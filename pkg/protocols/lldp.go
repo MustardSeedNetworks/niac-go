@@ -128,6 +128,11 @@ func (h *LLDPHandler) sendAdvertisements() {
 			continue
 		}
 
+		// Skip if LLDP is explicitly disabled for this device
+		if device.LLDPConfig != nil && !device.LLDPConfig.Enabled {
+			continue
+		}
+
 		// Build and send LLDP frame
 		frame := h.buildLLDPFrame(device)
 		if frame != nil {
@@ -148,7 +153,7 @@ func (h *LLDPHandler) buildLLDPFrame(device *config.Device) []byte {
 	// Mandatory TLVs (Chassis ID, Port ID, TTL)
 	frame = append(frame, h.buildChassisIDTLV(device)...)
 	frame = append(frame, h.buildPortIDTLV(device)...)
-	frame = append(frame, h.buildTTLTLV()...)
+	frame = append(frame, h.buildTTLTLV(device)...)
 
 	// Optional TLVs
 	frame = append(frame, h.buildPortDescriptionTLV(device)...)
@@ -169,9 +174,33 @@ func (h *LLDPHandler) buildLLDPFrame(device *config.Device) []byte {
 
 // buildChassisIDTLV builds the Chassis ID TLV
 func (h *LLDPHandler) buildChassisIDTLV(device *config.Device) []byte {
-	// Use MAC address as chassis ID
+	// Determine chassis ID type and value from config or use default
 	subtype := byte(LLDPChassisIDSubtypeMACAddress)
-	chassisID := device.MACAddress
+	var chassisID []byte
+
+	if device.LLDPConfig != nil && device.LLDPConfig.ChassisIDType != "" {
+		switch device.LLDPConfig.ChassisIDType {
+		case "mac":
+			subtype = byte(LLDPChassisIDSubtypeMACAddress)
+			chassisID = device.MACAddress
+		case "local":
+			subtype = byte(LLDPChassisIDSubtypeLocal)
+			chassisID = []byte(device.Name)
+		case "network_address":
+			subtype = byte(LLDPChassisIDSubtypeNetworkAddress)
+			if len(device.IPAddresses) > 0 {
+				chassisID = device.IPAddresses[0]
+			} else {
+				chassisID = device.MACAddress
+			}
+		default:
+			// Fall back to MAC address
+			chassisID = device.MACAddress
+		}
+	} else {
+		// Default to MAC address
+		chassisID = device.MACAddress
+	}
 
 	// TLV: Type(7 bits) | Length(9 bits) | Subtype(1 byte) | Chassis ID
 	length := 1 + len(chassisID) // subtype + chassis ID
@@ -211,20 +240,32 @@ func (h *LLDPHandler) buildPortIDTLV(device *config.Device) []byte {
 }
 
 // buildTTLTLV builds the TTL TLV
-func (h *LLDPHandler) buildTTLTLV() []byte {
+func (h *LLDPHandler) buildTTLTLV(device *config.Device) []byte {
+	// Use TTL from config if available, otherwise use default
+	ttl := uint16(LLDPTTL)
+	if device.LLDPConfig != nil && device.LLDPConfig.TTL > 0 {
+		ttl = uint16(device.LLDPConfig.TTL)
+	}
+
 	length := 2 // TTL is 2 bytes
 
 	tlv := make([]byte, 2+length)
 	tlv[0] = byte(LLDPTLVTypeTTL << 1)
 	tlv[1] = byte(length)
-	binary.BigEndian.PutUint16(tlv[2:4], LLDPTTL)
+	binary.BigEndian.PutUint16(tlv[2:4], ttl)
 
 	return tlv
 }
 
 // buildPortDescriptionTLV builds the Port Description TLV
 func (h *LLDPHandler) buildPortDescriptionTLV(device *config.Device) []byte {
-	description := []byte(fmt.Sprintf("%s interface", device.Type))
+	// Use port description from config if available, otherwise generate default
+	var description []byte
+	if device.LLDPConfig != nil && device.LLDPConfig.PortDescription != "" {
+		description = []byte(device.LLDPConfig.PortDescription)
+	} else {
+		description = []byte(fmt.Sprintf("%s interface", device.Type))
+	}
 
 	length := len(description)
 	if length == 0 {
@@ -258,7 +299,13 @@ func (h *LLDPHandler) buildSystemNameTLV(device *config.Device) []byte {
 
 // buildSystemDescriptionTLV builds the System Description TLV
 func (h *LLDPHandler) buildSystemDescriptionTLV(device *config.Device) []byte {
-	description := []byte(fmt.Sprintf("NIAC-Go simulated %s device", device.Type))
+	// Use system description from config if available, otherwise generate default
+	var description []byte
+	if device.LLDPConfig != nil && device.LLDPConfig.SystemDescription != "" {
+		description = []byte(device.LLDPConfig.SystemDescription)
+	} else {
+		description = []byte(fmt.Sprintf("NIAC-Go simulated %s device", device.Type))
+	}
 
 	length := len(description)
 	if length == 0 {

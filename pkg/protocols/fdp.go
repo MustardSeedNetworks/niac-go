@@ -100,6 +100,11 @@ func (h *FDPHandler) sendAdvertisements() {
 			continue
 		}
 
+		// Skip if FDP is explicitly disabled for this device
+		if device.FDPConfig != nil && !device.FDPConfig.Enabled {
+			continue
+		}
+
 		// Build and send FDP frame
 		frame := h.buildFDPFrame(device)
 		if frame != nil {
@@ -117,9 +122,15 @@ func (h *FDPHandler) sendAdvertisements() {
 func (h *FDPHandler) buildFDPFrame(device *config.Device) []byte {
 	var payload []byte
 
+	// Use holdtime from config if available, otherwise use default
+	holdtime := byte(FDPHoldtime)
+	if device.FDPConfig != nil && device.FDPConfig.Holdtime > 0 {
+		holdtime = byte(device.FDPConfig.Holdtime)
+	}
+
 	// FDP header: Version (1 byte) + TTL/Holdtime (1 byte) + Checksum (2 bytes)
 	payload = append(payload, FDPVersion)
-	payload = append(payload, byte(FDPHoldtime))
+	payload = append(payload, holdtime)
 	payload = append(payload, 0x00, 0x00) // Checksum placeholder
 
 	// Add TLVs
@@ -184,8 +195,11 @@ func (h *FDPHandler) buildDeviceIDTLV(device *config.Device) []byte {
 func (h *FDPHandler) buildPortTLV(device *config.Device) []byte {
 	var portName []byte
 
-	// Try to use first interface name if available
-	if len(device.Interfaces) > 0 && device.Interfaces[0].Name != "" {
+	// Use port ID from config if available
+	if device.FDPConfig != nil && device.FDPConfig.PortID != "" {
+		portName = []byte(device.FDPConfig.PortID)
+	} else if len(device.Interfaces) > 0 && device.Interfaces[0].Name != "" {
+		// Try to use first interface name if available
 		portName = []byte(device.Interfaces[0].Name)
 	} else {
 		portName = []byte("Port 1")
@@ -203,7 +217,13 @@ func (h *FDPHandler) buildPortTLV(device *config.Device) []byte {
 
 // buildPlatformTLV builds the Platform TLV
 func (h *FDPHandler) buildPlatformTLV(device *config.Device) []byte {
-	platform := []byte(fmt.Sprintf("NIAC-Go Simulated %s", device.Type))
+	// Use platform from config if available, otherwise generate default
+	var platform []byte
+	if device.FDPConfig != nil && device.FDPConfig.Platform != "" {
+		platform = []byte(device.FDPConfig.Platform)
+	} else {
+		platform = []byte(fmt.Sprintf("NIAC-Go Simulated %s", device.Type))
+	}
 
 	length := 4 + len(platform)
 
@@ -241,7 +261,13 @@ func (h *FDPHandler) buildCapabilitiesTLV(device *config.Device) []byte {
 
 // buildSoftwareTLV builds the Software TLV
 func (h *FDPHandler) buildSoftwareTLV(device *config.Device) []byte {
-	software := []byte("NIAC-Go v1.3.0")
+	// Use software version from config if available, otherwise use default
+	var software []byte
+	if device.FDPConfig != nil && device.FDPConfig.SoftwareVersion != "" {
+		software = []byte(device.FDPConfig.SoftwareVersion)
+	} else {
+		software = []byte("NIAC-Go v1.5.0")
+	}
 
 	length := 4 + len(software)
 

@@ -117,6 +117,11 @@ func (h *CDPHandler) sendAdvertisements() {
 			continue
 		}
 
+		// Skip if CDP is explicitly disabled for this device
+		if device.CDPConfig != nil && !device.CDPConfig.Enabled {
+			continue
+		}
+
 		// Build and send CDP frame
 		frame := h.buildCDPFrame(device)
 		if frame != nil {
@@ -134,9 +139,21 @@ func (h *CDPHandler) sendAdvertisements() {
 func (h *CDPHandler) buildCDPFrame(device *config.Device) []byte {
 	var payload []byte
 
+	// Use version and holdtime from config if available, otherwise use defaults
+	version := byte(CDPVersion)
+	holdtime := byte(CDPHoldtime)
+	if device.CDPConfig != nil {
+		if device.CDPConfig.Version > 0 {
+			version = byte(device.CDPConfig.Version)
+		}
+		if device.CDPConfig.Holdtime > 0 {
+			holdtime = byte(device.CDPConfig.Holdtime)
+		}
+	}
+
 	// CDP header: Version (1 byte) + TTL (1 byte) + Checksum (2 bytes)
-	payload = append(payload, CDPVersion)
-	payload = append(payload, byte(CDPHoldtime))
+	payload = append(payload, version)
+	payload = append(payload, holdtime)
 	payload = append(payload, 0x00, 0x00) // Checksum placeholder
 
 	// Add TLVs
@@ -251,8 +268,11 @@ func (h *CDPHandler) buildAddressesTLV(device *config.Device) []byte {
 func (h *CDPHandler) buildPortIDTLV(device *config.Device) []byte {
 	var portID []byte
 
-	// Try to use first interface name if available
-	if len(device.Interfaces) > 0 && device.Interfaces[0].Name != "" {
+	// Use port ID from config if available
+	if device.CDPConfig != nil && device.CDPConfig.PortID != "" {
+		portID = []byte(device.CDPConfig.PortID)
+	} else if len(device.Interfaces) > 0 && device.Interfaces[0].Name != "" {
+		// Try to use first interface name if available
 		portID = []byte(device.Interfaces[0].Name)
 	} else {
 		// Fall back to a generic port name
@@ -299,7 +319,13 @@ func (h *CDPHandler) buildCapabilitiesTLV(device *config.Device) []byte {
 
 // buildSoftwareVersionTLV builds the Software Version TLV
 func (h *CDPHandler) buildSoftwareVersionTLV(device *config.Device) []byte {
-	version := []byte("NIAC-Go v1.4.0")
+	// Use software version from config if available, otherwise use default
+	var version []byte
+	if device.CDPConfig != nil && device.CDPConfig.SoftwareVersion != "" {
+		version = []byte(device.CDPConfig.SoftwareVersion)
+	} else {
+		version = []byte("NIAC-Go v1.5.0")
+	}
 
 	length := 4 + len(version)
 
@@ -313,7 +339,13 @@ func (h *CDPHandler) buildSoftwareVersionTLV(device *config.Device) []byte {
 
 // buildPlatformTLV builds the Platform TLV
 func (h *CDPHandler) buildPlatformTLV(device *config.Device) []byte {
-	platform := []byte(fmt.Sprintf("Simulated %s", device.Type))
+	// Use platform from config if available, otherwise generate default
+	var platform []byte
+	if device.CDPConfig != nil && device.CDPConfig.Platform != "" {
+		platform = []byte(device.CDPConfig.Platform)
+	} else {
+		platform = []byte(fmt.Sprintf("Simulated %s", device.Type))
+	}
 
 	length := 4 + len(platform)
 
