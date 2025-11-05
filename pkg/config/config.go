@@ -5,13 +5,25 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
+
+	"github.com/krisarmstrong/niac-go/internal/converter"
 )
 
 // Config represents the network configuration
 type Config struct {
-	Devices []Device
+	Devices         []Device
+	IncludePath     string           // Base path for walk files
+	CapturePlayback *CapturePlayback // Optional PCAP playback config
+}
+
+// CapturePlayback represents PCAP file playback configuration
+type CapturePlayback struct {
+	FileName  string
+	LoopTime  int     // milliseconds
+	ScaleTime float64 // time scaling factor
 }
 
 // Device represents a simulated network device
@@ -47,7 +59,18 @@ type SNMPConfig struct {
 }
 
 // Load reads and parses a configuration file
+// Automatically detects format based on file extension:
+// - .yaml -> YAML format (converted from Java DSL)
+// - .cfg, .conf, or other -> legacy key-value format
 func Load(filename string) (*Config, error) {
+	ext := filepath.Ext(filename)
+
+	// Route to YAML loader for .yaml files
+	if ext == ".yaml" || ext == ".yml" {
+		return LoadYAML(filename)
+	}
+
+	// Legacy format loader
 	file, err := os.Open(filename)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open config file: %w", err)
@@ -166,6 +189,99 @@ func (c *Config) GetDeviceByIP(ip net.IP) *Device {
 		}
 	}
 	return nil
+}
+
+// LoadYAML loads a YAML configuration file
+func LoadYAML(filename string) (*Config, error) {
+	// Load using converter package
+	yamlConfig, err := converter.LoadYAMLConfig(filename)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load YAML config: %w", err)
+	}
+
+	// Validate
+	if err := converter.ValidateConfig(yamlConfig); err != nil {
+		return nil, fmt.Errorf("config validation failed: %w", err)
+	}
+
+	// Convert to runtime config format
+	cfg := &Config{
+		Devices:     make([]Device, 0, len(yamlConfig.Devices)),
+		IncludePath: yamlConfig.IncludePath,
+	}
+
+	// Copy CapturePlayback if present
+	if yamlConfig.CapturePlayback != nil {
+		cfg.CapturePlayback = &CapturePlayback{
+			FileName:  yamlConfig.CapturePlayback.FileName,
+			LoopTime:  yamlConfig.CapturePlayback.LoopTime,
+			ScaleTime: yamlConfig.CapturePlayback.ScaleTime,
+		}
+	}
+
+	// Convert devices
+	for _, yamlDevice := range yamlConfig.Devices {
+		device := Device{
+			Name:        yamlDevice.Name,
+			Type:        "unknown", // Default type
+			Interfaces:  make([]Interface, 0),
+			Properties:  make(map[string]string),
+			SNMPConfig: SNMPConfig{
+				Community: "public", // Default
+				SysName:   yamlDevice.Name,
+			},
+		}
+
+		// Parse MAC address
+		if yamlDevice.MAC != "" {
+			mac, err := net.ParseMAC(yamlDevice.MAC)
+			if err != nil {
+				return nil, fmt.Errorf("device %s: invalid MAC address %s: %w", yamlDevice.Name, yamlDevice.MAC, err)
+			}
+			device.MACAddress = mac
+		}
+
+		// Parse IP address
+		if yamlDevice.IP != "" {
+			ip := net.ParseIP(yamlDevice.IP)
+			if ip == nil {
+				return nil, fmt.Errorf("device %s: invalid IP address %s", yamlDevice.Name, yamlDevice.IP)
+			}
+			device.IPAddresses = append(device.IPAddresses, ip)
+		}
+
+		// Handle SNMP configuration
+		if yamlDevice.SnmpAgent != nil {
+			if yamlDevice.SnmpAgent.WalkFile != "" {
+				// Resolve walk file path relative to include path
+				walkFile := yamlDevice.SnmpAgent.WalkFile
+				if cfg.IncludePath != "" && !filepath.IsAbs(walkFile) {
+					walkFile = filepath.Join(cfg.IncludePath, walkFile)
+				}
+				device.SNMPConfig.WalkFile = walkFile
+			}
+
+			// TODO: Handle AddMibs - requires SNMP MIB storage
+			// For now, store in properties for future use
+			if len(yamlDevice.SnmpAgent.AddMibs) > 0 {
+				device.Properties["custom_mibs_count"] = fmt.Sprintf("%d", len(yamlDevice.SnmpAgent.AddMibs))
+			}
+		}
+
+		// Store VLAN if present
+		if yamlDevice.VLAN > 0 {
+			device.Properties["vlan"] = fmt.Sprintf("%d", yamlDevice.VLAN)
+		}
+
+		cfg.Devices = append(cfg.Devices, device)
+	}
+
+	// Validate final config
+	if len(cfg.Devices) == 0 {
+		return nil, fmt.Errorf("no devices defined in configuration")
+	}
+
+	return cfg, nil
 }
 
 // ParseSimpleConfig parses a simple device configuration format
