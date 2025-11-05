@@ -151,6 +151,15 @@ func main() {
 		if interactiveMode {
 			fmt.Printf("  Mode: Interactive TUI\n")
 		}
+		if cfg.CapturePlayback != nil {
+			fmt.Printf("  PCAP Playback: %s\n", cfg.CapturePlayback.FileName)
+			if cfg.CapturePlayback.LoopTime > 0 {
+				fmt.Printf("    Loop interval: %dms\n", cfg.CapturePlayback.LoopTime)
+			}
+			if cfg.CapturePlayback.ScaleTime > 0 && cfg.CapturePlayback.ScaleTime != 1.0 {
+				fmt.Printf("    Time scaling: %.2fx\n", cfg.CapturePlayback.ScaleTime)
+			}
+		}
 		fmt.Println()
 	}
 
