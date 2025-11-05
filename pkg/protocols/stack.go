@@ -36,6 +36,7 @@ type Stack struct {
 	netbiosHandler *NetBIOSHandler
 	stpHandler    *STPHandler
 	lldpHandler   *LLDPHandler
+	cdpHandler    *CDPHandler
 
 	// Statistics
 	stats        *Statistics
@@ -93,6 +94,7 @@ func NewStack(captureEngine *capture.Engine, cfg *config.Config, debugLevel int)
 	s.netbiosHandler = NewNetBIOSHandler(s, debugLevel)
 	s.stpHandler = NewSTPHandler(s, debugLevel)
 	s.lldpHandler = NewLLDPHandler(s)
+	s.cdpHandler = NewCDPHandler(s)
 
 	return s
 }
@@ -145,6 +147,9 @@ func (s *Stack) Start() error {
 	// Start LLDP periodic advertisements
 	s.lldpHandler.Start()
 
+	// Start CDP periodic advertisements
+	s.cdpHandler.Start()
+
 	if s.debugLevel >= 1 {
 		fmt.Println("Protocol stack started")
 	}
@@ -162,6 +167,9 @@ func (s *Stack) Stop() {
 
 	// Stop LLDP handler
 	s.lldpHandler.Stop()
+
+	// Stop CDP handler
+	s.cdpHandler.Stop()
 
 	close(s.stopChan)
 	s.wg.Wait()
@@ -256,6 +264,13 @@ func (s *Stack) decodePacket(pkt *Packet) {
 	if len(dstMAC) == 6 && dstMAC[0] == 0x01 && dstMAC[1] == 0x80 &&
 	   dstMAC[2] == 0xC2 && dstMAC[3] == 0x00 && dstMAC[4] == 0x00 && dstMAC[5] == 0x0E {
 		s.lldpHandler.HandlePacket(pkt)
+		return
+	}
+
+	// Check for CDP (multicast MAC 01:00:0C:CC:CC:CC)
+	if len(dstMAC) == 6 && dstMAC[0] == 0x01 && dstMAC[1] == 0x00 &&
+	   dstMAC[2] == 0x0C && dstMAC[3] == 0xCC && dstMAC[4] == 0xCC && dstMAC[5] == 0xCC {
+		s.cdpHandler.HandlePacket(pkt)
 		return
 	}
 
