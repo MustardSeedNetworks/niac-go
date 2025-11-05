@@ -7,16 +7,170 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Future (v1.5.0+)
-- Per-protocol debug level control
-- Color-coded debug output
-- Additional traffic patterns
-- IPv6 as primary device address
-- Multiple IPs per device
-- DHCPv6 prefix delegation (IA_PD)
-- HTTP/FTP server config in YAML
+### Future (v1.6.0+)
+- Additional traffic patterns (babble traffic customization)
 - SNMP trap generation
 - NetFlow/IPFIX export
+- DHCPv6 prefix delegation (IA_PD)
+
+## [1.5.0] - 2025-11-05
+
+### 🎉 MILESTONE: Complete YAML Configuration System!
+
+All protocols now fully configurable via YAML with per-protocol debug control and color-coded output.
+
+### Added
+
+#### Phase 1 Features
+- **Color-coded debug output**:
+  - Color-coded protocol messages for better readability
+  - Support for NO_COLOR environment variable
+  - `--no-color` flag to disable colors
+  - Automatic color detection for terminals
+
+- **Per-protocol debug level control**:
+  - 19 protocol-specific debug flags (--debug-arp, --debug-lldp, --debug-dhcpv6, etc.)
+  - Independent debug levels for each protocol (0-3)
+  - Fallback to global debug level when protocol-specific not set
+  - Comprehensive help output showing all debug flags
+
+- **Multiple IPs per device**:
+  - Devices can have multiple IPv4 and/or IPv6 addresses
+  - Use `ips:` (plural) instead of `ip:` (singular) in YAML
+  - Support for dual-stack (IPv4 + IPv6) configurations
+  - Multi-homed devices (multiple IPs on different networks)
+  - Example: `examples/multi-ip-devices.yaml`
+
+#### Phase 2 Group 1 - Discovery Protocol YAML Configuration
+- **LLDP Configuration** (IEEE 802.1AB):
+  - `advertise_interval`: How often to send LLDP advertisements (default: 30s)
+  - `ttl`: Time-to-live for LLDP information (default: 120s)
+  - `system_description`: Device description string
+  - `port_description`: Port/interface description
+  - `chassis_id_type`: "mac" or "network_address"
+
+- **CDP Configuration** (Cisco Discovery Protocol):
+  - `advertise_interval`: Advertisement interval (default: 60s)
+  - `holdtime`: Information holdtime (default: 180s)
+  - `version`: CDP version (1 or 2)
+  - `software_version`: Device software version string
+  - `platform`: Platform/model string
+  - `port_id`: Port identifier
+
+- **EDP Configuration** (Extreme Discovery Protocol):
+  - `advertise_interval`: Advertisement interval (default: 30s)
+  - `version_string`: Software version
+  - `display_string`: Device model/description
+
+- **FDP Configuration** (Foundry Discovery Protocol):
+  - `advertise_interval`: Advertisement interval (default: 60s)
+  - `holdtime`: Information holdtime (default: 180s)
+  - `software_version`: Device software version
+  - `platform`: Platform/model string
+  - `port_id`: Port identifier
+
+#### Phase 2 Group 1b - STP YAML Configuration
+- **STP Configuration** (Spanning Tree Protocol):
+  - `enabled`: Enable/disable STP (default: false)
+  - `bridge_priority`: Bridge priority 0-65535 (default: 32768)
+  - `hello_time`: Hello BPDU interval in seconds (default: 2)
+  - `max_age`: Maximum age in seconds (default: 20)
+  - `forward_delay`: Forward delay in seconds (default: 15)
+  - `version`: "stp", "rstp", or "mstp" (default: "stp")
+  - Example: `examples/layer2/stp-bridge.yaml`
+
+#### Phase 2 Group 2 - Application Protocol YAML Configuration
+- **HTTP Server Configuration**:
+  - `enabled`: Enable HTTP server
+  - `server_name`: Server identification string
+  - `endpoints`: Array of endpoint definitions
+    - `path`: URL path (e.g., "/api/v1/status")
+    - `method`: HTTP method (default: "GET")
+    - `status_code`: HTTP status code (default: 200)
+    - `content_type`: Response content type
+    - `body`: Response body
+  - Example: `examples/services/http-server.yaml`
+
+- **FTP Server Configuration**:
+  - `enabled`: Enable FTP server
+  - `welcome_banner`: FTP welcome message (220 response)
+  - `system_type`: System type string (e.g., "UNIX Type: L8")
+  - `allow_anonymous`: Allow anonymous login (default: true)
+  - `users`: Array of user accounts
+    - `username`: Login username
+    - `password`: Login password
+    - `home_dir`: User home directory
+  - Example: `examples/services/ftp-server.yaml`
+
+- **NetBIOS Configuration**:
+  - `enabled`: Enable NetBIOS name service
+  - `name`: NetBIOS device name (max 15 characters)
+  - `workgroup`: Workgroup/domain name
+  - `node_type`: "B" (broadcast), "P" (point-to-point), "M" (mixed), "H" (hybrid)
+  - `services`: Array of services ("workstation", "server", "browser", etc.)
+  - `ttl`: Name registration TTL in seconds (default: 300)
+  - Example: `examples/services/netbios-server.yaml`
+
+#### Phase 2 Group 3 - Network Protocol YAML Configuration
+- **ICMP Configuration**:
+  - `enabled`: Enable ICMP echo reply (default: true)
+  - `ttl`: Time To Live for ICMP packets (default: 64)
+    - Common values: 32 (old systems), 64 (Linux/Unix), 128 (Windows), 255 (routers)
+  - `rate_limit`: Max ICMP responses per second (default: 0 = unlimited)
+  - Example: `examples/network/icmp-config.yaml`
+
+- **ICMPv6 Configuration**:
+  - `enabled`: Enable ICMPv6 echo reply (default: true)
+  - `hop_limit`: Hop limit for ICMPv6 packets (default: 64)
+    - NDP packets ALWAYS use hop limit 255 per RFC 4861 (security requirement)
+  - `rate_limit`: Max ICMPv6 responses per second (default: 0 = unlimited)
+  - Example: `examples/network/icmpv6-config.yaml`
+
+- **DHCPv6 Server Configuration**:
+  - `enabled`: Enable DHCPv6 server (default: false)
+  - `pools`: IPv6 address pools
+    - `network`: IPv6 network in CIDR notation
+    - `range_start`: First address in pool
+    - `range_end`: Last address in pool
+  - `preferred_lifetime`: Preferred address lifetime in seconds (default: 604800 = 7 days)
+  - `valid_lifetime`: Valid address lifetime in seconds (default: 2592000 = 30 days)
+  - `preference`: Server preference 0-255 (default: 0, higher is better)
+  - `dns_servers`: Array of IPv6 DNS server addresses
+  - `domain_list`: Array of DNS search domains
+  - `sntp_servers`: Array of SNTP time server addresses
+  - `ntp_servers`: Array of NTP server addresses
+  - `sip_servers`: Array of SIP server addresses
+  - `sip_domains`: Array of SIP domain names
+  - Example: `examples/network/dhcpv6-config.yaml`
+
+### Changed
+- Protocol handlers now read configuration from device config structs
+- ICMP handler uses configurable TTL instead of hardcoded 64
+- ICMPv6 handler uses configurable hop limit with RFC 4861 compliance for NDP
+- DHCPv6 handler uses configurable server preference
+- Discovery protocol handlers use configurable advertisement intervals and values
+- STP handler uses configurable bridge priority and timers
+- HTTP/FTP/NetBIOS handlers use configurable server parameters
+
+### Documentation
+- Created organized example library in `examples/` directory:
+  - `examples/EXAMPLES-README.md` - Complete documentation of all examples
+  - `examples/complete-kitchen-sink.yaml` - Master example with ALL features
+  - `examples/layer2/` - Discovery protocol examples (LLDP, CDP, EDP, FDP, STP)
+  - `examples/dhcp/` - DHCP server examples (simple and advanced)
+  - `examples/services/` - Application service examples (DNS, HTTP, FTP, NetBIOS)
+  - `examples/network/` - Network protocol examples (IPv4, IPv6, dual-stack, ICMP, ICMPv6, DHCPv6)
+  - `examples/vendors/` - Vendor-specific examples (Cisco, Extreme, Foundry)
+- Updated all example files with comprehensive inline documentation
+- Added troubleshooting sections to example files
+- Documented all configuration options with defaults and valid ranges
+
+### Technical Details
+- Added ICMPConfig, ICMPv6Config, DHCPv6Config structs to pkg/config/config.go
+- Added STPConfig, HTTPConfig, FTPConfig, NetBIOSConfig structs
+- Updated all YAML parsing in internal/converter/converter.go
+- Enhanced config loader with default values for all new options
+- Backward compatible - existing configs without new options still work
 
 ## [1.4.0] - 2025-01-05
 
@@ -277,7 +431,8 @@ All 13 network protocols now fully implemented - complete feature parity with Ja
 - Compatible with all Java NIAC configuration files and SNMP walk files
 - Modern architecture using Go idioms (goroutines, channels, clean packages)
 
-[Unreleased]: https://github.com/krisarmstrong/niac-go/compare/v1.4.0...HEAD
+[Unreleased]: https://github.com/krisarmstrong/niac-go/compare/v1.5.0...HEAD
+[1.5.0]: https://github.com/krisarmstrong/niac-go/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/krisarmstrong/niac-go/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/krisarmstrong/niac-go/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/krisarmstrong/niac-go/compare/v1.1.0...v1.2.0
