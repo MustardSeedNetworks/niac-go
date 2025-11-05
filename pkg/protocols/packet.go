@@ -31,6 +31,7 @@ const (
 	EtherTypeARP  = 0x0806
 	EtherTypeIPv6 = 0x86dd
 	EtherTypeVLAN = 0x8100
+	EtherTypeLLDP = 0x88cc
 )
 
 // NewPacket creates a new packet with a buffer
