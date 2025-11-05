@@ -1,0 +1,7 @@
+include_path: walks
+devices:
+    - name: device1
+      mac: 10:0D:7F:4E:43:E9
+      ip: 10.250.1.50
+      snmp_agent:
+        walk_file: MikroTik.txt

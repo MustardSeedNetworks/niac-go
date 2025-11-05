@@ -1,0 +1,337 @@
+capture_playback:
+    file_name: cfg/STP_change.cap
+    loop_time: 180000
+    scale_time: 1
+devices:
+    - name: device1
+      mac: 00:09:B7:FA:76:61
+      ip: 10.250.0.10
+    - name: device2
+      mac: 00:24:E8:37:66:C9
+      ip: 10.250.1.5
+    - name: device3
+      mac: 00:30:F1:8D:50:90
+      ip: 10.250.1.242
+      snmp_agent:
+        walk_file: cfg/Dell_10_250_1_242.mz
+    - name: device4
+      mac: 00:11:93:4D:63:43
+      ip: 10.250.0.3
+      snmp_agent:
+        walk_file: cfg/Cisco_10_250_0_3.mz
+    - name: device5
+      mac: 00:1C:B1:DA:2C:C2
+      ip: 10.250.0.2
+    - name: device6
+      mac: 00:00:0C:07:AC:01
+      ip: 10.250.0.1
+      snmp_agent: {}
+    - name: device7
+      mac: 00:1C:B1:DA:2C:C5
+      ip: 10.250.8.1
+      snmp_agent: {}
+    - name: device8
+      mac: 00:1C:B1:DA:2C:C9
+      ip: 192.168.21.1
+      snmp_agent: {}
+    - name: device9
+      mac: 00:1C:B1:DA:2C:C1
+      ip: 192.168.249.2
+      snmp_agent: {}
+    - name: device10
+      mac: 00:07:0E:72:08:B1
+      ip: 192.168.249.1
+      snmp_agent:
+        walk_file: cfg/Cisco_192_168_249_1.mz
+    - name: device11
+      mac: 00:07:0E:72:08:B0
+      ip: 10.250.63.254
+      snmp_agent: {}
+    - name: device12
+      mac: 00:07:0E:72:08:B1
+      ip: 10.232.124.46
+      snmp_agent: {}
+    - name: device13
+      mac: 00:1C:B1:0D:C1:41
+      ip: 10.232.124.45
+      snmp_agent:
+        walk_file: cfg/Cisco_10_232_124_45.mz
+    - name: device14
+      mac: 00:1C:B1:0D:C1:44
+      ip: 129.196.196.1
+      snmp_agent: {}
+    - name: device15
+      mac: 00:1C:B1:0D:C1:44
+      ip: 129.196.196.3
+      snmp_agent: {}
+    - name: device16
+      mac: 00:1C:B1:0D:C1:43
+      ip: 129.196.195.1
+      snmp_agent: {}
+    - name: device17
+      mac: 00:1C:B1:0D:C1:42
+      ip: 10.232.142.20
+      snmp_agent: {}
+    - name: device18
+      mac: 04:A1:51:90:FE:16
+      ip: 10.250.1.240
+      snmp_agent:
+        walk_file: cfg/Netgear_10_250_1_240.mz
+    - name: device19
+      mac: 6C:B0:CE:1C:D4:AE
+      ip: 10.250.0.120
+      snmp_agent:
+        walk_file: cfg/Netgear_10_250_0_120.mz
+    - name: device20
+      mac: 04:A1:51:A8:A6:A4
+      ip: 10.250.1.207
+      snmp_agent:
+        walk_file: cfg/Netgear_10_250_1_207.mz
+    - name: device21
+      mac: 00:19:E7:CA:6E:A0
+      ip: 10.250.0.50
+      snmp_agent:
+        walk_file: cfg/Cisco_10_250_0_50.mz
+    - name: device22
+      mac: 00:1D:45:91:11:D0
+      ip: 10.250.8.132
+    - name: device23
+      mac: 00:0D:28:D3:3A:F0
+      ip: 10.250.8.3
+      snmp_agent:
+        walk_file: cfg/Cisco_10_250_8_3.mz
+    - name: device24
+      mac: EC:E1:A9:55:6C:80
+      ip: 10.250.1.250
+      snmp_agent:
+        walk_file: cfg/Cisco_WLC_10_250_1_250.mz
+    - name: device25
+      mac: B8:38:61:6E:1A:E0
+      ip: 10.250.1.249
+    - name: device26
+      mac: 02:C0:17:C2:04:25
+      ip: 10.250.0.252
+    - name: device27
+      mac: 02:C0:17:A4:AE:CA
+      ip: 10.250.0.253
+    - name: device28
+      mac: 00:50:56:49:2E:7E
+      ip: 10.250.0.81
+      snmp_agent:
+        walk_file: cfg/VM_10_250_0_81.mz
+    - name: device29
+      mac: 00:50:56:8E:A5:8D
+      ip: 10.250.0.146
+    - name: device30
+      mac: 00:0C:29:63:12:AE
+      ip: 10.250.1.199
+    - name: device31
+      mac: 00:0C:29:FC:EC:48
+      ip: 10.250.0.114
+    - name: device32
+      mac: 00:50:04:61:0D:7B
+      ip: 129.196.196.160
+      snmp_agent:
+        walk_file: cfg/MATTG_129_196_196_160.mz
+    - name: device33
+      mac: 00:50:04:61:0D:7B
+      ip: 129.196.231.98
+    - name: device34
+      mac: 00:1C:C4:FB:D7:02
+      ip: 192.168.21.10
+      snmp_agent:
+        walk_file: cfg/VoIP_192_168_21_10.mz
+    - name: device35
+      mac: 00:07:0E:AB:CD:17
+      ip: 10.232.142.17
+    - name: device36
+      mac: 00:07:0E:AB:CD:19
+      ip: 10.232.142.19
+    - name: device37
+      mac: 00:07:0E:AB:CD:21
+      ip: 10.232.142.21
+    - name: device38
+      mac: 00:03:9F:18:FC:36
+      ip: 10.250.0.5
+    - name: device39
+      mac: 00:0F:23:CF:EE:00
+      ip: 10.250.0.20
+    - name: device40
+      mac: 00:0C:29:AD:F8:39
+      ip: 10.250.0.60
+    - name: device41
+      mac: 00:10:25:00:61:00
+      ip: 10.250.0.61
+    - name: device42
+      mac: 00:D0:B7:43:E5:A7
+      ip: 10.250.0.62
+    - name: device43
+      mac: 00:0C:29:F1:8E:F9
+      ip: 10.250.0.65
+    - name: device44
+      mac: 00:0C:29:0C:98:87
+      ip: 10.250.0.66
+    - name: device45
+      mac: 00:24:D7:E5:E5:7C
+      ip: 10.250.0.102
+    - name: device46
+      mac: 00:C0:17:A3:01:47
+      ip: 10.250.0.112
+    - name: device47
+      mac: DC:2B:61:B7:71:A7
+      ip: 10.250.0.118
+    - name: device48
+      mac: 02:C0:17:A4:05:2A
+      ip: 10.250.0.167
+    - name: device49
+      mac: 02:C0:17:A4:05:3A
+      ip: ""
+    - name: device50
+      mac: 00:C0:17:A4:05:28
+      ip: 10.250.0.171
+    - name: device51
+      mac: 00:C0:17:A4:05:78
+      ip: 10.250.0.173
+    - name: device52
+      mac: 00:C0:17:C0:02:15
+      ip: 10.250.0.196
+    - name: device53
+      mac: 00:1E:13:8C:9B:30
+      ip: 10.250.0.219
+    - name: device54
+      mac: 00:14:A9:CD:44:44
+      ip: 10.250.1.8
+    - name: device55
+      mac: 02:C0:17:A4:04:2A
+      ip: 10.250.1.12
+    - name: device56
+      mac: 00:1E:BE:02:CF:40
+      ip: 10.250.1.18
+    - name: device57
+      mac: 02:C0:17:A4:03:6A
+      ip: 10.250.1.149
+    - name: device58
+      mac: 02:C0:17:A4:05:5A
+      ip: 10.250.1.163
+    - name: device59
+      mac: 64:A7:69:9D:A4:28
+      ip: 10.250.1.182
+    - name: device60
+      mac: 00:24:D7:72:41:C4
+      ip: 10.250.1.164
+    - name: device61
+      mac: 00:21:6A:C5:E1:34
+      ip: 10.250.0.132
+    - name: device62
+      mac: 00:0C:29:D1:1D:D3
+      ip: 10.250.1.221
+    - name: device63
+      mac: 00:14:1C:89:45:C2
+      ip: 192.168.249.6
+    - name: device64
+      mac: 00:12:34:56:78:90
+      ip: 192.168.255.254
+    - name: device65
+      mac: 00:0D:ED:95:73:A4
+      ip: 129.196.197.24
+    - name: device66
+      mac: 00:22:91:3C:26:41
+      ip: 129.196.196.4
+    - name: device67
+      mac: 00:22:91:3D:63:41
+      ip: 129.196.196.5
+    - name: device68
+      mac: 00:1D:B5:B9:EA:06
+      ip: 129.196.196.6
+    - name: device69
+      mac: 00:1D:45:1F:6D:EE
+      ip: 129.196.196.20
+    - name: device70
+      mac: 00:1D:45:1F:6E:D4
+      ip: 129.196.196.22
+    - name: device71
+      mac: 00:1D:45:05:81:00
+      ip: 129.196.196.23
+    - name: device72
+      mac: 00:1D:45:1F:64:CA
+      ip: 129.196.196.24
+    - name: device73
+      mac: 00:0F:1F:1A:EE:45
+      ip: 129.196.196.118
+    - name: device74
+      mac: 00:C0:17:A3:22:2B
+      ip: ""
+    - name: device75
+      mac: 00:22:19:F3:BD:BE
+      ip: 129.196.196.90
+    - name: device76
+      mac: F0:4D:A2:63:90:56
+      ip: ""
+    - name: device77
+      mac: 00:08:83:FA:A1:81
+      ip: 129.196.197.18
+    - name: device78
+      mac: 02:C0:17:A4:03:6B
+      ip: 10.250.8.219
+    - name: device79
+      mac: 00:1C:B1:0D:C1:44
+      ip: 129.196.231.98
+    - name: device80
+      mac: 00:C0:17:31:01:44
+      ip: 10.250.1.50
+    - name: device81
+      mac: 00:C0:17:C1:01:40
+      ip: 10.250.1.51
+    - name: device82
+      mac: 00:C0:17:C3:00:8C
+      ip: 129.196.196.222
+    - name: device83
+      mac: 00:C0:17:C2:01:40
+      ip: 10.250.1.52
+    - name: device84
+      mac: 00:C0:17:B7:01:93
+      ip: 10.250.1.53
+    - name: device85
+      mac: 00:C0:17:B3:01:93
+      ip: 10.250.1.54
+    - name: device86
+      mac: f0:4d:a2:43:34:43
+      ip: 10.250.1.55
+      snmp_agent:
+        walk_file: cfg/TruView.mz
+    - name: device87
+      mac: 00:C0:17:33:02:93
+      ip: 10.250.1.56
+    - name: device88
+      mac: 00:50:56:93:01:21
+      ip: 129.196.196.25
+    - name: device89
+      mac: 00:01:E6:7B:ED:6B
+      ip: 129.196.196.35
+      snmp_agent:
+        walk_file: cfg/Printer_129_196_196_35.mz
+    - name: device90
+      mac: 18:03:73:7B:ED:6B
+      ip: 129.196.196.10
+      snmp_agent:
+        walk_file: cfg/Oracle_129_196_196_10.mz
+    - name: device91
+      mac: 18:03:73:4E:ED:A7
+      ip: 10.250.0.33
+    - name: device92
+      mac: 18:03:73:3E:12:E9
+      ip: 10.250.0.44
+    - name: device93
+      mac: d0:67:e5:31:d1:f3
+      ip: 10.250.0.55
+    - name: device94
+      mac: 00:14:22:c9:b6:bd
+      ip: 10.250.0.55
+    - name: device95
+      mac: 00:14:22:ef:98:32
+      ip: 74.125.127.99
+    - name: device96
+      mac: 00:09:B7:FA:00:00
+      ip: 172.24.221.78
+      snmp_agent:
+        walk_file: cfg/172.024.221.078_walk.mz

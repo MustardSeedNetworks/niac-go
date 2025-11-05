@@ -1,0 +1,7 @@
+include_path: walks
+devices:
+    - name: device1
+      mac: 74:8E:F8:DE:79:06
+      ip: 10.250.0.45
+      snmp_agent:
+        walk_file: brocade.txt
