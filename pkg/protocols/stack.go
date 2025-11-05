@@ -37,6 +37,8 @@ type Stack struct {
 	stpHandler    *STPHandler
 	lldpHandler   *LLDPHandler
 	cdpHandler    *CDPHandler
+	edpHandler    *EDPHandler
+	fdpHandler    *FDPHandler
 
 	// Statistics
 	stats        *Statistics
@@ -95,6 +97,8 @@ func NewStack(captureEngine *capture.Engine, cfg *config.Config, debugLevel int)
 	s.stpHandler = NewSTPHandler(s, debugLevel)
 	s.lldpHandler = NewLLDPHandler(s)
 	s.cdpHandler = NewCDPHandler(s)
+	s.edpHandler = NewEDPHandler(s)
+	s.fdpHandler = NewFDPHandler(s)
 
 	return s
 }
@@ -144,11 +148,11 @@ func (s *Stack) Start() error {
 	s.wg.Add(1)
 	go s.babbleThread()
 
-	// Start LLDP periodic advertisements
+	// Start discovery protocol periodic advertisements
 	s.lldpHandler.Start()
-
-	// Start CDP periodic advertisements
 	s.cdpHandler.Start()
+	s.edpHandler.Start()
+	s.fdpHandler.Start()
 
 	if s.debugLevel >= 1 {
 		fmt.Println("Protocol stack started")
@@ -165,11 +169,11 @@ func (s *Stack) Stop() {
 
 	s.running = false
 
-	// Stop LLDP handler
+	// Stop discovery protocol handlers
 	s.lldpHandler.Stop()
-
-	// Stop CDP handler
 	s.cdpHandler.Stop()
+	s.edpHandler.Stop()
+	s.fdpHandler.Stop()
 
 	close(s.stopChan)
 	s.wg.Wait()
@@ -274,6 +278,20 @@ func (s *Stack) decodePacket(pkt *Packet) {
 		return
 	}
 
+	// Check for EDP (multicast MAC 00:E0:2B:00:00:00)
+	if len(dstMAC) == 6 && dstMAC[0] == 0x00 && dstMAC[1] == 0xE0 &&
+	   dstMAC[2] == 0x2B && dstMAC[3] == 0x00 && dstMAC[4] == 0x00 && dstMAC[5] == 0x00 {
+		s.edpHandler.HandlePacket(pkt)
+		return
+	}
+
+	// Check for FDP (multicast MAC 01:E0:52:CC:CC:CC)
+	if len(dstMAC) == 6 && dstMAC[0] == 0x01 && dstMAC[1] == 0xE0 &&
+	   dstMAC[2] == 0x52 && dstMAC[3] == 0xCC && dstMAC[4] == 0xCC && dstMAC[5] == 0xCC {
+		s.fdpHandler.HandlePacket(pkt)
+		return
+	}
+
 	// Get EtherType
 	etherType := pkt.GetEtherType()
 
@@ -299,6 +317,10 @@ func (s *Stack) decodePacket(pkt *Packet) {
 		s.ipv6Handler.HandlePacket(pkt)
 	case EtherTypeLLDP:
 		s.lldpHandler.HandlePacket(pkt)
+	case EtherTypeEDP:
+		s.edpHandler.HandlePacket(pkt)
+	case EtherTypeFDP:
+		s.fdpHandler.HandlePacket(pkt)
 	default:
 		if s.debugLevel >= 2 {
 			fmt.Printf("Unknown EtherType 0x%04x sn=%d\n", etherType, pkt.SerialNumber)
