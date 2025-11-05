@@ -255,9 +255,7 @@ Same as original NIAC project.
 ## Credits
 
 - **Original NIAC**: Kevin Kayes (2002-2015)
-- **Java Modernization**: Kris Armstrong (2025)
-- **Go Rewrite**: Kris Armstrong (2025)
-- **Built with**: [Claude Code](https://claude.com/claude-code)
+- **Java Modernization & Go Rewrite**: Kris Armstrong (2025)
 
 ## Related Projects
 

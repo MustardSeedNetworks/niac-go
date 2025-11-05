@@ -1,7 +1,11 @@
 package protocols
 
 import (
+	"encoding/binary"
 	"fmt"
+	"net"
+	"sync"
+	"time"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
@@ -20,16 +24,188 @@ const (
 	DHCPInform   = 8
 )
 
+// DHCP option types not defined in gopacket
+const (
+	DHCPOptNTP             layers.DHCPOpt = 42  // NTP servers
+	DHCPOptTFTPServer      layers.DHCPOpt = 66  // TFTP server name
+	DHCPOptBootfileName    layers.DHCPOpt = 67  // Bootfile name
+	DHCPOptDomainSearch    layers.DHCPOpt = 119 // Domain search list
+)
+
+// DHCP lease duration (24 hours)
+const DefaultLeaseTime = 24 * time.Hour
+
+// DHCPLease represents an IP address lease
+type DHCPLease struct {
+	IP         net.IP
+	MAC        net.HardwareAddr
+	Hostname   string
+	Expiry     time.Time
+	LeaseTime  time.Duration
+}
+
 // DHCPHandler handles DHCP server functionality
 type DHCPHandler struct {
-	stack *Stack
+	stack              *Stack
+	leases             map[string]*DHCPLease // Key: MAC address string
+	ipPool             []net.IP
+	poolStart          net.IP
+	poolEnd            net.IP
+	serverIP           net.IP
+	subnetMask         net.IP
+	gateway            net.IP
+	dnsServers         []net.IP
+	domainName         string
+	ntpServers         []net.IP     // Option 42: NTP servers
+	domainSearch       []string     // Option 119: Domain search list
+	tftpServerName     string       // Option 66: TFTP server name
+	bootfileName       string       // Option 67: Bootfile name (for PXE)
+	vendorSpecificInfo []byte       // Option 43: Vendor-specific information
+	mu                 sync.RWMutex
 }
 
 // NewDHCPHandler creates a new DHCP handler
 func NewDHCPHandler(stack *Stack) *DHCPHandler {
 	return &DHCPHandler{
-		stack: stack,
+		stack:      stack,
+		leases:     make(map[string]*DHCPLease),
+		ipPool:     make([]net.IP, 0),
+		subnetMask: net.IPv4(255, 255, 255, 0),
 	}
+}
+
+// SetPool configures the DHCP IP address pool
+func (h *DHCPHandler) SetPool(start, end net.IP) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	h.poolStart = start
+	h.poolEnd = end
+	h.ipPool = h.generateIPPool(start, end)
+}
+
+// SetServerConfig configures DHCP server parameters
+func (h *DHCPHandler) SetServerConfig(serverIP, gateway net.IP, dnsServers []net.IP, domain string) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	h.serverIP = serverIP
+	h.gateway = gateway
+	h.dnsServers = dnsServers
+	h.domainName = domain
+}
+
+// SetAdvancedOptions configures advanced DHCP options
+func (h *DHCPHandler) SetAdvancedOptions(ntpServers []net.IP, domainSearch []string, tftpServer, bootfile string, vendorInfo []byte) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	h.ntpServers = ntpServers
+	h.domainSearch = domainSearch
+	h.tftpServerName = tftpServer
+	h.bootfileName = bootfile
+	h.vendorSpecificInfo = vendorInfo
+}
+
+// generateIPPool creates a list of available IPs
+func (h *DHCPHandler) generateIPPool(start, end net.IP) []net.IP {
+	pool := make([]net.IP, 0)
+
+	startInt := binary.BigEndian.Uint32(start.To4())
+	endInt := binary.BigEndian.Uint32(end.To4())
+
+	for i := startInt; i <= endInt; i++ {
+		ip := make(net.IP, 4)
+		binary.BigEndian.PutUint32(ip, i)
+		pool = append(pool, ip)
+	}
+
+	return pool
+}
+
+// findAvailableIP finds an available IP address
+func (h *DHCPHandler) findAvailableIP() net.IP {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
+	// Check each IP in pool
+	for _, ip := range h.ipPool {
+		inUse := false
+		for _, lease := range h.leases {
+			if lease.IP.Equal(ip) && time.Now().Before(lease.Expiry) {
+				inUse = true
+				break
+			}
+		}
+		if !inUse {
+			return ip
+		}
+	}
+
+	return nil
+}
+
+// allocateLease allocates or renews a lease
+func (h *DHCPHandler) allocateLease(mac net.HardwareAddr, requestedIP net.IP, hostname string) (*DHCPLease, error) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	macStr := mac.String()
+
+	// Check if client already has a lease
+	if existing, ok := h.leases[macStr]; ok {
+		// Renew existing lease
+		existing.Expiry = time.Now().Add(DefaultLeaseTime)
+		// Update hostname if provided
+		if hostname != "" {
+			existing.Hostname = hostname
+		}
+		return existing, nil
+	}
+
+	// Find available IP
+	var ip net.IP
+	if requestedIP != nil && h.isIPInPool(requestedIP) && !h.isIPLeased(requestedIP) {
+		ip = requestedIP
+	} else {
+		ip = h.findAvailableIP()
+	}
+
+	if ip == nil {
+		return nil, fmt.Errorf("no available IP addresses")
+	}
+
+	// Create new lease
+	lease := &DHCPLease{
+		IP:        ip,
+		MAC:       mac,
+		Hostname:  hostname,
+		Expiry:    time.Now().Add(DefaultLeaseTime),
+		LeaseTime: DefaultLeaseTime,
+	}
+
+	h.leases[macStr] = lease
+	return lease, nil
+}
+
+// isIPInPool checks if IP is in the pool
+func (h *DHCPHandler) isIPInPool(ip net.IP) bool {
+	for _, poolIP := range h.ipPool {
+		if poolIP.Equal(ip) {
+			return true
+		}
+	}
+	return false
+}
+
+// isIPLeased checks if IP is currently leased
+func (h *DHCPHandler) isIPLeased(ip net.IP) bool {
+	for _, lease := range h.leases {
+		if lease.IP.Equal(ip) && time.Now().Before(lease.Expiry) {
+			return true
+		}
+	}
+	return false
 }
 
 // HandlePacket processes a DHCP packet
@@ -68,38 +244,115 @@ func (h *DHCPHandler) HandlePacket(pkt *Packet, ipLayer *layers.IPv4, udpLayer *
 			msgTypeStr, ipLayer.SrcIP, dhcp.ClientHWAddr, dhcp.Xid, pkt.SerialNumber)
 	}
 
-	// Handle based on message type
-	switch messageType {
-	case DHCPDiscover:
-		// TODO: Implement DHCP Discover -> Offer
-		if debugLevel >= 2 {
-			fmt.Printf("DHCP Discover handling not yet fully implemented sn=%d\n", pkt.SerialNumber)
-		}
-	case DHCPRequest:
-		// TODO: Implement DHCP Request -> Ack
-		if debugLevel >= 2 {
-			fmt.Printf("DHCP Request handling not yet fully implemented sn=%d\n", pkt.SerialNumber)
-		}
-	case DHCPRelease:
-		if debugLevel >= 3 {
-			fmt.Printf("DHCP Release received sn=%d\n", pkt.SerialNumber)
-		}
-	case DHCPInform:
-		if debugLevel >= 3 {
-			fmt.Printf("DHCP Inform received sn=%d\n", pkt.SerialNumber)
-		}
-	default:
-		if debugLevel >= 2 {
-			fmt.Printf("Unhandled DHCP message type %d sn=%d\n", messageType, pkt.SerialNumber)
+	// Get source device (DHCP server)
+	var serverDevice *config.Device
+	for _, dev := range devices {
+		if len(dev.IPAddresses) > 0 {
+			serverDevice = dev
+			break
 		}
 	}
 
-	// TODO: Full DHCP implementation would include:
-	// 1. IP address pool management
-	// 2. Lease tracking
-	// 3. DHCP Offer generation
-	// 4. DHCP Ack/Nak generation
-	// 5. Option handling (subnet, gateway, DNS, etc.)
+	if serverDevice == nil {
+		if debugLevel >= 2 {
+			fmt.Printf("DHCP: No server device configured sn=%d\n", pkt.SerialNumber)
+		}
+		return
+	}
+
+	// Extract hostname from options if present (Option 12)
+	var hostname string
+	for _, opt := range dhcp.Options {
+		if opt.Type == layers.DHCPOptHostname && len(opt.Data) > 0 {
+			hostname = string(opt.Data)
+			break
+		}
+	}
+
+	// Handle based on message type
+	switch messageType {
+	case DHCPDiscover:
+		// Handle DHCP Discover -> send Offer
+		if debugLevel >= 2 {
+			fmt.Printf("DHCP: Processing Discover from %s sn=%d\n", dhcp.ClientHWAddr, pkt.SerialNumber)
+		}
+
+		// Allocate IP for client
+		lease, err := h.allocateLease(dhcp.ClientHWAddr, nil, hostname)
+		if err != nil {
+			if debugLevel >= 1 {
+				fmt.Printf("DHCP: Failed to allocate IP: %v sn=%d\n", err, pkt.SerialNumber)
+			}
+			return
+		}
+
+		// Send DHCP Offer
+		if err := h.SendDHCPOffer(dhcp.Xid, dhcp.ClientHWAddr, lease.IP, serverDevice.IPAddresses[0], serverDevice.MACAddress); err != nil {
+			if debugLevel >= 1 {
+				fmt.Printf("DHCP: Failed to send Offer: %v sn=%d\n", err, pkt.SerialNumber)
+			}
+		} else {
+			h.stack.IncrementStat("dhcp_offers")
+			if debugLevel >= 2 {
+				fmt.Printf("DHCP: Sent Offer IP=%s to %s sn=%d\n", lease.IP, dhcp.ClientHWAddr, pkt.SerialNumber)
+			}
+		}
+
+	case DHCPRequest:
+		// Handle DHCP Request -> send Ack
+		if debugLevel >= 2 {
+			fmt.Printf("DHCP: Processing Request from %s sn=%d\n", dhcp.ClientHWAddr, pkt.SerialNumber)
+		}
+
+		// Get requested IP from options
+		var requestedIP net.IP
+		for _, opt := range dhcp.Options {
+			if opt.Type == layers.DHCPOptRequestIP && len(opt.Data) == 4 {
+				requestedIP = net.IP(opt.Data)
+				break
+			}
+		}
+
+		// Allocate/confirm lease
+		lease, err := h.allocateLease(dhcp.ClientHWAddr, requestedIP, hostname)
+		if err != nil {
+			if debugLevel >= 1 {
+				fmt.Printf("DHCP: Failed to confirm lease: %v sn=%d\n", err, pkt.SerialNumber)
+			}
+			return
+		}
+
+		// Send DHCP Ack
+		if err := h.SendDHCPAck(dhcp.Xid, dhcp.ClientHWAddr, lease.IP, serverDevice.IPAddresses[0], serverDevice.MACAddress); err != nil {
+			if debugLevel >= 1 {
+				fmt.Printf("DHCP: Failed to send Ack: %v sn=%d\n", err, pkt.SerialNumber)
+			}
+		} else {
+			h.stack.IncrementStat("dhcp_acks")
+			if debugLevel >= 2 {
+				fmt.Printf("DHCP: Sent Ack IP=%s to %s sn=%d\n", lease.IP, dhcp.ClientHWAddr, pkt.SerialNumber)
+			}
+		}
+
+	case DHCPRelease:
+		if debugLevel >= 2 {
+			fmt.Printf("DHCP: Release from %s sn=%d\n", dhcp.ClientHWAddr, pkt.SerialNumber)
+		}
+		// Remove lease
+		h.mu.Lock()
+		delete(h.leases, dhcp.ClientHWAddr.String())
+		h.mu.Unlock()
+
+	case DHCPInform:
+		if debugLevel >= 3 {
+			fmt.Printf("DHCP: Inform from %s sn=%d\n", dhcp.ClientHWAddr, pkt.SerialNumber)
+		}
+
+	default:
+		if debugLevel >= 2 {
+			fmt.Printf("DHCP: Unhandled message type %d sn=%d\n", messageType, pkt.SerialNumber)
+		}
+	}
 }
 
 // dhcpMessageTypeString returns string representation of DHCP message type
@@ -127,28 +380,263 @@ func (h *DHCPHandler) dhcpMessageTypeString(msgType uint8) string {
 }
 
 // SendDHCPOffer sends a DHCP Offer message
-func (h *DHCPHandler) SendDHCPOffer(xid uint32, clientMAC []byte, offeredIP, serverIP []byte) error {
-	// TODO: Implement DHCP Offer packet construction
-	// Would include:
-	// - DHCP header with offer details
-	// - Options: subnet mask, router, DNS, lease time, etc.
-	// - Broadcast to 255.255.255.255 or unicast to client
-
-	if h.stack.GetDebugLevel() >= 2 {
-		fmt.Println("DHCP Offer generation not yet implemented")
-	}
-
-	return fmt.Errorf("not yet implemented")
+func (h *DHCPHandler) SendDHCPOffer(xid uint32, clientMAC net.HardwareAddr, offeredIP, serverIP net.IP, serverMAC net.HardwareAddr) error {
+	return h.sendDHCPResponse(xid, clientMAC, offeredIP, serverIP, serverMAC, DHCPOffer)
 }
 
 // SendDHCPAck sends a DHCP Ack message
-func (h *DHCPHandler) SendDHCPAck(xid uint32, clientMAC []byte, assignedIP, serverIP []byte) error {
-	// TODO: Implement DHCP Ack packet construction
-	// Similar to Offer but confirms the lease
+func (h *DHCPHandler) SendDHCPAck(xid uint32, clientMAC net.HardwareAddr, assignedIP, serverIP net.IP, serverMAC net.HardwareAddr) error {
+	return h.sendDHCPResponse(xid, clientMAC, assignedIP, serverIP, serverMAC, DHCPAck)
+}
 
-	if h.stack.GetDebugLevel() >= 2 {
-		fmt.Println("DHCP Ack generation not yet implemented")
+// sendDHCPResponse sends a DHCP Offer or Ack response
+func (h *DHCPHandler) sendDHCPResponse(xid uint32, clientMAC net.HardwareAddr, assignedIP, serverIP net.IP, serverMAC net.HardwareAddr, msgType uint8) error {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
+	// Build DHCP layer
+	dhcp := &layers.DHCPv4{
+		Operation:    layers.DHCPOpReply,
+		HardwareType: layers.LinkTypeEthernet,
+		HardwareLen:  6,
+		HardwareOpts: 0,
+		Xid:          xid,
+		Secs:         0,
+		Flags:        0x8000, // Broadcast flag
+		ClientIP:     net.IPv4zero,
+		YourClientIP: assignedIP,
+		NextServerIP: net.IPv4zero,
+		RelayAgentIP: net.IPv4zero,
+		ClientHWAddr: clientMAC,
 	}
 
-	return fmt.Errorf("not yet implemented")
+	// Build DHCP options
+	options := []layers.DHCPOption{
+		{
+			Type:   layers.DHCPOptMessageType,
+			Length: 1,
+			Data:   []byte{msgType},
+		},
+		{
+			Type:   layers.DHCPOptServerID,
+			Length: 4,
+			Data:   []byte(serverIP.To4()),
+		},
+		{
+			Type:   layers.DHCPOptLeaseTime,
+			Length: 4,
+			Data:   h.encodeUint32(uint32(DefaultLeaseTime.Seconds())),
+		},
+		{
+			Type:   layers.DHCPOptSubnetMask,
+			Length: 4,
+			Data:   []byte(h.subnetMask.To4()),
+		},
+	}
+
+	// Add router/gateway if configured
+	if h.gateway != nil {
+		options = append(options, layers.DHCPOption{
+			Type:   layers.DHCPOptRouter,
+			Length: 4,
+			Data:   []byte(h.gateway.To4()),
+		})
+	}
+
+	// Add DNS servers if configured
+	if len(h.dnsServers) > 0 {
+		dnsData := make([]byte, 0, len(h.dnsServers)*4)
+		for _, dns := range h.dnsServers {
+			dnsData = append(dnsData, []byte(dns.To4())...)
+		}
+		options = append(options, layers.DHCPOption{
+			Type:   layers.DHCPOptDNS,
+			Length: uint8(len(dnsData)),
+			Data:   dnsData,
+		})
+	}
+
+	// Add domain name if configured
+	if h.domainName != "" {
+		options = append(options, layers.DHCPOption{
+			Type:   layers.DHCPOptDomainName,
+			Length: uint8(len(h.domainName)),
+			Data:   []byte(h.domainName),
+		})
+	}
+
+	// Add renewal time (T1) - 50% of lease time
+	options = append(options, layers.DHCPOption{
+		Type:   layers.DHCPOptT1,
+		Length: 4,
+		Data:   h.encodeUint32(uint32(DefaultLeaseTime.Seconds() / 2)),
+	})
+
+	// Add rebinding time (T2) - 87.5% of lease time
+	options = append(options, layers.DHCPOption{
+		Type:   layers.DHCPOptT2,
+		Length: 4,
+		Data:   h.encodeUint32(uint32(DefaultLeaseTime.Seconds() * 7 / 8)),
+	})
+
+	// Add NTP servers if configured (Option 42)
+	if len(h.ntpServers) > 0 {
+		ntpData := make([]byte, 0, len(h.ntpServers)*4)
+		for _, ntp := range h.ntpServers {
+			ntpData = append(ntpData, []byte(ntp.To4())...)
+		}
+		options = append(options, layers.DHCPOption{
+			Type:   DHCPOptNTP,
+			Length: uint8(len(ntpData)),
+			Data:   ntpData,
+		})
+	}
+
+	// Add TFTP server name if configured (Option 66)
+	if h.tftpServerName != "" {
+		options = append(options, layers.DHCPOption{
+			Type:   DHCPOptTFTPServer,
+			Length: uint8(len(h.tftpServerName)),
+			Data:   []byte(h.tftpServerName),
+		})
+	}
+
+	// Add bootfile name if configured (Option 67)
+	if h.bootfileName != "" {
+		options = append(options, layers.DHCPOption{
+			Type:   DHCPOptBootfileName,
+			Length: uint8(len(h.bootfileName)),
+			Data:   []byte(h.bootfileName),
+		})
+	}
+
+	// Add domain search list if configured (Option 119)
+	if len(h.domainSearch) > 0 {
+		searchData := h.encodeDomainSearchList(h.domainSearch)
+		options = append(options, layers.DHCPOption{
+			Type:   DHCPOptDomainSearch,
+			Length: uint8(len(searchData)),
+			Data:   searchData,
+		})
+	}
+
+	// Add vendor-specific information if configured (Option 43)
+	if len(h.vendorSpecificInfo) > 0 {
+		options = append(options, layers.DHCPOption{
+			Type:   layers.DHCPOptVendorOption,
+			Length: uint8(len(h.vendorSpecificInfo)),
+			Data:   h.vendorSpecificInfo,
+		})
+	}
+
+	// Add hostname from lease if available (Option 12)
+	if lease, ok := h.leases[clientMAC.String()]; ok && lease.Hostname != "" {
+		options = append(options, layers.DHCPOption{
+			Type:   layers.DHCPOptHostname,
+			Length: uint8(len(lease.Hostname)),
+			Data:   []byte(lease.Hostname),
+		})
+	}
+
+	// End option
+	options = append(options, layers.DHCPOption{
+		Type: layers.DHCPOptEnd,
+	})
+
+	dhcp.Options = options
+
+	// Build UDP layer
+	udp := &layers.UDP{
+		SrcPort: 67, // DHCP server port
+		DstPort: 68, // DHCP client port
+	}
+
+	// Build IP layer
+	ip := &layers.IPv4{
+		Version:  4,
+		TTL:      64,
+		Protocol: layers.IPProtocolUDP,
+		SrcIP:    serverIP,
+		DstIP:    net.IPv4bcast, // Broadcast
+	}
+
+	// Build Ethernet layer
+	eth := &layers.Ethernet{
+		SrcMAC:       serverMAC,
+		DstMAC:       net.HardwareAddr{0xff, 0xff, 0xff, 0xff, 0xff, 0xff}, // Broadcast
+		EthernetType: layers.EthernetTypeIPv4,
+	}
+
+	// Serialize packet
+	buf := gopacket.NewSerializeBuffer()
+	opts := gopacket.SerializeOptions{
+		ComputeChecksums: true,
+		FixLengths:       true,
+	}
+
+	udp.SetNetworkLayerForChecksum(ip)
+
+	if err := gopacket.SerializeLayers(buf, opts, eth, ip, udp, dhcp); err != nil {
+		return fmt.Errorf("failed to serialize DHCP response: %w", err)
+	}
+
+	// Send packet
+	return h.stack.SendRawPacket(buf.Bytes())
+}
+
+// encodeUint32 encodes a uint32 as big-endian bytes
+func (h *DHCPHandler) encodeUint32(val uint32) []byte {
+	b := make([]byte, 4)
+	binary.BigEndian.PutUint32(b, val)
+	return b
+}
+
+// encodeDomainSearchList encodes a domain search list in DNS label format (RFC 1035)
+// Used for DHCP Option 119 (Domain Search)
+func (h *DHCPHandler) encodeDomainSearchList(domains []string) []byte {
+	var result []byte
+
+	for _, domain := range domains {
+		// Split domain into labels (e.g., "example.com" -> ["example", "com"])
+		labels := []byte{}
+		for _, label := range splitDomain(domain) {
+			if len(label) == 0 || len(label) > 63 {
+				continue // Invalid label
+			}
+			// Add label length byte followed by label bytes
+			labels = append(labels, byte(len(label)))
+			labels = append(labels, []byte(label)...)
+		}
+		// Add null terminator (0x00)
+		labels = append(labels, 0)
+		result = append(result, labels...)
+	}
+
+	return result
+}
+
+// splitDomain splits a domain name into labels
+func splitDomain(domain string) []string {
+	if domain == "" {
+		return nil
+	}
+	// Remove trailing dot if present
+	if domain[len(domain)-1] == '.' {
+		domain = domain[:len(domain)-1]
+	}
+	labels := []string{}
+	start := 0
+	for i := 0; i < len(domain); i++ {
+		if domain[i] == '.' {
+			if i > start {
+				labels = append(labels, domain[start:i])
+			}
+			start = i + 1
+		}
+	}
+	// Add last label
+	if start < len(domain) {
+		labels = append(labels, domain[start:])
+	}
+	return labels
 }

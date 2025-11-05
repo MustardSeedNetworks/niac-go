@@ -7,10 +7,108 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Future (v1.3.0+)
+### Future (v1.5.0+)
 - Per-protocol debug level control
 - Color-coded debug output
 - Additional traffic patterns
+- IPv6 as primary device address
+- Multiple IPs per device
+- DHCPv6 prefix delegation (IA_PD)
+- HTTP/FTP server config in YAML
+- SNMP trap generation
+- NetFlow/IPFIX export
+
+## [1.4.0] - 2025-01-05
+
+### 🎉 MILESTONE: Complete DHCP/DNS Implementation!
+
+Full-featured DHCP and DNS servers with comprehensive option support.
+
+### Added
+- **Complete DHCPv4 Implementation (15 options)**:
+  - Basic options: Subnet Mask (1), Router (3), DNS Servers (6), Domain Name (15)
+  - Lease management: Lease Time (51), T1 Renewal (58), T2 Rebinding (59)
+  - Server identification: Server Identifier (54), Message Type (53)
+  - **New High Priority Options**:
+    - Hostname (Option 12) - Automatic capture and echo from client requests
+    - NTP Servers (Option 42) - Time synchronization
+    - Domain Search List (Option 119) - Multiple DNS search domains with RFC 1035 encoding
+    - TFTP Server Name (Option 66) - PXE boot support
+    - Bootfile Name (Option 67) - Boot image filename for PXE
+    - Vendor-Specific Info (Option 43) - Custom vendor data
+  - Static DHCP leases with MAC address masks for wildcard matching
+  - Configurable via YAML with full end-to-end integration
+
+- **Complete DHCPv6 Implementation (12 options)**:
+  - Basic options: Client/Server ID (DUID), IA_NA, IA_Addr, Preference
+  - DNS: DNS Servers (23), Domain Search List (24)
+  - **New High Priority Options**:
+    - SNTP Servers (Option 31) - Simple time synchronization
+    - NTP Servers (Option 56) - Full NTP configuration
+    - SIP Server Addresses (Option 22) - VoIP IPv6 addresses
+    - SIP Domain Names (Option 21) - VoIP domain names
+    - FQDN (Option 39) - Client fully qualified domain name
+  - Configurable via YAML with full end-to-end integration
+
+- **DNS Server Implementation**:
+  - Forward DNS records (A records) - hostname → IPv4
+  - Reverse DNS records (PTR records) - IPv4 → hostname
+  - Configurable TTL per record
+  - Multiple records per device
+  - Full YAML configuration support
+
+- **Complete YAML Configuration Support**:
+  - All DHCP options loadable from YAML configuration files
+  - DNS records configurable in device YAML
+  - End-to-end integration: YAML → config parser → runtime → protocol handlers
+  - Example configuration: `examples/scenario_configs/complete-reference.yaml`
+  - Comprehensive documentation: `examples/scenario_configs/README-complete-reference.md`
+
+- **Example Configuration with 12 Device Types**:
+  - Core Router (Cisco 2821) with full DHCP/DNS/SNMP
+  - Distribution Switch (Cisco Catalyst 3750)
+  - Access Switch (Cisco 2960)
+  - Wireless AP (Cisco Aironet)
+  - Linux Server (Ubuntu)
+  - Juniper Router (multi-vendor support)
+  - NetGear Switch (SMB device)
+  - VoIP Phone (Cisco IP Phone)
+  - Network Printer (HP LaserJet)
+  - NAS Storage (Synology DiskStation)
+  - Security Camera (Axis)
+  - Dual-Stack Server (IPv4/IPv6)
+
+### Changed
+- DHCP handler now supports advanced option configuration via `SetAdvancedOptions()`
+- DHCPv6 handler now supports advanced option configuration via `SetAdvancedOptions()`
+- DNS handler now supports dynamic record addition via `AddRecord()`
+- Config loader enhanced with complete DHCP/DNS parsing (lines 374-496 in config.go)
+- Main entry point now configures all handlers from YAML (lines 390-440 in main.go)
+
+### Technical Details
+- Added DHCPConfig and DNSConfig structs to runtime configuration
+- Implemented RFC 1035 DNS label encoding for domain search lists
+- Added accessor methods to Stack for protocol handler configuration
+- Hostname automatically captured from DHCP requests and echoed in responses
+- Vendor-specific data stored as hex strings in YAML, converted to bytes at runtime
+
+### Documentation
+- Created comprehensive reference YAML (658 lines) with all features
+- Added complete feature documentation with examples and troubleshooting
+- Updated all documentation files to proper locations
+- Organized planning documents in docs/ folder
+
+## [1.3.0] - 2025-01-05
+
+### Added
+- **Discovery Protocol Support (4 protocols)**:
+  - LLDP (Link Layer Discovery Protocol) - IEEE 802.1AB
+  - CDP (Cisco Discovery Protocol)
+  - EDP (Extreme Discovery Protocol)
+  - FDP (Foundry Discovery Protocol)
+  - All protocols configurable via YAML
+  - Periodic advertisement transmission
+  - Neighbor discovery and tracking
 
 ## [1.2.0] - 2025-01-05
 
@@ -179,7 +277,9 @@ All 13 network protocols now fully implemented - complete feature parity with Ja
 - Compatible with all Java NIAC configuration files and SNMP walk files
 - Modern architecture using Go idioms (goroutines, channels, clean packages)
 
-[Unreleased]: https://github.com/krisarmstrong/niac-go/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/krisarmstrong/niac-go/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/krisarmstrong/niac-go/compare/v1.3.0...v1.4.0
+[1.3.0]: https://github.com/krisarmstrong/niac-go/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/krisarmstrong/niac-go/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/krisarmstrong/niac-go/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/krisarmstrong/niac-go/releases/tag/v1.0.0

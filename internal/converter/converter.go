@@ -13,10 +13,10 @@ import (
 
 // Config represents the YAML configuration structure
 type Config struct {
-	IncludePath       string              `yaml:"include_path,omitempty"`
-	CapturePlayback   *CapturePlayback    `yaml:"capture_playback,omitempty"`
+	IncludePath        string              `yaml:"include_path,omitempty"`
+	CapturePlaybacks   []CapturePlayback   `yaml:"capture_playbacks,omitempty"` // Changed to array
 	DiscoveryProtocols *DiscoveryProtocols `yaml:"discovery_protocols,omitempty"`
-	Devices           []Device            `yaml:"devices"`
+	Devices            []Device            `yaml:"devices"`
 }
 
 // DiscoveryProtocols configures discovery protocol behavior
@@ -42,11 +42,13 @@ type CapturePlayback struct {
 
 // Device represents a network device
 type Device struct {
-	Name      string     `yaml:"name,omitempty"`
-	MAC       string     `yaml:"mac"`
-	IP        string     `yaml:"ip"`
-	VLAN      int        `yaml:"vlan,omitempty"`
-	SnmpAgent *SnmpAgent `yaml:"snmp_agent,omitempty"`
+	Name      string      `yaml:"name,omitempty"`
+	MAC       string      `yaml:"mac"`
+	IP        string      `yaml:"ip"`
+	VLAN      int         `yaml:"vlan,omitempty"`
+	SnmpAgent *SnmpAgent  `yaml:"snmp_agent,omitempty"`
+	Dhcp      *DhcpServer `yaml:"dhcp,omitempty"`
+	Dns       *DnsServer  `yaml:"dns,omitempty"`
 }
 
 // SnmpAgent represents SNMP agent configuration
@@ -60,6 +62,47 @@ type AddMib struct {
 	OID   string `yaml:"oid"`
 	Type  string `yaml:"type"`
 	Value string `yaml:"value"`
+}
+
+// DhcpServer represents DHCP server configuration
+type DhcpServer struct {
+	ClientLeases      []DhcpLease `yaml:"client_leases,omitempty"`
+	SubnetMask        string      `yaml:"subnet_mask,omitempty"`
+	Router            string      `yaml:"router,omitempty"`
+	DomainNameServer  string      `yaml:"domain_name_server,omitempty"`
+	NextServerIP      string      `yaml:"next_server_ip,omitempty"`
+	ServerIdentifier  string      `yaml:"server_identifier,omitempty"`
+	// DHCPv4 high priority options
+	NTPServers        []string    `yaml:"ntp_servers,omitempty"`         // Option 42
+	DomainSearch      []string    `yaml:"domain_search,omitempty"`       // Option 119
+	TFTPServerName    string      `yaml:"tftp_server_name,omitempty"`    // Option 66
+	BootfileName      string      `yaml:"bootfile_name,omitempty"`       // Option 67
+	VendorSpecific    string      `yaml:"vendor_specific,omitempty"`     // Option 43 (hex string)
+	// DHCPv6 options
+	SNTPServersV6     []string    `yaml:"sntp_servers_v6,omitempty"`     // Option 31
+	NTPServersV6      []string    `yaml:"ntp_servers_v6,omitempty"`      // Option 56
+	SIPServersV6      []string    `yaml:"sip_servers_v6,omitempty"`      // Option 22
+	SIPDomainsV6      []string    `yaml:"sip_domains_v6,omitempty"`      // Option 21
+}
+
+// DhcpLease represents a DHCP client lease
+type DhcpLease struct {
+	ClientIP     string `yaml:"client_ip"`
+	MacAddrValue string `yaml:"mac_addr_value,omitempty"`
+	MacAddrMask  string `yaml:"mac_addr_mask,omitempty"`
+}
+
+// DnsServer represents DNS server configuration
+type DnsServer struct {
+	ForwardRecords []DnsRecord `yaml:"forward_records,omitempty"`
+	ReverseRecords []DnsRecord `yaml:"reverse_records,omitempty"`
+}
+
+// DnsRecord represents a DNS A or PTR record
+type DnsRecord struct {
+	Name string `yaml:"name"`
+	IP   string `yaml:"ip"`
+	TTL  int    `yaml:"ttl,omitempty"`
 }
 
 // Parser handles parsing Java DSL format
@@ -131,7 +174,7 @@ func (p *Parser) Parse() (*Config, error) {
 			if err != nil {
 				return nil, err
 			}
-			config.CapturePlayback = playback
+			config.CapturePlaybacks = append(config.CapturePlaybacks, *playback)
 			continue
 		}
 
@@ -212,6 +255,20 @@ func (p *Parser) parseDevice(deviceNum int) (*Device, error) {
 			}
 			device.SnmpAgent = agent
 			continue
+		} else if strings.HasPrefix(line, "Dhcp(") {
+			dhcp, err := p.parseDhcp()
+			if err != nil {
+				return nil, err
+			}
+			device.Dhcp = dhcp
+			continue
+		} else if strings.HasPrefix(line, "Dns(") {
+			dns, err := p.parseDns()
+			if err != nil {
+				return nil, err
+			}
+			device.Dns = dns
+			continue
 		}
 
 		p.pos++
@@ -272,6 +329,162 @@ func (p *Parser) parseAddMib(line string) *AddMib {
 	}
 }
 
+// parseDhcp parses a Dhcp block
+func (p *Parser) parseDhcp() (*DhcpServer, error) {
+	p.pos++ // Skip opening line
+	dhcp := &DhcpServer{
+		ClientLeases: make([]DhcpLease, 0),
+	}
+
+	var currentLease *DhcpLease
+
+	for p.pos < len(p.lines) {
+		line := strings.TrimSpace(p.lines[p.pos])
+
+		if line == ")" {
+			// Save current lease if exists
+			if currentLease != nil {
+				dhcp.ClientLeases = append(dhcp.ClientLeases, *currentLease)
+			}
+			p.pos++
+			break
+		}
+
+		// Skip comments
+		if strings.HasPrefix(line, "//") || strings.HasPrefix(line, "#") {
+			p.pos++
+			continue
+		}
+
+		if strings.HasPrefix(line, "YourClientIpAddr") {
+			// Handle multiline format: YourClientIpAddr(10.250.1.138
+			// where the IP is on the same line but closing paren is on a later line
+			ip := p.extractValue(line)
+			if ip == "" {
+				// No closing paren on same line, extract everything after (
+				start := strings.Index(line, "(")
+				if start != -1 {
+					ip = strings.TrimSpace(line[start+1:])
+				}
+			}
+			currentLease = &DhcpLease{ClientIP: ip}
+		} else if strings.HasPrefix(line, "MacAddrValue") {
+			if currentLease != nil {
+				currentLease.MacAddrValue = p.formatMAC(p.extractValue(line))
+			}
+		} else if strings.HasPrefix(line, "MacAddrMask") {
+			if currentLease != nil {
+				currentLease.MacAddrMask = p.formatMAC(p.extractValue(line))
+			}
+			// End of this lease, save it
+			if currentLease != nil {
+				dhcp.ClientLeases = append(dhcp.ClientLeases, *currentLease)
+				currentLease = nil
+			}
+			// Skip the closing paren of YourClientIpAddr block on next line
+			p.pos++
+			if p.pos < len(p.lines) && strings.TrimSpace(p.lines[p.pos]) == ")" {
+				p.pos++ // Skip the closing paren
+			}
+			continue // Continue to next iteration without incrementing again
+		} else if strings.HasPrefix(line, "SubnetMask") {
+			dhcp.SubnetMask = p.extractValue(line)
+		} else if strings.HasPrefix(line, "Router") {
+			// Extract just the IP, ignore priority number
+			value := p.extractValue(line)
+			if value != "" {
+				dhcp.Router = strings.Fields(value)[0]
+			}
+		} else if strings.HasPrefix(line, "DomainNameServer") {
+			dhcp.DomainNameServer = p.extractValue(line)
+		} else if strings.HasPrefix(line, "NextServerIpAddr") {
+			dhcp.NextServerIP = p.extractValue(line)
+		} else if strings.HasPrefix(line, "ServerIdentifier") {
+			dhcp.ServerIdentifier = p.extractValue(line)
+		}
+
+		p.pos++
+	}
+
+	return dhcp, nil
+}
+
+// parseDns parses a Dns block
+func (p *Parser) parseDns() (*DnsServer, error) {
+	p.pos++ // Skip opening line
+	dns := &DnsServer{
+		ForwardRecords: make([]DnsRecord, 0),
+		ReverseRecords: make([]DnsRecord, 0),
+	}
+
+	for p.pos < len(p.lines) {
+		line := strings.TrimSpace(p.lines[p.pos])
+
+		if line == ")" {
+			p.pos++
+			break
+		}
+
+		// Skip comments
+		if strings.HasPrefix(line, "//") || strings.HasPrefix(line, "#") {
+			p.pos++
+			continue
+		}
+
+		if strings.HasPrefix(line, "Forward(") {
+			record := p.parseDnsRecord(line, true)
+			if record != nil {
+				dns.ForwardRecords = append(dns.ForwardRecords, *record)
+			}
+		} else if strings.HasPrefix(line, "Reverse(") {
+			record := p.parseDnsRecord(line, false)
+			if record != nil {
+				dns.ReverseRecords = append(dns.ReverseRecords, *record)
+			}
+		}
+
+		p.pos++
+	}
+
+	return dns, nil
+}
+
+// parseDnsRecord parses a Forward() or Reverse() DNS record
+func (p *Parser) parseDnsRecord(line string, isForward bool) *DnsRecord {
+	// Forward("hostname" IP TTL)
+	// Reverse(IP "hostname" TTL)
+	re := regexp.MustCompile(`\((.*?)\)`)
+	match := re.FindStringSubmatch(line)
+	if len(match) < 2 {
+		return nil
+	}
+
+	parts := strings.Fields(match[1])
+	if len(parts) < 2 {
+		return nil
+	}
+
+	record := &DnsRecord{}
+
+	if isForward {
+		// Forward("hostname" IP TTL)
+		record.Name = strings.Trim(parts[0], "\"")
+		record.IP = parts[1]
+		if len(parts) >= 3 {
+			fmt.Sscanf(parts[2], "%d", &record.TTL)
+		}
+	} else {
+		// Reverse(IP "hostname" TTL)
+		record.IP = parts[0]
+		record.Name = strings.Trim(parts[1], "\"")
+		if len(parts) >= 3 {
+			fmt.Sscanf(parts[2], "%d", &record.TTL)
+		}
+	}
+
+	return record
+}
+
 // extractString extracts a quoted string from a directive
 func (p *Parser) extractString(line string) string {
 	start := strings.Index(line, "\"")
@@ -329,17 +542,10 @@ func ValidateConfig(config *Config) error {
 		if device.MAC == "" {
 			return fmt.Errorf("device %d missing MAC address", i)
 		}
-		if device.IP == "" {
-			return fmt.Errorf("device %d missing IP address", i)
-		}
+		// IP address is optional in Java configs (some devices don't have IPs)
 
-		// If SNMP agent specified, validate it
-		if device.SnmpAgent != nil {
-			// Must have either walk file or add mibs
-			if device.SnmpAgent.WalkFile == "" && len(device.SnmpAgent.AddMibs) == 0 {
-				return fmt.Errorf("device %d SNMP agent has no walk file or MIBs", i)
-			}
-
+		// If SNMP agent specified, validate it (empty SNMP agents are allowed)
+		if device.SnmpAgent != nil && len(device.SnmpAgent.AddMibs) > 0 {
 			// Validate AddMibs have required fields
 			for j, mib := range device.SnmpAgent.AddMibs {
 				if mib.OID == "" {
@@ -352,10 +558,10 @@ func ValidateConfig(config *Config) error {
 		}
 	}
 
-	// If capture playback specified, validate it
-	if config.CapturePlayback != nil {
-		if config.CapturePlayback.FileName == "" {
-			return fmt.Errorf("CapturePlayback missing file name")
+	// If capture playbacks specified, validate them
+	for i, playback := range config.CapturePlaybacks {
+		if playback.FileName == "" {
+			return fmt.Errorf("CapturePlayback %d missing file name", i)
 		}
 	}
 
@@ -371,13 +577,16 @@ func PrintSummary(config *Config, w *bufio.Writer) {
 		fmt.Fprintf(w, "  Include Path: %s\n", config.IncludePath)
 	}
 
-	if config.CapturePlayback != nil {
-		fmt.Fprintf(w, "  PCAP Playback: %s\n", config.CapturePlayback.FileName)
-		if config.CapturePlayback.LoopTime > 0 {
-			fmt.Fprintf(w, "    Loop Time: %d ms\n", config.CapturePlayback.LoopTime)
-		}
-		if config.CapturePlayback.ScaleTime > 0 {
-			fmt.Fprintf(w, "    Scale Time: %.2f\n", config.CapturePlayback.ScaleTime)
+	if len(config.CapturePlaybacks) > 0 {
+		fmt.Fprintf(w, "  PCAP Playbacks: %d\n", len(config.CapturePlaybacks))
+		for i, playback := range config.CapturePlaybacks {
+			fmt.Fprintf(w, "    [%d] %s\n", i+1, playback.FileName)
+			if playback.LoopTime > 0 {
+				fmt.Fprintf(w, "        Loop Time: %d ms\n", playback.LoopTime)
+			}
+			if playback.ScaleTime > 0 {
+				fmt.Fprintf(w, "        Scale Time: %.2f\n", playback.ScaleTime)
+			}
 		}
 	}
 

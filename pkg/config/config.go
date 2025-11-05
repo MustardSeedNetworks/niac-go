@@ -49,7 +49,56 @@ type Device struct {
 	IPAddresses []net.IP
 	Interfaces  []Interface
 	SNMPConfig  SNMPConfig
+	DHCPConfig  *DHCPConfig // DHCP server configuration
+	DNSConfig   *DNSConfig  // DNS server configuration
 	Properties  map[string]string
+}
+
+// DHCPConfig holds DHCP server configuration for a device
+type DHCPConfig struct {
+	// Basic DHCPv4 options
+	SubnetMask       net.IPMask
+	Router           net.IP
+	DomainNameServer []net.IP
+	ServerIdentifier net.IP
+	NextServerIP     net.IP
+	DomainName       string
+
+	// DHCPv4 high priority options
+	NTPServers     []net.IP
+	DomainSearch   []string
+	TFTPServerName string
+	BootfileName   string
+	VendorSpecific []byte // Hex-encoded vendor-specific data
+
+	// DHCPv6 options
+	SNTPServersV6 []net.IP
+	NTPServersV6  []net.IP
+	SIPServersV6  []net.IP
+	SIPDomainsV6  []string
+
+	// Static leases
+	ClientLeases []DHCPLease
+}
+
+// DHCPLease represents a static DHCP lease assignment
+type DHCPLease struct {
+	ClientIP    net.IP
+	MACAddress  net.HardwareAddr
+	MACMask     net.HardwareAddr // For wildcard matching
+}
+
+// DNSConfig holds DNS server configuration for a device
+type DNSConfig struct {
+	ForwardRecords []DNSRecord
+	ReverseRecords []DNSRecord
+}
+
+// DNSRecord represents a DNS A or PTR record
+type DNSRecord struct {
+	Name string
+	IP   net.IP
+	TTL  uint32
 }
 
 // Interface represents a network interface on a device
@@ -225,12 +274,13 @@ func LoadYAML(filename string) (*Config, error) {
 		IncludePath: yamlConfig.IncludePath,
 	}
 
-	// Copy CapturePlayback if present
-	if yamlConfig.CapturePlayback != nil {
+	// Copy CapturePlayback if present (use first one from array for now)
+	// TODO: Support multiple PCAP playbacks in runtime
+	if len(yamlConfig.CapturePlaybacks) > 0 {
 		cfg.CapturePlayback = &CapturePlayback{
-			FileName:  yamlConfig.CapturePlayback.FileName,
-			LoopTime:  yamlConfig.CapturePlayback.LoopTime,
-			ScaleTime: yamlConfig.CapturePlayback.ScaleTime,
+			FileName:  yamlConfig.CapturePlaybacks[0].FileName,
+			LoopTime:  yamlConfig.CapturePlaybacks[0].LoopTime,
+			ScaleTime: yamlConfig.CapturePlaybacks[0].ScaleTime,
 		}
 	}
 
@@ -319,6 +369,131 @@ func LoadYAML(filename string) (*Config, error) {
 		// Store VLAN if present
 		if yamlDevice.VLAN > 0 {
 			device.Properties["vlan"] = fmt.Sprintf("%d", yamlDevice.VLAN)
+		}
+
+		// Handle DHCP configuration
+		if yamlDevice.Dhcp != nil {
+			dhcpCfg := &DHCPConfig{}
+
+			// Basic options
+			if yamlDevice.Dhcp.SubnetMask != "" {
+				if ip := net.ParseIP(yamlDevice.Dhcp.SubnetMask); ip != nil {
+					dhcpCfg.SubnetMask = net.IPMask(ip.To4())
+				}
+			}
+			if yamlDevice.Dhcp.Router != "" {
+				dhcpCfg.Router = net.ParseIP(yamlDevice.Dhcp.Router)
+			}
+			if yamlDevice.Dhcp.DomainNameServer != "" {
+				if ip := net.ParseIP(yamlDevice.Dhcp.DomainNameServer); ip != nil {
+					dhcpCfg.DomainNameServer = append(dhcpCfg.DomainNameServer, ip)
+				}
+			}
+			if yamlDevice.Dhcp.ServerIdentifier != "" {
+				dhcpCfg.ServerIdentifier = net.ParseIP(yamlDevice.Dhcp.ServerIdentifier)
+			}
+			if yamlDevice.Dhcp.NextServerIP != "" {
+				dhcpCfg.NextServerIP = net.ParseIP(yamlDevice.Dhcp.NextServerIP)
+			}
+			// Domain name is separate from domain name server
+			// Note: YAML doesn't have a separate domain_name field yet, so we'll leave this empty for now
+
+			// DHCPv4 high priority options
+			for _, ntpStr := range yamlDevice.Dhcp.NTPServers {
+				if ip := net.ParseIP(ntpStr); ip != nil {
+					dhcpCfg.NTPServers = append(dhcpCfg.NTPServers, ip)
+				}
+			}
+			dhcpCfg.DomainSearch = yamlDevice.Dhcp.DomainSearch
+			dhcpCfg.TFTPServerName = yamlDevice.Dhcp.TFTPServerName
+			dhcpCfg.BootfileName = yamlDevice.Dhcp.BootfileName
+			if yamlDevice.Dhcp.VendorSpecific != "" {
+				// Parse hex string to bytes
+				dhcpCfg.VendorSpecific = []byte(yamlDevice.Dhcp.VendorSpecific)
+			}
+
+			// DHCPv6 options
+			for _, sntpStr := range yamlDevice.Dhcp.SNTPServersV6 {
+				if ip := net.ParseIP(sntpStr); ip != nil {
+					dhcpCfg.SNTPServersV6 = append(dhcpCfg.SNTPServersV6, ip)
+				}
+			}
+			for _, ntpStr := range yamlDevice.Dhcp.NTPServersV6 {
+				if ip := net.ParseIP(ntpStr); ip != nil {
+					dhcpCfg.NTPServersV6 = append(dhcpCfg.NTPServersV6, ip)
+				}
+			}
+			for _, sipStr := range yamlDevice.Dhcp.SIPServersV6 {
+				if ip := net.ParseIP(sipStr); ip != nil {
+					dhcpCfg.SIPServersV6 = append(dhcpCfg.SIPServersV6, ip)
+				}
+			}
+			dhcpCfg.SIPDomainsV6 = yamlDevice.Dhcp.SIPDomainsV6
+
+			// Static leases
+			for _, lease := range yamlDevice.Dhcp.ClientLeases {
+				clientIP := net.ParseIP(lease.ClientIP)
+				if clientIP == nil {
+					continue
+				}
+				macAddr, err := net.ParseMAC(lease.MacAddrValue)
+				if err != nil {
+					continue
+				}
+				dhcpLease := DHCPLease{
+					ClientIP:   clientIP,
+					MACAddress: macAddr,
+				}
+				if lease.MacAddrMask != "" {
+					if mask, err := net.ParseMAC(lease.MacAddrMask); err == nil {
+						dhcpLease.MACMask = mask
+					}
+				}
+				dhcpCfg.ClientLeases = append(dhcpCfg.ClientLeases, dhcpLease)
+			}
+
+			device.DHCPConfig = dhcpCfg
+		}
+
+		// Handle DNS configuration
+		if yamlDevice.Dns != nil {
+			dnsCfg := &DNSConfig{}
+
+			// Forward records (A records)
+			for _, record := range yamlDevice.Dns.ForwardRecords {
+				ip := net.ParseIP(record.IP)
+				if ip == nil {
+					continue
+				}
+				ttl := uint32(3600) // Default TTL
+				if record.TTL > 0 {
+					ttl = uint32(record.TTL)
+				}
+				dnsCfg.ForwardRecords = append(dnsCfg.ForwardRecords, DNSRecord{
+					Name: record.Name,
+					IP:   ip,
+					TTL:  ttl,
+				})
+			}
+
+			// Reverse records (PTR records)
+			for _, record := range yamlDevice.Dns.ReverseRecords {
+				ip := net.ParseIP(record.IP)
+				if ip == nil {
+					continue
+				}
+				ttl := uint32(3600) // Default TTL
+				if record.TTL > 0 {
+					ttl = uint32(record.TTL)
+				}
+				dnsCfg.ReverseRecords = append(dnsCfg.ReverseRecords, DNSRecord{
+					Name: record.Name,
+					IP:   ip,
+					TTL:  ttl,
+				})
+			}
+
+			device.DNSConfig = dnsCfg
 		}
 
 		cfg.Devices = append(cfg.Devices, device)

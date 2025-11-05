@@ -178,6 +178,9 @@ func (h *UDPHandler) HandlePacketV6(pkt *Packet, packet gopacket.Packet, ipv6 *l
 		if debugLevel >= 2 {
 			fmt.Printf("SNMP/IPv6 query received (not yet implemented) sn=%d\n", pkt.SerialNumber)
 		}
+	case 547:
+		// DHCPv6 server port
+		h.stack.dhcpv6Handler.HandlePacket(pkt, ipv6, udp, devices)
 	case NetBIOSNameServicePort:
 		// NetBIOS Name Service over IPv6
 		h.stack.netbiosHandler.HandleNameService(pkt, packet, udp, devices)

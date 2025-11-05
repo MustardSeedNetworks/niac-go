@@ -1,14 +1,557 @@
-capture_playback:
-    file_name: cfg/STP_change.cap
-    loop_time: 180000
-    scale_time: 1
+capture_playbacks:
+    - file_name: cfg/local_network.cap
+      loop_time: 33333
+      scale_time: 0.74
+    - file_name: cfg/STP_change.cap
+      loop_time: 180000
+      scale_time: 1
 devices:
     - name: device1
       mac: 00:09:B7:FA:76:61
       ip: 10.250.0.10
+      snmp_agent:
+        walk_file: cfg/Cisco_10_250_0_10.mz
+      dhcp:
+        client_leases:
+            - client_ip: 10.250.1.138
+              mac_addr_value: 00:c0:17:a4:00:00
+              mac_addr_mask: ff:ff:ff:ff:00:07
+            - client_ip: 10.250.1.139
+              mac_addr_value: 00:c0:17:a4:00:04
+              mac_addr_mask: ff:ff:ff:ff:00:07
+        subnet_mask: 255.255.254.0
+        router: 10.250.0.1
+        domain_name_server: 10.250.1.5
+        next_server_ip: 10.250.0.10
+        server_identifier: 10.250.0.10
     - name: device2
       mac: 00:24:E8:37:66:C9
       ip: 10.250.1.5
+      dns:
+        forward_records:
+            - name: device-1-1.dns1.canned.net
+              ip: 10.250.1.1
+              ttl: 3600
+            - name: device-1-2.dns1.canned.net
+              ip: 10.250.1.2
+              ttl: 3600
+            - name: enterprise.netscout.com
+              ip: 199.171.209.30
+              ttl: 3600
+            - name: flukenetworks.com
+              ip: 129.196.231.98
+              ttl: 3600
+            - name: google.com
+              ip: 74.125.127.99
+              ttl: 3600
+            - name: www.google.com
+              ip: 74.125.127.99
+              ttl: 3600
+            - name: Oracle-server.demo.net
+              ip: 129.196.196.10
+              ttl: 3600
+        reverse_records:
+            - name: flukenetworks.com
+              ip: 129.196.231.98
+              ttl: 3600
+            - name: google.com
+              ip: 74.125.127.99
+              ttl: 3600
+            - name: L3-switch1-LAG-FHRP.demo.net
+              ip: 10.6.0.1
+              ttl: 3600
+            - name: L3-switch1-LAG-FHRP.demo.net
+              ip: 10.6.0.2
+              ttl: 3600
+            - name: L3-switch3-LAG.demo.net
+              ip: 10.232.124.45
+              ttl: 3600
+            - name: Router-NetFlow.demo.net
+              ip: 10.232.124.46
+              ttl: 3600
+            - name: router17.demo.net
+              ip: 10.232.142.17
+              ttl: 3600
+            - name: router3.demo.net
+              ip: 10.232.142.19
+              ttl: 3600
+            - name: L3-switch3-LAG.demo.net
+              ip: 10.232.142.20
+              ttl: 3600
+            - name: router4.demo.net
+              ip: 10.232.142.21
+              ttl: 3600
+            - name: L3-switch3-LAG.demo.net
+              ip: 10.234.0.65
+              ttl: 3600
+            - name: L3-switch1-LAG-FHRP.demo.net
+              ip: 10.250.0.1
+              ttl: 3600
+            - name: L3-switch1-LAG-FHRP.demo.net
+              ip: 10.250.0.2
+              ttl: 3600
+            - name: L3-switch2-FHRP.demo.net
+              ip: 10.250.0.3
+              ttl: 3600
+            - name: switch-0-5.demo.net
+              ip: 10.250.0.5
+              ttl: 3600
+            - name: switch-0-6.demo.net
+              ip: 10.250.0.6
+              ttl: 3600
+            - name: switch-DHCP.demo.net
+              ip: 10.250.0.10
+              ttl: 3600
+            - name: router20.demo.net
+              ip: 10.250.0.20
+              ttl: 3600
+            - name: switch-0-24.demo.net
+              ip: 10.250.0.24
+              ttl: 3600
+            - name: switch-0-25.demo.net
+              ip: 10.250.0.25
+              ttl: 3600
+            - name: switch-0-28.demo.net
+              ip: 10.250.0.28
+              ttl: 3600
+            - name: PC-16.demo.net
+              ip: 10.250.0.33
+              ttl: 3600
+            - name: switch-0-35.demo.net
+              ip: 10.250.0.35
+              ttl: 3600
+            - name: switch-0-36.demo.net
+              ip: 10.250.0.36
+              ttl: 3600
+            - name: switch-0-37.demo.net
+              ip: 10.250.0.37
+              ttl: 3600
+            - name: switch-0-39.demo.net
+              ip: 10.250.0.39
+              ttl: 3600
+            - name: switch-0-40.demo.net
+              ip: 10.250.0.40
+              ttl: 3600
+            - name: PC-19.demo.net
+              ip: 10.250.0.44
+              ttl: 3600
+            - name: Wireless-LAN-Controller.demo.net
+              ip: 10.250.0.50
+              ttl: 3600
+            - name: X-250-0-51.demo.net
+              ip: 10.250.0.51
+              ttl: 3600
+            - name: PC-55.demo.net
+              ip: 10.250.0.55
+              ttl: 3600
+            - name: VirtMach-0-60.demo.net
+              ip: 10.250.0.60
+              ttl: 3600
+            - name: Radius-61.demo.net
+              ip: 10.250.0.61
+              ttl: 3600
+            - name: Radius-62.demo.net
+              ip: 10.250.0.62
+              ttl: 3600
+            - name: VirtMach-0-65.demo.net
+              ip: 10.250.0.65
+              ttl: 3600
+            - name: VirtMach-0-66.demo.net
+              ip: 10.250.0.66
+              ttl: 3600
+            - name: Hypervisor-1.demo.net
+              ip: 10.250.0.81
+              ttl: 3600
+            - name: X-250-0-86.demo.net
+              ip: 10.250.0.86
+              ttl: 3600
+            - name: Wireless-Client-1.demo.net
+              ip: 10.250.0.102
+              ttl: 3600
+            - name: OptiView-series3.demo.net
+              ip: 10.250.0.112
+              ttl: 3600
+            - name: web-server1.demo.net
+              ip: 10.250.0.114
+              ttl: 3600
+            - name: X-250-0-118.demo.net
+              ip: 10.250.0.118
+              ttl: 3600
+            - name: CoreSwitch-2.demo.net
+              ip: 10.250.0.120
+              ttl: 3600
+            - name: Wireless-Client-2.demo.net
+              ip: 10.250.0.132
+              ttl: 3600
+            - name: Virtual-Machine-1.demo.net
+              ip: 10.250.0.146
+              ttl: 3600
+            - name: X-250-0-167.demo.net
+              ip: 10.250.0.167
+              ttl: 3600
+            - name: OptiViewXG-1.demo.net
+              ip: 10.250.0.171
+              ttl: 3600
+            - name: OptiViewXG-2.demo.net
+              ip: 10.250.0.173
+              ttl: 3600
+            - name: X-250-0-189.demo.net
+              ip: 10.250.0.189
+              ttl: 3600
+            - name: X-250-0-196.demo.net
+              ip: 10.250.0.196
+              ttl: 3600
+            - name: Radius-219.demo.net
+              ip: 10.250.0.219
+              ttl: 3600
+            - name: X-250-0-227.demo.net
+              ip: 10.250.0.227
+              ttl: 3600
+            - name: X-250-0-240.demo.net
+              ip: 10.250.0.240
+              ttl: 3600
+            - name: Wireless-AC-OT.demo.net
+              ip: 10.250.0.252
+              ttl: 3600
+            - name: Wireless-AC-XG.demo.net
+              ip: 10.250.0.253
+              ttl: 3600
+            - name: DNS-server.demo.net
+              ip: 10.250.1.5
+              ttl: 3600
+            - name: L3-Rack5-switch1.demo.net
+              ip: 10.250.1.7
+              ttl: 3600
+            - name: router8.demo.net
+              ip: 10.250.1.8
+              ttl: 3600
+            - name: X-250-1-12.demo.net
+              ip: 10.250.1.12
+              ttl: 3600
+            - name: router18.demo.net
+              ip: 10.250.1.18
+              ttl: 3600
+            - name: X-250-1-27.demo.net
+              ip: 10.250.1.27
+              ttl: 3600
+            - name: OneTouch.demo.net
+              ip: 10.250.1.50
+              ttl: 3600
+            - name: Etherscope.demo.net
+              ip: 10.250.1.51
+              ttl: 3600
+            - name: OneTouch-NextGen.demo.net
+              ip: 10.250.1.52
+              ttl: 3600
+            - name: LinkRunner.demo.net
+              ip: 10.250.1.53
+              ttl: 3600
+            - name: NetTool.demo.net
+              ip: 10.250.1.54
+              ttl: 3600
+            - name: TruView.demo.net
+              ip: 10.250.1.55
+              ttl: 3600
+            - name: Pulse.demo.net
+              ip: 10.250.1.56
+              ttl: 3600
+            - name: X-250-1-58.demo.net
+              ip: 10.250.1.58
+              ttl: 3600
+            - name: switch-1-73.demo.net
+              ip: 10.250.1.73
+              ttl: 3600
+            - name: X-250-1-74.demo.net
+              ip: 10.250.1.74
+              ttl: 3600
+            - name: X-250-1-91.demo.net
+              ip: 10.250.1.91
+              ttl: 3600
+            - name: X-250-1-107.demo.net
+              ip: 10.250.1.107
+              ttl: 3600
+            - name: X-250-1-138.demo.net
+              ip: 10.250.1.138
+              ttl: 3600
+            - name: X-250-1-148.demo.net
+              ip: 10.250.1.148
+              ttl: 3600
+            - name: X-250-1-149.demo.net
+              ip: 10.250.1.149
+              ttl: 3600
+            - name: X-250-1-163.demo.net
+              ip: 10.250.1.163
+              ttl: 3600
+            - name: Wireless-Client-5.demo.net
+              ip: 10.250.1.164
+              ttl: 3600
+            - name: X-250-1-177.demo.net
+              ip: 10.250.1.177
+              ttl: 3600
+            - name: X-250-1-182.demo.net
+              ip: 10.250.1.182
+              ttl: 3600
+            - name: Wireless-Client-3.demo.net
+              ip: 10.250.1.185
+              ttl: 3600
+            - name: Wireless-Client-4.demo.net
+              ip: 10.250.1.192
+              ttl: 3600
+            - name: web-server2.demo.net
+              ip: 10.250.1.199
+              ttl: 3600
+            - name: X-250-1-213.demo.net
+              ip: 10.250.1.213
+              ttl: 3600
+            - name: switch-1-216.demo.net
+              ip: 10.250.1.216
+              ttl: 3600
+            - name: PC-0221.demo.net
+              ip: 10.250.1.221
+              ttl: 3600
+            - name: CoreSwitch-1.demo.net
+              ip: 10.250.1.240
+              ttl: 3600
+            - name: AccessSwitch-1.demo.net
+              ip: 10.250.1.242
+              ttl: 3600
+            - name: WLAN-AC-AccessPoint.demo.net
+              ip: 10.250.1.249
+              ttl: 3600
+            - name: WLAN-AC-Controller.demo.net
+              ip: 10.250.1.250
+              ttl: 3600
+            - name: L3-switch1-LAG-FHRP.demo.net
+              ip: 10.250.2.1
+              ttl: 3600
+            - name: L3-switch1-LAG-FHRP.demo.net
+              ip: 10.250.2.2
+              ttl: 3600
+            - name: L3-switch2-FHRP.demo.net
+              ip: 10.250.2.3
+              ttl: 3600
+            - name: L3-switch1-LAG-FHRP.demo.net
+              ip: 10.250.4.1
+              ttl: 3600
+            - name: L3-switch1-LAG-FHRP.demo.net
+              ip: 10.250.8.1
+              ttl: 3600
+            - name: AccessPoint-2.demo.net
+              ip: 10.250.8.3
+              ttl: 3600
+            - name: X-8-51.demo.net
+              ip: 10.250.8.51
+              ttl: 3600
+            - name: X-8-60.demo.net
+              ip: 10.250.8.60
+              ttl: 3600
+            - name: Lightweight-AccessPoint-3.demo.net
+              ip: 10.250.8.132
+              ttl: 3600
+            - name: X-8-219.demo.net
+              ip: 10.250.8.219
+              ttl: 3600
+            - name: L3-switch1-LAG-FHRP.demo.net
+              ip: 10.250.10.1
+              ttl: 3600
+            - name: L3-switch1-LAG-FHRP.demo.net
+              ip: 10.250.12.1
+              ttl: 3600
+            - name: switch-12-2.demo.net
+              ip: 10.250.12.2
+              ttl: 3600
+            - name: L3-switch1-LAG-FHRP.demo.net
+              ip: 10.250.18.1
+              ttl: 3600
+            - name: L3-switch2-FHRP.demo.net
+              ip: 10.250.22.1
+              ttl: 3600
+            - name: L3-switch2-FHRP.demo.net
+              ip: 10.250.22.3
+              ttl: 3600
+            - name: router10.demo.net
+              ip: 10.250.22.10
+              ttl: 3600
+            - name: L3-switch1-LAG-FHRP.demo.net
+              ip: 10.250.33.1
+              ttl: 3600
+            - name: L3-switch1-LAG-FHRP.demo.net
+              ip: 10.250.33.2
+              ttl: 3600
+            - name: L3-switch2-FHRP.demo.net
+              ip: 10.250.33.3
+              ttl: 3600
+            - name: router10.demo.net
+              ip: 10.250.33.10
+              ttl: 3600
+            - name: L3-switch1-LAG-FHRP.demo.net
+              ip: 10.250.44.1
+              ttl: 3600
+            - name: L3-switch1-LAG-FHRP.demo.net
+              ip: 10.250.44.2
+              ttl: 3600
+            - name: L3-switch2-FHRP.demo.net
+              ip: 10.250.44.3
+              ttl: 3600
+            - name: router10.demo.net
+              ip: 10.250.44.10
+              ttl: 3600
+            - name: L3-switch1-LAG-FHRP.demo.net
+              ip: 10.250.47.2
+              ttl: 3600
+            - name: L3-switch1-LAG-FHRP.demo.net
+              ip: 10.250.48.2
+              ttl: 3600
+            - name: L3-switch1-LAG-FHRP.demo.net
+              ip: 10.250.55.1
+              ttl: 3600
+            - name: L3-switch1-LAG-FHRP.demo.net
+              ip: 10.250.55.2
+              ttl: 3600
+            - name: L3-switch2-FHRP.demo.net
+              ip: 10.250.55.3
+              ttl: 3600
+            - name: router10.demo.net
+              ip: 10.250.55.10
+              ttl: 3600
+            - name: router10.demo.net
+              ip: 10.250.63.240
+              ttl: 3600
+            - name: L3-switch2-FHRP.demo.net
+              ip: 10.250.63.252
+              ttl: 3600
+            - name: L3-switch1-LAG-FHRP.demo.net
+              ip: 10.250.63.253
+              ttl: 3600
+            - name: Router-NetFlow.demo.net
+              ip: 10.250.63.254
+              ttl: 3600
+            - name: L3-switch1-LAG-FHRP.demo.net
+              ip: 10.250.90.1
+              ttl: 3600
+            - name: L3-switch2-FHRP.demo.net
+              ip: 10.250.90.2
+              ttl: 3600
+            - name: file-server.demo.net
+              ip: 15.193.112.142
+              ttl: 3600
+            - name: X-151-153-11.demo.net
+              ip: 66.151.153.11
+              ttl: 3600
+            - name: X-74-125-224-185.demo.net
+              ip: 74.125.224.185
+              ttl: 3600
+            - name: X-74-125-224-186.demo.net
+              ip: 74.125.224.186
+              ttl: 3600
+            - name: X-74-125-227-25.demo.net
+              ip: 74.125.227.25
+              ttl: 3600
+            - name: L3-switch3-LAG.demo.net
+              ip: 129.196.195.1
+              ttl: 3600
+            - name: X-195-201.demo.net
+              ip: 129.196.195.201
+              ttl: 3600
+            - name: L3-switch3-LAG.demo.net
+              ip: 129.196.196.1
+              ttl: 3600
+            - name: L3-switch3-LAG.demo.net
+              ip: 129.196.196.3
+              ttl: 3600
+            - name: switch-196-4.demo.net
+              ip: 129.196.196.4
+              ttl: 3600
+            - name: switch-196-5.demo.net
+              ip: 129.196.196.5
+              ttl: 3600
+            - name: router6.demo.net
+              ip: 129.196.196.6
+              ttl: 3600
+            - name: Oracle-server.demo.net
+              ip: 129.196.196.10
+              ttl: 3600
+            - name: switch-196-20.demo.net
+              ip: 129.196.196.20
+              ttl: 3600
+            - name: switch-196-22.demo.net
+              ip: 129.196.196.22
+              ttl: 3600
+            - name: switch-196-23.demo.net
+              ip: 129.196.196.23
+              ttl: 3600
+            - name: switch-196-24.demo.net
+              ip: 129.196.196.24
+              ttl: 3600
+            - name: VM-25.demo.net
+              ip: 129.196.196.25
+              ttl: 3600
+            - name: Printer-1.demo.net
+              ip: 129.196.196.35
+              ttl: 3600
+            - name: PC-118.demo.net
+              ip: 129.196.196.118
+              ttl: 3600
+            - name: web-server7.demo.net
+              ip: 129.196.196.160
+              ttl: 3600
+            - name: VoIP-Phone-1.demo.net
+              ip: 129.196.197.24
+              ttl: 3600
+            - name: router10.demo.net
+              ip: 129.196.197.176
+              ttl: 3600
+            - name: X-197-228.demo.net
+              ip: 129.196.197.228
+              ttl: 3600
+            - name: X-231-81.demo.net
+              ip: 129.196.231.81
+              ttl: 3600
+            - name: X-231-109.demo.net
+              ip: 129.196.231.109
+              ttl: 3600
+            - name: X-65-40-154.demo.net
+              ip: 192.65.40.154
+              ttl: 3600
+            - name: X-2-250.demo.net
+              ip: 192.168.2.250
+              ttl: 3600
+            - name: L3-switch1-LAG-FHRP.demo.net
+              ip: 192.168.21.1
+              ttl: 3600
+            - name: VoIP-Call-Server.demo.net
+              ip: 192.168.21.10
+              ttl: 3600
+            - name: X-21-11.demo.net
+              ip: 192.168.21.11
+              ttl: 3600
+            - name: Router-NetFlow.demo.net
+              ip: 192.168.249.1
+              ttl: 3600
+            - name: L3-switch1-LAG-FHRP.demo.net
+              ip: 192.168.249.2
+              ttl: 3600
+            - name: L3-switch1-LAG-FHRP.demo.net
+              ip: 192.168.249.5
+              ttl: 3600
+            - name: router-249-6.demo.net
+              ip: 192.168.249.6
+              ttl: 3600
+            - name: L3-switch1-LAG-FHRP.demo.net
+              ip: 192.168.255.253
+              ttl: 3600
+            - name: router-255-254.demo.net
+              ip: 192.168.255.254
+              ttl: 3600
+            - name: enterprise.netscout.com
+              ip: 199.171.209.30
+              ttl: 3600
+            - name: X-204-160-126-126.demo.net
+              ip: 204.160.126.126
+              ttl: 3600
+            - name: Performance-Test-Remote.demo.net
+              ip: 129.196.196.222
+              ttl: 3600
     - name: device3
       mac: 00:30:F1:8D:50:90
       ip: 10.250.1.242

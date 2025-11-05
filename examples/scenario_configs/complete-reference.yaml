@@ -1,0 +1,503 @@
+# NIAC-Go Complete Configuration Reference
+# This file demonstrates ALL available features and options
+# Version: 1.4.0
+# Documentation: https://github.com/anthropics/niac-go
+
+# ============================================================================
+# GLOBAL CONFIGURATION
+# ============================================================================
+
+# Base path for relative file references (walk files, PCAP files, etc.)
+include_path: "../device_walks"
+
+# ============================================================================
+# PCAP CAPTURE PLAYBACK
+# ============================================================================
+# Replay existing PCAP files for traffic generation
+capture_playbacks:
+  # Example 1: Basic playback
+  - file_name: "../captures/http_traffic.pcap"
+    loop_time: 5000        # Loop every 5 seconds (milliseconds)
+    scale_time: 1.0        # Real-time playback (1.0 = 100%)
+
+  # Example 2: Fast replay
+  - file_name: "../captures/voip_calls.pcap"
+    loop_time: 10000       # Loop every 10 seconds
+    scale_time: 2.0        # 2x faster than real-time
+
+# ============================================================================
+# DISCOVERY PROTOCOLS
+# ============================================================================
+# Configure Layer 2/3 discovery protocol advertisements
+discovery_protocols:
+  # Link Layer Discovery Protocol (IEEE 802.1AB)
+  lldp:
+    enabled: true
+    interval: 30           # Advertise every 30 seconds
+
+  # Cisco Discovery Protocol
+  cdp:
+    enabled: true
+    interval: 60           # Advertise every 60 seconds
+
+  # Extreme Discovery Protocol
+  edp:
+    enabled: true
+    interval: 30
+
+  # Foundry Discovery Protocol
+  fdp:
+    enabled: true
+    interval: 60
+
+# ============================================================================
+# NETWORK DEVICES
+# ============================================================================
+devices:
+  # --------------------------------------------------------------------------
+  # CORE ROUTER - Full featured with SNMP, DHCPv4/v6, and DNS
+  # --------------------------------------------------------------------------
+  - name: "core-router-01"
+    mac: "00:1a:2b:3c:4d:01"
+    ip: "192.168.1.1"
+    vlan: 1
+
+    # SNMP Agent Configuration
+    snmp_agent:
+      # Use pre-recorded SNMP walk file
+      walk_file: "cisco/2800_10.250.63.254.walk"
+
+      # Override or add custom MIBs
+      add_mibs:
+        # System information
+        - oid: "1.3.6.1.2.1.1.1.0"           # sysDescr
+          type: "string"
+          value: "Cisco 2821 Router, IOS 15.1(4)M"
+
+        - oid: "1.3.6.1.2.1.1.3.0"           # sysUpTime
+          type: "timeticks"
+          value: "123456789"
+
+        - oid: "1.3.6.1.2.1.1.4.0"           # sysContact
+          type: "string"
+          value: "Network Admin <admin@example.com>"
+
+        - oid: "1.3.6.1.2.1.1.5.0"           # sysName
+          type: "string"
+          value: "core-router-01.example.com"
+
+        - oid: "1.3.6.1.2.1.1.6.0"           # sysLocation
+          type: "string"
+          value: "Data Center - Rack 42"
+
+        # Interface statistics (GigabitEthernet0/0)
+        - oid: "1.3.6.1.2.1.2.2.1.10.1"      # ifInOctets
+          type: "counter64"
+          value: "987654321098"
+
+        - oid: "1.3.6.1.2.1.2.2.1.16.1"      # ifOutOctets
+          type: "counter64"
+          value: "876543210987"
+
+        # Custom enterprise MIB
+        - oid: "1.3.6.1.4.1.9.9.109.1.1.1.1.3.1"  # Cisco CPU usage
+          type: "gauge"
+          value: "25"
+
+    # DHCPv4 and DHCPv6 Server Configuration
+    dhcp:
+      # Basic DHCPv4 options
+      subnet_mask: "255.255.255.0"
+      router: "192.168.1.1"
+      domain_name_server: "192.168.1.1"
+      server_identifier: "192.168.1.1"
+      next_server_ip: "192.168.1.10"          # For PXE boot
+
+      # DHCPv4 High Priority Options
+      ntp_servers:
+        - "192.168.1.100"                      # Primary NTP
+        - "192.168.1.101"                      # Secondary NTP
+
+      domain_search:
+        - "example.com"
+        - "corp.example.com"
+        - "lab.example.com"
+
+      tftp_server_name: "tftp.example.com"
+      bootfile_name: "pxelinux.0"
+      vendor_specific: "010203040506"          # Hex string for Option 43
+
+      # DHCPv6 Options (for dual-stack networks)
+      sntp_servers_v6:
+        - "2001:db8:1::100"                    # Primary SNTP
+        - "2001:db8:1::101"                    # Secondary SNTP
+
+      ntp_servers_v6:
+        - "2001:db8:1::200"                    # Primary NTP
+        - "2001:db8:1::201"                    # Secondary NTP
+
+      sip_servers_v6:
+        - "2001:db8:1::300"                    # VoIP SIP server
+        - "2001:db8:1::301"                    # Backup SIP server
+
+      sip_domains_v6:
+        - "voip.example.com"
+        - "sip.example.com"
+
+      # Static DHCP leases (MAC-to-IP bindings)
+      client_leases:
+        - client_ip: "192.168.1.50"
+          mac_addr_value: "aa:bb:cc:dd:ee:01"
+
+        - client_ip: "192.168.1.51"
+          mac_addr_value: "aa:bb:cc:dd:ee:02"
+
+        - client_ip: "192.168.1.52"
+          mac_addr_value: "aa:bb:cc:dd:ee:03"
+          mac_addr_mask: "ff:ff:ff:ff:ff:00"   # Match first 5 octets
+
+    # DNS Server Configuration
+    dns:
+      # A Records (hostname -> IPv4)
+      forward_records:
+        - name: "router.example.com"
+          ip: "192.168.1.1"
+          ttl: 3600
+
+        - name: "switch.example.com"
+          ip: "192.168.1.2"
+          ttl: 3600
+
+        - name: "server.example.com"
+          ip: "192.168.1.10"
+          ttl: 300                             # Shorter TTL for dynamic hosts
+
+        - name: "www.example.com"
+          ip: "192.168.1.20"
+          ttl: 86400
+
+        - name: "mail.example.com"
+          ip: "192.168.1.25"
+          ttl: 3600
+
+      # PTR Records (IPv4 -> hostname for reverse DNS)
+      reverse_records:
+        - ip: "192.168.1.1"
+          name: "router.example.com"
+          ttl: 3600
+
+        - ip: "192.168.1.2"
+          name: "switch.example.com"
+          ttl: 3600
+
+        - ip: "192.168.1.10"
+          name: "server.example.com"
+          ttl: 3600
+
+  # --------------------------------------------------------------------------
+  # DISTRIBUTION SWITCH - Cisco Catalyst 3750 with full SNMP
+  # --------------------------------------------------------------------------
+  - name: "dist-switch-01"
+    mac: "00:1b:2c:3d:4e:02"
+    ip: "192.168.1.2"
+    vlan: 1
+
+    snmp_agent:
+      walk_file: "cisco/C3750_10.250.0.2.walk"
+
+      add_mibs:
+        - oid: "1.3.6.1.2.1.1.1.0"
+          type: "string"
+          value: "Cisco Catalyst 3750-48TS, IOS 12.2(55)SE12"
+
+        - oid: "1.3.6.1.2.1.1.5.0"
+          type: "string"
+          value: "dist-switch-01"
+
+        - oid: "1.3.6.1.2.1.1.6.0"
+          type: "string"
+          value: "Distribution Layer - Rack 10"
+
+        # Port status examples
+        - oid: "1.3.6.1.2.1.2.2.1.7.1"       # ifAdminStatus port 1
+          type: "integer"
+          value: "1"                          # up(1)
+
+        - oid: "1.3.6.1.2.1.2.2.1.8.1"       # ifOperStatus port 1
+          type: "integer"
+          value: "1"                          # up(1)
+
+  # --------------------------------------------------------------------------
+  # ACCESS SWITCH - Smaller edge switch
+  # --------------------------------------------------------------------------
+  - name: "access-switch-01"
+    mac: "00:1c:2d:3e:4f:03"
+    ip: "192.168.1.3"
+    vlan: 10
+
+    snmp_agent:
+      walk_file: "cisco/C2960_10.250.0.36.walk"
+
+  # --------------------------------------------------------------------------
+  # WIRELESS ACCESS POINT - With custom management VLAN
+  # --------------------------------------------------------------------------
+  - name: "ap-lobby-01"
+    mac: "00:1d:2e:3f:4a:04"
+    ip: "192.168.2.10"
+    vlan: 20
+
+    snmp_agent:
+      walk_file: "cisco/Controller_10.250.1.250.walk"
+
+      add_mibs:
+        - oid: "1.3.6.1.2.1.1.1.0"
+          type: "string"
+          value: "Cisco Aironet 2800i Access Point"
+
+        - oid: "1.3.6.1.2.1.1.5.0"
+          type: "string"
+          value: "ap-lobby-01"
+
+        # Wireless client count
+        - oid: "1.3.6.1.4.1.14179.2.1.1.1.38.0"
+          type: "gauge"
+          value: "42"
+
+  # --------------------------------------------------------------------------
+  # LINUX SERVER - Web/Application Server
+  # --------------------------------------------------------------------------
+  - name: "web-server-01"
+    mac: "00:1e:2f:3a:4b:05"
+    ip: "192.168.1.10"
+    vlan: 100
+
+    snmp_agent:
+      walk_file: "linux/ubuntu-server-2204.walk"
+
+      add_mibs:
+        - oid: "1.3.6.1.2.1.1.1.0"
+          type: "string"
+          value: "Linux web-server-01 5.15.0-91-generic Ubuntu 22.04 LTS"
+
+        - oid: "1.3.6.1.2.1.1.5.0"
+          type: "string"
+          value: "web-server-01.example.com"
+
+        # System load average
+        - oid: "1.3.6.1.4.1.2021.10.1.3.1"   # laLoad.1
+          type: "string"
+          value: "0.15"
+
+        # Memory statistics
+        - oid: "1.3.6.1.4.1.2021.4.5.0"      # memTotalReal
+          type: "integer"
+          value: "16384000"
+
+        - oid: "1.3.6.1.4.1.2021.4.6.0"      # memAvailReal
+          type: "integer"
+          value: "8192000"
+
+        # Disk usage
+        - oid: "1.3.6.1.4.1.2021.9.1.9.1"    # dskPercent.1
+          type: "integer"
+          value: "65"
+
+  # --------------------------------------------------------------------------
+  # JUNIPER ROUTER - Multi-vendor environment
+  # --------------------------------------------------------------------------
+  - name: "edge-router-02"
+    mac: "00:1f:2a:3b:4c:06"
+    ip: "192.168.1.254"
+    vlan: 1
+
+    snmp_agent:
+      walk_file: "juniper/Juniper_Networks_10.250.0.101.walk"
+
+      add_mibs:
+        - oid: "1.3.6.1.2.1.1.1.0"
+          type: "string"
+          value: "Juniper Networks MX80, JUNOS 21.4R3.15"
+
+        - oid: "1.3.6.1.2.1.1.5.0"
+          type: "string"
+          value: "edge-router-02"
+
+  # --------------------------------------------------------------------------
+  # NETGEAR SWITCH - Small business switch
+  # --------------------------------------------------------------------------
+  - name: "workgroup-switch-01"
+    mac: "00:2a:3b:4c:5d:07"
+    ip: "192.168.3.10"
+    vlan: 30
+
+    snmp_agent:
+      walk_file: "netgear/GS110TP_10.250.1.207.walk"
+
+      add_mibs:
+        - oid: "1.3.6.1.2.1.1.1.0"
+          type: "string"
+          value: "NETGEAR GS110TP 8-Port Gigabit PoE+ Smart Managed Pro Switch"
+
+  # --------------------------------------------------------------------------
+  # VOIP PHONE - Network endpoint device
+  # --------------------------------------------------------------------------
+  - name: "voip-phone-101"
+    mac: "00:2b:3c:4d:5e:08"
+    ip: "192.168.4.101"
+    vlan: 40
+
+    snmp_agent:
+      walk_file: "voip/Hardware7816H3_IntelR_192.168.21.10.walk"
+
+      add_mibs:
+        - oid: "1.3.6.1.2.1.1.1.0"
+          type: "string"
+          value: "Cisco IP Phone 7841"
+
+        - oid: "1.3.6.1.2.1.1.5.0"
+          type: "string"
+          value: "SEP002B3C4D5E08"
+
+  # --------------------------------------------------------------------------
+  # NETWORK PRINTER - IoT device with simple SNMP
+  # --------------------------------------------------------------------------
+  - name: "printer-floor3"
+    mac: "00:2c:3d:4e:5f:09"
+    ip: "192.168.5.50"
+    vlan: 50
+
+    snmp_agent:
+      add_mibs:
+        - oid: "1.3.6.1.2.1.1.1.0"
+          type: "string"
+          value: "HP LaserJet Enterprise M608dn"
+
+        - oid: "1.3.6.1.2.1.1.5.0"
+          type: "string"
+          value: "printer-floor3"
+
+        # Printer-specific MIBs
+        - oid: "1.3.6.1.2.1.43.10.2.1.4.1.1"  # prtMarkerSuppliesLevel (toner)
+          type: "integer"
+          value: "75"
+
+        - oid: "1.3.6.1.2.1.43.11.1.1.9.1.1"  # prtMediaPathMediaSizeUnit
+          type: "integer"
+          value: "3"                           # micrometers(3)
+
+  # --------------------------------------------------------------------------
+  # NAS STORAGE - Network Attached Storage
+  # --------------------------------------------------------------------------
+  - name: "nas-backup-01"
+    mac: "00:2d:3e:4f:5a:0a"
+    ip: "192.168.6.100"
+    vlan: 60
+
+    snmp_agent:
+      add_mibs:
+        - oid: "1.3.6.1.2.1.1.1.0"
+          type: "string"
+          value: "Synology DiskStation DS920+ DSM 7.2"
+
+        - oid: "1.3.6.1.2.1.1.5.0"
+          type: "string"
+          value: "nas-backup-01"
+
+        # Storage volume statistics
+        - oid: "1.3.6.1.2.1.25.2.3.1.5.1"     # hrStorageSize
+          type: "integer"
+          value: "12582912"                    # 12TB
+
+        - oid: "1.3.6.1.2.1.25.2.3.1.6.1"     # hrStorageUsed
+          type: "integer"
+          value: "7549747"                     # 60% used
+
+  # --------------------------------------------------------------------------
+  # SECURITY CAMERA - IoT device with minimal SNMP
+  # --------------------------------------------------------------------------
+  - name: "camera-entrance-01"
+    mac: "00:2e:3f:4a:5b:0b"
+    ip: "192.168.7.10"
+    vlan: 70
+
+    snmp_agent:
+      add_mibs:
+        - oid: "1.3.6.1.2.1.1.1.0"
+          type: "string"
+          value: "Axis P3245-LVE Network Camera"
+
+        - oid: "1.3.6.1.2.1.1.5.0"
+          type: "string"
+          value: "camera-entrance-01"
+
+  # --------------------------------------------------------------------------
+  # DUAL-STACK DEVICE - IPv4 and IPv6
+  # --------------------------------------------------------------------------
+  - name: "dual-stack-server"
+    mac: "00:2f:3a:4b:5c:0c"
+    ip: "192.168.1.50"    # IPv4 address
+    # Note: Currently only one IP per device, IPv6 coming in future version
+    vlan: 1
+
+    snmp_agent:
+      add_mibs:
+        - oid: "1.3.6.1.2.1.1.1.0"
+          type: "string"
+          value: "Ubuntu 22.04 LTS Dual-Stack Server"
+
+        - oid: "1.3.6.1.2.1.1.5.0"
+          type: "string"
+          value: "dual-stack-server"
+
+# ============================================================================
+# USAGE NOTES
+# ============================================================================
+#
+# 1. File Paths:
+#    - Relative paths use include_path as base
+#    - Absolute paths work as-is
+#    - Walk files should be in device_walks/ directory
+#
+# 2. MAC Addresses:
+#    - Format: "aa:bb:cc:dd:ee:ff" (colon-separated)
+#    - Must be unique per device
+#
+# 3. IP Addresses:
+#    - IPv4: "192.168.1.1"
+#    - IPv6: "2001:db8::1" (coming soon for primary IP)
+#
+# 4. VLANs:
+#    - Range: 1-4094
+#    - 0 = no VLAN tag
+#    - Omit field if no VLAN needed
+#
+# 5. SNMP Walk Files:
+#    - Created using: snmpwalk -v2c -c public <IP> > output.walk
+#    - Or use niac-convert tool to extract from Java configs
+#
+# 6. DHCP Options:
+#    - All options are optional
+#    - Options only sent if configured
+#    - Hostname captured from DHCP Discover/Request
+#
+# 7. DNS Records:
+#    - TTL in seconds (default: 3600)
+#    - Forward: hostname -> IP
+#    - Reverse: IP -> hostname
+#
+# 8. Discovery Protocols:
+#    - Interval in seconds
+#    - Lower interval = more network overhead
+#    - Typical: 30-60 seconds
+#
+# 9. MIB Types:
+#    - string, integer, gauge, counter, counter64
+#    - timeticks (1/100th second)
+#    - ipaddress, objectid
+#
+# 10. Running NIAC:
+#     sudo ./niac --config complete-reference.yaml --interface eth0 --debug 2
+#
+# ============================================================================
+# END OF CONFIGURATION
+# ============================================================================

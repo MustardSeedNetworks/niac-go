@@ -299,7 +299,7 @@ func (h *CDPHandler) buildCapabilitiesTLV(device *config.Device) []byte {
 
 // buildSoftwareVersionTLV builds the Software Version TLV
 func (h *CDPHandler) buildSoftwareVersionTLV(device *config.Device) []byte {
-	version := []byte("NIAC-Go v1.3.0")
+	version := []byte("NIAC-Go v1.4.0")
 
 	length := 4 + len(version)
 
