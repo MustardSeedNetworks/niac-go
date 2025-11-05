@@ -112,9 +112,9 @@ examples/
 - ✅ **FTP Server:** Welcome banner, system type, users (see `ftp-server.yaml`)
 - ✅ **NetBIOS:** Name, workgroup, node type, services (see `netbios-server.yaml`)
 
-#### Phase 2 Group 3 (Pending)
-- ⏳ **ICMP/ICMPv6:** TTL values, rate limiting (coming soon)
-- ⏳ **DHCPv6:** IPv6 address assignment (coming soon)
+#### Phase 2 Group 3 (Completed)
+- ✅ **ICMP/ICMPv6:** TTL/hop limit values, rate limiting (see `network/icmp-config.yaml`, `network/icmpv6-config.yaml`)
+- ✅ **DHCPv6:** IPv6 address assignment, preference, lifetimes (see `network/dhcpv6-config.yaml`)
 
 ## Common Configuration Patterns
 

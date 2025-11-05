@@ -1,0 +1,207 @@
+# ICMPv6 Configuration Example
+# Demonstrates ICMPv6 echo reply configuration with custom hop limits and rate limiting
+
+devices:
+  # =================================================================
+  # Device 1: IPv6 Router with custom hop limit
+  # =================================================================
+  - name: ipv6-router-01
+    mac: "00:11:22:33:44:01"
+    ips:
+      - "fe80::1"                       # Link-local
+      - "2001:db8::1"                   # Global unicast
+      - "fd00::1"                       # Unique local
+
+    icmpv6:
+      enabled: true
+      hop_limit: 255        # Maximum hop limit (typical for routers)
+      rate_limit: 100       # Max 100 ICMPv6 responses per second
+
+    lldp:
+      enabled: true
+      system_description: "IPv6 Router with hop limit 255"
+
+  # =================================================================
+  # Device 2: IPv6 Server with standard hop limit
+  # =================================================================
+  - name: ipv6-server-01
+    mac: "00:11:22:33:44:02"
+    ips:
+      - "fe80::2"                       # Link-local
+      - "2001:db8::100"                 # Global unicast
+
+    icmpv6:
+      enabled: true
+      hop_limit: 64         # Standard hop limit (default)
+      rate_limit: 0         # Unlimited responses
+
+    lldp:
+      enabled: true
+      system_description: "IPv6 Server with standard hop limit"
+
+  # =================================================================
+  # Device 3: IPv6 Firewall with rate limiting
+  # =================================================================
+  - name: ipv6-firewall
+    mac: "00:11:22:33:44:03"
+    ips:
+      - "fe80::ff"                      # Link-local
+      - "2001:db8::254"                 # Global unicast
+
+    icmpv6:
+      enabled: true
+      hop_limit: 128        # Windows-like hop limit
+      rate_limit: 20        # Rate limit ICMPv6 to prevent floods
+
+    lldp:
+      enabled: true
+      system_description: "IPv6 Firewall with rate limiting"
+
+  # =================================================================
+  # Device 4: Dual-stack device with both ICMP and ICMPv6
+  # =================================================================
+  - name: dual-stack-host
+    mac: "00:11:22:33:44:04"
+    ips:
+      - "192.168.1.10"                  # IPv4
+      - "fe80::4"                       # IPv6 link-local
+      - "2001:db8::10"                  # IPv6 global
+
+    # Configure both ICMP and ICMPv6
+    icmp:
+      enabled: true
+      ttl: 64
+      rate_limit: 50
+
+    icmpv6:
+      enabled: true
+      hop_limit: 64
+      rate_limit: 50
+
+    lldp:
+      enabled: true
+      system_description: "Dual-stack host with both ICMP protocols"
+
+# Configuration Notes:
+# ====================
+#
+# ICMPv6 Configuration Fields:
+# - enabled (bool): Enable ICMPv6 echo reply responses
+#     * Default: true (ICMPv6 enabled by default)
+# - hop_limit (uint8): Hop limit for ICMPv6 packets (1-255)
+#     * Default: 64 (standard for most systems)
+#     * Common values:
+#       - 32: Testing
+#       - 64: Linux, macOS, Unix (standard)
+#       - 128: Windows systems
+#       - 255: Routers, network devices
+# - rate_limit (int): Maximum ICMPv6 responses per second
+#     * Default: 0 (unlimited)
+#     * Use to prevent ICMPv6 flood attacks
+#
+# IMPORTANT - NDP (Neighbor Discovery Protocol):
+# ==============================================
+# NDP packets ALWAYS use hop limit 255 per RFC 4861, regardless of config:
+# - Neighbor Solicitation (Type 135)
+# - Neighbor Advertisement (Type 136)
+# - Router Solicitation (Type 133)
+# - Router Advertisement (Type 134)
+# - Redirect (Type 137)
+#
+# This is a SECURITY requirement - hop limit 255 ensures NDP packets
+# are only processed from link-local neighbors (not routed).
+#
+# The hop_limit config ONLY affects:
+# - Echo Reply (Type 129) - response to ping6
+# - Other non-NDP ICMPv6 messages
+#
+# ICMPv6 (Internet Control Message Protocol version 6):
+# ======================================================
+# - RFC 4443: ICMPv6 for IPv6
+# - RFC 4861: Neighbor Discovery Protocol (NDP)
+# - Echo Request (Type 128) -> Echo Reply (Type 129)
+# - NDP replaces ARP in IPv6
+#
+# Hop Limit vs TTL:
+# =================
+# - IPv6 uses "Hop Limit" instead of IPv4's "Time To Live" (TTL)
+# - Functionally equivalent - decremented by each router
+# - hop_limit: 0 = packet discarded
+# - hop_limit: 1 = reaches directly connected devices only
+# - hop_limit: 255 = maximum (used by NDP for security)
+#
+# Common Hop Limit Values:
+# ========================
+# - Linux/Unix/macOS: 64
+# - Windows: 128
+# - Routers/Network devices: 255
+# - Multicast: 1 (link-local), 255 (global)
+#
+# Usage Examples:
+# ===============
+#
+# # Run ICMPv6 configuration
+# sudo niac en0 examples/network/icmpv6-config.yaml
+#
+# # Test with ping6
+# ping6 -c 4 fe80::1%en0          # Link-local (requires interface)
+# ping6 -c 4 2001:db8::1          # Global unicast
+#
+# # Check hop limit in ping6 output
+# # Expected: router shows hlim=255, server shows hlim=64
+#
+# # Test rate limiting
+# ping6 -f 2001:db8::254          # Firewall should rate limit
+#
+# # Validate configuration
+# niac --dry-run lo0 examples/network/icmpv6-config.yaml
+#
+# # Run with ICMPv6 debug
+# sudo niac --debug 1 --debug-icmpv6 3 en0 examples/network/icmpv6-config.yaml
+#
+# # Test NDP (always hop limit 255)
+# ndp -a                          # Show neighbor cache
+# ndp -d 2001:db8::1             # Delete entry to trigger NS/NA
+# ping6 2001:db8::1              # Triggers NDP
+#
+# Testing Scenarios:
+# ==================
+#
+# 1. Hop Limit Verification:
+#    - ping6 each device and observe hlim in response
+#    - Use traceroute6 to see hop limit decrements
+#
+# 2. NDP Behavior:
+#    - Clear neighbor cache: sudo ndp -c
+#    - Ping device to trigger NDP
+#    - Capture packets with tcpdump:
+#      sudo tcpdump -i en0 -n icmp6
+#    - Verify NS/NA packets use hop limit 255
+#
+# 3. Rate Limiting:
+#    - Flood ping the firewall
+#    - Observe responses limited to 20/second
+#
+# 4. Dual-stack Testing:
+#    - Test both ping and ping6 to dual-stack-host
+#    - Verify ICMP uses TTL=64, ICMPv6 uses hlim=64
+#    - Confirm both protocols can be rate limited independently
+#
+# 5. Link-local Communication:
+#    - Test link-local addresses (fe80::)
+#    - Requires interface specification: ping6 fe80::1%en0
+#    - NDP exchanges use link-local only
+#
+# Advanced Testing:
+# =================
+#
+# # Capture and analyze NDP traffic
+# sudo tcpdump -i en0 -vv 'icmp6 and (ip6[40] == 135 or ip6[40] == 136)'
+#
+# # View IPv6 neighbors
+# ip -6 neigh show          # Linux
+# ndp -an                   # macOS/BSD
+#
+# # Test with different packet sizes
+# ping6 -c 4 -s 1232 2001:db8::1    # Larger packets
+# ping6 -c 4 -s 56 2001:db8::1      # Smaller packets
