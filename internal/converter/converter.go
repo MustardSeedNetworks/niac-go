@@ -13,9 +13,24 @@ import (
 
 // Config represents the YAML configuration structure
 type Config struct {
-	IncludePath     string             `yaml:"include_path,omitempty"`
-	CapturePlayback *CapturePlayback   `yaml:"capture_playback,omitempty"`
-	Devices         []Device           `yaml:"devices"`
+	IncludePath       string              `yaml:"include_path,omitempty"`
+	CapturePlayback   *CapturePlayback    `yaml:"capture_playback,omitempty"`
+	DiscoveryProtocols *DiscoveryProtocols `yaml:"discovery_protocols,omitempty"`
+	Devices           []Device            `yaml:"devices"`
+}
+
+// DiscoveryProtocols configures discovery protocol behavior
+type DiscoveryProtocols struct {
+	LLDP *ProtocolConfig `yaml:"lldp,omitempty"`
+	CDP  *ProtocolConfig `yaml:"cdp,omitempty"`
+	EDP  *ProtocolConfig `yaml:"edp,omitempty"`
+	FDP  *ProtocolConfig `yaml:"fdp,omitempty"`
+}
+
+// ProtocolConfig configures a discovery protocol
+type ProtocolConfig struct {
+	Enabled  bool `yaml:"enabled"`
+	Interval int  `yaml:"interval,omitempty"` // Advertisement interval in seconds
 }
 
 // CapturePlayback represents PCAP playback configuration
