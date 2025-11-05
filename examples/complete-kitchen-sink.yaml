@@ -82,6 +82,42 @@ devices:
       contact: "Network Admin <netadmin@example.com>"
       engine_id: "80000009030011223344"
 
+    # HTTP Server Configuration
+    http:
+      enabled: true
+      server_name: "Cisco-HTTP/1.0"
+      endpoints:
+        - path: "/api/v1/status"
+          method: "GET"
+          status_code: 200
+          content_type: "application/json"
+          body: '{"status": "online", "uptime": 86400}'
+        - path: "/admin"
+          status_code: 403
+          content_type: "text/html"
+          body: '<html><body><h1>403 Forbidden</h1></body></html>'
+
+    # FTP Server Configuration
+    ftp:
+      enabled: true
+      welcome_banner: "220 Cisco IOS FTP Server ready."
+      system_type: "UNIX Type: L8"
+      allow_anonymous: false
+      users:
+        - username: "admin"
+          password: "cisco123"
+          home_dir: "/flash"
+
+    # NetBIOS Configuration
+    netbios:
+      enabled: true
+      name: "CISCO-RTR-01"
+      workgroup: "INFRASTRUCTURE"
+      node_type: "H"       # Hybrid node
+      services:
+        - "workstation"
+      ttl: 600
+
   # =================================================================
   # Device 2: Extreme Switch with EDP
   # =================================================================
@@ -247,10 +283,10 @@ devices:
 # - Per-device protocol enable/disable
 #
 # - STP configuration (bridge priority, timers, version)
+# - HTTP server configuration (server name, endpoints, responses)
+# - FTP server configuration (welcome banner, system type, users)
+# - NetBIOS configuration (name, workgroup, node type, services, TTL)
 #
 # Currently NOT configurable (coming in future versions):
-# - HTTP server endpoints (Group 2)
-# - FTP server configuration (Group 2)
-# - NetBIOS settings (Group 2)
 # - ICMP/ICMPv6 TTL values (Group 3)
 # - DHCPv6 server (Group 3)

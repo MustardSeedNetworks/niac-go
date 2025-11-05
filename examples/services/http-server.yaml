@@ -1,0 +1,186 @@
+# HTTP Server Configuration Example
+# Demonstrates custom HTTP endpoints, server headers, and responses
+
+devices:
+  # =================================================================
+  # Device 1: Web Server with Custom Endpoints
+  # =================================================================
+  - name: webserver-01
+    mac: "00:11:22:33:44:01"
+    ip: "192.168.1.10"
+
+    http:
+      enabled: true
+      server_name: "Apache/2.4.41 (Ubuntu)"  # Custom server header
+      endpoints:
+        - path: "/"
+          method: "GET"
+          status_code: 200
+          content_type: "text/html"
+          body: |
+            <!DOCTYPE html>
+            <html>
+            <head><title>Welcome to webserver-01</title></head>
+            <body>
+              <h1>Welcome to our Web Server</h1>
+              <p>This is a custom homepage.</p>
+            </body>
+            </html>
+
+        - path: "/api/status"
+          method: "GET"
+          status_code: 200
+          content_type: "application/json"
+          body: '{"status": "ok", "uptime": 86400, "connections": 42}'
+
+        - path: "/api/users"
+          method: "GET"
+          status_code: 200
+          content_type: "application/json"
+          body: '[{"id": 1, "name": "Alice"}, {"id": 2, "name": "Bob"}]'
+
+        - path: "/admin"
+          method: "GET"
+          status_code: 403
+          content_type: "text/html"
+          body: |
+            <!DOCTYPE html>
+            <html>
+            <head><title>403 Forbidden</title></head>
+            <body>
+              <h1>403 Forbidden</h1>
+              <p>You don't have permission to access this resource.</p>
+            </body>
+            </html>
+
+    lldp:
+      enabled: true
+      system_description: "Ubuntu 22.04 LTS - Web Server"
+      port_description: "eth0"
+
+  # =================================================================
+  # Device 2: API Server with JSON Responses
+  # =================================================================
+  - name: api-server-01
+    mac: "00:11:22:33:44:02"
+    ip: "192.168.1.20"
+
+    http:
+      enabled: true
+      server_name: "nginx/1.18.0"
+      endpoints:
+        - path: "/api/v1/health"
+          status_code: 200
+          content_type: "application/json"
+          body: '{"healthy": true, "version": "1.0.0"}'
+
+        - path: "/api/v1/metrics"
+          status_code: 200
+          content_type: "application/json"
+          body: '{"requests": 1337, "errors": 0, "avg_response_time_ms": 42}'
+
+        - path: "/api/v1/config"
+          status_code: 200
+          content_type: "application/json"
+          body: '{"environment": "production", "debug": false, "max_connections": 1000}'
+
+    lldp:
+      enabled: true
+      system_description: "Ubuntu 22.04 LTS - API Server"
+      port_description: "eth0"
+
+  # =================================================================
+  # Device 3: Simple Web Server (Default Endpoints)
+  # =================================================================
+  - name: simple-web
+    mac: "00:11:22:33:44:03"
+    ip: "192.168.1.30"
+
+    http:
+      enabled: true
+      server_name: "lighttpd/1.4.55"
+      # No custom endpoints - will use default "/" , "/status", "/api/info"
+
+    lldp:
+      enabled: true
+      system_description: "Alpine Linux - Web Server"
+
+  # =================================================================
+  # Device 4: HTTP Server with Error Responses
+  # =================================================================
+  - name: error-simulator
+    mac: "00:11:22:33:44:04"
+    ip: "192.168.1.40"
+
+    http:
+      enabled: true
+      server_name: "Caddy/2.6.4"
+      endpoints:
+        - path: "/500"
+          status_code: 500
+          content_type: "text/html"
+          body: |
+            <html><body><h1>500 Internal Server Error</h1>
+            <p>Something went wrong on our end.</p></body></html>
+
+        - path: "/503"
+          status_code: 503
+          content_type: "text/html"
+          body: |
+            <html><body><h1>503 Service Unavailable</h1>
+            <p>The service is temporarily unavailable.</p></body></html>
+
+        - path: "/redirect"
+          status_code: 302
+          content_type: "text/html"
+          body: '<html><body>Redirecting...</body></html>'
+
+# Configuration Notes:
+# ====================
+#
+# HTTP Server Fields:
+# - enabled (bool): Enable HTTP server responses
+# - server_name (string): Server header value (default: "NIAC-Go/1.0.0")
+# - endpoints (array): Custom endpoint definitions
+#
+# HTTP Endpoint Fields:
+# - path (string): URL path (e.g., "/", "/api/status")
+# - method (string): HTTP method (default: "GET")
+# - status_code (int): HTTP status code (default: 200)
+# - content_type (string): Content-Type header (default: "text/html")
+# - body (string): Response body (can be HTML, JSON, text, etc.)
+#
+# Common HTTP Status Codes:
+# - 200: OK
+# - 201: Created
+# - 204: No Content
+# - 301: Moved Permanently
+# - 302: Found (redirect)
+# - 304: Not Modified
+# - 400: Bad Request
+# - 401: Unauthorized
+# - 403: Forbidden
+# - 404: Not Found
+# - 500: Internal Server Error
+# - 501: Not Implemented
+# - 503: Service Unavailable
+#
+# Default Endpoints (when no custom endpoints configured):
+# - "/" and "/index.html": Device homepage
+# - "/status": Statistics and device status
+# - "/api/info": JSON device information
+#
+# Usage Examples:
+# ===============
+#
+# # Run HTTP server simulation
+# sudo niac en0 examples/services/http-server.yaml
+#
+# # Test with curl
+# curl http://192.168.1.10/
+# curl http://192.168.1.20/api/v1/health
+# curl http://192.168.1.30/status
+# curl http://192.168.1.40/500
+#
+# # Validate configuration
+# niac --dry-run lo0 examples/services/http-server.yaml

@@ -55,6 +55,9 @@ type Device struct {
 	Edp       *EdpConfig       `yaml:"edp,omitempty"`
 	Fdp       *FdpConfig       `yaml:"fdp,omitempty"`
 	Stp       *StpConfig       `yaml:"stp,omitempty"`
+	Http      *HttpConfig      `yaml:"http,omitempty"`
+	Ftp       *FtpConfig       `yaml:"ftp,omitempty"`
+	Netbios   *NetbiosConfig   `yaml:"netbios,omitempty"`
 }
 
 // SnmpAgent represents SNMP agent configuration
@@ -158,6 +161,48 @@ type StpConfig struct {
 	MaxAge         uint16 `yaml:"max_age,omitempty"`
 	ForwardDelay   uint16 `yaml:"forward_delay,omitempty"`
 	Version        string `yaml:"version,omitempty"`
+}
+
+// HttpConfig represents HTTP server configuration
+type HttpConfig struct {
+	Enabled    bool           `yaml:"enabled,omitempty"`
+	ServerName string         `yaml:"server_name,omitempty"`
+	Endpoints  []HttpEndpoint `yaml:"endpoints,omitempty"`
+}
+
+// HttpEndpoint represents an HTTP endpoint configuration
+type HttpEndpoint struct {
+	Path        string `yaml:"path,omitempty"`
+	Method      string `yaml:"method,omitempty"`
+	StatusCode  int    `yaml:"status_code,omitempty"`
+	ContentType string `yaml:"content_type,omitempty"`
+	Body        string `yaml:"body,omitempty"`
+}
+
+// FtpConfig represents FTP server configuration
+type FtpConfig struct {
+	Enabled        bool      `yaml:"enabled,omitempty"`
+	WelcomeBanner  string    `yaml:"welcome_banner,omitempty"`
+	SystemType     string    `yaml:"system_type,omitempty"`
+	AllowAnonymous bool      `yaml:"allow_anonymous,omitempty"`
+	Users          []FtpUser `yaml:"users,omitempty"`
+}
+
+// FtpUser represents an FTP user account
+type FtpUser struct {
+	Username string `yaml:"username,omitempty"`
+	Password string `yaml:"password,omitempty"`
+	HomeDir  string `yaml:"home_dir,omitempty"`
+}
+
+// NetbiosConfig represents NetBIOS service configuration
+type NetbiosConfig struct {
+	Enabled   bool     `yaml:"enabled,omitempty"`
+	Name      string   `yaml:"name,omitempty"`
+	Workgroup string   `yaml:"workgroup,omitempty"`
+	NodeType  string   `yaml:"node_type,omitempty"`
+	Services  []string `yaml:"services,omitempty"`
+	TTL       uint32   `yaml:"ttl,omitempty"`
 }
 
 // Parser handles parsing Java DSL format

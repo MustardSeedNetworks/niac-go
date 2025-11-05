@@ -43,20 +43,23 @@ type ProtocolConfig struct {
 
 // Device represents a simulated network device
 type Device struct {
-	Name        string
-	Type        string // router, switch, ap, etc.
-	MACAddress  net.HardwareAddr
-	IPAddresses []net.IP
-	Interfaces  []Interface
-	SNMPConfig  SNMPConfig
-	DHCPConfig  *DHCPConfig // DHCP server configuration
-	DNSConfig   *DNSConfig  // DNS server configuration
-	LLDPConfig  *LLDPConfig // LLDP discovery protocol configuration
-	CDPConfig   *CDPConfig  // CDP discovery protocol configuration
-	EDPConfig   *EDPConfig  // EDP discovery protocol configuration
-	FDPConfig   *FDPConfig  // FDP discovery protocol configuration
-	STPConfig   *STPConfig  // STP/RSTP/MSTP configuration
-	Properties  map[string]string
+	Name          string
+	Type          string // router, switch, ap, etc.
+	MACAddress    net.HardwareAddr
+	IPAddresses   []net.IP
+	Interfaces    []Interface
+	SNMPConfig    SNMPConfig
+	DHCPConfig    *DHCPConfig    // DHCP server configuration
+	DNSConfig     *DNSConfig     // DNS server configuration
+	LLDPConfig    *LLDPConfig    // LLDP discovery protocol configuration
+	CDPConfig     *CDPConfig     // CDP discovery protocol configuration
+	EDPConfig     *EDPConfig     // EDP discovery protocol configuration
+	FDPConfig     *FDPConfig     // FDP discovery protocol configuration
+	STPConfig     *STPConfig     // STP/RSTP/MSTP configuration
+	HTTPConfig    *HTTPConfig    // HTTP server configuration
+	FTPConfig     *FTPConfig     // FTP server configuration
+	NetBIOSConfig *NetBIOSConfig // NetBIOS service configuration
+	Properties    map[string]string
 }
 
 // DHCPConfig holds DHCP server configuration for a device
@@ -174,6 +177,48 @@ type STPConfig struct {
 	MaxAge         uint16 // seconds (default: 20)
 	ForwardDelay   uint16 // seconds (default: 15)
 	Version        string // "stp", "rstp", "mstp" (default: "stp")
+}
+
+// HTTPConfig holds HTTP server configuration
+type HTTPConfig struct {
+	Enabled       bool
+	ServerName    string            // Server header value (default: "NIAC-Go/1.0.0")
+	Endpoints     []HTTPEndpoint    // Custom endpoint definitions
+}
+
+// HTTPEndpoint defines a custom HTTP endpoint and response
+type HTTPEndpoint struct {
+	Path        string // URL path (e.g., "/", "/api/info")
+	Method      string // HTTP method (default: "GET")
+	StatusCode  int    // HTTP status code (default: 200)
+	ContentType string // Content-Type header (default: "text/html")
+	Body        string // Response body
+}
+
+// FTPConfig holds FTP server configuration
+type FTPConfig struct {
+	Enabled         bool
+	WelcomeBanner   string // Welcome message (default: "220 {devicename} FTP Server (NIAC-Go) ready.")
+	SystemType      string // System type string (default: "UNIX Type: L8")
+	AllowAnonymous  bool   // Allow anonymous login (default: true)
+	Users           []FTPUser // User accounts
+}
+
+// FTPUser represents an FTP user account
+type FTPUser struct {
+	Username string
+	Password string
+	HomeDir  string // Virtual home directory path
+}
+
+// NetBIOSConfig holds NetBIOS service configuration
+type NetBIOSConfig struct {
+	Enabled      bool
+	Name         string   // NetBIOS name (default: device name, max 15 chars)
+	Workgroup    string   // Workgroup/domain name (default: "WORKGROUP")
+	NodeType     string   // Node type: "B" (broadcast), "P" (peer), "M" (mixed), "H" (hybrid) (default: "B")
+	Services     []string // Service types to advertise (default: ["workstation", "fileserver"])
+	TTL          uint32   // Name registration TTL in seconds (default: 300)
 }
 
 // Load reads and parses a configuration file
@@ -669,6 +714,105 @@ func LoadYAML(filename string) (*Config, error) {
 				stpCfg.Version = "stp" // Default to STP
 			}
 			device.STPConfig = stpCfg
+		}
+
+		// Handle HTTP configuration
+		if yamlDevice.Http != nil {
+			httpCfg := &HTTPConfig{
+				Enabled:    yamlDevice.Http.Enabled,
+				ServerName: yamlDevice.Http.ServerName,
+				Endpoints:  make([]HTTPEndpoint, 0),
+			}
+			// Set default server name if not specified
+			if httpCfg.ServerName == "" {
+				httpCfg.ServerName = "NIAC-Go/1.0.0"
+			}
+			// Parse endpoints
+			for _, ep := range yamlDevice.Http.Endpoints {
+				endpoint := HTTPEndpoint{
+					Path:        ep.Path,
+					Method:      ep.Method,
+					StatusCode:  ep.StatusCode,
+					ContentType: ep.ContentType,
+					Body:        ep.Body,
+				}
+				// Set defaults
+				if endpoint.Method == "" {
+					endpoint.Method = "GET"
+				}
+				if endpoint.StatusCode == 0 {
+					endpoint.StatusCode = 200
+				}
+				if endpoint.ContentType == "" {
+					endpoint.ContentType = "text/html"
+				}
+				httpCfg.Endpoints = append(httpCfg.Endpoints, endpoint)
+			}
+			device.HTTPConfig = httpCfg
+		}
+
+		// Handle FTP configuration
+		if yamlDevice.Ftp != nil {
+			ftpCfg := &FTPConfig{
+				Enabled:        yamlDevice.Ftp.Enabled,
+				WelcomeBanner:  yamlDevice.Ftp.WelcomeBanner,
+				SystemType:     yamlDevice.Ftp.SystemType,
+				AllowAnonymous: yamlDevice.Ftp.AllowAnonymous,
+				Users:          make([]FTPUser, 0),
+			}
+			// Set defaults
+			if ftpCfg.WelcomeBanner == "" {
+				ftpCfg.WelcomeBanner = fmt.Sprintf("220 %s FTP Server (NIAC-Go) ready.", device.Name)
+			}
+			if ftpCfg.SystemType == "" {
+				ftpCfg.SystemType = "UNIX Type: L8"
+			}
+			// Parse users
+			for _, u := range yamlDevice.Ftp.Users {
+				user := FTPUser{
+					Username: u.Username,
+					Password: u.Password,
+					HomeDir:  u.HomeDir,
+				}
+				if user.HomeDir == "" {
+					user.HomeDir = "/"
+				}
+				ftpCfg.Users = append(ftpCfg.Users, user)
+			}
+			device.FTPConfig = ftpCfg
+		}
+
+		// Handle NetBIOS configuration
+		if yamlDevice.Netbios != nil {
+			netbiosCfg := &NetBIOSConfig{
+				Enabled:   yamlDevice.Netbios.Enabled,
+				Name:      yamlDevice.Netbios.Name,
+				Workgroup: yamlDevice.Netbios.Workgroup,
+				NodeType:  yamlDevice.Netbios.NodeType,
+				Services:  yamlDevice.Netbios.Services,
+				TTL:       yamlDevice.Netbios.TTL,
+			}
+			// Set defaults
+			if netbiosCfg.Name == "" {
+				// Use device name, truncate to 15 chars
+				netbiosCfg.Name = device.Name
+				if len(netbiosCfg.Name) > 15 {
+					netbiosCfg.Name = netbiosCfg.Name[:15]
+				}
+			}
+			if netbiosCfg.Workgroup == "" {
+				netbiosCfg.Workgroup = "WORKGROUP"
+			}
+			if netbiosCfg.NodeType == "" {
+				netbiosCfg.NodeType = "B" // Broadcast
+			}
+			if len(netbiosCfg.Services) == 0 {
+				netbiosCfg.Services = []string{"workstation", "fileserver"}
+			}
+			if netbiosCfg.TTL == 0 {
+				netbiosCfg.TTL = 300 // 5 minutes
+			}
+			device.NetBIOSConfig = netbiosCfg
 		}
 
 		cfg.Devices = append(cfg.Devices, device)

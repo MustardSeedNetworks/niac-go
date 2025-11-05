@@ -219,14 +219,41 @@ func (h *NetBIOSHandler) sendNameQueryResponse(pkt *Packet, transactionID uint16
 	binary.Write(buf, binary.BigEndian, uint16(0x0020)) // NB record
 	binary.Write(buf, binary.BigEndian, uint16(0x0001)) // IN class
 
-	// TTL = 300 seconds
-	binary.Write(buf, binary.BigEndian, uint32(300))
+	// Get TTL from matched device config (default: 300 seconds)
+	ttl := uint32(300)
+	nodeFlags := uint16(0x0000) // Default: B-node, unique name
+
+	// Find the device to get its NetBIOS config
+	for _, device := range h.stack.GetDevices().GetAll() {
+		if device.MACAddress.String() == srcMAC.String() {
+			if device.NetBIOSConfig != nil {
+				if device.NetBIOSConfig.TTL > 0 {
+					ttl = device.NetBIOSConfig.TTL
+				}
+				// Set node type flags based on config
+				switch device.NetBIOSConfig.NodeType {
+				case "B": // Broadcast
+					nodeFlags = 0x0000
+				case "P": // Peer-to-peer
+					nodeFlags = 0x2000
+				case "M": // Mixed
+					nodeFlags = 0x4000
+				case "H": // Hybrid
+					nodeFlags = 0x6000
+				}
+			}
+			break
+		}
+	}
+
+	// TTL
+	binary.Write(buf, binary.BigEndian, ttl)
 
 	// RDATA length = 6 (2 bytes flags + 4 bytes IP)
 	binary.Write(buf, binary.BigEndian, uint16(6))
 
-	// Name flags (0x0000 = B-node, unique name)
-	binary.Write(buf, binary.BigEndian, uint16(0x0000))
+	// Name flags
+	binary.Write(buf, binary.BigEndian, nodeFlags)
 
 	// IP address
 	buf.Write(deviceIP.To4())
