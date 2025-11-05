@@ -13,6 +13,7 @@ import (
 	"github.com/krisarmstrong/niac-go/pkg/capture"
 	"github.com/krisarmstrong/niac-go/pkg/config"
 	"github.com/krisarmstrong/niac-go/pkg/interactive"
+	"github.com/krisarmstrong/niac-go/pkg/logging"
 	"github.com/krisarmstrong/niac-go/pkg/protocols"
 )
 
@@ -90,6 +91,9 @@ func main() {
 		debugLevel = 0
 	}
 
+	// Initialize colors (respects --no-color flag and NO_COLOR env var)
+	logging.InitColors(!noColor)
+
 	// Handle version flag
 	if showVersion {
 		printVersion()
@@ -134,8 +138,8 @@ func main() {
 
 	// Check if interface exists
 	if !capture.InterfaceExists(interfaceName) {
-		fmt.Printf("Error: Interface '%s' not found\n\n", interfaceName)
-		fmt.Println("Available interfaces:")
+		logging.Error("Interface '%s' not found", interfaceName)
+		fmt.Println("\nAvailable interfaces:")
 		capture.ListInterfaces()
 		os.Exit(2)
 	}
@@ -143,25 +147,25 @@ func main() {
 	// Load configuration
 	cfg, err := config.Load(configFile)
 	if err != nil {
-		fmt.Printf("Error loading configuration: %v\n", err)
+		logging.Error("loading configuration: %v", err)
 		os.Exit(1)
 	}
 
 	if debugLevel >= 1 {
-		fmt.Printf("✓ Loaded configuration: %s\n", configFile)
-		fmt.Printf("  Devices: %d\n", len(cfg.Devices))
-		fmt.Printf("  Interface: %s\n", interfaceName)
-		fmt.Printf("  Debug level: %d (%s)\n", debugLevel, getDebugLevelName(debugLevel))
+		logging.Success("Loaded configuration: %s", configFile)
+		logging.Info("  Devices: %d", len(cfg.Devices))
+		logging.Info("  Interface: %s", interfaceName)
+		logging.Info("  Debug level: %d (%s)", debugLevel, getDebugLevelName(debugLevel))
 		if interactiveMode {
-			fmt.Printf("  Mode: Interactive TUI\n")
+			logging.Info("  Mode: Interactive TUI")
 		}
 		if cfg.CapturePlayback != nil {
-			fmt.Printf("  PCAP Playback: %s\n", cfg.CapturePlayback.FileName)
+			logging.Info("  PCAP Playback: %s", cfg.CapturePlayback.FileName)
 			if cfg.CapturePlayback.LoopTime > 0 {
-				fmt.Printf("    Loop interval: %dms\n", cfg.CapturePlayback.LoopTime)
+				logging.Info("    Loop interval: %dms", cfg.CapturePlayback.LoopTime)
 			}
 			if cfg.CapturePlayback.ScaleTime > 0 && cfg.CapturePlayback.ScaleTime != 1.0 {
-				fmt.Printf("    Time scaling: %.2fx\n", cfg.CapturePlayback.ScaleTime)
+				logging.Info("    Time scaling: %.2fx", cfg.CapturePlayback.ScaleTime)
 			}
 		}
 		fmt.Println()
@@ -169,9 +173,9 @@ func main() {
 
 	// Dry run mode - validate and exit
 	if dryRun {
-		fmt.Println("✓ Configuration validation successful")
-		fmt.Println("✓ Interface exists and is accessible")
-		fmt.Printf("✓ Ready to simulate %d devices on %s\n", len(cfg.Devices), interfaceName)
+		logging.Success("Configuration validation successful")
+		logging.Success("Interface exists and is accessible")
+		logging.Success("Ready to simulate %d devices on %s", len(cfg.Devices), interfaceName)
 		fmt.Println()
 		fmt.Println("Configuration is valid. Use without --dry-run to start simulation.")
 		os.Exit(0)
