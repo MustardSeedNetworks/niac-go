@@ -49,6 +49,27 @@ func main() {
 		noTraffic      bool
 		snmpCommunity  string
 		maxPacketSize  int
+
+		// Per-protocol debug levels
+		debugARP     int
+		debugIP      int
+		debugICMP    int
+		debugIPv6    int
+		debugICMPv6  int
+		debugUDP     int
+		debugTCP     int
+		debugDNS     int
+		debugDHCP    int
+		debugDHCPv6  int
+		debugHTTP    int
+		debugFTP     int
+		debugNetBIOS int
+		debugSTP     int
+		debugLLDP    int
+		debugCDP     int
+		debugEDP     int
+		debugFDP     int
+		debugSNMP    int
 	)
 
 	// Define flags
@@ -79,6 +100,27 @@ func main() {
 	flag.StringVar(&snmpCommunity, "snmp-community", "", "Default SNMP community string")
 	flag.IntVar(&maxPacketSize, "max-packet-size", 1514, "Maximum packet size in bytes")
 
+	// Per-protocol debug flags (-1 means use global level)
+	flag.IntVar(&debugARP, "debug-arp", -1, "ARP protocol debug level (0-3, default: global level)")
+	flag.IntVar(&debugIP, "debug-ip", -1, "IP protocol debug level (0-3, default: global level)")
+	flag.IntVar(&debugICMP, "debug-icmp", -1, "ICMP protocol debug level (0-3, default: global level)")
+	flag.IntVar(&debugIPv6, "debug-ipv6", -1, "IPv6 protocol debug level (0-3, default: global level)")
+	flag.IntVar(&debugICMPv6, "debug-icmpv6", -1, "ICMPv6 protocol debug level (0-3, default: global level)")
+	flag.IntVar(&debugUDP, "debug-udp", -1, "UDP protocol debug level (0-3, default: global level)")
+	flag.IntVar(&debugTCP, "debug-tcp", -1, "TCP protocol debug level (0-3, default: global level)")
+	flag.IntVar(&debugDNS, "debug-dns", -1, "DNS protocol debug level (0-3, default: global level)")
+	flag.IntVar(&debugDHCP, "debug-dhcp", -1, "DHCP protocol debug level (0-3, default: global level)")
+	flag.IntVar(&debugDHCPv6, "debug-dhcpv6", -1, "DHCPv6 protocol debug level (0-3, default: global level)")
+	flag.IntVar(&debugHTTP, "debug-http", -1, "HTTP protocol debug level (0-3, default: global level)")
+	flag.IntVar(&debugFTP, "debug-ftp", -1, "FTP protocol debug level (0-3, default: global level)")
+	flag.IntVar(&debugNetBIOS, "debug-netbios", -1, "NetBIOS protocol debug level (0-3, default: global level)")
+	flag.IntVar(&debugSTP, "debug-stp", -1, "STP protocol debug level (0-3, default: global level)")
+	flag.IntVar(&debugLLDP, "debug-lldp", -1, "LLDP protocol debug level (0-3, default: global level)")
+	flag.IntVar(&debugCDP, "debug-cdp", -1, "CDP protocol debug level (0-3, default: global level)")
+	flag.IntVar(&debugEDP, "debug-edp", -1, "EDP protocol debug level (0-3, default: global level)")
+	flag.IntVar(&debugFDP, "debug-fdp", -1, "FDP protocol debug level (0-3, default: global level)")
+	flag.IntVar(&debugSNMP, "debug-snmp", -1, "SNMP protocol debug level (0-3, default: global level)")
+
 	// Custom usage
 	flag.Usage = printUsage
 	flag.Parse()
@@ -93,6 +135,68 @@ func main() {
 
 	// Initialize colors (respects --no-color flag and NO_COLOR env var)
 	logging.InitColors(!noColor)
+
+	// Create debug configuration
+	debugConfig := logging.NewDebugConfig(debugLevel)
+
+	// Set per-protocol debug levels if specified (value >= 0)
+	if debugARP >= 0 {
+		debugConfig.SetProtocolLevel(logging.ProtocolARP, debugARP)
+	}
+	if debugIP >= 0 {
+		debugConfig.SetProtocolLevel(logging.ProtocolIP, debugIP)
+	}
+	if debugICMP >= 0 {
+		debugConfig.SetProtocolLevel(logging.ProtocolICMP, debugICMP)
+	}
+	if debugIPv6 >= 0 {
+		debugConfig.SetProtocolLevel(logging.ProtocolIPv6, debugIPv6)
+	}
+	if debugICMPv6 >= 0 {
+		debugConfig.SetProtocolLevel(logging.ProtocolICMPv6, debugICMPv6)
+	}
+	if debugUDP >= 0 {
+		debugConfig.SetProtocolLevel(logging.ProtocolUDP, debugUDP)
+	}
+	if debugTCP >= 0 {
+		debugConfig.SetProtocolLevel(logging.ProtocolTCP, debugTCP)
+	}
+	if debugDNS >= 0 {
+		debugConfig.SetProtocolLevel(logging.ProtocolDNS, debugDNS)
+	}
+	if debugDHCP >= 0 {
+		debugConfig.SetProtocolLevel(logging.ProtocolDHCP, debugDHCP)
+	}
+	if debugDHCPv6 >= 0 {
+		debugConfig.SetProtocolLevel(logging.ProtocolDHCPv6, debugDHCPv6)
+	}
+	if debugHTTP >= 0 {
+		debugConfig.SetProtocolLevel(logging.ProtocolHTTP, debugHTTP)
+	}
+	if debugFTP >= 0 {
+		debugConfig.SetProtocolLevel(logging.ProtocolFTP, debugFTP)
+	}
+	if debugNetBIOS >= 0 {
+		debugConfig.SetProtocolLevel(logging.ProtocolNetBIOS, debugNetBIOS)
+	}
+	if debugSTP >= 0 {
+		debugConfig.SetProtocolLevel(logging.ProtocolSTP, debugSTP)
+	}
+	if debugLLDP >= 0 {
+		debugConfig.SetProtocolLevel(logging.ProtocolLLDP, debugLLDP)
+	}
+	if debugCDP >= 0 {
+		debugConfig.SetProtocolLevel(logging.ProtocolCDP, debugCDP)
+	}
+	if debugEDP >= 0 {
+		debugConfig.SetProtocolLevel(logging.ProtocolEDP, debugEDP)
+	}
+	if debugFDP >= 0 {
+		debugConfig.SetProtocolLevel(logging.ProtocolFDP, debugFDP)
+	}
+	if debugSNMP >= 0 {
+		debugConfig.SetProtocolLevel(logging.ProtocolSNMP, debugSNMP)
+	}
 
 	// Handle version flag
 	if showVersion {
@@ -184,13 +288,13 @@ func main() {
 	// Start simulation
 	if interactiveMode {
 		// Run with interactive TUI
-		if err := interactive.Run(interfaceName, cfg, debugLevel); err != nil {
+		if err := interactive.Run(interfaceName, cfg, debugConfig); err != nil {
 			fmt.Printf("Error: %v\n", err)
 			os.Exit(1)
 		}
 	} else {
 		// Run in normal mode
-		if err := runNormalMode(interfaceName, cfg, debugLevel); err != nil {
+		if err := runNormalMode(interfaceName, cfg, debugConfig); err != nil {
 			fmt.Printf("Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -260,6 +364,27 @@ func printUsage() {
 	fmt.Println("        --snmp-community <str>  Default SNMP community string")
 	fmt.Println("        --max-packet-size <n>   Maximum packet size [default: 1514]")
 	fmt.Println()
+	fmt.Println("  Per-Protocol Debug Levels:")
+	fmt.Println("        --debug-arp <level>     ARP protocol debug level (0-3)")
+	fmt.Println("        --debug-ip <level>      IP protocol debug level (0-3)")
+	fmt.Println("        --debug-icmp <level>    ICMP protocol debug level (0-3)")
+	fmt.Println("        --debug-ipv6 <level>    IPv6 protocol debug level (0-3)")
+	fmt.Println("        --debug-icmpv6 <level>  ICMPv6 protocol debug level (0-3)")
+	fmt.Println("        --debug-udp <level>     UDP protocol debug level (0-3)")
+	fmt.Println("        --debug-tcp <level>     TCP protocol debug level (0-3)")
+	fmt.Println("        --debug-dns <level>     DNS protocol debug level (0-3)")
+	fmt.Println("        --debug-dhcp <level>    DHCP protocol debug level (0-3)")
+	fmt.Println("        --debug-dhcpv6 <level>  DHCPv6 protocol debug level (0-3)")
+	fmt.Println("        --debug-http <level>    HTTP protocol debug level (0-3)")
+	fmt.Println("        --debug-ftp <level>     FTP protocol debug level (0-3)")
+	fmt.Println("        --debug-netbios <level> NetBIOS protocol debug level (0-3)")
+	fmt.Println("        --debug-stp <level>     STP protocol debug level (0-3)")
+	fmt.Println("        --debug-lldp <level>    LLDP protocol debug level (0-3)")
+	fmt.Println("        --debug-cdp <level>     CDP protocol debug level (0-3)")
+	fmt.Println("        --debug-edp <level>     EDP protocol debug level (0-3)")
+	fmt.Println("        --debug-fdp <level>     FDP protocol debug level (0-3)")
+	fmt.Println("        --debug-snmp <level>    SNMP protocol debug level (0-3)")
+	fmt.Println()
 	fmt.Println("DEBUG LEVELS:")
 	fmt.Println("  0  QUIET   - Only critical errors")
 	fmt.Println("  1  NORMAL  - Status messages (default)")
@@ -278,6 +403,9 @@ func printUsage() {
 	fmt.Println()
 	fmt.Println("  # Run in quiet mode with log file")
 	fmt.Println("  sudo niac --quiet --log-file niac.log en0 network.cfg")
+	fmt.Println()
+	fmt.Println("  # Debug only DHCP protocol at verbose level")
+	fmt.Println("  sudo niac --debug 1 --debug-dhcp 3 en0 network.cfg")
 	fmt.Println()
 	fmt.Println("  # Show version")
 	fmt.Println("  niac --version")
@@ -372,7 +500,9 @@ func padRight(str string, length int) string {
 }
 
 // runNormalMode runs NIAC in normal (non-interactive) mode
-func runNormalMode(interfaceName string, cfg *config.Config, debugLevel int) error {
+func runNormalMode(interfaceName string, cfg *config.Config, debugConfig *logging.DebugConfig) error {
+	debugLevel := debugConfig.GetGlobal()
+
 	fmt.Println("Starting NIAC simulation...")
 	fmt.Printf("  Interface: %s\n", interfaceName)
 	fmt.Printf("  Devices: %d\n", len(cfg.Devices))
@@ -389,7 +519,7 @@ func runNormalMode(interfaceName string, cfg *config.Config, debugLevel int) err
 	defer engine.Close()
 
 	// Create protocol stack
-	stack := protocols.NewStack(engine, cfg, debugLevel)
+	stack := protocols.NewStack(engine, cfg, debugConfig)
 
 	// Configure DHCP/DNS handlers from device configs
 	for _, device := range cfg.Devices {
