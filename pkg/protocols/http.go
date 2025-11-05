@@ -304,3 +304,41 @@ func getDeviceNames(devices []*config.Device) string {
 	}
 	return strings.Join(names, ", ")
 }
+
+// HandleRequestV6 processes an HTTP request over IPv6
+func (h *HTTPHandler) HandleRequestV6(pkt *Packet, packet gopacket.Packet, ipv6 *layers.IPv6, tcpLayer *layers.TCP, devices []*config.Device) {
+	debugLevel := h.stack.GetDebugLevel()
+
+	// Parse HTTP request
+	if len(tcpLayer.Payload) == 0 {
+		return
+	}
+
+	request, err := parseHTTPRequest(tcpLayer.Payload)
+	if err != nil {
+		if debugLevel >= 3 {
+			fmt.Printf("Failed to parse HTTP/IPv6 request: %v\n", err)
+		}
+		return
+	}
+
+	if debugLevel >= 2 {
+		fmt.Printf("HTTP/IPv6 %s %s from [%s] (device: %v)\n",
+			request.Method, request.Path, ipv6.SrcIP, getDeviceNames(devices))
+	}
+
+	// Generate response
+	response := h.generateResponse(request, devices)
+
+	// Send response over IPv6
+	h.sendResponseV6(ipv6, tcpLayer, response, devices)
+}
+
+// sendResponseV6 sends HTTP response over IPv6 (stub - basic implementation)
+func (h *HTTPHandler) sendResponseV6(ipv6 *layers.IPv6, tcpLayer *layers.TCP, response []byte, devices []*config.Device) {
+	// TODO: Implement full HTTP response over IPv6
+	debugLevel := h.stack.GetDebugLevel()
+	if debugLevel >= 2 {
+		fmt.Printf("HTTP/IPv6: Would send %d byte response (stub)\n", len(response))
+	}
+}

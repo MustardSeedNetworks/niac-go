@@ -297,3 +297,14 @@ func (h *FTPHandler) SendWelcome(ipLayer *layers.IPv4, tcpLayer *layers.TCP, dev
 		fmt.Printf("Scheduled FTP welcome banner for %s\n", deviceName)
 	}
 }
+
+// HandleRequestV6 processes an FTP request over IPv6
+func (h *FTPHandler) HandleRequestV6(pkt *Packet, packet gopacket.Packet, ipv6 *layers.IPv6, tcpLayer *layers.TCP, devices []*config.Device) {
+	debugLevel := h.stack.GetDebugLevel()
+
+	if debugLevel >= 2 {
+		fmt.Printf("FTP/IPv6 request from [%s] (stub - not fully implemented)\n", ipv6.SrcIP)
+	}
+
+	// TODO: Implement full FTP over IPv6
+}
