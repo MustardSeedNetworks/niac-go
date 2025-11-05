@@ -62,6 +62,7 @@ type Device struct {
 	ICMPConfig    *ICMPConfig    // ICMP/ICMPv4 configuration
 	ICMPv6Config  *ICMPv6Config  // ICMPv6 configuration
 	DHCPv6Config  *DHCPv6Config  // DHCPv6 server configuration
+	TrafficConfig *TrafficConfig // Traffic pattern configuration (v1.6.0)
 	Properties    map[string]string
 }
 
@@ -125,12 +126,13 @@ type Interface struct {
 
 // SNMPConfig holds SNMP configuration
 type SNMPConfig struct {
-	Community  string
-	SysName    string
-	SysDescr   string
-	SysContact string
+	Community   string
+	SysName     string
+	SysDescr    string
+	SysContact  string
 	SysLocation string
-	WalkFile   string // Path to SNMP walk file
+	WalkFile    string      // Path to SNMP walk file
+	Traps       *TrapConfig // SNMP trap configuration (v1.6.0)
 }
 
 // LLDPConfig holds LLDP (Link Layer Discovery Protocol) configuration
@@ -258,6 +260,67 @@ type DHCPv6Pool struct {
 	Network    string   // IPv6 network (e.g., "2001:db8::/64")
 	RangeStart string   // Start of address range
 	RangeEnd   string   // End of address range
+}
+
+// TrafficConfig holds traffic pattern configuration (v1.6.0)
+type TrafficConfig struct {
+	Enabled            bool
+	ARPAnnouncements   *ARPAnnouncementConfig
+	PeriodicPings      *PeriodicPingConfig
+	RandomTraffic      *RandomTrafficConfig
+}
+
+// ARPAnnouncementConfig configures gratuitous ARP announcements
+type ARPAnnouncementConfig struct {
+	Enabled  bool
+	Interval int // Interval in seconds (default: 60)
+}
+
+// PeriodicPingConfig configures periodic ICMP echo requests
+type PeriodicPingConfig struct {
+	Enabled     bool
+	Interval    int // Interval in seconds (default: 120)
+	PayloadSize int // Payload size in bytes (default: 32)
+}
+
+// RandomTrafficConfig configures random background traffic
+type RandomTrafficConfig struct {
+	Enabled      bool
+	Interval     int      // Interval in seconds (default: 180)
+	PacketCount  int      // Number of packets per interval (default: 5)
+	Patterns     []string // Traffic patterns: "broadcast_arp", "multicast", "udp"
+}
+
+// TrapConfig holds SNMP trap configuration (v1.6.0)
+type TrapConfig struct {
+	Enabled               bool
+	Receivers             []string // Trap receiver addresses (IP:port format)
+	ColdStart             *TrapTriggerConfig
+	LinkState             *LinkStateTrapConfig
+	AuthenticationFailure *TrapTriggerConfig
+	HighCPU               *ThresholdTrapConfig
+	HighMemory            *ThresholdTrapConfig
+	InterfaceErrors       *ThresholdTrapConfig
+}
+
+// TrapTriggerConfig configures a simple trap trigger
+type TrapTriggerConfig struct {
+	Enabled   bool
+	OnStartup bool // Send trap on device startup
+}
+
+// LinkStateTrapConfig configures link up/down traps
+type LinkStateTrapConfig struct {
+	Enabled  bool
+	LinkDown bool // Send trap on link down
+	LinkUp   bool // Send trap on link up
+}
+
+// ThresholdTrapConfig configures threshold-based traps
+type ThresholdTrapConfig struct {
+	Enabled   bool
+	Threshold int // Threshold value (percent for CPU/Memory, count for errors)
+	Interval  int // Check interval in seconds
 }
 
 // Load reads and parses a configuration file
@@ -944,6 +1007,154 @@ func LoadYAML(filename string) (*Config, error) {
 			device.DHCPv6Config = dhcpv6Cfg
 		}
 
+
+	// Parse Traffic configuration (v1.6.0)
+	if yamlDevice.Traffic != nil {
+		trafficCfg := &TrafficConfig{
+			Enabled: yamlDevice.Traffic.Enabled,
+		}
+
+		// Parse ARP Announcements
+		if yamlDevice.Traffic.ARPAnnouncements != nil {
+			arpCfg := &ARPAnnouncementConfig{
+				Enabled:  yamlDevice.Traffic.ARPAnnouncements.Enabled,
+				Interval: yamlDevice.Traffic.ARPAnnouncements.Interval,
+			}
+			// Apply default interval if not specified
+			if arpCfg.Interval == 0 {
+				arpCfg.Interval = 60 // Default: 60 seconds
+			}
+			trafficCfg.ARPAnnouncements = arpCfg
+		}
+
+		// Parse Periodic Pings
+		if yamlDevice.Traffic.PeriodicPings != nil {
+			pingCfg := &PeriodicPingConfig{
+				Enabled:     yamlDevice.Traffic.PeriodicPings.Enabled,
+				Interval:    yamlDevice.Traffic.PeriodicPings.Interval,
+				PayloadSize: yamlDevice.Traffic.PeriodicPings.PayloadSize,
+			}
+			// Apply defaults if not specified
+			if pingCfg.Interval == 0 {
+				pingCfg.Interval = 120 // Default: 120 seconds
+			}
+			if pingCfg.PayloadSize == 0 {
+				pingCfg.PayloadSize = 32 // Default: 32 bytes
+			}
+			trafficCfg.PeriodicPings = pingCfg
+		}
+
+		// Parse Random Traffic
+		if yamlDevice.Traffic.RandomTraffic != nil {
+			randomCfg := &RandomTrafficConfig{
+				Enabled:     yamlDevice.Traffic.RandomTraffic.Enabled,
+				Interval:    yamlDevice.Traffic.RandomTraffic.Interval,
+				PacketCount: yamlDevice.Traffic.RandomTraffic.PacketCount,
+				Patterns:    yamlDevice.Traffic.RandomTraffic.Patterns,
+			}
+			// Apply defaults if not specified
+			if randomCfg.Interval == 0 {
+				randomCfg.Interval = 180 // Default: 180 seconds
+			}
+			if randomCfg.PacketCount == 0 {
+				randomCfg.PacketCount = 5 // Default: 5 packets
+			}
+			// Default patterns if none specified
+			if len(randomCfg.Patterns) == 0 {
+				randomCfg.Patterns = []string{"broadcast_arp", "multicast", "udp"}
+			}
+			trafficCfg.RandomTraffic = randomCfg
+		}
+
+		device.TrafficConfig = trafficCfg
+	}
+
+	// Parse SNMP Traps configuration (v1.6.0)
+	if yamlDevice.SnmpAgent != nil && yamlDevice.SnmpAgent.Traps != nil {
+		trapsCfg := &TrapConfig{
+			Enabled:   yamlDevice.SnmpAgent.Traps.Enabled,
+			Receivers: yamlDevice.SnmpAgent.Traps.Receivers,
+		}
+
+		// Parse Cold Start trap
+		if yamlDevice.SnmpAgent.Traps.ColdStart != nil {
+			trapsCfg.ColdStart = &TrapTriggerConfig{
+				Enabled:   yamlDevice.SnmpAgent.Traps.ColdStart.Enabled,
+				OnStartup: yamlDevice.SnmpAgent.Traps.ColdStart.OnStartup,
+			}
+		}
+
+		// Parse Link State trap
+		if yamlDevice.SnmpAgent.Traps.LinkState != nil {
+			trapsCfg.LinkState = &LinkStateTrapConfig{
+				Enabled:  yamlDevice.SnmpAgent.Traps.LinkState.Enabled,
+				LinkDown: yamlDevice.SnmpAgent.Traps.LinkState.LinkDown,
+				LinkUp:   yamlDevice.SnmpAgent.Traps.LinkState.LinkUp,
+			}
+		}
+
+		// Parse Authentication Failure trap
+		if yamlDevice.SnmpAgent.Traps.AuthenticationFailure != nil {
+			trapsCfg.AuthenticationFailure = &TrapTriggerConfig{
+				Enabled:   yamlDevice.SnmpAgent.Traps.AuthenticationFailure.Enabled,
+				OnStartup: yamlDevice.SnmpAgent.Traps.AuthenticationFailure.OnStartup,
+			}
+		}
+
+		// Parse High CPU trap
+		if yamlDevice.SnmpAgent.Traps.HighCPU != nil {
+			highCPUCfg := &ThresholdTrapConfig{
+				Enabled:   yamlDevice.SnmpAgent.Traps.HighCPU.Enabled,
+				Threshold: yamlDevice.SnmpAgent.Traps.HighCPU.Threshold,
+				Interval:  yamlDevice.SnmpAgent.Traps.HighCPU.Interval,
+			}
+			// Apply defaults if not specified
+			if highCPUCfg.Threshold == 0 {
+				highCPUCfg.Threshold = 80 // Default: 80%
+			}
+			if highCPUCfg.Interval == 0 {
+				highCPUCfg.Interval = 300 // Default: 300 seconds (5 minutes)
+			}
+			trapsCfg.HighCPU = highCPUCfg
+		}
+
+		// Parse High Memory trap
+		if yamlDevice.SnmpAgent.Traps.HighMemory != nil {
+			highMemCfg := &ThresholdTrapConfig{
+				Enabled:   yamlDevice.SnmpAgent.Traps.HighMemory.Enabled,
+				Threshold: yamlDevice.SnmpAgent.Traps.HighMemory.Threshold,
+				Interval:  yamlDevice.SnmpAgent.Traps.HighMemory.Interval,
+			}
+			// Apply defaults if not specified
+			if highMemCfg.Threshold == 0 {
+				highMemCfg.Threshold = 90 // Default: 90%
+			}
+			if highMemCfg.Interval == 0 {
+				highMemCfg.Interval = 300 // Default: 300 seconds (5 minutes)
+			}
+			trapsCfg.HighMemory = highMemCfg
+		}
+
+		// Parse Interface Errors trap
+		if yamlDevice.SnmpAgent.Traps.InterfaceErrors != nil {
+			ifErrCfg := &ThresholdTrapConfig{
+				Enabled:   yamlDevice.SnmpAgent.Traps.InterfaceErrors.Enabled,
+				Threshold: yamlDevice.SnmpAgent.Traps.InterfaceErrors.Threshold,
+				Interval:  yamlDevice.SnmpAgent.Traps.InterfaceErrors.Interval,
+			}
+			// Apply defaults if not specified
+			if ifErrCfg.Threshold == 0 {
+				ifErrCfg.Threshold = 100 // Default: 100 errors
+			}
+			if ifErrCfg.Interval == 0 {
+				ifErrCfg.Interval = 60 // Default: 60 seconds (1 minute)
+			}
+			trapsCfg.InterfaceErrors = ifErrCfg
+		}
+
+		// Attach traps config to SNMP config
+	device.SNMPConfig.Traps = trapsCfg
+	}
 		cfg.Devices = append(cfg.Devices, device)
 	}
 

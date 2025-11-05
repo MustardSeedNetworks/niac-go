@@ -29,6 +29,7 @@ type Simulator struct {
 type SimulatedDevice struct {
 	Config       *config.Device
 	SNMPAgent    *snmp.Agent
+	TrapSender   *snmp.TrapSender // SNMP trap sender (v1.6.0)
 	State        DeviceState
 	LastActivity time.Time
 	Counters     *DeviceCounters
@@ -101,6 +102,18 @@ func (s *Simulator) addDevice(device *config.Device) {
 		}
 	}
 
+	// Initialize SNMP trap sender if configured (v1.6.0)
+	if device.SNMPConfig.Traps != nil && device.SNMPConfig.Traps.Enabled {
+		if len(device.IPAddresses) > 0 {
+			trapSender, err := snmp.NewTrapSender(device.Name, device.IPAddresses[0], device.SNMPConfig.Traps, s.debugLevel)
+			if err == nil {
+				simDevice.TrapSender = trapSender
+			} else if s.debugLevel >= 1 {
+				log.Printf("Warning: failed to create trap sender for %s: %v", device.Name, err)
+			}
+		}
+	}
+
 	s.devices[device.Name] = simDevice
 
 	if s.debugLevel >= 1 {
@@ -120,6 +133,14 @@ func (s *Simulator) Start() error {
 	// Start behavior threads for each device
 	for name, device := range s.devices {
 		go s.deviceBehaviorLoop(name, device)
+
+		// Start trap sender if configured (v1.6.0)
+		if device.TrapSender != nil {
+			err := device.TrapSender.Start()
+			if err != nil && s.debugLevel >= 1 {
+				log.Printf("Warning: failed to start trap sender for %s: %v", name, err)
+			}
+		}
 	}
 
 	if s.debugLevel >= 1 {
@@ -137,6 +158,13 @@ func (s *Simulator) Stop() {
 
 	s.running = false
 	close(s.stopChan)
+
+	// Stop all trap senders (v1.6.0)
+	for _, device := range s.devices {
+		if device.TrapSender != nil {
+			device.TrapSender.Stop()
+		}
+	}
 
 	if s.debugLevel >= 1 {
 		log.Println("Device simulator stopped")

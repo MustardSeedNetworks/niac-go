@@ -2,7 +2,7 @@
 
 **Production-ready network device simulator** - Complete YAML configuration system with per-protocol debug control, multi-IP support, and comprehensive protocol coverage.
 
-**Current Version: 1.5.0** - Full YAML Configuration System
+**Current Version: 1.6.0** - Complete Protocol & YAML Work
 
 ## 🚀 Why Go?
 
@@ -29,7 +29,23 @@ NIAC-Go is a modern rewrite of the original Java-based NIAC, leveraging Go's str
 
 ## Features
 
-### v1.5.0 Highlights 🎉
+### v1.6.0 Highlights 🎉
+
+- **🚦 Configurable Traffic Patterns**: Per-device traffic control
+  - ARP announcement intervals
+  - Periodic ping intervals and payload sizes
+  - Random traffic generation (packet count, intervals, patterns)
+- **📡 SNMP Trap Generation**: SNMPv2c trap PDUs
+  - Event-based traps (coldStart, linkUp/Down, authenticationFailure)
+  - Threshold-based traps (high CPU, high memory, interface errors)
+  - Multiple trap receivers with configurable thresholds
+- **📝 Complete Protocol & YAML Work**: All protocol configuration complete
+  - 19 protocols fully configurable via YAML
+  - Per-device traffic and trap configuration
+  - Comprehensive examples for all features
+- **🎨 Enhanced Examples**: Updated complete-kitchen-sink.yaml with 9 devices showcasing all features
+
+### Previous Features (v1.5.0)
 
 - **🎨 Color-Coded Debug Output**: Protocol messages color-coded for better readability
 - **🔧 Per-Protocol Debug Control**: 19 independent debug flags (--debug-arp, --debug-lldp, etc.)
@@ -195,7 +211,9 @@ devices:
 ### Example Library
 
 See `examples/` directory for 20+ organized examples:
-- **Complete reference**: `complete-kitchen-sink.yaml` (all features)
+- **Complete reference**: `complete-kitchen-sink.yaml` (all v1.6.0 features, 9 devices)
+- **Traffic patterns** (v1.6.0): `traffic-patterns.yaml` - Configurable ARP, pings, random traffic
+- **SNMP traps** (v1.6.0): `snmp-traps.yaml` - Event & threshold-based trap generation
 - **Layer 2 protocols**: `layer2/lldp-only.yaml`, `layer2/stp-bridge.yaml`
 - **DHCP servers**: `dhcp/dhcpv4-simple.yaml`, `dhcp/dhcpv4-advanced.yaml`
 - **Services**: `services/dns-server.yaml`, `services/http-server.yaml`
