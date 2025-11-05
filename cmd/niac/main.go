@@ -437,6 +437,10 @@ func printDeviceList(configFile string) {
 		ipAddr := "N/A"
 		if len(device.IPAddresses) > 0 {
 			ipAddr = device.IPAddresses[0].String()
+			// Indicate if device has multiple IPs
+			if len(device.IPAddresses) > 1 {
+				ipAddr = ipAddr + " +" + fmt.Sprintf("%d", len(device.IPAddresses)-1)
+			}
 		}
 
 		macAddr := "N/A"

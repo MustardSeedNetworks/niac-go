@@ -44,7 +44,8 @@ type CapturePlayback struct {
 type Device struct {
 	Name      string      `yaml:"name,omitempty"`
 	MAC       string      `yaml:"mac"`
-	IP        string      `yaml:"ip"`
+	IP        string      `yaml:"ip,omitempty"`  // Single IP (backward compatible)
+	IPs       []string    `yaml:"ips,omitempty"` // Multiple IPs (new feature)
 	VLAN      int         `yaml:"vlan,omitempty"`
 	SnmpAgent *SnmpAgent  `yaml:"snmp_agent,omitempty"`
 	Dhcp      *DhcpServer `yaml:"dhcp,omitempty"`

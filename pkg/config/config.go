@@ -339,11 +339,21 @@ func LoadYAML(filename string) (*Config, error) {
 			device.MACAddress = mac
 		}
 
-		// Parse IP address
+		// Parse IP address(es)
+		// Support both singular 'ip' (backward compatible) and plural 'ips' (new feature)
 		if yamlDevice.IP != "" {
 			ip := net.ParseIP(yamlDevice.IP)
 			if ip == nil {
 				return nil, fmt.Errorf("device %s: invalid IP address %s", yamlDevice.Name, yamlDevice.IP)
+			}
+			device.IPAddresses = append(device.IPAddresses, ip)
+		}
+
+		// Parse multiple IPs if specified
+		for i, ipStr := range yamlDevice.IPs {
+			ip := net.ParseIP(ipStr)
+			if ip == nil {
+				return nil, fmt.Errorf("device %s: invalid IP address in ips[%d]: %s", yamlDevice.Name, i, ipStr)
 			}
 			device.IPAddresses = append(device.IPAddresses, ip)
 		}

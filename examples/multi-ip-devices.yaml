@@ -1,0 +1,50 @@
+# Multi-IP Device Configuration Example (v1.5.0 Feature 3)
+# Demonstrates devices with multiple IP addresses (IPv4 and IPv6)
+
+devices:
+  # Traditional single-IP device (backward compatible syntax)
+  - name: router1
+    mac: "00:11:22:33:44:01"
+    ip: "192.168.1.1"
+
+  # Multi-homed server with multiple IPv4 addresses
+  # Useful for servers with interfaces on multiple subnets
+  - name: multi-homed-server
+    mac: "00:11:22:33:44:02"
+    ips:
+      - "192.168.1.10"   # Management network
+      - "192.168.2.10"   # Production network
+      - "10.0.0.10"      # Storage network
+
+  # Dual-stack server with both IPv4 and IPv6
+  # Modern servers typically support both protocols
+  - name: dual-stack-server
+    mac: "00:11:22:33:44:03"
+    ips:
+      - "192.168.1.20"                  # IPv4 address
+      - "fe80::211:22ff:fe33:4403"     # Link-local IPv6
+      - "2001:db8::20"                  # Global IPv6
+
+  # IPv6-only server (future-proof configuration)
+  - name: ipv6-only-server
+    mac: "00:11:22:33:44:04"
+    ips:
+      - "fe80::211:22ff:fe33:4404"     # Link-local
+      - "2001:db8::100"                 # Global unicast
+      - "fd00::100"                     # Unique local
+
+  # Load balancer with virtual IPs
+  - name: load-balancer
+    mac: "00:11:22:33:44:05"
+    ips:
+      - "192.168.1.30"   # Primary IP
+      - "192.168.1.31"   # Virtual IP 1
+      - "192.168.1.32"   # Virtual IP 2
+      - "192.168.1.33"   # Virtual IP 3
+
+# Notes:
+# - Devices can have any combination of IPv4 and IPv6 addresses
+# - All IP addresses are registered in the device table
+# - Protocol handlers can respond from any configured IP
+# - Use 'ip:' for single address (backward compatible)
+# - Use 'ips:' array for multiple addresses (new in v1.5.0)
