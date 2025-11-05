@@ -88,3 +88,14 @@ func (h *DNSHandler) SendDNSResponse(query *layers.DNS, srcIP, dstIP []byte, src
 	// Send as UDP
 	return h.stack.udpHandler.SendUDP(srcIP, dstIP, 53, 53, dnsBuffer.Bytes(), srcMAC, dstMAC)
 }
+
+// HandleQueryV6 processes a DNS query over IPv6
+func (h *DNSHandler) HandleQueryV6(pkt *Packet, packet gopacket.Packet, ipv6 *layers.IPv6, udpLayer *layers.UDP, devices []*config.Device) {
+	debugLevel := h.stack.GetDebugLevel()
+
+	if debugLevel >= 2 {
+		fmt.Printf("DNS/IPv6 query from [%s] (stub - not fully implemented)\n", ipv6.SrcIP)
+	}
+
+	// TODO: Implement full DNS over IPv6
+}

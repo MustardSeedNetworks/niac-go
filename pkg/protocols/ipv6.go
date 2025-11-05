@@ -97,14 +97,12 @@ func (h *IPv6Handler) HandlePacket(pkt *Packet) {
 			h.stack.icmpv6Handler.HandlePacket(pkt, packet, ipv6, devices)
 		}
 	case layers.IPProtocolUDP:
-		// TODO: Pass to UDP handler with IPv6 context
-		if h.debugLevel >= 2 {
-			fmt.Printf("IPv6: UDP packet (IPv6 UDP not yet implemented) sn=%d\n", pkt.SerialNumber)
+		if h.stack.udpHandler != nil {
+			h.stack.udpHandler.HandlePacketV6(pkt, packet, ipv6, devices)
 		}
 	case layers.IPProtocolTCP:
-		// TODO: Pass to TCP handler with IPv6 context
-		if h.debugLevel >= 2 {
-			fmt.Printf("IPv6: TCP packet (IPv6 TCP not yet implemented) sn=%d\n", pkt.SerialNumber)
+		if h.stack.tcpHandler != nil {
+			h.stack.tcpHandler.HandlePacketV6(pkt, packet, ipv6, devices)
 		}
 	case IPv6NextHeaderNoNext:
 		// No next header, packet ends here

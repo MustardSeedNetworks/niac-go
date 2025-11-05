@@ -144,3 +144,49 @@ func (h *UDPHandler) SendUDP(srcIP, dstIP []byte, srcPort, dstPort uint16, paylo
 
 	return nil
 }
+
+// HandlePacketV6 processes a UDP packet over IPv6
+func (h *UDPHandler) HandlePacketV6(pkt *Packet, packet gopacket.Packet, ipv6 *layers.IPv6, devices []*config.Device) {
+	debugLevel := h.stack.GetDebugLevel()
+
+	// Parse UDP layer
+	udpLayer := packet.Layer(layers.LayerTypeUDP)
+	if udpLayer == nil {
+		if debugLevel >= 2 {
+			fmt.Printf("UDP/IPv6 packet missing UDP layer sn=%d\n", pkt.SerialNumber)
+		}
+		return
+	}
+
+	udp, ok := udpLayer.(*layers.UDP)
+	if !ok {
+		return
+	}
+
+	if debugLevel >= 3 {
+		fmt.Printf("UDP/IPv6 packet: [%s]:%d -> [%s]:%d length=%d sn=%d\n",
+			ipv6.SrcIP, udp.SrcPort, ipv6.DstIP, udp.DstPort, len(udp.Payload), pkt.SerialNumber)
+	}
+
+	// Route to application handler based on port
+	switch udp.DstPort {
+	case UDPPortDNS:
+		// DNS query over IPv6
+		h.stack.dnsHandler.HandleQueryV6(pkt, packet, ipv6, udp, devices)
+	case UDPPortSNMP:
+		// SNMP query over IPv6
+		if debugLevel >= 2 {
+			fmt.Printf("SNMP/IPv6 query received (not yet implemented) sn=%d\n", pkt.SerialNumber)
+		}
+	case NetBIOSNameServicePort:
+		// NetBIOS Name Service over IPv6
+		h.stack.netbiosHandler.HandleNameService(pkt, packet, udp, devices)
+	case NetBIOSDatagramServicePort:
+		// NetBIOS Datagram Service over IPv6
+		h.stack.netbiosHandler.HandleDatagramService(pkt, packet, udp, devices)
+	default:
+		if debugLevel >= 3 {
+			fmt.Printf("UDP/IPv6 packet to unhandled port %d sn=%d\n", udp.DstPort, pkt.SerialNumber)
+		}
+	}
+}
