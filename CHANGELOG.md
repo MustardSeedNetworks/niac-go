@@ -7,23 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-- Enhanced CLI with additional flags (--version, --list-interfaces, --dry-run, --verbose, --quiet)
-- Debug level cycling in interactive mode ([d] key)
-- Debug log viewer ([l] key)
-- Statistics viewer ([s] key)
-- Help overlay ([h] and [?] keys)
-- Debug settings menu ([D] key)
+### Future (v1.2.0+)
 - IPv6 and ICMPv6 protocol support
 - NetBIOS protocol support
 - Spanning Tree Protocol (STP) support
 - Per-protocol debug level control
 - Color-coded debug output
 
+## [1.1.0] - 2025-01-05
+
+### Added
+- **Enhanced CLI**:
+  - `--version` flag with detailed build information
+  - `--list-interfaces` to show available network interfaces
+  - `--list-devices` to display device table from config file
+  - `--dry-run` for configuration validation without starting
+  - `--verbose` / `-v` shortcut for debug level 3
+  - `--quiet` / `-q` shortcut for debug level 0
+  - Additional output flags: `--no-color`, `--log-file`, `--stats-interval`
+  - Advanced flags: `--babble-interval`, `--no-traffic`, `--snmp-community`, `--max-packet-size`
+  - Improved help text with comprehensive examples
+  - Beautiful banner on startup
+- **Interactive Mode Enhancements**:
+  - Debug level now displayed in status bar
+  - `[d]` key for debug level cycling (0→1→2→3→0)
+  - `[h]` and `[?]` keys for comprehensive help overlay
+  - `[l]` key for debug log viewer (shows last 10 logs)
+  - `[s]` key for detailed statistics viewer
+  - Debug logging system (keeps last 100 entries)
+  - Timestamped log entries
+  - Enhanced status messages
+  - Updated controls display in footer
+
 ### Changed
-- Status bar now displays current debug level
-- Improved help text with more examples
-- Enhanced debug output with timestamps
+- Version bumped to 1.1.0
+- Status bar now shows: "Debug: X (LEVELNAME)"
+- Interactive mode initial message now includes help hint
+- All error injections and actions are now logged
 
 ## [1.0.0] - 2025-01-05
 
@@ -103,5 +123,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Compatible with all Java NIAC configuration files and SNMP walk files
 - Modern architecture using Go idioms (goroutines, channels, clean packages)
 
-[Unreleased]: https://github.com/krisarmstrong/niac-go/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/krisarmstrong/niac-go/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/krisarmstrong/niac-go/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/krisarmstrong/niac-go/releases/tag/v1.0.0
