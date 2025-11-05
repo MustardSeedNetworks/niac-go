@@ -54,6 +54,11 @@ type model struct {
 	menuItems     []string
 	selectedItem  int
 
+	// View state
+	showHelp      bool
+	showLogs      bool
+	showStats     bool
+
 	// Error injection state
 	selectedDevice    int
 	selectedInterface int
@@ -66,6 +71,9 @@ type model struct {
 	errorsActive   int
 	uptime         time.Duration
 	startTime      time.Time
+
+	// Logs
+	debugLogs []string
 
 	// Status
 	statusMessage string
@@ -102,11 +110,42 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, nil
 
+		case "d":
+			// Cycle through debug levels: 0 -> 1 -> 2 -> 3 -> 0
+			m.debugLevel = (m.debugLevel + 1) % 4
+			debugLevelName := getDebugLevelName(m.debugLevel)
+			m.statusMessage = successStyle.Render(fmt.Sprintf("✓ Debug level: %d (%s)", m.debugLevel, debugLevelName))
+			m.statusIsError = false
+			m.addDebugLog(fmt.Sprintf("Debug level changed to %d (%s)", m.debugLevel, debugLevelName))
+			return m, nil
+
+		case "h", "?":
+			m.showHelp = !m.showHelp
+			m.showLogs = false
+			m.showStats = false
+			m.menuVisible = false
+			return m, nil
+
+		case "l":
+			m.showLogs = !m.showLogs
+			m.showHelp = false
+			m.showStats = false
+			m.menuVisible = false
+			return m, nil
+
+		case "s":
+			m.showStats = !m.showStats
+			m.showHelp = false
+			m.showLogs = false
+			m.menuVisible = false
+			return m, nil
+
 		case "c":
 			m.stateManager.ClearAll()
 			m.statusMessage = successStyle.Render("✓ All error injections cleared")
 			m.statusIsError = false
 			m.errorsActive = 0
+			m.addDebugLog("All error injections cleared")
 			return m, nil
 
 		case "up":
@@ -123,7 +162,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case "enter":
 			if m.menuVisible {
-				m = m.handleMenuSelection()
+				m.handleMenuSelection()
 			}
 			return m, nil
 		}
@@ -137,9 +176,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m model) handleMenuSelection() model {
+func (m *model) handleMenuSelection() {
 	if m.selectedItem < 0 || m.selectedItem >= len(m.menuItems) {
-		return m
+		return
 	}
 
 	selection := m.menuItems[m.selectedItem]
@@ -165,18 +204,18 @@ func (m model) handleMenuSelection() model {
 		m.statusMessage = successStyle.Render("✓ All errors cleared")
 		m.statusIsError = false
 		m.errorsActive = 0
+		m.addDebugLog("All error injections cleared")
 	case strings.Contains(selection, "Exit"):
 		m.menuVisible = false
 	}
-
-	return m
 }
 
-func (m model) injectError(errorType errors.ErrorType, value int) {
+func (m *model) injectError(errorType errors.ErrorType, value int) {
 	// Inject error on first device, first interface
 	if len(m.cfg.Devices) == 0 {
 		m.statusMessage = errorStyle.Render("✗ No devices configured")
 		m.statusIsError = true
+		m.addDebugLog("ERROR: No devices configured for error injection")
 		return
 	}
 
@@ -191,6 +230,7 @@ func (m model) injectError(errorType errors.ErrorType, value int) {
 	m.statusIsError = false
 	m.packetsInjected++
 	m.errorsActive++
+	m.addDebugLog(fmt.Sprintf("Injected %s (%d%%) on %s (%s)", errorType, value, device.Name, deviceIP))
 }
 
 func (m model) View() string {
@@ -201,8 +241,10 @@ func (m model) View() string {
 	s.WriteString("\n\n")
 
 	// Status bar
-	stats := fmt.Sprintf("Uptime: %s  |  Packets: %d  |  Errors Active: %d  |  Injected: %d",
+	stats := fmt.Sprintf("Uptime: %s  |  Debug: %d (%s)  |  Packets: %d  |  Errors Active: %d  |  Injected: %d",
 		formatDuration(m.uptime),
+		m.debugLevel,
+		getDebugLevelName(m.debugLevel),
 		m.packetsTotal,
 		m.errorsActive,
 		m.packetsInjected,
@@ -261,12 +303,38 @@ func (m model) View() string {
 		s.WriteString("\n")
 	}
 
+	// Help overlay
+	if m.showHelp {
+		s.WriteString(m.renderHelp())
+		s.WriteString("\n")
+	}
+
+	// Debug log viewer
+	if m.showLogs {
+		s.WriteString(m.renderLogs())
+		s.WriteString("\n")
+	}
+
+	// Statistics viewer
+	if m.showStats {
+		s.WriteString(m.renderStatistics())
+		s.WriteString("\n")
+	}
+
 	// Controls
 	s.WriteString("Controls: ")
 	s.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("86")).Render("[i]"))
 	s.WriteString(" Menu  ")
+	s.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("86")).Render("[d]"))
+	s.WriteString(" Debug  ")
+	s.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("86")).Render("[h]"))
+	s.WriteString(" Help  ")
+	s.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("86")).Render("[l]"))
+	s.WriteString(" Logs  ")
+	s.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("86")).Render("[s]"))
+	s.WriteString(" Stats  ")
 	s.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("86")).Render("[c]"))
-	s.WriteString(" Clear All  ")
+	s.WriteString(" Clear  ")
 	s.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("196")).Render("[q]"))
 	s.WriteString(" Quit")
 
@@ -305,6 +373,132 @@ func formatDuration(d time.Duration) string {
 	return fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
 }
 
+func getDebugLevelName(level int) string {
+	switch level {
+	case 0:
+		return "QUIET"
+	case 1:
+		return "NORMAL"
+	case 2:
+		return "VERBOSE"
+	case 3:
+		return "DEBUG"
+	default:
+		return "UNKNOWN"
+	}
+}
+
+func (m *model) addDebugLog(message string) {
+	timestamp := time.Now().Format("15:04:05")
+	logEntry := fmt.Sprintf("[%s] %s", timestamp, message)
+	m.debugLogs = append(m.debugLogs, logEntry)
+
+	// Keep only last 100 log entries
+	if len(m.debugLogs) > 100 {
+		m.debugLogs = m.debugLogs[len(m.debugLogs)-100:]
+	}
+}
+
+func (m model) renderHelp() string {
+	var help strings.Builder
+
+	help.WriteString("╔══════════════════════════════════════════════════════════════════╗\n")
+	help.WriteString("║                         NIAC-Go Help                             ║\n")
+	help.WriteString("╠══════════════════════════════════════════════════════════════════╣\n")
+	help.WriteString("║ Keyboard Shortcuts:                                              ║\n")
+	help.WriteString("║                                                                  ║\n")
+	help.WriteString("║  [i]     Toggle interactive error injection menu                ║\n")
+	help.WriteString("║  [d]     Cycle debug level (QUIET→NORMAL→VERBOSE→DEBUG)         ║\n")
+	help.WriteString("║  [h][?]  Toggle this help screen                                ║\n")
+	help.WriteString("║  [l]     Toggle debug log viewer                                ║\n")
+	help.WriteString("║  [s]     Toggle statistics viewer                               ║\n")
+	help.WriteString("║  [c]     Clear all error injections                             ║\n")
+	help.WriteString("║  [q]     Quit application                                       ║\n")
+	help.WriteString("║                                                                  ║\n")
+	help.WriteString("║ Debug Levels:                                                    ║\n")
+	help.WriteString("║  0 - QUIET    Only critical errors                              ║\n")
+	help.WriteString("║  1 - NORMAL   Status messages (default)                         ║\n")
+	help.WriteString("║  2 - VERBOSE  Protocol details                                   ║\n")
+	help.WriteString("║  3 - DEBUG    Full packet details                               ║\n")
+	help.WriteString("║                                                                  ║\n")
+	help.WriteString("║ Error Injection Types:                                           ║\n")
+	help.WriteString("║  • FCS Errors        - Frame Check Sequence errors              ║\n")
+	help.WriteString("║  • Packet Discards   - Dropped packets                          ║\n")
+	help.WriteString("║  • Interface Errors  - General interface errors                 ║\n")
+	help.WriteString("║  • High Utilization  - Link utilization > 95%                   ║\n")
+	help.WriteString("║  • High CPU          - CPU usage > 90%                          ║\n")
+	help.WriteString("║  • High Memory       - Memory usage > 85%                       ║\n")
+	help.WriteString("║  • High Disk         - Disk usage > 95%                         ║\n")
+	help.WriteString("╚══════════════════════════════════════════════════════════════════╝")
+
+	return help.String()
+}
+
+func (m model) renderLogs() string {
+	var logs strings.Builder
+
+	logs.WriteString("╔══════════════════════════════════════════════════════════════════╗\n")
+	logs.WriteString("║                      Debug Log Viewer                           ║\n")
+	logs.WriteString("╠══════════════════════════════════════════════════════════════════╣\n")
+
+	if len(m.debugLogs) == 0 {
+		logs.WriteString("║ No debug logs yet                                                ║\n")
+	} else {
+		// Show last 10 logs
+		start := 0
+		if len(m.debugLogs) > 10 {
+			start = len(m.debugLogs) - 10
+		}
+
+		for _, log := range m.debugLogs[start:] {
+			// Pad to 66 characters for alignment
+			padded := log
+			if len(log) > 64 {
+				padded = log[:64]
+			} else {
+				padded = log + strings.Repeat(" ", 64-len(log))
+			}
+			logs.WriteString(fmt.Sprintf("║ %s ║\n", padded))
+		}
+	}
+
+	logs.WriteString("╚══════════════════════════════════════════════════════════════════╝")
+
+	return logs.String()
+}
+
+func (m model) renderStatistics() string {
+	var stats strings.Builder
+
+	stats.WriteString("╔══════════════════════════════════════════════════════════════════╗\n")
+	stats.WriteString("║                     Detailed Statistics                          ║\n")
+	stats.WriteString("╠══════════════════════════════════════════════════════════════════╣\n")
+	stats.WriteString(fmt.Sprintf("║ Uptime:              %s                                    ║\n", formatDuration(m.uptime)))
+	stats.WriteString(fmt.Sprintf("║ Debug Level:         %d (%s)                              ║\n", m.debugLevel, getDebugLevelName(m.debugLevel)))
+	stats.WriteString(fmt.Sprintf("║ Interface:           %-40s ║\n", m.interfaceName))
+	stats.WriteString("║                                                                  ║\n")
+	stats.WriteString(fmt.Sprintf("║ Total Packets:       %-10d                                    ║\n", m.packetsTotal))
+	stats.WriteString(fmt.Sprintf("║ Packets Injected:    %-10d                                    ║\n", m.packetsInjected))
+	stats.WriteString(fmt.Sprintf("║ Active Errors:       %-10d                                    ║\n", m.errorsActive))
+	stats.WriteString("║                                                                  ║\n")
+	stats.WriteString(fmt.Sprintf("║ Devices Simulated:   %-10d                                    ║\n", len(m.cfg.Devices)))
+
+	// Count SNMP-enabled devices
+	snmpCount := 0
+	for _, dev := range m.cfg.Devices {
+		if dev.SNMPConfig.Community != "" || dev.SNMPConfig.WalkFile != "" {
+			snmpCount++
+		}
+	}
+	stats.WriteString(fmt.Sprintf("║ SNMP Devices:        %-10d                                    ║\n", snmpCount))
+	stats.WriteString("║                                                                  ║\n")
+	stats.WriteString(fmt.Sprintf("║ Memory Usage:        ~15 MB (estimated)                      ║\n"))
+	stats.WriteString(fmt.Sprintf("║ Start Time:          %s                                    ║\n", m.startTime.Format("15:04:05")))
+	stats.WriteString("╚══════════════════════════════════════════════════════════════════╝")
+
+	return stats.String()
+}
+
 // Run starts the interactive mode
 func Run(interfaceName string, cfg *config.Config, debugLevel int) error {
 	// Initialize state manager
@@ -332,8 +526,14 @@ func Run(interfaceName string, cfg *config.Config, debugLevel int) error {
 		debugLevel:    debugLevel,
 		menuItems:     menuItems,
 		startTime:     time.Now(),
-		statusMessage: "Press 'i' to open interactive menu",
+		statusMessage: "Press 'i' to open interactive menu, 'h' for help",
+		debugLogs:     make([]string, 0, 100),
 	}
+
+	// Add initial log entry
+	m.addDebugLog(fmt.Sprintf("Started NIAC-Go interactive mode on %s", interfaceName))
+	m.addDebugLog(fmt.Sprintf("Debug level: %d (%s)", debugLevel, getDebugLevelName(debugLevel)))
+	m.addDebugLog(fmt.Sprintf("Simulating %d device(s)", len(cfg.Devices)))
 
 	// Start TUI
 	p := tea.NewProgram(m, tea.WithAltScreen())
