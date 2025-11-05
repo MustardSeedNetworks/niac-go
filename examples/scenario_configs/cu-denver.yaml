@@ -1,0 +1,19 @@
+include_path: walks
+devices:
+    - name: device1
+      mac: 00:0D:EC:B2:5D:C0
+      ip: 10.250.0.45
+      snmp_agent:
+        walk_file: 132.194.006.101.txt
+    - name: device2
+      mac: 00:05:73:C6:F3:40
+      ip: 10.250.0.46
+    - name: device3
+      mac: 00:1C:0E:8A:A4:00
+      ip: 10.250.0.47
+    - name: device4
+      mac: 00:05:9B:74:E8:80
+      ip: 10.250.0.48
+    - name: device5
+      mac: 00:08:E3:FF:FC:04
+      ip: 10.250.0.49

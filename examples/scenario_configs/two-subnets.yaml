@@ -1,0 +1,119 @@
+include_path: walks
+devices:
+    - name: device1
+      mac: 00:C0:17:B0:B1:01
+      ip: 10.250.0.101
+    - name: device2
+      mac: 00:C0:17:B0:B1:02
+      ip: 10.250.0.102
+    - name: device3
+      mac: 00:C0:17:B0:B1:03
+      ip: 10.250.0.103
+    - name: device4
+      mac: 00:C0:17:B0:B1:04
+      ip: 10.250.0.104
+    - name: device5
+      mac: 00:C0:17:B0:B1:05
+      ip: 10.250.0.105
+    - name: device6
+      mac: 00:C0:17:B0:B1:06
+      ip: 10.250.0.106
+    - name: device7
+      mac: 00:C0:17:B0:B1:07
+      ip: 10.250.0.107
+    - name: device8
+      mac: 00:C0:17:B0:B1:08
+      ip: 10.250.0.108
+    - name: device9
+      mac: 00:C0:17:B0:B1:09
+      ip: 10.250.0.109
+    - name: device10
+      mac: 00:C0:17:B0:B1:10
+      ip: 10.250.0.110
+    - name: device11
+      mac: 00:C0:17:B0:B1:11
+      ip: 10.250.0.111
+    - name: device12
+      mac: 00:C0:17:B0:B1:12
+      ip: 10.250.0.112
+    - name: device13
+      mac: 00:C0:17:B0:B1:13
+      ip: 10.250.0.113
+    - name: device14
+      mac: 00:C0:17:B0:B1:14
+      ip: 10.250.0.114
+    - name: device15
+      mac: 00:C0:17:B0:B1:15
+      ip: 10.250.0.115
+    - name: device16
+      mac: 00:C0:17:B0:B1:16
+      ip: 10.250.0.116
+    - name: device17
+      mac: 00:C0:17:B0:B1:17
+      ip: 10.250.0.117
+    - name: device18
+      mac: 00:C0:17:B0:B1:18
+      ip: 10.250.0.118
+    - name: device19
+      mac: 00:C0:17:B0:B1:19
+      ip: 10.250.0.119
+    - name: device20
+      mac: 00:C0:17:B0:B1:20
+      ip: 10.250.0.120
+    - name: device21
+      mac: 00:C0:17:B0:B1:21
+      ip: 10.250.0.121
+    - name: device22
+      mac: 00:C0:17:B0:B1:22
+      ip: 10.250.0.122
+    - name: device23
+      mac: 00:C0:17:B0:B1:23
+      ip: 10.250.0.123
+    - name: device24
+      mac: 00:C0:17:B0:B1:24
+      ip: 10.250.0.124
+    - name: device25
+      mac: 00:C0:17:B0:B1:25
+      ip: 10.250.10.125
+    - name: device26
+      mac: 00:C0:17:B0:B1:26
+      ip: 10.250.10.126
+    - name: device27
+      mac: 00:C0:17:B0:B1:27
+      ip: 10.250.10.127
+    - name: device28
+      mac: 00:C0:17:B0:B1:28
+      ip: 10.250.10.128
+    - name: device29
+      mac: 00:C0:17:B0:B1:29
+      ip: 10.250.10.129
+    - name: device30
+      mac: 00:C0:17:B0:B1:30
+      ip: 10.250.10.130
+    - name: device31
+      mac: 00:C0:17:B0:B1:31
+      ip: 10.250.10.131
+    - name: device32
+      mac: 00:C0:17:B0:B1:32
+      ip: 10.250.10.132
+    - name: device33
+      mac: 00:C0:17:B0:B1:33
+      ip: 10.250.10.133
+    - name: device34
+      mac: 00:C0:17:B0:B1:34
+      ip: 10.250.10.134
+    - name: device35
+      mac: 00:C0:17:B0:B1:35
+      ip: 10.250.10.135
+    - name: device36
+      mac: 00:C0:17:B0:B1:36
+      ip: 10.250.10.136
+    - name: device37
+      mac: 00:C0:17:B0:B1:37
+      ip: 10.250.10.137
+    - name: device38
+      mac: 00:C0:17:B0:B1:38
+      ip: 10.250.10.138
+    - name: device39
+      mac: 00:C0:17:B0:B1:39
+      ip: 10.250.10.139

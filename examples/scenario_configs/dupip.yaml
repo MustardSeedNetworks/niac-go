@@ -1,0 +1,8 @@
+include_path: walks
+devices:
+    - name: device1
+      mac: 00:C0:17:53:B0:B1
+      ip: 10.250.0.45
+    - name: device2
+      mac: 00:C0:17:53:B0:B2
+      ip: 10.250.0.45
