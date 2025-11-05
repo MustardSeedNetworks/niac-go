@@ -142,13 +142,14 @@ func (h *ICMPv6Handler) handleEchoRequest(pkt *Packet, packet gopacket.Packet, i
 			TypeCode: layers.CreateICMPv6TypeCode(ICMPv6TypeEchoReply, 0),
 		}
 
-		err := h.sendICMPv6Packet(
+		err := h.sendICMPv6PacketWithDevice(
 			ipv6.DstIP,
 			ipv6.SrcIP,
 			device.MACAddress,
 			eth.SrcMAC,
 			reply,
 			icmpv6.Payload,
+			device, // Pass device for config
 		)
 		if err != nil {
 			if h.debugLevel >= 2 {
@@ -290,6 +291,28 @@ func (h *ICMPv6Handler) handleRouterSolicitation(pkt *Packet, packet gopacket.Pa
 // sendICMPv6Packet sends an ICMPv6 packet
 func (h *ICMPv6Handler) sendICMPv6Packet(srcIP, dstIP net.IP, srcMAC, dstMAC net.HardwareAddr,
 	icmpv6 *layers.ICMPv6, payload []byte) error {
+	return h.sendICMPv6PacketWithDevice(srcIP, dstIP, srcMAC, dstMAC, icmpv6, payload, nil)
+}
+
+// sendICMPv6PacketWithDevice sends an ICMPv6 packet with device config
+func (h *ICMPv6Handler) sendICMPv6PacketWithDevice(srcIP, dstIP net.IP, srcMAC, dstMAC net.HardwareAddr,
+	icmpv6 *layers.ICMPv6, payload []byte, device *config.Device) error {
+
+	// Determine hop limit based on ICMPv6 type
+	hopLimit := uint8(255) // Default to 255 for NDP (RFC 4861)
+	msgType := icmpv6.TypeCode.Type()
+
+	// NDP types MUST use hop limit 255 per RFC 4861
+	isNDP := msgType == ICMPv6TypeNeighborSolicitation ||
+		msgType == ICMPv6TypeNeighborAdvertisement ||
+		msgType == ICMPv6TypeRouterSolicitation ||
+		msgType == ICMPv6TypeRouterAdvertisement ||
+		msgType == ICMPv6TypeRedirect
+
+	// For non-NDP types (like Echo Reply), use configured value
+	if !isNDP && device != nil && device.ICMPv6Config != nil && device.ICMPv6Config.HopLimit > 0 {
+		hopLimit = device.ICMPv6Config.HopLimit
+	}
 
 	// Build Ethernet layer
 	eth := &layers.Ethernet{
@@ -305,7 +328,7 @@ func (h *ICMPv6Handler) sendICMPv6Packet(srcIP, dstIP net.IP, srcMAC, dstMAC net
 		FlowLabel:    0,
 		Length:       uint16(8 + len(payload)), // ICMPv6 header + payload
 		NextHeader:   layers.IPProtocolICMPv6,
-		HopLimit:     255, // RFC 4861: hop limit must be 255 for NDP
+		HopLimit:     hopLimit,
 		SrcIP:        srcIP,
 		DstIP:        dstIP,
 	}

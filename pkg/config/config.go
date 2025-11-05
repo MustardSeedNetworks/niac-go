@@ -59,6 +59,9 @@ type Device struct {
 	HTTPConfig    *HTTPConfig    // HTTP server configuration
 	FTPConfig     *FTPConfig     // FTP server configuration
 	NetBIOSConfig *NetBIOSConfig // NetBIOS service configuration
+	ICMPConfig    *ICMPConfig    // ICMP/ICMPv4 configuration
+	ICMPv6Config  *ICMPv6Config  // ICMPv6 configuration
+	DHCPv6Config  *DHCPv6Config  // DHCPv6 server configuration
 	Properties    map[string]string
 }
 
@@ -219,6 +222,42 @@ type NetBIOSConfig struct {
 	NodeType     string   // Node type: "B" (broadcast), "P" (peer), "M" (mixed), "H" (hybrid) (default: "B")
 	Services     []string // Service types to advertise (default: ["workstation", "fileserver"])
 	TTL          uint32   // Name registration TTL in seconds (default: 300)
+}
+
+// ICMPConfig holds ICMP/ICMPv4 configuration
+type ICMPConfig struct {
+	Enabled     bool
+	TTL         uint8   // Time to Live for ICMP packets (default: 64)
+	RateLimit   int     // Max ICMP responses per second (0 = unlimited, default: 0)
+}
+
+// ICMPv6Config holds ICMPv6 configuration
+type ICMPv6Config struct {
+	Enabled     bool
+	HopLimit    uint8   // Hop limit for ICMPv6 packets (default: 64, NDP uses 255)
+	RateLimit   int     // Max ICMPv6 responses per second (0 = unlimited, default: 0)
+}
+
+// DHCPv6Config holds DHCPv6 server configuration
+type DHCPv6Config struct {
+	Enabled             bool
+	Pools               []DHCPv6Pool  // Address pools
+	PreferredLifetime   uint32        // Preferred lifetime in seconds (default: 604800 = 7 days)
+	ValidLifetime       uint32        // Valid lifetime in seconds (default: 2592000 = 30 days)
+	Preference          uint8         // Server preference (0-255, higher is better, default: 0)
+	DNSServers          []net.IP      // DNS servers (IPv6)
+	DomainList          []string      // Domain search list
+	SNTPServers         []net.IP      // SNTP time servers (Option 31)
+	NTPServers          []net.IP      // NTP servers (Option 56)
+	SIPServers          []net.IP      // SIP server addresses (Option 22)
+	SIPDomains          []string      // SIP domain names (Option 21)
+}
+
+// DHCPv6Pool represents an IPv6 address pool
+type DHCPv6Pool struct {
+	Network    string   // IPv6 network (e.g., "2001:db8::/64")
+	RangeStart string   // Start of address range
+	RangeEnd   string   // End of address range
 }
 
 // Load reads and parses a configuration file
@@ -813,6 +852,96 @@ func LoadYAML(filename string) (*Config, error) {
 				netbiosCfg.TTL = 300 // 5 minutes
 			}
 			device.NetBIOSConfig = netbiosCfg
+		}
+
+		// Handle ICMP configuration
+		if yamlDevice.Icmp != nil {
+			icmpCfg := &ICMPConfig{
+				Enabled:   yamlDevice.Icmp.Enabled,
+				TTL:       yamlDevice.Icmp.TTL,
+				RateLimit: yamlDevice.Icmp.RateLimit,
+			}
+			// Set defaults
+			if icmpCfg.TTL == 0 {
+				icmpCfg.TTL = 64 // Default TTL
+			}
+			// RateLimit defaults to 0 (unlimited)
+			device.ICMPConfig = icmpCfg
+		}
+
+		// Handle ICMPv6 configuration
+		if yamlDevice.Icmpv6 != nil {
+			icmpv6Cfg := &ICMPv6Config{
+				Enabled:   yamlDevice.Icmpv6.Enabled,
+				HopLimit:  yamlDevice.Icmpv6.HopLimit,
+				RateLimit: yamlDevice.Icmpv6.RateLimit,
+			}
+			// Set defaults
+			if icmpv6Cfg.HopLimit == 0 {
+				icmpv6Cfg.HopLimit = 64 // Default hop limit (NDP uses 255, set in protocol handler)
+			}
+			// RateLimit defaults to 0 (unlimited)
+			device.ICMPv6Config = icmpv6Cfg
+		}
+
+		// Handle DHCPv6 configuration
+		if yamlDevice.Dhcpv6 != nil {
+			dhcpv6Cfg := &DHCPv6Config{
+				Enabled:           yamlDevice.Dhcpv6.Enabled,
+				Pools:             make([]DHCPv6Pool, 0),
+				PreferredLifetime: yamlDevice.Dhcpv6.PreferredLifetime,
+				ValidLifetime:     yamlDevice.Dhcpv6.ValidLifetime,
+				Preference:        yamlDevice.Dhcpv6.Preference,
+				DomainList:        yamlDevice.Dhcpv6.DomainList,
+				SIPDomains:        yamlDevice.Dhcpv6.SIPDomains,
+			}
+			// Set defaults
+			if dhcpv6Cfg.PreferredLifetime == 0 {
+				dhcpv6Cfg.PreferredLifetime = 604800 // 7 days
+			}
+			if dhcpv6Cfg.ValidLifetime == 0 {
+				dhcpv6Cfg.ValidLifetime = 2592000 // 30 days
+			}
+			// Preference defaults to 0 (lowest priority)
+
+			// Parse address pools
+			for _, pool := range yamlDevice.Dhcpv6.Pools {
+				dhcpv6Cfg.Pools = append(dhcpv6Cfg.Pools, DHCPv6Pool{
+					Network:    pool.Network,
+					RangeStart: pool.RangeStart,
+					RangeEnd:   pool.RangeEnd,
+				})
+			}
+
+			// Parse DNS servers
+			for _, dnsStr := range yamlDevice.Dhcpv6.DNSServers {
+				if ip := net.ParseIP(dnsStr); ip != nil {
+					dhcpv6Cfg.DNSServers = append(dhcpv6Cfg.DNSServers, ip)
+				}
+			}
+
+			// Parse SNTP servers
+			for _, sntpStr := range yamlDevice.Dhcpv6.SNTPServers {
+				if ip := net.ParseIP(sntpStr); ip != nil {
+					dhcpv6Cfg.SNTPServers = append(dhcpv6Cfg.SNTPServers, ip)
+				}
+			}
+
+			// Parse NTP servers
+			for _, ntpStr := range yamlDevice.Dhcpv6.NTPServers {
+				if ip := net.ParseIP(ntpStr); ip != nil {
+					dhcpv6Cfg.NTPServers = append(dhcpv6Cfg.NTPServers, ip)
+				}
+			}
+
+			// Parse SIP servers
+			for _, sipStr := range yamlDevice.Dhcpv6.SIPServers {
+				if ip := net.ParseIP(sipStr); ip != nil {
+					dhcpv6Cfg.SIPServers = append(dhcpv6Cfg.SIPServers, ip)
+				}
+			}
+
+			device.DHCPv6Config = dhcpv6Cfg
 		}
 
 		cfg.Devices = append(cfg.Devices, device)
