@@ -54,6 +54,7 @@ type Device struct {
 	Cdp       *CdpConfig       `yaml:"cdp,omitempty"`
 	Edp       *EdpConfig       `yaml:"edp,omitempty"`
 	Fdp       *FdpConfig       `yaml:"fdp,omitempty"`
+	Stp       *StpConfig       `yaml:"stp,omitempty"`
 }
 
 // SnmpAgent represents SNMP agent configuration
@@ -147,6 +148,16 @@ type FdpConfig struct {
 	SoftwareVersion   string `yaml:"software_version,omitempty"`
 	Platform          string `yaml:"platform,omitempty"`
 	PortID            string `yaml:"port_id,omitempty"`
+}
+
+// StpConfig represents STP/RSTP/MSTP configuration
+type StpConfig struct {
+	Enabled        bool   `yaml:"enabled,omitempty"`
+	BridgePriority uint16 `yaml:"bridge_priority,omitempty"`
+	HelloTime      uint16 `yaml:"hello_time,omitempty"`
+	MaxAge         uint16 `yaml:"max_age,omitempty"`
+	ForwardDelay   uint16 `yaml:"forward_delay,omitempty"`
+	Version        string `yaml:"version,omitempty"`
 }
 
 // Parser handles parsing Java DSL format

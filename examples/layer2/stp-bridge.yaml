@@ -1,0 +1,184 @@
+# STP (Spanning Tree Protocol) Configuration Example
+# Demonstrates IEEE 802.1D STP, 802.1w RSTP, and 802.1s MSTP configuration
+
+devices:
+  # =================================================================
+  # Root Bridge - Highest Priority (Lowest Value)
+  # =================================================================
+  - name: root-bridge
+    mac: "00:1a:2b:3c:4d:01"
+    ip: "192.168.1.1"
+
+    stp:
+      enabled: true
+      bridge_priority: 4096      # Low priority = becomes root (0-61440, increments of 4096)
+      hello_time: 2              # Send BPDUs every 2 seconds
+      max_age: 20                # Discard BPDU info after 20 seconds
+      forward_delay: 15          # Time in listening/learning states
+      version: "rstp"            # Rapid Spanning Tree Protocol (802.1w)
+
+    lldp:
+      enabled: true
+      system_description: "Cisco Catalyst 3850 Root Bridge - RSTP"
+      port_description: "GigabitEthernet1/0/1"
+
+  # =================================================================
+  # Secondary Bridge - Medium Priority
+  # =================================================================
+  - name: secondary-bridge
+    mac: "00:1a:2b:3c:4d:02"
+    ip: "192.168.1.2"
+
+    stp:
+      enabled: true
+      bridge_priority: 8192      # Higher priority than root (will be designated)
+      hello_time: 2
+      max_age: 20
+      forward_delay: 15
+      version: "rstp"
+
+    lldp:
+      enabled: true
+      system_description: "Cisco Catalyst 3850 Secondary Bridge - RSTP"
+      port_description: "GigabitEthernet1/0/1"
+
+  # =================================================================
+  # Access Switch - Default Priority
+  # =================================================================
+  - name: access-switch-01
+    mac: "00:1a:2b:3c:4d:03"
+    ip: "192.168.1.10"
+
+    stp:
+      enabled: true
+      bridge_priority: 32768     # Default priority (middle of range)
+      hello_time: 2
+      max_age: 20
+      forward_delay: 15
+      version: "stp"             # Classic STP (802.1D)
+
+    lldp:
+      enabled: true
+      system_description: "Cisco Catalyst 2960 Access Switch - STP"
+      port_description: "FastEthernet0/1"
+
+  # =================================================================
+  # MSTP Bridge - Multiple Spanning Tree
+  # =================================================================
+  - name: mstp-bridge
+    mac: "00:1a:2b:3c:4d:04"
+    ip: "192.168.1.20"
+
+    stp:
+      enabled: true
+      bridge_priority: 16384     # Mid-range priority
+      hello_time: 2
+      max_age: 20
+      forward_delay: 15
+      version: "mstp"            # Multiple Spanning Tree Protocol (802.1s)
+
+    lldp:
+      enabled: true
+      system_description: "Cisco Catalyst 3850 MSTP Bridge"
+      port_description: "TenGigabitEthernet1/1/1"
+
+  # =================================================================
+  # Edge Switch - High Priority (Low Priority Value)
+  # =================================================================
+  - name: edge-switch
+    mac: "00:1a:2b:3c:4d:05"
+    ip: "192.168.1.30"
+
+    stp:
+      enabled: true
+      bridge_priority: 61440     # Highest priority value = lowest preference
+      hello_time: 2
+      max_age: 20
+      forward_delay: 15
+      version: "rstp"
+
+    lldp:
+      enabled: true
+      system_description: "Cisco Catalyst 2960X Edge Switch - RSTP"
+      port_description: "GigabitEthernet0/1"
+
+  # =================================================================
+  # STP Disabled Device (e.g., end host)
+  # =================================================================
+  - name: workstation-01
+    mac: "00:11:22:33:44:06"
+    ip: "192.168.1.100"
+
+    stp:
+      enabled: false             # End hosts don't participate in STP
+
+    lldp:
+      enabled: true
+      system_description: "Ubuntu 22.04 LTS Workstation"
+      port_description: "eth0"
+
+# Configuration Notes:
+# ====================
+#
+# Bridge Priority:
+# - Valid range: 0-61440 in increments of 4096
+# - Lower value = higher priority (more likely to become root)
+# - Default: 32768
+# - Common values:
+#   * 0 or 4096: Force as root bridge
+#   * 8192: Secondary/backup root
+#   * 32768: Default (let election decide)
+#   * 61440: Never become root
+#
+# Hello Time:
+# - Interval between BPDUs (default: 2 seconds)
+# - Range: 1-10 seconds
+#
+# Max Age:
+# - How long to retain BPDU info (default: 20 seconds)
+# - Range: 6-40 seconds
+# - Must be >= 2 * (Hello Time + 1)
+#
+# Forward Delay:
+# - Time spent in listening/learning states (default: 15 seconds)
+# - Range: 4-30 seconds
+# - Must be >= (Max Age / 2) + 1
+#
+# STP Versions:
+# - "stp": IEEE 802.1D (original, 30-50 second convergence)
+# - "rstp": IEEE 802.1w (Rapid STP, <6 second convergence)
+# - "mstp": IEEE 802.1s (Multiple STP, VLANs mapped to instances)
+#
+# Testing Scenarios:
+# ==================
+#
+# 1. Root Bridge Election:
+#    - root-bridge (priority 4096) should win election
+#    - secondary-bridge (priority 8192) is backup
+#
+# 2. Topology Change:
+#    - Disable root-bridge
+#    - secondary-bridge should take over
+#
+# 3. BPDU Monitoring:
+#    - Use --debug-stp 3 to see BPDU exchanges
+#    - Verify hello_time interval
+#
+# 4. Version Comparison:
+#    - Compare convergence times between STP and RSTP devices
+#
+# 5. Mixed Environment:
+#    - RSTP bridges can interoperate with classic STP
+#    - MSTP requires compatible switches
+#
+# Usage Examples:
+# ===============
+#
+# # Run with STP debug output
+# sudo niac --debug-stp 3 en0 examples/layer2/stp-bridge.yaml
+#
+# # Validate configuration
+# niac --dry-run lo0 examples/layer2/stp-bridge.yaml
+#
+# # Monitor BPDU traffic with tcpdump
+# sudo tcpdump -i en0 -e ether dst 01:80:c2:00:00:00
