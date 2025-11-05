@@ -80,6 +80,23 @@ func (e *Engine) SendEthernet(dstMAC, srcMAC []byte, etherType uint16, payload [
 	return e.SendPacket(buf.Bytes())
 }
 
+// ReadPacket reads a single packet from the interface
+// Returns the packet data or nil on timeout/error
+func (e *Engine) ReadPacket(buffer []byte) ([]byte, error) {
+	data, _, err := e.handle.ReadPacketData()
+	if err != nil {
+		return nil, err
+	}
+
+	// Copy to provided buffer if it fits, otherwise return the data directly
+	if len(data) <= len(buffer) {
+		copy(buffer, data)
+		return buffer[:len(data)], nil
+	}
+
+	return data, nil
+}
+
 // StartCapture starts capturing packets and calls handler for each packet
 func (e *Engine) StartCapture(handler func(gopacket.Packet)) error {
 	packetSource := gopacket.NewPacketSource(e.handle, e.handle.LinkType())
