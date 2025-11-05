@@ -35,6 +35,7 @@ type Stack struct {
 	ftpHandler    *FTPHandler
 	netbiosHandler *NetBIOSHandler
 	stpHandler    *STPHandler
+	lldpHandler   *LLDPHandler
 
 	// Statistics
 	stats        *Statistics
@@ -91,6 +92,7 @@ func NewStack(captureEngine *capture.Engine, cfg *config.Config, debugLevel int)
 	s.ftpHandler = NewFTPHandler(s)
 	s.netbiosHandler = NewNetBIOSHandler(s, debugLevel)
 	s.stpHandler = NewSTPHandler(s, debugLevel)
+	s.lldpHandler = NewLLDPHandler(s)
 
 	return s
 }
@@ -140,6 +142,9 @@ func (s *Stack) Start() error {
 	s.wg.Add(1)
 	go s.babbleThread()
 
+	// Start LLDP periodic advertisements
+	s.lldpHandler.Start()
+
 	if s.debugLevel >= 1 {
 		fmt.Println("Protocol stack started")
 	}
@@ -154,6 +159,10 @@ func (s *Stack) Stop() {
 	}
 
 	s.running = false
+
+	// Stop LLDP handler
+	s.lldpHandler.Stop()
+
 	close(s.stopChan)
 	s.wg.Wait()
 
@@ -243,6 +252,13 @@ func (s *Stack) decodePacket(pkt *Packet) {
 		return
 	}
 
+	// Check for LLDP (multicast MAC 01:80:C2:00:00:0E)
+	if len(dstMAC) == 6 && dstMAC[0] == 0x01 && dstMAC[1] == 0x80 &&
+	   dstMAC[2] == 0xC2 && dstMAC[3] == 0x00 && dstMAC[4] == 0x00 && dstMAC[5] == 0x0E {
+		s.lldpHandler.HandlePacket(pkt)
+		return
+	}
+
 	// Get EtherType
 	etherType := pkt.GetEtherType()
 
@@ -266,6 +282,8 @@ func (s *Stack) decodePacket(pkt *Packet) {
 		s.ipHandler.HandlePacket(pkt)
 	case EtherTypeIPv6:
 		s.ipv6Handler.HandlePacket(pkt)
+	case EtherTypeLLDP:
+		s.lldpHandler.HandlePacket(pkt)
 	default:
 		if s.debugLevel >= 2 {
 			fmt.Printf("Unknown EtherType 0x%04x sn=%d\n", etherType, pkt.SerialNumber)
