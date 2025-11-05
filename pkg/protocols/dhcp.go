@@ -10,6 +10,7 @@ import (
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/krisarmstrong/niac-go/pkg/config"
+	"github.com/krisarmstrong/niac-go/pkg/logging"
 )
 
 // DHCP message types
@@ -281,7 +282,7 @@ func (h *DHCPHandler) HandlePacket(pkt *Packet, ipLayer *layers.IPv4, udpLayer *
 		lease, err := h.allocateLease(dhcp.ClientHWAddr, nil, hostname)
 		if err != nil {
 			if debugLevel >= 1 {
-				fmt.Printf("DHCP: Failed to allocate IP: %v sn=%d\n", err, pkt.SerialNumber)
+				logging.ProtocolDebug("DHCP", debugLevel, 1, "Failed to allocate IP: %v sn=%d", err, pkt.SerialNumber)
 			}
 			return
 		}
@@ -289,12 +290,12 @@ func (h *DHCPHandler) HandlePacket(pkt *Packet, ipLayer *layers.IPv4, udpLayer *
 		// Send DHCP Offer
 		if err := h.SendDHCPOffer(dhcp.Xid, dhcp.ClientHWAddr, lease.IP, serverDevice.IPAddresses[0], serverDevice.MACAddress); err != nil {
 			if debugLevel >= 1 {
-				fmt.Printf("DHCP: Failed to send Offer: %v sn=%d\n", err, pkt.SerialNumber)
+				logging.ProtocolDebug("DHCP", debugLevel, 1, "Failed to send Offer: %v sn=%d", err, pkt.SerialNumber)
 			}
 		} else {
 			h.stack.IncrementStat("dhcp_offers")
 			if debugLevel >= 2 {
-				fmt.Printf("DHCP: Sent Offer IP=%s to %s sn=%d\n", lease.IP, dhcp.ClientHWAddr, pkt.SerialNumber)
+				logging.ProtocolDebug("DHCP", debugLevel, 2, "Sent Offer IP=%s to %s sn=%d", lease.IP, dhcp.ClientHWAddr, pkt.SerialNumber)
 			}
 		}
 
@@ -317,7 +318,7 @@ func (h *DHCPHandler) HandlePacket(pkt *Packet, ipLayer *layers.IPv4, udpLayer *
 		lease, err := h.allocateLease(dhcp.ClientHWAddr, requestedIP, hostname)
 		if err != nil {
 			if debugLevel >= 1 {
-				fmt.Printf("DHCP: Failed to confirm lease: %v sn=%d\n", err, pkt.SerialNumber)
+				logging.ProtocolDebug("DHCP", debugLevel, 1, "Failed to confirm lease: %v sn=%d", err, pkt.SerialNumber)
 			}
 			return
 		}
@@ -325,12 +326,12 @@ func (h *DHCPHandler) HandlePacket(pkt *Packet, ipLayer *layers.IPv4, udpLayer *
 		// Send DHCP Ack
 		if err := h.SendDHCPAck(dhcp.Xid, dhcp.ClientHWAddr, lease.IP, serverDevice.IPAddresses[0], serverDevice.MACAddress); err != nil {
 			if debugLevel >= 1 {
-				fmt.Printf("DHCP: Failed to send Ack: %v sn=%d\n", err, pkt.SerialNumber)
+				logging.ProtocolDebug("DHCP", debugLevel, 1, "Failed to send Ack: %v sn=%d", err, pkt.SerialNumber)
 			}
 		} else {
 			h.stack.IncrementStat("dhcp_acks")
 			if debugLevel >= 2 {
-				fmt.Printf("DHCP: Sent Ack IP=%s to %s sn=%d\n", lease.IP, dhcp.ClientHWAddr, pkt.SerialNumber)
+				logging.ProtocolDebug("DHCP", debugLevel, 2, "Sent Ack IP=%s to %s sn=%d", lease.IP, dhcp.ClientHWAddr, pkt.SerialNumber)
 			}
 		}
 
