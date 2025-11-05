@@ -51,6 +51,10 @@ type Device struct {
 	SNMPConfig  SNMPConfig
 	DHCPConfig  *DHCPConfig // DHCP server configuration
 	DNSConfig   *DNSConfig  // DNS server configuration
+	LLDPConfig  *LLDPConfig // LLDP discovery protocol configuration
+	CDPConfig   *CDPConfig  // CDP discovery protocol configuration
+	EDPConfig   *EDPConfig  // EDP discovery protocol configuration
+	FDPConfig   *FDPConfig  // FDP discovery protocol configuration
 	Properties  map[string]string
 }
 
@@ -120,6 +124,45 @@ type SNMPConfig struct {
 	SysContact string
 	SysLocation string
 	WalkFile   string // Path to SNMP walk file
+}
+
+// LLDPConfig holds LLDP (Link Layer Discovery Protocol) configuration
+type LLDPConfig struct {
+	Enabled           bool
+	AdvertiseInterval int    // seconds
+	TTL               int    // seconds
+	SystemDescription string
+	PortDescription   string
+	ChassisIDType     string // "mac", "local", "network_address"
+}
+
+// CDPConfig holds CDP (Cisco Discovery Protocol) configuration
+type CDPConfig struct {
+	Enabled          bool
+	AdvertiseInterval int    // seconds
+	Holdtime         int    // seconds
+	Version          int    // 1 or 2
+	SoftwareVersion  string
+	Platform         string
+	PortID           string
+}
+
+// EDPConfig holds EDP (Extreme Discovery Protocol) configuration
+type EDPConfig struct {
+	Enabled           bool
+	AdvertiseInterval int    // seconds
+	VersionString     string
+	DisplayString     string
+}
+
+// FDPConfig holds FDP (Foundry Discovery Protocol) configuration
+type FDPConfig struct {
+	Enabled          bool
+	AdvertiseInterval int    // seconds
+	Holdtime         int    // seconds
+	SoftwareVersion  string
+	Platform         string
+	PortID           string
 }
 
 // Load reads and parses a configuration file
@@ -504,6 +547,88 @@ func LoadYAML(filename string) (*Config, error) {
 			}
 
 			device.DNSConfig = dnsCfg
+		}
+
+		// Handle LLDP configuration
+		if yamlDevice.Lldp != nil {
+			lldpCfg := &LLDPConfig{
+				Enabled:           yamlDevice.Lldp.Enabled,
+				AdvertiseInterval: yamlDevice.Lldp.AdvertiseInterval,
+				TTL:               yamlDevice.Lldp.TTL,
+				SystemDescription: yamlDevice.Lldp.SystemDescription,
+				PortDescription:   yamlDevice.Lldp.PortDescription,
+				ChassisIDType:     yamlDevice.Lldp.ChassisIDType,
+			}
+			// Set defaults if not specified
+			if lldpCfg.AdvertiseInterval == 0 {
+				lldpCfg.AdvertiseInterval = 30
+			}
+			if lldpCfg.TTL == 0 {
+				lldpCfg.TTL = 120
+			}
+			if lldpCfg.ChassisIDType == "" {
+				lldpCfg.ChassisIDType = "mac"
+			}
+			device.LLDPConfig = lldpCfg
+		}
+
+		// Handle CDP configuration
+		if yamlDevice.Cdp != nil {
+			cdpCfg := &CDPConfig{
+				Enabled:           yamlDevice.Cdp.Enabled,
+				AdvertiseInterval: yamlDevice.Cdp.AdvertiseInterval,
+				Holdtime:          yamlDevice.Cdp.Holdtime,
+				Version:           yamlDevice.Cdp.Version,
+				SoftwareVersion:   yamlDevice.Cdp.SoftwareVersion,
+				Platform:          yamlDevice.Cdp.Platform,
+				PortID:            yamlDevice.Cdp.PortID,
+			}
+			// Set defaults if not specified
+			if cdpCfg.AdvertiseInterval == 0 {
+				cdpCfg.AdvertiseInterval = 60
+			}
+			if cdpCfg.Holdtime == 0 {
+				cdpCfg.Holdtime = 180
+			}
+			if cdpCfg.Version == 0 {
+				cdpCfg.Version = 2
+			}
+			device.CDPConfig = cdpCfg
+		}
+
+		// Handle EDP configuration
+		if yamlDevice.Edp != nil {
+			edpCfg := &EDPConfig{
+				Enabled:           yamlDevice.Edp.Enabled,
+				AdvertiseInterval: yamlDevice.Edp.AdvertiseInterval,
+				VersionString:     yamlDevice.Edp.VersionString,
+				DisplayString:     yamlDevice.Edp.DisplayString,
+			}
+			// Set defaults if not specified
+			if edpCfg.AdvertiseInterval == 0 {
+				edpCfg.AdvertiseInterval = 30
+			}
+			device.EDPConfig = edpCfg
+		}
+
+		// Handle FDP configuration
+		if yamlDevice.Fdp != nil {
+			fdpCfg := &FDPConfig{
+				Enabled:           yamlDevice.Fdp.Enabled,
+				AdvertiseInterval: yamlDevice.Fdp.AdvertiseInterval,
+				Holdtime:          yamlDevice.Fdp.Holdtime,
+				SoftwareVersion:   yamlDevice.Fdp.SoftwareVersion,
+				Platform:          yamlDevice.Fdp.Platform,
+				PortID:            yamlDevice.Fdp.PortID,
+			}
+			// Set defaults if not specified
+			if fdpCfg.AdvertiseInterval == 0 {
+				fdpCfg.AdvertiseInterval = 60
+			}
+			if fdpCfg.Holdtime == 0 {
+				fdpCfg.Holdtime = 180
+			}
+			device.FDPConfig = fdpCfg
 		}
 
 		cfg.Devices = append(cfg.Devices, device)

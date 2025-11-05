@@ -85,6 +85,11 @@ func (h *EDPHandler) sendAdvertisements() {
 			continue
 		}
 
+		// Skip if EDP is explicitly disabled for this device
+		if device.EDPConfig != nil && !device.EDPConfig.Enabled {
+			continue
+		}
+
 		// Build and send EDP frame
 		frame := h.buildEDPFrame(device)
 		if frame != nil {
@@ -139,7 +144,13 @@ func (h *EDPHandler) buildEDPFrame(device *config.Device) []byte {
 
 // buildDisplayTLV builds the Display TLV
 func (h *EDPHandler) buildDisplayTLV(device *config.Device) []byte {
-	display := []byte(fmt.Sprintf("%s (%s)", device.Name, device.Type))
+	// Use display string from config if available, otherwise generate default
+	var display []byte
+	if device.EDPConfig != nil && device.EDPConfig.DisplayString != "" {
+		display = []byte(device.EDPConfig.DisplayString)
+	} else {
+		display = []byte(fmt.Sprintf("%s (%s)", device.Name, device.Type))
+	}
 
 	// TLV: Type (1 byte) + Length (2 bytes) + Value
 	tlv := make([]byte, 3+len(display))
@@ -152,22 +163,27 @@ func (h *EDPHandler) buildDisplayTLV(device *config.Device) []byte {
 
 // buildInfoTLV builds the Info TLV
 func (h *EDPHandler) buildInfoTLV(device *config.Device) []byte {
-	// Info string includes various device information
+	// Use version string from config if available, otherwise generate default
 	var info string
 
-	// Add MAC address
-	info += fmt.Sprintf("MAC:%s ", device.MACAddress.String())
+	if device.EDPConfig != nil && device.EDPConfig.VersionString != "" {
+		info = device.EDPConfig.VersionString
+	} else {
+		// Info string includes various device information
+		// Add MAC address
+		info += fmt.Sprintf("MAC:%s ", device.MACAddress.String())
 
-	// Add IP addresses
-	if len(device.IPAddresses) > 0 {
-		info += fmt.Sprintf("IP:%s ", device.IPAddresses[0].String())
+		// Add IP addresses
+		if len(device.IPAddresses) > 0 {
+			info += fmt.Sprintf("IP:%s ", device.IPAddresses[0].String())
+		}
+
+		// Add device type
+		info += fmt.Sprintf("Type:%s ", device.Type)
+
+		// Add NIAC-Go identifier
+		info += "NIAC-Go:v1.5.0"
 	}
-
-	// Add device type
-	info += fmt.Sprintf("Type:%s ", device.Type)
-
-	// Add NIAC-Go identifier
-	info += "NIAC-Go:v1.3.0"
 
 	infoBytes := []byte(info)
 

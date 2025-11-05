@@ -1,0 +1,138 @@
+# Discovery Protocol Configuration Example (v1.5.0 Feature - Group 1)
+# Demonstrates LLDP, CDP, EDP, and FDP protocol configuration
+
+devices:
+  # Cisco switch with LLDP and CDP
+  - name: cisco-switch-01
+    mac: "00:1a:2b:3c:4d:01"
+    ip: "192.168.1.10"
+
+    # LLDP (IEEE 802.1AB) Configuration
+    lldp:
+      enabled: true
+      advertise_interval: 30          # seconds (default: 30)
+      ttl: 120                        # seconds (default: 120)
+      system_description: "Cisco Catalyst 3560-X Series Switch"
+      port_description: "GigabitEthernet1/0/1"
+      chassis_id_type: "mac"          # options: mac, local, network_address
+
+    # CDP (Cisco Discovery Protocol) Configuration
+    cdp:
+      enabled: true
+      advertise_interval: 60          # seconds (default: 60)
+      holdtime: 180                   # seconds (default: 180)
+      version: 2                      # 1 or 2 (default: 2)
+      software_version: "IOS 15.2(4)E10"
+      platform: "cisco WS-C3560X-24T"
+      port_id: "GigabitEthernet1/0/1"
+
+  # Extreme Networks switch with LLDP and EDP
+  - name: extreme-switch-01
+    mac: "00:04:96:ab:cd:02"
+    ip: "192.168.1.20"
+
+    lldp:
+      enabled: true
+      advertise_interval: 30
+      ttl: 120
+      system_description: "ExtremeXOS v22.6.1.4"
+      port_description: "1:1"
+      chassis_id_type: "mac"
+
+    # EDP (Extreme Discovery Protocol) Configuration
+    edp:
+      enabled: true
+      advertise_interval: 30          # seconds (default: 30)
+      version_string: "ExtremeXOS version 22.6.1.4 v2261b4"
+      display_string: "X460-G2 Switch"
+
+  # Foundry/Brocade switch with LLDP and FDP
+  - name: foundry-switch-01
+    mac: "00:e0:52:11:22:03"
+    ip: "192.168.1.30"
+
+    lldp:
+      enabled: true
+      advertise_interval: 30
+      ttl: 120
+      system_description: "Brocade ICX 7450-48 Switch"
+      port_description: "1/1/1"
+      chassis_id_type: "mac"
+
+    # FDP (Foundry Discovery Protocol) Configuration
+    fdp:
+      enabled: true
+      advertise_interval: 60          # seconds (default: 60)
+      holdtime: 180                   # seconds (default: 180)
+      software_version: "08.0.30T211"
+      platform: "Brocade ICX7450-48"
+      port_id: "1/1/1"
+
+  # Generic router with only LLDP enabled
+  - name: generic-router-01
+    mac: "00:11:22:33:44:04"
+    ip: "192.168.1.1"
+
+    lldp:
+      enabled: true
+      advertise_interval: 30
+      ttl: 120
+      system_description: "Generic Router running NIAC-Go"
+      port_description: "eth0"
+      chassis_id_type: "network_address"  # Use IP as chassis ID
+
+  # Device with all discovery protocols disabled
+  - name: quiet-device
+    mac: "00:11:22:33:44:05"
+    ip: "192.168.1.50"
+
+    lldp:
+      enabled: false
+    cdp:
+      enabled: false
+    edp:
+      enabled: false
+    fdp:
+      enabled: false
+
+  # Device with no discovery protocol config (will use defaults)
+  - name: default-device
+    mac: "00:11:22:33:44:06"
+    ip: "192.168.1.60"
+    # No discovery protocol configs - protocols won't advertise unless explicitly enabled
+
+# Configuration Notes:
+#
+# LLDP (IEEE 802.1AB):
+# - enabled: Enable/disable LLDP advertisements
+# - advertise_interval: How often to send advertisements (seconds)
+# - ttl: Time-to-live for advertisements (seconds)
+# - system_description: Description of the system
+# - port_description: Description of the port
+# - chassis_id_type: Type of chassis ID (mac, local, network_address)
+#
+# CDP (Cisco Discovery Protocol):
+# - enabled: Enable/disable CDP advertisements
+# - advertise_interval: How often to send advertisements (seconds)
+# - holdtime: How long neighbors should retain information (seconds)
+# - version: CDP version (1 or 2)
+# - software_version: Software/firmware version string
+# - platform: Platform/model string
+# - port_id: Port identifier string
+#
+# EDP (Extreme Discovery Protocol):
+# - enabled: Enable/disable EDP advertisements
+# - advertise_interval: How often to send advertisements (seconds)
+# - version_string: Version information string
+# - display_string: Display name for the device
+#
+# FDP (Foundry Discovery Protocol):
+# - enabled: Enable/disable FDP advertisements
+# - advertise_interval: How often to send advertisements (seconds)
+# - holdtime: How long neighbors should retain information (seconds)
+# - software_version: Software/firmware version string
+# - platform: Platform/model string
+# - port_id: Port identifier string
+#
+# All fields are optional. If not specified, protocols will be disabled by default.
+# To enable a protocol with default values, set enabled: true

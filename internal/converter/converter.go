@@ -42,14 +42,18 @@ type CapturePlayback struct {
 
 // Device represents a network device
 type Device struct {
-	Name      string      `yaml:"name,omitempty"`
-	MAC       string      `yaml:"mac"`
-	IP        string      `yaml:"ip,omitempty"`  // Single IP (backward compatible)
-	IPs       []string    `yaml:"ips,omitempty"` // Multiple IPs (new feature)
-	VLAN      int         `yaml:"vlan,omitempty"`
-	SnmpAgent *SnmpAgent  `yaml:"snmp_agent,omitempty"`
-	Dhcp      *DhcpServer `yaml:"dhcp,omitempty"`
-	Dns       *DnsServer  `yaml:"dns,omitempty"`
+	Name      string           `yaml:"name,omitempty"`
+	MAC       string           `yaml:"mac"`
+	IP        string           `yaml:"ip,omitempty"`  // Single IP (backward compatible)
+	IPs       []string         `yaml:"ips,omitempty"` // Multiple IPs (new feature)
+	VLAN      int              `yaml:"vlan,omitempty"`
+	SnmpAgent *SnmpAgent       `yaml:"snmp_agent,omitempty"`
+	Dhcp      *DhcpServer      `yaml:"dhcp,omitempty"`
+	Dns       *DnsServer       `yaml:"dns,omitempty"`
+	Lldp      *LldpConfig      `yaml:"lldp,omitempty"`
+	Cdp       *CdpConfig       `yaml:"cdp,omitempty"`
+	Edp       *EdpConfig       `yaml:"edp,omitempty"`
+	Fdp       *FdpConfig       `yaml:"fdp,omitempty"`
 }
 
 // SnmpAgent represents SNMP agent configuration
@@ -104,6 +108,45 @@ type DnsRecord struct {
 	Name string `yaml:"name"`
 	IP   string `yaml:"ip"`
 	TTL  int    `yaml:"ttl,omitempty"`
+}
+
+// LldpConfig represents LLDP discovery protocol configuration
+type LldpConfig struct {
+	Enabled           bool   `yaml:"enabled,omitempty"`
+	AdvertiseInterval int    `yaml:"advertise_interval,omitempty"`
+	TTL               int    `yaml:"ttl,omitempty"`
+	SystemDescription string `yaml:"system_description,omitempty"`
+	PortDescription   string `yaml:"port_description,omitempty"`
+	ChassisIDType     string `yaml:"chassis_id_type,omitempty"`
+}
+
+// CdpConfig represents CDP discovery protocol configuration
+type CdpConfig struct {
+	Enabled           bool   `yaml:"enabled,omitempty"`
+	AdvertiseInterval int    `yaml:"advertise_interval,omitempty"`
+	Holdtime          int    `yaml:"holdtime,omitempty"`
+	Version           int    `yaml:"version,omitempty"`
+	SoftwareVersion   string `yaml:"software_version,omitempty"`
+	Platform          string `yaml:"platform,omitempty"`
+	PortID            string `yaml:"port_id,omitempty"`
+}
+
+// EdpConfig represents EDP discovery protocol configuration
+type EdpConfig struct {
+	Enabled           bool   `yaml:"enabled,omitempty"`
+	AdvertiseInterval int    `yaml:"advertise_interval,omitempty"`
+	VersionString     string `yaml:"version_string,omitempty"`
+	DisplayString     string `yaml:"display_string,omitempty"`
+}
+
+// FdpConfig represents FDP discovery protocol configuration
+type FdpConfig struct {
+	Enabled           bool   `yaml:"enabled,omitempty"`
+	AdvertiseInterval int    `yaml:"advertise_interval,omitempty"`
+	Holdtime          int    `yaml:"holdtime,omitempty"`
+	SoftwareVersion   string `yaml:"software_version,omitempty"`
+	Platform          string `yaml:"platform,omitempty"`
+	PortID            string `yaml:"port_id,omitempty"`
 }
 
 // Parser handles parsing Java DSL format
