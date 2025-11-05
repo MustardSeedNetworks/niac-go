@@ -10,10 +10,11 @@ import (
 
 // Well-known TCP ports
 const (
-	TCPPortHTTP  = 80
-	TCPPortHTTPS = 443
-	TCPPortSSH   = 22
+	TCPPortFTP    = 21
+	TCPPortSSH    = 22
 	TCPPortTelnet = 23
+	TCPPortHTTP   = 80
+	TCPPortHTTPS  = 443
 )
 
 // TCPHandler handles TCP packets
@@ -66,14 +67,24 @@ func (h *TCPHandler) HandlePacket(pkt *Packet, ipLayer *layers.IPv4, devices []*
 			flags, tcp.Seq, tcp.Ack, pkt.SerialNumber)
 	}
 
-	// For now, send RST for any TCP connections we don't handle
-	// This tells the client we're not accepting connections
-	if tcp.SYN && !tcp.ACK {
-		// SYN packet - send RST
-		h.sendRST(ipLayer, tcp, devices)
+	// Route to application handlers based on destination port
+	switch tcp.DstPort {
+	case TCPPortHTTP:
+		// HTTP traffic
+		if len(tcp.Payload) > 0 {
+			h.stack.httpHandler.HandleRequest(pkt, ipLayer, tcp, devices)
+		}
+	case TCPPortFTP:
+		// FTP control connection
+		if len(tcp.Payload) > 0 {
+			h.stack.ftpHandler.HandleRequest(pkt, ipLayer, tcp, devices)
+		}
+	default:
+		// For unsupported ports, send RST on SYN
+		if tcp.SYN && !tcp.ACK {
+			h.sendRST(ipLayer, tcp, devices)
+		}
 	}
-
-	// TODO: Implement full TCP state machine for services like HTTP
 }
 
 // sendRST sends a TCP RST packet
