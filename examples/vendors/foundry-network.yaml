@@ -1,0 +1,88 @@
+# Foundry/Brocade/Ruckus Network Configuration Example
+# Simulates a Foundry/Brocade environment with FDP and LLDP
+
+devices:
+  # Brocade ICX 7750 Core Switch
+  - name: core-icx7750-01
+    mac: "00:e0:52:11:22:01"
+    ip: "10.0.0.1"
+
+    lldp:
+      enabled: true
+      advertise_interval: 30
+      ttl: 120
+      system_description: "Brocade ICX7750-48F Switch, IronWare Version 08.0.40dT211"
+      port_description: "1/1/1"
+      chassis_id_type: "mac"
+
+    fdp:
+      enabled: true
+      advertise_interval: 60
+      holdtime: 180
+      software_version: "IronWare Version 08.0.40dT211"
+      platform: "Brocade ICX7750-48F"
+      port_id: "1/1/1"
+
+  # Brocade ICX 7450 Distribution Switch
+  - name: dist-icx7450-01
+    mac: "00:e0:52:11:22:02"
+    ip: "10.0.1.1"
+
+    lldp:
+      enabled: true
+      system_description: "Brocade ICX7450-48 Switch, IronWare Version 08.0.30T211"
+      port_description: "1/1/1"
+
+    fdp:
+      enabled: true
+      software_version: "IronWare Version 08.0.30T211"
+      platform: "Brocade ICX7450-48"
+      port_id: "1/1/1"
+
+  # Ruckus ICX 7150 Access Switch
+  - name: access-icx7150-01
+    mac: "00:e0:52:11:22:03"
+    ip: "10.0.2.10"
+
+    lldp:
+      enabled: true
+      system_description: "Ruckus ICX7150-48P Switch, Router Image Version 08.0.92T213"
+      port_description: "1/1/1"
+
+    fdp:
+      enabled: true
+      software_version: "Router Image Version 08.0.92T213"
+      platform: "Ruckus ICX7150-48P"
+      port_id: "1/1/1"
+
+  # Legacy Foundry FastIron
+  - name: legacy-fastiron-01
+    mac: "00:e0:52:11:22:04"
+    ip: "10.0.3.1"
+
+    lldp:
+      enabled: true
+      system_description: "Foundry FastIron Edge X624, SW: Version 07.3.00cT7e1"
+      port_description: "1/1"
+
+    fdp:
+      enabled: true
+      software_version: "SW: Version 07.3.00cT7e1"
+      platform: "FastIron Edge X624"
+      port_id: "1/1"
+
+# Foundry/Brocade/Ruckus Notes:
+# - FDP is the proprietary discovery protocol
+# - Company history: Foundry → Brocade → Ruckus (Arris) → CommScope
+# - LLDP supported on all modern models
+# - Port ID format:
+#   * Modern ICX: "stack-unit/module/port" (1/1/1)
+#   * Older models: "slot/port" (1/1)
+# - Software versions:
+#   * IronWare (core/distribution)
+#   * Router Image (some ICX models)
+# - Model naming:
+#   * ICX 7750 (core)
+#   * ICX 7450 (distribution)
+#   * ICX 7150 (access)
+#   * FastIron (legacy)

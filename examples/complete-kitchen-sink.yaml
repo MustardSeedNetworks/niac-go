@@ -1,0 +1,230 @@
+# Complete NIAC-Go Configuration Example - "Kitchen Sink"
+# This file demonstrates EVERY configurable feature currently available in NIAC-Go v1.5.0
+# Use this as a reference for all possible configuration options
+
+devices:
+  # =================================================================
+  # Device 1: Cisco Router with EVERYTHING
+  # =================================================================
+  - name: cisco-router-full
+    mac: "00:1a:2b:3c:4d:01"
+    ips:
+      - "192.168.1.1"                    # IPv4
+      - "fe80::21a:2bff:fe3c:4d01"      # IPv6 link-local
+      - "2001:db8::1"                    # IPv6 global
+
+    # LLDP Configuration (IEEE 802.1AB)
+    lldp:
+      enabled: true
+      advertise_interval: 30
+      ttl: 120
+      system_description: "Cisco IOS Software, 2900 Software (C2900-UNIVERSALK9-M), Version 15.4(3)M6a"
+      port_description: "GigabitEthernet0/0"
+      chassis_id_type: "mac"
+
+    # CDP Configuration (Cisco Discovery Protocol)
+    cdp:
+      enabled: true
+      advertise_interval: 60
+      holdtime: 180
+      version: 2
+      software_version: "Cisco IOS Software, 2900 Software (C2900-UNIVERSALK9-M), Version 15.4(3)M6a, RELEASE SOFTWARE"
+      platform: "Cisco 2921"
+      port_id: "GigabitEthernet0/0"
+
+    # DHCP Server Configuration
+    dhcp:
+      enabled: true
+      pools:
+        - network: "192.168.1.0/24"
+          range_start: "192.168.1.100"
+          range_end: "192.168.1.200"
+          gateway: "192.168.1.1"
+          dns_servers:
+            - "192.168.1.10"
+            - "8.8.8.8"
+          domain: "corp.example.com"
+          lease_time: 86400
+          options:
+            - code: 42
+              value: "c0a80165"
+
+    # DNS Server Configuration
+    dns:
+      enabled: true
+      records:
+        - name: "router.example.com"
+          type: "A"
+          value: "192.168.1.1"
+          ttl: 3600
+        - name: "router.example.com"
+          type: "AAAA"
+          value: "2001:db8::1"
+          ttl: 3600
+        - name: "example.com"
+          type: "NS"
+          value: "router.example.com"
+          ttl: 86400
+
+    # SNMP Configuration
+    snmp_agent:
+      community: "public"
+      location: "Data Center - Rack A1"
+      contact: "Network Admin <netadmin@example.com>"
+      engine_id: "80000009030011223344"
+
+  # =================================================================
+  # Device 2: Extreme Switch with EDP
+  # =================================================================
+  - name: extreme-switch-01
+    mac: "00:04:96:ab:cd:02"
+    ip: "192.168.1.20"
+
+    lldp:
+      enabled: true
+      advertise_interval: 30
+      ttl: 120
+      system_description: "ExtremeXOS version 22.6.1.4 v2261b4"
+      port_description: "1:1"
+
+    edp:
+      enabled: true
+      advertise_interval: 30
+      version_string: "ExtremeXOS version 22.6.1.4 v2261b4"
+      display_string: "X460-G2-24t-10G4"
+
+  # =================================================================
+  # Device 3: Brocade/Ruckus Switch with FDP
+  # =================================================================
+  - name: brocade-switch-01
+    mac: "00:e0:52:11:22:03"
+    ip: "192.168.1.30"
+
+    lldp:
+      enabled: true
+      system_description: "Brocade ICX7450-48 Switch, IronWare Version 08.0.30T211"
+      port_description: "1/1/1"
+
+    fdp:
+      enabled: true
+      advertise_interval: 60
+      holdtime: 180
+      software_version: "IronWare Version 08.0.30T211"
+      platform: "Brocade ICX7450-48"
+      port_id: "1/1/1"
+
+  # =================================================================
+  # Device 4: Multi-Homed Server (Multiple IPs)
+  # =================================================================
+  - name: multi-homed-server
+    mac: "00:11:22:33:44:04"
+    ips:
+      - "192.168.1.50"                   # Management network
+      - "192.168.2.50"                   # Production network
+      - "10.0.0.50"                      # Storage network
+      - "fe80::211:22ff:fe33:4404"      # IPv6 link-local
+      - "2001:db8::50"                   # IPv6 global
+
+    lldp:
+      enabled: true
+      system_description: "Ubuntu 22.04 LTS Server"
+      port_description: "eth0"
+
+    # DNS Server with various record types
+    dns:
+      enabled: true
+      records:
+        - name: "server.example.com"
+          type: "A"
+          value: "192.168.1.50"
+          ttl: 3600
+        - name: "server.example.com"
+          type: "AAAA"
+          value: "2001:db8::50"
+          ttl: 3600
+        - name: "www.example.com"
+          type: "CNAME"
+          value: "server.example.com"
+          ttl: 3600
+        - name: "example.com"
+          type: "MX"
+          value: "10 mail.example.com"
+          ttl: 3600
+        - name: "example.com"
+          type: "TXT"
+          value: "v=spf1 mx a ip4:192.168.1.0/24 -all"
+          ttl: 3600
+        - name: "_ldap._tcp.example.com"
+          type: "SRV"
+          value: "10 5 389 ldap.example.com"
+          ttl: 3600
+
+  # =================================================================
+  # Device 5: IPv6-Only Device
+  # =================================================================
+  - name: ipv6-only-device
+    mac: "00:11:22:33:44:05"
+    ips:
+      - "fe80::211:22ff:fe33:4405"      # Link-local
+      - "2001:db8::100"                  # Global unicast
+      - "fd00::100"                      # Unique local
+
+    lldp:
+      enabled: true
+      system_description: "IPv6-Only Linux Server"
+      chassis_id_type: "network_address"
+
+  # =================================================================
+  # Device 6: All Discovery Protocols Enabled (Multi-Vendor)
+  # =================================================================
+  - name: multi-protocol-device
+    mac: "00:11:22:33:44:06"
+    ip: "192.168.1.60"
+
+    lldp:
+      enabled: true
+    cdp:
+      enabled: true
+    edp:
+      enabled: true
+    fdp:
+      enabled: true
+
+  # =================================================================
+  # Device 7: All Discovery Protocols Disabled (Silent Device)
+  # =================================================================
+  - name: silent-device
+    mac: "00:11:22:33:44:07"
+    ip: "192.168.1.70"
+
+    lldp:
+      enabled: false
+    cdp:
+      enabled: false
+    edp:
+      enabled: false
+    fdp:
+      enabled: false
+
+# Configuration Summary:
+# =====================
+# This file demonstrates:
+# - Multiple IP addresses per device (IPv4 and IPv6)
+# - LLDP configuration (system description, port description, chassis ID type)
+# - CDP configuration (version, platform, software version, port ID)
+# - EDP configuration (version string, display string)
+# - FDP configuration (platform, software version, port ID)
+# - DHCP server with pools and options
+# - DNS server with A, AAAA, CNAME, MX, TXT, SRV, NS records
+# - SNMP agent configuration
+# - IPv4-only, IPv6-only, and dual-stack devices
+# - Multi-homed devices (multiple IPs on different networks)
+# - Per-device protocol enable/disable
+#
+# Currently NOT configurable (coming in future versions):
+# - HTTP server endpoints (Group 2)
+# - FTP server configuration (Group 2)
+# - NetBIOS settings (Group 2)
+# - STP bridge parameters (Group 1b)
+# - ICMP/ICMPv6 TTL values (Group 3)
+# - DHCPv6 server (Group 3)

@@ -1,0 +1,45 @@
+# Dual-Stack Network Configuration (IPv4 + IPv6)
+# Devices with both IPv4 and IPv6 addresses (v1.5.0 Feature 3)
+
+devices:
+  # Router with both IPv4 and IPv6
+  - name: router-01
+    mac: "00:11:22:33:44:01"
+    ips:
+      - "192.168.1.1"                    # IPv4
+      - "fe80::211:22ff:fe33:4401"      # IPv6 link-local
+      - "2001:db8::1"                    # IPv6 global
+
+    lldp:
+      enabled: true
+      system_description: "Dual-Stack Router"
+
+  # Server with multiple addresses of both families
+  - name: server-01
+    mac: "00:11:22:33:44:02"
+    ips:
+      - "192.168.1.10"                   # IPv4 primary
+      - "192.168.2.10"                   # IPv4 secondary
+      - "fe80::211:22ff:fe33:4402"      # IPv6 link-local
+      - "2001:db8::10"                   # IPv6 global
+      - "fd00::10"                       # IPv6 ULA
+
+    lldp:
+      enabled: true
+      system_description: "Dual-Stack Multi-Homed Server"
+
+  # Workstation with basic dual-stack
+  - name: workstation-01
+    mac: "00:11:22:33:44:03"
+    ips:
+      - "192.168.1.100"                  # IPv4
+      - "2001:db8::100"                  # IPv6 global
+
+# Dual-Stack Network Notes:
+# - Most common modern configuration
+# - Provides IPv4 for legacy compatibility
+# - Provides IPv6 for future-proofing
+# - Devices can communicate over either protocol
+# - Use 'ips' array to specify multiple addresses
+# - Mix IPv4 and IPv6 freely in the array
+# - Protocols will automatically use appropriate addresses

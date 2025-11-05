@@ -1,0 +1,52 @@
+# CDP-Only Configuration Example
+# Demonstrates Cisco Discovery Protocol
+# Use this for Cisco-only networks or when testing CDP compatibility
+
+devices:
+  # Basic Cisco switch with CDP
+  - name: cisco-2960-01
+    mac: "00:1a:2b:3c:4d:01"
+    ip: "192.168.1.10"
+
+    cdp:
+      enabled: true
+      advertise_interval: 60      # Default: 60 seconds
+      holdtime: 180               # Default: 180 seconds (3x interval)
+      version: 2                  # CDP version 1 or 2 (default: 2)
+
+  # Cisco switch with custom platform/version info
+  - name: cisco-3560-core
+    mac: "00:1a:2b:3c:4d:02"
+    ip: "192.168.1.1"
+
+    cdp:
+      enabled: true
+      advertise_interval: 60
+      holdtime: 180
+      version: 2
+      software_version: "Cisco IOS Software, C3560 Software (C3560-IPBASEK9-M), Version 15.0(2)SE11"
+      platform: "cisco WS-C3560-24TS"
+      port_id: "GigabitEthernet0/1"
+
+  # Cisco router with CDP
+  - name: cisco-router-01
+    mac: "00:1a:2b:3c:4d:03"
+    ip: "192.168.1.254"
+
+    cdp:
+      enabled: true
+      advertise_interval: 60
+      holdtime: 180
+      version: 2
+      software_version: "Cisco IOS Software, 1841 Software (C1841-ADVENTERPRISEK9-M), Version 15.1(4)M12a"
+      platform: "Cisco 1841"
+      port_id: "FastEthernet0/0"
+
+# CDP Protocol Notes:
+# - Cisco proprietary protocol
+# - Enabled by default on most Cisco devices
+# - CDPv2 adds more features (VTP domain, native VLAN, duplex)
+# - advertise_interval: How often to send CDP frames (typically 60s)
+# - holdtime: How long neighbors should keep the information (typically 180s)
+# - Software version and platform strings should match real Cisco formats
+# - Port ID format: FastEthernet0/0, GigabitEthernet1/0/1, etc.

@@ -1,0 +1,38 @@
+# Simple DHCPv4 Server Configuration
+# Basic DHCP server with single pool
+
+devices:
+  # DHCP server with simple pool configuration
+  - name: dhcp-server-01
+    mac: "00:11:22:33:44:55"
+    ip: "192.168.1.1"
+
+    dhcp:
+      enabled: true
+      pools:
+        - network: "192.168.1.0/24"
+          range_start: "192.168.1.100"
+          range_end: "192.168.1.200"
+          gateway: "192.168.1.1"
+          dns_servers:
+            - "8.8.8.8"
+            - "8.8.4.4"
+          domain: "example.local"
+          lease_time: 86400        # 24 hours in seconds
+
+  # Client devices that will request DHCP
+  - name: client-01
+    mac: "aa:bb:cc:dd:ee:01"
+    # No IP - will get from DHCP
+
+  - name: client-02
+    mac: "aa:bb:cc:dd:ee:02"
+    # No IP - will get from DHCP
+
+# DHCPv4 Notes:
+# - Server needs a static IP on the network
+# - Clients without IP will request DHCP
+# - Pool range should be within the network subnet
+# - Gateway typically the router/server IP
+# - DNS servers can be public (8.8.8.8) or private
+# - Lease time in seconds (86400 = 24 hours, 3600 = 1 hour)

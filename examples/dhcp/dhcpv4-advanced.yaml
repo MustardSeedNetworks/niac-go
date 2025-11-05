@@ -1,0 +1,67 @@
+# Advanced DHCPv4 Server Configuration
+# Multiple pools with DHCP options
+
+devices:
+  # DHCP server with multiple pools and options
+  - name: dhcp-server-advanced
+    mac: "00:11:22:33:44:55"
+    ip: "192.168.1.1"
+
+    dhcp:
+      enabled: true
+      pools:
+        # Main office network
+        - network: "192.168.1.0/24"
+          range_start: "192.168.1.100"
+          range_end: "192.168.1.200"
+          gateway: "192.168.1.1"
+          dns_servers:
+            - "192.168.1.10"
+            - "8.8.8.8"
+          domain: "office.example.com"
+          lease_time: 86400        # 24 hours
+          options:
+            - code: 42            # NTP servers
+              value: "c0a80165"   # 192.168.1.101 in hex
+            - code: 6             # DNS servers (additional)
+              value: "08080808"   # 8.8.8.8
+            - code: 15            # Domain name
+              value: "6f6666696365076578616d706c6503636f6d00"  # office.example.com
+
+        # Guest network - shorter lease
+        - network: "192.168.10.0/24"
+          range_start: "192.168.10.50"
+          range_end: "192.168.10.250"
+          gateway: "192.168.10.1"
+          dns_servers:
+            - "8.8.8.8"
+            - "8.8.4.4"
+          domain: "guest.example.com"
+          lease_time: 3600         # 1 hour
+
+        # IoT network - very long lease
+        - network: "192.168.20.0/24"
+          range_start: "192.168.20.100"
+          range_end: "192.168.20.200"
+          gateway: "192.168.20.1"
+          dns_servers:
+            - "192.168.1.10"
+          domain: "iot.example.local"
+          lease_time: 604800       # 7 days
+
+# DHCP Options Reference:
+# Common option codes:
+#   1  - Subnet mask
+#   3  - Router/Gateway
+#   6  - DNS servers
+#   12 - Hostname
+#   15 - Domain name
+#   42 - NTP servers
+#   51 - Lease time
+#   66 - TFTP server
+#   67 - Bootfile name
+#
+# Option values must be in hex format
+# Example conversions:
+#   IP 192.168.1.1 = c0a80101
+#   IP 8.8.8.8 = 08080808

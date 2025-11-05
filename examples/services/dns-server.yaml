@@ -1,0 +1,121 @@
+# DNS Server Configuration Example
+# Demonstrates DNS record types (A, AAAA, PTR, CNAME, MX, TXT, SRV, NS, SOA)
+
+devices:
+  # DNS server with various record types
+  - name: dns-server-01
+    mac: "00:11:22:33:44:55"
+    ip: "192.168.1.10"
+
+    dns:
+      enabled: true
+      records:
+        # A records (IPv4)
+        - name: "server1.example.com"
+          type: "A"
+          value: "192.168.1.20"
+          ttl: 3600
+
+        - name: "server2.example.com"
+          type: "A"
+          value: "192.168.1.21"
+          ttl: 3600
+
+        - name: "www.example.com"
+          type: "A"
+          value: "192.168.1.100"
+          ttl: 300
+
+        # AAAA records (IPv6)
+        - name: "server1.example.com"
+          type: "AAAA"
+          value: "2001:db8::20"
+          ttl: 3600
+
+        - name: "www.example.com"
+          type: "AAAA"
+          value: "2001:db8::100"
+          ttl: 300
+
+        # PTR records (reverse DNS)
+        - name: "20.1.168.192.in-addr.arpa"
+          type: "PTR"
+          value: "server1.example.com"
+          ttl: 3600
+
+        # CNAME records (aliases)
+        - name: "mail.example.com"
+          type: "CNAME"
+          value: "server1.example.com"
+          ttl: 3600
+
+        - name: "ftp.example.com"
+          type: "CNAME"
+          value: "server2.example.com"
+          ttl: 3600
+
+        # MX records (mail servers)
+        - name: "example.com"
+          type: "MX"
+          value: "10 mail.example.com"
+          ttl: 3600
+
+        - name: "example.com"
+          type: "MX"
+          value: "20 mail2.example.com"
+          ttl: 3600
+
+        # TXT records (SPF, DKIM, etc.)
+        - name: "example.com"
+          type: "TXT"
+          value: "v=spf1 mx a ip4:192.168.1.0/24 -all"
+          ttl: 3600
+
+        - name: "_dmarc.example.com"
+          type: "TXT"
+          value: "v=DMARC1; p=reject; rua=mailto:dmarc@example.com"
+          ttl: 3600
+
+        # SRV records (service discovery)
+        - name: "_ldap._tcp.example.com"
+          type: "SRV"
+          value: "10 5 389 ldap.example.com"
+          ttl: 3600
+
+        - name: "_sip._tcp.example.com"
+          type: "SRV"
+          value: "10 5 5060 sip.example.com"
+          ttl: 3600
+
+        # NS records (name servers)
+        - name: "example.com"
+          type: "NS"
+          value: "ns1.example.com"
+          ttl: 86400
+
+        - name: "example.com"
+          type: "NS"
+          value: "ns2.example.com"
+          ttl: 86400
+
+        # SOA record (zone authority)
+        - name: "example.com"
+          type: "SOA"
+          value: "ns1.example.com hostmaster.example.com 2024010101 3600 1800 604800 86400"
+          ttl: 86400
+
+# DNS Record Type Reference:
+# - A: IPv4 address
+# - AAAA: IPv6 address
+# - PTR: Reverse DNS lookup
+# - CNAME: Canonical name (alias)
+# - MX: Mail exchange (format: "priority hostname")
+# - TXT: Text records (SPF, DKIM, DMARC, etc.)
+# - SRV: Service records (format: "priority weight port target")
+# - NS: Name server
+# - SOA: Start of Authority (format: "primary hostmaster serial refresh retry expire minimum")
+#
+# TTL (Time To Live) in seconds:
+#   300 = 5 minutes (dynamic content)
+#   3600 = 1 hour (normal)
+#   86400 = 24 hours (stable records)

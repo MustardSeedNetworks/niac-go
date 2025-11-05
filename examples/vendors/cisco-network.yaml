@@ -1,0 +1,83 @@
+# Cisco Network Configuration Example
+# Simulates a Cisco-only environment with CDP and LLDP
+
+devices:
+  # Cisco Core Switch
+  - name: core-sw-01
+    mac: "00:1a:2b:3c:4d:01"
+    ip: "10.0.0.1"
+
+    lldp:
+      enabled: true
+      advertise_interval: 30
+      ttl: 120
+      system_description: "Cisco IOS Software, C4500 Software (cat4500e-UNIVERSALK9-M), Version 15.2(2)E9"
+      port_description: "TenGigabitEthernet1/1"
+      chassis_id_type: "mac"
+
+    cdp:
+      enabled: true
+      advertise_interval: 60
+      holdtime: 180
+      version: 2
+      software_version: "Cisco IOS Software, C4500 Software (cat4500e-UNIVERSALK9-M), Version 15.2(2)E9, RELEASE SOFTWARE (fc3)"
+      platform: "cisco WS-C4500X-32"
+      port_id: "TenGigabitEthernet1/1"
+
+  # Cisco Distribution Switch
+  - name: dist-sw-01
+    mac: "00:1a:2b:3c:4d:02"
+    ip: "10.0.1.1"
+
+    lldp:
+      enabled: true
+      system_description: "Cisco IOS Software, C3750 Software (C3750-IPSERVICESK9-M), Version 15.0(2)SE11"
+      port_description: "GigabitEthernet1/0/1"
+
+    cdp:
+      enabled: true
+      software_version: "Cisco IOS Software, C3750 Software (C3750-IPSERVICESK9-M), Version 15.0(2)SE11, RELEASE SOFTWARE (fc1)"
+      platform: "cisco WS-C3750X-48P"
+      port_id: "GigabitEthernet1/0/1"
+
+  # Cisco Access Switch
+  - name: access-sw-01
+    mac: "00:1a:2b:3c:4d:03"
+    ip: "10.0.2.10"
+
+    lldp:
+      enabled: true
+      system_description: "Cisco IOS Software, C2960 Software (C2960-LANBASEK9-M), Version 15.0(2)SE"
+      port_description: "FastEthernet0/1"
+
+    cdp:
+      enabled: true
+      software_version: "Cisco IOS Software, C2960 Software (C2960-LANBASEK9-M), Version 15.0(2)SE, RELEASE SOFTWARE (fc1)"
+      platform: "cisco WS-C2960-24TT-L"
+      port_id: "FastEthernet0/1"
+
+  # Cisco Router
+  - name: router-01
+    mac: "00:1a:2b:3c:4d:04"
+    ip: "10.0.0.254"
+
+    lldp:
+      enabled: true
+      system_description: "Cisco IOS Software, 2900 Software (C2900-UNIVERSALK9-M), Version 15.4(3)M6a"
+      port_description: "GigabitEthernet0/0"
+
+    cdp:
+      enabled: true
+      software_version: "Cisco IOS Software, 2900 Software (C2900-UNIVERSALK9-M), Version 15.4(3)M6a, RELEASE SOFTWARE (fc2)"
+      platform: "Cisco 2921"
+      port_id: "GigabitEthernet0/0"
+
+# Cisco Network Notes:
+# - CDP is Cisco's proprietary protocol (enabled by default on Cisco devices)
+# - LLDP is often enabled alongside CDP for multi-vendor compatibility
+# - Port naming conventions:
+#   * FastEthernet0/1 (10/100 Mbps)
+#   * GigabitEthernet1/0/1 (1 Gbps)
+#   * TenGigabitEthernet1/1 (10 Gbps)
+# - Version strings should match IOS format
+# - Platform strings use format "cisco MODEL"
