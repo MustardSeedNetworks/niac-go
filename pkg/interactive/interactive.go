@@ -9,6 +9,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/krisarmstrong/niac-go/pkg/config"
 	"github.com/krisarmstrong/niac-go/pkg/errors"
+	"github.com/krisarmstrong/niac-go/pkg/logging"
 )
 
 // Styles
@@ -500,7 +501,10 @@ func (m model) renderStatistics() string {
 }
 
 // Run starts the interactive mode
-func Run(interfaceName string, cfg *config.Config, debugLevel int) error {
+func Run(interfaceName string, cfg *config.Config, debugConfig *logging.DebugConfig) error {
+	// Extract global debug level for now (interactive mode doesn't yet support per-protocol debug)
+	debugLevel := debugConfig.GetGlobal()
+
 	// Initialize state manager
 	stateManager := errors.NewStateManager()
 

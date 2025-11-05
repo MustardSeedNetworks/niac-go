@@ -7,6 +7,7 @@ import (
 
 	"github.com/krisarmstrong/niac-go/pkg/capture"
 	"github.com/krisarmstrong/niac-go/pkg/config"
+	"github.com/krisarmstrong/niac-go/pkg/logging"
 )
 
 // Stack manages the network protocol stack
@@ -49,7 +50,7 @@ type Stack struct {
 	stopChan     chan struct{}
 	wg           sync.WaitGroup
 
-	debugLevel   int
+	debugConfig  *logging.DebugConfig
 }
 
 // Statistics holds protocol statistics
@@ -67,7 +68,7 @@ type Statistics struct {
 }
 
 // NewStack creates a new protocol stack
-func NewStack(captureEngine *capture.Engine, cfg *config.Config, debugLevel int) *Stack {
+func NewStack(captureEngine *capture.Engine, cfg *config.Config, debugConfig *logging.DebugConfig) *Stack {
 	s := &Stack{
 		capture:      captureEngine,
 		config:       cfg,
@@ -76,7 +77,7 @@ func NewStack(captureEngine *capture.Engine, cfg *config.Config, debugLevel int)
 		recvQueue:    make(chan *Packet, 1000),
 		stats:        &Statistics{},
 		stopChan:     make(chan struct{}),
-		debugLevel:   debugLevel,
+		debugConfig:  debugConfig,
 	}
 
 	// Initialize device table from config
@@ -86,8 +87,8 @@ func NewStack(captureEngine *capture.Engine, cfg *config.Config, debugLevel int)
 	s.arpHandler = NewARPHandler(s)
 	s.ipHandler = NewIPHandler(s)
 	s.icmpHandler = NewICMPHandler(s)
-	s.ipv6Handler = NewIPv6Handler(s, debugLevel)
-	s.icmpv6Handler = NewICMPv6Handler(s, debugLevel)
+	s.ipv6Handler = NewIPv6Handler(s, debugConfig.GetProtocolLevel(logging.ProtocolIPv6))
+	s.icmpv6Handler = NewICMPv6Handler(s, debugConfig.GetProtocolLevel(logging.ProtocolICMPv6))
 	s.udpHandler = NewUDPHandler(s)
 	s.tcpHandler = NewTCPHandler(s)
 	s.dnsHandler = NewDNSHandler(s)
@@ -95,8 +96,8 @@ func NewStack(captureEngine *capture.Engine, cfg *config.Config, debugLevel int)
 	s.dhcpv6Handler = NewDHCPv6Handler(s)
 	s.httpHandler = NewHTTPHandler(s)
 	s.ftpHandler = NewFTPHandler(s)
-	s.netbiosHandler = NewNetBIOSHandler(s, debugLevel)
-	s.stpHandler = NewSTPHandler(s, debugLevel)
+	s.netbiosHandler = NewNetBIOSHandler(s, debugConfig.GetProtocolLevel(logging.ProtocolNetBIOS))
+	s.stpHandler = NewSTPHandler(s, debugConfig.GetProtocolLevel(logging.ProtocolSTP))
 	s.lldpHandler = NewLLDPHandler(s)
 	s.cdpHandler = NewCDPHandler(s)
 	s.edpHandler = NewEDPHandler(s)
@@ -121,7 +122,7 @@ func (s *Stack) initializeDevices() {
 		}
 	}
 
-	if s.debugLevel >= 1 {
+	if s.debugConfig.GetGlobal() >= 1 {
 		fmt.Printf("Initialized %d devices from configuration\n", len(s.config.Devices))
 	}
 }
@@ -156,7 +157,7 @@ func (s *Stack) Start() error {
 	s.edpHandler.Start()
 	s.fdpHandler.Start()
 
-	if s.debugLevel >= 1 {
+	if s.debugConfig.GetGlobal() >= 1 {
 		fmt.Println("Protocol stack started")
 	}
 
@@ -180,7 +181,7 @@ func (s *Stack) Stop() {
 	close(s.stopChan)
 	s.wg.Wait()
 
-	if s.debugLevel >= 1 {
+	if s.debugConfig.GetGlobal() >= 1 {
 		fmt.Println("Protocol stack stopped")
 	}
 }
@@ -199,7 +200,7 @@ func (s *Stack) receiveThread() {
 			// Read packet (non-blocking with timeout handled by pcap)
 			data, err := s.capture.ReadPacket(buffer)
 			if err != nil {
-				if s.debugLevel >= 3 {
+				if s.debugConfig.GetGlobal() >= 3 {
 					fmt.Printf("Error reading packet: %v\n", err)
 				}
 				continue
@@ -232,7 +233,7 @@ func (s *Stack) receiveThread() {
 			case s.recvQueue <- pkt:
 			default:
 				// Queue full, drop packet
-				if s.debugLevel >= 2 {
+				if s.debugConfig.GetGlobal() >= 2 {
 					fmt.Println("Receive queue full, dropping packet")
 				}
 			}
@@ -305,7 +306,7 @@ func (s *Stack) decodePacket(pkt *Packet) {
 		etherType = pkt.Get16(offset)
 	}
 
-	if s.debugLevel >= 3 {
+	if s.debugConfig.GetGlobal() >= 3 {
 		fmt.Printf("Decoding packet sn=%d etherType=0x%04x\n", pkt.SerialNumber, etherType)
 	}
 
@@ -324,7 +325,7 @@ func (s *Stack) decodePacket(pkt *Packet) {
 	case EtherTypeFDP:
 		s.fdpHandler.HandlePacket(pkt)
 	default:
-		if s.debugLevel >= 2 {
+		if s.debugConfig.GetGlobal() >= 2 {
 			fmt.Printf("Unknown EtherType 0x%04x sn=%d\n", etherType, pkt.SerialNumber)
 		}
 	}
@@ -354,7 +355,7 @@ func (s *Stack) sendPacket(pkt *Packet) {
 
 	err := s.capture.SendPacket(pkt.Buffer[:pkt.Length])
 	if err != nil {
-		if s.debugLevel >= 2 {
+		if s.debugConfig.GetGlobal() >= 2 {
 			fmt.Printf("Error sending packet sn=%d: %v\n", pkt.SerialNumber, err)
 		}
 		s.stats.mu.Lock()
@@ -367,7 +368,7 @@ func (s *Stack) sendPacket(pkt *Packet) {
 	s.stats.PacketsSent++
 	s.stats.mu.Unlock()
 
-	if s.debugLevel >= 3 {
+	if s.debugConfig.GetGlobal() >= 3 {
 		fmt.Printf("Sent packet sn=%d length=%d\n", pkt.SerialNumber, pkt.Length)
 	}
 
@@ -405,7 +406,7 @@ func (s *Stack) Send(pkt *Packet) {
 	select {
 	case s.sendQueue <- pkt:
 	default:
-		if s.debugLevel >= 2 {
+		if s.debugConfig.GetGlobal() >= 2 {
 			fmt.Println("Send queue full, dropping packet")
 		}
 	}
@@ -461,9 +462,19 @@ func (s *Stack) IncrementStat(stat string) {
 	}
 }
 
-// GetDebugLevel returns the current debug level
+// GetDebugLevel returns the current global debug level
 func (s *Stack) GetDebugLevel() int {
-	return s.debugLevel
+	return s.debugConfig.GetGlobal()
+}
+
+// GetProtocolDebugLevel returns the debug level for a specific protocol
+func (s *Stack) GetProtocolDebugLevel(protocol string) int {
+	return s.debugConfig.GetProtocolLevel(protocol)
+}
+
+// GetDebugConfig returns the debug configuration
+func (s *Stack) GetDebugConfig() *logging.DebugConfig {
+	return s.debugConfig
 }
 
 // GetDHCPHandler returns the DHCP handler for configuration
