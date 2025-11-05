@@ -1,0 +1,53 @@
+# FDP-Only Configuration Example
+# Demonstrates Foundry Discovery Protocol
+# Use this for Foundry/Brocade/Ruckus ICX environments
+
+devices:
+  # Brocade ICX 7450 switch
+  - name: brocade-icx7450-01
+    mac: "00:e0:52:11:22:01"
+    ip: "192.168.1.10"
+
+    fdp:
+      enabled: true
+      advertise_interval: 60        # Default: 60 seconds
+      holdtime: 180                 # Default: 180 seconds (3x interval)
+      software_version: "IronWare Version 08.0.30T211"
+      platform: "Brocade ICX7450-48"
+      port_id: "1/1/1"
+
+  # Foundry FastIron switch
+  - name: foundry-fastiron-01
+    mac: "00:e0:52:11:22:02"
+    ip: "192.168.1.20"
+
+    fdp:
+      enabled: true
+      advertise_interval: 60
+      holdtime: 180
+      software_version: "SW: Version 07.3.00cT7e1"
+      platform: "FastIron Edge X624"
+      port_id: "1/1"
+
+  # Ruckus ICX 7150 switch
+  - name: ruckus-icx7150-01
+    mac: "00:e0:52:11:22:03"
+    ip: "192.168.1.30"
+
+    fdp:
+      enabled: true
+      advertise_interval: 60
+      holdtime: 180
+      software_version: "Router Image Version 08.0.92T213"
+      platform: "Ruckus ICX7150-48P"
+      port_id: "1/1/1"
+
+# FDP Protocol Notes:
+# - Foundry/Brocade proprietary protocol (now Ruckus after acquisitions)
+# - Similar to CDP but for Foundry/Brocade equipment
+# - Uses multicast MAC 01:E0:52:CC:CC:CC
+# - advertise_interval: How often to send FDP frames (typically 60s)
+# - holdtime: How long neighbors should keep the information (typically 180s)
+# - Port ID format varies by model:
+#   * Older: "1/1" (slot/port)
+#   * Newer ICX: "1/1/1" (stack-unit/module/port)

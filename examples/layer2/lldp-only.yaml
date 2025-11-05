@@ -1,0 +1,51 @@
+# LLDP-Only Configuration Example
+# Demonstrates IEEE 802.1AB Link Layer Discovery Protocol
+# Use this for networks where only LLDP is needed (most modern switches)
+
+devices:
+  # Basic LLDP device with minimal config
+  - name: switch-lldp-01
+    mac: "00:11:22:33:44:01"
+    ip: "192.168.1.10"
+
+    lldp:
+      enabled: true
+      advertise_interval: 30      # Default: 30 seconds
+      ttl: 120                    # Default: 120 seconds
+
+  # Advanced LLDP device with custom descriptions
+  - name: core-switch-01
+    mac: "00:11:22:33:44:02"
+    ip: "192.168.1.1"
+
+    lldp:
+      enabled: true
+      advertise_interval: 30
+      ttl: 120
+      system_description: "Core Switch - Building A"
+      port_description: "Uplink to Distribution"
+      chassis_id_type: "mac"      # Options: mac, local, network_address
+
+  # LLDP device using IP as chassis ID
+  - name: access-switch-01
+    mac: "00:11:22:33:44:03"
+    ip: "192.168.1.20"
+
+    lldp:
+      enabled: true
+      advertise_interval: 30
+      ttl: 120
+      system_description: "Access Switch - Floor 1"
+      port_description: "GigabitEthernet 1/0/1"
+      chassis_id_type: "network_address"  # Use IP instead of MAC
+
+# LLDP Protocol Notes:
+# - IEEE 802.1AB standard
+# - Supported by most modern network equipment
+# - Vendor-neutral (unlike CDP, EDP, FDP)
+# - advertise_interval: How often to send LLDP frames (typically 30s)
+# - ttl: How long neighbors should keep the information (typically 4x interval)
+# - chassis_id_type determines what identifies the device:
+#   * "mac" - Use device MAC address (default)
+#   * "local" - Use device name
+#   * "network_address" - Use device IP address

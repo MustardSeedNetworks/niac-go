@@ -1,0 +1,76 @@
+# Extreme Networks Configuration Example
+# Simulates an Extreme-only environment with EDP and LLDP
+
+devices:
+  # Extreme X670 Core Switch
+  - name: core-x670-01
+    mac: "00:04:96:ab:cd:01"
+    ip: "10.0.0.1"
+
+    lldp:
+      enabled: true
+      advertise_interval: 30
+      ttl: 120
+      system_description: "ExtremeXOS version 30.7.1.4 by release-manager on Mon Sep 21 13:20:14 EDT 2020"
+      port_description: "1:1"
+      chassis_id_type: "mac"
+
+    edp:
+      enabled: true
+      advertise_interval: 30
+      version_string: "ExtremeXOS version 30.7.1.4 v3071b4-patch1-6 by release-manager on Mon Sep 21 13:20:14 EDT 2020"
+      display_string: "X670-G2-48x-4q Core Switch"
+
+  # Extreme X460 Distribution Switch
+  - name: dist-x460-01
+    mac: "00:04:96:ab:cd:02"
+    ip: "10.0.1.1"
+
+    lldp:
+      enabled: true
+      system_description: "ExtremeXOS version 22.6.1.4"
+      port_description: "1:1"
+
+    edp:
+      enabled: true
+      version_string: "ExtremeXOS version 22.6.1.4 v2261b4 by release-manager"
+      display_string: "X460-G2-24t-10G4"
+
+  # Extreme Summit Access Switch
+  - name: access-summit-01
+    mac: "00:04:96:ab:cd:03"
+    ip: "10.0.2.10"
+
+    lldp:
+      enabled: true
+      system_description: "ExtremeXOS version 16.2.3.5"
+      port_description: "1"
+
+    edp:
+      enabled: true
+      version_string: "ExtremeXOS version 16.2.3.5 build 16.2.3.5 by release-manager"
+      display_string: "Summit X440-24t"
+
+  # Extreme X440 Stack
+  - name: stack-x440-01
+    mac: "00:04:96:ab:cd:04"
+    ip: "10.0.3.1"
+
+    lldp:
+      enabled: true
+      system_description: "ExtremeXOS version 22.5.1.7"
+      port_description: "1:1"
+
+    edp:
+      enabled: true
+      version_string: "ExtremeXOS version 22.5.1.7 v2251b7"
+      display_string: "X440-G2-48p-10G4 Stack"
+
+# Extreme Networks Notes:
+# - EDP is Extreme's proprietary discovery protocol
+# - LLDP is standard and widely used alongside EDP
+# - ExtremeXOS version format: "ExtremeXOS version XX.X.X.X"
+# - Port naming: Usually slot:port (1:1, 2:5, etc.)
+# - Display string typically includes model and description
+# - Version string includes build information
+# - Models: X670 (core), X460 (distribution), X440/Summit (access)

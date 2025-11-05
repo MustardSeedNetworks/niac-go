@@ -1,0 +1,41 @@
+# IPv6-Only Network Configuration
+# Pure IPv6 network with no IPv4 (v1.5.0 Feature 3)
+
+devices:
+  # Router with IPv6 only
+  - name: router-01
+    mac: "00:11:22:33:44:01"
+    ips:
+      - "fe80::211:22ff:fe33:4401"      # Link-local
+      - "2001:db8::1"                    # Global unicast
+
+    lldp:
+      enabled: true
+      system_description: "IPv6-Only Router"
+
+  # Server with multiple IPv6 addresses
+  - name: server-01
+    mac: "00:11:22:33:44:02"
+    ips:
+      - "fe80::211:22ff:fe33:4402"      # Link-local
+      - "2001:db8::10"                   # Global unicast
+      - "fd00::10"                       # Unique local address (ULA)
+
+    lldp:
+      enabled: true
+      system_description: "IPv6-Only Server"
+
+  # Workstation with IPv6
+  - name: workstation-01
+    mac: "00:11:22:33:44:03"
+    ips:
+      - "fe80::211:22ff:fe33:4403"      # Link-local
+      - "2001:db8::100"                  # Global unicast
+
+# IPv6-Only Network Notes:
+# - Modern network setup
+# - Uses 'ips' array for multiple addresses
+# - Link-local addresses (fe80::/10) for local segment
+# - Global unicast (2000::/3) for internet routing
+# - Unique local addresses (fc00::/7) for private networks
+# - No IPv4 fallback - pure IPv6 environment

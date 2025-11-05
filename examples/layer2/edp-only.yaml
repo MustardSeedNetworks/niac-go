@@ -1,0 +1,46 @@
+# EDP-Only Configuration Example
+# Demonstrates Extreme Discovery Protocol
+# Use this for Extreme Networks environments
+
+devices:
+  # Extreme X460 switch
+  - name: extreme-x460-01
+    mac: "00:04:96:ab:cd:01"
+    ip: "192.168.1.10"
+
+    edp:
+      enabled: true
+      advertise_interval: 30        # Default: 30 seconds
+      version_string: "ExtremeXOS version 22.6.1.4 v2261b4 by release-manager on Mon Oct 1 11:00:00 EDT 2018"
+      display_string: "X460-G2-24t-10G4"
+
+  # Extreme X670 core switch
+  - name: extreme-x670-core
+    mac: "00:04:96:ab:cd:02"
+    ip: "192.168.1.1"
+
+    edp:
+      enabled: true
+      advertise_interval: 30
+      version_string: "ExtremeXOS version 30.7.1.4 by release-manager"
+      display_string: "X670-G2-48x-4q Switch (Core)"
+
+  # Extreme Summit switch
+  - name: extreme-summit-01
+    mac: "00:04:96:ab:cd:03"
+    ip: "192.168.1.20"
+
+    edp:
+      enabled: true
+      advertise_interval: 30
+      version_string: "ExtremeXOS version 16.2.3.5"
+      display_string: "Summit X440-24t"
+
+# EDP Protocol Notes:
+# - Extreme Networks proprietary protocol
+# - Similar to CDP but Extreme-specific
+# - Used for topology discovery in Extreme networks
+# - advertise_interval: How often to send EDP frames (typically 30s)
+# - version_string: Full ExtremeXOS version information
+# - display_string: Human-readable device model/description
+# - EDP uses multicast MAC 00:E0:2B:00:00:00

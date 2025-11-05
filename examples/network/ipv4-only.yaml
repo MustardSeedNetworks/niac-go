@@ -1,0 +1,32 @@
+# IPv4-Only Network Configuration
+# Pure IPv4 network with no IPv6
+
+devices:
+  # Router
+  - name: router-01
+    mac: "00:11:22:33:44:01"
+    ip: "192.168.1.1"
+
+    lldp:
+      enabled: true
+      system_description: "IPv4 Router"
+
+  # Server with single IPv4
+  - name: server-01
+    mac: "00:11:22:33:44:02"
+    ip: "192.168.1.10"
+
+    lldp:
+      enabled: true
+      system_description: "IPv4 Server"
+
+  # Workstation with single IPv4
+  - name: workstation-01
+    mac: "00:11:22:33:44:03"
+    ip: "192.168.1.100"
+
+# IPv4-Only Network Notes:
+# - Traditional network setup
+# - All devices have single IPv4 addresses
+# - No IPv6 configuration
+# - Suitable for legacy environments
