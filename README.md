@@ -1,6 +1,8 @@
 # NIAC-Go: Network In A Can (Go Edition)
 
-**A complete rewrite of NIAC in Go** - Network device simulator with interactive error injection for testing and troubleshooting.
+**Production-ready network device simulator** - Complete YAML configuration system with per-protocol debug control, multi-IP support, and comprehensive protocol coverage.
+
+**Current Version: 1.5.0** - Full YAML Configuration System
 
 ## 🚀 Why Go?
 
@@ -12,6 +14,7 @@ NIAC-Go is a modern rewrite of the original Java-based NIAC, leveraging Go's str
 - **🎯 Simple Deployment**: Single binary, no dependencies
 - **🧵 Concurrency**: Goroutines make packet handling trivial
 - **🎨 Beautiful TUI**: Modern terminal UI with Bubbletea
+- **📝 Complete YAML Config**: All protocols fully configurable
 
 ## Performance Comparison
 
@@ -26,23 +29,38 @@ NIAC-Go is a modern rewrite of the original Java-based NIAC, leveraging Go's str
 
 ## Features
 
-✅ **Implemented**:
+### v1.5.0 Highlights 🎉
+
+- **🎨 Color-Coded Debug Output**: Protocol messages color-coded for better readability
+- **🔧 Per-Protocol Debug Control**: 19 independent debug flags (--debug-arp, --debug-lldp, etc.)
+- **🌐 Multiple IPs per Device**: Dual-stack (IPv4/IPv6) and multi-homed configurations
+- **📝 Complete YAML Configuration**: All protocols configurable via YAML
+  - Discovery Protocols: LLDP, CDP, EDP, FDP with custom values
+  - Layer 2: STP bridge priority, timers, and versions
+  - Application Services: HTTP endpoints, FTP users, NetBIOS names
+  - Network Protocols: ICMP TTL, ICMPv6 hop limits, DHCPv6 pools
+- **📚 Comprehensive Examples**: 20+ example files organized by use case
+- **🔒 RFC Compliance**: ICMPv6 NDP always uses hop limit 255 per RFC 4861
+
+### Core Features
+
+✅ **Complete Protocol Stack** (19 protocols):
+- **Layer 2**: ARP, STP, LLDP, CDP, EDP, FDP
+- **Layer 3**: IPv4, IPv6, ICMP, ICMPv6
+- **Layer 4**: TCP, UDP
+- **Application**: HTTP, FTP, DNS, DHCP (v4/v6), NetBIOS, SNMP
+
+✅ **Advanced Capabilities**:
 - Interactive error injection mode with beautiful TUI
 - Packet capture and injection (via gopacket/libpcap)
-- Configuration file parsing
+- YAML and legacy .cfg file parsing
 - Thread-safe error state management
 - Network interface detection
 - Multiple error types (FCS, Discards, CPU, Memory, etc.)
 - Real-time statistics
+- SNMP agent with walk file support
 - Comprehensive unit tests
 - Performance benchmarks
-
-🚧 **In Progress**:
-- SNMP agent implementation
-- Full protocol support (ARP, CDP, LLDP, STP)
-- Device simulation engine
-- SNMP walk file parsing
-- Non-interactive mode
 
 ## Installation
 
@@ -74,7 +92,10 @@ sudo cp niac /usr/local/bin/
 
 ```bash
 # Run with interactive error injection
-sudo ./niac --interactive en0 examples/basic-network.cfg
+sudo ./niac --interactive en0 examples/layer2/lldp-only.yaml
+
+# Or try the complete example with all features
+sudo ./niac --interactive en0 examples/complete-kitchen-sink.yaml
 
 # Controls:
 #   [i] - Open interactive menu
@@ -86,53 +107,102 @@ sudo ./niac --interactive en0 examples/basic-network.cfg
 #   [Enter] - Select
 ```
 
+### Basic Usage
+
+```bash
+# Validate configuration
+./niac --dry-run lo0 examples/network/ipv4-only.yaml
+
+# Run simulation
+sudo ./niac en0 examples/vendors/cisco-network.yaml
+
+# Run with verbose debug
+sudo ./niac --verbose en0 examples/layer2/lldp-only.yaml
+
+# Debug specific protocol only
+sudo ./niac --debug 1 --debug-lldp 3 en0 examples/layer2/lldp-only.yaml
+```
+
 ### Help
 
 ```bash
 ./niac --help
 ```
 
-Output:
-```
-NIAC Network in a Can (Go Edition) - Version 1.0.0-go
-Enhancements: Go Rewrite, Interactive Error Injection, Native Performance
-Runtime: Go go1.25.3 on darwin/arm64
-
-USAGE: niac [-d<n>] [-i|--interactive] <interface_name> <network.cfg>
-
-Options:
-  -d<n>              Debug level (0-3)
-  -i, --interactive  Enable interactive error injection mode
-
-Debug levels:
-  0 - no debug
-  1 - status (default)
-  2 - potential problems
-  3 - full detail
-```
+Shows all 50+ command-line options including:
+- Core flags: --debug, --verbose, --quiet, --interactive, --dry-run
+- Information: --version, --list-interfaces, --list-devices
+- Output: --no-color, --log-file, --stats-interval
+- Per-protocol debug: --debug-arp, --debug-lldp, --debug-dhcpv6, etc.
 
 ## Configuration
 
-Example `network.cfg`:
+### YAML Configuration (v1.5.0+)
 
-```
-device Router1 {
-    type = "router"
-    mac = "00:11:22:33:44:55"
-    ip = "192.168.1.1"
-    snmp_community = "public"
-    sysName = "Router1"
-    sysDescr = "Cisco IOS Software"
-}
+NIAC-Go uses YAML for configuration with full support for all protocol options:
 
-device Switch1 {
-    type = "switch"
-    mac = "00:11:22:33:44:66"
-    ip = "192.168.1.10"
-    snmp_community = "public"
-    sysName = "Switch1"
-}
+```yaml
+devices:
+  # Cisco router with LLDP and CDP
+  - name: cisco-router-01
+    mac: "00:1a:2b:3c:4d:01"
+    ips:
+      - "192.168.1.1"        # IPv4
+      - "2001:db8::1"        # IPv6
+
+    # Discovery protocols
+    lldp:
+      enabled: true
+      system_description: "Cisco IOS 15.4"
+      port_description: "GigabitEthernet0/0"
+
+    cdp:
+      enabled: true
+      platform: "Cisco 2921"
+      software_version: "IOS 15.4(3)M6a"
+
+    # DHCP server
+    dhcp:
+      enabled: true
+      pools:
+        - network: "192.168.1.0/24"
+          range_start: "192.168.1.100"
+          range_end: "192.168.1.200"
+          gateway: "192.168.1.1"
+          dns_servers: ["8.8.8.8"]
+
+    # ICMP configuration
+    icmp:
+      enabled: true
+      ttl: 128              # Windows-like TTL
+      rate_limit: 100
+
+  # IPv6-only device
+  - name: ipv6-server
+    mac: "00:11:22:33:44:55"
+    ips:
+      - "2001:db8::100"
+
+    dhcpv6:
+      enabled: true
+      pools:
+        - network: "2001:db8::/64"
+          range_start: "2001:db8::200"
+          range_end: "2001:db8::2ff"
+      preference: 255       # Highest priority
 ```
+
+### Example Library
+
+See `examples/` directory for 20+ organized examples:
+- **Complete reference**: `complete-kitchen-sink.yaml` (all features)
+- **Layer 2 protocols**: `layer2/lldp-only.yaml`, `layer2/stp-bridge.yaml`
+- **DHCP servers**: `dhcp/dhcpv4-simple.yaml`, `dhcp/dhcpv4-advanced.yaml`
+- **Services**: `services/dns-server.yaml`, `services/http-server.yaml`
+- **Network configs**: `network/ipv4-only.yaml`, `network/dual-stack.yaml`
+- **Vendor examples**: `vendors/cisco-network.yaml`
+
+Full documentation: `examples/EXAMPLES-README.md`
 
 ## Development
 
@@ -232,17 +302,21 @@ niac-go/
 
 ## Compatibility
 
-NIAC-Go aims for 100% feature parity with NIAC-Java:
+NIAC-Go has achieved feature parity with NIAC-Java and surpassed it:
 
 | Feature | Java | Go | Status |
 |---------|------|-----|--------|
 | Interactive Mode | ✅ | ✅ | **Complete** |
 | Error Injection | ✅ | ✅ | **Complete** |
-| Config Parsing | ✅ | ✅ | **Complete** |
+| Config Parsing | ✅ | ✅ | **Complete + YAML** |
 | Packet Capture | ✅ | ✅ | **Complete** |
-| SNMP Agent | ✅ | 🚧 | In Progress |
-| Protocol Support | ✅ | 🚧 | In Progress |
-| Device Simulation | ✅ | 🚧 | In Progress |
+| SNMP Agent | ✅ | ✅ | **Complete** |
+| Protocol Support | ✅ | ✅ | **Complete (19 protocols)** |
+| Device Simulation | ✅ | ✅ | **Complete** |
+| YAML Configuration | ❌ | ✅ | **Go Only** |
+| Per-Protocol Debug | ❌ | ✅ | **Go Only** |
+| Color Output | ❌ | ✅ | **Go Only** |
+| Multi-IP Devices | ❌ | ✅ | **Go Only** |
 
 ## Contributing
 
