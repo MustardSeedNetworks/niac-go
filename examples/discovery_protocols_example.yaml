@@ -1,0 +1,41 @@
+# Example configuration with discovery protocol options
+# This demonstrates how to control LLDP, CDP, EDP, and FDP protocols
+
+discovery_protocols:
+  # LLDP (Link Layer Discovery Protocol) - IEEE 802.1AB standard
+  lldp:
+    enabled: true
+    interval: 30  # seconds (default: 30)
+
+  # CDP (Cisco Discovery Protocol) - Cisco proprietary
+  cdp:
+    enabled: true
+    interval: 60  # seconds (default: 60)
+
+  # EDP (Extreme Discovery Protocol) - Extreme Networks
+  edp:
+    enabled: false  # Disabled in this example
+    interval: 30
+
+  # FDP (Foundry Discovery Protocol) - Foundry/Brocade
+  fdp:
+    enabled: false  # Disabled in this example
+    interval: 60
+
+devices:
+  - name: switch1
+    mac: "00:11:22:33:44:55"
+    ip: "192.168.1.10"
+
+  - name: switch2
+    mac: "00:11:22:33:44:66"
+    ip: "192.168.1.11"
+
+# Notes:
+# - If discovery_protocols section is omitted, all protocols are enabled with defaults
+# - Interval is in seconds
+# - Default intervals match protocol standards:
+#   - LLDP: 30 seconds
+#   - CDP: 60 seconds
+#   - EDP: 30 seconds
+#   - FDP: 60 seconds

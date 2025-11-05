@@ -14,9 +14,10 @@ import (
 
 // Config represents the network configuration
 type Config struct {
-	Devices         []Device
-	IncludePath     string           // Base path for walk files
-	CapturePlayback *CapturePlayback // Optional PCAP playback config
+	Devices            []Device
+	IncludePath        string              // Base path for walk files
+	CapturePlayback    *CapturePlayback    // Optional PCAP playback config
+	DiscoveryProtocols *DiscoveryProtocols // Discovery protocol configuration
 }
 
 // CapturePlayback represents PCAP file playback configuration
@@ -24,6 +25,20 @@ type CapturePlayback struct {
 	FileName  string
 	LoopTime  int     // milliseconds
 	ScaleTime float64 // time scaling factor
+}
+
+// DiscoveryProtocols configures discovery protocol behavior
+type DiscoveryProtocols struct {
+	LLDP *ProtocolConfig
+	CDP  *ProtocolConfig
+	EDP  *ProtocolConfig
+	FDP  *ProtocolConfig
+}
+
+// ProtocolConfig configures a discovery protocol
+type ProtocolConfig struct {
+	Enabled  bool
+	Interval int // Advertisement interval in seconds
 }
 
 // Device represents a simulated network device
@@ -216,6 +231,39 @@ func LoadYAML(filename string) (*Config, error) {
 			FileName:  yamlConfig.CapturePlayback.FileName,
 			LoopTime:  yamlConfig.CapturePlayback.LoopTime,
 			ScaleTime: yamlConfig.CapturePlayback.ScaleTime,
+		}
+	}
+
+	// Copy DiscoveryProtocols if present
+	if yamlConfig.DiscoveryProtocols != nil {
+		cfg.DiscoveryProtocols = &DiscoveryProtocols{}
+
+		if yamlConfig.DiscoveryProtocols.LLDP != nil {
+			cfg.DiscoveryProtocols.LLDP = &ProtocolConfig{
+				Enabled:  yamlConfig.DiscoveryProtocols.LLDP.Enabled,
+				Interval: yamlConfig.DiscoveryProtocols.LLDP.Interval,
+			}
+		}
+
+		if yamlConfig.DiscoveryProtocols.CDP != nil {
+			cfg.DiscoveryProtocols.CDP = &ProtocolConfig{
+				Enabled:  yamlConfig.DiscoveryProtocols.CDP.Enabled,
+				Interval: yamlConfig.DiscoveryProtocols.CDP.Interval,
+			}
+		}
+
+		if yamlConfig.DiscoveryProtocols.EDP != nil {
+			cfg.DiscoveryProtocols.EDP = &ProtocolConfig{
+				Enabled:  yamlConfig.DiscoveryProtocols.EDP.Enabled,
+				Interval: yamlConfig.DiscoveryProtocols.EDP.Interval,
+			}
+		}
+
+		if yamlConfig.DiscoveryProtocols.FDP != nil {
+			cfg.DiscoveryProtocols.FDP = &ProtocolConfig{
+				Enabled:  yamlConfig.DiscoveryProtocols.FDP.Enabled,
+				Interval: yamlConfig.DiscoveryProtocols.FDP.Interval,
+			}
 		}
 	}
 
