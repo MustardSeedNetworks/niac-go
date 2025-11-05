@@ -1,7 +1,0 @@
-include_path: walks
-devices:
-    - name: device1
-      mac: 00:E0:B1:EA:CC:08
-      ip: 10.250.0.49
-      snmp_agent:
-        walk_file: 9700.txt
