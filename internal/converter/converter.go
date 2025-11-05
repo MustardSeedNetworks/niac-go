@@ -58,6 +58,9 @@ type Device struct {
 	Http      *HttpConfig      `yaml:"http,omitempty"`
 	Ftp       *FtpConfig       `yaml:"ftp,omitempty"`
 	Netbios   *NetbiosConfig   `yaml:"netbios,omitempty"`
+	Icmp      *IcmpConfig      `yaml:"icmp,omitempty"`
+	Icmpv6    *Icmpv6Config    `yaml:"icmpv6,omitempty"`
+	Dhcpv6    *Dhcpv6Config    `yaml:"dhcpv6,omitempty"`
 }
 
 // SnmpAgent represents SNMP agent configuration
@@ -203,6 +206,42 @@ type NetbiosConfig struct {
 	NodeType  string   `yaml:"node_type,omitempty"`
 	Services  []string `yaml:"services,omitempty"`
 	TTL       uint32   `yaml:"ttl,omitempty"`
+}
+
+// IcmpConfig represents ICMP/ICMPv4 configuration
+type IcmpConfig struct {
+	Enabled   bool  `yaml:"enabled,omitempty"`
+	TTL       uint8 `yaml:"ttl,omitempty"`
+	RateLimit int   `yaml:"rate_limit,omitempty"`
+}
+
+// Icmpv6Config represents ICMPv6 configuration
+type Icmpv6Config struct {
+	Enabled   bool  `yaml:"enabled,omitempty"`
+	HopLimit  uint8 `yaml:"hop_limit,omitempty"`
+	RateLimit int   `yaml:"rate_limit,omitempty"`
+}
+
+// Dhcpv6Config represents DHCPv6 server configuration
+type Dhcpv6Config struct {
+	Enabled           bool           `yaml:"enabled,omitempty"`
+	Pools             []Dhcpv6Pool   `yaml:"pools,omitempty"`
+	PreferredLifetime uint32         `yaml:"preferred_lifetime,omitempty"`
+	ValidLifetime     uint32         `yaml:"valid_lifetime,omitempty"`
+	Preference        uint8          `yaml:"preference,omitempty"`
+	DNSServers        []string       `yaml:"dns_servers,omitempty"`
+	DomainList        []string       `yaml:"domain_list,omitempty"`
+	SNTPServers       []string       `yaml:"sntp_servers,omitempty"`
+	NTPServers        []string       `yaml:"ntp_servers,omitempty"`
+	SIPServers        []string       `yaml:"sip_servers,omitempty"`
+	SIPDomains        []string       `yaml:"sip_domains,omitempty"`
+}
+
+// Dhcpv6Pool represents an IPv6 address pool
+type Dhcpv6Pool struct {
+	Network    string `yaml:"network,omitempty"`
+	RangeStart string `yaml:"range_start,omitempty"`
+	RangeEnd   string `yaml:"range_end,omitempty"`
 }
 
 // Parser handles parsing Java DSL format

@@ -258,16 +258,16 @@ func (h *DHCPv6Handler) HandlePacket(pkt *Packet, ipv6Layer *layers.IPv6, udpLay
 	// Handle message based on type
 	switch msg.MessageType {
 	case DHCPv6Solicit:
-		h.handleSolicit(msg, ipv6Layer.SrcIP, serverIP, serverDevice.MACAddress, pkt.SerialNumber)
+		h.handleSolicit(msg, ipv6Layer.SrcIP, serverIP, serverDevice.MACAddress, serverDevice, pkt.SerialNumber)
 
 	case DHCPv6Request:
-		h.handleRequest(msg, ipv6Layer.SrcIP, serverIP, serverDevice.MACAddress, pkt.SerialNumber)
+		h.handleRequest(msg, ipv6Layer.SrcIP, serverIP, serverDevice.MACAddress, serverDevice, pkt.SerialNumber)
 
 	case DHCPv6Renew:
-		h.handleRenew(msg, ipv6Layer.SrcIP, serverIP, serverDevice.MACAddress, pkt.SerialNumber)
+		h.handleRenew(msg, ipv6Layer.SrcIP, serverIP, serverDevice.MACAddress, serverDevice, pkt.SerialNumber)
 
 	case DHCPv6Rebind:
-		h.handleRebind(msg, ipv6Layer.SrcIP, serverIP, serverDevice.MACAddress, pkt.SerialNumber)
+		h.handleRebind(msg, ipv6Layer.SrcIP, serverIP, serverDevice.MACAddress, serverDevice, pkt.SerialNumber)
 
 	case DHCPv6Release:
 		h.handleRelease(msg, pkt.SerialNumber)
@@ -361,7 +361,7 @@ func duidString(duid []byte) string {
 // Continue in next part...
 
 // handleSolicit processes DHCPv6 Solicit message
-func (h *DHCPv6Handler) handleSolicit(msg *DHCPv6Message, clientIP, serverIP net.IP, serverMAC net.HardwareAddr, sn int) {
+func (h *DHCPv6Handler) handleSolicit(msg *DHCPv6Message, clientIP, serverIP net.IP, serverMAC net.HardwareAddr, device *config.Device, sn int) {
 	debugLevel := h.stack.GetDebugLevel()
 
 	clientDUID := h.extractClientDUID(msg)
@@ -390,7 +390,7 @@ func (h *DHCPv6Handler) handleSolicit(msg *DHCPv6Message, clientIP, serverIP net
 	}
 
 	// Send Advertise
-	if err := h.sendAdvertise(msg, lease, clientIP, serverIP, serverMAC); err != nil {
+	if err := h.sendAdvertise(msg, lease, clientIP, serverIP, serverMAC, device); err != nil {
 		if debugLevel >= 1 {
 			fmt.Printf("DHCPv6: Failed to send Advertise: %v sn=%d\n", err, sn)
 		}
@@ -403,7 +403,7 @@ func (h *DHCPv6Handler) handleSolicit(msg *DHCPv6Message, clientIP, serverIP net
 }
 
 // handleRequest processes DHCPv6 Request message
-func (h *DHCPv6Handler) handleRequest(msg *DHCPv6Message, clientIP, serverIP net.IP, serverMAC net.HardwareAddr, sn int) {
+func (h *DHCPv6Handler) handleRequest(msg *DHCPv6Message, clientIP, serverIP net.IP, serverMAC net.HardwareAddr, device *config.Device, sn int) {
 	debugLevel := h.stack.GetDebugLevel()
 
 	clientDUID := h.extractClientDUID(msg)
@@ -432,7 +432,7 @@ func (h *DHCPv6Handler) handleRequest(msg *DHCPv6Message, clientIP, serverIP net
 	}
 
 	// Send Reply
-	if err := h.sendReply(msg, lease, clientIP, serverIP, serverMAC); err != nil {
+	if err := h.sendReply(msg, lease, clientIP, serverIP, serverMAC, device); err != nil {
 		if debugLevel >= 1 {
 			fmt.Printf("DHCPv6: Failed to send Reply: %v sn=%d\n", err, sn)
 		}
@@ -445,7 +445,7 @@ func (h *DHCPv6Handler) handleRequest(msg *DHCPv6Message, clientIP, serverIP net
 }
 
 // handleRenew processes DHCPv6 Renew message
-func (h *DHCPv6Handler) handleRenew(msg *DHCPv6Message, clientIP, serverIP net.IP, serverMAC net.HardwareAddr, sn int) {
+func (h *DHCPv6Handler) handleRenew(msg *DHCPv6Message, clientIP, serverIP net.IP, serverMAC net.HardwareAddr, device *config.Device, sn int) {
 	debugLevel := h.stack.GetDebugLevel()
 
 	clientDUID := h.extractClientDUID(msg)
@@ -464,7 +464,7 @@ func (h *DHCPv6Handler) handleRenew(msg *DHCPv6Message, clientIP, serverIP net.I
 	// Renew lease
 	h.renewLease(lease)
 
-	if err := h.sendReply(msg, lease, clientIP, serverIP, serverMAC); err != nil {
+	if err := h.sendReply(msg, lease, clientIP, serverIP, serverMAC, device); err != nil {
 		if debugLevel >= 1 {
 			fmt.Printf("DHCPv6: Failed to send Renew Reply: %v sn=%d\n", err, sn)
 		}
@@ -474,9 +474,9 @@ func (h *DHCPv6Handler) handleRenew(msg *DHCPv6Message, clientIP, serverIP net.I
 }
 
 // handleRebind processes DHCPv6 Rebind message
-func (h *DHCPv6Handler) handleRebind(msg *DHCPv6Message, clientIP, serverIP net.IP, serverMAC net.HardwareAddr, sn int) {
+func (h *DHCPv6Handler) handleRebind(msg *DHCPv6Message, clientIP, serverIP net.IP, serverMAC net.HardwareAddr, device *config.Device, sn int) {
 	// Rebind is similar to Renew but without server ID check
-	h.handleRenew(msg, clientIP, serverIP, serverMAC, sn)
+	h.handleRenew(msg, clientIP, serverIP, serverMAC, device, sn)
 }
 
 // handleRelease processes DHCPv6 Release message
@@ -521,7 +521,7 @@ func (h *DHCPv6Handler) handleInfoRequest(msg *DHCPv6Message, clientIP, serverIP
 	debugLevel := h.stack.GetDebugLevel()
 
 	// Send Reply with configuration info (DNS, domain, etc.) but no address
-	if err := h.sendInfoReply(msg, clientIP, serverIP, serverMAC); err != nil {
+	if err := h.sendInfoReply(msg, clientIP, serverIP, serverMAC, nil); err != nil {
 		if debugLevel >= 1 {
 			fmt.Printf("DHCPv6: Failed to send Info Reply: %v sn=%d\n", err, sn)
 		}
@@ -634,23 +634,23 @@ func (h *DHCPv6Handler) findAvailableAddress() net.IP {
 // Continue in next part...
 
 // sendAdvertise sends a DHCPv6 Advertise message
-func (h *DHCPv6Handler) sendAdvertise(clientMsg *DHCPv6Message, lease *DHCPv6Lease, clientIP, serverIP net.IP, serverMAC net.HardwareAddr) error {
-	return h.sendDHCPv6Response(DHCPv6Advertise, clientMsg, lease, clientIP, serverIP, serverMAC, false)
+func (h *DHCPv6Handler) sendAdvertise(clientMsg *DHCPv6Message, lease *DHCPv6Lease, clientIP, serverIP net.IP, serverMAC net.HardwareAddr, device *config.Device) error {
+	return h.sendDHCPv6Response(DHCPv6Advertise, clientMsg, lease, clientIP, serverIP, serverMAC, device, false)
 }
 
 // sendReply sends a DHCPv6 Reply message
-func (h *DHCPv6Handler) sendReply(clientMsg *DHCPv6Message, lease *DHCPv6Lease, clientIP, serverIP net.IP, serverMAC net.HardwareAddr) error {
-	return h.sendDHCPv6Response(DHCPv6Reply, clientMsg, lease, clientIP, serverIP, serverMAC, false)
+func (h *DHCPv6Handler) sendReply(clientMsg *DHCPv6Message, lease *DHCPv6Lease, clientIP, serverIP net.IP, serverMAC net.HardwareAddr, device *config.Device) error {
+	return h.sendDHCPv6Response(DHCPv6Reply, clientMsg, lease, clientIP, serverIP, serverMAC, device, false)
 }
 
 // sendInfoReply sends a DHCPv6 Reply for Information-Request
-func (h *DHCPv6Handler) sendInfoReply(clientMsg *DHCPv6Message, clientIP, serverIP net.IP, serverMAC net.HardwareAddr) error {
-	return h.sendDHCPv6Response(DHCPv6Reply, clientMsg, nil, clientIP, serverIP, serverMAC, true)
+func (h *DHCPv6Handler) sendInfoReply(clientMsg *DHCPv6Message, clientIP, serverIP net.IP, serverMAC net.HardwareAddr, device *config.Device) error {
+	return h.sendDHCPv6Response(DHCPv6Reply, clientMsg, nil, clientIP, serverIP, serverMAC, device, true)
 }
 
 // sendDHCPv6Response sends a DHCPv6 response message
 func (h *DHCPv6Handler) sendDHCPv6Response(msgType uint8, clientMsg *DHCPv6Message, lease *DHCPv6Lease,
-	clientIP, serverIP net.IP, serverMAC net.HardwareAddr, infoOnly bool) error {
+	clientIP, serverIP net.IP, serverMAC net.HardwareAddr, device *config.Device, infoOnly bool) error {
 
 	h.mu.RLock()
 	defer h.mu.RUnlock()
@@ -753,10 +753,14 @@ func (h *DHCPv6Handler) sendDHCPv6Response(msgType uint8, clientMsg *DHCPv6Messa
 	}
 
 	// Add preference (higher is better, 255 is max)
+	preference := uint8(0) // Default to 0 (lowest priority)
+	if device != nil && device.DHCPv6Config != nil {
+		preference = device.DHCPv6Config.Preference
+	}
 	response.Options = append(response.Options, DHCPv6Option{
 		Code:   DHCPv6OptPreference,
 		Length: 1,
-		Data:   []byte{255}, // Highest preference
+		Data:   []byte{preference},
 	})
 
 	// Serialize message

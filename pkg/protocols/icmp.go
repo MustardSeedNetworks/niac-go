@@ -109,6 +109,12 @@ func (h *ICMPHandler) handleEchoRequest(pkt *Packet, ipLayer *layers.IPv4, icmp 
 
 // sendEchoReply sends an ICMP Echo Reply
 func (h *ICMPHandler) sendEchoReply(srcMAC, dstMAC []byte, srcIP, dstIP []byte, id, seq uint16, payload []byte, device *config.Device) error {
+	// Get TTL from config, or use default
+	ttl := uint8(64)
+	if device.ICMPConfig != nil && device.ICMPConfig.TTL > 0 {
+		ttl = device.ICMPConfig.TTL
+	}
+
 	// Build Ethernet header
 	eth := &layers.Ethernet{
 		SrcMAC:       srcMAC,
@@ -120,7 +126,7 @@ func (h *ICMPHandler) sendEchoReply(srcMAC, dstMAC []byte, srcIP, dstIP []byte, 
 	ipLayer := &layers.IPv4{
 		Version:  4,
 		IHL:      5,
-		TTL:      64,
+		TTL:      ttl,
 		Protocol: layers.IPProtocolICMPv4,
 		SrcIP:    srcIP,
 		DstIP:    dstIP,
