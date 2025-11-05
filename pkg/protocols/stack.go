@@ -31,8 +31,9 @@ type Stack struct {
 	tcpHandler   *TCPHandler
 	dnsHandler   *DNSHandler
 	dhcpHandler  *DHCPHandler
-	httpHandler  *HTTPHandler
-	ftpHandler   *FTPHandler
+	httpHandler   *HTTPHandler
+	ftpHandler    *FTPHandler
+	netbiosHandler *NetBIOSHandler
 
 	// Statistics
 	stats        *Statistics
@@ -87,6 +88,7 @@ func NewStack(captureEngine *capture.Engine, cfg *config.Config, debugLevel int)
 	s.dhcpHandler = NewDHCPHandler(s)
 	s.httpHandler = NewHTTPHandler(s)
 	s.ftpHandler = NewFTPHandler(s)
+	s.netbiosHandler = NewNetBIOSHandler(s, debugLevel)
 
 	return s
 }

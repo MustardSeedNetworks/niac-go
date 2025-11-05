@@ -66,6 +66,12 @@ func (h *UDPHandler) HandlePacket(pkt *Packet, ipLayer *layers.IPv4, devices []*
 		if debugLevel >= 2 {
 			fmt.Printf("SNMP query received (not yet implemented) sn=%d\n", pkt.SerialNumber)
 		}
+	case NetBIOSNameServicePort:
+		// NetBIOS Name Service
+		h.stack.netbiosHandler.HandleNameService(pkt, packet, udp, devices)
+	case NetBIOSDatagramServicePort:
+		// NetBIOS Datagram Service
+		h.stack.netbiosHandler.HandleDatagramService(pkt, packet, udp, devices)
 	default:
 		if debugLevel >= 3 {
 			fmt.Printf("UDP packet to unhandled port %d sn=%d\n", udp.DstPort, pkt.SerialNumber)
