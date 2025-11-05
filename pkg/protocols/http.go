@@ -113,20 +113,61 @@ func (h *HTTPHandler) generateResponse(request *HTTPRequest, devices []*config.D
 	// Get device info for response
 	deviceName := "Unknown"
 	deviceType := "device"
+	var device *config.Device
 	if len(devices) > 0 {
-		deviceName = devices[0].Name
-		deviceType = devices[0].Type
+		device = devices[0]
+		deviceName = device.Name
+		deviceType = device.Type
 	}
 
-	// Determine response based on path
+	// Get server name from config
+	serverName := "NIAC-Go/1.0.0"
+	if device != nil && device.HTTPConfig != nil && device.HTTPConfig.ServerName != "" {
+		serverName = device.HTTPConfig.ServerName
+	}
+
+	// Check for custom endpoints in config first
+	var customEndpoint *config.HTTPEndpoint
+	if device != nil && device.HTTPConfig != nil && device.HTTPConfig.Enabled {
+		for i := range device.HTTPConfig.Endpoints {
+			ep := &device.HTTPConfig.Endpoints[i]
+			if ep.Path == request.Path {
+				// Check method match (default to GET if not specified)
+				epMethod := ep.Method
+				if epMethod == "" {
+					epMethod = "GET"
+				}
+				if epMethod == request.Method {
+					customEndpoint = ep
+					break
+				}
+			}
+		}
+	}
+
+	// Determine response based on custom endpoint or default paths
 	statusCode := 200
 	statusText := "OK"
 	contentType := "text/html"
 	var body string
 
-	switch request.Path {
-	case "/", "/index.html":
-		body = fmt.Sprintf(`<!DOCTYPE html>
+	if customEndpoint != nil {
+		// Use custom endpoint configuration
+		statusCode = customEndpoint.StatusCode
+		if statusCode == 0 {
+			statusCode = 200
+		}
+		contentType = customEndpoint.ContentType
+		if contentType == "" {
+			contentType = "text/html"
+		}
+		body = customEndpoint.Body
+		statusText = getStatusText(statusCode)
+	} else {
+		// Default endpoints
+		switch request.Path {
+		case "/", "/index.html":
+			body = fmt.Sprintf(`<!DOCTYPE html>
 <html>
 <head><title>%s - NIAC-Go</title></head>
 <body>
@@ -138,9 +179,9 @@ func (h *HTTPHandler) generateResponse(request *HTTPRequest, devices []*config.D
 </body>
 </html>`, deviceName, deviceName, deviceType)
 
-	case "/status":
-		stats := h.stack.GetStats()
-		body = fmt.Sprintf(`<!DOCTYPE html>
+		case "/status":
+			stats := h.stack.GetStats()
+			body = fmt.Sprintf(`<!DOCTYPE html>
 <html>
 <head><title>Status - %s</title></head>
 <body>
@@ -156,22 +197,22 @@ func (h *HTTPHandler) generateResponse(request *HTTPRequest, devices []*config.D
 </ul>
 </body>
 </html>`, deviceName, deviceName, deviceType,
-			stats.PacketsReceived, stats.PacketsSent,
-			stats.ARPRequests, stats.ICMPRequests)
+				stats.PacketsReceived, stats.PacketsSent,
+				stats.ARPRequests, stats.ICMPRequests)
 
-	case "/api/info":
-		contentType = "application/json"
-		body = fmt.Sprintf(`{
+		case "/api/info":
+			contentType = "application/json"
+			body = fmt.Sprintf(`{
   "name": "%s",
   "type": "%s",
   "version": "NIAC-Go v1.0.0",
   "status": "running"
 }`, deviceName, deviceType)
 
-	default:
-		statusCode = 404
-		statusText = "Not Found"
-		body = fmt.Sprintf(`<!DOCTYPE html>
+		default:
+			statusCode = 404
+			statusText = "Not Found"
+			body = fmt.Sprintf(`<!DOCTYPE html>
 <html>
 <head><title>404 Not Found</title></head>
 <body>
@@ -181,12 +222,13 @@ func (h *HTTPHandler) generateResponse(request *HTTPRequest, devices []*config.D
 <small>%s - NIAC-Go</small>
 </body>
 </html>`, request.Path, deviceName)
+		}
 	}
 
 	// Build response
 	response.WriteString(fmt.Sprintf("HTTP/1.1 %d %s\r\n", statusCode, statusText))
 	response.WriteString(fmt.Sprintf("Date: %s\r\n", time.Now().UTC().Format(time.RFC1123)))
-	response.WriteString("Server: NIAC-Go/1.0.0\r\n")
+	response.WriteString(fmt.Sprintf("Server: %s\r\n", serverName))
 	response.WriteString(fmt.Sprintf("Content-Type: %s\r\n", contentType))
 	response.WriteString(fmt.Sprintf("Content-Length: %d\r\n", len(body)))
 	response.WriteString("Connection: close\r\n")
@@ -194,6 +236,40 @@ func (h *HTTPHandler) generateResponse(request *HTTPRequest, devices []*config.D
 	response.WriteString(body)
 
 	return []byte(response.String())
+}
+
+// getStatusText returns HTTP status text for a status code
+func getStatusText(code int) string {
+	switch code {
+	case 200:
+		return "OK"
+	case 201:
+		return "Created"
+	case 204:
+		return "No Content"
+	case 301:
+		return "Moved Permanently"
+	case 302:
+		return "Found"
+	case 304:
+		return "Not Modified"
+	case 400:
+		return "Bad Request"
+	case 401:
+		return "Unauthorized"
+	case 403:
+		return "Forbidden"
+	case 404:
+		return "Not Found"
+	case 500:
+		return "Internal Server Error"
+	case 501:
+		return "Not Implemented"
+	case 503:
+		return "Service Unavailable"
+	default:
+		return "Unknown"
+	}
 }
 
 // sendResponse sends an HTTP response

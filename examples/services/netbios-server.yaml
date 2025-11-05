@@ -1,0 +1,247 @@
+# NetBIOS Service Configuration Example
+# Demonstrates NetBIOS name service, workgroups, and node types
+
+devices:
+  # =================================================================
+  # Device 1: Windows Workstation (B-node)
+  # =================================================================
+  - name: WIN-WORKSTATION
+    mac: "00:11:22:33:44:01"
+    ip: "192.168.1.10"
+
+    netbios:
+      enabled: true
+      name: "WIN-WORK01"      # NetBIOS name (max 15 chars)
+      workgroup: "WORKGROUP"
+      node_type: "B"          # Broadcast node
+      services:
+        - "workstation"
+        - "fileserver"
+      ttl: 300                # 5 minutes
+
+    lldp:
+      enabled: true
+      system_description: "Windows 10 Pro - Workstation"
+
+  # =================================================================
+  # Device 2: File Server (P-node)
+  # =================================================================
+  - name: FILESERVER-01
+    mac: "00:11:22:33:44:02"
+    ip: "192.168.1.20"
+
+    netbios:
+      enabled: true
+      name: "FILESERVER01"
+      workgroup: "CORP"
+      node_type: "P"          # Peer-to-peer node (WINS)
+      services:
+        - "fileserver"
+        - "messenger"
+      ttl: 600                # 10 minutes
+
+    lldp:
+      enabled: true
+      system_description: "Windows Server 2022 - File Server"
+
+  # =================================================================
+  # Device 3: Domain Controller (H-node)
+  # =================================================================
+  - name: DC-01
+    mac: "00:11:22:33:44:03"
+    ip: "192.168.1.5"
+
+    netbios:
+      enabled: true
+      name: "DC01"
+      workgroup: "CORP"
+      node_type: "H"          # Hybrid node (WINS + broadcast)
+      services:
+        - "workstation"
+        - "fileserver"
+        - "domain_controller"
+      ttl: 1200               # 20 minutes
+
+    lldp:
+      enabled: true
+      system_description: "Windows Server 2022 - Domain Controller"
+
+  # =================================================================
+  # Device 4: Print Server (M-node)
+  # =================================================================
+  - name: PRINTSERVER
+    mac: "00:11:22:33:44:04"
+    ip: "192.168.1.30"
+
+    netbios:
+      enabled: true
+      name: "PRINTSVR01"
+      workgroup: "WORKGROUP"
+      node_type: "M"          # Mixed node (broadcast + WINS)
+      services:
+        - "workstation"
+        - "fileserver"
+      ttl: 450                # 7.5 minutes
+
+    lldp:
+      enabled: true
+      system_description: "Windows Server 2019 - Print Server"
+
+  # =================================================================
+  # Device 5: Samba Server (Linux)
+  # =================================================================
+  - name: samba-server-01
+    mac: "00:11:22:33:44:05"
+    ip: "192.168.1.40"
+
+    netbios:
+      enabled: true
+      name: "SAMBA01"
+      workgroup: "WORKGROUP"
+      node_type: "H"          # Hybrid (typical for Samba)
+      services:
+        - "fileserver"
+      ttl: 300
+
+    lldp:
+      enabled: true
+      system_description: "Ubuntu 22.04 LTS - Samba Server 4.15"
+
+  # =================================================================
+  # Device 6: Windows 11 Client (Default Settings)
+  # =================================================================
+  - name: WIN11-CLIENT-01
+    mac: "00:11:22:33:44:06"
+    ip: "192.168.1.50"
+
+    netbios:
+      enabled: true
+      # Uses defaults:
+      # - name: device name truncated to 15 chars ("WIN11-CLIENT-0")
+      # - workgroup: "WORKGROUP"
+      # - node_type: "B" (broadcast)
+      # - services: ["workstation", "fileserver"]
+      # - ttl: 300 seconds
+
+    lldp:
+      enabled: true
+      system_description: "Windows 11 Pro"
+
+# Configuration Notes:
+# ====================
+#
+# NetBIOS Service Fields:
+# - enabled (bool): Enable NetBIOS Name Service responses
+# - name (string): NetBIOS name (max 15 characters)
+#     * Default: Device name truncated to 15 chars
+#     * Will be padded with spaces to 15 chars
+#     * Automatically converted to uppercase
+# - workgroup (string): Workgroup or domain name
+#     * Default: "WORKGROUP"
+# - node_type (string): NetBIOS node type
+#     * "B": Broadcast node (local subnet only)
+#     * "P": Peer-to-peer node (WINS server only)
+#     * "M": Mixed node (broadcast first, then WINS)
+#     * "H": Hybrid node (WINS first, then broadcast)
+#     * Default: "B"
+# - services (array): Service types to advertise
+#     * Default: ["workstation", "fileserver"]
+#     * Common values:
+#       - "workstation": Standard workstation (0x00)
+#       - "messenger": Messenger service (0x03)
+#       - "fileserver": File server service (0x20)
+#       - "domain_controller": Domain controller (0x1B)
+#       - "master_browser": Master browser (0x1D)
+#       - "browser": Browser service (0x1E)
+# - ttl (uint32): Name registration TTL in seconds
+#     * Default: 300 (5 minutes)
+#     * Typical range: 60-3600 seconds
+#
+# NetBIOS Name Service (NBNS):
+# =============================
+# - Protocol: UDP port 137
+# - Function: NetBIOS name to IP address resolution
+# - Similar to DNS but for NetBIOS names
+# - Used by Windows networking (SMB/CIFS)
+#
+# Node Types Explained:
+# =====================
+# B-node (Broadcast):
+#   - Uses broadcast for name resolution
+#   - Limited to local subnet
+#   - No WINS server required
+#   - Simple but generates broadcast traffic
+#
+# P-node (Peer-to-peer):
+#   - Uses WINS server only
+#   - No broadcast traffic
+#   - Requires WINS server
+#   - Efficient but WINS-dependent
+#
+# M-node (Mixed):
+#   - Tries broadcast first
+#   - Falls back to WINS if broadcast fails
+#   - More network traffic than H-node
+#
+# H-node (Hybrid):
+#   - Tries WINS first
+#   - Falls back to broadcast if WINS unavailable
+#   - Most common in modern networks
+#   - Balance of efficiency and reliability
+#
+# NetBIOS Name Types (Suffix Bytes):
+# ===================================
+# - 0x00: Workstation service
+# - 0x03: Messenger service
+# - 0x20: File server service
+# - 0x1B: Domain master browser
+# - 0x1D: Master browser
+# - 0x1E: Browser service elections
+#
+# Usage Examples:
+# ===============
+#
+# # Run NetBIOS name service simulation
+# sudo niac en0 examples/services/netbios-server.yaml
+#
+# # Query NetBIOS names with nmblookup (Linux/Mac)
+# nmblookup -A 192.168.1.10
+# nmblookup WIN-WORK01
+#
+# # Query with nbtstat (Windows)
+# nbtstat -A 192.168.1.10
+# nbtstat -a WIN-WORK01
+#
+# # Scan NetBIOS names on subnet
+# nbtscan 192.168.1.0/24
+#
+# # Monitor NetBIOS traffic with tcpdump
+# sudo tcpdump -i en0 port 137
+#
+# # Validate configuration
+# niac --dry-run lo0 examples/services/netbios-server.yaml
+#
+# Testing Scenarios:
+# ==================
+#
+# 1. Name Resolution:
+#    - Query each device by NetBIOS name
+#    - Verify correct IP address is returned
+#
+# 2. Workgroup Discovery:
+#    - Scan for devices in "WORKGROUP"
+#    - Scan for devices in "CORP" domain
+#
+# 3. Node Type Behavior:
+#    - B-node: Only responds to broadcast queries
+#    - P-node: Would query WINS (not simulated here)
+#    - H-node: Responds to both WINS and broadcast
+#
+# 4. Service Types:
+#    - Query for file servers (0x20)
+#    - Query for domain controllers (0x1B)
+#    - Query for workstations (0x00)
+#
+# 5. TTL Expiration:
+#    - Monitor name registration timeouts
+#    - Verify re-registration occurs

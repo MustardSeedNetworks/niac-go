@@ -1,0 +1,196 @@
+# FTP Server Configuration Example
+# Demonstrates FTP welcome banners, system types, and user accounts
+
+devices:
+  # =================================================================
+  # Device 1: Unix FTP Server
+  # =================================================================
+  - name: ftp-unix-01
+    mac: "00:11:22:33:44:01"
+    ip: "192.168.1.10"
+
+    ftp:
+      enabled: true
+      welcome_banner: "220 ProFTPD 1.3.7a Server (Ubuntu FTP Server) ready."
+      system_type: "UNIX Type: L8"
+      allow_anonymous: true
+      users:
+        - username: "ftpuser"
+          password: "ftppass123"
+          home_dir: "/home/ftpuser"
+        - username: "admin"
+          password: "admin123"
+          home_dir: "/home/admin"
+
+    lldp:
+      enabled: true
+      system_description: "Ubuntu 22.04 LTS - FTP Server"
+      port_description: "eth0"
+
+  # =================================================================
+  # Device 2: Windows FTP Server
+  # =================================================================
+  - name: ftp-windows-01
+    mac: "00:11:22:33:44:02"
+    ip: "192.168.1.20"
+
+    ftp:
+      enabled: true
+      welcome_banner: "220 Microsoft FTP Service"
+      system_type: "Windows_NT"
+      allow_anonymous: false
+      users:
+        - username: "Administrator"
+          password: "P@ssw0rd"
+          home_dir: "C:\\inetpub\\ftproot"
+        - username: "user1"
+          password: "user123"
+          home_dir: "C:\\Users\\user1\\Documents"
+
+    lldp:
+      enabled: true
+      system_description: "Windows Server 2022 - FTP Server"
+      port_description: "Ethernet 1"
+
+  # =================================================================
+  # Device 3: BSD FTP Server
+  # =================================================================
+  - name: ftp-bsd-01
+    mac: "00:11:22:33:44:03"
+    ip: "192.168.1.30"
+
+    ftp:
+      enabled: true
+      welcome_banner: "220 ftpd.example.com FTP server (Version 6.00LS) ready."
+      system_type: "UNIX Type: L8"
+      allow_anonymous: true
+
+    lldp:
+      enabled: true
+      system_description: "FreeBSD 13.2 - FTP Server"
+
+  # =================================================================
+  # Device 4: vsftpd Server (Very Secure FTP)
+  # =================================================================
+  - name: ftp-vsftpd-01
+    mac: "00:11:22:33:44:04"
+    ip: "192.168.1.40"
+
+    ftp:
+      enabled: true
+      welcome_banner: "220 (vsFTPd 3.0.3)"
+      system_type: "UNIX Type: L8"
+      allow_anonymous: false
+      users:
+        - username: "webmaster"
+          password: "web123"
+          home_dir: "/var/www"
+        - username: "backup"
+          password: "backup123"
+          home_dir: "/backup"
+
+    lldp:
+      enabled: true
+      system_description: "CentOS 8 - vsftpd Server"
+
+  # =================================================================
+  # Device 5: Simple FTP (Default Settings)
+  # =================================================================
+  - name: ftp-simple
+    mac: "00:11:22:33:44:05"
+    ip: "192.168.1.50"
+
+    ftp:
+      enabled: true
+      # Uses defaults:
+      # - welcome_banner: "220 {devicename} FTP Server (NIAC-Go) ready."
+      # - system_type: "UNIX Type: L8"
+      # - allow_anonymous: true
+      # - no users configured
+
+    lldp:
+      enabled: true
+      system_description: "Generic FTP Server"
+
+# Configuration Notes:
+# ====================
+#
+# FTP Server Fields:
+# - enabled (bool): Enable FTP server responses
+# - welcome_banner (string): Welcome message displayed on connection
+#     * Default: "220 {devicename} FTP Server (NIAC-Go) ready."
+#     * Should start with FTP response code (220)
+#     * Will auto-append \r\n if not present
+# - system_type (string): Response to SYST command
+#     * Default: "UNIX Type: L8"
+#     * Common values: "UNIX Type: L8", "Windows_NT", "MACOS"
+# - allow_anonymous (bool): Allow anonymous login
+#     * Default: true
+# - users (array): User account definitions
+#
+# FTP User Fields:
+# - username (string): Username for authentication
+# - password (string): Password for authentication
+# - home_dir (string): Virtual home directory path
+#     * Default: "/"
+#
+# Supported FTP Commands:
+# =======================
+# - USER: Specify username
+# - PASS: Specify password
+# - SYST: Get system type
+# - PWD: Print working directory
+# - TYPE: Set transfer type (A/I/E)
+# - PASV: Enter passive mode
+# - LIST: List directory contents
+# - RETR: Retrieve file (returns 550 error)
+# - STOR: Store file (returns 553 error - read-only)
+# - CWD: Change working directory
+# - CDUP: Change to parent directory
+# - DELE: Delete file (returns 553 error - read-only)
+# - MKD: Make directory
+# - RMD: Remove directory
+# - NOOP: No operation
+# - QUIT: Disconnect
+# - HELP: Show available commands
+#
+# Common System Type Responses:
+# ==============================
+# - "UNIX Type: L8" (most Unix/Linux systems)
+# - "Windows_NT" (Windows FTP servers)
+# - "MACOS" (macOS)
+# - "MVS" (IBM mainframe)
+# - "VMS" (OpenVMS)
+#
+# FTP Response Codes (Reference):
+# ================================
+# - 220: Service ready for new user
+# - 230: User logged in
+# - 331: User name okay, need password
+# - 215: NAME system type
+# - 257: "PATHNAME" created
+# - 550: Requested action not taken (file unavailable)
+# - 553: Requested action not taken (file name not allowed)
+#
+# Usage Examples:
+# ===============
+#
+# # Run FTP server simulation
+# sudo niac en0 examples/services/ftp-server.yaml
+#
+# # Test with FTP client
+# ftp 192.168.1.10
+# # User: ftpuser
+# # Password: ftppass123
+#
+# # Test with telnet (manual FTP commands)
+# telnet 192.168.1.10 21
+# USER ftpuser
+# PASS ftppass123
+# SYST
+# PWD
+# HELP
+# QUIT
+#
+# # Validate configuration
+# niac --dry-run lo0 examples/services/ftp-server.yaml

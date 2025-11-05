@@ -64,7 +64,12 @@ func (h *FTPHandler) HandleRequest(pkt *Packet, ipLayer *layers.IPv4, tcpLayer *
 		response = "230 User logged in, proceed.\r\n"
 
 	case "SYST":
-		response = "215 UNIX Type: L8\r\n"
+		// Use configured system type if available
+		systemType := "UNIX Type: L8"
+		if len(devices) > 0 && devices[0].FTPConfig != nil && devices[0].FTPConfig.SystemType != "" {
+			systemType = devices[0].FTPConfig.SystemType
+		}
+		response = fmt.Sprintf("215 %s\r\n", systemType)
 
 	case "PWD":
 		response = "257 \"/\" is current directory.\r\n"
@@ -284,8 +289,20 @@ func (h *FTPHandler) SendWelcome(ipLayer *layers.IPv4, tcpLayer *layers.TCP, dev
 		return
 	}
 
-	deviceName := devices[0].Name
-	welcome := fmt.Sprintf("220 %s FTP Server (NIAC-Go) ready.\r\n", deviceName)
+	device := devices[0]
+	deviceName := device.Name
+
+	// Use configured welcome banner if available
+	var welcome string
+	if device.FTPConfig != nil && device.FTPConfig.WelcomeBanner != "" {
+		welcome = device.FTPConfig.WelcomeBanner
+		// Ensure it ends with \r\n
+		if !strings.HasSuffix(welcome, "\r\n") {
+			welcome += "\r\n"
+		}
+	} else {
+		welcome = fmt.Sprintf("220 %s FTP Server (NIAC-Go) ready.\r\n", deviceName)
+	}
 
 	// Small delay to let connection establish
 	go func() {

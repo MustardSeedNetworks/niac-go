@@ -35,7 +35,10 @@ examples/
 │   └── dhcpv4-advanced.yaml       # Multiple pools with options
 │
 ├── services/                       # Application Services
-│   └── dns-server.yaml            # DNS with A, AAAA, CNAME, MX, TXT, SRV, NS, SOA
+│   ├── dns-server.yaml            # DNS with A, AAAA, CNAME, MX, TXT, SRV, NS, SOA
+│   ├── http-server.yaml           # HTTP with custom endpoints and responses
+│   ├── ftp-server.yaml            # FTP with welcome banners and users
+│   └── netbios-server.yaml        # NetBIOS name service configuration
 │
 ├── network/                        # IP Addressing Schemes
 │   ├── ipv4-only.yaml             # Traditional IPv4-only network
@@ -104,10 +107,10 @@ examples/
 #### Phase 2 Group 1b (Completed)
 - ✅ **STP Config:** Bridge priority, timers, version (see `stp-bridge.yaml`)
 
-#### Phase 2 Group 2 (Pending)
-- ⏳ **HTTP Server:** Endpoints, responses, content (coming soon)
-- ⏳ **FTP Server:** Welcome message, users, responses (coming soon)
-- ⏳ **NetBIOS:** Workgroup, node type, services (coming soon)
+#### Phase 2 Group 2 (Completed)
+- ✅ **HTTP Server:** Server name, endpoints, responses (see `http-server.yaml`)
+- ✅ **FTP Server:** Welcome banner, system type, users (see `ftp-server.yaml`)
+- ✅ **NetBIOS:** Name, workgroup, node type, services (see `netbios-server.yaml`)
 
 #### Phase 2 Group 3 (Pending)
 - ⏳ **ICMP/ICMPv6:** TTL values, rate limiting (coming soon)
