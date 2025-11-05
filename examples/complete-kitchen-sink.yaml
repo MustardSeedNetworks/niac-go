@@ -118,6 +118,42 @@ devices:
         - "workstation"
       ttl: 600
 
+    # ICMP Configuration (v1.5.0 Group 3)
+    icmp:
+      enabled: true
+      ttl: 128             # Windows-like TTL (routers often use 255)
+      rate_limit: 100      # Max 100 ICMP responses/sec (0 = unlimited)
+
+    # ICMPv6 Configuration (v1.5.0 Group 3)
+    icmpv6:
+      enabled: true
+      hop_limit: 255       # Maximum hop limit for router
+      rate_limit: 100      # Max 100 ICMPv6 responses/sec
+
+    # DHCPv6 Server Configuration (v1.5.0 Group 3)
+    dhcpv6:
+      enabled: true
+      pools:
+        - network: "2001:db8::/64"
+          range_start: "2001:db8::100"
+          range_end: "2001:db8::1ff"
+      preferred_lifetime: 604800      # 7 days
+      valid_lifetime: 2592000         # 30 days
+      preference: 255                 # Highest preference (primary server)
+      dns_servers:
+        - "2001:db8::10"
+        - "2001:4860:4860::8888"      # Google IPv6 DNS
+      domain_list:
+        - "corp.example.com"
+      sntp_servers:
+        - "2001:db8::20"
+      ntp_servers:
+        - "2001:db8::21"
+      sip_servers:
+        - "2001:db8::30"
+      sip_domains:
+        - "sip.corp.example.com"
+
   # =================================================================
   # Device 2: Extreme Switch with EDP
   # =================================================================
@@ -269,24 +305,43 @@ devices:
 
 # Configuration Summary:
 # =====================
-# This file demonstrates:
+# This file demonstrates ALL v1.5.0 features:
+#
+# Phase 1 Features:
 # - Multiple IP addresses per device (IPv4 and IPv6)
+# - Color-coded debug output
+# - Per-protocol debug level control
+#
+# Phase 2 Group 1 - Discovery Protocols:
 # - LLDP configuration (system description, port description, chassis ID type)
 # - CDP configuration (version, platform, software version, port ID)
 # - EDP configuration (version string, display string)
 # - FDP configuration (platform, software version, port ID)
-# - DHCP server with pools and options
-# - DNS server with A, AAAA, CNAME, MX, TXT, SRV, NS records
-# - SNMP agent configuration
-# - IPv4-only, IPv6-only, and dual-stack devices
-# - Multi-homed devices (multiple IPs on different networks)
-# - Per-device protocol enable/disable
 #
-# - STP configuration (bridge priority, timers, version)
+# Phase 2 Group 1b - Layer 2 Protocols:
+# - STP configuration (bridge priority, timers, version: stp/rstp/mstp)
+#
+# Phase 2 Group 2 - Application Protocols:
 # - HTTP server configuration (server name, endpoints, responses)
 # - FTP server configuration (welcome banner, system type, users)
 # - NetBIOS configuration (name, workgroup, node type, services, TTL)
 #
-# Currently NOT configurable (coming in future versions):
-# - ICMP/ICMPv6 TTL values (Group 3)
-# - DHCPv6 server (Group 3)
+# Phase 2 Group 3 - Network Protocols:
+# - ICMP configuration (TTL, rate limiting)
+# - ICMPv6 configuration (hop limit, rate limiting)
+#   * NDP packets always use hop limit 255 per RFC 4861
+# - DHCPv6 server (pools, lifetimes, preference, DNS/SNTP/NTP/SIP servers)
+#
+# Core Services:
+# - DHCP server with pools and options
+# - DNS server with A, AAAA, CNAME, MX, TXT, SRV, NS records
+# - SNMP agent configuration
+#
+# Network Configurations:
+# - IPv4-only, IPv6-only, and dual-stack devices
+# - Multi-homed devices (multiple IPs on different networks)
+# - Per-device protocol enable/disable
+#
+# Coming in Phase 3:
+# - Additional traffic patterns (babble traffic customization)
+# - SNMP trap generation

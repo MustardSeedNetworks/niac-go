@@ -1,0 +1,148 @@
+# ICMP Configuration Example
+# Demonstrates ICMP echo reply configuration with custom TTL and rate limiting
+
+devices:
+  # =================================================================
+  # Device 1: Router with custom ICMP TTL
+  # =================================================================
+  - name: router-01
+    mac: "00:11:22:33:44:01"
+    ip: "192.168.1.1"
+
+    icmp:
+      enabled: true
+      ttl: 128              # Windows-like TTL (default: 64)
+      rate_limit: 100       # Max 100 ICMP responses per second (0 = unlimited)
+
+    lldp:
+      enabled: true
+      system_description: "Router with high TTL for ICMP"
+
+  # =================================================================
+  # Device 2: Server with low TTL (testing)
+  # =================================================================
+  - name: test-server
+    mac: "00:11:22:33:44:02"
+    ip: "192.168.1.10"
+
+    icmp:
+      enabled: true
+      ttl: 32               # Low TTL for testing
+      rate_limit: 0         # Unlimited responses
+
+    lldp:
+      enabled: true
+      system_description: "Test server with low TTL"
+
+  # =================================================================
+  # Device 3: Firewall with rate limiting
+  # =================================================================
+  - name: firewall-01
+    mac: "00:11:22:33:44:03"
+    ip: "192.168.1.254"
+
+    icmp:
+      enabled: true
+      ttl: 64               # Default TTL
+      rate_limit: 10        # Rate limit to prevent ICMP floods (10/sec)
+
+    lldp:
+      enabled: true
+      system_description: "Firewall with ICMP rate limiting"
+
+  # =================================================================
+  # Device 4: Default ICMP behavior (enabled by default)
+  # =================================================================
+  - name: workstation-01
+    mac: "00:11:22:33:44:04"
+    ip: "192.168.1.100"
+
+    # ICMP enabled by default with TTL=64, rate_limit=0
+    # No explicit config needed
+
+    lldp:
+      enabled: true
+      system_description: "Workstation with default ICMP"
+
+# Configuration Notes:
+# ====================
+#
+# ICMP Configuration Fields:
+# - enabled (bool): Enable ICMP echo reply responses
+#     * Default: true (ICMP enabled by default)
+# - ttl (uint8): Time To Live for ICMP packets (1-255)
+#     * Default: 64 (standard Linux/Unix TTL)
+#     * Common values:
+#       - 32: Older systems, testing
+#       - 64: Linux, macOS, Unix (RFC 1122 recommendation)
+#       - 128: Windows systems
+#       - 255: Network devices, routers
+# - rate_limit (int): Maximum ICMP responses per second
+#     * Default: 0 (unlimited)
+#     * Use to prevent ICMP flood attacks
+#     * Recommended: 10-100 for production systems
+#
+# ICMP (Internet Control Message Protocol):
+# ==========================================
+# - RFC 792: ICMP for IPv4
+# - Used for network diagnostics (ping, traceroute)
+# - Echo Request (Type 8) -> Echo Reply (Type 0)
+# - TTL field helps detect routing loops
+#
+# TTL Values by OS (approximate):
+# ================================
+# - Linux/Unix/macOS: 64
+# - Windows: 128
+# - Cisco/Network devices: 255
+# - FreeBSD: 64
+# - Solaris: 255
+#
+# Rate Limiting:
+# ==============
+# - Prevents ICMP flood attacks
+# - rate_limit: 0 = unlimited (use for testing/lab)
+# - rate_limit: 10 = 10 responses/second (moderate protection)
+# - rate_limit: 100 = 100 responses/second (light protection)
+#
+# Usage Examples:
+# ===============
+#
+# # Run ICMP configuration
+# sudo niac en0 examples/network/icmp-config.yaml
+#
+# # Test with ping
+# ping -c 4 192.168.1.1
+# ping -c 4 192.168.1.10
+#
+# # Check TTL values in ping output
+# # Expected: router-01 shows TTL=128, test-server shows TTL=32
+#
+# # Test rate limiting (flood ping)
+# ping -f 192.168.1.254  # Firewall should rate limit to 10/sec
+#
+# # Validate configuration
+# niac --dry-run lo0 examples/network/icmp-config.yaml
+#
+# # Run with ICMP debug
+# sudo niac --debug 1 --debug-icmp 3 en0 examples/network/icmp-config.yaml
+#
+# Testing Scenarios:
+# ==================
+#
+# 1. TTL Verification:
+#    - Ping each device and observe TTL in response
+#    - Use traceroute to see TTL decrements
+#
+# 2. Rate Limiting:
+#    - Flood ping the firewall (192.168.1.254)
+#    - Observe responses limited to 10/second
+#    - Compare with unlimited devices
+#
+# 3. OS Fingerprinting:
+#    - TTL values can indicate OS type
+#    - router-01 (TTL=128) appears as Windows
+#    - test-server (TTL=32) appears as older system
+#
+# 4. Performance Testing:
+#    - Measure ICMP response times
+#    - Test impact of rate limiting on latency

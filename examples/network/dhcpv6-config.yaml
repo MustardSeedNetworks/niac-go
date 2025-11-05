@@ -1,0 +1,309 @@
+# DHCPv6 Server Configuration Example
+# Demonstrates DHCPv6 server with address pools, DNS, and advanced options
+
+devices:
+  # =================================================================
+  # Device 1: DHCPv6 Server with high preference
+  # =================================================================
+  - name: dhcpv6-primary
+    mac: "00:11:22:33:44:01"
+    ips:
+      - "fe80::1"                       # Link-local
+      - "2001:db8::1"                   # Global unicast (server address)
+
+    dhcpv6:
+      enabled: true
+
+      # Address pools for DHCPv6 clients
+      pools:
+        - network: "2001:db8::/64"
+          range_start: "2001:db8::100"
+          range_end: "2001:db8::1ff"
+
+      # Lease lifetimes
+      preferred_lifetime: 604800        # 7 days (seconds)
+      valid_lifetime: 2592000           # 30 days (seconds)
+
+      # Server preference (0-255, higher is better)
+      preference: 200                   # High preference (primary server)
+
+      # DNS configuration
+      dns_servers:
+        - "2001:db8::10"
+        - "2001:4860:4860::8888"        # Google DNS
+      domain_list:
+        - "example.com"
+        - "lab.example.com"
+
+      # Time servers
+      sntp_servers:
+        - "2001:db8::20"
+      ntp_servers:
+        - "2001:db8::21"
+
+      # SIP configuration
+      sip_servers:
+        - "2001:db8::30"
+      sip_domains:
+        - "sip.example.com"
+
+    lldp:
+      enabled: true
+      system_description: "Primary DHCPv6 Server"
+
+  # =================================================================
+  # Device 2: DHCPv6 Backup Server with lower preference
+  # =================================================================
+  - name: dhcpv6-backup
+    mac: "00:11:22:33:44:02"
+    ips:
+      - "fe80::2"
+      - "2001:db8::2"
+
+    dhcpv6:
+      enabled: true
+
+      pools:
+        - network: "2001:db8::/64"
+          range_start: "2001:db8::200"
+          range_end: "2001:db8::2ff"
+
+      preferred_lifetime: 3600          # 1 hour (shorter for backup)
+      valid_lifetime: 86400             # 1 day
+
+      preference: 100                   # Lower preference (backup server)
+
+      dns_servers:
+        - "2001:db8::10"
+      domain_list:
+        - "example.com"
+
+    lldp:
+      enabled: true
+      system_description: "Backup DHCPv6 Server"
+
+  # =================================================================
+  # Device 3: DHCPv6 Server with minimal config
+  # =================================================================
+  - name: dhcpv6-simple
+    mac: "00:11:22:33:44:03"
+    ips:
+      - "fe80::3"
+      - "2001:db8::3"
+
+    dhcpv6:
+      enabled: true
+
+      pools:
+        - network: "2001:db8:1::/64"
+          range_start: "2001:db8:1::100"
+          range_end: "2001:db8:1::1ff"
+
+      # Uses defaults:
+      # - preferred_lifetime: 604800 (7 days)
+      # - valid_lifetime: 2592000 (30 days)
+      # - preference: 0 (lowest priority)
+
+    lldp:
+      enabled: true
+      system_description: "Simple DHCPv6 Server"
+
+  # =================================================================
+  # Device 4: DNS Server (referenced by DHCPv6)
+  # =================================================================
+  - name: dns-server
+    mac: "00:11:22:33:44:10"
+    ips:
+      - "fe80::10"
+      - "2001:db8::10"
+
+    dns:
+      enabled: true
+      records:
+        - name: "ns1.example.com"
+          type: "AAAA"
+          value: "2001:db8::10"
+          ttl: 3600
+        - name: "example.com"
+          type: "NS"
+          value: "ns1.example.com"
+          ttl: 86400
+
+    lldp:
+      enabled: true
+      system_description: "IPv6 DNS Server"
+
+# Configuration Notes:
+# ====================
+#
+# DHCPv6 Configuration Fields:
+# - enabled (bool): Enable DHCPv6 server
+#     * Default: false (must be explicitly enabled)
+#
+# - pools (array): IPv6 address pools
+#     * network: IPv6 network in CIDR notation
+#     * range_start: First address in pool
+#     * range_end: Last address in pool
+#
+# - preferred_lifetime (uint32): Preferred address lifetime in seconds
+#     * Default: 604800 (7 days)
+#     * Time during which address is preferred
+#     * Should be <= valid_lifetime
+#
+# - valid_lifetime (uint32): Valid address lifetime in seconds
+#     * Default: 2592000 (30 days)
+#     * Time after which address becomes invalid
+#     * Should be >= preferred_lifetime
+#
+# - preference (uint8): Server preference (0-255)
+#     * Default: 0 (lowest priority)
+#     * Higher value = higher priority
+#     * 255 = highest priority
+#     * Clients prefer servers with higher values
+#
+# - dns_servers (array): IPv6 DNS server addresses
+#     * DHCPv6 Option 23: DNS Recursive Name Server
+#
+# - domain_list (array): DNS search domain list
+#     * DHCPv6 Option 24: Domain Search List
+#
+# - sntp_servers (array): SNTP time server addresses
+#     * DHCPv6 Option 31: SNTP Servers
+#
+# - ntp_servers (array): NTP server addresses
+#     * DHCPv6 Option 56: NTP Server
+#
+# - sip_servers (array): SIP server addresses
+#     * DHCPv6 Option 22: SIP Server IPv6 Address List
+#
+# - sip_domains (array): SIP domain names
+#     * DHCPv6 Option 21: SIP Server Domain Name List
+#
+# DHCPv6 Overview:
+# ================
+# - RFC 8415: Dynamic Host Configuration Protocol for IPv6
+# - Provides IPv6 addresses and configuration to clients
+# - Uses UDP ports 546 (client) and 547 (server)
+# - Operates on link-local and multicast addresses
+#
+# DHCPv6 Message Types:
+# =====================
+# - Solicit (1): Client requests address
+# - Advertise (2): Server offers address
+# - Request (3): Client confirms address
+# - Reply (7): Server assigns address
+# - Renew (5): Client renews lease
+# - Rebind (6): Client seeks any server
+# - Release (8): Client releases address
+# - Information-Request (11): Client requests config (no address)
+#
+# Address Lifetimes:
+# ==================
+# Preferred Lifetime:
+# - Time during which address is preferred for new connections
+# - After this, address is deprecated but still valid
+# - Typical: 7 days (604800 seconds)
+#
+# Valid Lifetime:
+# - Total time address remains valid
+# - After this, address becomes invalid and must not be used
+# - Typical: 30 days (2592000 seconds)
+# - Must be >= preferred_lifetime
+#
+# Recommended Values:
+# - Short leases (mobile): preferred=3600s (1h), valid=7200s (2h)
+# - Normal leases: preferred=604800s (7d), valid=2592000s (30d)
+# - Long leases (servers): preferred=2592000s (30d), valid=7776000s (90d)
+#
+# Server Preference:
+# ==================
+# When multiple DHCPv6 servers respond:
+# - Client selects server with highest preference value
+# - Primary server: preference=200-255
+# - Secondary server: preference=100-150
+# - Tertiary server: preference=50-99
+# - Default/backup: preference=0
+#
+# Usage Examples:
+# ===============
+#
+# # Run DHCPv6 server
+# sudo niac en0 examples/network/dhcpv6-config.yaml
+#
+# # Configure DHCPv6 client (Linux)
+# sudo dhclient -6 -v en0
+#
+# # Configure DHCPv6 client (macOS)
+# sudo ipconfig set en0 DHCP
+#
+# # View DHCPv6 leases (server side)
+# # NIAC-Go maintains leases in memory
+#
+# # Validate configuration
+# niac --dry-run lo0 examples/network/dhcpv6-config.yaml
+#
+# # Run with DHCPv6 debug
+# sudo niac --debug 1 --debug-dhcpv6 3 en0 examples/network/dhcpv6-config.yaml
+#
+# # Capture DHCPv6 traffic
+# sudo tcpdump -i en0 -vv 'udp port 546 or udp port 547'
+#
+# Testing Scenarios:
+# ==================
+#
+# 1. Server Preference Testing:
+#    - Run with both primary (preference=200) and backup (preference=100)
+#    - Client should prefer primary server
+#    - Stop primary, client should failover to backup
+#
+# 2. Address Pool Management:
+#    - Primary: 2001:db8::100-1ff (256 addresses)
+#    - Backup: 2001:db8::200-2ff (256 addresses)
+#    - Verify no conflicts between pools
+#
+# 3. Lifetime Testing:
+#    - Primary: 7 day preferred, 30 day valid
+#    - Backup: 1 hour preferred, 1 day valid (shorter for failover)
+#    - Observe client renewals
+#
+# 4. DNS Configuration:
+#    - Verify clients receive DNS servers: 2001:db8::10
+#    - Test DNS resolution with provided servers
+#    - Verify domain search list
+#
+# 5. Multi-server Environment:
+#    - Run all three servers simultaneously
+#    - Observe client behavior (should choose highest preference)
+#    - Monitor Advertise messages from all servers
+#
+# Advanced Testing:
+# =================
+#
+# # Request DHCPv6 information only (no address)
+# sudo dhclient -6 -S en0
+#
+# # Release DHCPv6 lease
+# sudo dhclient -6 -r en0
+#
+# # Monitor DHCPv6 multicast traffic
+# sudo tcpdump -i en0 'dst ff02::1:2 or dst ff05::1:3'
+#
+# # Test SLAAC + DHCPv6 (Stateless)
+# # Router Advertisement sets M=0, O=1
+# # Clients use SLAAC for address, DHCPv6 for config
+#
+# Common Issues:
+# ==============
+# 1. No Advertise received:
+#    - Check firewall allows UDP 546/547
+#    - Verify link-local addresses configured
+#    - Ensure multicast routing enabled
+#
+# 2. Client prefers wrong server:
+#    - Check preference values
+#    - Verify Advertise timing (first response wins if same preference)
+#
+# 3. Address conflicts:
+#    - Ensure pool ranges don't overlap
+#    - Check for static addresses in pool range
+#    - Verify prefix lengths match
