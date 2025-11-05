@@ -1,0 +1,112 @@
+# Traffic Pattern Configuration Example
+# Demonstrates customizable traffic generation patterns (v1.6.0)
+
+devices:
+  # Router with customized traffic patterns
+  - name: router-with-traffic
+    mac: "00:11:22:33:44:01"
+    ips:
+      - "192.168.1.1"
+      - "2001:db8::1"
+
+    # Custom traffic configuration
+    traffic:
+      enabled: true
+
+      # Gratuitous ARP announcements
+      arp_announcements:
+        enabled: true
+        interval: 30        # Send every 30 seconds (default: 60)
+
+      # Periodic ICMP pings
+      periodic_pings:
+        enabled: true
+        interval: 60        # Ping every 60 seconds (default: 120)
+        payload_size: 64    # 64 bytes payload (default: 32)
+
+      # Random background traffic
+      random_traffic:
+        enabled: true
+        interval: 90        # Generate every 90 seconds (default: 180)
+        packet_count: 10    # 10 packets per interval (default: 5)
+        patterns:
+          - broadcast_arp
+          - multicast
+          - udp
+
+    lldp:
+      enabled: true
+      system_description: "Router with custom traffic patterns"
+
+  # Server with minimal traffic
+  - name: quiet-server
+    mac: "00:11:22:33:44:02"
+    ip: "192.168.1.10"
+
+    # Minimal traffic - only ARP announcements
+    traffic:
+      enabled: true
+
+      arp_announcements:
+        enabled: true
+        interval: 300       # Very infrequent (5 minutes)
+
+      periodic_pings:
+        enabled: false      # Disable pings
+
+      random_traffic:
+        enabled: false      # Disable random traffic
+
+  # Device with traffic disabled
+  - name: silent-device
+    mac: "00:11:22:33:44:03"
+    ip: "192.168.1.20"
+
+    traffic:
+      enabled: false        # All traffic generation disabled
+
+# Configuration Notes:
+# ====================
+#
+# Traffic Configuration:
+# - enabled (bool): Master switch for traffic generation
+# - All sub-patterns respect this master switch
+#
+# ARP Announcements:
+# - Gratuitous ARP packets announcing device presence
+# - interval: seconds between announcements (default: 60)
+# - Use for network discovery and ARP cache population
+#
+# Periodic Pings:
+# - ICMP Echo Request packets sent between random devices
+# - interval: seconds between ping bursts (default: 120)
+# - payload_size: ping payload in bytes (default: 32)
+# - Simulates keepalive and connectivity testing
+#
+# Random Traffic:
+# - Background traffic for network realism
+# - interval: seconds between traffic bursts (default: 180)
+# - packet_count: packets per burst (default: 5)
+# - patterns: types of traffic to generate
+#   - broadcast_arp: Broadcast ARP requests
+#   - multicast: IP multicast packets
+#   - udp: Random UDP unicast packets
+#
+# Use Cases:
+# ===========
+#
+# 1. Network Discovery Testing:
+#    - High-frequency ARP announcements (interval: 10-30s)
+#    - Tests LLDP/CDP neighbor discovery timing
+#
+# 2. Bandwidth Testing:
+#    - High packet_count in random_traffic
+#    - Large payload_size in periodic_pings
+#
+# 3. Quiet Network Simulation:
+#    - Long intervals (300-600s)
+#    - Minimal packet_count (1-3)
+#
+# 4. Production Network Simulation:
+#    - Default intervals provide realistic traffic
+#    - Mix of all three pattern types

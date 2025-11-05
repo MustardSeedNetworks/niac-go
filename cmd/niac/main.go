@@ -18,10 +18,10 @@ import (
 )
 
 const (
-	Version      = "1.5.0"
+	Version      = "1.6.0"
 	BuildDate    = "2025-11-05"
 	GitCommit    = "HEAD"
-	Enhancements = "Full YAML Configuration, Per-Protocol Debug, Color Output, Multi-IP Support"
+	Enhancements = "Complete Protocol & YAML Work: Traffic Patterns, SNMP Traps"
 )
 
 func main() {

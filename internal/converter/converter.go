@@ -61,12 +61,14 @@ type Device struct {
 	Icmp      *IcmpConfig      `yaml:"icmp,omitempty"`
 	Icmpv6    *Icmpv6Config    `yaml:"icmpv6,omitempty"`
 	Dhcpv6    *Dhcpv6Config    `yaml:"dhcpv6,omitempty"`
+	Traffic   *TrafficConfig   `yaml:"traffic,omitempty"` // v1.6.0
 }
 
 // SnmpAgent represents SNMP agent configuration
 type SnmpAgent struct {
-	WalkFile string   `yaml:"walk_file,omitempty"`
-	AddMibs  []AddMib `yaml:"add_mibs,omitempty"`
+	WalkFile string       `yaml:"walk_file,omitempty"`
+	AddMibs  []AddMib     `yaml:"add_mibs,omitempty"`
+	Traps    *TrapsConfig `yaml:"traps,omitempty"` // v1.6.0
 }
 
 // AddMib represents a MIB override or addition
@@ -242,6 +244,67 @@ type Dhcpv6Pool struct {
 	Network    string `yaml:"network,omitempty"`
 	RangeStart string `yaml:"range_start,omitempty"`
 	RangeEnd   string `yaml:"range_end,omitempty"`
+}
+
+// TrafficConfig represents traffic pattern configuration (v1.6.0)
+type TrafficConfig struct {
+	Enabled            bool                      `yaml:"enabled,omitempty"`
+	ARPAnnouncements   *ARPAnnouncementConfig    `yaml:"arp_announcements,omitempty"`
+	PeriodicPings      *PeriodicPingConfig       `yaml:"periodic_pings,omitempty"`
+	RandomTraffic      *RandomTrafficConfig      `yaml:"random_traffic,omitempty"`
+}
+
+// ARPAnnouncementConfig configures gratuitous ARP announcements
+type ARPAnnouncementConfig struct {
+	Enabled  bool `yaml:"enabled,omitempty"`
+	Interval int  `yaml:"interval,omitempty"` // seconds
+}
+
+// PeriodicPingConfig configures periodic ICMP echo requests
+type PeriodicPingConfig struct {
+	Enabled     bool `yaml:"enabled,omitempty"`
+	Interval    int  `yaml:"interval,omitempty"`     // seconds
+	PayloadSize int  `yaml:"payload_size,omitempty"` // bytes
+}
+
+// RandomTrafficConfig configures random background traffic
+type RandomTrafficConfig struct {
+	Enabled      bool     `yaml:"enabled,omitempty"`
+	Interval     int      `yaml:"interval,omitempty"`      // seconds
+	PacketCount  int      `yaml:"packet_count,omitempty"`  // packets per interval
+	Patterns     []string `yaml:"patterns,omitempty"`      // traffic patterns
+}
+
+// TrapsConfig represents SNMP trap configuration (v1.6.0)
+type TrapsConfig struct {
+	Enabled               bool                   `yaml:"enabled,omitempty"`
+	Receivers             []string               `yaml:"receivers,omitempty"`
+	ColdStart             *TrapTriggerConfig     `yaml:"cold_start,omitempty"`
+	LinkState             *LinkStateTrapConfig   `yaml:"link_state,omitempty"`
+	AuthenticationFailure *TrapTriggerConfig     `yaml:"authentication_failure,omitempty"`
+	HighCPU               *ThresholdTrapConfig   `yaml:"high_cpu,omitempty"`
+	HighMemory            *ThresholdTrapConfig   `yaml:"high_memory,omitempty"`
+	InterfaceErrors       *ThresholdTrapConfig   `yaml:"interface_errors,omitempty"`
+}
+
+// TrapTriggerConfig configures a simple trap trigger
+type TrapTriggerConfig struct {
+	Enabled   bool `yaml:"enabled,omitempty"`
+	OnStartup bool `yaml:"on_startup,omitempty"`
+}
+
+// LinkStateTrapConfig configures link up/down traps
+type LinkStateTrapConfig struct {
+	Enabled  bool `yaml:"enabled,omitempty"`
+	LinkDown bool `yaml:"link_down,omitempty"`
+	LinkUp   bool `yaml:"link_up,omitempty"`
+}
+
+// ThresholdTrapConfig configures threshold-based traps
+type ThresholdTrapConfig struct {
+	Enabled   bool `yaml:"enabled,omitempty"`
+	Threshold int  `yaml:"threshold,omitempty"` // threshold value
+	Interval  int  `yaml:"interval,omitempty"`  // check interval in seconds
 }
 
 // Parser handles parsing Java DSL format

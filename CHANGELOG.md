@@ -7,11 +7,63 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Future (v1.6.0+)
-- Additional traffic patterns (babble traffic customization)
-- SNMP trap generation
+### Future (v1.7.0+)
 - NetFlow/IPFIX export
 - DHCPv6 prefix delegation (IA_PD)
+- Improved CLI and interactive mode enhancements
+- CI/CD pipeline and automated testing
+
+## [1.6.0] - 2025-11-05
+
+### 🎉 MILESTONE: Complete Protocol & YAML Work!
+
+All protocol and YAML configuration work is complete. Traffic patterns and SNMP trap generation are now fully configurable.
+
+### Added
+
+#### Phase 3 Features - Traffic & Monitoring
+
+- **Configurable Traffic Patterns**:
+  - Per-device traffic configuration
+  - **ARP Announcements**: Configurable gratuitous ARP intervals (default: 60s)
+  - **Periodic Pings**: Configurable ICMP echo intervals and payload sizes (default: 120s, 32 bytes)
+  - **Random Traffic**: Configurable packet counts, intervals, and traffic patterns
+    - Patterns: broadcast_arp, multicast, udp
+    - Configurable packet count per burst (default: 5)
+    - Configurable interval between bursts (default: 180s)
+  - Master enable/disable switch per device
+  - Examples: `examples/traffic-patterns.yaml`
+
+- **SNMP Trap Generation** (SNMPv2c):
+  - **Event-based traps**:
+    - coldStart (OID 1.3.6.1.6.3.1.1.5.1) - Device initialization
+    - linkDown/linkUp (OID 1.3.6.1.6.3.1.1.5.3/4) - Interface state changes
+    - authenticationFailure (OID 1.3.6.1.6.3.1.1.5.5) - SNMP auth failures
+  - **Threshold-based traps**:
+    - High CPU utilization (configurable threshold %, check interval)
+    - High Memory utilization (configurable threshold %, check interval)
+    - Interface Errors (configurable error count threshold, check interval)
+  - **Configuration options**:
+    - Multiple trap receivers (IP:port format, default port 162)
+    - Per-trap-type enable/disable
+    - Configurable thresholds and check intervals
+    - On-startup trap generation option
+  - Examples: `examples/snmp-traps.yaml`
+
+- **Updated Examples**:
+  - `complete-kitchen-sink.yaml` now demonstrates all v1.6.0 features
+  - Device 7: Configurable traffic patterns example
+  - Device 8: SNMP trap generation example
+  - Now includes 9 devices showcasing all features
+
+### Technical Details
+
+- New file: `pkg/snmp/traps.go` - SNMP trap generation implementation
+- Updated: `pkg/device/traffic.go` - Per-device configurable traffic patterns
+- Updated: `pkg/config/config.go` - TrafficConfig and TrapConfig structures
+- Updated: `internal/converter/converter.go` - YAML parsing for new features
+- Traffic generator now uses 10-second check interval for device-specific timings
+- Trap sender integrated with device simulator lifecycle (start/stop)
 
 ## [1.5.0] - 2025-11-05
 

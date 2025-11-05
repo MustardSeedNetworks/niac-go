@@ -288,11 +288,92 @@ devices:
       enabled: true
 
   # =================================================================
-  # Device 7: All Discovery Protocols Disabled (Silent Device)
+  # Device 7: Configurable Traffic Patterns (v1.6.0)
   # =================================================================
-  - name: silent-device
+  - name: router-with-traffic
     mac: "00:11:22:33:44:07"
     ip: "192.168.1.70"
+
+    lldp:
+      enabled: true
+      system_description: "Cisco IOS Router with Traffic"
+
+    # Customizable traffic patterns (v1.6.0)
+    traffic:
+      enabled: true
+
+      arp_announcements:
+        enabled: true
+        interval: 30        # More frequent than default (60s)
+
+      periodic_pings:
+        enabled: true
+        interval: 60        # Faster than default (120s)
+        payload_size: 128   # Larger than default (32 bytes)
+
+      random_traffic:
+        enabled: true
+        interval: 90        # More frequent than default (180s)
+        packet_count: 20    # More packets than default (5)
+        patterns:
+          - broadcast_arp
+          - multicast
+          - udp
+
+  # =================================================================
+  # Device 8: SNMP Trap Generation (v1.6.0)
+  # =================================================================
+  - name: router-with-traps
+    mac: "00:11:22:33:44:08"
+    ip: "192.168.1.80"
+
+    lldp:
+      enabled: true
+      system_description: "Cisco IOS Router with SNMP Traps"
+
+    # SNMP agent with trap generation (v1.6.0)
+    snmp_agent:
+      community: "public"
+      traps:
+        enabled: true
+        receivers:
+          - "192.168.1.100:162"    # NMS station
+
+        # Event-based traps
+        cold_start:
+          enabled: true
+          on_startup: true
+
+        link_state:
+          enabled: true
+          link_down: true
+          link_up: true
+
+        authentication_failure:
+          enabled: true
+
+        # Threshold-based traps
+        high_cpu:
+          enabled: true
+          threshold: 80      # 80% CPU
+          interval: 300      # Check every 5 minutes
+
+        high_memory:
+          enabled: true
+          threshold: 90      # 90% memory
+          interval: 300
+
+        interface_errors:
+          enabled: true
+          threshold: 100     # 100 errors
+          interval: 60       # Check every minute
+
+  # =================================================================
+  # Device 9: All Discovery Protocols Disabled (Silent Device)
+  # =================================================================
+  - name: silent-device
+    mac: "00:11:22:33:44:09"
+    ip: "192.168.1.90"
 
     lldp:
       enabled: false
@@ -305,7 +386,7 @@ devices:
 
 # Configuration Summary:
 # =====================
-# This file demonstrates ALL v1.5.0 features:
+# This file demonstrates ALL v1.6.0 features:
 #
 # Phase 1 Features:
 # - Multiple IP addresses per device (IPv4 and IPv6)
@@ -342,6 +423,12 @@ devices:
 # - Multi-homed devices (multiple IPs on different networks)
 # - Per-device protocol enable/disable
 #
-# Coming in Phase 3:
-# - Additional traffic patterns (babble traffic customization)
-# - SNMP trap generation
+# Phase 3 Features (v1.6.0):
+# - Configurable Traffic Patterns:
+#   * ARP announcement intervals
+#   * Periodic ping intervals and payload sizes
+#   * Random traffic generation (packet count, intervals, patterns)
+# - SNMP Trap Generation:
+#   * Event-based traps (coldStart, linkUp/Down, authenticationFailure)
+#   * Threshold-based traps (high CPU, high memory, interface errors)
+#   * Configurable trap receivers, thresholds, and check intervals
