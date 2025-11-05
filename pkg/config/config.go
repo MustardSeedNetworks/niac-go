@@ -109,7 +109,8 @@ func Load(filename string) (*Config, error) {
 					if err == nil {
 						currentDevice.MACAddress = mac
 					}
-				case "ip":
+				case "ip", "ipv6":
+					// Both "ip" and "ipv6" work - net.ParseIP handles both IPv4 and IPv6
 					ip := net.ParseIP(value)
 					if ip != nil {
 						currentDevice.IPAddresses = append(currentDevice.IPAddresses, ip)

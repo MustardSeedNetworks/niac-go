@@ -25,6 +25,8 @@ type Stack struct {
 	arpHandler   *ARPHandler
 	ipHandler    *IPHandler
 	icmpHandler  *ICMPHandler
+	ipv6Handler  *IPv6Handler
+	icmpv6Handler *ICMPv6Handler
 	udpHandler   *UDPHandler
 	tcpHandler   *TCPHandler
 	dnsHandler   *DNSHandler
@@ -77,6 +79,8 @@ func NewStack(captureEngine *capture.Engine, cfg *config.Config, debugLevel int)
 	s.arpHandler = NewARPHandler(s)
 	s.ipHandler = NewIPHandler(s)
 	s.icmpHandler = NewICMPHandler(s)
+	s.ipv6Handler = NewIPv6Handler(s, debugLevel)
+	s.icmpv6Handler = NewICMPv6Handler(s, debugLevel)
 	s.udpHandler = NewUDPHandler(s)
 	s.tcpHandler = NewTCPHandler(s)
 	s.dnsHandler = NewDNSHandler(s)
@@ -249,10 +253,7 @@ func (s *Stack) decodePacket(pkt *Packet) {
 	case EtherTypeIP:
 		s.ipHandler.HandlePacket(pkt)
 	case EtherTypeIPv6:
-		// TODO: IPv6 handler
-		if s.debugLevel >= 2 {
-			fmt.Printf("IPv6 packet (not yet implemented) sn=%d\n", pkt.SerialNumber)
-		}
+		s.ipv6Handler.HandlePacket(pkt)
 	default:
 		if s.debugLevel >= 2 {
 			fmt.Printf("Unknown EtherType 0x%04x sn=%d\n", etherType, pkt.SerialNumber)
@@ -339,6 +340,23 @@ func (s *Stack) Send(pkt *Packet) {
 			fmt.Println("Send queue full, dropping packet")
 		}
 	}
+}
+
+// SendRawPacket queues raw bytes as a packet for sending
+func (s *Stack) SendRawPacket(data []byte) error {
+	s.mu.Lock()
+	s.serialNumber++
+	serialNum := s.serialNumber
+	s.mu.Unlock()
+
+	pkt := &Packet{
+		Buffer:       data,
+		Length:       len(data),
+		SerialNumber: serialNum,
+	}
+
+	s.Send(pkt)
+	return nil
 }
 
 // GetDevices returns the device table
