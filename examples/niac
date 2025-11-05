@@ -1,0 +1,266 @@
+#!/usr/bin/env bash
+#
+# NIAC Demo Manager
+# Unified command-line interface for Network-in-a-Can demos
+#
+
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCENARIOS_DIR="${SCRIPT_DIR}/scenario_configs"
+WALKS_DIR="${SCRIPT_DIR}/device_walks"
+CAPTURES_DIR="${SCRIPT_DIR}/captures"
+BINARIES_DIR="${SCRIPT_DIR}/binaries"
+
+# Determine Java command
+if [ -n "$JAVA_HOME" ]; then
+    JAVA_CMD="$JAVA_HOME/bin/java"
+else
+    JAVA_CMD="java"
+fi
+
+# Main JAR location (adjust path as needed)
+NIAC_JAR="${SCRIPT_DIR}/../../target/network_in_a_can.jar"
+if [ ! -f "$NIAC_JAR" ]; then
+    NIAC_JAR="${SCRIPT_DIR}/../build/network_in_a_can.jar"
+fi
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Helper functions
+print_error() {
+    echo -e "${RED}Error: $1${NC}" >&2
+}
+
+print_success() {
+    echo -e "${GREEN}$1${NC}"
+}
+
+print_info() {
+    echo -e "${BLUE}$1${NC}"
+}
+
+print_warning() {
+    echo -e "${YELLOW}$1${NC}"
+}
+
+# Show usage
+show_usage() {
+    cat << EOF
+NIAC Demo Manager - Network-in-a-Can Demo Interface
+
+Usage: $(basename "$0") <command> [options]
+
+Commands:
+    list [scenarios|walks|captures]    List available resources
+    run <scenario>                     Run a demo scenario
+    walk <vendor> [device]             Show available device walks
+    help                               Show this help message
+
+Examples:
+    $(basename "$0") list scenarios    # List all available demo scenarios
+    $(basename "$0") list walks        # List all device vendor folders
+    $(basename "$0") run nexus         # Run the Nexus demo scenario
+    $(basename "$0") walk cisco        # List all Cisco device walks
+    $(basename "$0") walk dell         # List all Dell device walks
+
+Available Scenarios:
+EOF
+    if [ -d "$SCENARIOS_DIR" ]; then
+        ls -1 "$SCENARIOS_DIR"/*.cfg 2>/dev/null | while read -r cfg; do
+            scenario=$(basename "$cfg" .cfg)
+            echo "    - $scenario"
+        done
+    fi
+
+    cat << EOF
+
+Available Device Vendors:
+EOF
+    if [ -d "$WALKS_DIR" ]; then
+        ls -d "$WALKS_DIR"/*/ 2>/dev/null | while read -r vendor_dir; do
+            vendor=$(basename "$vendor_dir")
+            count=$(find "$vendor_dir" -name "*.walk" 2>/dev/null | wc -l | tr -d ' ')
+            echo "    - $vendor ($count walks)"
+        done
+    fi
+}
+
+# List command
+cmd_list() {
+    local type="${1:-scenarios}"
+
+    case "$type" in
+        scenarios|scenario)
+            print_info "Available Demo Scenarios:"
+            if [ -d "$SCENARIOS_DIR" ]; then
+                ls -1 "$SCENARIOS_DIR"/*.cfg 2>/dev/null | while read -r cfg; do
+                    scenario=$(basename "$cfg" .cfg)
+                    echo "  - $scenario"
+                done
+            else
+                print_error "Scenarios directory not found: $SCENARIOS_DIR"
+                return 1
+            fi
+            ;;
+        walks|walk|devices)
+            print_info "Available Device Vendors:"
+            if [ -d "$WALKS_DIR" ]; then
+                ls -d "$WALKS_DIR"/*/ 2>/dev/null | while read -r vendor_dir; do
+                    vendor=$(basename "$vendor_dir")
+                    count=$(find "$vendor_dir" -name "*.walk" 2>/dev/null | wc -l | tr -d ' ')
+                    printf "  %-15s (%3s walks)\n" "$vendor" "$count"
+                done
+            else
+                print_error "Walks directory not found: $WALKS_DIR"
+                return 1
+            fi
+            ;;
+        captures|capture|caps)
+            print_info "Available Packet Captures:"
+            if [ -d "$CAPTURES_DIR" ]; then
+                ls -1 "$CAPTURES_DIR"/*.pcap "$CAPTURES_DIR"/*.cap 2>/dev/null | while read -r cap; do
+                    capture=$(basename "$cap")
+                    size=$(du -h "$cap" | cut -f1)
+                    printf "  %-30s (%s)\n" "$capture" "$size"
+                done
+            else
+                print_error "Captures directory not found: $CAPTURES_DIR"
+                return 1
+            fi
+            ;;
+        *)
+            print_error "Unknown list type: $type"
+            echo "Valid types: scenarios, walks, captures"
+            return 1
+            ;;
+    esac
+}
+
+# Run command
+cmd_run() {
+    local scenario="$1"
+
+    if [ -z "$scenario" ]; then
+        print_error "Scenario name required"
+        echo "Usage: $(basename "$0") run <scenario>"
+        echo ""
+        cmd_list scenarios
+        return 1
+    fi
+
+    local cfg_file="${SCENARIOS_DIR}/${scenario}.cfg"
+
+    if [ ! -f "$cfg_file" ]; then
+        print_error "Scenario not found: $scenario"
+        echo ""
+        print_info "Available scenarios:"
+        cmd_list scenarios
+        return 1
+    fi
+
+    if [ ! -f "$NIAC_JAR" ]; then
+        print_error "NIAC JAR not found: $NIAC_JAR"
+        print_info "Please build the project first"
+        return 1
+    fi
+
+    print_success "Starting scenario: $scenario"
+    print_info "Config file: $cfg_file"
+    echo ""
+
+    # Run the NIAC with the configuration
+    "$JAVA_CMD" -jar "$NIAC_JAR" -c "$cfg_file"
+}
+
+# Walk command
+cmd_walk() {
+    local vendor="$1"
+    local device="$2"
+
+    if [ -z "$vendor" ]; then
+        print_error "Vendor name required"
+        echo "Usage: $(basename "$0") walk <vendor> [device]"
+        echo ""
+        cmd_list walks
+        return 1
+    fi
+
+    local vendor_dir="${WALKS_DIR}/${vendor}"
+
+    if [ ! -d "$vendor_dir" ]; then
+        print_error "Vendor not found: $vendor"
+        echo ""
+        print_info "Available vendors:"
+        cmd_list walks
+        return 1
+    fi
+
+    if [ -n "$device" ]; then
+        # Show specific device walk
+        local walk_file="${vendor_dir}/${vendor}-${device}.walk"
+        if [ ! -f "$walk_file" ]; then
+            print_error "Device walk not found: $walk_file"
+            echo ""
+            print_info "Available walks for $vendor:"
+            ls -1 "$vendor_dir"/*.walk 2>/dev/null | while read -r walk; do
+                echo "  - $(basename "$walk" .walk)"
+            done
+            return 1
+        fi
+
+        print_info "Device Walk: $(basename "$walk_file")"
+        echo ""
+        cat "$walk_file"
+    else
+        # List all walks for vendor
+        print_info "Available walks for $vendor:"
+        if ! ls -1 "$vendor_dir"/*.walk 2>/dev/null; then
+            print_warning "No walks found for $vendor"
+            return 1
+        fi | while read -r walk; do
+            local name=$(basename "$walk" .walk)
+            local size=$(du -h "$walk" | cut -f1)
+            printf "  %-50s (%s)\n" "$name" "$size"
+        done
+    fi
+}
+
+# Main command router
+main() {
+    if [ $# -eq 0 ]; then
+        show_usage
+        exit 0
+    fi
+
+    local command="$1"
+    shift
+
+    case "$command" in
+        list|ls)
+            cmd_list "$@"
+            ;;
+        run|start)
+            cmd_run "$@"
+            ;;
+        walk|walks|device|devices)
+            cmd_walk "$@"
+            ;;
+        help|--help|-h)
+            show_usage
+            ;;
+        *)
+            print_error "Unknown command: $command"
+            echo ""
+            show_usage
+            exit 1
+            ;;
+    esac
+}
+
+main "$@"
