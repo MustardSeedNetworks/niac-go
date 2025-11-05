@@ -46,10 +46,21 @@ func (dt *DeviceTable) GetByMAC(mac net.HardwareAddr) *config.Device {
 }
 
 // GetByIP looks up devices by IP address (may return multiple)
+// Works for both IPv4 and IPv6 addresses
 func (dt *DeviceTable) GetByIP(ip net.IP) []*config.Device {
 	dt.mu.RLock()
 	defer dt.mu.RUnlock()
 	return dt.byIP[ip.String()]
+}
+
+// GetByIPv6 looks up devices by IPv6 address (alias for GetByIP)
+func (dt *DeviceTable) GetByIPv6(ipv6 net.IP) []*config.Device {
+	return dt.GetByIP(ipv6)
+}
+
+// GetAll returns all unique devices
+func (dt *DeviceTable) GetAll() []*config.Device {
+	return dt.AllDevices()
 }
 
 // Remove removes a device from all indexes
