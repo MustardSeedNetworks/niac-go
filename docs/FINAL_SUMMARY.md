@@ -459,7 +459,7 @@ In just 10-12 hours of focused development, we've created:
 
 ---
 
-**Built with ❤️, Go, Claude Code, and lots of determination** 🚀
+**Built with ❤️, Go, and lots of determination** 🚀
 
 **Time**: ~12 hours
 **Lines**: 6,216

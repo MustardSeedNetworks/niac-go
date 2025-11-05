@@ -272,7 +272,7 @@ In one night, I built:
 
 ---
 
-**Built with ❤️, Go, and Claude Code**
+**Built with ❤️ and Go**
 **Time spent**: One epic overnight coding session 🌙
 **Fun level**: Maximum! 🚀**
 

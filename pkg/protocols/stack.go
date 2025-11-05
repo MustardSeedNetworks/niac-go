@@ -31,6 +31,7 @@ type Stack struct {
 	tcpHandler   *TCPHandler
 	dnsHandler   *DNSHandler
 	dhcpHandler  *DHCPHandler
+	dhcpv6Handler *DHCPv6Handler
 	httpHandler   *HTTPHandler
 	ftpHandler    *FTPHandler
 	netbiosHandler *NetBIOSHandler
@@ -91,6 +92,7 @@ func NewStack(captureEngine *capture.Engine, cfg *config.Config, debugLevel int)
 	s.tcpHandler = NewTCPHandler(s)
 	s.dnsHandler = NewDNSHandler(s)
 	s.dhcpHandler = NewDHCPHandler(s)
+	s.dhcpv6Handler = NewDHCPv6Handler(s)
 	s.httpHandler = NewHTTPHandler(s)
 	s.ftpHandler = NewFTPHandler(s)
 	s.netbiosHandler = NewNetBIOSHandler(s, debugLevel)
@@ -462,4 +464,19 @@ func (s *Stack) IncrementStat(stat string) {
 // GetDebugLevel returns the current debug level
 func (s *Stack) GetDebugLevel() int {
 	return s.debugLevel
+}
+
+// GetDHCPHandler returns the DHCP handler for configuration
+func (s *Stack) GetDHCPHandler() *DHCPHandler {
+	return s.dhcpHandler
+}
+
+// GetDHCPv6Handler returns the DHCPv6 handler for configuration
+func (s *Stack) GetDHCPv6Handler() *DHCPv6Handler {
+	return s.dhcpv6Handler
+}
+
+// GetDNSHandler returns the DNS handler for configuration
+func (s *Stack) GetDNSHandler() *DNSHandler {
+	return s.dnsHandler
 }
