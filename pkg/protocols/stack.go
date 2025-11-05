@@ -34,6 +34,7 @@ type Stack struct {
 	httpHandler   *HTTPHandler
 	ftpHandler    *FTPHandler
 	netbiosHandler *NetBIOSHandler
+	stpHandler    *STPHandler
 
 	// Statistics
 	stats        *Statistics
@@ -89,6 +90,7 @@ func NewStack(captureEngine *capture.Engine, cfg *config.Config, debugLevel int)
 	s.httpHandler = NewHTTPHandler(s)
 	s.ftpHandler = NewFTPHandler(s)
 	s.netbiosHandler = NewNetBIOSHandler(s, debugLevel)
+	s.stpHandler = NewSTPHandler(s, debugLevel)
 
 	return s
 }
@@ -233,6 +235,14 @@ func (s *Stack) decodeThread() {
 
 // decodePacket decodes a packet and routes to appropriate handler
 func (s *Stack) decodePacket(pkt *Packet) {
+	// Check for STP (multicast MAC 01:80:C2:00:00:00)
+	dstMAC := pkt.GetDestMAC()
+	if len(dstMAC) == 6 && dstMAC[0] == 0x01 && dstMAC[1] == 0x80 &&
+	   dstMAC[2] == 0xC2 && dstMAC[3] == 0x00 && dstMAC[4] == 0x00 && dstMAC[5] == 0x00 {
+		s.stpHandler.HandlePacket(pkt)
+		return
+	}
+
 	// Get EtherType
 	etherType := pkt.GetEtherType()
 
