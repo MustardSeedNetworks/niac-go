@@ -55,6 +55,7 @@ type Device struct {
 	CDPConfig   *CDPConfig  // CDP discovery protocol configuration
 	EDPConfig   *EDPConfig  // EDP discovery protocol configuration
 	FDPConfig   *FDPConfig  // FDP discovery protocol configuration
+	STPConfig   *STPConfig  // STP/RSTP/MSTP configuration
 	Properties  map[string]string
 }
 
@@ -163,6 +164,16 @@ type FDPConfig struct {
 	SoftwareVersion  string
 	Platform         string
 	PortID           string
+}
+
+// STPConfig holds STP (Spanning Tree Protocol) configuration
+type STPConfig struct {
+	Enabled        bool
+	BridgePriority uint16 // 0-61440 in increments of 4096 (default: 32768)
+	HelloTime      uint16 // seconds (default: 2)
+	MaxAge         uint16 // seconds (default: 20)
+	ForwardDelay   uint16 // seconds (default: 15)
+	Version        string // "stp", "rstp", "mstp" (default: "stp")
 }
 
 // Load reads and parses a configuration file
@@ -629,6 +640,35 @@ func LoadYAML(filename string) (*Config, error) {
 				fdpCfg.Holdtime = 180
 			}
 			device.FDPConfig = fdpCfg
+		}
+
+		// Handle STP configuration
+		if yamlDevice.Stp != nil {
+			stpCfg := &STPConfig{
+				Enabled:        yamlDevice.Stp.Enabled,
+				BridgePriority: yamlDevice.Stp.BridgePriority,
+				HelloTime:      yamlDevice.Stp.HelloTime,
+				MaxAge:         yamlDevice.Stp.MaxAge,
+				ForwardDelay:   yamlDevice.Stp.ForwardDelay,
+				Version:        yamlDevice.Stp.Version,
+			}
+			// Set defaults if not specified
+			if stpCfg.BridgePriority == 0 {
+				stpCfg.BridgePriority = 32768 // Default priority
+			}
+			if stpCfg.HelloTime == 0 {
+				stpCfg.HelloTime = 2 // Default hello time
+			}
+			if stpCfg.MaxAge == 0 {
+				stpCfg.MaxAge = 20 // Default max age
+			}
+			if stpCfg.ForwardDelay == 0 {
+				stpCfg.ForwardDelay = 15 // Default forward delay
+			}
+			if stpCfg.Version == "" {
+				stpCfg.Version = "stp" // Default to STP
+			}
+			device.STPConfig = stpCfg
 		}
 
 		cfg.Devices = append(cfg.Devices, device)

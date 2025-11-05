@@ -209,6 +209,32 @@ func (h *STPHandler) SendConfigBPDU(device *config.Device) error {
 		return fmt.Errorf("device has no MAC address")
 	}
 
+	// Skip if STP is explicitly disabled for this device
+	if device.STPConfig != nil && !device.STPConfig.Enabled {
+		return nil
+	}
+
+	// Get STP parameters from device config or use defaults
+	bridgePriority := h.bridgePriority
+	helloTime := h.helloTime
+	maxAge := h.maxAge
+	forwardDelay := h.forwardDelay
+
+	if device.STPConfig != nil {
+		if device.STPConfig.BridgePriority > 0 {
+			bridgePriority = device.STPConfig.BridgePriority
+		}
+		if device.STPConfig.HelloTime > 0 {
+			helloTime = device.STPConfig.HelloTime
+		}
+		if device.STPConfig.MaxAge > 0 {
+			maxAge = device.STPConfig.MaxAge
+		}
+		if device.STPConfig.ForwardDelay > 0 {
+			forwardDelay = device.STPConfig.ForwardDelay
+		}
+	}
+
 	// Parse STP multicast MAC
 	dstMAC, err := net.ParseMAC(STPMulticastMAC)
 	if err != nil {
@@ -242,7 +268,7 @@ func (h *STPHandler) SendConfigBPDU(device *config.Device) error {
 	buf = append(buf, flags)                     // Flags
 
 	// Root ID (8 bytes) = Priority (2) + MAC (6)
-	bridgeID := h.makeBridgeID(h.bridgePriority, device.MACAddress)
+	bridgeID := h.makeBridgeID(bridgePriority, device.MACAddress)
 	rootID := bridgeID // We are root
 
 	buf = append(buf, byte(rootID>>56), byte(rootID>>48), byte(rootID>>40), byte(rootID>>32),
@@ -263,16 +289,16 @@ func (h *STPHandler) SendConfigBPDU(device *config.Device) error {
 	buf = append(buf, 0x00, 0x00)
 
 	// Max Age (2 bytes) in 1/256ths of a second
-	maxAge := h.maxAge * 256
-	buf = append(buf, byte(maxAge>>8), byte(maxAge))
+	maxAgeScaled := maxAge * 256
+	buf = append(buf, byte(maxAgeScaled>>8), byte(maxAgeScaled))
 
 	// Hello Time (2 bytes) in 1/256ths of a second
-	helloTime := h.helloTime * 256
-	buf = append(buf, byte(helloTime>>8), byte(helloTime))
+	helloTimeScaled := helloTime * 256
+	buf = append(buf, byte(helloTimeScaled>>8), byte(helloTimeScaled))
 
 	// Forward Delay (2 bytes) in 1/256ths of a second
-	forwardDelay := h.forwardDelay * 256
-	buf = append(buf, byte(forwardDelay>>8), byte(forwardDelay))
+	forwardDelayScaled := forwardDelay * 256
+	buf = append(buf, byte(forwardDelayScaled>>8), byte(forwardDelayScaled))
 
 	// Pad to minimum Ethernet frame size if needed
 	for len(buf) < 64 {

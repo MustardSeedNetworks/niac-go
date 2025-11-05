@@ -27,6 +27,7 @@ examples/
 │   ├── cdp-only.yaml              # Cisco Discovery Protocol only
 │   ├── edp-only.yaml              # Extreme Discovery Protocol only
 │   ├── fdp-only.yaml              # Foundry Discovery Protocol only
+│   ├── stp-bridge.yaml            # Spanning Tree Protocol (STP/RSTP/MSTP)
 │   └── all-discovery-protocols.yaml  # All 4 protocols configured
 │
 ├── dhcp/                           # DHCP Server Configurations
@@ -100,8 +101,8 @@ examples/
 - ✅ **EDP Config:** Version string, display string in YAML
 - ✅ **FDP Config:** Platform, software, port ID in YAML
 
-#### Phase 2 Group 1b (Pending)
-- ⏳ **STP Config:** Bridge priority, timers (coming soon)
+#### Phase 2 Group 1b (Completed)
+- ✅ **STP Config:** Bridge priority, timers, version (see `stp-bridge.yaml`)
 
 #### Phase 2 Group 2 (Pending)
 - ⏳ **HTTP Server:** Endpoints, responses, content (coming soon)

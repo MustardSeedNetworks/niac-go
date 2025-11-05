@@ -32,6 +32,15 @@ devices:
       platform: "Cisco 2921"
       port_id: "GigabitEthernet0/0"
 
+    # STP Configuration (Spanning Tree Protocol)
+    stp:
+      enabled: true
+      bridge_priority: 4096        # Low priority = root bridge candidate
+      hello_time: 2
+      max_age: 20
+      forward_delay: 15
+      version: "rstp"              # Rapid Spanning Tree Protocol
+
     # DHCP Server Configuration
     dhcp:
       enabled: true
@@ -93,6 +102,14 @@ devices:
       version_string: "ExtremeXOS version 22.6.1.4 v2261b4"
       display_string: "X460-G2-24t-10G4"
 
+    stp:
+      enabled: true
+      bridge_priority: 8192        # Secondary bridge
+      hello_time: 2
+      max_age: 20
+      forward_delay: 15
+      version: "rstp"
+
   # =================================================================
   # Device 3: Brocade/Ruckus Switch with FDP
   # =================================================================
@@ -112,6 +129,14 @@ devices:
       software_version: "IronWare Version 08.0.30T211"
       platform: "Brocade ICX7450-48"
       port_id: "1/1/1"
+
+    stp:
+      enabled: true
+      bridge_priority: 32768       # Default priority
+      hello_time: 2
+      max_age: 20
+      forward_delay: 15
+      version: "stp"               # Classic STP
 
   # =================================================================
   # Device 4: Multi-Homed Server (Multiple IPs)
@@ -221,10 +246,11 @@ devices:
 # - Multi-homed devices (multiple IPs on different networks)
 # - Per-device protocol enable/disable
 #
+# - STP configuration (bridge priority, timers, version)
+#
 # Currently NOT configurable (coming in future versions):
 # - HTTP server endpoints (Group 2)
 # - FTP server configuration (Group 2)
 # - NetBIOS settings (Group 2)
-# - STP bridge parameters (Group 1b)
 # - ICMP/ICMPv6 TTL values (Group 3)
 # - DHCPv6 server (Group 3)
