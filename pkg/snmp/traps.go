@@ -23,17 +23,17 @@ const (
 
 // TrapSender manages SNMP trap generation for a device
 type TrapSender struct {
-	deviceName   string
-	deviceIP     net.IP
-	trapConfig   *config.TrapConfig
-	snmpClient   *gosnmp.GoSNMP
-	receivers    []*gosnmp.GoSNMP
-	running      bool
-	stopChan     chan struct{}
-	debugLevel   int
-	lastCPUTime  time.Time
-	lastMemTime  time.Time
-	lastErrTime  time.Time
+	deviceName  string
+	deviceIP    net.IP
+	trapConfig  *config.TrapConfig
+	snmpClient  *gosnmp.GoSNMP
+	receivers   []*gosnmp.GoSNMP
+	running     bool
+	stopChan    chan struct{}
+	debugLevel  int
+	lastCPUTime time.Time
+	lastMemTime time.Time
+	lastErrTime time.Time
 }
 
 // NewTrapSender creates a new SNMP trap sender
@@ -151,10 +151,10 @@ func (ts *TrapSender) SendLinkDown(ifIndex int, ifDescr string) error {
 	}
 
 	varbinds := []gosnmp.SnmpPDU{
-		{Name: ".1.3.6.1.2.1.2.2.1.1", Type: gosnmp.Integer, Value: ifIndex},          // ifIndex
-		{Name: ".1.3.6.1.2.1.2.2.1.7", Type: gosnmp.Integer, Value: 2},                // ifAdminStatus = down
-		{Name: ".1.3.6.1.2.1.2.2.1.8", Type: gosnmp.Integer, Value: 2},                // ifOperStatus = down
-		{Name: ".1.3.6.1.2.1.2.2.1.2", Type: gosnmp.OctetString, Value: ifDescr},      // ifDescr
+		{Name: ".1.3.6.1.2.1.2.2.1.1", Type: gosnmp.Integer, Value: ifIndex},     // ifIndex
+		{Name: ".1.3.6.1.2.1.2.2.1.7", Type: gosnmp.Integer, Value: 2},           // ifAdminStatus = down
+		{Name: ".1.3.6.1.2.1.2.2.1.8", Type: gosnmp.Integer, Value: 2},           // ifOperStatus = down
+		{Name: ".1.3.6.1.2.1.2.2.1.2", Type: gosnmp.OctetString, Value: ifDescr}, // ifDescr
 	}
 
 	return ts.sendTrap(OIDLinkDown, "linkDown", varbinds)
@@ -167,10 +167,10 @@ func (ts *TrapSender) SendLinkUp(ifIndex int, ifDescr string) error {
 	}
 
 	varbinds := []gosnmp.SnmpPDU{
-		{Name: ".1.3.6.1.2.1.2.2.1.1", Type: gosnmp.Integer, Value: ifIndex},          // ifIndex
-		{Name: ".1.3.6.1.2.1.2.2.1.7", Type: gosnmp.Integer, Value: 1},                // ifAdminStatus = up
-		{Name: ".1.3.6.1.2.1.2.2.1.8", Type: gosnmp.Integer, Value: 1},                // ifOperStatus = up
-		{Name: ".1.3.6.1.2.1.2.2.1.2", Type: gosnmp.OctetString, Value: ifDescr},      // ifDescr
+		{Name: ".1.3.6.1.2.1.2.2.1.1", Type: gosnmp.Integer, Value: ifIndex},     // ifIndex
+		{Name: ".1.3.6.1.2.1.2.2.1.7", Type: gosnmp.Integer, Value: 1},           // ifAdminStatus = up
+		{Name: ".1.3.6.1.2.1.2.2.1.8", Type: gosnmp.Integer, Value: 1},           // ifOperStatus = up
+		{Name: ".1.3.6.1.2.1.2.2.1.2", Type: gosnmp.OctetString, Value: ifDescr}, // ifDescr
 	}
 
 	return ts.sendTrap(OIDLinkUp, "linkUp", varbinds)
@@ -275,8 +275,8 @@ func (ts *TrapSender) SendHighCPU(cpuPercent int) error {
 // SendHighMemory sends a trap for high memory utilization
 func (ts *TrapSender) SendHighMemory(memPercent int) error {
 	varbinds := []gosnmp.SnmpPDU{
-		{Name: ".1.3.6.1.4.1.9.9.48.1.1.1.5", Type: gosnmp.Integer, Value: memPercent},  // Cisco memory used
-		{Name: ".1.3.6.1.2.1.25.2.3.1.6", Type: gosnmp.Integer, Value: memPercent},      // hrStorageUsed
+		{Name: ".1.3.6.1.4.1.9.9.48.1.1.1.5", Type: gosnmp.Integer, Value: memPercent}, // Cisco memory used
+		{Name: ".1.3.6.1.2.1.25.2.3.1.6", Type: gosnmp.Integer, Value: memPercent},     // hrStorageUsed
 	}
 
 	if ts.debugLevel >= 2 {
@@ -289,10 +289,10 @@ func (ts *TrapSender) SendHighMemory(memPercent int) error {
 // SendInterfaceErrors sends a trap for high interface error count
 func (ts *TrapSender) SendInterfaceErrors(ifIndex int, ifDescr string, errorCount int) error {
 	varbinds := []gosnmp.SnmpPDU{
-		{Name: ".1.3.6.1.2.1.2.2.1.1", Type: gosnmp.Integer, Value: ifIndex},               // ifIndex
-		{Name: ".1.3.6.1.2.1.2.2.1.2", Type: gosnmp.OctetString, Value: ifDescr},           // ifDescr
-		{Name: ".1.3.6.1.2.1.2.2.1.14", Type: gosnmp.Counter32, Value: uint(errorCount)},   // ifInErrors
-		{Name: ".1.3.6.1.2.1.2.2.1.20", Type: gosnmp.Counter32, Value: uint(errorCount)},   // ifOutErrors
+		{Name: ".1.3.6.1.2.1.2.2.1.1", Type: gosnmp.Integer, Value: ifIndex},             // ifIndex
+		{Name: ".1.3.6.1.2.1.2.2.1.2", Type: gosnmp.OctetString, Value: ifDescr},         // ifDescr
+		{Name: ".1.3.6.1.2.1.2.2.1.14", Type: gosnmp.Counter32, Value: uint(errorCount)}, // ifInErrors
+		{Name: ".1.3.6.1.2.1.2.2.1.20", Type: gosnmp.Counter32, Value: uint(errorCount)}, // ifOutErrors
 	}
 
 	if ts.debugLevel >= 2 {
@@ -308,12 +308,12 @@ func (ts *TrapSender) sendTrap(trapOID string, trapName string, varbinds []gosnm
 	trap := gosnmp.SnmpTrap{
 		Variables: []gosnmp.SnmpPDU{
 			{
-				Name:  ".1.3.6.1.2.1.1.3.0",                       // sysUpTime
+				Name:  ".1.3.6.1.2.1.1.3.0", // sysUpTime
 				Type:  gosnmp.TimeTicks,
 				Value: uint32(time.Now().Unix() % 4294967296),
 			},
 			{
-				Name:  ".1.3.6.1.6.3.1.1.4.1.0",                   // snmpTrapOID
+				Name:  ".1.3.6.1.6.3.1.1.4.1.0", // snmpTrapOID
 				Type:  gosnmp.ObjectIdentifier,
 				Value: trapOID,
 			},

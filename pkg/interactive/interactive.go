@@ -51,14 +51,14 @@ type model struct {
 	debugLevel    int
 
 	// Menu state
-	menuVisible   bool
-	menuItems     []string
-	selectedItem  int
+	menuVisible  bool
+	menuItems    []string
+	selectedItem int
 
 	// View state
-	showHelp      bool
-	showLogs      bool
-	showStats     bool
+	showHelp  bool
+	showLogs  bool
+	showStats bool
 
 	// Error injection state
 	selectedDevice    int
@@ -67,11 +67,11 @@ type model struct {
 	errorValue        int
 
 	// Stats
-	packetsTotal   int
+	packetsTotal    int
 	packetsInjected int
-	errorsActive   int
-	uptime         time.Duration
-	startTime      time.Time
+	errorsActive    int
+	uptime          time.Duration
+	startTime       time.Time
 
 	// Logs
 	debugLogs []string

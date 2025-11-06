@@ -14,13 +14,13 @@ import (
 
 // PlaybackEngine handles PCAP file playback
 type PlaybackEngine struct {
-	engine      *Engine
-	config      *config.CapturePlayback
-	debugLevel  int
-	running     bool
-	stopChan    chan struct{}
-	wg          sync.WaitGroup
-	mu          sync.Mutex
+	engine     *Engine
+	config     *config.CapturePlayback
+	debugLevel int
+	running    bool
+	stopChan   chan struct{}
+	wg         sync.WaitGroup
+	mu         sync.Mutex
 }
 
 // PlaybackPacket represents a packet with timestamp for playback

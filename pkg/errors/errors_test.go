@@ -118,11 +118,11 @@ func TestCalculateErrorValue(t *testing.T) {
 		errorRate int
 		expected  int
 	}{
-		{ErrorTypeCPU, 50, 90, 90},      // Percentage-based
-		{ErrorTypeMemory, 60, 85, 85},   // Percentage-based
-		{ErrorTypeFCS, 100, 50, 150},    // Counter-based: 100 + (100 * 50 / 100)
+		{ErrorTypeCPU, 50, 90, 90},        // Percentage-based
+		{ErrorTypeMemory, 60, 85, 85},     // Percentage-based
+		{ErrorTypeFCS, 100, 50, 150},      // Counter-based: 100 + (100 * 50 / 100)
 		{ErrorTypeDiscards, 100, 25, 125}, // Counter-based
-		{ErrorTypeFCS, 100, 0, 100},     // Zero rate
+		{ErrorTypeFCS, 100, 0, 100},       // Zero rate
 	}
 
 	for _, tt := range tests {

@@ -13,19 +13,19 @@ import (
 // ICMPv6 message type constants
 const (
 	// Error messages (type < 128)
-	ICMPv6TypeDestUnreachable   = 1
-	ICMPv6TypePacketTooBig      = 2
-	ICMPv6TypeTimeExceeded      = 3
-	ICMPv6TypeParameterProblem  = 4
+	ICMPv6TypeDestUnreachable  = 1
+	ICMPv6TypePacketTooBig     = 2
+	ICMPv6TypeTimeExceeded     = 3
+	ICMPv6TypeParameterProblem = 4
 
 	// Informational messages (type >= 128)
-	ICMPv6TypeEchoRequest          = 128
-	ICMPv6TypeEchoReply            = 129
-	ICMPv6TypeRouterSolicitation   = 133
-	ICMPv6TypeRouterAdvertisement  = 134
-	ICMPv6TypeNeighborSolicitation = 135
+	ICMPv6TypeEchoRequest           = 128
+	ICMPv6TypeEchoReply             = 129
+	ICMPv6TypeRouterSolicitation    = 133
+	ICMPv6TypeRouterAdvertisement   = 134
+	ICMPv6TypeNeighborSolicitation  = 135
 	ICMPv6TypeNeighborAdvertisement = 136
-	ICMPv6TypeRedirect             = 137
+	ICMPv6TypeRedirect              = 137
 )
 
 // ICMPv6 option types
@@ -246,8 +246,8 @@ func (h *ICMPv6Handler) sendNeighborAdvertisement(device *config.Device, dstIP n
 	// Option: Target Link-Layer Address
 	// Type(1) | Length(1) | Link-Layer Address(6)
 	payload = append(payload, ICMPv6OptTargetLinkAddr) // Type
-	payload = append(payload, 1)                        // Length (in units of 8 bytes)
-	payload = append(payload, device.MACAddress...)     // MAC address (6 bytes)
+	payload = append(payload, 1)                       // Length (in units of 8 bytes)
+	payload = append(payload, device.MACAddress...)    // MAC address (6 bytes)
 
 	// Calculate ICMPv6 checksum
 	checksum := CalculateIPv6Checksum(device.IPAddresses[0], dstIP, IPv6NextHeaderICMPv6, payload)

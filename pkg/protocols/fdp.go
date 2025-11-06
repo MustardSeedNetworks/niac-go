@@ -29,12 +29,12 @@ const (
 
 // FDP TLV Types
 const (
-	FDPTLVTypeDeviceID    = 0x0001
-	FDPTLVTypePort        = 0x0002
-	FDPTLVTypePlatform    = 0x0003
+	FDPTLVTypeDeviceID     = 0x0001
+	FDPTLVTypePort         = 0x0002
+	FDPTLVTypePlatform     = 0x0003
 	FDPTLVTypeCapabilities = 0x0004
-	FDPTLVTypeSoftware    = 0x0005
-	FDPTLVTypeIPAddress   = 0x0006
+	FDPTLVTypeSoftware     = 0x0005
+	FDPTLVTypeIPAddress    = 0x0006
 )
 
 // FDP Capabilities flags

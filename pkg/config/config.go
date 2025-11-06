@@ -95,9 +95,9 @@ type DHCPConfig struct {
 
 // DHCPLease represents a static DHCP lease assignment
 type DHCPLease struct {
-	ClientIP    net.IP
-	MACAddress  net.HardwareAddr
-	MACMask     net.HardwareAddr // For wildcard matching
+	ClientIP   net.IP
+	MACAddress net.HardwareAddr
+	MACMask    net.HardwareAddr // For wildcard matching
 }
 
 // DNSConfig holds DNS server configuration for a device
@@ -115,13 +115,13 @@ type DNSRecord struct {
 
 // Interface represents a network interface on a device
 type Interface struct {
-	Name      string
-	Speed     int // Mbps
-	Duplex    string
-	AdminStatus  string // up, down
-	OperStatus   string // up, down, testing
+	Name        string
+	Speed       int // Mbps
+	Duplex      string
+	AdminStatus string // up, down
+	OperStatus  string // up, down, testing
 	Description string
-	VLANs     []int
+	VLANs       []int
 }
 
 // SNMPConfig holds SNMP configuration
@@ -138,8 +138,8 @@ type SNMPConfig struct {
 // LLDPConfig holds LLDP (Link Layer Discovery Protocol) configuration
 type LLDPConfig struct {
 	Enabled           bool
-	AdvertiseInterval int    // seconds
-	TTL               int    // seconds
+	AdvertiseInterval int // seconds
+	TTL               int // seconds
 	SystemDescription string
 	PortDescription   string
 	ChassisIDType     string // "mac", "local", "network_address"
@@ -147,31 +147,31 @@ type LLDPConfig struct {
 
 // CDPConfig holds CDP (Cisco Discovery Protocol) configuration
 type CDPConfig struct {
-	Enabled          bool
-	AdvertiseInterval int    // seconds
-	Holdtime         int    // seconds
-	Version          int    // 1 or 2
-	SoftwareVersion  string
-	Platform         string
-	PortID           string
+	Enabled           bool
+	AdvertiseInterval int // seconds
+	Holdtime          int // seconds
+	Version           int // 1 or 2
+	SoftwareVersion   string
+	Platform          string
+	PortID            string
 }
 
 // EDPConfig holds EDP (Extreme Discovery Protocol) configuration
 type EDPConfig struct {
 	Enabled           bool
-	AdvertiseInterval int    // seconds
+	AdvertiseInterval int // seconds
 	VersionString     string
 	DisplayString     string
 }
 
 // FDPConfig holds FDP (Foundry Discovery Protocol) configuration
 type FDPConfig struct {
-	Enabled          bool
-	AdvertiseInterval int    // seconds
-	Holdtime         int    // seconds
-	SoftwareVersion  string
-	Platform         string
-	PortID           string
+	Enabled           bool
+	AdvertiseInterval int // seconds
+	Holdtime          int // seconds
+	SoftwareVersion   string
+	Platform          string
+	PortID            string
 }
 
 // STPConfig holds STP (Spanning Tree Protocol) configuration
@@ -186,9 +186,9 @@ type STPConfig struct {
 
 // HTTPConfig holds HTTP server configuration
 type HTTPConfig struct {
-	Enabled       bool
-	ServerName    string            // Server header value (default: "NIAC-Go/1.0.0")
-	Endpoints     []HTTPEndpoint    // Custom endpoint definitions
+	Enabled    bool
+	ServerName string         // Server header value (default: "NIAC-Go/1.0.0")
+	Endpoints  []HTTPEndpoint // Custom endpoint definitions
 }
 
 // HTTPEndpoint defines a custom HTTP endpoint and response
@@ -202,11 +202,11 @@ type HTTPEndpoint struct {
 
 // FTPConfig holds FTP server configuration
 type FTPConfig struct {
-	Enabled         bool
-	WelcomeBanner   string // Welcome message (default: "220 {devicename} FTP Server (NIAC-Go) ready.")
-	SystemType      string // System type string (default: "UNIX Type: L8")
-	AllowAnonymous  bool   // Allow anonymous login (default: true)
-	Users           []FTPUser // User accounts
+	Enabled        bool
+	WelcomeBanner  string    // Welcome message (default: "220 {devicename} FTP Server (NIAC-Go) ready.")
+	SystemType     string    // System type string (default: "UNIX Type: L8")
+	AllowAnonymous bool      // Allow anonymous login (default: true)
+	Users          []FTPUser // User accounts
 }
 
 // FTPUser represents an FTP user account
@@ -218,56 +218,56 @@ type FTPUser struct {
 
 // NetBIOSConfig holds NetBIOS service configuration
 type NetBIOSConfig struct {
-	Enabled      bool
-	Name         string   // NetBIOS name (default: device name, max 15 chars)
-	Workgroup    string   // Workgroup/domain name (default: "WORKGROUP")
-	NodeType     string   // Node type: "B" (broadcast), "P" (peer), "M" (mixed), "H" (hybrid) (default: "B")
-	Services     []string // Service types to advertise (default: ["workstation", "fileserver"])
-	TTL          uint32   // Name registration TTL in seconds (default: 300)
+	Enabled   bool
+	Name      string   // NetBIOS name (default: device name, max 15 chars)
+	Workgroup string   // Workgroup/domain name (default: "WORKGROUP")
+	NodeType  string   // Node type: "B" (broadcast), "P" (peer), "M" (mixed), "H" (hybrid) (default: "B")
+	Services  []string // Service types to advertise (default: ["workstation", "fileserver"])
+	TTL       uint32   // Name registration TTL in seconds (default: 300)
 }
 
 // ICMPConfig holds ICMP/ICMPv4 configuration
 type ICMPConfig struct {
-	Enabled     bool
-	TTL         uint8   // Time to Live for ICMP packets (default: 64)
-	RateLimit   int     // Max ICMP responses per second (0 = unlimited, default: 0)
+	Enabled   bool
+	TTL       uint8 // Time to Live for ICMP packets (default: 64)
+	RateLimit int   // Max ICMP responses per second (0 = unlimited, default: 0)
 }
 
 // ICMPv6Config holds ICMPv6 configuration
 type ICMPv6Config struct {
-	Enabled     bool
-	HopLimit    uint8   // Hop limit for ICMPv6 packets (default: 64, NDP uses 255)
-	RateLimit   int     // Max ICMPv6 responses per second (0 = unlimited, default: 0)
+	Enabled   bool
+	HopLimit  uint8 // Hop limit for ICMPv6 packets (default: 64, NDP uses 255)
+	RateLimit int   // Max ICMPv6 responses per second (0 = unlimited, default: 0)
 }
 
 // DHCPv6Config holds DHCPv6 server configuration
 type DHCPv6Config struct {
-	Enabled             bool
-	Pools               []DHCPv6Pool  // Address pools
-	PreferredLifetime   uint32        // Preferred lifetime in seconds (default: 604800 = 7 days)
-	ValidLifetime       uint32        // Valid lifetime in seconds (default: 2592000 = 30 days)
-	Preference          uint8         // Server preference (0-255, higher is better, default: 0)
-	DNSServers          []net.IP      // DNS servers (IPv6)
-	DomainList          []string      // Domain search list
-	SNTPServers         []net.IP      // SNTP time servers (Option 31)
-	NTPServers          []net.IP      // NTP servers (Option 56)
-	SIPServers          []net.IP      // SIP server addresses (Option 22)
-	SIPDomains          []string      // SIP domain names (Option 21)
+	Enabled           bool
+	Pools             []DHCPv6Pool // Address pools
+	PreferredLifetime uint32       // Preferred lifetime in seconds (default: 604800 = 7 days)
+	ValidLifetime     uint32       // Valid lifetime in seconds (default: 2592000 = 30 days)
+	Preference        uint8        // Server preference (0-255, higher is better, default: 0)
+	DNSServers        []net.IP     // DNS servers (IPv6)
+	DomainList        []string     // Domain search list
+	SNTPServers       []net.IP     // SNTP time servers (Option 31)
+	NTPServers        []net.IP     // NTP servers (Option 56)
+	SIPServers        []net.IP     // SIP server addresses (Option 22)
+	SIPDomains        []string     // SIP domain names (Option 21)
 }
 
 // DHCPv6Pool represents an IPv6 address pool
 type DHCPv6Pool struct {
-	Network    string   // IPv6 network (e.g., "2001:db8::/64")
-	RangeStart string   // Start of address range
-	RangeEnd   string   // End of address range
+	Network    string // IPv6 network (e.g., "2001:db8::/64")
+	RangeStart string // Start of address range
+	RangeEnd   string // End of address range
 }
 
 // TrafficConfig holds traffic pattern configuration (v1.6.0)
 type TrafficConfig struct {
-	Enabled            bool
-	ARPAnnouncements   *ARPAnnouncementConfig
-	PeriodicPings      *PeriodicPingConfig
-	RandomTraffic      *RandomTrafficConfig
+	Enabled          bool
+	ARPAnnouncements *ARPAnnouncementConfig
+	PeriodicPings    *PeriodicPingConfig
+	RandomTraffic    *RandomTrafficConfig
 }
 
 // ARPAnnouncementConfig configures gratuitous ARP announcements
@@ -285,10 +285,10 @@ type PeriodicPingConfig struct {
 
 // RandomTrafficConfig configures random background traffic
 type RandomTrafficConfig struct {
-	Enabled      bool
-	Interval     int      // Interval in seconds (default: 180)
-	PacketCount  int      // Number of packets per interval (default: 5)
-	Patterns     []string // Traffic patterns: "broadcast_arp", "multicast", "udp"
+	Enabled     bool
+	Interval    int      // Interval in seconds (default: 180)
+	PacketCount int      // Number of packets per interval (default: 5)
+	Patterns    []string // Traffic patterns: "broadcast_arp", "multicast", "udp"
 }
 
 // TrapConfig holds SNMP trap configuration (v1.6.0)
@@ -521,10 +521,10 @@ func LoadYAML(filename string) (*Config, error) {
 	// Convert devices
 	for _, yamlDevice := range yamlConfig.Devices {
 		device := Device{
-			Name:        yamlDevice.Name,
-			Type:        "unknown", // Default type
-			Interfaces:  make([]Interface, 0),
-			Properties:  make(map[string]string),
+			Name:       yamlDevice.Name,
+			Type:       "unknown", // Default type
+			Interfaces: make([]Interface, 0),
+			Properties: make(map[string]string),
 			SNMPConfig: SNMPConfig{
 				Community: "public", // Default
 				SysName:   yamlDevice.Name,
@@ -1007,154 +1007,153 @@ func LoadYAML(filename string) (*Config, error) {
 			device.DHCPv6Config = dhcpv6Cfg
 		}
 
+		// Parse Traffic configuration (v1.6.0)
+		if yamlDevice.Traffic != nil {
+			trafficCfg := &TrafficConfig{
+				Enabled: yamlDevice.Traffic.Enabled,
+			}
 
-	// Parse Traffic configuration (v1.6.0)
-	if yamlDevice.Traffic != nil {
-		trafficCfg := &TrafficConfig{
-			Enabled: yamlDevice.Traffic.Enabled,
+			// Parse ARP Announcements
+			if yamlDevice.Traffic.ARPAnnouncements != nil {
+				arpCfg := &ARPAnnouncementConfig{
+					Enabled:  yamlDevice.Traffic.ARPAnnouncements.Enabled,
+					Interval: yamlDevice.Traffic.ARPAnnouncements.Interval,
+				}
+				// Apply default interval if not specified
+				if arpCfg.Interval == 0 {
+					arpCfg.Interval = 60 // Default: 60 seconds
+				}
+				trafficCfg.ARPAnnouncements = arpCfg
+			}
+
+			// Parse Periodic Pings
+			if yamlDevice.Traffic.PeriodicPings != nil {
+				pingCfg := &PeriodicPingConfig{
+					Enabled:     yamlDevice.Traffic.PeriodicPings.Enabled,
+					Interval:    yamlDevice.Traffic.PeriodicPings.Interval,
+					PayloadSize: yamlDevice.Traffic.PeriodicPings.PayloadSize,
+				}
+				// Apply defaults if not specified
+				if pingCfg.Interval == 0 {
+					pingCfg.Interval = 120 // Default: 120 seconds
+				}
+				if pingCfg.PayloadSize == 0 {
+					pingCfg.PayloadSize = 32 // Default: 32 bytes
+				}
+				trafficCfg.PeriodicPings = pingCfg
+			}
+
+			// Parse Random Traffic
+			if yamlDevice.Traffic.RandomTraffic != nil {
+				randomCfg := &RandomTrafficConfig{
+					Enabled:     yamlDevice.Traffic.RandomTraffic.Enabled,
+					Interval:    yamlDevice.Traffic.RandomTraffic.Interval,
+					PacketCount: yamlDevice.Traffic.RandomTraffic.PacketCount,
+					Patterns:    yamlDevice.Traffic.RandomTraffic.Patterns,
+				}
+				// Apply defaults if not specified
+				if randomCfg.Interval == 0 {
+					randomCfg.Interval = 180 // Default: 180 seconds
+				}
+				if randomCfg.PacketCount == 0 {
+					randomCfg.PacketCount = 5 // Default: 5 packets
+				}
+				// Default patterns if none specified
+				if len(randomCfg.Patterns) == 0 {
+					randomCfg.Patterns = []string{"broadcast_arp", "multicast", "udp"}
+				}
+				trafficCfg.RandomTraffic = randomCfg
+			}
+
+			device.TrafficConfig = trafficCfg
 		}
 
-		// Parse ARP Announcements
-		if yamlDevice.Traffic.ARPAnnouncements != nil {
-			arpCfg := &ARPAnnouncementConfig{
-				Enabled:  yamlDevice.Traffic.ARPAnnouncements.Enabled,
-				Interval: yamlDevice.Traffic.ARPAnnouncements.Interval,
+		// Parse SNMP Traps configuration (v1.6.0)
+		if yamlDevice.SnmpAgent != nil && yamlDevice.SnmpAgent.Traps != nil {
+			trapsCfg := &TrapConfig{
+				Enabled:   yamlDevice.SnmpAgent.Traps.Enabled,
+				Receivers: yamlDevice.SnmpAgent.Traps.Receivers,
 			}
-			// Apply default interval if not specified
-			if arpCfg.Interval == 0 {
-				arpCfg.Interval = 60 // Default: 60 seconds
+
+			// Parse Cold Start trap
+			if yamlDevice.SnmpAgent.Traps.ColdStart != nil {
+				trapsCfg.ColdStart = &TrapTriggerConfig{
+					Enabled:   yamlDevice.SnmpAgent.Traps.ColdStart.Enabled,
+					OnStartup: yamlDevice.SnmpAgent.Traps.ColdStart.OnStartup,
+				}
 			}
-			trafficCfg.ARPAnnouncements = arpCfg
+
+			// Parse Link State trap
+			if yamlDevice.SnmpAgent.Traps.LinkState != nil {
+				trapsCfg.LinkState = &LinkStateTrapConfig{
+					Enabled:  yamlDevice.SnmpAgent.Traps.LinkState.Enabled,
+					LinkDown: yamlDevice.SnmpAgent.Traps.LinkState.LinkDown,
+					LinkUp:   yamlDevice.SnmpAgent.Traps.LinkState.LinkUp,
+				}
+			}
+
+			// Parse Authentication Failure trap
+			if yamlDevice.SnmpAgent.Traps.AuthenticationFailure != nil {
+				trapsCfg.AuthenticationFailure = &TrapTriggerConfig{
+					Enabled:   yamlDevice.SnmpAgent.Traps.AuthenticationFailure.Enabled,
+					OnStartup: yamlDevice.SnmpAgent.Traps.AuthenticationFailure.OnStartup,
+				}
+			}
+
+			// Parse High CPU trap
+			if yamlDevice.SnmpAgent.Traps.HighCPU != nil {
+				highCPUCfg := &ThresholdTrapConfig{
+					Enabled:   yamlDevice.SnmpAgent.Traps.HighCPU.Enabled,
+					Threshold: yamlDevice.SnmpAgent.Traps.HighCPU.Threshold,
+					Interval:  yamlDevice.SnmpAgent.Traps.HighCPU.Interval,
+				}
+				// Apply defaults if not specified
+				if highCPUCfg.Threshold == 0 {
+					highCPUCfg.Threshold = 80 // Default: 80%
+				}
+				if highCPUCfg.Interval == 0 {
+					highCPUCfg.Interval = 300 // Default: 300 seconds (5 minutes)
+				}
+				trapsCfg.HighCPU = highCPUCfg
+			}
+
+			// Parse High Memory trap
+			if yamlDevice.SnmpAgent.Traps.HighMemory != nil {
+				highMemCfg := &ThresholdTrapConfig{
+					Enabled:   yamlDevice.SnmpAgent.Traps.HighMemory.Enabled,
+					Threshold: yamlDevice.SnmpAgent.Traps.HighMemory.Threshold,
+					Interval:  yamlDevice.SnmpAgent.Traps.HighMemory.Interval,
+				}
+				// Apply defaults if not specified
+				if highMemCfg.Threshold == 0 {
+					highMemCfg.Threshold = 90 // Default: 90%
+				}
+				if highMemCfg.Interval == 0 {
+					highMemCfg.Interval = 300 // Default: 300 seconds (5 minutes)
+				}
+				trapsCfg.HighMemory = highMemCfg
+			}
+
+			// Parse Interface Errors trap
+			if yamlDevice.SnmpAgent.Traps.InterfaceErrors != nil {
+				ifErrCfg := &ThresholdTrapConfig{
+					Enabled:   yamlDevice.SnmpAgent.Traps.InterfaceErrors.Enabled,
+					Threshold: yamlDevice.SnmpAgent.Traps.InterfaceErrors.Threshold,
+					Interval:  yamlDevice.SnmpAgent.Traps.InterfaceErrors.Interval,
+				}
+				// Apply defaults if not specified
+				if ifErrCfg.Threshold == 0 {
+					ifErrCfg.Threshold = 100 // Default: 100 errors
+				}
+				if ifErrCfg.Interval == 0 {
+					ifErrCfg.Interval = 60 // Default: 60 seconds (1 minute)
+				}
+				trapsCfg.InterfaceErrors = ifErrCfg
+			}
+
+			// Attach traps config to SNMP config
+			device.SNMPConfig.Traps = trapsCfg
 		}
-
-		// Parse Periodic Pings
-		if yamlDevice.Traffic.PeriodicPings != nil {
-			pingCfg := &PeriodicPingConfig{
-				Enabled:     yamlDevice.Traffic.PeriodicPings.Enabled,
-				Interval:    yamlDevice.Traffic.PeriodicPings.Interval,
-				PayloadSize: yamlDevice.Traffic.PeriodicPings.PayloadSize,
-			}
-			// Apply defaults if not specified
-			if pingCfg.Interval == 0 {
-				pingCfg.Interval = 120 // Default: 120 seconds
-			}
-			if pingCfg.PayloadSize == 0 {
-				pingCfg.PayloadSize = 32 // Default: 32 bytes
-			}
-			trafficCfg.PeriodicPings = pingCfg
-		}
-
-		// Parse Random Traffic
-		if yamlDevice.Traffic.RandomTraffic != nil {
-			randomCfg := &RandomTrafficConfig{
-				Enabled:     yamlDevice.Traffic.RandomTraffic.Enabled,
-				Interval:    yamlDevice.Traffic.RandomTraffic.Interval,
-				PacketCount: yamlDevice.Traffic.RandomTraffic.PacketCount,
-				Patterns:    yamlDevice.Traffic.RandomTraffic.Patterns,
-			}
-			// Apply defaults if not specified
-			if randomCfg.Interval == 0 {
-				randomCfg.Interval = 180 // Default: 180 seconds
-			}
-			if randomCfg.PacketCount == 0 {
-				randomCfg.PacketCount = 5 // Default: 5 packets
-			}
-			// Default patterns if none specified
-			if len(randomCfg.Patterns) == 0 {
-				randomCfg.Patterns = []string{"broadcast_arp", "multicast", "udp"}
-			}
-			trafficCfg.RandomTraffic = randomCfg
-		}
-
-		device.TrafficConfig = trafficCfg
-	}
-
-	// Parse SNMP Traps configuration (v1.6.0)
-	if yamlDevice.SnmpAgent != nil && yamlDevice.SnmpAgent.Traps != nil {
-		trapsCfg := &TrapConfig{
-			Enabled:   yamlDevice.SnmpAgent.Traps.Enabled,
-			Receivers: yamlDevice.SnmpAgent.Traps.Receivers,
-		}
-
-		// Parse Cold Start trap
-		if yamlDevice.SnmpAgent.Traps.ColdStart != nil {
-			trapsCfg.ColdStart = &TrapTriggerConfig{
-				Enabled:   yamlDevice.SnmpAgent.Traps.ColdStart.Enabled,
-				OnStartup: yamlDevice.SnmpAgent.Traps.ColdStart.OnStartup,
-			}
-		}
-
-		// Parse Link State trap
-		if yamlDevice.SnmpAgent.Traps.LinkState != nil {
-			trapsCfg.LinkState = &LinkStateTrapConfig{
-				Enabled:  yamlDevice.SnmpAgent.Traps.LinkState.Enabled,
-				LinkDown: yamlDevice.SnmpAgent.Traps.LinkState.LinkDown,
-				LinkUp:   yamlDevice.SnmpAgent.Traps.LinkState.LinkUp,
-			}
-		}
-
-		// Parse Authentication Failure trap
-		if yamlDevice.SnmpAgent.Traps.AuthenticationFailure != nil {
-			trapsCfg.AuthenticationFailure = &TrapTriggerConfig{
-				Enabled:   yamlDevice.SnmpAgent.Traps.AuthenticationFailure.Enabled,
-				OnStartup: yamlDevice.SnmpAgent.Traps.AuthenticationFailure.OnStartup,
-			}
-		}
-
-		// Parse High CPU trap
-		if yamlDevice.SnmpAgent.Traps.HighCPU != nil {
-			highCPUCfg := &ThresholdTrapConfig{
-				Enabled:   yamlDevice.SnmpAgent.Traps.HighCPU.Enabled,
-				Threshold: yamlDevice.SnmpAgent.Traps.HighCPU.Threshold,
-				Interval:  yamlDevice.SnmpAgent.Traps.HighCPU.Interval,
-			}
-			// Apply defaults if not specified
-			if highCPUCfg.Threshold == 0 {
-				highCPUCfg.Threshold = 80 // Default: 80%
-			}
-			if highCPUCfg.Interval == 0 {
-				highCPUCfg.Interval = 300 // Default: 300 seconds (5 minutes)
-			}
-			trapsCfg.HighCPU = highCPUCfg
-		}
-
-		// Parse High Memory trap
-		if yamlDevice.SnmpAgent.Traps.HighMemory != nil {
-			highMemCfg := &ThresholdTrapConfig{
-				Enabled:   yamlDevice.SnmpAgent.Traps.HighMemory.Enabled,
-				Threshold: yamlDevice.SnmpAgent.Traps.HighMemory.Threshold,
-				Interval:  yamlDevice.SnmpAgent.Traps.HighMemory.Interval,
-			}
-			// Apply defaults if not specified
-			if highMemCfg.Threshold == 0 {
-				highMemCfg.Threshold = 90 // Default: 90%
-			}
-			if highMemCfg.Interval == 0 {
-				highMemCfg.Interval = 300 // Default: 300 seconds (5 minutes)
-			}
-			trapsCfg.HighMemory = highMemCfg
-		}
-
-		// Parse Interface Errors trap
-		if yamlDevice.SnmpAgent.Traps.InterfaceErrors != nil {
-			ifErrCfg := &ThresholdTrapConfig{
-				Enabled:   yamlDevice.SnmpAgent.Traps.InterfaceErrors.Enabled,
-				Threshold: yamlDevice.SnmpAgent.Traps.InterfaceErrors.Threshold,
-				Interval:  yamlDevice.SnmpAgent.Traps.InterfaceErrors.Interval,
-			}
-			// Apply defaults if not specified
-			if ifErrCfg.Threshold == 0 {
-				ifErrCfg.Threshold = 100 // Default: 100 errors
-			}
-			if ifErrCfg.Interval == 0 {
-				ifErrCfg.Interval = 60 // Default: 60 seconds (1 minute)
-			}
-			trapsCfg.InterfaceErrors = ifErrCfg
-		}
-
-		// Attach traps config to SNMP config
-	device.SNMPConfig.Traps = trapsCfg
-	}
 		cfg.Devices = append(cfg.Devices, device)
 	}
 

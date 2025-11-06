@@ -22,8 +22,8 @@ func New(interfaceName string, debugLevel int) (*Engine, error) {
 	// Open interface in promiscuous mode
 	handle, err := pcap.OpenLive(
 		interfaceName,
-		1600,         // snapshot length
-		true,         // promiscuous mode
+		1600, // snapshot length
+		true, // promiscuous mode
 		pcap.BlockForever,
 	)
 	if err != nil {

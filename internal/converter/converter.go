@@ -42,26 +42,26 @@ type CapturePlayback struct {
 
 // Device represents a network device
 type Device struct {
-	Name      string           `yaml:"name,omitempty"`
-	MAC       string           `yaml:"mac"`
-	IP        string           `yaml:"ip,omitempty"`  // Single IP (backward compatible)
-	IPs       []string         `yaml:"ips,omitempty"` // Multiple IPs (new feature)
-	VLAN      int              `yaml:"vlan,omitempty"`
-	SnmpAgent *SnmpAgent       `yaml:"snmp_agent,omitempty"`
-	Dhcp      *DhcpServer      `yaml:"dhcp,omitempty"`
-	Dns       *DnsServer       `yaml:"dns,omitempty"`
-	Lldp      *LldpConfig      `yaml:"lldp,omitempty"`
-	Cdp       *CdpConfig       `yaml:"cdp,omitempty"`
-	Edp       *EdpConfig       `yaml:"edp,omitempty"`
-	Fdp       *FdpConfig       `yaml:"fdp,omitempty"`
-	Stp       *StpConfig       `yaml:"stp,omitempty"`
-	Http      *HttpConfig      `yaml:"http,omitempty"`
-	Ftp       *FtpConfig       `yaml:"ftp,omitempty"`
-	Netbios   *NetbiosConfig   `yaml:"netbios,omitempty"`
-	Icmp      *IcmpConfig      `yaml:"icmp,omitempty"`
-	Icmpv6    *Icmpv6Config    `yaml:"icmpv6,omitempty"`
-	Dhcpv6    *Dhcpv6Config    `yaml:"dhcpv6,omitempty"`
-	Traffic   *TrafficConfig   `yaml:"traffic,omitempty"` // v1.6.0
+	Name      string         `yaml:"name,omitempty"`
+	MAC       string         `yaml:"mac"`
+	IP        string         `yaml:"ip,omitempty"`  // Single IP (backward compatible)
+	IPs       []string       `yaml:"ips,omitempty"` // Multiple IPs (new feature)
+	VLAN      int            `yaml:"vlan,omitempty"`
+	SnmpAgent *SnmpAgent     `yaml:"snmp_agent,omitempty"`
+	Dhcp      *DhcpServer    `yaml:"dhcp,omitempty"`
+	Dns       *DnsServer     `yaml:"dns,omitempty"`
+	Lldp      *LldpConfig    `yaml:"lldp,omitempty"`
+	Cdp       *CdpConfig     `yaml:"cdp,omitempty"`
+	Edp       *EdpConfig     `yaml:"edp,omitempty"`
+	Fdp       *FdpConfig     `yaml:"fdp,omitempty"`
+	Stp       *StpConfig     `yaml:"stp,omitempty"`
+	Http      *HttpConfig    `yaml:"http,omitempty"`
+	Ftp       *FtpConfig     `yaml:"ftp,omitempty"`
+	Netbios   *NetbiosConfig `yaml:"netbios,omitempty"`
+	Icmp      *IcmpConfig    `yaml:"icmp,omitempty"`
+	Icmpv6    *Icmpv6Config  `yaml:"icmpv6,omitempty"`
+	Dhcpv6    *Dhcpv6Config  `yaml:"dhcpv6,omitempty"`
+	Traffic   *TrafficConfig `yaml:"traffic,omitempty"` // v1.6.0
 }
 
 // SnmpAgent represents SNMP agent configuration
@@ -80,23 +80,23 @@ type AddMib struct {
 
 // DhcpServer represents DHCP server configuration
 type DhcpServer struct {
-	ClientLeases      []DhcpLease `yaml:"client_leases,omitempty"`
-	SubnetMask        string      `yaml:"subnet_mask,omitempty"`
-	Router            string      `yaml:"router,omitempty"`
-	DomainNameServer  string      `yaml:"domain_name_server,omitempty"`
-	NextServerIP      string      `yaml:"next_server_ip,omitempty"`
-	ServerIdentifier  string      `yaml:"server_identifier,omitempty"`
+	ClientLeases     []DhcpLease `yaml:"client_leases,omitempty"`
+	SubnetMask       string      `yaml:"subnet_mask,omitempty"`
+	Router           string      `yaml:"router,omitempty"`
+	DomainNameServer string      `yaml:"domain_name_server,omitempty"`
+	NextServerIP     string      `yaml:"next_server_ip,omitempty"`
+	ServerIdentifier string      `yaml:"server_identifier,omitempty"`
 	// DHCPv4 high priority options
-	NTPServers        []string    `yaml:"ntp_servers,omitempty"`         // Option 42
-	DomainSearch      []string    `yaml:"domain_search,omitempty"`       // Option 119
-	TFTPServerName    string      `yaml:"tftp_server_name,omitempty"`    // Option 66
-	BootfileName      string      `yaml:"bootfile_name,omitempty"`       // Option 67
-	VendorSpecific    string      `yaml:"vendor_specific,omitempty"`     // Option 43 (hex string)
+	NTPServers     []string `yaml:"ntp_servers,omitempty"`      // Option 42
+	DomainSearch   []string `yaml:"domain_search,omitempty"`    // Option 119
+	TFTPServerName string   `yaml:"tftp_server_name,omitempty"` // Option 66
+	BootfileName   string   `yaml:"bootfile_name,omitempty"`    // Option 67
+	VendorSpecific string   `yaml:"vendor_specific,omitempty"`  // Option 43 (hex string)
 	// DHCPv6 options
-	SNTPServersV6     []string    `yaml:"sntp_servers_v6,omitempty"`     // Option 31
-	NTPServersV6      []string    `yaml:"ntp_servers_v6,omitempty"`      // Option 56
-	SIPServersV6      []string    `yaml:"sip_servers_v6,omitempty"`      // Option 22
-	SIPDomainsV6      []string    `yaml:"sip_domains_v6,omitempty"`      // Option 21
+	SNTPServersV6 []string `yaml:"sntp_servers_v6,omitempty"` // Option 31
+	NTPServersV6  []string `yaml:"ntp_servers_v6,omitempty"`  // Option 56
+	SIPServersV6  []string `yaml:"sip_servers_v6,omitempty"`  // Option 22
+	SIPDomainsV6  []string `yaml:"sip_domains_v6,omitempty"`  // Option 21
 }
 
 // DhcpLease represents a DHCP client lease
@@ -226,17 +226,17 @@ type Icmpv6Config struct {
 
 // Dhcpv6Config represents DHCPv6 server configuration
 type Dhcpv6Config struct {
-	Enabled           bool           `yaml:"enabled,omitempty"`
-	Pools             []Dhcpv6Pool   `yaml:"pools,omitempty"`
-	PreferredLifetime uint32         `yaml:"preferred_lifetime,omitempty"`
-	ValidLifetime     uint32         `yaml:"valid_lifetime,omitempty"`
-	Preference        uint8          `yaml:"preference,omitempty"`
-	DNSServers        []string       `yaml:"dns_servers,omitempty"`
-	DomainList        []string       `yaml:"domain_list,omitempty"`
-	SNTPServers       []string       `yaml:"sntp_servers,omitempty"`
-	NTPServers        []string       `yaml:"ntp_servers,omitempty"`
-	SIPServers        []string       `yaml:"sip_servers,omitempty"`
-	SIPDomains        []string       `yaml:"sip_domains,omitempty"`
+	Enabled           bool         `yaml:"enabled,omitempty"`
+	Pools             []Dhcpv6Pool `yaml:"pools,omitempty"`
+	PreferredLifetime uint32       `yaml:"preferred_lifetime,omitempty"`
+	ValidLifetime     uint32       `yaml:"valid_lifetime,omitempty"`
+	Preference        uint8        `yaml:"preference,omitempty"`
+	DNSServers        []string     `yaml:"dns_servers,omitempty"`
+	DomainList        []string     `yaml:"domain_list,omitempty"`
+	SNTPServers       []string     `yaml:"sntp_servers,omitempty"`
+	NTPServers        []string     `yaml:"ntp_servers,omitempty"`
+	SIPServers        []string     `yaml:"sip_servers,omitempty"`
+	SIPDomains        []string     `yaml:"sip_domains,omitempty"`
 }
 
 // Dhcpv6Pool represents an IPv6 address pool
@@ -248,10 +248,10 @@ type Dhcpv6Pool struct {
 
 // TrafficConfig represents traffic pattern configuration (v1.6.0)
 type TrafficConfig struct {
-	Enabled            bool                      `yaml:"enabled,omitempty"`
-	ARPAnnouncements   *ARPAnnouncementConfig    `yaml:"arp_announcements,omitempty"`
-	PeriodicPings      *PeriodicPingConfig       `yaml:"periodic_pings,omitempty"`
-	RandomTraffic      *RandomTrafficConfig      `yaml:"random_traffic,omitempty"`
+	Enabled          bool                   `yaml:"enabled,omitempty"`
+	ARPAnnouncements *ARPAnnouncementConfig `yaml:"arp_announcements,omitempty"`
+	PeriodicPings    *PeriodicPingConfig    `yaml:"periodic_pings,omitempty"`
+	RandomTraffic    *RandomTrafficConfig   `yaml:"random_traffic,omitempty"`
 }
 
 // ARPAnnouncementConfig configures gratuitous ARP announcements
@@ -269,22 +269,22 @@ type PeriodicPingConfig struct {
 
 // RandomTrafficConfig configures random background traffic
 type RandomTrafficConfig struct {
-	Enabled      bool     `yaml:"enabled,omitempty"`
-	Interval     int      `yaml:"interval,omitempty"`      // seconds
-	PacketCount  int      `yaml:"packet_count,omitempty"`  // packets per interval
-	Patterns     []string `yaml:"patterns,omitempty"`      // traffic patterns
+	Enabled     bool     `yaml:"enabled,omitempty"`
+	Interval    int      `yaml:"interval,omitempty"`     // seconds
+	PacketCount int      `yaml:"packet_count,omitempty"` // packets per interval
+	Patterns    []string `yaml:"patterns,omitempty"`     // traffic patterns
 }
 
 // TrapsConfig represents SNMP trap configuration (v1.6.0)
 type TrapsConfig struct {
-	Enabled               bool                   `yaml:"enabled,omitempty"`
-	Receivers             []string               `yaml:"receivers,omitempty"`
-	ColdStart             *TrapTriggerConfig     `yaml:"cold_start,omitempty"`
-	LinkState             *LinkStateTrapConfig   `yaml:"link_state,omitempty"`
-	AuthenticationFailure *TrapTriggerConfig     `yaml:"authentication_failure,omitempty"`
-	HighCPU               *ThresholdTrapConfig   `yaml:"high_cpu,omitempty"`
-	HighMemory            *ThresholdTrapConfig   `yaml:"high_memory,omitempty"`
-	InterfaceErrors       *ThresholdTrapConfig   `yaml:"interface_errors,omitempty"`
+	Enabled               bool                 `yaml:"enabled,omitempty"`
+	Receivers             []string             `yaml:"receivers,omitempty"`
+	ColdStart             *TrapTriggerConfig   `yaml:"cold_start,omitempty"`
+	LinkState             *LinkStateTrapConfig `yaml:"link_state,omitempty"`
+	AuthenticationFailure *TrapTriggerConfig   `yaml:"authentication_failure,omitempty"`
+	HighCPU               *ThresholdTrapConfig `yaml:"high_cpu,omitempty"`
+	HighMemory            *ThresholdTrapConfig `yaml:"high_memory,omitempty"`
+	InterfaceErrors       *ThresholdTrapConfig `yaml:"interface_errors,omitempty"`
 }
 
 // TrapTriggerConfig configures a simple trap trigger

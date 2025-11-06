@@ -31,34 +31,34 @@ const (
 
 // CDP TLV Types
 const (
-	CDPTLVTypeDeviceID         = 0x0001
-	CDPTLVTypeAddresses        = 0x0002
-	CDPTLVTypePortID           = 0x0003
-	CDPTLVTypeCapabilities     = 0x0004
-	CDPTLVTypeSoftwareVersion  = 0x0005
-	CDPTLVTypePlatform         = 0x0006
-	CDPTLVTypeIPPrefix         = 0x0007
-	CDPTLVTypeVTPDomain        = 0x0009
-	CDPTLVTypeNativeVLAN       = 0x000A
-	CDPTLVTypeDuplex           = 0x000B
-	CDPTLVTypePower            = 0x0010
-	CDPTLVTypeMTU              = 0x0011
-	CDPTLVTypeTrustBitmap      = 0x0012
-	CDPTLVTypeUntrustedCOS     = 0x0013
-	CDPTLVTypeManagementAddr   = 0x0016
+	CDPTLVTypeDeviceID        = 0x0001
+	CDPTLVTypeAddresses       = 0x0002
+	CDPTLVTypePortID          = 0x0003
+	CDPTLVTypeCapabilities    = 0x0004
+	CDPTLVTypeSoftwareVersion = 0x0005
+	CDPTLVTypePlatform        = 0x0006
+	CDPTLVTypeIPPrefix        = 0x0007
+	CDPTLVTypeVTPDomain       = 0x0009
+	CDPTLVTypeNativeVLAN      = 0x000A
+	CDPTLVTypeDuplex          = 0x000B
+	CDPTLVTypePower           = 0x0010
+	CDPTLVTypeMTU             = 0x0011
+	CDPTLVTypeTrustBitmap     = 0x0012
+	CDPTLVTypeUntrustedCOS    = 0x0013
+	CDPTLVTypeManagementAddr  = 0x0016
 )
 
 // CDP Capabilities flags
 const (
-	CDPCapRouter      = 0x01
-	CDPCapTransBridge = 0x02
+	CDPCapRouter       = 0x01
+	CDPCapTransBridge  = 0x02
 	CDPCapSourceBridge = 0x04
-	CDPCapSwitch      = 0x08
-	CDPCapHost        = 0x10
-	CDPCapIGMPCapable = 0x20
-	CDPCapRepeater    = 0x40
-	CDPCapPhone       = 0x80
-	CDPCapRemote      = 0x100
+	CDPCapSwitch       = 0x08
+	CDPCapHost         = 0x10
+	CDPCapIGMPCapable  = 0x20
+	CDPCapRepeater     = 0x40
+	CDPCapPhone        = 0x80
+	CDPCapRemote       = 0x100
 )
 
 // CDPHandler handles CDP advertisements

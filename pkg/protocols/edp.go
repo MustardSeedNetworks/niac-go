@@ -23,10 +23,10 @@ const (
 
 // EDP TLV Types
 const (
-	EDPTLVTypeDisplay     = 0x01 // Device display string
-	EDPTLVTypeInfo        = 0x02 // Info TLV
-	EDPTLVTypeWarning     = 0x03 // Warning TLV
-	EDPTLVTypeNull        = 0x99 // End marker
+	EDPTLVTypeDisplay = 0x01 // Device display string
+	EDPTLVTypeInfo    = 0x02 // Info TLV
+	EDPTLVTypeWarning = 0x03 // Warning TLV
+	EDPTLVTypeNull    = 0x99 // End marker
 )
 
 // EDPHandler handles EDP advertisements

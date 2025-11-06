@@ -27,10 +27,10 @@ const (
 
 // DHCP option types not defined in gopacket
 const (
-	DHCPOptNTP             layers.DHCPOpt = 42  // NTP servers
-	DHCPOptTFTPServer      layers.DHCPOpt = 66  // TFTP server name
-	DHCPOptBootfileName    layers.DHCPOpt = 67  // Bootfile name
-	DHCPOptDomainSearch    layers.DHCPOpt = 119 // Domain search list
+	DHCPOptNTP          layers.DHCPOpt = 42  // NTP servers
+	DHCPOptTFTPServer   layers.DHCPOpt = 66  // TFTP server name
+	DHCPOptBootfileName layers.DHCPOpt = 67  // Bootfile name
+	DHCPOptDomainSearch layers.DHCPOpt = 119 // Domain search list
 )
 
 // DHCP lease duration (24 hours)
@@ -38,11 +38,11 @@ const DefaultLeaseTime = 24 * time.Hour
 
 // DHCPLease represents an IP address lease
 type DHCPLease struct {
-	IP         net.IP
-	MAC        net.HardwareAddr
-	Hostname   string
-	Expiry     time.Time
-	LeaseTime  time.Duration
+	IP        net.IP
+	MAC       net.HardwareAddr
+	Hostname  string
+	Expiry    time.Time
+	LeaseTime time.Duration
 }
 
 // DHCPHandler handles DHCP server functionality
@@ -57,11 +57,11 @@ type DHCPHandler struct {
 	gateway            net.IP
 	dnsServers         []net.IP
 	domainName         string
-	ntpServers         []net.IP     // Option 42: NTP servers
-	domainSearch       []string     // Option 119: Domain search list
-	tftpServerName     string       // Option 66: TFTP server name
-	bootfileName       string       // Option 67: Bootfile name (for PXE)
-	vendorSpecificInfo []byte       // Option 43: Vendor-specific information
+	ntpServers         []net.IP // Option 42: NTP servers
+	domainSearch       []string // Option 119: Domain search list
+	tftpServerName     string   // Option 66: TFTP server name
+	bootfileName       string   // Option 67: Bootfile name (for PXE)
+	vendorSpecificInfo []byte   // Option 43: Vendor-specific information
 	mu                 sync.RWMutex
 }
 
@@ -125,10 +125,8 @@ func (h *DHCPHandler) generateIPPool(start, end net.IP) []net.IP {
 }
 
 // findAvailableIP finds an available IP address
+// Note: Caller must hold h.mu lock
 func (h *DHCPHandler) findAvailableIP() net.IP {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-
 	// Check each IP in pool
 	for _, ip := range h.ipPool {
 		inUse := false

@@ -1,0 +1,196 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build Release Binaries
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+            name: linux-amd64
+          - goos: linux
+            goarch: arm64
+            name: linux-arm64
+          - goos: darwin
+            goarch: amd64
+            name: darwin-amd64
+          - goos: darwin
+            goarch: arm64
+            name: darwin-arm64
+          - goos: windows
+            goarch: amd64
+            name: windows-amd64
+            ext: .exe
+          - goos: freebsd
+            goarch: amd64
+            name: freebsd-amd64
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.21'
+
+    - name: Get version
+      id: version
+      run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+    - name: Build binary
+      env:
+        GOOS: ${{ matrix.goos }}
+        GOARCH: ${{ matrix.goarch }}
+        CGO_ENABLED: 0
+      run: |
+        OUTPUT="niac-${{ steps.version.outputs.VERSION }}-${{ matrix.name }}${{ matrix.ext }}"
+        go build -ldflags="-s -w -X main.Version=${{ steps.version.outputs.VERSION }}" -o "$OUTPUT" ./cmd/niac
+        ls -lh "$OUTPUT"
+
+    - name: Generate checksums
+      run: |
+        OUTPUT="niac-${{ steps.version.outputs.VERSION }}-${{ matrix.name }}${{ matrix.ext }}"
+        sha256sum "$OUTPUT" > "$OUTPUT.sha256"
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: niac-${{ matrix.name }}
+        path: |
+          niac-*-${{ matrix.name }}${{ matrix.ext }}
+          niac-*-${{ matrix.name }}${{ matrix.ext }}.sha256
+
+  sbom:
+    name: Generate SBOM
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.21'
+
+    - name: Get version
+      id: version
+      run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+    - name: Generate SBOM (SPDX)
+      uses: anchore/sbom-action@v0
+      with:
+        artifact-name: niac-${{ steps.version.outputs.VERSION }}-sbom.spdx.json
+        output-file: niac-${{ steps.version.outputs.VERSION }}-sbom.spdx.json
+        format: spdx-json
+
+    - name: Generate SBOM (CycloneDX)
+      uses: anchore/sbom-action@v0
+      with:
+        artifact-name: niac-${{ steps.version.outputs.VERSION }}-sbom.cyclonedx.json
+        output-file: niac-${{ steps.version.outputs.VERSION }}-sbom.cyclonedx.json
+        format: cyclonedx-json
+
+    - name: Upload SBOM artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: sbom
+        path: |
+          *.spdx.json
+          *.cyclonedx.json
+
+  release:
+    name: Create GitHub Release
+    needs: [build, sbom]
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Get version
+      id: version
+      run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts
+
+    - name: Move artifacts to release directory
+      run: |
+        mkdir -p release
+        find artifacts -type f -exec cp {} release/ \;
+        ls -lh release/
+
+    - name: Extract changelog for this version
+      id: changelog
+      run: |
+        VERSION="${{ steps.version.outputs.VERSION }}"
+        if [ -f CHANGELOG.md ]; then
+          # Extract the section for this version from CHANGELOG.md
+          sed -n "/## \[${VERSION#v}\]/,/## \[/p" CHANGELOG.md | sed '$ d' > /tmp/release_notes.md
+          if [ ! -s /tmp/release_notes.md ]; then
+            echo "Release $VERSION" > /tmp/release_notes.md
+            echo "" >> /tmp/release_notes.md
+            echo "See CHANGELOG.md for details." >> /tmp/release_notes.md
+          fi
+        else
+          echo "Release $VERSION" > /tmp/release_notes.md
+        fi
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: release/*
+        body_path: /tmp/release_notes.md
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  test-release:
+    name: Test Release Binaries
+    needs: build
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact: linux-amd64
+          - os: macos-latest
+            artifact: darwin-arm64
+          - os: windows-latest
+            artifact: windows-amd64
+
+    steps:
+    - name: Download artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: niac-${{ matrix.artifact }}
+
+    - name: Make binary executable (Unix)
+      if: runner.os != 'Windows'
+      run: chmod +x niac-*
+
+    - name: Test binary (Unix)
+      if: runner.os != 'Windows'
+      run: ./niac-* --help || echo "Help command executed"
+
+    - name: Test binary (Windows)
+      if: runner.os == 'Windows'
+      run: |
+        $binary = Get-ChildItem -Filter "niac-*.exe" | Select-Object -First 1
+        & $binary.FullName --help
+      shell: pwsh

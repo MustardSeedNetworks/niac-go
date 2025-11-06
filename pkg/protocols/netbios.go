@@ -21,11 +21,11 @@ const (
 
 // NetBIOS Name Service opcodes
 const (
-	NBNSOpQuery         = 0
-	NBNSOpRegistration  = 5
-	NBNSOpRelease       = 6
-	NBNSOpWACK          = 7
-	NBNSOpRefresh       = 8
+	NBNSOpQuery        = 0
+	NBNSOpRegistration = 5
+	NBNSOpRelease      = 6
+	NBNSOpWACK         = 7
+	NBNSOpRefresh      = 8
 )
 
 // NetBIOS Name Service response codes

@@ -11,11 +11,11 @@ import (
 
 // STP constants
 const (
-	STPMulticastMAC    = "01:80:C2:00:00:00"
-	STPProtocolID      = 0x0000
-	STPVersion         = 0x00
-	STPVersionRSTP     = 0x02
-	STPVersionMSTP     = 0x03
+	STPMulticastMAC = "01:80:C2:00:00:00"
+	STPProtocolID   = 0x0000
+	STPVersion      = 0x00
+	STPVersionRSTP  = 0x02
+	STPVersionMSTP  = 0x03
 )
 
 // BPDU types
@@ -44,19 +44,19 @@ const (
 
 // BPDU flags
 const (
-	BPDUFlagTopologyChange     = 0x01
-	BPDUFlagProposal           = 0x02
-	BPDUFlagPortRoleShift      = 2 // 2 bits for port role
-	BPDUFlagLearning           = 0x10
-	BPDUFlagForwarding         = 0x20
-	BPDUFlagAgreement          = 0x40
-	BPDUFlagTopologyChangeAck  = 0x80
+	BPDUFlagTopologyChange    = 0x01
+	BPDUFlagProposal          = 0x02
+	BPDUFlagPortRoleShift     = 2 // 2 bits for port role
+	BPDUFlagLearning          = 0x10
+	BPDUFlagForwarding        = 0x20
+	BPDUFlagAgreement         = 0x40
+	BPDUFlagTopologyChangeAck = 0x80
 )
 
 // Default STP timers (in seconds)
 const (
-	DefaultHelloTime   = 2
-	DefaultMaxAge      = 20
+	DefaultHelloTime    = 2
+	DefaultMaxAge       = 20
 	DefaultForwardDelay = 15
 )
 
@@ -70,15 +70,15 @@ type STPHandler struct {
 	bridgePriority uint16
 
 	// Root bridge info
-	rootID         uint64 // Priority + MAC
-	rootPathCost   uint32
+	rootID       uint64 // Priority + MAC
+	rootPathCost uint32
 
 	// Timers
-	helloTime      uint16
-	maxAge         uint16
-	forwardDelay   uint16
+	helloTime    uint16
+	maxAge       uint16
+	forwardDelay uint16
 
-	lastBPDUTime   time.Time
+	lastBPDUTime time.Time
 }
 
 // NewSTPHandler creates a new STP handler
@@ -122,7 +122,7 @@ func (h *STPHandler) HandlePacket(pkt *Packet) {
 	offset += 3
 
 	// Parse BPDU header
-	protocolID := binary.BigEndian.Uint16(pkt.Buffer[offset:offset+2])
+	protocolID := binary.BigEndian.Uint16(pkt.Buffer[offset : offset+2])
 	version := pkt.Buffer[offset+2]
 	bpduType := pkt.Buffer[offset+3]
 
@@ -245,19 +245,19 @@ func (h *STPHandler) SendConfigBPDU(device *config.Device) error {
 	buf := make([]byte, 0, 64)
 
 	// Ethernet header (14 bytes)
-	buf = append(buf, dstMAC...)                // Destination MAC
-	buf = append(buf, device.MACAddress...)      // Source MAC
-	buf = append(buf, 0x00, 0x26)                // Length = 38 bytes (LLC + BPDU)
+	buf = append(buf, dstMAC...)            // Destination MAC
+	buf = append(buf, device.MACAddress...) // Source MAC
+	buf = append(buf, 0x00, 0x26)           // Length = 38 bytes (LLC + BPDU)
 
 	// LLC header (3 bytes)
-	buf = append(buf, 0x42)                      // DSAP
-	buf = append(buf, 0x42)                      // SSAP
-	buf = append(buf, 0x03)                      // Control
+	buf = append(buf, 0x42) // DSAP
+	buf = append(buf, 0x42) // SSAP
+	buf = append(buf, 0x03) // Control
 
 	// BPDU header (4 bytes)
-	buf = append(buf, 0x00, 0x00)                // Protocol ID
-	buf = append(buf, STPVersion)                // Version
-	buf = append(buf, BPDUTypeConfig)            // BPDU Type
+	buf = append(buf, 0x00, 0x00)     // Protocol ID
+	buf = append(buf, STPVersion)     // Version
+	buf = append(buf, BPDUTypeConfig) // BPDU Type
 
 	// Configuration BPDU fields (31 bytes)
 	flags := uint8(0)
@@ -265,7 +265,7 @@ func (h *STPHandler) SendConfigBPDU(device *config.Device) error {
 		// Set topology change flag for testing
 		flags |= BPDUFlagTopologyChange
 	}
-	buf = append(buf, flags)                     // Flags
+	buf = append(buf, flags) // Flags
 
 	// Root ID (8 bytes) = Priority (2) + MAC (6)
 	bridgeID := h.makeBridgeID(bridgePriority, device.MACAddress)
