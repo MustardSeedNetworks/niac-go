@@ -20,6 +20,9 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    - name: Install libpcap
+      run: sudo apt-get update && sudo apt-get install -y libpcap-dev
+
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
@@ -57,6 +60,9 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    - name: Install libpcap
+      run: sudo apt-get update && sudo apt-get install -y libpcap-dev
+
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
@@ -87,6 +93,9 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    - name: Install libpcap
+      run: sudo apt-get update && sudo apt-get install -y libpcap-dev
+
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
@@ -116,6 +125,9 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+
+    - name: Install libpcap
+      run: sudo apt-get update && sudo apt-get install -y libpcap-dev
 
     - name: Set up Go
       uses: actions/setup-go@v5
