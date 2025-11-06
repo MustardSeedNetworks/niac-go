@@ -25,15 +25,15 @@ const (
 
 // LLDP TLV Types (per IEEE 802.1AB)
 const (
-	LLDPTLVTypeEnd              = 0
-	LLDPTLVTypeChassisID        = 1
-	LLDPTLVTypePortID           = 2
-	LLDPTLVTypeTTL              = 3
-	LLDPTLVTypePortDescription  = 4
-	LLDPTLVTypeSystemName       = 5
-	LLDPTLVTypeSystemDescription = 6
+	LLDPTLVTypeEnd                = 0
+	LLDPTLVTypeChassisID          = 1
+	LLDPTLVTypePortID             = 2
+	LLDPTLVTypeTTL                = 3
+	LLDPTLVTypePortDescription    = 4
+	LLDPTLVTypeSystemName         = 5
+	LLDPTLVTypeSystemDescription  = 6
 	LLDPTLVTypeSystemCapabilities = 7
-	LLDPTLVTypeManagementAddress = 8
+	LLDPTLVTypeManagementAddress  = 8
 	// 9-126 reserved for future standardization
 	LLDPTLVTypeOrganizationSpecific = 127
 )
@@ -74,8 +74,8 @@ const (
 
 // LLDPHandler handles LLDP advertisements
 type LLDPHandler struct {
-	stack         *Stack
-	stopChan      chan struct{}
+	stack           *Stack
+	stopChan        chan struct{}
 	advertiseTicker *time.Ticker
 }
 
@@ -387,9 +387,9 @@ func (h *LLDPHandler) buildManagementAddressTLV(device *config.Device) []byte {
 	// - OID String Length (1 byte)
 
 	addressStringLength := 1 + len(addressBytes) // subtype + address
-	interfaceSubtype := byte(2) // ifIndex
-	interfaceNumber := uint32(1) // Interface index
-	oidStringLength := byte(0) // No OID
+	interfaceSubtype := byte(2)                  // ifIndex
+	interfaceNumber := uint32(1)                 // Interface index
+	oidStringLength := byte(0)                   // No OID
 
 	length := 1 + addressStringLength + 1 + 4 + 1 // total TLV value length
 

@@ -15,12 +15,12 @@ import (
 
 // Agent represents an SNMP agent instance for a device
 type Agent struct {
-	device      *config.Device
-	mib         *MIB
-	community   string
-	startTime   time.Time
-	debugLevel  int
-	mu          sync.RWMutex
+	device     *config.Device
+	mib        *MIB
+	community  string
+	startTime  time.Time
+	debugLevel int
+	mu         sync.RWMutex
 }
 
 // NewAgent creates a new SNMP agent for a device

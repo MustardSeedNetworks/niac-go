@@ -9,9 +9,9 @@ import (
 
 // DeviceTable manages device lookups by MAC and IP
 type DeviceTable struct {
-	mu        sync.RWMutex
-	byMAC     map[string]*config.Device
-	byIP      map[string][]*config.Device
+	mu    sync.RWMutex
+	byMAC map[string]*config.Device
+	byIP  map[string][]*config.Device
 }
 
 // NewDeviceTable creates a new device table

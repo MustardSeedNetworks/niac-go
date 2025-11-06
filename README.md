@@ -2,7 +2,7 @@
 
 **Production-ready network device simulator** - Complete YAML configuration system with per-protocol debug control, multi-IP support, and comprehensive protocol coverage.
 
-**Current Version: 1.6.0** - Complete Protocol & YAML Work
+**Current Version: 1.7.0** - Testing & Quality Enhancements
 
 ## 🚀 Why Go?
 
@@ -29,7 +29,31 @@ NIAC-Go is a modern rewrite of the original Java-based NIAC, leveraging Go's str
 
 ## Features
 
-### v1.6.0 Highlights 🎉
+### v1.7.0 Highlights 🎉
+
+- **✅ Comprehensive Testing Infrastructure**: Production-ready test coverage
+  - **87 new tests** added across 4 major packages
+  - Config package: **50.6% coverage** (5.2x improvement from 9.8%)
+  - Protocol package: **15.4% coverage** (2.75x improvement from 5.6%)
+  - Device simulator: **22.0% coverage** (new)
+  - SNMP traps: **6.7% coverage** (new)
+  - Full validation of v1.6.0 features (traffic patterns, SNMP traps)
+- **🔍 Configuration Validator**: Comprehensive config validation tool
+  - Three-level validation (Errors, Warnings, Info)
+  - Device-level validation (name, type, MAC, IP addresses)
+  - Protocol-specific validation (19 protocols)
+  - v1.6.0 feature validation (traffic patterns, SNMP traps)
+  - Threshold validation (CPU/memory percentages, STP priorities)
+  - Detailed error messages with field names and suggestions
+  - Integrated with `--dry-run` flag for pre-flight checks
+  - Verbose mode for detailed configuration insights
+- **⏳ Enhanced CLI/UX**: Improved user experience
+  - Progress indicators during startup (capture engine, protocol stack, devices)
+  - Feature summary on startup (SNMP agents, traps, traffic generation)
+  - Clear error reporting with emojis (✓ ❌ ⚠️)
+  - Enhanced `--dry-run` validation output
+
+### Previous Features (v1.6.0)
 
 - **🚦 Configurable Traffic Patterns**: Per-device traffic control
   - ARP announcement intervals

@@ -11,9 +11,9 @@ import (
 
 // OIDValue represents an OID value with type
 type OIDValue struct {
-	Type     gosnmp.Asn1BER
-	Value    interface{}
-	Dynamic  func() *OIDValue // For dynamic values like sysUpTime
+	Type    gosnmp.Asn1BER
+	Value   interface{}
+	Dynamic func() *OIDValue // For dynamic values like sysUpTime
 }
 
 // MIB represents a Management Information Base

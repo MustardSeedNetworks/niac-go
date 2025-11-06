@@ -18,10 +18,10 @@ import (
 )
 
 const (
-	Version      = "1.6.0"
+	Version      = "1.7.0"
 	BuildDate    = "2025-11-05"
 	GitCommit    = "HEAD"
-	Enhancements = "Complete Protocol & YAML Work: Traffic Patterns, SNMP Traps"
+	Enhancements = "Testing & Quality: 87 New Tests, Configuration Validator, Enhanced CLI"
 )
 
 func main() {
@@ -35,13 +35,13 @@ func main() {
 		dryRun          bool
 
 		// Information flags
-		showVersion       bool
-		listInterfaces    bool
-		listDevices       bool
+		showVersion    bool
+		listInterfaces bool
+		listDevices    bool
 
 		// Output flags
-		noColor      bool
-		logFile      string
+		noColor       bool
+		logFile       string
 		statsInterval int
 
 		// Advanced flags
@@ -277,7 +277,18 @@ func main() {
 
 	// Dry run mode - validate and exit
 	if dryRun {
-		logging.Success("Configuration validation successful")
+		// Run comprehensive configuration validation
+		validator := config.NewValidator()
+		result := validator.Validate(cfg)
+		output := config.FormatValidationResult(result, verbose)
+		fmt.Println(output)
+
+		if !result.Valid {
+			logging.Error("Configuration validation failed")
+			os.Exit(1)
+		}
+
+		// Additional runtime checks
 		logging.Success("Interface exists and is accessible")
 		logging.Success("Ready to simulate %d devices on %s", len(cfg.Devices), interfaceName)
 		fmt.Println()
@@ -507,28 +518,46 @@ func padRight(str string, length int) string {
 func runNormalMode(interfaceName string, cfg *config.Config, debugConfig *logging.DebugConfig) error {
 	debugLevel := debugConfig.GetGlobal()
 
-	fmt.Println("Starting NIAC simulation...")
-	fmt.Printf("  Interface: %s\n", interfaceName)
-	fmt.Printf("  Devices: %d\n", len(cfg.Devices))
-	fmt.Printf("  Debug level: %d\n", debugLevel)
-	fmt.Println()
-	fmt.Println("Press Ctrl+C to stop")
-	fmt.Println()
+	if debugLevel >= 1 {
+		fmt.Println("Starting NIAC simulation...")
+		fmt.Printf("  Interface: %s\n", interfaceName)
+		fmt.Printf("  Devices: %d\n", len(cfg.Devices))
+		fmt.Printf("  Debug level: %d\n", debugLevel)
+		fmt.Println()
+	}
 
-	// Create capture engine
+	// Step 1: Initialize capture engine
+	if debugLevel >= 1 {
+		fmt.Print("⏳ Initializing capture engine... ")
+	}
 	engine, err := capture.New(interfaceName, debugLevel)
 	if err != nil {
+		if debugLevel >= 1 {
+			fmt.Println("❌")
+		}
 		return fmt.Errorf("failed to create capture engine: %w", err)
 	}
 	defer engine.Close()
+	if debugLevel >= 1 {
+		fmt.Println("✓")
+	}
 
-	// Create protocol stack
+	// Step 2: Create protocol stack
+	if debugLevel >= 1 {
+		fmt.Print("⏳ Creating protocol stack... ")
+	}
 	stack := protocols.NewStack(engine, cfg, debugConfig)
+	if debugLevel >= 1 {
+		fmt.Println("✓")
+	}
 
-	// Configure DHCP/DNS handlers from device configs
+	// Step 3: Configure service handlers (DHCP/DNS)
+	dhcpCount := 0
+	dnsCount := 0
 	for _, device := range cfg.Devices {
 		// Configure DHCP if present
 		if device.DHCPConfig != nil {
+			dhcpCount++
 			dhcp := device.DHCPConfig
 			dhcpHandler := stack.GetDHCPHandler()
 			dhcpv6Handler := stack.GetDHCPv6Handler()
@@ -536,10 +565,10 @@ func runNormalMode(interfaceName string, cfg *config.Config, debugConfig *loggin
 			// Basic DHCPv4 configuration
 			if len(dhcp.DomainNameServer) > 0 || dhcp.Router != nil {
 				dhcpHandler.SetServerConfig(
-					device.IPAddresses[0],   // Server IP
-					dhcp.Router,              // Gateway
-					dhcp.DomainNameServer,    // DNS servers
-					dhcp.DomainName,          // Domain name
+					device.IPAddresses[0], // Server IP
+					dhcp.Router,           // Gateway
+					dhcp.DomainNameServer, // DNS servers
+					dhcp.DomainName,       // Domain name
 				)
 			}
 
@@ -567,6 +596,7 @@ func runNormalMode(interfaceName string, cfg *config.Config, debugConfig *loggin
 
 		// Configure DNS if present
 		if device.DNSConfig != nil {
+			dnsCount++
 			dnsHandler := stack.GetDNSHandler()
 
 			// Load DNS records
@@ -576,31 +606,69 @@ func runNormalMode(interfaceName string, cfg *config.Config, debugConfig *loggin
 			// PTR records are handled automatically by AddRecord
 		}
 	}
-
-	// Start the stack
-	if err := stack.Start(); err != nil {
-		return fmt.Errorf("failed to start stack: %w", err)
+	if debugLevel >= 1 && (dhcpCount > 0 || dnsCount > 0) {
+		if dhcpCount > 0 {
+			fmt.Printf("⏳ Configuring DHCP servers (%d)... ✓\n", dhcpCount)
+		}
+		if dnsCount > 0 {
+			fmt.Printf("⏳ Configuring DNS servers (%d)... ✓\n", dnsCount)
+		}
 	}
 
+	// Step 4: Start the protocol stack
 	if debugLevel >= 1 {
-		fmt.Println("✓ Network simulation started")
-		fmt.Println("✓ Protocol stack running")
+		fmt.Printf("⏳ Starting %d simulated device(s)... ", len(cfg.Devices))
+	}
+	if err := stack.Start(); err != nil {
+		if debugLevel >= 1 {
+			fmt.Println("❌")
+		}
+		return fmt.Errorf("failed to start stack: %w", err)
+	}
+	if debugLevel >= 1 {
+		fmt.Println("✓")
+		fmt.Println()
+
+		// Display enabled features summary
+		fmt.Println("Enabled features:")
 
 		// Count and display SNMP-enabled devices
 		snmpCount := 0
+		trapCount := 0
 		for _, dev := range cfg.Devices {
 			if dev.SNMPConfig.Community != "" || dev.SNMPConfig.WalkFile != "" {
 				snmpCount++
 			}
+			if dev.SNMPConfig.Traps != nil && dev.SNMPConfig.Traps.Enabled {
+				trapCount++
+			}
 		}
 		if snmpCount > 0 {
-			fmt.Printf("✓ SNMP agents: %d device(s)\n", snmpCount)
+			fmt.Printf("  • SNMP agents: %d device(s)\n", snmpCount)
+			if trapCount > 0 {
+				fmt.Printf("  • SNMP traps: %d device(s)\n", trapCount)
+			}
+		}
+
+		// Count devices with traffic patterns
+		trafficCount := 0
+		for _, dev := range cfg.Devices {
+			if dev.TrafficConfig != nil && dev.TrafficConfig.Enabled {
+				trafficCount++
+			}
+		}
+		if trafficCount > 0 {
+			fmt.Printf("  • Traffic generation: %d device(s)\n", trafficCount)
 		}
 
 		// Show PCAP playback if configured
 		if cfg.CapturePlayback != nil {
-			fmt.Printf("✓ PCAP playback: %s\n", cfg.CapturePlayback.FileName)
+			fmt.Printf("  • PCAP playback: %s\n", cfg.CapturePlayback.FileName)
 		}
+
+		fmt.Println()
+		fmt.Println("✅ Network simulation is ready")
+		fmt.Println("   Press Ctrl+C to stop")
 		fmt.Println()
 	}
 

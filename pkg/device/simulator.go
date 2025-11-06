@@ -40,25 +40,25 @@ type SimulatedDevice struct {
 type DeviceState string
 
 const (
-	StateUp         DeviceState = "up"
-	StateDown       DeviceState = "down"
-	StateStarting   DeviceState = "starting"
-	StateStopping   DeviceState = "stopping"
+	StateUp          DeviceState = "up"
+	StateDown        DeviceState = "down"
+	StateStarting    DeviceState = "starting"
+	StateStopping    DeviceState = "stopping"
 	StateMaintenance DeviceState = "maintenance"
 )
 
 // DeviceCounters holds per-device statistics
 type DeviceCounters struct {
-	ARPRequestsReceived  uint64
-	ARPRepliesSent       uint64
-	ICMPRequestsReceived uint64
-	ICMPRepliesSent      uint64
-	SNMPQueriesReceived  uint64
-	HTTPRequestsReceived uint64
+	ARPRequestsReceived    uint64
+	ARPRepliesSent         uint64
+	ICMPRequestsReceived   uint64
+	ICMPRepliesSent        uint64
+	SNMPQueriesReceived    uint64
+	HTTPRequestsReceived   uint64
 	FTPConnectionsReceived uint64
-	PacketsSent          uint64
-	PacketsReceived      uint64
-	Errors               uint64
+	PacketsSent            uint64
+	PacketsReceived        uint64
+	Errors                 uint64
 }
 
 // NewSimulator creates a new device simulator
@@ -124,11 +124,14 @@ func (s *Simulator) addDevice(device *config.Device) {
 
 // Start starts the device simulator
 func (s *Simulator) Start() error {
+	s.mu.Lock()
 	if s.running {
+		s.mu.Unlock()
 		return fmt.Errorf("simulator already running")
 	}
 
 	s.running = true
+	s.mu.Unlock()
 
 	// Start behavior threads for each device
 	for name, device := range s.devices {
@@ -152,11 +155,15 @@ func (s *Simulator) Start() error {
 
 // Stop stops the device simulator
 func (s *Simulator) Stop() {
+	s.mu.Lock()
 	if !s.running {
+		s.mu.Unlock()
 		return
 	}
 
 	s.running = false
+	s.mu.Unlock()
+
 	close(s.stopChan)
 
 	// Stop all trap senders (v1.6.0)
@@ -176,7 +183,15 @@ func (s *Simulator) deviceBehaviorLoop(name string, device *SimulatedDevice) {
 	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
 
-	for s.running {
+	for {
+		s.mu.RLock()
+		running := s.running
+		s.mu.RUnlock()
+
+		if !running {
+			return
+		}
+
 		select {
 		case <-s.stopChan:
 			return
@@ -402,9 +417,9 @@ func (s *Simulator) GetStats() map[string]interface{} {
 	}
 
 	return map[string]interface{}{
-		"device_count":    len(s.devices),
-		"device_states":   deviceStates,
-		"total_counters":  totalCounters,
-		"running":         s.running,
+		"device_count":   len(s.devices),
+		"device_states":  deviceStates,
+		"total_counters": totalCounters,
+		"running":        s.running,
 	}
 }

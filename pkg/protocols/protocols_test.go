@@ -306,9 +306,9 @@ func TestParsePacketVLAN(t *testing.T) {
 	// Ethernet header with VLAN
 	pkt.PutDestMAC(net.HardwareAddr{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF})
 	pkt.PutSourceMAC(net.HardwareAddr{0x00, 0x11, 0x22, 0x33, 0x44, 0x55})
-	pkt.Put16(EtherTypeVLAN, 12)  // VLAN tag
-	pkt.Put16(0x0064, 14)          // VLAN ID 100
-	pkt.Put16(EtherTypeIP, 16)     // Actual EtherType after VLAN
+	pkt.Put16(EtherTypeVLAN, 12) // VLAN tag
+	pkt.Put16(0x0064, 14)        // VLAN ID 100
+	pkt.Put16(EtherTypeIP, 16)   // Actual EtherType after VLAN
 
 	parsed, err := ParsePacket(pkt.Buffer, 1)
 	if err != nil {

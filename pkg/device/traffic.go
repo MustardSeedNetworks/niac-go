@@ -25,10 +25,10 @@ type TrafficGenerator struct {
 
 // TrafficPattern represents a traffic generation pattern
 type TrafficPattern struct {
-	Name        string
-	Interval    time.Duration
-	Enabled     bool
-	LastRun     time.Time
+	Name     string
+	Interval time.Duration
+	Enabled  bool
+	LastRun  time.Time
 }
 
 // NewTrafficGenerator creates a new traffic generator

@@ -13,11 +13,11 @@ import (
 
 // DNSHandler handles DNS queries and responses
 type DNSHandler struct {
-	stack       *Stack
-	records     map[string][]net.IP // Hostname -> IPs
-	ptrRecords  map[string]string    // IP -> Hostname (reverse lookup)
-	mu          sync.RWMutex
-	domain      string               // Default domain
+	stack      *Stack
+	records    map[string][]net.IP // Hostname -> IPs
+	ptrRecords map[string]string   // IP -> Hostname (reverse lookup)
+	mu         sync.RWMutex
+	domain     string // Default domain
 }
 
 // NewDNSHandler creates a new DNS handler
@@ -113,12 +113,12 @@ func (h *DNSHandler) HandleQuery(pkt *Packet, ipLayer *layers.IPv4, udpLayer *la
 	// Build DNS response
 	response := &layers.DNS{
 		ID:           dns.ID,
-		QR:           true,  // Response
+		QR:           true, // Response
 		OpCode:       dns.OpCode,
 		AA:           true,  // Authoritative Answer
 		TC:           false, // Not truncated
 		RD:           dns.RD,
-		RA:           true,  // Recursion available
+		RA:           true, // Recursion available
 		ResponseCode: layers.DNSResponseCodeNoErr,
 		Questions:    dns.Questions,
 		Answers:      []layers.DNSResourceRecord{},

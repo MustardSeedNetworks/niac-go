@@ -9,13 +9,13 @@ import (
 type ErrorType string
 
 const (
-	ErrorTypeFCS        ErrorType = "FCS Errors"
-	ErrorTypeDiscards   ErrorType = "Packet Discards"
-	ErrorTypeInterface  ErrorType = "Interface Errors"
+	ErrorTypeFCS         ErrorType = "FCS Errors"
+	ErrorTypeDiscards    ErrorType = "Packet Discards"
+	ErrorTypeInterface   ErrorType = "Interface Errors"
 	ErrorTypeUtilization ErrorType = "High Utilization"
-	ErrorTypeCPU        ErrorType = "High CPU"
-	ErrorTypeMemory     ErrorType = "High Memory"
-	ErrorTypeDisk       ErrorType = "High Disk"
+	ErrorTypeCPU         ErrorType = "High CPU"
+	ErrorTypeMemory      ErrorType = "High Memory"
+	ErrorTypeDisk        ErrorType = "High Disk"
 )
 
 // AllErrorTypes returns all available error types
@@ -39,12 +39,12 @@ type InterfaceConfig struct {
 
 // ErrorState represents the current error injection state for a device
 type ErrorState struct {
-	DeviceIP    string
-	Interface   string
-	ErrorType   ErrorType
-	Value       int // Error rate or percentage
-	IfConfig    InterfaceConfig
-	Enabled     bool
+	DeviceIP  string
+	Interface string
+	ErrorType ErrorType
+	Value     int // Error rate or percentage
+	IfConfig  InterfaceConfig
+	Enabled   bool
 }
 
 // StateManager manages error injection state (thread-safe)

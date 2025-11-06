@@ -15,52 +15,52 @@ import (
 
 // DHCPv6 message types (RFC 8415)
 const (
-	DHCPv6Solicit      = 1
-	DHCPv6Advertise    = 2
-	DHCPv6Request      = 3
-	DHCPv6Confirm      = 4
-	DHCPv6Renew        = 5
-	DHCPv6Rebind       = 6
-	DHCPv6Reply        = 7
-	DHCPv6Release      = 8
-	DHCPv6Decline      = 9
-	DHCPv6Reconfigure  = 10
-	DHCPv6InfoRequest  = 11
-	DHCPv6RelayForw    = 12
-	DHCPv6RelayRepl    = 13
+	DHCPv6Solicit     = 1
+	DHCPv6Advertise   = 2
+	DHCPv6Request     = 3
+	DHCPv6Confirm     = 4
+	DHCPv6Renew       = 5
+	DHCPv6Rebind      = 6
+	DHCPv6Reply       = 7
+	DHCPv6Release     = 8
+	DHCPv6Decline     = 9
+	DHCPv6Reconfigure = 10
+	DHCPv6InfoRequest = 11
+	DHCPv6RelayForw   = 12
+	DHCPv6RelayRepl   = 13
 )
 
 // DHCPv6 option codes (RFC 8415)
 const (
-	DHCPv6OptClientID         = 1
-	DHCPv6OptServerID         = 2
-	DHCPv6OptIANA             = 3  // Identity Association for Non-temporary Addresses
-	DHCPv6OptIATA             = 4  // Identity Association for Temporary Addresses
-	DHCPv6OptIAAddr           = 5  // IA Address
-	DHCPv6OptORO              = 6  // Option Request Option
-	DHCPv6OptPreference       = 7
-	DHCPv6OptElapsedTime      = 8
-	DHCPv6OptRelayMsg         = 9
-	DHCPv6OptAuth             = 11
-	DHCPv6OptUnicast          = 12
-	DHCPv6OptStatusCode       = 13
-	DHCPv6OptRapidCommit      = 14
-	DHCPv6OptUserClass        = 15
-	DHCPv6OptVendorClass      = 16
-	DHCPv6OptVendorOpts       = 17
-	DHCPv6OptInterfaceID      = 18
-	DHCPv6OptReconfMsg        = 19
-	DHCPv6OptReconfAccept     = 20
-	DHCPv6OptSIPServers       = 21 // SIP Servers (Domain Name List)
-	DHCPv6OptSIPServerAddrs   = 22 // SIP Servers (IPv6 Address List)
-	DHCPv6OptDNSServers       = 23
-	DHCPv6OptDomainList       = 24
-	DHCPv6OptIAPD             = 25 // Identity Association for Prefix Delegation
-	DHCPv6OptIAPrefix         = 26
-	DHCPv6OptSNTPServers      = 31 // SNTP Servers
+	DHCPv6OptClientID               = 1
+	DHCPv6OptServerID               = 2
+	DHCPv6OptIANA                   = 3 // Identity Association for Non-temporary Addresses
+	DHCPv6OptIATA                   = 4 // Identity Association for Temporary Addresses
+	DHCPv6OptIAAddr                 = 5 // IA Address
+	DHCPv6OptORO                    = 6 // Option Request Option
+	DHCPv6OptPreference             = 7
+	DHCPv6OptElapsedTime            = 8
+	DHCPv6OptRelayMsg               = 9
+	DHCPv6OptAuth                   = 11
+	DHCPv6OptUnicast                = 12
+	DHCPv6OptStatusCode             = 13
+	DHCPv6OptRapidCommit            = 14
+	DHCPv6OptUserClass              = 15
+	DHCPv6OptVendorClass            = 16
+	DHCPv6OptVendorOpts             = 17
+	DHCPv6OptInterfaceID            = 18
+	DHCPv6OptReconfMsg              = 19
+	DHCPv6OptReconfAccept           = 20
+	DHCPv6OptSIPServers             = 21 // SIP Servers (Domain Name List)
+	DHCPv6OptSIPServerAddrs         = 22 // SIP Servers (IPv6 Address List)
+	DHCPv6OptDNSServers             = 23
+	DHCPv6OptDomainList             = 24
+	DHCPv6OptIAPD                   = 25 // Identity Association for Prefix Delegation
+	DHCPv6OptIAPrefix               = 26
+	DHCPv6OptSNTPServers            = 31 // SNTP Servers
 	DHCPv6OptInformationRefreshTime = 32
-	DHCPv6OptFQDN             = 39 // Client FQDN
-	DHCPv6OptNTPServer        = 56 // NTP Server
+	DHCPv6OptFQDN                   = 39 // Client FQDN
+	DHCPv6OptNTPServer              = 56 // NTP Server
 )
 
 // DHCPv6 status codes
@@ -114,31 +114,31 @@ type DHCPv6Option struct {
 
 // DHCPv6Lease represents an IPv6 address lease
 type DHCPv6Lease struct {
-	Address            net.IP
-	Prefix             *net.IPNet // For prefix delegation
-	DUID               []byte
-	IAID               uint32
-	PreferredLifetime  time.Time
-	ValidLifetime      time.Time
-	LastRenewal        time.Time
+	Address           net.IP
+	Prefix            *net.IPNet // For prefix delegation
+	DUID              []byte
+	IAID              uint32
+	PreferredLifetime time.Time
+	ValidLifetime     time.Time
+	LastRenewal       time.Time
 }
 
 // DHCPv6Handler handles DHCPv6 server functionality
 type DHCPv6Handler struct {
-	stack              *Stack
-	leases             map[string]*DHCPv6Lease // Key: DUID hex string
-	addressPool        []net.IP
-	prefixPool         []net.IPNet
-	serverDUID         []byte
-	preferredLifetime  time.Duration
-	validLifetime      time.Duration
-	dnsServers         []net.IP
-	domainList         []string
-	sntpServers        []net.IP     // Option 31: SNTP servers
-	ntpServers         []net.IP     // Option 56: NTP servers
-	sipServers         []net.IP     // Option 22: SIP server addresses
-	sipDomains         []string     // Option 21: SIP domain names
-	mu                 sync.RWMutex
+	stack             *Stack
+	leases            map[string]*DHCPv6Lease // Key: DUID hex string
+	addressPool       []net.IP
+	prefixPool        []net.IPNet
+	serverDUID        []byte
+	preferredLifetime time.Duration
+	validLifetime     time.Duration
+	dnsServers        []net.IP
+	domainList        []string
+	sntpServers       []net.IP // Option 31: SNTP servers
+	ntpServers        []net.IP // Option 56: NTP servers
+	sipServers        []net.IP // Option 22: SIP server addresses
+	sipDomains        []string // Option 21: SIP domain names
+	mu                sync.RWMutex
 }
 
 // NewDHCPv6Handler creates a new DHCPv6 handler

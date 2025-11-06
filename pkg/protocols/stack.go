@@ -19,38 +19,38 @@ type Stack struct {
 	mu           sync.Mutex
 
 	// Packet queues
-	sendQueue    chan *Packet
-	recvQueue    chan *Packet
+	sendQueue chan *Packet
+	recvQueue chan *Packet
 
 	// Protocol handlers
-	arpHandler   *ARPHandler
-	ipHandler    *IPHandler
-	icmpHandler  *ICMPHandler
-	ipv6Handler  *IPv6Handler
-	icmpv6Handler *ICMPv6Handler
-	udpHandler   *UDPHandler
-	tcpHandler   *TCPHandler
-	dnsHandler   *DNSHandler
-	dhcpHandler  *DHCPHandler
-	dhcpv6Handler *DHCPv6Handler
-	httpHandler   *HTTPHandler
-	ftpHandler    *FTPHandler
+	arpHandler     *ARPHandler
+	ipHandler      *IPHandler
+	icmpHandler    *ICMPHandler
+	ipv6Handler    *IPv6Handler
+	icmpv6Handler  *ICMPv6Handler
+	udpHandler     *UDPHandler
+	tcpHandler     *TCPHandler
+	dnsHandler     *DNSHandler
+	dhcpHandler    *DHCPHandler
+	dhcpv6Handler  *DHCPv6Handler
+	httpHandler    *HTTPHandler
+	ftpHandler     *FTPHandler
 	netbiosHandler *NetBIOSHandler
-	stpHandler    *STPHandler
-	lldpHandler   *LLDPHandler
-	cdpHandler    *CDPHandler
-	edpHandler    *EDPHandler
-	fdpHandler    *FDPHandler
+	stpHandler     *STPHandler
+	lldpHandler    *LLDPHandler
+	cdpHandler     *CDPHandler
+	edpHandler     *EDPHandler
+	fdpHandler     *FDPHandler
 
 	// Statistics
-	stats        *Statistics
+	stats *Statistics
 
 	// Control
-	running      bool
-	stopChan     chan struct{}
-	wg           sync.WaitGroup
+	running  bool
+	stopChan chan struct{}
+	wg       sync.WaitGroup
 
-	debugConfig  *logging.DebugConfig
+	debugConfig *logging.DebugConfig
 }
 
 // Statistics holds protocol statistics
@@ -70,14 +70,14 @@ type Statistics struct {
 // NewStack creates a new protocol stack
 func NewStack(captureEngine *capture.Engine, cfg *config.Config, debugConfig *logging.DebugConfig) *Stack {
 	s := &Stack{
-		capture:      captureEngine,
-		config:       cfg,
-		devices:      NewDeviceTable(),
-		sendQueue:    make(chan *Packet, 1000),
-		recvQueue:    make(chan *Packet, 1000),
-		stats:        &Statistics{},
-		stopChan:     make(chan struct{}),
-		debugConfig:  debugConfig,
+		capture:     captureEngine,
+		config:      cfg,
+		devices:     NewDeviceTable(),
+		sendQueue:   make(chan *Packet, 1000),
+		recvQueue:   make(chan *Packet, 1000),
+		stats:       &Statistics{},
+		stopChan:    make(chan struct{}),
+		debugConfig: debugConfig,
 	}
 
 	// Initialize device table from config
@@ -262,35 +262,35 @@ func (s *Stack) decodePacket(pkt *Packet) {
 	// Check for STP (multicast MAC 01:80:C2:00:00:00)
 	dstMAC := pkt.GetDestMAC()
 	if len(dstMAC) == 6 && dstMAC[0] == 0x01 && dstMAC[1] == 0x80 &&
-	   dstMAC[2] == 0xC2 && dstMAC[3] == 0x00 && dstMAC[4] == 0x00 && dstMAC[5] == 0x00 {
+		dstMAC[2] == 0xC2 && dstMAC[3] == 0x00 && dstMAC[4] == 0x00 && dstMAC[5] == 0x00 {
 		s.stpHandler.HandlePacket(pkt)
 		return
 	}
 
 	// Check for LLDP (multicast MAC 01:80:C2:00:00:0E)
 	if len(dstMAC) == 6 && dstMAC[0] == 0x01 && dstMAC[1] == 0x80 &&
-	   dstMAC[2] == 0xC2 && dstMAC[3] == 0x00 && dstMAC[4] == 0x00 && dstMAC[5] == 0x0E {
+		dstMAC[2] == 0xC2 && dstMAC[3] == 0x00 && dstMAC[4] == 0x00 && dstMAC[5] == 0x0E {
 		s.lldpHandler.HandlePacket(pkt)
 		return
 	}
 
 	// Check for CDP (multicast MAC 01:00:0C:CC:CC:CC)
 	if len(dstMAC) == 6 && dstMAC[0] == 0x01 && dstMAC[1] == 0x00 &&
-	   dstMAC[2] == 0x0C && dstMAC[3] == 0xCC && dstMAC[4] == 0xCC && dstMAC[5] == 0xCC {
+		dstMAC[2] == 0x0C && dstMAC[3] == 0xCC && dstMAC[4] == 0xCC && dstMAC[5] == 0xCC {
 		s.cdpHandler.HandlePacket(pkt)
 		return
 	}
 
 	// Check for EDP (multicast MAC 00:E0:2B:00:00:00)
 	if len(dstMAC) == 6 && dstMAC[0] == 0x00 && dstMAC[1] == 0xE0 &&
-	   dstMAC[2] == 0x2B && dstMAC[3] == 0x00 && dstMAC[4] == 0x00 && dstMAC[5] == 0x00 {
+		dstMAC[2] == 0x2B && dstMAC[3] == 0x00 && dstMAC[4] == 0x00 && dstMAC[5] == 0x00 {
 		s.edpHandler.HandlePacket(pkt)
 		return
 	}
 
 	// Check for FDP (multicast MAC 01:E0:52:CC:CC:CC)
 	if len(dstMAC) == 6 && dstMAC[0] == 0x01 && dstMAC[1] == 0xE0 &&
-	   dstMAC[2] == 0x52 && dstMAC[3] == 0xCC && dstMAC[4] == 0xCC && dstMAC[5] == 0xCC {
+		dstMAC[2] == 0x52 && dstMAC[3] == 0xCC && dstMAC[4] == 0xCC && dstMAC[5] == 0xCC {
 		s.fdpHandler.HandlePacket(pkt)
 		return
 	}
@@ -434,11 +434,23 @@ func (s *Stack) GetDevices() *DeviceTable {
 	return s.devices
 }
 
-// GetStats returns current statistics
+// GetStats returns current statistics (copy without mutex)
 func (s *Stack) GetStats() Statistics {
 	s.stats.mu.RLock()
 	defer s.stats.mu.RUnlock()
-	return *s.stats
+
+	// Return copy of data without mutex
+	return Statistics{
+		PacketsReceived: s.stats.PacketsReceived,
+		PacketsSent:     s.stats.PacketsSent,
+		ARPRequests:     s.stats.ARPRequests,
+		ARPReplies:      s.stats.ARPReplies,
+		ICMPRequests:    s.stats.ICMPRequests,
+		ICMPReplies:     s.stats.ICMPReplies,
+		DNSQueries:      s.stats.DNSQueries,
+		DHCPRequests:    s.stats.DHCPRequests,
+		Errors:          s.stats.Errors,
+	}
 }
 
 // IncrementStat increments a specific statistic

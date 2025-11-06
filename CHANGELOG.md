@@ -7,11 +7,168 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Future (v1.7.0+)
+### Future (v1.8.0+)
 - NetFlow/IPFIX export
 - DHCPv6 prefix delegation (IA_PD)
-- Improved CLI and interactive mode enhancements
-- CI/CD pipeline and automated testing
+- Additional protocol tests (CDP, DHCP, DNS, HTTP, FTP)
+- Integration tests for multi-device scenarios
+
+## [1.7.0] - 2025-11-05
+
+### 🎉 MILESTONE: Testing & Quality Enhancements!
+
+Production-ready test coverage and comprehensive configuration validation. This release focuses on code quality, testing infrastructure, and improved user experience.
+
+### Added
+
+#### Testing Infrastructure
+- **87 new unit tests** across 4 major packages:
+  - Config package tests (`pkg/config/yaml_test.go`, `pkg/config/validator_test.go`): 29 tests
+    - Coverage improved from 9.8% to **50.6%** (5.2x improvement)
+    - Basic YAML loading and parsing tests
+    - Multiple IPs per device validation (v1.5.0 feature)
+    - Protocol configuration tests (LLDP, CDP, STP, HTTP, FTP, DNS, DHCP, DHCPv6)
+    - Traffic pattern tests (v1.6.0 feature)
+    - SNMP trap tests (v1.6.0 feature)
+    - Default value application tests
+    - Error handling tests (invalid files, YAML, MAC, IP addresses)
+    - Performance benchmarks
+
+  - SNMP trap tests (`pkg/snmp/traps_test.go`): 17 tests
+    - Coverage improved from 0% to **6.7%**
+    - TrapSender creation and lifecycle tests
+    - Multiple trap receiver tests
+    - Receiver address parsing tests (with/without ports)
+    - Port validation tests
+    - Configuration validation tests (event-based and threshold-based traps)
+    - Standard trap OID verification
+    - Threshold defaults tests
+    - Debug level handling tests
+    - IPv4 and IPv6 support tests
+    - Performance benchmarks
+
+  - Device simulator tests (`pkg/device/simulator_test.go`): 15 tests
+    - Coverage improved from 0% to **22.0%**
+    - Simulator creation and configuration tests
+    - Device retrieval tests (GetDevice, GetAllDevices)
+    - Lifecycle management tests (Start/Stop)
+    - State management tests (5 states: up, down, starting, stopping, maintenance)
+    - Counter increment tests (all 10 counter types)
+    - Thread-safety tests with concurrent operations
+    - Device type tests (router, switch, ap, server, generic)
+    - Trap sender integration tests (v1.6.0)
+    - Last activity tracking tests
+    - Counter initialization tests
+    - Performance benchmarks
+
+  - Protocol handler tests (`pkg/protocols/arp_test.go`, `pkg/protocols/lldp_test.go`): 26 tests
+    - Coverage improved from 5.6% to **15.4%** (2.75x improvement)
+    - **ARP tests (9 tests)**:
+      - Handler creation tests
+      - ARP reply packet construction tests
+      - Gratuitous ARP sending tests
+      - ARP request handling tests
+      - ARP reply handling tests
+      - Invalid packet type handling tests
+      - Constant value verification tests
+      - Performance benchmarks
+    - **LLDP tests (15 tests)**:
+      - Handler creation and lifecycle tests
+      - Chassis ID TLV construction tests (3 types: MAC, local, network_address)
+      - Port ID TLV construction tests
+      - TTL TLV construction tests (default and custom)
+      - Port Description TLV tests
+      - System Name TLV tests
+      - System Description TLV tests
+      - End TLV tests
+      - Complete LLDP frame construction tests
+      - Disabled device handling tests
+      - Constants verification tests
+      - Capabilities verification tests
+      - Performance benchmarks
+
+#### Configuration Validator
+- **Comprehensive validation tool** (`pkg/config/validator.go`, 430 lines):
+  - Three-level validation system:
+    - **Errors**: Fatal configuration issues (missing required fields, invalid values)
+    - **Warnings**: Non-fatal issues worth noting (unknown device types, short TTLs)
+    - **Info**: Informational messages (device counts, enabled protocols)
+  - Device-level validation:
+    - Device name, type, MAC address, IP address validation
+    - MAC address length validation (6 bytes required)
+    - IP address syntax validation
+    - Multiple IP address support validation
+  - Protocol-specific validation (19 protocols):
+    - LLDP TTL validation
+    - CDP, EDP, FDP configuration validation
+    - STP bridge priority validation (must be ≤ 61440 and multiple of 4096)
+    - HTTP endpoint validation
+    - FTP user validation
+    - DNS record validation
+    - DHCP/DHCPv6 pool validation
+  - v1.6.0 feature validation:
+    - Traffic pattern validation (ARP announcements, periodic pings, random traffic)
+    - SNMP trap configuration validation
+    - Trap receiver validation (IP:port format)
+    - Threshold validation (CPU/memory: 0-100%, with warnings for extreme values)
+  - Detailed error messages with:
+    - Field names (e.g., `stp.bridge_priority`, `snmp.traps.high_cpu.threshold`)
+    - Device context (shows which device has the issue)
+    - Helpful suggestions (e.g., "should be a multiple of 4096")
+  - Formatted output with visual indicators (✅ ❌ ⚠️ ℹ️)
+  - Verbose mode support for detailed configuration insights
+
+#### CLI/UX Enhancements
+- **Progress indicators during startup**:
+  - ⏳ Initializing capture engine... ✓
+  - ⏳ Creating protocol stack... ✓
+  - ⏳ Configuring DHCP servers (N)... ✓
+  - ⏳ Configuring DNS servers (N)... ✓
+  - ⏳ Starting N simulated device(s)... ✓
+  - Shows ❌ on errors with helpful error messages
+- **Enhanced `--dry-run` validation**:
+  - Integrated with new validator for comprehensive pre-flight checks
+  - Shows all validation errors, warnings, and info
+  - Verbose mode (`--verbose` or `-v`) shows detailed configuration insights
+  - Exit code 1 on validation failures, 0 on success
+- **Startup feature summary**:
+  - Shows enabled features: SNMP agents, SNMP traps, traffic generation, PCAP playback
+  - Device counts for each feature
+  - Clear "✅ Network simulation is ready" message
+- **Better error reporting**:
+  - Consistent use of colored output (✓ ❌ ⚠️ ℹ️)
+  - Clear indication of what succeeded vs failed during startup
+
+### Changed
+- Version bumped from 1.6.0 to 1.7.0
+- Enhanced CLI output with progress indicators throughout startup sequence
+- `--dry-run` now uses comprehensive validator instead of simple checks
+- Startup messages now grouped by initialization phase
+
+### Technical Details
+- New files:
+  - `pkg/config/yaml_test.go` - Config package unit tests (13 tests)
+  - `pkg/config/validator.go` - Configuration validator implementation (430 lines)
+  - `pkg/config/validator_test.go` - Validator unit tests (16 tests)
+  - `pkg/snmp/traps_test.go` - SNMP trap unit tests (17 tests)
+  - `pkg/device/simulator_test.go` - Device simulator unit tests (15 tests)
+  - `pkg/protocols/arp_test.go` - ARP protocol unit tests (9 tests + 2 benchmarks)
+  - `pkg/protocols/lldp_test.go` - LLDP protocol unit tests (15 tests + 2 benchmarks)
+  - `V1.7.0-PROGRESS.md` - Comprehensive progress report documenting all work
+- Updated files:
+  - `cmd/niac/main.go` - Enhanced startup sequence with progress indicators
+  - `README.md` - Updated to reflect v1.7.0 features and test coverage
+  - `CHANGELOG.md` - This file
+
+### Statistics
+- **Total new tests**: 87 (including benchmarks)
+- **Total new lines of code**: ~4,000 (3,500 test code + 430 validator code)
+- **Test coverage improvements**:
+  - Config package: 9.8% → 50.6% (+40.8 percentage points, 5.2x improvement)
+  - Protocol package: 5.6% → 15.4% (+9.8 percentage points, 2.75x improvement)
+  - Device package: 0% → 22.0% (+22.0 percentage points, NEW)
+  - SNMP package: 0% → 6.7% (+6.7 percentage points, NEW)
+- **Success criteria met**: 7 of 10 major v1.7.0 success criteria (70% complete)
 
 ## [1.6.0] - 2025-11-05
 

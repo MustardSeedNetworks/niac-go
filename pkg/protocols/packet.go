@@ -19,7 +19,7 @@ type Packet struct {
 	Timestamp    time.Time
 	LoopTime     time.Duration // For periodic packets
 	Device       interface{}   // Associated device
-	VLAN         int          // -1 if no VLAN
+	VLAN         int           // -1 if no VLAN
 }
 
 // Constants for packet parsing

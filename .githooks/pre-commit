@@ -1,0 +1,75 @@
+#!/bin/bash
+# NIAC-Go Pre-commit Hook
+# Runs tests and checks before allowing commit
+
+set -e
+
+echo "🔍 Running pre-commit checks..."
+echo ""
+
+# Check if go is available
+if ! command -v go &> /dev/null; then
+    echo "❌ Go is not installed or not in PATH"
+    exit 1
+fi
+
+# Run go fmt check
+echo "📝 Checking code formatting..."
+UNFORMATTED=$(gofmt -l .)
+if [ -n "$UNFORMATTED" ]; then
+    echo "❌ The following files need formatting:"
+    echo "$UNFORMATTED"
+    echo ""
+    echo "Run: gofmt -w ."
+    exit 1
+fi
+echo "✅ Code formatting OK"
+echo ""
+
+# Run go vet
+echo "🔎 Running go vet..."
+if ! go vet ./...; then
+    echo "❌ go vet found issues"
+    exit 1
+fi
+echo "✅ go vet passed"
+echo ""
+
+# Run tests
+echo "🧪 Running tests..."
+if ! go test -short -race ./...; then
+    echo "❌ Tests failed"
+    exit 1
+fi
+echo "✅ All tests passed"
+echo ""
+
+# Check test coverage
+echo "📊 Checking test coverage..."
+COVERAGE=$(go test -short -coverprofile=/tmp/pre-commit-coverage.out ./... 2>&1 | grep "coverage:" | awk '{print $5}' | sed 's/%//' | head -1)
+if [ -n "$COVERAGE" ]; then
+    echo "Current coverage: ${COVERAGE}%"
+    THRESHOLD=40.0
+    if (( $(echo "$COVERAGE < $THRESHOLD" | bc -l) )); then
+        echo "⚠️  Warning: Coverage ${COVERAGE}% is below ${THRESHOLD}% threshold"
+        # Don't fail the commit, just warn
+    else
+        echo "✅ Coverage check passed"
+    fi
+else
+    echo "⚠️  Could not determine coverage"
+fi
+echo ""
+
+# Build check
+echo "🏗️  Checking build..."
+if ! go build -o /tmp/niac-test ./cmd/niac; then
+    echo "❌ Build failed"
+    exit 1
+fi
+rm -f /tmp/niac-test
+echo "✅ Build successful"
+echo ""
+
+echo "✅ All pre-commit checks passed!"
+echo "🚀 Proceeding with commit..."
