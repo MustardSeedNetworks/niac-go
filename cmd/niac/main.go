@@ -24,6 +24,7 @@ const (
 	Enhancements = "Testing & Quality: 87 New Tests, Configuration Validator, Enhanced CLI"
 )
 
+// nolint:gocyclo // Main function with flag parsing and mode routing
 func main() {
 	// Command line flags
 	var (
@@ -515,6 +516,7 @@ func padRight(str string, length int) string {
 }
 
 // runNormalMode runs NIAC in normal (non-interactive) mode
+// nolint:gocyclo // Complex function handling all normal mode operations
 func runNormalMode(interfaceName string, cfg *config.Config, debugConfig *logging.DebugConfig) error {
 	debugLevel := debugConfig.GetGlobal()
 
