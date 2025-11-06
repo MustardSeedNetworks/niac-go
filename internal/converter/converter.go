@@ -341,7 +341,7 @@ func ConvertFile(inputPath, outputPath string, verbose bool) error {
 	}
 
 	// Write output file
-	if err := os.WriteFile(outputPath, yamlData, 0644); err != nil {
+	if err := os.WriteFile(outputPath, yamlData, 0600); err != nil {
 		return fmt.Errorf("error writing output file: %w", err)
 	}
 
@@ -397,6 +397,7 @@ func (p *Parser) Parse() (*Config, error) {
 }
 
 // parseCapturePlayback parses a CapturePlayback block
+// nolint:unparam // Error return reserved for future validation
 func (p *Parser) parseCapturePlayback() (*CapturePlayback, error) {
 	p.pos++ // Skip opening line
 	playback := &CapturePlayback{}
@@ -413,11 +414,11 @@ func (p *Parser) parseCapturePlayback() (*CapturePlayback, error) {
 			playback.FileName = p.extractString(line)
 		} else if strings.HasPrefix(line, "LoopTime(") {
 			var loopTime int
-			fmt.Sscanf(line, "LoopTime(%d)", &loopTime)
+			_, _ = fmt.Sscanf(line, "LoopTime(%d)", &loopTime)
 			playback.LoopTime = loopTime
 		} else if strings.HasPrefix(line, "ScaleTime(") {
 			var scaleTime float64
-			fmt.Sscanf(line, "ScaleTime(%f)", &scaleTime)
+			_, _ = fmt.Sscanf(line, "ScaleTime(%f)", &scaleTime)
 			playback.ScaleTime = scaleTime
 		}
 
@@ -448,7 +449,7 @@ func (p *Parser) parseDevice(deviceNum int) (*Device, error) {
 			device.IP = p.extractValue(line)
 		} else if strings.HasPrefix(line, "Vlan(") {
 			var vlan int
-			fmt.Sscanf(line, "Vlan(%d)", &vlan)
+			_, _ = fmt.Sscanf(line, "Vlan(%d)", &vlan)
 			device.VLAN = vlan
 		} else if strings.HasPrefix(line, "SnmpAgent(") {
 			agent, err := p.parseSnmpAgent()
@@ -480,6 +481,7 @@ func (p *Parser) parseDevice(deviceNum int) (*Device, error) {
 }
 
 // parseSnmpAgent parses an SnmpAgent block
+// nolint:unparam // Error return reserved for future validation
 func (p *Parser) parseSnmpAgent() (*SnmpAgent, error) {
 	p.pos++ // Skip opening line
 	agent := &SnmpAgent{}
@@ -532,6 +534,7 @@ func (p *Parser) parseAddMib(line string) *AddMib {
 }
 
 // parseDhcp parses a Dhcp block
+// nolint:gocyclo // DHCP parser handles many option types
 func (p *Parser) parseDhcp() (*DhcpServer, error) {
 	p.pos++ // Skip opening line
 	dhcp := &DhcpServer{
@@ -612,6 +615,7 @@ func (p *Parser) parseDhcp() (*DhcpServer, error) {
 }
 
 // parseDns parses a Dns block
+// nolint:unparam // Error return reserved for future validation
 func (p *Parser) parseDns() (*DnsServer, error) {
 	p.pos++ // Skip opening line
 	dns := &DnsServer{
@@ -673,14 +677,14 @@ func (p *Parser) parseDnsRecord(line string, isForward bool) *DnsRecord {
 		record.Name = strings.Trim(parts[0], "\"")
 		record.IP = parts[1]
 		if len(parts) >= 3 {
-			fmt.Sscanf(parts[2], "%d", &record.TTL)
+			_, _ = fmt.Sscanf(parts[2], "%d", &record.TTL)
 		}
 	} else {
 		// Reverse(IP "hostname" TTL)
 		record.IP = parts[0]
 		record.Name = strings.Trim(parts[1], "\"")
 		if len(parts) >= 3 {
-			fmt.Sscanf(parts[2], "%d", &record.TTL)
+			_, _ = fmt.Sscanf(parts[2], "%d", &record.TTL)
 		}
 	}
 
