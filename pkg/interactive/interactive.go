@@ -61,10 +61,14 @@ type model struct {
 	showStats bool
 
 	// Error injection state
-	selectedDevice    int
+	// nolint:unused // Reserved for UI state
+	selectedDevice int
+	// nolint:unused // Reserved for UI state
 	selectedInterface int
+	// nolint:unused // Reserved for UI state
 	selectedErrorType int
-	errorValue        int
+	// nolint:unused // Reserved for UI state
+	errorValue int
 
 	// Stats
 	packetsTotal    int
@@ -493,7 +497,7 @@ func (m model) renderStatistics() string {
 	}
 	stats.WriteString(fmt.Sprintf("║ SNMP Devices:        %-10d                                    ║\n", snmpCount))
 	stats.WriteString("║                                                                  ║\n")
-	stats.WriteString(fmt.Sprintf("║ Memory Usage:        ~15 MB (estimated)                      ║\n"))
+	stats.WriteString("║ Memory Usage:        ~15 MB (estimated)                      ║\n")
 	stats.WriteString(fmt.Sprintf("║ Start Time:          %s                                    ║\n", m.startTime.Format("15:04:05")))
 	stats.WriteString("╚══════════════════════════════════════════════════════════════════╝")
 

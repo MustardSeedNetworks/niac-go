@@ -66,6 +66,7 @@ type STPHandler struct {
 	debugLevel int
 
 	// Bridge configuration
+	// nolint:unused // Reserved for STP bridge ID
 	bridgeMAC      net.HardwareAddr
 	bridgePriority uint16
 

@@ -88,7 +88,7 @@ func (h *ARPHandler) handleARPRequest(pkt *Packet, arp *layers.ARP) {
 
 	// Look up devices with this IP (considering VLAN)
 	devices := h.stack.GetDevices().GetByIP(targetIP)
-	if devices == nil || len(devices) == 0 {
+	if len(devices) == 0 {
 		if debugLevel >= 3 {
 			fmt.Printf("ARP Request: No device found for IP %s\n", targetIP)
 		}

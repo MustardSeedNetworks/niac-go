@@ -191,7 +191,7 @@ func (h *FTPHandler) sendResponse(ipLayer *layers.IPv4, tcpLayer *layers.TCP, re
 	// Get source MAC
 	srcDevices := h.stack.GetDevices().GetByIP(ipLayer.SrcIP)
 	var srcMAC []byte
-	if srcDevices != nil && len(srcDevices) > 0 && len(srcDevices[0].MACAddress) > 0 {
+	if len(srcDevices) > 0 && len(srcDevices[0].MACAddress) > 0 {
 		srcMAC = srcDevices[0].MACAddress
 	} else {
 		// Fallback - would need to get from original packet

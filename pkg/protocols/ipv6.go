@@ -71,7 +71,7 @@ func (h *IPv6Handler) HandlePacket(pkt *Packet) {
 
 	// Check if packet is for one of our devices
 	devices := h.stack.GetDevices().GetByIP(ipv6.DstIP)
-	if devices == nil || len(devices) == 0 {
+	if len(devices) == 0 {
 		// Check for multicast addresses we should respond to
 		if !IsIPv6Multicast(ipv6.DstIP) {
 			if h.debugLevel >= 3 {

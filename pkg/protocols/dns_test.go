@@ -322,7 +322,7 @@ func TestLoadDeviceRecords(t *testing.T) {
 
 	// Test device 3 - no IPs, should still be added but return empty
 	ips = handler.lookupHost("web-server-01")
-	if ips != nil && len(ips) > 0 {
+	if len(ips) > 0 {
 		t.Errorf("Expected no IPs for web-server-01 (no IPs configured), got %d", len(ips))
 	}
 }

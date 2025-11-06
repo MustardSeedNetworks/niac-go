@@ -288,7 +288,7 @@ func (h *HTTPHandler) sendResponse(ipLayer *layers.IPv4, tcpLayer *layers.TCP, r
 	// Get source MAC (lookup by source IP)
 	srcDevices := h.stack.GetDevices().GetByIP(ipLayer.SrcIP)
 	var srcMAC []byte
-	if srcDevices != nil && len(srcDevices) > 0 && len(srcDevices[0].MACAddress) > 0 {
+	if len(srcDevices) > 0 && len(srcDevices[0].MACAddress) > 0 {
 		srcMAC = srcDevices[0].MACAddress
 	} else {
 		// Cannot find source MAC - skip sending
