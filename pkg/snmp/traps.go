@@ -23,16 +23,20 @@ const (
 
 // TrapSender manages SNMP trap generation for a device
 type TrapSender struct {
-	deviceName  string
-	deviceIP    net.IP
-	trapConfig  *config.TrapConfig
-	snmpClient  *gosnmp.GoSNMP
-	receivers   []*gosnmp.GoSNMP
-	running     bool
-	stopChan    chan struct{}
-	debugLevel  int
+	deviceName string
+	deviceIP   net.IP
+	trapConfig *config.TrapConfig
+	// nolint:unused // Reserved for future SNMP trap sending
+	snmpClient *gosnmp.GoSNMP
+	receivers  []*gosnmp.GoSNMP
+	running    bool
+	stopChan   chan struct{}
+	debugLevel int
+	// nolint:unused // Reserved for trap throttling
 	lastCPUTime time.Time
+	// nolint:unused // Reserved for trap throttling
 	lastMemTime time.Time
+	// nolint:unused // Reserved for trap throttling
 	lastErrTime time.Time
 }
 

@@ -113,7 +113,7 @@ func (h *TCPHandler) sendRST(ipLayer *layers.IPv4, tcp *layers.TCP, devices []*c
 		// Get source MAC from device table lookup by source IP
 		srcDevice := h.stack.GetDevices().GetByIP(ipLayer.SrcIP)
 		var dstMAC []byte
-		if srcDevice != nil && len(srcDevice) > 0 && len(srcDevice[0].MACAddress) > 0 {
+		if len(srcDevice) > 0 && len(srcDevice[0].MACAddress) > 0 {
 			dstMAC = srcDevice[0].MACAddress
 		} else {
 			// Use MAC from original packet (reverse lookup)
@@ -353,7 +353,7 @@ func (h *TCPHandler) sendRSTV6(ipv6 *layers.IPv6, tcp *layers.TCP, devices []*co
 		// Get destination MAC
 		srcDevice := h.stack.GetDevices().GetByIP(ipv6.SrcIP)
 		var dstMAC []byte
-		if srcDevice != nil && len(srcDevice) > 0 && len(srcDevice[0].MACAddress) > 0 {
+		if len(srcDevice) > 0 && len(srcDevice[0].MACAddress) > 0 {
 			dstMAC = srcDevice[0].MACAddress
 		} else {
 			if debugLevel >= 2 {

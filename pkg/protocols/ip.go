@@ -55,7 +55,7 @@ func (h *IPHandler) HandlePacket(pkt *Packet) {
 
 	// Check if packet is for one of our devices
 	devices := h.stack.GetDevices().GetByIP(ip.DstIP)
-	if devices == nil || len(devices) == 0 {
+	if len(devices) == 0 {
 		// Not for us
 		if debugLevel >= 3 {
 			fmt.Printf("IP packet not for our devices: %s sn=%d\n", ip.DstIP, pkt.SerialNumber)

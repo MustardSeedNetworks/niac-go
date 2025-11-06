@@ -223,6 +223,7 @@ func (tg *TrafficGenerator) generateRandomTrafficForDevice(device *SimulatedDevi
 }
 
 // sendARPAnnouncements sends gratuitous ARP for all devices
+// nolint:unused // Future feature: periodic ARP announcements
 func (tg *TrafficGenerator) sendARPAnnouncements() {
 	devices := tg.simulator.GetAllDevices()
 
@@ -298,6 +299,7 @@ func (tg *TrafficGenerator) sendGratuitousARP(device *SimulatedDevice) error {
 }
 
 // periodicPingLoop sends periodic ICMP Echo requests
+// nolint:unused // Future feature: periodic connectivity tests
 func (tg *TrafficGenerator) periodicPingLoop() {
 	ticker := time.NewTicker(120 * time.Second)
 	defer ticker.Stop()
@@ -313,6 +315,7 @@ func (tg *TrafficGenerator) periodicPingLoop() {
 }
 
 // sendPeriodicPings sends ICMP echo requests from random devices
+// nolint:unused // Future feature: periodic connectivity tests
 func (tg *TrafficGenerator) sendPeriodicPings() {
 	devices := tg.simulator.GetAllDevices()
 	deviceList := make([]*SimulatedDevice, 0, len(devices))
@@ -407,6 +410,7 @@ func (tg *TrafficGenerator) sendPing(src, dst *SimulatedDevice) error {
 }
 
 // randomTrafficLoop generates random low-level traffic
+// nolint:unused // Future feature: background traffic generation
 func (tg *TrafficGenerator) randomTrafficLoop() {
 	ticker := time.NewTicker(180 * time.Second)
 	defer ticker.Stop()
@@ -422,6 +426,7 @@ func (tg *TrafficGenerator) randomTrafficLoop() {
 }
 
 // generateRandomTraffic generates random packets for realism
+// nolint:unused // Future feature: background traffic generation
 func (tg *TrafficGenerator) generateRandomTraffic() {
 	devices := tg.simulator.GetAllDevices()
 	deviceList := make([]*SimulatedDevice, 0, len(devices))
