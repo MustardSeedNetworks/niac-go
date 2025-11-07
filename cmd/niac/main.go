@@ -19,10 +19,10 @@ import (
 )
 
 const (
-	Version      = "1.7.0"
-	BuildDate    = "2025-11-05"
+	Version      = "1.9.0"
+	BuildDate    = "2025-01-06"
 	GitCommit    = "HEAD"
-	Enhancements = "Testing & Quality: 87 New Tests, Configuration Validator, Enhanced CLI"
+	Enhancements = "Code Quality & Security: Complexity Reduction, Integer Overflow Fix, 30+ Constants"
 )
 
 // nolint:gocyclo // Main function with flag parsing and mode routing
