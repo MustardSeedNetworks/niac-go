@@ -414,11 +414,17 @@ func (p *Parser) parseCapturePlayback() (*CapturePlayback, error) {
 			playback.FileName = p.extractString(line)
 		} else if strings.HasPrefix(line, "LoopTime(") {
 			var loopTime int
-			_, _ = fmt.Sscanf(line, "LoopTime(%d)", &loopTime)
+			n, err := fmt.Sscanf(line, "LoopTime(%d)", &loopTime)
+			if err != nil || n != 1 {
+				return nil, fmt.Errorf("line %d: invalid LoopTime format: %s", p.pos+1, line)
+			}
 			playback.LoopTime = loopTime
 		} else if strings.HasPrefix(line, "ScaleTime(") {
 			var scaleTime float64
-			_, _ = fmt.Sscanf(line, "ScaleTime(%f)", &scaleTime)
+			n, err := fmt.Sscanf(line, "ScaleTime(%f)", &scaleTime)
+			if err != nil || n != 1 {
+				return nil, fmt.Errorf("line %d: invalid ScaleTime format: %s", p.pos+1, line)
+			}
 			playback.ScaleTime = scaleTime
 		}
 
@@ -449,7 +455,10 @@ func (p *Parser) parseDevice(deviceNum int) (*Device, error) {
 			device.IP = p.extractValue(line)
 		} else if strings.HasPrefix(line, "Vlan(") {
 			var vlan int
-			_, _ = fmt.Sscanf(line, "Vlan(%d)", &vlan)
+			n, err := fmt.Sscanf(line, "Vlan(%d)", &vlan)
+			if err != nil || n != 1 {
+				return nil, fmt.Errorf("line %d: invalid Vlan format: %s", p.pos+1, line)
+			}
 			device.VLAN = vlan
 		} else if strings.HasPrefix(line, "SnmpAgent(") {
 			agent, err := p.parseSnmpAgent()
