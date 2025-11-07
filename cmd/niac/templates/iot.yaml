@@ -1,0 +1,35 @@
+# IoT Device Template
+# Lightweight IoT sensor with basic protocols
+
+devices:
+  - name: iot-sensor-01
+    type: host
+    mac_address: "00:1E:2F:3A:4B:01"
+    ip_addresses:
+      - "10.0.3.100"
+
+    # Basic protocols only
+    arp:
+      enabled: true
+    icmp:
+      enabled: true
+
+    # Minimal LLDP
+    lldp:
+      enabled: true
+      system_name: "IoT Sensor 01"
+      system_description: "Temperature/Humidity Sensor"
+      chassis_id: "00:1E:2F:3A:4B:01"
+      port_id: "eth0"
+      ttl: 300
+      capabilities: ["station-only"]
+
+    # Simple HTTP API
+    http:
+      enabled: true
+      server_header: "IoTDevice/1.0"
+      endpoints:
+        - path: "/"
+          content: '{"device": "sensor-01", "type": "temp-humidity"}'
+        - path: "/data"
+          content: '{"temp": 22.5, "humidity": 45}'

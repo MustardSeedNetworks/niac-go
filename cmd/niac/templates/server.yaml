@@ -1,0 +1,77 @@
+# Server Template
+# Multi-service server (DHCP, DNS, HTTP)
+
+devices:
+  - name: server-01
+    type: server
+    mac_address: "00:1D:2E:3F:4A:01"
+    ip_addresses:
+      - "10.0.0.10"
+
+    # Basic protocols
+    arp:
+      enabled: true
+    icmp:
+      enabled: true
+
+    # LLDP
+    lldp:
+      enabled: true
+      system_name: "Server 01"
+      system_description: "Ubuntu 22.04 LTS"
+      chassis_id: "00:1D:2E:3F:4A:01"
+      port_id: "eth0"
+      ttl: 120
+      capabilities: ["station-only"]
+
+    # SNMP
+    snmp:
+      enabled: true
+      community: "public"
+      sys_name: "server-01"
+      sys_descr: "Ubuntu 22.04.3 LTS"
+      sys_location: "Data Center A - Rack 5"
+      sys_contact: "sysadmin@example.com"
+
+      traps:
+        enabled: true
+        receivers:
+          - "10.0.0.100:162"
+        high_memory:
+          enabled: true
+          threshold: 90
+          interval: 300
+        high_disk:
+          enabled: true
+          threshold: 85
+          interval: 600
+
+    # DHCP Server
+    dhcp:
+      router: "10.0.0.1"
+      domain_name_server:
+        - "10.0.0.10"
+        - "8.8.8.8"
+      domain_name: "example.local"
+      lease_time: 86400
+
+    # DNS Server
+    dns:
+      forward_records:
+        - name: "server-01.example.local"
+          ip: "10.0.0.10"
+        - name: "router.example.local"
+          ip: "10.0.0.1"
+      reverse_records:
+        - ip: "10.0.0.10"
+          name: "server-01.example.local"
+
+    # HTTP Server
+    http:
+      enabled: true
+      server_header: "nginx/1.24.0"
+      endpoints:
+        - path: "/"
+          content: "<html><body><h1>Server 01</h1><p>Services: DHCP, DNS, HTTP</p></body></html>"
+        - path: "/status"
+          content: '{"status": "ok", "services": ["dhcp", "dns", "http"]}'
