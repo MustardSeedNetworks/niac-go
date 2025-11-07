@@ -1,3 +1,4 @@
+// Package protocols implements network protocol handlers for device simulation
 package protocols
 
 import (

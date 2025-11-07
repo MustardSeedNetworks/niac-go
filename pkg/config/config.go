@@ -1,3 +1,4 @@
+// Package config provides configuration file loading and parsing for network device simulation
 package config
 
 import (
@@ -17,6 +18,53 @@ const (
 	ChassisIDTypeMAC            = "mac"
 	ChassisIDTypeLocal          = "local"
 	ChassisIDTypeNetworkAddress = "network_address"
+)
+
+// Default configuration values
+const (
+	// Discovery protocol defaults
+	DefaultLLDPAdvertiseInterval = 30  // seconds
+	DefaultLLDPTTL               = 120 // seconds
+	DefaultCDPAdvertiseInterval  = 60  // seconds
+	DefaultCDPHoldtime           = 180 // seconds
+	DefaultCDPVersion            = 2
+	DefaultEDPAdvertiseInterval  = 30  // seconds
+	DefaultFDPAdvertiseInterval  = 60  // seconds
+	DefaultFDPHoldtime           = 180 // seconds
+
+	// STP defaults
+	DefaultSTPBridgePriority = 32768 // Default priority
+	DefaultSTPHelloTime      = 2     // seconds
+	DefaultSTPMaxAge         = 20    // seconds
+	DefaultSTPForwardDelay   = 15    // seconds
+
+	// NetBIOS defaults
+	DefaultNetBIOSTTL = 300 // 5 minutes in seconds
+
+	// ICMP defaults
+	DefaultICMPTTL        = 64 // Default TTL
+	DefaultICMPv6HopLimit = 64 // Default hop limit (NDP uses 255)
+
+	// DHCPv6 defaults
+	DefaultDHCPv6PreferredLifetime = 604800  // 7 days in seconds
+	DefaultDHCPv6ValidLifetime     = 2592000 // 30 days in seconds
+
+	// Traffic pattern defaults
+	DefaultARPAnnouncementInterval  = 60  // seconds
+	DefaultPeriodicPingInterval     = 120 // seconds
+	DefaultPeriodicPingPayloadSize  = 32  // bytes
+	DefaultRandomTrafficInterval    = 180 // seconds
+	DefaultRandomTrafficPacketCount = 5   // packets per interval
+
+	// SNMP trap defaults
+	DefaultHighCPUThreshold        = 80  // percent
+	DefaultHighMemoryThreshold     = 90  // percent
+	DefaultInterfaceErrorThreshold = 100 // error count
+	DefaultTrapCheckInterval       = 300 // 5 minutes in seconds
+	DefaultInterfaceErrorInterval  = 60  // 1 minute in seconds
+
+	// DNS defaults
+	DefaultDNSTTL = 3600 // 1 hour in seconds
 )
 
 // Config represents the network configuration
@@ -658,7 +706,7 @@ func LoadYAML(filename string) (*Config, error) {
 				netbiosCfg.Services = []string{"workstation", "fileserver"}
 			}
 			if netbiosCfg.TTL == 0 {
-				netbiosCfg.TTL = 300 // 5 minutes
+				netbiosCfg.TTL = DefaultNetBIOSTTL
 			}
 			device.NetBIOSConfig = netbiosCfg
 		}
@@ -672,7 +720,7 @@ func LoadYAML(filename string) (*Config, error) {
 			}
 			// Set defaults
 			if icmpCfg.TTL == 0 {
-				icmpCfg.TTL = 64 // Default TTL
+				icmpCfg.TTL = DefaultICMPTTL
 			}
 			// RateLimit defaults to 0 (unlimited)
 			device.ICMPConfig = icmpCfg
@@ -687,7 +735,7 @@ func LoadYAML(filename string) (*Config, error) {
 			}
 			// Set defaults
 			if icmpv6Cfg.HopLimit == 0 {
-				icmpv6Cfg.HopLimit = 64 // Default hop limit (NDP uses 255, set in protocol handler)
+				icmpv6Cfg.HopLimit = DefaultICMPv6HopLimit
 			}
 			// RateLimit defaults to 0 (unlimited)
 			device.ICMPv6Config = icmpv6Cfg
@@ -706,10 +754,10 @@ func LoadYAML(filename string) (*Config, error) {
 			}
 			// Set defaults
 			if dhcpv6Cfg.PreferredLifetime == 0 {
-				dhcpv6Cfg.PreferredLifetime = 604800 // 7 days
+				dhcpv6Cfg.PreferredLifetime = DefaultDHCPv6PreferredLifetime
 			}
 			if dhcpv6Cfg.ValidLifetime == 0 {
-				dhcpv6Cfg.ValidLifetime = 2592000 // 30 days
+				dhcpv6Cfg.ValidLifetime = DefaultDHCPv6ValidLifetime
 			}
 			// Preference defaults to 0 (lowest priority)
 
@@ -767,7 +815,7 @@ func LoadYAML(filename string) (*Config, error) {
 				}
 				// Apply default interval if not specified
 				if arpCfg.Interval == 0 {
-					arpCfg.Interval = 60 // Default: 60 seconds
+					arpCfg.Interval = DefaultARPAnnouncementInterval
 				}
 				trafficCfg.ARPAnnouncements = arpCfg
 			}
@@ -781,10 +829,10 @@ func LoadYAML(filename string) (*Config, error) {
 				}
 				// Apply defaults if not specified
 				if pingCfg.Interval == 0 {
-					pingCfg.Interval = 120 // Default: 120 seconds
+					pingCfg.Interval = DefaultPeriodicPingInterval
 				}
 				if pingCfg.PayloadSize == 0 {
-					pingCfg.PayloadSize = 32 // Default: 32 bytes
+					pingCfg.PayloadSize = DefaultPeriodicPingPayloadSize
 				}
 				trafficCfg.PeriodicPings = pingCfg
 			}
@@ -799,10 +847,10 @@ func LoadYAML(filename string) (*Config, error) {
 				}
 				// Apply defaults if not specified
 				if randomCfg.Interval == 0 {
-					randomCfg.Interval = 180 // Default: 180 seconds
+					randomCfg.Interval = DefaultRandomTrafficInterval
 				}
 				if randomCfg.PacketCount == 0 {
-					randomCfg.PacketCount = 5 // Default: 5 packets
+					randomCfg.PacketCount = DefaultRandomTrafficPacketCount
 				}
 				// Default patterns if none specified
 				if len(randomCfg.Patterns) == 0 {
@@ -855,10 +903,10 @@ func LoadYAML(filename string) (*Config, error) {
 				}
 				// Apply defaults if not specified
 				if highCPUCfg.Threshold == 0 {
-					highCPUCfg.Threshold = 80 // Default: 80%
+					highCPUCfg.Threshold = DefaultHighCPUThreshold
 				}
 				if highCPUCfg.Interval == 0 {
-					highCPUCfg.Interval = 300 // Default: 300 seconds (5 minutes)
+					highCPUCfg.Interval = DefaultTrapCheckInterval
 				}
 				trapsCfg.HighCPU = highCPUCfg
 			}
@@ -872,10 +920,10 @@ func LoadYAML(filename string) (*Config, error) {
 				}
 				// Apply defaults if not specified
 				if highMemCfg.Threshold == 0 {
-					highMemCfg.Threshold = 90 // Default: 90%
+					highMemCfg.Threshold = DefaultHighMemoryThreshold
 				}
 				if highMemCfg.Interval == 0 {
-					highMemCfg.Interval = 300 // Default: 300 seconds (5 minutes)
+					highMemCfg.Interval = DefaultTrapCheckInterval
 				}
 				trapsCfg.HighMemory = highMemCfg
 			}
@@ -889,10 +937,10 @@ func LoadYAML(filename string) (*Config, error) {
 				}
 				// Apply defaults if not specified
 				if ifErrCfg.Threshold == 0 {
-					ifErrCfg.Threshold = 100 // Default: 100 errors
+					ifErrCfg.Threshold = DefaultInterfaceErrorThreshold
 				}
 				if ifErrCfg.Interval == 0 {
-					ifErrCfg.Interval = 60 // Default: 60 seconds (1 minute)
+					ifErrCfg.Interval = DefaultInterfaceErrorInterval
 				}
 				trapsCfg.InterfaceErrors = ifErrCfg
 			}
@@ -1011,7 +1059,7 @@ func parseDNSConfig(yamlDns *converter.DnsServer, deviceName string) (*DNSConfig
 		if ip == nil {
 			continue
 		}
-		ttl := uint32(3600) // Default TTL
+		ttl := uint32(DefaultDNSTTL)
 		if record.TTL > 0 {
 			// Validate TTL is in reasonable range before conversion
 			if record.TTL < 0 {
@@ -1037,7 +1085,7 @@ func parseDNSConfig(yamlDns *converter.DnsServer, deviceName string) (*DNSConfig
 		if ip == nil {
 			continue
 		}
-		ttl := uint32(3600) // Default TTL
+		ttl := uint32(DefaultDNSTTL)
 		if record.TTL > 0 {
 			// Validate TTL is in reasonable range before conversion
 			if record.TTL < 0 {
@@ -1076,10 +1124,10 @@ func parseLLDPConfig(yamlLldp *converter.LldpConfig) *LLDPConfig {
 	}
 	// Set defaults if not specified
 	if lldpCfg.AdvertiseInterval == 0 {
-		lldpCfg.AdvertiseInterval = 30
+		lldpCfg.AdvertiseInterval = DefaultLLDPAdvertiseInterval
 	}
 	if lldpCfg.TTL == 0 {
-		lldpCfg.TTL = 120
+		lldpCfg.TTL = DefaultLLDPTTL
 	}
 	if lldpCfg.ChassisIDType == "" {
 		lldpCfg.ChassisIDType = ChassisIDTypeMAC
@@ -1104,13 +1152,13 @@ func parseCDPConfig(yamlCdp *converter.CdpConfig) *CDPConfig {
 	}
 	// Set defaults if not specified
 	if cdpCfg.AdvertiseInterval == 0 {
-		cdpCfg.AdvertiseInterval = 60
+		cdpCfg.AdvertiseInterval = DefaultCDPAdvertiseInterval
 	}
 	if cdpCfg.Holdtime == 0 {
-		cdpCfg.Holdtime = 180
+		cdpCfg.Holdtime = DefaultCDPHoldtime
 	}
 	if cdpCfg.Version == 0 {
-		cdpCfg.Version = 2
+		cdpCfg.Version = DefaultCDPVersion
 	}
 	return cdpCfg
 }
@@ -1129,7 +1177,7 @@ func parseEDPConfig(yamlEdp *converter.EdpConfig) *EDPConfig {
 	}
 	// Set defaults if not specified
 	if edpCfg.AdvertiseInterval == 0 {
-		edpCfg.AdvertiseInterval = 30
+		edpCfg.AdvertiseInterval = DefaultEDPAdvertiseInterval
 	}
 	return edpCfg
 }
@@ -1150,10 +1198,10 @@ func parseFDPConfig(yamlFdp *converter.FdpConfig) *FDPConfig {
 	}
 	// Set defaults if not specified
 	if fdpCfg.AdvertiseInterval == 0 {
-		fdpCfg.AdvertiseInterval = 60
+		fdpCfg.AdvertiseInterval = DefaultFDPAdvertiseInterval
 	}
 	if fdpCfg.Holdtime == 0 {
-		fdpCfg.Holdtime = 180
+		fdpCfg.Holdtime = DefaultFDPHoldtime
 	}
 	return fdpCfg
 }
@@ -1174,16 +1222,16 @@ func parseSTPConfig(yamlStp *converter.StpConfig) *STPConfig {
 	}
 	// Set defaults if not specified
 	if stpCfg.BridgePriority == 0 {
-		stpCfg.BridgePriority = 32768 // Default priority
+		stpCfg.BridgePriority = DefaultSTPBridgePriority
 	}
 	if stpCfg.HelloTime == 0 {
-		stpCfg.HelloTime = 2 // Default hello time
+		stpCfg.HelloTime = DefaultSTPHelloTime
 	}
 	if stpCfg.MaxAge == 0 {
-		stpCfg.MaxAge = 20 // Default max age
+		stpCfg.MaxAge = DefaultSTPMaxAge
 	}
 	if stpCfg.ForwardDelay == 0 {
-		stpCfg.ForwardDelay = 15 // Default forward delay
+		stpCfg.ForwardDelay = DefaultSTPForwardDelay
 	}
 	if stpCfg.Version == "" {
 		stpCfg.Version = "stp" // Default to STP

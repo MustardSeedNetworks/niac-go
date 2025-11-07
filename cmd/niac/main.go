@@ -1,3 +1,4 @@
+// Package main provides the NIAC command-line interface for network device simulation
 package main
 
 import (
@@ -558,7 +559,7 @@ func runNormalMode(interfaceName string, cfg *config.Config, debugConfig *loggin
 	dnsCount := 0
 	for _, device := range cfg.Devices {
 		// Configure DHCP if present
-		if device.DHCPConfig != nil {
+		if device.DHCPConfig != nil && len(device.IPAddresses) > 0 {
 			dhcpCount++
 			dhcp := device.DHCPConfig
 			dhcpHandler := stack.GetDHCPHandler()

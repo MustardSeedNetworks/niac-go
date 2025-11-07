@@ -1,3 +1,4 @@
+// Package logging provides colored console output and debug logging utilities
 package logging
 
 import (
