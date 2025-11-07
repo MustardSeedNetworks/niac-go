@@ -7,11 +7,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Future (v1.8.0+)
+### Future (v1.14.0+)
 - NetFlow/IPFIX export
 - DHCPv6 prefix delegation (IA_PD)
 - Additional protocol tests (CDP, DHCP, DNS, HTTP, FTP)
 - Integration tests for multi-device scenarios
+
+## [1.13.0] - 2025-01-07
+
+### 🎉 MILESTONE: Enhanced CLI & Configuration Tools!
+
+Modern CLI experience with comprehensive help, shell completion, man pages, and configuration management tools.
+
+### Added
+
+#### Enhanced CLI/Help
+- **Shell Completion**: `niac completion` command for bash, zsh, fish, and powershell
+  - Installation instructions for all shells
+  - Auto-generated completions for all commands and flags
+- **Rich Help Examples**: Practical examples added to all commands
+  - Quick start workflows with templates
+  - CI/CD integration examples
+  - Common use case demonstrations
+- **Man Pages**: Unix manual pages for all commands
+  - Generated with `niac man` command
+  - Professional documentation format
+  - Installation instructions included
+
+#### Configuration Management Tools
+- **Config Export**: `niac config export` command
+  - Normalize and clean YAML configurations
+  - Convert legacy .cfg to YAML format
+  - Validate before export
+- **Config Diff**: `niac config diff` command
+  - Compare two configurations
+  - Show device additions/removals/modifications
+  - Detect configuration drift
+- **Config Merge**: `niac config merge` command
+  - Merge base and overlay configurations
+  - Overlay takes precedence for conflicts
+  - Useful for environment-specific overrides
+
+### Changed
+- Version bumped to v1.13.0
+- Documentation updated with new commands
+- Man pages regenerated with all commands
 
 ## [1.7.0] - 2025-11-05
 
