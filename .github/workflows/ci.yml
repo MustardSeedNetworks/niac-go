@@ -1,0 +1,121 @@
+name: CI
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+
+jobs:
+  test:
+    name: Test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        go: ['1.21', '1.22']
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go }}
+
+      - name: Install libpcap (Ubuntu)
+        if: matrix.os == 'ubuntu-latest'
+        run: sudo apt-get update && sudo apt-get install -y libpcap-dev
+
+      - name: Install libpcap (macOS)
+        if: matrix.os == 'macos-latest'
+        run: brew install libpcap || true
+
+      - name: Cache Go modules
+        uses: actions/cache@v3
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ matrix.go }}-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-${{ matrix.go }}-
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Run tests with race detector
+        run: go test -v -race -count=1 -coverprofile=coverage.out ./...
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./coverage.out
+          flags: ${{ matrix.os }}-go${{ matrix.go }}
+          name: codecov-${{ matrix.os }}-go${{ matrix.go }}
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Install libpcap
+        run: sudo apt-get update && sudo apt-get install -y libpcap-dev
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: latest
+          args: --timeout=5m
+
+  build:
+    name: Build
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Install libpcap (Ubuntu)
+        if: matrix.os == 'ubuntu-latest'
+        run: sudo apt-get update && sudo apt-get install -y libpcap-dev
+
+      - name: Install libpcap (macOS)
+        if: matrix.os == 'macos-latest'
+        run: brew install libpcap || true
+
+      - name: Install Npcap (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          choco install npcap -y
+          echo "Npcap installed"
+
+      - name: Build
+        run: go build -v -o niac${{ matrix.os == 'windows-latest' && '.exe' || '' }} ./cmd/niac
+
+      - name: Verify build
+        run: ./niac${{ matrix.os == 'windows-latest' && '.exe' || '' }} --version
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: niac-${{ matrix.os }}
+          path: niac${{ matrix.os == 'windows-latest' && '.exe' || '' }}
+          retention-days: 7

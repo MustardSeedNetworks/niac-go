@@ -7,11 +7,56 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Future (v1.14.0+)
+### Future (v1.15.0+)
+- Additional unit tests for cmd/niac, pkg/capture, pkg/interactive, pkg/logging
 - NetFlow/IPFIX export
 - DHCPv6 prefix delegation (IA_PD)
-- Additional protocol tests (CDP, DHCP, DNS, HTTP, FTP)
 - Integration tests for multi-device scenarios
+- Performance benchmarks
+
+## [1.14.0] - 2025-01-07
+
+### 🎉 MILESTONE: CI/CD & Developer Infrastructure!
+
+Automated testing, comprehensive documentation, and contributor-ready infrastructure.
+
+### Added
+
+#### Continuous Integration
+- **GitHub Actions CI/CD Pipeline** (`.github/workflows/ci.yml`)
+  - Multi-OS testing: Ubuntu, macOS, Windows
+  - Multi-Go version testing: 1.21, 1.22
+  - Automated test runs with race detector
+  - Code coverage upload to Codecov
+  - Golangci-lint integration
+  - Build artifacts for all platforms
+  - 3 parallel jobs: test, lint, build
+
+#### Documentation
+- **CONTRIBUTING.md** - Complete contributor guide
+  - Development setup instructions
+  - Code style guidelines
+  - Testing requirements
+  - PR process and checklist
+  - Commit message conventions
+  - Recognition policy
+- **docs/ARCHITECTURE.md** - Comprehensive system design documentation
+  - Package structure and responsibilities
+  - Data flow diagrams
+  - Protocol handler architecture
+  - Configuration system design
+  - Error injection system
+  - Concurrency model
+  - Extension points
+  - Performance considerations
+
+### Changed
+- CI/CD now runs on every push and pull request
+- All tests run with race detector by default
+- Coverage tracking enabled
+
+### Infrastructure
+This release establishes the foundation for community contributions and ensures code quality through automation.
 
 ## [1.13.1] - 2025-01-07
 
