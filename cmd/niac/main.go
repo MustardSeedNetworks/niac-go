@@ -25,8 +25,15 @@ const (
 	Enhancements = "Code Quality & Security: Complexity Reduction, Integer Overflow Fix, 30+ Constants"
 )
 
-// nolint:gocyclo // Main function with flag parsing and mode routing
 func main() {
+	Execute()
+}
+
+// runLegacyMode maintains backward compatibility with original command-line interface
+// nolint:gocyclo // Main function with flag parsing and mode routing
+func runLegacyMode(osArgs []string) {
+	// Reset flag.CommandLine to avoid conflicts with cobra
+	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
 	// Command line flags
 	var (
 		// Core flags
