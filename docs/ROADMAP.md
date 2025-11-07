@@ -104,8 +104,18 @@
 - Tiny (~14KB), works without JavaScript
 - Perfect for admin/monitoring tools
 
-### v2.1.0 - Docker & Containers
+### v2.1.0 - Enhanced Web Features
 **Target**: 3-4 months
+
+- [ ] WebSocket for true real-time updates (if SSE not sufficient)
+- [ ] Device topology visualization (simple SVG/Canvas, no heavy library)
+- [ ] Configuration editor (YAML textarea with validation)
+- [ ] Log viewer with filtering
+- [ ] Packet statistics graphs (simple charts, maybe Chart.js or pure SVG)
+- [ ] Export stats as CSV/JSON
+
+### v2.2.0 - Docker & Containers
+**Target**: 4-6 months (lower priority)
 
 - [ ] **Dockerfile** with multi-stage build
 - [ ] Docker image published to Docker Hub
@@ -116,23 +126,15 @@
 - [ ] Environment variable configuration
 - [ ] Multi-architecture builds (amd64, arm64)
 
-### v2.2.0 - Enhanced Web Features
-**Target**: 4-6 months
+### v2.3.0+ - Kubernetes & Orchestration
+**Target**: TBD (maybe never)
 
-- [ ] WebSocket for true real-time updates (if SSE not sufficient)
-- [ ] Device topology visualization (simple SVG/Canvas, no heavy library)
-- [ ] Configuration editor (YAML textarea with validation)
-- [ ] Log viewer with filtering
-- [ ] Packet statistics graphs (simple charts, maybe Chart.js or pure SVG)
-- [ ] Export stats as CSV/JSON
-
-### v2.3.0 - Kubernetes & Orchestration
-**Target**: 6-8 months (if needed)
-
-- [ ] Kubernetes manifests
-- [ ] Helm chart
+- [ ] Kubernetes manifests (if there's demand)
+- [ ] Helm chart (if there's demand)
 - [ ] Horizontal scaling support
 - [ ] Service mesh compatibility
+
+**Note**: Kubernetes support depends on actual user demand. Most users will run NIAC on a single host or simple Docker setup.
 
 ---
 
@@ -175,8 +177,9 @@ docker run -p 8080:8080 niac-go web eth0 config.yaml
 | **v1.12.0** | TUI | Interactive terminal UI, Monitoring | ✅ DONE |
 | **v1.13.0** | CLI/Tools | Shell completion, Man pages, Config tools | ✅ DONE |
 | **v2.0.0** | Web API | REST API, HTMX UI, Simple Dashboard | 2-3 months |
-| **v2.1.0** | Containers | Docker images, Compose, Multi-arch | 3-4 months |
-| **v2.2.0** | Web Enhanced | Charts, Topology, Editor | 4-6 months |
+| **v2.1.0** | Web Enhanced | Charts, Topology, Editor | 3-4 months |
+| **v2.2.0** | Containers | Docker images (lower priority) | 4-6 months |
+| **v2.3.0+** | Kubernetes | K8s, Helm (if ever needed) | TBD |
 
 ---
 
