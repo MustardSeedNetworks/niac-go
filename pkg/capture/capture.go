@@ -1,3 +1,4 @@
+// Package capture provides network packet capture and injection functionality
 package capture
 
 import (

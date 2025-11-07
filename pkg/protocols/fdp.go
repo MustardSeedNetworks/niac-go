@@ -281,6 +281,10 @@ func (h *FDPHandler) buildSoftwareTLV(device *config.Device) []byte {
 
 // buildIPAddressTLV builds the IP Address TLV
 func (h *FDPHandler) buildIPAddressTLV(device *config.Device) []byte {
+	if len(device.IPAddresses) == 0 {
+		return nil
+	}
+
 	// Use first IP address
 	ip := device.IPAddresses[0]
 

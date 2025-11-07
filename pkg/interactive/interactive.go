@@ -1,3 +1,4 @@
+// Package interactive provides a terminal user interface for network simulation control and monitoring
 package interactive
 
 import (

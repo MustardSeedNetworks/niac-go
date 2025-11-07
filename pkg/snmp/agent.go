@@ -1,4 +1,4 @@
-// Package snmp implements an SNMP agent for device simulation
+// Package snmp implements SNMP agent functionality including MIB management and trap sending
 package snmp
 
 import (

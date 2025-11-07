@@ -1,3 +1,4 @@
+// Package errors provides error injection state management for network simulation testing
 package errors
 
 import (

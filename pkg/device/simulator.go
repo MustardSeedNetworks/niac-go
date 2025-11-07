@@ -117,8 +117,12 @@ func (s *Simulator) addDevice(device *config.Device) {
 	s.devices[device.Name] = simDevice
 
 	if s.debugLevel >= 1 {
+		ipAddr := "no-ip"
+		if len(device.IPAddresses) > 0 {
+			ipAddr = device.IPAddresses[0].String()
+		}
 		log.Printf("Added simulated device: %s (%s) at %s",
-			device.Name, device.Type, device.IPAddresses[0])
+			device.Name, device.Type, ipAddr)
 	}
 }
 
