@@ -544,6 +544,7 @@ func (p *Parser) parseAddMib(line string) *AddMib {
 
 // parseDhcp parses a Dhcp block
 // nolint:gocyclo // DHCP parser handles many option types
+// nolint:unparam // Error return reserved for future validation
 func (p *Parser) parseDhcp() (*DhcpServer, error) {
 	p.pos++ // Skip opening line
 	dhcp := &DhcpServer{
