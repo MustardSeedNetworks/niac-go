@@ -342,7 +342,13 @@ func Load(filename string) (*Config, error) {
 		return LoadYAML(filename)
 	}
 
-	// Legacy format loader
+	// Route to legacy format loader
+	return LoadLegacy(filename)
+}
+
+// LoadLegacy loads a legacy key-value configuration file
+// Format: device <name> { key = value ... }
+func LoadLegacy(filename string) (*Config, error) {
 	file, err := os.Open(filename)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open config file: %w", err)
