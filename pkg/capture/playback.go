@@ -202,7 +202,8 @@ func (p *PlaybackEngine) loadPCAP() ([]PlaybackPacket, error) {
 	}
 	defer handle.Close()
 
-	var packets []PlaybackPacket
+	// Pre-allocate slice with reasonable initial capacity to reduce reallocations
+	packets := make([]PlaybackPacket, 0, 1000)
 
 	// Read all packets
 	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
