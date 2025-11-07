@@ -26,285 +26,66 @@ func main() {
 }
 
 // runLegacyMode maintains backward compatibility with original command-line interface
-// nolint:gocyclo // Main function with flag parsing and mode routing
+// Refactored into smaller, testable functions
 func runLegacyMode(osArgs []string) {
 	// Reset flag.CommandLine to avoid conflicts with cobra
 	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
-	// Command line flags
-	var (
-		// Core flags
-		debugLevel      int
-		verbose         bool
-		quiet           bool
-		interactiveMode bool
-		dryRun          bool
 
-		// Information flags
-		showVersion    bool
-		listInterfaces bool
-		listDevices    bool
-
-		// Output flags
-		noColor       bool
-		logFile       string
-		statsInterval int
-
-		// Advanced flags
-		babbleInterval int
-		noTraffic      bool
-		snmpCommunity  string
-		maxPacketSize  int
-
-		// Per-protocol debug levels
-		debugARP     int
-		debugIP      int
-		debugICMP    int
-		debugIPv6    int
-		debugICMPv6  int
-		debugUDP     int
-		debugTCP     int
-		debugDNS     int
-		debugDHCP    int
-		debugDHCPv6  int
-		debugHTTP    int
-		debugFTP     int
-		debugNetBIOS int
-		debugSTP     int
-		debugLLDP    int
-		debugCDP     int
-		debugEDP     int
-		debugFDP     int
-		debugSNMP    int
-	)
-
-	// Define flags
-	flag.IntVar(&debugLevel, "d", 1, "Debug level (0-3)")
-	flag.IntVar(&debugLevel, "debug", 1, "Debug level (0-3)")
-	flag.BoolVar(&verbose, "v", false, "Verbose output (equivalent to -d 3)")
-	flag.BoolVar(&verbose, "verbose", false, "Verbose output (equivalent to -d 3)")
-	flag.BoolVar(&quiet, "q", false, "Quiet mode (equivalent to -d 0)")
-	flag.BoolVar(&quiet, "quiet", false, "Quiet mode (equivalent to -d 0)")
-
-	flag.BoolVar(&interactiveMode, "i", false, "Enable interactive TUI mode")
-	flag.BoolVar(&interactiveMode, "interactive", false, "Enable interactive TUI mode")
-	flag.BoolVar(&dryRun, "n", false, "Dry run - validate configuration without starting")
-	flag.BoolVar(&dryRun, "dry-run", false, "Dry run - validate configuration without starting")
-
-	flag.BoolVar(&showVersion, "V", false, "Show version information")
-	flag.BoolVar(&showVersion, "version", false, "Show version information")
-	flag.BoolVar(&listInterfaces, "l", false, "List available network interfaces")
-	flag.BoolVar(&listInterfaces, "list-interfaces", false, "List available network interfaces")
-	flag.BoolVar(&listDevices, "list-devices", false, "List devices in configuration file")
-
-	flag.BoolVar(&noColor, "no-color", false, "Disable colored output")
-	flag.StringVar(&logFile, "log-file", "", "Write log to file")
-	flag.IntVar(&statsInterval, "stats-interval", 1, "Statistics update interval in seconds")
-
-	flag.IntVar(&babbleInterval, "babble-interval", 60, "Traffic generation interval in seconds")
-	flag.BoolVar(&noTraffic, "no-traffic", false, "Disable background traffic generation")
-	flag.StringVar(&snmpCommunity, "snmp-community", "", "Default SNMP community string")
-	flag.IntVar(&maxPacketSize, "max-packet-size", 1514, "Maximum packet size in bytes")
-
-	// Per-protocol debug flags (-1 means use global level)
-	flag.IntVar(&debugARP, "debug-arp", -1, "ARP protocol debug level (0-3, default: global level)")
-	flag.IntVar(&debugIP, "debug-ip", -1, "IP protocol debug level (0-3, default: global level)")
-	flag.IntVar(&debugICMP, "debug-icmp", -1, "ICMP protocol debug level (0-3, default: global level)")
-	flag.IntVar(&debugIPv6, "debug-ipv6", -1, "IPv6 protocol debug level (0-3, default: global level)")
-	flag.IntVar(&debugICMPv6, "debug-icmpv6", -1, "ICMPv6 protocol debug level (0-3, default: global level)")
-	flag.IntVar(&debugUDP, "debug-udp", -1, "UDP protocol debug level (0-3, default: global level)")
-	flag.IntVar(&debugTCP, "debug-tcp", -1, "TCP protocol debug level (0-3, default: global level)")
-	flag.IntVar(&debugDNS, "debug-dns", -1, "DNS protocol debug level (0-3, default: global level)")
-	flag.IntVar(&debugDHCP, "debug-dhcp", -1, "DHCP protocol debug level (0-3, default: global level)")
-	flag.IntVar(&debugDHCPv6, "debug-dhcpv6", -1, "DHCPv6 protocol debug level (0-3, default: global level)")
-	flag.IntVar(&debugHTTP, "debug-http", -1, "HTTP protocol debug level (0-3, default: global level)")
-	flag.IntVar(&debugFTP, "debug-ftp", -1, "FTP protocol debug level (0-3, default: global level)")
-	flag.IntVar(&debugNetBIOS, "debug-netbios", -1, "NetBIOS protocol debug level (0-3, default: global level)")
-	flag.IntVar(&debugSTP, "debug-stp", -1, "STP protocol debug level (0-3, default: global level)")
-	flag.IntVar(&debugLLDP, "debug-lldp", -1, "LLDP protocol debug level (0-3, default: global level)")
-	flag.IntVar(&debugCDP, "debug-cdp", -1, "CDP protocol debug level (0-3, default: global level)")
-	flag.IntVar(&debugEDP, "debug-edp", -1, "EDP protocol debug level (0-3, default: global level)")
-	flag.IntVar(&debugFDP, "debug-fdp", -1, "FDP protocol debug level (0-3, default: global level)")
-	flag.IntVar(&debugSNMP, "debug-snmp", -1, "SNMP protocol debug level (0-3, default: global level)")
-
-	// Custom usage
+	// Define and parse flags
+	var flags legacyFlags
+	defineLegacyFlags(&flags)
 	flag.Usage = printUsage
 	flag.Parse()
 
-	// Handle verbose/quiet flags
-	if verbose {
-		debugLevel = 3
-	}
-	if quiet {
-		debugLevel = 0
-	}
+	// Process flag overrides (verbose/quiet)
+	processFlags(&flags)
 
 	// Initialize colors (respects --no-color flag and NO_COLOR env var)
-	logging.InitColors(!noColor)
-
-	// Create debug configuration
-	debugConfig := logging.NewDebugConfig(debugLevel)
-
-	// Set per-protocol debug levels if specified (value >= 0)
-	if debugARP >= 0 {
-		debugConfig.SetProtocolLevel(logging.ProtocolARP, debugARP)
-	}
-	if debugIP >= 0 {
-		debugConfig.SetProtocolLevel(logging.ProtocolIP, debugIP)
-	}
-	if debugICMP >= 0 {
-		debugConfig.SetProtocolLevel(logging.ProtocolICMP, debugICMP)
-	}
-	if debugIPv6 >= 0 {
-		debugConfig.SetProtocolLevel(logging.ProtocolIPv6, debugIPv6)
-	}
-	if debugICMPv6 >= 0 {
-		debugConfig.SetProtocolLevel(logging.ProtocolICMPv6, debugICMPv6)
-	}
-	if debugUDP >= 0 {
-		debugConfig.SetProtocolLevel(logging.ProtocolUDP, debugUDP)
-	}
-	if debugTCP >= 0 {
-		debugConfig.SetProtocolLevel(logging.ProtocolTCP, debugTCP)
-	}
-	if debugDNS >= 0 {
-		debugConfig.SetProtocolLevel(logging.ProtocolDNS, debugDNS)
-	}
-	if debugDHCP >= 0 {
-		debugConfig.SetProtocolLevel(logging.ProtocolDHCP, debugDHCP)
-	}
-	if debugDHCPv6 >= 0 {
-		debugConfig.SetProtocolLevel(logging.ProtocolDHCPv6, debugDHCPv6)
-	}
-	if debugHTTP >= 0 {
-		debugConfig.SetProtocolLevel(logging.ProtocolHTTP, debugHTTP)
-	}
-	if debugFTP >= 0 {
-		debugConfig.SetProtocolLevel(logging.ProtocolFTP, debugFTP)
-	}
-	if debugNetBIOS >= 0 {
-		debugConfig.SetProtocolLevel(logging.ProtocolNetBIOS, debugNetBIOS)
-	}
-	if debugSTP >= 0 {
-		debugConfig.SetProtocolLevel(logging.ProtocolSTP, debugSTP)
-	}
-	if debugLLDP >= 0 {
-		debugConfig.SetProtocolLevel(logging.ProtocolLLDP, debugLLDP)
-	}
-	if debugCDP >= 0 {
-		debugConfig.SetProtocolLevel(logging.ProtocolCDP, debugCDP)
-	}
-	if debugEDP >= 0 {
-		debugConfig.SetProtocolLevel(logging.ProtocolEDP, debugEDP)
-	}
-	if debugFDP >= 0 {
-		debugConfig.SetProtocolLevel(logging.ProtocolFDP, debugFDP)
-	}
-	if debugSNMP >= 0 {
-		debugConfig.SetProtocolLevel(logging.ProtocolSNMP, debugSNMP)
-	}
-
-	// Handle version flag
-	if showVersion {
-		printVersion()
-		os.Exit(0)
-	}
-
-	// Handle list interfaces flag
-	if listInterfaces {
-		fmt.Println("Available network interfaces:")
-		capture.ListInterfaces()
-		os.Exit(0)
-	}
+	logging.InitColors(!flags.noColor)
 
 	// Get remaining arguments
 	args := flag.Args()
 
-	// Handle list devices flag (needs config file)
-	if listDevices {
-		if len(args) < 1 {
-			fmt.Println("Error: --list-devices requires a configuration file")
-			fmt.Println()
-			printUsage()
-			os.Exit(1)
-		}
-		printDeviceList(args[0])
+	// Handle informational flags (version, list-interfaces, list-devices)
+	if handleInformationalFlags(&flags, args) {
 		os.Exit(0)
 	}
 
-	// Check for required arguments (unless just showing info)
-	if len(args) < 2 {
+	// Validate required arguments
+	interfaceName, configFile, err := validateLegacyArguments(args)
+	if err != nil {
 		printUsage()
 		os.Exit(1)
 	}
 
-	interfaceName := args[0]
-	configFile := args[1]
-
 	// Print banner (unless quiet)
-	if debugLevel > 0 {
+	if flags.debugLevel > 0 {
 		printBanner()
 	}
 
-	// Check if interface exists
-	if !capture.InterfaceExists(interfaceName) {
-		logging.Error("Interface '%s' not found", interfaceName)
-		fmt.Println("\nAvailable interfaces:")
-		capture.ListInterfaces()
+	// Validate interface exists
+	if err := validateInterface(interfaceName); err != nil {
 		os.Exit(2)
 	}
 
 	// Load configuration
-	cfg, err := config.Load(configFile)
+	cfg, err := loadAndPrintConfig(configFile, interfaceName, &flags)
 	if err != nil {
-		logging.Error("loading configuration: %v", err)
+		logging.Error("%v", err)
 		os.Exit(1)
 	}
 
-	if debugLevel >= 1 {
-		logging.Success("Loaded configuration: %s", configFile)
-		logging.Info("  Devices: %d", len(cfg.Devices))
-		logging.Info("  Interface: %s", interfaceName)
-		logging.Info("  Debug level: %d (%s)", debugLevel, getDebugLevelName(debugLevel))
-		if interactiveMode {
-			logging.Info("  Mode: Interactive TUI")
-		}
-		if cfg.CapturePlayback != nil {
-			logging.Info("  PCAP Playback: %s", cfg.CapturePlayback.FileName)
-			if cfg.CapturePlayback.LoopTime > 0 {
-				logging.Info("    Loop interval: %dms", cfg.CapturePlayback.LoopTime)
-			}
-			if cfg.CapturePlayback.ScaleTime > 0 && cfg.CapturePlayback.ScaleTime != 1.0 {
-				logging.Info("    Time scaling: %.2fx", cfg.CapturePlayback.ScaleTime)
-			}
-		}
-		fmt.Println()
+	// Handle dry run mode
+	if flags.dryRun {
+		runDryRunValidation(configFile, interfaceName, cfg)
+		// runDryRunValidation calls os.Exit, so this line is unreachable
 	}
 
-	// Dry run mode - validate and exit
-	if dryRun {
-		// Run comprehensive configuration validation
-		validator := config.NewValidator(configFile)
-		result := validator.Validate(cfg)
+	// Create debug configuration
+	debugConfig := setupDebugConfig(&flags)
 
-		if result.HasErrors() || result.HasWarnings() {
-			fmt.Println(result.Format())
-		}
-
-		if !result.Valid {
-			logging.Error("Configuration validation failed")
-			os.Exit(1)
-		}
-
-		// Additional runtime checks
-		logging.Success("Interface exists and is accessible")
-		logging.Success("Ready to simulate %d devices on %s", len(cfg.Devices), interfaceName)
-		fmt.Println()
-		fmt.Println("Configuration is valid. Use without --dry-run to start simulation.")
-		os.Exit(0)
-	}
-
-	// Start simulation
-	if interactiveMode {
+	// Start simulation based on mode
+	if flags.interactiveMode {
 		// Run with interactive TUI
 		if err := interactive.Run(interfaceName, cfg, debugConfig); err != nil {
 			fmt.Printf("Error: %v\n", err)
