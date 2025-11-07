@@ -18,12 +18,8 @@ import (
 	"github.com/krisarmstrong/niac-go/pkg/protocols"
 )
 
-const (
-	Version      = "1.9.0"
-	BuildDate    = "2025-01-06"
-	GitCommit    = "HEAD"
-	Enhancements = "Code Quality & Security: Complexity Reduction, Integer Overflow Fix, 30+ Constants"
-)
+// Version information is now managed in root.go
+// Build-time variables can be set with: go build -ldflags "-X main.version=..."
 
 func main() {
 	Execute()
@@ -326,15 +322,15 @@ func runLegacyMode(osArgs []string) {
 func printBanner() {
 	fmt.Printf("╔══════════════════════════════════════════════════════════════════╗\n")
 	fmt.Printf("║  NIAC - Network In A Can (Go Edition)                           ║\n")
-	fmt.Printf("║  Version %s                                                 ║\n", padRight(Version, 51))
+	fmt.Printf("║  Version %s                                                 ║\n", padRight(version, 51))
 	fmt.Printf("╚══════════════════════════════════════════════════════════════════╝\n")
 	fmt.Println()
 }
 
 func printVersion() {
-	fmt.Printf("NIAC-Go version %s\n", Version)
-	fmt.Printf("Build date: %s\n", BuildDate)
-	fmt.Printf("Git commit: %s\n", GitCommit)
+	fmt.Printf("NIAC-Go version %s\n", version)
+	fmt.Printf("Build commit: %s\n", commit)
+	fmt.Printf("Build date: %s\n", date)
 	fmt.Printf("Go version: %s\n", runtime.Version())
 	fmt.Printf("OS/Arch: %s/%s\n", runtime.GOOS, runtime.GOARCH)
 	fmt.Println()

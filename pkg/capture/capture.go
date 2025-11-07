@@ -187,6 +187,7 @@ type RateLimiter struct {
 	packetsPerSecond int
 	ticker           *time.Ticker
 	tokens           chan struct{}
+	done             chan struct{} // Signals goroutine to stop
 }
 
 // NewRateLimiter creates a rate limiter
@@ -194,6 +195,7 @@ func NewRateLimiter(packetsPerSecond int) *RateLimiter {
 	rl := &RateLimiter{
 		packetsPerSecond: packetsPerSecond,
 		tokens:           make(chan struct{}, packetsPerSecond),
+		done:             make(chan struct{}),
 	}
 
 	// Fill token bucket initially
@@ -201,14 +203,19 @@ func NewRateLimiter(packetsPerSecond int) *RateLimiter {
 		rl.tokens <- struct{}{}
 	}
 
-	// Refill tokens periodically
+	// Refill tokens periodically with proper cleanup
 	rl.ticker = time.NewTicker(time.Second / time.Duration(packetsPerSecond))
 	go func() {
-		for range rl.ticker.C {
+		for {
 			select {
-			case rl.tokens <- struct{}{}:
-			default:
-				// Bucket full
+			case <-rl.ticker.C:
+				select {
+				case rl.tokens <- struct{}{}:
+				default:
+					// Bucket full
+				}
+			case <-rl.done:
+				return // Clean exit
 			}
 		}
 	}()
@@ -221,7 +228,8 @@ func (rl *RateLimiter) Wait() {
 	<-rl.tokens
 }
 
-// Stop stops the rate limiter
+// Stop stops the rate limiter and cleans up goroutine
 func (rl *RateLimiter) Stop() {
 	rl.ticker.Stop()
+	close(rl.done) // Signal goroutine to exit
 }

@@ -623,10 +623,10 @@ func LoadYAML(filename string) (*Config, error) {
 		// Handle SNMP configuration
 		if yamlDevice.SnmpAgent != nil {
 			if yamlDevice.SnmpAgent.WalkFile != "" {
-				// Resolve walk file path relative to include path
-				walkFile := yamlDevice.SnmpAgent.WalkFile
-				if cfg.IncludePath != "" && !filepath.IsAbs(walkFile) {
-					walkFile = filepath.Join(cfg.IncludePath, walkFile)
+				// Resolve and validate walk file path (security: prevent path traversal)
+				walkFile, err := validateWalkFilePath(cfg.IncludePath, yamlDevice.SnmpAgent.WalkFile, yamlDevice.Name)
+				if err != nil {
+					return nil, err
 				}
 				device.SNMPConfig.WalkFile = walkFile
 			}
@@ -1372,6 +1372,44 @@ func GenerateMAC() net.HardwareAddr {
 		mac[i] = byte(i * 17) // Simple pattern for testing
 	}
 	return mac
+}
+
+// validateWalkFilePath validates and resolves SNMP walk file paths
+// Prevents path traversal attacks and ensures file exists
+func validateWalkFilePath(basePath, walkFile, deviceName string) (string, error) {
+	// Clean the path to normalize it
+	cleanPath := filepath.Clean(walkFile)
+
+	// Security: Prevent directory traversal
+	if strings.Contains(cleanPath, "..") {
+		return "", fmt.Errorf("device %s: walk file path contains invalid traversal: %s", deviceName, walkFile)
+	}
+
+	// Build full path
+	var fullPath string
+	if filepath.IsAbs(cleanPath) {
+		fullPath = cleanPath
+	} else if basePath != "" {
+		fullPath = filepath.Join(basePath, cleanPath)
+	} else {
+		fullPath = cleanPath
+	}
+
+	// Verify file exists and is accessible
+	info, err := os.Stat(fullPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return "", fmt.Errorf("device %s: walk file not found: %s", deviceName, fullPath)
+		}
+		return "", fmt.Errorf("device %s: cannot access walk file %s: %w", deviceName, fullPath, err)
+	}
+
+	// Verify it's a regular file, not a directory or device
+	if !info.Mode().IsRegular() {
+		return "", fmt.Errorf("device %s: walk file is not a regular file: %s", deviceName, fullPath)
+	}
+
+	return fullPath, nil
 }
 
 // ParseSpeed parses interface speed (e.g., "100M", "1G", "10G")
