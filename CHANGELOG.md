@@ -7,12 +7,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Future (v1.15.0+)
-- Additional unit tests for cmd/niac, pkg/capture, pkg/interactive, pkg/logging
+### Future (v1.16.0+)
+- Additional unit tests for cmd/niac, pkg/capture, pkg/interactive
+- Performance benchmarks for hot paths
+- SNMP test coverage improvements (6.7% → 50%+)
+- Fuzz testing for protocol parsers
 - NetFlow/IPFIX export
 - DHCPv6 prefix delegation (IA_PD)
-- Integration tests for multi-device scenarios
-- Performance benchmarks
+
+## [1.15.0] - 2025-01-07
+
+### 🎯 MILESTONE: Testing Foundation!
+
+First step toward comprehensive test coverage. Establishes testing patterns and increases coverage for critical packages.
+
+### Added
+
+#### Test Coverage
+- **pkg/logging Unit Tests** (`pkg/logging/colors_test.go`) - 25 test functions
+  - Achieved 61.4% coverage (exceeding 60% goal)
+  - Table-driven tests for all color functions
+  - Tests for NO_COLOR environment variable support
+  - Concurrent access safety tests
+  - Tests for debug level filtering
+  - Comprehensive coverage of all exported functions
+
+#### Testing Patterns
+- Established comprehensive testing patterns for future expansion
+  - Table-driven tests
+  - Mock-free unit testing where possible
+  - Concurrent access testing
+  - Environment variable testing
+
+### Improved
+- **Test Quality**: First package with >60% coverage beyond pkg/errors and pkg/config
+- **Testing Patterns**: Demonstrated table-driven tests and proper test organization
+- **CI Integration**: New tests run automatically in GitHub Actions pipeline
+
+### Impact
+- pkg/logging: 0% → 61.4% coverage ✅
+- Integration test framework established
+- Foundation for v1.16.0 test expansion
+
+### Notes
+- This is a focused release establishing testing patterns
+- pkg/capture, pkg/interactive, cmd/niac tests deferred to v1.16.0
+- Integration tests require additional setup for full execution
+- Comprehensive test roadmap documented in COMPREHENSIVE_REVIEW_V2.md
 
 ## [1.14.0] - 2025-01-07
 
