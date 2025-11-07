@@ -12,6 +12,13 @@ import (
 	"github.com/krisarmstrong/niac-go/internal/converter"
 )
 
+// LLDP Chassis ID Type constants
+const (
+	ChassisIDTypeMAC            = "mac"
+	ChassisIDTypeLocal          = "local"
+	ChassisIDTypeNetworkAddress = "network_address"
+)
+
 // Config represents the network configuration
 type Config struct {
 	Devices            []Device
@@ -725,7 +732,7 @@ func LoadYAML(filename string) (*Config, error) {
 				lldpCfg.TTL = 120
 			}
 			if lldpCfg.ChassisIDType == "" {
-				lldpCfg.ChassisIDType = "mac"
+				lldpCfg.ChassisIDType = ChassisIDTypeMAC
 			}
 			device.LLDPConfig = lldpCfg
 		}
