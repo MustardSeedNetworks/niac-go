@@ -280,10 +280,12 @@ func main() {
 	// Dry run mode - validate and exit
 	if dryRun {
 		// Run comprehensive configuration validation
-		validator := config.NewValidator()
+		validator := config.NewValidator(configFile)
 		result := validator.Validate(cfg)
-		output := config.FormatValidationResult(result, verbose)
-		fmt.Println(output)
+
+		if result.HasErrors() || result.HasWarnings() {
+			fmt.Println(result.Format())
+		}
 
 		if !result.Valid {
 			logging.Error("Configuration validation failed")
