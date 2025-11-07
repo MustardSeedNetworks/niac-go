@@ -23,6 +23,22 @@ making simulated devices appear real on the network.
 
 Perfect for testing network management systems, monitoring tools,
 and network discovery without physical hardware.`,
+	Example: `  # Quick start with template
+  niac template use router router.yaml
+  niac validate router.yaml
+  sudo niac interactive en0 router.yaml
+
+  # Validate configuration
+  niac validate config.yaml
+
+  # Run simulation (legacy mode)
+  sudo niac en0 config.yaml
+
+  # List available templates
+  niac template list
+
+  # Generate shell completion
+  niac completion bash > /etc/bash_completion.d/niac`,
 	Version: version,
 	Run: func(cmd *cobra.Command, args []string) {
 		// If no args, show help
