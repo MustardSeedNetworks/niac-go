@@ -2,7 +2,7 @@
 
 **Production-ready network device simulator** - Complete YAML configuration system with per-protocol debug control, multi-IP support, and comprehensive protocol coverage.
 
-**Current Version: 1.14.0** - CI/CD & Developer Infrastructure
+**Current Version: 1.15.0** - Testing Foundation
 
 ## 🚀 Why Go?
 
