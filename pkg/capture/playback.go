@@ -155,21 +155,11 @@ func (p *PlaybackEngine) playOnce() {
 		default:
 		}
 
-		// Calculate delay relative to first packet
-		relativeTime := pkt.Timestamp.Sub(firstPacketTime)
+		// Calculate how long to wait before sending this packet
+		sleepDuration := p.calculatePacketDelay(pkt, startTime, firstPacketTime)
 
-		// Apply time scaling
-		if p.config.ScaleTime > 0 && p.config.ScaleTime != 1.0 {
-			relativeTime = time.Duration(float64(relativeTime) * p.config.ScaleTime)
-		}
-
-		// Calculate when this packet should be sent
-		targetTime := startTime.Add(relativeTime)
-		now := time.Now()
-
-		// Sleep until target time
-		if targetTime.After(now) {
-			sleepDuration := targetTime.Sub(now)
+		// Sleep until target time if needed
+		if sleepDuration > 0 {
 			select {
 			case <-time.After(sleepDuration):
 			case <-p.stopChan:
@@ -221,6 +211,28 @@ func (p *PlaybackEngine) loadPCAP() ([]PlaybackPacket, error) {
 	}
 
 	return packets, nil
+}
+
+// calculatePacketDelay calculates how long to wait before sending a packet
+// based on relative timing and scaling factor
+func (p *PlaybackEngine) calculatePacketDelay(pkt PlaybackPacket, startTime, firstPacketTime time.Time) time.Duration {
+	// Calculate delay relative to first packet
+	relativeTime := pkt.Timestamp.Sub(firstPacketTime)
+
+	// Apply time scaling
+	if p.config.ScaleTime > 0 && p.config.ScaleTime != 1.0 {
+		relativeTime = time.Duration(float64(relativeTime) * p.config.ScaleTime)
+	}
+
+	// Calculate when this packet should be sent
+	targetTime := startTime.Add(relativeTime)
+	now := time.Now()
+
+	// Return sleep duration (0 if target time has passed)
+	if targetTime.After(now) {
+		return targetTime.Sub(now)
+	}
+	return 0
 }
 
 // IsRunning returns true if playback is currently running
