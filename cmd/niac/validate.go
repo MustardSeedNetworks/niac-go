@@ -30,6 +30,22 @@ This command performs comprehensive validation including:
 Exit codes:
   0 - Configuration is valid
   1 - Configuration has errors`,
+	Example: `  # Validate a configuration file
+  niac validate config.yaml
+
+  # Verbose output with details
+  niac validate config.yaml --verbose
+
+  # JSON output for CI/CD pipeline
+  niac validate config.yaml --json > validation-results.json
+
+  # Use in a CI/CD script
+  if niac validate config.yaml; then
+    echo "Config is valid, deploying..."
+  else
+    echo "Config validation failed!"
+    exit 1
+  fi`,
 	Args: cobra.ExactArgs(1),
 	Run:  runValidate,
 }

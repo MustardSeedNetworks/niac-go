@@ -21,6 +21,17 @@ The TUI provides:
 - Interactive error injection (press 'i')
 - Device status visualization
 - Keyboard controls (q to quit)`,
+	Example: `  # Run interactive mode
+  sudo niac interactive en0 config.yaml
+
+  # Quick start with template
+  niac template use router router.yaml
+  sudo niac interactive en0 router.yaml
+
+  # Controls during runtime:
+  #   i - Interactive error injection menu
+  #   q - Quit
+  #   ↑↓ - Navigate devices`,
 	Args: cobra.ExactArgs(2),
 	Run:  runInteractive,
 }

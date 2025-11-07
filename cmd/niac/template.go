@@ -19,26 +19,55 @@ var templateCmd = &cobra.Command{
 	Use:   "template",
 	Short: "Manage configuration templates",
 	Long:  `List, show, and use pre-built configuration templates for common scenarios.`,
+	Example: `  # List all available templates
+  niac template list
+
+  # Show router template contents
+  niac template show router
+
+  # Create config from router template
+  niac template use router my-router.yaml`,
 }
 
 var templateListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List available templates",
-	Run:   runTemplateList,
+	Example: `  # List all templates with descriptions
+  niac template list`,
+	Run: runTemplateList,
 }
 
 var templateShowCmd = &cobra.Command{
 	Use:   "show <template-name>",
 	Short: "Show template contents",
-	Args:  cobra.ExactArgs(1),
-	Run:   runTemplateShow,
+	Example: `  # Show router template
+  niac template show router
+
+  # Show minimal template
+  niac template show minimal
+
+  # Pipe to file
+  niac template show complete > my-config.yaml`,
+	Args: cobra.ExactArgs(1),
+	Run:  runTemplateShow,
 }
 
 var templateUseCmd = &cobra.Command{
 	Use:   "use <template-name> <output-file>",
 	Short: "Copy template to a new file",
-	Args:  cobra.ExactArgs(2),
-	Run:   runTemplateUse,
+	Example: `  # Create router config
+  niac template use router my-router.yaml
+
+  # Create IoT device config
+  niac template use iot sensor.yaml
+
+  # Create complete network
+  niac template use complete lab-network.yaml
+
+  # Quick workflow
+  niac template use router config.yaml && niac validate config.yaml`,
+	Args: cobra.ExactArgs(2),
+	Run:  runTemplateUse,
 }
 
 func init() {
