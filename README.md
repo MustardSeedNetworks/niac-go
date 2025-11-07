@@ -2,7 +2,7 @@
 
 **Production-ready network device simulator** - Complete YAML configuration system with per-protocol debug control, multi-IP support, and comprehensive protocol coverage.
 
-**Current Version: 1.7.0** - Testing & Quality Enhancements
+**Current Version: 1.12.0** - Interactive TUI & Templates
 
 ## 🚀 Why Go?
 
@@ -28,6 +28,37 @@ NIAC-Go is a modern rewrite of the original Java-based NIAC, leveraging Go's str
 | **Build Time** | 4-5 min | 5 sec | **48-60x faster** |
 
 ## Features
+
+### v1.12.0 Highlights 🎉
+
+- **🎨 Interactive TUI Command**: Modern terminal interface for real-time monitoring
+  - New `niac interactive` command with Bubble Tea UI
+  - Live device status and statistics
+  - Interactive error injection (press 'i')
+  - Keyboard controls and beautiful visualization
+
+### v1.11.0 Highlights 🎉
+
+- **📦 Configuration Templates**: Quick start with pre-built templates
+  - 7 production-ready templates (minimal, router, switch, ap, server, iot, complete)
+  - `niac template list|show|use` commands
+  - Templates embedded in binary
+  - Instant deployment for common scenarios
+
+### v1.10.0 Highlights 🎉
+
+- **✅ Modern CLI Framework**: Cobra-based command structure
+  - `niac validate` command with comprehensive validation
+  - Structured error reporting (ConfigError, ConfigErrorList)
+  - JSON output for CI/CD integration (--json flag)
+  - Verbose mode for detailed insights (--verbose)
+  - Beautiful terminal formatting with context and suggestions
+- **🔍 Configuration Validator**: Production-ready validation
+  - Device validation (names, types, MAC/IP duplicates)
+  - SNMP trap validation (thresholds 0-100, receiver format)
+  - DNS record validation (domain names, IPs)
+  - Three severity levels (error, warning, info)
+  - Line/column tracking for precise error location
 
 ### v1.7.0 Highlights 🎉
 
