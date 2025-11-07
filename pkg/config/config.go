@@ -519,25 +519,54 @@ func (c *Config) GetDeviceByIP(ip net.IP) *Device {
 
 // LoadYAML loads a YAML configuration file
 func LoadYAML(filename string) (*Config, error) {
-	// Load using converter package
+	// Step 1: Load YAML file
+	yamlConfig, err := loadYAMLFile(filename)
+	if err != nil {
+		return nil, err
+	}
+
+	// Step 2: Create base config with global settings
+	cfg := createBaseConfig(yamlConfig)
+
+	// Step 3: Convert devices
+	for _, yamlDevice := range yamlConfig.Devices {
+		device, err := convertYAMLDevice(yamlDevice, cfg.IncludePath)
+		if err != nil {
+			return nil, err
+		}
+		cfg.Devices = append(cfg.Devices, device)
+	}
+
+	// Step 4: Validate final config
+	if len(cfg.Devices) == 0 {
+		return nil, fmt.Errorf("no devices defined in configuration")
+	}
+
+	return cfg, nil
+}
+
+// loadYAMLFile loads and validates a YAML configuration file
+func loadYAMLFile(filename string) (*converter.Config, error) {
 	yamlConfig, err := converter.LoadYAMLConfig(filename)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load YAML config: %w", err)
 	}
 
-	// Validate
 	if err := converter.ValidateConfig(yamlConfig); err != nil {
 		return nil, fmt.Errorf("config validation failed: %w", err)
 	}
 
-	// Convert to runtime config format
+	return yamlConfig, nil
+}
+
+// createBaseConfig creates the base configuration with global settings
+func createBaseConfig(yamlConfig *converter.Config) *Config {
 	cfg := &Config{
 		Devices:     make([]Device, 0, len(yamlConfig.Devices)),
 		IncludePath: yamlConfig.IncludePath,
 	}
 
 	// Copy CapturePlayback if present (use first one from array for now)
-	// TODO: Support multiple PCAP playbacks in runtime
 	if len(yamlConfig.CapturePlaybacks) > 0 {
 		cfg.CapturePlayback = &CapturePlayback{
 			FileName:  yamlConfig.CapturePlaybacks[0].FileName,
@@ -579,384 +608,430 @@ func LoadYAML(filename string) (*Config, error) {
 		}
 	}
 
-	// Convert devices
-	for _, yamlDevice := range yamlConfig.Devices {
-		device := Device{
-			Name:       yamlDevice.Name,
-			Type:       "unknown", // Default type
-			Interfaces: make([]Interface, 0),
-			Properties: make(map[string]string),
-			SNMPConfig: SNMPConfig{
-				Community: "public", // Default
-				SysName:   yamlDevice.Name,
-			},
-		}
+	return cfg
+}
 
-		// Parse MAC address
-		if yamlDevice.MAC != "" {
-			mac, err := net.ParseMAC(yamlDevice.MAC)
+// convertYAMLDevice converts a YAML device to a runtime Device
+func convertYAMLDevice(yamlDevice converter.Device, includePath string) (Device, error) {
+	device := Device{
+		Name:       yamlDevice.Name,
+		Type:       "unknown", // Default type
+		Interfaces: make([]Interface, 0),
+		Properties: make(map[string]string),
+		SNMPConfig: SNMPConfig{
+			Community: "public", // Default
+			SysName:   yamlDevice.Name,
+		},
+	}
+
+	// Parse MAC address
+	if yamlDevice.MAC != "" {
+		mac, err := net.ParseMAC(yamlDevice.MAC)
+		if err != nil {
+			return device, fmt.Errorf("device %s: invalid MAC address %s: %w", yamlDevice.Name, yamlDevice.MAC, err)
+		}
+		device.MACAddress = mac
+	}
+
+	// Parse IP addresses
+	if err := parseDeviceIPAddresses(&device, &yamlDevice); err != nil {
+		return device, err
+	}
+
+	// Handle SNMP configuration
+	if err := parseDeviceSNMPConfig(&device, &yamlDevice, includePath); err != nil {
+		return device, err
+	}
+
+	// Store VLAN if present
+	if yamlDevice.VLAN > 0 {
+		device.Properties["vlan"] = fmt.Sprintf("%d", yamlDevice.VLAN)
+	}
+
+	// Parse protocol configurations
+	if err := parseDeviceProtocolConfigs(&device, &yamlDevice); err != nil {
+		return device, err
+	}
+
+	return device, nil
+}
+
+// parseDeviceIPAddresses parses IP addresses for a device
+func parseDeviceIPAddresses(device *Device, yamlDevice *converter.Device) error {
+	// Support both singular 'ip' (backward compatible) and plural 'ips' (new feature)
+	if yamlDevice.IP != "" {
+		ip := net.ParseIP(yamlDevice.IP)
+		if ip == nil {
+			return fmt.Errorf("device %s: invalid IP address %s", yamlDevice.Name, yamlDevice.IP)
+		}
+		device.IPAddresses = append(device.IPAddresses, ip)
+	}
+
+	// Parse multiple IPs if specified
+	for i, ipStr := range yamlDevice.IPs {
+		ip := net.ParseIP(ipStr)
+		if ip == nil {
+			return fmt.Errorf("device %s: invalid IP address in ips[%d]: %s", yamlDevice.Name, i, ipStr)
+		}
+		device.IPAddresses = append(device.IPAddresses, ip)
+	}
+
+	return nil
+}
+
+// parseDeviceSNMPConfig parses SNMP configuration for a device
+func parseDeviceSNMPConfig(device *Device, yamlDevice *converter.Device, includePath string) error {
+	if yamlDevice.SnmpAgent != nil {
+		if yamlDevice.SnmpAgent.WalkFile != "" {
+			// Resolve and validate walk file path (security: prevent path traversal)
+			walkFile, err := validateWalkFilePath(includePath, yamlDevice.SnmpAgent.WalkFile, yamlDevice.Name)
 			if err != nil {
-				return nil, fmt.Errorf("device %s: invalid MAC address %s: %w", yamlDevice.Name, yamlDevice.MAC, err)
+				return err
 			}
-			device.MACAddress = mac
+			device.SNMPConfig.WalkFile = walkFile
 		}
 
-		// Parse IP address(es)
-		// Support both singular 'ip' (backward compatible) and plural 'ips' (new feature)
-		if yamlDevice.IP != "" {
-			ip := net.ParseIP(yamlDevice.IP)
-			if ip == nil {
-				return nil, fmt.Errorf("device %s: invalid IP address %s", yamlDevice.Name, yamlDevice.IP)
-			}
-			device.IPAddresses = append(device.IPAddresses, ip)
+		// Store custom MIBs count for future use
+		if len(yamlDevice.SnmpAgent.AddMibs) > 0 {
+			device.Properties["custom_mibs_count"] = fmt.Sprintf("%d", len(yamlDevice.SnmpAgent.AddMibs))
 		}
 
-		// Parse multiple IPs if specified
-		for i, ipStr := range yamlDevice.IPs {
-			ip := net.ParseIP(ipStr)
-			if ip == nil {
-				return nil, fmt.Errorf("device %s: invalid IP address in ips[%d]: %s", yamlDevice.Name, i, ipStr)
+		// Parse SNMP Traps configuration
+		if yamlDevice.SnmpAgent.Traps != nil {
+			trapsCfg, err := parseSNMPTrapsConfig(yamlDevice.SnmpAgent.Traps)
+			if err != nil {
+				return err
 			}
-			device.IPAddresses = append(device.IPAddresses, ip)
-		}
-
-		// Handle SNMP configuration
-		if yamlDevice.SnmpAgent != nil {
-			if yamlDevice.SnmpAgent.WalkFile != "" {
-				// Resolve and validate walk file path (security: prevent path traversal)
-				walkFile, err := validateWalkFilePath(cfg.IncludePath, yamlDevice.SnmpAgent.WalkFile, yamlDevice.Name)
-				if err != nil {
-					return nil, err
-				}
-				device.SNMPConfig.WalkFile = walkFile
-			}
-
-			// TODO: Handle AddMibs - requires SNMP MIB storage
-			// For now, store in properties for future use
-			if len(yamlDevice.SnmpAgent.AddMibs) > 0 {
-				device.Properties["custom_mibs_count"] = fmt.Sprintf("%d", len(yamlDevice.SnmpAgent.AddMibs))
-			}
-		}
-
-		// Store VLAN if present
-		if yamlDevice.VLAN > 0 {
-			device.Properties["vlan"] = fmt.Sprintf("%d", yamlDevice.VLAN)
-		}
-
-		// Handle DHCP configuration
-		if dhcpCfg, err := parseDHCPConfig(yamlDevice.Dhcp, yamlDevice.Name); err != nil {
-			return nil, err
-		} else {
-			device.DHCPConfig = dhcpCfg
-		}
-
-		// Handle DNS configuration
-		if dnsCfg, err := parseDNSConfig(yamlDevice.Dns, yamlDevice.Name); err != nil {
-			return nil, err
-		} else {
-			device.DNSConfig = dnsCfg
-		}
-
-		// Handle LLDP configuration
-		device.LLDPConfig = parseLLDPConfig(yamlDevice.Lldp)
-
-		// Handle CDP configuration
-		device.CDPConfig = parseCDPConfig(yamlDevice.Cdp)
-
-		// Handle EDP configuration
-		device.EDPConfig = parseEDPConfig(yamlDevice.Edp)
-
-		// Handle FDP configuration
-		device.FDPConfig = parseFDPConfig(yamlDevice.Fdp)
-
-		// Handle STP configuration
-		device.STPConfig = parseSTPConfig(yamlDevice.Stp)
-
-		// Handle HTTP configuration
-		device.HTTPConfig = parseHTTPConfig(yamlDevice.Http, device.Name)
-
-		// Handle FTP configuration
-		device.FTPConfig = parseFTPConfig(yamlDevice.Ftp, device.Name)
-
-		// Handle NetBIOS configuration
-		if yamlDevice.Netbios != nil {
-			netbiosCfg := &NetBIOSConfig{
-				Enabled:   yamlDevice.Netbios.Enabled,
-				Name:      yamlDevice.Netbios.Name,
-				Workgroup: yamlDevice.Netbios.Workgroup,
-				NodeType:  yamlDevice.Netbios.NodeType,
-				Services:  yamlDevice.Netbios.Services,
-				TTL:       yamlDevice.Netbios.TTL,
-			}
-			// Set defaults
-			if netbiosCfg.Name == "" {
-				// Use device name, truncate to 15 chars
-				netbiosCfg.Name = device.Name
-				if len(netbiosCfg.Name) > 15 {
-					netbiosCfg.Name = netbiosCfg.Name[:15]
-				}
-			}
-			if netbiosCfg.Workgroup == "" {
-				netbiosCfg.Workgroup = "WORKGROUP"
-			}
-			if netbiosCfg.NodeType == "" {
-				netbiosCfg.NodeType = "B" // Broadcast
-			}
-			if len(netbiosCfg.Services) == 0 {
-				netbiosCfg.Services = []string{"workstation", "fileserver"}
-			}
-			if netbiosCfg.TTL == 0 {
-				netbiosCfg.TTL = DefaultNetBIOSTTL
-			}
-			device.NetBIOSConfig = netbiosCfg
-		}
-
-		// Handle ICMP configuration
-		if yamlDevice.Icmp != nil {
-			icmpCfg := &ICMPConfig{
-				Enabled:   yamlDevice.Icmp.Enabled,
-				TTL:       yamlDevice.Icmp.TTL,
-				RateLimit: yamlDevice.Icmp.RateLimit,
-			}
-			// Set defaults
-			if icmpCfg.TTL == 0 {
-				icmpCfg.TTL = DefaultICMPTTL
-			}
-			// RateLimit defaults to 0 (unlimited)
-			device.ICMPConfig = icmpCfg
-		}
-
-		// Handle ICMPv6 configuration
-		if yamlDevice.Icmpv6 != nil {
-			icmpv6Cfg := &ICMPv6Config{
-				Enabled:   yamlDevice.Icmpv6.Enabled,
-				HopLimit:  yamlDevice.Icmpv6.HopLimit,
-				RateLimit: yamlDevice.Icmpv6.RateLimit,
-			}
-			// Set defaults
-			if icmpv6Cfg.HopLimit == 0 {
-				icmpv6Cfg.HopLimit = DefaultICMPv6HopLimit
-			}
-			// RateLimit defaults to 0 (unlimited)
-			device.ICMPv6Config = icmpv6Cfg
-		}
-
-		// Handle DHCPv6 configuration
-		if yamlDevice.Dhcpv6 != nil {
-			dhcpv6Cfg := &DHCPv6Config{
-				Enabled:           yamlDevice.Dhcpv6.Enabled,
-				Pools:             make([]DHCPv6Pool, 0),
-				PreferredLifetime: yamlDevice.Dhcpv6.PreferredLifetime,
-				ValidLifetime:     yamlDevice.Dhcpv6.ValidLifetime,
-				Preference:        yamlDevice.Dhcpv6.Preference,
-				DomainList:        yamlDevice.Dhcpv6.DomainList,
-				SIPDomains:        yamlDevice.Dhcpv6.SIPDomains,
-			}
-			// Set defaults
-			if dhcpv6Cfg.PreferredLifetime == 0 {
-				dhcpv6Cfg.PreferredLifetime = DefaultDHCPv6PreferredLifetime
-			}
-			if dhcpv6Cfg.ValidLifetime == 0 {
-				dhcpv6Cfg.ValidLifetime = DefaultDHCPv6ValidLifetime
-			}
-			// Preference defaults to 0 (lowest priority)
-
-			// Parse address pools
-			for _, pool := range yamlDevice.Dhcpv6.Pools {
-				dhcpv6Cfg.Pools = append(dhcpv6Cfg.Pools, DHCPv6Pool{
-					Network:    pool.Network,
-					RangeStart: pool.RangeStart,
-					RangeEnd:   pool.RangeEnd,
-				})
-			}
-
-			// Parse DNS servers
-			for _, dnsStr := range yamlDevice.Dhcpv6.DNSServers {
-				if ip := net.ParseIP(dnsStr); ip != nil {
-					dhcpv6Cfg.DNSServers = append(dhcpv6Cfg.DNSServers, ip)
-				}
-			}
-
-			// Parse SNTP servers
-			for _, sntpStr := range yamlDevice.Dhcpv6.SNTPServers {
-				if ip := net.ParseIP(sntpStr); ip != nil {
-					dhcpv6Cfg.SNTPServers = append(dhcpv6Cfg.SNTPServers, ip)
-				}
-			}
-
-			// Parse NTP servers
-			for _, ntpStr := range yamlDevice.Dhcpv6.NTPServers {
-				if ip := net.ParseIP(ntpStr); ip != nil {
-					dhcpv6Cfg.NTPServers = append(dhcpv6Cfg.NTPServers, ip)
-				}
-			}
-
-			// Parse SIP servers
-			for _, sipStr := range yamlDevice.Dhcpv6.SIPServers {
-				if ip := net.ParseIP(sipStr); ip != nil {
-					dhcpv6Cfg.SIPServers = append(dhcpv6Cfg.SIPServers, ip)
-				}
-			}
-
-			device.DHCPv6Config = dhcpv6Cfg
-		}
-
-		// Parse Traffic configuration (v1.6.0)
-		if yamlDevice.Traffic != nil {
-			trafficCfg := &TrafficConfig{
-				Enabled: yamlDevice.Traffic.Enabled,
-			}
-
-			// Parse ARP Announcements
-			if yamlDevice.Traffic.ARPAnnouncements != nil {
-				arpCfg := &ARPAnnouncementConfig{
-					Enabled:  yamlDevice.Traffic.ARPAnnouncements.Enabled,
-					Interval: yamlDevice.Traffic.ARPAnnouncements.Interval,
-				}
-				// Apply default interval if not specified
-				if arpCfg.Interval == 0 {
-					arpCfg.Interval = DefaultARPAnnouncementInterval
-				}
-				trafficCfg.ARPAnnouncements = arpCfg
-			}
-
-			// Parse Periodic Pings
-			if yamlDevice.Traffic.PeriodicPings != nil {
-				pingCfg := &PeriodicPingConfig{
-					Enabled:     yamlDevice.Traffic.PeriodicPings.Enabled,
-					Interval:    yamlDevice.Traffic.PeriodicPings.Interval,
-					PayloadSize: yamlDevice.Traffic.PeriodicPings.PayloadSize,
-				}
-				// Apply defaults if not specified
-				if pingCfg.Interval == 0 {
-					pingCfg.Interval = DefaultPeriodicPingInterval
-				}
-				if pingCfg.PayloadSize == 0 {
-					pingCfg.PayloadSize = DefaultPeriodicPingPayloadSize
-				}
-				trafficCfg.PeriodicPings = pingCfg
-			}
-
-			// Parse Random Traffic
-			if yamlDevice.Traffic.RandomTraffic != nil {
-				randomCfg := &RandomTrafficConfig{
-					Enabled:     yamlDevice.Traffic.RandomTraffic.Enabled,
-					Interval:    yamlDevice.Traffic.RandomTraffic.Interval,
-					PacketCount: yamlDevice.Traffic.RandomTraffic.PacketCount,
-					Patterns:    yamlDevice.Traffic.RandomTraffic.Patterns,
-				}
-				// Apply defaults if not specified
-				if randomCfg.Interval == 0 {
-					randomCfg.Interval = DefaultRandomTrafficInterval
-				}
-				if randomCfg.PacketCount == 0 {
-					randomCfg.PacketCount = DefaultRandomTrafficPacketCount
-				}
-				// Default patterns if none specified
-				if len(randomCfg.Patterns) == 0 {
-					randomCfg.Patterns = []string{"broadcast_arp", "multicast", "udp"}
-				}
-				trafficCfg.RandomTraffic = randomCfg
-			}
-
-			device.TrafficConfig = trafficCfg
-		}
-
-		// Parse SNMP Traps configuration (v1.6.0)
-		if yamlDevice.SnmpAgent != nil && yamlDevice.SnmpAgent.Traps != nil {
-			trapsCfg := &TrapConfig{
-				Enabled:   yamlDevice.SnmpAgent.Traps.Enabled,
-				Receivers: yamlDevice.SnmpAgent.Traps.Receivers,
-			}
-
-			// Parse Cold Start trap
-			if yamlDevice.SnmpAgent.Traps.ColdStart != nil {
-				trapsCfg.ColdStart = &TrapTriggerConfig{
-					Enabled:   yamlDevice.SnmpAgent.Traps.ColdStart.Enabled,
-					OnStartup: yamlDevice.SnmpAgent.Traps.ColdStart.OnStartup,
-				}
-			}
-
-			// Parse Link State trap
-			if yamlDevice.SnmpAgent.Traps.LinkState != nil {
-				trapsCfg.LinkState = &LinkStateTrapConfig{
-					Enabled:  yamlDevice.SnmpAgent.Traps.LinkState.Enabled,
-					LinkDown: yamlDevice.SnmpAgent.Traps.LinkState.LinkDown,
-					LinkUp:   yamlDevice.SnmpAgent.Traps.LinkState.LinkUp,
-				}
-			}
-
-			// Parse Authentication Failure trap
-			if yamlDevice.SnmpAgent.Traps.AuthenticationFailure != nil {
-				trapsCfg.AuthenticationFailure = &TrapTriggerConfig{
-					Enabled:   yamlDevice.SnmpAgent.Traps.AuthenticationFailure.Enabled,
-					OnStartup: yamlDevice.SnmpAgent.Traps.AuthenticationFailure.OnStartup,
-				}
-			}
-
-			// Parse High CPU trap
-			if yamlDevice.SnmpAgent.Traps.HighCPU != nil {
-				highCPUCfg := &ThresholdTrapConfig{
-					Enabled:   yamlDevice.SnmpAgent.Traps.HighCPU.Enabled,
-					Threshold: yamlDevice.SnmpAgent.Traps.HighCPU.Threshold,
-					Interval:  yamlDevice.SnmpAgent.Traps.HighCPU.Interval,
-				}
-				// Apply defaults if not specified
-				if highCPUCfg.Threshold == 0 {
-					highCPUCfg.Threshold = DefaultHighCPUThreshold
-				}
-				if highCPUCfg.Interval == 0 {
-					highCPUCfg.Interval = DefaultTrapCheckInterval
-				}
-				trapsCfg.HighCPU = highCPUCfg
-			}
-
-			// Parse High Memory trap
-			if yamlDevice.SnmpAgent.Traps.HighMemory != nil {
-				highMemCfg := &ThresholdTrapConfig{
-					Enabled:   yamlDevice.SnmpAgent.Traps.HighMemory.Enabled,
-					Threshold: yamlDevice.SnmpAgent.Traps.HighMemory.Threshold,
-					Interval:  yamlDevice.SnmpAgent.Traps.HighMemory.Interval,
-				}
-				// Apply defaults if not specified
-				if highMemCfg.Threshold == 0 {
-					highMemCfg.Threshold = DefaultHighMemoryThreshold
-				}
-				if highMemCfg.Interval == 0 {
-					highMemCfg.Interval = DefaultTrapCheckInterval
-				}
-				trapsCfg.HighMemory = highMemCfg
-			}
-
-			// Parse Interface Errors trap
-			if yamlDevice.SnmpAgent.Traps.InterfaceErrors != nil {
-				ifErrCfg := &ThresholdTrapConfig{
-					Enabled:   yamlDevice.SnmpAgent.Traps.InterfaceErrors.Enabled,
-					Threshold: yamlDevice.SnmpAgent.Traps.InterfaceErrors.Threshold,
-					Interval:  yamlDevice.SnmpAgent.Traps.InterfaceErrors.Interval,
-				}
-				// Apply defaults if not specified
-				if ifErrCfg.Threshold == 0 {
-					ifErrCfg.Threshold = DefaultInterfaceErrorThreshold
-				}
-				if ifErrCfg.Interval == 0 {
-					ifErrCfg.Interval = DefaultInterfaceErrorInterval
-				}
-				trapsCfg.InterfaceErrors = ifErrCfg
-			}
-
-			// Attach traps config to SNMP config
 			device.SNMPConfig.Traps = trapsCfg
 		}
-		cfg.Devices = append(cfg.Devices, device)
 	}
 
-	// Validate final config
-	if len(cfg.Devices) == 0 {
-		return nil, fmt.Errorf("no devices defined in configuration")
+	return nil
+}
+
+// parseDeviceProtocolConfigs parses all protocol configurations for a device
+func parseDeviceProtocolConfigs(device *Device, yamlDevice *converter.Device) error {
+	var err error
+
+	// Handle DHCP configuration
+	if device.DHCPConfig, err = parseDHCPConfig(yamlDevice.Dhcp, yamlDevice.Name); err != nil {
+		return err
 	}
 
-	return cfg, nil
+	// Handle DNS configuration
+	if device.DNSConfig, err = parseDNSConfig(yamlDevice.Dns, yamlDevice.Name); err != nil {
+		return err
+	}
+
+	// Handle discovery protocols
+	device.LLDPConfig = parseLLDPConfig(yamlDevice.Lldp)
+	device.CDPConfig = parseCDPConfig(yamlDevice.Cdp)
+	device.EDPConfig = parseEDPConfig(yamlDevice.Edp)
+	device.FDPConfig = parseFDPConfig(yamlDevice.Fdp)
+	device.STPConfig = parseSTPConfig(yamlDevice.Stp)
+
+	// Handle service protocols
+	device.HTTPConfig = parseHTTPConfig(yamlDevice.Http, device.Name)
+	device.FTPConfig = parseFTPConfig(yamlDevice.Ftp, device.Name)
+	device.NetBIOSConfig = parseNetBIOSConfig(yamlDevice.Netbios, device.Name)
+
+	// Handle ICMP protocols
+	device.ICMPConfig = parseICMPConfig(yamlDevice.Icmp)
+	device.ICMPv6Config = parseICMPv6Config(yamlDevice.Icmpv6)
+
+	// Handle DHCPv6 configuration
+	if device.DHCPv6Config, err = parseDHCPv6Config(yamlDevice.Dhcpv6); err != nil {
+		return err
+	}
+
+	// Handle Traffic configuration
+	device.TrafficConfig = parseTrafficConfig(yamlDevice.Traffic)
+
+	return nil
+}
+
+// parseNetBIOSConfig parses NetBIOS configuration from YAML
+func parseNetBIOSConfig(yamlNetbios *converter.NetbiosConfig, deviceName string) *NetBIOSConfig {
+	if yamlNetbios == nil {
+		return nil
+	}
+
+	netbiosCfg := &NetBIOSConfig{
+		Enabled:   yamlNetbios.Enabled,
+		Name:      yamlNetbios.Name,
+		Workgroup: yamlNetbios.Workgroup,
+		NodeType:  yamlNetbios.NodeType,
+		Services:  yamlNetbios.Services,
+		TTL:       yamlNetbios.TTL,
+	}
+
+	// Set defaults
+	if netbiosCfg.Name == "" {
+		netbiosCfg.Name = deviceName
+		if len(netbiosCfg.Name) > 15 {
+			netbiosCfg.Name = netbiosCfg.Name[:15]
+		}
+	}
+	if netbiosCfg.Workgroup == "" {
+		netbiosCfg.Workgroup = "WORKGROUP"
+	}
+	if netbiosCfg.NodeType == "" {
+		netbiosCfg.NodeType = "B"
+	}
+	if len(netbiosCfg.Services) == 0 {
+		netbiosCfg.Services = []string{"workstation", "fileserver"}
+	}
+	if netbiosCfg.TTL == 0 {
+		netbiosCfg.TTL = DefaultNetBIOSTTL
+	}
+
+	return netbiosCfg
+}
+
+// parseICMPConfig parses ICMP configuration from YAML
+func parseICMPConfig(yamlIcmp *converter.IcmpConfig) *ICMPConfig {
+	if yamlIcmp == nil {
+		return nil
+	}
+
+	icmpCfg := &ICMPConfig{
+		Enabled:   yamlIcmp.Enabled,
+		TTL:       yamlIcmp.TTL,
+		RateLimit: yamlIcmp.RateLimit,
+	}
+
+	if icmpCfg.TTL == 0 {
+		icmpCfg.TTL = DefaultICMPTTL
+	}
+
+	return icmpCfg
+}
+
+// parseICMPv6Config parses ICMPv6 configuration from YAML
+func parseICMPv6Config(yamlIcmpv6 *converter.Icmpv6Config) *ICMPv6Config {
+	if yamlIcmpv6 == nil {
+		return nil
+	}
+
+	icmpv6Cfg := &ICMPv6Config{
+		Enabled:   yamlIcmpv6.Enabled,
+		HopLimit:  yamlIcmpv6.HopLimit,
+		RateLimit: yamlIcmpv6.RateLimit,
+	}
+
+	if icmpv6Cfg.HopLimit == 0 {
+		icmpv6Cfg.HopLimit = DefaultICMPv6HopLimit
+	}
+
+	return icmpv6Cfg
+}
+
+// parseDHCPv6Config parses DHCPv6 configuration from YAML
+func parseDHCPv6Config(yamlDhcpv6 *converter.Dhcpv6Config) (*DHCPv6Config, error) {
+	if yamlDhcpv6 == nil {
+		return nil, nil
+	}
+
+	dhcpv6Cfg := &DHCPv6Config{
+		Enabled:           yamlDhcpv6.Enabled,
+		Pools:             make([]DHCPv6Pool, 0),
+		PreferredLifetime: yamlDhcpv6.PreferredLifetime,
+		ValidLifetime:     yamlDhcpv6.ValidLifetime,
+		Preference:        yamlDhcpv6.Preference,
+		DomainList:        yamlDhcpv6.DomainList,
+		SIPDomains:        yamlDhcpv6.SIPDomains,
+	}
+
+	// Set defaults
+	if dhcpv6Cfg.PreferredLifetime == 0 {
+		dhcpv6Cfg.PreferredLifetime = DefaultDHCPv6PreferredLifetime
+	}
+	if dhcpv6Cfg.ValidLifetime == 0 {
+		dhcpv6Cfg.ValidLifetime = DefaultDHCPv6ValidLifetime
+	}
+
+	// Parse address pools
+	for _, pool := range yamlDhcpv6.Pools {
+		dhcpv6Cfg.Pools = append(dhcpv6Cfg.Pools, DHCPv6Pool{
+			Network:    pool.Network,
+			RangeStart: pool.RangeStart,
+			RangeEnd:   pool.RangeEnd,
+		})
+	}
+
+	// Parse DNS servers
+	for _, dnsStr := range yamlDhcpv6.DNSServers {
+		if ip := net.ParseIP(dnsStr); ip != nil {
+			dhcpv6Cfg.DNSServers = append(dhcpv6Cfg.DNSServers, ip)
+		}
+	}
+
+	// Parse SNTP servers
+	for _, sntpStr := range yamlDhcpv6.SNTPServers {
+		if ip := net.ParseIP(sntpStr); ip != nil {
+			dhcpv6Cfg.SNTPServers = append(dhcpv6Cfg.SNTPServers, ip)
+		}
+	}
+
+	// Parse NTP servers
+	for _, ntpStr := range yamlDhcpv6.NTPServers {
+		if ip := net.ParseIP(ntpStr); ip != nil {
+			dhcpv6Cfg.NTPServers = append(dhcpv6Cfg.NTPServers, ip)
+		}
+	}
+
+	// Parse SIP servers
+	for _, sipStr := range yamlDhcpv6.SIPServers {
+		if ip := net.ParseIP(sipStr); ip != nil {
+			dhcpv6Cfg.SIPServers = append(dhcpv6Cfg.SIPServers, ip)
+		}
+	}
+
+	return dhcpv6Cfg, nil
+}
+
+// parseTrafficConfig parses traffic configuration from YAML
+func parseTrafficConfig(yamlTraffic *converter.TrafficConfig) *TrafficConfig {
+	if yamlTraffic == nil {
+		return nil
+	}
+
+	trafficCfg := &TrafficConfig{
+		Enabled: yamlTraffic.Enabled,
+	}
+
+	// Parse ARP Announcements
+	if yamlTraffic.ARPAnnouncements != nil {
+		arpCfg := &ARPAnnouncementConfig{
+			Enabled:  yamlTraffic.ARPAnnouncements.Enabled,
+			Interval: yamlTraffic.ARPAnnouncements.Interval,
+		}
+		if arpCfg.Interval == 0 {
+			arpCfg.Interval = DefaultARPAnnouncementInterval
+		}
+		trafficCfg.ARPAnnouncements = arpCfg
+	}
+
+	// Parse Periodic Pings
+	if yamlTraffic.PeriodicPings != nil {
+		pingCfg := &PeriodicPingConfig{
+			Enabled:     yamlTraffic.PeriodicPings.Enabled,
+			Interval:    yamlTraffic.PeriodicPings.Interval,
+			PayloadSize: yamlTraffic.PeriodicPings.PayloadSize,
+		}
+		if pingCfg.Interval == 0 {
+			pingCfg.Interval = DefaultPeriodicPingInterval
+		}
+		if pingCfg.PayloadSize == 0 {
+			pingCfg.PayloadSize = DefaultPeriodicPingPayloadSize
+		}
+		trafficCfg.PeriodicPings = pingCfg
+	}
+
+	// Parse Random Traffic
+	if yamlTraffic.RandomTraffic != nil {
+		randomCfg := &RandomTrafficConfig{
+			Enabled:     yamlTraffic.RandomTraffic.Enabled,
+			Interval:    yamlTraffic.RandomTraffic.Interval,
+			PacketCount: yamlTraffic.RandomTraffic.PacketCount,
+			Patterns:    yamlTraffic.RandomTraffic.Patterns,
+		}
+		if randomCfg.Interval == 0 {
+			randomCfg.Interval = DefaultRandomTrafficInterval
+		}
+		if randomCfg.PacketCount == 0 {
+			randomCfg.PacketCount = DefaultRandomTrafficPacketCount
+		}
+		if len(randomCfg.Patterns) == 0 {
+			randomCfg.Patterns = []string{"broadcast_arp", "multicast", "udp"}
+		}
+		trafficCfg.RandomTraffic = randomCfg
+	}
+
+	return trafficCfg
+}
+
+// parseSNMPTrapsConfig parses SNMP traps configuration from YAML
+func parseSNMPTrapsConfig(yamlTraps *converter.TrapsConfig) (*TrapConfig, error) {
+	trapsCfg := &TrapConfig{
+		Enabled:   yamlTraps.Enabled,
+		Receivers: yamlTraps.Receivers,
+	}
+
+	// Parse Cold Start trap
+	if yamlTraps.ColdStart != nil {
+		trapsCfg.ColdStart = &TrapTriggerConfig{
+			Enabled:   yamlTraps.ColdStart.Enabled,
+			OnStartup: yamlTraps.ColdStart.OnStartup,
+		}
+	}
+
+	// Parse Link State trap
+	if yamlTraps.LinkState != nil {
+		trapsCfg.LinkState = &LinkStateTrapConfig{
+			Enabled:  yamlTraps.LinkState.Enabled,
+			LinkDown: yamlTraps.LinkState.LinkDown,
+			LinkUp:   yamlTraps.LinkState.LinkUp,
+		}
+	}
+
+	// Parse Authentication Failure trap
+	if yamlTraps.AuthenticationFailure != nil {
+		trapsCfg.AuthenticationFailure = &TrapTriggerConfig{
+			Enabled:   yamlTraps.AuthenticationFailure.Enabled,
+			OnStartup: yamlTraps.AuthenticationFailure.OnStartup,
+		}
+	}
+
+	// Parse High CPU trap
+	if yamlTraps.HighCPU != nil {
+		highCPUCfg := &ThresholdTrapConfig{
+			Enabled:   yamlTraps.HighCPU.Enabled,
+			Threshold: yamlTraps.HighCPU.Threshold,
+			Interval:  yamlTraps.HighCPU.Interval,
+		}
+		if highCPUCfg.Threshold == 0 {
+			highCPUCfg.Threshold = DefaultHighCPUThreshold
+		}
+		if highCPUCfg.Interval == 0 {
+			highCPUCfg.Interval = DefaultTrapCheckInterval
+		}
+		trapsCfg.HighCPU = highCPUCfg
+	}
+
+	// Parse High Memory trap
+	if yamlTraps.HighMemory != nil {
+		highMemCfg := &ThresholdTrapConfig{
+			Enabled:   yamlTraps.HighMemory.Enabled,
+			Threshold: yamlTraps.HighMemory.Threshold,
+			Interval:  yamlTraps.HighMemory.Interval,
+		}
+		if highMemCfg.Threshold == 0 {
+			highMemCfg.Threshold = DefaultHighMemoryThreshold
+		}
+		if highMemCfg.Interval == 0 {
+			highMemCfg.Interval = DefaultTrapCheckInterval
+		}
+		trapsCfg.HighMemory = highMemCfg
+	}
+
+	// Parse Interface Errors trap
+	if yamlTraps.InterfaceErrors != nil {
+		ifErrCfg := &ThresholdTrapConfig{
+			Enabled:   yamlTraps.InterfaceErrors.Enabled,
+			Threshold: yamlTraps.InterfaceErrors.Threshold,
+			Interval:  yamlTraps.InterfaceErrors.Interval,
+		}
+		if ifErrCfg.Threshold == 0 {
+			ifErrCfg.Threshold = DefaultInterfaceErrorThreshold
+		}
+		if ifErrCfg.Interval == 0 {
+			ifErrCfg.Interval = DefaultInterfaceErrorInterval
+		}
+		trapsCfg.InterfaceErrors = ifErrCfg
+	}
+
+	return trapsCfg, nil
 }
 
 // parseDHCPConfig parses DHCP configuration from YAML

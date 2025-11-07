@@ -303,7 +303,6 @@ func padRight(str string, length int) string {
 }
 
 // runNormalMode runs NIAC in normal (non-interactive) mode
-// nolint:gocyclo // Complex function handling all normal mode operations
 func runNormalMode(interfaceName string, cfg *config.Config, debugConfig *logging.DebugConfig) error {
 	debugLevel := debugConfig.GetGlobal()
 
@@ -316,20 +315,11 @@ func runNormalMode(interfaceName string, cfg *config.Config, debugConfig *loggin
 	}
 
 	// Step 1: Initialize capture engine
-	if debugLevel >= 1 {
-		fmt.Print("⏳ Initializing capture engine... ")
-	}
-	engine, err := capture.New(interfaceName, debugLevel)
+	engine, err := initializeCaptureEngine(interfaceName, debugLevel)
 	if err != nil {
-		if debugLevel >= 1 {
-			fmt.Println("❌")
-		}
-		return fmt.Errorf("failed to create capture engine: %w", err)
+		return err
 	}
 	defer engine.Close()
-	if debugLevel >= 1 {
-		fmt.Println("✓")
-	}
 
 	// Step 2: Create protocol stack
 	if debugLevel >= 1 {
@@ -341,8 +331,56 @@ func runNormalMode(interfaceName string, cfg *config.Config, debugConfig *loggin
 	}
 
 	// Step 3: Configure service handlers (DHCP/DNS)
-	dhcpCount := 0
-	dnsCount := 0
+	dhcpCount, dnsCount := configureServiceHandlers(stack, cfg, debugLevel)
+	if debugLevel >= 1 && (dhcpCount > 0 || dnsCount > 0) {
+		if dhcpCount > 0 {
+			fmt.Printf("⏳ Configuring DHCP servers (%d)... ✓\n", dhcpCount)
+		}
+		if dnsCount > 0 {
+			fmt.Printf("⏳ Configuring DNS servers (%d)... ✓\n", dnsCount)
+		}
+	}
+
+	// Step 4: Start the protocol stack and print summary
+	if debugLevel >= 1 {
+		fmt.Printf("⏳ Starting %d simulated device(s)... ", len(cfg.Devices))
+	}
+	if err := stack.Start(); err != nil {
+		if debugLevel >= 1 {
+			fmt.Println("❌")
+		}
+		return fmt.Errorf("failed to start stack: %w", err)
+	}
+	if debugLevel >= 1 {
+		fmt.Println("✓")
+		printStartupSummary(cfg, debugLevel)
+	}
+
+	// Step 5: Run simulation loop
+	startTime := time.Now()
+	return runSimulationLoop(stack, debugLevel, startTime)
+}
+
+// initializeCaptureEngine initializes the packet capture engine
+func initializeCaptureEngine(interfaceName string, debugLevel int) (*capture.Engine, error) {
+	if debugLevel >= 1 {
+		fmt.Print("⏳ Initializing capture engine... ")
+	}
+	engine, err := capture.New(interfaceName, debugLevel)
+	if err != nil {
+		if debugLevel >= 1 {
+			fmt.Println("❌")
+		}
+		return nil, fmt.Errorf("failed to create capture engine: %w", err)
+	}
+	if debugLevel >= 1 {
+		fmt.Println("✓")
+	}
+	return engine, nil
+}
+
+// configureServiceHandlers configures DHCP and DNS service handlers
+func configureServiceHandlers(stack *protocols.Stack, cfg *config.Config, debugLevel int) (dhcpCount, dnsCount int) {
 	for _, device := range cfg.Devices {
 		// Configure DHCP if present
 		if device.DHCPConfig != nil && len(device.IPAddresses) > 0 {
@@ -395,72 +433,58 @@ func runNormalMode(interfaceName string, cfg *config.Config, debugConfig *loggin
 			// PTR records are handled automatically by AddRecord
 		}
 	}
-	if debugLevel >= 1 && (dhcpCount > 0 || dnsCount > 0) {
-		if dhcpCount > 0 {
-			fmt.Printf("⏳ Configuring DHCP servers (%d)... ✓\n", dhcpCount)
+	return dhcpCount, dnsCount
+}
+
+// printStartupSummary displays the enabled features summary
+func printStartupSummary(cfg *config.Config, debugLevel int) {
+	fmt.Println()
+
+	// Display enabled features summary
+	fmt.Println("Enabled features:")
+
+	// Count and display SNMP-enabled devices
+	snmpCount := 0
+	trapCount := 0
+	for _, dev := range cfg.Devices {
+		if dev.SNMPConfig.Community != "" || dev.SNMPConfig.WalkFile != "" {
+			snmpCount++
 		}
-		if dnsCount > 0 {
-			fmt.Printf("⏳ Configuring DNS servers (%d)... ✓\n", dnsCount)
+		if dev.SNMPConfig.Traps != nil && dev.SNMPConfig.Traps.Enabled {
+			trapCount++
+		}
+	}
+	if snmpCount > 0 {
+		fmt.Printf("  • SNMP agents: %d device(s)\n", snmpCount)
+		if trapCount > 0 {
+			fmt.Printf("  • SNMP traps: %d device(s)\n", trapCount)
 		}
 	}
 
-	// Step 4: Start the protocol stack
-	if debugLevel >= 1 {
-		fmt.Printf("⏳ Starting %d simulated device(s)... ", len(cfg.Devices))
+	// Count devices with traffic patterns
+	trafficCount := 0
+	for _, dev := range cfg.Devices {
+		if dev.TrafficConfig != nil && dev.TrafficConfig.Enabled {
+			trafficCount++
+		}
 	}
-	if err := stack.Start(); err != nil {
-		if debugLevel >= 1 {
-			fmt.Println("❌")
-		}
-		return fmt.Errorf("failed to start stack: %w", err)
-	}
-	if debugLevel >= 1 {
-		fmt.Println("✓")
-		fmt.Println()
-
-		// Display enabled features summary
-		fmt.Println("Enabled features:")
-
-		// Count and display SNMP-enabled devices
-		snmpCount := 0
-		trapCount := 0
-		for _, dev := range cfg.Devices {
-			if dev.SNMPConfig.Community != "" || dev.SNMPConfig.WalkFile != "" {
-				snmpCount++
-			}
-			if dev.SNMPConfig.Traps != nil && dev.SNMPConfig.Traps.Enabled {
-				trapCount++
-			}
-		}
-		if snmpCount > 0 {
-			fmt.Printf("  • SNMP agents: %d device(s)\n", snmpCount)
-			if trapCount > 0 {
-				fmt.Printf("  • SNMP traps: %d device(s)\n", trapCount)
-			}
-		}
-
-		// Count devices with traffic patterns
-		trafficCount := 0
-		for _, dev := range cfg.Devices {
-			if dev.TrafficConfig != nil && dev.TrafficConfig.Enabled {
-				trafficCount++
-			}
-		}
-		if trafficCount > 0 {
-			fmt.Printf("  • Traffic generation: %d device(s)\n", trafficCount)
-		}
-
-		// Show PCAP playback if configured
-		if cfg.CapturePlayback != nil {
-			fmt.Printf("  • PCAP playback: %s\n", cfg.CapturePlayback.FileName)
-		}
-
-		fmt.Println()
-		fmt.Println("✅ Network simulation is ready")
-		fmt.Println("   Press Ctrl+C to stop")
-		fmt.Println()
+	if trafficCount > 0 {
+		fmt.Printf("  • Traffic generation: %d device(s)\n", trafficCount)
 	}
 
+	// Show PCAP playback if configured
+	if cfg.CapturePlayback != nil {
+		fmt.Printf("  • PCAP playback: %s\n", cfg.CapturePlayback.FileName)
+	}
+
+	fmt.Println()
+	fmt.Println("✅ Network simulation is ready")
+	fmt.Println("   Press Ctrl+C to stop")
+	fmt.Println()
+}
+
+// runSimulationLoop runs the main simulation loop with signal handling and stats
+func runSimulationLoop(stack *protocols.Stack, debugLevel int, startTime time.Time) error {
 	// Setup signal handler for graceful shutdown
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
@@ -475,7 +499,6 @@ func runNormalMode(interfaceName string, cfg *config.Config, debugConfig *loggin
 	}
 
 	// Main loop
-	startTime := time.Now()
 	for {
 		select {
 		case <-sigChan:
