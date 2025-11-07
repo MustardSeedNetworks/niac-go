@@ -685,6 +685,15 @@ func LoadYAML(filename string) (*Config, error) {
 				}
 				ttl := uint32(3600) // Default TTL
 				if record.TTL > 0 {
+					// Validate TTL is in reasonable range before conversion
+					if record.TTL < 0 {
+						return nil, fmt.Errorf("device %s: DNS forward record TTL cannot be negative: %d",
+							yamlDevice.Name, record.TTL)
+					}
+					if record.TTL > 2147483647 { // Max int32 (~68 years)
+						return nil, fmt.Errorf("device %s: DNS forward record TTL exceeds maximum (2147483647): %d",
+							yamlDevice.Name, record.TTL)
+					}
 					ttl = uint32(record.TTL)
 				}
 				dnsCfg.ForwardRecords = append(dnsCfg.ForwardRecords, DNSRecord{
@@ -702,6 +711,15 @@ func LoadYAML(filename string) (*Config, error) {
 				}
 				ttl := uint32(3600) // Default TTL
 				if record.TTL > 0 {
+					// Validate TTL is in reasonable range before conversion
+					if record.TTL < 0 {
+						return nil, fmt.Errorf("device %s: DNS reverse record TTL cannot be negative: %d",
+							yamlDevice.Name, record.TTL)
+					}
+					if record.TTL > 2147483647 { // Max int32 (~68 years)
+						return nil, fmt.Errorf("device %s: DNS reverse record TTL exceeds maximum (2147483647): %d",
+							yamlDevice.Name, record.TTL)
+					}
 					ttl = uint32(record.TTL)
 				}
 				dnsCfg.ReverseRecords = append(dnsCfg.ReverseRecords, DNSRecord{
