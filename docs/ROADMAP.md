@@ -1,38 +1,77 @@
 # NIAC-Go Roadmap
 
-## Current Release: v1.0.0 ✅
-- Complete protocol stack
-- Interactive error injection
-- Device simulation
-- Traffic generation
-- **Status**: SHIPPED
+## Completed Releases ✅
+
+### v1.12.0 - Interactive TUI ✅
+**Released**: January 7, 2025
+- ✅ `niac interactive` command for Terminal UI mode
+- ✅ Real-time device monitoring
+- ✅ Interactive error injection
+- ✅ Bubble Tea-based interface
+
+### v1.11.0 - Templates & Quick Start ✅
+**Released**: January 7, 2025
+- ✅ 7 pre-built configuration templates
+- ✅ Template commands (list, show, use)
+- ✅ Embedded templates in binary
+
+### v1.10.0 - Foundation & Validation ✅
+**Released**: January 7, 2025
+- ✅ Modern CLI framework (Cobra)
+- ✅ `niac validate` command
+- ✅ Comprehensive configuration validator
+- ✅ Structured error reporting
+- ✅ JSON output for CI/CD
+
+### v1.9.0 - Code Quality ✅
+**Released**: January 6, 2025
+- ✅ Complexity reduction
+- ✅ Integer overflow fixes
+- ✅ 30+ new constants
+
+### v1.7.0 - Testing & Quality ✅
+**Released**: January 5, 2025
+- ✅ 87 new tests
+- ✅ 50%+ test coverage
+- ✅ Configuration validator
+
+### v1.6.0 - Traffic & SNMP Traps ✅
+**Released**: January 4, 2025
+- ✅ Configurable traffic patterns
+- ✅ SNMP trap generation
+- ✅ Complete YAML configuration
+
+### v1.5.0 - Enhanced Configuration ✅
+**Released**: January 3, 2025
+- ✅ Color-coded debug output
+- ✅ Per-protocol debug control
+- ✅ Multiple IPs per device
+
+### v1.0.0 - Initial Release ✅
+**Released**: December 20, 2024
+- ✅ Complete protocol stack (19 protocols)
+- ✅ Interactive error injection
+- ✅ Device simulation
 
 ---
 
-## v1.1.0 - Enhanced CLI (In Progress)
-**Target**: 1-2 weeks
+## Current Focus: v1.13.0 - Enhanced CLI & Export
 
-### Features
-- [ ] Enhanced CLI flags (--version, --list-interfaces, --dry-run, --verbose, --quiet, etc.)
-- [ ] Interactive mode improvements (debug level cycling, log viewer, stats viewer, help)
-- [ ] Debug level in status bar
-- [ ] Color-coded output
-- [ ] Per-protocol debug levels
+**Target**: January 2025
 
-**ETA**: 6-8 hours of work remaining
-
----
-
-## v1.2.0 - Full Protocol Parity
-**Target**: 2-3 weeks
-
-### Features
-- [ ] IPv6 and ICMPv6 support
-- [ ] NetBIOS protocol support
-- [ ] Spanning Tree Protocol (STP)
-- [ ] Complete Java NIAC feature parity
-
-**Result**: Go NIAC becomes definitively superior to Java in ALL categories
+### Planned Features
+- [ ] **Enhanced Help & Completion**
+  - Command completion (bash, zsh, fish)
+  - Rich help examples for all commands
+  - Man pages generation
+- [ ] **Configuration Export Tools**
+  - `niac config export` - Export running config
+  - `niac config diff` - Compare configurations
+  - `niac config merge` - Merge configurations
+- [ ] **Documentation**
+  - CLI reference guide
+  - Template documentation
+  - Troubleshooting guide
 
 ---
 
