@@ -55,118 +55,29 @@
 
 ---
 
-## Current Focus: v1.13.0 - Enhanced CLI & Export
+## Completed: v1.13.0 - Enhanced CLI & Configuration Tools ✅
 
-**Target**: January 2025
+**Released**: January 7, 2025
 
-### Planned Features
-- [ ] **Enhanced Help & Completion**
-  - Command completion (bash, zsh, fish)
+### Features
+- ✅ **Enhanced Help & Completion**
+  - Command completion (bash, zsh, fish, powershell)
   - Rich help examples for all commands
   - Man pages generation
-- [ ] **Configuration Export Tools**
-  - `niac config export` - Export running config
+- ✅ **Configuration Export Tools**
+  - `niac config export` - Export and normalize configs
   - `niac config diff` - Compare configurations
-  - `niac config merge` - Merge configurations
-- [ ] **Documentation**
-  - CLI reference guide
-  - Template documentation
-  - Troubleshooting guide
+  - `niac config merge` - Merge base and overlay
+- ✅ **Documentation**
+  - CLI reference guide (docs/CLI_REFERENCE.md)
+  - CHANGELOG.md with full release history
+  - Complete man pages (12 pages)
 
 ---
 
-## v1.3.0 - Enhanced Configuration
-**Target**: 1-2 months
+## Future Releases
 
-### Configuration Enhancements
-- [ ] **CFG to JSON converter** (automatic migration tool)
-- [ ] **JSON config file support** (primary format)
-- [ ] **YAML config file support** (alternative format)
-- [ ] Backward compatibility with .cfg files
-- [ ] Config validation and linting
-- [ ] Config templates for common scenarios
-- [ ] Config generator with wizard
-- [ ] Environment variable substitution
-- [ ] Include/import directives
-- [ ] Config inheritance and overlays
-
-### Why JSON Over YAML?
-
-#### ✅ **JSON Advantages**
-1. **Native Go support** - `encoding/json` in stdlib (no dependencies)
-2. **Validation** - Strong typing, schema validation (JSON Schema)
-3. **Tooling** - Better IDE support, linters, formatters
-4. **Parsing speed** - Faster than YAML parsing
-5. **Strict syntax** - Less ambiguous than YAML
-6. **Web compatibility** - Direct use in Web UI (future v2.0)
-7. **API friendly** - REST APIs, configuration APIs
-8. **Size** - Slightly smaller than YAML
-9. **Security** - No code execution risks (YAML has had security issues)
-
-#### ⚠️ **YAML Advantages**
-1. **Human-readable** - Cleaner for large configs (no braces/quotes)
-2. **Comments** - Native comment support (JSON needs workarounds)
-3. **Multi-line strings** - Easier to read
-4. **Less verbose** - No closing braces
-5. **Anchors & aliases** - Config reuse (though can be confusing)
-
-#### 🎯 **Recommendation: JSON as Primary, YAML as Optional**
-
-**Strategy:**
-```
-Primary:   JSON (best for tooling, validation, web integration)
-Optional:  YAML (for users who prefer readability)
-Legacy:    CFG  (backward compatibility, no new features)
-```
-
-**Example JSON Config:**
-```json
-{
-  "version": "2.0",
-  "network": {
-    "name": "test-network",
-    "subnet": "192.168.1.0/24"
-  },
-  "devices": [
-    {
-      "name": "Router1",
-      "type": "router",
-      "ip": "192.168.1.1",
-      "mac": "00:11:22:33:44:55",
-      "snmp": {
-        "community": "public",
-        "sysname": "Router1",
-        "sysdescr": "Cisco IOS Router",
-        "walk_file": "walks/cisco_router.walk"
-      },
-      "interfaces": [
-        {
-          "name": "eth0",
-          "speed": "1000M",
-          "duplex": "full",
-          "admin_status": "up"
-        }
-      ]
-    }
-  ]
-}
-```
-
-**Conversion Tool:**
-```bash
-# Convert old .cfg to new .json
-niac config convert network.cfg network.json
-
-# Validate config
-niac config validate network.json
-
-# Generate from template
-niac config generate --template router --count 5 > routers.json
-```
-
----
-
-## v2.0.0 - Web UI & Containers
+### v2.0.0 - Web UI & Containers
 **Target**: 3-6 months
 
 ### Web UI Features
@@ -284,9 +195,11 @@ docker run -it --rm --privileged --net=host \
 | Version | Focus | Key Features | ETA |
 |---------|-------|--------------|-----|
 | **v1.0.0** | Core | Protocols, SNMP, Interactive, Simulation | ✅ DONE |
-| **v1.1.0** | CLI | Enhanced flags, debug tools, help | 1-2 weeks |
-| **v1.2.0** | Parity | IPv6, NetBIOS, STP | 2-3 weeks |
-| **v1.3.0** | Config | JSON/YAML support, converter, validation | 1-2 months |
+| **v1.5-v1.9** | Quality | Testing, Config, Code Quality | ✅ DONE |
+| **v1.10.0** | Foundation | Cobra CLI, Validation, Error Reporting | ✅ DONE |
+| **v1.11.0** | Templates | Pre-built configs, Quick start | ✅ DONE |
+| **v1.12.0** | TUI | Interactive terminal UI, Monitoring | ✅ DONE |
+| **v1.13.0** | CLI/Tools | Shell completion, Man pages, Config tools | ✅ DONE |
 | **v2.0.0** | Web/Cloud | Web UI, REST API, Docker/K8s | 3-6 months |
 
 ---
