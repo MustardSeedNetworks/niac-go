@@ -590,324 +590,39 @@ func LoadYAML(filename string) (*Config, error) {
 		}
 
 		// Handle DHCP configuration
-		if yamlDevice.Dhcp != nil {
-			dhcpCfg := &DHCPConfig{}
-
-			// Basic options
-			if yamlDevice.Dhcp.SubnetMask != "" {
-				if ip := net.ParseIP(yamlDevice.Dhcp.SubnetMask); ip != nil {
-					dhcpCfg.SubnetMask = net.IPMask(ip.To4())
-				}
-			}
-			if yamlDevice.Dhcp.Router != "" {
-				dhcpCfg.Router = net.ParseIP(yamlDevice.Dhcp.Router)
-			}
-			if yamlDevice.Dhcp.DomainNameServer != "" {
-				if ip := net.ParseIP(yamlDevice.Dhcp.DomainNameServer); ip != nil {
-					dhcpCfg.DomainNameServer = append(dhcpCfg.DomainNameServer, ip)
-				}
-			}
-			if yamlDevice.Dhcp.ServerIdentifier != "" {
-				dhcpCfg.ServerIdentifier = net.ParseIP(yamlDevice.Dhcp.ServerIdentifier)
-			}
-			if yamlDevice.Dhcp.NextServerIP != "" {
-				dhcpCfg.NextServerIP = net.ParseIP(yamlDevice.Dhcp.NextServerIP)
-			}
-			// Domain name is separate from domain name server
-			// Note: YAML doesn't have a separate domain_name field yet, so we'll leave this empty for now
-
-			// DHCPv4 high priority options
-			for _, ntpStr := range yamlDevice.Dhcp.NTPServers {
-				if ip := net.ParseIP(ntpStr); ip != nil {
-					dhcpCfg.NTPServers = append(dhcpCfg.NTPServers, ip)
-				}
-			}
-			dhcpCfg.DomainSearch = yamlDevice.Dhcp.DomainSearch
-			dhcpCfg.TFTPServerName = yamlDevice.Dhcp.TFTPServerName
-			dhcpCfg.BootfileName = yamlDevice.Dhcp.BootfileName
-			if yamlDevice.Dhcp.VendorSpecific != "" {
-				// Parse hex string to bytes
-				dhcpCfg.VendorSpecific = []byte(yamlDevice.Dhcp.VendorSpecific)
-			}
-
-			// DHCPv6 options
-			for _, sntpStr := range yamlDevice.Dhcp.SNTPServersV6 {
-				if ip := net.ParseIP(sntpStr); ip != nil {
-					dhcpCfg.SNTPServersV6 = append(dhcpCfg.SNTPServersV6, ip)
-				}
-			}
-			for _, ntpStr := range yamlDevice.Dhcp.NTPServersV6 {
-				if ip := net.ParseIP(ntpStr); ip != nil {
-					dhcpCfg.NTPServersV6 = append(dhcpCfg.NTPServersV6, ip)
-				}
-			}
-			for _, sipStr := range yamlDevice.Dhcp.SIPServersV6 {
-				if ip := net.ParseIP(sipStr); ip != nil {
-					dhcpCfg.SIPServersV6 = append(dhcpCfg.SIPServersV6, ip)
-				}
-			}
-			dhcpCfg.SIPDomainsV6 = yamlDevice.Dhcp.SIPDomainsV6
-
-			// Static leases
-			for _, lease := range yamlDevice.Dhcp.ClientLeases {
-				clientIP := net.ParseIP(lease.ClientIP)
-				if clientIP == nil {
-					continue
-				}
-				macAddr, err := net.ParseMAC(lease.MacAddrValue)
-				if err != nil {
-					continue
-				}
-				dhcpLease := DHCPLease{
-					ClientIP:   clientIP,
-					MACAddress: macAddr,
-				}
-				if lease.MacAddrMask != "" {
-					if mask, err := net.ParseMAC(lease.MacAddrMask); err == nil {
-						dhcpLease.MACMask = mask
-					}
-				}
-				dhcpCfg.ClientLeases = append(dhcpCfg.ClientLeases, dhcpLease)
-			}
-
+		if dhcpCfg, err := parseDHCPConfig(yamlDevice.Dhcp, yamlDevice.Name); err != nil {
+			return nil, err
+		} else {
 			device.DHCPConfig = dhcpCfg
 		}
 
 		// Handle DNS configuration
-		if yamlDevice.Dns != nil {
-			dnsCfg := &DNSConfig{}
-
-			// Forward records (A records)
-			for _, record := range yamlDevice.Dns.ForwardRecords {
-				ip := net.ParseIP(record.IP)
-				if ip == nil {
-					continue
-				}
-				ttl := uint32(3600) // Default TTL
-				if record.TTL > 0 {
-					// Validate TTL is in reasonable range before conversion
-					if record.TTL < 0 {
-						return nil, fmt.Errorf("device %s: DNS forward record TTL cannot be negative: %d",
-							yamlDevice.Name, record.TTL)
-					}
-					if record.TTL > 2147483647 { // Max int32 (~68 years)
-						return nil, fmt.Errorf("device %s: DNS forward record TTL exceeds maximum (2147483647): %d",
-							yamlDevice.Name, record.TTL)
-					}
-					ttl = uint32(record.TTL)
-				}
-				dnsCfg.ForwardRecords = append(dnsCfg.ForwardRecords, DNSRecord{
-					Name: record.Name,
-					IP:   ip,
-					TTL:  ttl,
-				})
-			}
-
-			// Reverse records (PTR records)
-			for _, record := range yamlDevice.Dns.ReverseRecords {
-				ip := net.ParseIP(record.IP)
-				if ip == nil {
-					continue
-				}
-				ttl := uint32(3600) // Default TTL
-				if record.TTL > 0 {
-					// Validate TTL is in reasonable range before conversion
-					if record.TTL < 0 {
-						return nil, fmt.Errorf("device %s: DNS reverse record TTL cannot be negative: %d",
-							yamlDevice.Name, record.TTL)
-					}
-					if record.TTL > 2147483647 { // Max int32 (~68 years)
-						return nil, fmt.Errorf("device %s: DNS reverse record TTL exceeds maximum (2147483647): %d",
-							yamlDevice.Name, record.TTL)
-					}
-					ttl = uint32(record.TTL)
-				}
-				dnsCfg.ReverseRecords = append(dnsCfg.ReverseRecords, DNSRecord{
-					Name: record.Name,
-					IP:   ip,
-					TTL:  ttl,
-				})
-			}
-
+		if dnsCfg, err := parseDNSConfig(yamlDevice.Dns, yamlDevice.Name); err != nil {
+			return nil, err
+		} else {
 			device.DNSConfig = dnsCfg
 		}
 
 		// Handle LLDP configuration
-		if yamlDevice.Lldp != nil {
-			lldpCfg := &LLDPConfig{
-				Enabled:           yamlDevice.Lldp.Enabled,
-				AdvertiseInterval: yamlDevice.Lldp.AdvertiseInterval,
-				TTL:               yamlDevice.Lldp.TTL,
-				SystemDescription: yamlDevice.Lldp.SystemDescription,
-				PortDescription:   yamlDevice.Lldp.PortDescription,
-				ChassisIDType:     yamlDevice.Lldp.ChassisIDType,
-			}
-			// Set defaults if not specified
-			if lldpCfg.AdvertiseInterval == 0 {
-				lldpCfg.AdvertiseInterval = 30
-			}
-			if lldpCfg.TTL == 0 {
-				lldpCfg.TTL = 120
-			}
-			if lldpCfg.ChassisIDType == "" {
-				lldpCfg.ChassisIDType = ChassisIDTypeMAC
-			}
-			device.LLDPConfig = lldpCfg
-		}
+		device.LLDPConfig = parseLLDPConfig(yamlDevice.Lldp)
 
 		// Handle CDP configuration
-		if yamlDevice.Cdp != nil {
-			cdpCfg := &CDPConfig{
-				Enabled:           yamlDevice.Cdp.Enabled,
-				AdvertiseInterval: yamlDevice.Cdp.AdvertiseInterval,
-				Holdtime:          yamlDevice.Cdp.Holdtime,
-				Version:           yamlDevice.Cdp.Version,
-				SoftwareVersion:   yamlDevice.Cdp.SoftwareVersion,
-				Platform:          yamlDevice.Cdp.Platform,
-				PortID:            yamlDevice.Cdp.PortID,
-			}
-			// Set defaults if not specified
-			if cdpCfg.AdvertiseInterval == 0 {
-				cdpCfg.AdvertiseInterval = 60
-			}
-			if cdpCfg.Holdtime == 0 {
-				cdpCfg.Holdtime = 180
-			}
-			if cdpCfg.Version == 0 {
-				cdpCfg.Version = 2
-			}
-			device.CDPConfig = cdpCfg
-		}
+		device.CDPConfig = parseCDPConfig(yamlDevice.Cdp)
 
 		// Handle EDP configuration
-		if yamlDevice.Edp != nil {
-			edpCfg := &EDPConfig{
-				Enabled:           yamlDevice.Edp.Enabled,
-				AdvertiseInterval: yamlDevice.Edp.AdvertiseInterval,
-				VersionString:     yamlDevice.Edp.VersionString,
-				DisplayString:     yamlDevice.Edp.DisplayString,
-			}
-			// Set defaults if not specified
-			if edpCfg.AdvertiseInterval == 0 {
-				edpCfg.AdvertiseInterval = 30
-			}
-			device.EDPConfig = edpCfg
-		}
+		device.EDPConfig = parseEDPConfig(yamlDevice.Edp)
 
 		// Handle FDP configuration
-		if yamlDevice.Fdp != nil {
-			fdpCfg := &FDPConfig{
-				Enabled:           yamlDevice.Fdp.Enabled,
-				AdvertiseInterval: yamlDevice.Fdp.AdvertiseInterval,
-				Holdtime:          yamlDevice.Fdp.Holdtime,
-				SoftwareVersion:   yamlDevice.Fdp.SoftwareVersion,
-				Platform:          yamlDevice.Fdp.Platform,
-				PortID:            yamlDevice.Fdp.PortID,
-			}
-			// Set defaults if not specified
-			if fdpCfg.AdvertiseInterval == 0 {
-				fdpCfg.AdvertiseInterval = 60
-			}
-			if fdpCfg.Holdtime == 0 {
-				fdpCfg.Holdtime = 180
-			}
-			device.FDPConfig = fdpCfg
-		}
+		device.FDPConfig = parseFDPConfig(yamlDevice.Fdp)
 
 		// Handle STP configuration
-		if yamlDevice.Stp != nil {
-			stpCfg := &STPConfig{
-				Enabled:        yamlDevice.Stp.Enabled,
-				BridgePriority: yamlDevice.Stp.BridgePriority,
-				HelloTime:      yamlDevice.Stp.HelloTime,
-				MaxAge:         yamlDevice.Stp.MaxAge,
-				ForwardDelay:   yamlDevice.Stp.ForwardDelay,
-				Version:        yamlDevice.Stp.Version,
-			}
-			// Set defaults if not specified
-			if stpCfg.BridgePriority == 0 {
-				stpCfg.BridgePriority = 32768 // Default priority
-			}
-			if stpCfg.HelloTime == 0 {
-				stpCfg.HelloTime = 2 // Default hello time
-			}
-			if stpCfg.MaxAge == 0 {
-				stpCfg.MaxAge = 20 // Default max age
-			}
-			if stpCfg.ForwardDelay == 0 {
-				stpCfg.ForwardDelay = 15 // Default forward delay
-			}
-			if stpCfg.Version == "" {
-				stpCfg.Version = "stp" // Default to STP
-			}
-			device.STPConfig = stpCfg
-		}
+		device.STPConfig = parseSTPConfig(yamlDevice.Stp)
 
 		// Handle HTTP configuration
-		if yamlDevice.Http != nil {
-			httpCfg := &HTTPConfig{
-				Enabled:    yamlDevice.Http.Enabled,
-				ServerName: yamlDevice.Http.ServerName,
-				Endpoints:  make([]HTTPEndpoint, 0),
-			}
-			// Set default server name if not specified
-			if httpCfg.ServerName == "" {
-				httpCfg.ServerName = "NIAC-Go/1.0.0"
-			}
-			// Parse endpoints
-			for _, ep := range yamlDevice.Http.Endpoints {
-				endpoint := HTTPEndpoint{
-					Path:        ep.Path,
-					Method:      ep.Method,
-					StatusCode:  ep.StatusCode,
-					ContentType: ep.ContentType,
-					Body:        ep.Body,
-				}
-				// Set defaults
-				if endpoint.Method == "" {
-					endpoint.Method = "GET"
-				}
-				if endpoint.StatusCode == 0 {
-					endpoint.StatusCode = 200
-				}
-				if endpoint.ContentType == "" {
-					endpoint.ContentType = "text/html"
-				}
-				httpCfg.Endpoints = append(httpCfg.Endpoints, endpoint)
-			}
-			device.HTTPConfig = httpCfg
-		}
+		device.HTTPConfig = parseHTTPConfig(yamlDevice.Http, device.Name)
 
 		// Handle FTP configuration
-		if yamlDevice.Ftp != nil {
-			ftpCfg := &FTPConfig{
-				Enabled:        yamlDevice.Ftp.Enabled,
-				WelcomeBanner:  yamlDevice.Ftp.WelcomeBanner,
-				SystemType:     yamlDevice.Ftp.SystemType,
-				AllowAnonymous: yamlDevice.Ftp.AllowAnonymous,
-				Users:          make([]FTPUser, 0),
-			}
-			// Set defaults
-			if ftpCfg.WelcomeBanner == "" {
-				ftpCfg.WelcomeBanner = fmt.Sprintf("220 %s FTP Server (NIAC-Go) ready.", device.Name)
-			}
-			if ftpCfg.SystemType == "" {
-				ftpCfg.SystemType = "UNIX Type: L8"
-			}
-			// Parse users
-			for _, u := range yamlDevice.Ftp.Users {
-				user := FTPUser{
-					Username: u.Username,
-					Password: u.Password,
-					HomeDir:  u.HomeDir,
-				}
-				if user.HomeDir == "" {
-					user.HomeDir = "/"
-				}
-				ftpCfg.Users = append(ftpCfg.Users, user)
-			}
-			device.FTPConfig = ftpCfg
-		}
+		device.FTPConfig = parseFTPConfig(yamlDevice.Ftp, device.Name)
 
 		// Handle NetBIOS configuration
 		if yamlDevice.Netbios != nil {
@@ -1188,6 +903,360 @@ func LoadYAML(filename string) (*Config, error) {
 	}
 
 	return cfg, nil
+}
+
+// parseDHCPConfig parses DHCP configuration from YAML
+func parseDHCPConfig(yamlDhcp *converter.DhcpServer, deviceName string) (*DHCPConfig, error) {
+	if yamlDhcp == nil {
+		return nil, nil
+	}
+
+	dhcpCfg := &DHCPConfig{}
+
+	// Basic options
+	if yamlDhcp.SubnetMask != "" {
+		if ip := net.ParseIP(yamlDhcp.SubnetMask); ip != nil {
+			dhcpCfg.SubnetMask = net.IPMask(ip.To4())
+		}
+	}
+	if yamlDhcp.Router != "" {
+		dhcpCfg.Router = net.ParseIP(yamlDhcp.Router)
+	}
+	if yamlDhcp.DomainNameServer != "" {
+		if ip := net.ParseIP(yamlDhcp.DomainNameServer); ip != nil {
+			dhcpCfg.DomainNameServer = append(dhcpCfg.DomainNameServer, ip)
+		}
+	}
+	if yamlDhcp.ServerIdentifier != "" {
+		dhcpCfg.ServerIdentifier = net.ParseIP(yamlDhcp.ServerIdentifier)
+	}
+	if yamlDhcp.NextServerIP != "" {
+		dhcpCfg.NextServerIP = net.ParseIP(yamlDhcp.NextServerIP)
+	}
+
+	// DHCPv4 high priority options
+	for _, ntpStr := range yamlDhcp.NTPServers {
+		if ip := net.ParseIP(ntpStr); ip != nil {
+			dhcpCfg.NTPServers = append(dhcpCfg.NTPServers, ip)
+		}
+	}
+	dhcpCfg.DomainSearch = yamlDhcp.DomainSearch
+	dhcpCfg.TFTPServerName = yamlDhcp.TFTPServerName
+	dhcpCfg.BootfileName = yamlDhcp.BootfileName
+	if yamlDhcp.VendorSpecific != "" {
+		// Parse hex string to bytes
+		dhcpCfg.VendorSpecific = []byte(yamlDhcp.VendorSpecific)
+	}
+
+	// DHCPv6 options
+	for _, sntpStr := range yamlDhcp.SNTPServersV6 {
+		if ip := net.ParseIP(sntpStr); ip != nil {
+			dhcpCfg.SNTPServersV6 = append(dhcpCfg.SNTPServersV6, ip)
+		}
+	}
+	for _, ntpStr := range yamlDhcp.NTPServersV6 {
+		if ip := net.ParseIP(ntpStr); ip != nil {
+			dhcpCfg.NTPServersV6 = append(dhcpCfg.NTPServersV6, ip)
+		}
+	}
+	for _, sipStr := range yamlDhcp.SIPServersV6 {
+		if ip := net.ParseIP(sipStr); ip != nil {
+			dhcpCfg.SIPServersV6 = append(dhcpCfg.SIPServersV6, ip)
+		}
+	}
+	dhcpCfg.SIPDomainsV6 = yamlDhcp.SIPDomainsV6
+
+	// Static leases
+	for _, lease := range yamlDhcp.ClientLeases {
+		clientIP := net.ParseIP(lease.ClientIP)
+		if clientIP == nil {
+			continue
+		}
+		macAddr, err := net.ParseMAC(lease.MacAddrValue)
+		if err != nil {
+			continue
+		}
+		dhcpLease := DHCPLease{
+			ClientIP:   clientIP,
+			MACAddress: macAddr,
+		}
+		if lease.MacAddrMask != "" {
+			if mask, err := net.ParseMAC(lease.MacAddrMask); err == nil {
+				dhcpLease.MACMask = mask
+			}
+		}
+		dhcpCfg.ClientLeases = append(dhcpCfg.ClientLeases, dhcpLease)
+	}
+
+	return dhcpCfg, nil
+}
+
+// parseDNSConfig parses DNS configuration from YAML
+func parseDNSConfig(yamlDns *converter.DnsServer, deviceName string) (*DNSConfig, error) {
+	if yamlDns == nil {
+		return nil, nil
+	}
+
+	dnsCfg := &DNSConfig{}
+
+	// Forward records (A records)
+	for _, record := range yamlDns.ForwardRecords {
+		ip := net.ParseIP(record.IP)
+		if ip == nil {
+			continue
+		}
+		ttl := uint32(3600) // Default TTL
+		if record.TTL > 0 {
+			// Validate TTL is in reasonable range before conversion
+			if record.TTL < 0 {
+				return nil, fmt.Errorf("device %s: DNS forward record TTL cannot be negative: %d",
+					deviceName, record.TTL)
+			}
+			if record.TTL > 2147483647 { // Max int32 (~68 years)
+				return nil, fmt.Errorf("device %s: DNS forward record TTL exceeds maximum (2147483647): %d",
+					deviceName, record.TTL)
+			}
+			ttl = uint32(record.TTL)
+		}
+		dnsCfg.ForwardRecords = append(dnsCfg.ForwardRecords, DNSRecord{
+			Name: record.Name,
+			IP:   ip,
+			TTL:  ttl,
+		})
+	}
+
+	// Reverse records (PTR records)
+	for _, record := range yamlDns.ReverseRecords {
+		ip := net.ParseIP(record.IP)
+		if ip == nil {
+			continue
+		}
+		ttl := uint32(3600) // Default TTL
+		if record.TTL > 0 {
+			// Validate TTL is in reasonable range before conversion
+			if record.TTL < 0 {
+				return nil, fmt.Errorf("device %s: DNS reverse record TTL cannot be negative: %d",
+					deviceName, record.TTL)
+			}
+			if record.TTL > 2147483647 { // Max int32 (~68 years)
+				return nil, fmt.Errorf("device %s: DNS reverse record TTL exceeds maximum (2147483647): %d",
+					deviceName, record.TTL)
+			}
+			ttl = uint32(record.TTL)
+		}
+		dnsCfg.ReverseRecords = append(dnsCfg.ReverseRecords, DNSRecord{
+			Name: record.Name,
+			IP:   ip,
+			TTL:  ttl,
+		})
+	}
+
+	return dnsCfg, nil
+}
+
+// parseLLDPConfig parses LLDP configuration from YAML
+func parseLLDPConfig(yamlLldp *converter.LldpConfig) *LLDPConfig {
+	if yamlLldp == nil {
+		return nil
+	}
+
+	lldpCfg := &LLDPConfig{
+		Enabled:           yamlLldp.Enabled,
+		AdvertiseInterval: yamlLldp.AdvertiseInterval,
+		TTL:               yamlLldp.TTL,
+		SystemDescription: yamlLldp.SystemDescription,
+		PortDescription:   yamlLldp.PortDescription,
+		ChassisIDType:     yamlLldp.ChassisIDType,
+	}
+	// Set defaults if not specified
+	if lldpCfg.AdvertiseInterval == 0 {
+		lldpCfg.AdvertiseInterval = 30
+	}
+	if lldpCfg.TTL == 0 {
+		lldpCfg.TTL = 120
+	}
+	if lldpCfg.ChassisIDType == "" {
+		lldpCfg.ChassisIDType = ChassisIDTypeMAC
+	}
+	return lldpCfg
+}
+
+// parseCDPConfig parses CDP configuration from YAML
+func parseCDPConfig(yamlCdp *converter.CdpConfig) *CDPConfig {
+	if yamlCdp == nil {
+		return nil
+	}
+
+	cdpCfg := &CDPConfig{
+		Enabled:           yamlCdp.Enabled,
+		AdvertiseInterval: yamlCdp.AdvertiseInterval,
+		Holdtime:          yamlCdp.Holdtime,
+		Version:           yamlCdp.Version,
+		SoftwareVersion:   yamlCdp.SoftwareVersion,
+		Platform:          yamlCdp.Platform,
+		PortID:            yamlCdp.PortID,
+	}
+	// Set defaults if not specified
+	if cdpCfg.AdvertiseInterval == 0 {
+		cdpCfg.AdvertiseInterval = 60
+	}
+	if cdpCfg.Holdtime == 0 {
+		cdpCfg.Holdtime = 180
+	}
+	if cdpCfg.Version == 0 {
+		cdpCfg.Version = 2
+	}
+	return cdpCfg
+}
+
+// parseEDPConfig parses EDP configuration from YAML
+func parseEDPConfig(yamlEdp *converter.EdpConfig) *EDPConfig {
+	if yamlEdp == nil {
+		return nil
+	}
+
+	edpCfg := &EDPConfig{
+		Enabled:           yamlEdp.Enabled,
+		AdvertiseInterval: yamlEdp.AdvertiseInterval,
+		VersionString:     yamlEdp.VersionString,
+		DisplayString:     yamlEdp.DisplayString,
+	}
+	// Set defaults if not specified
+	if edpCfg.AdvertiseInterval == 0 {
+		edpCfg.AdvertiseInterval = 30
+	}
+	return edpCfg
+}
+
+// parseFDPConfig parses FDP configuration from YAML
+func parseFDPConfig(yamlFdp *converter.FdpConfig) *FDPConfig {
+	if yamlFdp == nil {
+		return nil
+	}
+
+	fdpCfg := &FDPConfig{
+		Enabled:           yamlFdp.Enabled,
+		AdvertiseInterval: yamlFdp.AdvertiseInterval,
+		Holdtime:          yamlFdp.Holdtime,
+		SoftwareVersion:   yamlFdp.SoftwareVersion,
+		Platform:          yamlFdp.Platform,
+		PortID:            yamlFdp.PortID,
+	}
+	// Set defaults if not specified
+	if fdpCfg.AdvertiseInterval == 0 {
+		fdpCfg.AdvertiseInterval = 60
+	}
+	if fdpCfg.Holdtime == 0 {
+		fdpCfg.Holdtime = 180
+	}
+	return fdpCfg
+}
+
+// parseSTPConfig parses STP configuration from YAML
+func parseSTPConfig(yamlStp *converter.StpConfig) *STPConfig {
+	if yamlStp == nil {
+		return nil
+	}
+
+	stpCfg := &STPConfig{
+		Enabled:        yamlStp.Enabled,
+		BridgePriority: yamlStp.BridgePriority,
+		HelloTime:      yamlStp.HelloTime,
+		MaxAge:         yamlStp.MaxAge,
+		ForwardDelay:   yamlStp.ForwardDelay,
+		Version:        yamlStp.Version,
+	}
+	// Set defaults if not specified
+	if stpCfg.BridgePriority == 0 {
+		stpCfg.BridgePriority = 32768 // Default priority
+	}
+	if stpCfg.HelloTime == 0 {
+		stpCfg.HelloTime = 2 // Default hello time
+	}
+	if stpCfg.MaxAge == 0 {
+		stpCfg.MaxAge = 20 // Default max age
+	}
+	if stpCfg.ForwardDelay == 0 {
+		stpCfg.ForwardDelay = 15 // Default forward delay
+	}
+	if stpCfg.Version == "" {
+		stpCfg.Version = "stp" // Default to STP
+	}
+	return stpCfg
+}
+
+// parseHTTPConfig parses HTTP configuration from YAML
+func parseHTTPConfig(yamlHttp *converter.HttpConfig, deviceName string) *HTTPConfig {
+	if yamlHttp == nil {
+		return nil
+	}
+
+	httpCfg := &HTTPConfig{
+		Enabled:    yamlHttp.Enabled,
+		ServerName: yamlHttp.ServerName,
+		Endpoints:  make([]HTTPEndpoint, 0),
+	}
+	// Set default server name if not specified
+	if httpCfg.ServerName == "" {
+		httpCfg.ServerName = "NIAC-Go/1.0.0"
+	}
+	// Parse endpoints
+	for _, ep := range yamlHttp.Endpoints {
+		endpoint := HTTPEndpoint{
+			Path:        ep.Path,
+			Method:      ep.Method,
+			StatusCode:  ep.StatusCode,
+			ContentType: ep.ContentType,
+			Body:        ep.Body,
+		}
+		// Set defaults
+		if endpoint.Method == "" {
+			endpoint.Method = "GET"
+		}
+		if endpoint.StatusCode == 0 {
+			endpoint.StatusCode = 200
+		}
+		if endpoint.ContentType == "" {
+			endpoint.ContentType = "text/html"
+		}
+		httpCfg.Endpoints = append(httpCfg.Endpoints, endpoint)
+	}
+	return httpCfg
+}
+
+// parseFTPConfig parses FTP configuration from YAML
+func parseFTPConfig(yamlFtp *converter.FtpConfig, deviceName string) *FTPConfig {
+	if yamlFtp == nil {
+		return nil
+	}
+
+	ftpCfg := &FTPConfig{
+		Enabled:        yamlFtp.Enabled,
+		WelcomeBanner:  yamlFtp.WelcomeBanner,
+		SystemType:     yamlFtp.SystemType,
+		AllowAnonymous: yamlFtp.AllowAnonymous,
+		Users:          make([]FTPUser, 0),
+	}
+	// Set defaults
+	if ftpCfg.WelcomeBanner == "" {
+		ftpCfg.WelcomeBanner = fmt.Sprintf("220 %s FTP Server (NIAC-Go) ready.", deviceName)
+	}
+	if ftpCfg.SystemType == "" {
+		ftpCfg.SystemType = "UNIX Type: L8"
+	}
+	// Parse users
+	for _, u := range yamlFtp.Users {
+		user := FTPUser{
+			Username: u.Username,
+			Password: u.Password,
+			HomeDir:  u.HomeDir,
+		}
+		if user.HomeDir == "" {
+			user.HomeDir = "/"
+		}
+		ftpCfg.Users = append(ftpCfg.Users, user)
+	}
+	return ftpCfg
 }
 
 // ParseSimpleConfig parses a simple device configuration format
