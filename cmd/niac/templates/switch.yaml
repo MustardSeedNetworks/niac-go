@@ -1,0 +1,55 @@
+# Switch Template
+# Layer 2/3 switch with STP and VLAN support
+
+devices:
+  - name: access-switch-01
+    type: switch
+    mac_address: "00:1B:2C:3D:4E:01"
+    ip_addresses:
+      - "10.0.1.10"
+
+    # Basic protocols
+    arp:
+      enabled: true
+    icmp:
+      enabled: true
+
+    # Discovery
+    lldp:
+      enabled: true
+      system_name: "Access Switch 01"
+      system_description: "Cisco Catalyst 9300"
+      chassis_id: "00:1B:2C:3D:4E:01"
+      port_id: "GigabitEthernet1/0/1"
+      ttl: 120
+      capabilities: ["bridge"]
+      vlan_id: 100
+
+    cdp:
+      enabled: true
+      device_id: "access-switch-01"
+      platform: "Cisco Catalyst 9300-48P"
+      software_version: "IOS XE 17.6.3"
+      capabilities: ["Switch", "IGMP"]
+      port_id: "GigabitEthernet1/0/1"
+      vlan_id: 100
+      native_vlan: 1
+      duplex: "full"
+      ttl: 180
+
+    # Spanning Tree Protocol
+    stp:
+      enabled: true
+      bridge_priority: 32768
+      bridge_id: "00:1B:2C:3D:4E:01"
+      root_priority: 4096
+      root_id: "00:1A:2B:3C:4D:01"
+
+    # SNMP
+    snmp:
+      enabled: true
+      community: "public"
+      sys_name: "access-switch-01"
+      sys_descr: "Cisco Catalyst 9300 Switch"
+      sys_location: "Building A - Floor 2 - IDF"
+      sys_contact: "netops@example.com"

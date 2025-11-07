@@ -1,0 +1,66 @@
+# Complete Network Simulation
+# Multi-device network with router, switch, AP, server
+
+devices:
+  - name: core-router
+    type: router
+    mac_address: "00:0A:0B:0C:0D:01"
+    ip_addresses: ["10.0.0.1"]
+    arp: {enabled: true}
+    icmp: {enabled: true}
+    lldp:
+      enabled: true
+      system_name: "Core Router"
+      chassis_id: "00:0A:0B:0C:0D:01"
+      port_id: "GigabitEthernet0/1"
+      ttl: 120
+      capabilities: ["router"]
+    snmp:
+      enabled: true
+      community: "public"
+      sys_name: "core-router"
+      sys_descr: "Cisco IOS Router"
+
+  - name: access-switch
+    type: switch
+    mac_address: "00:0A:0B:0C:0D:02"
+    ip_addresses: ["10.0.0.2"]
+    arp: {enabled: true}
+    icmp: {enabled: true}
+    lldp:
+      enabled: true
+      system_name: "Access Switch"
+      chassis_id: "00:0A:0B:0C:0D:02"
+      port_id: "GigabitEthernet1/0/1"
+      capabilities: ["bridge"]
+    stp:
+      enabled: true
+      bridge_priority: 32768
+      bridge_id: "00:0A:0B:0C:0D:02"
+
+  - name: wifi-ap
+    type: ap
+    mac_address: "00:0A:0B:0C:0D:03"
+    ip_addresses: ["10.0.0.3"]
+    arp: {enabled: true}
+    icmp: {enabled: true}
+    lldp:
+      enabled: true
+      system_name: "WiFi AP"
+      chassis_id: "00:0A:0B:0C:0D:03"
+      capabilities: ["wlan-access-point"]
+
+  - name: dhcp-server
+    type: server
+    mac_address: "00:0A:0B:0C:0D:04"
+    ip_addresses: ["10.0.0.10"]
+    arp: {enabled: true}
+    icmp: {enabled: true}
+    dhcp:
+      router: "10.0.0.1"
+      domain_name_server: ["10.0.0.10", "8.8.8.8"]
+      domain_name: "lab.local"
+    dns:
+      forward_records:
+        - {name: "router.lab.local", ip: "10.0.0.1"}
+        - {name: "switch.lab.local", ip: "10.0.0.2"}

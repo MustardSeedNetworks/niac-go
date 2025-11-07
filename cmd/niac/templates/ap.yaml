@@ -1,0 +1,54 @@
+# Access Point Template
+# Enterprise Wi-Fi AP with controller integration
+
+devices:
+  - name: wifi-ap-01
+    type: ap
+    mac_address: "00:1C:2D:3E:4F:01"
+    ip_addresses:
+      - "10.0.2.50"
+
+    # Basic protocols
+    arp:
+      enabled: true
+    icmp:
+      enabled: true
+
+    # Discovery
+    lldp:
+      enabled: true
+      system_name: "WiFi AP 01"
+      system_description: "Cisco Aironet 9120AX"
+      chassis_id: "00:1C:2D:3E:4F:01"
+      port_id: "GigabitEthernet0"
+      ttl: 120
+      capabilities: ["wlan-access-point"]
+      management_addresses:
+        - "10.0.2.50"
+
+    cdp:
+      enabled: true
+      device_id: "wifi-ap-01"
+      platform: "Cisco Aironet 9120AXI"
+      software_version: "17.9.4"
+      capabilities: ["Host"]
+      port_id: "GigabitEthernet0"
+      power_draw: 15.4
+      ttl: 180
+
+    # SNMP
+    snmp:
+      enabled: true
+      community: "public"
+      sys_name: "wifi-ap-01"
+      sys_descr: "Cisco Aironet Access Point"
+      sys_location: "Building A - Floor 2 - Room 201"
+      sys_contact: "wireless@example.com"
+
+    # HTTP - Web interface
+    http:
+      enabled: true
+      server_header: "Cisco-IOS"
+      endpoints:
+        - path: "/"
+          content: "<html><body><h1>Cisco Aironet AP</h1></body></html>"

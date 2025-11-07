@@ -1,0 +1,17 @@
+# Minimal NIAC Configuration
+# Single device with basic protocols
+
+devices:
+  - name: device-01
+    type: router
+    mac_address: "00:11:22:33:44:55"
+    ip_addresses:
+      - "192.168.1.1"
+
+    # ARP - Address Resolution Protocol
+    arp:
+      enabled: true
+
+    # ICMP - Ping responses
+    icmp:
+      enabled: true

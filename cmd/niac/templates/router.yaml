@@ -1,0 +1,57 @@
+# Router Template
+# Enterprise router with full protocol support
+
+devices:
+  - name: core-router-01
+    type: router
+    mac_address: "00:1A:2B:3C:4D:01"
+    ip_addresses:
+      - "10.0.0.1"
+      - "192.168.1.1"
+
+    # Basic protocols
+    arp:
+      enabled: true
+    icmp:
+      enabled: true
+
+    # Discovery protocols
+    lldp:
+      enabled: true
+      system_name: "Core Router 01"
+      system_description: "Cisco IOS XE 17.3"
+      chassis_id: "00:1A:2B:3C:4D:01"
+      port_id: "GigabitEthernet0/1"
+      ttl: 120
+      capabilities: ["bridge", "router"]
+
+    cdp:
+      enabled: true
+      device_id: "core-router-01"
+      platform: "Cisco ISR4331"
+      software_version: "IOS XE 17.3.5"
+      capabilities: ["Router", "Switch", "IGMP"]
+      port_id: "GigabitEthernet0/1"
+      ttl: 180
+
+    # SNMP
+    snmp:
+      enabled: true
+      community: "public"
+      sys_name: "core-router-01"
+      sys_descr: "Cisco IOS XE Router"
+      sys_location: "Data Center A - Rack 12"
+      sys_contact: "netops@example.com"
+
+      traps:
+        enabled: true
+        receivers:
+          - "10.0.0.100:162"
+        high_cpu:
+          enabled: true
+          threshold: 80
+          interval: 300
+        high_memory:
+          enabled: true
+          threshold: 85
+          interval: 300
