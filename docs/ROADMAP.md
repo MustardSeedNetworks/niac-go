@@ -77,116 +77,90 @@
 
 ## Future Releases
 
-### v2.0.0 - Web UI & Containers
-**Target**: 3-6 months
+### v2.0.0 - REST API & Basic Web
+**Target**: 2-3 months
 
-### Web UI Features
-- [ ] **Modern web interface** (React/Vue/Svelte)
-- [ ] Real-time dashboard
-- [ ] Live packet visualization
-- [ ] Interactive device map/topology
-- [ ] Configuration editor (visual + code)
-- [ ] Statistics graphs and charts
+**Philosophy**: Start simple with Go templates and progressive enhancement, not a complex SPA.
+
+#### REST API
+- [ ] HTTP server with standard library (net/http or Chi/Echo)
+- [ ] REST endpoints for device status, stats, config
+- [ ] JSON responses for all data
+- [ ] Basic authentication (optional)
+- [ ] API versioning (/api/v1/)
+
+#### Simple Web UI (Go Templates + HTMX)
+- [ ] **Server-rendered HTML** with Go templates
+- [ ] **HTMX** for dynamic updates (no build step!)
+- [ ] Status dashboard (device list, stats)
+- [ ] Real-time updates via SSE (Server-Sent Events) or HTMX polling
+- [ ] Simple device controls (start/stop, error injection)
+- [ ] Embedded in single binary (no separate frontend)
+
+**Why HTMX over React?**
+- No build step, no node_modules, no complexity
+- Server-driven, fits Go's strengths
+- Progressive enhancement from HTML
+- Tiny (~14KB), works without JavaScript
+- Perfect for admin/monitoring tools
+
+### v2.1.0 - Docker & Containers
+**Target**: 3-4 months
+
+- [ ] **Dockerfile** with multi-stage build
+- [ ] Docker image published to Docker Hub
+- [ ] Docker Compose example
+- [ ] Health check endpoint
+- [ ] Graceful shutdown handling
+- [ ] Volume mounts for configs and walks
+- [ ] Environment variable configuration
+- [ ] Multi-architecture builds (amd64, arm64)
+
+### v2.2.0 - Enhanced Web Features
+**Target**: 4-6 months
+
+- [ ] WebSocket for true real-time updates (if SSE not sufficient)
+- [ ] Device topology visualization (simple SVG/Canvas, no heavy library)
+- [ ] Configuration editor (YAML textarea with validation)
 - [ ] Log viewer with filtering
-- [ ] Error injection controls
-- [ ] Device management (add/remove/edit)
-- [ ] Traffic pattern controls
-- [ ] WebSocket for real-time updates
-- [ ] REST API for automation
+- [ ] Packet statistics graphs (simple charts, maybe Chart.js or pure SVG)
+- [ ] Export stats as CSV/JSON
 
-### Container Features
-- [ ] **Docker image** (`docker run niac-go`)
-- [ ] Docker Compose for multi-device scenarios
-- [ ] Kubernetes deployment manifests
-- [ ] Helm charts
-- [ ] Health checks and readiness probes
-- [ ] Volume mounts for configs
-- [ ] Environment-based configuration
-- [ ] Multi-architecture support (amd64, arm64)
+### v2.3.0 - Kubernetes & Orchestration
+**Target**: 6-8 months (if needed)
 
-### Architecture: Web UI Options
+- [ ] Kubernetes manifests
+- [ ] Helm chart
+- [ ] Horizontal scaling support
+- [ ] Service mesh compatibility
 
-#### **Option A: Embedded Web UI** (Recommended)
-```
-niac binary includes web server
-├── Serve Web UI on http://localhost:8080
-├── REST API on /api/*
-├── WebSocket on /ws
-└── Same binary, multiple modes:
-    - CLI mode: niac --interactive en0 network.json
-    - Web mode: niac --web en0 network.json
-```
+---
 
-**Pros:**
-- Single binary distribution
-- No separate components
-- Easy deployment
-- Works offline
+## Architecture Philosophy
 
-**Cons:**
-- Larger binary size (~15-20 MB)
-- UI updates require new binary
-
-#### **Option B: Separate Web UI**
-```
-niac-server (Go backend with API)
-└── REST API + WebSocket
-
-niac-web (Frontend SPA)
-└── React/Vue app served separately
-```
-
-**Pros:**
-- Smaller core binary
-- Independent UI updates
-- Better separation of concerns
-
-**Cons:**
-- Multiple components to deploy
-- More complex setup
-
-#### **Option C: Hybrid** (Best of Both)
-```
-niac binary with embedded UI
-└── Can also run as API-only server
-
-External UI can connect if desired
-└── For custom dashboards, integrations
-```
-
-### Container Deployment Example
-
-```yaml
-# docker-compose.yml
-version: '3.8'
-services:
-  niac:
-    image: krisarmstrong/niac-go:latest
-    container_name: niac-simulator
-    privileged: true  # Required for packet capture
-    network_mode: host
-    volumes:
-      - ./configs:/configs
-      - ./walks:/walks
-    environment:
-      - NIAC_INTERFACE=eth0
-      - NIAC_CONFIG=/configs/network.json
-      - NIAC_DEBUG_LEVEL=2
-      - NIAC_WEB_ENABLED=true
-      - NIAC_WEB_PORT=8080
-    ports:
-      - "8080:8080"  # Web UI
-    command: --web --interface eth0 /configs/network.json
-```
+**Embedded Everything**: Keep NIAC as a single binary with optional features.
 
 ```bash
-# Run with Docker
-docker run -it --rm --privileged --net=host \
-  -v $(pwd)/configs:/configs \
-  -v $(pwd)/walks:/walks \
-  krisarmstrong/niac-go:latest \
-  --web --interface en0 /configs/network.json
+# CLI mode (current)
+niac interactive en0 config.yaml
+
+# Web mode (v2.0.0+)
+niac web en0 config.yaml
+  └── Serves web UI on http://localhost:8080
+  └── REST API on http://localhost:8080/api/v1/
+  └── SSE updates on http://localhost:8080/events
+
+# Docker mode (v2.1.0+)
+docker run -p 8080:8080 niac-go web eth0 config.yaml
 ```
+
+**Technology Stack (v2.0.0)**:
+- **Backend**: Go net/http or Chi router
+- **Templates**: Go html/template
+- **Interactivity**: HTMX (~14KB) for AJAX-style updates
+- **Styling**: Simple CSS (or Pico.css/Water.css for classless styling)
+- **Real-time**: SSE (Server-Sent Events) - simpler than WebSocket
+- **No build step**: Everything embedded in Go binary
 
 ---
 
@@ -200,7 +174,9 @@ docker run -it --rm --privileged --net=host \
 | **v1.11.0** | Templates | Pre-built configs, Quick start | ✅ DONE |
 | **v1.12.0** | TUI | Interactive terminal UI, Monitoring | ✅ DONE |
 | **v1.13.0** | CLI/Tools | Shell completion, Man pages, Config tools | ✅ DONE |
-| **v2.0.0** | Web/Cloud | Web UI, REST API, Docker/K8s | 3-6 months |
+| **v2.0.0** | Web API | REST API, HTMX UI, Simple Dashboard | 2-3 months |
+| **v2.1.0** | Containers | Docker images, Compose, Multi-arch | 3-4 months |
+| **v2.2.0** | Web Enhanced | Charts, Topology, Editor | 4-6 months |
 
 ---
 
