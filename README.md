@@ -2,7 +2,7 @@
 
 **Production-ready network device simulator** - Complete YAML configuration system with per-protocol debug control, multi-IP support, and comprehensive protocol coverage.
 
-**Current Version: 1.12.0** - Interactive TUI & Templates
+**Current Version: 1.13.0** - Enhanced CLI & Configuration Tools
 
 ## 🚀 Why Go?
 
@@ -28,6 +28,19 @@ NIAC-Go is a modern rewrite of the original Java-based NIAC, leveraging Go's str
 | **Build Time** | 4-5 min | 5 sec | **48-60x faster** |
 
 ## Features
+
+### v1.13.0 Highlights 🎉
+
+- **🎯 Enhanced CLI/Help**: Professional CLI experience
+  - Shell completion for bash, zsh, fish, and powershell
+  - Rich help examples for all commands
+  - Unix man pages generation (`niac man`)
+  - Installation instructions for all shells
+- **🔧 Configuration Management Tools**: DevOps-ready config tools
+  - `niac config export` - Normalize and clean YAML configurations
+  - `niac config diff` - Compare configurations and detect drift
+  - `niac config merge` - Merge base and overlay configurations
+  - Environment-specific overrides support
 
 ### v1.12.0 Highlights 🎉
 
