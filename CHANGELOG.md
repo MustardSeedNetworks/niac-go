@@ -13,6 +13,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Additional protocol tests (CDP, DHCP, DNS, HTTP, FTP)
 - Integration tests for multi-device scenarios
 
+## [1.13.1] - 2025-01-07
+
+### 🔒 SECURITY PATCH - Critical
+
+Critical security and correctness fixes identified in comprehensive code review.
+
+### Fixed
+
+#### Security
+- **CRITICAL**: Path traversal vulnerability in SNMP walk file loading
+  - Added `validateWalkFilePath()` function to prevent `../../etc/passwd` style attacks
+  - Walk files now validated to exist, be regular files, and not contain traversal sequences
+  - Prevents malicious configurations from accessing system files (pkg/config/config.go:1377)
+
+#### Correctness
+- **Version inconsistency**: Removed duplicate version constants from `main.go`
+  - Single source of truth now in `root.go` (v1.13.1)
+  - Removed conflicting `Version = "1.9.0"` from main.go:22
+  - Supports build-time version injection via linker flags
+
+#### Resource Leaks
+- **Goroutine leak in RateLimiter**: Added proper cleanup mechanism
+  - Added `done` channel to signal goroutine termination
+  - `Stop()` now calls `close(done)` to clean up goroutine (pkg/capture/capture.go:234)
+  - Prevents goroutine accumulation in long-running processes
+
+### Changed
+- Version references in `printBanner()` and `printVersion()` now use variables from `root.go`
+
 ## [1.13.0] - 2025-01-07
 
 ### 🎉 MILESTONE: Enhanced CLI & Configuration Tools!
