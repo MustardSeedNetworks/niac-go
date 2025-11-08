@@ -1,0 +1,49 @@
+# SNMP Agent - Basic Configuration
+#
+# This example demonstrates a simple SNMP agent with walk file support.
+# The agent responds to SNMP GET/GETNEXT/GETBULK requests using data
+# from the walk file.
+#
+# Use Case: Basic SNMP monitoring and discovery
+# Protocol: SNMPv2c with community string authentication
+# Added: v1.6.0
+
+devices:
+  - name: niac-core-sw-01
+    type: switch
+    mac: "00:11:22:33:44:01"
+    ips:
+      - "10.0.0.11"
+
+    # SNMP Agent Configuration
+    snmp_agent:
+      enabled: true
+      community: "public"  # SNMPv2c community string (read-only)
+      walk_file: "device_walks/misc/n5k.walk"  # Path to SNMP walk file
+
+      # Optional: System information (overrides walk file values)
+      sysname: "niac-core-sw-01"
+      sysdescr: "Cisco Nexus 5000 Series - NiAC-Go Simulated Device"
+      syscontact: "netadmin@niac-go.com"
+      syslocation: "NiAC-Go - DC-WEST - Rack A12"
+
+    # Enable LLDP for discovery
+    lldp:
+      enabled: true
+      system_name: "niac-core-sw-01"
+      system_description: "Cisco Nexus 5000 - Core Switch"
+      port_description: "Management Interface"
+
+# Usage:
+#   niac validate examples/snmp/snmp-agent-basic.yaml
+#   sudo niac en0 examples/snmp/snmp-agent-basic.yaml
+#
+# Test with snmpwalk:
+#   snmpwalk -v2c -c public 10.0.0.11
+#   snmpget -v2c -c public 10.0.0.11 sysName.0
+#
+# Notes:
+#   - Uses SNMPv2c with "public" community string
+#   - Walk file contains real device SNMP data
+#   - Agent responds to standard SNMP queries
+#   - Production deployments should use SNMPv3

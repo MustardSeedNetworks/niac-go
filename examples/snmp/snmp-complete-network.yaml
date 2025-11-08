@@ -1,0 +1,279 @@
+# SNMP - Complete Network Monitoring Scenario
+#
+# This example demonstrates a realistic network monitoring setup with
+# multiple devices, a centralized monitoring server, and comprehensive
+# SNMP trap generation.
+#
+# Network Topology:
+#   - Core Router (edge, DHCP server, DNS, traps enabled)
+#   - Core Switch (L2/L3, LLDP, CDP, traps enabled)
+#   - Distribution Switch (access layer, LLDP, basic traps)
+#   - Monitoring Server (trap receiver, SNMP collector)
+#
+# Use Case: Enterprise network monitoring with centralized SNMP management
+# Protocol: SNMPv2c with trap collection
+# Added: v1.6.0
+
+devices:
+  # Core Router - Network Gateway
+  - name: niac-core-rtr-01
+    type: router
+    mac: "00:11:22:33:44:01"
+    ips:
+      - "10.0.0.1"
+      - "198.51.100.1"  # WAN interface
+
+    snmp_agent:
+      enabled: true
+      community: "niac-go-ro"
+      walk_file: "device_walks/misc/C3900_63.147.68.1.walk"
+
+      sysname: "niac-core-rtr-01"
+      sysdescr: "Cisco 3900 Router - NiAC-Go Core Router"
+      syscontact: "netadmin@niac-go.com"
+      syslocation: "NiAC-Go - DC-WEST - Core Network"
+
+      traps:
+        enabled: true
+        receivers: ["10.100.0.100:162"]
+        community: "niac-go-trap"
+
+        # Router-specific traps
+        cold_start:
+          enabled: true
+        link_up:
+          enabled: true
+        link_down:
+          enabled: true
+        authentication_failure:
+          enabled: true
+        high_cpu:
+          enabled: true
+          threshold: 80
+        high_memory:
+          enabled: true
+          threshold: 85
+
+    # Routing and services
+    lldp:
+      enabled: true
+      system_name: "niac-core-rtr-01"
+      system_description: "Cisco 3900 - Core Router"
+      port_description: "GigabitEthernet0/0"
+
+    cdp:
+      enabled: true
+      platform: "Cisco 3900"
+      software_version: "IOS 15.4(3)M6a"
+
+    # DHCP server for network
+    dhcp:
+      enabled: true
+      pools:
+        - network: "10.0.10.0/24"
+          range_start: "10.0.10.100"
+          range_end: "10.0.10.200"
+          gateway: "10.0.0.1"
+          dns_servers: ["10.0.0.1", "8.8.8.8"]
+          lease_time: 86400
+
+    # DNS server
+    dns:
+      enabled: true
+      forward_records:
+        - name: "niac-core-rtr-01.niac-go.local"
+          ip: "10.0.0.1"
+          ttl: 3600
+        - name: "gateway.niac-go.local"
+          ip: "10.0.0.1"
+          ttl: 3600
+
+    icmp:
+      enabled: true
+      ttl: 64
+
+  # Core Switch - L2/L3 Distribution
+  - name: niac-core-sw-01
+    type: switch
+    mac: "00:11:22:33:44:11"
+    ips:
+      - "10.0.0.11"
+
+    snmp_agent:
+      enabled: true
+      community: "niac-go-ro"
+      walk_file: "device_walks/misc/n5k.walk"
+
+      sysname: "niac-core-sw-01"
+      sysdescr: "Cisco Nexus 5000 - NiAC-Go Core Switch"
+      syscontact: "netadmin@niac-go.com"
+      syslocation: "NiAC-Go - DC-WEST - Rack A12"
+
+      traps:
+        enabled: true
+        receivers: ["10.100.0.100:162"]
+        community: "niac-go-trap"
+
+        # Switch-specific traps
+        link_up:
+          enabled: true
+        link_down:
+          enabled: true
+        interface_errors:
+          enabled: true
+          threshold: 1000
+        high_cpu:
+          enabled: true
+          threshold: 75
+        high_memory:
+          enabled: true
+          threshold: 80
+
+    lldp:
+      enabled: true
+      system_name: "niac-core-sw-01"
+      system_description: "Cisco Nexus 5000 - Core Switch"
+      chassis_id: "00:11:22:33:44:11"
+      port_description: "Management0"
+      advertise_interval: 30
+
+    cdp:
+      enabled: true
+      platform: "Cisco Nexus 5000"
+      capabilities: "Switch IGMP"
+      advertise_interval: 60
+
+    # STP for loop prevention
+    stp:
+      enabled: true
+      bridge_priority: 4096  # Root bridge priority
+
+  # Distribution Switch - Access Layer
+  - name: niac-dist-sw-floor2
+    type: switch
+    mac: "00:11:22:33:44:22"
+    ips:
+      - "10.0.0.22"
+
+    snmp_agent:
+      enabled: true
+      community: "public"  # Access switches use standard community
+      walk_file: "device_walks/misc/PowerConnect_6224_10.248.1.246.walk"
+
+      sysname: "niac-dist-sw-floor2"
+      sysdescr: "Dell PowerConnect 6224 - Distribution Switch"
+      syscontact: "netadmin@niac-go.com"
+      syslocation: "NiAC-Go - Campus - Building A Floor 2"
+
+      traps:
+        enabled: true
+        receivers: ["10.100.0.100:162"]
+        community: "niac-go-trap"
+
+        # Basic traps for access switches
+        link_up:
+          enabled: true
+        link_down:
+          enabled: true
+        interface_errors:
+          enabled: true
+          threshold: 500
+
+    lldp:
+      enabled: true
+      system_name: "niac-dist-sw-floor2"
+      system_description: "Dell PowerConnect 6224"
+      port_description: "Unit 1 Port 1"
+
+    stp:
+      enabled: true
+      bridge_priority: 8192  # Secondary priority
+
+  # Monitoring Server - SNMP Trap Receiver
+  - name: niac-monitoring-srv
+    type: server
+    mac: "00:11:22:33:45:00"
+    ips:
+      - "10.100.0.100"
+
+    # Monitoring server also has SNMP agent for self-monitoring
+    snmp_agent:
+      enabled: true
+      community: "niac-go-ro"
+      walk_file: "device_walks/misc/IOS_10.125.1.70.walk"
+
+      sysname: "niac-monitoring-srv"
+      sysdescr: "NiAC-Go Network Monitoring Server"
+      syscontact: "netadmin@niac-go.com"
+      syslocation: "NiAC-Go - DC-WEST - Management Network"
+
+      # Server monitoring traps
+      traps:
+        enabled: true
+        receivers: ["10.100.0.100:162"]  # Self-monitoring
+        community: "niac-go-trap"
+        high_cpu:
+          enabled: true
+          threshold: 90
+        high_memory:
+          enabled: true
+          threshold: 95
+        high_disk:
+          enabled: true
+          threshold: 85
+
+    # HTTP management interface
+    http:
+      enabled: true
+      server_name: "NiAC-Go Monitoring"
+      endpoints:
+        - path: "/"
+          response: "NiAC-Go Network Monitoring Server"
+        - path: "/status"
+          response: "Status: Active | Devices Monitored: 3 | Traps Received: 0"
+
+# Usage:
+#   niac validate examples/snmp/snmp-complete-network.yaml
+#   sudo niac en0 examples/snmp/snmp-complete-network.yaml
+#
+# SNMP Polling (from monitoring server perspective):
+#   # Poll all devices
+#   snmpwalk -v2c -c niac-go-ro 10.0.0.1 system
+#   snmpwalk -v2c -c niac-go-ro 10.0.0.11 system
+#   snmpwalk -v2c -c public 10.0.0.22 system
+#   snmpwalk -v2c -c niac-go-ro 10.100.0.100 system
+#
+#   # Get specific OIDs
+#   snmpget -v2c -c niac-go-ro 10.0.0.1 sysName.0 sysUpTime.0
+#   snmpget -v2c -c niac-go-ro 10.0.0.11 ifNumber.0
+#
+#   # Bulk operations
+#   snmpbulkwalk -v2c -c niac-go-ro 10.0.0.11 ifDescr
+#
+# Trap Monitoring (on 10.100.0.100):
+#   # Start trap receiver daemon
+#   snmptrapd -f -Lo -c snmptrapd.conf
+#
+#   # Inject errors to test traps (interactive mode)
+#   sudo niac --interactive en0 examples/snmp/snmp-complete-network.yaml
+#   Press 'i' -> Select device -> Inject error -> Observe traps
+#
+# Network Monitoring Workflow:
+#   1. Monitoring server polls all devices every 5 minutes
+#   2. Devices send traps when thresholds are exceeded
+#   3. LLDP/CDP provides topology discovery
+#   4. SNMP walk files provide realistic device data
+#
+# Integration with Monitoring Tools:
+#   - Nagios/Icinga: Use check_snmp plugin
+#   - Zabbix: Configure SNMP monitoring
+#   - PRTG: Add SNMP sensors
+#   - Observium: Auto-discovery via SNMP
+#   - LibreNMS: Add devices by IP
+#
+# Notes:
+#   - All devices send traps to 10.100.0.100:162
+#   - Community strings vary by device role
+#   - Trap community is consistent: "niac-go-trap"
+#   - Thresholds tuned per device type
+#   - This simulates a production monitoring setup

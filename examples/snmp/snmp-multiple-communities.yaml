@@ -1,0 +1,110 @@
+# SNMP - Multiple Community Strings
+#
+# This example demonstrates different SNMP community strings across
+# multiple devices, simulating a realistic network with varied access
+# controls.
+#
+# Use Case: Multi-device network with different SNMP security policies
+# Protocol: SNMPv2c with device-specific community strings
+# Added: v1.19.0 (configurable community strings)
+
+devices:
+  # Management server - restrictive access
+  - name: niac-mgmt-srv-01
+    type: server
+    mac: "00:11:22:33:44:50"
+    ips:
+      - "10.100.0.50"
+
+    snmp_agent:
+      enabled: true
+      community: "niac-go-ro"  # Custom read-only community
+      walk_file: "device_walks/misc/IOS_10.125.1.70.walk"
+
+      sysname: "niac-mgmt-srv-01"
+      sysdescr: "NiAC-Go Management Server"
+      syscontact: "netadmin@niac-go.com"
+      syslocation: "NiAC-Go - DC-WEST - Management VLAN"
+
+  # Core switch - standard public access
+  - name: niac-core-sw-01
+    type: switch
+    mac: "00:11:22:33:44:01"
+    ips:
+      - "10.0.0.11"
+
+    snmp_agent:
+      enabled: true
+      community: "public"  # Standard community
+      walk_file: "device_walks/misc/n5k.walk"
+
+      sysname: "niac-core-sw-01"
+      sysdescr: "Cisco Nexus 5000 - Core Switch"
+      syscontact: "netadmin@niac-go.com"
+      syslocation: "NiAC-Go - DC-WEST - Core Network"
+
+  # Edge router - private community with traps
+  - name: niac-edge-rtr-01
+    type: router
+    mac: "00:11:22:33:44:02"
+    ips:
+      - "10.0.0.1"
+
+    snmp_agent:
+      enabled: true
+      community: "niac-go-private"  # Private community
+      walk_file: "device_walks/misc/C3900_63.147.68.1.walk"
+
+      sysname: "niac-edge-rtr-01"
+      sysdescr: "Cisco 3900 - Edge Router"
+      syscontact: "netadmin@niac-go.com"
+      syslocation: "NiAC-Go - DC-WEST - Edge Network"
+
+      traps:
+        enabled: true
+        receivers: ["10.100.0.100:162"]
+        community: "niac-go-trap"  # Separate trap community
+        high_cpu:
+          enabled: true
+          threshold: 75
+
+    # Enable routing protocols
+    lldp:
+      enabled: true
+      system_name: "niac-edge-rtr-01"
+
+    cdp:
+      enabled: true
+      platform: "Cisco 3900"
+
+# Usage:
+#   niac validate examples/snmp/snmp-multiple-communities.yaml
+#   sudo niac en0 examples/snmp/snmp-multiple-communities.yaml
+#
+# Test different community strings:
+#   # This works - correct community
+#   snmpwalk -v2c -c public 10.0.0.11 sysName
+#
+#   # This works - correct community
+#   snmpwalk -v2c -c niac-go-ro 10.100.0.50 sysName
+#
+#   # This works - correct community
+#   snmpwalk -v2c -c niac-go-private 10.0.0.1 sysName
+#
+#   # This fails - wrong community
+#   snmpwalk -v2c -c wrong 10.0.0.11 sysName
+#   # Result: Timeout: No Response from 10.0.0.11
+#
+# Community String Best Practices:
+#   - Use unique communities per device role/sensitivity
+#   - Never use "public" or "private" in production
+#   - Use separate communities for read-only vs read-write
+#   - Use different community for traps
+#   - Consider SNMPv3 with USM for production (v2.x)
+#
+# Security Notes:
+#   - SNMPv2c communities are sent in cleartext
+#   - Use ACLs to restrict SNMP access by IP
+#   - Monitor for authentication failures
+#   - Rotate community strings regularly
+#   - For production, use SNMPv3 with encryption

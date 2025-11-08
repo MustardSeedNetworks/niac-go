@@ -1,0 +1,115 @@
+# SNMP Traps - Complete Configuration
+#
+# This example demonstrates all SNMP trap types supported by NIAC-Go.
+# Includes both event-based traps (coldStart, linkUp, etc.) and
+# threshold-based traps (high CPU, memory, errors).
+#
+# Use Case: Network monitoring and alerting
+# Protocol: SNMPv2c traps
+# Added: v1.6.0
+
+devices:
+  - name: niac-core-rtr-01
+    type: router
+    mac: "00:11:22:33:44:01"
+    ips:
+      - "10.0.0.1"
+
+    # SNMP Agent with Trap Generation
+    snmp_agent:
+      enabled: true
+      community: "public"  # Agent community (GET/GETNEXT/GETBULK)
+      walk_file: "device_walks/misc/C3900_63.147.68.1.walk"
+
+      sysname: "niac-core-rtr-01"
+      sysdescr: "Cisco 3900 Series Router - NiAC-Go Core Router"
+      syscontact: "netadmin@niac-go.com"
+      syslocation: "NiAC-Go - DC-WEST - Core Network"
+
+      # Trap Configuration
+      traps:
+        enabled: true
+        receivers:
+          - "10.100.0.100:162"  # Primary SNMP manager
+          - "10.100.0.101:162"  # Backup SNMP manager
+        community: "niac-go-trap"  # Trap community string
+
+        # Event-Based Traps
+        # These fire on specific events
+
+        cold_start:
+          enabled: true
+          # Sent when device starts up
+
+        link_up:
+          enabled: true
+          # Sent when interface comes up
+
+        link_down:
+          enabled: true
+          # Sent when interface goes down
+
+        authentication_failure:
+          enabled: true
+          # Sent on SNMP authentication failure
+
+        # Threshold-Based Traps
+        # These fire when values exceed thresholds
+
+        high_cpu:
+          enabled: true
+          threshold: 80  # Percentage (0-100)
+          # Fires when CPU usage > 80%
+
+        high_memory:
+          enabled: true
+          threshold: 85  # Percentage (0-100)
+          # Fires when memory usage > 85%
+
+        high_disk:
+          enabled: true
+          threshold: 90  # Percentage (0-100)
+          # Fires when disk usage > 90%
+
+        interface_errors:
+          enabled: true
+          threshold: 1000  # Error count
+          # Fires when interface errors > 1000
+
+    # Enable discovery protocols
+    lldp:
+      enabled: true
+      system_name: "niac-core-rtr-01"
+      system_description: "Cisco 3900 - Core Router"
+
+    cdp:
+      enabled: true
+      platform: "Cisco 3900"
+      software_version: "IOS 15.4(3)M6a"
+
+# Usage:
+#   niac validate examples/snmp/snmp-traps-all.yaml
+#   sudo niac en0 examples/snmp/snmp-traps-all.yaml
+#
+# Inject errors to trigger traps:
+#   sudo niac --interactive en0 examples/snmp/snmp-traps-all.yaml
+#   Press 'i' -> Select device -> Set High CPU to 85%
+#
+# Listen for traps (on trap receiver):
+#   snmptrapd -f -Lo -c snmptrapd.conf
+#
+# Trap receiver configuration (snmptrapd.conf):
+#   authCommunity log,execute,net niac-go-trap
+#   disableAuthorization yes
+#
+# Example trap output:
+#   2025-01-08 12:34:56 10.0.0.1(via UDP: [10.0.0.1]:41234) TRAP2, SNMP v2c, community niac-go-trap
+#   SNMPv2-MIB::sysUpTime.0 = Timeticks: (123456) 0:20:34.56
+#   SNMPv2-MIB::snmpTrapOID.0 = OID: SNMPv2-MIB::linkDown
+#
+# Notes:
+#   - Traps are SNMPv2c (not v1 or v3)
+#   - Multiple trap receivers supported
+#   - Thresholds are 0-100 for percentages
+#   - Use interactive mode to inject errors and test traps
+#   - Production should use SNMPv3 traps with authentication

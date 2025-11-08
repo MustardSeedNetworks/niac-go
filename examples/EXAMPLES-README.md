@@ -40,6 +40,12 @@ examples/
 │   ├── ftp-server.yaml            # FTP with welcome banners and users
 │   └── netbios-server.yaml        # NetBIOS name service configuration
 │
+├── snmp/                           # SNMP Monitoring (v1.6.0+)
+│   ├── snmp-agent-basic.yaml      # Basic SNMP agent with walk file
+│   ├── snmp-traps-all.yaml        # All trap types (event + threshold)
+│   ├── snmp-multiple-communities.yaml  # Different community strings per device
+│   └── snmp-complete-network.yaml # Complete monitoring scenario (4 devices)
+│
 ├── network/                        # IP Addressing Schemes
 │   ├── ipv4-only.yaml             # Traditional IPv4-only network
 │   ├── ipv6-only.yaml             # Modern IPv6-only network
@@ -70,6 +76,13 @@ examples/
 - **Basic DHCP:** `dhcp/dhcpv4-simple.yaml` - Single pool, straightforward
 - **Complex DHCP:** `dhcp/dhcpv4-advanced.yaml` - Multiple pools, custom options
 
+### SNMP Monitoring
+
+- **Basic agent:** `snmp/snmp-agent-basic.yaml` - SNMP agent with walk file
+- **Trap testing:** `snmp/snmp-traps-all.yaml` - All trap types demonstrated
+- **Multi-device:** `snmp/snmp-multiple-communities.yaml` - Different security policies
+- **Complete setup:** `snmp/snmp-complete-network.yaml` - Enterprise monitoring scenario
+
 ### IPv6 Adoption
 
 - **Pure IPv6:** `network/ipv6-only.yaml` - Test IPv6-only environments
@@ -88,8 +101,12 @@ examples/
 - ✅ Device identity (name, MAC, single IP)
 - ✅ DHCP server configuration
 - ✅ DNS server configuration
-- ✅ SNMP agent configuration
 - ✅ Discovery protocols with hardcoded values
+
+### v1.6.0 Features
+- ✅ **SNMP Agent:** Walk file support, community strings (see `snmp/snmp-agent-basic.yaml`)
+- ✅ **SNMP Traps:** Event-based and threshold-based traps (see `snmp/snmp-traps-all.yaml`)
+- ✅ **System Info Override:** sysName, sysDescr, sysContact, sysLocation
 
 ### v1.5.0 Features
 
