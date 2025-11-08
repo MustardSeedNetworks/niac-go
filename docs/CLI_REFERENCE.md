@@ -9,6 +9,10 @@ Complete command-line reference for NIAC-Go.
   - [validate](#validate)
   - [template](#template)
   - [interactive](#interactive)
+  - [config](#config)
+  - [init](#init)
+  - [completion](#completion)
+  - [man](#man)
 - [Legacy Mode](#legacy-mode)
 - [Examples](#examples)
 
@@ -214,6 +218,319 @@ The interactive TUI provides:
 - Protocol status (enabled/disabled)
 - Error injection controls
 - Real-time updates
+
+### config
+
+Configuration management tools for exporting, comparing, and merging NIAC configurations.
+
+```bash
+niac config <subcommand>
+```
+
+#### Subcommands
+
+##### export
+
+Export a NIAC configuration file to normalized YAML format.
+
+```bash
+niac config export <input-file> <output-file>
+```
+
+Features:
+- Loads and validates the input configuration
+- Normalizes all fields and structures
+- Exports to clean YAML format
+- Useful for converting legacy .cfg to YAML
+
+Examples:
+```bash
+# Export to new file
+niac config export config.yaml normalized.yaml
+
+# Convert legacy .cfg to YAML
+niac config export legacy.cfg new-config.yaml
+
+# Validate and normalize
+niac config export messy.yaml clean.yaml
+```
+
+Error handling:
+- Fails if output file already exists (prevents accidental overwrite)
+- Shows validation warnings but exports anyway
+- Exits with error if input file cannot be loaded
+
+##### diff
+
+Compare two NIAC configuration files and show differences.
+
+```bash
+niac config diff <file1> <file2>
+```
+
+Compares:
+- Device additions/removals
+- Device name changes
+- MAC/IP address changes
+- Device type changes
+
+Output format:
+```
++ Device added: new-device
+- Device removed: old-device
+~ Device router-1: MAC changed from 00:11:22:33:44:55 to 00:11:22:33:44:66
+~ Device router-1: Type changed from router to switch
+No differences found  (if files are identical)
+```
+
+Examples:
+```bash
+# Compare two configs
+niac config diff prod.yaml staging.yaml
+
+# Check for configuration drift
+niac config diff baseline.yaml current.yaml
+
+# Compare before/after changes
+niac config diff config.yaml config.new.yaml
+```
+
+##### merge
+
+Merge two NIAC configuration files with overlay semantics.
+
+```bash
+niac config merge <base-file> <overlay-file> <output-file>
+```
+
+Merge behavior:
+- Devices with same name: overlay replaces base
+- New devices in overlay: added to result
+- Devices only in base: kept in result
+
+Examples:
+```bash
+# Merge overlay into base
+niac config merge base.yaml overlay.yaml merged.yaml
+
+# Apply environment-specific overrides
+niac config merge common.yaml prod-overrides.yaml prod-config.yaml
+
+# Combine device configs from different sources
+niac config merge routers.yaml switches.yaml network.yaml
+```
+
+Output:
+```
+Merged configuration written to merged.yaml
+Base devices: 5
+Overlay devices: 3
+Merged devices: 7
+```
+
+Error handling:
+- Fails if output file already exists
+- Exits with error if base or overlay cannot be loaded
+
+##### generate
+
+Interactive configuration generator for NIAC (more detailed than `niac init`).
+
+```bash
+niac config generate [output-file]
+```
+
+The generator prompts for:
+- Network name and subnet
+- Number of devices
+- Device details (type, name, IP, MAC)
+- Protocols to enable (LLDP, CDP, SNMP, DHCP, DNS, etc.)
+- Protocol-specific configuration
+
+Examples:
+```bash
+# Generate configuration interactively
+niac config generate
+
+# Generate with specific output file
+niac config generate my-network.yaml
+
+# Validate and run
+niac config generate network.yaml && niac validate network.yaml
+```
+
+Interactive prompts:
+```
+Step 1: Network Information
+  Network name: simulation-network
+  Network subnet (CIDR): 192.168.1.0/24
+  Path for SNMP walk files: /path/to/walks
+
+Step 2: Device Configuration
+  How many devices: 3
+  Device 1:
+    Type: (1) router (2) switch (3) ap...
+    Name: router-1
+    IP: 192.168.1.1
+    MAC: 02:00:00:00:00:01
+    Enable LLDP? (y/n)
+    Enable CDP? (y/n)
+    ...
+
+Step 3: Save Configuration
+  Output filename: config.yaml
+```
+
+### init
+
+Interactive template selection wizard for quick project setup.
+
+```bash
+niac init [flags]
+```
+
+Provides a guided interface for:
+1. Selecting a template (minimal, router, switch, etc.)
+2. Specifying output filename
+3. Optionally editing the configuration
+
+Examples:
+```bash
+# Start the init wizard
+niac init
+
+# Create router config and validate
+niac init && niac validate config.yaml
+```
+
+Interactive flow:
+```
+NIAC Configuration Wizard
+
+Select a template:
+  1) minimal      - Single device with basic protocols
+  2) router       - Enterprise router
+  3) switch       - L2/L3 switch
+  4) ap           - Access point
+  5) server       - Multi-service server
+  6) iot          - IoT device
+  7) complete     - Multi-device network
+
+Choice [1-7]: 2
+
+Output filename [config.yaml]: my-router.yaml
+
+✓ Created my-router.yaml
+
+Next steps:
+  1. Edit configuration: vim my-router.yaml
+  2. Validate: niac validate my-router.yaml
+  3. Run: sudo niac interactive en0 my-router.yaml
+```
+
+### completion
+
+Generate shell completion scripts for niac commands.
+
+```bash
+niac completion <shell>
+```
+
+Supported shells:
+- `bash`
+- `zsh`
+- `fish`
+- `powershell`
+
+#### Installation
+
+##### Bash
+
+```bash
+# Generate completion script
+niac completion bash > /etc/bash_completion.d/niac
+
+# Or add to your .bashrc
+echo 'source <(niac completion bash)' >> ~/.bashrc
+source ~/.bashrc
+```
+
+##### Zsh
+
+```bash
+# Generate completion script
+niac completion zsh > "${fpath[1]}/_niac"
+
+# Or add to your .zshrc
+echo 'source <(niac completion zsh)' >> ~/.zshrc
+source ~/.zshrc
+```
+
+##### Fish
+
+```bash
+# Generate completion script
+niac completion fish > ~/.config/fish/completions/niac.fish
+
+# Reload fish completions
+source ~/.config/fish/config.fish
+```
+
+##### PowerShell
+
+```powershell
+# Add to your PowerShell profile
+niac completion powershell | Out-String | Invoke-Expression
+
+# Or save to file
+niac completion powershell > niac.ps1
+```
+
+#### Features
+
+Once installed, shell completion provides:
+- Command completion (`niac va<TAB>` → `niac validate`)
+- Subcommand completion (`niac template <TAB>` → shows `list show use`)
+- Flag completion (`niac validate --<TAB>` → shows available flags)
+- File path completion for config files
+- Template name completion for `niac template` commands
+
+### man
+
+Generate Unix man pages for niac commands.
+
+```bash
+niac man [output-directory]
+```
+
+Generates man pages for all niac commands in the specified directory (defaults to ./man).
+
+Examples:
+```bash
+# Generate man pages in ./man directory
+niac man
+
+# Generate in custom directory
+niac man /usr/local/share/man/man1
+
+# Generate and install system-wide (requires sudo)
+sudo niac man /usr/share/man/man1
+sudo mandb  # Update man page database
+
+# View generated man pages
+man niac
+man niac-validate
+man niac-template
+```
+
+Generated pages:
+- `niac.1` - Main niac command
+- `niac-validate.1` - Validate subcommand
+- `niac-template.1` - Template subcommand
+- `niac-interactive.1` - Interactive subcommand
+- `niac-config.1` - Config management commands
+- `niac-init.1` - Init wizard
+- `niac-completion.1` - Shell completion
 
 ## Legacy Mode
 
