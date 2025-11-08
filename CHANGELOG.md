@@ -179,14 +179,20 @@ Added comprehensive performance benchmarks and fuzz testing infrastructure to pr
   - SNMP: GET/GET-NEXT/GET-BULK operations
   - DNS & NetBIOS: Query processing
 
-#### Fuzz Testing (6 tests)
-- **pkg/config**
+#### Fuzz Testing (18 tests total)
+- **pkg/config (6 tests)**
   - YAML loading with arbitrary input
   - Speed string parsing
   - MAC address generation
   - Simple config parsing
   - Walk file path validation
   - Device config parsing
+
+- **pkg/protocols (12 tests)**
+  - ARP: Packet parsing, MAC parsing, IP parsing
+  - DHCP: MAC lookup, IP allocation, hostname validation
+  - DNS: Domain name parsing, record type handling, TTL validation
+  - LLDP: Chassis ID, port ID, system description, TTL validation
 
 ### Changed
 - Updated README version from 1.19.0 to 1.20.0
@@ -198,6 +204,7 @@ Added comprehensive performance benchmarks and fuzz testing infrastructure to pr
 
 ### Closes
 - #18 - Add performance benchmark suite
+- #25 - Add fuzz tests for protocol parsers
 
 ## [1.19.0] - 2025-11-08
 
