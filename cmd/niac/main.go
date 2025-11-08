@@ -18,10 +18,14 @@ import (
 	"github.com/krisarmstrong/niac-go/pkg/interactive"
 	"github.com/krisarmstrong/niac-go/pkg/logging"
 	"github.com/krisarmstrong/niac-go/pkg/protocols"
+	"github.com/krisarmstrong/niac-go/pkg/stats"
 )
 
 // Version information is now managed in root.go
 // Build-time variables can be set with: go build -ldflags "-X main.version=..."
+
+// Global statistics instance
+var globalStats *stats.Statistics
 
 func main() {
 	Execute()
@@ -95,6 +99,24 @@ func runLegacyMode(osArgs []string) {
 
 	// Create debug configuration
 	debugConfig := setupDebugConfig(&flags)
+
+	// Initialize global statistics (v1.19.0)
+	globalStats = stats.NewStatistics(interfaceName, configFile, version)
+	globalStats.SetDeviceCount(len(cfg.Devices))
+
+	// Count SNMP-enabled devices
+	snmpCount := 0
+	for _, dev := range cfg.Devices {
+		if dev.SNMPConfig.Community != "" || dev.SNMPConfig.WalkFile != "" {
+			snmpCount++
+		}
+	}
+	globalStats.SetSNMPDeviceCount(snmpCount)
+
+	// Setup deferred stats export on exit
+	if flags.exportStatsJSON != "" || flags.exportStatsCSV != "" {
+		defer exportStatistics(&flags)
+	}
 
 	// Start simulation based on mode
 	if flags.interactiveMode {
@@ -200,6 +222,10 @@ func printUsage() {
 	fmt.Println("  Performance Profiling:")
 	fmt.Println("    -p, --profile            Enable pprof performance profiling")
 	fmt.Println("        --profile-port <port>   Port for pprof HTTP server [default: 6060]")
+	fmt.Println()
+	fmt.Println("  Statistics Export:")
+	fmt.Println("        --export-stats-json <file>  Export runtime statistics to JSON file on exit")
+	fmt.Println("        --export-stats-csv <file>   Export runtime statistics to CSV file on exit")
 	fmt.Println()
 	fmt.Println("  Per-Protocol Debug Levels:")
 	fmt.Println("        --debug-arp <level>     ARP protocol debug level (0-3)")
@@ -637,4 +663,32 @@ func formatDuration(d time.Duration) string {
 		return fmt.Sprintf("%dm%ds", int(d.Minutes()), int(d.Seconds())%60)
 	}
 	return fmt.Sprintf("%dh%dm", int(d.Hours()), int(d.Minutes())%60)
+}
+
+// exportStatistics exports runtime statistics to JSON and/or CSV files (v1.19.0)
+func exportStatistics(flags *legacyFlags) {
+	if globalStats == nil {
+		return
+	}
+
+	// Update final statistics
+	globalStats.Update()
+
+	// Export to JSON if requested
+	if flags.exportStatsJSON != "" {
+		if err := globalStats.ExportJSON(flags.exportStatsJSON); err != nil {
+			logging.Error("Failed to export statistics to JSON: %v", err)
+		} else {
+			logging.Info("Statistics exported to JSON: %s", flags.exportStatsJSON)
+		}
+	}
+
+	// Export to CSV if requested
+	if flags.exportStatsCSV != "" {
+		if err := globalStats.ExportCSV(flags.exportStatsCSV); err != nil {
+			logging.Error("Failed to export statistics to CSV: %v", err)
+		} else {
+			logging.Info("Statistics exported to CSV: %s", flags.exportStatsCSV)
+		}
+	}
 }
