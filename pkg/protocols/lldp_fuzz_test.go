@@ -8,8 +8,8 @@ import (
 func FuzzLLDPChassisID(f *testing.F) {
 	// Seed with valid chassis ID formats
 	f.Add("00:11:22:33:44:55") // MAC address
-	f.Add("device-chassis-01")  // Local name
-	f.Add("192.168.1.1")        // IP address
+	f.Add("device-chassis-01") // Local name
+	f.Add("192.168.1.1")       // IP address
 	f.Add("")
 	f.Add("verylongchassisidthatmightexceedlimitsbutthatshouldbefineintheory")
 

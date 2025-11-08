@@ -50,7 +50,7 @@ func FuzzMACAddressParsing(f *testing.F) {
 	f.Add("001122334455")
 	f.Add("")
 	f.Add("invalid")
-	f.Add("00:11:22:33:44") // Too short
+	f.Add("00:11:22:33:44")       // Too short
 	f.Add("00:11:22:33:44:55:66") // Too long
 
 	f.Fuzz(func(t *testing.T, macStr string) {
@@ -86,7 +86,7 @@ func FuzzIPAddressParsing(f *testing.F) {
 	f.Add("")
 	f.Add("invalid")
 	f.Add("256.256.256.256") // Out of range
-	f.Add("192.168.1") // Too short
+	f.Add("192.168.1")       // Too short
 
 	f.Fuzz(func(t *testing.T, ipStr string) {
 		// Prevent panics
