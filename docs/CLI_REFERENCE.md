@@ -242,6 +242,10 @@ niac <interface> <config-file> [flags]
 - `--log-file <file>` - Write logs to file
 - `--stats-interval <seconds>` - Statistics interval
 
+#### Performance Profiling Flags
+- `--profile, -p` - Enable pprof performance profiling
+- `--profile-port <port>` - Port for pprof HTTP server (default: 6060)
+
 #### Per-Protocol Debug Flags
 - `--debug-arp` - Debug ARP protocol
 - `--debug-icmp` - Debug ICMP protocol
@@ -337,6 +341,45 @@ niac en0 config.yaml --debug 3 --log-file debug.log
 # Verbose validation
 niac validate config.yaml --verbose
 ```
+
+#### 5. Performance Profiling
+
+```bash
+# Enable profiling on default port (6060)
+niac en0 config.yaml --profile
+
+# Enable profiling on custom port
+niac en0 config.yaml --profile --profile-port 8080
+
+# Collect CPU profile (30 seconds)
+curl http://localhost:6060/debug/pprof/profile?seconds=30 > cpu.prof
+go tool pprof cpu.prof
+
+# Collect memory profile
+curl http://localhost:6060/debug/pprof/heap > mem.prof
+go tool pprof mem.prof
+
+# Interactive CPU profiling
+go tool pprof http://localhost:6060/debug/pprof/profile?seconds=30
+
+# Interactive memory profiling
+go tool pprof http://localhost:6060/debug/pprof/heap
+
+# View goroutines
+curl http://localhost:6060/debug/pprof/goroutine > goroutine.prof
+go tool pprof goroutine.prof
+
+# Available pprof endpoints:
+# http://localhost:6060/debug/pprof/          - Index page
+# http://localhost:6060/debug/pprof/profile   - CPU profile
+# http://localhost:6060/debug/pprof/heap      - Memory heap profile
+# http://localhost:6060/debug/pprof/goroutine - Goroutine stack traces
+# http://localhost:6060/debug/pprof/block     - Block profile
+# http://localhost:6060/debug/pprof/mutex     - Mutex profile
+# http://localhost:6060/debug/pprof/allocs    - Allocation profile
+```
+
+**Security Note:** The profiling server binds to `127.0.0.1` (localhost only) for security. Do not expose the profiling port on public networks or production environments.
 
 ## Environment Variables
 

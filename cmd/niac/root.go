@@ -34,6 +34,9 @@ and network discovery without physical hardware.`,
   # Run simulation (legacy mode)
   sudo niac en0 config.yaml
 
+  # Run with profiling enabled (legacy mode)
+  sudo niac -- --profile en0 config.yaml
+
   # List available templates
   niac template list
 

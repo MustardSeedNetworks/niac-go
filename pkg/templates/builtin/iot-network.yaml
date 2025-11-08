@@ -1,0 +1,123 @@
+# IoT Network Template
+# IoT devices with constrained protocols and lightweight operation
+#
+# Use Case: IoT sensor networks and embedded devices
+# Includes: IoT gateway, sensors, actuators with minimal protocols
+
+devices:
+  # IoT Gateway
+  - name: iot-gateway
+    mac: "00:AA:BB:CC:01:01"
+    ips:
+      - "192.168.100.1"
+      - "10.0.0.1"
+
+    lldp:
+      enabled: true
+      system_description: "IoT Edge Gateway Router"
+
+    snmp_agent:
+      walk_file: ""
+
+    dhcp:
+      enabled: true
+      pools:
+        - network: "192.168.100.0/24"
+          range_start: "192.168.100.50"
+          range_end: "192.168.100.200"
+          gateway: "192.168.100.1"
+          dns_servers:
+            - "192.168.100.1"
+            - "8.8.8.8"
+          domain: "iot.local"
+          lease_time: 86400
+
+  # Temperature Sensor 1
+  - name: temp-sensor-01
+    mac: "00:AA:BB:CC:10:01"
+    ip: "192.168.100.10"
+
+    http:
+      enabled: true
+      server_name: "TempSensor-01"
+      endpoints:
+        - path: "/status"
+          status_code: 200
+          content_type: "application/json"
+          body: '{"device":"temp-sensor-01","temp":22.5,"unit":"C"}'
+
+  # Motion Sensor
+  - name: motion-sensor-01
+    mac: "00:AA:BB:CC:20:01"
+    ip: "192.168.100.20"
+
+    http:
+      enabled: true
+      server_name: "MotionSensor-01"
+      endpoints:
+        - path: "/status"
+          content_type: "application/json"
+          body: '{"device":"motion-sensor-01","motion":false,"battery":92}'
+
+  # Smart Light
+  - name: smart-light-01
+    mac: "00:AA:BB:CC:30:01"
+    ip: "192.168.100.30"
+
+    http:
+      enabled: true
+      server_name: "SmartLight-01"
+      endpoints:
+        - path: "/status"
+          content_type: "application/json"
+          body: '{"device":"smart-light-01","state":"on","brightness":75}'
+
+  # Smart Thermostat
+  - name: thermostat-01
+    mac: "00:AA:BB:CC:40:01"
+    ip: "192.168.100.40"
+
+    http:
+      enabled: true
+      server_name: "Thermostat-01"
+
+    snmp_agent:
+      walk_file: ""
+
+  # IP Camera
+  - name: camera-01
+    mac: "00:AA:BB:CC:50:01"
+    ip: "192.168.100.50"
+
+    http:
+      enabled: true
+      server_name: "IPCamera-01"
+
+    snmp_agent:
+      walk_file: ""
+
+  # IoT Hub
+  - name: iot-hub
+    mac: "00:AA:BB:CC:99:01"
+    ip: "192.168.100.100"
+
+    http:
+      enabled: true
+      server_name: "IoT-Hub"
+      endpoints:
+        - path: "/api/devices"
+          content_type: "application/json"
+          body: '{"devices":7,"online":7,"offline":0}'
+
+    dns:
+      enabled: true
+      records:
+        - name: "gateway.iot.local"
+          type: "A"
+          value: "192.168.100.1"
+        - name: "hub.iot.local"
+          type: "A"
+          value: "192.168.100.100"
+
+    snmp_agent:
+      walk_file: ""

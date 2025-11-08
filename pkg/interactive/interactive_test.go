@@ -390,14 +390,18 @@ func TestModel_HandleMenuSelection(t *testing.T) {
 
 			m.handleMenuSelection()
 
-			// Verify error was injected
-			state := m.stateManager.GetError("192.168.1.1", "eth0")
-			if state == nil {
-				t.Fatal("Error state not set after menu selection")
+			// New behavior: menu selection enters value input mode
+			if !m.valueInputMode {
+				t.Fatal("Value input mode should be enabled after menu selection")
 			}
 
-			if state.ErrorType != tt.expectedError {
-				t.Errorf("Expected error type %s, got %s", tt.expectedError, state.ErrorType)
+			if m.valueInputPrompt == "" {
+				t.Error("Value input prompt should be set")
+			}
+
+			// Verify menu is now hidden
+			if m.menuVisible {
+				t.Error("Menu should be hidden when entering value input mode")
 			}
 		})
 	}

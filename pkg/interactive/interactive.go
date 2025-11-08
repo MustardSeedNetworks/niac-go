@@ -52,9 +52,12 @@ type model struct {
 	debugLevel    int
 
 	// Menu state
-	menuVisible  bool
-	menuItems    []string
-	selectedItem int
+	menuVisible      bool
+	menuItems        []string
+	selectedItem     int
+	valueInputMode   bool
+	valueInputPrompt string
+	valueInputBuffer string
 
 	// View state
 	showHelp  bool
@@ -62,14 +65,10 @@ type model struct {
 	showStats bool
 
 	// Error injection state
-	// nolint:unused // Reserved for UI state
-	selectedDevice int
-	// nolint:unused // Reserved for UI state
+	selectedDeviceIdx int
 	selectedInterface int
-	// nolint:unused // Reserved for UI state
 	selectedErrorType int
-	// nolint:unused // Reserved for UI state
-	errorValue int
+	errorValue        int
 
 	// Stats
 	packetsTotal    int
@@ -104,6 +103,11 @@ func tickCmd() tea.Cmd {
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
+		// Handle value input mode
+		if m.valueInputMode {
+			return m.handleValueInput(msg)
+		}
+
 		switch msg.String() {
 		case "q", "ctrl+c":
 			return m, tea.Quit
@@ -113,6 +117,24 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.menuVisible {
 				m.statusMessage = "Interactive menu opened - use arrow keys to navigate"
 				m.statusIsError = false
+			}
+			return m, nil
+
+		case "D":
+			// Cycle through devices: 0 -> 1 -> 2 -> ... -> N-1 -> 0
+			if len(m.cfg.Devices) > 0 {
+				m.selectedDeviceIdx = (m.selectedDeviceIdx + 1) % len(m.cfg.Devices)
+				device := m.cfg.Devices[m.selectedDeviceIdx]
+				deviceIP := "no-ip"
+				if len(device.IPAddresses) > 0 {
+					deviceIP = device.IPAddresses[0].String()
+				}
+				m.statusMessage = successStyle.Render(fmt.Sprintf("✓ Selected device: %s (%s)", device.Name, deviceIP))
+				m.statusIsError = false
+				m.addDebugLog(fmt.Sprintf("Selected device: %s (%s)", device.Name, deviceIP))
+			} else {
+				m.statusMessage = errorStyle.Render("✗ No devices configured")
+				m.statusIsError = true
 			}
 			return m, nil
 
@@ -171,6 +193,43 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.handleMenuSelection()
 			}
 			return m, nil
+
+		// Quick access number keys (1-7) for error injection with default values
+		case "1":
+			if !m.menuVisible && !m.showHelp && !m.showLogs && !m.showStats {
+				m.promptForValue(errors.ErrorTypeFCS, "Enter FCS error count (0-100): ")
+			}
+			return m, nil
+		case "2":
+			if !m.menuVisible && !m.showHelp && !m.showLogs && !m.showStats {
+				m.promptForValue(errors.ErrorTypeDiscards, "Enter packet discard rate (0-100): ")
+			}
+			return m, nil
+		case "3":
+			if !m.menuVisible && !m.showHelp && !m.showLogs && !m.showStats {
+				m.promptForValue(errors.ErrorTypeInterface, "Enter interface error count (0-100): ")
+			}
+			return m, nil
+		case "4":
+			if !m.menuVisible && !m.showHelp && !m.showLogs && !m.showStats {
+				m.promptForValue(errors.ErrorTypeUtilization, "Enter utilization percentage (0-100): ")
+			}
+			return m, nil
+		case "5":
+			if !m.menuVisible && !m.showHelp && !m.showLogs && !m.showStats {
+				m.promptForValue(errors.ErrorTypeCPU, "Enter CPU percentage (0-100): ")
+			}
+			return m, nil
+		case "6":
+			if !m.menuVisible && !m.showHelp && !m.showLogs && !m.showStats {
+				m.promptForValue(errors.ErrorTypeMemory, "Enter memory percentage (0-100): ")
+			}
+			return m, nil
+		case "7":
+			if !m.menuVisible && !m.showHelp && !m.showLogs && !m.showStats {
+				m.promptForValue(errors.ErrorTypeDisk, "Enter disk percentage (0-100): ")
+			}
+			return m, nil
 		}
 
 	case tickMsg:
@@ -189,22 +248,22 @@ func (m *model) handleMenuSelection() {
 
 	selection := m.menuItems[m.selectedItem]
 
-	// Handle menu selections
+	// Handle menu selections - now with custom value input
 	switch {
 	case strings.Contains(selection, "FCS Errors"):
-		m.injectError(errors.ErrorTypeFCS, 50)
+		m.promptForValue(errors.ErrorTypeFCS, "Enter FCS error count (0-100): ")
 	case strings.Contains(selection, "Packet Discards"):
-		m.injectError(errors.ErrorTypeDiscards, 25)
+		m.promptForValue(errors.ErrorTypeDiscards, "Enter packet discard rate (0-100): ")
 	case strings.Contains(selection, "Interface Errors"):
-		m.injectError(errors.ErrorTypeInterface, 10)
+		m.promptForValue(errors.ErrorTypeInterface, "Enter interface error count (0-100): ")
 	case strings.Contains(selection, "High Utilization"):
-		m.injectError(errors.ErrorTypeUtilization, 95)
+		m.promptForValue(errors.ErrorTypeUtilization, "Enter utilization percentage (0-100): ")
 	case strings.Contains(selection, "High CPU"):
-		m.injectError(errors.ErrorTypeCPU, 90)
+		m.promptForValue(errors.ErrorTypeCPU, "Enter CPU percentage (0-100): ")
 	case strings.Contains(selection, "High Memory"):
-		m.injectError(errors.ErrorTypeMemory, 85)
+		m.promptForValue(errors.ErrorTypeMemory, "Enter memory percentage (0-100): ")
 	case strings.Contains(selection, "High Disk"):
-		m.injectError(errors.ErrorTypeDisk, 95)
+		m.promptForValue(errors.ErrorTypeDisk, "Enter disk percentage (0-100): ")
 	case strings.Contains(selection, "Clear All"):
 		m.stateManager.ClearAll()
 		m.statusMessage = successStyle.Render("✓ All errors cleared")
@@ -216,8 +275,76 @@ func (m *model) handleMenuSelection() {
 	}
 }
 
+func (m *model) promptForValue(errorType errors.ErrorType, prompt string) {
+	m.selectedErrorType = int(getErrorTypeIndex(errorType))
+	m.valueInputPrompt = prompt
+	m.valueInputBuffer = ""
+	m.valueInputMode = true
+	m.menuVisible = false
+}
+
+func (m model) handleValueInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "enter":
+		// Process the input
+		var value int
+		_, err := fmt.Sscanf(m.valueInputBuffer, "%d", &value)
+		if err != nil || value < 0 || value > 100 {
+			m.statusMessage = errorStyle.Render("✗ Invalid value. Must be between 0 and 100")
+			m.statusIsError = true
+		} else {
+			errorType := getErrorTypeByIndex(m.selectedErrorType)
+			m.injectError(errorType, value)
+		}
+		m.valueInputMode = false
+		m.valueInputBuffer = ""
+		return m, nil
+
+	case "esc":
+		// Cancel input
+		m.valueInputMode = false
+		m.valueInputBuffer = ""
+		m.statusMessage = "Input cancelled"
+		m.statusIsError = false
+		return m, nil
+
+	case "backspace":
+		if len(m.valueInputBuffer) > 0 {
+			m.valueInputBuffer = m.valueInputBuffer[:len(m.valueInputBuffer)-1]
+		}
+		return m, nil
+
+	default:
+		// Only accept digits
+		if len(msg.String()) == 1 && msg.String()[0] >= '0' && msg.String()[0] <= '9' {
+			if len(m.valueInputBuffer) < 3 { // Max 3 digits for 0-100
+				m.valueInputBuffer += msg.String()
+			}
+		}
+		return m, nil
+	}
+}
+
+func getErrorTypeIndex(errorType errors.ErrorType) int {
+	types := errors.AllErrorTypes()
+	for i, t := range types {
+		if t == errorType {
+			return i
+		}
+	}
+	return 0
+}
+
+func getErrorTypeByIndex(index int) errors.ErrorType {
+	types := errors.AllErrorTypes()
+	if index >= 0 && index < len(types) {
+		return types[index]
+	}
+	return errors.ErrorTypeFCS
+}
+
 func (m *model) injectError(errorType errors.ErrorType, value int) {
-	// Inject error on first device, first interface
+	// Inject error on currently selected device
 	if len(m.cfg.Devices) == 0 {
 		m.statusMessage = errorStyle.Render("✗ No devices configured")
 		m.statusIsError = true
@@ -225,7 +352,12 @@ func (m *model) injectError(errorType errors.ErrorType, value int) {
 		return
 	}
 
-	device := m.cfg.Devices[0]
+	// Ensure selectedDeviceIdx is within bounds
+	if m.selectedDeviceIdx < 0 || m.selectedDeviceIdx >= len(m.cfg.Devices) {
+		m.selectedDeviceIdx = 0
+	}
+
+	device := m.cfg.Devices[m.selectedDeviceIdx]
 	deviceIP := "unknown"
 	if len(device.IPAddresses) > 0 {
 		deviceIP = device.IPAddresses[0].String()
@@ -246,12 +378,16 @@ func (m model) View() string {
 	s.WriteString(titleStyle.Render(fmt.Sprintf(" NIAC-Go Interactive Mode - %s ", m.interfaceName)))
 	s.WriteString("\n\n")
 
-	// Status bar
-	stats := fmt.Sprintf("Uptime: %s  |  Debug: %d (%s)  |  Packets: %d  |  Errors Active: %d  |  Injected: %d",
+	// Status bar with selected device
+	selectedDeviceName := "None"
+	if len(m.cfg.Devices) > 0 && m.selectedDeviceIdx >= 0 && m.selectedDeviceIdx < len(m.cfg.Devices) {
+		selectedDeviceName = m.cfg.Devices[m.selectedDeviceIdx].Name
+	}
+	stats := fmt.Sprintf("Uptime: %s  |  Debug: %d (%s)  |  Selected Device: %s  |  Errors Active: %d  |  Injected: %d",
 		formatDuration(m.uptime),
 		m.debugLevel,
 		getDebugLevelName(m.debugLevel),
-		m.packetsTotal,
+		selectedDeviceName,
 		m.errorsActive,
 		m.packetsInjected,
 	)
@@ -267,12 +403,22 @@ func (m model) View() string {
 			ip = device.IPAddresses[0].String()
 		}
 
-		s.WriteString(fmt.Sprintf("  %d. %s (%s) - %s - %s\n",
+		// Highlight selected device
+		prefix := "  "
+		suffix := ""
+		if i == m.selectedDeviceIdx {
+			prefix = selectedStyle.Render("→ ")
+			suffix = selectedStyle.Render(" [SELECTED]")
+		}
+
+		s.WriteString(fmt.Sprintf("%s%d. %s (%s) - %s - %s%s\n",
+			prefix,
 			i+1,
 			device.Name,
 			device.Type,
 			ip,
 			device.MACAddress.String(),
+			suffix,
 		))
 	}
 	s.WriteString("\n")
@@ -303,8 +449,14 @@ func (m model) View() string {
 		s.WriteString("\n\n")
 	}
 
+	// Value input prompt
+	if m.valueInputMode {
+		s.WriteString(m.renderValueInput())
+		s.WriteString("\n")
+	}
+
 	// Menu
-	if m.menuVisible {
+	if m.menuVisible && !m.valueInputMode {
 		s.WriteString(m.renderMenu())
 		s.WriteString("\n")
 	}
@@ -331,6 +483,8 @@ func (m model) View() string {
 	s.WriteString("Controls: ")
 	s.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("86")).Render("[i]"))
 	s.WriteString(" Menu  ")
+	s.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("86")).Render("[D]"))
+	s.WriteString(" Device  ")
 	s.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("86")).Render("[d]"))
 	s.WriteString(" Debug  ")
 	s.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("86")).Render("[h]"))
@@ -347,12 +501,48 @@ func (m model) View() string {
 	return s.String()
 }
 
+func (m model) renderValueInput() string {
+	var input strings.Builder
+
+	input.WriteString("╔══════════════════════════════════════════════════════════════════╗\n")
+	input.WriteString("║                    Error Value Input                            ║\n")
+	input.WriteString("╠══════════════════════════════════════════════════════════════════╣\n")
+	input.WriteString(fmt.Sprintf("║ %s%-60s ║\n", "", m.valueInputPrompt))
+	input.WriteString("║                                                                  ║\n")
+
+	// Show current input
+	inputDisplay := m.valueInputBuffer
+	if inputDisplay == "" {
+		inputDisplay = "_"
+	}
+	input.WriteString(fmt.Sprintf("║ Value: %-56s ║\n", inputDisplay))
+	input.WriteString("║                                                                  ║\n")
+	input.WriteString("║ Press [Enter] to confirm, [Esc] to cancel                       ║\n")
+	input.WriteString("╚══════════════════════════════════════════════════════════════════╝")
+
+	return input.String()
+}
+
 func (m model) renderMenu() string {
 	var menu strings.Builder
 
-	menu.WriteString("╔══════════════════════════════════════════════╗\n")
-	menu.WriteString("║       Interactive Error Injection Menu      ║\n")
-	menu.WriteString("╠══════════════════════════════════════════════╣\n")
+	// Get selected device info
+	selectedDeviceInfo := "None"
+	if len(m.cfg.Devices) > 0 && m.selectedDeviceIdx >= 0 && m.selectedDeviceIdx < len(m.cfg.Devices) {
+		device := m.cfg.Devices[m.selectedDeviceIdx]
+		deviceIP := "no-ip"
+		if len(device.IPAddresses) > 0 {
+			deviceIP = device.IPAddresses[0].String()
+		}
+		selectedDeviceInfo = fmt.Sprintf("%s (%s)", device.Name, deviceIP)
+	}
+
+	menu.WriteString("╔══════════════════════════════════════════════════════════════════╗\n")
+	menu.WriteString("║         Interactive Error Injection Menu                        ║\n")
+	menu.WriteString("╠══════════════════════════════════════════════════════════════════╣\n")
+	menu.WriteString(fmt.Sprintf("║ Target Device: %-49s ║\n", selectedDeviceInfo))
+	menu.WriteString("║ (Press Shift+D to change device)                                ║\n")
+	menu.WriteString("╠══════════════════════════════════════════════════════════════════╣\n")
 
 	for i, item := range m.menuItems {
 		if i == m.selectedItem {
@@ -360,13 +550,13 @@ func (m model) renderMenu() string {
 		} else {
 			menu.WriteString("║   " + item)
 		}
-		// Pad to align the right border
-		padding := 44 - len(item) - 3
+		// Pad to align the right border (66 chars wide)
+		padding := 64 - len(item) - 3
 		menu.WriteString(strings.Repeat(" ", padding))
 		menu.WriteString("║\n")
 	}
 
-	menu.WriteString("╚══════════════════════════════════════════════╝")
+	menu.WriteString("╚══════════════════════════════════════════════════════════════════╝")
 
 	return menu.String()
 }
@@ -414,12 +604,24 @@ func (m model) renderHelp() string {
 	help.WriteString("║ Keyboard Shortcuts:                                              ║\n")
 	help.WriteString("║                                                                  ║\n")
 	help.WriteString("║  [i]     Toggle interactive error injection menu                ║\n")
+	help.WriteString("║  [D]     Cycle through devices (Shift+D)                        ║\n")
 	help.WriteString("║  [d]     Cycle debug level (QUIET→NORMAL→VERBOSE→DEBUG)         ║\n")
 	help.WriteString("║  [h][?]  Toggle this help screen                                ║\n")
 	help.WriteString("║  [l]     Toggle debug log viewer                                ║\n")
 	help.WriteString("║  [s]     Toggle statistics viewer                               ║\n")
 	help.WriteString("║  [c]     Clear all error injections                             ║\n")
+	help.WriteString("║  [1-7]   Quick error injection (FCS/Disc/If/Util/CPU/Mem/Disk) ║\n")
 	help.WriteString("║  [q]     Quit application                                       ║\n")
+	help.WriteString("║                                                                  ║\n")
+	help.WriteString("║ Error Injection Workflow:                                        ║\n")
+	help.WriteString("║  Method 1 (Quick Access):                                       ║\n")
+	help.WriteString("║    1. Press [D] to select target device                         ║\n")
+	help.WriteString("║    2. Press number key [1-7] for error type                     ║\n")
+	help.WriteString("║    3. Enter value (0-100) and press [Enter]                     ║\n")
+	help.WriteString("║  Method 2 (Menu):                                                ║\n")
+	help.WriteString("║    1. Press [D] to select target device                         ║\n")
+	help.WriteString("║    2. Press [i] to open error injection menu                    ║\n")
+	help.WriteString("║    3. Use arrow keys, [Enter], type value, [Enter]              ║\n")
 	help.WriteString("║                                                                  ║\n")
 	help.WriteString("║ Debug Levels:                                                    ║\n")
 	help.WriteString("║  0 - QUIET    Only critical errors                              ║\n")
@@ -428,13 +630,13 @@ func (m model) renderHelp() string {
 	help.WriteString("║  3 - DEBUG    Full packet details                               ║\n")
 	help.WriteString("║                                                                  ║\n")
 	help.WriteString("║ Error Injection Types:                                           ║\n")
-	help.WriteString("║  • FCS Errors        - Frame Check Sequence errors              ║\n")
-	help.WriteString("║  • Packet Discards   - Dropped packets                          ║\n")
-	help.WriteString("║  • Interface Errors  - General interface errors                 ║\n")
-	help.WriteString("║  • High Utilization  - Link utilization > 95%                   ║\n")
-	help.WriteString("║  • High CPU          - CPU usage > 90%                          ║\n")
-	help.WriteString("║  • High Memory       - Memory usage > 85%                       ║\n")
-	help.WriteString("║  • High Disk         - Disk usage > 95%                         ║\n")
+	help.WriteString("║  • FCS Errors        - Frame Check Sequence errors (0-100)      ║\n")
+	help.WriteString("║  • Packet Discards   - Dropped packets rate (0-100)             ║\n")
+	help.WriteString("║  • Interface Errors  - General interface errors (0-100)         ║\n")
+	help.WriteString("║  • High Utilization  - Link utilization percentage (0-100)      ║\n")
+	help.WriteString("║  • High CPU          - CPU usage percentage (0-100)             ║\n")
+	help.WriteString("║  • High Memory       - Memory usage percentage (0-100)          ║\n")
+	help.WriteString("║  • High Disk         - Disk usage percentage (0-100)            ║\n")
 	help.WriteString("╚══════════════════════════════════════════════════════════════════╝")
 
 	return help.String()
@@ -515,16 +717,15 @@ func Run(interfaceName string, cfg *config.Config, debugConfig *logging.DebugCon
 
 	// Create menu items
 	menuItems := []string{
-		"1. Inject FCS Errors (50%)",
-		"2. Inject Packet Discards (25%)",
-		"3. Inject Interface Errors (10%)",
-		"4. Inject High Utilization (95%)",
-		"5. Inject High CPU (90%)",
-		"6. Inject High Memory (85%)",
-		"7. Inject High Disk (95%)",
-		"8. Configure Interface",
-		"9. Clear All Errors",
-		"0. Exit Menu",
+		"1. Inject FCS Errors (custom value)",
+		"2. Inject Packet Discards (custom value)",
+		"3. Inject Interface Errors (custom value)",
+		"4. Inject High Utilization (custom value)",
+		"5. Inject High CPU (custom value)",
+		"6. Inject High Memory (custom value)",
+		"7. Inject High Disk (custom value)",
+		"8. Clear All Errors",
+		"9. Exit Menu",
 	}
 
 	// Create model

@@ -36,6 +36,10 @@ type legacyFlags struct {
 	snmpCommunity  string
 	maxPacketSize  int
 
+	// Profiling flags
+	enableProfiling bool
+	profilePort     int
+
 	// Per-protocol debug levels
 	debugARP     int
 	debugIP      int
@@ -90,6 +94,11 @@ func defineLegacyFlags(flags *legacyFlags) {
 	flag.BoolVar(&flags.noTraffic, "no-traffic", false, "Disable background traffic generation")
 	flag.StringVar(&flags.snmpCommunity, "snmp-community", "", "Default SNMP community string")
 	flag.IntVar(&flags.maxPacketSize, "max-packet-size", 1514, "Maximum packet size in bytes")
+
+	// Profiling flags
+	flag.BoolVar(&flags.enableProfiling, "profile", false, "Enable pprof performance profiling")
+	flag.BoolVar(&flags.enableProfiling, "p", false, "Enable pprof performance profiling")
+	flag.IntVar(&flags.profilePort, "profile-port", 6060, "Port for pprof HTTP server (default: 6060)")
 
 	// Per-protocol debug flags (-1 means use global level)
 	flag.IntVar(&flags.debugARP, "debug-arp", -1, "ARP protocol debug level (0-3, default: global level)")

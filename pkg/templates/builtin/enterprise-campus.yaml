@@ -1,0 +1,125 @@
+# Enterprise Campus Template
+# Multi-building campus network with distribution layers
+#
+# Use Case: Large enterprise campus with distribution layers
+# Includes: Core routers, distribution switches, building access, services
+
+devices:
+  # Campus Core Router 1
+  - name: campus-core-01
+    mac: "00:1C:2E:3A:01:01"
+    ips:
+      - "10.0.0.1"
+      - "172.20.0.1"
+
+    lldp:
+      enabled: true
+      system_description: "Enterprise Campus Core Router"
+      port_description: "TenGigabitEthernet0/0/0"
+
+    cdp:
+      enabled: true
+      platform: "Cisco Catalyst 9600"
+      software_version: "IOS XE 17.9.1"
+
+    snmp_agent:
+      walk_file: ""
+
+  # Campus Core Router 2
+  - name: campus-core-02
+    mac: "00:1C:2E:3A:01:02"
+    ips:
+      - "10.0.0.2"
+      - "172.20.0.2"
+
+    lldp:
+      enabled: true
+      system_description: "Enterprise Campus Core Router"
+
+    cdp:
+      enabled: true
+      platform: "Cisco Catalyst 9600"
+
+    snmp_agent:
+      walk_file: ""
+
+  # Building A Distribution
+  - name: bldg-a-dist-01
+    mac: "00:1C:2E:3A:10:01"
+    ip: "10.10.0.1"
+
+    lldp:
+      enabled: true
+      system_description: "Building A Distribution"
+
+    stp:
+      enabled: true
+      bridge_priority: 4096
+
+    snmp_agent:
+      walk_file: ""
+
+  # Building A Access Floor 1
+  - name: bldg-a-fl1-sw-01
+    mac: "00:1C:2E:3A:11:01"
+    ip: "10.10.1.1"
+
+    lldp:
+      enabled: true
+      system_description: "Building A Floor 1"
+
+    stp:
+      enabled: true
+      bridge_priority: 32768
+
+    snmp_agent:
+      walk_file: ""
+
+  # Building B Distribution
+  - name: bldg-b-dist-01
+    mac: "00:1C:2E:3A:20:01"
+    ip: "10.20.0.1"
+
+    lldp:
+      enabled: true
+      system_description: "Building B Distribution"
+
+    stp:
+      enabled: true
+      bridge_priority: 4096
+
+    snmp_agent:
+      walk_file: ""
+
+  # Campus DNS/DHCP Server
+  - name: campus-dns-01
+    mac: "00:1C:2E:3A:60:01"
+    ip: "10.0.10.100"
+
+    dhcp:
+      enabled: true
+      pools:
+        - network: "10.0.0.0/8"
+          range_start: "10.100.0.1"
+          range_end: "10.100.255.254"
+          gateway: "10.0.0.1"
+          dns_servers:
+            - "10.0.10.100"
+          domain: "enterprise.com"
+          lease_time: 86400
+
+    dns:
+      enabled: true
+      records:
+        - name: "core01.enterprise.com"
+          type: "A"
+          value: "10.0.0.1"
+        - name: "core02.enterprise.com"
+          type: "A"
+          value: "10.0.0.2"
+        - name: "dns.enterprise.com"
+          type: "A"
+          value: "10.0.10.100"
+
+    snmp_agent:
+      walk_file: ""
