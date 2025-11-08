@@ -1,8 +1,13 @@
 # NIAC-Go: Network In A Can (Go Edition)
 
+[![CI](https://github.com/krisarmstrong/niac-go/workflows/CI/badge.svg)](https://github.com/krisarmstrong/niac-go/actions)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Go](https://img.shields.io/badge/go-1.21+-blue.svg)](https://golang.org/dl/)
+[![Version](https://img.shields.io/badge/version-1.19.0-brightgreen.svg)](https://github.com/krisarmstrong/niac-go/releases)
+
 **Production-ready network device simulator** - Complete YAML configuration system with per-protocol debug control, multi-IP support, and comprehensive protocol coverage.
 
-**Current Version: 1.15.0** - Testing Foundation
+**Current Version: 1.19.0** - Enhancements
 
 ## 🚀 Why Go?
 
