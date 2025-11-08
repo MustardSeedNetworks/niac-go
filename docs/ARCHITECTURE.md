@@ -89,21 +89,28 @@ Packages are loosely coupled. Mock interfaces for testing without real network a
 **Purpose**: CLI application entry point
 
 **Files**:
-- `main.go` - Program entry and legacy mode
-- `root.go` - Cobra root command
+- `main.go` - Program entry point (calls Execute())
+- `root.go` - Cobra root command and version info
+- `legacy.go` - Legacy CLI mode (backward compatibility)
 - `validate.go` - Config validation command
 - `template.go` - Template management commands
 - `interactive.go` - Interactive TUI command
 - `config.go` - Config management (export/diff/merge)
+- `generate.go` - Interactive config generator
+- `init.go` - Template selection wizard
 - `completion.go` - Shell completion
 - `man.go` - Man page generation
 
 **Responsibilities**:
-- Parse command-line flags
-- Load configuration
-- Initialize capture engine
-- Start protocol stack
-- Handle signals (Ctrl+C)
+- Parse command-line arguments and flags (Cobra)
+- Load and validate YAML/legacy configuration files
+- Initialize capture engine (pkg/capture)
+- Start protocol stack (pkg/protocols)
+- Handle signals (Ctrl+C, proper shutdown with WaitGroups)
+- Manage template system (embedded templates)
+- Config file operations (export, diff, merge, generate)
+- Shell completion generation (bash, zsh, fish, powershell)
+- Man page generation for documentation
 
 ---
 
@@ -120,13 +127,20 @@ type Engine struct {
 ```
 
 **Responsibilities**:
-- Open network interface (libpcap)
-- Read packets from wire
-- Send packets to wire
-- BPF filtering support
-- Rate limiting (RateLimiter)
+- Open network interface with libpcap (100ms timeout for responsive shutdown)
+- Read packets from wire (non-blocking with timeout handling)
+- Send packets to wire (raw Ethernet frames)
+- BPF filtering support (SetFilter)
+- Rate limiting (RateLimiter with token bucket algorithm)
+- Packet statistics (via pcap.Stats)
+- Proper cleanup and shutdown (Close method, WaitGroup coordination)
 
 **Dependencies**: `gopacket`, `gopacket/pcap`
+
+**Key Changes** (v1.21.1):
+- Fixed Ctrl+C hang by using 100ms timeout instead of BlockForever
+- Added comprehensive shutdown tests (capture_shutdown_test.go)
+- RateLimiter now properly cleans up goroutines with done channel
 
 ---
 
@@ -152,14 +166,28 @@ type Device struct {
 ```
 
 **Responsibilities**:
-- Load YAML configurations
-- Load legacy .cfg files (backward compat)
-- Validate device configurations
-- Resolve walk file paths (with security checks)
+- Load YAML configurations (primary format)
+- Load legacy .cfg files (backward compatibility)
+- Validate device configurations (Validator with 3 severity levels)
+- Resolve walk file paths (with security checks against path traversal)
+- Config comparison and diff operations
+- Config merging with overlay semantics
+- Template management (embedded in binary)
 
 **File References**:
-- `config.go:1377` - `validateWalkFilePath()` for security
-- `config.go:520` - `LoadYAML()` for YAML parsing
+- `config.go` - Core configuration structures and loading
+- `validator.go` - Comprehensive validation with errors, warnings, info
+- `legacy_converter.go` - Legacy .cfg to YAML conversion
+
+**Key Features**:
+- Validation with line/column tracking for precise error location
+- JSON output support for CI/CD integration
+- Three-level validation (error, warning, info)
+- Device validation (names, types, MAC/IP duplicates)
+- Protocol-specific validation (19 protocols)
+- SNMP trap validation (thresholds, receivers)
+- DNS record validation
+- DHCPv4/v6 pool validation (PoolStart, PoolEnd added in v1.19.0)
 
 ---
 
@@ -204,7 +232,20 @@ type Handler interface {
 **Key Patterns**:
 - Each handler is stateless (except SNMP agent)
 - Handlers registered in `stack.go`
-- Concurrent packet processing
+- Concurrent packet processing with goroutine-safe state
+- Proper shutdown coordination with WaitGroup and stop channels
+
+**Shutdown Architecture** (v1.21.1):
+- Stack maintains WaitGroup for all goroutines
+- Stop channel signals graceful shutdown
+- Stop() method is idempotent (safe to call multiple times)
+- Waits for all protocol handlers to complete
+- Comprehensive tests in stack_shutdown_test.go
+
+**Key Methods**:
+- `Start()` - Begins packet capture and protocol handling
+- `Stop()` - Graceful shutdown with WaitGroup coordination
+- `initializeDevices()` - Sets up device registry from config
 
 ---
 
@@ -221,12 +262,20 @@ type Agent struct {
 ```
 
 **Responsibilities**:
-- Load SNMP walk files
+- Load SNMP walk files (standard snmpwalk format)
 - Respond to GET/GETNEXT/GETBULK requests
 - Generate SNMP traps (v1.6.0+)
 - Error injection integration
+- Configurable community strings (v1.19.0)
 
 **Walk File Format**: Standard `snmpwalk` output
+
+**Trap Generation** (v1.6.0+):
+- Event-based traps: coldStart, linkUp, linkDown, authenticationFailure
+- Threshold-based traps: highCPU, highMemory, interfaceErrors
+- Multiple trap receivers with configurable thresholds (0-100%)
+- Configurable community strings (default: "public")
+- Integration with error injection system
 
 ---
 
@@ -287,6 +336,35 @@ type model struct {
 - Debug log viewer
 
 **Framework**: Bubble Tea (charmbracelet/bubbletea)
+
+---
+
+### pkg/templates
+**Purpose**: Embedded configuration templates
+
+**Responsibilities**:
+- Embed template files in binary using go:embed
+- Template discovery and listing
+- Template retrieval by name
+- 7 production-ready templates: minimal, router, switch, ap, server, iot, complete
+
+**Templates**:
+- `minimal.yaml` - Single device with basic protocols
+- `router.yaml` - Enterprise router with full protocol support
+- `switch.yaml` - Layer 2/3 switch with STP and VLAN
+- `ap.yaml` - Wi-Fi access point
+- `server.yaml` - Multi-service server (DHCP, DNS, HTTP)
+- `iot.yaml` - Lightweight IoT sensor device
+- `complete.yaml` - Multi-device network simulation
+
+**Usage**:
+```go
+// List all templates
+templates := templates.List()
+
+// Get specific template
+content, err := templates.Get("router")
+```
 
 ---
 
@@ -669,6 +747,29 @@ Add: `--debug 3 --debug-<protocol> 3` for full trace
 
 ---
 
-**Last Updated**: January 7, 2025
-**Version**: v1.14.0
+**Last Updated**: January 8, 2025
+**Version**: v1.21.3
 **Maintainer**: Kris Armstrong
+
+---
+
+## Recent Changes
+
+### v1.21.1 - Bug Fixes
+- Fixed Ctrl+C hang (100ms pcap timeout instead of BlockForever)
+- Fixed simulator restart bug (proper WaitGroup shutdown coordination)
+- Fixed DHCP broadcast packet handling (255.255.255.255)
+- Added configurable DHCP pools (PoolStart, PoolEnd)
+- Added configurable SNMP community strings
+
+### v1.21.2 - Testing & Documentation
+- Added comprehensive tests for config commands (13 new tests)
+- Updated CLI documentation for all commands
+- Documented config export, diff, merge, generate commands
+- Documented init, completion, and man commands
+
+### v1.21.3 - Architecture & Coverage
+- Updated architecture documentation to reflect current implementation
+- Added shutdown architecture details
+- Documented new command structure
+- Improved core package test coverage (in progress)
