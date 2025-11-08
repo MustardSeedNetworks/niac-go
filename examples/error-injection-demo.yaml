@@ -1,0 +1,100 @@
+# Multi-Device Error Injection Demo Configuration (v1.18.0)
+# Demonstrates the new multi-device error injection feature in interactive TUI mode
+#
+# Usage:
+#   sudo niac --interactive en0 examples/error-injection-demo.yaml
+#
+# Then use the TUI to:
+#   1. Press [D] (Shift+D) to cycle through devices
+#   2. Press [i] to open the error injection menu
+#   3. Select an error type and enter a custom value (0-100)
+#   4. Or use quick access keys [1-7] to inject errors directly
+#
+# Features demonstrated:
+#   - Device selection with visual indicators
+#   - Configurable error values for all error types
+#   - Multiple devices with different error states
+#   - Real-time error state display
+
+devices:
+  # Router - Gateway device
+  - name: gateway-router
+    type: router
+    mac: "00:11:22:33:44:01"
+    ip: "192.168.1.1"
+
+  # Core Switch - Distribution layer
+  - name: core-switch-1
+    type: switch
+    mac: "00:11:22:33:44:02"
+    ip: "192.168.1.2"
+
+  # Access Switch - Access layer
+  - name: access-switch-1
+    type: switch
+    mac: "00:11:22:33:44:03"
+    ip: "192.168.1.3"
+
+  # Server - Production server
+  - name: app-server-1
+    type: server
+    mac: "00:11:22:33:44:04"
+    ip: "192.168.1.10"
+
+  # Wireless AP - Access point
+  - name: wireless-ap-1
+    type: ap
+    mac: "00:11:22:33:44:05"
+    ip: "192.168.1.20"
+
+# Interactive TUI Workflow Examples:
+#
+# Example 1: Quick Error Injection
+#   1. Press [D] until "gateway-router" is selected
+#   2. Press [5] for High CPU
+#   3. Type "90" and press Enter
+#   Result: CPU usage set to 90% on gateway-router
+#
+# Example 2: Menu-Based Error Injection
+#   1. Press [D] until "core-switch-1" is selected
+#   2. Press [i] to open menu
+#   3. Use arrow keys to select "Inject High Utilization"
+#   4. Press Enter, type "95", press Enter
+#   Result: Utilization set to 95% on core-switch-1
+#
+# Example 3: Multiple Error Types on Same Device
+#   1. Press [D] until "access-switch-1" is selected
+#   2. Press [1], type "50", press Enter (FCS Errors)
+#   3. Press [2], type "25", press Enter (Packet Discards)
+#   4. Press [3], type "10", press Enter (Interface Errors)
+#   Result: Multiple error types active on access-switch-1
+#
+# Example 4: Different Errors on Different Devices
+#   1. Select "app-server-1" with [D]
+#   2. Press [5], type "85", Enter (High CPU)
+#   3. Select "wireless-ap-1" with [D]
+#   4. Press [6], type "90", Enter (High Memory)
+#   Result: CPU errors on server, memory errors on AP
+#
+# Example 5: Clear All Errors
+#   Press [c] to clear all error injections across all devices
+#
+# Error Types Available:
+#   1 - FCS Errors (0-100): Frame Check Sequence errors
+#   2 - Packet Discards (0-100): Dropped packet rate
+#   3 - Interface Errors (0-100): General interface errors
+#   4 - High Utilization (0-100%): Link utilization percentage
+#   5 - High CPU (0-100%): CPU usage percentage
+#   6 - High Memory (0-100%): Memory usage percentage
+#   7 - High Disk (0-100%): Disk usage percentage
+#
+# Keyboard Shortcuts:
+#   [i]     - Toggle error injection menu
+#   [D]     - Cycle through devices (Shift+D)
+#   [d]     - Cycle debug level
+#   [h][?]  - Toggle help screen
+#   [l]     - Toggle debug log viewer
+#   [s]     - Toggle statistics viewer
+#   [c]     - Clear all error injections
+#   [1-7]   - Quick error injection
+#   [q]     - Quit application

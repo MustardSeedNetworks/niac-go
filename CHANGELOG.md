@@ -7,13 +7,144 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+#### Performance Profiling (#26)
+- **pprof Integration** - Built-in performance monitoring via Go's net/http/pprof
+  - `--profile, -p` flag to enable profiling server
+  - `--profile-port <port>` to customize HTTP server port (default: 6060)
+  - Security: Binds to localhost (127.0.0.1) only for safety
+  - Automatic handler registration via import side-effect
+
+- **Available Profiling Endpoints**
+  - `/debug/pprof/` - Index page with links to all profiles
+  - `/debug/pprof/profile` - CPU profile (30s default, configurable)
+  - `/debug/pprof/heap` - Memory heap profile
+  - `/debug/pprof/goroutine` - Goroutine stack traces
+  - `/debug/pprof/block` - Block profiling data
+  - `/debug/pprof/mutex` - Mutex contention profile
+  - `/debug/pprof/allocs` - Memory allocation profile
+
+- **Usage Examples**
+  ```bash
+  # Enable profiling on default port
+  niac --profile en0 config.yaml
+
+  # Custom port
+  niac --profile --profile-port 8080 en0 config.yaml
+
+  # Collect CPU profile
+  curl http://localhost:6060/debug/pprof/profile?seconds=30 > cpu.prof
+  go tool pprof cpu.prof
+
+  # Interactive memory profiling
+  go tool pprof http://localhost:6060/debug/pprof/heap
+  ```
+
+- **Documentation**
+  - Added profiling section to CLI help text
+  - Added profiling examples to usage output
+  - Updated CLI_REFERENCE.md with comprehensive profiling guide
+  - Security warnings about localhost-only binding
+
+### Future (v1.19.0+)
+- Config generator CLI with interactive prompts
+- Packet hex dump viewer in TUI
+- Statistics export (JSON/CSV)
+- NetFlow/IPFIX export
+- DHCPv6 prefix delegation (IA_PD)
+
+## [1.18.0] - 2025-01-07
+
+### 🎯 MILESTONE: Enhanced Interactive TUI!
+
+Major improvements to the interactive mode with multi-device error injection, configurable error values, and improved user experience.
+
+### Added
+
+#### Multi-Device Error Injection (#24)
+- **Device Selection** - Cycle through devices with Shift+D key
+  - Selected device highlighted in device list with arrow indicator
+  - Current device shown in status bar and error injection menu
+  - Device information displayed: name, type, IP, MAC
+
+- **Configurable Error Values** - Custom error injection values
+  - Value input prompt with real-time feedback
+  - Support for 0-100 range validation
+  - ESC to cancel, Enter to confirm
+  - Clear error messages for invalid input
+
+- **Quick Access Keys** - Number keys 1-7 for rapid error injection
+  - 1: FCS Errors
+  - 2: Packet Discards
+  - 3: Interface Errors
+  - 4: High Utilization
+  - 5: High CPU
+  - 6: High Memory
+  - 7: High Disk
+
+- **Enhanced Error Injection Menu**
+  - Shows currently selected target device
+  - Device selection hint in menu
+  - Updated menu items to indicate custom values
+  - All 7 error types with configurable values
+
+#### User Interface Improvements
+- **Status Bar** - Now displays selected device name
+- **Device List** - Visual indicator for currently selected device
+- **Value Input Mode** - Dedicated UI for entering error values
+  - Professional input box with border
+  - Prompt text and current input display
+  - Clear instructions (Enter/Esc)
+
+- **Updated Help Screen**
+  - Two error injection workflows documented
+  - Quick access method (Method 1)
+  - Menu-based method (Method 2)
+  - Number key shortcuts listed
+  - Updated keyboard shortcuts reference
+
+#### Technical Enhancements
+- **Model State Management**
+  - Added `selectedDeviceIdx` for device tracking
+  - Added `valueInputMode` for input state
+  - Added `valueInputPrompt` and `valueInputBuffer` for value entry
+  - Bounds checking for device index
+
+- **Input Validation**
+  - Range validation (0-100) for all error types
+  - Real-time input feedback
+  - Digit-only input filtering
+  - Max 3 digits for percentage values
+
+### Changed
+- **Error Injection Workflow** - Now uses selected device instead of always first device
+- **Menu Items** - Updated to show "(custom value)" instead of fixed percentages
+- **Controls Bar** - Added "[D] Device" shortcut indicator
+- **Help Documentation** - Expanded with new features and workflows
+
+### Fixed
+- Error injection now targets the correct device based on user selection
+- Multiple devices can now have different error states simultaneously
+- Device cycling works with any number of configured devices
+
+### Developer Notes
+- Maintained backward compatibility with existing 'i' + ENTER interface
+- Thread-safe error state updates via StateManager
+- Clear separation between menu navigation and value input modes
+- Value input uses dedicated handler for better code organization
+
+### Impact
+- **User Experience**: Multi-device testing now fully supported
+- **Flexibility**: Custom error values allow precise testing scenarios
+- **Efficiency**: Quick access keys enable rapid error injection
+- **Visibility**: Always know which device is selected for error injection
+
 ### Future (v1.16.0+)
 - Additional unit tests for cmd/niac, pkg/capture, pkg/interactive
 - Performance benchmarks for hot paths
 - SNMP test coverage improvements (6.7% → 50%+)
 - Fuzz testing for protocol parsers
-- NetFlow/IPFIX export
-- DHCPv6 prefix delegation (IA_PD)
 
 ## [1.15.0] - 2025-01-07
 

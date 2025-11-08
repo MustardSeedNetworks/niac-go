@@ -1,0 +1,95 @@
+# Small Office Template
+# Router, switch, AP, and DNS/DHCP server for small office networks
+#
+# Use Case: Small office or branch network (10-50 devices)
+# Includes: Router, switch, access point, and network services
+
+devices:
+  # Gateway Router
+  - name: office-router
+    mac: "00:50:56:A1:01:01"
+    ips:
+      - "192.168.10.1"
+      - "10.10.10.1"
+
+    lldp:
+      enabled: true
+      system_description: "Small Office Gateway Router"
+      port_description: "GigabitEthernet0/0"
+
+    cdp:
+      enabled: true
+      software_version: "IOS XE 17.6.3"
+      platform: "Cisco ISR4321"
+      port_id: "GigabitEthernet0/0"
+
+    snmp_agent:
+      walk_file: ""
+
+  # Core Switch
+  - name: office-switch
+    mac: "00:50:56:A1:02:01"
+    ip: "192.168.10.2"
+
+    lldp:
+      enabled: true
+      system_description: "Office Switch"
+      port_description: "GigabitEthernet1/0/1"
+
+    stp:
+      enabled: true
+      bridge_priority: 24576
+
+    snmp_agent:
+      walk_file: ""
+
+  # Wireless Access Point
+  - name: office-ap-01
+    mac: "00:50:56:A1:03:01"
+    ip: "192.168.10.10"
+
+    lldp:
+      enabled: true
+      system_description: "Office Wireless AP"
+      port_description: "GigabitEthernet0"
+
+    snmp_agent:
+      walk_file: ""
+
+  # DHCP and DNS Server
+  - name: office-server
+    mac: "00:50:56:A1:10:01"
+    ip: "192.168.10.100"
+
+    dhcp:
+      enabled: true
+      pools:
+        - network: "192.168.10.0/24"
+          range_start: "192.168.10.50"
+          range_end: "192.168.10.99"
+          gateway: "192.168.10.1"
+          dns_servers:
+            - "192.168.10.100"
+            - "8.8.8.8"
+          domain: "office.local"
+          lease_time: 86400
+
+    dns:
+      enabled: true
+      records:
+        - name: "router.office.local"
+          type: "A"
+          value: "192.168.10.1"
+        - name: "switch.office.local"
+          type: "A"
+          value: "192.168.10.2"
+        - name: "server.office.local"
+          type: "A"
+          value: "192.168.10.100"
+
+    http:
+      enabled: true
+      server_name: "Office-Server"
+
+    snmp_agent:
+      walk_file: ""

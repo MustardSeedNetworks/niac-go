@@ -4,6 +4,8 @@ package main
 import (
 	"flag"
 	"fmt"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"runtime"
@@ -35,7 +37,12 @@ func runLegacyMode(osArgs []string) {
 	var flags legacyFlags
 	defineLegacyFlags(&flags)
 	flag.Usage = printUsage
-	flag.Parse()
+	// Parse the provided arguments (skip first element which is program name)
+	if len(osArgs) > 1 {
+		flag.CommandLine.Parse(osArgs[1:])
+	} else {
+		flag.Parse()
+	}
 
 	// Process flag overrides (verbose/quiet)
 	processFlags(&flags)
@@ -56,6 +63,11 @@ func runLegacyMode(osArgs []string) {
 	if err != nil {
 		printUsage()
 		os.Exit(1)
+	}
+
+	// Start profiling server if enabled
+	if flags.enableProfiling {
+		startProfilingServer(flags.profilePort, flags.debugLevel)
 	}
 
 	// Print banner (unless quiet)
@@ -98,6 +110,28 @@ func runLegacyMode(osArgs []string) {
 			os.Exit(1)
 		}
 	}
+}
+
+// startProfilingServer starts the pprof HTTP server for performance profiling
+func startProfilingServer(port int, debugLevel int) {
+	// Security: bind to localhost only to prevent external access
+	addr := fmt.Sprintf("127.0.0.1:%d", port)
+
+	go func() {
+		if debugLevel >= 1 {
+			logging.Info("Starting pprof server on http://%s/debug/pprof/", addr)
+			logging.Info("  CPU profile:    http://%s/debug/pprof/profile?seconds=30", addr)
+			logging.Info("  Heap profile:   http://%s/debug/pprof/heap", addr)
+			logging.Info("  Goroutines:     http://%s/debug/pprof/goroutine", addr)
+			logging.Warning("Profiling server is for local development only - do not expose publicly")
+			fmt.Println()
+		}
+
+		// Start HTTP server - pprof handlers are automatically registered via import
+		if err := http.ListenAndServe(addr, nil); err != nil {
+			logging.Error("Failed to start pprof server: %v", err)
+		}
+	}()
 }
 
 func printBanner() {
@@ -163,6 +197,10 @@ func printUsage() {
 	fmt.Println("        --snmp-community <str>  Default SNMP community string")
 	fmt.Println("        --max-packet-size <n>   Maximum packet size [default: 1514]")
 	fmt.Println()
+	fmt.Println("  Performance Profiling:")
+	fmt.Println("    -p, --profile            Enable pprof performance profiling")
+	fmt.Println("        --profile-port <port>   Port for pprof HTTP server [default: 6060]")
+	fmt.Println()
 	fmt.Println("  Per-Protocol Debug Levels:")
 	fmt.Println("        --debug-arp <level>     ARP protocol debug level (0-3)")
 	fmt.Println("        --debug-ip <level>      IP protocol debug level (0-3)")
@@ -208,6 +246,34 @@ func printUsage() {
 	fmt.Println()
 	fmt.Println("  # Show version")
 	fmt.Println("  niac --version")
+	fmt.Println()
+	fmt.Println("  # Enable profiling for performance analysis")
+	fmt.Println("  sudo niac --profile en0 network.cfg")
+	fmt.Println()
+	fmt.Println("  # Enable profiling on custom port")
+	fmt.Println("  sudo niac --profile --profile-port 8080 en0 network.cfg")
+	fmt.Println()
+	fmt.Println("PROFILING:")
+	fmt.Println("  When --profile is enabled, pprof endpoints are available at:")
+	fmt.Println("    http://localhost:6060/debug/pprof/          - Index page")
+	fmt.Println("    http://localhost:6060/debug/pprof/profile   - CPU profile")
+	fmt.Println("    http://localhost:6060/debug/pprof/heap      - Memory profile")
+	fmt.Println("    http://localhost:6060/debug/pprof/goroutine - Goroutine profile")
+	fmt.Println()
+	fmt.Println("  Collect CPU profile (30 seconds):")
+	fmt.Println("    curl http://localhost:6060/debug/pprof/profile?seconds=30 > cpu.prof")
+	fmt.Println("    go tool pprof cpu.prof")
+	fmt.Println()
+	fmt.Println("  Collect memory profile:")
+	fmt.Println("    curl http://localhost:6060/debug/pprof/heap > mem.prof")
+	fmt.Println("    go tool pprof mem.prof")
+	fmt.Println()
+	fmt.Println("  Interactive profiling:")
+	fmt.Println("    go tool pprof http://localhost:6060/debug/pprof/profile?seconds=30")
+	fmt.Println("    go tool pprof http://localhost:6060/debug/pprof/heap")
+	fmt.Println()
+	fmt.Println("  WARNING: Profiling server binds to localhost only for security.")
+	fmt.Println("           Do not expose the profiling port on public networks.")
 	fmt.Println()
 	fmt.Println("For more information, see: https://github.com/krisarmstrong/niac-go")
 }
