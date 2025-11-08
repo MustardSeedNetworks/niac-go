@@ -54,13 +54,21 @@ func (h *IPHandler) HandlePacket(pkt *Packet) {
 	}
 
 	// Check if packet is for one of our devices
+	// Also accept broadcast packets (255.255.255.255) for DHCP and other broadcast protocols
+	isBroadcast := ip.DstIP.Equal([]byte{255, 255, 255, 255})
 	devices := h.stack.GetDevices().GetByIP(ip.DstIP)
-	if len(devices) == 0 {
-		// Not for us
+
+	if len(devices) == 0 && !isBroadcast {
+		// Not for us and not broadcast
 		if debugLevel >= 3 {
 			fmt.Printf("IP packet not for our devices: %s sn=%d\n", ip.DstIP, pkt.SerialNumber)
 		}
 		return
+	}
+
+	// For broadcast packets, deliver to all devices (for DHCP, etc.)
+	if isBroadcast && len(devices) == 0 {
+		devices = h.stack.GetDevices().GetAll()
 	}
 
 	// Route to layer 4 protocol handler

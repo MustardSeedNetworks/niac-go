@@ -20,12 +20,13 @@ type Engine struct {
 
 // New creates a new capture engine
 func New(interfaceName string, debugLevel int) (*Engine, error) {
-	// Open interface in promiscuous mode
+	// Open interface in promiscuous mode with timeout
+	// Use 100ms timeout to allow responsive shutdown on Ctrl+C
 	handle, err := pcap.OpenLive(
 		interfaceName,
-		1600, // snapshot length
-		true, // promiscuous mode
-		pcap.BlockForever,
+		1600,                 // snapshot length
+		true,                 // promiscuous mode
+		100*time.Millisecond, // timeout for responsive shutdown
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open interface %s: %w", interfaceName, err)
@@ -83,9 +84,14 @@ func (e *Engine) SendEthernet(dstMAC, srcMAC []byte, etherType uint16, payload [
 
 // ReadPacket reads a single packet from the interface
 // Returns the packet data or nil on timeout/error
+// Timeouts are not treated as errors to allow responsive shutdown
 func (e *Engine) ReadPacket(buffer []byte) ([]byte, error) {
 	data, _, err := e.handle.ReadPacketData()
 	if err != nil {
+		// Timeout is expected and allows responsive shutdown
+		if err == pcap.NextErrorTimeoutExpired {
+			return nil, nil
+		}
 		return nil, err
 	}
 

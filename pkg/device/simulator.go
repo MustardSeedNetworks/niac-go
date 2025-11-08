@@ -22,6 +22,7 @@ type Simulator struct {
 	mu           sync.RWMutex
 	running      bool
 	stopChan     chan struct{}
+	wg           sync.WaitGroup // Track goroutines for clean shutdown
 	debugLevel   int
 }
 
@@ -139,6 +140,7 @@ func (s *Simulator) Start() error {
 
 	// Start behavior threads for each device
 	for name, device := range s.devices {
+		s.wg.Add(1)
 		go s.deviceBehaviorLoop(name, device)
 
 		// Start trap sender if configured (v1.6.0)
@@ -168,7 +170,11 @@ func (s *Simulator) Stop() {
 	s.running = false
 	s.mu.Unlock()
 
+	// Signal all goroutines to stop
 	close(s.stopChan)
+
+	// Wait for all device behavior loops to finish
+	s.wg.Wait()
 
 	// Stop all trap senders (v1.6.0)
 	for _, device := range s.devices {
@@ -177,6 +183,11 @@ func (s *Simulator) Stop() {
 		}
 	}
 
+	// Reset stopChan for potential restart
+	s.mu.Lock()
+	s.stopChan = make(chan struct{})
+	s.mu.Unlock()
+
 	if s.debugLevel >= 1 {
 		log.Println("Device simulator stopped")
 	}
@@ -184,6 +195,8 @@ func (s *Simulator) Stop() {
 
 // deviceBehaviorLoop runs device-specific behavior
 func (s *Simulator) deviceBehaviorLoop(name string, device *SimulatedDevice) {
+	defer s.wg.Done()
+
 	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
 

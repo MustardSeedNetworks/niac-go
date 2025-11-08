@@ -59,6 +59,12 @@ func NewTrapSender(deviceName string, deviceIP net.IP, trapConfig *config.TrapCo
 		debugLevel: debugLevel,
 	}
 
+	// Determine community string
+	community := trapConfig.Community
+	if community == "" {
+		community = "public" // Default to "public" if not configured
+	}
+
 	// Initialize SNMP clients for each receiver
 	for _, receiver := range trapConfig.Receivers {
 		host, port, err := net.SplitHostPort(receiver)
@@ -71,7 +77,7 @@ func NewTrapSender(deviceName string, deviceIP net.IP, trapConfig *config.TrapCo
 		client := &gosnmp.GoSNMP{
 			Target:    host,
 			Port:      parsePort(port),
-			Community: "public",
+			Community: community,
 			Version:   gosnmp.Version2c,
 			Timeout:   time.Duration(2) * time.Second,
 			Retries:   1,

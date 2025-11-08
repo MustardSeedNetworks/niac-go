@@ -120,6 +120,38 @@ func (s *Stack) initializeDevices() {
 		for _, ip := range device.IPAddresses {
 			s.devices.AddByIP(ip, device)
 		}
+
+		// Configure DHCP server if device has DHCP config
+		if device.DHCPConfig != nil {
+			// Set pool if configured
+			if device.DHCPConfig.PoolStart != nil && device.DHCPConfig.PoolEnd != nil {
+				s.dhcpHandler.SetPool(device.DHCPConfig.PoolStart, device.DHCPConfig.PoolEnd)
+			}
+
+			// Set server configuration
+			serverIP := device.DHCPConfig.ServerIdentifier
+			if serverIP == nil && len(device.IPAddresses) > 0 {
+				serverIP = device.IPAddresses[0] // Use first IP as server ID if not specified
+			}
+			gateway := device.DHCPConfig.Router
+			dnsServers := device.DHCPConfig.DomainNameServer
+			domain := device.DHCPConfig.DomainName
+
+			s.dhcpHandler.SetServerConfig(serverIP, gateway, dnsServers, domain)
+
+			// Set advanced options
+			s.dhcpHandler.SetAdvancedOptions(
+				device.DHCPConfig.NTPServers,
+				device.DHCPConfig.DomainSearch,
+				device.DHCPConfig.TFTPServerName,
+				device.DHCPConfig.BootfileName,
+				device.DHCPConfig.VendorSpecific,
+			)
+
+			if s.debugConfig.GetGlobal() >= 1 {
+				fmt.Printf("Configured DHCP server for device %s\n", device.Name)
+			}
+		}
 	}
 
 	if s.debugConfig.GetGlobal() >= 1 {

@@ -86,6 +86,9 @@ type DhcpServer struct {
 	DomainNameServer string      `yaml:"domain_name_server,omitempty"`
 	NextServerIP     string      `yaml:"next_server_ip,omitempty"`
 	ServerIdentifier string      `yaml:"server_identifier,omitempty"`
+	// Pool configuration
+	PoolStart string `yaml:"pool_start,omitempty"` // Start of DHCP address pool
+	PoolEnd   string `yaml:"pool_end,omitempty"`   // End of DHCP address pool
 	// DHCPv4 high priority options
 	NTPServers     []string `yaml:"ntp_servers,omitempty"`      // Option 42
 	DomainSearch   []string `yaml:"domain_search,omitempty"`    // Option 119
@@ -279,6 +282,7 @@ type RandomTrafficConfig struct {
 type TrapsConfig struct {
 	Enabled               bool                 `yaml:"enabled,omitempty"`
 	Receivers             []string             `yaml:"receivers,omitempty"`
+	Community             string               `yaml:"community,omitempty"` // SNMP community string
 	ColdStart             *TrapTriggerConfig   `yaml:"cold_start,omitempty"`
 	LinkState             *LinkStateTrapConfig `yaml:"link_state,omitempty"`
 	AuthenticationFailure *TrapTriggerConfig   `yaml:"authentication_failure,omitempty"`

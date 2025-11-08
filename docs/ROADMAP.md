@@ -192,7 +192,7 @@ docker run -p 8080:8080 niac-go web eth0 config.yaml
 - [ ] Custom protocol definitions (plugin system)
 - [ ] Network topology import (from real networks)
 - [ ] Integration with network tools (Wireshark, tcpdump)
-- [ ] Machine learning for traffic patterns
+- [ ] Statistical analysis for traffic patterns
 - [ ] Cloud deployment (AWS, GCP, Azure)
 - [ ] SaaS offering (hosted NIAC)
 

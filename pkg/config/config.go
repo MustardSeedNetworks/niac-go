@@ -131,6 +131,10 @@ type DHCPConfig struct {
 	NextServerIP     net.IP
 	DomainName       string
 
+	// DHCPv4 Pool configuration
+	PoolStart net.IP // Start of DHCP address pool
+	PoolEnd   net.IP // End of DHCP address pool
+
 	// DHCPv4 high priority options
 	NTPServers     []net.IP
 	DomainSearch   []string
@@ -350,6 +354,7 @@ type RandomTrafficConfig struct {
 type TrapConfig struct {
 	Enabled               bool
 	Receivers             []string // Trap receiver addresses (IP:port format)
+	Community             string   // SNMP community string (default: "public")
 	ColdStart             *TrapTriggerConfig
 	LinkState             *LinkStateTrapConfig
 	AuthenticationFailure *TrapTriggerConfig
@@ -956,6 +961,7 @@ func parseSNMPTrapsConfig(yamlTraps *converter.TrapsConfig) (*TrapConfig, error)
 	trapsCfg := &TrapConfig{
 		Enabled:   yamlTraps.Enabled,
 		Receivers: yamlTraps.Receivers,
+		Community: yamlTraps.Community,
 	}
 
 	// Parse Cold Start trap
@@ -1061,6 +1067,14 @@ func parseDHCPConfig(yamlDhcp *converter.DhcpServer, deviceName string) (*DHCPCo
 	}
 	if yamlDhcp.NextServerIP != "" {
 		dhcpCfg.NextServerIP = net.ParseIP(yamlDhcp.NextServerIP)
+	}
+
+	// Pool configuration
+	if yamlDhcp.PoolStart != "" {
+		dhcpCfg.PoolStart = net.ParseIP(yamlDhcp.PoolStart)
+	}
+	if yamlDhcp.PoolEnd != "" {
+		dhcpCfg.PoolEnd = net.ParseIP(yamlDhcp.PoolEnd)
 	}
 
 	// DHCPv4 high priority options
