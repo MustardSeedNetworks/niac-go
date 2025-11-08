@@ -146,6 +146,69 @@ Major improvements to the interactive mode with multi-device error injection, co
 - SNMP test coverage improvements (6.7% → 50%+)
 - Fuzz testing for protocol parsers
 
+## [1.20.0] - 2025-11-08
+
+### 🎯 MILESTONE: Performance & Testing!
+
+Added comprehensive performance benchmarks and fuzz testing infrastructure to provide performance insights and improve code quality.
+
+### Added
+
+#### Performance Benchmarks (38+ total)
+- **pkg/config (10 benchmarks)**
+  - Config validation (simple & complex)
+  - MAC/IP address normalization
+  - Device lookups by MAC and IP
+  - Legacy config loading
+  - Speed parsing
+  - MAC generation
+  - Multi-protocol configurations
+
+- **pkg/device (8 benchmarks)**
+  - Device creation (single/multiple IPs, multiple devices)
+  - Protocol handler registration
+  - Device state lookup
+  - Counter increments
+  - Various device configurations (LLDP, DHCP, full config)
+
+- **pkg/protocols (20+ benchmarks)**
+  - ARP: Request handling, reply generation, gratuitous ARP
+  - LLDP: Packet generation, TLV building
+  - DHCP: DISCOVER/OFFER/ACK cycle, lease allocation
+  - ICMP: Echo request processing
+  - SNMP: GET/GET-NEXT/GET-BULK operations
+  - DNS & NetBIOS: Query processing
+
+#### Fuzz Testing (6 tests)
+- **pkg/config**
+  - YAML loading with arbitrary input
+  - Speed string parsing
+  - MAC address generation
+  - Simple config parsing
+  - Walk file path validation
+  - Device config parsing
+
+### Changed
+- Updated README version from 1.19.0 to 1.20.0
+
+### Metrics
+- **Total Tests**: 1014
+- **Test Files**: 41
+- **Coverage**: Config 55.0%, Errors 95.1%, Stats 94.1%, Templates 91.9%
+
+### Closes
+- #18 - Add performance benchmark suite
+
+## [1.19.0] - 2025-11-08
+
+### 🎯 MILESTONE: Enhancements!
+
+Minor enhancements and improvements to existing functionality.
+
+### Changed
+- Updated README badges and version information
+- Updated documentation to reflect latest release
+
 ## [1.15.0] - 2025-01-07
 
 ### 🎯 MILESTONE: Testing Foundation!
