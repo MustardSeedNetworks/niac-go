@@ -40,6 +40,10 @@ type legacyFlags struct {
 	enableProfiling bool
 	profilePort     int
 
+	// Statistics export flags
+	exportStatsJSON string
+	exportStatsCSV  string
+
 	// Per-protocol debug levels
 	debugARP     int
 	debugIP      int
@@ -99,6 +103,10 @@ func defineLegacyFlags(flags *legacyFlags) {
 	flag.BoolVar(&flags.enableProfiling, "profile", false, "Enable pprof performance profiling")
 	flag.BoolVar(&flags.enableProfiling, "p", false, "Enable pprof performance profiling")
 	flag.IntVar(&flags.profilePort, "profile-port", 6060, "Port for pprof HTTP server (default: 6060)")
+
+	// Statistics export flags
+	flag.StringVar(&flags.exportStatsJSON, "export-stats-json", "", "Export statistics to JSON file on exit")
+	flag.StringVar(&flags.exportStatsCSV, "export-stats-csv", "", "Export statistics to CSV file on exit")
 
 	// Per-protocol debug flags (-1 means use global level)
 	flag.IntVar(&flags.debugARP, "debug-arp", -1, "ARP protocol debug level (0-3, default: global level)")
