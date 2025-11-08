@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Future (v1.22.0+)
+- Config generator CLI with interactive prompts
+- Packet hex dump viewer in TUI
+- Statistics export (JSON/CSV)
+- NetFlow/IPFIX export
+- DHCPv6 prefix delegation (IA_PD)
+
+## [1.21.0] - 2025-11-08
+
+### 🎯 MILESTONE: Performance Profiling!
+
+Production-ready performance monitoring with pprof integration for CPU, memory, and goroutine analysis.
+
 ### Added
 
 #### Performance Profiling (#26)
@@ -47,12 +60,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Updated CLI_REFERENCE.md with comprehensive profiling guide
   - Security warnings about localhost-only binding
 
-### Future (v1.19.0+)
-- Config generator CLI with interactive prompts
-- Packet hex dump viewer in TUI
-- Statistics export (JSON/CSV)
-- NetFlow/IPFIX export
-- DHCPv6 prefix delegation (IA_PD)
+### Metrics
+- **Total Lines**: 36,802 (18,132 source + 18,670 tests)
+- **Test Coverage**: Config 55.0%, Errors 95.1%, Stats 94.1%, Templates 91.9%
+
+### Closes
+- #26 - Add pprof performance monitoring
 
 ## [1.18.0] - 2025-01-07
 
