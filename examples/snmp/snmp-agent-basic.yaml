@@ -19,7 +19,7 @@ devices:
     snmp_agent:
       enabled: true
       community: "public"  # SNMPv2c community string (read-only)
-      walk_file: "device_walks/misc/n5k.walk"  # Path to SNMP walk file
+      walk_file: "device_walks_sanitized/misc/niac-misc-nexus-n5000-227.walk"  # Path to SNMP walk file
 
       # Optional: System information (overrides walk file values)
       sysname: "niac-core-sw-01"

@@ -19,7 +19,7 @@ devices:
     snmp_agent:
       enabled: true
       community: "public"  # Agent community (GET/GETNEXT/GETBULK)
-      walk_file: "device_walks/misc/C3900_63.147.68.1.walk"
+      walk_file: "device_walks_sanitized/misc/niac-misc-c3900.walk"
 
       sysname: "niac-core-rtr-01"
       sysdescr: "Cisco 3900 Series Router - NiAC-Go Core Router"
