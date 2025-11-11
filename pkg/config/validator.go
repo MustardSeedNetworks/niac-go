@@ -102,6 +102,10 @@ func (v *Validator) validateDevice(device *Device, index int, names map[string]b
 	// Validate protocol-specific configurations
 	v.validateSNMPTraps(device, prefix)
 	v.validateDNSRecords(device, prefix)
+
+	// Validate topology configurations (v1.23.0)
+	v.validatePortChannels(device, prefix)
+	v.validateTrunkPorts(device, prefix, names)
 }
 
 // validateSNMPTraps validates SNMP trap configuration
@@ -235,6 +239,105 @@ func ValidateIPAddress(ipStr string) error {
 		return fmt.Errorf("invalid IP address: %s", ipStr)
 	}
 	return nil
+}
+
+// validatePortChannels validates port-channel configuration (v1.23.0)
+func (v *Validator) validatePortChannels(device *Device, prefix string) {
+	if len(device.PortChannels) == 0 {
+		return
+	}
+
+	seenIDs := make(map[int]bool)
+	memberInterfaces := make(map[string]int) // interface -> port-channel ID
+
+	for i, pc := range device.PortChannels {
+		pcPrefix := fmt.Sprintf("%s.port_channels[%d]", prefix, i)
+
+		// Validate port-channel ID
+		if pc.ID <= 0 {
+			v.addError(pcPrefix+".id", "port-channel ID must be positive")
+		} else if seenIDs[pc.ID] {
+			v.addError(pcPrefix+".id", fmt.Sprintf("duplicate port-channel ID: %d", pc.ID))
+		}
+		seenIDs[pc.ID] = true
+
+		// Validate members
+		if len(pc.Members) == 0 {
+			v.addError(pcPrefix+".members", "port-channel must have at least one member interface")
+		}
+
+		for j, member := range pc.Members {
+			if member == "" {
+				v.addError(fmt.Sprintf("%s.members[%d]", pcPrefix, j), "member interface name cannot be empty")
+			} else if existingPC, exists := memberInterfaces[member]; exists {
+				v.addError(fmt.Sprintf("%s.members[%d]", pcPrefix, j),
+					fmt.Sprintf("interface %s already belongs to port-channel %d", member, existingPC))
+			} else {
+				memberInterfaces[member] = pc.ID
+			}
+		}
+
+		// Validate mode
+		if pc.Mode != "" {
+			validModes := []string{"active", "passive", "on"}
+			if !contains(validModes, pc.Mode) {
+				v.addWarning(pcPrefix+".mode", fmt.Sprintf("unknown LACP mode: %s (valid: %s)",
+					pc.Mode, strings.Join(validModes, ", ")))
+			}
+		}
+	}
+}
+
+// validateTrunkPorts validates trunk port configuration (v1.23.0)
+func (v *Validator) validateTrunkPorts(device *Device, prefix string, deviceNames map[string]bool) {
+	if len(device.TrunkPorts) == 0 {
+		return
+	}
+
+	seenInterfaces := make(map[string]bool)
+
+	for i, trunk := range device.TrunkPorts {
+		trunkPrefix := fmt.Sprintf("%s.trunk_ports[%d]", prefix, i)
+
+		// Validate interface
+		if trunk.Interface == "" {
+			v.addError(trunkPrefix+".interface", "trunk interface name is required")
+		} else if seenInterfaces[trunk.Interface] {
+			v.addError(trunkPrefix+".interface", fmt.Sprintf("duplicate trunk configuration for interface: %s", trunk.Interface))
+		}
+		seenInterfaces[trunk.Interface] = true
+
+		// Validate VLANs
+		if len(trunk.VLANs) == 0 {
+			v.addWarning(trunkPrefix+".vlans", "trunk port has no allowed VLANs configured")
+		}
+
+		for j, vlan := range trunk.VLANs {
+			if vlan < 1 || vlan > 4094 {
+				v.addError(fmt.Sprintf("%s.vlans[%d]", trunkPrefix, j),
+					fmt.Sprintf("invalid VLAN ID: %d (must be 1-4094)", vlan))
+			}
+		}
+
+		// Validate native VLAN
+		if trunk.NativeVLAN != 0 && (trunk.NativeVLAN < 1 || trunk.NativeVLAN > 4094) {
+			v.addError(trunkPrefix+".native_vlan", fmt.Sprintf("invalid native VLAN: %d (must be 1-4094)", trunk.NativeVLAN))
+		}
+
+		// Validate remote device reference
+		if trunk.RemoteDevice != "" {
+			if !deviceNames[trunk.RemoteDevice] {
+				v.addWarning(trunkPrefix+".remote_device",
+					fmt.Sprintf("remote device %s not found in configuration", trunk.RemoteDevice))
+			}
+		}
+
+		// Check if remote interface is specified when remote device is specified
+		if trunk.RemoteDevice != "" && trunk.RemoteInterface == "" {
+			v.addWarning(trunkPrefix+".remote_interface",
+				"remote_interface should be specified when remote_device is set")
+		}
+	}
 }
 
 // ValidateMACAddress validates a MAC address string

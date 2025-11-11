@@ -118,6 +118,8 @@ type Device struct {
 	ICMPv6Config  *ICMPv6Config  // ICMPv6 configuration
 	DHCPv6Config  *DHCPv6Config  // DHCPv6 server configuration
 	TrafficConfig *TrafficConfig // Traffic pattern configuration (v1.6.0)
+	PortChannels  []PortChannel  // Port-channel/LAG configuration (v1.23.0)
+	TrunkPorts    []TrunkPort    // Trunk port configuration (v1.23.0)
 	Properties    map[string]string
 }
 
@@ -381,6 +383,22 @@ type ThresholdTrapConfig struct {
 	Enabled   bool
 	Threshold int // Threshold value (percent for CPU/Memory, count for errors)
 	Interval  int // Check interval in seconds
+}
+
+// PortChannel represents a port-channel (LAG/Link Aggregation Group) configuration (v1.23.0)
+type PortChannel struct {
+	ID      int      // Port-channel ID (e.g., 1 for Port-channel1)
+	Members []string // Member interface names (e.g., ["Ethernet1/1", "Ethernet1/2"])
+	Mode    string   // LACP mode: "active", "passive", "on" (static)
+}
+
+// TrunkPort represents a trunk port configuration with VLAN tagging (v1.23.0)
+type TrunkPort struct {
+	Interface       string // Local interface name (can be physical or port-channel)
+	VLANs           []int  // List of allowed VLANs
+	NativeVLAN      int    // Native VLAN (untagged, default: 1)
+	RemoteDevice    string // Remote device name (for topology validation)
+	RemoteInterface string // Remote interface name (for LLDP/CDP neighbor)
 }
 
 // Load reads and parses a configuration file
