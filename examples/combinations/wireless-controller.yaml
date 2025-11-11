@@ -1,0 +1,185 @@
+# Wireless LAN Controller - Centralized Management
+#
+# This example demonstrates a wireless controller managing multiple APs
+# with SNMP monitoring, HTTP management, DHCP, and DNS integration.
+#
+# Use Case: Centralized wireless management with comprehensive monitoring
+# Protocols: SNMP v2c, HTTP, DHCP, DNS, ICMP
+# Added: v1.23.0
+
+devices:
+  - name: niac-wlc-01
+    type: server  # Wireless controllers are treated as specialized servers
+    mac: "00:11:22:33:47:01"
+    ips:
+      - "10.100.10.50"  # Management network
+      - "10.0.40.1"     # AP management subnet
+
+    # SNMP Agent - Wireless Infrastructure Monitoring
+    snmp_agent:
+      enabled: true
+      community: "niac-go-wireless"  # Dedicated wireless community
+      walk_file: "device_walks_sanitized/cisco/niac-cisco-controller-198.walk"
+
+      sysname: "niac-wlc-01"
+      sysdescr: "Cisco Wireless LAN Controller 9800 - NiAC-Go WLC"
+      syscontact: "wireless@niac-go.com"
+      syslocation: "NiAC-Go - DC-WEST - Wireless Infrastructure"
+
+      # Wireless-specific trap monitoring
+      traps:
+        enabled: true
+        receivers:
+          - "10.100.0.100:162"  # Monitoring server
+          - "10.100.0.105:162"  # Wireless specialist dashboard
+        community: "niac-go-trap-wireless"
+
+        # Critical wireless events
+        cold_start:
+          enabled: true
+        authentication_failure:
+          enabled: true
+
+        # Wireless infrastructure health
+        high_cpu:
+          enabled: true
+          threshold: 80  # Controllers are CPU-intensive
+        high_memory:
+          enabled: true
+          threshold: 85
+        high_disk:
+          enabled: true
+          threshold: 90
+
+    # HTTP Management Interface
+    # Web-based controller management
+    http:
+      enabled: true
+      server_name: "NiAC-Go Wireless Controller"
+      endpoints:
+        - path: "/"
+          response: "Cisco Wireless LAN Controller - NiAC-Go WLC-01"
+          status_code: 200
+
+        - path: "/admin"
+          response: "WLC Admin Portal - Login Required"
+          status_code: 200
+
+        - path: "/api/v1/status"
+          response: '{"controller":"niac-wlc-01","status":"active","aps_connected":24,"clients_connected":156}'
+          status_code: 200
+          content_type: "application/json"
+
+        - path: "/api/v1/aps"
+          response: '{"total_aps":24,"online":24,"offline":0,"rebooting":0}'
+          status_code: 200
+          content_type: "application/json"
+
+    # DHCP Server - Access Point Management
+    # Provide IPs to APs in management subnet
+    dhcp:
+      enabled: true
+      pools:
+        - network: "10.0.40.0/24"
+          range_start: "10.0.40.100"
+          range_end: "10.0.40.200"
+          gateway: "10.0.40.1"
+          dns_servers: ["10.0.40.1", "10.100.0.1"]
+          lease_time: 86400
+          domain_name: "ap.niac-go.local"
+          # DHCP option 43 for AP discovery would go here
+
+    # DNS Server - AP and Wireless Client Resolution
+    dns:
+      enabled: true
+      forward_records:
+        - name: "wlc.niac-go.local"
+          ip: "10.100.10.50"
+          ttl: 3600
+        - name: "wlc-mgmt.niac-go.local"
+          ip: "10.0.40.1"
+          ttl: 3600
+        - name: "niac-wlc-01.niac-go.local"
+          ip: "10.100.10.50"
+          ttl: 3600
+        # AP DNS records for management
+        - name: "ap-floor1-101.ap.niac-go.local"
+          ip: "10.0.40.101"
+          ttl: 300
+        - name: "ap-floor2-201.ap.niac-go.local"
+          ip: "10.0.40.102"
+          ttl: 300
+        - name: "ap-floor3-301.ap.niac-go.local"
+          ip: "10.0.40.103"
+          ttl: 300
+
+    # ICMP Response
+    icmp:
+      enabled: true
+      ttl: 64
+
+# Usage:
+#   niac validate examples/combinations/wireless-controller.yaml
+#   sudo niac en0 examples/combinations/wireless-controller.yaml
+#
+# Test protocols:
+#
+#   # HTTP Management Interface
+#   curl http://10.100.10.50/
+#   curl http://10.100.10.50/api/v1/status
+#   curl http://10.100.10.50/api/v1/aps
+#
+#   # SNMP Monitoring - Wireless Specific
+#   snmpwalk -v2c -c niac-go-wireless 10.100.10.50 system
+#   snmpwalk -v2c -c niac-go-wireless 10.100.10.50 interfaces
+#
+#   # Monitor AP count (Cisco WLC MIBs)
+#   snmpget -v2c -c niac-go-wireless 10.100.10.50 CISCO-LWAPP-AP-MIB::cLApTable
+#
+#   # Monitor client count
+#   snmpget -v2c -c niac-go-wireless 10.100.10.50 CISCO-LWAPP-DOT11-CLIENT-MIB::cldcClientTable
+#
+#   # DHCP Server (AP perspective)
+#   # APs will request DHCP from 10.0.40.1
+#
+#   # DNS Resolution
+#   dig @10.0.40.1 wlc.niac-go.local
+#   dig @10.0.40.1 ap-floor1-101.ap.niac-go.local
+#
+#   # Trap Monitoring
+#   snmptrapd -f -Lo -c snmptrapd.conf
+#
+#   # ICMP Connectivity
+#   ping 10.100.10.50
+#   ping 10.0.40.1
+#
+# Wireless Controller Best Practices:
+#   - Dual IPs: management (10.100.x.x) and AP management (10.0.40.x)
+#   - Dedicated SNMP community for wireless
+#   - HTTP API for programmatic management
+#   - DHCP for automatic AP provisioning
+#   - DNS for AP name resolution
+#   - Separate trap receiver for wireless specialists
+#
+# Protocol Interactions:
+#   - APs discover controller via DHCP option 43 or DNS
+#   - APs get IP from DHCP pool (10.0.40.100-200)
+#   - DNS provides name resolution for APs
+#   - HTTP provides web UI and REST API
+#   - SNMP monitors controller health and wireless stats
+#   - Traps alert on AP join/leave events
+#   - ICMP confirms both interfaces reachable
+#
+# Typical Deployment:
+#   - 1-2 controllers for redundancy
+#   - 10-100+ APs per controller
+#   - Centralized policy management
+#   - Client roaming across APs
+#   - RF monitoring and optimization
+#
+# Notes:
+#   - Controllers are CPU and memory intensive
+#   - Monitor AP connection count via SNMP
+#   - HTTP API enables automation
+#   - Cisco WLC walk file for realistic OIDs
+#   - Dual trap receivers (general + wireless specialist)

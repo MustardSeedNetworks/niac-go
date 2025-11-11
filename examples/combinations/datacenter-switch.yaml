@@ -1,0 +1,145 @@
+# Data Center Switch - Core Infrastructure
+#
+# This example demonstrates a data center core switch with STP, LLDP, CDP,
+# and comprehensive SNMP monitoring for critical infrastructure.
+#
+# Use Case: Data center core switch with redundancy and monitoring
+# Protocols: STP, LLDP, CDP, SNMP v2c, ICMP
+# Added: v1.23.0
+
+devices:
+  - name: niac-dc-sw-core-01
+    type: switch
+    mac: "00:11:22:33:45:01"
+    ips:
+      - "10.100.0.11"  # Management VLAN
+
+    # Spanning Tree Protocol
+    # Root bridge for data center topology
+    stp:
+      enabled: true
+      bridge_priority: 4096  # Root bridge priority (lowest wins)
+      hello_time: 2
+      max_age: 20
+      forward_delay: 15
+
+    # LLDP Discovery
+    # Standard discovery protocol for multi-vendor environments
+    lldp:
+      enabled: true
+      system_name: "niac-dc-sw-core-01"
+      system_description: "Cisco Nexus 9300 - Data Center Core Switch"
+      chassis_id: "00:11:22:33:45:01"
+      port_description: "Management0"
+      advertise_interval: 30
+      management_address: "10.100.0.11"
+
+    # CDP Discovery
+    # Cisco discovery protocol for compatibility
+    cdp:
+      enabled: true
+      platform: "N9K-C9372PX"
+      capabilities: "Switch IGMP"
+      software_version: "NX-OS 9.3(8)"
+      advertise_interval: 60
+      native_vlan: 1
+
+    # SNMP Agent with Critical Infrastructure Monitoring
+    snmp_agent:
+      enabled: true
+      community: "niac-go-ro"
+      walk_file: "device_walks_sanitized/misc/niac-misc-nexus-n5000-227.walk"
+
+      sysname: "niac-dc-sw-core-01"
+      sysdescr: "Cisco Nexus 9300 Series - Data Center Core Switch"
+      syscontact: "dcops@niac-go.com"
+      syslocation: "NiAC-Go - DC-WEST - Row 5 Rack A01"
+
+      # Critical infrastructure traps
+      traps:
+        enabled: true
+        receivers:
+          - "10.100.0.100:162"  # Primary NOC
+          - "10.100.0.101:162"  # Secondary NOC
+          - "10.100.0.102:162"  # Syslog server
+        community: "niac-go-trap-critical"
+
+        # Event-based traps
+        cold_start:
+          enabled: true
+        link_up:
+          enabled: true
+        link_down:
+          enabled: true
+        authentication_failure:
+          enabled: true
+
+        # Threshold-based traps - Conservative for data center
+        high_cpu:
+          enabled: true
+          threshold: 70  # Alert at 70% CPU
+        high_memory:
+          enabled: true
+          threshold: 80  # Alert at 80% memory
+        interface_errors:
+          enabled: true
+          threshold: 500  # Alert on interface errors
+
+    # ICMP Response
+    icmp:
+      enabled: true
+      ttl: 64
+
+# Usage:
+#   niac validate examples/combinations/datacenter-switch.yaml
+#   sudo niac en0 examples/combinations/datacenter-switch.yaml
+#
+# Test protocols:
+#
+#   # STP Status
+#   show spanning-tree
+#   brctl show
+#
+#   # LLDP Neighbors
+#   lldpcli show neighbors
+#   lldpcli show statistics
+#
+#   # CDP Neighbors (if Cisco devices present)
+#   show cdp neighbors detail
+#
+#   # SNMP Monitoring
+#   snmpwalk -v2c -c niac-go-ro 10.100.0.11 system
+#   snmpwalk -v2c -c niac-go-ro 10.100.0.11 interfaces
+#   snmpget -v2c -c niac-go-ro 10.100.0.11 sysUpTime.0
+#
+#   # Monitor for interface errors
+#   snmpbulkwalk -v2c -c niac-go-ro 10.100.0.11 ifInErrors
+#   snmpbulkwalk -v2c -c niac-go-ro 10.100.0.11 ifOutErrors
+#
+#   # Trap monitoring (on NOC server)
+#   snmptrapd -f -Lo -c snmptrapd.conf
+#
+#   # ICMP Connectivity
+#   ping 10.100.0.11
+#
+# Data Center Best Practices:
+#   - STP root bridge priority set to 4096 (low value = high priority)
+#   - Conservative CPU/memory thresholds for early warning
+#   - Triple trap receivers for redundancy (NOC primary, NOC secondary, syslog)
+#   - Both LLDP and CDP for multi-vendor support
+#   - Management VLAN (VLAN 100) separation
+#   - Detailed system location for rack identification
+#
+# Protocol Interactions:
+#   - STP prevents loops in redundant topology
+#   - LLDP/CDP discover neighbor switches and servers
+#   - SNMP monitors STP state, interface status, errors
+#   - Traps alert NOC on topology changes (link up/down)
+#   - ICMP confirms layer 3 reachability
+#
+# Notes:
+#   - Root bridge role is critical in data center
+#   - Monitor interface errors closely (500 threshold)
+#   - Use dedicated management network (10.100.0.0/16)
+#   - Triple trap receivers ensure alert delivery
+#   - NX-OS walk file provides realistic Nexus data

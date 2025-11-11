@@ -1,0 +1,132 @@
+# Access Switch - Floor Distribution
+#
+# This example demonstrates an access layer switch providing connectivity
+# to end-user devices with LLDP, STP, and SNMP monitoring.
+#
+# Use Case: Access layer switch for workstations, printers, phones
+# Protocols: LLDP, STP, SNMP v2c, ICMP
+# Added: v1.23.0
+
+devices:
+  - name: niac-access-sw-floor3
+    type: switch
+    mac: "00:11:22:33:46:01"
+    ips:
+      - "10.0.30.11"  # Floor 3 management subnet
+
+    # LLDP Discovery
+    # Advertise to upstream switches and downstream devices
+    lldp:
+      enabled: true
+      system_name: "niac-access-sw-floor3"
+      system_description: "Dell PowerConnect 6224 - Access Switch Floor 3"
+      chassis_id: "00:11:22:33:46:01"
+      port_description: "Unit 1 Port 1"
+      advertise_interval: 30
+      management_address: "10.0.30.11"
+      port_id_subtype: "interface_name"
+
+    # Spanning Tree Protocol
+    # Secondary priority - defer to core switches
+    stp:
+      enabled: true
+      bridge_priority: 32768  # Default priority (access layer)
+      hello_time: 2
+      max_age: 20
+      forward_delay: 15
+
+    # SNMP Agent - Basic Monitoring
+    snmp_agent:
+      enabled: true
+      community: "public"  # Access switches typically use standard community
+      walk_file: "device_walks_sanitized/misc/niac-misc-powerconnect-6224-153.walk"
+
+      sysname: "niac-access-sw-floor3"
+      sysdescr: "Dell PowerConnect 6224 - Access Layer Switch"
+      syscontact: "netops@niac-go.com"
+      syslocation: "NiAC-Go - Campus - Building A Floor 3 Closet B"
+
+      # Basic traps for access layer
+      traps:
+        enabled: true
+        receivers: ["10.100.0.100:162"]
+        community: "niac-go-trap"
+
+        # Focus on link status for end-user impact
+        link_up:
+          enabled: true
+        link_down:
+          enabled: true
+
+        # Basic health monitoring
+        interface_errors:
+          enabled: true
+          threshold: 1000
+
+    # ICMP Response
+    icmp:
+      enabled: true
+      ttl: 64
+
+# Usage:
+#   niac validate examples/combinations/access-switch.yaml
+#   sudo niac en0 examples/combinations/access-switch.yaml
+#
+# Test protocols:
+#
+#   # LLDP Discovery
+#   lldpcli show neighbors
+#   lldpcli show interfaces
+#
+#   # Verify LLDP learns connected devices
+#   lldpcli show neighbors summary
+#
+#   # STP Status
+#   show spanning-tree
+#   brctl showstp <bridge>
+#
+#   # SNMP Monitoring
+#   snmpwalk -v2c -c public 10.0.30.11 system
+#   snmpwalk -v2c -c public 10.0.30.11 interfaces
+#
+#   # Monitor port status
+#   snmpbulkwalk -v2c -c public 10.0.30.11 ifOperStatus
+#   snmpbulkwalk -v2c -c public 10.0.30.11 ifAdminStatus
+#
+#   # Check interface errors
+#   snmpget -v2c -c public 10.0.30.11 ifInErrors.1
+#   snmpget -v2c -c public 10.0.30.11 ifOutErrors.1
+#
+#   # Trap monitoring
+#   snmptrapd -f -Lo
+#
+#   # ICMP Connectivity
+#   ping 10.0.30.11
+#
+# Access Layer Best Practices:
+#   - Use standard "public" community for easier management
+#   - Focus traps on link status (end-user impact)
+#   - STP priority 32768 (default) - defer to core
+#   - Detailed location for physical identification
+#   - LLDP discovers phones, printers, workstations
+#
+# Typical Connected Devices:
+#   - Workstations (Windows/Mac/Linux)
+#   - VoIP phones (LLDP-MED capable)
+#   - Printers (network attached)
+#   - Access points (if wireless)
+#   - Security cameras
+#
+# Protocol Interactions:
+#   - LLDP discovers all connected end devices
+#   - STP prevents loops, follows core bridge
+#   - SNMP monitors port status and errors
+#   - Link up/down traps alert on user impact
+#   - ICMP confirms switch is reachable
+#
+# Notes:
+#   - Access switches are leaf nodes in STP topology
+#   - LLDP-MED provides power negotiation for phones
+#   - Simple trap configuration (link status focus)
+#   - Dell PowerConnect walk file for realistic data
+#   - Management subnet separates from user VLANs

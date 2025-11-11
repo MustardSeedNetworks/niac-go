@@ -1,0 +1,169 @@
+# Enterprise Router - Complete Protocol Suite
+#
+# This example demonstrates a full-featured enterprise edge router with
+# all protocols enabled: LLDP, CDP, DHCP, DNS, SNMP (with traps), and ICMP.
+#
+# Use Case: Enterprise edge router providing gateway, DHCP, DNS, and monitoring
+# Protocols: LLDP, CDP, DHCP, DNS, SNMP v2c, ICMP
+# Added: v1.23.0
+
+devices:
+  - name: niac-edge-rtr-01
+    type: router
+    mac: "00:11:22:33:44:01"
+    ips:
+      - "10.0.0.1"          # Internal gateway
+      - "198.51.100.1"      # WAN interface (RFC 5737)
+
+    # Discovery Protocols
+    # Enable both LLDP and CDP for maximum compatibility
+    lldp:
+      enabled: true
+      system_name: "niac-edge-rtr-01"
+      system_description: "NiAC-Go Enterprise Edge Router"
+      chassis_id: "00:11:22:33:44:01"
+      port_description: "GigabitEthernet0/0 - Internal"
+      advertise_interval: 30
+
+    cdp:
+      enabled: true
+      platform: "Cisco 4331 ISR"
+      capabilities: "Router Switch IGMP"
+      software_version: "IOS XE 16.12.4"
+      advertise_interval: 60
+
+    # DHCP Server
+    # Provide IP addressing for internal networks
+    dhcp:
+      enabled: true
+      pools:
+        - network: "10.0.10.0/24"
+          range_start: "10.0.10.100"
+          range_end: "10.0.10.200"
+          gateway: "10.0.0.1"
+          dns_servers: ["10.0.0.1", "8.8.8.8"]
+          lease_time: 86400
+          domain_name: "corp.niac-go.local"
+
+        - network: "10.0.20.0/24"
+          range_start: "10.0.20.100"
+          range_end: "10.0.20.200"
+          gateway: "10.0.0.1"
+          dns_servers: ["10.0.0.1"]
+          lease_time: 43200
+          domain_name: "guest.niac-go.local"
+
+    # DNS Server
+    # Provide name resolution for internal resources
+    dns:
+      enabled: true
+      forward_records:
+        - name: "router.niac-go.local"
+          ip: "10.0.0.1"
+          ttl: 3600
+        - name: "gateway.niac-go.local"
+          ip: "10.0.0.1"
+          ttl: 3600
+        - name: "niac-edge-rtr-01.niac-go.local"
+          ip: "10.0.0.1"
+          ttl: 3600
+        - name: "core-sw.niac-go.local"
+          ip: "10.0.0.11"
+          ttl: 3600
+
+    # SNMP Agent with Full Monitoring
+    # Comprehensive SNMP monitoring with traps
+    snmp_agent:
+      enabled: true
+      community: "niac-go-ro"
+      walk_file: "device_walks_sanitized/misc/niac-misc-c3900.walk"
+
+      sysname: "niac-edge-rtr-01"
+      sysdescr: "Cisco 4331 ISR - NiAC-Go Enterprise Edge Router"
+      syscontact: "netadmin@niac-go.com"
+      syslocation: "NiAC-Go - DC-WEST - Edge Network"
+
+      # Comprehensive trap configuration
+      traps:
+        enabled: true
+        receivers:
+          - "10.100.0.100:162"  # Primary monitoring server
+          - "10.100.0.101:162"  # Backup monitoring server
+        community: "niac-go-trap"
+
+        # Event-based traps
+        cold_start:
+          enabled: true
+        link_up:
+          enabled: true
+        link_down:
+          enabled: true
+        authentication_failure:
+          enabled: true
+
+        # Threshold-based traps
+        high_cpu:
+          enabled: true
+          threshold: 75
+        high_memory:
+          enabled: true
+          threshold: 85
+        high_disk:
+          enabled: true
+          threshold: 90
+        interface_errors:
+          enabled: true
+          threshold: 1000
+
+    # ICMP Response
+    # Enable ping for connectivity testing
+    icmp:
+      enabled: true
+      ttl: 64
+
+# Usage:
+#   niac validate examples/combinations/enterprise-router.yaml
+#   sudo niac en0 examples/combinations/enterprise-router.yaml
+#
+# Test all protocols:
+#
+#   # LLDP Discovery
+#   lldpcli show neighbors
+#
+#   # CDP Discovery
+#   show cdp neighbors
+#
+#   # DHCP Server
+#   sudo dhclient en0  # Request IP from DHCP pool
+#
+#   # DNS Resolution
+#   dig @10.0.0.1 router.niac-go.local
+#   nslookup gateway.niac-go.local 10.0.0.1
+#
+#   # SNMP Polling
+#   snmpwalk -v2c -c niac-go-ro 10.0.0.1 system
+#   snmpget -v2c -c niac-go-ro 10.0.0.1 sysName.0 sysUpTime.0
+#   snmpbulkwalk -v2c -c niac-go-ro 10.0.0.1 ifDescr
+#
+#   # SNMP Traps (on monitoring server at 10.100.0.100)
+#   snmptrapd -f -Lo -c snmptrapd.conf
+#
+#   # ICMP Ping
+#   ping 10.0.0.1
+#   ping 198.51.100.1
+#
+# Protocol Interactions:
+#   - DHCP clients receive DNS server (10.0.0.1) in lease
+#   - DNS provides resolution for internal devices
+#   - SNMP monitors all services and generates traps
+#   - LLDP/CDP advertise router to connected switches
+#   - ICMP confirms connectivity at layer 3
+#
+# Notes:
+#   - All protocols work together seamlessly
+#   - Comprehensive monitoring via SNMP
+#   - Dual trap receivers for redundancy
+#   - RFC 5737 addresses for WAN (safe for documentation)
+#   - Multiple DHCP pools for segmentation
+#   - DNS provides local name resolution
+#   - LLDP and CDP for multi-vendor compatibility
