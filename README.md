@@ -102,6 +102,26 @@ NIAC-Go is a modern rewrite of the original Java-based NIAC, leveraging Go's str
   - Clear error reporting with emojis (✓ ❌ ⚠️)
   - Enhanced `--dry-run` validation output
 
+### Latest Features (v1.23.0) - Topology Configuration
+
+- **🔗 Port-Channels (Link Aggregation)**: Bundle multiple physical interfaces for increased bandwidth and redundancy
+  - LACP modes: active, passive, on
+  - 2+ member interfaces with automatic validation
+  - Trunk over port-channel support
+- **🌉 Trunk Ports with VLAN Tagging**: 802.1Q trunk configuration
+  - Multiple VLANs per trunk (1-4094)
+  - Native VLAN support
+  - Remote device references for topology validation
+- **🏗️ Multi-Device Topologies**: Complete network environment simulation
+  - Spine-leaf data center topologies
+  - Enterprise campus (core-distribution-access)
+  - Branch office and wireless deployments
+  - Multi-vendor integration (Cisco, Juniper, Aruba)
+- **📖 Comprehensive Guides**: New documentation for advanced scenarios
+  - [Topology Configuration Guide](docs/TOPOLOGY_GUIDE.md) - Port-channels, trunks, VLANs
+  - [Environment Simulation Guide](docs/ENVIRONMENTS.md) - Complete network examples
+  - See `examples/topology/` and `examples/combinations/` for ready-to-use configs
+
 ### Previous Features (v1.6.0)
 
 - **🚦 Configurable Traffic Patterns**: Per-device traffic control
