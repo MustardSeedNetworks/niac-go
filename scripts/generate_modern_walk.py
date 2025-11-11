@@ -105,6 +105,96 @@ DEVICE_TEMPLATES = {
             'uplinks': ['ethernet1/1', 'ethernet1/2'],
         },
     },
+    'hpe': {
+        'aruba-2930f-48g': {
+            'model': 'JL262A',
+            'description': 'HPE Aruba 2930F 48G 4SFP+ Switch, FL.16.11.0009',
+            'ports': 48,
+            'stacking': True,
+            'poe': False,
+            'uplinks': ['1/49', '1/50', '1/51', '1/52'],
+        },
+        'aruba-6300m-48g': {
+            'model': 'JL659A',
+            'description': 'HPE Aruba CX 6300M 48G Class 4 PoE 4SFP56 Switch, ArubaOS-CX FL.10.11.1020',
+            'ports': 48,
+            'stacking': True,
+            'poe': True,
+            'uplinks': ['1/1/49', '1/1/50', '1/1/51', '1/1/52'],
+        },
+    },
+    'arista': {
+        '7050sx3-48yc12': {
+            'model': '7050SX3-48YC12',
+            'description': 'Arista Networks EOS version 4.28.3M',
+            'ports': 48,
+            'stacking': False,
+            'poe': False,
+            'uplinks': ['Ethernet49/1', 'Ethernet50/1', 'Ethernet51/1', 'Ethernet52/1'],
+        },
+        '7280sr3-48yc8': {
+            'model': '7280SR3-48YC8',
+            'description': 'Arista Networks EOS version 4.28.3M',
+            'ports': 48,
+            'stacking': False,
+            'poe': False,
+            'uplinks': ['Ethernet49/1', 'Ethernet50/1', 'Ethernet51/1', 'Ethernet52/1'],
+        },
+    },
+    'dell': {
+        'n3248te-on': {
+            'model': 'N3248TE-ON',
+            'description': 'Dell EMC Networking N3248TE-ON, OS10 Enterprise 10.5.3.4',
+            'ports': 48,
+            'stacking': True,
+            'poe': True,
+            'uplinks': ['ethernet1/1/49', 'ethernet1/1/50', 'ethernet1/1/51', 'ethernet1/1/52'],
+        },
+        's5248f-on': {
+            'model': 'S5248F-ON',
+            'description': 'Dell EMC Networking S5248F-ON, OS10 Enterprise 10.5.3.4',
+            'ports': 48,
+            'stacking': True,
+            'poe': False,
+            'uplinks': ['ethernet1/1/49', 'ethernet1/1/50', 'ethernet1/1/51', 'ethernet1/1/52'],
+        },
+    },
+    'fortinet': {
+        'fs-448e-fpoe': {
+            'model': 'FS-448E-FPOE',
+            'description': 'FortiSwitch-448E-FPOE v7.2.3,build0517,221201 (GA)',
+            'ports': 48,
+            'stacking': True,
+            'poe': True,
+            'uplinks': ['port49', 'port50', 'port51', 'port52'],
+        },
+        'fs-548d-fpoe': {
+            'model': 'FS-548D-FPOE',
+            'description': 'FortiSwitch-548D-FPOE v7.2.3,build0517,221201 (GA)',
+            'ports': 48,
+            'stacking': True,
+            'poe': True,
+            'uplinks': ['port49', 'port50', 'port51', 'port52'],
+        },
+    },
+    'meraki': {
+        'ms390-48uxb': {
+            'model': 'MS390-48UXB',
+            'description': 'Cisco Meraki MS390-48UXB Cloud-Managed Aggregation Switch, firmware 15.21',
+            'ports': 48,
+            'stacking': True,
+            'poe': True,
+            'uplinks': ['Port49', 'Port50', 'Port51', 'Port52'],
+        },
+        'ms425-48': {
+            'model': 'MS425-48',
+            'description': 'Cisco Meraki MS425-48 Cloud-Managed Aggregation Switch, firmware 15.21',
+            'ports': 48,
+            'stacking': True,
+            'poe': False,
+            'uplinks': ['Port49', 'Port50', 'Port51', 'Port52'],
+        },
+    },
 }
 
 def generate_system_mib(device_info, hostname="niac-device-01"):
