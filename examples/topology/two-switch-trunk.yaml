@@ -1,0 +1,166 @@
+# Two-Switch Trunk Link Topology
+#
+# This example demonstrates two core switches connected via a trunk link
+# carrying multiple VLANs. Both switches use LLDP/CDP for neighbor discovery.
+#
+# Topology:
+#   [niac-core-sw-01]  <-trunk->  [niac-core-sw-02]
+#   GigabitEthernet0/1 ---------- GigabitEthernet0/1
+#   VLANs: 1, 10, 20, 30
+#   Native VLAN: 1
+#
+# Use Case: Data center core switch redundancy
+# Protocols: LLDP, CDP, SNMP, ICMP
+# Added: v1.23.0
+
+devices:
+  - name: niac-core-sw-01
+    type: switch
+    mac: "00:11:22:33:44:01"
+    ips:
+      - "10.0.0.11"  # Management VLAN
+
+    # LLDP Discovery
+    lldp:
+      enabled: true
+      system_name: "niac-core-sw-01"
+      system_description: "Cisco Nexus 9300 - Core Switch 01"
+      chassis_id: "00:11:22:33:44:01"
+      port_description: "Management0"
+      advertise_interval: 30
+      management_address: "10.0.0.11"
+
+    # CDP Discovery
+    cdp:
+      enabled: true
+      platform: "N9K-C9372PX"
+      capabilities: "Switch IGMP"
+      software_version: "NX-OS 9.3(8)"
+      advertise_interval: 60
+
+    # Trunk Port Configuration
+    trunk_ports:
+      - interface: "GigabitEthernet0/1"
+        vlans: [1, 10, 20, 30]
+        native_vlan: 1
+        remote_device: "niac-core-sw-02"
+        remote_interface: "GigabitEthernet0/1"
+
+    # SNMP Agent
+    snmp_agent:
+      enabled: true
+      community: "niac-go-ro"
+
+      sysname: "niac-core-sw-01"
+      sysdescr: "Cisco Nexus 9300 - Core Switch 01"
+      syscontact: "netops@niac-go.com"
+      syslocation: "NiAC-Go - DC-WEST - Row 1 Rack A01"
+
+      traps:
+        enabled: true
+        receivers: ["10.100.0.100:162"]
+        community: "niac-go-trap"
+        link_up:
+          enabled: true
+        link_down:
+          enabled: true
+
+    # ICMP Response
+    icmp:
+      enabled: true
+      ttl: 64
+
+  - name: niac-core-sw-02
+    type: switch
+    mac: "00:11:22:33:44:02"
+    ips:
+      - "10.0.0.12"  # Management VLAN
+
+    # LLDP Discovery
+    lldp:
+      enabled: true
+      system_name: "niac-core-sw-02"
+      system_description: "Cisco Nexus 9300 - Core Switch 02"
+      chassis_id: "00:11:22:33:44:02"
+      port_description: "Management0"
+      advertise_interval: 30
+      management_address: "10.0.0.12"
+
+    # CDP Discovery
+    cdp:
+      enabled: true
+      platform: "N9K-C9372PX"
+      capabilities: "Switch IGMP"
+      software_version: "NX-OS 9.3(8)"
+      advertise_interval: 60
+
+    # Trunk Port Configuration (reciprocal)
+    trunk_ports:
+      - interface: "GigabitEthernet0/1"
+        vlans: [1, 10, 20, 30]
+        native_vlan: 1
+        remote_device: "niac-core-sw-01"
+        remote_interface: "GigabitEthernet0/1"
+
+    # SNMP Agent
+    snmp_agent:
+      enabled: true
+      community: "niac-go-ro"
+
+      sysname: "niac-core-sw-02"
+      sysdescr: "Cisco Nexus 9300 - Core Switch 02"
+      syscontact: "netops@niac-go.com"
+      syslocation: "NiAC-Go - DC-WEST - Row 1 Rack A02"
+
+      traps:
+        enabled: true
+        receivers: ["10.100.0.100:162"]
+        community: "niac-go-trap"
+        link_up:
+          enabled: true
+        link_down:
+          enabled: true
+
+    # ICMP Response
+    icmp:
+      enabled: true
+      ttl: 64
+
+# Usage:
+#   niac validate examples/topology/two-switch-trunk.yaml
+#   sudo niac en0 examples/topology/two-switch-trunk.yaml
+#
+# Test neighbor discovery:
+#
+#   # LLDP Neighbors
+#   lldpcli show neighbors
+#   # Should show:
+#   #   niac-core-sw-01 -> niac-core-sw-02 via Gi0/1
+#   #   niac-core-sw-02 -> niac-core-sw-01 via Gi0/1
+#
+#   # CDP Neighbors
+#   show cdp neighbors
+#   # Should show both switches as neighbors
+#
+#   # SNMP Verification
+#   snmpwalk -v2c -c niac-go-ro 10.0.0.11 system
+#   snmpwalk -v2c -c niac-go-ro 10.0.0.12 system
+#
+#   # Ping Test
+#   ping 10.0.0.11
+#   ping 10.0.0.12
+#
+# Topology Features:
+#   - Bidirectional trunk link
+#   - Multiple VLAN support (1, 10, 20, 30)
+#   - Native VLAN 1 (untagged management)
+#   - LLDP/CDP neighbor discovery
+#   - SNMP monitoring on both switches
+#   - Link state trap alerts
+#
+# Notes:
+#   - Both trunk_ports configurations reference each other
+#   - Validator checks remote_device references
+#   - LLDP/CDP will show bidirectional neighbors
+#   - Native VLAN traffic passes untagged
+#   - Tagged VLANs: 10, 20, 30

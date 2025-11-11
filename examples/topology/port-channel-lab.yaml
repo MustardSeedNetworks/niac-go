@@ -1,0 +1,155 @@
+# Port-Channel (LAG) Lab Topology
+#
+# This example demonstrates Link Aggregation Groups (LAG) using port-channels
+# with LACP. Two switches connected via a port-channel trunk carrying VLANs.
+#
+# Topology:
+#   [niac-core-sw-01] <-Port-Channel1-> [niac-core-sw-02]
+#   Gi0/1 + Gi0/2    ==================  Gi0/1 + Gi0/2
+#   LACP Mode: active                    LACP Mode: active
+#   VLANs: 1, 10, 20, 30, 40
+#
+# Use Case: High-bandwidth data center inter-switch link
+# Protocols: LLDP, CDP, LACP, SNMP, ICMP
+# Added: v1.23.0
+
+devices:
+  - name: niac-core-sw-01
+    type: switch
+    mac: "00:11:22:33:45:01"
+    ips:
+      - "10.0.0.21"  # Management
+
+    # LLDP Discovery
+    lldp:
+      enabled: true
+      system_name: "niac-core-sw-01"
+      system_description: "Cisco Catalyst 3850 - Core Switch 01"
+      chassis_id: "00:11:22:33:45:01"
+      advertise_interval: 30
+
+    # CDP Discovery
+    cdp:
+      enabled: true
+      platform: "WS-C3850-48P"
+      capabilities: "Switch IGMP"
+      software_version: "IOS-XE 16.12.4"
+
+    # Port-Channel Configuration
+    port_channels:
+      - id: 1
+        members: ["GigabitEthernet0/1", "GigabitEthernet0/2"]
+        mode: "active"  # LACP active mode
+
+    # Trunk on Port-Channel
+    trunk_ports:
+      - interface: "port-channel1"
+        vlans: [1, 10, 20, 30, 40]
+        native_vlan: 1
+        remote_device: "niac-core-sw-02"
+        remote_interface: "port-channel1"
+
+    # SNMP Agent
+    snmp_agent:
+      enabled: true
+      community: "niac-go-ro"
+      sysname: "niac-core-sw-01"
+      sysdescr: "Cisco Catalyst 3850 - Core Switch 01"
+      syscontact: "netops@niac-go.com"
+      syslocation: "NiAC-Go - LAB - Rack 01"
+
+    # ICMP
+    icmp:
+      enabled: true
+
+  - name: niac-core-sw-02
+    type: switch
+    mac: "00:11:22:33:45:02"
+    ips:
+      - "10.0.0.22"  # Management
+
+    # LLDP Discovery
+    lldp:
+      enabled: true
+      system_name: "niac-core-sw-02"
+      system_description: "Cisco Catalyst 3850 - Core Switch 02"
+      chassis_id: "00:11:22:33:45:02"
+      advertise_interval: 30
+
+    # CDP Discovery
+    cdp:
+      enabled: true
+      platform: "WS-C3850-48P"
+      capabilities: "Switch IGMP"
+      software_version: "IOS-XE 16.12.4"
+
+    # Port-Channel Configuration (reciprocal)
+    port_channels:
+      - id: 1
+        members: ["GigabitEthernet0/1", "GigabitEthernet0/2"]
+        mode: "active"  # LACP active mode
+
+    # Trunk on Port-Channel (reciprocal)
+    trunk_ports:
+      - interface: "port-channel1"
+        vlans: [1, 10, 20, 30, 40]
+        native_vlan: 1
+        remote_device: "niac-core-sw-01"
+        remote_interface: "port-channel1"
+
+    # SNMP Agent
+    snmp_agent:
+      enabled: true
+      community: "niac-go-ro"
+      sysname: "niac-core-sw-02"
+      sysdescr: "Cisco Catalyst 3850 - Core Switch 02"
+      syscontact: "netops@niac-go.com"
+      syslocation: "NiAC-Go - LAB - Rack 02"
+
+    # ICMP
+    icmp:
+      enabled: true
+
+# Usage:
+#   niac validate examples/topology/port-channel-lab.yaml
+#   sudo niac en0 examples/topology/port-channel-lab.yaml
+#
+# Test port-channel functionality:
+#
+#   # Verify port-channel configuration
+#   show etherchannel summary
+#   # Should show Po1 with 2 members (Gi0/1, Gi0/2)
+#
+#   # Check LACP status
+#   show lacp neighbor
+#   # Should show active LACP negotiation
+#
+#   # LLDP Neighbors via port-channel
+#   lldpcli show neighbors
+#   # Should show neighbor relationship via Po1
+#
+#   # SNMP Port-Channel Verification
+#   snmpwalk -v2c -c niac-go-ro 10.0.0.21 ifDescr | grep -i port
+#   # Should show port-channel interface
+#
+#   # Test redundancy (simulate link failure)
+#   # Disable Gi0/1, Po1 should remain up with Gi0/2
+#
+# Port-Channel Benefits:
+#   - Increased bandwidth (2x1G = 2Gbps aggregate)
+#   - Link redundancy (failure of one link doesn't break Po1)
+#   - Load balancing across member links
+#   - LACP provides dynamic configuration
+#   - Single logical interface for trunking
+#
+# LACP Modes:
+#   - active: Actively sends LACP packets (both ends active = fastest convergence)
+#   - passive: Responds to LACP packets (requires one active end)
+#   - on: Static LAG without LACP negotiation
+#
+# Notes:
+#   - Both switches use identical port-channel IDs (1)
+#   - Member interfaces must have matching speed/duplex
+#   - Trunk configuration applies to the port-channel interface
+#   - LLDP/CDP can discover neighbors through the aggregated link
+#   - Validator ensures member interfaces aren't in multiple port-channels
