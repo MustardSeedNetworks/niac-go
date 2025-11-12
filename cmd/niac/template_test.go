@@ -262,4 +262,4 @@ func TestTemplateFilePermissions(t *testing.T) {
 	}
 }
 
-// Note: contains function is defined in generate_test.go
+// Note: contains() helper function is defined in generate_test.go and shared across test files

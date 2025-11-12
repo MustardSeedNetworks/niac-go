@@ -1484,12 +1484,12 @@ func GenerateMAC() net.HardwareAddr {
 // validateWalkFilePath validates and resolves SNMP walk file paths
 // Prevents path traversal attacks and ensures file exists
 func validateWalkFilePath(basePath, walkFile, deviceName string) (string, error) {
-	// Clean the path to normalize it
+	// Clean the path to normalize it FIRST
 	cleanPath := filepath.Clean(walkFile)
 
-	// Security: Prevent directory traversal
+	// Security: Check for traversal AFTER cleaning
 	if strings.Contains(cleanPath, "..") {
-		return "", fmt.Errorf("device %s: walk file path contains invalid traversal: %s", deviceName, walkFile)
+		return "", fmt.Errorf("device %s: path traversal detected: %s", deviceName, walkFile)
 	}
 
 	// Build full path
@@ -1502,13 +1502,35 @@ func validateWalkFilePath(basePath, walkFile, deviceName string) (string, error)
 		fullPath = cleanPath
 	}
 
-	// Verify file exists and is accessible
-	info, err := os.Stat(fullPath)
+	// CRITICAL: Verify resolved path stays within base directory
+	if basePath != "" {
+		absBase, err := filepath.Abs(basePath)
+		if err != nil {
+			return "", fmt.Errorf("device %s: invalid base path: %w", deviceName, err)
+		}
+		absFull, err := filepath.Abs(fullPath)
+		if err != nil {
+			return "", fmt.Errorf("device %s: invalid file path: %w", deviceName, err)
+		}
+
+		// Ensure path starts with base (add separator to prevent partial match)
+		if !strings.HasPrefix(absFull+string(filepath.Separator), absBase+string(filepath.Separator)) {
+			return "", fmt.Errorf("device %s: path outside base directory: %s", deviceName, walkFile)
+		}
+	}
+
+	// Use Lstat to detect symlinks (doesn't follow them)
+	info, err := os.Lstat(fullPath)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return "", fmt.Errorf("device %s: walk file not found: %s", deviceName, fullPath)
 		}
 		return "", fmt.Errorf("device %s: cannot access walk file %s: %w", deviceName, fullPath, err)
+	}
+
+	// Reject symlinks for security
+	if info.Mode()&os.ModeSymlink != 0 {
+		return "", fmt.Errorf("device %s: walk file is a symlink (not allowed): %s", deviceName, fullPath)
 	}
 
 	// Verify it's a regular file, not a directory or device

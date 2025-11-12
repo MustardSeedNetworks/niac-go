@@ -157,15 +157,18 @@ func TestGenerateIPPool(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			pool := handler.generateIPPool(tt.start, tt.end)
+			pool, err := handler.generateIPPool(tt.start, tt.end)
+			if err != nil {
+				t.Fatalf("Failed to generate IP pool: %v", err)
+			}
 			if len(pool) != tt.expectedCount {
 				t.Errorf("Expected %d IPs, got %d", tt.expectedCount, len(pool))
 			}
 			// Verify first and last IPs
-			if !pool[0].Equal(tt.start) {
+			if len(pool) > 0 && !pool[0].Equal(tt.start) {
 				t.Errorf("Expected first IP %v, got %v", tt.start, pool[0])
 			}
-			if !pool[len(pool)-1].Equal(tt.end) {
+			if len(pool) > 0 && !pool[len(pool)-1].Equal(tt.end) {
 				t.Errorf("Expected last IP %v, got %v", tt.end, pool[len(pool)-1])
 			}
 		})

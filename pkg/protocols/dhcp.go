@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"net"
+	"os"
 	"sync"
 	"time"
 
@@ -82,7 +83,14 @@ func (h *DHCPHandler) SetPool(start, end net.IP) {
 
 	h.poolStart = start
 	h.poolEnd = end
-	h.ipPool = h.generateIPPool(start, end)
+	pool, err := h.generateIPPool(start, end)
+	if err != nil {
+		// Log error but don't fail initialization - just use empty pool
+		fmt.Fprintf(os.Stderr, "Warning: DHCP pool generation failed: %v\n", err)
+		h.ipPool = []net.IP{}
+	} else {
+		h.ipPool = pool
+	}
 }
 
 // SetServerConfig configures DHCP server parameters
@@ -108,20 +116,36 @@ func (h *DHCPHandler) SetAdvancedOptions(ntpServers []net.IP, domainSearch []str
 	h.vendorSpecificInfo = vendorInfo
 }
 
-// generateIPPool creates a list of available IPs
-func (h *DHCPHandler) generateIPPool(start, end net.IP) []net.IP {
-	pool := make([]net.IP, 0)
+// MaxPoolSize is the maximum number of IPs allowed in a DHCP pool
+const MaxPoolSize = 65536 // 2^16 IPs (reasonable for simulation)
 
+// generateIPPool creates a list of available IPs
+// Returns error if pool size exceeds MaxPoolSize or if range is invalid
+func (h *DHCPHandler) generateIPPool(start, end net.IP) ([]net.IP, error) {
 	startInt := binary.BigEndian.Uint32(start.To4())
 	endInt := binary.BigEndian.Uint32(end.To4())
 
+	// Validate range
+	if endInt < startInt {
+		return nil, fmt.Errorf("invalid DHCP pool: end IP (%s) < start IP (%s)", end, start)
+	}
+
+	// Calculate pool size
+	size := uint64(endInt) - uint64(startInt) + 1
+	if size > MaxPoolSize {
+		return nil, fmt.Errorf("DHCP pool size %d exceeds maximum %d (range: %s to %s)",
+			size, MaxPoolSize, start, end)
+	}
+
+	// Pre-allocate slice with exact capacity
+	pool := make([]net.IP, 0, size)
 	for i := startInt; i <= endInt; i++ {
 		ip := make(net.IP, 4)
 		binary.BigEndian.PutUint32(ip, i)
 		pool = append(pool, ip)
 	}
 
-	return pool
+	return pool, nil
 }
 
 // findAvailableIP finds an available IP address
@@ -511,12 +535,17 @@ func (h *DHCPHandler) sendDHCPResponse(xid uint32, clientMAC net.HardwareAddr, a
 
 	// Add domain search list if configured (Option 119)
 	if len(h.domainSearch) > 0 {
-		searchData := h.encodeDomainSearchList(h.domainSearch)
-		options = append(options, layers.DHCPOption{
-			Type:   DHCPOptDomainSearch,
-			Length: uint8(len(searchData)),
-			Data:   searchData,
-		})
+		searchData, err := h.encodeDomainSearchList(h.domainSearch)
+		if err != nil {
+			// Log error but don't fail - just skip this option
+			fmt.Fprintf(os.Stderr, "Warning: DHCP domain search encoding failed: %v\n", err)
+		} else if len(searchData) > 0 {
+			options = append(options, layers.DHCPOption{
+				Type:   DHCPOptDomainSearch,
+				Length: uint8(len(searchData)),
+				Data:   searchData,
+			})
+		}
 	}
 
 	// Add vendor-specific information if configured (Option 43)
@@ -590,14 +619,31 @@ func (h *DHCPHandler) encodeUint32(val uint32) []byte {
 	return b
 }
 
+// DHCP option constraints (RFC 2132, RFC 3397)
+const (
+	MaxDHCPOptionLen     = 255 // Maximum DHCP option length
+	MaxDomainSearchCount = 10  // Reasonable limit for simulation
+	MaxDomainLen         = 253 // RFC 1035: maximum domain name length
+)
+
 // encodeDomainSearchList encodes a domain search list in DNS label format (RFC 1035)
 // Used for DHCP Option 119 (Domain Search)
-func (h *DHCPHandler) encodeDomainSearchList(domains []string) []byte {
-	var result []byte
+// Returns error if constraints are violated
+func (h *DHCPHandler) encodeDomainSearchList(domains []string) ([]byte, error) {
+	if len(domains) > MaxDomainSearchCount {
+		return nil, fmt.Errorf("too many domain search entries: %d > %d", len(domains), MaxDomainSearchCount)
+	}
+
+	result := make([]byte, 0, MaxDHCPOptionLen)
 
 	for _, domain := range domains {
+		// Validate domain length
+		if len(domain) > MaxDomainLen {
+			return nil, fmt.Errorf("domain too long: %d > %d (domain: %s)", len(domain), MaxDomainLen, domain)
+		}
+
 		// Split domain into labels (e.g., "example.com" -> ["example", "com"])
-		labels := []byte{}
+		labels := make([]byte, 0, len(domain)+10)
 		for _, label := range splitDomain(domain) {
 			if len(label) == 0 || len(label) > 63 {
 				continue // Invalid label
@@ -608,10 +654,16 @@ func (h *DHCPHandler) encodeDomainSearchList(domains []string) []byte {
 		}
 		// Add null terminator (0x00)
 		labels = append(labels, 0)
+
+		// Check total size before adding
+		if len(result)+len(labels) > MaxDHCPOptionLen {
+			return nil, fmt.Errorf("domain search list exceeds DHCP option max size (%d bytes)", MaxDHCPOptionLen)
+		}
+
 		result = append(result, labels...)
 	}
 
-	return result
+	return result, nil
 }
 
 // splitDomain splits a domain name into labels

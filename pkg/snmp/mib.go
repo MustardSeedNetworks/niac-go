@@ -82,20 +82,27 @@ func (m *MIB) Get(oid string) *OIDValue {
 
 // GetNext retrieves the next OID in lexicographical order
 func (m *MIB) GetNext(oid string) (string, *OIDValue) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-
 	// Normalize OID
 	oid = strings.TrimPrefix(oid, ".")
 
-	// Update sorted list if needed
-	if m.dirty {
-		m.mu.RUnlock()
+	// First pass: check if update needed while holding read lock
+	m.mu.RLock()
+	needsUpdate := m.dirty
+	m.mu.RUnlock()
+
+	// Upgrade to write lock if needed
+	if needsUpdate {
 		m.mu.Lock()
-		m.updateSortedList()
+		// Double-check after acquiring lock (another goroutine may have updated)
+		if m.dirty {
+			m.updateSortedList()
+		}
 		m.mu.Unlock()
-		m.mu.RLock()
 	}
+
+	// Re-acquire read lock for the actual read
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 
 	// Find next OID in sorted list
 	for _, nextOID := range m.sorted {

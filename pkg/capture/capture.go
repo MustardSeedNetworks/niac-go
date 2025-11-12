@@ -4,6 +4,8 @@ package capture
 import (
 	"fmt"
 	"log"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/google/gopacket"
@@ -194,6 +196,8 @@ type RateLimiter struct {
 	ticker           *time.Ticker
 	tokens           chan struct{}
 	done             chan struct{} // Signals goroutine to stop
+	wg               sync.WaitGroup
+	stopped          uint32 // Atomic flag for idempotent Stop()
 }
 
 // NewRateLimiter creates a rate limiter
@@ -211,7 +215,9 @@ func NewRateLimiter(packetsPerSecond int) *RateLimiter {
 
 	// Refill tokens periodically with proper cleanup
 	rl.ticker = time.NewTicker(time.Second / time.Duration(packetsPerSecond))
+	rl.wg.Add(1)
 	go func() {
+		defer rl.wg.Done()
 		for {
 			select {
 			case <-rl.ticker.C:
@@ -235,7 +241,11 @@ func (rl *RateLimiter) Wait() {
 }
 
 // Stop stops the rate limiter and cleans up goroutine
+// This method is idempotent and safe to call multiple times
 func (rl *RateLimiter) Stop() {
-	rl.ticker.Stop()
-	close(rl.done) // Signal goroutine to exit
+	if atomic.CompareAndSwapUint32(&rl.stopped, 0, 1) {
+		rl.ticker.Stop()
+		close(rl.done)
+		rl.wg.Wait() // Wait for goroutine to fully exit
+	}
 }
