@@ -3,7 +3,7 @@ package device
 import (
 	"fmt"
 	"log"
-	"math/rand"
+	"math/rand" // Note: math/rand used for network traffic simulation (not security-critical)
 	"time"
 
 	"github.com/google/gopacket"

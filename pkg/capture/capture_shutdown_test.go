@@ -68,9 +68,9 @@ func TestRateLimiterStop(t *testing.T) {
 	// Give goroutine time to exit
 	time.Sleep(50 * time.Millisecond)
 
-	// Note: Calling Stop() twice will panic on close of closed channel
-	// This is expected behavior - Stop() is not meant to be called multiple times
-	// The ticker.Stop() is idempotent, but close(channel) is not
+	// Test idempotent Stop() - should not panic with atomic flag
+	rl.Stop()
+	rl.Stop()
 }
 
 // TestRateLimiterGoroutineCleanup ensures goroutine exits on Stop

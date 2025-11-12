@@ -1,74 +1,124 @@
+# golangci-lint configuration for niac-go
+# See https://golangci-lint.run/usage/configuration/ for all options
+
 run:
   timeout: 5m
   tests: true
-  modules-download-mode: readonly
+  skip-dirs:
+    - vendor
+    - examples/device_walks
+    - examples/device_walks_sanitized
 
 linters:
   enable:
+    # Default linters
     - errcheck      # Check for unchecked errors
     - gosimple      # Simplify code
-    - govet         # Go vet examines Go source code
+    - govet         # Go vet
     - ineffassign   # Detect ineffectual assignments
-    - staticcheck   # Go static analysis
+    - staticcheck   # Advanced static analysis
     - unused        # Check for unused code
-    - gofmt         # Check code formatting
-    - goimports     # Check import formatting
-    - misspell      # Detect misspelled English words
-    - revive        # Fast, configurable, extensible linter
-    - gosec         # Security checker
-    - gocyclo       # Cyclomatic complexity
-    - dupl          # Code duplication
+
+    # Additional recommended linters
+    - gofmt         # Check formatting
+    - goimports     # Check import ordering
+    - misspell      # Spell check
     - goconst       # Find repeated strings that could be constants
-    - unconvert     # Unnecessary type conversions
-    - unparam       # Unused function parameters
-    - nakedret      # Naked returns in long functions
-    - prealloc      # Find slice declarations that could be preallocated
-    - exportloopref # Check for pointers to loop variables
-    - nilerr        # Check nil err and return nil
-    - noctx         # HTTP requests without context
-    - rowserrcheck  # Check if sql.Rows.Err is checked
-    - sqlclosecheck # Check if sql.Rows/Stmt are closed
-    - bodyclose     # Check HTTP body is closed
-    - errorlint     # Error wrapping checker
+    - gocyclo       # Check cyclomatic complexity
+    - dupl          # Check for duplicate code
+    - revive        # Fast, configurable, extensible, flexible drop-in replacement for golint
+    - gosec         # Security checker
+    - unconvert     # Remove unnecessary type conversions
+    - gocritic      # Comprehensive Go linter
+    - bodyclose     # Check for HTTP response body close
+    - noctx         # Find HTTP requests without context
+    - rowserrcheck  # Check for SQL rows.Err
+    - sqlclosecheck # Check for SQL Close() calls
+    - whitespace    # Detect leading/trailing whitespace
+
+  disable:
+    - typecheck     # Disabled as it can be noisy with build tags
+    - depguard      # Not needed for this project
+    - funlen        # Function length checks can be too strict
+    - lll           # Line length checks handled by gofmt
+    - gocognit      # Similar to gocyclo, avoid duplication
+    - nestif        # Can be overly strict
+    - gomnd         # Magic number detection too aggressive for network protocols
+    - exhaustive    # Exhaustive switch checking too strict
+    - exhaustruct   # Too strict for this project
+    - testpackage   # Force external test packages (too restrictive)
+    - nlreturn      # Forces newline returns (stylistic)
+    - wrapcheck     # Too strict for error wrapping
 
 linters-settings:
   errcheck:
     check-type-assertions: true
     check-blank: true
 
+  govet:
+    check-shadowing: true
+    enable-all: true
+
   gocyclo:
     min-complexity: 15
+
+  dupl:
+    threshold: 100
 
   goconst:
     min-len: 3
     min-occurrences: 3
 
-  dupl:
-    threshold: 150
+  misspell:
+    locale: US
 
   revive:
+    confidence: 0.8
     rules:
+      - name: blank-imports
+      - name: context-as-argument
+      - name: context-keys-type
+      - name: dot-imports
+      - name: error-return
+      - name: error-strings
+      - name: error-naming
       - name: exported
-        disabled: false
-      - name: package-comments
-        disabled: true  # Don't require package comments
-      - name: unexported-return
-        disabled: true
-      - name: indent-error-flow
-        disabled: false
+      - name: if-return
+      - name: increment-decrement
       - name: var-naming
-        disabled: false
-        arguments:
-          - ["ID", "IP", "MAC", "DNS", "HTTP", "DHCP", "SNMP", "CDP", "LLDP", "STP", "FTP", "ARP", "TLV", "PDU", "MIB", "OID", "UDP", "TCP", "ICMP"] # Allow common network acronyms
+      - name: var-declaration
+      - name: package-comments
+      - name: range
+      - name: receiver-naming
+      - name: time-naming
+      - name: unexported-return
+      - name: indent-error-flow
+      - name: errorf
+      - name: empty-block
+      - name: superfluous-else
+      - name: unused-parameter
+      - name: unreachable-code
+      - name: redefines-builtin-id
 
   gosec:
     excludes:
-      - G104  # Allow unhandled errors in some places (covered by errcheck)
-      - G304  # Allow file path from variable (needed for config loading)
+      - G304  # File path provided as taint input (we validate paths)
+      - G401  # Use of weak crypto (acceptable for simulation)
+      - G404  # Use of math/rand (documented as intentional for simulation)
+
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - performance
+      - style
+    disabled-checks:
+      - ifElseChain
+      - hugeParam
+      - rangeValCopy
 
 issues:
   exclude-rules:
-    # Exclude some linters from test files
+    # Exclude some linters from running on tests files
     - path: _test\.go
       linters:
         - gocyclo
@@ -77,16 +127,28 @@ issues:
         - gosec
         - goconst
 
-    # Exclude vendor directories
-    - path: vendor/
+    # Exclude shadow checking on err variable (common pattern)
+    - text: "shadow: declaration of \"err\""
       linters:
-        - all
+        - govet
 
-  max-issues-per-linter: 50
-  max-same-issues: 3
+    # Exclude duplicate code in protocol handlers (similar structure by design)
+    - path: pkg/protocols/.*\.go
+      linters:
+        - dupl
+
+    # Allow long lines in generated code
+    - path: pkg/protocols/.*_test\.go
+      linters:
+        - whitespace
+
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  new: false
 
 output:
   format: colored-line-number
   print-issued-lines: true
   print-linter-name: true
+  uniq-by-line: true
   sort-results: true

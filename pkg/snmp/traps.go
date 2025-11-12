@@ -3,7 +3,7 @@ package snmp
 import (
 	"fmt"
 	"log"
-	"math/rand"
+	"math/rand" // Note: math/rand used for simulation traffic generation (not security-critical)
 	"net"
 	"time"
 
