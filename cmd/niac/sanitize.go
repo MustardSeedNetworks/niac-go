@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 
 	"github.com/spf13/cobra"
 )
@@ -30,6 +31,7 @@ type SanitizationMapping struct {
 		IPsTransformed       int `json:"ips_transformed"`
 		HostnamesTransformed int `json:"hostnames_transformed"`
 	} `json:"statistics"`
+	mu sync.RWMutex // Protect concurrent access to maps
 }
 
 var sanitizeCmd = &cobra.Command{
@@ -101,6 +103,32 @@ func runSanitize(cmd *cobra.Command, args []string) error {
 	location, _ := cmd.Flags().GetString("location")
 	contact, _ := cmd.Flags().GetString("contact")
 	community, _ := cmd.Flags().GetString("community")
+
+	// Validate input paths (Fix #67 - Input validation)
+	if !batch {
+		if err := validateFilePath(args[0], false); err != nil {
+			return fmt.Errorf("invalid input file: %w", err)
+		}
+		if err := validateFilePath(args[1], true); err != nil {
+			return fmt.Errorf("invalid output file: %w", err)
+		}
+	} else {
+		inputDir, _ := cmd.Flags().GetString("input-dir")
+		outputDir, _ := cmd.Flags().GetString("output-dir")
+		if err := validateDirPath(inputDir, false); err != nil {
+			return fmt.Errorf("invalid input directory: %w", err)
+		}
+		if err := validateDirPath(outputDir, true); err != nil {
+			return fmt.Errorf("invalid output directory: %w", err)
+		}
+	}
+
+	// Validate mapping file path if provided
+	if mappingFile != "" {
+		if err := validateFilePath(mappingFile, true); err != nil {
+			return fmt.Errorf("invalid mapping file path: %w", err)
+		}
+	}
 
 	// Load or create mapping
 	mapping := &SanitizationMapping{
@@ -191,41 +219,81 @@ func sanitizeBatch(inputDir, outputDir string, mapping *SanitizationMapping, dom
 }
 
 func sanitizeFile(inputFile, outputFile string, mapping *SanitizationMapping, domain, location, contact, community string) error {
+	// Fix #59: Ensure proper file handle cleanup with explicit error handling
 	input, err := os.Open(inputFile)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to open input file: %w", err)
 	}
-	defer input.Close()
+	defer func() {
+		if cerr := input.Close(); cerr != nil && err == nil {
+			err = fmt.Errorf("failed to close input file: %w", cerr)
+		}
+	}()
 
-	output, err := os.Create(outputFile)
+	// Fix #68: Atomic write pattern to avoid TOCTOU
+	// Write to temporary file first, then atomic rename
+	tempFile := outputFile + ".tmp"
+	output, err := os.Create(tempFile)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create output file: %w", err)
 	}
-	defer output.Close()
+	defer func() {
+		if cerr := output.Close(); cerr != nil && err == nil {
+			err = fmt.Errorf("failed to close output file: %w", cerr)
+		}
+		// Clean up temp file if operation failed
+		if err != nil {
+			os.Remove(tempFile)
+		}
+	}()
 
 	scanner := bufio.NewScanner(input)
 	writer := bufio.NewWriter(output)
-	defer writer.Flush()
 
 	// Track transformations for this file
+	mapping.mu.RLock()
 	initialIPs := len(mapping.IPMappings)
 	initialHostnames := len(mapping.Hostnames)
+	mapping.mu.RUnlock()
 
 	for scanner.Scan() {
 		line := scanner.Text()
 		sanitized := sanitizeLine(line, mapping, domain, location, contact, community)
-		fmt.Fprintln(writer, sanitized)
+		if _, err := fmt.Fprintln(writer, sanitized); err != nil {
+			return fmt.Errorf("failed to write line: %w", err)
+		}
 	}
 
 	if err := scanner.Err(); err != nil {
-		return err
+		return fmt.Errorf("scanner error: %w", err)
 	}
 
-	// Update statistics
+	if err := writer.Flush(); err != nil {
+		return fmt.Errorf("failed to flush writer: %w", err)
+	}
+
+	// Sync to disk before closing
+	if err := output.Sync(); err != nil {
+		return fmt.Errorf("failed to sync output: %w", err)
+	}
+
+	// Close output file explicitly before rename
+	if err := output.Close(); err != nil {
+		return fmt.Errorf("failed to close output file: %w", err)
+	}
+
+	// Fix #68: Atomic rename to prevent TOCTOU
+	if err := os.Rename(tempFile, outputFile); err != nil {
+		return fmt.Errorf("failed to rename temp file: %w", err)
+	}
+
+	// Update statistics with lock
+	mapping.mu.Lock()
 	newIPs := len(mapping.IPMappings) - initialIPs
 	newHostnames := len(mapping.Hostnames) - initialHostnames
 	mapping.Statistics.IPsTransformed += newIPs
 	mapping.Statistics.HostnamesTransformed += newHostnames
+	mapping.mu.Unlock()
 
 	return nil
 }
@@ -306,10 +374,13 @@ func sanitizeLine(line string, mapping *SanitizationMapping, domain, location, c
 }
 
 func sanitizeIP(ip string, mapping *SanitizationMapping) string {
-	// Check if already mapped
+	// Fix #60: Check if already mapped with read lock
+	mapping.mu.RLock()
 	if sanitized, exists := mapping.IPMappings[ip]; exists {
+		mapping.mu.RUnlock()
 		return sanitized
 	}
+	mapping.mu.RUnlock()
 
 	// Deterministic mapping using hash
 	hash := sha256.Sum256([]byte(ip))
@@ -348,17 +419,27 @@ func sanitizeIP(ip string, mapping *SanitizationMapping) string {
 
 	sanitized := fmt.Sprintf("10.%d.%d.%d", subnet, octet3, octet4)
 
-	// Store mapping
+	// Fix #60: Store mapping with write lock
+	mapping.mu.Lock()
+	// Double-check in case another goroutine added it while we waited
+	if existing, exists := mapping.IPMappings[ip]; exists {
+		mapping.mu.Unlock()
+		return existing
+	}
 	mapping.IPMappings[ip] = sanitized
+	mapping.mu.Unlock()
 
 	return sanitized
 }
 
 func sanitizeHostname(hostname string, mapping *SanitizationMapping) string {
-	// Check if already mapped
+	// Fix #60: Check if already mapped with read lock
+	mapping.mu.RLock()
 	if sanitized, exists := mapping.Hostnames[hostname]; exists {
+		mapping.mu.RUnlock()
 		return sanitized
 	}
+	mapping.mu.RUnlock()
 
 	// Determine device type from hostname patterns
 	var deviceType string
@@ -383,7 +464,16 @@ func sanitizeHostname(hostname string, mapping *SanitizationMapping) string {
 	num := binary.BigEndian.Uint16(hash[:2]) % 100
 
 	sanitized := fmt.Sprintf("niac-core-%s-%02d", deviceType, num)
+
+	// Fix #60: Store mapping with write lock
+	mapping.mu.Lock()
+	// Double-check in case another goroutine added it while we waited
+	if existing, exists := mapping.Hostnames[hostname]; exists {
+		mapping.mu.Unlock()
+		return existing
+	}
 	mapping.Hostnames[hostname] = sanitized
+	mapping.mu.Unlock()
 
 	return sanitized
 }
@@ -433,10 +523,159 @@ func loadMapping(filename string, mapping *SanitizationMapping) error {
 }
 
 func saveMapping(filename string, mapping *SanitizationMapping) error {
+	// Use lock when marshaling to avoid concurrent modifications
+	mapping.mu.RLock()
 	data, err := json.MarshalIndent(mapping, "", "  ")
+	mapping.mu.RUnlock()
+
 	if err != nil {
 		return err
 	}
 
-	return os.WriteFile(filename, data, 0644)
+	// Fix #68: Atomic write for mapping file
+	tempFile := filename + ".tmp"
+	if err := os.WriteFile(tempFile, data, 0644); err != nil {
+		return err
+	}
+
+	return os.Rename(tempFile, filename)
+}
+
+// validateFilePath validates file paths to prevent path traversal attacks
+// Fix #67: Input validation
+func validateFilePath(path string, allowCreate bool) error {
+	if path == "" {
+		return fmt.Errorf("empty path")
+	}
+
+	// Clean the path to normalize it
+	cleanPath := filepath.Clean(path)
+
+	// Check for path traversal attempts
+	if strings.Contains(cleanPath, "..") {
+		return fmt.Errorf("path traversal detected: %s", path)
+	}
+
+	// Get absolute path
+	absPath, err := filepath.Abs(cleanPath)
+	if err != nil {
+		return fmt.Errorf("invalid path: %w", err)
+	}
+
+	// Check if path is within current working directory or subdirectories
+	cwd, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("failed to get current directory: %w", err)
+	}
+
+	// Allow paths within CWD, /tmp, or user's home directory
+	validPrefixes := []string{cwd, os.TempDir()}
+	if homeDir, err := os.UserHomeDir(); err == nil {
+		validPrefixes = append(validPrefixes, homeDir)
+	}
+
+	isValid := false
+	for _, prefix := range validPrefixes {
+		absPrefix, err := filepath.Abs(prefix)
+		if err != nil {
+			continue
+		}
+		if strings.HasPrefix(absPath+string(filepath.Separator), absPrefix+string(filepath.Separator)) {
+			isValid = true
+			break
+		}
+	}
+
+	if !isValid {
+		return fmt.Errorf("path outside allowed directories: %s", path)
+	}
+
+	// For input files, ensure they exist and are regular files
+	if !allowCreate {
+		info, err := os.Lstat(absPath)
+		if err != nil {
+			if os.IsNotExist(err) {
+				return fmt.Errorf("file does not exist: %s", path)
+			}
+			return fmt.Errorf("cannot access file: %w", err)
+		}
+
+		// Reject symlinks for security
+		if info.Mode()&os.ModeSymlink != 0 {
+			return fmt.Errorf("symlinks not allowed: %s", path)
+		}
+
+		// Ensure it's a regular file
+		if !info.Mode().IsRegular() {
+			return fmt.Errorf("not a regular file: %s", path)
+		}
+	}
+
+	return nil
+}
+
+// validateDirPath validates directory paths
+// Fix #67: Input validation
+func validateDirPath(path string, allowCreate bool) error {
+	if path == "" {
+		return fmt.Errorf("empty path")
+	}
+
+	// Clean the path
+	cleanPath := filepath.Clean(path)
+
+	// Check for path traversal
+	if strings.Contains(cleanPath, "..") {
+		return fmt.Errorf("path traversal detected: %s", path)
+	}
+
+	// Get absolute path
+	absPath, err := filepath.Abs(cleanPath)
+	if err != nil {
+		return fmt.Errorf("invalid path: %w", err)
+	}
+
+	// Check if path is within allowed directories
+	cwd, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("failed to get current directory: %w", err)
+	}
+
+	validPrefixes := []string{cwd, os.TempDir()}
+	if homeDir, err := os.UserHomeDir(); err == nil {
+		validPrefixes = append(validPrefixes, homeDir)
+	}
+
+	isValid := false
+	for _, prefix := range validPrefixes {
+		absPrefix, err := filepath.Abs(prefix)
+		if err != nil {
+			continue
+		}
+		if strings.HasPrefix(absPath+string(filepath.Separator), absPrefix+string(filepath.Separator)) {
+			isValid = true
+			break
+		}
+	}
+
+	if !isValid {
+		return fmt.Errorf("path outside allowed directories: %s", path)
+	}
+
+	// For input dirs, ensure they exist
+	if !allowCreate {
+		info, err := os.Stat(absPath)
+		if err != nil {
+			if os.IsNotExist(err) {
+				return fmt.Errorf("directory does not exist: %s", path)
+			}
+			return fmt.Errorf("cannot access directory: %w", err)
+		}
+
+		if !info.IsDir() {
+			return fmt.Errorf("not a directory: %s", path)
+		}
+	}
+
+	return nil
 }
