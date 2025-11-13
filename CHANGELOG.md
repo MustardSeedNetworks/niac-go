@@ -14,6 +14,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - NetFlow/IPFIX export
 - DHCPv6 prefix delegation (IA_PD)
 
+## [1.24.1] - 2025-11-13
+
+### Added
+- EDP/FDP packet parsing now records live neighbors in the shared discovery table alongside LLDP/CDP, unlocking full topology awareness for the CLI and TUI (#79).
+- The interactive TUI gained a neighbor discovery panel (`Shift+N`) with relative “last seen” timers, protocol labels, and management IPs so operators can validate simulations without leaving the console (#79).
+
+### Changed
+- Periodic and final CLI stats now surface the number of discovered neighbors to keep headless runs feature-parity with the TUI (#79).
+- README highlights the new `[N]` shortcut and both entrypoints promote the shared neighbor functionality; `VERSION` + root command metadata bumped to `v1.24.1` for the release tag.
+
 ## [1.24.0] - 2025-11-12
 
 ### 🚀 Highlights
