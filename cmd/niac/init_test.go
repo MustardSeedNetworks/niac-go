@@ -2,6 +2,8 @@ package main
 
 import (
 	"bufio"
+	"errors"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -38,12 +40,23 @@ func TestPromptChoice(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			reader := bufio.NewReader(strings.NewReader(tt.input))
-			result := promptChoice(reader, "", tt.validChoices)
+			result, err := promptChoice(reader, "", tt.validChoices)
+			if err != nil {
+				t.Fatalf("promptChoice returned error: %v", err)
+			}
 
 			if result != tt.expectedChoice {
 				t.Errorf("promptChoice() = %v, want %v", result, tt.expectedChoice)
 			}
 		})
+	}
+}
+
+func TestPromptChoiceEOF(t *testing.T) {
+	reader := bufio.NewReader(strings.NewReader(""))
+	_, err := promptChoice(reader, "", []string{"a"})
+	if !errors.Is(err, io.EOF) {
+		t.Fatalf("expected EOF, got %v", err)
 	}
 }
 
@@ -108,12 +121,23 @@ func TestPromptYesNo(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			reader := bufio.NewReader(strings.NewReader(tt.input))
-			result := promptYesNo(reader, "")
+			result, err := promptYesNo(reader, "")
+			if err != nil {
+				t.Fatalf("promptYesNo returned error: %v", err)
+			}
 
 			if result != tt.expected {
 				t.Errorf("promptYesNo() = %v, want %v", result, tt.expected)
 			}
 		})
+	}
+}
+
+func TestPromptYesNoEOF(t *testing.T) {
+	reader := bufio.NewReader(strings.NewReader(""))
+	_, err := promptYesNo(reader, "")
+	if !errors.Is(err, io.EOF) {
+		t.Fatalf("expected EOF, got %v", err)
 	}
 }
 
@@ -158,12 +182,23 @@ func TestPromptInt(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			reader := bufio.NewReader(strings.NewReader(tt.input))
-			result := promptInt(reader, "", tt.min, tt.max)
+			result, err := promptInt(reader, "", tt.min, tt.max)
+			if err != nil {
+				t.Fatalf("promptInt returned error: %v", err)
+			}
 
 			if result != tt.expected {
 				t.Errorf("promptInt() = %v, want %v", result, tt.expected)
 			}
 		})
+	}
+}
+
+func TestPromptIntEOF(t *testing.T) {
+	reader := bufio.NewReader(strings.NewReader(""))
+	_, err := promptInt(reader, "", 1, 10)
+	if !errors.Is(err, io.EOF) {
+		t.Fatalf("expected EOF, got %v", err)
 	}
 }
 

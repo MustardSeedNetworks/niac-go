@@ -1,6 +1,7 @@
 package main
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -168,7 +169,7 @@ func TestGenerateYAMLStructure(t *testing.T) {
 	}
 
 	for _, expected := range expectedStrings {
-		if !contains(yaml, expected) {
+		if !strings.Contains(yaml, expected) {
 			t.Errorf("Generated YAML missing expected string: %s", expected)
 		}
 	}
@@ -225,7 +226,7 @@ func TestGenerateYAMLWithMultipleProtocols(t *testing.T) {
 	}
 
 	for _, expected := range expectedStrings {
-		if !contains(yaml, expected) {
+		if !strings.Contains(yaml, expected) {
 			t.Errorf("Generated YAML missing expected string: %s", expected)
 		}
 	}
@@ -264,18 +265,12 @@ func TestGenerateYAMLMultipleDevices(t *testing.T) {
 	yaml := generateYAML(cfg)
 
 	// Verify all devices are included
-	if !contains(yaml, "router-1") || !contains(yaml, "switch-1") || !contains(yaml, "ap-1") {
+	if !strings.Contains(yaml, "router-1") || !strings.Contains(yaml, "switch-1") || !strings.Contains(yaml, "ap-1") {
 		t.Error("Generated YAML missing one or more devices")
 	}
 
 	// Verify all MACs are included
-	if !contains(yaml, "44:01") || !contains(yaml, "44:02") || !contains(yaml, "44:03") {
+	if !strings.Contains(yaml, "44:01") || !strings.Contains(yaml, "44:02") || !strings.Contains(yaml, "44:03") {
 		t.Error("Generated YAML missing device MAC addresses")
 	}
-}
-
-// Helper function to check if string contains substring
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(s) > len(substr) &&
-		(s[:len(substr)] == substr || contains(s[1:], substr)))
 }

@@ -57,6 +57,68 @@ NiAC-Go includes 555+ sanitized walk files across 17 vendors:
 | VoIP | Multiple | Cisco VoIP gateways, IP phones |
 | Misc | Multiple | Various vendors/models |
 
+### Captured vs. Synthetic Sources
+
+NiAC-Go ships with two complementary walk-file sources:
+
+| Source | Location | Description |
+|--------|----------|-------------|
+| Sanitized Captures | `examples/device_walks_sanitized/` | Real captures gathered from production gear and scrubbed for safe redistribution. Ideal when you need exact parity with legacy hardware. |
+| Generated Walks | `scripts/generate_modern_walk.py` | Deterministic generator that produces realistic SNMP walks for modern hardware families (Arista, Aruba, Cisco, Dell, Fortinet, HPE, Juniper, Meraki, Palo Alto, etc.). Use this when you need devices that aren’t yet in the sanitized archive. |
+
+You can freely mix sources inside a single simulation—some devices can reference sanitized captures while others point to a generated `.walk` file.
+
+### Synthetic Walk Catalog
+
+The generator currently supports the following modern platforms (run `python3 scripts/generate_modern_walk.py --list` for the canonical list):
+
+| Vendor | Models |
+|--------|--------|
+| Arista | 7050SX3-48YC12, 7280SR3-48YC8 |
+| Aruba | CX6300-48G, CX8360-48Y8C |
+| Cisco | C3850-48P, C3650-48PD, C9300-48P, N9K-C9300 |
+| Dell | N3248TE-ON, S5248F-ON |
+| Extreme | X465-48W |
+| Fortinet | FS-448E-FPOE, FS-548D-FPOE |
+| HPE | Aruba 2930F-48G, Aruba 6300M-48G |
+| Juniper | EX4300-48P, QFX5100-48S |
+| Meraki | MS390-48UXB, MS425-48 |
+| Palo Alto | PA-440 |
+
+We continually add new models; contributions are welcome via pull request.
+
+### Generating Modern Walk Files
+
+Use the helper script in `scripts/generate_modern_walk.py` to synthesize a walk:
+
+```bash
+# Enumerate every supported vendor/model
+python3 scripts/generate_modern_walk.py --list
+
+# Generate a Cisco Catalyst 9300 walk with a custom hostname
+python3 scripts/generate_modern_walk.py \
+  --vendor cisco \
+  --model c9300-48p \
+  --hostname core-sw-01 \
+  --output examples/device_walks/generated/cisco-c9300.walk
+```
+
+Once generated, reference the file from any device definition:
+
+```yaml
+snmp_agent:
+  enabled: true
+  community: "public"
+  walk_file: "examples/device_walks/generated/cisco-c9300.walk"
+```
+
+### Troubleshooting Generation
+
+- **`Unknown vendor/model`**: Re-run with `--list` to confirm spelling; vendors are lowercase (e.g., `paloalto`, `meraki`).
+- **Permission errors**: Ensure the target directory exists (e.g., `mkdir -p examples/device_walks/generated` before running the script).
+- **Custom hostnames**: Use `--hostname` to stamp meaningful names into the System MIB so monitoring tools show the correct value.
+- **Validating output**: Run `snmpwalk -v2c -c public -Of output.walk` after integrating to confirm NiAC-Go is serving the expected OIDs.
+
 ### Vendor Directory Structure
 
 ```

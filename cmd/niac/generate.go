@@ -2,7 +2,9 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"strings"
@@ -81,25 +83,13 @@ func runGenerate(cmd *cobra.Command, args []string) {
 	}
 
 	// Network name
-	fmt.Print(color.CyanString("Network name: "))
-	cfg.networkName, _ = reader.ReadString('\n')
-	cfg.networkName = strings.TrimSpace(cfg.networkName)
-	if cfg.networkName == "" {
-		cfg.networkName = "simulation-network"
-	}
+	cfg.networkName = promptString(reader, color.CyanString("Network name: "), "simulation-network")
 
 	// Subnet
-	fmt.Print(color.CyanString("Network subnet (CIDR, e.g., 192.168.1.0/24): "))
-	cfg.subnet, _ = reader.ReadString('\n')
-	cfg.subnet = strings.TrimSpace(cfg.subnet)
-	if cfg.subnet == "" {
-		cfg.subnet = "192.168.1.0/24"
-	}
+	cfg.subnet = promptString(reader, color.CyanString("Network subnet (CIDR, e.g., 192.168.1.0/24): "), "192.168.1.0/24")
 
 	// Include path for walk files
-	fmt.Print(color.CyanString("Path for SNMP walk files (leave empty for none): "))
-	cfg.includePath, _ = reader.ReadString('\n')
-	cfg.includePath = strings.TrimSpace(cfg.includePath)
+	cfg.includePath = promptString(reader, color.CyanString("Path for SNMP walk files (leave empty for none): "), "")
 
 	fmt.Println()
 
@@ -107,7 +97,7 @@ func runGenerate(cmd *cobra.Command, args []string) {
 	color.New(color.Bold, color.FgCyan).Println("Step 2: Device Configuration")
 	color.White("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
 
-	deviceCount := promptInt(reader, "How many devices to create (1-20): ", 1, 20)
+	deviceCount := mustPromptInt(reader, "How many devices to create (1-20): ", 1, 20)
 	fmt.Println()
 
 	for i := 0; i < deviceCount; i++ {
@@ -122,7 +112,7 @@ func runGenerate(cmd *cobra.Command, args []string) {
 		fmt.Println(color.CyanString("Device type:"))
 		fmt.Println("  1) router       2) switch       3) access-point")
 		fmt.Println("  4) server       5) workstation  6) firewall")
-		typeChoice := promptChoice(reader, "Select type (1-6): ", []string{"1", "2", "3", "4", "5", "6"})
+		typeChoice := mustPromptChoice(reader, "Select type (1-6): ", []string{"1", "2", "3", "4", "5", "6"})
 		device.devType = mapDeviceType(typeChoice)
 
 		// Device name
@@ -161,7 +151,7 @@ func runGenerate(cmd *cobra.Command, args []string) {
 	// Check if file exists
 	if _, err := os.Stat(outputFile); err == nil {
 		color.Yellow("Warning: File %s already exists!\n", outputFile)
-		if !promptYesNo(reader, "Overwrite? (y/n): ") {
+		if !mustPromptYesNo(reader, "Overwrite? (y/n): ") {
 			color.Red("Aborted.\n")
 			os.Exit(0)
 		}
@@ -246,7 +236,7 @@ func selectProtocols(reader *bufio.Reader, devType string) map[string]protocolCo
 	// Discovery protocols
 	fmt.Println()
 	color.Yellow("Discovery Protocols:")
-	if promptYesNo(reader, "  Enable LLDP? (y/n): ") {
+	if mustPromptYesNo(reader, "  Enable LLDP? (y/n): ") {
 		protocols["lldp"] = protocolConfig{
 			enabled: true,
 			params: map[string]string{
@@ -255,7 +245,7 @@ func selectProtocols(reader *bufio.Reader, devType string) map[string]protocolCo
 			},
 		}
 	}
-	if promptYesNo(reader, "  Enable CDP? (y/n): ") {
+	if mustPromptYesNo(reader, "  Enable CDP? (y/n): ") {
 		protocols["cdp"] = protocolConfig{
 			enabled: true,
 			params: map[string]string{
@@ -268,7 +258,7 @@ func selectProtocols(reader *bufio.Reader, devType string) map[string]protocolCo
 	// Management protocols
 	fmt.Println()
 	color.Yellow("Management Protocols:")
-	if promptYesNo(reader, "  Enable SNMP? (y/n): ") {
+	if mustPromptYesNo(reader, "  Enable SNMP? (y/n): ") {
 		community := promptString(reader, "    SNMP community [public]: ", "public")
 		walkFile := promptString(reader, "    Walk file (leave empty for none): ", "")
 		protocols["snmp"] = protocolConfig{
@@ -284,7 +274,7 @@ func selectProtocols(reader *bufio.Reader, devType string) map[string]protocolCo
 	fmt.Println()
 	color.Yellow("Network Services:")
 	if devType == "router" || devType == "server" {
-		if promptYesNo(reader, "  Enable DHCP server? (y/n): ") {
+		if mustPromptYesNo(reader, "  Enable DHCP server? (y/n): ") {
 			protocols["dhcp"] = protocolConfig{
 				enabled: true,
 				params: map[string]string{
@@ -293,7 +283,7 @@ func selectProtocols(reader *bufio.Reader, devType string) map[string]protocolCo
 				},
 			}
 		}
-		if promptYesNo(reader, "  Enable DNS server? (y/n): ") {
+		if mustPromptYesNo(reader, "  Enable DNS server? (y/n): ") {
 			protocols["dns"] = protocolConfig{
 				enabled: true,
 				params:  make(map[string]string),
@@ -305,7 +295,7 @@ func selectProtocols(reader *bufio.Reader, devType string) map[string]protocolCo
 	if devType == "server" || devType == "workstation" {
 		fmt.Println()
 		color.Yellow("Application Protocols:")
-		if promptYesNo(reader, "  Enable HTTP server? (y/n): ") {
+		if mustPromptYesNo(reader, "  Enable HTTP server? (y/n): ") {
 			protocols["http"] = protocolConfig{
 				enabled: true,
 				params: map[string]string{
@@ -313,7 +303,7 @@ func selectProtocols(reader *bufio.Reader, devType string) map[string]protocolCo
 				},
 			}
 		}
-		if promptYesNo(reader, "  Enable FTP server? (y/n): ") {
+		if mustPromptYesNo(reader, "  Enable FTP server? (y/n): ") {
 			protocols["ftp"] = protocolConfig{
 				enabled: true,
 				params: map[string]string{
@@ -423,13 +413,21 @@ func countEnabledProtocols(protocols map[string]protocolConfig) int {
 }
 
 func promptString(reader *bufio.Reader, prompt string, defaultValue string) string {
-	fmt.Print(prompt)
-	input, _ := reader.ReadString('\n')
-	input = strings.TrimSpace(input)
-	if input == "" {
-		return defaultValue
+	for {
+		fmt.Print(prompt)
+		input, err := readLine(reader)
+		if err != nil {
+			if errors.Is(err, io.EOF) && defaultValue != "" {
+				return defaultValue
+			}
+			handleInputError(err)
+			continue
+		}
+		if input == "" {
+			return defaultValue
+		}
+		return input
 	}
-	return input
 }
 
 // promptInt and promptChoice are already defined in init.go

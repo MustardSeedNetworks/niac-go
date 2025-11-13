@@ -249,6 +249,30 @@ Shows all 50+ command-line options including:
 - Output: --no-color, --log-file, --stats-interval
 - Per-protocol debug: --debug-arp, --debug-lldp, --debug-dhcpv6, etc.
 
+### Generating Modern Walk Files
+
+Need an SNMP walk for newer hardware? Use the built-in generator to create realistic synthetic walks for modern switches, firewalls, and routers:
+
+```bash
+# Discover the 18 supported vendor/model profiles
+python3 scripts/generate_modern_walk.py --list
+
+# Generate a specific device walk file
+python3 scripts/generate_modern_walk.py \
+  --vendor cisco \
+  --model c9300-48p \
+  --output examples/device_walks/generated/cisco-c9300.walk
+
+# Use a custom hostname in the generated data
+python3 scripts/generate_modern_walk.py \
+  --vendor aruba \
+  --model cx6300-48g \
+  --hostname core-sw-01 \
+  --output aruba-cx6300.walk
+```
+
+The resulting `.walk` files can be referenced from any device’s `snmp_agent.walk_file` field, right alongside the sanitized captures that ship with NiAC-Go.
+
 ## Configuration
 
 ### YAML Configuration (v1.5.0+)

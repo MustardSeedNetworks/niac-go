@@ -238,6 +238,23 @@ sudo niac --interactive en0 examples/error-injection-demo.yaml
 sudo niac en0 examples/complete-kitchen-sink.yaml
 ```
 
+## Synthetic Walk Files
+
+NiAC-Go can generate modern SNMP walk files rather than relying solely on captured data. The generator script lives in `scripts/generate_modern_walk.py`:
+
+```bash
+# Discover every supported vendor/model
+python3 scripts/generate_modern_walk.py --list
+
+# Create a Meraki MS390 walk file
+python3 scripts/generate_modern_walk.py \
+  --vendor meraki \
+  --model ms390-48uxb \
+  --output examples/device_walks/generated/meraki-ms390.walk
+```
+
+Reference the generated file in any example by pointing a device’s `snmp_agent.walk_file` setting to the new path. This is a quick way to simulate current-generation hardware without curated captures.
+
 ## Usage Instructions
 
 ### Validation

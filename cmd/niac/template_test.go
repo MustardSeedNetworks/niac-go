@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/krisarmstrong/niac-go/pkg/templates"
@@ -191,7 +192,7 @@ func TestTemplateContentValidity(t *testing.T) {
 
 	// Templates should be YAML format
 	// This is a simple check - actual validation happens in config package
-	if !contains(tmpl.Content, "devices:") && !contains(tmpl.Content, "device:") {
+	if !strings.Contains(tmpl.Content, "devices:") && !strings.Contains(tmpl.Content, "device:") {
 		t.Error("Template should contain 'devices:' key")
 	}
 }
@@ -261,5 +262,3 @@ func TestTemplateFilePermissions(t *testing.T) {
 		t.Logf("File permissions: got %v, expected %v (may vary by OS)", mode.Perm(), expectedPerm)
 	}
 }
-
-// Note: contains() helper function is defined in generate_test.go and shared across test files
