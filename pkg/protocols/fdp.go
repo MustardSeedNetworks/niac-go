@@ -372,7 +372,7 @@ func (h *FDPHandler) sendFrame(device *config.Device, fdpPayload []byte) error {
 	return nil
 }
 
-// HandlePacket processes an incoming FDP packet (for future use)
+// HandlePacket parses inbound FDP frames and records neighbor metadata.
 func (h *FDPHandler) HandlePacket(pkt *Packet) {
 	debugLevel := h.stack.GetDebugLevel()
 	payload, ok := ethernetPayload(pkt.Buffer)

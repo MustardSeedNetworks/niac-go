@@ -269,7 +269,7 @@ func (h *EDPHandler) sendFrame(device *config.Device, edpPayload []byte) error {
 	return nil
 }
 
-// HandlePacket processes an incoming EDP packet (for future use)
+// HandlePacket parses incoming Extreme Discovery Protocol frames and records neighbors.
 func (h *EDPHandler) HandlePacket(pkt *Packet) {
 	debugLevel := h.stack.GetDebugLevel()
 	payload, ok := ethernetPayload(pkt.Buffer)

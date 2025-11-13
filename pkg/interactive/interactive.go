@@ -222,21 +222,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 
 		case "N":
-			m.showNeighbors = !m.showNeighbors
-			m.showHelp = false
-			m.showLogs = false
-			m.showStats = false
-			m.showHexDump = false
-			m.menuVisible = false
-			if m.showNeighbors {
-				if len(m.neighbors) == 0 {
-					m.statusMessage = "Neighbor table opened - waiting for discovery packets"
-					m.statusIsError = false
-				} else {
-					m.statusMessage = successStyle.Render(fmt.Sprintf("✓ Showing %d learned neighbors", len(m.neighbors)))
-					m.statusIsError = false
-				}
-			}
+			m.toggleNeighborView()
 			return m, nil
 
 		case "n":
@@ -244,7 +230,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.hexDumpPacketIndex = (m.hexDumpPacketIndex + 1) % len(m.packetBuffer)
 				m.hexDumpScrollY = 0
 				m.statusMessage = successStyle.Render(fmt.Sprintf("✓ Packet %d/%d", m.hexDumpPacketIndex+1, len(m.packetBuffer)))
+				return m, nil
 			}
+			m.toggleNeighborView()
 			return m, nil
 
 		case "p":
@@ -367,6 +355,24 @@ func (m *model) refreshStats() {
 		DHCPRequests:    stats.DHCPRequests,
 	}
 	m.neighbors = m.stack.GetNeighbors()
+}
+
+func (m *model) toggleNeighborView() {
+	m.showNeighbors = !m.showNeighbors
+	m.showHelp = false
+	m.showLogs = false
+	m.showStats = false
+	m.showHexDump = false
+	m.menuVisible = false
+	if m.showNeighbors {
+		if len(m.neighbors) == 0 {
+			m.statusMessage = "Neighbor table opened - waiting for discovery packets"
+			m.statusIsError = false
+		} else {
+			m.statusMessage = successStyle.Render(fmt.Sprintf("✓ Showing %d learned neighbors", len(m.neighbors)))
+			m.statusIsError = false
+		}
+	}
 }
 
 func (m *model) handleMenuSelection() {
@@ -633,7 +639,7 @@ func (m model) View() string {
 	s.WriteString(" Logs  ")
 	s.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("86")).Render("[s]"))
 	s.WriteString(" Stats  ")
-	s.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("86")).Render("[N]"))
+	s.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("86")).Render("[N]/[n]"))
 	s.WriteString(" Neighbors  ")
 	s.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("86")).Render("[x]"))
 	s.WriteString(" Hex  ")
@@ -804,7 +810,7 @@ func (m model) renderHelp() string {
 	help.WriteString("║  [h][?]  Toggle this help screen                                ║\n")
 	help.WriteString("║  [l]     Toggle debug log viewer                                ║\n")
 	help.WriteString("║  [s]     Toggle statistics viewer                               ║\n")
-	help.WriteString("║  [N]     Toggle neighbor discovery table                        ║\n")
+	help.WriteString("║  [N]/[n] Toggle neighbor discovery table                        ║\n")
 	help.WriteString("║  [x]     Toggle packet hex dump viewer                          ║\n")
 	help.WriteString("║  [n]/[p] Navigate packets (next/previous) in hex viewer         ║\n")
 	help.WriteString("║  [↑][↓]  Scroll hex dump / Navigate menu items                  ║\n")
@@ -975,7 +981,7 @@ func (m model) renderNeighbors() string {
 	panel.WriteString("╠══════════════════════════════════════════════════════════════════╣\n")
 	summary := fmt.Sprintf("Total neighbors: %d  •  TTL refresh every 30s", len(rows))
 	panel.WriteString(padPanelLine(summary))
-	panel.WriteString(padPanelLine("Press [N] to close this view"))
+	panel.WriteString(padPanelLine("Press [N]/[n] to close this view"))
 	panel.WriteString("╚══════════════════════════════════════════════════════════════════╝")
 
 	return panel.String()

@@ -212,7 +212,7 @@ sudo ./niac --interactive en0 examples/complete-kitchen-sink.yaml
 # Controls:
 #   [i] - Open interactive menu
 #   [s] - Toggle detailed statistics
-#   [N] - Toggle neighbor discovery table
+#   [N]/[n] - Toggle neighbor discovery table
 #   [x] - Toggle packet hex dump viewer
 #   [c] - Clear all errors
 #   [q] - Quit
