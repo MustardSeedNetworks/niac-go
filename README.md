@@ -384,6 +384,19 @@ niac-go/
 └── README.md
 ```
 
+## Reference Guides
+
+Need deeper dives? The `docs/` directory ships with dedicated walkthroughs:
+
+- [docs/TOPOLOGY_GUIDE.md](docs/TOPOLOGY_GUIDE.md) – Port-channels, trunk ports, VLAN-aware topologies, and LLDP/CDP neighbor design.
+- [docs/ENVIRONMENTS.md](docs/ENVIRONMENTS.md) – Complete data center, enterprise campus, branch, wireless, and multi-vendor simulation scenarios.
+- [docs/PROTOCOL_GUIDE.md](docs/PROTOCOL_GUIDE.md) – How to configure LLDP, CDP, DHCP, DNS, SNMP (agents + traps), STP variants, and more.
+- [docs/API_REFERENCE.md](docs/API_REFERENCE.md) – The full YAML schema with every field, default, and validation rule.
+- [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) – Common validation failures, debugging tips, and performance tuning advice.
+- [docs/WALK_FILES.md](docs/WALK_FILES.md) – Vendor coverage, synthetic vs. sanitized walks, and contribution guidelines.
+
+Each guide includes paste-ready YAML snippets and command-line workflows so you can adapt the scenarios to your lab quickly.
+
 ## Architecture
 
 ### Error Injection System
