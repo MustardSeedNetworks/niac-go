@@ -73,7 +73,7 @@ func runInteractive(cmd *cobra.Command, args []string) {
 	debugConfig := logging.NewDebugConfig(debugLevel)
 
 	// Start interactive mode
-	if err := runInteractiveMode(interfaceName, cfg, debugConfig); err != nil {
+	if err := runInteractiveMode(interfaceName, cfg, debugConfig, configFile); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}

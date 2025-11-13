@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NIAC Control Center</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/force-graph@1.44.3/dist/force-graph.min.js"></script>
+  </head>
+  <body>
+    <header>
+      <h1>NIAC Control Center</h1>
+      <div class="status-pill" id="api-status">offline</div>
+    </header>
+    <main>
+      <section>
+        <h2>Live Statistics</h2>
+        <div id="stats">
+          <div class="stat">
+            <span class="label">Interface</span>
+            <span class="value" id="stat-interface">-</span>
+          </div>
+          <div class="stat">
+            <span class="label">Packets TX</span>
+            <span class="value" id="stat-tx">0</span>
+          </div>
+          <div class="stat">
+            <span class="label">Packets RX</span>
+            <span class="value" id="stat-rx">0</span>
+          </div>
+          <div class="stat">
+            <span class="label">Errors</span>
+            <span class="value" id="stat-errors">0</span>
+          </div>
+          <div class="stat">
+            <span class="label">Devices</span>
+            <span class="value" id="stat-devices">0</span>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>Device Inventory</h2>
+        <table id="device-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Type</th>
+              <th>IP Addresses</th>
+              <th>Protocols</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>Recent Runs</h2>
+        <table id="history-table">
+          <thead>
+            <tr>
+              <th>Started</th>
+              <th>Duration</th>
+              <th>Interface</th>
+              <th>Devices</th>
+              <th>Packets</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>Topology</h2>
+        <div id="topology-container"></div>
+      </section>
+    </main>
+    <footer>
+      <span id="version-info"></span>
+      <button id="token-reset">Change API Token</button>
+    </footer>
+    <script src="/app.js"></script>
+  </body>
+</html>

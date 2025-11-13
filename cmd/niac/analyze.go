@@ -95,6 +95,7 @@ func init() {
 	analyzeCmd.Flags().String("output", "yaml", "Output format (yaml, json, text)")
 	analyzeCmd.Flags().Bool("extract-topology", false, "Extract full topology")
 	analyzeCmd.Flags().Bool("show-neighbors", false, "Show neighbor relationships only")
+	analyzeCmd.Flags().String("graphviz", "", "Write Graphviz (DOT) output to file (use '-' for stdout)")
 }
 
 func runAnalyze(cmd *cobra.Command, args []string) error {
@@ -102,11 +103,18 @@ func runAnalyze(cmd *cobra.Command, args []string) error {
 	outputFormat, _ := cmd.Flags().GetString("output")
 	_, _ = cmd.Flags().GetBool("extract-topology") // Reserved for future use
 	showNeighbors, _ := cmd.Flags().GetBool("show-neighbors")
+	graphvizPath, _ := cmd.Flags().GetString("graphviz")
 
 	// Parse walk file
 	analysis, err := parseWalkFile(walkFile)
 	if err != nil {
 		return fmt.Errorf("failed to parse walk file: %w", err)
+	}
+
+	if graphvizPath != "" {
+		if err := writeGraphviz(analysis, graphvizPath); err != nil {
+			return err
+		}
 	}
 
 	// Filter output if needed
@@ -351,6 +359,45 @@ func outputText(analysis *WalkAnalysis) error {
 	}
 
 	return nil
+}
+
+func writeGraphviz(analysis *WalkAnalysis, target string) error {
+	if len(analysis.Neighbors) == 0 {
+		return fmt.Errorf("no neighbor information available for graph export")
+	}
+
+	local := analysis.Device.SysName
+	if local == "" {
+		local = "local-device"
+	}
+
+	var builder strings.Builder
+	builder.WriteString("digraph niac_topology {\n")
+	builder.WriteString("  rankdir=LR;\n")
+	builder.WriteString(fmt.Sprintf("  \"%s\" [shape=box, style=filled, fillcolor=\"#2563EB\", fontcolor=\"white\"];\n", local))
+
+	seen := make(map[string]struct{})
+	for _, neighbor := range analysis.Neighbors {
+		if neighbor.RemoteDevice == "" {
+			continue
+		}
+		key := strings.ToLower(neighbor.RemoteDevice)
+		if _, ok := seen[key]; !ok {
+			builder.WriteString(fmt.Sprintf("  \"%s\" [shape=ellipse, style=filled, fillcolor=\"#0f172a\", fontcolor=\"white\"];\n", neighbor.RemoteDevice))
+			seen[key] = struct{}{}
+		}
+
+		label := fmt.Sprintf("%s → %s (%s)", neighbor.LocalInterface, neighbor.RemoteInterface, strings.ToUpper(neighbor.Protocol))
+		builder.WriteString(fmt.Sprintf("  \"%s\" -> \"%s\" [label=\"%s\"];\n", local, neighbor.RemoteDevice, label))
+	}
+	builder.WriteString("}\n")
+
+	data := []byte(builder.String())
+	if target == "-" {
+		fmt.Print(builder.String())
+		return nil
+	}
+	return os.WriteFile(target, data, 0o644)
 }
 
 func outputNeighbors(neighbors []NeighborInfo, format string) error {

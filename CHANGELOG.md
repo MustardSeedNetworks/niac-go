@@ -14,6 +14,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - NetFlow/IPFIX export
 - DHCPv6 prefix delegation (IA_PD)
 
+## [1.24.0] - 2025-11-12
+
+### 🚀 Highlights
+- **Runtime services everywhere** – both the Cobra CLI and the legacy entrypoint can expose the same REST API, metrics endpoint, and alert pipeline (#31, #36).
+- **Run history persistence** – BoltDB-backed storage keeps recent NIAC sessions so the CLI, TUI, and API share a unified “run history” view (#32).
+- **Topology tooling** – `niac analyze` exports Graphviz DOT files and the new `niac analyze-pcap` command summarizes captures for troubleshooting (#34, #37).
+- **Deployment ready** – Dockerfile, Compose stack, and Kubernetes manifest ship with the repo for containerised runs (#35).
+- **Web UI Preview** – a lightweight HTML/JS UI is bundled with the API for early adopters. It remains marked as a v2.0 feature and is disabled unless `--api-listen` is set (#30).
+
+### Added
+- Global runtime flags (`--api-listen`, `--metrics-listen`, `--storage-path`, `--api-token`, `--alert-*`) are available to both the Cobra CLI and the legacy interface. Legacy users can now expose the exact same services without switching entrypoints (#31).
+- `pkg/api` implements REST endpoints for live stats, device inventory, topology, and run history plus a metrics listener and webhook-based alerting (#31, #36).
+- `pkg/storage` provides a BoltDB persistence layer with read/write helpers and regression tests. Set `--storage-path disabled` to opt-out cleanly (#32).
+- Bundled REST API documentation (`docs/REST_API.md`), Dockerfile, docker-compose stack, and `deploy/kubernetes/niac-deployment.yaml` make it easy to run NIAC in containers or clusters (#35).
+- `niac analyze --graphviz` exports DOT graphs from SNMP walks, and the new `niac analyze-pcap` command emits protocol summaries in text/JSON/YAML for fast PCAP triage (#34, #37).
+- Embedded Web UI assets (HTML/CSS/JS) surface live stats, device inventory, history, and topology in the browser when the API is enabled. This feature is flagged as a 2.0 preview and is off by default (#30, #37).
+
+### Fixed / Changed
+- `analyze-pcap` now uses the correct gopacket layer constants so LLDP and CDP frames are classified reliably (#34).
+- `README.md` documents the runtime services, storage controls, and new analyzer workflows; version badges now reflect Go 1.24 support.
+- Version metadata (root command + `VERSION` file) bumped to `v1.24.0` to align binaries, docs, and release tooling.
+
+### Quality
+- Added unit tests for the storage persistence layer to prevent regressions when adjusting BoltDB handling (#74).
+- `go.mod` vendor list updated to include `go.etcd.io/bbolt` explicitly, ensuring repeatable builds for every entrypoint.
+
 ## [1.21.0] - 2025-11-08
 
 ### 🎯 MILESTONE: Performance Profiling!

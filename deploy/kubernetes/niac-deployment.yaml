@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: niac
+  labels:
+    app: niac
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: niac
+  template:
+    metadata:
+      labels:
+        app: niac
+    spec:
+      containers:
+        - name: niac
+          image: niac:latest
+          imagePullPolicy: IfNotPresent
+          args:
+            [
+              "--api-listen",
+              ":8080",
+              "--api-token",
+              "changeme",
+              "--storage-path",
+              "/data/niac.db",
+              "lo",
+              "/data/demo.yaml",
+            ]
+          ports:
+            - name: http
+              containerPort: 8080
+          volumeMounts:
+            - name: config
+              mountPath: /data/demo.yaml
+              subPath: demo.yaml
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: config
+          configMap:
+            name: niac-config
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: niac-config
+data:
+  demo.yaml: |
+    devices:
+      - name: kube-router
+        type: router
+        mac: "02:00:00:00:00:01"
+        ips:
+          - "10.42.0.1"
+        snmp:
+          enabled: true
+        snmp_agent:
+          community: "public"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: niac
+spec:
+  selector:
+    app: niac
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8080
+      targetPort: 8080

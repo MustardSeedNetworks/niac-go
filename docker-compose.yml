@@ -1,0 +1,25 @@
+version: "3.9"
+
+services:
+  niac:
+    build: .
+    container_name: niac
+    command:
+      [
+        "--api-listen",
+        ":8080",
+        "--api-token",
+        "changeme",
+        "--storage-path",
+        "/data/niac.db",
+        "lo",
+        "/data/demo.yaml",
+      ]
+    volumes:
+      - ./deploy/configs/demo.yaml:/data/demo.yaml:ro
+      - niac-data:/data
+    network_mode: host
+    restart: unless-stopped
+
+volumes:
+  niac-data:

@@ -8,6 +8,7 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"syscall"
@@ -50,6 +51,7 @@ func runLegacyMode(osArgs []string) {
 
 	// Process flag overrides (verbose/quiet)
 	processFlags(&flags)
+	applyLegacyServiceFlags(&flags)
 
 	// Initialize colors (respects --no-color flag and NO_COLOR env var)
 	logging.InitColors(!flags.noColor)
@@ -120,12 +122,12 @@ func runLegacyMode(osArgs []string) {
 
 	// Start simulation based on mode
 	if flags.interactiveMode {
-		if err := runInteractiveMode(interfaceName, cfg, debugConfig); err != nil {
+		if err := runInteractiveMode(interfaceName, cfg, debugConfig, configFile); err != nil {
 			fmt.Printf("Error: %v\n", err)
 			os.Exit(1)
 		}
 	} else {
-		if err := runNormalMode(interfaceName, cfg, debugConfig); err != nil {
+		if err := runNormalMode(interfaceName, cfg, debugConfig, configFile); err != nil {
 			fmt.Printf("Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -446,7 +448,7 @@ func startSimulation(interfaceName string, cfg *config.Config, debugConfig *logg
 }
 
 // runNormalMode runs NIAC in normal (non-interactive) mode
-func runNormalMode(interfaceName string, cfg *config.Config, debugConfig *logging.DebugConfig) error {
+func runNormalMode(interfaceName string, cfg *config.Config, debugConfig *logging.DebugConfig, configFile string) error {
 	engine, stack, startTime, err := startSimulation(interfaceName, cfg, debugConfig)
 	if err != nil {
 		return err
@@ -454,19 +456,39 @@ func runNormalMode(interfaceName string, cfg *config.Config, debugConfig *loggin
 	defer engine.Close()
 	defer stack.Stop()
 
+	services, err := startRuntimeServices(stack, cfg, interfaceName, filepath.Base(configFile))
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if services != nil {
+			services.Stop()
+		}
+	}()
+
 	return runSimulationLoop(stack, debugConfig.GetGlobal(), startTime)
 }
 
 // runInteractiveMode runs NIAC with the interactive TUI layered on the live simulator
-func runInteractiveMode(interfaceName string, cfg *config.Config, debugConfig *logging.DebugConfig) error {
+func runInteractiveMode(interfaceName string, cfg *config.Config, debugConfig *logging.DebugConfig, configFile string) error {
 	engine, stack, startTime, err := startSimulation(interfaceName, cfg, debugConfig)
 	if err != nil {
+		return err
+	}
+
+	services, err := startRuntimeServices(stack, cfg, interfaceName, filepath.Base(configFile))
+	if err != nil {
+		engine.Close()
+		stack.Stop()
 		return err
 	}
 
 	defer func() {
 		stack.Stop()
 		engine.Close()
+		if services != nil {
+			services.Stop()
+		}
 	}()
 
 	return interactive.Run(interfaceName, cfg, debugConfig, stack, startTime)

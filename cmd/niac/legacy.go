@@ -64,6 +64,14 @@ type legacyFlags struct {
 	debugEDP     int
 	debugFDP     int
 	debugSNMP    int
+
+	// Service / API flags
+	apiListen             string
+	apiToken              string
+	metricsListen         string
+	storagePath           string
+	alertPacketsThreshold uint64
+	alertWebhook          string
 }
 
 // defineLegacyFlags defines all command-line flags for legacy mode
@@ -128,6 +136,14 @@ func defineLegacyFlags(flags *legacyFlags) {
 	flag.IntVar(&flags.debugEDP, "debug-edp", -1, "EDP protocol debug level (0-3, default: global level)")
 	flag.IntVar(&flags.debugFDP, "debug-fdp", -1, "FDP protocol debug level (0-3, default: global level)")
 	flag.IntVar(&flags.debugSNMP, "debug-snmp", -1, "SNMP protocol debug level (0-3, default: global level)")
+
+	// Service / API flags
+	flag.StringVar(&flags.apiListen, "api-listen", "", "Expose REST API and Web UI on this address (e.g., :8080)")
+	flag.StringVar(&flags.apiToken, "api-token", "", "Bearer token required for API/Web UI access")
+	flag.StringVar(&flags.metricsListen, "metrics-listen", "", "Expose Prometheus metrics on this address (defaults to --api-listen)")
+	flag.StringVar(&flags.storagePath, "storage-path", "", "Path to NIAC run history database (default: ~/.niac/niac.db)")
+	flag.Uint64Var(&flags.alertPacketsThreshold, "alert-packets-threshold", 0, "Trigger alerts when total packet count exceeds this value")
+	flag.StringVar(&flags.alertWebhook, "alert-webhook", "", "Optional webhook URL to notify when alerts fire")
 }
 
 // processFlags applies flag transformations (verbose/quiet override)
@@ -137,6 +153,30 @@ func processFlags(flags *legacyFlags) {
 	}
 	if flags.quiet {
 		flags.debugLevel = 0
+	}
+}
+
+func applyLegacyServiceFlags(flags *legacyFlags) {
+	if flags.apiListen != "" {
+		servicesOpts.apiListen = flags.apiListen
+	}
+	if flags.apiToken != "" {
+		servicesOpts.apiToken = flags.apiToken
+	}
+	if flags.metricsListen != "" {
+		servicesOpts.metricsListen = flags.metricsListen
+	}
+	if flags.storagePath != "" {
+		servicesOpts.storagePath = flags.storagePath
+	}
+	if flags.alertPacketsThreshold > 0 {
+		servicesOpts.alertPacketsThreshold = flags.alertPacketsThreshold
+	}
+	if flags.alertWebhook != "" {
+		servicesOpts.alertWebhook = flags.alertWebhook
+	}
+	if servicesOpts.storagePath == "" {
+		servicesOpts.storagePath = defaultStoragePath()
 	}
 }
 

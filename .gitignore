@@ -1,6 +1,6 @@
 # Binaries
-niac
-niac-convert
+/niac
+/niac-convert
 *.exe
 *.dll
 *.so

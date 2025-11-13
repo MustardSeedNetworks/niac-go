@@ -2,12 +2,12 @@
 
 [![CI](https://github.com/krisarmstrong/niac-go/workflows/CI/badge.svg)](https://github.com/krisarmstrong/niac-go/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Go](https://img.shields.io/badge/go-1.21+-blue.svg)](https://golang.org/dl/)
-[![Version](https://img.shields.io/badge/version-1.21.6-brightgreen.svg)](https://github.com/krisarmstrong/niac-go/releases)
+[![Go](https://img.shields.io/badge/go-1.24+-blue.svg)](https://golang.org/dl/)
+[![Version](https://img.shields.io/badge/version-1.24.0-brightgreen.svg)](https://github.com/krisarmstrong/niac-go/releases)
 
 **Production-ready network device simulator** - Complete YAML configuration system with per-protocol debug control, multi-IP support, and comprehensive protocol coverage.
 
-**Current Version: 1.21.6** - Critical Security and Reliability Fixes
+**Current Version: 1.24.0** - Critical Security and Reliability Fixes
 
 ## 🚀 Why Go?
 
@@ -189,7 +189,7 @@ sudo cp niac /usr/local/bin/
 
 ### Requirements
 
-- **Go**: 1.21+ for building
+- **Go**: 1.24+ for building
 - **libpcap**: For packet capture
   - macOS: `brew install libpcap` (usually pre-installed)
   - Linux: `sudo apt-get install libpcap-dev`
@@ -236,6 +236,52 @@ sudo ./niac --verbose en0 examples/layer2/lldp-only.yaml
 # Debug specific protocol only
 sudo ./niac --debug 1 --debug-lldp 3 en0 examples/layer2/lldp-only.yaml
 ```
+
+### Web UI & REST API
+
+```bash
+niac --api-listen :8080 --api-token supersecret en0 config.yaml
+```
+
+Visit `http://localhost:8080`, enter the token, and monitor packets, devices, history, and a live topology graph. Full API documentation lives in [`docs/REST_API.md`](docs/REST_API.md).
+
+### Metrics & Alerting
+
+```bash
+niac --api-listen :8080 \
+     --metrics-listen :9090 \
+     --alert-packets-threshold 100000 \
+     --alert-webhook https://hooks.example.com/niac \
+     en0 config.yaml
+```
+
+Prometheus metrics are exposed at `/metrics` and alerts are pushed to the optional webhook when the configured packet threshold is crossed.
+
+### Run History Storage
+
+NIAC automatically persists recent run metadata (interface, packets, errors) to a BoltDB database so the Web UI can show history. By default it is written to `~/.niac/niac.db`, but you can relocate or disable it:
+
+```bash
+# Store history alongside other simulator artifacts
+niac --storage-path /var/lib/niac/history.db en0 config.yaml
+
+# Opt out of persistence entirely (stateless containers, CI, etc.)
+niac --storage-path disabled en0 config.yaml
+```
+
+When disabled, the API simply returns an empty history list, keeping both CLI and TUI behaviour consistent.
+
+### Container & Kubernetes Deployment
+
+Use the provided `Dockerfile`, `docker-compose.yml`, and `deploy/kubernetes/niac-deployment.yaml` manifests to run NIAC inside containers:
+
+```bash
+docker compose up --build
+# or
+kubectl apply -f deploy/kubernetes/niac-deployment.yaml
+```
+
+The sample manifests run NIAC on the container's loopback interface and expose the Web UI on port 8080.
 
 ### Help
 
@@ -344,6 +390,17 @@ See `examples/` directory for 20+ organized examples:
 
 Full documentation: `examples/EXAMPLES-README.md`
 
+### Topology & Protocol Analysis
+
+```bash
+# Export Graphviz topology from an SNMP walk
+niac analyze-walk device.walk --graphviz topology.dot
+dot -Tpng topology.dot -o topology.png
+
+# Summarise a packet capture
+niac analyze-pcap captures/demo.pcap --output json
+```
+
 ## Development
 
 ### Testing
@@ -392,6 +449,7 @@ Need deeper dives? The `docs/` directory ships with dedicated walkthroughs:
 - [docs/ENVIRONMENTS.md](docs/ENVIRONMENTS.md) – Complete data center, enterprise campus, branch, wireless, and multi-vendor simulation scenarios.
 - [docs/PROTOCOL_GUIDE.md](docs/PROTOCOL_GUIDE.md) – How to configure LLDP, CDP, DHCP, DNS, SNMP (agents + traps), STP variants, and more.
 - [docs/API_REFERENCE.md](docs/API_REFERENCE.md) – The full YAML schema with every field, default, and validation rule.
+- [docs/REST_API.md](docs/REST_API.md) – REST endpoints, Web UI, authentication, and alerting options.
 - [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) – Common validation failures, debugging tips, and performance tuning advice.
 - [docs/WALK_FILES.md](docs/WALK_FILES.md) – Vendor coverage, synthetic vs. sanitized walks, and contribution guidelines.
 

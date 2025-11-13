@@ -1,0 +1,16 @@
+devices:
+  - name: api-router
+    type: router
+    mac: "02:00:00:00:00:01"
+    ips:
+      - "10.10.0.1"
+    lldp:
+      enabled: true
+    snmp:
+      enabled: true
+    snmp_agent:
+      community: "public"
+      sysname: "api-router"
+    http:
+      enabled: true
+      server_name: "NIAC Demo"

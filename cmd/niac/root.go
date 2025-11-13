@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	version = "v1.21.6"
+	version = "v1.24.0"
 	commit  = "dev"
 	date    = "unknown"
 )
@@ -58,7 +58,15 @@ and network discovery without physical hardware.`,
 }
 
 func init() {
+	cobra.OnInitialize(resolveServiceDefaults)
 	rootCmd.SetVersionTemplate(fmt.Sprintf("niac %s (commit: %s, built: %s)\n", version, commit, date))
+
+	rootCmd.PersistentFlags().StringVar(&servicesOpts.apiListen, "api-listen", "", "Expose the REST API and Web UI on this address (e.g., :8080)")
+	rootCmd.PersistentFlags().StringVar(&servicesOpts.apiToken, "api-token", "", "Bearer token required for API/Web UI access")
+	rootCmd.PersistentFlags().StringVar(&servicesOpts.metricsListen, "metrics-listen", "", "Expose Prometheus metrics on this address (defaults to --api-listen)")
+	rootCmd.PersistentFlags().StringVar(&servicesOpts.storagePath, "storage-path", "", "Path to NIAC run history database (default: ~/.niac/niac.db)")
+	rootCmd.PersistentFlags().Uint64Var(&servicesOpts.alertPacketsThreshold, "alert-packets-threshold", 0, "Trigger alerts when total packets exceed this value")
+	rootCmd.PersistentFlags().StringVar(&servicesOpts.alertWebhook, "alert-webhook", "", "Optional webhook URL to notify when alerts fire")
 }
 
 func Execute() {
