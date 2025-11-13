@@ -224,6 +224,24 @@ sudo ./niac --interactive en0 examples/complete-kitchen-sink.yaml
 
 Both entrypoints launch the full simulator stack; the TUI now displays live packet statistics, the learned neighbor table (LLDP/CDP/EDP/FDP), and shares the same runtime as the standard CLI workflow.
 
+### Web UI (v2 Preview)
+
+The upcoming 2.x release introduces a React-based control plane that mirrors everything the CLI/TUI can do—statistics, neighbor insights, config management, and (soon) automation. The UI reuses the shared `@krisarmstrong/web-foundation` system that also powers `krisarmstrong-portfolio` and `wi-fi-vigilante`.
+
+```bash
+# Install once
+cd webui
+npm install
+
+# Run the development server
+npm run dev
+
+# Build production assets (served by the Go API layer)
+npm run build
+```
+
+The React app lives in `webui/` with Tailwind CSS, React Router, and the shared component library already wired up. During the v2.0 development cycle it ships alongside the existing CLI/TUI so you can pick whichever entrypoint fits the workflow.
+
 ### Basic Usage
 
 ```bash
