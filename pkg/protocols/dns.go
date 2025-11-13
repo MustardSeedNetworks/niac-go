@@ -167,9 +167,9 @@ func (h *DNSHandler) HandleQuery(pkt *Packet, ipLayer *layers.IPv4, udpLayer *la
 
 		case layers.DNSTypePTR:
 			// PTR record query (reverse lookup)
-			// TODO: Parse reverse DNS format (x.x.x.x.in-addr.arpa)
+			// Pending: parse reverse DNS (in-addr.arpa/ip6.arpa) - see issue #80
 			if debugLevel >= 2 {
-				fmt.Printf("DNS: PTR query for %s (not yet implemented) sn=%d\n", hostname, pkt.SerialNumber)
+				fmt.Printf("DNS: PTR query for %s (reverse lookup pending, issue #80) sn=%d\n", hostname, pkt.SerialNumber)
 			}
 		}
 	}
@@ -271,5 +271,5 @@ func (h *DNSHandler) HandleQueryV6(pkt *Packet, packet gopacket.Packet, ipv6 *la
 		fmt.Printf("DNS/IPv6 query from [%s] (stub - not fully implemented)\n", ipv6.SrcIP)
 	}
 
-	// TODO: Implement full DNS over IPv6
+	// Pending: implement full DNS over IPv6 (issue #80)
 }

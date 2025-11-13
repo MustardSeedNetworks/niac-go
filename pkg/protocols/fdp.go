@@ -379,8 +379,8 @@ func (h *FDPHandler) HandlePacket(pkt *Packet) {
 		fmt.Printf("FDP: Received FDP frame sn=%d (parsing not yet implemented)\n", pkt.SerialNumber)
 	}
 
-	// TODO: Parse incoming FDP frames and store neighbor information
-	// This would be useful for:
+	// Pending: parse incoming FDP frames and store neighbor information (issue #79)
+	// This will enable:
 	// - Discovering real Foundry/Brocade devices on the network
 	// - Responding to FDP queries
 	// - Building network topology

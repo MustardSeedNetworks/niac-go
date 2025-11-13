@@ -98,8 +98,7 @@ func (h *ARPHandler) handleARPRequest(pkt *Packet, arp *layers.ARP) {
 
 	// Send reply for each matching device
 	for _, device := range devices {
-		// Check VLAN match if applicable
-		// TODO: Add VLAN support to device config
+		// Check VLAN match if applicable (tracked in issue #77 - VLAN-aware ARP)
 		// For now, respond to all
 
 		if len(device.MACAddress) == 0 {

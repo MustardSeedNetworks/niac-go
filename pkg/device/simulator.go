@@ -337,7 +337,7 @@ func (s *Simulator) SetDeviceState(name string, state DeviceState) error {
 		log.Printf("Device %s state changed: %s -> %s", name, oldState, state)
 	}
 
-	// TODO: Generate SNMP trap for state change
+	// Pending: generate SNMP traps for state changes (see issue #76)
 
 	return nil
 }
@@ -405,6 +405,94 @@ func (s *Simulator) GetCounters(deviceName string) *DeviceCounters {
 		PacketsReceived:        device.Counters.PacketsReceived,
 		Errors:                 device.Counters.Errors,
 	}
+}
+
+// Reload gracefully reloads the configuration without stopping the simulator
+// It performs a diff-based reload: adds new devices, removes deleted devices, and updates existing devices
+func (s *Simulator) Reload(newConfig *config.Config) error {
+	s.mu.Lock()
+	wasRunning := s.running
+	s.mu.Unlock()
+
+	// If running, stop gracefully
+	if wasRunning {
+		if s.debugLevel >= 1 {
+			log.Println("Stopping simulator for config reload...")
+		}
+		s.Stop()
+	}
+
+	// Build map of new device names
+	newDeviceNames := make(map[string]bool)
+	for i := range newConfig.Devices {
+		newDeviceNames[newConfig.Devices[i].Name] = true
+	}
+
+	// Remove devices that no longer exist in new config
+	s.mu.Lock()
+	for name := range s.devices {
+		if !newDeviceNames[name] {
+			if s.debugLevel >= 1 {
+				log.Printf("Removing device %s (no longer in config)", name)
+			}
+			delete(s.devices, name)
+		}
+	}
+
+	// Add or update devices from new config
+	for i := range newConfig.Devices {
+		device := &newConfig.Devices[i]
+		if existingDevice, exists := s.devices[device.Name]; exists {
+			// Update existing device configuration
+			if s.debugLevel >= 1 {
+				log.Printf("Updating device %s configuration", device.Name)
+			}
+			existingDevice.Config = device
+			// Recreate SNMP agent with updated configuration
+			existingDevice.SNMPAgent = snmp.NewAgent(device, s.debugLevel)
+			if device.SNMPConfig.WalkFile != "" {
+				if err := existingDevice.SNMPAgent.LoadWalkFile(device.SNMPConfig.WalkFile); err != nil && s.debugLevel >= 1 {
+					log.Printf("Warning: failed to reload walk file for %s: %v", device.Name, err)
+				}
+			}
+
+			// Recreate trap sender if traps are enabled
+			existingDevice.TrapSender = nil
+			if device.SNMPConfig.Traps != nil && device.SNMPConfig.Traps.Enabled {
+				if len(device.IPAddresses) > 0 {
+					trapSender, err := snmp.NewTrapSender(device.Name, device.IPAddresses[0], device.SNMPConfig.Traps, s.debugLevel)
+					if err == nil {
+						existingDevice.TrapSender = trapSender
+					} else if s.debugLevel >= 1 {
+						log.Printf("Warning: failed to recreate trap sender for %s: %v", device.Name, err)
+					}
+				}
+			}
+		} else {
+			// Add new device
+			if s.debugLevel >= 1 {
+				log.Printf("Adding new device %s", device.Name)
+			}
+			s.addDevice(device)
+		}
+	}
+
+	// Update config reference
+	s.config = newConfig
+	s.mu.Unlock()
+
+	// Restart if was running before
+	if wasRunning {
+		if s.debugLevel >= 1 {
+			log.Println("Restarting simulator with new configuration...")
+		}
+		return s.Start()
+	}
+
+	if s.debugLevel >= 1 {
+		log.Println("Configuration reloaded successfully")
+	}
+	return nil
 }
 
 // GetStats returns simulator statistics

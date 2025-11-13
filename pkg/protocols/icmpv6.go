@@ -280,7 +280,7 @@ func (h *ICMPv6Handler) handleRouterSolicitation(pkt *Packet, packet gopacket.Pa
 	for _, device := range allDevices {
 		// Only respond if device is a router with IPv6
 		if device.Type == "router" && len(device.IPAddresses) > 0 {
-			// TODO: Implement Router Advertisement
+			// Pending: implement Router Advertisement/NDP support (issue #80)
 			if h.debugLevel >= 2 {
 				fmt.Printf("ICMPv6: Would send RA from %s (not implemented) sn=%d\n", device.Name, pkt.SerialNumber)
 			}

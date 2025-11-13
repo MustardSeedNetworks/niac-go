@@ -471,8 +471,8 @@ func (h *LLDPHandler) HandlePacket(pkt *Packet) {
 		fmt.Printf("LLDP: Received LLDP frame sn=%d (parsing not yet implemented)\n", pkt.SerialNumber)
 	}
 
-	// TODO: Parse incoming LLDP frames and store neighbor information
-	// This would be useful for:
+	// Pending: parse incoming LLDP frames and store neighbor information (issue #79)
+	// This will unlock:
 	// - Discovering real devices on the network
 	// - Responding to LLDP queries
 	// - Building network topology

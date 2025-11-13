@@ -5,10 +5,16 @@ import (
 	"os"
 
 	"github.com/krisarmstrong/niac-go/pkg/config"
-	"github.com/krisarmstrong/niac-go/pkg/interactive"
 	"github.com/krisarmstrong/niac-go/pkg/logging"
 	"github.com/spf13/cobra"
 )
+
+var interactiveOptions struct {
+	debugLevel int
+	verbose    bool
+	quiet      bool
+	noColor    bool
+}
 
 var interactiveCmd = &cobra.Command{
 	Use:   "interactive <interface> <config-file>",
@@ -38,6 +44,10 @@ The TUI provides:
 
 func init() {
 	rootCmd.AddCommand(interactiveCmd)
+	interactiveCmd.Flags().IntVarP(&interactiveOptions.debugLevel, "debug", "d", 1, "Debug level (0-3)")
+	interactiveCmd.Flags().BoolVarP(&interactiveOptions.verbose, "verbose", "v", false, "Verbose output (equivalent to -d 3)")
+	interactiveCmd.Flags().BoolVarP(&interactiveOptions.quiet, "quiet", "q", false, "Quiet mode (equivalent to -d 0)")
+	interactiveCmd.Flags().BoolVar(&interactiveOptions.noColor, "no-color", false, "Disable colored output")
 }
 
 func runInteractive(cmd *cobra.Command, args []string) {
@@ -51,8 +61,19 @@ func runInteractive(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
+	debugLevel := interactiveOptions.debugLevel
+	if interactiveOptions.verbose {
+		debugLevel = 3
+	}
+	if interactiveOptions.quiet {
+		debugLevel = 0
+	}
+
+	logging.InitColors(!interactiveOptions.noColor)
+	debugConfig := logging.NewDebugConfig(debugLevel)
+
 	// Start interactive mode
-	if err := interactive.Run(interfaceName, cfg, nil); err != nil {
+	if err := runInteractiveMode(interfaceName, cfg, debugConfig); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}

@@ -323,5 +323,5 @@ func (h *FTPHandler) HandleRequestV6(pkt *Packet, packet gopacket.Packet, ipv6 *
 		fmt.Printf("FTP/IPv6 request from [%s] (stub - not fully implemented)\n", ipv6.SrcIP)
 	}
 
-	// TODO: Implement full FTP over IPv6
+	// Pending: implement full FTP over IPv6 (issue #80)
 }

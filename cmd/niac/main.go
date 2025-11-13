@@ -120,13 +120,11 @@ func runLegacyMode(osArgs []string) {
 
 	// Start simulation based on mode
 	if flags.interactiveMode {
-		// Run with interactive TUI
-		if err := interactive.Run(interfaceName, cfg, debugConfig); err != nil {
+		if err := runInteractiveMode(interfaceName, cfg, debugConfig); err != nil {
 			fmt.Printf("Error: %v\n", err)
 			os.Exit(1)
 		}
 	} else {
-		// Run in normal mode
 		if err := runNormalMode(interfaceName, cfg, debugConfig); err != nil {
 			fmt.Printf("Error: %v\n", err)
 			os.Exit(1)
@@ -394,8 +392,8 @@ func padRight(str string, length int) string {
 	return str + strings.Repeat(" ", length-len(str))
 }
 
-// runNormalMode runs NIAC in normal (non-interactive) mode
-func runNormalMode(interfaceName string, cfg *config.Config, debugConfig *logging.DebugConfig) error {
+// startSimulation initializes the capture engine and protocol stack, returning running handles
+func startSimulation(interfaceName string, cfg *config.Config, debugConfig *logging.DebugConfig) (*capture.Engine, *protocols.Stack, time.Time, error) {
 	debugLevel := debugConfig.GetGlobal()
 
 	if debugLevel >= 1 {
@@ -406,14 +404,11 @@ func runNormalMode(interfaceName string, cfg *config.Config, debugConfig *loggin
 		fmt.Println()
 	}
 
-	// Step 1: Initialize capture engine
 	engine, err := initializeCaptureEngine(interfaceName, debugLevel)
 	if err != nil {
-		return err
+		return nil, nil, time.Time{}, err
 	}
-	defer engine.Close()
 
-	// Step 2: Create protocol stack
 	if debugLevel >= 1 {
 		fmt.Print("⏳ Creating protocol stack... ")
 	}
@@ -422,7 +417,6 @@ func runNormalMode(interfaceName string, cfg *config.Config, debugConfig *loggin
 		fmt.Println("✓")
 	}
 
-	// Step 3: Configure service handlers (DHCP/DNS)
 	dhcpCount, dnsCount := configureServiceHandlers(stack, cfg, debugLevel)
 	if debugLevel >= 1 && (dhcpCount > 0 || dnsCount > 0) {
 		if dhcpCount > 0 {
@@ -433,7 +427,6 @@ func runNormalMode(interfaceName string, cfg *config.Config, debugConfig *loggin
 		}
 	}
 
-	// Step 4: Start the protocol stack and print summary
 	if debugLevel >= 1 {
 		fmt.Printf("⏳ Starting %d simulated device(s)... ", len(cfg.Devices))
 	}
@@ -441,16 +434,42 @@ func runNormalMode(interfaceName string, cfg *config.Config, debugConfig *loggin
 		if debugLevel >= 1 {
 			fmt.Println("❌")
 		}
-		return fmt.Errorf("failed to start stack: %w", err)
+		engine.Close()
+		return nil, nil, time.Time{}, fmt.Errorf("failed to start stack: %w", err)
 	}
 	if debugLevel >= 1 {
 		fmt.Println("✓")
 		printStartupSummary(cfg, debugLevel)
 	}
 
-	// Step 5: Run simulation loop
-	startTime := time.Now()
-	return runSimulationLoop(stack, debugLevel, startTime)
+	return engine, stack, time.Now(), nil
+}
+
+// runNormalMode runs NIAC in normal (non-interactive) mode
+func runNormalMode(interfaceName string, cfg *config.Config, debugConfig *logging.DebugConfig) error {
+	engine, stack, startTime, err := startSimulation(interfaceName, cfg, debugConfig)
+	if err != nil {
+		return err
+	}
+	defer engine.Close()
+	defer stack.Stop()
+
+	return runSimulationLoop(stack, debugConfig.GetGlobal(), startTime)
+}
+
+// runInteractiveMode runs NIAC with the interactive TUI layered on the live simulator
+func runInteractiveMode(interfaceName string, cfg *config.Config, debugConfig *logging.DebugConfig) error {
+	engine, stack, startTime, err := startSimulation(interfaceName, cfg, debugConfig)
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		stack.Stop()
+		engine.Close()
+	}()
+
+	return interactive.Run(interfaceName, cfg, debugConfig, stack, startTime)
 }
 
 // initializeCaptureEngine initializes the packet capture engine

@@ -3,11 +3,11 @@
 [![CI](https://github.com/krisarmstrong/niac-go/workflows/CI/badge.svg)](https://github.com/krisarmstrong/niac-go/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Go](https://img.shields.io/badge/go-1.21+-blue.svg)](https://golang.org/dl/)
-[![Version](https://img.shields.io/badge/version-1.21.5-brightgreen.svg)](https://github.com/krisarmstrong/niac-go/releases)
+[![Version](https://img.shields.io/badge/version-1.21.6-brightgreen.svg)](https://github.com/krisarmstrong/niac-go/releases)
 
 **Production-ready network device simulator** - Complete YAML configuration system with per-protocol debug control, multi-IP support, and comprehensive protocol coverage.
 
-**Current Version: 1.21.5** - Critical Security and Reliability Fixes
+**Current Version: 1.21.6** - Critical Security and Reliability Fixes
 
 ## 🚀 Why Go?
 
@@ -200,7 +200,10 @@ sudo cp niac /usr/local/bin/
 ### Interactive Mode
 
 ```bash
-# Run with interactive error injection
+# Run with interactive error injection (Cobra subcommand)
+sudo ./niac interactive en0 examples/layer2/lldp-only.yaml
+
+# Legacy flag is still supported
 sudo ./niac --interactive en0 examples/layer2/lldp-only.yaml
 
 # Or try the complete example with all features
@@ -215,6 +218,8 @@ sudo ./niac --interactive en0 examples/complete-kitchen-sink.yaml
 #   [↑↓] - Navigate
 #   [Enter] - Select
 ```
+
+Both entrypoints launch the full simulator stack; the TUI now displays live packet statistics and shares the same runtime as the standard CLI workflow.
 
 ### Basic Usage
 

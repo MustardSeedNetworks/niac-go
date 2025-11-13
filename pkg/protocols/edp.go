@@ -273,8 +273,8 @@ func (h *EDPHandler) HandlePacket(pkt *Packet) {
 		fmt.Printf("EDP: Received EDP frame sn=%d (parsing not yet implemented)\n", pkt.SerialNumber)
 	}
 
-	// TODO: Parse incoming EDP frames and store neighbor information
-	// This would be useful for:
+	// Pending: parse incoming EDP frames and store neighbor information (issue #79)
+	// This will enable:
 	// - Discovering real Extreme devices on the network
 	// - Responding to EDP queries
 	// - Building network topology

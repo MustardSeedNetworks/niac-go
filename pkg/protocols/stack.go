@@ -428,7 +428,7 @@ func (s *Stack) babbleThread() {
 			return
 		case <-ticker.C:
 			// Generate periodic traffic (ARP announcements, etc.)
-			// TODO: Implement periodic traffic generation
+			// Pending: configurable periodic traffic generation (issue #78)
 		}
 	}
 }

@@ -62,7 +62,7 @@ func (h *UDPHandler) HandlePacket(pkt *Packet, ipLayer *layers.IPv4, devices []*
 		h.stack.dhcpHandler.HandlePacket(pkt, ipLayer, udp, devices)
 	case UDPPortSNMP:
 		// SNMP query
-		// TODO: Add SNMP handler
+		// Pending: route SNMP queries through UDP stack (issue #81)
 		if debugLevel >= 2 {
 			fmt.Printf("SNMP query received (not yet implemented) sn=%d\n", pkt.SerialNumber)
 		}

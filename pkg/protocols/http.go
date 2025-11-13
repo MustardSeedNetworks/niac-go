@@ -412,7 +412,7 @@ func (h *HTTPHandler) HandleRequestV6(pkt *Packet, packet gopacket.Packet, ipv6 
 
 // sendResponseV6 sends HTTP response over IPv6 (stub - basic implementation)
 func (h *HTTPHandler) sendResponseV6(ipv6 *layers.IPv6, tcpLayer *layers.TCP, response []byte, devices []*config.Device) {
-	// TODO: Implement full HTTP response over IPv6
+	// Pending: implement full HTTP response handling over IPv6 (issue #80)
 	debugLevel := h.stack.GetDebugLevel()
 	if debugLevel >= 2 {
 		fmt.Printf("HTTP/IPv6: Would send %d byte response (stub)\n", len(response))

@@ -3,6 +3,8 @@ package device
 import (
 	"fmt"
 	"net"
+	"os"
+	"path/filepath"
 	"sync"
 	"testing"
 	"time"
@@ -34,6 +36,7 @@ func createTestConfig(deviceCount int) *config.Config {
 	return cfg
 }
 
+// helper to get simulated device by name (panic on missing) for tests
 // TestNewSimulator tests creating a new simulator
 func TestNewSimulator(t *testing.T) {
 	cfg := createTestConfig(3)
@@ -479,6 +482,55 @@ func TestDeviceCounters_Initial(t *testing.T) {
 	}
 	if counters.PacketsReceived != 0 {
 		t.Error("PacketsReceived should be 0 initially")
+	}
+}
+
+// TestSimulator_ReloadUpdatesSNMPAgent verifies reload rebuilds SNMP agent and trap sender state
+func TestSimulator_ReloadUpdatesSNMPAgent(t *testing.T) {
+	cfg := createTestConfig(1)
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	errorMgr := errors.NewStateManager()
+	sim := NewSimulator(cfg, stack, errorMgr, 0)
+
+	originalDevice := sim.GetDevice("test-device-0")
+	if originalDevice == nil {
+		t.Fatal("Device not found")
+	}
+	if originalDevice.SNMPAgent == nil {
+		t.Fatal("SNMP agent should be initialized")
+	}
+	originalAgent := originalDevice.SNMPAgent
+
+	newCfg := createTestConfig(1)
+	newCfg.Devices[0].SNMPConfig.Community = "private"
+
+	// Create a temporary walk file to trigger load logic
+	walkFile := filepath.Join(t.TempDir(), "test.walk")
+	if err := os.WriteFile(walkFile, []byte(".1.3.6.1.2.1.1.1.0 = STRING: \"NIAC\"\n"), 0o644); err != nil {
+		t.Fatalf("Failed to create walk file: %v", err)
+	}
+	newCfg.Devices[0].SNMPConfig.WalkFile = walkFile
+	newCfg.Devices[0].SNMPConfig.Traps = &config.TrapConfig{
+		Enabled:   true,
+		Receivers: []string{"127.0.0.1:162"},
+	}
+
+	if err := sim.Reload(newCfg); err != nil {
+		t.Fatalf("Reload failed: %v", err)
+	}
+
+	reloadedDevice := sim.GetDevice("test-device-0")
+	if reloadedDevice == nil {
+		t.Fatal("Reloaded device not found")
+	}
+	if reloadedDevice.SNMPAgent == nil {
+		t.Fatal("SNMP agent should be reinitialized after reload")
+	}
+	if reloadedDevice.SNMPAgent == originalAgent {
+		t.Error("Expected SNMP agent to be recreated with new configuration")
+	}
+	if reloadedDevice.TrapSender == nil {
+		t.Error("Trap sender should be initialized after reload when traps are enabled")
 	}
 }
 

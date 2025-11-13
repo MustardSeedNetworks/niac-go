@@ -530,7 +530,16 @@ func TestModel_RenderLogs(t *testing.T) {
 // TestModel_RenderStatistics tests statistics rendering
 func TestModel_RenderStatistics(t *testing.T) {
 	m := createTestModel()
-	m.packetsTotal = 100
+	m.stackStats = stackStatsSnapshot{
+		PacketsReceived: 60,
+		PacketsSent:     40,
+		ARPRequests:     5,
+		ARPReplies:      6,
+		ICMPRequests:    7,
+		ICMPReplies:     8,
+		DNSQueries:      9,
+		DHCPRequests:    10,
+	}
 	m.packetsInjected = 10
 	m.errorsActive = 2
 

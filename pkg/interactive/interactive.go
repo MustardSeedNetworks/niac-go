@@ -11,6 +11,7 @@ import (
 	"github.com/krisarmstrong/niac-go/pkg/config"
 	"github.com/krisarmstrong/niac-go/pkg/errors"
 	"github.com/krisarmstrong/niac-go/pkg/logging"
+	"github.com/krisarmstrong/niac-go/pkg/protocols"
 )
 
 // Styles
@@ -57,11 +58,23 @@ type CapturedPacket struct {
 
 const maxPacketBuffer = 20 // Keep last 20 packets
 
+type stackStatsSnapshot struct {
+	PacketsReceived uint64
+	PacketsSent     uint64
+	ARPRequests     uint64
+	ARPReplies      uint64
+	ICMPRequests    uint64
+	ICMPReplies     uint64
+	DNSQueries      uint64
+	DHCPRequests    uint64
+}
+
 type model struct {
 	cfg           *config.Config
 	stateManager  *errors.StateManager
 	interfaceName string
 	debugLevel    int
+	stack         *protocols.Stack
 
 	// Menu state
 	menuVisible      bool
@@ -84,7 +97,7 @@ type model struct {
 	errorValue        int
 
 	// Stats
-	packetsTotal    int
+	stackStats      stackStatsSnapshot
 	packetsInjected int
 	errorsActive    int
 	uptime          time.Duration
@@ -304,10 +317,28 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tickMsg:
 		m.uptime = time.Since(m.startTime)
 		m.errorsActive = len(m.stateManager.GetAllStates())
+		m.refreshStats()
 		return m, tickCmd()
 	}
 
 	return m, nil
+}
+
+func (m *model) refreshStats() {
+	if m.stack == nil {
+		return
+	}
+	stats := m.stack.GetStats()
+	m.stackStats = stackStatsSnapshot{
+		PacketsReceived: stats.PacketsReceived,
+		PacketsSent:     stats.PacketsSent,
+		ARPRequests:     stats.ARPRequests,
+		ARPReplies:      stats.ARPReplies,
+		ICMPRequests:    stats.ICMPRequests,
+		ICMPReplies:     stats.ICMPReplies,
+		DNSQueries:      stats.DNSQueries,
+		DHCPRequests:    stats.DHCPRequests,
+	}
 }
 
 func (m *model) handleMenuSelection() {
@@ -760,6 +791,8 @@ func (m model) renderLogs() string {
 func (m model) renderStatistics() string {
 	var stats strings.Builder
 
+	totalPackets := m.stackStats.PacketsReceived + m.stackStats.PacketsSent
+
 	stats.WriteString("╔══════════════════════════════════════════════════════════════════╗\n")
 	stats.WriteString("║                     Detailed Statistics                          ║\n")
 	stats.WriteString("╠══════════════════════════════════════════════════════════════════╣\n")
@@ -767,13 +800,17 @@ func (m model) renderStatistics() string {
 	stats.WriteString(fmt.Sprintf("║ Debug Level:         %d (%s)                              ║\n", m.debugLevel, getDebugLevelName(m.debugLevel)))
 	stats.WriteString(fmt.Sprintf("║ Interface:           %-40s ║\n", m.interfaceName))
 	stats.WriteString("║                                                                  ║\n")
-	stats.WriteString(fmt.Sprintf("║ Total Packets:       %-10d                                    ║\n", m.packetsTotal))
+	stats.WriteString(fmt.Sprintf("║ Total Packets:       %-10d                                    ║\n", totalPackets))
+	stats.WriteString(fmt.Sprintf("║ RX / TX Packets:     %-10d / %-10d                       ║\n", m.stackStats.PacketsReceived, m.stackStats.PacketsSent))
+	stats.WriteString(fmt.Sprintf("║ ARP Req / Rep:       %-10d / %-10d                       ║\n", m.stackStats.ARPRequests, m.stackStats.ARPReplies))
+	stats.WriteString(fmt.Sprintf("║ ICMP Req / Rep:      %-10d / %-10d                       ║\n", m.stackStats.ICMPRequests, m.stackStats.ICMPReplies))
+	stats.WriteString(fmt.Sprintf("║ DNS Queries:         %-10d                                    ║\n", m.stackStats.DNSQueries))
+	stats.WriteString(fmt.Sprintf("║ DHCP Requests:       %-10d                                    ║\n", m.stackStats.DHCPRequests))
 	stats.WriteString(fmt.Sprintf("║ Packets Injected:    %-10d                                    ║\n", m.packetsInjected))
 	stats.WriteString(fmt.Sprintf("║ Active Errors:       %-10d                                    ║\n", m.errorsActive))
 	stats.WriteString("║                                                                  ║\n")
 	stats.WriteString(fmt.Sprintf("║ Devices Simulated:   %-10d                                    ║\n", len(m.cfg.Devices)))
 
-	// Count SNMP-enabled devices
 	snmpCount := 0
 	for _, dev := range m.cfg.Devices {
 		if dev.SNMPConfig.Community != "" || dev.SNMPConfig.WalkFile != "" {
@@ -782,7 +819,6 @@ func (m model) renderStatistics() string {
 	}
 	stats.WriteString(fmt.Sprintf("║ SNMP Devices:        %-10d                                    ║\n", snmpCount))
 	stats.WriteString("║                                                                  ║\n")
-	stats.WriteString("║ Memory Usage:        ~15 MB (estimated)                      ║\n")
 	stats.WriteString(fmt.Sprintf("║ Start Time:          %s                                    ║\n", m.startTime.Format("15:04:05")))
 	stats.WriteString("╚══════════════════════════════════════════════════════════════════╝")
 
@@ -905,13 +941,18 @@ func (m *model) AddPacket(protocol, srcAddr, dstAddr string, data []byte) {
 		}
 	}
 
-	m.packetsTotal++
 }
 
 // Run starts the interactive mode
-func Run(interfaceName string, cfg *config.Config, debugConfig *logging.DebugConfig) error {
-	// Extract global debug level for now (interactive mode doesn't yet support per-protocol debug)
+func Run(interfaceName string, cfg *config.Config, debugConfig *logging.DebugConfig, stack *protocols.Stack, startTime time.Time) error {
+	if debugConfig == nil {
+		debugConfig = logging.NewDebugConfig(1)
+	}
 	debugLevel := debugConfig.GetGlobal()
+
+	if startTime.IsZero() {
+		startTime = time.Now()
+	}
 
 	// Initialize state manager
 	stateManager := errors.NewStateManager()
@@ -935,10 +976,15 @@ func Run(interfaceName string, cfg *config.Config, debugConfig *logging.DebugCon
 		stateManager:  stateManager,
 		interfaceName: interfaceName,
 		debugLevel:    debugLevel,
+		stack:         stack,
 		menuItems:     menuItems,
-		startTime:     time.Now(),
+		startTime:     startTime,
 		statusMessage: "Press 'i' to open interactive menu, 'h' for help",
 		debugLogs:     make([]string, 0, 100),
+	}
+
+	if stack != nil {
+		m.refreshStats()
 	}
 
 	// Add initial log entry

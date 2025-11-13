@@ -432,8 +432,8 @@ func (h *CDPHandler) HandlePacket(pkt *Packet) {
 		fmt.Printf("CDP: Received CDP frame sn=%d (parsing not yet implemented)\n", pkt.SerialNumber)
 	}
 
-	// TODO: Parse incoming CDP frames and store neighbor information
-	// This would be useful for:
+	// Pending: parse incoming CDP frames and store neighbor information (issue #79)
+	// This will enable:
 	// - Discovering real devices on the network
 	// - Responding to CDP queries
 	// - Building network topology
