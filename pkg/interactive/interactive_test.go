@@ -577,6 +577,38 @@ func TestFormatRelativeTime(t *testing.T) {
 	}
 }
 
+func TestToggleNeighborView_NoNeighbors(t *testing.T) {
+	m := createTestModel()
+	m.statusMessage = ""
+	m.toggleNeighborView()
+	if !m.showNeighbors {
+		t.Fatal("expected neighbor view enabled")
+	}
+	if !strings.Contains(m.statusMessage, "waiting for discovery") {
+		t.Errorf("expected waiting message, got %q", m.statusMessage)
+	}
+	m.toggleNeighborView()
+	if m.showNeighbors {
+		t.Error("expected neighbor view to be disabled after second toggle")
+	}
+}
+
+func TestToggleNeighborView_WithNeighbors(t *testing.T) {
+	m := createTestModel()
+	m.neighbors = []protocols.NeighborRecord{{
+		Protocol:     protocols.ProtocolLLDP,
+		LocalDevice:  "Core",
+		RemoteDevice: "Edge",
+	}}
+	m.toggleNeighborView()
+	if !m.showNeighbors {
+		t.Fatal("expected neighbor view enabled")
+	}
+	if !strings.Contains(m.statusMessage, "Showing 1") {
+		t.Errorf("expected success message, got %q", m.statusMessage)
+	}
+}
+
 // TestModel_RenderStatistics tests statistics rendering
 func TestModel_RenderStatistics(t *testing.T) {
 	m := createTestModel()
