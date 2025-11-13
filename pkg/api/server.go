@@ -7,8 +7,10 @@ import (
 	"fmt"
 	"io/fs"
 	"log"
+	"mime"
 	"net/http"
 	"path"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -68,10 +70,9 @@ func (s *Server) Start() error {
 		mux.HandleFunc("/api/v1/history", s.auth(s.handleHistory))
 		mux.HandleFunc("/api/v1/topology", s.auth(s.handleTopology))
 		mux.HandleFunc("/api/v1/version", s.auth(s.handleVersion))
+		mux.HandleFunc("/api/v1/neighbors", s.auth(s.handleNeighbors))
 		mux.HandleFunc("/metrics", s.handleMetrics)
-		mux.HandleFunc("/app.js", s.auth(s.serveStatic("app.js")))
-		mux.HandleFunc("/styles.css", s.auth(s.serveStatic("styles.css")))
-		mux.HandleFunc("/", s.auth(s.serveStatic("index.html")))
+		mux.HandleFunc("/", s.auth(s.serveSPA()))
 
 		s.httpServer = &http.Server{
 			Addr:    s.cfg.Addr,
@@ -148,14 +149,42 @@ func (s *Server) auth(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-func (s *Server) serveStatic(name string) http.HandlerFunc {
+func (s *Server) serveSPA() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		data, err := fs.ReadFile(uiFS, path.Join("ui", name))
-		if err != nil {
+		if r.Method != http.MethodGet && r.Method != http.MethodHead {
 			http.NotFound(w, r)
 			return
 		}
-		http.ServeContent(w, r, name, time.Time{}, bytes.NewReader(data))
+
+		requestPath := strings.TrimPrefix(r.URL.Path, "/")
+		if requestPath == "" || strings.HasSuffix(r.URL.Path, "/") {
+			requestPath = "index.html"
+		}
+		if strings.Contains(requestPath, "..") {
+			http.NotFound(w, r)
+			return
+		}
+
+		lookupPath := path.Join("ui", requestPath)
+		data, err := fs.ReadFile(uiFS, lookupPath)
+		if err != nil {
+			data, err = fs.ReadFile(uiFS, path.Join("ui", "index.html"))
+			if err != nil {
+				http.NotFound(w, r)
+				return
+			}
+			requestPath = "index.html"
+		}
+
+		if ctype := mime.TypeByExtension(filepath.Ext(requestPath)); ctype != "" {
+			w.Header().Set("Content-Type", ctype)
+		} else if strings.HasSuffix(requestPath, ".js") {
+			w.Header().Set("Content-Type", "application/javascript")
+		} else if strings.HasSuffix(requestPath, ".css") {
+			w.Header().Set("Content-Type", "text/css")
+		}
+
+		http.ServeContent(w, r, requestPath, time.Time{}, bytes.NewReader(data))
 	}
 }
 
@@ -242,6 +271,14 @@ func (s *Server) handleTopology(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleVersion(w http.ResponseWriter, r *http.Request) {
 	s.writeJSON(w, map[string]string{"version": s.cfg.Version})
+}
+
+func (s *Server) handleNeighbors(w http.ResponseWriter, r *http.Request) {
+	neighbors := s.cfg.Stack.GetNeighbors()
+	if neighbors == nil {
+		neighbors = []protocols.NeighborRecord{}
+	}
+	s.writeJSON(w, neighbors)
 }
 
 func (s *Server) handleMetrics(w http.ResponseWriter, r *http.Request) {

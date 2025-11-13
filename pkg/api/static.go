@@ -2,5 +2,5 @@ package api
 
 import "embed"
 
-//go:embed ui/*
+//go:embed ui/* ui/assets/*
 var uiFS embed.FS
