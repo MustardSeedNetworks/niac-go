@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"net"
+	"strings"
 	"time"
 
 	"github.com/google/gopacket"
@@ -467,13 +468,102 @@ func (h *LLDPHandler) sendFrame(device *config.Device, lldpPayload []byte) error
 func (h *LLDPHandler) HandlePacket(pkt *Packet) {
 	debugLevel := h.stack.GetDebugLevel()
 
-	if debugLevel >= 2 {
-		fmt.Printf("LLDP: Received LLDP frame sn=%d (parsing not yet implemented)\n", pkt.SerialNumber)
+	packet := gopacket.NewPacket(pkt.Buffer, layers.LayerTypeEthernet, gopacket.Default)
+	lldpLayer := packet.Layer(layers.LayerTypeLinkLayerDiscovery)
+	if lldpLayer == nil {
+		return
 	}
 
-	// Pending: parse incoming LLDP frames and store neighbor information (issue #79)
-	// This will unlock:
-	// - Discovering real devices on the network
-	// - Responding to LLDP queries
-	// - Building network topology
+	lldp, ok := lldpLayer.(*layers.LinkLayerDiscovery)
+	if !ok {
+		return
+	}
+
+	device := h.stack.selectDiscoveryDevice(ProtocolLLDP)
+	if device == nil {
+		return
+	}
+
+	entry := NeighborRecord{
+		Protocol:        ProtocolLLDP,
+		LocalDevice:     device.Name,
+		RemoteChassisID: lldpChassisIDToString(lldp.ChassisID),
+		RemotePort:      lldpPortIDToString(lldp.PortID),
+		TTL:             time.Duration(lldp.TTL) * time.Second,
+	}
+	if entry.TTL <= 0 {
+		entry.TTL = time.Duration(LLDPTTL) * time.Second
+	}
+
+	if infoLayer := packet.Layer(layers.LayerTypeLinkLayerDiscoveryInfo); infoLayer != nil {
+		if info, ok := infoLayer.(*layers.LinkLayerDiscoveryInfo); ok {
+			entry.RemoteDevice = strings.TrimSpace(info.SysName)
+			entry.Description = strings.TrimSpace(info.SysDescription)
+			entry.Capabilities = lldpCapabilitiesToStrings(info.SysCapabilities.EnabledCap)
+			if len(info.MgmtAddress.Address) > 0 {
+				entry.ManagementAddress = net.IP(info.MgmtAddress.Address).String()
+			}
+		}
+	}
+
+	if entry.RemoteDevice == "" {
+		entry.RemoteDevice = entry.RemoteChassisID
+	}
+
+	if debugLevel >= 2 {
+		fmt.Printf("LLDP: Neighbor %s via %s (local %s)\n", entry.RemoteDevice, entry.RemotePort, entry.LocalDevice)
+	}
+
+	h.stack.recordNeighbor(entry)
+}
+
+func lldpChassisIDToString(id layers.LLDPChassisID) string {
+	switch id.Subtype {
+	case layers.LLDPChassisIDSubTypeMACAddr:
+		if len(id.ID) == 6 {
+			return net.HardwareAddr(id.ID).String()
+		}
+	default:
+	}
+	return string(id.ID)
+}
+
+func lldpPortIDToString(id layers.LLDPPortID) string {
+	switch id.Subtype {
+	case layers.LLDPPortIDSubtypeMACAddr:
+		if len(id.ID) == 6 {
+			return net.HardwareAddr(id.ID).String()
+		}
+	default:
+	}
+	return string(id.ID)
+}
+
+func lldpCapabilitiesToStrings(caps layers.LLDPCapabilities) []string {
+	var out []string
+	if caps.Bridge {
+		out = append(out, "bridge")
+	}
+	if caps.Router {
+		out = append(out, "router")
+	}
+	if caps.WLANAP {
+		out = append(out, "wlan-ap")
+	}
+	if caps.Repeater {
+		out = append(out, "repeater")
+	}
+	if caps.StationOnly {
+		out = append(out, "station")
+	}
+	if caps.Phone {
+		out = append(out, "phone")
+	}
+	if caps.CVLAN {
+		out = append(out, "cvlan")
+	}
+	if caps.SVLAN {
+		out = append(out, "svlan")
+	}
+	return dedupStrings(out)
 }

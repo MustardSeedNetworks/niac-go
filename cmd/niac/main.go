@@ -657,8 +657,9 @@ func runSimulationLoop(stack *protocols.Stack, debugLevel int, startTime time.Ti
 // printPeriodicStats prints periodic statistics
 func printPeriodicStats(stack *protocols.Stack, uptime time.Duration) {
 	stats := stack.GetStats()
+	neighbors := len(stack.GetNeighbors())
 
-	fmt.Printf("[%s] Uptime: %s | Packets: RX=%d TX=%d | ARP: %d/%d | ICMP: %d/%d | DNS: %d | DHCP: %d\n",
+	fmt.Printf("[%s] Uptime: %s | Packets: RX=%d TX=%d | ARP: %d/%d | ICMP: %d/%d | DNS: %d | DHCP: %d | Neighbors: %d\n",
 		time.Now().Format("15:04:05"),
 		formatDuration(uptime),
 		stats.PacketsReceived,
@@ -669,12 +670,14 @@ func printPeriodicStats(stack *protocols.Stack, uptime time.Duration) {
 		stats.ICMPReplies,
 		stats.DNSQueries,
 		stats.DHCPRequests,
+		neighbors,
 	)
 }
 
 // printFinalStats prints final statistics on shutdown
 func printFinalStats(stack *protocols.Stack, uptime time.Duration) {
 	stats := stack.GetStats()
+	neighbors := len(stack.GetNeighbors())
 
 	fmt.Println()
 	fmt.Println("╔══════════════════════════════════════════════════════════════════╗")
@@ -691,6 +694,7 @@ func printFinalStats(stack *protocols.Stack, uptime time.Duration) {
 	fmt.Printf("║ ICMP Replies:        %-10d                                    ║\n", stats.ICMPReplies)
 	fmt.Printf("║ DNS Queries:         %-10d                                    ║\n", stats.DNSQueries)
 	fmt.Printf("║ DHCP Requests:       %-10d                                    ║\n", stats.DHCPRequests)
+	fmt.Printf("║ Neighbors Learned:   %-10d                                    ║\n", neighbors)
 	fmt.Println("╚══════════════════════════════════════════════════════════════════╝")
 	fmt.Println()
 }

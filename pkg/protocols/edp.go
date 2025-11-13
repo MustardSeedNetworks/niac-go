@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"net"
+	"strings"
 	"time"
 
 	"github.com/krisarmstrong/niac-go/pkg/config"
@@ -16,6 +17,9 @@ const (
 
 	// EDP advertisement interval (default 30 seconds)
 	EDPAdvertiseInterval = 30 * time.Second
+
+	// Default neighbor aging (seconds)
+	EDPDefaultTTL = 120
 
 	// EDP version
 	EDPVersion = 1
@@ -268,14 +272,90 @@ func (h *EDPHandler) sendFrame(device *config.Device, edpPayload []byte) error {
 // HandlePacket processes an incoming EDP packet (for future use)
 func (h *EDPHandler) HandlePacket(pkt *Packet) {
 	debugLevel := h.stack.GetDebugLevel()
-
-	if debugLevel >= 2 {
-		fmt.Printf("EDP: Received EDP frame sn=%d (parsing not yet implemented)\n", pkt.SerialNumber)
+	payload, ok := ethernetPayload(pkt.Buffer)
+	if !ok || len(payload) < 8 {
+		return
 	}
 
-	// Pending: parse incoming EDP frames and store neighbor information (issue #79)
-	// This will enable:
-	// - Discovering real Extreme devices on the network
-	// - Responding to EDP queries
-	// - Building network topology
+	// Header: Version(1) Reserved(1) Seq(2) IDLen(2)
+	idLen := int(binary.BigEndian.Uint16(payload[4:6]))
+	cursor := 6
+	if cursor+idLen+2 > len(payload) { // +2 to leave room for checksum
+		return
+	}
+	deviceID := strings.TrimSpace(string(payload[cursor : cursor+idLen]))
+	cursor += idLen
+
+	checksumBoundary := len(payload) - 2
+	if checksumBoundary <= cursor {
+		return
+	}
+
+	var display, info string
+	for cursor < checksumBoundary {
+		if cursor+3 > checksumBoundary {
+			break
+		}
+		tlvt := payload[cursor]
+		tlvLen := int(binary.BigEndian.Uint16(payload[cursor+1 : cursor+3]))
+		cursor += 3
+		if cursor+tlvLen > checksumBoundary {
+			break
+		}
+		value := payload[cursor : cursor+tlvLen]
+		cursor += tlvLen
+
+		switch tlvt {
+		case EDPTLVTypeDisplay:
+			display = strings.TrimSpace(string(value))
+		case EDPTLVTypeInfo:
+			info = strings.TrimSpace(string(value))
+		case EDPTLVTypeWarning:
+			// ignore warnings for now
+		case EDPTLVTypeNull:
+			cursor = checksumBoundary
+		}
+	}
+
+	fields := parseKeyValueFields(info)
+	remoteMAC := fields["MAC"]
+	remoteIP := fields["IP"]
+	remotePort := fields["PORT"]
+	remoteType := strings.ToLower(fields["TYPE"])
+
+	device := h.stack.selectDiscoveryDevice(ProtocolEDP)
+	if device == nil {
+		return
+	}
+
+	entry := NeighborRecord{
+		Protocol:        ProtocolEDP,
+		LocalDevice:     device.Name,
+		RemoteDevice:    coalesceStrings(display, deviceID, remoteMAC),
+		RemoteChassisID: coalesceStrings(remoteMAC, deviceID),
+		RemotePort:      strings.TrimSpace(remotePort),
+		Description:     strings.TrimSpace(info),
+		TTL:             time.Duration(EDPDefaultTTL) * time.Second,
+	}
+
+	if remoteIP != "" {
+		entry.ManagementAddress = remoteIP
+	}
+	if remoteType != "" {
+		entry.Capabilities = []string{remoteType}
+	}
+	entry.Capabilities = dedupStrings(entry.Capabilities)
+
+	if entry.RemoteDevice == "" {
+		entry.RemoteDevice = entry.RemoteChassisID
+	}
+	if entry.RemoteChassisID == "" {
+		entry.RemoteChassisID = entry.RemoteDevice
+	}
+
+	if debugLevel >= 2 && entry.RemoteDevice != "" {
+		fmt.Printf("EDP: Neighbor %s via %s (local %s)\n", entry.RemoteDevice, entry.RemotePort, entry.LocalDevice)
+	}
+
+	h.stack.recordNeighbor(entry)
 }

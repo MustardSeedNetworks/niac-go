@@ -211,6 +211,9 @@ sudo ./niac --interactive en0 examples/complete-kitchen-sink.yaml
 
 # Controls:
 #   [i] - Open interactive menu
+#   [s] - Toggle detailed statistics
+#   [N] - Toggle neighbor discovery table
+#   [x] - Toggle packet hex dump viewer
 #   [c] - Clear all errors
 #   [q] - Quit
 
@@ -219,7 +222,7 @@ sudo ./niac --interactive en0 examples/complete-kitchen-sink.yaml
 #   [Enter] - Select
 ```
 
-Both entrypoints launch the full simulator stack; the TUI now displays live packet statistics and shares the same runtime as the standard CLI workflow.
+Both entrypoints launch the full simulator stack; the TUI now displays live packet statistics, the learned neighbor table (LLDP/CDP/EDP/FDP), and shares the same runtime as the standard CLI workflow.
 
 ### Basic Usage
 

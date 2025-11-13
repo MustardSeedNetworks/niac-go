@@ -44,6 +44,11 @@ const (
 	NDFlagOverride  = 0x20
 )
 
+const (
+	NDPrefixFlagOnLink     = 0x80
+	NDPrefixFlagAutonomous = 0x40
+)
+
 // ICMPv6Handler handles ICMPv6 packets (IPv6's version of ICMP)
 type ICMPv6Handler struct {
 	stack      *Stack
@@ -271,21 +276,87 @@ func (h *ICMPv6Handler) sendNeighborAdvertisement(device *config.Device, dstIP n
 
 // handleRouterSolicitation responds to Router Solicitation messages
 func (h *ICMPv6Handler) handleRouterSolicitation(pkt *Packet, packet gopacket.Packet, ipv6 *layers.IPv6) {
+	ethLayer := packet.Layer(layers.LayerTypeEthernet)
+	if ethLayer == nil {
+		return
+	}
+	dstMAC := ethLayer.(*layers.Ethernet).SrcMAC
+
 	if h.debugLevel >= 2 {
 		fmt.Printf("ICMPv6: Router Solicitation from %s sn=%d\n", ipv6.SrcIP, pkt.SerialNumber)
 	}
 
-	// Find devices configured as routers
-	allDevices := h.stack.devices.GetAll()
-	for _, device := range allDevices {
-		// Only respond if device is a router with IPv6
-		if device.Type == "router" && len(device.IPAddresses) > 0 {
-			// Pending: implement Router Advertisement/NDP support (issue #80)
+	for _, device := range h.stack.devices.GetAll() {
+		if !deviceCanAdvertiseIPv6(device) {
+			continue
+		}
+		srcIP := firstIPv6Address(device)
+		if srcIP == nil {
+			continue
+		}
+		if err := h.sendRouterAdvertisement(device, srcIP, ipv6.SrcIP, dstMAC); err != nil {
 			if h.debugLevel >= 2 {
-				fmt.Printf("ICMPv6: Would send RA from %s (not implemented) sn=%d\n", device.Name, pkt.SerialNumber)
+				fmt.Printf("ICMPv6: Failed to send RA from %s: %v sn=%d\n", device.Name, err, pkt.SerialNumber)
 			}
+			continue
+		}
+		if h.debugLevel >= 2 {
+			fmt.Printf("ICMPv6: Sent Router Advertisement from %s to %s sn=%d\n", device.Name, ipv6.SrcIP, pkt.SerialNumber)
 		}
 	}
+}
+
+func (h *ICMPv6Handler) sendRouterAdvertisement(device *config.Device, srcIP, dstIP net.IP, dstMAC net.HardwareAddr) error {
+	body := h.buildRouterAdvertisementBody(device, srcIP)
+	icmpv6 := &layers.ICMPv6{
+		TypeCode: layers.CreateICMPv6TypeCode(ICMPv6TypeRouterAdvertisement, 0),
+	}
+
+	return h.sendICMPv6PacketWithDevice(
+		srcIP,
+		dstIP,
+		device.MACAddress,
+		dstMAC,
+		icmpv6,
+		body,
+		device,
+	)
+}
+
+func (h *ICMPv6Handler) buildRouterAdvertisementBody(device *config.Device, srcIP net.IP) []byte {
+	hopLimit := uint8(64)
+	if device.ICMPv6Config != nil && device.ICMPv6Config.HopLimit > 0 {
+		hopLimit = device.ICMPv6Config.HopLimit
+	}
+
+	body := make([]byte, 12)
+	body[0] = hopLimit
+	body[1] = 0 // M/O flags cleared
+	binary.BigEndian.PutUint16(body[2:4], 1800)
+	binary.BigEndian.PutUint32(body[4:8], 0)
+	binary.BigEndian.PutUint32(body[8:12], 0)
+
+	body = append(body, ICMPv6OptSourceLinkAddr, 1)
+	body = append(body, device.MACAddress...)
+
+	body = append(body, ICMPv6OptMTU, 1, 0, 0)
+	mtu := make([]byte, 4)
+	binary.BigEndian.PutUint32(mtu, 1500)
+	body = append(body, mtu...)
+
+	prefix := deriveIPv6Prefix(srcIP, 64)
+	body = append(body, ICMPv6OptPrefixInfo, 4)
+	body = append(body, byte(64))
+	body = append(body, NDPrefixFlagOnLink|NDPrefixFlagAutonomous)
+	valid := make([]byte, 4)
+	binary.BigEndian.PutUint32(valid, 2592000)
+	body = append(body, valid...)
+	binary.BigEndian.PutUint32(valid, 604800)
+	body = append(body, valid...)
+	body = append(body, []byte{0, 0, 0, 0}...)
+	body = append(body, prefix.To16()...)
+
+	return body
 }
 
 // sendICMPv6Packet sends an ICMPv6 packet
@@ -390,4 +461,31 @@ func (h *ICMPv6Handler) getTypeName(msgType uint8) string {
 // SetDebugLevel updates the debug level
 func (h *ICMPv6Handler) SetDebugLevel(level int) {
 	h.debugLevel = level
+}
+
+func deviceCanAdvertiseIPv6(device *config.Device) bool {
+	if device == nil || device.Type != "router" {
+		return false
+	}
+	return firstIPv6Address(device) != nil
+}
+
+func firstIPv6Address(device *config.Device) net.IP {
+	if device == nil {
+		return nil
+	}
+	for _, ip := range device.IPAddresses {
+		if ip.To4() == nil && ip.To16() != nil {
+			return ip
+		}
+	}
+	return nil
+}
+
+func deriveIPv6Prefix(ip net.IP, prefixLen int) net.IP {
+	mask := net.CIDRMask(prefixLen, 128)
+	masked := ip.Mask(mask)
+	prefix := make(net.IP, len(masked))
+	copy(prefix, masked)
+	return prefix
 }

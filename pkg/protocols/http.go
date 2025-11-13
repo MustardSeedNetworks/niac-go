@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"net"
 	"strings"
 	"time"
 
@@ -407,14 +408,81 @@ func (h *HTTPHandler) HandleRequestV6(pkt *Packet, packet gopacket.Packet, ipv6 
 	response := h.generateResponse(request, devices)
 
 	// Send response over IPv6
-	h.sendResponseV6(ipv6, tcpLayer, response, devices)
+	h.sendResponseV6(ipv6, tcpLayer, response, devices, pkt.GetSourceMAC())
 }
 
-// sendResponseV6 sends HTTP response over IPv6 (stub - basic implementation)
-func (h *HTTPHandler) sendResponseV6(ipv6 *layers.IPv6, tcpLayer *layers.TCP, response []byte, devices []*config.Device) {
-	// Pending: implement full HTTP response handling over IPv6 (issue #80)
+// sendResponseV6 sends HTTP response over IPv6.
+func (h *HTTPHandler) sendResponseV6(ipv6 *layers.IPv6, tcpLayer *layers.TCP, response []byte, devices []*config.Device, dstMAC net.HardwareAddr) {
 	debugLevel := h.stack.GetDebugLevel()
+
+	if len(devices) == 0 {
+		return
+	}
+
+	device := devices[0]
+	if len(device.MACAddress) == 0 || dstMAC == nil {
+		if debugLevel >= 2 {
+			fmt.Printf("HTTP/IPv6: Cannot send response, missing MAC info\n")
+		}
+		return
+	}
+
+	ipReply := &layers.IPv6{
+		Version:      6,
+		TrafficClass: 0,
+		FlowLabel:    0,
+		NextHeader:   layers.IPProtocolTCP,
+		HopLimit:     64,
+		SrcIP:        ipv6.DstIP,
+		DstIP:        ipv6.SrcIP,
+	}
+
+	tcpReply := &layers.TCP{
+		SrcPort: tcpLayer.DstPort,
+		DstPort: tcpLayer.SrcPort,
+		Seq:     tcpLayer.Ack,
+		Ack:     tcpLayer.Seq + uint32(len(tcpLayer.Payload)),
+		PSH:     true,
+		ACK:     true,
+		Window:  65535,
+	}
+	tcpReply.SetNetworkLayerForChecksum(ipReply)
+
+	buffer := gopacket.NewSerializeBuffer()
+	opts := gopacket.SerializeOptions{
+		FixLengths:       true,
+		ComputeChecksums: true,
+	}
+
+	eth := &layers.Ethernet{
+		SrcMAC:       device.MACAddress,
+		DstMAC:       dstMAC,
+		EthernetType: layers.EthernetTypeIPv6,
+	}
+
+	if err := gopacket.SerializeLayers(buffer, opts, eth, ipReply, tcpReply, gopacket.Payload(response)); err != nil {
+		if debugLevel >= 1 {
+			fmt.Printf("HTTP/IPv6: Failed to serialize response: %v\n", err)
+		}
+		return
+	}
+
+	h.stack.mu.Lock()
+	h.stack.serialNumber++
+	serialNum := h.stack.serialNumber
+	h.stack.mu.Unlock()
+
+	respPkt := &Packet{
+		Buffer:       buffer.Bytes(),
+		Length:       len(buffer.Bytes()),
+		SerialNumber: serialNum,
+		Device:       device,
+	}
+
+	h.stack.Send(respPkt)
+
 	if debugLevel >= 2 {
-		fmt.Printf("HTTP/IPv6: Would send %d byte response (stub)\n", len(response))
+		fmt.Printf("Sent HTTP/IPv6 response: %d bytes from [%s] to [%s] (device: %s)\n",
+			len(response), ipReply.SrcIP, ipReply.DstIP, device.Name)
 	}
 }

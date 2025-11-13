@@ -421,21 +421,68 @@ func TestSendAdvertisementsEDP_NoMACAddress(t *testing.T) {
 	}
 }
 
-// TestHandlePacketEDP verifies incoming packet handling stub
+// TestHandlePacketEDP verifies neighbor recording from an incoming frame
 func TestHandlePacketEDP(t *testing.T) {
-	cfg := &config.Config{}
+	cfg := &config.Config{
+		Devices: []config.Device{{
+			Name:       "Local-Core",
+			MACAddress: net.HardwareAddr{0x00, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE},
+		}},
+	}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
 	handler := NewEDPHandler(stack)
 
-	// Create a dummy packet
-	pkt := &Packet{
-		Buffer:       make([]byte, 100),
-		Length:       100,
-		SerialNumber: 1,
+	remote := &config.Device{
+		Name:       "Extreme-Edge",
+		Type:       "switch",
+		MACAddress: net.HardwareAddr{0x00, 0x11, 0x22, 0x33, 0x44, 0x55},
+		EDPConfig: &config.EDPConfig{
+			DisplayString: "Extreme-Edge Slot1",
+			VersionString: "MAC:00:11:22:33:44:55 IP:10.10.10.10 Type:Switch Port:1/1",
+		},
 	}
+	payload := handler.buildEDPFrame(remote)
+	frame := buildEDPTestFrame(remote.MACAddress, payload)
+	pkt := &Packet{Buffer: frame, Length: len(frame)}
 
-	// This should not panic (parsing not implemented yet)
 	handler.HandlePacket(pkt)
+
+	neighbors := stack.neighbors.list()
+	if len(neighbors) != 1 {
+		t.Fatalf("expected 1 neighbor recorded, got %d", len(neighbors))
+	}
+	entry := neighbors[0]
+	if entry.Protocol != ProtocolEDP {
+		t.Fatalf("unexpected protocol %s", entry.Protocol)
+	}
+	if entry.RemoteDevice != "Extreme-Edge Slot1" {
+		t.Errorf("unexpected remote device %q", entry.RemoteDevice)
+	}
+	if entry.RemotePort != "1/1" {
+		t.Errorf("unexpected remote port %q", entry.RemotePort)
+	}
+	if entry.ManagementAddress != "10.10.10.10" {
+		t.Errorf("unexpected management address %q", entry.ManagementAddress)
+	}
+	if entry.RemoteChassisID != "00:11:22:33:44:55" {
+		t.Errorf("unexpected chassis id %q", entry.RemoteChassisID)
+	}
+	expectedTTL := time.Duration(EDPDefaultTTL) * time.Second
+	if entry.TTL != expectedTTL {
+		t.Errorf("expected TTL %v, got %v", expectedTTL, entry.TTL)
+	}
+	if len(entry.Capabilities) == 0 || entry.Capabilities[0] != "switch" {
+		t.Errorf("expected switch capability, got %#v", entry.Capabilities)
+	}
+}
+
+func buildEDPTestFrame(src net.HardwareAddr, payload []byte) []byte {
+	frame := make([]byte, 14+len(payload))
+	copy(frame[0:6], []byte{0x00, 0xE0, 0x2B, 0x00, 0x00, 0x00})
+	copy(frame[6:12], src)
+	binary.BigEndian.PutUint16(frame[12:14], EtherTypeEDP)
+	copy(frame[14:], payload)
+	return frame
 }
 
 // Benchmarks

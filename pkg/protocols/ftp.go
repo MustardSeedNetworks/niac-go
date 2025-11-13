@@ -2,6 +2,7 @@ package protocols
 
 import (
 	"fmt"
+	"net"
 	"strings"
 	"time"
 
@@ -41,134 +42,9 @@ func (h *FTPHandler) HandleRequest(pkt *Packet, ipLayer *layers.IPv4, tcpLayer *
 			ipLayer.SrcIP, command, getDeviceNames(devices))
 	}
 
-	// Parse command
-	parts := strings.Fields(command)
-	if len(parts) == 0 {
+	response := h.buildFTPResponse(command, false, devices)
+	if response == "" {
 		return
-	}
-
-	cmd := strings.ToUpper(parts[0])
-	var response string
-
-	// Handle FTP commands
-	switch cmd {
-	case "USER":
-		if len(parts) > 1 {
-			response = "331 User name okay, need password.\r\n"
-		} else {
-			response = "501 Syntax error in parameters or arguments.\r\n"
-		}
-
-	case "PASS":
-		// Accept any password
-		response = "230 User logged in, proceed.\r\n"
-
-	case "SYST":
-		// Use configured system type if available
-		systemType := "UNIX Type: L8"
-		if len(devices) > 0 && devices[0].FTPConfig != nil && devices[0].FTPConfig.SystemType != "" {
-			systemType = devices[0].FTPConfig.SystemType
-		}
-		response = fmt.Sprintf("215 %s\r\n", systemType)
-
-	case "PWD":
-		response = "257 \"/\" is current directory.\r\n"
-
-	case "TYPE":
-		if len(parts) > 1 {
-			response = fmt.Sprintf("200 Type set to %s.\r\n", parts[1])
-		} else {
-			response = "501 Syntax error in parameters or arguments.\r\n"
-		}
-
-	case "PASV":
-		// Generate passive mode response
-		// Format: 227 Entering Passive Mode (h1,h2,h3,h4,p1,p2)
-		// We'll use a dummy port
-		if len(devices) > 0 && len(devices[0].IPAddresses) > 0 {
-			ip := devices[0].IPAddresses[0]
-			port := 20000 // Dummy data port
-			p1 := port / 256
-			p2 := port % 256
-			response = fmt.Sprintf("227 Entering Passive Mode (%d,%d,%d,%d,%d,%d).\r\n",
-				ip[0], ip[1], ip[2], ip[3], p1, p2)
-		} else {
-			response = "500 Passive mode failed.\r\n"
-		}
-
-	case "LIST":
-		// Send dummy file listing via control connection
-		response = "150 Here comes the directory listing.\r\n"
-		// In a real implementation, we'd send data via data connection
-		// For simulation, just send completion
-		response += "226 Directory send OK.\r\n"
-
-	case "RETR":
-		if len(parts) > 1 {
-			filename := parts[1]
-			response = fmt.Sprintf("550 %s: No such file or directory.\r\n", filename)
-		} else {
-			response = "501 Syntax error in parameters or arguments.\r\n"
-		}
-
-	case "STOR":
-		if len(parts) > 1 {
-			response = "553 Could not create file (read-only filesystem).\r\n"
-		} else {
-			response = "501 Syntax error in parameters or arguments.\r\n"
-		}
-
-	case "CWD":
-		if len(parts) > 1 {
-			response = "250 Directory successfully changed.\r\n"
-		} else {
-			response = "501 Syntax error in parameters or arguments.\r\n"
-		}
-
-	case "CDUP":
-		response = "250 Directory successfully changed.\r\n"
-
-	case "DELE":
-		if len(parts) > 1 {
-			response = "553 Could not delete file (read-only filesystem).\r\n"
-		} else {
-			response = "501 Syntax error in parameters or arguments.\r\n"
-		}
-
-	case "MKD":
-		if len(parts) > 1 {
-			response = "257 Directory created.\r\n"
-		} else {
-			response = "501 Syntax error in parameters or arguments.\r\n"
-		}
-
-	case "RMD":
-		if len(parts) > 1 {
-			response = "250 Directory deleted.\r\n"
-		} else {
-			response = "501 Syntax error in parameters or arguments.\r\n"
-		}
-
-	case "NOOP":
-		response = "200 NOOP ok.\r\n"
-
-	case "QUIT":
-		response = "221 Goodbye.\r\n"
-
-	case "HELP":
-		response = "214-The following commands are recognized:\r\n" +
-			" USER PASS SYST PWD TYPE PASV LIST RETR STOR\r\n" +
-			" CWD CDUP DELE MKD RMD NOOP QUIT HELP\r\n" +
-			"214 Help OK.\r\n"
-
-	default:
-		// If this looks like an FTP command but we don't recognize it
-		if len(cmd) <= 4 && cmd == strings.ToUpper(cmd) {
-			response = "502 Command not implemented.\r\n"
-		} else {
-			// Not an FTP command, ignore
-			return
-		}
 	}
 
 	// Send response
@@ -276,6 +152,185 @@ func (h *FTPHandler) sendResponse(ipLayer *layers.IPv4, tcpLayer *layers.TCP, re
 	}
 }
 
+func (h *FTPHandler) sendResponseV6(ipv6 *layers.IPv6, tcpLayer *layers.TCP, response []byte, devices []*config.Device, dstMAC net.HardwareAddr) {
+	debugLevel := h.stack.GetDebugLevel()
+
+	if len(devices) == 0 {
+		return
+	}
+
+	device := devices[0]
+	if len(device.MACAddress) == 0 || dstMAC == nil {
+		if debugLevel >= 2 {
+			fmt.Printf("Cannot send FTP/IPv6 response: missing MAC info\n")
+		}
+		return
+	}
+
+	eth := &layers.Ethernet{
+		SrcMAC:       device.MACAddress,
+		DstMAC:       dstMAC,
+		EthernetType: layers.EthernetTypeIPv6,
+	}
+
+	ipReply := &layers.IPv6{
+		Version:      6,
+		TrafficClass: 0,
+		FlowLabel:    0,
+		NextHeader:   layers.IPProtocolTCP,
+		HopLimit:     64,
+		SrcIP:        ipv6.DstIP,
+		DstIP:        ipv6.SrcIP,
+	}
+
+	tcpReply := &layers.TCP{
+		SrcPort: tcpLayer.DstPort,
+		DstPort: tcpLayer.SrcPort,
+		Seq:     tcpLayer.Ack,
+		Ack:     tcpLayer.Seq + uint32(len(tcpLayer.Payload)),
+		PSH:     true,
+		ACK:     true,
+		Window:  65535,
+	}
+	tcpReply.SetNetworkLayerForChecksum(ipReply)
+
+	buffer := gopacket.NewSerializeBuffer()
+	opts := gopacket.SerializeOptions{
+		FixLengths:       true,
+		ComputeChecksums: true,
+	}
+
+	if err := gopacket.SerializeLayers(buffer, opts, eth, ipReply, tcpReply, gopacket.Payload(response)); err != nil {
+		if debugLevel >= 1 {
+			fmt.Printf("FTP/IPv6: Failed to serialize response: %v\n", err)
+		}
+		return
+	}
+
+	h.stack.mu.Lock()
+	h.stack.serialNumber++
+	serialNum := h.stack.serialNumber
+	h.stack.mu.Unlock()
+
+	respPkt := &Packet{
+		Buffer:       buffer.Bytes(),
+		Length:       len(buffer.Bytes()),
+		SerialNumber: serialNum,
+		Device:       device,
+	}
+
+	h.stack.Send(respPkt)
+
+	if debugLevel >= 2 {
+		fmt.Printf("Sent FTP/IPv6 response %d bytes to [%s]\n", len(response), ipv6.SrcIP)
+	}
+}
+
+func (h *FTPHandler) buildFTPResponse(command string, ipv6 bool, devices []*config.Device) string {
+	parts := strings.Fields(command)
+	if len(parts) == 0 {
+		return ""
+	}
+
+	cmd := strings.ToUpper(parts[0])
+	switch cmd {
+	case "USER":
+		if len(parts) > 1 {
+			return "331 User name okay, need password.\r\n"
+		}
+		return "501 Syntax error in parameters or arguments.\r\n"
+	case "PASS":
+		return "230 User logged in, proceed.\r\n"
+	case "SYST":
+		systemType := "UNIX Type: L8"
+		if len(devices) > 0 && devices[0].FTPConfig != nil && devices[0].FTPConfig.SystemType != "" {
+			systemType = devices[0].FTPConfig.SystemType
+		}
+		return fmt.Sprintf("215 %s\r\n", systemType)
+	case "PWD":
+		return "257 \"/\" is current directory.\r\n"
+	case "TYPE":
+		if len(parts) > 1 {
+			return fmt.Sprintf("200 Type set to %s.\r\n", parts[1])
+		}
+		return "501 Syntax error in parameters or arguments.\r\n"
+	case "PASV":
+		if ipv6 {
+			return "522 Network protocol not supported, use EPSV.\r\n"
+		}
+		ip := selectIPv4Address(devices)
+		if ip == nil {
+			return "500 Passive mode failed.\r\n"
+		}
+		port := 20000
+		p1 := port / 256
+		p2 := port % 256
+		ip4 := ip.To4()
+		return fmt.Sprintf("227 Entering Passive Mode (%d,%d,%d,%d,%d,%d).\r\n",
+			ip4[0], ip4[1], ip4[2], ip4[3], p1, p2)
+	case "EPSV":
+		port := 20000
+		return fmt.Sprintf("229 Entering Extended Passive Mode (|||%d|).\r\n", port)
+	case "LIST":
+		return "150 Here comes the directory listing.\r\n226 Directory send OK.\r\n"
+	case "RETR":
+		if len(parts) > 1 {
+			return fmt.Sprintf("550 %s: No such file or directory.\r\n", parts[1])
+		}
+		return "501 Syntax error in parameters or arguments.\r\n"
+	case "STOR":
+		if len(parts) > 1 {
+			return "553 Could not create file (read-only filesystem).\r\n"
+		}
+		return "501 Syntax error in parameters or arguments.\r\n"
+	case "CWD":
+		if len(parts) > 1 {
+			return "250 Directory successfully changed.\r\n"
+		}
+		return "501 Syntax error in parameters or arguments.\r\n"
+	case "CDUP":
+		return "250 Directory successfully changed.\r\n"
+	case "DELE":
+		if len(parts) > 1 {
+			return "553 Could not delete file (read-only filesystem).\r\n"
+		}
+		return "501 Syntax error in parameters or arguments.\r\n"
+	case "MKD":
+		if len(parts) > 1 {
+			return "257 Directory created.\r\n"
+		}
+		return "501 Syntax error in parameters or arguments.\r\n"
+	case "RMD":
+		if len(parts) > 1 {
+			return "250 Directory deleted.\r\n"
+		}
+		return "501 Syntax error in parameters or arguments.\r\n"
+	case "NOOP":
+		return "200 NOOP ok.\r\n"
+	case "QUIT":
+		return "221 Goodbye.\r\n"
+	case "HELP":
+		return "214-The following commands are recognized:\r\n USER PASS SYST PWD TYPE PASV EPSV LIST RETR STOR\r\n CWD CDUP DELE MKD RMD NOOP QUIT HELP\r\n214 Help OK.\r\n"
+	default:
+		if len(cmd) <= 4 && cmd == strings.ToUpper(cmd) {
+			return "502 Command not implemented.\r\n"
+		}
+		return ""
+	}
+}
+
+func selectIPv4Address(devices []*config.Device) net.IP {
+	if len(devices) == 0 {
+		return nil
+	}
+	for _, ip := range devices[0].IPAddresses {
+		if v4 := ip.To4(); v4 != nil {
+			return v4
+		}
+	}
+	return nil
+}
+
 // SendWelcome sends FTP welcome banner when connection is established
 func (h *FTPHandler) SendWelcome(ipLayer *layers.IPv4, tcpLayer *layers.TCP, devices []*config.Device) {
 	debugLevel := h.stack.GetDebugLevel()
@@ -319,9 +374,24 @@ func (h *FTPHandler) SendWelcome(ipLayer *layers.IPv4, tcpLayer *layers.TCP, dev
 func (h *FTPHandler) HandleRequestV6(pkt *Packet, packet gopacket.Packet, ipv6 *layers.IPv6, tcpLayer *layers.TCP, devices []*config.Device) {
 	debugLevel := h.stack.GetDebugLevel()
 
-	if debugLevel >= 2 {
-		fmt.Printf("FTP/IPv6 request from [%s] (stub - not fully implemented)\n", ipv6.SrcIP)
+	if len(tcpLayer.Payload) == 0 {
+		return
 	}
 
-	// Pending: implement full FTP over IPv6 (issue #80)
+	command := strings.TrimSpace(string(tcpLayer.Payload))
+	if command == "" {
+		return
+	}
+
+	if debugLevel >= 2 {
+		fmt.Printf("FTP/IPv6 command from [%s]: %s (device: %v)\n",
+			ipv6.SrcIP, command, getDeviceNames(devices))
+	}
+
+	response := h.buildFTPResponse(command, true, devices)
+	if response == "" {
+		return
+	}
+
+	h.sendResponseV6(ipv6, tcpLayer, []byte(response), devices, pkt.GetSourceMAC())
 }

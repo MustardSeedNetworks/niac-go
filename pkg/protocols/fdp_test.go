@@ -617,21 +617,68 @@ func TestSendAdvertisementsFDP_NoMACAddress(t *testing.T) {
 	}
 }
 
-// TestHandlePacketFDP verifies incoming packet handling stub
+// TestHandlePacketFDP verifies neighbor recording from an incoming frame
 func TestHandlePacketFDP(t *testing.T) {
-	cfg := &config.Config{}
+	cfg := &config.Config{
+		Devices: []config.Device{{Name: "Local-Core"}},
+	}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
 	handler := NewFDPHandler(stack)
 
-	// Create a dummy packet
-	pkt := &Packet{
-		Buffer:       make([]byte, 100),
-		Length:       100,
-		SerialNumber: 1,
+	remote := &config.Device{
+		Name:        "FDP-Edge",
+		Type:        "router",
+		MACAddress:  net.HardwareAddr{0x00, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE},
+		IPAddresses: []net.IP{net.ParseIP("10.20.30.1")},
+		FDPConfig: &config.FDPConfig{
+			PortID:          "1/2/3",
+			Platform:        "FastIron",
+			SoftwareVersion: "FI 8.0",
+			Holdtime:        90,
+		},
 	}
+	payload := handler.buildFDPFrame(remote)
+	frame := buildFDPTestFrame(remote.MACAddress, payload)
+	pkt := &Packet{Buffer: frame, Length: len(frame)}
 
-	// This should not panic (parsing not implemented yet)
 	handler.HandlePacket(pkt)
+
+	neighbors := stack.neighbors.list()
+	if len(neighbors) != 1 {
+		t.Fatalf("expected 1 neighbor recorded, got %d", len(neighbors))
+	}
+	entry := neighbors[0]
+	if entry.Protocol != ProtocolFDP {
+		t.Fatalf("unexpected protocol %s", entry.Protocol)
+	}
+	if entry.RemoteDevice != "FDP-Edge" {
+		t.Errorf("unexpected remote device %q", entry.RemoteDevice)
+	}
+	if entry.RemotePort != "1/2/3" {
+		t.Errorf("unexpected remote port %q", entry.RemotePort)
+	}
+	if entry.ManagementAddress != "10.20.30.1" {
+		t.Errorf("unexpected management address %q", entry.ManagementAddress)
+	}
+	expectedTTL := 90 * time.Second
+	if entry.TTL != expectedTTL {
+		t.Errorf("expected TTL %v, got %v", expectedTTL, entry.TTL)
+	}
+	if entry.Description != "FastIron / FI 8.0" {
+		t.Errorf("unexpected description %q", entry.Description)
+	}
+	if len(entry.Capabilities) < 2 {
+		t.Fatalf("expected router+switch capabilities, got %#v", entry.Capabilities)
+	}
+}
+
+func buildFDPTestFrame(src net.HardwareAddr, payload []byte) []byte {
+	frame := make([]byte, 14+len(payload))
+	copy(frame[0:6], []byte{0x01, 0xE0, 0x52, 0xCC, 0xCC, 0xCC})
+	copy(frame[6:12], src)
+	binary.BigEndian.PutUint16(frame[12:14], uint16(len(payload)))
+	copy(frame[14:], payload)
+	return frame
 }
 
 // Benchmarks

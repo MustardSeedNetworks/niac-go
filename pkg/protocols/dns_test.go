@@ -1,10 +1,12 @@
 package protocols
 
 import (
+	"encoding/hex"
 	"net"
 	"strings"
 	"testing"
 
+	"github.com/google/gopacket/layers"
 	"github.com/krisarmstrong/niac-go/pkg/config"
 	"github.com/krisarmstrong/niac-go/pkg/logging"
 )
@@ -238,6 +240,63 @@ func TestLookupHost(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestParsePTRNameIPv4(t *testing.T) {
+	ip, ok := parsePTRName([]byte("4.3.2.1.in-addr.arpa."))
+	if !ok {
+		t.Fatalf("expected IPv4 PTR parse success")
+	}
+	expected := net.ParseIP("1.2.3.4").To4()
+	if !ip.Equal(expected) {
+		t.Fatalf("expected %s, got %s", expected, ip)
+	}
+}
+
+func TestParsePTRNameIPv6(t *testing.T) {
+	expected := net.ParseIP("2001:db8::1")
+	ptr := ipv6PTRString(expected)
+	ip, ok := parsePTRName([]byte(ptr))
+	if !ok {
+		t.Fatalf("expected IPv6 PTR parse success")
+	}
+	if !ip.Equal(expected) {
+		t.Fatalf("expected %s, got %s", expected, ip)
+	}
+}
+
+func TestResolveQuestionsPTR(t *testing.T) {
+	cfg := &config.Config{}
+	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
+	handler := NewDNSHandler(stack)
+	handler.AddRecord("router.example.com", net.ParseIP("2001:db8::1"))
+
+	ptrName := ipv6PTRString(net.ParseIP("2001:db8::1"))
+	question := layers.DNSQuestion{
+		Name:  []byte(ptrName),
+		Type:  layers.DNSTypePTR,
+		Class: layers.DNSClassIN,
+	}
+
+	answers, code := handler.resolveQuestions([]layers.DNSQuestion{question}, 1, 0)
+	if code != layers.DNSResponseCodeNoErr {
+		t.Fatalf("expected no error response, got %v", code)
+	}
+	if len(answers) != 1 {
+		t.Fatalf("expected 1 answer, got %d", len(answers))
+	}
+	if string(answers[0].PTR) != "router.example.com." {
+		t.Fatalf("expected PTR router.example.com., got %s", answers[0].PTR)
+	}
+}
+
+func ipv6PTRString(ip net.IP) string {
+	hexDigits := strings.ToLower(hex.EncodeToString(ip.To16()))
+	parts := make([]string, 0, len(hexDigits))
+	for i := len(hexDigits) - 1; i >= 0; i-- {
+		parts = append(parts, string(hexDigits[i]))
+	}
+	return strings.Join(parts, ".") + ".ip6.arpa."
 }
 
 // TestLookupHost_WithDomain tests short name lookup with default domain

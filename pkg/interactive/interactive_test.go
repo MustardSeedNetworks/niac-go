@@ -10,6 +10,7 @@ import (
 	"github.com/krisarmstrong/niac-go/pkg/config"
 	"github.com/krisarmstrong/niac-go/pkg/errors"
 	"github.com/krisarmstrong/niac-go/pkg/logging"
+	"github.com/krisarmstrong/niac-go/pkg/protocols"
 )
 
 // TestFormatDuration tests duration formatting
@@ -452,6 +453,10 @@ func TestModel_View(t *testing.T) {
 	if !strings.Contains(view, "Controls:") {
 		t.Error("View should contain controls section")
 	}
+
+	if !strings.Contains(view, "[N]") {
+		t.Error("View should list neighbor shortcut")
+	}
 }
 
 // TestModel_RenderMenu tests menu rendering
@@ -524,6 +529,51 @@ func TestModel_RenderLogs(t *testing.T) {
 	logs = m.renderLogs()
 	if !strings.Contains(logs, "test log 1") || !strings.Contains(logs, "test log 2") {
 		t.Error("Logs should contain added log messages")
+	}
+}
+
+func TestRenderNeighborsEmpty(t *testing.T) {
+	m := createTestModel()
+	output := m.renderNeighbors()
+	if !strings.Contains(output, "Neighbor Discovery Table") {
+		t.Fatal("neighbor panel should include title")
+	}
+	if !strings.Contains(output, "No neighbors discovered yet") {
+		t.Error("expected empty-state message when no neighbors exist")
+	}
+}
+
+func TestRenderNeighborsWithEntries(t *testing.T) {
+	m := createTestModel()
+	m.neighbors = []protocols.NeighborRecord{
+		{
+			Protocol:          protocols.ProtocolLLDP,
+			LocalDevice:       "Core",
+			RemoteDevice:      "Edge",
+			RemotePort:        "Gi0/1",
+			ManagementAddress: "10.0.0.2",
+			LastSeen:          time.Now().Add(-5 * time.Second),
+		},
+	}
+	output := m.renderNeighbors()
+	for _, token := range []string{"Neighbor Discovery Table", "Core", "Edge", "10.0.0.2", "LLDP"} {
+		if !strings.Contains(output, token) {
+			t.Errorf("expected neighbor output to contain %q", token)
+		}
+	}
+}
+
+func TestFormatRelativeTime(t *testing.T) {
+	now := time.Now()
+	if got := formatRelativeTime(time.Time{}); got != "never" {
+		t.Errorf("expected 'never' for zero time, got %q", got)
+	}
+	if got := formatRelativeTime(now); got != "now" {
+		t.Errorf("expected 'now' for immediate timestamps, got %q", got)
+	}
+	past := now.Add(-45 * time.Second)
+	if got := formatRelativeTime(past); !strings.Contains(got, "ago") {
+		t.Errorf("expected relative string to contain 'ago', got %q", got)
 	}
 }
 

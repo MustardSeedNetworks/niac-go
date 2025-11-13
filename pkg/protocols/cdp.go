@@ -6,6 +6,8 @@ import (
 	"net"
 	"time"
 
+	"github.com/google/gopacket"
+	"github.com/google/gopacket/layers"
 	"github.com/krisarmstrong/niac-go/pkg/config"
 )
 
@@ -428,13 +430,83 @@ func (h *CDPHandler) sendFrame(device *config.Device, cdpPayload []byte) error {
 func (h *CDPHandler) HandlePacket(pkt *Packet) {
 	debugLevel := h.stack.GetDebugLevel()
 
-	if debugLevel >= 2 {
-		fmt.Printf("CDP: Received CDP frame sn=%d (parsing not yet implemented)\n", pkt.SerialNumber)
+	packet := gopacket.NewPacket(pkt.Buffer, layers.LayerTypeEthernet, gopacket.Default)
+	cdpLayer := packet.Layer(layers.LayerTypeCiscoDiscovery)
+	infoLayer := packet.Layer(layers.LayerTypeCiscoDiscoveryInfo)
+	if cdpLayer == nil || infoLayer == nil {
+		return
 	}
 
-	// Pending: parse incoming CDP frames and store neighbor information (issue #79)
-	// This will enable:
-	// - Discovering real devices on the network
-	// - Responding to CDP queries
-	// - Building network topology
+	cdp, ok := cdpLayer.(*layers.CiscoDiscovery)
+	if !ok {
+		return
+	}
+	info, ok := infoLayer.(*layers.CiscoDiscoveryInfo)
+	if !ok {
+		return
+	}
+
+	device := h.stack.selectDiscoveryDevice(ProtocolCDP)
+	if device == nil {
+		return
+	}
+
+	entry := NeighborRecord{
+		Protocol:        ProtocolCDP,
+		LocalDevice:     device.Name,
+		RemoteDevice:    info.DeviceID,
+		RemoteChassisID: info.DeviceID,
+		RemotePort:      info.PortID,
+		Description:     info.Platform,
+		TTL:             time.Duration(cdp.TTL) * time.Second,
+		Capabilities:    cdpCapabilitiesToStrings(info.Capabilities),
+	}
+
+	if info.SysName != "" {
+		entry.RemoteDevice = info.SysName
+	}
+	if entry.TTL <= 0 {
+		entry.TTL = time.Duration(CDPHoldtime) * time.Second
+	}
+
+	if len(info.MgmtAddresses) > 0 {
+		entry.ManagementAddress = info.MgmtAddresses[0].String()
+	} else if len(info.Addresses) > 0 {
+		entry.ManagementAddress = info.Addresses[0].String()
+	}
+
+	if debugLevel >= 2 {
+		fmt.Printf("CDP: Neighbor %s via %s (local %s)\n", entry.RemoteDevice, entry.RemotePort, entry.LocalDevice)
+	}
+
+	h.stack.recordNeighbor(entry)
+}
+
+func cdpCapabilitiesToStrings(cap layers.CDPCapabilities) []string {
+	var out []string
+	if cap.L3Router {
+		out = append(out, "router")
+	}
+	if cap.L2Switch {
+		out = append(out, "switch")
+	}
+	if cap.TBBridge || cap.SPBridge {
+		out = append(out, "bridge")
+	}
+	if cap.IsHost {
+		out = append(out, "host")
+	}
+	if cap.L1Repeater {
+		out = append(out, "repeater")
+	}
+	if cap.IsPhone {
+		out = append(out, "phone")
+	}
+	if cap.RemotelyManaged {
+		out = append(out, "remote")
+	}
+	if cap.IGMPFilter {
+		out = append(out, "igmp-filter")
+	}
+	return dedupStrings(out)
 }

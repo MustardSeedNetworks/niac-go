@@ -3,6 +3,7 @@ package interactive
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -85,10 +86,11 @@ type model struct {
 	valueInputBuffer string
 
 	// View state
-	showHelp    bool
-	showLogs    bool
-	showStats   bool
-	showHexDump bool
+	showHelp      bool
+	showLogs      bool
+	showStats     bool
+	showHexDump   bool
+	showNeighbors bool
 
 	// Error injection state
 	selectedDeviceIdx int
@@ -114,6 +116,8 @@ type model struct {
 	packetBuffer       []CapturedPacket
 	hexDumpPacketIndex int
 	hexDumpScrollY     int
+
+	neighbors []protocols.NeighborRecord
 }
 
 type tickMsg time.Time
@@ -182,6 +186,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.showHelp = !m.showHelp
 			m.showLogs = false
 			m.showStats = false
+			m.showNeighbors = false
+			m.showHexDump = false
 			m.menuVisible = false
 			return m, nil
 
@@ -189,6 +195,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.showLogs = !m.showLogs
 			m.showHelp = false
 			m.showStats = false
+			m.showNeighbors = false
 			m.menuVisible = false
 			return m, nil
 
@@ -197,6 +204,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.showHelp = false
 			m.showLogs = false
 			m.showHexDump = false
+			m.showNeighbors = false
 			m.menuVisible = false
 			return m, nil
 
@@ -205,10 +213,29 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.showHelp = false
 			m.showLogs = false
 			m.showStats = false
+			m.showNeighbors = false
 			m.menuVisible = false
 			if m.showHexDump {
 				m.hexDumpScrollY = 0
 				m.statusMessage = "Hex dump viewer opened - use arrow keys to navigate, [n]/[p] for next/prev packet"
+			}
+			return m, nil
+
+		case "N":
+			m.showNeighbors = !m.showNeighbors
+			m.showHelp = false
+			m.showLogs = false
+			m.showStats = false
+			m.showHexDump = false
+			m.menuVisible = false
+			if m.showNeighbors {
+				if len(m.neighbors) == 0 {
+					m.statusMessage = "Neighbor table opened - waiting for discovery packets"
+					m.statusIsError = false
+				} else {
+					m.statusMessage = successStyle.Render(fmt.Sprintf("✓ Showing %d learned neighbors", len(m.neighbors)))
+					m.statusIsError = false
+				}
 			}
 			return m, nil
 
@@ -339,6 +366,7 @@ func (m *model) refreshStats() {
 		DNSQueries:      stats.DNSQueries,
 		DHCPRequests:    stats.DHCPRequests,
 	}
+	m.neighbors = m.stack.GetNeighbors()
 }
 
 func (m *model) handleMenuSelection() {
@@ -579,6 +607,12 @@ func (m model) View() string {
 		s.WriteString("\n")
 	}
 
+	// Neighbor viewer
+	if m.showNeighbors {
+		s.WriteString(m.renderNeighbors())
+		s.WriteString("\n")
+	}
+
 	// Hex dump viewer
 	if m.showHexDump {
 		s.WriteString(m.renderHexDump())
@@ -599,6 +633,8 @@ func (m model) View() string {
 	s.WriteString(" Logs  ")
 	s.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("86")).Render("[s]"))
 	s.WriteString(" Stats  ")
+	s.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("86")).Render("[N]"))
+	s.WriteString(" Neighbors  ")
 	s.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("86")).Render("[x]"))
 	s.WriteString(" Hex  ")
 	s.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("86")).Render("[c]"))
@@ -677,6 +713,57 @@ func formatDuration(d time.Duration) string {
 	return fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
 }
 
+func padPanelLine(text string) string {
+	const width = 64
+	if len(text) > width {
+		if width > 3 {
+			text = text[:width-3] + "..."
+		} else {
+			text = text[:width]
+		}
+	}
+	return fmt.Sprintf("║ %-64s ║\n", text)
+}
+
+func fitColumn(text string, width int) string {
+	if width <= 0 {
+		return ""
+	}
+	if len(text) > width {
+		if width > 3 {
+			text = text[:width-3] + "..."
+		} else {
+			text = text[:width]
+		}
+	}
+	return fmt.Sprintf("%-*s", width, text)
+}
+
+func formatRelativeTime(ts time.Time) string {
+	if ts.IsZero() {
+		return "never"
+	}
+	elapsed := time.Since(ts)
+	if elapsed < 0 {
+		elapsed = 0
+	}
+	if elapsed < time.Second {
+		return "now"
+	}
+	if elapsed < time.Minute {
+		return fmt.Sprintf("%ds ago", int(elapsed.Seconds()))
+	}
+	if elapsed < time.Hour {
+		return fmt.Sprintf("%dm%ds ago", int(elapsed.Minutes()), int(elapsed.Seconds())%60)
+	}
+	hours := int(elapsed.Hours())
+	minutes := int(elapsed.Minutes()) % 60
+	if hours >= 100 {
+		return fmt.Sprintf("%dh", hours)
+	}
+	return fmt.Sprintf("%dh%dm", hours, minutes)
+}
+
 func getDebugLevelName(level int) string {
 	switch level {
 	case 0:
@@ -717,6 +804,7 @@ func (m model) renderHelp() string {
 	help.WriteString("║  [h][?]  Toggle this help screen                                ║\n")
 	help.WriteString("║  [l]     Toggle debug log viewer                                ║\n")
 	help.WriteString("║  [s]     Toggle statistics viewer                               ║\n")
+	help.WriteString("║  [N]     Toggle neighbor discovery table                        ║\n")
 	help.WriteString("║  [x]     Toggle packet hex dump viewer                          ║\n")
 	help.WriteString("║  [n]/[p] Navigate packets (next/previous) in hex viewer         ║\n")
 	help.WriteString("║  [↑][↓]  Scroll hex dump / Navigate menu items                  ║\n")
@@ -823,6 +911,74 @@ func (m model) renderStatistics() string {
 	stats.WriteString("╚══════════════════════════════════════════════════════════════════╝")
 
 	return stats.String()
+}
+
+func (m model) renderNeighbors() string {
+	var panel strings.Builder
+
+	panel.WriteString("╔══════════════════════════════════════════════════════════════════╗\n")
+	panel.WriteString("║                    Neighbor Discovery Table                      ║\n")
+	panel.WriteString("╠══════════════════════════════════════════════════════════════════╣\n")
+
+	if len(m.neighbors) == 0 {
+		panel.WriteString(padPanelLine("No neighbors discovered yet"))
+		panel.WriteString(padPanelLine("Advertise LLDP/CDP/EDP/FDP to populate this view"))
+		panel.WriteString("╚══════════════════════════════════════════════════════════════════╝")
+		return panel.String()
+	}
+
+	rows := make([]protocols.NeighborRecord, len(m.neighbors))
+	copy(rows, m.neighbors)
+	sort.Slice(rows, func(i, j int) bool {
+		if rows[i].LocalDevice != rows[j].LocalDevice {
+			return rows[i].LocalDevice < rows[j].LocalDevice
+		}
+		if rows[i].Protocol != rows[j].Protocol {
+			return rows[i].Protocol < rows[j].Protocol
+		}
+		return rows[i].RemoteDevice < rows[j].RemoteDevice
+	})
+
+	header := fmt.Sprintf("%s %s %s %s %s",
+		fitColumn("Proto", 5),
+		fitColumn("Local Device", 14),
+		fitColumn("Remote (Port)", 18),
+		fitColumn("Mgmt Address", 15),
+		fitColumn("Seen", 8),
+	)
+	panel.WriteString(padPanelLine(header))
+	panel.WriteString("╠══════════════════════════════════════════════════════════════════╣\n")
+
+	for _, entry := range rows {
+		remote := entry.RemoteDevice
+		if entry.RemotePort != "" {
+			if remote == "" {
+				remote = entry.RemotePort
+			} else {
+				remote = fmt.Sprintf("%s/%s", remote, entry.RemotePort)
+			}
+		}
+		mgmt := entry.ManagementAddress
+		if mgmt == "" {
+			mgmt = "-"
+		}
+		line := fmt.Sprintf("%s %s %s %s %s",
+			fitColumn(strings.ToUpper(entry.Protocol), 5),
+			fitColumn(entry.LocalDevice, 14),
+			fitColumn(remote, 18),
+			fitColumn(mgmt, 15),
+			fitColumn(formatRelativeTime(entry.LastSeen), 8),
+		)
+		panel.WriteString(padPanelLine(line))
+	}
+
+	panel.WriteString("╠══════════════════════════════════════════════════════════════════╣\n")
+	summary := fmt.Sprintf("Total neighbors: %d  •  TTL refresh every 30s", len(rows))
+	panel.WriteString(padPanelLine(summary))
+	panel.WriteString(padPanelLine("Press [N] to close this view"))
+	panel.WriteString("╚══════════════════════════════════════════════════════════════════╝")
+
+	return panel.String()
 }
 
 func (m model) renderHexDump() string {

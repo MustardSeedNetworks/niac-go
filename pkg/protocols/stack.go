@@ -43,6 +43,7 @@ type Stack struct {
 	edpHandler     *EDPHandler
 	fdpHandler     *FDPHandler
 	snmpHandler    *SNMPHandler
+	neighbors      *neighborTable
 
 	// Statistics
 	stats *Statistics
@@ -83,6 +84,7 @@ func NewStack(captureEngine *capture.Engine, cfg *config.Config, debugConfig *lo
 		stopChan:    make(chan struct{}),
 		debugConfig: debugConfig,
 		snmpAgents:  make(map[*config.Device]*snmp.Agent),
+		neighbors:   newNeighborTable(),
 	}
 
 	// Create protocol handlers
@@ -196,6 +198,7 @@ func (s *Stack) Start() error {
 	s.cdpHandler.Start()
 	s.edpHandler.Start()
 	s.fdpHandler.Start()
+	s.startNeighborCleanupLoop()
 
 	if s.debugConfig.GetGlobal() >= 1 {
 		fmt.Println("Protocol stack started")
@@ -578,4 +581,69 @@ func (s *Stack) GetDHCPv6Handler() *DHCPv6Handler {
 // GetDNSHandler returns the DNS handler for configuration
 func (s *Stack) GetDNSHandler() *DNSHandler {
 	return s.dnsHandler
+}
+
+// GetNeighbors returns a snapshot of the current neighbor table.
+func (s *Stack) GetNeighbors() []NeighborRecord {
+	if s.neighbors == nil {
+		return nil
+	}
+	return s.neighbors.list()
+}
+
+func (s *Stack) recordNeighbor(entry NeighborRecord) {
+	if s.neighbors == nil {
+		return
+	}
+	s.neighbors.upsert(entry)
+}
+
+func (s *Stack) startNeighborCleanupLoop() {
+	if s.neighbors == nil {
+		return
+	}
+	s.wg.Add(1)
+	go func() {
+		defer s.wg.Done()
+		ticker := time.NewTicker(30 * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				s.neighbors.cleanupExpired()
+			case <-s.stopChan:
+				return
+			}
+		}
+	}()
+}
+
+func (s *Stack) selectDiscoveryDevice(proto string) *config.Device {
+	for i := range s.config.Devices {
+		dev := &s.config.Devices[i]
+		switch proto {
+		case ProtocolLLDP:
+			if dev.LLDPConfig == nil || dev.LLDPConfig.Enabled {
+				return dev
+			}
+		case ProtocolCDP:
+			if dev.CDPConfig == nil || dev.CDPConfig.Enabled {
+				return dev
+			}
+		case ProtocolEDP:
+			if dev.EDPConfig == nil || dev.EDPConfig.Enabled {
+				return dev
+			}
+		case ProtocolFDP:
+			if dev.FDPConfig == nil || dev.FDPConfig.Enabled {
+				return dev
+			}
+		default:
+			return dev
+		}
+	}
+	if len(s.config.Devices) > 0 {
+		return &s.config.Devices[0]
+	}
+	return nil
 }

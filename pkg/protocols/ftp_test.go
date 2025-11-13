@@ -209,134 +209,10 @@ func TestFTPCommands(t *testing.T) {
 
 // generateFTPResponse simulates FTP response generation (helper for testing)
 func generateFTPResponse(command string, devices []*config.Device) string {
-	command = strings.TrimSpace(command)
-	if command == "" {
-		return ""
-	}
-
-	parts := strings.Fields(command)
-	if len(parts) == 0 {
-		return ""
-	}
-
-	cmd := strings.ToUpper(parts[0])
-	var response string
-
-	switch cmd {
-	case "USER":
-		if len(parts) > 1 {
-			response = "331 User name okay, need password.\r\n"
-		} else {
-			response = "501 Syntax error in parameters or arguments.\r\n"
-		}
-
-	case "PASS":
-		response = "230 User logged in, proceed.\r\n"
-
-	case "SYST":
-		systemType := "UNIX Type: L8"
-		if len(devices) > 0 && devices[0].FTPConfig != nil && devices[0].FTPConfig.SystemType != "" {
-			systemType = devices[0].FTPConfig.SystemType
-		}
-		response = "215 " + systemType + "\r\n"
-
-	case "PWD":
-		response = "257 \"/\" is current directory.\r\n"
-
-	case "TYPE":
-		if len(parts) > 1 {
-			response = "200 Type set to " + parts[1] + ".\r\n"
-		} else {
-			response = "501 Syntax error in parameters or arguments.\r\n"
-		}
-
-	case "PASV":
-		if len(devices) > 0 && len(devices[0].IPAddresses) > 0 {
-			ip := devices[0].IPAddresses[0]
-			port := 20000
-			p1 := port / 256
-			p2 := port % 256
-			response = "227 Entering Passive Mode (" +
-				string(rune('0'+ip[0]/100)) + string(rune('0'+(ip[0]/10)%10)) + string(rune('0'+ip[0]%10)) + "," +
-				string(rune('0'+ip[1]/100)) + string(rune('0'+(ip[1]/10)%10)) + string(rune('0'+ip[1]%10)) + "," +
-				string(rune('0'+ip[2]/100)) + string(rune('0'+(ip[2]/10)%10)) + string(rune('0'+ip[2]%10)) + "," +
-				string(rune('0'+ip[3]/100)) + string(rune('0'+(ip[3]/10)%10)) + string(rune('0'+ip[3]%10)) + "," +
-				string(rune('0'+p1/100)) + string(rune('0'+(p1/10)%10)) + string(rune('0'+p1%10)) + "," +
-				string(rune('0'+p2/100)) + string(rune('0'+(p2/10)%10)) + string(rune('0'+p2%10)) +
-				").\r\n"
-		} else {
-			response = "500 Passive mode failed.\r\n"
-		}
-
-	case "LIST":
-		response = "150 Here comes the directory listing.\r\n"
-		response += "226 Directory send OK.\r\n"
-
-	case "RETR":
-		if len(parts) > 1 {
-			filename := parts[1]
-			response = "550 " + filename + ": No such file or directory.\r\n"
-		} else {
-			response = "501 Syntax error in parameters or arguments.\r\n"
-		}
-
-	case "STOR":
-		if len(parts) > 1 {
-			response = "553 Could not create file (read-only filesystem).\r\n"
-		} else {
-			response = "501 Syntax error in parameters or arguments.\r\n"
-		}
-
-	case "CWD":
-		if len(parts) > 1 {
-			response = "250 Directory successfully changed.\r\n"
-		} else {
-			response = "501 Syntax error in parameters or arguments.\r\n"
-		}
-
-	case "CDUP":
-		response = "250 Directory successfully changed.\r\n"
-
-	case "DELE":
-		if len(parts) > 1 {
-			response = "553 Could not delete file (read-only filesystem).\r\n"
-		} else {
-			response = "501 Syntax error in parameters or arguments.\r\n"
-		}
-
-	case "MKD":
-		if len(parts) > 1 {
-			response = "257 Directory created.\r\n"
-		} else {
-			response = "501 Syntax error in parameters or arguments.\r\n"
-		}
-
-	case "RMD":
-		if len(parts) > 1 {
-			response = "250 Directory deleted.\r\n"
-		} else {
-			response = "501 Syntax error in parameters or arguments.\r\n"
-		}
-
-	case "NOOP":
-		response = "200 NOOP ok.\r\n"
-
-	case "QUIT":
-		response = "221 Goodbye.\r\n"
-
-	case "HELP":
-		response = "214-The following commands are recognized:\r\n" +
-			" USER PASS SYST PWD TYPE PASV LIST RETR STOR\r\n" +
-			" CWD CDUP DELE MKD RMD NOOP QUIT HELP\r\n" +
-			"214 Help OK.\r\n"
-
-	default:
-		if len(cmd) <= 4 && cmd == strings.ToUpper(cmd) {
-			response = "502 Command not implemented.\r\n"
-		}
-	}
-
-	return response
+	cfg := &config.Config{}
+	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
+	handler := NewFTPHandler(stack)
+	return handler.buildFTPResponse(command, false, devices)
 }
 
 // TestFTPCommandParsing tests FTP command parsing
@@ -398,6 +274,36 @@ func TestFTPCommandParsing(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestFTPIPv6PassiveModes(t *testing.T) {
+	cfg := &config.Config{}
+	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
+	handler := NewFTPHandler(stack)
+
+	devices := []*config.Device{
+		{
+			Name: "router",
+			IPAddresses: []net.IP{
+				net.ParseIP("192.168.1.10"),
+				net.ParseIP("2001:db8::1"),
+			},
+			MACAddress: net.HardwareAddr{0x00, 0xaa, 0xbb, 0xcc, 0xdd, 0xee},
+		},
+	}
+
+	resp := handler.buildFTPResponse("PASV", true, devices)
+	if !strings.HasPrefix(resp, "522") {
+		t.Fatalf("expected PASV over IPv6 to return 522, got %s", resp)
+	}
+
+	resp = handler.buildFTPResponse("EPSV", true, devices)
+	if !strings.HasPrefix(resp, "229") {
+		t.Fatalf("expected EPSV over IPv6 to return 229, got %s", resp)
+	}
+	if !strings.Contains(resp, "(|||") {
+		t.Fatalf("expected EPSV response to include extended passive format, got %s", resp)
 	}
 }
 

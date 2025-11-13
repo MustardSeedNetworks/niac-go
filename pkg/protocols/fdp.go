@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"net"
+	"strings"
 	"time"
 
 	"github.com/krisarmstrong/niac-go/pkg/config"
@@ -374,14 +375,107 @@ func (h *FDPHandler) sendFrame(device *config.Device, fdpPayload []byte) error {
 // HandlePacket processes an incoming FDP packet (for future use)
 func (h *FDPHandler) HandlePacket(pkt *Packet) {
 	debugLevel := h.stack.GetDebugLevel()
-
-	if debugLevel >= 2 {
-		fmt.Printf("FDP: Received FDP frame sn=%d (parsing not yet implemented)\n", pkt.SerialNumber)
+	payload, ok := ethernetPayload(pkt.Buffer)
+	if !ok || len(payload) < 4 {
+		return
 	}
 
-	// Pending: parse incoming FDP frames and store neighbor information (issue #79)
-	// This will enable:
-	// - Discovering real Foundry/Brocade devices on the network
-	// - Responding to FDP queries
-	// - Building network topology
+	fdpData := payload
+	if len(payload) >= 8 && payload[0] == 0xAA && payload[1] == 0xAA {
+		fdpData = payload[8:]
+	}
+	if len(fdpData) < 4 {
+		return
+	}
+
+	// Header: Version(1) + Holdtime(1) + Checksum(2)
+	ttl := int(fdpData[1])
+	cursor := 4
+	limit := len(fdpData)
+
+	var deviceID, portID, platform, software string
+	var mgmtIP net.IP
+	var caps []string
+
+	for cursor+4 <= limit {
+		tlvt := binary.BigEndian.Uint16(fdpData[cursor : cursor+2])
+		length := int(binary.BigEndian.Uint16(fdpData[cursor+2 : cursor+4]))
+		if length < 4 || cursor+length > limit {
+			break
+		}
+		value := fdpData[cursor+4 : cursor+length]
+		switch tlvt {
+		case FDPTLVTypeDeviceID:
+			deviceID = strings.TrimSpace(string(value))
+		case FDPTLVTypePort:
+			portID = strings.TrimSpace(string(value))
+		case FDPTLVTypePlatform:
+			platform = strings.TrimSpace(string(value))
+		case FDPTLVTypeCapabilities:
+			if len(value) >= 4 {
+				capBits := binary.BigEndian.Uint32(value[:4])
+				caps = fdpCapabilitiesToStrings(capBits)
+			}
+		case FDPTLVTypeSoftware:
+			software = strings.TrimSpace(string(value))
+		case FDPTLVTypeIPAddress:
+			if len(value) == net.IPv4len || len(value) == net.IPv6len {
+				ip := make(net.IP, len(value))
+				copy(ip, value)
+				mgmtIP = ip
+			}
+		}
+		cursor += length
+	}
+
+	device := h.stack.selectDiscoveryDevice(ProtocolFDP)
+	if device == nil {
+		return
+	}
+
+	ttlSeconds := time.Duration(ttl)
+	if ttlSeconds <= 0 {
+		ttlSeconds = time.Duration(FDPHoldtime)
+	}
+
+	entry := NeighborRecord{
+		Protocol:        ProtocolFDP,
+		LocalDevice:     device.Name,
+		RemoteDevice:    coalesceStrings(deviceID, platform),
+		RemoteChassisID: coalesceStrings(deviceID, platform),
+		RemotePort:      portID,
+		Description:     joinNonEmpty(" / ", platform, software),
+		TTL:             ttlSeconds * time.Second,
+		Capabilities:    caps,
+	}
+	if mgmtIP != nil {
+		entry.ManagementAddress = mgmtIP.String()
+	}
+	entry.Capabilities = dedupStrings(entry.Capabilities)
+	if entry.RemoteDevice == "" {
+		entry.RemoteDevice = "unknown-fdp"
+	}
+	if entry.RemoteChassisID == "" {
+		entry.RemoteChassisID = entry.RemoteDevice
+	}
+
+	if debugLevel >= 2 {
+		fmt.Printf("FDP: Neighbor %s via %s (local %s)\n", entry.RemoteDevice, entry.RemotePort, entry.LocalDevice)
+	}
+
+	h.stack.recordNeighbor(entry)
+}
+
+func fdpCapabilitiesToStrings(bits uint32) []string {
+	var caps []string
+	if bits&FDPCapRouter != 0 {
+		caps = append(caps, "router")
+	}
+	if bits&FDPCapSwitch != 0 {
+		caps = append(caps, "switch")
+	}
+	if bits&FDPCapHost != 0 {
+		caps = append(caps, "host")
+	}
+	return caps
 }
