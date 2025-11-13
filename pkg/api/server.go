@@ -175,6 +175,7 @@ func (s *Server) handleStats(w http.ResponseWriter, r *http.Request) {
 			"icmp_replies":     stats.ICMPReplies,
 			"dns_queries":      stats.DNSQueries,
 			"dhcp_requests":    stats.DHCPRequests,
+			"snmp_queries":     stats.SNMPQueries,
 			"errors":           stats.Errors,
 		},
 	}
@@ -248,6 +249,7 @@ func (s *Server) handleMetrics(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain; version=0.0.4")
 	fmt.Fprintf(w, "niac_packets_sent_total %d\n", stats.PacketsSent)
 	fmt.Fprintf(w, "niac_packets_received_total %d\n", stats.PacketsReceived)
+	fmt.Fprintf(w, "niac_snmp_queries_total %d\n", stats.SNMPQueries)
 	fmt.Fprintf(w, "niac_errors_total %d\n", stats.Errors)
 	fmt.Fprintf(w, "niac_devices_total %d\n", len(s.cfg.Config.Devices))
 }

@@ -6,6 +6,7 @@ import (
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/krisarmstrong/niac-go/pkg/config"
+	"github.com/krisarmstrong/niac-go/pkg/logging"
 )
 
 // Well-known UDP ports
@@ -61,11 +62,7 @@ func (h *UDPHandler) HandlePacket(pkt *Packet, ipLayer *layers.IPv4, devices []*
 		// DHCP server port
 		h.stack.dhcpHandler.HandlePacket(pkt, ipLayer, udp, devices)
 	case UDPPortSNMP:
-		// SNMP query
-		// Pending: route SNMP queries through UDP stack (issue #81)
-		if debugLevel >= 2 {
-			fmt.Printf("SNMP query received (not yet implemented) sn=%d\n", pkt.SerialNumber)
-		}
+		h.handleSNMP(pkt, ipLayer, udp, devices)
 	case NetBIOSNameServicePort:
 		// NetBIOS Name Service
 		h.stack.netbiosHandler.HandleNameService(pkt, packet, udp, devices)
@@ -77,6 +74,16 @@ func (h *UDPHandler) HandlePacket(pkt *Packet, ipLayer *layers.IPv4, devices []*
 			fmt.Printf("UDP packet to unhandled port %d sn=%d\n", udp.DstPort, pkt.SerialNumber)
 		}
 	}
+}
+
+func (h *UDPHandler) handleSNMP(pkt *Packet, ipLayer *layers.IPv4, udp *layers.UDP, devices []*config.Device) {
+	if h.stack.snmpHandler == nil {
+		if h.stack.GetProtocolDebugLevel(logging.ProtocolSNMP) >= 2 {
+			fmt.Printf("SNMP handler not initialised sn=%d\n", pkt.SerialNumber)
+		}
+		return
+	}
+	h.stack.snmpHandler.HandlePacket(pkt, ipLayer, udp, devices)
 }
 
 // SendUDP sends a UDP packet
@@ -174,8 +181,7 @@ func (h *UDPHandler) HandlePacketV6(pkt *Packet, packet gopacket.Packet, ipv6 *l
 		// DNS query over IPv6
 		h.stack.dnsHandler.HandleQueryV6(pkt, packet, ipv6, udp, devices)
 	case UDPPortSNMP:
-		// SNMP query over IPv6
-		if debugLevel >= 2 {
+		if h.stack.snmpHandler != nil && h.stack.GetProtocolDebugLevel(logging.ProtocolSNMP) >= 2 {
 			fmt.Printf("SNMP/IPv6 query received (not yet implemented) sn=%d\n", pkt.SerialNumber)
 		}
 	case 547:

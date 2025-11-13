@@ -239,15 +239,21 @@ func (a *Agent) GetCommunity() string {
 
 // ProcessPDU processes SNMP PDU variables and returns response variables
 // This is typically called by an SNMP server implementation
-func (a *Agent) ProcessPDU(pduType gosnmp.PDUType, vars []gosnmp.SnmpPDU) []gosnmp.SnmpPDU {
+func (a *Agent) ProcessPDU(pduType gosnmp.PDUType, vars []gosnmp.SnmpPDU, maxRepetitions uint32) []gosnmp.SnmpPDU {
 	switch pduType {
 	case gosnmp.GetRequest:
 		return a.processGetRequest(vars)
 	case gosnmp.GetNextRequest:
 		return a.processGetNextRequest(vars)
 	case gosnmp.GetBulkRequest:
-		// For bulk, we need maxRepetitions which would be passed separately
-		return a.processGetBulkRequestVars(vars, 10) // Default to 10
+		reps := int(maxRepetitions)
+		if reps <= 0 {
+			reps = 10
+		}
+		if reps > 50 {
+			reps = 50
+		}
+		return a.processGetBulkRequestVars(vars, reps)
 	default:
 		// Return error PDU
 		return []gosnmp.SnmpPDU{{

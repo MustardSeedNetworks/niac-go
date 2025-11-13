@@ -689,7 +689,7 @@ func TestAgent_ProcessPDU_GetRequest(t *testing.T) {
 		{Name: "1.3.6.1.2.1.1.5.0", Type: gosnmp.Null},
 	}
 
-	response := agent.ProcessPDU(gosnmp.GetRequest, vars)
+	response := agent.ProcessPDU(gosnmp.GetRequest, vars, 0)
 
 	if len(response) != len(vars) {
 		t.Errorf("Expected %d responses, got %d", len(vars), len(response))
@@ -711,7 +711,7 @@ func TestAgent_ProcessPDU_GetNextRequest(t *testing.T) {
 		{Name: "1.3.6.1.2.1.1", Type: gosnmp.Null},
 	}
 
-	response := agent.ProcessPDU(gosnmp.GetNextRequest, vars)
+	response := agent.ProcessPDU(gosnmp.GetNextRequest, vars, 0)
 
 	if len(response) == 0 {
 		t.Error("Expected non-empty response")
@@ -732,7 +732,7 @@ func TestAgent_ProcessPDU_GetBulkRequest(t *testing.T) {
 		{Name: "1.3.6.1.2.1.1", Type: gosnmp.Null},
 	}
 
-	response := agent.ProcessPDU(gosnmp.GetBulkRequest, vars)
+	response := agent.ProcessPDU(gosnmp.GetBulkRequest, vars, 5)
 
 	if len(response) == 0 {
 		t.Error("Expected non-empty response")
@@ -748,7 +748,7 @@ func TestAgent_ProcessPDU_InvalidRequest(t *testing.T) {
 		{Name: "1.3.6.1.2.1.1.1.0", Type: gosnmp.Null},
 	}
 
-	response := agent.ProcessPDU(gosnmp.PDUType(99), vars)
+	response := agent.ProcessPDU(gosnmp.PDUType(99), vars, 0)
 
 	if len(response) == 0 {
 		t.Error("Expected error response")
@@ -768,7 +768,7 @@ func TestAgent_ProcessPDU_NoSuchObject(t *testing.T) {
 		{Name: "1.2.3.4.5.6.7.8.9", Type: gosnmp.Null},
 	}
 
-	response := agent.ProcessPDU(gosnmp.GetRequest, vars)
+	response := agent.ProcessPDU(gosnmp.GetRequest, vars, 0)
 
 	if len(response) != 1 {
 		t.Errorf("Expected 1 response, got %d", len(response))

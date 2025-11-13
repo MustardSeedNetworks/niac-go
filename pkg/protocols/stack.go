@@ -8,6 +8,7 @@ import (
 	"github.com/krisarmstrong/niac-go/pkg/capture"
 	"github.com/krisarmstrong/niac-go/pkg/config"
 	"github.com/krisarmstrong/niac-go/pkg/logging"
+	"github.com/krisarmstrong/niac-go/pkg/snmp"
 )
 
 // Stack manages the network protocol stack
@@ -41,6 +42,7 @@ type Stack struct {
 	cdpHandler     *CDPHandler
 	edpHandler     *EDPHandler
 	fdpHandler     *FDPHandler
+	snmpHandler    *SNMPHandler
 
 	// Statistics
 	stats *Statistics
@@ -51,6 +53,7 @@ type Stack struct {
 	wg       sync.WaitGroup
 
 	debugConfig *logging.DebugConfig
+	snmpAgents  map[*config.Device]*snmp.Agent
 }
 
 // Statistics holds protocol statistics
@@ -64,6 +67,7 @@ type Statistics struct {
 	ICMPReplies     uint64
 	DNSQueries      uint64
 	DHCPRequests    uint64
+	SNMPQueries     uint64
 	Errors          uint64
 }
 
@@ -78,10 +82,8 @@ func NewStack(captureEngine *capture.Engine, cfg *config.Config, debugConfig *lo
 		stats:       &Statistics{},
 		stopChan:    make(chan struct{}),
 		debugConfig: debugConfig,
+		snmpAgents:  make(map[*config.Device]*snmp.Agent),
 	}
-
-	// Initialize device table from config
-	s.initializeDevices()
 
 	// Create protocol handlers
 	s.arpHandler = NewARPHandler(s)
@@ -102,6 +104,10 @@ func NewStack(captureEngine *capture.Engine, cfg *config.Config, debugConfig *lo
 	s.cdpHandler = NewCDPHandler(s)
 	s.edpHandler = NewEDPHandler(s)
 	s.fdpHandler = NewFDPHandler(s)
+	s.snmpHandler = NewSNMPHandler(s)
+
+	// Initialize device table from config (requires handlers for DHCP/SNMP setup)
+	s.initializeDevices()
 
 	return s
 }
@@ -152,6 +158,8 @@ func (s *Stack) initializeDevices() {
 				fmt.Printf("Configured DHCP server for device %s\n", device.Name)
 			}
 		}
+
+		s.initSNMPAgent(device)
 	}
 
 	if s.debugConfig.GetGlobal() >= 1 {
@@ -481,8 +489,44 @@ func (s *Stack) GetStats() Statistics {
 		ICMPReplies:     s.stats.ICMPReplies,
 		DNSQueries:      s.stats.DNSQueries,
 		DHCPRequests:    s.stats.DHCPRequests,
+		SNMPQueries:     s.stats.SNMPQueries,
 		Errors:          s.stats.Errors,
 	}
+}
+
+func (s *Stack) initSNMPAgent(device *config.Device) {
+	if !snmpEnabled(device.SNMPConfig) {
+		return
+	}
+
+	debugLevel := s.debugConfig.GetProtocolLevel(logging.ProtocolSNMP)
+	agent := snmp.NewAgent(device, debugLevel)
+
+	if device.SNMPConfig.WalkFile != "" {
+		if err := agent.LoadWalkFile(device.SNMPConfig.WalkFile); err != nil && debugLevel >= 1 {
+			fmt.Printf("SNMP: failed to load walk file for %s: %v\n", device.Name, err)
+		}
+	}
+
+	s.snmpAgents[device] = agent
+}
+
+func snmpEnabled(cfg config.SNMPConfig) bool {
+	if cfg.Community != "" || cfg.WalkFile != "" || cfg.SysName != "" ||
+		cfg.SysDescr != "" || cfg.SysContact != "" || cfg.SysLocation != "" {
+		return true
+	}
+	if cfg.Traps != nil && cfg.Traps.Enabled {
+		return true
+	}
+	return false
+}
+
+func (s *Stack) getSNMPAgent(device *config.Device) *snmp.Agent {
+	if s == nil {
+		return nil
+	}
+	return s.snmpAgents[device]
 }
 
 // IncrementStat increments a specific statistic
