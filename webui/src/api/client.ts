@@ -107,6 +107,30 @@ export const fetchFiles = (kind: 'pcaps' | 'walks') =>
 export const fetchVersion = () => request<VersionInfo>('/api/v1/version');
 export const fetchTopology = () => request<TopologyGraph>('/api/v1/topology');
 export const fetchErrorTypes = () => request<ErrorInjectionInfo>('/api/v1/errors');
+
+export const injectError = (payload: {
+  device_ip: string;
+  interface: string;
+  error_type: string;
+  value: number;
+}) =>
+  request<{ success: boolean; message: string; device_ip: string; interface: string; error_type: string; value: number }>('/api/v1/errors', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+
+export const clearError = (deviceIP: string, iface: string) =>
+  request<{ success: boolean; message: string; device_ip: string; interface: string }>(
+    `/api/v1/errors?device_ip=${encodeURIComponent(deviceIP)}&interface=${encodeURIComponent(iface)}`,
+    { method: 'DELETE' }
+  );
+
+export const clearAllErrors = () =>
+  request<{ success: boolean; message: string }>('/api/v1/errors', {
+    method: 'DELETE',
+  });
+
 export const fetchInterfaces = () => request<InterfacesResponse>('/api/v1/interfaces');
 export const fetchRuntimeStatus = () => request<RuntimeStatus>('/api/v1/runtime');
 export const fetchSimulationStatus = () => request<SimulationStatus>('/api/v1/simulation');

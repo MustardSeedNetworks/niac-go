@@ -117,6 +117,13 @@ export interface ErrorType {
 export interface ErrorInjectionInfo {
   available_types: ErrorType[];
   info: string;
+  active_errors?: {
+    [deviceIP: string]: {
+      [interfaceName: string]: {
+        [errorType: string]: number;
+      };
+    };
+  };
 }
 
 export interface NetworkInterface {
