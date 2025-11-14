@@ -145,3 +145,125 @@ func formatVLANList(vlans []int) string {
 	// For longer lists, show count
 	return fmt.Sprintf("%d-%d (+%d more)", vlans[0], vlans[len(vlans)-1], len(vlans)-2)
 }
+
+// ExportGraphML exports the topology in GraphML format (for yEd, Gephi)
+func (t *Topology) ExportGraphML() string {
+	var sb strings.Builder
+	sb.WriteString(`<?xml version="1.0" encoding="UTF-8"?>` + "\n")
+	sb.WriteString(`<graphml xmlns="http://graphml.graphdrawing.org/xmlns"` + "\n")
+	sb.WriteString(`  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"` + "\n")
+	sb.WriteString(`  xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns` + "\n")
+	sb.WriteString(`  http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd">` + "\n")
+
+	// Define keys (attributes)
+	sb.WriteString(`  <key id="d0" for="node" attr.name="type" attr.type="string"/>` + "\n")
+	sb.WriteString(`  <key id="d1" for="edge" attr.name="label" attr.type="string"/>` + "\n")
+	sb.WriteString(`  <key id="d2" for="edge" attr.name="source_interface" attr.type="string"/>` + "\n")
+	sb.WriteString(`  <key id="d3" for="edge" attr.name="target_interface" attr.type="string"/>` + "\n")
+	sb.WriteString(`  <key id="d4" for="edge" attr.name="link_type" attr.type="string"/>` + "\n")
+	sb.WriteString(`  <key id="d5" for="edge" attr.name="vlans" attr.type="string"/>` + "\n")
+	sb.WriteString(`  <key id="d6" for="edge" attr.name="speed_mbps" attr.type="int"/>` + "\n")
+	sb.WriteString(`  <key id="d7" for="edge" attr.name="status" attr.type="string"/>` + "\n")
+
+	sb.WriteString(`  <graph id="G" edgedefault="undirected">` + "\n")
+
+	// Nodes
+	for _, node := range t.Nodes {
+		sb.WriteString(fmt.Sprintf(`    <node id="%s">`, escapeXML(node.Name)) + "\n")
+		sb.WriteString(fmt.Sprintf(`      <data key="d0">%s</data>`, escapeXML(node.Type)) + "\n")
+		sb.WriteString(`    </node>` + "\n")
+	}
+
+	// Edges
+	for i, link := range t.Links {
+		sb.WriteString(fmt.Sprintf(`    <edge id="e%d" source="%s" target="%s">`, i, escapeXML(link.Source), escapeXML(link.Target)) + "\n")
+		sb.WriteString(fmt.Sprintf(`      <data key="d1">%s</data>`, escapeXML(link.Label)) + "\n")
+		sb.WriteString(fmt.Sprintf(`      <data key="d2">%s</data>`, escapeXML(link.SourceInterface)) + "\n")
+		sb.WriteString(fmt.Sprintf(`      <data key="d3">%s</data>`, escapeXML(link.TargetInterface)) + "\n")
+		sb.WriteString(fmt.Sprintf(`      <data key="d4">%s</data>`, escapeXML(link.LinkType)) + "\n")
+		sb.WriteString(fmt.Sprintf(`      <data key="d5">%s</data>`, escapeXML(formatVLANList(link.VLANs))) + "\n")
+		if link.Speed > 0 {
+			sb.WriteString(fmt.Sprintf(`      <data key="d6">%d</data>`, link.Speed) + "\n")
+		}
+		sb.WriteString(fmt.Sprintf(`      <data key="d7">%s</data>`, escapeXML(link.Status)) + "\n")
+		sb.WriteString(`    </edge>` + "\n")
+	}
+
+	sb.WriteString(`  </graph>` + "\n")
+	sb.WriteString(`</graphml>` + "\n")
+	return sb.String()
+}
+
+// ExportDOT exports the topology in DOT format (for Graphviz)
+func (t *Topology) ExportDOT() string {
+	var sb strings.Builder
+	sb.WriteString("graph niac_topology {\n")
+	sb.WriteString("  // Nodes\n")
+
+	// Nodes
+	for _, node := range t.Nodes {
+		shape := "box"
+		if node.Type == "router" {
+			shape = "ellipse"
+		} else if node.Type == "switch" {
+			shape = "box"
+		} else if node.Type == "ap" {
+			shape = "diamond"
+		}
+		sb.WriteString(fmt.Sprintf("  \"%s\" [shape=%s, label=\"%s\\n(%s)\"];\n",
+			escapeDOT(node.Name), shape, escapeDOT(node.Name), escapeDOT(node.Type)))
+	}
+
+	sb.WriteString("\n  // Links\n")
+
+	// Links
+	for _, link := range t.Links {
+		style := "solid"
+		color := "black"
+		if link.LinkType == "trunk" {
+			style = "bold"
+			color = "blue"
+		} else if link.LinkType == "lag" {
+			style = "bold"
+			color = "orange"
+		} else if link.LinkType == "access" {
+			color = "green"
+		}
+
+		if link.Status == "down" {
+			style = "dashed"
+			color = "red"
+		}
+
+		label := fmt.Sprintf("%s-%s", escapeDOT(link.SourceInterface), escapeDOT(link.TargetInterface))
+		if len(link.VLANs) > 0 {
+			label += fmt.Sprintf("\\nVLANs: %s", escapeDOT(formatVLANList(link.VLANs)))
+		}
+		if link.Speed > 0 {
+			label += fmt.Sprintf("\\n%dMbps", link.Speed)
+		}
+
+		sb.WriteString(fmt.Sprintf("  \"%s\" -- \"%s\" [label=\"%s\", style=%s, color=%s];\n",
+			escapeDOT(link.Source), escapeDOT(link.Target), label, style, color))
+	}
+
+	sb.WriteString("}\n")
+	return sb.String()
+}
+
+// escapeXML escapes special XML characters
+func escapeXML(s string) string {
+	s = strings.ReplaceAll(s, "&", "&amp;")
+	s = strings.ReplaceAll(s, "<", "&lt;")
+	s = strings.ReplaceAll(s, ">", "&gt;")
+	s = strings.ReplaceAll(s, "\"", "&quot;")
+	s = strings.ReplaceAll(s, "'", "&apos;")
+	return s
+}
+
+// escapeDOT escapes special DOT characters
+func escapeDOT(s string) string {
+	s = strings.ReplaceAll(s, "\"", "\\\"")
+	s = strings.ReplaceAll(s, "\n", "\\n")
+	return s
+}

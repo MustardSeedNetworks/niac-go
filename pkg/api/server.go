@@ -161,6 +161,7 @@ func (s *Server) Start() error {
 		mux.HandleFunc("/api/v1/alerts", s.auth(s.handleAlerts))
 		mux.HandleFunc("/api/v1/files", s.auth(s.handleFiles))
 		mux.HandleFunc("/api/v1/topology", s.auth(s.handleTopology))
+		mux.HandleFunc("/api/v1/topology/export", s.auth(s.handleTopologyExport))
 		mux.HandleFunc("/api/v1/errors", s.auth(s.handleErrors))
 		mux.HandleFunc("/api/v1/interfaces", s.auth(s.handleInterfaces))
 		mux.HandleFunc("/api/v1/runtime", s.auth(s.handleRuntime))
@@ -552,6 +553,41 @@ func (s *Server) handleFiles(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleTopology(w http.ResponseWriter, r *http.Request) {
 	s.writeJSON(w, s.currentTopology())
+}
+
+func (s *Server) handleTopologyExport(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.Header().Set("Allow", "GET")
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	format := r.URL.Query().Get("format")
+	if format == "" {
+		format = "json"
+	}
+
+	topology := s.currentTopology()
+
+	switch format {
+	case "json":
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Content-Disposition", "attachment; filename=\"topology.json\"")
+		s.writeJSON(w, topology)
+
+	case "graphml":
+		w.Header().Set("Content-Type", "application/xml")
+		w.Header().Set("Content-Disposition", "attachment; filename=\"topology.graphml\"")
+		fmt.Fprint(w, topology.ExportGraphML())
+
+	case "dot":
+		w.Header().Set("Content-Type", "text/vnd.graphviz")
+		w.Header().Set("Content-Disposition", "attachment; filename=\"topology.dot\"")
+		fmt.Fprint(w, topology.ExportDOT())
+
+	default:
+		http.Error(w, fmt.Sprintf("unsupported format: %s (supported: json, graphml, dot)", format), http.StatusBadRequest)
+	}
 }
 
 func (s *Server) handleVersion(w http.ResponseWriter, r *http.Request) {
