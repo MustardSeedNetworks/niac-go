@@ -508,8 +508,60 @@ Items deferred to v2.1.0 and beyond (per VERSION_ROADMAP.md):
 ✅ Branch: v2.0.0-webui (up to date with origin)
 ```
 
+### Completed Actions
+1. ✅ GitHub releases created for v2.0.1, v2.0.2, v2.1.0
+2. ✅ README.md badges updated to v2.1.1
+3. ✅ All builds verified and working
+
+---
+
+## v2.1.1 - Security Patch Release
+
+**Released:** 2025-11-14
+**Focus:** Critical security vulnerability fixes
+
+### Security Fixes (5 vulnerabilities)
+
+#### 1. golang.org/x/net - HTTP/2 Rapid Reset (HIGH)
+**CVE:** HTTP/2 rapid reset can cause excessive work in net/http
+**Severity:** HIGH
+**Fixed:** Updated to v0.17.0+
+
+#### 2. golang.org/x/net - HTTP/2 Stream Cancellation (MEDIUM)
+**CVE:** HTTP/2 Stream Cancellation Attack
+**Severity:** MEDIUM
+**Fixed:** Updated to v0.17.0+
+
+#### 3. golang.org/x/net - HTTP/2 Header Handling (MEDIUM)
+**CVE:** Close connections when receiving too many headers
+**Severity:** MEDIUM
+**Fixed:** Updated to v0.23.0+
+
+#### 4. golang.org/x/net - HTTP Proxy Bypass (MEDIUM)
+**CVE:** HTTP Proxy bypass using IPv6 Zone IDs
+**Severity:** MEDIUM
+**Fixed:** Updated to v0.36.0+
+
+#### 5. golang.org/x/net - Cross-Site Scripting (MEDIUM)
+**CVE:** XSS vulnerability in golang.org/x/net
+**Severity:** MEDIUM
+**Fixed:** Updated to v0.38.0+
+
+### Dependency Updates
+
+**golang.org/x/net:** v0.15.0 → **v0.38.0** ✅
+**golang.org/x/text:** v0.13.0 → v0.23.0
+
+### Release Status
+- ✅ All vulnerabilities fixed
+- ✅ Tests passing
+- ✅ Build verified
+- ✅ Tag created and pushed
+- ✅ GitHub release published
+- ✅ README badges updated
+
+---
+
 ### Next Steps
-1. Create GitHub releases for each tag
-2. Close completed issues from VERSION_ROADMAP.md
-3. Update README.md badges to v2.1.0
-4. Begin work on remaining VERSION_ROADMAP.md features
+1. Begin work on remaining VERSION_ROADMAP.md features for v2.2.0
+2. Monitor for additional security updates
