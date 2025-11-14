@@ -7,19 +7,75 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Future (v2.2.0+)
+### Future (v2.3.0+)
 - Config generator CLI with interactive prompts
 - Packet hex dump viewer in TUI
 - Statistics export (JSON/CSV)
 - NetFlow/IPFIX export
 - DHCPv6 prefix delegation (IA_PD)
-- Live log streaming via WebUI
-- Hex dump packet viewer
-- Traffic injection controls
-- VLAN-aware ARP
-- Monaco Editor for YAML
-- Enhanced performance monitoring
-- Advanced topology visualization
+- Container and Kubernetes deployment (#35)
+- Multi-user authentication (#33)
+
+## [2.2.0] - 2025-11-14
+
+### Added
+
+#### Enhanced Performance Monitoring (#36)
+- **Extended Prometheus Metrics** - Comprehensive monitoring capabilities
+  - System metrics: `niac_uptime_seconds`, `niac_goroutines_total`, `niac_memory_usage_bytes`, `niac_memory_sys_bytes`, `niac_gc_runs_total`
+  - Protocol metrics: `niac_arp_requests_total`, `niac_arp_replies_total`, `niac_icmp_requests_total`, `niac_icmp_replies_total`, `niac_dns_queries_total`, `niac_dhcp_requests_total`
+  - All metrics include Prometheus HELP and TYPE annotations
+
+- **Grafana Dashboard Template** - Pre-built visualization (`docs/grafana-dashboard.json`)
+  - Overview panel (devices, packets, errors)
+  - System metrics panel (goroutines, memory, uptime, GC)
+  - Protocol breakdown panel (traffic by protocol type)
+  - Memory usage panel (allocation trends)
+  - Runtime metrics panel (goroutines and GC over time)
+  - Auto-refreshes every 5s, shows last 15 minutes
+
+- **Monitoring Documentation** - Complete setup guide (`docs/MONITORING.md`)
+  - Prometheus installation and configuration
+  - Grafana setup and dashboard import
+  - Complete metrics reference (20+ metrics)
+  - Alert rule examples
+  - Troubleshooting guide
+  - Best practices
+
+#### Advanced Topology Visualization (#37)
+- **Enhanced Topology Data Model** - Rich link information
+  - `source_interface` / `target_interface` - Interface names
+  - `link_type` - Auto-detected: trunk, access, lag, p2p
+  - `vlans` - List of allowed VLANs
+  - `native_vlan` - Native VLAN for trunk ports
+  - `speed_mbps` - Link speed from interface config
+  - `duplex` - Full/half duplex
+  - `status` - up, down, degraded (from OperStatus)
+  - `utilization_percent` - Placeholder for future metrics
+  - Smart VLAN list formatting (e.g., "1-3,10" or "1-5 (+10 more)")
+
+- **Topology Export API** - Multiple format support
+  - `GET /api/v1/topology/export?format=json` - JSON format (default)
+  - `GET /api/v1/topology/export?format=graphml` - GraphML (yEd, Gephi, Cytoscape)
+  - `GET /api/v1/topology/export?format=dot` - DOT (Graphviz)
+  - GraphML includes all link attributes
+  - DOT format with color-coded links:
+    - Trunk links: bold blue
+    - LAG links: bold orange
+    - Access links: green
+    - Down links: dashed red
+  - Device shapes by type (router=ellipse, switch=box, ap=diamond)
+
+### Changed
+- Enhanced `/metrics` endpoint with system and protocol metrics
+- Updated `REST_API.md` with monitoring section
+- BuildTopology now extracts speed/duplex/status from interface configs
+- Enhanced topology labels with VLAN and speed information
+
+### Documentation
+- Added `docs/MONITORING.md` - Comprehensive monitoring guide
+- Updated `docs/REST_API.md` - Added monitoring section
+- Created `docs/grafana-dashboard.json` - Pre-built Grafana dashboard
 
 ## [2.1.2] - 2025-11-14
 
