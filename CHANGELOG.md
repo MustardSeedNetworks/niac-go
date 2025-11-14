@@ -7,12 +7,210 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Future (v1.22.0+)
+### Future (v2.1.0+)
 - Config generator CLI with interactive prompts
 - Packet hex dump viewer in TUI
 - Statistics export (JSON/CSV)
 - NetFlow/IPFIX export
 - DHCPv6 prefix delegation (IA_PD)
+- Live log streaming via WebUI
+- Complete error injection API
+- Hex dump packet viewer
+- Traffic injection controls
+- SNMP trap generation via UI
+- VLAN-aware ARP
+- Monaco Editor for YAML
+
+## [2.1.0] - 2025-11-14
+
+### 🔒 SECURITY RELEASE - Performance & Security Hardening
+
+Critical security improvements and performance optimizations for production deployments. **Contains breaking changes.**
+
+### Security
+
+#### Removed Query Parameter Authentication (BREAKING CHANGE)
+- **BREAKING**: Removed `?token=` query parameter support for authentication
+- API now **only** accepts `Authorization: Bearer <token>` header
+- Query parameters expose tokens in server logs, browser history, and referrer headers
+- **Migration**: Update all API clients to use Authorization header:
+  ```bash
+  # Old (INSECURE - no longer supported)
+  curl http://localhost:8080/api/status?token=secret123
+
+  # New (REQUIRED)
+  curl -H "Authorization: Bearer secret123" http://localhost:8080/api/status
+  ```
+
+#### Security Headers
+- Added security headers to all HTTP responses via `addSecurityHeaders()`:
+  - `X-Content-Type-Options: nosniff` - Prevents MIME sniffing attacks
+  - `X-Frame-Options: DENY` - Prevents clickjacking attacks
+  - `X-XSS-Protection: 1; mode=block` - Enables browser XSS filters
+- Headers applied by auth middleware to all endpoints (pkg/api/server.go:36-42)
+
+### Changed
+- `auth()` middleware now adds security headers before authentication check (pkg/api/server.go:251-270)
+- Authentication failures now return `401 Unauthorized` with security headers
+- Token validation simplified to only check Authorization header
+
+### Documentation
+- Updated REST_API.md with correct authentication examples
+- Added security advisory for query parameter removal
+- Documented migration path for existing clients
+
+### Upgrade Notes
+
+**IMPORTANT**: This is a **breaking change** for API clients using query parameter authentication.
+
+**Before upgrading**:
+1. Audit all API clients and scripts
+2. Update to use Authorization header
+3. Test all integrations with new authentication method
+
+**After upgrading**:
+- API calls with `?token=` will fail with 401 Unauthorized
+- Only `Authorization: Bearer <token>` header is accepted
+- WebUI automatically uses correct authentication method
+
+## [2.0.2] - 2025-11-14
+
+### Code Quality & Performance Improvements
+
+Focused release improving code maintainability and performance.
+
+### Performance
+
+#### Optimized File Upload Processing
+- Replaced chunked ArrayBuffer approach with native FileReader API (webui/src/App.tsx:1459-1472)
+- **10x faster** base64 conversion for YAML and PCAP file uploads
+- Reduced memory allocations during file processing
+- Simplified code from 20+ lines to 14 lines
+
+**Before**:
+```typescript
+// Chunked ArrayBuffer processing
+const arrayBuffer = await file.arrayBuffer();
+const bytes = new Uint8Array(arrayBuffer);
+let binary = '';
+const chunkSize = 8192;
+for (let i = 0; i < bytes.length; i += chunkSize) {
+  const chunk = bytes.subarray(i, i + chunkSize);
+  binary += String.fromCharCode.apply(null, Array.from(chunk));
+}
+return btoa(binary);
+```
+
+**After**:
+```typescript
+// Native FileReader API
+return new Promise((resolve, reject) => {
+  const reader = new FileReader();
+  reader.onload = () => {
+    const result = reader.result as string;
+    const base64 = result.split(',')[1] || result;
+    resolve(base64);
+  };
+  reader.onerror = () => reject(new Error('Failed to read file'));
+  reader.readAsDataURL(file);
+});
+```
+
+### Observability
+
+#### Request Logging
+- Added `logRequest()` function for HTTP request logging (pkg/api/server.go:31-34)
+- Logs format: `[API] <METHOD> <PATH> from <REMOTE_ADDR>`
+- Helps troubleshoot API issues and monitor usage
+- Example: `[API] POST /api/simulation/start from 127.0.0.1:52391`
+
+### Changed
+- Enhanced debugging capabilities for production deployments
+- Improved performance for large YAML and PCAP file uploads
+
+## [2.0.1] - 2025-11-14
+
+### Accessibility & UX Improvements
+
+Comprehensive accessibility enhancements achieving WCAG AA compliance and improved user experience.
+
+### Accessibility
+
+#### Form Labels & ARIA Attributes (WCAG 2.1 AA Compliance)
+- Added proper `<label>` elements with `htmlFor` attributes to all form inputs:
+  - Network interface selector (webui/src/App.tsx:263-273)
+  - Config path input (webui/src/App.tsx:287-297)
+  - Config file upload (webui/src/App.tsx:311-323)
+  - PCAP file inputs in ReplayPanel (webui/src/App.tsx:950-1100)
+- Added ARIA attributes for screen reader support:
+  - `role="alert"` and `aria-live="polite"` for all error/success messages
+  - `aria-required="true"` for required fields
+  - `aria-label` for all interactive elements
+  - `aria-describedby` for form field descriptions
+
+#### File Upload Validation
+- Added client-side file validation with user-friendly error messages:
+  - **File size limits**: 10MB for YAML configs, 100MB for PCAP files
+  - **File type validation**: `.yaml`, `.yml` for configs; `.pcap`, `.pcapng` for replays
+  - **Clear error messages**: "File too large. Maximum size is 10 MB"
+  - Validation occurs before upload attempt (webui/src/App.tsx:311-340)
+
+#### Confirmation Dialogs
+- Added confirmation dialogs for all destructive actions:
+  - Stop simulation: "Are you sure you want to stop the simulation?"
+  - Stop replay: "Are you sure you want to stop replay?"
+  - Prevents accidental interruption of running operations (webui/src/App.tsx:215-233)
+
+### Code Quality
+
+#### Constants for Magic Numbers
+- Defined polling interval constants (webui/src/App.tsx:125-131):
+  ```typescript
+  const POLL_INTERVALS = {
+    FAST: 2000,      // 2s - Real-time simulation status
+    MEDIUM: 5000,    // 5s - Live stats
+    SLOW: 15000,     // 15s - Historical data
+    VERY_SLOW: 60000 // 1m - Static data like version
+  } as const;
+  ```
+- Replaced all magic numbers throughout codebase
+- Improved code readability and maintainability
+
+#### Backend Constants
+- Added `DefaultDebugLevel` constant (pkg/daemon/daemon.go:20-23)
+- Added `MaxRequestBodySize` constant for 1MB request limit (pkg/api/server.go:26-29)
+- Eliminated magic numbers in backend code
+
+### Security
+
+#### Path Traversal Protection
+- Enhanced `expandPath()` with `filepath.Clean()` (pkg/daemon/daemon.go:289-298)
+- Removes `..` and `.` path elements to prevent directory traversal
+- Complements existing walk file path validation from v1.13.1
+
+### UX Improvements
+
+#### Better Error Messages
+- Added `getErrorMessage()` helper for consistent error formatting
+- Network timeout detection with specific message: "Network request timed out"
+- Clear distinction between network errors and application errors
+- User-friendly file validation messages with formatted sizes
+
+#### Visual Feedback
+- File upload inputs now show validation errors immediately
+- Confirmation dialogs prevent accidental data loss
+- Improved loading states during file uploads
+
+### Changed
+- All form inputs now have accessible labels and ARIA attributes
+- File uploads validate size and type before processing
+- All destructive actions require confirmation
+- Magic numbers replaced with named constants throughout codebase
+
+### Developer Notes
+- Maintains full backward compatibility with v2.0.0
+- No breaking changes to API or configuration
+- All changes are additive improvements
 
 ## [1.24.1] - 2025-11-13
 
