@@ -28,6 +28,9 @@ import (
 const (
 	// MaxRequestBodySize is the maximum size for API request bodies (1MB)
 	MaxRequestBodySize = 1 << 20 // 1MB
+	// MaxPCAPUploadSize is the maximum size for PCAP file uploads (100MB)
+	// SECURITY: This prevents memory exhaustion attacks via large uploads
+	MaxPCAPUploadSize = 100 << 20 // 100MB
 )
 
 // logRequest logs HTTP requests for debugging
@@ -494,8 +497,15 @@ func (s *Server) handleReplay(w http.ResponseWriter, r *http.Request) {
 	case http.MethodGet:
 		s.writeJSON(w, s.cfg.Replay.Status())
 	case http.MethodPost:
+		// SECURITY FIX #97: Enforce request body size limit for PCAP uploads
+		r.Body = http.MaxBytesReader(w, r.Body, MaxPCAPUploadSize)
+
 		var req ReplayRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			if err.Error() == "http: request body too large" {
+				http.Error(w, "PCAP file too large (max 100MB)", http.StatusRequestEntityTooLarge)
+				return
+			}
 			http.Error(w, fmt.Sprintf("invalid request: %v", err), http.StatusBadRequest)
 			return
 		}
@@ -1019,10 +1029,22 @@ func (s *Server) prepareReplayRequest(req ReplayRequest) (ReplayRequest, error) 
 	}
 
 	if req.InlineData != "" {
+		// SECURITY FIX #97: Additional check on base64 encoded data size
+		// Base64 encoding increases size by ~4/3, so check before decode
+		if len(req.InlineData) > MaxPCAPUploadSize*4/3 {
+			return req, fmt.Errorf("PCAP data exceeds size limit (max 100MB)")
+		}
+
 		data, err := base64.StdEncoding.DecodeString(req.InlineData)
 		if err != nil {
 			return req, fmt.Errorf("decode replay data: %w", err)
 		}
+
+		// Double-check decoded size
+		if len(data) > MaxPCAPUploadSize {
+			return req, fmt.Errorf("decoded PCAP exceeds size limit (max 100MB)")
+		}
+
 		path, err := s.writeUploadedFile(data)
 		if err != nil {
 			return req, err
@@ -1219,6 +1241,18 @@ func (s *Server) collectFiles(kind string) ([]FileEntry, error) {
 		return []FileEntry{}, nil
 	}
 
+	// Resolve canonical root path to prevent path traversal attacks
+	rootAbs, err := filepath.Abs(root)
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve root path: %w", err)
+	}
+	// Resolve symlinks in root path
+	rootReal, err := filepath.EvalSymlinks(rootAbs)
+	if err != nil {
+		// If symlink resolution fails, use absolute path
+		rootReal = rootAbs
+	}
+
 	var entries []FileEntry
 	err = filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -1246,6 +1280,21 @@ func (s *Server) collectFiles(kind string) ([]FileEntry, error) {
 		if err != nil {
 			return nil
 		}
+
+		// SECURITY FIX #95: Validate path stays within root directory
+		// Resolve symlinks to prevent symlink attacks (#96)
+		realPath, err := filepath.EvalSymlinks(absPath)
+		if err != nil {
+			// If symlink resolution fails, skip this file
+			return nil
+		}
+
+		// Ensure resolved path is within the allowed root directory
+		if !strings.HasPrefix(realPath, rootReal+string(os.PathSeparator)) && realPath != rootReal {
+			// Path is outside allowed directory, skip it
+			return nil
+		}
+
 		entries = append(entries, FileEntry{
 			Path:      absPath,
 			Name:      filepath.Base(path),

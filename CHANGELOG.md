@@ -16,6 +16,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Container and Kubernetes deployment (#35)
 - Multi-user authentication (#33)
 
+## [2.3.1] - 2025-11-14
+
+### Security
+
+**CRITICAL security fixes - All users should upgrade immediately**
+
+- **Fixed path traversal vulnerability in file listing API** (#95)
+  - API endpoint `/api/v1/files` now properly validates file paths
+  - Added `filepath.EvalSymlinks()` to resolve and validate canonical paths
+  - Ensures files can only be listed within intended directories
+  - Prevents attackers from enumerating files outside walk/pcap directories
+
+- **Fixed symlink attack risk in file operations** (#96)
+  - PCAP replay now resolves symlinks before file operations
+  - Validates resolved paths stay within allowed directories
+  - Prevents malicious symlinks from accessing sensitive system files
+  - Protects against directory traversal via symbolic links
+
+- **Fixed unbounded PCAP upload vulnerability** (#97)
+  - Added 100MB size limit for PCAP file uploads
+  - Implemented `http.MaxBytesReader` to prevent memory exhaustion
+  - Added validation for base64-encoded upload data
+  - Returns HTTP 413 (Request Entity Too Large) for oversized uploads
+  - Prevents denial of service via large file uploads
+
+### Changed
+- Increased PCAP upload limit from 1MB to 100MB (with enforcement)
+- Enhanced file path validation throughout API layer
+- Improved error messages for upload size violations
+
 ## [2.3.0] - 2025-11-14
 
 ### Added
