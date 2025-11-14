@@ -74,7 +74,7 @@ export const ReplayControlPanel: FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <div className="flex items-center gap-2 mb-1">
-                  <Tag variant="success">Running</Tag>
+                  <Tag colorScheme="green">Running</Tag>
                   <span className="font-medium">{replayStatus.file}</span>
                 </div>
                 <SmallText className="text-gray-400">
@@ -111,7 +111,7 @@ export const ReplayControlPanel: FC = () => {
                 <option value="">Select PCAP file...</option>
                 {pcapFiles?.map((file) => (
                   <option key={file.path} value={file.path}>
-                    {file.filename} ({(file.size_bytes / 1024).toFixed(1)} KB)
+                    {file.name} ({(file.size_bytes / 1024).toFixed(1)} KB)
                   </option>
                 ))}
               </select>

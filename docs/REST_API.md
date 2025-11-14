@@ -33,6 +33,9 @@ Flags:
 | `GET` | `/api/v1/files?kind=walks|pcaps` | List available SNMP walk or PCAP files |
 | `GET` | `/api/v1/topology` | Simple topology graph derived from configuration |
 | `GET` | `/api/v1/version` | Version information |
+| `GET` | `/api/v1/errors` | Available error types and active error injections |
+| `POST` | `/api/v1/errors` | Inject network errors on device interfaces |
+| `DELETE` | `/api/v1/errors` | Clear specific or all error injections |
 | `GET` | `/metrics` | Prometheus metrics endpoint (see [Monitoring Guide](MONITORING.md)) |
 
 Include `Authorization: Bearer <token>` or append `?token=<token>` when authentication is enabled.
@@ -46,6 +49,7 @@ Navigate to `http://host:8080/` and supply the API token. The interface displays
 - Historical runs pulled from BoltDB
 - YAML editor that reads/writes the same config file used by the CLI/TUI
 - An interactive topology graph (ForceGraph)
+- Traffic injection controls for error injection and PCAP replay
 
 ### Configuration management
 
@@ -109,6 +113,78 @@ The CLI's capture engine replays the PCAP immediately, optionally looping (`loop
 ```
 
 `PUT /api/v1/alerts` expects the same payload to update the alert loop at runtime. Setting `packets_threshold` to `0` disables alerts.
+
+### Error Injection
+
+NIAC supports runtime error injection for testing and simulation scenarios. The Web UI provides a Traffic Injection page with controls for injecting errors on device interfaces.
+
+`GET /api/v1/errors` returns available error types and currently active injections:
+
+```json
+{
+  "available_types": [
+    {
+      "type": "fcs_errors",
+      "description": "Frame Check Sequence errors (Layer 2 corruption)"
+    },
+    {
+      "type": "packet_discards",
+      "description": "Packets dropped due to buffer overflow"
+    },
+    {
+      "type": "interface_errors",
+      "description": "Generic interface input/output errors"
+    },
+    {
+      "type": "high_utilization",
+      "description": "Interface bandwidth saturation"
+    },
+    {
+      "type": "high_cpu",
+      "description": "Elevated CPU usage on device"
+    },
+    {
+      "type": "high_memory",
+      "description": "Memory pressure on device"
+    },
+    {
+      "type": "high_disk",
+      "description": "Disk space exhaustion"
+    }
+  ],
+  "info": "Error injection allows testing monitoring and alerting systems",
+  "active_errors": {
+    "192.168.1.1": {
+      "GigabitEthernet0/1": {
+        "fcs_errors": 50,
+        "packet_discards": 25
+      }
+    }
+  }
+}
+```
+
+`POST /api/v1/errors` injects an error on a specific device interface:
+
+```json
+{
+  "device_ip": "192.168.1.1",
+  "interface": "GigabitEthernet0/1",
+  "error_type": "fcs_errors",
+  "value": 50
+}
+```
+
+The `value` field represents error severity (0-100), where:
+- 0 = No errors
+- 50 = Moderate error rate
+- 100 = Maximum error injection
+
+`DELETE /api/v1/errors?device_ip=192.168.1.1&interface=GigabitEthernet0/1` clears all errors on a specific interface.
+
+`DELETE /api/v1/errors` (no query parameters) clears all active error injections.
+
+Error injections persist until explicitly cleared or NIAC is restarted. The Web UI displays active errors in real-time and allows clearing individual interfaces or all errors at once.
 
 ## Alerts
 

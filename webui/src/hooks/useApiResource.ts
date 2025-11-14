@@ -11,29 +11,34 @@ export function useApiResource<T>(fetcher: () => Promise<T>, deps: unknown[] = [
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const timerRef = useRef<number | null>(null);
+  const fetcherRef = useRef(fetcher);
+
+  // Update fetcher ref when it changes
+  useEffect(() => {
+    fetcherRef.current = fetcher;
+  }, [fetcher]);
+
+  const run = async () => {
+    try {
+      const result = await fetcherRef.current();
+      setData(transform ? transform(result) : result);
+      setError(null);
+    } catch (err) {
+      setError(err as Error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
 
-    const run = async () => {
-      try {
-        const result = await fetcher();
-        if (!cancelled) {
-          setData(transform ? transform(result) : result);
-          setError(null);
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setError(err as Error);
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
+    const runWithCancellation = async () => {
+      if (cancelled) return;
+      await run();
     };
 
-    run();
+    runWithCancellation();
 
     if (intervalMs) {
       timerRef.current = window.setInterval(run, intervalMs);
@@ -49,5 +54,5 @@ export function useApiResource<T>(fetcher: () => Promise<T>, deps: unknown[] = [
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
 
-  return { data, loading, error } as const;
+  return { data, loading, error, refetch: run } as const;
 }

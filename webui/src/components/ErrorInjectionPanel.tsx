@@ -95,8 +95,8 @@ export const ErrorInjectionPanel: FC = () => {
               >
                 <option value="">Select device...</option>
                 {devices?.map((dev) => (
-                  <option key={dev.name} value={dev.ip_addresses?.[0]}>
-                    {dev.name} ({dev.ip_addresses?.[0]})
+                  <option key={dev.name} value={dev.ips?.[0]}>
+                    {dev.name} ({dev.ips?.[0]})
                   </option>
                 ))}
               </select>
@@ -210,7 +210,7 @@ export const ErrorInjectionPanel: FC = () => {
                           <td className="py-2 px-2">{iface}</td>
                           <td className="py-2 px-2">{errorType}</td>
                           <td className="py-2 px-2">
-                            <Tag variant="warning">{value}%</Tag>
+                            <Tag colorScheme="yellow">{value}%</Tag>
                           </td>
                           <td className="py-2 px-2">
                             <button

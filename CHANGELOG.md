@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Future (v2.3.0+)
+### Future (v2.4.0+)
 - Config generator CLI with interactive prompts
 - Packet hex dump viewer in TUI
 - Statistics export (JSON/CSV)
@@ -15,6 +15,56 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - DHCPv6 prefix delegation (IA_PD)
 - Container and Kubernetes deployment (#35)
 - Multi-user authentication (#33)
+
+## [2.3.0] - 2025-11-14
+
+### Added
+
+#### Traffic Injection Controls in WebUI (#90)
+- **Error Injection Panel** - Runtime error injection for testing and simulation
+  - Inject 7 types of network errors on device interfaces:
+    - FCS Errors (Frame Check Sequence errors - Layer 2 corruption)
+    - Packet Discards (dropped due to buffer overflow)
+    - Interface Errors (generic input/output errors)
+    - High Utilization (bandwidth saturation)
+    - High CPU (elevated CPU usage)
+    - High Memory (memory pressure)
+    - High Disk (disk space exhaustion)
+  - Device and interface selector with validation
+  - Error severity slider (0-100%)
+  - Real-time display of active error injections
+  - Clear individual or all errors at once
+  - Auto-refresh every 5 seconds
+
+- **PCAP Replay Control Panel** - Enhanced replay controls in WebUI
+  - File selector with size display
+  - Loop interval control (milliseconds)
+  - Time scale control (0.1x - 10x speed)
+  - Live replay status display
+  - Start/stop controls
+  - Auto-refresh every 2 seconds
+
+- **Traffic Injection API Endpoints**
+  - `GET /api/v1/errors` - List available error types and active injections
+  - `POST /api/v1/errors` - Inject errors on device interfaces
+  - `DELETE /api/v1/errors` - Clear specific or all error injections
+  - Error injections persist until cleared or restart
+  - Full API documentation in REST_API.md
+
+- **Traffic Injection Page** - New WebUI page combining error injection and PCAP replay controls
+  - Unified interface for traffic testing and simulation
+  - Responsive layout with clear sections
+  - Real-time feedback and validation
+  - Integration with existing design system
+
+### Changed
+- Updated REST API documentation with error injection examples
+- Enhanced WebUI navigation with Traffic Injection page
+
+### Technical
+- Added `useApiResource` refetch capability for manual data refresh
+- Updated TypeScript types for error injection responses
+- Fixed type definitions for DeviceSummary, ErrorInjectionInfo, FileEntry
 
 ## [2.2.0] - 2025-11-14
 
