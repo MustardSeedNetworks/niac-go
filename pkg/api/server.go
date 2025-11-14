@@ -19,6 +19,7 @@ import (
 
 	"github.com/krisarmstrong/niac-go/pkg/capture"
 	"github.com/krisarmstrong/niac-go/pkg/config"
+	"github.com/krisarmstrong/niac-go/pkg/errors"
 	"github.com/krisarmstrong/niac-go/pkg/protocols"
 	"github.com/krisarmstrong/niac-go/pkg/storage"
 )
@@ -565,8 +566,24 @@ func (s *Server) handleNeighbors(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleErrors(w http.ResponseWriter, r *http.Request) {
-	// GET: List available error types and current configuration
-	if r.Method == http.MethodGet {
+	s.configMu.RLock()
+	stack := s.cfg.Stack
+	s.configMu.RUnlock()
+
+	if stack == nil {
+		http.Error(w, "no simulation running", http.StatusServiceUnavailable)
+		return
+	}
+
+	errorMgr := stack.GetErrorManager()
+	if errorMgr == nil {
+		http.Error(w, "error manager not available", http.StatusServiceUnavailable)
+		return
+	}
+
+	switch r.Method {
+	case http.MethodGet:
+		// List available error types and current active errors
 		errorTypes := []map[string]string{
 			{"type": "FCS Errors", "description": "Frame Check Sequence errors (0-100)"},
 			{"type": "Packet Discards", "description": "Dropped packets (0-100)"},
@@ -576,15 +593,87 @@ func (s *Server) handleErrors(w http.ResponseWriter, r *http.Request) {
 			{"type": "High Memory", "description": "Device memory usage (0-100%)"},
 			{"type": "High Disk", "description": "Device disk usage (0-100%)"},
 		}
+
+		activeErrors := errorMgr.GetAllStates()
 		s.writeJSON(w, map[string]interface{}{
 			"available_types": errorTypes,
-			"info":            "Error injection requires TUI mode or direct device configuration",
+			"active_errors":   activeErrors,
 		})
-		return
-	}
 
-	// POST/PUT/DELETE: Not yet implemented - requires integration with device table
-	http.Error(w, "Error injection API coming soon - use TUI interactive mode for now", http.StatusNotImplemented)
+	case http.MethodPost, http.MethodPut:
+		// Inject or update error
+		var req struct {
+			DeviceIP  string `json:"device_ip"`
+			Interface string `json:"interface"`
+			ErrorType string `json:"error_type"`
+			Value     int    `json:"value"`
+		}
+
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, fmt.Sprintf("invalid request: %v", err), http.StatusBadRequest)
+			return
+		}
+
+		// Validate inputs
+		if req.DeviceIP == "" {
+			http.Error(w, "device_ip is required", http.StatusBadRequest)
+			return
+		}
+		if req.Interface == "" {
+			http.Error(w, "interface is required", http.StatusBadRequest)
+			return
+		}
+		if req.ErrorType == "" {
+			http.Error(w, "error_type is required", http.StatusBadRequest)
+			return
+		}
+		if req.Value < 0 || req.Value > 100 {
+			http.Error(w, "value must be between 0 and 100", http.StatusBadRequest)
+			return
+		}
+
+		// Inject error
+		errorMgr.SetError(req.DeviceIP, req.Interface, errors.ErrorType(req.ErrorType), req.Value)
+
+		s.writeJSON(w, map[string]interface{}{
+			"success":    true,
+			"message":    "error injected successfully",
+			"device_ip":  req.DeviceIP,
+			"interface":  req.Interface,
+			"error_type": req.ErrorType,
+			"value":      req.Value,
+		})
+
+	case http.MethodDelete:
+		// Clear errors
+		query := r.URL.Query()
+		deviceIP := query.Get("device_ip")
+		iface := query.Get("interface")
+
+		if deviceIP == "" && iface == "" {
+			// Clear all errors
+			errorMgr.ClearAll()
+			s.writeJSON(w, map[string]interface{}{
+				"success": true,
+				"message": "all errors cleared",
+			})
+		} else if deviceIP != "" && iface != "" {
+			// Clear specific device/interface error
+			errorMgr.ClearError(deviceIP, iface)
+			s.writeJSON(w, map[string]interface{}{
+				"success":   true,
+				"message":   "error cleared",
+				"device_ip": deviceIP,
+				"interface": iface,
+			})
+		} else {
+			http.Error(w, "both device_ip and interface are required, or omit both to clear all", http.StatusBadRequest)
+		}
+
+	default:
+		w.Header().Set("Allow", "GET, POST, PUT, DELETE")
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	}
 }
 
 func (s *Server) handleInterfaces(w http.ResponseWriter, r *http.Request) {

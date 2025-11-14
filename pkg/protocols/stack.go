@@ -7,6 +7,7 @@ import (
 
 	"github.com/krisarmstrong/niac-go/pkg/capture"
 	"github.com/krisarmstrong/niac-go/pkg/config"
+	"github.com/krisarmstrong/niac-go/pkg/errors"
 	"github.com/krisarmstrong/niac-go/pkg/logging"
 	"github.com/krisarmstrong/niac-go/pkg/snmp"
 )
@@ -55,8 +56,9 @@ type Stack struct {
 	stopChan chan struct{}
 	wg       sync.WaitGroup
 
-	debugConfig *logging.DebugConfig
-	snmpAgents  map[*config.Device]*snmp.Agent
+	debugConfig  *logging.DebugConfig
+	snmpAgents   map[*config.Device]*snmp.Agent
+	errorManager *errors.StateManager
 }
 
 // Statistics holds protocol statistics
@@ -77,16 +79,17 @@ type Statistics struct {
 // NewStack creates a new protocol stack
 func NewStack(captureEngine *capture.Engine, cfg *config.Config, debugConfig *logging.DebugConfig) *Stack {
 	s := &Stack{
-		capture:     captureEngine,
-		config:      cfg,
-		devices:     NewDeviceTable(),
-		sendQueue:   make(chan *Packet, 1000),
-		recvQueue:   make(chan *Packet, 1000),
-		stats:       &Statistics{},
-		stopChan:    make(chan struct{}),
-		debugConfig: debugConfig,
-		snmpAgents:  make(map[*config.Device]*snmp.Agent),
-		neighbors:   newNeighborTable(),
+		capture:      captureEngine,
+		config:       cfg,
+		devices:      NewDeviceTable(),
+		sendQueue:    make(chan *Packet, 1000),
+		recvQueue:    make(chan *Packet, 1000),
+		stats:        &Statistics{},
+		stopChan:     make(chan struct{}),
+		debugConfig:  debugConfig,
+		snmpAgents:   make(map[*config.Device]*snmp.Agent),
+		neighbors:    newNeighborTable(),
+		errorManager: errors.NewStateManager(),
 	}
 
 	// Create protocol handlers
@@ -641,6 +644,11 @@ func (s *Stack) GetNeighbors() []NeighborRecord {
 		return nil
 	}
 	return s.neighbors.list()
+}
+
+// GetErrorManager returns the error state manager
+func (s *Stack) GetErrorManager() *errors.StateManager {
+	return s.errorManager
 }
 
 func (s *Stack) recordNeighbor(entry NeighborRecord) {
