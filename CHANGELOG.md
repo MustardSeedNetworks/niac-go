@@ -7,19 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Future (v2.1.0+)
+### Future (v2.2.0+)
 - Config generator CLI with interactive prompts
 - Packet hex dump viewer in TUI
 - Statistics export (JSON/CSV)
 - NetFlow/IPFIX export
 - DHCPv6 prefix delegation (IA_PD)
 - Live log streaming via WebUI
-- Complete error injection API
 - Hex dump packet viewer
 - Traffic injection controls
-- SNMP trap generation via UI
 - VLAN-aware ARP
 - Monaco Editor for YAML
+- Enhanced performance monitoring
+- Advanced topology visualization
+
+## [2.1.2] - 2025-11-14
+
+### Added
+- **Error Injection API** - Complete REST API for runtime error injection (#88)
+  - POST/PUT `/api/v1/errors` - Inject or update errors on device interfaces
+  - DELETE `/api/v1/errors` - Clear specific or all injected errors
+  - GET `/api/v1/errors` - List available error types and active errors
+  - Support for all 7 error types: FCS Errors, Packet Discards, Interface Errors, High Utilization, High CPU, High Memory, High Disk
+  - Full input validation and error handling
+  - Integration with `pkg/errors.StateManager`
+
+- **SNMP Traps on Device State Changes** - Automatic trap generation (#76)
+  - linkDown trap (1.3.6.1.6.3.1.1.5.3) when device goes down/stopping
+  - linkUp trap (1.3.6.1.6.3.1.1.5.4) when device comes up
+  - Automatic integration with device state machine
+  - Debug logging for trap send success/failure
+  - Better integration with network monitoring systems (SNMP NMS)
+
+### Changed
+- Added `errorManager` field to `protocols.Stack` for centralized error state management
+- Enhanced device simulator to send SNMP traps on state transitions
+
+### Fixed
+- Error injection now fully functional via REST API (was stub before)
 
 ## [2.1.0] - 2025-11-14
 
