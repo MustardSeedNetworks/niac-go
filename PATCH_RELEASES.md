@@ -478,12 +478,38 @@ Items deferred to v2.1.0 and beyond (per VERSION_ROADMAP.md):
 
 ## Current Status
 
-**✅ v2.0.0 is READY FOR RELEASE**
+**✅ THREE RELEASES COMPLETED AND PUBLISHED!**
 
-Next steps:
-1. Final QA testing
-2. Update CHANGELOG.md
-3. Create GitHub release
-4. Celebrate! 🎉
+### Released Versions
 
-Then begin work on v2.0.1 accessibility improvements.
+**v2.0.1** - Released 2025-11-14
+- ✅ All 8 accessibility & UX issues fixed
+- ✅ WCAG AA compliance achieved
+- ✅ Committed, tagged, and pushed
+
+**v2.0.2** - Released 2025-11-14
+- ✅ Performance optimizations complete
+- ✅ Request logging implemented
+- ✅ Committed, tagged, and pushed
+
+**v2.1.0** - Released 2025-11-14 (formerly v2.0.3)
+- ✅ Security hardening complete
+- ✅ Breaking change: Removed query parameter auth
+- ✅ Security headers implemented
+- ✅ Committed, tagged, and pushed
+- ⚠️ **BREAKING CHANGE** - Bumped to v2.1.0 per semver
+
+### Git Status
+```
+✅ Commit 18a5c3b: v2.0.1 - Accessibility & UX Improvements
+✅ Commit 72aadec: v2.0.2 - Code Quality & Performance
+✅ Commit d837407: v2.1.0 - Security Hardening
+✅ Tags pushed: v2.0.1, v2.0.2, v2.1.0
+✅ Branch: v2.0.0-webui (up to date with origin)
+```
+
+### Next Steps
+1. Create GitHub releases for each tag
+2. Close completed issues from VERSION_ROADMAP.md
+3. Update README.md badges to v2.1.0
+4. Begin work on remaining VERSION_ROADMAP.md features
