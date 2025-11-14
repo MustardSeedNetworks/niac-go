@@ -154,6 +154,24 @@ func NewDHCPv6Handler(stack *Stack) *DHCPv6Handler {
 	}
 }
 
+// Reset clears DHCPv6 leases and cached options.
+func (h *DHCPv6Handler) Reset() {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.leases = make(map[string]*DHCPv6Lease)
+	h.addressPool = nil
+	h.prefixPool = nil
+	h.serverDUID = generateDUID()
+	h.preferredLifetime = DefaultPreferredLifetime
+	h.validLifetime = DefaultValidLifetime
+	h.dnsServers = nil
+	h.domainList = nil
+	h.sntpServers = nil
+	h.ntpServers = nil
+	h.sipServers = nil
+	h.sipDomains = nil
+}
+
 // generateDUID generates a DUID-LL (Link-Layer) for the server
 func generateDUID() []byte {
 	// DUID-LL format: Type(2) + HW Type(2) + Link-Layer Address(variable)

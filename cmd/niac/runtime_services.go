@@ -3,10 +3,14 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/krisarmstrong/niac-go/pkg/api"
+	"github.com/krisarmstrong/niac-go/pkg/capture"
 	"github.com/krisarmstrong/niac-go/pkg/config"
 	"github.com/krisarmstrong/niac-go/pkg/protocols"
 	"github.com/krisarmstrong/niac-go/pkg/storage"
@@ -16,18 +20,28 @@ type runtimeServices struct {
 	storage       *storage.Storage
 	apiServer     *api.Server
 	stack         *protocols.Stack
+	engine        *capture.Engine
 	startTime     time.Time
 	interfaceName string
-	configFile    string
+	configName    string
+	configPath    string
 	deviceCount   int
+	replay        api.ReplayManager
 }
 
-func startRuntimeServices(stack *protocols.Stack, cfg *config.Config, interfaceName, configFile string) (*runtimeServices, error) {
+func startRuntimeServices(engine *capture.Engine, stack *protocols.Stack, cfg *config.Config, interfaceName, configFile string) (*runtimeServices, error) {
+	configPath := configFile
+	if abs, err := filepath.Abs(configFile); err == nil {
+		configPath = abs
+	}
+
 	rs := &runtimeServices{
 		stack:         stack,
+		engine:        engine,
 		startTime:     time.Now(),
 		interfaceName: interfaceName,
-		configFile:    configFile,
+		configName:    filepath.Base(configPath),
+		configPath:    configPath,
 		deviceCount:   len(cfg.Devices),
 	}
 
@@ -41,6 +55,10 @@ func startRuntimeServices(stack *protocols.Stack, cfg *config.Config, interfaceN
 		if err != nil {
 			return nil, fmt.Errorf("open storage: %w", err)
 		}
+	}
+
+	if engine != nil {
+		rs.replay = newReplayController(engine, stack.GetDebugLevel())
 	}
 
 	apiAddr := servicesOpts.apiListen
@@ -58,6 +76,7 @@ func startRuntimeServices(stack *protocols.Stack, cfg *config.Config, interfaceN
 			Token:       servicesOpts.apiToken,
 			Stack:       stack,
 			Config:      cfg,
+			ConfigPath:  rs.configPath,
 			Storage:     rs.storage,
 			Interface:   interfaceName,
 			Version:     version,
@@ -66,6 +85,8 @@ func startRuntimeServices(stack *protocols.Stack, cfg *config.Config, interfaceN
 				PacketsThreshold: servicesOpts.alertPacketsThreshold,
 				WebhookURL:       servicesOpts.alertWebhook,
 			},
+			ApplyConfig: rs.applyConfig,
+			Replay:      rs.replay,
 		}
 
 		rs.apiServer = api.NewServer(*cfgCopy)
@@ -80,7 +101,23 @@ func startRuntimeServices(stack *protocols.Stack, cfg *config.Config, interfaceN
 	return rs, nil
 }
 
+func (rs *runtimeServices) applyConfig(newCfg *config.Config) error {
+	if rs == nil || newCfg == nil {
+		return fmt.Errorf("runtime services not initialized")
+	}
+	if err := rs.stack.ReloadConfig(newCfg); err != nil {
+		return err
+	}
+	configureServiceHandlers(rs.stack, newCfg, rs.stack.GetDebugLevel())
+	rs.deviceCount = len(newCfg.Devices)
+	return nil
+}
+
 func (rs *runtimeServices) Stop() {
+	if rs.replay != nil {
+		_, _ = rs.replay.Stop()
+	}
+
 	if rs.apiServer != nil {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
@@ -93,7 +130,7 @@ func (rs *runtimeServices) Stop() {
 			StartedAt:       rs.startTime,
 			Duration:        time.Since(rs.startTime),
 			Interface:       rs.interfaceName,
-			ConfigName:      rs.configFile,
+			ConfigName:      rs.configName,
 			DeviceCount:     rs.deviceCount,
 			PacketsSent:     stats.PacketsSent,
 			PacketsReceived: stats.PacketsReceived,
@@ -101,5 +138,93 @@ func (rs *runtimeServices) Stop() {
 		}
 		_ = rs.storage.AddRun(record)
 		rs.storage.Close()
+	}
+}
+
+type replayController struct {
+	engine     *capture.Engine
+	debugLevel int
+	mu         sync.Mutex
+	current    *capture.PlaybackEngine
+	state      api.ReplayState
+	cleanup    string
+}
+
+func newReplayController(engine *capture.Engine, debugLevel int) *replayController {
+	return &replayController{
+		engine:     engine,
+		debugLevel: debugLevel,
+	}
+}
+
+func (rc *replayController) Status() api.ReplayState {
+	rc.mu.Lock()
+	defer rc.mu.Unlock()
+	return rc.state
+}
+
+func (rc *replayController) Start(req api.ReplayRequest) (api.ReplayState, error) {
+	rc.mu.Lock()
+	defer rc.mu.Unlock()
+
+	if rc.engine == nil {
+		return rc.state, fmt.Errorf("capture engine unavailable for replay")
+	}
+	if strings.TrimSpace(req.File) == "" {
+		return rc.state, fmt.Errorf("pcap file path is required")
+	}
+
+	if rc.current != nil {
+		rc.current.Stop()
+		rc.current = nil
+	}
+	rc.cleanupTempFile()
+
+	cfg := &config.CapturePlayback{
+		FileName:  req.File,
+		LoopTime:  req.LoopMs,
+		ScaleTime: req.Scale,
+	}
+	player := capture.NewPlaybackEngine(rc.engine, cfg, rc.debugLevel)
+	if err := player.Start(); err != nil {
+		if req.Uploaded {
+			os.Remove(req.File)
+		}
+		return rc.state, err
+	}
+
+	rc.current = player
+	rc.state = api.ReplayState{
+		Running:   true,
+		File:      req.File,
+		LoopMs:    req.LoopMs,
+		Scale:     req.Scale,
+		StartedAt: time.Now().UTC(),
+	}
+	if req.Uploaded {
+		rc.cleanup = req.File
+	} else {
+		rc.cleanup = ""
+	}
+	return rc.state, nil
+}
+
+func (rc *replayController) Stop() (api.ReplayState, error) {
+	rc.mu.Lock()
+	defer rc.mu.Unlock()
+
+	if rc.current != nil {
+		rc.current.Stop()
+		rc.current = nil
+	}
+	rc.state.Running = false
+	rc.cleanupTempFile()
+	return rc.state, nil
+}
+
+func (rc *replayController) cleanupTempFile() {
+	if rc.cleanup != "" {
+		_ = os.Remove(rc.cleanup)
+		rc.cleanup = ""
 	}
 }

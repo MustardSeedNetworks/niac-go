@@ -542,30 +542,20 @@ func (c *Config) GetDeviceByIP(ip net.IP) *Device {
 
 // LoadYAML loads a YAML configuration file
 func LoadYAML(filename string) (*Config, error) {
-	// Step 1: Load YAML file
 	yamlConfig, err := loadYAMLFile(filename)
 	if err != nil {
 		return nil, err
 	}
+	return buildConfigFromYAML(yamlConfig)
+}
 
-	// Step 2: Create base config with global settings
-	cfg := createBaseConfig(yamlConfig)
-
-	// Step 3: Convert devices
-	for _, yamlDevice := range yamlConfig.Devices {
-		device, err := convertYAMLDevice(yamlDevice, cfg.IncludePath)
-		if err != nil {
-			return nil, err
-		}
-		cfg.Devices = append(cfg.Devices, device)
+// LoadYAMLBytes builds a runtime config from in-memory YAML data.
+func LoadYAMLBytes(data []byte) (*Config, error) {
+	yamlConfig, err := loadYAMLBytes(data)
+	if err != nil {
+		return nil, err
 	}
-
-	// Step 4: Validate final config
-	if len(cfg.Devices) == 0 {
-		return nil, fmt.Errorf("no devices defined in configuration")
-	}
-
-	return cfg, nil
+	return buildConfigFromYAML(yamlConfig)
 }
 
 // loadYAMLFile loads and validates a YAML configuration file
@@ -574,12 +564,40 @@ func loadYAMLFile(filename string) (*converter.Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to load YAML config: %w", err)
 	}
+	return validateYAMLConfig(yamlConfig)
+}
 
+func loadYAMLBytes(data []byte) (*converter.Config, error) {
+	yamlConfig, err := converter.LoadYAMLConfigFromBytes(data)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse YAML config: %w", err)
+	}
+	return validateYAMLConfig(yamlConfig)
+}
+
+func validateYAMLConfig(yamlConfig *converter.Config) (*converter.Config, error) {
 	if err := converter.ValidateConfig(yamlConfig); err != nil {
 		return nil, fmt.Errorf("config validation failed: %w", err)
 	}
-
 	return yamlConfig, nil
+}
+
+func buildConfigFromYAML(yamlConfig *converter.Config) (*Config, error) {
+	cfg := createBaseConfig(yamlConfig)
+
+	for _, yamlDevice := range yamlConfig.Devices {
+		device, err := convertYAMLDevice(yamlDevice, cfg.IncludePath)
+		if err != nil {
+			return nil, err
+		}
+		cfg.Devices = append(cfg.Devices, device)
+	}
+
+	if len(cfg.Devices) == 0 {
+		return nil, fmt.Errorf("no devices defined in configuration")
+	}
+
+	return cfg, nil
 }
 
 // createBaseConfig creates the base configuration with global settings

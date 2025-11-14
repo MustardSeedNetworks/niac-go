@@ -15,6 +15,8 @@ import (
 type Stack struct {
 	capture      *capture.Engine
 	config       *config.Config
+	configMu     sync.RWMutex
+	reloadMu     sync.Mutex
 	devices      *DeviceTable
 	serialNumber int
 	mu           sync.Mutex
@@ -109,15 +111,35 @@ func NewStack(captureEngine *capture.Engine, cfg *config.Config, debugConfig *lo
 	s.snmpHandler = NewSNMPHandler(s)
 
 	// Initialize device table from config (requires handlers for DHCP/SNMP setup)
-	s.initializeDevices()
+	s.initializeDevices(cfg)
 
 	return s
 }
 
-// initializeDevices populates the device table from config
-func (s *Stack) initializeDevices() {
-	for i := range s.config.Devices {
-		device := &s.config.Devices[i]
+// initializeDevices repopulates device-dependent state from the provided config.
+func (s *Stack) initializeDevices(cfg *config.Config) {
+	if cfg == nil {
+		return
+	}
+
+	if s.devices == nil {
+		s.devices = NewDeviceTable()
+	} else {
+		s.devices.Reset()
+	}
+	s.snmpAgents = make(map[*config.Device]*snmp.Agent)
+	if s.dhcpHandler != nil {
+		s.dhcpHandler.Reset()
+	}
+	if s.dhcpv6Handler != nil {
+		s.dhcpv6Handler.Reset()
+	}
+	if s.dnsHandler != nil {
+		s.dnsHandler.Reset()
+	}
+
+	for i := range cfg.Devices {
+		device := &cfg.Devices[i]
 
 		// Add by MAC
 		if len(device.MACAddress) > 0 {
@@ -164,8 +186,12 @@ func (s *Stack) initializeDevices() {
 		s.initSNMPAgent(device)
 	}
 
+	s.configMu.Lock()
+	s.config = cfg
+	s.configMu.Unlock()
+
 	if s.debugConfig.GetGlobal() >= 1 {
-		fmt.Printf("Initialized %d devices from configuration\n", len(s.config.Devices))
+		fmt.Printf("Initialized %d devices from configuration\n", len(cfg.Devices))
 	}
 }
 
@@ -477,6 +503,26 @@ func (s *Stack) GetDevices() *DeviceTable {
 	return s.devices
 }
 
+// ReloadConfig applies a new configuration to the running stack.
+func (s *Stack) ReloadConfig(cfg *config.Config) error {
+	if cfg == nil {
+		return fmt.Errorf("reload config: nil config")
+	}
+
+	s.reloadMu.Lock()
+	defer s.reloadMu.Unlock()
+
+	s.initializeDevices(cfg)
+	if s.neighbors != nil {
+		s.neighbors.reset()
+	}
+
+	if s.debugConfig.GetGlobal() >= 1 {
+		fmt.Printf("Protocol stack reloaded (%d devices)\n", len(cfg.Devices))
+	}
+	return nil
+}
+
 // GetStats returns current statistics (copy without mutex)
 func (s *Stack) GetStats() Statistics {
 	s.stats.mu.RLock()
@@ -583,6 +629,12 @@ func (s *Stack) GetDNSHandler() *DNSHandler {
 	return s.dnsHandler
 }
 
+func (s *Stack) currentConfig() *config.Config {
+	s.configMu.RLock()
+	defer s.configMu.RUnlock()
+	return s.config
+}
+
 // GetNeighbors returns a snapshot of the current neighbor table.
 func (s *Stack) GetNeighbors() []NeighborRecord {
 	if s.neighbors == nil {
@@ -619,8 +671,13 @@ func (s *Stack) startNeighborCleanupLoop() {
 }
 
 func (s *Stack) selectDiscoveryDevice(proto string) *config.Device {
-	for i := range s.config.Devices {
-		dev := &s.config.Devices[i]
+	cfg := s.currentConfig()
+	if cfg == nil {
+		return nil
+	}
+
+	for i := range cfg.Devices {
+		dev := &cfg.Devices[i]
 		switch proto {
 		case ProtocolLLDP:
 			if dev.LLDPConfig == nil || dev.LLDPConfig.Enabled {
@@ -642,8 +699,8 @@ func (s *Stack) selectDiscoveryDevice(proto string) *config.Device {
 			return dev
 		}
 	}
-	if len(s.config.Devices) > 0 {
-		return &s.config.Devices[0]
+	if len(cfg.Devices) > 0 {
+		return &cfg.Devices[0]
 	}
 	return nil
 }

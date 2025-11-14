@@ -76,6 +76,7 @@ type model struct {
 	interfaceName string
 	debugLevel    int
 	stack         *protocols.Stack
+	reloadFunc    func() (*config.Config, error)
 
 	// Menu state
 	menuVisible      bool
@@ -121,6 +122,10 @@ type model struct {
 }
 
 type tickMsg time.Time
+type reloadMsg struct {
+	cfg *config.Config
+	err error
+}
 
 func (m model) Init() tea.Cmd {
 	return tea.Batch(
@@ -135,8 +140,29 @@ func tickCmd() tea.Cmd {
 	})
 }
 
+func reloadCmd(fn func() (*config.Config, error)) tea.Cmd {
+	if fn == nil {
+		return nil
+	}
+	return func() tea.Msg {
+		cfg, err := fn()
+		return reloadMsg{cfg: cfg, err: err}
+	}
+}
+
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case reloadMsg:
+		if msg.err != nil {
+			m.statusMessage = errorStyle.Render(fmt.Sprintf("✗ Reload failed: %v", msg.err))
+			m.statusIsError = true
+		} else if msg.cfg != nil {
+			m.cfg = msg.cfg
+			m.selectedDeviceIdx = 0
+			m.statusMessage = successStyle.Render(fmt.Sprintf("✓ Reloaded configuration (%d devices)", len(msg.cfg.Devices)))
+			m.statusIsError = false
+		}
+		return m, nil
 	case tea.KeyMsg:
 		// Handle value input mode
 		if m.valueInputMode {
@@ -181,6 +207,15 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.statusIsError = false
 			m.addDebugLog(fmt.Sprintf("Debug level changed to %d (%s)", m.debugLevel, debugLevelName))
 			return m, nil
+		case "r":
+			if m.reloadFunc == nil {
+				m.statusMessage = errorStyle.Render("✗ Reload not available in this mode")
+				m.statusIsError = true
+				return m, nil
+			}
+			m.statusMessage = "Reloading configuration..."
+			m.statusIsError = false
+			return m, reloadCmd(m.reloadFunc)
 
 		case "h", "?":
 			m.showHelp = !m.showHelp
@@ -812,6 +847,7 @@ func (m model) renderHelp() string {
 	help.WriteString("║  [s]     Toggle statistics viewer                               ║\n")
 	help.WriteString("║  [N]/[n] Toggle neighbor discovery table                        ║\n")
 	help.WriteString("║  [x]     Toggle packet hex dump viewer                          ║\n")
+	help.WriteString("║  [r]     Reload configuration from disk                         ║\n")
 	help.WriteString("║  [n]/[p] Navigate packets (next/previous) in hex viewer         ║\n")
 	help.WriteString("║  [↑][↓]  Scroll hex dump / Navigate menu items                  ║\n")
 	help.WriteString("║  [PgUp]  Page up in hex dump                                    ║\n")
@@ -1106,7 +1142,7 @@ func (m *model) AddPacket(protocol, srcAddr, dstAddr string, data []byte) {
 }
 
 // Run starts the interactive mode
-func Run(interfaceName string, cfg *config.Config, debugConfig *logging.DebugConfig, stack *protocols.Stack, startTime time.Time) error {
+func Run(interfaceName string, cfg *config.Config, debugConfig *logging.DebugConfig, stack *protocols.Stack, startTime time.Time, reloadFunc func() (*config.Config, error)) error {
 	if debugConfig == nil {
 		debugConfig = logging.NewDebugConfig(1)
 	}
@@ -1139,9 +1175,10 @@ func Run(interfaceName string, cfg *config.Config, debugConfig *logging.DebugCon
 		interfaceName: interfaceName,
 		debugLevel:    debugLevel,
 		stack:         stack,
+		reloadFunc:    reloadFunc,
 		menuItems:     menuItems,
 		startTime:     startTime,
-		statusMessage: "Press 'i' to open interactive menu, 'h' for help",
+		statusMessage: "Press 'i' for menu, 'r' to reload config, 'h' for help",
 		debugLogs:     make([]string, 0, 100),
 	}
 

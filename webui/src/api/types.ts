@@ -27,7 +27,7 @@ export interface DeviceSummary {
 export interface HistoryRecord {
   id: number;
   started_at: string;
-  duration: number;
+  duration: string;
   interface: string;
   config_name: string;
   device_count: number;
@@ -47,4 +47,114 @@ export interface NeighborRecord {
   ManagementAddress: string;
   LastSeen: string;
   TTL: number;
+}
+
+export interface ConfigDocument {
+  path: string;
+  filename: string;
+  modified_at: string;
+  size_bytes: number;
+  device_count: number;
+  content: string;
+}
+
+export interface ConfigUpdateRequest {
+  content: string;
+}
+
+export interface ReplayState {
+  running: boolean;
+  file: string;
+  loop_ms: number;
+  scale: number;
+  started_at?: string;
+}
+
+export interface ReplayRequest {
+  file: string;
+  loop_ms?: number;
+  scale?: number;
+  data?: string;
+}
+
+export interface FileEntry {
+  path: string;
+  name: string;
+  size_bytes: number;
+  modified_at: string;
+}
+
+export interface AlertConfig {
+  packets_threshold: number;
+  webhook_url: string;
+}
+
+export interface VersionInfo {
+  version: string;
+}
+
+export interface TopologyGraph {
+  nodes: TopologyNode[];
+  links: TopologyLink[];
+}
+
+export interface TopologyNode {
+  name: string;
+  type: string;
+}
+
+export interface TopologyLink {
+  source: string;
+  target: string;
+  label: string;
+}
+
+export interface ErrorType {
+  type: string;
+  description: string;
+}
+
+export interface ErrorInjectionInfo {
+  available_types: ErrorType[];
+  info: string;
+}
+
+export interface NetworkInterface {
+  name: string;
+  description: string;
+  addresses: string[];
+  current: boolean;
+}
+
+export interface InterfacesResponse {
+  interfaces: NetworkInterface[];
+  current_interface: string;
+}
+
+export interface RuntimeStatus {
+  running: boolean;
+  interface: string;
+  config_path: string;
+  config_name?: string;
+  version: string;
+  device_count: number;
+  packets_sent: number;
+  packets_received: number;
+  uptime_seconds: number;
+}
+
+export interface SimulationStatus {
+  running: boolean;
+  interface?: string;
+  config_path?: string;
+  config_name?: string;
+  device_count: number;
+  started_at?: string;
+  uptime_seconds: number;
+}
+
+export interface SimulationRequest {
+  interface: string;
+  config_path?: string;
+  config_data?: string;
 }

@@ -264,7 +264,18 @@ sudo ./niac --debug 1 --debug-lldp 3 en0 examples/layer2/lldp-only.yaml
 niac --api-listen :8080 --api-token supersecret en0 config.yaml
 ```
 
-Visit `http://localhost:8080`, enter the token, and monitor packets, devices, history, and a live topology graph. Full API documentation lives in [`docs/REST_API.md`](docs/REST_API.md).
+Visit `http://localhost:8080`, enter the token, and monitor packets, devices, history, and a live topology graph. The built-in YAML editor now talks to `/api/v1/config`, so edits run the same validation pipeline as `niac validate` before landing on disk. Packet replay and alert thresholds can also be managed directly from the Web UI via `/api/v1/replay` and `/api/v1/alerts`. Full API documentation lives in [`docs/REST_API.md`](docs/REST_API.md).
+
+### Reloading Configuration
+
+The 1.x runtime can apply config changes without restarting:
+
+```bash
+# Ask a running niac process to reload its config file
+kill -HUP $(pgrep -f "niac .*en0")
+```
+
+Interactive mode also exposes the shortcut `[r]` to reload the active configuration and refresh the TUI. Behind the scenes both flows call the same hot-reload path that the Web UI/API use, so CLI, TUI, and browser all stay in sync.
 
 ### Metrics & Alerting
 

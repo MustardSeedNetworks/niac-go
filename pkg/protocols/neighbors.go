@@ -39,6 +39,12 @@ func newNeighborTable() *neighborTable {
 	}
 }
 
+func (t *neighborTable) reset() {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.entries = make(map[string]map[string]*NeighborRecord)
+}
+
 func (t *neighborTable) upsert(entry NeighborRecord) {
 	if entry.LocalDevice == "" || entry.RemoteChassisID == "" {
 		return

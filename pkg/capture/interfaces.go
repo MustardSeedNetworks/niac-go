@@ -70,3 +70,12 @@ func GetInterface(name string) (*pcap.Interface, error) {
 
 	return nil, fmt.Errorf("interface %s not found", name)
 }
+
+// GetAllInterfaces returns all available network interfaces
+func GetAllInterfaces() ([]pcap.Interface, error) {
+	devices, err := pcap.FindAllDevs()
+	if err != nil {
+		return nil, fmt.Errorf("error finding devices: %w", err)
+	}
+	return devices, nil
+}

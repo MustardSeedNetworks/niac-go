@@ -456,7 +456,7 @@ func runNormalMode(interfaceName string, cfg *config.Config, debugConfig *loggin
 	defer engine.Close()
 	defer stack.Stop()
 
-	services, err := startRuntimeServices(stack, cfg, interfaceName, filepath.Base(configFile))
+	services, err := startRuntimeServices(engine, stack, cfg, interfaceName, configFile)
 	if err != nil {
 		return err
 	}
@@ -466,7 +466,8 @@ func runNormalMode(interfaceName string, cfg *config.Config, debugConfig *loggin
 		}
 	}()
 
-	return runSimulationLoop(stack, debugConfig.GetGlobal(), startTime)
+	reloadFunc := buildReloadFunc(stack, configFile, services)
+	return runSimulationLoop(stack, debugConfig.GetGlobal(), startTime, reloadFunc)
 }
 
 // runInteractiveMode runs NIAC with the interactive TUI layered on the live simulator
@@ -476,7 +477,7 @@ func runInteractiveMode(interfaceName string, cfg *config.Config, debugConfig *l
 		return err
 	}
 
-	services, err := startRuntimeServices(stack, cfg, interfaceName, filepath.Base(configFile))
+	services, err := startRuntimeServices(engine, stack, cfg, interfaceName, configFile)
 	if err != nil {
 		engine.Close()
 		stack.Stop()
@@ -491,7 +492,8 @@ func runInteractiveMode(interfaceName string, cfg *config.Config, debugConfig *l
 		}
 	}()
 
-	return interactive.Run(interfaceName, cfg, debugConfig, stack, startTime)
+	reloadFunc := buildReloadFunc(stack, configFile, services)
+	return interactive.Run(interfaceName, cfg, debugConfig, stack, startTime, reloadFunc)
 }
 
 // initializeCaptureEngine initializes the packet capture engine
@@ -617,10 +619,10 @@ func printStartupSummary(cfg *config.Config, debugLevel int) {
 }
 
 // runSimulationLoop runs the main simulation loop with signal handling and stats
-func runSimulationLoop(stack *protocols.Stack, debugLevel int, startTime time.Time) error {
+func runSimulationLoop(stack *protocols.Stack, debugLevel int, startTime time.Time, reloadConfig func() (*config.Config, error)) error {
 	// Setup signal handler for graceful shutdown
 	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
 
 	// Stats ticker (print stats every 10 seconds if debug >= 1)
 	var statsTicker *time.Ticker
@@ -634,8 +636,23 @@ func runSimulationLoop(stack *protocols.Stack, debugLevel int, startTime time.Ti
 	// Main loop
 	for {
 		select {
-		case <-sigChan:
-			// Graceful shutdown
+		case sig := <-sigChan:
+			if sig == syscall.SIGHUP {
+				if reloadConfig != nil {
+					fmt.Println()
+					fmt.Println("Reloading configuration...")
+					if cfg, err := reloadConfig(); err != nil {
+						fmt.Printf("Reload failed: %v\n", err)
+					} else if cfg != nil && debugLevel >= 1 {
+						fmt.Printf("Reloaded configuration (%d devices)\n", len(cfg.Devices))
+					}
+				} else {
+					fmt.Println()
+					fmt.Println("Reload requested but no reload handler is available")
+				}
+				continue
+			}
+
 			fmt.Println()
 			fmt.Println("Shutting down...")
 			stack.Stop()
@@ -697,6 +714,33 @@ func printFinalStats(stack *protocols.Stack, uptime time.Duration) {
 	fmt.Printf("║ Neighbors Learned:   %-10d                                    ║\n", neighbors)
 	fmt.Println("╚══════════════════════════════════════════════════════════════════╝")
 	fmt.Println()
+}
+
+func buildReloadFunc(stack *protocols.Stack, configFile string, services *runtimeServices) func() (*config.Config, error) {
+	if configFile == "" || stack == nil {
+		return nil
+	}
+	abs, err := filepath.Abs(configFile)
+	if err != nil {
+		abs = configFile
+	}
+	return func() (*config.Config, error) {
+		newCfg, err := config.Load(abs)
+		if err != nil {
+			return nil, err
+		}
+		if services != nil {
+			if err := services.applyConfig(newCfg); err != nil {
+				return nil, err
+			}
+		} else {
+			if err := stack.ReloadConfig(newCfg); err != nil {
+				return nil, err
+			}
+			configureServiceHandlers(stack, newCfg, stack.GetDebugLevel())
+		}
+		return newCfg, nil
+	}
 }
 
 // formatDuration formats a duration in a readable way

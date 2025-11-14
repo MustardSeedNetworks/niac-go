@@ -22,6 +22,14 @@ func NewDeviceTable() *DeviceTable {
 	}
 }
 
+// Reset clears all stored devices.
+func (dt *DeviceTable) Reset() {
+	dt.mu.Lock()
+	defer dt.mu.Unlock()
+	dt.byMAC = make(map[string]*config.Device)
+	dt.byIP = make(map[string][]*config.Device)
+}
+
 // AddByMAC adds a device indexed by MAC address
 func (dt *DeviceTable) AddByMAC(mac net.HardwareAddr, device *config.Device) {
 	dt.mu.Lock()

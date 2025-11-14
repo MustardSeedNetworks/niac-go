@@ -116,6 +116,26 @@ func (h *DHCPHandler) SetAdvancedOptions(ntpServers []net.IP, domainSearch []str
 	h.vendorSpecificInfo = vendorInfo
 }
 
+// Reset clears all DHCP server state while preserving the associated stack.
+func (h *DHCPHandler) Reset() {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.leases = make(map[string]*DHCPLease)
+	h.ipPool = nil
+	h.poolStart = nil
+	h.poolEnd = nil
+	h.serverIP = nil
+	h.subnetMask = net.IPv4(255, 255, 255, 0)
+	h.gateway = nil
+	h.dnsServers = nil
+	h.domainName = ""
+	h.ntpServers = nil
+	h.domainSearch = nil
+	h.tftpServerName = ""
+	h.bootfileName = ""
+	h.vendorSpecificInfo = nil
+}
+
 // MaxPoolSize is the maximum number of IPs allowed in a DHCP pool
 const MaxPoolSize = 65536 // 2^16 IPs (reasonable for simulation)
 

@@ -17,9 +17,6 @@ func TestStackStopCleanup(t *testing.T) {
 	// Create stack without capture (to avoid network dependency)
 	stack := NewStack(nil, cfg, debugConfig)
 
-	// Initialize devices
-	stack.initializeDevices()
-
 	// Stack should not be running yet
 	if stack.running {
 		t.Error("Stack should not be running before Start()")
@@ -103,7 +100,6 @@ func TestStackDeviceInitialization(t *testing.T) {
 	debugConfig := logging.NewDebugConfig(0)
 
 	stack := NewStack(nil, cfg, debugConfig)
-	stack.initializeDevices()
 
 	// Verify device was added
 	devices := stack.GetDevices().GetAll()
@@ -113,6 +109,48 @@ func TestStackDeviceInitialization(t *testing.T) {
 
 	if devices[0].Name != "test-device" {
 		t.Errorf("Expected device name 'test-device', got '%s'", devices[0].Name)
+	}
+}
+
+func TestStackReloadConfig(t *testing.T) {
+	cfg1 := &config.Config{
+		Devices: []config.Device{
+			{
+				Name:        "alpha",
+				Type:        "switch",
+				MACAddress:  []byte{0x00, 0x01, 0x02, 0x03, 0x04, 0x05},
+				IPAddresses: []net.IP{net.IPv4(10, 0, 0, 1)},
+			},
+		},
+	}
+	cfg2 := &config.Config{
+		Devices: []config.Device{
+			{
+				Name:        "beta",
+				Type:        "router",
+				MACAddress:  []byte{0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff},
+				IPAddresses: []net.IP{net.IPv4(10, 0, 1, 1)},
+			},
+			{
+				Name:        "gamma",
+				Type:        "router",
+				MACAddress:  []byte{0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0x01},
+				IPAddresses: []net.IP{net.IPv4(10, 0, 2, 1)},
+			},
+		},
+	}
+
+	stack := NewStack(nil, cfg1, logging.NewDebugConfig(0))
+	if got := stack.GetDevices().Count(); got != 1 {
+		t.Fatalf("expected 1 device after init, got %d", got)
+	}
+
+	if err := stack.ReloadConfig(cfg2); err != nil {
+		t.Fatalf("ReloadConfig failed: %v", err)
+	}
+
+	if got := stack.GetDevices().Count(); got != len(cfg2.Devices) {
+		t.Fatalf("expected %d devices after reload, got %d", len(cfg2.Devices), got)
 	}
 }
 

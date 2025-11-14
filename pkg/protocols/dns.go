@@ -32,6 +32,15 @@ func NewDNSHandler(stack *Stack) *DNSHandler {
 	}
 }
 
+// Reset clears all cached DNS records.
+func (h *DNSHandler) Reset() {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.records = make(map[string][]net.IP)
+	h.ptrRecords = make(map[string]string)
+	h.domain = "local"
+}
+
 // AddRecord adds a DNS A/AAAA record
 func (h *DNSHandler) AddRecord(hostname string, ip net.IP) {
 	h.mu.Lock()

@@ -746,12 +746,15 @@ func LoadYAMLConfig(filename string) (*Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error reading YAML file: %w", err)
 	}
+	return LoadYAMLConfigFromBytes(data)
+}
 
+// LoadYAMLConfigFromBytes converts in-memory YAML data into a Go config structure.
+func LoadYAMLConfigFromBytes(data []byte) (*Config, error) {
 	var config Config
 	if err := yaml.Unmarshal(data, &config); err != nil {
 		return nil, fmt.Errorf("error parsing YAML: %w", err)
 	}
-
 	return &config, nil
 }
 
