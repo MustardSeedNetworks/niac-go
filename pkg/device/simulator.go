@@ -337,7 +337,43 @@ func (s *Simulator) SetDeviceState(name string, state DeviceState) error {
 		log.Printf("Device %s state changed: %s -> %s", name, oldState, state)
 	}
 
-	// Pending: generate SNMP traps for state changes (see issue #76)
+	// Generate SNMP traps for state changes (issue #76)
+	if device.TrapSender != nil {
+		// Send linkDown trap when transitioning to down/stopping states
+		if (state == StateDown || state == StateStopping) && oldState != StateDown && oldState != StateStopping {
+			// Get interface index - use 1 for primary interface
+			ifIndex := 1
+			ifDescr := "Primary Interface"
+			if len(device.Config.IPAddresses) > 0 {
+				ifDescr = fmt.Sprintf("Interface %s", device.Config.IPAddresses[0])
+			}
+
+			if err := device.TrapSender.SendLinkDown(ifIndex, ifDescr); err != nil {
+				if s.debugLevel >= 1 {
+					log.Printf("Failed to send linkDown trap for %s: %v", name, err)
+				}
+			} else if s.debugLevel >= 2 {
+				log.Printf("Sent linkDown trap for device %s interface %d", name, ifIndex)
+			}
+		}
+
+		// Send linkUp trap when transitioning to up state
+		if state == StateUp && oldState != StateUp {
+			ifIndex := 1
+			ifDescr := "Primary Interface"
+			if len(device.Config.IPAddresses) > 0 {
+				ifDescr = fmt.Sprintf("Interface %s", device.Config.IPAddresses[0])
+			}
+
+			if err := device.TrapSender.SendLinkUp(ifIndex, ifDescr); err != nil {
+				if s.debugLevel >= 1 {
+					log.Printf("Failed to send linkUp trap for %s: %v", name, err)
+				}
+			} else if s.debugLevel >= 2 {
+				log.Printf("Sent linkUp trap for device %s interface %d", name, ifIndex)
+			}
+		}
+	}
 
 	return nil
 }
