@@ -568,11 +568,53 @@ func LoadYAML(filename string) (*Config, error) {
 	return cfg, nil
 }
 
+// LoadYAMLBytes loads a YAML configuration from bytes
+func LoadYAMLBytes(data []byte) (*Config, error) {
+	// Step 1: Load YAML from bytes
+	yamlConfig, err := loadYAMLBytes(data)
+	if err != nil {
+		return nil, err
+	}
+
+	// Step 2: Create base config with global settings
+	cfg := createBaseConfig(yamlConfig)
+
+	// Step 3: Convert devices
+	for _, yamlDevice := range yamlConfig.Devices {
+		device, err := convertYAMLDevice(yamlDevice, cfg.IncludePath)
+		if err != nil {
+			return nil, err
+		}
+		cfg.Devices = append(cfg.Devices, device)
+	}
+
+	// Step 4: Validate final config
+	if len(cfg.Devices) == 0 {
+		return nil, fmt.Errorf("no devices defined in configuration")
+	}
+
+	return cfg, nil
+}
+
 // loadYAMLFile loads and validates a YAML configuration file
 func loadYAMLFile(filename string) (*converter.Config, error) {
 	yamlConfig, err := converter.LoadYAMLConfig(filename)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load YAML config: %w", err)
+	}
+
+	if err := converter.ValidateConfig(yamlConfig); err != nil {
+		return nil, fmt.Errorf("config validation failed: %w", err)
+	}
+
+	return yamlConfig, nil
+}
+
+// loadYAMLBytes loads and validates a YAML configuration from bytes
+func loadYAMLBytes(data []byte) (*converter.Config, error) {
+	yamlConfig, err := converter.LoadYAMLConfigFromBytes(data)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse YAML config: %w", err)
 	}
 
 	if err := converter.ValidateConfig(yamlConfig); err != nil {

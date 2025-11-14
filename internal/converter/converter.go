@@ -755,6 +755,15 @@ func LoadYAMLConfig(filename string) (*Config, error) {
 	return &config, nil
 }
 
+// LoadYAMLConfigFromBytes loads a YAML configuration from bytes
+func LoadYAMLConfigFromBytes(data []byte) (*Config, error) {
+	var config Config
+	if err := yaml.Unmarshal(data, &config); err != nil {
+		return nil, fmt.Errorf("error parsing YAML: %w", err)
+	}
+	return &config, nil
+}
+
 // ValidateConfig validates that no functionality was lost in conversion
 func ValidateConfig(config *Config) error {
 	// Validate devices have required fields
