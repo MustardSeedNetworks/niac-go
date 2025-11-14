@@ -33,7 +33,7 @@ Flags:
 | `GET` | `/api/v1/files?kind=walks|pcaps` | List available SNMP walk or PCAP files |
 | `GET` | `/api/v1/topology` | Simple topology graph derived from configuration |
 | `GET` | `/api/v1/version` | Version information |
-| `GET` | `/metrics` | Prometheus metrics (`niac_packets_sent_total`, etc.) |
+| `GET` | `/metrics` | Prometheus metrics endpoint (see [Monitoring Guide](MONITORING.md)) |
 
 Include `Authorization: Bearer <token>` or append `?token=<token>` when authentication is enabled.
 
@@ -123,3 +123,41 @@ Add `--alert-packets-threshold <n>` and optional `--alert-webhook https://...` t
   "triggeredAt": "2025-11-13T01:33:00Z"
 }
 ```
+
+## Monitoring & Metrics
+
+NIAC-Go exposes comprehensive Prometheus-compatible metrics at `/metrics`. For complete monitoring setup instructions, see the [Monitoring Guide](MONITORING.md).
+
+### Quick Start
+
+```bash
+# View raw metrics
+curl http://localhost:8080/metrics
+
+# Example metrics:
+# niac_packets_sent_total 15234
+# niac_packets_received_total 12890
+# niac_devices_total 10
+# niac_uptime_seconds 3600
+# niac_memory_usage_bytes 45678912
+# niac_goroutines_total 42
+# ...
+```
+
+### Available Metric Categories
+
+1. **Traffic Metrics**: Packet counts, device counts, error counts
+2. **Protocol Metrics**: ARP, ICMP, DNS, DHCP, SNMP activity
+3. **System Metrics**: Memory, goroutines, GC runs, uptime
+
+### Grafana Dashboard
+
+A pre-built Grafana dashboard is available at `docs/grafana-dashboard.json` with panels for:
+- Overview (devices, packets, errors)
+- System health (memory, goroutines, uptime)
+- Protocol breakdown (traffic by protocol type)
+- Runtime metrics (GC, memory trends)
+
+Import the dashboard into Grafana after configuring Prometheus as a data source.
+
+For detailed setup instructions, metric descriptions, and alert configuration, see the [Monitoring Guide](MONITORING.md).
