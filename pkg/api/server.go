@@ -13,6 +13,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -160,6 +161,7 @@ func (s *Server) Start() error {
 		mux.HandleFunc("/api/v1/alerts", s.auth(s.handleAlerts))
 		mux.HandleFunc("/api/v1/files", s.auth(s.handleFiles))
 		mux.HandleFunc("/api/v1/topology", s.auth(s.handleTopology))
+		mux.HandleFunc("/api/v1/topology/export", s.auth(s.handleTopologyExport))
 		mux.HandleFunc("/api/v1/errors", s.auth(s.handleErrors))
 		mux.HandleFunc("/api/v1/interfaces", s.auth(s.handleInterfaces))
 		mux.HandleFunc("/api/v1/runtime", s.auth(s.handleRuntime))
@@ -553,6 +555,41 @@ func (s *Server) handleTopology(w http.ResponseWriter, r *http.Request) {
 	s.writeJSON(w, s.currentTopology())
 }
 
+func (s *Server) handleTopologyExport(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.Header().Set("Allow", "GET")
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	format := r.URL.Query().Get("format")
+	if format == "" {
+		format = "json"
+	}
+
+	topology := s.currentTopology()
+
+	switch format {
+	case "json":
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Content-Disposition", "attachment; filename=\"topology.json\"")
+		s.writeJSON(w, topology)
+
+	case "graphml":
+		w.Header().Set("Content-Type", "application/xml")
+		w.Header().Set("Content-Disposition", "attachment; filename=\"topology.graphml\"")
+		fmt.Fprint(w, topology.ExportGraphML())
+
+	case "dot":
+		w.Header().Set("Content-Type", "text/vnd.graphviz")
+		w.Header().Set("Content-Disposition", "attachment; filename=\"topology.dot\"")
+		fmt.Fprint(w, topology.ExportDOT())
+
+	default:
+		http.Error(w, fmt.Sprintf("unsupported format: %s (supported: json, graphml, dot)", format), http.StatusBadRequest)
+	}
+}
+
 func (s *Server) handleVersion(w http.ResponseWriter, r *http.Request) {
 	s.writeJSON(w, map[string]string{"version": s.cfg.Version})
 }
@@ -829,12 +866,79 @@ func (s *Server) handleMetrics(w http.ResponseWriter, r *http.Request) {
 	if cfg != nil {
 		deviceCount = len(cfg.Devices)
 	}
+
+	// Get system metrics
+	var memStats runtime.MemStats
+	runtime.ReadMemStats(&memStats)
+
 	w.Header().Set("Content-Type", "text/plain; version=0.0.4")
+
+	// Existing basic metrics
+	fmt.Fprintf(w, "# HELP niac_packets_sent_total Total packets sent\n")
+	fmt.Fprintf(w, "# TYPE niac_packets_sent_total counter\n")
 	fmt.Fprintf(w, "niac_packets_sent_total %d\n", stats.PacketsSent)
+
+	fmt.Fprintf(w, "# HELP niac_packets_received_total Total packets received\n")
+	fmt.Fprintf(w, "# TYPE niac_packets_received_total counter\n")
 	fmt.Fprintf(w, "niac_packets_received_total %d\n", stats.PacketsReceived)
+
+	fmt.Fprintf(w, "# HELP niac_snmp_queries_total Total SNMP queries processed\n")
+	fmt.Fprintf(w, "# TYPE niac_snmp_queries_total counter\n")
 	fmt.Fprintf(w, "niac_snmp_queries_total %d\n", stats.SNMPQueries)
+
+	fmt.Fprintf(w, "# HELP niac_errors_total Total errors\n")
+	fmt.Fprintf(w, "# TYPE niac_errors_total counter\n")
 	fmt.Fprintf(w, "niac_errors_total %d\n", stats.Errors)
+
+	fmt.Fprintf(w, "# HELP niac_devices_total Number of simulated devices\n")
+	fmt.Fprintf(w, "# TYPE niac_devices_total gauge\n")
 	fmt.Fprintf(w, "niac_devices_total %d\n", deviceCount)
+
+	// Protocol-specific metrics
+	fmt.Fprintf(w, "# HELP niac_arp_requests_total Total ARP requests sent\n")
+	fmt.Fprintf(w, "# TYPE niac_arp_requests_total counter\n")
+	fmt.Fprintf(w, "niac_arp_requests_total %d\n", stats.ARPRequests)
+
+	fmt.Fprintf(w, "# HELP niac_arp_replies_total Total ARP replies sent\n")
+	fmt.Fprintf(w, "# TYPE niac_arp_replies_total counter\n")
+	fmt.Fprintf(w, "niac_arp_replies_total %d\n", stats.ARPReplies)
+
+	fmt.Fprintf(w, "# HELP niac_icmp_requests_total Total ICMP requests sent\n")
+	fmt.Fprintf(w, "# TYPE niac_icmp_requests_total counter\n")
+	fmt.Fprintf(w, "niac_icmp_requests_total %d\n", stats.ICMPRequests)
+
+	fmt.Fprintf(w, "# HELP niac_icmp_replies_total Total ICMP replies sent\n")
+	fmt.Fprintf(w, "# TYPE niac_icmp_replies_total counter\n")
+	fmt.Fprintf(w, "niac_icmp_replies_total %d\n", stats.ICMPReplies)
+
+	fmt.Fprintf(w, "# HELP niac_dns_queries_total Total DNS queries processed\n")
+	fmt.Fprintf(w, "# TYPE niac_dns_queries_total counter\n")
+	fmt.Fprintf(w, "niac_dns_queries_total %d\n", stats.DNSQueries)
+
+	fmt.Fprintf(w, "# HELP niac_dhcp_requests_total Total DHCP requests processed\n")
+	fmt.Fprintf(w, "# TYPE niac_dhcp_requests_total counter\n")
+	fmt.Fprintf(w, "niac_dhcp_requests_total %d\n", stats.DHCPRequests)
+
+	// System performance metrics
+	fmt.Fprintf(w, "# HELP niac_uptime_seconds Server uptime in seconds\n")
+	fmt.Fprintf(w, "# TYPE niac_uptime_seconds gauge\n")
+	fmt.Fprintf(w, "niac_uptime_seconds %d\n", int64(time.Since(s.startTime).Seconds()))
+
+	fmt.Fprintf(w, "# HELP niac_goroutines_total Number of goroutines\n")
+	fmt.Fprintf(w, "# TYPE niac_goroutines_total gauge\n")
+	fmt.Fprintf(w, "niac_goroutines_total %d\n", runtime.NumGoroutine())
+
+	fmt.Fprintf(w, "# HELP niac_memory_usage_bytes Memory usage in bytes\n")
+	fmt.Fprintf(w, "# TYPE niac_memory_usage_bytes gauge\n")
+	fmt.Fprintf(w, "niac_memory_usage_bytes %d\n", memStats.Alloc)
+
+	fmt.Fprintf(w, "# HELP niac_memory_sys_bytes Total memory obtained from OS in bytes\n")
+	fmt.Fprintf(w, "# TYPE niac_memory_sys_bytes gauge\n")
+	fmt.Fprintf(w, "niac_memory_sys_bytes %d\n", memStats.Sys)
+
+	fmt.Fprintf(w, "# HELP niac_gc_runs_total Total number of GC runs\n")
+	fmt.Fprintf(w, "# TYPE niac_gc_runs_total counter\n")
+	fmt.Fprintf(w, "niac_gc_runs_total %d\n", memStats.NumGC)
 }
 
 func (s *Server) writeJSON(w http.ResponseWriter, payload interface{}) {
