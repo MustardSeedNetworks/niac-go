@@ -13,6 +13,7 @@ import {
   BellRing,
   SatelliteDish,
   FileCog,
+  Zap,
 } from 'lucide-react';
 import {
   PageShell,
@@ -54,6 +55,7 @@ import {
   stopSimulation,
 } from './api/client';
 import type { DeviceSummary, HistoryRecord, NeighborRecord, AlertConfig, ReplayRequest, FileEntry, TopologyGraph, ErrorType, NetworkInterface } from './api/types';
+import { TrafficInjectionPage } from './pages/TrafficInjectionPage';
 import './App.css';
 
 type PageConfig = {
@@ -115,6 +117,14 @@ const pages: PageConfig[] = [
     icon: Workflow,
     Component: AutomationPage,
     badge: 'Beta',
+  },
+  {
+    path: '/traffic',
+    label: 'Traffic Injection',
+    title: 'Traffic & Error Injection',
+    description: 'Inject network errors and replay PCAP traffic for testing and simulation.',
+    icon: Zap,
+    Component: TrafficInjectionPage,
   },
 ];
 
