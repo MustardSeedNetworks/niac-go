@@ -3,6 +3,7 @@ package api
 import (
 	"bytes"
 	"context"
+	"crypto/subtle"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -39,11 +40,41 @@ func logRequest(r *http.Request) {
 }
 
 // addSecurityHeaders adds security headers to all HTTP responses
-func addSecurityHeaders(w http.ResponseWriter) {
+// SECURITY FIX #102: Comprehensive security headers to prevent web attacks
+func addSecurityHeaders(w http.ResponseWriter, r *http.Request) {
+	// Prevent MIME type sniffing
 	w.Header().Set("X-Content-Type-Options", "nosniff")
+
+	// Prevent clickjacking attacks
 	w.Header().Set("X-Frame-Options", "DENY")
+
+	// Enable XSS protection (legacy, but still useful for older browsers)
 	w.Header().Set("X-XSS-Protection", "1; mode=block")
-	// Don't add HSTS as it may not be HTTPS
+
+	// Content Security Policy - restrict resource loading
+	w.Header().Set("Content-Security-Policy",
+		"default-src 'self'; "+
+			"script-src 'self' 'unsafe-inline'; "+
+			"style-src 'self' 'unsafe-inline'; "+
+			"img-src 'self' data:; "+
+			"font-src 'self'; "+
+			"connect-src 'self'; "+
+			"object-src 'none'; "+
+			"base-uri 'self'; "+
+			"form-action 'self'")
+
+	// Only add HSTS if connection is over TLS
+	if r.TLS != nil {
+		w.Header().Set("Strict-Transport-Security",
+			"max-age=31536000; includeSubDomains")
+	}
+
+	// Restrict browser features
+	w.Header().Set("Permissions-Policy",
+		"geolocation=(), microphone=(), camera=(), payment=(), usb=(), magnetometer=()")
+
+	// Control referrer information
+	w.Header().Set("Referrer-Policy", "no-referrer")
 }
 
 // AlertConfig controls basic threshold-based alerting.
@@ -149,6 +180,9 @@ func NewServer(cfg ServerConfig) *Server {
 }
 
 // Start boots the HTTP listeners.
+// SECURITY FIX #98: Goroutines will properly exit when Shutdown() is called
+// The ListenAndServe calls run in goroutines and will terminate when Shutdown()
+// is invoked, preventing goroutine leaks. Always call Shutdown() to cleanup.
 func (s *Server) Start() error {
 	if s.cfg.Stack == nil || s.cfg.Config == nil {
 		return fmt.Errorf("api server requires stack and config references")
@@ -174,9 +208,15 @@ func (s *Server) Start() error {
 		mux.HandleFunc("/metrics", s.handleMetrics)
 		mux.HandleFunc("/", s.auth(s.serveSPA()))
 
+		// SECURITY FIX #99: Add HTTP timeouts to prevent slowloris attacks
 		s.httpServer = &http.Server{
-			Addr:    s.cfg.Addr,
-			Handler: mux,
+			Addr:              s.cfg.Addr,
+			Handler:           mux,
+			ReadTimeout:       10 * time.Second,
+			WriteTimeout:      10 * time.Second,
+			IdleTimeout:       60 * time.Second,
+			ReadHeaderTimeout: 5 * time.Second,
+			MaxHeaderBytes:    1 << 20, // 1MB
 		}
 
 		go func() {
@@ -190,9 +230,15 @@ func (s *Server) Start() error {
 		mux := http.NewServeMux()
 		mux.HandleFunc("/metrics", s.handleMetrics)
 
+		// SECURITY FIX #99: Add HTTP timeouts to metrics server too
 		s.metricsServer = &http.Server{
-			Addr:    s.cfg.MetricsAddr,
-			Handler: mux,
+			Addr:              s.cfg.MetricsAddr,
+			Handler:           mux,
+			ReadTimeout:       10 * time.Second,
+			WriteTimeout:      10 * time.Second,
+			IdleTimeout:       60 * time.Second,
+			ReadHeaderTimeout: 5 * time.Second,
+			MaxHeaderBytes:    1 << 20, // 1MB
 		}
 
 		go func() {
@@ -207,6 +253,8 @@ func (s *Server) Start() error {
 }
 
 // Shutdown stops the HTTP listeners.
+// Shutdown gracefully shuts down the API and metrics servers
+// SECURITY FIX #98: Proper server shutdown to prevent goroutine leaks
 func (s *Server) Shutdown(ctx context.Context) error {
 	// Acquire lock before closing channel to prevent race with updateAlertConfig
 	s.alertMu.Lock()
@@ -216,14 +264,30 @@ func (s *Server) Shutdown(ctx context.Context) error {
 	}
 	s.alertMu.Unlock()
 
+	var firstErr error
+
+	// Shutdown metrics server first (less critical)
 	if s.metricsServer != nil {
-		_ = s.metricsServer.Shutdown(ctx)
+		if err := s.metricsServer.Shutdown(ctx); err != nil {
+			log.Printf("Error shutting down metrics server: %v", err)
+			if firstErr == nil {
+				firstErr = err
+			}
+		}
 	}
 
+	// Shutdown main HTTP server
 	if s.httpServer != nil {
-		return s.httpServer.Shutdown(ctx)
+		if err := s.httpServer.Shutdown(ctx); err != nil {
+			log.Printf("Error shutting down HTTP server: %v", err)
+			if firstErr == nil {
+				firstErr = err
+			}
+		}
 	}
-	return nil
+
+	// Return first error encountered, if any
+	return firstErr
 }
 
 // SetDaemonController sets the daemon controller (for daemon mode)
@@ -257,7 +321,7 @@ func (s *Server) ClearSimulation() {
 func (s *Server) auth(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Add security headers to all responses
-		addSecurityHeaders(w)
+		addSecurityHeaders(w, r)
 
 		if s.cfg.Token == "" {
 			next(w, r)
@@ -270,7 +334,9 @@ func (s *Server) auth(next http.HandlerFunc) http.HandlerFunc {
 			token = strings.TrimPrefix(token, "Bearer ")
 		}
 
-		if token != s.cfg.Token {
+		// SECURITY FIX #100: Use constant-time comparison to prevent timing attacks
+		// Standard string comparison (!=) could leak token information via timing
+		if subtle.ConstantTimeCompare([]byte(token), []byte(s.cfg.Token)) != 1 {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}

@@ -62,7 +62,8 @@ func init() {
 	rootCmd.SetVersionTemplate(fmt.Sprintf("niac %s (commit: %s, built: %s)\n", version, commit, date))
 
 	rootCmd.PersistentFlags().StringVar(&servicesOpts.apiListen, "api-listen", "", "Expose the REST API and Web UI on this address (e.g., :8080)")
-	rootCmd.PersistentFlags().StringVar(&servicesOpts.apiToken, "api-token", "", "Bearer token required for API/Web UI access")
+	// SECURITY FIX #101: Deprecate --api-token flag in favor of environment variable
+	rootCmd.PersistentFlags().StringVar(&servicesOpts.apiToken, "api-token", "", "Bearer token required for API/Web UI access (DEPRECATED: use NIAC_API_TOKEN env var)")
 	rootCmd.PersistentFlags().StringVar(&servicesOpts.metricsListen, "metrics-listen", "", "Expose Prometheus metrics on this address (defaults to --api-listen)")
 	rootCmd.PersistentFlags().StringVar(&servicesOpts.storagePath, "storage-path", "", "Path to NIAC run history database (default: ~/.niac/niac.db)")
 	rootCmd.PersistentFlags().Uint64Var(&servicesOpts.alertPacketsThreshold, "alert-packets-threshold", 0, "Trigger alerts when total packets exceed this value")

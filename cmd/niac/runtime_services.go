@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -69,11 +70,22 @@ func startRuntimeServices(engine *capture.Engine, stack *protocols.Stack, cfg *c
 	}
 
 	if apiAddr != "" {
+		// SECURITY FIX #101: Prefer NIAC_API_TOKEN environment variable over CLI flag
+		apiToken := os.Getenv("NIAC_API_TOKEN")
+		if apiToken == "" {
+			apiToken = servicesOpts.apiToken
+			// Warn if using deprecated CLI flag
+			if apiToken != "" {
+				fmt.Fprintln(os.Stderr, "⚠️  WARNING: --api-token flag is deprecated and exposes token in process list")
+				fmt.Fprintln(os.Stderr, "    Please use NIAC_API_TOKEN environment variable instead")
+			}
+		}
+
 		topology := api.BuildTopology(cfg)
 		cfgCopy := &api.ServerConfig{
 			Addr:        apiAddr,
 			MetricsAddr: metricsAddr,
-			Token:       servicesOpts.apiToken,
+			Token:       apiToken,
 			Stack:       stack,
 			Config:      cfg,
 			ConfigPath:  rs.configPath,
@@ -115,13 +127,19 @@ func (rs *runtimeServices) applyConfig(newCfg *config.Config) error {
 
 func (rs *runtimeServices) Stop() {
 	if rs.replay != nil {
-		_, _ = rs.replay.Stop()
+		// SECURITY FIX #106: Log errors during shutdown instead of silently discarding
+		if _, err := rs.replay.Stop(); err != nil {
+			log.Printf("Error stopping replay during shutdown: %v", err)
+		}
 	}
 
 	if rs.apiServer != nil {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		_ = rs.apiServer.Shutdown(ctx)
+		// SECURITY FIX #106: Log API server shutdown errors
+		if err := rs.apiServer.Shutdown(ctx); err != nil {
+			log.Printf("Error shutting down API server: %v", err)
+		}
 	}
 
 	if rs.storage != nil {
@@ -136,7 +154,10 @@ func (rs *runtimeServices) Stop() {
 			PacketsReceived: stats.PacketsReceived,
 			Errors:          stats.Errors,
 		}
-		_ = rs.storage.AddRun(record)
+		// SECURITY FIX #106: Log storage errors during shutdown
+		if err := rs.storage.AddRun(record); err != nil {
+			log.Printf("Error saving run record during shutdown: %v", err)
+		}
 		rs.storage.Close()
 	}
 }

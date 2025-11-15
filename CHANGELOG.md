@@ -16,6 +16,86 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Container and Kubernetes deployment (#35)
 - Multi-user authentication (#33)
 
+## [2.3.2] - 2025-11-14
+
+### Security
+
+**HIGH priority security fixes - Recommended for all production deployments**
+
+- **Fixed timing attack vulnerability in API authentication** (#100)
+  - Replaced string comparison with `crypto/subtle.ConstantTimeCompare()`
+  - Prevents token brute-forcing via timing analysis
+  - All authentication comparisons now use constant-time operations
+
+- **Added HTTP timeouts to prevent slowloris attacks** (#99)
+  - Configured `ReadTimeout: 10s`, `WriteTimeout: 10s`, `IdleTimeout: 60s`
+  - Added `ReadHeaderTimeout: 5s` and `MaxHeaderBytes: 1MB`
+  - Applied to both main API server and metrics server
+  - Prevents denial of service via slow connections
+
+- **Fixed API token exposure in process listings** (#101)
+  - Added `NIAC_API_TOKEN` environment variable support
+  - Deprecated `--api-token` CLI flag (still works but warns)
+  - CLI flag shows token in `ps` output and shell history
+  - Environment variable is the secure recommended method
+
+- **Added comprehensive security headers** (#102)
+  - Content-Security-Policy to prevent XSS and injection attacks
+  - Strict-Transport-Security (HSTS) when using TLS
+  - X-Frame-Options, X-Content-Type-Options, X-XSS-Protection
+  - Permissions-Policy to restrict browser features
+  - Referrer-Policy to control referrer information
+  - Protects against clickjacking, MIME sniffing, and other web attacks
+
+- **Improved goroutine lifecycle management** (#98)
+  - Enhanced HTTP server shutdown with proper error handling
+  - Added error logging for all shutdown operations
+  - Documented lifecycle pattern to prevent goroutine leaks
+  - Returns first error encountered during shutdown
+
+- **Fixed silent error suppression during shutdown** (#106)
+  - Added error logging to replay stop operation
+  - Added error logging to API server shutdown
+  - Added error logging to storage operations
+  - Improves debugging and monitoring of shutdown issues
+
+### Changed
+- **BREAKING**: `--api-token` flag deprecated in favor of `NIAC_API_TOKEN` env var
+  - Using the flag will display a deprecation warning
+  - Both methods work in v2.3.2 for backward compatibility
+  - CLI flag will be removed in v3.0.0
+- Enhanced `Server.Shutdown()` to return proper errors instead of discarding them
+- Updated security headers function signature to accept request for TLS detection
+
+### Documentation
+- **Updated version badge in README** (#103)
+  - Changed to dynamic GitHub release badge
+  - Now auto-updates with each release
+  - Current version shown as 2.3.2
+
+- **Updated ARCHITECTURE.md metadata** (#115)
+  - Updated version reference to v2.3.1
+  - Updated last modified date to November 14, 2025
+
+### Migration Guide
+
+#### Environment Variable for API Token
+**Old (deprecated)**:
+```bash
+niac --api-listen :8080 --api-token mysecrettoken
+```
+
+**New (secure)**:
+```bash
+export NIAC_API_TOKEN=mysecrettoken
+niac --api-listen :8080
+```
+
+Or inline:
+```bash
+NIAC_API_TOKEN=mysecrettoken niac --api-listen :8080
+```
+
 ## [2.3.1] - 2025-11-14
 
 ### Security

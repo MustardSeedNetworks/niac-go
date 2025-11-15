@@ -747,8 +747,8 @@ Add: `--debug 3 --debug-<protocol> 3` for full trace
 
 ---
 
-**Last Updated**: January 8, 2025
-**Version**: v1.21.3
+**Last Updated**: November 14, 2025
+**Version**: v2.3.1
 **Maintainer**: Kris Armstrong
 
 ---
