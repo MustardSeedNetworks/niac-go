@@ -7,7 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Future (v2.6.0+)
+### Future (v2.7.0+)
+- WebUI re-render optimization (#125)
+- Virtual scrolling for large device lists (#126)
+- OpenAPI/Swagger specification (#117)
+- State management library evaluation (#133)
 - Config generator CLI with interactive prompts
 - Packet hex dump viewer in TUI
 - Statistics export (JSON/CSV)
@@ -15,6 +19,108 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - DHCPv6 prefix delegation (IA_PD)
 - Container and Kubernetes deployment (#35)
 - Multi-user authentication (#33)
+
+## [2.6.0] - 2025-11-14
+
+### Added
+
+**Monitoring & Observability**
+
+- **Goroutine Count Monitoring** (#119)
+  - Added goroutine count to `/api/v1/stats` endpoint
+  - Helps detect potential goroutine leaks
+  - Useful for capacity planning and debugging
+  - Location: `pkg/api/server.go:687-688`
+
+- **Request Tracing IDs** (#118)
+  - Unique `X-Request-ID` header for all API requests and responses
+  - Included in error logs for debugging
+  - 128-bit random IDs for request correlation
+  - Enables distributed tracing and log correlation
+  - Location: `pkg/api/server.go:197-203, 579-582, 307-311`
+
+**Error Handling**
+
+- **Graceful Degradation** (#132)
+  - Improved error response when PCAP replay engine unavailable
+  - Returns standardized error with helpful message
+  - HTTP 503 with clear guidance instead of generic 501
+  - Location: `pkg/api/server.go:878-883`
+
+### Documentation
+
+**Comprehensive Documentation Suite** - Major documentation expansion (#120, #122, #127, #128, #130, #131, #114, #113)
+
+- **[FAQ](docs/FAQ.md)** - 50+ frequently asked questions covering:
+  - Installation, configuration, protocols
+  - Troubleshooting, performance, security
+  - Advanced usage, CI/CD, contributing
+
+- **[API Examples](docs/API-EXAMPLES.md)** - Practical code examples in:
+  - curl, Python, JavaScript/Node.js, Go, PowerShell
+  - Authentication, CSRF tokens, error handling
+  - Stats monitoring, config updates, PCAP replay
+
+- **[Performance Tuning Guide](docs/PERFORMANCE.md)** - Optimization for:
+  - Channel buffer sizing (500-10000 based on traffic)
+  - Debug level impact (0-60% overhead)
+  - Protocol optimization, memory tuning
+  - CPU optimization, storage, monitoring
+  - Benchmarking and troubleshooting
+
+- **[Deployment Guide](docs/DEPLOYMENT.md)** - Production deployment:
+  - Docker and Docker Compose examples
+  - Kubernetes manifests (Deployment, Service, PVC)
+  - Systemd service configuration
+  - Cloud deployment (AWS, Azure, GCP)
+  - Security hardening checklist
+
+- **[CI/CD Integration](docs/CI-CD.md)** - Pipeline examples:
+  - GitHub Actions workflow
+  - GitLab CI configuration
+  - Jenkins Pipeline
+  - Docker-based CI
+
+- **[SNMP Walk Files](docs/SNMP-WALKS.md)** - Complete workflow:
+  - Creating walks from real devices
+  - Optimizing file sizes
+  - Sanitization before contribution
+  - Device-specific examples
+  - Contribution guidelines
+
+- **[Breaking Changes Policy](docs/BREAKING-CHANGES.md)** - Versioning guide:
+  - Semantic versioning commitment
+  - Deprecation process (2 minor version grace period)
+  - API versioning strategy
+  - Migration guides
+
+- **[Documentation Index](docs/README.md)** - Central hub:
+  - Quick start links
+  - API reference table
+  - Configuration reference
+  - Troubleshooting guide
+  - Performance benchmarks
+
+### Changed
+
+- **Go Version Requirement** (#123)
+  - Updated to Go 1.25.4+ (was incorrectly showing 1.24)
+  - Badge and documentation clarified
+  - Location: `README.md:5,10`
+
+- **API Error Logging**
+  - All API errors now include request ID in logs
+  - Improved correlation between requests and errors
+  - Better debugging for production issues
+
+- **Replay Error Messages**
+  - More helpful error messages when replay unavailable
+  - Guidance on how to enable replay functionality
+
+### Fixed
+
+- Go version badge URL encoding (1.25.4%2B)
+- Request ID logging in error responses
 
 ## [2.5.0] - 2025-11-14
 

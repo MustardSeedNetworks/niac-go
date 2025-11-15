@@ -2,12 +2,12 @@
 
 [![CI](https://github.com/krisarmstrong/niac-go/workflows/CI/badge.svg)](https://github.com/krisarmstrong/niac-go/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Go](https://img.shields.io/badge/go-1.24+-blue.svg)](https://golang.org/dl/)
+[![Go](https://img.shields.io/badge/go-1.25.4%2B-blue.svg)](https://golang.org/dl/)
 [![Version](https://img.shields.io/github/v/release/krisarmstrong/niac-go)](https://github.com/krisarmstrong/niac-go/releases)
 
 **Production-ready network device simulator** - Complete YAML configuration system with per-protocol debug control, multi-IP support, and comprehensive protocol coverage.
 
-**Current Version: 2.3.1** - Security Patch (Critical vulnerabilities fixed)
+**Requires Go 1.25.4 or later** for building from source.
 
 ## 🚀 Why Go?
 

@@ -186,7 +186,20 @@ func isTrustedProxy(ip string) bool {
 
 // logRequest logs HTTP requests for debugging
 func logRequest(r *http.Request) {
-	log.Printf("[API] %s %s from %s", r.Method, r.URL.Path, r.RemoteAddr)
+	requestID := r.Header.Get("X-Request-ID")
+	if requestID != "" {
+		log.Printf("[API] [%s] %s %s from %s", requestID, r.Method, r.URL.Path, r.RemoteAddr)
+	} else {
+		log.Printf("[API] %s %s from %s", r.Method, r.URL.Path, r.RemoteAddr)
+	}
+}
+
+// generateRequestID creates a unique request ID for tracing
+// FEATURE #118: Request tracing for debugging and monitoring
+func generateRequestID() string {
+	bytes := make([]byte, 16)
+	rand.Read(bytes)
+	return hex.EncodeToString(bytes)
 }
 
 // csrfProtect wraps handlers that modify state and require CSRF token validation
@@ -289,6 +302,12 @@ func writeError(w http.ResponseWriter, r *http.Request, status int, errorCode, m
 		Timestamp: time.Now(),
 		Path:      r.URL.Path,
 		Method:    r.Method,
+	}
+
+	// FEATURE #118: Include request ID in error logging
+	requestID := r.Header.Get("X-Request-ID")
+	if requestID != "" {
+		log.Printf("[API] [%s] Error %d: %s - %s", requestID, status, errorCode, message)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -576,6 +595,11 @@ func (s *Server) ClearSimulation() {
 
 func (s *Server) auth(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// FEATURE #118: Generate unique request ID for tracing
+		requestID := generateRequestID()
+		r.Header.Set("X-Request-ID", requestID)
+		w.Header().Set("X-Request-ID", requestID)
+
 		// Add security headers to all responses
 		addSecurityHeaders(w, r)
 
@@ -586,7 +610,7 @@ func (s *Server) auth(next http.HandlerFunc) http.HandlerFunc {
 			// FEATURE #105: Use standardized error response
 			writeError(w, r, http.StatusTooManyRequests, "rate_limit_exceeded",
 				"Rate limit exceeded. Please try again later.", nil)
-			log.Printf("[API] Rate limit exceeded for IP: %s", clientIP)
+			log.Printf("[API] [%s] Rate limit exceeded for IP: %s", requestID, clientIP)
 			return
 		}
 
@@ -607,6 +631,7 @@ func (s *Server) auth(next http.HandlerFunc) http.HandlerFunc {
 			// FEATURE #105: Use standardized error response
 			writeError(w, r, http.StatusUnauthorized, "unauthorized",
 				"Invalid or missing authentication token", nil)
+			log.Printf("[API] [%s] Unauthorized request from %s", requestID, clientIP)
 			return
 		}
 
@@ -683,11 +708,16 @@ func (s *Server) handleStats(w http.ResponseWriter, r *http.Request) {
 	if cfg != nil {
 		deviceCount = len(cfg.Devices)
 	}
+
+	// FEATURE #119: Include goroutine count for debugging and monitoring
+	goroutineCount := runtime.NumGoroutine()
+
 	payload := map[string]interface{}{
 		"timestamp":    time.Now().UTC(),
 		"interface":    s.cfg.Interface,
 		"version":      s.cfg.Version,
 		"device_count": deviceCount,
+		"goroutines":   goroutineCount, // FEATURE #119: Monitor goroutine count
 		"stack": map[string]uint64{
 			"packets_sent":     stats.PacketsSent,
 			"packets_received": stats.PacketsReceived,
@@ -845,8 +875,10 @@ func (s *Server) handleConfigUpdate(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleReplay(w http.ResponseWriter, r *http.Request) {
+	// FEATURE #132: Graceful degradation when replay engine is unavailable
 	if s.cfg.Replay == nil {
-		http.Error(w, "replay control unavailable", http.StatusNotImplemented)
+		writeError(w, r, http.StatusServiceUnavailable, "replay_unavailable",
+			"PCAP replay functionality is not available in this mode. Start niac with a configuration to enable replay.", nil)
 		return
 	}
 
