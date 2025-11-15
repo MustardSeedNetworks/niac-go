@@ -20,7 +20,7 @@ info:
     - Default: 100 requests/second per IP
     - Burst: 200 requests
     - Response: HTTP 429 when exceeded
-  version: 2.7.0
+  version: 2.8.1
   contact:
     name: Kris Armstrong
     url: https://github.com/krisarmstrong/niac-go

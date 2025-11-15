@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -24,8 +25,41 @@ type WalkEntry struct {
 // For example:
 // .1.3.6.1.2.1.1.1.0 = STRING: "Cisco IOS Software"
 // .1.3.6.1.2.1.1.3.0 = Timeticks: (12345) 0:02:03.45
+//
+// SECURITY: This function validates the file path to prevent directory traversal attacks.
 func ParseWalkFile(filename string) ([]WalkEntry, error) {
-	file, err := os.Open(filename)
+	// SECURITY FIX #2.8.1: Prevent path traversal attacks
+	// Clean the path and check for traversal sequences
+	cleanPath := filepath.Clean(filename)
+
+	// Check for directory traversal attempts
+	if strings.Contains(cleanPath, "..") {
+		return nil, fmt.Errorf("invalid walk file path: directory traversal not allowed")
+	}
+
+	// Convert to absolute path for validation
+	absPath, err := filepath.Abs(cleanPath)
+	if err != nil {
+		return nil, fmt.Errorf("invalid walk file path: %w", err)
+	}
+
+	// Ensure file exists and is a regular file (not a symlink or directory)
+	fileInfo, err := os.Lstat(absPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to access walk file: %v", err)
+	}
+
+	// Reject symlinks to prevent symlink attacks
+	if fileInfo.Mode()&os.ModeSymlink != 0 {
+		return nil, fmt.Errorf("walk file cannot be a symbolic link")
+	}
+
+	// Reject directories
+	if fileInfo.IsDir() {
+		return nil, fmt.Errorf("walk file path is a directory, not a file")
+	}
+
+	file, err := os.Open(absPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open walk file: %v", err)
 	}

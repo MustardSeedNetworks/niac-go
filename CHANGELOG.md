@@ -16,6 +16,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Container and Kubernetes deployment (#35)
 - Multi-user authentication (#33)
 
+## [2.8.1] - 2025-11-15
+
+### Security
+
+**CRITICAL Fixes**
+
+- **Path Traversal Prevention** in SNMP walk file loading (`pkg/snmp/walk.go`)
+  - Added path validation to prevent directory traversal attacks
+  - Reject symlinks to prevent symlink attacks
+  - Validate file is regular file, not directory
+  - Prevents arbitrary file read vulnerability
+
+- **Race Condition Fix** in alert channel management (`pkg/api/server.go`)
+  - Fixed race condition where `alertStop` channel could be closed twice
+  - Use select statement to check if channel already closed
+  - Start goroutine while holding lock to prevent race
+  - Prevents server panic crashes
+
+**HIGH Priority Fixes**
+
+- **Panic Recovery Middleware** added to all HTTP handlers (`pkg/api/server.go`)
+  - Prevents single malformed request from crashing entire API server
+  - Logs panic with full stack trace for debugging
+  - Returns proper 500 error to client
+  - Improves API availability and stability
+
+- **Rate Limiter Memory Exhaustion Prevention** (`pkg/api/server.go`)
+  - Added `MaxRateLimiterCount` constant (10,000 IP addresses)
+  - Implements FIFO eviction when limit reached
+  - Prevents memory exhaustion from IP spoofing attacks
+  - Logs evictions for security monitoring
+
+- **Input Validation** for simulation config data (`pkg/daemon/daemon.go`)
+  - Added 10MB size limit on inline config data
+  - Prevents memory exhaustion from multi-GB YAML uploads
+  - Returns clear error message with size information
+
+### Fixed
+
+- **Documentation**: Corrected Go version requirement from "1.25.4" to "1.23" in README.md
+- **Documentation**: Updated OpenAPI specification version from 2.7.0 to 2.8.1
+
+### Changed
+
+- **API Security**: All HTTP handlers now wrapped with panic recovery middleware
+- **Rate Limiting**: Enhanced with maximum capacity enforcement and FIFO eviction
+
 ## [2.8.0] - 2025-11-15
 
 ### Added

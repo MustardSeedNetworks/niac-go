@@ -7,7 +7,7 @@
 
 **Production-ready network device simulator** - Complete YAML configuration system with per-protocol debug control, multi-IP support, and comprehensive protocol coverage.
 
-**Requires Go 1.25.4 or later** for building from source.
+**Requires Go 1.23 or later** for building from source.
 
 ## 🚀 Why Go?
 

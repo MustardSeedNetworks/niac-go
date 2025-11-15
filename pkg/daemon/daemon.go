@@ -149,6 +149,12 @@ func (d *Daemon) StartSimulation(req api.SimulationRequest) error {
 	var err error
 
 	if req.ConfigData != "" {
+		// SECURITY FIX #2.8.1: Validate config data size to prevent memory exhaustion
+		const MaxConfigSize = 10 * 1024 * 1024 // 10MB limit
+		if len(req.ConfigData) > MaxConfigSize {
+			return fmt.Errorf("config data exceeds maximum size of %d bytes (got %d bytes)", MaxConfigSize, len(req.ConfigData))
+		}
+
 		// Parse inline YAML
 		cfg, err = config.LoadYAMLBytes([]byte(req.ConfigData))
 		configPath = "<inline>"

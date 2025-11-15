@@ -18,6 +18,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"runtime/debug"
 	"strings"
 	"sync"
 	"time"
@@ -37,6 +38,10 @@ const (
 	// MaxPCAPUploadSize is the maximum size for PCAP file uploads (100MB)
 	// SECURITY: This prevents memory exhaustion attacks via large uploads
 	MaxPCAPUploadSize = 100 << 20 // 100MB
+
+	// SECURITY FIX #2.8.1: Maximum number of IP addresses tracked by rate limiter
+	// This prevents memory exhaustion from IP spoofing attacks
+	MaxRateLimiterCount = 10000
 
 	// FEATURE #104: Rate limiting defaults
 	// Allow 100 requests per second per IP with burst of 200
@@ -70,12 +75,30 @@ func NewRateLimiter(r rate.Limit, b int) *RateLimiter {
 }
 
 // GetLimiter returns the rate limiter for the given IP address
+// SECURITY FIX #2.8.1: Enforce maximum count to prevent memory exhaustion
 func (rl *RateLimiter) GetLimiter(ip string) *rate.Limiter {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
 
 	entry, exists := rl.limiters[ip]
 	if !exists {
+		// SECURITY FIX #2.8.1: Enforce max size limit
+		if len(rl.limiters) >= MaxRateLimiterCount {
+			// Remove oldest entry (FIFO eviction)
+			var oldestIP string
+			oldestTime := time.Now()
+			for checkIP, checkEntry := range rl.limiters {
+				if checkEntry.lastSeen.Before(oldestTime) {
+					oldestTime = checkEntry.lastSeen
+					oldestIP = checkIP
+				}
+			}
+			if oldestIP != "" {
+				delete(rl.limiters, oldestIP)
+				log.Printf("[API] Rate limiter at capacity (%d), evicted oldest IP: %s", MaxRateLimiterCount, oldestIP)
+			}
+		}
+
 		entry = &rateLimiterEntry{
 			limiter:  rate.NewLimiter(rl.rate, rl.burst),
 			lastSeen: time.Now(),
@@ -293,6 +316,27 @@ type ErrorDetail struct {
 	Value string `json:"value,omitempty"` // The value that caused the error (sanitized)
 }
 
+// recoverMiddleware recovers from panics in HTTP handlers to prevent server crashes
+// SECURITY FIX #2.8.1: Add panic recovery to prevent single malformed request from crashing API
+func (s *Server) recoverMiddleware(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if err := recover(); err != nil {
+				requestID := r.Header.Get("X-Request-ID")
+				// Log panic with stack trace
+				log.Printf("[API] [%s] PANIC recovered: %v", requestID, err)
+				log.Printf("[API] Stack trace: %s", debug.Stack())
+
+				// Return 500 error to client
+				writeError(w, r, http.StatusInternalServerError,
+					"internal_server_error",
+					"An internal error occurred. Please try again later.", nil)
+			}
+		}()
+		next(w, r)
+	}
+}
+
 // writeError writes a standardized error response
 func writeError(w http.ResponseWriter, r *http.Request, status int, errorCode, message string, details []ErrorDetail) {
 	response := ErrorResponse{
@@ -453,26 +497,27 @@ func (s *Server) Start() error {
 
 	if s.cfg.Addr != "" {
 		mux := http.NewServeMux()
+		// SECURITY FIX #2.8.1: Wrap all handlers with panic recovery middleware
 		// SECURITY FIX LOW-1: CSRF token endpoint for clients to retrieve token
-		mux.HandleFunc("/api/v1/csrf-token", s.auth(s.handleCSRFToken))
-		mux.HandleFunc("/api/v1/stats", s.auth(s.handleStats))
-		mux.HandleFunc("/api/v1/devices", s.auth(s.handleDevices))
-		mux.HandleFunc("/api/v1/history", s.auth(s.handleHistory))
+		mux.HandleFunc("/api/v1/csrf-token", s.recoverMiddleware(s.auth(s.handleCSRFToken)))
+		mux.HandleFunc("/api/v1/stats", s.recoverMiddleware(s.auth(s.handleStats)))
+		mux.HandleFunc("/api/v1/devices", s.recoverMiddleware(s.auth(s.handleDevices)))
+		mux.HandleFunc("/api/v1/history", s.recoverMiddleware(s.auth(s.handleHistory)))
 		// SECURITY FIX LOW-1: Protect state-changing endpoints with CSRF
-		mux.HandleFunc("/api/v1/config", s.auth(s.csrfProtect(s.handleConfig)))
-		mux.HandleFunc("/api/v1/replay", s.auth(s.csrfProtect(s.handleReplay)))
-		mux.HandleFunc("/api/v1/alerts", s.auth(s.csrfProtect(s.handleAlerts)))
-		mux.HandleFunc("/api/v1/files", s.auth(s.handleFiles))
-		mux.HandleFunc("/api/v1/topology", s.auth(s.handleTopology))
-		mux.HandleFunc("/api/v1/topology/export", s.auth(s.handleTopologyExport))
-		mux.HandleFunc("/api/v1/errors", s.auth(s.handleErrors))
-		mux.HandleFunc("/api/v1/interfaces", s.auth(s.handleInterfaces))
-		mux.HandleFunc("/api/v1/runtime", s.auth(s.handleRuntime))
-		mux.HandleFunc("/api/v1/simulation", s.auth(s.handleSimulation))
-		mux.HandleFunc("/api/v1/version", s.auth(s.handleVersion))
-		mux.HandleFunc("/api/v1/neighbors", s.auth(s.handleNeighbors))
-		mux.HandleFunc("/metrics", s.handleMetrics)
-		mux.HandleFunc("/", s.auth(s.serveSPA()))
+		mux.HandleFunc("/api/v1/config", s.recoverMiddleware(s.auth(s.csrfProtect(s.handleConfig))))
+		mux.HandleFunc("/api/v1/replay", s.recoverMiddleware(s.auth(s.csrfProtect(s.handleReplay))))
+		mux.HandleFunc("/api/v1/alerts", s.recoverMiddleware(s.auth(s.csrfProtect(s.handleAlerts))))
+		mux.HandleFunc("/api/v1/files", s.recoverMiddleware(s.auth(s.handleFiles)))
+		mux.HandleFunc("/api/v1/topology", s.recoverMiddleware(s.auth(s.handleTopology)))
+		mux.HandleFunc("/api/v1/topology/export", s.recoverMiddleware(s.auth(s.handleTopologyExport)))
+		mux.HandleFunc("/api/v1/errors", s.recoverMiddleware(s.auth(s.handleErrors)))
+		mux.HandleFunc("/api/v1/interfaces", s.recoverMiddleware(s.auth(s.handleInterfaces)))
+		mux.HandleFunc("/api/v1/runtime", s.recoverMiddleware(s.auth(s.handleRuntime)))
+		mux.HandleFunc("/api/v1/simulation", s.recoverMiddleware(s.auth(s.handleSimulation)))
+		mux.HandleFunc("/api/v1/version", s.recoverMiddleware(s.auth(s.handleVersion)))
+		mux.HandleFunc("/api/v1/neighbors", s.recoverMiddleware(s.auth(s.handleNeighbors)))
+		mux.HandleFunc("/metrics", s.recoverMiddleware(s.handleMetrics))
+		mux.HandleFunc("/", s.recoverMiddleware(s.auth(s.serveSPA())))
 
 		// SECURITY FIX #99: Add HTTP timeouts to prevent slowloris attacks
 		s.httpServer = &http.Server{
@@ -494,7 +539,7 @@ func (s *Server) Start() error {
 
 	if s.cfg.MetricsAddr != "" && s.cfg.MetricsAddr != s.cfg.Addr {
 		mux := http.NewServeMux()
-		mux.HandleFunc("/metrics", s.handleMetrics)
+		mux.HandleFunc("/metrics", s.recoverMiddleware(s.handleMetrics))
 
 		// SECURITY FIX #99: Add HTTP timeouts to metrics server too
 		s.metricsServer = &http.Server{
@@ -1527,21 +1572,31 @@ func (s *Server) getAlertConfig() AlertConfig {
 }
 
 func (s *Server) updateAlertConfig(cfg AlertConfig) {
+	// SECURITY FIX #2.8.1: Prevent race condition on alertStop channel
 	s.alertMu.Lock()
+	defer s.alertMu.Unlock()
+
+	// Stop existing alert loop if running
 	if s.alertStop != nil {
-		close(s.alertStop)
+		// Check if channel is already closed to prevent panic
+		select {
+		case <-s.alertStop:
+			// Already closed
+		default:
+			// Safe to close
+			close(s.alertStop)
+		}
 		s.alertStop = nil
 	}
+
 	s.cfg.Alert = cfg
 	s.lastAlert = 0
-	var stopChan chan struct{}
-	if cfg.PacketsThreshold > 0 {
-		stopChan = make(chan struct{})
-		s.alertStop = stopChan
-	}
-	s.alertMu.Unlock()
 
-	if stopChan != nil {
+	// Start new alert loop if threshold is set
+	if cfg.PacketsThreshold > 0 {
+		stopChan := make(chan struct{})
+		s.alertStop = stopChan
+		// Start goroutine while still holding lock to prevent race
 		go s.alertLoop(stopChan)
 	}
 }
