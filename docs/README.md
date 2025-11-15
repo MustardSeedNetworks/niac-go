@@ -38,6 +38,7 @@ Comprehensive documentation for Network In A Can - Go Edition.
 - **Base URL**: `http://localhost:8080/api/v1/`
 - **Authentication**: Bearer token in `Authorization` header
 - **CSRF Protection**: Required for POST/PUT/PATCH/DELETE
+- **OpenAPI Specification**: [openapi.yaml](openapi.yaml) - Complete OpenAPI 3.0 spec
 
 **Endpoints:**
 
@@ -53,7 +54,7 @@ Comprehensive documentation for Network In A Can - Go Edition.
 | GET | `/csrf-token` | Get CSRF token | Yes | No |
 | GET | `/version` | API version | Yes | No |
 
-See [API-EXAMPLES.md](API-EXAMPLES.md) for detailed usage.
+See [API-EXAMPLES.md](API-EXAMPLES.md) for detailed usage or [openapi.yaml](openapi.yaml) for the complete OpenAPI specification.
 
 ### Prometheus Metrics
 

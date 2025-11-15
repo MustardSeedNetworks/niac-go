@@ -301,14 +301,14 @@ func (s *Statistics) snapshot() StatisticsSnapshot {
 	}
 
 	// Deep copy maps
-	for k, v := range s.PacketCounts {
-		snapshot.PacketCounts[k] = v
+	for packetType, count := range s.PacketCounts {
+		snapshot.PacketCounts[packetType] = count
 	}
-	for k, v := range s.ErrorCounts {
-		snapshot.ErrorCounts[k] = v
+	for errorType, count := range s.ErrorCounts {
+		snapshot.ErrorCounts[errorType] = count
 	}
-	for k, v := range s.ProtocolStats {
-		snapshot.ProtocolStats[k] = v
+	for protocol, stats := range s.ProtocolStats {
+		snapshot.ProtocolStats[protocol] = stats
 	}
 
 	return snapshot

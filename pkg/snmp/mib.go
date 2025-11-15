@@ -137,7 +137,8 @@ func (m *MIB) updateSortedList() {
 	m.dirty = false
 }
 
-// Delete removes an OID from the MIB
+// Delete removes an OID from the MIB.
+// FEATURE #116: Added godoc for utility functions
 func (m *MIB) Delete(oid string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -177,8 +178,9 @@ func (m *MIB) AllOIDs() []string {
 	return result
 }
 
-// compareOIDs compares two OID strings lexicographically
-// Returns: -1 if oid1 < oid2, 0 if equal, 1 if oid1 > oid2
+// compareOIDs compares two OID strings lexicographically.
+// Returns -1 if oid1 < oid2, 0 if equal, 1 if oid1 > oid2.
+// FEATURE #116: Added godoc for utility functions
 func compareOIDs(oid1, oid2 string) int {
 	// Parse both OIDs
 	parts1 := parseOIDParts(oid1)
@@ -210,7 +212,9 @@ func compareOIDs(oid1, oid2 string) int {
 	return 0
 }
 
-// parseOIDParts parses an OID string into integer components
+// parseOIDParts parses an OID string into integer components.
+// Examples: "1.3.6.1" -> [1, 3, 6, 1], ".1.3.6" -> [1, 3, 6]
+// FEATURE #116: Added godoc for utility functions
 func parseOIDParts(oid string) []int {
 	parts := strings.Split(oid, ".")
 	result := make([]int, 0, len(parts))

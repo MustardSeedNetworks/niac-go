@@ -268,17 +268,17 @@ func (a *Agent) ProcessPDU(pduType gosnmp.PDUType, vars []gosnmp.SnmpPDU, maxRep
 func (a *Agent) processGetRequest(vars []gosnmp.SnmpPDU) []gosnmp.SnmpPDU {
 	response := make([]gosnmp.SnmpPDU, len(vars))
 
-	for i, v := range vars {
-		value, err := a.HandleGet(v.Name)
+	for i, snmpVar := range vars {
+		value, err := a.HandleGet(snmpVar.Name)
 		if err != nil {
 			response[i] = gosnmp.SnmpPDU{
-				Name:  v.Name,
+				Name:  snmpVar.Name,
 				Type:  gosnmp.NoSuchObject,
 				Value: nil,
 			}
 		} else {
 			response[i] = gosnmp.SnmpPDU{
-				Name:  v.Name,
+				Name:  snmpVar.Name,
 				Type:  value.Type,
 				Value: value.Value,
 			}
@@ -292,11 +292,11 @@ func (a *Agent) processGetRequest(vars []gosnmp.SnmpPDU) []gosnmp.SnmpPDU {
 func (a *Agent) processGetNextRequest(vars []gosnmp.SnmpPDU) []gosnmp.SnmpPDU {
 	response := make([]gosnmp.SnmpPDU, len(vars))
 
-	for i, v := range vars {
-		nextOID, value, err := a.HandleGetNext(v.Name)
+	for i, snmpVar := range vars {
+		nextOID, value, err := a.HandleGetNext(snmpVar.Name)
 		if err != nil {
 			response[i] = gosnmp.SnmpPDU{
-				Name:  v.Name,
+				Name:  snmpVar.Name,
 				Type:  gosnmp.EndOfMibView,
 				Value: nil,
 			}
@@ -316,11 +316,11 @@ func (a *Agent) processGetNextRequest(vars []gosnmp.SnmpPDU) []gosnmp.SnmpPDU {
 func (a *Agent) processGetBulkRequestVars(vars []gosnmp.SnmpPDU, maxRepetitions int) []gosnmp.SnmpPDU {
 	var response []gosnmp.SnmpPDU
 
-	for _, v := range vars {
-		results, err := a.HandleGetBulk(v.Name, maxRepetitions)
+	for _, snmpVar := range vars {
+		results, err := a.HandleGetBulk(snmpVar.Name, maxRepetitions)
 		if err != nil {
 			response = append(response, gosnmp.SnmpPDU{
-				Name:  v.Name,
+				Name:  snmpVar.Name,
 				Type:  gosnmp.EndOfMibView,
 				Value: nil,
 			})

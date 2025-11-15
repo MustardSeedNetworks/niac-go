@@ -7,10 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Future (v2.7.0+)
+### Future (v2.8.0+)
 - WebUI re-render optimization (#125)
 - Virtual scrolling for large device lists (#126)
-- OpenAPI/Swagger specification (#117)
 - State management library evaluation (#133)
 - Config generator CLI with interactive prompts
 - Packet hex dump viewer in TUI
@@ -19,6 +18,68 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - DHCPv6 prefix delegation (IA_PD)
 - Container and Kubernetes deployment (#35)
 - Multi-user authentication (#33)
+
+## [2.7.0] - 2025-11-14
+
+### Added
+
+**API Documentation**
+
+- **OpenAPI 3.0 Specification** (#117)
+  - Complete OpenAPI spec at `docs/openapi.yaml`
+  - Documents all REST API endpoints with schemas
+  - Includes authentication, CSRF, rate limiting details
+  - Request/response examples for all operations
+  - Can be used with Swagger UI, Postman, etc.
+
+**WebUI Documentation**
+
+- **Comprehensive WebUI Guide** (#121)
+  - Complete documentation at `docs/WEBUI.md`
+  - Authentication and setup instructions
+  - Dashboard features and statistics overview
+  - Device management and configuration editing
+  - PCAP replay controls and topology visualization
+  - Troubleshooting guide and performance tips
+  - Customization instructions for polling intervals
+  - Browser compatibility matrix
+
+### Changed
+
+**Code Quality**
+
+- **Variable Naming Improvements** (#129)
+  - Replaced single-letter variables with descriptive names
+  - Improved loop variable clarity (e.g., `for _, device := range devices`)
+  - Fixed generic names like `k, v` to context-specific names
+  - Updated: `pkg/daemon/daemon.go`, `pkg/protocols/stack.go`, `pkg/device/*.go`
+  - Updated: `pkg/snmp/agent.go`, `pkg/stats/export.go`, `pkg/storage/storage.go`
+  - Updated: `pkg/logging/debug_config.go`
+  - Improved code readability and maintainability
+
+**Documentation**
+
+- **Godoc Comments** (#116)
+  - Added comprehensive godoc for utility functions
+  - Documented `compareOIDs()`, `parseOIDParts()`, `Delete()` in `pkg/snmp/mib.go`
+  - Improved API documentation for developers
+
+- **WebUI Polling Configuration** (#112)
+  - Documented tiered polling intervals (FAST, MEDIUM, SLOW, VERY_SLOW)
+  - Added customization instructions in `docs/WEBUI.md`
+  - Examples for different use cases (real-time, battery saving, etc.)
+
+- **API Reference Updates**
+  - Added OpenAPI spec reference to `docs/README.md`
+  - Cross-linked API documentation files
+
+### Notes
+
+**Breaking Changes**: None
+
+**Deferred Features**: WebUI re-render optimization (#125), virtual scrolling (#126), and state management evaluation (#133) deferred to v2.8.0 for focused WebUI architectural improvements.
+
+**Testing**: All tests pass, build successful
 
 ## [2.6.0] - 2025-11-14
 

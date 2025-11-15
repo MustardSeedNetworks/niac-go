@@ -72,15 +72,15 @@ func (s *Storage) AddRun(record RunRecord) error {
 	}
 
 	return s.db.Update(func(tx *bbolt.Tx) error {
-		b := tx.Bucket([]byte(runBucket))
-		id, _ := b.NextSequence()
+		bucket := tx.Bucket([]byte(runBucket))
+		id, _ := bucket.NextSequence()
 		record.ID = id
 
 		data, err := json.Marshal(record)
 		if err != nil {
 			return err
 		}
-		return b.Put(itob(id), data)
+		return bucket.Put(itob(id), data)
 	})
 }
 
@@ -95,10 +95,10 @@ func (s *Storage) ListRuns(limit int) ([]RunRecord, error) {
 
 	records := make([]RunRecord, 0, limit)
 	err := s.db.View(func(tx *bbolt.Tx) error {
-		c := tx.Bucket([]byte(runBucket)).Cursor()
-		for k, v := c.Last(); k != nil && len(records) < limit; k, v = c.Prev() {
+		cursor := tx.Bucket([]byte(runBucket)).Cursor()
+		for key, value := cursor.Last(); key != nil && len(records) < limit; key, value = cursor.Prev() {
 			var rec RunRecord
-			if err := json.Unmarshal(v, &rec); err != nil {
+			if err := json.Unmarshal(value, &rec); err != nil {
 				return err
 			}
 			records = append(records, rec)

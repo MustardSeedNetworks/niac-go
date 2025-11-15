@@ -311,8 +311,8 @@ func (s *Simulator) GetAllDevices() map[string]*SimulatedDevice {
 
 	// Return copy to avoid race conditions
 	devices := make(map[string]*SimulatedDevice, len(s.devices))
-	for k, v := range s.devices {
-		devices[k] = v
+	for deviceName, device := range s.devices {
+		devices[deviceName] = device
 	}
 	return devices
 }

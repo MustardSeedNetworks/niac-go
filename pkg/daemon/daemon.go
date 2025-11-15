@@ -56,7 +56,7 @@ type Simulation struct {
 
 // NewDaemon creates a new daemon instance
 func NewDaemon(cfg Config) (*Daemon, error) {
-	d := &Daemon{
+	daemon := &Daemon{
 		cfg: cfg,
 	}
 
@@ -64,13 +64,13 @@ func NewDaemon(cfg Config) (*Daemon, error) {
 	if cfg.StoragePath != "" && cfg.StoragePath != "disabled" {
 		storagePath := expandPath(cfg.StoragePath)
 		var err error
-		d.storage, err = storage.Open(storagePath)
+		daemon.storage, err = storage.Open(storagePath)
 		if err != nil {
 			return nil, fmt.Errorf("open storage: %w", err)
 		}
 	}
 
-	return d, nil
+	return daemon, nil
 }
 
 // Start starts the daemon's API server

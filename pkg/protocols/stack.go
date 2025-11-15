@@ -95,7 +95,7 @@ func NewStack(captureEngine *capture.Engine, cfg *config.Config, debugConfig *lo
 	// FEATURE #124: Use configurable buffer size
 	bufferSize := DefaultQueueBufferSize
 
-	s := &Stack{
+	stack := &Stack{
 		capture:      captureEngine,
 		config:       cfg,
 		devices:      NewDeviceTable(),
@@ -110,30 +110,30 @@ func NewStack(captureEngine *capture.Engine, cfg *config.Config, debugConfig *lo
 	}
 
 	// Create protocol handlers
-	s.arpHandler = NewARPHandler(s)
-	s.ipHandler = NewIPHandler(s)
-	s.icmpHandler = NewICMPHandler(s)
-	s.ipv6Handler = NewIPv6Handler(s, debugConfig.GetProtocolLevel(logging.ProtocolIPv6))
-	s.icmpv6Handler = NewICMPv6Handler(s, debugConfig.GetProtocolLevel(logging.ProtocolICMPv6))
-	s.udpHandler = NewUDPHandler(s)
-	s.tcpHandler = NewTCPHandler(s)
-	s.dnsHandler = NewDNSHandler(s)
-	s.dhcpHandler = NewDHCPHandler(s)
-	s.dhcpv6Handler = NewDHCPv6Handler(s)
-	s.httpHandler = NewHTTPHandler(s)
-	s.ftpHandler = NewFTPHandler(s)
-	s.netbiosHandler = NewNetBIOSHandler(s, debugConfig.GetProtocolLevel(logging.ProtocolNetBIOS))
-	s.stpHandler = NewSTPHandler(s, debugConfig.GetProtocolLevel(logging.ProtocolSTP))
-	s.lldpHandler = NewLLDPHandler(s)
-	s.cdpHandler = NewCDPHandler(s)
-	s.edpHandler = NewEDPHandler(s)
-	s.fdpHandler = NewFDPHandler(s)
-	s.snmpHandler = NewSNMPHandler(s)
+	stack.arpHandler = NewARPHandler(stack)
+	stack.ipHandler = NewIPHandler(stack)
+	stack.icmpHandler = NewICMPHandler(stack)
+	stack.ipv6Handler = NewIPv6Handler(stack, debugConfig.GetProtocolLevel(logging.ProtocolIPv6))
+	stack.icmpv6Handler = NewICMPv6Handler(stack, debugConfig.GetProtocolLevel(logging.ProtocolICMPv6))
+	stack.udpHandler = NewUDPHandler(stack)
+	stack.tcpHandler = NewTCPHandler(stack)
+	stack.dnsHandler = NewDNSHandler(stack)
+	stack.dhcpHandler = NewDHCPHandler(stack)
+	stack.dhcpv6Handler = NewDHCPv6Handler(stack)
+	stack.httpHandler = NewHTTPHandler(stack)
+	stack.ftpHandler = NewFTPHandler(stack)
+	stack.netbiosHandler = NewNetBIOSHandler(stack, debugConfig.GetProtocolLevel(logging.ProtocolNetBIOS))
+	stack.stpHandler = NewSTPHandler(stack, debugConfig.GetProtocolLevel(logging.ProtocolSTP))
+	stack.lldpHandler = NewLLDPHandler(stack)
+	stack.cdpHandler = NewCDPHandler(stack)
+	stack.edpHandler = NewEDPHandler(stack)
+	stack.fdpHandler = NewFDPHandler(stack)
+	stack.snmpHandler = NewSNMPHandler(stack)
 
 	// Initialize device table from config (requires handlers for DHCP/SNMP setup)
-	s.initializeDevices(cfg)
+	stack.initializeDevices(cfg)
 
-	return s
+	return stack
 }
 
 // initializeDevices repopulates device-dependent state from the provided config.

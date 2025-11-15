@@ -1,0 +1,712 @@
+openapi: 3.0.3
+info:
+  title: NIAC-Go API
+  description: |
+    Network In A Can - Go Edition REST API
+
+    This API provides programmatic access to network simulation management,
+    device monitoring, configuration updates, and PCAP replay functionality.
+
+    ## Authentication
+    All endpoints require Bearer token authentication. Set the token via
+    the `NIAC_API_TOKEN` environment variable when starting the server.
+
+    ## CSRF Protection
+    State-changing operations (POST, PUT, PATCH, DELETE) require a CSRF token.
+    1. Retrieve token from `/api/v1/csrf-token`
+    2. Include token in `X-CSRF-Token` header
+
+    ## Rate Limiting
+    - Default: 100 requests/second per IP
+    - Burst: 200 requests
+    - Response: HTTP 429 when exceeded
+  version: 2.7.0
+  contact:
+    name: Kris Armstrong
+    url: https://github.com/krisarmstrong/niac-go
+  license:
+    name: MIT
+    url: https://github.com/krisarmstrong/niac-go/blob/main/LICENSE
+
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Local development server
+  - url: https://niac.example.com/api/v1
+    description: Production server (example)
+
+security:
+  - BearerAuth: []
+
+tags:
+  - name: System
+    description: System information and health
+  - name: Statistics
+    description: Runtime statistics and metrics
+  - name: Devices
+    description: Device management and information
+  - name: Configuration
+    description: Configuration management
+  - name: Replay
+    description: PCAP replay control
+  - name: Topology
+    description: Network topology information
+  - name: Security
+    description: Security and authentication
+
+paths:
+  /version:
+    get:
+      tags:
+        - System
+      summary: Get API version
+      description: Returns the current API version and build information
+      operationId: getVersion
+      responses:
+        '200':
+          description: Version information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  version:
+                    type: string
+                    example: "2.7.0"
+                  api_version:
+                    type: string
+                    example: "v1"
+                  build_time:
+                    type: string
+                    format: date-time
+                    example: "2025-11-14T10:30:00Z"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /csrf-token:
+    get:
+      tags:
+        - Security
+      summary: Get CSRF token
+      description: Retrieves a CSRF token required for state-changing operations
+      operationId: getCsrfToken
+      responses:
+        '200':
+          description: CSRF token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    example: "abc123def456"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /stats:
+    get:
+      tags:
+        - Statistics
+      summary: Get runtime statistics
+      description: Returns comprehensive runtime statistics including packet counts, protocol stats, and system info
+      operationId: getStats
+      responses:
+        '200':
+          description: Runtime statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Statistics'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /devices:
+    get:
+      tags:
+        - Devices
+      summary: List all devices
+      description: Returns list of all configured simulated devices
+      operationId: listDevices
+      responses:
+        '200':
+          description: Device list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  devices:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Device'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /devices/{name}:
+    get:
+      tags:
+        - Devices
+      summary: Get device details
+      description: Returns detailed information about a specific device
+      operationId: getDevice
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Device name
+          example: "router-1"
+      responses:
+        '200':
+          description: Device details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Device'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /config:
+    get:
+      tags:
+        - Configuration
+      summary: Get configuration
+      description: Returns the current YAML configuration
+      operationId: getConfig
+      responses:
+        '200':
+          description: Current configuration
+          content:
+            application/x-yaml:
+              schema:
+                type: string
+              example: |
+                devices:
+                  - name: router-1
+                    type: router
+                    ip: 192.168.1.1
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    put:
+      tags:
+        - Configuration
+      summary: Update configuration
+      description: Updates the configuration (requires CSRF token)
+      operationId: updateConfig
+      security:
+        - BearerAuth: []
+        - CsrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/x-yaml:
+            schema:
+              type: string
+            example: |
+              devices:
+                - name: router-1
+                  type: router
+                  ip: 192.168.1.1
+      responses:
+        '200':
+          description: Configuration updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  message:
+                    type: string
+                    example: "Configuration updated successfully"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /replay:
+    get:
+      tags:
+        - Replay
+      summary: Get replay status
+      description: Returns current PCAP replay status
+      operationId: getReplayStatus
+      responses:
+        '200':
+          description: Replay status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReplayStatus'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+    post:
+      tags:
+        - Replay
+      summary: Start PCAP replay
+      description: Starts PCAP replay from uploaded file or file path (requires CSRF token)
+      operationId: startReplay
+      security:
+        - BearerAuth: []
+        - CsrfToken: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: PCAP file to upload (max 100MB)
+                path:
+                  type: string
+                  description: Path to PCAP file on server (alternative to upload)
+                speed:
+                  type: number
+                  format: float
+                  minimum: 0.1
+                  maximum: 10.0
+                  default: 1.0
+                  description: Playback speed multiplier
+                loop:
+                  type: boolean
+                  default: false
+                  description: Loop replay continuously
+      responses:
+        '200':
+          description: Replay started successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "started"
+                  file:
+                    type: string
+                    example: "capture.pcap"
+                  speed:
+                    type: number
+                    example: 1.0
+                  loop:
+                    type: boolean
+                    example: false
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+    delete:
+      tags:
+        - Replay
+      summary: Stop PCAP replay
+      description: Stops the currently running PCAP replay (requires CSRF token)
+      operationId: stopReplay
+      security:
+        - BearerAuth: []
+        - CsrfToken: []
+      responses:
+        '200':
+          description: Replay stopped successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "stopped"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /topology:
+    get:
+      tags:
+        - Topology
+      summary: Get network topology
+      description: Returns network topology graph based on discovered connections
+      operationId: getTopology
+      responses:
+        '200':
+          description: Network topology
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Topology'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /topology/export:
+    get:
+      tags:
+        - Topology
+      summary: Export topology
+      description: Exports network topology in various formats
+      operationId: exportTopology
+      parameters:
+        - name: format
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [json, graphml, dot]
+          description: Export format
+          example: "graphml"
+      responses:
+        '200':
+          description: Exported topology
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Topology'
+            application/xml:
+              schema:
+                type: string
+            text/plain:
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Token
+      description: API token set via NIAC_API_TOKEN environment variable
+
+    CsrfToken:
+      type: apiKey
+      in: header
+      name: X-CSRF-Token
+      description: CSRF token obtained from /api/v1/csrf-token
+
+  schemas:
+    Statistics:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+          example: "2025-11-14T10:30:00Z"
+        uptime:
+          type: string
+          example: "2h15m30s"
+        version:
+          type: string
+          example: "2.7.0"
+        interface:
+          type: string
+          example: "eth0"
+        device_count:
+          type: integer
+          example: 50
+        goroutines:
+          type: integer
+          description: Current goroutine count for leak detection
+          example: 127
+        packets_sent:
+          type: integer
+          format: int64
+          example: 1000000
+        packets_received:
+          type: integer
+          format: int64
+          example: 950000
+        errors:
+          type: integer
+          format: int64
+          example: 42
+        protocol_stats:
+          type: object
+          properties:
+            arp_requests:
+              type: integer
+              format: int64
+              example: 5000
+            arp_replies:
+              type: integer
+              format: int64
+              example: 4950
+            icmp_requests:
+              type: integer
+              format: int64
+              example: 10000
+            icmp_replies:
+              type: integer
+              format: int64
+              example: 9800
+            dns_queries:
+              type: integer
+              format: int64
+              example: 2000
+            dhcp_requests:
+              type: integer
+              format: int64
+              example: 50
+            snmp_queries:
+              type: integer
+              format: int64
+              example: 500
+
+    Device:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "router-1"
+        type:
+          type: string
+          enum: [router, switch, server, firewall, loadbalancer]
+          example: "router"
+        mac:
+          type: string
+          example: "00:0c:29:ab:cd:ef"
+        ip:
+          type: string
+          example: "192.168.1.1"
+        ip_addresses:
+          type: array
+          items:
+            type: string
+          example: ["192.168.1.1", "10.0.0.1"]
+        gateway:
+          type: string
+          example: "192.168.1.254"
+        protocols:
+          type: array
+          items:
+            type: string
+          example: ["ARP", "ICMP", "DNS", "SNMP", "LLDP"]
+        state:
+          type: string
+          enum: [up, down]
+          example: "up"
+        stats:
+          type: object
+          properties:
+            packets_sent:
+              type: integer
+              format: int64
+            packets_received:
+              type: integer
+              format: int64
+
+    ReplayStatus:
+      type: object
+      properties:
+        active:
+          type: boolean
+          example: true
+        file:
+          type: string
+          example: "capture.pcap"
+        speed:
+          type: number
+          format: float
+          example: 1.0
+        loop:
+          type: boolean
+          example: false
+        packets_sent:
+          type: integer
+          format: int64
+          example: 5000
+        total_packets:
+          type: integer
+          format: int64
+          example: 10000
+        progress:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 100.0
+          example: 50.0
+        start_time:
+          type: string
+          format: date-time
+          example: "2025-11-14T10:30:00Z"
+
+    Topology:
+      type: object
+      properties:
+        nodes:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                example: "router-1"
+              label:
+                type: string
+                example: "Router 1"
+              type:
+                type: string
+                example: "router"
+              ip:
+                type: string
+                example: "192.168.1.1"
+        edges:
+          type: array
+          items:
+            type: object
+            properties:
+              source:
+                type: string
+                example: "router-1"
+              target:
+                type: string
+                example: "switch-1"
+              protocol:
+                type: string
+                example: "LLDP"
+
+    Error:
+      type: object
+      properties:
+        error_code:
+          type: string
+          example: "invalid_request"
+        message:
+          type: string
+          example: "Invalid request parameters"
+        details:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+                example: "speed"
+              issue:
+                type: string
+                example: "must be between 0.1 and 10.0"
+        request_id:
+          type: string
+          description: Unique request ID for tracing
+          example: "abc123def456789"
+
+  responses:
+    BadRequest:
+      description: Bad request - invalid parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error_code: "invalid_request"
+            message: "Invalid request parameters"
+            details:
+              - field: "speed"
+                issue: "must be between 0.1 and 10.0"
+            request_id: "abc123def456789"
+
+    Unauthorized:
+      description: Unauthorized - missing or invalid token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error_code: "unauthorized"
+            message: "Invalid or missing authentication token"
+            request_id: "abc123def456789"
+
+    Forbidden:
+      description: Forbidden - missing or invalid CSRF token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error_code: "csrf_token_invalid"
+            message: "CSRF token is missing or invalid"
+            request_id: "abc123def456789"
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error_code: "not_found"
+            message: "Device not found"
+            request_id: "abc123def456789"
+
+    ServiceUnavailable:
+      description: Service unavailable - feature not enabled
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error_code: "replay_unavailable"
+            message: "PCAP replay functionality is not available in this mode"
+            request_id: "abc123def456789"
+
+  examples:
+    StatsResponse:
+      value:
+        timestamp: "2025-11-14T10:30:00Z"
+        uptime: "2h15m30s"
+        version: "2.7.0"
+        interface: "eth0"
+        device_count: 50
+        goroutines: 127
+        packets_sent: 1000000
+        packets_received: 950000
+        errors: 42
+        protocol_stats:
+          arp_requests: 5000
+          arp_replies: 4950
+          icmp_requests: 10000
+          icmp_replies: 9800
+          dns_queries: 2000
+          dhcp_requests: 50
+          snmp_queries: 500
+
+    DeviceListResponse:
+      value:
+        devices:
+          - name: "router-1"
+            type: "router"
+            mac: "00:0c:29:ab:cd:ef"
+            ip: "192.168.1.1"
+            ip_addresses: ["192.168.1.1", "10.0.0.1"]
+            gateway: "192.168.1.254"
+            protocols: ["ARP", "ICMP", "DNS", "SNMP", "LLDP"]
+            state: "up"
+          - name: "switch-1"
+            type: "switch"
+            mac: "00:0c:29:12:34:56"
+            ip: "192.168.1.2"
+            ip_addresses: ["192.168.1.2"]
+            protocols: ["ARP", "LLDP", "CDP", "STP"]
+            state: "up"

@@ -60,8 +60,8 @@ func (d *DebugConfig) GetAllLevels() map[string]int {
 	defer d.mu.RUnlock()
 
 	levels := make(map[string]int, len(d.protocols))
-	for k, v := range d.protocols {
-		levels[k] = v
+	for protocolName, level := range d.protocols {
+		levels[protocolName] = level
 	}
 	return levels
 }

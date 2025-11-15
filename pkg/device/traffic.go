@@ -153,9 +153,9 @@ func (tg *TrafficGenerator) sendPeriodicPing(device *SimulatedDevice, payloadSiz
 	devices := tg.simulator.GetAllDevices()
 	deviceList := make([]*SimulatedDevice, 0)
 
-	for _, d := range devices {
-		if d.State == StateUp && d != device {
-			deviceList = append(deviceList, d)
+	for _, dev := range devices {
+		if dev.State == StateUp && dev != device {
+			deviceList = append(deviceList, dev)
 		}
 	}
 
@@ -180,9 +180,9 @@ func (tg *TrafficGenerator) generateRandomTrafficForDevice(device *SimulatedDevi
 	devices := tg.simulator.GetAllDevices()
 	deviceList := make([]*SimulatedDevice, 0)
 
-	for _, d := range devices {
-		if d.State == StateUp {
-			deviceList = append(deviceList, d)
+	for _, dev := range devices {
+		if dev.State == StateUp {
+			deviceList = append(deviceList, dev)
 		}
 	}
 
