@@ -1,4 +1,4 @@
-import { createElement, type ChangeEvent, type FC, type ReactNode, useEffect, useState } from 'react';
+import { createElement, memo, useCallback, useMemo, type ChangeEvent, type FC, type ReactNode, useEffect, useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import type { LucideIcon } from 'lucide-react';
 import {
@@ -30,6 +30,7 @@ import {
 } from '@krisarmstrong/web-foundation';
 import type { NavItem } from '@krisarmstrong/web-foundation';
 import { useApiResource } from './hooks/useApiResource';
+import { useVirtualScroll } from './hooks/useVirtualScroll';
 import {
   fetchStats,
   fetchDevices,
@@ -175,14 +176,15 @@ export default function App() {
   );
 }
 
-function PageTemplate({ page, children }: { page: PageConfig; children: ReactNode }) {
+// FEATURE #125: Memoize PageTemplate to prevent unnecessary re-renders
+const PageTemplate = memo(({ page, children }: { page: PageConfig; children: ReactNode }) => {
   return (
     <section className="space-y-6">
       <PageHeader icon={page.icon} title={page.title} description={page.description} />
       {children}
     </section>
   );
-}
+});
 
 function RuntimeControlPage() {
   const [refetchTrigger, setRefetchTrigger] = useState(0);
@@ -198,7 +200,8 @@ function RuntimeControlPage() {
 
   const isDaemonMode = simStatus !== null; // If endpoint responds, we're in daemon mode
 
-  const handleStart = async () => {
+  // FEATURE #125: Memoize handlers to prevent unnecessary re-renders
+  const handleStart = useCallback(async () => {
     if (!selectedInterface && !configPath && !configFile) {
       setMessage({ tone: 'error', text: 'Please select an interface and provide a config file' });
       return;
@@ -228,9 +231,9 @@ function RuntimeControlPage() {
     } finally {
       setStarting(false);
     }
-  };
+  }, [selectedInterface, configPath, configFile]);
 
-  const handleStop = async () => {
+  const handleStop = useCallback(async () => {
     // Confirm before stopping simulation
     if (!window.confirm('Are you sure you want to stop the simulation? This will interrupt the current run.')) {
       return;
@@ -248,7 +251,7 @@ function RuntimeControlPage() {
     } finally {
       setStopping(false);
     }
-  };
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -503,7 +506,8 @@ function DashboardPage() {
   const { data: errorInfo } = useApiResource(fetchErrorTypes, []);
   const [showErrors, setShowErrors] = useState(false);
 
-  const telemetry = [
+  // FEATURE #125: Memoize telemetry data to prevent recalculation on every render
+  const telemetry = useMemo(() => [
     {
       label: 'Neighbors learned',
       value: neighbors ? `${neighbors.length}` : '—',
@@ -519,7 +523,7 @@ function DashboardPage() {
       value: stats ? `${stats.device_count}` : '—',
       detail: stats?.interface ?? 'interface',
     },
-  ];
+  ], [neighbors, stats]);
 
   return (
     <div className="space-y-6">
@@ -683,48 +687,96 @@ function DeviceListCard() {
   );
 }
 
-function DeviceTable({ devices }: { devices: DeviceSummary[] }) {
-  return (
-    <div className="overflow-x-auto rounded-xl border border-white/5">
-      <table className="min-w-full divide-y divide-white/10 text-sm">
-        <thead className="bg-gray-900/60 text-xs uppercase tracking-wide text-gray-400">
-          <tr>
-            <th className="px-4 py-3 text-left">Device</th>
-            <th className="px-4 py-3 text-left">Type</th>
-            <th className="px-4 py-3 text-left">IP addresses</th>
-            <th className="px-4 py-3 text-left">Protocols</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-white/5 text-gray-300">
-          {devices.map((device) => (
-            <tr key={device.name}>
-              <td className="px-4 py-3 font-semibold text-white">{device.name}</td>
-              <td className="px-4 py-3">{device.type}</td>
-              <td className="px-4 py-3 font-mono text-xs">{device.ips.join(', ') || '—'}</td>
-              <td className="px-4 py-3">
-                <div className="flex flex-wrap gap-2">
-                  {device.protocols.map((proto) => (
-                    <Tag key={`${device.name}-${proto}`} colorScheme="purple">
-                      {proto}
-                    </Tag>
-                  ))}
-                  {!device.protocols.length && <SmallText className="text-gray-400">None</SmallText>}
-                </div>
-              </td>
-            </tr>
-          ))}
-          {!devices.length && (
+// FEATURE #125 & #126: Memoized DeviceTable with virtual scrolling for large device lists
+const DeviceTable = memo(({ devices }: { devices: DeviceSummary[] }) => {
+  // FEATURE #126: Use virtual scrolling for 100+ devices
+  const useVirtualization = devices.length >= 100;
+  const virtualScroll = useVirtualScroll(devices, {
+    itemHeight: 60, // Approximate row height in pixels
+    containerHeight: 600, // Max viewport height
+    overscan: 5,
+  });
+
+  if (!devices.length) {
+    return (
+      <div className="rounded-xl border border-white/5 bg-gray-950/50 p-8 text-center text-gray-400">
+        No devices defined in the loaded configuration.
+      </div>
+    );
+  }
+
+  if (!useVirtualization) {
+    // Standard rendering for small lists
+    return (
+      <div className="overflow-x-auto rounded-xl border border-white/5">
+        <table className="min-w-full divide-y divide-white/10 text-sm">
+          <thead className="bg-gray-900/60 text-xs uppercase tracking-wide text-gray-400">
             <tr>
-              <td colSpan={4} className="px-4 py-4 text-center text-gray-400">
-                No devices defined in the loaded configuration.
-              </td>
+              <th className="px-4 py-3 text-left">Device</th>
+              <th className="px-4 py-3 text-left">Type</th>
+              <th className="px-4 py-3 text-left">IP addresses</th>
+              <th className="px-4 py-3 text-left">Protocols</th>
             </tr>
-          )}
-        </tbody>
-      </table>
+          </thead>
+          <tbody className="divide-y divide-white/5 text-gray-300">
+            {devices.map((device) => (
+              <DeviceRow key={device.name} device={device} />
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
+
+  // Virtual scrolling for large lists
+  return (
+    <div className="rounded-xl border border-white/5">
+      <div className="bg-gray-900/60 px-4 py-2 text-xs text-gray-400">
+        Showing {virtualScroll.visibleItems.length} of {devices.length} devices (virtual scrolling enabled)
+      </div>
+      <div {...virtualScroll.containerProps} className="overflow-auto">
+        <div {...virtualScroll.spacerProps}>
+          <div {...virtualScroll.contentProps}>
+            <table className="min-w-full divide-y divide-white/10 text-sm">
+              <thead className="bg-gray-900/60 text-xs uppercase tracking-wide text-gray-400">
+                <tr>
+                  <th className="px-4 py-3 text-left">Device</th>
+                  <th className="px-4 py-3 text-left">Type</th>
+                  <th className="px-4 py-3 text-left">IP addresses</th>
+                  <th className="px-4 py-3 text-left">Protocols</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5 text-gray-300">
+                {virtualScroll.visibleItems.map(({ item: device }) => (
+                  <DeviceRow key={device.name} device={device} />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </div>
   );
-}
+});
+
+// FEATURE #125: Memoize individual device row
+const DeviceRow = memo(({ device }: { device: DeviceSummary }) => (
+  <tr>
+    <td className="px-4 py-3 font-semibold text-white">{device.name}</td>
+    <td className="px-4 py-3">{device.type}</td>
+    <td className="px-4 py-3 font-mono text-xs">{device.ips.join(', ') || '—'}</td>
+    <td className="px-4 py-3">
+      <div className="flex flex-wrap gap-2">
+        {device.protocols.map((proto) => (
+          <Tag key={`${device.name}-${proto}`} colorScheme="purple">
+            {proto}
+          </Tag>
+        ))}
+        {!device.protocols.length && <SmallText className="text-gray-400">None</SmallText>}
+      </div>
+    </td>
+  </tr>
+));
 
 function ConfigEditorCard() {
   const { data, loading, error } = useApiResource(fetchConfig, [], { intervalMs: POLL_INTERVALS.VERY_SLOW });
@@ -950,7 +1002,8 @@ function TopologyVisualization({ topology }: { topology: TopologyGraph }) {
   );
 }
 
-function NeighborTable({ neighbors }: { neighbors: NeighborRecord[] }) {
+// FEATURE #125: Memoize NeighborTable to prevent unnecessary re-renders
+const NeighborTable = memo(({ neighbors }: { neighbors: NeighborRecord[] }) => {
   return (
     <div className="overflow-x-auto rounded-xl border border-white/5">
       <table className="min-w-full divide-y divide-white/10 text-sm">
@@ -989,7 +1042,7 @@ function NeighborTable({ neighbors }: { neighbors: NeighborRecord[] }) {
       </table>
     </div>
   );
-}
+});
 
 function AnalysisPage() {
   const { data: history } = useApiResource(fetchHistory, [], { intervalMs: POLL_INTERVALS.SLOW });
@@ -1394,7 +1447,8 @@ function AlertConfigCard() {
   );
 }
 
-function StatBlock({ label, value, helper }: { label: string; value: string; helper: string }) {
+// FEATURE #125: Memoize StatBlock to prevent unnecessary re-renders
+const StatBlock = memo(({ label, value, helper }: { label: string; value: string; helper: string }) => {
   return (
     <div>
       <SmallText className="uppercase tracking-wide text-gray-400">{label}</SmallText>
@@ -1402,7 +1456,7 @@ function StatBlock({ label, value, helper }: { label: string; value: string; hel
       <SmallText className="text-gray-300">{helper}</SmallText>
     </div>
   );
-}
+});
 
 function formatNumber(value: number) {
   return value.toLocaleString();
