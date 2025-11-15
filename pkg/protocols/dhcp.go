@@ -141,16 +141,19 @@ const MaxPoolSize = 65536 // 2^16 IPs (reasonable for simulation)
 
 // generateIPPool creates a list of available IPs
 // Returns error if pool size exceeds MaxPoolSize or if range is invalid
+// SECURITY FIX MEDIUM-1: Validates range to prevent integer overflow
 func (h *DHCPHandler) generateIPPool(start, end net.IP) ([]net.IP, error) {
 	startInt := binary.BigEndian.Uint32(start.To4())
 	endInt := binary.BigEndian.Uint32(end.To4())
 
-	// Validate range
+	// SECURITY: Validate range to prevent integer overflow
+	// This check ensures endInt >= startInt before subtraction
 	if endInt < startInt {
 		return nil, fmt.Errorf("invalid DHCP pool: end IP (%s) < start IP (%s)", end, start)
 	}
 
-	// Calculate pool size
+	// Calculate pool size (safe because endInt >= startInt)
+	// Using uint64 to prevent overflow even for max range (2^32 - 1)
 	size := uint64(endInt) - uint64(startInt) + 1
 	if size > MaxPoolSize {
 		return nil, fmt.Errorf("DHCP pool size %d exceeds maximum %d (range: %s to %s)",

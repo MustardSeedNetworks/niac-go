@@ -3,8 +3,10 @@ package api
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
 	"crypto/subtle"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/fs"
@@ -187,6 +189,40 @@ func logRequest(r *http.Request) {
 	log.Printf("[API] %s %s from %s", r.Method, r.URL.Path, r.RemoteAddr)
 }
 
+// csrfProtect wraps handlers that modify state and require CSRF token validation
+// SECURITY FIX LOW-1: Prevents Cross-Site Request Forgery attacks
+func (s *Server) csrfProtect(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Only check CSRF for state-changing methods
+		if r.Method == http.MethodPost || r.Method == http.MethodPut ||
+			r.Method == http.MethodPatch || r.Method == http.MethodDelete {
+
+			// Skip CSRF check if no token was generated (error during startup)
+			if s.csrfToken == "" {
+				next(w, r)
+				return
+			}
+
+			// Get CSRF token from header
+			clientToken := r.Header.Get("X-CSRF-Token")
+			if clientToken == "" {
+				writeError(w, r, http.StatusForbidden, "csrf_token_missing",
+					"CSRF token required for state-changing requests. Include X-CSRF-Token header.", nil)
+				return
+			}
+
+			// Constant-time comparison to prevent timing attacks
+			if subtle.ConstantTimeCompare([]byte(clientToken), []byte(s.csrfToken)) != 1 {
+				writeError(w, r, http.StatusForbidden, "csrf_token_invalid",
+					"Invalid CSRF token", nil)
+				return
+			}
+		}
+
+		next(w, r)
+	}
+}
+
 // addSecurityHeaders adds security headers to all HTTP responses
 // SECURITY FIX #102: Comprehensive security headers to prevent web attacks
 func addSecurityHeaders(w http.ResponseWriter, r *http.Request) {
@@ -353,14 +389,29 @@ type Server struct {
 	daemon        DaemonController // Optional: only set in daemon mode
 	startTime     time.Time        // Track server start time for uptime
 	rateLimiter   *RateLimiter     // FEATURE #104: Per-IP rate limiting
+	csrfToken     string           // SECURITY FIX LOW-1: CSRF protection token
+}
+
+// generateCSRFToken generates a cryptographically secure random token
+// SECURITY FIX LOW-1: CSRF protection
+func generateCSRFToken() (string, error) {
+	bytes := make([]byte, 32)
+	if _, err := rand.Read(bytes); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(bytes), nil
 }
 
 // NewServer returns a configured API server.
 func NewServer(cfg ServerConfig) *Server {
+	// Generate CSRF token (ignore errors, fallback to empty which disables CSRF check)
+	csrfToken, _ := generateCSRFToken()
+
 	return &Server{
 		cfg:         cfg,
 		startTime:   time.Now(),
 		rateLimiter: NewRateLimiter(DefaultRateLimit, DefaultBurst),
+		csrfToken:   csrfToken,
 	}
 }
 
@@ -383,12 +434,15 @@ func (s *Server) Start() error {
 
 	if s.cfg.Addr != "" {
 		mux := http.NewServeMux()
+		// SECURITY FIX LOW-1: CSRF token endpoint for clients to retrieve token
+		mux.HandleFunc("/api/v1/csrf-token", s.auth(s.handleCSRFToken))
 		mux.HandleFunc("/api/v1/stats", s.auth(s.handleStats))
 		mux.HandleFunc("/api/v1/devices", s.auth(s.handleDevices))
 		mux.HandleFunc("/api/v1/history", s.auth(s.handleHistory))
-		mux.HandleFunc("/api/v1/config", s.auth(s.handleConfig))
-		mux.HandleFunc("/api/v1/replay", s.auth(s.handleReplay))
-		mux.HandleFunc("/api/v1/alerts", s.auth(s.handleAlerts))
+		// SECURITY FIX LOW-1: Protect state-changing endpoints with CSRF
+		mux.HandleFunc("/api/v1/config", s.auth(s.csrfProtect(s.handleConfig)))
+		mux.HandleFunc("/api/v1/replay", s.auth(s.csrfProtect(s.handleReplay)))
+		mux.HandleFunc("/api/v1/alerts", s.auth(s.csrfProtect(s.handleAlerts)))
 		mux.HandleFunc("/api/v1/files", s.auth(s.handleFiles))
 		mux.HandleFunc("/api/v1/topology", s.auth(s.handleTopology))
 		mux.HandleFunc("/api/v1/topology/export", s.auth(s.handleTopologyExport))
@@ -597,6 +651,20 @@ func (s *Server) serveSPA() http.HandlerFunc {
 
 		http.ServeContent(w, r, requestPath, time.Time{}, bytes.NewReader(data))
 	}
+}
+
+// handleCSRFToken returns the CSRF token for the client
+// SECURITY FIX LOW-1: Clients must retrieve this token and include it in state-changing requests
+func (s *Server) handleCSRFToken(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.Header().Set("Allow", "GET")
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	s.writeJSON(w, map[string]string{
+		"token": s.csrfToken,
+	})
 }
 
 func (s *Server) handleStats(w http.ResponseWriter, r *http.Request) {
@@ -1315,6 +1383,38 @@ func (s *Server) sendAlert(total uint64) {
 	}
 }
 
+// validatePCAPMagic validates that the file begins with a valid PCAP magic number
+// SECURITY FIX LOW-2: Prevents processing of non-PCAP files that could exploit parser bugs
+func validatePCAPMagic(data []byte) error {
+	if len(data) < 4 {
+		return fmt.Errorf("file too small to be a valid PCAP (< 4 bytes)")
+	}
+
+	// Check for valid PCAP magic numbers
+	// 0xa1b2c3d4 = standard pcap (microsecond precision, big-endian)
+	// 0xd4c3b2a1 = standard pcap (microsecond precision, little-endian)
+	// 0xa1b23c4d = pcap with nanosecond precision (big-endian)
+	// 0x4d3cb2a1 = pcap with nanosecond precision (little-endian)
+	// 0x0a0d0d0a = pcapng format
+	magic := uint32(data[0])<<24 | uint32(data[1])<<16 | uint32(data[2])<<8 | uint32(data[3])
+
+	validMagics := []uint32{
+		0xa1b2c3d4, // pcap microsecond BE
+		0xd4c3b2a1, // pcap microsecond LE
+		0xa1b23c4d, // pcap nanosecond BE
+		0x4d3cb2a1, // pcap nanosecond LE
+		0x0a0d0d0a, // pcapng
+	}
+
+	for _, validMagic := range validMagics {
+		if magic == validMagic {
+			return nil
+		}
+	}
+
+	return fmt.Errorf("invalid PCAP magic number: 0x%08x (expected pcap or pcapng format)", magic)
+}
+
 func (s *Server) prepareReplayRequest(req ReplayRequest) (ReplayRequest, error) {
 	if strings.TrimSpace(req.File) == "" && req.InlineData == "" {
 		return req, fmt.Errorf("pcap file path or data is required")
@@ -1335,6 +1435,11 @@ func (s *Server) prepareReplayRequest(req ReplayRequest) (ReplayRequest, error) 
 		// Double-check decoded size
 		if len(data) > MaxPCAPUploadSize {
 			return req, fmt.Errorf("decoded PCAP exceeds size limit (max 100MB)")
+		}
+
+		// SECURITY FIX LOW-2: Validate PCAP file magic number
+		if err := validatePCAPMagic(data); err != nil {
+			return req, fmt.Errorf("invalid PCAP file: %w", err)
 		}
 
 		path, err := s.writeUploadedFile(data)

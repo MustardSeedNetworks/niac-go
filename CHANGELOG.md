@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Future (v2.5.0+)
+### Future (v2.6.0+)
 - Config generator CLI with interactive prompts
 - Packet hex dump viewer in TUI
 - Statistics export (JSON/CSV)
@@ -15,6 +15,73 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - DHCPv6 prefix delegation (IA_PD)
 - Container and Kubernetes deployment (#35)
 - Multi-user authentication (#33)
+
+## [2.5.0] - 2025-11-14
+
+### Security
+
+**MEDIUM priority defensive security improvements**
+
+- **DHCP Pool Validation** (MEDIUM-1)
+  - Documented existing integer overflow protection in IP pool generation
+  - Validates end IP >= start IP to prevent invalid ranges
+  - Uses uint64 arithmetic to prevent overflow even for max range (2^32 - 1)
+  - Location: `pkg/protocols/dhcp.go:144-157`
+
+- **DNS Label Validation** (MEDIUM-2)
+  - Added RFC 1035 compliance for DNS name lengths
+  - Maximum domain name length: 255 bytes
+  - Maximum label length: 63 bytes per label
+  - Silently skips invalid queries to prevent parser exploitation
+  - Location: `pkg/protocols/dns.go:337-513`
+
+- **HTTP Header Bomb Protection** (MEDIUM-3)
+  - Limited maximum HTTP headers to 100 per request
+  - Prevents resource exhaustion from malicious header flooding
+  - Silently ignores excessive headers beyond limit
+  - Location: `pkg/protocols/http.go:89-115`
+
+- **FTP Log Injection Prevention** (MEDIUM-4)
+  - Sanitizes FTP commands before logging to prevent log injection attacks
+  - Replaces control characters (ASCII 0-31, DEL) with '?'
+  - Prevents attackers from corrupting logs or injecting fake log entries
+  - Location: `pkg/protocols/ftp.go:40-419`
+
+- **SNMP Credential Redaction** (MEDIUM-5)
+  - Redacts SNMP community strings in debug logs
+  - Prevents credential exposure in log files
+  - Community strings replaced with [REDACTED] in mismatch messages
+  - Location: `pkg/protocols/snmp.go:49-56`
+
+**LOW priority security enhancements**
+
+- **CSRF Protection** (LOW-1)
+  - Added Cross-Site Request Forgery protection for state-changing API endpoints
+  - Cryptographically secure CSRF token generated on server startup
+  - Required X-CSRF-Token header for POST/PUT/PATCH/DELETE requests
+  - Constant-time token comparison to prevent timing attacks
+  - New endpoint: `GET /api/v1/csrf-token` to retrieve token
+  - Protected endpoints: `/api/v1/config`, `/api/v1/replay`, `/api/v1/alerts`
+  - Location: `pkg/api/server.go:192-224, 358, 438, 443-445, 656-668`
+
+- **PCAP Content Validation** (LOW-2)
+  - Validates PCAP file magic numbers before processing
+  - Supports pcap (microsecond/nanosecond) and pcapng formats
+  - Prevents processing of malicious non-PCAP files
+  - Rejects files with invalid magic numbers with clear error message
+  - Location: `pkg/api/server.go:1386-1416`
+
+### Changed
+
+- FTP debug logging now sanitizes command payloads
+- DNS queries with invalid name lengths are silently dropped
+- HTTP request parser enforces 100 header limit
+- SNMP community string mismatches logged without exposing credentials
+- API test suite updated with valid PCAP header for upload tests
+
+### Fixed
+
+- Updated test data in `TestServerHandleReplayUpload` to use valid PCAP magic number
 
 ## [2.4.1] - 2025-11-14
 

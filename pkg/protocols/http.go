@@ -86,6 +86,10 @@ func parseHTTPRequest(payload []byte) (*HTTPRequest, error) {
 	}
 
 	// Parse headers
+	// SECURITY FIX MEDIUM-3: Limit number of headers to prevent resource exhaustion
+	const MaxHeaders = 100
+	headerCount := 0
+
 	for {
 		line, err := reader.ReadString('\n')
 		if err != nil {
@@ -100,7 +104,13 @@ func parseHTTPRequest(payload []byte) (*HTTPRequest, error) {
 		// Parse header
 		headerParts := strings.SplitN(line, ":", 2)
 		if len(headerParts) == 2 {
+			// Check header limit to prevent header bomb attacks
+			if headerCount >= MaxHeaders {
+				// Silently ignore excessive headers
+				break
+			}
 			request.Headers[strings.TrimSpace(headerParts[0])] = strings.TrimSpace(headerParts[1])
+			headerCount++
 		}
 	}
 

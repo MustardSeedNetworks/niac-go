@@ -48,8 +48,9 @@ func (h *SNMPHandler) HandlePacket(pkt *Packet, ip *layers.IPv4, udp *layers.UDP
 
 	if request.Community != agent.GetCommunity() {
 		if h.stack.GetProtocolDebugLevel(logging.ProtocolSNMP) >= 2 {
-			fmt.Printf("SNMP: community mismatch %s (expected %s) for device %s sn=%d\n",
-				request.Community, agent.GetCommunity(), device.Name, pkt.SerialNumber)
+			// SECURITY FIX MEDIUM-5: Redact community strings to prevent credential exposure
+			fmt.Printf("SNMP: community mismatch [REDACTED] (expected [REDACTED]) for device %s sn=%d\n",
+				device.Name, pkt.SerialNumber)
 		}
 		return
 	}

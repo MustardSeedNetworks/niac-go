@@ -334,6 +334,16 @@ func (h *DNSHandler) resolveQuestions(questions []layers.DNSQuestion, debugLevel
 	answers := make([]layers.DNSResourceRecord, 0, len(questions))
 
 	for _, q := range questions {
+		// SECURITY FIX MEDIUM-2: Validate DNS name length per RFC 1035
+		// Maximum domain name length is 255 bytes total
+		// Maximum label length is 63 bytes
+		if !isValidDNSName(q.Name) {
+			if debugLevel >= 2 {
+				fmt.Printf("DNS: Invalid domain name length (> 255 or label > 63): %s sn=%d\n", q.Name, serial)
+			}
+			continue // Skip invalid names
+		}
+
 		hostname := strings.ToLower(strings.TrimSuffix(string(q.Name), "."))
 		switch q.Type {
 		case layers.DNSTypeA:
@@ -481,4 +491,23 @@ func parseIPv6PTRName(name string) (net.IP, bool) {
 	}
 
 	return net.IP(data), true
+}
+
+// isValidDNSName validates DNS name length per RFC 1035
+// SECURITY FIX MEDIUM-2: Prevents malformed DNS responses
+func isValidDNSName(name []byte) bool {
+	// RFC 1035: Maximum domain name length is 255 bytes
+	if len(name) > 255 {
+		return false
+	}
+
+	// Validate individual label lengths (max 63 bytes per label)
+	labels := strings.Split(string(name), ".")
+	for _, label := range labels {
+		if len(label) > 63 {
+			return false
+		}
+	}
+
+	return true
 }

@@ -38,8 +38,10 @@ func (h *FTPHandler) HandleRequest(pkt *Packet, ipLayer *layers.IPv4, tcpLayer *
 	}
 
 	if debugLevel >= 2 {
+		// SECURITY FIX MEDIUM-4: Sanitize command for logging to prevent log injection
+		sanitizedCmd := sanitizeForLogging(command)
 		fmt.Printf("FTP command from %s: %s (device: %v)\n",
-			ipLayer.SrcIP, command, getDeviceNames(devices))
+			ipLayer.SrcIP, sanitizedCmd, getDeviceNames(devices))
 	}
 
 	response := h.buildFTPResponse(command, false, devices)
@@ -394,4 +396,24 @@ func (h *FTPHandler) HandleRequestV6(pkt *Packet, packet gopacket.Packet, ipv6 *
 	}
 
 	h.sendResponseV6(ipv6, tcpLayer, []byte(response), devices, pkt.GetSourceMAC())
+}
+
+// sanitizeForLogging removes control characters and newlines to prevent log injection
+// SECURITY FIX MEDIUM-4: Prevents malicious payloads from corrupting logs
+func sanitizeForLogging(s string) string {
+	// Replace control characters (ASCII 0-31 except space) with '?'
+	var result strings.Builder
+	result.Grow(len(s))
+
+	for _, r := range s {
+		if r < 32 && r != ' ' {
+			result.WriteRune('?') // Replace control chars
+		} else if r == 127 {
+			result.WriteRune('?') // Replace DEL
+		} else {
+			result.WriteRune(r)
+		}
+	}
+
+	return result.String()
 }
