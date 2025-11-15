@@ -16,6 +16,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Container and Kubernetes deployment (#35)
 - Multi-user authentication (#33)
 
+## [2.4.1] - 2025-11-14
+
+### Security
+
+**HIGH priority security fixes discovered in post-release audit**
+
+- **Fixed X-Forwarded-For header spoofing vulnerability** (HIGH-1)
+  - Rate limiting could be bypassed by forging X-Forwarded-For or X-Real-IP headers
+  - Now only trusts these headers from localhost and private networks (trusted proxies)
+  - Validates IP format before trusting forwarded headers
+  - Direct connection IP used if not from trusted proxy
+  - Prevents attackers from bypassing rate limits by header manipulation
+  - Location: `pkg/api/server.go:91-158`
+
+- **Fixed rate limiter memory exhaustion** (HIGH-2)
+  - Rate limiter map could grow unbounded storing limiters for all IPs ever seen
+  - Added timestamp tracking for each IP's last request
+  - Aggressive cleanup: removes entries not seen in last hour
+  - Logs cleanup activity for monitoring
+  - Prevents memory exhaustion from millions of unique IPs
+  - Location: `pkg/api/server.go:45-114`
+
+### Changed
+
+- Rate limiter now tracks last-seen time for each IP
+- Cleanup logs number of entries removed and total remaining
+- `getClientIP()` validates IP format before trusting forwarded headers
+- Added `isTrustedProxy()` helper to validate proxy sources
+
+### Performance
+
+- More aggressive rate limiter cleanup (1 hour vs. token-based)
+- Reduced memory footprint for long-running servers
+- Logging provides visibility into limiter map size
+
 ## [2.4.0] - 2025-11-14
 
 ### Added

@@ -42,10 +42,17 @@ const (
 	DefaultBurst     = 200
 )
 
+// rateLimiterEntry tracks a rate limiter with its last access time
+// SECURITY FIX HIGH-2: Prevents unbounded memory growth
+type rateLimiterEntry struct {
+	limiter  *rate.Limiter
+	lastSeen time.Time
+}
+
 // RateLimiter provides per-IP rate limiting for API requests
 // FEATURE #104: Prevents brute force and DoS attacks
 type RateLimiter struct {
-	limiters map[string]*rate.Limiter
+	limiters map[string]*rateLimiterEntry
 	mu       sync.RWMutex
 	rate     rate.Limit
 	burst    int
@@ -54,7 +61,7 @@ type RateLimiter struct {
 // NewRateLimiter creates a new rate limiter with the given rate and burst
 func NewRateLimiter(r rate.Limit, b int) *RateLimiter {
 	return &RateLimiter{
-		limiters: make(map[string]*rate.Limiter),
+		limiters: make(map[string]*rateLimiterEntry),
 		rate:     r,
 		burst:    b,
 	}
@@ -65,51 +72,114 @@ func (rl *RateLimiter) GetLimiter(ip string) *rate.Limiter {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
 
-	limiter, exists := rl.limiters[ip]
+	entry, exists := rl.limiters[ip]
 	if !exists {
-		limiter = rate.NewLimiter(rl.rate, rl.burst)
-		rl.limiters[ip] = limiter
+		entry = &rateLimiterEntry{
+			limiter:  rate.NewLimiter(rl.rate, rl.burst),
+			lastSeen: time.Now(),
+		}
+		rl.limiters[ip] = entry
+	} else {
+		// Update last seen time
+		entry.lastSeen = time.Now()
 	}
 
-	return limiter
+	return entry.limiter
 }
 
 // CleanupStale removes limiters for IPs that haven't been seen recently
-// This prevents memory growth from storing limiters for all IPs ever seen
+// SECURITY FIX HIGH-2: Aggressive cleanup to prevent memory exhaustion
+// This prevents memory growth from storing limiters for millions of IPs over time
 func (rl *RateLimiter) CleanupStale() {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
 
-	// Remove limiters with no recent activity (all tokens available = not used recently)
-	for ip, limiter := range rl.limiters {
-		if limiter.Tokens() == float64(rl.burst) {
+	now := time.Now()
+	// Remove limiters not seen in the last hour
+	// This is aggressive enough to prevent memory growth while allowing
+	// legitimate clients to maintain their rate limit state during normal usage
+	const staleThreshold = 1 * time.Hour
+
+	count := 0
+	for ip, entry := range rl.limiters {
+		if now.Sub(entry.lastSeen) > staleThreshold {
 			delete(rl.limiters, ip)
+			count++
 		}
+	}
+
+	if count > 0 {
+		log.Printf("[API] Cleaned up %d stale rate limiters (total: %d)", count, len(rl.limiters))
 	}
 }
 
 // getClientIP extracts the real client IP from the request
+// SECURITY FIX HIGH-1: Only trust forwarded headers from trusted proxies
 func getClientIP(r *http.Request) string {
-	// Check X-Forwarded-For header first (for proxies/load balancers)
-	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-		// Take the first IP in the chain
-		if idx := strings.Index(xff, ","); idx != -1 {
-			return strings.TrimSpace(xff[:idx])
-		}
-		return strings.TrimSpace(xff)
-	}
-
-	// Check X-Real-IP header
-	if xri := r.Header.Get("X-Real-IP"); xri != "" {
-		return strings.TrimSpace(xri)
-	}
-
-	// Fall back to RemoteAddr
-	ip, _, err := net.SplitHostPort(r.RemoteAddr)
+	// Get the direct connection IP first
+	remoteIP, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
-		return r.RemoteAddr
+		remoteIP = r.RemoteAddr
 	}
-	return ip
+
+	// SECURITY: Only trust X-Forwarded-For/X-Real-IP if coming from localhost/private networks
+	// This prevents header spoofing attacks where clients forge these headers to bypass rate limiting
+	// In production behind a reverse proxy, configure trusted proxy ranges
+	if isTrustedProxy(remoteIP) {
+		// Check X-Forwarded-For header (for proxies/load balancers)
+		if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+			// Take the first IP in the chain (leftmost = original client)
+			if idx := strings.Index(xff, ","); idx != -1 {
+				clientIP := strings.TrimSpace(xff[:idx])
+				// Validate it's a valid IP before trusting it
+				if net.ParseIP(clientIP) != nil {
+					return clientIP
+				}
+			} else {
+				clientIP := strings.TrimSpace(xff)
+				if net.ParseIP(clientIP) != nil {
+					return clientIP
+				}
+			}
+		}
+
+		// Check X-Real-IP header
+		if xri := r.Header.Get("X-Real-IP"); xri != "" {
+			clientIP := strings.TrimSpace(xri)
+			if net.ParseIP(clientIP) != nil {
+				return clientIP
+			}
+		}
+	}
+
+	// Use direct connection IP (not trusted proxy or invalid forwarded IP)
+	return remoteIP
+}
+
+// isTrustedProxy checks if an IP is from a trusted proxy/load balancer
+// SECURITY: Prevents header spoofing by only trusting forwarded headers from known proxies
+func isTrustedProxy(ip string) bool {
+	// Parse the IP
+	parsedIP := net.ParseIP(ip)
+	if parsedIP == nil {
+		return false
+	}
+
+	// Trust localhost (127.0.0.0/8, ::1)
+	if parsedIP.IsLoopback() {
+		return true
+	}
+
+	// Trust private networks (10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16)
+	// This is safe for internal deployments behind a reverse proxy
+	// For internet-facing deployments, configure specific proxy IPs
+	if parsedIP.IsPrivate() {
+		return true
+	}
+
+	// TODO: Add configuration option for custom trusted proxy CIDRs
+	// For now, only trust localhost and private networks
+	return false
 }
 
 // logRequest logs HTTP requests for debugging
