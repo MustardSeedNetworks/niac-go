@@ -10,6 +10,7 @@ import (
 	"io/fs"
 	"log"
 	"mime"
+	"net"
 	"net/http"
 	"os"
 	"path"
@@ -18,6 +19,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"golang.org/x/time/rate"
 
 	"github.com/krisarmstrong/niac-go/pkg/capture"
 	"github.com/krisarmstrong/niac-go/pkg/config"
@@ -32,7 +35,82 @@ const (
 	// MaxPCAPUploadSize is the maximum size for PCAP file uploads (100MB)
 	// SECURITY: This prevents memory exhaustion attacks via large uploads
 	MaxPCAPUploadSize = 100 << 20 // 100MB
+
+	// FEATURE #104: Rate limiting defaults
+	// Allow 100 requests per second per IP with burst of 200
+	DefaultRateLimit = 100
+	DefaultBurst     = 200
 )
+
+// RateLimiter provides per-IP rate limiting for API requests
+// FEATURE #104: Prevents brute force and DoS attacks
+type RateLimiter struct {
+	limiters map[string]*rate.Limiter
+	mu       sync.RWMutex
+	rate     rate.Limit
+	burst    int
+}
+
+// NewRateLimiter creates a new rate limiter with the given rate and burst
+func NewRateLimiter(r rate.Limit, b int) *RateLimiter {
+	return &RateLimiter{
+		limiters: make(map[string]*rate.Limiter),
+		rate:     r,
+		burst:    b,
+	}
+}
+
+// GetLimiter returns the rate limiter for the given IP address
+func (rl *RateLimiter) GetLimiter(ip string) *rate.Limiter {
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
+
+	limiter, exists := rl.limiters[ip]
+	if !exists {
+		limiter = rate.NewLimiter(rl.rate, rl.burst)
+		rl.limiters[ip] = limiter
+	}
+
+	return limiter
+}
+
+// CleanupStale removes limiters for IPs that haven't been seen recently
+// This prevents memory growth from storing limiters for all IPs ever seen
+func (rl *RateLimiter) CleanupStale() {
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
+
+	// Remove limiters with no recent activity (all tokens available = not used recently)
+	for ip, limiter := range rl.limiters {
+		if limiter.Tokens() == float64(rl.burst) {
+			delete(rl.limiters, ip)
+		}
+	}
+}
+
+// getClientIP extracts the real client IP from the request
+func getClientIP(r *http.Request) string {
+	// Check X-Forwarded-For header first (for proxies/load balancers)
+	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+		// Take the first IP in the chain
+		if idx := strings.Index(xff, ","); idx != -1 {
+			return strings.TrimSpace(xff[:idx])
+		}
+		return strings.TrimSpace(xff)
+	}
+
+	// Check X-Real-IP header
+	if xri := r.Header.Get("X-Real-IP"); xri != "" {
+		return strings.TrimSpace(xri)
+	}
+
+	// Fall back to RemoteAddr
+	ip, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return r.RemoteAddr
+	}
+	return ip
+}
 
 // logRequest logs HTTP requests for debugging
 func logRequest(r *http.Request) {
@@ -75,6 +153,41 @@ func addSecurityHeaders(w http.ResponseWriter, r *http.Request) {
 
 	// Control referrer information
 	w.Header().Set("Referrer-Policy", "no-referrer")
+}
+
+// ErrorResponse represents a standardized API error response
+// FEATURE #105: Consistent error format for all API endpoints
+type ErrorResponse struct {
+	Error     string        `json:"error"`                // Machine-readable error code
+	Message   string        `json:"message"`              // Human-readable error message
+	Details   []ErrorDetail `json:"details,omitempty"`    // Optional detailed error information
+	RequestID string        `json:"request_id,omitempty"` // Optional request ID for tracing
+	Timestamp time.Time     `json:"timestamp"`            // When the error occurred
+	Path      string        `json:"path"`                 // Request path that caused the error
+	Method    string        `json:"method"`               // HTTP method
+}
+
+// ErrorDetail provides detailed information about a specific error
+type ErrorDetail struct {
+	Field string `json:"field,omitempty"` // Field name that caused the error
+	Issue string `json:"issue"`           // Description of the issue
+	Value string `json:"value,omitempty"` // The value that caused the error (sanitized)
+}
+
+// writeError writes a standardized error response
+func writeError(w http.ResponseWriter, r *http.Request, status int, errorCode, message string, details []ErrorDetail) {
+	response := ErrorResponse{
+		Error:     errorCode,
+		Message:   message,
+		Details:   details,
+		Timestamp: time.Now(),
+		Path:      r.URL.Path,
+		Method:    r.Method,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(response)
 }
 
 // AlertConfig controls basic threshold-based alerting.
@@ -169,13 +282,15 @@ type Server struct {
 	configMu      sync.RWMutex
 	daemon        DaemonController // Optional: only set in daemon mode
 	startTime     time.Time        // Track server start time for uptime
+	rateLimiter   *RateLimiter     // FEATURE #104: Per-IP rate limiting
 }
 
 // NewServer returns a configured API server.
 func NewServer(cfg ServerConfig) *Server {
 	return &Server{
-		cfg:       cfg,
-		startTime: time.Now(),
+		cfg:         cfg,
+		startTime:   time.Now(),
+		rateLimiter: NewRateLimiter(DefaultRateLimit, DefaultBurst),
 	}
 }
 
@@ -186,6 +301,14 @@ func NewServer(cfg ServerConfig) *Server {
 func (s *Server) Start() error {
 	if s.cfg.Stack == nil || s.cfg.Config == nil {
 		return fmt.Errorf("api server requires stack and config references")
+	}
+
+	// SECURITY FIX #107: Warn if API is running without authentication
+	if s.cfg.Token == "" && s.cfg.Addr != "" {
+		log.Println("⚠️  WARNING: API server running WITHOUT authentication!")
+		log.Println("    All endpoints are publicly accessible without any access control.")
+		log.Println("    Set NIAC_API_TOKEN environment variable to enable authentication.")
+		log.Println("    Example: export NIAC_API_TOKEN=$(openssl rand -base64 32)")
 	}
 
 	if s.cfg.Addr != "" {
@@ -247,6 +370,15 @@ func (s *Server) Start() error {
 			}
 		}()
 	}
+
+	// FEATURE #104: Start periodic cleanup of stale rate limiters
+	go func() {
+		ticker := time.NewTicker(5 * time.Minute)
+		defer ticker.Stop()
+		for range ticker.C {
+			s.rateLimiter.CleanupStale()
+		}
+	}()
 
 	s.updateAlertConfig(s.cfg.Alert)
 	return nil
@@ -323,6 +455,17 @@ func (s *Server) auth(next http.HandlerFunc) http.HandlerFunc {
 		// Add security headers to all responses
 		addSecurityHeaders(w, r)
 
+		// FEATURE #104: Apply rate limiting per IP address
+		clientIP := getClientIP(r)
+		limiter := s.rateLimiter.GetLimiter(clientIP)
+		if !limiter.Allow() {
+			// FEATURE #105: Use standardized error response
+			writeError(w, r, http.StatusTooManyRequests, "rate_limit_exceeded",
+				"Rate limit exceeded. Please try again later.", nil)
+			log.Printf("[API] Rate limit exceeded for IP: %s", clientIP)
+			return
+		}
+
 		if s.cfg.Token == "" {
 			next(w, r)
 			return
@@ -337,7 +480,9 @@ func (s *Server) auth(next http.HandlerFunc) http.HandlerFunc {
 		// SECURITY FIX #100: Use constant-time comparison to prevent timing attacks
 		// Standard string comparison (!=) could leak token information via timing
 		if subtle.ConstantTimeCompare([]byte(token), []byte(s.cfg.Token)) != 1 {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			// FEATURE #105: Use standardized error response
+			writeError(w, r, http.StatusUnauthorized, "unauthorized",
+				"Invalid or missing authentication token", nil)
 			return
 		}
 
@@ -503,6 +648,9 @@ func (s *Server) handleConfigGet(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleConfigUpdate(w http.ResponseWriter, r *http.Request) {
+	// SECURITY FIX #111: Enforce request body size limit
+	r.Body = http.MaxBytesReader(w, r.Body, MaxRequestBodySize)
+
 	if s.cfg.ConfigPath == "" {
 		http.Error(w, "config path not available", http.StatusBadRequest)
 		return
@@ -512,6 +660,11 @@ func (s *Server) handleConfigUpdate(w http.ResponseWriter, r *http.Request) {
 		Content string `json:"content"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		if err.Error() == "http: request body too large" {
+			writeError(w, r, http.StatusRequestEntityTooLarge, "request_too_large",
+				fmt.Sprintf("Request body exceeds maximum size of %d bytes", MaxRequestBodySize), nil)
+			return
+		}
 		http.Error(w, fmt.Sprintf("invalid request body: %v", err), http.StatusBadRequest)
 		return
 	}
@@ -714,6 +867,9 @@ func (s *Server) handleErrors(w http.ResponseWriter, r *http.Request) {
 		})
 
 	case http.MethodPost, http.MethodPut:
+		// SECURITY FIX #111: Enforce request body size limit
+		r.Body = http.MaxBytesReader(w, r.Body, MaxRequestBodySize)
+
 		// Inject or update error
 		var req struct {
 			DeviceIP  string `json:"device_ip"`

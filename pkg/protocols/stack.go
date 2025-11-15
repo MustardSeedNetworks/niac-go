@@ -12,6 +12,20 @@ import (
 	"github.com/krisarmstrong/niac-go/pkg/snmp"
 )
 
+const (
+	// FEATURE #124: Configurable packet queue buffer sizes
+	// Default buffer size for send/receive queues
+	// Increase this for high-traffic scenarios to prevent packet drops
+	// Decrease for memory-constrained environments
+	DefaultQueueBufferSize = 1000
+
+	// Recommended sizes for different scenarios:
+	// - Low traffic (< 100 pps): 500
+	// - Normal traffic (100-1000 pps): 1000 (default)
+	// - High traffic (1000-10000 pps): 5000
+	// - Very high traffic (> 10000 pps): 10000
+)
+
 // Stack manages the network protocol stack
 type Stack struct {
 	capture      *capture.Engine
@@ -78,12 +92,15 @@ type Statistics struct {
 
 // NewStack creates a new protocol stack
 func NewStack(captureEngine *capture.Engine, cfg *config.Config, debugConfig *logging.DebugConfig) *Stack {
+	// FEATURE #124: Use configurable buffer size
+	bufferSize := DefaultQueueBufferSize
+
 	s := &Stack{
 		capture:      captureEngine,
 		config:       cfg,
 		devices:      NewDeviceTable(),
-		sendQueue:    make(chan *Packet, 1000),
-		recvQueue:    make(chan *Packet, 1000),
+		sendQueue:    make(chan *Packet, bufferSize),
+		recvQueue:    make(chan *Packet, bufferSize),
 		stats:        &Statistics{},
 		stopChan:     make(chan struct{}),
 		debugConfig:  debugConfig,

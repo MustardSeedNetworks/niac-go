@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Future (v2.4.0+)
+### Future (v2.5.0+)
 - Config generator CLI with interactive prompts
 - Packet hex dump viewer in TUI
 - Statistics export (JSON/CSV)
@@ -15,6 +15,80 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - DHCPv6 prefix delegation (IA_PD)
 - Container and Kubernetes deployment (#35)
 - Multi-user authentication (#33)
+
+## [2.4.0] - 2025-11-14
+
+### Added
+
+**New Features & Security Enhancements**
+
+- **API Rate Limiting** (#104)
+  - Per-IP rate limiting to prevent brute force and DoS attacks
+  - Default: 100 requests/second with burst of 200
+  - Automatic cleanup of stale rate limiters every 5 minutes
+  - Supports X-Forwarded-For and X-Real-IP headers for proxy/load balancer scenarios
+  - Returns HTTP 429 (Too Many Requests) with standardized error response
+
+- **Standardized API Error Response Format** (#105)
+  - Consistent JSON error responses across all API endpoints
+  - Includes error code, message, details, timestamp, path, and method
+  - Machine-readable error codes for client applications
+  - Optional detailed error information for debugging
+  - Example response:
+    ```json
+    {
+      "error": "rate_limit_exceeded",
+      "message": "Rate limit exceeded. Please try again later.",
+      "timestamp": "2025-11-14T12:34:56Z",
+      "path": "/api/v1/stats",
+      "method": "GET"
+    }
+    ```
+
+- **Configurable Channel Buffer Sizes** (#124)
+  - Packet queue buffers now use named constant (DefaultQueueBufferSize = 1000)
+  - Documented recommended sizes for different traffic scenarios
+  - Low traffic (< 100 pps): 500
+  - Normal traffic (100-1000 pps): 1000 (default)
+  - High traffic (1000-10000 pps): 5000
+  - Very high traffic (> 10000 pps): 10000
+
+### Security
+
+- **Unauthenticated API Warning** (#107)
+  - Server now logs prominent warning when API runs without authentication
+  - Warns users that all endpoints are publicly accessible
+  - Provides example command to generate secure token
+  - Helps prevent accidental deployment without security
+
+- **Request Body Size Limits** (#111)
+  - Enforced MaxBytesReader on all POST/PUT request handlers
+  - Config update endpoint limited to 1MB
+  - Error injection endpoint limited to 1MB
+  - Returns HTTP 413 (Request Entity Too Large) for oversized requests
+  - Prevents memory exhaustion via large payloads
+
+- **Config Path Validation** (#108)
+  - Documented security implications of walk file paths
+  - Builds on path traversal fixes from v2.3.1 (#95, #96)
+  - Users should ensure file paths in configs are trusted
+
+### Changed
+
+- Updated error responses to use standardized format
+- Rate limit errors now return proper JSON instead of plain text
+- Authentication errors now use standardized error response
+- Improved logging for rate limit violations
+
+### Dependencies
+
+- Added `golang.org/x/time v0.14.0` for rate limiting functionality
+
+### Performance
+
+- Optimized rate limiter with periodic stale entry cleanup
+- Reduced memory usage by removing unused rate limiters
+- Channel buffer sizes documented for performance tuning
 
 ## [2.3.2] - 2025-11-14
 
