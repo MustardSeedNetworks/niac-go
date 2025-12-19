@@ -34,11 +34,6 @@ var (
 			Foreground(lipgloss.Color("82")).
 			Bold(true)
 
-	menuStyle = lipgloss.NewStyle().
-			Border(lipgloss.RoundedBorder()).
-			BorderForeground(lipgloss.Color("62")).
-			Padding(1, 2)
-
 	selectedStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("170")).
 			Bold(true)
@@ -95,9 +90,7 @@ type model struct {
 
 	// Error injection state
 	selectedDeviceIdx int
-	selectedInterface int
 	selectedErrorType int
-	errorValue        int
 
 	// Stats
 	stackStats      stackStatsSnapshot
@@ -127,6 +120,7 @@ type reloadMsg struct {
 	err error
 }
 
+// Init initializes the interactive TUI model
 func (m model) Init() tea.Cmd {
 	return tea.Batch(
 		tickCmd(),
@@ -150,6 +144,7 @@ func reloadCmd(fn func() (*config.Config, error)) tea.Cmd {
 	}
 }
 
+// Update handles messages and updates the TUI model state
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case reloadMsg:
@@ -540,6 +535,7 @@ func (m *model) injectError(errorType errors.ErrorType, value int) {
 	m.addDebugLog(fmt.Sprintf("Injected %s (%d%%) on %s (%s)", errorType, value, device.Name, deviceIP))
 }
 
+// View renders the TUI display to the terminal
 func (m model) View() string {
 	var s strings.Builder
 

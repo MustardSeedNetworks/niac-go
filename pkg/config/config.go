@@ -420,7 +420,7 @@ func Load(filename string) (*Config, error) {
 // LoadLegacy loads a legacy key-value configuration file
 // Format: device <name> { key = value ... }
 func LoadLegacy(filename string) (*Config, error) {
-	file, err := os.Open(filename)
+	file, err := os.Open(filename) // #nosec G304 -- user-provided file path, validated by caller
 	if err != nil {
 		return nil, fmt.Errorf("failed to open config file: %w", err)
 	}

@@ -67,15 +67,15 @@ func runGenerate(cmd *cobra.Command, args []string) {
 	reader := bufio.NewReader(os.Stdin)
 
 	// Print header
-	color.New(color.Bold, color.FgCyan).Println("\n╔════════════════════════════════════════════════════════════╗")
-	color.New(color.Bold, color.FgCyan).Println("║      NIAC Configuration Generator (v1.19.0)               ║")
-	color.New(color.Bold, color.FgCyan).Print("╚════════════════════════════════════════════════════════════╝\n\n")
+	color.New(color.Bold, color.FgCyan).Println("\n╔════════════════════════════════════════════════════════════╗") // #nosec G104 -- cosmetic output
+	color.New(color.Bold, color.FgCyan).Println("║      NIAC Configuration Generator (v1.19.0)               ║")    // #nosec G104 -- cosmetic output
+	color.New(color.Bold, color.FgCyan).Print("╚════════════════════════════════════════════════════════════╝\n\n") // #nosec G104 -- cosmetic output
 
 	color.Yellow("This wizard will guide you through creating a complete YAML")
 	color.Yellow("configuration file for your network simulation.\n\n")
 
 	// Step 1: Network Information
-	color.New(color.Bold, color.FgCyan).Println("Step 1: Network Information")
+	color.New(color.Bold, color.FgCyan).Println("Step 1: Network Information") // #nosec G104 -- cosmetic output
 	color.White("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
 
 	cfg := &generatedConfig{
@@ -94,14 +94,14 @@ func runGenerate(cmd *cobra.Command, args []string) {
 	fmt.Println()
 
 	// Step 2: Device Configuration
-	color.New(color.Bold, color.FgCyan).Println("Step 2: Device Configuration")
+	color.New(color.Bold, color.FgCyan).Println("Step 2: Device Configuration") // #nosec G104 -- cosmetic output
 	color.White("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
 
 	deviceCount := mustPromptInt(reader, "How many devices to create (1-20): ", 1, 20)
 	fmt.Println()
 
 	for i := 0; i < deviceCount; i++ {
-		color.New(color.Bold, color.FgYellow).Printf("Device %d/%d:\n", i+1, deviceCount)
+		color.New(color.Bold, color.FgYellow).Printf("Device %d/%d:\n", i+1, deviceCount) // #nosec G104 -- cosmetic output
 		color.White("──────────────────────────────────────────────────────────────\n")
 
 		device := generatedDevice{
@@ -109,7 +109,7 @@ func runGenerate(cmd *cobra.Command, args []string) {
 		}
 
 		// Device type
-		fmt.Println(color.CyanString("Device type:"))
+		fmt.Println(color.CyanString("Device type:")) // #nosec G104 -- cosmetic output
 		fmt.Println("  1) router       2) switch       3) access-point")
 		fmt.Println("  4) server       5) workstation  6) firewall")
 		typeChoice := mustPromptChoice(reader, "Select type (1-6): ", []string{"1", "2", "3", "4", "5", "6"})
@@ -138,7 +138,7 @@ func runGenerate(cmd *cobra.Command, args []string) {
 	}
 
 	// Step 3: Output File
-	color.New(color.Bold, color.FgCyan).Println("Step 3: Save Configuration")
+	color.New(color.Bold, color.FgCyan).Println("Step 3: Save Configuration") // #nosec G104 -- cosmetic output
 	color.White("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
 
 	var outputFile string
@@ -161,7 +161,7 @@ func runGenerate(cmd *cobra.Command, args []string) {
 	yamlContent := generateYAML(cfg)
 
 	// Write to file
-	if err := os.WriteFile(outputFile, []byte(yamlContent), 0644); err != nil {
+	if err := os.WriteFile(outputFile, []byte(yamlContent), 0600); err != nil {
 		color.Red("Error writing file: %v\n", err)
 		os.Exit(1)
 	}
@@ -172,7 +172,7 @@ func runGenerate(cmd *cobra.Command, args []string) {
 	fmt.Println()
 
 	// Summary
-	color.New(color.Bold).Println("Configuration Summary:")
+	color.New(color.Bold).Println("Configuration Summary:") // #nosec G104 -- cosmetic output
 	fmt.Printf("  Network:  %s (%s)\n", cfg.networkName, cfg.subnet)
 	fmt.Printf("  Devices:  %d\n", len(cfg.devices))
 	for i, dev := range cfg.devices {
@@ -182,13 +182,13 @@ func runGenerate(cmd *cobra.Command, args []string) {
 	fmt.Println()
 
 	// Next steps
-	color.New(color.Bold).Println("Next Steps:")
+	color.New(color.Bold).Println("Next Steps:") // #nosec G104 -- cosmetic output
 	fmt.Println()
 	fmt.Println("1. Validate your configuration:")
-	fmt.Printf("   %s\n", color.CyanString("niac validate %s", outputFile))
+	fmt.Printf("   %s\n", color.CyanString("niac validate %s", outputFile)) // #nosec G104 -- cosmetic output
 	fmt.Println()
 	fmt.Println("2. Run the simulation:")
-	fmt.Printf("   %s\n", color.CyanString("sudo niac interactive en0 %s", outputFile))
+	fmt.Printf("   %s\n", color.CyanString("sudo niac interactive en0 %s", outputFile)) // #nosec G104 -- cosmetic output
 	fmt.Println()
 }
 
@@ -323,7 +323,7 @@ func generateYAML(cfg *generatedConfig) string {
 	sb.WriteString("# NIAC Configuration File\n")
 	sb.WriteString(fmt.Sprintf("# Network: %s\n", cfg.networkName))
 	sb.WriteString(fmt.Sprintf("# Generated: %s\n", time.Now().Format("2006-01-02 15:04:05")))
-	sb.WriteString(fmt.Sprintf("# NIAC version: v1.19.0\n\n"))
+	sb.WriteString("# NIAC version: v1.19.0\n\n")
 
 	// Include path
 	if cfg.includePath != "" {

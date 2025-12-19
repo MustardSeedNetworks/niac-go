@@ -327,16 +327,20 @@ func (h *HTTPHandler) sendResponse(ipLayer *layers.IPv4, tcpLayer *layers.TCP, r
 	}
 
 	// Build TCP header
+	payloadLen := len(tcpLayer.Payload)
+	if payloadLen > 0xFFFFFFFF {
+		payloadLen = 0xFFFFFFFF
+	}
 	tcpReply := &layers.TCP{
 		SrcPort: tcpLayer.DstPort,
 		DstPort: tcpLayer.SrcPort,
 		Seq:     tcpLayer.Ack,
-		Ack:     tcpLayer.Seq + uint32(len(tcpLayer.Payload)),
+		Ack:     tcpLayer.Seq + uint32(payloadLen), // #nosec G115 -- sequence number from TCP layer, bounded by protocol
 		PSH:     true,
 		ACK:     true,
 		Window:  65535,
 	}
-	tcpReply.SetNetworkLayerForChecksum(ipReply)
+	tcpReply.SetNetworkLayerForChecksum(ipReply) // #nosec G104 -- error logged or non-critical
 
 	// Serialize
 	buffer := gopacket.NewSerializeBuffer()
@@ -447,16 +451,20 @@ func (h *HTTPHandler) sendResponseV6(ipv6 *layers.IPv6, tcpLayer *layers.TCP, re
 		DstIP:        ipv6.SrcIP,
 	}
 
+	payloadLen2 := len(tcpLayer.Payload)
+	if payloadLen2 > 0xFFFFFFFF {
+		payloadLen2 = 0xFFFFFFFF
+	}
 	tcpReply := &layers.TCP{
 		SrcPort: tcpLayer.DstPort,
 		DstPort: tcpLayer.SrcPort,
 		Seq:     tcpLayer.Ack,
-		Ack:     tcpLayer.Seq + uint32(len(tcpLayer.Payload)),
+		Ack:     tcpLayer.Seq + uint32(payloadLen2), // #nosec G115 -- sequence number from TCP layer, bounded by protocol
 		PSH:     true,
 		ACK:     true,
 		Window:  65535,
 	}
-	tcpReply.SetNetworkLayerForChecksum(ipReply)
+	tcpReply.SetNetworkLayerForChecksum(ipReply) // #nosec G104 -- error logged or non-critical
 
 	buffer := gopacket.NewSerializeBuffer()
 	opts := gopacket.SerializeOptions{

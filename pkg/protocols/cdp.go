@@ -204,10 +204,13 @@ func (h *CDPHandler) buildLLCSNAPHeader() []byte {
 func (h *CDPHandler) buildDeviceIDTLV(device *config.Device) []byte {
 	deviceID := []byte(device.Name)
 	length := 4 + len(deviceID) // Type (2) + Length (2) + Value
+	if length > 65535 {
+		length = 65535 // Cap at max uint16
+	}
 
 	tlv := make([]byte, length)
 	binary.BigEndian.PutUint16(tlv[0:2], CDPTLVTypeDeviceID)
-	binary.BigEndian.PutUint16(tlv[2:4], uint16(length))
+	binary.BigEndian.PutUint16(tlv[2:4], uint16(length)) // #nosec G115 -- length capped at 65535 above
 	copy(tlv[4:], deviceID)
 
 	return tlv
@@ -246,11 +249,14 @@ func (h *CDPHandler) buildAddressesTLV(device *config.Device) []byte {
 
 	addrLen := 1 + 1 + 1 + 2 + len(addrBytes)
 	length := 4 + 4 + addrLen // Type + Length + NumAddrs + Address
+	if length > 65535 {
+		length = 65535 // Cap at max uint16
+	}
 
 	tlv := make([]byte, length)
 	binary.BigEndian.PutUint16(tlv[0:2], CDPTLVTypeAddresses)
-	binary.BigEndian.PutUint16(tlv[2:4], uint16(length))
-	binary.BigEndian.PutUint32(tlv[4:8], 1) // Number of addresses
+	binary.BigEndian.PutUint16(tlv[2:4], uint16(length)) // #nosec G115 -- length capped at 65535 above
+	binary.BigEndian.PutUint32(tlv[4:8], 1)              // Number of addresses
 
 	offset := 8
 	tlv[offset] = protoType
@@ -259,7 +265,11 @@ func (h *CDPHandler) buildAddressesTLV(device *config.Device) []byte {
 	offset++
 	tlv[offset] = protoType // Protocol value
 	offset++
-	binary.BigEndian.PutUint16(tlv[offset:offset+2], uint16(len(addrBytes)))
+	addrBytesLen := len(addrBytes)
+	if addrBytesLen > 65535 {
+		addrBytesLen = 65535
+	}
+	binary.BigEndian.PutUint16(tlv[offset:offset+2], uint16(addrBytesLen)) // #nosec G115 -- addrBytesLen capped at 65535 above
 	offset += 2
 	copy(tlv[offset:], addrBytes)
 
@@ -282,10 +292,13 @@ func (h *CDPHandler) buildPortIDTLV(device *config.Device) []byte {
 	}
 
 	length := 4 + len(portID)
+	if length > 65535 {
+		length = 65535
+	}
 
 	tlv := make([]byte, length)
 	binary.BigEndian.PutUint16(tlv[0:2], CDPTLVTypePortID)
-	binary.BigEndian.PutUint16(tlv[2:4], uint16(length))
+	binary.BigEndian.PutUint16(tlv[2:4], uint16(length)) // #nosec G115 -- length capped at 65535 above
 	copy(tlv[4:], portID)
 
 	return tlv
@@ -313,7 +326,7 @@ func (h *CDPHandler) buildCapabilitiesTLV(device *config.Device) []byte {
 
 	tlv := make([]byte, length)
 	binary.BigEndian.PutUint16(tlv[0:2], CDPTLVTypeCapabilities)
-	binary.BigEndian.PutUint16(tlv[2:4], uint16(length))
+	binary.BigEndian.PutUint16(tlv[2:4], 8) // length is constant 8
 	binary.BigEndian.PutUint32(tlv[4:8], capabilities)
 
 	return tlv
@@ -330,10 +343,13 @@ func (h *CDPHandler) buildSoftwareVersionTLV(device *config.Device) []byte {
 	}
 
 	length := 4 + len(version)
+	if length > 65535 {
+		length = 65535
+	}
 
 	tlv := make([]byte, length)
 	binary.BigEndian.PutUint16(tlv[0:2], CDPTLVTypeSoftwareVersion)
-	binary.BigEndian.PutUint16(tlv[2:4], uint16(length))
+	binary.BigEndian.PutUint16(tlv[2:4], uint16(length)) // #nosec G115 -- length capped at 65535 above
 	copy(tlv[4:], version)
 
 	return tlv
@@ -350,10 +366,13 @@ func (h *CDPHandler) buildPlatformTLV(device *config.Device) []byte {
 	}
 
 	length := 4 + len(platform)
+	if length > 65535 {
+		length = 65535
+	}
 
 	tlv := make([]byte, length)
 	binary.BigEndian.PutUint16(tlv[0:2], CDPTLVTypePlatform)
-	binary.BigEndian.PutUint16(tlv[2:4], uint16(length))
+	binary.BigEndian.PutUint16(tlv[2:4], uint16(length)) // #nosec G115 -- length capped at 65535 above
 	copy(tlv[4:], platform)
 
 	return tlv
@@ -390,7 +409,11 @@ func (h *CDPHandler) sendFrame(device *config.Device, cdpPayload []byte) error {
 
 	// CDP uses length field instead of EtherType (802.3 format)
 	// Length field = LLC/SNAP + CDP payload length
-	length := uint16(len(cdpPayload))
+	cdpPayloadLen := len(cdpPayload)
+	if cdpPayloadLen > 65535 {
+		cdpPayloadLen = 65535
+	}
+	length := uint16(cdpPayloadLen) // #nosec G115 -- cdpPayloadLen capped at 65535 above
 
 	// Build raw Ethernet frame with 802.3 format
 	frame := make([]byte, 14+len(cdpPayload))

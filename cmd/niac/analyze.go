@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
@@ -136,11 +137,17 @@ func runAnalyze(cmd *cobra.Command, args []string) error {
 }
 
 func parseWalkFile(filename string) (*WalkAnalysis, error) {
-	file, err := os.Open(filename)
+	// Validate file path
+	cleanPath := filepath.Clean(filename)
+	if strings.Contains(cleanPath, "..") {
+		return nil, fmt.Errorf("path traversal detected in filename")
+	}
+
+	file, err := os.Open(cleanPath) // #nosec G304 -- path validated above
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
+	defer file.Close() // #nosec G104 -- deferred close
 
 	analysis := &WalkAnalysis{
 		Interfaces: make([]InterfaceInfo, 0),
@@ -198,7 +205,7 @@ func parseWalkFile(filename string) (*WalkAnalysis, error) {
 	}
 
 	// Try to find sysName by looking for short hostnames in STRING fields
-	file.Seek(0, 0)
+	file.Seek(0, 0) // #nosec G104 -- seek errors handled by subsequent read
 	scanner = bufio.NewScanner(file)
 	hostnameRe := regexp.MustCompile(`= STRING: "([a-z0-9\-]{3,30})"$`)
 	for scanner.Scan() {
@@ -247,27 +254,6 @@ func parseWalkFile(filename string) (*WalkAnalysis, error) {
 	return analysis, nil
 }
 
-func getInterfaceType(ifType int) string {
-	// IF-MIB ifType values
-	switch ifType {
-	case 6:
-		return "ethernet"
-	case 24:
-		return "loopback"
-	case 131:
-		return "tunnel"
-	case 161:
-		return "port-channel"
-	case 135, 136:
-		return "vlan"
-	default:
-		if ifType >= 1 && ifType <= 100 {
-			return "physical"
-		}
-		return "logical"
-	}
-}
-
 func getInterfaceTypeFromName(name string) string {
 	// Determine interface type from name pattern
 	nameLower := strings.ToLower(name)
@@ -300,13 +286,6 @@ func getInterfaceTypeFromName(name string) string {
 	return "unknown"
 }
 
-func formatMACAddress(raw string) string {
-	// Convert various MAC formats to xx:xx:xx:xx:xx:xx
-	cleaned := strings.ReplaceAll(raw, " ", ":")
-	cleaned = strings.ReplaceAll(cleaned, "-", ":")
-	return strings.ToLower(cleaned)
-}
-
 func outputJSON(analysis *WalkAnalysis) error {
 	encoder := json.NewEncoder(os.Stdout)
 	encoder.SetIndent("", "  ")
@@ -315,7 +294,7 @@ func outputJSON(analysis *WalkAnalysis) error {
 
 func outputYAML(analysis *WalkAnalysis) error {
 	encoder := yaml.NewEncoder(os.Stdout)
-	defer encoder.Close()
+	defer encoder.Close() // #nosec G104 -- deferred close
 	encoder.SetIndent(2)
 	return encoder.Encode(analysis)
 }
@@ -397,7 +376,7 @@ func writeGraphviz(analysis *WalkAnalysis, target string) error {
 		fmt.Print(builder.String())
 		return nil
 	}
-	return os.WriteFile(target, data, 0o644)
+	return os.WriteFile(target, data, 0o600)
 }
 
 func outputNeighbors(neighbors []NeighborInfo, format string) error {
@@ -408,7 +387,7 @@ func outputNeighbors(neighbors []NeighborInfo, format string) error {
 		return encoder.Encode(map[string]interface{}{"neighbors": neighbors})
 	case "yaml":
 		encoder := yaml.NewEncoder(os.Stdout)
-		defer encoder.Close()
+		defer encoder.Close() // #nosec G104 -- deferred close
 		encoder.SetIndent(2)
 		return encoder.Encode(map[string]interface{}{"neighbors": neighbors})
 	case "text":

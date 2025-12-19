@@ -1,0 +1,72 @@
+- [x] Define the audit scope.
+- [ ] Conduct a two-pass SAST analysis on all files within scope.
+  - [x] SAST Recon on /Users/krisarmstrong/Developer/projects/niac-go/pkg/storage/storage.go
+  - [x] SAST Recon on /Users/krisarmstrong/Developer/projects/niac-go/pkg/logging/debug_config.go
+  - [x] SAST Recon on /Users/krisarmstrong/Developer/projects/niac-go/pkg/storage/storage.go
+          - [x] Investigate data flow from `path` in `Open` function on line 26.  - [x] SAST Recon on /Users/krisarmstrong/Developer/projects/niac-go/pkg/stats/export.go
+    - [ ] Investigate data flow from `filename` in `ExportJSON` function on line 190.
+    - [ ] Investigate data flow from `filename` in `ExportCSV` function on line 205.
+  - [ ] SAST Recon on /Users/krisarmstrong/Developer/projects/niac-go/pkg/snmp/agent.go
+  - [ ] SAST Recon on /Users/krisarmstrong/Developer/projects/niac-go/pkg/device/traffic.go
+  - [ ] SAST Recon on /Users/krisarmstrong/Developer/projects/niac-go/pkg/device/simulator.go
+  - [ ] SAST Recon on /Users/krisarmstrong/Developer/projects/niac-go/pkg/protocols/stack.go
+  - [ ] SAST Recon on /Users/krisarmstrong/Developer/projects/niac-go/pkg/daemon/daemon.go
+  - [ ] SAST Recon on /Users/krisarmstrong/Developer/projects/niac-go/pkg/snmp/mib.go
+  - [ ] SAST Recon on /Users/krisarmstrong/Developer/projects/niac-go/pkg/api/server.go
+  - [ ] SAST Recon on /Users/krisarmstrong/Developer/projects/niac-go/pkg/protocols/snmp.go
+  - [ ] SAST Recon on /Users/krisarmstrong/Developer/projects/niac-go/pkg/protocols/ftp.go
+  - [ ] SAST Recon on /Users/krisarmstrong/Developer/projects/niac-go/pkg/protocols/http.go
+  - [ ] SAST Recon on /Users/krisarmstrong/Developer/projects/niac-go/pkg/protocols/dns.go
+  - [ ] SAST Recon on /Users/krisarmstrong/Developer/projects/niac-go/pkg/protocols/dhcp.go
+  - [ ] SAST Recon on /Users/krisarmstrong/Developer/projects/niac-go/cmd/niac/runtime_services.go
+  - [ ] SAST Recon on /Users/krisarmstrong/Developer/projects/niac-go/cmd/niac/root.go
+  - [ ] SAST Recon on /Users/krisarmstrong/Developer/projects/niac-go/pkg/api/topology.go
+  - [ ] SAST Recon on /Users/krisarmstrong/Developer/projects/niac-go/pkg/protocols/neighbors.go
+  - [ ] SAST Recon on /Users/krisarmstrong/Developer/projects/niac-go/pkg/protocols/dhcpv6.go
+  - [ ] SAST Recon on /Users/krisarmstrong/Developer/projects/niac-go/pkg/protocols/device_table.go
+  - [ ] SAST Recon on /Users/krisarmstrong/Developer/projects/niac-go/pkg/interactive/interactive.go
+  - [ ] SAST Recon on /Users/krisarmstrong/Developer/projects/niac-go/pkg/config/config.go
+  - [ ] SAST Recon on /Users/krisarmstrong/Developer/projects/niac-go/pkg/capture/interfaces.go
+  - [ ] SAST Recon on /Users/krisarmstrong/Developer/projects/niac-go/pkg/api/static.go
+  - [ ] SAST Recon on /Users/krisarmstrong/Developer/projects/niac-go/internal/converter/converter.go
+  - [ ] SAST Recon on /Users/krisarmstrong/Developer/projects/niac-go/cmd/niac/main.go
+  - [ ] SAST Recon on /Users/krisarmstrong/Developer/projects/niac-go/cmd/niac/cmd_daemon.go
+  - [ ] SAST Recon on /Users/krisarmstrong/Developer/projects/niac-go/cmd/niac-convert/main.go
+  - [ ] SAST Recon on /Users/krisarmstrong/Developer/projects/niac-go/cmd/niac/analyze_pcap.go
+  - [ ] SAST Recon on /Users/krisarmstrong/Developer/projects/niac-go/cmd/niac/analyze.go
+  - [ ] SAST Recon on /Users/krisarmstrong/Developer/projects/niac-go/cmd/niac/completion.go
+  - [ ] SAST Recon on /Users/krisarmstrong/Developer/projects/niac-go/cmd/niac/config.go
+  - [ ] SAST Recon on /Users/krisarmstrong/Developer/projects/niac-go/cmd/niac/generate.go
+  - [ ] SAST Recon on /Users/krisarmstrong/Developer/projects/niac-go/cmd/niac/init.go
+  - [ ] SAST Recon on /Users/krisarmstrong/Developer/projects/niac-go/cmd/niac/interactive.go
+  - [ ] SAST Recon on /Users/krisarmstrong/Developer/projects/niac-go/cmd/niac/legacy.go
+  - [ ] SAST Recon on /Users/krisarmstrong/Developer/projects/niac-go/cmd/niac/man.go
+  - [ ] SAST Recon on /Users/krisarmstrong/Developer/projects/niac-go/cmd/niac/sanitize.go
+  - [ ] SAST Recon on /Users/krisarmstrong/Developer/projects/niac-go/cmd/niac/services.go
+  - [ ] SAST Recon on /Users/krisarmstrong/Developer/projects/niac-go/cmd/niac/template.go
+  - [ ] SAST Recon on /Users/krisarmstrong/Developer/projects/niac-go/cmd/niac/validate.go
+  - [ ] SAST Recon on /Users/krisarmstrong/Developer/projects/niac-go/pkg/capture/capture.go
+  - [ ] SAST Recon on /Users/krisarmstrong/Developer/projects/niac-go/pkg/config/errors.go
+  - [ ] SAST Recon on /Users/krisarmstrong/Developer/projects/niac-go/pkg/config/validator.go
+  - [ ] SAST Recon on /Users/krisarmstrong/Developer/projects/niac-go/pkg/capture/playback.go
+  - [ ] SAST Recon on /Users/krisarmstrong/Developer/projects/niac-go/pkg/errors/errors.go
+  - [ ] SAST Recon on /Users/krisarmstrong/Developer/projects/niac-go/pkg/logging/colors.go
+  - [ ] SAST Recon on /Users/krisarmstrong/Developer/projects/niac-go/pkg/protocols/arp.go
+  - [ ] SAST Recon on /Users/krisarmstrong/Developer/projects/niac-go/pkg/protocols/cdp.go
+  - [ ] SAST Recon on /Users/krisarmstrong/Developer/projects/niac-go/pkg/protocols/edp.go
+  - [ ] SAST Recon on /Users/krisarmstrong/Developer/projects/niac-go/pkg/protocols/fdp.go
+  - [ ] SAST Recon on /Users/krisarmstrong/Developer/projects/niac-go/pkg/protocols/icmp.go
+  - [ ] SAST Recon on /Users/krisarmstrong/Developer/projects/niac-go/pkg/protocols/icmpv6.go
+  - [ ] SAST Recon on /Users/krisarmstrong/Developer/projects/niac-go/pkg/protocols/ip.go
+  - [ ] SAST Recon on /Users/krisarmstrong/Developer/projects/niac-go/pkg/protocols/ipv6.go
+  - [ ] SAST Recon on /Users/krisarmstrong/Developer/projects/niac-go/pkg/protocols/lldp.go
+  - [ ] SAST Recon on /Users/krisarmstrong/Developer/projects/niac-go/pkg/protocols/netbios.go
+  - [ ] SAST Recon on /Users/krisarmstrong/Developer/projects/niac-go/pkg/protocols/packet.go
+  - [ ] SAST Recon on /Users/krisarmstrong/Developer/projects/niac-go/pkg/protocols/stp.go
+  - [ ] SAST Recon on /Users/krisarmstrong/Developer/projects/niac-go/pkg/protocols/tcp.go
+  - [ ] SAST Recon on /Users/krisarmstrong/Developer/projects/niac-go/pkg/protocols/udp.go
+  - [ ] SAST Recon on /Users/krisarmstrong/Developer/projects/niac-go/pkg/snmp/traps.go
+  - [ ] SAST Recon on /Users/krisarmstrong/Developer/projects/niac-go/pkg/snmp/walk.go
+  - [ ] SAST Recon on /Users/krisarmstrong/Developer/projects/niac-go/pkg/templates/template.go
+  - [ ] SAST Recon on /Users/krisarmstrong/Developer/projects/niac-go/test_walk_loader.go
+- [ ] Conduct the final review of all findings as per your **Minimizing False Positives** operating principle and generate the final report.

@@ -495,19 +495,27 @@ func (h *DHCPHandler) sendDHCPResponse(xid uint32, clientMAC net.HardwareAddr, a
 		for _, dns := range h.dnsServers {
 			dnsData = append(dnsData, []byte(dns.To4())...)
 		}
+		dnsLen := len(dnsData)
+		if dnsLen > 255 {
+			dnsLen = 255 // Cap at max uint8
+		}
 		options = append(options, layers.DHCPOption{
 			Type:   layers.DHCPOptDNS,
-			Length: uint8(len(dnsData)),
-			Data:   dnsData,
+			Length: uint8(dnsLen), // #nosec G115 -- dnsLen capped at 255 above
+			Data:   dnsData[:dnsLen],
 		})
 	}
 
 	// Add domain name if configured
 	if h.domainName != "" {
+		domainLen := len(h.domainName)
+		if domainLen > 255 {
+			domainLen = 255
+		}
 		options = append(options, layers.DHCPOption{
 			Type:   layers.DHCPOptDomainName,
-			Length: uint8(len(h.domainName)),
-			Data:   []byte(h.domainName),
+			Length: uint8(domainLen), // #nosec G115 -- domainLen capped at 255 above
+			Data:   []byte(h.domainName[:domainLen]),
 		})
 	}
 
@@ -531,28 +539,40 @@ func (h *DHCPHandler) sendDHCPResponse(xid uint32, clientMAC net.HardwareAddr, a
 		for _, ntp := range h.ntpServers {
 			ntpData = append(ntpData, []byte(ntp.To4())...)
 		}
+		ntpLen := len(ntpData)
+		if ntpLen > 255 {
+			ntpLen = 255
+		}
 		options = append(options, layers.DHCPOption{
 			Type:   DHCPOptNTP,
-			Length: uint8(len(ntpData)),
-			Data:   ntpData,
+			Length: uint8(ntpLen), // #nosec G115 -- ntpLen capped at 255 above
+			Data:   ntpData[:ntpLen],
 		})
 	}
 
 	// Add TFTP server name if configured (Option 66)
 	if h.tftpServerName != "" {
+		tftpLen := len(h.tftpServerName)
+		if tftpLen > 255 {
+			tftpLen = 255
+		}
 		options = append(options, layers.DHCPOption{
 			Type:   DHCPOptTFTPServer,
-			Length: uint8(len(h.tftpServerName)),
-			Data:   []byte(h.tftpServerName),
+			Length: uint8(tftpLen), // #nosec G115 -- tftpLen capped at 255 above
+			Data:   []byte(h.tftpServerName[:tftpLen]),
 		})
 	}
 
 	// Add bootfile name if configured (Option 67)
 	if h.bootfileName != "" {
+		bootLen := len(h.bootfileName)
+		if bootLen > 255 {
+			bootLen = 255
+		}
 		options = append(options, layers.DHCPOption{
 			Type:   DHCPOptBootfileName,
-			Length: uint8(len(h.bootfileName)),
-			Data:   []byte(h.bootfileName),
+			Length: uint8(bootLen), // #nosec G115 -- bootLen capped at 255 above
+			Data:   []byte(h.bootfileName[:bootLen]),
 		})
 	}
 
@@ -563,29 +583,41 @@ func (h *DHCPHandler) sendDHCPResponse(xid uint32, clientMAC net.HardwareAddr, a
 			// Log error but don't fail - just skip this option
 			fmt.Fprintf(os.Stderr, "Warning: DHCP domain search encoding failed: %v\n", err)
 		} else if len(searchData) > 0 {
+			searchLen := len(searchData)
+			if searchLen > 255 {
+				searchLen = 255
+			}
 			options = append(options, layers.DHCPOption{
 				Type:   DHCPOptDomainSearch,
-				Length: uint8(len(searchData)),
-				Data:   searchData,
+				Length: uint8(searchLen), // #nosec G115 -- searchLen capped at 255 above
+				Data:   searchData[:searchLen],
 			})
 		}
 	}
 
 	// Add vendor-specific information if configured (Option 43)
 	if len(h.vendorSpecificInfo) > 0 {
+		vendorLen := len(h.vendorSpecificInfo)
+		if vendorLen > 255 {
+			vendorLen = 255
+		}
 		options = append(options, layers.DHCPOption{
 			Type:   layers.DHCPOptVendorOption,
-			Length: uint8(len(h.vendorSpecificInfo)),
-			Data:   h.vendorSpecificInfo,
+			Length: uint8(vendorLen), // #nosec G115 -- vendorLen capped at 255 above
+			Data:   h.vendorSpecificInfo[:vendorLen],
 		})
 	}
 
 	// Add hostname from lease if available (Option 12)
 	if lease, ok := h.leases[clientMAC.String()]; ok && lease.Hostname != "" {
+		hostnameLen := len(lease.Hostname)
+		if hostnameLen > 255 {
+			hostnameLen = 255
+		}
 		options = append(options, layers.DHCPOption{
 			Type:   layers.DHCPOptHostname,
-			Length: uint8(len(lease.Hostname)),
-			Data:   []byte(lease.Hostname),
+			Length: uint8(hostnameLen), // #nosec G115 -- hostnameLen capped at 255 above
+			Data:   []byte(lease.Hostname[:hostnameLen]),
 		})
 	}
 
@@ -625,7 +657,7 @@ func (h *DHCPHandler) sendDHCPResponse(xid uint32, clientMAC net.HardwareAddr, a
 		FixLengths:       true,
 	}
 
-	udp.SetNetworkLayerForChecksum(ip)
+	udp.SetNetworkLayerForChecksum(ip) // #nosec G104 -- error logged or non-critical
 
 	if err := gopacket.SerializeLayers(buf, opts, eth, ip, udp, dhcp); err != nil {
 		return fmt.Errorf("failed to serialize DHCP response: %w", err)

@@ -40,12 +40,13 @@ type SimulatedDevice struct {
 // DeviceState represents the current state of a device
 type DeviceState string
 
+// Device state constants
 const (
-	StateUp          DeviceState = "up"
-	StateDown        DeviceState = "down"
-	StateStarting    DeviceState = "starting"
-	StateStopping    DeviceState = "stopping"
-	StateMaintenance DeviceState = "maintenance"
+	StateUp          DeviceState = "up"          // Device is running normally
+	StateDown        DeviceState = "down"        // Device is offline
+	StateStarting    DeviceState = "starting"    // Device is booting up
+	StateStopping    DeviceState = "stopping"    // Device is shutting down
+	StateMaintenance DeviceState = "maintenance" // Device is in maintenance mode
 )
 
 // DeviceCounters holds per-device statistics

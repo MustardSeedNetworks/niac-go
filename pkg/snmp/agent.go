@@ -69,7 +69,11 @@ func (a *Agent) initializeSystemMIB() {
 	// sysUpTime (1.3.6.1.2.1.1.3.0) - TimeTicks (hundredths of second)
 	a.mib.SetDynamic("1.3.6.1.2.1.1.3.0", func() *OIDValue {
 		uptime := time.Since(a.startTime)
-		timeticks := uint32(uptime.Milliseconds() / 10) // Convert to hundredths of second
+		ms := uptime.Milliseconds() / 10 // Convert to hundredths of second
+		if ms > 0xFFFFFFFF {
+			ms = 0xFFFFFFFF
+		}
+		timeticks := uint32(ms) // #nosec G115 -- uptime from time calculation, bounded
 		return &OIDValue{
 			Type:  gosnmp.TimeTicks,
 			Value: timeticks,
@@ -235,6 +239,31 @@ func (a *Agent) SetOID(oid string, value *OIDValue) error {
 // GetCommunity returns the agent's community string
 func (a *Agent) GetCommunity() string {
 	return a.community
+}
+
+// RedactedCommunity returns a redacted version for safe logging
+// SECURITY FIX MEDIUM-5: Prevent community string exposure in logs
+func (a *Agent) RedactedCommunity() string {
+	if len(a.community) == 0 {
+		return "[EMPTY]"
+	}
+	if len(a.community) <= 2 {
+		return "**"
+	}
+	// Show first and last character only
+	return string(a.community[0]) + strings.Repeat("*", len(a.community)-2) + string(a.community[len(a.community)-1])
+}
+
+// RedactCommunityString redacts a community string for safe logging
+// SECURITY FIX MEDIUM-5: Helper function to redact any community string
+func RedactCommunityString(community string) string {
+	if len(community) == 0 {
+		return "[EMPTY]"
+	}
+	if len(community) <= 2 {
+		return "**"
+	}
+	return string(community[0]) + strings.Repeat("*", len(community)-2) + string(community[len(community)-1])
 }
 
 // ProcessPDU processes SNMP PDU variables and returns response variables

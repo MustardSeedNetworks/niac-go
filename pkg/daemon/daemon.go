@@ -314,9 +314,7 @@ type replayController struct {
 	engine     *capture.Engine
 	debugLevel int
 	mu         sync.Mutex
-	current    *capture.PlaybackEngine
 	state      api.ReplayState
-	cleanup    string
 }
 
 func newReplayController(engine *capture.Engine, debugLevel int) *replayController {
@@ -326,18 +324,21 @@ func newReplayController(engine *capture.Engine, debugLevel int) *replayControll
 	}
 }
 
+// Status returns the current replay state
 func (rc *replayController) Status() api.ReplayState {
 	rc.mu.Lock()
 	defer rc.mu.Unlock()
 	return rc.state
 }
 
+// Start begins PCAP replay with the given request
 func (rc *replayController) Start(req api.ReplayRequest) (api.ReplayState, error) {
 	// Implementation same as in runtime_services.go
 	// Simplified for now
 	return rc.state, fmt.Errorf("replay not yet implemented in daemon mode")
 }
 
+// Stop halts the current PCAP replay
 func (rc *replayController) Stop() (api.ReplayState, error) {
 	rc.mu.Lock()
 	defer rc.mu.Unlock()

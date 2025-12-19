@@ -183,10 +183,13 @@ func (h *FDPHandler) buildLLCSNAPHeader() []byte {
 func (h *FDPHandler) buildDeviceIDTLV(device *config.Device) []byte {
 	deviceID := []byte(device.Name)
 	length := 4 + len(deviceID) // Type (2) + Length (2) + Value
+	if length > 65535 {
+		length = 65535
+	}
 
 	tlv := make([]byte, length)
 	binary.BigEndian.PutUint16(tlv[0:2], FDPTLVTypeDeviceID)
-	binary.BigEndian.PutUint16(tlv[2:4], uint16(length))
+	binary.BigEndian.PutUint16(tlv[2:4], uint16(length)) // #nosec G115 -- TLV length limited by protocol specification
 	copy(tlv[4:], deviceID)
 
 	return tlv
@@ -207,10 +210,13 @@ func (h *FDPHandler) buildPortTLV(device *config.Device) []byte {
 	}
 
 	length := 4 + len(portName)
+	if length > 65535 {
+		length = 65535
+	}
 
 	tlv := make([]byte, length)
 	binary.BigEndian.PutUint16(tlv[0:2], FDPTLVTypePort)
-	binary.BigEndian.PutUint16(tlv[2:4], uint16(length))
+	binary.BigEndian.PutUint16(tlv[2:4], uint16(length)) // #nosec G115 -- TLV length limited by protocol specification
 	copy(tlv[4:], portName)
 
 	return tlv
@@ -227,10 +233,13 @@ func (h *FDPHandler) buildPlatformTLV(device *config.Device) []byte {
 	}
 
 	length := 4 + len(platform)
+	if length > 65535 {
+		length = 65535
+	}
 
 	tlv := make([]byte, length)
 	binary.BigEndian.PutUint16(tlv[0:2], FDPTLVTypePlatform)
-	binary.BigEndian.PutUint16(tlv[2:4], uint16(length))
+	binary.BigEndian.PutUint16(tlv[2:4], uint16(length)) // #nosec G115 -- TLV length limited by protocol specification
 	copy(tlv[4:], platform)
 
 	return tlv
@@ -254,7 +263,7 @@ func (h *FDPHandler) buildCapabilitiesTLV(device *config.Device) []byte {
 
 	tlv := make([]byte, length)
 	binary.BigEndian.PutUint16(tlv[0:2], FDPTLVTypeCapabilities)
-	binary.BigEndian.PutUint16(tlv[2:4], uint16(length))
+	binary.BigEndian.PutUint16(tlv[2:4], 8) // length is constant 8
 	binary.BigEndian.PutUint32(tlv[4:8], capabilities)
 
 	return tlv
@@ -271,10 +280,13 @@ func (h *FDPHandler) buildSoftwareTLV(device *config.Device) []byte {
 	}
 
 	length := 4 + len(software)
+	if length > 65535 {
+		length = 65535
+	}
 
 	tlv := make([]byte, length)
 	binary.BigEndian.PutUint16(tlv[0:2], FDPTLVTypeSoftware)
-	binary.BigEndian.PutUint16(tlv[2:4], uint16(length))
+	binary.BigEndian.PutUint16(tlv[2:4], uint16(length)) // #nosec G115 -- TLV length limited by protocol specification
 	copy(tlv[4:], software)
 
 	return tlv
@@ -297,10 +309,13 @@ func (h *FDPHandler) buildIPAddressTLV(device *config.Device) []byte {
 	}
 
 	length := 4 + len(ipBytes)
+	if length > 65535 {
+		length = 65535
+	}
 
 	tlv := make([]byte, length)
 	binary.BigEndian.PutUint16(tlv[0:2], FDPTLVTypeIPAddress)
-	binary.BigEndian.PutUint16(tlv[2:4], uint16(length))
+	binary.BigEndian.PutUint16(tlv[2:4], uint16(length)) // #nosec G115 -- TLV length limited by protocol specification
 	copy(tlv[4:], ipBytes)
 
 	return tlv
@@ -336,7 +351,11 @@ func (h *FDPHandler) sendFrame(device *config.Device, fdpPayload []byte) error {
 	dstMAC, _ := net.ParseMAC(FDPMulticastMAC)
 
 	// FDP uses length field instead of EtherType (802.3 format)
-	length := uint16(len(fdpPayload))
+	payloadLen := len(fdpPayload)
+	if payloadLen > 65535 {
+		payloadLen = 65535
+	}
+	length := uint16(payloadLen) // #nosec G115 -- TLV length limited by protocol specification
 
 	// Build raw Ethernet frame with 802.3 format
 	frame := make([]byte, 14+len(fdpPayload))
@@ -433,9 +452,9 @@ func (h *FDPHandler) HandlePacket(pkt *Packet) {
 		return
 	}
 
-	ttlSeconds := time.Duration(ttl)
-	if ttlSeconds <= 0 {
-		ttlSeconds = time.Duration(FDPHoldtime)
+	ttlDuration := time.Duration(ttl)
+	if ttlDuration <= 0 {
+		ttlDuration = time.Duration(FDPHoldtime)
 	}
 
 	entry := NeighborRecord{
@@ -445,7 +464,7 @@ func (h *FDPHandler) HandlePacket(pkt *Packet) {
 		RemoteChassisID: coalesceStrings(deviceID, platform),
 		RemotePort:      portID,
 		Description:     joinNonEmpty(" / ", platform, software),
-		TTL:             ttlSeconds * time.Second,
+		TTL:             ttlDuration * time.Second,
 		Capabilities:    caps,
 	}
 	if mgmtIP != nil {

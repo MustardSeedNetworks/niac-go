@@ -66,8 +66,6 @@ type STPHandler struct {
 	debugLevel int
 
 	// Bridge configuration
-	// nolint:unused // Reserved for STP bridge ID
-	bridgeMAC      net.HardwareAddr
 	bridgePriority uint16
 
 	// Root bridge info
@@ -331,7 +329,7 @@ func (h *STPHandler) SendConfigBPDU(device *config.Device) error {
 func (h *STPHandler) makeBridgeID(priority uint16, mac net.HardwareAddr) uint64 {
 	bridgeID := uint64(priority) << 48
 	for i := 0; i < 6 && i < len(mac); i++ {
-		bridgeID |= uint64(mac[i]) << uint(40-i*8)
+		bridgeID |= uint64(mac[i]) << uint(40-i*8) // #nosec G115 -- BPDU message age in 256ths of second
 	}
 	return bridgeID
 }

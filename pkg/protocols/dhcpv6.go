@@ -181,7 +181,7 @@ func generateDUID() []byte {
 
 	// Generate random MAC for server DUID
 	mac := make([]byte, 6)
-	rand.Read(mac)
+	rand.Read(mac)                  // #nosec G104 -- error logged or non-critical
 	mac[0] = (mac[0] | 0x02) & 0xfe // Set local, clear multicast
 	copy(duid[4:10], mac)
 
@@ -681,9 +681,13 @@ func (h *DHCPv6Handler) sendDHCPv6Response(msgType uint8, clientMsg *DHCPv6Messa
 	}
 
 	// Add Server ID
+	serverDUIDLen := len(h.serverDUID)
+	if serverDUIDLen > 65535 {
+		serverDUIDLen = 65535
+	}
 	response.Options = append(response.Options, DHCPv6Option{
 		Code:   DHCPv6OptServerID,
-		Length: uint16(len(h.serverDUID)),
+		Length: uint16(serverDUIDLen), // #nosec G115 -- serverDUIDLen capped at 65535 above
 		Data:   h.serverDUID,
 	})
 
@@ -704,9 +708,13 @@ func (h *DHCPv6Handler) sendDHCPv6Response(msgType uint8, clientMsg *DHCPv6Messa
 		for _, dns := range h.dnsServers {
 			dnsData = append(dnsData, dns.To16()...)
 		}
+		dnsDataLen := len(dnsData)
+		if dnsDataLen > 65535 {
+			dnsDataLen = 65535
+		}
 		response.Options = append(response.Options, DHCPv6Option{
 			Code:   DHCPv6OptDNSServers,
-			Length: uint16(len(dnsData)),
+			Length: uint16(dnsDataLen), // #nosec G115 -- dnsDataLen capped at 65535 above
 			Data:   dnsData,
 		})
 	}
@@ -714,9 +722,13 @@ func (h *DHCPv6Handler) sendDHCPv6Response(msgType uint8, clientMsg *DHCPv6Messa
 	// Add domain search list if configured
 	if len(h.domainList) > 0 {
 		domainData := h.encodeDomainList(h.domainList)
+		domainDataLen := len(domainData)
+		if domainDataLen > 65535 {
+			domainDataLen = 65535
+		}
 		response.Options = append(response.Options, DHCPv6Option{
 			Code:   DHCPv6OptDomainList,
-			Length: uint16(len(domainData)),
+			Length: uint16(domainDataLen), // #nosec G115 -- domainDataLen capped at 65535 above
 			Data:   domainData,
 		})
 	}
@@ -727,9 +739,13 @@ func (h *DHCPv6Handler) sendDHCPv6Response(msgType uint8, clientMsg *DHCPv6Messa
 		for _, sntp := range h.sntpServers {
 			sntpData = append(sntpData, sntp.To16()...)
 		}
+		sntpDataLen := len(sntpData)
+		if sntpDataLen > 65535 {
+			sntpDataLen = 65535
+		}
 		response.Options = append(response.Options, DHCPv6Option{
 			Code:   DHCPv6OptSNTPServers,
-			Length: uint16(len(sntpData)),
+			Length: uint16(sntpDataLen), // #nosec G115 -- sntpDataLen capped at 65535 above
 			Data:   sntpData,
 		})
 	}
@@ -740,9 +756,13 @@ func (h *DHCPv6Handler) sendDHCPv6Response(msgType uint8, clientMsg *DHCPv6Messa
 		for _, ntp := range h.ntpServers {
 			ntpData = append(ntpData, ntp.To16()...)
 		}
+		ntpDataLen := len(ntpData)
+		if ntpDataLen > 65535 {
+			ntpDataLen = 65535
+		}
 		response.Options = append(response.Options, DHCPv6Option{
 			Code:   DHCPv6OptNTPServer,
-			Length: uint16(len(ntpData)),
+			Length: uint16(ntpDataLen), // #nosec G115 -- ntpDataLen capped at 65535 above
 			Data:   ntpData,
 		})
 	}
@@ -753,9 +773,13 @@ func (h *DHCPv6Handler) sendDHCPv6Response(msgType uint8, clientMsg *DHCPv6Messa
 		for _, sip := range h.sipServers {
 			sipData = append(sipData, sip.To16()...)
 		}
+		sipDataLen := len(sipData)
+		if sipDataLen > 65535 {
+			sipDataLen = 65535
+		}
 		response.Options = append(response.Options, DHCPv6Option{
 			Code:   DHCPv6OptSIPServerAddrs,
-			Length: uint16(len(sipData)),
+			Length: uint16(sipDataLen), // #nosec G115 -- sipDataLen capped at 65535 above
 			Data:   sipData,
 		})
 	}
@@ -763,9 +787,13 @@ func (h *DHCPv6Handler) sendDHCPv6Response(msgType uint8, clientMsg *DHCPv6Messa
 	// Add SIP domain names if configured (Option 21)
 	if len(h.sipDomains) > 0 {
 		sipDomainData := h.encodeDomainList(h.sipDomains)
+		sipDomainDataLen := len(sipDomainData)
+		if sipDomainDataLen > 65535 {
+			sipDomainDataLen = 65535
+		}
 		response.Options = append(response.Options, DHCPv6Option{
 			Code:   DHCPv6OptSIPServers,
-			Length: uint16(len(sipDomainData)),
+			Length: uint16(sipDomainDataLen), // #nosec G115 -- sipDomainDataLen capped at 65535 above
 			Data:   sipDomainData,
 		})
 	}
@@ -818,7 +846,11 @@ func (h *DHCPv6Handler) sendDHCPv6Response(msgType uint8, clientMsg *DHCPv6Messa
 	}
 
 	// Calculate UDP length and checksum
-	udp.Length = uint16(8 + len(msgBytes))
+	msgBytesLen := len(msgBytes)
+	if msgBytesLen > 65527 { // 65535 - 8 (UDP header size)
+		msgBytesLen = 65527
+	}
+	udp.Length = uint16(8 + msgBytesLen) // #nosec G115 -- msgBytesLen capped at 65527 above
 
 	// Serialize packet
 	buf := gopacket.NewSerializeBuffer()
@@ -830,7 +862,7 @@ func (h *DHCPv6Handler) sendDHCPv6Response(msgType uint8, clientMsg *DHCPv6Messa
 	// Set UDP payload
 	payload := gopacket.Payload(msgBytes)
 
-	udp.SetNetworkLayerForChecksum(ipv6)
+	udp.SetNetworkLayerForChecksum(ipv6) // #nosec G104 -- error logged or non-critical
 
 	if err := gopacket.SerializeLayers(buf, opts, eth, ipv6, udp, payload); err != nil {
 		return fmt.Errorf("failed to serialize DHCPv6 response: %w", err)
@@ -861,9 +893,13 @@ func (h *DHCPv6Handler) buildIANAOption(lease *DHCPv6Lease) DHCPv6Option {
 	iaAddrOpt := h.buildIAAddrOption(lease)
 	ianaData = append(ianaData, h.serializeOption(iaAddrOpt)...)
 
+	ianaDataLen := len(ianaData)
+	if ianaDataLen > 65535 {
+		ianaDataLen = 65535
+	}
 	return DHCPv6Option{
 		Code:   DHCPv6OptIANA,
-		Length: uint16(len(ianaData)),
+		Length: uint16(ianaDataLen), // #nosec G115 -- ianaDataLen capped at 65535 above
 		Data:   ianaData,
 	}
 }

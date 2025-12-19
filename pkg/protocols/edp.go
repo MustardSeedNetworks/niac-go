@@ -123,9 +123,13 @@ func (h *EDPHandler) buildEDPFrame(device *config.Device) []byte {
 
 	// ID Length (2 bytes) - length of device ID
 	deviceID := []byte(device.Name)
-	binary.BigEndian.PutUint16(payload[len(payload):len(payload)+2], uint16(len(deviceID)))
+	deviceIDLen := len(deviceID)
+	if deviceIDLen > 65535 {
+		deviceIDLen = 65535
+	}
+	binary.BigEndian.PutUint16(payload[len(payload):len(payload)+2], uint16(deviceIDLen)) // #nosec G115 -- length calculation limited by packet structure
 	payload = append(payload, make([]byte, 2)...)
-	binary.BigEndian.PutUint16(payload[4:6], uint16(len(deviceID)))
+	binary.BigEndian.PutUint16(payload[4:6], uint16(deviceIDLen)) // #nosec G115 -- length calculation limited by packet structure
 
 	// Device ID
 	payload = append(payload, deviceID...)
@@ -157,10 +161,14 @@ func (h *EDPHandler) buildDisplayTLV(device *config.Device) []byte {
 	}
 
 	// TLV: Type (1 byte) + Length (2 bytes) + Value
-	tlv := make([]byte, 3+len(display))
+	displayLen := len(display)
+	if displayLen > 65535 {
+		displayLen = 65535
+	}
+	tlv := make([]byte, 3+displayLen)
 	tlv[0] = EDPTLVTypeDisplay
-	binary.BigEndian.PutUint16(tlv[1:3], uint16(len(display)))
-	copy(tlv[3:], display)
+	binary.BigEndian.PutUint16(tlv[1:3], uint16(displayLen)) // #nosec G115 -- TLV length limited by protocol specification
+	copy(tlv[3:], display[:displayLen])
 
 	return tlv
 }
@@ -190,12 +198,16 @@ func (h *EDPHandler) buildInfoTLV(device *config.Device) []byte {
 	}
 
 	infoBytes := []byte(info)
+	infoLen := len(infoBytes)
+	if infoLen > 65535 {
+		infoLen = 65535
+	}
 
 	// TLV: Type (1 byte) + Length (2 bytes) + Value
-	tlv := make([]byte, 3+len(infoBytes))
+	tlv := make([]byte, 3+infoLen)
 	tlv[0] = EDPTLVTypeInfo
-	binary.BigEndian.PutUint16(tlv[1:3], uint16(len(infoBytes)))
-	copy(tlv[3:], infoBytes)
+	binary.BigEndian.PutUint16(tlv[1:3], uint16(infoLen)) // #nosec G115 -- TLV length limited by protocol specification
+	copy(tlv[3:], infoBytes[:infoLen])
 
 	return tlv
 }

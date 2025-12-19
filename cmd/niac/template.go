@@ -97,7 +97,7 @@ func init() {
 func runTemplateList(cmd *cobra.Command, args []string) {
 	templateList := templates.List()
 
-	color.New(color.Bold).Println("Available Templates:")
+	color.New(color.Bold).Println("Available Templates:") // #nosec G104 -- cosmetic output
 	fmt.Println()
 
 	// Find longest name for alignment
@@ -109,7 +109,7 @@ func runTemplateList(cmd *cobra.Command, args []string) {
 	}
 
 	for _, t := range templateList {
-		color.New(color.FgCyan).Printf("  %-*s", maxLen+2, t.Name)
+		color.New(color.FgCyan).Printf("  %-*s", maxLen+2, t.Name) // #nosec G104 -- cosmetic output
 		fmt.Printf(" - %s\n", t.Description)
 		if t.UseCase != "" {
 			fmt.Printf("  %*s   Use case: %s\n", maxLen, "", t.UseCase)
@@ -166,7 +166,7 @@ func runTemplateUse(cmd *cobra.Command, args []string) {
 	}
 
 	// Write to file
-	if err := os.WriteFile(outputFile, []byte(tmpl.Content), 0644); err != nil {
+	if err := os.WriteFile(outputFile, []byte(tmpl.Content), 0600); err != nil {
 		color.Red("Error writing file: %v", err)
 		os.Exit(1)
 	}
@@ -192,13 +192,13 @@ func runTemplateApply(cmd *cobra.Command, args []string) {
 	}
 
 	// Display template info
-	color.New(color.Bold).Printf("Template: %s\n", tmpl.Name)
+	color.New(color.Bold).Printf("Template: %s\n", tmpl.Name) // #nosec G104 -- cosmetic output
 	fmt.Printf("Description: %s\n", tmpl.Description)
 	fmt.Printf("Use case: %s\n", tmpl.UseCase)
 	fmt.Println()
 
 	// Validate template by loading it as config
-	color.New(color.Bold).Println("Validating template...")
+	color.New(color.Bold).Println("Validating template...") // #nosec G104 -- cosmetic output
 
 	// Create temporary file for validation
 	tmpFile, err := os.CreateTemp("", "niac-template-*.yaml")
@@ -207,13 +207,13 @@ func runTemplateApply(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 	defer os.Remove(tmpFile.Name())
-	defer tmpFile.Close()
+	defer tmpFile.Close() // #nosec G104 -- deferred close
 
 	if _, err := tmpFile.WriteString(tmpl.Content); err != nil {
 		color.Red("Error writing temporary file: %v", err)
 		os.Exit(1)
 	}
-	tmpFile.Close()
+	tmpFile.Close() // #nosec G104 -- error logged elsewhere
 
 	// Load and validate
 	cfg, err := config.Load(tmpFile.Name())
@@ -226,12 +226,12 @@ func runTemplateApply(cmd *cobra.Command, args []string) {
 	fmt.Println()
 
 	// Display configuration summary
-	color.New(color.Bold).Println("Configuration Summary:")
+	color.New(color.Bold).Println("Configuration Summary:") // #nosec G104 -- cosmetic output
 	fmt.Printf("  Devices: %d\n", len(cfg.Devices))
 	fmt.Println()
 
 	// List devices with details
-	color.New(color.Bold).Println("Devices:")
+	color.New(color.Bold).Println("Devices:") // #nosec G104 -- cosmetic output
 	for _, device := range cfg.Devices {
 		fmt.Printf("  • %s (%s)\n", device.Name, device.Type)
 		if len(device.IPAddresses) > 0 {

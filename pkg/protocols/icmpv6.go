@@ -44,9 +44,10 @@ const (
 	NDFlagOverride  = 0x20
 )
 
+// Neighbor Discovery prefix flags
 const (
-	NDPrefixFlagOnLink     = 0x80
-	NDPrefixFlagAutonomous = 0x40
+	NDPrefixFlagOnLink     = 0x80 // Prefix can be used for on-link determination
+	NDPrefixFlagAutonomous = 0x40 // Prefix can be used for autonomous address configuration
 )
 
 // ICMPv6Handler handles ICMPv6 packets (IPv6's version of ICMP)
@@ -393,11 +394,15 @@ func (h *ICMPv6Handler) sendICMPv6PacketWithDevice(srcIP, dstIP net.IP, srcMAC, 
 	}
 
 	// Build IPv6 layer
+	icmpLen := 8 + len(payload) // ICMPv6 header + payload
+	if icmpLen > 65535 {
+		icmpLen = 65535
+	}
 	ipv6 := &layers.IPv6{
 		Version:      6,
 		TrafficClass: 0,
 		FlowLabel:    0,
-		Length:       uint16(8 + len(payload)), // ICMPv6 header + payload
+		Length:       uint16(icmpLen), // #nosec G115 -- payload length limited by packet MTU
 		NextHeader:   layers.IPProtocolICMPv6,
 		HopLimit:     hopLimit,
 		SrcIP:        srcIP,

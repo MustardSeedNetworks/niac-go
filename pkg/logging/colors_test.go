@@ -11,6 +11,7 @@ import (
 
 // TestInitColors_Enabled tests that colors are enabled when requested
 func TestInitColors_Enabled(t *testing.T) {
+	t.Setenv("NO_COLOR", "")
 	InitColors(true)
 	if !AreColorsEnabled() {
 		t.Error("Colors should be enabled")

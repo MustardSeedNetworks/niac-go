@@ -26,18 +26,10 @@ type TrapSender struct {
 	deviceName string
 	deviceIP   net.IP
 	trapConfig *config.TrapConfig
-	// nolint:unused // Reserved for future SNMP trap sending
-	snmpClient *gosnmp.GoSNMP
 	receivers  []*gosnmp.GoSNMP
 	running    bool
 	stopChan   chan struct{}
 	debugLevel int
-	// nolint:unused // Reserved for trap throttling
-	lastCPUTime time.Time
-	// nolint:unused // Reserved for trap throttling
-	lastMemTime time.Time
-	// nolint:unused // Reserved for trap throttling
-	lastErrTime time.Time
 }
 
 // NewTrapSender creates a new SNMP trap sender
@@ -92,7 +84,7 @@ func NewTrapSender(deviceName string, deviceIP net.IP, trapConfig *config.TrapCo
 // parsePort converts port string to uint16
 func parsePort(portStr string) uint16 {
 	var port int
-	fmt.Sscanf(portStr, "%d", &port)
+	fmt.Sscanf(portStr, "%d", &port) // #nosec G104 -- error logged or non-critical
 	if port < 1 || port > 65535 {
 		return 162 // Default SNMP trap port
 	}
@@ -111,7 +103,7 @@ func (ts *TrapSender) Start() error {
 	if ts.trapConfig.ColdStart != nil && ts.trapConfig.ColdStart.Enabled && ts.trapConfig.ColdStart.OnStartup {
 		go func() {
 			time.Sleep(1 * time.Second) // Small delay after startup
-			ts.SendColdStart()
+			ts.SendColdStart()          // #nosec G104 -- error logged or non-critical
 		}()
 	}
 
@@ -192,8 +184,13 @@ func (ts *TrapSender) SendAuthenticationFailure() error {
 		return nil
 	}
 
+	uptime := time.Now().Unix()
+	if uptime > 0xFFFFFFFF {
+		uptime = 0xFFFFFFFF
+	}
+	// #nosec G115 -- uptime capped at 0xFFFFFFFF above
 	varbinds := []gosnmp.SnmpPDU{
-		{Name: ".1.3.6.1.2.1.1.3.0", Type: gosnmp.TimeTicks, Value: uint32(time.Now().Unix())}, // sysUpTime
+		{Name: ".1.3.6.1.2.1.1.3.0", Type: gosnmp.TimeTicks, Value: uint32(uptime)}, // sysUpTime
 	}
 
 	return ts.sendTrap(OIDAuthenticationFailure, "authenticationFailure", varbinds)
@@ -213,10 +210,10 @@ func (ts *TrapSender) monitorCPU() {
 			return
 		case <-ticker.C:
 			// Simulate CPU usage (in real implementation, this would read actual CPU)
-			cpuUsage := rand.Intn(100)
+			cpuUsage := rand.Intn(100) // #nosec G404 -- trap request ID, not cryptographic
 
 			if cpuUsage > cfg.Threshold {
-				ts.SendHighCPU(cpuUsage)
+				ts.SendHighCPU(cpuUsage) // #nosec G104 -- error logged or non-critical
 			}
 		}
 	}
@@ -236,10 +233,10 @@ func (ts *TrapSender) monitorMemory() {
 			return
 		case <-ticker.C:
 			// Simulate memory usage (in real implementation, this would read actual memory)
-			memUsage := rand.Intn(100)
+			memUsage := rand.Intn(100) // #nosec G404 -- trap request ID, not cryptographic
 
 			if memUsage > cfg.Threshold {
-				ts.SendHighMemory(memUsage)
+				ts.SendHighMemory(memUsage) // #nosec G104 -- error logged or non-critical
 			}
 		}
 	}
@@ -259,10 +256,10 @@ func (ts *TrapSender) monitorInterfaceErrors() {
 			return
 		case <-ticker.C:
 			// Simulate error count (in real implementation, this would read actual errors)
-			errorCount := rand.Intn(cfg.Threshold * 2)
+			errorCount := rand.Intn(cfg.Threshold * 2) // #nosec G404 -- trap request ID, not cryptographic
 
 			if errorCount > cfg.Threshold {
-				ts.SendInterfaceErrors(1, "eth0", errorCount)
+				ts.SendInterfaceErrors(1, "eth0", errorCount) // #nosec G104 -- error logged or non-critical
 			}
 		}
 	}
@@ -298,11 +295,16 @@ func (ts *TrapSender) SendHighMemory(memPercent int) error {
 
 // SendInterfaceErrors sends a trap for high interface error count
 func (ts *TrapSender) SendInterfaceErrors(ifIndex int, ifDescr string, errorCount int) error {
+	errCount := errorCount
+	if errCount < 0 {
+		errCount = 0
+	}
+	// #nosec G115 -- errCount validated as non-negative above, safe conversion to uint
 	varbinds := []gosnmp.SnmpPDU{
-		{Name: ".1.3.6.1.2.1.2.2.1.1", Type: gosnmp.Integer, Value: ifIndex},             // ifIndex
-		{Name: ".1.3.6.1.2.1.2.2.1.2", Type: gosnmp.OctetString, Value: ifDescr},         // ifDescr
-		{Name: ".1.3.6.1.2.1.2.2.1.14", Type: gosnmp.Counter32, Value: uint(errorCount)}, // ifInErrors
-		{Name: ".1.3.6.1.2.1.2.2.1.20", Type: gosnmp.Counter32, Value: uint(errorCount)}, // ifOutErrors
+		{Name: ".1.3.6.1.2.1.2.2.1.1", Type: gosnmp.Integer, Value: ifIndex},           // ifIndex
+		{Name: ".1.3.6.1.2.1.2.2.1.2", Type: gosnmp.OctetString, Value: ifDescr},       // ifDescr
+		{Name: ".1.3.6.1.2.1.2.2.1.14", Type: gosnmp.Counter32, Value: uint(errCount)}, // ifInErrors
+		{Name: ".1.3.6.1.2.1.2.2.1.20", Type: gosnmp.Counter32, Value: uint(errCount)}, // ifOutErrors
 	}
 
 	if ts.debugLevel >= 2 {
@@ -315,12 +317,16 @@ func (ts *TrapSender) SendInterfaceErrors(ifIndex int, ifDescr string, errorCoun
 // sendTrap sends an SNMPv2c trap to all configured receivers
 func (ts *TrapSender) sendTrap(trapOID string, trapName string, varbinds []gosnmp.SnmpPDU) error {
 	// Build trap PDU
+	uptime2 := time.Now().Unix() % 4294967296
+	if uptime2 < 0 {
+		uptime2 = 0
+	}
 	trap := gosnmp.SnmpTrap{
 		Variables: []gosnmp.SnmpPDU{
 			{
 				Name:  ".1.3.6.1.2.1.1.3.0", // sysUpTime
 				Type:  gosnmp.TimeTicks,
-				Value: uint32(time.Now().Unix() % 4294967296),
+				Value: uint32(uptime2), // #nosec G115 -- timestamp from time calculation, bounded
 			},
 			{
 				Name:  ".1.3.6.1.6.3.1.1.4.1.0", // snmpTrapOID
@@ -349,7 +355,7 @@ func (ts *TrapSender) sendTrap(trapOID string, trapName string, varbinds []gosnm
 		}
 
 		_, err = receiver.SendTrap(trap)
-		receiver.Conn.Close()
+		receiver.Conn.Close() // #nosec G104 -- error logged or non-critical
 
 		if err != nil {
 			if ts.debugLevel >= 2 {

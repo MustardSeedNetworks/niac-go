@@ -35,7 +35,7 @@ func runMan(cmd *cobra.Command, args []string) {
 	}
 
 	manDir := "docs/man"
-	if err := os.MkdirAll(manDir, 0755); err != nil {
+	if err := os.MkdirAll(manDir, 0750); err != nil {
 		fmt.Fprintf(os.Stderr, "Error creating man directory: %v\n", err)
 		os.Exit(1)
 	}

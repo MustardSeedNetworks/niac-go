@@ -1,4 +1,6 @@
 # NIAC-Go: Network In A Can (Go Edition)
+[![Checks](https://github.com/krisarmstrong/niac-go/actions/workflows/checks.yml/badge.svg)](https://github.com/krisarmstrong/niac-go/actions/workflows/checks.yml)
+
 
 [![CI](https://github.com/krisarmstrong/niac-go/workflows/CI/badge.svg)](https://github.com/krisarmstrong/niac-go/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -434,6 +436,12 @@ niac analyze-pcap captures/demo.pcap --output json
 ```
 
 ## Development
+Run the full local checks:
+
+```bash
+./check.sh
+```
+
 
 ### Testing
 

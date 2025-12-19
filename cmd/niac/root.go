@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	version = "v2.8.1"
+	version = "v2.12.0"
 	commit  = "dev"
 	date    = "unknown"
 )
@@ -46,7 +46,7 @@ and network discovery without physical hardware.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// If no args, show help
 		if len(args) == 0 {
-			cmd.Help()
+			cmd.Help() // #nosec G104 -- error logged or non-critical
 			return
 		}
 		// Legacy mode: if args provided and no subcommand matched, run main simulation

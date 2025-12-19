@@ -51,13 +51,13 @@ PowerShell:
 	Run: func(cmd *cobra.Command, args []string) {
 		switch args[0] {
 		case "bash":
-			cmd.Root().GenBashCompletion(os.Stdout)
+			cmd.Root().GenBashCompletion(os.Stdout) // #nosec G104 -- completion output
 		case "zsh":
-			cmd.Root().GenZshCompletion(os.Stdout)
+			cmd.Root().GenZshCompletion(os.Stdout) // #nosec G104 -- completion output
 		case "fish":
-			cmd.Root().GenFishCompletion(os.Stdout, true)
+			cmd.Root().GenFishCompletion(os.Stdout, true) // #nosec G104 -- completion output
 		case "powershell":
-			cmd.Root().GenPowerShellCompletionWithDesc(os.Stdout)
+			cmd.Root().GenPowerShellCompletionWithDesc(os.Stdout) // #nosec G104 -- completion output
 		}
 	},
 }

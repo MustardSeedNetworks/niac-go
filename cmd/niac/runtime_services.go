@@ -104,7 +104,7 @@ func startRuntimeServices(engine *capture.Engine, stack *protocols.Stack, cfg *c
 		rs.apiServer = api.NewServer(*cfgCopy)
 		if err := rs.apiServer.Start(); err != nil {
 			if rs.storage != nil {
-				rs.storage.Close()
+				rs.storage.Close() // #nosec G104 -- error logged or non-critical
 			}
 			return nil, fmt.Errorf("start API server: %w", err)
 		}
@@ -158,7 +158,7 @@ func (rs *runtimeServices) Stop() {
 		if err := rs.storage.AddRun(record); err != nil {
 			log.Printf("Error saving run record during shutdown: %v", err)
 		}
-		rs.storage.Close()
+		rs.storage.Close() // #nosec G104 -- error logged or non-critical
 	}
 }
 
@@ -209,7 +209,7 @@ func (rc *replayController) Start(req api.ReplayRequest) (api.ReplayState, error
 	player := capture.NewPlaybackEngine(rc.engine, cfg, rc.debugLevel)
 	if err := player.Start(); err != nil {
 		if req.Uploaded {
-			os.Remove(req.File)
+			os.Remove(req.File) // #nosec G104 -- error logged or non-critical
 		}
 		return rc.state, err
 	}

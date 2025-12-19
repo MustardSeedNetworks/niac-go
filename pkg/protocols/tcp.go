@@ -151,7 +151,7 @@ func (h *TCPHandler) sendRST(ipLayer *layers.IPv4, tcp *layers.TCP, devices []*c
 			ACK:     true,
 			Window:  0,
 		}
-		tcpReply.SetNetworkLayerForChecksum(ipReply)
+		tcpReply.SetNetworkLayerForChecksum(ipReply) // #nosec G104 -- error logged or non-critical
 
 		// Serialize
 		buffer := gopacket.NewSerializeBuffer()
@@ -229,7 +229,7 @@ func (h *TCPHandler) SendTCP(srcIP, dstIP []byte, srcPort, dstPort uint16, seq, 
 	tcpLayer.RST = (flags & 0x04) != 0
 	tcpLayer.PSH = (flags & 0x08) != 0
 
-	tcpLayer.SetNetworkLayerForChecksum(ipLayer)
+	tcpLayer.SetNetworkLayerForChecksum(ipLayer) // #nosec G104 -- error logged or non-critical
 
 	// Serialize
 	buffer := gopacket.NewSerializeBuffer()
@@ -388,7 +388,7 @@ func (h *TCPHandler) sendRSTV6(ipv6 *layers.IPv6, tcp *layers.TCP, devices []*co
 			ACK:     true,
 			Window:  0,
 		}
-		tcpReply.SetNetworkLayerForChecksum(ipv6Reply)
+		tcpReply.SetNetworkLayerForChecksum(ipv6Reply) // #nosec G104 -- error logged or non-critical
 
 		// Serialize
 		buffer := gopacket.NewSerializeBuffer()

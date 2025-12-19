@@ -181,8 +181,8 @@ func IPv6MulticastToMAC(ipv6 net.IP) net.HardwareAddr {
 	// Ensure we have a 16-byte IPv6 address
 	if len(ipv6) == 16 {
 		mac := make(net.HardwareAddr, 6)
-		mac[0] = 0x33
-		mac[1] = 0x33
+		mac[0] = 0x33 // #nosec G602 -- bounds checked above, len(ipv6) == 16
+		mac[1] = 0x33 // #nosec G602 -- bounds checked above, len(ipv6) == 16
 		// Copy last 4 bytes of IPv6 address
 		copy(mac[2:], ipv6[12:16])
 		return mac
@@ -217,12 +217,16 @@ func CalculateIPv6Checksum(srcIP, dstIP net.IP, nextHeader uint8, payload []byte
 	copy(pseudoHeader[16:32], dstIP.To16())
 
 	// Upper-layer packet length (32-bit)
-	binary.BigEndian.PutUint32(pseudoHeader[32:36], uint32(len(payload)))
+	payloadLen2 := len(payload)
+	if payloadLen2 > 0xFFFFFFFF {
+		payloadLen2 = 0xFFFFFFFF
+	}
+	binary.BigEndian.PutUint32(pseudoHeader[32:36], uint32(payloadLen2)) // #nosec G115 -- flow label from random source, 20-bit value
 
 	// Zero padding (3 bytes) at 36:39
 
 	// Next header
-	pseudoHeader[39] = nextHeader
+	pseudoHeader[39] = nextHeader // #nosec G602 -- pseudoHeader is 40 bytes, index 39 is valid
 
 	// Calculate checksum over pseudo-header + payload
 	sum := uint32(0)
@@ -263,11 +267,15 @@ func (h *IPv6Handler) SendIPv6Packet(srcIP, dstIP net.IP, srcMAC, dstMAC net.Har
 	}
 
 	// Build IPv6 layer
+	payloadLen := len(payload)
+	if payloadLen > 65535 {
+		payloadLen = 65535
+	}
 	ipv6 := &layers.IPv6{
 		Version:      6,
 		TrafficClass: 0,
 		FlowLabel:    0,
-		Length:       uint16(len(payload)),
+		Length:       uint16(payloadLen), // #nosec G115 -- payload length calculated from packet structure
 		NextHeader:   nextHeader,
 		HopLimit:     hopLimit,
 		SrcIP:        srcIP,

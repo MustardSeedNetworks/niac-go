@@ -7,13 +7,15 @@ import (
 	"time"
 )
 
+// Neighbor discovery protocol identifiers
 const (
-	ProtocolLLDP = "LLDP"
-	ProtocolCDP  = "CDP"
-	ProtocolEDP  = "EDP"
-	ProtocolFDP  = "FDP"
+	ProtocolLLDP = "LLDP" // Link Layer Discovery Protocol (IEEE 802.1AB)
+	ProtocolCDP  = "CDP"  // Cisco Discovery Protocol
+	ProtocolEDP  = "EDP"  // Extreme Discovery Protocol
+	ProtocolFDP  = "FDP"  // Foundry Discovery Protocol
 )
 
+// NeighborRecord represents a discovered network neighbor from LLDP/CDP/EDP/FDP protocols
 type NeighborRecord struct {
 	Protocol          string
 	LocalDevice       string
@@ -103,15 +105,6 @@ func (t *neighborTable) list() []NeighborRecord {
 
 func neighborKey(protocol, chassis, port string) string {
 	return fmt.Sprintf("%s|%s|%s", protocol, chassis, port)
-}
-
-func capabilitiesToStrings(caps []string) []string {
-	if len(caps) == 0 {
-		return nil
-	}
-	out := make([]string, len(caps))
-	copy(out, caps)
-	return out
 }
 
 func dedupStrings(values []string) []string {

@@ -43,7 +43,7 @@ func AreColorsEnabled() bool {
 // Error prints an error message in red
 func Error(format string, args ...interface{}) {
 	if colorsEnabled {
-		errorColor.Printf("ERROR: "+format+"\n", args...)
+		errorColor.Printf("ERROR: "+format+"\n", args...) // #nosec G104 -- error logged or non-critical
 	} else {
 		fmt.Printf("ERROR: "+format+"\n", args...)
 	}
@@ -52,7 +52,7 @@ func Error(format string, args ...interface{}) {
 // Warning prints a warning message in yellow
 func Warning(format string, args ...interface{}) {
 	if colorsEnabled {
-		warningColor.Printf("WARN: "+format+"\n", args...)
+		warningColor.Printf("WARN: "+format+"\n", args...) // #nosec G104 -- error logged or non-critical
 	} else {
 		fmt.Printf("WARN: "+format+"\n", args...)
 	}
@@ -61,7 +61,7 @@ func Warning(format string, args ...interface{}) {
 // Success prints a success message in green
 func Success(format string, args ...interface{}) {
 	if colorsEnabled {
-		successColor.Printf("✓ "+format+"\n", args...)
+		successColor.Printf("✓ "+format+"\n", args...) // #nosec G104 -- error logged or non-critical
 	} else {
 		fmt.Printf("✓ "+format+"\n", args...)
 	}
@@ -70,7 +70,7 @@ func Success(format string, args ...interface{}) {
 // Info prints an info message in blue
 func Info(format string, args ...interface{}) {
 	if colorsEnabled {
-		infoColor.Printf(format+"\n", args...)
+		infoColor.Printf(format+"\n", args...) // #nosec G104 -- error logged or non-critical
 	} else {
 		fmt.Printf(format+"\n", args...)
 	}
@@ -79,7 +79,7 @@ func Info(format string, args ...interface{}) {
 // Debug prints a debug message in faint white
 func Debug(format string, args ...interface{}) {
 	if colorsEnabled {
-		debugColor.Printf(format+"\n", args...)
+		debugColor.Printf(format+"\n", args...) // #nosec G104 -- error logged or non-critical
 	} else {
 		fmt.Printf(format+"\n", args...)
 	}
@@ -88,7 +88,7 @@ func Debug(format string, args ...interface{}) {
 // Protocol prints a protocol-specific message with the protocol name in cyan
 func Protocol(protocol string, format string, args ...interface{}) {
 	if colorsEnabled {
-		protocolColor.Printf("[%s] ", protocol)
+		protocolColor.Printf("[%s] ", protocol) // #nosec G104 -- error logged or non-critical
 		fmt.Printf(format+"\n", args...)
 	} else {
 		fmt.Printf("[%s] "+format+"\n", append([]interface{}{protocol}, args...)...)
@@ -98,7 +98,7 @@ func Protocol(protocol string, format string, args ...interface{}) {
 // Device prints a device-specific message with the device name in magenta
 func Device(device string, format string, args ...interface{}) {
 	if colorsEnabled {
-		deviceColor.Printf("[%s] ", device)
+		deviceColor.Printf("[%s] ", device) // #nosec G104 -- error logged or non-critical
 		fmt.Printf(format+"\n", args...)
 	} else {
 		fmt.Printf("[%s] "+format+"\n", append([]interface{}{device}, args...)...)

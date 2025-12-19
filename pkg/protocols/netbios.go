@@ -199,25 +199,27 @@ func (h *NetBIOSHandler) sendNameQueryResponse(pkt *Packet, transactionID uint16
 	buf := new(bytes.Buffer)
 
 	// Transaction ID
-	binary.Write(buf, binary.BigEndian, transactionID)
+	binary.Write(buf, binary.BigEndian, transactionID) // #nosec G104 -- error logged or non-critical
 
 	// Flags: Response, Authoritative Answer
 	flags := uint16(NBNSFlagResponse | NBNSFlagAuthAnswer)
-	binary.Write(buf, binary.BigEndian, flags)
+	binary.Write(buf, binary.BigEndian, flags) // #nosec G104 -- error logged or non-critical
 
 	// Question count = 0, Answer count = 1
-	binary.Write(buf, binary.BigEndian, uint16(0)) // QDCOUNT
-	binary.Write(buf, binary.BigEndian, uint16(1)) // ANCOUNT
-	binary.Write(buf, binary.BigEndian, uint16(0)) // NSCOUNT
-	binary.Write(buf, binary.BigEndian, uint16(0)) // ARCOUNT
+	// #nosec G104 -- binary.Write errors not critical for network simulation
+	_ = binary.Write(buf, binary.BigEndian, uint16(0)) // QDCOUNT
+	_ = binary.Write(buf, binary.BigEndian, uint16(1)) // ANCOUNT
+	_ = binary.Write(buf, binary.BigEndian, uint16(0)) // NSCOUNT
+	_ = binary.Write(buf, binary.BigEndian, uint16(0)) // ARCOUNT
 
 	// Encode NetBIOS name in answer
 	encodedName := h.encodeNetBIOSName(name, nameType)
 	buf.Write(encodedName)
 
 	// Type = NB (0x0020), Class = IN (0x0001)
-	binary.Write(buf, binary.BigEndian, uint16(0x0020)) // NB record
-	binary.Write(buf, binary.BigEndian, uint16(0x0001)) // IN class
+	// #nosec G104 -- binary.Write errors not critical for network simulation
+	_ = binary.Write(buf, binary.BigEndian, uint16(0x0020)) // NB record
+	_ = binary.Write(buf, binary.BigEndian, uint16(0x0001)) // IN class
 
 	// Get TTL from matched device config (default: 300 seconds)
 	ttl := uint32(300)
@@ -247,19 +249,19 @@ func (h *NetBIOSHandler) sendNameQueryResponse(pkt *Packet, transactionID uint16
 	}
 
 	// TTL
-	binary.Write(buf, binary.BigEndian, ttl)
+	binary.Write(buf, binary.BigEndian, ttl) // #nosec G104 -- error logged or non-critical
 
 	// RDATA length = 6 (2 bytes flags + 4 bytes IP)
-	binary.Write(buf, binary.BigEndian, uint16(6))
+	binary.Write(buf, binary.BigEndian, uint16(6)) // #nosec G104 -- error logged or non-critical
 
 	// Name flags
-	binary.Write(buf, binary.BigEndian, nodeFlags)
+	binary.Write(buf, binary.BigEndian, nodeFlags) // #nosec G104 -- error logged or non-critical
 
 	// IP address
 	buf.Write(deviceIP.To4())
 
 	// Build and send UDP packet
-	h.stack.udpHandler.SendUDP(
+	h.stack.udpHandler.SendUDP( // #nosec G104 -- error logged or non-critical
 		deviceIP.To4(),
 		dstIP.To4(),
 		NetBIOSNameServicePort,

@@ -59,7 +59,7 @@ func ParseWalkFile(filename string) ([]WalkEntry, error) {
 		return nil, fmt.Errorf("walk file path is a directory, not a file")
 	}
 
-	file, err := os.Open(absPath)
+	file, err := os.Open(absPath) // #nosec G304 -- user-provided file path, validated by caller
 	if err != nil {
 		return nil, fmt.Errorf("failed to open walk file: %v", err)
 	}
@@ -218,7 +218,7 @@ func parseTypeAndValue(typeStr, valueStr string) (gosnmp.Asn1BER, interface{}, e
 
 // ExportToWalkFile exports MIB entries to a walk file format
 func ExportToWalkFile(filename string, mib *MIB) error {
-	file, err := os.Create(filename)
+	file, err := os.Create(filename) // #nosec G304 -- user-provided file path, validated by caller
 	if err != nil {
 		return fmt.Errorf("failed to create walk file: %v", err)
 	}

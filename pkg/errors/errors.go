@@ -9,14 +9,15 @@ import (
 // ErrorType represents types of errors that can be injected
 type ErrorType string
 
+// Available error types for injection
 const (
-	ErrorTypeFCS         ErrorType = "FCS Errors"
-	ErrorTypeDiscards    ErrorType = "Packet Discards"
-	ErrorTypeInterface   ErrorType = "Interface Errors"
-	ErrorTypeUtilization ErrorType = "High Utilization"
-	ErrorTypeCPU         ErrorType = "High CPU"
-	ErrorTypeMemory      ErrorType = "High Memory"
-	ErrorTypeDisk        ErrorType = "High Disk"
+	ErrorTypeFCS         ErrorType = "FCS Errors"       // Frame Check Sequence errors
+	ErrorTypeDiscards    ErrorType = "Packet Discards"  // Packet drop errors
+	ErrorTypeInterface   ErrorType = "Interface Errors" // General interface errors
+	ErrorTypeUtilization ErrorType = "High Utilization" // Bandwidth utilization
+	ErrorTypeCPU         ErrorType = "High CPU"         // CPU load
+	ErrorTypeMemory      ErrorType = "High Memory"      // Memory usage
+	ErrorTypeDisk        ErrorType = "High Disk"        // Disk usage
 )
 
 // AllErrorTypes returns all available error types

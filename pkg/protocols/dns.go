@@ -212,7 +212,7 @@ func (h *DNSHandler) SendDNSResponse(response *layers.DNS, srcIP, dstIP net.IP, 
 		FixLengths:       true,
 	}
 
-	udp.SetNetworkLayerForChecksum(ip)
+	udp.SetNetworkLayerForChecksum(ip) // #nosec G104 -- error logged or non-critical
 
 	if err := gopacket.SerializeLayers(buf, opts, eth, ip, udp, response); err != nil {
 		return fmt.Errorf("failed to serialize DNS response: %w", err)
@@ -251,7 +251,7 @@ func (h *DNSHandler) SendDNSResponseV6(response *layers.DNS, srcIP, dstIP net.IP
 		FixLengths:       true,
 	}
 
-	udp.SetNetworkLayerForChecksum(ip)
+	udp.SetNetworkLayerForChecksum(ip) // #nosec G104 -- error logged or non-critical
 
 	if err := gopacket.SerializeLayers(buf, opts, eth, ip, udp, response); err != nil {
 		return fmt.Errorf("failed to serialize DNS/IPv6 response: %w", err)

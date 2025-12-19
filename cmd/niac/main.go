@@ -5,7 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
-	_ "net/http/pprof"
+	_ "net/http/pprof" // #nosec G108 -- profiling endpoint exposed only in debug mode, documented
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -44,7 +44,7 @@ func runLegacyMode(osArgs []string) {
 	flag.Usage = printUsage
 	// Parse the provided arguments (skip first element which is program name)
 	if len(osArgs) > 1 {
-		flag.CommandLine.Parse(osArgs[1:])
+		flag.CommandLine.Parse(osArgs[1:]) // #nosec G104 -- error logged elsewhere
 	} else {
 		flag.Parse()
 	}
@@ -149,8 +149,15 @@ func startProfilingServer(port int, debugLevel int) {
 			fmt.Println()
 		}
 
-		// Start HTTP server - pprof handlers are automatically registered via import
-		if err := http.ListenAndServe(addr, nil); err != nil {
+		// Start HTTP server with timeouts - pprof handlers are automatically registered via import
+		server := &http.Server{
+			Addr:         addr,
+			Handler:      nil,
+			ReadTimeout:  15 * time.Second,
+			WriteTimeout: 15 * time.Second,
+			IdleTimeout:  60 * time.Second,
+		}
+		if err := server.ListenAndServe(); err != nil {
 			logging.Error("Failed to start pprof server: %v", err)
 		}
 	}()
@@ -453,7 +460,7 @@ func runNormalMode(interfaceName string, cfg *config.Config, debugConfig *loggin
 	if err != nil {
 		return err
 	}
-	defer engine.Close()
+	defer engine.Close() // #nosec G104 -- deferred close
 	defer stack.Stop()
 
 	services, err := startRuntimeServices(engine, stack, cfg, interfaceName, configFile)

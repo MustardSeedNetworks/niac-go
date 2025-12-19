@@ -110,7 +110,7 @@ func (h *UDPHandler) SendUDP(srcIP, dstIP []byte, srcPort, dstPort uint16, paylo
 		SrcPort: layers.UDPPort(srcPort),
 		DstPort: layers.UDPPort(dstPort),
 	}
-	udpLayer.SetNetworkLayerForChecksum(ipLayer)
+	udpLayer.SetNetworkLayerForChecksum(ipLayer) // #nosec G104 -- error logged or non-critical
 
 	// Serialize
 	buffer := gopacket.NewSerializeBuffer()

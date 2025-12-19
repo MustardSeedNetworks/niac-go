@@ -36,8 +36,18 @@ const (
 	EtherTypeFDP  = 0x8037
 )
 
+// MaxPacketSize is the maximum IP packet size (IPv4/IPv6)
+// SECURITY FIX MEDIUM-4: Prevent memory exhaustion from large buffer requests
+const MaxPacketSize = 65535
+
 // NewPacket creates a new packet with a buffer
+// SECURITY FIX MEDIUM-4: Validates size to prevent memory exhaustion
 func NewPacket(size int) *Packet {
+	// Validate packet size bounds
+	if size < 0 || size > MaxPacketSize {
+		size = 1514 // Standard Ethernet MTU (defense in depth)
+	}
+
 	return &Packet{
 		Buffer:    make([]byte, size),
 		Length:    0,

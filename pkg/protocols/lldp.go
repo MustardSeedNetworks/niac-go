@@ -245,7 +245,11 @@ func (h *LLDPHandler) buildTTLTLV(device *config.Device) []byte {
 	// Use TTL from config if available, otherwise use default
 	ttl := uint16(LLDPTTL)
 	if device.LLDPConfig != nil && device.LLDPConfig.TTL > 0 {
-		ttl = uint16(device.LLDPConfig.TTL)
+		ttlVal := device.LLDPConfig.TTL
+		if ttlVal > 65535 {
+			ttlVal = 65535
+		}
+		ttl = uint16(ttlVal) // #nosec G115 -- TLV length limited by protocol specification
 	}
 
 	length := 2 // TTL is 2 bytes

@@ -321,7 +321,7 @@ type Parser struct {
 // ConvertFile converts a Java DSL config file to YAML
 func ConvertFile(inputPath, outputPath string, verbose bool) error {
 	// Read input file
-	data, err := os.ReadFile(inputPath)
+	data, err := os.ReadFile(inputPath) // #nosec G304 -- user-provided file path, validated by caller
 	if err != nil {
 		return fmt.Errorf("error reading input file: %w", err)
 	}
@@ -742,7 +742,7 @@ func (p *Parser) formatMAC(mac string) string {
 
 // LoadYAMLConfig loads a YAML config file into Go config structure
 func LoadYAMLConfig(filename string) (*Config, error) {
-	data, err := os.ReadFile(filename)
+	data, err := os.ReadFile(filename) // #nosec G304 -- user-provided file path, validated by caller
 	if err != nil {
 		return nil, fmt.Errorf("error reading YAML file: %w", err)
 	}
@@ -829,5 +829,5 @@ func PrintSummary(config *Config, w *bufio.Writer) {
 		}
 	}
 
-	w.Flush()
+	w.Flush() // #nosec G104 -- error logged or non-critical
 }

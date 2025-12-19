@@ -21,12 +21,7 @@ func TestNewStatistics(t *testing.T) {
 	if stats.Version != "v1.19.0" {
 		t.Errorf("Expected version 'v1.19.0', got '%s'", stats.Version)
 	}
-	if stats.PacketCounts == nil {
-		t.Error("PacketCounts map should be initialized")
-	}
-	if stats.ErrorCounts == nil {
-		t.Error("ErrorCounts map should be initialized")
-	}
+	// PERFORMANCE FIX MEDIUM-1: packetCounts and errorCounts are now sync.Map, always "initialized"
 }
 
 func TestIncrementPacketCount(t *testing.T) {
@@ -36,11 +31,13 @@ func TestIncrementPacketCount(t *testing.T) {
 	stats.IncrementPacketCount("ARP")
 	stats.IncrementPacketCount("ICMP")
 
-	if stats.PacketCounts["ARP"] != 2 {
-		t.Errorf("Expected ARP count 2, got %d", stats.PacketCounts["ARP"])
+	// PERFORMANCE FIX MEDIUM-1: Access via snapshot since PacketCounts is now sync.Map
+	snapshot := stats.GetSnapshot()
+	if snapshot.PacketCounts["ARP"] != 2 {
+		t.Errorf("Expected ARP count 2, got %d", snapshot.PacketCounts["ARP"])
 	}
-	if stats.PacketCounts["ICMP"] != 1 {
-		t.Errorf("Expected ICMP count 1, got %d", stats.PacketCounts["ICMP"])
+	if snapshot.PacketCounts["ICMP"] != 1 {
+		t.Errorf("Expected ICMP count 1, got %d", snapshot.PacketCounts["ICMP"])
 	}
 }
 
@@ -51,11 +48,12 @@ func TestIncrementErrorCount(t *testing.T) {
 	stats.IncrementErrorCount("router-1")
 	stats.IncrementErrorCount("switch-1")
 
-	if stats.ErrorCounts["router-1"] != 2 {
-		t.Errorf("Expected router-1 error count 2, got %d", stats.ErrorCounts["router-1"])
+	snapshot := stats.GetSnapshot()
+	if snapshot.ErrorCounts["router-1"] != 2 {
+		t.Errorf("Expected router-1 error count 2, got %d", snapshot.ErrorCounts["router-1"])
 	}
-	if stats.ErrorCounts["switch-1"] != 1 {
-		t.Errorf("Expected switch-1 error count 1, got %d", stats.ErrorCounts["switch-1"])
+	if snapshot.ErrorCounts["switch-1"] != 1 {
+		t.Errorf("Expected switch-1 error count 1, got %d", snapshot.ErrorCounts["switch-1"])
 	}
 }
 
@@ -85,8 +83,8 @@ func TestIncrementSNMPQuery(t *testing.T) {
 	stats.IncrementSNMPQuery()
 	stats.IncrementSNMPQuery()
 
-	if stats.SNMPQueryCount != 3 {
-		t.Errorf("Expected SNMP query count 3, got %d", stats.SNMPQueryCount)
+	if stats.SNMPQueryCount.Load() != 3 {
+		t.Errorf("Expected SNMP query count 3, got %d", stats.SNMPQueryCount.Load())
 	}
 }
 
@@ -96,8 +94,8 @@ func TestIncrementSNMPTrap(t *testing.T) {
 	stats.IncrementSNMPTrap()
 	stats.IncrementSNMPTrap()
 
-	if stats.SNMPTrapsSent != 2 {
-		t.Errorf("Expected SNMP traps sent 2, got %d", stats.SNMPTrapsSent)
+	if stats.SNMPTrapsSent.Load() != 2 {
+		t.Errorf("Expected SNMP traps sent 2, got %d", stats.SNMPTrapsSent.Load())
 	}
 }
 
@@ -108,8 +106,8 @@ func TestIncrementDHCPRequest(t *testing.T) {
 	stats.IncrementDHCPRequest()
 	stats.IncrementDHCPRequest()
 
-	if stats.DHCPRequestCount != 3 {
-		t.Errorf("Expected DHCP request count 3, got %d", stats.DHCPRequestCount)
+	if stats.DHCPRequestCount.Load() != 3 {
+		t.Errorf("Expected DHCP request count 3, got %d", stats.DHCPRequestCount.Load())
 	}
 }
 
@@ -180,7 +178,8 @@ func TestExportJSON(t *testing.T) {
 		t.Fatalf("Failed to read JSON file: %v", err)
 	}
 
-	var loaded Statistics
+	// PERFORMANCE FIX MEDIUM-1: JSON exports StatisticsSnapshot, not Statistics
+	var loaded StatisticsSnapshot
 	if err := json.Unmarshal(data, &loaded); err != nil {
 		t.Fatalf("Failed to unmarshal JSON: %v", err)
 	}
@@ -323,10 +322,11 @@ func TestConcurrentAccess(t *testing.T) {
 	}
 
 	// Verify counts (should be 1000 total)
-	if stats.PacketCounts["ARP"] != 1000 {
-		t.Errorf("Expected ARP count 1000, got %d", stats.PacketCounts["ARP"])
+	snapshot := stats.GetSnapshot()
+	if snapshot.PacketCounts["ARP"] != 1000 {
+		t.Errorf("Expected ARP count 1000, got %d", snapshot.PacketCounts["ARP"])
 	}
-	if stats.SNMPQueryCount != 1000 {
-		t.Errorf("Expected SNMP query count 1000, got %d", stats.SNMPQueryCount)
+	if stats.SNMPQueryCount.Load() != 1000 {
+		t.Errorf("Expected SNMP query count 1000, got %d", stats.SNMPQueryCount.Load())
 	}
 }

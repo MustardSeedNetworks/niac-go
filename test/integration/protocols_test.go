@@ -227,6 +227,7 @@ func TestProtocolIntegration_SNMPGetNextRequest(t *testing.T) {
 
 	if value == nil {
 		t.Error("SNMP GET-NEXT returned nil value")
+		return
 	}
 
 	t.Logf("SNMP GET-NEXT successful: %s = %v", nextOID, value.Value)

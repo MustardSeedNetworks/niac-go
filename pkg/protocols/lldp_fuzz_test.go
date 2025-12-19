@@ -115,9 +115,6 @@ func FuzzLLDPTTL(f *testing.F) {
 		_ = ttl * 2
 		_ = ttl + 1
 
-		// Check reasonable ranges
-		if ttl > 65535 {
-			t.Error("TTL exceeded uint16 max")
-		}
+		// Check reasonable ranges - ttl is uint16, always <= math.MaxUint16
 	})
 }

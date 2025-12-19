@@ -41,15 +41,15 @@ func runInit(cmd *cobra.Command, args []string) {
 	reader := bufio.NewReader(os.Stdin)
 
 	// Print header
-	color.New(color.Bold, color.FgCyan).Println("\n╔════════════════════════════════════════════════════════════╗")
-	color.New(color.Bold, color.FgCyan).Println("║         NIAC Configuration Template Wizard                ║")
-	color.New(color.Bold, color.FgCyan).Print("╚════════════════════════════════════════════════════════════╝\n")
+	color.New(color.Bold, color.FgCyan).Println("\n╔════════════════════════════════════════════════════════════╗") // #nosec G104 -- cosmetic output
+	color.New(color.Bold, color.FgCyan).Println("║         NIAC Configuration Template Wizard                ║")    // #nosec G104 -- cosmetic output
+	color.New(color.Bold, color.FgCyan).Print("╚════════════════════════════════════════════════════════════╝\n")   // #nosec G104 -- cosmetic output
 
 	fmt.Println("This wizard will help you choose the right template for your")
 	fmt.Print("network simulation.\n")
 
 	// Question 1: Network type
-	fmt.Println(color.CyanString("1. What type of network are you simulating?"))
+	fmt.Println(color.CyanString("1. What type of network are you simulating?")) // #nosec G104 -- cosmetic output
 	fmt.Println("   a) Basic network (router + switch)")
 	fmt.Println("   b) Small office network")
 	fmt.Println("   c) Data center / enterprise core")
@@ -105,7 +105,7 @@ func runInit(cmd *cobra.Command, args []string) {
 	}
 
 	// Show template details
-	fmt.Println(color.YellowString("Template Details:"))
+	fmt.Println(color.YellowString("Template Details:")) // #nosec G104 -- cosmetic output
 	fmt.Printf("  Name: %s\n", tmpl.Name)
 	fmt.Printf("  Description: %s\n", tmpl.Description)
 	fmt.Printf("  Use case: %s\n", tmpl.UseCase)
@@ -140,7 +140,7 @@ func runInit(cmd *cobra.Command, args []string) {
 	}
 
 	// Write template to file
-	if err := os.WriteFile(outputFile, []byte(tmpl.Content), 0644); err != nil {
+	if err := os.WriteFile(outputFile, []byte(tmpl.Content), 0600); err != nil {
 		color.Red("Error writing file: %v", err)
 		os.Exit(1)
 	}
@@ -151,24 +151,24 @@ func runInit(cmd *cobra.Command, args []string) {
 	fmt.Println()
 
 	// Next steps
-	color.New(color.Bold).Println("Next Steps:")
+	color.New(color.Bold).Println("Next Steps:") // #nosec G104 -- cosmetic output
 	fmt.Println()
 	fmt.Println("1. Validate your configuration:")
-	fmt.Printf("   %s\n", color.CyanString("niac validate %s", outputFile))
+	fmt.Printf("   %s\n", color.CyanString("niac validate %s", outputFile)) // #nosec G104 -- cosmetic output
 	fmt.Println()
 	fmt.Println("2. Edit the configuration (optional):")
-	fmt.Printf("   %s\n", color.CyanString("vi %s", outputFile))
+	fmt.Printf("   %s\n", color.CyanString("vi %s", outputFile)) // #nosec G104 -- cosmetic output
 	fmt.Println()
 	fmt.Println("3. Run the simulation:")
-	fmt.Printf("   %s\n", color.CyanString("sudo niac interactive en0 %s", outputFile))
+	fmt.Printf("   %s\n", color.CyanString("sudo niac interactive en0 %s", outputFile)) // #nosec G104 -- cosmetic output
 	fmt.Println()
 	fmt.Println("4. Or use dry-run mode to test without running:")
-	fmt.Printf("   %s\n", color.CyanString("niac --dry-run en0 %s", outputFile))
+	fmt.Printf("   %s\n", color.CyanString("niac --dry-run en0 %s", outputFile)) // #nosec G104 -- cosmetic output
 	fmt.Println()
 
 	// Optional: Show device count
-	fmt.Println(color.YellowString("Tip:") + " To see what devices are in this configuration:")
-	fmt.Printf("     %s\n", color.CyanString("niac template apply %s", selectedTemplate))
+	fmt.Println(color.YellowString("Tip:") + " To see what devices are in this configuration:") // #nosec G104 -- cosmetic output
+	fmt.Printf("     %s\n", color.CyanString("niac template apply %s", selectedTemplate))       // #nosec G104 -- cosmetic output
 	fmt.Println()
 }
 
