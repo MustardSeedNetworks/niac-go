@@ -3,12 +3,13 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
 
 var (
-	version = "v2.12.0"
+	version = "dev"
 	commit  = "dev"
 	date    = "unknown"
 )
@@ -58,6 +59,18 @@ and network discovery without physical hardware.`,
 }
 
 func init() {
+	if version == "dev" {
+		if data, err := os.ReadFile("VERSION"); err == nil {
+			v := strings.TrimSpace(string(data))
+			if v != "" {
+				if !strings.HasPrefix(v, "v") {
+					v = "v" + v
+				}
+				version = v
+			}
+		}
+	}
+
 	cobra.OnInitialize(resolveServiceDefaults)
 	rootCmd.SetVersionTemplate(fmt.Sprintf("niac %s (commit: %s, built: %s)\n", version, commit, date))
 

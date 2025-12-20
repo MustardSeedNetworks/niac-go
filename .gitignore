@@ -37,3 +37,20 @@ test_walk_loader.go
 bin/
 dist/
 build/
+
+# Tooling defaults
+*.log
+.env
+.env.*
+.venv/
+venv/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+*.egg-info/
+.eggs/
+.tox/
+.nox/
+coverage.out

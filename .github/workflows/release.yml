@@ -58,7 +58,7 @@ jobs:
         CGO_ENABLED: 0
       run: |
         OUTPUT="niac-${{ steps.version.outputs.VERSION }}-${{ matrix.name }}${{ matrix.ext }}"
-        go build -ldflags="-s -w -X main.Version=${{ steps.version.outputs.VERSION }}" -o "$OUTPUT" ./cmd/niac
+        go build -ldflags="-s -w -X main.version=${{ steps.version.outputs.VERSION }}" -o "$OUTPUT" ./cmd/niac
         ls -lh "$OUTPUT"
 
     - name: Generate checksums
