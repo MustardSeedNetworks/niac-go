@@ -15,6 +15,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Container and Kubernetes deployment (#35)
 - Multi-user authentication (#33)
 
+## [2.12.3] - 2025-12-20
+
+### Security
+- Bump webui glob to 10.5.0 to address CVE-2025-64756.
+
 ## [2.12.0] - 2025-11-16
 
 ### Security - Complete Hardening ✅
