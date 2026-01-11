@@ -4,34 +4,145 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * NIAC Theme System
+ * Based on seed/stem color patterns with improved contrast
+ * Semantic color naming for consistent look and feel
+ */
+
 :root {
-  /* Brand colors */
+  /* ========================================
+   * Brand Colors
+   * Primary violet with high-contrast variants
+   * ======================================== */
+  --color-brand-50: #f5f3ff;
+  --color-brand-100: #ede9fe;
+  --color-brand-200: #ddd6fe;
+  --color-brand-300: #c4b5fd;
+  --color-brand-400: #a78bfa;
   --color-brand-500: #8b5cf6;
   --color-brand-600: #7c3aed;
+  --color-brand-700: #6d28d9;
+  --color-brand-800: #5b21b6;
+  --color-brand-900: #4c1d95;
 
-  /* Surface colors */
-  --color-bg: #030712;
-  --color-surface: #111827;
-  --color-surface-elevated: #1f2937;
+  /* ========================================
+   * Surface Colors (Dark Theme)
+   * Elevated surfaces for visual hierarchy
+   * ======================================== */
+  --color-bg-base: #030712;       /* Deepest background */
+  --color-bg-surface: #0f1117;    /* Main surface */
+  --color-bg-elevated: #1a1d25;   /* Cards, modals */
+  --color-bg-overlay: #242731;    /* Dropdowns, tooltips */
+  --color-bg-muted: #2d3139;      /* Inactive states */
 
-  /* Text colors */
-  --color-text-primary: #f9fafb;
-  --color-text-secondary: #9ca3af;
-  --color-text-muted: #6b7280;
+  /* ========================================
+   * Text Colors
+   * High contrast for accessibility (WCAG AA)
+   * ======================================== */
+  --color-text-primary: #f8fafc;   /* Primary text - high contrast */
+  --color-text-secondary: #cbd5e1; /* Secondary text */
+  --color-text-muted: #94a3b8;     /* Muted/placeholder text */
+  --color-text-disabled: #64748b;  /* Disabled states */
+  --color-text-inverse: #0f172a;   /* Text on light backgrounds */
 
-  /* Border */
-  --color-border: rgba(255, 255, 255, 0.1);
-  --color-border-focus: rgba(139, 92, 246, 0.5);
+  /* ========================================
+   * Border Colors
+   * Subtle borders with focus states
+   * ======================================== */
+  --color-border-default: rgba(255, 255, 255, 0.08);
+  --color-border-subtle: rgba(255, 255, 255, 0.05);
+  --color-border-muted: rgba(255, 255, 255, 0.12);
+  --color-border-focus: rgba(139, 92, 246, 0.6);
+  --color-border-error: rgba(239, 68, 68, 0.5);
 
+  /* ========================================
+   * Status Colors
+   * Semantic colors for feedback states
+   * ======================================== */
+  /* Success - Green */
+  --color-success-50: #f0fdf4;
+  --color-success-100: #dcfce7;
+  --color-success-400: #4ade80;
+  --color-success-500: #22c55e;
+  --color-success-600: #16a34a;
+  --color-success-900: #14532d;
+
+  /* Warning - Amber */
+  --color-warning-50: #fffbeb;
+  --color-warning-100: #fef3c7;
+  --color-warning-400: #fbbf24;
+  --color-warning-500: #f59e0b;
+  --color-warning-600: #d97706;
+  --color-warning-900: #78350f;
+
+  /* Error - Red */
+  --color-error-50: #fef2f2;
+  --color-error-100: #fee2e2;
+  --color-error-400: #f87171;
+  --color-error-500: #ef4444;
+  --color-error-600: #dc2626;
+  --color-error-900: #7f1d1d;
+
+  /* Info - Blue */
+  --color-info-50: #eff6ff;
+  --color-info-100: #dbeafe;
+  --color-info-400: #60a5fa;
+  --color-info-500: #3b82f6;
+  --color-info-600: #2563eb;
+  --color-info-900: #1e3a8a;
+
+  /* ========================================
+   * Device Type Colors (Topology)
+   * Distinct colors for network device types
+   * ======================================== */
+  --color-device-router: #3b82f6;      /* Blue */
+  --color-device-switch: #22c55e;      /* Green */
+  --color-device-firewall: #ef4444;    /* Red */
+  --color-device-server: #f97316;      /* Orange */
+  --color-device-workstation: #6b7280; /* Gray */
+  --color-device-ap: #a855f7;          /* Purple */
+  --color-device-iot: #14b8a6;         /* Teal */
+  --color-device-unknown: #94a3b8;     /* Slate */
+
+  /* ========================================
+   * Link Speed Colors (Topology)
+   * Color-coded network speeds
+   * ======================================== */
+  --color-link-10m: #94a3b8;      /* 10 Mbps - Gray */
+  --color-link-100m: #22c55e;     /* 100 Mbps - Green */
+  --color-link-1g: #3b82f6;       /* 1 Gbps - Blue */
+  --color-link-10g: #a855f7;      /* 10 Gbps - Purple */
+  --color-link-25g: #f97316;      /* 25 Gbps - Orange */
+  --color-link-40g: #ec4899;      /* 40 Gbps - Pink */
+  --color-link-100g: #eab308;     /* 100 Gbps - Yellow */
+  --color-link-trunk: #06b6d4;    /* Trunk/LAG - Cyan */
+
+  /* ========================================
+   * Protocol Colors
+   * Distinct colors for protocol identification
+   * ======================================== */
+  --color-proto-arp: #22c55e;
+  --color-proto-icmp: #3b82f6;
+  --color-proto-dns: #a855f7;
+  --color-proto-dhcp: #f97316;
+  --color-proto-snmp: #14b8a6;
+  --color-proto-lldp: #ec4899;
+  --color-proto-cdp: #eab308;
+  --color-proto-http: #6366f1;
+  --color-proto-tcp: #06b6d4;
+  --color-proto-udp: #8b5cf6;
+
+  /* Apply base colors */
   color: var(--color-text-primary);
-  background-color: var(--color-bg);
+  background-color: var(--color-bg-base);
 }
 
 body {
   margin: 0;
   min-height: 100vh;
   font-family: 'Inter', system-ui, sans-serif;
-  background-color: var(--color-bg);
+  background-color: var(--color-bg-base);
   color: var(--color-text-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -41,24 +152,26 @@ body {
   min-height: 100vh;
 }
 
-/* Scrollbar styling */
+/* ========================================
+ * Scrollbar Styling
+ * ======================================== */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--color-bg-elevated);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--color-bg-muted);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.25);
+  background: var(--color-border-muted);
 }
 
 /* Selection color */
@@ -67,7 +180,9 @@ body {
   color: white;
 }
 
-/* Focus ring utility */
+/* ========================================
+ * Utility Classes
+ * ======================================== */
 @layer utilities {
   .focus-ring {
     @apply focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:ring-offset-2 focus:ring-offset-gray-900;
@@ -76,16 +191,40 @@ body {
   .focus-ring-inset {
     @apply focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:ring-inset;
   }
+
+  /* Text contrast utilities */
+  .text-high-contrast {
+    color: var(--color-text-primary);
+  }
+
+  .text-medium-contrast {
+    color: var(--color-text-secondary);
+  }
+
+  .text-low-contrast {
+    color: var(--color-text-muted);
+  }
 }
 
-/* Glassmorphism card base */
+/* ========================================
+ * Component Base Styles
+ * ======================================== */
 @layer components {
+  /* Glass Card - improved contrast */
   .glass-card {
-    @apply backdrop-blur-xl bg-gradient-to-br from-gray-900/90 to-gray-900/70 border border-white/10 shadow-xl shadow-black/20;
+    @apply backdrop-blur-xl border shadow-xl shadow-black/20;
+    background: linear-gradient(135deg, var(--color-bg-elevated) 0%, rgba(26, 29, 37, 0.8) 100%);
+    border-color: var(--color-border-default);
   }
 
   .glass-card-hover {
-    @apply glass-card transition-all duration-300 hover:shadow-2xl hover:shadow-brand-500/5 hover:border-white/15;
+    @apply glass-card transition-all duration-300;
+  }
+
+  .glass-card-hover:hover {
+    @apply shadow-2xl;
+    border-color: var(--color-border-muted);
+    box-shadow: 0 0 20px -5px rgba(139, 92, 246, 0.15);
   }
 
   /* Skeleton loading animation */
@@ -93,30 +232,76 @@ body {
     @apply bg-gradient-to-r from-white/5 via-white/10 to-white/5 bg-[length:200%_100%] animate-shimmer rounded;
   }
 
-  /* Input base styles */
+  /* Input base styles - improved contrast */
   .input-base {
-    @apply w-full rounded-lg border border-white/10 bg-gray-950/60 px-4 py-2.5 text-white placeholder:text-gray-500 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 focus:outline-none transition-all;
+    @apply w-full rounded-lg px-4 py-2.5 text-white transition-all;
+    background-color: var(--color-bg-surface);
+    border: 1px solid var(--color-border-default);
   }
 
-  /* Button base */
+  .input-base::placeholder {
+    color: var(--color-text-muted);
+  }
+
+  .input-base:focus {
+    outline: none;
+    border-color: var(--color-brand-500);
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15);
+  }
+
+  /* Button base - improved */
   .btn-base {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:ring-offset-2 focus:ring-offset-gray-900 disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-base:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.3);
   }
 
   .btn-primary {
-    @apply btn-base bg-gradient-to-r from-brand-600 to-brand-500 text-white shadow-lg shadow-brand-500/25 hover:from-brand-500 hover:to-brand-400 active:scale-[0.98];
+    @apply btn-base text-white shadow-lg;
+    background: linear-gradient(135deg, var(--color-brand-600) 0%, var(--color-brand-500) 100%);
+    box-shadow: 0 4px 14px -3px rgba(139, 92, 246, 0.4);
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    background: linear-gradient(135deg, var(--color-brand-500) 0%, var(--color-brand-400) 100%);
+    transform: translateY(-1px);
+  }
+
+  .btn-primary:active:not(:disabled) {
+    transform: scale(0.98);
   }
 
   .btn-secondary {
-    @apply btn-base bg-white/10 text-white hover:bg-white/15 active:bg-white/20;
+    @apply btn-base text-white;
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+
+  .btn-secondary:hover:not(:disabled) {
+    background-color: rgba(255, 255, 255, 0.15);
   }
 
   .btn-ghost {
-    @apply btn-base text-gray-400 hover:text-white hover:bg-white/10 active:bg-white/15;
+    @apply btn-base;
+    color: var(--color-text-secondary);
+  }
+
+  .btn-ghost:hover:not(:disabled) {
+    color: var(--color-text-primary);
+    background-color: rgba(255, 255, 255, 0.1);
   }
 
   .btn-outline {
-    @apply btn-base border border-white/20 text-gray-300 hover:bg-white/5 hover:border-white/30 active:bg-white/10;
+    @apply btn-base;
+    color: var(--color-text-secondary);
+    border: 1px solid var(--color-border-muted);
+  }
+
+  .btn-outline:hover:not(:disabled) {
+    background-color: rgba(255, 255, 255, 0.05);
+    border-color: var(--color-border-focus);
   }
 
   /* Status indicator */
@@ -130,18 +315,64 @@ body {
     background: inherit;
   }
 
-  /* Table styles */
+  /* Table styles - improved readability */
   .table-header {
-    @apply bg-gray-950/60 text-gray-400 font-medium text-xs uppercase tracking-wider;
+    @apply font-medium text-xs uppercase tracking-wider;
+    background-color: var(--color-bg-surface);
+    color: var(--color-text-muted);
   }
 
   .table-row {
-    @apply border-b border-white/5 transition-colors hover:bg-white/5;
+    @apply transition-colors;
+    border-bottom: 1px solid var(--color-border-subtle);
+  }
+
+  .table-row:hover {
+    background-color: rgba(255, 255, 255, 0.03);
   }
 
   /* Page animation */
   .page-enter {
     @apply animate-fade-in;
+  }
+
+  /* Card variants for different contexts */
+  .card-surface {
+    background-color: var(--color-bg-elevated);
+    border: 1px solid var(--color-border-default);
+    border-radius: 0.75rem;
+  }
+
+  .card-elevated {
+    background-color: var(--color-bg-overlay);
+    border: 1px solid var(--color-border-muted);
+    border-radius: 0.75rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+  }
+
+  /* Status badges with proper contrast */
+  .badge-success {
+    background-color: rgba(34, 197, 94, 0.15);
+    color: var(--color-success-400);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+  }
+
+  .badge-warning {
+    background-color: rgba(245, 158, 11, 0.15);
+    color: var(--color-warning-400);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+  }
+
+  .badge-error {
+    background-color: rgba(239, 68, 68, 0.15);
+    color: var(--color-error-400);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+  }
+
+  .badge-info {
+    background-color: rgba(59, 130, 246, 0.15);
+    color: var(--color-info-400);
+    border: 1px solid rgba(59, 130, 246, 0.3);
   }
 }
 
@@ -164,4 +395,51 @@ code, pre, .font-mono {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* ========================================
+ * React Flow Customizations
+ * ======================================== */
+.react-flow__node {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.react-flow__node:hover {
+  z-index: 100 !important;
+}
+
+.react-flow__edge-path {
+  stroke-width: 2;
+}
+
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke-width: 3;
+}
+
+.react-flow__controls {
+  box-shadow: none !important;
+  border: 1px solid var(--color-border-default) !important;
+  border-radius: 0.5rem !important;
+  overflow: hidden;
+}
+
+.react-flow__controls-button {
+  background-color: var(--color-bg-elevated) !important;
+  border-color: var(--color-border-subtle) !important;
+  color: var(--color-text-secondary) !important;
+}
+
+.react-flow__controls-button:hover {
+  background-color: var(--color-bg-overlay) !important;
+  color: var(--color-text-primary) !important;
+}
+
+.react-flow__minimap {
+  background-color: var(--color-bg-surface) !important;
+  border: 1px solid var(--color-border-default) !important;
+  border-radius: 0.5rem !important;
+}
+
+.react-flow__background {
+  background-color: var(--color-bg-base) !important;
 }

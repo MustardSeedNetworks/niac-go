@@ -39,7 +39,6 @@ import {
   fetchStats,
   fetchDevices,
   fetchHistory,
-  fetchNeighbors,
   fetchConfig,
   updateConfig,
   fetchReplayStatus,
@@ -49,14 +48,13 @@ import {
   updateAlerts,
   fetchFiles,
   fetchVersion,
-  fetchTopology,
   fetchErrorTypes,
   fetchInterfaces,
   fetchSimulationStatus,
   startSimulation,
   stopSimulation,
 } from './api/client';
-import type { DeviceSummary, HistoryRecord, NeighborRecord, AlertConfig, ReplayRequest, FileEntry, TopologyGraph, ErrorType, NetworkInterface } from './api/types';
+import type { DeviceSummary, HistoryRecord, AlertConfig, ReplayRequest, FileEntry, ErrorType, NetworkInterface } from './api/types';
 import { TrafficInjectionPage } from './pages/TrafficInjectionPage';
 import { DebugConsolePage } from './pages/DebugConsolePage';
 import { PacketInspectorPage } from './pages/PacketInspectorPage';
@@ -65,6 +63,7 @@ import { ConfigDiffPage } from './pages/ConfigDiffPage';
 import { PcapAnalyzerPage } from './pages/PcapAnalyzerPage';
 import { DeviceListPage } from './pages/DeviceListPage';
 import { DeviceEditorPage } from './pages/DeviceEditorPage';
+import { TopologyPage } from './pages/TopologyPage';
 import './App.css';
 
 type PageConfig = {
@@ -619,7 +618,6 @@ function DashboardPage() {
   const { data: stats } = useApiResource(fetchStats, [], {
     intervalMs: POLL_INTERVALS.MEDIUM,
   });
-  const { data: neighbors } = useApiResource(fetchNeighbors, [], { intervalMs: POLL_INTERVALS.MEDIUM });
   const { data: history } = useApiResource(fetchHistory, [], { intervalMs: POLL_INTERVALS.SLOW });
   const { data: errorInfo } = useApiResource(fetchErrorTypes, []);
   const { data: simStatus } = useApiResource(fetchSimulationStatus, [], { intervalMs: POLL_INTERVALS.FAST });
@@ -672,17 +670,6 @@ function DashboardPage() {
             </div>
             <p className="text-3xl font-bold text-white">{stats?.device_count ?? '—'}</p>
             <p className="text-xs text-gray-500">Active network devices</p>
-          </CardContent>
-        </Card>
-
-        <Card hover className="group">
-          <CardContent className="space-y-1">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-400">Neighbors</span>
-              <Network className="h-5 w-5 text-blue-400 group-hover:scale-110 transition-transform" />
-            </div>
-            <p className="text-3xl font-bold text-white">{neighbors?.length ?? '—'}</p>
-            <p className="text-xs text-gray-500">LLDP/CDP/EDP/FDP</p>
           </CardContent>
         </Card>
 
@@ -1141,145 +1128,7 @@ function WalkFileBrowser({ files, onCopy }: { files: FileEntry[]; onCopy: (path:
   );
 }
 
-function TopologyPage() {
-  const { data: neighbors, loading, error } = useApiResource(fetchNeighbors, [], { intervalMs: POLL_INTERVALS.MEDIUM });
-  const { data: topology } = useApiResource(fetchTopology, [], { intervalMs: POLL_INTERVALS.SLOW });
-  const [showGraph, setShowGraph] = useState(true);
-
-  return (
-    <div className="space-y-6">
-      <Card className="border-white/5 bg-gray-900/70">
-        <CardContent className="space-y-4">
-          <H2 className="mb-0 flex items-center gap-2">
-            <Network className="h-5 w-5 text-cyan-300" />
-            Network topology
-          </H2>
-          <P className="text-gray-300">
-            Visualize device connections derived from port-channels, trunk ports, and discovered neighbors.
-          </P>
-          <div className="flex flex-wrap gap-3">
-            <Button
-              tone={showGraph ? 'violet' : undefined}
-              variant={showGraph ? undefined : 'outline'}
-              leftIcon={<Network className="h-4 w-4" />}
-              onClick={() => setShowGraph(!showGraph)}
-            >
-              {showGraph ? 'Hide topology' : 'Show topology'}
-            </Button>
-            <Button variant="outline" leftIcon={<LineChart className="h-4 w-4" />}>Export Graphviz</Button>
-          </div>
-          {showGraph && topology && <TopologyVisualization topology={topology} />}
-        </CardContent>
-      </Card>
-      <Card className="border-white/5 bg-gray-900/70">
-        <CardContent className="space-y-4">
-          <H2 className="mb-0">Discovered neighbors</H2>
-          {loading && <SmallText className="text-gray-400">Discovering peers...</SmallText>}
-          {error && <SmallText className="text-red-400">Unable to load neighbors: {error.message}</SmallText>}
-          {!loading && !error && <NeighborTable neighbors={neighbors ?? []} />}
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
-function TopologyVisualization({ topology }: { topology: TopologyGraph }) {
-  if (!topology.nodes.length) {
-    return (
-      <div className="rounded-xl border border-white/10 bg-gray-950/50 p-8 text-center">
-        <SmallText className="text-gray-400">No topology data available. Configure trunk ports or port-channels to see connections.</SmallText>
-      </div>
-    );
-  }
-
-  const getNodeColor = (type: string) => {
-    const colors: Record<string, string> = {
-      router: 'bg-blue-500',
-      switch: 'bg-green-500',
-      'access-point': 'bg-purple-500',
-      server: 'bg-orange-500',
-      workstation: 'bg-gray-500',
-      firewall: 'bg-red-500',
-    };
-    return colors[type] || 'bg-cyan-500';
-  };
-
-  return (
-    <div className="rounded-xl border border-white/10 bg-gray-950/50 p-6">
-      <div className="mb-4 flex flex-wrap gap-2">
-        {topology.nodes.map((node) => (
-          <div key={node.name} className="rounded-lg border border-white/10 bg-gray-900/70 px-4 py-2">
-            <div className="flex items-center gap-2">
-              <div className={`h-3 w-3 rounded-full ${getNodeColor(node.type)}`} />
-              <span className="font-semibold text-white">{node.name}</span>
-              <Tag colorScheme="gray" className="text-xs">{node.type}</Tag>
-            </div>
-          </div>
-        ))}
-      </div>
-      {topology.links.length > 0 && (
-        <div className="space-y-2">
-          <SmallText className="font-semibold uppercase tracking-wide text-gray-400">Connections</SmallText>
-          <div className="space-y-1">
-            {topology.links.map((link, idx) => (
-              <div key={idx} className="flex items-center gap-2 rounded-lg border border-white/5 bg-gray-900/50 px-3 py-2 text-sm">
-                <span className="font-mono text-blue-300">{link.source}</span>
-                <span className="text-gray-500">↔</span>
-                <span className="font-mono text-blue-300">{link.target}</span>
-                {link.label && <Tag colorScheme="purple" className="ml-auto text-xs">{link.label}</Tag>}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-      {topology.links.length === 0 && (
-        <SmallText className="text-gray-400">No connections configured. Add trunk ports or port-channels to see links.</SmallText>
-      )}
-    </div>
-  );
-}
-
-// FEATURE #125: Memoize NeighborTable to prevent unnecessary re-renders
-const NeighborTable = memo(({ neighbors }: { neighbors: NeighborRecord[] }) => {
-  return (
-    <div className="overflow-x-auto rounded-xl border border-white/5">
-      <table className="min-w-full divide-y divide-white/10 text-sm">
-        <thead className="bg-gray-900/60 text-xs uppercase tracking-wide text-gray-400">
-          <tr>
-            <th className="px-4 py-3 text-left">Local</th>
-            <th className="px-4 py-3 text-left">Remote</th>
-            <th className="px-4 py-3 text-left">Protocol</th>
-            <th className="px-4 py-3 text-left">Mgmt address</th>
-            <th className="px-4 py-3 text-left">Last seen</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-white/5 text-gray-300">
-          {neighbors.map((neighbor) => (
-            <tr key={`${neighbor.LocalDevice}-${neighbor.RemoteDevice}-${neighbor.RemotePort}`}>
-              <td className="px-4 py-3 font-semibold text-white">
-                {neighbor.LocalDevice}
-                {neighbor.RemotePort && <span className="text-gray-400"> · {neighbor.RemotePort}</span>}
-              </td>
-              <td className="px-4 py-3 text-white/90">{neighbor.RemoteDevice}</td>
-              <td className="px-4 py-3">
-                <Tag colorScheme="purple">{neighbor.Protocol}</Tag>
-              </td>
-              <td className="px-4 py-3 font-mono text-xs">{neighbor.ManagementAddress || '—'}</td>
-              <td className="px-4 py-3 text-gray-400">{formatRelativeTime(neighbor.LastSeen)}</td>
-            </tr>
-          ))}
-          {!neighbors.length && (
-            <tr>
-              <td colSpan={5} className="px-4 py-4 text-center text-gray-400">
-                No neighbors reported yet. Enable LLDP/CDP/EDP/FDP in your config to populate this table.
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
-    </div>
-  );
-});
+// TopologyPage is now imported from ./pages/TopologyPage
 
 function AnalysisPage() {
   const { data: history } = useApiResource(fetchHistory, [], { intervalMs: POLL_INTERVALS.SLOW });
