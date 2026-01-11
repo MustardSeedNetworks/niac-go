@@ -1,5 +1,5 @@
 import { memo, type FC, type ChangeEvent } from 'react';
-import { Search, Download, Trash2 } from 'lucide-react';
+import { Search, Download, Trash2, Pause, Play } from 'lucide-react';
 import { Button, SmallText } from '../ui';
 import type { LogLevel, Protocol } from '../api/types';
 
@@ -28,10 +28,12 @@ export interface LogFiltersProps {
   searchQuery: string;
   autoScroll: boolean;
   logCount: number;
+  paused?: boolean;
   onLevelChange: (level: LogLevel | 'All') => void;
   onProtocolChange: (protocol: Protocol | 'All') => void;
   onSearchChange: (query: string) => void;
   onAutoScrollChange: (enabled: boolean) => void;
+  onPauseToggle?: () => void;
   onExport: () => void;
   onClear: () => void;
 }
@@ -42,10 +44,12 @@ export const LogFilters: FC<LogFiltersProps> = memo(({
   searchQuery,
   autoScroll,
   logCount,
+  paused = false,
   onLevelChange,
   onProtocolChange,
   onSearchChange,
   onAutoScrollChange,
+  onPauseToggle,
   onExport,
   onClear,
 }) => {
@@ -151,6 +155,18 @@ export const LogFilters: FC<LogFiltersProps> = memo(({
 
         {/* Action Buttons */}
         <div className="flex items-center gap-2">
+          {onPauseToggle && (
+            <Button
+              variant={paused ? 'solid' : 'outline'}
+              size="sm"
+              onClick={onPauseToggle}
+              leftIcon={paused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
+              aria-label={paused ? 'Resume log stream' : 'Pause log stream'}
+              className={paused ? 'bg-green-600 hover:bg-green-700 border-green-500' : ''}
+            >
+              {paused ? 'Resume' : 'Pause'}
+            </Button>
+          )}
           <Button
             variant="outline"
             size="sm"

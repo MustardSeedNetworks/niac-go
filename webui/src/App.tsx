@@ -1,4 +1,4 @@
-import { createElement, memo, useCallback, useMemo, type ChangeEvent, type FC, type ReactNode, useEffect, useState } from 'react';
+import { memo, useCallback, type ChangeEvent, type FC, type ReactNode, useEffect, useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import type { LucideIcon } from 'lucide-react';
 import {
@@ -7,7 +7,6 @@ import {
   Network,
   LineChart,
   Workflow,
-  ShieldCheck,
   PlugZap,
   Bot,
   BellRing,
@@ -22,8 +21,7 @@ import {
   Wrench,
 } from 'lucide-react';
 import {
-  PageShell,
-  PrimaryNav,
+  SidebarLayout,
   PageHeader,
   Card,
   CardContent,
@@ -34,7 +32,7 @@ import {
   SmallText,
   AccentLink,
 } from './ui';
-import type { NavItem } from './ui';
+import type { SidebarNavGroup } from './ui';
 import { useApiResource } from './hooks/useApiResource';
 import { useVirtualScroll } from './hooks/useVirtualScroll';
 import {
@@ -188,12 +186,47 @@ const pages: PageConfig[] = [
   },
 ];
 
-const navItems: NavItem[] = pages.map((page) => ({
-  label: page.label,
-  path: page.path,
-  icon: createElement(page.icon, { className: 'h-4 w-4' }),
-  badge: page.badge,
-}));
+// Organize navigation into logical groups
+const navGroups: SidebarNavGroup[] = [
+  {
+    label: 'Control',
+    items: [
+      { path: '/', label: 'Command Center', icon: Activity },
+      { path: '/runtime', label: 'Runtime Control', icon: PlugZap },
+    ],
+  },
+  {
+    label: 'Configuration',
+    items: [
+      { path: '/devices', label: 'Devices & Config', icon: Server },
+      { path: '/device-config', label: 'Config Builder', icon: Wrench, badge: 'New' },
+      { path: '/templates', label: 'Templates', icon: FileCode },
+      { path: '/config-diff', label: 'Config Diff', icon: GitCompare },
+    ],
+  },
+  {
+    label: 'Network',
+    items: [
+      { path: '/topology', label: 'Topology', icon: Network },
+      { path: '/traffic', label: 'Traffic Injection', icon: Zap },
+    ],
+  },
+  {
+    label: 'Analysis',
+    items: [
+      { path: '/analysis', label: 'Playback', icon: LineChart },
+      { path: '/debug', label: 'Debug Console', icon: Terminal },
+      { path: '/packets', label: 'Packet Inspector', icon: FileSearch },
+      { path: '/pcap-analyzer', label: 'PCAP Analyzer', icon: FileBox },
+    ],
+  },
+  {
+    label: 'Automation',
+    items: [
+      { path: '/automation', label: 'Alerts & Workflows', icon: Workflow, badge: 'Beta' },
+    ],
+  },
+];
 
 // Polling intervals (in milliseconds)
 const POLL_INTERVALS = {
@@ -207,69 +240,57 @@ export default function App() {
   const { data: version } = useApiResource(fetchVersion, [], { intervalMs: POLL_INTERVALS.VERY_SLOW });
 
   return (
-    <PageShell>
-      <div className="space-y-10">
-        <div className="rounded-2xl border border-white/5 bg-gray-900/60 p-4 backdrop-blur">
-          <PrimaryNav items={navItems} className="flex-wrap gap-2" />
-        </div>
-
-        <Routes>
-          {pages.map((page) => (
-            <Route
-              key={page.path}
-              path={page.path}
-              element={
-                <PageTemplate page={page}>
-                  <page.Component />
-                </PageTemplate>
-              }
-            />
-          ))}
-          {/* Dynamic routes for device editor */}
+    <SidebarLayout groups={navGroups} version={version?.version}>
+      <Routes>
+        {pages.map((page) => (
           <Route
-            path="/device-config/new"
+            key={page.path}
+            path={page.path}
             element={
-              <PageTemplate
-                page={{
-                  path: '/device-config/new',
-                  label: 'New Device',
-                  title: 'New Device',
-                  description: 'Create a new network device configuration.',
-                  icon: Wrench,
-                  Component: DeviceEditorPage,
-                }}
-              >
-                <DeviceEditorPage />
+              <PageTemplate page={page}>
+                <page.Component />
               </PageTemplate>
             }
           />
-          <Route
-            path="/device-config/:hostname"
-            element={
-              <PageTemplate
-                page={{
-                  path: '/device-config/:hostname',
-                  label: 'Edit Device',
-                  title: 'Edit Device',
-                  description: 'Edit device configuration settings.',
-                  icon: Wrench,
-                  Component: DeviceEditorPage,
-                }}
-              >
-                <DeviceEditorPage />
-              </PageTemplate>
-            }
-          />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-
-        {version && (
-          <div className="rounded-xl border border-white/5 bg-gray-900/40 px-4 py-3 text-center text-sm text-gray-400">
-            NIAC-Go {version.version} • Network In A Can
-          </div>
-        )}
-      </div>
-    </PageShell>
+        ))}
+        {/* Dynamic routes for device editor */}
+        <Route
+          path="/device-config/new"
+          element={
+            <PageTemplate
+              page={{
+                path: '/device-config/new',
+                label: 'New Device',
+                title: 'New Device',
+                description: 'Create a new network device configuration.',
+                icon: Wrench,
+                Component: DeviceEditorPage,
+              }}
+            >
+              <DeviceEditorPage />
+            </PageTemplate>
+          }
+        />
+        <Route
+          path="/device-config/:hostname"
+          element={
+            <PageTemplate
+              page={{
+                path: '/device-config/:hostname',
+                label: 'Edit Device',
+                title: 'Edit Device',
+                description: 'Edit device configuration settings.',
+                icon: Wrench,
+                Component: DeviceEditorPage,
+              }}
+            >
+              <DeviceEditorPage />
+            </PageTemplate>
+          }
+        />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </SidebarLayout>
   );
 }
 
@@ -595,85 +616,204 @@ function InterfaceList({ interfaces }: { interfaces: NetworkInterface[]; current
 }
 
 function DashboardPage() {
-  const { data: stats, loading: statsLoading, error: statsError } = useApiResource(fetchStats, [], {
+  const { data: stats } = useApiResource(fetchStats, [], {
     intervalMs: POLL_INTERVALS.MEDIUM,
   });
   const { data: neighbors } = useApiResource(fetchNeighbors, [], { intervalMs: POLL_INTERVALS.MEDIUM });
   const { data: history } = useApiResource(fetchHistory, [], { intervalMs: POLL_INTERVALS.SLOW });
   const { data: errorInfo } = useApiResource(fetchErrorTypes, []);
+  const { data: simStatus } = useApiResource(fetchSimulationStatus, [], { intervalMs: POLL_INTERVALS.FAST });
   const [showErrors, setShowErrors] = useState(false);
 
-  // FEATURE #125: Memoize telemetry data to prevent recalculation on every render
-  const telemetry = useMemo(() => [
-    {
-      label: 'Neighbors learned',
-      value: neighbors ? `${neighbors.length}` : '—',
-      detail: 'LLDP/CDP/EDP/FDP',
-    },
-    {
-      label: 'Packets received',
-      value: stats ? formatNumber(stats.stack.packets_received) : '—',
-      detail: stats ? `${formatNumber(stats.stack.packets_sent)} sent` : 'Awaiting counters',
-    },
-    {
-      label: 'Devices online',
-      value: stats ? `${stats.device_count}` : '—',
-      detail: stats?.interface ?? 'interface',
-    },
-  ], [neighbors, stats]);
+  const isRunning = simStatus?.running ?? false;
+  // Get uptime from simulation status
+  const uptimeSeconds = simStatus?.uptime_seconds ?? 0;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
+      {/* Status banner */}
+      <Card className={`border-l-4 ${isRunning ? 'border-l-emerald-500' : 'border-l-gray-500'}`}>
+        <CardContent className="py-4">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="relative">
+                <div className={`h-3 w-3 rounded-full ${isRunning ? 'bg-emerald-500' : 'bg-gray-500'}`} />
+                {isRunning && (
+                  <div className="absolute inset-0 h-3 w-3 rounded-full bg-emerald-500 animate-ping opacity-75" />
+                )}
+              </div>
+              <div>
+                <p className="font-semibold text-white">
+                  {isRunning ? 'Simulation Running' : 'Simulation Stopped'}
+                </p>
+                <p className="text-sm text-gray-400">
+                  {stats?.interface ?? 'No interface'} • {stats?.device_count ?? 0} devices
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {uptimeSeconds > 0 && (
+                <Tag colorScheme="violet">
+                  Uptime: {formatUptime(uptimeSeconds)}
+                </Tag>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Stat cards row */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Card hover className="group">
+          <CardContent className="space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-gray-400">Devices Online</span>
+              <Server className="h-5 w-5 text-violet-400 group-hover:scale-110 transition-transform" />
+            </div>
+            <p className="text-3xl font-bold text-white">{stats?.device_count ?? '—'}</p>
+            <p className="text-xs text-gray-500">Active network devices</p>
+          </CardContent>
+        </Card>
+
+        <Card hover className="group">
+          <CardContent className="space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-gray-400">Neighbors</span>
+              <Network className="h-5 w-5 text-blue-400 group-hover:scale-110 transition-transform" />
+            </div>
+            <p className="text-3xl font-bold text-white">{neighbors?.length ?? '—'}</p>
+            <p className="text-xs text-gray-500">LLDP/CDP/EDP/FDP</p>
+          </CardContent>
+        </Card>
+
+        <Card hover className="group">
+          <CardContent className="space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-gray-400">Packets RX</span>
+              <Activity className="h-5 w-5 text-emerald-400 group-hover:scale-110 transition-transform" />
+            </div>
+            <p className="text-3xl font-bold text-white">
+              {stats ? formatNumber(stats.stack.packets_received) : '—'}
+            </p>
+            <p className="text-xs text-gray-500">
+              {stats ? `${formatNumber(stats.stack.packets_sent)} sent` : 'Awaiting data'}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card hover className="group">
+          <CardContent className="space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-gray-400">DNS Queries</span>
+              <SatelliteDish className="h-5 w-5 text-amber-400 group-hover:scale-110 transition-transform" />
+            </div>
+            <p className="text-3xl font-bold text-white">
+              {stats ? formatNumber(stats.stack.dns_queries) : '—'}
+            </p>
+            <p className="text-xs text-gray-500">
+              DHCP: {stats ? formatNumber(stats.stack.dhcp_requests) : '—'}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Main content grid */}
       <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2 border-white/5 bg-gradient-to-br from-gray-900/70 to-gray-950/80">
-          <CardContent className="space-y-5">
-            <div className="flex flex-wrap items-center gap-3">
-              <Tag>{stats ? 'RUNNING' : 'AWAITING DATA'}</Tag>
-              <Tag colorScheme="purple">Devices: {stats?.device_count ?? '–'}</Tag>
+        {/* Quick Actions */}
+        <Card className="lg:col-span-2">
+          <CardContent className="space-y-4">
+            <H2 className="mb-0 flex items-center gap-2">
+              <Zap className="h-5 w-5 text-violet-400" />
+              Quick Actions
+            </H2>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <button
+                onClick={() => setShowErrors(!showErrors)}
+                className="flex items-center gap-3 rounded-lg border border-white/10 bg-white/5 p-4 text-left hover:bg-white/10 hover:border-violet-500/30 transition-all group"
+              >
+                <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-yellow-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <PlugZap className="h-5 w-5 text-yellow-400" />
+                </div>
+                <div>
+                  <p className="font-medium text-white">Error Injection</p>
+                  <p className="text-sm text-gray-400">Inject network errors</p>
+                </div>
+              </button>
+
+              <AccentLink to="/debug" className="no-underline">
+                <div className="flex items-center gap-3 rounded-lg border border-white/10 bg-white/5 p-4 text-left hover:bg-white/10 hover:border-violet-500/30 transition-all group">
+                  <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-violet-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Terminal className="h-5 w-5 text-violet-400" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-white">Debug Console</p>
+                    <p className="text-sm text-gray-400">View live logs</p>
+                  </div>
+                </div>
+              </AccentLink>
+
+              <AccentLink to="/traffic" className="no-underline">
+                <div className="flex items-center gap-3 rounded-lg border border-white/10 bg-white/5 p-4 text-left hover:bg-white/10 hover:border-violet-500/30 transition-all group">
+                  <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-blue-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Activity className="h-5 w-5 text-blue-400" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-white">Traffic Injection</p>
+                    <p className="text-sm text-gray-400">Replay PCAP files</p>
+                  </div>
+                </div>
+              </AccentLink>
+
+              <AccentLink to="/topology" className="no-underline">
+                <div className="flex items-center gap-3 rounded-lg border border-white/10 bg-white/5 p-4 text-left hover:bg-white/10 hover:border-violet-500/30 transition-all group">
+                  <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-emerald-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Network className="h-5 w-5 text-emerald-400" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-white">View Topology</p>
+                    <p className="text-sm text-gray-400">Network graph</p>
+                  </div>
+                </div>
+              </AccentLink>
             </div>
-            <H2 className="mb-2">{stats?.interface ?? 'NIAC interface'}</H2>
-            <P className="text-gray-300">
-              {statsLoading && 'Collecting runtime statistics...'}
-              {statsError && 'Unable to load statistics from the NIAC runtime.'}
-              {!statsLoading && !statsError &&
-                'NIAC is publishing counters, neighbor data, and run history through the REST API. The Web UI polls a few times a minute so it mirrors the CLI/TUI view.'}
-            </P>
-            <div className="grid gap-4 sm:grid-cols-3">
-              {telemetry.map((item) => (
-                <StatBlock key={item.label} label={item.label} value={item.value} helper={item.detail} />
-              ))}
-            </div>
-            <div className="flex flex-wrap gap-3">
-              <Button tone="violet" leftIcon={<Activity className="h-4 w-4" />}>Open live logs</Button>
-              <Button variant="outline" leftIcon={<PlugZap className="h-4 w-4" />} onClick={() => setShowErrors(!showErrors)}>
-                {showErrors ? 'Hide' : 'Show'} error injection
-              </Button>
-              <Button variant="ghost" leftIcon={<ShieldCheck className="h-4 w-4" />}>Trigger alert test</Button>
-            </div>
+
             {showErrors && errorInfo && <ErrorInjectionPanel errorTypes={errorInfo.available_types} info={errorInfo.info} />}
           </CardContent>
         </Card>
-        <Card className="border-white/5 bg-gray-900/70">
+
+        {/* Recent Runs */}
+        <Card>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
-              <H2 className="mb-0">Recent runs</H2>
-              <Tag colorScheme="gray">BoltDB</Tag>
+              <H2 className="mb-0">Recent Runs</H2>
+              <Tag colorScheme="gray">History</Tag>
             </div>
             <div className="space-y-3">
-              {(history ?? []).slice(0, 3).map((item) => (
-                <div key={item.id} className="rounded-lg border border-white/5 bg-gray-950/50 p-3">
-                  <p className="font-mono text-sm text-blue-200">{formatTime(item.started_at)}</p>
-                  <p className="text-white font-semibold">{item.config_name}</p>
-                  <SmallText className="text-gray-400">
-                    {item.device_count} devices · RX {formatNumber(item.packets_received)} · TX {formatNumber(item.packets_sent)}
-                  </SmallText>
+              {(history ?? []).slice(0, 4).map((item) => (
+                <div key={item.id} className="rounded-lg border border-white/5 bg-gray-950/50 p-3 hover:border-white/10 transition-colors">
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="font-mono text-xs text-violet-300">{formatTime(item.started_at)}</p>
+                    <Tag colorScheme="gray" className="text-[10px]">{item.device_count} dev</Tag>
+                  </div>
+                  <p className="text-white font-medium text-sm truncate">{item.config_name}</p>
+                  <div className="flex gap-3 mt-1 text-xs text-gray-500">
+                    <span>RX {formatNumber(item.packets_received)}</span>
+                    <span>TX {formatNumber(item.packets_sent)}</span>
+                  </div>
                 </div>
               ))}
-              {!history?.length && <SmallText className="text-gray-400">No run history yet.</SmallText>}
+              {!history?.length && (
+                <div className="text-center py-6 text-gray-500">
+                  <Activity className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">No run history yet</p>
+                </div>
+              )}
             </div>
-            <AccentLink to="/analysis" className="text-indigo-300">
-              See all history →
-            </AccentLink>
+            {history && history.length > 0 && (
+              <AccentLink to="/analysis" className="text-sm">
+                View all history →
+              </AccentLink>
+            )}
           </CardContent>
         </Card>
       </div>

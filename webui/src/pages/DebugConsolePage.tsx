@@ -45,10 +45,14 @@ export const DebugConsolePage: FC = () => {
   const [protocolFilter, setProtocolFilter] = useState<Protocol | 'All'>('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [autoScroll, setAutoScroll] = useState(true);
+  const [paused, setPaused] = useState(false);
   const [showDebugSettings, setShowDebugSettings] = useState(false);
 
   // Handle incoming log messages
   const handleMessage = useCallback((data: unknown) => {
+    // Skip adding logs when paused
+    if (paused) return;
+
     const logEntry = mapToLogEntry(data);
     if (logEntry) {
       setLogs((prevLogs) => {
@@ -60,6 +64,11 @@ export const DebugConsolePage: FC = () => {
         return newLogs;
       });
     }
+  }, [paused]);
+
+  // Toggle pause state
+  const handlePauseToggle = useCallback(() => {
+    setPaused(prev => !prev);
   }, []);
 
   // WebSocket connection for log streaming
@@ -124,9 +133,16 @@ export const DebugConsolePage: FC = () => {
 
   // Connection status display
   const connectionStatus = useMemo(() => {
+    if (paused) {
+      return {
+        label: 'Paused',
+        color: 'yellow' as const,
+        indicator: 'bg-yellow-400',
+      };
+    }
     if (connected) {
       return {
-        label: 'Connected',
+        label: 'Live',
         color: 'green' as const,
         indicator: 'bg-green-400 animate-pulse',
       };
@@ -143,7 +159,7 @@ export const DebugConsolePage: FC = () => {
       color: 'red' as const,
       indicator: 'bg-red-400',
     };
-  }, [connected, reconnecting]);
+  }, [connected, reconnecting, paused]);
 
   return (
     <div className="space-y-6">
@@ -185,10 +201,12 @@ export const DebugConsolePage: FC = () => {
             searchQuery={searchQuery}
             autoScroll={autoScroll}
             logCount={logs.length}
+            paused={paused}
             onLevelChange={setLevelFilter}
             onProtocolChange={setProtocolFilter}
             onSearchChange={setSearchQuery}
             onAutoScrollChange={setAutoScroll}
+            onPauseToggle={handlePauseToggle}
             onExport={handleExport}
             onClear={handleClear}
           />

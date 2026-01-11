@@ -746,6 +746,12 @@ func (s *Server) Start() error {
 		mux.HandleFunc("/api/v1/neighbors", s.recoverMiddleware(s.auth(s.handleNeighbors)))
 		mux.HandleFunc("/api/v1/ws/status", s.recoverMiddleware(s.auth(s.handleWSStatus)))
 
+		// Walk file validation endpoints
+		mux.HandleFunc("/api/v1/walk/validate", s.recoverMiddleware(s.auth(s.csrfProtect(s.handleWalkValidation))))
+		mux.HandleFunc("/api/v1/walk/fix", s.recoverMiddleware(s.auth(s.csrfProtect(s.handleWalkValidation))))
+		mux.HandleFunc("/api/v1/walk/list", s.recoverMiddleware(s.auth(s.handleWalkList)))
+		mux.HandleFunc("/api/v1/walk/validate-all", s.recoverMiddleware(s.auth(s.csrfProtect(s.handleWalkBatchValidate))))
+
 		// WebSocket endpoints for real-time streaming
 		// Note: WebSocket handlers perform their own upgrade and don't need recoverMiddleware
 		mux.HandleFunc("/ws/packets", s.auth(s.handleWSPackets))

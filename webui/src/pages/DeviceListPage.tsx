@@ -17,6 +17,9 @@ import {
   Shield,
   HardDrive,
   Cpu,
+  LayoutGrid,
+  LayoutList,
+  Network,
 } from 'lucide-react';
 import {
   Card,
@@ -26,6 +29,8 @@ import {
   P,
   SmallText,
   Tag,
+  DeviceTableSkeleton,
+  DeviceCardGridSkeleton,
 } from '../ui';
 import { useApiResource } from '../hooks/useApiResource';
 import {
@@ -72,10 +77,20 @@ export const DeviceListPage: FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<DeviceType | 'all'>('all');
   const [protocolFilter, setProtocolFilter] = useState<string>('all');
+  const [viewMode, setViewMode] = useState<'cards' | 'table'>(() => {
+    const stored = localStorage.getItem('niac-device-view-mode');
+    return (stored === 'cards' || stored === 'table') ? stored : 'table';
+  });
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [selectedDevices, setSelectedDevices] = useState<Set<string>>(new Set());
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [showCloneModal, setShowCloneModal] = useState<string | null>(null);
+
+  // Persist view mode
+  const handleViewModeChange = useCallback((mode: 'cards' | 'table') => {
+    setViewMode(mode);
+    localStorage.setItem('niac-device-view-mode', mode);
+  }, []);
 
   const devices = deviceList?.devices ?? [];
 
@@ -330,6 +345,34 @@ export const DeviceListPage: FC = () => {
                 </option>
               ))}
             </select>
+
+            {/* View toggle */}
+            <div className="flex items-center gap-1 p-1 rounded-lg bg-gray-950/60 border border-white/10">
+              <button
+                onClick={() => handleViewModeChange('table')}
+                className={`p-2 rounded-md transition-colors ${
+                  viewMode === 'table'
+                    ? 'bg-violet-600 text-white'
+                    : 'text-gray-400 hover:text-white hover:bg-white/10'
+                }`}
+                title="Table view"
+                aria-label="Table view"
+              >
+                <LayoutList className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => handleViewModeChange('cards')}
+                className={`p-2 rounded-md transition-colors ${
+                  viewMode === 'cards'
+                    ? 'bg-violet-600 text-white'
+                    : 'text-gray-400 hover:text-white hover:bg-white/10'
+                }`}
+                title="Card view"
+                aria-label="Card view"
+              >
+                <LayoutGrid className="h-4 w-4" />
+              </button>
+            </div>
           </div>
 
           {/* Bulk actions */}
@@ -383,14 +426,28 @@ export const DeviceListPage: FC = () => {
 
       {/* Loading state */}
       {loading && !deviceList && (
-        <Card className="border-white/5 bg-gray-900/70">
-          <CardContent className="flex items-center justify-center py-12">
-            <div className="flex items-center gap-3 text-gray-400">
-              <div className="h-5 w-5 animate-spin rounded-full border-2 border-violet-500 border-t-transparent" />
-              <span>Loading devices...</span>
-            </div>
-          </CardContent>
-        </Card>
+        <>
+          {viewMode === 'table' ? (
+            <Card className="border-white/5 bg-gray-900/70">
+              <CardContent className="p-0">
+                {/* Table header skeleton */}
+                <div className="flex items-center gap-4 border-b border-white/10 px-4 py-3 bg-gray-950/40">
+                  <div className="h-4 w-4 rounded bg-gray-700/50" />
+                  <div className="flex-1 grid grid-cols-12 gap-4 text-sm font-medium text-gray-400">
+                    <div className="col-span-3">Hostname</div>
+                    <div className="col-span-2">Type</div>
+                    <div className="col-span-2">IP Address</div>
+                    <div className="col-span-3">Protocols</div>
+                    <div className="col-span-2 text-right">Actions</div>
+                  </div>
+                </div>
+                <DeviceTableSkeleton rows={8} />
+              </CardContent>
+            </Card>
+          ) : (
+            <DeviceCardGridSkeleton count={8} />
+          )}
+        </>
       )}
 
       {/* Error state */}
@@ -461,8 +518,8 @@ export const DeviceListPage: FC = () => {
         </Card>
       )}
 
-      {/* Device list */}
-      {filteredDevices.length > 0 && (
+      {/* Device list - Table View */}
+      {filteredDevices.length > 0 && viewMode === 'table' && (
         <Card className="border-white/5 bg-gray-900/70">
           <CardContent className="p-0">
             {/* Table header */}
@@ -582,6 +639,148 @@ export const DeviceListPage: FC = () => {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Device list - Card View */}
+      {filteredDevices.length > 0 && viewMode === 'cards' && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {filteredDevices.map((device) => {
+            const DeviceIcon = deviceTypeIcons[device.type ?? 'unknown'];
+            const typeColor = deviceTypeColors[device.type ?? 'unknown'];
+            const deviceProtocols = getDeviceProtocols(device);
+
+            return (
+              <div
+                key={device.hostname}
+                onClick={() => navigate(`/device-config/${encodeURIComponent(device.hostname)}`)}
+                className="cursor-pointer group"
+              >
+                <Card
+                  className={`border-white/5 bg-gray-900/70 hover:border-violet-500/30 transition-all h-full ${
+                    selectedDevices.has(device.hostname) ? 'ring-2 ring-violet-500/50 border-violet-500/30' : ''
+                  }`}
+                >
+                <CardContent className="p-4 space-y-3">
+                  {/* Header with checkbox and type icon */}
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleDeviceSelection(device.hostname);
+                        }}
+                        className="flex items-center"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedDevices.has(device.hostname)}
+                          onChange={() => {}}
+                          className="h-4 w-4 rounded border-gray-600 bg-gray-800 text-violet-500 focus:ring-violet-500 cursor-pointer"
+                        />
+                      </div>
+                      <div className={`p-2 rounded-lg ${
+                        typeColor === 'blue' ? 'bg-blue-500/20' :
+                        typeColor === 'green' ? 'bg-green-500/20' :
+                        typeColor === 'purple' ? 'bg-purple-500/20' :
+                        typeColor === 'yellow' ? 'bg-yellow-500/20' :
+                        typeColor === 'red' ? 'bg-red-500/20' :
+                        'bg-gray-500/20'
+                      }`}>
+                        <DeviceIcon className={`h-5 w-5 ${
+                          typeColor === 'blue' ? 'text-blue-400' :
+                          typeColor === 'green' ? 'text-green-400' :
+                          typeColor === 'purple' ? 'text-purple-400' :
+                          typeColor === 'yellow' ? 'text-yellow-400' :
+                          typeColor === 'red' ? 'text-red-400' :
+                          'text-gray-400'
+                        }`} />
+                      </div>
+                    </div>
+                    <Tag colorScheme={typeColor} className="text-xs capitalize">
+                      {device.type?.replace('_', ' ') || 'unknown'}
+                    </Tag>
+                  </div>
+
+                  {/* Device name and IP */}
+                  <div>
+                    <h3 className="font-semibold text-white group-hover:text-violet-300 transition-colors truncate">
+                      {device.hostname}
+                    </h3>
+                    <div className="flex items-center gap-1 mt-1">
+                      <Network className="h-3.5 w-3.5 text-gray-500" />
+                      <span className="text-sm text-gray-400 font-mono">
+                        {device.ip || device.ips?.[0] || 'No IP'}
+                      </span>
+                      {device.ips && device.ips.length > 1 && (
+                        <span className="text-xs text-gray-500">
+                          +{device.ips.length - 1}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* MAC Address */}
+                  <div className="text-xs text-gray-500 font-mono truncate">
+                    {device.mac}
+                  </div>
+
+                  {/* Protocols */}
+                  <div className="flex flex-wrap gap-1">
+                    {deviceProtocols.length > 0 ? (
+                      deviceProtocols.slice(0, 3).map((proto) => (
+                        <Tag key={proto} colorScheme="gray" className="text-xs">
+                          {proto}
+                        </Tag>
+                      ))
+                    ) : (
+                      <span className="text-gray-500 text-xs">No protocols</span>
+                    )}
+                    {deviceProtocols.length > 3 && (
+                      <Tag colorScheme="gray" className="text-xs">
+                        +{deviceProtocols.length - 3}
+                      </Tag>
+                    )}
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex justify-end gap-1 pt-2 border-t border-white/5">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/device-config/${encodeURIComponent(device.hostname)}`);
+                      }}
+                      className="p-2 text-gray-400 hover:text-violet-300 hover:bg-white/10 rounded-lg transition-colors"
+                      title="Edit device"
+                    >
+                      <Edit3 className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowCloneModal(device.hostname);
+                      }}
+                      className="p-2 text-gray-400 hover:text-blue-300 hover:bg-white/10 rounded-lg transition-colors"
+                      title="Clone device"
+                    >
+                      <Copy className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowDeleteConfirm(device.hostname);
+                      }}
+                      className="p-2 text-gray-400 hover:text-red-400 hover:bg-white/10 rounded-lg transition-colors"
+                      title="Delete device"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </CardContent>
+                </Card>
+              </div>
+            );
+          })}
+        </div>
       )}
 
       {/* Delete confirmation modal */}

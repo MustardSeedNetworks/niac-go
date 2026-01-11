@@ -769,9 +769,15 @@ func createBaseConfig(yamlConfig *converter.Config) *Config {
 
 // convertYAMLDevice converts a YAML device to a runtime Device
 func convertYAMLDevice(yamlDevice converter.Device, includePath string) (Device, error) {
+	// Determine device type (default to "unknown" if not specified)
+	deviceType := yamlDevice.Type
+	if deviceType == "" {
+		deviceType = "unknown"
+	}
+
 	device := Device{
 		Name:       yamlDevice.Name,
-		Type:       "unknown", // Default type
+		Type:       deviceType,
 		Interfaces: make([]Interface, 0),
 		Properties: make(map[string]string),
 		SNMPConfig: SNMPConfig{

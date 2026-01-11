@@ -17,6 +17,14 @@ import {
   Shield,
   HardDrive,
   Cpu,
+  Plus,
+  X,
+  Globe,
+  Database,
+  FileText,
+  Folder,
+  Network,
+  Radio,
 } from 'lucide-react';
 import {
   Card,
@@ -41,6 +49,17 @@ import type {
   LLDPConfig,
   CDPConfig,
   STPConfig,
+  DHCPConfig,
+  DHCPLease,
+  DNSConfig,
+  DNSRecord,
+  HTTPConfig,
+  HTTPEndpoint,
+  FTPConfig,
+  FTPUser,
+  NetBIOSConfig,
+  NetBIOSService,
+  TrafficConfig,
   FileEntry,
 } from '../api/types';
 import { YamlEditor } from '../components/config/YamlEditor';
@@ -243,6 +262,51 @@ export const DeviceEditorPage: FC = () => {
         lines.push('    cdp:');
         lines.push('      enabled: true');
         if (device.cdp.platform) lines.push(`      platform: "${device.cdp.platform}"`);
+      }
+      if (device.stp?.enabled) {
+        lines.push('    stp:');
+        lines.push('      enabled: true');
+        if (device.stp.bridge_priority !== undefined) lines.push(`      bridge_priority: ${device.stp.bridge_priority}`);
+      }
+      if (device.dhcp) {
+        lines.push('    dhcp:');
+        if (device.dhcp.subnet_mask) lines.push(`      subnet_mask: "${device.dhcp.subnet_mask}"`);
+        if (device.dhcp.router) lines.push(`      router: "${device.dhcp.router}"`);
+        if (device.dhcp.domain_name_server) lines.push(`      domain_name_server: "${device.dhcp.domain_name_server}"`);
+      }
+      if (device.dns) {
+        lines.push('    dns:');
+        if (device.dns.forward_records?.length) {
+          lines.push('      forward_records:');
+          device.dns.forward_records.forEach((r) => {
+            lines.push(`        - name: "${r.name}"`);
+            lines.push(`          ip: "${r.ip}"`);
+          });
+        }
+      }
+      if (device.http?.enabled) {
+        lines.push('    http:');
+        lines.push('      enabled: true');
+        if (device.http.server_name) lines.push(`      server_name: "${device.http.server_name}"`);
+      }
+      if (device.ftp?.enabled) {
+        lines.push('    ftp:');
+        lines.push('      enabled: true');
+        if (device.ftp.welcome_banner) lines.push(`      welcome_banner: "${device.ftp.welcome_banner}"`);
+      }
+      if (device.netbios?.enabled) {
+        lines.push('    netbios:');
+        lines.push('      enabled: true');
+        if (device.netbios.name) lines.push(`      name: "${device.netbios.name}"`);
+        if (device.netbios.workgroup) lines.push(`      workgroup: "${device.netbios.workgroup}"`);
+      }
+      if (device.traffic?.enabled) {
+        lines.push('    traffic:');
+        lines.push('      enabled: true');
+        if (device.traffic.arp_announcements?.enabled) {
+          lines.push('      arp_announcements:');
+          lines.push('        enabled: true');
+        }
       }
       return lines.join('\n');
     } catch {
@@ -676,6 +740,912 @@ export const DeviceEditorPage: FC = () => {
                 className="w-full rounded-lg border border-white/10 bg-gray-950/60 p-3 text-sm text-white placeholder-gray-500 focus:border-violet-400 focus:outline-none"
               />
             </FormField>
+          </div>
+        )}
+      </CollapsibleSection>
+
+      {/* Additional IP Addresses */}
+      <CollapsibleSection
+        title="Additional IP Addresses"
+        isExpanded={expandedSections.has('ips')}
+        onToggle={() => toggleSection('ips')}
+      >
+        <div className="space-y-4">
+          <SmallText className="text-gray-400">
+            Add secondary IP addresses for multi-homed or VLAN configurations.
+          </SmallText>
+          {(device.ips || []).map((ip, index) => (
+            <div key={index} className="flex gap-2">
+              <input
+                type="text"
+                value={ip}
+                onChange={(e) => {
+                  const newIps = [...(device.ips || [])];
+                  newIps[index] = e.target.value;
+                  updateField('ips', newIps);
+                }}
+                placeholder="e.g., 192.168.2.1"
+                className="flex-1 rounded-lg border border-white/10 bg-gray-950/60 p-3 text-sm text-white placeholder-gray-500 focus:border-violet-400 focus:outline-none font-mono"
+              />
+              <Button
+                variant="ghost"
+                tone="red"
+                size="sm"
+                onClick={() => {
+                  const newIps = (device.ips || []).filter((_, i) => i !== index);
+                  updateField('ips', newIps);
+                }}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          ))}
+          <Button
+            variant="outline"
+            size="sm"
+            leftIcon={<Plus className="h-4 w-4" />}
+            onClick={() => updateField('ips', [...(device.ips || []), ''])}
+          >
+            Add IP Address
+          </Button>
+        </div>
+      </CollapsibleSection>
+
+      {/* DHCP Server */}
+      <CollapsibleSection
+        title="DHCP Server"
+        isExpanded={expandedSections.has('dhcp')}
+        onToggle={() => toggleSection('dhcp')}
+        enabled={!!device.dhcp}
+        onEnableChange={(enabled) => {
+          if (enabled) {
+            updateProtocol('dhcp', { subnet_mask: '255.255.255.0' } as DHCPConfig);
+          } else {
+            updateProtocol('dhcp', undefined);
+          }
+        }}
+      >
+        {device.dhcp && (
+          <div className="space-y-6">
+            <div className="grid gap-4 md:grid-cols-2">
+              <FormField label="Subnet Mask" helpText="DHCP subnet mask">
+                <input
+                  type="text"
+                  value={device.dhcp.subnet_mask || ''}
+                  onChange={(e) =>
+                    updateProtocol('dhcp', { ...device.dhcp!, subnet_mask: e.target.value })
+                  }
+                  placeholder="255.255.255.0"
+                  className="w-full rounded-lg border border-white/10 bg-gray-950/60 p-3 text-sm text-white placeholder-gray-500 focus:border-violet-400 focus:outline-none font-mono"
+                />
+              </FormField>
+
+              <FormField label="Default Gateway" helpText="Router/gateway for clients">
+                <input
+                  type="text"
+                  value={device.dhcp.router || ''}
+                  onChange={(e) =>
+                    updateProtocol('dhcp', { ...device.dhcp!, router: e.target.value })
+                  }
+                  placeholder="192.168.1.1"
+                  className="w-full rounded-lg border border-white/10 bg-gray-950/60 p-3 text-sm text-white placeholder-gray-500 focus:border-violet-400 focus:outline-none font-mono"
+                />
+              </FormField>
+
+              <FormField label="DNS Server" helpText="Domain name server for clients">
+                <input
+                  type="text"
+                  value={device.dhcp.domain_name_server || ''}
+                  onChange={(e) =>
+                    updateProtocol('dhcp', { ...device.dhcp!, domain_name_server: e.target.value })
+                  }
+                  placeholder="8.8.8.8"
+                  className="w-full rounded-lg border border-white/10 bg-gray-950/60 p-3 text-sm text-white placeholder-gray-500 focus:border-violet-400 focus:outline-none font-mono"
+                />
+              </FormField>
+
+              <FormField label="Domain Name" helpText="Domain suffix for clients">
+                <input
+                  type="text"
+                  value={device.dhcp.domain_name || ''}
+                  onChange={(e) =>
+                    updateProtocol('dhcp', { ...device.dhcp!, domain_name: e.target.value })
+                  }
+                  placeholder="example.local"
+                  className="w-full rounded-lg border border-white/10 bg-gray-950/60 p-3 text-sm text-white placeholder-gray-500 focus:border-violet-400 focus:outline-none"
+                />
+              </FormField>
+
+              <FormField label="Pool Start" helpText="Start of DHCP address pool">
+                <input
+                  type="text"
+                  value={device.dhcp.pool_start || ''}
+                  onChange={(e) =>
+                    updateProtocol('dhcp', { ...device.dhcp!, pool_start: e.target.value })
+                  }
+                  placeholder="192.168.1.100"
+                  className="w-full rounded-lg border border-white/10 bg-gray-950/60 p-3 text-sm text-white placeholder-gray-500 focus:border-violet-400 focus:outline-none font-mono"
+                />
+              </FormField>
+
+              <FormField label="Pool End" helpText="End of DHCP address pool">
+                <input
+                  type="text"
+                  value={device.dhcp.pool_end || ''}
+                  onChange={(e) =>
+                    updateProtocol('dhcp', { ...device.dhcp!, pool_end: e.target.value })
+                  }
+                  placeholder="192.168.1.200"
+                  className="w-full rounded-lg border border-white/10 bg-gray-950/60 p-3 text-sm text-white placeholder-gray-500 focus:border-violet-400 focus:outline-none font-mono"
+                />
+              </FormField>
+            </div>
+
+            {/* Static Leases */}
+            <div className="space-y-3">
+              <h4 className="text-sm font-medium text-white flex items-center gap-2">
+                <Database className="h-4 w-4 text-violet-400" />
+                Static Leases
+              </h4>
+              {(device.dhcp.client_leases || []).map((lease, index) => (
+                <div key={index} className="flex gap-2 items-center">
+                  <input
+                    type="text"
+                    value={lease.mac_address || ''}
+                    onChange={(e) => {
+                      const leases = [...(device.dhcp!.client_leases || [])];
+                      leases[index] = { ...leases[index], mac_address: e.target.value };
+                      updateProtocol('dhcp', { ...device.dhcp!, client_leases: leases });
+                    }}
+                    placeholder="MAC Address"
+                    className="flex-1 rounded-lg border border-white/10 bg-gray-950/60 p-2 text-sm text-white placeholder-gray-500 focus:border-violet-400 focus:outline-none font-mono"
+                  />
+                  <input
+                    type="text"
+                    value={lease.client_ip || ''}
+                    onChange={(e) => {
+                      const leases = [...(device.dhcp!.client_leases || [])];
+                      leases[index] = { ...leases[index], client_ip: e.target.value };
+                      updateProtocol('dhcp', { ...device.dhcp!, client_leases: leases });
+                    }}
+                    placeholder="IP Address"
+                    className="flex-1 rounded-lg border border-white/10 bg-gray-950/60 p-2 text-sm text-white placeholder-gray-500 focus:border-violet-400 focus:outline-none font-mono"
+                  />
+                  <Button
+                    variant="ghost"
+                    tone="red"
+                    size="sm"
+                    onClick={() => {
+                      const leases = (device.dhcp!.client_leases || []).filter((_, i) => i !== index);
+                      updateProtocol('dhcp', { ...device.dhcp!, client_leases: leases });
+                    }}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+              <Button
+                variant="outline"
+                size="sm"
+                leftIcon={<Plus className="h-4 w-4" />}
+                onClick={() => {
+                  const leases = [...(device.dhcp!.client_leases || []), { mac_address: '', client_ip: '' } as DHCPLease];
+                  updateProtocol('dhcp', { ...device.dhcp!, client_leases: leases });
+                }}
+              >
+                Add Static Lease
+              </Button>
+            </div>
+          </div>
+        )}
+      </CollapsibleSection>
+
+      {/* DNS Server */}
+      <CollapsibleSection
+        title="DNS Server"
+        isExpanded={expandedSections.has('dns')}
+        onToggle={() => toggleSection('dns')}
+        enabled={!!device.dns}
+        onEnableChange={(enabled) => {
+          if (enabled) {
+            updateProtocol('dns', { forward_records: [], reverse_records: [] } as DNSConfig);
+          } else {
+            updateProtocol('dns', undefined);
+          }
+        }}
+      >
+        {device.dns && (
+          <div className="space-y-6">
+            {/* Forward Records (A records) */}
+            <div className="space-y-3">
+              <h4 className="text-sm font-medium text-white flex items-center gap-2">
+                <Globe className="h-4 w-4 text-violet-400" />
+                Forward Records (A Records)
+              </h4>
+              {(device.dns.forward_records || []).map((record, index) => (
+                <div key={index} className="flex gap-2 items-center">
+                  <input
+                    type="text"
+                    value={record.name || ''}
+                    onChange={(e) => {
+                      const records = [...(device.dns!.forward_records || [])];
+                      records[index] = { ...records[index], name: e.target.value };
+                      updateProtocol('dns', { ...device.dns!, forward_records: records });
+                    }}
+                    placeholder="Hostname (e.g., www.example.com)"
+                    className="flex-1 rounded-lg border border-white/10 bg-gray-950/60 p-2 text-sm text-white placeholder-gray-500 focus:border-violet-400 focus:outline-none"
+                  />
+                  <input
+                    type="text"
+                    value={record.ip || ''}
+                    onChange={(e) => {
+                      const records = [...(device.dns!.forward_records || [])];
+                      records[index] = { ...records[index], ip: e.target.value };
+                      updateProtocol('dns', { ...device.dns!, forward_records: records });
+                    }}
+                    placeholder="IP Address"
+                    className="w-40 rounded-lg border border-white/10 bg-gray-950/60 p-2 text-sm text-white placeholder-gray-500 focus:border-violet-400 focus:outline-none font-mono"
+                  />
+                  <input
+                    type="number"
+                    value={record.ttl ?? 300}
+                    onChange={(e) => {
+                      const records = [...(device.dns!.forward_records || [])];
+                      records[index] = { ...records[index], ttl: parseInt(e.target.value) };
+                      updateProtocol('dns', { ...device.dns!, forward_records: records });
+                    }}
+                    placeholder="TTL"
+                    className="w-24 rounded-lg border border-white/10 bg-gray-950/60 p-2 text-sm text-white placeholder-gray-500 focus:border-violet-400 focus:outline-none"
+                  />
+                  <Button
+                    variant="ghost"
+                    tone="red"
+                    size="sm"
+                    onClick={() => {
+                      const records = (device.dns!.forward_records || []).filter((_, i) => i !== index);
+                      updateProtocol('dns', { ...device.dns!, forward_records: records });
+                    }}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+              <Button
+                variant="outline"
+                size="sm"
+                leftIcon={<Plus className="h-4 w-4" />}
+                onClick={() => {
+                  const records = [...(device.dns!.forward_records || []), { name: '', ip: '', ttl: 300 } as DNSRecord];
+                  updateProtocol('dns', { ...device.dns!, forward_records: records });
+                }}
+              >
+                Add Forward Record
+              </Button>
+            </div>
+
+            {/* Reverse Records (PTR records) */}
+            <div className="space-y-3">
+              <h4 className="text-sm font-medium text-white flex items-center gap-2">
+                <Globe className="h-4 w-4 text-violet-400" />
+                Reverse Records (PTR Records)
+              </h4>
+              {(device.dns.reverse_records || []).map((record, index) => (
+                <div key={index} className="flex gap-2 items-center">
+                  <input
+                    type="text"
+                    value={record.ip || ''}
+                    onChange={(e) => {
+                      const records = [...(device.dns!.reverse_records || [])];
+                      records[index] = { ...records[index], ip: e.target.value };
+                      updateProtocol('dns', { ...device.dns!, reverse_records: records });
+                    }}
+                    placeholder="IP Address"
+                    className="w-40 rounded-lg border border-white/10 bg-gray-950/60 p-2 text-sm text-white placeholder-gray-500 focus:border-violet-400 focus:outline-none font-mono"
+                  />
+                  <input
+                    type="text"
+                    value={record.name || ''}
+                    onChange={(e) => {
+                      const records = [...(device.dns!.reverse_records || [])];
+                      records[index] = { ...records[index], name: e.target.value };
+                      updateProtocol('dns', { ...device.dns!, reverse_records: records });
+                    }}
+                    placeholder="Hostname (e.g., server.example.com)"
+                    className="flex-1 rounded-lg border border-white/10 bg-gray-950/60 p-2 text-sm text-white placeholder-gray-500 focus:border-violet-400 focus:outline-none"
+                  />
+                  <Button
+                    variant="ghost"
+                    tone="red"
+                    size="sm"
+                    onClick={() => {
+                      const records = (device.dns!.reverse_records || []).filter((_, i) => i !== index);
+                      updateProtocol('dns', { ...device.dns!, reverse_records: records });
+                    }}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+              <Button
+                variant="outline"
+                size="sm"
+                leftIcon={<Plus className="h-4 w-4" />}
+                onClick={() => {
+                  const records = [...(device.dns!.reverse_records || []), { ip: '', name: '', ttl: 300 } as DNSRecord];
+                  updateProtocol('dns', { ...device.dns!, reverse_records: records });
+                }}
+              >
+                Add Reverse Record
+              </Button>
+            </div>
+          </div>
+        )}
+      </CollapsibleSection>
+
+      {/* HTTP Server */}
+      <CollapsibleSection
+        title="HTTP Server"
+        isExpanded={expandedSections.has('http')}
+        onToggle={() => toggleSection('http')}
+        enabled={device.http?.enabled ?? false}
+        onEnableChange={(enabled) => {
+          updateProtocol('http', enabled ? { enabled: true, server_name: 'NIAC/1.0' } as HTTPConfig : undefined);
+        }}
+      >
+        {device.http?.enabled && (
+          <div className="space-y-6">
+            <div className="grid gap-4 md:grid-cols-2">
+              <FormField label="Server Name" helpText="HTTP Server header value">
+                <input
+                  type="text"
+                  value={device.http.server_name || ''}
+                  onChange={(e) =>
+                    updateProtocol('http', { ...device.http!, server_name: e.target.value })
+                  }
+                  placeholder="Apache/2.4.41"
+                  className="w-full rounded-lg border border-white/10 bg-gray-950/60 p-3 text-sm text-white placeholder-gray-500 focus:border-violet-400 focus:outline-none"
+                />
+              </FormField>
+            </div>
+
+            {/* Endpoints */}
+            <div className="space-y-3">
+              <h4 className="text-sm font-medium text-white flex items-center gap-2">
+                <FileText className="h-4 w-4 text-violet-400" />
+                Endpoints
+              </h4>
+              {(device.http.endpoints || []).map((endpoint, index) => (
+                <div key={index} className="rounded-lg border border-white/5 bg-gray-950/40 p-4 space-y-3">
+                  <div className="flex gap-2 items-center">
+                    <select
+                      value={endpoint.method || 'GET'}
+                      onChange={(e) => {
+                        const endpoints = [...(device.http!.endpoints || [])];
+                        endpoints[index] = { ...endpoints[index], method: e.target.value as HTTPEndpoint['method'] };
+                        updateProtocol('http', { ...device.http!, endpoints });
+                      }}
+                      className="w-24 rounded-lg border border-white/10 bg-gray-950/60 p-2 text-sm text-white focus:border-violet-400 focus:outline-none"
+                    >
+                      <option value="GET">GET</option>
+                      <option value="POST">POST</option>
+                      <option value="PUT">PUT</option>
+                      <option value="DELETE">DELETE</option>
+                    </select>
+                    <input
+                      type="text"
+                      value={endpoint.path || ''}
+                      onChange={(e) => {
+                        const endpoints = [...(device.http!.endpoints || [])];
+                        endpoints[index] = { ...endpoints[index], path: e.target.value };
+                        updateProtocol('http', { ...device.http!, endpoints });
+                      }}
+                      placeholder="/api/status"
+                      className="flex-1 rounded-lg border border-white/10 bg-gray-950/60 p-2 text-sm text-white placeholder-gray-500 focus:border-violet-400 focus:outline-none font-mono"
+                    />
+                    <input
+                      type="number"
+                      value={endpoint.status_code ?? 200}
+                      onChange={(e) => {
+                        const endpoints = [...(device.http!.endpoints || [])];
+                        endpoints[index] = { ...endpoints[index], status_code: parseInt(e.target.value) };
+                        updateProtocol('http', { ...device.http!, endpoints });
+                      }}
+                      placeholder="Status"
+                      className="w-20 rounded-lg border border-white/10 bg-gray-950/60 p-2 text-sm text-white placeholder-gray-500 focus:border-violet-400 focus:outline-none"
+                    />
+                    <Button
+                      variant="ghost"
+                      tone="red"
+                      size="sm"
+                      onClick={() => {
+                        const endpoints = (device.http!.endpoints || []).filter((_, i) => i !== index);
+                        updateProtocol('http', { ...device.http!, endpoints });
+                      }}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={endpoint.content_type || ''}
+                      onChange={(e) => {
+                        const endpoints = [...(device.http!.endpoints || [])];
+                        endpoints[index] = { ...endpoints[index], content_type: e.target.value };
+                        updateProtocol('http', { ...device.http!, endpoints });
+                      }}
+                      placeholder="Content-Type (e.g., application/json)"
+                      className="w-64 rounded-lg border border-white/10 bg-gray-950/60 p-2 text-sm text-white placeholder-gray-500 focus:border-violet-400 focus:outline-none"
+                    />
+                    <input
+                      type="text"
+                      value={endpoint.body || ''}
+                      onChange={(e) => {
+                        const endpoints = [...(device.http!.endpoints || [])];
+                        endpoints[index] = { ...endpoints[index], body: e.target.value };
+                        updateProtocol('http', { ...device.http!, endpoints });
+                      }}
+                      placeholder="Response body"
+                      className="flex-1 rounded-lg border border-white/10 bg-gray-950/60 p-2 text-sm text-white placeholder-gray-500 focus:border-violet-400 focus:outline-none"
+                    />
+                  </div>
+                </div>
+              ))}
+              <Button
+                variant="outline"
+                size="sm"
+                leftIcon={<Plus className="h-4 w-4" />}
+                onClick={() => {
+                  const endpoints = [...(device.http!.endpoints || []), { path: '/', method: 'GET', status_code: 200, content_type: 'text/html' } as HTTPEndpoint];
+                  updateProtocol('http', { ...device.http!, endpoints });
+                }}
+              >
+                Add Endpoint
+              </Button>
+            </div>
+          </div>
+        )}
+      </CollapsibleSection>
+
+      {/* FTP Server */}
+      <CollapsibleSection
+        title="FTP Server"
+        isExpanded={expandedSections.has('ftp')}
+        onToggle={() => toggleSection('ftp')}
+        enabled={device.ftp?.enabled ?? false}
+        onEnableChange={(enabled) => {
+          updateProtocol('ftp', enabled ? { enabled: true, system_type: 'UNIX Type: L8' } as FTPConfig : undefined);
+        }}
+      >
+        {device.ftp?.enabled && (
+          <div className="space-y-6">
+            <div className="grid gap-4 md:grid-cols-2">
+              <FormField label="Welcome Banner" helpText="FTP welcome message">
+                <input
+                  type="text"
+                  value={device.ftp.welcome_banner || ''}
+                  onChange={(e) =>
+                    updateProtocol('ftp', { ...device.ftp!, welcome_banner: e.target.value })
+                  }
+                  placeholder="Welcome to FTP Server"
+                  className="w-full rounded-lg border border-white/10 bg-gray-950/60 p-3 text-sm text-white placeholder-gray-500 focus:border-violet-400 focus:outline-none"
+                />
+              </FormField>
+
+              <FormField label="System Type" helpText="SYST response">
+                <input
+                  type="text"
+                  value={device.ftp.system_type || ''}
+                  onChange={(e) =>
+                    updateProtocol('ftp', { ...device.ftp!, system_type: e.target.value })
+                  }
+                  placeholder="UNIX Type: L8"
+                  className="w-full rounded-lg border border-white/10 bg-gray-950/60 p-3 text-sm text-white placeholder-gray-500 focus:border-violet-400 focus:outline-none"
+                />
+              </FormField>
+
+              <FormField label="Allow Anonymous" helpText="Allow anonymous FTP access">
+                <label className="relative inline-flex items-center cursor-pointer mt-2">
+                  <input
+                    type="checkbox"
+                    checked={device.ftp.allow_anonymous ?? false}
+                    onChange={(e) =>
+                      updateProtocol('ftp', { ...device.ftp!, allow_anonymous: e.target.checked })
+                    }
+                    className="sr-only peer"
+                  />
+                  <div className="w-9 h-5 bg-gray-700 rounded-full peer peer-checked:bg-violet-600 peer-focus:ring-2 peer-focus:ring-violet-500 transition-colors">
+                    <div className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${device.ftp.allow_anonymous ? 'translate-x-4' : ''}`} />
+                  </div>
+                  <span className="ml-3 text-sm text-gray-300">{device.ftp.allow_anonymous ? 'Enabled' : 'Disabled'}</span>
+                </label>
+              </FormField>
+            </div>
+
+            {/* FTP Users */}
+            <div className="space-y-3">
+              <h4 className="text-sm font-medium text-white flex items-center gap-2">
+                <Folder className="h-4 w-4 text-violet-400" />
+                FTP Users
+              </h4>
+              {(device.ftp.users || []).map((user, index) => (
+                <div key={index} className="flex gap-2 items-center">
+                  <input
+                    type="text"
+                    value={user.username || ''}
+                    onChange={(e) => {
+                      const users = [...(device.ftp!.users || [])];
+                      users[index] = { ...users[index], username: e.target.value };
+                      updateProtocol('ftp', { ...device.ftp!, users });
+                    }}
+                    placeholder="Username"
+                    className="flex-1 rounded-lg border border-white/10 bg-gray-950/60 p-2 text-sm text-white placeholder-gray-500 focus:border-violet-400 focus:outline-none"
+                  />
+                  <input
+                    type="text"
+                    value={user.password || ''}
+                    onChange={(e) => {
+                      const users = [...(device.ftp!.users || [])];
+                      users[index] = { ...users[index], password: e.target.value };
+                      updateProtocol('ftp', { ...device.ftp!, users });
+                    }}
+                    placeholder="Password"
+                    className="flex-1 rounded-lg border border-white/10 bg-gray-950/60 p-2 text-sm text-white placeholder-gray-500 focus:border-violet-400 focus:outline-none"
+                  />
+                  <input
+                    type="text"
+                    value={user.home_dir || ''}
+                    onChange={(e) => {
+                      const users = [...(device.ftp!.users || [])];
+                      users[index] = { ...users[index], home_dir: e.target.value };
+                      updateProtocol('ftp', { ...device.ftp!, users });
+                    }}
+                    placeholder="Home Directory"
+                    className="flex-1 rounded-lg border border-white/10 bg-gray-950/60 p-2 text-sm text-white placeholder-gray-500 focus:border-violet-400 focus:outline-none font-mono"
+                  />
+                  <Button
+                    variant="ghost"
+                    tone="red"
+                    size="sm"
+                    onClick={() => {
+                      const users = (device.ftp!.users || []).filter((_, i) => i !== index);
+                      updateProtocol('ftp', { ...device.ftp!, users });
+                    }}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+              <Button
+                variant="outline"
+                size="sm"
+                leftIcon={<Plus className="h-4 w-4" />}
+                onClick={() => {
+                  const users = [...(device.ftp!.users || []), { username: '', password: '', home_dir: '/' } as FTPUser];
+                  updateProtocol('ftp', { ...device.ftp!, users });
+                }}
+              >
+                Add User
+              </Button>
+            </div>
+          </div>
+        )}
+      </CollapsibleSection>
+
+      {/* NetBIOS */}
+      <CollapsibleSection
+        title="NetBIOS"
+        isExpanded={expandedSections.has('netbios')}
+        onToggle={() => toggleSection('netbios')}
+        enabled={device.netbios?.enabled ?? false}
+        onEnableChange={(enabled) => {
+          updateProtocol('netbios', enabled ? { enabled: true, node_type: 'B' } as NetBIOSConfig : undefined);
+        }}
+      >
+        {device.netbios?.enabled && (
+          <div className="space-y-6">
+            <div className="grid gap-4 md:grid-cols-2">
+              <FormField label="NetBIOS Name" helpText="NetBIOS computer name (max 15 chars)">
+                <input
+                  type="text"
+                  value={device.netbios.name || ''}
+                  onChange={(e) =>
+                    updateProtocol('netbios', { ...device.netbios!, name: e.target.value.toUpperCase().slice(0, 15) })
+                  }
+                  placeholder="FILESERVER"
+                  maxLength={15}
+                  className="w-full rounded-lg border border-white/10 bg-gray-950/60 p-3 text-sm text-white placeholder-gray-500 focus:border-violet-400 focus:outline-none uppercase"
+                />
+              </FormField>
+
+              <FormField label="Workgroup" helpText="NetBIOS workgroup/domain">
+                <input
+                  type="text"
+                  value={device.netbios.workgroup || ''}
+                  onChange={(e) =>
+                    updateProtocol('netbios', { ...device.netbios!, workgroup: e.target.value.toUpperCase() })
+                  }
+                  placeholder="WORKGROUP"
+                  className="w-full rounded-lg border border-white/10 bg-gray-950/60 p-3 text-sm text-white placeholder-gray-500 focus:border-violet-400 focus:outline-none uppercase"
+                />
+              </FormField>
+
+              <FormField label="Node Type" helpText="NetBIOS node type">
+                <select
+                  value={device.netbios.node_type || 'B'}
+                  onChange={(e) =>
+                    updateProtocol('netbios', { ...device.netbios!, node_type: e.target.value as NetBIOSConfig['node_type'] })
+                  }
+                  className="w-full rounded-lg border border-white/10 bg-gray-950/60 p-3 text-sm text-white focus:border-violet-400 focus:outline-none"
+                >
+                  <option value="B">B-node (Broadcast)</option>
+                  <option value="P">P-node (Point-to-Point)</option>
+                  <option value="M">M-node (Mixed)</option>
+                  <option value="H">H-node (Hybrid)</option>
+                </select>
+              </FormField>
+
+              <FormField label="TTL (seconds)" helpText="Time-to-live for NetBIOS announcements">
+                <input
+                  type="number"
+                  value={device.netbios.ttl ?? 300000}
+                  onChange={(e) =>
+                    updateProtocol('netbios', { ...device.netbios!, ttl: parseInt(e.target.value) })
+                  }
+                  min={60000}
+                  max={604800000}
+                  className="w-full rounded-lg border border-white/10 bg-gray-950/60 p-3 text-sm text-white placeholder-gray-500 focus:border-violet-400 focus:outline-none"
+                />
+              </FormField>
+            </div>
+
+            {/* Services */}
+            <div className="space-y-3">
+              <h4 className="text-sm font-medium text-white flex items-center gap-2">
+                <Network className="h-4 w-4 text-violet-400" />
+                NetBIOS Services
+              </h4>
+              <div className="flex flex-wrap gap-4">
+                {(['workstation', 'fileserver', 'messenger'] as NetBIOSService[]).map((service) => (
+                  <label key={service} className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={(device.netbios!.services || []).includes(service)}
+                      onChange={(e) => {
+                        const services = device.netbios!.services || [];
+                        if (e.target.checked) {
+                          updateProtocol('netbios', { ...device.netbios!, services: [...services, service] });
+                        } else {
+                          updateProtocol('netbios', { ...device.netbios!, services: services.filter(s => s !== service) });
+                        }
+                      }}
+                      className="w-4 h-4 rounded border-gray-600 bg-gray-800 text-violet-600 focus:ring-violet-500"
+                    />
+                    <span className="text-sm text-gray-300 capitalize">{service}</span>
+                  </label>
+                ))}
+              </div>
+
+              <label className="flex items-center gap-2 cursor-pointer mt-2">
+                <input
+                  type="checkbox"
+                  checked={device.netbios.msbrowse ?? false}
+                  onChange={(e) =>
+                    updateProtocol('netbios', { ...device.netbios!, msbrowse: e.target.checked })
+                  }
+                  className="w-4 h-4 rounded border-gray-600 bg-gray-800 text-violet-600 focus:ring-violet-500"
+                />
+                <span className="text-sm text-gray-300">Master Browser (MSBROWSE)</span>
+              </label>
+            </div>
+          </div>
+        )}
+      </CollapsibleSection>
+
+      {/* Traffic Patterns */}
+      <CollapsibleSection
+        title="Traffic Patterns"
+        isExpanded={expandedSections.has('traffic')}
+        onToggle={() => toggleSection('traffic')}
+        enabled={device.traffic?.enabled ?? false}
+        onEnableChange={(enabled) => {
+          updateProtocol('traffic', enabled ? { enabled: true } as TrafficConfig : undefined);
+        }}
+      >
+        {device.traffic?.enabled && (
+          <div className="space-y-6">
+            {/* ARP Announcements */}
+            <div className="rounded-lg border border-white/5 bg-gray-950/40 p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-medium text-white flex items-center gap-2">
+                  <Radio className="h-4 w-4 text-violet-400" />
+                  ARP Announcements
+                </h4>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={device.traffic.arp_announcements?.enabled ?? false}
+                    onChange={(e) =>
+                      updateProtocol('traffic', {
+                        ...device.traffic!,
+                        arp_announcements: { ...device.traffic!.arp_announcements, enabled: e.target.checked }
+                      })
+                    }
+                    className="sr-only peer"
+                  />
+                  <div className="w-9 h-5 bg-gray-700 rounded-full peer peer-checked:bg-violet-600 peer-focus:ring-2 peer-focus:ring-violet-500 transition-colors">
+                    <div className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${device.traffic.arp_announcements?.enabled ? 'translate-x-4' : ''}`} />
+                  </div>
+                </label>
+              </div>
+              {device.traffic.arp_announcements?.enabled && (
+                <FormField label="Interval (seconds)" helpText="Time between ARP announcements">
+                  <input
+                    type="number"
+                    value={device.traffic.arp_announcements.interval ?? 60}
+                    onChange={(e) =>
+                      updateProtocol('traffic', {
+                        ...device.traffic!,
+                        arp_announcements: { ...device.traffic!.arp_announcements!, interval: parseInt(e.target.value) }
+                      })
+                    }
+                    min={1}
+                    className="w-32 rounded-lg border border-white/10 bg-gray-950/60 p-2 text-sm text-white placeholder-gray-500 focus:border-violet-400 focus:outline-none"
+                  />
+                </FormField>
+              )}
+            </div>
+
+            {/* Periodic Pings */}
+            <div className="rounded-lg border border-white/5 bg-gray-950/40 p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-medium text-white flex items-center gap-2">
+                  <Radio className="h-4 w-4 text-violet-400" />
+                  Periodic Pings
+                </h4>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={device.traffic.periodic_pings?.enabled ?? false}
+                    onChange={(e) =>
+                      updateProtocol('traffic', {
+                        ...device.traffic!,
+                        periodic_pings: { ...device.traffic!.periodic_pings, enabled: e.target.checked }
+                      })
+                    }
+                    className="sr-only peer"
+                  />
+                  <div className="w-9 h-5 bg-gray-700 rounded-full peer peer-checked:bg-violet-600 peer-focus:ring-2 peer-focus:ring-violet-500 transition-colors">
+                    <div className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${device.traffic.periodic_pings?.enabled ? 'translate-x-4' : ''}`} />
+                  </div>
+                </label>
+              </div>
+              {device.traffic.periodic_pings?.enabled && (
+                <div className="grid gap-4 md:grid-cols-2">
+                  <FormField label="Interval (seconds)" helpText="Time between pings">
+                    <input
+                      type="number"
+                      value={device.traffic.periodic_pings.interval ?? 30}
+                      onChange={(e) =>
+                        updateProtocol('traffic', {
+                          ...device.traffic!,
+                          periodic_pings: { ...device.traffic!.periodic_pings!, interval: parseInt(e.target.value) }
+                        })
+                      }
+                      min={1}
+                      className="w-full rounded-lg border border-white/10 bg-gray-950/60 p-2 text-sm text-white placeholder-gray-500 focus:border-violet-400 focus:outline-none"
+                    />
+                  </FormField>
+                  <FormField label="Payload Size (bytes)" helpText="Size of ICMP payload">
+                    <input
+                      type="number"
+                      value={device.traffic.periodic_pings.payload_size ?? 56}
+                      onChange={(e) =>
+                        updateProtocol('traffic', {
+                          ...device.traffic!,
+                          periodic_pings: { ...device.traffic!.periodic_pings!, payload_size: parseInt(e.target.value) }
+                        })
+                      }
+                      min={0}
+                      max={65507}
+                      className="w-full rounded-lg border border-white/10 bg-gray-950/60 p-2 text-sm text-white placeholder-gray-500 focus:border-violet-400 focus:outline-none"
+                    />
+                  </FormField>
+                </div>
+              )}
+            </div>
+
+            {/* Random Traffic */}
+            <div className="rounded-lg border border-white/5 bg-gray-950/40 p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-medium text-white flex items-center gap-2">
+                  <Radio className="h-4 w-4 text-violet-400" />
+                  Random Traffic
+                </h4>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={device.traffic.random_traffic?.enabled ?? false}
+                    onChange={(e) =>
+                      updateProtocol('traffic', {
+                        ...device.traffic!,
+                        random_traffic: { ...device.traffic!.random_traffic, enabled: e.target.checked }
+                      })
+                    }
+                    className="sr-only peer"
+                  />
+                  <div className="w-9 h-5 bg-gray-700 rounded-full peer peer-checked:bg-violet-600 peer-focus:ring-2 peer-focus:ring-violet-500 transition-colors">
+                    <div className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${device.traffic.random_traffic?.enabled ? 'translate-x-4' : ''}`} />
+                  </div>
+                </label>
+              </div>
+              {device.traffic.random_traffic?.enabled && (
+                <div className="space-y-4">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <FormField label="Interval (seconds)" helpText="Time between traffic bursts">
+                      <input
+                        type="number"
+                        value={device.traffic.random_traffic.interval ?? 60}
+                        onChange={(e) =>
+                          updateProtocol('traffic', {
+                            ...device.traffic!,
+                            random_traffic: { ...device.traffic!.random_traffic!, interval: parseInt(e.target.value) }
+                          })
+                        }
+                        min={1}
+                        className="w-full rounded-lg border border-white/10 bg-gray-950/60 p-2 text-sm text-white placeholder-gray-500 focus:border-violet-400 focus:outline-none"
+                      />
+                    </FormField>
+                    <FormField label="Packet Count" helpText="Packets per burst">
+                      <input
+                        type="number"
+                        value={device.traffic.random_traffic.packet_count ?? 5}
+                        onChange={(e) =>
+                          updateProtocol('traffic', {
+                            ...device.traffic!,
+                            random_traffic: { ...device.traffic!.random_traffic!, packet_count: parseInt(e.target.value) }
+                          })
+                        }
+                        min={1}
+                        max={100}
+                        className="w-full rounded-lg border border-white/10 bg-gray-950/60 p-2 text-sm text-white placeholder-gray-500 focus:border-violet-400 focus:outline-none"
+                      />
+                    </FormField>
+                  </div>
+                  <div className="space-y-2">
+                    <h5 className="text-xs font-medium text-gray-400">Traffic Patterns</h5>
+                    <div className="flex flex-wrap gap-4">
+                      {(['broadcast_arp', 'multicast', 'udp'] as const).map((pattern) => (
+                        <label key={pattern} className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={(device.traffic!.random_traffic?.patterns || []).includes(pattern)}
+                            onChange={(e) => {
+                              const patterns = device.traffic!.random_traffic?.patterns || [];
+                              if (e.target.checked) {
+                                updateProtocol('traffic', {
+                                  ...device.traffic!,
+                                  random_traffic: { ...device.traffic!.random_traffic!, patterns: [...patterns, pattern] }
+                                });
+                              } else {
+                                updateProtocol('traffic', {
+                                  ...device.traffic!,
+                                  random_traffic: { ...device.traffic!.random_traffic!, patterns: patterns.filter(p => p !== pattern) }
+                                });
+                              }
+                            }}
+                            className="w-4 h-4 rounded border-gray-600 bg-gray-800 text-violet-600 focus:ring-violet-500"
+                          />
+                          <span className="text-sm text-gray-300">
+                            {pattern === 'broadcast_arp' ? 'Broadcast ARP' : pattern === 'multicast' ? 'Multicast' : 'UDP'}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </CollapsibleSection>

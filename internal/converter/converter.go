@@ -44,6 +44,7 @@ type CapturePlayback struct {
 // Device represents a network device
 type Device struct {
 	Name      string         `yaml:"name,omitempty"`
+	Type      string         `yaml:"type,omitempty"` // Device type: router, switch, ap, firewall, server, workstation, iot
 	MAC       string         `yaml:"mac"`
 	IP        string         `yaml:"ip,omitempty"`  // Single IP (backward compatible)
 	IPs       []string       `yaml:"ips,omitempty"` // Multiple IPs (new feature)
