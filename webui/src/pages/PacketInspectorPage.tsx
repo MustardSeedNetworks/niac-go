@@ -8,7 +8,7 @@ import {
   H2,
 } from '../ui';
 import { Wifi, WifiOff, Pause, Play, Trash2, Download } from 'lucide-react';
-import { usePacketStream } from '../hooks/useWebSocket';
+import { usePacketStream } from '../hooks/useEventSource';
 import { PacketList, type Packet } from '../components/PacketList';
 import { HexDumpViewer } from '../components/HexDumpViewer';
 import { PacketDetails } from '../components/PacketDetails';
@@ -28,12 +28,11 @@ function generatePacketId(): string {
 
 /**
  * Connection Status Indicator Component
+ * SSE auto-reconnects, so we just show connected/connecting states
  */
 const ConnectionStatus: FC<{
   connected: boolean;
-  reconnecting: boolean;
-  reconnectAttempt: number;
-}> = ({ connected, reconnecting, reconnectAttempt }) => {
+}> = ({ connected }) => {
   if (connected) {
     return (
       <div className="flex items-center gap-2">
@@ -43,19 +42,11 @@ const ConnectionStatus: FC<{
     );
   }
 
-  if (reconnecting) {
-    return (
-      <div className="flex items-center gap-2">
-        <WifiOff className="h-4 w-4 text-yellow-400 animate-pulse" />
-        <Tag colorScheme="yellow">Reconnecting ({reconnectAttempt})</Tag>
-      </div>
-    );
-  }
-
+  // SSE auto-reconnects, so disconnected state is brief
   return (
     <div className="flex items-center gap-2">
-      <WifiOff className="h-4 w-4 text-red-400" />
-      <Tag colorScheme="red">Disconnected</Tag>
+      <WifiOff className="h-4 w-4 text-yellow-400 animate-pulse" />
+      <Tag colorScheme="yellow">Connecting...</Tag>
     </div>
   );
 };
@@ -64,7 +55,7 @@ const ConnectionStatus: FC<{
  * Packet Inspector Page
  *
  * Real-time packet hex dump viewer with:
- * - WebSocket streaming of live packets
+ * - SSE streaming of live packets (auto-reconnects)
  * - Packet list with filtering
  * - Hex dump display with color-coded headers/payload
  * - Parsed packet details panel
@@ -90,8 +81,8 @@ export const PacketInspectorPage: FC = () => {
     isPausedRef.current = isPaused;
   }, [isPaused]);
 
-  // WebSocket connection
-  const { connected, reconnecting, reconnectAttempt, reconnect } = usePacketStream({
+  // SSE connection (auto-reconnects)
+  const { connected, reconnect } = usePacketStream({
     onMessage: useCallback((data: unknown) => {
       // Skip if paused
       if (isPausedRef.current) return;
@@ -165,11 +156,7 @@ export const PacketInspectorPage: FC = () => {
             {/* Title and connection status */}
             <div className="flex items-center gap-4">
               <H2 className="mb-0">Packet Inspector</H2>
-              <ConnectionStatus
-                connected={connected}
-                reconnecting={reconnecting}
-                reconnectAttempt={reconnectAttempt}
-              />
+              <ConnectionStatus connected={connected} />
             </div>
 
             {/* Control buttons */}
@@ -203,7 +190,8 @@ export const PacketInspectorPage: FC = () => {
                 Export
               </Button>
 
-              {!connected && !reconnecting && (
+              {/* SSE auto-reconnects, but manual reconnect is available */}
+              {!connected && (
                 <Button
                   tone="violet"
                   size="sm"

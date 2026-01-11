@@ -1,6 +1,20 @@
+/**
+ * @deprecated This module is deprecated. Use useEventSource.ts instead.
+ *
+ * SSE (Server-Sent Events) is preferred over WebSocket for NIAC because:
+ * - Automatic reconnection built into browser EventSource API
+ * - Simpler API (server → client only, which is all we need)
+ * - Better proxy/CDN compatibility
+ * - Works well with HTTP/2 multiplexing
+ *
+ * WebSocket endpoints (/ws/*) are still available for backwards compatibility,
+ * but new code should use SSE endpoints (/api/v1/stream/*).
+ */
+
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 /**
+ * @deprecated Use UseEventSourceOptions from useEventSource.ts instead.
  * Options for configuring the WebSocket connection
  */
 export interface UseWebSocketOptions {

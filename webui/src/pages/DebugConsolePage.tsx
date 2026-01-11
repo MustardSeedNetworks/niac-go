@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo, type FC } from 'react';
 import { Settings2, ChevronDown, ChevronUp } from 'lucide-react';
 import { Card, CardContent, Tag, Button } from '../ui';
-import { useLogStream } from '../hooks/useWebSocket';
+import { useLogStream } from '../hooks/useEventSource';
 import { LogFilters } from '../components/LogFilters';
 import { LogViewer } from '../components/LogViewer';
 import { ProtocolDebugLevels } from '../components/debug/ProtocolDebugLevels';
@@ -15,7 +15,7 @@ function generateLogId(): string {
   return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 }
 
-// Map incoming WebSocket data to LogEntry format
+// Map incoming SSE data to LogEntry format
 function mapToLogEntry(data: unknown): LogEntry | null {
   if (!data || typeof data !== 'object') {
     return null;
@@ -23,7 +23,7 @@ function mapToLogEntry(data: unknown): LogEntry | null {
 
   const rawLog = data as Record<string, unknown>;
 
-  // Handle different log formats from the WebSocket
+  // Handle different log formats from the SSE stream
   const level = (rawLog.level as string)?.toUpperCase() as LogLevel;
   const validLevels: LogLevel[] = ['ERROR', 'WARN', 'INFO', 'DEBUG'];
 
@@ -71,8 +71,8 @@ export const DebugConsolePage: FC = () => {
     setPaused(prev => !prev);
   }, []);
 
-  // WebSocket connection for log streaming
-  const { connected, reconnecting, reconnect } = useLogStream({
+  // SSE connection for log streaming (auto-reconnects)
+  const { connected, reconnect } = useLogStream({
     onMessage: handleMessage,
   });
 
@@ -147,19 +147,13 @@ export const DebugConsolePage: FC = () => {
         indicator: 'bg-green-400 animate-pulse',
       };
     }
-    if (reconnecting) {
-      return {
-        label: 'Reconnecting...',
-        color: 'yellow' as const,
-        indicator: 'bg-yellow-400 animate-pulse',
-      };
-    }
+    // SSE auto-reconnects, so disconnected state is brief
     return {
-      label: 'Disconnected',
-      color: 'red' as const,
-      indicator: 'bg-red-400',
+      label: 'Connecting...',
+      color: 'yellow' as const,
+      indicator: 'bg-yellow-400 animate-pulse',
     };
-  }, [connected, reconnecting, paused]);
+  }, [connected, paused]);
 
   return (
     <div className="space-y-6">
@@ -251,7 +245,7 @@ export const DebugConsolePage: FC = () => {
               {logs.length >= MAX_LOG_BUFFER && ' (oldest logs will be removed)'}
             </span>
             <span>
-              WebSocket: /ws/logs
+              SSE: /api/v1/stream/logs
             </span>
           </div>
         </CardContent>

@@ -674,7 +674,8 @@ type Server struct {
 	startTime     time.Time        // Track server start time for uptime
 	rateLimiter   *RateLimiter     // FEATURE #104: Per-IP rate limiting
 	csrfToken     string           // SECURITY FIX LOW-1: CSRF protection token
-	wsHub         *WSHub           // WebSocket hub for real-time streaming
+	wsHub         *WSHub           // WebSocket hub for real-time streaming (legacy)
+	sseHub        *SSEHub          // SSE hub for real-time streaming (preferred)
 }
 
 // generateCSRFToken generates a cryptographically secure random token
@@ -698,6 +699,7 @@ func NewServer(cfg ServerConfig) *Server {
 		rateLimiter: NewRateLimiter(DefaultRateLimit, DefaultBurst),
 		csrfToken:   csrfToken,
 		wsHub:       NewWSHub(),
+		sseHub:      NewSSEHub(),
 	}
 }
 
@@ -752,11 +754,18 @@ func (s *Server) Start() error {
 		mux.HandleFunc("/api/v1/walk/list", s.recoverMiddleware(s.auth(s.handleWalkList)))
 		mux.HandleFunc("/api/v1/walk/validate-all", s.recoverMiddleware(s.auth(s.csrfProtect(s.handleWalkBatchValidate))))
 
-		// WebSocket endpoints for real-time streaming
+		// WebSocket endpoints for real-time streaming (legacy - kept for backwards compatibility)
 		// Note: WebSocket handlers perform their own upgrade and don't need recoverMiddleware
 		mux.HandleFunc("/ws/packets", s.auth(s.handleWSPackets))
 		mux.HandleFunc("/ws/logs", s.auth(s.handleWSLogs))
 		mux.HandleFunc("/ws/stats", s.auth(s.handleWSStats))
+
+		// SSE (Server-Sent Events) endpoints for real-time streaming (preferred)
+		// SSE is simpler than WebSocket: automatic reconnection, better proxy support
+		mux.HandleFunc("/api/v1/stream/packets", s.recoverMiddleware(s.auth(s.handleSSEPackets)))
+		mux.HandleFunc("/api/v1/stream/logs", s.recoverMiddleware(s.auth(s.handleSSELogs)))
+		mux.HandleFunc("/api/v1/stream/stats", s.recoverMiddleware(s.auth(s.handleSSEStats)))
+		mux.HandleFunc("/api/v1/stream/status", s.recoverMiddleware(s.auth(s.handleSSEStatus)))
 
 		mux.HandleFunc("/metrics", s.recoverMiddleware(s.handleMetrics))
 		mux.HandleFunc("/", s.recoverMiddleware(s.auth(s.serveSPA())))
@@ -810,9 +819,13 @@ func (s *Server) Start() error {
 		}
 	}()
 
-	// Start WebSocket hub for real-time streaming
+	// Start WebSocket hub for real-time streaming (legacy)
 	go s.wsHub.Run()
 	log.Printf("[WS] WebSocket hub started")
+
+	// Start SSE hub for real-time streaming (preferred)
+	go s.sseHub.Run()
+	log.Printf("[SSE] Server-Sent Events hub started")
 
 	s.updateAlertConfig(s.cfg.Alert)
 	return nil
