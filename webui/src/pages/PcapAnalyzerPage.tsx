@@ -13,151 +13,25 @@ import { PcapPacketList } from '../components/pcap/PcapPacketList';
 import { PcapStats } from '../components/pcap/PcapStats';
 import { HexDumpViewer } from '../components/HexDumpViewer';
 import { PacketDetails } from '../components/PacketDetails';
-import type { PcapPacket, PcapStats as PcapStatsType, PcapAnalysisResult } from '../api/types';
+import { uploadPcap, fetchPcapAnalysis } from '../api/client';
+import type { PcapPacket, PcapAnalysisResult } from '../api/types';
 import type { Packet } from '../components/PacketList';
 
-// TODO: Implement when backend PCAP upload is ready
-// async function fileToBase64(file: File): Promise<string> { ... }
-
 /**
- * Generate unique ID for packets
+ * Convert file to base64 string for upload
  */
-function generatePacketId(): string {
-  return `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-}
-
-/**
- * Mock PCAP parser - generates sample packets from file
- * This simulates what the backend would return
- * TODO: Replace with actual API call when backend is implemented
- */
-async function mockParsePcap(file: File): Promise<PcapAnalysisResult> {
-  // Simulate network delay
-  await new Promise((resolve) => setTimeout(resolve, 1500));
-
-  // Generate mock packets
-  const numPackets = Math.floor(Math.random() * 100) + 50;
-  const baseTime = Date.now() - 60000; // Start 1 minute ago
-
-  const protocols = ['TCP', 'UDP', 'ICMP', 'ARP', 'DNS', 'HTTP', 'TLS', 'DHCP'];
-  const sourceIPs = [
-    '192.168.1.100',
-    '192.168.1.101',
-    '192.168.1.102',
-    '10.0.0.1',
-    '10.0.0.50',
-    '172.16.0.10',
-  ];
-  const destIPs = [
-    '8.8.8.8',
-    '1.1.1.1',
-    '192.168.1.1',
-    '10.0.0.254',
-    '172.16.0.1',
-    '224.0.0.1',
-  ];
-
-  const packets: PcapPacket[] = [];
-  const protocolCounts: Record<string, number> = {};
-  const sourceCounts: Record<string, number> = {};
-  const destCounts: Record<string, number> = {};
-  let totalBytes = 0;
-
-  for (let i = 0; i < numPackets; i++) {
-    const protocol = protocols[Math.floor(Math.random() * protocols.length)];
-    const sourceIP = sourceIPs[Math.floor(Math.random() * sourceIPs.length)];
-    const destIP = destIPs[Math.floor(Math.random() * destIPs.length)];
-    const length = Math.floor(Math.random() * 1400) + 60;
-
-    // Update counts
-    protocolCounts[protocol] = (protocolCounts[protocol] || 0) + 1;
-    sourceCounts[sourceIP] = (sourceCounts[sourceIP] || 0) + 1;
-    destCounts[destIP] = (destCounts[destIP] || 0) + 1;
-    totalBytes += length;
-
-    const packet: PcapPacket = {
-      id: generatePacketId(),
-      number: i + 1,
-      timestamp: new Date(baseTime + i * 10).toISOString(),
-      sourceIP,
-      destIP,
-      sourcePort: protocol === 'TCP' || protocol === 'UDP' ? Math.floor(Math.random() * 65535) : undefined,
-      destPort: protocol === 'TCP' || protocol === 'UDP' ? Math.floor(Math.random() * 65535) : undefined,
-      protocol,
-      length,
-      info: getPacketInfo(protocol, sourceIP, destIP),
-      rawData: generateMockHexData(length),
+async function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      // Remove the data URL prefix (e.g., "data:application/octet-stream;base64,")
+      const base64 = result.split(',')[1];
+      resolve(base64);
     };
-
-    packets.push(packet);
-  }
-
-  // Sort sources and destinations by count
-  const topSources = Object.entries(sourceCounts)
-    .map(([ip, count]) => ({ ip, count }))
-    .sort((a, b) => b.count - a.count);
-
-  const topDestinations = Object.entries(destCounts)
-    .map(([ip, count]) => ({ ip, count }))
-    .sort((a, b) => b.count - a.count);
-
-  const stats: PcapStatsType = {
-    totalPackets: numPackets,
-    totalBytes,
-    timeRange: {
-      start: packets[0]?.timestamp || new Date().toISOString(),
-      end: packets[packets.length - 1]?.timestamp || new Date().toISOString(),
-      durationMs: numPackets * 10,
-    },
-    protocols: protocolCounts,
-    topSources,
-    topDestinations,
-  };
-
-  return {
-    filename: file.name,
-    fileSize: file.size,
-    packets,
-    stats,
-  };
-}
-
-/**
- * Generate mock packet info based on protocol
- */
-function getPacketInfo(protocol: string, source: string, dest: string): string {
-  switch (protocol) {
-    case 'TCP':
-      return `${Math.floor(Math.random() * 65535)} > ${Math.floor(Math.random() * 65535)} [SYN] Seq=0 Win=65535 Len=0`;
-    case 'UDP':
-      return `Source port: ${Math.floor(Math.random() * 65535)} Destination port: ${Math.floor(Math.random() * 65535)}`;
-    case 'ICMP':
-      return 'Echo (ping) request';
-    case 'ARP':
-      return `Who has ${dest}? Tell ${source}`;
-    case 'DNS':
-      return 'Standard query 0x1234 A example.com';
-    case 'HTTP':
-      return 'GET /index.html HTTP/1.1';
-    case 'TLS':
-      return 'Client Hello';
-    case 'DHCP':
-      return 'DHCP Discover - Transaction ID 0x12345678';
-    default:
-      return `${protocol} packet`;
-  }
-}
-
-/**
- * Generate mock hex data
- */
-function generateMockHexData(length: number): string {
-  const bytes = Math.min(length, 256);
-  let hex = '';
-  for (let i = 0; i < bytes; i++) {
-    hex += Math.floor(Math.random() * 256).toString(16).padStart(2, '0');
-  }
-  return hex;
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 }
 
 /**
@@ -231,13 +105,16 @@ export const PcapAnalyzerPage: FC = () => {
     setSuccess(null);
 
     try {
-      // TODO: Replace with actual API call when backend is implemented
-      // const base64Data = await fileToBase64(selectedFile);
-      // const uploadResponse = await uploadPcap({ filename: selectedFile.name, data: base64Data });
-      // const result = await fetchPcapAnalysis(uploadResponse.analysisId);
+      // Convert file to base64 and upload to backend
+      const base64Data = await fileToBase64(selectedFile);
+      const uploadResponse = await uploadPcap({ filename: selectedFile.name, data: base64Data });
 
-      // For now, use mock parser
-      const result = await mockParsePcap(selectedFile);
+      if (!uploadResponse.success) {
+        throw new Error(uploadResponse.message || 'Upload failed');
+      }
+
+      // Fetch the analysis result
+      const result = await fetchPcapAnalysis(uploadResponse.analysisId);
 
       setAnalysisResult(result);
       setSuccess(`Successfully analyzed ${result.packets.length} packets`);
@@ -247,7 +124,9 @@ export const PcapAnalyzerPage: FC = () => {
         setSelectedPacket(result.packets[0]);
       }
     } catch (err) {
-      setError((err as Error).message || 'Failed to analyze PCAP file');
+      const errorMessage = (err as Error).message || 'Failed to analyze PCAP file';
+      setError(errorMessage);
+      console.error('PCAP analysis error:', err);
     } finally {
       setIsAnalyzing(false);
     }

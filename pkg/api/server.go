@@ -754,6 +754,10 @@ func (s *Server) Start() error {
 		mux.HandleFunc("/api/v1/walk/list", s.recoverMiddleware(s.auth(s.handleWalkList)))
 		mux.HandleFunc("/api/v1/walk/validate-all", s.recoverMiddleware(s.auth(s.csrfProtect(s.handleWalkBatchValidate))))
 
+		// PCAP analysis endpoints
+		mux.HandleFunc("/api/v1/pcap/upload", s.recoverMiddleware(s.auth(s.csrfProtect(s.handlePcapUpload))))
+		mux.HandleFunc("/api/v1/pcap/", s.recoverMiddleware(s.auth(s.handlePcapAnalysis)))
+
 		// WebSocket endpoints for real-time streaming (legacy - kept for backwards compatibility)
 		// Note: WebSocket handlers perform their own upgrade and don't need recoverMiddleware
 		mux.HandleFunc("/ws/packets", s.auth(s.handleWSPackets))
