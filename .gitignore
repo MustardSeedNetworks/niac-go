@@ -37,6 +37,12 @@ test_walk_loader.go
 bin/
 dist/
 build/
+*.tar.gz
+*.zip
+
+# Coverage files
+coverage.txt
+coverage*.out
 
 # Tooling defaults
 *.log
