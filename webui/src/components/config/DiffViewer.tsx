@@ -1,6 +1,6 @@
 import { type FC, useMemo, memo, useCallback } from 'react';
 import { ChevronLeft, ChevronRight, ChevronsLeftRight } from 'lucide-react';
-import { Button, SmallText, Tag } from '@krisarmstrong/web-foundation';
+import { Button, SmallText, Tag } from '../../ui';
 
 /**
  * Types for diff operations

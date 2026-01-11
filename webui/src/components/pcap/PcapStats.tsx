@@ -1,5 +1,5 @@
 import { type FC, memo } from 'react';
-import { Card, CardContent, Tag, SmallText, H2 } from '@krisarmstrong/web-foundation';
+import { Card, CardContent, Tag, SmallText, H2 } from '../../ui';
 import {
   BarChart3,
   Clock,

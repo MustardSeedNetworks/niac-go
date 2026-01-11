@@ -284,12 +284,13 @@ func addSecurityHeaders(w http.ResponseWriter, r *http.Request) {
 
 	// Content Security Policy - restrict resource loading
 	// Note: connect-src includes ws: and wss: for WebSocket connections
+	// Note: fonts.googleapis.com and fonts.gstatic.com allowed for Google Fonts
 	w.Header().Set("Content-Security-Policy",
 		"default-src 'self'; "+
 			"script-src 'self' 'unsafe-inline'; "+
-			"style-src 'self' 'unsafe-inline'; "+
+			"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "+
 			"img-src 'self' data:; "+
-			"font-src 'self'; "+
+			"font-src 'self' https://fonts.gstatic.com; "+
 			"connect-src 'self' ws: wss:; "+
 			"object-src 'none'; "+
 			"base-uri 'self'; "+

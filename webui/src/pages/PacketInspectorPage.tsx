@@ -6,7 +6,7 @@ import {
   Tag,
   SmallText,
   H2,
-} from '@krisarmstrong/web-foundation';
+} from '../ui';
 import { Wifi, WifiOff, Pause, Play, Trash2, Download } from 'lucide-react';
 import { usePacketStream } from '../hooks/useWebSocket';
 import { PacketList, type Packet } from '../components/PacketList';

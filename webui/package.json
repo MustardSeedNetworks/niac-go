@@ -15,7 +15,6 @@
     "@codemirror/language": "^6.10.8",
     "@codemirror/state": "^6.5.2",
     "@codemirror/view": "^6.36.5",
-    "@krisarmstrong/web-foundation": "file:../../../_web/web-foundation",
     "@lezer/highlight": "^1.2.1",
     "lucide-react": "^0.553.0",
     "react": "^19.2.0",

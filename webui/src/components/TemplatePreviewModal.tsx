@@ -1,6 +1,6 @@
 import { type FC, useEffect, useCallback } from 'react';
 import { X, Copy, Download, FileCode } from 'lucide-react';
-import { Button, Tag, SmallText } from '@krisarmstrong/web-foundation';
+import { Button, Tag, SmallText } from '../ui';
 import type { Template, TemplateContent } from '../api/types';
 import { YamlViewer } from './config/YamlEditor';
 

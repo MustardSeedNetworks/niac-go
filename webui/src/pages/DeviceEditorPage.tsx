@@ -25,7 +25,7 @@ import {
   H2,
   SmallText,
   Tag,
-} from '@krisarmstrong/web-foundation';
+} from '../ui';
 import { useApiResource } from '../hooks/useApiResource';
 import {
   fetchConfigDevice,

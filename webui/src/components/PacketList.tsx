@@ -1,5 +1,5 @@
 import { type FC, memo, useMemo } from 'react';
-import { Tag, SmallText } from '@krisarmstrong/web-foundation';
+import { Tag, SmallText } from '../ui';
 
 /**
  * Packet data structure for display in the list

@@ -6,7 +6,7 @@ import {
   Tag,
   SmallText,
   H2,
-} from '@krisarmstrong/web-foundation';
+} from '../ui';
 import { FileSearch, Download, Trash2, Info } from 'lucide-react';
 import { PcapUploader } from '../components/pcap/PcapUploader';
 import { PcapPacketList } from '../components/pcap/PcapPacketList';

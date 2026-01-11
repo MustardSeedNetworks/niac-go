@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo, type FC } from 'react';
 import { Settings2, ChevronDown, ChevronUp } from 'lucide-react';
-import { Card, CardContent, Tag, Button } from '@krisarmstrong/web-foundation';
+import { Card, CardContent, Tag, Button } from '../ui';
 import { useLogStream } from '../hooks/useWebSocket';
 import { LogFilters } from '../components/LogFilters';
 import { LogViewer } from '../components/LogViewer';

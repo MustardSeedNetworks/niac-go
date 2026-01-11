@@ -16,7 +16,7 @@ import {
   SmallText,
   Tag,
   H2,
-} from '@krisarmstrong/web-foundation';
+} from '../../ui';
 import type { MergeDecision, DiffBlock } from './DiffViewer';
 import { YamlViewer } from './YamlEditor';
 

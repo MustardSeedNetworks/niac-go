@@ -5,7 +5,7 @@ import {
   Button,
   Tag,
   SmallText,
-} from '@krisarmstrong/web-foundation';
+} from '../ui';
 import { useApiResource } from '../hooks/useApiResource';
 import {
   fetchDevices,

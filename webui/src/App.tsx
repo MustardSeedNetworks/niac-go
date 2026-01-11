@@ -33,8 +33,8 @@ import {
   P,
   SmallText,
   AccentLink,
-} from '@krisarmstrong/web-foundation';
-import type { NavItem } from '@krisarmstrong/web-foundation';
+} from './ui';
+import type { NavItem } from './ui';
 import { useApiResource } from './hooks/useApiResource';
 import { useVirtualScroll } from './hooks/useVirtualScroll';
 import {

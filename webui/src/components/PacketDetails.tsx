@@ -1,5 +1,5 @@
 import { type FC, memo } from 'react';
-import { Tag, SmallText } from '@krisarmstrong/web-foundation';
+import { Tag, SmallText } from '../ui';
 import type { Packet } from './PacketList';
 
 interface PacketDetailsProps {

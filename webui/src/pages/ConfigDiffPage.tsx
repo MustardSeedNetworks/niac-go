@@ -14,7 +14,7 @@ import {
   P,
   SmallText,
   Tag,
-} from '@krisarmstrong/web-foundation';
+} from '../ui';
 import {
   DiffViewer,
   generateMergedContent,

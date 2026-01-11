@@ -1,6 +1,6 @@
 import { memo, type FC } from 'react';
 import { Globe, Router, Layers, Wifi, Server, Building2, FileCode } from 'lucide-react';
-import { Card, CardContent, Button, Tag, SmallText } from '@krisarmstrong/web-foundation';
+import { Card, CardContent, Button, Tag, SmallText } from '../ui';
 import type { Template } from '../api/types';
 
 interface TemplateCardProps {

@@ -1,6 +1,6 @@
 import { memo, type FC, type ChangeEvent } from 'react';
 import { Search, Download, Trash2 } from 'lucide-react';
-import { Button, SmallText } from '@krisarmstrong/web-foundation';
+import { Button, SmallText } from '../ui';
 import type { LogLevel, Protocol } from '../api/types';
 
 const LOG_LEVELS: Array<LogLevel | 'All'> = ['All', 'ERROR', 'WARN', 'INFO', 'DEBUG'];

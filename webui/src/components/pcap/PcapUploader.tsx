@@ -1,5 +1,5 @@
 import { type FC, useState, useCallback, useRef } from 'react';
-import { Card, CardContent, Button, SmallText, Tag } from '@krisarmstrong/web-foundation';
+import { Card, CardContent, Button, SmallText, Tag } from '../../ui';
 import { Upload, FileUp, X, AlertCircle, CheckCircle } from 'lucide-react';
 
 interface PcapUploaderProps {

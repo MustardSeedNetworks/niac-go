@@ -1,6 +1,6 @@
 import { memo, useCallback, type FC, type ChangeEvent } from 'react';
 import { RefreshCw, Save, RotateCcw, Settings2 } from 'lucide-react';
-import { Card, CardContent, Button, Tag, H2, SmallText } from '@krisarmstrong/web-foundation';
+import { Card, CardContent, Button, Tag, H2, SmallText } from '../../ui';
 import {
   useProtocolDebugLevels,
   DEBUG_LEVELS,

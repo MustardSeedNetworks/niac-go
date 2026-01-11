@@ -26,7 +26,7 @@ import {
   P,
   SmallText,
   Tag,
-} from '@krisarmstrong/web-foundation';
+} from '../ui';
 import { useApiResource } from '../hooks/useApiResource';
 import {
   fetchConfigDevices,

@@ -1,5 +1,5 @@
 import { type FC } from 'react';
-import { H2, P } from '@krisarmstrong/web-foundation';
+import { H2, P } from '../ui';
 import { ErrorInjectionPanel } from '../components/ErrorInjectionPanel';
 import { ReplayControlPanel } from '../components/ReplayControlPanel';
 

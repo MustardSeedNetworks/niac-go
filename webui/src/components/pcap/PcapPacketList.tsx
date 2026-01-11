@@ -1,5 +1,5 @@
 import { type FC, memo, useMemo, useState, useCallback } from 'react';
-import { Card, CardContent, Tag, SmallText } from '@krisarmstrong/web-foundation';
+import { Card, CardContent, Tag, SmallText } from '../../ui';
 import { Search, Filter, ChevronDown, ChevronUp } from 'lucide-react';
 import type { PcapPacket } from '../../api/types';
 
