@@ -102,10 +102,57 @@ func (v *Validator) validateDevice(device *Device, index int, names map[string]b
 	// Validate protocol-specific configurations
 	v.validateSNMPTraps(device, prefix)
 	v.validateDNSRecords(device, prefix)
+	v.validateTTLConfig(device, prefix)
+	v.validateSNMPAccessList(device, prefix)
+	v.validateNetBIOSNames(device, prefix)
 
 	// Validate topology configurations (v1.23.0)
 	v.validatePortChannels(device, prefix)
 	v.validateTrunkPorts(device, prefix, names)
+}
+
+// validateTTLConfig validates TTL configuration for traceroute simulation.
+func (v *Validator) validateTTLConfig(device *Device, prefix string) {
+	if device.TTLConfig == nil {
+		return
+	}
+	if device.TTLConfig.TTL < 1 || device.TTLConfig.TTL > 255 {
+		v.addError(prefix+".ttl.ttl", fmt.Sprintf("TTL must be between 1 and 255, got %d", device.TTLConfig.TTL))
+	}
+	if device.TTLConfig.IP != nil && device.TTLConfig.IP.To4() == nil {
+		v.addError(prefix+".ttl.ip", "TTL IP must be IPv4")
+	}
+	if device.TTLConfig.Mask != nil && len(device.TTLConfig.Mask) != 4 {
+		v.addError(prefix+".ttl.mask", "TTL mask must be IPv4 netmask")
+	}
+}
+
+// validateSNMPAccessList validates SNMP access list entries.
+func (v *Validator) validateSNMPAccessList(device *Device, prefix string) {
+	if len(device.SNMPConfig.AccessList) == 0 {
+		return
+	}
+	for i, ip := range device.SNMPConfig.AccessList {
+		if ip == nil {
+			v.addError(fmt.Sprintf("%s.snmp.access_list[%d]", prefix, i), "SNMP access list IP is nil")
+		}
+	}
+}
+
+// validateNetBIOSNames validates NetBIOS name entries.
+func (v *Validator) validateNetBIOSNames(device *Device, prefix string) {
+	if device.NetBIOSConfig == nil {
+		return
+	}
+	for i, name := range device.NetBIOSConfig.Names {
+		if name.Name == "" {
+			v.addError(fmt.Sprintf("%s.netbios.names[%d].name", prefix, i), "NetBIOS name is required")
+			continue
+		}
+		if len(name.Name) > 15 {
+			v.addError(fmt.Sprintf("%s.netbios.names[%d].name", prefix, i), "NetBIOS name exceeds 15 characters")
+		}
+	}
 }
 
 // validateSNMPTraps validates SNMP trap configuration
@@ -178,6 +225,9 @@ func (v *Validator) validateDNSRecords(device *Device, prefix string) {
 		if record.IP == nil {
 			v.addError(recordPrefix+".ip", "DNS record IP is required")
 		}
+		if record.RCode < 0 || record.RCode > 15 {
+			v.addError(recordPrefix+".rcode", fmt.Sprintf("DNS RCode must be 0-15, got %d", record.RCode))
+		}
 	}
 
 	// Validate reverse records
@@ -190,6 +240,9 @@ func (v *Validator) validateDNSRecords(device *Device, prefix string) {
 
 		if record.Name == "" {
 			v.addError(recordPrefix+".name", "reverse DNS record name is required")
+		}
+		if record.RCode < 0 || record.RCode > 15 {
+			v.addError(recordPrefix+".rcode", fmt.Sprintf("DNS RCode must be 0-15, got %d", record.RCode))
 		}
 	}
 }

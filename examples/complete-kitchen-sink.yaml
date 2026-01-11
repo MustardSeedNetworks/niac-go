@@ -130,6 +130,16 @@ devices:
       hop_limit: 255       # Maximum hop limit for router
       rate_limit: 100      # Max 100 ICMPv6 responses/sec
 
+    # iPerf3 Bandwidth Testing Configuration (v1.25.0)
+    iperf3:
+      enabled: true
+      port: 5201           # Default iPerf3 port
+      upload_mbps: 100     # Simulated upload bandwidth
+      download_mbps: 100   # Simulated download bandwidth
+      typical_latency_ms: 1.0
+      jitter_ms: 0.1
+      packet_loss_percent: 0.0
+
     # DHCPv6 Server Configuration (v1.5.0 Group 3)
     dhcpv6:
       enabled: true
@@ -432,3 +442,29 @@ devices:
 #   * Event-based traps (coldStart, linkUp/Down, authenticationFailure)
 #   * Threshold-based traps (high CPU, high memory, interface errors)
 #   * Configurable trap receivers, thresholds, and check intervals
+#
+# Phase 4 Features (v1.24.0+):
+# - OS Fingerprinting Configuration:
+#   * OS type (linux, windows, cisco-ios, etc.)
+#   * TTL defaults per OS type
+#   * TCP window size and options
+#   * Service banners (SSH, HTTP, FTP, SMTP, Telnet)
+#
+# Phase 5 Features (v1.25.0):
+# - Health Check Protocol Emulation:
+#   * HTTPS/TLS (port 443)
+#   * LDAP/LDAPS (ports 389, 636)
+#   * RTSP streaming (port 554)
+#   * MySQL (port 3306)
+#   * PostgreSQL (port 5432)
+#   * MS SQL Server (port 1433)
+#   * Modbus TCP (port 502) - industrial
+#   * DICOM (port 104) - healthcare imaging
+#   * HL7 MLLP (port 2575) - healthcare messaging
+#   * OPC UA (port 4840) - industrial
+#   * SMB/CIFS (port 445) - file sharing
+# - iPerf3 Bandwidth Testing Emulation:
+#   * Configurable upload/download bandwidth
+#   * Simulated latency and jitter
+#   * Packet loss simulation
+#   * Full iPerf3 protocol support

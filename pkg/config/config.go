@@ -102,6 +102,10 @@ type Device struct {
 	Type          string // router, switch, ap, etc.
 	MACAddress    net.HardwareAddr
 	IPAddresses   []net.IP
+	MapToIP       net.IP     // Map UDP traffic to external IP (Java MapToIp)
+	Babble        bool       // Periodically emit babble traffic
+	TTLConfig     *TTLConfig // ICMP TTL timeout behavior (traceroute simulation)
+	VLAN          int        // Optional VLAN membership (Java Vlan)
 	Interfaces    []Interface
 	SNMPConfig    SNMPConfig
 	DHCPConfig    *DHCPConfig    // DHCP server configuration
@@ -117,10 +121,39 @@ type Device struct {
 	ICMPConfig    *ICMPConfig    // ICMP/ICMPv4 configuration
 	ICMPv6Config  *ICMPv6Config  // ICMPv6 configuration
 	DHCPv6Config  *DHCPv6Config  // DHCPv6 server configuration
-	TrafficConfig *TrafficConfig // Traffic pattern configuration (v1.6.0)
-	PortChannels  []PortChannel  // Port-channel/LAG configuration (v1.23.0)
-	TrunkPorts    []TrunkPort    // Trunk port configuration (v1.23.0)
-	Properties    map[string]string
+	TrafficConfig       *TrafficConfig       // Traffic pattern configuration (v1.6.0)
+	OSFingerprintConfig *OSFingerprintConfig // OS fingerprinting configuration (v1.24.0)
+	IPerf3              *IPerf3Config        // iPerf3 server emulation configuration (v1.25.0)
+	PortChannels        []PortChannel        // Port-channel/LAG configuration (v1.23.0)
+	TrunkPorts          []TrunkPort          // Trunk port configuration (v1.23.0)
+	Properties          map[string]string
+}
+
+// OSFingerprintConfig represents OS fingerprinting configuration for device simulation
+type OSFingerprintConfig struct {
+	OSType       string // e.g., "linux", "windows", "cisco-ios", "juniper-junos"
+	TTL          uint8  // Default IP TTL (Linux=64, Windows=128, Cisco=255)
+	WindowSize   uint16 // TCP window size
+	WindowScale  uint8  // TCP window scale option
+	MSS          uint16 // TCP maximum segment size
+	SSHBanner    string // SSH version banner
+	HTTPServer   string // HTTP Server header
+	FTPBanner    string // FTP welcome banner
+	SMTPBanner   string // SMTP banner
+	TelnetBanner string // Telnet banner
+	DontFragment bool   // IP DF bit (Linux=true, Windows=false usually)
+}
+
+// IPerf3Config holds iPerf3 server emulation configuration for bandwidth testing simulation
+type IPerf3Config struct {
+	Enabled           bool    // Whether iPerf3 server is enabled
+	Port              uint16  // Listen port (default 5201)
+	MaxBandwidthMbps  float64 // Maximum simulated bandwidth
+	TypicalLatencyMs  float64 // Simulated network latency
+	JitterMs          float64 // Simulated jitter (UDP tests)
+	PacketLossPercent float64 // Simulated packet loss percentage
+	UploadMbps        float64 // Simulated upload bandwidth
+	DownloadMbps      float64 // Simulated download bandwidth
 }
 
 // DHCPConfig holds DHCP server configuration for a device
@@ -169,9 +202,10 @@ type DNSConfig struct {
 
 // DNSRecord represents a DNS A or PTR record
 type DNSRecord struct {
-	Name string
-	IP   net.IP
-	TTL  uint32
+	Name  string
+	IP    net.IP
+	TTL   uint32
+	RCode int // DNS response code override (0 = NoError)
 }
 
 // Interface represents a network interface on a device
@@ -187,13 +221,46 @@ type Interface struct {
 
 // SNMPConfig holds SNMP configuration
 type SNMPConfig struct {
-	Community   string
-	SysName     string
-	SysDescr    string
-	SysContact  string
-	SysLocation string
-	WalkFile    string      // Path to SNMP walk file
-	Traps       *TrapConfig // SNMP trap configuration (v1.6.0)
+	Community         string
+	SysName           string
+	SysDescr          string
+	SysContact        string
+	SysLocation       string
+	WalkFile          string             // Path to SNMP walk file (legacy single)
+	WalkFiles         []string           // Paths to SNMP walk files
+	AddMibs           []AddMib           // Custom MIB overrides/additions
+	CommunityIncludes []CommunityInclude // Community-specific walk includes
+	AccessList        []net.IP           // Allowed source IPs for SNMP
+	SnmpAddr          net.IP             // SNMP agent mapped from another device
+	Dot1DFdbTable     *FdbTableConfig    // FDB table injection (dot1d)
+	Dot1QFdbTable     *FdbTableConfig    // FDB table injection (dot1q)
+	Traps             *TrapConfig        // SNMP trap configuration (v1.6.0)
+}
+
+// AddMib represents a MIB override or addition.
+type AddMib struct {
+	OID   string
+	Type  string
+	Value string
+}
+
+// CommunityInclude represents a community-specific walk include.
+type CommunityInclude struct {
+	Community string
+	WalkFile  string
+}
+
+// FdbTableConfig configures SNMP forwarding database table injection.
+type FdbTableConfig struct {
+	Port int
+	VLAN int
+}
+
+// TTLConfig configures ICMP TTL timeout behavior (traceroute simulation).
+type TTLConfig struct {
+	TTL  int
+	IP   net.IP
+	Mask net.IPMask
 }
 
 // LLDPConfig holds LLDP (Link Layer Discovery Protocol) configuration
@@ -280,25 +347,73 @@ type FTPUser struct {
 // NetBIOSConfig holds NetBIOS service configuration
 type NetBIOSConfig struct {
 	Enabled   bool
-	Name      string   // NetBIOS name (default: device name, max 15 chars)
-	Workgroup string   // Workgroup/domain name (default: "WORKGROUP")
-	NodeType  string   // Node type: "B" (broadcast), "P" (peer), "M" (mixed), "H" (hybrid) (default: "B")
-	Services  []string // Service types to advertise (default: ["workstation", "fileserver"])
-	TTL       uint32   // Name registration TTL in seconds (default: 300)
+	Name      string        // NetBIOS name (default: device name, max 15 chars)
+	Workgroup string        // Workgroup/domain name (default: "WORKGROUP")
+	NodeType  string        // Node type: "B" (broadcast), "P" (peer), "M" (mixed), "H" (hybrid) (default: "B")
+	Services  []string      // Service types to advertise (default: ["workstation", "fileserver"])
+	TTL       uint32        // Name registration TTL in seconds (default: 300)
+	Names     []NetBIOSName // Explicit NetBIOS status names
+	MsBrowse  bool          // Enable __MSBROWSE__ group name
+}
+
+// NetBIOSName represents a NetBIOS name entry.
+type NetBIOSName struct {
+	Name   string
+	Suffix uint8
+	Group  bool
 }
 
 // ICMPConfig holds ICMP/ICMPv4 configuration
 type ICMPConfig struct {
-	Enabled   bool
-	TTL       uint8 // Time to Live for ICMP packets (default: 64)
-	RateLimit int   // Max ICMP responses per second (0 = unlimited, default: 0)
+	Enabled             bool
+	TTL                 uint8 // Time to Live for ICMP packets (default: 64)
+	RateLimit           int   // Max ICMP responses per second (0 = unlimited, default: 0)
+	AddressMaskReply    net.IP
+	RouterAdvertisement *IcmpRouterAdvertisement
+}
+
+// IcmpRouterAdvertisement configures IPv4 router advertisements.
+type IcmpRouterAdvertisement struct {
+	Period   int
+	Lifetime int
+	Routers  []IcmpRouter
+}
+
+// IcmpRouter represents an advertised router entry.
+type IcmpRouter struct {
+	Address    net.IP
+	Preference int
 }
 
 // ICMPv6Config holds ICMPv6 configuration
 type ICMPv6Config struct {
-	Enabled   bool
-	HopLimit  uint8 // Hop limit for ICMPv6 packets (default: 64, NDP uses 255)
-	RateLimit int   // Max ICMPv6 responses per second (0 = unlimited, default: 0)
+	Enabled             bool
+	HopLimit            uint8 // Hop limit for ICMPv6 packets (default: 64, NDP uses 255)
+	RateLimit           int   // Max ICMPv6 responses per second (0 = unlimited, default: 0)
+	RouterAdvertisement *Icmpv6RouterAdvertisement
+}
+
+// Icmpv6RouterAdvertisement configures IPv6 router advertisements.
+type Icmpv6RouterAdvertisement struct {
+	Period        int
+	CurHopLimit   int
+	Managed       int
+	Other         int
+	Lifetime      int
+	ReachableTime int
+	RetransTimer  int
+	MTU           int
+	PrefixInfo    []Icmpv6PrefixInfo
+}
+
+// Icmpv6PrefixInfo represents IPv6 prefix information options.
+type Icmpv6PrefixInfo struct {
+	PrefixLength      int
+	Onlink            int
+	Auto              int
+	ValidLifetime     int
+	PreferredLifetime int
+	Prefix            net.IP
 }
 
 // DHCPv6Config holds DHCPv6 server configuration
@@ -679,6 +794,38 @@ func convertYAMLDevice(yamlDevice converter.Device, includePath string) (Device,
 		return device, err
 	}
 
+	// MapToIP (Java MapToIp)
+	if yamlDevice.MapToIP != "" {
+		if ip := net.ParseIP(yamlDevice.MapToIP); ip != nil {
+			device.MapToIP = ip
+		} else {
+			return device, fmt.Errorf("device %s: invalid map_to_ip %s", yamlDevice.Name, yamlDevice.MapToIP)
+		}
+	}
+
+	// Babble (periodic traffic)
+	device.Babble = yamlDevice.Babble
+
+	// TTL config (traceroute simulation)
+	if yamlDevice.TTL != nil {
+		ttlCfg := &TTLConfig{TTL: yamlDevice.TTL.TTL}
+		if yamlDevice.TTL.IP != "" {
+			if ip := net.ParseIP(yamlDevice.TTL.IP); ip != nil {
+				ttlCfg.IP = ip.To4()
+			} else {
+				return device, fmt.Errorf("device %s: invalid ttl ip %s", yamlDevice.Name, yamlDevice.TTL.IP)
+			}
+		}
+		if yamlDevice.TTL.Mask != "" {
+			if ip := net.ParseIP(yamlDevice.TTL.Mask); ip != nil {
+				ttlCfg.Mask = net.IPMask(ip.To4())
+			} else {
+				return device, fmt.Errorf("device %s: invalid ttl mask %s", yamlDevice.Name, yamlDevice.TTL.Mask)
+			}
+		}
+		device.TTLConfig = ttlCfg
+	}
+
 	// Handle SNMP configuration
 	if err := parseDeviceSNMPConfig(&device, &yamlDevice, includePath); err != nil {
 		return device, err
@@ -687,6 +834,7 @@ func convertYAMLDevice(yamlDevice converter.Device, includePath string) (Device,
 	// Store VLAN if present
 	if yamlDevice.VLAN > 0 {
 		device.Properties["vlan"] = fmt.Sprintf("%d", yamlDevice.VLAN)
+		device.VLAN = yamlDevice.VLAN
 	}
 
 	// Parse protocol configurations
@@ -723,6 +871,7 @@ func parseDeviceIPAddresses(device *Device, yamlDevice *converter.Device) error 
 // parseDeviceSNMPConfig parses SNMP configuration for a device
 func parseDeviceSNMPConfig(device *Device, yamlDevice *converter.Device, includePath string) error {
 	if yamlDevice.SnmpAgent != nil {
+		// Resolve primary walk file
 		if yamlDevice.SnmpAgent.WalkFile != "" {
 			// Resolve and validate walk file path (security: prevent path traversal)
 			walkFile, err := validateWalkFilePath(includePath, yamlDevice.SnmpAgent.WalkFile, yamlDevice.Name)
@@ -730,11 +879,70 @@ func parseDeviceSNMPConfig(device *Device, yamlDevice *converter.Device, include
 				return err
 			}
 			device.SNMPConfig.WalkFile = walkFile
+			device.SNMPConfig.WalkFiles = append(device.SNMPConfig.WalkFiles, walkFile)
 		}
 
-		// Store custom MIBs count for future use
+		// Resolve additional walk files
+		for _, walk := range yamlDevice.SnmpAgent.WalkFiles {
+			walkFile, err := validateWalkFilePath(includePath, walk, yamlDevice.Name)
+			if err != nil {
+				return err
+			}
+			device.SNMPConfig.WalkFiles = append(device.SNMPConfig.WalkFiles, walkFile)
+		}
+
+		// Store custom MIBs
 		if len(yamlDevice.SnmpAgent.AddMibs) > 0 {
 			device.Properties["custom_mibs_count"] = fmt.Sprintf("%d", len(yamlDevice.SnmpAgent.AddMibs))
+			for _, mib := range yamlDevice.SnmpAgent.AddMibs {
+				device.SNMPConfig.AddMibs = append(device.SNMPConfig.AddMibs, AddMib{
+					OID:   mib.OID,
+					Type:  mib.Type,
+					Value: mib.Value,
+				})
+			}
+		}
+
+		// Community includes
+		for _, include := range yamlDevice.SnmpAgent.CommunityIncludes {
+			walkFile, err := validateWalkFilePath(includePath, include.WalkFile, yamlDevice.Name)
+			if err != nil {
+				return err
+			}
+			device.SNMPConfig.CommunityIncludes = append(device.SNMPConfig.CommunityIncludes, CommunityInclude{
+				Community: include.Community,
+				WalkFile:  walkFile,
+			})
+		}
+
+		// Access list
+		for _, ipStr := range yamlDevice.SnmpAgent.AccessList {
+			if ip := net.ParseIP(ipStr); ip != nil {
+				device.SNMPConfig.AccessList = append(device.SNMPConfig.AccessList, ip)
+			}
+		}
+
+		// SnmpAddr mapping
+		if yamlDevice.SnmpAgent.SnmpAddr != "" {
+			if ip := net.ParseIP(yamlDevice.SnmpAgent.SnmpAddr); ip != nil {
+				device.SNMPConfig.SnmpAddr = ip
+			} else {
+				return fmt.Errorf("device %s: invalid snmp_addr %s", yamlDevice.Name, yamlDevice.SnmpAgent.SnmpAddr)
+			}
+		}
+
+		// Dot1D/Dot1Q FDB tables
+		if yamlDevice.SnmpAgent.Dot1DFdbTable != nil {
+			device.SNMPConfig.Dot1DFdbTable = &FdbTableConfig{
+				Port: yamlDevice.SnmpAgent.Dot1DFdbTable.Port,
+				VLAN: yamlDevice.SnmpAgent.Dot1DFdbTable.VLAN,
+			}
+		}
+		if yamlDevice.SnmpAgent.Dot1QFdbTable != nil {
+			device.SNMPConfig.Dot1QFdbTable = &FdbTableConfig{
+				Port: yamlDevice.SnmpAgent.Dot1QFdbTable.Port,
+				VLAN: yamlDevice.SnmpAgent.Dot1QFdbTable.VLAN,
+			}
 		}
 
 		// Parse SNMP Traps configuration
@@ -788,7 +996,101 @@ func parseDeviceProtocolConfigs(device *Device, yamlDevice *converter.Device) er
 	// Handle Traffic configuration
 	device.TrafficConfig = parseTrafficConfig(yamlDevice.Traffic)
 
+	// Handle OS Fingerprint configuration
+	device.OSFingerprintConfig = parseOSFingerprintConfig(yamlDevice.OSFingerprint)
+
+	// Handle iPerf3 configuration
+	device.IPerf3 = parseIPerf3Config(yamlDevice.IPerf3)
+
 	return nil
+}
+
+// parseOSFingerprintConfig parses OS fingerprinting configuration from YAML
+func parseOSFingerprintConfig(yamlOSFP *converter.OSFingerprintConfig) *OSFingerprintConfig {
+	if yamlOSFP == nil {
+		return nil
+	}
+
+	osFP := &OSFingerprintConfig{
+		OSType:       yamlOSFP.OSType,
+		TTL:          yamlOSFP.TTL,
+		WindowSize:   yamlOSFP.WindowSize,
+		WindowScale:  yamlOSFP.WindowScale,
+		MSS:          yamlOSFP.MSS,
+		SSHBanner:    yamlOSFP.SSHBanner,
+		HTTPServer:   yamlOSFP.HTTPServer,
+		FTPBanner:    yamlOSFP.FTPBanner,
+		SMTPBanner:   yamlOSFP.SMTPBanner,
+		TelnetBanner: yamlOSFP.TelnetBanner,
+		DontFragment: yamlOSFP.DontFragment,
+	}
+
+	// Apply OS type defaults if no specific values are set
+	if osFP.OSType != "" && osFP.TTL == 0 {
+		switch osFP.OSType {
+		case "linux", "macos", "freebsd", "openbsd":
+			osFP.TTL = 64
+		case "windows", "windows-server":
+			osFP.TTL = 128
+		case "cisco-ios", "cisco-nxos", "juniper-junos", "arista-eos":
+			osFP.TTL = 255
+		default:
+			osFP.TTL = 64 // Default to Linux-like
+		}
+	}
+
+	// Set default window size based on OS type if not specified
+	if osFP.OSType != "" && osFP.WindowSize == 0 {
+		switch osFP.OSType {
+		case "linux":
+			osFP.WindowSize = 29200
+		case "windows", "windows-server":
+			osFP.WindowSize = 65535
+		case "macos":
+			osFP.WindowSize = 65535
+		default:
+			osFP.WindowSize = 65535
+		}
+	}
+
+	return osFP
+}
+
+// parseIPerf3Config parses iPerf3 server emulation configuration from YAML
+func parseIPerf3Config(yamlIPerf3 *converter.IPerf3Config) *IPerf3Config {
+	if yamlIPerf3 == nil {
+		return nil
+	}
+
+	cfg := &IPerf3Config{
+		Enabled:           yamlIPerf3.Enabled,
+		Port:              yamlIPerf3.Port,
+		MaxBandwidthMbps:  yamlIPerf3.MaxBandwidthMbps,
+		TypicalLatencyMs:  yamlIPerf3.TypicalLatencyMs,
+		JitterMs:          yamlIPerf3.JitterMs,
+		PacketLossPercent: yamlIPerf3.PacketLossPercent,
+		UploadMbps:        yamlIPerf3.UploadMbps,
+		DownloadMbps:      yamlIPerf3.DownloadMbps,
+	}
+
+	// Set defaults for unspecified values
+	if cfg.Port == 0 {
+		cfg.Port = 5201 // Default iPerf3 port
+	}
+	if cfg.UploadMbps == 0 {
+		cfg.UploadMbps = 100.0 // Default 100 Mbps
+	}
+	if cfg.DownloadMbps == 0 {
+		cfg.DownloadMbps = 100.0 // Default 100 Mbps
+	}
+	if cfg.MaxBandwidthMbps == 0 {
+		cfg.MaxBandwidthMbps = 1000.0 // Default 1 Gbps max
+	}
+	if cfg.TypicalLatencyMs == 0 {
+		cfg.TypicalLatencyMs = 1.0 // Default 1ms
+	}
+
+	return cfg
 }
 
 // parseNetBIOSConfig parses NetBIOS configuration from YAML
@@ -804,6 +1106,7 @@ func parseNetBIOSConfig(yamlNetbios *converter.NetbiosConfig, deviceName string)
 		NodeType:  yamlNetbios.NodeType,
 		Services:  yamlNetbios.Services,
 		TTL:       yamlNetbios.TTL,
+		MsBrowse:  yamlNetbios.MsBrowse,
 	}
 
 	// Set defaults
@@ -826,6 +1129,25 @@ func parseNetBIOSConfig(yamlNetbios *converter.NetbiosConfig, deviceName string)
 		netbiosCfg.TTL = DefaultNetBIOSTTL
 	}
 
+	// Parse explicit NetBIOS names
+	for _, name := range yamlNetbios.Names {
+		entry := NetBIOSName{
+			Name:  name.Name,
+			Group: name.Group,
+		}
+		if name.Suffix != "" {
+			// Parse suffix as hex (0x..) or decimal
+			if strings.HasPrefix(strings.ToLower(name.Suffix), "0x") {
+				if v, err := strconv.ParseUint(name.Suffix[2:], 16, 8); err == nil {
+					entry.Suffix = uint8(v)
+				}
+			} else if v, err := strconv.ParseUint(name.Suffix, 10, 8); err == nil {
+				entry.Suffix = uint8(v)
+			}
+		}
+		netbiosCfg.Names = append(netbiosCfg.Names, entry)
+	}
+
 	return netbiosCfg
 }
 
@@ -845,6 +1167,27 @@ func parseICMPConfig(yamlIcmp *converter.IcmpConfig) *ICMPConfig {
 		icmpCfg.TTL = DefaultICMPTTL
 	}
 
+	if yamlIcmp.AddressMaskReply != "" {
+		if ip := net.ParseIP(yamlIcmp.AddressMaskReply); ip != nil {
+			icmpCfg.AddressMaskReply = ip.To4()
+		}
+	}
+	if yamlIcmp.RouterAdvertisement != nil {
+		ra := &IcmpRouterAdvertisement{
+			Period:   yamlIcmp.RouterAdvertisement.Period,
+			Lifetime: yamlIcmp.RouterAdvertisement.Lifetime,
+		}
+		for _, r := range yamlIcmp.RouterAdvertisement.Routers {
+			if ip := net.ParseIP(r.Address); ip != nil {
+				ra.Routers = append(ra.Routers, IcmpRouter{
+					Address:    ip.To4(),
+					Preference: r.Preference,
+				})
+			}
+		}
+		icmpCfg.RouterAdvertisement = ra
+	}
+
 	return icmpCfg
 }
 
@@ -862,6 +1205,34 @@ func parseICMPv6Config(yamlIcmpv6 *converter.Icmpv6Config) *ICMPv6Config {
 
 	if icmpv6Cfg.HopLimit == 0 {
 		icmpv6Cfg.HopLimit = DefaultICMPv6HopLimit
+	}
+
+	if yamlIcmpv6.RouterAdvertisement != nil {
+		ra := &Icmpv6RouterAdvertisement{
+			Period:        yamlIcmpv6.RouterAdvertisement.Period,
+			CurHopLimit:   yamlIcmpv6.RouterAdvertisement.CurHopLimit,
+			Managed:       yamlIcmpv6.RouterAdvertisement.Managed,
+			Other:         yamlIcmpv6.RouterAdvertisement.Other,
+			Lifetime:      yamlIcmpv6.RouterAdvertisement.Lifetime,
+			ReachableTime: yamlIcmpv6.RouterAdvertisement.ReachableTime,
+			RetransTimer:  yamlIcmpv6.RouterAdvertisement.RetransTimer,
+			MTU:           yamlIcmpv6.RouterAdvertisement.MTU,
+		}
+		for _, p := range yamlIcmpv6.RouterAdvertisement.PrefixInfo {
+			var prefix net.IP
+			if p.Prefix != "" {
+				prefix = net.ParseIP(p.Prefix)
+			}
+			ra.PrefixInfo = append(ra.PrefixInfo, Icmpv6PrefixInfo{
+				PrefixLength:      p.PrefixLength,
+				Onlink:            p.Onlink,
+				Auto:              p.Auto,
+				ValidLifetime:     p.ValidLifetime,
+				PreferredLifetime: p.PreferredLifetime,
+				Prefix:            prefix,
+			})
+		}
+		icmpv6Cfg.RouterAdvertisement = ra
 	}
 
 	return icmpv6Cfg
@@ -1198,9 +1569,10 @@ func parseDNSConfig(yamlDns *converter.DnsServer, deviceName string) (*DNSConfig
 			ttl = uint32(record.TTL)
 		}
 		dnsCfg.ForwardRecords = append(dnsCfg.ForwardRecords, DNSRecord{
-			Name: record.Name,
-			IP:   ip,
-			TTL:  ttl,
+			Name:  record.Name,
+			IP:    ip,
+			TTL:   ttl,
+			RCode: record.RCode,
 		})
 	}
 
@@ -1224,9 +1596,10 @@ func parseDNSConfig(yamlDns *converter.DnsServer, deviceName string) (*DNSConfig
 			ttl = uint32(record.TTL)
 		}
 		dnsCfg.ReverseRecords = append(dnsCfg.ReverseRecords, DNSRecord{
-			Name: record.Name,
-			IP:   ip,
-			TTL:  ttl,
+			Name:  record.Name,
+			IP:    ip,
+			TTL:   ttl,
+			RCode: record.RCode,
 		})
 	}
 

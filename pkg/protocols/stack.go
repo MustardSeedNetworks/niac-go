@@ -2,14 +2,17 @@ package protocols
 
 import (
 	"fmt"
+	"net"
+	"strconv"
 	"sync"
 	"time"
 
+	"github.com/google/gopacket"
+	"github.com/google/gopacket/layers"
 	"github.com/krisarmstrong/niac-go/pkg/capture"
 	"github.com/krisarmstrong/niac-go/pkg/config"
 	"github.com/krisarmstrong/niac-go/pkg/errors"
 	"github.com/krisarmstrong/niac-go/pkg/logging"
-	"github.com/krisarmstrong/niac-go/pkg/snmp"
 )
 
 const (
@@ -59,8 +62,10 @@ type Stack struct {
 	cdpHandler     *CDPHandler
 	edpHandler     *EDPHandler
 	fdpHandler     *FDPHandler
-	snmpHandler    *SNMPHandler
-	neighbors      *neighborTable
+	snmpHandler        *SNMPHandler
+	healthCheckHandler *HealthCheckHandler
+	iperf3Handler      *IPerf3Handler
+	neighbors          *neighborTable
 
 	// Statistics
 	stats *Statistics
@@ -71,7 +76,7 @@ type Stack struct {
 	wg       sync.WaitGroup
 
 	debugConfig  *logging.DebugConfig
-	snmpAgents   map[*config.Device]*snmp.Agent
+	snmpAgents   map[*config.Device]*snmpAgentGroup
 	errorManager *errors.StateManager
 }
 
@@ -104,7 +109,7 @@ func NewStack(captureEngine *capture.Engine, cfg *config.Config, debugConfig *lo
 		stats:        &Statistics{},
 		stopChan:     make(chan struct{}),
 		debugConfig:  debugConfig,
-		snmpAgents:   make(map[*config.Device]*snmp.Agent),
+		snmpAgents:   make(map[*config.Device]*snmpAgentGroup),
 		neighbors:    newNeighborTable(),
 		errorManager: errors.NewStateManager(),
 	}
@@ -129,6 +134,8 @@ func NewStack(captureEngine *capture.Engine, cfg *config.Config, debugConfig *lo
 	stack.edpHandler = NewEDPHandler(stack)
 	stack.fdpHandler = NewFDPHandler(stack)
 	stack.snmpHandler = NewSNMPHandler(stack)
+	stack.healthCheckHandler = NewHealthCheckHandler(stack)
+	stack.iperf3Handler = NewIPerf3Handler(stack)
 
 	// Initialize device table from config (requires handlers for DHCP/SNMP setup)
 	stack.initializeDevices(cfg)
@@ -147,7 +154,7 @@ func (s *Stack) initializeDevices(cfg *config.Config) {
 	} else {
 		s.devices.Reset()
 	}
-	s.snmpAgents = make(map[*config.Device]*snmp.Agent)
+	s.snmpAgents = make(map[*config.Device]*snmpAgentGroup)
 	if s.dhcpHandler != nil {
 		s.dhcpHandler.Reset()
 	}
@@ -169,6 +176,16 @@ func (s *Stack) initializeDevices(cfg *config.Config) {
 		// Add by IP addresses
 		for _, ip := range device.IPAddresses {
 			s.devices.AddByIP(ip, device)
+		}
+
+		// Register TTL handlers
+		if device.TTLConfig != nil {
+			s.devices.RegisterTTL(device)
+		}
+
+		// Register forwarding devices for FDB table injection
+		if device.SNMPConfig.Dot1DFdbTable != nil || device.SNMPConfig.Dot1QFdbTable != nil {
+			s.devices.RegisterForwardingDevice(device)
 		}
 
 		// Configure DHCP server if device has DHCP config
@@ -197,6 +214,7 @@ func (s *Stack) initializeDevices(cfg *config.Config) {
 				device.DHCPConfig.BootfileName,
 				device.DHCPConfig.VendorSpecific,
 			)
+			s.dhcpHandler.SetStaticLeases(device.DHCPConfig.ClientLeases)
 
 			if s.debugConfig.GetGlobal() >= 1 {
 				fmt.Printf("Configured DHCP server for device %s\n", device.Name)
@@ -204,6 +222,26 @@ func (s *Stack) initializeDevices(cfg *config.Config) {
 		}
 
 		s.initSNMPAgent(device)
+
+		// Load device-specific DNS records
+		if device.DNSConfig != nil {
+			s.dnsHandler.LoadDeviceDNSConfig(device)
+		}
+	}
+
+	// Apply SnmpAddr mappings (SNMP agent sharing)
+	for i := range cfg.Devices {
+		device := &cfg.Devices[i]
+		if device.SNMPConfig.SnmpAddr == nil {
+			continue
+		}
+		targets := s.devices.GetByIP(device.SNMPConfig.SnmpAddr)
+		if len(targets) == 0 {
+			continue
+		}
+		if group, ok := s.snmpAgents[targets[0]]; ok {
+			s.snmpAgents[device] = group
+		}
 	}
 
 	s.configMu.Lock()
@@ -476,7 +514,7 @@ func (s *Stack) sendPacket(pkt *Packet) {
 func (s *Stack) babbleThread() {
 	defer s.wg.Done()
 
-	ticker := time.NewTicker(30 * time.Second)
+	ticker := time.NewTicker(15 * time.Second)
 	defer ticker.Stop()
 
 	for s.running {
@@ -484,10 +522,73 @@ func (s *Stack) babbleThread() {
 		case <-s.stopChan:
 			return
 		case <-ticker.C:
-			// Generate periodic traffic (ARP announcements, etc.)
-			// Pending: configurable periodic traffic generation (issue #78)
+			for _, device := range s.devices.GetAll() {
+				if device == nil || !device.Babble {
+					continue
+				}
+				s.sendBabble(device)
+				time.Sleep(10 * time.Millisecond)
+			}
 		}
 	}
+}
+
+func (s *Stack) sendBabble(device *config.Device) {
+	if device == nil || len(device.MACAddress) == 0 {
+		return
+	}
+	srcIP := firstIPv4Address(device)
+	if srcIP == nil {
+		return
+	}
+
+	broadcastMAC := net.HardwareAddr{0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
+	targetIP := net.IPv4(10, 1, 1, 1)
+
+	arp := &layers.ARP{
+		AddrType:          layers.LinkTypeEthernet,
+		Protocol:          layers.EthernetTypeIPv4,
+		HwAddressSize:     6,
+		ProtAddressSize:   4,
+		Operation:         layers.ARPRequest,
+		SourceHwAddress:   []byte(device.MACAddress),
+		SourceProtAddress: []byte(srcIP.To4()),
+		DstHwAddress:      []byte{0, 0, 0, 0, 0, 0},
+		DstProtAddress:    []byte(targetIP.To4()),
+	}
+
+	eth := &layers.Ethernet{
+		SrcMAC:       device.MACAddress,
+		DstMAC:       broadcastMAC,
+		EthernetType: layers.EthernetTypeARP,
+	}
+
+	buf := gopacket.NewSerializeBuffer()
+	opts := gopacket.SerializeOptions{FixLengths: true, ComputeChecksums: true}
+
+	vlan := device.VLAN
+	if vlan == 0 {
+		if v, ok := device.Properties["vlan"]; ok {
+			if parsed, err := strconv.Atoi(v); err == nil {
+				vlan = parsed
+			}
+		}
+	}
+
+	if vlan > 0 {
+		eth.EthernetType = layers.EthernetTypeDot1Q
+		dot1q := &layers.Dot1Q{
+			Priority:       0,
+			DropEligible:   false,
+			VLANIdentifier: uint16(vlan),
+			Type:           layers.EthernetTypeARP,
+		}
+		_ = gopacket.SerializeLayers(buf, opts, eth, dot1q, arp)
+	} else {
+		_ = gopacket.SerializeLayers(buf, opts, eth, arp)
+	}
+
+	_ = s.SendRawPacket(buf.Bytes())
 }
 
 // Send queues a packet for sending
@@ -569,20 +670,53 @@ func (s *Stack) initSNMPAgent(device *config.Device) {
 	}
 
 	debugLevel := s.debugConfig.GetProtocolLevel(logging.ProtocolSNMP)
-	agent := snmp.NewAgent(device, debugLevel)
+	group := newSnmpAgentGroup()
+	baseCommunity := device.SNMPConfig.Community
+	if baseCommunity == "" {
+		baseCommunity = "public"
+	}
+	baseAgent := group.Ensure(baseCommunity, device, debugLevel)
 
+	// Load walk files into base community agent
+	for _, walkFile := range device.SNMPConfig.WalkFiles {
+		if err := baseAgent.LoadWalkFile(walkFile); err != nil && debugLevel >= 1 {
+			fmt.Printf("SNMP: failed to load walk file for %s: %v\n", device.Name, err)
+		}
+	}
 	if device.SNMPConfig.WalkFile != "" {
-		if err := agent.LoadWalkFile(device.SNMPConfig.WalkFile); err != nil && debugLevel >= 1 {
+		if err := baseAgent.LoadWalkFile(device.SNMPConfig.WalkFile); err != nil && debugLevel >= 1 {
 			fmt.Printf("SNMP: failed to load walk file for %s: %v\n", device.Name, err)
 		}
 	}
 
-	s.snmpAgents[device] = agent
+	// Load community-specific walk files
+	for _, include := range device.SNMPConfig.CommunityIncludes {
+		agent := group.Ensure(include.Community, device, debugLevel)
+		if err := agent.LoadWalkFile(include.WalkFile); err != nil && debugLevel >= 1 {
+			fmt.Printf("SNMP: failed to load walk file for %s (%s): %v\n", device.Name, include.Community, err)
+		}
+	}
+
+	// Apply AddMib entries to base community (Java uses public)
+	for _, mib := range device.SNMPConfig.AddMibs {
+		agent := group.Ensure("public", device, debugLevel)
+		if err := agent.AddMib(mib.OID, mib.Type, mib.Value); err != nil && debugLevel >= 2 {
+			fmt.Printf("SNMP: AddMib failed for %s oid=%s err=%v\n", device.Name, mib.OID, err)
+		}
+	}
+
+	s.snmpAgents[device] = group
 }
 
 func snmpEnabled(cfg config.SNMPConfig) bool {
-	if cfg.Community != "" || cfg.WalkFile != "" || cfg.SysName != "" ||
+	if cfg.Community != "" || cfg.WalkFile != "" || len(cfg.WalkFiles) > 0 || cfg.SysName != "" ||
 		cfg.SysDescr != "" || cfg.SysContact != "" || cfg.SysLocation != "" {
+		return true
+	}
+	if len(cfg.AddMibs) > 0 || len(cfg.CommunityIncludes) > 0 || len(cfg.AccessList) > 0 || cfg.SnmpAddr != nil {
+		return true
+	}
+	if cfg.Dot1DFdbTable != nil || cfg.Dot1QFdbTable != nil {
 		return true
 	}
 	if cfg.Traps != nil && cfg.Traps.Enabled {
@@ -591,11 +725,71 @@ func snmpEnabled(cfg config.SNMPConfig) bool {
 	return false
 }
 
-func (s *Stack) getSNMPAgent(device *config.Device) *snmp.Agent {
+func (s *Stack) getSNMPAgents(device *config.Device) *snmpAgentGroup {
 	if s == nil {
 		return nil
 	}
 	return s.snmpAgents[device]
+}
+
+func (s *Stack) updateFDBTables(mac net.HardwareAddr) {
+	if s == nil || len(mac) == 0 {
+		return
+	}
+	for _, device := range s.devices.GetForwardingDevices() {
+		if device == nil {
+			continue
+		}
+		group := s.snmpAgents[device]
+		if group == nil {
+			group = newSnmpAgentGroup()
+			s.snmpAgents[device] = group
+		}
+		debugLevel := s.debugConfig.GetProtocolLevel(logging.ProtocolSNMP)
+		baseCommunity := device.SNMPConfig.Community
+		if baseCommunity == "" {
+			baseCommunity = "public"
+		}
+
+		decMac := ""
+		hexMac := ""
+		for _, b := range mac {
+			decMac += fmt.Sprintf(".%d", b)
+			hexMac += fmt.Sprintf("%02X ", b)
+		}
+
+		if device.SNMPConfig.Dot1DFdbTable != nil {
+			port := device.SNMPConfig.Dot1DFdbTable.Port
+			vlan := device.SNMPConfig.Dot1DFdbTable.VLAN
+			community := baseCommunity
+			if vlan > 0 {
+				community = fmt.Sprintf("%s@%d", baseCommunity, vlan)
+			}
+			addressMib := ".1.3.6.1.2.1.17.4.3.1.1" + decMac
+			portMib := ".1.3.6.1.2.1.17.4.3.1.2" + decMac
+			statusMib := ".1.3.6.1.2.1.17.4.3.1.3" + decMac
+			agent := group.Ensure(community, device, debugLevel)
+			_ = agent.AddMib(addressMib, "STRING", "fixed("+hexMac+")")
+			_ = agent.AddMib(portMib, "INTEGER", fmt.Sprintf("fixed(%d)", port))
+			_ = agent.AddMib(statusMib, "INTEGER", "fixed(3)")
+		}
+
+		if device.SNMPConfig.Dot1QFdbTable != nil {
+			port := device.SNMPConfig.Dot1QFdbTable.Port
+			vlan := device.SNMPConfig.Dot1QFdbTable.VLAN
+			if vlan <= 0 {
+				continue
+			}
+			community := baseCommunity
+			addressMib := fmt.Sprintf(".1.3.6.1.2.1.17.7.1.2.2.1.1.%d%s", vlan, decMac)
+			portMib := fmt.Sprintf(".1.3.6.1.2.1.17.7.1.2.2.1.2.%d%s", vlan, decMac)
+			statusMib := fmt.Sprintf(".1.3.6.1.2.1.17.7.1.2.2.1.3.%d%s", vlan, decMac)
+			agent := group.Ensure(community, device, debugLevel)
+			_ = agent.AddMib(addressMib, "STRING", "fixed("+hexMac+")")
+			_ = agent.AddMib(portMib, "INTEGER", fmt.Sprintf("fixed(%d)", port))
+			_ = agent.AddMib(statusMib, "INTEGER", "fixed(3)")
+		}
+	}
 }
 
 // IncrementStat increments a specific statistic

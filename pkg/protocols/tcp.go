@@ -74,11 +74,89 @@ func (h *TCPHandler) HandlePacket(pkt *Packet, ipLayer *layers.IPv4, devices []*
 		if len(tcp.Payload) > 0 {
 			h.stack.httpHandler.HandleRequest(pkt, ipLayer, tcp, devices)
 		}
+	case TCPPortHTTPS:
+		// HTTPS - respond to TCP connection (TLS handshake not simulated at packet level)
+		if tcp.SYN && !tcp.ACK {
+			h.stack.healthCheckHandler.HandleTCPConnect(pkt, ipLayer, tcp, devices, TCPPortHTTPS)
+		}
 	case TCPPortFTP:
 		// FTP control connection
 		if len(tcp.Payload) > 0 {
 			h.stack.ftpHandler.HandleRequest(pkt, ipLayer, tcp, devices)
 		}
+	case TCPPortLDAP, TCPPortLDAPS:
+		// LDAP/LDAPS
+		if tcp.SYN && !tcp.ACK {
+			h.stack.healthCheckHandler.HandleTCPConnect(pkt, ipLayer, tcp, devices, uint16(tcp.DstPort))
+		} else if len(tcp.Payload) > 0 {
+			h.stack.healthCheckHandler.HandleLDAPRequest(pkt, ipLayer, tcp, devices)
+		}
+	case TCPPortRTSP:
+		// RTSP
+		if tcp.SYN && !tcp.ACK {
+			h.stack.healthCheckHandler.HandleTCPConnect(pkt, ipLayer, tcp, devices, TCPPortRTSP)
+		} else if len(tcp.Payload) > 0 {
+			h.stack.healthCheckHandler.HandleRTSPRequest(pkt, ipLayer, tcp, devices)
+		}
+	case TCPPortMySQL:
+		// MySQL
+		if tcp.SYN && !tcp.ACK {
+			h.stack.healthCheckHandler.HandleTCPConnect(pkt, ipLayer, tcp, devices, TCPPortMySQL)
+		} else if len(tcp.Payload) > 0 {
+			h.stack.healthCheckHandler.HandleMySQLRequest(pkt, ipLayer, tcp, devices)
+		}
+	case TCPPortPostgres:
+		// PostgreSQL
+		if tcp.SYN && !tcp.ACK {
+			h.stack.healthCheckHandler.HandleTCPConnect(pkt, ipLayer, tcp, devices, TCPPortPostgres)
+		} else if len(tcp.Payload) > 0 {
+			h.stack.healthCheckHandler.HandlePostgresRequest(pkt, ipLayer, tcp, devices)
+		}
+	case TCPPortMSSQL:
+		// MS SQL Server
+		if tcp.SYN && !tcp.ACK {
+			h.stack.healthCheckHandler.HandleTCPConnect(pkt, ipLayer, tcp, devices, TCPPortMSSQL)
+		} else if len(tcp.Payload) > 0 {
+			h.stack.healthCheckHandler.HandleMSSQLRequest(pkt, ipLayer, tcp, devices)
+		}
+	case TCPPortModbus:
+		// Modbus TCP
+		if tcp.SYN && !tcp.ACK {
+			h.stack.healthCheckHandler.HandleTCPConnect(pkt, ipLayer, tcp, devices, TCPPortModbus)
+		} else if len(tcp.Payload) > 0 {
+			h.stack.healthCheckHandler.HandleModbusRequest(pkt, ipLayer, tcp, devices)
+		}
+	case TCPPortDICOM:
+		// DICOM
+		if tcp.SYN && !tcp.ACK {
+			h.stack.healthCheckHandler.HandleTCPConnect(pkt, ipLayer, tcp, devices, TCPPortDICOM)
+		} else if len(tcp.Payload) > 0 {
+			h.stack.healthCheckHandler.HandleDICOMRequest(pkt, ipLayer, tcp, devices)
+		}
+	case TCPPortHL7:
+		// HL7 MLLP
+		if tcp.SYN && !tcp.ACK {
+			h.stack.healthCheckHandler.HandleTCPConnect(pkt, ipLayer, tcp, devices, TCPPortHL7)
+		} else if len(tcp.Payload) > 0 {
+			h.stack.healthCheckHandler.HandleHL7Request(pkt, ipLayer, tcp, devices)
+		}
+	case TCPPortOPCUA:
+		// OPC UA
+		if tcp.SYN && !tcp.ACK {
+			h.stack.healthCheckHandler.HandleTCPConnect(pkt, ipLayer, tcp, devices, TCPPortOPCUA)
+		} else if len(tcp.Payload) > 0 {
+			h.stack.healthCheckHandler.HandleOPCUARequest(pkt, ipLayer, tcp, devices)
+		}
+	case TCPPortSMB:
+		// SMB/CIFS
+		if tcp.SYN && !tcp.ACK {
+			h.stack.healthCheckHandler.HandleTCPConnect(pkt, ipLayer, tcp, devices, TCPPortSMB)
+		} else if len(tcp.Payload) > 0 {
+			h.stack.healthCheckHandler.HandleSMBRequest(pkt, ipLayer, tcp, devices)
+		}
+	case TCPPortIPerf3:
+		// iPerf3 bandwidth testing
+		h.stack.iperf3Handler.HandleIPerf3Request(pkt, ipLayer, tcp, devices)
 	default:
 		// For unsupported ports, send RST on SYN
 		if tcp.SYN && !tcp.ACK {

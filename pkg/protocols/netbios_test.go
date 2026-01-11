@@ -110,23 +110,30 @@ func TestNetBIOSNameDecoding(t *testing.T) {
 
 func TestNetBIOSNameTypes(t *testing.T) {
 	// Verify NetBIOS name type constants
-	if NBNameWorkstation != 0x00 {
-		t.Error("NBNameWorkstation should be 0x00")
+	tests := []struct {
+		name     string
+		constant byte
+		expected byte
+	}{
+		{"NBNameWorkstation", NBNameWorkstation, 0x00},
+		{"NBNameMsBrowse", NBNameMsBrowse, 0x01},
+		{"NBNameMessenger", NBNameMessenger, 0x03},
+		{"NBNameRASServer", NBNameRASServer, 0x06},
+		{"NBNameDomainMaster", NBNameDomainMaster, 0x1B},
+		{"NBNameDomainCtrl", NBNameDomainCtrl, 0x1C},
+		{"NBNameMasterBrowser", NBNameMasterBrowser, 0x1D},
+		{"NBNameBrowser", NBNameBrowser, 0x1E},
+		{"NBNameNetDDE", NBNameNetDDE, 0x1F},
+		{"NBNameFileServer", NBNameFileServer, 0x20},
+		{"NBNameRASClient", NBNameRASClient, 0x21},
+		{"NBNameNetMonAgent", NBNameNetMonAgent, 0xBE},
+		{"NBNameNetMonUtility", NBNameNetMonUtility, 0xBF},
 	}
-	if NBNameMessenger != 0x03 {
-		t.Error("NBNameMessenger should be 0x03")
-	}
-	if NBNameFileServer != 0x20 {
-		t.Error("NBNameFileServer should be 0x20")
-	}
-	if NBNameDomainMaster != 0x1B {
-		t.Error("NBNameDomainMaster should be 0x1B")
-	}
-	if NBNameMasterBrowser != 0x1D {
-		t.Error("NBNameMasterBrowser should be 0x1D")
-	}
-	if NBNameBrowser != 0x1E {
-		t.Error("NBNameBrowser should be 0x1E")
+
+	for _, tt := range tests {
+		if tt.constant != tt.expected {
+			t.Errorf("%s should be 0x%02X, got 0x%02X", tt.name, tt.expected, tt.constant)
+		}
 	}
 }
 

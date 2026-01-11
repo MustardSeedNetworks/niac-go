@@ -83,15 +83,15 @@ func TestAddRecord(t *testing.T) {
 				t.Errorf("Record not added for hostname %s", normalized)
 			} else if len(ips) == 0 {
 				t.Error("No IPs in record")
-			} else if !ips[0].Equal(tt.ip) {
-				t.Errorf("Expected IP %v, got %v", tt.ip, ips[0])
+			} else if !ips[0].ip.Equal(tt.ip) {
+				t.Errorf("Expected IP %v, got %v", tt.ip, ips[0].ip)
 			}
 
 			// Check reverse record (PTR)
 			if hostname, ok := handler.ptrRecords[tt.ip.String()]; !ok {
 				t.Errorf("PTR record not added for IP %s", tt.ip)
-			} else if hostname != normalized {
-				t.Errorf("Expected PTR hostname %s, got %s", normalized, hostname)
+			} else if hostname.name != normalized {
+				t.Errorf("Expected PTR hostname %s, got %s", normalized, hostname.name)
 			}
 		})
 	}
@@ -122,8 +122,8 @@ func TestAddRecord_Multiple(t *testing.T) {
 
 	// Verify all IPs are present
 	found := make(map[string]bool)
-	for _, ip := range ips {
-		found[ip.String()] = true
+	for _, rec := range ips {
+		found[rec.ip.String()] = true
 	}
 
 	if !found[ip1.String()] {
@@ -223,7 +223,7 @@ func TestLookupHost(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ips := handler.lookupHost(tt.hostname)
+			ips := handler.lookupHost(tt.hostname, nil)
 
 			if tt.expectFound {
 				if ips == nil {
@@ -243,7 +243,7 @@ func TestLookupHost(t *testing.T) {
 }
 
 func TestParsePTRNameIPv4(t *testing.T) {
-	ip, ok := parsePTRName([]byte("4.3.2.1.in-addr.arpa."))
+	ip, ok, _ := parsePTRName([]byte("4.3.2.1.in-addr.arpa."))
 	if !ok {
 		t.Fatalf("expected IPv4 PTR parse success")
 	}
@@ -256,7 +256,7 @@ func TestParsePTRNameIPv4(t *testing.T) {
 func TestParsePTRNameIPv6(t *testing.T) {
 	expected := net.ParseIP("2001:db8::1")
 	ptr := ipv6PTRString(expected)
-	ip, ok := parsePTRName([]byte(ptr))
+	ip, ok, _ := parsePTRName([]byte(ptr))
 	if !ok {
 		t.Fatalf("expected IPv6 PTR parse success")
 	}
@@ -278,7 +278,7 @@ func TestResolveQuestionsPTR(t *testing.T) {
 		Class: layers.DNSClassIN,
 	}
 
-	answers, code := handler.resolveQuestions([]layers.DNSQuestion{question}, 1, 0)
+	answers, code := handler.resolveQuestions([]layers.DNSQuestion{question}, nil, 1, 0)
 	if code != layers.DNSResponseCodeNoErr {
 		t.Fatalf("expected no error response, got %v", code)
 	}
@@ -309,7 +309,7 @@ func TestLookupHost_WithDomain(t *testing.T) {
 	handler.AddRecord("server.example.com", net.ParseIP("192.168.1.10"))
 
 	// Lookup short name - should append domain
-	ips := handler.lookupHost("server")
+	ips := handler.lookupHost("server", nil)
 	if ips == nil {
 		t.Fatal("Expected to find 'server' with default domain appended")
 	}
@@ -318,8 +318,8 @@ func TestLookupHost_WithDomain(t *testing.T) {
 		t.Errorf("Expected 1 IP, got %d", len(ips))
 	}
 
-	if !ips[0].Equal(net.ParseIP("192.168.1.10")) {
-		t.Errorf("Expected IP 192.168.1.10, got %v", ips[0])
+	if !ips[0].ip.Equal(net.ParseIP("192.168.1.10")) {
+		t.Errorf("Expected IP 192.168.1.10, got %v", ips[0].ip)
 	}
 }
 
@@ -362,7 +362,7 @@ func TestLoadDeviceRecords(t *testing.T) {
 	handler.LoadDeviceRecords(devices)
 
 	// Test device 1 - should use sysName
-	ips := handler.lookupHost("core-router-01")
+	ips := handler.lookupHost("core-router-01", nil)
 	if ips == nil {
 		t.Fatal("Expected to find 'core-router-01'")
 	}
@@ -371,7 +371,7 @@ func TestLoadDeviceRecords(t *testing.T) {
 	}
 
 	// Test device 2 - should use device name
-	ips = handler.lookupHost("switch1")
+	ips = handler.lookupHost("switch1", nil)
 	if ips == nil {
 		t.Fatal("Expected to find 'switch1'")
 	}
@@ -380,7 +380,7 @@ func TestLoadDeviceRecords(t *testing.T) {
 	}
 
 	// Test device 3 - no IPs, should still be added but return empty
-	ips = handler.lookupHost("web-server-01")
+	ips = handler.lookupHost("web-server-01", nil)
 	if len(ips) > 0 {
 		t.Errorf("Expected no IPs for web-server-01 (no IPs configured), got %d", len(ips))
 	}
@@ -397,7 +397,7 @@ func TestLookupHost_IPv4Only(t *testing.T) {
 	handler.AddRecord(hostname, net.ParseIP("2001:db8::1"))
 	handler.AddRecord(hostname, net.ParseIP("192.168.1.11"))
 
-	ips := handler.lookupHost(hostname)
+	ips := handler.lookupHost(hostname, nil)
 	if len(ips) != 3 {
 		t.Fatalf("Expected 3 total IPs, got %d", len(ips))
 	}
@@ -406,9 +406,9 @@ func TestLookupHost_IPv4Only(t *testing.T) {
 	ipv4Count := 0
 	ipv6Count := 0
 	for _, ip := range ips {
-		if ip.To4() != nil {
+		if ip.ip.To4() != nil {
 			ipv4Count++
-		} else if ip.To16() != nil {
+		} else if ip.ip.To16() != nil {
 			ipv6Count++
 		}
 	}
@@ -432,16 +432,16 @@ func TestLookupHost_IPv6Only(t *testing.T) {
 	handler.AddRecord(hostname, net.ParseIP("2001:db8::1"))
 	handler.AddRecord(hostname, net.ParseIP("2001:db8::2"))
 
-	ips := handler.lookupHost(hostname)
+	ips := handler.lookupHost(hostname, nil)
 	if len(ips) != 2 {
 		t.Fatalf("Expected 2 IPv6 addresses, got %d", len(ips))
 	}
 
 	for _, ip := range ips {
-		if ip.To4() != nil {
+		if ip.ip.To4() != nil {
 			t.Error("Expected only IPv6 addresses, found IPv4")
 		}
-		if ip.To16() == nil {
+		if ip.ip.To16() == nil {
 			t.Error("Invalid IPv6 address")
 		}
 	}
@@ -470,8 +470,8 @@ func TestPTRRecords(t *testing.T) {
 			t.Errorf("PTR record not found for IP %s", tt.ip)
 		} else {
 			expected := strings.ToLower(strings.TrimSuffix(tt.hostname, "."))
-			if hostname != expected {
-				t.Errorf("PTR for %s: expected %s, got %s", tt.ip, expected, hostname)
+			if hostname.name != expected {
+				t.Errorf("PTR for %s: expected %s, got %s", tt.ip, expected, hostname.name)
 			}
 		}
 	}
@@ -503,7 +503,7 @@ func TestThreadSafety(t *testing.T) {
 	// Concurrent reads
 	go func() {
 		for i := 0; i < 100; i++ {
-			handler.lookupHost("server1.example.com")
+			handler.lookupHost("server1.example.com", nil)
 		}
 		done <- true
 	}()
@@ -521,8 +521,8 @@ func TestThreadSafety(t *testing.T) {
 	}
 
 	// Verify records are consistent
-	ips1 := handler.lookupHost("server1.example.com")
-	ips2 := handler.lookupHost("server2.example.com")
+	ips1 := handler.lookupHost("server1.example.com", nil)
+	ips2 := handler.lookupHost("server2.example.com", nil)
 
 	if ips1 == nil {
 		t.Error("server1.example.com records corrupted")
@@ -541,7 +541,7 @@ func TestEmptyHostname(t *testing.T) {
 	handler.AddRecord("", net.ParseIP("192.168.1.10"))
 
 	// Should be stored under empty string key
-	ips := handler.lookupHost("")
+	ips := handler.lookupHost("", nil)
 	if ips == nil {
 		t.Error("Expected to find empty hostname")
 	}
@@ -563,7 +563,7 @@ func TestSpecialCharacters(t *testing.T) {
 	for _, hostname := range hostnames {
 		handler.AddRecord(hostname, net.ParseIP("192.168.1.10"))
 
-		ips := handler.lookupHost(hostname)
+		ips := handler.lookupHost(hostname, nil)
 		if ips == nil {
 			t.Errorf("Failed to find hostname with special chars: %s", hostname)
 		}
@@ -613,7 +613,7 @@ func BenchmarkLookupHost(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		handler.lookupHost("server5.example.com")
+		handler.lookupHost("server5.example.com", nil)
 	}
 }
 
@@ -658,7 +658,7 @@ func BenchmarkConcurrentLookups(b *testing.B) {
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			handler.lookupHost("server5.example.com")
+			handler.lookupHost("server5.example.com", nil)
 		}
 	})
 }

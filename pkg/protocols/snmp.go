@@ -8,7 +8,6 @@ import (
 	"github.com/gosnmp/gosnmp"
 	"github.com/krisarmstrong/niac-go/pkg/config"
 	"github.com/krisarmstrong/niac-go/pkg/logging"
-	"github.com/krisarmstrong/niac-go/pkg/snmp"
 )
 
 // SNMPHandler routes SNMP queries to per-device agents.
@@ -30,14 +29,6 @@ func (h *SNMPHandler) HandlePacket(pkt *Packet, ip *layers.IPv4, udp *layers.UDP
 		return
 	}
 
-	device, agent := h.selectAgent(devices)
-	if agent == nil {
-		if h.stack.GetProtocolDebugLevel(logging.ProtocolSNMP) >= 3 {
-			fmt.Printf("SNMP: no agent mapped for %s sn=%d\n", ip.DstIP, pkt.SerialNumber)
-		}
-		return
-	}
-
 	request, err := h.decodeRequest(udp.Payload)
 	if err != nil {
 		if h.stack.GetProtocolDebugLevel(logging.ProtocolSNMP) >= 2 {
@@ -46,64 +37,76 @@ func (h *SNMPHandler) HandlePacket(pkt *Packet, ip *layers.IPv4, udp *layers.UDP
 		return
 	}
 
-	if request.Community != agent.GetCommunity() {
-		if h.stack.GetProtocolDebugLevel(logging.ProtocolSNMP) >= 2 {
-			// SECURITY FIX MEDIUM-5: Redact community strings to prevent credential exposure
-			fmt.Printf("SNMP: community mismatch [REDACTED] (expected [REDACTED]) for device %s sn=%d\n",
-				device.Name, pkt.SerialNumber)
+	for _, device := range devices {
+		group := h.stack.getSNMPAgents(device)
+		if group == nil {
+			continue
 		}
-		return
-	}
-
-	responseVars := agent.ProcessPDU(request.PDUType, request.Variables, request.MaxRepetitions)
-
-	response := &gosnmp.SnmpPacket{
-		Version:    request.Version,
-		Community:  request.Community,
-		PDUType:    gosnmp.GetResponse,
-		RequestID:  request.RequestID,
-		Error:      gosnmp.NoError,
-		ErrorIndex: 0,
-		Variables:  responseVars,
-	}
-
-	payload, err := response.MarshalMsg()
-	if err != nil {
-		if h.stack.GetProtocolDebugLevel(logging.ProtocolSNMP) >= 1 {
-			fmt.Printf("SNMP: marshal response failed for device %s sn=%d err=%v\n", device.Name, pkt.SerialNumber, err)
+		if !snmpAccessAllowed(device, ip.SrcIP) {
+			continue
 		}
-		return
-	}
 
-	h.stack.stats.mu.Lock()
-	h.stack.stats.SNMPQueries++
-	h.stack.stats.mu.Unlock()
+		agent := group.Get(request.Community)
+		if agent == nil {
+			agent = group.Get("public")
+		}
+		if agent == nil {
+			continue
+		}
 
-	srcIP := ip.DstIP.To4()
-	dstIP := ip.SrcIP.To4()
-	if srcIP == nil || dstIP == nil {
-		return
-	}
+		responseVars := agent.ProcessPDU(request.PDUType, request.Variables, request.MaxRepetitions)
 
-	srcMAC := h.sourceMAC(device, pkt)
-	dstMAC := pkt.GetSourceMAC()
-	if len(dstMAC) == 0 || len(srcMAC) == 0 {
-		return
-	}
+		response := &gosnmp.SnmpPacket{
+			Version:    request.Version,
+			Community:  request.Community,
+			PDUType:    gosnmp.GetResponse,
+			RequestID:  request.RequestID,
+			Error:      gosnmp.NoError,
+			ErrorIndex: 0,
+			Variables:  responseVars,
+		}
 
-	err = h.stack.udpHandler.SendUDP(srcIP, dstIP, uint16(udp.DstPort), uint16(udp.SrcPort), payload, []byte(srcMAC), []byte(dstMAC))
-	if err != nil && h.stack.GetProtocolDebugLevel(logging.ProtocolSNMP) >= 1 {
-		fmt.Printf("SNMP: failed to emit response for device %s sn=%d err=%v\n", device.Name, pkt.SerialNumber, err)
+		payload, err := response.MarshalMsg()
+		if err != nil {
+			if h.stack.GetProtocolDebugLevel(logging.ProtocolSNMP) >= 1 {
+				fmt.Printf("SNMP: marshal response failed for device %s sn=%d err=%v\n", device.Name, pkt.SerialNumber, err)
+			}
+			continue
+		}
+
+		h.stack.stats.mu.Lock()
+		h.stack.stats.SNMPQueries++
+		h.stack.stats.mu.Unlock()
+
+		srcIP := ip.DstIP.To4()
+		dstIP := ip.SrcIP.To4()
+		if srcIP == nil || dstIP == nil {
+			continue
+		}
+
+		srcMAC := h.sourceMAC(device, pkt)
+		dstMAC := pkt.GetSourceMAC()
+		if len(dstMAC) == 0 || len(srcMAC) == 0 {
+			continue
+		}
+
+		err = h.stack.udpHandler.SendUDP(srcIP, dstIP, uint16(udp.DstPort), uint16(udp.SrcPort), payload, []byte(srcMAC), []byte(dstMAC))
+		if err != nil && h.stack.GetProtocolDebugLevel(logging.ProtocolSNMP) >= 1 {
+			fmt.Printf("SNMP: failed to emit response for device %s sn=%d err=%v\n", device.Name, pkt.SerialNumber, err)
+		}
 	}
 }
 
-func (h *SNMPHandler) selectAgent(devices []*config.Device) (*config.Device, *snmp.Agent) {
-	for _, dev := range devices {
-		if agent := h.stack.getSNMPAgent(dev); agent != nil {
-			return dev, agent
+func snmpAccessAllowed(device *config.Device, srcIP net.IP) bool {
+	if device == nil || len(device.SNMPConfig.AccessList) == 0 {
+		return true
+	}
+	for _, ip := range device.SNMPConfig.AccessList {
+		if ip != nil && ip.Equal(srcIP) {
+			return true
 		}
 	}
-	return nil, nil
+	return false
 }
 
 func (h *SNMPHandler) decodeRequest(payload []byte) (*gosnmp.SnmpPacket, error) {

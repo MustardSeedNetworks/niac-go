@@ -2,6 +2,8 @@ package protocols
 
 import (
 	"fmt"
+	"net"
+	"time"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
@@ -53,6 +55,16 @@ func (h *UDPHandler) HandlePacket(pkt *Packet, ipLayer *layers.IPv4, devices []*
 			ipLayer.SrcIP, udp.SrcPort, ipLayer.DstIP, udp.DstPort, len(udp.Payload), pkt.SerialNumber)
 	}
 
+	// MapToIP handling (UDP proxy)
+	if !ipLayer.DstIP.Equal(net.IPv4(255, 255, 255, 255)) {
+		for _, device := range devices {
+			if device.MapToIP != nil {
+				h.proxyToMap(device, ipLayer, udp, pkt)
+				return
+			}
+		}
+	}
+
 	// Route to application handler based on port
 	switch udp.DstPort {
 	case UDPPortDNS:
@@ -84,6 +96,44 @@ func (h *UDPHandler) handleSNMP(pkt *Packet, ipLayer *layers.IPv4, udp *layers.U
 		return
 	}
 	h.stack.snmpHandler.HandlePacket(pkt, ipLayer, udp, devices)
+}
+
+func (h *UDPHandler) proxyToMap(device *config.Device, ipLayer *layers.IPv4, udp *layers.UDP, pkt *Packet) {
+	if device == nil || device.MapToIP == nil {
+		return
+	}
+	go func() {
+		dstAddr := &net.UDPAddr{IP: device.MapToIP, Port: int(udp.DstPort)}
+		conn, err := net.DialUDP("udp", nil, dstAddr)
+		if err != nil {
+			return
+		}
+		defer conn.Close()
+
+		_ = conn.SetDeadline(time.Now().Add(30 * time.Second))
+		if _, err := conn.Write(udp.Payload); err != nil {
+			return
+		}
+
+		buf := make([]byte, 1500)
+		n, err := conn.Read(buf)
+		if err != nil || n <= 0 {
+			return
+		}
+
+		srcMAC := device.MACAddress
+		dstMAC := pkt.GetSourceMAC()
+		if len(srcMAC) == 0 || len(dstMAC) == 0 {
+			return
+		}
+
+		srcIP := ipLayer.DstIP.To4()
+		if srcIP == nil {
+			return
+		}
+
+		_ = h.SendUDP(srcIP, ipLayer.SrcIP.To4(), uint16(udp.DstPort), uint16(udp.SrcPort), buf[:n], []byte(srcMAC), []byte(dstMAC))
+	}()
 }
 
 // SendUDP sends a UDP packet

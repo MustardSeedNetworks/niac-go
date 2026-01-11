@@ -63,6 +63,7 @@ type DHCPHandler struct {
 	tftpServerName     string   // Option 66: TFTP server name
 	bootfileName       string   // Option 67: Bootfile name (for PXE)
 	vendorSpecificInfo []byte   // Option 43: Vendor-specific information
+	staticLeases       []config.DHCPLease
 	mu                 sync.RWMutex
 }
 
@@ -134,6 +135,14 @@ func (h *DHCPHandler) Reset() {
 	h.tftpServerName = ""
 	h.bootfileName = ""
 	h.vendorSpecificInfo = nil
+	h.staticLeases = nil
+}
+
+// SetStaticLeases configures static DHCP leases.
+func (h *DHCPHandler) SetStaticLeases(leases []config.DHCPLease) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.staticLeases = leases
 }
 
 // MaxPoolSize is the maximum number of IPs allowed in a DHCP pool
@@ -198,6 +207,27 @@ func (h *DHCPHandler) allocateLease(mac net.HardwareAddr, requestedIP net.IP, ho
 
 	macStr := mac.String()
 
+	// Check static leases first
+	if staticIP := h.matchStaticLease(mac); staticIP != nil {
+		if existing, ok := h.leases[macStr]; ok {
+			existing.Expiry = time.Now().Add(DefaultLeaseTime)
+			existing.IP = staticIP
+			if hostname != "" {
+				existing.Hostname = hostname
+			}
+			return existing, nil
+		}
+		lease := &DHCPLease{
+			IP:        staticIP,
+			MAC:       mac,
+			Hostname:  hostname,
+			Expiry:    time.Now().Add(DefaultLeaseTime),
+			LeaseTime: DefaultLeaseTime,
+		}
+		h.leases[macStr] = lease
+		return lease, nil
+	}
+
 	// Check if client already has a lease
 	if existing, ok := h.leases[macStr]; ok {
 		// Renew existing lease
@@ -232,6 +262,37 @@ func (h *DHCPHandler) allocateLease(mac net.HardwareAddr, requestedIP net.IP, ho
 
 	h.leases[macStr] = lease
 	return lease, nil
+}
+
+// matchStaticLease finds a matching static lease IP for the given MAC.
+func (h *DHCPHandler) matchStaticLease(mac net.HardwareAddr) net.IP {
+	for _, lease := range h.staticLeases {
+		if lease.MACAddress == nil {
+			continue
+		}
+		if macMatchesMask(mac, lease.MACAddress, lease.MACMask) {
+			return lease.ClientIP
+		}
+	}
+	return nil
+}
+
+func macMatchesMask(mac, match, mask net.HardwareAddr) bool {
+	if len(mac) == 0 || len(match) == 0 {
+		return false
+	}
+	if len(mask) == 0 {
+		return mac.String() == match.String()
+	}
+	if len(mask) != len(mac) || len(match) != len(mac) {
+		return false
+	}
+	for i := 0; i < len(mac); i++ {
+		if (mac[i] & mask[i]) != (match[i] & mask[i]) {
+			return false
+		}
+	}
+	return true
 }
 
 // isIPInPool checks if IP is in the pool
@@ -375,6 +436,7 @@ func (h *DHCPHandler) HandlePacket(pkt *Packet, ipLayer *layers.IPv4, udpLayer *
 			}
 		} else {
 			h.stack.IncrementStat("dhcp_acks")
+			h.updateFDBTables(dhcp.ClientHWAddr)
 			if debugLevel >= 2 {
 				logging.ProtocolDebug("DHCP", debugLevel, 2, "Sent Ack IP=%s to %s sn=%d", lease.IP, dhcp.ClientHWAddr, pkt.SerialNumber)
 			}
@@ -423,6 +485,13 @@ func (h *DHCPHandler) dhcpMessageTypeString(msgType uint8) string {
 	default:
 		return fmt.Sprintf("UNKNOWN(%d)", msgType)
 	}
+}
+
+func (h *DHCPHandler) updateFDBTables(mac net.HardwareAddr) {
+	if h == nil || h.stack == nil {
+		return
+	}
+	h.stack.updateFDBTables(mac)
 }
 
 // SendDHCPOffer sends a DHCP Offer message

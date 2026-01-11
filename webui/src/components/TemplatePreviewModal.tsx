@@ -1,0 +1,177 @@
+import { type FC, useEffect, useCallback } from 'react';
+import { X, Copy, Download, FileCode } from 'lucide-react';
+import { Button, Tag, SmallText } from '@krisarmstrong/web-foundation';
+import type { Template, TemplateContent } from '../api/types';
+
+interface TemplatePreviewModalProps {
+  template: Template | null;
+  content: TemplateContent | null;
+  loading: boolean;
+  error: Error | null;
+  onClose: () => void;
+  onUse: (template: Template) => void;
+  onCopy: () => void;
+}
+
+export const TemplatePreviewModal: FC<TemplatePreviewModalProps> = ({
+  template,
+  content,
+  loading,
+  error,
+  onClose,
+  onUse,
+  onCopy,
+}) => {
+  // Handle escape key to close modal
+  const handleKeyDown = useCallback(
+    (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    },
+    [onClose]
+  );
+
+  useEffect(() => {
+    document.addEventListener('keydown', handleKeyDown);
+    // Prevent body scroll when modal is open
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = 'unset';
+    };
+  }, [handleKeyDown]);
+
+  if (!template) return null;
+
+  const handleDownload = () => {
+    if (!content) return;
+
+    const blob = new Blob([content.content], { type: 'text/yaml' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${template.name}.yaml`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-title"
+    >
+      <div
+        className="relative mx-4 max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-2xl border border-white/10 bg-gray-900/95 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Modal Header */}
+        <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
+          <div className="flex items-center gap-3">
+            <div className="rounded-lg bg-violet-500/20 p-2">
+              <FileCode className="h-5 w-5 text-violet-300" />
+            </div>
+            <div>
+              <h2 id="modal-title" className="text-lg font-semibold text-white">
+                {template.name}
+              </h2>
+              <SmallText className="text-gray-400">
+                {template.description || 'Configuration template preview'}
+              </SmallText>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="rounded-lg p-2 text-gray-400 hover:bg-white/10 hover:text-white transition-colors"
+            aria-label="Close modal"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Template metadata */}
+        <div className="flex flex-wrap items-center gap-3 border-b border-white/10 px-6 py-3 bg-gray-950/50">
+          <Tag colorScheme="purple">
+            {template.device_count} {template.device_count === 1 ? 'device' : 'devices'}
+          </Tag>
+          <Tag colorScheme="gray" className="capitalize">
+            {template.type}
+          </Tag>
+          {content && (
+            <Tag colorScheme="blue" className="uppercase">
+              {content.format}
+            </Tag>
+          )}
+          {template.tags?.map((tag) => (
+            <Tag key={tag} colorScheme="gray" className="text-xs">
+              {tag}
+            </Tag>
+          ))}
+        </div>
+
+        {/* Content area */}
+        <div className="max-h-[50vh] overflow-auto p-6">
+          {loading && (
+            <div className="flex items-center justify-center py-12">
+              <div className="flex items-center gap-3 text-gray-400">
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-violet-500 border-t-transparent" />
+                <span>Loading template content...</span>
+              </div>
+            </div>
+          )}
+
+          {error && (
+            <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-red-300">
+              <p className="font-semibold">Failed to load template</p>
+              <SmallText className="text-red-400">{error.message}</SmallText>
+            </div>
+          )}
+
+          {content && !loading && !error && (
+            <pre className="overflow-x-auto rounded-xl border border-white/10 bg-gray-950/70 p-4 font-mono text-sm text-gray-300">
+              <code>{content.content}</code>
+            </pre>
+          )}
+        </div>
+
+        {/* Modal Footer */}
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 px-6 py-4 bg-gray-950/50">
+          <div className="flex gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              leftIcon={<Copy className="h-4 w-4" />}
+              onClick={onCopy}
+              disabled={!content}
+            >
+              Copy YAML
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              leftIcon={<Download className="h-4 w-4" />}
+              onClick={handleDownload}
+              disabled={!content}
+            >
+              Download
+            </Button>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={onClose}>
+              Close
+            </Button>
+            <Button tone="violet" onClick={() => onUse(template)}>
+              Use Template
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};

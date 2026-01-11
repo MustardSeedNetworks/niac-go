@@ -1,0 +1,3102 @@
+# Seed-Compatible Enterprise Network - Full Emulation
+# ====================================================
+#
+# This configuration provides a complete enterprise network simulation that
+# supports ALL health checks and monitoring capabilities of the Seed tool.
+#
+# Network Topology:
+# =================
+#
+#                            [INTERNET]
+#                                |
+#                    [WAN Edge Routers] (BGP, NAT)
+#                         |         |
+#                    [ISP1-1Gbps] [ISP2-500Mbps]
+#                         |         |
+#                    [Core Firewall Cluster]
+#                         |         |
+#                    [Core Router 1]---[Core Router 2]
+#                         |                   |
+#            +------------+-------------------+------------+
+#            |            |                   |            |
+#     [DC Firewall]  [Bldg A FW]        [Bldg B FW]   [WAN to Remote]
+#            |            |                   |            |
+#     [DC ToR Switch] [Dist-A]           [Dist-B]    +-----+-----+
+#            |            |                   |      |           |
+#     [Server Farm]   [Access]            [Access]  [Bldg C]  [Bldg D]
+#                     Fl1,2,3             Fl1,2     (Branch)  (Mfg)
+#
+# Buildings:
+# ==========
+#   Building A - Corporate HQ (3 floors) - On-campus
+#   Building B - Engineering Center (2 floors) - On-campus
+#   Building C - Remote Branch Office (2 floors) - WAN connected
+#   Building D - Manufacturing Facility (1 floor + warehouse) - WAN connected
+#
+# VLANs:
+# ======
+#   VLAN 1    - Native/Management
+#   VLAN 10   - Core Infrastructure
+#   VLAN 20   - Server Farm
+#   VLAN 30   - User Workstations - Building A
+#   VLAN 40   - User Workstations - Building B
+#   VLAN 50   - Voice/VoIP
+#   VLAN 60   - Guest/Visitor
+#   VLAN 70   - User Workstations - Building C
+#   VLAN 80   - User Workstations - Building D
+#   VLAN 100  - Industrial/SCADA
+#   VLAN 200  - Healthcare/Medical
+#   VLAN 250  - Wireless
+#   VLAN 999  - Quarantine
+#
+# Supported Health Checks (Seed Compatible):
+# ==========================================
+#   - ICMP Ping (all devices)
+#   - TCP Port Checks (all protocol ports)
+#   - SNMP v2c Polling and Walks
+#   - SNMP Traps
+#   - DNS Resolution
+#   - DHCP/DHCPv6 Server
+#   - HTTP/HTTPS
+#   - FTP
+#   - LDAP/LDAPS
+#   - Database (MySQL, PostgreSQL, MSSQL)
+#   - SMB/CIFS File Sharing
+#   - RTSP Streaming
+#   - Modbus TCP (Industrial)
+#   - OPC UA (Industrial)
+#   - DICOM (Healthcare)
+#   - HL7 MLLP (Healthcare)
+#   - iPerf3 Bandwidth Testing
+#   - Traceroute Path Analysis
+#   - Discovery Protocols (LLDP, CDP)
+#   - STP/RSTP
+#
+# Version: v1.25.0+
+# Author: NiAC-Go Team
+
+# Include path for walk files (must be set to the examples directory when running)
+# When running niac from go directory: include_path: "examples"
+# When running from examples directory: include_path: "."
+include_path: "examples"
+
+devices:
+
+  # =========================================================================
+  # WAN EDGE LAYER
+  # =========================================================================
+
+  # Primary WAN Edge Router (ISP1 - 1Gbps Fiber)
+  - name: wan-edge-primary
+    type: router
+    mac: "00:01:01:01:01:01"
+    ips:
+      - "10.0.0.1"           # Internal gateway
+      - "203.0.113.1"        # Public IP (ISP1)
+      - "2001:db8:1::1"      # IPv6
+
+    lldp:
+      enabled: true
+      system_name: "wan-edge-primary"
+      system_description: "Cisco ASR 1001-X - Primary WAN Edge"
+      port_description: "TenGigabitEthernet0/0/0"
+      advertise_interval: 30
+
+    cdp:
+      enabled: true
+      platform: "Cisco ASR 1001-X"
+      software_version: "IOS XE 17.9.3"
+      capabilities: "Router"
+
+    # TTL config for traceroute simulation (hop 1)
+    ttl:
+      ttl: 1
+      ip: "10.0.0.1"
+
+    icmp:
+      enabled: true
+      ttl: 255
+      rate_limit: 1000
+
+    icmpv6:
+      enabled: true
+      hop_limit: 255
+
+    # Primary WAN - 1Gbps symmetric fiber
+    iperf3:
+      enabled: true
+      port: 5201
+      upload_mbps: 1000
+      download_mbps: 1000
+      typical_latency_ms: 2.0
+      jitter_ms: 0.5
+      packet_loss_percent: 0.01
+
+    os_fingerprint:
+      os_type: "cisco-ios"
+      ttl: 255
+
+    # Neighbor connections for topology discovery
+    trunk_ports:
+      - interface: "TenGigabitEthernet0/0/0"
+        vlans: [1, 10]
+        native_vlan: 1
+        remote_device: "core-fw-01"
+        remote_interface: "ethernet1/1"
+
+    snmp_agent:
+      enabled: true
+      community: "enterprise-ro"
+      sysname: "wan-edge-primary"
+      sysdescr: "Cisco ASR 1001-X - Primary WAN Edge Router"
+      syscontact: "noc@enterprise.com"
+      syslocation: "Enterprise HQ - Data Center - WAN Edge Rack"
+      walk_file: "device_walks/cisco/2800_10.250.1.6.walk"
+      add_mibs:
+        # Interface traffic counters (varimib - time-varying)
+        - oid: "1.3.6.1.2.1.2.2.1.10.1"  # ifInOctets.1
+          type: Counter32
+          value: "varimib((100 50000))"  # +50KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.16.1"  # ifOutOctets.1
+          type: Counter32
+          value: "varimib((100 30000))"  # +30KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.10.2"  # ifInOctets.2
+          type: Counter32
+          value: "varimib((100 25000))"  # +25KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.16.2"  # ifOutOctets.2
+          type: Counter32
+          value: "varimib((100 20000))"  # +20KB/sec
+      traps:
+        enabled: true
+        receivers: ["10.20.1.100:162"]
+        community: "enterprise-trap"
+        cold_start:
+          enabled: true
+        link_up:
+          enabled: true
+        link_down:
+          enabled: true
+        high_cpu:
+          enabled: true
+          threshold: 80
+        high_memory:
+          enabled: true
+          threshold: 85
+
+  # Secondary WAN Edge Router (ISP2 - 500Mbps Cable)
+  - name: wan-edge-secondary
+    type: router
+    mac: "00:01:01:01:01:02"
+    ips:
+      - "10.0.0.2"
+      - "198.51.100.1"       # Public IP (ISP2)
+
+    lldp:
+      enabled: true
+      system_name: "wan-edge-secondary"
+      system_description: "Cisco ASR 1001-X - Secondary WAN Edge"
+
+    cdp:
+      enabled: true
+      platform: "Cisco ASR 1001-X"
+      software_version: "IOS XE 17.9.3"
+
+    ttl:
+      ttl: 1
+      ip: "10.0.0.2"
+
+    icmp:
+      enabled: true
+      ttl: 255
+
+    # Secondary WAN - 500Mbps/100Mbps cable
+    iperf3:
+      enabled: true
+      port: 5201
+      upload_mbps: 100
+      download_mbps: 500
+      typical_latency_ms: 15.0
+      jitter_ms: 3.0
+      packet_loss_percent: 0.1
+
+    os_fingerprint:
+      os_type: "cisco-ios"
+
+    # Neighbor connections for topology discovery
+    trunk_ports:
+      - interface: "TenGigabitEthernet0/0/0"
+        vlans: [1, 10]
+        native_vlan: 1
+        remote_device: "core-fw-02"
+        remote_interface: "ethernet1/1"
+
+    snmp_agent:
+      enabled: true
+      community: "enterprise-ro"
+      sysname: "wan-edge-secondary"
+      syslocation: "Enterprise HQ - Data Center - WAN Edge Rack"
+      walk_file: "device_walks/cisco/2800_10.250.1.6.walk"
+      add_mibs:
+        # Interface traffic counters (varimib - time-varying)
+        - oid: "1.3.6.1.2.1.2.2.1.10.1"  # ifInOctets.1
+          type: Counter32
+          value: "varimib((100 50000))"  # +50KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.16.1"  # ifOutOctets.1
+          type: Counter32
+          value: "varimib((100 30000))"  # +30KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.10.2"  # ifInOctets.2
+          type: Counter32
+          value: "varimib((100 25000))"  # +25KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.16.2"  # ifOutOctets.2
+          type: Counter32
+          value: "varimib((100 20000))"  # +20KB/sec
+
+  # =========================================================================
+  # CORE FIREWALL CLUSTER (Perimeter Security)
+  # =========================================================================
+
+  # Primary Core Firewall - Palo Alto PA-5250
+  - name: core-fw-01
+    type: router
+    mac: "00:01:01:02:01:01"
+    ips:
+      - "10.0.0.10"          # Management
+      - "10.0.0.254"         # Inside gateway
+
+    lldp:
+      enabled: true
+      system_name: "core-fw-01"
+      system_description: "Palo Alto PA-5250 - Primary Core Firewall"
+      port_description: "ethernet1/1"
+      advertise_interval: 30
+
+    cdp:
+      enabled: true
+      platform: "Palo Alto PA-5250"
+      software_version: "PAN-OS 11.1.2"
+      capabilities: "Router"
+
+    icmp:
+      enabled: true
+      ttl: 64
+      rate_limit: 500
+
+    os_fingerprint:
+      os_type: "linux"
+      ttl: 64
+
+    http:
+      enabled: true
+      server_name: "PAN-OS"
+      endpoints:
+        - path: "/php/login.php"
+          response: "<html><title>Palo Alto Networks</title></html>"
+        - path: "/api/"
+          status_code: 403
+          response: '{"error":"API key required"}'
+
+    # Neighbor connections for topology discovery
+    trunk_ports:
+      - interface: "ethernet1/1"
+        vlans: [1, 10]
+        native_vlan: 1
+        remote_device: "wan-edge-primary"
+        remote_interface: "TenGigabitEthernet0/0/0"
+      - interface: "ethernet1/2"
+        vlans: [1, 10, 20, 30, 40, 50, 60, 100, 200, 250]
+        native_vlan: 1
+        remote_device: "core-rtr-01"
+        remote_interface: "TenGigabitEthernet1/0/2"
+      - interface: "ethernet1/10"
+        vlans: [1]
+        native_vlan: 1
+        remote_device: "core-fw-02"
+        remote_interface: "ethernet1/10"
+
+    snmp_agent:
+      enabled: true
+      community: "enterprise-ro"
+      sysname: "core-fw-01"
+      sysdescr: "Palo Alto Networks PA-5250 series firewall"
+      syscontact: "security@enterprise.com"
+      syslocation: "Data Center - Core Security Rack"
+      add_mibs:
+        # Interface traffic counters (varimib - time-varying)
+        - oid: "1.3.6.1.2.1.2.2.1.10.1"  # ifInOctets.1
+          type: Counter32
+          value: "varimib((100 50000))"  # +50KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.16.1"  # ifOutOctets.1
+          type: Counter32
+          value: "varimib((100 30000))"  # +30KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.10.2"  # ifInOctets.2
+          type: Counter32
+          value: "varimib((100 25000))"  # +25KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.16.2"  # ifOutOctets.2
+          type: Counter32
+          value: "varimib((100 20000))"  # +20KB/sec
+      traps:
+        enabled: true
+        receivers: ["10.20.1.100:162"]
+        community: "enterprise-trap"
+        link_up:
+          enabled: true
+        link_down:
+          enabled: true
+
+  # Secondary Core Firewall - Palo Alto PA-5250 (HA Peer)
+  - name: core-fw-02
+    type: router
+    mac: "00:01:01:02:01:02"
+    ips:
+      - "10.0.0.11"          # Management
+      - "10.0.0.253"         # Inside gateway (HA standby)
+
+    lldp:
+      enabled: true
+      system_name: "core-fw-02"
+      system_description: "Palo Alto PA-5250 - Secondary Core Firewall (HA)"
+
+    cdp:
+      enabled: true
+      platform: "Palo Alto PA-5250"
+      software_version: "PAN-OS 11.1.2"
+
+    icmp:
+      enabled: true
+      ttl: 64
+
+    os_fingerprint:
+      os_type: "linux"
+
+    # Neighbor connections for topology discovery
+    trunk_ports:
+      - interface: "ethernet1/1"
+        vlans: [1, 10]
+        native_vlan: 1
+        remote_device: "wan-edge-secondary"
+        remote_interface: "TenGigabitEthernet0/0/0"
+      - interface: "ethernet1/2"
+        vlans: [1, 10, 20, 30, 40, 50, 60, 100, 200, 250]
+        native_vlan: 1
+        remote_device: "core-rtr-02"
+        remote_interface: "TenGigabitEthernet1/0/2"
+      - interface: "ethernet1/10"
+        vlans: [1]
+        native_vlan: 1
+        remote_device: "core-fw-01"
+        remote_interface: "ethernet1/10"
+
+    snmp_agent:
+      enabled: true
+      community: "enterprise-ro"
+      sysname: "core-fw-02"
+      sysdescr: "Palo Alto Networks PA-5250 series firewall"
+      syslocation: "Data Center - Core Security Rack"
+      add_mibs:
+        # Interface traffic counters (varimib - time-varying)
+        - oid: "1.3.6.1.2.1.2.2.1.10.1"  # ifInOctets.1
+          type: Counter32
+          value: "varimib((100 50000))"  # +50KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.16.1"  # ifOutOctets.1
+          type: Counter32
+          value: "varimib((100 30000))"  # +30KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.10.2"  # ifInOctets.2
+          type: Counter32
+          value: "varimib((100 25000))"  # +25KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.16.2"  # ifOutOctets.2
+          type: Counter32
+          value: "varimib((100 20000))"  # +20KB/sec
+
+  # =========================================================================
+  # CORE LAYER
+  # =========================================================================
+
+  # Core Router 1
+  - name: core-rtr-01
+    type: router
+    mac: "00:01:02:01:01:01"
+    ips:
+      - "10.1.0.1"
+      - "10.10.0.1"          # VLAN 10 - Core
+      - "10.20.0.1"          # VLAN 20 - Server
+      - "2001:db8:10::1"
+
+    lldp:
+      enabled: true
+      system_name: "core-rtr-01"
+      system_description: "Cisco Catalyst 9500 - Core Router 1"
+      advertise_interval: 30
+
+    cdp:
+      enabled: true
+      platform: "C9500-24Y4C"
+      software_version: "IOS XE 17.9.3"
+      capabilities: "Router Switch"
+
+    stp:
+      enabled: true
+      bridge_priority: 4096    # Root bridge for VLAN 10
+      version: "rstp"
+
+    trunk_ports:
+      - interface: "TenGigabitEthernet1/0/1"
+        vlans: [1, 10, 20, 30, 40, 50, 60, 100, 200, 250]
+        native_vlan: 1
+        remote_device: "core-rtr-02"
+        remote_interface: "TenGigabitEthernet1/0/1"
+      - interface: "TenGigabitEthernet1/0/2"
+        vlans: [1, 10, 20, 30, 40, 50, 60, 100, 200, 250]
+        native_vlan: 1
+        remote_device: "core-fw-01"
+        remote_interface: "ethernet1/2"
+      - interface: "TenGigabitEthernet1/0/3"
+        vlans: [1, 20]
+        native_vlan: 1
+        remote_device: "fw-datacenter"
+        remote_interface: "ethernet1/1"
+      - interface: "TenGigabitEthernet1/0/4"
+        vlans: [1, 30, 50, 60, 250]
+        native_vlan: 1
+        remote_device: "fw-bldg-a"
+        remote_interface: "ethernet1/1"
+      - interface: "TenGigabitEthernet1/0/10"
+        vlans: [1, 10]
+        native_vlan: 1
+        remote_device: "wlc-primary"
+        remote_interface: "GigabitEthernet0/0/1"
+      # WAN links to remote sites (via MPLS/VPN)
+      - interface: "GigabitEthernet0/0/1"
+        vlans: [1]
+        native_vlan: 1
+        remote_device: "wan-rtr-bldg-c"
+        remote_interface: "GigabitEthernet0/0/1"
+      - interface: "GigabitEthernet0/0/2"
+        vlans: [1]
+        native_vlan: 1
+        remote_device: "wan-rtr-bldg-d"
+        remote_interface: "GigabitEthernet0/0/1"
+
+    ttl:
+      ttl: 2
+      ip: "10.1.0.1"
+
+    icmp:
+      enabled: true
+      ttl: 255
+
+    snmp_agent:
+      enabled: true
+      community: "enterprise-ro"
+      sysname: "core-rtr-01"
+      sysdescr: "Cisco Catalyst 9500 - Core Router 1"
+      syslocation: "Data Center - Core Rack 1"
+      walk_file: "device_walks/cisco/C3750_10.250.0.1.walk"
+      add_mibs:
+        # Interface traffic counters (varimib - time-varying)
+        - oid: "1.3.6.1.2.1.2.2.1.10.1"  # ifInOctets.1
+          type: Counter32
+          value: "varimib((100 50000))"  # +50KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.16.1"  # ifOutOctets.1
+          type: Counter32
+          value: "varimib((100 30000))"  # +30KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.10.2"  # ifInOctets.2
+          type: Counter32
+          value: "varimib((100 25000))"  # +25KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.16.2"  # ifOutOctets.2
+          type: Counter32
+          value: "varimib((100 20000))"  # +20KB/sec
+      traps:
+        enabled: true
+        receivers: ["10.20.1.100:162"]
+        link_up:
+          enabled: true
+        link_down:
+          enabled: true
+
+  # Core Router 2 (Redundant)
+  - name: core-rtr-02
+    type: router
+    mac: "00:01:02:01:01:02"
+    ips:
+      - "10.1.0.2"
+      - "10.10.0.2"
+      - "10.20.0.2"
+      - "2001:db8:10::2"
+
+    lldp:
+      enabled: true
+      system_name: "core-rtr-02"
+      system_description: "Cisco Catalyst 9500 - Core Router 2"
+
+    cdp:
+      enabled: true
+      platform: "C9500-24Y4C"
+      software_version: "IOS XE 17.9.3"
+
+    stp:
+      enabled: true
+      bridge_priority: 8192    # Secondary root
+
+    trunk_ports:
+      - interface: "TenGigabitEthernet1/0/1"
+        vlans: [1, 10, 20, 30, 40, 50, 60, 100, 200, 250]
+        native_vlan: 1
+        remote_device: "core-rtr-01"
+        remote_interface: "TenGigabitEthernet1/0/1"
+      - interface: "TenGigabitEthernet1/0/2"
+        vlans: [1, 10, 20, 30, 40, 50, 60, 100, 200, 250]
+        native_vlan: 1
+        remote_device: "core-fw-02"
+        remote_interface: "ethernet1/2"
+      - interface: "TenGigabitEthernet1/0/4"
+        vlans: [1, 40, 50, 60, 250]
+        native_vlan: 1
+        remote_device: "fw-bldg-b"
+        remote_interface: "ethernet1/1"
+      - interface: "TenGigabitEthernet1/0/10"
+        vlans: [1, 10]
+        native_vlan: 1
+        remote_device: "wlc-secondary"
+        remote_interface: "GigabitEthernet0/0/1"
+
+    ttl:
+      ttl: 2
+      ip: "10.1.0.2"
+
+    icmp:
+      enabled: true
+      ttl: 255
+
+    snmp_agent:
+      enabled: true
+      community: "enterprise-ro"
+      sysname: "core-rtr-02"
+      syslocation: "Data Center - Core Rack 2"
+      walk_file: "device_walks/cisco/C3750_10.250.0.1.walk"
+      add_mibs:
+        # Interface traffic counters (varimib - time-varying)
+        - oid: "1.3.6.1.2.1.2.2.1.10.1"  # ifInOctets.1
+          type: Counter32
+          value: "varimib((100 50000))"  # +50KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.16.1"  # ifOutOctets.1
+          type: Counter32
+          value: "varimib((100 30000))"  # +30KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.10.2"  # ifInOctets.2
+          type: Counter32
+          value: "varimib((100 25000))"  # +25KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.16.2"  # ifOutOctets.2
+          type: Counter32
+          value: "varimib((100 20000))"  # +20KB/sec
+
+  # =========================================================================
+  # BUILDING A - CORPORATE HQ (On-Campus)
+  # =========================================================================
+
+  # Building A Firewall - Palo Alto PA-440
+  - name: fw-bldg-a
+    type: router
+    mac: "00:01:03:01:00:01"
+    ips:
+      - "10.30.0.254"        # Building A gateway
+      - "10.1.10.1"          # Uplink to core
+
+    lldp:
+      enabled: true
+      system_name: "fw-bldg-a"
+      system_description: "Palo Alto PA-440 - Building A Firewall"
+      port_description: "ethernet1/1"
+
+    cdp:
+      enabled: true
+      platform: "Palo Alto PA-440"
+      software_version: "PAN-OS 11.1.2"
+
+    # Neighbor connections for topology discovery
+    trunk_ports:
+      - interface: "ethernet1/1"
+        vlans: [1, 30, 50, 60, 250]
+        native_vlan: 1
+        remote_device: "core-rtr-01"
+        remote_interface: "TenGigabitEthernet1/0/4"
+      - interface: "ethernet1/2"
+        vlans: [1, 30, 50, 60, 250]
+        native_vlan: 1
+        remote_device: "dist-sw-bldg-a-01"
+        remote_interface: "TenGigabitEthernet1/0/1"
+
+    icmp:
+      enabled: true
+      ttl: 64
+
+    os_fingerprint:
+      os_type: "linux"
+
+    http:
+      enabled: true
+      server_name: "PAN-OS"
+      endpoints:
+        - path: "/php/login.php"
+          response: "<html><title>Palo Alto Networks - Building A</title></html>"
+
+    snmp_agent:
+      enabled: true
+      community: "enterprise-ro"
+      sysname: "fw-bldg-a"
+      sysdescr: "Palo Alto Networks PA-440 series firewall"
+      syslocation: "Building A - MDF - Security"
+      add_mibs:
+        # Interface traffic counters (varimib - time-varying)
+        - oid: "1.3.6.1.2.1.2.2.1.10.1"  # ifInOctets.1
+          type: Counter32
+          value: "varimib((100 50000))"  # +50KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.16.1"  # ifOutOctets.1
+          type: Counter32
+          value: "varimib((100 30000))"  # +30KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.10.2"  # ifInOctets.2
+          type: Counter32
+          value: "varimib((100 25000))"  # +25KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.16.2"  # ifOutOctets.2
+          type: Counter32
+          value: "varimib((100 20000))"  # +20KB/sec
+      traps:
+        enabled: true
+        receivers: ["10.20.1.100:162"]
+        link_up:
+          enabled: true
+        link_down:
+          enabled: true
+
+  # Building A Distribution Switch
+  - name: dist-sw-bldg-a-01
+    type: switch
+    mac: "00:01:03:01:01:01"
+    ips:
+      - "10.30.0.1"          # VLAN 30 - Building A Users
+    vlan: 30
+
+    lldp:
+      enabled: true
+      system_name: "dist-sw-bldg-a-01"
+      system_description: "Cisco Catalyst 9300 - Building A Distribution"
+
+    cdp:
+      enabled: true
+      platform: "C9300-48T"
+
+    stp:
+      enabled: true
+      bridge_priority: 16384
+
+    # Neighbor connections for topology discovery
+    trunk_ports:
+      - interface: "TenGigabitEthernet1/0/1"
+        vlans: [1, 30, 50, 60, 250]
+        native_vlan: 1
+        remote_device: "fw-bldg-a"
+        remote_interface: "ethernet1/2"
+      - interface: "GigabitEthernet1/0/1"
+        vlans: [1, 30, 50, 60, 250]
+        native_vlan: 1
+        remote_device: "access-sw-bldg-a-fl1"
+        remote_interface: "GigabitEthernet1/0/49"
+      - interface: "GigabitEthernet1/0/2"
+        vlans: [1, 30, 50, 60, 250]
+        native_vlan: 1
+        remote_device: "access-sw-bldg-a-fl2"
+        remote_interface: "GigabitEthernet1/0/49"
+      - interface: "GigabitEthernet1/0/3"
+        vlans: [1, 30, 50, 60, 250]
+        native_vlan: 1
+        remote_device: "access-sw-bldg-a-fl3"
+        remote_interface: "GigabitEthernet1/0/49"
+
+    icmp:
+      enabled: true
+      ttl: 64
+
+    snmp_agent:
+      enabled: true
+      community: "enterprise-ro"
+      sysname: "dist-sw-bldg-a-01"
+      syslocation: "Building A - MDF"
+      walk_file: "device_walks/cisco/C3560_10.250.1.8_v882.walk"
+      add_mibs:
+        # Interface traffic counters (varimib - time-varying)
+        - oid: "1.3.6.1.2.1.2.2.1.10.1"  # ifInOctets.1
+          type: Counter32
+          value: "varimib((100 50000))"  # +50KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.16.1"  # ifOutOctets.1
+          type: Counter32
+          value: "varimib((100 30000))"  # +30KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.10.2"  # ifInOctets.2
+          type: Counter32
+          value: "varimib((100 25000))"  # +25KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.16.2"  # ifOutOctets.2
+          type: Counter32
+          value: "varimib((100 20000))"  # +20KB/sec
+
+  # =========================================================================
+  # BUILDING B - ENGINEERING CENTER (On-Campus)
+  # =========================================================================
+
+  # Building B Firewall - Palo Alto PA-440
+  - name: fw-bldg-b
+    type: router
+    mac: "00:01:03:02:00:01"
+    ips:
+      - "10.40.0.254"        # Building B gateway
+      - "10.1.20.1"          # Uplink to core
+
+    lldp:
+      enabled: true
+      system_name: "fw-bldg-b"
+      system_description: "Palo Alto PA-440 - Building B Firewall"
+
+    cdp:
+      enabled: true
+      platform: "Palo Alto PA-440"
+      software_version: "PAN-OS 11.1.2"
+
+    # Neighbor connections for topology discovery
+    trunk_ports:
+      - interface: "ethernet1/1"
+        vlans: [1, 40, 50, 60, 250]
+        native_vlan: 1
+        remote_device: "core-rtr-02"
+        remote_interface: "TenGigabitEthernet1/0/4"
+      - interface: "ethernet1/2"
+        vlans: [1, 40, 50, 60, 250]
+        native_vlan: 1
+        remote_device: "dist-sw-bldg-b-01"
+        remote_interface: "TenGigabitEthernet1/0/1"
+
+    icmp:
+      enabled: true
+      ttl: 64
+
+    os_fingerprint:
+      os_type: "linux"
+
+    snmp_agent:
+      enabled: true
+      community: "enterprise-ro"
+      sysname: "fw-bldg-b"
+      sysdescr: "Palo Alto Networks PA-440 series firewall"
+      syslocation: "Building B - MDF - Security"
+      add_mibs:
+        # Interface traffic counters (varimib - time-varying)
+        - oid: "1.3.6.1.2.1.2.2.1.10.1"  # ifInOctets.1
+          type: Counter32
+          value: "varimib((100 50000))"  # +50KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.16.1"  # ifOutOctets.1
+          type: Counter32
+          value: "varimib((100 30000))"  # +30KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.10.2"  # ifInOctets.2
+          type: Counter32
+          value: "varimib((100 25000))"  # +25KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.16.2"  # ifOutOctets.2
+          type: Counter32
+          value: "varimib((100 20000))"  # +20KB/sec
+      traps:
+        enabled: true
+        receivers: ["10.20.1.100:162"]
+
+  # Building B Distribution Switch
+  - name: dist-sw-bldg-b-01
+    type: switch
+    mac: "00:01:03:02:01:01"
+    ips:
+      - "10.40.0.1"          # VLAN 40 - Building B Users
+    vlan: 40
+
+    lldp:
+      enabled: true
+      system_name: "dist-sw-bldg-b-01"
+      system_description: "Cisco Catalyst 9300 - Building B Distribution"
+
+    cdp:
+      enabled: true
+      platform: "C9300-48T"
+
+    stp:
+      enabled: true
+      bridge_priority: 16384
+
+    # Neighbor connections for topology discovery
+    trunk_ports:
+      - interface: "TenGigabitEthernet1/0/1"
+        vlans: [1, 40, 50, 60, 250]
+        native_vlan: 1
+        remote_device: "fw-bldg-b"
+        remote_interface: "ethernet1/2"
+      - interface: "GigabitEthernet1/0/1"
+        vlans: [1, 40, 50, 60, 250]
+        native_vlan: 1
+        remote_device: "access-sw-bldg-b-fl1"
+        remote_interface: "GigabitEthernet1/0/49"
+      - interface: "GigabitEthernet1/0/2"
+        vlans: [1, 40, 50, 60, 250]
+        native_vlan: 1
+        remote_device: "access-sw-bldg-b-fl2"
+        remote_interface: "GigabitEthernet1/0/49"
+
+    icmp:
+      enabled: true
+      ttl: 64
+
+    snmp_agent:
+      enabled: true
+      community: "enterprise-ro"
+      sysname: "dist-sw-bldg-b-01"
+      syslocation: "Building B - MDF"
+      walk_file: "device_walks/cisco/C3560_10.250.1.8_v882.walk"
+      add_mibs:
+        # Interface traffic counters (varimib - time-varying)
+        - oid: "1.3.6.1.2.1.2.2.1.10.1"  # ifInOctets.1
+          type: Counter32
+          value: "varimib((100 50000))"  # +50KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.16.1"  # ifOutOctets.1
+          type: Counter32
+          value: "varimib((100 30000))"  # +30KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.10.2"  # ifInOctets.2
+          type: Counter32
+          value: "varimib((100 25000))"  # +25KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.16.2"  # ifOutOctets.2
+          type: Counter32
+          value: "varimib((100 20000))"  # +20KB/sec
+
+  # =========================================================================
+  # ACCESS LAYER - BUILDING A FLOORS
+  # =========================================================================
+
+  - name: access-sw-bldg-a-fl1
+    type: switch
+    mac: "00:01:04:01:01:01"
+    ip: "10.30.1.1"
+    vlan: 30
+
+    lldp:
+      enabled: true
+      system_name: "access-sw-bldg-a-fl1"
+      system_description: "Cisco Catalyst 9200 - Building A Floor 1"
+
+    cdp:
+      enabled: true
+      platform: "C9200-48P"
+
+    stp:
+      enabled: true
+      bridge_priority: 32768
+
+    # Neighbor connections for topology discovery
+    trunk_ports:
+      - interface: "GigabitEthernet1/0/49"
+        vlans: [1, 30, 50, 60, 250]
+        native_vlan: 1
+        remote_device: "dist-sw-bldg-a-01"
+        remote_interface: "GigabitEthernet1/0/1"
+      - interface: "GigabitEthernet1/0/1"
+        vlans: [250]
+        native_vlan: 1
+        remote_device: "ap-bldg-a-fl1-01"
+        remote_interface: "GigabitEthernet0"
+      - interface: "GigabitEthernet1/0/2"
+        vlans: [250]
+        native_vlan: 1
+        remote_device: "ap-bldg-a-fl1-02"
+        remote_interface: "GigabitEthernet0"
+
+    icmp:
+      enabled: true
+      ttl: 64
+
+    snmp_agent:
+      enabled: true
+      community: "enterprise-ro"
+      sysname: "access-sw-bldg-a-fl1"
+      syslocation: "Building A - Floor 1 IDF"
+      walk_file: "device_walks/cisco/C2960_10.250.0.36_v5.walk"
+      add_mibs:
+        # Interface traffic counters (varimib - time-varying)
+        - oid: "1.3.6.1.2.1.2.2.1.10.1"  # ifInOctets.1
+          type: Counter32
+          value: "varimib((100 50000))"  # +50KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.16.1"  # ifOutOctets.1
+          type: Counter32
+          value: "varimib((100 30000))"  # +30KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.10.2"  # ifInOctets.2
+          type: Counter32
+          value: "varimib((100 25000))"  # +25KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.16.2"  # ifOutOctets.2
+          type: Counter32
+          value: "varimib((100 20000))"  # +20KB/sec
+
+  - name: access-sw-bldg-a-fl2
+    type: switch
+    mac: "00:01:04:01:02:01"
+    ip: "10.30.2.1"
+    vlan: 30
+
+    lldp:
+      enabled: true
+      system_name: "access-sw-bldg-a-fl2"
+      system_description: "Cisco Catalyst 9200 - Building A Floor 2"
+
+    cdp:
+      enabled: true
+      platform: "C9200-48P"
+
+    stp:
+      enabled: true
+      bridge_priority: 32768
+
+    # Neighbor connections for topology discovery
+    trunk_ports:
+      - interface: "GigabitEthernet1/0/49"
+        vlans: [1, 30, 50, 60, 250]
+        native_vlan: 1
+        remote_device: "dist-sw-bldg-a-01"
+        remote_interface: "GigabitEthernet1/0/2"
+
+    icmp:
+      enabled: true
+      ttl: 64
+
+    snmp_agent:
+      enabled: true
+      community: "enterprise-ro"
+      sysname: "access-sw-bldg-a-fl2"
+      syslocation: "Building A - Floor 2 IDF"
+      walk_file: "device_walks/cisco/C2960_10.250.0.36_v5.walk"
+      add_mibs:
+        # Interface traffic counters (varimib - time-varying)
+        - oid: "1.3.6.1.2.1.2.2.1.10.1"  # ifInOctets.1
+          type: Counter32
+          value: "varimib((100 50000))"  # +50KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.16.1"  # ifOutOctets.1
+          type: Counter32
+          value: "varimib((100 30000))"  # +30KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.10.2"  # ifInOctets.2
+          type: Counter32
+          value: "varimib((100 25000))"  # +25KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.16.2"  # ifOutOctets.2
+          type: Counter32
+          value: "varimib((100 20000))"  # +20KB/sec
+
+  - name: access-sw-bldg-a-fl3
+    type: switch
+    mac: "00:01:04:01:03:01"
+    ip: "10.30.3.1"
+    vlan: 30
+
+    lldp:
+      enabled: true
+      system_name: "access-sw-bldg-a-fl3"
+      system_description: "Cisco Catalyst 9200 - Building A Floor 3"
+
+    cdp:
+      enabled: true
+      platform: "C9200-48P"
+
+    stp:
+      enabled: true
+      bridge_priority: 32768
+
+    # Neighbor connections for topology discovery
+    trunk_ports:
+      - interface: "GigabitEthernet1/0/49"
+        vlans: [1, 30, 50, 60, 250]
+        native_vlan: 1
+        remote_device: "dist-sw-bldg-a-01"
+        remote_interface: "GigabitEthernet1/0/3"
+
+    icmp:
+      enabled: true
+      ttl: 64
+
+    snmp_agent:
+      enabled: true
+      community: "enterprise-ro"
+      sysname: "access-sw-bldg-a-fl3"
+      syslocation: "Building A - Floor 3 IDF"
+      walk_file: "device_walks/cisco/C2960_10.250.0.36_v5.walk"
+      add_mibs:
+        # Interface traffic counters (varimib - time-varying)
+        - oid: "1.3.6.1.2.1.2.2.1.10.1"  # ifInOctets.1
+          type: Counter32
+          value: "varimib((100 50000))"  # +50KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.16.1"  # ifOutOctets.1
+          type: Counter32
+          value: "varimib((100 30000))"  # +30KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.10.2"  # ifInOctets.2
+          type: Counter32
+          value: "varimib((100 25000))"  # +25KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.16.2"  # ifOutOctets.2
+          type: Counter32
+          value: "varimib((100 20000))"  # +20KB/sec
+
+  # =========================================================================
+  # ACCESS LAYER - BUILDING B FLOORS
+  # =========================================================================
+
+  - name: access-sw-bldg-b-fl1
+    type: switch
+    mac: "00:01:04:02:01:01"
+    ip: "10.40.1.1"
+    vlan: 40
+
+    lldp:
+      enabled: true
+      system_name: "access-sw-bldg-b-fl1"
+      system_description: "Cisco Catalyst 9200 - Building B Floor 1"
+
+    cdp:
+      enabled: true
+      platform: "C9200-48P"
+
+    stp:
+      enabled: true
+      bridge_priority: 32768
+
+    # Neighbor connections for topology discovery
+    trunk_ports:
+      - interface: "GigabitEthernet1/0/49"
+        vlans: [1, 40, 50, 60, 250]
+        native_vlan: 1
+        remote_device: "dist-sw-bldg-b-01"
+        remote_interface: "GigabitEthernet1/0/1"
+      - interface: "GigabitEthernet1/0/1"
+        vlans: [250]
+        native_vlan: 1
+        remote_device: "ap-bldg-b-fl1-01"
+        remote_interface: "GigabitEthernet0"
+
+    icmp:
+      enabled: true
+      ttl: 64
+
+    snmp_agent:
+      enabled: true
+      community: "enterprise-ro"
+      sysname: "access-sw-bldg-b-fl1"
+      syslocation: "Building B - Floor 1 IDF"
+      walk_file: "device_walks/cisco/C2960_10.250.0.36_v5.walk"
+      add_mibs:
+        # Interface traffic counters (varimib - time-varying)
+        - oid: "1.3.6.1.2.1.2.2.1.10.1"  # ifInOctets.1
+          type: Counter32
+          value: "varimib((100 50000))"  # +50KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.16.1"  # ifOutOctets.1
+          type: Counter32
+          value: "varimib((100 30000))"  # +30KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.10.2"  # ifInOctets.2
+          type: Counter32
+          value: "varimib((100 25000))"  # +25KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.16.2"  # ifOutOctets.2
+          type: Counter32
+          value: "varimib((100 20000))"  # +20KB/sec
+
+  - name: access-sw-bldg-b-fl2
+    type: switch
+    mac: "00:01:04:02:02:01"
+    ip: "10.40.2.1"
+    vlan: 40
+
+    lldp:
+      enabled: true
+      system_name: "access-sw-bldg-b-fl2"
+      system_description: "Cisco Catalyst 9200 - Building B Floor 2"
+
+    cdp:
+      enabled: true
+      platform: "C9200-48P"
+
+    stp:
+      enabled: true
+      bridge_priority: 32768
+
+    # Neighbor connections for topology discovery
+    trunk_ports:
+      - interface: "GigabitEthernet1/0/49"
+        vlans: [1, 40, 50, 60, 250]
+        native_vlan: 1
+        remote_device: "dist-sw-bldg-b-01"
+        remote_interface: "GigabitEthernet1/0/2"
+
+    icmp:
+      enabled: true
+      ttl: 64
+
+    snmp_agent:
+      enabled: true
+      community: "enterprise-ro"
+      sysname: "access-sw-bldg-b-fl2"
+      syslocation: "Building B - Floor 2 IDF"
+      walk_file: "device_walks/cisco/C2960_10.250.0.36_v5.walk"
+      add_mibs:
+        # Interface traffic counters (varimib - time-varying)
+        - oid: "1.3.6.1.2.1.2.2.1.10.1"  # ifInOctets.1
+          type: Counter32
+          value: "varimib((100 50000))"  # +50KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.16.1"  # ifOutOctets.1
+          type: Counter32
+          value: "varimib((100 30000))"  # +30KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.10.2"  # ifInOctets.2
+          type: Counter32
+          value: "varimib((100 25000))"  # +25KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.16.2"  # ifOutOctets.2
+          type: Counter32
+          value: "varimib((100 20000))"  # +20KB/sec
+
+  # =========================================================================
+  # DATA CENTER - SERVER FARM
+  # =========================================================================
+
+  # Data Center Firewall - Palo Alto PA-3260 (High Performance)
+  - name: fw-datacenter
+    type: router
+    mac: "00:01:05:00:01:01"
+    ips:
+      - "10.20.0.254"        # DC gateway
+      - "10.1.100.1"         # Uplink to core
+
+    lldp:
+      enabled: true
+      system_name: "fw-datacenter"
+      system_description: "Palo Alto PA-3260 - Data Center Firewall"
+      port_description: "ethernet1/1"
+
+    cdp:
+      enabled: true
+      platform: "Palo Alto PA-3260"
+      software_version: "PAN-OS 11.1.2"
+
+    # Neighbor connections for topology discovery
+    trunk_ports:
+      - interface: "ethernet1/1"
+        vlans: [1, 20]
+        native_vlan: 1
+        remote_device: "core-rtr-01"
+        remote_interface: "TenGigabitEthernet1/0/3"
+      - interface: "ethernet1/2"
+        vlans: [1, 20, 100, 200]
+        native_vlan: 1
+        remote_device: "dc-tor-sw-01"
+        remote_interface: "TenGigabitEthernet1/0/1"
+
+    icmp:
+      enabled: true
+      ttl: 64
+
+    os_fingerprint:
+      os_type: "linux"
+
+    http:
+      enabled: true
+      server_name: "PAN-OS"
+      endpoints:
+        - path: "/php/login.php"
+          response: "<html><title>Palo Alto Networks - DC</title></html>"
+
+    snmp_agent:
+      enabled: true
+      community: "enterprise-ro"
+      sysname: "fw-datacenter"
+      sysdescr: "Palo Alto Networks PA-3260 series firewall"
+      syscontact: "security@enterprise.com"
+      syslocation: "Data Center - Security Rack"
+      add_mibs:
+        # Interface traffic counters (varimib - time-varying)
+        - oid: "1.3.6.1.2.1.2.2.1.10.1"  # ifInOctets.1
+          type: Counter32
+          value: "varimib((100 50000))"  # +50KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.16.1"  # ifOutOctets.1
+          type: Counter32
+          value: "varimib((100 30000))"  # +30KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.10.2"  # ifInOctets.2
+          type: Counter32
+          value: "varimib((100 25000))"  # +25KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.16.2"  # ifOutOctets.2
+          type: Counter32
+          value: "varimib((100 20000))"  # +20KB/sec
+      traps:
+        enabled: true
+        receivers: ["10.20.1.100:162"]
+        community: "enterprise-trap"
+        link_up:
+          enabled: true
+        link_down:
+          enabled: true
+        high_cpu:
+          enabled: true
+          threshold: 70
+
+  # DC Switch (ToR - Top of Rack)
+  - name: dc-tor-sw-01
+    type: switch
+    mac: "00:01:05:01:01:01"
+    ip: "10.20.0.10"
+    vlan: 20
+
+    lldp:
+      enabled: true
+      system_name: "dc-tor-sw-01"
+      system_description: "Cisco Nexus 9300 - DC ToR Switch"
+
+    cdp:
+      enabled: true
+      platform: "N9K-C9372PX"
+
+    stp:
+      enabled: true
+      bridge_priority: 4096
+
+    # Neighbor connections for topology discovery
+    trunk_ports:
+      - interface: "TenGigabitEthernet1/0/1"
+        vlans: [1, 20, 100, 200]
+        native_vlan: 1
+        remote_device: "fw-datacenter"
+        remote_interface: "ethernet1/2"
+      # Server connections (access ports, but included for topology)
+      - interface: "Ethernet1/1"
+        vlans: [20]
+        native_vlan: 20
+        remote_device: "db-mysql-primary"
+        remote_interface: "eth0"
+      - interface: "Ethernet1/2"
+        vlans: [20]
+        native_vlan: 20
+        remote_device: "db-postgres-primary"
+        remote_interface: "eth0"
+      - interface: "Ethernet1/3"
+        vlans: [20]
+        native_vlan: 20
+        remote_device: "db-mssql-primary"
+        remote_interface: "eth0"
+
+    icmp:
+      enabled: true
+      ttl: 64
+
+    snmp_agent:
+      enabled: true
+      community: "enterprise-ro"
+      sysname: "dc-tor-sw-01"
+      syslocation: "Data Center - Server Rack 1"
+      walk_file: "device_walks/cisco/Nexus_n5000.walk"
+      add_mibs:
+        # Interface traffic counters (varimib - time-varying)
+        - oid: "1.3.6.1.2.1.2.2.1.10.1"  # ifInOctets.1
+          type: Counter32
+          value: "varimib((100 50000))"  # +50KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.16.1"  # ifOutOctets.1
+          type: Counter32
+          value: "varimib((100 30000))"  # +30KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.10.2"  # ifInOctets.2
+          type: Counter32
+          value: "varimib((100 25000))"  # +25KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.16.2"  # ifOutOctets.2
+          type: Counter32
+          value: "varimib((100 20000))"  # +20KB/sec
+
+  # =========================================================================
+  # DATABASE SERVERS (MySQL, PostgreSQL, MSSQL health checks)
+  # =========================================================================
+
+  - name: db-mysql-primary
+    type: server
+    mac: "00:01:10:01:01:01"
+    ip: "10.20.1.10"
+    vlan: 20
+
+    lldp:
+      enabled: true
+      system_name: "db-mysql-primary"
+      system_description: "MySQL 8.0 Primary Database Server"
+
+    icmp:
+      enabled: true
+      ttl: 64
+
+    os_fingerprint:
+      os_type: "linux"
+      ttl: 64
+      ssh_banner: "SSH-2.0-OpenSSH_8.9p1 Ubuntu-3ubuntu0.6"
+
+    http:
+      enabled: true
+      server_name: "MySQL-Monitor/1.0"
+      endpoints:
+        - path: "/health"
+          response: '{"status":"healthy","connections":42}'
+
+    snmp_agent:
+      enabled: true
+      community: "enterprise-ro"
+      sysname: "db-mysql-primary"
+      syslocation: "Data Center - Database Cluster"
+      walk_file: "device_walks/oracle/Linux_Oracle_129.196.196.10.walk"
+
+  - name: db-postgres-primary
+    type: server
+    mac: "00:01:10:01:02:01"
+    ip: "10.20.1.11"
+    vlan: 20
+
+    lldp:
+      enabled: true
+      system_name: "db-postgres-primary"
+      system_description: "PostgreSQL 15 Primary Database Server"
+
+    icmp:
+      enabled: true
+      ttl: 64
+
+    os_fingerprint:
+      os_type: "linux"
+
+    snmp_agent:
+      enabled: true
+      community: "enterprise-ro"
+      sysname: "db-postgres-primary"
+      syslocation: "Data Center - Database Cluster"
+      walk_file: "device_walks/oracle/Linux_Oracle_129.196.196.10.walk"
+
+  - name: db-mssql-primary
+    type: server
+    mac: "00:01:10:01:03:01"
+    ip: "10.20.1.12"
+    vlan: 20
+
+    lldp:
+      enabled: true
+      system_name: "db-mssql-primary"
+      system_description: "Microsoft SQL Server 2022"
+
+    icmp:
+      enabled: true
+      ttl: 128
+
+    os_fingerprint:
+      os_type: "windows-server"
+      ttl: 128
+      http_server: "Microsoft-IIS/10.0"
+
+    snmp_agent:
+      enabled: true
+      community: "enterprise-ro"
+      sysname: "db-mssql-primary"
+      syslocation: "Data Center - Database Cluster"
+      walk_file: "device_walks/oracle/Linux_Oracle_129.196.196.10.walk"
+
+  # =========================================================================
+  # DIRECTORY SERVICES (LDAP/Active Directory)
+  # =========================================================================
+
+  - name: ldap-dc-01
+    type: server
+    mac: "00:01:10:02:01:01"
+    ip: "10.20.1.20"
+    vlan: 20
+
+    lldp:
+      enabled: true
+      system_name: "ldap-dc-01"
+      system_description: "Windows Server 2022 - Primary Domain Controller"
+
+    icmp:
+      enabled: true
+      ttl: 128
+
+    os_fingerprint:
+      os_type: "windows-server"
+      ttl: 128
+
+    # NetBIOS for Windows domain
+    netbios:
+      enabled: true
+      name: "LDAP-DC-01"
+      workgroup: "ENTERPRISE"
+      node_type: "H"
+      services:
+        - "domain_controller"
+        - "workstation"
+
+    dns:
+      enabled: true
+      records:
+        - name: "dc01.enterprise.local"
+          type: "A"
+          value: "10.20.1.20"
+        - name: "ldap.enterprise.local"
+          type: "A"
+          value: "10.20.1.20"
+        - name: "_ldap._tcp.enterprise.local"
+          type: "SRV"
+          value: "0 100 389 dc01.enterprise.local"
+
+    snmp_agent:
+      enabled: true
+      community: "enterprise-ro"
+      sysname: "ldap-dc-01"
+      syslocation: "Data Center - Identity Services"
+      walk_file: "device_walks/oracle/Linux_Oracle_129.196.196.10.walk"
+
+  - name: ldap-dc-02
+    type: server
+    mac: "00:01:10:02:02:01"
+    ip: "10.20.1.21"
+    vlan: 20
+
+    lldp:
+      enabled: true
+      system_name: "ldap-dc-02"
+      system_description: "Windows Server 2022 - Secondary Domain Controller"
+
+    icmp:
+      enabled: true
+      ttl: 128
+
+    os_fingerprint:
+      os_type: "windows-server"
+
+    netbios:
+      enabled: true
+      name: "LDAP-DC-02"
+      workgroup: "ENTERPRISE"
+
+    snmp_agent:
+      enabled: true
+      community: "enterprise-ro"
+      sysname: "ldap-dc-02"
+      syslocation: "Data Center - Identity Services"
+      walk_file: "device_walks/oracle/Linux_Oracle_129.196.196.10.walk"
+
+  # =========================================================================
+  # FILE SERVERS (SMB/CIFS)
+  # =========================================================================
+
+  - name: file-server-01
+    type: server
+    mac: "00:01:10:03:01:01"
+    ip: "10.20.1.30"
+    vlan: 20
+
+    lldp:
+      enabled: true
+      system_name: "file-server-01"
+      system_description: "Windows Server 2022 - File Server"
+
+    icmp:
+      enabled: true
+      ttl: 128
+
+    os_fingerprint:
+      os_type: "windows-server"
+      ttl: 128
+
+    netbios:
+      enabled: true
+      name: "FILE-SERVER-01"
+      workgroup: "ENTERPRISE"
+      services:
+        - "file_server"
+        - "workstation"
+
+    snmp_agent:
+      enabled: true
+      community: "enterprise-ro"
+      sysname: "file-server-01"
+      syslocation: "Data Center - Storage"
+      walk_file: "device_walks/oracle/Linux_Oracle_129.196.196.10.walk"
+
+  # =========================================================================
+  # STREAMING / MEDIA (RTSP)
+  # =========================================================================
+
+  - name: nvr-server-01
+    type: server
+    mac: "00:01:10:04:01:01"
+    ip: "10.20.1.40"
+    vlan: 20
+
+    lldp:
+      enabled: true
+      system_name: "nvr-server-01"
+      system_description: "Network Video Recorder - RTSP Streaming"
+
+    icmp:
+      enabled: true
+      ttl: 64
+
+    os_fingerprint:
+      os_type: "linux"
+      http_server: "NVR-Streamer/3.0"
+
+    http:
+      enabled: true
+      server_name: "NVR-Streamer/3.0"
+      endpoints:
+        - path: "/api/cameras"
+          response: '[{"id":1,"name":"Lobby","status":"online"},{"id":2,"name":"Parking","status":"online"}]'
+
+    snmp_agent:
+      enabled: true
+      community: "enterprise-ro"
+      sysname: "nvr-server-01"
+      syslocation: "Data Center - Security Systems"
+      walk_file: "device_walks/oracle/Linux_Oracle_129.196.196.10.walk"
+
+  # =========================================================================
+  # INDUSTRIAL SYSTEMS (Modbus, OPC UA) - VLAN 100
+  # =========================================================================
+
+  - name: scada-server-01
+    type: server
+    mac: "00:01:10:05:01:01"
+    ip: "10.100.1.10"
+    vlan: 100
+
+    lldp:
+      enabled: true
+      system_name: "scada-server-01"
+      system_description: "SCADA HMI Server"
+
+    icmp:
+      enabled: true
+      ttl: 64
+
+    os_fingerprint:
+      os_type: "linux"
+
+    snmp_agent:
+      enabled: true
+      community: "enterprise-ro"
+      sysname: "scada-server-01"
+      syslocation: "Manufacturing - Control Room"
+      walk_file: "device_walks/oracle/Linux_Oracle_129.196.196.10.walk"
+
+  - name: plc-controller-01
+    type: host
+    mac: "00:01:10:05:02:01"
+    ip: "10.100.1.20"
+    vlan: 100
+
+    lldp:
+      enabled: true
+      system_name: "plc-controller-01"
+      system_description: "Allen-Bradley PLC - Modbus/TCP"
+
+    icmp:
+      enabled: true
+      ttl: 64
+
+    snmp_agent:
+      enabled: true
+      community: "enterprise-ro"
+      sysname: "plc-controller-01"
+      syslocation: "Manufacturing - Line 1"
+
+  - name: opcua-server-01
+    type: server
+    mac: "00:01:10:05:03:01"
+    ip: "10.100.1.30"
+    vlan: 100
+
+    lldp:
+      enabled: true
+      system_name: "opcua-server-01"
+      system_description: "OPC UA Server - Industrial Gateway"
+
+    icmp:
+      enabled: true
+      ttl: 64
+
+    snmp_agent:
+      enabled: true
+      community: "enterprise-ro"
+      sysname: "opcua-server-01"
+      syslocation: "Manufacturing - Control Room"
+      walk_file: "device_walks/oracle/Linux_Oracle_129.196.196.10.walk"
+
+  # =========================================================================
+  # HEALTHCARE SYSTEMS (DICOM, HL7) - VLAN 200
+  # =========================================================================
+
+  - name: pacs-server-01
+    type: server
+    mac: "00:01:10:06:01:01"
+    ip: "10.200.1.10"
+    vlan: 200
+
+    lldp:
+      enabled: true
+      system_name: "pacs-server-01"
+      system_description: "PACS Imaging Server - DICOM"
+
+    icmp:
+      enabled: true
+      ttl: 64
+
+    os_fingerprint:
+      os_type: "linux"
+
+    snmp_agent:
+      enabled: true
+      community: "enterprise-ro"
+      sysname: "pacs-server-01"
+      syslocation: "Hospital - Radiology"
+      walk_file: "device_walks/oracle/Linux_Oracle_129.196.196.10.walk"
+
+  - name: hl7-interface-01
+    type: server
+    mac: "00:01:10:06:02:01"
+    ip: "10.200.1.20"
+    vlan: 200
+
+    lldp:
+      enabled: true
+      system_name: "hl7-interface-01"
+      system_description: "HL7 Integration Engine"
+
+    icmp:
+      enabled: true
+      ttl: 64
+
+    snmp_agent:
+      enabled: true
+      community: "enterprise-ro"
+      sysname: "hl7-interface-01"
+      syslocation: "Hospital - IT"
+      walk_file: "device_walks/oracle/Linux_Oracle_129.196.196.10.walk"
+
+  # =========================================================================
+  # INFRASTRUCTURE SERVICES (DNS, DHCP, NTP, Monitoring)
+  # =========================================================================
+
+  - name: dns-dhcp-01
+    type: server
+    mac: "00:01:10:07:01:01"
+    ip: "10.10.1.10"
+    vlan: 10
+
+    lldp:
+      enabled: true
+      system_name: "dns-dhcp-01"
+      system_description: "DNS/DHCP Primary Server"
+
+    icmp:
+      enabled: true
+      ttl: 64
+
+    dhcp:
+      enabled: true
+      pools:
+        - network: "10.30.0.0/16"
+          range_start: "10.30.100.1"
+          range_end: "10.30.100.254"
+          gateway: "10.30.0.1"
+          dns_servers:
+            - "10.10.1.10"
+            - "10.10.1.11"
+          domain: "enterprise.local"
+          lease_time: 86400
+        - network: "10.40.0.0/16"
+          range_start: "10.40.100.1"
+          range_end: "10.40.100.254"
+          gateway: "10.40.0.1"
+          dns_servers:
+            - "10.10.1.10"
+          domain: "enterprise.local"
+          lease_time: 86400
+
+    dns:
+      enabled: true
+      records:
+        # Infrastructure
+        - name: "dns1.enterprise.local"
+          type: "A"
+          value: "10.10.1.10"
+        - name: "dns2.enterprise.local"
+          type: "A"
+          value: "10.10.1.11"
+        - name: "ntp.enterprise.local"
+          type: "A"
+          value: "10.10.1.20"
+        # Gateways
+        - name: "gateway.enterprise.local"
+          type: "A"
+          value: "10.0.0.1"
+        - name: "core1.enterprise.local"
+          type: "A"
+          value: "10.1.0.1"
+        - name: "core2.enterprise.local"
+          type: "A"
+          value: "10.1.0.2"
+        # Servers
+        - name: "mysql.enterprise.local"
+          type: "A"
+          value: "10.20.1.10"
+        - name: "postgres.enterprise.local"
+          type: "A"
+          value: "10.20.1.11"
+        - name: "mssql.enterprise.local"
+          type: "A"
+          value: "10.20.1.12"
+        - name: "ldap.enterprise.local"
+          type: "A"
+          value: "10.20.1.20"
+        - name: "files.enterprise.local"
+          type: "A"
+          value: "10.20.1.30"
+        - name: "nvr.enterprise.local"
+          type: "A"
+          value: "10.20.1.40"
+        - name: "monitoring.enterprise.local"
+          type: "A"
+          value: "10.20.1.100"
+        - name: "iperf.enterprise.local"
+          type: "A"
+          value: "10.20.1.200"
+
+    snmp_agent:
+      enabled: true
+      community: "enterprise-ro"
+      sysname: "dns-dhcp-01"
+      syslocation: "Data Center - Core Services"
+      walk_file: "device_walks/oracle/Linux_Oracle_129.196.196.10.walk"
+
+  - name: dns-dhcp-02
+    type: server
+    mac: "00:01:10:07:02:01"
+    ip: "10.10.1.11"
+    vlan: 10
+
+    lldp:
+      enabled: true
+      system_name: "dns-dhcp-02"
+      system_description: "DNS/DHCP Secondary Server"
+
+    icmp:
+      enabled: true
+      ttl: 64
+
+    dns:
+      enabled: true
+      records:
+        - name: "dns2.enterprise.local"
+          type: "A"
+          value: "10.10.1.11"
+
+    snmp_agent:
+      enabled: true
+      community: "enterprise-ro"
+      sysname: "dns-dhcp-02"
+      syslocation: "Data Center - Core Services"
+      walk_file: "device_walks/oracle/Linux_Oracle_129.196.196.10.walk"
+
+  # =========================================================================
+  # MONITORING SERVER (SNMP Trap Receiver, Seed Integration)
+  # =========================================================================
+
+  - name: monitoring-server
+    type: server
+    mac: "00:01:10:08:01:01"
+    ip: "10.20.1.100"
+    vlan: 20
+
+    lldp:
+      enabled: true
+      system_name: "monitoring-server"
+      system_description: "Enterprise Monitoring Server"
+
+    icmp:
+      enabled: true
+      ttl: 64
+
+    os_fingerprint:
+      os_type: "linux"
+      ssh_banner: "SSH-2.0-OpenSSH_9.0"
+
+    http:
+      enabled: true
+      server_name: "Monitoring-Server/1.0"
+      endpoints:
+        - path: "/"
+          response: "Enterprise Monitoring Dashboard"
+        - path: "/api/status"
+          response: '{"status":"operational","devices":35,"alerts":2}'
+        - path: "/health"
+          response: '{"healthy":true}'
+
+    # Self-monitoring
+    snmp_agent:
+      enabled: true
+      community: "enterprise-ro"
+      sysname: "monitoring-server"
+      syslocation: "Data Center - Monitoring"
+      walk_file: "device_walks/oracle/Linux_Oracle_129.196.196.10.walk"
+      traps:
+        enabled: true
+        receivers: ["10.20.1.100:162"]
+        high_cpu:
+          enabled: true
+          threshold: 90
+        high_memory:
+          enabled: true
+          threshold: 95
+
+  # =========================================================================
+  # BANDWIDTH TEST SERVER (iPerf3)
+  # =========================================================================
+
+  - name: iperf-server
+    type: server
+    mac: "00:01:10:09:01:01"
+    ip: "10.20.1.200"
+    vlan: 20
+
+    lldp:
+      enabled: true
+      system_name: "iperf-server"
+      system_description: "Bandwidth Test Server - iPerf3"
+
+    icmp:
+      enabled: true
+      ttl: 64
+
+    # High-performance iPerf3 server (10Gbps capable)
+    iperf3:
+      enabled: true
+      port: 5201
+      upload_mbps: 10000
+      download_mbps: 10000
+      typical_latency_ms: 0.1
+      jitter_ms: 0.01
+      packet_loss_percent: 0.0
+      max_bandwidth_mbps: 10000
+
+    os_fingerprint:
+      os_type: "linux"
+      ssh_banner: "SSH-2.0-OpenSSH_9.0"
+
+    snmp_agent:
+      enabled: true
+      community: "enterprise-ro"
+      sysname: "iperf-server"
+      syslocation: "Data Center - Testing"
+      walk_file: "device_walks/oracle/Linux_Oracle_129.196.196.10.walk"
+
+  # =========================================================================
+  # WEB SERVERS (HTTP/HTTPS)
+  # =========================================================================
+
+  - name: web-server-01
+    type: server
+    mac: "00:01:10:10:01:01"
+    ip: "10.20.1.50"
+    vlan: 20
+
+    lldp:
+      enabled: true
+      system_name: "web-server-01"
+      system_description: "Apache Web Server"
+
+    icmp:
+      enabled: true
+      ttl: 64
+
+    os_fingerprint:
+      os_type: "linux"
+      http_server: "Apache/2.4.57 (Ubuntu)"
+
+    http:
+      enabled: true
+      server_name: "Apache/2.4.57 (Ubuntu)"
+      endpoints:
+        - path: "/"
+          response: "<html><body><h1>Enterprise Portal</h1></body></html>"
+        - path: "/api/health"
+          response: '{"status":"healthy"}'
+        - path: "/robots.txt"
+          response: "User-agent: *\nDisallow: /admin/"
+
+    snmp_agent:
+      enabled: true
+      community: "enterprise-ro"
+      sysname: "web-server-01"
+      syslocation: "Data Center - Web Tier"
+      walk_file: "device_walks/oracle/Linux_Oracle_129.196.196.10.walk"
+
+  # =========================================================================
+  # FTP SERVER
+  # =========================================================================
+
+  - name: ftp-server-01
+    type: server
+    mac: "00:01:10:11:01:01"
+    ip: "10.20.1.60"
+    vlan: 20
+
+    lldp:
+      enabled: true
+      system_name: "ftp-server-01"
+      system_description: "vsftpd FTP Server"
+
+    icmp:
+      enabled: true
+      ttl: 64
+
+    os_fingerprint:
+      os_type: "linux"
+      ftp_banner: "220 Enterprise FTP Server Ready"
+
+    ftp:
+      enabled: true
+      welcome_banner: "220 Enterprise FTP Server Ready"
+      system_type: "UNIX Type: L8"
+
+    snmp_agent:
+      enabled: true
+      community: "enterprise-ro"
+      sysname: "ftp-server-01"
+      syslocation: "Data Center - File Transfer"
+      walk_file: "device_walks/oracle/Linux_Oracle_129.196.196.10.walk"
+
+  # =========================================================================
+  # BUILDING C - REMOTE BRANCH OFFICE (WAN Connected)
+  # =========================================================================
+
+  # Building C WAN Router - Connects to HQ via MPLS/Internet VPN
+  - name: wan-rtr-bldg-c
+    type: router
+    mac: "00:01:06:01:01:01"
+    ips:
+      - "10.70.0.1"          # Building C gateway
+      - "172.16.100.2"       # WAN link to HQ
+
+    lldp:
+      enabled: true
+      system_name: "wan-rtr-bldg-c"
+      system_description: "Cisco ISR 4331 - Building C WAN Router"
+      port_description: "GigabitEthernet0/0/0"
+
+    cdp:
+      enabled: true
+      platform: "Cisco ISR 4331"
+      software_version: "IOS XE 17.9.3"
+      capabilities: "Router"
+
+    # Neighbor connections for topology discovery
+    trunk_ports:
+      - interface: "GigabitEthernet0/0/1"
+        vlans: [1]
+        native_vlan: 1
+        remote_device: "core-rtr-01"
+        remote_interface: "GigabitEthernet0/0/1"
+      - interface: "GigabitEthernet0/0/0"
+        vlans: [1, 70]
+        native_vlan: 1
+        remote_device: "fw-bldg-c"
+        remote_interface: "ethernet1/1"
+
+    icmp:
+      enabled: true
+      ttl: 255
+
+    # Branch office WAN link - 100Mbps MPLS
+    iperf3:
+      enabled: true
+      port: 5201
+      upload_mbps: 100
+      download_mbps: 100
+      typical_latency_ms: 25.0
+      jitter_ms: 5.0
+      packet_loss_percent: 0.1
+
+    os_fingerprint:
+      os_type: "cisco-ios"
+
+    snmp_agent:
+      enabled: true
+      community: "enterprise-ro"
+      sysname: "wan-rtr-bldg-c"
+      sysdescr: "Cisco ISR 4331 - Branch Office WAN Router"
+      syslocation: "Building C - Network Closet"
+      walk_file: "device_walks/misc/1841_172.21.96.10.walk"
+      add_mibs:
+        # Interface traffic counters (varimib - time-varying)
+        - oid: "1.3.6.1.2.1.2.2.1.10.1"  # ifInOctets.1
+          type: Counter32
+          value: "varimib((100 50000))"  # +50KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.16.1"  # ifOutOctets.1
+          type: Counter32
+          value: "varimib((100 30000))"  # +30KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.10.2"  # ifInOctets.2
+          type: Counter32
+          value: "varimib((100 25000))"  # +25KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.16.2"  # ifOutOctets.2
+          type: Counter32
+          value: "varimib((100 20000))"  # +20KB/sec
+      traps:
+        enabled: true
+        receivers: ["10.20.1.100:162"]
+        link_up:
+          enabled: true
+        link_down:
+          enabled: true
+
+  # Building C Firewall - Palo Alto PA-220
+  - name: fw-bldg-c
+    type: router
+    mac: "00:01:06:01:00:01"
+    ips:
+      - "10.70.0.254"        # Building C inside gateway
+      - "10.70.0.253"        # Uplink to WAN router
+
+    lldp:
+      enabled: true
+      system_name: "fw-bldg-c"
+      system_description: "Palo Alto PA-220 - Building C Firewall"
+
+    cdp:
+      enabled: true
+      platform: "Palo Alto PA-220"
+      software_version: "PAN-OS 11.1.2"
+
+    # Neighbor connections for topology discovery
+    trunk_ports:
+      - interface: "ethernet1/1"
+        vlans: [1, 70]
+        native_vlan: 1
+        remote_device: "wan-rtr-bldg-c"
+        remote_interface: "GigabitEthernet0/0/0"
+      - interface: "ethernet1/2"
+        vlans: [1, 70, 250]
+        native_vlan: 1
+        remote_device: "sw-bldg-c-core"
+        remote_interface: "GigabitEthernet1/0/49"
+
+    icmp:
+      enabled: true
+      ttl: 64
+
+    os_fingerprint:
+      os_type: "linux"
+
+    http:
+      enabled: true
+      server_name: "PAN-OS"
+      endpoints:
+        - path: "/php/login.php"
+          response: "<html><title>Palo Alto Networks - Branch C</title></html>"
+
+    snmp_agent:
+      enabled: true
+      community: "enterprise-ro"
+      sysname: "fw-bldg-c"
+      sysdescr: "Palo Alto Networks PA-220 series firewall"
+      syslocation: "Building C - Network Closet"
+      add_mibs:
+        # Interface traffic counters (varimib - time-varying)
+        - oid: "1.3.6.1.2.1.2.2.1.10.1"  # ifInOctets.1
+          type: Counter32
+          value: "varimib((100 50000))"  # +50KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.16.1"  # ifOutOctets.1
+          type: Counter32
+          value: "varimib((100 30000))"  # +30KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.10.2"  # ifInOctets.2
+          type: Counter32
+          value: "varimib((100 25000))"  # +25KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.16.2"  # ifOutOctets.2
+          type: Counter32
+          value: "varimib((100 20000))"  # +20KB/sec
+      traps:
+        enabled: true
+        receivers: ["10.20.1.100:162"]
+
+  # Building C Distribution/Core Switch (Small office - combined role)
+  - name: sw-bldg-c-core
+    type: switch
+    mac: "00:01:06:02:01:01"
+    ips:
+      - "10.70.1.1"          # VLAN 70 gateway
+    vlan: 70
+
+    lldp:
+      enabled: true
+      system_name: "sw-bldg-c-core"
+      system_description: "Cisco Catalyst 9200 - Building C Core Switch"
+
+    cdp:
+      enabled: true
+      platform: "C9200-24P"
+
+    stp:
+      enabled: true
+      bridge_priority: 4096
+
+    # Neighbor connections for topology discovery
+    trunk_ports:
+      - interface: "GigabitEthernet1/0/49"
+        vlans: [1, 70, 250]
+        native_vlan: 1
+        remote_device: "fw-bldg-c"
+        remote_interface: "ethernet1/2"
+      - interface: "GigabitEthernet1/0/1"
+        vlans: [1, 70, 250]
+        native_vlan: 1
+        remote_device: "access-sw-bldg-c-fl1"
+        remote_interface: "GigabitEthernet1/0/49"
+      - interface: "GigabitEthernet1/0/2"
+        vlans: [1, 70, 250]
+        native_vlan: 1
+        remote_device: "access-sw-bldg-c-fl2"
+        remote_interface: "GigabitEthernet1/0/49"
+      - interface: "GigabitEthernet1/0/10"
+        vlans: [1, 70, 250]
+        native_vlan: 1
+        remote_device: "wlc-bldg-c"
+        remote_interface: "GigabitEthernet0/0/0"
+
+    icmp:
+      enabled: true
+      ttl: 64
+
+    snmp_agent:
+      enabled: true
+      community: "enterprise-ro"
+      sysname: "sw-bldg-c-core"
+      syslocation: "Building C - Network Closet"
+      walk_file: "device_walks/cisco/C3560_10.250.1.8_v882.walk"
+      add_mibs:
+        # Interface traffic counters (varimib - time-varying)
+        - oid: "1.3.6.1.2.1.2.2.1.10.1"  # ifInOctets.1
+          type: Counter32
+          value: "varimib((100 50000))"  # +50KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.16.1"  # ifOutOctets.1
+          type: Counter32
+          value: "varimib((100 30000))"  # +30KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.10.2"  # ifInOctets.2
+          type: Counter32
+          value: "varimib((100 25000))"  # +25KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.16.2"  # ifOutOctets.2
+          type: Counter32
+          value: "varimib((100 20000))"  # +20KB/sec
+
+  # Building C Floor 1 Access Switch
+  - name: access-sw-bldg-c-fl1
+    type: switch
+    mac: "00:01:06:03:01:01"
+    ip: "10.70.1.10"
+    vlan: 70
+
+    lldp:
+      enabled: true
+      system_name: "access-sw-bldg-c-fl1"
+      system_description: "Cisco Catalyst 9200 - Building C Floor 1"
+
+    cdp:
+      enabled: true
+      platform: "C9200-24P"
+
+    stp:
+      enabled: true
+      bridge_priority: 32768
+
+    # Neighbor connections for topology discovery
+    trunk_ports:
+      - interface: "GigabitEthernet1/0/49"
+        vlans: [1, 70, 250]
+        native_vlan: 1
+        remote_device: "sw-bldg-c-core"
+        remote_interface: "GigabitEthernet1/0/1"
+
+    icmp:
+      enabled: true
+      ttl: 64
+
+    snmp_agent:
+      enabled: true
+      community: "enterprise-ro"
+      sysname: "access-sw-bldg-c-fl1"
+      syslocation: "Building C - Floor 1 IDF"
+      walk_file: "device_walks/cisco/C2960_10.250.0.36_v5.walk"
+      add_mibs:
+        # Interface traffic counters (varimib - time-varying)
+        - oid: "1.3.6.1.2.1.2.2.1.10.1"  # ifInOctets.1
+          type: Counter32
+          value: "varimib((100 50000))"  # +50KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.16.1"  # ifOutOctets.1
+          type: Counter32
+          value: "varimib((100 30000))"  # +30KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.10.2"  # ifInOctets.2
+          type: Counter32
+          value: "varimib((100 25000))"  # +25KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.16.2"  # ifOutOctets.2
+          type: Counter32
+          value: "varimib((100 20000))"  # +20KB/sec
+
+  # Building C Floor 2 Access Switch
+  - name: access-sw-bldg-c-fl2
+    type: switch
+    mac: "00:01:06:03:02:01"
+    ip: "10.70.2.10"
+    vlan: 70
+
+    lldp:
+      enabled: true
+      system_name: "access-sw-bldg-c-fl2"
+      system_description: "Cisco Catalyst 9200 - Building C Floor 2"
+
+    cdp:
+      enabled: true
+      platform: "C9200-24P"
+
+    stp:
+      enabled: true
+      bridge_priority: 32768
+
+    # Neighbor connections for topology discovery
+    trunk_ports:
+      - interface: "GigabitEthernet1/0/49"
+        vlans: [1, 70, 250]
+        native_vlan: 1
+        remote_device: "sw-bldg-c-core"
+        remote_interface: "GigabitEthernet1/0/2"
+
+    icmp:
+      enabled: true
+      ttl: 64
+
+    snmp_agent:
+      enabled: true
+      community: "enterprise-ro"
+      sysname: "access-sw-bldg-c-fl2"
+      syslocation: "Building C - Floor 2 IDF"
+      walk_file: "device_walks/cisco/C2960_10.250.0.36_v5.walk"
+      add_mibs:
+        # Interface traffic counters (varimib - time-varying)
+        - oid: "1.3.6.1.2.1.2.2.1.10.1"  # ifInOctets.1
+          type: Counter32
+          value: "varimib((100 50000))"  # +50KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.16.1"  # ifOutOctets.1
+          type: Counter32
+          value: "varimib((100 30000))"  # +30KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.10.2"  # ifInOctets.2
+          type: Counter32
+          value: "varimib((100 25000))"  # +25KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.16.2"  # ifOutOctets.2
+          type: Counter32
+          value: "varimib((100 20000))"  # +20KB/sec
+
+  # Building C Wireless Controller (Embedded in switch or small WLC)
+  - name: wlc-bldg-c
+    type: router
+    mac: "00:01:06:04:01:01"
+    ip: "10.70.1.100"
+    vlan: 70
+
+    lldp:
+      enabled: true
+      system_name: "wlc-bldg-c"
+      system_description: "Cisco Catalyst 9800-CL - Building C WLC"
+
+    cdp:
+      enabled: true
+      platform: "C9800-CL-K9"
+      software_version: "IOS XE 17.9.3"
+
+    # Neighbor connections for topology discovery
+    trunk_ports:
+      - interface: "GigabitEthernet0/0/0"
+        vlans: [1, 70, 250]
+        native_vlan: 1
+        remote_device: "sw-bldg-c-core"
+        remote_interface: "GigabitEthernet1/0/10"
+
+    icmp:
+      enabled: true
+      ttl: 64
+
+    http:
+      enabled: true
+      server_name: "Cisco-IOS-XE"
+      endpoints:
+        - path: "/"
+          response: "<html><title>Cisco Wireless LAN Controller</title></html>"
+
+    snmp_agent:
+      enabled: true
+      community: "enterprise-ro"
+      sysname: "wlc-bldg-c"
+      sysdescr: "Cisco Catalyst 9800-CL Wireless Controller"
+      syslocation: "Building C - Network Closet"
+      walk_file: "device_walks/misc/Controller_10.1.50.13.walk"
+      add_mibs:
+        # Interface traffic counters (varimib - time-varying)
+        - oid: "1.3.6.1.2.1.2.2.1.10.1"  # ifInOctets.1
+          type: Counter32
+          value: "varimib((100 50000))"  # +50KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.16.1"  # ifOutOctets.1
+          type: Counter32
+          value: "varimib((100 30000))"  # +30KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.10.2"  # ifInOctets.2
+          type: Counter32
+          value: "varimib((100 25000))"  # +25KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.16.2"  # ifOutOctets.2
+          type: Counter32
+          value: "varimib((100 20000))"  # +20KB/sec
+
+  # Building C Local File/Print Server
+  - name: server-bldg-c
+    type: server
+    mac: "00:01:06:05:01:01"
+    ip: "10.70.1.50"
+    vlan: 70
+
+    lldp:
+      enabled: true
+      system_name: "server-bldg-c"
+      system_description: "Windows Server 2022 - Branch File Server"
+
+    icmp:
+      enabled: true
+      ttl: 128
+
+    os_fingerprint:
+      os_type: "windows-server"
+      ttl: 128
+
+    netbios:
+      enabled: true
+      name: "SERVER-BLDG-C"
+      workgroup: "ENTERPRISE"
+      services:
+        - "file_server"
+        - "print_server"
+
+    snmp_agent:
+      enabled: true
+      community: "enterprise-ro"
+      sysname: "server-bldg-c"
+      syslocation: "Building C - Server Room"
+      walk_file: "device_walks/oracle/Linux_Oracle_129.196.196.10.walk"
+
+  # =========================================================================
+  # BUILDING D - MANUFACTURING FACILITY (WAN Connected)
+  # =========================================================================
+
+  # Building D WAN Router - Industrial facility
+  - name: wan-rtr-bldg-d
+    type: router
+    mac: "00:01:07:01:01:01"
+    ips:
+      - "10.80.0.1"          # Building D gateway
+      - "172.16.200.2"       # WAN link to HQ
+
+    lldp:
+      enabled: true
+      system_name: "wan-rtr-bldg-d"
+      system_description: "Cisco ISR 4331 - Building D WAN Router"
+
+    cdp:
+      enabled: true
+      platform: "Cisco ISR 4331"
+      software_version: "IOS XE 17.9.3"
+
+    # Neighbor connections for topology discovery
+    trunk_ports:
+      - interface: "GigabitEthernet0/0/1"
+        vlans: [1]
+        native_vlan: 1
+        remote_device: "core-rtr-01"
+        remote_interface: "GigabitEthernet0/0/2"
+      - interface: "GigabitEthernet0/0/0"
+        vlans: [1, 80, 100]
+        native_vlan: 1
+        remote_device: "fw-bldg-d"
+        remote_interface: "ethernet1/1"
+
+    icmp:
+      enabled: true
+      ttl: 255
+
+    # Manufacturing WAN link - 50Mbps
+    iperf3:
+      enabled: true
+      port: 5201
+      upload_mbps: 50
+      download_mbps: 50
+      typical_latency_ms: 35.0
+      jitter_ms: 8.0
+      packet_loss_percent: 0.2
+
+    os_fingerprint:
+      os_type: "cisco-ios"
+
+    snmp_agent:
+      enabled: true
+      community: "enterprise-ro"
+      sysname: "wan-rtr-bldg-d"
+      sysdescr: "Cisco ISR 4331 - Manufacturing WAN Router"
+      syslocation: "Building D - MDF"
+      walk_file: "device_walks/misc/1841_172.21.96.10.walk"
+      add_mibs:
+        # Interface traffic counters (varimib - time-varying)
+        - oid: "1.3.6.1.2.1.2.2.1.10.1"  # ifInOctets.1
+          type: Counter32
+          value: "varimib((100 50000))"  # +50KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.16.1"  # ifOutOctets.1
+          type: Counter32
+          value: "varimib((100 30000))"  # +30KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.10.2"  # ifInOctets.2
+          type: Counter32
+          value: "varimib((100 25000))"  # +25KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.16.2"  # ifOutOctets.2
+          type: Counter32
+          value: "varimib((100 20000))"  # +20KB/sec
+      traps:
+        enabled: true
+        receivers: ["10.20.1.100:162"]
+        link_up:
+          enabled: true
+        link_down:
+          enabled: true
+
+  # Building D Firewall - Palo Alto PA-220 (Industrial)
+  - name: fw-bldg-d
+    type: router
+    mac: "00:01:07:01:00:01"
+    ips:
+      - "10.80.0.254"        # Building D inside gateway
+      - "10.80.0.253"        # Uplink to WAN router
+
+    lldp:
+      enabled: true
+      system_name: "fw-bldg-d"
+      system_description: "Palo Alto PA-220 - Building D Industrial Firewall"
+
+    cdp:
+      enabled: true
+      platform: "Palo Alto PA-220"
+      software_version: "PAN-OS 11.1.2"
+
+    # Neighbor connections for topology discovery
+    trunk_ports:
+      - interface: "ethernet1/1"
+        vlans: [1, 80, 100]
+        native_vlan: 1
+        remote_device: "wan-rtr-bldg-d"
+        remote_interface: "GigabitEthernet0/0/0"
+      - interface: "ethernet1/2"
+        vlans: [1, 80, 100]
+        native_vlan: 1
+        remote_device: "sw-bldg-d-ind"
+        remote_interface: "GigabitEthernet1/0/49"
+
+    icmp:
+      enabled: true
+      ttl: 64
+
+    os_fingerprint:
+      os_type: "linux"
+
+    snmp_agent:
+      enabled: true
+      community: "enterprise-ro"
+      sysname: "fw-bldg-d"
+      sysdescr: "Palo Alto Networks PA-220 series firewall"
+      syslocation: "Building D - MDF"
+      add_mibs:
+        # Interface traffic counters (varimib - time-varying)
+        - oid: "1.3.6.1.2.1.2.2.1.10.1"  # ifInOctets.1
+          type: Counter32
+          value: "varimib((100 50000))"  # +50KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.16.1"  # ifOutOctets.1
+          type: Counter32
+          value: "varimib((100 30000))"  # +30KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.10.2"  # ifInOctets.2
+          type: Counter32
+          value: "varimib((100 25000))"  # +25KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.16.2"  # ifOutOctets.2
+          type: Counter32
+          value: "varimib((100 20000))"  # +20KB/sec
+      traps:
+        enabled: true
+        receivers: ["10.20.1.100:162"]
+
+  # Building D Industrial Switch (Ruggedized)
+  - name: sw-bldg-d-ind
+    type: switch
+    mac: "00:01:07:02:01:01"
+    ips:
+      - "10.80.1.1"          # VLAN 80 - Office users
+      - "10.80.100.1"        # VLAN 100 - Industrial
+    vlan: 80
+
+    lldp:
+      enabled: true
+      system_name: "sw-bldg-d-ind"
+      system_description: "Cisco IE-4010 - Building D Industrial Switch"
+
+    cdp:
+      enabled: true
+      platform: "IE-4010-4S24P"
+      software_version: "IOS 15.2(7)E"
+
+    stp:
+      enabled: true
+      bridge_priority: 4096
+
+    # Neighbor connections for topology discovery
+    trunk_ports:
+      - interface: "GigabitEthernet1/0/49"
+        vlans: [1, 80, 100]
+        native_vlan: 1
+        remote_device: "fw-bldg-d"
+        remote_interface: "ethernet1/2"
+      - interface: "GigabitEthernet1/0/1"
+        vlans: [1, 80]
+        native_vlan: 1
+        remote_device: "sw-bldg-d-wh"
+        remote_interface: "GigabitEthernet1/0/49"
+      # Industrial device connections
+      - interface: "FastEthernet1/0/1"
+        vlans: [100]
+        native_vlan: 100
+        remote_device: "plc-bldg-d-01"
+        remote_interface: "eth0"
+      - interface: "FastEthernet1/0/2"
+        vlans: [100]
+        native_vlan: 100
+        remote_device: "plc-bldg-d-02"
+        remote_interface: "eth0"
+      - interface: "FastEthernet1/0/3"
+        vlans: [100]
+        native_vlan: 100
+        remote_device: "hmi-bldg-d"
+        remote_interface: "eth0"
+      - interface: "FastEthernet1/0/4"
+        vlans: [100]
+        native_vlan: 100
+        remote_device: "scada-bldg-d"
+        remote_interface: "eth0"
+
+    icmp:
+      enabled: true
+      ttl: 64
+
+    snmp_agent:
+      enabled: true
+      community: "enterprise-ro"
+      sysname: "sw-bldg-d-ind"
+      sysdescr: "Cisco IE-4010 Industrial Ethernet Switch"
+      syslocation: "Building D - Factory Floor"
+      walk_file: "device_walks/cisco/C3550_10.250.0.20_v640.walk"
+      add_mibs:
+        # Interface traffic counters (varimib - time-varying)
+        - oid: "1.3.6.1.2.1.2.2.1.10.1"  # ifInOctets.1
+          type: Counter32
+          value: "varimib((100 50000))"  # +50KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.16.1"  # ifOutOctets.1
+          type: Counter32
+          value: "varimib((100 30000))"  # +30KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.10.2"  # ifInOctets.2
+          type: Counter32
+          value: "varimib((100 25000))"  # +25KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.16.2"  # ifOutOctets.2
+          type: Counter32
+          value: "varimib((100 20000))"  # +20KB/sec
+
+  # Building D Warehouse Switch
+  - name: sw-bldg-d-wh
+    type: switch
+    mac: "00:01:07:02:02:01"
+    ip: "10.80.2.1"
+    vlan: 80
+
+    lldp:
+      enabled: true
+      system_name: "sw-bldg-d-wh"
+      system_description: "Cisco IE-4010 - Building D Warehouse Switch"
+
+    cdp:
+      enabled: true
+      platform: "IE-4010-4S24P"
+
+    stp:
+      enabled: true
+      bridge_priority: 32768
+
+    icmp:
+      enabled: true
+      ttl: 64
+
+    snmp_agent:
+      enabled: true
+      community: "enterprise-ro"
+      sysname: "sw-bldg-d-wh"
+      syslocation: "Building D - Warehouse"
+      walk_file: "device_walks/cisco/C3550_10.250.0.20_v640.walk"
+      add_mibs:
+        # Interface traffic counters (varimib - time-varying)
+        - oid: "1.3.6.1.2.1.2.2.1.10.1"  # ifInOctets.1
+          type: Counter32
+          value: "varimib((100 50000))"  # +50KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.16.1"  # ifOutOctets.1
+          type: Counter32
+          value: "varimib((100 30000))"  # +30KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.10.2"  # ifInOctets.2
+          type: Counter32
+          value: "varimib((100 25000))"  # +25KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.16.2"  # ifOutOctets.2
+          type: Counter32
+          value: "varimib((100 20000))"  # +20KB/sec
+
+  # Building D PLC Controller #1 (Modbus TCP)
+  - name: plc-bldg-d-01
+    type: host
+    mac: "00:01:07:03:01:01"
+    ip: "10.80.100.10"
+    vlan: 100
+
+    lldp:
+      enabled: true
+      system_name: "plc-bldg-d-01"
+      system_description: "Siemens S7-1500 PLC - Production Line 1"
+
+    icmp:
+      enabled: true
+      ttl: 64
+
+    snmp_agent:
+      enabled: true
+      community: "enterprise-ro"
+      sysname: "plc-bldg-d-01"
+      syslocation: "Building D - Production Line 1"
+
+  # Building D PLC Controller #2 (Modbus TCP)
+  - name: plc-bldg-d-02
+    type: host
+    mac: "00:01:07:03:02:01"
+    ip: "10.80.100.11"
+    vlan: 100
+
+    lldp:
+      enabled: true
+      system_name: "plc-bldg-d-02"
+      system_description: "Siemens S7-1500 PLC - Production Line 2"
+
+    icmp:
+      enabled: true
+      ttl: 64
+
+    snmp_agent:
+      enabled: true
+      community: "enterprise-ro"
+      sysname: "plc-bldg-d-02"
+      syslocation: "Building D - Production Line 2"
+
+  # Building D HMI Station (OPC UA)
+  - name: hmi-bldg-d
+    type: host
+    mac: "00:01:07:04:01:01"
+    ip: "10.80.100.20"
+    vlan: 100
+
+    lldp:
+      enabled: true
+      system_name: "hmi-bldg-d"
+      system_description: "Siemens HMI Panel - Factory Floor"
+
+    icmp:
+      enabled: true
+      ttl: 64
+
+    snmp_agent:
+      enabled: true
+      community: "enterprise-ro"
+      sysname: "hmi-bldg-d"
+      syslocation: "Building D - Control Room"
+      walk_file: "device_walks/oracle/Linux_Oracle_129.196.196.10.walk"
+
+  # Building D SCADA Server
+  - name: scada-bldg-d
+    type: server
+    mac: "00:01:07:05:01:01"
+    ip: "10.80.100.50"
+    vlan: 100
+
+    lldp:
+      enabled: true
+      system_name: "scada-bldg-d"
+      system_description: "Wonderware SCADA Server"
+
+    icmp:
+      enabled: true
+      ttl: 128
+
+    os_fingerprint:
+      os_type: "windows-server"
+      ttl: 128
+
+    http:
+      enabled: true
+      server_name: "Microsoft-IIS/10.0"
+      endpoints:
+        - path: "/InTouch/"
+          response: "<html><title>Wonderware InTouch</title></html>"
+
+    snmp_agent:
+      enabled: true
+      community: "enterprise-ro"
+      sysname: "scada-bldg-d"
+      syslocation: "Building D - Control Room"
+      walk_file: "device_walks/oracle/Linux_Oracle_129.196.196.10.walk"
+
+  # Building D Office Server
+  - name: server-bldg-d
+    type: server
+    mac: "00:01:07:06:01:01"
+    ip: "10.80.1.50"
+    vlan: 80
+
+    lldp:
+      enabled: true
+      system_name: "server-bldg-d"
+      system_description: "Windows Server 2022 - Manufacturing Office Server"
+
+    icmp:
+      enabled: true
+      ttl: 128
+
+    os_fingerprint:
+      os_type: "windows-server"
+
+    netbios:
+      enabled: true
+      name: "SERVER-BLDG-D"
+      workgroup: "ENTERPRISE"
+      services:
+        - "file_server"
+
+    snmp_agent:
+      enabled: true
+      community: "enterprise-ro"
+      sysname: "server-bldg-d"
+      syslocation: "Building D - Office"
+      walk_file: "device_walks/oracle/Linux_Oracle_129.196.196.10.walk"
+
+  # =========================================================================
+  # WIRELESS INFRASTRUCTURE (Campus-Wide)
+  # =========================================================================
+
+  # Primary Wireless LAN Controller - HQ
+  - name: wlc-primary
+    type: router
+    mac: "00:01:08:01:01:01"
+    ip: "10.10.1.50"
+    vlan: 10
+
+    lldp:
+      enabled: true
+      system_name: "wlc-primary"
+      system_description: "Cisco Catalyst 9800-40 - Primary WLC"
+
+    cdp:
+      enabled: true
+      platform: "C9800-40-K9"
+      software_version: "IOS XE 17.9.3"
+      capabilities: "Router"
+
+    icmp:
+      enabled: true
+      ttl: 64
+
+    http:
+      enabled: true
+      server_name: "Cisco-IOS-XE"
+      endpoints:
+        - path: "/"
+          response: "<html><title>Cisco Wireless LAN Controller</title></html>"
+        - path: "/webui/"
+          response: "<html><title>Cisco WLC Web UI</title></html>"
+
+    snmp_agent:
+      enabled: true
+      community: "enterprise-ro"
+      sysname: "wlc-primary"
+      sysdescr: "Cisco Catalyst 9800-40 Wireless LAN Controller"
+      syslocation: "Data Center - Wireless Infrastructure"
+      walk_file: "device_walks/misc/Controller_10.1.50.13.walk"
+      add_mibs:
+        # Interface traffic counters (varimib - time-varying)
+        - oid: "1.3.6.1.2.1.2.2.1.10.1"  # ifInOctets.1
+          type: Counter32
+          value: "varimib((100 50000))"  # +50KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.16.1"  # ifOutOctets.1
+          type: Counter32
+          value: "varimib((100 30000))"  # +30KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.10.2"  # ifInOctets.2
+          type: Counter32
+          value: "varimib((100 25000))"  # +25KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.16.2"  # ifOutOctets.2
+          type: Counter32
+          value: "varimib((100 20000))"  # +20KB/sec
+      traps:
+        enabled: true
+        receivers: ["10.20.1.100:162"]
+
+  # Secondary WLC (HA)
+  - name: wlc-secondary
+    type: router
+    mac: "00:01:08:01:02:01"
+    ip: "10.10.1.51"
+    vlan: 10
+
+    lldp:
+      enabled: true
+      system_name: "wlc-secondary"
+      system_description: "Cisco Catalyst 9800-40 - Secondary WLC (HA)"
+
+    cdp:
+      enabled: true
+      platform: "C9800-40-K9"
+      software_version: "IOS XE 17.9.3"
+
+    icmp:
+      enabled: true
+      ttl: 64
+
+    snmp_agent:
+      enabled: true
+      community: "enterprise-ro"
+      sysname: "wlc-secondary"
+      syslocation: "Data Center - Wireless Infrastructure"
+      walk_file: "device_walks/misc/Controller_10.1.50.13.walk"
+      add_mibs:
+        # Interface traffic counters (varimib - time-varying)
+        - oid: "1.3.6.1.2.1.2.2.1.10.1"  # ifInOctets.1
+          type: Counter32
+          value: "varimib((100 50000))"  # +50KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.16.1"  # ifOutOctets.1
+          type: Counter32
+          value: "varimib((100 30000))"  # +30KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.10.2"  # ifInOctets.2
+          type: Counter32
+          value: "varimib((100 25000))"  # +25KB/sec
+        - oid: "1.3.6.1.2.1.2.2.1.16.2"  # ifOutOctets.2
+          type: Counter32
+          value: "varimib((100 20000))"  # +20KB/sec
+
+  # Sample Access Points (Building A Floor 1)
+  - name: ap-bldg-a-fl1-01
+    type: ap
+    mac: "00:01:08:02:01:01"
+    ip: "10.250.1.10"
+    vlan: 250
+
+    lldp:
+      enabled: true
+      system_name: "ap-bldg-a-fl1-01"
+      system_description: "Cisco Catalyst 9120AXI - Building A Floor 1"
+      port_description: "GigabitEthernet0"
+
+    cdp:
+      enabled: true
+      platform: "C9120AXI-B"
+      software_version: "17.9.3"
+
+    icmp:
+      enabled: true
+      ttl: 64
+
+    snmp_agent:
+      enabled: true
+      community: "enterprise-ro"
+      sysname: "ap-bldg-a-fl1-01"
+      syslocation: "Building A - Floor 1 - Lobby"
+      walk_file: "device_walks/cisco/C1200_10.250.8.3.walk"
+
+  - name: ap-bldg-a-fl1-02
+    type: ap
+    mac: "00:01:08:02:01:02"
+    ip: "10.250.1.11"
+    vlan: 250
+
+    lldp:
+      enabled: true
+      system_name: "ap-bldg-a-fl1-02"
+      system_description: "Cisco Catalyst 9120AXI - Building A Floor 1"
+
+    cdp:
+      enabled: true
+      platform: "C9120AXI-B"
+
+    icmp:
+      enabled: true
+      ttl: 64
+
+    snmp_agent:
+      enabled: true
+      community: "enterprise-ro"
+      sysname: "ap-bldg-a-fl1-02"
+      syslocation: "Building A - Floor 1 - Conference Room"
+      walk_file: "device_walks/cisco/C1200_10.250.8.3.walk"
+
+  # Sample APs Building B
+  - name: ap-bldg-b-fl1-01
+    type: ap
+    mac: "00:01:08:03:01:01"
+    ip: "10.250.2.10"
+    vlan: 250
+
+    lldp:
+      enabled: true
+      system_name: "ap-bldg-b-fl1-01"
+      system_description: "Cisco Catalyst 9120AXI - Building B Floor 1"
+
+    cdp:
+      enabled: true
+      platform: "C9120AXI-B"
+
+    icmp:
+      enabled: true
+      ttl: 64
+
+    snmp_agent:
+      enabled: true
+      community: "enterprise-ro"
+      sysname: "ap-bldg-b-fl1-01"
+      syslocation: "Building B - Floor 1 - Engineering Lab"
+      walk_file: "device_walks/cisco/C1200_10.250.8.3.walk"
+
+# =========================================================================
+# USAGE GUIDE
+# =========================================================================
+#
+# Run this configuration:
+#   sudo niac en0 examples/seed-compatible-enterprise.yaml
+#
+# With debug output:
+#   sudo niac --debug en0 examples/seed-compatible-enterprise.yaml
+#
+# Interactive mode (inject errors, view stats):
+#   sudo niac --interactive en0 examples/seed-compatible-enterprise.yaml
+#
+# =========================================================================
+# SEED HEALTH CHECK COMPATIBILITY
+# =========================================================================
+#
+# This configuration supports ALL seed health check types:
+#
+# 1. PING/ICMP
+#    ping 10.0.0.1              # WAN Edge
+#    ping 10.20.1.10            # Database server
+#
+# 2. TCP PORT CHECKS
+#    nc -zv 10.20.1.10 3306     # MySQL
+#    nc -zv 10.20.1.11 5432     # PostgreSQL
+#    nc -zv 10.20.1.12 1433     # MSSQL
+#    nc -zv 10.20.1.20 389      # LDAP
+#    nc -zv 10.20.1.20 636      # LDAPS
+#    nc -zv 10.20.1.30 445      # SMB
+#    nc -zv 10.20.1.40 554      # RTSP
+#    nc -zv 10.100.1.20 502     # Modbus
+#    nc -zv 10.100.1.30 4840    # OPC UA
+#    nc -zv 10.200.1.10 104     # DICOM
+#    nc -zv 10.200.1.20 2575    # HL7
+#
+# 3. SNMP
+#    snmpwalk -v2c -c enterprise-ro 10.0.0.1 system
+#    snmpwalk -v2c -c enterprise-ro 10.1.0.1 system
+#    snmpget -v2c -c enterprise-ro 10.20.1.10 sysName.0
+#
+# 4. DNS
+#    dig @10.10.1.10 mysql.enterprise.local
+#    dig @10.10.1.10 ldap.enterprise.local
+#    nslookup monitoring.enterprise.local 10.10.1.10
+#
+# 5. HTTP/HTTPS
+#    curl http://10.20.1.50/api/health
+#    curl http://10.20.1.100/api/status
+#
+# 6. IPERF3 BANDWIDTH
+#    iperf3 -c 10.0.0.1 -t 5                    # WAN (1Gbps)
+#    iperf3 -c 10.0.0.2 -t 5                    # Secondary WAN (500Mbps)
+#    iperf3 -c 10.20.1.200 -t 10                # DC Server (10Gbps)
+#    iperf3 -c 10.20.1.200 -t 10 -R             # Download test
+#    iperf3 -c 10.20.1.200 -t 10 --bidir        # Bidirectional
+#
+# 7. TRACEROUTE
+#    traceroute 10.20.1.10     # Path through network hops
+#
+# 8. DISCOVERY PROTOCOLS
+#    # LLDP neighbors visible on attached switch
+#    # CDP neighbors visible on Cisco equipment
+#
+# =========================================================================
+# NETWORK DEVICE COUNT: 60 devices
+# =========================================================================
+#
+# HQ/CAMPUS:
+#   WAN Edge:         2 routers (primary/secondary ISP)
+#   Core Firewalls:   2 firewalls (Palo Alto PA-5250 HA pair)
+#   Core Routers:     2 routers (Catalyst 9500)
+#   DC Firewall:      1 firewall (Palo Alto PA-3260)
+#   Building A FW:    1 firewall (Palo Alto PA-440)
+#   Building B FW:    1 firewall (Palo Alto PA-440)
+#   Distribution:     2 switches (1 per building)
+#   Access:           5 switches (Bldg A: 3, Bldg B: 2)
+#   Data Center:      1 ToR switch
+#   HQ Servers:      17 servers
+#     - Database:     3 (MySQL, PostgreSQL, MSSQL)
+#     - Directory:    2 (LDAP/AD)
+#     - File:         1 (SMB)
+#     - Streaming:    1 (RTSP)
+#     - Industrial:   3 (SCADA, Modbus, OPC UA)
+#     - Healthcare:   2 (DICOM, HL7)
+#     - DNS/DHCP:     2
+#     - Monitoring:   1
+#     - iPerf3:       1
+#     - Web:          1
+#     - FTP:          1
+#
+# BUILDING C (Remote Branch Office):
+#   WAN Router:       1 (Cisco ISR 4331)
+#   Firewall:         1 (Palo Alto PA-220)
+#   Core Switch:      1
+#   Access Switches:  2 (Floor 1, Floor 2)
+#   WLC:              1 (Catalyst 9800-CL)
+#   File Server:      1
+#
+# BUILDING D (Manufacturing Facility):
+#   WAN Router:       1 (Cisco ISR 4331)
+#   Firewall:         1 (Palo Alto PA-220)
+#   Industrial SW:    1 (Cisco IE-4010)
+#   Warehouse SW:     1
+#   PLCs:             2 (Siemens S7-1500)
+#   HMI:              1
+#   SCADA Server:     1
+#   Office Server:    1
+#
+# WIRELESS INFRASTRUCTURE:
+#   WLCs:             3 (HQ Primary/Secondary + Bldg C)
+#   Access Points:    3 (sample APs shown)
+#
+# FIREWALLS SUMMARY: 7 total
+#   - Core HA Pair (PA-5250 x2)
+#   - Data Center (PA-3260 x1)
+#   - Building A (PA-440 x1)
+#   - Building B (PA-440 x1)
+#   - Building C (PA-220 x1)
+#   - Building D (PA-220 x1)
+#
+# VLANs: 13 (1, 10, 20, 30, 40, 50, 60, 70, 80, 100, 200, 250, 999)
+# Buildings: 4
+#   - Building A: Corporate HQ (3 floors) - On-campus
+#   - Building B: Engineering Center (2 floors) - On-campus
+#   - Building C: Remote Branch Office (2 floors) - WAN
+#   - Building D: Manufacturing Facility (1 floor + warehouse) - WAN

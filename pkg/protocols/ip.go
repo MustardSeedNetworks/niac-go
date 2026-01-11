@@ -71,6 +71,22 @@ func (h *IPHandler) HandlePacket(pkt *Packet) {
 		devices = h.stack.GetDevices().GetAll()
 	}
 
+	// If this is UDP and a device has MapToIP configured, skip TTL handling
+	skipTTL := false
+	if ip.Protocol == IPProtocolUDP {
+		for _, device := range devices {
+			if device.MapToIP != nil {
+				skipTTL = true
+				break
+			}
+		}
+	}
+
+	// Handle TTL timeout (traceroute simulation)
+	if !skipTTL && h.handleTTLTimeout(pkt, ip) {
+		return
+	}
+
 	// Route to layer 4 protocol handler
 	switch ip.Protocol {
 	case IPProtocolICMP:
@@ -84,6 +100,60 @@ func (h *IPHandler) HandlePacket(pkt *Packet) {
 			fmt.Printf("Unhandled IP protocol %d sn=%d\n", ip.Protocol, pkt.SerialNumber)
 		}
 	}
+}
+
+func (h *IPHandler) handleTTLTimeout(pkt *Packet, ipLayer *layers.IPv4) bool {
+	if h.stack == nil || h.stack.icmpHandler == nil {
+		return false
+	}
+	if ipLayer == nil {
+		return false
+	}
+	ttl := int(ipLayer.TTL)
+	device := h.stack.GetDevices().GetDeviceByTTL(ttl)
+	if device == nil {
+		return false
+	}
+
+	srcIP := firstIPv4Address(device)
+	if srcIP == nil || len(device.MACAddress) == 0 {
+		return false
+	}
+
+	// If the TTL device is the destination, ignore.
+	for _, ip := range device.IPAddresses {
+		if ip.Equal(ipLayer.DstIP) {
+			return false
+		}
+	}
+
+	// Skip if destination is in TTL subnet
+	if device.TTLConfig != nil && device.TTLConfig.IP != nil && device.TTLConfig.Mask != nil {
+		if dst := ipLayer.DstIP.To4(); dst != nil && device.TTLConfig.IP.To4() != nil {
+			sameSubnet := true
+			for i := 0; i < 4; i++ {
+				if (dst[i] & device.TTLConfig.Mask[i]) != device.TTLConfig.IP.To4()[i] {
+					sameSubnet = false
+					break
+				}
+			}
+			if sameSubnet {
+				return false
+			}
+		}
+	}
+
+	dstMAC := pkt.GetSourceMAC()
+	if dstMAC == nil {
+		return false
+	}
+
+	if err := h.stack.icmpHandler.SendICMPTimeExceeded(srcIP, ipLayer.SrcIP, device.MACAddress, dstMAC, ipLayer, device); err != nil {
+		return false
+	}
+
+	h.stack.GetDevices().IncrementTTLCount(device)
+	return true
 }
 
 // SendIPPacket sends an IP packet

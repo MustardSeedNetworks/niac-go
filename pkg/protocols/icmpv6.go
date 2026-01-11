@@ -325,26 +325,90 @@ func (h *ICMPv6Handler) sendRouterAdvertisement(device *config.Device, srcIP, ds
 }
 
 func (h *ICMPv6Handler) buildRouterAdvertisementBody(device *config.Device, srcIP net.IP) []byte {
+	raCfg := (*config.Icmpv6RouterAdvertisement)(nil)
+	if device != nil && device.ICMPv6Config != nil {
+		raCfg = device.ICMPv6Config.RouterAdvertisement
+	}
+
 	hopLimit := uint8(64)
 	if device.ICMPv6Config != nil && device.ICMPv6Config.HopLimit > 0 {
 		hopLimit = device.ICMPv6Config.HopLimit
 	}
+	if raCfg != nil && raCfg.CurHopLimit > 0 {
+		hopLimit = uint8(raCfg.CurHopLimit)
+	}
 
 	body := make([]byte, 12)
 	body[0] = hopLimit
-	body[1] = 0 // M/O flags cleared
-	binary.BigEndian.PutUint16(body[2:4], 1800)
-	binary.BigEndian.PutUint32(body[4:8], 0)
-	binary.BigEndian.PutUint32(body[8:12], 0)
 
+	flags := byte(0)
+	if raCfg != nil {
+		if raCfg.Managed != 0 {
+			flags |= 0x80
+		}
+		if raCfg.Other != 0 {
+			flags |= 0x40
+		}
+	}
+	body[1] = flags
+
+	lifetime := uint16(1800)
+	if raCfg != nil && raCfg.Lifetime > 0 {
+		lifetime = uint16(raCfg.Lifetime)
+	}
+	binary.BigEndian.PutUint16(body[2:4], lifetime)
+
+	reachable := uint32(0)
+	retrans := uint32(0)
+	if raCfg != nil {
+		reachable = uint32(raCfg.ReachableTime)
+		retrans = uint32(raCfg.RetransTimer)
+	}
+	binary.BigEndian.PutUint32(body[4:8], reachable)
+	binary.BigEndian.PutUint32(body[8:12], retrans)
+
+	// Source link-layer option
 	body = append(body, ICMPv6OptSourceLinkAddr, 1)
 	body = append(body, device.MACAddress...)
 
+	// MTU option
+	mtuVal := uint32(1500)
+	if raCfg != nil && raCfg.MTU > 0 {
+		mtuVal = uint32(raCfg.MTU)
+	}
 	body = append(body, ICMPv6OptMTU, 1, 0, 0)
 	mtu := make([]byte, 4)
-	binary.BigEndian.PutUint32(mtu, 1500)
+	binary.BigEndian.PutUint32(mtu, mtuVal)
 	body = append(body, mtu...)
 
+	if raCfg != nil && len(raCfg.PrefixInfo) > 0 {
+		for _, p := range raCfg.PrefixInfo {
+			prefix := p.Prefix
+			if prefix == nil || prefix.To16() == nil {
+				continue
+			}
+			body = append(body, ICMPv6OptPrefixInfo, 4)
+			body = append(body, byte(p.PrefixLength))
+			pFlags := byte(0)
+			if p.Onlink != 0 {
+				pFlags |= NDPrefixFlagOnLink
+			}
+			if p.Auto != 0 {
+				pFlags |= NDPrefixFlagAutonomous
+			}
+			body = append(body, pFlags)
+			valid := make([]byte, 4)
+			binary.BigEndian.PutUint32(valid, uint32(p.ValidLifetime))
+			body = append(body, valid...)
+			binary.BigEndian.PutUint32(valid, uint32(p.PreferredLifetime))
+			body = append(body, valid...)
+			body = append(body, []byte{0, 0, 0, 0}...)
+			body = append(body, prefix.To16()...)
+		}
+		return body
+	}
+
+	// Default prefix if none configured
 	prefix := deriveIPv6Prefix(srcIP, 64)
 	body = append(body, ICMPv6OptPrefixInfo, 4)
 	body = append(body, byte(64))
@@ -469,7 +533,10 @@ func (h *ICMPv6Handler) SetDebugLevel(level int) {
 }
 
 func deviceCanAdvertiseIPv6(device *config.Device) bool {
-	if device == nil || device.Type != "router" {
+	if device == nil {
+		return false
+	}
+	if device.ICMPv6Config == nil || device.ICMPv6Config.RouterAdvertisement == nil {
 		return false
 	}
 	return firstIPv6Address(device) != nil

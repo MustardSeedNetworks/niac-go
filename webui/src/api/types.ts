@@ -165,3 +165,158 @@ export interface SimulationRequest {
   config_path?: string;
   config_data?: string;
 }
+
+// Debug Console Types
+export type LogLevel = 'ERROR' | 'WARN' | 'INFO' | 'DEBUG';
+
+export type Protocol = 'ARP' | 'ICMP' | 'DNS' | 'TCP' | 'UDP' | 'SNMP' | 'DHCP' | 'LLDP' | 'CDP' | 'HTTP' | 'HTTPS' | 'SSH' | 'TELNET';
+
+export interface LogEntry {
+  id: string;
+  timestamp: string;
+  level: LogLevel;
+  protocol: Protocol | string;
+  message: string;
+  source?: string;
+  details?: Record<string, unknown>;
+}
+
+// Template Types
+export interface Template {
+  name: string;
+  description: string;
+  device_count: number;
+  type: 'basic' | 'router' | 'switch' | 'access-point' | 'server' | 'complete' | 'custom';
+  tags?: string[];
+  created_at?: string;
+  modified_at?: string;
+}
+
+export interface TemplateContent {
+  name: string;
+  content: string;
+  format: 'yaml' | 'json';
+}
+
+export interface UseTemplateRequest {
+  template_name: string;
+  new_config_name?: string;
+}
+
+export interface UseTemplateResponse {
+  success: boolean;
+  config_path: string;
+  message: string;
+}
+
+// Protocol Debug Level Types
+export type DebugLevel = 'OFF' | 'ERROR' | 'WARN' | 'INFO' | 'DEBUG' | 'TRACE';
+
+export type DebugProtocol =
+  | 'SNMP'
+  | 'LLDP'
+  | 'CDP'
+  | 'STP'
+  | 'LACP'
+  | 'OSPF'
+  | 'BGP'
+  | 'EIGRP'
+  | 'RIP'
+  | 'ISIS'
+  | 'VRRP'
+  | 'HSRP'
+  | 'GLBP'
+  | 'BFD'
+  | 'MPLS'
+  | 'PIM'
+  | 'IGMP'
+  | 'MSDP'
+  | 'NetFlow';
+
+export type ProtocolCategory = 'discovery' | 'switching' | 'routing' | 'redundancy' | 'multicast' | 'monitoring';
+
+export interface ProtocolDebugConfig {
+  protocol: DebugProtocol;
+  level: DebugLevel;
+  category: ProtocolCategory;
+}
+
+export interface ProtocolDebugLevelsResponse {
+  protocols: ProtocolDebugConfig[];
+  default_level: DebugLevel;
+}
+
+export interface UpdateProtocolDebugLevelRequest {
+  protocol: DebugProtocol;
+  level: DebugLevel;
+}
+
+export interface UpdateProtocolDebugLevelsRequest {
+  protocols: UpdateProtocolDebugLevelRequest[];
+}
+
+export interface ResetProtocolDebugLevelsResponse {
+  success: boolean;
+  message: string;
+  protocols: ProtocolDebugConfig[];
+}
+
+export interface UploadTemplateRequest {
+  name: string;
+  description: string;
+  content: string;
+  type?: Template['type'];
+}
+
+export interface UploadTemplateResponse {
+  success: boolean;
+  template: Template;
+  message: string;
+}
+
+// PCAP Analyzer Types
+export interface PcapPacket {
+  id: string;
+  number: number;
+  timestamp: string;
+  sourceIP: string;
+  destIP: string;
+  sourcePort?: number;
+  destPort?: number;
+  protocol: string;
+  length: number;
+  info: string;
+  rawData?: string;
+  headers?: Record<string, unknown>;
+}
+
+export interface PcapAnalysisResult {
+  filename: string;
+  fileSize: number;
+  packets: PcapPacket[];
+  stats: PcapStats;
+}
+
+export interface PcapStats {
+  totalPackets: number;
+  totalBytes: number;
+  timeRange: {
+    start: string;
+    end: string;
+    durationMs: number;
+  };
+  protocols: Record<string, number>;
+  topSources: Array<{ ip: string; count: number }>;
+  topDestinations: Array<{ ip: string; count: number }>;
+}
+
+export interface PcapUploadRequest {
+  filename: string;
+  data: string; // Base64 encoded PCAP data
+}
+
+export interface PcapUploadResponse {
+  success: boolean;
+  analysisId: string;
+  message: string;
+}

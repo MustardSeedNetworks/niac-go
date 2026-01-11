@@ -23,23 +23,33 @@ type Agent struct {
 	mu         sync.RWMutex
 }
 
-// NewAgent creates a new SNMP agent for a device
+// NewAgent creates a new SNMP agent for a device using the device's community.
 func NewAgent(device *config.Device, debugLevel int) *Agent {
+	community := "public"
+	if device != nil && device.SNMPConfig.Community != "" {
+		community = device.SNMPConfig.Community
+	}
+	return NewAgentWithCommunity(device, community, debugLevel)
+}
+
+// NewAgentWithCommunity creates a new SNMP agent for a device with a specific community.
+func NewAgentWithCommunity(device *config.Device, community string, debugLevel int) *Agent {
 	agent := &Agent{
 		device:     device,
 		mib:        NewMIB(),
-		community:  "public",
+		community:  community,
 		startTime:  time.Now(),
 		debugLevel: debugLevel,
 	}
-
-	// Set community from device config if available
-	if device.SNMPConfig.Community != "" {
-		agent.community = device.SNMPConfig.Community
+	if agent.community == "" {
+		agent.community = "public"
 	}
 
 	// Initialize standard MIB-II system objects
 	agent.initializeSystemMIB()
+
+	// Initialize neighbor discovery MIBs (IF-MIB, LLDP-MIB, CDP-MIB)
+	agent.initializeNeighborMIBs()
 
 	return agent
 }

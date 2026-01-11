@@ -42,12 +42,19 @@ const (
 
 // NetBIOS name types (suffix byte)
 const (
-	NBNameWorkstation   = 0x00
-	NBNameMessenger     = 0x03
-	NBNameFileServer    = 0x20
-	NBNameDomainMaster  = 0x1B
-	NBNameMasterBrowser = 0x1D
-	NBNameBrowser       = 0x1E
+	NBNameWorkstation    = 0x00 // Workstation service
+	NBNameMsBrowse       = 0x01 // Master Browser election
+	NBNameMessenger      = 0x03 // Messenger service
+	NBNameRASServer      = 0x06 // RAS Server
+	NBNameDomainMaster   = 0x1B // Domain Master Browser
+	NBNameDomainCtrl     = 0x1C // Domain Controller
+	NBNameMasterBrowser  = 0x1D // Master Browser for subnet
+	NBNameBrowser        = 0x1E // Browser election
+	NBNameNetDDE         = 0x1F // NetDDE server
+	NBNameFileServer     = 0x20 // LANMAN/File server
+	NBNameRASClient      = 0x21 // RAS Client
+	NBNameNetMonAgent    = 0xBE // Network Monitor agent
+	NBNameNetMonUtility  = 0xBF // Network Monitor utility
 )
 
 // NetBIOS Name Service flags
@@ -143,21 +150,14 @@ func (h *NetBIOSHandler) handleNameQuery(pkt *Packet, packet gopacket.Packet, tr
 
 	// Look for matching device
 	var matchedDevice *config.Device
+	var matchedGroup bool
 	targetName := strings.ToUpper(strings.TrimSpace(name))
 
 	for _, device := range devices {
-		deviceName := strings.ToUpper(strings.TrimSpace(device.Name))
-		if deviceName == targetName {
+		if ok, group := matchNetBIOSName(device, targetName, nameType); ok {
 			matchedDevice = device
+			matchedGroup = group
 			break
-		}
-		// Also check sysName in SNMP config
-		if device.SNMPConfig.SysName != "" {
-			sysName := strings.ToUpper(strings.TrimSpace(device.SNMPConfig.SysName))
-			if sysName == targetName {
-				matchedDevice = device
-				break
-			}
 		}
 	}
 
@@ -186,7 +186,7 @@ func (h *NetBIOSHandler) handleNameQuery(pkt *Packet, packet gopacket.Packet, tr
 	}
 
 	// Send positive name query response
-	h.sendNameQueryResponse(pkt, transactionID, name, nameType, deviceIPv4, ipv4.SrcIP, matchedDevice.MACAddress, eth.SrcMAC)
+	h.sendNameQueryResponse(pkt, transactionID, name, nameType, matchedGroup, deviceIPv4, ipv4.SrcIP, matchedDevice.MACAddress, eth.SrcMAC)
 
 	if h.debugLevel >= 2 {
 		fmt.Printf("NetBIOS NS: Sent positive response for '%s' -> %s sn=%d\n", name, deviceIPv4, pkt.SerialNumber)
@@ -194,7 +194,7 @@ func (h *NetBIOSHandler) handleNameQuery(pkt *Packet, packet gopacket.Packet, tr
 }
 
 // sendNameQueryResponse sends a NetBIOS name query response
-func (h *NetBIOSHandler) sendNameQueryResponse(pkt *Packet, transactionID uint16, name string, nameType byte, deviceIP, dstIP net.IP, srcMAC, dstMAC net.HardwareAddr) {
+func (h *NetBIOSHandler) sendNameQueryResponse(pkt *Packet, transactionID uint16, name string, nameType byte, isGroup bool, deviceIP, dstIP net.IP, srcMAC, dstMAC net.HardwareAddr) {
 	// Build NetBIOS Name Service response
 	buf := new(bytes.Buffer)
 
@@ -221,31 +221,26 @@ func (h *NetBIOSHandler) sendNameQueryResponse(pkt *Packet, transactionID uint16
 	_ = binary.Write(buf, binary.BigEndian, uint16(0x0020)) // NB record
 	_ = binary.Write(buf, binary.BigEndian, uint16(0x0001)) // IN class
 
-	// Get TTL from matched device config (default: 300 seconds)
+	// Get TTL and node flags from matched device config (default: 300 seconds)
 	ttl := uint32(300)
 	nodeFlags := uint16(0x0000) // Default: B-node, unique name
-
-	// Find the device to get its NetBIOS config
-	for _, device := range h.stack.GetDevices().GetAll() {
-		if device.MACAddress.String() == srcMAC.String() {
-			if device.NetBIOSConfig != nil {
-				if device.NetBIOSConfig.TTL > 0 {
-					ttl = device.NetBIOSConfig.TTL
-				}
-				// Set node type flags based on config
-				switch device.NetBIOSConfig.NodeType {
-				case "B": // Broadcast
-					nodeFlags = 0x0000
-				case "P": // Peer-to-peer
-					nodeFlags = 0x2000
-				case "M": // Mixed
-					nodeFlags = 0x4000
-				case "H": // Hybrid
-					nodeFlags = 0x6000
-				}
-			}
-			break
+	if matched := h.stack.GetDevices().GetByMAC(srcMAC); matched != nil && matched.NetBIOSConfig != nil {
+		if matched.NetBIOSConfig.TTL > 0 {
+			ttl = matched.NetBIOSConfig.TTL
 		}
+		switch matched.NetBIOSConfig.NodeType {
+		case "B":
+			nodeFlags = 0x0000
+		case "P":
+			nodeFlags = 0x2000
+		case "M":
+			nodeFlags = 0x4000
+		case "H":
+			nodeFlags = 0x6000
+		}
+	}
+	if isGroup {
+		nodeFlags |= 0x8000
 	}
 
 	// TTL
@@ -372,6 +367,98 @@ func (h *NetBIOSHandler) decodeNetBIOSName(data []byte) (string, byte, int) {
 	}
 
 	return name, nameType, offset
+}
+
+func matchNetBIOSName(device *config.Device, targetName string, nameType byte) (bool, bool) {
+	if device == nil {
+		return false, false
+	}
+	if device.NetBIOSConfig != nil {
+		if !device.NetBIOSConfig.Enabled {
+			return false, false
+		}
+		// Check explicit NetBIOS names first
+		if len(device.NetBIOSConfig.Names) > 0 {
+			for _, n := range device.NetBIOSConfig.Names {
+				if strings.EqualFold(strings.TrimSpace(n.Name), targetName) && n.Suffix == nameType {
+					return true, n.Group
+				}
+			}
+		}
+
+		// Derive names from services if explicit list not provided
+		for _, entry := range deriveNetBIOSNames(device) {
+			if strings.EqualFold(strings.TrimSpace(entry.Name), targetName) && entry.Suffix == nameType {
+				return true, entry.Group
+			}
+		}
+	}
+
+	// Fallback to device and sysName (legacy behavior)
+	deviceName := strings.ToUpper(strings.TrimSpace(device.Name))
+	if deviceName == targetName {
+		return true, false
+	}
+	if device.SNMPConfig.SysName != "" {
+		sysName := strings.ToUpper(strings.TrimSpace(device.SNMPConfig.SysName))
+		if sysName == targetName {
+			return true, false
+		}
+	}
+
+	return false, false
+}
+
+type netbiosNameEntry struct {
+	Name   string
+	Suffix byte
+	Group  bool
+}
+
+func deriveNetBIOSNames(device *config.Device) []netbiosNameEntry {
+	if device == nil || device.NetBIOSConfig == nil {
+		return nil
+	}
+	cfg := device.NetBIOSConfig
+	name := cfg.Name
+	if name == "" {
+		name = device.Name
+	}
+	result := make([]netbiosNameEntry, 0)
+	for _, svc := range cfg.Services {
+		switch strings.ToLower(svc) {
+		case "workstation":
+			result = append(result, netbiosNameEntry{Name: name, Suffix: NBNameWorkstation})
+		case "messenger":
+			result = append(result, netbiosNameEntry{Name: name, Suffix: NBNameMessenger})
+		case "fileserver":
+			result = append(result, netbiosNameEntry{Name: name, Suffix: NBNameFileServer})
+		case "domainmaster":
+			result = append(result, netbiosNameEntry{Name: name, Suffix: NBNameDomainMaster, Group: true})
+		case "domaincontroller", "domainctrl":
+			result = append(result, netbiosNameEntry{Name: name, Suffix: NBNameDomainCtrl, Group: true})
+		case "masterbrowser":
+			result = append(result, netbiosNameEntry{Name: name, Suffix: NBNameMasterBrowser, Group: true})
+		case "browser":
+			result = append(result, netbiosNameEntry{Name: name, Suffix: NBNameBrowser, Group: true})
+		case "msbrowse":
+			result = append(result, netbiosNameEntry{Name: "__MSBROWSE__", Suffix: NBNameMsBrowse, Group: true})
+		case "rasserver":
+			result = append(result, netbiosNameEntry{Name: name, Suffix: NBNameRASServer})
+		case "rasclient":
+			result = append(result, netbiosNameEntry{Name: name, Suffix: NBNameRASClient})
+		case "netdde":
+			result = append(result, netbiosNameEntry{Name: name, Suffix: NBNameNetDDE})
+		case "netmonagent", "networkmonitoragent":
+			result = append(result, netbiosNameEntry{Name: name, Suffix: NBNameNetMonAgent})
+		case "netmonutility", "networkmonitorutility":
+			result = append(result, netbiosNameEntry{Name: name, Suffix: NBNameNetMonUtility})
+		}
+	}
+	if cfg.MsBrowse {
+		result = append(result, netbiosNameEntry{Name: "__MSBROWSE__", Suffix: 0x01, Group: true})
+	}
+	return result
 }
 
 // RegisterName registers a NetBIOS name for a device

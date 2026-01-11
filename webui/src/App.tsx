@@ -14,6 +14,11 @@ import {
   SatelliteDish,
   FileCog,
   Zap,
+  Terminal,
+  FileSearch,
+  FileCode,
+  GitCompare,
+  FileBox,
 } from 'lucide-react';
 import {
   PageShell,
@@ -54,6 +59,11 @@ import {
 } from './api/client';
 import type { DeviceSummary, HistoryRecord, NeighborRecord, AlertConfig, ReplayRequest, FileEntry, TopologyGraph, ErrorType, NetworkInterface } from './api/types';
 import { TrafficInjectionPage } from './pages/TrafficInjectionPage';
+import { DebugConsolePage } from './pages/DebugConsolePage';
+import { PacketInspectorPage } from './pages/PacketInspectorPage';
+import { TemplatesPage } from './pages/TemplatesPage';
+import { ConfigDiffPage } from './pages/ConfigDiffPage';
+import { PcapAnalyzerPage } from './pages/PcapAnalyzerPage';
 import './App.css';
 
 type PageConfig = {
@@ -123,6 +133,46 @@ const pages: PageConfig[] = [
     description: 'Inject network errors and replay PCAP traffic for testing and simulation.',
     icon: Zap,
     Component: TrafficInjectionPage,
+  },
+  {
+    path: '/debug',
+    label: 'Debug Console',
+    title: 'Debug Console',
+    description: 'Real-time log streaming and debugging tools for monitoring NIAC operations.',
+    icon: Terminal,
+    Component: DebugConsolePage,
+  },
+  {
+    path: '/packets',
+    label: 'Packet Inspector',
+    title: 'Packet Inspector',
+    description: 'Real-time packet hex dump viewing with protocol filtering and search capabilities.',
+    icon: FileSearch,
+    Component: PacketInspectorPage,
+  },
+  {
+    path: '/templates',
+    label: 'Templates',
+    title: 'Configuration Templates',
+    description: 'Browse and use pre-configured network templates to quickly start simulations.',
+    icon: FileCode,
+    Component: TemplatesPage,
+  },
+  {
+    path: '/config-diff',
+    label: 'Config Diff',
+    title: 'Config Diff & Merge',
+    description: 'Compare and merge YAML configuration files with visual diff and merge controls.',
+    icon: GitCompare,
+    Component: ConfigDiffPage,
+  },
+  {
+    path: '/pcap-analyzer',
+    label: 'PCAP Analyzer',
+    title: 'PCAP Analyzer',
+    description: 'Upload and analyze PCAP files with packet inspection, filtering, and statistics.',
+    icon: FileBox,
+    Component: PcapAnalyzerPage,
   },
 ];
 

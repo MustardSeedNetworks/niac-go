@@ -9,16 +9,22 @@ import (
 
 // DeviceTable manages device lookups by MAC and IP
 type DeviceTable struct {
-	mu    sync.RWMutex
-	byMAC map[string]*config.Device
-	byIP  map[string][]*config.Device
+	mu                sync.RWMutex
+	byMAC             map[string]*config.Device
+	byIP              map[string][]*config.Device
+	ttlDevices        map[int][]*config.Device
+	ttlCounts         map[*config.Device]int
+	forwardingDevices []*config.Device
 }
 
 // NewDeviceTable creates a new device table
 func NewDeviceTable() *DeviceTable {
 	return &DeviceTable{
-		byMAC: make(map[string]*config.Device),
-		byIP:  make(map[string][]*config.Device),
+		byMAC:             make(map[string]*config.Device),
+		byIP:              make(map[string][]*config.Device),
+		ttlDevices:        make(map[int][]*config.Device),
+		ttlCounts:         make(map[*config.Device]int),
+		forwardingDevices: make([]*config.Device, 0),
 	}
 }
 
@@ -28,6 +34,9 @@ func (dt *DeviceTable) Reset() {
 	defer dt.mu.Unlock()
 	dt.byMAC = make(map[string]*config.Device)
 	dt.byIP = make(map[string][]*config.Device)
+	dt.ttlDevices = make(map[int][]*config.Device)
+	dt.ttlCounts = make(map[*config.Device]int)
+	dt.forwardingDevices = make([]*config.Device, 0)
 }
 
 // AddByMAC adds a device indexed by MAC address
@@ -116,4 +125,73 @@ func (dt *DeviceTable) AllDevices() []*config.Device {
 		devices = append(devices, device)
 	}
 	return devices
+}
+
+// RegisterTTL registers a device for TTL timeout handling.
+func (dt *DeviceTable) RegisterTTL(device *config.Device) {
+	if device == nil || device.TTLConfig == nil {
+		return
+	}
+	ttl := device.TTLConfig.TTL
+	if ttl < 1 || ttl > 255 {
+		return
+	}
+	dt.mu.Lock()
+	defer dt.mu.Unlock()
+	dt.ttlDevices[ttl] = append(dt.ttlDevices[ttl], device)
+	if _, ok := dt.ttlCounts[device]; !ok {
+		dt.ttlCounts[device] = 0
+	}
+}
+
+// GetDeviceByTTL returns a device that should respond to a TTL timeout.
+func (dt *DeviceTable) GetDeviceByTTL(ttl int) *config.Device {
+	dt.mu.RLock()
+	devices := dt.ttlDevices[ttl]
+	dt.mu.RUnlock()
+	if len(devices) == 0 {
+		return nil
+	}
+	// Choose device with lowest count
+	var selected *config.Device
+	minCount := 0
+	dt.mu.RLock()
+	for _, dev := range devices {
+		count := dt.ttlCounts[dev]
+		if selected == nil || count < minCount {
+			selected = dev
+			minCount = count
+		}
+	}
+	dt.mu.RUnlock()
+	return selected
+}
+
+// IncrementTTLCount increments the response count for a TTL device.
+func (dt *DeviceTable) IncrementTTLCount(device *config.Device) {
+	if device == nil {
+		return
+	}
+	dt.mu.Lock()
+	dt.ttlCounts[device]++
+	dt.mu.Unlock()
+}
+
+// RegisterForwardingDevice registers a device for FDB table injection.
+func (dt *DeviceTable) RegisterForwardingDevice(device *config.Device) {
+	if device == nil {
+		return
+	}
+	dt.mu.Lock()
+	defer dt.mu.Unlock()
+	dt.forwardingDevices = append(dt.forwardingDevices, device)
+}
+
+// GetForwardingDevices returns forwarding devices.
+func (dt *DeviceTable) GetForwardingDevices() []*config.Device {
+	dt.mu.RLock()
+	defer dt.mu.RUnlock()
+	devs := make([]*config.Device, len(dt.forwardingDevices))
+	copy(devs, dt.forwardingDevices)
+	return devs
 }

@@ -16,6 +16,18 @@ import type {
   RuntimeStatus,
   SimulationStatus,
   SimulationRequest,
+  Template,
+  TemplateContent,
+  UseTemplateRequest,
+  UseTemplateResponse,
+  UploadTemplateRequest,
+  UploadTemplateResponse,
+  ProtocolDebugLevelsResponse,
+  UpdateProtocolDebugLevelsRequest,
+  ResetProtocolDebugLevelsResponse,
+  PcapAnalysisResult,
+  PcapUploadRequest,
+  PcapUploadResponse,
 } from './types';
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? '';
@@ -144,3 +156,60 @@ export const stopSimulation = () =>
   request<{ status: string }>('/api/v1/simulation', {
     method: 'DELETE',
   });
+
+// Template API functions
+export const fetchTemplates = () => request<Template[]>('/api/v1/templates');
+
+export const fetchTemplateContent = (name: string) =>
+  request<TemplateContent>(`/api/v1/templates/${encodeURIComponent(name)}`);
+
+export const applyTemplate = (payload: UseTemplateRequest) =>
+  request<UseTemplateResponse>('/api/v1/templates/use', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+
+export const uploadTemplate = (payload: UploadTemplateRequest) =>
+  request<UploadTemplateResponse>('/api/v1/templates', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+
+export const deleteTemplate = (name: string) =>
+  request<{ success: boolean; message: string }>(
+    `/api/v1/templates/${encodeURIComponent(name)}`,
+    { method: 'DELETE' }
+  );
+
+// Protocol Debug Levels API functions
+export const fetchProtocolDebugLevels = () =>
+  request<ProtocolDebugLevelsResponse>('/api/v1/debug/levels');
+
+export const updateProtocolDebugLevels = (payload: UpdateProtocolDebugLevelsRequest) =>
+  request<ProtocolDebugLevelsResponse>('/api/v1/debug/levels', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+
+export const resetProtocolDebugLevels = () =>
+  request<ResetProtocolDebugLevelsResponse>('/api/v1/debug/levels/reset', {
+    method: 'POST',
+  });
+
+// PCAP Analyzer API functions
+// Note: These are stub implementations - backend endpoint needs to be implemented
+export const uploadPcap = (payload: PcapUploadRequest) =>
+  request<PcapUploadResponse>('/api/v1/pcap/upload', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+
+export const analyzePcap = (analysisId: string) =>
+  request<PcapAnalysisResult>(`/api/v1/pcap/analyze/${encodeURIComponent(analysisId)}`);
+
+export const fetchPcapAnalysis = (analysisId: string) =>
+  request<PcapAnalysisResult>(`/api/v1/pcap/${encodeURIComponent(analysisId)}`);

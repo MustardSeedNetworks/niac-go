@@ -283,13 +283,14 @@ func addSecurityHeaders(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("X-XSS-Protection", "1; mode=block")
 
 	// Content Security Policy - restrict resource loading
+	// Note: connect-src includes ws: and wss: for WebSocket connections
 	w.Header().Set("Content-Security-Policy",
 		"default-src 'self'; "+
 			"script-src 'self' 'unsafe-inline'; "+
 			"style-src 'self' 'unsafe-inline'; "+
 			"img-src 'self' data:; "+
 			"font-src 'self'; "+
-			"connect-src 'self'; "+
+			"connect-src 'self' ws: wss:; "+
 			"object-src 'none'; "+
 			"base-uri 'self'; "+
 			"form-action 'self'")
@@ -672,6 +673,7 @@ type Server struct {
 	startTime     time.Time        // Track server start time for uptime
 	rateLimiter   *RateLimiter     // FEATURE #104: Per-IP rate limiting
 	csrfToken     string           // SECURITY FIX LOW-1: CSRF protection token
+	wsHub         *WSHub           // WebSocket hub for real-time streaming
 }
 
 // generateCSRFToken generates a cryptographically secure random token
@@ -694,6 +696,7 @@ func NewServer(cfg ServerConfig) *Server {
 		startTime:   time.Now(),
 		rateLimiter: NewRateLimiter(DefaultRateLimit, DefaultBurst),
 		csrfToken:   csrfToken,
+		wsHub:       NewWSHub(),
 	}
 }
 
@@ -737,6 +740,14 @@ func (s *Server) Start() error {
 		mux.HandleFunc("/api/v1/simulation", s.recoverMiddleware(s.auth(s.handleSimulation)))
 		mux.HandleFunc("/api/v1/version", s.recoverMiddleware(s.auth(s.handleVersion)))
 		mux.HandleFunc("/api/v1/neighbors", s.recoverMiddleware(s.auth(s.handleNeighbors)))
+		mux.HandleFunc("/api/v1/ws/status", s.recoverMiddleware(s.auth(s.handleWSStatus)))
+
+		// WebSocket endpoints for real-time streaming
+		// Note: WebSocket handlers perform their own upgrade and don't need recoverMiddleware
+		mux.HandleFunc("/ws/packets", s.auth(s.handleWSPackets))
+		mux.HandleFunc("/ws/logs", s.auth(s.handleWSLogs))
+		mux.HandleFunc("/ws/stats", s.auth(s.handleWSStats))
+
 		mux.HandleFunc("/metrics", s.recoverMiddleware(s.handleMetrics))
 		mux.HandleFunc("/", s.recoverMiddleware(s.auth(s.serveSPA())))
 
@@ -789,6 +800,10 @@ func (s *Server) Start() error {
 		}
 	}()
 
+	// Start WebSocket hub for real-time streaming
+	go s.wsHub.Run()
+	log.Printf("[WS] WebSocket hub started")
+
 	s.updateAlertConfig(s.cfg.Alert)
 	return nil
 }
@@ -827,6 +842,12 @@ func (s *Server) Shutdown(ctx context.Context) error {
 		}
 	}
 
+	// Stop WebSocket hub
+	if s.wsHub != nil {
+		s.wsHub.Stop()
+		log.Printf("[WS] WebSocket hub stopped")
+	}
+
 	// Return first error encountered, if any
 	return firstErr
 }
@@ -834,6 +855,11 @@ func (s *Server) Shutdown(ctx context.Context) error {
 // SetDaemonController sets the daemon controller (for daemon mode)
 func (s *Server) SetDaemonController(daemon DaemonController) {
 	s.daemon = daemon
+}
+
+// GetWSHub returns the WebSocket hub for external broadcasting
+func (s *Server) GetWSHub() *WSHub {
+	return s.wsHub
 }
 
 // UpdateSimulation updates the server with simulation components (for daemon mode)
