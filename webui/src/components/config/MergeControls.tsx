@@ -18,6 +18,7 @@ import {
   H2,
 } from '@krisarmstrong/web-foundation';
 import type { MergeDecision, DiffBlock } from './DiffViewer';
+import { YamlViewer } from './YamlEditor';
 
 interface MergeControlsProps {
   diffBlocks: DiffBlock[];
@@ -322,18 +323,14 @@ export const MergePreviewModal: FC<MergePreviewModalProps> = ({
 
         {/* Modal Content */}
         <div className="flex-1 overflow-auto p-6">
-          <div className="rounded-xl border border-white/10 bg-gray-950/70 overflow-hidden">
-            <pre className="p-4 font-mono text-sm text-gray-300 overflow-x-auto whitespace-pre">
-              {content.split('\n').map((line, idx) => (
-                <div key={idx} className="flex">
-                  <span className="w-12 flex-shrink-0 text-right pr-4 text-gray-500 select-none">
-                    {idx + 1}
-                  </span>
-                  <span className="flex-1">{line}</span>
-                </div>
-              ))}
-            </pre>
-          </div>
+          <YamlViewer
+            value={content}
+            height="100%"
+            minHeight="300px"
+            maxHeight="60vh"
+            showLineNumbers={true}
+            showFoldGutter={true}
+          />
         </div>
 
         {/* Modal Footer */}

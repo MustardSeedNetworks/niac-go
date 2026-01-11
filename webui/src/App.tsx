@@ -19,6 +19,7 @@ import {
   FileCode,
   GitCompare,
   FileBox,
+  Wrench,
 } from 'lucide-react';
 import {
   PageShell,
@@ -64,6 +65,8 @@ import { PacketInspectorPage } from './pages/PacketInspectorPage';
 import { TemplatesPage } from './pages/TemplatesPage';
 import { ConfigDiffPage } from './pages/ConfigDiffPage';
 import { PcapAnalyzerPage } from './pages/PcapAnalyzerPage';
+import { DeviceListPage } from './pages/DeviceListPage';
+import { DeviceEditorPage } from './pages/DeviceEditorPage';
 import './App.css';
 
 type PageConfig = {
@@ -100,6 +103,15 @@ const pages: PageConfig[] = [
     description: 'Review YAML-derived devices, SNMP walks, DHCP/DNS personas, and packet playback targets.',
     icon: Server,
     Component: DevicesPage,
+  },
+  {
+    path: '/device-config',
+    label: 'Config Builder',
+    title: 'Visual Config Builder',
+    description: 'Create, edit, and manage device configurations with a visual interface.',
+    icon: Wrench,
+    Component: DeviceListPage,
+    badge: 'New',
   },
   {
     path: '/topology',
@@ -213,6 +225,41 @@ export default function App() {
               }
             />
           ))}
+          {/* Dynamic routes for device editor */}
+          <Route
+            path="/device-config/new"
+            element={
+              <PageTemplate
+                page={{
+                  path: '/device-config/new',
+                  label: 'New Device',
+                  title: 'New Device',
+                  description: 'Create a new network device configuration.',
+                  icon: Wrench,
+                  Component: DeviceEditorPage,
+                }}
+              >
+                <DeviceEditorPage />
+              </PageTemplate>
+            }
+          />
+          <Route
+            path="/device-config/:hostname"
+            element={
+              <PageTemplate
+                page={{
+                  path: '/device-config/:hostname',
+                  label: 'Edit Device',
+                  title: 'Edit Device',
+                  description: 'Edit device configuration settings.',
+                  icon: Wrench,
+                  Component: DeviceEditorPage,
+                }}
+              >
+                <DeviceEditorPage />
+              </PageTemplate>
+            }
+          />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
 

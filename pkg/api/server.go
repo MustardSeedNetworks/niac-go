@@ -729,6 +729,9 @@ func (s *Server) Start() error {
 		mux.HandleFunc("/api/v1/history", s.recoverMiddleware(s.auth(s.handleHistory)))
 		// SECURITY FIX LOW-1: Protect state-changing endpoints with CSRF
 		mux.HandleFunc("/api/v1/config", s.recoverMiddleware(s.auth(s.csrfProtect(s.handleConfig))))
+		mux.HandleFunc("/api/v1/config/devices", s.recoverMiddleware(s.auth(s.csrfProtect(s.handleDevicesV2))))
+		mux.HandleFunc("/api/v1/config/devices/", s.recoverMiddleware(s.auth(s.csrfProtect(s.handleDevicesV2))))
+		mux.HandleFunc("/api/v1/config/schema", s.recoverMiddleware(s.auth(s.handleConfigSchema)))
 		mux.HandleFunc("/api/v1/replay", s.recoverMiddleware(s.auth(s.csrfProtect(s.handleReplay))))
 		mux.HandleFunc("/api/v1/alerts", s.recoverMiddleware(s.auth(s.csrfProtect(s.handleAlerts))))
 		mux.HandleFunc("/api/v1/files", s.recoverMiddleware(s.auth(s.handleFiles)))

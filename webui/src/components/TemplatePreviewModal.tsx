@@ -2,6 +2,7 @@ import { type FC, useEffect, useCallback } from 'react';
 import { X, Copy, Download, FileCode } from 'lucide-react';
 import { Button, Tag, SmallText } from '@krisarmstrong/web-foundation';
 import type { Template, TemplateContent } from '../api/types';
+import { YamlViewer } from './config/YamlEditor';
 
 interface TemplatePreviewModalProps {
   template: Template | null;
@@ -134,9 +135,14 @@ export const TemplatePreviewModal: FC<TemplatePreviewModalProps> = ({
           )}
 
           {content && !loading && !error && (
-            <pre className="overflow-x-auto rounded-xl border border-white/10 bg-gray-950/70 p-4 font-mono text-sm text-gray-300">
-              <code>{content.content}</code>
-            </pre>
+            <YamlViewer
+              value={content.content}
+              height="auto"
+              minHeight="200px"
+              maxHeight="400px"
+              showLineNumbers={true}
+              showFoldGutter={true}
+            />
           )}
         </div>
 

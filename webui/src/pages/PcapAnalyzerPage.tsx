@@ -16,24 +16,8 @@ import { PacketDetails } from '../components/PacketDetails';
 import type { PcapPacket, PcapStats as PcapStatsType, PcapAnalysisResult } from '../api/types';
 import type { Packet } from '../components/PacketList';
 
-/**
- * Convert File to base64 string
- * Used for API upload when backend is implemented
- */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-async function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      // Remove data URL prefix (data:*/*;base64,)
-      const base64 = result.split(',')[1] || result;
-      resolve(base64);
-    };
-    reader.onerror = () => reject(new Error('Failed to read file'));
-    reader.readAsDataURL(file);
-  });
-}
+// TODO: Implement when backend PCAP upload is ready
+// async function fileToBase64(file: File): Promise<string> { ... }
 
 /**
  * Generate unique ID for packets

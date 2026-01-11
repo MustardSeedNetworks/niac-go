@@ -7,6 +7,9 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react()],
+    resolve: {
+      dedupe: ['react', 'react-dom', 'react-router-dom', 'lucide-react'],
+    },
     server: {
       proxy: {
         '/api': {

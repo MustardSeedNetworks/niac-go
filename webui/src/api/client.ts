@@ -28,6 +28,13 @@ import type {
   PcapAnalysisResult,
   PcapUploadRequest,
   PcapUploadResponse,
+  // Device Configuration Types
+  Device,
+  DeviceListResponse,
+  DeviceDetailResponse,
+  DeviceMutationResponse,
+  CloneDeviceRequest,
+  ConfigSchema,
 } from './types';
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? '';
@@ -213,3 +220,70 @@ export const analyzePcap = (analysisId: string) =>
 
 export const fetchPcapAnalysis = (analysisId: string) =>
   request<PcapAnalysisResult>(`/api/v1/pcap/${encodeURIComponent(analysisId)}`);
+
+// ============================================================================
+// Device Configuration API functions
+// ============================================================================
+
+/**
+ * Fetch all devices from the configuration
+ */
+export const fetchConfigDevices = () =>
+  request<DeviceListResponse>('/api/v1/config/devices');
+
+/**
+ * Fetch a single device by hostname
+ */
+export const fetchConfigDevice = (hostname: string) =>
+  request<DeviceDetailResponse>(`/api/v1/config/devices/${encodeURIComponent(hostname)}`);
+
+/**
+ * Create a new device
+ */
+export const createDevice = (device: Device) =>
+  request<DeviceMutationResponse>('/api/v1/config/devices', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(device),
+  });
+
+/**
+ * Update an existing device
+ */
+export const updateDevice = (hostname: string, device: Partial<Device>) =>
+  request<DeviceMutationResponse>(`/api/v1/config/devices/${encodeURIComponent(hostname)}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(device),
+  });
+
+/**
+ * Delete a device
+ */
+export const deleteDevice = (hostname: string) =>
+  request<DeviceMutationResponse>(`/api/v1/config/devices/${encodeURIComponent(hostname)}`, {
+    method: 'DELETE',
+  });
+
+/**
+ * Clone a device with a new hostname
+ */
+export const cloneDevice = (hostname: string, payload: CloneDeviceRequest) =>
+  request<DeviceMutationResponse>(`/api/v1/config/devices/${encodeURIComponent(hostname)}/clone`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+
+/**
+ * Fetch the JSON Schema for device configuration
+ * Used for dynamic form generation
+ */
+export const fetchConfigSchema = () =>
+  request<ConfigSchema>('/api/v1/config/schema');
+
+/**
+ * Fetch available walk files for SNMP configuration
+ */
+export const fetchWalkFiles = () =>
+  request<FileEntry[]>('/api/v1/files?kind=walks');
