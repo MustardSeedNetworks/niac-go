@@ -4,31 +4,32 @@ import (
 	"encoding/binary"
 	"fmt"
 	"net"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/krisarmstrong/niac-go/pkg/config"
 )
 
-// FDP protocol constants
+// FDP protocol constants.
 const (
-	// FDP multicast destination MAC address (01:E0:52:CC:CC:CC)
+	// FDP multicast destination MAC address (01:E0:52:CC:CC:CC).
 	FDPMulticastMAC = "\x01\xE0\x52\xCC\xCC\xCC"
 
 	// FDP uses SNAP encapsulation similar to CDP
-	// EtherType 0x8037 or LLC/SNAP with OUI 00:E0:52
+	// EtherType 0x8037 or LLC/SNAP with OUI 00:E0:52.
 
-	// FDP advertisement interval (default 60 seconds)
+	// FDP advertisement interval (default 60 seconds).
 	FDPAdvertiseInterval = 60 * time.Second
 
-	// FDP holdtime (typically 180 seconds)
+	// FDP holdtime (typically 180 seconds).
 	FDPHoldtime = 180 // seconds
 
-	// FDP version
+	// FDP version.
 	FDPVersion = 1
 )
 
-// FDP TLV Types
+// FDP TLV Types.
 const (
 	FDPTLVTypeDeviceID     = 0x0001
 	FDPTLVTypePort         = 0x0002
@@ -38,21 +39,24 @@ const (
 	FDPTLVTypeIPAddress    = 0x0006
 )
 
-// FDP Capabilities flags
+// FDP Capabilities flags.
 const (
 	FDPCapRouter = 0x01
 	FDPCapSwitch = 0x02
 	FDPCapHost   = 0x04
 )
 
-// FDPHandler handles FDP advertisements
+// Device type string constant for FDP specific types.
+const deviceTypeHost = "host"
+
+// FDPHandler handles FDP advertisements.
 type FDPHandler struct {
 	stack           *Stack
 	stopChan        chan struct{}
 	advertiseTicker *time.Ticker
 }
 
-// NewFDPHandler creates a new FDP handler
+// NewFDPHandler creates a new FDP handler.
 func NewFDPHandler(stack *Stack) *FDPHandler {
 	return &FDPHandler{
 		stack:    stack,
@@ -60,12 +64,12 @@ func NewFDPHandler(stack *Stack) *FDPHandler {
 	}
 }
 
-// Start begins periodic FDP advertisements
+// Start begins periodic FDP advertisements.
 func (h *FDPHandler) Start() {
 	debugLevel := h.stack.GetDebugLevel()
 
 	if debugLevel >= 1 {
-		fmt.Printf("FDP: Starting periodic advertisements (interval: %v)\n", FDPAdvertiseInterval)
+		_, _ = fmt.Fprintf(os.Stdout, "FDP: Starting periodic advertisements (interval: %v)\n", FDPAdvertiseInterval)
 	}
 
 	h.advertiseTicker = time.NewTicker(FDPAdvertiseInterval)
@@ -80,18 +84,19 @@ func (h *FDPHandler) Start() {
 				h.sendAdvertisements()
 			case <-h.stopChan:
 				h.advertiseTicker.Stop()
+
 				return
 			}
 		}
 	}()
 }
 
-// Stop halts FDP advertisements
+// Stop halts FDP advertisements.
 func (h *FDPHandler) Stop() {
 	close(h.stopChan)
 }
 
-// sendAdvertisements sends FDP advertisements for all devices
+// sendAdvertisements sends FDP advertisements for all devices.
 func (h *FDPHandler) sendAdvertisements() {
 	debugLevel := h.stack.GetDebugLevel()
 
@@ -111,15 +116,15 @@ func (h *FDPHandler) sendAdvertisements() {
 		if frame != nil {
 			err := h.sendFrame(device, frame)
 			if err != nil && debugLevel >= 2 {
-				fmt.Printf("FDP: Error sending advertisement for %s: %v\n", device.Name, err)
+				_, _ = fmt.Fprintf(os.Stdout, "FDP: Error sending advertisement for %s: %v\n", device.Name, err)
 			} else if debugLevel >= 3 {
-				fmt.Printf("FDP: Sent advertisement for %s (%d bytes)\n", device.Name, len(frame))
+				_, _ = fmt.Fprintf(os.Stdout, "FDP: Sent advertisement for %s (%d bytes)\n", device.Name, len(frame))
 			}
 		}
 	}
 }
 
-// buildFDPFrame constructs an FDP frame for a device
+// buildFDPFrame constructs an FDP frame for a device.
 func (h *FDPHandler) buildFDPFrame(device *config.Device) []byte {
 	var payload []byte
 
@@ -158,7 +163,7 @@ func (h *FDPHandler) buildFDPFrame(device *config.Device) []byte {
 	return frame
 }
 
-// buildLLCSNAPHeader builds the LLC/SNAP header for FDP
+// buildLLCSNAPHeader builds the LLC/SNAP header for FDP.
 func (h *FDPHandler) buildLLCSNAPHeader() []byte {
 	header := make([]byte, 8)
 
@@ -179,9 +184,10 @@ func (h *FDPHandler) buildLLCSNAPHeader() []byte {
 	return header
 }
 
-// buildDeviceIDTLV builds the Device ID TLV
+// buildDeviceIDTLV builds the Device ID TLV.
 func (h *FDPHandler) buildDeviceIDTLV(device *config.Device) []byte {
 	deviceID := []byte(device.Name)
+
 	length := 4 + len(deviceID) // Type (2) + Length (2) + Value
 	if length > 65535 {
 		length = 65535
@@ -195,7 +201,7 @@ func (h *FDPHandler) buildDeviceIDTLV(device *config.Device) []byte {
 	return tlv
 }
 
-// buildPortTLV builds the Port TLV
+// buildPortTLV builds the Port TLV.
 func (h *FDPHandler) buildPortTLV(device *config.Device) []byte {
 	var portName []byte
 
@@ -222,14 +228,14 @@ func (h *FDPHandler) buildPortTLV(device *config.Device) []byte {
 	return tlv
 }
 
-// buildPlatformTLV builds the Platform TLV
+// buildPlatformTLV builds the Platform TLV.
 func (h *FDPHandler) buildPlatformTLV(device *config.Device) []byte {
 	// Use platform from config if available, otherwise generate default
 	var platform []byte
 	if device.FDPConfig != nil && device.FDPConfig.Platform != "" {
 		platform = []byte(device.FDPConfig.Platform)
 	} else {
-		platform = []byte(fmt.Sprintf("NIAC-Go Simulated %s", device.Type))
+		platform = []byte("NIAC-Go Simulated " + device.Type)
 	}
 
 	length := 4 + len(platform)
@@ -245,15 +251,15 @@ func (h *FDPHandler) buildPlatformTLV(device *config.Device) []byte {
 	return tlv
 }
 
-// buildCapabilitiesTLV builds the Capabilities TLV
+// buildCapabilitiesTLV builds the Capabilities TLV.
 func (h *FDPHandler) buildCapabilitiesTLV(device *config.Device) []byte {
 	// Determine capabilities based on device type
 	var capabilities uint32
 
 	switch device.Type {
-	case "router":
+	case deviceTypeRouter:
 		capabilities = FDPCapRouter | FDPCapSwitch
-	case "switch":
+	case deviceTypeSwitch:
 		capabilities = FDPCapSwitch
 	default:
 		capabilities = FDPCapHost
@@ -269,7 +275,7 @@ func (h *FDPHandler) buildCapabilitiesTLV(device *config.Device) []byte {
 	return tlv
 }
 
-// buildSoftwareTLV builds the Software TLV
+// buildSoftwareTLV builds the Software TLV.
 func (h *FDPHandler) buildSoftwareTLV(device *config.Device) []byte {
 	// Use software version from config if available, otherwise use default
 	var software []byte
@@ -292,7 +298,7 @@ func (h *FDPHandler) buildSoftwareTLV(device *config.Device) []byte {
 	return tlv
 }
 
-// buildIPAddressTLV builds the IP Address TLV
+// buildIPAddressTLV builds the IP Address TLV.
 func (h *FDPHandler) buildIPAddressTLV(device *config.Device) []byte {
 	if len(device.IPAddresses) == 0 {
 		return nil
@@ -321,7 +327,7 @@ func (h *FDPHandler) buildIPAddressTLV(device *config.Device) []byte {
 	return tlv
 }
 
-// calculateChecksum calculates the FDP checksum
+// calculateChecksum calculates the FDP checksum.
 func (h *FDPHandler) calculateChecksum(data []byte) uint16 {
 	// Standard Internet checksum
 	sum := uint32(0)
@@ -345,55 +351,15 @@ func (h *FDPHandler) calculateChecksum(data []byte) uint16 {
 	return ^uint16(sum)
 }
 
-// sendFrame sends an FDP frame
+// sendFrame sends an FDP frame.
 func (h *FDPHandler) sendFrame(device *config.Device, fdpPayload []byte) error {
-	// Build Ethernet header
-	dstMAC, _ := net.ParseMAC(FDPMulticastMAC)
-
-	// FDP uses length field instead of EtherType (802.3 format)
-	payloadLen := len(fdpPayload)
-	if payloadLen > 65535 {
-		payloadLen = 65535
-	}
-	length := uint16(payloadLen) // #nosec G115 -- TLV length limited by protocol specification
-
-	// Build raw Ethernet frame with 802.3 format
-	frame := make([]byte, 14+len(fdpPayload))
-
-	// Destination MAC
-	copy(frame[0:6], dstMAC)
-
-	// Source MAC
-	copy(frame[6:12], device.MACAddress)
-
-	// Length field (instead of EtherType)
-	binary.BigEndian.PutUint16(frame[12:14], length)
-
-	// Payload (LLC/SNAP + FDP)
-	copy(frame[14:], fdpPayload)
-
-	// Get serial number
-	h.stack.mu.Lock()
-	h.stack.serialNumber++
-	serialNum := h.stack.serialNumber
-	h.stack.mu.Unlock()
-
-	// Create and send packet
-	pkt := &Packet{
-		Buffer:       frame,
-		Length:       len(frame),
-		SerialNumber: serialNum,
-		Device:       device,
-	}
-
-	h.stack.Send(pkt)
-
-	return nil
+	return sendDiscoveryFrame(FDPMulticastMAC, device, fdpPayload, h.stack)
 }
 
 // HandlePacket parses inbound FDP frames and records neighbor metadata.
 func (h *FDPHandler) HandlePacket(pkt *Packet) {
 	debugLevel := h.stack.GetDebugLevel()
+
 	payload, ok := ethernetPayload(pkt.Buffer)
 	if !ok || len(payload) < 4 {
 		return
@@ -403,6 +369,7 @@ func (h *FDPHandler) HandlePacket(pkt *Packet) {
 	if len(payload) >= 8 && payload[0] == 0xAA && payload[1] == 0xAA {
 		fdpData = payload[8:]
 	}
+
 	if len(fdpData) < 4 {
 		return
 	}
@@ -412,17 +379,22 @@ func (h *FDPHandler) HandlePacket(pkt *Packet) {
 	cursor := 4
 	limit := len(fdpData)
 
-	var deviceID, portID, platform, software string
-	var mgmtIP net.IP
-	var caps []string
+	var (
+		deviceID, portID, platform, software string
+		mgmtIP                               net.IP
+		caps                                 []string
+	)
 
 	for cursor+4 <= limit {
 		tlvt := binary.BigEndian.Uint16(fdpData[cursor : cursor+2])
+
 		length := int(binary.BigEndian.Uint16(fdpData[cursor+2 : cursor+4]))
 		if length < 4 || cursor+length > limit {
 			break
 		}
+
 		value := fdpData[cursor+4 : cursor+length]
+
 		switch tlvt {
 		case FDPTLVTypeDeviceID:
 			deviceID = strings.TrimSpace(string(value))
@@ -444,6 +416,7 @@ func (h *FDPHandler) HandlePacket(pkt *Packet) {
 				mgmtIP = ip
 			}
 		}
+
 		cursor += length
 	}
 
@@ -452,9 +425,9 @@ func (h *FDPHandler) HandlePacket(pkt *Packet) {
 		return
 	}
 
-	ttlDuration := time.Duration(ttl)
-	if ttlDuration <= 0 {
-		ttlDuration = time.Duration(FDPHoldtime)
+	ttlSeconds := ttl
+	if ttlSeconds <= 0 {
+		ttlSeconds = FDPHoldtime
 	}
 
 	entry := NeighborRecord{
@@ -464,22 +437,24 @@ func (h *FDPHandler) HandlePacket(pkt *Packet) {
 		RemoteChassisID: coalesceStrings(deviceID, platform),
 		RemotePort:      portID,
 		Description:     joinNonEmpty(" / ", platform, software),
-		TTL:             ttlDuration * time.Second,
+		TTL:             time.Duration(ttlSeconds) * time.Second,
 		Capabilities:    caps,
 	}
 	if mgmtIP != nil {
 		entry.ManagementAddress = mgmtIP.String()
 	}
+
 	entry.Capabilities = dedupStrings(entry.Capabilities)
 	if entry.RemoteDevice == "" {
 		entry.RemoteDevice = "unknown-fdp"
 	}
+
 	if entry.RemoteChassisID == "" {
 		entry.RemoteChassisID = entry.RemoteDevice
 	}
 
 	if debugLevel >= 2 {
-		fmt.Printf("FDP: Neighbor %s via %s (local %s)\n", entry.RemoteDevice, entry.RemotePort, entry.LocalDevice)
+		_, _ = fmt.Fprintf(os.Stdout, "FDP: Neighbor %s via %s (local %s)\n", entry.RemoteDevice, entry.RemotePort, entry.LocalDevice)
 	}
 
 	h.stack.recordNeighbor(entry)
@@ -488,13 +463,16 @@ func (h *FDPHandler) HandlePacket(pkt *Packet) {
 func fdpCapabilitiesToStrings(bits uint32) []string {
 	var caps []string
 	if bits&FDPCapRouter != 0 {
-		caps = append(caps, "router")
+		caps = append(caps, deviceTypeRouter)
 	}
+
 	if bits&FDPCapSwitch != 0 {
-		caps = append(caps, "switch")
+		caps = append(caps, deviceTypeSwitch)
 	}
+
 	if bits&FDPCapHost != 0 {
-		caps = append(caps, "host")
+		caps = append(caps, deviceTypeHost)
 	}
+
 	return caps
 }
