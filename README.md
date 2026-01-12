@@ -232,7 +232,7 @@ The upcoming 2.x release introduces a React-based control plane that mirrors eve
 
 ```bash
 # Install once
-cd webui
+cd ui
 npm install
 
 # Run the development server
@@ -242,7 +242,7 @@ npm run dev
 npm run build
 ```
 
-The React app lives in `webui/` with Tailwind CSS, React Router, and the shared component library already wired up. During the v2.0 development cycle it ships alongside the existing CLI/TUI so you can pick whichever entrypoint fits the workflow.
+The React app lives in `ui/` with Tailwind CSS, React Router, and the shared component library already wired up. During the v2.0 development cycle it ships alongside the existing CLI/TUI so you can pick whichever entrypoint fits the workflow.
 
 ### Basic Usage
 
