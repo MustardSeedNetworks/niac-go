@@ -13,7 +13,7 @@ import (
 	"github.com/krisarmstrong/niac-go/pkg/snmp"
 )
 
-// SECURITY FIX #154: Secure path validation for walk files
+// SECURITY FIX #154, #166: Secure path validation for walk files
 // validateWalkFilePath ensures the file path is safe and doesn't traverse outside allowed directories.
 func (s *Server) validateWalkFilePath(filename string) (string, error) {
 	// Empty filename is invalid
@@ -29,21 +29,52 @@ func (s *Server) validateWalkFilePath(filename string) (string, error) {
 		return "", errors.New("filename contains invalid characters")
 	}
 
-	// If path is relative, make it relative to config directory
+	// SECURITY FIX #161: Thread-safe access to ConfigPath
+	// SECURITY FIX #166: Get config directory as the allowed base directory
+	cfgPath := s.configPath()
+	var allowedDir string
+	if cfgPath != "" {
+		allowedDir = filepath.Dir(cfgPath)
+	} else {
+		// If no config path, use current working directory
+		var err error
+		allowedDir, err = os.Getwd()
+		if err != nil {
+			return "", fmt.Errorf("cannot determine allowed directory: %w", err)
+		}
+	}
+
+	// Resolve to absolute path
 	var absPath string
 	if !filepath.IsAbs(cleanPath) {
-		// Get config directory from server config
-		configDir := "."
-		if s.cfg.ConfigPath != "" {
-			configDir = filepath.Dir(s.cfg.ConfigPath)
-		}
-		absPath = filepath.Join(configDir, cleanPath)
+		absPath = filepath.Join(allowedDir, cleanPath)
 	} else {
 		absPath = cleanPath
 	}
 
 	// Clean the absolute path
 	absPath = filepath.Clean(absPath)
+
+	// SECURITY FIX #166: Resolve symlinks to prevent symlink-based traversal attacks
+	realPath, err := filepath.EvalSymlinks(absPath)
+	if err != nil {
+		// If symlink resolution fails, file may not exist
+		if os.IsNotExist(err) {
+			return "", fmt.Errorf("walk file not found: %s", filename)
+		}
+		realPath = absPath
+	}
+
+	// Resolve allowed directory to real path for comparison
+	realAllowedDir, err := filepath.EvalSymlinks(allowedDir)
+	if err != nil {
+		realAllowedDir = allowedDir
+	}
+
+	// SECURITY FIX #166: Verify the file is within the allowed directory (prevent path traversal)
+	if !strings.HasPrefix(realPath, realAllowedDir+string(filepath.Separator)) && realPath != realAllowedDir {
+		return "", fmt.Errorf("access denied: file must be within %s", allowedDir)
+	}
 
 	// Verify the path exists and is a file (not a directory)
 	info, err := os.Stat(absPath)
