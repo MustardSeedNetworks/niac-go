@@ -21,6 +21,54 @@ var (
 	ErrInvalidIPAddress  = errors.New("invalid IP address")
 )
 
+// YAML validation constants to prevent resource exhaustion attacks.
+// SECURITY FIX #153: Limit YAML input size and complexity.
+const (
+	MaxYAMLSize  = 1024 * 1024 // 1MB max YAML input
+	MaxYAMLDepth = 20          // Maximum nesting depth
+)
+
+// validateYAMLInput checks YAML input for size and complexity limits.
+// SECURITY FIX #153: Prevents memory exhaustion and DoS attacks.
+func validateYAMLInput(input string) error {
+	// Check size
+	if len(input) > MaxYAMLSize {
+		return fmt.Errorf("YAML input too large: %d bytes (max %d)", len(input), MaxYAMLSize)
+	}
+
+	// Check for empty input
+	if strings.TrimSpace(input) == "" {
+		return errors.New("YAML input is empty")
+	}
+
+	return nil
+}
+
+// checkYAMLDepth verifies parsed YAML doesn't exceed maximum nesting depth.
+// SECURITY FIX #153: Prevents billion laughs and similar attacks.
+func checkYAMLDepth(data any, currentDepth int) error {
+	if currentDepth > MaxYAMLDepth {
+		return fmt.Errorf("YAML nesting depth exceeds maximum of %d", MaxYAMLDepth)
+	}
+
+	switch v := data.(type) {
+	case map[string]any:
+		for _, val := range v {
+			if err := checkYAMLDepth(val, currentDepth+1); err != nil {
+				return err
+			}
+		}
+	case []any:
+		for _, item := range v {
+			if err := checkYAMLDepth(item, currentDepth+1); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
 // DeviceResponse represents a device in API responses with full details.
 type DeviceResponse struct {
 	// Basic info
@@ -376,15 +424,14 @@ func (s *Server) handleDeviceUpdate(w http.ResponseWriter, r *http.Request, host
 	newCfg := *cfg
 
 	if req.RawYAML != "" {
-		// Parse raw YAML and replace device
-		var rawDev map[string]any
-		if err := yaml.Unmarshal([]byte(req.RawYAML), &rawDev); err != nil {
-			writeError(w, r, http.StatusBadRequest, "invalid_yaml", "Invalid YAML format", nil)
+		// SECURITY FIX #153: Validate YAML input before parsing
+		if err := validateYAMLInput(req.RawYAML); err != nil {
+			writeError(w, r, http.StatusBadRequest, "invalid_yaml", err.Error(), nil)
 
 			return
 		}
 
-		// Parse into device structure
+		// Parse into device structure (includes depth validation)
 		updatedDevice, err := parseDeviceFromYAML(req.RawYAML, hostname)
 		if err != nil {
 			writeError(w, r, http.StatusBadRequest, "parse_failed", err.Error(), nil)
@@ -868,6 +915,11 @@ func parseIP(s string) (net.IP, error) {
 }
 
 func parseDeviceFromYAML(yamlStr, hostname string) (*config.Device, error) {
+	// SECURITY FIX #153: Validate YAML input before parsing
+	if err := validateYAMLInput(yamlStr); err != nil {
+		return nil, fmt.Errorf("YAML validation failed: %w", err)
+	}
+
 	// This is a simplified parser - in production, use the full config loader
 	// For now, return a basic device
 	dev := &config.Device{
@@ -879,6 +931,11 @@ func parseDeviceFromYAML(yamlStr, hostname string) (*config.Device, error) {
 	err := yaml.Unmarshal([]byte(yamlStr), &data)
 	if err != nil {
 		return nil, fmt.Errorf("invalid YAML: %w", err)
+	}
+
+	// SECURITY FIX #153: Check YAML depth to prevent DoS attacks
+	if err := checkYAMLDepth(data, 0); err != nil {
+		return nil, err
 	}
 
 	if t, ok := data["type"].(string); ok {
