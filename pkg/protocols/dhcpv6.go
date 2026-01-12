@@ -982,14 +982,14 @@ func (h *DHCPv6Handler) buildIANAOption(lease *DHCPv6Lease) DHCPv6Option {
 
 	// Build IA Address option
 	iaAddrOpt := h.buildIAAddrOption(lease)
-	ianaData := append(ianaHeader, h.serializeOption(iaAddrOpt)...)
+	ianaHeader = append(ianaHeader, h.serializeOption(iaAddrOpt)...)
 
-	ianaDataLen := min(len(ianaData), 65535)
+	ianaDataLen := min(len(ianaHeader), 65535)
 
 	return DHCPv6Option{
 		Code:   DHCPv6OptIANA,
 		Length: uint16(ianaDataLen), // #nosec G115 -- ianaDataLen capped at 65535 above
-		Data:   ianaData,
+		Data:   ianaHeader,
 	}
 }
 

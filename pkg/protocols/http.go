@@ -90,7 +90,7 @@ func parseHTTPRequest(payload []byte) (*HTTPRequest, error) {
 
 	// Parse headers
 	// SECURITY FIX MEDIUM-3: Limit number of headers to prevent resource exhaustion
-	const MaxHeaders = 100
+	const maxHeaderCount = 100
 
 	headerCount := 0
 
@@ -114,7 +114,7 @@ func parseHTTPRequest(payload []byte) (*HTTPRequest, error) {
 		headerParts := strings.SplitN(line, ":", 2)
 		if len(headerParts) == 2 {
 			// Check header limit to prevent header bomb attacks
-			if headerCount >= MaxHeaders {
+			if headerCount >= maxHeaderCount {
 				// Silently ignore excessive headers
 				break
 			}

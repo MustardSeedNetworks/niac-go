@@ -138,6 +138,7 @@ func runAnalyze(cmd *cobra.Command, args []string) error {
 	}
 }
 
+//nolint:gocognit // SNMP walk parsing requires complex pattern matching
 func parseWalkFile(filename string) (*WalkAnalysis, error) {
 	// Validate file path
 	cleanPath := filepath.Clean(filename)

@@ -52,11 +52,9 @@ func (h *ICMPHandler) HandlePacket(pkt *Packet, ipLayer *layers.IPv4, devices []
 		h.handleAddressMaskRequest(pkt, ipLayer, icmp)
 	} else if icmp.TypeCode.Type() == layers.ICMPv4TypeRouterSolicitation {
 		h.handleRouterSolicitation(pkt, ipLayer, icmp)
-	} else {
-		if debugLevel >= 3 {
-			_, _ = fmt.Fprintf(os.Stdout, "ICMP packet type=%d code=%d sn=%d\n",
-				icmp.TypeCode.Type(), icmp.TypeCode.Code(), pkt.SerialNumber)
-		}
+	} else if debugLevel >= 3 {
+		_, _ = fmt.Fprintf(os.Stdout, "ICMP packet type=%d code=%d sn=%d\n",
+			icmp.TypeCode.Type(), icmp.TypeCode.Code(), pkt.SerialNumber)
 	}
 }
 
@@ -269,7 +267,7 @@ func (h *ICMPHandler) SendICMPTimeExceeded(
 		origPayload = origPayload[:8]
 	}
 
-	payload := append(origHeader, origPayload...)
+	origHeader = append(origHeader, origPayload...)
 
 	icmpLayer := &layers.ICMPv4{
 		TypeCode: layers.CreateICMPv4TypeCode(layers.ICMPv4TypeTimeExceeded, 0),
@@ -296,7 +294,7 @@ func (h *ICMPHandler) SendICMPTimeExceeded(
 		FixLengths:       true,
 		ComputeChecksums: true,
 	}
-	err := gopacket.SerializeLayers(buf, opts, eth, ipLayer, icmpLayer, gopacket.Payload(payload))
+	err := gopacket.SerializeLayers(buf, opts, eth, ipLayer, icmpLayer, gopacket.Payload(origHeader))
 	if err != nil {
 		return fmt.Errorf("error serializing ICMP time exceeded: %w", err)
 	}

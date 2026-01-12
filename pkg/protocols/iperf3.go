@@ -347,14 +347,11 @@ func (h *IPerf3Handler) handleParamExchange(
 	}
 
 	// Handle single-byte state messages
-	if len(payload) == 1 {
-		switch int8(payload[0]) {
-		case iperf3MsgTestStart:
-			session.State = iperf3StateTestStart
-			session.StartTime = time.Now()
+	if len(payload) == 1 && int8(payload[0]) == iperf3MsgTestStart {
+		session.State = iperf3StateTestStart
+		session.StartTime = time.Now()
 
-			return
-		}
+		return
 	}
 
 	var params iperf3TestParams

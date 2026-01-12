@@ -1111,7 +1111,7 @@ func (s *Server) Shutdown(ctx context.Context) error {
 		if err != nil {
 			slog.Error("Error shutting down metrics server", "error", err)
 
-			if firstErr == nil {
+			if firstErr == nil { //nolint:govet // nilness: intentionally checking nil for first error capture
 				firstErr = err
 			}
 		}

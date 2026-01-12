@@ -389,6 +389,8 @@ func TestDefineLegacyFlags(t *testing.T) {
 }
 
 // TestLegacyFlags_AllFieldsPresent tests that legacyFlags struct has all expected fields.
+//
+//nolint:govet // unusedwrite: intentional writes to verify struct field existence
 func TestLegacyFlags_AllFieldsPresent(t *testing.T) {
 	flags := &legacyFlags{}
 	_ = flags // Use blank identifier to avoid unused variable error

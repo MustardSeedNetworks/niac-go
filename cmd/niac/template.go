@@ -182,6 +182,7 @@ func runTemplateUse(cmd *cobra.Command, args []string) {
 	fmt.Printf("  sudo niac interactive en0 %s\n", outputFile)
 }
 
+//nolint:gocognit // Template application involves interactive prompts
 func runTemplateApply(cmd *cobra.Command, args []string) {
 	templateName := args[0]
 

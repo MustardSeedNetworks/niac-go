@@ -328,6 +328,7 @@ func selectProtocols(reader *bufio.Reader, devType string) map[string]protocolCo
 	return protocols
 }
 
+//nolint:gocognit // YAML generation requires handling many device fields
 func generateYAML(cfg *generatedConfig) string {
 	var sb strings.Builder
 

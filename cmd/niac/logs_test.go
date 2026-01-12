@@ -131,6 +131,7 @@ func TestLogLevelValidation(t *testing.T) {
 	}
 }
 
+//nolint:govet // unusedwrite: false positive, fields are read in assertions
 func TestOutputLogJSON(t *testing.T) {
 	log := ipc.LogEntry{
 		Timestamp: time.Date(2024, 1, 15, 10, 30, 0, 0, time.UTC),
@@ -195,6 +196,7 @@ func TestLogEntryFields(t *testing.T) {
 	}
 
 	// Test full log entry
+	//nolint:govet // unusedwrite: false positive, fields are read in assertions
 	fullLog := ipc.LogEntry{
 		Timestamp: now,
 		Level:     ipc.LogLevelError,

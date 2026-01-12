@@ -1008,10 +1008,10 @@ func (h *DNSHandler) buildNBSTATResponse(device *config.Device, id uint16, q lay
 	answer = append(answer, make([]byte, 40)...)
 
 	// Assemble full payload
-	payload := append(header, question...)
-	payload = append(payload, answer...)
+	header = append(header, question...)
+	header = append(header, answer...)
 
-	return payload, nil
+	return header, nil
 }
 
 func encodeDNSName(name []byte) []byte {

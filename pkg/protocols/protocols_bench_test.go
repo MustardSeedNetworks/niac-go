@@ -471,6 +471,8 @@ func BenchmarkSNMPGetBulkRequest(b *testing.B) {
 }
 
 // BenchmarkDNSQueryProcessing benchmarks processing DNS queries.
+//
+//nolint:govet // unusedwrite: field is used in benchmark loop
 func BenchmarkDNSQueryProcessing(b *testing.B) {
 	// Configure DNS records
 	device := &config.Device{

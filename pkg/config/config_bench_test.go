@@ -137,10 +137,12 @@ devices:
 	b.ResetTimer()
 
 	for b.Loop() {
-		// Simple device iteration
+		// Simple device iteration - counting devices simulates lookup
+		count := 0
 		for range cfg.Devices {
-			// Simulate lookup work
+			count++
 		}
+		_ = count
 	}
 }
 

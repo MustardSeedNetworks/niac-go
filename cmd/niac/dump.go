@@ -169,6 +169,7 @@ func printPacketsHexDump(packets []ipc.PacketData) {
 }
 
 // formatHexDump formats binary data as a hex dump (xxd-style).
+//nolint:gocognit // Hex dump formatting requires byte-by-byte processing
 func formatHexDump(data []byte) string {
 	if len(data) == 0 {
 		return ""

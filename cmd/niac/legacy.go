@@ -75,6 +75,7 @@ type legacyFlags struct {
 }
 
 // defineLegacyFlags defines all command-line flags for legacy mode.
+//nolint:funlen // Flag definitions are declarative and straightforward
 func defineLegacyFlags(flags *legacyFlags) {
 	// Core flags
 	flag.IntVar(&flags.debugLevel, "d", 1, "Debug level (0-3)")

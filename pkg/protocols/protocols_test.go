@@ -234,6 +234,7 @@ func TestDeviceTableMultiple(t *testing.T) {
 	}
 }
 
+//nolint:govet // unusedwrite: false positive, ARPRequests field is being tested for concurrent access
 func TestStatistics(t *testing.T) {
 	stats := &Statistics{}
 

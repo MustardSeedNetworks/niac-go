@@ -307,13 +307,13 @@ func (h *ICMPv6Handler) sendNeighborAdvertisement(device *config.Device, dstIP n
 
 	// Option: Target Link-Layer Address
 	// Type(1) | Length(1) | Link-Layer Address(6)
-	payload := append(payloadHeader, ICMPv6OptTargetLinkAddr) // Type
-	payload = append(payload, 1)                              // Length (in units of 8 bytes)
-	payload = append(payload, device.MACAddress...)           // MAC address (6 bytes)
+	payloadHeader = append(payloadHeader, ICMPv6OptTargetLinkAddr) // Type
+	payloadHeader = append(payloadHeader, 1)                       // Length (in units of 8 bytes)
+	payloadHeader = append(payloadHeader, device.MACAddress...)    // MAC address (6 bytes)
 
 	// Calculate ICMPv6 checksum
-	checksum := CalculateIPv6Checksum(device.IPAddresses[0], dstIP, IPv6NextHeaderICMPv6, payload)
-	binary.BigEndian.PutUint16(payload[2:4], checksum)
+	checksum := CalculateIPv6Checksum(device.IPAddresses[0], dstIP, IPv6NextHeaderICMPv6, payloadHeader)
+	binary.BigEndian.PutUint16(payloadHeader[2:4], checksum)
 
 	// Build ICMPv6 layer
 	icmpv6 := &layers.ICMPv6{
@@ -327,7 +327,7 @@ func (h *ICMPv6Handler) sendNeighborAdvertisement(device *config.Device, dstIP n
 		device.MACAddress,
 		dstMAC,
 		icmpv6,
-		payload[4:], // Skip type, code, checksum
+		payloadHeader[4:], // Skip type, code, checksum
 	)
 }
 
@@ -456,8 +456,8 @@ func (h *ICMPv6Handler) buildRouterAdvertisementBody(device *config.Device, srcI
 	binary.BigEndian.PutUint32(bodyHeader[8:12], retrans)
 
 	// Source link-layer option
-	body := append(bodyHeader, ICMPv6OptSourceLinkAddr, 1)
-	body = append(body, device.MACAddress...)
+	bodyHeader = append(bodyHeader, ICMPv6OptSourceLinkAddr, 1)
+	bodyHeader = append(bodyHeader, device.MACAddress...)
 
 	// MTU option
 	mtuVal := uint32(1500)
@@ -465,10 +465,10 @@ func (h *ICMPv6Handler) buildRouterAdvertisementBody(device *config.Device, srcI
 		mtuVal = uint32(raCfg.MTU) //nolint:gosec // G115: MTU bounded by network standards
 	}
 
-	body = append(body, ICMPv6OptMTU, 1, 0, 0)
+	bodyHeader = append(bodyHeader, ICMPv6OptMTU, 1, 0, 0)
 	mtu := make([]byte, 4)
 	binary.BigEndian.PutUint32(mtu, mtuVal)
-	body = append(body, mtu...)
+	bodyHeader = append(bodyHeader, mtu...)
 
 	if raCfg != nil && len(raCfg.PrefixInfo) > 0 {
 		for _, p := range raCfg.PrefixInfo {
@@ -477,8 +477,8 @@ func (h *ICMPv6Handler) buildRouterAdvertisementBody(device *config.Device, srcI
 				continue
 			}
 
-			body = append(body, ICMPv6OptPrefixInfo, 4)
-			body = append(body, byte(p.PrefixLength))
+			bodyHeader = append(bodyHeader, ICMPv6OptPrefixInfo, 4)
+			bodyHeader = append(bodyHeader, byte(p.PrefixLength))
 
 			pFlags := byte(0)
 			if p.Onlink != 0 {
@@ -489,41 +489,41 @@ func (h *ICMPv6Handler) buildRouterAdvertisementBody(device *config.Device, srcI
 				pFlags |= NDPrefixFlagAutonomous
 			}
 
-			body = append(body, pFlags)
+			bodyHeader = append(bodyHeader, pFlags)
 			valid := make([]byte, 4)
 			// Safe conversion: IPv6 RA lifetimes are bounded by protocol
 			binary.BigEndian.PutUint32(
 				valid,
 				uint32(p.ValidLifetime), //nolint:gosec // G115: bounded by RA protocol
 			)
-			body = append(body, valid...)
+			bodyHeader = append(bodyHeader, valid...)
 			binary.BigEndian.PutUint32(
 				valid,
 				uint32(p.PreferredLifetime), //nolint:gosec // G115: bounded by RA protocol
 			)
-			body = append(body, valid...)
-			body = append(body, []byte{0, 0, 0, 0}...)
-			body = append(body, prefix.To16()...)
+			bodyHeader = append(bodyHeader, valid...)
+			bodyHeader = append(bodyHeader, []byte{0, 0, 0, 0}...)
+			bodyHeader = append(bodyHeader, prefix.To16()...)
 		}
 
-		return body
+		return bodyHeader
 	}
 
 	// Default prefix if none configured
 	prefix := deriveIPv6Prefix(srcIP, 64)
 
-	body = append(body, ICMPv6OptPrefixInfo, 4)
-	body = append(body, byte(64))
-	body = append(body, NDPrefixFlagOnLink|NDPrefixFlagAutonomous)
+	bodyHeader = append(bodyHeader, ICMPv6OptPrefixInfo, 4)
+	bodyHeader = append(bodyHeader, byte(64))
+	bodyHeader = append(bodyHeader, NDPrefixFlagOnLink|NDPrefixFlagAutonomous)
 	valid := make([]byte, 4)
 	binary.BigEndian.PutUint32(valid, 2592000)
-	body = append(body, valid...)
+	bodyHeader = append(bodyHeader, valid...)
 	binary.BigEndian.PutUint32(valid, 604800)
-	body = append(body, valid...)
-	body = append(body, []byte{0, 0, 0, 0}...)
-	body = append(body, prefix.To16()...)
+	bodyHeader = append(bodyHeader, valid...)
+	bodyHeader = append(bodyHeader, []byte{0, 0, 0, 0}...)
+	bodyHeader = append(bodyHeader, prefix.To16()...)
 
-	return body
+	return bodyHeader
 }
 
 // sendICMPv6Packet sends an ICMPv6 packet.

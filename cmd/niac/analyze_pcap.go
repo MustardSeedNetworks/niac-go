@@ -59,6 +59,7 @@ func runAnalyzePcap(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+//nolint:gocognit // PCAP parsing requires handling many packet types
 func summarizePCAP(filename string) (*pcapSummary, error) {
 	handle, err := pcap.OpenOffline(filename)
 	if err != nil {

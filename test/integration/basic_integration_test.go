@@ -148,6 +148,8 @@ func TestIntegration_SNMPAgentOperations(t *testing.T) {
 }
 
 // TestIntegration_ProtocolTable tests device table operations.
+//
+//nolint:govet // unusedwrite: false positive, fields are read in assertions
 func TestIntegration_ProtocolTable(t *testing.T) {
 	// Create multiple devices
 	mac1, _ := net.ParseMAC("00:11:22:33:44:55")

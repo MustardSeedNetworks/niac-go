@@ -190,6 +190,7 @@ func printVersion() {
 	fmt.Println("Go rewrite by Kris Armstrong (2025)")
 }
 
+//nolint:funlen // Usage text is declarative documentation
 func printUsage() {
 	fmt.Println("USAGE:")
 	fmt.Println("  niac [OPTIONS] <interface> <config_file>")
@@ -525,6 +526,7 @@ func initializeCaptureEngine(interfaceName string, debugLevel int) (*capture.Eng
 }
 
 // configureServiceHandlers configures DHCP and DNS service handlers
+//nolint:gocognit // Service handler configuration involves many protocol options
 func configureServiceHandlers(stack *protocols.Stack, cfg *config.Config, debugLevel int) (dhcpCount, dnsCount int) {
 	for _, device := range cfg.Devices {
 		// Configure DHCP if present
@@ -629,6 +631,7 @@ func printStartupSummary(cfg *config.Config, debugLevel int) {
 }
 
 // runSimulationLoop runs the main simulation loop with signal handling and stats
+//nolint:gocognit // Main event loop handles multiple signal types
 func runSimulationLoop(stack *protocols.Stack, debugLevel int, startTime time.Time, reloadConfig func() (*config.Config, error)) error {
 	// Setup signal handler for graceful shutdown
 	sigChan := make(chan os.Signal, 1)

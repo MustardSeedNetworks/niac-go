@@ -237,10 +237,8 @@ func TestLookupHost(t *testing.T) {
 				if len(ips) != tt.expectedCount {
 					t.Errorf("Expected %d IPs, got %d", tt.expectedCount, len(ips))
 				}
-			} else {
-				if ips != nil {
-					t.Errorf("Expected nil for hostname %s, got %v", tt.hostname, ips)
-				}
+			} else if ips != nil {
+				t.Errorf("Expected nil for hostname %s, got %v", tt.hostname, ips)
 			}
 		})
 	}

@@ -363,7 +363,7 @@ func TestPanicRecovery_NilPointerPanic(t *testing.T) {
 	panicHandler := func(w http.ResponseWriter, r *http.Request) {
 		var ptr *int
 
-		_ = *ptr // This will panic
+		_ = *ptr //nolint:govet // nilness: intentional nil dereference to test panic recovery
 	}
 
 	req := httptest.NewRequest(http.MethodGet, "/test", nil)

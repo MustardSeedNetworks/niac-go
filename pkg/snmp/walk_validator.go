@@ -220,19 +220,16 @@ func validateOID(lineNum int, oid, originalLine string) []ValidationIssue {
 			}
 		}
 	} else if strings.Contains(oid, "::") {
-		// Named OID like SNMPv2-MIB::sysDescr.0
-		// This is valid format
-	} else {
+		// Named OID like SNMPv2-MIB::sysDescr.0 - valid format, no action needed
+	} else if !strings.Contains(oid, ".") && !strings.Contains(oid, "::") {
 		// Check if it looks like a malformed OID
-		if !strings.Contains(oid, ".") && !strings.Contains(oid, "::") {
-			issues = append(issues, ValidationIssue{
-				Line:     lineNum,
-				Severity: "warning",
-				Message:  "OID format is unusual - expected numeric (.1.3.6...) or named (MIB::name) format",
-				Original: originalLine,
-				AutoFix:  false,
-			})
-		}
+		issues = append(issues, ValidationIssue{
+			Line:     lineNum,
+			Severity: "warning",
+			Message:  "OID format is unusual - expected numeric (.1.3.6...) or named (MIB::name) format",
+			Original: originalLine,
+			AutoFix:  false,
+		})
 	}
 
 	return issues

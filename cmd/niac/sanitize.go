@@ -567,6 +567,7 @@ func saveMapping(filename string, mapping *SanitizationMapping) error {
 
 // validateFilePath validates file paths to prevent path traversal attacks
 // Fix #67: Input validation.
+//nolint:gocognit // Path validation requires multiple security checks
 func validateFilePath(path string, allowCreate bool) error {
 	if path == "" {
 		return errors.New("empty path")

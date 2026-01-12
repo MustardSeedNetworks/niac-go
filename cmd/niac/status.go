@@ -62,6 +62,7 @@ func init() {
 	statusCmd.Flags().StringVar(&statusOptions.socketPath, "socket", "", "Path to IPC socket (default: /tmp/niac.sock)")
 }
 
+//nolint:gocognit // Status display aggregates multiple data sources
 func runStatus(cmd *cobra.Command, args []string) {
 	// Determine socket path
 	socketPath := statusOptions.socketPath

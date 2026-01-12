@@ -155,9 +155,9 @@ func (h *FDPHandler) buildFDPFrame(device *config.Device) []byte {
 	llcSnap := h.buildLLCSNAPHeader()
 
 	// Combine LLC/SNAP + FDP payload
-	frame := append(llcSnap, payload...)
+	llcSnap = append(llcSnap, payload...)
 
-	return frame
+	return llcSnap
 }
 
 // buildLLCSNAPHeader builds the LLC/SNAP header for FDP.
