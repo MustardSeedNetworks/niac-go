@@ -43,9 +43,9 @@ jobs:
         run: go mod verify
 
       - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v7
+        uses: golangci/golangci-lint-action@v9
         with:
-          version: v2.1.6
+          version: v2.7.2
           args: --timeout=5m
 
       - name: Run tests
@@ -129,7 +129,7 @@ jobs:
           govulncheck ./...
 
       - name: Run gosec
-        uses: securego/gosec@master
+        uses: securego/gosec@v2.22.11
         with:
           args: "-fmt sarif -out gosec-results.sarif ./..."
 
