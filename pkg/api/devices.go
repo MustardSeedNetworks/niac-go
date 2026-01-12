@@ -1,4 +1,3 @@
-// Package api provides device CRUD endpoints for the WebUI config builder
 package api
 
 import (
@@ -10,9 +9,8 @@ import (
 	"net/http"
 	"strings"
 
-	"gopkg.in/yaml.v3"
-
 	"github.com/krisarmstrong/niac-go/pkg/config"
+	"gopkg.in/yaml.v3"
 )
 
 // Sentinel errors for API devices.
@@ -54,13 +52,15 @@ func checkYAMLDepth(data any, currentDepth int) error {
 	switch v := data.(type) {
 	case map[string]any:
 		for _, val := range v {
-			if err := checkYAMLDepth(val, currentDepth+1); err != nil {
+			err := checkYAMLDepth(val, currentDepth+1)
+			if err != nil {
 				return err
 			}
 		}
 	case []any:
 		for _, item := range v {
-			if err := checkYAMLDepth(item, currentDepth+1); err != nil {
+			err := checkYAMLDepth(item, currentDepth+1)
+			if err != nil {
 				return err
 			}
 		}
@@ -1026,7 +1026,11 @@ func serializeDeviceToYAML(dev *config.Device) ([]byte, error) {
 		data["snmp_agent"] = snmp
 	}
 
-	return yaml.Marshal(data)
+	yamlData, err := yaml.Marshal(data)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal device YAML: %w", err)
+	}
+	return yamlData, nil
 }
 
 func serializeConfigToYAML(cfg *config.Config) (string, error) {
@@ -1048,7 +1052,7 @@ func serializeConfigToYAML(cfg *config.Config) (string, error) {
 
 	yamlBytes, err := yaml.Marshal(data)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to marshal config YAML: %w", err)
 	}
 
 	return string(yamlBytes), nil

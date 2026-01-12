@@ -47,13 +47,12 @@ import (
 	"sync"
 	"time"
 
-	"golang.org/x/time/rate"
-
 	"github.com/krisarmstrong/niac-go/pkg/capture"
 	"github.com/krisarmstrong/niac-go/pkg/config"
 	niacerrors "github.com/krisarmstrong/niac-go/pkg/errors"
 	"github.com/krisarmstrong/niac-go/pkg/protocols"
 	"github.com/krisarmstrong/niac-go/pkg/storage"
+	"golang.org/x/time/rate"
 )
 
 const (
@@ -74,13 +73,13 @@ const (
 	DefaultBurst = 200
 
 	// SECURITY FIX #156: Per-endpoint rate limits for sensitive operations
-	// Upload endpoints: stricter limits to prevent abuse
+	// Upload endpoints: stricter limits to prevent abuse.
 	UploadRateLimit = 5  // 5 requests per second
 	UploadBurst     = 10 // Burst of 10
-	// Write operations: moderate limits
+	// Write operations: moderate limits.
 	WriteRateLimit = 20 // 20 requests per second
 	WriteBurst     = 40 // Burst of 40
-	// Walk file operations: moderate limits
+	// Walk file operations: moderate limits.
 	WalkRateLimit = 10 // 10 requests per second
 	WalkBurst     = 20 // Burst of 20
 
@@ -454,7 +453,8 @@ func validateAlertConfig(cfg AlertConfig) []ErrorDetail {
 			})
 		}
 		// SSRF protection: check for internal/private addresses
-		if err := validateWebhookURLSSRF(cfg.WebhookURL); err != nil {
+		err := validateWebhookURLSSRF(cfg.WebhookURL)
+		if err != nil {
 			errors = append(errors, ErrorDetail{
 				Field: "webhook_url",
 				Issue: err.Error(),
@@ -472,13 +472,13 @@ func validateWebhookURLSSRF(urlStr string) error {
 	// Parse the URL
 	parsedURL, err := url.Parse(urlStr)
 	if err != nil {
-		return fmt.Errorf("invalid URL format")
+		return errors.New("invalid URL format")
 	}
 
 	// Extract hostname (without port)
 	host := parsedURL.Hostname()
 	if host == "" {
-		return fmt.Errorf("URL must have a hostname")
+		return errors.New("URL must have a hostname")
 	}
 
 	// Check for localhost aliases
@@ -491,10 +491,8 @@ func validateWebhookURLSSRF(urlStr string) error {
 		"0",
 		"[::1]",
 	}
-	for _, blocked := range blockedHosts {
-		if lowerHost == blocked {
-			return fmt.Errorf("localhost addresses not allowed")
-		}
+	if slices.Contains(blockedHosts, lowerHost) {
+		return errors.New("localhost addresses not allowed")
 	}
 
 	// Check for metadata service endpoints (cloud environments)
@@ -503,10 +501,8 @@ func validateWebhookURLSSRF(urlStr string) error {
 		"metadata.google.internal",
 		"metadata.goog",
 	}
-	for _, meta := range metadataHosts {
-		if lowerHost == meta {
-			return fmt.Errorf("metadata service addresses not allowed")
-		}
+	if slices.Contains(metadataHosts, lowerHost) {
+		return errors.New("metadata service addresses not allowed")
 	}
 
 	// Parse as IP address
@@ -514,20 +510,20 @@ func validateWebhookURLSSRF(urlStr string) error {
 	if ip != nil {
 		// Check for private/internal IP ranges
 		if ip.IsLoopback() {
-			return fmt.Errorf("loopback addresses not allowed")
+			return errors.New("loopback addresses not allowed")
 		}
 		if ip.IsPrivate() {
-			return fmt.Errorf("private network addresses not allowed")
+			return errors.New("private network addresses not allowed")
 		}
 		if ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() {
-			return fmt.Errorf("link-local addresses not allowed")
+			return errors.New("link-local addresses not allowed")
 		}
 		if ip.IsUnspecified() {
-			return fmt.Errorf("unspecified addresses not allowed")
+			return errors.New("unspecified addresses not allowed")
 		}
 		// Block 169.254.0.0/16 (link-local) explicitly
 		if ip4 := ip.To4(); ip4 != nil && ip4[0] == 169 && ip4[1] == 254 {
-			return fmt.Errorf("link-local addresses not allowed")
+			return errors.New("link-local addresses not allowed")
 		}
 	}
 
@@ -700,15 +696,6 @@ func validateQueryParam(name, value string, allowedValues []string) *ErrorDetail
 	return nil
 }
 
-// min returns the minimum of two integers.
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-
-	return b
-}
-
 // recoverMiddleware recovers from panics in HTTP handlers to prevent server crashes
 // SECURITY FIX #2.8.1: Add panic recovery to prevent single malformed request from crashing API.
 func (s *Server) recoverMiddleware(next http.HandlerFunc) http.HandlerFunc {
@@ -869,7 +856,7 @@ type Server struct {
 func generateCSRFToken() (string, error) {
 	bytes := make([]byte, 32)
 	if _, err := rand.Read(bytes); err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to generate random bytes: %w", err)
 	}
 
 	return hex.EncodeToString(bytes), nil
@@ -900,7 +887,13 @@ func NewServer(cfg ServerConfig) *Server {
 func (s *Server) Start() error {
 	// In daemon mode, Stack and Config can be nil initially (set later when simulation starts)
 	// In non-daemon mode, they must be set before Start()
-	if s.daemon == nil && (s.cfg.Stack == nil || s.cfg.Config == nil) {
+	// SECURITY FIX #161: Thread-safe access to Stack and Config
+	s.configMu.RLock()
+	hasStack := s.cfg.Stack != nil
+	hasConfig := s.cfg.Config != nil
+	s.configMu.RUnlock()
+
+	if s.daemon == nil && (!hasStack || !hasConfig) {
 		return ErrAPIServerRequiresStackAndConfig
 	}
 
@@ -922,8 +915,14 @@ func (s *Server) Start() error {
 		// SECURITY FIX LOW-1: Protect state-changing endpoints with CSRF
 		// SECURITY FIX #156: Apply write rate limiting to state-changing endpoints
 		mux.HandleFunc("/api/v1/config", s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.handleConfig)))))
-		mux.HandleFunc("/api/v1/config/devices", s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.handleDevicesV2)))))
-		mux.HandleFunc("/api/v1/config/devices/", s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.handleDevicesV2)))))
+		mux.HandleFunc(
+			"/api/v1/config/devices",
+			s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.handleDevicesV2)))),
+		)
+		mux.HandleFunc(
+			"/api/v1/config/devices/",
+			s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.handleDevicesV2)))),
+		)
 		mux.HandleFunc("/api/v1/config/schema", s.recoverMiddleware(s.auth(s.handleConfigSchema)))
 		mux.HandleFunc("/api/v1/replay", s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.handleReplay)))))
 		mux.HandleFunc("/api/v1/alerts", s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.handleAlerts)))))
@@ -939,8 +938,14 @@ func (s *Server) Start() error {
 
 		// Walk file validation endpoints
 		// SECURITY FIX #156: Apply walk-specific rate limiting
-		mux.HandleFunc("/api/v1/walk/validate", s.recoverMiddleware(s.auth(s.walkRateLimit(s.csrfProtect(s.handleWalkValidation)))))
-		mux.HandleFunc("/api/v1/walk/fix", s.recoverMiddleware(s.auth(s.walkRateLimit(s.csrfProtect(s.handleWalkValidation)))))
+		mux.HandleFunc(
+			"/api/v1/walk/validate",
+			s.recoverMiddleware(s.auth(s.walkRateLimit(s.csrfProtect(s.handleWalkValidation)))),
+		)
+		mux.HandleFunc(
+			"/api/v1/walk/fix",
+			s.recoverMiddleware(s.auth(s.walkRateLimit(s.csrfProtect(s.handleWalkValidation)))),
+		)
 		mux.HandleFunc("/api/v1/walk/list", s.recoverMiddleware(s.auth(s.walkRateLimit(s.handleWalkList))))
 		mux.HandleFunc(
 			"/api/v1/walk/validate-all",
@@ -949,7 +954,10 @@ func (s *Server) Start() error {
 
 		// PCAP analysis endpoints
 		// SECURITY FIX #156: Apply upload-specific rate limiting for uploads
-		mux.HandleFunc("/api/v1/pcap/upload", s.recoverMiddleware(s.auth(s.uploadRateLimit(s.csrfProtect(s.handlePcapUpload)))))
+		mux.HandleFunc(
+			"/api/v1/pcap/upload",
+			s.recoverMiddleware(s.auth(s.uploadRateLimit(s.csrfProtect(s.handlePcapUpload)))),
+		)
 		mux.HandleFunc("/api/v1/pcap/", s.recoverMiddleware(s.auth(s.handlePcapAnalysis)))
 
 		// SSE (Server-Sent Events) endpoints for real-time streaming
@@ -1209,9 +1217,11 @@ func (s *Server) handleCSRFToken(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleStats(w http.ResponseWriter, r *http.Request) {
+	// SECURITY FIX #161: Thread-safe access to all config fields
 	s.configMu.RLock()
 	stack := s.cfg.Stack
 	cfg := s.cfg.Config
+	iface := s.cfg.Interface
 	s.configMu.RUnlock()
 
 	if stack == nil {
@@ -1232,7 +1242,7 @@ func (s *Server) handleStats(w http.ResponseWriter, r *http.Request) {
 
 	payload := map[string]any{
 		"timestamp":    time.Now().UTC(),
-		"interface":    s.cfg.Interface,
+		"interface":    iface,
 		"version":      s.cfg.Version,
 		"device_count": deviceCount,
 		"goroutines":   goroutineCount, // FEATURE #119: Monitor goroutine count
@@ -1357,7 +1367,8 @@ func (s *Server) handleConfigUpdate(w http.ResponseWriter, r *http.Request) {
 	// SECURITY FIX #111: Enforce request body size limit
 	r.Body = http.MaxBytesReader(w, r.Body, MaxRequestBodySize)
 
-	if s.cfg.ConfigPath == "" {
+	// SECURITY FIX #161: Thread-safe access to ConfigPath
+	if s.configPath() == "" {
 		http.Error(w, "config path not available", http.StatusBadRequest)
 
 		return
@@ -1633,7 +1644,15 @@ func (s *Server) handleVersion(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleNeighbors(w http.ResponseWriter, r *http.Request) {
-	neighbors := s.cfg.Stack.GetNeighbors()
+	// SECURITY FIX #161: Thread-safe access to Stack
+	stack := s.currentStack()
+	if stack == nil {
+		http.Error(w, "no simulation running", http.StatusServiceUnavailable)
+
+		return
+	}
+
+	neighbors := stack.GetNeighbors()
 	if neighbors == nil {
 		neighbors = []protocols.NeighborRecord{}
 	}
@@ -1799,6 +1818,9 @@ func (s *Server) handleInterfaces(w http.ResponseWriter, r *http.Request) {
 		Current     bool     `json:"current"`
 	}
 
+	// SECURITY FIX #161: Thread-safe access to Interface
+	currentIface := s.currentInterface()
+
 	result := make([]interfaceInfo, 0, len(ifaces))
 	for _, iface := range ifaces {
 		addrs := make([]string, 0, len(iface.Addresses))
@@ -1810,13 +1832,13 @@ func (s *Server) handleInterfaces(w http.ResponseWriter, r *http.Request) {
 			Name:        iface.Name,
 			Description: iface.Description,
 			Addresses:   addrs,
-			Current:     iface.Name == s.cfg.Interface,
+			Current:     iface.Name == currentIface,
 		})
 	}
 
 	s.writeJSON(w, map[string]any{
 		"interfaces":        result,
-		"current_interface": s.cfg.Interface,
+		"current_interface": currentIface,
 	})
 }
 
@@ -1828,10 +1850,12 @@ func (s *Server) handleRuntime(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check if stack is available
+	// SECURITY FIX #161: Thread-safe access to all config fields
 	s.configMu.RLock()
 	stack := s.cfg.Stack
 	cfg := s.cfg.Config
+	iface := s.cfg.Interface
+	cfgPath := s.cfg.ConfigPath
 	s.configMu.RUnlock()
 
 	if stack == nil {
@@ -1844,8 +1868,8 @@ func (s *Server) handleRuntime(w http.ResponseWriter, r *http.Request) {
 
 	runtime := map[string]any{
 		"running":          true, // API server is running
-		"interface":        s.cfg.Interface,
-		"config_path":      s.cfg.ConfigPath,
+		"interface":        iface,
+		"config_path":      cfgPath,
 		"version":          s.cfg.Version,
 		"device_count":     0,
 		"packets_sent":     stats.PacketsSent,
@@ -1855,7 +1879,7 @@ func (s *Server) handleRuntime(w http.ResponseWriter, r *http.Request) {
 
 	if cfg != nil {
 		runtime["device_count"] = len(cfg.Devices)
-		runtime["config_name"] = filepath.Base(s.cfg.ConfigPath)
+		runtime["config_name"] = filepath.Base(cfgPath)
 	}
 
 	s.writeJSON(w, runtime)
@@ -2107,11 +2131,12 @@ func (s *Server) sendAlert(total uint64) {
 		return
 	}
 
+	// SECURITY FIX #161: Thread-safe access to Interface
 	body, _ := json.Marshal(map[string]any{
 		"type":        "packet_threshold",
 		"threshold":   cfg.PacketsThreshold,
 		"total":       total,
-		"interface":   s.cfg.Interface,
+		"interface":   s.currentInterface(),
 		"triggeredAt": time.Now().UTC(),
 	})
 
@@ -2299,20 +2324,22 @@ type configDocument struct {
 }
 
 func (s *Server) readConfigDocument() (*configDocument, int, error) {
-	if s.cfg.ConfigPath == "" {
+	// SECURITY FIX #161: Thread-safe access to ConfigPath
+	cfgPath := s.configPath()
+	if cfgPath == "" {
 		return nil, http.StatusBadRequest, ErrConfigPathNotAvailable
 	}
 
-	data, err := os.ReadFile(s.cfg.ConfigPath)
+	data, err := os.ReadFile(cfgPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, http.StatusNotFound, fmt.Errorf("%w: %s", ErrConfigFileNotFound, s.cfg.ConfigPath)
+			return nil, http.StatusNotFound, fmt.Errorf("%w: %s", ErrConfigFileNotFound, cfgPath)
 		}
 
 		return nil, http.StatusInternalServerError, fmt.Errorf("reading config: %w", err)
 	}
 
-	info, err := os.Stat(s.cfg.ConfigPath)
+	info, err := os.Stat(cfgPath)
 	if err != nil {
 		return nil, http.StatusInternalServerError, fmt.Errorf("stat config: %w", err)
 	}
@@ -2325,8 +2352,8 @@ func (s *Server) readConfigDocument() (*configDocument, int, error) {
 	}
 
 	return &configDocument{
-		Path:        s.cfg.ConfigPath,
-		Filename:    filepath.Base(s.cfg.ConfigPath),
+		Path:        cfgPath,
+		Filename:    filepath.Base(cfgPath),
 		ModifiedAt:  info.ModTime().UTC(),
 		SizeBytes:   info.Size(),
 		DeviceCount: deviceCount,
@@ -2335,7 +2362,10 @@ func (s *Server) readConfigDocument() (*configDocument, int, error) {
 }
 
 func (s *Server) writeConfigFile(content string) error {
-	dir := filepath.Dir(s.cfg.ConfigPath)
+	// SECURITY FIX #161: Thread-safe access to ConfigPath
+	cfgPath := s.configPath()
+	dir := filepath.Dir(cfgPath)
+
 	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return fmt.Errorf("create config directory: %w", err)
 	}
@@ -2369,7 +2399,7 @@ func (s *Server) writeConfigFile(content string) error {
 		return fmt.Errorf("chmod temp file: %w", err)
 	}
 
-	if err := os.Rename(tmpPath, s.cfg.ConfigPath); err != nil {
+	if err := os.Rename(tmpPath, cfgPath); err != nil {
 		return fmt.Errorf("replace config: %w", err)
 	}
 
@@ -2397,6 +2427,30 @@ func (s *Server) replaceConfig(cfg *config.Config) {
 	s.configMu.Unlock()
 }
 
+// SECURITY FIX #161: Thread-safe access to ConfigPath to prevent race conditions.
+func (s *Server) configPath() string {
+	s.configMu.RLock()
+	defer s.configMu.RUnlock()
+
+	return s.cfg.ConfigPath
+}
+
+// SECURITY FIX #161: Thread-safe access to Stack to prevent race conditions.
+func (s *Server) currentStack() *protocols.Stack {
+	s.configMu.RLock()
+	defer s.configMu.RUnlock()
+
+	return s.cfg.Stack
+}
+
+// SECURITY FIX #161: Thread-safe access to Interface to prevent race conditions.
+func (s *Server) currentInterface() string {
+	s.configMu.RLock()
+	defer s.configMu.RUnlock()
+
+	return s.cfg.Interface
+}
+
 func (s *Server) collectFiles(kind string) ([]FileEntry, error) {
 	var (
 		root string
@@ -2408,8 +2462,9 @@ func (s *Server) collectFiles(kind string) ([]FileEntry, error) {
 		root = s.resolveIncludePath()
 		exts = []string{".walk"}
 	case "pcaps":
-		if s.cfg.ConfigPath != "" {
-			root = filepath.Dir(s.cfg.ConfigPath)
+		// SECURITY FIX #161: Thread-safe access to ConfigPath
+		if cfgPath := s.configPath(); cfgPath != "" {
+			root = filepath.Dir(cfgPath)
 		}
 
 		exts = []string{".pcap", ".pcapng"}
@@ -2423,7 +2478,7 @@ func (s *Server) collectFiles(kind string) ([]FileEntry, error) {
 
 	info, err := os.Stat(root)
 	if err != nil {
-		return []FileEntry{}, err
+		return []FileEntry{}, fmt.Errorf("failed to stat root: %w", err)
 	}
 
 	if !info.IsDir() {
@@ -2460,12 +2515,12 @@ func (s *Server) collectFiles(kind string) ([]FileEntry, error) {
 
 		info, infoErr := d.Info()
 		if infoErr != nil {
-			return infoErr
+			return fmt.Errorf("failed to get file info: %w", infoErr)
 		}
 
 		absPath, absErr := filepath.Abs(path)
 		if absErr != nil {
-			return absErr
+			return fmt.Errorf("failed to get absolute path: %w", absErr)
 		}
 
 		// SECURITY FIX #95: Validate path stays within root directory
@@ -2473,7 +2528,7 @@ func (s *Server) collectFiles(kind string) ([]FileEntry, error) {
 		realPath, evalErr := filepath.EvalSymlinks(absPath)
 		if evalErr != nil {
 			// If symlink resolution fails, skip this file
-			return evalErr
+			return fmt.Errorf("failed to evaluate symlinks: %w", evalErr)
 		}
 
 		// Ensure resolved path is within the allowed root directory
@@ -2495,7 +2550,7 @@ func (s *Server) collectFiles(kind string) ([]FileEntry, error) {
 		return nil
 	})
 	if err != nil && !errors.Is(err, filepath.SkipDir) {
-		return nil, err
+		return nil, fmt.Errorf("failed to walk directory: %w", err)
 	}
 
 	return entries, nil
@@ -2508,8 +2563,9 @@ func (s *Server) resolveIncludePath() string {
 	}
 
 	includePath := cfg.IncludePath
-	if !filepath.IsAbs(includePath) && s.cfg.ConfigPath != "" {
-		includePath = filepath.Join(filepath.Dir(s.cfg.ConfigPath), includePath)
+	// SECURITY FIX #161: Thread-safe access to ConfigPath
+	if cfgPath := s.configPath(); !filepath.IsAbs(includePath) && cfgPath != "" {
+		includePath = filepath.Join(filepath.Dir(cfgPath), includePath)
 	}
 
 	if abs, err := filepath.Abs(includePath); err == nil {
