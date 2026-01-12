@@ -309,14 +309,11 @@ func (tg *TrafficGenerator) sendPing(src, dst *SimulatedDevice) error {
 	}
 
 	// Build ICMP Echo Request
+	// #nosec G404 -- network traffic simulation, not cryptographic
 	icmpLayer := &layers.ICMPv4{
 		TypeCode: layers.CreateICMPv4TypeCode(layers.ICMPv4TypeEchoRequest, 0),
-		Id: uint16(
-			rand.IntN(65536),
-		),
-		Seq: uint16(
-			rand.IntN(65536),
-		),
+		Id:       uint16(rand.IntN(65536)), //nolint:gosec // G115: bounded by 65536
+		Seq:      uint16(rand.IntN(65536)), //nolint:gosec // G115: bounded by 65536
 	}
 
 	// Payload
@@ -452,13 +449,10 @@ func (tg *TrafficGenerator) sendRandomUDP(src, dst *SimulatedDevice) error {
 		DstIP:    dst.Config.IPAddresses[0].To4(),
 	}
 
+	// #nosec G404 -- network traffic simulation, not cryptographic
 	udpLayer := &layers.UDP{
-		SrcPort: layers.UDPPort(
-			rand.IntN(60000) + 1024,
-		),
-		DstPort: layers.UDPPort(
-			rand.IntN(60000) + 1024,
-		),
+		SrcPort: layers.UDPPort(rand.IntN(60000) + 1024), //nolint:gosec // G115: bounded port range
+		DstPort: layers.UDPPort(rand.IntN(60000) + 1024), //nolint:gosec // G115: bounded port range
 	}
 	_ = udpLayer.SetNetworkLayerForChecksum(ipLayer) // error is non-critical for checksum setup
 

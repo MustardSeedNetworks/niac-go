@@ -147,7 +147,7 @@ func runTopologyExport(cmd *cobra.Command, args []string) error {
 
 	// Write output
 	if topologyOptions.outputFile != "" {
-		err := os.WriteFile(topologyOptions.outputFile, []byte(output), 0o644)
+		err := os.WriteFile(topologyOptions.outputFile, []byte(output), 0o600)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: failed to write to file %s: %v\n", topologyOptions.outputFile, err)
 			os.Exit(2)

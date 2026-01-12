@@ -169,9 +169,10 @@ func buildRouterAdvertisementPayload(ra *config.IcmpRouterAdvertisement) []byte 
 	payload := make([]byte, 4+8*numAddrs)
 	payload[0] = byte(numAddrs)
 	payload[1] = 2 // Address entry size (2 words)
+	// Safe conversion: RA lifetime is bounded by protocol definition
 	binary.BigEndian.PutUint16(
 		payload[2:4],
-		uint16(ra.Lifetime),
+		uint16(ra.Lifetime), //nolint:gosec // G115: bounded by RA protocol
 	)
 
 	offset := 4
@@ -179,9 +180,10 @@ func buildRouterAdvertisementPayload(ra *config.IcmpRouterAdvertisement) []byte 
 	for _, router := range ra.Routers {
 		if ip := router.Address.To4(); ip != nil {
 			copy(payload[offset:offset+4], ip)
+			// Safe conversion: router preference is bounded by protocol definition
 			binary.BigEndian.PutUint32(
 				payload[offset+4:offset+8],
-				uint32(router.Preference),
+				uint32(router.Preference), //nolint:gosec // G115: bounded by RA protocol
 			)
 			offset += 8
 		}

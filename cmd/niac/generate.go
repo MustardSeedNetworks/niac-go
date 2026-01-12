@@ -67,15 +67,12 @@ func runGenerate(cmd *cobra.Command, args []string) {
 	reader := bufio.NewReader(os.Stdin)
 
 	// Print header
-	color.New(color.Bold, color.FgCyan).
+	_, _ = color.New(color.Bold, color.FgCyan).
 		Println("\n╔════════════════════════════════════════════════════════════╗")
-		// #nosec G104 -- cosmetic output
-	color.New(color.Bold, color.FgCyan).
+	_, _ = color.New(color.Bold, color.FgCyan).
 		Println("║      NIAC Configuration Generator (v1.19.0)               ║")
-		// #nosec G104 -- cosmetic output
-	color.New(color.Bold, color.FgCyan).
+	_, _ = color.New(color.Bold, color.FgCyan).
 		Print("╚════════════════════════════════════════════════════════════╝\n\n")
-		// #nosec G104 -- cosmetic output
 
 	color.Yellow("This wizard will guide you through creating a complete YAML")
 	color.Yellow("configuration file for your network simulation.\n\n")
@@ -111,9 +108,8 @@ func runGenerate(cmd *cobra.Command, args []string) {
 	fmt.Println()
 
 	for i := range deviceCount {
-		color.New(color.Bold, color.FgYellow).
+		_, _ = color.New(color.Bold, color.FgYellow).
 			Printf("Device %d/%d:\n", i+1, deviceCount)
-			// #nosec G104 -- cosmetic output
 		color.White("──────────────────────────────────────────────────────────────\n")
 
 		device := generatedDevice{

@@ -42,15 +42,12 @@ func runInit(cmd *cobra.Command, args []string) {
 	reader := bufio.NewReader(os.Stdin)
 
 	// Print header
-	color.New(color.Bold, color.FgCyan).
+	_, _ = color.New(color.Bold, color.FgCyan).
 		Println("\n╔════════════════════════════════════════════════════════════╗")
-		// #nosec G104 -- cosmetic output
-	color.New(color.Bold, color.FgCyan).
+	_, _ = color.New(color.Bold, color.FgCyan).
 		Println("║         NIAC Configuration Template Wizard                ║")
-		// #nosec G104 -- cosmetic output
-	color.New(color.Bold, color.FgCyan).
+	_, _ = color.New(color.Bold, color.FgCyan).
 		Print("╚════════════════════════════════════════════════════════════╝\n")
-		// #nosec G104 -- cosmetic output
 
 	fmt.Println("This wizard will help you choose the right template for your")
 	fmt.Print("network simulation.\n")

@@ -203,10 +203,10 @@ func (s *Storage) ListRuns(limit int) ([]RunRecord, error) {
 }
 
 func itob(v uint64) []byte {
-	var b [8]byte
-	for i := range uint(8) {
-		b[7-i] = byte(v >> (i * 8))
+	b := make([]byte, 8)
+	for i := range 8 {
+		b[7-i] = byte(v >> (uint(i) * 8)) //nolint:gosec // G115: i bounded by loop 0-7
 	}
 
-	return b[:]
+	return b
 }

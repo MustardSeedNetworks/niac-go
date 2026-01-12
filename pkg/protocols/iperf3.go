@@ -481,10 +481,11 @@ func (h *IPerf3Handler) sendResults(
 	}
 
 	// Send with length prefix
+	// Safe conversion: JSON data length is bounded by iperf3 protocol limits
 	response := make([]byte, 4+len(jsonData))
 	binary.BigEndian.PutUint32(
 		response[:4],
-		uint32(len(jsonData)),
+		uint32(len(jsonData)), //nolint:gosec // G115: bounded by protocol
 	)
 	copy(response[4:], jsonData)
 
@@ -630,15 +631,14 @@ func (h *IPerf3Handler) sendTCPResponse(
 		DstIP:    ipLayer.SrcIP,
 	}
 
+	// Safe conversion: min() bounds payloadLen to 0xFFFFFFFF which fits in uint32
 	payloadLen := min(len(tcpLayer.Payload), 0xFFFFFFFF)
 
 	tcpReply := &layers.TCP{
 		SrcPort: tcpLayer.DstPort,
 		DstPort: tcpLayer.SrcPort,
 		Seq:     tcpLayer.Ack,
-		Ack: tcpLayer.Seq + uint32(
-			payloadLen,
-		),
+		Ack:     tcpLayer.Seq + uint32(payloadLen), //nolint:gosec // G115: bounded by min()
 		PSH:    true,
 		ACK:    true,
 		Window: 65535,

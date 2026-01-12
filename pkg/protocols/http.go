@@ -352,15 +352,14 @@ func (h *HTTPHandler) sendResponse(
 	}
 
 	// Build TCP header
+	// Safe conversion: min() bounds payloadLen to 0xFFFFFFFF which fits in uint32
 	payloadLen := min(len(tcpLayer.Payload), 0xFFFFFFFF)
 
 	tcpReply := &layers.TCP{
 		SrcPort: tcpLayer.DstPort,
 		DstPort: tcpLayer.SrcPort,
 		Seq:     tcpLayer.Ack,
-		Ack: tcpLayer.Seq + uint32(
-			payloadLen,
-		),
+		Ack:     tcpLayer.Seq + uint32(payloadLen), //nolint:gosec // G115: bounded by min()
 		PSH:    true,
 		ACK:    true,
 		Window: 65535,
@@ -493,15 +492,14 @@ func (h *HTTPHandler) sendResponseV6(
 		DstIP:        ipv6.SrcIP,
 	}
 
+	// Safe conversion: min() bounds payloadLen2 to 0xFFFFFFFF which fits in uint32
 	payloadLen2 := min(len(tcpLayer.Payload), 0xFFFFFFFF)
 
 	tcpReply := &layers.TCP{
 		SrcPort: tcpLayer.DstPort,
 		DstPort: tcpLayer.SrcPort,
 		Seq:     tcpLayer.Ack,
-		Ack: tcpLayer.Seq + uint32(
-			payloadLen2,
-		),
+		Ack:     tcpLayer.Seq + uint32(payloadLen2), //nolint:gosec // G115: bounded by min()
 		PSH:    true,
 		ACK:    true,
 		Window: 65535,

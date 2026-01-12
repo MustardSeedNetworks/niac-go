@@ -444,15 +444,14 @@ func (h *HealthCheckHandler) sendTCPResponse(
 		DstIP:    ipLayer.SrcIP,
 	}
 
+	// Safe conversion: min() bounds payloadLen to 0xFFFFFFFF which fits in uint32
 	payloadLen := min(len(tcpLayer.Payload), 0xFFFFFFFF)
 
 	tcpReply := &layers.TCP{
 		SrcPort: tcpLayer.DstPort,
 		DstPort: tcpLayer.SrcPort,
 		Seq:     tcpLayer.Ack,
-		Ack: tcpLayer.Seq + uint32(
-			payloadLen,
-		),
+		Ack:     tcpLayer.Seq + uint32(payloadLen), //nolint:gosec // G115: bounded by min()
 		PSH:    true,
 		ACK:    true,
 		Window: 65535,
@@ -710,9 +709,10 @@ func (h *HealthCheckHandler) generateMSSQLResponse(request []byte, devices []*co
 	response := make([]byte, packetLen)
 	response[0] = 0x04 // type: response
 	response[1] = 0x01 // status: EOM
+	// Safe conversion: packetLen is small (8 + tokenData length ~= 50 bytes)
 	binary.BigEndian.PutUint16(
 		response[2:],
-		uint16(packetLen),
+		uint16(packetLen), //nolint:gosec // G115: packetLen is small, bounded
 	)
 	response[4] = 0x00 // SPID
 	response[5] = 0x00

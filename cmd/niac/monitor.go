@@ -288,11 +288,17 @@ func fetchStats(client *ipc.Client, prev *monitorStats, interval time.Duration) 
 		return nil, fmt.Errorf("failed to get status: %w", err)
 	}
 
+	// Safe conversion: ErrorsActive is an int from IPC status, bounded by protocol
+	var errorsActive uint64
+	if status.ErrorsActive >= 0 {
+		errorsActive = uint64(status.ErrorsActive) //nolint:gosec // G115: bounded by IPC protocol
+	}
+
 	stats := &monitorStats{
 		Time:      time.Now(),
 		PacketsRX: status.PacketsRX,
 		PacketsTX: status.PacketsTX,
-		Errors:    uint64(status.ErrorsActive),
+		Errors:    errorsActive,
 		Uptime:    status.Uptime,
 	}
 

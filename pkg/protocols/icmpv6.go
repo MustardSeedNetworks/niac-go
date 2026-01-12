@@ -491,14 +491,15 @@ func (h *ICMPv6Handler) buildRouterAdvertisementBody(device *config.Device, srcI
 
 			body = append(body, pFlags)
 			valid := make([]byte, 4)
+			// Safe conversion: IPv6 RA lifetimes are bounded by protocol
 			binary.BigEndian.PutUint32(
 				valid,
-				uint32(p.ValidLifetime),
+				uint32(p.ValidLifetime), //nolint:gosec // G115: bounded by RA protocol
 			)
 			body = append(body, valid...)
 			binary.BigEndian.PutUint32(
 				valid,
-				uint32(p.PreferredLifetime),
+				uint32(p.PreferredLifetime), //nolint:gosec // G115: bounded by RA protocol
 			)
 			body = append(body, valid...)
 			body = append(body, []byte{0, 0, 0, 0}...)
