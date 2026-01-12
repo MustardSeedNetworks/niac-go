@@ -1,14 +1,7 @@
-import { type FC, memo } from 'react';
-import { Card, CardContent, Tag, SmallText, H2 } from '../../ui';
-import {
-  BarChart3,
-  Clock,
-  FileText,
-  Network,
-  ArrowRightLeft,
-  Server,
-} from 'lucide-react';
-import type { PcapStats as PcapStatsType } from '../../api/types';
+import { ArrowRightLeft, BarChart3, Clock, FileText, Network, Server } from "lucide-react";
+import { type FC, memo } from "react";
+import type { PcapStats as PcapStatsType } from "../../api/types";
+import { Card, CardContent, H2, SmallText, Tag } from "../../ui";
 
 interface PcapStatsProps {
   stats: PcapStatsType | null;
@@ -42,12 +35,12 @@ function formatDuration(ms: number): string {
 function formatTimestamp(timestamp: string): string {
   try {
     const date = new Date(timestamp);
-    return date.toLocaleString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
+    return date.toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
       hour12: false,
     });
   } catch {
@@ -58,20 +51,22 @@ function formatTimestamp(timestamp: string): string {
 /**
  * Get color scheme for protocol tag
  */
-function getProtocolColor(protocol: string): 'blue' | 'green' | 'yellow' | 'purple' | 'gray' | 'red' {
-  const colors: Record<string, 'blue' | 'green' | 'yellow' | 'purple' | 'gray' | 'red'> = {
-    ARP: 'yellow',
-    ICMP: 'blue',
-    DNS: 'green',
-    TCP: 'purple',
-    UDP: 'gray',
-    HTTP: 'blue',
-    HTTPS: 'green',
-    DHCP: 'yellow',
-    SSH: 'red',
-    TLS: 'green',
+function getProtocolColor(
+  protocol: string,
+): "blue" | "green" | "yellow" | "purple" | "gray" | "red" {
+  const colors: Record<string, "blue" | "green" | "yellow" | "purple" | "gray" | "red"> = {
+    ARP: "yellow",
+    ICMP: "blue",
+    DNS: "green",
+    TCP: "purple",
+    UDP: "gray",
+    HTTP: "blue",
+    HTTPS: "green",
+    DHCP: "yellow",
+    SSH: "red",
+    TLS: "green",
   };
-  return colors[protocol.toUpperCase()] || 'gray';
+  return colors[protocol.toUpperCase()] || "gray";
 }
 
 /**
@@ -97,10 +92,10 @@ const StatBlock = memo(
       <p className="text-2xl font-bold text-white">{value}</p>
       {helper && <SmallText className="text-gray-500">{helper}</SmallText>}
     </div>
-  )
+  ),
 );
 
-StatBlock.displayName = 'StatBlock';
+StatBlock.displayName = "StatBlock";
 
 /**
  * Protocol Breakdown Component
@@ -113,9 +108,7 @@ const ProtocolBreakdown: FC<{ protocols: Record<string, number>; total: number }
       .slice(0, 10);
 
     if (sortedProtocols.length === 0) {
-      return (
-        <SmallText className="text-gray-400">No protocol data available</SmallText>
-      );
+      return <SmallText className="text-gray-400">No protocol data available</SmallText>;
     }
 
     return (
@@ -145,10 +138,10 @@ const ProtocolBreakdown: FC<{ protocols: Record<string, number>; total: number }
         })}
       </div>
     );
-  }
+  },
 );
 
-ProtocolBreakdown.displayName = 'ProtocolBreakdown';
+ProtocolBreakdown.displayName = "ProtocolBreakdown";
 
 /**
  * Top Endpoints Component
@@ -216,7 +209,7 @@ const TopEndpoints: FC<{
   );
 });
 
-TopEndpoints.displayName = 'TopEndpoints';
+TopEndpoints.displayName = "TopEndpoints";
 
 /**
  * PCAP Statistics Component
@@ -348,6 +341,6 @@ export const PcapStats: FC<PcapStatsProps> = memo(({ stats, filename, fileSize }
   );
 });
 
-PcapStats.displayName = 'PcapStats';
+PcapStats.displayName = "PcapStats";
 
 export default PcapStats;

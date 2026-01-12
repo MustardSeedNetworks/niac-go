@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -17,7 +18,7 @@ import (
 func (s *Server) validateWalkFilePath(filename string) (string, error) {
 	// Empty filename is invalid
 	if filename == "" {
-		return "", fmt.Errorf("filename cannot be empty")
+		return "", errors.New("filename cannot be empty")
 	}
 
 	// Clean the path to normalize it
@@ -25,7 +26,7 @@ func (s *Server) validateWalkFilePath(filename string) (string, error) {
 
 	// Reject paths containing null bytes (potential bypass attempt)
 	if strings.ContainsRune(cleanPath, 0) {
-		return "", fmt.Errorf("filename contains invalid characters")
+		return "", errors.New("filename contains invalid characters")
 	}
 
 	// If path is relative, make it relative to config directory
@@ -53,7 +54,7 @@ func (s *Server) validateWalkFilePath(filename string) (string, error) {
 		return "", fmt.Errorf("cannot access walk file: %w", err)
 	}
 	if info.IsDir() {
-		return "", fmt.Errorf("path is a directory, not a file")
+		return "", errors.New("path is a directory, not a file")
 	}
 
 	// Verify file has a reasonable extension (.walk, .snmpwalk, or .txt)

@@ -3,7 +3,9 @@ package protocols
 import (
 	"fmt"
 	"net"
+	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -19,17 +21,17 @@ const (
 	// FEATURE #124: Configurable packet queue buffer sizes
 	// Default buffer size for send/receive queues
 	// Increase this for high-traffic scenarios to prevent packet drops
-	// Decrease for memory-constrained environments
+	// Decrease for memory-constrained environments.
 	DefaultQueueBufferSize = 1000
 
 	// Recommended sizes for different scenarios:
 	// - Low traffic (< 100 pps): 500
 	// - Normal traffic (100-1000 pps): 1000 (default)
 	// - High traffic (1000-10000 pps): 5000
-	// - Very high traffic (> 10000 pps): 10000
+	// - Very high traffic (> 10000 pps): 10000.
 )
 
-// Stack manages the network protocol stack
+// Stack manages the network protocol stack.
 type Stack struct {
 	capture      *capture.Engine
 	config       *config.Config
@@ -44,24 +46,24 @@ type Stack struct {
 	recvQueue chan *Packet
 
 	// Protocol handlers
-	arpHandler     *ARPHandler
-	ipHandler      *IPHandler
-	icmpHandler    *ICMPHandler
-	ipv6Handler    *IPv6Handler
-	icmpv6Handler  *ICMPv6Handler
-	udpHandler     *UDPHandler
-	tcpHandler     *TCPHandler
-	dnsHandler     *DNSHandler
-	dhcpHandler    *DHCPHandler
-	dhcpv6Handler  *DHCPv6Handler
-	httpHandler    *HTTPHandler
-	ftpHandler     *FTPHandler
-	netbiosHandler *NetBIOSHandler
-	stpHandler     *STPHandler
-	lldpHandler    *LLDPHandler
-	cdpHandler     *CDPHandler
-	edpHandler     *EDPHandler
-	fdpHandler     *FDPHandler
+	arpHandler         *ARPHandler
+	ipHandler          *IPHandler
+	icmpHandler        *ICMPHandler
+	ipv6Handler        *IPv6Handler
+	icmpv6Handler      *ICMPv6Handler
+	udpHandler         *UDPHandler
+	tcpHandler         *TCPHandler
+	dnsHandler         *DNSHandler
+	dhcpHandler        *DHCPHandler
+	dhcpv6Handler      *DHCPv6Handler
+	httpHandler        *HTTPHandler
+	ftpHandler         *FTPHandler
+	netbiosHandler     *NetBIOSHandler
+	stpHandler         *STPHandler
+	lldpHandler        *LLDPHandler
+	cdpHandler         *CDPHandler
+	edpHandler         *EDPHandler
+	fdpHandler         *FDPHandler
 	snmpHandler        *SNMPHandler
 	healthCheckHandler *HealthCheckHandler
 	iperf3Handler      *IPerf3Handler
@@ -80,7 +82,7 @@ type Stack struct {
 	errorManager *errors.StateManager
 }
 
-// Statistics holds protocol statistics
+// Statistics holds protocol statistics.
 type Statistics struct {
 	mu              sync.RWMutex
 	PacketsReceived uint64
@@ -95,7 +97,7 @@ type Statistics struct {
 	Errors          uint64
 }
 
-// NewStack creates a new protocol stack
+// NewStack creates a new protocol stack.
 func NewStack(captureEngine *capture.Engine, cfg *config.Config, debugConfig *logging.DebugConfig) *Stack {
 	// FEATURE #124: Use configurable buffer size
 	bufferSize := DefaultQueueBufferSize
@@ -154,13 +156,16 @@ func (s *Stack) initializeDevices(cfg *config.Config) {
 	} else {
 		s.devices.Reset()
 	}
+
 	s.snmpAgents = make(map[*config.Device]*snmpAgentGroup)
 	if s.dhcpHandler != nil {
 		s.dhcpHandler.Reset()
 	}
+
 	if s.dhcpv6Handler != nil {
 		s.dhcpv6Handler.Reset()
 	}
+
 	if s.dnsHandler != nil {
 		s.dnsHandler.Reset()
 	}
@@ -200,6 +205,7 @@ func (s *Stack) initializeDevices(cfg *config.Config) {
 			if serverIP == nil && len(device.IPAddresses) > 0 {
 				serverIP = device.IPAddresses[0] // Use first IP as server ID if not specified
 			}
+
 			gateway := device.DHCPConfig.Router
 			dnsServers := device.DHCPConfig.DomainNameServer
 			domain := device.DHCPConfig.DomainName
@@ -217,7 +223,7 @@ func (s *Stack) initializeDevices(cfg *config.Config) {
 			s.dhcpHandler.SetStaticLeases(device.DHCPConfig.ClientLeases)
 
 			if s.debugConfig.GetGlobal() >= 1 {
-				fmt.Printf("Configured DHCP server for device %s\n", device.Name)
+				_, _ = fmt.Fprintf(os.Stdout, "Configured DHCP server for device %s\n", device.Name)
 			}
 		}
 
@@ -235,10 +241,12 @@ func (s *Stack) initializeDevices(cfg *config.Config) {
 		if device.SNMPConfig.SnmpAddr == nil {
 			continue
 		}
+
 		targets := s.devices.GetByIP(device.SNMPConfig.SnmpAddr)
 		if len(targets) == 0 {
 			continue
 		}
+
 		if group, ok := s.snmpAgents[targets[0]]; ok {
 			s.snmpAgents[device] = group
 		}
@@ -249,32 +257,36 @@ func (s *Stack) initializeDevices(cfg *config.Config) {
 	s.configMu.Unlock()
 
 	if s.debugConfig.GetGlobal() >= 1 {
-		fmt.Printf("Initialized %d devices from configuration\n", len(cfg.Devices))
+		_, _ = fmt.Fprintf(os.Stdout, "Initialized %d devices from configuration\n", len(cfg.Devices))
 	}
 }
 
-// Start starts the protocol stack processing
+// Start starts the protocol stack processing.
 func (s *Stack) Start() error {
 	if s.running {
-		return fmt.Errorf("stack already running")
+		return ErrStackAlreadyRunning
 	}
 
 	s.running = true
 
 	// Start receive thread
 	s.wg.Add(1)
+
 	go s.receiveThread()
 
 	// Start decode thread
 	s.wg.Add(1)
+
 	go s.decodeThread()
 
 	// Start send thread
 	s.wg.Add(1)
+
 	go s.sendThread()
 
 	// Start babble thread (periodic packet generation)
 	s.wg.Add(1)
+
 	go s.babbleThread()
 
 	// Start discovery protocol periodic advertisements
@@ -285,13 +297,13 @@ func (s *Stack) Start() error {
 	s.startNeighborCleanupLoop()
 
 	if s.debugConfig.GetGlobal() >= 1 {
-		fmt.Println("Protocol stack started")
+		_, _ = fmt.Fprintln(os.Stdout, "Protocol stack started")
 	}
 
 	return nil
 }
 
-// Stop stops the protocol stack
+// Stop stops the protocol stack.
 func (s *Stack) Stop() {
 	if !s.running {
 		return
@@ -309,11 +321,11 @@ func (s *Stack) Stop() {
 	s.wg.Wait()
 
 	if s.debugConfig.GetGlobal() >= 1 {
-		fmt.Println("Protocol stack stopped")
+		_, _ = fmt.Fprintln(os.Stdout, "Protocol stack stopped")
 	}
 }
 
-// receiveThread receives packets from the network
+// receiveThread receives packets from the network.
 func (s *Stack) receiveThread() {
 	defer s.wg.Done()
 
@@ -328,8 +340,9 @@ func (s *Stack) receiveThread() {
 			data, err := s.capture.ReadPacket(buffer)
 			if err != nil {
 				if s.debugConfig.GetGlobal() >= 3 {
-					fmt.Printf("Error reading packet: %v\n", err)
+					_, _ = fmt.Fprintf(os.Stdout, "Error reading packet: %v\n", err)
 				}
+
 				continue
 			}
 
@@ -348,6 +361,7 @@ func (s *Stack) receiveThread() {
 				s.stats.mu.Lock()
 				s.stats.Errors++
 				s.stats.mu.Unlock()
+
 				continue
 			}
 
@@ -361,14 +375,14 @@ func (s *Stack) receiveThread() {
 			default:
 				// Queue full, drop packet
 				if s.debugConfig.GetGlobal() >= 2 {
-					fmt.Println("Receive queue full, dropping packet")
+					_, _ = fmt.Fprintln(os.Stdout, "Receive queue full, dropping packet")
 				}
 			}
 		}
 	}
 }
 
-// decodeThread decodes and routes packets to protocol handlers
+// decodeThread decodes and routes packets to protocol handlers.
 func (s *Stack) decodeThread() {
 	defer s.wg.Done()
 
@@ -384,13 +398,14 @@ func (s *Stack) decodeThread() {
 	}
 }
 
-// decodePacket decodes a packet and routes to appropriate handler
+// decodePacket decodes a packet and routes to appropriate handler.
 func (s *Stack) decodePacket(pkt *Packet) {
 	// Check for STP (multicast MAC 01:80:C2:00:00:00)
 	dstMAC := pkt.GetDestMAC()
 	if len(dstMAC) == 6 && dstMAC[0] == 0x01 && dstMAC[1] == 0x80 &&
 		dstMAC[2] == 0xC2 && dstMAC[3] == 0x00 && dstMAC[4] == 0x00 && dstMAC[5] == 0x00 {
 		s.stpHandler.HandlePacket(pkt)
+
 		return
 	}
 
@@ -398,6 +413,7 @@ func (s *Stack) decodePacket(pkt *Packet) {
 	if len(dstMAC) == 6 && dstMAC[0] == 0x01 && dstMAC[1] == 0x80 &&
 		dstMAC[2] == 0xC2 && dstMAC[3] == 0x00 && dstMAC[4] == 0x00 && dstMAC[5] == 0x0E {
 		s.lldpHandler.HandlePacket(pkt)
+
 		return
 	}
 
@@ -405,6 +421,7 @@ func (s *Stack) decodePacket(pkt *Packet) {
 	if len(dstMAC) == 6 && dstMAC[0] == 0x01 && dstMAC[1] == 0x00 &&
 		dstMAC[2] == 0x0C && dstMAC[3] == 0xCC && dstMAC[4] == 0xCC && dstMAC[5] == 0xCC {
 		s.cdpHandler.HandlePacket(pkt)
+
 		return
 	}
 
@@ -412,6 +429,7 @@ func (s *Stack) decodePacket(pkt *Packet) {
 	if len(dstMAC) == 6 && dstMAC[0] == 0x00 && dstMAC[1] == 0xE0 &&
 		dstMAC[2] == 0x2B && dstMAC[3] == 0x00 && dstMAC[4] == 0x00 && dstMAC[5] == 0x00 {
 		s.edpHandler.HandlePacket(pkt)
+
 		return
 	}
 
@@ -419,6 +437,7 @@ func (s *Stack) decodePacket(pkt *Packet) {
 	if len(dstMAC) == 6 && dstMAC[0] == 0x01 && dstMAC[1] == 0xE0 &&
 		dstMAC[2] == 0x52 && dstMAC[3] == 0xCC && dstMAC[4] == 0xCC && dstMAC[5] == 0xCC {
 		s.fdpHandler.HandlePacket(pkt)
+
 		return
 	}
 
@@ -434,7 +453,7 @@ func (s *Stack) decodePacket(pkt *Packet) {
 	}
 
 	if s.debugConfig.GetGlobal() >= 3 {
-		fmt.Printf("Decoding packet sn=%d etherType=0x%04x\n", pkt.SerialNumber, etherType)
+		_, _ = fmt.Fprintf(os.Stdout, "Decoding packet sn=%d etherType=0x%04x\n", pkt.SerialNumber, etherType)
 	}
 
 	// Route to protocol handler
@@ -453,12 +472,12 @@ func (s *Stack) decodePacket(pkt *Packet) {
 		s.fdpHandler.HandlePacket(pkt)
 	default:
 		if s.debugConfig.GetGlobal() >= 2 {
-			fmt.Printf("Unknown EtherType 0x%04x sn=%d\n", etherType, pkt.SerialNumber)
+			_, _ = fmt.Fprintf(os.Stdout, "Unknown EtherType 0x%04x sn=%d\n", etherType, pkt.SerialNumber)
 		}
 	}
 }
 
-// sendThread sends packets to the network
+// sendThread sends packets to the network.
 func (s *Stack) sendThread() {
 	defer s.wg.Done()
 
@@ -474,7 +493,7 @@ func (s *Stack) sendThread() {
 	}
 }
 
-// sendPacket sends a packet to the network
+// sendPacket sends a packet to the network.
 func (s *Stack) sendPacket(pkt *Packet) {
 	if pkt.Length == 0 {
 		pkt.Length = len(pkt.Buffer)
@@ -483,11 +502,13 @@ func (s *Stack) sendPacket(pkt *Packet) {
 	err := s.capture.SendPacket(pkt.Buffer[:pkt.Length])
 	if err != nil {
 		if s.debugConfig.GetGlobal() >= 2 {
-			fmt.Printf("Error sending packet sn=%d: %v\n", pkt.SerialNumber, err)
+			_, _ = fmt.Fprintf(os.Stdout, "Error sending packet sn=%d: %v\n", pkt.SerialNumber, err)
 		}
+
 		s.stats.mu.Lock()
 		s.stats.Errors++
 		s.stats.mu.Unlock()
+
 		return
 	}
 
@@ -496,13 +517,14 @@ func (s *Stack) sendPacket(pkt *Packet) {
 	s.stats.mu.Unlock()
 
 	if s.debugConfig.GetGlobal() >= 3 {
-		fmt.Printf("Sent packet sn=%d length=%d\n", pkt.SerialNumber, pkt.Length)
+		_, _ = fmt.Fprintf(os.Stdout, "Sent packet sn=%d length=%d\n", pkt.SerialNumber, pkt.Length)
 	}
 
 	// Reschedule if looping
 	if pkt.LoopTime > 0 {
 		go func() {
 			time.Sleep(pkt.LoopTime)
+
 			if s.running {
 				s.Send(pkt)
 			}
@@ -510,7 +532,7 @@ func (s *Stack) sendPacket(pkt *Packet) {
 	}
 }
 
-// babbleThread generates periodic network traffic
+// babbleThread generates periodic network traffic.
 func (s *Stack) babbleThread() {
 	defer s.wg.Done()
 
@@ -526,6 +548,7 @@ func (s *Stack) babbleThread() {
 				if device == nil || !device.Babble {
 					continue
 				}
+
 				s.sendBabble(device)
 				time.Sleep(10 * time.Millisecond)
 			}
@@ -537,6 +560,7 @@ func (s *Stack) sendBabble(device *config.Device) {
 	if device == nil || len(device.MACAddress) == 0 {
 		return
 	}
+
 	srcIP := firstIPv4Address(device)
 	if srcIP == nil {
 		return
@@ -580,7 +604,7 @@ func (s *Stack) sendBabble(device *config.Device) {
 		dot1q := &layers.Dot1Q{
 			Priority:       0,
 			DropEligible:   false,
-			VLANIdentifier: uint16(vlan),
+			VLANIdentifier: uint16(vlan), //nolint:gosec // G115: VLAN ID bounded by 802.1Q (0-4095)
 			Type:           layers.EthernetTypeARP,
 		}
 		_ = gopacket.SerializeLayers(buf, opts, eth, dot1q, arp)
@@ -591,18 +615,18 @@ func (s *Stack) sendBabble(device *config.Device) {
 	_ = s.SendRawPacket(buf.Bytes())
 }
 
-// Send queues a packet for sending
+// Send queues a packet for sending.
 func (s *Stack) Send(pkt *Packet) {
 	select {
 	case s.sendQueue <- pkt:
 	default:
 		if s.debugConfig.GetGlobal() >= 2 {
-			fmt.Println("Send queue full, dropping packet")
+			_, _ = fmt.Fprintln(os.Stdout, "Send queue full, dropping packet")
 		}
 	}
 }
 
-// SendRawPacket queues raw bytes as a packet for sending
+// SendRawPacket queues raw bytes as a packet for sending.
 func (s *Stack) SendRawPacket(data []byte) error {
 	s.mu.Lock()
 	s.serialNumber++
@@ -616,10 +640,11 @@ func (s *Stack) SendRawPacket(data []byte) error {
 	}
 
 	s.Send(pkt)
+
 	return nil
 }
 
-// GetDevices returns the device table
+// GetDevices returns the device table.
 func (s *Stack) GetDevices() *DeviceTable {
 	return s.devices
 }
@@ -627,24 +652,26 @@ func (s *Stack) GetDevices() *DeviceTable {
 // ReloadConfig applies a new configuration to the running stack.
 func (s *Stack) ReloadConfig(cfg *config.Config) error {
 	if cfg == nil {
-		return fmt.Errorf("reload config: nil config")
+		return ErrNilConfig
 	}
 
 	s.reloadMu.Lock()
 	defer s.reloadMu.Unlock()
 
 	s.initializeDevices(cfg)
+
 	if s.neighbors != nil {
 		s.neighbors.reset()
 	}
 
 	if s.debugConfig.GetGlobal() >= 1 {
-		fmt.Printf("Protocol stack reloaded (%d devices)\n", len(cfg.Devices))
+		_, _ = fmt.Fprintf(os.Stdout, "Protocol stack reloaded (%d devices)\n", len(cfg.Devices))
 	}
+
 	return nil
 }
 
-// GetStats returns current statistics (copy without mutex)
+// GetStats returns current statistics (copy without mutex).
 func (s *Stack) GetStats() Statistics {
 	s.stats.mu.RLock()
 	defer s.stats.mu.RUnlock()
@@ -671,37 +698,50 @@ func (s *Stack) initSNMPAgent(device *config.Device) {
 
 	debugLevel := s.debugConfig.GetProtocolLevel(logging.ProtocolSNMP)
 	group := newSnmpAgentGroup()
+
 	baseCommunity := device.SNMPConfig.Community
 	if baseCommunity == "" {
-		baseCommunity = "public"
+		baseCommunity = config.DefaultSNMPCommunity
 	}
+
 	baseAgent := group.Ensure(baseCommunity, device, debugLevel)
 
 	// Load walk files into base community agent
 	for _, walkFile := range device.SNMPConfig.WalkFiles {
-		if err := baseAgent.LoadWalkFile(walkFile); err != nil && debugLevel >= 1 {
-			fmt.Printf("SNMP: failed to load walk file for %s: %v\n", device.Name, err)
+		err := baseAgent.LoadWalkFile(walkFile)
+		if err != nil && debugLevel >= 1 {
+			_, _ = fmt.Fprintf(os.Stdout, "SNMP: failed to load walk file for %s: %v\n", device.Name, err)
 		}
 	}
+
 	if device.SNMPConfig.WalkFile != "" {
-		if err := baseAgent.LoadWalkFile(device.SNMPConfig.WalkFile); err != nil && debugLevel >= 1 {
-			fmt.Printf("SNMP: failed to load walk file for %s: %v\n", device.Name, err)
+		err := baseAgent.LoadWalkFile(device.SNMPConfig.WalkFile)
+		if err != nil && debugLevel >= 1 {
+			_, _ = fmt.Fprintf(os.Stdout, "SNMP: failed to load walk file for %s: %v\n", device.Name, err)
 		}
 	}
 
 	// Load community-specific walk files
 	for _, include := range device.SNMPConfig.CommunityIncludes {
 		agent := group.Ensure(include.Community, device, debugLevel)
-		if err := agent.LoadWalkFile(include.WalkFile); err != nil && debugLevel >= 1 {
-			fmt.Printf("SNMP: failed to load walk file for %s (%s): %v\n", device.Name, include.Community, err)
+		err := agent.LoadWalkFile(include.WalkFile)
+		if err != nil && debugLevel >= 1 {
+			_, _ = fmt.Fprintf(
+				os.Stdout,
+				"SNMP: failed to load walk file for %s (%s): %v\n",
+				device.Name,
+				include.Community,
+				err,
+			)
 		}
 	}
 
 	// Apply AddMib entries to base community (Java uses public)
 	for _, mib := range device.SNMPConfig.AddMibs {
-		agent := group.Ensure("public", device, debugLevel)
-		if err := agent.AddMib(mib.OID, mib.Type, mib.Value); err != nil && debugLevel >= 2 {
-			fmt.Printf("SNMP: AddMib failed for %s oid=%s err=%v\n", device.Name, mib.OID, err)
+		agent := group.Ensure(config.DefaultSNMPCommunity, device, debugLevel)
+		err := agent.AddMib(mib.OID, mib.Type, mib.Value)
+		if err != nil && debugLevel >= 2 {
+			_, _ = fmt.Fprintf(os.Stdout, "SNMP: AddMib failed for %s oid=%s err=%v\n", device.Name, mib.OID, err)
 		}
 	}
 
@@ -713,15 +753,19 @@ func snmpEnabled(cfg config.SNMPConfig) bool {
 		cfg.SysDescr != "" || cfg.SysContact != "" || cfg.SysLocation != "" {
 		return true
 	}
+
 	if len(cfg.AddMibs) > 0 || len(cfg.CommunityIncludes) > 0 || len(cfg.AccessList) > 0 || cfg.SnmpAddr != nil {
 		return true
 	}
+
 	if cfg.Dot1DFdbTable != nil || cfg.Dot1QFdbTable != nil {
 		return true
 	}
+
 	if cfg.Traps != nil && cfg.Traps.Enabled {
 		return true
 	}
+
 	return false
 }
 
@@ -729,6 +773,7 @@ func (s *Stack) getSNMPAgents(device *config.Device) *snmpAgentGroup {
 	if s == nil {
 		return nil
 	}
+
 	return s.snmpAgents[device]
 }
 
@@ -736,35 +781,45 @@ func (s *Stack) updateFDBTables(mac net.HardwareAddr) {
 	if s == nil || len(mac) == 0 {
 		return
 	}
+
 	for _, device := range s.devices.GetForwardingDevices() {
 		if device == nil {
 			continue
 		}
+
 		group := s.snmpAgents[device]
 		if group == nil {
 			group = newSnmpAgentGroup()
 			s.snmpAgents[device] = group
 		}
+
 		debugLevel := s.debugConfig.GetProtocolLevel(logging.ProtocolSNMP)
+
 		baseCommunity := device.SNMPConfig.Community
 		if baseCommunity == "" {
-			baseCommunity = "public"
+			baseCommunity = config.DefaultSNMPCommunity
 		}
 
-		decMac := ""
-		hexMac := ""
+		var decMacBuilder, hexMacBuilder strings.Builder
 		for _, b := range mac {
-			decMac += fmt.Sprintf(".%d", b)
-			hexMac += fmt.Sprintf("%02X ", b)
+			decMacBuilder.WriteString(".")
+			decMacBuilder.WriteString(strconv.Itoa(int(b)))
+			_, _ = fmt.Fprintf(&hexMacBuilder, "%02X ", b)
 		}
+
+		decMac := decMacBuilder.String()
+		hexMac := hexMacBuilder.String()
 
 		if device.SNMPConfig.Dot1DFdbTable != nil {
 			port := device.SNMPConfig.Dot1DFdbTable.Port
 			vlan := device.SNMPConfig.Dot1DFdbTable.VLAN
+
 			community := baseCommunity
+
 			if vlan > 0 {
 				community = fmt.Sprintf("%s@%d", baseCommunity, vlan)
 			}
+
 			addressMib := ".1.3.6.1.2.1.17.4.3.1.1" + decMac
 			portMib := ".1.3.6.1.2.1.17.4.3.1.2" + decMac
 			statusMib := ".1.3.6.1.2.1.17.4.3.1.3" + decMac
@@ -776,10 +831,12 @@ func (s *Stack) updateFDBTables(mac net.HardwareAddr) {
 
 		if device.SNMPConfig.Dot1QFdbTable != nil {
 			port := device.SNMPConfig.Dot1QFdbTable.Port
+
 			vlan := device.SNMPConfig.Dot1QFdbTable.VLAN
 			if vlan <= 0 {
 				continue
 			}
+
 			community := baseCommunity
 			addressMib := fmt.Sprintf(".1.3.6.1.2.1.17.7.1.2.2.1.1.%d%s", vlan, decMac)
 			portMib := fmt.Sprintf(".1.3.6.1.2.1.17.7.1.2.2.1.2.%d%s", vlan, decMac)
@@ -792,7 +849,7 @@ func (s *Stack) updateFDBTables(mac net.HardwareAddr) {
 	}
 }
 
-// IncrementStat increments a specific statistic
+// IncrementStat increments a specific statistic.
 func (s *Stack) IncrementStat(stat string) {
 	s.stats.mu.Lock()
 	defer s.stats.mu.Unlock()
@@ -813,32 +870,32 @@ func (s *Stack) IncrementStat(stat string) {
 	}
 }
 
-// GetDebugLevel returns the current global debug level
+// GetDebugLevel returns the current global debug level.
 func (s *Stack) GetDebugLevel() int {
 	return s.debugConfig.GetGlobal()
 }
 
-// GetProtocolDebugLevel returns the debug level for a specific protocol
+// GetProtocolDebugLevel returns the debug level for a specific protocol.
 func (s *Stack) GetProtocolDebugLevel(protocol string) int {
 	return s.debugConfig.GetProtocolLevel(protocol)
 }
 
-// GetDebugConfig returns the debug configuration
+// GetDebugConfig returns the debug configuration.
 func (s *Stack) GetDebugConfig() *logging.DebugConfig {
 	return s.debugConfig
 }
 
-// GetDHCPHandler returns the DHCP handler for configuration
+// GetDHCPHandler returns the DHCP handler for configuration.
 func (s *Stack) GetDHCPHandler() *DHCPHandler {
 	return s.dhcpHandler
 }
 
-// GetDHCPv6Handler returns the DHCPv6 handler for configuration
+// GetDHCPv6Handler returns the DHCPv6 handler for configuration.
 func (s *Stack) GetDHCPv6Handler() *DHCPv6Handler {
 	return s.dhcpv6Handler
 }
 
-// GetDNSHandler returns the DNS handler for configuration
+// GetDNSHandler returns the DNS handler for configuration.
 func (s *Stack) GetDNSHandler() *DNSHandler {
 	return s.dnsHandler
 }
@@ -846,6 +903,7 @@ func (s *Stack) GetDNSHandler() *DNSHandler {
 func (s *Stack) currentConfig() *config.Config {
 	s.configMu.RLock()
 	defer s.configMu.RUnlock()
+
 	return s.config
 }
 
@@ -854,10 +912,11 @@ func (s *Stack) GetNeighbors() []NeighborRecord {
 	if s.neighbors == nil {
 		return nil
 	}
+
 	return s.neighbors.list()
 }
 
-// GetErrorManager returns the error state manager
+// GetErrorManager returns the error state manager.
 func (s *Stack) GetErrorManager() *errors.StateManager {
 	return s.errorManager
 }
@@ -866,6 +925,7 @@ func (s *Stack) recordNeighbor(entry NeighborRecord) {
 	if s.neighbors == nil {
 		return
 	}
+
 	s.neighbors.upsert(entry)
 }
 
@@ -873,11 +933,11 @@ func (s *Stack) startNeighborCleanupLoop() {
 	if s.neighbors == nil {
 		return
 	}
-	s.wg.Add(1)
-	go func() {
-		defer s.wg.Done()
+
+	s.wg.Go(func() {
 		ticker := time.NewTicker(30 * time.Second)
 		defer ticker.Stop()
+
 		for {
 			select {
 			case <-ticker.C:
@@ -886,7 +946,7 @@ func (s *Stack) startNeighborCleanupLoop() {
 				return
 			}
 		}
-	}()
+	})
 }
 
 func (s *Stack) selectDiscoveryDevice(proto string) *config.Device {
@@ -897,6 +957,7 @@ func (s *Stack) selectDiscoveryDevice(proto string) *config.Device {
 
 	for i := range cfg.Devices {
 		dev := &cfg.Devices[i]
+
 		switch proto {
 		case ProtocolLLDP:
 			if dev.LLDPConfig == nil || dev.LLDPConfig.Enabled {
@@ -918,8 +979,10 @@ func (s *Stack) selectDiscoveryDevice(proto string) *config.Device {
 			return dev
 		}
 	}
+
 	if len(cfg.Devices) > 0 {
 		return &cfg.Devices[0]
 	}
+
 	return nil
 }

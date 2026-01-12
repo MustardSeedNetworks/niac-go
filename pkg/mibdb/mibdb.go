@@ -4,8 +4,10 @@
 package mibdb
 
 import (
+	"context"
 	"database/sql"
 	"embed"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -18,16 +20,32 @@ import (
 	_ "modernc.org/sqlite"
 )
 
+// Sentinel errors for mibdb package.
+var (
+	// ErrNotFound is returned when a requested entry does not exist in the database.
+	ErrNotFound = errors.New("entry not found")
+	// ErrUnknownOIDName is returned when an OID name cannot be resolved.
+	ErrUnknownOIDName = errors.New("unknown OID name")
+	// ErrInvalidVarimibIntegralFormat is returned when the varimib integral config is malformed.
+	ErrInvalidVarimibIntegralFormat = errors.New("invalid varimib integral format")
+	// ErrInvalidCentiseconds is returned when centiseconds cannot be parsed.
+	ErrInvalidCentiseconds = errors.New("invalid centiseconds")
+	// ErrInvalidDelta is returned when delta cannot be parsed.
+	ErrInvalidDelta = errors.New("invalid delta")
+	// ErrInvalidVarimibStringFormat is returned when the varimib string config is malformed.
+	ErrInvalidVarimibStringFormat = errors.New("invalid varimib string format")
+)
+
 //go:embed schema.sql
 var schemaSQL embed.FS
 
-// DB represents the MIB database
+// DB represents the MIB database.
 type DB struct {
 	db *sql.DB
 	mu sync.RWMutex
 }
 
-// OIDEntry represents a named OID mapping
+// OIDEntry represents a named OID mapping.
 type OIDEntry struct {
 	Name     string // Human-readable name (e.g., "sysDescr")
 	OID      string // Numeric OID (e.g., "1.3.6.1.2.1.1.1")
@@ -35,7 +53,7 @@ type OIDEntry struct {
 	MIBName  string // Source MIB name (e.g., "SNMPv2-MIB")
 }
 
-// VariMibHandler represents a time-varying MIB handler configuration
+// VariMibHandler represents a time-varying MIB handler configuration.
 type VariMibHandler struct {
 	OIDPattern  string // OID pattern or exact match
 	HandlerType string // "integral", "string", "fixed", "sysuptime"
@@ -44,7 +62,7 @@ type VariMibHandler struct {
 
 // VariMibIntegralConfig represents configuration for integral (counter) handlers
 // Format in config files: varimib((2000 10) (4000 -10))
-// Meaning: increment by 10 every 2000 centiseconds, then decrement by 10 every 4000 centiseconds
+// Meaning: increment by 10 every 2000 centiseconds, then decrement by 10 every 4000 centiseconds.
 type VariMibIntegralConfig struct {
 	Intervals []struct {
 		CentiSeconds int64 // Interval in centiseconds (1/100 sec)
@@ -54,7 +72,7 @@ type VariMibIntegralConfig struct {
 
 // VariMibStringConfig represents configuration for string-cycling handlers
 // Format: varimib((42000 10.250.0.3) (42000 10.250.0.2))
-// Meaning: cycle through values every 42000 centiseconds
+// Meaning: cycle through values every 42000 centiseconds.
 type VariMibStringConfig struct {
 	Intervals []struct {
 		CentiSeconds int64  // Interval in centiseconds
@@ -62,7 +80,7 @@ type VariMibStringConfig struct {
 	}
 }
 
-// New creates a new MIB database, either in-memory or file-based
+// New creates a new MIB database, either in-memory or file-based.
 func New(dbPath string) (*DB, error) {
 	var dsn string
 	if dbPath == "" || dbPath == ":memory:" {
@@ -70,9 +88,11 @@ func New(dbPath string) (*DB, error) {
 	} else {
 		// Ensure directory exists
 		dir := filepath.Dir(dbPath)
-		if err := os.MkdirAll(dir, 0755); err != nil {
+		err := os.MkdirAll(dir, 0o750)
+		if err != nil {
 			return nil, fmt.Errorf("failed to create database directory: %w", err)
 		}
+
 		dsn = dbPath
 	}
 
@@ -83,14 +103,15 @@ func New(dbPath string) (*DB, error) {
 
 	// Initialize schema
 	if err := initSchema(db); err != nil {
-		db.Close()
+		_ = db.Close()
+
 		return nil, fmt.Errorf("failed to initialize schema: %w", err)
 	}
 
 	return &DB{db: db}, nil
 }
 
-// NewInMemory creates a new in-memory MIB database pre-populated with standard OIDs
+// NewInMemory creates a new in-memory MIB database pre-populated with standard OIDs.
 func NewInMemory() (*DB, error) {
 	db, err := New(":memory:")
 	if err != nil {
@@ -99,7 +120,8 @@ func NewInMemory() (*DB, error) {
 
 	// Load built-in OID definitions
 	if err := db.LoadBuiltinOIDs(); err != nil {
-		db.Close()
+		_ = db.Close()
+
 		return nil, fmt.Errorf("failed to load builtin OIDs: %w", err)
 	}
 
@@ -112,7 +134,7 @@ func initSchema(db *sql.DB) error {
 		return fmt.Errorf("failed to read schema: %w", err)
 	}
 
-	_, err = db.Exec(string(schema))
+	_, err = db.ExecContext(context.Background(), string(schema))
 	if err != nil {
 		return fmt.Errorf("failed to execute schema: %w", err)
 	}
@@ -120,56 +142,69 @@ func initSchema(db *sql.DB) error {
 	return nil
 }
 
-// Close closes the database connection
+// Close closes the database connection.
 func (d *DB) Close() error {
-	return d.db.Close()
+	if err := d.db.Close(); err != nil {
+		return fmt.Errorf("failed to close database: %w", err)
+	}
+	return nil
 }
 
-// AddOID adds a single OID entry to the database
+// AddOID adds a single OID entry to the database.
 func (d *DB) AddOID(entry OIDEntry) error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
-	_, err := d.db.Exec(`
+	_, err := d.db.ExecContext(context.Background(), `
 		INSERT OR REPLACE INTO oid_names (name, oid, full_path, mib_name)
 		VALUES (?, ?, ?, ?)
 	`, entry.Name, entry.OID, entry.FullPath, entry.MIBName)
+	if err != nil {
+		return fmt.Errorf("failed to add OID: %w", err)
+	}
 
-	return err
+	return nil
 }
 
-// AddOIDs adds multiple OID entries in a single transaction
+// AddOIDs adds multiple OID entries in a single transaction.
 func (d *DB) AddOIDs(entries []OIDEntry) error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
-	tx, err := d.db.Begin()
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
+	ctx := context.Background()
 
-	stmt, err := tx.Prepare(`
+	tx, err := d.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+
+	defer func() { _ = tx.Rollback() }() // rollback is safe to call after commit, returns ErrTxDone
+
+	stmt, err := tx.PrepareContext(ctx, `
 		INSERT OR REPLACE INTO oid_names (name, oid, full_path, mib_name)
 		VALUES (?, ?, ?, ?)
 	`)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to prepare statement: %w", err)
 	}
-	defer stmt.Close()
+
+	defer func() { _ = stmt.Close() }()
 
 	for _, entry := range entries {
 		_, err := stmt.Exec(entry.Name, entry.OID, entry.FullPath, entry.MIBName)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to execute statement: %w", err)
 		}
 	}
 
-	return tx.Commit()
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+	return nil
 }
 
 // ResolveOIDName converts a name-based OID to numeric form
-// e.g., "sysDescr.0" -> "1.3.6.1.2.1.1.1.0"
+// e.g., "sysDescr.0" -> "1.3.6.1.2.1.1.1.0".
 func (d *DB) ResolveOIDName(oid string) (string, error) {
 	// If already numeric, return as-is
 	if strings.HasPrefix(oid, ".") || (len(oid) > 0 && oid[0] >= '0' && oid[0] <= '9') {
@@ -182,108 +217,124 @@ func (d *DB) ResolveOIDName(oid string) (string, error) {
 	// Extract the name part (before any dots or instance suffix)
 	name := oid
 	suffix := ""
+
 	if idx := strings.Index(oid, "."); idx > 0 {
 		name = oid[:idx]
 		suffix = oid[idx:]
 	}
 
 	var numericOID string
-	err := d.db.QueryRow(`SELECT oid FROM oid_names WHERE name = ?`, name).Scan(&numericOID)
+
+	err := d.db.QueryRowContext(context.Background(), `SELECT oid FROM oid_names WHERE name = ?`, name).
+		Scan(&numericOID)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return "", fmt.Errorf("unknown OID name: %s", name)
+		if errors.Is(err, sql.ErrNoRows) {
+			return "", fmt.Errorf("%w: %s", ErrUnknownOIDName, name)
 		}
-		return "", err
+
+		return "", fmt.Errorf("failed to query OID: %w", err)
 	}
 
 	return numericOID + suffix, nil
 }
 
-// GetOIDByName looks up an OID entry by name
+// GetOIDByName looks up an OID entry by name.
 func (d *DB) GetOIDByName(name string) (*OIDEntry, error) {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
 
 	var entry OIDEntry
-	err := d.db.QueryRow(`
+
+	err := d.db.QueryRowContext(context.Background(), `
 		SELECT name, oid, COALESCE(full_path, ''), COALESCE(mib_name, '')
 		FROM oid_names WHERE name = ?
 	`, name).Scan(&entry.Name, &entry.OID, &entry.FullPath, &entry.MIBName)
-
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, nil
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
 		}
-		return nil, err
+
+		return nil, fmt.Errorf("failed to query OID by name: %w", err)
 	}
 
 	return &entry, nil
 }
 
-// GetOIDsByPrefix returns all OIDs that start with the given prefix
+// GetOIDsByPrefix returns all OIDs that start with the given prefix.
 func (d *DB) GetOIDsByPrefix(prefix string) ([]OIDEntry, error) {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
 
-	rows, err := d.db.Query(`
+	rows, err := d.db.QueryContext(context.Background(), `
 		SELECT name, oid, COALESCE(full_path, ''), COALESCE(mib_name, '')
 		FROM oid_names WHERE oid LIKE ? || '%'
 		ORDER BY oid
 	`, prefix)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to query OIDs by prefix: %w", err)
 	}
-	defer rows.Close()
+
+	defer func() { _ = rows.Close() }()
 
 	var entries []OIDEntry
+
 	for rows.Next() {
 		var entry OIDEntry
-		if err := rows.Scan(&entry.Name, &entry.OID, &entry.FullPath, &entry.MIBName); err != nil {
-			return nil, err
+		err := rows.Scan(&entry.Name, &entry.OID, &entry.FullPath, &entry.MIBName)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan row: %w", err)
 		}
+
 		entries = append(entries, entry)
 	}
 
-	return entries, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("failed to iterate rows: %w", err)
+	}
+	return entries, nil
 }
 
-// AddVariMibHandler adds a VariMib handler configuration
+// AddVariMibHandler adds a VariMib handler configuration.
 func (d *DB) AddVariMibHandler(handler VariMibHandler) error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
-	_, err := d.db.Exec(`
+	_, err := d.db.ExecContext(context.Background(), `
 		INSERT OR REPLACE INTO varimib_handlers (oid_pattern, handler_type, config)
 		VALUES (?, ?, ?)
 	`, handler.OIDPattern, handler.HandlerType, handler.Config)
+	if err != nil {
+		return fmt.Errorf("failed to add VariMib handler: %w", err)
+	}
 
-	return err
+	return nil
 }
 
-// GetVariMibHandler retrieves the handler for a specific OID
+// GetVariMibHandler retrieves the handler for a specific OID.
 func (d *DB) GetVariMibHandler(oid string) (*VariMibHandler, error) {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
 
 	var handler VariMibHandler
-	err := d.db.QueryRow(`
+
+	err := d.db.QueryRowContext(context.Background(), `
 		SELECT oid_pattern, handler_type, config
 		FROM varimib_handlers
 		WHERE oid_pattern = ? OR ? LIKE oid_pattern
 		LIMIT 1
 	`, oid, oid).Scan(&handler.OIDPattern, &handler.HandlerType, &handler.Config)
-
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, nil
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
 		}
-		return nil, err
+
+		return nil, fmt.Errorf("failed to query VariMib handler: %w", err)
 	}
 
 	return &handler, nil
 }
 
-// ParseVariMibIntegral parses the varimib integral format: varimib((2000 10) (4000 -10))
+// ParseVariMibIntegral parses the varimib integral format: varimib((2000 10) (4000 -10)).
 func ParseVariMibIntegral(config string) (*VariMibIntegralConfig, error) {
 	// Remove "varimib" prefix and brackets
 	config = strings.TrimSpace(config)
@@ -296,19 +347,22 @@ func ParseVariMibIntegral(config string) (*VariMibIntegralConfig, error) {
 	matches := re.FindAllStringSubmatch(config, -1)
 
 	if len(matches) == 0 {
-		return nil, fmt.Errorf("invalid varimib integral format: %s", config)
+		return nil, fmt.Errorf("%w: %s", ErrInvalidVarimibIntegralFormat, config)
 	}
 
 	result := &VariMibIntegralConfig{}
+
 	for _, match := range matches {
 		centisecs, err := strconv.ParseInt(match[1], 10, 64)
 		if err != nil {
-			return nil, fmt.Errorf("invalid centiseconds: %s", match[1])
+			return nil, fmt.Errorf("%w: %s", ErrInvalidCentiseconds, match[1])
 		}
+
 		delta, err := strconv.ParseInt(match[2], 10, 64)
 		if err != nil {
-			return nil, fmt.Errorf("invalid delta: %s", match[2])
+			return nil, fmt.Errorf("%w: %s", ErrInvalidDelta, match[2])
 		}
+
 		result.Intervals = append(result.Intervals, struct {
 			CentiSeconds int64
 			Delta        int64
@@ -318,7 +372,7 @@ func ParseVariMibIntegral(config string) (*VariMibIntegralConfig, error) {
 	return result, nil
 }
 
-// ParseVariMibString parses the varimib string format: varimib((42000 10.250.0.3) (42000 10.250.0.2))
+// ParseVariMibString parses the varimib string format: varimib((42000 10.250.0.3) (42000 10.250.0.2)).
 func ParseVariMibString(config string) (*VariMibStringConfig, error) {
 	config = strings.TrimSpace(config)
 	config = strings.TrimPrefix(config, "varimib")
@@ -330,15 +384,17 @@ func ParseVariMibString(config string) (*VariMibStringConfig, error) {
 	matches := re.FindAllStringSubmatch(config, -1)
 
 	if len(matches) == 0 {
-		return nil, fmt.Errorf("invalid varimib string format: %s", config)
+		return nil, fmt.Errorf("%w: %s", ErrInvalidVarimibStringFormat, config)
 	}
 
 	result := &VariMibStringConfig{}
+
 	for _, match := range matches {
 		centisecs, err := strconv.ParseInt(match[1], 10, 64)
 		if err != nil {
-			return nil, fmt.Errorf("invalid centiseconds: %s", match[1])
+			return nil, fmt.Errorf("%w: %s", ErrInvalidCentiseconds, match[1])
 		}
+
 		result.Intervals = append(result.Intervals, struct {
 			CentiSeconds int64
 			Value        string
@@ -348,14 +404,14 @@ func ParseVariMibString(config string) (*VariMibStringConfig, error) {
 	return result, nil
 }
 
-// VariMibIntegralHandler implements a counter that changes over time
+// VariMibIntegralHandler implements a counter that changes over time.
 type VariMibIntegralHandler struct {
 	config    *VariMibIntegralConfig
 	startTime time.Time
 	baseValue int64
 }
 
-// NewVariMibIntegralHandler creates a new integral handler
+// NewVariMibIntegralHandler creates a new integral handler.
 func NewVariMibIntegralHandler(config *VariMibIntegralConfig, baseValue int64) *VariMibIntegralHandler {
 	return &VariMibIntegralHandler{
 		config:    config,
@@ -364,7 +420,7 @@ func NewVariMibIntegralHandler(config *VariMibIntegralConfig, baseValue int64) *
 	}
 }
 
-// Value returns the current value based on elapsed time
+// Value returns the current value based on elapsed time.
 func (h *VariMibIntegralHandler) Value() int64 {
 	elapsed := time.Since(h.startTime)
 	centisecs := elapsed.Milliseconds() / 10 // Convert to centiseconds
@@ -389,13 +445,13 @@ func (h *VariMibIntegralHandler) Value() int64 {
 	return value
 }
 
-// VariMibStringHandler implements a string that cycles through values
+// VariMibStringHandler implements a string that cycles through values.
 type VariMibStringHandler struct {
 	config    *VariMibStringConfig
 	startTime time.Time
 }
 
-// NewVariMibStringHandler creates a new string handler
+// NewVariMibStringHandler creates a new string handler.
 func NewVariMibStringHandler(config *VariMibStringConfig) *VariMibStringHandler {
 	return &VariMibStringHandler{
 		config:    config,
@@ -403,7 +459,7 @@ func NewVariMibStringHandler(config *VariMibStringConfig) *VariMibStringHandler 
 	}
 }
 
-// Value returns the current string value based on elapsed time
+// Value returns the current string value based on elapsed time.
 func (h *VariMibStringHandler) Value() string {
 	if len(h.config.Intervals) == 0 {
 		return ""
@@ -424,6 +480,7 @@ func (h *VariMibStringHandler) Value() string {
 
 	// Find position in cycle
 	pos := centisecs % totalCycle
+
 	var accumulated int64
 	for _, interval := range h.config.Intervals {
 		accumulated += interval.CentiSeconds
@@ -435,22 +492,28 @@ func (h *VariMibStringHandler) Value() string {
 	return h.config.Intervals[len(h.config.Intervals)-1].Value
 }
 
-// Stats returns database statistics
+// Stats returns database statistics.
 func (d *DB) Stats() (map[string]int, error) {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
 
 	stats := make(map[string]int)
 
+	ctx := context.Background()
+
 	var count int
-	if err := d.db.QueryRow(`SELECT COUNT(*) FROM oid_names`).Scan(&count); err != nil {
-		return nil, err
+	err := d.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM oid_names`).Scan(&count)
+	if err != nil {
+		return nil, fmt.Errorf("failed to count OID names: %w", err)
 	}
+
 	stats["oid_names"] = count
 
-	if err := d.db.QueryRow(`SELECT COUNT(*) FROM varimib_handlers`).Scan(&count); err != nil {
-		return nil, err
+	err = d.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM varimib_handlers`).Scan(&count)
+	if err != nil {
+		return nil, fmt.Errorf("failed to count VariMib handlers: %w", err)
 	}
+
 	stats["varimib_handlers"] = count
 
 	return stats, nil

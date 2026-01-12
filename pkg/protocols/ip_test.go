@@ -10,7 +10,7 @@ import (
 	"github.com/krisarmstrong/niac-go/pkg/logging"
 )
 
-// TestNewIPHandler verifies IP handler creation
+// TestNewIPHandler verifies IP handler creation.
 func TestNewIPHandler(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -19,12 +19,13 @@ func TestNewIPHandler(t *testing.T) {
 	if handler == nil {
 		t.Fatal("Expected IP handler, got nil")
 	}
+
 	if handler.stack != stack {
 		t.Error("Stack not set correctly")
 	}
 }
 
-// TestIPProtocolConstants verifies IP protocol number constants
+// TestIPProtocolConstants verifies IP protocol number constants.
 func TestIPProtocolConstants(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -45,7 +46,7 @@ func TestIPProtocolConstants(t *testing.T) {
 	}
 }
 
-// TestHandleIPPacket_ICMP verifies IP packet routing to ICMP handler
+// TestHandleIPPacket_ICMP verifies IP packet routing to ICMP handler.
 func TestHandleIPPacket_ICMP(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -108,7 +109,7 @@ func TestHandleIPPacket_ICMP(t *testing.T) {
 	}
 }
 
-// TestHandleIPPacket_NonMatchingIP verifies handling when IP doesn't match any device
+// TestHandleIPPacket_NonMatchingIP verifies handling when IP doesn't match any device.
 func TestHandleIPPacket_NonMatchingIP(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -171,7 +172,7 @@ func TestHandleIPPacket_NonMatchingIP(t *testing.T) {
 	}
 }
 
-// TestHandleIPPacket_UnknownProtocol verifies handling of unsupported protocols
+// TestHandleIPPacket_UnknownProtocol verifies handling of unsupported protocols.
 func TestHandleIPPacket_UnknownProtocol(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -220,11 +221,10 @@ func TestHandleIPPacket_UnknownProtocol(t *testing.T) {
 
 	// Handle packet - should be logged but not crash
 	handler.HandlePacket(pkt)
-
 	// No specific assertion - just verify it doesn't panic
 }
 
-// TestSendIPPacket verifies IP packet sending
+// TestSendIPPacket verifies IP packet sending.
 func TestSendIPPacket(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -238,7 +238,6 @@ func TestSendIPPacket(t *testing.T) {
 	dstMAC := net.HardwareAddr{0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF}
 
 	err := handler.SendIPPacket(srcIP, dstIP, protocol, payload, srcMAC, dstMAC)
-
 	if err != nil {
 		t.Errorf("SendIPPacket failed: %v", err)
 	}
@@ -249,7 +248,7 @@ func TestSendIPPacket(t *testing.T) {
 	}
 }
 
-// TestHandleIPPacket_MissingIPLayer verifies handling when IP layer is missing
+// TestHandleIPPacket_MissingIPLayer verifies handling when IP layer is missing.
 func TestHandleIPPacket_MissingIPLayer(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -281,13 +280,12 @@ func TestHandleIPPacket_MissingIPLayer(t *testing.T) {
 
 	// Handle packet - should return early without crashing
 	handler.HandlePacket(pkt)
-
 	// No specific assertion - just verify it doesn't panic
 }
 
 // Benchmarks
 
-// BenchmarkHandleIPPacket benchmarks IP packet handling
+// BenchmarkHandleIPPacket benchmarks IP packet handling.
 func BenchmarkHandleIPPacket(b *testing.B) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -327,7 +325,7 @@ func BenchmarkHandleIPPacket(b *testing.B) {
 		ComputeChecksums: true,
 	}
 
-	gopacket.SerializeLayers(buffer, opts, eth, ipLayer, icmpLayer, gopacket.Payload([]byte("test")))
+	_ = gopacket.SerializeLayers(buffer, opts, eth, ipLayer, icmpLayer, gopacket.Payload([]byte("test")))
 
 	pkt := &Packet{
 		Buffer:       buffer.Bytes(),
@@ -335,13 +333,12 @@ func BenchmarkHandleIPPacket(b *testing.B) {
 		SerialNumber: 1,
 	}
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		handler.HandlePacket(pkt)
 	}
 }
 
-// BenchmarkSendIPPacket benchmarks IP packet sending
+// BenchmarkSendIPPacket benchmarks IP packet sending.
 func BenchmarkSendIPPacket(b *testing.B) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -354,8 +351,7 @@ func BenchmarkSendIPPacket(b *testing.B) {
 	srcMAC := net.HardwareAddr{0x00, 0x11, 0x22, 0x33, 0x44, 0x55}
 	dstMAC := net.HardwareAddr{0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF}
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		handler.SendIPPacket(srcIP, dstIP, protocol, payload, srcMAC, dstMAC)
+	for b.Loop() {
+		_ = handler.SendIPPacket(srcIP, dstIP, protocol, payload, srcMAC, dstMAC)
 	}
 }

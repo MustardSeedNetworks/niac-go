@@ -1,8 +1,8 @@
-import { type FC } from 'react';
-import { CollapsibleSection, FormField } from '../form';
-import type { LLDPConfig } from '../../api/types';
-import type { ProtocolSectionProps } from './types';
-import { inputClassName } from './types';
+import type { FC } from "react";
+import type { LLDPConfig } from "../../api/types";
+import { CollapsibleSection, FormField } from "../form";
+import type { ProtocolSectionProps } from "./types";
+import { inputClassName } from "./types";
 
 export const LLDPSection: FC<ProtocolSectionProps> = ({
   device,
@@ -10,8 +10,8 @@ export const LLDPSection: FC<ProtocolSectionProps> = ({
   onToggle,
   onUpdate,
 }) => {
-  const updateLLDP = (config: LLDPConfig | undefined) => {
-    onUpdate('lldp', config);
+  const updateLldp = (config: LLDPConfig | undefined) => {
+    onUpdate("lldp", config);
   };
 
   return (
@@ -21,7 +21,7 @@ export const LLDPSection: FC<ProtocolSectionProps> = ({
       onToggle={onToggle}
       enabled={device.lldp?.enabled ?? false}
       onEnableChange={(enabled) => {
-        updateLLDP(enabled ? { enabled: true } as LLDPConfig : undefined);
+        updateLldp(enabled ? ({ enabled: true } as LLDPConfig) : undefined);
       }}
     >
       {device.lldp?.enabled && (
@@ -29,10 +29,8 @@ export const LLDPSection: FC<ProtocolSectionProps> = ({
           <FormField label="System Description" helpText="LLDP system description">
             <input
               type="text"
-              value={device.lldp.system_description || ''}
-              onChange={(e) =>
-                updateLLDP({ ...device.lldp!, system_description: e.target.value })
-              }
+              value={device.lldp.system_description || ""}
+              onChange={(e) => updateLldp({ ...device.lldp!, system_description: e.target.value })}
               placeholder="Cisco IOS Software..."
               className={inputClassName}
             />
@@ -41,10 +39,8 @@ export const LLDPSection: FC<ProtocolSectionProps> = ({
           <FormField label="Port Description" helpText="LLDP port description">
             <input
               type="text"
-              value={device.lldp.port_description || ''}
-              onChange={(e) =>
-                updateLLDP({ ...device.lldp!, port_description: e.target.value })
-              }
+              value={device.lldp.port_description || ""}
+              onChange={(e) => updateLldp({ ...device.lldp!, port_description: e.target.value })}
               placeholder="GigabitEthernet0/1"
               className={inputClassName}
             />
@@ -55,7 +51,7 @@ export const LLDPSection: FC<ProtocolSectionProps> = ({
               type="number"
               value={device.lldp.advertise_interval || 30}
               onChange={(e) =>
-                updateLLDP({ ...device.lldp!, advertise_interval: parseInt(e.target.value) })
+                updateLldp({ ...device.lldp!, advertise_interval: parseInt(e.target.value, 10) })
               }
               min={5}
               max={32768}
@@ -67,9 +63,7 @@ export const LLDPSection: FC<ProtocolSectionProps> = ({
             <input
               type="number"
               value={device.lldp.ttl || 120}
-              onChange={(e) =>
-                updateLLDP({ ...device.lldp!, ttl: parseInt(e.target.value) })
-              }
+              onChange={(e) => updateLldp({ ...device.lldp!, ttl: parseInt(e.target.value, 10) })}
               min={1}
               max={65535}
               className={inputClassName}

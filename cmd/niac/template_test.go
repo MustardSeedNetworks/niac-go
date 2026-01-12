@@ -115,7 +115,7 @@ func TestTemplateUseFileCreation(t *testing.T) {
 			}
 
 			// Write template to file
-			err = os.WriteFile(tt.outputFile, []byte(tmpl.Content), 0644)
+			err = os.WriteFile(tt.outputFile, []byte(tmpl.Content), 0o644)
 			if err != nil {
 				t.Errorf("Failed to write template: %v", err)
 				return
@@ -146,7 +146,7 @@ func TestTemplateFileOverwrite(t *testing.T) {
 
 	// Create initial file
 	initialContent := []byte("initial: content")
-	err := os.WriteFile(outputFile, initialContent, 0644)
+	err := os.WriteFile(outputFile, initialContent, 0o644)
 	if err != nil {
 		t.Fatalf("Failed to create initial file: %v", err)
 	}
@@ -158,7 +158,7 @@ func TestTemplateFileOverwrite(t *testing.T) {
 	}
 
 	// Overwrite with template
-	err = os.WriteFile(outputFile, []byte(tmpl.Content), 0644)
+	err = os.WriteFile(outputFile, []byte(tmpl.Content), 0o644)
 	if err != nil {
 		t.Fatalf("Failed to overwrite file: %v", err)
 	}
@@ -229,7 +229,7 @@ func TestTemplateInvalidDirectory(t *testing.T) {
 		t.Fatalf("Failed to get template: %v", err)
 	}
 
-	err = os.WriteFile(invalidPath, []byte(tmpl.Content), 0644)
+	err = os.WriteFile(invalidPath, []byte(tmpl.Content), 0o644)
 	if err == nil {
 		t.Error("Expected error when writing to invalid directory, got nil")
 	}
@@ -245,7 +245,7 @@ func TestTemplateFilePermissions(t *testing.T) {
 	}
 
 	// Write with 0644 permissions
-	err = os.WriteFile(outputFile, []byte(tmpl.Content), 0644)
+	err = os.WriteFile(outputFile, []byte(tmpl.Content), 0o644)
 	if err != nil {
 		t.Fatalf("Failed to write file: %v", err)
 	}
@@ -257,7 +257,7 @@ func TestTemplateFilePermissions(t *testing.T) {
 	}
 
 	mode := info.Mode()
-	expectedPerm := os.FileMode(0644)
+	expectedPerm := os.FileMode(0o644)
 	if mode.Perm() != expectedPerm {
 		t.Logf("File permissions: got %v, expected %v (may vary by OS)", mode.Perm(), expectedPerm)
 	}

@@ -35,12 +35,14 @@ func runMan(cmd *cobra.Command, args []string) {
 	}
 
 	manDir := "docs/man"
-	if err := os.MkdirAll(manDir, 0750); err != nil {
+	err := os.MkdirAll(manDir, 0o750)
+	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error creating man directory: %v\n", err)
 		os.Exit(1)
 	}
 
-	if err := doc.GenManTree(rootCmd, header, manDir); err != nil {
+	err = doc.GenManTree(rootCmd, header, manDir)
+	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error generating man pages: %v\n", err)
 		os.Exit(1)
 	}

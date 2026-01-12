@@ -1,4 +1,3 @@
-// Package api provides PCAP analysis endpoints for the NIAC web UI.
 package api
 
 import (
@@ -100,17 +99,17 @@ const (
 
 // pcapCacheEntry wraps an analysis with its approximate memory size.
 type pcapCacheEntry struct {
-	result   *PcapAnalysisResult
-	memSize  int64 // Approximate memory size in bytes
-	addedAt  time.Time
+	result  *PcapAnalysisResult
+	memSize int64 // Approximate memory size in bytes
+	addedAt time.Time
 }
 
 type pcapCache struct {
-	mu          sync.RWMutex
-	entries     map[string]*pcapCacheEntry
-	maxEntries  int
-	maxMemory   int64
-	currentMem  int64
+	mu         sync.RWMutex
+	entries    map[string]*pcapCacheEntry
+	maxEntries int
+	maxMemory  int64
+	currentMem int64
 }
 
 var globalPcapCache = &pcapCache{

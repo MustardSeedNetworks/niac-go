@@ -6,7 +6,7 @@ import (
 	"github.com/krisarmstrong/niac-go/pkg/errors"
 )
 
-// TestErrorInjection_FCSErrors tests FCS error injection
+// TestErrorInjection_FCSErrors tests FCS error injection.
 func TestErrorInjection_FCSErrors(t *testing.T) {
 	sm := errors.NewStateManager()
 
@@ -43,7 +43,7 @@ func TestErrorInjection_FCSErrors(t *testing.T) {
 	}
 }
 
-// TestErrorInjection_PacketDiscards tests packet discard injection
+// TestErrorInjection_PacketDiscards tests packet discard injection.
 func TestErrorInjection_PacketDiscards(t *testing.T) {
 	sm := errors.NewStateManager()
 
@@ -76,7 +76,7 @@ func TestErrorInjection_PacketDiscards(t *testing.T) {
 	}
 }
 
-// TestErrorInjection_InterfaceErrors tests interface error injection
+// TestErrorInjection_InterfaceErrors tests interface error injection.
 func TestErrorInjection_InterfaceErrors(t *testing.T) {
 	sm := errors.NewStateManager()
 
@@ -113,7 +113,7 @@ func TestErrorInjection_InterfaceErrors(t *testing.T) {
 	}
 }
 
-// TestErrorInjection_HighUtilization tests high utilization injection
+// TestErrorInjection_HighUtilization tests high utilization injection.
 func TestErrorInjection_HighUtilization(t *testing.T) {
 	sm := errors.NewStateManager()
 
@@ -151,7 +151,7 @@ func TestErrorInjection_HighUtilization(t *testing.T) {
 	}
 }
 
-// TestErrorInjection_HighCPU tests CPU utilization injection
+// TestErrorInjection_HighCPU tests CPU utilization injection.
 func TestErrorInjection_HighCPU(t *testing.T) {
 	sm := errors.NewStateManager()
 
@@ -183,7 +183,7 @@ func TestErrorInjection_HighCPU(t *testing.T) {
 	}
 }
 
-// TestErrorInjection_HighMemory tests memory utilization injection
+// TestErrorInjection_HighMemory tests memory utilization injection.
 func TestErrorInjection_HighMemory(t *testing.T) {
 	sm := errors.NewStateManager()
 
@@ -207,7 +207,7 @@ func TestErrorInjection_HighMemory(t *testing.T) {
 	}
 }
 
-// TestErrorInjection_HighDisk tests disk utilization injection
+// TestErrorInjection_HighDisk tests disk utilization injection.
 func TestErrorInjection_HighDisk(t *testing.T) {
 	sm := errors.NewStateManager()
 
@@ -231,7 +231,7 @@ func TestErrorInjection_HighDisk(t *testing.T) {
 	}
 }
 
-// TestErrorInjection_MultipleDevicesAndInterfaces tests error injection across multiple devices
+// TestErrorInjection_MultipleDevicesAndInterfaces tests error injection across multiple devices.
 func TestErrorInjection_MultipleDevicesAndInterfaces(t *testing.T) {
 	sm := errors.NewStateManager()
 
@@ -271,7 +271,7 @@ func TestErrorInjection_MultipleDevicesAndInterfaces(t *testing.T) {
 	}
 }
 
-// TestErrorInjection_ClearAll tests clearing all error states
+// TestErrorInjection_ClearAll tests clearing all error states.
 func TestErrorInjection_ClearAll(t *testing.T) {
 	sm := errors.NewStateManager()
 
@@ -296,7 +296,7 @@ func TestErrorInjection_ClearAll(t *testing.T) {
 	}
 }
 
-// TestErrorInjection_UpdateValue tests updating error rates
+// TestErrorInjection_UpdateValue tests updating error rates.
 func TestErrorInjection_UpdateValue(t *testing.T) {
 	sm := errors.NewStateManager()
 
@@ -325,7 +325,7 @@ func TestErrorInjection_UpdateValue(t *testing.T) {
 	}
 }
 
-// TestErrorInjection_InterfaceConfigPersistence tests that interface config persists through error changes
+// TestErrorInjection_InterfaceConfigPersistence tests that interface config persists through error changes.
 func TestErrorInjection_InterfaceConfigPersistence(t *testing.T) {
 	sm := errors.NewStateManager()
 
@@ -372,7 +372,7 @@ func TestErrorInjection_InterfaceConfigPersistence(t *testing.T) {
 	}
 }
 
-// TestErrorInjection_AllErrorTypes tests all error types are supported
+// TestErrorInjection_AllErrorTypes tests all error types are supported.
 func TestErrorInjection_AllErrorTypes(t *testing.T) {
 	sm := errors.NewStateManager()
 	deviceIP := "192.168.1.1"
@@ -390,6 +390,7 @@ func TestErrorInjection_AllErrorTypes(t *testing.T) {
 		state := sm.GetError(deviceIP, iface)
 		if state == nil {
 			t.Errorf("Error state not set for %s", errorType)
+
 			continue
 		}
 

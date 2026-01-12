@@ -12,7 +12,7 @@ func TestParseVariMibValue_Fixed(t *testing.T) {
 		name     string
 		value    string
 		asnType  gosnmp.Asn1BER
-		expected interface{}
+		expected any
 	}{
 		{"fixed integer", "fixed(42)", gosnmp.Integer, 42},
 		{"fixed string", "fixed(hello)", gosnmp.OctetString, "hello"},
@@ -47,6 +47,7 @@ func TestParseVariMibValue_Integral(t *testing.T) {
 
 	// Wait for value to change
 	time.Sleep(30 * time.Millisecond)
+
 	after := handler.GetValue().(uint32)
 
 	if after <= initial {
@@ -127,6 +128,7 @@ func TestVariMibRegistry(t *testing.T) {
 	if oidValue == nil {
 		t.Fatal("Expected OIDValue, got nil")
 	}
+
 	if oidValue.Type != gosnmp.Integer {
 		t.Errorf("Expected Integer type, got %v", oidValue.Type)
 	}
@@ -153,8 +155,8 @@ func TestVariMibStringHandler_Cycling(t *testing.T) {
 		startTime: time.Now(),
 		asnType:   gosnmp.OctetString,
 		intervals: []stringInterval{
-			{centiSeconds: 5, value: "first"},   // 50ms
-			{centiSeconds: 5, value: "second"},  // 50ms
+			{centiSeconds: 5, value: "first"},  // 50ms
+			{centiSeconds: 5, value: "second"}, // 50ms
 		},
 	}
 
@@ -166,6 +168,7 @@ func TestVariMibStringHandler_Cycling(t *testing.T) {
 
 	// Wait and check cycling
 	time.Sleep(60 * time.Millisecond)
+
 	newValue := handler.GetValue().(string)
 	if newValue != "first" && newValue != "second" {
 		t.Errorf("Expected first or second, got %s", newValue)

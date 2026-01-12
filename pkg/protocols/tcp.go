@@ -2,13 +2,14 @@ package protocols
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/krisarmstrong/niac-go/pkg/config"
 )
 
-// Well-known TCP ports
+// Well-known TCP ports.
 const (
 	TCPPortFTP    = 21
 	TCPPortSSH    = 22
@@ -17,29 +18,31 @@ const (
 	TCPPortHTTPS  = 443
 )
 
-// TCPHandler handles TCP packets
+// TCPHandler handles TCP packets.
 type TCPHandler struct {
 	stack *Stack
 }
 
-// NewTCPHandler creates a new TCP handler
+// NewTCPHandler creates a new TCP handler.
 func NewTCPHandler(stack *Stack) *TCPHandler {
 	return &TCPHandler{
 		stack: stack,
 	}
 }
 
-// HandlePacket processes a TCP packet over IPv4
+// HandlePacket processes a TCP packet over IPv4.
 func (h *TCPHandler) HandlePacket(pkt *Packet, ipLayer *layers.IPv4, devices []*config.Device) {
 	debugLevel := h.stack.GetDebugLevel()
 
 	// Parse TCP layer
 	packet := gopacket.NewPacket(pkt.Buffer, layers.LayerTypeEthernet, gopacket.Default)
+
 	tcpLayer := packet.Layer(layers.LayerTypeTCP)
 	if tcpLayer == nil {
 		if debugLevel >= 2 {
-			fmt.Printf("TCP packet missing TCP layer sn=%d\n", pkt.SerialNumber)
+			_, _ = fmt.Fprintf(os.Stdout, "TCP packet missing TCP layer sn=%d\n", pkt.SerialNumber)
 		}
+
 		return
 	}
 
@@ -53,16 +56,20 @@ func (h *TCPHandler) HandlePacket(pkt *Packet, ipLayer *layers.IPv4, devices []*
 		if tcp.SYN {
 			flags += "SYN "
 		}
+
 		if tcp.ACK {
 			flags += "ACK "
 		}
+
 		if tcp.FIN {
 			flags += "FIN "
 		}
+
 		if tcp.RST {
 			flags += "RST "
 		}
-		fmt.Printf("TCP packet: %s:%d -> %s:%d flags=[%s] seq=%d ack=%d sn=%d\n",
+
+		_, _ = fmt.Fprintf(os.Stdout, "TCP packet: %s:%d -> %s:%d flags=[%s] seq=%d ack=%d sn=%d\n",
 			ipLayer.SrcIP, tcp.SrcPort, ipLayer.DstIP, tcp.DstPort,
 			flags, tcp.Seq, tcp.Ack, pkt.SerialNumber)
 	}
@@ -165,7 +172,7 @@ func (h *TCPHandler) HandlePacket(pkt *Packet, ipLayer *layers.IPv4, devices []*
 	}
 }
 
-// sendRST sends a TCP RST packet
+// sendRST sends a TCP RST packet.
 func (h *TCPHandler) sendRST(ipLayer *layers.IPv4, tcp *layers.TCP, devices []*config.Device) {
 	debugLevel := h.stack.GetDebugLevel()
 
@@ -177,12 +184,15 @@ func (h *TCPHandler) sendRST(ipLayer *layers.IPv4, tcp *layers.TCP, devices []*c
 
 		// Check if device has the destination IP
 		hasIP := false
+
 		for _, deviceIP := range device.IPAddresses {
 			if deviceIP.Equal(ipLayer.DstIP) {
 				hasIP = true
+
 				break
 			}
 		}
+
 		if !hasIP {
 			continue
 		}
@@ -190,15 +200,18 @@ func (h *TCPHandler) sendRST(ipLayer *layers.IPv4, tcp *layers.TCP, devices []*c
 		// Build RST packet
 		// Get source MAC from device table lookup by source IP
 		srcDevice := h.stack.GetDevices().GetByIP(ipLayer.SrcIP)
+
 		var dstMAC []byte
+
 		if len(srcDevice) > 0 && len(srcDevice[0].MACAddress) > 0 {
 			dstMAC = srcDevice[0].MACAddress
 		} else {
 			// Use MAC from original packet (reverse lookup)
 			// For now, skip if we can't find it
 			if debugLevel >= 2 {
-				fmt.Printf("Cannot send RST: no MAC for %s\n", ipLayer.SrcIP)
+				_, _ = fmt.Fprintf(os.Stdout, "Cannot send RST: no MAC for %s\n", ipLayer.SrcIP)
 			}
+
 			continue
 		}
 
@@ -229,7 +242,7 @@ func (h *TCPHandler) sendRST(ipLayer *layers.IPv4, tcp *layers.TCP, devices []*c
 			ACK:     true,
 			Window:  0,
 		}
-		tcpReply.SetNetworkLayerForChecksum(ipReply) // #nosec G104 -- error logged or non-critical
+		_ = tcpReply.SetNetworkLayerForChecksum(ipReply) // error is non-critical for simulation
 
 		// Serialize
 		buffer := gopacket.NewSerializeBuffer()
@@ -241,8 +254,9 @@ func (h *TCPHandler) sendRST(ipLayer *layers.IPv4, tcp *layers.TCP, devices []*c
 		err := gopacket.SerializeLayers(buffer, opts, eth, ipReply, tcpReply)
 		if err != nil {
 			if debugLevel >= 2 {
-				fmt.Printf("Error serializing TCP RST: %v\n", err)
+				_, _ = fmt.Fprintf(os.Stdout, "Error serializing TCP RST: %v\n", err)
 			}
+
 			continue
 		}
 
@@ -263,7 +277,7 @@ func (h *TCPHandler) sendRST(ipLayer *layers.IPv4, tcp *layers.TCP, devices []*c
 		h.stack.Send(pkt)
 
 		if debugLevel >= 3 {
-			fmt.Printf("Sent TCP RST from %s:%d to %s:%d device=%s sn=%d\n",
+			_, _ = fmt.Fprintf(os.Stdout, "Sent TCP RST from %s:%d to %s:%d device=%s sn=%d\n",
 				ipReply.SrcIP, tcpReply.SrcPort, ipReply.DstIP, tcpReply.DstPort,
 				device.Name, serialNum)
 		}
@@ -272,8 +286,15 @@ func (h *TCPHandler) sendRST(ipLayer *layers.IPv4, tcp *layers.TCP, devices []*c
 	}
 }
 
-// SendTCP sends a TCP packet
-func (h *TCPHandler) SendTCP(srcIP, dstIP []byte, srcPort, dstPort uint16, seq, ack uint32, flags byte, payload []byte, srcMAC, dstMAC []byte) error {
+// SendTCP sends a TCP packet.
+func (h *TCPHandler) SendTCP(
+	srcIP, dstIP []byte,
+	srcPort, dstPort uint16,
+	seq, ack uint32,
+	flags byte,
+	payload []byte,
+	srcMAC, dstMAC []byte,
+) error {
 	// Build Ethernet header
 	eth := &layers.Ethernet{
 		SrcMAC:       srcMAC,
@@ -307,7 +328,7 @@ func (h *TCPHandler) SendTCP(srcIP, dstIP []byte, srcPort, dstPort uint16, seq, 
 	tcpLayer.RST = (flags & 0x04) != 0
 	tcpLayer.PSH = (flags & 0x08) != 0
 
-	tcpLayer.SetNetworkLayerForChecksum(ipLayer) // #nosec G104 -- error logged or non-critical
+	_ = tcpLayer.SetNetworkLayerForChecksum(ipLayer) // error is non-critical for simulation
 
 	// Serialize
 	buffer := gopacket.NewSerializeBuffer()
@@ -323,7 +344,7 @@ func (h *TCPHandler) SendTCP(srcIP, dstIP []byte, srcPort, dstPort uint16, seq, 
 		gopacket.Payload(payload),
 	)
 	if err != nil {
-		return fmt.Errorf("error serializing TCP packet: %v", err)
+		return fmt.Errorf("error serializing TCP packet: %w", err)
 	}
 
 	// Get serial number
@@ -342,14 +363,14 @@ func (h *TCPHandler) SendTCP(srcIP, dstIP []byte, srcPort, dstPort uint16, seq, 
 	h.stack.Send(pkt)
 
 	if h.stack.GetDebugLevel() >= 3 {
-		fmt.Printf("Sent TCP packet: %s:%d -> %s:%d length=%d sn=%d\n",
+		_, _ = fmt.Fprintf(os.Stdout, "Sent TCP packet: %s:%d -> %s:%d length=%d sn=%d\n",
 			srcIP, srcPort, dstIP, dstPort, len(payload), serialNum)
 	}
 
 	return nil
 }
 
-// HandlePacketV6 processes a TCP packet over IPv6
+// HandlePacketV6 processes a TCP packet over IPv6.
 func (h *TCPHandler) HandlePacketV6(pkt *Packet, packet gopacket.Packet, ipv6 *layers.IPv6, devices []*config.Device) {
 	debugLevel := h.stack.GetDebugLevel()
 
@@ -357,8 +378,9 @@ func (h *TCPHandler) HandlePacketV6(pkt *Packet, packet gopacket.Packet, ipv6 *l
 	tcpLayer := packet.Layer(layers.LayerTypeTCP)
 	if tcpLayer == nil {
 		if debugLevel >= 2 {
-			fmt.Printf("TCP/IPv6 packet missing TCP layer sn=%d\n", pkt.SerialNumber)
+			_, _ = fmt.Fprintf(os.Stdout, "TCP/IPv6 packet missing TCP layer sn=%d\n", pkt.SerialNumber)
 		}
+
 		return
 	}
 
@@ -372,16 +394,20 @@ func (h *TCPHandler) HandlePacketV6(pkt *Packet, packet gopacket.Packet, ipv6 *l
 		if tcp.SYN {
 			flags += "SYN "
 		}
+
 		if tcp.ACK {
 			flags += "ACK "
 		}
+
 		if tcp.FIN {
 			flags += "FIN "
 		}
+
 		if tcp.RST {
 			flags += "RST "
 		}
-		fmt.Printf("TCP/IPv6 packet: [%s]:%d -> [%s]:%d flags=[%s] seq=%d ack=%d sn=%d\n",
+
+		_, _ = fmt.Fprintf(os.Stdout, "TCP/IPv6 packet: [%s]:%d -> [%s]:%d flags=[%s] seq=%d ack=%d sn=%d\n",
 			ipv6.SrcIP, tcp.SrcPort, ipv6.DstIP, tcp.DstPort,
 			flags, tcp.Seq, tcp.Ack, pkt.SerialNumber)
 	}
@@ -406,7 +432,7 @@ func (h *TCPHandler) HandlePacketV6(pkt *Packet, packet gopacket.Packet, ipv6 *l
 	}
 }
 
-// sendRSTV6 sends a TCP RST packet over IPv6
+// sendRSTV6 sends a TCP RST packet over IPv6.
 func (h *TCPHandler) sendRSTV6(ipv6 *layers.IPv6, tcp *layers.TCP, devices []*config.Device) {
 	debugLevel := h.stack.GetDebugLevel()
 
@@ -418,25 +444,31 @@ func (h *TCPHandler) sendRSTV6(ipv6 *layers.IPv6, tcp *layers.TCP, devices []*co
 
 		// Check if device has the destination IPv6
 		hasIP := false
+
 		for _, deviceIP := range device.IPAddresses {
 			if deviceIP.Equal(ipv6.DstIP) {
 				hasIP = true
+
 				break
 			}
 		}
+
 		if !hasIP {
 			continue
 		}
 
 		// Get destination MAC
 		srcDevice := h.stack.GetDevices().GetByIP(ipv6.SrcIP)
+
 		var dstMAC []byte
+
 		if len(srcDevice) > 0 && len(srcDevice[0].MACAddress) > 0 {
 			dstMAC = srcDevice[0].MACAddress
 		} else {
 			if debugLevel >= 2 {
-				fmt.Printf("Cannot send RST: no MAC for [%s]\n", ipv6.SrcIP)
+				_, _ = fmt.Fprintf(os.Stdout, "Cannot send RST: no MAC for [%s]\n", ipv6.SrcIP)
 			}
+
 			continue
 		}
 
@@ -466,7 +498,7 @@ func (h *TCPHandler) sendRSTV6(ipv6 *layers.IPv6, tcp *layers.TCP, devices []*co
 			ACK:     true,
 			Window:  0,
 		}
-		tcpReply.SetNetworkLayerForChecksum(ipv6Reply) // #nosec G104 -- error logged or non-critical
+		_ = tcpReply.SetNetworkLayerForChecksum(ipv6Reply) // error is non-critical for simulation
 
 		// Serialize
 		buffer := gopacket.NewSerializeBuffer()
@@ -478,8 +510,9 @@ func (h *TCPHandler) sendRSTV6(ipv6 *layers.IPv6, tcp *layers.TCP, devices []*co
 		err := gopacket.SerializeLayers(buffer, opts, eth, ipv6Reply, tcpReply)
 		if err != nil {
 			if debugLevel >= 2 {
-				fmt.Printf("Error serializing TCP/IPv6 RST: %v\n", err)
+				_, _ = fmt.Fprintf(os.Stdout, "Error serializing TCP/IPv6 RST: %v\n", err)
 			}
+
 			continue
 		}
 
@@ -499,7 +532,7 @@ func (h *TCPHandler) sendRSTV6(ipv6 *layers.IPv6, tcp *layers.TCP, devices []*co
 		h.stack.Send(pkt)
 
 		if debugLevel >= 3 {
-			fmt.Printf("Sent TCP/IPv6 RST from [%s]:%d to [%s]:%d device=%s sn=%d\n",
+			_, _ = fmt.Fprintf(os.Stdout, "Sent TCP/IPv6 RST from [%s]:%d to [%s]:%d device=%s sn=%d\n",
 				ipv6Reply.SrcIP, tcpReply.SrcPort, ipv6Reply.DstIP, tcpReply.DstPort,
 				device.Name, serialNum)
 		}

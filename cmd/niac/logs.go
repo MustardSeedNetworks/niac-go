@@ -1,4 +1,3 @@
-// Package main provides the logs command for streaming and viewing simulation logs
 package main
 
 import (
@@ -150,7 +149,7 @@ func runLogsTail(cmd *cobra.Command, args []string) error {
 	return runLogsOnce(client, level)
 }
 
-// runLogsOnce fetches and displays logs once (no follow mode)
+// runLogsOnce fetches and displays logs once (no follow mode).
 func runLogsOnce(client *ipc.Client, level string) error {
 	logs, err := client.GetLogs(level, logsOpts.count)
 	if err != nil {
@@ -174,7 +173,7 @@ func runLogsOnce(client *ipc.Client, level string) error {
 	return nil
 }
 
-// runLogsFollow streams logs continuously
+// runLogsFollow streams logs continuously.
 func runLogsFollow(ctx context.Context, client *ipc.Client, level string) error {
 	sub := client.SubscribeLogs(level, logsOpts.filter, 500*time.Millisecond)
 	defer sub.Stop()
@@ -209,7 +208,7 @@ func runLogsFollow(ctx context.Context, client *ipc.Client, level string) error 
 	}
 }
 
-// filterLogs filters logs by the text pattern
+// filterLogs filters logs by the text pattern.
 func filterLogs(logs []ipc.LogEntry, filter string) []ipc.LogEntry {
 	if filter == "" {
 		return logs
@@ -228,7 +227,7 @@ func filterLogs(logs []ipc.LogEntry, filter string) []ipc.LogEntry {
 	return filtered
 }
 
-// printLogEntry prints a log entry in human-readable format
+// printLogEntry prints a log entry in human-readable format.
 func printLogEntry(log ipc.LogEntry) {
 	timestamp := log.Timestamp.Format("15:04:05.000")
 
@@ -268,9 +267,9 @@ func printLogEntry(log ipc.LogEntry) {
 	}
 }
 
-// outputLogJSON outputs a log entry as JSON
+// outputLogJSON outputs a log entry as JSON.
 func outputLogJSON(log ipc.LogEntry) {
-	output := map[string]interface{}{
+	output := map[string]any{
 		"timestamp": log.Timestamp.Format(time.RFC3339Nano),
 		"level":     string(log.Level),
 		"message":   log.Message,

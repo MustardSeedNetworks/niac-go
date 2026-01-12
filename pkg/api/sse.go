@@ -16,7 +16,7 @@ package api
 import (
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"sync"
 	"sync/atomic"
@@ -24,14 +24,14 @@ import (
 )
 
 const (
-	// SSE configuration
-	sseBufferSize    = 256 // Client send buffer size
-	sseMaxClients    = 100 // Max clients per stream
-	sseMaxMsgPerSec  = 100 // Rate limit: max messages per second
-	sseHeartbeatSec  = 30  // Send heartbeat comment every N seconds
+	// SSE configuration.
+	sseBufferSize   = 256 // Client send buffer size
+	sseMaxClients   = 100 // Max clients per stream
+	sseMaxMsgPerSec = 100 // Rate limit: max messages per second
+	sseHeartbeatSec = 30  // Send heartbeat comment every N seconds
 )
 
-// SSEStream represents a stream type
+// SSEStream represents a stream type.
 type SSEStream string
 
 const (
@@ -40,14 +40,14 @@ const (
 	SSEStreamStats   SSEStream = "stats"
 )
 
-// SSEMessage represents a message to be sent via SSE
+// SSEMessage represents a message to be sent via SSE.
 type SSEMessage struct {
-	Event string      `json:"event,omitempty"` // Optional event type
-	Data  interface{} `json:"data"`
-	ID    string      `json:"id,omitempty"` // Optional event ID for Last-Event-ID
+	Event string `json:"event,omitempty"` // Optional event type
+	Data  any    `json:"data"`
+	ID    string `json:"id,omitempty"` // Optional event ID for Last-Event-ID
 }
 
-// SSEClient represents a connected SSE client
+// SSEClient represents a connected SSE client.
 type SSEClient struct {
 	hub      *SSEHub
 	send     chan []byte
@@ -56,7 +56,7 @@ type SSEClient struct {
 	clientIP string
 }
 
-// SSEHub manages SSE clients and message broadcasting
+// SSEHub manages SSE clients and message broadcasting.
 type SSEHub struct {
 	clients      map[SSEStream]map[*SSEClient]bool
 	broadcast    chan *streamMessage
@@ -69,13 +69,13 @@ type SSEHub struct {
 	eventID      atomic.Uint64 // Global event ID counter
 }
 
-// streamMessage wraps a message with its target stream
+// streamMessage wraps a message with its target stream.
 type streamMessage struct {
 	stream SSEStream
 	data   []byte
 }
 
-// sseRateLimiter provides simple token bucket rate limiting
+// sseRateLimiter provides simple token bucket rate limiting.
 type sseRateLimiter struct {
 	tokens     atomic.Int64
 	maxTokens  int64
@@ -84,7 +84,7 @@ type sseRateLimiter struct {
 	mu         sync.Mutex
 }
 
-// newSSERateLimiter creates a rate limiter
+// newSSERateLimiter creates a rate limiter.
 func newSSERateLimiter(maxPerSecond int64) *sseRateLimiter {
 	rl := &sseRateLimiter{
 		maxTokens: maxPerSecond,
@@ -92,10 +92,11 @@ func newSSERateLimiter(maxPerSecond int64) *sseRateLimiter {
 	}
 	rl.tokens.Store(maxPerSecond)
 	rl.lastRefill.Store(time.Now().UnixMilli())
+
 	return rl
 }
 
-// allow checks if a message can be sent
+// allow checks if a message can be sent.
 func (rl *sseRateLimiter) allow() bool {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
@@ -105,22 +106,26 @@ func (rl *sseRateLimiter) allow() bool {
 
 	if elapsed >= rl.refillMs {
 		tokensToAdd := elapsed / rl.refillMs
+
 		newTokens := rl.tokens.Load() + tokensToAdd
 		if newTokens > rl.maxTokens {
 			newTokens = rl.maxTokens
 		}
+
 		rl.tokens.Store(newTokens)
 		rl.lastRefill.Store(now)
 	}
 
 	if rl.tokens.Load() > 0 {
 		rl.tokens.Add(-1)
+
 		return true
 	}
+
 	return false
 }
 
-// NewSSEHub creates a new SSE hub
+// NewSSEHub creates a new SSE hub.
 func NewSSEHub() *SSEHub {
 	hub := &SSEHub{
 		clients:      make(map[SSEStream]map[*SSEClient]bool),
@@ -140,7 +145,7 @@ func NewSSEHub() *SSEHub {
 	return hub
 }
 
-// Run starts the hub's main event loop
+// Run starts the hub's main event loop.
 func (h *SSEHub) Run() {
 	h.running.Store(true)
 	defer h.running.Store(false)
@@ -158,12 +163,13 @@ func (h *SSEHub) Run() {
 
 		case <-h.stopChan:
 			h.closeAllClients()
+
 			return
 		}
 	}
 }
 
-// Stop gracefully shuts down the hub
+// Stop gracefully shuts down the hub.
 func (h *SSEHub) Stop() {
 	if h.running.Load() {
 		close(h.stopChan)
@@ -177,14 +183,29 @@ func (h *SSEHub) registerClient(client *SSEClient) {
 	streamClients := h.clients[client.stream]
 
 	if len(streamClients) >= sseMaxClients {
-		log.Printf("[SSE] Rejecting client for stream %s: max clients reached (%d)", client.stream, sseMaxClients)
+		slog.Warn(
+			"[SSE] Rejecting client for stream: max clients reached",
+			"stream",
+			client.stream,
+			"maxClients",
+			sseMaxClients,
+		)
 		client.closed.Store(true)
 		close(client.send)
+
 		return
 	}
 
 	streamClients[client] = true
-	log.Printf("[SSE] Client connected to stream %s from %s (total: %d)", client.stream, client.clientIP, len(streamClients))
+	slog.Info(
+		"[SSE] Client connected to stream",
+		"stream",
+		client.stream,
+		"clientIP",
+		client.clientIP,
+		"total",
+		len(streamClients),
+	)
 }
 
 func (h *SSEHub) unregisterClient(client *SSEClient) {
@@ -194,11 +215,13 @@ func (h *SSEHub) unregisterClient(client *SSEClient) {
 	streamClients := h.clients[client.stream]
 	if _, ok := streamClients[client]; ok {
 		delete(streamClients, client)
+
 		if !client.closed.Load() {
 			client.closed.Store(true)
 			close(client.send)
 		}
-		log.Printf("[SSE] Client disconnected from stream %s (remaining: %d)", client.stream, len(streamClients))
+
+		slog.Info("[SSE] Client disconnected from stream", "stream", client.stream, "remaining", len(streamClients))
 	}
 }
 
@@ -236,13 +259,15 @@ func (h *SSEHub) closeAllClients() {
 				close(client.send)
 			}
 		}
+
 		h.clients[stream] = make(map[*SSEClient]bool)
 	}
-	log.Printf("[SSE] All clients disconnected")
+
+	slog.Info("[SSE] All clients disconnected")
 }
 
-// Broadcast sends a message to all clients of a stream
-func (h *SSEHub) Broadcast(stream SSEStream, data interface{}) {
+// Broadcast sends a message to all clients of a stream.
+func (h *SSEHub) Broadcast(stream SSEStream, data any) {
 	if !h.running.Load() {
 		return
 	}
@@ -253,7 +278,8 @@ func (h *SSEHub) Broadcast(stream SSEStream, data interface{}) {
 	// Format as SSE
 	jsonData, err := json.Marshal(data)
 	if err != nil {
-		log.Printf("[SSE] Failed to marshal message: %v", err)
+		slog.Error("[SSE] Failed to marshal message", "error", err)
+
 		return
 	}
 
@@ -267,18 +293,18 @@ func (h *SSEHub) Broadcast(stream SSEStream, data interface{}) {
 	}
 }
 
-// BroadcastPacket sends a packet to all packet stream subscribers
-func (h *SSEHub) BroadcastPacket(data interface{}) {
-	h.Broadcast(SSEStreamPackets, map[string]interface{}{
+// BroadcastPacket sends a packet to all packet stream subscribers.
+func (h *SSEHub) BroadcastPacket(data any) {
+	h.Broadcast(SSEStreamPackets, map[string]any{
 		"type":      "packet",
 		"data":      data,
 		"timestamp": time.Now().UTC(),
 	})
 }
 
-// BroadcastLog sends a log message to all log stream subscribers
+// BroadcastLog sends a log message to all log stream subscribers.
 func (h *SSEHub) BroadcastLog(level, message string) {
-	h.Broadcast(SSEStreamLogs, map[string]interface{}{
+	h.Broadcast(SSEStreamLogs, map[string]any{
 		"type":      "log",
 		"level":     level,
 		"message":   message,
@@ -286,23 +312,24 @@ func (h *SSEHub) BroadcastLog(level, message string) {
 	})
 }
 
-// BroadcastStats sends statistics to all stats stream subscribers
-func (h *SSEHub) BroadcastStats(data interface{}) {
-	h.Broadcast(SSEStreamStats, map[string]interface{}{
+// BroadcastStats sends statistics to all stats stream subscribers.
+func (h *SSEHub) BroadcastStats(data any) {
+	h.Broadcast(SSEStreamStats, map[string]any{
 		"type":      "stats",
 		"data":      data,
 		"timestamp": time.Now().UTC(),
 	})
 }
 
-// ClientCount returns the number of clients for a stream
+// ClientCount returns the number of clients for a stream.
 func (h *SSEHub) ClientCount(stream SSEStream) int {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
+
 	return len(h.clients[stream])
 }
 
-// TotalClientCount returns total connected clients
+// TotalClientCount returns total connected clients.
 func (h *SSEHub) TotalClientCount() int {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
@@ -311,15 +338,17 @@ func (h *SSEHub) TotalClientCount() int {
 	for _, clients := range h.clients {
 		total += len(clients)
 	}
+
 	return total
 }
 
-// serveSSE handles SSE connections for a specific stream
+// serveSSE handles SSE connections for a specific stream.
 func (s *Server) serveSSE(stream SSEStream) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Check if SSE hub is available
 		if s.sseHub == nil {
 			writeError(w, r, http.StatusServiceUnavailable, "sse_unavailable", "SSE streaming not available", nil)
+
 			return
 		}
 
@@ -333,13 +362,15 @@ func (s *Server) serveSSE(stream SSEStream) http.HandlerFunc {
 		flusher, ok := w.(http.Flusher)
 		if !ok {
 			writeError(w, r, http.StatusInternalServerError, "sse_not_supported", "Streaming not supported", nil)
+
 			return
 		}
 
 		// Disable write deadline for long-lived SSE connections (Go 1.20+)
 		rc := http.NewResponseController(w)
-		if err := rc.SetWriteDeadline(time.Time{}); err != nil {
-			log.Printf("[SSE] Warning: could not disable write deadline: %v", err)
+		err := rc.SetWriteDeadline(time.Time{})
+		if err != nil {
+			slog.Warn("[SSE] Could not disable write deadline", "error", err)
 		}
 
 		// Create client
@@ -359,7 +390,8 @@ func (s *Server) serveSSE(stream SSEStream) http.HandlerFunc {
 		}()
 
 		// Send initial connection event
-		fmt.Fprintf(w, "event: connected\ndata: {\"stream\":\"%s\"}\n\n", stream)
+		_, _ = fmt.Fprintf(w, "event: connected\ndata: {\"stream\":\"%s\"}\n\n", stream)
+
 		flusher.Flush()
 
 		// Heartbeat ticker to keep connection alive
@@ -378,10 +410,12 @@ func (s *Server) serveSSE(stream SSEStream) http.HandlerFunc {
 					// Channel closed
 					return
 				}
+
 				_, err := w.Write(msg)
 				if err != nil {
 					return
 				}
+
 				flusher.Flush()
 
 			case <-heartbeat.C:
@@ -390,38 +424,40 @@ func (s *Server) serveSSE(stream SSEStream) http.HandlerFunc {
 				if err != nil {
 					return
 				}
+
 				flusher.Flush()
 			}
 		}
 	}
 }
 
-// handleSSEPackets handles SSE connections for packet streaming
+// handleSSEPackets handles SSE connections for packet streaming.
 func (s *Server) handleSSEPackets(w http.ResponseWriter, r *http.Request) {
 	s.serveSSE(SSEStreamPackets)(w, r)
 }
 
-// handleSSELogs handles SSE connections for log streaming
+// handleSSELogs handles SSE connections for log streaming.
 func (s *Server) handleSSELogs(w http.ResponseWriter, r *http.Request) {
 	s.serveSSE(SSEStreamLogs)(w, r)
 }
 
-// handleSSEStats handles SSE connections for stats streaming
+// handleSSEStats handles SSE connections for stats streaming.
 func (s *Server) handleSSEStats(w http.ResponseWriter, r *http.Request) {
 	s.serveSSE(SSEStreamStats)(w, r)
 }
 
-// handleSSEStatus returns SSE hub status
+// handleSSEStatus returns SSE hub status.
 func (s *Server) handleSSEStatus(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		writeError(w, r, http.StatusMethodNotAllowed, "method_not_allowed", "Method not allowed", nil)
+
 		return
 	}
 
-	var status map[string]interface{}
+	var status map[string]any
 
 	if s.sseHub != nil {
-		status = map[string]interface{}{
+		status = map[string]any{
 			"running": s.sseHub.running.Load(),
 			"clients": map[string]int{
 				"packets": s.sseHub.ClientCount(SSEStreamPackets),
@@ -436,7 +472,7 @@ func (s *Server) handleSSEStatus(w http.ResponseWriter, r *http.Request) {
 			},
 		}
 	} else {
-		status = map[string]interface{}{
+		status = map[string]any{
 			"running": false,
 			"clients": map[string]int{
 				"packets": 0,
@@ -448,5 +484,5 @@ func (s *Server) handleSSEStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(status)
+	_ = json.NewEncoder(w).Encode(status) // HTTP write errors are non-critical
 }

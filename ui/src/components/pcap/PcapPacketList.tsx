@@ -1,7 +1,7 @@
-import { type FC, memo, useMemo, useState, useCallback } from 'react';
-import { Card, CardContent, Tag, SmallText } from '../../ui';
-import { Search, Filter, ChevronDown, ChevronUp } from 'lucide-react';
-import type { PcapPacket } from '../../api/types';
+import { ChevronDown, ChevronUp, Filter, Search } from "lucide-react";
+import { type FC, memo, useCallback, useMemo, useState } from "react";
+import type { PcapPacket } from "../../api/types";
+import { Card, CardContent, SmallText, Tag } from "../../ui";
 
 interface PcapPacketListProps {
   packets: PcapPacket[];
@@ -19,36 +19,38 @@ interface PcapPacketListProps {
 
 /** Available protocol filters */
 const PROTOCOL_OPTIONS = [
-  'All',
-  'TCP',
-  'UDP',
-  'ICMP',
-  'ARP',
-  'DNS',
-  'HTTP',
-  'HTTPS',
-  'DHCP',
-  'SSH',
-  'TLS',
+  "All",
+  "TCP",
+  "UDP",
+  "ICMP",
+  "ARP",
+  "DNS",
+  "HTTP",
+  "HTTPS",
+  "DHCP",
+  "SSH",
+  "TLS",
 ] as const;
 
 /**
  * Get color scheme for protocol tag
  */
-function getProtocolColor(protocol: string): 'blue' | 'green' | 'yellow' | 'purple' | 'gray' | 'red' {
-  const colors: Record<string, 'blue' | 'green' | 'yellow' | 'purple' | 'gray' | 'red'> = {
-    ARP: 'yellow',
-    ICMP: 'blue',
-    DNS: 'green',
-    TCP: 'purple',
-    UDP: 'gray',
-    HTTP: 'blue',
-    HTTPS: 'green',
-    DHCP: 'yellow',
-    SSH: 'red',
-    TLS: 'green',
+function getProtocolColor(
+  protocol: string,
+): "blue" | "green" | "yellow" | "purple" | "gray" | "red" {
+  const colors: Record<string, "blue" | "green" | "yellow" | "purple" | "gray" | "red"> = {
+    ARP: "yellow",
+    ICMP: "blue",
+    DNS: "green",
+    TCP: "purple",
+    UDP: "gray",
+    HTTP: "blue",
+    HTTPS: "green",
+    DHCP: "yellow",
+    SSH: "red",
+    TLS: "green",
   };
-  return colors[protocol.toUpperCase()] || 'gray';
+  return colors[protocol.toUpperCase()] || "gray";
 }
 
 /**
@@ -57,11 +59,11 @@ function getProtocolColor(protocol: string): 'blue' | 'green' | 'yellow' | 'purp
 function formatTimestamp(timestamp: string): string {
   try {
     const date = new Date(timestamp);
-    return date.toLocaleTimeString('en-US', {
+    return date.toLocaleTimeString("en-US", {
       hour12: false,
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
       fractionalSecondDigits: 3,
     });
   } catch {
@@ -85,9 +87,7 @@ const PacketRow = memo(
     <tr
       onClick={onClick}
       className={`cursor-pointer transition-colors ${
-        isSelected
-          ? 'bg-violet-900/30'
-          : 'hover:bg-gray-900/50'
+        isSelected ? "bg-violet-900/30" : "hover:bg-gray-900/50"
       }`}
     >
       <td className="px-3 py-2 text-gray-400 text-xs font-mono">{packet.number}</td>
@@ -104,10 +104,10 @@ const PacketRow = memo(
       <td className="px-3 py-2 text-gray-400 text-xs text-right">{packet.length}</td>
       <td className="px-3 py-2 text-gray-400 text-xs truncate max-w-xs">{packet.info}</td>
     </tr>
-  )
+  ),
 );
 
-PacketRow.displayName = 'PacketRow';
+PacketRow.displayName = "PacketRow";
 
 /**
  * Filter Panel Component
@@ -225,10 +225,10 @@ const FilterPanel: FC<{
         )}
       </div>
     );
-  }
+  },
 );
 
-FilterPanel.displayName = 'FilterPanel';
+FilterPanel.displayName = "FilterPanel";
 
 /**
  * PCAP Packet List Component
@@ -270,7 +270,10 @@ export const PcapPacketList: FC<PcapPacketListProps> = memo(
     const filteredPackets = useMemo(() => {
       return packets.filter((packet) => {
         // Protocol filter
-        if (protocolFilter !== 'All' && packet.protocol.toUpperCase() !== protocolFilter.toUpperCase()) {
+        if (
+          protocolFilter !== "All" &&
+          packet.protocol.toUpperCase() !== protocolFilter.toUpperCase()
+        ) {
           return false;
         }
 
@@ -296,7 +299,7 @@ export const PcapPacketList: FC<PcapPacketListProps> = memo(
             packet.destPort?.toString(),
           ]
             .filter(Boolean)
-            .join(' ')
+            .join(" ")
             .toLowerCase();
 
           return searchableText.includes(query);
@@ -311,7 +314,7 @@ export const PcapPacketList: FC<PcapPacketListProps> = memo(
       (packet: PcapPacket) => {
         onSelectPacket(packet);
       },
-      [onSelectPacket]
+      [onSelectPacket],
     );
 
     if (packets.length === 0) {
@@ -405,9 +408,9 @@ export const PcapPacketList: FC<PcapPacketListProps> = memo(
         </CardContent>
       </Card>
     );
-  }
+  },
 );
 
-PcapPacketList.displayName = 'PcapPacketList';
+PcapPacketList.displayName = "PcapPacketList";
 
 export default PcapPacketList;

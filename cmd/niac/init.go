@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -41,9 +42,15 @@ func runInit(cmd *cobra.Command, args []string) {
 	reader := bufio.NewReader(os.Stdin)
 
 	// Print header
-	color.New(color.Bold, color.FgCyan).Println("\n╔════════════════════════════════════════════════════════════╗") // #nosec G104 -- cosmetic output
-	color.New(color.Bold, color.FgCyan).Println("║         NIAC Configuration Template Wizard                ║")    // #nosec G104 -- cosmetic output
-	color.New(color.Bold, color.FgCyan).Print("╚════════════════════════════════════════════════════════════╝\n")   // #nosec G104 -- cosmetic output
+	color.New(color.Bold, color.FgCyan).
+		Println("\n╔════════════════════════════════════════════════════════════╗")
+		// #nosec G104 -- cosmetic output
+	color.New(color.Bold, color.FgCyan).
+		Println("║         NIAC Configuration Template Wizard                ║")
+		// #nosec G104 -- cosmetic output
+	color.New(color.Bold, color.FgCyan).
+		Print("╚════════════════════════════════════════════════════════════╝\n")
+		// #nosec G104 -- cosmetic output
 
 	fmt.Println("This wizard will help you choose the right template for your")
 	fmt.Print("network simulation.\n")
@@ -60,7 +67,11 @@ func runInit(cmd *cobra.Command, args []string) {
 	fmt.Println("   h) Test lab / protocol testing")
 	fmt.Println()
 
-	networkType := mustPromptChoice(reader, "Enter your choice (a-h): ", []string{"a", "b", "c", "d", "e", "f", "g", "h"})
+	networkType := mustPromptChoice(
+		reader,
+		"Enter your choice (a-h): ",
+		[]string{"a", "b", "c", "d", "e", "f", "g", "h"},
+	)
 
 	// Map choice to template
 	var selectedTemplate string
@@ -140,7 +151,7 @@ func runInit(cmd *cobra.Command, args []string) {
 	}
 
 	// Write template to file
-	if err := os.WriteFile(outputFile, []byte(tmpl.Content), 0600); err != nil {
+	if err := os.WriteFile(outputFile, []byte(tmpl.Content), 0o600); err != nil {
 		color.Red("Error writing file: %v", err)
 		os.Exit(1)
 	}
@@ -160,19 +171,27 @@ func runInit(cmd *cobra.Command, args []string) {
 	fmt.Printf("   %s\n", color.CyanString("vi %s", outputFile)) // #nosec G104 -- cosmetic output
 	fmt.Println()
 	fmt.Println("3. Run the simulation:")
-	fmt.Printf("   %s\n", color.CyanString("sudo niac interactive en0 %s", outputFile)) // #nosec G104 -- cosmetic output
+	fmt.Printf(
+		"   %s\n",
+		color.CyanString("sudo niac interactive en0 %s", outputFile),
+	) // #nosec G104 -- cosmetic output
 	fmt.Println()
 	fmt.Println("4. Or use dry-run mode to test without running:")
 	fmt.Printf("   %s\n", color.CyanString("niac --dry-run en0 %s", outputFile)) // #nosec G104 -- cosmetic output
 	fmt.Println()
 
 	// Optional: Show device count
-	fmt.Println(color.YellowString("Tip:") + " To see what devices are in this configuration:") // #nosec G104 -- cosmetic output
-	fmt.Printf("     %s\n", color.CyanString("niac template apply %s", selectedTemplate))       // #nosec G104 -- cosmetic output
+	fmt.Println(
+		color.YellowString("Tip:") + " To see what devices are in this configuration:",
+	) // #nosec G104 -- cosmetic output
+	fmt.Printf(
+		"     %s\n",
+		color.CyanString("niac template apply %s", selectedTemplate),
+	) // #nosec G104 -- cosmetic output
 	fmt.Println()
 }
 
-// promptChoice prompts for a choice from a list of valid options
+// promptChoice prompts for a choice from a list of valid options.
 func promptChoice(reader *bufio.Reader, prompt string, validChoices []string) (string, error) {
 	for {
 		fmt.Print(prompt)
@@ -182,17 +201,15 @@ func promptChoice(reader *bufio.Reader, prompt string, validChoices []string) (s
 		}
 		input = strings.ToLower(strings.TrimSpace(input))
 
-		for _, choice := range validChoices {
-			if input == choice {
-				return input, nil
-			}
+		if slices.Contains(validChoices, input) {
+			return input, nil
 		}
 
 		color.Red("Invalid choice. Please enter one of: %s", strings.Join(validChoices, ", "))
 	}
 }
 
-// promptYesNo prompts for a yes/no answer
+// promptYesNo prompts for a yes/no answer.
 func promptYesNo(reader *bufio.Reader, prompt string) (bool, error) {
 	for {
 		fmt.Print(prompt)
@@ -213,7 +230,7 @@ func promptYesNo(reader *bufio.Reader, prompt string) (bool, error) {
 	}
 }
 
-// promptInt prompts for an integer within a range
+// promptInt prompts for an integer within a range.
 func promptInt(reader *bufio.Reader, prompt string, min, max int) (int, error) {
 	for {
 		fmt.Print(prompt)
@@ -248,7 +265,7 @@ func readLine(reader *bufio.Reader) (string, error) {
 			}
 			return line, nil
 		}
-		return "", err
+		return "", fmt.Errorf("failed to read line: %w", err)
 	}
 	return strings.TrimSpace(line), nil
 }

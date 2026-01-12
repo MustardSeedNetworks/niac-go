@@ -12,7 +12,7 @@ import (
 	"github.com/krisarmstrong/niac-go/pkg/config"
 )
 
-// createTestPCAP creates a temporary PCAP file for testing
+// createTestPCAP creates a temporary PCAP file for testing.
 func createTestPCAP(t *testing.T, packetCount int) string {
 	t.Helper()
 
@@ -23,7 +23,8 @@ func createTestPCAP(t *testing.T, packetCount int) string {
 	if err != nil {
 		t.Fatalf("Failed to create temp PCAP: %v", err)
 	}
-	defer f.Close()
+
+	defer func() { _ = f.Close() }()
 
 	w := pcapgo.NewWriter(f)
 	if err := w.WriteFileHeader(1600, layers.LinkTypeEthernet); err != nil {
@@ -35,7 +36,7 @@ func createTestPCAP(t *testing.T, packetCount int) string {
 	dstMAC := []byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
 	baseTime := time.Now()
 
-	for i := 0; i < packetCount; i++ {
+	for i := range packetCount {
 		eth := &layers.Ethernet{
 			SrcMAC:       srcMAC,
 			DstMAC:       dstMAC,
@@ -46,7 +47,8 @@ func createTestPCAP(t *testing.T, packetCount int) string {
 		opts := gopacket.SerializeOptions{}
 		payload := []byte{byte(i), 0x01, 0x02, 0x03}
 
-		if err := gopacket.SerializeLayers(buf, opts, eth, gopacket.Payload(payload)); err != nil {
+		err := gopacket.SerializeLayers(buf, opts, eth, gopacket.Payload(payload))
+		if err != nil {
 			t.Fatalf("Failed to serialize packet: %v", err)
 		}
 
@@ -58,7 +60,8 @@ func createTestPCAP(t *testing.T, packetCount int) string {
 			Length:        len(buf.Bytes()),
 		}
 
-		if err := w.WritePacket(info, buf.Bytes()); err != nil {
+		err = w.WritePacket(info, buf.Bytes())
+		if err != nil {
 			t.Fatalf("Failed to write packet: %v", err)
 		}
 	}
@@ -66,7 +69,7 @@ func createTestPCAP(t *testing.T, packetCount int) string {
 	return pcapFile
 }
 
-// TestNewPlaybackEngine tests playback engine creation
+// TestNewPlaybackEngine tests playback engine creation.
 func TestNewPlaybackEngine(t *testing.T) {
 	if os.Getenv("CI") != "" {
 		t.Skip("Skipping playback test in CI environment")
@@ -74,11 +77,13 @@ func TestNewPlaybackEngine(t *testing.T) {
 
 	// Need a real engine for playback
 	loopbackNames := []string{"lo", "lo0"}
+
 	var testInterface string
 
 	for _, name := range loopbackNames {
 		if InterfaceExists(name) {
 			testInterface = name
+
 			break
 		}
 	}
@@ -120,18 +125,20 @@ func TestNewPlaybackEngine(t *testing.T) {
 	}
 }
 
-// TestPlaybackEngine_Start_NoConfig tests starting without config
+// TestPlaybackEngine_Start_NoConfig tests starting without config.
 func TestPlaybackEngine_Start_NoConfig(t *testing.T) {
 	if os.Getenv("CI") != "" {
 		t.Skip("Skipping playback test in CI environment")
 	}
 
 	loopbackNames := []string{"lo", "lo0"}
+
 	var testInterface string
 
 	for _, name := range loopbackNames {
 		if InterfaceExists(name) {
 			testInterface = name
+
 			break
 		}
 	}
@@ -154,18 +161,20 @@ func TestPlaybackEngine_Start_NoConfig(t *testing.T) {
 	}
 }
 
-// TestPlaybackEngine_Start_NonExistentFile tests starting with missing file
+// TestPlaybackEngine_Start_NonExistentFile tests starting with missing file.
 func TestPlaybackEngine_Start_NonExistentFile(t *testing.T) {
 	if os.Getenv("CI") != "" {
 		t.Skip("Skipping playback test in CI environment")
 	}
 
 	loopbackNames := []string{"lo", "lo0"}
+
 	var testInterface string
 
 	for _, name := range loopbackNames {
 		if InterfaceExists(name) {
 			testInterface = name
+
 			break
 		}
 	}
@@ -192,18 +201,20 @@ func TestPlaybackEngine_Start_NonExistentFile(t *testing.T) {
 	}
 }
 
-// TestPlaybackEngine_Stop tests stopping playback
+// TestPlaybackEngine_Stop tests stopping playback.
 func TestPlaybackEngine_Stop(t *testing.T) {
 	if os.Getenv("CI") != "" {
 		t.Skip("Skipping playback test in CI environment")
 	}
 
 	loopbackNames := []string{"lo", "lo0"}
+
 	var testInterface string
 
 	for _, name := range loopbackNames {
 		if InterfaceExists(name) {
 			testInterface = name
+
 			break
 		}
 	}
@@ -231,18 +242,20 @@ func TestPlaybackEngine_Stop(t *testing.T) {
 	pb.Stop()
 }
 
-// TestPlaybackEngine_IsRunning tests running state
+// TestPlaybackEngine_IsRunning tests running state.
 func TestPlaybackEngine_IsRunning(t *testing.T) {
 	if os.Getenv("CI") != "" {
 		t.Skip("Skipping playback test in CI environment")
 	}
 
 	loopbackNames := []string{"lo", "lo0"}
+
 	var testInterface string
 
 	for _, name := range loopbackNames {
 		if InterfaceExists(name) {
 			testInterface = name
+
 			break
 		}
 	}
@@ -268,18 +281,20 @@ func TestPlaybackEngine_IsRunning(t *testing.T) {
 	}
 }
 
-// TestPlaybackEngine_GetConfig tests config retrieval
+// TestPlaybackEngine_GetConfig tests config retrieval.
 func TestPlaybackEngine_GetConfig(t *testing.T) {
 	if os.Getenv("CI") != "" {
 		t.Skip("Skipping playback test in CI environment")
 	}
 
 	loopbackNames := []string{"lo", "lo0"}
+
 	var testInterface string
 
 	for _, name := range loopbackNames {
 		if InterfaceExists(name) {
 			testInterface = name
+
 			break
 		}
 	}
@@ -306,7 +321,7 @@ func TestPlaybackEngine_GetConfig(t *testing.T) {
 	}
 }
 
-// TestPlaybackEngine_LoadPCAP tests PCAP file loading
+// TestPlaybackEngine_LoadPCAP tests PCAP file loading.
 func TestPlaybackEngine_LoadPCAP(t *testing.T) {
 	if os.Getenv("CI") != "" {
 		t.Skip("Skipping playback test in CI environment")
@@ -316,11 +331,13 @@ func TestPlaybackEngine_LoadPCAP(t *testing.T) {
 	pcapFile := createTestPCAP(t, 5)
 
 	loopbackNames := []string{"lo", "lo0"}
+
 	var testInterface string
 
 	for _, name := range loopbackNames {
 		if InterfaceExists(name) {
 			testInterface = name
+
 			break
 		}
 	}
@@ -363,18 +380,20 @@ func TestPlaybackEngine_LoadPCAP(t *testing.T) {
 	}
 }
 
-// TestPlaybackEngine_CalculatePacketDelay tests timing calculation
+// TestPlaybackEngine_CalculatePacketDelay tests timing calculation.
 func TestPlaybackEngine_CalculatePacketDelay(t *testing.T) {
 	if os.Getenv("CI") != "" {
 		t.Skip("Skipping playback test in CI environment")
 	}
 
 	loopbackNames := []string{"lo", "lo0"}
+
 	var testInterface string
 
 	for _, name := range loopbackNames {
 		if InterfaceExists(name) {
 			testInterface = name
+
 			break
 		}
 	}
@@ -427,18 +446,20 @@ func TestPlaybackEngine_CalculatePacketDelay(t *testing.T) {
 	}
 }
 
-// TestPlaybackEngine_CalculatePacketDelay_PastDue tests handling of past-due packets
+// TestPlaybackEngine_CalculatePacketDelay_PastDue tests handling of past-due packets.
 func TestPlaybackEngine_CalculatePacketDelay_PastDue(t *testing.T) {
 	if os.Getenv("CI") != "" {
 		t.Skip("Skipping playback test in CI environment")
 	}
 
 	loopbackNames := []string{"lo", "lo0"}
+
 	var testInterface string
 
 	for _, name := range loopbackNames {
 		if InterfaceExists(name) {
 			testInterface = name
+
 			break
 		}
 	}
@@ -477,7 +498,7 @@ func TestPlaybackEngine_CalculatePacketDelay_PastDue(t *testing.T) {
 	}
 }
 
-// TestPlaybackPacket_Structure tests PlaybackPacket struct
+// TestPlaybackPacket_Structure tests PlaybackPacket struct.
 func TestPlaybackPacket_Structure(t *testing.T) {
 	pkt := PlaybackPacket{
 		Data:      []byte{0x01, 0x02, 0x03},
@@ -493,18 +514,20 @@ func TestPlaybackPacket_Structure(t *testing.T) {
 	}
 }
 
-// TestPlaybackEngine_ConcurrentStartStop tests concurrent start/stop calls
+// TestPlaybackEngine_ConcurrentStartStop tests concurrent start/stop calls.
 func TestPlaybackEngine_ConcurrentStartStop(t *testing.T) {
 	if os.Getenv("CI") != "" {
 		t.Skip("Skipping playback test in CI environment")
 	}
 
 	loopbackNames := []string{"lo", "lo0"}
+
 	var testInterface string
 
 	for _, name := range loopbackNames {
 		if InterfaceExists(name) {
 			testInterface = name
+
 			break
 		}
 	}
@@ -527,15 +550,17 @@ func TestPlaybackEngine_ConcurrentStartStop(t *testing.T) {
 
 	// Multiple Stop() calls should not panic
 	done := make(chan struct{})
-	for i := 0; i < 10; i++ {
+
+	for range 10 {
 		go func() {
 			pb.Stop()
+
 			done <- struct{}{}
 		}()
 	}
 
 	// Wait for all goroutines
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		select {
 		case <-done:
 		case <-time.After(1 * time.Second):

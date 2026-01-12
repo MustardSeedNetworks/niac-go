@@ -1,49 +1,33 @@
-import { type FC, useState } from 'react';
+import { FileCog, LineChart, PlugZap } from "lucide-react";
+import { type FC, useState } from "react";
 import {
-  LineChart,
-  FileCog,
-  PlugZap,
-} from 'lucide-react';
-import {
-  Card,
-  CardContent,
-  Button,
-  H2,
-  P,
-  SmallText,
-} from '../ui';
-import { useApiResource } from '../hooks/useApiResource';
-import {
+  fetchFiles,
   fetchHistory,
   fetchReplayStatus,
   startReplay,
   stopReplay,
-  fetchFiles,
-} from '../api/client';
-import type { ReplayRequest } from '../api/types';
-import { POLL_INTERVALS } from '../constants';
-import {
-  formatNumber,
-  formatTime,
-  formatBytes,
-  getErrorMessage,
-} from '../utils';
-import { fileToBase64, copyToClipboard } from '../utils/file';
+} from "../api/client";
+import type { ReplayRequest } from "../api/types";
+import { POLL_INTERVALS } from "../constants";
+import { useApiResource } from "../hooks/useApiResource";
+import { Button, Card, CardContent, H2, P, SmallText } from "../ui";
+import { formatBytes, formatNumber, formatTime, getErrorMessage } from "../utils";
+import { copyToClipboard, fileToBase64 } from "../utils/file";
 
 /**
  * Format duration string with fallback
  */
 function formatDuration(value: string): string {
-  return value || '—';
+  return value || "—";
 }
 
 /**
  * Format relative time from timestamp
  */
 function formatRelativeTime(timestamp: string): string {
-  if (!timestamp) return '—';
+  if (!timestamp) return "—";
   const diff = Date.now() - new Date(timestamp).getTime();
-  if (diff < 0) return 'just now';
+  if (diff < 0) return "just now";
   const seconds = Math.floor(diff / 1000);
   if (seconds < 60) return `${seconds}s ago`;
   const minutes = Math.floor(seconds / 60);
@@ -71,23 +55,30 @@ export const AnalysisPage: FC = () => {
             Capture & walk analysis
           </H2>
           <P>
-            Replay PCAP files, filter packets, and bundle the results with SNMP walk exports. Every run can be
-            published as downloadable evidence for troubleshooting or demo handoffs.
+            Replay PCAP files, filter packets, and bundle the results with SNMP walk exports. Every
+            run can be published as downloadable evidence for troubleshooting or demo handoffs.
           </P>
           <div className="space-y-3 text-sm text-gray-300">
             {(history ?? []).slice(0, 5).map((item) => (
               <div key={item.id} className="rounded-lg border border-white/5 bg-gray-950/50 p-3">
                 <p className="text-white font-semibold">{item.config_name}</p>
                 <SmallText className="text-gray-400">
-                  {formatTime(item.started_at)} · duration {formatDuration(item.duration)} · RX {formatNumber(item.packets_received)} · TX {formatNumber(item.packets_sent)}
+                  {formatTime(item.started_at)} · duration {formatDuration(item.duration)} · RX{" "}
+                  {formatNumber(item.packets_received)} · TX {formatNumber(item.packets_sent)}
                 </SmallText>
               </div>
             ))}
-            {!history?.length && <SmallText className="text-gray-400">No captured runs yet.</SmallText>}
+            {history?.length === 0 && (
+              <SmallText className="text-gray-400">No captured runs yet.</SmallText>
+            )}
           </div>
           <div className="flex flex-wrap gap-3">
-            <Button tone="violet" leftIcon={<LineChart className="h-4 w-4" />}>Open analyzer</Button>
-            <Button variant="outline" leftIcon={<FileCog className="h-4 w-4" />}>Export bundle</Button>
+            <Button tone="violet" leftIcon={<LineChart className="h-4 w-4" />}>
+              Open analyzer
+            </Button>
+            <Button variant="outline" leftIcon={<FileCog className="h-4 w-4" />}>
+              Export bundle
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -100,23 +91,27 @@ export const AnalysisPage: FC = () => {
  * Replay Panel - PCAP replay controls
  */
 const ReplayPanel: FC = () => {
-  const { data: status, loading, error } = useApiResource(fetchReplayStatus, [], { intervalMs: 8000 });
-  const { data: pcaps } = useApiResource(() => fetchFiles('pcaps'), [], { intervalMs: 45000 });
-  const [pcapPath, setPcapPath] = useState('');
-  const [loopMs, setLoopMs] = useState('');
-  const [scale, setScale] = useState('');
+  const {
+    data: status,
+    loading,
+    error,
+  } = useApiResource(fetchReplayStatus, [], { intervalMs: 8000 });
+  const { data: pcaps } = useApiResource(() => fetchFiles("pcaps"), [], { intervalMs: 45000 });
+  const [pcapPath, setPcapPath] = useState("");
+  const [loopMs, setLoopMs] = useState("");
+  const [scale, setScale] = useState("");
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [fileInputKey, setFileInputKey] = useState(0);
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<{ tone: 'success' | 'error'; text: string } | null>(null);
+  const [message, setMessage] = useState<{ tone: "success" | "error"; text: string } | null>(null);
 
   const handleStart = async () => {
     if (busy) {
       return;
     }
-    const effectiveName = pcapPath.trim() || uploadFile?.name || '';
+    const effectiveName = pcapPath.trim() || uploadFile?.name || "";
     if (!effectiveName) {
-      setMessage({ tone: 'error', text: 'Provide a PCAP path or upload a capture' });
+      setMessage({ tone: "error", text: "Provide a PCAP path or upload a capture" });
       return;
     }
     setBusy(true);
@@ -133,13 +128,13 @@ const ReplayPanel: FC = () => {
         payload.data = await fileToBase64(uploadFile);
       }
       await startReplay(payload);
-      setMessage({ tone: 'success', text: 'Replay started' });
+      setMessage({ tone: "success", text: "Replay started" });
       if (uploadFile) {
         setUploadFile(null);
         setFileInputKey((value) => value + 1);
       }
     } catch (err) {
-      setMessage({ tone: 'error', text: getErrorMessage(err) });
+      setMessage({ tone: "error", text: getErrorMessage(err) });
     } finally {
       setBusy(false);
     }
@@ -148,7 +143,7 @@ const ReplayPanel: FC = () => {
   const handleStop = async () => {
     if (busy) return;
 
-    if (!window.confirm('Are you sure you want to stop the replay?')) {
+    if (!window.confirm("Are you sure you want to stop the replay?")) {
       return;
     }
 
@@ -156,9 +151,9 @@ const ReplayPanel: FC = () => {
     setMessage(null);
     try {
       await stopReplay();
-      setMessage({ tone: 'success', text: 'Replay stopped' });
+      setMessage({ tone: "success", text: "Replay stopped" });
     } catch (err) {
-      setMessage({ tone: 'error', text: getErrorMessage(err) });
+      setMessage({ tone: "error", text: getErrorMessage(err) });
     } finally {
       setBusy(false);
     }
@@ -172,11 +167,16 @@ const ReplayPanel: FC = () => {
           Packet replay
         </H2>
         <P className="text-gray-300">
-          Point NIAC at a PCAP file to replay capture traffic through the live interface. Replay honors loop timing and
-          scaling so you can rapidly reproduce demos without leaving the Web UI.
+          Point NIAC at a PCAP file to replay capture traffic through the live interface. Replay
+          honors loop timing and scaling so you can rapidly reproduce demos without leaving the Web
+          UI.
         </P>
         {loading && <SmallText className="text-gray-400">Checking replay engine…</SmallText>}
-        {error && <SmallText className="text-red-400">Unable to read replay status: {error.message}</SmallText>}
+        {error && (
+          <SmallText className="text-red-400">
+            Unable to read replay status: {error.message}
+          </SmallText>
+        )}
         <div className="grid gap-4 md:grid-cols-3">
           <div>
             <label htmlFor="pcap-file-path" className="block text-sm text-gray-400">
@@ -224,7 +224,7 @@ const ReplayPanel: FC = () => {
         </div>
         {message && (
           <SmallText
-            className={message.tone === 'success' ? 'text-emerald-300' : 'text-red-400'}
+            className={message.tone === "success" ? "text-emerald-300" : "text-red-400"}
             role="alert"
             aria-live="polite"
           >
@@ -249,22 +249,22 @@ const ReplayPanel: FC = () => {
                   return;
                 }
 
-                const MAX_SIZE = 100 * 1024 * 1024;
-                if (file.size > MAX_SIZE) {
+                const MaxSize = 100 * 1024 * 1024;
+                if (file.size > MaxSize) {
                   setMessage({
-                    tone: 'error',
-                    text: `PCAP file too large. Maximum size is ${formatBytes(MAX_SIZE)}`
+                    tone: "error",
+                    text: `PCAP file too large. Maximum size is ${formatBytes(MaxSize)}`,
                   });
-                  event.target.value = '';
+                  event.target.value = "";
                   return;
                 }
 
                 if (!file.name.match(/\.(pcap|pcapng)$/i)) {
                   setMessage({
-                    tone: 'error',
-                    text: 'Please select a PCAP file (.pcap or .pcapng)'
+                    tone: "error",
+                    text: "Please select a PCAP file (.pcap or .pcapng)",
                   });
-                  event.target.value = '';
+                  event.target.value = "";
                   return;
                 }
 
@@ -273,7 +273,8 @@ const ReplayPanel: FC = () => {
               disabled={busy}
             />
             <SmallText className="text-gray-500">
-              If the server cannot access your filesystem, upload a capture directly from the browser.
+              If the server cannot access your filesystem, upload a capture directly from the
+              browser.
             </SmallText>
           </div>
           {uploadFile && (
@@ -284,8 +285,12 @@ const ReplayPanel: FC = () => {
           )}
         </div>
         <div className="flex flex-wrap gap-3">
-          <Button tone="violet" disabled={(!pcapPath.trim() && !uploadFile) || busy} onClick={handleStart}>
-            {busy ? 'Working…' : 'Start replay'}
+          <Button
+            tone="violet"
+            disabled={(!pcapPath.trim() && !uploadFile) || busy}
+            onClick={handleStart}
+          >
+            {busy ? "Working…" : "Start replay"}
           </Button>
           <Button variant="outline" disabled={busy || !status?.running} onClick={handleStop}>
             Stop replay
@@ -296,7 +301,10 @@ const ReplayPanel: FC = () => {
             <SmallText className="text-gray-400">Discovered captures</SmallText>
             <div className="max-h-48 space-y-1 overflow-y-auto rounded-xl border border-white/10 bg-gray-950/50 p-2 text-sm text-gray-300">
               {pcaps.map((file) => (
-                <div key={file.path} className="flex items-center justify-between gap-2 rounded-lg border border-white/5 bg-gray-900/50 px-3 py-2">
+                <div
+                  key={file.path}
+                  className="flex items-center justify-between gap-2 rounded-lg border border-white/5 bg-gray-900/50 px-3 py-2"
+                >
                   <div>
                     <p className="text-white">{file.name}</p>
                     <SmallText className="text-gray-500">{file.path}</SmallText>
@@ -316,10 +324,12 @@ const ReplayPanel: FC = () => {
         )}
         {status && (
           <div className="rounded-lg border border-white/10 bg-gray-950/50 p-3 text-sm text-gray-300">
-            <p className="font-semibold text-white">{status.running ? 'Running' : 'Idle'}</p>
+            <p className="font-semibold text-white">{status.running ? "Running" : "Idle"}</p>
             {status.file && <p className="font-mono text-xs text-gray-400">{status.file}</p>}
             {status.running && status.started_at && (
-              <SmallText className="text-gray-400">Started {formatRelativeTime(status.started_at)}</SmallText>
+              <SmallText className="text-gray-400">
+                Started {formatRelativeTime(status.started_at)}
+              </SmallText>
             )}
           </div>
         )}

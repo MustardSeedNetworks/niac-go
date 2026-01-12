@@ -1,12 +1,11 @@
-// Package protocols provides network protocol handlers for the NIAC simulator.
-// This file implements iPerf3 server emulation for bandwidth testing simulation.
 package protocols
 
 import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"math/rand"
+	"math/rand/v2"
+	"os"
 	"strings"
 	"time"
 
@@ -15,12 +14,12 @@ import (
 	"github.com/krisarmstrong/niac-go/pkg/config"
 )
 
-// iPerf3 default port
+// iPerf3 default port.
 const (
 	TCPPortIPerf3 = 5201
 )
 
-// iPerf3 protocol states
+// iPerf3 protocol states.
 const (
 	iperf3StateInit       = 0
 	iperf3StateParamExch  = 1
@@ -35,7 +34,7 @@ const (
 	iperf3StateServerErr  = -2
 )
 
-// iPerf3 message types (state cookies sent to client)
+// iPerf3 message types (state cookies sent to client).
 const (
 	iperf3MsgTestStart    = 1
 	iperf3MsgTestRunning  = 2
@@ -45,21 +44,21 @@ const (
 	iperf3MsgServerBusy   = -2
 )
 
-// DefaultIPerf3Config returns default iPerf3 emulation configuration
+// DefaultIPerf3Config returns default iPerf3 emulation configuration.
 func DefaultIPerf3Config() *config.IPerf3Config {
 	return &config.IPerf3Config{
 		Enabled:           false,
 		Port:              TCPPortIPerf3,
-		MaxBandwidthMbps:  1000.0,  // 1 Gbps
-		TypicalLatencyMs:  1.0,     // 1ms
-		JitterMs:          0.1,     // 0.1ms
-		PacketLossPercent: 0.0,     // No loss
-		UploadMbps:        100.0,   // 100 Mbps
-		DownloadMbps:      100.0,   // 100 Mbps
+		MaxBandwidthMbps:  1000.0, // 1 Gbps
+		TypicalLatencyMs:  1.0,    // 1ms
+		JitterMs:          0.1,    // 0.1ms
+		PacketLossPercent: 0.0,    // No loss
+		UploadMbps:        100.0,  // 100 Mbps
+		DownloadMbps:      100.0,  // 100 Mbps
 	}
 }
 
-// IPerf3Session tracks state for an active iPerf3 test session
+// IPerf3Session tracks state for an active iPerf3 test session.
 type IPerf3Session struct {
 	ClientIP     string
 	ClientPort   uint16
@@ -72,40 +71,40 @@ type IPerf3Session struct {
 	LastActivity time.Time
 }
 
-// iperf3TestParams represents the test parameters exchanged in JSON
+// iperf3TestParams represents the test parameters exchanged in JSON.
 type iperf3TestParams struct {
-	TCP        bool    `json:"tcp,omitempty"`
-	UDP        bool    `json:"udp,omitempty"`
-	Omit       int     `json:"omit,omitempty"`
-	Time       int     `json:"time,omitempty"`
-	Parallel   int     `json:"parallel,omitempty"`
-	Length     int     `json:"len,omitempty"`
-	Bandwidth  int64   `json:"bandwidth,omitempty"`
-	Pacing     int64   `json:"pacing_timer,omitempty"`
-	Client     string  `json:"client,omitempty"`
-	Reverse    bool    `json:"reverse,omitempty"`
-	Bidirect   bool    `json:"bidirectional,omitempty"`
-	Window     int     `json:"window,omitempty"`
-	MSS        int     `json:"MSS,omitempty"`
-	NoDelay    bool    `json:"nodelay,omitempty"`
-	Version    string  `json:"version,omitempty"`
-	BlockCount int64   `json:"blockcount,omitempty"`
-	TOS        int     `json:"TOS,omitempty"`
-	FlowLabel  int     `json:"flowlabel,omitempty"`
-	Title      string  `json:"title,omitempty"`
-	Extra      string  `json:"extra_data,omitempty"`
-	Cookie     string  `json:"cookie,omitempty"`
-	NumStreams int     `json:"num_streams,omitempty"`
+	TCP        bool   `json:"tcp,omitempty"`
+	UDP        bool   `json:"udp,omitempty"`
+	Omit       int    `json:"omit,omitempty"`
+	Time       int    `json:"time,omitempty"`
+	Parallel   int    `json:"parallel,omitempty"`
+	Length     int    `json:"len,omitempty"`
+	Bandwidth  int64  `json:"bandwidth,omitempty"`
+	Pacing     int64  `json:"pacing_timer,omitempty"`
+	Client     string `json:"client,omitempty"`
+	Reverse    bool   `json:"reverse,omitempty"`
+	Bidirect   bool   `json:"bidirectional,omitempty"`
+	Window     int    `json:"window,omitempty"`
+	MSS        int    `json:"MSS,omitempty"`
+	NoDelay    bool   `json:"nodelay,omitempty"`
+	Version    string `json:"version,omitempty"`
+	BlockCount int64  `json:"blockcount,omitempty"`
+	TOS        int    `json:"TOS,omitempty"`
+	FlowLabel  int    `json:"flowlabel,omitempty"`
+	Title      string `json:"title,omitempty"`
+	Extra      string `json:"extra_data,omitempty"`
+	Cookie     string `json:"cookie,omitempty"`
+	NumStreams int    `json:"num_streams,omitempty"`
 }
 
-// iperf3ServerResult represents the results sent back to client
+// iperf3ServerResult represents the results sent back to client.
 type iperf3ServerResult struct {
-	CPU          *iperf3CPUUtil `json:"cpu_util_total,omitempty"`
-	SenderTCP    *iperf3TCPInfo `json:"sender_tcp_congestion,omitempty"`
-	ReceiverTCP  *iperf3TCPInfo `json:"receiver_tcp_congestion,omitempty"`
-	Streams      []iperf3Stream `json:"streams,omitempty"`
-	SumSent      *iperf3Sum     `json:"sum_sent,omitempty"`
-	SumReceived  *iperf3Sum     `json:"sum_received,omitempty"`
+	CPU         *iperf3CPUUtil `json:"cpu_util_total,omitempty"`
+	SenderTCP   *iperf3TCPInfo `json:"sender_tcp_congestion,omitempty"`
+	ReceiverTCP *iperf3TCPInfo `json:"receiver_tcp_congestion,omitempty"`
+	Streams     []iperf3Stream `json:"streams,omitempty"`
+	SumSent     *iperf3Sum     `json:"sum_sent,omitempty"`
+	SumReceived *iperf3Sum     `json:"sum_received,omitempty"`
 }
 
 type iperf3CPUUtil struct {
@@ -122,15 +121,15 @@ type iperf3TCPInfo struct {
 }
 
 type iperf3Stream struct {
-	ID        int     `json:"id"`
-	Bytes     uint64  `json:"bytes"`
-	BPS       float64 `json:"bits_per_second"`
-	Retransmits int   `json:"retransmits,omitempty"`
-	MaxSndCwnd  int   `json:"max_snd_cwnd,omitempty"`
-	MaxSndWnd   int   `json:"max_snd_wnd,omitempty"`
-	MaxRtt      int   `json:"max_rtt,omitempty"`
-	MinRtt      int   `json:"min_rtt,omitempty"`
-	MeanRtt     int   `json:"mean_rtt,omitempty"`
+	ID          int     `json:"id"`
+	Bytes       uint64  `json:"bytes"`
+	BPS         float64 `json:"bits_per_second"`
+	Retransmits int     `json:"retransmits,omitempty"`
+	MaxSndCwnd  int     `json:"max_snd_cwnd,omitempty"`
+	MaxSndWnd   int     `json:"max_snd_wnd,omitempty"`
+	MaxRtt      int     `json:"max_rtt,omitempty"`
+	MinRtt      int     `json:"min_rtt,omitempty"`
+	MeanRtt     int     `json:"mean_rtt,omitempty"`
 	JitterMs    float64 `json:"jitter_ms,omitempty"`
 	LostPackets int     `json:"lost_packets,omitempty"`
 	Packets     int     `json:"packets,omitempty"`
@@ -139,22 +138,22 @@ type iperf3Stream struct {
 }
 
 type iperf3Sum struct {
-	Start     float64 `json:"start"`
-	End       float64 `json:"end"`
-	Seconds   float64 `json:"seconds"`
-	Bytes     uint64  `json:"bytes"`
-	BPS       float64 `json:"bits_per_second"`
-	Retransmits int   `json:"retransmits,omitempty"`
-	Sender    bool    `json:"sender"`
+	Start       float64 `json:"start"`
+	End         float64 `json:"end"`
+	Seconds     float64 `json:"seconds"`
+	Bytes       uint64  `json:"bytes"`
+	BPS         float64 `json:"bits_per_second"`
+	Retransmits int     `json:"retransmits,omitempty"`
+	Sender      bool    `json:"sender"`
 }
 
-// IPerf3Handler handles iPerf3 protocol emulation
+// IPerf3Handler handles iPerf3 protocol emulation.
 type IPerf3Handler struct {
 	stack    *Stack
 	sessions map[string]*IPerf3Session // keyed by "ip:port"
 }
 
-// NewIPerf3Handler creates a new iPerf3 handler
+// NewIPerf3Handler creates a new iPerf3 handler.
 func NewIPerf3Handler(stack *Stack) *IPerf3Handler {
 	return &IPerf3Handler{
 		stack:    stack,
@@ -162,12 +161,17 @@ func NewIPerf3Handler(stack *Stack) *IPerf3Handler {
 	}
 }
 
-// getOrCreateSession gets or creates an iPerf3 session
-func (h *IPerf3Handler) getOrCreateSession(clientIP string, clientPort uint16, cfg *config.IPerf3Config) *IPerf3Session {
+// getOrCreateSession gets or creates an iPerf3 session.
+func (h *IPerf3Handler) getOrCreateSession(
+	clientIP string,
+	clientPort uint16,
+	cfg *config.IPerf3Config,
+) *IPerf3Session {
 	key := fmt.Sprintf("%s:%d", clientIP, clientPort)
 
 	if session, exists := h.sessions[key]; exists {
 		session.LastActivity = time.Now()
+
 		return session
 	}
 
@@ -180,10 +184,11 @@ func (h *IPerf3Handler) getOrCreateSession(clientIP string, clientPort uint16, c
 		LastActivity: time.Now(),
 	}
 	h.sessions[key] = session
+
 	return session
 }
 
-// cleanupStaleSessions removes sessions that haven't had activity
+// cleanupStaleSessions removes sessions that haven't had activity.
 func (h *IPerf3Handler) cleanupStaleSessions(maxAge time.Duration) {
 	now := time.Now()
 	for key, session := range h.sessions {
@@ -193,8 +198,13 @@ func (h *IPerf3Handler) cleanupStaleSessions(maxAge time.Duration) {
 	}
 }
 
-// HandleIPerf3Request handles incoming iPerf3 traffic
-func (h *IPerf3Handler) HandleIPerf3Request(pkt *Packet, ipLayer *layers.IPv4, tcpLayer *layers.TCP, devices []*config.Device) {
+// HandleIPerf3Request handles incoming iPerf3 traffic.
+func (h *IPerf3Handler) HandleIPerf3Request(
+	pkt *Packet,
+	ipLayer *layers.IPv4,
+	tcpLayer *layers.TCP,
+	devices []*config.Device,
+) {
 	debugLevel := h.stack.GetDebugLevel()
 
 	// Get iPerf3 config from device (use defaults if not configured)
@@ -208,18 +218,21 @@ func (h *IPerf3Handler) HandleIPerf3Request(pkt *Packet, ipLayer *layers.IPv4, t
 
 	if !cfg.Enabled {
 		if debugLevel >= 2 {
-			fmt.Printf("iPerf3 disabled for device, ignoring request\n")
+			_, _ = fmt.Fprintf(os.Stdout, "iPerf3 disabled for device, ignoring request\n")
 		}
+
 		return
 	}
 
 	// Handle TCP SYN - initial connection
 	if tcpLayer.SYN && !tcpLayer.ACK {
 		if debugLevel >= 2 {
-			fmt.Printf("iPerf3: New connection from %s:%d\n", ipLayer.SrcIP, tcpLayer.SrcPort)
+			_, _ = fmt.Fprintf(os.Stdout, "iPerf3: New connection from %s:%d\n", ipLayer.SrcIP, tcpLayer.SrcPort)
 		}
+
 		h.sendSYNACK(ipLayer, tcpLayer, devices)
 		h.getOrCreateSession(ipLayer.SrcIP.String(), uint16(tcpLayer.SrcPort), cfg)
+
 		return
 	}
 
@@ -233,13 +246,19 @@ func (h *IPerf3Handler) HandleIPerf3Request(pkt *Packet, ipLayer *layers.IPv4, t
 	h.cleanupStaleSessions(5 * time.Minute)
 }
 
-// handleIPerf3Data processes iPerf3 protocol messages
-func (h *IPerf3Handler) handleIPerf3Data(pkt *Packet, ipLayer *layers.IPv4, tcpLayer *layers.TCP, devices []*config.Device, session *IPerf3Session) {
+// handleIPerf3Data processes iPerf3 protocol messages.
+func (h *IPerf3Handler) handleIPerf3Data(
+	pkt *Packet,
+	ipLayer *layers.IPv4,
+	tcpLayer *layers.TCP,
+	devices []*config.Device,
+	session *IPerf3Session,
+) {
 	debugLevel := h.stack.GetDebugLevel()
 	payload := tcpLayer.Payload
 
 	if debugLevel >= 3 {
-		fmt.Printf("iPerf3: Received %d bytes from %s:%d in state %d\n",
+		_, _ = fmt.Fprintf(os.Stdout, "iPerf3: Received %d bytes from %s:%d in state %d\n",
 			len(payload), ipLayer.SrcIP, tcpLayer.SrcPort, session.State)
 	}
 
@@ -258,6 +277,7 @@ func (h *IPerf3Handler) handleIPerf3Data(pkt *Packet, ipLayer *layers.IPv4, tcpL
 			} else if len(payload) >= 32 {
 				// Cookie received, acknowledge and move to param exchange
 				session.State = iperf3StateParamExch
+
 				h.sendStateCode(ipLayer, tcpLayer, devices, iperf3MsgTestStart)
 			}
 		}
@@ -269,6 +289,7 @@ func (h *IPerf3Handler) handleIPerf3Data(pkt *Packet, ipLayer *layers.IPv4, tcpL
 	case iperf3StateCreateFlow:
 		// Data streams being created
 		session.State = iperf3StateTestStart
+
 		h.sendStateCode(ipLayer, tcpLayer, devices, iperf3MsgTestRunning)
 
 	case iperf3StateTestStart, iperf3StateTestRun:
@@ -288,8 +309,9 @@ func (h *IPerf3Handler) handleIPerf3Data(pkt *Packet, ipLayer *layers.IPv4, tcpL
 	case iperf3StateExchResult:
 		// Exchange results phase
 		if debugLevel >= 2 {
-			fmt.Printf("iPerf3: Test complete, sending results\n")
+			_, _ = fmt.Fprintf(os.Stdout, "iPerf3: Test complete, sending results\n")
 		}
+
 		h.sendResults(ipLayer, tcpLayer, devices, session)
 		session.State = iperf3StateIPerf3Done
 
@@ -300,8 +322,14 @@ func (h *IPerf3Handler) handleIPerf3Data(pkt *Packet, ipLayer *layers.IPv4, tcpL
 	}
 }
 
-// handleParamExchange parses and acknowledges test parameters
-func (h *IPerf3Handler) handleParamExchange(ipLayer *layers.IPv4, tcpLayer *layers.TCP, devices []*config.Device, session *IPerf3Session, payload []byte) {
+// handleParamExchange parses and acknowledges test parameters.
+func (h *IPerf3Handler) handleParamExchange(
+	ipLayer *layers.IPv4,
+	tcpLayer *layers.TCP,
+	devices []*config.Device,
+	session *IPerf3Session,
+	payload []byte,
+) {
 	debugLevel := h.stack.GetDebugLevel()
 
 	// Try to parse as JSON
@@ -324,28 +352,33 @@ func (h *IPerf3Handler) handleParamExchange(ipLayer *layers.IPv4, tcpLayer *laye
 		case iperf3MsgTestStart:
 			session.State = iperf3StateTestStart
 			session.StartTime = time.Now()
+
 			return
 		}
 	}
 
 	var params iperf3TestParams
-	if err := json.Unmarshal(jsonData, &params); err != nil {
+	err := json.Unmarshal(jsonData, &params)
+	if err != nil {
 		if debugLevel >= 2 {
-			fmt.Printf("iPerf3: Failed to parse params: %v (data: %s)\n", err, string(jsonData))
+			_, _ = fmt.Fprintf(os.Stdout, "iPerf3: Failed to parse params: %v (data: %s)\n", err, string(jsonData))
 		}
 		// Send acknowledgment anyway
 		h.sendStateCode(ipLayer, tcpLayer, devices, iperf3MsgTestStart)
+
 		session.State = iperf3StateCreateFlow
+
 		return
 	}
 
 	session.TestParams = &params
+
 	if params.Time == 0 {
 		params.Time = 10 // Default 10 second test
 	}
 
 	if debugLevel >= 2 {
-		fmt.Printf("iPerf3: Test params - Duration: %ds, Parallel: %d, TCP: %v, Reverse: %v\n",
+		_, _ = fmt.Fprintf(os.Stdout, "iPerf3: Test params - Duration: %ds, Parallel: %d, TCP: %v, Reverse: %v\n",
 			params.Time, params.Parallel, params.TCP, params.Reverse)
 	}
 
@@ -356,14 +389,24 @@ func (h *IPerf3Handler) handleParamExchange(ipLayer *layers.IPv4, tcpLayer *laye
 	h.sendStateCode(ipLayer, tcpLayer, devices, iperf3MsgTestStart)
 }
 
-// sendStateCode sends a single-byte state code to the client
-func (h *IPerf3Handler) sendStateCode(ipLayer *layers.IPv4, tcpLayer *layers.TCP, devices []*config.Device, stateCode int8) {
+// sendStateCode sends a single-byte state code to the client.
+func (h *IPerf3Handler) sendStateCode(
+	ipLayer *layers.IPv4,
+	tcpLayer *layers.TCP,
+	devices []*config.Device,
+	stateCode int8,
+) {
 	response := []byte{byte(stateCode)}
 	h.sendTCPResponse(ipLayer, tcpLayer, response, devices)
 }
 
-// sendResults sends simulated test results to the client
-func (h *IPerf3Handler) sendResults(ipLayer *layers.IPv4, tcpLayer *layers.TCP, devices []*config.Device, session *IPerf3Session) {
+// sendResults sends simulated test results to the client.
+func (h *IPerf3Handler) sendResults(
+	ipLayer *layers.IPv4,
+	tcpLayer *layers.TCP,
+	devices []*config.Device,
+	session *IPerf3Session,
+) {
 	cfg := session.Config
 
 	// Calculate simulated results based on device config
@@ -377,7 +420,7 @@ func (h *IPerf3Handler) sendResults(ipLayer *layers.IPv4, tcpLayer *layers.TCP, 
 	uploadBps := cfg.UploadMbps * 1_000_000
 
 	// Add some realistic variance (±5%)
-	variance := 0.95 + rand.Float64()*0.1
+	variance := 0.95 + rand.Float64()*0.1 // #nosec G404 -- simulation variance, not security-sensitive
 	downloadBps *= variance
 	uploadBps *= variance
 
@@ -385,6 +428,7 @@ func (h *IPerf3Handler) sendResults(ipLayer *layers.IPv4, tcpLayer *layers.TCP, 
 	uploadBytes := uint64(uploadBps / 8 * duration)
 
 	// Build result JSON
+	// #nosec G404 -- all rand usage below is for simulation variance, not security-sensitive
 	result := &iperf3ServerResult{
 		CPU: &iperf3CPUUtil{
 			HostTotal:    2.5 + rand.Float64()*2,
@@ -438,7 +482,10 @@ func (h *IPerf3Handler) sendResults(ipLayer *layers.IPv4, tcpLayer *layers.TCP, 
 
 	// Send with length prefix
 	response := make([]byte, 4+len(jsonData))
-	binary.BigEndian.PutUint32(response[:4], uint32(len(jsonData)))
+	binary.BigEndian.PutUint32(
+		response[:4],
+		uint32(len(jsonData)),
+	)
 	copy(response[4:], jsonData)
 
 	h.sendTCPResponse(ipLayer, tcpLayer, response, devices)
@@ -447,7 +494,7 @@ func (h *IPerf3Handler) sendResults(ipLayer *layers.IPv4, tcpLayer *layers.TCP, 
 	h.sendStateCode(ipLayer, tcpLayer, devices, iperf3MsgResultOK)
 }
 
-// sendSYNACK sends a TCP SYN-ACK response
+// sendSYNACK sends a TCP SYN-ACK response.
 func (h *IPerf3Handler) sendSYNACK(ipLayer *layers.IPv4, tcpLayer *layers.TCP, devices []*config.Device) {
 	debugLevel := h.stack.GetDebugLevel()
 
@@ -462,13 +509,16 @@ func (h *IPerf3Handler) sendSYNACK(ipLayer *layers.IPv4, tcpLayer *layers.TCP, d
 
 	// Get source MAC
 	srcDevices := h.stack.GetDevices().GetByIP(ipLayer.SrcIP)
+
 	var srcMAC []byte
+
 	if len(srcDevices) > 0 && len(srcDevices[0].MACAddress) > 0 {
 		srcMAC = srcDevices[0].MACAddress
 	} else {
 		if debugLevel >= 2 {
-			fmt.Printf("iPerf3: Cannot send SYN-ACK: no MAC for %s\n", ipLayer.SrcIP)
+			_, _ = fmt.Fprintf(os.Stdout, "iPerf3: Cannot send SYN-ACK: no MAC for %s\n", ipLayer.SrcIP)
 		}
+
 		return
 	}
 
@@ -499,7 +549,7 @@ func (h *IPerf3Handler) sendSYNACK(ipLayer *layers.IPv4, tcpLayer *layers.TCP, d
 		ACK:     true,
 		Window:  65535,
 	}
-	tcpReply.SetNetworkLayerForChecksum(ipReply)
+	_ = tcpReply.SetNetworkLayerForChecksum(ipReply) // error is non-critical for simulation
 
 	// Serialize
 	buffer := gopacket.NewSerializeBuffer()
@@ -511,8 +561,9 @@ func (h *IPerf3Handler) sendSYNACK(ipLayer *layers.IPv4, tcpLayer *layers.TCP, d
 	err := gopacket.SerializeLayers(buffer, opts, eth, ipReply, tcpReply)
 	if err != nil {
 		if debugLevel >= 2 {
-			fmt.Printf("iPerf3: Error serializing SYN-ACK: %v\n", err)
+			_, _ = fmt.Fprintf(os.Stdout, "iPerf3: Error serializing SYN-ACK: %v\n", err)
 		}
+
 		return
 	}
 
@@ -531,13 +582,18 @@ func (h *IPerf3Handler) sendSYNACK(ipLayer *layers.IPv4, tcpLayer *layers.TCP, d
 	h.stack.Send(pktOut)
 
 	if debugLevel >= 3 {
-		fmt.Printf("iPerf3: Sent TCP SYN-ACK from %s:%d to %s:%d\n",
+		_, _ = fmt.Fprintf(os.Stdout, "iPerf3: Sent TCP SYN-ACK from %s:%d to %s:%d\n",
 			ipReply.SrcIP, tcpReply.SrcPort, ipReply.DstIP, tcpReply.DstPort)
 	}
 }
 
-// sendTCPResponse sends a TCP response with payload
-func (h *IPerf3Handler) sendTCPResponse(ipLayer *layers.IPv4, tcpLayer *layers.TCP, payload []byte, devices []*config.Device) {
+// sendTCPResponse sends a TCP response with payload.
+func (h *IPerf3Handler) sendTCPResponse(
+	ipLayer *layers.IPv4,
+	tcpLayer *layers.TCP,
+	payload []byte,
+	devices []*config.Device,
+) {
 	debugLevel := h.stack.GetDebugLevel()
 
 	if len(devices) == 0 || len(payload) == 0 {
@@ -550,7 +606,9 @@ func (h *IPerf3Handler) sendTCPResponse(ipLayer *layers.IPv4, tcpLayer *layers.T
 	}
 
 	srcDevices := h.stack.GetDevices().GetByIP(ipLayer.SrcIP)
+
 	var srcMAC []byte
+
 	if len(srcDevices) > 0 && len(srcDevices[0].MACAddress) > 0 {
 		srcMAC = srcDevices[0].MACAddress
 	} else {
@@ -572,20 +630,20 @@ func (h *IPerf3Handler) sendTCPResponse(ipLayer *layers.IPv4, tcpLayer *layers.T
 		DstIP:    ipLayer.SrcIP,
 	}
 
-	payloadLen := len(tcpLayer.Payload)
-	if payloadLen > 0xFFFFFFFF {
-		payloadLen = 0xFFFFFFFF
-	}
+	payloadLen := min(len(tcpLayer.Payload), 0xFFFFFFFF)
+
 	tcpReply := &layers.TCP{
 		SrcPort: tcpLayer.DstPort,
 		DstPort: tcpLayer.SrcPort,
 		Seq:     tcpLayer.Ack,
-		Ack:     tcpLayer.Seq + uint32(payloadLen),
-		PSH:     true,
-		ACK:     true,
-		Window:  65535,
+		Ack: tcpLayer.Seq + uint32(
+			payloadLen,
+		),
+		PSH:    true,
+		ACK:    true,
+		Window: 65535,
 	}
-	tcpReply.SetNetworkLayerForChecksum(ipReply)
+	_ = tcpReply.SetNetworkLayerForChecksum(ipReply) // error is non-critical for simulation
 
 	buffer := gopacket.NewSerializeBuffer()
 	opts := gopacket.SerializeOptions{
@@ -596,8 +654,9 @@ func (h *IPerf3Handler) sendTCPResponse(ipLayer *layers.IPv4, tcpLayer *layers.T
 	err := gopacket.SerializeLayers(buffer, opts, eth, ipReply, tcpReply, gopacket.Payload(payload))
 	if err != nil {
 		if debugLevel >= 2 {
-			fmt.Printf("iPerf3: Error serializing TCP response: %v\n", err)
+			_, _ = fmt.Fprintf(os.Stdout, "iPerf3: Error serializing TCP response: %v\n", err)
 		}
+
 		return
 	}
 
@@ -616,19 +675,21 @@ func (h *IPerf3Handler) sendTCPResponse(ipLayer *layers.IPv4, tcpLayer *layers.T
 	h.stack.Send(pktOut)
 
 	if debugLevel >= 3 {
-		fmt.Printf("iPerf3: Sent %d bytes to %s:%d\n", len(payload), ipLayer.DstIP, tcpLayer.SrcPort)
+		_, _ = fmt.Fprintf(os.Stdout, "iPerf3: Sent %d bytes to %s:%d\n", len(payload), ipLayer.DstIP, tcpLayer.SrcPort)
 	}
 }
 
-// GetDeviceIPerf3Config extracts iPerf3 config from device name for display
+// GetDeviceIPerf3Config extracts iPerf3 config from device name for display.
 func GetDeviceIPerf3Config(device *config.Device) string {
 	if device.IPerf3 == nil || !device.IPerf3.Enabled {
 		return "disabled"
 	}
+
 	cfg := device.IPerf3
+
 	return fmt.Sprintf("Up: %.0f Mbps, Down: %.0f Mbps, Latency: %.1fms",
 		cfg.UploadMbps, cfg.DownloadMbps, cfg.TypicalLatencyMs)
 }
 
-// Helper to avoid unused import warning
+// Helper to avoid unused import warning.
 var _ = strings.TrimSpace

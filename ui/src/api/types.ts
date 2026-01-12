@@ -118,7 +118,7 @@ export interface ErrorInjectionInfo {
   available_types: ErrorType[];
   info: string;
   active_errors?: {
-    [deviceIP: string]: {
+    [deviceIp: string]: {
       [interfaceName: string]: {
         [errorType: string]: number;
       };
@@ -167,9 +167,22 @@ export interface SimulationRequest {
 }
 
 // Debug Console Types
-export type LogLevel = 'ERROR' | 'WARN' | 'INFO' | 'DEBUG';
+export type LogLevel = "ERROR" | "WARN" | "INFO" | "DEBUG";
 
-export type Protocol = 'ARP' | 'ICMP' | 'DNS' | 'TCP' | 'UDP' | 'SNMP' | 'DHCP' | 'LLDP' | 'CDP' | 'HTTP' | 'HTTPS' | 'SSH' | 'TELNET';
+export type Protocol =
+  | "ARP"
+  | "ICMP"
+  | "DNS"
+  | "TCP"
+  | "UDP"
+  | "SNMP"
+  | "DHCP"
+  | "LLDP"
+  | "CDP"
+  | "HTTP"
+  | "HTTPS"
+  | "SSH"
+  | "TELNET";
 
 export interface LogEntry {
   id: string;
@@ -186,7 +199,7 @@ export interface Template {
   name: string;
   description: string;
   device_count: number;
-  type: 'basic' | 'router' | 'switch' | 'access-point' | 'server' | 'complete' | 'custom';
+  type: "basic" | "router" | "switch" | "access-point" | "server" | "complete" | "custom";
   tags?: string[];
   created_at?: string;
   modified_at?: string;
@@ -195,7 +208,7 @@ export interface Template {
 export interface TemplateContent {
   name: string;
   content: string;
-  format: 'yaml' | 'json';
+  format: "yaml" | "json";
 }
 
 export interface UseTemplateRequest {
@@ -210,30 +223,36 @@ export interface UseTemplateResponse {
 }
 
 // Protocol Debug Level Types
-export type DebugLevel = 'OFF' | 'ERROR' | 'WARN' | 'INFO' | 'DEBUG' | 'TRACE';
+export type DebugLevel = "OFF" | "ERROR" | "WARN" | "INFO" | "DEBUG" | "TRACE";
 
 export type DebugProtocol =
-  | 'SNMP'
-  | 'LLDP'
-  | 'CDP'
-  | 'STP'
-  | 'LACP'
-  | 'OSPF'
-  | 'BGP'
-  | 'EIGRP'
-  | 'RIP'
-  | 'ISIS'
-  | 'VRRP'
-  | 'HSRP'
-  | 'GLBP'
-  | 'BFD'
-  | 'MPLS'
-  | 'PIM'
-  | 'IGMP'
-  | 'MSDP'
-  | 'NetFlow';
+  | "SNMP"
+  | "LLDP"
+  | "CDP"
+  | "STP"
+  | "LACP"
+  | "OSPF"
+  | "BGP"
+  | "EIGRP"
+  | "RIP"
+  | "ISIS"
+  | "VRRP"
+  | "HSRP"
+  | "GLBP"
+  | "BFD"
+  | "MPLS"
+  | "PIM"
+  | "IGMP"
+  | "MSDP"
+  | "NetFlow";
 
-export type ProtocolCategory = 'discovery' | 'switching' | 'routing' | 'redundancy' | 'multicast' | 'monitoring';
+export type ProtocolCategory =
+  | "discovery"
+  | "switching"
+  | "routing"
+  | "redundancy"
+  | "multicast"
+  | "monitoring";
 
 export interface ProtocolDebugConfig {
   protocol: DebugProtocol;
@@ -265,7 +284,7 @@ export interface UploadTemplateRequest {
   name: string;
   description: string;
   content: string;
-  type?: Template['type'];
+  type?: Template["type"];
 }
 
 export interface UploadTemplateResponse {
@@ -358,14 +377,14 @@ export interface Device {
 }
 
 export type DeviceType =
-  | 'router'
-  | 'switch'
-  | 'access_point'
-  | 'firewall'
-  | 'server'
-  | 'workstation'
-  | 'iot'
-  | 'unknown';
+  | "router"
+  | "switch"
+  | "access_point"
+  | "firewall"
+  | "server"
+  | "workstation"
+  | "iot"
+  | "unknown";
 
 /**
  * SNMP Agent configuration
@@ -393,15 +412,15 @@ export interface AddMib {
 }
 
 export type MibType =
-  | 'STRING'
-  | 'INTEGER'
-  | 'Counter32'
-  | 'Counter64'
-  | 'Gauge32'
-  | 'TimeTicks'
-  | 'OID'
-  | 'IpAddress'
-  | 'Hex-STRING';
+  | "STRING"
+  | "INTEGER"
+  | "Counter32"
+  | "Counter64"
+  | "Gauge32"
+  | "TimeTicks"
+  | "OID"
+  | "IpAddress"
+  | "Hex-STRING";
 
 export interface FdbTableConfig {
   port: number;
@@ -449,7 +468,7 @@ export interface LLDPConfig {
   port_description?: string;
 }
 
-export type ChassisIDType = 'mac' | 'local' | 'network_address';
+export type ChassisIDType = "mac" | "local" | "network_address";
 
 /**
  * CDP (Cisco Discovery Protocol) configuration
@@ -498,7 +517,7 @@ export interface STPConfig {
   forward_delay?: number;
 }
 
-export type STPVersion = 'stp' | 'rstp' | 'mstp';
+export type STPVersion = "stp" | "rstp" | "mstp";
 
 /**
  * DHCP Server configuration
@@ -552,7 +571,7 @@ export interface HTTPConfig {
 
 export interface HTTPEndpoint {
   path: string;
-  method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
+  method?: "GET" | "POST" | "PUT" | "DELETE";
   status_code?: number;
   content_type?: string;
   body?: string;
@@ -589,8 +608,8 @@ export interface NetBIOSConfig {
   names?: NetBIOSName[];
 }
 
-export type NetBIOSNodeType = 'B' | 'P' | 'M' | 'H';
-export type NetBIOSService = 'workstation' | 'fileserver' | 'messenger';
+export type NetBIOSNodeType = "B" | "P" | "M" | "H";
+export type NetBIOSService = "workstation" | "fileserver" | "messenger";
 
 export interface NetBIOSName {
   name: string;
@@ -702,7 +721,7 @@ export interface RandomTrafficConfig {
   patterns?: RandomTrafficPattern[];
 }
 
-export type RandomTrafficPattern = 'broadcast_arp' | 'multicast' | 'udp';
+export type RandomTrafficPattern = "broadcast_arp" | "multicast" | "udp";
 
 /**
  * TTL Configuration for traceroute simulation
@@ -731,14 +750,14 @@ export interface OSFingerprintConfig {
 }
 
 export type OSType =
-  | 'linux'
-  | 'windows'
-  | 'macos'
-  | 'freebsd'
-  | 'cisco-ios'
-  | 'cisco-nxos'
-  | 'juniper-junos'
-  | 'arista-eos';
+  | "linux"
+  | "windows"
+  | "macos"
+  | "freebsd"
+  | "cisco-ios"
+  | "cisco-nxos"
+  | "juniper-junos"
+  | "arista-eos";
 
 /**
  * iPerf3 Server configuration
@@ -824,9 +843,9 @@ export interface JSONSchemaProperty {
   items?: JSONSchemaProperty;
   properties?: Record<string, JSONSchemaProperty>;
   required?: string[];
-  'ui:widget'?: string;
-  'ui:help'?: string;
-  'ui:placeholder'?: string;
+  "ui:widget"?: string;
+  "ui:help"?: string;
+  "ui:placeholder"?: string;
 }
 
 export interface ConfigSchema {

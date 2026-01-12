@@ -120,7 +120,7 @@ func TestValidateCommand(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			configFile := filepath.Join(tmpDir, "config.yaml")
-			err := os.WriteFile(configFile, []byte(tt.configData), 0644)
+			err := os.WriteFile(configFile, []byte(tt.configData), 0o644)
 			if err != nil {
 				t.Fatalf("Failed to write config file: %v", err)
 			}
@@ -164,7 +164,7 @@ func TestValidateReadableConfig(t *testing.T) {
       - "10.0.0.1"
 `
 
-	err := os.WriteFile(configFile, []byte(validConfig), 0644)
+	err := os.WriteFile(configFile, []byte(validConfig), 0o644)
 	if err != nil {
 		t.Fatalf("Failed to write config: %v", err)
 	}

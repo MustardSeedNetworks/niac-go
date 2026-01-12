@@ -28,9 +28,11 @@ func TestParseSimpleConfig(t *testing.T) {
 	if router.Name != "Router1" {
 		t.Errorf("Expected name 'Router1', got '%s'", router.Name)
 	}
+
 	if router.Type != "router" {
 		t.Errorf("Expected type 'router', got '%s'", router.Type)
 	}
+
 	expectedIP := net.ParseIP("192.168.1.1")
 	if !router.IPAddresses[0].Equal(expectedIP) {
 		t.Errorf("Expected IP %s, got %s", expectedIP, router.IPAddresses[0])
@@ -63,12 +65,14 @@ func TestGetDeviceByMAC(t *testing.T) {
 	if device == nil {
 		t.Fatal("GetDeviceByMAC returned nil")
 	}
+
 	if device.Name != "Router1" {
 		t.Errorf("Expected Router1, got %s", device.Name)
 	}
 
 	// Test non-existent MAC
 	mac = net.HardwareAddr{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}
+
 	device = cfg.GetDeviceByMAC(mac)
 	if device != nil {
 		t.Error("Expected nil for non-existent MAC")
@@ -95,6 +99,7 @@ func TestGetDeviceByIP(t *testing.T) {
 	if device == nil {
 		t.Fatal("GetDeviceByIP returned nil")
 	}
+
 	if device.Name != "Router1" {
 		t.Errorf("Expected Router1, got %s", device.Name)
 	}
@@ -120,11 +125,14 @@ func TestParseSpeed(t *testing.T) {
 				if err == nil {
 					t.Error("Expected error, got nil")
 				}
+
 				return
 			}
+
 			if err != nil {
 				t.Errorf("Unexpected error: %v", err)
 			}
+
 			if result != tt.expected {
 				t.Errorf("Expected %d, got %d", tt.expected, result)
 			}
@@ -150,8 +158,7 @@ func BenchmarkParseSimpleConfig(b *testing.B) {
 		"AP1 ap 192.168.1.20 00:11:22:33:44:77",
 	}
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_, _ = ParseSimpleConfig(lines)
 	}
 }

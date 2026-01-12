@@ -45,9 +45,15 @@ import (
 	"go.etcd.io/bbolt"
 )
 
+// Sentinel errors for storage operations.
+var (
+	ErrStorageDisabled       = errors.New("storage disabled")
+	ErrStorageNotInitialised = errors.New("storage not initialised")
+)
+
 const (
 	runBucket = "runs"
-	// SECURITY FIX MEDIUM-2: Database operation timeout
+	// SECURITY FIX MEDIUM-2: Database operation timeout.
 	dbOperationTimeout = 5 * time.Second
 )
 
@@ -58,38 +64,42 @@ type Storage struct {
 
 // RunRecord captures a single NIAC execution summary.
 type RunRecord struct {
-	ID              uint64        `json:"id" yaml:"id"`
-	StartedAt       time.Time     `json:"started_at" yaml:"started_at"`
-	Duration        time.Duration `json:"duration" yaml:"duration"`
-	Interface       string        `json:"interface" yaml:"interface"`
-	ConfigName      string        `json:"config_name" yaml:"config_name"`
-	DeviceCount     int           `json:"device_count" yaml:"device_count"`
-	PacketsSent     uint64        `json:"packets_sent" yaml:"packets_sent"`
+	ID              uint64        `json:"id"               yaml:"id"`
+	StartedAt       time.Time     `json:"started_at"       yaml:"started_at"`
+	Duration        time.Duration `json:"duration"         yaml:"duration"`
+	Interface       string        `json:"interface"        yaml:"interface"`
+	ConfigName      string        `json:"config_name"      yaml:"config_name"`
+	DeviceCount     int           `json:"device_count"     yaml:"device_count"`
+	PacketsSent     uint64        `json:"packets_sent"     yaml:"packets_sent"`
 	PacketsReceived uint64        `json:"packets_received" yaml:"packets_received"`
-	Errors          uint64        `json:"errors" yaml:"errors"`
+	Errors          uint64        `json:"errors"           yaml:"errors"`
 }
 
 // Open opens (or creates) the storage database at the requested path.
 func Open(path string) (*Storage, error) {
 	if strings.EqualFold(path, "disabled") || path == "" {
-		return nil, errors.New("storage disabled")
+		return nil, ErrStorageDisabled
 	}
 
 	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create storage directory: %w", err)
 	}
 
 	db, err := bbolt.Open(path, 0o600, &bbolt.Options{Timeout: time.Second})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
 
 	if err := db.Update(func(tx *bbolt.Tx) error {
-		_, err := tx.CreateBucketIfNotExists([]byte(runBucket))
-		return err
+		_, bucketErr := tx.CreateBucketIfNotExists([]byte(runBucket))
+		if bucketErr != nil {
+			return fmt.Errorf("failed to create bucket: %w", bucketErr)
+		}
+		return nil
 	}); err != nil {
 		_ = db.Close()
-		return nil, err
+
+		return nil, fmt.Errorf("failed to initialize database: %w", err)
 	}
 
 	return &Storage{db: db}, nil
@@ -100,11 +110,15 @@ func (s *Storage) Close() error {
 	if s == nil || s.db == nil {
 		return nil
 	}
-	return s.db.Close()
+
+	if err := s.db.Close(); err != nil {
+		return fmt.Errorf("failed to close database: %w", err)
+	}
+	return nil
 }
 
 // AddRun stores a run record.
-// SECURITY FIX MEDIUM-2: Add timeout to prevent API hangs on slow storage
+// SECURITY FIX MEDIUM-2: Add timeout to prevent API hangs on slow storage.
 func (s *Storage) AddRun(record RunRecord) error {
 	if s == nil || s.db == nil {
 		return nil
@@ -114,6 +128,7 @@ func (s *Storage) AddRun(record RunRecord) error {
 	defer cancel()
 
 	errChan := make(chan error, 1)
+
 	go func() {
 		errChan <- s.db.Update(func(tx *bbolt.Tx) error {
 			bucket := tx.Bucket([]byte(runBucket))
@@ -122,8 +137,9 @@ func (s *Storage) AddRun(record RunRecord) error {
 
 			data, err := json.Marshal(record)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to marshal record: %w", err)
 			}
+
 			return bucket.Put(itob(id), data)
 		})
 	}()
@@ -137,11 +153,12 @@ func (s *Storage) AddRun(record RunRecord) error {
 }
 
 // ListRuns returns the most recent run records up to the requested limit.
-// SECURITY FIX MEDIUM-2: Add timeout to prevent API hangs on slow storage
+// SECURITY FIX MEDIUM-2: Add timeout to prevent API hangs on slow storage.
 func (s *Storage) ListRuns(limit int) ([]RunRecord, error) {
 	if s == nil || s.db == nil {
-		return nil, errors.New("storage not initialised")
+		return nil, ErrStorageNotInitialised
 	}
+
 	if limit <= 0 {
 		limit = 20
 	}
@@ -153,19 +170,25 @@ func (s *Storage) ListRuns(limit int) ([]RunRecord, error) {
 		records []RunRecord
 		err     error
 	}
+
 	resultChan := make(chan result, 1)
 
 	go func() {
 		records := make([]RunRecord, 0, limit)
+
 		err := s.db.View(func(tx *bbolt.Tx) error {
 			cursor := tx.Bucket([]byte(runBucket)).Cursor()
+
 			for key, value := cursor.Last(); key != nil && len(records) < limit; key, value = cursor.Prev() {
 				var rec RunRecord
-				if err := json.Unmarshal(value, &rec); err != nil {
-					return err
+				err := json.Unmarshal(value, &rec)
+				if err != nil {
+					return fmt.Errorf("failed to unmarshal record: %w", err)
 				}
+
 				records = append(records, rec)
 			}
+
 			return nil
 		})
 		resultChan <- result{records: records, err: err}
@@ -181,8 +204,9 @@ func (s *Storage) ListRuns(limit int) ([]RunRecord, error) {
 
 func itob(v uint64) []byte {
 	var b [8]byte
-	for i := uint(0); i < 8; i++ {
+	for i := range uint(8) {
 		b[7-i] = byte(v >> (i * 8))
 	}
+
 	return b[:]
 }

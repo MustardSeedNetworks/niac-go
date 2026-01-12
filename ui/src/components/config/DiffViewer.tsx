@@ -1,11 +1,11 @@
-import { type FC, useMemo, memo, useCallback } from 'react';
-import { ChevronLeft, ChevronRight, ChevronsLeftRight } from 'lucide-react';
-import { Button, SmallText, Tag } from '../../ui';
+import { ChevronLeft, ChevronRight, ChevronsLeftRight } from "lucide-react";
+import { type FC, memo, useCallback, useMemo } from "react";
+import { Button, SmallText, Tag } from "../../ui";
 
 /**
  * Types for diff operations
  */
-export type DiffType = 'unchanged' | 'added' | 'removed' | 'modified';
+export type DiffType = "unchanged" | "added" | "removed" | "modified";
 
 export interface DiffLine {
   lineNumber: number;
@@ -25,7 +25,7 @@ export interface DiffBlock {
 
 export interface MergeDecision {
   blockId: string;
-  choice: 'left' | 'right' | 'both' | 'none';
+  choice: "left" | "right" | "both" | "none";
 }
 
 interface DiffViewerProps {
@@ -34,7 +34,7 @@ interface DiffViewerProps {
   leftLabel?: string;
   rightLabel?: string;
   mergeDecisions: Map<string, MergeDecision>;
-  onMergeDecision: (blockId: string, choice: MergeDecision['choice']) => void;
+  onMergeDecision: (blockId: string, choice: MergeDecision["choice"]) => void;
   showMergeControls?: boolean;
 }
 
@@ -42,8 +42,8 @@ interface DiffViewerProps {
  * Compute LCS-based diff between two content strings
  */
 function computeDiff(left: string, right: string): DiffBlock[] {
-  const leftLines = left.split('\n');
-  const rightLines = right.split('\n');
+  const leftLines = left.split("\n");
+  const rightLines = right.split("\n");
 
   const blocks: DiffBlock[] = [];
   let leftIdx = 0;
@@ -51,7 +51,7 @@ function computeDiff(left: string, right: string): DiffBlock[] {
   let blockId = 0;
 
   // Simple line-by-line diff using longest common subsequence approach
-  const lcs = computeLCS(leftLines, rightLines);
+  const lcs = computeLcs(leftLines, rightLines);
   let lcsIdx = 0;
 
   while (leftIdx < leftLines.length || rightIdx < rightLines.length) {
@@ -69,14 +69,14 @@ function computeDiff(left: string, right: string): DiffBlock[] {
       const line: DiffLine = {
         lineNumber: leftIdx + 1,
         content: leftLines[leftIdx],
-        type: 'unchanged',
+        type: "unchanged",
         leftLineNumber: leftIdx + 1,
         rightLineNumber: rightIdx + 1,
       };
 
       // Group consecutive unchanged lines
       const lastBlock = blocks[blocks.length - 1];
-      if (lastBlock && lastBlock.type === 'unchanged') {
+      if (lastBlock && lastBlock.type === "unchanged") {
         lastBlock.leftLines.push(line);
         lastBlock.rightLines.push({ ...line });
       } else {
@@ -84,7 +84,7 @@ function computeDiff(left: string, right: string): DiffBlock[] {
           id: `block-${blockId++}`,
           leftLines: [line],
           rightLines: [{ ...line }],
-          type: 'unchanged',
+          type: "unchanged",
           startLine: leftIdx + 1,
         });
       }
@@ -104,7 +104,7 @@ function computeDiff(left: string, right: string): DiffBlock[] {
         leftChanged.push({
           lineNumber: leftIdx + 1,
           content: leftLines[leftIdx],
-          type: 'removed',
+          type: "removed",
           leftLineNumber: leftIdx + 1,
         });
         leftIdx++;
@@ -117,7 +117,7 @@ function computeDiff(left: string, right: string): DiffBlock[] {
         rightChanged.push({
           lineNumber: rightIdx + 1,
           content: rightLines[rightIdx],
-          type: 'added',
+          type: "added",
           rightLineNumber: rightIdx + 1,
         });
         rightIdx++;
@@ -126,10 +126,10 @@ function computeDiff(left: string, right: string): DiffBlock[] {
       if (leftChanged.length > 0 || rightChanged.length > 0) {
         const type: DiffType =
           leftChanged.length > 0 && rightChanged.length > 0
-            ? 'modified'
+            ? "modified"
             : leftChanged.length > 0
-              ? 'removed'
-              : 'added';
+              ? "removed"
+              : "added";
 
         blocks.push({
           id: `block-${blockId++}`,
@@ -138,7 +138,7 @@ function computeDiff(left: string, right: string): DiffBlock[] {
           type,
           startLine: Math.min(
             leftChanged[0]?.lineNumber ?? Infinity,
-            rightChanged[0]?.lineNumber ?? Infinity
+            rightChanged[0]?.lineNumber ?? Infinity,
           ),
         });
       }
@@ -151,13 +151,13 @@ function computeDiff(left: string, right: string): DiffBlock[] {
 /**
  * Compute longest common subsequence of lines
  */
-function computeLCS(left: string[], right: string[]): string[] {
+function computeLcs(left: string[], right: string[]): string[] {
   const m = left.length;
   const n = right.length;
 
   // Build LCS length table
   const dp: number[][] = Array.from({ length: m + 1 }, () =>
-    Array.from({ length: n + 1 }, () => 0)
+    Array.from({ length: n + 1 }, () => 0),
   );
 
   for (let i = 1; i <= m; i++) {
@@ -195,29 +195,29 @@ function computeLCS(left: string[], right: string[]): string[] {
  */
 function getDiffStyles(type: DiffType): { bg: string; border: string; text: string } {
   switch (type) {
-    case 'added':
+    case "added":
       return {
-        bg: 'bg-green-500/10',
-        border: 'border-green-500/30',
-        text: 'text-green-300',
+        bg: "bg-green-500/10",
+        border: "border-green-500/30",
+        text: "text-green-300",
       };
-    case 'removed':
+    case "removed":
       return {
-        bg: 'bg-red-500/10',
-        border: 'border-red-500/30',
-        text: 'text-red-300',
+        bg: "bg-red-500/10",
+        border: "border-red-500/30",
+        text: "text-red-300",
       };
-    case 'modified':
+    case "modified":
       return {
-        bg: 'bg-yellow-500/10',
-        border: 'border-yellow-500/30',
-        text: 'text-yellow-300',
+        bg: "bg-yellow-500/10",
+        border: "border-yellow-500/30",
+        text: "text-yellow-300",
       };
     default:
       return {
-        bg: '',
-        border: 'border-transparent',
-        text: 'text-gray-300',
+        bg: "",
+        border: "border-transparent",
+        text: "text-gray-300",
       };
   }
 }
@@ -227,27 +227,29 @@ function getDiffStyles(type: DiffType): { bg: string; border: string; text: stri
  */
 const DiffLineComponent: FC<{
   line: DiffLine;
-  side: 'left' | 'right';
+  side: "left" | "right";
 }> = memo(({ line, side }) => {
   const styles = getDiffStyles(line.type);
-  const lineNum = side === 'left' ? line.leftLineNumber : line.rightLineNumber;
+  const lineNum = side === "left" ? line.leftLineNumber : line.rightLineNumber;
 
   return (
     <div className={`flex ${styles.bg} border-l-2 ${styles.border}`}>
       <span className="w-12 flex-shrink-0 px-2 py-0.5 text-right text-xs text-gray-500 select-none border-r border-white/5">
-        {lineNum ?? ''}
+        {lineNum ?? ""}
       </span>
       <span className="px-1 py-0.5 text-xs text-gray-400 select-none w-4">
-        {line.type === 'added' ? '+' : line.type === 'removed' ? '-' : ' '}
+        {line.type === "added" ? "+" : line.type === "removed" ? "-" : " "}
       </span>
-      <pre className={`flex-1 px-2 py-0.5 text-sm font-mono ${styles.text} overflow-x-auto whitespace-pre`}>
-        {line.content || ' '}
+      <pre
+        className={`flex-1 px-2 py-0.5 text-sm font-mono ${styles.text} overflow-x-auto whitespace-pre`}
+      >
+        {line.content || " "}
       </pre>
     </div>
   );
 });
 
-DiffLineComponent.displayName = 'DiffLineComponent';
+DiffLineComponent.displayName = "DiffLineComponent";
 
 /**
  * Diff block with merge controls
@@ -255,10 +257,10 @@ DiffLineComponent.displayName = 'DiffLineComponent';
 const DiffBlockComponent: FC<{
   block: DiffBlock;
   decision?: MergeDecision;
-  onDecision: (choice: MergeDecision['choice']) => void;
+  onDecision: (choice: MergeDecision["choice"]) => void;
   showMergeControls: boolean;
 }> = memo(({ block, decision, onDecision, showMergeControls }) => {
-  const isChanged = block.type !== 'unchanged';
+  const isChanged = block.type !== "unchanged";
   const maxLines = Math.max(block.leftLines.length, block.rightLines.length);
 
   // Pad lines to equal length for alignment
@@ -268,48 +270,48 @@ const DiffBlockComponent: FC<{
   while (paddedLeftLines.length < maxLines) {
     paddedLeftLines.push({
       lineNumber: -1,
-      content: '',
-      type: 'unchanged',
+      content: "",
+      type: "unchanged",
     });
   }
 
   while (paddedRightLines.length < maxLines) {
     paddedRightLines.push({
       lineNumber: -1,
-      content: '',
-      type: 'unchanged',
+      content: "",
+      type: "unchanged",
     });
   }
 
   return (
-    <div className={`${isChanged ? 'border border-white/10 rounded-lg overflow-hidden mb-2' : ''}`}>
+    <div className={`${isChanged ? "border border-white/10 rounded-lg overflow-hidden mb-2" : ""}`}>
       {/* Merge controls for changed blocks */}
       {isChanged && showMergeControls && (
         <div className="flex items-center justify-center gap-2 py-2 px-4 bg-gray-900/80 border-b border-white/10">
           <SmallText className="text-gray-400 mr-2">Accept:</SmallText>
           <Button
             size="sm"
-            variant={decision?.choice === 'left' ? undefined : 'outline'}
-            tone={decision?.choice === 'left' ? 'violet' : undefined}
-            onClick={() => onDecision('left')}
+            variant={decision?.choice === "left" ? undefined : "outline"}
+            tone={decision?.choice === "left" ? "violet" : undefined}
+            onClick={() => onDecision("left")}
             leftIcon={<ChevronLeft className="h-3 w-3" />}
           >
             Left
           </Button>
           <Button
             size="sm"
-            variant={decision?.choice === 'both' ? undefined : 'outline'}
-            tone={decision?.choice === 'both' ? 'violet' : undefined}
-            onClick={() => onDecision('both')}
+            variant={decision?.choice === "both" ? undefined : "outline"}
+            tone={decision?.choice === "both" ? "violet" : undefined}
+            onClick={() => onDecision("both")}
             leftIcon={<ChevronsLeftRight className="h-3 w-3" />}
           >
             Both
           </Button>
           <Button
             size="sm"
-            variant={decision?.choice === 'right' ? undefined : 'outline'}
-            tone={decision?.choice === 'right' ? 'violet' : undefined}
-            onClick={() => onDecision('right')}
+            variant={decision?.choice === "right" ? undefined : "outline"}
+            tone={decision?.choice === "right" ? "violet" : undefined}
+            onClick={() => onDecision("right")}
             leftIcon={<ChevronRight className="h-3 w-3" />}
           >
             Right
@@ -327,22 +329,14 @@ const DiffBlockComponent: FC<{
         {/* Left panel */}
         <div className="overflow-x-auto">
           {paddedLeftLines.map((line, idx) => (
-            <DiffLineComponent
-              key={`left-${block.id}-${idx}`}
-              line={line}
-              side="left"
-            />
+            <DiffLineComponent key={`left-${block.id}-${idx}`} line={line} side="left" />
           ))}
         </div>
 
         {/* Right panel */}
         <div className="overflow-x-auto">
           {paddedRightLines.map((line, idx) => (
-            <DiffLineComponent
-              key={`right-${block.id}-${idx}`}
-              line={line}
-              side="right"
-            />
+            <DiffLineComponent key={`right-${block.id}-${idx}`} line={line} side="right" />
           ))}
         </div>
       </div>
@@ -350,7 +344,7 @@ const DiffBlockComponent: FC<{
   );
 });
 
-DiffBlockComponent.displayName = 'DiffBlockComponent';
+DiffBlockComponent.displayName = "DiffBlockComponent";
 
 /**
  * Side-by-side diff viewer component
@@ -358,8 +352,8 @@ DiffBlockComponent.displayName = 'DiffBlockComponent';
 export const DiffViewer: FC<DiffViewerProps> = ({
   leftContent,
   rightContent,
-  leftLabel = 'Original',
-  rightLabel = 'Modified',
+  leftLabel = "Original",
+  rightLabel = "Modified",
   mergeDecisions,
   onMergeDecision,
   showMergeControls = true,
@@ -367,7 +361,7 @@ export const DiffViewer: FC<DiffViewerProps> = ({
   // Compute diff blocks
   const diffBlocks = useMemo(
     () => computeDiff(leftContent, rightContent),
-    [leftContent, rightContent]
+    [leftContent, rightContent],
   );
 
   // Count changes
@@ -377,11 +371,11 @@ export const DiffViewer: FC<DiffViewerProps> = ({
     let modifications = 0;
 
     for (const block of diffBlocks) {
-      if (block.type === 'added') {
+      if (block.type === "added") {
         additions += block.rightLines.length;
-      } else if (block.type === 'removed') {
+      } else if (block.type === "removed") {
         deletions += block.leftLines.length;
-      } else if (block.type === 'modified') {
+      } else if (block.type === "modified") {
         modifications++;
       }
     }
@@ -390,10 +384,10 @@ export const DiffViewer: FC<DiffViewerProps> = ({
   }, [diffBlocks]);
 
   const handleDecision = useCallback(
-    (blockId: string) => (choice: MergeDecision['choice']) => {
+    (blockId: string) => (choice: MergeDecision["choice"]) => {
       onMergeDecision(blockId, choice);
     },
-    [onMergeDecision]
+    [onMergeDecision],
   );
 
   if (!leftContent && !rightContent) {
@@ -420,7 +414,8 @@ export const DiffViewer: FC<DiffViewerProps> = ({
         </Tag>
         {showMergeControls && (
           <SmallText className="text-gray-400 ml-auto">
-            {mergeDecisions.size} / {diffBlocks.filter((b) => b.type !== 'unchanged').length} decisions made
+            {mergeDecisions.size} / {diffBlocks.filter((b) => b.type !== "unchanged").length}{" "}
+            decisions made
           </SmallText>
         )}
       </div>
@@ -457,13 +452,13 @@ export const DiffViewer: FC<DiffViewerProps> = ({
 export function generateMergedContent(
   leftContent: string,
   rightContent: string,
-  decisions: Map<string, MergeDecision>
+  decisions: Map<string, MergeDecision>,
 ): string {
   const diffBlocks = computeDiff(leftContent, rightContent);
   const mergedLines: string[] = [];
 
   for (const block of diffBlocks) {
-    if (block.type === 'unchanged') {
+    if (block.type === "unchanged") {
       // Include unchanged lines
       for (const line of block.leftLines) {
         mergedLines.push(line.content);
@@ -471,13 +466,13 @@ export function generateMergedContent(
     } else {
       const decision = decisions.get(block.id);
 
-      if (!decision || decision.choice === 'none') {
+      if (!decision || decision.choice === "none") {
         // No decision - keep left by default for removals, right for additions
-        if (block.type === 'removed') {
+        if (block.type === "removed") {
           for (const line of block.leftLines) {
             mergedLines.push(line.content);
           }
-        } else if (block.type === 'added') {
+        } else if (block.type === "added") {
           for (const line of block.rightLines) {
             mergedLines.push(line.content);
           }
@@ -487,15 +482,15 @@ export function generateMergedContent(
             mergedLines.push(line.content);
           }
         }
-      } else if (decision.choice === 'left') {
+      } else if (decision.choice === "left") {
         for (const line of block.leftLines) {
           mergedLines.push(line.content);
         }
-      } else if (decision.choice === 'right') {
+      } else if (decision.choice === "right") {
         for (const line of block.rightLines) {
           mergedLines.push(line.content);
         }
-      } else if (decision.choice === 'both') {
+      } else if (decision.choice === "both") {
         // Include both, left first
         for (const line of block.leftLines) {
           mergedLines.push(line.content);
@@ -507,7 +502,7 @@ export function generateMergedContent(
     }
   }
 
-  return mergedLines.join('\n');
+  return mergedLines.join("\n");
 }
 
 export { computeDiff };

@@ -4,12 +4,13 @@ import (
 	"encoding/binary"
 	"fmt"
 	"net"
+	"os"
 	"time"
 
 	"github.com/krisarmstrong/niac-go/pkg/config"
 )
 
-// STP constants
+// STP constants.
 const (
 	STPMulticastMAC = "01:80:C2:00:00:00"
 	STPProtocolID   = 0x0000
@@ -18,13 +19,13 @@ const (
 	STPVersionMSTP  = 0x03
 )
 
-// BPDU types
+// BPDU types.
 const (
 	BPDUTypeConfig = 0x00
 	BPDUTypeTCN    = 0x80 // Topology Change Notification
 )
 
-// STP port states
+// STP port states.
 const (
 	STPStateDisabled   = 0
 	STPStateBlocking   = 1
@@ -33,7 +34,7 @@ const (
 	STPStateForwarding = 4
 )
 
-// STP port roles (RSTP)
+// STP port roles (RSTP).
 const (
 	STPRoleUnknown    = 0
 	STPRoleAlternate  = 1
@@ -42,7 +43,7 @@ const (
 	STPRoleDesignated = 4
 )
 
-// BPDU flags
+// BPDU flags.
 const (
 	BPDUFlagTopologyChange    = 0x01
 	BPDUFlagProposal          = 0x02
@@ -53,14 +54,14 @@ const (
 	BPDUFlagTopologyChangeAck = 0x80
 )
 
-// Default STP timers (in seconds)
+// Default STP timers (in seconds).
 const (
 	DefaultHelloTime    = 2
 	DefaultMaxAge       = 20
 	DefaultForwardDelay = 15
 )
 
-// STPHandler handles Spanning Tree Protocol packets
+// STPHandler handles Spanning Tree Protocol packets.
 type STPHandler struct {
 	stack      *Stack
 	debugLevel int
@@ -80,7 +81,7 @@ type STPHandler struct {
 	lastBPDUTime time.Time
 }
 
-// NewSTPHandler creates a new STP handler
+// NewSTPHandler creates a new STP handler.
 func NewSTPHandler(stack *Stack, debugLevel int) *STPHandler {
 	return &STPHandler{
 		stack:          stack,
@@ -93,13 +94,14 @@ func NewSTPHandler(stack *Stack, debugLevel int) *STPHandler {
 	}
 }
 
-// HandlePacket processes an STP/RSTP BPDU packet
+// HandlePacket processes an STP/RSTP BPDU packet.
 func (h *STPHandler) HandlePacket(pkt *Packet) {
 	// Check minimum packet size (Ethernet header + LLC + BPDU)
 	if len(pkt.Buffer) < 38 {
 		if h.debugLevel >= 2 {
-			fmt.Printf("STP: Packet too short sn=%d\n", pkt.SerialNumber)
+			_, _ = fmt.Fprintf(os.Stdout, "STP: Packet too short sn=%d\n", pkt.SerialNumber)
 		}
+
 		return
 	}
 
@@ -113,8 +115,9 @@ func (h *STPHandler) HandlePacket(pkt *Packet) {
 
 	if dsap != 0x42 || ssap != 0x42 {
 		if h.debugLevel >= 2 {
-			fmt.Printf("STP: Invalid LLC header sn=%d\n", pkt.SerialNumber)
+			_, _ = fmt.Fprintf(os.Stdout, "STP: Invalid LLC header sn=%d\n", pkt.SerialNumber)
 		}
+
 		return
 	}
 
@@ -127,13 +130,14 @@ func (h *STPHandler) HandlePacket(pkt *Packet) {
 
 	if protocolID != STPProtocolID {
 		if h.debugLevel >= 2 {
-			fmt.Printf("STP: Invalid protocol ID 0x%04x sn=%d\n", protocolID, pkt.SerialNumber)
+			_, _ = fmt.Fprintf(os.Stdout, "STP: Invalid protocol ID 0x%04x sn=%d\n", protocolID, pkt.SerialNumber)
 		}
+
 		return
 	}
 
 	if h.debugLevel >= 3 {
-		fmt.Printf("STP: Received BPDU version=%d type=0x%02x sn=%d\n",
+		_, _ = fmt.Fprintf(os.Stdout, "STP: Received BPDU version=%d type=0x%02x sn=%d\n",
 			version, bpduType, pkt.SerialNumber)
 	}
 
@@ -146,20 +150,21 @@ func (h *STPHandler) HandlePacket(pkt *Packet) {
 		h.handleTCN(pkt)
 	default:
 		if h.debugLevel >= 2 {
-			fmt.Printf("STP: Unknown BPDU type 0x%02x sn=%d\n", bpduType, pkt.SerialNumber)
+			_, _ = fmt.Fprintf(os.Stdout, "STP: Unknown BPDU type 0x%02x sn=%d\n", bpduType, pkt.SerialNumber)
 		}
 	}
 }
 
-// handleConfigBPDU processes a Configuration BPDU
+// handleConfigBPDU processes a Configuration BPDU.
 func (h *STPHandler) handleConfigBPDU(pkt *Packet, offset int) {
 	data := pkt.Buffer[offset:]
 
 	// Parse Configuration BPDU fields
 	if len(data) < 35 {
 		if h.debugLevel >= 2 {
-			fmt.Printf("STP: Config BPDU too short sn=%d\n", pkt.SerialNumber)
+			_, _ = fmt.Fprintf(os.Stdout, "STP: Config BPDU too short sn=%d\n", pkt.SerialNumber)
 		}
+
 		return
 	}
 
@@ -177,8 +182,17 @@ func (h *STPHandler) handleConfigBPDU(pkt *Packet, offset int) {
 		tcFlag := (flags & BPDUFlagTopologyChange) != 0
 		tcAckFlag := (flags & BPDUFlagTopologyChangeAck) != 0
 
-		fmt.Printf("STP: Config BPDU - Root=0x%016x Cost=%d Bridge=0x%016x Port=%d TC=%v TCAck=%v sn=%d\n",
-			rootID, rootPathCost, bridgeID, portID, tcFlag, tcAckFlag, pkt.SerialNumber)
+		_, _ = fmt.Fprintf(
+			os.Stdout,
+			"STP: Config BPDU - Root=0x%016x Cost=%d Bridge=0x%016x Port=%d TC=%v TCAck=%v sn=%d\n",
+			rootID,
+			rootPathCost,
+			bridgeID,
+			portID,
+			tcFlag,
+			tcAckFlag,
+			pkt.SerialNumber,
+		)
 	}
 
 	// Store information for potential response generation
@@ -192,20 +206,19 @@ func (h *STPHandler) handleConfigBPDU(pkt *Packet, offset int) {
 	_ = messageAge // Store if needed for aging
 }
 
-// handleTCN processes a Topology Change Notification BPDU
+// handleTCN processes a Topology Change Notification BPDU.
 func (h *STPHandler) handleTCN(pkt *Packet) {
 	if h.debugLevel >= 2 {
-		fmt.Printf("STP: Topology Change Notification received sn=%d\n", pkt.SerialNumber)
+		_, _ = fmt.Fprintf(os.Stdout, "STP: Topology Change Notification received sn=%d\n", pkt.SerialNumber)
 	}
-
 	// In a real implementation, this would trigger topology change procedures
 	// For simulation, we just log it
 }
 
-// SendConfigBPDU sends a Configuration BPDU for a device
+// SendConfigBPDU sends a Configuration BPDU for a device.
 func (h *STPHandler) SendConfigBPDU(device *config.Device) error {
 	if len(device.MACAddress) == 0 {
-		return fmt.Errorf("device has no MAC address")
+		return ErrDeviceNoMACAddress
 	}
 
 	// Skip if STP is explicitly disabled for this device
@@ -223,12 +236,15 @@ func (h *STPHandler) SendConfigBPDU(device *config.Device) error {
 		if device.STPConfig.BridgePriority > 0 {
 			bridgePriority = device.STPConfig.BridgePriority
 		}
+
 		if device.STPConfig.HelloTime > 0 {
 			helloTime = device.STPConfig.HelloTime
 		}
+
 		if device.STPConfig.MaxAge > 0 {
 			maxAge = device.STPConfig.MaxAge
 		}
+
 		if device.STPConfig.ForwardDelay > 0 {
 			forwardDelay = device.STPConfig.ForwardDelay
 		}
@@ -264,6 +280,7 @@ func (h *STPHandler) SendConfigBPDU(device *config.Device) error {
 		// Set topology change flag for testing
 		flags |= BPDUFlagTopologyChange
 	}
+
 	buf = append(buf, flags) // Flags
 
 	// Root ID (8 bytes) = Priority (2) + MAC (6)
@@ -319,33 +336,34 @@ func (h *STPHandler) SendConfigBPDU(device *config.Device) error {
 	h.stack.Send(pkt)
 
 	if h.debugLevel >= 2 {
-		fmt.Printf("STP: Sent Config BPDU from %s sn=%d\n", device.Name, serialNum)
+		_, _ = fmt.Fprintf(os.Stdout, "STP: Sent Config BPDU from %s sn=%d\n", device.Name, serialNum)
 	}
 
 	return nil
 }
 
-// makeBridgeID creates a bridge ID from priority and MAC address
+// makeBridgeID creates a bridge ID from priority and MAC address.
 func (h *STPHandler) makeBridgeID(priority uint16, mac net.HardwareAddr) uint64 {
 	bridgeID := uint64(priority) << 48
 	for i := 0; i < 6 && i < len(mac); i++ {
 		bridgeID |= uint64(mac[i]) << uint(40-i*8) // #nosec G115 -- BPDU message age in 256ths of second
 	}
+
 	return bridgeID
 }
 
-// SetBridgePriority sets the bridge priority
+// SetBridgePriority sets the bridge priority.
 func (h *STPHandler) SetBridgePriority(priority uint16) {
 	h.bridgePriority = priority
 }
 
-// GetPortState returns the current STP port state
+// GetPortState returns the current STP port state.
 func (h *STPHandler) GetPortState() int {
 	// For simulation, we assume ports are always forwarding
 	return STPStateForwarding
 }
 
-// SetDebugLevel updates the debug level
+// SetDebugLevel updates the debug level.
 func (h *STPHandler) SetDebugLevel(level int) {
 	h.debugLevel = level
 }

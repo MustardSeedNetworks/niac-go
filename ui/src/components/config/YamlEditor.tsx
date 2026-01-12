@@ -1,60 +1,73 @@
-import { type FC, useRef, useEffect, useCallback, useMemo } from 'react';
-import { EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter } from '@codemirror/view';
-import { EditorState, Extension } from '@codemirror/state';
-import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
-import { yaml } from '@codemirror/lang-yaml';
-import { syntaxHighlighting, HighlightStyle, foldGutter, indentOnInput, bracketMatching } from '@codemirror/language';
-import { tags } from '@lezer/highlight';
+import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
+import { yaml } from "@codemirror/lang-yaml";
+import {
+  bracketMatching,
+  foldGutter,
+  HighlightStyle,
+  indentOnInput,
+  syntaxHighlighting,
+} from "@codemirror/language";
+import { EditorState, type Extension } from "@codemirror/state";
+import {
+  EditorView,
+  highlightActiveLine,
+  highlightActiveLineGutter,
+  keymap,
+  lineNumbers,
+} from "@codemirror/view";
+import { tags } from "@lezer/highlight";
+import { type FC, useCallback, useEffect, useMemo, useRef } from "react";
 
 /**
  * Custom dark theme for CodeMirror that matches the app's design
  */
 const niacTheme = EditorView.theme({
-  '&': {
-    color: '#d4d4d4',
-    backgroundColor: 'transparent',
-    fontSize: '14px',
-    fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
+  "&": {
+    color: "#d4d4d4",
+    backgroundColor: "transparent",
+    fontSize: "14px",
+    fontFamily:
+      'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
   },
-  '.cm-content': {
-    caretColor: '#a78bfa',
-    padding: '16px 0',
+  ".cm-content": {
+    caretColor: "#a78bfa",
+    padding: "16px 0",
   },
-  '.cm-cursor': {
-    borderLeftColor: '#a78bfa',
+  ".cm-cursor": {
+    borderLeftColor: "#a78bfa",
   },
-  '&.cm-focused': {
-    outline: 'none',
+  "&.cm-focused": {
+    outline: "none",
   },
-  '.cm-selectionBackground, &.cm-focused .cm-selectionBackground': {
-    backgroundColor: 'rgba(139, 92, 246, 0.3)',
+  ".cm-selectionBackground, &.cm-focused .cm-selectionBackground": {
+    backgroundColor: "rgba(139, 92, 246, 0.3)",
   },
-  '.cm-activeLine': {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+  ".cm-activeLine": {
+    backgroundColor: "rgba(255, 255, 255, 0.05)",
   },
-  '.cm-activeLineGutter': {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+  ".cm-activeLineGutter": {
+    backgroundColor: "rgba(255, 255, 255, 0.05)",
   },
-  '.cm-gutters': {
-    backgroundColor: 'transparent',
-    color: '#6b7280',
-    border: 'none',
-    paddingRight: '8px',
+  ".cm-gutters": {
+    backgroundColor: "transparent",
+    color: "#6b7280",
+    border: "none",
+    paddingRight: "8px",
   },
-  '.cm-lineNumbers .cm-gutterElement': {
-    padding: '0 8px 0 16px',
-    minWidth: '40px',
+  ".cm-lineNumbers .cm-gutterElement": {
+    padding: "0 8px 0 16px",
+    minWidth: "40px",
   },
-  '.cm-foldGutter .cm-gutterElement': {
-    padding: '0 4px',
-    cursor: 'pointer',
+  ".cm-foldGutter .cm-gutterElement": {
+    padding: "0 4px",
+    cursor: "pointer",
   },
-  '.cm-foldPlaceholder': {
-    backgroundColor: 'rgba(139, 92, 246, 0.2)',
-    border: 'none',
-    color: '#a78bfa',
-    padding: '0 4px',
-    margin: '0 4px',
+  ".cm-foldPlaceholder": {
+    backgroundColor: "rgba(139, 92, 246, 0.2)",
+    border: "none",
+    color: "#a78bfa",
+    padding: "0 4px",
+    margin: "0 4px",
   },
 });
 
@@ -62,19 +75,19 @@ const niacTheme = EditorView.theme({
  * YAML-specific syntax highlighting
  */
 const yamlHighlighting = HighlightStyle.define([
-  { tag: tags.keyword, color: '#c678dd' },
-  { tag: tags.string, color: '#98c379' },
-  { tag: tags.number, color: '#d19a66' },
-  { tag: tags.bool, color: '#56b6c2' },
-  { tag: tags.null, color: '#56b6c2' },
-  { tag: tags.propertyName, color: '#e06c75' },
-  { tag: tags.comment, color: '#5c6370', fontStyle: 'italic' },
-  { tag: tags.punctuation, color: '#abb2bf' },
-  { tag: tags.bracket, color: '#abb2bf' },
-  { tag: tags.operator, color: '#abb2bf' },
-  { tag: tags.meta, color: '#61afef' },
-  { tag: tags.atom, color: '#d19a66' },
-  { tag: tags.special(tags.variableName), color: '#e06c75' },
+  { tag: tags.keyword, color: "#c678dd" },
+  { tag: tags.string, color: "#98c379" },
+  { tag: tags.number, color: "#d19a66" },
+  { tag: tags.bool, color: "#56b6c2" },
+  { tag: tags.null, color: "#56b6c2" },
+  { tag: tags.propertyName, color: "#e06c75" },
+  { tag: tags.comment, color: "#5c6370", fontStyle: "italic" },
+  { tag: tags.punctuation, color: "#abb2bf" },
+  { tag: tags.bracket, color: "#abb2bf" },
+  { tag: tags.operator, color: "#abb2bf" },
+  { tag: tags.meta, color: "#61afef" },
+  { tag: tags.atom, color: "#d19a66" },
+  { tag: tags.special(tags.variableName), color: "#e06c75" },
 ]);
 
 interface YamlEditorProps {
@@ -120,13 +133,13 @@ export const YamlEditor: FC<YamlEditorProps> = ({
   onChange,
   readOnly = false,
   placeholder,
-  height = 'auto',
-  minHeight = '200px',
-  maxHeight = '500px',
+  height = "auto",
+  minHeight = "200px",
+  maxHeight = "500px",
   showLineNumbers = true,
   showFoldGutter = true,
   lineWrapping = false,
-  className = '',
+  className = "",
   onValidationError,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -164,25 +177,28 @@ export const YamlEditor: FC<YamlEditorProps> = ({
     }
 
     if (placeholder) {
-      exts.push(EditorView.contentAttributes.of({ 'aria-placeholder': placeholder }));
+      exts.push(EditorView.contentAttributes.of({ "aria-placeholder": placeholder }));
     }
 
     return exts;
   }, [readOnly, placeholder, showLineNumbers, showFoldGutter, lineWrapping]);
 
   // Handle content updates
-  const handleUpdate = useCallback((update: { state: EditorState; docChanged: boolean }) => {
-    if (update.docChanged && onChange) {
-      const newValue = update.state.doc.toString();
-      onChange(newValue);
+  const handleUpdate = useCallback(
+    (update: { state: EditorState; docChanged: boolean }) => {
+      if (update.docChanged && onChange) {
+        const newValue = update.state.doc.toString();
+        onChange(newValue);
 
-      // Basic YAML validation
-      if (onValidationError) {
-        const errors = validateYaml(newValue);
-        onValidationError(errors);
+        // Basic YAML validation
+        if (onValidationError) {
+          const errors = validateYaml(newValue);
+          onValidationError(errors);
+        }
       }
-    }
-  }, [onChange, onValidationError]);
+    },
+    [onChange, onValidationError],
+  );
 
   // Initialize editor
   useEffect(() => {
@@ -195,10 +211,7 @@ export const YamlEditor: FC<YamlEditorProps> = ({
 
     const state = EditorState.create({
       doc: value,
-      extensions: [
-        ...extensions,
-        EditorView.updateListener.of(handleUpdate),
-      ],
+      extensions: [...extensions, EditorView.updateListener.of(handleUpdate)],
     });
 
     const view = new EditorView({
@@ -212,7 +225,7 @@ export const YamlEditor: FC<YamlEditorProps> = ({
       view.destroy();
       viewRef.current = null;
     };
-  }, [extensions, handleUpdate]); // Note: value is intentionally excluded
+  }, [extensions, handleUpdate, value]); // Note: value is intentionally excluded
 
   // Update content when value prop changes externally
   useEffect(() => {
@@ -235,7 +248,7 @@ export const YamlEditor: FC<YamlEditorProps> = ({
     height,
     minHeight,
     maxHeight,
-    overflow: 'auto' as const,
+    overflow: "auto" as const,
   };
 
   return (
@@ -251,7 +264,7 @@ export const YamlEditor: FC<YamlEditorProps> = ({
 /**
  * Read-only YAML viewer component (convenience wrapper)
  */
-export const YamlViewer: FC<Omit<YamlEditorProps, 'readOnly' | 'onChange'>> = (props) => {
+export const YamlViewer: FC<Omit<YamlEditorProps, "readOnly" | "onChange">> = (props) => {
   return <YamlEditor {...props} readOnly />;
 };
 
@@ -261,14 +274,14 @@ export const YamlViewer: FC<Omit<YamlEditorProps, 'readOnly' | 'onChange'>> = (p
  */
 function validateYaml(content: string): string[] {
   const errors: string[] = [];
-  const lines = content.split('\n');
+  const lines = content.split("\n");
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     const lineNum = i + 1;
 
     // Check for tabs (YAML should use spaces)
-    if (line.includes('\t')) {
+    if (line.includes("\t")) {
       errors.push(`Line ${lineNum}: Tabs are not allowed in YAML, use spaces instead`);
     }
 

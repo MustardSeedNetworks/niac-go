@@ -2,8 +2,10 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"text/tabwriter"
@@ -13,10 +15,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Default socket path for IPC communication
+// Default socket path for IPC communication.
 const defaultSocketPath = "/var/run/niac/niac.sock"
 
-// Valid error types for injection (must match pkg/errors/errors.go ErrorType constants)
+// Valid error types for injection (must match pkg/errors/errors.go ErrorType constants).
 var validErrorTypes = []string{
 	"FCS Errors",
 	"Packet Discards",
@@ -27,7 +29,7 @@ var validErrorTypes = []string{
 	"High Disk",
 }
 
-// errorTypeAliases maps user-friendly snake_case names to internal error type names
+// errorTypeAliases maps user-friendly snake_case names to internal error type names.
 var errorTypeAliases = map[string]string{
 	"fcs_errors":       "FCS Errors",
 	"packet_discards":  "Packet Discards",
@@ -38,10 +40,10 @@ var errorTypeAliases = map[string]string{
 	"high_disk":        "High Disk",
 }
 
-// Global socket path flag
+// Global socket path flag.
 var injectSocketPath string
 
-// Injection represents an active error injection
+// Injection represents an active error injection.
 type Injection struct {
 	Device    string    `json:"device"`
 	Interface string    `json:"interface"`
@@ -50,7 +52,7 @@ type Injection struct {
 	Injected  time.Time `json:"injected"`
 }
 
-// InjectionResponse represents the response from the IPC server
+// InjectionResponse represents the response from the IPC server.
 type InjectionResponse struct {
 	Success    bool        `json:"success"`
 	Message    string      `json:"message"`
@@ -227,7 +229,11 @@ func runInjectList(cmd *cobra.Command, args []string) error {
 	if injectListJSON {
 		encoder := json.NewEncoder(os.Stdout)
 		encoder.SetIndent("", "  ")
-		return encoder.Encode(injections)
+		err := encoder.Encode(injections)
+		if err != nil {
+			return fmt.Errorf("failed to encode injections: %w", err)
+		}
+		return nil
 	}
 
 	// Table output
@@ -250,16 +256,19 @@ func runInjectList(cmd *cobra.Command, args []string) error {
 			inj.Device, iface, inj.ErrorType, inj.Value, injectedAt)
 	}
 
-	return w.Flush()
+	if err := w.Flush(); err != nil {
+		return fmt.Errorf("failed to flush output: %w", err)
+	}
+	return nil
 }
 
 func runInjectClear(cmd *cobra.Command, args []string) error {
 	// Validate flags: require either --device or --all
 	if injectClearDev == "" && !injectClearAll {
-		return fmt.Errorf("must specify either --device <name> or --all")
+		return errors.New("must specify either --device <name> or --all")
 	}
 	if injectClearDev != "" && injectClearAll {
-		return fmt.Errorf("cannot specify both --device and --all")
+		return errors.New("cannot specify both --device and --all")
 	}
 
 	var resp *InjectionResponse
@@ -288,20 +297,18 @@ func runInjectClear(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// isValidErrorType checks if the given error type is valid
+// isValidErrorType checks if the given error type is valid.
 func isValidErrorType(errorType string) bool {
 	// Check if it's a valid canonical name
-	for _, valid := range validErrorTypes {
-		if errorType == valid {
-			return true
-		}
+	if slices.Contains(validErrorTypes, errorType) {
+		return true
 	}
 	// Check if it's a valid alias
 	_, ok := errorTypeAliases[errorType]
 	return ok
 }
 
-// normalizeErrorType converts snake_case aliases to canonical error type names
+// normalizeErrorType converts snake_case aliases to canonical error type names.
 func normalizeErrorType(errorType string) string {
 	if canonical, ok := errorTypeAliases[errorType]; ok {
 		return canonical
@@ -309,18 +316,18 @@ func normalizeErrorType(errorType string) string {
 	return errorType
 }
 
-// getIPCClient creates an IPC client with the configured socket path
+// getIPCClient creates an IPC client with the configured socket path.
 func getIPCClient() *ipc.Client {
 	return ipc.NewClient(injectSocketPath)
 }
 
-// sendInjectionCommand sends an injection command via IPC
+// sendInjectionCommand sends an injection command via IPC.
 func sendInjectionCommand(device, errorType string, value int) (*InjectionResponse, error) {
 	client := getIPCClient()
 
 	err := client.InjectError(device, errorType, value)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to send injection command: %w", err)
 	}
 
 	return &InjectionResponse{
@@ -329,13 +336,13 @@ func sendInjectionCommand(device, errorType string, value int) (*InjectionRespon
 	}, nil
 }
 
-// fetchInjections fetches the list of active injections via IPC
+// fetchInjections fetches the list of active injections via IPC.
 func fetchInjections() (*InjectionResponse, error) {
 	client := getIPCClient()
 
 	injections, err := client.ListInjections()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to list injections: %w", err)
 	}
 
 	// Convert ipc.ErrorInjectionData to our Injection type
@@ -356,14 +363,14 @@ func fetchInjections() (*InjectionResponse, error) {
 	}, nil
 }
 
-// clearAllInjections clears all injections on all devices via IPC
+// clearAllInjections clears all injections on all devices via IPC.
 func clearAllInjections() (*InjectionResponse, error) {
 	client := getIPCClient()
 
 	// Pass empty string to clear all injections
 	err := client.ClearInjections("")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to clear all injections: %w", err)
 	}
 
 	return &InjectionResponse{
@@ -372,13 +379,13 @@ func clearAllInjections() (*InjectionResponse, error) {
 	}, nil
 }
 
-// clearDeviceInjections clears all injections on a specific device via IPC
+// clearDeviceInjections clears all injections on a specific device via IPC.
 func clearDeviceInjections(device string) (*InjectionResponse, error) {
 	client := getIPCClient()
 
 	err := client.ClearInjections(device)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to clear device injections: %w", err)
 	}
 
 	return &InjectionResponse{

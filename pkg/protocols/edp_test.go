@@ -10,7 +10,7 @@ import (
 	"github.com/krisarmstrong/niac-go/pkg/logging"
 )
 
-// TestNewEDPHandler verifies EDP handler creation
+// TestNewEDPHandler verifies EDP handler creation.
 func TestNewEDPHandler(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -19,20 +19,22 @@ func TestNewEDPHandler(t *testing.T) {
 	if handler == nil {
 		t.Fatal("Expected EDP handler, got nil")
 	}
+
 	if handler.stack != stack {
 		t.Error("Stack not set correctly")
 	}
+
 	if handler.stopChan == nil {
 		t.Error("Stop channel not initialized")
 	}
 }
 
-// TestEDPConstants verifies EDP protocol constants
+// TestEDPConstants verifies EDP protocol constants.
 func TestEDPConstants(t *testing.T) {
 	tests := []struct {
 		name     string
-		value    interface{}
-		expected interface{}
+		value    any
+		expected any
 	}{
 		{"Multicast MAC", EDPMulticastMAC, "\x00\xE0\x2B\x00\x00\x00"},
 		{"Advertise Interval", EDPAdvertiseInterval, 30 * time.Second},
@@ -48,7 +50,7 @@ func TestEDPConstants(t *testing.T) {
 	}
 }
 
-// TestEDPTLVTypes verifies TLV type constants
+// TestEDPTLVTypes verifies TLV type constants.
 func TestEDPTLVTypes(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -70,7 +72,7 @@ func TestEDPTLVTypes(t *testing.T) {
 	}
 }
 
-// TestBuildDisplayTLVEDP verifies Display TLV construction for EDP
+// TestBuildDisplayTLVEDP verifies Display TLV construction for EDP.
 func TestBuildDisplayTLVEDP(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -113,7 +115,9 @@ func TestBuildDisplayTLVEDP(t *testing.T) {
 
 			// Verify length
 			length := binary.BigEndian.Uint16(tlv[1:3])
+
 			expectedLength := uint16(len(tt.expectedDisplay))
+
 			if length != expectedLength {
 				t.Errorf("Expected length %d, got %d", expectedLength, length)
 			}
@@ -127,7 +131,7 @@ func TestBuildDisplayTLVEDP(t *testing.T) {
 	}
 }
 
-// TestBuildInfoTLVEDP verifies Info TLV construction for EDP
+// TestBuildInfoTLVEDP verifies Info TLV construction for EDP.
 func TestBuildInfoTLVEDP(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -188,7 +192,7 @@ func TestBuildInfoTLVEDP(t *testing.T) {
 	}
 }
 
-// TestBuildNullTLVEDP verifies NULL TLV construction for EDP
+// TestBuildNullTLVEDP verifies NULL TLV construction for EDP.
 func TestBuildNullTLVEDP(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -209,7 +213,7 @@ func TestBuildNullTLVEDP(t *testing.T) {
 	}
 }
 
-// TestCalculateChecksumEDP verifies EDP checksum calculation
+// TestCalculateChecksumEDP verifies EDP checksum calculation.
 func TestCalculateChecksumEDP(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -243,7 +247,7 @@ func TestCalculateChecksumEDP(t *testing.T) {
 	}
 }
 
-// TestBuildEDPFrame verifies complete EDP frame construction
+// TestBuildEDPFrame verifies complete EDP frame construction.
 func TestBuildEDPFrame(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -290,7 +294,7 @@ func TestBuildEDPFrame(t *testing.T) {
 	}
 }
 
-// TestBuildEDPFrame_CustomConfig verifies EDP frame with custom configuration
+// TestBuildEDPFrame_CustomConfig verifies EDP frame with custom configuration.
 func TestBuildEDPFrame_CustomConfig(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -319,7 +323,7 @@ func TestBuildEDPFrame_CustomConfig(t *testing.T) {
 	}
 }
 
-// TestEDPLifecycle verifies Start/Stop functionality
+// TestEDPLifecycle verifies Start/Stop functionality.
 func TestEDPLifecycle(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -347,7 +351,7 @@ func TestEDPLifecycle(t *testing.T) {
 	}
 }
 
-// TestSendAdvertisementsEDP verifies advertisement sending logic for EDP
+// TestSendAdvertisementsEDP verifies advertisement sending logic for EDP.
 func TestSendAdvertisementsEDP(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -371,7 +375,7 @@ func TestSendAdvertisementsEDP(t *testing.T) {
 	}
 }
 
-// TestSendAdvertisementsEDP_DisabledDevice verifies EDP disabled devices are skipped
+// TestSendAdvertisementsEDP_DisabledDevice verifies EDP disabled devices are skipped.
 func TestSendAdvertisementsEDP_DisabledDevice(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -398,7 +402,7 @@ func TestSendAdvertisementsEDP_DisabledDevice(t *testing.T) {
 	}
 }
 
-// TestSendAdvertisementsEDP_NoMACAddress verifies devices without MAC are skipped
+// TestSendAdvertisementsEDP_NoMACAddress verifies devices without MAC are skipped.
 func TestSendAdvertisementsEDP_NoMACAddress(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -421,7 +425,7 @@ func TestSendAdvertisementsEDP_NoMACAddress(t *testing.T) {
 	}
 }
 
-// TestHandlePacketEDP verifies neighbor recording from an incoming frame
+// TestHandlePacketEDP verifies neighbor recording from an incoming frame.
 func TestHandlePacketEDP(t *testing.T) {
 	cfg := &config.Config{
 		Devices: []config.Device{{
@@ -451,26 +455,33 @@ func TestHandlePacketEDP(t *testing.T) {
 	if len(neighbors) != 1 {
 		t.Fatalf("expected 1 neighbor recorded, got %d", len(neighbors))
 	}
+
 	entry := neighbors[0]
 	if entry.Protocol != ProtocolEDP {
 		t.Fatalf("unexpected protocol %s", entry.Protocol)
 	}
+
 	if entry.RemoteDevice != "Extreme-Edge Slot1" {
 		t.Errorf("unexpected remote device %q", entry.RemoteDevice)
 	}
+
 	if entry.RemotePort != "1/1" {
 		t.Errorf("unexpected remote port %q", entry.RemotePort)
 	}
+
 	if entry.ManagementAddress != "10.10.10.10" {
 		t.Errorf("unexpected management address %q", entry.ManagementAddress)
 	}
+
 	if entry.RemoteChassisID != "00:11:22:33:44:55" {
 		t.Errorf("unexpected chassis id %q", entry.RemoteChassisID)
 	}
+
 	expectedTTL := time.Duration(EDPDefaultTTL) * time.Second
 	if entry.TTL != expectedTTL {
 		t.Errorf("expected TTL %v, got %v", expectedTTL, entry.TTL)
 	}
+
 	if len(entry.Capabilities) == 0 || entry.Capabilities[0] != "switch" {
 		t.Errorf("expected switch capability, got %#v", entry.Capabilities)
 	}
@@ -482,12 +493,13 @@ func buildEDPTestFrame(src net.HardwareAddr, payload []byte) []byte {
 	copy(frame[6:12], src)
 	binary.BigEndian.PutUint16(frame[12:14], EtherTypeEDP)
 	copy(frame[14:], payload)
+
 	return frame
 }
 
 // Benchmarks
 
-// BenchmarkBuildEDPFrame benchmarks EDP frame construction
+// BenchmarkBuildEDPFrame benchmarks EDP frame construction.
 func BenchmarkBuildEDPFrame(b *testing.B) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -500,13 +512,12 @@ func BenchmarkBuildEDPFrame(b *testing.B) {
 		IPAddresses: []net.IP{net.ParseIP("192.168.1.1")},
 	}
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		handler.buildEDPFrame(device)
 	}
 }
 
-// BenchmarkCalculateChecksumEDP benchmarks checksum calculation
+// BenchmarkCalculateChecksumEDP benchmarks checksum calculation.
 func BenchmarkCalculateChecksumEDP(b *testing.B) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -517,8 +528,7 @@ func BenchmarkCalculateChecksumEDP(b *testing.B) {
 		data[i] = byte(i)
 	}
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		handler.calculateChecksum(data)
 	}
 }

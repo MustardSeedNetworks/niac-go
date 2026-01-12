@@ -1,4 +1,3 @@
-// Package main provides the NIAC CLI application
 package main
 
 import (
@@ -13,7 +12,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// dumpOptions holds command-line options for the dump command
+// dumpOptions holds command-line options for the dump command.
 var dumpOptions struct {
 	device     string
 	iface      string
@@ -71,7 +70,7 @@ func init() {
 	dumpCmd.Flags().BoolVar(&dumpOptions.jsonOutput, "json", false, "Output packets as JSON")
 }
 
-// PacketDump represents a captured packet for display
+// PacketDump represents a captured packet for display.
 type PacketDump struct {
 	Index     int       `json:"index"`
 	Timestamp time.Time `json:"timestamp"`
@@ -82,7 +81,7 @@ type PacketDump struct {
 	HexDump   string    `json:"hex_dump,omitempty"`
 }
 
-// runDump executes the dump command
+// runDump executes the dump command.
 func runDump(cmd *cobra.Command, args []string) error {
 	// Determine socket path
 	socketPath := dumpOptions.socketPath
@@ -93,7 +92,7 @@ func runDump(cmd *cobra.Command, args []string) error {
 	// Check if socket exists
 	if _, err := os.Stat(socketPath); os.IsNotExist(err) {
 		if dumpOptions.jsonOutput {
-			outputDumpJSON(map[string]interface{}{
+			outputDumpJSON(map[string]any{
 				"success": false,
 				"error":   "socket not found",
 			})
@@ -111,7 +110,7 @@ func runDump(cmd *cobra.Command, args []string) error {
 	packets, err := client.DumpPackets(dumpOptions.device, dumpOptions.iface, dumpOptions.count)
 	if err != nil {
 		if dumpOptions.jsonOutput {
-			outputDumpJSON(map[string]interface{}{
+			outputDumpJSON(map[string]any{
 				"success": false,
 				"error":   err.Error(),
 			})
@@ -123,9 +122,9 @@ func runDump(cmd *cobra.Command, args []string) error {
 
 	if len(packets) == 0 {
 		if dumpOptions.jsonOutput {
-			outputDumpJSON(map[string]interface{}{
+			outputDumpJSON(map[string]any{
 				"success": true,
-				"packets": []interface{}{},
+				"packets": []any{},
 				"count":   0,
 			})
 		} else {
@@ -144,7 +143,7 @@ func runDump(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// printPacketsHexDump prints packets in hex dump format (similar to xxd)
+// printPacketsHexDump prints packets in hex dump format (similar to xxd).
 func printPacketsHexDump(packets []ipc.PacketData) {
 	for i, pkt := range packets {
 		// Print packet header
@@ -169,7 +168,7 @@ func printPacketsHexDump(packets []ipc.PacketData) {
 	fmt.Printf("Total: %d packet(s)\n", len(packets))
 }
 
-// formatHexDump formats binary data as a hex dump (xxd-style)
+// formatHexDump formats binary data as a hex dump (xxd-style).
 func formatHexDump(data []byte) string {
 	if len(data) == 0 {
 		return ""
@@ -183,10 +182,7 @@ func formatHexDump(data []byte) string {
 		sb.WriteString(fmt.Sprintf("%08x: ", offset))
 
 		// Hex bytes
-		end := offset + bytesPerLine
-		if end > len(data) {
-			end = len(data)
-		}
+		end := min(offset+bytesPerLine, len(data))
 
 		hexPart := hex.EncodeToString(data[offset:end])
 
@@ -229,7 +225,7 @@ func formatHexDump(data []byte) string {
 	return sb.String()
 }
 
-// outputPacketsJSON outputs packets as formatted JSON
+// outputPacketsJSON outputs packets as formatted JSON.
 func outputPacketsJSON(packets []ipc.PacketData) {
 	result := make([]PacketDump, len(packets))
 	for i, pkt := range packets {
@@ -244,7 +240,7 @@ func outputPacketsJSON(packets []ipc.PacketData) {
 		}
 	}
 
-	output := map[string]interface{}{
+	output := map[string]any{
 		"success": true,
 		"packets": result,
 		"count":   len(packets),
@@ -252,12 +248,12 @@ func outputPacketsJSON(packets []ipc.PacketData) {
 
 	encoder := json.NewEncoder(os.Stdout)
 	encoder.SetIndent("", "  ")
-	encoder.Encode(output) // #nosec G104 -- stdout write error is non-critical
+	_ = encoder.Encode(output)
 }
 
-// outputDumpJSON outputs data as formatted JSON
-func outputDumpJSON(data interface{}) {
+// outputDumpJSON outputs data as formatted JSON.
+func outputDumpJSON(data any) {
 	encoder := json.NewEncoder(os.Stdout)
 	encoder.SetIndent("", "  ")
-	encoder.Encode(data) // #nosec G104 -- stdout write error is non-critical
+	_ = encoder.Encode(data)
 }

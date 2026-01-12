@@ -1,28 +1,14 @@
-import { type FC, useState, useCallback, useMemo } from 'react';
+import { AlertCircle, FileCheck, FileCode, GitCompare, Upload, X } from "lucide-react";
+import { type FC, useCallback, useMemo, useState } from "react";
 import {
-  Upload,
-  FileCode,
-  X,
-  AlertCircle,
-  GitCompare,
-  FileCheck,
-} from 'lucide-react';
-import {
-  Card,
-  CardContent,
-  H2,
-  P,
-  SmallText,
-  Tag,
-} from '../ui';
-import {
+  computeDiff,
+  type DiffBlock,
   DiffViewer,
   generateMergedContent,
-  computeDiff,
   type MergeDecision,
-  type DiffBlock,
-} from '../components/config/DiffViewer';
-import { MergeControls, MergePreviewModal } from '../components/config/MergeControls';
+} from "../components/config/DiffViewer";
+import { MergeControls, MergePreviewModal } from "../components/config/MergeControls";
+import { Card, CardContent, H2, P, SmallText, Tag } from "../ui";
 
 interface UploadedFile {
   name: string;
@@ -49,14 +35,14 @@ const FileUploadZone: FC<{
 
       // Validate file type
       if (!uploadedFile.name.match(/\.(yaml|yml)$/i)) {
-        setError('Please select a YAML file (.yaml or .yml)');
+        setError("Please select a YAML file (.yaml or .yml)");
         return;
       }
 
       // Validate file size (1MB limit)
-      const MAX_SIZE = 1024 * 1024;
-      if (uploadedFile.size > MAX_SIZE) {
-        setError('File too large. Maximum size is 1MB');
+      const MaxSize = 1024 * 1024;
+      if (uploadedFile.size > MaxSize) {
+        setError("File too large. Maximum size is 1MB");
         return;
       }
 
@@ -68,10 +54,10 @@ const FileUploadZone: FC<{
           size: uploadedFile.size,
         });
       } catch {
-        setError('Failed to read file');
+        setError("Failed to read file");
       }
     },
-    [onFileUpload]
+    [onFileUpload],
   );
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -94,7 +80,7 @@ const FileUploadZone: FC<{
         handleFile(droppedFile);
       }
     },
-    [handleFile]
+    [handleFile],
   );
 
   const handleInputChange = useCallback(
@@ -104,7 +90,7 @@ const FileUploadZone: FC<{
         handleFile(selectedFile);
       }
     },
-    [handleFile]
+    [handleFile],
   );
 
   if (file) {
@@ -118,7 +104,7 @@ const FileUploadZone: FC<{
             <div>
               <p className="font-semibold text-white">{file.name}</p>
               <SmallText className="text-green-300">
-                {formatBytes(file.size)} | {file.content.split('\n').length} lines
+                {formatBytes(file.size)} | {file.content.split("\n").length} lines
               </SmallText>
             </div>
           </div>
@@ -140,9 +126,9 @@ const FileUploadZone: FC<{
       <label
         className={`block rounded-xl border-2 border-dashed p-6 text-center transition-colors cursor-pointer ${
           dragOver
-            ? 'border-violet-400 bg-violet-500/10'
-            : 'border-white/20 hover:border-violet-400/50 hover:bg-gray-950/50'
-        } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+            ? "border-violet-400 bg-violet-500/10"
+            : "border-white/20 hover:border-violet-400/50 hover:bg-gray-950/50"
+        } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
@@ -156,9 +142,7 @@ const FileUploadZone: FC<{
         />
         <Upload className="mx-auto h-8 w-8 text-gray-400 mb-2" />
         <p className="text-gray-300 font-medium">{label}</p>
-        <SmallText className="text-gray-500">
-          Drag & drop or click to select a YAML file
-        </SmallText>
+        <SmallText className="text-gray-500">Drag & drop or click to select a YAML file</SmallText>
       </label>
       {error && (
         <div className="flex items-center gap-2 text-red-400 text-sm">
@@ -175,9 +159,9 @@ const FileUploadZone: FC<{
  */
 function formatBytes(size: number): string {
   if (!Number.isFinite(size) || size <= 0) {
-    return '0 B';
+    return "0 B";
   }
-  const units = ['B', 'KB', 'MB', 'GB'];
+  const units = ["B", "KB", "MB", "GB"];
   let idx = 0;
   let value = size;
   while (value >= 1024 && idx < units.length - 1) {
@@ -202,14 +186,10 @@ export const ConfigDiffPage: FC = () => {
   const [rightFile, setRightFile] = useState<UploadedFile | null>(null);
 
   // Merge state
-  const [mergeDecisions, setMergeDecisions] = useState<Map<string, MergeDecision>>(
-    new Map()
-  );
+  const [mergeDecisions, setMergeDecisions] = useState<Map<string, MergeDecision>>(new Map());
 
   // UI state
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(
-    null
-  );
+  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [showPreview, setShowPreview] = useState(false);
 
   // Compute diff blocks for merge controls
@@ -220,7 +200,7 @@ export const ConfigDiffPage: FC = () => {
 
   // Generate merged content
   const mergedContent = useMemo(() => {
-    if (!leftFile || !rightFile) return '';
+    if (!leftFile || !rightFile) return "";
     return generateMergedContent(leftFile.content, rightFile.content, mergeDecisions);
   }, [leftFile, rightFile, mergeDecisions]);
 
@@ -238,56 +218,53 @@ export const ConfigDiffPage: FC = () => {
   }, []);
 
   // Handle merge decisions
-  const handleMergeDecision = useCallback(
-    (blockId: string, choice: MergeDecision['choice']) => {
-      setMergeDecisions((prev) => {
-        const next = new Map(prev);
-        next.set(blockId, { blockId, choice });
-        return next;
-      });
-    },
-    []
-  );
+  const handleMergeDecision = useCallback((blockId: string, choice: MergeDecision["choice"]) => {
+    setMergeDecisions((prev) => {
+      const next = new Map(prev);
+      next.set(blockId, { blockId, choice });
+      return next;
+    });
+  }, []);
 
   // Accept all from left
   const handleAcceptAllLeft = useCallback(() => {
-    const changedBlocks = diffBlocks.filter((b) => b.type !== 'unchanged');
+    const changedBlocks = diffBlocks.filter((b) => b.type !== "unchanged");
     const decisions = new Map<string, MergeDecision>();
     for (const block of changedBlocks) {
-      decisions.set(block.id, { blockId: block.id, choice: 'left' });
+      decisions.set(block.id, { blockId: block.id, choice: "left" });
     }
     setMergeDecisions(decisions);
-    setMessage({ type: 'success', text: 'All changes set to accept from left file' });
+    setMessage({ type: "success", text: "All changes set to accept from left file" });
   }, [diffBlocks]);
 
   // Accept all from right
   const handleAcceptAllRight = useCallback(() => {
-    const changedBlocks = diffBlocks.filter((b) => b.type !== 'unchanged');
+    const changedBlocks = diffBlocks.filter((b) => b.type !== "unchanged");
     const decisions = new Map<string, MergeDecision>();
     for (const block of changedBlocks) {
-      decisions.set(block.id, { blockId: block.id, choice: 'right' });
+      decisions.set(block.id, { blockId: block.id, choice: "right" });
     }
     setMergeDecisions(decisions);
-    setMessage({ type: 'success', text: 'All changes set to accept from right file' });
+    setMessage({ type: "success", text: "All changes set to accept from right file" });
   }, [diffBlocks]);
 
   // Reset all decisions
   const handleReset = useCallback(() => {
     setMergeDecisions(new Map());
-    setMessage({ type: 'success', text: 'All merge decisions reset' });
+    setMessage({ type: "success", text: "All merge decisions reset" });
   }, []);
 
   // Export merged content
   const handleExport = useCallback(() => {
     if (!mergedContent) return;
 
-    const blob = new Blob([mergedContent], { type: 'text/yaml' });
+    const blob = new Blob([mergedContent], { type: "text/yaml" });
     const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
+    const link = document.createElement("a");
     link.href = url;
 
     // Generate filename from source files
-    const baseName = leftFile?.name.replace(/\.(yaml|yml)$/i, '') || 'config';
+    const baseName = leftFile?.name.replace(/\.(yaml|yml)$/i, "") || "config";
     link.download = `${baseName}-merged.yaml`;
 
     document.body.appendChild(link);
@@ -295,7 +272,7 @@ export const ConfigDiffPage: FC = () => {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
 
-    setMessage({ type: 'success', text: 'Merged configuration exported successfully' });
+    setMessage({ type: "success", text: "Merged configuration exported successfully" });
   }, [mergedContent, leftFile]);
 
   // Show preview modal
@@ -324,7 +301,7 @@ export const ConfigDiffPage: FC = () => {
             {hasFiles && (
               <div className="flex items-center gap-2">
                 <Tag colorScheme="purple">
-                  {diffBlocks.filter((b) => b.type !== 'unchanged').length} changes
+                  {diffBlocks.filter((b) => b.type !== "unchanged").length} changes
                 </Tag>
               </div>
             )}
@@ -334,13 +311,13 @@ export const ConfigDiffPage: FC = () => {
           {message && (
             <div
               className={`flex items-center gap-2 rounded-lg p-3 ${
-                message.type === 'success'
-                  ? 'border border-green-500/30 bg-green-500/10 text-green-300'
-                  : 'border border-red-500/30 bg-red-500/10 text-red-300'
+                message.type === "success"
+                  ? "border border-green-500/30 bg-green-500/10 text-green-300"
+                  : "border border-red-500/30 bg-red-500/10 text-red-300"
               }`}
               role="alert"
             >
-              {message.type === 'success' ? (
+              {message.type === "success" ? (
                 <FileCheck className="h-4 w-4" />
               ) : (
                 <AlertCircle className="h-4 w-4" />
@@ -448,8 +425,8 @@ export const ConfigDiffPage: FC = () => {
             <GitCompare className="mx-auto h-12 w-12 text-gray-600" />
             <H2 className="mt-4 mb-2">Ready to Compare</H2>
             <P className="text-gray-400 max-w-md mx-auto">
-              Upload two YAML configuration files above to see a side-by-side comparison
-              with color-coded changes and interactive merge controls.
+              Upload two YAML configuration files above to see a side-by-side comparison with
+              color-coded changes and interactive merge controls.
             </P>
             <div className="flex flex-wrap justify-center gap-4 mt-6">
               <div className="flex items-center gap-2">

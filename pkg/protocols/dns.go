@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"net"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -14,7 +15,7 @@ import (
 	"github.com/krisarmstrong/niac-go/pkg/config"
 )
 
-// DNSHandler handles DNS queries and responses
+// DNSHandler handles DNS queries and responses.
 type DNSHandler struct {
 	stack         *Stack
 	records       map[string][]dnsRecord // Hostname -> records
@@ -41,7 +42,7 @@ type dnsRecordSet struct {
 	reverse map[string]dnsPTR
 }
 
-// NewDNSHandler creates a new DNS handler
+// NewDNSHandler creates a new DNS handler.
 func NewDNSHandler(stack *Stack) *DNSHandler {
 	return &DNSHandler{
 		stack:         stack,
@@ -56,13 +57,14 @@ func NewDNSHandler(stack *Stack) *DNSHandler {
 func (h *DNSHandler) Reset() {
 	h.mu.Lock()
 	defer h.mu.Unlock()
+
 	h.records = make(map[string][]dnsRecord)
 	h.ptrRecords = make(map[string]dnsPTR)
 	h.deviceRecords = make(map[*config.Device]*dnsRecordSet)
 	h.domain = "local"
 }
 
-// AddRecord adds a DNS A/AAAA record
+// AddRecord adds a DNS A/AAAA record.
 func (h *DNSHandler) AddRecord(hostname string, ip net.IP) {
 	h.AddRecordWithTTL(hostname, ip, 300, layers.DNSResponseCodeNoErr)
 }
@@ -94,6 +96,7 @@ func (h *DNSHandler) AddRecordWithTTL(hostname string, ip net.IP, ttl uint32, rc
 func (h *DNSHandler) AddPTRRecord(ip net.IP, hostname string, ttl uint32, rcode layers.DNSResponseCode) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
+
 	hostname = strings.ToLower(strings.TrimSuffix(hostname, "."))
 	h.ptrRecords[ip.String()] = dnsPTR{
 		name:  hostname,
@@ -102,14 +105,15 @@ func (h *DNSHandler) AddPTRRecord(ip net.IP, hostname string, ttl uint32, rcode 
 	}
 }
 
-// SetDomain sets the default DNS domain
+// SetDomain sets the default DNS domain.
 func (h *DNSHandler) SetDomain(domain string) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
+
 	h.domain = domain
 }
 
-// LoadDeviceRecords loads DNS records from configured devices
+// LoadDeviceRecords loads DNS records from configured devices.
 func (h *DNSHandler) LoadDeviceRecords(devices []*config.Device) {
 	for _, device := range devices {
 		hostname := device.SNMPConfig.SysName
@@ -128,6 +132,7 @@ func (h *DNSHandler) LoadDeviceDNSConfig(device *config.Device) {
 	if device == nil || device.DNSConfig == nil {
 		return
 	}
+
 	set := &dnsRecordSet{
 		forward: make(map[string][]dnsRecord),
 		reverse: make(map[string]dnsPTR),
@@ -138,14 +143,15 @@ func (h *DNSHandler) LoadDeviceDNSConfig(device *config.Device) {
 		set.forward[name] = append(set.forward[name], dnsRecord{
 			ip:    rec.IP,
 			ttl:   rec.TTL,
-			rcode: layers.DNSResponseCode(rec.RCode),
+			rcode: layers.DNSResponseCode(rec.RCode), //nolint:gosec // G115: DNS RCode bounded by DNS protocol
 		})
 	}
+
 	for _, rec := range device.DNSConfig.ReverseRecords {
 		set.reverse[rec.IP.String()] = dnsPTR{
 			name:  strings.ToLower(strings.TrimSuffix(rec.Name, ".")),
 			ttl:   rec.TTL,
-			rcode: layers.DNSResponseCode(rec.RCode),
+			rcode: layers.DNSResponseCode(rec.RCode), //nolint:gosec // G115: DNS RCode bounded by DNS protocol
 		}
 	}
 
@@ -154,17 +160,19 @@ func (h *DNSHandler) LoadDeviceDNSConfig(device *config.Device) {
 	h.mu.Unlock()
 }
 
-// HandleQuery processes a DNS query
+// HandleQuery processes a DNS query.
 func (h *DNSHandler) HandleQuery(pkt *Packet, ipLayer *layers.IPv4, udpLayer *layers.UDP, devices []*config.Device) {
 	debugLevel := h.stack.GetDebugLevel()
 
 	// Parse DNS layer
 	packet := gopacket.NewPacket(pkt.Buffer, layers.LayerTypeEthernet, gopacket.Default)
+
 	dnsLayer := packet.Layer(layers.LayerTypeDNS)
 	if dnsLayer == nil {
 		if debugLevel >= 2 {
-			fmt.Printf("DNS packet missing DNS layer sn=%d\n", pkt.SerialNumber)
+			_, _ = fmt.Fprintf(os.Stdout, "DNS packet missing DNS layer sn=%d\n", pkt.SerialNumber)
 		}
+
 		return
 	}
 
@@ -177,7 +185,7 @@ func (h *DNSHandler) HandleQuery(pkt *Packet, ipLayer *layers.IPv4, udpLayer *la
 
 	if debugLevel >= 3 {
 		for _, q := range dns.Questions {
-			fmt.Printf("DNS Query: %s type=%s class=%s from %s sn=%d\n",
+			_, _ = fmt.Fprintf(os.Stdout, "DNS Query: %s type=%s class=%s from %s sn=%d\n",
 				string(q.Name), q.Type, q.Class, ipLayer.SrcIP, pkt.SerialNumber)
 		}
 	}
@@ -185,15 +193,22 @@ func (h *DNSHandler) HandleQuery(pkt *Packet, ipLayer *layers.IPv4, udpLayer *la
 	serverDevice, serverIP := h.selectServerDevice(devices, false)
 	if serverDevice == nil || serverIP == nil {
 		if debugLevel >= 2 {
-			fmt.Printf("DNS: No IPv4 server device/IP configured sn=%d\n", pkt.SerialNumber)
+			_, _ = fmt.Fprintf(os.Stdout, "DNS: No IPv4 server device/IP configured sn=%d\n", pkt.SerialNumber)
 		}
+
 		return
 	}
 
 	if len(serverDevice.MACAddress) == 0 {
 		if debugLevel >= 2 {
-			fmt.Printf("DNS: Server device %s missing MAC address sn=%d\n", serverDevice.Name, pkt.SerialNumber)
+			_, _ = fmt.Fprintf(
+				os.Stdout,
+				"DNS: Server device %s missing MAC address sn=%d\n",
+				serverDevice.Name,
+				pkt.SerialNumber,
+			)
 		}
+
 		return
 	}
 
@@ -201,11 +216,13 @@ func (h *DNSHandler) HandleQuery(pkt *Packet, ipLayer *layers.IPv4, udpLayer *la
 	// Handle NBSTAT queries with custom response (gopacket does not support NBSTAT serialization).
 	for _, q := range dns.Questions {
 		if q.Type == layers.DNSType(33) {
-			if err := h.handleNBSTATQuery(pkt, ipLayer, udpLayer, serverDevice, dns.ID, q, packet); err != nil {
+			err := h.handleNBSTATQuery(pkt, ipLayer, udpLayer, serverDevice, dns.ID, q, packet)
+			if err != nil {
 				if debugLevel >= 2 {
-					fmt.Printf("DNS: NBSTAT handling failed: %v sn=%d\n", err, pkt.SerialNumber)
+					_, _ = fmt.Fprintf(os.Stdout, "DNS: NBSTAT handling failed: %v sn=%d\n", err, pkt.SerialNumber)
 				}
 			}
+
 			return
 		}
 	}
@@ -224,9 +241,10 @@ func (h *DNSHandler) HandleQuery(pkt *Packet, ipLayer *layers.IPv4, udpLayer *la
 	}
 
 	recordSet := h.getRecordSetForDevice(serverDevice)
+
 	response.Answers, response.ResponseCode = h.resolveQuestions(dns.Questions, recordSet, debugLevel, pkt.SerialNumber)
 	if len(response.Answers) == 0 && debugLevel >= 2 {
-		fmt.Printf("DNS: NXDOMAIN for queries sn=%d\n", pkt.SerialNumber)
+		_, _ = fmt.Fprintf(os.Stdout, "DNS: NXDOMAIN for queries sn=%d\n", pkt.SerialNumber)
 	} else if len(response.Answers) > 0 {
 		if response.ResponseCode == 0 {
 			response.ResponseCode = layers.DNSResponseCodeNoErr
@@ -235,22 +253,37 @@ func (h *DNSHandler) HandleQuery(pkt *Packet, ipLayer *layers.IPv4, udpLayer *la
 
 	// Get source MAC from Ethernet layer
 	ethLayer := packet.Layer(layers.LayerTypeEthernet)
+
 	var srcMAC net.HardwareAddr
+
 	if eth, ok := ethLayer.(*layers.Ethernet); ok {
 		srcMAC = eth.SrcMAC
 	}
 
 	// Send response
-	if err := h.SendDNSResponse(response, serverIP, ipLayer.SrcIP, serverDevice.MACAddress, srcMAC, udpLayer.SrcPort); err != nil {
+	err := h.SendDNSResponse(
+		response,
+		serverIP,
+		ipLayer.SrcIP,
+		serverDevice.MACAddress,
+		srcMAC,
+		udpLayer.SrcPort,
+	)
+	if err != nil {
 		if debugLevel >= 1 {
-			fmt.Printf("DNS: Failed to send response: %v sn=%d\n", err, pkt.SerialNumber)
+			_, _ = fmt.Fprintf(os.Stdout, "DNS: Failed to send response: %v sn=%d\n", err, pkt.SerialNumber)
 		}
 	} else if debugLevel >= 3 {
-		fmt.Printf("DNS: Sent response with %d answers sn=%d\n", len(response.Answers), pkt.SerialNumber)
+		_, _ = fmt.Fprintf(
+			os.Stdout,
+			"DNS: Sent response with %d answers sn=%d\n",
+			len(response.Answers),
+			pkt.SerialNumber,
+		)
 	}
 }
 
-// lookupHost looks up IP addresses for a hostname
+// lookupHost looks up IP addresses for a hostname.
 func (h *DNSHandler) lookupHost(hostname string, set *dnsRecordSet) []dnsRecord {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
@@ -262,12 +295,14 @@ func (h *DNSHandler) lookupHost(hostname string, set *dnsRecordSet) []dnsRecord 
 		if recs, ok := set.forward[hostname]; ok {
 			return recs
 		}
+
 		if !strings.Contains(hostname, ".") {
 			fullname := hostname + "." + h.domain
 			if recs, ok := set.forward[fullname]; ok {
 				return recs
 			}
 		}
+
 		return nil
 	}
 
@@ -275,6 +310,7 @@ func (h *DNSHandler) lookupHost(hostname string, set *dnsRecordSet) []dnsRecord 
 	if recs, ok := h.records[hostname]; ok {
 		return recs
 	}
+
 	if !strings.Contains(hostname, ".") {
 		fullname := hostname + "." + h.domain
 		if recs, ok := h.records[fullname]; ok {
@@ -285,8 +321,13 @@ func (h *DNSHandler) lookupHost(hostname string, set *dnsRecordSet) []dnsRecord 
 	return nil
 }
 
-// SendDNSResponse sends a DNS response
-func (h *DNSHandler) SendDNSResponse(response *layers.DNS, srcIP, dstIP net.IP, srcMAC, dstMAC net.HardwareAddr, dstPort layers.UDPPort) error {
+// SendDNSResponse sends a DNS response.
+func (h *DNSHandler) SendDNSResponse(
+	response *layers.DNS,
+	srcIP, dstIP net.IP,
+	srcMAC, dstMAC net.HardwareAddr,
+	dstPort layers.UDPPort,
+) error {
 	// Build UDP layer
 	udp := &layers.UDP{
 		SrcPort: 53,
@@ -316,9 +357,10 @@ func (h *DNSHandler) SendDNSResponse(response *layers.DNS, srcIP, dstIP net.IP, 
 		FixLengths:       true,
 	}
 
-	udp.SetNetworkLayerForChecksum(ip) // #nosec G104 -- error logged or non-critical
+	_ = udp.SetNetworkLayerForChecksum(ip) // error is non-critical for simulation
 
-	if err := gopacket.SerializeLayers(buf, opts, eth, ip, udp, response); err != nil {
+	err := gopacket.SerializeLayers(buf, opts, eth, ip, udp, response)
+	if err != nil {
 		return fmt.Errorf("failed to serialize DNS response: %w", err)
 	}
 
@@ -327,7 +369,12 @@ func (h *DNSHandler) SendDNSResponse(response *layers.DNS, srcIP, dstIP net.IP, 
 }
 
 // SendDNSResponseV6 sends a DNS response over IPv6.
-func (h *DNSHandler) SendDNSResponseV6(response *layers.DNS, srcIP, dstIP net.IP, srcMAC, dstMAC net.HardwareAddr, dstPort layers.UDPPort) error {
+func (h *DNSHandler) SendDNSResponseV6(
+	response *layers.DNS,
+	srcIP, dstIP net.IP,
+	srcMAC, dstMAC net.HardwareAddr,
+	dstPort layers.UDPPort,
+) error {
 	udp := &layers.UDP{
 		SrcPort: 53,
 		DstPort: dstPort,
@@ -355,24 +402,32 @@ func (h *DNSHandler) SendDNSResponseV6(response *layers.DNS, srcIP, dstIP net.IP
 		FixLengths:       true,
 	}
 
-	udp.SetNetworkLayerForChecksum(ip) // #nosec G104 -- error logged or non-critical
+	_ = udp.SetNetworkLayerForChecksum(ip) // error is non-critical for simulation
 
-	if err := gopacket.SerializeLayers(buf, opts, eth, ip, udp, response); err != nil {
+	err := gopacket.SerializeLayers(buf, opts, eth, ip, udp, response)
+	if err != nil {
 		return fmt.Errorf("failed to serialize DNS/IPv6 response: %w", err)
 	}
 
 	return h.stack.SendRawPacket(buf.Bytes())
 }
 
-// HandleQueryV6 processes a DNS query over IPv6
-func (h *DNSHandler) HandleQueryV6(pkt *Packet, packet gopacket.Packet, ipv6 *layers.IPv6, udpLayer *layers.UDP, devices []*config.Device) {
+// HandleQueryV6 processes a DNS query over IPv6.
+func (h *DNSHandler) HandleQueryV6(
+	pkt *Packet,
+	packet gopacket.Packet,
+	ipv6 *layers.IPv6,
+	udpLayer *layers.UDP,
+	devices []*config.Device,
+) {
 	debugLevel := h.stack.GetDebugLevel()
 
 	dnsLayer := packet.Layer(layers.LayerTypeDNS)
 	if dnsLayer == nil {
 		if debugLevel >= 2 {
-			fmt.Printf("DNS/IPv6 packet missing DNS layer sn=%d\n", pkt.SerialNumber)
+			_, _ = fmt.Fprintf(os.Stdout, "DNS/IPv6 packet missing DNS layer sn=%d\n", pkt.SerialNumber)
 		}
+
 		return
 	}
 
@@ -386,25 +441,35 @@ func (h *DNSHandler) HandleQueryV6(pkt *Packet, packet gopacket.Packet, ipv6 *la
 	serverDevice, serverIP := h.selectServerDevice(devices, true)
 	if serverDevice == nil || serverIP == nil {
 		if debugLevel >= 2 {
-			fmt.Printf("DNS/IPv6: No server device/IP configured sn=%d\n", pkt.SerialNumber)
+			_, _ = fmt.Fprintf(os.Stdout, "DNS/IPv6: No server device/IP configured sn=%d\n", pkt.SerialNumber)
 		}
+
 		return
 	}
+
 	if len(serverDevice.MACAddress) == 0 {
 		if debugLevel >= 2 {
-			fmt.Printf("DNS/IPv6: Server device %s missing MAC address sn=%d\n", serverDevice.Name, pkt.SerialNumber)
+			_, _ = fmt.Fprintf(
+				os.Stdout,
+				"DNS/IPv6: Server device %s missing MAC address sn=%d\n",
+				serverDevice.Name,
+				pkt.SerialNumber,
+			)
 		}
+
 		return
 	}
 
 	// Handle NBSTAT queries with custom response
 	for _, q := range dns.Questions {
 		if q.Type == layers.DNSType(33) {
-			if err := h.handleNBSTATQueryV6(pkt, ipv6, udpLayer, serverDevice, dns.ID, q, packet); err != nil {
+			err := h.handleNBSTATQueryV6(pkt, ipv6, udpLayer, serverDevice, dns.ID, q, packet)
+			if err != nil {
 				if debugLevel >= 2 {
-					fmt.Printf("DNS/IPv6: NBSTAT handling failed: %v sn=%d\n", err, pkt.SerialNumber)
+					_, _ = fmt.Fprintf(os.Stdout, "DNS/IPv6: NBSTAT handling failed: %v sn=%d\n", err, pkt.SerialNumber)
 				}
 			}
+
 			return
 		}
 	}
@@ -422,10 +487,11 @@ func (h *DNSHandler) HandleQueryV6(pkt *Packet, packet gopacket.Packet, ipv6 *la
 	}
 
 	recordSet := h.getRecordSetForDevice(serverDevice)
+
 	response.Answers, response.ResponseCode = h.resolveQuestions(dns.Questions, recordSet, debugLevel, pkt.SerialNumber)
 	if len(response.Answers) == 0 {
 		if debugLevel >= 2 {
-			fmt.Printf("DNS/IPv6: NXDOMAIN for queries sn=%d\n", pkt.SerialNumber)
+			_, _ = fmt.Fprintf(os.Stdout, "DNS/IPv6: NXDOMAIN for queries sn=%d\n", pkt.SerialNumber)
 		}
 	} else {
 		if response.ResponseCode == 0 {
@@ -436,20 +502,40 @@ func (h *DNSHandler) HandleQueryV6(pkt *Packet, packet gopacket.Packet, ipv6 *la
 	ethLayer := packet.Layer(layers.LayerTypeEthernet)
 	if ethLayer == nil {
 		if debugLevel >= 2 {
-			fmt.Printf("DNS/IPv6: Missing Ethernet layer sn=%d\n", pkt.SerialNumber)
+			_, _ = fmt.Fprintf(os.Stdout, "DNS/IPv6: Missing Ethernet layer sn=%d\n", pkt.SerialNumber)
 		}
+
 		return
 	}
-	dstMAC := ethLayer.(*layers.Ethernet).SrcMAC
 
-	if err := h.SendDNSResponseV6(response, serverIP, ipv6.SrcIP, serverDevice.MACAddress, dstMAC, udpLayer.SrcPort); err != nil {
+	eth, ok := ethLayer.(*layers.Ethernet)
+	if !ok {
+		return
+	}
+
+	dstMAC := eth.SrcMAC
+
+	err := h.SendDNSResponseV6(
+		response,
+		serverIP,
+		ipv6.SrcIP,
+		serverDevice.MACAddress,
+		dstMAC,
+		udpLayer.SrcPort,
+	)
+	if err != nil {
 		if debugLevel >= 1 {
-			fmt.Printf("DNS/IPv6: Failed to send response: %v sn=%d\n", err, pkt.SerialNumber)
+			_, _ = fmt.Fprintf(os.Stdout, "DNS/IPv6: Failed to send response: %v sn=%d\n", err, pkt.SerialNumber)
 		}
 	}
 }
 
-func (h *DNSHandler) resolveQuestions(questions []layers.DNSQuestion, set *dnsRecordSet, debugLevel int, serial int) ([]layers.DNSResourceRecord, layers.DNSResponseCode) {
+func (h *DNSHandler) resolveQuestions(
+	questions []layers.DNSQuestion,
+	set *dnsRecordSet,
+	debugLevel int,
+	serial int,
+) ([]layers.DNSResourceRecord, layers.DNSResponseCode) {
 	answers := make([]layers.DNSResourceRecord, 0, len(questions))
 	responseCode := layers.DNSResponseCodeNoErr
 
@@ -459,12 +545,20 @@ func (h *DNSHandler) resolveQuestions(questions []layers.DNSQuestion, set *dnsRe
 		// Maximum label length is 63 bytes
 		if !isValidDNSName(q.Name) {
 			if debugLevel >= 2 {
-				fmt.Printf("DNS: Invalid domain name length (> 255 or label > 63): %s sn=%d\n", q.Name, serial)
+				_, _ = fmt.Fprintf(
+					os.Stdout,
+					"DNS: Invalid domain name length (> 255 or label > 63): %s sn=%d\n",
+					q.Name,
+					serial,
+				)
 			}
+
 			continue // Skip invalid names
 		}
 
 		hostname := strings.ToLower(strings.TrimSuffix(string(q.Name), "."))
+
+		//nolint:exhaustive // Only A, AAAA, PTR, and NBSTAT record types are supported
 		switch q.Type {
 		case layers.DNSTypeA:
 			for _, rec := range h.lookupHost(hostname, set) {
@@ -476,11 +570,13 @@ func (h *DNSHandler) resolveQuestions(questions []layers.DNSQuestion, set *dnsRe
 						TTL:   rec.ttl,
 						IP:    rec.ip,
 					})
+
 					if rec.rcode != layers.DNSResponseCodeNoErr {
 						responseCode = rec.rcode
 					}
+
 					if debugLevel >= 2 {
-						fmt.Printf("DNS: %s -> %s (A record) sn=%d\n", hostname, rec.ip, serial)
+						_, _ = fmt.Fprintf(os.Stdout, "DNS: %s -> %s (A record) sn=%d\n", hostname, rec.ip, serial)
 					}
 				}
 			}
@@ -494,11 +590,13 @@ func (h *DNSHandler) resolveQuestions(questions []layers.DNSQuestion, set *dnsRe
 						TTL:   rec.ttl,
 						IP:    rec.ip,
 					})
+
 					if rec.rcode != layers.DNSResponseCodeNoErr {
 						responseCode = rec.rcode
 					}
+
 					if debugLevel >= 2 {
-						fmt.Printf("DNS: %s -> %s (AAAA record) sn=%d\n", hostname, rec.ip, serial)
+						_, _ = fmt.Fprintf(os.Stdout, "DNS: %s -> %s (AAAA record) sn=%d\n", hostname, rec.ip, serial)
 					}
 				}
 			}
@@ -509,6 +607,7 @@ func (h *DNSHandler) resolveQuestions(questions []layers.DNSQuestion, set *dnsRe
 					if !strings.HasSuffix(ptr, ".") {
 						ptr += "."
 					}
+
 					answers = append(answers, layers.DNSResourceRecord{
 						Name:  q.Name,
 						Type:  layers.DNSTypePTR,
@@ -516,17 +615,19 @@ func (h *DNSHandler) resolveQuestions(questions []layers.DNSQuestion, set *dnsRe
 						TTL:   host.ttl,
 						PTR:   []byte(ptr),
 					})
+
 					if host.rcode != layers.DNSResponseCodeNoErr {
 						responseCode = host.rcode
 					}
+
 					if debugLevel >= 2 {
-						fmt.Printf("DNS: %s -> %s (PTR record) sn=%d\n", q.Name, ptr, serial)
+						_, _ = fmt.Fprintf(os.Stdout, "DNS: %s -> %s (PTR record) sn=%d\n", q.Name, ptr, serial)
 					}
 				} else if isV6 {
 					responseCode = layers.DNSResponseCodeNXDomain
 				}
 			} else if debugLevel >= 2 {
-				fmt.Printf("DNS: PTR query %s could not be parsed sn=%d\n", q.Name, serial)
+				_, _ = fmt.Fprintf(os.Stdout, "DNS: PTR query %s could not be parsed sn=%d\n", q.Name, serial)
 			}
 		case layers.DNSType(33): // NBSTAT (NetBIOS)
 			// NBSTAT handled separately.
@@ -537,8 +638,10 @@ func (h *DNSHandler) resolveQuestions(questions []layers.DNSQuestion, set *dnsRe
 		if responseCode == layers.DNSResponseCodeNoErr {
 			responseCode = layers.DNSResponseCodeNXDomain
 		}
+
 		return answers, responseCode
 	}
+
 	return answers, responseCode
 }
 
@@ -547,15 +650,19 @@ func (h *DNSHandler) selectServerDevice(devices []*config.Device, wantIPv6 bool)
 		if !h.deviceHasDNSRecords(dev) {
 			continue
 		}
+
 		ip := pickIPAddressForDNS(dev, wantIPv6)
 		if ip == nil {
 			continue
 		}
+
 		if len(dev.MACAddress) == 0 {
 			continue
 		}
+
 		return dev, ip
 	}
+
 	return nil, nil
 }
 
@@ -563,13 +670,16 @@ func (h *DNSHandler) deviceHasDNSRecords(dev *config.Device) bool {
 	if dev == nil {
 		return false
 	}
+
 	h.mu.RLock()
 	_, hasSet := h.deviceRecords[dev]
 	hasGlobal := len(h.records) > 0
 	h.mu.RUnlock()
+
 	if hasSet {
 		return true
 	}
+
 	if dev.DNSConfig != nil {
 		return true
 	}
@@ -581,9 +691,11 @@ func (h *DNSHandler) getRecordSetForDevice(dev *config.Device) *dnsRecordSet {
 	if dev == nil {
 		return nil
 	}
+
 	h.mu.RLock()
 	set := h.deviceRecords[dev]
 	h.mu.RUnlock()
+
 	return set
 }
 
@@ -597,28 +709,36 @@ func pickIPAddressForDNS(device *config.Device, wantIPv6 bool) net.IP {
 			return v4
 		}
 	}
+
 	return nil
 }
 
 func (h *DNSHandler) lookupPTR(ip net.IP, set *dnsRecordSet) (dnsPTR, bool) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
+
 	if set != nil {
 		rec, ok := set.reverse[ip.String()]
+
 		return rec, ok
 	}
+
 	rec, ok := h.ptrRecords[ip.String()]
+
 	return rec, ok
 }
 
 func parsePTRName(name []byte) (net.IP, bool, bool) {
 	ptrName := strings.ToLower(strings.TrimSuffix(string(name), "."))
+
 	switch {
 	case strings.HasSuffix(ptrName, ".in-addr.arpa"):
 		ip, ok := parseIPv4PTRName(ptrName)
+
 		return ip, ok, false
 	case strings.HasSuffix(ptrName, ".ip6.arpa"):
 		ip, ok := parseIPv6PTRName(ptrName)
+
 		return ip, ok, true
 	default:
 		return nil, false, false
@@ -627,35 +747,43 @@ func parsePTRName(name []byte) (net.IP, bool, bool) {
 
 func parseIPv4PTRName(name string) (net.IP, bool) {
 	base := strings.TrimSuffix(name, ".in-addr.arpa")
+
 	parts := strings.Split(strings.Trim(base, "."), ".")
 	if len(parts) != 4 {
 		return nil, false
 	}
 
 	ip := net.IPv4(0, 0, 0, 0).To4()
-	for i := 0; i < 4; i++ {
+
+	for i := range 4 {
 		val, err := strconv.Atoi(parts[len(parts)-1-i])
 		if err != nil || val < 0 || val > 255 {
 			return nil, false
 		}
+
 		ip[i] = byte(val)
 	}
+
 	return ip, true
 }
 
 func parseIPv6PTRName(name string) (net.IP, bool) {
 	base := strings.TrimSuffix(name, ".ip6.arpa")
+
 	nibbles := strings.Split(strings.Trim(base, "."), ".")
 	if len(nibbles) != 32 {
 		return nil, false
 	}
 
 	var builder strings.Builder
+
 	builder.Grow(32)
+
 	for i := len(nibbles) - 1; i >= 0; i-- {
 		if len(nibbles[i]) != 1 {
 			return nil, false
 		}
+
 		builder.WriteString(nibbles[i])
 	}
 
@@ -667,36 +795,76 @@ func parseIPv6PTRName(name string) (net.IP, bool) {
 	return net.IP(data), true
 }
 
-func (h *DNSHandler) handleNBSTATQuery(pkt *Packet, ipLayer *layers.IPv4, udpLayer *layers.UDP, serverDevice *config.Device, id uint16, q layers.DNSQuestion, packet gopacket.Packet) error {
+func (h *DNSHandler) handleNBSTATQuery(
+	pkt *Packet,
+	ipLayer *layers.IPv4,
+	udpLayer *layers.UDP,
+	serverDevice *config.Device,
+	id uint16,
+	q layers.DNSQuestion,
+	packet gopacket.Packet,
+) error {
 	payload, err := h.buildNBSTATResponse(serverDevice, id, q)
 	if err != nil || len(payload) == 0 {
 		return err
 	}
+
 	ethLayer := packet.Layer(layers.LayerTypeEthernet)
+
 	var dstMAC net.HardwareAddr
+
 	if eth, ok := ethLayer.(*layers.Ethernet); ok {
 		dstMAC = eth.SrcMAC
 	}
-	return h.stack.udpHandler.SendUDP(serverDeviceIP(serverDevice, false), ipLayer.SrcIP, 53, uint16(udpLayer.SrcPort), payload, []byte(serverDevice.MACAddress), []byte(dstMAC))
+
+	return h.stack.udpHandler.SendUDP(
+		serverDeviceIP(serverDevice, false),
+		ipLayer.SrcIP,
+		53,
+		uint16(udpLayer.SrcPort),
+		payload,
+		[]byte(serverDevice.MACAddress),
+		[]byte(dstMAC),
+	)
 }
 
-func (h *DNSHandler) handleNBSTATQueryV6(pkt *Packet, ipv6 *layers.IPv6, udpLayer *layers.UDP, serverDevice *config.Device, id uint16, q layers.DNSQuestion, packet gopacket.Packet) error {
+func (h *DNSHandler) handleNBSTATQueryV6(
+	pkt *Packet,
+	ipv6 *layers.IPv6,
+	udpLayer *layers.UDP,
+	serverDevice *config.Device,
+	id uint16,
+	q layers.DNSQuestion,
+	packet gopacket.Packet,
+) error {
 	payload, err := h.buildNBSTATResponse(serverDevice, id, q)
 	if err != nil || len(payload) == 0 {
 		return err
 	}
+
 	ethLayer := packet.Layer(layers.LayerTypeEthernet)
+
 	var dstMAC net.HardwareAddr
+
 	if eth, ok := ethLayer.(*layers.Ethernet); ok {
 		dstMAC = eth.SrcMAC
 	}
-	return h.sendDNSPayloadV6(payload, serverDeviceIP(serverDevice, true), ipv6.SrcIP, serverDevice.MACAddress, dstMAC, udpLayer.SrcPort)
+
+	return h.sendDNSPayloadV6(
+		payload,
+		serverDeviceIP(serverDevice, true),
+		ipv6.SrcIP,
+		serverDevice.MACAddress,
+		dstMAC,
+		udpLayer.SrcPort,
+	)
 }
 
 func serverDeviceIP(device *config.Device, wantIPv6 bool) net.IP {
 	if device == nil {
 		return nil
 	}
+
 	for _, ip := range device.IPAddresses {
 		if wantIPv6 {
 			if ip.To4() == nil && ip.To16() != nil {
@@ -706,10 +874,16 @@ func serverDeviceIP(device *config.Device, wantIPv6 bool) net.IP {
 			return v4
 		}
 	}
+
 	return nil
 }
 
-func (h *DNSHandler) sendDNSPayloadV6(payload []byte, srcIP, dstIP net.IP, srcMAC, dstMAC net.HardwareAddr, dstPort layers.UDPPort) error {
+func (h *DNSHandler) sendDNSPayloadV6(
+	payload []byte,
+	srcIP, dstIP net.IP,
+	srcMAC, dstMAC net.HardwareAddr,
+	dstPort layers.UDPPort,
+) error {
 	udp := &layers.UDP{
 		SrcPort: 53,
 		DstPort: dstPort,
@@ -733,10 +907,13 @@ func (h *DNSHandler) sendDNSPayloadV6(payload []byte, srcIP, dstIP net.IP, srcMA
 		ComputeChecksums: true,
 		FixLengths:       true,
 	}
-	udp.SetNetworkLayerForChecksum(ip) // #nosec G104 -- error logged or non-critical
-	if err := gopacket.SerializeLayers(buf, opts, eth, ip, udp, gopacket.Payload(payload)); err != nil {
+
+	_ = udp.SetNetworkLayerForChecksum(ip) // error is non-critical for simulation
+	err := gopacket.SerializeLayers(buf, opts, eth, ip, udp, gopacket.Payload(payload))
+	if err != nil {
 		return fmt.Errorf("failed to serialize DNS/IPv6 response: %w", err)
 	}
+
 	return h.stack.SendRawPacket(buf.Bytes())
 }
 
@@ -795,23 +972,29 @@ func (h *DNSHandler) buildNBSTATResponse(device *config.Device, id uint16, q lay
 	answer = append(answer, byte(len(names)))
 
 	ownerNodeType := netbiosOwnerNodeType(device)
+
 	for _, name := range names {
 		// 15-char name padded with spaces
 		rawName := name.Name
 		if len(rawName) > 15 {
 			rawName = rawName[:15]
 		}
+
 		nameBytes := make([]byte, 15)
 		copy(nameBytes, rawName)
+
 		for i := len(rawName); i < 15; i++ {
 			nameBytes[i] = ' '
 		}
+
 		answer = append(answer, nameBytes...)
 		answer = append(answer, name.Suffix)
+
 		flags := uint16(0x0400 | (uint16(ownerNodeType) << 13))
 		if name.Group {
 			flags |= 0x8000
 		}
+
 		answer = append(answer, byte(flags>>8), byte(flags))
 	}
 
@@ -827,6 +1010,7 @@ func (h *DNSHandler) buildNBSTATResponse(device *config.Device, id uint16, q lay
 	// Assemble full payload
 	payload := append(header, question...)
 	payload = append(payload, answer...)
+
 	return payload, nil
 }
 
@@ -835,15 +1019,19 @@ func encodeDNSName(name []byte) []byte {
 	if trimmed == "" {
 		return []byte{0}
 	}
+
 	labels := strings.Split(trimmed, ".")
 	buf := make([]byte, 0, len(trimmed)+2)
+
 	for _, label := range labels {
 		if label == "" {
 			continue
 		}
+
 		buf = append(buf, byte(len(label)))
 		buf = append(buf, []byte(label)...)
 	}
+
 	return buf
 }
 
@@ -852,19 +1040,27 @@ func decodeNBSTATService(name []byte) string {
 	if idx := strings.IndexByte(base, '.'); idx != -1 {
 		base = base[:idx]
 	}
+
 	if len(base) < 2 {
 		return ""
 	}
+
 	length := len(base) / 2
+
 	decoded := make([]byte, 0, length)
-	for i := 0; i < length; i++ {
+
+	for i := range length {
 		hi := base[2*i] - 'A'
+
 		lo := base[2*i+1] - 'A'
+
 		if hi > 0x0F || lo > 0x0F {
 			return ""
 		}
+
 		decoded = append(decoded, (hi<<4)|lo)
 	}
+
 	return string(decoded)
 }
 
@@ -872,14 +1068,18 @@ func isNBSTATServiceSupported(service string, device *config.Device) bool {
 	if device == nil || device.NetBIOSConfig == nil {
 		return false
 	}
+
 	workstation := string(append([]byte{'*'}, make([]byte, 15)...))
 	masterBrowser := string([]byte{0x01, 0x02, '_', '_', 'M', 'S', 'B', 'R', 'O', 'W', 'S', 'E', '_', '_', 0x02, 0x01})
+
 	if service == workstation {
 		return true
 	}
+
 	if service == masterBrowser {
 		return device.NetBIOSConfig.MsBrowse
 	}
+
 	return false
 }
 
@@ -893,6 +1093,7 @@ func netbiosNamesForDevice(device *config.Device) []nbstatNameEntry {
 	if device == nil || device.NetBIOSConfig == nil {
 		return nil
 	}
+
 	cfg := device.NetBIOSConfig
 	names := make([]nbstatNameEntry, 0)
 
@@ -900,9 +1101,11 @@ func netbiosNamesForDevice(device *config.Device) []nbstatNameEntry {
 		for _, n := range cfg.Names {
 			names = append(names, nbstatNameEntry{Name: n.Name, Suffix: n.Suffix, Group: n.Group})
 		}
+
 		if cfg.MsBrowse {
 			names = append(names, nbstatNameEntry{Name: "__MSBROWSE__", Suffix: 0x01, Group: true})
 		}
+
 		return names
 	}
 
@@ -910,6 +1113,7 @@ func netbiosNamesForDevice(device *config.Device) []nbstatNameEntry {
 	if baseName == "" {
 		baseName = device.Name
 	}
+
 	for _, svc := range cfg.Services {
 		switch strings.ToLower(svc) {
 		case "workstation":
@@ -928,9 +1132,11 @@ func netbiosNamesForDevice(device *config.Device) []nbstatNameEntry {
 			names = append(names, nbstatNameEntry{Name: "__MSBROWSE__", Suffix: 0x01, Group: true})
 		}
 	}
+
 	if cfg.MsBrowse {
 		names = append(names, nbstatNameEntry{Name: "__MSBROWSE__", Suffix: 0x01, Group: true})
 	}
+
 	return names
 }
 
@@ -938,6 +1144,7 @@ func netbiosOwnerNodeType(device *config.Device) uint8 {
 	if device == nil || device.NetBIOSConfig == nil {
 		return 0
 	}
+
 	switch strings.ToUpper(device.NetBIOSConfig.NodeType) {
 	case "P":
 		return 1
@@ -951,7 +1158,7 @@ func netbiosOwnerNodeType(device *config.Device) uint8 {
 }
 
 // isValidDNSName validates DNS name length per RFC 1035
-// SECURITY FIX MEDIUM-2: Prevents malformed DNS responses
+// SECURITY FIX MEDIUM-2: Prevents malformed DNS responses.
 func isValidDNSName(name []byte) bool {
 	// RFC 1035: Maximum domain name length is 255 bytes
 	if len(name) > 255 {
@@ -959,8 +1166,8 @@ func isValidDNSName(name []byte) bool {
 	}
 
 	// Validate individual label lengths (max 63 bytes per label)
-	labels := strings.Split(string(name), ".")
-	for _, label := range labels {
+	labels := strings.SplitSeq(string(name), ".")
+	for label := range labels {
 		if len(label) > 63 {
 			return false
 		}

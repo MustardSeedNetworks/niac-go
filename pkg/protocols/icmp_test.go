@@ -10,7 +10,7 @@ import (
 	"github.com/krisarmstrong/niac-go/pkg/logging"
 )
 
-// TestNewICMPHandler verifies ICMP handler creation
+// TestNewICMPHandler verifies ICMP handler creation.
 func TestNewICMPHandler(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -19,12 +19,13 @@ func TestNewICMPHandler(t *testing.T) {
 	if handler == nil {
 		t.Fatal("Expected ICMP handler, got nil")
 	}
+
 	if handler.stack != stack {
 		t.Error("Stack not set correctly")
 	}
 }
 
-// TestHandleICMPEchoRequest verifies ICMP echo request handling
+// TestHandleICMPEchoRequest verifies ICMP echo request handling.
 func TestHandleICMPEchoRequest(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -88,6 +89,7 @@ func TestHandleICMPEchoRequest(t *testing.T) {
 	// Handle the packet
 	devices := []*config.Device{device}
 	initialSerial := stack.serialNumber
+
 	handler.HandlePacket(pkt, ipLayer, devices)
 
 	// Verify reply was sent (serial number incremented)
@@ -102,7 +104,7 @@ func TestHandleICMPEchoRequest(t *testing.T) {
 	}
 }
 
-// TestHandleICMPEchoRequest_NoMatchingDevice verifies handling when IP doesn't match
+// TestHandleICMPEchoRequest_NoMatchingDevice verifies handling when IP doesn't match.
 func TestHandleICMPEchoRequest_NoMatchingDevice(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -164,7 +166,7 @@ func TestHandleICMPEchoRequest_NoMatchingDevice(t *testing.T) {
 	}
 }
 
-// TestSendEchoReply verifies ICMP echo reply sending
+// TestSendEchoReply verifies ICMP echo reply sending.
 func TestSendEchoReply(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -184,7 +186,6 @@ func TestSendEchoReply(t *testing.T) {
 	payload := []byte("test payload")
 
 	err := handler.sendEchoReply(srcMAC, dstMAC, srcIP, dstIP, id, seq, payload, device)
-
 	if err != nil {
 		t.Errorf("sendEchoReply failed: %v", err)
 	}
@@ -195,7 +196,7 @@ func TestSendEchoReply(t *testing.T) {
 	}
 }
 
-// TestSendEchoReply_CustomTTL verifies ICMP reply with custom TTL
+// TestSendEchoReply_CustomTTL verifies ICMP reply with custom TTL.
 func TestSendEchoReply_CustomTTL(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -218,13 +219,12 @@ func TestSendEchoReply_CustomTTL(t *testing.T) {
 	payload := []byte("test")
 
 	err := handler.sendEchoReply(srcMAC, dstMAC, srcIP, dstIP, id, seq, payload, device)
-
 	if err != nil {
 		t.Errorf("sendEchoReply with custom TTL failed: %v", err)
 	}
 }
 
-// TestSendICMPUnreachable verifies ICMP destination unreachable message
+// TestSendICMPUnreachable verifies ICMP destination unreachable message.
 func TestSendICMPUnreachable(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -238,7 +238,6 @@ func TestSendICMPUnreachable(t *testing.T) {
 	originalPacket := make([]byte, 100)
 
 	err := handler.SendICMPUnreachable(srcIP, dstIP, srcMAC, dstMAC, code, originalPacket)
-
 	if err != nil {
 		t.Errorf("SendICMPUnreachable failed: %v", err)
 	}
@@ -249,7 +248,7 @@ func TestSendICMPUnreachable(t *testing.T) {
 	}
 }
 
-// TestSendICMPUnreachable_LargeOriginalPacket verifies payload truncation
+// TestSendICMPUnreachable_LargeOriginalPacket verifies payload truncation.
 func TestSendICMPUnreachable_LargeOriginalPacket(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -263,13 +262,12 @@ func TestSendICMPUnreachable_LargeOriginalPacket(t *testing.T) {
 	originalPacket := make([]byte, 200) // Large packet
 
 	err := handler.SendICMPUnreachable(srcIP, dstIP, srcMAC, dstMAC, code, originalPacket)
-
 	if err != nil {
 		t.Errorf("SendICMPUnreachable with large packet failed: %v", err)
 	}
 }
 
-// TestHandleICMPOtherTypes verifies handling of non-echo-request ICMP types
+// TestHandleICMPOtherTypes verifies handling of non-echo-request ICMP types.
 func TestHandleICMPOtherTypes(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -332,7 +330,7 @@ func TestHandleICMPOtherTypes(t *testing.T) {
 
 // Benchmarks
 
-// BenchmarkHandleICMPEchoRequest benchmarks ICMP echo request handling
+// BenchmarkHandleICMPEchoRequest benchmarks ICMP echo request handling.
 func BenchmarkHandleICMPEchoRequest(b *testing.B) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -373,7 +371,7 @@ func BenchmarkHandleICMPEchoRequest(b *testing.B) {
 		ComputeChecksums: true,
 	}
 
-	gopacket.SerializeLayers(buffer, opts, eth, ipLayer, icmpLayer, gopacket.Payload([]byte("test")))
+	_ = gopacket.SerializeLayers(buffer, opts, eth, ipLayer, icmpLayer, gopacket.Payload([]byte("test")))
 
 	pkt := &Packet{
 		Buffer:       buffer.Bytes(),
@@ -383,13 +381,12 @@ func BenchmarkHandleICMPEchoRequest(b *testing.B) {
 
 	devices := []*config.Device{device}
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		handler.HandlePacket(pkt, ipLayer, devices)
 	}
 }
 
-// BenchmarkSendEchoReply benchmarks ICMP echo reply sending
+// BenchmarkSendEchoReply benchmarks ICMP echo reply sending.
 func BenchmarkSendEchoReply(b *testing.B) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -408,8 +405,7 @@ func BenchmarkSendEchoReply(b *testing.B) {
 	seq := uint16(1)
 	payload := []byte("test payload")
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		handler.sendEchoReply(srcMAC, dstMAC, srcIP, dstIP, id, seq, payload, device)
+	for b.Loop() {
+		_ = handler.sendEchoReply(srcMAC, dstMAC, srcIP, dstIP, id, seq, payload, device)
 	}
 }

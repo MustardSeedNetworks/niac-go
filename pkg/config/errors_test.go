@@ -70,18 +70,23 @@ func TestConfigError_Format(t *testing.T) {
 	if !strings.Contains(formatted, "✗") {
 		t.Error("Formatted error should contain error icon")
 	}
+
 	if !strings.Contains(formatted, "config.yaml:45:12") {
 		t.Error("Formatted error should contain file location")
 	}
+
 	if !strings.Contains(formatted, "Invalid value for 'threshold'") {
 		t.Error("Formatted error should contain message")
 	}
+
 	if !strings.Contains(formatted, "Expected: integer (0-100)") {
 		t.Error("Formatted error should contain expected value")
 	}
+
 	if !strings.Contains(formatted, "Got: string 'ninety'") {
 		t.Error("Formatted error should contain actual value")
 	}
+
 	if !strings.Contains(formatted, "💡 Suggestion") {
 		t.Error("Formatted error should contain suggestion")
 	}
@@ -101,6 +106,7 @@ func TestConfigErrorList_Add(t *testing.T) {
 	if list.Valid {
 		t.Error("Valid should be false after adding error")
 	}
+
 	if len(list.Errors) != 1 {
 		t.Errorf("Errors length = %d, want 1", len(list.Errors))
 	}
@@ -130,11 +136,13 @@ func TestConfigErrorList_HasErrors(t *testing.T) {
 	}
 
 	list.Add(&ConfigError{Severity: SeverityWarning, Message: "warning"})
+
 	if list.HasErrors() {
 		t.Error("HasErrors() should be false for warnings only")
 	}
 
 	list.Add(&ConfigError{Severity: SeverityError, Message: "error"})
+
 	if !list.HasErrors() {
 		t.Error("HasErrors() should be true after adding error")
 	}
@@ -148,6 +156,7 @@ func TestConfigErrorList_HasWarnings(t *testing.T) {
 	}
 
 	list.Add(&ConfigError{Severity: SeverityWarning, Message: "warning"})
+
 	if !list.HasWarnings() {
 		t.Error("HasWarnings() should be true after adding warning")
 	}
@@ -179,9 +188,11 @@ func TestConfigErrorList_ToJSON(t *testing.T) {
 	if parsed.File != "config.yaml" {
 		t.Errorf("Parsed file = %q, want %q", parsed.File, "config.yaml")
 	}
+
 	if len(parsed.Errors) != 1 {
 		t.Errorf("Parsed errors length = %d, want 1", len(parsed.Errors))
 	}
+
 	if parsed.Valid {
 		t.Error("Parsed valid should be false")
 	}
@@ -193,12 +204,15 @@ func TestNewConfigError(t *testing.T) {
 	if err.File != "config.yaml" {
 		t.Errorf("File = %q, want %q", err.File, "config.yaml")
 	}
+
 	if err.Field != "threshold" {
 		t.Errorf("Field = %q, want %q", err.Field, "threshold")
 	}
+
 	if err.Message != "invalid value" {
 		t.Errorf("Message = %q, want %q", err.Message, "invalid value")
 	}
+
 	if err.Severity != SeverityError {
 		t.Errorf("Severity = %q, want %q", err.Severity, SeverityError)
 	}
@@ -230,9 +244,11 @@ func TestConfigErrorList_Format(t *testing.T) {
 	if !strings.Contains(formatted, "✗ Configuration errors found") {
 		t.Error("Should contain error header")
 	}
+
 	if !strings.Contains(formatted, "⚠ Configuration warnings") {
 		t.Error("Should contain warning header")
 	}
+
 	if !strings.Contains(formatted, "Summary: 1 error(s), 1 warning(s)") {
 		t.Error("Should contain summary")
 	}

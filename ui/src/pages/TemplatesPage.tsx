@@ -1,26 +1,12 @@
-import { type FC, useState, useMemo, useCallback } from 'react';
-import { Search, Upload, X, FileCode, AlertCircle } from 'lucide-react';
-import {
-  Card,
-  CardContent,
-  Button,
-  H2,
-  P,
-  SmallText,
-  Tag,
-  InputModal,
-} from '../ui';
-import { useApiResource } from '../hooks/useApiResource';
-import {
-  fetchTemplates,
-  fetchTemplateContent,
-  applyTemplate,
-  uploadTemplate,
-} from '../api/client';
-import type { Template, TemplateContent } from '../api/types';
-import { TemplateCard } from '../components/TemplateCard';
-import { TemplatePreviewModal } from '../components/TemplatePreviewModal';
-import { getErrorMessage } from '../utils';
+import { AlertCircle, FileCode, Search, Upload, X } from "lucide-react";
+import { type FC, useCallback, useMemo, useState } from "react";
+import { applyTemplate, fetchTemplateContent, fetchTemplates, uploadTemplate } from "../api/client";
+import type { Template, TemplateContent } from "../api/types";
+import { TemplateCard } from "../components/TemplateCard";
+import { TemplatePreviewModal } from "../components/TemplatePreviewModal";
+import { useApiResource } from "../hooks/useApiResource";
+import { Button, Card, CardContent, H2, InputModal, P, SmallText, Tag } from "../ui";
+import { getErrorMessage } from "../utils";
 
 export const TemplatesPage: FC = () => {
   const {
@@ -30,13 +16,13 @@ export const TemplatesPage: FC = () => {
     refetch: refetchTemplates,
   } = useApiResource(fetchTemplates, [], { intervalMs: 30000 });
 
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const [templateContent, setTemplateContent] = useState<TemplateContent | null>(null);
   const [contentLoading, setContentLoading] = useState(false);
   const [contentError, setContentError] = useState<Error | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [showUseTemplateModal, setShowUseTemplateModal] = useState<Template | null>(null);
 
   // Filter templates based on search query
@@ -50,7 +36,7 @@ export const TemplatesPage: FC = () => {
         template.name.toLowerCase().includes(query) ||
         template.description?.toLowerCase().includes(query) ||
         template.type.toLowerCase().includes(query) ||
-        template.tags?.some((tag) => tag.toLowerCase().includes(query))
+        template.tags?.some((tag) => tag.toLowerCase().includes(query)),
     );
   }, [templates, searchQuery]);
 
@@ -58,7 +44,7 @@ export const TemplatesPage: FC = () => {
   const templatesByType = useMemo(() => {
     const grouped: Record<string, Template[]> = {};
     for (const template of filteredTemplates) {
-      const type = template.type || 'custom';
+      const type = template.type || "custom";
       if (!grouped[type]) {
         grouped[type] = [];
       }
@@ -90,33 +76,36 @@ export const TemplatesPage: FC = () => {
   }, []);
 
   // Handle confirming the use template action
-  const handleConfirmUseTemplate = useCallback(async (configName: string) => {
-    if (!showUseTemplateModal) return;
+  const handleConfirmUseTemplate = useCallback(
+    async (configName: string) => {
+      if (!showUseTemplateModal) return;
 
-    const template = showUseTemplateModal;
-    setShowUseTemplateModal(null);
-    setMessage(null);
+      const template = showUseTemplateModal;
+      setShowUseTemplateModal(null);
+      setMessage(null);
 
-    try {
-      const response = await applyTemplate({
-        template_name: template.name,
-        new_config_name: configName || undefined,
-      });
+      try {
+        const response = await applyTemplate({
+          template_name: template.name,
+          new_config_name: configName || undefined,
+        });
 
-      setMessage({
-        type: 'success',
-        text: response.message || `Configuration created at ${response.config_path}`,
-      });
+        setMessage({
+          type: "success",
+          text: response.message || `Configuration created at ${response.config_path}`,
+        });
 
-      // Close the preview modal if open
-      setSelectedTemplate(null);
-    } catch (err) {
-      setMessage({
-        type: 'error',
-        text: getErrorMessage(err) || 'Failed to create configuration from template',
-      });
-    }
-  }, [showUseTemplateModal]);
+        // Close the preview modal if open
+        setSelectedTemplate(null);
+      } catch (err) {
+        setMessage({
+          type: "error",
+          text: getErrorMessage(err) || "Failed to create configuration from template",
+        });
+      }
+    },
+    [showUseTemplateModal],
+  );
 
   // Handle closing the preview modal
   const handleClosePreview = useCallback(() => {
@@ -131,16 +120,16 @@ export const TemplatesPage: FC = () => {
 
     try {
       await navigator.clipboard.writeText(templateContent.content);
-      setMessage({ type: 'success', text: 'Template content copied to clipboard' });
+      setMessage({ type: "success", text: "Template content copied to clipboard" });
     } catch {
       // Fallback for older browsers
-      const textarea = document.createElement('textarea');
+      const textarea = document.createElement("textarea");
       textarea.value = templateContent.content;
       document.body.appendChild(textarea);
       textarea.select();
-      document.execCommand('copy');
+      document.execCommand("copy");
       document.body.removeChild(textarea);
-      setMessage({ type: 'success', text: 'Template content copied to clipboard' });
+      setMessage({ type: "success", text: "Template content copied to clipboard" });
     }
   }, [templateContent]);
 
@@ -180,7 +169,7 @@ export const TemplatesPage: FC = () => {
             />
             {searchQuery && (
               <button
-                onClick={() => setSearchQuery('')}
+                onClick={() => setSearchQuery("")}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
                 aria-label="Clear search"
               >
@@ -193,13 +182,13 @@ export const TemplatesPage: FC = () => {
           {message && (
             <div
               className={`flex items-center gap-2 rounded-lg p-3 ${
-                message.type === 'success'
-                  ? 'border border-green-500/30 bg-green-500/10 text-green-300'
-                  : 'border border-red-500/30 bg-red-500/10 text-red-300'
+                message.type === "success"
+                  ? "border border-green-500/30 bg-green-500/10 text-green-300"
+                  : "border border-red-500/30 bg-red-500/10 text-red-300"
               }`}
               role="alert"
             >
-              {message.type === 'error' && <AlertCircle className="h-4 w-4" />}
+              {message.type === "error" && <AlertCircle className="h-4 w-4" />}
               <span>{message.text}</span>
               <button
                 onClick={() => setMessage(null)}
@@ -278,7 +267,7 @@ export const TemplatesPage: FC = () => {
             <P className="text-gray-400">
               No templates match your search &quot;{searchQuery}&quot;. Try a different search term.
             </P>
-            <Button variant="outline" className="mt-4" onClick={() => setSearchQuery('')}>
+            <Button variant="outline" className="mt-4" onClick={() => setSearchQuery("")}>
               Clear Search
             </Button>
           </CardContent>
@@ -329,10 +318,10 @@ export const TemplatesPage: FC = () => {
           onSuccess={() => {
             setShowUploadModal(false);
             refetchTemplates();
-            setMessage({ type: 'success', text: 'Template uploaded successfully' });
+            setMessage({ type: "success", text: "Template uploaded successfully" });
           }}
           onError={(error) => {
-            setMessage({ type: 'error', text: error.message });
+            setMessage({ type: "error", text: error.message });
           }}
         />
       )}
@@ -345,7 +334,7 @@ export const TemplatesPage: FC = () => {
         title="Create Configuration"
         message="Enter a name for the new configuration (or leave blank for default):"
         placeholder="e.g., my-config"
-        defaultValue={showUseTemplateModal ? `${showUseTemplateModal.name}-config` : ''}
+        defaultValue={showUseTemplateModal ? `${showUseTemplateModal.name}-config` : ""}
         submitLabel="Create"
         submitTone="violet"
       />
@@ -361,10 +350,10 @@ interface UploadTemplateModalProps {
 }
 
 const UploadTemplateModal: FC<UploadTemplateModalProps> = ({ onClose, onSuccess, onError }) => {
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [content, setContent] = useState('');
-  const [type, setType] = useState<Template['type']>('custom');
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [content, setContent] = useState("");
+  const [type, setType] = useState<Template["type"]>("custom");
   const [uploading, setUploading] = useState(false);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
 
@@ -375,15 +364,15 @@ const UploadTemplateModal: FC<UploadTemplateModalProps> = ({ onClose, onSuccess,
     }
 
     // Validate file size (1MB limit for templates)
-    const MAX_SIZE = 1024 * 1024;
-    if (file.size > MAX_SIZE) {
-      onError(new Error('File too large. Maximum size is 1MB'));
+    const MaxSize = 1024 * 1024;
+    if (file.size > MaxSize) {
+      onError(new Error("File too large. Maximum size is 1MB"));
       return;
     }
 
     // Validate file type
     if (!file.name.match(/\.(yaml|yml)$/i)) {
-      onError(new Error('Please select a YAML file (.yaml or .yml)'));
+      onError(new Error("Please select a YAML file (.yaml or .yml)"));
       return;
     }
 
@@ -396,16 +385,16 @@ const UploadTemplateModal: FC<UploadTemplateModalProps> = ({ onClose, onSuccess,
 
       // Auto-fill name from filename if empty
       if (!name) {
-        setName(file.name.replace(/\.(yaml|yml)$/i, ''));
+        setName(file.name.replace(/\.(yaml|yml)$/i, ""));
       }
     } catch {
-      onError(new Error('Failed to read file'));
+      onError(new Error("Failed to read file"));
     }
   };
 
   const handleSubmit = async () => {
     if (!name.trim() || !content.trim()) {
-      onError(new Error('Name and content are required'));
+      onError(new Error("Name and content are required"));
       return;
     }
 
@@ -448,9 +437,7 @@ const UploadTemplateModal: FC<UploadTemplateModalProps> = ({ onClose, onSuccess,
               <h2 id="upload-modal-title" className="text-lg font-semibold text-white">
                 Upload Template
               </h2>
-              <SmallText className="text-gray-400">
-                Add a new configuration template
-              </SmallText>
+              <SmallText className="text-gray-400">Add a new configuration template</SmallText>
             </div>
           </div>
           <button
@@ -466,9 +453,7 @@ const UploadTemplateModal: FC<UploadTemplateModalProps> = ({ onClose, onSuccess,
         <div className="space-y-4 p-6">
           {/* File upload */}
           <div>
-            <label className="mb-2 block text-sm font-medium text-gray-300">
-              Upload YAML File
-            </label>
+            <label className="mb-2 block text-sm font-medium text-gray-300">Upload YAML File</label>
             <input
               type="file"
               accept=".yaml,.yml"
@@ -476,9 +461,7 @@ const UploadTemplateModal: FC<UploadTemplateModalProps> = ({ onClose, onSuccess,
               className="w-full cursor-pointer rounded-lg border border-dashed border-white/20 bg-gray-950/40 p-3 text-sm text-white file:mr-3 file:rounded-md file:border-0 file:bg-violet-600 file:px-3 file:py-1 file:text-sm file:font-medium"
             />
             {uploadFile && (
-              <SmallText className="mt-1 text-green-400">
-                Selected: {uploadFile.name}
-              </SmallText>
+              <SmallText className="mt-1 text-green-400">Selected: {uploadFile.name}</SmallText>
             )}
           </div>
 
@@ -499,7 +482,10 @@ const UploadTemplateModal: FC<UploadTemplateModalProps> = ({ onClose, onSuccess,
 
           {/* Description input */}
           <div>
-            <label htmlFor="template-description" className="mb-2 block text-sm font-medium text-gray-300">
+            <label
+              htmlFor="template-description"
+              className="mb-2 block text-sm font-medium text-gray-300"
+            >
               Description
             </label>
             <textarea
@@ -520,7 +506,7 @@ const UploadTemplateModal: FC<UploadTemplateModalProps> = ({ onClose, onSuccess,
             <select
               id="template-type"
               value={type}
-              onChange={(e) => setType(e.target.value as Template['type'])}
+              onChange={(e) => setType(e.target.value as Template["type"])}
               className="w-full rounded-lg border border-white/10 bg-gray-950/60 p-3 text-sm text-white focus:border-violet-400 focus:outline-none"
             >
               <option value="basic">Basic Network</option>
@@ -535,7 +521,10 @@ const UploadTemplateModal: FC<UploadTemplateModalProps> = ({ onClose, onSuccess,
 
           {/* Content textarea */}
           <div>
-            <label htmlFor="template-content" className="mb-2 block text-sm font-medium text-gray-300">
+            <label
+              htmlFor="template-content"
+              className="mb-2 block text-sm font-medium text-gray-300"
+            >
               YAML Content *
             </label>
             <textarea
@@ -560,7 +549,7 @@ const UploadTemplateModal: FC<UploadTemplateModalProps> = ({ onClose, onSuccess,
             onClick={handleSubmit}
             disabled={uploading || !name.trim() || !content.trim()}
           >
-            {uploading ? 'Uploading...' : 'Upload Template'}
+            {uploading ? "Uploading..." : "Upload Template"}
           </Button>
         </div>
       </div>

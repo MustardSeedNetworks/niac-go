@@ -1,13 +1,7 @@
-import { type FC, type ReactNode, createElement, useState, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import type { LucideIcon } from 'lucide-react';
-import {
-  Menu,
-  X,
-  ChevronLeft,
-  ChevronRight,
-  Network,
-} from 'lucide-react';
+import type { LucideIcon } from "lucide-react";
+import { ChevronLeft, ChevronRight, Menu, Network, X } from "lucide-react";
+import { createElement, type FC, type ReactNode, useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 
 export interface SidebarNavItem {
   path: string;
@@ -28,14 +22,14 @@ interface SidebarProps {
 }
 
 // Store collapsed state in localStorage
-const STORAGE_KEY = 'niac-sidebar-collapsed';
+const STORAGE_KEY = "niac-sidebar-collapsed";
 
 export const SidebarLayout: FC<SidebarProps> = ({ groups, version, children }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
-    return stored === 'true';
+    return stored === "true";
   });
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -47,11 +41,10 @@ export const SidebarLayout: FC<SidebarProps> = ({ groups, version, children }) =
   // Close mobile menu on navigation
   useEffect(() => {
     setMobileOpen(false);
-  }, [location.pathname]);
+  }, []);
 
   const isActive = (path: string) =>
-    location.pathname === path ||
-    (path !== '/' && location.pathname.startsWith(path));
+    location.pathname === path || (path !== "/" && location.pathname.startsWith(path));
 
   const renderNavItem = (item: SidebarNavItem) => {
     const active = isActive(item.path);
@@ -62,27 +55,30 @@ export const SidebarLayout: FC<SidebarProps> = ({ groups, version, children }) =
         className={`
           group flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium
           transition-all duration-200
-          ${active
-            ? 'bg-gradient-to-r from-violet-600/30 to-violet-500/20 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]'
-            : 'text-gray-400 hover:text-white hover:bg-white/5'
+          ${
+            active
+              ? "bg-gradient-to-r from-violet-600/30 to-violet-500/20 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]"
+              : "text-gray-400 hover:text-white hover:bg-white/5"
           }
         `}
         title={collapsed ? item.label : undefined}
       >
         {createElement(item.icon, {
-          className: `h-5 w-5 flex-shrink-0 ${active ? 'text-violet-400' : 'text-gray-500 group-hover:text-gray-300'}`,
+          className: `h-5 w-5 flex-shrink-0 ${active ? "text-violet-400" : "text-gray-500 group-hover:text-gray-300"}`,
         })}
         {!collapsed && (
           <>
             <span className="flex-1 text-left truncate">{item.label}</span>
             {item.badge && (
-              <span className={`px-1.5 py-0.5 text-xs rounded font-medium ${
-                item.badge === 'New'
-                  ? 'bg-emerald-500/20 text-emerald-300'
-                  : item.badge === 'Beta'
-                  ? 'bg-amber-500/20 text-amber-300'
-                  : 'bg-violet-500/20 text-violet-300'
-              }`}>
+              <span
+                className={`px-1.5 py-0.5 text-xs rounded font-medium ${
+                  item.badge === "New"
+                    ? "bg-emerald-500/20 text-emerald-300"
+                    : item.badge === "Beta"
+                      ? "bg-amber-500/20 text-amber-300"
+                      : "bg-violet-500/20 text-violet-300"
+                }`}
+              >
                 {item.badge}
               </span>
             )}
@@ -100,8 +96,10 @@ export const SidebarLayout: FC<SidebarProps> = ({ groups, version, children }) =
   const sidebarContent = (
     <>
       {/* Logo */}
-      <div className={`flex items-center ${collapsed ? 'justify-center' : 'justify-between'} px-3 py-4 border-b border-white/10`}>
-        <div className={`flex items-center gap-2 ${collapsed ? 'justify-center' : ''}`}>
+      <div
+        className={`flex items-center ${collapsed ? "justify-center" : "justify-between"} px-3 py-4 border-b border-white/10`}
+      >
+        <div className={`flex items-center gap-2 ${collapsed ? "justify-center" : ""}`}>
           <div className="relative flex-shrink-0">
             <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-violet-500 to-violet-700 flex items-center justify-center shadow-lg shadow-violet-500/30">
               <Network className="h-5 w-5 text-white" />
@@ -133,19 +131,19 @@ export const SidebarLayout: FC<SidebarProps> = ({ groups, version, children }) =
               </h3>
             )}
             {collapsed && <div className="h-px bg-white/10 mx-2 mb-2" />}
-            <div className="space-y-1">
-              {group.items.map(renderNavItem)}
-            </div>
+            <div className="space-y-1">{group.items.map(renderNavItem)}</div>
           </div>
         ))}
       </nav>
 
       {/* Footer */}
-      <div className={`px-3 py-4 border-t border-white/10 ${collapsed ? 'text-center' : ''}`}>
+      <div className={`px-3 py-4 border-t border-white/10 ${collapsed ? "text-center" : ""}`}>
         {version && (
-          <div className={`text-xs font-mono text-gray-500 ${collapsed ? '' : 'flex items-center justify-between'}`}>
+          <div
+            className={`text-xs font-mono text-gray-500 ${collapsed ? "" : "flex items-center justify-between"}`}
+          >
             {!collapsed && <span>Version</span>}
-            <span className={collapsed ? '' : 'text-gray-400'}>{version}</span>
+            <span className={collapsed ? "" : "text-gray-400"}>{version}</span>
           </div>
         )}
         {collapsed && (
@@ -174,7 +172,7 @@ export const SidebarLayout: FC<SidebarProps> = ({ groups, version, children }) =
         <button
           onClick={() => setMobileOpen(!mobileOpen)}
           className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
-          aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
+          aria-label={mobileOpen ? "Close menu" : "Open menu"}
         >
           {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
@@ -193,12 +191,10 @@ export const SidebarLayout: FC<SidebarProps> = ({ groups, version, children }) =
         className={`
           lg:hidden fixed top-0 left-0 z-50 h-full w-72 bg-gray-900/95 backdrop-blur-xl border-r border-white/10
           transform transition-transform duration-300 ease-in-out
-          ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}
+          ${mobileOpen ? "translate-x-0" : "-translate-x-full"}
         `}
       >
-        <div className="flex flex-col h-full">
-          {sidebarContent}
-        </div>
+        <div className="flex flex-col h-full">{sidebarContent}</div>
       </aside>
 
       {/* Desktop sidebar */}
@@ -207,7 +203,7 @@ export const SidebarLayout: FC<SidebarProps> = ({ groups, version, children }) =
           hidden lg:flex fixed top-0 left-0 z-40 h-full flex-col
           bg-gray-900/80 backdrop-blur-xl border-r border-white/10
           transition-all duration-300 ease-in-out
-          ${collapsed ? 'w-16' : 'w-64'}
+          ${collapsed ? "w-16" : "w-64"}
         `}
       >
         {sidebarContent}
@@ -218,12 +214,10 @@ export const SidebarLayout: FC<SidebarProps> = ({ groups, version, children }) =
         className={`
           transition-all duration-300 ease-in-out
           pt-16 lg:pt-0
-          ${collapsed ? 'lg:pl-16' : 'lg:pl-64'}
+          ${collapsed ? "lg:pl-16" : "lg:pl-64"}
         `}
       >
-        <div className="p-4 sm:p-6 lg:p-8">
-          {children}
-        </div>
+        <div className="p-4 sm:p-6 lg:p-8">{children}</div>
       </main>
     </div>
   );

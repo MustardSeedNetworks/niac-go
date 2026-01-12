@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-// ValidationIssue represents a single issue found in a walk file
+// ValidationIssue represents a single issue found in a walk file.
 type ValidationIssue struct {
 	Line       int    `json:"line"`
 	Severity   string `json:"severity"` // "error", "warning", "info"
@@ -20,23 +20,23 @@ type ValidationIssue struct {
 	AutoFix    bool   `json:"auto_fix"` // Whether this can be auto-fixed
 }
 
-// ValidationResult contains the results of validating a walk file
+// ValidationResult contains the results of validating a walk file.
 type ValidationResult struct {
-	Filename    string            `json:"filename"`
-	Valid       bool              `json:"valid"`
-	TotalLines  int               `json:"total_lines"`
-	ValidLines  int               `json:"valid_lines"`
-	Issues      []ValidationIssue `json:"issues"`
-	FixedCount  int               `json:"fixed_count,omitempty"`
-	FixedLines  []int             `json:"fixed_lines,omitempty"`
+	Filename   string            `json:"filename"`
+	Valid      bool              `json:"valid"`
+	TotalLines int               `json:"total_lines"`
+	ValidLines int               `json:"valid_lines"`
+	Issues     []ValidationIssue `json:"issues"`
+	FixedCount int               `json:"fixed_count,omitempty"`
+	FixedLines []int             `json:"fixed_lines,omitempty"`
 }
 
-// ValidateWalkFile validates a walk file and returns detailed results
+// ValidateWalkFile validates a walk file and returns detailed results.
 func ValidateWalkFile(filename string) (*ValidationResult, error) {
 	// Security: validate path
 	cleanPath := filepath.Clean(filename)
 	if strings.Contains(cleanPath, "..") {
-		return nil, fmt.Errorf("invalid walk file path: directory traversal not allowed")
+		return nil, ErrDirectoryTraversal
 	}
 
 	absPath, err := filepath.Abs(cleanPath)
@@ -46,22 +46,23 @@ func ValidateWalkFile(filename string) (*ValidationResult, error) {
 
 	fileInfo, err := os.Lstat(absPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to access walk file: %v", err)
+		return nil, fmt.Errorf("%w: %w", ErrFailedToAccessWalkFile, err)
 	}
 
 	if fileInfo.Mode()&os.ModeSymlink != 0 {
-		return nil, fmt.Errorf("walk file cannot be a symbolic link")
+		return nil, ErrWalkFileSymlink
 	}
 
 	if fileInfo.IsDir() {
-		return nil, fmt.Errorf("walk file path is a directory, not a file")
+		return nil, ErrWalkFileIsDirectory
 	}
 
 	file, err := os.Open(absPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open walk file: %v", err)
+		return nil, fmt.Errorf("%w: %w", ErrFailedToOpenWalkFile, err)
 	}
-	defer file.Close()
+
+	defer func() { _ = file.Close() }()
 
 	result := &ValidationResult{
 		Filename: filename,
@@ -82,6 +83,7 @@ func ValidateWalkFile(filename string) (*ValidationResult, error) {
 		// Skip empty lines and comments
 		if trimmedLine == "" || strings.HasPrefix(trimmedLine, "#") {
 			result.ValidLines++
+
 			continue
 		}
 
@@ -101,15 +103,16 @@ func ValidateWalkFile(filename string) (*ValidationResult, error) {
 	}
 
 	if err := scanner.Err(); err != nil {
-		return nil, fmt.Errorf("error reading walk file: %v", err)
+		return nil, fmt.Errorf("%w: %w", ErrReadingWalkFile, err)
 	}
 
 	return result, nil
 }
 
-// validateWalkLine validates a single line and returns any issues found
+// validateWalkLine validates a single line and returns any issues found.
 func validateWalkLine(lineNum int, line string) []ValidationIssue {
 	var issues []ValidationIssue
+
 	trimmedLine := strings.TrimSpace(line)
 
 	// Check for leading/trailing whitespace
@@ -133,6 +136,7 @@ func validateWalkLine(lineNum int, line string) []ValidationIssue {
 			Original: trimmedLine,
 			AutoFix:  false,
 		})
+
 		return issues
 	}
 
@@ -153,6 +157,7 @@ func validateWalkLine(lineNum int, line string) []ValidationIssue {
 			Original: trimmedLine,
 			AutoFix:  false,
 		})
+
 		return issues
 	}
 
@@ -171,7 +176,7 @@ func validateWalkLine(lineNum int, line string) []ValidationIssue {
 	return issues
 }
 
-// validateOID checks if the OID is valid
+// validateOID checks if the OID is valid.
 func validateOID(lineNum int, oid, originalLine string) []ValidationIssue {
 	var issues []ValidationIssue
 
@@ -184,6 +189,7 @@ func validateOID(lineNum int, oid, originalLine string) []ValidationIssue {
 			Original: originalLine,
 			AutoFix:  false,
 		})
+
 		return issues
 	}
 
@@ -232,7 +238,7 @@ func validateOID(lineNum int, oid, originalLine string) []ValidationIssue {
 	return issues
 }
 
-// validateType checks if the type is valid and properly formatted
+// validateType checks if the type is valid and properly formatted.
 func validateType(lineNum int, typeStr, _ /*valueStr*/, originalLine string) []ValidationIssue {
 	var issues []ValidationIssue
 
@@ -246,18 +252,18 @@ func validateType(lineNum int, typeStr, _ /*valueStr*/, originalLine string) []V
 		"COUNTER": true, "COUNTER32": true,
 		"COUNTER64": true,
 		"TIMETICKS": true,
-		"OID": true, "OBJECT IDENTIFIER": true,
+		"OID":       true, "OBJECT IDENTIFIER": true,
 		"IPADDRESS": true, "IP ADDRESS": true, "IPADDR": true,
 		"BITS":       true,
 		"HEX-STRING": true, "HEX": true,
 		"OPAQUE": true,
 		"NULL":   true,
 		// Also allow "No Such Object", "No Such Instance", etc.
-		"NO SUCH OBJECT AT THIS OID":   true,
-		"NO SUCH INSTANCE EXISTS":      true,
-		"NO SUCH OBJECT":               true,
-		"NO SUCH INSTANCE":             true,
-		"ENDOFMIBVIEW":                 true,
+		"NO SUCH OBJECT AT THIS OID": true,
+		"NO SUCH INSTANCE EXISTS":    true,
+		"NO SUCH OBJECT":             true,
+		"NO SUCH INSTANCE":           true,
+		"ENDOFMIBVIEW":               true,
 	}
 
 	if !validTypes[upperType] {
@@ -274,24 +280,28 @@ func validateType(lineNum int, typeStr, _ /*valueStr*/, originalLine string) []V
 		} else {
 			// Check for common misspellings
 			corrections := map[string]string{
-				"STRNG":     "STRING",
-				"STRIGN":    "STRING",
-				"INTGER":    "INTEGER",
-				"INTEGR":    "INTEGER",
-				"GUAGE":     "GAUGE",
-				"GUAGE32":   "GAUGE32",
-				"CONTER":    "COUNTER",
-				"CONTER32":  "COUNTER32",
-				"TIMTICKS":  "TIMETICKS",
-				"TIMETICK":  "TIMETICKS",
-				"IPADRESS":  "IPADDRESS",
-				"IPADDRES":  "IPADDRESS",
+				"STRNG":    "STRING",
+				"STRIGN":   "STRING",
+				"INTGER":   "INTEGER",
+				"INTEGR":   "INTEGER",
+				"GAUGE":    "GAUGE",
+				"GUAGE32":  "GAUGE32",
+				"CONTER":   "COUNTER",
+				"CONTER32": "COUNTER32",
+				"TIMTICKS": "TIMETICKS",
+				"TIMETICK": "TIMETICKS",
+				"IPADRESS": "IPADDRESS",
+				"IPADDRES": "IPADDRESS",
 			}
 			if correction, ok := corrections[upperType]; ok {
 				issues = append(issues, ValidationIssue{
-					Line:       lineNum,
-					Severity:   "warning",
-					Message:    fmt.Sprintf("Type '%s' appears to be misspelled, did you mean '%s'?", typeStr, correction),
+					Line:     lineNum,
+					Severity: "warning",
+					Message: fmt.Sprintf(
+						"Type '%s' appears to be misspelled, did you mean '%s'?",
+						typeStr,
+						correction,
+					),
 					Original:   originalLine,
 					Suggestion: strings.Replace(originalLine, typeStr+":", correction+":", 1),
 					AutoFix:    true,
@@ -311,9 +321,10 @@ func validateType(lineNum int, typeStr, _ /*valueStr*/, originalLine string) []V
 	return issues
 }
 
-// validateValue checks if the value is valid for the given type
+// validateValue checks if the value is valid for the given type.
 func validateValue(lineNum int, typeStr, valueStr, originalLine string) []ValidationIssue {
 	var issues []ValidationIssue
+
 	upperType := strings.ToUpper(typeStr)
 
 	switch upperType {
@@ -321,7 +332,8 @@ func validateValue(lineNum int, typeStr, valueStr, originalLine string) []Valida
 		// Strings should ideally be quoted
 		if valueStr != "" && !strings.HasPrefix(valueStr, "\"") {
 			// Check if it looks like it should be quoted
-			if !strings.HasPrefix(valueStr, "0x") && !strings.HasPrefix(valueStr, "varimib") && !strings.HasPrefix(valueStr, "fixed") {
+			if !strings.HasPrefix(valueStr, "0x") && !strings.HasPrefix(valueStr, "varimib") &&
+				!strings.HasPrefix(valueStr, "fixed") {
 				issues = append(issues, ValidationIssue{
 					Line:       lineNum,
 					Severity:   "info",
@@ -357,7 +369,7 @@ func validateValue(lineNum int, typeStr, valueStr, originalLine string) []Valida
 			issues = append(issues, ValidationIssue{
 				Line:     lineNum,
 				Severity: "error",
-				Message:  fmt.Sprintf("%s value is empty", upperType),
+				Message:  upperType + " value is empty",
 				Original: originalLine,
 				AutoFix:  false,
 			})
@@ -434,7 +446,7 @@ func validateValue(lineNum int, typeStr, valueStr, originalLine string) []Valida
 }
 
 // AutoFixWalkFile attempts to fix common issues in a walk file
-// Returns the path to the fixed file and a list of fixes applied
+// Returns the path to the fixed file and a list of fixes applied.
 func AutoFixWalkFile(filename string, outputPath string) (*ValidationResult, error) {
 	// First validate to get list of issues
 	validation, err := ValidateWalkFile(filename)
@@ -444,6 +456,7 @@ func AutoFixWalkFile(filename string, outputPath string) (*ValidationResult, err
 
 	// Read the file
 	cleanPath := filepath.Clean(filename)
+
 	absPath, err := filepath.Abs(cleanPath)
 	if err != nil {
 		return nil, fmt.Errorf("invalid walk file path: %w", err)
@@ -451,7 +464,7 @@ func AutoFixWalkFile(filename string, outputPath string) (*ValidationResult, err
 
 	content, err := os.ReadFile(absPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read walk file: %v", err)
+		return nil, fmt.Errorf("%w: %w", ErrFailedToReadWalkFile, err)
 	}
 
 	lines := strings.Split(string(content), "\n")
@@ -459,6 +472,7 @@ func AutoFixWalkFile(filename string, outputPath string) (*ValidationResult, err
 
 	// Build map of line -> suggested fix
 	lineFixes := make(map[int]string)
+
 	for _, issue := range validation.Issues {
 		if issue.AutoFix && issue.Suggestion != "" {
 			lineFixes[issue.Line] = issue.Suggestion
@@ -467,6 +481,7 @@ func AutoFixWalkFile(filename string, outputPath string) (*ValidationResult, err
 
 	// Apply fixes
 	var fixedContent []string
+
 	for i, line := range lines {
 		lineNum := i + 1
 		if fix, ok := lineFixes[lineNum]; ok {
@@ -481,15 +496,17 @@ func AutoFixWalkFile(filename string, outputPath string) (*ValidationResult, err
 	if outputPath == "" {
 		// Create backup and overwrite original
 		backupPath := absPath + ".bak"
-		if err := os.WriteFile(backupPath, content, 0644); err != nil {
-			return nil, fmt.Errorf("failed to create backup: %v", err)
+		err := os.WriteFile(backupPath, content, 0o600)
+		if err != nil {
+			return nil, fmt.Errorf("%w: %w", ErrFailedToCreateBackup, err)
 		}
+
 		outputPath = absPath
 	}
 
 	// Write fixed content
-	if err := os.WriteFile(outputPath, []byte(strings.Join(fixedContent, "\n")), 0644); err != nil {
-		return nil, fmt.Errorf("failed to write fixed file: %v", err)
+	if err := os.WriteFile(outputPath, []byte(strings.Join(fixedContent, "\n")), 0o600); err != nil {
+		return nil, fmt.Errorf("%w: %w", ErrFailedToWriteFixedFile, err)
 	}
 
 	// Build list of fixed line numbers
@@ -504,7 +521,7 @@ func AutoFixWalkFile(filename string, outputPath string) (*ValidationResult, err
 	return validation, nil
 }
 
-// ValidateAndSummarize provides a summary of walk file validation
+// ValidateAndSummarize provides a summary of walk file validation.
 func ValidateAndSummarize(filename string) (string, error) {
 	result, err := ValidateWalkFile(filename)
 	if err != nil {
@@ -512,6 +529,7 @@ func ValidateAndSummarize(filename string) (string, error) {
 	}
 
 	var sb strings.Builder
+
 	fmt.Fprintf(&sb, "Walk File Validation: %s\n", filename)
 	sb.WriteString(strings.Repeat("=", 60) + "\n")
 	fmt.Fprintf(&sb, "Total Lines: %d\n", result.TotalLines)
@@ -542,11 +560,13 @@ func ValidateAndSummarize(filename string) (string, error) {
 			case "info":
 				infoCount++
 			}
+
 			if issue.AutoFix {
 				autoFixable++
 			}
 
 			fmt.Fprintf(&sb, "Line %d [%s]: %s\n", issue.Line, strings.ToUpper(issue.Severity), issue.Message)
+
 			if issue.Suggestion != "" {
 				fmt.Fprintf(&sb, "  Suggestion: %s\n", issue.Suggestion)
 			}

@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/csv"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -16,7 +18,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// OutputFormat represents the output format type for monitor command
+// OutputFormat represents the output format type for monitor command.
 type OutputFormat string
 
 const (
@@ -25,7 +27,7 @@ const (
 	FormatCSV   OutputFormat = "csv"
 )
 
-// monitorStats holds the statistics for a single monitoring sample
+// monitorStats holds the statistics for a single monitoring sample.
 type monitorStats struct {
 	Time      time.Time `json:"time"`
 	PacketsRX uint64    `json:"packets_rx"`
@@ -103,7 +105,7 @@ func runMonitor(cmd *cobra.Command, args []string) error {
 	}
 
 	if interval < 100*time.Millisecond {
-		return fmt.Errorf("interval must be at least 100ms")
+		return errors.New("interval must be at least 100ms")
 	}
 
 	// Validate format
@@ -154,7 +156,7 @@ func runMonitor(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// runTableMonitor displays statistics in a continuously-updated table format
+// runTableMonitor displays statistics in a continuously-updated table format.
 func runTableMonitor(ctx context.Context, client *ipc.Client, interval time.Duration) error {
 	var prevStats *monitorStats
 	ticker := time.NewTicker(interval)
@@ -191,7 +193,7 @@ func runTableMonitor(ctx context.Context, client *ipc.Client, interval time.Dura
 	}
 }
 
-// runJSONMonitor outputs statistics as JSON Lines (one JSON object per line)
+// runJSONMonitor outputs statistics as JSON Lines (one JSON object per line).
 func runJSONMonitor(ctx context.Context, client *ipc.Client, interval time.Duration) error {
 	var prevStats *monitorStats
 	ticker := time.NewTicker(interval)
@@ -213,7 +215,7 @@ func runJSONMonitor(ctx context.Context, client *ipc.Client, interval time.Durat
 			stats, err := fetchStats(client, prevStats, interval)
 			if err != nil {
 				// Output error as JSON
-				errObj := map[string]interface{}{
+				errObj := map[string]any{
 					"error": err.Error(),
 					"time":  time.Now().Format(time.RFC3339),
 				}
@@ -227,7 +229,7 @@ func runJSONMonitor(ctx context.Context, client *ipc.Client, interval time.Durat
 	}
 }
 
-// runCSVMonitor outputs statistics as CSV
+// runCSVMonitor outputs statistics as CSV.
 func runCSVMonitor(ctx context.Context, client *ipc.Client, interval time.Duration) error {
 	var prevStats *monitorStats
 	ticker := time.NewTicker(interval)
@@ -237,7 +239,19 @@ func runCSVMonitor(ctx context.Context, client *ipc.Client, interval time.Durati
 	defer writer.Flush()
 
 	// Write header
-	header := []string{"time", "packets_rx", "packets_tx", "arp", "icmp", "dns", "dhcp", "snmp", "errors", "rate_rx", "rate_tx"}
+	header := []string{
+		"time",
+		"packets_rx",
+		"packets_tx",
+		"arp",
+		"icmp",
+		"dns",
+		"dhcp",
+		"snmp",
+		"errors",
+		"rate_rx",
+		"rate_tx",
+	}
 	if err := writer.Write(header); err != nil {
 		return fmt.Errorf("failed to write CSV header: %w", err)
 	}
@@ -267,11 +281,11 @@ func runCSVMonitor(ctx context.Context, client *ipc.Client, interval time.Durati
 	}
 }
 
-// fetchStats fetches current statistics from the IPC server and calculates rates
+// fetchStats fetches current statistics from the IPC server and calculates rates.
 func fetchStats(client *ipc.Client, prev *monitorStats, interval time.Duration) (*monitorStats, error) {
 	status, err := client.GetStatus()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get status: %w", err)
 	}
 
 	stats := &monitorStats{
@@ -298,12 +312,12 @@ func fetchStats(client *ipc.Client, prev *monitorStats, interval time.Duration) 
 	return stats, nil
 }
 
-// clearScreen clears the terminal screen and moves cursor to top-left
+// clearScreen clears the terminal screen and moves cursor to top-left.
 func clearScreen() {
 	fmt.Print("\033[2J\033[H")
 }
 
-// printTableHeader prints the table header
+// printTableHeader prints the table header.
 func printTableHeader() {
 	fmt.Println("NIAC Monitor - Press Ctrl+C to stop")
 	fmt.Println(strings.Repeat("-", 80))
@@ -312,7 +326,7 @@ func printTableHeader() {
 	fmt.Println(strings.Repeat("-", 80))
 }
 
-// printTableRow prints a single statistics row
+// printTableRow prints a single statistics row.
 func printTableRow(stats *monitorStats) {
 	uptime := formatMonitorDuration(time.Duration(stats.Uptime) * time.Second)
 
@@ -327,7 +341,7 @@ func printTableRow(stats *monitorStats) {
 	)
 }
 
-// outputMonitorJSON outputs a single stats object as JSON
+// outputMonitorJSON outputs a single stats object as JSON.
 func outputMonitorJSON(stats *monitorStats) {
 	jsonBytes, err := json.Marshal(stats)
 	if err != nil {
@@ -337,32 +351,32 @@ func outputMonitorJSON(stats *monitorStats) {
 	fmt.Println(string(jsonBytes))
 }
 
-// outputCSVRow writes a single CSV row
+// outputCSVRow writes a single CSV row.
 func outputCSVRow(writer *csv.Writer, stats *monitorStats) {
 	row := []string{
 		stats.Time.Format(time.RFC3339),
-		fmt.Sprintf("%d", stats.PacketsRX),
-		fmt.Sprintf("%d", stats.PacketsTX),
-		fmt.Sprintf("%d", stats.ARP),
-		fmt.Sprintf("%d", stats.ICMP),
-		fmt.Sprintf("%d", stats.DNS),
-		fmt.Sprintf("%d", stats.DHCP),
-		fmt.Sprintf("%d", stats.SNMP),
-		fmt.Sprintf("%d", stats.Errors),
+		strconv.FormatUint(stats.PacketsRX, 10),
+		strconv.FormatUint(stats.PacketsTX, 10),
+		strconv.FormatUint(stats.ARP, 10),
+		strconv.FormatUint(stats.ICMP, 10),
+		strconv.FormatUint(stats.DNS, 10),
+		strconv.FormatUint(stats.DHCP, 10),
+		strconv.FormatUint(stats.SNMP, 10),
+		strconv.FormatUint(stats.Errors, 10),
 		fmt.Sprintf("%.2f", stats.RateRX),
 		fmt.Sprintf("%.2f", stats.RateTX),
 	}
-	writer.Write(row)
+	_ = writer.Write(row)
 	writer.Flush()
 }
 
-// formatMonitorNumber formats a number with thousands separators
+// formatMonitorNumber formats a number with thousands separators.
 func formatMonitorNumber(n uint64) string {
 	if n < 1000 {
-		return fmt.Sprintf("%d", n)
+		return strconv.FormatUint(n, 10)
 	}
 
-	str := fmt.Sprintf("%d", n)
+	str := strconv.FormatUint(n, 10)
 	var result strings.Builder
 	length := len(str)
 
@@ -376,7 +390,7 @@ func formatMonitorNumber(n uint64) string {
 	return result.String()
 }
 
-// formatMonitorDuration formats a duration as HH:MM:SS for monitor display
+// formatMonitorDuration formats a duration as HH:MM:SS for monitor display.
 func formatMonitorDuration(d time.Duration) string {
 	d = d.Round(time.Second)
 	h := d / time.Hour

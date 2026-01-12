@@ -10,7 +10,7 @@ import (
 	"github.com/krisarmstrong/niac-go/pkg/logging"
 )
 
-// BenchmarkARPRequestHandling benchmarks processing ARP requests
+// BenchmarkARPRequestHandling benchmarks processing ARP requests.
 func BenchmarkARPRequestHandling(b *testing.B) {
 	cfg := &config.Config{}
 	debugConfig := logging.NewDebugConfig(0)
@@ -52,7 +52,7 @@ func BenchmarkARPRequestHandling(b *testing.B) {
 
 	buffer := gopacket.NewSerializeBuffer()
 	opts := gopacket.SerializeOptions{FixLengths: true, ComputeChecksums: true}
-	gopacket.SerializeLayers(buffer, opts, eth, arp)
+	_ = gopacket.SerializeLayers(buffer, opts, eth, arp)
 
 	pkt := &Packet{
 		Buffer:       buffer.Bytes(),
@@ -61,14 +61,13 @@ func BenchmarkARPRequestHandling(b *testing.B) {
 	}
 
 	b.ReportAllocs()
-	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		handler.HandlePacket(pkt)
 	}
 }
 
-// BenchmarkARPReplyGeneration benchmarks generating ARP reply packets
+// BenchmarkARPReplyGeneration benchmarks generating ARP reply packets.
 func BenchmarkARPReplyGeneration(b *testing.B) {
 	cfg := &config.Config{}
 	debugConfig := logging.NewDebugConfig(0)
@@ -81,14 +80,13 @@ func BenchmarkARPReplyGeneration(b *testing.B) {
 	targetIP := net.ParseIP("192.168.1.100")
 
 	b.ReportAllocs()
-	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = handler.buildARPReply(senderMAC, senderIP, targetMAC, targetIP)
 	}
 }
 
-// BenchmarkARPGratuitous benchmarks sending gratuitous ARP announcements
+// BenchmarkARPGratuitous benchmarks sending gratuitous ARP announcements.
 func BenchmarkARPGratuitous(b *testing.B) {
 	cfg := &config.Config{}
 	debugConfig := logging.NewDebugConfig(0)
@@ -104,14 +102,13 @@ func BenchmarkARPGratuitous(b *testing.B) {
 	}
 
 	b.ReportAllocs()
-	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = handler.SendGratuitousARP(device)
 	}
 }
 
-// BenchmarkLLDPPacketGeneration benchmarks generating LLDP advertisement packets
+// BenchmarkLLDPPacketGeneration benchmarks generating LLDP advertisement packets.
 func BenchmarkLLDPPacketGeneration(b *testing.B) {
 	cfg := &config.Config{}
 	debugConfig := logging.NewDebugConfig(0)
@@ -136,14 +133,13 @@ func BenchmarkLLDPPacketGeneration(b *testing.B) {
 	}
 
 	b.ReportAllocs()
-	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = handler.buildLLDPFrame(device)
 	}
 }
 
-// BenchmarkLLDPChassisIDTLV benchmarks building LLDP Chassis ID TLV
+// BenchmarkLLDPChassisIDTLV benchmarks building LLDP Chassis ID TLV.
 func BenchmarkLLDPChassisIDTLV(b *testing.B) {
 	cfg := &config.Config{}
 	debugConfig := logging.NewDebugConfig(0)
@@ -160,14 +156,13 @@ func BenchmarkLLDPChassisIDTLV(b *testing.B) {
 	}
 
 	b.ReportAllocs()
-	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = handler.buildChassisIDTLV(device)
 	}
 }
 
-// BenchmarkLLDPManagementAddressTLV benchmarks building LLDP Management Address TLV
+// BenchmarkLLDPManagementAddressTLV benchmarks building LLDP Management Address TLV.
 func BenchmarkLLDPManagementAddressTLV(b *testing.B) {
 	cfg := &config.Config{}
 	debugConfig := logging.NewDebugConfig(0)
@@ -183,14 +178,13 @@ func BenchmarkLLDPManagementAddressTLV(b *testing.B) {
 	}
 
 	b.ReportAllocs()
-	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = handler.buildManagementAddressTLV(device)
 	}
 }
 
-// BenchmarkDHCPDiscover benchmarks processing DHCP DISCOVER messages
+// BenchmarkDHCPDiscover benchmarks processing DHCP DISCOVER messages.
 func BenchmarkDHCPDiscover(b *testing.B) {
 	cfg := &config.Config{}
 	debugConfig := logging.NewDebugConfig(0)
@@ -251,8 +245,9 @@ func BenchmarkDHCPDiscover(b *testing.B) {
 
 	buffer := gopacket.NewSerializeBuffer()
 	opts := gopacket.SerializeOptions{FixLengths: true, ComputeChecksums: true}
-	udp.SetNetworkLayerForChecksum(ip)
-	gopacket.SerializeLayers(buffer, opts, eth, ip, udp, dhcp)
+
+	_ = udp.SetNetworkLayerForChecksum(ip)
+	_ = gopacket.SerializeLayers(buffer, opts, eth, ip, udp, dhcp)
 
 	pkt := &Packet{
 		Buffer:       buffer.Bytes(),
@@ -261,14 +256,13 @@ func BenchmarkDHCPDiscover(b *testing.B) {
 	}
 
 	b.ReportAllocs()
-	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		handler.HandlePacket(pkt, ip, udp, devices)
 	}
 }
 
-// BenchmarkDHCPOfferGeneration benchmarks generating DHCP OFFER messages
+// BenchmarkDHCPOfferGeneration benchmarks generating DHCP OFFER messages.
 func BenchmarkDHCPOfferGeneration(b *testing.B) {
 	cfg := &config.Config{}
 	debugConfig := logging.NewDebugConfig(0)
@@ -285,14 +279,13 @@ func BenchmarkDHCPOfferGeneration(b *testing.B) {
 	serverMAC, _ := net.ParseMAC("00:11:22:33:44:55")
 
 	b.ReportAllocs()
-	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = handler.SendDHCPOffer(0x12345678, clientMAC, offeredIP, serverIP, serverMAC)
 	}
 }
 
-// BenchmarkDHCPAckGeneration benchmarks generating DHCP ACK messages
+// BenchmarkDHCPAckGeneration benchmarks generating DHCP ACK messages.
 func BenchmarkDHCPAckGeneration(b *testing.B) {
 	cfg := &config.Config{}
 	debugConfig := logging.NewDebugConfig(0)
@@ -309,14 +302,13 @@ func BenchmarkDHCPAckGeneration(b *testing.B) {
 	serverMAC, _ := net.ParseMAC("00:11:22:33:44:55")
 
 	b.ReportAllocs()
-	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = handler.SendDHCPAck(0x12345678, clientMAC, assignedIP, serverIP, serverMAC)
 	}
 }
 
-// BenchmarkDHCPLeaseAllocation benchmarks allocating DHCP leases
+// BenchmarkDHCPLeaseAllocation benchmarks allocating DHCP leases.
 func BenchmarkDHCPLeaseAllocation(b *testing.B) {
 	cfg := &config.Config{}
 	debugConfig := logging.NewDebugConfig(0)
@@ -327,14 +319,13 @@ func BenchmarkDHCPLeaseAllocation(b *testing.B) {
 	clientMAC, _ := net.ParseMAC("aa:bb:cc:dd:ee:ff")
 
 	b.ReportAllocs()
-	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_, _ = handler.allocateLease(clientMAC, nil, "test-host")
 	}
 }
 
-// BenchmarkDHCPFullCycle benchmarks complete DHCP DISCOVER->OFFER->REQUEST->ACK cycle
+// BenchmarkDHCPFullCycle benchmarks complete DHCP DISCOVER->OFFER->REQUEST->ACK cycle.
 func BenchmarkDHCPFullCycle(b *testing.B) {
 	cfg := &config.Config{}
 	debugConfig := logging.NewDebugConfig(0)
@@ -352,7 +343,7 @@ func BenchmarkDHCPFullCycle(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for i := range b.N {
 		// Generate unique client MAC for each iteration
 		clientMAC, _ := net.ParseMAC("aa:bb:cc:dd:ee:ff")
 		clientMAC[5] = byte(i % 256)
@@ -368,7 +359,7 @@ func BenchmarkDHCPFullCycle(b *testing.B) {
 	}
 }
 
-// BenchmarkICMPEchoRequest benchmarks processing ICMP echo requests
+// BenchmarkICMPEchoRequest benchmarks processing ICMP echo requests.
 func BenchmarkICMPEchoRequest(b *testing.B) {
 	cfg := &config.Config{}
 	debugConfig := logging.NewDebugConfig(0)
@@ -425,24 +416,22 @@ func BenchmarkICMPEchoRequest(b *testing.B) {
 	}
 
 	b.ReportAllocs()
-	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		handler.HandlePacket(pkt, ipLayer, devices)
 	}
 }
 
 // BenchmarkSNMPGetRequest benchmarks processing SNMP GET requests (simulated)
-// Note: This benchmarks the packet parsing overhead, not the full SNMP agent
+// Note: This benchmarks the packet parsing overhead, not the full SNMP agent.
 func BenchmarkSNMPGetRequest(b *testing.B) {
 	// Simulates SNMP GET request processing overhead
 	oid := "1.3.6.1.2.1.1.1.0" // sysDescr
 	community := "public"
 
 	b.ReportAllocs()
-	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		// Simulate OID lookup
 		_ = oid
 		_ = community
@@ -450,40 +439,38 @@ func BenchmarkSNMPGetRequest(b *testing.B) {
 	}
 }
 
-// BenchmarkSNMPGetNextRequest benchmarks processing SNMP GET-NEXT requests (simulated)
+// BenchmarkSNMPGetNextRequest benchmarks processing SNMP GET-NEXT requests (simulated).
 func BenchmarkSNMPGetNextRequest(b *testing.B) {
 	oid := "1.3.6.1.2.1.1.1"
 	community := "public"
 
 	b.ReportAllocs()
-	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		// Simulate finding next OID
 		_ = oid
 		_ = community
 	}
 }
 
-// BenchmarkSNMPGetBulkRequest benchmarks processing SNMP GET-BULK requests (simulated)
+// BenchmarkSNMPGetBulkRequest benchmarks processing SNMP GET-BULK requests (simulated).
 func BenchmarkSNMPGetBulkRequest(b *testing.B) {
 	oid := "1.3.6.1.2.1.2.2.1"
 	community := "public"
 	maxRepetitions := 10
 
 	b.ReportAllocs()
-	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		// Simulate bulk retrieval
-		for j := 0; j < maxRepetitions; j++ {
+		for range maxRepetitions {
 			_ = oid
 			_ = community
 		}
 	}
 }
 
-// BenchmarkDNSQueryProcessing benchmarks processing DNS queries
+// BenchmarkDNSQueryProcessing benchmarks processing DNS queries.
 func BenchmarkDNSQueryProcessing(b *testing.B) {
 	// Configure DNS records
 	device := &config.Device{
@@ -496,9 +483,8 @@ func BenchmarkDNSQueryProcessing(b *testing.B) {
 	}
 
 	b.ReportAllocs()
-	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		// Simulate DNS query lookup
 		for _, record := range device.DNSConfig.ForwardRecords {
 			_ = record.Name
@@ -507,16 +493,15 @@ func BenchmarkDNSQueryProcessing(b *testing.B) {
 	}
 }
 
-// BenchmarkNetBIOSNameQuery benchmarks processing NetBIOS name queries
+// BenchmarkNetBIOSNameQuery benchmarks processing NetBIOS name queries.
 func BenchmarkNetBIOSNameQuery(b *testing.B) {
 	// Simulate NetBIOS name query processing
 	netbiosName := "TESTDEVICE"
 	workgroup := "WORKGROUP"
 
 	b.ReportAllocs()
-	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		// Simulate name lookup
 		_ = netbiosName
 		_ = workgroup

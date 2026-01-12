@@ -6,10 +6,10 @@ import (
 	"sync"
 )
 
-// ErrorType represents types of errors that can be injected
+// ErrorType represents types of errors that can be injected.
 type ErrorType string
 
-// Available error types for injection
+// Available error types for injection.
 const (
 	ErrorTypeFCS         ErrorType = "FCS Errors"       // Frame Check Sequence errors
 	ErrorTypeDiscards    ErrorType = "Packet Discards"  // Packet drop errors
@@ -20,7 +20,7 @@ const (
 	ErrorTypeDisk        ErrorType = "High Disk"        // Disk usage
 )
 
-// AllErrorTypes returns all available error types
+// AllErrorTypes returns all available error types.
 func AllErrorTypes() []ErrorType {
 	return []ErrorType{
 		ErrorTypeFCS,
@@ -33,13 +33,13 @@ func AllErrorTypes() []ErrorType {
 	}
 }
 
-// InterfaceConfig represents interface configuration
+// InterfaceConfig represents interface configuration.
 type InterfaceConfig struct {
 	Speed  int    // Mbps
 	Duplex string // "full" or "half"
 }
 
-// ErrorState represents the current error injection state for a device
+// ErrorState represents the current error injection state for a device.
 type ErrorState struct {
 	DeviceIP  string
 	Interface string
@@ -49,20 +49,20 @@ type ErrorState struct {
 	Enabled   bool
 }
 
-// StateManager manages error injection state (thread-safe)
+// StateManager manages error injection state (thread-safe).
 type StateManager struct {
 	mu     sync.RWMutex
 	states map[string]*ErrorState // key: deviceIP:interface
 }
 
-// NewStateManager creates a new state manager
+// NewStateManager creates a new state manager.
 func NewStateManager() *StateManager {
 	return &StateManager{
 		states: make(map[string]*ErrorState),
 	}
 }
 
-// SetError sets error injection for a device interface
+// SetError sets error injection for a device interface.
 func (sm *StateManager) SetError(deviceIP, iface string, errorType ErrorType, value int) {
 	sm.mu.Lock()
 	defer sm.mu.Unlock()
@@ -87,7 +87,7 @@ func (sm *StateManager) SetError(deviceIP, iface string, errorType ErrorType, va
 	state.Enabled = value > 0
 }
 
-// GetError retrieves error state for a device interface
+// GetError retrieves error state for a device interface.
 func (sm *StateManager) GetError(deviceIP, iface string) *ErrorState {
 	sm.mu.RLock()
 	defer sm.mu.RUnlock()
@@ -96,13 +96,14 @@ func (sm *StateManager) GetError(deviceIP, iface string) *ErrorState {
 	if state, exists := sm.states[key]; exists {
 		// Return a copy to avoid race conditions
 		stateCopy := *state
+
 		return &stateCopy
 	}
 
 	return nil
 }
 
-// ClearError clears error injection for a device interface
+// ClearError clears error injection for a device interface.
 func (sm *StateManager) ClearError(deviceIP, iface string) {
 	sm.mu.Lock()
 	defer sm.mu.Unlock()
@@ -114,7 +115,7 @@ func (sm *StateManager) ClearError(deviceIP, iface string) {
 	}
 }
 
-// ClearAll clears all error injections
+// ClearAll clears all error injections.
 func (sm *StateManager) ClearAll() {
 	sm.mu.Lock()
 	defer sm.mu.Unlock()
@@ -125,7 +126,7 @@ func (sm *StateManager) ClearAll() {
 	}
 }
 
-// GetAllStates returns all current error states
+// GetAllStates returns all current error states.
 func (sm *StateManager) GetAllStates() []*ErrorState {
 	sm.mu.RLock()
 	defer sm.mu.RUnlock()
@@ -141,7 +142,7 @@ func (sm *StateManager) GetAllStates() []*ErrorState {
 	return states
 }
 
-// SetInterfaceConfig sets interface configuration
+// SetInterfaceConfig sets interface configuration.
 func (sm *StateManager) SetInterfaceConfig(deviceIP, iface string, speed int, duplex string) {
 	sm.mu.Lock()
 	defer sm.mu.Unlock()
@@ -161,7 +162,7 @@ func (sm *StateManager) SetInterfaceConfig(deviceIP, iface string, speed int, du
 	state.IfConfig.Duplex = duplex
 }
 
-// GetInterfaceConfig retrieves interface configuration
+// GetInterfaceConfig retrieves interface configuration.
 func (sm *StateManager) GetInterfaceConfig(deviceIP, iface string) InterfaceConfig {
 	sm.mu.RLock()
 	defer sm.mu.RUnlock()
@@ -181,14 +182,14 @@ func (sm *StateManager) makeKey(deviceIP, iface string) string {
 	return fmt.Sprintf("%s:%s", deviceIP, iface)
 }
 
-// ShouldInjectError determines if an error should be injected based on probability
+// ShouldInjectError determines if an error should be injected based on probability.
 func ShouldInjectError(errorRate int) bool {
 	// Simple implementation - can be enhanced with real randomization
 	// For now, inject errors based on a percentage
 	return errorRate > 0 && (errorRate >= 100)
 }
 
-// CalculateErrorValue calculates the error value based on type and rate
+// CalculateErrorValue calculates the error value based on type and rate.
 func CalculateErrorValue(errorType ErrorType, baseValue, errorRate int) int {
 	if errorRate == 0 {
 		return baseValue

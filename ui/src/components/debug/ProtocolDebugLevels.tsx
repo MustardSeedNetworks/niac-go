@@ -1,41 +1,46 @@
-import { memo, useCallback, type FC, type ChangeEvent } from 'react';
-import { RefreshCw, Save, RotateCcw, Settings2 } from 'lucide-react';
-import { Card, CardContent, Button, Tag, H2, SmallText } from '../../ui';
+import { RefreshCw, RotateCcw, Save, Settings2 } from "lucide-react";
+import { type ChangeEvent, type FC, memo, useCallback } from "react";
+import type {
+  DebugLevel,
+  DebugProtocol,
+  ProtocolCategory,
+  ProtocolDebugConfig,
+} from "../../api/types";
 import {
-  useProtocolDebugLevels,
+  CATEGORY_ORDER,
   DEBUG_LEVELS,
   PROTOCOL_CATEGORIES,
-  CATEGORY_ORDER,
-} from '../../hooks/useProtocolDebugLevels';
-import type { DebugLevel, DebugProtocol, ProtocolCategory, ProtocolDebugConfig } from '../../api/types';
+  useProtocolDebugLevels,
+} from "../../hooks/useProtocolDebugLevels";
+import { Button, Card, CardContent, H2, SmallText, Tag } from "../../ui";
 
 // Colors for different debug levels
 const LEVEL_COLORS: Record<DebugLevel, string> = {
-  OFF: 'bg-gray-700',
-  ERROR: 'bg-red-600',
-  WARN: 'bg-yellow-600',
-  INFO: 'bg-blue-600',
-  DEBUG: 'bg-green-600',
-  TRACE: 'bg-purple-600',
+  OFF: "bg-gray-700",
+  ERROR: "bg-red-600",
+  WARN: "bg-yellow-600",
+  INFO: "bg-blue-600",
+  DEBUG: "bg-green-600",
+  TRACE: "bg-purple-600",
 };
 
 // Category colors for visual grouping
 const CATEGORY_COLORS: Record<ProtocolCategory, string> = {
-  discovery: 'border-cyan-500/30',
-  switching: 'border-emerald-500/30',
-  routing: 'border-blue-500/30',
-  redundancy: 'border-orange-500/30',
-  multicast: 'border-purple-500/30',
-  monitoring: 'border-pink-500/30',
+  discovery: "border-cyan-500/30",
+  switching: "border-emerald-500/30",
+  routing: "border-blue-500/30",
+  redundancy: "border-orange-500/30",
+  multicast: "border-purple-500/30",
+  monitoring: "border-pink-500/30",
 };
 
 const CATEGORY_HEADER_COLORS: Record<ProtocolCategory, string> = {
-  discovery: 'text-cyan-400',
-  switching: 'text-emerald-400',
-  routing: 'text-blue-400',
-  redundancy: 'text-orange-400',
-  multicast: 'text-purple-400',
-  monitoring: 'text-pink-400',
+  discovery: "text-cyan-400",
+  switching: "text-emerald-400",
+  routing: "text-blue-400",
+  redundancy: "text-orange-400",
+  multicast: "text-purple-400",
+  monitoring: "text-pink-400",
 };
 
 /**
@@ -50,17 +55,32 @@ interface ProtocolSliderProps {
 const ProtocolSlider: FC<ProtocolSliderProps> = memo(({ config, onChange, disabled }) => {
   const levelIndex = DEBUG_LEVELS.indexOf(config.level);
 
-  const handleChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
-    const newIndex = parseInt(e.target.value, 10);
-    const newLevel = DEBUG_LEVELS[newIndex];
-    onChange(config.protocol, newLevel);
-  }, [config.protocol, onChange]);
+  const handleChange = useCallback(
+    (e: ChangeEvent<HTMLInputElement>) => {
+      const newIndex = parseInt(e.target.value, 10);
+      const newLevel = DEBUG_LEVELS[newIndex];
+      onChange(config.protocol, newLevel);
+    },
+    [config.protocol, onChange],
+  );
 
   return (
     <div className="rounded-lg border border-white/10 bg-gray-950/50 p-4">
       <div className="flex items-center justify-between mb-3">
         <span className="font-semibold text-white">{config.protocol}</span>
-        <Tag colorScheme={config.level === 'OFF' ? 'gray' : config.level === 'ERROR' ? 'red' : config.level === 'WARN' ? 'yellow' : config.level === 'DEBUG' || config.level === 'TRACE' ? 'green' : 'blue'}>
+        <Tag
+          colorScheme={
+            config.level === "OFF"
+              ? "gray"
+              : config.level === "ERROR"
+                ? "red"
+                : config.level === "WARN"
+                  ? "yellow"
+                  : config.level === "DEBUG" || config.level === "TRACE"
+                    ? "green"
+                    : "blue"
+          }
+        >
           {config.level}
         </Tag>
       </div>
@@ -111,7 +131,7 @@ const ProtocolSlider: FC<ProtocolSliderProps> = memo(({ config, onChange, disabl
         {DEBUG_LEVELS.map((level) => (
           <span
             key={level}
-            className={`${levelIndex === DEBUG_LEVELS.indexOf(level) ? 'text-white font-medium' : ''}`}
+            className={`${levelIndex === DEBUG_LEVELS.indexOf(level) ? "text-white font-medium" : ""}`}
           >
             {level.substring(0, 3)}
           </span>
@@ -121,7 +141,7 @@ const ProtocolSlider: FC<ProtocolSliderProps> = memo(({ config, onChange, disabl
   );
 });
 
-ProtocolSlider.displayName = 'ProtocolSlider';
+ProtocolSlider.displayName = "ProtocolSlider";
 
 /**
  * Protocol Category Group Component
@@ -133,29 +153,33 @@ interface CategoryGroupProps {
   disabled?: boolean;
 }
 
-const CategoryGroup: FC<CategoryGroupProps> = memo(({ category, protocols, onLevelChange, disabled }) => {
-  if (protocols.length === 0) return null;
+const CategoryGroup: FC<CategoryGroupProps> = memo(
+  ({ category, protocols, onLevelChange, disabled }) => {
+    if (protocols.length === 0) return null;
 
-  return (
-    <div className={`rounded-xl border ${CATEGORY_COLORS[category]} bg-gray-900/50 p-4`}>
-      <h3 className={`text-sm font-semibold uppercase tracking-wide mb-4 ${CATEGORY_HEADER_COLORS[category]}`}>
-        {PROTOCOL_CATEGORIES[category]}
-      </h3>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {protocols.map((config) => (
-          <ProtocolSlider
-            key={config.protocol}
-            config={config}
-            onChange={onLevelChange}
-            disabled={disabled}
-          />
-        ))}
+    return (
+      <div className={`rounded-xl border ${CATEGORY_COLORS[category]} bg-gray-900/50 p-4`}>
+        <h3
+          className={`text-sm font-semibold uppercase tracking-wide mb-4 ${CATEGORY_HEADER_COLORS[category]}`}
+        >
+          {PROTOCOL_CATEGORIES[category]}
+        </h3>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {protocols.map((config) => (
+            <ProtocolSlider
+              key={config.protocol}
+              config={config}
+              onChange={onLevelChange}
+              disabled={disabled}
+            />
+          ))}
+        </div>
       </div>
-    </div>
-  );
-});
+    );
+  },
+);
 
-CategoryGroup.displayName = 'CategoryGroup';
+CategoryGroup.displayName = "CategoryGroup";
 
 /**
  * Main Protocol Debug Levels Component
@@ -180,13 +204,13 @@ export const ProtocolDebugLevels: FC = () => {
   const protocolsByCategory = getProtocolsByCategory();
 
   const handleReset = useCallback(async () => {
-    if (window.confirm('Reset all protocols to default debug levels? This cannot be undone.')) {
+    if (window.confirm("Reset all protocols to default debug levels? This cannot be undone.")) {
       await resetToDefaults();
     }
   }, [resetToDefaults]);
 
   const handleDiscard = useCallback(() => {
-    if (window.confirm('Discard unsaved changes?')) {
+    if (window.confirm("Discard unsaved changes?")) {
       discardChanges();
     }
   }, [discardChanges]);
@@ -233,7 +257,7 @@ export const ProtocolDebugLevels: FC = () => {
                   leftIcon={<Save className="h-4 w-4" />}
                   aria-label="Save changes"
                 >
-                  {saving ? 'Saving...' : 'Save Changes'}
+                  {saving ? "Saving..." : "Save Changes"}
                 </Button>
               </>
             )}
@@ -252,25 +276,35 @@ export const ProtocolDebugLevels: FC = () => {
 
         {/* Status Messages */}
         {error && (
-          <div className="rounded-lg border border-red-500/30 bg-red-900/20 px-4 py-3 text-sm text-red-300" role="alert">
+          <div
+            className="rounded-lg border border-red-500/30 bg-red-900/20 px-4 py-3 text-sm text-red-300"
+            role="alert"
+          >
             {error}
           </div>
         )}
         {successMessage && (
-          <div className="rounded-lg border border-green-500/30 bg-green-900/20 px-4 py-3 text-sm text-green-300" role="status">
+          <div
+            className="rounded-lg border border-green-500/30 bg-green-900/20 px-4 py-3 text-sm text-green-300"
+            role="status"
+          >
             {successMessage}
           </div>
         )}
         {hasChanges && !error && !successMessage && (
-          <div className="rounded-lg border border-yellow-500/30 bg-yellow-900/20 px-4 py-3 text-sm text-yellow-300" role="status">
+          <div
+            className="rounded-lg border border-yellow-500/30 bg-yellow-900/20 px-4 py-3 text-sm text-yellow-300"
+            role="status"
+          >
             You have unsaved changes
           </div>
         )}
 
         {/* Description */}
         <SmallText className="text-gray-400">
-          Adjust debug output verbosity for each network protocol. Higher levels (DEBUG, TRACE) produce more detailed logs
-          but may impact performance. Changes take effect immediately when saved.
+          Adjust debug output verbosity for each network protocol. Higher levels (DEBUG, TRACE)
+          produce more detailed logs but may impact performance. Changes take effect immediately
+          when saved.
         </SmallText>
 
         {/* Protocol Groups */}
@@ -291,31 +325,45 @@ export const ProtocolDebugLevels: FC = () => {
 
         {/* Legend */}
         <div className="rounded-lg border border-white/10 bg-gray-950/50 p-4">
-          <SmallText className="font-semibold uppercase tracking-wide text-gray-400 mb-3">Level Guide</SmallText>
+          <SmallText className="font-semibold uppercase tracking-wide text-gray-400 mb-3">
+            Level Guide
+          </SmallText>
           <div className="flex flex-wrap gap-4 text-sm">
             <div className="flex items-center gap-2">
               <span className={`h-3 w-3 rounded-full ${LEVEL_COLORS.OFF}`} />
-              <span className="text-gray-300"><strong>OFF</strong> - No output</span>
+              <span className="text-gray-300">
+                <strong>OFF</strong> - No output
+              </span>
             </div>
             <div className="flex items-center gap-2">
               <span className={`h-3 w-3 rounded-full ${LEVEL_COLORS.ERROR}`} />
-              <span className="text-gray-300"><strong>ERROR</strong> - Critical issues only</span>
+              <span className="text-gray-300">
+                <strong>ERROR</strong> - Critical issues only
+              </span>
             </div>
             <div className="flex items-center gap-2">
               <span className={`h-3 w-3 rounded-full ${LEVEL_COLORS.WARN}`} />
-              <span className="text-gray-300"><strong>WARN</strong> - Warnings and errors</span>
+              <span className="text-gray-300">
+                <strong>WARN</strong> - Warnings and errors
+              </span>
             </div>
             <div className="flex items-center gap-2">
               <span className={`h-3 w-3 rounded-full ${LEVEL_COLORS.INFO}`} />
-              <span className="text-gray-300"><strong>INFO</strong> - General information</span>
+              <span className="text-gray-300">
+                <strong>INFO</strong> - General information
+              </span>
             </div>
             <div className="flex items-center gap-2">
               <span className={`h-3 w-3 rounded-full ${LEVEL_COLORS.DEBUG}`} />
-              <span className="text-gray-300"><strong>DEBUG</strong> - Detailed debugging</span>
+              <span className="text-gray-300">
+                <strong>DEBUG</strong> - Detailed debugging
+              </span>
             </div>
             <div className="flex items-center gap-2">
               <span className={`h-3 w-3 rounded-full ${LEVEL_COLORS.TRACE}`} />
-              <span className="text-gray-300"><strong>TRACE</strong> - Full packet traces</span>
+              <span className="text-gray-300">
+                <strong>TRACE</strong> - Full packet traces
+              </span>
             </div>
           </div>
         </div>

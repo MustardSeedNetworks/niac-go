@@ -1,6 +1,6 @@
-import { type FC, memo } from 'react';
-import { Tag, SmallText } from '../ui';
-import type { Packet } from './PacketList';
+import { type FC, memo } from "react";
+import { SmallText, Tag } from "../ui";
+import type { Packet } from "./PacketList";
 
 interface PacketDetailsProps {
   packet: Packet | null;
@@ -21,13 +21,13 @@ function formatBytes(bytes: number): string {
 function formatTimestamp(timestamp: string): string {
   try {
     const date = new Date(timestamp);
-    return date.toLocaleString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
+    return date.toLocaleString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
       fractionalSecondDigits: 3,
       hour12: false,
     });
@@ -39,37 +39,49 @@ function formatTimestamp(timestamp: string): string {
 /**
  * Get protocol color for tag display
  */
-function getProtocolColor(protocol: string): 'blue' | 'green' | 'yellow' | 'purple' | 'gray' | 'red' {
-  const colors: Record<string, 'blue' | 'green' | 'yellow' | 'purple' | 'gray' | 'red'> = {
-    ARP: 'yellow',
-    ICMP: 'blue',
-    DNS: 'green',
-    TCP: 'purple',
-    UDP: 'gray',
-    HTTP: 'blue',
-    HTTPS: 'green',
-    DHCP: 'yellow',
+function getProtocolColor(
+  protocol: string,
+): "blue" | "green" | "yellow" | "purple" | "gray" | "red" {
+  const colors: Record<string, "blue" | "green" | "yellow" | "purple" | "gray" | "red"> = {
+    ARP: "yellow",
+    ICMP: "blue",
+    DNS: "green",
+    TCP: "purple",
+    UDP: "gray",
+    HTTP: "blue",
+    HTTPS: "green",
+    DHCP: "yellow",
   };
-  return colors[protocol.toUpperCase()] || 'gray';
+  return colors[protocol.toUpperCase()] || "gray";
 }
 
 /**
  * Detail row component for consistent styling
  */
-const DetailRow = memo(({ label, value, mono = false }: { label: string; value: string | number | undefined; mono?: boolean }) => {
-  if (value === undefined || value === null || value === '') {
-    return null;
-  }
+const DetailRow = memo(
+  ({
+    label,
+    value,
+    mono = false,
+  }: {
+    label: string;
+    value: string | number | undefined;
+    mono?: boolean;
+  }) => {
+    if (value === undefined || value === null || value === "") {
+      return null;
+    }
 
-  return (
-    <div className="flex items-start gap-2 py-1.5 border-b border-white/5 last:border-0">
-      <SmallText className="text-gray-400 w-24 flex-shrink-0">{label}</SmallText>
-      <span className={`text-sm text-white ${mono ? 'font-mono' : ''}`}>{value}</span>
-    </div>
-  );
-});
+    return (
+      <div className="flex items-start gap-2 py-1.5 border-b border-white/5 last:border-0">
+        <SmallText className="text-gray-400 w-24 flex-shrink-0">{label}</SmallText>
+        <span className={`text-sm text-white ${mono ? "font-mono" : ""}`}>{value}</span>
+      </div>
+    );
+  },
+);
 
-DetailRow.displayName = 'DetailRow';
+DetailRow.displayName = "DetailRow";
 
 /**
  * Headers section for parsed protocol headers
@@ -87,7 +99,7 @@ const HeadersSection = memo(({ headers }: { headers: Record<string, unknown> | u
           <DetailRow
             key={key}
             label={key}
-            value={typeof value === 'object' ? JSON.stringify(value) : String(value)}
+            value={typeof value === "object" ? JSON.stringify(value) : String(value)}
             mono
           />
         ))}
@@ -96,7 +108,7 @@ const HeadersSection = memo(({ headers }: { headers: Record<string, unknown> | u
   );
 });
 
-HeadersSection.displayName = 'HeadersSection';
+HeadersSection.displayName = "HeadersSection";
 
 /**
  * Packet Details Component
@@ -134,33 +146,27 @@ export const PacketDetails: FC<PacketDetailsProps> = memo(({ packet }) => {
         <div className="pt-2">
           <SmallText className="text-gray-500 uppercase text-xs tracking-wide">Source</SmallText>
         </div>
-        <DetailRow
-          label="IP Address"
-          value={packet.sourceIP}
-          mono
-        />
+        <DetailRow label="IP Address" value={packet.sourceIP} mono />
         {packet.sourcePort !== undefined && (
           <DetailRow label="Port" value={packet.sourcePort} mono />
         )}
 
         {/* Destination */}
         <div className="pt-2">
-          <SmallText className="text-gray-500 uppercase text-xs tracking-wide">Destination</SmallText>
+          <SmallText className="text-gray-500 uppercase text-xs tracking-wide">
+            Destination
+          </SmallText>
         </div>
-        <DetailRow
-          label="IP Address"
-          value={packet.destIP}
-          mono
-        />
-        {packet.destPort !== undefined && (
-          <DetailRow label="Port" value={packet.destPort} mono />
-        )}
+        <DetailRow label="IP Address" value={packet.destIP} mono />
+        {packet.destPort !== undefined && <DetailRow label="Port" value={packet.destPort} mono />}
 
         {/* Summary */}
         {packet.summary && (
           <>
             <div className="pt-2">
-              <SmallText className="text-gray-500 uppercase text-xs tracking-wide">Summary</SmallText>
+              <SmallText className="text-gray-500 uppercase text-xs tracking-wide">
+                Summary
+              </SmallText>
             </div>
             <p className="text-sm text-gray-300 py-1.5">{packet.summary}</p>
           </>
@@ -173,4 +179,4 @@ export const PacketDetails: FC<PacketDetailsProps> = memo(({ packet }) => {
   );
 });
 
-PacketDetails.displayName = 'PacketDetails';
+PacketDetails.displayName = "PacketDetails";

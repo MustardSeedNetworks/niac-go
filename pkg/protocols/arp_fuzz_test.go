@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-// FuzzARPPacketParsing tests ARP packet parsing with arbitrary input
+// FuzzARPPacketParsing tests ARP packet parsing with arbitrary input.
 func FuzzARPPacketParsing(f *testing.F) {
 	// Seed with valid MAC and IP addresses
 	f.Add([]byte{0x00, 0x11, 0x22, 0x33, 0x44, 0x55}, []byte{192, 168, 1, 1})
@@ -32,6 +32,7 @@ func FuzzARPPacketParsing(f *testing.F) {
 		// Validate they're reasonable
 		if mac == nil || ip == nil {
 			t.Error("Failed to create MAC or IP")
+
 			return
 		}
 
@@ -41,7 +42,7 @@ func FuzzARPPacketParsing(f *testing.F) {
 	})
 }
 
-// FuzzMACAddressParsing tests MAC address parsing with arbitrary input
+// FuzzMACAddressParsing tests MAC address parsing with arbitrary input.
 func FuzzMACAddressParsing(f *testing.F) {
 	// Seed with various MAC formats
 	f.Add("00:11:22:33:44:55")
@@ -74,7 +75,7 @@ func FuzzMACAddressParsing(f *testing.F) {
 	})
 }
 
-// FuzzIPAddressParsing tests IP address parsing with arbitrary input
+// FuzzIPAddressParsing tests IP address parsing with arbitrary input.
 func FuzzIPAddressParsing(f *testing.F) {
 	// Seed with various IP formats
 	f.Add("192.168.1.1")

@@ -1,14 +1,14 @@
-import { createContext, useContext, useMemo, type ReactNode } from 'react';
-import { useApiResource } from '../hooks/useApiResource';
+import { createContext, type ReactNode, useContext, useMemo } from "react";
 import {
-  fetchStats,
   fetchDevices,
-  fetchHistory,
-  fetchNeighbors,
-  fetchVersion,
   fetchErrorTypes,
+  fetchHistory,
   fetchInterfaces,
-} from '../api/client';
+  fetchNeighbors,
+  fetchStats,
+  fetchVersion,
+} from "../api/client";
+import { useApiResource } from "../hooks/useApiResource";
 
 /**
  * FEATURE #133: Centralized state management using React Context
@@ -19,9 +19,9 @@ import {
 
 // Polling intervals (in milliseconds)
 const POLL_INTERVALS = {
-  FAST: 2000,      // 2s - Real-time simulation status
-  MEDIUM: 5000,    // 5s - Live stats
-  SLOW: 15000,     // 15s - Historical data
+  FAST: 2000, // 2s - Real-time simulation status
+  MEDIUM: 5000, // 5s - Live stats
+  SLOW: 15000, // 15s - Historical data
   VERY_SLOW: 60000, // 1m - Static data like version
 } as const;
 
@@ -60,7 +60,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       interfaces,
       pollIntervals: POLL_INTERVALS,
     }),
-    [stats, devices, history, neighbors, version, errorTypes, interfaces]
+    [stats, devices, history, neighbors, version, errorTypes, interfaces],
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
@@ -74,7 +74,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 export function useAppContext() {
   const context = useContext(AppContext);
   if (!context) {
-    throw new Error('useAppContext must be used within AppProvider');
+    throw new Error("useAppContext must be used within AppProvider");
   }
   return context;
 }
@@ -84,9 +84,7 @@ export function useAppContext() {
  *
  * Prevents components from re-rendering when unrelated state changes.
  */
-export function useAppState<K extends keyof AppContextValue>(
-  key: K
-): AppContextValue[K] {
+export function useAppState<K extends keyof AppContextValue>(key: K): AppContextValue[K] {
   const context = useAppContext();
   return context[key];
 }

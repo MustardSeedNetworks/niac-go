@@ -9,7 +9,7 @@ import (
 	"github.com/krisarmstrong/niac-go/pkg/logging"
 )
 
-// TestNewLLDPHandler tests creating a new LLDP handler
+// TestNewLLDPHandler tests creating a new LLDP handler.
 func TestNewLLDPHandler(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -19,15 +19,17 @@ func TestNewLLDPHandler(t *testing.T) {
 	if handler == nil {
 		t.Fatal("Expected LLDP handler, got nil")
 	}
+
 	if handler.stack != stack {
 		t.Error("Stack not set correctly")
 	}
+
 	if handler.stopChan == nil {
 		t.Error("stopChan not initialized")
 	}
 }
 
-// TestLLDPHandler_Lifecycle tests start and stop
+// TestLLDPHandler_Lifecycle tests start and stop.
 func TestLLDPHandler_Lifecycle(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -50,7 +52,7 @@ func TestLLDPHandler_Lifecycle(t *testing.T) {
 	time.Sleep(50 * time.Millisecond)
 }
 
-// TestBuildChassisIDTLV tests building Chassis ID TLV
+// TestBuildChassisIDTLV tests building Chassis ID TLV.
 func TestBuildChassisIDTLV(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -79,7 +81,7 @@ func TestBuildChassisIDTLV(t *testing.T) {
 	}
 }
 
-// TestBuildChassisIDTLV_WithConfig tests Chassis ID with different config types
+// TestBuildChassisIDTLV_WithConfig tests Chassis ID with different config types.
 func TestBuildChassisIDTLV_WithConfig(t *testing.T) {
 	tests := []struct {
 		name          string
@@ -115,7 +117,7 @@ func TestBuildChassisIDTLV_WithConfig(t *testing.T) {
 	}
 }
 
-// TestBuildPortIDTLV tests building Port ID TLV
+// TestBuildPortIDTLV tests building Port ID TLV.
 func TestBuildPortIDTLV(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -139,7 +141,7 @@ func TestBuildPortIDTLV(t *testing.T) {
 	}
 }
 
-// TestBuildTTLTLV tests building TTL TLV
+// TestBuildTTLTLV tests building TTL TLV.
 func TestBuildTTLTLV(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -168,7 +170,7 @@ func TestBuildTTLTLV(t *testing.T) {
 	}
 }
 
-// TestBuildTTLTLV_CustomTTL tests TTL with custom value
+// TestBuildTTLTLV_CustomTTL tests TTL with custom value.
 func TestBuildTTLTLV_CustomTTL(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -197,7 +199,7 @@ func TestBuildTTLTLV_CustomTTL(t *testing.T) {
 	}
 }
 
-// TestBuildPortDescriptionTLV tests building Port Description TLV
+// TestBuildPortDescriptionTLV tests building Port Description TLV.
 func TestBuildPortDescriptionTLV(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -231,7 +233,7 @@ func TestBuildPortDescriptionTLV(t *testing.T) {
 	}
 }
 
-// TestBuildSystemNameTLV tests building System Name TLV
+// TestBuildSystemNameTLV tests building System Name TLV.
 func TestBuildSystemNameTLV(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -255,7 +257,7 @@ func TestBuildSystemNameTLV(t *testing.T) {
 	}
 }
 
-// TestBuildSystemDescriptionTLV tests building System Description TLV
+// TestBuildSystemDescriptionTLV tests building System Description TLV.
 func TestBuildSystemDescriptionTLV(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -284,7 +286,7 @@ func TestBuildSystemDescriptionTLV(t *testing.T) {
 	}
 }
 
-// TestBuildEndTLV tests building End TLV
+// TestBuildEndTLV tests building End TLV.
 func TestBuildEndTLV(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -309,7 +311,7 @@ func TestBuildEndTLV(t *testing.T) {
 	}
 }
 
-// TestBuildLLDPFrame tests building a complete LLDP frame
+// TestBuildLLDPFrame tests building a complete LLDP frame.
 func TestBuildLLDPFrame(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -345,7 +347,7 @@ func TestBuildLLDPFrame(t *testing.T) {
 	}
 }
 
-// TestBuildLLDPFrame_DisabledDevice tests that disabled LLDP devices don't advertise
+// TestBuildLLDPFrame_DisabledDevice tests that disabled LLDP devices don't advertise.
 func TestBuildLLDPFrame_DisabledDevice(t *testing.T) {
 	cfg := &config.Config{
 		Devices: []config.Device{
@@ -367,18 +369,21 @@ func TestBuildLLDPFrame_DisabledDevice(t *testing.T) {
 	// If this doesn't crash, the test passes
 }
 
-// TestLLDPConstants tests LLDP constant values
+// TestLLDPConstants tests LLDP constant values.
 func TestLLDPConstants(t *testing.T) {
 	// Check TLV type constants
 	if LLDPTLVTypeEnd != 0 {
 		t.Errorf("LLDPTLVTypeEnd should be 0, got %d", LLDPTLVTypeEnd)
 	}
+
 	if LLDPTLVTypeChassisID != 1 {
 		t.Errorf("LLDPTLVTypeChassisID should be 1, got %d", LLDPTLVTypeChassisID)
 	}
+
 	if LLDPTLVTypePortID != 2 {
 		t.Errorf("LLDPTLVTypePortID should be 2, got %d", LLDPTLVTypePortID)
 	}
+
 	if LLDPTLVTypeTTL != 3 {
 		t.Errorf("LLDPTLVTypeTTL should be 3, got %d", LLDPTLVTypeTTL)
 	}
@@ -400,23 +405,26 @@ func TestLLDPConstants(t *testing.T) {
 	}
 }
 
-// TestLLDPCapabilities tests capability constants
+// TestLLDPCapabilities tests capability constants.
 func TestLLDPCapabilities(t *testing.T) {
 	if LLDPCapOther != 1<<0 {
 		t.Errorf("LLDPCapOther should be %d, got %d", 1<<0, LLDPCapOther)
 	}
+
 	if LLDPCapRepeater != 1<<1 {
 		t.Errorf("LLDPCapRepeater should be %d, got %d", 1<<1, LLDPCapRepeater)
 	}
+
 	if LLDPCapBridge != 1<<2 {
 		t.Errorf("LLDPCapBridge should be %d, got %d", 1<<2, LLDPCapBridge)
 	}
+
 	if LLDPCapRouter != 1<<4 {
 		t.Errorf("LLDPCapRouter should be %d, got %d", 1<<4, LLDPCapRouter)
 	}
 }
 
-// BenchmarkBuildLLDPFrame benchmarks LLDP frame construction
+// BenchmarkBuildLLDPFrame benchmarks LLDP frame construction.
 func BenchmarkBuildLLDPFrame(b *testing.B) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -433,13 +441,12 @@ func BenchmarkBuildLLDPFrame(b *testing.B) {
 		},
 	}
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		handler.buildLLDPFrame(device)
 	}
 }
 
-// BenchmarkBuildChassisIDTLV benchmarks Chassis ID TLV construction
+// BenchmarkBuildChassisIDTLV benchmarks Chassis ID TLV construction.
 func BenchmarkBuildChassisIDTLV(b *testing.B) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -450,8 +457,7 @@ func BenchmarkBuildChassisIDTLV(b *testing.B) {
 		MACAddress: net.HardwareAddr{0x00, 0x11, 0x22, 0x33, 0x44, 0x55},
 	}
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		handler.buildChassisIDTLV(device)
 	}
 }

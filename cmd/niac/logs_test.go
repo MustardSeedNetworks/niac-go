@@ -103,14 +103,14 @@ func TestFilterLogs(t *testing.T) {
 
 func TestLogLevelValidation(t *testing.T) {
 	tests := []struct {
-		level   string
-		valid   bool
+		level string
+		valid bool
 	}{
 		{"debug", true},
 		{"info", true},
 		{"warn", true},
 		{"error", true},
-		{"DEBUG", true},   // Should be case-insensitive when lowercased
+		{"DEBUG", true}, // Should be case-insensitive when lowercased
 		{"INFO", true},
 		{"WARN", true},
 		{"ERROR", true},

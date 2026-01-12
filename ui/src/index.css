@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap");
 
 @import "tailwindcss";
 @source "../**/*.{js,ts,jsx,tsx}";
@@ -29,21 +29,21 @@
    * Surface Colors (Dark Theme)
    * Elevated surfaces for visual hierarchy
    * ======================================== */
-  --color-bg-base: #030712;       /* Deepest background */
-  --color-bg-surface: #0f1117;    /* Main surface */
-  --color-bg-elevated: #1a1d25;   /* Cards, modals */
-  --color-bg-overlay: #242731;    /* Dropdowns, tooltips */
-  --color-bg-muted: #2d3139;      /* Inactive states */
+  --color-bg-base: #030712; /* Deepest background */
+  --color-bg-surface: #0f1117; /* Main surface */
+  --color-bg-elevated: #1a1d25; /* Cards, modals */
+  --color-bg-overlay: #242731; /* Dropdowns, tooltips */
+  --color-bg-muted: #2d3139; /* Inactive states */
 
   /* ========================================
    * Text Colors
    * High contrast for accessibility (WCAG AA)
    * ======================================== */
-  --color-text-primary: #f8fafc;   /* Primary text - high contrast */
+  --color-text-primary: #f8fafc; /* Primary text - high contrast */
   --color-text-secondary: #cbd5e1; /* Secondary text */
-  --color-text-muted: #94a3b8;     /* Muted/placeholder text */
-  --color-text-disabled: #64748b;  /* Disabled states */
-  --color-text-inverse: #0f172a;   /* Text on light backgrounds */
+  --color-text-muted: #94a3b8; /* Muted/placeholder text */
+  --color-text-disabled: #64748b; /* Disabled states */
+  --color-text-inverse: #0f172a; /* Text on light backgrounds */
 
   /* ========================================
    * Border Colors
@@ -95,27 +95,27 @@
    * Device Type Colors (Topology)
    * Distinct colors for network device types
    * ======================================== */
-  --color-device-router: #3b82f6;      /* Blue */
-  --color-device-switch: #22c55e;      /* Green */
-  --color-device-firewall: #ef4444;    /* Red */
-  --color-device-server: #f97316;      /* Orange */
+  --color-device-router: #3b82f6; /* Blue */
+  --color-device-switch: #22c55e; /* Green */
+  --color-device-firewall: #ef4444; /* Red */
+  --color-device-server: #f97316; /* Orange */
   --color-device-workstation: #6b7280; /* Gray */
-  --color-device-ap: #a855f7;          /* Purple */
-  --color-device-iot: #14b8a6;         /* Teal */
-  --color-device-unknown: #94a3b8;     /* Slate */
+  --color-device-ap: #a855f7; /* Purple */
+  --color-device-iot: #14b8a6; /* Teal */
+  --color-device-unknown: #94a3b8; /* Slate */
 
   /* ========================================
    * Link Speed Colors (Topology)
    * Color-coded network speeds
    * ======================================== */
-  --color-link-10m: #94a3b8;      /* 10 Mbps - Gray */
-  --color-link-100m: #22c55e;     /* 100 Mbps - Green */
-  --color-link-1g: #3b82f6;       /* 1 Gbps - Blue */
-  --color-link-10g: #a855f7;      /* 10 Gbps - Purple */
-  --color-link-25g: #f97316;      /* 25 Gbps - Orange */
-  --color-link-40g: #ec4899;      /* 40 Gbps - Pink */
-  --color-link-100g: #eab308;     /* 100 Gbps - Yellow */
-  --color-link-trunk: #06b6d4;    /* Trunk/LAG - Cyan */
+  --color-link-10m: #94a3b8; /* 10 Mbps - Gray */
+  --color-link-100m: #22c55e; /* 100 Mbps - Green */
+  --color-link-1g: #3b82f6; /* 1 Gbps - Blue */
+  --color-link-10g: #a855f7; /* 10 Gbps - Purple */
+  --color-link-25g: #f97316; /* 25 Gbps - Orange */
+  --color-link-40g: #ec4899; /* 40 Gbps - Pink */
+  --color-link-100g: #eab308; /* 100 Gbps - Yellow */
+  --color-link-trunk: #06b6d4; /* Trunk/LAG - Cyan */
 
   /* ========================================
    * Protocol Colors
@@ -140,7 +140,7 @@
 body {
   margin: 0;
   min-height: 100vh;
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: "Inter", system-ui, sans-serif;
   background-color: var(--color-bg-base);
   color: var(--color-text-primary);
   -webkit-font-smoothing: antialiased;
@@ -184,7 +184,9 @@ body {
  * ======================================== */
 .focus-ring:focus {
   outline: none;
-  box-shadow: 0 0 0 2px #111827, 0 0 0 4px rgba(139, 92, 246, 0.5);
+  box-shadow:
+    0 0 0 2px #111827,
+    0 0 0 4px rgba(139, 92, 246, 0.5);
 }
 
 .focus-ring-inset:focus {
@@ -227,13 +229,20 @@ body {
 }
 
 .glass-card-hover:hover {
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 20px -5px rgba(139, 92, 246, 0.15);
+  box-shadow:
+    0 25px 50px -12px rgba(0, 0, 0, 0.25),
+    0 0 20px -5px rgba(139, 92, 246, 0.15);
   border-color: var(--color-border-muted);
 }
 
 /* Skeleton loading animation */
 .skeleton {
-  background: linear-gradient(to right, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+  background: linear-gradient(
+    to right,
+    rgba(255, 255, 255, 0.05),
+    rgba(255, 255, 255, 0.1),
+    rgba(255, 255, 255, 0.05)
+  );
   background-size: 200% 100%;
   animation: shimmer 2s linear infinite;
   border-radius: 0.25rem;
@@ -382,7 +391,7 @@ body {
 }
 
 .status-dot-pulse::before {
-  content: '';
+  content: "";
   position: absolute;
   inset: 0;
   border-radius: 9999px;
@@ -455,40 +464,57 @@ body {
 }
 
 @keyframes ping {
-  75%, 100% {
+  75%,
+  100% {
     transform: scale(2);
     opacity: 0;
   }
 }
 
 @keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
 }
 
 @keyframes fadeIn {
-  0% { opacity: 0; transform: translateY(8px); }
-  100% { opacity: 1; transform: translateY(0); }
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Code/mono text */
-code, pre, .font-mono {
-  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+code,
+pre,
+.font-mono {
+  font-family: "JetBrains Mono", "Fira Code", monospace;
 }
 
 /* Ensure smooth transitions don't cause layout shift */
 * {
-  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
+  transition-property:
+    color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow,
+    transform, filter, backdrop-filter;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 150ms;
 }
 
 /* Disable transitions for reduced motion preference */
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms;
+    animation-iteration-count: 1;
+    transition-duration: 0.01ms;
   }
 }
 
@@ -496,11 +522,13 @@ code, pre, .font-mono {
  * React Flow Customizations
  * ======================================== */
 .react-flow__node {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .react-flow__node:hover {
-  z-index: 100 !important;
+  z-index: 100;
 }
 
 .react-flow__edge-path {
@@ -512,29 +540,29 @@ code, pre, .font-mono {
 }
 
 .react-flow__controls {
-  box-shadow: none !important;
-  border: 1px solid var(--color-border-default) !important;
-  border-radius: 0.5rem !important;
+  box-shadow: none;
+  border: 1px solid var(--color-border-default);
+  border-radius: 0.5rem;
   overflow: hidden;
 }
 
 .react-flow__controls-button {
-  background-color: var(--color-bg-elevated) !important;
-  border-color: var(--color-border-subtle) !important;
-  color: var(--color-text-secondary) !important;
+  background-color: var(--color-bg-elevated);
+  border-color: var(--color-border-subtle);
+  color: var(--color-text-secondary);
 }
 
 .react-flow__controls-button:hover {
-  background-color: var(--color-bg-overlay) !important;
-  color: var(--color-text-primary) !important;
+  background-color: var(--color-bg-overlay);
+  color: var(--color-text-primary);
 }
 
 .react-flow__minimap {
-  background-color: var(--color-bg-surface) !important;
-  border: 1px solid var(--color-border-default) !important;
-  border-radius: 0.5rem !important;
+  background-color: var(--color-bg-surface);
+  border: 1px solid var(--color-border-default);
+  border-radius: 0.5rem;
 }
 
 .react-flow__background {
-  background-color: var(--color-bg-base) !important;
+  background-color: var(--color-bg-base);
 }

@@ -1,25 +1,17 @@
-import { type FC, useCallback, useMemo, useState } from 'react';
 import {
-  Download,
-  Trash2,
-  RotateCcw,
+  AlertCircle,
+  CheckCircle2,
   ChevronLeft,
   ChevronRight,
-  CheckCircle2,
-  AlertCircle,
+  Download,
   FileCheck,
-} from 'lucide-react';
-import {
-  Card,
-  CardContent,
-  Button,
-  SmallText,
-  Tag,
-  H2,
-  ConfirmModal,
-} from '../../ui';
-import type { MergeDecision, DiffBlock } from './DiffViewer';
-import { YamlViewer } from './YamlEditor';
+  RotateCcw,
+  Trash2,
+} from "lucide-react";
+import { type FC, useCallback, useMemo, useState } from "react";
+import { Button, Card, CardContent, ConfirmModal, H2, SmallText, Tag } from "../../ui";
+import type { DiffBlock, MergeDecision } from "./DiffViewer";
+import { YamlViewer } from "./YamlEditor";
 
 interface MergeControlsProps {
   diffBlocks: DiffBlock[];
@@ -46,8 +38,8 @@ export const MergeControls: FC<MergeControlsProps> = ({
   onExport,
   onPreview,
   disabled = false,
-  leftLabel = 'Original',
-  rightLabel = 'Modified',
+  leftLabel = "Original",
+  rightLabel = "Modified",
 }) => {
   // Confirm modal states
   const [showAcceptLeftConfirm, setShowAcceptLeftConfirm] = useState(false);
@@ -57,7 +49,7 @@ export const MergeControls: FC<MergeControlsProps> = ({
 
   // Calculate statistics
   const stats = useMemo(() => {
-    const changedBlocks = diffBlocks.filter((b) => b.type !== 'unchanged');
+    const changedBlocks = diffBlocks.filter((b) => b.type !== "unchanged");
     const totalChanges = changedBlocks.length;
     const decisionsCount = mergeDecisions.size;
 
@@ -66,9 +58,9 @@ export const MergeControls: FC<MergeControlsProps> = ({
     let bothCount = 0;
 
     for (const decision of mergeDecisions.values()) {
-      if (decision.choice === 'left') leftCount++;
-      else if (decision.choice === 'right') rightCount++;
-      else if (decision.choice === 'both') bothCount++;
+      if (decision.choice === "left") leftCount++;
+      else if (decision.choice === "right") rightCount++;
+      else if (decision.choice === "both") bothCount++;
     }
 
     const isComplete = decisionsCount === totalChanges;
@@ -135,9 +127,7 @@ export const MergeControls: FC<MergeControlsProps> = ({
         {stats.totalChanges > 0 && (
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm">
-              <SmallText className="text-gray-400">
-                Resolution progress
-              </SmallText>
+              <SmallText className="text-gray-400">Resolution progress</SmallText>
               <SmallText className="text-gray-300">
                 {stats.decisionsCount} / {stats.totalChanges} ({stats.progress}%)
               </SmallText>
@@ -246,10 +236,10 @@ export const MergeControls: FC<MergeControlsProps> = ({
         {/* Help text */}
         <SmallText className="text-gray-500">
           {stats.totalChanges === 0
-            ? 'Upload two YAML config files to start comparing and merging.'
+            ? "Upload two YAML config files to start comparing and merging."
             : stats.isComplete
-              ? 'All changes resolved. You can now export the merged configuration.'
-              : 'Click the merge buttons on each changed block to decide how to merge.'}
+              ? "All changes resolved. You can now export the merged configuration."
+              : "Click the merge buttons on each changed block to decide how to merge."}
         </SmallText>
       </CardContent>
 
@@ -309,23 +299,19 @@ interface MergePreviewModalProps {
   onExport: () => void;
 }
 
-export const MergePreviewModal: FC<MergePreviewModalProps> = ({
-  content,
-  onClose,
-  onExport,
-}) => {
-  const lineCount = useMemo(() => content.split('\n').length, [content]);
+export const MergePreviewModal: FC<MergePreviewModalProps> = ({ content, onClose, onExport }) => {
+  const lineCount = useMemo(() => content.split("\n").length, [content]);
 
   const handleCopy = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(content);
     } catch {
       // Fallback for older browsers
-      const textarea = document.createElement('textarea');
+      const textarea = document.createElement("textarea");
       textarea.value = content;
       document.body.appendChild(textarea);
       textarea.select();
-      document.execCommand('copy');
+      document.execCommand("copy");
       document.body.removeChild(textarea);
     }
   }, [content]);
@@ -352,9 +338,7 @@ export const MergePreviewModal: FC<MergePreviewModalProps> = ({
               <h2 id="preview-modal-title" className="text-lg font-semibold text-white">
                 Merged Configuration Preview
               </h2>
-              <SmallText className="text-gray-400">
-                {lineCount} lines
-              </SmallText>
+              <SmallText className="text-gray-400">{lineCount} lines</SmallText>
             </div>
           </div>
           <button
@@ -363,7 +347,12 @@ export const MergePreviewModal: FC<MergePreviewModalProps> = ({
             aria-label="Close modal"
           >
             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>

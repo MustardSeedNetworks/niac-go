@@ -1,6 +1,6 @@
-import { type FC, useState, useCallback, useRef } from 'react';
-import { Card, CardContent, Button, SmallText, Tag } from '../../ui';
-import { Upload, FileUp, X, AlertCircle, CheckCircle } from 'lucide-react';
+import { AlertCircle, CheckCircle, FileUp, Upload, X } from "lucide-react";
+import { type FC, useCallback, useRef, useState } from "react";
+import { Button, Card, CardContent, SmallText, Tag } from "../../ui";
 
 interface PcapUploaderProps {
   onFileSelect: (file: File) => void;
@@ -15,7 +15,7 @@ interface PcapUploaderProps {
 const MAX_FILE_SIZE = 100 * 1024 * 1024;
 
 /** Accepted file extensions */
-const ACCEPTED_EXTENSIONS = ['.pcap', '.pcapng', '.cap'];
+const ACCEPTED_EXTENSIONS = [".pcap", ".pcapng", ".cap"];
 
 /**
  * Format bytes to human-readable string
@@ -37,7 +37,7 @@ function validateFile(file: File): { valid: boolean; error?: string } {
   if (!hasValidExtension) {
     return {
       valid: false,
-      error: `Invalid file type. Please select a PCAP file (${ACCEPTED_EXTENSIONS.join(', ')})`,
+      error: `Invalid file type. Please select a PCAP file (${ACCEPTED_EXTENSIONS.join(", ")})`,
     };
   }
 
@@ -52,7 +52,7 @@ function validateFile(file: File): { valid: boolean; error?: string } {
   if (file.size === 0) {
     return {
       valid: false,
-      error: 'File is empty',
+      error: "File is empty",
     };
   }
 
@@ -86,14 +86,14 @@ export const PcapUploader: FC<PcapUploaderProps> = ({
       if (!validation.valid) {
         // Reset input
         if (fileInputRef.current) {
-          fileInputRef.current.value = '';
+          fileInputRef.current.value = "";
         }
         return;
       }
 
       onFileSelect(file);
     },
-    [onFileSelect]
+    [onFileSelect],
   );
 
   // Handle drag events
@@ -125,7 +125,7 @@ export const PcapUploader: FC<PcapUploaderProps> = ({
 
       onFileSelect(file);
     },
-    [onFileSelect]
+    [onFileSelect],
   );
 
   // Handle click to open file dialog
@@ -137,7 +137,7 @@ export const PcapUploader: FC<PcapUploaderProps> = ({
   const handleClear = useCallback(() => {
     onFileSelect(null as unknown as File);
     if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+      fileInputRef.current.value = "";
     }
   }, [onFileSelect]);
 
@@ -149,7 +149,7 @@ export const PcapUploader: FC<PcapUploaderProps> = ({
           role="button"
           tabIndex={0}
           onClick={handleClick}
-          onKeyDown={(e) => e.key === 'Enter' && handleClick()}
+          onKeyDown={(e) => e.key === "Enter" && handleClick()}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
@@ -157,10 +157,10 @@ export const PcapUploader: FC<PcapUploaderProps> = ({
             relative cursor-pointer rounded-xl border-2 border-dashed p-8 text-center transition-all
             ${
               isDragOver
-                ? 'border-violet-400 bg-violet-900/20'
-                : 'border-white/10 bg-gray-950/40 hover:border-white/20 hover:bg-gray-950/60'
+                ? "border-violet-400 bg-violet-900/20"
+                : "border-white/10 bg-gray-950/40 hover:border-white/20 hover:bg-gray-950/60"
             }
-            ${isAnalyzing ? 'pointer-events-none opacity-50' : ''}
+            ${isAnalyzing ? "pointer-events-none opacity-50" : ""}
           `}
           aria-label="Drop PCAP file here or click to select"
         >
@@ -170,28 +170,21 @@ export const PcapUploader: FC<PcapUploaderProps> = ({
             accept=".pcap,.pcapng,.cap"
             onChange={handleFileChange}
             className="hidden"
-            aria-hidden="true"
           />
 
           <div className="flex flex-col items-center gap-3">
             <div
-              className={`rounded-full p-4 ${
-                isDragOver ? 'bg-violet-500/20' : 'bg-gray-800/50'
-              }`}
+              className={`rounded-full p-4 ${isDragOver ? "bg-violet-500/20" : "bg-gray-800/50"}`}
             >
-              <Upload
-                className={`h-8 w-8 ${
-                  isDragOver ? 'text-violet-400' : 'text-gray-400'
-                }`}
-              />
+              <Upload className={`h-8 w-8 ${isDragOver ? "text-violet-400" : "text-gray-400"}`} />
             </div>
 
             <div>
               <p className="text-lg font-medium text-white">
-                {isDragOver ? 'Drop file to upload' : 'Drag & drop PCAP file'}
+                {isDragOver ? "Drop file to upload" : "Drag & drop PCAP file"}
               </p>
               <SmallText className="text-gray-400">
-                or click to browse ({ACCEPTED_EXTENSIONS.join(', ')})
+                or click to browse ({ACCEPTED_EXTENSIONS.join(", ")})
               </SmallText>
             </div>
 
@@ -208,9 +201,7 @@ export const PcapUploader: FC<PcapUploaderProps> = ({
               <FileUp className="h-5 w-5 text-violet-400" />
               <div>
                 <p className="font-medium text-white">{selectedFile.name}</p>
-                <SmallText className="text-gray-400">
-                  {formatBytes(selectedFile.size)}
-                </SmallText>
+                <SmallText className="text-gray-400">{formatBytes(selectedFile.size)}</SmallText>
               </div>
               <Tag colorScheme="purple" className="text-xs">
                 Ready
@@ -261,7 +252,7 @@ export const PcapUploader: FC<PcapUploaderProps> = ({
             )
           }
         >
-          {isAnalyzing ? 'Analyzing...' : 'Analyze PCAP'}
+          {isAnalyzing ? "Analyzing..." : "Analyze PCAP"}
         </Button>
       </CardContent>
     </Card>

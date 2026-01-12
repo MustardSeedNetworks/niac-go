@@ -1,5 +1,5 @@
-import { memo } from 'react';
-import { SmallText } from '../ui';
+import { memo } from "react";
+import { SmallText } from "../ui";
 
 interface StatBlockProps {
   label: string;
@@ -20,4 +20,4 @@ export const StatBlock = memo(({ label, value, helper }: StatBlockProps) => {
   );
 });
 
-StatBlock.displayName = 'StatBlock';
+StatBlock.displayName = "StatBlock";

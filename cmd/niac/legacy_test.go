@@ -8,7 +8,7 @@ import (
 	"github.com/krisarmstrong/niac-go/pkg/logging"
 )
 
-// TestProcessFlags_Verbose tests verbose flag override
+// TestProcessFlags_Verbose tests verbose flag override.
 func TestProcessFlags_Verbose(t *testing.T) {
 	flags := &legacyFlags{
 		debugLevel: 1,
@@ -22,7 +22,7 @@ func TestProcessFlags_Verbose(t *testing.T) {
 	}
 }
 
-// TestProcessFlags_Quiet tests quiet flag override
+// TestProcessFlags_Quiet tests quiet flag override.
 func TestProcessFlags_Quiet(t *testing.T) {
 	flags := &legacyFlags{
 		debugLevel: 2,
@@ -36,7 +36,7 @@ func TestProcessFlags_Quiet(t *testing.T) {
 	}
 }
 
-// TestProcessFlags_VerboseOverridesQuiet tests verbose takes precedence
+// TestProcessFlags_VerboseOverridesQuiet tests verbose takes precedence.
 func TestProcessFlags_VerboseOverridesQuiet(t *testing.T) {
 	flags := &legacyFlags{
 		debugLevel: 1,
@@ -48,11 +48,14 @@ func TestProcessFlags_VerboseOverridesQuiet(t *testing.T) {
 
 	// verbose is processed first, so it wins
 	if flags.debugLevel != 0 {
-		t.Errorf("Expected debug level 0 when both verbose and quiet are set (quiet processed last), got %d", flags.debugLevel)
+		t.Errorf(
+			"Expected debug level 0 when both verbose and quiet are set (quiet processed last), got %d",
+			flags.debugLevel,
+		)
 	}
 }
 
-// TestProcessFlags_NoOverride tests no override when flags not set
+// TestProcessFlags_NoOverride tests no override when flags not set.
 func TestProcessFlags_NoOverride(t *testing.T) {
 	flags := &legacyFlags{
 		debugLevel: 2,
@@ -67,12 +70,11 @@ func TestProcessFlags_NoOverride(t *testing.T) {
 	}
 }
 
-// TestValidateLegacyArguments_Valid tests valid arguments
+// TestValidateLegacyArguments_Valid tests valid arguments.
 func TestValidateLegacyArguments_Valid(t *testing.T) {
 	args := []string{"eth0", "config.yaml"}
 
 	iface, configFile, err := validateLegacyArguments(args)
-
 	if err != nil {
 		t.Errorf("Expected no error, got: %v", err)
 	}
@@ -86,7 +88,7 @@ func TestValidateLegacyArguments_Valid(t *testing.T) {
 	}
 }
 
-// TestValidateLegacyArguments_MissingArgs tests missing arguments
+// TestValidateLegacyArguments_MissingArgs tests missing arguments.
 func TestValidateLegacyArguments_MissingArgs(t *testing.T) {
 	testCases := []struct {
 		name string
@@ -112,12 +114,11 @@ func TestValidateLegacyArguments_MissingArgs(t *testing.T) {
 	}
 }
 
-// TestValidateLegacyArguments_ExtraArgs tests extra arguments are ignored
+// TestValidateLegacyArguments_ExtraArgs tests extra arguments are ignored.
 func TestValidateLegacyArguments_ExtraArgs(t *testing.T) {
 	args := []string{"eth0", "config.yaml", "extra1", "extra2"}
 
 	iface, configFile, err := validateLegacyArguments(args)
-
 	if err != nil {
 		t.Errorf("Expected no error with extra args, got: %v", err)
 	}
@@ -131,7 +132,7 @@ func TestValidateLegacyArguments_ExtraArgs(t *testing.T) {
 	}
 }
 
-// TestSetupDebugConfig_GlobalLevel tests debug config with global level only
+// TestSetupDebugConfig_GlobalLevel tests debug config with global level only.
 func TestSetupDebugConfig_GlobalLevel(t *testing.T) {
 	flags := &legacyFlags{
 		debugLevel:   2,
@@ -168,7 +169,7 @@ func TestSetupDebugConfig_GlobalLevel(t *testing.T) {
 	}
 }
 
-// TestSetupDebugConfig_PerProtocol tests per-protocol debug levels
+// TestSetupDebugConfig_PerProtocol tests per-protocol debug levels.
 func TestSetupDebugConfig_PerProtocol(t *testing.T) {
 	flags := &legacyFlags{
 		debugLevel:   1,
@@ -222,7 +223,7 @@ func TestSetupDebugConfig_PerProtocol(t *testing.T) {
 	}
 }
 
-// TestSetupDebugConfig_AllProtocols tests all protocol debug levels can be set
+// TestSetupDebugConfig_AllProtocols tests all protocol debug levels can be set.
 func TestSetupDebugConfig_AllProtocols(t *testing.T) {
 	flags := &legacyFlags{
 		debugLevel:   1,
@@ -284,7 +285,7 @@ func TestSetupDebugConfig_AllProtocols(t *testing.T) {
 	}
 }
 
-// TestHandleInformationalFlags_Version tests version flag handling
+// TestHandleInformationalFlags_Version tests version flag handling.
 func TestHandleInformationalFlags_Version(t *testing.T) {
 	flags := &legacyFlags{
 		showVersion: true,
@@ -299,7 +300,7 @@ func TestHandleInformationalFlags_Version(t *testing.T) {
 	}
 }
 
-// TestHandleInformationalFlags_ListInterfaces tests list interfaces flag
+// TestHandleInformationalFlags_ListInterfaces tests list interfaces flag.
 func TestHandleInformationalFlags_ListInterfaces(t *testing.T) {
 	flags := &legacyFlags{
 		listInterfaces: true,
@@ -312,7 +313,7 @@ func TestHandleInformationalFlags_ListInterfaces(t *testing.T) {
 	}
 }
 
-// TestHandleInformationalFlags_ListDevices_NoConfig tests list devices without config
+// TestHandleInformationalFlags_ListDevices_NoConfig tests list devices without config.
 func TestHandleInformationalFlags_ListDevices_NoConfig(t *testing.T) {
 	// This should exit with error, but handleInformationalFlags calls os.Exit
 	// We can't easily test this without refactoring
@@ -320,7 +321,7 @@ func TestHandleInformationalFlags_ListDevices_NoConfig(t *testing.T) {
 	t.Skip("Skipping test that calls os.Exit(1)")
 }
 
-// TestHandleInformationalFlags_NoFlags tests no informational flags
+// TestHandleInformationalFlags_NoFlags tests no informational flags.
 func TestHandleInformationalFlags_NoFlags(t *testing.T) {
 	flags := &legacyFlags{
 		showVersion:    false,
@@ -335,7 +336,7 @@ func TestHandleInformationalFlags_NoFlags(t *testing.T) {
 	}
 }
 
-// TestDefineLegacyFlags tests that all flags are defined
+// TestDefineLegacyFlags tests that all flags are defined.
 func TestDefineLegacyFlags(t *testing.T) {
 	// Reset flag.CommandLine to avoid conflicts
 	oldCommandLine := flag.CommandLine
@@ -387,7 +388,7 @@ func TestDefineLegacyFlags(t *testing.T) {
 	}
 }
 
-// TestLegacyFlags_AllFieldsPresent tests that legacyFlags struct has all expected fields
+// TestLegacyFlags_AllFieldsPresent tests that legacyFlags struct has all expected fields.
 func TestLegacyFlags_AllFieldsPresent(t *testing.T) {
 	flags := &legacyFlags{}
 	_ = flags // Use blank identifier to avoid unused variable error
@@ -432,7 +433,7 @@ func TestLegacyFlags_AllFieldsPresent(t *testing.T) {
 	t.Log("All legacyFlags fields present and accessible")
 }
 
-// TestGetDebugLevelName tests debug level name formatting
+// TestGetDebugLevelName tests debug level name formatting.
 func TestGetDebugLevelName(t *testing.T) {
 	tests := []struct {
 		level    int

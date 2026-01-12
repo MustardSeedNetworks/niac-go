@@ -15,18 +15,22 @@ func TestStateManager(t *testing.T) {
 	if state == nil {
 		t.Fatal("GetError returned nil")
 	}
+
 	if state.ErrorType != ErrorTypeFCS {
 		t.Errorf("Expected ErrorTypeFCS, got %v", state.ErrorType)
 	}
+
 	if state.Value != 50 {
 		t.Errorf("Expected value 50, got %d", state.Value)
 	}
+
 	if !state.Enabled {
 		t.Error("Expected state to be enabled")
 	}
 
 	// Test ClearError
 	sm.ClearError("192.168.1.1", "eth0")
+
 	state = sm.GetError("192.168.1.1", "eth0")
 	if state.Enabled {
 		t.Error("Expected state to be disabled")
@@ -49,6 +53,7 @@ func TestStateManagerMultipleDevices(t *testing.T) {
 
 	// Clear all
 	sm.ClearAll()
+
 	states = sm.GetAllStates()
 	if len(states) != 0 {
 		t.Errorf("Expected 0 active states after ClearAll, got %d", len(states))
@@ -66,6 +71,7 @@ func TestInterfaceConfig(t *testing.T) {
 	if cfg.Speed != 10000 {
 		t.Errorf("Expected speed 10000, got %d", cfg.Speed)
 	}
+
 	if cfg.Duplex != "full" {
 		t.Errorf("Expected duplex 'full', got '%s'", cfg.Duplex)
 	}
@@ -75,6 +81,7 @@ func TestInterfaceConfig(t *testing.T) {
 	if cfg.Speed != 1000 {
 		t.Errorf("Expected default speed 1000, got %d", cfg.Speed)
 	}
+
 	if cfg.Duplex != "full" {
 		t.Errorf("Expected default duplex 'full', got '%s'", cfg.Duplex)
 	}
@@ -101,6 +108,7 @@ func TestAllErrorTypes(t *testing.T) {
 		if _, exists := expectedTypes[et]; !exists {
 			t.Errorf("Unexpected error type: %v", et)
 		}
+
 		expectedTypes[et] = true
 	}
 
@@ -138,17 +146,19 @@ func TestConcurrentAccess(t *testing.T) {
 
 	// Test concurrent writes
 	done := make(chan bool)
-	for i := 0; i < 10; i++ {
+
+	for i := range 10 {
 		go func(id int) {
-			for j := 0; j < 100; j++ {
+			for j := range 100 {
 				sm.SetError("192.168.1.1", "eth0", ErrorTypeFCS, j)
 			}
+
 			done <- true
 		}(i)
 	}
 
 	// Wait for all goroutines
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		<-done
 	}
 
@@ -161,9 +171,8 @@ func TestConcurrentAccess(t *testing.T) {
 
 func BenchmarkSetError(b *testing.B) {
 	sm := NewStateManager()
-	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		sm.SetError("192.168.1.1", "eth0", ErrorTypeFCS, 50)
 	}
 }
@@ -171,21 +180,19 @@ func BenchmarkSetError(b *testing.B) {
 func BenchmarkGetError(b *testing.B) {
 	sm := NewStateManager()
 	sm.SetError("192.168.1.1", "eth0", ErrorTypeFCS, 50)
-	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = sm.GetError("192.168.1.1", "eth0")
 	}
 }
 
 func BenchmarkGetAllStates(b *testing.B) {
 	sm := NewStateManager()
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		sm.SetError("192.168.1.1", "eth0", ErrorTypeFCS, 50)
 	}
-	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = sm.GetAllStates()
 	}
 }

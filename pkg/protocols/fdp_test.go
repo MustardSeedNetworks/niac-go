@@ -10,7 +10,7 @@ import (
 	"github.com/krisarmstrong/niac-go/pkg/logging"
 )
 
-// TestNewFDPHandler verifies FDP handler creation
+// TestNewFDPHandler verifies FDP handler creation.
 func TestNewFDPHandler(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -19,20 +19,22 @@ func TestNewFDPHandler(t *testing.T) {
 	if handler == nil {
 		t.Fatal("Expected FDP handler, got nil")
 	}
+
 	if handler.stack != stack {
 		t.Error("Stack not set correctly")
 	}
+
 	if handler.stopChan == nil {
 		t.Error("Stop channel not initialized")
 	}
 }
 
-// TestFDPConstants verifies FDP protocol constants
+// TestFDPConstants verifies FDP protocol constants.
 func TestFDPConstants(t *testing.T) {
 	tests := []struct {
 		name     string
-		value    interface{}
-		expected interface{}
+		value    any
+		expected any
 	}{
 		{"Multicast MAC", FDPMulticastMAC, "\x01\xE0\x52\xCC\xCC\xCC"},
 		{"Advertise Interval", FDPAdvertiseInterval, 60 * time.Second},
@@ -49,7 +51,7 @@ func TestFDPConstants(t *testing.T) {
 	}
 }
 
-// TestFDPTLVTypes verifies TLV type constants
+// TestFDPTLVTypes verifies TLV type constants.
 func TestFDPTLVTypes(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -73,7 +75,7 @@ func TestFDPTLVTypes(t *testing.T) {
 	}
 }
 
-// TestFDPCapabilities verifies capability flags
+// TestFDPCapabilities verifies capability flags.
 func TestFDPCapabilities(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -94,7 +96,7 @@ func TestFDPCapabilities(t *testing.T) {
 	}
 }
 
-// TestBuildLLCSNAPHeaderFDP verifies LLC/SNAP header construction for FDP
+// TestBuildLLCSNAPHeaderFDP verifies LLC/SNAP header construction for FDP.
 func TestBuildLLCSNAPHeaderFDP(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -110,9 +112,11 @@ func TestBuildLLCSNAPHeaderFDP(t *testing.T) {
 	if header[0] != 0xAA {
 		t.Errorf("Expected DSAP 0xAA, got 0x%02X", header[0])
 	}
+
 	if header[1] != 0xAA {
 		t.Errorf("Expected SSAP 0xAA, got 0x%02X", header[1])
 	}
+
 	if header[2] != 0x03 {
 		t.Errorf("Expected Control 0x03, got 0x%02X", header[2])
 	}
@@ -129,7 +133,7 @@ func TestBuildLLCSNAPHeaderFDP(t *testing.T) {
 	}
 }
 
-// TestBuildDeviceIDTLVFDP verifies Device ID TLV construction for FDP
+// TestBuildDeviceIDTLVFDP verifies Device ID TLV construction for FDP.
 func TestBuildDeviceIDTLVFDP(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -148,7 +152,9 @@ func TestBuildDeviceIDTLVFDP(t *testing.T) {
 	}
 
 	tlvLength := binary.BigEndian.Uint16(tlv[2:4])
+
 	expectedLength := 4 + len(device.Name)
+
 	if int(tlvLength) != expectedLength {
 		t.Errorf("Expected length %d, got %d", expectedLength, tlvLength)
 	}
@@ -160,7 +166,7 @@ func TestBuildDeviceIDTLVFDP(t *testing.T) {
 	}
 }
 
-// TestBuildPortTLVFDP verifies Port TLV construction for FDP
+// TestBuildPortTLVFDP verifies Port TLV construction for FDP.
 func TestBuildPortTLVFDP(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -215,7 +221,7 @@ func TestBuildPortTLVFDP(t *testing.T) {
 	}
 }
 
-// TestBuildPlatformTLVFDP verifies Platform TLV construction for FDP
+// TestBuildPlatformTLVFDP verifies Platform TLV construction for FDP.
 func TestBuildPlatformTLVFDP(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -263,7 +269,7 @@ func TestBuildPlatformTLVFDP(t *testing.T) {
 	}
 }
 
-// TestBuildCapabilitiesTLVFDP verifies Capabilities TLV construction for FDP
+// TestBuildCapabilitiesTLVFDP verifies Capabilities TLV construction for FDP.
 func TestBuildCapabilitiesTLVFDP(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -308,7 +314,7 @@ func TestBuildCapabilitiesTLVFDP(t *testing.T) {
 	}
 }
 
-// TestBuildSoftwareTLVFDP verifies Software TLV construction for FDP
+// TestBuildSoftwareTLVFDP verifies Software TLV construction for FDP.
 func TestBuildSoftwareTLVFDP(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -354,7 +360,7 @@ func TestBuildSoftwareTLVFDP(t *testing.T) {
 	}
 }
 
-// TestBuildIPAddressTLVFDP verifies IP Address TLV construction for FDP
+// TestBuildIPAddressTLVFDP verifies IP Address TLV construction for FDP.
 func TestBuildIPAddressTLVFDP(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -395,7 +401,7 @@ func TestBuildIPAddressTLVFDP(t *testing.T) {
 	}
 }
 
-// TestCalculateChecksumFDP verifies FDP checksum calculation
+// TestCalculateChecksumFDP verifies FDP checksum calculation.
 func TestCalculateChecksumFDP(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -429,7 +435,7 @@ func TestCalculateChecksumFDP(t *testing.T) {
 	}
 }
 
-// TestBuildFDPFrame verifies complete FDP frame construction
+// TestBuildFDPFrame verifies complete FDP frame construction.
 func TestBuildFDPFrame(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -482,7 +488,7 @@ func TestBuildFDPFrame(t *testing.T) {
 	}
 }
 
-// TestBuildFDPFrame_CustomConfig verifies FDP frame with custom configuration
+// TestBuildFDPFrame_CustomConfig verifies FDP frame with custom configuration.
 func TestBuildFDPFrame_CustomConfig(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -515,7 +521,7 @@ func TestBuildFDPFrame_CustomConfig(t *testing.T) {
 	}
 }
 
-// TestFDPLifecycle verifies Start/Stop functionality
+// TestFDPLifecycle verifies Start/Stop functionality.
 func TestFDPLifecycle(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -543,7 +549,7 @@ func TestFDPLifecycle(t *testing.T) {
 	}
 }
 
-// TestSendAdvertisementsFDP verifies advertisement sending logic for FDP
+// TestSendAdvertisementsFDP verifies advertisement sending logic for FDP.
 func TestSendAdvertisementsFDP(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -567,7 +573,7 @@ func TestSendAdvertisementsFDP(t *testing.T) {
 	}
 }
 
-// TestSendAdvertisementsFDP_DisabledDevice verifies FDP disabled devices are skipped
+// TestSendAdvertisementsFDP_DisabledDevice verifies FDP disabled devices are skipped.
 func TestSendAdvertisementsFDP_DisabledDevice(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -594,7 +600,7 @@ func TestSendAdvertisementsFDP_DisabledDevice(t *testing.T) {
 	}
 }
 
-// TestSendAdvertisementsFDP_NoMACAddress verifies devices without MAC are skipped
+// TestSendAdvertisementsFDP_NoMACAddress verifies devices without MAC are skipped.
 func TestSendAdvertisementsFDP_NoMACAddress(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -617,7 +623,7 @@ func TestSendAdvertisementsFDP_NoMACAddress(t *testing.T) {
 	}
 }
 
-// TestHandlePacketFDP verifies neighbor recording from an incoming frame
+// TestHandlePacketFDP verifies neighbor recording from an incoming frame.
 func TestHandlePacketFDP(t *testing.T) {
 	cfg := &config.Config{
 		Devices: []config.Device{{Name: "Local-Core"}},
@@ -647,26 +653,33 @@ func TestHandlePacketFDP(t *testing.T) {
 	if len(neighbors) != 1 {
 		t.Fatalf("expected 1 neighbor recorded, got %d", len(neighbors))
 	}
+
 	entry := neighbors[0]
 	if entry.Protocol != ProtocolFDP {
 		t.Fatalf("unexpected protocol %s", entry.Protocol)
 	}
+
 	if entry.RemoteDevice != "FDP-Edge" {
 		t.Errorf("unexpected remote device %q", entry.RemoteDevice)
 	}
+
 	if entry.RemotePort != "1/2/3" {
 		t.Errorf("unexpected remote port %q", entry.RemotePort)
 	}
+
 	if entry.ManagementAddress != "10.20.30.1" {
 		t.Errorf("unexpected management address %q", entry.ManagementAddress)
 	}
+
 	expectedTTL := 90 * time.Second
 	if entry.TTL != expectedTTL {
 		t.Errorf("expected TTL %v, got %v", expectedTTL, entry.TTL)
 	}
+
 	if entry.Description != "FastIron / FI 8.0" {
 		t.Errorf("unexpected description %q", entry.Description)
 	}
+
 	if len(entry.Capabilities) < 2 {
 		t.Fatalf("expected router+switch capabilities, got %#v", entry.Capabilities)
 	}
@@ -678,12 +691,13 @@ func buildFDPTestFrame(src net.HardwareAddr, payload []byte) []byte {
 	copy(frame[6:12], src)
 	binary.BigEndian.PutUint16(frame[12:14], uint16(len(payload)))
 	copy(frame[14:], payload)
+
 	return frame
 }
 
 // Benchmarks
 
-// BenchmarkBuildFDPFrame benchmarks FDP frame construction
+// BenchmarkBuildFDPFrame benchmarks FDP frame construction.
 func BenchmarkBuildFDPFrame(b *testing.B) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -699,25 +713,23 @@ func BenchmarkBuildFDPFrame(b *testing.B) {
 		},
 	}
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		handler.buildFDPFrame(device)
 	}
 }
 
-// BenchmarkBuildLLCSNAPHeaderFDP benchmarks LLC/SNAP header construction
+// BenchmarkBuildLLCSNAPHeaderFDP benchmarks LLC/SNAP header construction.
 func BenchmarkBuildLLCSNAPHeaderFDP(b *testing.B) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
 	handler := NewFDPHandler(stack)
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		handler.buildLLCSNAPHeader()
 	}
 }
 
-// BenchmarkCalculateChecksumFDP benchmarks checksum calculation
+// BenchmarkCalculateChecksumFDP benchmarks checksum calculation.
 func BenchmarkCalculateChecksumFDP(b *testing.B) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -728,8 +740,7 @@ func BenchmarkCalculateChecksumFDP(b *testing.B) {
 		data[i] = byte(i)
 	}
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		handler.calculateChecksum(data)
 	}
 }

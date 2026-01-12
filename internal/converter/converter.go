@@ -3,6 +3,7 @@ package converter
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"regexp"
@@ -12,7 +13,18 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Config represents the YAML configuration structure
+// Sentinel errors for converter.
+var (
+	ErrInvalidLoopTimeFormat      = errors.New("invalid LoopTime format")
+	ErrInvalidScaleTimeFormat     = errors.New("invalid ScaleTime format")
+	ErrInvalidVlanFormat          = errors.New("invalid Vlan format")
+	ErrDeviceMissingMAC           = errors.New("device missing MAC address")
+	ErrAddMibMissingOID           = errors.New("AddMib missing OID")
+	ErrAddMibMissingType          = errors.New("AddMib missing type")
+	ErrCapturePlaybackMissingFile = errors.New("CapturePlayback missing file name")
+)
+
+// Config represents the YAML configuration structure.
 type Config struct {
 	IncludePath        string              `yaml:"include_path,omitempty"`
 	CapturePlaybacks   []CapturePlayback   `yaml:"capture_playbacks,omitempty"` // Changed to array
@@ -20,7 +32,7 @@ type Config struct {
 	Devices            []Device            `yaml:"devices"`
 }
 
-// DiscoveryProtocols configures discovery protocol behavior
+// DiscoveryProtocols configures discovery protocol behavior.
 type DiscoveryProtocols struct {
 	LLDP *ProtocolConfig `yaml:"lldp,omitempty"`
 	CDP  *ProtocolConfig `yaml:"cdp,omitempty"`
@@ -28,50 +40,50 @@ type DiscoveryProtocols struct {
 	FDP  *ProtocolConfig `yaml:"fdp,omitempty"`
 }
 
-// ProtocolConfig configures a discovery protocol
+// ProtocolConfig configures a discovery protocol.
 type ProtocolConfig struct {
 	Enabled  bool `yaml:"enabled"`
 	Interval int  `yaml:"interval,omitempty"` // Advertisement interval in seconds
 }
 
-// CapturePlayback represents PCAP playback configuration
+// CapturePlayback represents PCAP playback configuration.
 type CapturePlayback struct {
 	FileName  string  `yaml:"file_name"`
 	LoopTime  int     `yaml:"loop_time,omitempty"`
 	ScaleTime float64 `yaml:"scale_time,omitempty"`
 }
 
-// Device represents a network device
+// Device represents a network device.
 type Device struct {
-	Name      string         `yaml:"name,omitempty"`
-	Type      string         `yaml:"type,omitempty"` // Device type: router, switch, ap, firewall, server, workstation, iot
-	MAC       string         `yaml:"mac"`
-	IP        string         `yaml:"ip,omitempty"`  // Single IP (backward compatible)
-	IPs       []string       `yaml:"ips,omitempty"` // Multiple IPs (new feature)
-	VLAN      int            `yaml:"vlan,omitempty"`
-	MapToIP   string         `yaml:"map_to_ip,omitempty"`
-	Babble    bool           `yaml:"babble,omitempty"`
-	TTL       *TTLConfig     `yaml:"ttl,omitempty"`
-	SnmpAgent *SnmpAgent     `yaml:"snmp_agent,omitempty"`
-	Dhcp      *DhcpServer    `yaml:"dhcp,omitempty"`
-	Dns       *DnsServer     `yaml:"dns,omitempty"`
-	Lldp      *LldpConfig    `yaml:"lldp,omitempty"`
-	Cdp       *CdpConfig     `yaml:"cdp,omitempty"`
-	Edp       *EdpConfig     `yaml:"edp,omitempty"`
-	Fdp       *FdpConfig     `yaml:"fdp,omitempty"`
-	Stp       *StpConfig     `yaml:"stp,omitempty"`
-	Http      *HttpConfig    `yaml:"http,omitempty"`
-	Ftp       *FtpConfig     `yaml:"ftp,omitempty"`
-	Netbios   *NetbiosConfig `yaml:"netbios,omitempty"`
-	Icmp      *IcmpConfig    `yaml:"icmp,omitempty"`
-	Icmpv6    *Icmpv6Config  `yaml:"icmpv6,omitempty"`
-	Dhcpv6    *Dhcpv6Config  `yaml:"dhcpv6,omitempty"`
+	Name          string               `yaml:"name,omitempty"`
+	Type          string               `yaml:"type,omitempty"` // Device type: router, switch, ap, firewall, server, workstation, iot
+	MAC           string               `yaml:"mac"`
+	IP            string               `yaml:"ip,omitempty"`  // Single IP (backward compatible)
+	IPs           []string             `yaml:"ips,omitempty"` // Multiple IPs (new feature)
+	VLAN          int                  `yaml:"vlan,omitempty"`
+	MapToIP       string               `yaml:"map_to_ip,omitempty"`
+	Babble        bool                 `yaml:"babble,omitempty"`
+	TTL           *TTLConfig           `yaml:"ttl,omitempty"`
+	SnmpAgent     *SnmpAgent           `yaml:"snmp_agent,omitempty"`
+	Dhcp          *DhcpServer          `yaml:"dhcp,omitempty"`
+	Dns           *DnsServer           `yaml:"dns,omitempty"`
+	Lldp          *LldpConfig          `yaml:"lldp,omitempty"`
+	Cdp           *CdpConfig           `yaml:"cdp,omitempty"`
+	Edp           *EdpConfig           `yaml:"edp,omitempty"`
+	Fdp           *FdpConfig           `yaml:"fdp,omitempty"`
+	Stp           *StpConfig           `yaml:"stp,omitempty"`
+	Http          *HttpConfig          `yaml:"http,omitempty"`
+	Ftp           *FtpConfig           `yaml:"ftp,omitempty"`
+	Netbios       *NetbiosConfig       `yaml:"netbios,omitempty"`
+	Icmp          *IcmpConfig          `yaml:"icmp,omitempty"`
+	Icmpv6        *Icmpv6Config        `yaml:"icmpv6,omitempty"`
+	Dhcpv6        *Dhcpv6Config        `yaml:"dhcpv6,omitempty"`
 	Traffic       *TrafficConfig       `yaml:"traffic,omitempty"`        // v1.6.0
 	OSFingerprint *OSFingerprintConfig `yaml:"os_fingerprint,omitempty"` // v1.24.0
 	IPerf3        *IPerf3Config        `yaml:"iperf3,omitempty"`         // v1.25.0
 }
 
-// IPerf3Config represents iPerf3 server emulation configuration
+// IPerf3Config represents iPerf3 server emulation configuration.
 type IPerf3Config struct {
 	Enabled           bool    `yaml:"enabled,omitempty"`
 	Port              uint16  `yaml:"port,omitempty"`
@@ -83,22 +95,22 @@ type IPerf3Config struct {
 	DownloadMbps      float64 `yaml:"download_mbps,omitempty"`
 }
 
-// OSFingerprintConfig represents OS fingerprinting configuration for device simulation
+// OSFingerprintConfig represents OS fingerprinting configuration for device simulation.
 type OSFingerprintConfig struct {
-	OSType       string `yaml:"os_type,omitempty"`        // e.g., "linux", "windows", "cisco-ios", "juniper-junos"
-	TTL          uint8  `yaml:"ttl,omitempty"`            // Default IP TTL (Linux=64, Windows=128, Cisco=255)
-	WindowSize   uint16 `yaml:"window_size,omitempty"`    // TCP window size
-	WindowScale  uint8  `yaml:"window_scale,omitempty"`   // TCP window scale option
-	MSS          uint16 `yaml:"mss,omitempty"`            // TCP maximum segment size
-	SSHBanner    string `yaml:"ssh_banner,omitempty"`     // SSH version banner
-	HTTPServer   string `yaml:"http_server,omitempty"`    // HTTP Server header
-	FTPBanner    string `yaml:"ftp_banner,omitempty"`     // FTP welcome banner
-	SMTPBanner   string `yaml:"smtp_banner,omitempty"`    // SMTP banner
-	TelnetBanner string `yaml:"telnet_banner,omitempty"`  // Telnet banner
-	DontFragment bool   `yaml:"dont_fragment,omitempty"`  // IP DF bit (Linux=true, Windows=false usually)
+	OSType       string `yaml:"os_type,omitempty"`       // e.g., "linux", "windows", "cisco-ios", "juniper-junos"
+	TTL          uint8  `yaml:"ttl,omitempty"`           // Default IP TTL (Linux=64, Windows=128, Cisco=255)
+	WindowSize   uint16 `yaml:"window_size,omitempty"`   // TCP window size
+	WindowScale  uint8  `yaml:"window_scale,omitempty"`  // TCP window scale option
+	MSS          uint16 `yaml:"mss,omitempty"`           // TCP maximum segment size
+	SSHBanner    string `yaml:"ssh_banner,omitempty"`    // SSH version banner
+	HTTPServer   string `yaml:"http_server,omitempty"`   // HTTP Server header
+	FTPBanner    string `yaml:"ftp_banner,omitempty"`    // FTP welcome banner
+	SMTPBanner   string `yaml:"smtp_banner,omitempty"`   // SMTP banner
+	TelnetBanner string `yaml:"telnet_banner,omitempty"` // Telnet banner
+	DontFragment bool   `yaml:"dont_fragment,omitempty"` // IP DF bit (Linux=true, Windows=false usually)
 }
 
-// SnmpAgent represents SNMP agent configuration
+// SnmpAgent represents SNMP agent configuration.
 type SnmpAgent struct {
 	WalkFile          string             `yaml:"walk_file,omitempty"`
 	WalkFiles         []string           `yaml:"walk_files,omitempty"`
@@ -111,33 +123,33 @@ type SnmpAgent struct {
 	Traps             *TrapsConfig       `yaml:"traps,omitempty"` // v1.6.0
 }
 
-// AddMib represents a MIB override or addition
+// AddMib represents a MIB override or addition.
 type AddMib struct {
 	OID   string `yaml:"oid"`
 	Type  string `yaml:"type"`
 	Value string `yaml:"value"`
 }
 
-// CommunityInclude represents a community-specific walk include
+// CommunityInclude represents a community-specific walk include.
 type CommunityInclude struct {
 	Community string `yaml:"community"`
 	WalkFile  string `yaml:"walk_file"`
 }
 
-// FdbTableConfig configures SNMP forwarding database table injection
+// FdbTableConfig configures SNMP forwarding database table injection.
 type FdbTableConfig struct {
 	Port int `yaml:"port,omitempty"`
 	VLAN int `yaml:"vlan,omitempty"`
 }
 
-// TTLConfig configures ICMP TTL timeout behavior (traceroute simulation)
+// TTLConfig configures ICMP TTL timeout behavior (traceroute simulation).
 type TTLConfig struct {
 	TTL  int    `yaml:"ttl,omitempty"`
 	IP   string `yaml:"ip,omitempty"`
 	Mask string `yaml:"mask,omitempty"`
 }
 
-// DhcpServer represents DHCP server configuration
+// DhcpServer represents DHCP server configuration.
 type DhcpServer struct {
 	ClientLeases     []DhcpLease `yaml:"client_leases,omitempty"`
 	SubnetMask       string      `yaml:"subnet_mask,omitempty"`
@@ -161,20 +173,20 @@ type DhcpServer struct {
 	SIPDomainsV6  []string `yaml:"sip_domains_v6,omitempty"`  // Option 21
 }
 
-// DhcpLease represents a DHCP client lease
+// DhcpLease represents a DHCP client lease.
 type DhcpLease struct {
 	ClientIP     string `yaml:"client_ip"`
 	MacAddrValue string `yaml:"mac_addr_value,omitempty"`
 	MacAddrMask  string `yaml:"mac_addr_mask,omitempty"`
 }
 
-// DnsServer represents DNS server configuration
+// DnsServer represents DNS server configuration.
 type DnsServer struct {
 	ForwardRecords []DnsRecord `yaml:"forward_records,omitempty"`
 	ReverseRecords []DnsRecord `yaml:"reverse_records,omitempty"`
 }
 
-// DnsRecord represents a DNS A or PTR record
+// DnsRecord represents a DNS A or PTR record.
 type DnsRecord struct {
 	Name  string `yaml:"name"`
 	IP    string `yaml:"ip"`
@@ -182,7 +194,7 @@ type DnsRecord struct {
 	RCode int    `yaml:"rcode,omitempty"`
 }
 
-// LldpConfig represents LLDP discovery protocol configuration
+// LldpConfig represents LLDP discovery protocol configuration.
 type LldpConfig struct {
 	Enabled           bool   `yaml:"enabled,omitempty"`
 	AdvertiseInterval int    `yaml:"advertise_interval,omitempty"`
@@ -192,7 +204,7 @@ type LldpConfig struct {
 	ChassisIDType     string `yaml:"chassis_id_type,omitempty"`
 }
 
-// CdpConfig represents CDP discovery protocol configuration
+// CdpConfig represents CDP discovery protocol configuration.
 type CdpConfig struct {
 	Enabled           bool   `yaml:"enabled,omitempty"`
 	AdvertiseInterval int    `yaml:"advertise_interval,omitempty"`
@@ -203,7 +215,7 @@ type CdpConfig struct {
 	PortID            string `yaml:"port_id,omitempty"`
 }
 
-// EdpConfig represents EDP discovery protocol configuration
+// EdpConfig represents EDP discovery protocol configuration.
 type EdpConfig struct {
 	Enabled           bool   `yaml:"enabled,omitempty"`
 	AdvertiseInterval int    `yaml:"advertise_interval,omitempty"`
@@ -211,7 +223,7 @@ type EdpConfig struct {
 	DisplayString     string `yaml:"display_string,omitempty"`
 }
 
-// FdpConfig represents FDP discovery protocol configuration
+// FdpConfig represents FDP discovery protocol configuration.
 type FdpConfig struct {
 	Enabled           bool   `yaml:"enabled,omitempty"`
 	AdvertiseInterval int    `yaml:"advertise_interval,omitempty"`
@@ -221,7 +233,7 @@ type FdpConfig struct {
 	PortID            string `yaml:"port_id,omitempty"`
 }
 
-// StpConfig represents STP/RSTP/MSTP configuration
+// StpConfig represents STP/RSTP/MSTP configuration.
 type StpConfig struct {
 	Enabled        bool   `yaml:"enabled,omitempty"`
 	BridgePriority uint16 `yaml:"bridge_priority,omitempty"`
@@ -231,14 +243,14 @@ type StpConfig struct {
 	Version        string `yaml:"version,omitempty"`
 }
 
-// HttpConfig represents HTTP server configuration
+// HttpConfig represents HTTP server configuration.
 type HttpConfig struct {
 	Enabled    bool           `yaml:"enabled,omitempty"`
 	ServerName string         `yaml:"server_name,omitempty"`
 	Endpoints  []HttpEndpoint `yaml:"endpoints,omitempty"`
 }
 
-// HttpEndpoint represents an HTTP endpoint configuration
+// HttpEndpoint represents an HTTP endpoint configuration.
 type HttpEndpoint struct {
 	Path        string `yaml:"path,omitempty"`
 	Method      string `yaml:"method,omitempty"`
@@ -247,7 +259,7 @@ type HttpEndpoint struct {
 	Body        string `yaml:"body,omitempty"`
 }
 
-// FtpConfig represents FTP server configuration
+// FtpConfig represents FTP server configuration.
 type FtpConfig struct {
 	Enabled        bool      `yaml:"enabled,omitempty"`
 	WelcomeBanner  string    `yaml:"welcome_banner,omitempty"`
@@ -256,14 +268,14 @@ type FtpConfig struct {
 	Users          []FtpUser `yaml:"users,omitempty"`
 }
 
-// FtpUser represents an FTP user account
+// FtpUser represents an FTP user account.
 type FtpUser struct {
 	Username string `yaml:"username,omitempty"`
 	Password string `yaml:"password,omitempty"`
 	HomeDir  string `yaml:"home_dir,omitempty"`
 }
 
-// NetbiosConfig represents NetBIOS service configuration
+// NetbiosConfig represents NetBIOS service configuration.
 type NetbiosConfig struct {
 	Enabled   bool          `yaml:"enabled,omitempty"`
 	Name      string        `yaml:"name,omitempty"`
@@ -275,14 +287,14 @@ type NetbiosConfig struct {
 	MsBrowse  bool          `yaml:"msbrowse,omitempty"`
 }
 
-// NetbiosName represents a NetBIOS name entry
+// NetbiosName represents a NetBIOS name entry.
 type NetbiosName struct {
 	Name   string `yaml:"name,omitempty"`
 	Suffix string `yaml:"suffix,omitempty"`
 	Group  bool   `yaml:"group,omitempty"`
 }
 
-// IcmpConfig represents ICMP/ICMPv4 configuration
+// IcmpConfig represents ICMP/ICMPv4 configuration.
 type IcmpConfig struct {
 	Enabled             bool                     `yaml:"enabled,omitempty"`
 	TTL                 uint8                    `yaml:"ttl,omitempty"`
@@ -291,20 +303,20 @@ type IcmpConfig struct {
 	RouterAdvertisement *IcmpRouterAdvertisement `yaml:"router_advertisement,omitempty"`
 }
 
-// IcmpRouterAdvertisement configures IPv4 router advertisements
+// IcmpRouterAdvertisement configures IPv4 router advertisements.
 type IcmpRouterAdvertisement struct {
 	Period   int          `yaml:"period,omitempty"`
 	Lifetime int          `yaml:"lifetime,omitempty"`
 	Routers  []IcmpRouter `yaml:"routers,omitempty"`
 }
 
-// IcmpRouter represents an advertised router entry
+// IcmpRouter represents an advertised router entry.
 type IcmpRouter struct {
 	Address    string `yaml:"address,omitempty"`
 	Preference int    `yaml:"preference,omitempty"`
 }
 
-// Icmpv6Config represents ICMPv6 configuration
+// Icmpv6Config represents ICMPv6 configuration.
 type Icmpv6Config struct {
 	Enabled             bool                       `yaml:"enabled,omitempty"`
 	HopLimit            uint8                      `yaml:"hop_limit,omitempty"`
@@ -312,7 +324,7 @@ type Icmpv6Config struct {
 	RouterAdvertisement *Icmpv6RouterAdvertisement `yaml:"router_advertisement,omitempty"`
 }
 
-// Icmpv6RouterAdvertisement configures IPv6 router advertisements
+// Icmpv6RouterAdvertisement configures IPv6 router advertisements.
 type Icmpv6RouterAdvertisement struct {
 	Period        int                `yaml:"period,omitempty"`
 	CurHopLimit   int                `yaml:"cur_hop_limit,omitempty"`
@@ -325,7 +337,7 @@ type Icmpv6RouterAdvertisement struct {
 	PrefixInfo    []Icmpv6PrefixInfo `yaml:"prefix_info,omitempty"`
 }
 
-// Icmpv6PrefixInfo represents IPv6 prefix info options
+// Icmpv6PrefixInfo represents IPv6 prefix info options.
 type Icmpv6PrefixInfo struct {
 	PrefixLength      int    `yaml:"prefix_length,omitempty"`
 	Onlink            int    `yaml:"onlink,omitempty"`
@@ -335,7 +347,7 @@ type Icmpv6PrefixInfo struct {
 	Prefix            string `yaml:"prefix,omitempty"`
 }
 
-// Dhcpv6Config represents DHCPv6 server configuration
+// Dhcpv6Config represents DHCPv6 server configuration.
 type Dhcpv6Config struct {
 	Enabled           bool         `yaml:"enabled,omitempty"`
 	Pools             []Dhcpv6Pool `yaml:"pools,omitempty"`
@@ -350,14 +362,14 @@ type Dhcpv6Config struct {
 	SIPDomains        []string     `yaml:"sip_domains,omitempty"`
 }
 
-// Dhcpv6Pool represents an IPv6 address pool
+// Dhcpv6Pool represents an IPv6 address pool.
 type Dhcpv6Pool struct {
 	Network    string `yaml:"network,omitempty"`
 	RangeStart string `yaml:"range_start,omitempty"`
 	RangeEnd   string `yaml:"range_end,omitempty"`
 }
 
-// TrafficConfig represents traffic pattern configuration (v1.6.0)
+// TrafficConfig represents traffic pattern configuration (v1.6.0).
 type TrafficConfig struct {
 	Enabled          bool                   `yaml:"enabled,omitempty"`
 	ARPAnnouncements *ARPAnnouncementConfig `yaml:"arp_announcements,omitempty"`
@@ -365,20 +377,20 @@ type TrafficConfig struct {
 	RandomTraffic    *RandomTrafficConfig   `yaml:"random_traffic,omitempty"`
 }
 
-// ARPAnnouncementConfig configures gratuitous ARP announcements
+// ARPAnnouncementConfig configures gratuitous ARP announcements.
 type ARPAnnouncementConfig struct {
 	Enabled  bool `yaml:"enabled,omitempty"`
 	Interval int  `yaml:"interval,omitempty"` // seconds
 }
 
-// PeriodicPingConfig configures periodic ICMP echo requests
+// PeriodicPingConfig configures periodic ICMP echo requests.
 type PeriodicPingConfig struct {
 	Enabled     bool `yaml:"enabled,omitempty"`
 	Interval    int  `yaml:"interval,omitempty"`     // seconds
 	PayloadSize int  `yaml:"payload_size,omitempty"` // bytes
 }
 
-// RandomTrafficConfig configures random background traffic
+// RandomTrafficConfig configures random background traffic.
 type RandomTrafficConfig struct {
 	Enabled     bool     `yaml:"enabled,omitempty"`
 	Interval    int      `yaml:"interval,omitempty"`     // seconds
@@ -386,7 +398,7 @@ type RandomTrafficConfig struct {
 	Patterns    []string `yaml:"patterns,omitempty"`     // traffic patterns
 }
 
-// TrapsConfig represents SNMP trap configuration (v1.6.0)
+// TrapsConfig represents SNMP trap configuration (v1.6.0).
 type TrapsConfig struct {
 	Enabled               bool                 `yaml:"enabled,omitempty"`
 	Receivers             []string             `yaml:"receivers,omitempty"`
@@ -399,34 +411,34 @@ type TrapsConfig struct {
 	InterfaceErrors       *ThresholdTrapConfig `yaml:"interface_errors,omitempty"`
 }
 
-// TrapTriggerConfig configures a simple trap trigger
+// TrapTriggerConfig configures a simple trap trigger.
 type TrapTriggerConfig struct {
 	Enabled   bool `yaml:"enabled,omitempty"`
 	OnStartup bool `yaml:"on_startup,omitempty"`
 }
 
-// LinkStateTrapConfig configures link up/down traps
+// LinkStateTrapConfig configures link up/down traps.
 type LinkStateTrapConfig struct {
 	Enabled  bool `yaml:"enabled,omitempty"`
 	LinkDown bool `yaml:"link_down,omitempty"`
 	LinkUp   bool `yaml:"link_up,omitempty"`
 }
 
-// ThresholdTrapConfig configures threshold-based traps
+// ThresholdTrapConfig configures threshold-based traps.
 type ThresholdTrapConfig struct {
 	Enabled   bool `yaml:"enabled,omitempty"`
 	Threshold int  `yaml:"threshold,omitempty"` // threshold value
 	Interval  int  `yaml:"interval,omitempty"`  // check interval in seconds
 }
 
-// Parser handles parsing Java DSL format
+// Parser handles parsing Java DSL format.
 type Parser struct {
 	lines   []string
 	pos     int
 	verbose bool
 }
 
-// ConvertFile converts a Java DSL config file to YAML
+// ConvertFile converts a Java DSL config file to YAML.
 func ConvertFile(inputPath, outputPath string, verbose bool) error {
 	// Read input file
 	data, err := os.ReadFile(inputPath) // #nosec G304 -- user-provided file path, validated by caller
@@ -453,14 +465,14 @@ func ConvertFile(inputPath, outputPath string, verbose bool) error {
 	}
 
 	// Write output file
-	if err := os.WriteFile(outputPath, yamlData, 0600); err != nil {
+	if err := os.WriteFile(outputPath, yamlData, 0o600); err != nil {
 		return fmt.Errorf("error writing output file: %w", err)
 	}
 
 	return nil
 }
 
-// Parse parses the Java DSL format
+// Parse parses the Java DSL format.
 func (p *Parser) Parse() (*Config, error) {
 	config := &Config{}
 	deviceCount := 0
@@ -471,6 +483,7 @@ func (p *Parser) Parse() (*Config, error) {
 		// Skip comments and empty lines
 		if line == "" || strings.HasPrefix(line, "//") || strings.HasPrefix(line, "#") {
 			p.pos++
+
 			continue
 		}
 
@@ -480,6 +493,7 @@ func (p *Parser) Parse() (*Config, error) {
 				config.IncludePath = path
 			}
 			p.pos++
+
 			continue
 		}
 
@@ -489,6 +503,7 @@ func (p *Parser) Parse() (*Config, error) {
 				return nil, err
 			}
 			config.CapturePlaybacks = append(config.CapturePlaybacks, *playback)
+
 			continue
 		}
 
@@ -499,6 +514,7 @@ func (p *Parser) Parse() (*Config, error) {
 			}
 			config.Devices = append(config.Devices, *device)
 			deviceCount++
+
 			continue
 		}
 
@@ -519,6 +535,7 @@ func (p *Parser) parseCapturePlayback() (*CapturePlayback, error) {
 
 		if line == ")" {
 			p.pos++
+
 			break
 		}
 
@@ -528,14 +545,14 @@ func (p *Parser) parseCapturePlayback() (*CapturePlayback, error) {
 			var loopTime int
 			n, err := fmt.Sscanf(line, "LoopTime(%d)", &loopTime)
 			if err != nil || n != 1 {
-				return nil, fmt.Errorf("line %d: invalid LoopTime format: %s", p.pos+1, line)
+				return nil, fmt.Errorf("line %d: %w: %s", p.pos+1, ErrInvalidLoopTimeFormat, line)
 			}
 			playback.LoopTime = loopTime
 		} else if strings.HasPrefix(line, "ScaleTime(") {
 			var scaleTime float64
 			n, err := fmt.Sscanf(line, "ScaleTime(%f)", &scaleTime)
 			if err != nil || n != 1 {
-				return nil, fmt.Errorf("line %d: invalid ScaleTime format: %s", p.pos+1, line)
+				return nil, fmt.Errorf("line %d: %w: %s", p.pos+1, ErrInvalidScaleTimeFormat, line)
 			}
 			playback.ScaleTime = scaleTime
 		}
@@ -546,7 +563,7 @@ func (p *Parser) parseCapturePlayback() (*CapturePlayback, error) {
 	return playback, nil
 }
 
-// parseDevice parses a Device block
+// parseDevice parses a Device block.
 func (p *Parser) parseDevice(deviceNum int) (*Device, error) {
 	p.pos++ // Skip opening line
 	device := &Device{
@@ -558,6 +575,7 @@ func (p *Parser) parseDevice(deviceNum int) (*Device, error) {
 
 		if line == ")" {
 			p.pos++
+
 			break
 		}
 
@@ -588,7 +606,7 @@ func (p *Parser) parseDevice(deviceNum int) (*Device, error) {
 			var vlan int
 			n, err := fmt.Sscanf(line, "Vlan(%d)", &vlan)
 			if err != nil || n != 1 {
-				return nil, fmt.Errorf("line %d: invalid Vlan format: %s", p.pos+1, line)
+				return nil, fmt.Errorf("line %d: %w: %s", p.pos+1, ErrInvalidVlanFormat, line)
 			}
 			device.VLAN = vlan
 		} else if strings.HasPrefix(line, "SpanningTree(") {
@@ -603,6 +621,7 @@ func (p *Parser) parseDevice(deviceNum int) (*Device, error) {
 				return nil, err
 			}
 			device.SnmpAgent = mergeSnmpAgent(device.SnmpAgent, agent)
+
 			continue
 		} else if strings.HasPrefix(line, "SnmpAccessList(") {
 			accessList, err := p.parseSnmpAccessList()
@@ -613,6 +632,7 @@ func (p *Parser) parseDevice(deviceNum int) (*Device, error) {
 				device.SnmpAgent = &SnmpAgent{}
 			}
 			device.SnmpAgent.AccessList = append(device.SnmpAgent.AccessList, accessList...)
+
 			continue
 		} else if strings.HasPrefix(line, "NetBiosStatus(") {
 			netbios, err := p.parseNetBiosStatus()
@@ -620,6 +640,7 @@ func (p *Parser) parseDevice(deviceNum int) (*Device, error) {
 				return nil, err
 			}
 			device.Netbios = mergeNetbios(device.Netbios, netbios)
+
 			continue
 		} else if strings.HasPrefix(line, "Icmp(") {
 			icmp, err := p.parseIcmp()
@@ -627,6 +648,7 @@ func (p *Parser) parseDevice(deviceNum int) (*Device, error) {
 				return nil, err
 			}
 			device.Icmp = icmp
+
 			continue
 		} else if strings.HasPrefix(line, "Icmp6(") {
 			icmp6, err := p.parseIcmp6()
@@ -634,6 +656,7 @@ func (p *Parser) parseDevice(deviceNum int) (*Device, error) {
 				return nil, err
 			}
 			device.Icmpv6 = icmp6
+
 			continue
 		} else if strings.HasPrefix(line, "Dhcp(") {
 			dhcp, err := p.parseDhcp()
@@ -641,6 +664,7 @@ func (p *Parser) parseDevice(deviceNum int) (*Device, error) {
 				return nil, err
 			}
 			device.Dhcp = dhcp
+
 			continue
 		} else if strings.HasPrefix(line, "Dns(") {
 			dns, err := p.parseDns()
@@ -648,6 +672,7 @@ func (p *Parser) parseDevice(deviceNum int) (*Device, error) {
 				return nil, err
 			}
 			device.Dns = dns
+
 			continue
 		}
 
@@ -684,6 +709,7 @@ func mergeSnmpAgent(base *SnmpAgent, incoming *SnmpAgent) *SnmpAgent {
 	if base.Traps == nil {
 		base.Traps = incoming.Traps
 	}
+
 	return base
 }
 
@@ -713,6 +739,7 @@ func mergeNetbios(base *NetbiosConfig, incoming *NetbiosConfig) *NetbiosConfig {
 	base.Names = append(base.Names, incoming.Names...)
 	base.MsBrowse = base.MsBrowse || incoming.MsBrowse
 	base.Enabled = base.Enabled || incoming.Enabled
+
 	return base
 }
 
@@ -727,12 +754,14 @@ func (p *Parser) parseSnmpAgent() (*SnmpAgent, error) {
 
 		if line == ")" {
 			p.pos++
+
 			break
 		}
 
 		// Skip comments
 		if strings.HasPrefix(line, "//") || strings.HasPrefix(line, "#") {
 			p.pos++
+
 			continue
 		}
 
@@ -785,10 +814,12 @@ func (p *Parser) parseSnmpAccessList() ([]string, error) {
 		line := strings.TrimSpace(p.lines[p.pos])
 		if line == ")" {
 			p.pos++
+
 			break
 		}
 		if strings.HasPrefix(line, "//") || strings.HasPrefix(line, "#") {
 			p.pos++
+
 			continue
 		}
 		if strings.HasPrefix(line, "IpAddr(") {
@@ -818,6 +849,7 @@ func (p *Parser) parseTTL(line string) *TTLConfig {
 	if _, err := fmt.Sscanf(parts[0], "%d", &ttl); err != nil {
 		return nil
 	}
+
 	return &TTLConfig{
 		TTL:  ttl,
 		IP:   parts[1],
@@ -836,11 +868,13 @@ func (p *Parser) parseNetBiosStatus() (*NetbiosConfig, error) {
 		line := strings.TrimSpace(p.lines[p.pos])
 		if line == ")" {
 			p.pos++
+
 			break
 		}
 
 		if strings.HasPrefix(line, "//") || strings.HasPrefix(line, "#") {
 			p.pos++
+
 			continue
 		}
 
@@ -922,10 +956,12 @@ func (p *Parser) parseIcmp() (*IcmpConfig, error) {
 		line := strings.TrimSpace(p.lines[p.pos])
 		if line == ")" {
 			p.pos++
+
 			break
 		}
 		if strings.HasPrefix(line, "//") || strings.HasPrefix(line, "#") {
 			p.pos++
+
 			continue
 		}
 
@@ -937,6 +973,7 @@ func (p *Parser) parseIcmp() (*IcmpConfig, error) {
 				return nil, err
 			}
 			icmp.RouterAdvertisement = ra
+
 			continue
 		}
 
@@ -955,10 +992,12 @@ func (p *Parser) parseIcmpRouterAdvertisement() (*IcmpRouterAdvertisement, error
 		line := strings.TrimSpace(p.lines[p.pos])
 		if line == ")" {
 			p.pos++
+
 			break
 		}
 		if strings.HasPrefix(line, "//") || strings.HasPrefix(line, "#") {
 			p.pos++
+
 			continue
 		}
 
@@ -1003,10 +1042,12 @@ func (p *Parser) parseIcmp6() (*Icmpv6Config, error) {
 		line := strings.TrimSpace(p.lines[p.pos])
 		if line == ")" {
 			p.pos++
+
 			break
 		}
 		if strings.HasPrefix(line, "//") || strings.HasPrefix(line, "#") {
 			p.pos++
+
 			continue
 		}
 
@@ -1016,6 +1057,7 @@ func (p *Parser) parseIcmp6() (*Icmpv6Config, error) {
 				return nil, err
 			}
 			icmp6.RouterAdvertisement = ra
+
 			continue
 		}
 
@@ -1034,10 +1076,12 @@ func (p *Parser) parseIcmpv6RouterAdvertisement() (*Icmpv6RouterAdvertisement, e
 		line := strings.TrimSpace(p.lines[p.pos])
 		if line == ")" {
 			p.pos++
+
 			break
 		}
 		if strings.HasPrefix(line, "//") || strings.HasPrefix(line, "#") {
 			p.pos++
+
 			continue
 		}
 
@@ -1082,6 +1126,7 @@ func (p *Parser) parseIcmpv6RouterAdvertisement() (*Icmpv6RouterAdvertisement, e
 			if prefix != nil {
 				ra.PrefixInfo = append(ra.PrefixInfo, *prefix)
 			}
+
 			continue
 		}
 
@@ -1100,10 +1145,12 @@ func (p *Parser) parseIcmpv6PrefixInformation() (*Icmpv6PrefixInfo, error) {
 		line := strings.TrimSpace(p.lines[p.pos])
 		if line == ")" {
 			p.pos++
+
 			break
 		}
 		if strings.HasPrefix(line, "//") || strings.HasPrefix(line, "#") {
 			p.pos++
+
 			continue
 		}
 		switch {
@@ -1148,14 +1195,16 @@ func (p *Parser) collectQuotedDirective(line string, minQuotes int) string {
 		}
 		combined += " " + next
 	}
+
 	return combined
 }
 
 func stripInlineComment(line string) string {
 	inQuote := false
-	for i := 0; i < len(line)-1; i++ {
+	for i := range len(line) - 1 {
 		if line[i] == '"' {
 			inQuote = !inQuote
+
 			continue
 		}
 		if !inQuote && line[i] == '/' && line[i+1] == '/' {
@@ -1165,6 +1214,7 @@ func stripInlineComment(line string) string {
 			return strings.TrimSpace(line[:i])
 		}
 	}
+
 	return strings.TrimSpace(line)
 }
 
@@ -1191,6 +1241,7 @@ func (p *Parser) parseCommunityInclude(line string) (string, string) {
 	if len(matches) < 2 {
 		return "", ""
 	}
+
 	return matches[0][1], matches[1][1]
 }
 
@@ -1214,6 +1265,7 @@ func (p *Parser) parseFdbTable(line string, dot1d bool) *FdbTableConfig {
 	} else if !dot1d {
 		return nil
 	}
+
 	return cfg
 }
 
@@ -1237,12 +1289,14 @@ func (p *Parser) parseDhcp() (*DhcpServer, error) {
 				dhcp.ClientLeases = append(dhcp.ClientLeases, *currentLease)
 			}
 			p.pos++
+
 			break
 		}
 
 		// Skip comments
 		if strings.HasPrefix(line, "//") || strings.HasPrefix(line, "#") {
 			p.pos++
+
 			continue
 		}
 
@@ -1252,9 +1306,8 @@ func (p *Parser) parseDhcp() (*DhcpServer, error) {
 			ip := p.extractValue(line)
 			if ip == "" {
 				// No closing paren on same line, extract everything after (
-				start := strings.Index(line, "(")
-				if start != -1 {
-					ip = strings.TrimSpace(line[start+1:])
+				if _, after, found := strings.Cut(line, "("); found {
+					ip = strings.TrimSpace(after)
 				}
 			}
 			currentLease = &DhcpLease{ClientIP: ip}
@@ -1276,6 +1329,7 @@ func (p *Parser) parseDhcp() (*DhcpServer, error) {
 			if p.pos < len(p.lines) && strings.TrimSpace(p.lines[p.pos]) == ")" {
 				p.pos++ // Skip the closing paren
 			}
+
 			continue // Continue to next iteration without incrementing again
 		} else if strings.HasPrefix(line, "SubnetMask") {
 			dhcp.SubnetMask = p.extractValue(line)
@@ -1313,12 +1367,14 @@ func (p *Parser) parseDns() (*DnsServer, error) {
 
 		if line == ")" {
 			p.pos++
+
 			break
 		}
 
 		// Skip comments
 		if strings.HasPrefix(line, "//") || strings.HasPrefix(line, "#") {
 			p.pos++
+
 			continue
 		}
 
@@ -1350,7 +1406,7 @@ func (p *Parser) parseDns() (*DnsServer, error) {
 	return dns, nil
 }
 
-// parseDnsRecord parses a Forward() or Reverse() DNS record
+// parseDnsRecord parses a Forward() or Reverse() DNS record.
 func (p *Parser) parseDnsRecord(line string, isForward bool) *DnsRecord {
 	// Forward("hostname" IP TTL)
 	// Forward2("hostname" IP TTL RCODE)
@@ -1394,7 +1450,7 @@ func (p *Parser) parseDnsRecord(line string, isForward bool) *DnsRecord {
 	return record
 }
 
-// extractString extracts a quoted string from a directive
+// extractString extracts a quoted string from a directive.
 func (p *Parser) extractString(line string) string {
 	start := strings.Index(line, "\"")
 	if start == -1 {
@@ -1404,10 +1460,11 @@ func (p *Parser) extractString(line string) string {
 	if end == -1 {
 		return ""
 	}
+
 	return line[start+1 : start+1+end]
 }
 
-// extractValue extracts a value from parentheses (no quotes)
+// extractValue extracts a value from parentheses (no quotes).
 func (p *Parser) extractValue(line string) string {
 	start := strings.Index(line, "(")
 	if start == -1 {
@@ -1417,42 +1474,47 @@ func (p *Parser) extractValue(line string) string {
 	if end == -1 {
 		return ""
 	}
+
 	return line[start+1 : start+1+end]
 }
 
-// formatMAC converts XXXXXXXXXXXX to XX:XX:XX:XX:XX:XX
+// formatMAC converts XXXXXXXXXXXX to XX:XX:XX:XX:XX:XX.
 func (p *Parser) formatMAC(mac string) string {
 	if len(mac) != 12 {
 		return mac
 	}
+
 	return fmt.Sprintf("%s:%s:%s:%s:%s:%s",
 		mac[0:2], mac[2:4], mac[4:6], mac[6:8], mac[8:10], mac[10:12])
 }
 
-// LoadYAMLConfig loads a YAML config file into Go config structure
+// LoadYAMLConfig loads a YAML config file into Go config structure.
 func LoadYAMLConfig(filename string) (*Config, error) {
 	data, err := os.ReadFile(filename) // #nosec G304 -- user-provided file path, validated by caller
 	if err != nil {
 		return nil, fmt.Errorf("error reading YAML file: %w", err)
 	}
+
 	return LoadYAMLConfigFromBytes(data)
 }
 
 // LoadYAMLConfigFromBytes converts in-memory YAML data into a Go config structure.
 func LoadYAMLConfigFromBytes(data []byte) (*Config, error) {
 	var config Config
-	if err := yaml.Unmarshal(data, &config); err != nil {
+	err := yaml.Unmarshal(data, &config)
+	if err != nil {
 		return nil, fmt.Errorf("error parsing YAML: %w", err)
 	}
+
 	return &config, nil
 }
 
-// ValidateConfig validates that no functionality was lost in conversion
+// ValidateConfig validates that no functionality was lost in conversion.
 func ValidateConfig(config *Config) error {
 	// Validate devices have required fields
 	for i, device := range config.Devices {
 		if device.MAC == "" {
-			return fmt.Errorf("device %d missing MAC address", i)
+			return fmt.Errorf("%w: device %d", ErrDeviceMissingMAC, i)
 		}
 		// IP address is optional in Java configs (some devices don't have IPs)
 
@@ -1461,10 +1523,10 @@ func ValidateConfig(config *Config) error {
 			// Validate AddMibs have required fields
 			for j, mib := range device.SnmpAgent.AddMibs {
 				if mib.OID == "" {
-					return fmt.Errorf("device %d AddMib %d missing OID", i, j)
+					return fmt.Errorf("%w: device %d AddMib %d", ErrAddMibMissingOID, i, j)
 				}
 				if mib.Type == "" {
-					return fmt.Errorf("device %d AddMib %d missing type", i, j)
+					return fmt.Errorf("%w: device %d AddMib %d", ErrAddMibMissingType, i, j)
 				}
 			}
 		}
@@ -1473,31 +1535,31 @@ func ValidateConfig(config *Config) error {
 	// If capture playbacks specified, validate them
 	for i, playback := range config.CapturePlaybacks {
 		if playback.FileName == "" {
-			return fmt.Errorf("CapturePlayback %d missing file name", i)
+			return fmt.Errorf("%w: index %d", ErrCapturePlaybackMissingFile, i)
 		}
 	}
 
 	return nil
 }
 
-// PrintSummary prints a summary of the config
+// PrintSummary prints a summary of the config.
 func PrintSummary(config *Config, w *bufio.Writer) {
-	fmt.Fprintf(w, "Configuration Summary:\n")
-	fmt.Fprintf(w, "  Devices: %d\n", len(config.Devices))
+	_, _ = fmt.Fprintf(w, "Configuration Summary:\n")
+	_, _ = fmt.Fprintf(w, "  Devices: %d\n", len(config.Devices))
 
 	if config.IncludePath != "" {
-		fmt.Fprintf(w, "  Include Path: %s\n", config.IncludePath)
+		_, _ = fmt.Fprintf(w, "  Include Path: %s\n", config.IncludePath)
 	}
 
 	if len(config.CapturePlaybacks) > 0 {
-		fmt.Fprintf(w, "  PCAP Playbacks: %d\n", len(config.CapturePlaybacks))
+		_, _ = fmt.Fprintf(w, "  PCAP Playbacks: %d\n", len(config.CapturePlaybacks))
 		for i, playback := range config.CapturePlaybacks {
-			fmt.Fprintf(w, "    [%d] %s\n", i+1, playback.FileName)
+			_, _ = fmt.Fprintf(w, "    [%d] %s\n", i+1, playback.FileName)
 			if playback.LoopTime > 0 {
-				fmt.Fprintf(w, "        Loop Time: %d ms\n", playback.LoopTime)
+				_, _ = fmt.Fprintf(w, "        Loop Time: %d ms\n", playback.LoopTime)
 			}
 			if playback.ScaleTime > 0 {
-				fmt.Fprintf(w, "        Scale Time: %.2f\n", playback.ScaleTime)
+				_, _ = fmt.Fprintf(w, "        Scale Time: %.2f\n", playback.ScaleTime)
 			}
 		}
 	}
@@ -1512,11 +1574,11 @@ func PrintSummary(config *Config, w *bufio.Writer) {
 	}
 
 	if snmpCount > 0 {
-		fmt.Fprintf(w, "  SNMP Agents: %d\n", snmpCount)
+		_, _ = fmt.Fprintf(w, "  SNMP Agents: %d\n", snmpCount)
 		if mibCount > 0 {
-			fmt.Fprintf(w, "  Custom MIBs: %d\n", mibCount)
+			_, _ = fmt.Fprintf(w, "  Custom MIBs: %d\n", mibCount)
 		}
 	}
 
-	w.Flush() // #nosec G104 -- error logged or non-critical
+	_ = w.Flush()
 }

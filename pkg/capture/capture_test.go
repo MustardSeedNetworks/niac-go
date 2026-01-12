@@ -2,6 +2,7 @@ package capture
 
 import (
 	"os"
+	"slices"
 	"sync"
 	"testing"
 	"time"
@@ -11,7 +12,7 @@ import (
 	"github.com/google/gopacket/pcap"
 )
 
-// TestRateLimiter_NewRateLimiter tests rate limiter creation
+// TestRateLimiter_NewRateLimiter tests rate limiter creation.
 func TestRateLimiter_NewRateLimiter(t *testing.T) {
 	rl := NewRateLimiter(100)
 	defer rl.Stop()
@@ -37,14 +38,16 @@ func TestRateLimiter_NewRateLimiter(t *testing.T) {
 	}
 }
 
-// TestRateLimiter_Wait tests that Wait() blocks and releases
+// TestRateLimiter_Wait tests that Wait() blocks and releases.
 func TestRateLimiter_Wait(t *testing.T) {
 	// Use high rate to make test fast
 	rl := NewRateLimiter(1000)
 	defer rl.Stop()
 
 	start := time.Now()
+
 	rl.Wait() // Should not block initially (bucket pre-filled)
+
 	elapsed := time.Since(start)
 
 	// Should return almost immediately since bucket is pre-filled
@@ -53,21 +56,24 @@ func TestRateLimiter_Wait(t *testing.T) {
 	}
 }
 
-// TestRateLimiter_Wait_RateLimiting tests actual rate limiting behavior
+// TestRateLimiter_Wait_RateLimiting tests actual rate limiting behavior.
 func TestRateLimiter_Wait_RateLimiting(t *testing.T) {
 	// Use low rate to test rate limiting
 	packetsPerSecond := 10
+
 	rl := NewRateLimiter(packetsPerSecond)
 	defer rl.Stop()
 
 	// Drain the initial tokens
-	for i := 0; i < packetsPerSecond; i++ {
+	for range packetsPerSecond {
 		rl.Wait()
 	}
 
 	// Next wait should block until token refill
 	start := time.Now()
+
 	rl.Wait()
+
 	elapsed := time.Since(start)
 
 	// Should wait approximately 1/packetsPerSecond seconds (100ms for 10 pps)
@@ -79,22 +85,21 @@ func TestRateLimiter_Wait_RateLimiting(t *testing.T) {
 	}
 }
 
-// TestRateLimiter_Stop tests clean shutdown
+// TestRateLimiter_Stop tests clean shutdown.
 func TestRateLimiter_Stop(t *testing.T) {
 	rl := NewRateLimiter(100)
 
 	// Stop should not panic
 	rl.Stop()
-
 	// Verify ticker stopped (accessing stopped ticker doesn't panic)
 	// We can't directly test the goroutine exit without race detector,
 	// but Stop() closes done channel which causes goroutine to exit
 }
 
-// TestRateLimiter_Stop_NoLeaks tests that goroutine exits after Stop
+// TestRateLimiter_Stop_NoLeaks tests that goroutine exits after Stop.
 func TestRateLimiter_Stop_NoLeaks(t *testing.T) {
 	// This test verifies goroutine cleanup by creating/stopping many rate limiters
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		rl := NewRateLimiter(100)
 		rl.Stop()
 	}
@@ -102,25 +107,25 @@ func TestRateLimiter_Stop_NoLeaks(t *testing.T) {
 	// Run with -race flag to detect leaks
 }
 
-// TestRateLimiter_ConcurrentWait tests concurrent Wait() calls
+// TestRateLimiter_ConcurrentWait tests concurrent Wait() calls.
 func TestRateLimiter_ConcurrentWait(t *testing.T) {
 	rl := NewRateLimiter(100)
 	defer rl.Stop()
 
 	var wg sync.WaitGroup
+
 	goroutines := 10
 
 	// Launch multiple goroutines calling Wait()
-	for i := 0; i < goroutines; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for range goroutines {
+		wg.Go(func() {
 			rl.Wait()
-		}()
+		})
 	}
 
 	// Wait for all goroutines to complete
 	done := make(chan struct{})
+
 	go func() {
 		wg.Wait()
 		close(done)
@@ -134,32 +139,24 @@ func TestRateLimiter_ConcurrentWait(t *testing.T) {
 	}
 }
 
-// TestInterfaceExists tests interface existence check
+// TestInterfaceExists tests interface existence check.
 func TestInterfaceExists(t *testing.T) {
 	// Test with loopback interface (should exist on all systems)
 	loopbackNames := []string{"lo", "lo0", "Loopback"}
-	found := false
 
-	for _, name := range loopbackNames {
-		if InterfaceExists(name) {
-			found = true
-			break
-		}
-	}
-
-	if !found {
+	if !slices.ContainsFunc(loopbackNames, InterfaceExists) {
 		t.Skip("No loopback interface found (unusual but not an error)")
 	}
 }
 
-// TestInterfaceExists_NonExistent tests checking for non-existent interface
+// TestInterfaceExists_NonExistent tests checking for non-existent interface.
 func TestInterfaceExists_NonExistent(t *testing.T) {
 	if InterfaceExists("definitely-does-not-exist-interface-12345") {
 		t.Error("InterfaceExists returned true for non-existent interface")
 	}
 }
 
-// TestGetInterface tests getting interface information
+// TestGetInterface tests getting interface information.
 func TestGetInterface(t *testing.T) {
 	// Get list of interfaces first
 	devices, err := pcap.FindAllDevs()
@@ -173,8 +170,8 @@ func TestGetInterface(t *testing.T) {
 
 	// Test with first available interface
 	testInterface := devices[0].Name
-	iface, err := GetInterface(testInterface)
 
+	iface, err := GetInterface(testInterface)
 	if err != nil {
 		t.Fatalf("GetInterface failed: %v", err)
 	}
@@ -188,23 +185,22 @@ func TestGetInterface(t *testing.T) {
 	}
 }
 
-// TestGetInterface_NonExistent tests getting non-existent interface
+// TestGetInterface_NonExistent tests getting non-existent interface.
 func TestGetInterface_NonExistent(t *testing.T) {
 	_, err := GetInterface("definitely-does-not-exist-interface-12345")
-
 	if err == nil {
 		t.Error("Expected error for non-existent interface, got nil")
 	}
 }
 
-// TestListInterfaces tests listing all interfaces
+// TestListInterfaces tests listing all interfaces.
 func TestListInterfaces(t *testing.T) {
 	// This test just verifies ListInterfaces doesn't panic
 	// We can't easily capture stdout to verify output
 	ListInterfaces()
 }
 
-// TestEngine_NewEngine tests engine creation
+// TestEngine_NewEngine tests engine creation.
 func TestEngine_New(t *testing.T) {
 	// This test requires a valid network interface
 	// Skip if not running with privileges or on CI without network access
@@ -214,11 +210,13 @@ func TestEngine_New(t *testing.T) {
 
 	// Try to find loopback interface
 	loopbackNames := []string{"lo", "lo0", "Loopback"}
+
 	var testInterface string
 
 	for _, name := range loopbackNames {
 		if InterfaceExists(name) {
 			testInterface = name
+
 			break
 		}
 	}
@@ -246,27 +244,28 @@ func TestEngine_New(t *testing.T) {
 	}
 }
 
-// TestEngine_New_InvalidInterface tests engine creation with invalid interface
+// TestEngine_New_InvalidInterface tests engine creation with invalid interface.
 func TestEngine_New_InvalidInterface(t *testing.T) {
 	_, err := New("definitely-does-not-exist-interface-12345", 0)
-
 	if err == nil {
 		t.Error("Expected error for invalid interface, got nil")
 	}
 }
 
-// TestEngine_Close tests engine cleanup
+// TestEngine_Close tests engine cleanup.
 func TestEngine_Close(t *testing.T) {
 	if os.Getenv("CI") != "" {
 		t.Skip("Skipping engine test in CI environment")
 	}
 
 	loopbackNames := []string{"lo", "lo0", "Loopback"}
+
 	var testInterface string
 
 	for _, name := range loopbackNames {
 		if InterfaceExists(name) {
 			testInterface = name
+
 			break
 		}
 	}
@@ -287,22 +286,23 @@ func TestEngine_Close(t *testing.T) {
 	engine.Close()
 }
 
-// TestSendEthernet_ValidFrame tests building Ethernet frame
+// TestSendEthernet_ValidFrame tests building Ethernet frame.
 func TestSendEthernet_ValidFrame(t *testing.T) {
 	// This test would require a real interface to send packets
 	// Instead, we can test the serialization logic by creating an engine
 	// and checking if SendEthernet builds valid frames
-
 	if os.Getenv("CI") != "" {
 		t.Skip("Skipping packet send test in CI environment")
 	}
 
 	loopbackNames := []string{"lo", "lo0"}
+
 	var testInterface string
 
 	for _, name := range loopbackNames {
 		if InterfaceExists(name) {
 			testInterface = name
+
 			break
 		}
 	}
@@ -328,7 +328,7 @@ func TestSendEthernet_ValidFrame(t *testing.T) {
 	_ = err
 }
 
-// TestBuildARPPacket tests ARP packet construction
+// TestBuildARPPacket tests ARP packet construction.
 func TestBuildARPPacket(t *testing.T) {
 	// Test ARP packet serialization without actually sending
 	srcMAC := []byte{0x00, 0x11, 0x22, 0x33, 0x44, 0x55}
@@ -373,20 +373,22 @@ func TestBuildARPPacket(t *testing.T) {
 
 	// Verify packet can be parsed back
 	packet := gopacket.NewPacket(data, layers.LayerTypeEthernet, gopacket.Default)
+
 	arpLayer := packet.Layer(layers.LayerTypeARP)
 	if arpLayer == nil {
 		t.Error("Cannot parse ARP layer from serialized packet")
 	}
 }
 
-// TestRateLimiter_TokenBucket tests token bucket behavior
+// TestRateLimiter_TokenBucket tests token bucket behavior.
 func TestRateLimiter_TokenBucket(t *testing.T) {
 	packetsPerSecond := 5
+
 	rl := NewRateLimiter(packetsPerSecond)
 	defer rl.Stop()
 
 	// Bucket should be pre-filled with packetsPerSecond tokens
-	for i := 0; i < packetsPerSecond; i++ {
+	for i := range packetsPerSecond {
 		select {
 		case <-rl.tokens:
 			// Success - got token
@@ -404,18 +406,20 @@ func TestRateLimiter_TokenBucket(t *testing.T) {
 	}
 }
 
-// TestEngine_DebugLevel tests debug level setting
+// TestEngine_DebugLevel tests debug level setting.
 func TestEngine_DebugLevel(t *testing.T) {
 	if os.Getenv("CI") != "" {
 		t.Skip("Skipping engine test in CI environment")
 	}
 
 	loopbackNames := []string{"lo", "lo0"}
+
 	var testInterface string
 
 	for _, name := range loopbackNames {
 		if InterfaceExists(name) {
 			testInterface = name
+
 			break
 		}
 	}
@@ -448,27 +452,25 @@ func TestEngine_DebugLevel(t *testing.T) {
 	}
 }
 
-// BenchmarkRateLimiter_Wait benchmarks rate limiter performance
+// BenchmarkRateLimiter_Wait benchmarks rate limiter performance.
 func BenchmarkRateLimiter_Wait(b *testing.B) {
 	rl := NewRateLimiter(10000) // High rate to minimize blocking
 	defer rl.Stop()
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		rl.Wait()
 	}
 }
 
-// BenchmarkRateLimiter_NewStop benchmarks creation and cleanup
+// BenchmarkRateLimiter_NewStop benchmarks creation and cleanup.
 func BenchmarkRateLimiter_NewStop(b *testing.B) {
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		rl := NewRateLimiter(100)
 		rl.Stop()
 	}
 }
 
-// BenchmarkSerializeARP benchmarks ARP packet serialization
+// BenchmarkSerializeARP benchmarks ARP packet serialization.
 func BenchmarkSerializeARP(b *testing.B) {
 	srcMAC := []byte{0x00, 0x11, 0x22, 0x33, 0x44, 0x55}
 	dstMAC := []byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
@@ -498,8 +500,7 @@ func BenchmarkSerializeARP(b *testing.B) {
 		ComputeChecksums: true,
 	}
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		buf := gopacket.NewSerializeBuffer()
 		_ = gopacket.SerializeLayers(buf, opts, eth, arp)
 	}

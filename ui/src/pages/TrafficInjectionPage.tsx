@@ -1,7 +1,7 @@
-import { type FC } from 'react';
-import { H2, P } from '../ui';
-import { ErrorInjectionPanel } from '../components/ErrorInjectionPanel';
-import { ReplayControlPanel } from '../components/ReplayControlPanel';
+import type { FC } from "react";
+import { ErrorInjectionPanel } from "../components/ErrorInjectionPanel";
+import { ReplayControlPanel } from "../components/ReplayControlPanel";
+import { H2, P } from "../ui";
 
 export const TrafficInjectionPage: FC = () => {
   return (

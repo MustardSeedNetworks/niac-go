@@ -39,18 +39,23 @@ func TestICMPv6Constants(t *testing.T) {
 	if ICMPv6TypeDestUnreachable != 1 {
 		t.Error("ICMPv6TypeDestUnreachable should be 1")
 	}
+
 	if ICMPv6TypePacketTooBig != 2 {
 		t.Error("ICMPv6TypePacketTooBig should be 2")
 	}
+
 	if ICMPv6TypeTimeExceeded != 3 {
 		t.Error("ICMPv6TypeTimeExceeded should be 3")
 	}
+
 	if ICMPv6TypeParameterProblem != 4 {
 		t.Error("ICMPv6TypeParameterProblem should be 4")
 	}
+
 	if ICMPv6TypeEchoRequest != 128 {
 		t.Error("ICMPv6TypeEchoRequest should be 128")
 	}
+
 	if ICMPv6TypeEchoReply != 129 {
 		t.Error("ICMPv6TypeEchoReply should be 129")
 	}
@@ -59,15 +64,19 @@ func TestICMPv6Constants(t *testing.T) {
 	if ICMPv6TypeRouterSolicitation != 133 {
 		t.Error("ICMPv6TypeRouterSolicitation should be 133")
 	}
+
 	if ICMPv6TypeRouterAdvertisement != 134 {
 		t.Error("ICMPv6TypeRouterAdvertisement should be 134")
 	}
+
 	if ICMPv6TypeNeighborSolicitation != 135 {
 		t.Error("ICMPv6TypeNeighborSolicitation should be 135")
 	}
+
 	if ICMPv6TypeNeighborAdvertisement != 136 {
 		t.Error("ICMPv6TypeNeighborAdvertisement should be 136")
 	}
+
 	if ICMPv6TypeRedirect != 137 {
 		t.Error("ICMPv6TypeRedirect should be 137")
 	}
@@ -78,15 +87,19 @@ func TestICMPv6OptionConstants(t *testing.T) {
 	if ICMPv6OptSourceLinkAddr != 1 {
 		t.Error("ICMPv6OptSourceLinkAddr should be 1")
 	}
+
 	if ICMPv6OptTargetLinkAddr != 2 {
 		t.Error("ICMPv6OptTargetLinkAddr should be 2")
 	}
+
 	if ICMPv6OptPrefixInfo != 3 {
 		t.Error("ICMPv6OptPrefixInfo should be 3")
 	}
+
 	if ICMPv6OptRedirectedHdr != 4 {
 		t.Error("ICMPv6OptRedirectedHdr should be 4")
 	}
+
 	if ICMPv6OptMTU != 5 {
 		t.Error("ICMPv6OptMTU should be 5")
 	}
@@ -97,9 +110,11 @@ func TestNDFlags(t *testing.T) {
 	if NDFlagRouter != 0x80 {
 		t.Error("NDFlagRouter should be 0x80")
 	}
+
 	if NDFlagSolicited != 0x40 {
 		t.Error("NDFlagSolicited should be 0x40")
 	}
+
 	if NDFlagOverride != 0x20 {
 		t.Error("NDFlagOverride should be 0x20")
 	}

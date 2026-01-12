@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-// TestLoadYAML_Basic tests basic YAML loading functionality
+// TestLoadYAML_Basic tests basic YAML loading functionality.
 func TestLoadYAML_Basic(t *testing.T) {
 	yaml := `
 devices:
@@ -16,7 +16,8 @@ devices:
     ip: "192.168.1.1"
 `
 	tmpfile := createTempYAML(t, yaml)
-	defer os.Remove(tmpfile)
+
+	defer func() { _ = os.Remove(tmpfile) }()
 
 	cfg, err := LoadYAML(tmpfile)
 	if err != nil {
@@ -43,7 +44,7 @@ devices:
 	}
 }
 
-// TestLoadYAML_MultipleIPs tests multiple IP addresses per device (v1.5.0)
+// TestLoadYAML_MultipleIPs tests multiple IP addresses per device (v1.5.0).
 func TestLoadYAML_MultipleIPs(t *testing.T) {
 	yaml := `
 devices:
@@ -55,7 +56,8 @@ devices:
       - "10.0.0.1"
 `
 	tmpfile := createTempYAML(t, yaml)
-	defer os.Remove(tmpfile)
+
+	defer func() { _ = os.Remove(tmpfile) }()
 
 	cfg, err := LoadYAML(tmpfile)
 	if err != nil {
@@ -76,7 +78,7 @@ devices:
 	}
 }
 
-// TestLoadYAML_LLDP tests LLDP protocol configuration
+// TestLoadYAML_LLDP tests LLDP protocol configuration.
 func TestLoadYAML_LLDP(t *testing.T) {
 	yaml := `
 devices:
@@ -92,7 +94,8 @@ devices:
       chassis_id_type: "mac"
 `
 	tmpfile := createTempYAML(t, yaml)
-	defer os.Remove(tmpfile)
+
+	defer func() { _ = os.Remove(tmpfile) }()
 
 	cfg, err := LoadYAML(tmpfile)
 	if err != nil {
@@ -108,24 +111,29 @@ devices:
 	if !lldp.Enabled {
 		t.Error("Expected LLDP enabled")
 	}
+
 	if lldp.SystemDescription != "Test LLDP Device" {
 		t.Errorf("Expected system description 'Test LLDP Device', got '%s'", lldp.SystemDescription)
 	}
+
 	if lldp.PortDescription != "GigabitEthernet0/0" {
 		t.Errorf("Expected port description 'GigabitEthernet0/0', got '%s'", lldp.PortDescription)
 	}
+
 	if lldp.AdvertiseInterval != 45 {
 		t.Errorf("Expected advertise interval 45, got %d", lldp.AdvertiseInterval)
 	}
+
 	if lldp.TTL != 180 {
 		t.Errorf("Expected TTL 180, got %d", lldp.TTL)
 	}
+
 	if lldp.ChassisIDType != "mac" {
 		t.Errorf("Expected chassis ID type 'mac', got '%s'", lldp.ChassisIDType)
 	}
 }
 
-// TestLoadYAML_CDP tests CDP protocol configuration
+// TestLoadYAML_CDP tests CDP protocol configuration.
 func TestLoadYAML_CDP(t *testing.T) {
 	yaml := `
 devices:
@@ -140,7 +148,8 @@ devices:
       port_id: "GigabitEthernet0/0"
 `
 	tmpfile := createTempYAML(t, yaml)
-	defer os.Remove(tmpfile)
+
+	defer func() { _ = os.Remove(tmpfile) }()
 
 	cfg, err := LoadYAML(tmpfile)
 	if err != nil {
@@ -156,15 +165,17 @@ devices:
 	if !cdp.Enabled {
 		t.Error("Expected CDP enabled")
 	}
+
 	if cdp.Version != 2 {
 		t.Errorf("Expected version 2, got %d", cdp.Version)
 	}
+
 	if cdp.Platform != "Cisco 2921" {
 		t.Errorf("Expected platform 'Cisco 2921', got '%s'", cdp.Platform)
 	}
 }
 
-// TestLoadYAML_TrafficConfig tests traffic pattern configuration (v1.6.0)
+// TestLoadYAML_TrafficConfig tests traffic pattern configuration (v1.6.0).
 func TestLoadYAML_TrafficConfig(t *testing.T) {
 	yaml := `
 devices:
@@ -190,7 +201,8 @@ devices:
           - udp
 `
 	tmpfile := createTempYAML(t, yaml)
-	defer os.Remove(tmpfile)
+
+	defer func() { _ = os.Remove(tmpfile) }()
 
 	cfg, err := LoadYAML(tmpfile)
 	if err != nil {
@@ -211,9 +223,11 @@ devices:
 	if traffic.ARPAnnouncements == nil {
 		t.Fatal("Expected ARP announcements config, got nil")
 	}
+
 	if !traffic.ARPAnnouncements.Enabled {
 		t.Error("Expected ARP announcements enabled")
 	}
+
 	if traffic.ARPAnnouncements.Interval != 30 {
 		t.Errorf("Expected interval 30, got %d", traffic.ARPAnnouncements.Interval)
 	}
@@ -222,9 +236,11 @@ devices:
 	if traffic.PeriodicPings == nil {
 		t.Fatal("Expected periodic pings config, got nil")
 	}
+
 	if traffic.PeriodicPings.Interval != 60 {
 		t.Errorf("Expected interval 60, got %d", traffic.PeriodicPings.Interval)
 	}
+
 	if traffic.PeriodicPings.PayloadSize != 128 {
 		t.Errorf("Expected payload size 128, got %d", traffic.PeriodicPings.PayloadSize)
 	}
@@ -233,15 +249,17 @@ devices:
 	if traffic.RandomTraffic == nil {
 		t.Fatal("Expected random traffic config, got nil")
 	}
+
 	if traffic.RandomTraffic.PacketCount != 20 {
 		t.Errorf("Expected packet count 20, got %d", traffic.RandomTraffic.PacketCount)
 	}
+
 	if len(traffic.RandomTraffic.Patterns) != 3 {
 		t.Errorf("Expected 3 patterns, got %d", len(traffic.RandomTraffic.Patterns))
 	}
 }
 
-// TestLoadYAML_SNMPTraps tests SNMP trap configuration (v1.6.0)
+// TestLoadYAML_SNMPTraps tests SNMP trap configuration (v1.6.0).
 func TestLoadYAML_SNMPTraps(t *testing.T) {
 	yaml := `
 devices:
@@ -276,7 +294,8 @@ devices:
           interval: 60
 `
 	tmpfile := createTempYAML(t, yaml)
-	defer os.Remove(tmpfile)
+
+	defer func() { _ = os.Remove(tmpfile) }()
 
 	cfg, err := LoadYAML(tmpfile)
 	if err != nil {
@@ -297,6 +316,7 @@ devices:
 	if len(traps.Receivers) != 2 {
 		t.Errorf("Expected 2 receivers, got %d", len(traps.Receivers))
 	}
+
 	if traps.Receivers[0] != "192.168.1.100:162" {
 		t.Errorf("Expected receiver '192.168.1.100:162', got '%s'", traps.Receivers[0])
 	}
@@ -305,6 +325,7 @@ devices:
 	if traps.ColdStart == nil {
 		t.Fatal("Expected cold start config, got nil")
 	}
+
 	if !traps.ColdStart.Enabled || !traps.ColdStart.OnStartup {
 		t.Error("Expected cold start enabled with on_startup")
 	}
@@ -313,6 +334,7 @@ devices:
 	if traps.LinkState == nil {
 		t.Fatal("Expected link state config, got nil")
 	}
+
 	if !traps.LinkState.LinkDown || !traps.LinkState.LinkUp {
 		t.Error("Expected link down and link up enabled")
 	}
@@ -321,15 +343,17 @@ devices:
 	if traps.HighCPU == nil {
 		t.Fatal("Expected high CPU config, got nil")
 	}
+
 	if traps.HighCPU.Threshold != 80 {
 		t.Errorf("Expected threshold 80, got %d", traps.HighCPU.Threshold)
 	}
+
 	if traps.HighCPU.Interval != 300 {
 		t.Errorf("Expected interval 300, got %d", traps.HighCPU.Interval)
 	}
 }
 
-// TestLoadYAML_TrafficDefaults tests default values for traffic config (v1.6.0)
+// TestLoadYAML_TrafficDefaults tests default values for traffic config (v1.6.0).
 func TestLoadYAML_TrafficDefaults(t *testing.T) {
 	yaml := `
 devices:
@@ -346,7 +370,8 @@ devices:
         enabled: true
 `
 	tmpfile := createTempYAML(t, yaml)
-	defer os.Remove(tmpfile)
+
+	defer func() { _ = os.Remove(tmpfile) }()
 
 	cfg, err := LoadYAML(tmpfile)
 	if err != nil {
@@ -360,21 +385,25 @@ devices:
 	if traffic.ARPAnnouncements.Interval != 60 {
 		t.Errorf("Expected default ARP interval 60, got %d", traffic.ARPAnnouncements.Interval)
 	}
+
 	if traffic.PeriodicPings.Interval != 120 {
 		t.Errorf("Expected default ping interval 120, got %d", traffic.PeriodicPings.Interval)
 	}
+
 	if traffic.PeriodicPings.PayloadSize != 32 {
 		t.Errorf("Expected default payload size 32, got %d", traffic.PeriodicPings.PayloadSize)
 	}
+
 	if traffic.RandomTraffic.Interval != 180 {
 		t.Errorf("Expected default random interval 180, got %d", traffic.RandomTraffic.Interval)
 	}
+
 	if traffic.RandomTraffic.PacketCount != 5 {
 		t.Errorf("Expected default packet count 5, got %d", traffic.RandomTraffic.PacketCount)
 	}
 }
 
-// TestLoadYAML_TrapDefaults tests default values for trap config (v1.6.0)
+// TestLoadYAML_TrapDefaults tests default values for trap config (v1.6.0).
 func TestLoadYAML_TrapDefaults(t *testing.T) {
 	yaml := `
 devices:
@@ -394,7 +423,8 @@ devices:
           enabled: true
 `
 	tmpfile := createTempYAML(t, yaml)
-	defer os.Remove(tmpfile)
+
+	defer func() { _ = os.Remove(tmpfile) }()
 
 	cfg, err := LoadYAML(tmpfile)
 	if err != nil {
@@ -408,21 +438,25 @@ devices:
 	if traps.HighCPU.Threshold != 80 {
 		t.Errorf("Expected default CPU threshold 80, got %d", traps.HighCPU.Threshold)
 	}
+
 	if traps.HighCPU.Interval != 300 {
 		t.Errorf("Expected default CPU interval 300, got %d", traps.HighCPU.Interval)
 	}
+
 	if traps.HighMemory.Threshold != 90 {
 		t.Errorf("Expected default memory threshold 90, got %d", traps.HighMemory.Threshold)
 	}
+
 	if traps.InterfaceErrors.Threshold != 100 {
 		t.Errorf("Expected default error threshold 100, got %d", traps.InterfaceErrors.Threshold)
 	}
+
 	if traps.InterfaceErrors.Interval != 60 {
 		t.Errorf("Expected default error interval 60, got %d", traps.InterfaceErrors.Interval)
 	}
 }
 
-// TestLoadYAML_InvalidFile tests error handling for missing file
+// TestLoadYAML_InvalidFile tests error handling for missing file.
 func TestLoadYAML_InvalidFile(t *testing.T) {
 	_, err := LoadYAML("/nonexistent/file.yaml")
 	if err == nil {
@@ -430,7 +464,7 @@ func TestLoadYAML_InvalidFile(t *testing.T) {
 	}
 }
 
-// TestLoadYAML_InvalidYAML tests error handling for malformed YAML
+// TestLoadYAML_InvalidYAML tests error handling for malformed YAML.
 func TestLoadYAML_InvalidYAML(t *testing.T) {
 	yaml := `
 devices:
@@ -439,7 +473,8 @@ devices:
     ip: 192.168.1.1
 `
 	tmpfile := createTempYAML(t, yaml)
-	defer os.Remove(tmpfile)
+
+	defer func() { _ = os.Remove(tmpfile) }()
 
 	_, err := LoadYAML(tmpfile)
 	if err == nil {
@@ -447,7 +482,7 @@ devices:
 	}
 }
 
-// TestLoadYAML_InvalidMAC tests error handling for invalid MAC address
+// TestLoadYAML_InvalidMAC tests error handling for invalid MAC address.
 func TestLoadYAML_InvalidMAC(t *testing.T) {
 	yaml := `
 devices:
@@ -456,7 +491,8 @@ devices:
     ip: "192.168.1.1"
 `
 	tmpfile := createTempYAML(t, yaml)
-	defer os.Remove(tmpfile)
+
+	defer func() { _ = os.Remove(tmpfile) }()
 
 	_, err := LoadYAML(tmpfile)
 	if err == nil {
@@ -464,7 +500,7 @@ devices:
 	}
 }
 
-// TestLoadYAML_InvalidIP tests error handling for invalid IP address
+// TestLoadYAML_InvalidIP tests error handling for invalid IP address.
 func TestLoadYAML_InvalidIP(t *testing.T) {
 	yaml := `
 devices:
@@ -473,7 +509,8 @@ devices:
     ip: "999.999.999.999"
 `
 	tmpfile := createTempYAML(t, yaml)
-	defer os.Remove(tmpfile)
+
+	defer func() { _ = os.Remove(tmpfile) }()
 
 	_, err := LoadYAML(tmpfile)
 	if err == nil {
@@ -481,11 +518,12 @@ devices:
 	}
 }
 
-// TestLoadYAML_EmptyConfig tests handling of empty configuration
+// TestLoadYAML_EmptyConfig tests handling of empty configuration.
 func TestLoadYAML_EmptyConfig(t *testing.T) {
 	yaml := `devices: []`
 	tmpfile := createTempYAML(t, yaml)
-	defer os.Remove(tmpfile)
+
+	defer func() { _ = os.Remove(tmpfile) }()
 
 	_, err := LoadYAML(tmpfile)
 	if err == nil {
@@ -493,7 +531,7 @@ func TestLoadYAML_EmptyConfig(t *testing.T) {
 	}
 }
 
-// TestLoad_AutoDetection tests automatic format detection
+// TestLoad_AutoDetection tests automatic format detection.
 func TestLoad_AutoDetection(t *testing.T) {
 	// Test YAML detection
 	yaml := `
@@ -503,7 +541,8 @@ devices:
     ip: "192.168.1.1"
 `
 	tmpfile := createTempYAML(t, yaml)
-	defer os.Remove(tmpfile)
+
+	defer func() { _ = os.Remove(tmpfile) }()
 
 	cfg, err := Load(tmpfile)
 	if err != nil {
@@ -515,14 +554,14 @@ devices:
 	}
 }
 
-// Helper function to create temporary YAML file for testing
+// Helper function to create temporary YAML file for testing.
 func createTempYAML(t *testing.T, content string) string {
-	tmpfile, err := os.CreateTemp("", "test-*.yaml")
+	tmpfile, err := os.CreateTemp(t.TempDir(), "test-*.yaml")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err := tmpfile.Write([]byte(content)); err != nil {
+	if _, err := tmpfile.WriteString(content); err != nil {
 		t.Fatal(err)
 	}
 
@@ -533,7 +572,7 @@ func createTempYAML(t *testing.T, content string) string {
 	return tmpfile.Name()
 }
 
-// BenchmarkLoadYAML benchmarks YAML loading performance
+// BenchmarkLoadYAML benchmarks YAML loading performance.
 func BenchmarkLoadYAML(b *testing.B) {
 	yaml := `
 devices:
@@ -544,14 +583,15 @@ devices:
       enabled: true
       system_description: "Benchmark Device"
 `
-	tmpfile := filepath.Join(os.TempDir(), "benchmark.yaml")
-	if err := os.WriteFile(tmpfile, []byte(yaml), 0644); err != nil {
+
+	tmpfile := filepath.Join(b.TempDir(), "benchmark.yaml")
+
+	err := os.WriteFile(tmpfile, []byte(yaml), 0o600)
+	if err != nil {
 		b.Fatal(err)
 	}
-	defer os.Remove(tmpfile)
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_, _ = LoadYAML(tmpfile)
 	}
 }

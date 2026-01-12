@@ -6,7 +6,7 @@ import (
 	"github.com/google/gopacket/pcap"
 )
 
-// TestInterfaceExists_Loopback tests loopback interface detection
+// TestInterfaceExists_Loopback tests loopback interface detection.
 func TestInterfaceExists_Loopback(t *testing.T) {
 	// Most systems have at least one of these
 	loopbackNames := []string{"lo", "lo0", "Loopback", "loopback"}
@@ -15,7 +15,9 @@ func TestInterfaceExists_Loopback(t *testing.T) {
 	for _, name := range loopbackNames {
 		if InterfaceExists(name) {
 			found = true
+
 			t.Logf("Found loopback interface: %s", name)
+
 			break
 		}
 	}
@@ -25,7 +27,7 @@ func TestInterfaceExists_Loopback(t *testing.T) {
 	}
 }
 
-// TestInterfaceExists_MultipleCalls tests repeated calls
+// TestInterfaceExists_MultipleCalls tests repeated calls.
 func TestInterfaceExists_MultipleCalls(t *testing.T) {
 	// Should return consistent results
 	name := "lo"
@@ -37,7 +39,7 @@ func TestInterfaceExists_MultipleCalls(t *testing.T) {
 	}
 }
 
-// TestListInterfaces_NoError tests that listing doesn't panic
+// TestListInterfaces_NoError tests that listing doesn't panic.
 func TestListInterfaces_NoError(t *testing.T) {
 	// Should not panic
 	defer func() {
@@ -49,7 +51,7 @@ func TestListInterfaces_NoError(t *testing.T) {
 	ListInterfaces()
 }
 
-// TestGetInterface_AllInterfaces tests getting all available interfaces
+// TestGetInterface_AllInterfaces tests getting all available interfaces.
 func TestGetInterface_AllInterfaces(t *testing.T) {
 	devices, err := pcap.FindAllDevs()
 	if err != nil {
@@ -65,6 +67,7 @@ func TestGetInterface_AllInterfaces(t *testing.T) {
 		iface, err := GetInterface(device.Name)
 		if err != nil {
 			t.Errorf("GetInterface(%s) failed: %v", device.Name, err)
+
 			continue
 		}
 
@@ -74,7 +77,7 @@ func TestGetInterface_AllInterfaces(t *testing.T) {
 	}
 }
 
-// TestGetInterface_CaseSensitive tests case sensitivity
+// TestGetInterface_CaseSensitive tests case sensitivity.
 func TestGetInterface_CaseSensitive(t *testing.T) {
 	devices, err := pcap.FindAllDevs()
 	if err != nil {
@@ -98,13 +101,15 @@ func TestGetInterface_CaseSensitive(t *testing.T) {
 	// Note: Interface names are typically case-sensitive on Unix systems
 	// This test documents the behavior rather than asserting it
 	wrongCaseName := "DEFINITELY_WRONG_CASE_NAME_12345"
+
 	_, err = GetInterface(wrongCaseName)
+
 	if err == nil {
 		t.Logf("Note: GetInterface found interface with name %s (unexpected)", wrongCaseName)
 	}
 }
 
-// TestGetInterface_EmptyName tests empty interface name
+// TestGetInterface_EmptyName tests empty interface name.
 func TestGetInterface_EmptyName(t *testing.T) {
 	_, err := GetInterface("")
 	if err == nil {
@@ -112,14 +117,14 @@ func TestGetInterface_EmptyName(t *testing.T) {
 	}
 }
 
-// TestInterfaceExists_EmptyName tests empty interface name
+// TestInterfaceExists_EmptyName tests empty interface name.
 func TestInterfaceExists_EmptyName(t *testing.T) {
 	if InterfaceExists("") {
 		t.Error("InterfaceExists returned true for empty name")
 	}
 }
 
-// TestInterfaceExists_SpecialCharacters tests names with special characters
+// TestInterfaceExists_SpecialCharacters tests names with special characters.
 func TestInterfaceExists_SpecialCharacters(t *testing.T) {
 	testCases := []string{
 		"lo@123",
@@ -139,7 +144,7 @@ func TestInterfaceExists_SpecialCharacters(t *testing.T) {
 	}
 }
 
-// TestGetInterface_VeryLongName tests very long interface names
+// TestGetInterface_VeryLongName tests very long interface names.
 func TestGetInterface_VeryLongName(t *testing.T) {
 	// Most systems have length limits on interface names (typically 16 chars on Unix)
 	longName := "this-is-a-very-long-interface-name-that-exceeds-normal-limits-123456789"
@@ -150,25 +155,26 @@ func TestGetInterface_VeryLongName(t *testing.T) {
 	}
 }
 
-// TestInterfaceExists_Concurrency tests concurrent calls
+// TestInterfaceExists_Concurrency tests concurrent calls.
 func TestInterfaceExists_Concurrency(t *testing.T) {
 	done := make(chan bool, 10)
 
 	// Launch multiple goroutines
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		go func() {
 			_ = InterfaceExists("lo")
+
 			done <- true
 		}()
 	}
 
 	// Wait for all
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		<-done
 	}
 }
 
-// TestGetInterface_Concurrency tests concurrent interface lookups
+// TestGetInterface_Concurrency tests concurrent interface lookups.
 func TestGetInterface_Concurrency(t *testing.T) {
 	devices, err := pcap.FindAllDevs()
 	if err != nil || len(devices) == 0 {
@@ -179,28 +185,28 @@ func TestGetInterface_Concurrency(t *testing.T) {
 	done := make(chan bool, 10)
 
 	// Launch multiple goroutines
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		go func() {
 			_, _ = GetInterface(testInterface)
+
 			done <- true
 		}()
 	}
 
 	// Wait for all
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		<-done
 	}
 }
 
-// BenchmarkInterfaceExists benchmarks interface existence check
+// BenchmarkInterfaceExists benchmarks interface existence check.
 func BenchmarkInterfaceExists(b *testing.B) {
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = InterfaceExists("lo")
 	}
 }
 
-// BenchmarkGetInterface benchmarks getting interface info
+// BenchmarkGetInterface benchmarks getting interface info.
 func BenchmarkGetInterface(b *testing.B) {
 	devices, err := pcap.FindAllDevs()
 	if err != nil || len(devices) == 0 {
@@ -209,13 +215,12 @@ func BenchmarkGetInterface(b *testing.B) {
 
 	testInterface := devices[0].Name
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_, _ = GetInterface(testInterface)
 	}
 }
 
-// TestGetInterface_InterfaceFields tests interface field population
+// TestGetInterface_InterfaceFields tests interface field population.
 func TestGetInterface_InterfaceFields(t *testing.T) {
 	devices, err := pcap.FindAllDevs()
 	if err != nil || len(devices) == 0 {

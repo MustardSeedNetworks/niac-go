@@ -1,4 +1,3 @@
-// Package main provides the topology command for exporting network topology
 package main
 
 import (
@@ -13,14 +12,14 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// topologyOptions holds command-line options for the topology command
+// topologyOptions holds command-line options for the topology command.
 var topologyOptions struct {
 	format     string
 	outputFile string
 	socketPath string
 }
 
-// topologyCmd is the parent command for topology operations
+// topologyCmd is the parent command for topology operations.
 var topologyCmd = &cobra.Command{
 	Use:   "topology",
 	Short: "Network topology management commands",
@@ -41,7 +40,7 @@ topology from a running NIAC simulation.`,
   niac topology export --format dot | dot -Tpng -o network.png`,
 }
 
-// topologyExportCmd exports the current network topology
+// topologyExportCmd exports the current network topology.
 var topologyExportCmd = &cobra.Command{
 	Use:   "export",
 	Short: "Export current network topology",
@@ -99,7 +98,7 @@ func init() {
 		"Path to IPC socket (default: /tmp/niac.sock)")
 }
 
-// runTopologyExport executes the topology export command
+// runTopologyExport executes the topology export command.
 func runTopologyExport(cmd *cobra.Command, args []string) error {
 	// Validate format
 	format := strings.ToLower(topologyOptions.format)
@@ -148,7 +147,8 @@ func runTopologyExport(cmd *cobra.Command, args []string) error {
 
 	// Write output
 	if topologyOptions.outputFile != "" {
-		if err := os.WriteFile(topologyOptions.outputFile, []byte(output), 0644); err != nil {
+		err := os.WriteFile(topologyOptions.outputFile, []byte(output), 0o644)
+		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: failed to write to file %s: %v\n", topologyOptions.outputFile, err)
 			os.Exit(2)
 		}
@@ -160,7 +160,7 @@ func runTopologyExport(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// exportTopologyJSON exports topology as formatted JSON
+// exportTopologyJSON exports topology as formatted JSON.
 func exportTopologyJSON(topology *api.Topology) (string, error) {
 	// Create an extended structure with more details
 	export := TopologyExport{
@@ -207,12 +207,12 @@ func exportTopologyJSON(topology *api.Topology) (string, error) {
 
 	data, err := json.MarshalIndent(export, "", "  ")
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to marshal topology JSON: %w", err)
 	}
 	return string(data) + "\n", nil
 }
 
-// exportTopologyYAML exports topology as YAML
+// exportTopologyYAML exports topology as YAML.
 func exportTopologyYAML(topology *api.Topology) (string, error) {
 	// Create an extended structure with more details
 	export := TopologyExport{
@@ -259,12 +259,12 @@ func exportTopologyYAML(topology *api.Topology) (string, error) {
 
 	data, err := yaml.Marshal(export)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to marshal topology YAML: %w", err)
 	}
 	return string(data), nil
 }
 
-// countDevicesByType counts devices by their type
+// countDevicesByType counts devices by their type.
 func countDevicesByType(nodes []api.TopologyNode) map[string]int {
 	counts := make(map[string]int)
 	for _, node := range nodes {
@@ -277,39 +277,39 @@ func countDevicesByType(nodes []api.TopologyNode) map[string]int {
 	return counts
 }
 
-// TopologyExport is the export structure for JSON/YAML output
+// TopologyExport is the export structure for JSON/YAML output.
 type TopologyExport struct {
-	Nodes       []TopologyNodeExport `json:"nodes" yaml:"nodes"`
-	Links       []TopologyLinkExport `json:"links" yaml:"links"`
-	Summary     TopologySummary      `json:"summary" yaml:"summary"`
+	Nodes       []TopologyNodeExport `json:"nodes"                  yaml:"nodes"`
+	Links       []TopologyLinkExport `json:"links"                  yaml:"links"`
+	Summary     TopologySummary      `json:"summary"                yaml:"summary"`
 	GeneratedAt string               `json:"generated_at,omitempty" yaml:"generated_at,omitempty"`
 }
 
-// TopologyNodeExport represents a device node in the export
+// TopologyNodeExport represents a device node in the export.
 type TopologyNodeExport struct {
 	Name string `json:"name" yaml:"name"`
 	Type string `json:"type" yaml:"type"`
 }
 
-// TopologyLinkExport represents a connection link in the export
+// TopologyLinkExport represents a connection link in the export.
 type TopologyLinkExport struct {
-	Source          string  `json:"source" yaml:"source"`
-	Target          string  `json:"target" yaml:"target"`
-	SourceInterface string  `json:"source_interface" yaml:"source_interface"`
-	TargetInterface string  `json:"target_interface" yaml:"target_interface"`
-	LinkType        string  `json:"link_type" yaml:"link_type"`
-	VLANs           []int   `json:"vlans,omitempty" yaml:"vlans,omitempty"`
-	NativeVLAN      int     `json:"native_vlan,omitempty" yaml:"native_vlan,omitempty"`
-	SpeedMbps       int     `json:"speed_mbps,omitempty" yaml:"speed_mbps,omitempty"`
-	Duplex          string  `json:"duplex,omitempty" yaml:"duplex,omitempty"`
-	Status          string  `json:"status" yaml:"status"`
+	Source          string  `json:"source"                        yaml:"source"`
+	Target          string  `json:"target"                        yaml:"target"`
+	SourceInterface string  `json:"source_interface"              yaml:"source_interface"`
+	TargetInterface string  `json:"target_interface"              yaml:"target_interface"`
+	LinkType        string  `json:"link_type"                     yaml:"link_type"`
+	VLANs           []int   `json:"vlans,omitempty"               yaml:"vlans,omitempty"`
+	NativeVLAN      int     `json:"native_vlan,omitempty"         yaml:"native_vlan,omitempty"`
+	SpeedMbps       int     `json:"speed_mbps,omitempty"          yaml:"speed_mbps,omitempty"`
+	Duplex          string  `json:"duplex,omitempty"              yaml:"duplex,omitempty"`
+	Status          string  `json:"status"                        yaml:"status"`
 	Utilization     float64 `json:"utilization_percent,omitempty" yaml:"utilization_percent,omitempty"`
 }
 
-// TopologySummary provides summary statistics about the topology
+// TopologySummary provides summary statistics about the topology.
 type TopologySummary struct {
-	TotalNodes    int            `json:"total_nodes" yaml:"total_nodes"`
-	TotalLinks    int            `json:"total_links" yaml:"total_links"`
+	TotalNodes    int            `json:"total_nodes"     yaml:"total_nodes"`
+	TotalLinks    int            `json:"total_links"     yaml:"total_links"`
 	DevicesByType map[string]int `json:"devices_by_type" yaml:"devices_by_type"`
-	LinksByType   map[string]int `json:"links_by_type" yaml:"links_by_type"`
+	LinksByType   map[string]int `json:"links_by_type"   yaml:"links_by_type"`
 }

@@ -1,23 +1,16 @@
-import { type FC, useState, useCallback, useEffect, useRef } from 'react';
-import {
-  Card,
-  CardContent,
-  Button,
-  Tag,
-  SmallText,
-  H2,
-} from '../ui';
-import { Wifi, WifiOff, Pause, Play, Trash2, Download } from 'lucide-react';
-import { usePacketStream } from '../hooks/useEventSource';
-import { PacketList, type Packet } from '../components/PacketList';
-import { HexDumpViewer } from '../components/HexDumpViewer';
-import { PacketDetails } from '../components/PacketDetails';
+import { Download, Pause, Play, Trash2, Wifi, WifiOff } from "lucide-react";
+import { type FC, useCallback, useEffect, useRef, useState } from "react";
+import { HexDumpViewer } from "../components/HexDumpViewer";
+import { PacketDetails } from "../components/PacketDetails";
+import { type Packet, PacketList } from "../components/PacketList";
+import { usePacketStream } from "../hooks/useEventSource";
+import { Button, Card, CardContent, H2, SmallText, Tag } from "../ui";
 
 /** Maximum number of packets to buffer */
 const MAX_PACKETS = 100;
 
 /** Available protocol filters */
-const PROTOCOL_FILTERS = ['All', 'ARP', 'ICMP', 'DNS', 'TCP', 'UDP', 'HTTP', 'DHCP'] as const;
+const PROTOCOL_FILTERS = ["All", "ARP", "ICMP", "DNS", "TCP", "UDP", "HTTP", "DHCP"] as const;
 
 /**
  * Generate unique packet ID
@@ -68,8 +61,8 @@ export const PacketInspectorPage: FC = () => {
   const [selectedPacket, setSelectedPacket] = useState<Packet | null>(null);
 
   // Filter state
-  const [protocolFilter, setProtocolFilter] = useState<string>('All');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [protocolFilter, setProtocolFilter] = useState<string>("All");
+  const [searchQuery, setSearchQuery] = useState("");
 
   // UI state
   const [autoScroll, setAutoScroll] = useState(true);
@@ -93,14 +86,14 @@ export const PacketInspectorPage: FC = () => {
       const packet: Packet = {
         id: generatePacketId(),
         timestamp: (incoming.timestamp as string) || new Date().toISOString(),
-        protocol: (incoming.protocol as string) || 'Unknown',
-        sourceIP: (incoming.sourceIP as string) || (incoming.source_ip as string) || 'Unknown',
-        destIP: (incoming.destIP as string) || (incoming.dest_ip as string) || 'Unknown',
+        protocol: (incoming.protocol as string) || "Unknown",
+        sourceIP: (incoming.sourceIP as string) || (incoming.source_ip as string) || "Unknown",
+        destIP: (incoming.destIP as string) || (incoming.dest_ip as string) || "Unknown",
         sourcePort: incoming.sourcePort as number | undefined,
         destPort: incoming.destPort as number | undefined,
         size: (incoming.size as number) || 0,
-        summary: (incoming.summary as string) || '',
-        rawData: (incoming.rawData as string) || (incoming.payload as string) || '',
+        summary: (incoming.summary as string) || "",
+        rawData: (incoming.rawData as string) || (incoming.payload as string) || "",
         headers: incoming.headers as Record<string, unknown> | undefined,
       };
 
@@ -126,11 +119,11 @@ export const PacketInspectorPage: FC = () => {
     if (packets.length === 0) return;
 
     const exportData = JSON.stringify(packets, null, 2);
-    const blob = new Blob([exportData], { type: 'application/json' });
+    const blob = new Blob([exportData], { type: "application/json" });
     const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
+    const link = document.createElement("a");
     link.href = url;
-    link.download = `packets-${new Date().toISOString().slice(0, 19).replace(/[:.]/g, '-')}.json`;
+    link.download = `packets-${new Date().toISOString().slice(0, 19).replace(/[:.]/g, "-")}.json`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -162,12 +155,12 @@ export const PacketInspectorPage: FC = () => {
             {/* Control buttons */}
             <div className="flex flex-wrap items-center gap-2">
               <Button
-                variant={isPaused ? 'outline' : 'ghost'}
+                variant={isPaused ? "outline" : "ghost"}
                 size="sm"
                 onClick={handlePauseToggle}
                 leftIcon={isPaused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
               >
-                {isPaused ? 'Resume' : 'Pause'}
+                {isPaused ? "Resume" : "Pause"}
               </Button>
 
               <Button
@@ -192,11 +185,7 @@ export const PacketInspectorPage: FC = () => {
 
               {/* SSE auto-reconnects, but manual reconnect is available */}
               {!connected && (
-                <Button
-                  tone="violet"
-                  size="sm"
-                  onClick={reconnect}
-                >
+                <Button tone="violet" size="sm" onClick={reconnect}>
                   Reconnect
                 </Button>
               )}
@@ -262,7 +251,9 @@ export const PacketInspectorPage: FC = () => {
                   Packet List
                 </SmallText>
                 {isPaused && (
-                  <Tag colorScheme="yellow" className="text-xs">Paused</Tag>
+                  <Tag colorScheme="yellow" className="text-xs">
+                    Paused
+                  </Tag>
                 )}
               </div>
               <div className="flex-1 min-h-0">
@@ -289,7 +280,7 @@ export const PacketInspectorPage: FC = () => {
               </SmallText>
               <div className="flex-1 min-h-0">
                 <HexDumpViewer
-                  rawData={selectedPacket?.rawData ?? ''}
+                  rawData={selectedPacket?.rawData ?? ""}
                   headerLength={14} // Ethernet header
                 />
               </div>

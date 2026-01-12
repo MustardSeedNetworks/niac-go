@@ -17,7 +17,7 @@ import (
 	"golang.org/x/time/rate"
 )
 
-// newTestServerWithAuth creates a test server with auth and rate limiting initialized
+// newTestServerWithAuth creates a test server with auth and rate limiting initialized.
 func newTestServerWithAuth(t *testing.T) (*Server, string, string) {
 	t.Helper()
 	server, tmpDir := newTestServer(t)
@@ -30,6 +30,7 @@ func newTestServerWithAuth(t *testing.T) (*Server, string, string) {
 	if err != nil {
 		t.Fatalf("Failed to generate CSRF token: %v", err)
 	}
+
 	server.csrfToken = csrfToken
 
 	// Generate auth token
@@ -39,7 +40,7 @@ func newTestServerWithAuth(t *testing.T) (*Server, string, string) {
 	return server, tmpDir, token
 }
 
-// TestRateLimiter_ExcessiveRequests verifies rate limiting blocks excessive requests
+// TestRateLimiter_ExcessiveRequests verifies rate limiting blocks excessive requests.
 func TestRateLimiter_ExcessiveRequests(t *testing.T) {
 	limiter := NewRateLimiter(rate.Limit(2), 5) // 2 req/sec, burst of 5
 
@@ -47,7 +48,7 @@ func TestRateLimiter_ExcessiveRequests(t *testing.T) {
 	rl := limiter.GetLimiter(ip)
 
 	// First 5 requests should succeed (burst)
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		if !rl.Allow() {
 			t.Errorf("Request %d should be allowed (within burst)", i+1)
 		}
@@ -67,7 +68,7 @@ func TestRateLimiter_ExcessiveRequests(t *testing.T) {
 	}
 }
 
-// TestRateLimiter_PerIPIsolation verifies different IPs have independent rate limits
+// TestRateLimiter_PerIPIsolation verifies different IPs have independent rate limits.
 func TestRateLimiter_PerIPIsolation(t *testing.T) {
 	limiter := NewRateLimiter(rate.Limit(2), 3)
 
@@ -78,7 +79,7 @@ func TestRateLimiter_PerIPIsolation(t *testing.T) {
 	rl2 := limiter.GetLimiter(ip2)
 
 	// Exhaust IP1's burst
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		if !rl1.Allow() {
 			t.Errorf("IP1 request %d should be allowed", i+1)
 		}
@@ -90,19 +91,19 @@ func TestRateLimiter_PerIPIsolation(t *testing.T) {
 	}
 
 	// IP2 should still have full burst available
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		if !rl2.Allow() {
 			t.Errorf("IP2 request %d should be allowed (independent limit)", i+1)
 		}
 	}
 }
 
-// TestRateLimiter_CleanupPreventsMemoryLeak verifies stale limiters are cleaned up
+// TestRateLimiter_CleanupPreventsMemoryLeak verifies stale limiters are cleaned up.
 func TestRateLimiter_CleanupPreventsMemoryLeak(t *testing.T) {
 	limiter := NewRateLimiter(rate.Limit(10), 20)
 
 	// Create limiters for 100 different IPs
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		ip := fmt.Sprintf("192.168.1.%d", i)
 		limiter.GetLimiter(ip)
 	}
@@ -117,14 +118,16 @@ func TestRateLimiter_CleanupPreventsMemoryLeak(t *testing.T) {
 	}
 
 	// Access only the first 10 IPs to keep them "fresh"
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		ip := fmt.Sprintf("192.168.1.%d", i)
 		limiter.GetLimiter(ip)
 	}
 
 	// Manually set lastSeen to simulate stale entries (over 1 hour ago)
 	limiter.mu.Lock()
+
 	staleTime := time.Now().Add(-2 * time.Hour)
+
 	freshIPs := map[string]bool{
 		"192.168.1.0": true, "192.168.1.1": true, "192.168.1.2": true,
 		"192.168.1.3": true, "192.168.1.4": true, "192.168.1.5": true,
@@ -137,6 +140,7 @@ func TestRateLimiter_CleanupPreventsMemoryLeak(t *testing.T) {
 			entry.lastSeen = staleTime
 		}
 	}
+
 	limiter.mu.Unlock()
 
 	// Run cleanup
@@ -152,10 +156,11 @@ func TestRateLimiter_CleanupPreventsMemoryLeak(t *testing.T) {
 	}
 }
 
-// TestRateLimiter_MaxCapacityEnforcement verifies FIFO eviction at max capacity
+// TestRateLimiter_MaxCapacityEnforcement verifies FIFO eviction at max capacity.
 func TestRateLimiter_MaxCapacityEnforcement(t *testing.T) {
 	// Temporarily reduce max for testing
 	originalMax := MaxRateLimiterCount
+
 	defer func() {
 		// Can't restore const, but document that this test modifies behavior
 	}()
@@ -164,7 +169,7 @@ func TestRateLimiter_MaxCapacityEnforcement(t *testing.T) {
 
 	// Fill up to a reasonable test limit (100 IPs)
 	testLimit := 100
-	for i := 0; i < testLimit; i++ {
+	for i := range testLimit {
 		ip := fmt.Sprintf("192.168.%d.%d", i/256, i%256)
 		limiter.GetLimiter(ip)
 	}
@@ -201,17 +206,19 @@ func TestRateLimiter_MaxCapacityEnforcement(t *testing.T) {
 	t.Logf("Test note: MaxRateLimiterCount=%d prevents exhaustive eviction testing", originalMax)
 }
 
-// TestCSRF_TokenValidation verifies CSRF token validation works correctly
+// TestCSRF_TokenValidation verifies CSRF token validation works correctly.
 func TestCSRF_TokenValidation(t *testing.T) {
 	server, tmpDir, token := newTestServerWithAuth(t)
-	defer os.RemoveAll(tmpDir)
+
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	// Test valid CSRF token on protected endpoint
 	reqBody := strings.NewReader(`{"packets_threshold":1000}`)
-	req := httptest.NewRequest("PUT", "/api/v1/alerts", reqBody)
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/alerts", reqBody)
 	req.Header.Set("Authorization", "Bearer "+token)
-	req.Header.Set("X-CSRF-Token", server.csrfToken)
+	req.Header.Set("X-Csrf-Token", server.csrfToken)
 	req.Header.Set("Content-Type", "application/json")
+
 	w := httptest.NewRecorder()
 
 	handler := server.auth(server.csrfProtect(server.handleAlerts))
@@ -222,17 +229,19 @@ func TestCSRF_TokenValidation(t *testing.T) {
 	}
 }
 
-// TestCSRF_InvalidTokenRejection verifies invalid CSRF tokens are rejected
+// TestCSRF_InvalidTokenRejection verifies invalid CSRF tokens are rejected.
 func TestCSRF_InvalidTokenRejection(t *testing.T) {
 	server, tmpDir, token := newTestServerWithAuth(t)
-	defer os.RemoveAll(tmpDir)
+
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	// Try to use an invalid CSRF token
 	reqBody := strings.NewReader(`{"packets_threshold":1000}`)
-	req := httptest.NewRequest("PUT", "/api/v1/alerts", reqBody)
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/alerts", reqBody)
 	req.Header.Set("Authorization", "Bearer "+token)
-	req.Header.Set("X-CSRF-Token", "invalid-token-12345")
+	req.Header.Set("X-Csrf-Token", "invalid-token-12345")
 	req.Header.Set("Content-Type", "application/json")
+
 	w := httptest.NewRecorder()
 
 	handler := server.auth(server.csrfProtect(server.handleAlerts))
@@ -243,17 +252,19 @@ func TestCSRF_InvalidTokenRejection(t *testing.T) {
 	}
 }
 
-// TestCSRF_MissingTokenRejection verifies missing CSRF tokens are rejected
+// TestCSRF_MissingTokenRejection verifies missing CSRF tokens are rejected.
 func TestCSRF_MissingTokenRejection(t *testing.T) {
 	server, tmpDir, token := newTestServerWithAuth(t)
-	defer os.RemoveAll(tmpDir)
+
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	// Try to make a state-changing request without CSRF token
 	reqBody := strings.NewReader(`{"packets_threshold":1000}`)
-	req := httptest.NewRequest("PUT", "/api/v1/alerts", reqBody)
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/alerts", reqBody)
 	req.Header.Set("Authorization", "Bearer "+token)
 	// Deliberately omit X-CSRF-Token header
 	req.Header.Set("Content-Type", "application/json")
+
 	w := httptest.NewRecorder()
 
 	handler := server.auth(server.csrfProtect(server.handleAlerts))
@@ -264,13 +275,15 @@ func TestCSRF_MissingTokenRejection(t *testing.T) {
 	}
 }
 
-// TestAuth_ValidToken verifies valid authentication tokens are accepted
+// TestAuth_ValidToken verifies valid authentication tokens are accepted.
 func TestAuth_ValidToken(t *testing.T) {
 	server, tmpDir, token := newTestServerWithAuth(t)
-	defer os.RemoveAll(tmpDir)
 
-	req := httptest.NewRequest("GET", "/api/v1/stats", nil)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/stats", nil)
 	req.Header.Set("Authorization", "Bearer "+token)
+
 	w := httptest.NewRecorder()
 
 	handler := server.auth(server.handleStats)
@@ -281,14 +294,16 @@ func TestAuth_ValidToken(t *testing.T) {
 	}
 }
 
-// TestAuth_InvalidTokenRejection verifies invalid tokens are rejected
+// TestAuth_InvalidTokenRejection verifies invalid tokens are rejected.
 func TestAuth_InvalidToken(t *testing.T) {
 	server, tmpDir, _ := newTestServerWithAuth(t)
-	defer os.RemoveAll(tmpDir)
+
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	// Use a different invalid token
-	req := httptest.NewRequest("GET", "/api/v1/stats", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/stats", nil)
 	req.Header.Set("Authorization", "Bearer invalid-token-xyz")
+
 	w := httptest.NewRecorder()
 
 	handler := server.auth(server.handleStats)
@@ -299,12 +314,13 @@ func TestAuth_InvalidToken(t *testing.T) {
 	}
 }
 
-// TestAuth_MissingToken verifies requests without tokens are rejected
+// TestAuth_MissingToken verifies requests without tokens are rejected.
 func TestAuth_MissingToken(t *testing.T) {
 	server, tmpDir, _ := newTestServerWithAuth(t)
-	defer os.RemoveAll(tmpDir)
 
-	req := httptest.NewRequest("GET", "/api/v1/stats", nil)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/stats", nil)
 	// Deliberately omit Authorization header
 	w := httptest.NewRecorder()
 
@@ -316,15 +332,16 @@ func TestAuth_MissingToken(t *testing.T) {
 	}
 }
 
-// TestAuth_NoAuthRequired verifies endpoints work without auth when token not set
+// TestAuth_NoAuthRequired verifies endpoints work without auth when token not set.
 func TestAuth_NoAuthRequired(t *testing.T) {
 	server, tmpDir := newTestServer(t)
-	defer os.RemoveAll(tmpDir)
+
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	// Initialize rate limiter but NOT auth token
 	server.rateLimiter = NewRateLimiter(DefaultRateLimit, DefaultBurst)
 
-	req := httptest.NewRequest("GET", "/api/v1/stats", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/stats", nil)
 	// No Authorization header
 	w := httptest.NewRecorder()
 
@@ -336,18 +353,20 @@ func TestAuth_NoAuthRequired(t *testing.T) {
 	}
 }
 
-// TestPanicRecovery_NilPointerPanic verifies panic recovery catches nil pointer panics
+// TestPanicRecovery_NilPointerPanic verifies panic recovery catches nil pointer panics.
 func TestPanicRecovery_NilPointerPanic(t *testing.T) {
 	server, tmpDir, _ := newTestServerWithAuth(t)
-	defer os.RemoveAll(tmpDir)
+
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	// Create a handler that deliberately panics with nil pointer
 	panicHandler := func(w http.ResponseWriter, r *http.Request) {
 		var ptr *int
+
 		_ = *ptr // This will panic
 	}
 
-	req := httptest.NewRequest("GET", "/test", nil)
+	req := httptest.NewRequest(http.MethodGet, "/test", nil)
 	w := httptest.NewRecorder()
 
 	// Wrap with recovery middleware
@@ -361,7 +380,8 @@ func TestPanicRecovery_NilPointerPanic(t *testing.T) {
 
 	// Response should be JSON error
 	var response ErrorResponse
-	if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
+	err := json.NewDecoder(w.Body).Decode(&response)
+	if err != nil {
 		t.Fatalf("Failed to decode error response: %v", err)
 	}
 
@@ -370,18 +390,19 @@ func TestPanicRecovery_NilPointerPanic(t *testing.T) {
 	}
 }
 
-// TestPanicRecovery_ArrayOutOfBounds verifies panic recovery catches array panics
+// TestPanicRecovery_ArrayOutOfBounds verifies panic recovery catches array panics.
 func TestPanicRecovery_ArrayOutOfBounds(t *testing.T) {
 	server, tmpDir, _ := newTestServerWithAuth(t)
-	defer os.RemoveAll(tmpDir)
+
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	// Create a handler that panics with array out of bounds
 	panicHandler := func(w http.ResponseWriter, r *http.Request) {
 		arr := []int{1, 2, 3}
-		_ = arr[10] // This will panic
+		_ = arr[10]
 	}
 
-	req := httptest.NewRequest("GET", "/test", nil)
+	req := httptest.NewRequest(http.MethodGet, "/test", nil)
 	w := httptest.NewRecorder()
 
 	handler := server.recoverMiddleware(panicHandler)
@@ -392,18 +413,19 @@ func TestPanicRecovery_ArrayOutOfBounds(t *testing.T) {
 	}
 }
 
-// TestPanicRecovery_NormalOperation verifies recovery doesn't affect normal requests
+// TestPanicRecovery_NormalOperation verifies recovery doesn't affect normal requests.
 func TestPanicRecovery_NormalOperation(t *testing.T) {
 	server, tmpDir, _ := newTestServerWithAuth(t)
-	defer os.RemoveAll(tmpDir)
+
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	// Normal handler that doesn't panic
 	normalHandler := func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
+		_, _ = w.Write([]byte("OK"))
 	}
 
-	req := httptest.NewRequest("GET", "/test", nil)
+	req := httptest.NewRequest(http.MethodGet, "/test", nil)
 	w := httptest.NewRecorder()
 
 	handler := server.recoverMiddleware(normalHandler)
@@ -418,9 +440,9 @@ func TestPanicRecovery_NormalOperation(t *testing.T) {
 	}
 }
 
-// TestGetClientIP_DirectConnection verifies IP extraction from direct connections
+// TestGetClientIP_DirectConnection verifies IP extraction from direct connections.
 func TestGetClientIP_DirectConnection(t *testing.T) {
-	req := httptest.NewRequest("GET", "/test", nil)
+	req := httptest.NewRequest(http.MethodGet, "/test", nil)
 	req.RemoteAddr = "192.168.1.100:54321"
 
 	ip := getClientIP(req)
@@ -430,9 +452,9 @@ func TestGetClientIP_DirectConnection(t *testing.T) {
 	}
 }
 
-// TestGetClientIP_XForwardedFor verifies IP extraction from X-Forwarded-For header
+// TestGetClientIP_XForwardedFor verifies IP extraction from X-Forwarded-For header.
 func TestGetClientIP_XForwardedFor(t *testing.T) {
-	req := httptest.NewRequest("GET", "/test", nil)
+	req := httptest.NewRequest(http.MethodGet, "/test", nil)
 	req.RemoteAddr = "10.0.0.1:54321"
 	req.Header.Set("X-Forwarded-For", "203.0.113.5, 198.51.100.1")
 
@@ -444,9 +466,9 @@ func TestGetClientIP_XForwardedFor(t *testing.T) {
 	}
 }
 
-// TestGetClientIP_XRealIP verifies IP extraction from X-Real-IP header
+// TestGetClientIP_XRealIP verifies IP extraction from X-Real-IP header.
 func TestGetClientIP_XRealIP(t *testing.T) {
-	req := httptest.NewRequest("GET", "/test", nil)
+	req := httptest.NewRequest(http.MethodGet, "/test", nil)
 	req.RemoteAddr = "10.0.0.1:54321"
 	req.Header.Set("X-Real-IP", "203.0.113.10")
 
@@ -457,7 +479,7 @@ func TestGetClientIP_XRealIP(t *testing.T) {
 	}
 }
 
-// TestRateLimiting_ConcurrentRequests verifies rate limiting under concurrent load
+// TestRateLimiting_ConcurrentRequests verifies rate limiting under concurrent load.
 func TestRateLimiting_ConcurrentRequests(t *testing.T) {
 	limiter := NewRateLimiter(rate.Limit(100), 200)
 
@@ -466,18 +488,18 @@ func TestRateLimiting_ConcurrentRequests(t *testing.T) {
 	requestsPerGoroutine := 10
 
 	var wg sync.WaitGroup
+
 	allowed := make(chan bool, concurrency*requestsPerGoroutine)
 
 	// Launch concurrent requests
-	for i := 0; i < concurrency; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for range concurrency {
+		wg.Go(func() {
 			rl := limiter.GetLimiter(ip)
-			for j := 0; j < requestsPerGoroutine; j++ {
+
+			for range requestsPerGoroutine {
 				allowed <- rl.Allow()
 			}
-		}()
+		})
 	}
 
 	wg.Wait()
@@ -485,6 +507,7 @@ func TestRateLimiting_ConcurrentRequests(t *testing.T) {
 
 	// Count allowed requests
 	allowedCount := 0
+
 	for a := range allowed {
 		if a {
 			allowedCount++
@@ -504,25 +527,29 @@ func TestRateLimiting_ConcurrentRequests(t *testing.T) {
 	t.Logf("Allowed %d/%d concurrent requests", allowedCount, concurrency*requestsPerGoroutine)
 }
 
-// TestAlertConfig_ConcurrentUpdates verifies concurrent alert config updates don't race (SECURITY FIX #2.8.1)
+// TestAlertConfig_ConcurrentUpdates verifies concurrent alert config updates don't race (SECURITY FIX #2.8.1).
 func TestAlertConfig_ConcurrentUpdates(t *testing.T) {
 	server, tmpDir, token := newTestServerWithAuth(t)
-	defer os.RemoveAll(tmpDir)
+
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	// Concurrently update alert config multiple times
 	const numUpdates = 10
+
 	var wg sync.WaitGroup
 
-	for i := 0; i < numUpdates; i++ {
+	for i := range numUpdates {
 		wg.Add(1)
+
 		go func(threshold int) {
 			defer wg.Done()
 
 			reqBody := fmt.Sprintf(`{"packets_threshold":%d}`, threshold*1000)
-			req := httptest.NewRequest("PUT", "/api/v1/alerts", strings.NewReader(reqBody))
+			req := httptest.NewRequest(http.MethodPut, "/api/v1/alerts", strings.NewReader(reqBody))
 			req.Header.Set("Authorization", "Bearer "+token)
-			req.Header.Set("X-CSRF-Token", server.csrfToken)
+			req.Header.Set("X-Csrf-Token", server.csrfToken)
 			req.Header.Set("Content-Type", "application/json")
+
 			w := httptest.NewRecorder()
 
 			handler := server.auth(server.csrfProtect(server.handleAlerts))
@@ -537,8 +564,9 @@ func TestAlertConfig_ConcurrentUpdates(t *testing.T) {
 	wg.Wait()
 
 	// Verify server is still functional
-	req := httptest.NewRequest("GET", "/api/v1/alerts", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/alerts", nil)
 	req.Header.Set("Authorization", "Bearer "+token)
+
 	w := httptest.NewRecorder()
 
 	handler := server.auth(server.handleAlerts)
@@ -549,17 +577,19 @@ func TestAlertConfig_ConcurrentUpdates(t *testing.T) {
 	}
 }
 
-// TestAlertConfig_NoDoubleClose verifies alert channel doesn't panic on double close (SECURITY FIX #2.8.1)
+// TestAlertConfig_NoDoubleClose verifies alert channel doesn't panic on double close (SECURITY FIX #2.8.1).
 func TestAlertConfig_NoDoubleClose(t *testing.T) {
 	server, tmpDir, token := newTestServerWithAuth(t)
-	defer os.RemoveAll(tmpDir)
+
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	// Enable alerts
 	reqBody := `{"packets_threshold":1000}`
-	req := httptest.NewRequest("PUT", "/api/v1/alerts", strings.NewReader(reqBody))
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/alerts", strings.NewReader(reqBody))
 	req.Header.Set("Authorization", "Bearer "+token)
-	req.Header.Set("X-CSRF-Token", server.csrfToken)
+	req.Header.Set("X-Csrf-Token", server.csrfToken)
 	req.Header.Set("Content-Type", "application/json")
+
 	w := httptest.NewRecorder()
 
 	handler := server.auth(server.csrfProtect(server.handleAlerts))
@@ -570,12 +600,13 @@ func TestAlertConfig_NoDoubleClose(t *testing.T) {
 	}
 
 	// Update alerts multiple times rapidly (triggers stop/start of goroutine)
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		reqBody = fmt.Sprintf(`{"packets_threshold":%d}`, (i+1)*1000)
-		req = httptest.NewRequest("PUT", "/api/v1/alerts", strings.NewReader(reqBody))
+		req = httptest.NewRequest(http.MethodPut, "/api/v1/alerts", strings.NewReader(reqBody))
 		req.Header.Set("Authorization", "Bearer "+token)
-		req.Header.Set("X-CSRF-Token", server.csrfToken)
+		req.Header.Set("X-Csrf-Token", server.csrfToken)
 		req.Header.Set("Content-Type", "application/json")
+
 		w = httptest.NewRecorder()
 
 		handler(w, req)
@@ -587,10 +618,11 @@ func TestAlertConfig_NoDoubleClose(t *testing.T) {
 
 	// Disable alerts (should cleanly close channel)
 	reqBody = `{"packets_threshold":0}`
-	req = httptest.NewRequest("PUT", "/api/v1/alerts", strings.NewReader(reqBody))
+	req = httptest.NewRequest(http.MethodPut, "/api/v1/alerts", strings.NewReader(reqBody))
 	req.Header.Set("Authorization", "Bearer "+token)
-	req.Header.Set("X-CSRF-Token", server.csrfToken)
+	req.Header.Set("X-Csrf-Token", server.csrfToken)
 	req.Header.Set("Content-Type", "application/json")
+
 	w = httptest.NewRecorder()
 
 	handler(w, req)
@@ -598,25 +630,26 @@ func TestAlertConfig_NoDoubleClose(t *testing.T) {
 	if w.Code != http.StatusOK {
 		t.Fatalf("Failed to disable alerts: %d", w.Code)
 	}
-
 	// No panic should occur
 }
 
-// TestAlertConfig_GoroutineCleanup verifies alert goroutines are cleaned up properly (SECURITY FIX #98)
+// TestAlertConfig_GoroutineCleanup verifies alert goroutines are cleaned up properly (SECURITY FIX #98).
 func TestAlertConfig_GoroutineCleanup(t *testing.T) {
 	server, tmpDir, token := newTestServerWithAuth(t)
-	defer os.RemoveAll(tmpDir)
+
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	initialGoroutines := runtime.NumGoroutine()
 
 	// Enable and disable alerts multiple times
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		// Enable
 		reqBody := `{"packets_threshold":1000}`
-		req := httptest.NewRequest("PUT", "/api/v1/alerts", strings.NewReader(reqBody))
+		req := httptest.NewRequest(http.MethodPut, "/api/v1/alerts", strings.NewReader(reqBody))
 		req.Header.Set("Authorization", "Bearer "+token)
-		req.Header.Set("X-CSRF-Token", server.csrfToken)
+		req.Header.Set("X-Csrf-Token", server.csrfToken)
 		req.Header.Set("Content-Type", "application/json")
+
 		w := httptest.NewRecorder()
 
 		handler := server.auth(server.csrfProtect(server.handleAlerts))
@@ -628,10 +661,11 @@ func TestAlertConfig_GoroutineCleanup(t *testing.T) {
 
 		// Disable
 		reqBody = `{"packets_threshold":0}`
-		req = httptest.NewRequest("PUT", "/api/v1/alerts", strings.NewReader(reqBody))
+		req = httptest.NewRequest(http.MethodPut, "/api/v1/alerts", strings.NewReader(reqBody))
 		req.Header.Set("Authorization", "Bearer "+token)
-		req.Header.Set("X-CSRF-Token", server.csrfToken)
+		req.Header.Set("X-Csrf-Token", server.csrfToken)
 		req.Header.Set("Content-Type", "application/json")
+
 		w = httptest.NewRecorder()
 
 		handler(w, req)
@@ -653,9 +687,10 @@ func TestAlertConfig_GoroutineCleanup(t *testing.T) {
 	}
 }
 
-// Helper function to generate test authentication tokens
+// Helper function to generate test authentication tokens.
 func generateTestToken() string {
 	b := make([]byte, 32)
-	rand.Read(b)
+	_, _ = rand.Read(b)
+
 	return base64.URLEncoding.EncodeToString(b)
 }

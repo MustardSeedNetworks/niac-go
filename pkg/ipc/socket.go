@@ -1,8 +1,9 @@
-// Package ipc provides inter-process communication for NIAC remote control
 package ipc
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -12,41 +13,44 @@ import (
 
 	"github.com/krisarmstrong/niac-go/pkg/api"
 	"github.com/krisarmstrong/niac-go/pkg/config"
-	"github.com/krisarmstrong/niac-go/pkg/errors"
+	pkgerrors "github.com/krisarmstrong/niac-go/pkg/errors"
 	"github.com/krisarmstrong/niac-go/pkg/logging"
 	"github.com/krisarmstrong/niac-go/pkg/protocols"
 )
 
-// Command represents an IPC command
+// Sentinel errors for IPC server.
+var ErrIPCServerAlreadyRunning = errors.New("IPC server already running")
+
+// Command represents an IPC command.
 type Command string
 
 const (
-	// CommandStatus queries the current simulation status
+	// CommandStatus queries the current simulation status.
 	CommandStatus Command = "status"
-	// CommandReload reloads the configuration
+	// CommandReload reloads the configuration.
 	CommandReload Command = "reload"
-	// CommandInject injects an error
+	// CommandInject injects an error.
 	CommandInject Command = "inject"
-	// CommandList lists active error injections
+	// CommandList lists active error injections.
 	CommandList Command = "list"
-	// CommandClear clears error injections
+	// CommandClear clears error injections.
 	CommandClear Command = "clear"
-	// CommandShutdown gracefully shuts down the simulation
+	// CommandShutdown gracefully shuts down the simulation.
 	CommandShutdown Command = "shutdown"
-	// CommandLogs subscribes to log stream
+	// CommandLogs subscribes to log stream.
 	CommandLogs Command = "logs"
-	// CommandTopology retrieves the current network topology
+	// CommandTopology retrieves the current network topology.
 	CommandTopology Command = "topology"
-	// CommandDump returns captured packets as hex dumps
+	// CommandDump returns captured packets as hex dumps.
 	CommandDump Command = "dump"
-	// CommandNeighbors retrieves the neighbor discovery table
+	// CommandNeighbors retrieves the neighbor discovery table.
 	CommandNeighbors Command = "neighbors"
 )
 
-// PacketBufferSize is the maximum number of packets to store in the ring buffer
+// PacketBufferSize is the maximum number of packets to store in the ring buffer.
 const PacketBufferSize = 1000
 
-// LogLevel represents the severity level of a log entry
+// LogLevel represents the severity level of a log entry.
 type LogLevel string
 
 const (
@@ -56,7 +60,7 @@ const (
 	LogLevelError LogLevel = "error"
 )
 
-// LogEntry represents a single log message from the simulation
+// LogEntry represents a single log message from the simulation.
 type LogEntry struct {
 	Timestamp time.Time `json:"timestamp"`
 	Level     LogLevel  `json:"level"`
@@ -66,20 +70,20 @@ type LogEntry struct {
 	Protocol  string    `json:"protocol,omitempty"` // protocol if applicable
 }
 
-// Request represents an IPC request
+// Request represents an IPC request.
 type Request struct {
-	Command Command                `json:"command"`
-	Args    map[string]interface{} `json:"args,omitempty"`
+	Command Command        `json:"command"`
+	Args    map[string]any `json:"args,omitempty"`
 }
 
-// Response represents an IPC response
+// Response represents an IPC response.
 type Response struct {
-	Success bool                   `json:"success"`
-	Data    map[string]interface{} `json:"data,omitempty"`
-	Error   string                 `json:"error,omitempty"`
+	Success bool           `json:"success"`
+	Data    map[string]any `json:"data,omitempty"`
+	Error   string         `json:"error,omitempty"`
 }
 
-// StatusData contains simulation status information
+// StatusData contains simulation status information.
 type StatusData struct {
 	Running      bool      `json:"running"`
 	Interface    string    `json:"interface"`
@@ -92,16 +96,16 @@ type StatusData struct {
 	ErrorsActive int       `json:"errors_active"`
 }
 
-// ErrorInjectionData contains error injection information
+// ErrorInjectionData contains error injection information.
 type ErrorInjectionData struct {
-	Device    string           `json:"device"`
-	Interface string           `json:"interface"`
-	ErrorType errors.ErrorType `json:"error_type"`
-	Value     int              `json:"value"`
-	Injected  time.Time        `json:"injected_at"`
+	Device    string              `json:"device"`
+	Interface string              `json:"interface"`
+	ErrorType pkgerrors.ErrorType `json:"error_type"`
+	Value     int                 `json:"value"`
+	Injected  time.Time           `json:"injected_at"`
 }
 
-// PacketData contains captured packet information for hex dump display
+// PacketData contains captured packet information for hex dump display.
 type PacketData struct {
 	Timestamp time.Time `json:"timestamp"`
 	Length    int       `json:"length"`
@@ -110,7 +114,7 @@ type PacketData struct {
 	Data      []byte    `json:"data"`
 }
 
-// PacketBuffer is a thread-safe ring buffer for storing captured packets
+// PacketBuffer is a thread-safe ring buffer for storing captured packets.
 type PacketBuffer struct {
 	packets []PacketData
 	head    int
@@ -118,13 +122,13 @@ type PacketBuffer struct {
 	mu      sync.RWMutex
 }
 
-// Server is an IPC socket server for remote control
+// Server is an IPC socket server for remote control.
 type Server struct {
 	socketPath    string
 	listener      net.Listener
 	stack         *protocols.Stack
 	cfg           *config.Config
-	stateManager  *errors.StateManager
+	stateManager  *pkgerrors.StateManager
 	interfaceName string
 	configPath    string
 	startTime     time.Time
@@ -134,9 +138,10 @@ type Server struct {
 	packetBuffer  *PacketBuffer
 }
 
-// NewServer creates a new IPC server
+// NewServer creates a new IPC server.
 func NewServer(socketPath string, stack *protocols.Stack, cfg *config.Config,
-	stateManager *errors.StateManager, interfaceName, configPath string) *Server {
+	stateManager *pkgerrors.StateManager, interfaceName, configPath string,
+) *Server {
 	return &Server{
 		socketPath:    socketPath,
 		stack:         stack,
@@ -151,7 +156,7 @@ func NewServer(socketPath string, stack *protocols.Stack, cfg *config.Config,
 	}
 }
 
-// NewPacketBuffer creates a new packet buffer with the given capacity
+// NewPacketBuffer creates a new packet buffer with the given capacity.
 func NewPacketBuffer(capacity int) *PacketBuffer {
 	return &PacketBuffer{
 		packets: make([]PacketData, capacity),
@@ -160,19 +165,21 @@ func NewPacketBuffer(capacity int) *PacketBuffer {
 	}
 }
 
-// Add adds a packet to the ring buffer
+// Add adds a packet to the ring buffer.
 func (pb *PacketBuffer) Add(pkt PacketData) {
 	pb.mu.Lock()
 	defer pb.mu.Unlock()
 
 	pb.packets[pb.head] = pkt
+
 	pb.head = (pb.head + 1) % len(pb.packets)
+
 	if pb.count < len(pb.packets) {
 		pb.count++
 	}
 }
 
-// GetAll returns all packets in the buffer (oldest first)
+// GetAll returns all packets in the buffer (oldest first).
 func (pb *PacketBuffer) GetAll() []PacketData {
 	pb.mu.RLock()
 	defer pb.mu.RUnlock()
@@ -182,12 +189,13 @@ func (pb *PacketBuffer) GetAll() []PacketData {
 	}
 
 	result := make([]PacketData, pb.count)
+
 	start := 0
 	if pb.count == len(pb.packets) {
 		start = pb.head
 	}
 
-	for i := 0; i < pb.count; i++ {
+	for i := range pb.count {
 		idx := (start + i) % len(pb.packets)
 		result[i] = pb.packets[idx]
 	}
@@ -195,7 +203,7 @@ func (pb *PacketBuffer) GetAll() []PacketData {
 	return result
 }
 
-// GetFiltered returns packets matching the filter criteria
+// GetFiltered returns packets matching the filter criteria.
 func (pb *PacketBuffer) GetFiltered(device, iface string, count int) []PacketData {
 	all := pb.GetAll()
 	if all == nil {
@@ -204,13 +212,16 @@ func (pb *PacketBuffer) GetFiltered(device, iface string, count int) []PacketDat
 
 	// Apply filters
 	var filtered []PacketData
+
 	for _, pkt := range all {
 		if device != "" && pkt.Device != device {
 			continue
 		}
+
 		if iface != "" && pkt.Interface != iface {
 			continue
 		}
+
 		filtered = append(filtered, pkt)
 	}
 
@@ -222,13 +233,13 @@ func (pb *PacketBuffer) GetFiltered(device, iface string, count int) []PacketDat
 	return filtered
 }
 
-// Start starts the IPC server
+// Start starts the IPC server.
 func (s *Server) Start() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	if s.running {
-		return fmt.Errorf("IPC server already running")
+		return ErrIPCServerAlreadyRunning
 	}
 
 	// Remove existing socket if present
@@ -238,19 +249,22 @@ func (s *Server) Start() error {
 
 	// Create socket directory if needed
 	socketDir := filepath.Dir(s.socketPath)
-	if err := os.MkdirAll(socketDir, 0755); err != nil {
+	if err := os.MkdirAll(socketDir, 0o750); err != nil {
 		return fmt.Errorf("failed to create socket directory: %w", err)
 	}
 
 	// Create Unix domain socket
-	listener, err := net.Listen("unix", s.socketPath)
+	lc := net.ListenConfig{}
+
+	listener, err := lc.Listen(context.Background(), "unix", s.socketPath)
 	if err != nil {
 		return fmt.Errorf("failed to create socket: %w", err)
 	}
 
 	// Set socket permissions (owner only)
-	if err := os.Chmod(s.socketPath, 0600); err != nil {
-		listener.Close()
+	if err := os.Chmod(s.socketPath, 0o600); err != nil {
+		_ = listener.Close()
+
 		return fmt.Errorf("failed to set socket permissions: %w", err)
 	}
 
@@ -261,10 +275,11 @@ func (s *Server) Start() error {
 	go s.acceptLoop()
 
 	logging.Info("IPC server started on %s", s.socketPath)
+
 	return nil
 }
 
-// Stop stops the IPC server
+// Stop stops the IPC server.
 func (s *Server) Stop() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -277,17 +292,18 @@ func (s *Server) Stop() error {
 	s.running = false
 
 	if s.listener != nil {
-		s.listener.Close()
+		_ = s.listener.Close()
 	}
 
 	// Remove socket file
-	os.RemoveAll(s.socketPath)
+	_ = os.RemoveAll(s.socketPath)
 
 	logging.Info("IPC server stopped")
+
 	return nil
 }
 
-// acceptLoop accepts incoming connections
+// acceptLoop accepts incoming connections.
 func (s *Server) acceptLoop() {
 	for {
 		select {
@@ -304,6 +320,7 @@ func (s *Server) acceptLoop() {
 				return
 			default:
 				logging.Error("IPC accept error: %v", err)
+
 				continue
 			}
 		}
@@ -313,18 +330,21 @@ func (s *Server) acceptLoop() {
 	}
 }
 
-// handleConnection handles a single IPC connection
+// handleConnection handles a single IPC connection.
 func (s *Server) handleConnection(conn net.Conn) {
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	// Set read/write timeouts
-	conn.SetDeadline(time.Now().Add(5 * time.Second))
+	_ = conn.SetDeadline(time.Now().Add(5 * time.Second)) // error is non-critical, connection will timeout naturally
 
 	// Read request
 	decoder := json.NewDecoder(conn)
+
 	var req Request
-	if err := decoder.Decode(&req); err != nil {
+	err := decoder.Decode(&req)
+	if err != nil {
 		s.sendError(conn, fmt.Errorf("invalid request: %w", err))
+
 		return
 	}
 
@@ -333,12 +353,13 @@ func (s *Server) handleConnection(conn net.Conn) {
 
 	// Send response
 	encoder := json.NewEncoder(conn)
-	if err := encoder.Encode(response); err != nil {
+	err = encoder.Encode(response)
+	if err != nil {
 		logging.Error("Failed to send IPC response: %v", err)
 	}
 }
 
-// processCommand processes an IPC command
+// processCommand processes an IPC command.
 func (s *Server) processCommand(req *Request) *Response {
 	switch req.Command {
 	case CommandStatus:
@@ -369,7 +390,7 @@ func (s *Server) processCommand(req *Request) *Response {
 	}
 }
 
-// handleStatus returns simulation status
+// handleStatus returns simulation status.
 func (s *Server) handleStatus(req *Request) *Response {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -391,13 +412,13 @@ func (s *Server) handleStatus(req *Request) *Response {
 
 	return &Response{
 		Success: true,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"status": status,
 		},
 	}
 }
 
-// handleReload reloads the configuration
+// handleReload reloads the configuration.
 func (s *Server) handleReload(req *Request) *Response {
 	// Load new config
 	newCfg, err := config.Load(s.configPath)
@@ -410,7 +431,8 @@ func (s *Server) handleReload(req *Request) *Response {
 
 	// Validate new config
 	validator := config.NewValidator(s.configPath)
-	if errs := validator.Validate(newCfg); !errs.Valid {
+	errs := validator.Validate(newCfg)
+	if !errs.Valid {
 		return &Response{
 			Success: false,
 			Error:   fmt.Sprintf("config validation failed: %v", errs),
@@ -427,14 +449,14 @@ func (s *Server) handleReload(req *Request) *Response {
 
 	return &Response{
 		Success: true,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"message":      "configuration reloaded",
 			"device_count": len(newCfg.Devices),
 		},
 	}
 }
 
-// handleInject injects an error
+// handleInject injects an error.
 func (s *Server) handleInject(req *Request) *Response {
 	// Extract arguments
 	deviceName, ok := req.Args["device"].(string)
@@ -463,9 +485,11 @@ func (s *Server) handleInject(req *Request) *Response {
 
 	// Find device
 	var device *config.Device
+
 	for i := range s.cfg.Devices {
 		if s.cfg.Devices[i].Name == deviceName {
 			device = &s.cfg.Devices[i]
+
 			break
 		}
 	}
@@ -473,12 +497,12 @@ func (s *Server) handleInject(req *Request) *Response {
 	if device == nil {
 		return &Response{
 			Success: false,
-			Error:   fmt.Sprintf("device not found: %s", deviceName),
+			Error:   "device not found: " + deviceName,
 		}
 	}
 
 	// Parse error type
-	errorType := errors.ErrorType(errorTypeStr)
+	errorType := pkgerrors.ErrorType(errorTypeStr)
 
 	// Get interface (use first available)
 	interfaceName := s.interfaceName
@@ -495,7 +519,7 @@ func (s *Server) handleInject(req *Request) *Response {
 
 	return &Response{
 		Success: true,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"message":    "error injected",
 			"device":     deviceName,
 			"error_type": errorType,
@@ -504,7 +528,7 @@ func (s *Server) handleInject(req *Request) *Response {
 	}
 }
 
-// handleList lists active error injections
+// handleList lists active error injections.
 func (s *Server) handleList(req *Request) *Response {
 	states := s.stateManager.GetAllStates()
 
@@ -521,23 +545,25 @@ func (s *Server) handleList(req *Request) *Response {
 
 	return &Response{
 		Success: true,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"injections": injections,
 			"count":      len(injections),
 		},
 	}
 }
 
-// handleClear clears error injections
+// handleClear clears error injections.
 func (s *Server) handleClear(req *Request) *Response {
 	// Check for device filter
 	if deviceName, ok := req.Args["device"].(string); ok {
 		// Clear for specific device
 		cleared := 0
+
 		states := s.stateManager.GetAllStates()
 		for _, state := range states {
 			if state.DeviceIP == deviceName {
 				s.stateManager.ClearError(state.DeviceIP, state.Interface)
+
 				cleared++
 			}
 		}
@@ -546,7 +572,7 @@ func (s *Server) handleClear(req *Request) *Response {
 
 		return &Response{
 			Success: true,
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"message": fmt.Sprintf("cleared %d injections for device %s", cleared, deviceName),
 				"cleared": cleared,
 			},
@@ -559,20 +585,20 @@ func (s *Server) handleClear(req *Request) *Response {
 
 	return &Response{
 		Success: true,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"message": "all error injections cleared",
 		},
 	}
 }
 
-// handleShutdown initiates graceful shutdown
+// handleShutdown initiates graceful shutdown.
 func (s *Server) handleShutdown(req *Request) *Response {
 	logging.Info("Shutdown requested via IPC")
 
 	// Send response before shutting down
 	response := &Response{
 		Success: true,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"message": "shutdown initiated",
 		},
 	}
@@ -589,7 +615,7 @@ func (s *Server) handleShutdown(req *Request) *Response {
 }
 
 // handleLogs returns recent log entries from the simulation
-// Supports filtering by log level and limiting the number of entries
+// Supports filtering by log level and limiting the number of entries.
 func (s *Server) handleLogs(req *Request) *Response {
 	// Extract optional parameters
 	count := 100 // default number of log entries
@@ -598,6 +624,7 @@ func (s *Server) handleLogs(req *Request) *Response {
 	}
 
 	minLevel := LogLevelDebug
+
 	if levelStr, ok := req.Args["level"].(string); ok {
 		switch levelStr {
 		case "debug":
@@ -616,14 +643,14 @@ func (s *Server) handleLogs(req *Request) *Response {
 
 	return &Response{
 		Success: true,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"logs":  logs,
 			"count": len(logs),
 		},
 	}
 }
 
-// getRecentLogs returns recent log entries based on current simulation state
+// getRecentLogs returns recent log entries based on current simulation state.
 func (s *Server) getRecentLogs(count int, minLevel LogLevel) []LogEntry {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -645,6 +672,7 @@ func (s *Server) getRecentLogs(count int, minLevel LogLevel) []LogEntry {
 		if len(logs) >= count {
 			break
 		}
+
 		if compareLevels(LogLevelInfo, minLevel) >= 0 {
 			logs = append(logs, LogEntry{
 				Timestamp: time.Now(),
@@ -662,13 +690,19 @@ func (s *Server) getRecentLogs(count int, minLevel LogLevel) []LogEntry {
 		if len(logs) >= count {
 			break
 		}
+
 		if compareLevels(LogLevelWarn, minLevel) >= 0 {
 			logs = append(logs, LogEntry{
 				Timestamp: time.Now(),
 				Level:     LogLevelWarn,
-				Message:   fmt.Sprintf("Error injection active: %s on %s (value: %d)", state.ErrorType, state.DeviceIP, state.Value),
-				Source:    "error-injection",
-				Device:    state.DeviceIP,
+				Message: fmt.Sprintf(
+					"Error injection active: %s on %s (value: %d)",
+					state.ErrorType,
+					state.DeviceIP,
+					state.Value,
+				),
+				Source: "error-injection",
+				Device: state.DeviceIP,
 			})
 		}
 	}
@@ -676,7 +710,7 @@ func (s *Server) getRecentLogs(count int, minLevel LogLevel) []LogEntry {
 	return logs
 }
 
-// compareLevels returns -1 if a < b, 0 if a == b, 1 if a > b
+// compareLevels returns -1 if a < b, 0 if a == b, 1 if a > b.
 func compareLevels(a, b LogLevel) int {
 	levels := map[LogLevel]int{
 		LogLevelDebug: 0,
@@ -684,17 +718,20 @@ func compareLevels(a, b LogLevel) int {
 		LogLevelWarn:  2,
 		LogLevelError: 3,
 	}
+
 	aVal, bVal := levels[a], levels[b]
 	if aVal < bVal {
 		return -1
 	}
+
 	if aVal > bVal {
 		return 1
 	}
+
 	return 0
 }
 
-// handleTopology returns the current network topology
+// handleTopology returns the current network topology.
 func (s *Server) handleTopology(req *Request) *Response {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -704,13 +741,13 @@ func (s *Server) handleTopology(req *Request) *Response {
 
 	return &Response{
 		Success: true,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"topology": topology,
 		},
 	}
 }
 
-// NeighborData represents neighbor discovery information for IPC responses
+// NeighborData represents neighbor discovery information for IPC responses.
 type NeighborData struct {
 	Protocol          string    `json:"protocol"`
 	LocalDevice       string    `json:"local_device"`
@@ -724,7 +761,7 @@ type NeighborData struct {
 	ExpireAt          time.Time `json:"expire_at"`
 }
 
-// handleNeighbors returns the neighbor discovery table
+// handleNeighbors returns the neighbor discovery table.
 func (s *Server) handleNeighbors(req *Request) *Response {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -754,14 +791,14 @@ func (s *Server) handleNeighbors(req *Request) *Response {
 
 	return &Response{
 		Success: true,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"neighbors": result,
 			"count":     len(result),
 		},
 	}
 }
 
-// sendError sends an error response
+// sendError sends an error response.
 func (s *Server) sendError(conn net.Conn, err error) {
 	response := &Response{
 		Success: false,
@@ -769,16 +806,17 @@ func (s *Server) sendError(conn net.Conn, err error) {
 	}
 
 	encoder := json.NewEncoder(conn)
-	encoder.Encode(response)
+	_ = encoder.Encode(response) // error is non-critical, connection will be closed after
 }
 
-// DefaultSocketPath returns the default socket path
+// DefaultSocketPath returns the default socket path.
 func DefaultSocketPath() string {
 	tmpDir := os.TempDir()
+
 	return filepath.Join(tmpDir, "niac.sock")
 }
 
-// handleDump returns captured packets from the buffer
+// handleDump returns captured packets from the buffer.
 func (s *Server) handleDump(req *Request) *Response {
 	// Extract filter arguments
 	device := ""
@@ -788,9 +826,11 @@ func (s *Server) handleDump(req *Request) *Response {
 	if d, ok := req.Args["device"].(string); ok {
 		device = d
 	}
+
 	if i, ok := req.Args["interface"].(string); ok {
 		iface = i
 	}
+
 	if c, ok := req.Args["count"].(float64); ok { // JSON numbers are float64
 		count = int(c)
 	}
@@ -800,7 +840,7 @@ func (s *Server) handleDump(req *Request) *Response {
 
 	return &Response{
 		Success: true,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"packets": packets,
 			"count":   len(packets),
 		},
@@ -829,7 +869,7 @@ func (s *Server) AddPacket(data []byte, device, iface string) {
 	s.packetBuffer.Add(pkt)
 }
 
-// GetPacketBuffer returns the packet buffer for external access
+// GetPacketBuffer returns the packet buffer for external access.
 func (s *Server) GetPacketBuffer() *PacketBuffer {
 	return s.packetBuffer
 }

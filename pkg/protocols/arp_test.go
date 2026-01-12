@@ -10,7 +10,7 @@ import (
 	"github.com/krisarmstrong/niac-go/pkg/logging"
 )
 
-// TestNewARPHandler tests creating a new ARP handler
+// TestNewARPHandler tests creating a new ARP handler.
 func TestNewARPHandler(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -20,12 +20,13 @@ func TestNewARPHandler(t *testing.T) {
 	if handler == nil {
 		t.Fatal("Expected ARP handler, got nil")
 	}
+
 	if handler.stack != stack {
 		t.Error("Stack not set correctly")
 	}
 }
 
-// TestBuildARPReply tests building an ARP reply packet
+// TestBuildARPReply tests building an ARP reply packet.
 func TestBuildARPReply(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -41,9 +42,11 @@ func TestBuildARPReply(t *testing.T) {
 	if reply == nil {
 		t.Fatal("Expected ARP reply packet, got nil")
 	}
+
 	if reply.Length == 0 {
 		t.Error("ARP reply packet has zero length")
 	}
+
 	if len(reply.Buffer) == 0 {
 		t.Error("ARP reply buffer is empty")
 	}
@@ -56,10 +59,12 @@ func TestBuildARPReply(t *testing.T) {
 	if ethLayer == nil {
 		t.Fatal("ARP reply missing Ethernet layer")
 	}
+
 	eth, _ := ethLayer.(*layers.Ethernet)
 	if eth.SrcMAC.String() != senderMAC.String() {
 		t.Errorf("Expected source MAC %s, got %s", senderMAC, eth.SrcMAC)
 	}
+
 	if eth.DstMAC.String() != targetMAC.String() {
 		t.Errorf("Expected dest MAC %s, got %s", targetMAC, eth.DstMAC)
 	}
@@ -69,19 +74,22 @@ func TestBuildARPReply(t *testing.T) {
 	if arpLayer == nil {
 		t.Fatal("ARP reply missing ARP layer")
 	}
+
 	arp, _ := arpLayer.(*layers.ARP)
 	if arp.Operation != layers.ARPReply {
 		t.Errorf("Expected ARP reply operation, got %d", arp.Operation)
 	}
+
 	if net.IP(arp.SourceProtAddress).String() != senderIP.String() {
 		t.Errorf("Expected source IP %s, got %s", senderIP, net.IP(arp.SourceProtAddress))
 	}
+
 	if net.IP(arp.DstProtAddress).String() != targetIP.String() {
 		t.Errorf("Expected target IP %s, got %s", targetIP, net.IP(arp.DstProtAddress))
 	}
 }
 
-// TestSendGratuitousARP tests sending gratuitous ARP
+// TestSendGratuitousARP tests sending gratuitous ARP.
 func TestSendGratuitousARP(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -99,7 +107,7 @@ func TestSendGratuitousARP(t *testing.T) {
 	}
 }
 
-// TestSendGratuitousARP_NoMAC tests gratuitous ARP with missing MAC
+// TestSendGratuitousARP_NoMAC tests gratuitous ARP with missing MAC.
 func TestSendGratuitousARP_NoMAC(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -117,7 +125,7 @@ func TestSendGratuitousARP_NoMAC(t *testing.T) {
 	}
 }
 
-// TestSendGratuitousARP_NoIP tests gratuitous ARP with missing IP
+// TestSendGratuitousARP_NoIP tests gratuitous ARP with missing IP.
 func TestSendGratuitousARP_NoIP(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -135,7 +143,7 @@ func TestSendGratuitousARP_NoIP(t *testing.T) {
 	}
 }
 
-// TestHandleARPRequest tests handling ARP requests
+// TestHandleARPRequest tests handling ARP requests.
 func TestHandleARPRequest(t *testing.T) {
 	// Create config with a device
 	cfg := &config.Config{
@@ -198,7 +206,7 @@ func TestHandleARPRequest(t *testing.T) {
 	}
 }
 
-// TestHandleARPReply tests handling ARP replies
+// TestHandleARPReply tests handling ARP replies.
 func TestHandleARPReply(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -250,7 +258,7 @@ func TestHandleARPReply(t *testing.T) {
 	}
 }
 
-// TestHandleARPPacket_InvalidType tests handling ARP with wrong type
+// TestHandleARPPacket_InvalidType tests handling ARP with wrong type.
 func TestHandleARPPacket_InvalidType(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -302,26 +310,30 @@ func TestHandleARPPacket_InvalidType(t *testing.T) {
 	}
 }
 
-// TestARPConstants tests ARP field offset constants
+// TestARPConstants tests ARP field offset constants.
 func TestARPConstants(t *testing.T) {
 	if ARPOperation != 6 {
 		t.Errorf("ARPOperation should be 6, got %d", ARPOperation)
 	}
+
 	if ARPSenderHWAddress != 8 {
 		t.Errorf("ARPSenderHWAddress should be 8, got %d", ARPSenderHWAddress)
 	}
+
 	if ARPSenderProtocolAddress != 14 {
 		t.Errorf("ARPSenderProtocolAddress should be 14, got %d", ARPSenderProtocolAddress)
 	}
+
 	if ARPTargetHWAddress != 18 {
 		t.Errorf("ARPTargetHWAddress should be 18, got %d", ARPTargetHWAddress)
 	}
+
 	if ARPTargetProtocolAddress != 24 {
 		t.Errorf("ARPTargetProtocolAddress should be 24, got %d", ARPTargetProtocolAddress)
 	}
 }
 
-// BenchmarkBuildARPReply benchmarks ARP reply construction
+// BenchmarkBuildARPReply benchmarks ARP reply construction.
 func BenchmarkBuildARPReply(b *testing.B) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -332,13 +344,12 @@ func BenchmarkBuildARPReply(b *testing.B) {
 	targetMAC := net.HardwareAddr{0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff}
 	targetIP := net.ParseIP("192.168.1.100")
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		handler.buildARPReply(senderMAC, senderIP, targetMAC, targetIP)
 	}
 }
 
-// BenchmarkSendGratuitousARP benchmarks gratuitous ARP sending
+// BenchmarkSendGratuitousARP benchmarks gratuitous ARP sending.
 func BenchmarkSendGratuitousARP(b *testing.B) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -350,8 +361,7 @@ func BenchmarkSendGratuitousARP(b *testing.B) {
 		IPAddresses: []net.IP{net.ParseIP("192.168.1.1")},
 	}
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		handler.SendGratuitousARP(device)
+	for b.Loop() {
+		_ = handler.SendGratuitousARP(device)
 	}
 }

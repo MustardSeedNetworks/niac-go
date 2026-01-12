@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"net"
+	"os"
 	"strings"
 	"time"
 
@@ -12,19 +13,19 @@ import (
 	"github.com/krisarmstrong/niac-go/pkg/config"
 )
 
-// LLDP protocol constants
+// LLDP protocol constants.
 const (
-	// LLDP multicast destination MAC address (01:80:c2:00:00:0e)
+	// LLDPMulticastMAC is the LLDP multicast destination MAC address (01:80:c2:00:00:0e).
 	LLDPMulticastMAC = "\x01\x80\xc2\x00\x00\x0e"
 
-	// LLDP advertisement interval (default 30 seconds per IEEE 802.1AB)
+	// LLDPAdvertiseInterval is the default LLDP advertisement interval per IEEE 802.1AB.
 	LLDPAdvertiseInterval = 30 * time.Second
 
-	// LLDP TTL (Time To Live) - typically 4x advertisement interval
-	LLDPTTL = 120 // seconds
+	// LLDPTTL is the LLDP time-to-live in seconds.
+	LLDPTTL = 120
 )
 
-// LLDP TLV Types (per IEEE 802.1AB)
+// LLDP TLV Types (per IEEE 802.1AB).
 const (
 	LLDPTLVTypeEnd                = 0
 	LLDPTLVTypeChassisID          = 1
@@ -35,11 +36,11 @@ const (
 	LLDPTLVTypeSystemDescription  = 6
 	LLDPTLVTypeSystemCapabilities = 7
 	LLDPTLVTypeManagementAddress  = 8
-	// 9-126 reserved for future standardization
+	// 9-126 reserved for future standardization.
 	LLDPTLVTypeOrganizationSpecific = 127
 )
 
-// LLDP Chassis ID Subtypes
+// LLDP Chassis ID Subtypes.
 const (
 	LLDPChassisIDSubtypeChassisComponent = 1
 	LLDPChassisIDSubtypeInterfaceAlias   = 2
@@ -50,7 +51,7 @@ const (
 	LLDPChassisIDSubtypeLocal            = 7
 )
 
-// LLDP Port ID Subtypes
+// LLDP Port ID Subtypes.
 const (
 	LLDPPortIDSubtypeInterfaceAlias = 1
 	LLDPPortIDSubtypePortComponent  = 2
@@ -61,7 +62,7 @@ const (
 	LLDPPortIDSubtypeLocal          = 7
 )
 
-// LLDP System Capabilities
+// LLDP System Capabilities.
 const (
 	LLDPCapOther       = 1 << 0
 	LLDPCapRepeater    = 1 << 1
@@ -73,14 +74,14 @@ const (
 	LLDPCapStationOnly = 1 << 7
 )
 
-// LLDPHandler handles LLDP advertisements
+// LLDPHandler handles LLDP advertisements.
 type LLDPHandler struct {
 	stack           *Stack
 	stopChan        chan struct{}
 	advertiseTicker *time.Ticker
 }
 
-// NewLLDPHandler creates a new LLDP handler
+// NewLLDPHandler creates a new LLDP handler.
 func NewLLDPHandler(stack *Stack) *LLDPHandler {
 	return &LLDPHandler{
 		stack:    stack,
@@ -88,12 +89,12 @@ func NewLLDPHandler(stack *Stack) *LLDPHandler {
 	}
 }
 
-// Start begins periodic LLDP advertisements
+// Start begins periodic LLDP advertisements.
 func (h *LLDPHandler) Start() {
 	debugLevel := h.stack.GetDebugLevel()
 
 	if debugLevel >= 1 {
-		fmt.Printf("LLDP: Starting periodic advertisements (interval: %v)\n", LLDPAdvertiseInterval)
+		_, _ = fmt.Fprintf(os.Stdout, "LLDP: Starting periodic advertisements (interval: %v)\n", LLDPAdvertiseInterval)
 	}
 
 	h.advertiseTicker = time.NewTicker(LLDPAdvertiseInterval)
@@ -108,18 +109,19 @@ func (h *LLDPHandler) Start() {
 				h.sendAdvertisements()
 			case <-h.stopChan:
 				h.advertiseTicker.Stop()
+
 				return
 			}
 		}
 	}()
 }
 
-// Stop halts LLDP advertisements
+// Stop halts LLDP advertisements.
 func (h *LLDPHandler) Stop() {
 	close(h.stopChan)
 }
 
-// sendAdvertisements sends LLDP advertisements for all devices
+// sendAdvertisements sends LLDP advertisements for all devices.
 func (h *LLDPHandler) sendAdvertisements() {
 	debugLevel := h.stack.GetDebugLevel()
 
@@ -139,15 +141,15 @@ func (h *LLDPHandler) sendAdvertisements() {
 		if frame != nil {
 			err := h.sendFrame(device, frame)
 			if err != nil && debugLevel >= 2 {
-				fmt.Printf("LLDP: Error sending advertisement for %s: %v\n", device.Name, err)
+				_, _ = fmt.Fprintf(os.Stdout, "LLDP: Error sending advertisement for %s: %v\n", device.Name, err)
 			} else if debugLevel >= 3 {
-				fmt.Printf("LLDP: Sent advertisement for %s (%d bytes)\n", device.Name, len(frame))
+				_, _ = fmt.Fprintf(os.Stdout, "LLDP: Sent advertisement for %s (%d bytes)\n", device.Name, len(frame))
 			}
 		}
 	}
 }
 
-// buildLLDPFrame constructs an LLDP frame for a device
+// buildLLDPFrame constructs an LLDP frame for a device.
 func (h *LLDPHandler) buildLLDPFrame(device *config.Device) []byte {
 	var frame []byte
 
@@ -173,22 +175,24 @@ func (h *LLDPHandler) buildLLDPFrame(device *config.Device) []byte {
 	return frame
 }
 
-// buildChassisIDTLV builds the Chassis ID TLV
+// buildChassisIDTLV builds the Chassis ID TLV.
 func (h *LLDPHandler) buildChassisIDTLV(device *config.Device) []byte {
 	// Determine chassis ID type and value from config or use default
 	subtype := byte(LLDPChassisIDSubtypeMACAddress)
+
 	var chassisID []byte
 
 	if device.LLDPConfig != nil && device.LLDPConfig.ChassisIDType != "" {
 		switch device.LLDPConfig.ChassisIDType {
-		case "mac":
+		case config.ChassisIDTypeMAC:
 			subtype = byte(LLDPChassisIDSubtypeMACAddress)
 			chassisID = device.MACAddress
-		case "local":
+		case config.ChassisIDTypeLocal:
 			subtype = byte(LLDPChassisIDSubtypeLocal)
 			chassisID = []byte(device.Name)
-		case "network_address":
+		case config.ChassisIDTypeNetworkAddress:
 			subtype = byte(LLDPChassisIDSubtypeNetworkAddress)
+
 			if len(device.IPAddresses) > 0 {
 				chassisID = device.IPAddresses[0]
 			} else {
@@ -215,10 +219,11 @@ func (h *LLDPHandler) buildChassisIDTLV(device *config.Device) []byte {
 	return tlv
 }
 
-// buildPortIDTLV builds the Port ID TLV
+// buildPortIDTLV builds the Port ID TLV.
 func (h *LLDPHandler) buildPortIDTLV(device *config.Device) []byte {
 	// Use interface name or device name as port ID
 	subtype := byte(LLDPPortIDSubtypeInterfaceName)
+
 	var portID []byte
 
 	// Try to use first interface name if available
@@ -240,15 +245,14 @@ func (h *LLDPHandler) buildPortIDTLV(device *config.Device) []byte {
 	return tlv
 }
 
-// buildTTLTLV builds the TTL TLV
+// buildTTLTLV builds the TTL TLV.
 func (h *LLDPHandler) buildTTLTLV(device *config.Device) []byte {
 	// Use TTL from config if available, otherwise use default
 	ttl := uint16(LLDPTTL)
+
 	if device.LLDPConfig != nil && device.LLDPConfig.TTL > 0 {
-		ttlVal := device.LLDPConfig.TTL
-		if ttlVal > 65535 {
-			ttlVal = 65535
-		}
+		ttlVal := min(device.LLDPConfig.TTL, 65535)
+
 		ttl = uint16(ttlVal) // #nosec G115 -- TLV length limited by protocol specification
 	}
 
@@ -262,14 +266,14 @@ func (h *LLDPHandler) buildTTLTLV(device *config.Device) []byte {
 	return tlv
 }
 
-// buildPortDescriptionTLV builds the Port Description TLV
+// buildPortDescriptionTLV builds the Port Description TLV.
 func (h *LLDPHandler) buildPortDescriptionTLV(device *config.Device) []byte {
 	// Use port description from config if available, otherwise generate default
 	var description []byte
 	if device.LLDPConfig != nil && device.LLDPConfig.PortDescription != "" {
 		description = []byte(device.LLDPConfig.PortDescription)
 	} else {
-		description = []byte(fmt.Sprintf("%s interface", device.Type))
+		description = []byte(device.Type + " interface")
 	}
 
 	length := len(description)
@@ -285,7 +289,7 @@ func (h *LLDPHandler) buildPortDescriptionTLV(device *config.Device) []byte {
 	return tlv
 }
 
-// buildSystemNameTLV builds the System Name TLV
+// buildSystemNameTLV builds the System Name TLV.
 func (h *LLDPHandler) buildSystemNameTLV(device *config.Device) []byte {
 	name := []byte(device.Name)
 
@@ -302,14 +306,14 @@ func (h *LLDPHandler) buildSystemNameTLV(device *config.Device) []byte {
 	return tlv
 }
 
-// buildSystemDescriptionTLV builds the System Description TLV
+// buildSystemDescriptionTLV builds the System Description TLV.
 func (h *LLDPHandler) buildSystemDescriptionTLV(device *config.Device) []byte {
 	// Use system description from config if available, otherwise generate default
 	var description []byte
 	if device.LLDPConfig != nil && device.LLDPConfig.SystemDescription != "" {
 		description = []byte(device.LLDPConfig.SystemDescription)
 	} else {
-		description = []byte(fmt.Sprintf("NIAC-Go simulated %s device", device.Type))
+		description = fmt.Appendf(nil, "NIAC-Go simulated %s device", device.Type)
 	}
 
 	length := len(description)
@@ -325,11 +329,13 @@ func (h *LLDPHandler) buildSystemDescriptionTLV(device *config.Device) []byte {
 	return tlv
 }
 
-// buildSystemCapabilitiesTLV builds the System Capabilities TLV
+// buildSystemCapabilitiesTLV builds the System Capabilities TLV.
 func (h *LLDPHandler) buildSystemCapabilitiesTLV(device *config.Device) []byte {
 	// Determine capabilities based on device type
-	var capabilities uint16
-	var enabled uint16
+	var (
+		capabilities uint16
+		enabled      uint16
+	)
 
 	switch device.Type {
 	case "router":
@@ -360,7 +366,7 @@ func (h *LLDPHandler) buildSystemCapabilitiesTLV(device *config.Device) []byte {
 	return tlv
 }
 
-// buildManagementAddressTLV builds the Management Address TLV
+// buildManagementAddressTLV builds the Management Address TLV.
 func (h *LLDPHandler) buildManagementAddressTLV(device *config.Device) []byte {
 	if len(device.IPAddresses) == 0 {
 		return nil
@@ -370,8 +376,10 @@ func (h *LLDPHandler) buildManagementAddressTLV(device *config.Device) []byte {
 	ip := device.IPAddresses[0]
 
 	// Determine address subtype (IPv4 or IPv6)
-	var addressSubtype byte
-	var addressBytes []byte
+	var (
+		addressSubtype byte
+		addressBytes   []byte
+	)
 
 	if len(ip) == 4 {
 		addressSubtype = 1 // IPv4
@@ -418,12 +426,12 @@ func (h *LLDPHandler) buildManagementAddressTLV(device *config.Device) []byte {
 	return tlv
 }
 
-// buildEndTLV builds the End TLV
+// buildEndTLV builds the End TLV.
 func (h *LLDPHandler) buildEndTLV() []byte {
 	return []byte{0x00, 0x00} // Type=0, Length=0
 }
 
-// sendFrame sends an LLDP frame
+// sendFrame sends an LLDP frame.
 func (h *LLDPHandler) sendFrame(device *config.Device, lldpPayload []byte) error {
 	// Build Ethernet header
 	dstMAC, _ := net.ParseMAC(LLDPMulticastMAC)
@@ -446,7 +454,7 @@ func (h *LLDPHandler) sendFrame(device *config.Device, lldpPayload []byte) error
 		gopacket.Payload(lldpPayload),
 	)
 	if err != nil {
-		return fmt.Errorf("error serializing LLDP frame: %v", err)
+		return fmt.Errorf("error serializing LLDP frame: %w", err)
 	}
 
 	// Get serial number
@@ -468,11 +476,12 @@ func (h *LLDPHandler) sendFrame(device *config.Device, lldpPayload []byte) error
 	return nil
 }
 
-// HandlePacket processes an incoming LLDP packet (for future use)
+// HandlePacket processes an incoming LLDP packet (for future use).
 func (h *LLDPHandler) HandlePacket(pkt *Packet) {
 	debugLevel := h.stack.GetDebugLevel()
 
 	packet := gopacket.NewPacket(pkt.Buffer, layers.LayerTypeEthernet, gopacket.Default)
+
 	lldpLayer := packet.Layer(layers.LayerTypeLinkLayerDiscovery)
 	if lldpLayer == nil {
 		return
@@ -503,6 +512,7 @@ func (h *LLDPHandler) HandlePacket(pkt *Packet) {
 		if info, ok := infoLayer.(*layers.LinkLayerDiscoveryInfo); ok {
 			entry.RemoteDevice = strings.TrimSpace(info.SysName)
 			entry.Description = strings.TrimSpace(info.SysDescription)
+
 			entry.Capabilities = lldpCapabilitiesToStrings(info.SysCapabilities.EnabledCap)
 			if len(info.MgmtAddress.Address) > 0 {
 				entry.ManagementAddress = net.IP(info.MgmtAddress.Address).String()
@@ -515,13 +525,20 @@ func (h *LLDPHandler) HandlePacket(pkt *Packet) {
 	}
 
 	if debugLevel >= 2 {
-		fmt.Printf("LLDP: Neighbor %s via %s (local %s)\n", entry.RemoteDevice, entry.RemotePort, entry.LocalDevice)
+		_, _ = fmt.Fprintf(
+			os.Stdout,
+			"LLDP: Neighbor %s via %s (local %s)\n",
+			entry.RemoteDevice,
+			entry.RemotePort,
+			entry.LocalDevice,
+		)
 	}
 
 	h.stack.recordNeighbor(entry)
 }
 
 func lldpChassisIDToString(id layers.LLDPChassisID) string {
+	//nolint:exhaustive // Only MAC address subtype needs special handling
 	switch id.Subtype {
 	case layers.LLDPChassisIDSubTypeMACAddr:
 		if len(id.ID) == 6 {
@@ -529,10 +546,12 @@ func lldpChassisIDToString(id layers.LLDPChassisID) string {
 		}
 	default:
 	}
+
 	return string(id.ID)
 }
 
 func lldpPortIDToString(id layers.LLDPPortID) string {
+	//nolint:exhaustive // Only MAC address subtype needs special handling
 	switch id.Subtype {
 	case layers.LLDPPortIDSubtypeMACAddr:
 		if len(id.ID) == 6 {
@@ -540,6 +559,7 @@ func lldpPortIDToString(id layers.LLDPPortID) string {
 		}
 	default:
 	}
+
 	return string(id.ID)
 }
 
@@ -548,26 +568,34 @@ func lldpCapabilitiesToStrings(caps layers.LLDPCapabilities) []string {
 	if caps.Bridge {
 		out = append(out, "bridge")
 	}
+
 	if caps.Router {
 		out = append(out, "router")
 	}
+
 	if caps.WLANAP {
 		out = append(out, "wlan-ap")
 	}
+
 	if caps.Repeater {
 		out = append(out, "repeater")
 	}
+
 	if caps.StationOnly {
 		out = append(out, "station")
 	}
+
 	if caps.Phone {
 		out = append(out, "phone")
 	}
+
 	if caps.CVLAN {
 		out = append(out, "cvlan")
 	}
+
 	if caps.SVLAN {
 		out = append(out, "svlan")
 	}
+
 	return dedupStrings(out)
 }

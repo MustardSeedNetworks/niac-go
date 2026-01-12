@@ -2,8 +2,9 @@
 package capture
 
 import (
+	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -13,14 +14,17 @@ import (
 	"github.com/google/gopacket/pcap"
 )
 
-// Engine handles packet capture and injection
+// Sentinel errors for capture package.
+var ErrNoMACAddressFound = errors.New("no MAC address found for interface")
+
+// Engine handles packet capture and injection.
 type Engine struct {
 	interfaceName string
 	handle        *pcap.Handle
 	debugLevel    int
 }
 
-// New creates a new capture engine
+// New creates a new capture engine.
 func New(interfaceName string, debugLevel int) (*Engine, error) {
 	// Open interface in promiscuous mode with timeout
 	// Use 100ms timeout to allow responsive shutdown on Ctrl+C
@@ -41,27 +45,28 @@ func New(interfaceName string, debugLevel int) (*Engine, error) {
 	}, nil
 }
 
-// Close closes the capture engine
+// Close closes the capture engine.
 func (e *Engine) Close() {
 	if e.handle != nil {
 		e.handle.Close()
 	}
 }
 
-// SendPacket sends a raw packet on the interface
+// SendPacket sends a raw packet on the interface.
 func (e *Engine) SendPacket(packet []byte) error {
-	if err := e.handle.WritePacketData(packet); err != nil {
+	err := e.handle.WritePacketData(packet)
+	if err != nil {
 		return fmt.Errorf("failed to send packet: %w", err)
 	}
 
 	if e.debugLevel >= 3 {
-		log.Printf("Sent packet: %d bytes", len(packet))
+		slog.Debug("Sent packet", "bytes", len(packet))
 	}
 
 	return nil
 }
 
-// SendEthernet sends an Ethernet frame
+// SendEthernet sends an Ethernet frame.
 func (e *Engine) SendEthernet(dstMAC, srcMAC []byte, etherType uint16, payload []byte) error {
 	// Build Ethernet layer
 	eth := &layers.Ethernet{
@@ -77,7 +82,8 @@ func (e *Engine) SendEthernet(dstMAC, srcMAC []byte, etherType uint16, payload [
 		ComputeChecksums: true,
 	}
 
-	if err := gopacket.SerializeLayers(buf, opts, eth, gopacket.Payload(payload)); err != nil {
+	err := gopacket.SerializeLayers(buf, opts, eth, gopacket.Payload(payload))
+	if err != nil {
 		return fmt.Errorf("failed to serialize packet: %w", err)
 	}
 
@@ -86,32 +92,34 @@ func (e *Engine) SendEthernet(dstMAC, srcMAC []byte, etherType uint16, payload [
 
 // ReadPacket reads a single packet from the interface
 // Returns the packet data or nil on timeout/error
-// Timeouts are not treated as errors to allow responsive shutdown
+// Timeouts are not treated as errors to allow responsive shutdown.
 func (e *Engine) ReadPacket(buffer []byte) ([]byte, error) {
 	data, _, err := e.handle.ReadPacketData()
 	if err != nil {
 		// Timeout is expected and allows responsive shutdown
-		if err == pcap.NextErrorTimeoutExpired {
+		if errors.Is(err, pcap.NextErrorTimeoutExpired) {
 			return nil, nil
 		}
-		return nil, err
+
+		return nil, fmt.Errorf("failed to read packet data: %w", err)
 	}
 
 	// Copy to provided buffer if it fits, otherwise return the data directly
 	if len(data) <= len(buffer) {
 		copy(buffer, data)
+
 		return buffer[:len(data)], nil
 	}
 
 	return data, nil
 }
 
-// StartCapture starts capturing packets and calls handler for each packet
+// StartCapture starts capturing packets and calls handler for each packet.
 func (e *Engine) StartCapture(handler func(gopacket.Packet)) error {
 	packetSource := gopacket.NewPacketSource(e.handle, e.handle.LinkType())
 
 	if e.debugLevel >= 1 {
-		log.Printf("Started packet capture on %s", e.interfaceName)
+		slog.Info("Started packet capture", "interface", e.interfaceName)
 	}
 
 	for packet := range packetSource.Packets() {
@@ -121,21 +129,25 @@ func (e *Engine) StartCapture(handler func(gopacket.Packet)) error {
 	return nil
 }
 
-// SetFilter sets a BPF filter on the capture
+// SetFilter sets a BPF filter on the capture.
 func (e *Engine) SetFilter(filter string) error {
-	return e.handle.SetBPFFilter(filter)
+	if err := e.handle.SetBPFFilter(filter); err != nil {
+		return fmt.Errorf("failed to set BPF filter: %w", err)
+	}
+	return nil
 }
 
-// Stats returns capture statistics
+// Stats returns capture statistics.
 func (e *Engine) Stats() (*pcap.Stats, error) {
 	stats, err := e.handle.Stats()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get stats: %w", err)
 	}
+
 	return stats, nil
 }
 
-// SendARP sends an ARP packet
+// SendARP sends an ARP packet.
 func (e *Engine) SendARP(srcMAC, dstMAC []byte, srcIP, dstIP string, isRequest bool) error {
 	operation := uint16(layers.ARPReply)
 	if isRequest {
@@ -166,14 +178,15 @@ func (e *Engine) SendARP(srcMAC, dstMAC []byte, srcIP, dstIP string, isRequest b
 		ComputeChecksums: true,
 	}
 
-	if err := gopacket.SerializeLayers(buf, opts, eth, arp); err != nil {
-		return err
+	err := gopacket.SerializeLayers(buf, opts, eth, arp)
+	if err != nil {
+		return fmt.Errorf("failed to serialize ARP packet: %w", err)
 	}
 
 	return e.SendPacket(buf.Bytes())
 }
 
-// GetInterfaceMAC returns the MAC address of the interface
+// GetInterfaceMAC returns the MAC address of the interface.
 func (e *Engine) GetInterfaceMAC() ([]byte, error) {
 	iface, err := GetInterface(e.interfaceName)
 	if err != nil {
@@ -187,10 +200,10 @@ func (e *Engine) GetInterfaceMAC() ([]byte, error) {
 		}
 	}
 
-	return nil, fmt.Errorf("no MAC address found for interface %s", e.interfaceName)
+	return nil, fmt.Errorf("%w: %s", ErrNoMACAddressFound, e.interfaceName)
 }
 
-// RateLimiter controls packet sending rate
+// RateLimiter controls packet sending rate.
 type RateLimiter struct {
 	packetsPerSecond int
 	ticker           *time.Ticker
@@ -200,7 +213,7 @@ type RateLimiter struct {
 	stopped          uint32 // Atomic flag for idempotent Stop()
 }
 
-// NewRateLimiter creates a rate limiter
+// NewRateLimiter creates a rate limiter.
 func NewRateLimiter(packetsPerSecond int) *RateLimiter {
 	rl := &RateLimiter{
 		packetsPerSecond: packetsPerSecond,
@@ -209,15 +222,13 @@ func NewRateLimiter(packetsPerSecond int) *RateLimiter {
 	}
 
 	// Fill token bucket initially
-	for i := 0; i < packetsPerSecond; i++ {
+	for range packetsPerSecond {
 		rl.tokens <- struct{}{}
 	}
 
 	// Refill tokens periodically with proper cleanup
 	rl.ticker = time.NewTicker(time.Second / time.Duration(packetsPerSecond))
-	rl.wg.Add(1)
-	go func() {
-		defer rl.wg.Done()
+	rl.wg.Go(func() {
 		for {
 			select {
 			case <-rl.ticker.C:
@@ -230,18 +241,18 @@ func NewRateLimiter(packetsPerSecond int) *RateLimiter {
 				return // Clean exit
 			}
 		}
-	}()
+	})
 
 	return rl
 }
 
-// Wait blocks until a token is available
+// Wait blocks until a token is available.
 func (rl *RateLimiter) Wait() {
 	<-rl.tokens
 }
 
 // Stop stops the rate limiter and cleans up goroutine
-// This method is idempotent and safe to call multiple times
+// This method is idempotent and safe to call multiple times.
 func (rl *RateLimiter) Stop() {
 	if atomic.CompareAndSwapUint32(&rl.stopped, 0, 1) {
 		rl.ticker.Stop()

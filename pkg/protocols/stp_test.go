@@ -20,9 +20,11 @@ func TestSTPConstants(t *testing.T) {
 	if STPVersion != 0x00 {
 		t.Error("STP Version should be 0x00")
 	}
+
 	if STPVersionRSTP != 0x02 {
 		t.Error("RSTP Version should be 0x02")
 	}
+
 	if STPVersionMSTP != 0x03 {
 		t.Error("MSTP Version should be 0x03")
 	}
@@ -33,6 +35,7 @@ func TestBPDUTypes(t *testing.T) {
 	if BPDUTypeConfig != 0x00 {
 		t.Error("Config BPDU type should be 0x00")
 	}
+
 	if BPDUTypeTCN != 0x80 {
 		t.Error("TCN BPDU type should be 0x80")
 	}
@@ -43,15 +46,19 @@ func TestSTPPortStates(t *testing.T) {
 	if STPStateDisabled != 0 {
 		t.Error("Disabled state should be 0")
 	}
+
 	if STPStateBlocking != 1 {
 		t.Error("Blocking state should be 1")
 	}
+
 	if STPStateListening != 2 {
 		t.Error("Listening state should be 2")
 	}
+
 	if STPStateLearning != 3 {
 		t.Error("Learning state should be 3")
 	}
+
 	if STPStateForwarding != 4 {
 		t.Error("Forwarding state should be 4")
 	}
@@ -62,15 +69,19 @@ func TestSTPPortRoles(t *testing.T) {
 	if STPRoleUnknown != 0 {
 		t.Error("Unknown role should be 0")
 	}
+
 	if STPRoleAlternate != 1 {
 		t.Error("Alternate role should be 1")
 	}
+
 	if STPRoleBackup != 2 {
 		t.Error("Backup role should be 2")
 	}
+
 	if STPRoleRoot != 3 {
 		t.Error("Root role should be 3")
 	}
+
 	if STPRoleDesignated != 4 {
 		t.Error("Designated role should be 4")
 	}
@@ -81,21 +92,27 @@ func TestBPDUFlags(t *testing.T) {
 	if BPDUFlagTopologyChange != 0x01 {
 		t.Error("TC flag should be 0x01")
 	}
+
 	if BPDUFlagProposal != 0x02 {
 		t.Error("Proposal flag should be 0x02")
 	}
+
 	if BPDUFlagPortRoleShift != 2 {
 		t.Error("Port role shift should be 2")
 	}
+
 	if BPDUFlagLearning != 0x10 {
 		t.Error("Learning flag should be 0x10")
 	}
+
 	if BPDUFlagForwarding != 0x20 {
 		t.Error("Forwarding flag should be 0x20")
 	}
+
 	if BPDUFlagAgreement != 0x40 {
 		t.Error("Agreement flag should be 0x40")
 	}
+
 	if BPDUFlagTopologyChangeAck != 0x80 {
 		t.Error("TC Ack flag should be 0x80")
 	}
@@ -105,6 +122,7 @@ func TestBPDUFlags(t *testing.T) {
 	if (flags & BPDUFlagTopologyChange) == 0 {
 		t.Error("TC flag should be set")
 	}
+
 	if (flags & BPDUFlagTopologyChangeAck) == 0 {
 		t.Error("TC Ack flag should be set")
 	}
@@ -115,9 +133,11 @@ func TestSTPTimers(t *testing.T) {
 	if DefaultHelloTime != 2 {
 		t.Error("Default Hello Time should be 2 seconds")
 	}
+
 	if DefaultMaxAge != 20 {
 		t.Error("Default Max Age should be 20 seconds")
 	}
+
 	if DefaultForwardDelay != 15 {
 		t.Error("Default Forward Delay should be 15 seconds")
 	}
@@ -172,9 +192,10 @@ func TestMakeBridgeID(t *testing.T) {
 
 			// Verify MAC extraction
 			extractedMAC := make([]byte, 6)
-			for i := 0; i < 6; i++ {
+			for i := range 6 {
 				extractedMAC[i] = byte(bridgeID >> uint(40-i*8))
 			}
+
 			if net.HardwareAddr(extractedMAC).String() != mac.String() {
 				t.Errorf("MAC mismatch: expected %s, got %s", mac, net.HardwareAddr(extractedMAC))
 			}
@@ -200,6 +221,7 @@ func TestSetBridgePriority(t *testing.T) {
 
 	for _, priority := range priorities {
 		handler.SetBridgePriority(priority)
+
 		if handler.bridgePriority != priority {
 			t.Errorf("Expected priority %d, got %d", priority, handler.bridgePriority)
 		}
@@ -214,7 +236,7 @@ func TestSTPMulticastMAC(t *testing.T) {
 	}
 
 	expected := []byte{0x01, 0x80, 0xC2, 0x00, 0x00, 0x00}
-	for i := 0; i < 6; i++ {
+	for i := range 6 {
 		if mac[i] != expected[i] {
 			t.Errorf("Byte %d: expected 0x%02x, got 0x%02x", i, expected[i], mac[i])
 		}

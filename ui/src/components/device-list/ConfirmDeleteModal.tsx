@@ -1,6 +1,6 @@
-import { type FC } from 'react';
-import { Trash2 } from 'lucide-react';
-import { Button } from '../../ui';
+import { Trash2 } from "lucide-react";
+import type { FC } from "react";
+import { Button } from "../../ui";
 
 interface ConfirmDeleteModalProps {
   hostname: string;
@@ -30,7 +30,8 @@ export const ConfirmDeleteModal: FC<ConfirmDeleteModalProps> = ({
             <h2 className="text-lg font-semibold">Delete Device</h2>
           </div>
           <p className="text-gray-300">
-            Are you sure you want to delete <strong>{hostname}</strong>? This action cannot be undone.
+            Are you sure you want to delete <strong>{hostname}</strong>? This action cannot be
+            undone.
           </p>
           <div className="flex justify-end gap-3 pt-2">
             <Button variant="outline" onClick={onCancel}>

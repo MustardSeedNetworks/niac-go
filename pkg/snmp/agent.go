@@ -13,7 +13,16 @@ import (
 	"github.com/krisarmstrong/niac-go/pkg/config"
 )
 
-// Agent represents an SNMP agent instance for a device
+// Default OID constants.
+const (
+	// DefaultCiscoSysObjectID is the default sysObjectID for Cisco devices.
+	DefaultCiscoSysObjectID = "1.3.6.1.4.1.9.1.1"
+
+	// unknownPlaceholder is used as a fallback value when actual data is unavailable.
+	unknownPlaceholder = "Unknown"
+)
+
+// Agent represents an SNMP agent instance for a device.
 type Agent struct {
 	device     *config.Device
 	mib        *MIB
@@ -25,10 +34,11 @@ type Agent struct {
 
 // NewAgent creates a new SNMP agent for a device using the device's community.
 func NewAgent(device *config.Device, debugLevel int) *Agent {
-	community := "public"
+	community := config.DefaultSNMPCommunity
 	if device != nil && device.SNMPConfig.Community != "" {
 		community = device.SNMPConfig.Community
 	}
+
 	return NewAgentWithCommunity(device, community, debugLevel)
 }
 
@@ -42,7 +52,7 @@ func NewAgentWithCommunity(device *config.Device, community string, debugLevel i
 		debugLevel: debugLevel,
 	}
 	if agent.community == "" {
-		agent.community = "public"
+		agent.community = config.DefaultSNMPCommunity
 	}
 
 	// Initialize standard MIB-II system objects
@@ -54,13 +64,14 @@ func NewAgentWithCommunity(device *config.Device, community string, debugLevel i
 	return agent
 }
 
-// initializeSystemMIB initializes standard MIB-II system group OIDs
+// initializeSystemMIB initializes standard MIB-II system group OIDs.
 func (a *Agent) initializeSystemMIB() {
 	// sysDescr (1.3.6.1.2.1.1.1.0)
 	sysDescr := a.device.Properties["sysDescr"]
 	if sysDescr == "" {
 		sysDescr = fmt.Sprintf("%s %s", a.device.Type, a.device.Name)
 	}
+
 	a.mib.Set("1.3.6.1.2.1.1.1.0", &OIDValue{
 		Type:  gosnmp.OctetString,
 		Value: sysDescr,
@@ -69,8 +80,9 @@ func (a *Agent) initializeSystemMIB() {
 	// sysObjectID (1.3.6.1.2.1.1.2.0)
 	sysObjectID := a.device.Properties["sysObjectID"]
 	if sysObjectID == "" {
-		sysObjectID = "1.3.6.1.4.1.9.1.1" // Default to generic Cisco
+		sysObjectID = DefaultCiscoSysObjectID // Default to generic Cisco
 	}
+
 	a.mib.Set("1.3.6.1.2.1.1.2.0", &OIDValue{
 		Type:  gosnmp.ObjectIdentifier,
 		Value: sysObjectID,
@@ -79,11 +91,13 @@ func (a *Agent) initializeSystemMIB() {
 	// sysUpTime (1.3.6.1.2.1.1.3.0) - TimeTicks (hundredths of second)
 	a.mib.SetDynamic("1.3.6.1.2.1.1.3.0", func() *OIDValue {
 		uptime := time.Since(a.startTime)
-		ms := uptime.Milliseconds() / 10 // Convert to hundredths of second
-		if ms > 0xFFFFFFFF {
-			ms = 0xFFFFFFFF
-		}
+
+		ms := min(
+			// Convert to hundredths of second
+			uptime.Milliseconds()/10, 0xFFFFFFFF)
+
 		timeticks := uint32(ms) // #nosec G115 -- uptime from time calculation, bounded
+
 		return &OIDValue{
 			Type:  gosnmp.TimeTicks,
 			Value: timeticks,
@@ -95,6 +109,7 @@ func (a *Agent) initializeSystemMIB() {
 	if sysContact == "" {
 		sysContact = "admin@example.com"
 	}
+
 	a.mib.Set("1.3.6.1.2.1.1.4.0", &OIDValue{
 		Type:  gosnmp.OctetString,
 		Value: sysContact,
@@ -105,6 +120,7 @@ func (a *Agent) initializeSystemMIB() {
 	if sysName == "" {
 		sysName = a.device.Name
 	}
+
 	a.mib.Set("1.3.6.1.2.1.1.5.0", &OIDValue{
 		Type:  gosnmp.OctetString,
 		Value: sysName,
@@ -113,8 +129,9 @@ func (a *Agent) initializeSystemMIB() {
 	// sysLocation (1.3.6.1.2.1.1.6.0)
 	sysLocation := a.device.Properties["sysLocation"]
 	if sysLocation == "" {
-		sysLocation = "Unknown"
+		sysLocation = unknownPlaceholder
 	}
+
 	a.mib.Set("1.3.6.1.2.1.1.6.0", &OIDValue{
 		Type:  gosnmp.OctetString,
 		Value: sysLocation,
@@ -136,15 +153,15 @@ func (a *Agent) initializeSystemMIB() {
 	}
 }
 
-// LoadWalkFile loads SNMP walk file data into the MIB
+// LoadWalkFile loads SNMP walk file data into the MIB.
 func (a *Agent) LoadWalkFile(filename string) error {
 	if filename == "" {
-		return fmt.Errorf("no walk file specified")
+		return ErrNoWalkFileSpecified
 	}
 
 	entries, err := ParseWalkFile(filename)
 	if err != nil {
-		return fmt.Errorf("failed to parse walk file: %v", err)
+		return fmt.Errorf("%w: %w", ErrFailedToParseWalkFile, err)
 	}
 
 	// Add all entries to MIB
@@ -163,14 +180,14 @@ func (a *Agent) LoadWalkFile(filename string) error {
 	return nil
 }
 
-// HandleGet processes an SNMP GET request
+// HandleGet processes an SNMP GET request.
 func (a *Agent) HandleGet(oid string) (*OIDValue, error) {
 	a.mu.RLock()
 	defer a.mu.RUnlock()
 
 	value := a.mib.Get(oid)
 	if value == nil {
-		return nil, fmt.Errorf("no such object: %s", oid)
+		return nil, fmt.Errorf("%w: %s", ErrNoSuchObject, oid)
 	}
 
 	if a.debugLevel >= 3 {
@@ -180,14 +197,14 @@ func (a *Agent) HandleGet(oid string) (*OIDValue, error) {
 	return value, nil
 }
 
-// HandleGetNext processes an SNMP GET-NEXT request
+// HandleGetNext processes an SNMP GET-NEXT request.
 func (a *Agent) HandleGetNext(oid string) (string, *OIDValue, error) {
 	a.mu.RLock()
 	defer a.mu.RUnlock()
 
 	nextOID, value := a.mib.GetNext(oid)
 	if nextOID == "" || value == nil {
-		return "", nil, fmt.Errorf("end of MIB view")
+		return "", nil, ErrEndOfMIBView
 	}
 
 	if a.debugLevel >= 3 {
@@ -198,7 +215,7 @@ func (a *Agent) HandleGetNext(oid string) (string, *OIDValue, error) {
 	return nextOID, value, nil
 }
 
-// HandleGetBulk processes an SNMP GET-BULK request
+// HandleGetBulk processes an SNMP GET-BULK request.
 func (a *Agent) HandleGetBulk(oid string, maxRepetitions int) ([]OIDResult, error) {
 	a.mu.RLock()
 	defer a.mu.RUnlock()
@@ -206,7 +223,7 @@ func (a *Agent) HandleGetBulk(oid string, maxRepetitions int) ([]OIDResult, erro
 	results := make([]OIDResult, 0, maxRepetitions)
 	currentOID := oid
 
-	for i := 0; i < maxRepetitions; i++ {
+	for range maxRepetitions {
 		nextOID, value := a.mib.GetNext(currentOID)
 		if nextOID == "" || value == nil {
 			break
@@ -228,7 +245,7 @@ func (a *Agent) HandleGetBulk(oid string, maxRepetitions int) ([]OIDResult, erro
 	return results, nil
 }
 
-// SetOID sets an OID value (for SNMP SET operations)
+// SetOID sets an OID value (for SNMP SET operations).
 func (a *Agent) SetOID(oid string, value *OIDValue) error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
@@ -246,17 +263,18 @@ func (a *Agent) SetOID(oid string, value *OIDValue) error {
 	return nil
 }
 
-// GetCommunity returns the agent's community string
+// GetCommunity returns the agent's community string.
 func (a *Agent) GetCommunity() string {
 	return a.community
 }
 
 // RedactedCommunity returns a redacted version for safe logging
-// SECURITY FIX MEDIUM-5: Prevent community string exposure in logs
+// SECURITY FIX MEDIUM-5: Prevent community string exposure in logs.
 func (a *Agent) RedactedCommunity() string {
 	if len(a.community) == 0 {
 		return "[EMPTY]"
 	}
+
 	if len(a.community) <= 2 {
 		return "**"
 	}
@@ -265,19 +283,21 @@ func (a *Agent) RedactedCommunity() string {
 }
 
 // RedactCommunityString redacts a community string for safe logging
-// SECURITY FIX MEDIUM-5: Helper function to redact any community string
+// SECURITY FIX MEDIUM-5: Helper function to redact any community string.
 func RedactCommunityString(community string) string {
 	if len(community) == 0 {
 		return "[EMPTY]"
 	}
+
 	if len(community) <= 2 {
 		return "**"
 	}
+
 	return string(community[0]) + strings.Repeat("*", len(community)-2) + string(community[len(community)-1])
 }
 
 // ProcessPDU processes SNMP PDU variables and returns response variables
-// This is typically called by an SNMP server implementation
+// This is typically called by an SNMP server implementation.
 func (a *Agent) ProcessPDU(pduType gosnmp.PDUType, vars []gosnmp.SnmpPDU, maxRepetitions uint32) []gosnmp.SnmpPDU {
 	switch pduType {
 	case gosnmp.GetRequest:
@@ -289,21 +309,28 @@ func (a *Agent) ProcessPDU(pduType gosnmp.PDUType, vars []gosnmp.SnmpPDU, maxRep
 		if reps <= 0 {
 			reps = 10
 		}
+
 		if reps > 50 {
 			reps = 50
 		}
+
 		return a.processGetBulkRequestVars(vars, reps)
 	default:
 		// Return error PDU
+		name := ""
+		if len(vars) > 0 {
+			name = vars[0].Name
+		}
+
 		return []gosnmp.SnmpPDU{{
-			Name:  vars[0].Name,
+			Name:  name,
 			Type:  gosnmp.NoSuchObject,
 			Value: nil,
 		}}
 	}
 }
 
-// processGetRequest processes GET request variables
+// processGetRequest processes GET request variables.
 func (a *Agent) processGetRequest(vars []gosnmp.SnmpPDU) []gosnmp.SnmpPDU {
 	response := make([]gosnmp.SnmpPDU, len(vars))
 
@@ -327,7 +354,7 @@ func (a *Agent) processGetRequest(vars []gosnmp.SnmpPDU) []gosnmp.SnmpPDU {
 	return response
 }
 
-// processGetNextRequest processes GET-NEXT request variables
+// processGetNextRequest processes GET-NEXT request variables.
 func (a *Agent) processGetNextRequest(vars []gosnmp.SnmpPDU) []gosnmp.SnmpPDU {
 	response := make([]gosnmp.SnmpPDU, len(vars))
 
@@ -351,7 +378,7 @@ func (a *Agent) processGetNextRequest(vars []gosnmp.SnmpPDU) []gosnmp.SnmpPDU {
 	return response
 }
 
-// processGetBulkRequestVars processes GET-BULK request variables
+// processGetBulkRequestVars processes GET-BULK request variables.
 func (a *Agent) processGetBulkRequestVars(vars []gosnmp.SnmpPDU, maxRepetitions int) []gosnmp.SnmpPDU {
 	var response []gosnmp.SnmpPDU
 
@@ -363,6 +390,7 @@ func (a *Agent) processGetBulkRequestVars(vars []gosnmp.SnmpPDU, maxRepetitions 
 				Type:  gosnmp.EndOfMibView,
 				Value: nil,
 			})
+
 			continue
 		}
 
@@ -378,21 +406,21 @@ func (a *Agent) processGetBulkRequestVars(vars []gosnmp.SnmpPDU, maxRepetitions 
 	return response
 }
 
-// OIDResult represents an OID and its value
+// OIDResult represents an OID and its value.
 type OIDResult struct {
 	OID   string
 	Value *OIDValue
 }
 
-// FormatIP formats an IP address for display
+// FormatIP formats an IP address for display.
 func FormatIP(ip net.IP) string {
 	return ip.String()
 }
 
-// ParseOID parses an OID string and validates it
+// ParseOID parses an OID string and validates it.
 func ParseOID(oid string) ([]int, error) {
 	if oid == "" {
-		return nil, fmt.Errorf("empty OID")
+		return nil, ErrEmptyOID
 	}
 
 	// Remove leading dot if present
@@ -403,10 +431,12 @@ func ParseOID(oid string) ([]int, error) {
 
 	for i, part := range parts {
 		var num int
+
 		_, err := fmt.Sscanf(part, "%d", &num)
 		if err != nil {
-			return nil, fmt.Errorf("invalid OID component: %s", part)
+			return nil, fmt.Errorf("%w: %s", ErrInvalidOIDComponent, part)
 		}
+
 		result[i] = num
 	}
 

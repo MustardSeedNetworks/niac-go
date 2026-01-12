@@ -1,8 +1,9 @@
 package capture
 
 import (
+	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"sync"
 	"time"
@@ -12,7 +13,13 @@ import (
 	"github.com/krisarmstrong/niac-go/pkg/config"
 )
 
-// PlaybackEngine handles PCAP file playback
+// Sentinel errors for playback.
+var (
+	ErrNoPlaybackConfiguration = errors.New("no playback configuration provided")
+	ErrPlaybackAlreadyRunning  = errors.New("playback already running")
+)
+
+// PlaybackEngine handles PCAP file playback.
 type PlaybackEngine struct {
 	engine     *Engine
 	config     *config.CapturePlayback
@@ -23,13 +30,13 @@ type PlaybackEngine struct {
 	mu         sync.Mutex
 }
 
-// PlaybackPacket represents a packet with timestamp for playback
+// PlaybackPacket represents a packet with timestamp for playback.
 type PlaybackPacket struct {
 	Data      []byte
 	Timestamp time.Time
 }
 
-// NewPlaybackEngine creates a new PCAP playback engine
+// NewPlaybackEngine creates a new PCAP playback engine.
 func NewPlaybackEngine(engine *Engine, playbackConfig *config.CapturePlayback, debugLevel int) *PlaybackEngine {
 	return &PlaybackEngine{
 		engine:     engine,
@@ -39,10 +46,10 @@ func NewPlaybackEngine(engine *Engine, playbackConfig *config.CapturePlayback, d
 	}
 }
 
-// Start begins PCAP playback
+// Start begins PCAP playback.
 func (p *PlaybackEngine) Start() error {
 	if p.config == nil {
-		return fmt.Errorf("no playback configuration provided")
+		return ErrNoPlaybackConfiguration
 	}
 
 	// Check if PCAP file exists
@@ -51,37 +58,46 @@ func (p *PlaybackEngine) Start() error {
 	}
 
 	p.mu.Lock()
+
 	if p.running {
 		p.mu.Unlock()
-		return fmt.Errorf("playback already running")
+
+		return ErrPlaybackAlreadyRunning
 	}
+
 	p.running = true
 	p.mu.Unlock()
 
 	if p.debugLevel >= 1 {
-		log.Printf("Starting PCAP playback: %s", p.config.FileName)
+		slog.Info("Starting PCAP playback", "filename", p.config.FileName)
+
 		if p.config.ScaleTime > 0 && p.config.ScaleTime != 1.0 {
-			log.Printf("  Time scaling: %.2fx", p.config.ScaleTime)
+			slog.Info("PCAP playback time scaling", "scale", p.config.ScaleTime)
 		}
+
 		if p.config.LoopTime > 0 {
-			log.Printf("  Loop interval: %dms", p.config.LoopTime)
+			slog.Info("PCAP playback loop interval", "intervalMs", p.config.LoopTime)
 		}
 	}
 
 	// Start playback goroutine
 	p.wg.Add(1)
+
 	go p.playbackLoop()
 
 	return nil
 }
 
-// Stop stops PCAP playback
+// Stop stops PCAP playback.
 func (p *PlaybackEngine) Stop() {
 	p.mu.Lock()
+
 	if !p.running {
 		p.mu.Unlock()
+
 		return
 	}
+
 	p.running = false
 	p.mu.Unlock()
 
@@ -89,17 +105,18 @@ func (p *PlaybackEngine) Stop() {
 	p.wg.Wait()
 
 	if p.debugLevel >= 1 {
-		log.Printf("Stopped PCAP playback")
+		slog.Info("Stopped PCAP playback")
 	}
 }
 
-// playbackLoop is the main playback loop
+// playbackLoop is the main playback loop.
 func (p *PlaybackEngine) playbackLoop() {
 	defer p.wg.Done()
 
 	// If LoopTime is specified, loop playback at that interval
 	if p.config.LoopTime > 0 {
 		loopInterval := time.Duration(p.config.LoopTime) * time.Millisecond
+
 		ticker := time.NewTicker(loopInterval)
 		defer ticker.Stop()
 
@@ -121,26 +138,28 @@ func (p *PlaybackEngine) playbackLoop() {
 	}
 }
 
-// playOnce plays the PCAP file once
+// playOnce plays the PCAP file once.
 func (p *PlaybackEngine) playOnce() {
 	// Load packets from PCAP
 	packets, err := p.loadPCAP()
 	if err != nil {
 		if p.debugLevel >= 1 {
-			log.Printf("Error loading PCAP: %v", err)
+			slog.Error("Error loading PCAP", "error", err)
 		}
+
 		return
 	}
 
 	if len(packets) == 0 {
 		if p.debugLevel >= 2 {
-			log.Printf("No packets found in PCAP file")
+			slog.Info("No packets found in PCAP file")
 		}
+
 		return
 	}
 
 	if p.debugLevel >= 2 {
-		log.Printf("Replaying %d packets from %s", len(packets), p.config.FileName)
+		slog.Info("Replaying packets from PCAP", "count", len(packets), "filename", p.config.FileName)
 	}
 
 	// Replay packets with timing
@@ -168,22 +187,23 @@ func (p *PlaybackEngine) playOnce() {
 		}
 
 		// Send packet
-		if err := p.engine.SendPacket(pkt.Data); err != nil {
+		err := p.engine.SendPacket(pkt.Data)
+		if err != nil {
 			if p.debugLevel >= 2 {
-				log.Printf("Error sending packet %d: %v", i+1, err)
+				slog.Error("Error sending packet", "packetNum", i+1, "error", err)
 			}
 		} else if p.debugLevel >= 3 {
-			log.Printf("Sent packet %d/%d (%d bytes)", i+1, len(packets), len(pkt.Data))
+			slog.Debug("Sent packet", "packetNum", i+1, "total", len(packets), "bytes", len(pkt.Data))
 		}
 	}
 
 	if p.debugLevel >= 2 {
 		elapsed := time.Since(startTime)
-		log.Printf("Playback complete: %d packets in %v", len(packets), elapsed)
+		slog.Info("Playback complete", "packets", len(packets), "elapsed", elapsed)
 	}
 }
 
-// loadPCAP loads packets from a PCAP file
+// loadPCAP loads packets from a PCAP file.
 func (p *PlaybackEngine) loadPCAP() ([]PlaybackPacket, error) {
 	// Open PCAP file
 	handle, err := pcap.OpenOffline(p.config.FileName)
@@ -214,7 +234,7 @@ func (p *PlaybackEngine) loadPCAP() ([]PlaybackPacket, error) {
 }
 
 // calculatePacketDelay calculates how long to wait before sending a packet
-// based on relative timing and scaling factor
+// based on relative timing and scaling factor.
 func (p *PlaybackEngine) calculatePacketDelay(pkt PlaybackPacket, startTime, firstPacketTime time.Time) time.Duration {
 	// Calculate delay relative to first packet
 	relativeTime := pkt.Timestamp.Sub(firstPacketTime)
@@ -232,17 +252,19 @@ func (p *PlaybackEngine) calculatePacketDelay(pkt PlaybackPacket, startTime, fir
 	if targetTime.After(now) {
 		return targetTime.Sub(now)
 	}
+
 	return 0
 }
 
-// IsRunning returns true if playback is currently running
+// IsRunning returns true if playback is currently running.
 func (p *PlaybackEngine) IsRunning() bool {
 	p.mu.Lock()
 	defer p.mu.Unlock()
+
 	return p.running
 }
 
-// GetConfig returns the playback configuration
+// GetConfig returns the playback configuration.
 func (p *PlaybackEngine) GetConfig() *config.CapturePlayback {
 	return p.config
 }

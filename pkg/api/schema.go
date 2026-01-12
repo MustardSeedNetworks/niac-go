@@ -1,19 +1,18 @@
-// Package api provides HTTP API handlers for NIAC configuration
 package api
 
 import (
 	"encoding/json"
-	"log"
+	"log/slog"
 	"net/http"
 )
 
-// SchemaProperty represents a JSON Schema property definition
+// SchemaProperty represents a JSON Schema property definition.
 type SchemaProperty struct {
 	Type        string                     `json:"type"`
 	Title       string                     `json:"title,omitempty"`
 	Description string                     `json:"description,omitempty"`
-	Default     interface{}                `json:"default,omitempty"`
-	Enum        []interface{}              `json:"enum,omitempty"`
+	Default     any                        `json:"default,omitempty"`
+	Enum        []any                      `json:"enum,omitempty"`
 	EnumNames   []string                   `json:"enumNames,omitempty"`
 	Minimum     *float64                   `json:"minimum,omitempty"`
 	Maximum     *float64                   `json:"maximum,omitempty"`
@@ -25,12 +24,12 @@ type SchemaProperty struct {
 	Properties  map[string]*SchemaProperty `json:"properties,omitempty"`
 	Required    []string                   `json:"required,omitempty"`
 	// UI hints for form rendering
-	UIWidget    string `json:"ui:widget,omitempty"`
-	UIHelp      string `json:"ui:help,omitempty"`
+	UIWidget      string `json:"ui:widget,omitempty"`
+	UIHelp        string `json:"ui:help,omitempty"`
 	UIPlaceholder string `json:"ui:placeholder,omitempty"`
 }
 
-// ConfigSchema represents the complete JSON Schema for device configuration
+// ConfigSchema represents the complete JSON Schema for device configuration.
 type ConfigSchema struct {
 	Schema      string                     `json:"$schema"`
 	Type        string                     `json:"type"`
@@ -42,23 +41,25 @@ type ConfigSchema struct {
 }
 
 // handleConfigSchema returns the JSON Schema for device configuration
-// GET /api/v1/config/schema
+// GET /api/v1/config/schema.
 func (s *Server) handleConfigSchema(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+
 		return
 	}
 
 	schema := buildDeviceSchema()
 
 	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(schema); err != nil {
-		log.Printf("[API] Failed to encode schema response: %v", err)
+	err := json.NewEncoder(w).Encode(schema)
+	if err != nil {
+		slog.Error("[API] Failed to encode schema response", "error", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 	}
 }
 
-// buildDeviceSchema creates the JSON Schema for device configuration
+// buildDeviceSchema creates the JSON Schema for device configuration.
 func buildDeviceSchema() *ConfigSchema {
 	// Helper functions for pointer values
 	minZero := 0.0
@@ -86,20 +87,20 @@ func buildDeviceSchema() *ConfigSchema {
 				UIHelp:      "Enter a unique hostname for this device",
 			},
 			"mac": {
-				Type:        "string",
-				Title:       "MAC Address",
-				Description: "Device MAC address in format XX:XX:XX:XX:XX:XX",
-				Pattern:     `^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$`,
-				MinLength:   &minMAC,
-				MaxLength:   &maxMAC,
+				Type:          "string",
+				Title:         "MAC Address",
+				Description:   "Device MAC address in format XX:XX:XX:XX:XX:XX",
+				Pattern:       `^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$`,
+				MinLength:     &minMAC,
+				MaxLength:     &maxMAC,
 				UIPlaceholder: "00:11:22:33:44:55",
-				UIHelp:      "MAC address in colon-separated format",
+				UIHelp:        "MAC address in colon-separated format",
 			},
 			"ip": {
-				Type:        "string",
-				Title:       "IP Address",
-				Description: "Primary IPv4 or IPv6 address",
-				Format:      "ipv4",
+				Type:          "string",
+				Title:         "IP Address",
+				Description:   "Primary IPv4 or IPv6 address",
+				Format:        "ipv4",
 				UIPlaceholder: "192.168.1.1",
 			},
 			"ips": {
@@ -115,9 +116,27 @@ func buildDeviceSchema() *ConfigSchema {
 				Type:        "string",
 				Title:       "Device Type",
 				Description: "Type of network device",
-				Enum:        []interface{}{"router", "switch", "access_point", "firewall", "server", "workstation", "iot", "unknown"},
-				EnumNames:   []string{"Router", "Switch", "Access Point", "Firewall", "Server", "Workstation", "IoT Device", "Unknown"},
-				Default:     "switch",
+				Enum: []any{
+					"router",
+					"switch",
+					"access_point",
+					"firewall",
+					"server",
+					"workstation",
+					"iot",
+					"unknown",
+				},
+				EnumNames: []string{
+					"Router",
+					"Switch",
+					"Access Point",
+					"Firewall",
+					"Server",
+					"Workstation",
+					"IoT Device",
+					"Unknown",
+				},
+				Default: "switch",
 			},
 			"vlan": {
 				Type:        "integer",
@@ -138,24 +157,24 @@ func buildDeviceSchema() *ConfigSchema {
 				Description: "Map UDP traffic to an external IP address",
 				Format:      "ipv4",
 			},
-			"snmp_agent": buildSNMPAgentSchema(),
-			"lldp":       buildLLDPSchema(),
-			"cdp":        buildCDPSchema(),
-			"edp":        buildEDPSchema(),
-			"fdp":        buildFDPSchema(),
-			"stp":        buildSTPSchema(&maxPriority),
-			"dhcp":       buildDHCPSchema(),
-			"dns":        buildDNSSchema(),
-			"http":       buildHTTPSchema(&maxPort),
-			"ftp":        buildFTPSchema(),
-			"netbios":    buildNetBIOSSchema(&maxTTL),
-			"icmp":       buildICMPSchema(&maxTTL),
-			"icmpv6":     buildICMPv6Schema(&maxTTL),
-			"dhcpv6":     buildDHCPv6Schema(),
-			"traffic":    buildTrafficSchema(&minZero),
-			"ttl":        buildTTLConfigSchema(&maxTTL),
+			"snmp_agent":     buildSNMPAgentSchema(),
+			"lldp":           buildLLDPSchema(),
+			"cdp":            buildCDPSchema(),
+			"edp":            buildEDPSchema(),
+			"fdp":            buildFDPSchema(),
+			"stp":            buildSTPSchema(&maxPriority),
+			"dhcp":           buildDHCPSchema(),
+			"dns":            buildDNSSchema(),
+			"http":           buildHTTPSchema(&maxPort),
+			"ftp":            buildFTPSchema(),
+			"netbios":        buildNetBIOSSchema(&maxTTL),
+			"icmp":           buildICMPSchema(&maxTTL),
+			"icmpv6":         buildICMPv6Schema(&maxTTL),
+			"dhcpv6":         buildDHCPv6Schema(),
+			"traffic":        buildTrafficSchema(&minZero),
+			"ttl":            buildTTLConfigSchema(&maxTTL),
 			"os_fingerprint": buildOSFingerprintSchema(),
-			"iperf3":     buildIPerf3Schema(&maxPort),
+			"iperf3":         buildIPerf3Schema(&maxPort),
 		},
 		Definitions: map[string]*SchemaProperty{
 			"ipv4": {
@@ -235,10 +254,20 @@ func buildSNMPAgentSchema() *SchemaProperty {
 							Pattern:     `^\.?[0-9]+(\.[0-9]+)*$`,
 						},
 						"type": {
-							Type:        "string",
-							Title:       "Type",
-							Enum:        []interface{}{"STRING", "INTEGER", "Counter32", "Counter64", "Gauge32", "TimeTicks", "OID", "IpAddress", "Hex-STRING"},
-							Default:     "STRING",
+							Type:  "string",
+							Title: "Type",
+							Enum: []any{
+								"STRING",
+								"INTEGER",
+								"Counter32",
+								"Counter64",
+								"Gauge32",
+								"TimeTicks",
+								"OID",
+								"IpAddress",
+								"Hex-STRING",
+							},
+							Default: "STRING",
 						},
 						"value": {
 							Type:  "string",
@@ -290,11 +319,11 @@ func buildLLDPSchema() *SchemaProperty {
 				Maximum:     floatPtr(65535),
 			},
 			"chassis_id_type": {
-				Type:        "string",
-				Title:       "Chassis ID Type",
-				Enum:        []interface{}{"mac", "local", "network_address"},
-				EnumNames:   []string{"MAC Address", "Local", "Network Address"},
-				Default:     "mac",
+				Type:      "string",
+				Title:     "Chassis ID Type",
+				Enum:      []any{"mac", "local", "network_address"},
+				EnumNames: []string{"MAC Address", "Local", "Network Address"},
+				Default:   "mac",
 			},
 			"system_description": {
 				Type:        "string",
@@ -339,15 +368,15 @@ func buildCDPSchema() *SchemaProperty {
 				Maximum:     floatPtr(255),
 			},
 			"version": {
-				Type:        "integer",
-				Title:       "CDP Version",
-				Enum:        []interface{}{1, 2},
-				Default:     2,
+				Type:    "integer",
+				Title:   "CDP Version",
+				Enum:    []any{1, 2},
+				Default: 2,
 			},
 			"platform": {
-				Type:        "string",
-				Title:       "Platform",
-				Description: "Device platform string (e.g., 'cisco WS-C3750X-48P')",
+				Type:          "string",
+				Title:         "Platform",
+				Description:   "Device platform string (e.g., 'cisco WS-C3750X-48P')",
 				UIPlaceholder: "cisco WS-C3750X-48P",
 			},
 			"software_version": {
@@ -356,9 +385,9 @@ func buildCDPSchema() *SchemaProperty {
 				Description: "Software version string",
 			},
 			"port_id": {
-				Type:        "string",
-				Title:       "Port ID",
-				Description: "Local port identifier",
+				Type:          "string",
+				Title:         "Port ID",
+				Description:   "Local port identifier",
 				UIPlaceholder: "GigabitEthernet0/1",
 			},
 		},
@@ -446,7 +475,7 @@ func buildSTPSchema(maxPriority *float64) *SchemaProperty {
 			"version": {
 				Type:      "string",
 				Title:     "STP Version",
-				Enum:      []interface{}{"stp", "rstp", "mstp"},
+				Enum:      []any{"stp", "rstp", "mstp"},
 				EnumNames: []string{"STP", "RSTP (Rapid)", "MSTP (Multiple)"},
 				Default:   "stp",
 			},
@@ -493,9 +522,9 @@ func buildDHCPSchema() *SchemaProperty {
 		Description: "DHCP server configuration",
 		Properties: map[string]*SchemaProperty{
 			"subnet_mask": {
-				Type:   "string",
-				Title:  "Subnet Mask",
-				Format: "ipv4",
+				Type:          "string",
+				Title:         "Subnet Mask",
+				Format:        "ipv4",
 				UIPlaceholder: "255.255.255.0",
 			},
 			"router": {
@@ -633,14 +662,14 @@ func buildHTTPSchema(maxPort *float64) *SchemaProperty {
 					Type: "object",
 					Properties: map[string]*SchemaProperty{
 						"path": {
-							Type:  "string",
-							Title: "Path",
+							Type:          "string",
+							Title:         "Path",
 							UIPlaceholder: "/api/info",
 						},
 						"method": {
 							Type:    "string",
 							Title:   "Method",
-							Enum:    []interface{}{"GET", "POST", "PUT", "DELETE"},
+							Enum:    []any{"GET", "POST", "PUT", "DELETE"},
 							Default: "GET",
 						},
 						"status_code": {
@@ -748,7 +777,7 @@ func buildNetBIOSSchema(maxTTL *float64) *SchemaProperty {
 			"node_type": {
 				Type:      "string",
 				Title:     "Node Type",
-				Enum:      []interface{}{"B", "P", "M", "H"},
+				Enum:      []any{"B", "P", "M", "H"},
 				EnumNames: []string{"Broadcast", "Peer", "Mixed", "Hybrid"},
 				Default:   "B",
 			},
@@ -758,9 +787,9 @@ func buildNetBIOSSchema(maxTTL *float64) *SchemaProperty {
 				Description: "Service types to advertise",
 				Items: &SchemaProperty{
 					Type: "string",
-					Enum: []interface{}{"workstation", "fileserver", "messenger"},
+					Enum: []any{"workstation", "fileserver", "messenger"},
 				},
-				Default: []interface{}{"workstation", "fileserver"},
+				Default: []any{"workstation", "fileserver"},
 			},
 			"ttl": {
 				Type:        "integer",
@@ -864,8 +893,8 @@ func buildDHCPv6Schema() *SchemaProperty {
 					Type: "object",
 					Properties: map[string]*SchemaProperty{
 						"network": {
-							Type:  "string",
-							Title: "Network",
+							Type:          "string",
+							Title:         "Network",
 							UIPlaceholder: "2001:db8::/64",
 						},
 						"range_start": {
@@ -998,9 +1027,9 @@ func buildTrafficSchema(minZero *float64) *SchemaProperty {
 						Title: "Traffic Patterns",
 						Items: &SchemaProperty{
 							Type: "string",
-							Enum: []interface{}{"broadcast_arp", "multicast", "udp"},
+							Enum: []any{"broadcast_arp", "multicast", "udp"},
 						},
-						Default: []interface{}{"broadcast_arp", "multicast", "udp"},
+						Default: []any{"broadcast_arp", "multicast", "udp"},
 					},
 				},
 			},
@@ -1047,8 +1076,26 @@ func buildOSFingerprintSchema() *SchemaProperty {
 				Type:        "string",
 				Title:       "OS Type",
 				Description: "Operating system type to emulate",
-				Enum:        []interface{}{"linux", "windows", "macos", "freebsd", "cisco-ios", "cisco-nxos", "juniper-junos", "arista-eos"},
-				EnumNames:   []string{"Linux", "Windows", "macOS", "FreeBSD", "Cisco IOS", "Cisco NX-OS", "Juniper JunOS", "Arista EOS"},
+				Enum: []any{
+					"linux",
+					"windows",
+					"macos",
+					"freebsd",
+					"cisco-ios",
+					"cisco-nxos",
+					"juniper-junos",
+					"arista-eos",
+				},
+				EnumNames: []string{
+					"Linux",
+					"Windows",
+					"macOS",
+					"FreeBSD",
+					"Cisco IOS",
+					"Cisco NX-OS",
+					"Juniper JunOS",
+					"Arista EOS",
+				},
 			},
 			"ttl": {
 				Type:        "integer",
@@ -1075,9 +1122,9 @@ func buildOSFingerprintSchema() *SchemaProperty {
 				Description: "TCP maximum segment size",
 			},
 			"ssh_banner": {
-				Type:        "string",
-				Title:       "SSH Banner",
-				Description: "SSH version banner",
+				Type:          "string",
+				Title:         "SSH Banner",
+				Description:   "SSH version banner",
 				UIPlaceholder: "SSH-2.0-OpenSSH_8.9p1",
 			},
 			"http_server": {
@@ -1160,7 +1207,7 @@ func buildIPerf3Schema(maxPort *float64) *SchemaProperty {
 	}
 }
 
-// Helper functions for pointer values
+// Helper functions for pointer values.
 func floatPtr(v float64) *float64 {
 	return &v
 }

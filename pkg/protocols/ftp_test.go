@@ -9,7 +9,7 @@ import (
 	"github.com/krisarmstrong/niac-go/pkg/logging"
 )
 
-// TestNewFTPHandler tests FTP handler creation
+// TestNewFTPHandler tests FTP handler creation.
 func TestNewFTPHandler(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -24,7 +24,7 @@ func TestNewFTPHandler(t *testing.T) {
 	}
 }
 
-// TestHandleRequest_USER tests USER command parsing
+// TestHandleRequest_USER tests USER command parsing.
 func TestHandleRequest_USER(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -62,7 +62,7 @@ func TestHandleRequest_USER(t *testing.T) {
 	}
 }
 
-// TestFTPCommands tests various FTP command responses
+// TestFTPCommands tests various FTP command responses.
 func TestFTPCommands(t *testing.T) {
 	tests := []struct {
 		name             string
@@ -207,15 +207,16 @@ func TestFTPCommands(t *testing.T) {
 	}
 }
 
-// generateFTPResponse simulates FTP response generation (helper for testing)
+// generateFTPResponse simulates FTP response generation (helper for testing).
 func generateFTPResponse(command string, devices []*config.Device) string {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
 	handler := NewFTPHandler(stack)
+
 	return handler.buildFTPResponse(command, false, devices)
 }
 
-// TestFTPCommandParsing tests FTP command parsing
+// TestFTPCommandParsing tests FTP command parsing.
 func TestFTPCommandParsing(t *testing.T) {
 	tests := []struct {
 		name         string
@@ -302,12 +303,13 @@ func TestFTPIPv6PassiveModes(t *testing.T) {
 	if !strings.HasPrefix(resp, "229") {
 		t.Fatalf("expected EPSV over IPv6 to return 229, got %s", resp)
 	}
+
 	if !strings.Contains(resp, "(|||") {
 		t.Fatalf("expected EPSV response to include extended passive format, got %s", resp)
 	}
 }
 
-// TestFTPCustomSystemType tests custom system type configuration
+// TestFTPCustomSystemType tests custom system type configuration.
 func TestFTPCustomSystemType(t *testing.T) {
 	devices := []*config.Device{
 		{
@@ -329,7 +331,7 @@ func TestFTPCustomSystemType(t *testing.T) {
 	}
 }
 
-// TestFTPPassiveMode tests PASV command response
+// TestFTPPassiveMode tests PASV command response.
 func TestFTPPassiveMode(t *testing.T) {
 	devices := []*config.Device{
 		{
@@ -354,7 +356,7 @@ func TestFTPPassiveMode(t *testing.T) {
 	}
 }
 
-// TestFTPPassiveMode_NoDevice tests PASV without configured device
+// TestFTPPassiveMode_NoDevice tests PASV without configured device.
 func TestFTPPassiveMode_NoDevice(t *testing.T) {
 	response := generateFTPResponse("PASV", nil)
 
@@ -363,7 +365,7 @@ func TestFTPPassiveMode_NoDevice(t *testing.T) {
 	}
 }
 
-// TestFTPAuthenticationFlow tests typical authentication sequence
+// TestFTPAuthenticationFlow tests typical authentication sequence.
 func TestFTPAuthenticationFlow(t *testing.T) {
 	// USER command
 	userResp := generateFTPResponse("USER testuser", nil)
@@ -378,7 +380,7 @@ func TestFTPAuthenticationFlow(t *testing.T) {
 	}
 }
 
-// TestFTPFileOperations tests file-related commands
+// TestFTPFileOperations tests file-related commands.
 func TestFTPFileOperations(t *testing.T) {
 	tests := []struct {
 		name         string
@@ -403,7 +405,7 @@ func TestFTPFileOperations(t *testing.T) {
 	}
 }
 
-// TestFTPDirectoryOperations tests directory commands
+// TestFTPDirectoryOperations tests directory commands.
 func TestFTPDirectoryOperations(t *testing.T) {
 	tests := []struct {
 		name         string
@@ -430,7 +432,7 @@ func TestFTPDirectoryOperations(t *testing.T) {
 	}
 }
 
-// TestFTPHelpCommand tests HELP command content
+// TestFTPHelpCommand tests HELP command content.
 func TestFTPHelpCommand(t *testing.T) {
 	response := generateFTPResponse("HELP", nil)
 
@@ -451,7 +453,7 @@ func TestFTPHelpCommand(t *testing.T) {
 	}
 }
 
-// TestFTPCaseInsensitive tests case-insensitive command processing
+// TestFTPCaseInsensitive tests case-insensitive command processing.
 func TestFTPCaseInsensitive(t *testing.T) {
 	commands := []string{
 		"user testuser",
@@ -468,7 +470,7 @@ func TestFTPCaseInsensitive(t *testing.T) {
 	}
 }
 
-// TestFTPEmptyCommand tests empty command handling
+// TestFTPEmptyCommand tests empty command handling.
 func TestFTPEmptyCommand(t *testing.T) {
 	emptyCommands := []string{"", "   ", "\r\n", "\t"}
 
@@ -480,7 +482,7 @@ func TestFTPEmptyCommand(t *testing.T) {
 	}
 }
 
-// TestFTPUnknownCommand tests unrecognized FTP-like commands
+// TestFTPUnknownCommand tests unrecognized FTP-like commands.
 func TestFTPUnknownCommand(t *testing.T) {
 	// Test that short uppercase commands that aren't recognized get 502
 	unknownCmds := []string{"ABCD", "XYZ", "FOO"}
@@ -498,18 +500,17 @@ func TestFTPUnknownCommand(t *testing.T) {
 
 // Benchmarks
 
-// BenchmarkFTPCommandParsing benchmarks command parsing
+// BenchmarkFTPCommandParsing benchmarks command parsing.
 func BenchmarkFTPCommandParsing(b *testing.B) {
 	command := "USER testuser"
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		strings.TrimSpace(command)
 		strings.Fields(command)
 	}
 }
 
-// BenchmarkFTPResponseGeneration benchmarks response generation
+// BenchmarkFTPResponseGeneration benchmarks response generation.
 func BenchmarkFTPResponseGeneration(b *testing.B) {
 	devices := []*config.Device{
 		{
@@ -528,7 +529,8 @@ func BenchmarkFTPResponseGeneration(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+
+	for i := range b.N {
 		generateFTPResponse(commands[i%len(commands)], devices)
 	}
 }

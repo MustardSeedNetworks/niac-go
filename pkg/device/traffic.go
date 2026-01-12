@@ -1,9 +1,10 @@
 package device
 
 import (
+	"errors"
 	"fmt"
-	"log"
-	"math/rand" // Note: math/rand used for network traffic simulation (not security-critical)
+	"log/slog"
+	"math/rand/v2" // Note: math/rand used for network traffic simulation (not security-critical)
 	"time"
 
 	"github.com/google/gopacket"
@@ -11,7 +12,10 @@ import (
 	"github.com/krisarmstrong/niac-go/pkg/protocols"
 )
 
-// TrafficGenerator generates background network traffic
+// Sentinel errors for traffic generator.
+var ErrTrafficGeneratorAlreadyRunning = errors.New("traffic generator already running")
+
+// TrafficGenerator generates background network traffic.
 type TrafficGenerator struct {
 	simulator    *Simulator
 	stack        *protocols.Stack
@@ -23,7 +27,7 @@ type TrafficGenerator struct {
 	lastRandTime map[string]time.Time // Last random traffic time per device
 }
 
-// TrafficPattern represents a traffic generation pattern
+// TrafficPattern represents a traffic generation pattern.
 type TrafficPattern struct {
 	Name     string
 	Interval time.Duration
@@ -31,7 +35,7 @@ type TrafficPattern struct {
 	LastRun  time.Time
 }
 
-// NewTrafficGenerator creates a new traffic generator
+// NewTrafficGenerator creates a new traffic generator.
 func NewTrafficGenerator(sim *Simulator, stack *protocols.Stack, debugLevel int) *TrafficGenerator {
 	return &TrafficGenerator{
 		simulator:    sim,
@@ -44,10 +48,10 @@ func NewTrafficGenerator(sim *Simulator, stack *protocols.Stack, debugLevel int)
 	}
 }
 
-// Start starts the traffic generator
+// Start starts the traffic generator.
 func (tg *TrafficGenerator) Start() error {
 	if tg.running {
-		return fmt.Errorf("traffic generator already running")
+		return ErrTrafficGeneratorAlreadyRunning
 	}
 
 	tg.running = true
@@ -57,13 +61,13 @@ func (tg *TrafficGenerator) Start() error {
 	go tg.trafficGenerationLoop()
 
 	if tg.debugLevel >= 1 {
-		log.Println("Traffic generator started (v1.6.0 configurable traffic)")
+		slog.Info("Traffic generator started (v1.6.0 configurable traffic)")
 	}
 
 	return nil
 }
 
-// Stop stops the traffic generator
+// Stop stops the traffic generator.
 func (tg *TrafficGenerator) Stop() {
 	if !tg.running {
 		return
@@ -73,11 +77,11 @@ func (tg *TrafficGenerator) Stop() {
 	close(tg.stopChan)
 
 	if tg.debugLevel >= 1 {
-		log.Println("Traffic generator stopped")
+		slog.Info("Traffic generator stopped")
 	}
 }
 
-// trafficGenerationLoop unified traffic generation with per-device config support (v1.6.0)
+// trafficGenerationLoop unified traffic generation with per-device config support (v1.6.0).
 func (tg *TrafficGenerator) trafficGenerationLoop() {
 	// Use 10-second ticker to check all devices
 	ticker := time.NewTicker(10 * time.Second)
@@ -93,7 +97,7 @@ func (tg *TrafficGenerator) trafficGenerationLoop() {
 	}
 }
 
-// checkAndGenerateTraffic checks each device's config and generates traffic if intervals have elapsed
+// checkAndGenerateTraffic checks each device's config and generates traffic if intervals have elapsed.
 func (tg *TrafficGenerator) checkAndGenerateTraffic() {
 	devices := tg.simulator.GetAllDevices()
 	now := time.Now()
@@ -113,7 +117,9 @@ func (tg *TrafficGenerator) checkAndGenerateTraffic() {
 		// Check ARP announcements
 		if cfg.ARPAnnouncements != nil && cfg.ARPAnnouncements.Enabled {
 			lastTime := tg.lastARPTime[name]
+
 			interval := time.Duration(cfg.ARPAnnouncements.Interval) * time.Second
+
 			if now.Sub(lastTime) >= interval {
 				tg.sendARPAnnouncement(device)
 				tg.lastARPTime[name] = now
@@ -123,7 +129,9 @@ func (tg *TrafficGenerator) checkAndGenerateTraffic() {
 		// Check periodic pings
 		if cfg.PeriodicPings != nil && cfg.PeriodicPings.Enabled {
 			lastTime := tg.lastPingTime[name]
+
 			interval := time.Duration(cfg.PeriodicPings.Interval) * time.Second
+
 			if now.Sub(lastTime) >= interval {
 				tg.sendPeriodicPing(device, cfg.PeriodicPings.PayloadSize)
 				tg.lastPingTime[name] = now
@@ -133,7 +141,9 @@ func (tg *TrafficGenerator) checkAndGenerateTraffic() {
 		// Check random traffic
 		if cfg.RandomTraffic != nil && cfg.RandomTraffic.Enabled {
 			lastTime := tg.lastRandTime[name]
+
 			interval := time.Duration(cfg.RandomTraffic.Interval) * time.Second
+
 			if now.Sub(lastTime) >= interval {
 				tg.generateRandomTrafficForDevice(device, cfg.RandomTraffic.PacketCount, cfg.RandomTraffic.Patterns)
 				tg.lastRandTime[name] = now
@@ -142,12 +152,12 @@ func (tg *TrafficGenerator) checkAndGenerateTraffic() {
 	}
 }
 
-// sendARPAnnouncement sends a gratuitous ARP for a single device (v1.6.0)
+// sendARPAnnouncement sends a gratuitous ARP for a single device (v1.6.0).
 func (tg *TrafficGenerator) sendARPAnnouncement(device *SimulatedDevice) {
-	tg.sendGratuitousARP(device) // #nosec G104 -- error logged or non-critical
+	_ = tg.sendGratuitousARP(device) // error is non-critical for traffic simulation
 }
 
-// sendPeriodicPing sends an ICMP ping from one device to another with configurable payload (v1.6.0)
+// sendPeriodicPing sends an ICMP ping from one device to another with configurable payload (v1.6.0).
 func (tg *TrafficGenerator) sendPeriodicPing(device *SimulatedDevice, payloadSize int) {
 	// Get list of other devices to ping
 	devices := tg.simulator.GetAllDevices()
@@ -164,18 +174,22 @@ func (tg *TrafficGenerator) sendPeriodicPing(device *SimulatedDevice, payloadSiz
 	}
 
 	// Pick random destination
-	dst := deviceList[rand.Intn(len(deviceList))] // #nosec G404 -- network traffic simulation, not cryptographic
+	dst := deviceList[rand.IntN(len(deviceList))] // #nosec G404 -- network traffic simulation, not cryptographic
 
 	if len(dst.Config.MACAddress) == 0 || len(dst.Config.IPAddresses) == 0 {
 		return
 	}
 
 	// Use existing sendPing (currently doesn't use payloadSize, but we'll pass it for future use)
-	tg.sendPing(device, dst) // #nosec G104 -- error logged or non-critical
+	_ = tg.sendPing(device, dst) // error is non-critical for traffic simulation
 }
 
-// generateRandomTrafficForDevice generates random traffic for a single device (v1.6.0)
-func (tg *TrafficGenerator) generateRandomTrafficForDevice(device *SimulatedDevice, packetCount int, patterns []string) {
+// generateRandomTrafficForDevice generates random traffic for a single device (v1.6.0).
+func (tg *TrafficGenerator) generateRandomTrafficForDevice(
+	device *SimulatedDevice,
+	packetCount int,
+	patterns []string,
+) {
 	// Get list of other devices
 	devices := tg.simulator.GetAllDevices()
 	deviceList := make([]*SimulatedDevice, 0)
@@ -191,34 +205,36 @@ func (tg *TrafficGenerator) generateRandomTrafficForDevice(device *SimulatedDevi
 	}
 
 	// Generate configured number of packets
-	for i := 0; i < packetCount; i++ {
+	for range packetCount {
 		// Pick random pattern from configured patterns
 		if len(patterns) == 0 {
 			patterns = []string{"broadcast_arp", "multicast", "udp"}
 		}
 
-		pattern := patterns[rand.Intn(len(patterns))] // #nosec G404 -- network traffic simulation, not cryptographic
+		pattern := patterns[rand.IntN(len(patterns))] // #nosec G404 -- network traffic simulation, not cryptographic
 
 		switch pattern {
 		case "broadcast_arp":
-			tg.sendBroadcastARP(device) // #nosec G104 -- error logged or non-critical
+			_ = tg.sendBroadcastARP(device) // error is non-critical for traffic simulation
 		case "multicast":
-			tg.sendMulticast(device) // #nosec G104 -- error logged or non-critical
+			_ = tg.sendMulticast(device) // error is non-critical for traffic simulation
 		case "udp":
 			if len(deviceList) > 1 {
-				dst := deviceList[rand.Intn(len(deviceList))] // #nosec G404 -- network traffic simulation, not cryptographic
+				dst := deviceList[rand.IntN(len(deviceList))] // #nosec G404 -- network traffic simulation, not cryptographic
 				if dst != device && len(dst.Config.MACAddress) > 0 {
-					tg.sendRandomUDP(device, dst) // #nosec G104 -- error logged or non-critical
+					_ = tg.sendRandomUDP(device, dst) // error is non-critical for traffic simulation
 				}
 			}
 		}
 
 		// Small delay between packets
-		time.Sleep(time.Duration(rand.Intn(100)) * time.Millisecond) // #nosec G404 -- network traffic simulation, not cryptographic
+		time.Sleep(
+			time.Duration(rand.IntN(100)) * time.Millisecond,
+		) // #nosec G404 -- network traffic simulation, not cryptographic
 	}
 
 	if tg.debugLevel >= 3 {
-		log.Printf("[%s] Generated %d random packets", device.Config.Name, packetCount)
+		slog.Debug("Generated random packets", "device", device.Config.Name, "count", packetCount)
 	}
 }
 
@@ -255,7 +271,7 @@ func (tg *TrafficGenerator) sendGratuitousARP(device *SimulatedDevice) error {
 
 	err := gopacket.SerializeLayers(buffer, opts, eth, arp)
 	if err != nil {
-		return fmt.Errorf("failed to serialize ARP: %v", err)
+		return fmt.Errorf("failed to serialize ARP: %w", err)
 	}
 
 	// Send packet
@@ -273,7 +289,7 @@ func (tg *TrafficGenerator) sendGratuitousARP(device *SimulatedDevice) error {
 	return nil
 }
 
-// sendPing sends an ICMP Echo Request
+// sendPing sends an ICMP Echo Request.
 func (tg *TrafficGenerator) sendPing(src, dst *SimulatedDevice) error {
 	// Build Ethernet header
 	eth := &layers.Ethernet{
@@ -295,8 +311,12 @@ func (tg *TrafficGenerator) sendPing(src, dst *SimulatedDevice) error {
 	// Build ICMP Echo Request
 	icmpLayer := &layers.ICMPv4{
 		TypeCode: layers.CreateICMPv4TypeCode(layers.ICMPv4TypeEchoRequest, 0),
-		Id:       uint16(rand.Intn(65536)), // #nosec G115,G404 -- network traffic simulation, ICMP ID from 16-bit range
-		Seq:      uint16(rand.Intn(65536)), // #nosec G115,G404 -- network traffic simulation, ICMP sequence from 16-bit range
+		Id: uint16(
+			rand.IntN(65536),
+		),
+		Seq: uint16(
+			rand.IntN(65536),
+		),
 	}
 
 	// Payload
@@ -311,7 +331,7 @@ func (tg *TrafficGenerator) sendPing(src, dst *SimulatedDevice) error {
 
 	err := gopacket.SerializeLayers(buffer, opts, eth, ipLayer, icmpLayer, gopacket.Payload(payload))
 	if err != nil {
-		return fmt.Errorf("failed to serialize ping: %v", err)
+		return fmt.Errorf("failed to serialize ping: %w", err)
 	}
 
 	// Send packet
@@ -329,10 +349,15 @@ func (tg *TrafficGenerator) sendPing(src, dst *SimulatedDevice) error {
 	return nil
 }
 
-// sendBroadcastARP sends a broadcast ARP request
+// sendBroadcastARP sends a broadcast ARP request.
 func (tg *TrafficGenerator) sendBroadcastARP(src *SimulatedDevice) error {
 	// Pick a random IP to query
-	randomIP := []byte{192, 168, 1, byte(rand.Intn(254) + 1)} // #nosec G404 -- network traffic simulation, not cryptographic
+	randomIP := []byte{
+		192,
+		168,
+		1,
+		byte(rand.IntN(254) + 1),
+	} // #nosec G404 -- network traffic simulation, not cryptographic
 
 	eth := &layers.Ethernet{
 		SrcMAC:       src.Config.MACAddress,
@@ -355,7 +380,10 @@ func (tg *TrafficGenerator) sendBroadcastARP(src *SimulatedDevice) error {
 	buffer := gopacket.NewSerializeBuffer()
 	opts := gopacket.SerializeOptions{FixLengths: true, ComputeChecksums: true}
 
-	gopacket.SerializeLayers(buffer, opts, eth, arp) // #nosec G104 -- error logged or non-critical
+	err := gopacket.SerializeLayers(buffer, opts, eth, arp)
+	if err != nil {
+		return fmt.Errorf("failed to serialize ARP layers: %w", err)
+	}
 
 	pkt := &protocols.Packet{
 		Buffer: buffer.Bytes(),
@@ -369,10 +397,17 @@ func (tg *TrafficGenerator) sendBroadcastARP(src *SimulatedDevice) error {
 	return nil
 }
 
-// sendMulticast sends a multicast packet
+// sendMulticast sends a multicast packet.
 func (tg *TrafficGenerator) sendMulticast(src *SimulatedDevice) error {
 	// Send to multicast MAC
-	multicastMAC := []byte{0x01, 0x00, 0x5e, byte(rand.Intn(128)), byte(rand.Intn(256)), byte(rand.Intn(256))} // #nosec G404 -- network traffic simulation, not cryptographic
+	multicastMAC := []byte{
+		0x01,
+		0x00,
+		0x5e,
+		byte(rand.IntN(128)),
+		byte(rand.IntN(256)),
+		byte(rand.IntN(256)),
+	} // #nosec G404 -- network traffic simulation, not cryptographic
 
 	eth := &layers.Ethernet{
 		SrcMAC:       src.Config.MACAddress,
@@ -383,7 +418,10 @@ func (tg *TrafficGenerator) sendMulticast(src *SimulatedDevice) error {
 	buffer := gopacket.NewSerializeBuffer()
 	opts := gopacket.SerializeOptions{FixLengths: true}
 
-	gopacket.SerializeLayers(buffer, opts, eth, gopacket.Payload([]byte("multicast data"))) // #nosec G104 -- error logged or non-critical
+	err := gopacket.SerializeLayers(buffer, opts, eth, gopacket.Payload([]byte("multicast data")))
+	if err != nil {
+		return fmt.Errorf("failed to serialize multicast layers: %w", err)
+	}
 
 	pkt := &protocols.Packet{
 		Buffer: buffer.Bytes(),
@@ -397,7 +435,7 @@ func (tg *TrafficGenerator) sendMulticast(src *SimulatedDevice) error {
 	return nil
 }
 
-// sendRandomUDP sends a random UDP packet
+// sendRandomUDP sends a random UDP packet.
 func (tg *TrafficGenerator) sendRandomUDP(src, dst *SimulatedDevice) error {
 	eth := &layers.Ethernet{
 		SrcMAC:       src.Config.MACAddress,
@@ -415,17 +453,24 @@ func (tg *TrafficGenerator) sendRandomUDP(src, dst *SimulatedDevice) error {
 	}
 
 	udpLayer := &layers.UDP{
-		SrcPort: layers.UDPPort(rand.Intn(60000) + 1024), // #nosec G115,G404 -- network traffic simulation, UDP port from limited range
-		DstPort: layers.UDPPort(rand.Intn(60000) + 1024), // #nosec G115,G404 -- network traffic simulation, UDP port from limited range
+		SrcPort: layers.UDPPort(
+			rand.IntN(60000) + 1024,
+		),
+		DstPort: layers.UDPPort(
+			rand.IntN(60000) + 1024,
+		),
 	}
-	udpLayer.SetNetworkLayerForChecksum(ipLayer) // #nosec G104 -- error logged or non-critical
+	_ = udpLayer.SetNetworkLayerForChecksum(ipLayer) // error is non-critical for checksum setup
 
 	payload := []byte("random UDP data")
 
 	buffer := gopacket.NewSerializeBuffer()
 	opts := gopacket.SerializeOptions{FixLengths: true, ComputeChecksums: true}
 
-	gopacket.SerializeLayers(buffer, opts, eth, ipLayer, udpLayer, gopacket.Payload(payload)) // #nosec G104 -- error logged or non-critical
+	err := gopacket.SerializeLayers(buffer, opts, eth, ipLayer, udpLayer, gopacket.Payload(payload))
+	if err != nil {
+		return fmt.Errorf("failed to serialize UDP layers: %w", err)
+	}
 
 	pkt := &protocols.Packet{
 		Buffer: buffer.Bytes(),

@@ -1,7 +1,7 @@
-// Package main provides legacy mode helper functions
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -11,7 +11,7 @@ import (
 	"github.com/krisarmstrong/niac-go/pkg/logging"
 )
 
-// legacyFlags holds all command-line flags for legacy mode
+// legacyFlags holds all command-line flags for legacy mode.
 type legacyFlags struct {
 	// Core flags
 	debugLevel      int
@@ -74,7 +74,7 @@ type legacyFlags struct {
 	alertWebhook          string
 }
 
-// defineLegacyFlags defines all command-line flags for legacy mode
+// defineLegacyFlags defines all command-line flags for legacy mode.
 func defineLegacyFlags(flags *legacyFlags) {
 	// Core flags
 	flag.IntVar(&flags.debugLevel, "d", 1, "Debug level (0-3)")
@@ -140,13 +140,28 @@ func defineLegacyFlags(flags *legacyFlags) {
 	// Service / API flags
 	flag.StringVar(&flags.apiListen, "api-listen", "", "Expose REST API and Web UI on this address (e.g., :8080)")
 	flag.StringVar(&flags.apiToken, "api-token", "", "Bearer token required for API/Web UI access")
-	flag.StringVar(&flags.metricsListen, "metrics-listen", "", "Expose Prometheus metrics on this address (defaults to --api-listen)")
-	flag.StringVar(&flags.storagePath, "storage-path", "", "Path to NIAC run history database (default: ~/.niac/niac.db)")
-	flag.Uint64Var(&flags.alertPacketsThreshold, "alert-packets-threshold", 0, "Trigger alerts when total packet count exceeds this value")
+	flag.StringVar(
+		&flags.metricsListen,
+		"metrics-listen",
+		"",
+		"Expose Prometheus metrics on this address (defaults to --api-listen)",
+	)
+	flag.StringVar(
+		&flags.storagePath,
+		"storage-path",
+		"",
+		"Path to NIAC run history database (default: ~/.niac/niac.db)",
+	)
+	flag.Uint64Var(
+		&flags.alertPacketsThreshold,
+		"alert-packets-threshold",
+		0,
+		"Trigger alerts when total packet count exceeds this value",
+	)
 	flag.StringVar(&flags.alertWebhook, "alert-webhook", "", "Optional webhook URL to notify when alerts fire")
 }
 
-// processFlags applies flag transformations (verbose/quiet override)
+// processFlags applies flag transformations (verbose/quiet override).
 func processFlags(flags *legacyFlags) {
 	if flags.verbose {
 		flags.debugLevel = 3
@@ -180,7 +195,7 @@ func applyLegacyServiceFlags(flags *legacyFlags) {
 	}
 }
 
-// setupDebugConfig creates debug configuration from flags
+// setupDebugConfig creates debug configuration from flags.
 func setupDebugConfig(flags *legacyFlags) *logging.DebugConfig {
 	debugConfig := logging.NewDebugConfig(flags.debugLevel)
 
@@ -247,7 +262,7 @@ func setupDebugConfig(flags *legacyFlags) *logging.DebugConfig {
 }
 
 // handleInformationalFlags processes version/list flags and exits if handled
-// Returns true if a flag was handled and program should exit
+// Returns true if a flag was handled and program should exit.
 func handleInformationalFlags(flags *legacyFlags, args []string) bool {
 	// Handle version flag
 	if flags.showVersion {
@@ -277,15 +292,15 @@ func handleInformationalFlags(flags *legacyFlags, args []string) bool {
 	return false
 }
 
-// validateLegacyArguments validates required command-line arguments
+// validateLegacyArguments validates required command-line arguments.
 func validateLegacyArguments(args []string) (interfaceName, configFile string, err error) {
 	if len(args) < 2 {
-		return "", "", fmt.Errorf("missing required arguments: interface and config file")
+		return "", "", errors.New("missing required arguments: interface and config file")
 	}
 	return args[0], args[1], nil
 }
 
-// validateInterface checks if interface exists
+// validateInterface checks if interface exists.
 func validateInterface(interfaceName string) error {
 	if !capture.InterfaceExists(interfaceName) {
 		logging.Error("Interface '%s' not found", interfaceName)
@@ -296,7 +311,7 @@ func validateInterface(interfaceName string) error {
 	return nil
 }
 
-// loadAndPrintConfig loads config and prints info
+// loadAndPrintConfig loads config and prints info.
 func loadAndPrintConfig(configFile, interfaceName string, flags *legacyFlags) (*config.Config, error) {
 	cfg, err := config.Load(configFile)
 	if err != nil {
@@ -326,7 +341,7 @@ func loadAndPrintConfig(configFile, interfaceName string, flags *legacyFlags) (*
 	return cfg, nil
 }
 
-// runDryRunValidation runs dry-run validation and exits
+// runDryRunValidation runs dry-run validation and exits.
 func runDryRunValidation(configFile, interfaceName string, cfg *config.Config) {
 	// Run comprehensive configuration validation
 	validator := config.NewValidator(configFile)

@@ -1,8 +1,8 @@
-import { type FC } from 'react';
-import { CollapsibleSection, FormField } from '../form';
-import type { SNMPAgent, FileEntry } from '../../api/types';
-import type { SNMPSectionProps } from './types';
-import { inputClassName, selectClassName } from './types';
+import type { FC } from "react";
+import type { FileEntry, SNMPAgent } from "../../api/types";
+import { CollapsibleSection, FormField } from "../form";
+import type { SNMPSectionProps } from "./types";
+import { inputClassName, selectClassName } from "./types";
 
 export const SNMPSection: FC<SNMPSectionProps> = ({
   device,
@@ -11,8 +11,8 @@ export const SNMPSection: FC<SNMPSectionProps> = ({
   onUpdate,
   walkFiles,
 }) => {
-  const updateSNMP = (config: SNMPAgent | undefined) => {
-    onUpdate('snmp_agent', config);
+  const updateSnmp = (config: SNMPAgent | undefined) => {
+    onUpdate("snmp_agent", config);
   };
 
   return (
@@ -23,9 +23,9 @@ export const SNMPSection: FC<SNMPSectionProps> = ({
       enabled={!!device.snmp_agent}
       onEnableChange={(enabled) => {
         if (enabled) {
-          updateSNMP({ community: 'public', sys_name: device.hostname } as SNMPAgent);
+          updateSnmp({ community: "public", sys_name: device.hostname } as SNMPAgent);
         } else {
-          updateSNMP(undefined);
+          updateSnmp(undefined);
         }
       }}
     >
@@ -34,10 +34,8 @@ export const SNMPSection: FC<SNMPSectionProps> = ({
           <FormField label="Community String" helpText="SNMP v1/v2c community string">
             <input
               type="text"
-              value={device.snmp_agent.community || ''}
-              onChange={(e) =>
-                updateSNMP({ ...device.snmp_agent!, community: e.target.value })
-              }
+              value={device.snmp_agent.community || ""}
+              onChange={(e) => updateSnmp({ ...device.snmp_agent!, community: e.target.value })}
               placeholder="public"
               className={inputClassName}
             />
@@ -46,21 +44,21 @@ export const SNMPSection: FC<SNMPSectionProps> = ({
           <FormField label="System Name" helpText="SNMP sysName value">
             <input
               type="text"
-              value={device.snmp_agent.sys_name || ''}
-              onChange={(e) =>
-                updateSNMP({ ...device.snmp_agent!, sys_name: e.target.value })
-              }
+              value={device.snmp_agent.sys_name || ""}
+              onChange={(e) => updateSnmp({ ...device.snmp_agent!, sys_name: e.target.value })}
               placeholder="Device hostname"
               className={inputClassName}
             />
           </FormField>
 
-          <FormField label="Walk File" helpText="Path to SNMP walk file for emulation" className="md:col-span-2">
+          <FormField
+            label="Walk File"
+            helpText="Path to SNMP walk file for emulation"
+            className="md:col-span-2"
+          >
             <select
-              value={device.snmp_agent.walk_file || ''}
-              onChange={(e) =>
-                updateSNMP({ ...device.snmp_agent!, walk_file: e.target.value })
-              }
+              value={device.snmp_agent.walk_file || ""}
+              onChange={(e) => updateSnmp({ ...device.snmp_agent!, walk_file: e.target.value })}
               className={selectClassName}
             >
               <option value="">Select a walk file...</option>

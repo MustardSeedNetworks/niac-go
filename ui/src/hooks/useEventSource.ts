@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from "react";
 
 /**
  * Options for configuring the EventSource connection
@@ -55,14 +55,7 @@ export interface UseEventSourceResult {
  * ```
  */
 export function useEventSource(options: UseEventSourceOptions): UseEventSourceResult {
-  const {
-    url,
-    onMessage,
-    onConnect,
-    onDisconnect,
-    onError,
-    enabled = true,
-  } = options;
+  const { url, onMessage, onConnect, onDisconnect, onError, enabled = true } = options;
 
   const [data, setData] = useState<unknown>(null);
   const [connected, setConnected] = useState(false);
@@ -77,10 +70,18 @@ export function useEventSource(options: UseEventSourceOptions): UseEventSourceRe
   const onDisconnectRef = useRef(onDisconnect);
   const onErrorRef = useRef(onError);
 
-  useEffect(() => { onMessageRef.current = onMessage; }, [onMessage]);
-  useEffect(() => { onConnectRef.current = onConnect; }, [onConnect]);
-  useEffect(() => { onDisconnectRef.current = onDisconnect; }, [onDisconnect]);
-  useEffect(() => { onErrorRef.current = onError; }, [onError]);
+  useEffect(() => {
+    onMessageRef.current = onMessage;
+  }, [onMessage]);
+  useEffect(() => {
+    onConnectRef.current = onConnect;
+  }, [onConnect]);
+  useEffect(() => {
+    onDisconnectRef.current = onDisconnect;
+  }, [onDisconnect]);
+  useEffect(() => {
+    onErrorRef.current = onError;
+  }, [onError]);
 
   /**
    * Connect to the EventSource
@@ -125,12 +126,11 @@ export function useEventSource(options: UseEventSourceOptions): UseEventSourceRe
       };
 
       // Handle custom 'connected' event from server
-      es.addEventListener('connected', () => {
+      es.addEventListener("connected", () => {
         // Event received - connection confirmed
       });
-
     } catch {
-      setError(new Event('error'));
+      setError(new Event("error"));
     }
   }, [url]);
 
@@ -212,7 +212,7 @@ export interface StreamHookOptions {
  * Packet data structure from /api/v1/stream/packets
  */
 export interface PacketData {
-  type: 'packet';
+  type: "packet";
   timestamp: string;
   data: {
     sourceIP: string;
@@ -229,7 +229,7 @@ export interface PacketData {
  */
 export function usePacketStream(options: StreamHookOptions = {}): UseEventSourceResult {
   const { enabled = true, ...restOptions } = options;
-  const url = enabled ? `${getStreamBaseUrl()}/packets` : '';
+  const url = enabled ? `${getStreamBaseUrl()}/packets` : "";
 
   return useEventSource({
     url,
@@ -242,9 +242,9 @@ export function usePacketStream(options: StreamHookOptions = {}): UseEventSource
  * Log data structure from /api/v1/stream/logs
  */
 export interface LogData {
-  type: 'log';
+  type: "log";
   timestamp: string;
-  level: 'debug' | 'info' | 'warn' | 'error';
+  level: "debug" | "info" | "warn" | "error";
   message: string;
 }
 
@@ -253,7 +253,7 @@ export interface LogData {
  */
 export function useLogStream(options: StreamHookOptions = {}): UseEventSourceResult {
   const { enabled = true, ...restOptions } = options;
-  const url = enabled ? `${getStreamBaseUrl()}/logs` : '';
+  const url = enabled ? `${getStreamBaseUrl()}/logs` : "";
 
   return useEventSource({
     url,
@@ -266,7 +266,7 @@ export function useLogStream(options: StreamHookOptions = {}): UseEventSourceRes
  * Stats data structure from /api/v1/stream/stats
  */
 export interface StatsData {
-  type: 'stats';
+  type: "stats";
   timestamp: string;
   data: {
     packetsPerSecond: number;
@@ -283,7 +283,7 @@ export interface StatsData {
  */
 export function useStatsStream(options: StreamHookOptions = {}): UseEventSourceResult {
   const { enabled = true, ...restOptions } = options;
-  const url = enabled ? `${getStreamBaseUrl()}/stats` : '';
+  const url = enabled ? `${getStreamBaseUrl()}/stats` : "";
 
   return useEventSource({
     url,

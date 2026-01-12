@@ -2,12 +2,14 @@
 package interactive
 
 import (
+	"context"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -21,7 +23,7 @@ import (
 	"github.com/krisarmstrong/niac-go/pkg/templates"
 )
 
-// Styles
+// Styles.
 var (
 	titleStyle = lipgloss.NewStyle().
 			Bold(true).
@@ -47,7 +49,7 @@ var (
 	statsStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("246"))
 
-	// Validation styles
+		// Validation styles.
 	validationErrorStyle = lipgloss.NewStyle().
 				Foreground(lipgloss.Color("196")) // Red for errors
 
@@ -61,7 +63,7 @@ var (
 				Foreground(lipgloss.Color("82")).
 				Bold(true) // Green for success
 
-	// Config diff styles
+		// Config diff styles.
 	diffAddedStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("82")) // Green for added
 
@@ -72,12 +74,12 @@ var (
 			Foreground(lipgloss.Color("39")).
 			Bold(true) // Blue for headers
 
-	// Search styles
+		// Search styles.
 	searchMatchStyle = lipgloss.NewStyle().
 				Background(lipgloss.Color("226")).
 				Foreground(lipgloss.Color("0")) // Yellow highlight
 
-	// Topology styles
+		// Topology styles.
 	topologyNodeStyle = lipgloss.NewStyle().
 				Foreground(lipgloss.Color("86"))
 
@@ -85,7 +87,7 @@ var (
 				Foreground(lipgloss.Color("246"))
 )
 
-// CapturedPacket stores packet data for hex dump viewer
+// CapturedPacket stores packet data for hex dump viewer.
 type CapturedPacket struct {
 	Timestamp time.Time
 	Protocol  string
@@ -95,7 +97,7 @@ type CapturedPacket struct {
 	Data      []byte
 }
 
-// HistoryEntry stores data about a past simulation run
+// HistoryEntry stores data about a past simulation run.
 type HistoryEntry struct {
 	StartTime       time.Time
 	EndTime         time.Time
@@ -106,9 +108,27 @@ type HistoryEntry struct {
 	ErrorsInjected  int
 }
 
-const maxPacketBuffer = 20 // Keep last 20 packets
+const (
+	maxPacketBuffer = 20 // Keep last 20 packets
 
-// SnmpOidEntry represents a single SNMP OID entry for the walk browser
+	// Key constants for keyboard input handling.
+	keyEsc   = "esc"
+	keyDown  = "down"
+	keyEnter = "enter"
+
+	// Format constants.
+	formatJSON = "json"
+
+	// Search category constants.
+	searchCategoryAll     = "all"
+	searchCategoryDevices = "devices"
+	searchCategoryLogs    = "logs"
+
+	// Default IP placeholder when no IP is configured.
+	noIPPlaceholder = "no-ip"
+)
+
+// SnmpOidEntry represents a single SNMP OID entry for the walk browser.
 type SnmpOidEntry struct {
 	OID         string // Full OID string (e.g., "1.3.6.1.2.1.1.1.0")
 	Name        string // Human-readable name if available (e.g., "sysDescr")
@@ -190,25 +210,25 @@ type model struct {
 	templatePreviewContent string
 
 	// Config diff viewer state
-	showConfigDiff     bool
-	configDiffContent  []string
-	configDiffScrollY  int
-	previousConfig     *config.Config
-	configFilePath     string
+	showConfigDiff    bool
+	configDiffContent []string
+	configDiffScrollY int
+	previousConfig    *config.Config
+	configFilePath    string
 
 	// Search mode state
-	showSearch       bool
-	searchMode       bool
-	searchQuery      string
-	searchResults    []searchResult
-	selectedResult   int
-	searchCategory   string // "devices", "logs", "all"
+	showSearch     bool
+	searchMode     bool
+	searchQuery    string
+	searchResults  []searchResult
+	selectedResult int
+	searchCategory string // "devices", "logs", "all"
 
 	// Export state
-	showExport        bool
-	exportFormat      string // "csv", "json"
-	lastExportPath    string
-	lastExportTime    time.Time
+	showExport     bool
+	exportFormat   string // "csv", "json"
+	lastExportPath string
+	lastExportTime time.Time
 
 	// Topology view state
 	showTopology    bool
@@ -250,19 +270,21 @@ type model struct {
 	snmpSearchQuery  string
 }
 
-type tickMsg time.Time
-type pcapTickMsg time.Time
-type reloadMsg struct {
-	cfg *config.Config
-	err error
-}
+type (
+	tickMsg     time.Time
+	pcapTickMsg time.Time
+	reloadMsg   struct {
+		cfg *config.Config
+		err error
+	}
+)
 
-// editorFinishedMsg is sent when the external editor finishes
+// editorFinishedMsg is sent when the external editor finishes.
 type editorFinishedMsg struct {
 	err error
 }
 
-// searchResult represents a single search match
+// searchResult represents a single search match.
 type searchResult struct {
 	Category string // "device", "log", "error", "neighbor"
 	Title    string
@@ -270,7 +292,7 @@ type searchResult struct {
 	Index    int
 }
 
-// Init initializes the interactive TUI model
+// Init initializes the interactive TUI model.
 func (m model) Init() tea.Cmd {
 	return tea.Batch(
 		tickCmd(),
@@ -288,6 +310,7 @@ func pcapTickCmd(speed float64) tea.Cmd {
 	// Calculate interval based on playback speed
 	// Normal speed (1.0) = 100ms per packet
 	interval := time.Duration(float64(100*time.Millisecond) / speed)
+
 	return tea.Tick(interval, func(t time.Time) tea.Msg {
 		return pcapTickMsg(t)
 	})
@@ -297,13 +320,15 @@ func reloadCmd(fn func() (*config.Config, error)) tea.Cmd {
 	if fn == nil {
 		return nil
 	}
+
 	return func() tea.Msg {
 		cfg, err := fn()
+
 		return reloadMsg{cfg: cfg, err: err}
 	}
 }
 
-// Update handles messages and updates the TUI model state
+// Update handles messages and updates the TUI model state.
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case reloadMsg:
@@ -315,12 +340,16 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.cfg != nil {
 				m.previousConfig = m.cfg
 			}
+
 			m.cfg = msg.cfg
 			m.selectedDeviceIdx = 0
-			m.statusMessage = successStyle.Render(fmt.Sprintf("✓ Reloaded configuration (%d devices)", len(msg.cfg.Devices)))
+			m.statusMessage = successStyle.Render(
+				fmt.Sprintf("✓ Reloaded configuration (%d devices)", len(msg.cfg.Devices)),
+			)
 			m.statusIsError = false
 			m.addDebugLog(fmt.Sprintf("Config reloaded: %d devices", len(msg.cfg.Devices)))
 		}
+
 		return m, nil
 
 	case editorFinishedMsg:
@@ -331,6 +360,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.statusMessage = successStyle.Render("Editor closed - press [r] to reload config")
 			m.statusIsError = false
 		}
+
 		return m, nil
 	case tea.KeyMsg:
 		// Handle search mode input
@@ -377,25 +407,30 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "q", "ctrl+c":
 			return m, tea.Quit
 
-		case "esc":
+		case keyEsc:
 			// Close validation modal if open
 			if m.showValidation {
 				m.showValidation = false
+
 				return m, nil
 			}
 			// Close template browser or preview
 			if m.showTemplatePreview {
 				m.showTemplatePreview = false
 				m.templatePreviewContent = ""
+
 				return m, nil
 			}
+
 			if m.showTemplates {
 				m.showTemplates = false
+
 				return m, nil
 			}
 			// Close config diff viewer
 			if m.showConfigDiff {
 				m.showConfigDiff = false
+
 				return m, nil
 			}
 			// Close search mode
@@ -406,16 +441,19 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.searchResults = nil
 				m.statusMessage = "Search cancelled"
 				m.statusIsError = false
+
 				return m, nil
 			}
 			// Close export panel
 			if m.showExport {
 				m.showExport = false
+
 				return m, nil
 			}
 			// Close topology view
 			if m.showTopology {
 				m.showTopology = false
+
 				return m, nil
 			}
 			// Close alert config
@@ -423,8 +461,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.showAlertConfig = false
 				m.statusMessage = successStyle.Render("Alert configuration saved")
 				m.statusIsError = false
+
 				return m, nil
 			}
+
 			return m, nil
 
 		case "v":
@@ -441,21 +481,28 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.showStats = false
 				m.showNeighbors = false
 				m.showHexDump = false
+
 				m.menuVisible = false
-				if m.validationResults.HasErrors() {
+				switch {
+				case m.validationResults.HasErrors():
 					m.statusMessage = errorStyle.Render(fmt.Sprintf("Validation found %d error(s), %d warning(s)",
 						len(m.validationResults.Errors), len(m.validationResults.Warnings)))
 					m.statusIsError = true
-				} else if m.validationResults.HasWarnings() {
-					m.statusMessage = fmt.Sprintf("Validation passed with %d warning(s)", len(m.validationResults.Warnings))
+				case m.validationResults.HasWarnings():
+					m.statusMessage = fmt.Sprintf(
+						"Validation passed with %d warning(s)",
+						len(m.validationResults.Warnings),
+					)
 					m.statusIsError = false
-				} else {
+				default:
 					m.statusMessage = successStyle.Render("Validation passed - no errors or warnings")
 					m.statusIsError = false
 				}
+
 				m.addDebugLog(fmt.Sprintf("Config validation: %d errors, %d warnings",
 					len(m.validationResults.Errors), len(m.validationResults.Warnings)))
 			}
+
 			return m, nil
 
 		case "t":
@@ -483,6 +530,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.statusMessage = "Template Browser - use arrow keys to navigate, Enter to preview"
 				m.statusIsError = false
 			}
+
 			return m, nil
 
 		case "C":
@@ -497,6 +545,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.statusMessage = "Config Diff Viewer - showing changes since last reload"
 				m.statusIsError = false
 			}
+
 			return m, nil
 
 		case "e":
@@ -504,8 +553,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.configFilePath == "" {
 				m.statusMessage = errorStyle.Render("No config file path available")
 				m.statusIsError = true
+
 				return m, nil
 			}
+
 			return m, m.openEditor()
 
 		case "E":
@@ -514,11 +565,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.showExport = false
 			} else {
 				m.showExport = true
-				m.exportFormat = "json" // Default format
+				m.exportFormat = formatJSON // Default format
 				m.closeAllOverlays()
 				m.statusMessage = "Export Stats - Press [j] for JSON, [c] for CSV, [Enter] to save"
 				m.statusIsError = false
 			}
+
 			return m, nil
 
 		case "a":
@@ -538,12 +590,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						"Latency":    100,
 					}
 				}
+
 				m.showAlertConfig = true
 				m.selectedAlertType = 0
 				m.closeAllOverlays()
 				m.statusMessage = "Alert Config - [Up/Down] navigate, [Left/Right] adjust, [Enter] toggle, [Space] all"
 				m.statusIsError = false
 			}
+
 			return m, nil
 
 		case "T":
@@ -558,6 +612,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.statusMessage = "Topology View - ASCII network diagram"
 				m.statusIsError = false
 			}
+
 			return m, nil
 
 		case "P":
@@ -570,15 +625,18 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.pcapPackets = make([]CapturedPacket, len(m.packetBuffer))
 				copy(m.pcapPackets, m.packetBuffer)
 				m.pcapPlaybackIndex = 0
+
 				m.pcapPlaying = false
 				if m.pcapPlaybackSpeed == 0 {
 					m.pcapPlaybackSpeed = 1.0
 				}
+
 				m.showPcapReplay = true
 				m.closeAllOverlays()
 				m.statusMessage = "PCAP Replay - [Space] play/pause, [←→] step, [+/-] speed"
 				m.statusIsError = false
 			}
+
 			return m, nil
 
 		case "H":
@@ -593,6 +651,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.statusMessage = "Run History - [↑↓] navigate, [Enter] details"
 				m.statusIsError = false
 			}
+
 			return m, nil
 
 		case "W":
@@ -604,7 +663,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.snmpOidTree = []SnmpOidEntry{
 					{OID: ".1.3.6.1.2.1.1.1.0", Name: "sysDescr", Value: "Network Simulator", Type: "STRING"},
 					{OID: ".1.3.6.1.2.1.1.2.0", Name: "sysObjectID", Value: ".1.3.6.1.4.1.99999", Type: "OID"},
-					{OID: ".1.3.6.1.2.1.1.3.0", Name: "sysUpTime", Value: fmt.Sprintf("%d", int(m.uptime.Seconds()*100)), Type: "TIMETICKS"},
+					{
+						OID:   ".1.3.6.1.2.1.1.3.0",
+						Name:  "sysUpTime",
+						Value: strconv.Itoa(int(m.uptime.Seconds() * 100)),
+						Type:  "TIMETICKS",
+					},
 					{OID: ".1.3.6.1.2.1.1.4.0", Name: "sysContact", Value: "admin@niac.local", Type: "STRING"},
 					{OID: ".1.3.6.1.2.1.1.5.0", Name: "sysName", Value: m.interfaceName, Type: "STRING"},
 					{OID: ".1.3.6.1.2.1.1.6.0", Name: "sysLocation", Value: "Network Lab", Type: "STRING"},
@@ -616,6 +680,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.statusMessage = "SNMP Walk Browser - [↑↓] navigate, [Enter] expand"
 				m.statusIsError = false
 			}
+
 			return m, nil
 
 		case "F":
@@ -630,6 +695,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.statusMessage = "Device Config - [Tab] switch tab, [↑↓] scroll"
 				m.statusIsError = false
 			}
+
 			return m, nil
 
 		case "/":
@@ -645,11 +711,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.searchQuery = ""
 				m.searchResults = nil
 				m.selectedResult = 0
-				m.searchCategory = "all"
+				m.searchCategory = searchCategoryAll
 				m.closeAllOverlays()
 				m.statusMessage = "Search Mode - type to filter devices/logs, [Esc] to exit"
 				m.statusIsError = false
 			}
+
 			return m, nil
 
 		case "i":
@@ -658,6 +725,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.statusMessage = "Interactive menu opened - use arrow keys to navigate"
 				m.statusIsError = false
 			}
+
 			return m, nil
 
 		case "D":
@@ -665,10 +733,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if len(m.cfg.Devices) > 0 {
 				m.selectedDeviceIdx = (m.selectedDeviceIdx + 1) % len(m.cfg.Devices)
 				device := m.cfg.Devices[m.selectedDeviceIdx]
-				deviceIP := "no-ip"
+
+				deviceIP := noIPPlaceholder
 				if len(device.IPAddresses) > 0 {
 					deviceIP = device.IPAddresses[0].String()
 				}
+
 				m.statusMessage = successStyle.Render(fmt.Sprintf("✓ Selected device: %s (%s)", device.Name, deviceIP))
 				m.statusIsError = false
 				m.addDebugLog(fmt.Sprintf("Selected device: %s (%s)", device.Name, deviceIP))
@@ -676,6 +746,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.statusMessage = errorStyle.Render("✗ No devices configured")
 				m.statusIsError = true
 			}
+
 			return m, nil
 
 		case "d":
@@ -685,15 +756,19 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.statusMessage = successStyle.Render(fmt.Sprintf("✓ Debug level: %d (%s)", m.debugLevel, debugLevelName))
 			m.statusIsError = false
 			m.addDebugLog(fmt.Sprintf("Debug level changed to %d (%s)", m.debugLevel, debugLevelName))
+
 			return m, nil
 		case "r":
 			if m.reloadFunc == nil {
 				m.statusMessage = errorStyle.Render("✗ Reload not available in this mode")
 				m.statusIsError = true
+
 				return m, nil
 			}
+
 			m.statusMessage = "Reloading configuration..."
 			m.statusIsError = false
+
 			return m, reloadCmd(m.reloadFunc)
 
 		case "h", "?":
@@ -703,6 +778,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.showNeighbors = false
 			m.showHexDump = false
 			m.menuVisible = false
+
 			return m, nil
 
 		case "l":
@@ -711,6 +787,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.showStats = false
 			m.showNeighbors = false
 			m.menuVisible = false
+
 			return m, nil
 
 		case "s":
@@ -720,6 +797,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.showHexDump = false
 			m.showNeighbors = false
 			m.menuVisible = false
+
 			return m, nil
 
 		case "x":
@@ -728,25 +806,33 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.showLogs = false
 			m.showStats = false
 			m.showNeighbors = false
+
 			m.menuVisible = false
 			if m.showHexDump {
 				m.hexDumpScrollY = 0
 				m.statusMessage = "Hex dump viewer opened - use arrow keys to navigate, [n]/[p] for next/prev packet"
 			}
+
 			return m, nil
 
 		case "N":
 			m.toggleNeighborView()
+
 			return m, nil
 
 		case "n":
 			if m.showHexDump && len(m.packetBuffer) > 0 {
 				m.hexDumpPacketIndex = (m.hexDumpPacketIndex + 1) % len(m.packetBuffer)
 				m.hexDumpScrollY = 0
-				m.statusMessage = successStyle.Render(fmt.Sprintf("✓ Packet %d/%d", m.hexDumpPacketIndex+1, len(m.packetBuffer)))
+				m.statusMessage = successStyle.Render(
+					fmt.Sprintf("✓ Packet %d/%d", m.hexDumpPacketIndex+1, len(m.packetBuffer)),
+				)
+
 				return m, nil
 			}
+
 			m.toggleNeighborView()
+
 			return m, nil
 
 		case "p":
@@ -755,9 +841,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if m.hexDumpPacketIndex < 0 {
 					m.hexDumpPacketIndex = len(m.packetBuffer) - 1
 				}
+
 				m.hexDumpScrollY = 0
-				m.statusMessage = successStyle.Render(fmt.Sprintf("✓ Packet %d/%d", m.hexDumpPacketIndex+1, len(m.packetBuffer)))
+				m.statusMessage = successStyle.Render(
+					fmt.Sprintf("✓ Packet %d/%d", m.hexDumpPacketIndex+1, len(m.packetBuffer)),
+				)
 			}
+
 			return m, nil
 
 		case "c":
@@ -766,81 +856,98 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if m.selectedTemplate >= 0 && m.selectedTemplate < len(m.templateList) {
 					templateName := m.templateList[m.selectedTemplate].Name
 					// Show the template path (users can use `niac template use <name> <output>`)
-					m.statusMessage = successStyle.Render(fmt.Sprintf("Template: %s - Use: niac template use %s <output.yaml>", templateName, templateName))
+					m.statusMessage = successStyle.Render(
+						fmt.Sprintf(
+							"Template: %s - Use: niac template use %s <output.yaml>",
+							templateName,
+							templateName,
+						),
+					)
 					m.statusIsError = false
-					m.addDebugLog(fmt.Sprintf("Template path shown: %s", templateName))
+					m.addDebugLog("Template path shown: " + templateName)
 				}
+
 				return m, nil
 			}
+
 			m.stateManager.ClearAll()
 			m.statusMessage = successStyle.Render("All error injections cleared")
 			m.statusIsError = false
 			m.errorsActive = 0
 			m.addDebugLog("All error injections cleared")
+
 			return m, nil
 
 		case "up":
-			if m.showSearch && len(m.searchResults) > 0 && m.selectedResult > 0 {
+			switch {
+			case m.showSearch && len(m.searchResults) > 0 && m.selectedResult > 0:
 				m.selectedResult--
-			} else if m.showConfigDiff && m.configDiffScrollY > 0 {
+			case m.showConfigDiff && m.configDiffScrollY > 0:
 				m.configDiffScrollY--
-			} else if m.showTopology && m.topologyScrollY > 0 {
+			case m.showTopology && m.topologyScrollY > 0:
 				m.topologyScrollY--
-			} else if m.showTemplates && !m.showTemplatePreview && m.selectedTemplate > 0 {
+			case m.showTemplates && !m.showTemplatePreview && m.selectedTemplate > 0:
 				m.selectedTemplate--
-			} else if m.menuVisible && m.selectedItem > 0 {
+			case m.menuVisible && m.selectedItem > 0:
 				m.selectedItem--
-			} else if m.showHexDump && m.hexDumpScrollY > 0 {
+			case m.showHexDump && m.hexDumpScrollY > 0:
 				m.hexDumpScrollY--
 			}
+
 			return m, nil
 
-		case "down":
-			if m.showSearch && len(m.searchResults) > 0 && m.selectedResult < len(m.searchResults)-1 {
+		case keyDown:
+			switch {
+			case m.showSearch && len(m.searchResults) > 0 && m.selectedResult < len(m.searchResults)-1:
 				m.selectedResult++
-			} else if m.showConfigDiff {
+			case m.showConfigDiff:
 				m.configDiffScrollY++
-			} else if m.showTopology {
+			case m.showTopology:
 				m.topologyScrollY++
-			} else if m.showTemplates && !m.showTemplatePreview && m.selectedTemplate < len(m.templateList)-1 {
+			case m.showTemplates && !m.showTemplatePreview && m.selectedTemplate < len(m.templateList)-1:
 				m.selectedTemplate++
-			} else if m.menuVisible && m.selectedItem < len(m.menuItems)-1 {
+			case m.menuVisible && m.selectedItem < len(m.menuItems)-1:
 				m.selectedItem++
-			} else if m.showHexDump {
+			case m.showHexDump:
 				m.hexDumpScrollY++
 			}
+
 			return m, nil
 
 		case "pgup":
-			if m.showConfigDiff {
+			switch {
+			case m.showConfigDiff:
 				m.configDiffScrollY -= 10
 				if m.configDiffScrollY < 0 {
 					m.configDiffScrollY = 0
 				}
-			} else if m.showTopology {
+			case m.showTopology:
 				m.topologyScrollY -= 10
 				if m.topologyScrollY < 0 {
 					m.topologyScrollY = 0
 				}
-			} else if m.showHexDump {
+			case m.showHexDump:
 				m.hexDumpScrollY -= 10
 				if m.hexDumpScrollY < 0 {
 					m.hexDumpScrollY = 0
 				}
 			}
+
 			return m, nil
 
 		case "pgdown":
-			if m.showConfigDiff {
+			switch {
+			case m.showConfigDiff:
 				m.configDiffScrollY += 10
-			} else if m.showTopology {
+			case m.showTopology:
 				m.topologyScrollY += 10
-			} else if m.showHexDump {
+			case m.showHexDump:
 				m.hexDumpScrollY += 10
 			}
+
 			return m, nil
 
-		case "enter":
+		case keyEnter:
 			if m.showTemplates && !m.showTemplatePreview {
 				// Show template preview
 				if m.selectedTemplate >= 0 && m.selectedTemplate < len(m.templateList) {
@@ -848,7 +955,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					if err == nil {
 						m.templatePreviewContent = tmpl.Content
 						m.showTemplatePreview = true
-						m.statusMessage = successStyle.Render(fmt.Sprintf("Previewing: %s - Press ESC to go back", tmpl.Name))
+						m.statusMessage = successStyle.Render(
+							fmt.Sprintf("Previewing: %s - Press ESC to go back", tmpl.Name),
+						)
 						m.statusIsError = false
 					} else {
 						m.statusMessage = errorStyle.Render(fmt.Sprintf("Error loading template: %v", err))
@@ -858,6 +967,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			} else if m.menuVisible {
 				m.handleMenuSelection()
 			}
+
 			return m, nil
 
 		// Quick access number keys (1-7) for error injection with default values
@@ -865,36 +975,43 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if !m.menuVisible && !m.showHelp && !m.showLogs && !m.showStats {
 				m.promptForValue(errors.ErrorTypeFCS, "Enter FCS error count (0-100): ")
 			}
+
 			return m, nil
 		case "2":
 			if !m.menuVisible && !m.showHelp && !m.showLogs && !m.showStats {
 				m.promptForValue(errors.ErrorTypeDiscards, "Enter packet discard rate (0-100): ")
 			}
+
 			return m, nil
 		case "3":
 			if !m.menuVisible && !m.showHelp && !m.showLogs && !m.showStats {
 				m.promptForValue(errors.ErrorTypeInterface, "Enter interface error count (0-100): ")
 			}
+
 			return m, nil
 		case "4":
 			if !m.menuVisible && !m.showHelp && !m.showLogs && !m.showStats {
 				m.promptForValue(errors.ErrorTypeUtilization, "Enter utilization percentage (0-100): ")
 			}
+
 			return m, nil
 		case "5":
 			if !m.menuVisible && !m.showHelp && !m.showLogs && !m.showStats {
 				m.promptForValue(errors.ErrorTypeCPU, "Enter CPU percentage (0-100): ")
 			}
+
 			return m, nil
 		case "6":
 			if !m.menuVisible && !m.showHelp && !m.showLogs && !m.showStats {
 				m.promptForValue(errors.ErrorTypeMemory, "Enter memory percentage (0-100): ")
 			}
+
 			return m, nil
 		case "7":
 			if !m.menuVisible && !m.showHelp && !m.showLogs && !m.showStats {
 				m.promptForValue(errors.ErrorTypeDisk, "Enter disk percentage (0-100): ")
 			}
+
 			return m, nil
 		}
 
@@ -902,6 +1019,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.uptime = time.Since(m.startTime)
 		m.errorsActive = len(m.stateManager.GetAllStates())
 		m.refreshStats()
+
 		return m, tickCmd()
 	}
 
@@ -912,6 +1030,7 @@ func (m *model) refreshStats() {
 	if m.stack == nil {
 		return
 	}
+
 	stats := m.stack.GetStats()
 	m.stackStats = stackStatsSnapshot{
 		PacketsReceived: stats.PacketsReceived,
@@ -932,6 +1051,7 @@ func (m *model) toggleNeighborView() {
 	m.showLogs = false
 	m.showStats = false
 	m.showHexDump = false
+
 	m.menuVisible = false
 	if m.showNeighbors {
 		if len(m.neighbors) == 0 {
@@ -988,9 +1108,10 @@ func (m *model) promptForValue(errorType errors.ErrorType, prompt string) {
 
 func (m model) handleValueInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
-	case "enter":
+	case keyEnter:
 		// Process the input
 		var value int
+
 		_, err := fmt.Sscanf(m.valueInputBuffer, "%d", &value)
 		if err != nil || value < 0 || value > 100 {
 			m.statusMessage = errorStyle.Render("✗ Invalid value. Must be between 0 and 100")
@@ -999,22 +1120,26 @@ func (m model) handleValueInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			errorType := getErrorTypeByIndex(m.selectedErrorType)
 			m.injectError(errorType, value)
 		}
+
 		m.valueInputMode = false
 		m.valueInputBuffer = ""
+
 		return m, nil
 
-	case "esc":
+	case keyEsc:
 		// Cancel input
 		m.valueInputMode = false
 		m.valueInputBuffer = ""
 		m.statusMessage = "Input cancelled"
 		m.statusIsError = false
+
 		return m, nil
 
 	case "backspace":
 		if len(m.valueInputBuffer) > 0 {
 			m.valueInputBuffer = m.valueInputBuffer[:len(m.valueInputBuffer)-1]
 		}
+
 		return m, nil
 
 	default:
@@ -1024,6 +1149,7 @@ func (m model) handleValueInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				m.valueInputBuffer += msg.String()
 			}
 		}
+
 		return m, nil
 	}
 }
@@ -1035,6 +1161,7 @@ func getErrorTypeIndex(errorType errors.ErrorType) int {
 			return i
 		}
 	}
+
 	return 0
 }
 
@@ -1043,6 +1170,7 @@ func getErrorTypeByIndex(index int) errors.ErrorType {
 	if index >= 0 && index < len(types) {
 		return types[index]
 	}
+
 	return errors.ErrorTypeFCS
 }
 
@@ -1052,6 +1180,7 @@ func (m *model) injectError(errorType errors.ErrorType, value int) {
 		m.statusMessage = errorStyle.Render("✗ No devices configured")
 		m.statusIsError = true
 		m.addDebugLog("ERROR: No devices configured for error injection")
+
 		return
 	}
 
@@ -1061,6 +1190,7 @@ func (m *model) injectError(errorType errors.ErrorType, value int) {
 	}
 
 	device := m.cfg.Devices[m.selectedDeviceIdx]
+
 	deviceIP := "unknown"
 	if len(device.IPAddresses) > 0 {
 		deviceIP = device.IPAddresses[0].String()
@@ -1074,7 +1204,7 @@ func (m *model) injectError(errorType errors.ErrorType, value int) {
 	m.addDebugLog(fmt.Sprintf("Injected %s (%d%%) on %s (%s)", errorType, value, device.Name, deviceIP))
 }
 
-// View renders the TUI display to the terminal
+// View renders the TUI display to the terminal.
 func (m model) View() string {
 	var s strings.Builder
 
@@ -1087,6 +1217,7 @@ func (m model) View() string {
 	if len(m.cfg.Devices) > 0 && m.selectedDeviceIdx >= 0 && m.selectedDeviceIdx < len(m.cfg.Devices) {
 		selectedDeviceName = m.cfg.Devices[m.selectedDeviceIdx].Name
 	}
+
 	stats := fmt.Sprintf("Uptime: %s  |  Debug: %d (%s)  |  Selected Device: %s  |  Errors Active: %d  |  Injected: %d",
 		formatDuration(m.uptime),
 		m.debugLevel,
@@ -1101,8 +1232,9 @@ func (m model) View() string {
 	// Devices
 	s.WriteString(deviceStyle.Render("📡 Simulated Devices:"))
 	s.WriteString("\n")
+
 	for i, device := range m.cfg.Devices {
-		ip := "no-ip"
+		ip := noIPPlaceholder
 		if len(device.IPAddresses) > 0 {
 			ip = device.IPAddresses[0].String()
 		}
@@ -1110,6 +1242,7 @@ func (m model) View() string {
 		// Highlight selected device
 		prefix := "  "
 		suffix := ""
+
 		if i == m.selectedDeviceIdx {
 			prefix = selectedStyle.Render("→ ")
 			suffix = selectedStyle.Render(" [SELECTED]")
@@ -1125,6 +1258,7 @@ func (m model) View() string {
 			suffix,
 		))
 	}
+
 	s.WriteString("\n")
 
 	// Active errors
@@ -1132,6 +1266,7 @@ func (m model) View() string {
 	if len(activeStates) > 0 {
 		s.WriteString(errorStyle.Render("⚠️  Active Error Injections:"))
 		s.WriteString("\n")
+
 		for _, state := range activeStates {
 			s.WriteString(fmt.Sprintf("  • %s on %s:%s (%d%%)\n",
 				state.ErrorType,
@@ -1140,6 +1275,7 @@ func (m model) View() string {
 				state.Value,
 			))
 		}
+
 		s.WriteString("\n")
 	}
 
@@ -1150,6 +1286,7 @@ func (m model) View() string {
 		} else {
 			s.WriteString(m.statusMessage)
 		}
+
 		s.WriteString("\n\n")
 	}
 
@@ -1321,6 +1458,7 @@ func (m model) renderValueInput() string {
 	if inputDisplay == "" {
 		inputDisplay = "_"
 	}
+
 	input.WriteString(fmt.Sprintf("║ Value: %-56s ║\n", inputDisplay))
 	input.WriteString("║                                                                  ║\n")
 	input.WriteString("║ Press [Enter] to confirm, [Esc] to cancel                       ║\n")
@@ -1334,12 +1472,15 @@ func (m model) renderMenu() string {
 
 	// Get selected device info
 	selectedDeviceInfo := "None"
+
 	if len(m.cfg.Devices) > 0 && m.selectedDeviceIdx >= 0 && m.selectedDeviceIdx < len(m.cfg.Devices) {
 		device := m.cfg.Devices[m.selectedDeviceIdx]
-		deviceIP := "no-ip"
+
+		deviceIP := noIPPlaceholder
 		if len(device.IPAddresses) > 0 {
 			deviceIP = device.IPAddresses[0].String()
 		}
+
 		selectedDeviceInfo = fmt.Sprintf("%s (%s)", device.Name, deviceIP)
 	}
 
@@ -1384,6 +1525,7 @@ func padPanelLine(text string) string {
 			text = text[:width]
 		}
 	}
+
 	return fmt.Sprintf("║ %-64s ║\n", text)
 }
 
@@ -1391,6 +1533,7 @@ func fitColumn(text string, width int) string {
 	if width <= 0 {
 		return ""
 	}
+
 	if len(text) > width {
 		if width > 3 {
 			text = text[:width-3] + "..."
@@ -1398,6 +1541,7 @@ func fitColumn(text string, width int) string {
 			text = text[:width]
 		}
 	}
+
 	return fmt.Sprintf("%-*s", width, text)
 }
 
@@ -1405,24 +1549,27 @@ func formatRelativeTime(ts time.Time) string {
 	if ts.IsZero() {
 		return "never"
 	}
-	elapsed := time.Since(ts)
-	if elapsed < 0 {
-		elapsed = 0
-	}
+
+	elapsed := max(time.Since(ts), 0)
 	if elapsed < time.Second {
 		return "now"
 	}
+
 	if elapsed < time.Minute {
 		return fmt.Sprintf("%ds ago", int(elapsed.Seconds()))
 	}
+
 	if elapsed < time.Hour {
 		return fmt.Sprintf("%dm%ds ago", int(elapsed.Minutes()), int(elapsed.Seconds())%60)
 	}
+
 	hours := int(elapsed.Hours())
 	minutes := int(elapsed.Minutes()) % 60
+
 	if hours >= 100 {
 		return fmt.Sprintf("%dh", hours)
 	}
+
 	return fmt.Sprintf("%dh%dm", hours, minutes)
 }
 
@@ -1540,6 +1687,7 @@ func (m model) renderLogs() string {
 			} else {
 				padded = log + strings.Repeat(" ", 64-len(log))
 			}
+
 			logs.WriteString(fmt.Sprintf("║ %s ║\n", padded))
 		}
 	}
@@ -1557,30 +1705,70 @@ func (m model) renderStatistics() string {
 	stats.WriteString("╔══════════════════════════════════════════════════════════════════╗\n")
 	stats.WriteString("║                     Detailed Statistics                          ║\n")
 	stats.WriteString("╠══════════════════════════════════════════════════════════════════╣\n")
-	stats.WriteString(fmt.Sprintf("║ Uptime:              %s                                    ║\n", formatDuration(m.uptime)))
-	stats.WriteString(fmt.Sprintf("║ Debug Level:         %d (%s)                              ║\n", m.debugLevel, getDebugLevelName(m.debugLevel)))
+	stats.WriteString(
+		fmt.Sprintf("║ Uptime:              %s                                    ║\n", formatDuration(m.uptime)),
+	)
+	stats.WriteString(
+		fmt.Sprintf(
+			"║ Debug Level:         %d (%s)                              ║\n",
+			m.debugLevel,
+			getDebugLevelName(m.debugLevel),
+		),
+	)
 	stats.WriteString(fmt.Sprintf("║ Interface:           %-40s ║\n", m.interfaceName))
 	stats.WriteString("║                                                                  ║\n")
 	stats.WriteString(fmt.Sprintf("║ Total Packets:       %-10d                                    ║\n", totalPackets))
-	stats.WriteString(fmt.Sprintf("║ RX / TX Packets:     %-10d / %-10d                       ║\n", m.stackStats.PacketsReceived, m.stackStats.PacketsSent))
-	stats.WriteString(fmt.Sprintf("║ ARP Req / Rep:       %-10d / %-10d                       ║\n", m.stackStats.ARPRequests, m.stackStats.ARPReplies))
-	stats.WriteString(fmt.Sprintf("║ ICMP Req / Rep:      %-10d / %-10d                       ║\n", m.stackStats.ICMPRequests, m.stackStats.ICMPReplies))
-	stats.WriteString(fmt.Sprintf("║ DNS Queries:         %-10d                                    ║\n", m.stackStats.DNSQueries))
-	stats.WriteString(fmt.Sprintf("║ DHCP Requests:       %-10d                                    ║\n", m.stackStats.DHCPRequests))
-	stats.WriteString(fmt.Sprintf("║ Packets Injected:    %-10d                                    ║\n", m.packetsInjected))
-	stats.WriteString(fmt.Sprintf("║ Active Errors:       %-10d                                    ║\n", m.errorsActive))
+	stats.WriteString(
+		fmt.Sprintf(
+			"║ RX / TX Packets:     %-10d / %-10d                       ║\n",
+			m.stackStats.PacketsReceived,
+			m.stackStats.PacketsSent,
+		),
+	)
+	stats.WriteString(
+		fmt.Sprintf(
+			"║ ARP Req / Rep:       %-10d / %-10d                       ║\n",
+			m.stackStats.ARPRequests,
+			m.stackStats.ARPReplies,
+		),
+	)
+	stats.WriteString(
+		fmt.Sprintf(
+			"║ ICMP Req / Rep:      %-10d / %-10d                       ║\n",
+			m.stackStats.ICMPRequests,
+			m.stackStats.ICMPReplies,
+		),
+	)
+	stats.WriteString(
+		fmt.Sprintf("║ DNS Queries:         %-10d                                    ║\n", m.stackStats.DNSQueries),
+	)
+	stats.WriteString(
+		fmt.Sprintf("║ DHCP Requests:       %-10d                                    ║\n", m.stackStats.DHCPRequests),
+	)
+	stats.WriteString(
+		fmt.Sprintf("║ Packets Injected:    %-10d                                    ║\n", m.packetsInjected),
+	)
+	stats.WriteString(
+		fmt.Sprintf("║ Active Errors:       %-10d                                    ║\n", m.errorsActive),
+	)
 	stats.WriteString("║                                                                  ║\n")
-	stats.WriteString(fmt.Sprintf("║ Devices Simulated:   %-10d                                    ║\n", len(m.cfg.Devices)))
+	stats.WriteString(
+		fmt.Sprintf("║ Devices Simulated:   %-10d                                    ║\n", len(m.cfg.Devices)),
+	)
 
 	snmpCount := 0
+
 	for _, dev := range m.cfg.Devices {
 		if dev.SNMPConfig.Community != "" || dev.SNMPConfig.WalkFile != "" {
 			snmpCount++
 		}
 	}
+
 	stats.WriteString(fmt.Sprintf("║ SNMP Devices:        %-10d                                    ║\n", snmpCount))
 	stats.WriteString("║                                                                  ║\n")
-	stats.WriteString(fmt.Sprintf("║ Start Time:          %s                                    ║\n", m.startTime.Format("15:04:05")))
+	stats.WriteString(
+		fmt.Sprintf("║ Start Time:          %s                                    ║\n", m.startTime.Format("15:04:05")),
+	)
 	stats.WriteString("╚══════════════════════════════════════════════════════════════════╝")
 
 	return stats.String()
@@ -1597,6 +1785,7 @@ func (m model) renderNeighbors() string {
 		panel.WriteString(padPanelLine("No neighbors discovered yet"))
 		panel.WriteString(padPanelLine("Advertise LLDP/CDP/EDP/FDP to populate this view"))
 		panel.WriteString("╚══════════════════════════════════════════════════════════════════╝")
+
 		return panel.String()
 	}
 
@@ -1606,9 +1795,11 @@ func (m model) renderNeighbors() string {
 		if rows[i].LocalDevice != rows[j].LocalDevice {
 			return rows[i].LocalDevice < rows[j].LocalDevice
 		}
+
 		if rows[i].Protocol != rows[j].Protocol {
 			return rows[i].Protocol < rows[j].Protocol
 		}
+
 		return rows[i].RemoteDevice < rows[j].RemoteDevice
 	})
 
@@ -1631,10 +1822,12 @@ func (m model) renderNeighbors() string {
 				remote = fmt.Sprintf("%s/%s", remote, entry.RemotePort)
 			}
 		}
+
 		mgmt := entry.ManagementAddress
 		if mgmt == "" {
 			mgmt = "-"
 		}
+
 		line := fmt.Sprintf("%s %s %s %s %s",
 			fitColumn(strings.ToUpper(entry.Protocol), 5),
 			fitColumn(entry.LocalDevice, 14),
@@ -1646,6 +1839,7 @@ func (m model) renderNeighbors() string {
 	}
 
 	panel.WriteString("╠══════════════════════════════════════════════════════════════════╣\n")
+
 	summary := fmt.Sprintf("Total neighbors: %d  •  TTL refresh every 30s", len(rows))
 	panel.WriteString(padPanelLine(summary))
 	panel.WriteString(padPanelLine("Press [N]/[n] to close this view"))
@@ -1665,6 +1859,7 @@ func (m model) renderHexDump() string {
 		dump.WriteString("║ No packets captured yet                                          ║\n")
 		dump.WriteString("║ Packets will appear here as they are received                    ║\n")
 		dump.WriteString("╚══════════════════════════════════════════════════════════════════╝")
+
 		return dump.String()
 	}
 
@@ -1672,6 +1867,7 @@ func (m model) renderHexDump() string {
 	if m.hexDumpPacketIndex >= len(m.packetBuffer) {
 		m.hexDumpPacketIndex = len(m.packetBuffer) - 1
 	}
+
 	pkt := m.packetBuffer[m.hexDumpPacketIndex]
 
 	// Packet metadata
@@ -1689,45 +1885,39 @@ func (m model) renderHexDump() string {
 	// Calculate number of lines to display (16 bytes per line)
 	maxLines := 15 // Display max 15 lines
 	totalLines := (len(pkt.Data) + 15) / 16
+
 	startLine := m.hexDumpScrollY
 	if startLine >= totalLines {
-		startLine = totalLines - 1
-		if startLine < 0 {
-			startLine = 0
-		}
+		startLine = max(totalLines-1, 0)
 	}
-	endLine := startLine + maxLines
-	if endLine > totalLines {
-		endLine = totalLines
-	}
+
+	endLine := min(startLine+maxLines, totalLines)
 
 	// Render hex dump lines
 	for line := startLine; line < endLine; line++ {
 		offset := line * 16
-		end := offset + 16
-		if end > len(pkt.Data) {
-			end = len(pkt.Data)
-		}
+		end := min(offset+16, len(pkt.Data))
 
 		// Offset
 		lineStr := fmt.Sprintf("║ %04x   ", offset)
 
 		// Hex bytes
-		hexStr := ""
-		asciiStr := ""
+		var hexBuilder, asciiBuilder strings.Builder
+
 		for i := offset; i < end; i++ {
 			b := pkt.Data[i]
-			hexStr += fmt.Sprintf("%02x ", b)
+			fmt.Fprintf(&hexBuilder, "%02x ", b)
+
 			if b >= 32 && b <= 126 {
-				asciiStr += string(b)
+				asciiBuilder.WriteByte(b)
 			} else {
-				asciiStr += "."
+				asciiBuilder.WriteByte('.')
 			}
 		}
 
 		// Pad hex to align ASCII column (48 chars for 16 bytes)
-		hexStr = fmt.Sprintf("%-48s", hexStr)
-		asciiStr = fmt.Sprintf("%-16s", asciiStr)
+		hexStr := fmt.Sprintf("%-48s", hexBuilder.String())
+		asciiStr := fmt.Sprintf("%-16s", asciiBuilder.String())
 
 		lineStr += hexStr + " " + asciiStr + " ║\n"
 		dump.WriteString(lineStr)
@@ -1759,20 +1949,23 @@ func (m model) renderTemplateBrowser() string {
 		// Show template name
 		if m.selectedTemplate >= 0 && m.selectedTemplate < len(m.templateList) {
 			tmpl := m.templateList[m.selectedTemplate]
-			panel.WriteString(padPanelLine(fmt.Sprintf("Name: %s", tmpl.Name)))
-			panel.WriteString(padPanelLine(fmt.Sprintf("Description: %s", tmpl.Description)))
+			panel.WriteString(padPanelLine("Name: " + tmpl.Name))
+			panel.WriteString(padPanelLine("Description: " + tmpl.Description))
 			panel.WriteString("╠══════════════════════════════════════════════════════════════════╣\n")
 		}
 
 		// Show first 15 lines of content
 		lines := strings.Split(m.templatePreviewContent, "\n")
+
 		maxPreviewLines := 15
 		if len(lines) > maxPreviewLines {
 			lines = lines[:maxPreviewLines]
 		}
+
 		for _, line := range lines {
 			panel.WriteString(padPanelLine(line))
 		}
+
 		if len(strings.Split(m.templatePreviewContent, "\n")) > maxPreviewLines {
 			panel.WriteString(padPanelLine("... (content truncated)"))
 		}
@@ -1780,6 +1973,7 @@ func (m model) renderTemplateBrowser() string {
 		panel.WriteString("╠══════════════════════════════════════════════════════════════════╣\n")
 		panel.WriteString(padPanelLine("[ESC] Back to list  [t] Close browser"))
 		panel.WriteString("╚══════════════════════════════════════════════════════════════════╝")
+
 		return panel.String()
 	}
 
@@ -1791,6 +1985,7 @@ func (m model) renderTemplateBrowser() string {
 	if len(m.templateList) == 0 {
 		panel.WriteString(padPanelLine("No templates available"))
 		panel.WriteString("╚══════════════════════════════════════════════════════════════════╝")
+
 		return panel.String()
 	}
 
@@ -1805,6 +2000,7 @@ func (m model) renderTemplateBrowser() string {
 		if len(line) > 64 {
 			line = line[:61] + "..."
 		}
+
 		panel.WriteString(padPanelLine(line))
 	}
 
@@ -1825,6 +2021,7 @@ func (m model) renderValidation() string {
 	if m.validationResults == nil {
 		panel.WriteString(padPanelLine("No validation results available"))
 		panel.WriteString("╚══════════════════════════════════════════════════════════════════╝")
+
 		return panel.String()
 	}
 
@@ -1848,34 +2045,49 @@ func (m model) renderValidation() string {
 		// Show errors first (red)
 		if errorCount > 0 {
 			panel.WriteString(padPanelLine(validationErrorStyle.Render("ERRORS:")))
+
 			for i, err := range m.validationResults.Errors {
 				if i >= 8 { // Limit display to prevent overflow
 					remaining := errorCount - i
-					panel.WriteString(padPanelLine(validationErrorStyle.Render(fmt.Sprintf("  ... and %d more error(s)", remaining))))
+					panel.WriteString(
+						padPanelLine(validationErrorStyle.Render(fmt.Sprintf("  ... and %d more error(s)", remaining))),
+					)
+
 					break
 				}
+
 				errLine := fmt.Sprintf("  [%s] %s", err.Field, err.Message)
 				if len(errLine) > 62 {
 					errLine = errLine[:59] + "..."
 				}
+
 				panel.WriteString(padPanelLine(validationErrorStyle.Render(errLine)))
 			}
+
 			panel.WriteString(padPanelLine(""))
 		}
 
 		// Show warnings (yellow)
 		if warningCount > 0 {
 			panel.WriteString(padPanelLine(validationWarningStyle.Render("WARNINGS:")))
+
 			for i, warn := range m.validationResults.Warnings {
 				if i >= 8 { // Limit display to prevent overflow
 					remaining := warningCount - i
-					panel.WriteString(padPanelLine(validationWarningStyle.Render(fmt.Sprintf("  ... and %d more warning(s)", remaining))))
+					panel.WriteString(
+						padPanelLine(
+							validationWarningStyle.Render(fmt.Sprintf("  ... and %d more warning(s)", remaining)),
+						),
+					)
+
 					break
 				}
+
 				warnLine := fmt.Sprintf("  [%s] %s", warn.Field, warn.Message)
 				if len(warnLine) > 62 {
 					warnLine = warnLine[:59] + "..."
 				}
+
 				panel.WriteString(padPanelLine(validationWarningStyle.Render(warnLine)))
 			}
 		}
@@ -1888,7 +2100,7 @@ func (m model) renderValidation() string {
 	return panel.String()
 }
 
-// AddPacket adds a packet to the capture buffer
+// AddPacket adds a packet to the capture buffer.
 func (m *model) AddPacket(protocol, srcAddr, dstAddr string, data []byte) {
 	pkt := CapturedPacket{
 		Timestamp: time.Now(),
@@ -1910,19 +2122,34 @@ func (m *model) AddPacket(protocol, srcAddr, dstAddr string, data []byte) {
 			m.hexDumpPacketIndex = len(m.packetBuffer) - 1
 		}
 	}
-
 }
 
-// Run starts the interactive mode
-func Run(interfaceName string, cfg *config.Config, debugConfig *logging.DebugConfig, stack *protocols.Stack, startTime time.Time, reloadFunc func() (*config.Config, error)) error {
+// Run starts the interactive mode.
+func Run(
+	interfaceName string,
+	cfg *config.Config,
+	debugConfig *logging.DebugConfig,
+	stack *protocols.Stack,
+	startTime time.Time,
+	reloadFunc func() (*config.Config, error),
+) error {
 	return RunWithConfigPath(interfaceName, cfg, debugConfig, stack, startTime, reloadFunc, "")
 }
 
-// RunWithConfigPath starts the interactive mode with a config file path for editing
-func RunWithConfigPath(interfaceName string, cfg *config.Config, debugConfig *logging.DebugConfig, stack *protocols.Stack, startTime time.Time, reloadFunc func() (*config.Config, error), configFilePath string) error {
+// RunWithConfigPath starts the interactive mode with a config file path for editing.
+func RunWithConfigPath(
+	interfaceName string,
+	cfg *config.Config,
+	debugConfig *logging.DebugConfig,
+	stack *protocols.Stack,
+	startTime time.Time,
+	reloadFunc func() (*config.Config, error),
+	configFilePath string,
+) error {
 	if debugConfig == nil {
 		debugConfig = logging.NewDebugConfig(1)
 	}
+
 	debugLevel := debugConfig.GetGlobal()
 
 	if startTime.IsZero() {
@@ -1956,8 +2183,8 @@ func RunWithConfigPath(interfaceName string, cfg *config.Config, debugConfig *lo
 		menuItems:      menuItems,
 		startTime:      startTime,
 		configFilePath: configFilePath,
-		exportFormat:   "json",
-		searchCategory: "all",
+		exportFormat:   formatJSON,
+		searchCategory: searchCategoryAll,
 		statusMessage:  "Press 'i' for menu, 'r' to reload config, 'h' for help",
 		debugLogs:      make([]string, 0, 100),
 	}
@@ -1967,7 +2194,7 @@ func RunWithConfigPath(interfaceName string, cfg *config.Config, debugConfig *lo
 	}
 
 	// Add initial log entry
-	m.addDebugLog(fmt.Sprintf("Started NIAC-Go interactive mode on %s", interfaceName))
+	m.addDebugLog("Started NIAC-Go interactive mode on " + interfaceName)
 	m.addDebugLog(fmt.Sprintf("Debug level: %d (%s)", debugLevel, getDebugLevelName(debugLevel)))
 	m.addDebugLog(fmt.Sprintf("Simulating %d device(s)", len(cfg.Devices)))
 
@@ -1980,7 +2207,7 @@ func RunWithConfigPath(interfaceName string, cfg *config.Config, debugConfig *lo
 	return nil
 }
 
-// closeAllOverlays closes all overlay panels
+// closeAllOverlays closes all overlay panels.
 func (m *model) closeAllOverlays() {
 	m.showHelp = false
 	m.showLogs = false
@@ -1994,19 +2221,20 @@ func (m *model) closeAllOverlays() {
 	m.valueInputMode = false
 }
 
-// handleSearchInput handles keyboard input during search mode
+// handleSearchInput handles keyboard input during search mode.
 func (m model) handleSearchInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
-	case "esc":
+	case keyEsc:
 		m.searchMode = false
 		m.showSearch = false
 		m.searchQuery = ""
 		m.searchResults = nil
 		m.statusMessage = "Search cancelled"
 		m.statusIsError = false
+
 		return m, nil
 
-	case "enter":
+	case keyEnter:
 		// Select current search result
 		if len(m.searchResults) > 0 && m.selectedResult >= 0 && m.selectedResult < len(m.searchResults) {
 			result := m.searchResults[m.selectedResult]
@@ -2018,39 +2246,45 @@ func (m model) handleSearchInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			case "device":
 				if result.Index >= 0 && result.Index < len(m.cfg.Devices) {
 					m.selectedDeviceIdx = result.Index
-					m.statusMessage = successStyle.Render(fmt.Sprintf("Selected device: %s", result.Title))
+					m.statusMessage = successStyle.Render("Selected device: " + result.Title)
 				}
 			case "log":
 				m.showLogs = true
 				m.statusMessage = successStyle.Render("Opened log viewer")
 			}
+
 			m.statusIsError = false
 		}
+
 		return m, nil
 
 	case "up":
 		if m.selectedResult > 0 {
 			m.selectedResult--
 		}
+
 		return m, nil
 
-	case "down":
+	case keyDown:
 		if m.selectedResult < len(m.searchResults)-1 {
 			m.selectedResult++
 		}
+
 		return m, nil
 
 	case "tab":
 		// Cycle search category
 		switch m.searchCategory {
-		case "all":
-			m.searchCategory = "devices"
-		case "devices":
-			m.searchCategory = "logs"
-		case "logs":
-			m.searchCategory = "all"
+		case searchCategoryAll:
+			m.searchCategory = searchCategoryDevices
+		case searchCategoryDevices:
+			m.searchCategory = searchCategoryLogs
+		case searchCategoryLogs:
+			m.searchCategory = searchCategoryAll
 		}
+
 		m.performSearch()
+
 		return m, nil
 
 	case "backspace":
@@ -2058,6 +2292,7 @@ func (m model) handleSearchInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.searchQuery = m.searchQuery[:len(m.searchQuery)-1]
 			m.performSearch()
 		}
+
 		return m, nil
 
 	default:
@@ -2069,11 +2304,12 @@ func (m model) handleSearchInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				m.performSearch()
 			}
 		}
+
 		return m, nil
 	}
 }
 
-// performSearch executes the search and populates results
+// performSearch executes the search and populates results.
 func (m *model) performSearch() {
 	m.searchResults = nil
 	m.selectedResult = 0
@@ -2085,14 +2321,15 @@ func (m *model) performSearch() {
 	query := strings.ToLower(m.searchQuery)
 
 	// Search devices
-	if m.searchCategory == "all" || m.searchCategory == "devices" {
+	if m.searchCategory == searchCategoryAll || m.searchCategory == searchCategoryDevices {
 		for i, device := range m.cfg.Devices {
 			if strings.Contains(strings.ToLower(device.Name), query) ||
 				strings.Contains(strings.ToLower(device.Type), query) {
-				ip := "no-ip"
+				ip := noIPPlaceholder
 				if len(device.IPAddresses) > 0 {
 					ip = device.IPAddresses[0].String()
 				}
+
 				m.searchResults = append(m.searchResults, searchResult{
 					Category: "device",
 					Title:    device.Name,
@@ -2109,6 +2346,7 @@ func (m *model) performSearch() {
 						Detail:   fmt.Sprintf("%s - %s", device.Type, ip.String()),
 						Index:    i,
 					})
+
 					break
 				}
 			}
@@ -2116,7 +2354,7 @@ func (m *model) performSearch() {
 	}
 
 	// Search logs
-	if m.searchCategory == "all" || m.searchCategory == "logs" {
+	if m.searchCategory == searchCategoryAll || m.searchCategory == searchCategoryLogs {
 		for i, log := range m.debugLogs {
 			if strings.Contains(strings.ToLower(log), query) {
 				m.searchResults = append(m.searchResults, searchResult{
@@ -2130,7 +2368,7 @@ func (m *model) performSearch() {
 	}
 
 	// Search active errors
-	if m.searchCategory == "all" {
+	if m.searchCategory == searchCategoryAll {
 		for _, state := range m.stateManager.GetAllStates() {
 			if strings.Contains(strings.ToLower(state.DeviceIP), query) ||
 				strings.Contains(strings.ToLower(string(state.ErrorType)), query) {
@@ -2145,51 +2383,58 @@ func (m *model) performSearch() {
 	}
 }
 
-// handleExportInput handles keyboard input during export panel
+// handleExportInput handles keyboard input during export panel.
 func (m model) handleExportInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
-	case "esc":
+	case keyEsc:
 		m.showExport = false
 		m.statusMessage = "Export cancelled"
 		m.statusIsError = false
+
 		return m, nil
 
 	case "j":
-		m.exportFormat = "json"
+		m.exportFormat = formatJSON
 		m.statusMessage = "Export format: JSON"
 		m.statusIsError = false
+
 		return m, nil
 
 	case "c":
 		m.exportFormat = "csv"
 		m.statusMessage = "Export format: CSV"
 		m.statusIsError = false
+
 		return m, nil
 
-	case "enter":
+	case keyEnter:
 		// Perform export
 		err := m.exportStats()
 		if err != nil {
 			m.statusMessage = errorStyle.Render(fmt.Sprintf("Export failed: %v", err))
 			m.statusIsError = true
 		} else {
-			m.statusMessage = successStyle.Render(fmt.Sprintf("Exported to: %s", m.lastExportPath))
+			m.statusMessage = successStyle.Render("Exported to: " + m.lastExportPath)
 			m.statusIsError = false
 			m.showExport = false
 		}
+
 		return m, nil
 	}
 
 	return m, nil
 }
 
-// exportStats exports current statistics to a file
+// exportStats exports current statistics to a file.
 func (m *model) exportStats() error {
 	timestamp := time.Now().Format("20060102-150405")
-	var filename string
-	var err error
 
-	if m.exportFormat == "json" {
+	var (
+		filename string
+		err      error
+	)
+
+	if m.exportFormat == formatJSON {
 		filename = fmt.Sprintf("niac-stats-%s.json", timestamp)
 		err = m.exportStatsJSON(filename)
 	} else {
@@ -2203,14 +2448,14 @@ func (m *model) exportStats() error {
 
 	m.lastExportPath = filename
 	m.lastExportTime = time.Now()
-	m.addDebugLog(fmt.Sprintf("Exported stats to %s", filename))
+	m.addDebugLog("Exported stats to " + filename)
 
 	return nil
 }
 
-// exportStatsJSON exports statistics to JSON format
+// exportStatsJSON exports statistics to JSON format.
 func (m *model) exportStatsJSON(filename string) error {
-	stats := map[string]interface{}{
+	stats := map[string]any{
 		"timestamp":        time.Now().Format(time.RFC3339),
 		"interface":        m.interfaceName,
 		"uptime_seconds":   m.uptime.Seconds(),
@@ -2233,65 +2478,104 @@ func (m *model) exportStatsJSON(filename string) error {
 
 	data, err := json.MarshalIndent(stats, "", "  ")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to marshal stats JSON: %w", err)
 	}
 
-	return os.WriteFile(filename, data, 0600)
+	if err := os.WriteFile(filename, data, 0o600); err != nil {
+		return fmt.Errorf("failed to write stats file: %w", err)
+	}
+	return nil
 }
 
-// exportStatsCSV exports statistics to CSV format
+// exportStatsCSV exports statistics to CSV format.
 func (m *model) exportStatsCSV(filename string) error {
-	file, err := os.Create(filename) // #nosec G304 -- user-initiated export
+	// SECURITY FIX #163: Create file with restricted permissions (owner-only)
+	file, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600) // #nosec G304 -- user-initiated
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create CSV file: %w", err)
 	}
-	defer file.Close()
+
+	defer func() { _ = file.Close() }()
 
 	writer := csv.NewWriter(file)
 	defer writer.Flush()
 
 	// Write header
-	writer.Write([]string{"Metric", "Value", "Category"}) // #nosec G104
+	_ = writer.Write([]string{"Metric", "Value", "Category"}) // CSV write errors handled by writer.Error()
 
 	// General stats
-	writer.Write([]string{"Timestamp", time.Now().Format(time.RFC3339), "General"})              // #nosec G104
-	writer.Write([]string{"Interface", m.interfaceName, "General"})                              // #nosec G104
-	writer.Write([]string{"Uptime (seconds)", fmt.Sprintf("%.0f", m.uptime.Seconds()), "General"}) // #nosec G104
-	writer.Write([]string{"Debug Level", fmt.Sprintf("%d", m.debugLevel), "General"})            // #nosec G104
-	writer.Write([]string{"Device Count", fmt.Sprintf("%d", len(m.cfg.Devices)), "General"})     // #nosec G104
-	writer.Write([]string{"Errors Active", fmt.Sprintf("%d", m.errorsActive), "General"})        // #nosec G104
-	writer.Write([]string{"Packets Injected", fmt.Sprintf("%d", m.packetsInjected), "General"})  // #nosec G104
+	_ = writer.Write(
+		[]string{"Timestamp", time.Now().Format(time.RFC3339), "General"},
+	) // CSV write errors handled by writer.Error()
+	_ = writer.Write(
+		[]string{"Interface", m.interfaceName, "General"},
+	) // CSV write errors handled by writer.Error()
+	_ = writer.Write(
+		[]string{"Uptime (seconds)", fmt.Sprintf("%.0f", m.uptime.Seconds()), "General"},
+	) // CSV write errors handled by writer.Error()
+	_ = writer.Write(
+		[]string{"Debug Level", strconv.Itoa(m.debugLevel), "General"},
+	) // CSV write errors handled by writer.Error()
+	_ = writer.Write(
+		[]string{"Device Count", strconv.Itoa(len(m.cfg.Devices)), "General"},
+	) // CSV write errors handled by writer.Error()
+	_ = writer.Write(
+		[]string{"Errors Active", strconv.Itoa(m.errorsActive), "General"},
+	) // CSV write errors handled by writer.Error()
+	_ = writer.Write(
+		[]string{"Packets Injected", strconv.Itoa(m.packetsInjected), "General"},
+	) // CSV write errors handled by writer.Error()
 
 	// Stack stats
-	writer.Write([]string{"Packets Received", fmt.Sprintf("%d", m.stackStats.PacketsReceived), "Network"}) // #nosec G104
-	writer.Write([]string{"Packets Sent", fmt.Sprintf("%d", m.stackStats.PacketsSent), "Network"})         // #nosec G104
-	writer.Write([]string{"ARP Requests", fmt.Sprintf("%d", m.stackStats.ARPRequests), "Protocol"})        // #nosec G104
-	writer.Write([]string{"ARP Replies", fmt.Sprintf("%d", m.stackStats.ARPReplies), "Protocol"})          // #nosec G104
-	writer.Write([]string{"ICMP Requests", fmt.Sprintf("%d", m.stackStats.ICMPRequests), "Protocol"})      // #nosec G104
-	writer.Write([]string{"ICMP Replies", fmt.Sprintf("%d", m.stackStats.ICMPReplies), "Protocol"})        // #nosec G104
-	writer.Write([]string{"DNS Queries", fmt.Sprintf("%d", m.stackStats.DNSQueries), "Protocol"})          // #nosec G104
-	writer.Write([]string{"DHCP Requests", fmt.Sprintf("%d", m.stackStats.DHCPRequests), "Protocol"})      // #nosec G104
+	_ = writer.Write(
+		[]string{"Packets Received", strconv.FormatUint(m.stackStats.PacketsReceived, 10), "Network"},
+	) // CSV write errors handled by writer.Error()
+	_ = writer.Write(
+		[]string{"Packets Sent", strconv.FormatUint(m.stackStats.PacketsSent, 10), "Network"},
+	) // CSV write errors handled by writer.Error()
+	_ = writer.Write(
+		[]string{"ARP Requests", strconv.FormatUint(m.stackStats.ARPRequests, 10), "Protocol"},
+	) // CSV write errors handled by writer.Error()
+	_ = writer.Write(
+		[]string{"ARP Replies", strconv.FormatUint(m.stackStats.ARPReplies, 10), "Protocol"},
+	) // CSV write errors handled by writer.Error()
+	_ = writer.Write(
+		[]string{"ICMP Requests", strconv.FormatUint(m.stackStats.ICMPRequests, 10), "Protocol"},
+	) // CSV write errors handled by writer.Error()
+	_ = writer.Write(
+		[]string{"ICMP Replies", strconv.FormatUint(m.stackStats.ICMPReplies, 10), "Protocol"},
+	) // CSV write errors handled by writer.Error()
+	_ = writer.Write(
+		[]string{"DNS Queries", strconv.FormatUint(m.stackStats.DNSQueries, 10), "Protocol"},
+	) // CSV write errors handled by writer.Error()
+	_ = writer.Write(
+		[]string{"DHCP Requests", strconv.FormatUint(m.stackStats.DHCPRequests, 10), "Protocol"},
+	) // CSV write errors handled by writer.Error()
 
 	// Devices
 	for _, device := range m.cfg.Devices {
-		ip := "no-ip"
+		ip := noIPPlaceholder
 		if len(device.IPAddresses) > 0 {
 			ip = device.IPAddresses[0].String()
 		}
-		writer.Write([]string{device.Name, fmt.Sprintf("%s,%s,%s", device.Type, ip, device.MACAddress.String()), "Device"}) // #nosec G104
+
+		_ = writer.Write(
+			[]string{device.Name, fmt.Sprintf("%s,%s,%s", device.Type, ip, device.MACAddress.String()), "Device"},
+		) // CSV write errors handled by writer.Error()
 	}
 
 	return nil
 }
 
-// getDevicesSummary returns a summary of devices for export
+// getDevicesSummary returns a summary of devices for export.
 func (m *model) getDevicesSummary() []map[string]string {
 	devices := make([]map[string]string, 0, len(m.cfg.Devices))
 	for _, device := range m.cfg.Devices {
-		ip := "no-ip"
+		ip := noIPPlaceholder
 		if len(device.IPAddresses) > 0 {
 			ip = device.IPAddresses[0].String()
 		}
+
 		devices = append(devices, map[string]string{
 			"name": device.Name,
 			"type": device.Type,
@@ -2299,32 +2583,36 @@ func (m *model) getDevicesSummary() []map[string]string {
 			"mac":  device.MACAddress.String(),
 		})
 	}
+
 	return devices
 }
 
-// openEditor opens the config file in the user's preferred editor
+// openEditor opens the config file in the user's preferred editor.
 func (m *model) openEditor() tea.Cmd {
 	editor := os.Getenv("EDITOR")
 	if editor == "" {
 		editor = os.Getenv("VISUAL")
 	}
+
 	if editor == "" {
 		editor = "vi" // Default fallback
 	}
 
-	c := exec.Command(editor, m.configFilePath) // #nosec G204 -- user-specified editor
+	c := exec.CommandContext(context.Background(), editor, m.configFilePath) // #nosec G204 -- user-specified editor
+
 	return tea.ExecProcess(c, func(err error) tea.Msg {
 		return editorFinishedMsg{err: err}
 	})
 }
 
-// generateConfigDiff generates a diff between current and previous config
+// generateConfigDiff generates a diff between current and previous config.
 func (m *model) generateConfigDiff() {
 	m.configDiffContent = nil
 
 	if m.previousConfig == nil {
 		m.configDiffContent = append(m.configDiffContent, "No previous configuration to compare.")
 		m.configDiffContent = append(m.configDiffContent, "Reload config with [r] to create a comparison baseline.")
+
 		return
 	}
 
@@ -2337,13 +2625,24 @@ func (m *model) generateConfigDiff() {
 
 	if prevCount != currCount {
 		if currCount > prevCount {
-			m.configDiffContent = append(m.configDiffContent, diffAddedStyle.Render(fmt.Sprintf("+ Device count: %d -> %d (+%d)", prevCount, currCount, currCount-prevCount)))
+			m.configDiffContent = append(
+				m.configDiffContent,
+				diffAddedStyle.Render(
+					fmt.Sprintf("+ Device count: %d -> %d (+%d)", prevCount, currCount, currCount-prevCount),
+				),
+			)
 		} else {
-			m.configDiffContent = append(m.configDiffContent, diffRemovedStyle.Render(fmt.Sprintf("- Device count: %d -> %d (-%d)", prevCount, currCount, prevCount-currCount)))
+			m.configDiffContent = append(
+				m.configDiffContent,
+				diffRemovedStyle.Render(
+					fmt.Sprintf("- Device count: %d -> %d (-%d)", prevCount, currCount, prevCount-currCount),
+				),
+			)
 		}
 	} else {
 		m.configDiffContent = append(m.configDiffContent, fmt.Sprintf("  Device count: %d (unchanged)", currCount))
 	}
+
 	m.configDiffContent = append(m.configDiffContent, "")
 
 	// Build device maps for comparison
@@ -2359,24 +2658,33 @@ func (m *model) generateConfigDiff() {
 
 	// Find added devices
 	m.configDiffContent = append(m.configDiffContent, diffHeaderStyle.Render("--- Devices ---"))
+
 	for name, device := range currDevices {
 		if _, exists := prevDevices[name]; !exists {
-			ip := "no-ip"
+			ip := noIPPlaceholder
 			if len(device.IPAddresses) > 0 {
 				ip = device.IPAddresses[0].String()
 			}
-			m.configDiffContent = append(m.configDiffContent, diffAddedStyle.Render(fmt.Sprintf("+ %s (%s, %s)", name, device.Type, ip)))
+
+			m.configDiffContent = append(
+				m.configDiffContent,
+				diffAddedStyle.Render(fmt.Sprintf("+ %s (%s, %s)", name, device.Type, ip)),
+			)
 		}
 	}
 
 	// Find removed devices
 	for name, device := range prevDevices {
 		if _, exists := currDevices[name]; !exists {
-			ip := "no-ip"
+			ip := noIPPlaceholder
 			if len(device.IPAddresses) > 0 {
 				ip = device.IPAddresses[0].String()
 			}
-			m.configDiffContent = append(m.configDiffContent, diffRemovedStyle.Render(fmt.Sprintf("- %s (%s, %s)", name, device.Type, ip)))
+
+			m.configDiffContent = append(
+				m.configDiffContent,
+				diffRemovedStyle.Render(fmt.Sprintf("- %s (%s, %s)", name, device.Type, ip)),
+			)
 		}
 	}
 
@@ -2395,7 +2703,7 @@ func (m *model) generateConfigDiff() {
 	}
 }
 
-// compareDevices compares two devices and returns a list of changes
+// compareDevices compares two devices and returns a list of changes.
 func (m *model) compareDevices(prev, curr *config.Device) []string {
 	var changes []string
 
@@ -2414,6 +2722,7 @@ func (m *model) compareDevices(prev, curr *config.Device) []string {
 	for _, ip := range prev.IPAddresses {
 		prevIPs[ip.String()] = true
 	}
+
 	currIPs := make(map[string]bool)
 	for _, ip := range curr.IPAddresses {
 		currIPs[ip.String()] = true
@@ -2421,19 +2730,20 @@ func (m *model) compareDevices(prev, curr *config.Device) []string {
 
 	for ip := range currIPs {
 		if !prevIPs[ip] {
-			changes = append(changes, diffAddedStyle.Render(fmt.Sprintf("+ IP: %s", ip)))
+			changes = append(changes, diffAddedStyle.Render("+ IP: "+ip))
 		}
 	}
+
 	for ip := range prevIPs {
 		if !currIPs[ip] {
-			changes = append(changes, diffRemovedStyle.Render(fmt.Sprintf("- IP: %s", ip)))
+			changes = append(changes, diffRemovedStyle.Render("- IP: "+ip))
 		}
 	}
 
 	return changes
 }
 
-// generateTopologyView generates an ASCII network topology diagram
+// generateTopologyView generates an ASCII network topology diagram.
 func (m *model) generateTopologyView() {
 	var sb strings.Builder
 
@@ -2455,6 +2765,7 @@ func (m *model) generateTopologyView() {
 
 	for nodeType, nodes := range nodesByType {
 		sb.WriteString(fmt.Sprintf("  [%s]\n", nodeType))
+
 		for _, node := range nodes {
 			sb.WriteString(fmt.Sprintf("    +-- %s\n", node.Name))
 		}
@@ -2477,9 +2788,11 @@ func (m *model) generateTopologyView() {
 			if link.LinkType != "" {
 				linkInfo += fmt.Sprintf(" (%s)", link.LinkType)
 			}
+
 			if len(link.VLANs) > 0 {
 				linkInfo += fmt.Sprintf(" VLANs: %v", link.VLANs)
 			}
+
 			sb.WriteString(linkInfo + "\n")
 		}
 	}
@@ -2494,7 +2807,7 @@ func (m *model) generateTopologyView() {
 	m.topologyContent = sb.String()
 }
 
-// generateASCIIDiagram creates a simple ASCII network diagram
+// generateASCIIDiagram creates a simple ASCII network diagram.
 func (m *model) generateASCIIDiagram(topology api.Topology) string {
 	var sb strings.Builder
 
@@ -2522,18 +2835,24 @@ func (m *model) generateASCIIDiagram(topology api.Topology) string {
 	if len(routers) > 0 {
 		sb.WriteString("                        ROUTERS\n")
 		sb.WriteString("  ")
+
 		for i, r := range routers {
 			if i > 0 {
 				sb.WriteString("    ")
 			}
+
 			sb.WriteString(fmt.Sprintf("[%s]", truncateName(r.Name, 12)))
 		}
+
 		sb.WriteString("\n")
+
 		if len(switches) > 0 || len(others) > 0 {
 			sb.WriteString("      ")
+
 			for range routers {
 				sb.WriteString("    |       ")
 			}
+
 			sb.WriteString("\n")
 		}
 	}
@@ -2542,18 +2861,24 @@ func (m *model) generateASCIIDiagram(topology api.Topology) string {
 	if len(switches) > 0 {
 		sb.WriteString("                        SWITCHES\n")
 		sb.WriteString("  ")
+
 		for i, s := range switches {
 			if i > 0 {
 				sb.WriteString("    ")
 			}
+
 			sb.WriteString(fmt.Sprintf("[%s]", truncateName(s.Name, 12)))
 		}
+
 		sb.WriteString("\n")
+
 		if len(others) > 0 {
 			sb.WriteString("      ")
+
 			for range switches {
 				sb.WriteString("    |       ")
 			}
+
 			sb.WriteString("\n")
 		}
 	}
@@ -2562,30 +2887,35 @@ func (m *model) generateASCIIDiagram(topology api.Topology) string {
 	if len(others) > 0 {
 		sb.WriteString("                        DEVICES\n")
 		sb.WriteString("  ")
+
 		for i, o := range others {
 			if i > 0 {
 				sb.WriteString("    ")
 			}
+
 			sb.WriteString(fmt.Sprintf("[%s]", truncateName(o.Name, 12)))
 		}
+
 		sb.WriteString("\n")
 	}
 
 	return sb.String()
 }
 
-// truncateName truncates a name to fit in the diagram
+// truncateName truncates a name to fit in the diagram.
 func truncateName(name string, maxLen int) string {
 	if len(name) <= maxLen {
 		return name
 	}
+
 	if maxLen <= 3 {
 		return name[:maxLen]
 	}
+
 	return name[:maxLen-3] + "..."
 }
 
-// renderConfigDiff renders the config diff view
+// renderConfigDiff renders the config diff view.
 func (m model) renderConfigDiff() string {
 	var panel strings.Builder
 
@@ -2596,23 +2926,20 @@ func (m model) renderConfigDiff() string {
 	if len(m.configDiffContent) == 0 {
 		panel.WriteString(padPanelLine("No diff content available"))
 		panel.WriteString("╚══════════════════════════════════════════════════════════════════╝")
+
 		return panel.String()
 	}
 
 	// Calculate visible lines
 	maxLines := 15
 	totalLines := len(m.configDiffContent)
+
 	startLine := m.configDiffScrollY
 	if startLine >= totalLines {
-		startLine = totalLines - 1
-		if startLine < 0 {
-			startLine = 0
-		}
+		startLine = max(totalLines-1, 0)
 	}
-	endLine := startLine + maxLines
-	if endLine > totalLines {
-		endLine = totalLines
-	}
+
+	endLine := min(startLine+maxLines, totalLines)
 
 	for i := startLine; i < endLine; i++ {
 		panel.WriteString(padPanelLine(m.configDiffContent[i]))
@@ -2620,7 +2947,11 @@ func (m model) renderConfigDiff() string {
 
 	if totalLines > maxLines {
 		panel.WriteString("╠══════════════════════════════════════════════════════════════════╣\n")
-		panel.WriteString(padPanelLine(fmt.Sprintf("Lines %d-%d of %d (use arrows/PgUp/PgDn to scroll)", startLine+1, endLine, totalLines)))
+		panel.WriteString(
+			padPanelLine(
+				fmt.Sprintf("Lines %d-%d of %d (use arrows/PgUp/PgDn to scroll)", startLine+1, endLine, totalLines),
+			),
+		)
 	}
 
 	panel.WriteString("╠══════════════════════════════════════════════════════════════════╣\n")
@@ -2630,7 +2961,7 @@ func (m model) renderConfigDiff() string {
 	return panel.String()
 }
 
-// renderSearch renders the search panel
+// renderSearch renders the search panel.
 func (m model) renderSearch() string {
 	var panel strings.Builder
 
@@ -2643,8 +2974,9 @@ func (m model) renderSearch() string {
 	if queryDisplay == "" {
 		queryDisplay = "_"
 	}
-	panel.WriteString(padPanelLine(fmt.Sprintf("Query: %s", queryDisplay)))
-	panel.WriteString(padPanelLine(fmt.Sprintf("Category: [%s] (Tab to cycle)", m.searchCategory)))
+
+	panel.WriteString(padPanelLine("Query: " + queryDisplay))
+	panel.WriteString(padPanelLine("Category: [" + m.searchCategory + "] (Tab to cycle)"))
 	panel.WriteString("╠══════════════════════════════════════════════════════════════════╣\n")
 
 	if len(m.searchResults) == 0 {
@@ -2659,35 +2991,38 @@ func (m model) renderSearch() string {
 
 		// Show up to 10 results
 		maxResults := 10
+
 		start := 0
 		if m.selectedResult >= maxResults {
 			start = m.selectedResult - maxResults + 1
 		}
-		end := start + maxResults
-		if end > len(m.searchResults) {
-			end = len(m.searchResults)
-		}
+
+		end := min(start+maxResults, len(m.searchResults))
 
 		for i := start; i < end; i++ {
 			result := m.searchResults[i]
+
 			prefix := "  "
 			if i == m.selectedResult {
 				prefix = selectedStyle.Render("->")
 			}
 
-			categoryTag := fmt.Sprintf("[%s]", result.Category)
-			line := fmt.Sprintf("%s %s %s", prefix, categoryTag, result.Title)
+			categoryTag := "[" + result.Category + "]"
+
+			line := prefix + " " + categoryTag + " " + result.Title
 			if len(line) > 64 {
 				line = line[:61] + "..."
 			}
+
 			panel.WriteString(padPanelLine(line))
 
 			// Show detail for selected item
 			if i == m.selectedResult && result.Detail != "" {
-				detailLine := fmt.Sprintf("     %s", result.Detail)
+				detailLine := "     " + result.Detail
 				if len(detailLine) > 64 {
 					detailLine = detailLine[:61] + "..."
 				}
+
 				panel.WriteString(padPanelLine(statsStyle.Render(detailLine)))
 			}
 		}
@@ -2700,7 +3035,7 @@ func (m model) renderSearch() string {
 	return panel.String()
 }
 
-// renderExport renders the export panel
+// renderExport renders the export panel.
 func (m model) renderExport() string {
 	var panel strings.Builder
 
@@ -2714,28 +3049,31 @@ func (m model) renderExport() string {
 	// Format selection
 	jsonSelected := "  "
 	csvSelected := "  "
-	if m.exportFormat == "json" {
+
+	if m.exportFormat == formatJSON {
 		jsonSelected = selectedStyle.Render("->")
 	} else {
 		csvSelected = selectedStyle.Render("->")
 	}
 
-	panel.WriteString(padPanelLine(fmt.Sprintf("%s [j] JSON - Structured data format", jsonSelected)))
-	panel.WriteString(padPanelLine(fmt.Sprintf("%s [c] CSV  - Spreadsheet compatible", csvSelected)))
+	panel.WriteString(padPanelLine(jsonSelected + " [j] JSON - Structured data format"))
+	panel.WriteString(padPanelLine(csvSelected + " [c] CSV  - Spreadsheet compatible"))
 	panel.WriteString(padPanelLine(""))
 
 	// Stats preview
 	panel.WriteString("╠══════════════════════════════════════════════════════════════════╣\n")
 	panel.WriteString(padPanelLine(diffHeaderStyle.Render("Data to export:")))
-	panel.WriteString(padPanelLine(fmt.Sprintf("  Devices:         %d", len(m.cfg.Devices))))
-	panel.WriteString(padPanelLine(fmt.Sprintf("  Active Errors:   %d", m.errorsActive)))
-	panel.WriteString(padPanelLine(fmt.Sprintf("  Packets RX/TX:   %d / %d", m.stackStats.PacketsReceived, m.stackStats.PacketsSent)))
-	panel.WriteString(padPanelLine(fmt.Sprintf("  Uptime:          %s", formatDuration(m.uptime))))
+	panel.WriteString(padPanelLine("  Devices:         " + strconv.Itoa(len(m.cfg.Devices))))
+	panel.WriteString(padPanelLine("  Active Errors:   " + strconv.Itoa(m.errorsActive)))
+	panel.WriteString(
+		padPanelLine(fmt.Sprintf("  Packets RX/TX:   %d / %d", m.stackStats.PacketsReceived, m.stackStats.PacketsSent)),
+	)
+	panel.WriteString(padPanelLine("  Uptime:          " + formatDuration(m.uptime)))
 
 	// Last export info
 	if !m.lastExportTime.IsZero() {
 		panel.WriteString(padPanelLine(""))
-		panel.WriteString(padPanelLine(successStyle.Render(fmt.Sprintf("Last export: %s", m.lastExportPath))))
+		panel.WriteString(padPanelLine(successStyle.Render("Last export: " + m.lastExportPath)))
 	}
 
 	panel.WriteString("╠══════════════════════════════════════════════════════════════════╣\n")
@@ -2745,7 +3083,7 @@ func (m model) renderExport() string {
 	return panel.String()
 }
 
-// renderTopology renders the topology view
+// renderTopology renders the topology view.
 func (m model) renderTopology() string {
 	var panel strings.Builder
 
@@ -2756,6 +3094,7 @@ func (m model) renderTopology() string {
 	if m.topologyContent == "" {
 		panel.WriteString(padPanelLine("No topology data available"))
 		panel.WriteString("╚══════════════════════════════════════════════════════════════════╝")
+
 		return panel.String()
 	}
 
@@ -2764,17 +3103,13 @@ func (m model) renderTopology() string {
 	// Calculate visible lines
 	maxLines := 18
 	totalLines := len(lines)
+
 	startLine := m.topologyScrollY
 	if startLine >= totalLines {
-		startLine = totalLines - 1
-		if startLine < 0 {
-			startLine = 0
-		}
+		startLine = max(totalLines-1, 0)
 	}
-	endLine := startLine + maxLines
-	if endLine > totalLines {
-		endLine = totalLines
-	}
+
+	endLine := min(startLine+maxLines, totalLines)
 
 	for i := startLine; i < endLine; i++ {
 		panel.WriteString(padPanelLine(lines[i]))
@@ -2782,7 +3117,9 @@ func (m model) renderTopology() string {
 
 	if totalLines > maxLines {
 		panel.WriteString("╠══════════════════════════════════════════════════════════════════╣\n")
-		panel.WriteString(padPanelLine(fmt.Sprintf("Lines %d-%d of %d (use arrows/PgUp/PgDn)", startLine+1, endLine, totalLines)))
+		panel.WriteString(
+			padPanelLine(fmt.Sprintf("Lines %d-%d of %d (use arrows/PgUp/PgDn)", startLine+1, endLine, totalLines)),
+		)
 	}
 
 	panel.WriteString("╠══════════════════════════════════════════════════════════════════╣\n")
@@ -2792,27 +3129,30 @@ func (m model) renderTopology() string {
 	return panel.String()
 }
 
-// handleAlertConfigInput handles keyboard input in alert config panel
+// handleAlertConfigInput handles keyboard input in alert config panel.
 func (m model) handleAlertConfigInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	alertTypes := []string{"CPU", "Memory", "Disk", "PacketLoss", "Latency"}
 
 	switch msg.String() {
-	case "esc":
+	case keyEsc:
 		m.showAlertConfig = false
 		m.statusMessage = "Alert configuration saved"
 		m.statusIsError = false
+
 		return m, nil
 
 	case "up":
 		if m.selectedAlertType > 0 {
 			m.selectedAlertType--
 		}
+
 		return m, nil
 
-	case "down":
+	case keyDown:
 		if m.selectedAlertType < len(alertTypes)-1 {
 			m.selectedAlertType++
 		}
+
 		return m, nil
 
 	case "left":
@@ -2821,9 +3161,11 @@ func (m model) handleAlertConfigInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if m.alertThresholds == nil {
 			m.alertThresholds = make(map[string]int)
 		}
+
 		if m.alertThresholds[alertType] > 0 {
 			m.alertThresholds[alertType] -= 5
 		}
+
 		return m, nil
 
 	case "right":
@@ -2832,26 +3174,30 @@ func (m model) handleAlertConfigInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if m.alertThresholds == nil {
 			m.alertThresholds = make(map[string]int)
 		}
+
 		if m.alertThresholds[alertType] < 100 {
 			m.alertThresholds[alertType] += 5
 		}
+
 		return m, nil
 
-	case "enter":
+	case keyEnter:
 		// Toggle individual alert
 		m.alertsEnabled = !m.alertsEnabled
+
 		return m, nil
 
 	case " ":
 		// Toggle all alerts
 		m.alertsEnabled = !m.alertsEnabled
+
 		return m, nil
 	}
 
 	return m, nil
 }
 
-// renderAlertConfig renders the alert configuration panel
+// renderAlertConfig renders the alert configuration panel.
 func (m model) renderAlertConfig() string {
 	var panel strings.Builder
 
@@ -2897,10 +3243,12 @@ func (m model) renderAlertConfig() string {
 	}
 
 	panel.WriteString("╠══════════════════════════════════════════════════════════════════╣\n")
+
 	enabledStatus := "DISABLED"
 	if m.alertsEnabled {
 		enabledStatus = successStyle.Render("ENABLED")
 	}
+
 	panel.WriteString(padPanelLine(fmt.Sprintf("Alerts: %s  [Space] Toggle All", enabledStatus)))
 	panel.WriteString("╠══════════════════════════════════════════════════════════════════╣\n")
 	panel.WriteString(padPanelLine("[↑↓] Navigate  [←→] Adjust  [Enter] Toggle  [ESC] Save & Close"))
@@ -2909,14 +3257,15 @@ func (m model) renderAlertConfig() string {
 	return panel.String()
 }
 
-// handlePcapReplayInput handles keyboard input in PCAP replay panel
+// handlePcapReplayInput handles keyboard input in PCAP replay panel.
 func (m model) handlePcapReplayInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
-	case "esc":
+	case keyEsc:
 		m.showPcapReplay = false
 		m.pcapPlaying = false
 		m.statusMessage = "PCAP replay closed"
 		m.statusIsError = false
+
 		return m, nil
 
 	case " ":
@@ -2927,7 +3276,9 @@ func (m model) handlePcapReplayInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		} else {
 			m.statusMessage = "PCAP playback paused"
 		}
+
 		m.statusIsError = false
+
 		return m, nil
 
 	case "left":
@@ -2935,6 +3286,7 @@ func (m model) handlePcapReplayInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if m.pcapPlaybackIndex > 0 {
 			m.pcapPlaybackIndex--
 		}
+
 		return m, nil
 
 	case "right":
@@ -2942,6 +3294,7 @@ func (m model) handlePcapReplayInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if m.pcapPlaybackIndex < len(m.pcapPackets)-1 {
 			m.pcapPlaybackIndex++
 		}
+
 		return m, nil
 
 	case "+", "=":
@@ -2949,6 +3302,7 @@ func (m model) handlePcapReplayInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if m.pcapPlaybackSpeed < 4.0 {
 			m.pcapPlaybackSpeed *= 2
 		}
+
 		return m, nil
 
 	case "-", "_":
@@ -2956,6 +3310,7 @@ func (m model) handlePcapReplayInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if m.pcapPlaybackSpeed > 0.25 {
 			m.pcapPlaybackSpeed /= 2
 		}
+
 		return m, nil
 
 	case "r":
@@ -2963,13 +3318,14 @@ func (m model) handlePcapReplayInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.pcapPlaybackIndex = 0
 		m.statusMessage = "PCAP replay restarted"
 		m.statusIsError = false
+
 		return m, nil
 	}
 
 	return m, nil
 }
 
-// renderPcapReplay renders the PCAP replay control panel
+// renderPcapReplay renders the PCAP replay control panel.
 func (m model) renderPcapReplay() string {
 	var panel strings.Builder
 
@@ -2986,15 +3342,18 @@ func (m model) renderPcapReplay() string {
 		if m.pcapPlaying {
 			status = successStyle.Render("▶ PLAYING")
 		}
+
 		panel.WriteString(padPanelLine(fmt.Sprintf("Status: %s  Speed: %.2fx", status, m.pcapPlaybackSpeed)))
 		panel.WriteString(padPanelLine(fmt.Sprintf("Packet: %d / %d", m.pcapPlaybackIndex+1, len(m.pcapPackets))))
 
 		// Progress bar
 		barWidth := 50
+
 		progress := 0
 		if len(m.pcapPackets) > 0 {
 			progress = (m.pcapPlaybackIndex * barWidth) / len(m.pcapPackets)
 		}
+
 		progressBar := "[" + strings.Repeat("=", progress) + strings.Repeat("-", barWidth-progress) + "]"
 		panel.WriteString(padPanelLine(progressBar))
 
@@ -3003,9 +3362,9 @@ func (m model) renderPcapReplay() string {
 		// Current packet info
 		if m.pcapPlaybackIndex >= 0 && m.pcapPlaybackIndex < len(m.pcapPackets) {
 			pkt := m.pcapPackets[m.pcapPlaybackIndex]
-			panel.WriteString(padPanelLine(fmt.Sprintf("Time: %s", pkt.Timestamp.Format("15:04:05.000"))))
+			panel.WriteString(padPanelLine("Time: " + pkt.Timestamp.Format("15:04:05.000")))
 			panel.WriteString(padPanelLine(fmt.Sprintf("Protocol: %s  Length: %d bytes", pkt.Protocol, pkt.Length)))
-			panel.WriteString(padPanelLine(fmt.Sprintf("Src: %s → Dst: %s", pkt.SrcAddr, pkt.DstAddr)))
+			panel.WriteString(padPanelLine("Src: " + pkt.SrcAddr + " → Dst: " + pkt.DstAddr))
 		}
 	}
 
@@ -3017,7 +3376,7 @@ func (m model) renderPcapReplay() string {
 	return panel.String()
 }
 
-// renderHistory renders the run history viewer panel
+// renderHistory renders the run history viewer panel.
 func (m model) renderHistory() string {
 	var panel strings.Builder
 
@@ -3030,15 +3389,23 @@ func (m model) renderHistory() string {
 		panel.WriteString(padPanelLine("History is recorded when simulations start/stop"))
 	} else {
 		// Header row
-		panel.WriteString(padPanelLine(fmt.Sprintf("%-20s %-10s %-8s %-12s %-12s", "Date/Time", "Duration", "Devices", "Packets RX", "Packets TX")))
+		panel.WriteString(
+			padPanelLine(
+				fmt.Sprintf(
+					"%-20s %-10s %-8s %-12s %-12s",
+					"Date/Time",
+					"Duration",
+					"Devices",
+					"Packets RX",
+					"Packets TX",
+				),
+			),
+		)
 		panel.WriteString(padPanelLine(strings.Repeat("-", 64)))
 
 		// History entries
 		startIdx := m.historyScrollY
-		endIdx := startIdx + 8
-		if endIdx > len(m.historyEntries) {
-			endIdx = len(m.historyEntries)
-		}
+		endIdx := min(startIdx+8, len(m.historyEntries))
 
 		for i := startIdx; i < endIdx; i++ {
 			entry := m.historyEntries[i]
@@ -3070,7 +3437,7 @@ func (m model) renderHistory() string {
 	return panel.String()
 }
 
-// renderSnmpWalk renders the SNMP walk browser panel
+// renderSnmpWalk renders the SNMP walk browser panel.
 func (m model) renderSnmpWalk() string {
 	var panel strings.Builder
 
@@ -3084,10 +3451,7 @@ func (m model) renderSnmpWalk() string {
 	} else {
 		// Display OID tree
 		startIdx := m.snmpScrollY
-		endIdx := startIdx + 12
-		if endIdx > len(m.snmpOidTree) {
-			endIdx = len(m.snmpOidTree)
-		}
+		endIdx := min(startIdx+12, len(m.snmpOidTree))
 
 		for i := startIdx; i < endIdx; i++ {
 			oid := m.snmpOidTree[i]
@@ -3117,7 +3481,7 @@ func (m model) renderSnmpWalk() string {
 	return panel.String()
 }
 
-// renderDeviceConfig renders the device configuration panel
+// renderDeviceConfig renders the device configuration panel.
 func (m model) renderDeviceConfig() string {
 	var panel strings.Builder
 
@@ -3125,28 +3489,34 @@ func (m model) renderDeviceConfig() string {
 
 	// Get current device
 	var device *config.Device
+
 	deviceName := "No Device Selected"
+
 	if m.selectedDeviceIdx >= 0 && m.selectedDeviceIdx < len(m.cfg.Devices) {
 		device = &m.cfg.Devices[m.selectedDeviceIdx]
 		deviceName = device.Name
 	}
 
-	panel.WriteString(padPanelLine(diffHeaderStyle.Render(fmt.Sprintf("Device Configuration: %s", deviceName))))
+	panel.WriteString(padPanelLine(diffHeaderStyle.Render("Device Configuration: " + deviceName)))
 	panel.WriteString("╠══════════════════════════════════════════════════════════════════╣\n")
 
 	// Tab bar
 	tabs := []string{"General", "Interfaces", "Protocols", "SNMP"}
+
 	var tabBar strings.Builder
+
 	for i, tab := range tabs {
 		if i == m.deviceConfigTab {
-			tabBar.WriteString(selectedStyle.Render(fmt.Sprintf("[%s]", tab)))
+			tabBar.WriteString(selectedStyle.Render("[" + tab + "]"))
 		} else {
-			tabBar.WriteString(fmt.Sprintf(" %s ", tab))
+			tabBar.WriteString(" " + tab + " ")
 		}
+
 		if i < len(tabs)-1 {
 			tabBar.WriteString(" | ")
 		}
 	}
+
 	panel.WriteString(padPanelLine(tabBar.String()))
 	panel.WriteString("╠══════════════════════════════════════════════════════════════════╣\n")
 
@@ -3155,47 +3525,54 @@ func (m model) renderDeviceConfig() string {
 	} else {
 		switch m.deviceConfigTab {
 		case 0: // General
-			panel.WriteString(padPanelLine(fmt.Sprintf("Name:        %s", device.Name)))
-			panel.WriteString(padPanelLine(fmt.Sprintf("Type:        %s", device.Type)))
-			panel.WriteString(padPanelLine(fmt.Sprintf("MAC Address: %s", device.MACAddress)))
+			panel.WriteString(padPanelLine("Name:        " + device.Name))
+			panel.WriteString(padPanelLine("Type:        " + device.Type))
+			panel.WriteString(padPanelLine("MAC Address: " + device.MACAddress.String()))
+
 			if len(device.IPAddresses) > 0 {
-				panel.WriteString(padPanelLine(fmt.Sprintf("IP Address:  %s", device.IPAddresses[0])))
+				panel.WriteString(padPanelLine("IP Address:  " + device.IPAddresses[0].String()))
 			}
+
 			if device.VLAN > 0 {
 				panel.WriteString(padPanelLine(fmt.Sprintf("VLAN:        %d", device.VLAN)))
 			}
-			panel.WriteString(padPanelLine(fmt.Sprintf("Babble:      %s", boolToEnabled(device.Babble))))
+
+			panel.WriteString(padPanelLine("Babble:      " + boolToEnabled(device.Babble)))
 
 		case 1: // Interfaces
 			if len(device.Interfaces) == 0 {
 				panel.WriteString(padPanelLine("No interfaces configured"))
 			} else {
-				panel.WriteString(padPanelLine(fmt.Sprintf("%-15s %-10s %-10s %-8s", "Interface", "Speed", "Duplex", "Status")))
+				panel.WriteString(
+					padPanelLine(fmt.Sprintf("%-15s %-10s %-10s %-8s", "Interface", "Speed", "Duplex", "Status")),
+				)
 				panel.WriteString(padPanelLine(strings.Repeat("-", 50)))
+
 				for _, iface := range device.Interfaces {
 					status := iface.AdminStatus
 					if status == "" {
 						status = "up"
 					}
+
 					panel.WriteString(padPanelLine(fmt.Sprintf("%-15s %-10d %-10s %-8s",
 						iface.Name, iface.Speed, iface.Duplex, status)))
 				}
 			}
 
 		case 2: // Protocols
-			panel.WriteString(padPanelLine(fmt.Sprintf("LLDP:    %s", boolToEnabled(device.LLDPConfig != nil))))
-			panel.WriteString(padPanelLine(fmt.Sprintf("CDP:     %s", boolToEnabled(device.CDPConfig != nil))))
-			panel.WriteString(padPanelLine(fmt.Sprintf("STP:     %s", boolToEnabled(device.STPConfig != nil))))
-			panel.WriteString(padPanelLine(fmt.Sprintf("EDP:     %s", boolToEnabled(device.EDPConfig != nil))))
-			panel.WriteString(padPanelLine(fmt.Sprintf("FDP:     %s", boolToEnabled(device.FDPConfig != nil))))
+			panel.WriteString(padPanelLine("LLDP:    " + boolToEnabled(device.LLDPConfig != nil)))
+			panel.WriteString(padPanelLine("CDP:     " + boolToEnabled(device.CDPConfig != nil)))
+			panel.WriteString(padPanelLine("STP:     " + boolToEnabled(device.STPConfig != nil)))
+			panel.WriteString(padPanelLine("EDP:     " + boolToEnabled(device.EDPConfig != nil)))
+			panel.WriteString(padPanelLine("FDP:     " + boolToEnabled(device.FDPConfig != nil)))
 
 		case 3: // SNMP
 			if device.SNMPConfig.Community != "" {
-				panel.WriteString(padPanelLine(fmt.Sprintf("Community:  %s", device.SNMPConfig.Community)))
-				panel.WriteString(padPanelLine(fmt.Sprintf("SysName:    %s", device.SNMPConfig.SysName)))
-				panel.WriteString(padPanelLine(fmt.Sprintf("SysDescr:   %s", device.SNMPConfig.SysDescr)))
-				panel.WriteString(padPanelLine(fmt.Sprintf("Contact:    %s", device.SNMPConfig.SysContact)))
-				panel.WriteString(padPanelLine(fmt.Sprintf("Location:   %s", device.SNMPConfig.SysLocation)))
+				panel.WriteString(padPanelLine("Community:  " + device.SNMPConfig.Community))
+				panel.WriteString(padPanelLine("SysName:    " + device.SNMPConfig.SysName))
+				panel.WriteString(padPanelLine("SysDescr:   " + device.SNMPConfig.SysDescr))
+				panel.WriteString(padPanelLine("Contact:    " + device.SNMPConfig.SysContact))
+				panel.WriteString(padPanelLine("Location:   " + device.SNMPConfig.SysLocation))
 			} else {
 				panel.WriteString(padPanelLine("SNMP not configured for this device"))
 			}
@@ -3209,116 +3586,135 @@ func (m model) renderDeviceConfig() string {
 	return panel.String()
 }
 
-// boolToEnabled returns "Enabled" or "Disabled" based on the boolean
+// boolToEnabled returns "Enabled" or "Disabled" based on the boolean.
 func boolToEnabled(b bool) string {
 	if b {
 		return successStyle.Render("Enabled")
 	}
+
 	return "Disabled"
 }
 
-// handleHistoryInput handles keyboard input in history viewer
+// handleScrollInput is a shared helper for handling scroll navigation in list views.
+// It updates selectedIdx and scrollY based on the key pressed.
+// Returns true if a navigation key was handled, false otherwise.
+// visibleRows is the number of visible rows in the viewport.
+func handleScrollInput(
+	key string,
+	selectedIdx, scrollY, listLen, visibleRows int,
+) (newSelectedIdx, newScrollY int, handled bool) {
+	switch key {
+	case "up":
+		if selectedIdx > 0 {
+			selectedIdx--
+			if selectedIdx < scrollY {
+				scrollY = selectedIdx
+			}
+		}
+
+		return selectedIdx, scrollY, true
+	case keyDown:
+		if selectedIdx < listLen-1 {
+			selectedIdx++
+			if selectedIdx >= scrollY+visibleRows {
+				scrollY++
+			}
+		}
+
+		return selectedIdx, scrollY, true
+	case "pgup":
+		scrollY -= visibleRows
+		if scrollY < 0 {
+			scrollY = 0
+		}
+
+		return selectedIdx, scrollY, true
+	case "pgdown":
+		scrollY += visibleRows
+		maxScroll := max(listLen-visibleRows, 0)
+		scrollY = min(scrollY, maxScroll)
+
+		return selectedIdx, scrollY, true
+	}
+
+	return selectedIdx, scrollY, false
+}
+
+// handleHistoryInput handles keyboard input in history viewer.
 func (m model) handleHistoryInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch msg.String() {
-	case "esc":
+	key := msg.String()
+	if key == keyEsc {
 		m.showHistory = false
-		return m, nil
-	case "up":
-		if m.selectedHistoryIdx > 0 {
-			m.selectedHistoryIdx--
-			if m.selectedHistoryIdx < m.historyScrollY {
-				m.historyScrollY = m.selectedHistoryIdx
-			}
-		}
-		return m, nil
-	case "down":
-		if m.selectedHistoryIdx < len(m.historyEntries)-1 {
-			m.selectedHistoryIdx++
-			if m.selectedHistoryIdx >= m.historyScrollY+8 {
-				m.historyScrollY++
-			}
-		}
-		return m, nil
-	case "pgup":
-		m.historyScrollY -= 8
-		if m.historyScrollY < 0 {
-			m.historyScrollY = 0
-		}
-		return m, nil
-	case "pgdown":
-		m.historyScrollY += 8
-		maxScroll := len(m.historyEntries) - 8
-		if maxScroll < 0 {
-			maxScroll = 0
-		}
-		if m.historyScrollY > maxScroll {
-			m.historyScrollY = maxScroll
-		}
+
 		return m, nil
 	}
+
+	const visibleRows = 8
+
+	newIdx, newScroll, handled := handleScrollInput(
+		key,
+		m.selectedHistoryIdx,
+		m.historyScrollY,
+		len(m.historyEntries),
+		visibleRows,
+	)
+	if handled {
+		m.selectedHistoryIdx = newIdx
+		m.historyScrollY = newScroll
+	}
+
 	return m, nil
 }
 
-// handleSnmpWalkInput handles keyboard input in SNMP walk browser
+// handleSnmpWalkInput handles keyboard input in SNMP walk browser.
 func (m model) handleSnmpWalkInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch msg.String() {
-	case "esc":
+	key := msg.String()
+	if key == keyEsc {
 		m.showSnmpWalk = false
-		return m, nil
-	case "up":
-		if m.selectedSnmpOid > 0 {
-			m.selectedSnmpOid--
-			if m.selectedSnmpOid < m.snmpScrollY {
-				m.snmpScrollY = m.selectedSnmpOid
-			}
-		}
-		return m, nil
-	case "down":
-		if m.selectedSnmpOid < len(m.snmpOidTree)-1 {
-			m.selectedSnmpOid++
-			if m.selectedSnmpOid >= m.snmpScrollY+12 {
-				m.snmpScrollY++
-			}
-		}
-		return m, nil
-	case "pgup":
-		m.snmpScrollY -= 12
-		if m.snmpScrollY < 0 {
-			m.snmpScrollY = 0
-		}
-		return m, nil
-	case "pgdown":
-		m.snmpScrollY += 12
-		maxScroll := len(m.snmpOidTree) - 12
-		if maxScroll < 0 {
-			maxScroll = 0
-		}
-		if m.snmpScrollY > maxScroll {
-			m.snmpScrollY = maxScroll
-		}
+
 		return m, nil
 	}
+
+	const visibleRows = 12
+
+	newIdx, newScroll, handled := handleScrollInput(
+		key,
+		m.selectedSnmpOid,
+		m.snmpScrollY,
+		len(m.snmpOidTree),
+		visibleRows,
+	)
+	if handled {
+		m.selectedSnmpOid = newIdx
+		m.snmpScrollY = newScroll
+	}
+
 	return m, nil
 }
 
-// handleDeviceConfigInput handles keyboard input in device config panel
+// handleDeviceConfigInput handles keyboard input in device config panel.
 func (m model) handleDeviceConfigInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
-	case "esc":
+	case keyEsc:
 		m.showDeviceConfig = false
+
 		return m, nil
 	case "tab":
 		m.deviceConfigTab = (m.deviceConfigTab + 1) % 4
 		m.deviceConfigScrollY = 0
+
 		return m, nil
 	case "up":
 		if m.deviceConfigScrollY > 0 {
 			m.deviceConfigScrollY--
 		}
+
 		return m, nil
-	case "down":
+	case keyDown:
 		m.deviceConfigScrollY++
+
 		return m, nil
 	}
+
 	return m, nil
 }

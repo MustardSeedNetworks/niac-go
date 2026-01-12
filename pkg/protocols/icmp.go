@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"net"
+	"os"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
@@ -15,24 +16,26 @@ type ICMPHandler struct {
 	stack *Stack
 }
 
-// NewICMPHandler creates a new ICMP handler
+// NewICMPHandler creates a new ICMP handler.
 func NewICMPHandler(stack *Stack) *ICMPHandler {
 	return &ICMPHandler{
 		stack: stack,
 	}
 }
 
-// HandlePacket processes an ICMP packet
+// HandlePacket processes an ICMP packet.
 func (h *ICMPHandler) HandlePacket(pkt *Packet, ipLayer *layers.IPv4, devices []*config.Device) {
 	debugLevel := h.stack.GetDebugLevel()
 
 	// Parse ICMP layer
 	packet := gopacket.NewPacket(pkt.Buffer, layers.LayerTypeEthernet, gopacket.Default)
+
 	icmpLayer := packet.Layer(layers.LayerTypeICMPv4)
 	if icmpLayer == nil {
 		if debugLevel >= 2 {
-			fmt.Printf("ICMP packet missing ICMP layer sn=%d\n", pkt.SerialNumber)
+			_, _ = fmt.Fprintf(os.Stdout, "ICMP packet missing ICMP layer sn=%d\n", pkt.SerialNumber)
 		}
+
 		return
 	}
 
@@ -51,7 +54,7 @@ func (h *ICMPHandler) HandlePacket(pkt *Packet, ipLayer *layers.IPv4, devices []
 		h.handleRouterSolicitation(pkt, ipLayer, icmp)
 	} else {
 		if debugLevel >= 3 {
-			fmt.Printf("ICMP packet type=%d code=%d sn=%d\n",
+			_, _ = fmt.Fprintf(os.Stdout, "ICMP packet type=%d code=%d sn=%d\n",
 				icmp.TypeCode.Type(), icmp.TypeCode.Code(), pkt.SerialNumber)
 		}
 	}
@@ -66,6 +69,7 @@ func (h *ICMPHandler) handleAddressMaskRequest(pkt *Packet, ipLayer *layers.IPv4
 	isBroadcast := dstMAC != nil && dstMAC.String() == "ff:ff:ff:ff:ff:ff"
 
 	var targets []*config.Device
+
 	if isBroadcast {
 		for _, dev := range h.stack.GetDevices().GetAll() {
 			if dev.ICMPConfig != nil && dev.ICMPConfig.AddressMaskReply != nil {
@@ -88,6 +92,7 @@ func (h *ICMPHandler) handleAddressMaskRequest(pkt *Packet, ipLayer *layers.IPv4
 		if device.ICMPConfig == nil || device.ICMPConfig.AddressMaskReply == nil {
 			continue
 		}
+
 		if len(device.MACAddress) == 0 {
 			continue
 		}
@@ -111,7 +116,7 @@ func (h *ICMPHandler) handleAddressMaskRequest(pkt *Packet, ipLayer *layers.IPv4
 
 		err := h.sendICMPWithPayload(srcIP, dstIP, device.MACAddress, replyDstMAC, icmpReply, mask, device)
 		if err != nil && debugLevel >= 2 {
-			fmt.Printf("ICMP: Address Mask Reply failed: %v\n", err)
+			_, _ = fmt.Fprintf(os.Stdout, "ICMP: Address Mask Reply failed: %v\n", err)
 		}
 	}
 }
@@ -125,19 +130,31 @@ func (h *ICMPHandler) handleRouterSolicitation(pkt *Packet, ipLayer *layers.IPv4
 		if device.ICMPConfig == nil || device.ICMPConfig.RouterAdvertisement == nil {
 			continue
 		}
+
 		srcIP := firstIPv4Address(device)
 		if srcIP == nil || len(device.MACAddress) == 0 {
 			continue
 		}
+
 		payload := buildRouterAdvertisementPayload(device.ICMPConfig.RouterAdvertisement)
+
 		icmpReply := &layers.ICMPv4{
 			TypeCode: layers.CreateICMPv4TypeCode(layers.ICMPv4TypeRouterAdvertisement, 0),
 			Id:       icmp.Id,
 			Seq:      icmp.Seq,
 		}
-		if err := h.sendICMPWithPayload(srcIP, ipLayer.SrcIP, device.MACAddress, dstMAC, icmpReply, payload, device); err != nil {
+		err := h.sendICMPWithPayload(
+			srcIP,
+			ipLayer.SrcIP,
+			device.MACAddress,
+			dstMAC,
+			icmpReply,
+			payload,
+			device,
+		)
+		if err != nil {
 			if debugLevel >= 2 {
-				fmt.Printf("ICMP: Router Advertisement failed: %v\n", err)
+				_, _ = fmt.Fprintf(os.Stdout, "ICMP: Router Advertisement failed: %v\n", err)
 			}
 		}
 	}
@@ -147,23 +164,39 @@ func buildRouterAdvertisementPayload(ra *config.IcmpRouterAdvertisement) []byte 
 	if ra == nil {
 		return nil
 	}
+
 	numAddrs := len(ra.Routers)
 	payload := make([]byte, 4+8*numAddrs)
 	payload[0] = byte(numAddrs)
 	payload[1] = 2 // Address entry size (2 words)
-	binary.BigEndian.PutUint16(payload[2:4], uint16(ra.Lifetime))
+	binary.BigEndian.PutUint16(
+		payload[2:4],
+		uint16(ra.Lifetime),
+	)
+
 	offset := 4
+
 	for _, router := range ra.Routers {
 		if ip := router.Address.To4(); ip != nil {
 			copy(payload[offset:offset+4], ip)
-			binary.BigEndian.PutUint32(payload[offset+4:offset+8], uint32(router.Preference))
+			binary.BigEndian.PutUint32(
+				payload[offset+4:offset+8],
+				uint32(router.Preference),
+			)
 			offset += 8
 		}
 	}
+
 	return payload[:offset]
 }
 
-func (h *ICMPHandler) sendICMPWithPayload(srcIP, dstIP net.IP, srcMAC, dstMAC net.HardwareAddr, icmpLayer *layers.ICMPv4, payload []byte, device *config.Device) error {
+func (h *ICMPHandler) sendICMPWithPayload(
+	srcIP, dstIP net.IP,
+	srcMAC, dstMAC net.HardwareAddr,
+	icmpLayer *layers.ICMPv4,
+	payload []byte,
+	device *config.Device,
+) error {
 	ttl := uint8(64)
 	if device != nil && device.ICMPConfig != nil && device.ICMPConfig.TTL > 0 {
 		ttl = device.ICMPConfig.TTL
@@ -197,7 +230,7 @@ func (h *ICMPHandler) sendICMPWithPayload(srcIP, dstIP net.IP, srcMAC, dstMAC ne
 		gopacket.Payload(payload),
 	)
 	if err != nil {
-		return fmt.Errorf("error serializing ICMP reply: %v", err)
+		return fmt.Errorf("error serializing ICMP reply: %w", err)
 	}
 
 	h.stack.mu.Lock()
@@ -212,19 +245,28 @@ func (h *ICMPHandler) sendICMPWithPayload(srcIP, dstIP net.IP, srcMAC, dstMAC ne
 		Device:       device,
 	}
 	h.stack.Send(pkt)
+
 	return nil
 }
 
 // SendICMPTimeExceeded sends an ICMP Time Exceeded message.
-func (h *ICMPHandler) SendICMPTimeExceeded(srcIP, dstIP net.IP, srcMAC, dstMAC net.HardwareAddr, originalIP *layers.IPv4, device *config.Device) error {
+func (h *ICMPHandler) SendICMPTimeExceeded(
+	srcIP, dstIP net.IP,
+	srcMAC, dstMAC net.HardwareAddr,
+	originalIP *layers.IPv4,
+	device *config.Device,
+) error {
 	if originalIP == nil {
-		return fmt.Errorf("original IP layer missing")
+		return ErrOriginalIPLayerMissing
 	}
+
 	origHeader := originalIP.LayerContents()
+
 	origPayload := originalIP.Payload
 	if len(origPayload) > 8 {
 		origPayload = origPayload[:8]
 	}
+
 	payload := append(origHeader, origPayload...)
 
 	icmpLayer := &layers.ICMPv4{
@@ -247,12 +289,14 @@ func (h *ICMPHandler) SendICMPTimeExceeded(srcIP, dstIP net.IP, srcMAC, dstMAC n
 	}
 
 	buf := gopacket.NewSerializeBuffer()
+
 	opts := gopacket.SerializeOptions{
 		FixLengths:       true,
 		ComputeChecksums: true,
 	}
-	if err := gopacket.SerializeLayers(buf, opts, eth, ipLayer, icmpLayer, gopacket.Payload(payload)); err != nil {
-		return fmt.Errorf("error serializing ICMP time exceeded: %v", err)
+	err := gopacket.SerializeLayers(buf, opts, eth, ipLayer, icmpLayer, gopacket.Payload(payload))
+	if err != nil {
+		return fmt.Errorf("error serializing ICMP time exceeded: %w", err)
 	}
 
 	h.stack.mu.Lock()
@@ -267,6 +311,7 @@ func (h *ICMPHandler) SendICMPTimeExceeded(srcIP, dstIP net.IP, srcMAC, dstMAC n
 		Device:       device,
 	}
 	h.stack.Send(pkt)
+
 	return nil
 }
 
@@ -274,20 +319,27 @@ func firstIPv4Address(device *config.Device) net.IP {
 	if device == nil {
 		return nil
 	}
+
 	for _, ip := range device.IPAddresses {
 		if v4 := ip.To4(); v4 != nil {
 			return v4
 		}
 	}
+
 	return nil
 }
 
-// handleEchoRequest processes ICMP Echo Request and sends Echo Reply
-func (h *ICMPHandler) handleEchoRequest(pkt *Packet, ipLayer *layers.IPv4, icmp *layers.ICMPv4, devices []*config.Device) {
+// handleEchoRequest processes ICMP Echo Request and sends Echo Reply.
+func (h *ICMPHandler) handleEchoRequest(
+	pkt *Packet,
+	ipLayer *layers.IPv4,
+	icmp *layers.ICMPv4,
+	devices []*config.Device,
+) {
 	debugLevel := h.stack.GetDebugLevel()
 
 	if debugLevel >= 3 {
-		fmt.Printf("ICMP Echo Request from %s to %s id=%d seq=%d sn=%d\n",
+		_, _ = fmt.Fprintf(os.Stdout, "ICMP Echo Request from %s to %s id=%d seq=%d sn=%d\n",
 			ipLayer.SrcIP, ipLayer.DstIP, icmp.Id, icmp.Seq, pkt.SerialNumber)
 	}
 
@@ -302,12 +354,15 @@ func (h *ICMPHandler) handleEchoRequest(pkt *Packet, ipLayer *layers.IPv4, icmp 
 
 		// Check if device has this IP
 		hasIP := false
+
 		for _, deviceIP := range device.IPAddresses {
 			if deviceIP.Equal(ipLayer.DstIP) {
 				hasIP = true
+
 				break
 			}
 		}
+
 		if !hasIP {
 			continue
 		}
@@ -323,23 +378,29 @@ func (h *ICMPHandler) handleEchoRequest(pkt *Packet, ipLayer *layers.IPv4, icmp 
 			icmp.Payload,
 			device,
 		)
-
 		if err != nil {
 			if debugLevel >= 2 {
-				fmt.Printf("Error sending ICMP reply: %v\n", err)
+				_, _ = fmt.Fprintf(os.Stdout, "Error sending ICMP reply: %v\n", err)
 			}
 		} else {
 			h.stack.IncrementStat("icmp_replies")
+
 			if debugLevel >= 3 {
-				fmt.Printf("ICMP Echo Reply from %s (%s) to %s device=%s\n",
+				_, _ = fmt.Fprintf(os.Stdout, "ICMP Echo Reply from %s (%s) to %s device=%s\n",
 					ipLayer.DstIP, device.MACAddress, ipLayer.SrcIP, device.Name)
 			}
 		}
 	}
 }
 
-// sendEchoReply sends an ICMP Echo Reply
-func (h *ICMPHandler) sendEchoReply(srcMAC, dstMAC []byte, srcIP, dstIP []byte, id, seq uint16, payload []byte, device *config.Device) error {
+// sendEchoReply sends an ICMP Echo Reply.
+func (h *ICMPHandler) sendEchoReply(
+	srcMAC, dstMAC []byte,
+	srcIP, dstIP []byte,
+	id, seq uint16,
+	payload []byte,
+	device *config.Device,
+) error {
 	// Get TTL from config, or use default
 	ttl := uint8(64)
 	if device.ICMPConfig != nil && device.ICMPConfig.TTL > 0 {
@@ -384,7 +445,7 @@ func (h *ICMPHandler) sendEchoReply(srcMAC, dstMAC []byte, srcIP, dstIP []byte, 
 		gopacket.Payload(payload),
 	)
 	if err != nil {
-		return fmt.Errorf("error serializing ICMP reply: %v", err)
+		return fmt.Errorf("error serializing ICMP reply: %w", err)
 	}
 
 	// Get serial number
@@ -406,8 +467,13 @@ func (h *ICMPHandler) sendEchoReply(srcMAC, dstMAC []byte, srcIP, dstIP []byte, 
 	return nil
 }
 
-// SendICMPUnreachable sends an ICMP Destination Unreachable message
-func (h *ICMPHandler) SendICMPUnreachable(srcIP, dstIP []byte, srcMAC, dstMAC []byte, code uint8, originalPacket []byte) error {
+// SendICMPUnreachable sends an ICMP Destination Unreachable message.
+func (h *ICMPHandler) SendICMPUnreachable(
+	srcIP, dstIP []byte,
+	srcMAC, dstMAC []byte,
+	code uint8,
+	originalPacket []byte,
+) error {
 	// Build Ethernet header
 	eth := &layers.Ethernet{
 		SrcMAC:       srcMAC,
@@ -450,7 +516,7 @@ func (h *ICMPHandler) SendICMPUnreachable(srcIP, dstIP []byte, srcMAC, dstMAC []
 		gopacket.Payload(payload),
 	)
 	if err != nil {
-		return fmt.Errorf("error serializing ICMP unreachable: %v", err)
+		return fmt.Errorf("error serializing ICMP unreachable: %w", err)
 	}
 
 	// Get serial number
@@ -469,7 +535,7 @@ func (h *ICMPHandler) SendICMPUnreachable(srcIP, dstIP []byte, srcMAC, dstMAC []
 	h.stack.Send(pkt)
 
 	if h.stack.GetDebugLevel() >= 3 {
-		fmt.Printf("Sent ICMP Destination Unreachable (code=%d) from %s to %s sn=%d\n",
+		_, _ = fmt.Fprintf(os.Stdout, "Sent ICMP Destination Unreachable (code=%d) from %s to %s sn=%d\n",
 			code, srcIP, dstIP, serialNum)
 	}
 

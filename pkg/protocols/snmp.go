@@ -3,6 +3,7 @@ package protocols
 import (
 	"fmt"
 	"net"
+	"os"
 
 	"github.com/google/gopacket/layers"
 	"github.com/gosnmp/gosnmp"
@@ -25,6 +26,7 @@ func (h *SNMPHandler) HandlePacket(pkt *Packet, ip *layers.IPv4, udp *layers.UDP
 	if h == nil || h.stack == nil || h.stack.udpHandler == nil {
 		return
 	}
+
 	if len(udp.Payload) == 0 {
 		return
 	}
@@ -32,8 +34,9 @@ func (h *SNMPHandler) HandlePacket(pkt *Packet, ip *layers.IPv4, udp *layers.UDP
 	request, err := h.decodeRequest(udp.Payload)
 	if err != nil {
 		if h.stack.GetProtocolDebugLevel(logging.ProtocolSNMP) >= 2 {
-			fmt.Printf("SNMP: decode failed for %s sn=%d err=%v\n", ip.DstIP, pkt.SerialNumber, err)
+			_, _ = fmt.Fprintf(os.Stdout, "SNMP: decode failed for %s sn=%d err=%v\n", ip.DstIP, pkt.SerialNumber, err)
 		}
+
 		return
 	}
 
@@ -42,6 +45,7 @@ func (h *SNMPHandler) HandlePacket(pkt *Packet, ip *layers.IPv4, udp *layers.UDP
 		if group == nil {
 			continue
 		}
+
 		if !snmpAccessAllowed(device, ip.SrcIP) {
 			continue
 		}
@@ -50,6 +54,7 @@ func (h *SNMPHandler) HandlePacket(pkt *Packet, ip *layers.IPv4, udp *layers.UDP
 		if agent == nil {
 			agent = group.Get("public")
 		}
+
 		if agent == nil {
 			continue
 		}
@@ -69,8 +74,14 @@ func (h *SNMPHandler) HandlePacket(pkt *Packet, ip *layers.IPv4, udp *layers.UDP
 		payload, err := response.MarshalMsg()
 		if err != nil {
 			if h.stack.GetProtocolDebugLevel(logging.ProtocolSNMP) >= 1 {
-				fmt.Printf("SNMP: marshal response failed for device %s sn=%d err=%v\n", device.Name, pkt.SerialNumber, err)
+				_, _ = fmt.Fprintf(os.Stdout,
+					"SNMP: marshal response failed for device %s sn=%d err=%v\n",
+					device.Name,
+					pkt.SerialNumber,
+					err,
+				)
 			}
+
 			continue
 		}
 
@@ -79,20 +90,38 @@ func (h *SNMPHandler) HandlePacket(pkt *Packet, ip *layers.IPv4, udp *layers.UDP
 		h.stack.stats.mu.Unlock()
 
 		srcIP := ip.DstIP.To4()
+
 		dstIP := ip.SrcIP.To4()
+
 		if srcIP == nil || dstIP == nil {
 			continue
 		}
 
 		srcMAC := h.sourceMAC(device, pkt)
+
 		dstMAC := pkt.GetSourceMAC()
+
 		if len(dstMAC) == 0 || len(srcMAC) == 0 {
 			continue
 		}
 
-		err = h.stack.udpHandler.SendUDP(srcIP, dstIP, uint16(udp.DstPort), uint16(udp.SrcPort), payload, []byte(srcMAC), []byte(dstMAC))
+		err = h.stack.udpHandler.SendUDP(
+			srcIP,
+			dstIP,
+			uint16(udp.DstPort),
+			uint16(udp.SrcPort),
+			payload,
+			[]byte(srcMAC),
+			[]byte(dstMAC),
+		)
 		if err != nil && h.stack.GetProtocolDebugLevel(logging.ProtocolSNMP) >= 1 {
-			fmt.Printf("SNMP: failed to emit response for device %s sn=%d err=%v\n", device.Name, pkt.SerialNumber, err)
+			_, _ = fmt.Fprintf(
+				os.Stdout,
+				"SNMP: failed to emit response for device %s sn=%d err=%v\n",
+				device.Name,
+				pkt.SerialNumber,
+				err,
+			)
 		}
 	}
 }
@@ -101,11 +130,13 @@ func snmpAccessAllowed(device *config.Device, srcIP net.IP) bool {
 	if device == nil || len(device.SNMPConfig.AccessList) == 0 {
 		return true
 	}
+
 	for _, ip := range device.SNMPConfig.AccessList {
 		if ip != nil && ip.Equal(srcIP) {
 			return true
 		}
 	}
+
 	return false
 }
 
@@ -116,12 +147,18 @@ func (h *SNMPHandler) decodeRequest(payload []byte) (*gosnmp.SnmpPacket, error) 
 		Community: "public",
 		MaxOids:   gosnmp.MaxOids,
 	}
-	return decoder.SnmpDecodePacket(payload)
+
+	pkt, err := decoder.SnmpDecodePacket(payload)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode SNMP packet: %w", err)
+	}
+	return pkt, nil
 }
 
 func (h *SNMPHandler) sourceMAC(device *config.Device, pkt *Packet) net.HardwareAddr {
 	if len(device.MACAddress) == 6 {
 		return device.MACAddress
 	}
+
 	return pkt.GetDestMAC()
 }

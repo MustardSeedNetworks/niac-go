@@ -1,11 +1,11 @@
 export {
+  computeDiff,
+  type DiffBlock,
+  type DiffLine,
+  type DiffType,
   DiffViewer,
   generateMergedContent,
-  computeDiff,
-  type DiffType,
-  type DiffLine,
-  type DiffBlock,
   type MergeDecision,
-} from './DiffViewer';
+} from "./DiffViewer";
 
-export { MergeControls, MergePreviewModal } from './MergeControls';
+export { MergeControls, MergePreviewModal } from "./MergeControls";

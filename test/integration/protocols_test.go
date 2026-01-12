@@ -11,7 +11,7 @@ import (
 	"github.com/krisarmstrong/niac-go/pkg/snmp"
 )
 
-// createTestDevices creates test devices for protocol integration testing
+// createTestDevices creates test devices for protocol integration testing.
 func createTestDevices() []*config.Device {
 	mac1, _ := net.ParseMAC("00:11:22:33:44:55")
 	mac2, _ := net.ParseMAC("00:11:22:33:44:66")
@@ -42,7 +42,7 @@ func createTestDevices() []*config.Device {
 	return []*config.Device{dev1, dev2}
 }
 
-// TestProtocolIntegration_ARPPacketStructure tests ARP packet structure creation
+// TestProtocolIntegration_ARPPacketStructure tests ARP packet structure creation.
 func TestProtocolIntegration_ARPPacketStructure(t *testing.T) {
 	devices := createTestDevices()
 
@@ -88,7 +88,7 @@ func TestProtocolIntegration_ARPPacketStructure(t *testing.T) {
 	t.Logf("ARP request packet created: %d bytes", len(buffer.Bytes()))
 }
 
-// TestProtocolIntegration_ARPResponseStructure tests ARP response packet structure
+// TestProtocolIntegration_ARPResponseStructure tests ARP response packet structure.
 func TestProtocolIntegration_ARPResponseStructure(t *testing.T) {
 	devices := createTestDevices()
 
@@ -134,7 +134,7 @@ func TestProtocolIntegration_ARPResponseStructure(t *testing.T) {
 	t.Logf("ARP reply packet created: %d bytes", len(buffer.Bytes()))
 }
 
-// TestProtocolIntegration_LLDPFrameStructure tests LLDP frame structure
+// TestProtocolIntegration_LLDPFrameStructure tests LLDP frame structure.
 func TestProtocolIntegration_LLDPFrameStructure(t *testing.T) {
 	devices := createTestDevices()
 	device := devices[0]
@@ -185,7 +185,7 @@ func TestProtocolIntegration_LLDPFrameStructure(t *testing.T) {
 	t.Logf("LLDP frame created: %d bytes", len(buffer.Bytes()))
 }
 
-// TestProtocolIntegration_SNMPGetRequest tests SNMP GET request handling
+// TestProtocolIntegration_SNMPGetRequest tests SNMP GET request handling.
 func TestProtocolIntegration_SNMPGetRequest(t *testing.T) {
 	devices := createTestDevices()
 
@@ -209,7 +209,7 @@ func TestProtocolIntegration_SNMPGetRequest(t *testing.T) {
 	t.Logf("SNMP GET successful: sysDescr=%v", result.Value)
 }
 
-// TestProtocolIntegration_SNMPGetNextRequest tests SNMP GET-NEXT request handling
+// TestProtocolIntegration_SNMPGetNextRequest tests SNMP GET-NEXT request handling.
 func TestProtocolIntegration_SNMPGetNextRequest(t *testing.T) {
 	devices := createTestDevices()
 
@@ -227,13 +227,14 @@ func TestProtocolIntegration_SNMPGetNextRequest(t *testing.T) {
 
 	if value == nil {
 		t.Error("SNMP GET-NEXT returned nil value")
+
 		return
 	}
 
 	t.Logf("SNMP GET-NEXT successful: %s = %v", nextOID, value.Value)
 }
 
-// TestProtocolIntegration_SNMPWalk tests SNMP walk operation
+// TestProtocolIntegration_SNMPWalk tests SNMP walk operation.
 func TestProtocolIntegration_SNMPWalk(t *testing.T) {
 	devices := createTestDevices()
 
@@ -244,7 +245,7 @@ func TestProtocolIntegration_SNMPWalk(t *testing.T) {
 	oidCount := 0
 	oids := []string{}
 
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		nextOID, value, err := agent.HandleGetNext(currentOID)
 		if err != nil || nextOID == "" || value == nil {
 			break
@@ -264,7 +265,7 @@ func TestProtocolIntegration_SNMPWalk(t *testing.T) {
 	}
 }
 
-// TestProtocolIntegration_SNMPGetBulkRequest tests SNMP GET-BULK request
+// TestProtocolIntegration_SNMPGetBulkRequest tests SNMP GET-BULK request.
 func TestProtocolIntegration_SNMPGetBulkRequest(t *testing.T) {
 	devices := createTestDevices()
 
@@ -290,7 +291,7 @@ func TestProtocolIntegration_SNMPGetBulkRequest(t *testing.T) {
 	}
 }
 
-// TestProtocolIntegration_DHCPDiscoverPacket tests DHCP DISCOVER packet structure
+// TestProtocolIntegration_DHCPDiscoverPacket tests DHCP DISCOVER packet structure.
 func TestProtocolIntegration_DHCPDiscoverPacket(t *testing.T) {
 	clientMAC, _ := net.ParseMAC("aa:bb:cc:dd:ee:ff")
 
@@ -336,7 +337,7 @@ func TestProtocolIntegration_DHCPDiscoverPacket(t *testing.T) {
 		ComputeChecksums: true,
 	}
 
-	udp.SetNetworkLayerForChecksum(ip)
+	_ = udp.SetNetworkLayerForChecksum(ip)
 
 	err := gopacket.SerializeLayers(buffer, opts, eth, ip, udp, dhcp)
 	if err != nil {
@@ -350,7 +351,7 @@ func TestProtocolIntegration_DHCPDiscoverPacket(t *testing.T) {
 	t.Logf("DHCP DISCOVER packet created: %d bytes", len(buffer.Bytes()))
 }
 
-// TestProtocolIntegration_DHCPOfferPacket tests DHCP OFFER packet structure
+// TestProtocolIntegration_DHCPOfferPacket tests DHCP OFFER packet structure.
 func TestProtocolIntegration_DHCPOfferPacket(t *testing.T) {
 	devices := createTestDevices()
 	serverIP := devices[0].IPAddresses[0]
@@ -405,7 +406,7 @@ func TestProtocolIntegration_DHCPOfferPacket(t *testing.T) {
 		ComputeChecksums: true,
 	}
 
-	udp.SetNetworkLayerForChecksum(ip)
+	_ = udp.SetNetworkLayerForChecksum(ip)
 
 	err := gopacket.SerializeLayers(buffer, opts, eth, ip, udp, dhcp)
 	if err != nil {
@@ -419,7 +420,7 @@ func TestProtocolIntegration_DHCPOfferPacket(t *testing.T) {
 	t.Logf("DHCP OFFER packet created: %d bytes", len(buffer.Bytes()))
 }
 
-// TestProtocolIntegration_DHCPRequestPacket tests DHCP REQUEST packet structure
+// TestProtocolIntegration_DHCPRequestPacket tests DHCP REQUEST packet structure.
 func TestProtocolIntegration_DHCPRequestPacket(t *testing.T) {
 	clientMAC, _ := net.ParseMAC("aa:bb:cc:dd:ee:ff")
 	requestedIP := net.ParseIP("192.168.1.100")
@@ -485,7 +486,7 @@ func TestProtocolIntegration_DHCPRequestPacket(t *testing.T) {
 	t.Logf("DHCP REQUEST packet created: %d bytes", len(buffer.Bytes()))
 }
 
-// TestProtocolIntegration_DHCPAckPacket tests DHCP ACK packet structure
+// TestProtocolIntegration_DHCPAckPacket tests DHCP ACK packet structure.
 func TestProtocolIntegration_DHCPAckPacket(t *testing.T) {
 	devices := createTestDevices()
 	serverIP := devices[0].IPAddresses[0]
@@ -554,7 +555,7 @@ func TestProtocolIntegration_DHCPAckPacket(t *testing.T) {
 	t.Logf("DHCP ACK packet created: %d bytes", len(buffer.Bytes()))
 }
 
-// TestProtocolIntegration_MultipleDevices tests protocol operations across multiple devices
+// TestProtocolIntegration_MultipleDevices tests protocol operations across multiple devices.
 func TestProtocolIntegration_MultipleDevices(t *testing.T) {
 	devices := createTestDevices()
 
@@ -569,6 +570,7 @@ func TestProtocolIntegration_MultipleDevices(t *testing.T) {
 		result, err := agent.HandleGet("1.3.6.1.2.1.1.5.0") // sysName
 		if err != nil {
 			t.Errorf("Device %d: SNMP GET failed: %v", i, err)
+
 			continue
 		}
 
@@ -577,7 +579,7 @@ func TestProtocolIntegration_MultipleDevices(t *testing.T) {
 	}
 }
 
-// TestProtocolIntegration_CommunityValidation tests SNMP community string validation
+// TestProtocolIntegration_CommunityValidation tests SNMP community string validation.
 func TestProtocolIntegration_CommunityValidation(t *testing.T) {
 	devices := createTestDevices()
 
@@ -600,7 +602,7 @@ func TestProtocolIntegration_CommunityValidation(t *testing.T) {
 	t.Log("SNMP community validation successful")
 }
 
-// TestProtocolIntegration_ConcurrentOperations tests concurrent protocol operations
+// TestProtocolIntegration_ConcurrentOperations tests concurrent protocol operations.
 func TestProtocolIntegration_ConcurrentOperations(t *testing.T) {
 	devices := createTestDevices()
 	agent := snmp.NewAgent(devices[0], 0)
@@ -608,7 +610,7 @@ func TestProtocolIntegration_ConcurrentOperations(t *testing.T) {
 	done := make(chan bool, 50)
 
 	// Launch concurrent SNMP GET operations
-	for i := 0; i < 50; i++ {
+	for range 50 {
 		go func() {
 			_, _ = agent.HandleGet("1.3.6.1.2.1.1.3.0")
 			done <- true
@@ -617,7 +619,7 @@ func TestProtocolIntegration_ConcurrentOperations(t *testing.T) {
 
 	// Wait with timeout
 	timeout := time.After(5 * time.Second)
-	for i := 0; i < 50; i++ {
+	for range 50 {
 		select {
 		case <-done:
 			// Success
@@ -629,7 +631,7 @@ func TestProtocolIntegration_ConcurrentOperations(t *testing.T) {
 	t.Log("Concurrent protocol operations completed successfully")
 }
 
-// TestProtocolIntegration_ErrorHandling tests protocol error responses
+// TestProtocolIntegration_ErrorHandling tests protocol error responses.
 func TestProtocolIntegration_ErrorHandling(t *testing.T) {
 	devices := createTestDevices()
 	agent := snmp.NewAgent(devices[0], 0)
@@ -655,7 +657,7 @@ func TestProtocolIntegration_ErrorHandling(t *testing.T) {
 	t.Log("Protocol error handling verified")
 }
 
-// TestProtocolIntegration_PacketSizeValidation tests protocol packet size validation
+// TestProtocolIntegration_PacketSizeValidation tests protocol packet size validation.
 func TestProtocolIntegration_PacketSizeValidation(t *testing.T) {
 	// Test ARP packet size
 	srcMAC, _ := net.ParseMAC("aa:bb:cc:dd:ee:ff")
@@ -686,7 +688,8 @@ func TestProtocolIntegration_PacketSizeValidation(t *testing.T) {
 		ComputeChecksums: true,
 	}
 
-	if err := gopacket.SerializeLayers(buffer, opts, eth, arp); err != nil {
+	err := gopacket.SerializeLayers(buffer, opts, eth, arp)
+	if err != nil {
 		t.Fatalf("Failed to serialize ARP packet: %v", err)
 	}
 

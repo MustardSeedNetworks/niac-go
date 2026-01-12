@@ -1,8 +1,8 @@
-import { type FC } from 'react';
-import { Edit3, Copy, Trash2 } from 'lucide-react';
-import { Card, CardContent, Tag } from '../../ui';
-import { deviceTypeIcons, deviceTypeColors } from '../../constants/deviceTypes';
-import type { DeviceViewProps } from './types';
+import { Copy, Edit3, Trash2 } from "lucide-react";
+import type { FC } from "react";
+import { deviceTypeColors, deviceTypeIcons } from "../../constants/deviceTypes";
+import { Card, CardContent, Tag } from "../../ui";
+import type { DeviceViewProps } from "./types";
 
 export const DeviceTableView: FC<DeviceViewProps> = ({
   devices,
@@ -37,15 +37,15 @@ export const DeviceTableView: FC<DeviceViewProps> = ({
         {/* Device rows */}
         <div className="divide-y divide-white/5">
           {devices.map((device) => {
-            const DeviceIcon = deviceTypeIcons[device.type ?? 'unknown'];
-            const typeColor = deviceTypeColors[device.type ?? 'unknown'];
+            const DeviceIcon = deviceTypeIcons[device.type ?? "unknown"];
+            const typeColor = deviceTypeColors[device.type ?? "unknown"];
             const deviceProtocols = getDeviceProtocols(device);
 
             return (
               <div
                 key={device.hostname}
                 className={`flex items-center gap-4 px-4 py-3 hover:bg-white/5 transition-colors ${
-                  selectedDevices.has(device.hostname) ? 'bg-violet-500/10' : ''
+                  selectedDevices.has(device.hostname) ? "bg-violet-500/10" : ""
                 }`}
               >
                 <input
@@ -69,19 +69,17 @@ export const DeviceTableView: FC<DeviceViewProps> = ({
                   {/* Type */}
                   <div className="col-span-2">
                     <Tag colorScheme={typeColor} className="text-xs capitalize">
-                      {device.type?.replace('_', ' ') || 'unknown'}
+                      {device.type?.replace("_", " ") || "unknown"}
                     </Tag>
                   </div>
 
                   {/* IP */}
                   <div className="col-span-2">
                     <span className="text-gray-300 text-sm font-mono">
-                      {device.ip || device.ips?.[0] || '—'}
+                      {device.ip || device.ips?.[0] || "—"}
                     </span>
                     {device.ips && device.ips.length > 1 && (
-                      <span className="ml-1 text-gray-500 text-xs">
-                        +{device.ips.length - 1}
-                      </span>
+                      <span className="ml-1 text-gray-500 text-xs">+{device.ips.length - 1}</span>
                     )}
                   </div>
 

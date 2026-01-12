@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-// FuzzDNSDomainName tests DNS domain name parsing with arbitrary input
+// FuzzDNSDomainName tests DNS domain name parsing with arbitrary input.
 func FuzzDNSDomainName(f *testing.F) {
 	// Seed with valid domain names
 	f.Add("example.com")
@@ -36,10 +36,10 @@ func FuzzDNSDomainName(f *testing.F) {
 		_ = strings.TrimSpace(domain)
 
 		// Split into labels
-		labels := strings.Split(domain, ".")
+		labels := strings.SplitSeq(domain, ".")
 
 		// Check each label
-		for _, label := range labels {
+		for label := range labels {
 			if len(label) > 63 {
 				return // Invalid but shouldn't panic
 			}
@@ -47,7 +47,7 @@ func FuzzDNSDomainName(f *testing.F) {
 	})
 }
 
-// FuzzDNSRecordType tests DNS record type handling with arbitrary input
+// FuzzDNSRecordType tests DNS record type handling with arbitrary input.
 func FuzzDNSRecordType(f *testing.F) {
 	// Seed with valid record types (as strings for testing)
 	f.Add("A")
@@ -89,7 +89,7 @@ func FuzzDNSRecordType(f *testing.F) {
 	})
 }
 
-// FuzzDNSTTL tests DNS TTL value handling with arbitrary input
+// FuzzDNSTTL tests DNS TTL value handling with arbitrary input.
 func FuzzDNSTTL(f *testing.F) {
 	// Seed with valid TTL values
 	f.Add(uint32(0))

@@ -11,7 +11,7 @@ import (
 	"github.com/krisarmstrong/niac-go/pkg/api"
 )
 
-// TestDaemon_StartupShutdown verifies daemon can start and shutdown cleanly
+// TestDaemon_StartupShutdown verifies daemon can start and shutdown cleanly.
 func TestDaemon_StartupShutdown(t *testing.T) {
 	// Create temporary storage
 	tmpDir := t.TempDir()
@@ -53,7 +53,7 @@ func TestDaemon_StartupShutdown(t *testing.T) {
 	}
 }
 
-// TestDaemon_SimulationLifecycle verifies simulation can be started and stopped
+// TestDaemon_SimulationLifecycle verifies simulation can be started and stopped.
 func TestDaemon_SimulationLifecycle(t *testing.T) {
 	if os.Getenv("CI") == "true" || os.Geteuid() != 0 {
 		t.Skip("Skipping simulation test (requires root privileges for packet capture)")
@@ -77,9 +77,11 @@ func TestDaemon_SimulationLifecycle(t *testing.T) {
 	if err := daemon.Start(); err != nil {
 		t.Fatalf("Failed to start daemon: %v", err)
 	}
+
 	defer func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
+
 		_ = daemon.Shutdown(ctx)
 	}()
 
@@ -129,7 +131,7 @@ devices:
 	}
 }
 
-// TestDaemon_ErrorRecovery verifies daemon handles errors gracefully
+// TestDaemon_ErrorRecovery verifies daemon handles errors gracefully.
 func TestDaemon_ErrorRecovery(t *testing.T) {
 	tmpDir := t.TempDir()
 	storagePath := filepath.Join(tmpDir, "test.db")
@@ -149,9 +151,11 @@ func TestDaemon_ErrorRecovery(t *testing.T) {
 	if err := daemon.Start(); err != nil {
 		t.Fatalf("Failed to start daemon: %v", err)
 	}
+
 	defer func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
+
 		_ = daemon.Shutdown(ctx)
 	}()
 
@@ -165,6 +169,7 @@ func TestDaemon_ErrorRecovery(t *testing.T) {
 	if err == nil {
 		t.Error("Expected error for nonexistent interface")
 	}
+
 	if !strings.Contains(err.Error(), "does not exist") {
 		t.Errorf("Expected 'does not exist' error, got: %v", err)
 	}
@@ -190,12 +195,13 @@ func TestDaemon_ErrorRecovery(t *testing.T) {
 	if err == nil {
 		t.Error("Expected error for missing config")
 	}
+
 	if !strings.Contains(err.Error(), "must be provided") {
 		t.Errorf("Expected 'must be provided' error, got: %v", err)
 	}
 }
 
-// TestDaemon_ResourceCleanup verifies resources are cleaned up properly
+// TestDaemon_ResourceCleanup verifies resources are cleaned up properly.
 func TestDaemon_ResourceCleanup(t *testing.T) {
 	tmpDir := t.TempDir()
 	storagePath := filepath.Join(tmpDir, "test.db")
@@ -236,7 +242,7 @@ func TestDaemon_ResourceCleanup(t *testing.T) {
 	}
 }
 
-// TestDaemon_ConfigSizeValidation verifies config size limits (SECURITY FIX #2.8.1)
+// TestDaemon_ConfigSizeValidation verifies config size limits (SECURITY FIX #2.8.1).
 func TestDaemon_ConfigSizeValidation(t *testing.T) {
 	tmpDir := t.TempDir()
 	storagePath := filepath.Join(tmpDir, "test.db")
@@ -256,9 +262,11 @@ func TestDaemon_ConfigSizeValidation(t *testing.T) {
 	if err := daemon.Start(); err != nil {
 		t.Fatalf("Failed to start daemon: %v", err)
 	}
+
 	defer func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
+
 		_ = daemon.Shutdown(ctx)
 	}()
 
@@ -280,7 +288,7 @@ func TestDaemon_ConfigSizeValidation(t *testing.T) {
 	}
 }
 
-// TestDaemon_StorageDisabled verifies daemon works without storage
+// TestDaemon_StorageDisabled verifies daemon works without storage.
 func TestDaemon_StorageDisabled(t *testing.T) {
 	cfg := Config{
 		ListenAddr:  "127.0.0.1:0",
@@ -311,7 +319,7 @@ func TestDaemon_StorageDisabled(t *testing.T) {
 	}
 }
 
-// TestDaemon_MultipleStartStop verifies daemon handles multiple start/stop cycles
+// TestDaemon_MultipleStartStop verifies daemon handles multiple start/stop cycles.
 func TestDaemon_MultipleStartStop(t *testing.T) {
 	if os.Getenv("CI") == "true" || os.Geteuid() != 0 {
 		t.Skip("Skipping simulation test (requires root privileges for packet capture)")
@@ -335,9 +343,11 @@ func TestDaemon_MultipleStartStop(t *testing.T) {
 	if err := daemon.Start(); err != nil {
 		t.Fatalf("Failed to start daemon: %v", err)
 	}
+
 	defer func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
+
 		_ = daemon.Shutdown(ctx)
 	}()
 
@@ -353,13 +363,14 @@ devices:
 `
 
 	// Start/stop simulation 3 times
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		req := api.SimulationRequest{
 			Interface:  "lo0",
 			ConfigData: configData,
 		}
 
-		if err := daemon.StartSimulation(req); err != nil {
+		err := daemon.StartSimulation(req)
+		if err != nil {
 			t.Fatalf("Cycle %d: Failed to start simulation: %v", i, err)
 		}
 
@@ -368,7 +379,8 @@ devices:
 			t.Errorf("Cycle %d: Simulation should be running", i)
 		}
 
-		if err := daemon.StopSimulation(); err != nil {
+		err = daemon.StopSimulation()
+		if err != nil {
 			t.Fatalf("Cycle %d: Failed to stop simulation: %v", i, err)
 		}
 

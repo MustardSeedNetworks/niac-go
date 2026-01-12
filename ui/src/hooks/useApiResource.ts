@@ -1,11 +1,15 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from "react";
 
 interface Options<T> {
   intervalMs?: number;
   transform?: (value: T) => T;
 }
 
-export function useApiResource<T>(fetcher: () => Promise<T>, deps: unknown[] = [], options: Options<T> = {}) {
+export function useApiResource<T>(
+  fetcher: () => Promise<T>,
+  deps: unknown[] = [],
+  options: Options<T> = {},
+) {
   const { intervalMs, transform } = options;
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);

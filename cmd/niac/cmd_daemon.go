@@ -44,7 +44,8 @@ func init() {
 
 	daemonCmd.Flags().StringVar(&daemonOpts.listen, "listen", ":8080", "Address to listen on for API and web UI")
 	daemonCmd.Flags().StringVar(&daemonOpts.token, "token", "", "Bearer token for API authentication (optional)")
-	daemonCmd.Flags().StringVar(&daemonOpts.storagePath, "storage", "~/.niac/niac.db", "Path to run history database (use 'disabled' to disable)")
+	daemonCmd.Flags().
+		StringVar(&daemonOpts.storagePath, "storage", "~/.niac/niac.db", "Path to run history database (use 'disabled' to disable)")
 }
 
 func runDaemon(cmd *cobra.Command, args []string) error {
@@ -90,7 +91,7 @@ func runDaemon(cmd *cobra.Command, args []string) error {
 
 	if err := d.Shutdown(ctx); err != nil {
 		logging.Error("Error during shutdown: %v", err)
-		return err
+		return fmt.Errorf("failed to shutdown daemon: %w", err)
 	}
 
 	logging.Success("✓ Daemon stopped gracefully")

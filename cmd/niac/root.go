@@ -47,7 +47,7 @@ and network discovery without physical hardware.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// If no args, show help
 		if len(args) == 0 {
-			cmd.Help() // #nosec G104 -- error logged or non-critical
+			_ = cmd.Help()
 			return
 		}
 		// Legacy mode: if args provided and no subcommand matched, run main simulation
@@ -74,17 +74,24 @@ func init() {
 	cobra.OnInitialize(resolveServiceDefaults)
 	rootCmd.SetVersionTemplate(fmt.Sprintf("niac %s (commit: %s, built: %s)\n", version, commit, date))
 
-	rootCmd.PersistentFlags().StringVar(&servicesOpts.apiListen, "api-listen", "", "Expose the REST API and Web UI on this address (e.g., :8080)")
+	rootCmd.PersistentFlags().
+		StringVar(&servicesOpts.apiListen, "api-listen", "", "Expose the REST API and Web UI on this address (e.g., :8080)")
 	// SECURITY FIX #101: Deprecate --api-token flag in favor of environment variable
-	rootCmd.PersistentFlags().StringVar(&servicesOpts.apiToken, "api-token", "", "Bearer token required for API/Web UI access (DEPRECATED: use NIAC_API_TOKEN env var)")
-	rootCmd.PersistentFlags().StringVar(&servicesOpts.metricsListen, "metrics-listen", "", "Expose Prometheus metrics on this address (defaults to --api-listen)")
-	rootCmd.PersistentFlags().StringVar(&servicesOpts.storagePath, "storage-path", "", "Path to NIAC run history database (default: ~/.niac/niac.db)")
-	rootCmd.PersistentFlags().Uint64Var(&servicesOpts.alertPacketsThreshold, "alert-packets-threshold", 0, "Trigger alerts when total packets exceed this value")
-	rootCmd.PersistentFlags().StringVar(&servicesOpts.alertWebhook, "alert-webhook", "", "Optional webhook URL to notify when alerts fire")
+	rootCmd.PersistentFlags().
+		StringVar(&servicesOpts.apiToken, "api-token", "", "Bearer token required for API/Web UI access (DEPRECATED: use NIAC_API_TOKEN env var)")
+	rootCmd.PersistentFlags().
+		StringVar(&servicesOpts.metricsListen, "metrics-listen", "", "Expose Prometheus metrics on this address (defaults to --api-listen)")
+	rootCmd.PersistentFlags().
+		StringVar(&servicesOpts.storagePath, "storage-path", "", "Path to NIAC run history database (default: ~/.niac/niac.db)")
+	rootCmd.PersistentFlags().
+		Uint64Var(&servicesOpts.alertPacketsThreshold, "alert-packets-threshold", 0, "Trigger alerts when total packets exceed this value")
+	rootCmd.PersistentFlags().
+		StringVar(&servicesOpts.alertWebhook, "alert-webhook", "", "Optional webhook URL to notify when alerts fire")
 }
 
 func Execute() {
-	if err := rootCmd.Execute(); err != nil {
+	err := rootCmd.Execute()
+	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}

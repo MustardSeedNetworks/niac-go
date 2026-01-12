@@ -3,6 +3,7 @@ package config
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -13,61 +14,103 @@ import (
 	"github.com/krisarmstrong/niac-go/internal/converter"
 )
 
-// LLDP Chassis ID Type constants
+// Sentinel errors for configuration validation.
+var (
+	ErrInvalidDeviceDeclaration = errors.New("invalid device declaration")
+	ErrNoDevicesDefined         = errors.New("no devices defined in configuration")
+	ErrInvalidMapToIP           = errors.New("invalid map_to_ip")
+	ErrInvalidTTLIP             = errors.New("invalid ttl ip")
+	ErrInvalidTTLMask           = errors.New("invalid ttl mask")
+	ErrInvalidIPAddress         = errors.New("invalid IP address")
+	ErrInvalidSNMPAddr          = errors.New("invalid snmp_addr")
+	ErrDNSTTLNegative           = errors.New("DNS record TTL cannot be negative")
+	ErrDNSTTLExceedsMax         = errors.New("DNS record TTL exceeds maximum (2147483647)")
+	ErrInsufficientFields       = errors.New("insufficient fields")
+	ErrPathTraversalDetected    = errors.New("path traversal detected")
+	ErrPathOutsideBaseDir       = errors.New("path outside base directory")
+	ErrWalkFileNotFound         = errors.New("walk file not found")
+	ErrWalkFileIsSymlink        = errors.New("walk file is a symlink (not allowed)")
+	ErrWalkFileNotRegular       = errors.New("walk file is not a regular file")
+)
+
+// LLDP Chassis ID Type constants.
 const (
 	ChassisIDTypeMAC            = "mac"
 	ChassisIDTypeLocal          = "local"
 	ChassisIDTypeNetworkAddress = "network_address"
 )
 
-// Default configuration values
+// Default configuration values.
 const (
-	// Discovery protocol defaults
-	DefaultLLDPAdvertiseInterval = 30  // seconds
-	DefaultLLDPTTL               = 120 // seconds
-	DefaultCDPAdvertiseInterval  = 60  // seconds
-	DefaultCDPHoldtime           = 180 // seconds
-	DefaultCDPVersion            = 2
-	DefaultEDPAdvertiseInterval  = 30  // seconds
-	DefaultFDPAdvertiseInterval  = 60  // seconds
-	DefaultFDPHoldtime           = 180 // seconds
+	// DefaultLLDPAdvertiseInterval is the default LLDP advertisement interval in seconds.
+	DefaultLLDPAdvertiseInterval = 30
+	// DefaultLLDPTTL is the default LLDP time-to-live in seconds.
+	DefaultLLDPTTL = 120
+	// DefaultCDPAdvertiseInterval is the default CDP advertisement interval in seconds.
+	DefaultCDPAdvertiseInterval = 60
+	// DefaultCDPHoldtime is the default CDP holdtime in seconds.
+	DefaultCDPHoldtime = 180
+	// DefaultCDPVersion is the default CDP protocol version.
+	DefaultCDPVersion = 2
+	// DefaultEDPAdvertiseInterval is the default EDP advertisement interval in seconds.
+	DefaultEDPAdvertiseInterval = 30
+	// DefaultFDPAdvertiseInterval is the default FDP advertisement interval in seconds.
+	DefaultFDPAdvertiseInterval = 60
+	// DefaultFDPHoldtime is the default FDP holdtime in seconds.
+	DefaultFDPHoldtime = 180
 
-	// STP defaults
-	DefaultSTPBridgePriority = 32768 // Default priority
-	DefaultSTPHelloTime      = 2     // seconds
-	DefaultSTPMaxAge         = 20    // seconds
-	DefaultSTPForwardDelay   = 15    // seconds
+	// DefaultSTPBridgePriority is the default STP bridge priority.
+	DefaultSTPBridgePriority = 32768
+	// DefaultSTPHelloTime is the default STP hello time in seconds.
+	DefaultSTPHelloTime = 2
+	// DefaultSTPMaxAge is the default STP max age in seconds.
+	DefaultSTPMaxAge = 20
+	// DefaultSTPForwardDelay is the default STP forward delay in seconds.
+	DefaultSTPForwardDelay = 15
 
-	// NetBIOS defaults
-	DefaultNetBIOSTTL = 300 // 5 minutes in seconds
+	// DefaultNetBIOSTTL is the default NetBIOS TTL in seconds.
+	DefaultNetBIOSTTL = 300
 
-	// ICMP defaults
-	DefaultICMPTTL        = 64 // Default TTL
-	DefaultICMPv6HopLimit = 64 // Default hop limit (NDP uses 255)
+	// DefaultICMPTTL is the default ICMP time-to-live.
+	DefaultICMPTTL = 64
+	// DefaultICMPv6HopLimit is the default ICMPv6 hop limit.
+	DefaultICMPv6HopLimit = 64
 
-	// DHCPv6 defaults
-	DefaultDHCPv6PreferredLifetime = 604800  // 7 days in seconds
-	DefaultDHCPv6ValidLifetime     = 2592000 // 30 days in seconds
+	// DefaultDHCPv6PreferredLifetime is the default DHCPv6 preferred lifetime in seconds.
+	DefaultDHCPv6PreferredLifetime = 604800
+	// DefaultDHCPv6ValidLifetime is the default DHCPv6 valid lifetime in seconds.
+	DefaultDHCPv6ValidLifetime = 2592000
 
-	// Traffic pattern defaults
-	DefaultARPAnnouncementInterval  = 60  // seconds
-	DefaultPeriodicPingInterval     = 120 // seconds
-	DefaultPeriodicPingPayloadSize  = 32  // bytes
-	DefaultRandomTrafficInterval    = 180 // seconds
-	DefaultRandomTrafficPacketCount = 5   // packets per interval
+	// DefaultARPAnnouncementInterval is the default ARP announcement interval in seconds.
+	DefaultARPAnnouncementInterval = 60
+	// DefaultPeriodicPingInterval is the default periodic ping interval in seconds.
+	DefaultPeriodicPingInterval = 120
+	// DefaultPeriodicPingPayloadSize is the default periodic ping payload size in bytes.
+	DefaultPeriodicPingPayloadSize = 32
+	// DefaultRandomTrafficInterval is the default random traffic interval in seconds.
+	DefaultRandomTrafficInterval = 180
+	// DefaultRandomTrafficPacketCount is the default packets per interval.
+	DefaultRandomTrafficPacketCount = 5
 
-	// SNMP trap defaults
-	DefaultHighCPUThreshold        = 80  // percent
-	DefaultHighMemoryThreshold     = 90  // percent
-	DefaultInterfaceErrorThreshold = 100 // error count
-	DefaultTrapCheckInterval       = 300 // 5 minutes in seconds
-	DefaultInterfaceErrorInterval  = 60  // 1 minute in seconds
+	// DefaultSNMPCommunity is the default SNMP community string.
+	DefaultSNMPCommunity = "public"
 
-	// DNS defaults
-	DefaultDNSTTL = 3600 // 1 hour in seconds
+	// DefaultHighCPUThreshold is the default high CPU usage threshold in percent.
+	DefaultHighCPUThreshold = 80
+	// DefaultHighMemoryThreshold is the default high memory usage threshold in percent.
+	DefaultHighMemoryThreshold = 90
+	// DefaultInterfaceErrorThreshold is the default interface error threshold count.
+	DefaultInterfaceErrorThreshold = 100
+	// DefaultTrapCheckInterval is the default trap check interval in seconds.
+	DefaultTrapCheckInterval = 300
+	// DefaultInterfaceErrorInterval is the default interface error check interval in seconds.
+	DefaultInterfaceErrorInterval = 60
+
+	// DefaultDNSTTL is the default DNS TTL in seconds.
+	DefaultDNSTTL = 3600
 )
 
-// Config represents the network configuration
+// Config represents the network configuration.
 type Config struct {
 	Devices            []Device
 	IncludePath        string              // Base path for walk files
@@ -75,14 +118,14 @@ type Config struct {
 	DiscoveryProtocols *DiscoveryProtocols // Discovery protocol configuration
 }
 
-// CapturePlayback represents PCAP file playback configuration
+// CapturePlayback represents PCAP file playback configuration.
 type CapturePlayback struct {
 	FileName  string
 	LoopTime  int     // milliseconds
 	ScaleTime float64 // time scaling factor
 }
 
-// DiscoveryProtocols configures discovery protocol behavior
+// DiscoveryProtocols configures discovery protocol behavior.
 type DiscoveryProtocols struct {
 	LLDP *ProtocolConfig
 	CDP  *ProtocolConfig
@@ -90,37 +133,37 @@ type DiscoveryProtocols struct {
 	FDP  *ProtocolConfig
 }
 
-// ProtocolConfig configures a discovery protocol
+// ProtocolConfig configures a discovery protocol.
 type ProtocolConfig struct {
 	Enabled  bool
 	Interval int // Advertisement interval in seconds
 }
 
-// Device represents a simulated network device
+// Device represents a simulated network device.
 type Device struct {
-	Name          string
-	Type          string // router, switch, ap, etc.
-	MACAddress    net.HardwareAddr
-	IPAddresses   []net.IP
-	MapToIP       net.IP     // Map UDP traffic to external IP (Java MapToIp)
-	Babble        bool       // Periodically emit babble traffic
-	TTLConfig     *TTLConfig // ICMP TTL timeout behavior (traceroute simulation)
-	VLAN          int        // Optional VLAN membership (Java Vlan)
-	Interfaces    []Interface
-	SNMPConfig    SNMPConfig
-	DHCPConfig    *DHCPConfig    // DHCP server configuration
-	DNSConfig     *DNSConfig     // DNS server configuration
-	LLDPConfig    *LLDPConfig    // LLDP discovery protocol configuration
-	CDPConfig     *CDPConfig     // CDP discovery protocol configuration
-	EDPConfig     *EDPConfig     // EDP discovery protocol configuration
-	FDPConfig     *FDPConfig     // FDP discovery protocol configuration
-	STPConfig     *STPConfig     // STP/RSTP/MSTP configuration
-	HTTPConfig    *HTTPConfig    // HTTP server configuration
-	FTPConfig     *FTPConfig     // FTP server configuration
-	NetBIOSConfig *NetBIOSConfig // NetBIOS service configuration
-	ICMPConfig    *ICMPConfig    // ICMP/ICMPv4 configuration
-	ICMPv6Config  *ICMPv6Config  // ICMPv6 configuration
-	DHCPv6Config  *DHCPv6Config  // DHCPv6 server configuration
+	Name                string
+	Type                string // router, switch, ap, etc.
+	MACAddress          net.HardwareAddr
+	IPAddresses         []net.IP
+	MapToIP             net.IP     // Map UDP traffic to external IP (Java MapToIp)
+	Babble              bool       // Periodically emit babble traffic
+	TTLConfig           *TTLConfig // ICMP TTL timeout behavior (traceroute simulation)
+	VLAN                int        // Optional VLAN membership (Java Vlan)
+	Interfaces          []Interface
+	SNMPConfig          SNMPConfig
+	DHCPConfig          *DHCPConfig          // DHCP server configuration
+	DNSConfig           *DNSConfig           // DNS server configuration
+	LLDPConfig          *LLDPConfig          // LLDP discovery protocol configuration
+	CDPConfig           *CDPConfig           // CDP discovery protocol configuration
+	EDPConfig           *EDPConfig           // EDP discovery protocol configuration
+	FDPConfig           *FDPConfig           // FDP discovery protocol configuration
+	STPConfig           *STPConfig           // STP/RSTP/MSTP configuration
+	HTTPConfig          *HTTPConfig          // HTTP server configuration
+	FTPConfig           *FTPConfig           // FTP server configuration
+	NetBIOSConfig       *NetBIOSConfig       // NetBIOS service configuration
+	ICMPConfig          *ICMPConfig          // ICMP/ICMPv4 configuration
+	ICMPv6Config        *ICMPv6Config        // ICMPv6 configuration
+	DHCPv6Config        *DHCPv6Config        // DHCPv6 server configuration
 	TrafficConfig       *TrafficConfig       // Traffic pattern configuration (v1.6.0)
 	OSFingerprintConfig *OSFingerprintConfig // OS fingerprinting configuration (v1.24.0)
 	IPerf3              *IPerf3Config        // iPerf3 server emulation configuration (v1.25.0)
@@ -129,7 +172,7 @@ type Device struct {
 	Properties          map[string]string
 }
 
-// OSFingerprintConfig represents OS fingerprinting configuration for device simulation
+// OSFingerprintConfig represents OS fingerprinting configuration for device simulation.
 type OSFingerprintConfig struct {
 	OSType       string // e.g., "linux", "windows", "cisco-ios", "juniper-junos"
 	TTL          uint8  // Default IP TTL (Linux=64, Windows=128, Cisco=255)
@@ -144,7 +187,7 @@ type OSFingerprintConfig struct {
 	DontFragment bool   // IP DF bit (Linux=true, Windows=false usually)
 }
 
-// IPerf3Config holds iPerf3 server emulation configuration for bandwidth testing simulation
+// IPerf3Config holds iPerf3 server emulation configuration for bandwidth testing simulation.
 type IPerf3Config struct {
 	Enabled           bool    // Whether iPerf3 server is enabled
 	Port              uint16  // Listen port (default 5201)
@@ -156,7 +199,7 @@ type IPerf3Config struct {
 	DownloadMbps      float64 // Simulated download bandwidth
 }
 
-// DHCPConfig holds DHCP server configuration for a device
+// DHCPConfig holds DHCP server configuration for a device.
 type DHCPConfig struct {
 	// Basic DHCPv4 options
 	SubnetMask       net.IPMask
@@ -187,20 +230,20 @@ type DHCPConfig struct {
 	ClientLeases []DHCPLease
 }
 
-// DHCPLease represents a static DHCP lease assignment
+// DHCPLease represents a static DHCP lease assignment.
 type DHCPLease struct {
 	ClientIP   net.IP
 	MACAddress net.HardwareAddr
 	MACMask    net.HardwareAddr // For wildcard matching
 }
 
-// DNSConfig holds DNS server configuration for a device
+// DNSConfig holds DNS server configuration for a device.
 type DNSConfig struct {
 	ForwardRecords []DNSRecord
 	ReverseRecords []DNSRecord
 }
 
-// DNSRecord represents a DNS A or PTR record
+// DNSRecord represents a DNS A or PTR record.
 type DNSRecord struct {
 	Name  string
 	IP    net.IP
@@ -208,7 +251,7 @@ type DNSRecord struct {
 	RCode int // DNS response code override (0 = NoError)
 }
 
-// Interface represents a network interface on a device
+// Interface represents a network interface on a device.
 type Interface struct {
 	Name        string
 	Speed       int // Mbps
@@ -219,7 +262,7 @@ type Interface struct {
 	VLANs       []int
 }
 
-// SNMPConfig holds SNMP configuration
+// SNMPConfig holds SNMP configuration.
 type SNMPConfig struct {
 	Community         string
 	SysName           string
@@ -263,7 +306,7 @@ type TTLConfig struct {
 	Mask net.IPMask
 }
 
-// LLDPConfig holds LLDP (Link Layer Discovery Protocol) configuration
+// LLDPConfig holds LLDP (Link Layer Discovery Protocol) configuration.
 type LLDPConfig struct {
 	Enabled           bool
 	AdvertiseInterval int // seconds
@@ -273,7 +316,7 @@ type LLDPConfig struct {
 	ChassisIDType     string // "mac", "local", "network_address"
 }
 
-// CDPConfig holds CDP (Cisco Discovery Protocol) configuration
+// CDPConfig holds CDP (Cisco Discovery Protocol) configuration.
 type CDPConfig struct {
 	Enabled           bool
 	AdvertiseInterval int // seconds
@@ -284,7 +327,7 @@ type CDPConfig struct {
 	PortID            string
 }
 
-// EDPConfig holds EDP (Extreme Discovery Protocol) configuration
+// EDPConfig holds EDP (Extreme Discovery Protocol) configuration.
 type EDPConfig struct {
 	Enabled           bool
 	AdvertiseInterval int // seconds
@@ -292,7 +335,7 @@ type EDPConfig struct {
 	DisplayString     string
 }
 
-// FDPConfig holds FDP (Foundry Discovery Protocol) configuration
+// FDPConfig holds FDP (Foundry Discovery Protocol) configuration.
 type FDPConfig struct {
 	Enabled           bool
 	AdvertiseInterval int // seconds
@@ -302,7 +345,7 @@ type FDPConfig struct {
 	PortID            string
 }
 
-// STPConfig holds STP (Spanning Tree Protocol) configuration
+// STPConfig holds STP (Spanning Tree Protocol) configuration.
 type STPConfig struct {
 	Enabled        bool
 	BridgePriority uint16 // 0-61440 in increments of 4096 (default: 32768)
@@ -312,14 +355,14 @@ type STPConfig struct {
 	Version        string // "stp", "rstp", "mstp" (default: "stp")
 }
 
-// HTTPConfig holds HTTP server configuration
+// HTTPConfig holds HTTP server configuration.
 type HTTPConfig struct {
 	Enabled    bool
 	ServerName string         // Server header value (default: "NIAC-Go/1.0.0")
 	Endpoints  []HTTPEndpoint // Custom endpoint definitions
 }
 
-// HTTPEndpoint defines a custom HTTP endpoint and response
+// HTTPEndpoint defines a custom HTTP endpoint and response.
 type HTTPEndpoint struct {
 	Path        string // URL path (e.g., "/", "/api/info")
 	Method      string // HTTP method (default: "GET")
@@ -328,7 +371,7 @@ type HTTPEndpoint struct {
 	Body        string // Response body
 }
 
-// FTPConfig holds FTP server configuration
+// FTPConfig holds FTP server configuration.
 type FTPConfig struct {
 	Enabled        bool
 	WelcomeBanner  string    // Welcome message (default: "220 {devicename} FTP Server (NIAC-Go) ready.")
@@ -337,14 +380,14 @@ type FTPConfig struct {
 	Users          []FTPUser // User accounts
 }
 
-// FTPUser represents an FTP user account
+// FTPUser represents an FTP user account.
 type FTPUser struct {
 	Username string
 	Password string
 	HomeDir  string // Virtual home directory path
 }
 
-// NetBIOSConfig holds NetBIOS service configuration
+// NetBIOSConfig holds NetBIOS service configuration.
 type NetBIOSConfig struct {
 	Enabled   bool
 	Name      string        // NetBIOS name (default: device name, max 15 chars)
@@ -363,7 +406,7 @@ type NetBIOSName struct {
 	Group  bool
 }
 
-// ICMPConfig holds ICMP/ICMPv4 configuration
+// ICMPConfig holds ICMP/ICMPv4 configuration.
 type ICMPConfig struct {
 	Enabled             bool
 	TTL                 uint8 // Time to Live for ICMP packets (default: 64)
@@ -385,7 +428,7 @@ type IcmpRouter struct {
 	Preference int
 }
 
-// ICMPv6Config holds ICMPv6 configuration
+// ICMPv6Config holds ICMPv6 configuration.
 type ICMPv6Config struct {
 	Enabled             bool
 	HopLimit            uint8 // Hop limit for ICMPv6 packets (default: 64, NDP uses 255)
@@ -416,7 +459,7 @@ type Icmpv6PrefixInfo struct {
 	Prefix            net.IP
 }
 
-// DHCPv6Config holds DHCPv6 server configuration
+// DHCPv6Config holds DHCPv6 server configuration.
 type DHCPv6Config struct {
 	Enabled           bool
 	Pools             []DHCPv6Pool // Address pools
@@ -431,14 +474,14 @@ type DHCPv6Config struct {
 	SIPDomains        []string     // SIP domain names (Option 21)
 }
 
-// DHCPv6Pool represents an IPv6 address pool
+// DHCPv6Pool represents an IPv6 address pool.
 type DHCPv6Pool struct {
 	Network    string // IPv6 network (e.g., "2001:db8::/64")
 	RangeStart string // Start of address range
 	RangeEnd   string // End of address range
 }
 
-// TrafficConfig holds traffic pattern configuration (v1.6.0)
+// TrafficConfig holds traffic pattern configuration (v1.6.0).
 type TrafficConfig struct {
 	Enabled          bool
 	ARPAnnouncements *ARPAnnouncementConfig
@@ -446,20 +489,20 @@ type TrafficConfig struct {
 	RandomTraffic    *RandomTrafficConfig
 }
 
-// ARPAnnouncementConfig configures gratuitous ARP announcements
+// ARPAnnouncementConfig configures gratuitous ARP announcements.
 type ARPAnnouncementConfig struct {
 	Enabled  bool
 	Interval int // Interval in seconds (default: 60)
 }
 
-// PeriodicPingConfig configures periodic ICMP echo requests
+// PeriodicPingConfig configures periodic ICMP echo requests.
 type PeriodicPingConfig struct {
 	Enabled     bool
 	Interval    int // Interval in seconds (default: 120)
 	PayloadSize int // Payload size in bytes (default: 32)
 }
 
-// RandomTrafficConfig configures random background traffic
+// RandomTrafficConfig configures random background traffic.
 type RandomTrafficConfig struct {
 	Enabled     bool
 	Interval    int      // Interval in seconds (default: 180)
@@ -467,7 +510,7 @@ type RandomTrafficConfig struct {
 	Patterns    []string // Traffic patterns: "broadcast_arp", "multicast", "udp"
 }
 
-// TrapConfig holds SNMP trap configuration (v1.6.0)
+// TrapConfig holds SNMP trap configuration (v1.6.0).
 type TrapConfig struct {
 	Enabled               bool
 	Receivers             []string // Trap receiver addresses (IP:port format)
@@ -480,34 +523,34 @@ type TrapConfig struct {
 	InterfaceErrors       *ThresholdTrapConfig
 }
 
-// TrapTriggerConfig configures a simple trap trigger
+// TrapTriggerConfig configures a simple trap trigger.
 type TrapTriggerConfig struct {
 	Enabled   bool
 	OnStartup bool // Send trap on device startup
 }
 
-// LinkStateTrapConfig configures link up/down traps
+// LinkStateTrapConfig configures link up/down traps.
 type LinkStateTrapConfig struct {
 	Enabled  bool
 	LinkDown bool // Send trap on link down
 	LinkUp   bool // Send trap on link up
 }
 
-// ThresholdTrapConfig configures threshold-based traps
+// ThresholdTrapConfig configures threshold-based traps.
 type ThresholdTrapConfig struct {
 	Enabled   bool
 	Threshold int // Threshold value (percent for CPU/Memory, count for errors)
 	Interval  int // Check interval in seconds
 }
 
-// PortChannel represents a port-channel (LAG/Link Aggregation Group) configuration (v1.23.0)
+// PortChannel represents a port-channel (LAG/Link Aggregation Group) configuration (v1.23.0).
 type PortChannel struct {
 	ID      int      // Port-channel ID (e.g., 1 for Port-channel1)
 	Members []string // Member interface names (e.g., ["Ethernet1/1", "Ethernet1/2"])
 	Mode    string   // LACP mode: "active", "passive", "on" (static)
 }
 
-// TrunkPort represents a trunk port configuration with VLAN tagging (v1.23.0)
+// TrunkPort represents a trunk port configuration with VLAN tagging (v1.23.0).
 type TrunkPort struct {
 	Interface       string // Local interface name (can be physical or port-channel)
 	VLANs           []int  // List of allowed VLANs
@@ -519,7 +562,7 @@ type TrunkPort struct {
 // Load reads and parses a configuration file
 // Automatically detects format based on file extension:
 // - .yaml -> YAML format (converted from Java DSL)
-// - .cfg, .conf, or other -> legacy key-value format
+// - .cfg, .conf, or other -> legacy key-value format.
 func Load(filename string) (*Config, error) {
 	ext := filepath.Ext(filename)
 
@@ -533,19 +576,21 @@ func Load(filename string) (*Config, error) {
 }
 
 // LoadLegacy loads a legacy key-value configuration file
-// Format: device <name> { key = value ... }
+// Format: device <name> { key = value ... }.
 func LoadLegacy(filename string) (*Config, error) {
 	file, err := os.Open(filename) // #nosec G304 -- user-provided file path, validated by caller
 	if err != nil {
 		return nil, fmt.Errorf("failed to open config file: %w", err)
 	}
-	defer file.Close()
+
+	defer func() { _ = file.Close() }()
 
 	cfg := &Config{
 		Devices: make([]Device, 0),
 	}
 
 	var currentDevice *Device
+
 	scanner := bufio.NewScanner(file)
 	lineNum := 0
 
@@ -562,7 +607,7 @@ func LoadLegacy(filename string) (*Config, error) {
 		if strings.HasPrefix(line, "device ") {
 			parts := strings.Fields(line)
 			if len(parts) < 2 {
-				return nil, fmt.Errorf("line %d: invalid device declaration", lineNum)
+				return nil, fmt.Errorf("%w: line %d", ErrInvalidDeviceDeclaration, lineNum)
 			}
 
 			device := Device{
@@ -572,6 +617,7 @@ func LoadLegacy(filename string) (*Config, error) {
 			}
 			cfg.Devices = append(cfg.Devices, device)
 			currentDevice = &cfg.Devices[len(cfg.Devices)-1]
+
 			continue
 		}
 
@@ -579,6 +625,7 @@ func LoadLegacy(filename string) (*Config, error) {
 		if currentDevice != nil {
 			if strings.HasPrefix(line, "}") {
 				currentDevice = nil
+
 				continue
 			}
 
@@ -627,23 +674,24 @@ func LoadLegacy(filename string) (*Config, error) {
 
 	// Validate config
 	if len(cfg.Devices) == 0 {
-		return nil, fmt.Errorf("no devices defined in configuration")
+		return nil, ErrNoDevicesDefined
 	}
 
 	return cfg, nil
 }
 
-// GetDeviceByMAC finds a device by MAC address
+// GetDeviceByMAC finds a device by MAC address.
 func (c *Config) GetDeviceByMAC(mac net.HardwareAddr) *Device {
 	for i := range c.Devices {
 		if c.Devices[i].MACAddress.String() == mac.String() {
 			return &c.Devices[i]
 		}
 	}
+
 	return nil
 }
 
-// GetDeviceByIP finds a device by IP address
+// GetDeviceByIP finds a device by IP address.
 func (c *Config) GetDeviceByIP(ip net.IP) *Device {
 	for i := range c.Devices {
 		for _, deviceIP := range c.Devices[i].IPAddresses {
@@ -652,15 +700,17 @@ func (c *Config) GetDeviceByIP(ip net.IP) *Device {
 			}
 		}
 	}
+
 	return nil
 }
 
-// LoadYAML loads a YAML configuration file
+// LoadYAML loads a YAML configuration file.
 func LoadYAML(filename string) (*Config, error) {
 	yamlConfig, err := loadYAMLFile(filename)
 	if err != nil {
 		return nil, err
 	}
+
 	return buildConfigFromYAML(yamlConfig)
 }
 
@@ -670,15 +720,17 @@ func LoadYAMLBytes(data []byte) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return buildConfigFromYAML(yamlConfig)
 }
 
-// loadYAMLFile loads and validates a YAML configuration file
+// loadYAMLFile loads and validates a YAML configuration file.
 func loadYAMLFile(filename string) (*converter.Config, error) {
 	yamlConfig, err := converter.LoadYAMLConfig(filename)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load YAML config: %w", err)
 	}
+
 	return validateYAMLConfig(yamlConfig)
 }
 
@@ -687,13 +739,16 @@ func loadYAMLBytes(data []byte) (*converter.Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse YAML config: %w", err)
 	}
+
 	return validateYAMLConfig(yamlConfig)
 }
 
 func validateYAMLConfig(yamlConfig *converter.Config) (*converter.Config, error) {
-	if err := converter.ValidateConfig(yamlConfig); err != nil {
+	err := converter.ValidateConfig(yamlConfig)
+	if err != nil {
 		return nil, fmt.Errorf("config validation failed: %w", err)
 	}
+
 	return yamlConfig, nil
 }
 
@@ -705,17 +760,18 @@ func buildConfigFromYAML(yamlConfig *converter.Config) (*Config, error) {
 		if err != nil {
 			return nil, err
 		}
+
 		cfg.Devices = append(cfg.Devices, device)
 	}
 
 	if len(cfg.Devices) == 0 {
-		return nil, fmt.Errorf("no devices defined in configuration")
+		return nil, ErrNoDevicesDefined
 	}
 
 	return cfg, nil
 }
 
-// createBaseConfig creates the base configuration with global settings
+// createBaseConfig creates the base configuration with global settings.
 func createBaseConfig(yamlConfig *converter.Config) *Config {
 	cfg := &Config{
 		Devices:     make([]Device, 0, len(yamlConfig.Devices)),
@@ -767,7 +823,7 @@ func createBaseConfig(yamlConfig *converter.Config) *Config {
 	return cfg
 }
 
-// convertYAMLDevice converts a YAML device to a runtime Device
+// convertYAMLDevice converts a YAML device to a runtime Device.
 func convertYAMLDevice(yamlDevice converter.Device, includePath string) (Device, error) {
 	// Determine device type (default to "unknown" if not specified)
 	deviceType := yamlDevice.Type
@@ -792,11 +848,13 @@ func convertYAMLDevice(yamlDevice converter.Device, includePath string) (Device,
 		if err != nil {
 			return device, fmt.Errorf("device %s: invalid MAC address %s: %w", yamlDevice.Name, yamlDevice.MAC, err)
 		}
+
 		device.MACAddress = mac
 	}
 
 	// Parse IP addresses
-	if err := parseDeviceIPAddresses(&device, &yamlDevice); err != nil {
+	err := parseDeviceIPAddresses(&device, &yamlDevice)
+	if err != nil {
 		return device, err
 	}
 
@@ -805,7 +863,7 @@ func convertYAMLDevice(yamlDevice converter.Device, includePath string) (Device,
 		if ip := net.ParseIP(yamlDevice.MapToIP); ip != nil {
 			device.MapToIP = ip
 		} else {
-			return device, fmt.Errorf("device %s: invalid map_to_ip %s", yamlDevice.Name, yamlDevice.MapToIP)
+			return device, fmt.Errorf("device %s: %w: %s", yamlDevice.Name, ErrInvalidMapToIP, yamlDevice.MapToIP)
 		}
 	}
 
@@ -815,50 +873,56 @@ func convertYAMLDevice(yamlDevice converter.Device, includePath string) (Device,
 	// TTL config (traceroute simulation)
 	if yamlDevice.TTL != nil {
 		ttlCfg := &TTLConfig{TTL: yamlDevice.TTL.TTL}
+
 		if yamlDevice.TTL.IP != "" {
 			if ip := net.ParseIP(yamlDevice.TTL.IP); ip != nil {
 				ttlCfg.IP = ip.To4()
 			} else {
-				return device, fmt.Errorf("device %s: invalid ttl ip %s", yamlDevice.Name, yamlDevice.TTL.IP)
+				return device, fmt.Errorf("device %s: %w: %s", yamlDevice.Name, ErrInvalidTTLIP, yamlDevice.TTL.IP)
 			}
 		}
+
 		if yamlDevice.TTL.Mask != "" {
 			if ip := net.ParseIP(yamlDevice.TTL.Mask); ip != nil {
 				ttlCfg.Mask = net.IPMask(ip.To4())
 			} else {
-				return device, fmt.Errorf("device %s: invalid ttl mask %s", yamlDevice.Name, yamlDevice.TTL.Mask)
+				return device, fmt.Errorf("device %s: %w: %s", yamlDevice.Name, ErrInvalidTTLMask, yamlDevice.TTL.Mask)
 			}
 		}
+
 		device.TTLConfig = ttlCfg
 	}
 
 	// Handle SNMP configuration
-	if err := parseDeviceSNMPConfig(&device, &yamlDevice, includePath); err != nil {
+	err = parseDeviceSNMPConfig(&device, &yamlDevice, includePath)
+	if err != nil {
 		return device, err
 	}
 
 	// Store VLAN if present
 	if yamlDevice.VLAN > 0 {
-		device.Properties["vlan"] = fmt.Sprintf("%d", yamlDevice.VLAN)
+		device.Properties["vlan"] = strconv.Itoa(yamlDevice.VLAN)
 		device.VLAN = yamlDevice.VLAN
 	}
 
 	// Parse protocol configurations
-	if err := parseDeviceProtocolConfigs(&device, &yamlDevice); err != nil {
+	err = parseDeviceProtocolConfigs(&device, &yamlDevice)
+	if err != nil {
 		return device, err
 	}
 
 	return device, nil
 }
 
-// parseDeviceIPAddresses parses IP addresses for a device
+// parseDeviceIPAddresses parses IP addresses for a device.
 func parseDeviceIPAddresses(device *Device, yamlDevice *converter.Device) error {
 	// Support both singular 'ip' (backward compatible) and plural 'ips' (new feature)
 	if yamlDevice.IP != "" {
 		ip := net.ParseIP(yamlDevice.IP)
 		if ip == nil {
-			return fmt.Errorf("device %s: invalid IP address %s", yamlDevice.Name, yamlDevice.IP)
+			return fmt.Errorf("device %s: %w: %s", yamlDevice.Name, ErrInvalidIPAddress, yamlDevice.IP)
 		}
+
 		device.IPAddresses = append(device.IPAddresses, ip)
 	}
 
@@ -866,15 +930,16 @@ func parseDeviceIPAddresses(device *Device, yamlDevice *converter.Device) error 
 	for i, ipStr := range yamlDevice.IPs {
 		ip := net.ParseIP(ipStr)
 		if ip == nil {
-			return fmt.Errorf("device %s: invalid IP address in ips[%d]: %s", yamlDevice.Name, i, ipStr)
+			return fmt.Errorf("device %s: %w in ips[%d]: %s", yamlDevice.Name, ErrInvalidIPAddress, i, ipStr)
 		}
+
 		device.IPAddresses = append(device.IPAddresses, ip)
 	}
 
 	return nil
 }
 
-// parseDeviceSNMPConfig parses SNMP configuration for a device
+// parseDeviceSNMPConfig parses SNMP configuration for a device.
 func parseDeviceSNMPConfig(device *Device, yamlDevice *converter.Device, includePath string) error {
 	if yamlDevice.SnmpAgent != nil {
 		// Resolve primary walk file
@@ -884,6 +949,7 @@ func parseDeviceSNMPConfig(device *Device, yamlDevice *converter.Device, include
 			if err != nil {
 				return err
 			}
+
 			device.SNMPConfig.WalkFile = walkFile
 			device.SNMPConfig.WalkFiles = append(device.SNMPConfig.WalkFiles, walkFile)
 		}
@@ -894,12 +960,13 @@ func parseDeviceSNMPConfig(device *Device, yamlDevice *converter.Device, include
 			if err != nil {
 				return err
 			}
+
 			device.SNMPConfig.WalkFiles = append(device.SNMPConfig.WalkFiles, walkFile)
 		}
 
 		// Store custom MIBs
 		if len(yamlDevice.SnmpAgent.AddMibs) > 0 {
-			device.Properties["custom_mibs_count"] = fmt.Sprintf("%d", len(yamlDevice.SnmpAgent.AddMibs))
+			device.Properties["custom_mibs_count"] = strconv.Itoa(len(yamlDevice.SnmpAgent.AddMibs))
 			for _, mib := range yamlDevice.SnmpAgent.AddMibs {
 				device.SNMPConfig.AddMibs = append(device.SNMPConfig.AddMibs, AddMib{
 					OID:   mib.OID,
@@ -915,6 +982,7 @@ func parseDeviceSNMPConfig(device *Device, yamlDevice *converter.Device, include
 			if err != nil {
 				return err
 			}
+
 			device.SNMPConfig.CommunityIncludes = append(device.SNMPConfig.CommunityIncludes, CommunityInclude{
 				Community: include.Community,
 				WalkFile:  walkFile,
@@ -933,7 +1001,12 @@ func parseDeviceSNMPConfig(device *Device, yamlDevice *converter.Device, include
 			if ip := net.ParseIP(yamlDevice.SnmpAgent.SnmpAddr); ip != nil {
 				device.SNMPConfig.SnmpAddr = ip
 			} else {
-				return fmt.Errorf("device %s: invalid snmp_addr %s", yamlDevice.Name, yamlDevice.SnmpAgent.SnmpAddr)
+				return fmt.Errorf(
+					"device %s: %w: %s",
+					yamlDevice.Name,
+					ErrInvalidSNMPAddr,
+					yamlDevice.SnmpAgent.SnmpAddr,
+				)
 			}
 		}
 
@@ -944,6 +1017,7 @@ func parseDeviceSNMPConfig(device *Device, yamlDevice *converter.Device, include
 				VLAN: yamlDevice.SnmpAgent.Dot1DFdbTable.VLAN,
 			}
 		}
+
 		if yamlDevice.SnmpAgent.Dot1QFdbTable != nil {
 			device.SNMPConfig.Dot1QFdbTable = &FdbTableConfig{
 				Port: yamlDevice.SnmpAgent.Dot1QFdbTable.Port,
@@ -957,6 +1031,7 @@ func parseDeviceSNMPConfig(device *Device, yamlDevice *converter.Device, include
 			if err != nil {
 				return err
 			}
+
 			device.SNMPConfig.Traps = trapsCfg
 		}
 	}
@@ -964,7 +1039,7 @@ func parseDeviceSNMPConfig(device *Device, yamlDevice *converter.Device, include
 	return nil
 }
 
-// parseDeviceProtocolConfigs parses all protocol configurations for a device
+// parseDeviceProtocolConfigs parses all protocol configurations for a device.
 func parseDeviceProtocolConfigs(device *Device, yamlDevice *converter.Device) error {
 	var err error
 
@@ -1011,7 +1086,7 @@ func parseDeviceProtocolConfigs(device *Device, yamlDevice *converter.Device) er
 	return nil
 }
 
-// parseOSFingerprintConfig parses OS fingerprinting configuration from YAML
+// parseOSFingerprintConfig parses OS fingerprinting configuration from YAML.
 func parseOSFingerprintConfig(yamlOSFP *converter.OSFingerprintConfig) *OSFingerprintConfig {
 	if yamlOSFP == nil {
 		return nil
@@ -1062,7 +1137,7 @@ func parseOSFingerprintConfig(yamlOSFP *converter.OSFingerprintConfig) *OSFinger
 	return osFP
 }
 
-// parseIPerf3Config parses iPerf3 server emulation configuration from YAML
+// parseIPerf3Config parses iPerf3 server emulation configuration from YAML.
 func parseIPerf3Config(yamlIPerf3 *converter.IPerf3Config) *IPerf3Config {
 	if yamlIPerf3 == nil {
 		return nil
@@ -1083,15 +1158,19 @@ func parseIPerf3Config(yamlIPerf3 *converter.IPerf3Config) *IPerf3Config {
 	if cfg.Port == 0 {
 		cfg.Port = 5201 // Default iPerf3 port
 	}
+
 	if cfg.UploadMbps == 0 {
 		cfg.UploadMbps = 100.0 // Default 100 Mbps
 	}
+
 	if cfg.DownloadMbps == 0 {
 		cfg.DownloadMbps = 100.0 // Default 100 Mbps
 	}
+
 	if cfg.MaxBandwidthMbps == 0 {
 		cfg.MaxBandwidthMbps = 1000.0 // Default 1 Gbps max
 	}
+
 	if cfg.TypicalLatencyMs == 0 {
 		cfg.TypicalLatencyMs = 1.0 // Default 1ms
 	}
@@ -1099,7 +1178,7 @@ func parseIPerf3Config(yamlIPerf3 *converter.IPerf3Config) *IPerf3Config {
 	return cfg
 }
 
-// parseNetBIOSConfig parses NetBIOS configuration from YAML
+// parseNetBIOSConfig parses NetBIOS configuration from YAML.
 func parseNetBIOSConfig(yamlNetbios *converter.NetbiosConfig, deviceName string) *NetBIOSConfig {
 	if yamlNetbios == nil {
 		return nil
@@ -1122,15 +1201,19 @@ func parseNetBIOSConfig(yamlNetbios *converter.NetbiosConfig, deviceName string)
 			netbiosCfg.Name = netbiosCfg.Name[:15]
 		}
 	}
+
 	if netbiosCfg.Workgroup == "" {
 		netbiosCfg.Workgroup = "WORKGROUP"
 	}
+
 	if netbiosCfg.NodeType == "" {
 		netbiosCfg.NodeType = "B"
 	}
+
 	if len(netbiosCfg.Services) == 0 {
 		netbiosCfg.Services = []string{"workstation", "fileserver"}
 	}
+
 	if netbiosCfg.TTL == 0 {
 		netbiosCfg.TTL = DefaultNetBIOSTTL
 	}
@@ -1141,6 +1224,7 @@ func parseNetBIOSConfig(yamlNetbios *converter.NetbiosConfig, deviceName string)
 			Name:  name.Name,
 			Group: name.Group,
 		}
+
 		if name.Suffix != "" {
 			// Parse suffix as hex (0x..) or decimal
 			if strings.HasPrefix(strings.ToLower(name.Suffix), "0x") {
@@ -1151,13 +1235,14 @@ func parseNetBIOSConfig(yamlNetbios *converter.NetbiosConfig, deviceName string)
 				entry.Suffix = uint8(v)
 			}
 		}
+
 		netbiosCfg.Names = append(netbiosCfg.Names, entry)
 	}
 
 	return netbiosCfg
 }
 
-// parseICMPConfig parses ICMP configuration from YAML
+// parseICMPConfig parses ICMP configuration from YAML.
 func parseICMPConfig(yamlIcmp *converter.IcmpConfig) *ICMPConfig {
 	if yamlIcmp == nil {
 		return nil
@@ -1178,11 +1263,13 @@ func parseICMPConfig(yamlIcmp *converter.IcmpConfig) *ICMPConfig {
 			icmpCfg.AddressMaskReply = ip.To4()
 		}
 	}
+
 	if yamlIcmp.RouterAdvertisement != nil {
 		ra := &IcmpRouterAdvertisement{
 			Period:   yamlIcmp.RouterAdvertisement.Period,
 			Lifetime: yamlIcmp.RouterAdvertisement.Lifetime,
 		}
+
 		for _, r := range yamlIcmp.RouterAdvertisement.Routers {
 			if ip := net.ParseIP(r.Address); ip != nil {
 				ra.Routers = append(ra.Routers, IcmpRouter{
@@ -1191,13 +1278,14 @@ func parseICMPConfig(yamlIcmp *converter.IcmpConfig) *ICMPConfig {
 				})
 			}
 		}
+
 		icmpCfg.RouterAdvertisement = ra
 	}
 
 	return icmpCfg
 }
 
-// parseICMPv6Config parses ICMPv6 configuration from YAML
+// parseICMPv6Config parses ICMPv6 configuration from YAML.
 func parseICMPv6Config(yamlIcmpv6 *converter.Icmpv6Config) *ICMPv6Config {
 	if yamlIcmpv6 == nil {
 		return nil
@@ -1224,11 +1312,13 @@ func parseICMPv6Config(yamlIcmpv6 *converter.Icmpv6Config) *ICMPv6Config {
 			RetransTimer:  yamlIcmpv6.RouterAdvertisement.RetransTimer,
 			MTU:           yamlIcmpv6.RouterAdvertisement.MTU,
 		}
+
 		for _, p := range yamlIcmpv6.RouterAdvertisement.PrefixInfo {
 			var prefix net.IP
 			if p.Prefix != "" {
 				prefix = net.ParseIP(p.Prefix)
 			}
+
 			ra.PrefixInfo = append(ra.PrefixInfo, Icmpv6PrefixInfo{
 				PrefixLength:      p.PrefixLength,
 				Onlink:            p.Onlink,
@@ -1238,6 +1328,7 @@ func parseICMPv6Config(yamlIcmpv6 *converter.Icmpv6Config) *ICMPv6Config {
 				Prefix:            prefix,
 			})
 		}
+
 		icmpv6Cfg.RouterAdvertisement = ra
 	}
 
@@ -1245,9 +1336,10 @@ func parseICMPv6Config(yamlIcmpv6 *converter.Icmpv6Config) *ICMPv6Config {
 }
 
 // parseDHCPv6Config parses DHCPv6 configuration from YAML
+// Returns an empty DHCPv6Config if input is nil (not an error condition).
 func parseDHCPv6Config(yamlDhcpv6 *converter.Dhcpv6Config) (*DHCPv6Config, error) {
 	if yamlDhcpv6 == nil {
-		return nil, nil
+		return &DHCPv6Config{}, nil
 	}
 
 	dhcpv6Cfg := &DHCPv6Config{
@@ -1264,6 +1356,7 @@ func parseDHCPv6Config(yamlDhcpv6 *converter.Dhcpv6Config) (*DHCPv6Config, error
 	if dhcpv6Cfg.PreferredLifetime == 0 {
 		dhcpv6Cfg.PreferredLifetime = DefaultDHCPv6PreferredLifetime
 	}
+
 	if dhcpv6Cfg.ValidLifetime == 0 {
 		dhcpv6Cfg.ValidLifetime = DefaultDHCPv6ValidLifetime
 	}
@@ -1308,7 +1401,7 @@ func parseDHCPv6Config(yamlDhcpv6 *converter.Dhcpv6Config) (*DHCPv6Config, error
 	return dhcpv6Cfg, nil
 }
 
-// parseTrafficConfig parses traffic configuration from YAML
+// parseTrafficConfig parses traffic configuration from YAML.
 func parseTrafficConfig(yamlTraffic *converter.TrafficConfig) *TrafficConfig {
 	if yamlTraffic == nil {
 		return nil
@@ -1327,6 +1420,7 @@ func parseTrafficConfig(yamlTraffic *converter.TrafficConfig) *TrafficConfig {
 		if arpCfg.Interval == 0 {
 			arpCfg.Interval = DefaultARPAnnouncementInterval
 		}
+
 		trafficCfg.ARPAnnouncements = arpCfg
 	}
 
@@ -1340,9 +1434,11 @@ func parseTrafficConfig(yamlTraffic *converter.TrafficConfig) *TrafficConfig {
 		if pingCfg.Interval == 0 {
 			pingCfg.Interval = DefaultPeriodicPingInterval
 		}
+
 		if pingCfg.PayloadSize == 0 {
 			pingCfg.PayloadSize = DefaultPeriodicPingPayloadSize
 		}
+
 		trafficCfg.PeriodicPings = pingCfg
 	}
 
@@ -1357,19 +1453,22 @@ func parseTrafficConfig(yamlTraffic *converter.TrafficConfig) *TrafficConfig {
 		if randomCfg.Interval == 0 {
 			randomCfg.Interval = DefaultRandomTrafficInterval
 		}
+
 		if randomCfg.PacketCount == 0 {
 			randomCfg.PacketCount = DefaultRandomTrafficPacketCount
 		}
+
 		if len(randomCfg.Patterns) == 0 {
 			randomCfg.Patterns = []string{"broadcast_arp", "multicast", "udp"}
 		}
+
 		trafficCfg.RandomTraffic = randomCfg
 	}
 
 	return trafficCfg
 }
 
-// parseSNMPTrapsConfig parses SNMP traps configuration from YAML
+// parseSNMPTrapsConfig parses SNMP traps configuration from YAML.
 func parseSNMPTrapsConfig(yamlTraps *converter.TrapsConfig) (*TrapConfig, error) {
 	trapsCfg := &TrapConfig{
 		Enabled:   yamlTraps.Enabled,
@@ -1412,9 +1511,11 @@ func parseSNMPTrapsConfig(yamlTraps *converter.TrapsConfig) (*TrapConfig, error)
 		if highCPUCfg.Threshold == 0 {
 			highCPUCfg.Threshold = DefaultHighCPUThreshold
 		}
+
 		if highCPUCfg.Interval == 0 {
 			highCPUCfg.Interval = DefaultTrapCheckInterval
 		}
+
 		trapsCfg.HighCPU = highCPUCfg
 	}
 
@@ -1428,9 +1529,11 @@ func parseSNMPTrapsConfig(yamlTraps *converter.TrapsConfig) (*TrapConfig, error)
 		if highMemCfg.Threshold == 0 {
 			highMemCfg.Threshold = DefaultHighMemoryThreshold
 		}
+
 		if highMemCfg.Interval == 0 {
 			highMemCfg.Interval = DefaultTrapCheckInterval
 		}
+
 		trapsCfg.HighMemory = highMemCfg
 	}
 
@@ -1444,9 +1547,11 @@ func parseSNMPTrapsConfig(yamlTraps *converter.TrapsConfig) (*TrapConfig, error)
 		if ifErrCfg.Threshold == 0 {
 			ifErrCfg.Threshold = DefaultInterfaceErrorThreshold
 		}
+
 		if ifErrCfg.Interval == 0 {
 			ifErrCfg.Interval = DefaultInterfaceErrorInterval
 		}
+
 		trapsCfg.InterfaceErrors = ifErrCfg
 	}
 
@@ -1454,9 +1559,10 @@ func parseSNMPTrapsConfig(yamlTraps *converter.TrapsConfig) (*TrapConfig, error)
 }
 
 // parseDHCPConfig parses DHCP configuration from YAML
+// Returns an empty DHCPConfig if input is nil (not an error condition).
 func parseDHCPConfig(yamlDhcp *converter.DhcpServer, deviceName string) (*DHCPConfig, error) {
 	if yamlDhcp == nil {
-		return nil, nil
+		return &DHCPConfig{}, nil
 	}
 
 	dhcpCfg := &DHCPConfig{}
@@ -1467,17 +1573,21 @@ func parseDHCPConfig(yamlDhcp *converter.DhcpServer, deviceName string) (*DHCPCo
 			dhcpCfg.SubnetMask = net.IPMask(ip.To4())
 		}
 	}
+
 	if yamlDhcp.Router != "" {
 		dhcpCfg.Router = net.ParseIP(yamlDhcp.Router)
 	}
+
 	if yamlDhcp.DomainNameServer != "" {
 		if ip := net.ParseIP(yamlDhcp.DomainNameServer); ip != nil {
 			dhcpCfg.DomainNameServer = append(dhcpCfg.DomainNameServer, ip)
 		}
 	}
+
 	if yamlDhcp.ServerIdentifier != "" {
 		dhcpCfg.ServerIdentifier = net.ParseIP(yamlDhcp.ServerIdentifier)
 	}
+
 	if yamlDhcp.NextServerIP != "" {
 		dhcpCfg.NextServerIP = net.ParseIP(yamlDhcp.NextServerIP)
 	}
@@ -1486,6 +1596,7 @@ func parseDHCPConfig(yamlDhcp *converter.DhcpServer, deviceName string) (*DHCPCo
 	if yamlDhcp.PoolStart != "" {
 		dhcpCfg.PoolStart = net.ParseIP(yamlDhcp.PoolStart)
 	}
+
 	if yamlDhcp.PoolEnd != "" {
 		dhcpCfg.PoolEnd = net.ParseIP(yamlDhcp.PoolEnd)
 	}
@@ -1496,9 +1607,12 @@ func parseDHCPConfig(yamlDhcp *converter.DhcpServer, deviceName string) (*DHCPCo
 			dhcpCfg.NTPServers = append(dhcpCfg.NTPServers, ip)
 		}
 	}
+
 	dhcpCfg.DomainSearch = yamlDhcp.DomainSearch
 	dhcpCfg.TFTPServerName = yamlDhcp.TFTPServerName
+
 	dhcpCfg.BootfileName = yamlDhcp.BootfileName
+
 	if yamlDhcp.VendorSpecific != "" {
 		// Parse hex string to bytes
 		dhcpCfg.VendorSpecific = []byte(yamlDhcp.VendorSpecific)
@@ -1510,16 +1624,19 @@ func parseDHCPConfig(yamlDhcp *converter.DhcpServer, deviceName string) (*DHCPCo
 			dhcpCfg.SNTPServersV6 = append(dhcpCfg.SNTPServersV6, ip)
 		}
 	}
+
 	for _, ntpStr := range yamlDhcp.NTPServersV6 {
 		if ip := net.ParseIP(ntpStr); ip != nil {
 			dhcpCfg.NTPServersV6 = append(dhcpCfg.NTPServersV6, ip)
 		}
 	}
+
 	for _, sipStr := range yamlDhcp.SIPServersV6 {
 		if ip := net.ParseIP(sipStr); ip != nil {
 			dhcpCfg.SIPServersV6 = append(dhcpCfg.SIPServersV6, ip)
 		}
 	}
+
 	dhcpCfg.SIPDomainsV6 = yamlDhcp.SIPDomainsV6
 
 	// Static leases
@@ -1528,19 +1645,23 @@ func parseDHCPConfig(yamlDhcp *converter.DhcpServer, deviceName string) (*DHCPCo
 		if clientIP == nil {
 			continue
 		}
+
 		macAddr, err := net.ParseMAC(lease.MacAddrValue)
 		if err != nil {
 			continue
 		}
+
 		dhcpLease := DHCPLease{
 			ClientIP:   clientIP,
 			MACAddress: macAddr,
 		}
+
 		if lease.MacAddrMask != "" {
 			if mask, err := net.ParseMAC(lease.MacAddrMask); err == nil {
 				dhcpLease.MACMask = mask
 			}
 		}
+
 		dhcpCfg.ClientLeases = append(dhcpCfg.ClientLeases, dhcpLease)
 	}
 
@@ -1548,9 +1669,10 @@ func parseDHCPConfig(yamlDhcp *converter.DhcpServer, deviceName string) (*DHCPCo
 }
 
 // parseDNSConfig parses DNS configuration from YAML
+// Returns an empty DNSConfig if input is nil (not an error condition).
 func parseDNSConfig(yamlDns *converter.DnsServer, deviceName string) (*DNSConfig, error) {
 	if yamlDns == nil {
-		return nil, nil
+		return &DNSConfig{}, nil
 	}
 
 	dnsCfg := &DNSConfig{}
@@ -1561,19 +1683,24 @@ func parseDNSConfig(yamlDns *converter.DnsServer, deviceName string) (*DNSConfig
 		if ip == nil {
 			continue
 		}
+
 		ttl := uint32(DefaultDNSTTL)
+
 		if record.TTL > 0 {
 			// Validate TTL is in reasonable range before conversion
 			if record.TTL < 0 {
-				return nil, fmt.Errorf("device %s: DNS forward record TTL cannot be negative: %d",
-					deviceName, record.TTL)
+				return nil, fmt.Errorf("device %s: %w: %d",
+					deviceName, ErrDNSTTLNegative, record.TTL)
 			}
+
 			if record.TTL > 2147483647 { // Max int32 (~68 years)
-				return nil, fmt.Errorf("device %s: DNS forward record TTL exceeds maximum (2147483647): %d",
-					deviceName, record.TTL)
+				return nil, fmt.Errorf("device %s: %w: %d",
+					deviceName, ErrDNSTTLExceedsMax, record.TTL)
 			}
+
 			ttl = uint32(record.TTL)
 		}
+
 		dnsCfg.ForwardRecords = append(dnsCfg.ForwardRecords, DNSRecord{
 			Name:  record.Name,
 			IP:    ip,
@@ -1588,19 +1715,24 @@ func parseDNSConfig(yamlDns *converter.DnsServer, deviceName string) (*DNSConfig
 		if ip == nil {
 			continue
 		}
+
 		ttl := uint32(DefaultDNSTTL)
+
 		if record.TTL > 0 {
 			// Validate TTL is in reasonable range before conversion
 			if record.TTL < 0 {
-				return nil, fmt.Errorf("device %s: DNS reverse record TTL cannot be negative: %d",
-					deviceName, record.TTL)
+				return nil, fmt.Errorf("device %s: %w: %d",
+					deviceName, ErrDNSTTLNegative, record.TTL)
 			}
+
 			if record.TTL > 2147483647 { // Max int32 (~68 years)
-				return nil, fmt.Errorf("device %s: DNS reverse record TTL exceeds maximum (2147483647): %d",
-					deviceName, record.TTL)
+				return nil, fmt.Errorf("device %s: %w: %d",
+					deviceName, ErrDNSTTLExceedsMax, record.TTL)
 			}
+
 			ttl = uint32(record.TTL)
 		}
+
 		dnsCfg.ReverseRecords = append(dnsCfg.ReverseRecords, DNSRecord{
 			Name:  record.Name,
 			IP:    ip,
@@ -1612,7 +1744,7 @@ func parseDNSConfig(yamlDns *converter.DnsServer, deviceName string) (*DNSConfig
 	return dnsCfg, nil
 }
 
-// parseLLDPConfig parses LLDP configuration from YAML
+// parseLLDPConfig parses LLDP configuration from YAML.
 func parseLLDPConfig(yamlLldp *converter.LldpConfig) *LLDPConfig {
 	if yamlLldp == nil {
 		return nil
@@ -1630,16 +1762,19 @@ func parseLLDPConfig(yamlLldp *converter.LldpConfig) *LLDPConfig {
 	if lldpCfg.AdvertiseInterval == 0 {
 		lldpCfg.AdvertiseInterval = DefaultLLDPAdvertiseInterval
 	}
+
 	if lldpCfg.TTL == 0 {
 		lldpCfg.TTL = DefaultLLDPTTL
 	}
+
 	if lldpCfg.ChassisIDType == "" {
 		lldpCfg.ChassisIDType = ChassisIDTypeMAC
 	}
+
 	return lldpCfg
 }
 
-// parseCDPConfig parses CDP configuration from YAML
+// parseCDPConfig parses CDP configuration from YAML.
 func parseCDPConfig(yamlCdp *converter.CdpConfig) *CDPConfig {
 	if yamlCdp == nil {
 		return nil
@@ -1658,16 +1793,19 @@ func parseCDPConfig(yamlCdp *converter.CdpConfig) *CDPConfig {
 	if cdpCfg.AdvertiseInterval == 0 {
 		cdpCfg.AdvertiseInterval = DefaultCDPAdvertiseInterval
 	}
+
 	if cdpCfg.Holdtime == 0 {
 		cdpCfg.Holdtime = DefaultCDPHoldtime
 	}
+
 	if cdpCfg.Version == 0 {
 		cdpCfg.Version = DefaultCDPVersion
 	}
+
 	return cdpCfg
 }
 
-// parseEDPConfig parses EDP configuration from YAML
+// parseEDPConfig parses EDP configuration from YAML.
 func parseEDPConfig(yamlEdp *converter.EdpConfig) *EDPConfig {
 	if yamlEdp == nil {
 		return nil
@@ -1683,10 +1821,11 @@ func parseEDPConfig(yamlEdp *converter.EdpConfig) *EDPConfig {
 	if edpCfg.AdvertiseInterval == 0 {
 		edpCfg.AdvertiseInterval = DefaultEDPAdvertiseInterval
 	}
+
 	return edpCfg
 }
 
-// parseFDPConfig parses FDP configuration from YAML
+// parseFDPConfig parses FDP configuration from YAML.
 func parseFDPConfig(yamlFdp *converter.FdpConfig) *FDPConfig {
 	if yamlFdp == nil {
 		return nil
@@ -1704,13 +1843,15 @@ func parseFDPConfig(yamlFdp *converter.FdpConfig) *FDPConfig {
 	if fdpCfg.AdvertiseInterval == 0 {
 		fdpCfg.AdvertiseInterval = DefaultFDPAdvertiseInterval
 	}
+
 	if fdpCfg.Holdtime == 0 {
 		fdpCfg.Holdtime = DefaultFDPHoldtime
 	}
+
 	return fdpCfg
 }
 
-// parseSTPConfig parses STP configuration from YAML
+// parseSTPConfig parses STP configuration from YAML.
 func parseSTPConfig(yamlStp *converter.StpConfig) *STPConfig {
 	if yamlStp == nil {
 		return nil
@@ -1728,22 +1869,27 @@ func parseSTPConfig(yamlStp *converter.StpConfig) *STPConfig {
 	if stpCfg.BridgePriority == 0 {
 		stpCfg.BridgePriority = DefaultSTPBridgePriority
 	}
+
 	if stpCfg.HelloTime == 0 {
 		stpCfg.HelloTime = DefaultSTPHelloTime
 	}
+
 	if stpCfg.MaxAge == 0 {
 		stpCfg.MaxAge = DefaultSTPMaxAge
 	}
+
 	if stpCfg.ForwardDelay == 0 {
 		stpCfg.ForwardDelay = DefaultSTPForwardDelay
 	}
+
 	if stpCfg.Version == "" {
 		stpCfg.Version = "stp" // Default to STP
 	}
+
 	return stpCfg
 }
 
-// parseHTTPConfig parses HTTP configuration from YAML
+// parseHTTPConfig parses HTTP configuration from YAML.
 func parseHTTPConfig(yamlHttp *converter.HttpConfig, deviceName string) *HTTPConfig {
 	if yamlHttp == nil {
 		return nil
@@ -1771,18 +1917,22 @@ func parseHTTPConfig(yamlHttp *converter.HttpConfig, deviceName string) *HTTPCon
 		if endpoint.Method == "" {
 			endpoint.Method = "GET"
 		}
+
 		if endpoint.StatusCode == 0 {
 			endpoint.StatusCode = 200
 		}
+
 		if endpoint.ContentType == "" {
 			endpoint.ContentType = "text/html"
 		}
+
 		httpCfg.Endpoints = append(httpCfg.Endpoints, endpoint)
 	}
+
 	return httpCfg
 }
 
-// parseFTPConfig parses FTP configuration from YAML
+// parseFTPConfig parses FTP configuration from YAML.
 func parseFTPConfig(yamlFtp *converter.FtpConfig, deviceName string) *FTPConfig {
 	if yamlFtp == nil {
 		return nil
@@ -1799,6 +1949,7 @@ func parseFTPConfig(yamlFtp *converter.FtpConfig, deviceName string) *FTPConfig 
 	if ftpCfg.WelcomeBanner == "" {
 		ftpCfg.WelcomeBanner = fmt.Sprintf("220 %s FTP Server (NIAC-Go) ready.", deviceName)
 	}
+
 	if ftpCfg.SystemType == "" {
 		ftpCfg.SystemType = "UNIX Type: L8"
 	}
@@ -1812,13 +1963,15 @@ func parseFTPConfig(yamlFtp *converter.FtpConfig, deviceName string) *FTPConfig 
 		if user.HomeDir == "" {
 			user.HomeDir = "/"
 		}
+
 		ftpCfg.Users = append(ftpCfg.Users, user)
 	}
+
 	return ftpCfg
 }
 
 // ParseSimpleConfig parses a simple device configuration format
-// Format: DeviceName Type IP MAC [walkfile]
+// Format: DeviceName Type IP MAC [walkfile].
 func ParseSimpleConfig(lines []string) (*Config, error) {
 	cfg := &Config{
 		Devices: make([]Device, 0),
@@ -1832,7 +1985,7 @@ func ParseSimpleConfig(lines []string) (*Config, error) {
 
 		parts := strings.Fields(line)
 		if len(parts) < 4 {
-			return nil, fmt.Errorf("line %d: insufficient fields", lineNum+1)
+			return nil, fmt.Errorf("%w: line %d", ErrInsufficientFields, lineNum+1)
 		}
 
 		mac, err := net.ParseMAC(parts[3])
@@ -1842,7 +1995,7 @@ func ParseSimpleConfig(lines []string) (*Config, error) {
 
 		ip := net.ParseIP(parts[2])
 		if ip == nil {
-			return nil, fmt.Errorf("line %d: invalid IP address", lineNum+1)
+			return nil, fmt.Errorf("%w: line %d", ErrInvalidIPAddress, lineNum+1)
 		}
 
 		device := Device{
@@ -1867,7 +2020,7 @@ func ParseSimpleConfig(lines []string) (*Config, error) {
 	return cfg, nil
 }
 
-// GenerateMAC generates a random MAC address
+// GenerateMAC generates a random MAC address.
 func GenerateMAC() net.HardwareAddr {
 	mac := make(net.HardwareAddr, 6)
 	// Set locally administered bit
@@ -1875,27 +2028,30 @@ func GenerateMAC() net.HardwareAddr {
 	for i := 1; i < 6; i++ {
 		mac[i] = byte(i * 17) // Simple pattern for testing
 	}
+
 	return mac
 }
 
 // validateWalkFilePath validates and resolves SNMP walk file paths
-// Prevents path traversal attacks and ensures file exists
+// Prevents path traversal attacks and ensures file exists.
 func validateWalkFilePath(basePath, walkFile, deviceName string) (string, error) {
 	// Clean the path to normalize it FIRST
 	cleanPath := filepath.Clean(walkFile)
 
 	// Security: Check for traversal AFTER cleaning
 	if strings.Contains(cleanPath, "..") {
-		return "", fmt.Errorf("device %s: path traversal detected: %s", deviceName, walkFile)
+		return "", fmt.Errorf("device %s: %w: %s", deviceName, ErrPathTraversalDetected, walkFile)
 	}
 
 	// Build full path
 	var fullPath string
-	if filepath.IsAbs(cleanPath) {
+
+	switch {
+	case filepath.IsAbs(cleanPath):
 		fullPath = cleanPath
-	} else if basePath != "" {
+	case basePath != "":
 		fullPath = filepath.Join(basePath, cleanPath)
-	} else {
+	default:
 		fullPath = cleanPath
 	}
 
@@ -1905,6 +2061,7 @@ func validateWalkFilePath(basePath, walkFile, deviceName string) (string, error)
 		if err != nil {
 			return "", fmt.Errorf("device %s: invalid base path: %w", deviceName, err)
 		}
+
 		absFull, err := filepath.Abs(fullPath)
 		if err != nil {
 			return "", fmt.Errorf("device %s: invalid file path: %w", deviceName, err)
@@ -1912,7 +2069,7 @@ func validateWalkFilePath(basePath, walkFile, deviceName string) (string, error)
 
 		// Ensure path starts with base (add separator to prevent partial match)
 		if !strings.HasPrefix(absFull+string(filepath.Separator), absBase+string(filepath.Separator)) {
-			return "", fmt.Errorf("device %s: path outside base directory: %s", deviceName, walkFile)
+			return "", fmt.Errorf("device %s: %w: %s", deviceName, ErrPathOutsideBaseDir, walkFile)
 		}
 	}
 
@@ -1920,39 +2077,49 @@ func validateWalkFilePath(basePath, walkFile, deviceName string) (string, error)
 	info, err := os.Lstat(fullPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return "", fmt.Errorf("device %s: walk file not found: %s", deviceName, fullPath)
+			return "", fmt.Errorf("device %s: %w: %s", deviceName, ErrWalkFileNotFound, fullPath)
 		}
+
 		return "", fmt.Errorf("device %s: cannot access walk file %s: %w", deviceName, fullPath, err)
 	}
 
 	// Reject symlinks for security
 	if info.Mode()&os.ModeSymlink != 0 {
-		return "", fmt.Errorf("device %s: walk file is a symlink (not allowed): %s", deviceName, fullPath)
+		return "", fmt.Errorf("device %s: %w: %s", deviceName, ErrWalkFileIsSymlink, fullPath)
 	}
 
 	// Verify it's a regular file, not a directory or device
 	if !info.Mode().IsRegular() {
-		return "", fmt.Errorf("device %s: walk file is not a regular file: %s", deviceName, fullPath)
+		return "", fmt.Errorf("device %s: %w: %s", deviceName, ErrWalkFileNotRegular, fullPath)
 	}
 
 	return fullPath, nil
 }
 
-// ParseSpeed parses interface speed (e.g., "100M", "1G", "10G")
+// ParseSpeed parses interface speed (e.g., "100M", "1G", "10G").
 func ParseSpeed(speedStr string) (int, error) {
 	speedStr = strings.ToUpper(strings.TrimSpace(speedStr))
 
-	if strings.HasSuffix(speedStr, "G") {
-		val, err := strconv.Atoi(strings.TrimSuffix(speedStr, "G"))
+	if val, found := strings.CutSuffix(speedStr, "G"); found {
+		num, err := strconv.Atoi(val)
 		if err != nil {
-			return 0, err
+			return 0, fmt.Errorf("failed to parse speed value: %w", err)
 		}
-		return val * 1000, nil // Convert to Mbps
+
+		return num * 1000, nil // Convert to Mbps
 	}
 
-	if strings.HasSuffix(speedStr, "M") {
-		return strconv.Atoi(strings.TrimSuffix(speedStr, "M"))
+	if val, found := strings.CutSuffix(speedStr, "M"); found {
+		num, err := strconv.Atoi(val)
+		if err != nil {
+			return 0, fmt.Errorf("failed to parse speed value: %w", err)
+		}
+		return num, nil
 	}
 
-	return strconv.Atoi(speedStr)
+	num, err := strconv.Atoi(speedStr)
+	if err != nil {
+		return 0, fmt.Errorf("failed to parse speed value: %w", err)
+	}
+	return num, nil
 }

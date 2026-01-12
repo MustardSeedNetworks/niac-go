@@ -1,8 +1,8 @@
-import { type FC } from 'react';
-import { Radio } from 'lucide-react';
-import { CollapsibleSection, FormField } from '../form';
-import type { TrafficConfig } from '../../api/types';
-import type { ProtocolSectionProps } from './types';
+import { Radio } from "lucide-react";
+import type { FC } from "react";
+import type { TrafficConfig } from "../../api/types";
+import { CollapsibleSection, FormField } from "../form";
+import type { ProtocolSectionProps } from "./types";
 
 export const TrafficSection: FC<ProtocolSectionProps> = ({
   device,
@@ -11,7 +11,7 @@ export const TrafficSection: FC<ProtocolSectionProps> = ({
   onUpdate,
 }) => {
   const updateTraffic = (config: TrafficConfig | undefined) => {
-    onUpdate('traffic', config);
+    onUpdate("traffic", config);
   };
 
   return (
@@ -21,7 +21,7 @@ export const TrafficSection: FC<ProtocolSectionProps> = ({
       onToggle={onToggle}
       enabled={device.traffic?.enabled ?? false}
       onEnableChange={(enabled) => {
-        updateTraffic(enabled ? { enabled: true } as TrafficConfig : undefined);
+        updateTraffic(enabled ? ({ enabled: true } as TrafficConfig) : undefined);
       }}
     >
       {device.traffic?.enabled && (
@@ -40,13 +40,18 @@ export const TrafficSection: FC<ProtocolSectionProps> = ({
                   onChange={(e) =>
                     updateTraffic({
                       ...device.traffic!,
-                      arp_announcements: { ...device.traffic!.arp_announcements, enabled: e.target.checked }
+                      arp_announcements: {
+                        ...device.traffic?.arp_announcements,
+                        enabled: e.target.checked,
+                      },
                     })
                   }
                   className="sr-only peer"
                 />
                 <div className="w-9 h-5 bg-gray-700 rounded-full peer peer-checked:bg-violet-600 peer-focus:ring-2 peer-focus:ring-violet-500 transition-colors">
-                  <div className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${device.traffic.arp_announcements?.enabled ? 'translate-x-4' : ''}`} />
+                  <div
+                    className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${device.traffic.arp_announcements?.enabled ? "translate-x-4" : ""}`}
+                  />
                 </div>
               </label>
             </div>
@@ -58,7 +63,10 @@ export const TrafficSection: FC<ProtocolSectionProps> = ({
                   onChange={(e) =>
                     updateTraffic({
                       ...device.traffic!,
-                      arp_announcements: { ...device.traffic!.arp_announcements!, interval: parseInt(e.target.value) }
+                      arp_announcements: {
+                        ...device.traffic?.arp_announcements!,
+                        interval: parseInt(e.target.value, 10),
+                      },
                     })
                   }
                   min={1}
@@ -82,13 +90,18 @@ export const TrafficSection: FC<ProtocolSectionProps> = ({
                   onChange={(e) =>
                     updateTraffic({
                       ...device.traffic!,
-                      periodic_pings: { ...device.traffic!.periodic_pings, enabled: e.target.checked }
+                      periodic_pings: {
+                        ...device.traffic?.periodic_pings,
+                        enabled: e.target.checked,
+                      },
                     })
                   }
                   className="sr-only peer"
                 />
                 <div className="w-9 h-5 bg-gray-700 rounded-full peer peer-checked:bg-violet-600 peer-focus:ring-2 peer-focus:ring-violet-500 transition-colors">
-                  <div className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${device.traffic.periodic_pings?.enabled ? 'translate-x-4' : ''}`} />
+                  <div
+                    className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${device.traffic.periodic_pings?.enabled ? "translate-x-4" : ""}`}
+                  />
                 </div>
               </label>
             </div>
@@ -101,7 +114,10 @@ export const TrafficSection: FC<ProtocolSectionProps> = ({
                     onChange={(e) =>
                       updateTraffic({
                         ...device.traffic!,
-                        periodic_pings: { ...device.traffic!.periodic_pings!, interval: parseInt(e.target.value) }
+                        periodic_pings: {
+                          ...device.traffic?.periodic_pings!,
+                          interval: parseInt(e.target.value, 10),
+                        },
                       })
                     }
                     min={1}
@@ -115,7 +131,10 @@ export const TrafficSection: FC<ProtocolSectionProps> = ({
                     onChange={(e) =>
                       updateTraffic({
                         ...device.traffic!,
-                        periodic_pings: { ...device.traffic!.periodic_pings!, payload_size: parseInt(e.target.value) }
+                        periodic_pings: {
+                          ...device.traffic?.periodic_pings!,
+                          payload_size: parseInt(e.target.value, 10),
+                        },
                       })
                     }
                     min={0}
@@ -141,13 +160,18 @@ export const TrafficSection: FC<ProtocolSectionProps> = ({
                   onChange={(e) =>
                     updateTraffic({
                       ...device.traffic!,
-                      random_traffic: { ...device.traffic!.random_traffic, enabled: e.target.checked }
+                      random_traffic: {
+                        ...device.traffic?.random_traffic,
+                        enabled: e.target.checked,
+                      },
                     })
                   }
                   className="sr-only peer"
                 />
                 <div className="w-9 h-5 bg-gray-700 rounded-full peer peer-checked:bg-violet-600 peer-focus:ring-2 peer-focus:ring-violet-500 transition-colors">
-                  <div className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${device.traffic.random_traffic?.enabled ? 'translate-x-4' : ''}`} />
+                  <div
+                    className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${device.traffic.random_traffic?.enabled ? "translate-x-4" : ""}`}
+                  />
                 </div>
               </label>
             </div>
@@ -161,7 +185,10 @@ export const TrafficSection: FC<ProtocolSectionProps> = ({
                       onChange={(e) =>
                         updateTraffic({
                           ...device.traffic!,
-                          random_traffic: { ...device.traffic!.random_traffic!, interval: parseInt(e.target.value) }
+                          random_traffic: {
+                            ...device.traffic?.random_traffic!,
+                            interval: parseInt(e.target.value, 10),
+                          },
                         })
                       }
                       min={1}
@@ -175,7 +202,10 @@ export const TrafficSection: FC<ProtocolSectionProps> = ({
                       onChange={(e) =>
                         updateTraffic({
                           ...device.traffic!,
-                          random_traffic: { ...device.traffic!.random_traffic!, packet_count: parseInt(e.target.value) }
+                          random_traffic: {
+                            ...device.traffic?.random_traffic!,
+                            packet_count: parseInt(e.target.value, 10),
+                          },
                         })
                       }
                       min={1}
@@ -187,29 +217,41 @@ export const TrafficSection: FC<ProtocolSectionProps> = ({
                 <div className="space-y-2">
                   <h5 className="text-xs font-medium text-gray-400">Traffic Patterns</h5>
                   <div className="flex flex-wrap gap-4">
-                    {(['broadcast_arp', 'multicast', 'udp'] as const).map((pattern) => (
+                    {(["broadcast_arp", "multicast", "udp"] as const).map((pattern) => (
                       <label key={pattern} className="flex items-center gap-2 cursor-pointer">
                         <input
                           type="checkbox"
-                          checked={(device.traffic!.random_traffic?.patterns || []).includes(pattern)}
+                          checked={(device.traffic?.random_traffic?.patterns || []).includes(
+                            pattern,
+                          )}
                           onChange={(e) => {
-                            const patterns = device.traffic!.random_traffic?.patterns || [];
+                            const patterns = device.traffic?.random_traffic?.patterns || [];
                             if (e.target.checked) {
                               updateTraffic({
                                 ...device.traffic!,
-                                random_traffic: { ...device.traffic!.random_traffic!, patterns: [...patterns, pattern] }
+                                random_traffic: {
+                                  ...device.traffic?.random_traffic!,
+                                  patterns: [...patterns, pattern],
+                                },
                               });
                             } else {
                               updateTraffic({
                                 ...device.traffic!,
-                                random_traffic: { ...device.traffic!.random_traffic!, patterns: patterns.filter(p => p !== pattern) }
+                                random_traffic: {
+                                  ...device.traffic?.random_traffic!,
+                                  patterns: patterns.filter((p) => p !== pattern),
+                                },
                               });
                             }
                           }}
                           className="w-4 h-4 rounded border-gray-600 bg-gray-800 text-violet-600 focus:ring-violet-500"
                         />
                         <span className="text-sm text-gray-300">
-                          {pattern === 'broadcast_arp' ? 'Broadcast ARP' : pattern === 'multicast' ? 'Multicast' : 'UDP'}
+                          {pattern === "broadcast_arp"
+                            ? "Broadcast ARP"
+                            : pattern === "multicast"
+                              ? "Multicast"
+                              : "UDP"}
                         </span>
                       </label>
                     ))}

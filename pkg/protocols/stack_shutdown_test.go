@@ -9,7 +9,7 @@ import (
 	"github.com/krisarmstrong/niac-go/pkg/logging"
 )
 
-// TestStackStopCleanup tests that Stop() properly cleans up stack resources
+// TestStackStopCleanup tests that Stop() properly cleans up stack resources.
 func TestStackStopCleanup(t *testing.T) {
 	cfg := &config.Config{}
 	debugConfig := logging.NewDebugConfig(0)
@@ -35,7 +35,7 @@ func TestStackStopCleanup(t *testing.T) {
 	}
 }
 
-// TestStackStopWaitsForGoroutines tests that Stop() waits for goroutines
+// TestStackStopWaitsForGoroutines tests that Stop() waits for goroutines.
 func TestStackStopWaitsForGoroutines(t *testing.T) {
 	cfg := &config.Config{}
 	debugConfig := logging.NewDebugConfig(0)
@@ -47,12 +47,12 @@ func TestStackStopWaitsForGoroutines(t *testing.T) {
 
 	// Start a goroutine that will wait for stop signal
 	stopped := make(chan bool)
-	stack.wg.Add(1)
-	go func() {
-		defer stack.wg.Done()
+
+	stack.wg.Go(func() {
 		<-stack.stopChan
+
 		stopped <- true
-	}()
+	})
 
 	// Stop the stack
 	go stack.Stop()
@@ -66,7 +66,7 @@ func TestStackStopWaitsForGoroutines(t *testing.T) {
 	}
 }
 
-// TestStackMultipleStartStop tests Start/Stop cycles
+// TestStackMultipleStartStop tests Start/Stop cycles.
 func TestStackMultipleStartStop(t *testing.T) {
 	cfg := &config.Config{}
 	debugConfig := logging.NewDebugConfig(0)
@@ -85,7 +85,7 @@ func TestStackMultipleStartStop(t *testing.T) {
 	}
 }
 
-// TestStackDeviceInitialization tests that devices are properly initialized
+// TestStackDeviceInitialization tests that devices are properly initialized.
 func TestStackDeviceInitialization(t *testing.T) {
 	cfg := &config.Config{
 		Devices: []config.Device{
@@ -145,7 +145,8 @@ func TestStackReloadConfig(t *testing.T) {
 		t.Fatalf("expected 1 device after init, got %d", got)
 	}
 
-	if err := stack.ReloadConfig(cfg2); err != nil {
+	err := stack.ReloadConfig(cfg2)
+	if err != nil {
 		t.Fatalf("ReloadConfig failed: %v", err)
 	}
 
@@ -154,7 +155,7 @@ func TestStackReloadConfig(t *testing.T) {
 	}
 }
 
-// TestStackCleanupOrder tests that cleanup happens in correct order
+// TestStackCleanupOrder tests that cleanup happens in correct order.
 func TestStackCleanupOrder(t *testing.T) {
 	cfg := &config.Config{}
 	debugConfig := logging.NewDebugConfig(0)
@@ -169,11 +170,14 @@ func TestStackCleanupOrder(t *testing.T) {
 
 	// Simulate protocol handlers with cleanup
 	stack.wg.Add(1)
+
 	go func() {
 		defer func() {
 			cleanupOrder = append(cleanupOrder, "goroutine")
+
 			stack.wg.Done()
 		}()
+
 		<-stack.stopChan
 	}()
 

@@ -15,13 +15,13 @@ import (
 	"github.com/krisarmstrong/niac-go/pkg/protocols"
 )
 
-// createTestConfig creates a test configuration with one or more devices
+// createTestConfig creates a test configuration with one or more devices.
 func createTestConfig(deviceCount int) *config.Config {
 	cfg := &config.Config{
 		Devices: make([]config.Device, deviceCount),
 	}
 
-	for i := 0; i < deviceCount; i++ {
+	for i := range deviceCount {
 		cfg.Devices[i] = config.Device{
 			Name:        fmt.Sprintf("test-device-%d", i),
 			Type:        "router",
@@ -37,7 +37,7 @@ func createTestConfig(deviceCount int) *config.Config {
 }
 
 // helper to get simulated device by name (panic on missing) for tests
-// TestNewSimulator tests creating a new simulator
+// TestNewSimulator tests creating a new simulator.
 func TestNewSimulator(t *testing.T) {
 	cfg := createTestConfig(3)
 	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -48,24 +48,29 @@ func TestNewSimulator(t *testing.T) {
 	if sim == nil {
 		t.Fatal("Expected simulator, got nil")
 	}
+
 	if sim.config != cfg {
 		t.Error("Config not set correctly")
 	}
+
 	if sim.stack != stack {
 		t.Error("Stack not set correctly")
 	}
+
 	if sim.errorManager != errorMgr {
 		t.Error("Error manager not set correctly")
 	}
+
 	if len(sim.devices) != 3 {
 		t.Errorf("Expected 3 devices, got %d", len(sim.devices))
 	}
+
 	if sim.running {
 		t.Error("Simulator should not be running initially")
 	}
 }
 
-// TestNewSimulator_EmptyConfig tests simulator with no devices
+// TestNewSimulator_EmptyConfig tests simulator with no devices.
 func TestNewSimulator_EmptyConfig(t *testing.T) {
 	cfg := &config.Config{
 		Devices: []config.Device{},
@@ -78,12 +83,13 @@ func TestNewSimulator_EmptyConfig(t *testing.T) {
 	if sim == nil {
 		t.Fatal("Expected simulator, got nil")
 	}
+
 	if len(sim.devices) != 0 {
 		t.Errorf("Expected 0 devices, got %d", len(sim.devices))
 	}
 }
 
-// TestSimulator_GetDevice tests retrieving a device by name
+// TestSimulator_GetDevice tests retrieving a device by name.
 func TestSimulator_GetDevice(t *testing.T) {
 	cfg := createTestConfig(2)
 	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -95,6 +101,7 @@ func TestSimulator_GetDevice(t *testing.T) {
 	if device == nil {
 		t.Fatal("Expected device, got nil")
 	}
+
 	if device.Config.Name != "test-device-0" {
 		t.Errorf("Expected device name 'test-device-0', got '%s'", device.Config.Name)
 	}
@@ -106,7 +113,7 @@ func TestSimulator_GetDevice(t *testing.T) {
 	}
 }
 
-// TestSimulator_GetAllDevices tests retrieving all devices
+// TestSimulator_GetAllDevices tests retrieving all devices.
 func TestSimulator_GetAllDevices(t *testing.T) {
 	cfg := createTestConfig(3)
 	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -120,7 +127,7 @@ func TestSimulator_GetAllDevices(t *testing.T) {
 	}
 
 	// Check that all expected devices are present
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		name := fmt.Sprintf("test-device-%d", i)
 		if _, exists := devices[name]; !exists {
 			t.Errorf("Expected device '%s' not found", name)
@@ -128,7 +135,7 @@ func TestSimulator_GetAllDevices(t *testing.T) {
 	}
 }
 
-// TestSimulator_Lifecycle tests start and stop
+// TestSimulator_Lifecycle tests start and stop.
 func TestSimulator_Lifecycle(t *testing.T) {
 	cfg := createTestConfig(1)
 	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -145,6 +152,7 @@ func TestSimulator_Lifecycle(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to start simulator: %v", err)
 	}
+
 	if !sim.running {
 		t.Error("Simulator should be running after Start()")
 	}
@@ -167,7 +175,7 @@ func TestSimulator_Lifecycle(t *testing.T) {
 	sim.Stop()
 }
 
-// TestSimulator_SetDeviceState tests setting device state
+// TestSimulator_SetDeviceState tests setting device state.
 func TestSimulator_SetDeviceState(t *testing.T) {
 	cfg := createTestConfig(1)
 	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -211,7 +219,7 @@ func TestSimulator_SetDeviceState(t *testing.T) {
 	}
 }
 
-// TestSimulator_DeviceStates tests all device state constants
+// TestSimulator_DeviceStates tests all device state constants.
 func TestSimulator_DeviceStates(t *testing.T) {
 	states := []DeviceState{
 		StateUp,
@@ -241,7 +249,7 @@ func TestSimulator_DeviceStates(t *testing.T) {
 	}
 }
 
-// TestSimulator_IncrementCounter tests counter increments
+// TestSimulator_IncrementCounter tests counter increments.
 func TestSimulator_IncrementCounter(t *testing.T) {
 	cfg := createTestConfig(1)
 	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -268,7 +276,9 @@ func TestSimulator_IncrementCounter(t *testing.T) {
 	for counterName, counter := range counters {
 		t.Run(counterName, func(t *testing.T) {
 			initial := *counter
+
 			sim.IncrementCounter(deviceName, counterName)
+
 			if *counter != initial+1 {
 				t.Errorf("Counter %s: expected %d, got %d", counterName, initial+1, *counter)
 			}
@@ -276,7 +286,7 @@ func TestSimulator_IncrementCounter(t *testing.T) {
 	}
 }
 
-// TestSimulator_IncrementCounter_NonExistentDevice tests incrementing counter for non-existent device
+// TestSimulator_IncrementCounter_NonExistentDevice tests incrementing counter for non-existent device.
 func TestSimulator_IncrementCounter_NonExistentDevice(t *testing.T) {
 	cfg := createTestConfig(1)
 	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -287,7 +297,7 @@ func TestSimulator_IncrementCounter_NonExistentDevice(t *testing.T) {
 	sim.IncrementCounter("non-existent", "arp_requests")
 }
 
-// TestSimulator_ConcurrentAccess tests thread-safety with concurrent operations
+// TestSimulator_ConcurrentAccess tests thread-safety with concurrent operations.
 func TestSimulator_ConcurrentAccess(t *testing.T) {
 	cfg := createTestConfig(5)
 	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -297,24 +307,24 @@ func TestSimulator_ConcurrentAccess(t *testing.T) {
 	var wg sync.WaitGroup
 
 	// Concurrent device retrieval
-	for i := 0; i < 10; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for j := 0; j < 100; j++ {
+	for range 10 {
+		wg.Go(func() {
+			for range 100 {
 				sim.GetAllDevices()
 				sim.GetDevice("test-device-0")
 			}
-		}()
+		})
 	}
 
 	// Concurrent counter increments
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		wg.Add(1)
+
 		go func(deviceIdx int) {
 			defer wg.Done()
+
 			deviceName := fmt.Sprintf("test-device-%d", deviceIdx%5)
-			for j := 0; j < 100; j++ {
+			for range 100 {
 				sim.IncrementCounter(deviceName, "packets_sent")
 				sim.IncrementCounter(deviceName, "packets_received")
 			}
@@ -322,14 +332,16 @@ func TestSimulator_ConcurrentAccess(t *testing.T) {
 	}
 
 	// Concurrent state changes
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		wg.Add(1)
+
 		go func(deviceIdx int) {
 			defer wg.Done()
+
 			deviceName := fmt.Sprintf("test-device-%d", deviceIdx%5)
-			for j := 0; j < 50; j++ {
-				sim.SetDeviceState(deviceName, StateUp)
-				sim.SetDeviceState(deviceName, StateDown)
+			for range 50 {
+				_ = sim.SetDeviceState(deviceName, StateUp)
+				_ = sim.SetDeviceState(deviceName, StateDown)
 			}
 		}(i)
 	}
@@ -343,17 +355,22 @@ func TestSimulator_ConcurrentAccess(t *testing.T) {
 	}
 
 	// Check that counters increased (should be 200 per device: 2 counters * 100 increments)
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		deviceName := fmt.Sprintf("test-device-%d", i)
+
 		device := sim.GetDevice(deviceName)
+
 		if device == nil {
 			t.Errorf("Device %s not found", deviceName)
+
 			continue
 		}
 
 		// Should have received 400 increments (2 goroutines * (100 packets_sent + 100 packets_received))
 		expectedCount := uint64(400)
+
 		totalCount := device.Counters.PacketsSent + device.Counters.PacketsReceived
+
 		if totalCount != expectedCount {
 			t.Errorf("Device %s: expected %d counter increments, got %d",
 				deviceName, expectedCount, totalCount)
@@ -361,7 +378,7 @@ func TestSimulator_ConcurrentAccess(t *testing.T) {
 	}
 }
 
-// TestSimulator_DeviceTypes tests different device types
+// TestSimulator_DeviceTypes tests different device types.
 func TestSimulator_DeviceTypes(t *testing.T) {
 	deviceTypes := []string{"router", "switch", "ap", "access-point", "server", "generic"}
 
@@ -389,6 +406,7 @@ func TestSimulator_DeviceTypes(t *testing.T) {
 			if device == nil {
 				t.Fatal("Device not found")
 			}
+
 			if device.Config.Type != deviceType {
 				t.Errorf("Expected device type '%s', got '%s'", deviceType, device.Config.Type)
 			}
@@ -396,7 +414,7 @@ func TestSimulator_DeviceTypes(t *testing.T) {
 	}
 }
 
-// TestSimulator_WithTrapSender tests simulator with trap sender enabled
+// TestSimulator_WithTrapSender tests simulator with trap sender enabled.
 func TestSimulator_WithTrapSender(t *testing.T) {
 	cfg := &config.Config{
 		Devices: []config.Device{
@@ -435,7 +453,7 @@ func TestSimulator_WithTrapSender(t *testing.T) {
 	}
 }
 
-// TestSimulator_LastActivity tests that LastActivity is tracked
+// TestSimulator_LastActivity tests that LastActivity is tracked.
 func TestSimulator_LastActivity(t *testing.T) {
 	cfg := createTestConfig(1)
 	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -458,7 +476,7 @@ func TestSimulator_LastActivity(t *testing.T) {
 	}
 }
 
-// TestDeviceCounters_Initial tests that counters are initialized to zero
+// TestDeviceCounters_Initial tests that counters are initialized to zero.
 func TestDeviceCounters_Initial(t *testing.T) {
 	cfg := createTestConfig(1)
 	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -474,18 +492,21 @@ func TestDeviceCounters_Initial(t *testing.T) {
 	if counters.ARPRequestsReceived != 0 {
 		t.Error("ARPRequestsReceived should be 0 initially")
 	}
+
 	if counters.ARPRepliesSent != 0 {
 		t.Error("ARPRepliesSent should be 0 initially")
 	}
+
 	if counters.PacketsSent != 0 {
 		t.Error("PacketsSent should be 0 initially")
 	}
+
 	if counters.PacketsReceived != 0 {
 		t.Error("PacketsReceived should be 0 initially")
 	}
 }
 
-// TestSimulator_ReloadUpdatesSNMPAgent verifies reload rebuilds SNMP agent and trap sender state
+// TestSimulator_ReloadUpdatesSNMPAgent verifies reload rebuilds SNMP agent and trap sender state.
 func TestSimulator_ReloadUpdatesSNMPAgent(t *testing.T) {
 	cfg := createTestConfig(1)
 	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -496,9 +517,11 @@ func TestSimulator_ReloadUpdatesSNMPAgent(t *testing.T) {
 	if originalDevice == nil {
 		t.Fatal("Device not found")
 	}
+
 	if originalDevice.SNMPAgent == nil {
 		t.Fatal("SNMP agent should be initialized")
 	}
+
 	originalAgent := originalDevice.SNMPAgent
 
 	newCfg := createTestConfig(1)
@@ -506,16 +529,19 @@ func TestSimulator_ReloadUpdatesSNMPAgent(t *testing.T) {
 
 	// Create a temporary walk file to trigger load logic
 	walkFile := filepath.Join(t.TempDir(), "test.walk")
-	if err := os.WriteFile(walkFile, []byte(".1.3.6.1.2.1.1.1.0 = STRING: \"NIAC\"\n"), 0o644); err != nil {
+	err := os.WriteFile(walkFile, []byte(".1.3.6.1.2.1.1.1.0 = STRING: \"NIAC\"\n"), 0o644)
+	if err != nil {
 		t.Fatalf("Failed to create walk file: %v", err)
 	}
+
 	newCfg.Devices[0].SNMPConfig.WalkFile = walkFile
 	newCfg.Devices[0].SNMPConfig.Traps = &config.TrapConfig{
 		Enabled:   true,
 		Receivers: []string{"127.0.0.1:162"},
 	}
 
-	if err := sim.Reload(newCfg); err != nil {
+	err = sim.Reload(newCfg)
+	if err != nil {
 		t.Fatalf("Reload failed: %v", err)
 	}
 
@@ -523,51 +549,51 @@ func TestSimulator_ReloadUpdatesSNMPAgent(t *testing.T) {
 	if reloadedDevice == nil {
 		t.Fatal("Reloaded device not found")
 	}
+
 	if reloadedDevice.SNMPAgent == nil {
 		t.Fatal("SNMP agent should be reinitialized after reload")
 	}
+
 	if reloadedDevice.SNMPAgent == originalAgent {
 		t.Error("Expected SNMP agent to be recreated with new configuration")
 	}
+
 	if reloadedDevice.TrapSender == nil {
 		t.Error("Trap sender should be initialized after reload when traps are enabled")
 	}
 }
 
-// BenchmarkNewSimulator benchmarks simulator creation
+// BenchmarkNewSimulator benchmarks simulator creation.
 func BenchmarkNewSimulator(b *testing.B) {
 	cfg := createTestConfig(10)
 	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
 	errorMgr := errors.NewStateManager()
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		NewSimulator(cfg, stack, errorMgr, 0)
 	}
 }
 
-// BenchmarkGetDevice benchmarks device retrieval
+// BenchmarkGetDevice benchmarks device retrieval.
 func BenchmarkGetDevice(b *testing.B) {
 	cfg := createTestConfig(10)
 	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
 	errorMgr := errors.NewStateManager()
 	sim := NewSimulator(cfg, stack, errorMgr, 0)
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		sim.GetDevice("test-device-5")
 	}
 }
 
-// BenchmarkIncrementCounter benchmarks counter increments
+// BenchmarkIncrementCounter benchmarks counter increments.
 func BenchmarkIncrementCounter(b *testing.B) {
 	cfg := createTestConfig(1)
 	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
 	errorMgr := errors.NewStateManager()
 	sim := NewSimulator(cfg, stack, errorMgr, 0)
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		sim.IncrementCounter("test-device-0", "packets_sent")
 	}
 }

@@ -14,10 +14,10 @@ import (
 )
 
 type pcapSummary struct {
-	File        string            `json:"file" yaml:"file"`
-	Packets     int               `json:"packets" yaml:"packets"`
-	CapturedAt  time.Time         `json:"captured_at" yaml:"captured_at"`
-	ProtocolMap map[string]int    `json:"protocols" yaml:"protocols"`
+	File        string            `json:"file"            yaml:"file"`
+	Packets     int               `json:"packets"         yaml:"packets"`
+	CapturedAt  time.Time         `json:"captured_at"     yaml:"captured_at"`
+	ProtocolMap map[string]int    `json:"protocols"       yaml:"protocols"`
 	Notes       map[string]string `json:"notes,omitempty" yaml:"notes,omitempty"`
 }
 

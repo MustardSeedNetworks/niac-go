@@ -1,43 +1,26 @@
-import { type FC, useState, memo } from 'react';
 import {
   Activity,
-  Server,
+  Bot,
   Network,
   PlugZap,
-  Bot,
   SatelliteDish,
-  Zap,
+  Server,
   Terminal,
-} from 'lucide-react';
-import {
-  Card,
-  CardContent,
-  Button,
-  Tag,
-  H2,
-  SmallText,
-  AccentLink,
-} from '../ui';
-import { useApiResource } from '../hooks/useApiResource';
-import {
-  fetchStats,
-  fetchHistory,
-  fetchErrorTypes,
-  fetchSimulationStatus,
-} from '../api/client';
-import type { HistoryRecord, ErrorType } from '../api/types';
-import { POLL_INTERVALS } from '../constants';
-import {
-  formatNumber,
-  formatTime,
-  formatUptime,
-} from '../utils';
+  Zap,
+} from "lucide-react";
+import { type FC, memo, useState } from "react";
+import { fetchErrorTypes, fetchHistory, fetchSimulationStatus, fetchStats } from "../api/client";
+import type { ErrorType, HistoryRecord } from "../api/types";
+import { POLL_INTERVALS } from "../constants";
+import { useApiResource } from "../hooks/useApiResource";
+import { AccentLink, Button, Card, CardContent, H2, SmallText, Tag } from "../ui";
+import { formatNumber, formatTime, formatUptime } from "../utils";
 
 /**
  * Format duration string with fallback
  */
 function formatDuration(value: string): string {
-  return value || '—';
+  return value || "—";
 }
 
 /**
@@ -51,7 +34,9 @@ export const DashboardPage: FC = () => {
   });
   const { data: history } = useApiResource(fetchHistory, [], { intervalMs: POLL_INTERVALS.SLOW });
   const { data: errorInfo } = useApiResource(fetchErrorTypes, []);
-  const { data: simStatus } = useApiResource(fetchSimulationStatus, [], { intervalMs: POLL_INTERVALS.FAST });
+  const { data: simStatus } = useApiResource(fetchSimulationStatus, [], {
+    intervalMs: POLL_INTERVALS.FAST,
+  });
   const [showErrors, setShowErrors] = useState(false);
 
   const isRunning = simStatus?.running ?? false;
@@ -60,30 +45,30 @@ export const DashboardPage: FC = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Status banner */}
-      <Card className={`border-l-4 ${isRunning ? 'border-l-emerald-500' : 'border-l-gray-500'}`}>
+      <Card className={`border-l-4 ${isRunning ? "border-l-emerald-500" : "border-l-gray-500"}`}>
         <CardContent className="py-4">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-4">
               <div className="relative">
-                <div className={`h-3 w-3 rounded-full ${isRunning ? 'bg-emerald-500' : 'bg-gray-500'}`} />
+                <div
+                  className={`h-3 w-3 rounded-full ${isRunning ? "bg-emerald-500" : "bg-gray-500"}`}
+                />
                 {isRunning && (
                   <div className="absolute inset-0 h-3 w-3 rounded-full bg-emerald-500 animate-ping opacity-75" />
                 )}
               </div>
               <div>
                 <p className="font-semibold text-white">
-                  {isRunning ? 'Simulation Running' : 'Simulation Stopped'}
+                  {isRunning ? "Simulation Running" : "Simulation Stopped"}
                 </p>
                 <p className="text-sm text-gray-400">
-                  {stats?.interface ?? 'No interface'} • {stats?.device_count ?? 0} devices
+                  {stats?.interface ?? "No interface"} • {stats?.device_count ?? 0} devices
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
               {uptimeSeconds > 0 && (
-                <Tag colorScheme="violet">
-                  Uptime: {formatUptime(uptimeSeconds)}
-                </Tag>
+                <Tag colorScheme="violet">Uptime: {formatUptime(uptimeSeconds)}</Tag>
               )}
             </div>
           </div>
@@ -98,7 +83,7 @@ export const DashboardPage: FC = () => {
               <span className="text-sm font-medium text-gray-400">Devices Online</span>
               <Server className="h-5 w-5 text-violet-400 group-hover:scale-110 transition-transform" />
             </div>
-            <p className="text-3xl font-bold text-white">{stats?.device_count ?? '—'}</p>
+            <p className="text-3xl font-bold text-white">{stats?.device_count ?? "—"}</p>
             <p className="text-xs text-gray-500">Active network devices</p>
           </CardContent>
         </Card>
@@ -110,10 +95,10 @@ export const DashboardPage: FC = () => {
               <Activity className="h-5 w-5 text-emerald-400 group-hover:scale-110 transition-transform" />
             </div>
             <p className="text-3xl font-bold text-white">
-              {stats ? formatNumber(stats.stack.packets_received) : '—'}
+              {stats ? formatNumber(stats.stack.packets_received) : "—"}
             </p>
             <p className="text-xs text-gray-500">
-              {stats ? `${formatNumber(stats.stack.packets_sent)} sent` : 'Awaiting data'}
+              {stats ? `${formatNumber(stats.stack.packets_sent)} sent` : "Awaiting data"}
             </p>
           </CardContent>
         </Card>
@@ -125,10 +110,10 @@ export const DashboardPage: FC = () => {
               <SatelliteDish className="h-5 w-5 text-amber-400 group-hover:scale-110 transition-transform" />
             </div>
             <p className="text-3xl font-bold text-white">
-              {stats ? formatNumber(stats.stack.dns_queries) : '—'}
+              {stats ? formatNumber(stats.stack.dns_queries) : "—"}
             </p>
             <p className="text-xs text-gray-500">
-              DHCP: {stats ? formatNumber(stats.stack.dhcp_requests) : '—'}
+              DHCP: {stats ? formatNumber(stats.stack.dhcp_requests) : "—"}
             </p>
           </CardContent>
         </Card>
@@ -194,7 +179,9 @@ export const DashboardPage: FC = () => {
               </AccentLink>
             </div>
 
-            {showErrors && errorInfo && <ErrorInjectionPanel errorTypes={errorInfo.available_types} info={errorInfo.info} />}
+            {showErrors && errorInfo && (
+              <ErrorInjectionPanel errorTypes={errorInfo.available_types} info={errorInfo.info} />
+            )}
           </CardContent>
         </Card>
 
@@ -207,10 +194,17 @@ export const DashboardPage: FC = () => {
             </div>
             <div className="space-y-3">
               {(history ?? []).slice(0, 4).map((item) => (
-                <div key={item.id} className="rounded-lg border border-white/5 bg-gray-950/50 p-3 hover:border-white/10 transition-colors">
+                <div
+                  key={item.id}
+                  className="rounded-lg border border-white/5 bg-gray-950/50 p-3 hover:border-white/10 transition-colors"
+                >
                   <div className="flex items-center justify-between mb-1">
-                    <p className="font-mono text-xs text-violet-300">{formatTime(item.started_at)}</p>
-                    <Tag colorScheme="gray" className="text-[10px]">{item.device_count} dev</Tag>
+                    <p className="font-mono text-xs text-violet-300">
+                      {formatTime(item.started_at)}
+                    </p>
+                    <Tag colorScheme="gray" className="text-[10px]">
+                      {item.device_count} dev
+                    </Tag>
                   </div>
                   <p className="text-white font-medium text-sm truncate">{item.config_name}</p>
                   <div className="flex gap-3 mt-1 text-xs text-gray-500">
@@ -219,7 +213,7 @@ export const DashboardPage: FC = () => {
                   </div>
                 </div>
               ))}
-              {!history?.length && (
+              {history?.length === 0 && (
                 <div className="text-center py-6 text-gray-500">
                   <Activity className="h-8 w-8 mx-auto mb-2 opacity-50" />
                   <p className="text-sm">No run history yet</p>
@@ -243,32 +237,42 @@ export const DashboardPage: FC = () => {
 /**
  * Error Injection Panel - Shows available error types
  */
-const ErrorInjectionPanel = memo(({ errorTypes, info }: { errorTypes: ErrorType[]; info: string }) => {
-  return (
-    <div className="mt-4 rounded-xl border border-yellow-500/20 bg-yellow-900/10 p-4">
-      <div className="mb-3 flex items-start gap-2">
-        <PlugZap className="mt-0.5 h-5 w-5 text-yellow-400" />
-        <div>
-          <p className="font-semibold text-yellow-200">Error Injection Types</p>
-          <SmallText className="text-yellow-300/80">{info}</SmallText>
+const ErrorInjectionPanel = memo(
+  ({ errorTypes, info }: { errorTypes: ErrorType[]; info: string }) => {
+    return (
+      <div className="mt-4 rounded-xl border border-yellow-500/20 bg-yellow-900/10 p-4">
+        <div className="mb-3 flex items-start gap-2">
+          <PlugZap className="mt-0.5 h-5 w-5 text-yellow-400" />
+          <div>
+            <p className="font-semibold text-yellow-200">Error Injection Types</p>
+            <SmallText className="text-yellow-300/80">{info}</SmallText>
+          </div>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {errorTypes.map((errorType) => (
+            <div
+              key={errorType.type}
+              className="rounded-lg border border-white/10 bg-gray-900/50 p-3"
+            >
+              <p className="font-semibold text-white">{errorType.type}</p>
+              <SmallText className="text-gray-400">{errorType.description}</SmallText>
+            </div>
+          ))}
+        </div>
+        <div className="mt-3 rounded-lg bg-blue-900/20 p-3 text-sm text-blue-200">
+          <strong>TUI Mode:</strong> Run{" "}
+          <code className="rounded bg-black/30 px-1.5 py-0.5 font-mono text-xs">
+            niac interactive [interface] [config]
+          </code>{" "}
+          to access interactive error injection with keyboard controls (press 'i' for menu, keys 1-7
+          for quick injection).
         </div>
       </div>
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-        {errorTypes.map((errorType) => (
-          <div key={errorType.type} className="rounded-lg border border-white/10 bg-gray-900/50 p-3">
-            <p className="font-semibold text-white">{errorType.type}</p>
-            <SmallText className="text-gray-400">{errorType.description}</SmallText>
-          </div>
-        ))}
-      </div>
-      <div className="mt-3 rounded-lg bg-blue-900/20 p-3 text-sm text-blue-200">
-        <strong>TUI Mode:</strong> Run <code className="rounded bg-black/30 px-1.5 py-0.5 font-mono text-xs">niac interactive [interface] [config]</code> to access interactive error injection with keyboard controls (press 'i' for menu, keys 1-7 for quick injection).
-      </div>
-    </div>
-  );
-});
+    );
+  },
+);
 
-ErrorInjectionPanel.displayName = 'ErrorInjectionPanel';
+ErrorInjectionPanel.displayName = "ErrorInjectionPanel";
 
 /**
  * Automation Timeline - Shows recent run history
@@ -280,11 +284,13 @@ const AutomationTimeline = memo(({ history }: { history: HistoryRecord[] | null 
     time: formatTime(run.started_at),
   }));
 
-  if (!timeline.length) {
+  if (timeline.length === 0) {
     return (
       <Card className="border-white/5 bg-gray-900/70">
         <CardContent>
-          <SmallText className="text-gray-400">Automation updates will appear after the first run completes.</SmallText>
+          <SmallText className="text-gray-400">
+            Automation updates will appear after the first run completes.
+          </SmallText>
         </CardContent>
       </Card>
     );
@@ -302,13 +308,21 @@ const AutomationTimeline = memo(({ history }: { history: HistoryRecord[] | null 
         </div>
         <div className="space-y-4">
           {timeline.map((event) => (
-            <div key={event.title} className="flex flex-col gap-1 rounded-lg border border-white/5 bg-gray-950/50 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div
+              key={event.title}
+              className="flex flex-col gap-1 rounded-lg border border-white/5 bg-gray-950/50 p-4 sm:flex-row sm:items-center sm:justify-between"
+            >
               <div>
                 <SmallText className="text-blue-300">{event.time}</SmallText>
                 <p className="font-semibold text-white">{event.title}</p>
                 <SmallText className="text-gray-400">{event.detail}</SmallText>
               </div>
-              <Button variant="ghost" size="sm" className="mt-2 sm:mt-0" leftIcon={<Bot className="h-4 w-4" />}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="mt-2 sm:mt-0"
+                leftIcon={<Bot className="h-4 w-4" />}
+              >
                 View details
               </Button>
             </div>
@@ -319,6 +333,6 @@ const AutomationTimeline = memo(({ history }: { history: HistoryRecord[] | null 
   );
 });
 
-AutomationTimeline.displayName = 'AutomationTimeline';
+AutomationTimeline.displayName = "AutomationTimeline";
 
 export default DashboardPage;

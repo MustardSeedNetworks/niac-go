@@ -3,6 +3,7 @@ package protocols
 
 import (
 	"fmt"
+	"log/slog"
 	"net"
 
 	"github.com/google/gopacket"
@@ -10,7 +11,7 @@ import (
 	"github.com/krisarmstrong/niac-go/pkg/config"
 )
 
-// ARP field offsets (after Ethernet header)
+// ARP field offsets (after Ethernet header).
 const (
 	ARPOperation             = 6  // Operation (request/reply)
 	ARPSenderHWAddress       = 8  // Sender hardware address
@@ -19,19 +20,19 @@ const (
 	ARPTargetProtocolAddress = 24 // Target protocol address
 )
 
-// ARPHandler handles ARP requests and replies
+// ARPHandler handles ARP requests and replies.
 type ARPHandler struct {
 	stack *Stack
 }
 
-// NewARPHandler creates a new ARP handler
+// NewARPHandler creates a new ARP handler.
 func NewARPHandler(stack *Stack) *ARPHandler {
 	return &ARPHandler{
 		stack: stack,
 	}
 }
 
-// HandlePacket processes an ARP packet
+// HandlePacket processes an ARP packet.
 func (h *ARPHandler) HandlePacket(pkt *Packet) {
 	debugLevel := h.stack.GetDebugLevel()
 
@@ -42,8 +43,9 @@ func (h *ARPHandler) HandlePacket(pkt *Packet) {
 	arpLayer := packet.Layer(layers.LayerTypeARP)
 	if arpLayer == nil {
 		if debugLevel >= 2 {
-			fmt.Printf("ARP packet missing ARP layer sn=%d\n", pkt.SerialNumber)
+			slog.Debug("ARP packet missing ARP layer", "sn", pkt.SerialNumber)
 		}
+
 		return
 	}
 
@@ -55,24 +57,34 @@ func (h *ARPHandler) HandlePacket(pkt *Packet) {
 	// Only handle ARP requests for IPv4 over Ethernet
 	if arp.AddrType != layers.LinkTypeEthernet || arp.Protocol != layers.EthernetTypeIPv4 {
 		if debugLevel >= 2 {
-			fmt.Printf("ARP packet with unsupported type sn=%d\n", pkt.SerialNumber)
+			slog.Debug("ARP packet with unsupported type", "sn", pkt.SerialNumber)
 		}
+
 		return
 	}
 
-	if arp.Operation == layers.ARPRequest {
+	switch arp.Operation {
+	case layers.ARPRequest:
 		h.handleARPRequest(pkt, arp)
-	} else if arp.Operation == layers.ARPReply {
+	case layers.ARPReply:
 		// Could log/track replies if needed
 		h.stack.IncrementStat("arp_replies")
+
 		if debugLevel >= 3 {
-			fmt.Printf("ARP Reply from %s (%s) sn=%d\n",
-				net.IP(arp.SourceProtAddress), net.HardwareAddr(arp.SourceHwAddress), pkt.SerialNumber)
+			slog.Debug(
+				"ARP Reply",
+				"sourceIP",
+				net.IP(arp.SourceProtAddress),
+				"sourceMAC",
+				net.HardwareAddr(arp.SourceHwAddress),
+				"sn",
+				pkt.SerialNumber,
+			)
 		}
 	}
 }
 
-// handleARPRequest processes an ARP request and generates reply if we have the target IP
+// handleARPRequest processes an ARP request and generates reply if we have the target IP.
 func (h *ARPHandler) handleARPRequest(pkt *Packet, arp *layers.ARP) {
 	debugLevel := h.stack.GetDebugLevel()
 
@@ -83,16 +95,26 @@ func (h *ARPHandler) handleARPRequest(pkt *Packet, arp *layers.ARP) {
 	h.stack.IncrementStat("arp_requests")
 
 	if debugLevel >= 3 {
-		fmt.Printf("ARP Request: Who has %s? Tell %s (%s) sn=%d\n",
-			targetIP, sourceIP, sourceMAC, pkt.SerialNumber)
+		slog.Debug(
+			"ARP Request",
+			"targetIP",
+			targetIP,
+			"sourceIP",
+			sourceIP,
+			"sourceMAC",
+			sourceMAC,
+			"sn",
+			pkt.SerialNumber,
+		)
 	}
 
 	// Look up devices with this IP (considering VLAN)
 	devices := h.stack.GetDevices().GetByIP(targetIP)
 	if len(devices) == 0 {
 		if debugLevel >= 3 {
-			fmt.Printf("ARP Request: No device found for IP %s\n", targetIP)
+			slog.Debug("ARP Request: No device found for IP", "ip", targetIP)
 		}
+
 		return
 	}
 
@@ -100,7 +122,6 @@ func (h *ARPHandler) handleARPRequest(pkt *Packet, arp *layers.ARP) {
 	for _, device := range devices {
 		// Check VLAN match if applicable (tracked in issue #77 - VLAN-aware ARP)
 		// For now, respond to all
-
 		if len(device.MACAddress) == 0 {
 			continue
 		}
@@ -112,15 +133,29 @@ func (h *ARPHandler) handleARPRequest(pkt *Packet, arp *layers.ARP) {
 			h.stack.IncrementStat("arp_replies")
 
 			if debugLevel >= 3 {
-				fmt.Printf("ARP Reply: %s is at %s (device: %s) sn=%d\n",
-					targetIP, device.MACAddress, device.Name, reply.SerialNumber)
+				slog.Debug(
+					"ARP Reply",
+					"ip",
+					targetIP,
+					"mac",
+					device.MACAddress,
+					"device",
+					device.Name,
+					"sn",
+					reply.SerialNumber,
+				)
 			}
 		}
 	}
 }
 
-// buildARPReply constructs an ARP reply packet
-func (h *ARPHandler) buildARPReply(senderMAC net.HardwareAddr, senderIP net.IP, targetMAC net.HardwareAddr, targetIP net.IP) *Packet {
+// buildARPReply constructs an ARP reply packet.
+func (h *ARPHandler) buildARPReply(
+	senderMAC net.HardwareAddr,
+	senderIP net.IP,
+	targetMAC net.HardwareAddr,
+	targetIP net.IP,
+) *Packet {
 	// Build Ethernet header
 	eth := &layers.Ethernet{
 		SrcMAC:       senderMAC,
@@ -151,8 +186,9 @@ func (h *ARPHandler) buildARPReply(senderMAC net.HardwareAddr, senderIP net.IP, 
 	err := gopacket.SerializeLayers(buffer, opts, eth, arpLayer)
 	if err != nil {
 		if h.stack.GetDebugLevel() >= 2 {
-			fmt.Printf("Error serializing ARP reply: %v\n", err)
+			slog.Debug("Error serializing ARP reply", "error", err)
 		}
+
 		return nil
 	}
 
@@ -172,10 +208,10 @@ func (h *ARPHandler) buildARPReply(senderMAC net.HardwareAddr, senderIP net.IP, 
 	return pkt
 }
 
-// SendGratuitousARP sends a gratuitous ARP announcement
+// SendGratuitousARP sends a gratuitous ARP announcement.
 func (h *ARPHandler) SendGratuitousARP(device *config.Device) error {
 	if len(device.MACAddress) == 0 || len(device.IPAddresses) == 0 {
-		return fmt.Errorf("device missing MAC or IP address")
+		return ErrDeviceMissingMACOrIP
 	}
 
 	// Use first IP
@@ -209,7 +245,7 @@ func (h *ARPHandler) SendGratuitousARP(device *config.Device) error {
 
 	err := gopacket.SerializeLayers(buffer, opts, eth, arpLayer)
 	if err != nil {
-		return fmt.Errorf("error serializing gratuitous ARP: %v", err)
+		return fmt.Errorf("error serializing gratuitous ARP: %w", err)
 	}
 
 	// Get serial number
@@ -228,7 +264,7 @@ func (h *ARPHandler) SendGratuitousARP(device *config.Device) error {
 	h.stack.Send(pkt)
 
 	if h.stack.GetDebugLevel() >= 3 {
-		fmt.Printf("Sent gratuitous ARP for %s (%s) from device %s\n", ip, device.MACAddress, device.Name)
+		slog.Debug("Sent gratuitous ARP", "ip", ip, "mac", device.MACAddress, "device", device.Name)
 	}
 
 	return nil

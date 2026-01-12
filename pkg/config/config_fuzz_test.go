@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-// FuzzLoadYAML tests YAML parsing with arbitrary input
+// FuzzLoadYAML tests YAML parsing with arbitrary input.
 func FuzzLoadYAML(f *testing.F) {
 	// Seed with valid YAML examples
 	f.Add([]byte(`
@@ -41,7 +41,8 @@ devices:
 		tmpDir := t.TempDir()
 		tmpFile := filepath.Join(tmpDir, "test.yaml")
 
-		if err := os.WriteFile(tmpFile, data, 0644); err != nil {
+		err := os.WriteFile(tmpFile, data, 0o600)
+		if err != nil {
 			return // Skip if we can't write file
 		}
 
@@ -51,7 +52,7 @@ devices:
 	})
 }
 
-// FuzzParseSpeed tests speed string parsing with arbitrary input
+// FuzzParseSpeed tests speed string parsing with arbitrary input.
 func FuzzParseSpeed(f *testing.F) {
 	// Seed with valid speed strings
 	f.Add("100M")
@@ -93,7 +94,7 @@ func FuzzParseSpeed(f *testing.F) {
 	})
 }
 
-// FuzzGenerateMAC tests MAC address generation
+// FuzzGenerateMAC tests MAC address generation.
 func FuzzGenerateMAC(f *testing.F) {
 	// Seed with some inputs (GenerateMAC doesn't take input, but we'll call it many times)
 	f.Add([]byte{0})
@@ -114,6 +115,7 @@ func FuzzGenerateMAC(f *testing.F) {
 		// Validate MAC address
 		if mac == nil {
 			t.Error("GenerateMAC returned nil")
+
 			return
 		}
 
@@ -128,7 +130,7 @@ func FuzzGenerateMAC(f *testing.F) {
 	})
 }
 
-// FuzzParseSimpleConfig tests simple config parsing with arbitrary input
+// FuzzParseSimpleConfig tests simple config parsing with arbitrary input.
 func FuzzParseSimpleConfig(f *testing.F) {
 	// Seed with valid config lines
 	f.Add("device1 router 192.168.1.1 00:11:22:33:44:55")
@@ -157,12 +159,12 @@ func FuzzParseSimpleConfig(f *testing.F) {
 	})
 }
 
-// FuzzValidateWalkFilePath tests walk file path validation
+// FuzzValidateWalkFilePath tests walk file path validation.
 func FuzzValidateWalkFilePath(f *testing.F) {
 	// Create a temp directory with a test file
 	tmpDir := f.TempDir()
 	validFile := filepath.Join(tmpDir, "valid.txt")
-	os.WriteFile(validFile, []byte("test"), 0644)
+	_ = os.WriteFile(validFile, []byte("test"), 0o600)
 
 	// Seed with various path inputs
 	f.Add(tmpDir, "valid.txt", "device1")
@@ -194,7 +196,7 @@ func FuzzValidateWalkFilePath(f *testing.F) {
 	})
 }
 
-// FuzzDeviceConfigParsing tests device configuration parsing with malformed data
+// FuzzDeviceConfigParsing tests device configuration parsing with malformed data.
 func FuzzDeviceConfigParsing(f *testing.F) {
 	// Seed with various device config inputs
 	f.Add("mac", "00:11:22:33:44:55")
@@ -245,7 +247,7 @@ func FuzzDeviceConfigParsing(f *testing.F) {
 func parseMACAddress(s string) (net.HardwareAddr, error) {
 	// This wraps net.ParseMAC to ensure no panics
 	defer func() {
-		recover() // Catch any panics
+		_ = recover() // Catch any panics
 	}()
 
 	if s == "" {
@@ -259,7 +261,7 @@ func parseMACAddress(s string) (net.HardwareAddr, error) {
 func parseIPAddress(s string) net.IP {
 	// This wraps net.ParseIP to ensure no panics
 	defer func() {
-		recover() // Catch any panics
+		_ = recover() // Catch any panics
 	}()
 
 	if s == "" {

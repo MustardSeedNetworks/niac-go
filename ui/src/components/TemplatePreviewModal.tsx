@@ -1,8 +1,8 @@
-import { type FC, useEffect, useCallback } from 'react';
-import { X, Copy, Download, FileCode } from 'lucide-react';
-import { Button, Tag, SmallText } from '../ui';
-import type { Template, TemplateContent } from '../api/types';
-import { YamlViewer } from './config/YamlEditor';
+import { Copy, Download, FileCode, X } from "lucide-react";
+import { type FC, useCallback, useEffect } from "react";
+import type { Template, TemplateContent } from "../api/types";
+import { Button, SmallText, Tag } from "../ui";
+import { YamlViewer } from "./config/YamlEditor";
 
 interface TemplatePreviewModalProps {
   template: Template | null;
@@ -26,21 +26,21 @@ export const TemplatePreviewModal: FC<TemplatePreviewModalProps> = ({
   // Handle escape key to close modal
   const handleKeyDown = useCallback(
     (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
+      if (event.key === "Escape") {
         onClose();
       }
     },
-    [onClose]
+    [onClose],
   );
 
   useEffect(() => {
-    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener("keydown", handleKeyDown);
     // Prevent body scroll when modal is open
-    document.body.style.overflow = 'hidden';
+    document.body.style.overflow = "hidden";
 
     return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = 'unset';
+      document.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = "unset";
     };
   }, [handleKeyDown]);
 
@@ -49,9 +49,9 @@ export const TemplatePreviewModal: FC<TemplatePreviewModalProps> = ({
   const handleDownload = () => {
     if (!content) return;
 
-    const blob = new Blob([content.content], { type: 'text/yaml' });
+    const blob = new Blob([content.content], { type: "text/yaml" });
     const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
+    const link = document.createElement("a");
     link.href = url;
     link.download = `${template.name}.yaml`;
     document.body.appendChild(link);
@@ -83,7 +83,7 @@ export const TemplatePreviewModal: FC<TemplatePreviewModalProps> = ({
                 {template.name}
               </h2>
               <SmallText className="text-gray-400">
-                {template.description || 'Configuration template preview'}
+                {template.description || "Configuration template preview"}
               </SmallText>
             </div>
           </div>
@@ -99,7 +99,7 @@ export const TemplatePreviewModal: FC<TemplatePreviewModalProps> = ({
         {/* Template metadata */}
         <div className="flex flex-wrap items-center gap-3 border-b border-white/10 px-6 py-3 bg-gray-950/50">
           <Tag colorScheme="purple">
-            {template.device_count} {template.device_count === 1 ? 'device' : 'devices'}
+            {template.device_count} {template.device_count === 1 ? "device" : "devices"}
           </Tag>
           <Tag colorScheme="gray" className="capitalize">
             {template.type}

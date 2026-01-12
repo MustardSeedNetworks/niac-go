@@ -142,15 +142,19 @@ func TestNetBIOSOpcodes(t *testing.T) {
 	if NBNSOpQuery != 0 {
 		t.Error("NBNSOpQuery should be 0")
 	}
+
 	if NBNSOpRegistration != 5 {
 		t.Error("NBNSOpRegistration should be 5")
 	}
+
 	if NBNSOpRelease != 6 {
 		t.Error("NBNSOpRelease should be 6")
 	}
+
 	if NBNSOpWACK != 7 {
 		t.Error("NBNSOpWACK should be 7")
 	}
+
 	if NBNSOpRefresh != 8 {
 		t.Error("NBNSOpRefresh should be 8")
 	}
@@ -161,9 +165,11 @@ func TestNetBIOSPorts(t *testing.T) {
 	if NetBIOSNameServicePort != 137 {
 		t.Error("NetBIOSNameServicePort should be 137")
 	}
+
 	if NetBIOSDatagramServicePort != 138 {
 		t.Error("NetBIOSDatagramServicePort should be 138")
 	}
+
 	if NetBIOSSessionServicePort != 139 {
 		t.Error("NetBIOSSessionServicePort should be 139")
 	}

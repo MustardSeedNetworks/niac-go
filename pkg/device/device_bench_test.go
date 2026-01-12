@@ -10,7 +10,7 @@ import (
 	"github.com/krisarmstrong/niac-go/pkg/protocols"
 )
 
-// BenchmarkDeviceCreation benchmarks creating a new simulated device
+// BenchmarkDeviceCreation benchmarks creating a new simulated device.
 func BenchmarkDeviceCreation(b *testing.B) {
 	mac, _ := net.ParseMAC("00:11:22:33:44:55")
 	ip := net.ParseIP("192.168.1.1")
@@ -38,14 +38,13 @@ func BenchmarkDeviceCreation(b *testing.B) {
 	errorMgr := errors.NewStateManager()
 
 	b.ReportAllocs()
-	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = NewSimulator(cfg, stack, errorMgr, 0)
 	}
 }
 
-// BenchmarkDeviceCreation_WithMultipleIPs benchmarks device creation with multiple IP addresses
+// BenchmarkDeviceCreation_WithMultipleIPs benchmarks device creation with multiple IP addresses.
 func BenchmarkDeviceCreation_WithMultipleIPs(b *testing.B) {
 	mac, _ := net.ParseMAC("00:11:22:33:44:55")
 	ips := []net.IP{
@@ -75,17 +74,17 @@ func BenchmarkDeviceCreation_WithMultipleIPs(b *testing.B) {
 	errorMgr := errors.NewStateManager()
 
 	b.ReportAllocs()
-	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = NewSimulator(cfg, stack, errorMgr, 0)
 	}
 }
 
-// BenchmarkDeviceCreation_MultipleDevices benchmarks creating multiple devices
+// BenchmarkDeviceCreation_MultipleDevices benchmarks creating multiple devices.
 func BenchmarkDeviceCreation_MultipleDevices(b *testing.B) {
 	devices := make([]config.Device, 10)
-	for i := 0; i < 10; i++ {
+
+	for i := range 10 {
 		mac, _ := net.ParseMAC("00:11:22:33:44:55")
 		mac[5] = byte(i)
 		ip := net.ParseIP("192.168.1.1")
@@ -109,14 +108,13 @@ func BenchmarkDeviceCreation_MultipleDevices(b *testing.B) {
 	errorMgr := errors.NewStateManager()
 
 	b.ReportAllocs()
-	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = NewSimulator(cfg, stack, errorMgr, 0)
 	}
 }
 
-// BenchmarkProtocolHandlerRegistration benchmarks registering protocol handlers
+// BenchmarkProtocolHandlerRegistration benchmarks registering protocol handlers.
 func BenchmarkProtocolHandlerRegistration(b *testing.B) {
 	mac, _ := net.ParseMAC("00:11:22:33:44:55")
 	ip := net.ParseIP("192.168.1.1")
@@ -141,16 +139,15 @@ func BenchmarkProtocolHandlerRegistration(b *testing.B) {
 	errorMgr := errors.NewStateManager()
 
 	b.ReportAllocs()
-	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		sim := NewSimulator(cfg, stack, errorMgr, 0)
 		// Protocol handlers are registered during initialization
 		_ = sim
 	}
 }
 
-// BenchmarkDeviceStateLookup benchmarks looking up device state
+// BenchmarkDeviceStateLookup benchmarks looking up device state.
 func BenchmarkDeviceStateLookup(b *testing.B) {
 	mac, _ := net.ParseMAC("00:11:22:33:44:55")
 	ip := net.ParseIP("192.168.1.1")
@@ -176,9 +173,8 @@ func BenchmarkDeviceStateLookup(b *testing.B) {
 	sim := NewSimulator(cfg, stack, errorMgr, 0)
 
 	b.ReportAllocs()
-	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		dev := sim.GetDevice("test-device")
 		if dev != nil {
 			_ = dev.State
@@ -186,7 +182,7 @@ func BenchmarkDeviceStateLookup(b *testing.B) {
 	}
 }
 
-// BenchmarkDeviceCounterIncrement benchmarks incrementing device counters
+// BenchmarkDeviceCounterIncrement benchmarks incrementing device counters.
 func BenchmarkDeviceCounterIncrement(b *testing.B) {
 	mac, _ := net.ParseMAC("00:11:22:33:44:55")
 	ip := net.ParseIP("192.168.1.1")
@@ -213,15 +209,14 @@ func BenchmarkDeviceCounterIncrement(b *testing.B) {
 	dev := sim.GetDevice("test-device")
 
 	b.ReportAllocs()
-	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		dev.Counters.PacketsReceived++
 		dev.Counters.PacketsSent++
 	}
 }
 
-// BenchmarkDeviceWithLLDPConfig benchmarks device creation with LLDP configuration
+// BenchmarkDeviceWithLLDPConfig benchmarks device creation with LLDP configuration.
 func BenchmarkDeviceWithLLDPConfig(b *testing.B) {
 	mac, _ := net.ParseMAC("00:11:22:33:44:55")
 	ip := net.ParseIP("192.168.1.1")
@@ -254,14 +249,13 @@ func BenchmarkDeviceWithLLDPConfig(b *testing.B) {
 	errorMgr := errors.NewStateManager()
 
 	b.ReportAllocs()
-	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = NewSimulator(cfg, stack, errorMgr, 0)
 	}
 }
 
-// BenchmarkDeviceWithDHCPConfig benchmarks device creation with DHCP server configuration
+// BenchmarkDeviceWithDHCPConfig benchmarks device creation with DHCP server configuration.
 func BenchmarkDeviceWithDHCPConfig(b *testing.B) {
 	mac, _ := net.ParseMAC("00:11:22:33:44:55")
 	ip := net.ParseIP("192.168.1.1")
@@ -296,14 +290,13 @@ func BenchmarkDeviceWithDHCPConfig(b *testing.B) {
 	errorMgr := errors.NewStateManager()
 
 	b.ReportAllocs()
-	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = NewSimulator(cfg, stack, errorMgr, 0)
 	}
 }
 
-// BenchmarkDeviceWithFullConfig benchmarks device creation with complete configuration
+// BenchmarkDeviceWithFullConfig benchmarks device creation with complete configuration.
 func BenchmarkDeviceWithFullConfig(b *testing.B) {
 	mac, _ := net.ParseMAC("00:11:22:33:44:55")
 	ips := []net.IP{
@@ -374,9 +367,8 @@ func BenchmarkDeviceWithFullConfig(b *testing.B) {
 	errorMgr := errors.NewStateManager()
 
 	b.ReportAllocs()
-	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = NewSimulator(cfg, stack, errorMgr, 0)
 	}
 }

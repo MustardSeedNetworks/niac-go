@@ -12,9 +12,10 @@ import (
 	"github.com/krisarmstrong/niac-go/pkg/config"
 )
 
-// createTestDevice creates a test device configuration
+// createTestDevice creates a test device configuration.
 func createTestDevice() *config.Device {
 	mac, _ := net.ParseMAC("00:11:22:33:44:55")
+
 	return &config.Device{
 		Name:       "test-device",
 		Type:       "router",
@@ -29,7 +30,7 @@ func createTestDevice() *config.Device {
 	}
 }
 
-// TestNewAgent tests agent creation
+// TestNewAgent tests agent creation.
 func TestNewAgent(t *testing.T) {
 	device := createTestDevice()
 	agent := NewAgent(device, 0)
@@ -59,7 +60,7 @@ func TestNewAgent(t *testing.T) {
 	}
 }
 
-// TestNewAgent_CustomCommunity tests agent with custom community
+// TestNewAgent_CustomCommunity tests agent with custom community.
 func TestNewAgent_CustomCommunity(t *testing.T) {
 	device := createTestDevice()
 	device.SNMPConfig.Community = "private"
@@ -71,7 +72,7 @@ func TestNewAgent_CustomCommunity(t *testing.T) {
 	}
 }
 
-// TestNewAgent_DebugLevel tests agent with different debug levels
+// TestNewAgent_DebugLevel tests agent with different debug levels.
 func TestNewAgent_DebugLevel(t *testing.T) {
 	device := createTestDevice()
 
@@ -84,7 +85,7 @@ func TestNewAgent_DebugLevel(t *testing.T) {
 	}
 }
 
-// TestAgent_InitializeSystemMIB tests system MIB initialization
+// TestAgent_InitializeSystemMIB tests system MIB initialization.
 func TestAgent_InitializeSystemMIB(t *testing.T) {
 	device := createTestDevice()
 	agent := NewAgent(device, 0)
@@ -113,7 +114,7 @@ func TestAgent_InitializeSystemMIB(t *testing.T) {
 	}
 }
 
-// TestAgent_SystemMIB_DefaultValues tests default values for system MIB
+// TestAgent_SystemMIB_DefaultValues tests default values for system MIB.
 func TestAgent_SystemMIB_DefaultValues(t *testing.T) {
 	device := createTestDevice()
 	agent := NewAgent(device, 0)
@@ -123,6 +124,7 @@ func TestAgent_SystemMIB_DefaultValues(t *testing.T) {
 	if sysDescr == nil {
 		t.Fatal("sysDescr not initialized")
 	}
+
 	descr := sysDescr.Value.(string)
 	if !strings.Contains(descr, device.Type) || !strings.Contains(descr, device.Name) {
 		t.Errorf("sysDescr should contain device type and name, got: %s", descr)
@@ -133,12 +135,13 @@ func TestAgent_SystemMIB_DefaultValues(t *testing.T) {
 	if sysName == nil {
 		t.Fatal("sysName not initialized")
 	}
+
 	if sysName.Value.(string) != device.Name {
 		t.Errorf("Expected sysName '%s', got '%s'", device.Name, sysName.Value.(string))
 	}
 }
 
-// TestAgent_SystemMIB_CustomProperties tests system MIB with custom properties
+// TestAgent_SystemMIB_CustomProperties tests system MIB with custom properties.
 func TestAgent_SystemMIB_CustomProperties(t *testing.T) {
 	device := createTestDevice()
 	device.Properties["sysDescr"] = "Custom Description"
@@ -165,6 +168,7 @@ func TestAgent_SystemMIB_CustomProperties(t *testing.T) {
 			if value == nil {
 				t.Fatalf("OID %s not initialized", tt.oid)
 			}
+
 			if value.Value.(string) != tt.expected {
 				t.Errorf("Expected %s '%s', got '%s'", tt.property, tt.expected, value.Value.(string))
 			}
@@ -172,7 +176,7 @@ func TestAgent_SystemMIB_CustomProperties(t *testing.T) {
 	}
 }
 
-// TestAgent_SysUpTime tests dynamic sysUpTime OID
+// TestAgent_SysUpTime tests dynamic sysUpTime OID.
 func TestAgent_SysUpTime(t *testing.T) {
 	device := createTestDevice()
 	agent := NewAgent(device, 0)
@@ -201,7 +205,7 @@ func TestAgent_SysUpTime(t *testing.T) {
 	}
 }
 
-// TestAgent_MIB_GetSet tests MIB get/set operations through agent
+// TestAgent_MIB_GetSet tests MIB get/set operations through agent.
 func TestAgent_MIB_GetSet(t *testing.T) {
 	device := createTestDevice()
 	agent := NewAgent(device, 0)
@@ -230,7 +234,7 @@ func TestAgent_MIB_GetSet(t *testing.T) {
 	}
 }
 
-// TestAgent_ConcurrentAccess tests concurrent access to agent
+// TestAgent_ConcurrentAccess tests concurrent access to agent.
 func TestAgent_ConcurrentAccess(t *testing.T) {
 	device := createTestDevice()
 	agent := NewAgent(device, 0)
@@ -238,7 +242,7 @@ func TestAgent_ConcurrentAccess(t *testing.T) {
 	done := make(chan bool, 100)
 
 	// Launch multiple goroutines accessing MIB
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		go func(id int) {
 			// Read sysUpTime
 			_ = agent.mib.Get("1.3.6.1.2.1.1.3.0")
@@ -251,12 +255,12 @@ func TestAgent_ConcurrentAccess(t *testing.T) {
 	}
 
 	// Wait for all goroutines
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		<-done
 	}
 }
 
-// TestAgent_StartTime tests that start time is set correctly
+// TestAgent_StartTime tests that start time is set correctly.
 func TestAgent_StartTime(t *testing.T) {
 	before := time.Now()
 	device := createTestDevice()
@@ -268,7 +272,7 @@ func TestAgent_StartTime(t *testing.T) {
 	}
 }
 
-// TestAgent_DeviceTypes tests agents with different device types
+// TestAgent_DeviceTypes tests agents with different device types.
 func TestAgent_DeviceTypes(t *testing.T) {
 	types := []string{"router", "switch", "ap", "server", "firewall"}
 
@@ -292,19 +296,19 @@ func TestAgent_DeviceTypes(t *testing.T) {
 	}
 }
 
-// TestAgent_MultipleSNMPAgents tests creating multiple agents
+// TestAgent_MultipleSNMPAgents tests creating multiple agents.
 func TestAgent_MultipleSNMPAgents(t *testing.T) {
 	devices := make([]*config.Device, 10)
 	agents := make([]*Agent, 10)
 
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		devices[i] = createTestDevice()
 		devices[i].Name = "device-" + string(rune('0'+i))
 		agents[i] = NewAgent(devices[i], 0)
 	}
 
 	// Verify each agent has correct device
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		if agents[i].device.Name != devices[i].Name {
 			t.Errorf("Agent %d has wrong device name", i)
 		}
@@ -316,39 +320,36 @@ func TestAgent_MultipleSNMPAgents(t *testing.T) {
 	}
 }
 
-// BenchmarkNewAgent benchmarks agent creation
+// BenchmarkNewAgent benchmarks agent creation.
 func BenchmarkNewAgent(b *testing.B) {
 	device := createTestDevice()
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = NewAgent(device, 0)
 	}
 }
 
-// BenchmarkAgent_MIBGet benchmarks MIB Get operations
+// BenchmarkAgent_MIBGet benchmarks MIB Get operations.
 func BenchmarkAgent_MIBGet(b *testing.B) {
 	device := createTestDevice()
 	agent := NewAgent(device, 0)
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = agent.mib.Get("1.3.6.1.2.1.1.1.0")
 	}
 }
 
-// BenchmarkAgent_SysUpTime benchmarks dynamic sysUpTime reads
+// BenchmarkAgent_SysUpTime benchmarks dynamic sysUpTime reads.
 func BenchmarkAgent_SysUpTime(b *testing.B) {
 	device := createTestDevice()
 	agent := NewAgent(device, 0)
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = agent.mib.Get("1.3.6.1.2.1.1.3.0")
 	}
 }
 
-// BenchmarkAgent_ConcurrentGet benchmarks concurrent MIB access
+// BenchmarkAgent_ConcurrentGet benchmarks concurrent MIB access.
 func BenchmarkAgent_ConcurrentGet(b *testing.B) {
 	device := createTestDevice()
 	agent := NewAgent(device, 0)
@@ -361,7 +362,7 @@ func BenchmarkAgent_ConcurrentGet(b *testing.B) {
 	})
 }
 
-// TestAgent_HandleGet tests SNMP GET request handling
+// TestAgent_HandleGet tests SNMP GET request handling.
 func TestAgent_HandleGet(t *testing.T) {
 	device := createTestDevice()
 	agent := NewAgent(device, 0)
@@ -371,6 +372,7 @@ func TestAgent_HandleGet(t *testing.T) {
 	if err != nil {
 		t.Fatalf("HandleGet failed: %v", err)
 	}
+
 	if result == nil {
 		t.Fatal("HandleGet returned nil result")
 	}
@@ -382,7 +384,7 @@ func TestAgent_HandleGet(t *testing.T) {
 	}
 }
 
-// TestAgent_HandleGet_AllSystemOIDs tests GET for all system MIB OIDs
+// TestAgent_HandleGet_AllSystemOIDs tests GET for all system MIB OIDs.
 func TestAgent_HandleGet_AllSystemOIDs(t *testing.T) {
 	device := createTestDevice()
 	device.Properties["sysDescr"] = "Test System"
@@ -409,6 +411,7 @@ func TestAgent_HandleGet_AllSystemOIDs(t *testing.T) {
 			if err != nil {
 				t.Errorf("HandleGet(%s) failed: %v", oid, err)
 			}
+
 			if result == nil {
 				t.Errorf("HandleGet(%s) returned nil", oid)
 			}
@@ -416,7 +419,7 @@ func TestAgent_HandleGet_AllSystemOIDs(t *testing.T) {
 	}
 }
 
-// TestAgent_HandleGetNext tests SNMP GET-NEXT request handling
+// TestAgent_HandleGetNext tests SNMP GET-NEXT request handling.
 func TestAgent_HandleGetNext(t *testing.T) {
 	device := createTestDevice()
 	agent := NewAgent(device, 0)
@@ -426,15 +429,17 @@ func TestAgent_HandleGetNext(t *testing.T) {
 	if err != nil {
 		t.Fatalf("HandleGetNext failed: %v", err)
 	}
+
 	if nextOID == "" {
 		t.Error("HandleGetNext returned empty OID")
 	}
+
 	if value == nil {
 		t.Error("HandleGetNext returned nil value")
 	}
 }
 
-// TestAgent_HandleGetNext_Traversal tests GET-NEXT traversal through MIB
+// TestAgent_HandleGetNext_Traversal tests GET-NEXT traversal through MIB.
 func TestAgent_HandleGetNext_Traversal(t *testing.T) {
 	device := createTestDevice()
 	agent := NewAgent(device, 0)
@@ -444,11 +449,12 @@ func TestAgent_HandleGetNext_Traversal(t *testing.T) {
 	visited := make(map[string]bool)
 	maxIterations := 20
 
-	for i := 0; i < maxIterations; i++ {
+	for range maxIterations {
 		nextOID, value, err := agent.HandleGetNext(currentOID)
 		if err != nil {
 			break // End of MIB
 		}
+
 		if nextOID == "" || value == nil {
 			break
 		}
@@ -456,8 +462,10 @@ func TestAgent_HandleGetNext_Traversal(t *testing.T) {
 		// Check for loops
 		if visited[nextOID] {
 			t.Errorf("Loop detected at OID %s", nextOID)
+
 			break
 		}
+
 		visited[nextOID] = true
 
 		// Verify OID progression
@@ -473,7 +481,7 @@ func TestAgent_HandleGetNext_Traversal(t *testing.T) {
 	}
 }
 
-// TestAgent_HandleGetNext_EndOfMIB tests GET-NEXT at end of MIB
+// TestAgent_HandleGetNext_EndOfMIB tests GET-NEXT at end of MIB.
 func TestAgent_HandleGetNext_EndOfMIB(t *testing.T) {
 	device := createTestDevice()
 	agent := NewAgent(device, 0)
@@ -485,7 +493,7 @@ func TestAgent_HandleGetNext_EndOfMIB(t *testing.T) {
 	}
 }
 
-// TestAgent_HandleGetBulk tests SNMP GET-BULK request handling
+// TestAgent_HandleGetBulk tests SNMP GET-BULK request handling.
 func TestAgent_HandleGetBulk(t *testing.T) {
 	device := createTestDevice()
 	agent := NewAgent(device, 0)
@@ -512,7 +520,7 @@ func TestAgent_HandleGetBulk(t *testing.T) {
 	}
 }
 
-// TestAgent_HandleGetBulk_LargeRequest tests GET-BULK with large maxRepetitions
+// TestAgent_HandleGetBulk_LargeRequest tests GET-BULK with large maxRepetitions.
 func TestAgent_HandleGetBulk_LargeRequest(t *testing.T) {
 	device := createTestDevice()
 	agent := NewAgent(device, 0)
@@ -528,7 +536,7 @@ func TestAgent_HandleGetBulk_LargeRequest(t *testing.T) {
 	}
 }
 
-// TestAgent_HandleGetBulk_ZeroRepetitions tests GET-BULK with zero maxRepetitions
+// TestAgent_HandleGetBulk_ZeroRepetitions tests GET-BULK with zero maxRepetitions.
 func TestAgent_HandleGetBulk_ZeroRepetitions(t *testing.T) {
 	device := createTestDevice()
 	agent := NewAgent(device, 0)
@@ -543,7 +551,7 @@ func TestAgent_HandleGetBulk_ZeroRepetitions(t *testing.T) {
 	}
 }
 
-// TestAgent_SetOID tests SNMP SET operation
+// TestAgent_SetOID tests SNMP SET operation.
 func TestAgent_SetOID(t *testing.T) {
 	device := createTestDevice()
 	agent := NewAgent(device, 0)
@@ -570,13 +578,14 @@ func TestAgent_SetOID(t *testing.T) {
 	}
 }
 
-// TestAgent_SetOID_UpdateExisting tests updating an existing OID
+// TestAgent_SetOID_UpdateExisting tests updating an existing OID.
 func TestAgent_SetOID_UpdateExisting(t *testing.T) {
 	device := createTestDevice()
 	agent := NewAgent(device, 0)
 
 	// Update sysContact
 	newContact := "newadmin@example.com"
+
 	err := agent.SetOID("1.3.6.1.2.1.1.4.0", &OIDValue{
 		Type:  gosnmp.OctetString,
 		Value: newContact,
@@ -596,7 +605,7 @@ func TestAgent_SetOID_UpdateExisting(t *testing.T) {
 	}
 }
 
-// TestAgent_GetCommunity tests community string retrieval
+// TestAgent_GetCommunity tests community string retrieval.
 func TestAgent_GetCommunity(t *testing.T) {
 	device := createTestDevice()
 	device.SNMPConfig.Community = "test-community"
@@ -609,7 +618,7 @@ func TestAgent_GetCommunity(t *testing.T) {
 	}
 }
 
-// TestAgent_GetCommunity_Default tests default community string
+// TestAgent_GetCommunity_Default tests default community string.
 func TestAgent_GetCommunity_Default(t *testing.T) {
 	device := createTestDevice()
 	device.SNMPConfig.Community = ""
@@ -622,7 +631,7 @@ func TestAgent_GetCommunity_Default(t *testing.T) {
 	}
 }
 
-// TestAgent_LoadWalkFile tests loading SNMP walk file
+// TestAgent_LoadWalkFile tests loading SNMP walk file.
 func TestAgent_LoadWalkFile(t *testing.T) {
 	device := createTestDevice()
 	agent := NewAgent(device, 0)
@@ -636,7 +645,7 @@ func TestAgent_LoadWalkFile(t *testing.T) {
 .1.3.6.1.4.1.9999.1.3.0 = Counter32: 12345
 `
 
-	if err := os.WriteFile(walkFile, []byte(walkContent), 0644); err != nil {
+	if err := os.WriteFile(walkFile, []byte(walkContent), 0o600); err != nil {
 		t.Fatalf("Failed to create walk file: %v", err)
 	}
 
@@ -657,7 +666,7 @@ func TestAgent_LoadWalkFile(t *testing.T) {
 	}
 }
 
-// TestAgent_LoadWalkFile_EmptyPath tests loading with empty path
+// TestAgent_LoadWalkFile_EmptyPath tests loading with empty path.
 func TestAgent_LoadWalkFile_EmptyPath(t *testing.T) {
 	device := createTestDevice()
 	agent := NewAgent(device, 0)
@@ -668,7 +677,7 @@ func TestAgent_LoadWalkFile_EmptyPath(t *testing.T) {
 	}
 }
 
-// TestAgent_LoadWalkFile_NonExistent tests loading non-existent file
+// TestAgent_LoadWalkFile_NonExistent tests loading non-existent file.
 func TestAgent_LoadWalkFile_NonExistent(t *testing.T) {
 	device := createTestDevice()
 	agent := NewAgent(device, 0)
@@ -679,7 +688,7 @@ func TestAgent_LoadWalkFile_NonExistent(t *testing.T) {
 	}
 }
 
-// TestAgent_ProcessPDU_GetRequest tests ProcessPDU with GET request
+// TestAgent_ProcessPDU_GetRequest tests ProcessPDU with GET request.
 func TestAgent_ProcessPDU_GetRequest(t *testing.T) {
 	device := createTestDevice()
 	agent := NewAgent(device, 0)
@@ -702,7 +711,7 @@ func TestAgent_ProcessPDU_GetRequest(t *testing.T) {
 	}
 }
 
-// TestAgent_ProcessPDU_GetNextRequest tests ProcessPDU with GET-NEXT request
+// TestAgent_ProcessPDU_GetNextRequest tests ProcessPDU with GET-NEXT request.
 func TestAgent_ProcessPDU_GetNextRequest(t *testing.T) {
 	device := createTestDevice()
 	agent := NewAgent(device, 0)
@@ -723,7 +732,7 @@ func TestAgent_ProcessPDU_GetNextRequest(t *testing.T) {
 	}
 }
 
-// TestAgent_ProcessPDU_GetBulkRequest tests ProcessPDU with GET-BULK request
+// TestAgent_ProcessPDU_GetBulkRequest tests ProcessPDU with GET-BULK request.
 func TestAgent_ProcessPDU_GetBulkRequest(t *testing.T) {
 	device := createTestDevice()
 	agent := NewAgent(device, 0)
@@ -739,7 +748,7 @@ func TestAgent_ProcessPDU_GetBulkRequest(t *testing.T) {
 	}
 }
 
-// TestAgent_ProcessPDU_InvalidRequest tests ProcessPDU with invalid request type
+// TestAgent_ProcessPDU_InvalidRequest tests ProcessPDU with invalid request type.
 func TestAgent_ProcessPDU_InvalidRequest(t *testing.T) {
 	device := createTestDevice()
 	agent := NewAgent(device, 0)
@@ -759,7 +768,7 @@ func TestAgent_ProcessPDU_InvalidRequest(t *testing.T) {
 	}
 }
 
-// TestAgent_ProcessPDU_NoSuchObject tests ProcessPDU with non-existent OID
+// TestAgent_ProcessPDU_NoSuchObject tests ProcessPDU with non-existent OID.
 func TestAgent_ProcessPDU_NoSuchObject(t *testing.T) {
 	device := createTestDevice()
 	agent := NewAgent(device, 0)
@@ -779,7 +788,7 @@ func TestAgent_ProcessPDU_NoSuchObject(t *testing.T) {
 	}
 }
 
-// TestParseOID tests OID parsing
+// TestParseOID tests OID parsing.
 func TestParseOID(t *testing.T) {
 	tests := []struct {
 		input       string
@@ -803,6 +812,7 @@ func TestParseOID(t *testing.T) {
 				if err != nil {
 					t.Errorf("Unexpected error: %v", err)
 				}
+
 				if len(result) == 0 {
 					t.Error("Expected non-empty result")
 				}
@@ -811,7 +821,7 @@ func TestParseOID(t *testing.T) {
 	}
 }
 
-// TestFormatIP tests IP address formatting
+// TestFormatIP tests IP address formatting.
 func TestFormatIP(t *testing.T) {
 	tests := []struct {
 		ip       net.IP
@@ -832,11 +842,11 @@ func TestFormatIP(t *testing.T) {
 	}
 }
 
-// TestAgent_DebugLevels tests agent with different debug levels
+// TestAgent_DebugLevels tests agent with different debug levels.
 func TestAgent_DebugLevels(t *testing.T) {
 	device := createTestDevice()
 
-	for debugLevel := 0; debugLevel <= 3; debugLevel++ {
+	for debugLevel := range 4 {
 		t.Run(fmt.Sprintf("level_%d", debugLevel), func(t *testing.T) {
 			agent := NewAgent(device, debugLevel)
 
@@ -849,7 +859,7 @@ func TestAgent_DebugLevels(t *testing.T) {
 	}
 }
 
-// TestAgent_ConcurrentReadWrite tests concurrent read/write operations
+// TestAgent_ConcurrentReadWrite tests concurrent read/write operations.
 func TestAgent_ConcurrentReadWrite(t *testing.T) {
 	device := createTestDevice()
 	agent := NewAgent(device, 0)
@@ -857,32 +867,34 @@ func TestAgent_ConcurrentReadWrite(t *testing.T) {
 	done := make(chan bool, 200)
 
 	// Writers
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		go func(id int) {
 			oid := fmt.Sprintf("1.3.6.1.4.1.9999.%d.0", id)
 			_ = agent.SetOID(oid, &OIDValue{
 				Type:  gosnmp.Integer,
 				Value: id,
 			})
+
 			done <- true
 		}(i)
 	}
 
 	// Readers
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		go func() {
 			_, _ = agent.HandleGet("1.3.6.1.2.1.1.3.0")
+
 			done <- true
 		}()
 	}
 
 	// Wait for completion
-	for i := 0; i < 200; i++ {
+	for range 200 {
 		<-done
 	}
 }
 
-// TestAgent_LargeWalkFile tests loading large walk file
+// TestAgent_LargeWalkFile tests loading large walk file.
 func TestAgent_LargeWalkFile(t *testing.T) {
 	device := createTestDevice()
 	agent := NewAgent(device, 0)
@@ -896,7 +908,7 @@ func TestAgent_LargeWalkFile(t *testing.T) {
 		content.WriteString(fmt.Sprintf(".1.3.6.1.4.1.9999.%d.0 = INTEGER: %d\n", i, i))
 	}
 
-	if err := os.WriteFile(walkFile, []byte(content.String()), 0644); err != nil {
+	if err := os.WriteFile(walkFile, []byte(content.String()), 0o600); err != nil {
 		t.Fatalf("Failed to create walk file: %v", err)
 	}
 
@@ -916,7 +928,7 @@ func TestAgent_LargeWalkFile(t *testing.T) {
 	}
 }
 
-// TestAgent_OIDTreeNavigation tests navigating OID tree structure
+// TestAgent_OIDTreeNavigation tests navigating OID tree structure.
 func TestAgent_OIDTreeNavigation(t *testing.T) {
 	device := createTestDevice()
 	agent := NewAgent(device, 0)
@@ -930,7 +942,7 @@ func TestAgent_OIDTreeNavigation(t *testing.T) {
 	}
 
 	for i, oid := range oids {
-		agent.SetOID(oid, &OIDValue{
+		_ = agent.SetOID(oid, &OIDValue{
 			Type:  gosnmp.Integer,
 			Value: i,
 		})
@@ -940,11 +952,12 @@ func TestAgent_OIDTreeNavigation(t *testing.T) {
 	currentOID := "1.3.6.1.4.1.9999"
 	visited := []string{}
 
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		nextOID, value, err := agent.HandleGetNext(currentOID)
 		if err != nil || nextOID == "" || value == nil {
 			break
 		}
+
 		visited = append(visited, nextOID)
 		currentOID = nextOID
 	}
@@ -954,7 +967,7 @@ func TestAgent_OIDTreeNavigation(t *testing.T) {
 	}
 }
 
-// TestAgent_EmptyCommunity tests agent with no community string set
+// TestAgent_EmptyCommunity tests agent with no community string set.
 func TestAgent_EmptyCommunity(t *testing.T) {
 	device := createTestDevice()
 	device.SNMPConfig.Community = ""
@@ -968,52 +981,48 @@ func TestAgent_EmptyCommunity(t *testing.T) {
 	}
 }
 
-// BenchmarkAgent_HandleGet benchmarks HandleGet operation
+// BenchmarkAgent_HandleGet benchmarks HandleGet operation.
 func BenchmarkAgent_HandleGet(b *testing.B) {
 	device := createTestDevice()
 	agent := NewAgent(device, 0)
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_, _ = agent.HandleGet("1.3.6.1.2.1.1.1.0")
 	}
 }
 
-// BenchmarkAgent_HandleGetNext benchmarks HandleGetNext operation
+// BenchmarkAgent_HandleGetNext benchmarks HandleGetNext operation.
 func BenchmarkAgent_HandleGetNext(b *testing.B) {
 	device := createTestDevice()
 	agent := NewAgent(device, 0)
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_, _, _ = agent.HandleGetNext("1.3.6.1.2.1.1")
 	}
 }
 
-// BenchmarkAgent_HandleGetBulk benchmarks HandleGetBulk operation
+// BenchmarkAgent_HandleGetBulk benchmarks HandleGetBulk operation.
 func BenchmarkAgent_HandleGetBulk(b *testing.B) {
 	device := createTestDevice()
 	agent := NewAgent(device, 0)
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_, _ = agent.HandleGetBulk("1.3.6.1.2.1.1", 10)
 	}
 }
 
-// BenchmarkAgent_SetOID benchmarks SetOID operation
+// BenchmarkAgent_SetOID benchmarks SetOID operation.
 func BenchmarkAgent_SetOID(b *testing.B) {
 	device := createTestDevice()
 	agent := NewAgent(device, 0)
 	value := &OIDValue{Type: gosnmp.Integer, Value: 42}
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = agent.SetOID("1.3.6.1.4.1.9999.1.0", value)
 	}
 }
 
-// BenchmarkAgent_LoadWalkFile benchmarks walk file loading
+// BenchmarkAgent_LoadWalkFile benchmarks walk file loading.
 func BenchmarkAgent_LoadWalkFile(b *testing.B) {
 	device := createTestDevice()
 
@@ -1025,12 +1034,12 @@ func BenchmarkAgent_LoadWalkFile(b *testing.B) {
 .1.3.6.1.4.1.9999.3.0 = Counter32: 12345
 `
 
-	if err := os.WriteFile(walkFile, []byte(content), 0644); err != nil {
+	err := os.WriteFile(walkFile, []byte(content), 0o600)
+	if err != nil {
 		b.Fatalf("Failed to create walk file: %v", err)
 	}
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		agent := NewAgent(device, 0)
 		_ = agent.LoadWalkFile(walkFile)
 	}

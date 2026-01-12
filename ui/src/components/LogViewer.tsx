@@ -1,6 +1,6 @@
-import { memo, useEffect, useRef, useMemo, useState, useCallback, type FC } from 'react';
-import { ChevronRight, ChevronDown, Copy, Check, Terminal, AlertCircle } from 'lucide-react';
-import type { LogEntry, LogLevel } from '../api/types';
+import { AlertCircle, Check, ChevronDown, ChevronRight, Copy, Terminal } from "lucide-react";
+import { type FC, memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { LogEntry, LogLevel } from "../api/types";
 
 export interface LogViewerProps {
   logs: LogEntry[];
@@ -9,50 +9,51 @@ export interface LogViewerProps {
 }
 
 // Level-based color classes for styling log entries
-const LEVEL_COLORS: Record<LogLevel, { bg: string; text: string; border: string; accent: string }> = {
-  ERROR: {
-    bg: 'bg-red-500/10',
-    text: 'text-red-400',
-    border: 'border-red-500/30',
-    accent: 'bg-red-500',
-  },
-  WARN: {
-    bg: 'bg-yellow-500/10',
-    text: 'text-yellow-400',
-    border: 'border-yellow-500/30',
-    accent: 'bg-yellow-500',
-  },
-  INFO: {
-    bg: 'bg-white/5',
-    text: 'text-gray-200',
-    border: 'border-white/10',
-    accent: 'bg-blue-500',
-  },
-  DEBUG: {
-    bg: 'bg-gray-500/10',
-    text: 'text-gray-500',
-    border: 'border-gray-500/20',
-    accent: 'bg-gray-500',
-  },
-};
+const LEVEL_COLORS: Record<LogLevel, { bg: string; text: string; border: string; accent: string }> =
+  {
+    ERROR: {
+      bg: "bg-red-500/10",
+      text: "text-red-400",
+      border: "border-red-500/30",
+      accent: "bg-red-500",
+    },
+    WARN: {
+      bg: "bg-yellow-500/10",
+      text: "text-yellow-400",
+      border: "border-yellow-500/30",
+      accent: "bg-yellow-500",
+    },
+    INFO: {
+      bg: "bg-white/5",
+      text: "text-gray-200",
+      border: "border-white/10",
+      accent: "bg-blue-500",
+    },
+    DEBUG: {
+      bg: "bg-gray-500/10",
+      text: "text-gray-500",
+      border: "border-gray-500/20",
+      accent: "bg-gray-500",
+    },
+  };
 
 // Level badge colors
 const LEVEL_BADGE_COLORS: Record<LogLevel, string> = {
-  ERROR: 'bg-red-500/20 text-red-400 border-red-500/30',
-  WARN: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
-  INFO: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-  DEBUG: 'bg-gray-500/20 text-gray-500 border-gray-500/30',
+  ERROR: "bg-red-500/20 text-red-400 border-red-500/30",
+  WARN: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
+  INFO: "bg-blue-500/20 text-blue-400 border-blue-500/30",
+  DEBUG: "bg-gray-500/20 text-gray-500 border-gray-500/30",
 };
 
 // Format timestamp for display
 function formatTimestamp(timestamp: string): string {
   try {
     const date = new Date(timestamp);
-    return date.toLocaleTimeString('en-US', {
+    return date.toLocaleTimeString("en-US", {
       hour12: false,
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
     });
   } catch {
     return timestamp;
@@ -63,13 +64,13 @@ function formatTimestamp(timestamp: string): string {
 function formatFullTimestamp(timestamp: string): string {
   try {
     const date = new Date(timestamp);
-    return date.toLocaleString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
+    return date.toLocaleString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
       hour12: false,
     });
   } catch {
@@ -84,7 +85,7 @@ function highlightText(text: string, query: string): React.ReactNode {
   }
 
   try {
-    const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+    const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "gi");
     const parts = text.split(regex);
 
     return parts.map((part, index) => {
@@ -117,29 +118,32 @@ const LogEntryRow: FC<{ log: LogEntry; searchQuery: string }> = memo(({ log, sea
 
   const hasDetails = log.details && Object.keys(log.details).length > 0;
 
-  const handleCopy = useCallback(async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    const fullLog = `[${log.timestamp}] [${log.level}] [${log.protocol}] ${log.message}${log.details ? '\n' + formatDetails(log.details) : ''}`;
-    try {
-      await navigator.clipboard.writeText(fullLog);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Fallback for older browsers
-      const textArea = document.createElement('textarea');
-      textArea.value = fullLog;
-      document.body.appendChild(textArea);
-      textArea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textArea);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  }, [log]);
+  const handleCopy = useCallback(
+    async (e: React.MouseEvent) => {
+      e.stopPropagation();
+      const fullLog = `[${log.timestamp}] [${log.level}] [${log.protocol}] ${log.message}${log.details ? `\n${formatDetails(log.details)}` : ""}`;
+      try {
+        await navigator.clipboard.writeText(fullLog);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      } catch {
+        // Fallback for older browsers
+        const textArea = document.createElement("textarea");
+        textArea.value = fullLog;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textArea);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }
+    },
+    [log],
+  );
 
   const toggleExpand = useCallback(() => {
     if (hasDetails) {
-      setExpanded(prev => !prev);
+      setExpanded((prev) => !prev);
     }
   }, [hasDetails]);
 
@@ -148,15 +152,11 @@ const LogEntryRow: FC<{ log: LogEntry; searchQuery: string }> = memo(({ log, sea
       {/* Main log row */}
       <div
         onClick={toggleExpand}
-        className={`flex items-start gap-2 px-3 py-2 font-mono text-sm ${colors.bg} hover:bg-white/5 transition-colors ${hasDetails ? 'cursor-pointer' : ''}`}
+        className={`flex items-start gap-2 px-3 py-2 font-mono text-sm ${colors.bg} hover:bg-white/5 transition-colors ${hasDetails ? "cursor-pointer" : ""}`}
       >
         {/* Expand indicator */}
-        <span className={`shrink-0 mt-0.5 ${hasDetails ? 'text-gray-500' : 'text-transparent'}`}>
-          {expanded ? (
-            <ChevronDown className="h-4 w-4" />
-          ) : (
-            <ChevronRight className="h-4 w-4" />
-          )}
+        <span className={`shrink-0 mt-0.5 ${hasDetails ? "text-gray-500" : "text-transparent"}`}>
+          {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
         </span>
 
         {/* Level indicator bar */}
@@ -186,9 +186,7 @@ const LogEntryRow: FC<{ log: LogEntry; searchQuery: string }> = memo(({ log, sea
 
         {/* Source (if available) */}
         {log.source && (
-          <span className="shrink-0 text-gray-600 text-xs font-mono">
-            {log.source}
-          </span>
+          <span className="shrink-0 text-gray-600 text-xs font-mono">{log.source}</span>
         )}
 
         {/* Copy button */}
@@ -213,7 +211,8 @@ const LogEntryRow: FC<{ log: LogEntry; searchQuery: string }> = memo(({ log, sea
             {/* Metadata row */}
             <div className="flex flex-wrap gap-4 text-xs text-gray-500">
               <span>
-                <strong className="text-gray-400">Time:</strong> {formatFullTimestamp(log.timestamp)}
+                <strong className="text-gray-400">Time:</strong>{" "}
+                {formatFullTimestamp(log.timestamp)}
               </span>
               {log.source && (
                 <span>
@@ -254,7 +253,7 @@ const LogEntryRow: FC<{ log: LogEntry; searchQuery: string }> = memo(({ log, sea
   );
 });
 
-LogEntryRow.displayName = 'LogEntryRow';
+LogEntryRow.displayName = "LogEntryRow";
 
 export const LogViewer: FC<LogViewerProps> = memo(({ logs, searchQuery, autoScroll }) => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -263,15 +262,13 @@ export const LogViewer: FC<LogViewerProps> = memo(({ logs, searchQuery, autoScro
   // Scroll to bottom when new logs arrive and auto-scroll is enabled
   useEffect(() => {
     if (autoScroll && endRef.current) {
-      endRef.current.scrollIntoView({ behavior: 'smooth' });
+      endRef.current.scrollIntoView({ behavior: "smooth" });
     }
-  }, [logs, autoScroll]);
+  }, [autoScroll]);
 
   // Memoize the rendered logs to prevent unnecessary re-renders
   const renderedLogs = useMemo(() => {
-    return logs.map((log) => (
-      <LogEntryRow key={log.id} log={log} searchQuery={searchQuery} />
-    ));
+    return logs.map((log) => <LogEntryRow key={log.id} log={log} searchQuery={searchQuery} />);
   }, [logs, searchQuery]);
 
   // Calculate log statistics
@@ -281,7 +278,7 @@ export const LogViewer: FC<LogViewerProps> = memo(({ logs, searchQuery, autoScro
         acc[log.level] = (acc[log.level] || 0) + 1;
         return acc;
       },
-      {} as Record<string, number>
+      {} as Record<string, number>,
     );
   }, [logs]);
 
@@ -312,19 +309,15 @@ export const LogViewer: FC<LogViewerProps> = memo(({ logs, searchQuery, autoScro
       <div className="flex items-center gap-4 text-xs">
         {Object.entries(stats).map(([level, count]) => {
           const colors = LEVEL_COLORS[level as LogLevel];
-          const isError = level === 'ERROR';
+          const isError = level === "ERROR";
           return (
             <div
               key={level}
-              className={`flex items-center gap-1.5 px-2 py-1 rounded ${colors?.bg || 'bg-gray-500/10'}`}
+              className={`flex items-center gap-1.5 px-2 py-1 rounded ${colors?.bg || "bg-gray-500/10"}`}
             >
-              {isError && count > 0 && (
-                <AlertCircle className="h-3 w-3 text-red-400" />
-              )}
-              <span className={`${colors?.accent || 'bg-gray-500'} h-2 w-2 rounded-full`} />
-              <span className={`font-medium ${colors?.text || 'text-gray-400'}`}>
-                {level}
-              </span>
+              {isError && count > 0 && <AlertCircle className="h-3 w-3 text-red-400" />}
+              <span className={`${colors?.accent || "bg-gray-500"} h-2 w-2 rounded-full`} />
+              <span className={`font-medium ${colors?.text || "text-gray-400"}`}>{level}</span>
               <span className="text-gray-500">{count}</span>
             </div>
           );
@@ -346,4 +339,4 @@ export const LogViewer: FC<LogViewerProps> = memo(({ logs, searchQuery, autoScro
   );
 });
 
-LogViewer.displayName = 'LogViewer';
+LogViewer.displayName = "LogViewer";

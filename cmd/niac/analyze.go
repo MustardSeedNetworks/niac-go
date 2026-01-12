@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -14,53 +15,53 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// WalkAnalysis represents the analyzed walk file data
+// WalkAnalysis represents the analyzed walk file data.
 type WalkAnalysis struct {
-	Device     DeviceInfo      `json:"device" yaml:"device"`
+	Device     DeviceInfo      `json:"device"     yaml:"device"`
 	Interfaces []InterfaceInfo `json:"interfaces" yaml:"interfaces"`
-	Neighbors  []NeighborInfo  `json:"neighbors" yaml:"neighbors"`
+	Neighbors  []NeighborInfo  `json:"neighbors"  yaml:"neighbors"`
 	Statistics AnalysisStats   `json:"statistics" yaml:"statistics"`
 }
 
-// DeviceInfo contains device identification
+// DeviceInfo contains device identification.
 type DeviceInfo struct {
-	SysName     string `json:"sysname" yaml:"sysname"`
-	SysDescr    string `json:"sysdescr" yaml:"sysdescr"`
-	SysObjectID string `json:"sysobjectid" yaml:"sysobjectid"`
-	SysContact  string `json:"syscontact,omitempty" yaml:"syscontact,omitempty"`
+	SysName     string `json:"sysname"               yaml:"sysname"`
+	SysDescr    string `json:"sysdescr"              yaml:"sysdescr"`
+	SysObjectID string `json:"sysobjectid"           yaml:"sysobjectid"`
+	SysContact  string `json:"syscontact,omitempty"  yaml:"syscontact,omitempty"`
 	SysLocation string `json:"syslocation,omitempty" yaml:"syslocation,omitempty"`
 }
 
-// InterfaceInfo contains interface details
+// InterfaceInfo contains interface details.
 type InterfaceInfo struct {
-	Index       int      `json:"index" yaml:"index"`
-	Name        string   `json:"name" yaml:"name"`
-	Description string   `json:"description,omitempty" yaml:"description,omitempty"`
-	Type        string   `json:"type" yaml:"type"`
-	Speed       int64    `json:"speed,omitempty" yaml:"speed,omitempty"`
+	Index       int      `json:"index"                  yaml:"index"`
+	Name        string   `json:"name"                   yaml:"name"`
+	Description string   `json:"description,omitempty"  yaml:"description,omitempty"`
+	Type        string   `json:"type"                   yaml:"type"`
+	Speed       int64    `json:"speed,omitempty"        yaml:"speed,omitempty"`
 	AdminStatus string   `json:"admin_status,omitempty" yaml:"admin_status,omitempty"`
-	OperStatus  string   `json:"oper_status,omitempty" yaml:"oper_status,omitempty"`
-	MACAddress  string   `json:"mac_address,omitempty" yaml:"mac_address,omitempty"`
-	MemberOf    string   `json:"member_of,omitempty" yaml:"member_of,omitempty"`
-	Members     []string `json:"members,omitempty" yaml:"members,omitempty"`
-	Trunk       bool     `json:"trunk,omitempty" yaml:"trunk,omitempty"`
-	VLANs       []int    `json:"vlans,omitempty" yaml:"vlans,omitempty"`
+	OperStatus  string   `json:"oper_status,omitempty"  yaml:"oper_status,omitempty"`
+	MACAddress  string   `json:"mac_address,omitempty"  yaml:"mac_address,omitempty"`
+	MemberOf    string   `json:"member_of,omitempty"    yaml:"member_of,omitempty"`
+	Members     []string `json:"members,omitempty"      yaml:"members,omitempty"`
+	Trunk       bool     `json:"trunk,omitempty"        yaml:"trunk,omitempty"`
+	VLANs       []int    `json:"vlans,omitempty"        yaml:"vlans,omitempty"`
 }
 
-// NeighborInfo contains neighbor relationship
+// NeighborInfo contains neighbor relationship.
 type NeighborInfo struct {
-	LocalInterface  string `json:"local_interface" yaml:"local_interface"`
-	RemoteDevice    string `json:"remote_device" yaml:"remote_device"`
+	LocalInterface  string `json:"local_interface"  yaml:"local_interface"`
+	RemoteDevice    string `json:"remote_device"    yaml:"remote_device"`
 	RemoteInterface string `json:"remote_interface" yaml:"remote_interface"`
-	Protocol        string `json:"protocol" yaml:"protocol"`
+	Protocol        string `json:"protocol"         yaml:"protocol"`
 }
 
-// AnalysisStats contains statistics
+// AnalysisStats contains statistics.
 type AnalysisStats struct {
-	TotalInterfaces    int `json:"total_interfaces" yaml:"total_interfaces"`
+	TotalInterfaces    int `json:"total_interfaces"    yaml:"total_interfaces"`
 	PhysicalInterfaces int `json:"physical_interfaces" yaml:"physical_interfaces"`
-	LogicalInterfaces  int `json:"logical_interfaces" yaml:"logical_interfaces"`
-	TotalNeighbors     int `json:"total_neighbors" yaml:"total_neighbors"`
+	LogicalInterfaces  int `json:"logical_interfaces"  yaml:"logical_interfaces"`
+	TotalNeighbors     int `json:"total_neighbors"     yaml:"total_neighbors"`
 }
 
 var analyzeCmd = &cobra.Command{
@@ -113,7 +114,8 @@ func runAnalyze(cmd *cobra.Command, args []string) error {
 	}
 
 	if graphvizPath != "" {
-		if err := writeGraphviz(analysis, graphvizPath); err != nil {
+		err := writeGraphviz(analysis, graphvizPath)
+		if err != nil {
 			return err
 		}
 	}
@@ -140,12 +142,12 @@ func parseWalkFile(filename string) (*WalkAnalysis, error) {
 	// Validate file path
 	cleanPath := filepath.Clean(filename)
 	if strings.Contains(cleanPath, "..") {
-		return nil, fmt.Errorf("path traversal detected in filename")
+		return nil, errors.New("path traversal detected in filename")
 	}
 
 	file, err := os.Open(cleanPath) // #nosec G304 -- path validated above
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to open walk file: %w", err)
 	}
 	defer file.Close() // #nosec G104 -- deferred close
 
@@ -168,7 +170,9 @@ func parseWalkFile(filename string) (*WalkAnalysis, error) {
 
 	// IF-MIB::ifTable - Match interface data patterns
 	// Interface descriptions contain names like "FastEthernet", "GigabitEthernet", "Serial", etc.
-	ifDescrRe := regexp.MustCompile(`\.1\.3\.6\.1\.2\.[\d.]+\s*=\s*STRING:\s*"((?:Fast|Gigabit)?Ethernet[\d/]+|Serial[\d/]+|Loopback\d+|Null\d+|Async[\d/]+|Port-channel\d+|Vlan\d+|Tunnel\d+)"`)
+	ifDescrRe := regexp.MustCompile(
+		`\.1\.3\.6\.1\.2\.[\d.]+\s*=\s*STRING:\s*"((?:Fast|Gigabit)?Ethernet[\d/]+|Serial[\d/]+|Loopback\d+|Null\d+|Async[\d/]+|Port-channel\d+|Vlan\d+|Tunnel\d+)"`,
+	)
 
 	// For sanitized files, extract interface info from the contextifDescr matches interface names, we can build a basic map
 	interfaceCounter := 0
@@ -205,7 +209,7 @@ func parseWalkFile(filename string) (*WalkAnalysis, error) {
 	}
 
 	// Try to find sysName by looking for short hostnames in STRING fields
-	file.Seek(0, 0) // #nosec G104 -- seek errors handled by subsequent read
+	_, _ = file.Seek(0, 0) // seek errors handled by subsequent read
 	scanner = bufio.NewScanner(file)
 	hostnameRe := regexp.MustCompile(`= STRING: "([a-z0-9\-]{3,30})"$`)
 	for scanner.Scan() {
@@ -223,7 +227,7 @@ func parseWalkFile(filename string) (*WalkAnalysis, error) {
 	}
 
 	if err := scanner.Err(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to scan walk file: %w", err)
 	}
 
 	// Convert map to sorted slice
@@ -289,14 +293,22 @@ func getInterfaceTypeFromName(name string) string {
 func outputJSON(analysis *WalkAnalysis) error {
 	encoder := json.NewEncoder(os.Stdout)
 	encoder.SetIndent("", "  ")
-	return encoder.Encode(analysis)
+	err := encoder.Encode(analysis)
+	if err != nil {
+		return fmt.Errorf("failed to encode JSON: %w", err)
+	}
+	return nil
 }
 
 func outputYAML(analysis *WalkAnalysis) error {
 	encoder := yaml.NewEncoder(os.Stdout)
 	defer encoder.Close() // #nosec G104 -- deferred close
 	encoder.SetIndent(2)
-	return encoder.Encode(analysis)
+	err := encoder.Encode(analysis)
+	if err != nil {
+		return fmt.Errorf("failed to encode YAML: %w", err)
+	}
+	return nil
 }
 
 func outputText(analysis *WalkAnalysis) error {
@@ -342,7 +354,7 @@ func outputText(analysis *WalkAnalysis) error {
 
 func writeGraphviz(analysis *WalkAnalysis, target string) error {
 	if len(analysis.Neighbors) == 0 {
-		return fmt.Errorf("no neighbor information available for graph export")
+		return errors.New("no neighbor information available for graph export")
 	}
 
 	local := analysis.Device.SysName
@@ -353,7 +365,9 @@ func writeGraphviz(analysis *WalkAnalysis, target string) error {
 	var builder strings.Builder
 	builder.WriteString("digraph niac_topology {\n")
 	builder.WriteString("  rankdir=LR;\n")
-	builder.WriteString(fmt.Sprintf("  \"%s\" [shape=box, style=filled, fillcolor=\"#2563EB\", fontcolor=\"white\"];\n", local))
+	builder.WriteString(
+		fmt.Sprintf("  \"%s\" [shape=box, style=filled, fillcolor=\"#2563EB\", fontcolor=\"white\"];\n", local),
+	)
 
 	seen := make(map[string]struct{})
 	for _, neighbor := range analysis.Neighbors {
@@ -362,11 +376,21 @@ func writeGraphviz(analysis *WalkAnalysis, target string) error {
 		}
 		key := strings.ToLower(neighbor.RemoteDevice)
 		if _, ok := seen[key]; !ok {
-			builder.WriteString(fmt.Sprintf("  \"%s\" [shape=ellipse, style=filled, fillcolor=\"#0f172a\", fontcolor=\"white\"];\n", neighbor.RemoteDevice))
+			builder.WriteString(
+				fmt.Sprintf(
+					"  \"%s\" [shape=ellipse, style=filled, fillcolor=\"#0f172a\", fontcolor=\"white\"];\n",
+					neighbor.RemoteDevice,
+				),
+			)
 			seen[key] = struct{}{}
 		}
 
-		label := fmt.Sprintf("%s → %s (%s)", neighbor.LocalInterface, neighbor.RemoteInterface, strings.ToUpper(neighbor.Protocol))
+		label := fmt.Sprintf(
+			"%s → %s (%s)",
+			neighbor.LocalInterface,
+			neighbor.RemoteInterface,
+			strings.ToUpper(neighbor.Protocol),
+		)
 		builder.WriteString(fmt.Sprintf("  \"%s\" -> \"%s\" [label=\"%s\"];\n", local, neighbor.RemoteDevice, label))
 	}
 	builder.WriteString("}\n")
@@ -376,7 +400,11 @@ func writeGraphviz(analysis *WalkAnalysis, target string) error {
 		fmt.Print(builder.String())
 		return nil
 	}
-	return os.WriteFile(target, data, 0o600)
+	err := os.WriteFile(target, data, 0o600)
+	if err != nil {
+		return fmt.Errorf("failed to write DOT file: %w", err)
+	}
+	return nil
 }
 
 func outputNeighbors(neighbors []NeighborInfo, format string) error {
@@ -384,12 +412,20 @@ func outputNeighbors(neighbors []NeighborInfo, format string) error {
 	case "json":
 		encoder := json.NewEncoder(os.Stdout)
 		encoder.SetIndent("", "  ")
-		return encoder.Encode(map[string]interface{}{"neighbors": neighbors})
+		err := encoder.Encode(map[string]interface{}{"neighbors": neighbors})
+		if err != nil {
+			return fmt.Errorf("failed to encode neighbors JSON: %w", err)
+		}
+		return nil
 	case "yaml":
 		encoder := yaml.NewEncoder(os.Stdout)
 		defer encoder.Close() // #nosec G104 -- deferred close
 		encoder.SetIndent(2)
-		return encoder.Encode(map[string]interface{}{"neighbors": neighbors})
+		err := encoder.Encode(map[string]interface{}{"neighbors": neighbors})
+		if err != nil {
+			return fmt.Errorf("failed to encode neighbors YAML: %w", err)
+		}
+		return nil
 	case "text":
 		for _, neighbor := range neighbors {
 			fmt.Printf("%s (%s) -> %s (%s)\n",

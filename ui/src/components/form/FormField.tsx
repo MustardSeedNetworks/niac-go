@@ -1,5 +1,5 @@
-import { type FC, type ReactNode } from 'react';
-import { HelpCircle } from 'lucide-react';
+import { HelpCircle } from "lucide-react";
+import type { FC, ReactNode } from "react";
 
 export interface FormFieldProps {
   label: string;
@@ -14,7 +14,7 @@ export const FormField: FC<FormFieldProps> = ({
   children,
   helpText,
   required,
-  className = '',
+  className = "",
 }) => {
   return (
     <div className={className}>

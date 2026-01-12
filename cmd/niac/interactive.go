@@ -45,7 +45,8 @@ The TUI provides:
 func init() {
 	rootCmd.AddCommand(interactiveCmd)
 	interactiveCmd.Flags().IntVarP(&interactiveOptions.debugLevel, "debug", "d", 1, "Debug level (0-3)")
-	interactiveCmd.Flags().BoolVarP(&interactiveOptions.verbose, "verbose", "v", false, "Verbose output (equivalent to -d 3)")
+	interactiveCmd.Flags().
+		BoolVarP(&interactiveOptions.verbose, "verbose", "v", false, "Verbose output (equivalent to -d 3)")
 	interactiveCmd.Flags().BoolVarP(&interactiveOptions.quiet, "quiet", "q", false, "Quiet mode (equivalent to -d 0)")
 	interactiveCmd.Flags().BoolVar(&interactiveOptions.noColor, "no-color", false, "Disable colored output")
 }

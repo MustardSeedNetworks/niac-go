@@ -3,31 +3,32 @@ package protocols
 import (
 	"fmt"
 	"net"
+	"os"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 )
 
-// IP protocol numbers
+// IP protocol numbers.
 const (
 	IPProtocolICMP = 1
 	IPProtocolTCP  = 6
 	IPProtocolUDP  = 17
 )
 
-// IPHandler handles IP packets
+// IPHandler handles IP packets.
 type IPHandler struct {
 	stack *Stack
 }
 
-// NewIPHandler creates a new IP handler
+// NewIPHandler creates a new IP handler.
 func NewIPHandler(stack *Stack) *IPHandler {
 	return &IPHandler{
 		stack: stack,
 	}
 }
 
-// HandlePacket processes an IP packet
+// HandlePacket processes an IP packet.
 func (h *IPHandler) HandlePacket(pkt *Packet) {
 	debugLevel := h.stack.GetDebugLevel()
 
@@ -38,8 +39,9 @@ func (h *IPHandler) HandlePacket(pkt *Packet) {
 	ipLayer := packet.Layer(layers.LayerTypeIPv4)
 	if ipLayer == nil {
 		if debugLevel >= 2 {
-			fmt.Printf("IP packet missing IPv4 layer sn=%d\n", pkt.SerialNumber)
+			_, _ = fmt.Fprintf(os.Stdout, "IP packet missing IPv4 layer sn=%d\n", pkt.SerialNumber)
 		}
+
 		return
 	}
 
@@ -49,7 +51,7 @@ func (h *IPHandler) HandlePacket(pkt *Packet) {
 	}
 
 	if debugLevel >= 3 {
-		fmt.Printf("IP packet: %s -> %s protocol=%d sn=%d\n",
+		_, _ = fmt.Fprintf(os.Stdout, "IP packet: %s -> %s protocol=%d sn=%d\n",
 			ip.SrcIP, ip.DstIP, ip.Protocol, pkt.SerialNumber)
 	}
 
@@ -61,8 +63,9 @@ func (h *IPHandler) HandlePacket(pkt *Packet) {
 	if len(devices) == 0 && !isBroadcast {
 		// Not for us and not broadcast
 		if debugLevel >= 3 {
-			fmt.Printf("IP packet not for our devices: %s sn=%d\n", ip.DstIP, pkt.SerialNumber)
+			_, _ = fmt.Fprintf(os.Stdout, "IP packet not for our devices: %s sn=%d\n", ip.DstIP, pkt.SerialNumber)
 		}
+
 		return
 	}
 
@@ -73,10 +76,12 @@ func (h *IPHandler) HandlePacket(pkt *Packet) {
 
 	// If this is UDP and a device has MapToIP configured, skip TTL handling
 	skipTTL := false
+
 	if ip.Protocol == IPProtocolUDP {
 		for _, device := range devices {
 			if device.MapToIP != nil {
 				skipTTL = true
+
 				break
 			}
 		}
@@ -88,6 +93,7 @@ func (h *IPHandler) HandlePacket(pkt *Packet) {
 	}
 
 	// Route to layer 4 protocol handler
+	//nolint:exhaustive // Only ICMP, UDP, and TCP protocols are implemented
 	switch ip.Protocol {
 	case IPProtocolICMP:
 		h.stack.icmpHandler.HandlePacket(pkt, ip, devices)
@@ -97,7 +103,7 @@ func (h *IPHandler) HandlePacket(pkt *Packet) {
 		h.stack.tcpHandler.HandlePacket(pkt, ip, devices)
 	default:
 		if debugLevel >= 2 {
-			fmt.Printf("Unhandled IP protocol %d sn=%d\n", ip.Protocol, pkt.SerialNumber)
+			_, _ = fmt.Fprintf(os.Stdout, "Unhandled IP protocol %d sn=%d\n", ip.Protocol, pkt.SerialNumber)
 		}
 	}
 }
@@ -106,10 +112,13 @@ func (h *IPHandler) handleTTLTimeout(pkt *Packet, ipLayer *layers.IPv4) bool {
 	if h.stack == nil || h.stack.icmpHandler == nil {
 		return false
 	}
+
 	if ipLayer == nil {
 		return false
 	}
+
 	ttl := int(ipLayer.TTL)
+
 	device := h.stack.GetDevices().GetDeviceByTTL(ttl)
 	if device == nil {
 		return false
@@ -131,12 +140,15 @@ func (h *IPHandler) handleTTLTimeout(pkt *Packet, ipLayer *layers.IPv4) bool {
 	if device.TTLConfig != nil && device.TTLConfig.IP != nil && device.TTLConfig.Mask != nil {
 		if dst := ipLayer.DstIP.To4(); dst != nil && device.TTLConfig.IP.To4() != nil {
 			sameSubnet := true
-			for i := 0; i < 4; i++ {
+
+			for i := range 4 {
 				if (dst[i] & device.TTLConfig.Mask[i]) != device.TTLConfig.IP.To4()[i] {
 					sameSubnet = false
+
 					break
 				}
 			}
+
 			if sameSubnet {
 				return false
 			}
@@ -148,16 +160,30 @@ func (h *IPHandler) handleTTLTimeout(pkt *Packet, ipLayer *layers.IPv4) bool {
 		return false
 	}
 
-	if err := h.stack.icmpHandler.SendICMPTimeExceeded(srcIP, ipLayer.SrcIP, device.MACAddress, dstMAC, ipLayer, device); err != nil {
+	err := h.stack.icmpHandler.SendICMPTimeExceeded(
+		srcIP,
+		ipLayer.SrcIP,
+		device.MACAddress,
+		dstMAC,
+		ipLayer,
+		device,
+	)
+	if err != nil {
 		return false
 	}
 
 	h.stack.GetDevices().IncrementTTLCount(device)
+
 	return true
 }
 
-// SendIPPacket sends an IP packet
-func (h *IPHandler) SendIPPacket(srcIP, dstIP net.IP, protocol layers.IPProtocol, payload []byte, srcMAC, dstMAC net.HardwareAddr) error {
+// SendIPPacket sends an IP packet.
+func (h *IPHandler) SendIPPacket(
+	srcIP, dstIP net.IP,
+	protocol layers.IPProtocol,
+	payload []byte,
+	srcMAC, dstMAC net.HardwareAddr,
+) error {
 	// Build Ethernet header
 	eth := &layers.Ethernet{
 		SrcMAC:       srcMAC,
@@ -188,7 +214,7 @@ func (h *IPHandler) SendIPPacket(srcIP, dstIP net.IP, protocol layers.IPProtocol
 		gopacket.Payload(payload),
 	)
 	if err != nil {
-		return fmt.Errorf("error serializing IP packet: %v", err)
+		return fmt.Errorf("error serializing IP packet: %w", err)
 	}
 
 	// Get serial number
@@ -207,7 +233,7 @@ func (h *IPHandler) SendIPPacket(srcIP, dstIP net.IP, protocol layers.IPProtocol
 	h.stack.Send(pkt)
 
 	if h.stack.GetDebugLevel() >= 3 {
-		fmt.Printf("Sent IP packet: %s -> %s protocol=%d length=%d sn=%d\n",
+		_, _ = fmt.Fprintf(os.Stdout, "Sent IP packet: %s -> %s protocol=%d length=%d sn=%d\n",
 			srcIP, dstIP, protocol, len(payload), serialNum)
 	}
 

@@ -1,42 +1,45 @@
-import { type FC, type ReactNode } from 'react';
+import type { FC, ReactNode } from "react";
 
-type CardVariant = 'default' | 'elevated' | 'outlined' | 'ghost';
+type CardVariant = "default" | "elevated" | "outlined" | "ghost";
 
 interface CardProps {
   children: ReactNode;
   className?: string;
   variant?: CardVariant;
   hover?: boolean;
-  padding?: 'none' | 'sm' | 'md' | 'lg';
+  padding?: "none" | "sm" | "md" | "lg";
 }
 
 const variantStyles: Record<CardVariant, string> = {
-  default: 'backdrop-blur-xl bg-gradient-to-br from-gray-900/90 to-gray-900/70 border border-white/10 shadow-xl shadow-black/20',
-  elevated: 'backdrop-blur-xl bg-gradient-to-br from-gray-800/90 to-gray-900/80 border border-white/15 shadow-2xl shadow-black/30',
-  outlined: 'bg-transparent border border-white/20',
-  ghost: 'bg-white/5 border border-transparent',
+  default:
+    "backdrop-blur-xl bg-gradient-to-br from-gray-900/90 to-gray-900/70 border border-white/10 shadow-xl shadow-black/20",
+  elevated:
+    "backdrop-blur-xl bg-gradient-to-br from-gray-800/90 to-gray-900/80 border border-white/15 shadow-2xl shadow-black/30",
+  outlined: "bg-transparent border border-white/20",
+  ghost: "bg-white/5 border border-transparent",
 };
 
-const hoverStyles = 'transition-all duration-300 hover:shadow-2xl hover:shadow-brand-500/5 hover:border-white/20 hover:-translate-y-0.5';
+const hoverStyles =
+  "transition-all duration-300 hover:shadow-2xl hover:shadow-brand-500/5 hover:border-white/20 hover:-translate-y-0.5";
 
 export const Card: FC<CardProps> = ({
   children,
-  className = '',
-  variant = 'default',
+  className = "",
+  variant = "default",
   hover = false,
   padding,
 }) => {
   const paddingClasses: Record<string, string> = {
-    none: '',
-    sm: 'p-4',
-    md: 'p-6',
-    lg: 'p-8',
+    none: "",
+    sm: "p-4",
+    md: "p-6",
+    lg: "p-8",
   };
-  const paddingClass = padding ? paddingClasses[padding] ?? '' : '';
+  const paddingClass = padding ? (paddingClasses[padding] ?? "") : "";
 
   return (
     <div
-      className={`rounded-xl ${variantStyles[variant]} ${hover ? hoverStyles : ''} ${paddingClass} ${className}`}
+      className={`rounded-xl ${variantStyles[variant]} ${hover ? hoverStyles : ""} ${paddingClass} ${className}`}
     >
       {children}
     </div>
@@ -48,7 +51,7 @@ interface CardContentProps {
   className?: string;
 }
 
-export const CardContent: FC<CardContentProps> = ({ children, className = '' }) => {
+export const CardContent: FC<CardContentProps> = ({ children, className = "" }) => {
   return <div className={`p-6 ${className}`}>{children}</div>;
 };
 
@@ -58,9 +61,11 @@ interface CardHeaderProps {
   actions?: ReactNode;
 }
 
-export const CardHeader: FC<CardHeaderProps> = ({ children, className = '', actions }) => {
+export const CardHeader: FC<CardHeaderProps> = ({ children, className = "", actions }) => {
   return (
-    <div className={`flex items-center justify-between px-6 py-4 border-b border-white/10 ${className}`}>
+    <div
+      className={`flex items-center justify-between px-6 py-4 border-b border-white/10 ${className}`}
+    >
       <div className="flex items-center gap-3">{children}</div>
       {actions && <div className="flex items-center gap-2">{actions}</div>}
     </div>
@@ -72,7 +77,7 @@ interface CardFooterProps {
   className?: string;
 }
 
-export const CardFooter: FC<CardFooterProps> = ({ children, className = '' }) => {
+export const CardFooter: FC<CardFooterProps> = ({ children, className = "" }) => {
   return (
     <div className={`px-6 py-4 border-t border-white/10 bg-black/20 rounded-b-xl ${className}`}>
       {children}
@@ -92,28 +97,16 @@ interface StatCardProps {
   className?: string;
 }
 
-export const StatCard: FC<StatCardProps> = ({
-  label,
-  value,
-  icon,
-  trend,
-  className = '',
-}) => {
+export const StatCard: FC<StatCardProps> = ({ label, value, icon, trend, className = "" }) => {
   const trendColor = trend
     ? trend.value > 0
-      ? 'text-emerald-400'
+      ? "text-emerald-400"
       : trend.value < 0
-      ? 'text-red-400'
-      : 'text-gray-400'
-    : '';
+        ? "text-red-400"
+        : "text-gray-400"
+    : "";
 
-  const trendIcon = trend
-    ? trend.value > 0
-      ? '↑'
-      : trend.value < 0
-      ? '↓'
-      : '→'
-    : '';
+  const trendIcon = trend ? (trend.value > 0 ? "↑" : trend.value < 0 ? "↓" : "→") : "";
 
   return (
     <Card className={className} hover>

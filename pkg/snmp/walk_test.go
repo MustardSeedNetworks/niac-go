@@ -9,7 +9,7 @@ import (
 	"github.com/gosnmp/gosnmp"
 )
 
-// TestParseWalkFile_PathTraversal verifies path traversal attacks are rejected
+// TestParseWalkFile_PathTraversal verifies path traversal attacks are rejected.
 func TestParseWalkFile_PathTraversal(t *testing.T) {
 	// Test various path traversal patterns that will be caught
 	// Note: filepath.Clean() resolves "../" before our check, so patterns like
@@ -28,6 +28,7 @@ func TestParseWalkFile_PathTraversal(t *testing.T) {
 			if err == nil {
 				t.Errorf("Expected error for path traversal pattern: %s", pattern)
 			}
+
 			if err != nil && !strings.Contains(err.Error(), "directory traversal not allowed") &&
 				!strings.Contains(err.Error(), "failed to access walk file") {
 				t.Errorf("Expected path traversal or file access error, got: %v", err)
@@ -36,14 +37,14 @@ func TestParseWalkFile_PathTraversal(t *testing.T) {
 	}
 }
 
-// TestParseWalkFile_SymlinkRejection verifies symlink attacks are rejected
+// TestParseWalkFile_SymlinkRejection verifies symlink attacks are rejected.
 func TestParseWalkFile_SymlinkRejection(t *testing.T) {
 	// Create temporary directory and files
 	tmpDir := t.TempDir()
 
 	// Create a real file
 	targetFile := filepath.Join(tmpDir, "target.txt")
-	if err := os.WriteFile(targetFile, []byte("SNMPv2-MIB::sysDescr.0 = test"), 0644); err != nil {
+	if err := os.WriteFile(targetFile, []byte("SNMPv2-MIB::sysDescr.0 = test"), 0o600); err != nil {
 		t.Fatalf("Failed to create target file: %v", err)
 	}
 
@@ -58,12 +59,13 @@ func TestParseWalkFile_SymlinkRejection(t *testing.T) {
 	if err == nil {
 		t.Error("Expected error for symlink file")
 	}
+
 	if !strings.Contains(err.Error(), "cannot be a symbolic link") {
 		t.Errorf("Expected 'cannot be a symbolic link' error, got: %v", err)
 	}
 }
 
-// TestParseWalkFile_DirectoryRejection verifies directories are rejected
+// TestParseWalkFile_DirectoryRejection verifies directories are rejected.
 func TestParseWalkFile_DirectoryRejection(t *testing.T) {
 	tmpDir := t.TempDir()
 
@@ -72,12 +74,13 @@ func TestParseWalkFile_DirectoryRejection(t *testing.T) {
 	if err == nil {
 		t.Error("Expected error for directory path")
 	}
+
 	if !strings.Contains(err.Error(), "is a directory") {
 		t.Errorf("Expected 'is a directory' error, got: %v", err)
 	}
 }
 
-// TestParseWalkFile_NonexistentFile verifies nonexistent files are handled
+// TestParseWalkFile_NonexistentFile verifies nonexistent files are handled.
 func TestParseWalkFile_NonexistentFile(t *testing.T) {
 	nonexistentPath := "/tmp/nonexistent-walk-file-xyz-" + t.Name() + ".txt"
 
@@ -85,12 +88,13 @@ func TestParseWalkFile_NonexistentFile(t *testing.T) {
 	if err == nil {
 		t.Error("Expected error for nonexistent file")
 	}
+
 	if !strings.Contains(err.Error(), "failed to access walk file") {
 		t.Errorf("Expected 'failed to access walk file' error, got: %v", err)
 	}
 }
 
-// TestParseWalkFile_ValidFile verifies valid walk files are parsed correctly
+// TestParseWalkFile_ValidFile verifies valid walk files are parsed correctly.
 func TestParseWalkFile_ValidFile(t *testing.T) {
 	tmpDir := t.TempDir()
 	walkFile := filepath.Join(tmpDir, "valid-walk.txt")
@@ -104,7 +108,7 @@ SNMPv2-MIB::sysName.0 = STRING: "router-1"
 SNMPv2-MIB::sysLocation.0 = STRING: "Data Center 1"
 `
 
-	if err := os.WriteFile(walkFile, []byte(walkData), 0644); err != nil {
+	if err := os.WriteFile(walkFile, []byte(walkData), 0o600); err != nil {
 		t.Fatalf("Failed to create walk file: %v", err)
 	}
 
@@ -124,22 +128,24 @@ SNMPv2-MIB::sysLocation.0 = STRING: "Data Center 1"
 		if entries[0].OID != "SNMPv2-MIB::sysDescr.0" {
 			t.Errorf("Expected OID 'SNMPv2-MIB::sysDescr.0', got: %s", entries[0].OID)
 		}
+
 		if entries[0].Type != gosnmp.OctetString {
 			t.Errorf("Expected type OctetString, got: %v", entries[0].Type)
 		}
+
 		if entries[0].Value != "Cisco IOS Software" {
 			t.Errorf("Expected value 'Cisco IOS Software', got: %v", entries[0].Value)
 		}
 	}
 }
 
-// TestParseWalkFile_EmptyFile verifies empty files are handled
+// TestParseWalkFile_EmptyFile verifies empty files are handled.
 func TestParseWalkFile_EmptyFile(t *testing.T) {
 	tmpDir := t.TempDir()
 	walkFile := filepath.Join(tmpDir, "empty-walk.txt")
 
 	// Create an empty file
-	if err := os.WriteFile(walkFile, []byte(""), 0644); err != nil {
+	if err := os.WriteFile(walkFile, []byte(""), 0o600); err != nil {
 		t.Fatalf("Failed to create empty file: %v", err)
 	}
 
@@ -155,7 +161,7 @@ func TestParseWalkFile_EmptyFile(t *testing.T) {
 	}
 }
 
-// TestParseWalkFile_MalformedLines verifies malformed lines are skipped
+// TestParseWalkFile_MalformedLines verifies malformed lines are skipped.
 func TestParseWalkFile_MalformedLines(t *testing.T) {
 	tmpDir := t.TempDir()
 	walkFile := filepath.Join(tmpDir, "malformed-walk.txt")
@@ -168,7 +174,7 @@ Invalid = line = format
 SNMPv2-MIB::sysName.0 = STRING: "test-router"
 `
 
-	if err := os.WriteFile(walkFile, []byte(walkData), 0644); err != nil {
+	if err := os.WriteFile(walkFile, []byte(walkData), 0o600); err != nil {
 		t.Fatalf("Failed to create walk file: %v", err)
 	}
 
@@ -184,7 +190,7 @@ SNMPv2-MIB::sysName.0 = STRING: "test-router"
 	}
 }
 
-// TestParseWalkFile_AbsolutePathValidation verifies absolute paths are handled correctly
+// TestParseWalkFile_AbsolutePathValidation verifies absolute paths are handled correctly.
 func TestParseWalkFile_AbsolutePathValidation(t *testing.T) {
 	tmpDir := t.TempDir()
 	walkFile := filepath.Join(tmpDir, "test-walk.txt")
@@ -192,7 +198,7 @@ func TestParseWalkFile_AbsolutePathValidation(t *testing.T) {
 	// Create a valid walk file
 	walkData := `SNMPv2-MIB::sysDescr.0 = STRING: "Test"`
 
-	if err := os.WriteFile(walkFile, []byte(walkData), 0644); err != nil {
+	if err := os.WriteFile(walkFile, []byte(walkData), 0o600); err != nil {
 		t.Fatalf("Failed to create walk file: %v", err)
 	}
 
@@ -212,15 +218,16 @@ func TestParseWalkFile_AbsolutePathValidation(t *testing.T) {
 	}
 }
 
-// TestParseWalkFile_RelativePathNormal verifies normal relative paths work
+// TestParseWalkFile_RelativePathNormal verifies normal relative paths work.
 func TestParseWalkFile_RelativePathNormal(t *testing.T) {
 	// Create a temporary file in current directory
 	tmpFile := "test-walk-" + t.Name() + ".txt"
-	defer os.Remove(tmpFile)
+
+	defer func() { _ = os.Remove(tmpFile) }()
 
 	walkData := `SNMPv2-MIB::sysDescr.0 = STRING: "Test Device"`
 
-	if err := os.WriteFile(tmpFile, []byte(walkData), 0644); err != nil {
+	if err := os.WriteFile(tmpFile, []byte(walkData), 0o600); err != nil {
 		t.Fatalf("Failed to create walk file: %v", err)
 	}
 
@@ -235,7 +242,7 @@ func TestParseWalkFile_RelativePathNormal(t *testing.T) {
 	}
 }
 
-// TestParseWalkFile_VariousOIDFormats verifies different OID formats are parsed
+// TestParseWalkFile_VariousOIDFormats verifies different OID formats are parsed.
 func TestParseWalkFile_VariousOIDFormats(t *testing.T) {
 	tmpDir := t.TempDir()
 	walkFile := filepath.Join(tmpDir, "oid-formats.txt")
@@ -247,7 +254,7 @@ IF-MIB::ifDescr.1 = STRING: "Interface Description"
 iso.3.6.1.2.1.1.5.0 = STRING: "ISO prefix"
 `
 
-	if err := os.WriteFile(walkFile, []byte(walkData), 0644); err != nil {
+	if err := os.WriteFile(walkFile, []byte(walkData), 0o600); err != nil {
 		t.Fatalf("Failed to create walk file: %v", err)
 	}
 
@@ -261,7 +268,7 @@ iso.3.6.1.2.1.1.5.0 = STRING: "ISO prefix"
 	}
 }
 
-// TestParseWalkFile_VariousDataTypes verifies different SNMP data types are parsed
+// TestParseWalkFile_VariousDataTypes verifies different SNMP data types are parsed.
 func TestParseWalkFile_VariousDataTypes(t *testing.T) {
 	tmpDir := t.TempDir()
 	walkFile := filepath.Join(tmpDir, "data-types.txt")
@@ -277,7 +284,7 @@ SNMPv2-MIB::sysServices.0 = INTEGER: 72
 IF-MIB::ifAdminStatus.1 = INTEGER: 1
 `
 
-	if err := os.WriteFile(walkFile, []byte(walkData), 0644); err != nil {
+	if err := os.WriteFile(walkFile, []byte(walkData), 0o600); err != nil {
 		t.Fatalf("Failed to create walk file: %v", err)
 	}
 

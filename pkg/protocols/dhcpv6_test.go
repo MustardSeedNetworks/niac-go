@@ -10,7 +10,7 @@ import (
 	"github.com/krisarmstrong/niac-go/pkg/logging"
 )
 
-// TestNewDHCPv6Handler tests handler creation
+// TestNewDHCPv6Handler tests handler creation.
 func TestNewDHCPv6Handler(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -41,7 +41,7 @@ func TestNewDHCPv6Handler(t *testing.T) {
 	}
 }
 
-// TestGenerateDUID tests DUID generation
+// TestGenerateDUID tests DUID generation.
 func TestGenerateDUID(t *testing.T) {
 	duid := generateDUID()
 
@@ -66,6 +66,7 @@ func TestGenerateDUID(t *testing.T) {
 	if (macByte0 & 0x02) == 0 {
 		t.Error("MAC address should have local bit set")
 	}
+
 	if (macByte0 & 0x01) != 0 {
 		t.Error("MAC address should not have multicast bit set")
 	}
@@ -77,7 +78,7 @@ func TestGenerateDUID(t *testing.T) {
 	}
 }
 
-// TestSetAddressPool tests address pool configuration
+// TestSetAddressPool tests address pool configuration.
 func TestSetAddressPool(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -102,7 +103,7 @@ func TestSetAddressPool(t *testing.T) {
 	}
 }
 
-// TestSetPrefixPool tests prefix pool configuration
+// TestSetPrefixPool tests prefix pool configuration.
 func TestSetPrefixPool(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -123,7 +124,7 @@ func TestSetPrefixPool(t *testing.T) {
 	}
 }
 
-// TestSetServerConfigDHCPv6 tests server configuration
+// TestSetServerConfigDHCPv6 tests server configuration.
 func TestSetServerConfigDHCPv6(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -154,7 +155,7 @@ func TestSetServerConfigDHCPv6(t *testing.T) {
 	}
 }
 
-// TestSetAdvancedOptionsDHCPv6 tests advanced DHCPv6 options
+// TestSetAdvancedOptionsDHCPv6 tests advanced DHCPv6 options.
 func TestSetAdvancedOptionsDHCPv6(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -184,7 +185,7 @@ func TestSetAdvancedOptionsDHCPv6(t *testing.T) {
 	}
 }
 
-// TestAllocateLeaseDHCPv6 tests lease allocation
+// TestAllocateLeaseDHCPv6 tests lease allocation.
 func TestAllocateLeaseDHCPv6(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -225,15 +226,17 @@ func TestAllocateLeaseDHCPv6(t *testing.T) {
 	if lease.PreferredLifetime.Before(now) {
 		t.Error("Preferred lifetime should be in the future")
 	}
+
 	if lease.ValidLifetime.Before(now) {
 		t.Error("Valid lifetime should be in the future")
 	}
+
 	if lease.PreferredLifetime.After(lease.ValidLifetime) {
 		t.Error("Preferred lifetime should be before valid lifetime")
 	}
 }
 
-// TestAllocateLeaseDHCPv6_Renewal tests existing lease renewal
+// TestAllocateLeaseDHCPv6_Renewal tests existing lease renewal.
 func TestAllocateLeaseDHCPv6_Renewal(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -267,7 +270,7 @@ func TestAllocateLeaseDHCPv6_Renewal(t *testing.T) {
 	}
 }
 
-// TestAllocateLeaseDHCPv6_PoolExhaustion tests no available addresses
+// TestAllocateLeaseDHCPv6_PoolExhaustion tests no available addresses.
 func TestAllocateLeaseDHCPv6_PoolExhaustion(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -279,6 +282,7 @@ func TestAllocateLeaseDHCPv6_PoolExhaustion(t *testing.T) {
 
 	// Allocate the only address
 	clientDUID1 := []byte{0x00, 0x03, 0x00, 0x01, 0x00, 0x11, 0x22, 0x33, 0x44, 0x55}
+
 	_, err := handler.allocateLease(clientDUID1, 1)
 	if err != nil {
 		t.Fatalf("First allocation failed: %v", err)
@@ -286,13 +290,14 @@ func TestAllocateLeaseDHCPv6_PoolExhaustion(t *testing.T) {
 
 	// Try to allocate to another client
 	clientDUID2 := []byte{0x00, 0x03, 0x00, 0x01, 0x00, 0x11, 0x22, 0x33, 0x44, 0x56}
+
 	_, err = handler.allocateLease(clientDUID2, 2)
 	if err == nil {
 		t.Error("Expected error when pool exhausted, got nil")
 	}
 }
 
-// TestConfirmLease tests lease confirmation
+// TestConfirmLease tests lease confirmation.
 func TestConfirmLease(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -318,7 +323,7 @@ func TestConfirmLease(t *testing.T) {
 	}
 }
 
-// TestFindLease tests lease lookup
+// TestFindLease tests lease lookup.
 func TestFindLease(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -345,13 +350,14 @@ func TestFindLease(t *testing.T) {
 
 	// Try to find non-existent lease
 	nonExistentDUID := []byte{0x00, 0x03, 0x00, 0x01, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
+
 	notFound := handler.findLease(nonExistentDUID)
 	if notFound != nil {
 		t.Error("Should not find lease for non-existent DUID")
 	}
 }
 
-// TestRenewLease tests lease renewal
+// TestRenewLease tests lease renewal.
 func TestRenewLease(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -375,7 +381,7 @@ func TestRenewLease(t *testing.T) {
 	}
 }
 
-// TestParseDHCPv6Message tests message parsing
+// TestParseDHCPv6Message tests message parsing.
 func TestParseDHCPv6Message(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -423,6 +429,7 @@ func TestParseDHCPv6Message(t *testing.T) {
 				if err == nil {
 					t.Error("Expected error but got nil")
 				}
+
 				return
 			}
 
@@ -437,7 +444,7 @@ func TestParseDHCPv6Message(t *testing.T) {
 	}
 }
 
-// TestFindOption tests option finding
+// TestFindOption tests option finding.
 func TestFindOption(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -456,6 +463,7 @@ func TestFindOption(t *testing.T) {
 	if clientID == nil {
 		t.Fatal("Failed to find Client ID option")
 	}
+
 	if clientID.Code != DHCPv6OptClientID {
 		t.Errorf("Expected code %d, got %d", DHCPv6OptClientID, clientID.Code)
 	}
@@ -467,7 +475,7 @@ func TestFindOption(t *testing.T) {
 	}
 }
 
-// TestExtractClientDUID tests client DUID extraction
+// TestExtractClientDUID tests client DUID extraction.
 func TestExtractClientDUID(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -503,7 +511,7 @@ func TestExtractClientDUID(t *testing.T) {
 	}
 }
 
-// TestExtractIANA tests IANA extraction
+// TestExtractIANA tests IANA extraction.
 func TestExtractIANA(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -541,7 +549,7 @@ func TestExtractIANA(t *testing.T) {
 	}
 }
 
-// TestSplitDomainLabels tests domain label splitting
+// TestSplitDomainLabels tests domain label splitting.
 func TestSplitDomainLabels(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -581,6 +589,7 @@ func TestSplitDomainLabels(t *testing.T) {
 
 			if len(labels) != len(tt.expected) {
 				t.Errorf("Expected %d labels, got %d", len(tt.expected), len(labels))
+
 				return
 			}
 
@@ -593,7 +602,7 @@ func TestSplitDomainLabels(t *testing.T) {
 	}
 }
 
-// TestEncodeDomainList tests domain list encoding
+// TestEncodeDomainList tests domain list encoding.
 func TestEncodeDomainList(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -623,7 +632,7 @@ func TestEncodeDomainList(t *testing.T) {
 	}
 }
 
-// TestMessageTypeString tests message type string conversion
+// TestMessageTypeString tests message type string conversion.
 func TestMessageTypeString(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -655,12 +664,13 @@ func TestMessageTypeString(t *testing.T) {
 	}
 }
 
-// TestDHCPv6Constants tests DHCPv6 constants
+// TestDHCPv6Constants tests DHCPv6 constants.
 func TestDHCPv6Constants(t *testing.T) {
 	// Test message types
 	if DHCPv6Solicit != 1 {
 		t.Errorf("DHCPv6Solicit should be 1, got %d", DHCPv6Solicit)
 	}
+
 	if DHCPv6Reply != 7 {
 		t.Errorf("DHCPv6Reply should be 7, got %d", DHCPv6Reply)
 	}
@@ -669,9 +679,11 @@ func TestDHCPv6Constants(t *testing.T) {
 	if DHCPv6OptClientID != 1 {
 		t.Errorf("DHCPv6OptClientID should be 1, got %d", DHCPv6OptClientID)
 	}
+
 	if DHCPv6OptServerID != 2 {
 		t.Errorf("DHCPv6OptServerID should be 2, got %d", DHCPv6OptServerID)
 	}
+
 	if DHCPv6OptDNSServers != 23 {
 		t.Errorf("DHCPv6OptDNSServers should be 23, got %d", DHCPv6OptDNSServers)
 	}
@@ -685,12 +697,13 @@ func TestDHCPv6Constants(t *testing.T) {
 	if DHCPv6ServerPort != 547 {
 		t.Errorf("DHCPv6ServerPort should be 547, got %d", DHCPv6ServerPort)
 	}
+
 	if DHCPv6ClientPort != 546 {
 		t.Errorf("DHCPv6ClientPort should be 546, got %d", DHCPv6ClientPort)
 	}
 }
 
-// TestDefaultLifetimes tests default lifetime constants
+// TestDefaultLifetimes tests default lifetime constants.
 func TestDefaultLifetimes(t *testing.T) {
 	expectedPreferred := 7 * 24 * time.Hour
 	expectedValid := 30 * 24 * time.Hour
@@ -709,7 +722,7 @@ func TestDefaultLifetimes(t *testing.T) {
 	}
 }
 
-// TestBuildIANAOption tests IANA option building
+// TestBuildIANAOption tests IANA option building.
 func TestBuildIANAOption(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -739,7 +752,7 @@ func TestBuildIANAOption(t *testing.T) {
 	}
 }
 
-// TestBuildIAAddrOption tests IA Address option building
+// TestBuildIAAddrOption tests IA Address option building.
 func TestBuildIAAddrOption(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -777,7 +790,7 @@ func TestBuildIAAddrOption(t *testing.T) {
 
 // Benchmarks
 
-// BenchmarkAllocateLeaseDHCPv6 benchmarks lease allocation
+// BenchmarkAllocateLeaseDHCPv6 benchmarks lease allocation.
 func BenchmarkAllocateLeaseDHCPv6(b *testing.B) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -785,29 +798,32 @@ func BenchmarkAllocateLeaseDHCPv6(b *testing.B) {
 
 	// Create a pool of 1000 addresses
 	addresses := make([]net.IP, 1000)
-	for i := 0; i < 1000; i++ {
+
+	for i := range 1000 {
 		addr := net.ParseIP("2001:db8::1")
 		addr[15] = byte(i)
 		addresses[i] = addr
 	}
+
 	handler.SetAddressPool(addresses)
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+
+	for i := range b.N {
 		clientDUID := make([]byte, 10)
 		binary.BigEndian.PutUint32(clientDUID[6:], uint32(i))
-		handler.allocateLease(clientDUID, uint32(i))
+		_, _ = handler.allocateLease(clientDUID, uint32(i))
 	}
 }
 
-// BenchmarkGenerateDUID benchmarks DUID generation
+// BenchmarkGenerateDUID benchmarks DUID generation.
 func BenchmarkGenerateDUID(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		generateDUID()
 	}
 }
 
-// BenchmarkParseDHCPv6Message benchmarks message parsing
+// BenchmarkParseDHCPv6Message benchmarks message parsing.
 func BenchmarkParseDHCPv6Message(b *testing.B) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -825,8 +841,7 @@ func BenchmarkParseDHCPv6Message(b *testing.B) {
 		0x00, 0x00, 0x00, 0x00, // T2
 	}
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		handler.parseDHCPv6Message(msg)
+	for b.Loop() {
+		_, _ = handler.parseDHCPv6Message(msg)
 	}
 }

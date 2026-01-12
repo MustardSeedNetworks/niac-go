@@ -1,28 +1,13 @@
-import { type FC, useState, useEffect, memo, type ChangeEvent } from 'react';
-import {
-  Server,
-  FileCog,
-} from 'lucide-react';
-import {
-  Card,
-  CardContent,
-  Button,
-  Tag,
-  H2,
-  SmallText,
-} from '../ui';
-import { useApiResource } from '../hooks/useApiResource';
-import { useVirtualScroll } from '../hooks/useVirtualScroll';
-import {
-  fetchDevices,
-  fetchConfig,
-  updateConfig,
-  fetchFiles,
-} from '../api/client';
-import type { DeviceSummary, FileEntry } from '../api/types';
-import { POLL_INTERVALS } from '../constants';
-import { formatTime, formatBytes, getErrorMessage } from '../utils';
-import { copyToClipboard } from '../utils/file';
+import { FileCog, Server } from "lucide-react";
+import { type ChangeEvent, type FC, memo, useEffect, useState } from "react";
+import { fetchConfig, fetchDevices, fetchFiles, updateConfig } from "../api/client";
+import type { DeviceSummary, FileEntry } from "../api/types";
+import { POLL_INTERVALS } from "../constants";
+import { useApiResource } from "../hooks/useApiResource";
+import { useVirtualScroll } from "../hooks/useVirtualScroll";
+import { Button, Card, CardContent, H2, SmallText, Tag } from "../ui";
+import { formatBytes, formatTime, getErrorMessage } from "../utils";
+import { copyToClipboard } from "../utils/file";
 
 /**
  * Devices Page - Config Workspace
@@ -42,7 +27,11 @@ export const DevicesPage: FC = () => {
  * Device List Card - Shows devices from current config
  */
 const DeviceListCard: FC = () => {
-  const { data: devices, loading, error } = useApiResource(fetchDevices, [], { intervalMs: POLL_INTERVALS.SLOW });
+  const {
+    data: devices,
+    loading,
+    error,
+  } = useApiResource(fetchDevices, [], { intervalMs: POLL_INTERVALS.SLOW });
 
   return (
     <Card className="border-white/5 bg-gray-900/70">
@@ -52,10 +41,13 @@ const DeviceListCard: FC = () => {
           Config workspace
         </H2>
         {loading && <SmallText className="text-gray-400">Loading devices...</SmallText>}
-        {error && <SmallText className="text-red-400">Unable to load devices: {error.message}</SmallText>}
+        {error && (
+          <SmallText className="text-red-400">Unable to load devices: {error.message}</SmallText>
+        )}
         {!loading && !error && <DeviceTable devices={devices ?? []} />}
         <SmallText className="text-gray-400">
-          Devices are rendered directly from the active YAML config so the CLI/TUI and Web UI always agree.
+          Devices are rendered directly from the active YAML config so the CLI/TUI and Web UI always
+          agree.
         </SmallText>
       </CardContent>
     </Card>
@@ -73,7 +65,7 @@ const DeviceTable = memo(({ devices }: { devices: DeviceSummary[] }) => {
     overscan: 5,
   });
 
-  if (!devices.length) {
+  if (devices.length === 0) {
     return (
       <div className="rounded-xl border border-white/5 bg-gray-950/50 p-8 text-center text-gray-400">
         No devices defined in the loaded configuration.
@@ -106,7 +98,8 @@ const DeviceTable = memo(({ devices }: { devices: DeviceSummary[] }) => {
   return (
     <div className="rounded-xl border border-white/5">
       <div className="bg-gray-900/60 px-4 py-2 text-xs text-gray-400">
-        Showing {virtualScroll.visibleItems.length} of {devices.length} devices (virtual scrolling enabled)
+        Showing {virtualScroll.visibleItems.length} of {devices.length} devices (virtual scrolling
+        enabled)
       </div>
       <div {...virtualScroll.containerProps} className="overflow-auto">
         <div {...virtualScroll.spacerProps}>
@@ -133,7 +126,7 @@ const DeviceTable = memo(({ devices }: { devices: DeviceSummary[] }) => {
   );
 });
 
-DeviceTable.displayName = 'DeviceTable';
+DeviceTable.displayName = "DeviceTable";
 
 /**
  * Single device row
@@ -142,7 +135,7 @@ const DeviceRow = memo(({ device }: { device: DeviceSummary }) => (
   <tr>
     <td className="px-4 py-3 font-semibold text-white">{device.name}</td>
     <td className="px-4 py-3">{device.type}</td>
-    <td className="px-4 py-3 font-mono text-xs">{device.ips.join(', ') || '—'}</td>
+    <td className="px-4 py-3 font-mono text-xs">{device.ips.join(", ") || "—"}</td>
     <td className="px-4 py-3">
       <div className="flex flex-wrap gap-2">
         {device.protocols.map((proto) => (
@@ -150,24 +143,28 @@ const DeviceRow = memo(({ device }: { device: DeviceSummary }) => (
             {proto}
           </Tag>
         ))}
-        {!device.protocols.length && <SmallText className="text-gray-400">None</SmallText>}
+        {device.protocols.length === 0 && <SmallText className="text-gray-400">None</SmallText>}
       </div>
     </td>
   </tr>
 ));
 
-DeviceRow.displayName = 'DeviceRow';
+DeviceRow.displayName = "DeviceRow";
 
 /**
  * Config Editor Card - YAML configuration editor
  */
 const ConfigEditorCard: FC = () => {
-  const { data, loading, error } = useApiResource(fetchConfig, [], { intervalMs: POLL_INTERVALS.VERY_SLOW });
-  const { data: walkFiles } = useApiResource(() => fetchFiles('walks'), [], { intervalMs: POLL_INTERVALS.VERY_SLOW });
-  const [value, setValue] = useState('');
+  const { data, loading, error } = useApiResource(fetchConfig, [], {
+    intervalMs: POLL_INTERVALS.VERY_SLOW,
+  });
+  const { data: walkFiles } = useApiResource(() => fetchFiles("walks"), [], {
+    intervalMs: POLL_INTERVALS.VERY_SLOW,
+  });
+  const [value, setValue] = useState("");
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [status, setStatus] = useState<{ tone: 'success' | 'error'; message: string } | null>(null);
+  const [status, setStatus] = useState<{ tone: "success" | "error"; message: string } | null>(null);
 
   useEffect(() => {
     if (data && !dirty) {
@@ -199,9 +196,9 @@ const ConfigEditorCard: FC = () => {
       const updated = await updateConfig({ content: value });
       setValue(updated.content);
       setDirty(false);
-      setStatus({ tone: 'success', message: 'Configuration saved' });
+      setStatus({ tone: "success", message: "Configuration saved" });
     } catch (err) {
-      setStatus({ tone: 'error', message: getErrorMessage(err) });
+      setStatus({ tone: "error", message: getErrorMessage(err) });
     } finally {
       setSaving(false);
     }
@@ -210,9 +207,9 @@ const ConfigEditorCard: FC = () => {
   const handleWalkCopy = async (path: string) => {
     try {
       await copyToClipboard(path);
-      setStatus({ tone: 'success', message: `Copied ${path}` });
+      setStatus({ tone: "success", message: `Copied ${path}` });
     } catch (err) {
-      setStatus({ tone: 'error', message: getErrorMessage(err) || 'Unable to copy path' });
+      setStatus({ tone: "error", message: getErrorMessage(err) || "Unable to copy path" });
     }
   };
 
@@ -224,11 +221,15 @@ const ConfigEditorCard: FC = () => {
           YAML editor
         </H2>
         {loading && <SmallText className="text-gray-400">Loading configuration...</SmallText>}
-        {error && <SmallText className="text-red-400">Unable to load config: {error.message}</SmallText>}
+        {error && (
+          <SmallText className="text-red-400">Unable to load config: {error.message}</SmallText>
+        )}
         {data && (
           <>
             <div className="flex flex-wrap gap-4 text-xs text-gray-400">
-              <span>Path: <code className="font-mono text-white">{data.path}</code></span>
+              <span>
+                Path: <code className="font-mono text-white">{data.path}</code>
+              </span>
               <span>Updated: {formatTime(data.modified_at)}</span>
               <span>Size: {formatBytes(data.size_bytes)}</span>
             </div>
@@ -240,20 +241,23 @@ const ConfigEditorCard: FC = () => {
               disabled={loading || saving}
             />
             {status && (
-              <SmallText className={status.tone === 'success' ? 'text-emerald-300' : 'text-red-400'}>
+              <SmallText
+                className={status.tone === "success" ? "text-emerald-300" : "text-red-400"}
+              >
                 {status.message}
               </SmallText>
             )}
             <div className="flex flex-wrap gap-3">
               <Button tone="violet" disabled={!dirty || saving} onClick={handleSave}>
-                {saving ? 'Saving…' : 'Save changes'}
+                {saving ? "Saving…" : "Save changes"}
               </Button>
               <Button variant="outline" disabled={!dirty || saving} onClick={handleReset}>
                 Discard
               </Button>
             </div>
             <SmallText className="text-gray-400">
-              Saving runs full validation (same as `niac validate`) before persisting so runtime changes stay safe.
+              Saving runs full validation (same as `niac validate`) before persisting so runtime
+              changes stay safe.
             </SmallText>
             <WalkFileBrowser files={walkFiles ?? []} onCopy={handleWalkCopy} />
           </>
@@ -266,8 +270,11 @@ const ConfigEditorCard: FC = () => {
 /**
  * Walk File Browser - Browse available SNMP walks
  */
-const WalkFileBrowser: FC<{ files: FileEntry[]; onCopy: (path: string) => void }> = ({ files, onCopy }) => {
-  if (!files.length) {
+const WalkFileBrowser: FC<{ files: FileEntry[]; onCopy: (path: string) => void }> = ({
+  files,
+  onCopy,
+}) => {
+  if (files.length === 0) {
     return null;
   }
   return (
@@ -275,7 +282,10 @@ const WalkFileBrowser: FC<{ files: FileEntry[]; onCopy: (path: string) => void }
       <SmallText className="text-gray-400">Available SNMP walks</SmallText>
       <div className="max-h-48 space-y-1 overflow-y-auto rounded-xl border border-white/10 bg-gray-950/50 p-2 text-sm text-gray-300">
         {files.map((file) => (
-          <div key={file.path} className="flex items-center justify-between gap-2 rounded-lg border border-white/5 bg-gray-900/50 px-3 py-2">
+          <div
+            key={file.path}
+            className="flex items-center justify-between gap-2 rounded-lg border border-white/5 bg-gray-900/50 px-3 py-2"
+          >
             <div>
               <p className="text-white">{file.name}</p>
               <SmallText className="text-gray-500">{file.path}</SmallText>

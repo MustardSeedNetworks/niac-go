@@ -351,7 +351,7 @@ SNMPv2-MIB::sysContact.0 = STRING: admin@test.com
 .1.3.6.1.2.1.4.20.1.1.192.168.1.1 = IpAddress: 192.168.1.1
 `
 
-	if err := os.WriteFile(inputFile, []byte(testData), 0644); err != nil {
+	if err := os.WriteFile(inputFile, []byte(testData), 0o644); err != nil {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
 
@@ -436,7 +436,7 @@ func TestSanitizeFileErrors(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create input file if needed
 			if !tt.expectError || !strings.Contains(tt.name, "does not exist") {
-				os.WriteFile(tt.inputFile, []byte("test"), 0644)
+				os.WriteFile(tt.inputFile, []byte("test"), 0o644)
 			}
 
 			mapping := &SanitizationMapping{
@@ -444,7 +444,15 @@ func TestSanitizeFileErrors(t *testing.T) {
 				Hostnames:  make(map[string]string),
 			}
 
-			err := sanitizeFile(tt.inputFile, tt.outputFile, mapping, "niac-go.com", "DC-WEST", "netadmin@niac-go.com", "public")
+			err := sanitizeFile(
+				tt.inputFile,
+				tt.outputFile,
+				mapping,
+				"niac-go.com",
+				"DC-WEST",
+				"netadmin@niac-go.com",
+				"public",
+			)
 
 			if tt.expectError && err == nil {
 				t.Error("sanitizeFile() expected error, got nil")
@@ -501,7 +509,11 @@ func TestLoadSaveMapping(t *testing.T) {
 	}
 
 	if loaded.Statistics.FilesProcessed != original.Statistics.FilesProcessed {
-		t.Errorf("Statistics mismatch: got %d, want %d", loaded.Statistics.FilesProcessed, original.Statistics.FilesProcessed)
+		t.Errorf(
+			"Statistics mismatch: got %d, want %d",
+			loaded.Statistics.FilesProcessed,
+			original.Statistics.FilesProcessed,
+		)
 	}
 }
 
@@ -521,7 +533,7 @@ func TestLoadMappingErrors(t *testing.T) {
 
 	// Test loading invalid JSON
 	invalidFile := filepath.Join(tmpDir, "invalid.json")
-	os.WriteFile(invalidFile, []byte("not valid json{{{"), 0644)
+	os.WriteFile(invalidFile, []byte("not valid json{{{"), 0o644)
 
 	err = loadMapping(invalidFile, mapping)
 	if err == nil {

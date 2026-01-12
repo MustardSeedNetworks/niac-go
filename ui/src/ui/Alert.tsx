@@ -1,7 +1,7 @@
-import { type FC, type ReactNode } from 'react';
-import { AlertCircle, CheckCircle, Info, AlertTriangle, X } from 'lucide-react';
+import { AlertCircle, AlertTriangle, CheckCircle, Info, X } from "lucide-react";
+import type { FC, ReactNode } from "react";
 
-export type AlertStatus = 'success' | 'error' | 'warning' | 'info';
+export type AlertStatus = "success" | "error" | "warning" | "info";
 
 export interface AlertProps {
   status: AlertStatus;
@@ -10,39 +10,37 @@ export interface AlertProps {
   className?: string;
 }
 
-const statusConfig: Record<AlertStatus, {
-  icon: typeof AlertCircle;
-  containerClass: string;
-  iconClass: string;
-}> = {
+const statusConfig: Record<
+  AlertStatus,
+  {
+    icon: typeof AlertCircle;
+    containerClass: string;
+    iconClass: string;
+  }
+> = {
   success: {
     icon: CheckCircle,
-    containerClass: 'border-green-500/30 bg-green-500/10 text-green-300',
-    iconClass: 'text-green-400',
+    containerClass: "border-green-500/30 bg-green-500/10 text-green-300",
+    iconClass: "text-green-400",
   },
   error: {
     icon: AlertCircle,
-    containerClass: 'border-red-500/30 bg-red-500/10 text-red-300',
-    iconClass: 'text-red-400',
+    containerClass: "border-red-500/30 bg-red-500/10 text-red-300",
+    iconClass: "text-red-400",
   },
   warning: {
     icon: AlertTriangle,
-    containerClass: 'border-yellow-500/30 bg-yellow-500/10 text-yellow-300',
-    iconClass: 'text-yellow-400',
+    containerClass: "border-yellow-500/30 bg-yellow-500/10 text-yellow-300",
+    iconClass: "text-yellow-400",
   },
   info: {
     icon: Info,
-    containerClass: 'border-blue-500/30 bg-blue-500/10 text-blue-300',
-    iconClass: 'text-blue-400',
+    containerClass: "border-blue-500/30 bg-blue-500/10 text-blue-300",
+    iconClass: "text-blue-400",
   },
 };
 
-export const Alert: FC<AlertProps> = ({
-  status,
-  children,
-  onDismiss,
-  className = '',
-}) => {
+export const Alert: FC<AlertProps> = ({ status, children, onDismiss, className = "" }) => {
   const config = statusConfig[status];
   const Icon = config.icon;
 

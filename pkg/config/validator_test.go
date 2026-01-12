@@ -10,6 +10,7 @@ func TestNewValidator(t *testing.T) {
 	if v == nil {
 		t.Fatal("Expected validator, got nil")
 	}
+
 	if v.file != "test.yaml" {
 		t.Errorf("Expected file='test.yaml', got '%s'", v.file)
 	}
@@ -32,6 +33,7 @@ func TestValidate_ValidConfig(t *testing.T) {
 
 	if !result.Valid {
 		t.Errorf("Expected valid configuration, got invalid. Errors: %d", len(result.Errors))
+
 		for _, err := range result.Errors {
 			t.Logf("  Error: %s: %s", err.Field, err.Message)
 		}
@@ -45,6 +47,7 @@ func TestValidate_NilConfig(t *testing.T) {
 	if result.Valid {
 		t.Error("Expected invalid for nil config")
 	}
+
 	if len(result.Errors) == 0 {
 		t.Error("Expected error for nil config")
 	}
@@ -61,6 +64,7 @@ func TestValidate_EmptyConfig(t *testing.T) {
 	if !result.Valid {
 		t.Error("Empty config should be valid (though warned)")
 	}
+
 	if len(result.Warnings) == 0 {
 		t.Error("Expected warning for empty config")
 	}
@@ -83,6 +87,7 @@ func TestValidate_MissingDeviceName(t *testing.T) {
 	if result.Valid {
 		t.Error("Expected invalid for missing device name")
 	}
+
 	if len(result.Errors) == 0 {
 		t.Error("Expected error for missing device name")
 	}
@@ -214,6 +219,7 @@ func TestValidate_InvalidThreshold(t *testing.T) {
 	if result.Valid {
 		t.Error("Expected invalid for threshold > 100")
 	}
+
 	if len(result.Errors) == 0 {
 		t.Error("Expected error for invalid threshold")
 	}

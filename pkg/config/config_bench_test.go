@@ -4,10 +4,11 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
-// BenchmarkLoadYAML_Small benchmarks loading a small YAML config
+// BenchmarkLoadYAML_Small benchmarks loading a small YAML config.
 func BenchmarkLoadYAML_Small(b *testing.B) {
 	// Create a minimal YAML config
 	yamlContent := `
@@ -19,18 +20,21 @@ devices:
 `
 
 	tmpDir := b.TempDir()
+
 	configFile := filepath.Join(tmpDir, "small.yaml")
-	if err := os.WriteFile(configFile, []byte(yamlContent), 0644); err != nil {
+	err := os.WriteFile(configFile, []byte(yamlContent), 0o600)
+	if err != nil {
 		b.Fatalf("Failed to create test file: %v", err)
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+
+	for b.Loop() {
 		_, _ = LoadYAML(configFile)
 	}
 }
 
-// BenchmarkLoadYAML_Medium benchmarks loading a medium YAML config
+// BenchmarkLoadYAML_Medium benchmarks loading a medium YAML config.
 func BenchmarkLoadYAML_Medium(b *testing.B) {
 	yamlContent := `
 devices:
@@ -55,25 +59,29 @@ devices:
 `
 
 	tmpDir := b.TempDir()
+
 	configFile := filepath.Join(tmpDir, "medium.yaml")
-	if err := os.WriteFile(configFile, []byte(yamlContent), 0644); err != nil {
+	err := os.WriteFile(configFile, []byte(yamlContent), 0o600)
+	if err != nil {
 		b.Fatalf("Failed to create test file: %v", err)
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+
+	for b.Loop() {
 		_, _ = LoadYAML(configFile)
 	}
 }
 
-// BenchmarkLoadYAML_Large benchmarks loading a large YAML config
+// BenchmarkLoadYAML_Large benchmarks loading a large YAML config.
 func BenchmarkLoadYAML_Large(b *testing.B) {
 	// Generate a larger config with multiple devices
 	yamlContent := `
 devices:
 `
-	for i := 0; i < 10; i++ {
-		yamlContent += `
+	var yamlContentSb75 strings.Builder
+	for i := range 10 {
+		yamlContentSb75.WriteString(`
   - name: device-` + string(rune('0'+i)) + `
     mac: "00:11:22:33:44:` + string(rune('0'+i)) + string(rune('0'+i)) + `"
     ips:
@@ -87,22 +95,26 @@ devices:
         - network: "192.168.` + string(rune('1'+i)) + `.0/24"
           range_start: "192.168.` + string(rune('1'+i)) + `.100"
           range_end: "192.168.` + string(rune('1'+i)) + `.200"
-`
+`)
 	}
+	yamlContent += yamlContentSb75.String()
 
 	tmpDir := b.TempDir()
+
 	configFile := filepath.Join(tmpDir, "large.yaml")
-	if err := os.WriteFile(configFile, []byte(yamlContent), 0644); err != nil {
+	err := os.WriteFile(configFile, []byte(yamlContent), 0o600)
+	if err != nil {
 		b.Fatalf("Failed to create test file: %v", err)
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+
+	for b.Loop() {
 		_, _ = LoadYAML(configFile)
 	}
 }
 
-// BenchmarkDeviceLookup benchmarks device iteration
+// BenchmarkDeviceLookup benchmarks device iteration.
 func BenchmarkDeviceLookup(b *testing.B) {
 	yamlContent := `
 devices:
@@ -113,15 +125,18 @@ devices:
 `
 
 	tmpDir := b.TempDir()
+
 	configFile := filepath.Join(tmpDir, "test.yaml")
-	if err := os.WriteFile(configFile, []byte(yamlContent), 0644); err != nil {
+	err := os.WriteFile(configFile, []byte(yamlContent), 0o600)
+	if err != nil {
 		b.Fatalf("Failed to create test file: %v", err)
 	}
 
 	cfg, _ := LoadYAML(configFile)
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+
+	for b.Loop() {
 		// Simple device iteration
 		for range cfg.Devices {
 			// Simulate lookup work
@@ -129,7 +144,7 @@ devices:
 	}
 }
 
-// BenchmarkParseYAML benchmarks YAML parsing only (no validation)
+// BenchmarkParseYAML benchmarks YAML parsing only (no validation).
 func BenchmarkParseYAML(b *testing.B) {
 	yamlContent := []byte(`
 devices:
@@ -140,20 +155,23 @@ devices:
 `)
 
 	tmpDir := b.TempDir()
+
 	configFile := filepath.Join(tmpDir, "test.yaml")
-	if err := os.WriteFile(configFile, yamlContent, 0644); err != nil {
+	err := os.WriteFile(configFile, yamlContent, 0o600)
+	if err != nil {
 		b.Fatalf("Failed to create test file: %v", err)
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+
+	for b.Loop() {
 		// Just measure file read and YAML parse time
 		data, _ := os.ReadFile(configFile)
 		_ = data
 	}
 }
 
-// BenchmarkConfigValidation_Simple benchmarks validating a simple configuration
+// BenchmarkConfigValidation_Simple benchmarks validating a simple configuration.
 func BenchmarkConfigValidation_Simple(b *testing.B) {
 	yamlContent := `
 devices:
@@ -164,22 +182,24 @@ devices:
 `
 
 	tmpDir := b.TempDir()
+
 	configFile := filepath.Join(tmpDir, "simple.yaml")
-	if err := os.WriteFile(configFile, []byte(yamlContent), 0644); err != nil {
+	err := os.WriteFile(configFile, []byte(yamlContent), 0o600)
+	if err != nil {
 		b.Fatalf("Failed to create test file: %v", err)
 	}
 
 	b.ReportAllocs()
 	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		cfg, _ := LoadYAML(configFile)
 		// Validation happens during LoadYAML
 		_ = cfg
 	}
 }
 
-// BenchmarkConfigValidation_Complex benchmarks validating a complex configuration
+// BenchmarkConfigValidation_Complex benchmarks validating a complex configuration.
 func BenchmarkConfigValidation_Complex(b *testing.B) {
 	yamlContent := `
 devices:
@@ -223,21 +243,23 @@ devices:
 `
 
 	tmpDir := b.TempDir()
+
 	configFile := filepath.Join(tmpDir, "complex.yaml")
-	if err := os.WriteFile(configFile, []byte(yamlContent), 0644); err != nil {
+	err := os.WriteFile(configFile, []byte(yamlContent), 0o600)
+	if err != nil {
 		b.Fatalf("Failed to create test file: %v", err)
 	}
 
 	b.ReportAllocs()
 	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		cfg, _ := LoadYAML(configFile)
 		_ = cfg
 	}
 }
 
-// BenchmarkConfigNormalization_MACAddress benchmarks MAC address normalization
+// BenchmarkConfigNormalization_MACAddress benchmarks MAC address normalization.
 func BenchmarkConfigNormalization_MACAddress(b *testing.B) {
 	macStrings := []string{
 		"00:11:22:33:44:55",
@@ -249,14 +271,14 @@ func BenchmarkConfigNormalization_MACAddress(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		for _, macStr := range macStrings {
 			_, _ = net.ParseMAC(macStr)
 		}
 	}
 }
 
-// BenchmarkConfigNormalization_IPAddress benchmarks IP address normalization
+// BenchmarkConfigNormalization_IPAddress benchmarks IP address normalization.
 func BenchmarkConfigNormalization_IPAddress(b *testing.B) {
 	ipStrings := []string{
 		"192.168.1.1",
@@ -268,14 +290,14 @@ func BenchmarkConfigNormalization_IPAddress(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		for _, ipStr := range ipStrings {
 			_ = net.ParseIP(ipStr)
 		}
 	}
 }
 
-// BenchmarkGetDeviceByMAC benchmarks device lookup by MAC address
+// BenchmarkGetDeviceByMAC benchmarks device lookup by MAC address.
 func BenchmarkGetDeviceByMAC(b *testing.B) {
 	yamlContent := `
 devices:
@@ -294,8 +316,10 @@ devices:
 `
 
 	tmpDir := b.TempDir()
+
 	configFile := filepath.Join(tmpDir, "test.yaml")
-	if err := os.WriteFile(configFile, []byte(yamlContent), 0644); err != nil {
+	err := os.WriteFile(configFile, []byte(yamlContent), 0o600)
+	if err != nil {
 		b.Fatalf("Failed to create test file: %v", err)
 	}
 
@@ -305,12 +329,12 @@ devices:
 	b.ReportAllocs()
 	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = cfg.GetDeviceByMAC(targetMAC)
 	}
 }
 
-// BenchmarkGetDeviceByIP benchmarks device lookup by IP address
+// BenchmarkGetDeviceByIP benchmarks device lookup by IP address.
 func BenchmarkGetDeviceByIP(b *testing.B) {
 	yamlContent := `
 devices:
@@ -329,8 +353,10 @@ devices:
 `
 
 	tmpDir := b.TempDir()
+
 	configFile := filepath.Join(tmpDir, "test.yaml")
-	if err := os.WriteFile(configFile, []byte(yamlContent), 0644); err != nil {
+	err := os.WriteFile(configFile, []byte(yamlContent), 0o600)
+	if err != nil {
 		b.Fatalf("Failed to create test file: %v", err)
 	}
 
@@ -340,12 +366,12 @@ devices:
 	b.ReportAllocs()
 	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = cfg.GetDeviceByIP(targetIP)
 	}
 }
 
-// BenchmarkLoadLegacyConfig benchmarks loading legacy format configuration
+// BenchmarkLoadLegacyConfig benchmarks loading legacy format configuration.
 func BenchmarkLoadLegacyConfig(b *testing.B) {
 	legacyContent := `
 # Legacy format config
@@ -360,44 +386,46 @@ device router-01 {
 `
 
 	tmpDir := b.TempDir()
+
 	configFile := filepath.Join(tmpDir, "legacy.cfg")
-	if err := os.WriteFile(configFile, []byte(legacyContent), 0644); err != nil {
+	err := os.WriteFile(configFile, []byte(legacyContent), 0o600)
+	if err != nil {
 		b.Fatalf("Failed to create test file: %v", err)
 	}
 
 	b.ReportAllocs()
 	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_, _ = LoadLegacy(configFile)
 	}
 }
 
-// BenchmarkParseSpeed benchmarks interface speed parsing
+// BenchmarkParseSpeed benchmarks interface speed parsing.
 func BenchmarkParseSpeed(b *testing.B) {
 	speeds := []string{"100M", "1G", "10G", "1000", "10000"}
 
 	b.ReportAllocs()
 	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		for _, speed := range speeds {
 			_, _ = ParseSpeed(speed)
 		}
 	}
 }
 
-// BenchmarkGenerateMAC benchmarks generating random MAC addresses
+// BenchmarkGenerateMAC benchmarks generating random MAC addresses.
 func BenchmarkGenerateMAC(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = GenerateMAC()
 	}
 }
 
-// BenchmarkConfigWithMultipleProtocols benchmarks loading config with multiple protocol configs
+// BenchmarkConfigWithMultipleProtocols benchmarks loading config with multiple protocol configs.
 func BenchmarkConfigWithMultipleProtocols(b *testing.B) {
 	yamlContent := `
 devices:
@@ -436,15 +464,17 @@ devices:
 `
 
 	tmpDir := b.TempDir()
+
 	configFile := filepath.Join(tmpDir, "multiproto.yaml")
-	if err := os.WriteFile(configFile, []byte(yamlContent), 0644); err != nil {
+	err := os.WriteFile(configFile, []byte(yamlContent), 0o600)
+	if err != nil {
 		b.Fatalf("Failed to create test file: %v", err)
 	}
 
 	b.ReportAllocs()
 	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_, _ = LoadYAML(configFile)
 	}
 }

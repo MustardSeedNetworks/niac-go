@@ -4,19 +4,20 @@
  * Centralized definitions for device types, icons, colors, and labels
  * used across the application.
  */
-import type { FC } from 'react';
+
 import {
+  Cpu,
+  HardDrive,
+  Laptop,
+  Monitor,
+  Network,
   Router,
   Server,
-  Wifi,
   Shield,
-  HardDrive,
-  Monitor,
-  Cpu,
-  Network,
-  Laptop,
-} from 'lucide-react';
-import type { DeviceType } from '../api/types';
+  Wifi,
+} from "lucide-react";
+import type { FC } from "react";
+import type { DeviceType } from "../api/types";
 
 // Icon type for lucide-react components
 type LucideIcon = FC<{ className?: string }>;
@@ -46,7 +47,7 @@ export const topologyDeviceIcons: Record<string, LucideIcon> = {
   firewall: Shield,
   server: Server,
   workstation: Laptop,
-  'access-point': Wifi,
+  "access-point": Wifi,
   access_point: Wifi,
   ap: Wifi,
   iot: Cpu,
@@ -57,20 +58,20 @@ export const topologyDeviceIcons: Record<string, LucideIcon> = {
 /**
  * Tag color scheme type for UI components
  */
-export type TagColorScheme = 'blue' | 'green' | 'purple' | 'yellow' | 'red' | 'gray';
+export type TagColorScheme = "blue" | "green" | "purple" | "yellow" | "red" | "gray";
 
 /**
  * Device type colors for Tag components
  */
 export const deviceTypeColors: Record<DeviceType, TagColorScheme> = {
-  router: 'blue',
-  switch: 'green',
-  access_point: 'purple',
-  firewall: 'red',
-  server: 'yellow',
-  workstation: 'gray',
-  iot: 'purple',
-  unknown: 'gray',
+  router: "blue",
+  switch: "green",
+  access_point: "purple",
+  firewall: "red",
+  server: "yellow",
+  workstation: "gray",
+  iot: "purple",
+  unknown: "gray",
 };
 
 /**
@@ -78,31 +79,31 @@ export const deviceTypeColors: Record<DeviceType, TagColorScheme> = {
  * Uses CSS variables defined in the theme
  */
 export const topologyDeviceColors: Record<string, string> = {
-  router: 'var(--color-device-router)',
-  switch: 'var(--color-device-switch)',
-  firewall: 'var(--color-device-firewall)',
-  server: 'var(--color-device-server)',
-  workstation: 'var(--color-device-workstation)',
-  'access-point': 'var(--color-device-ap)',
-  access_point: 'var(--color-device-ap)',
-  ap: 'var(--color-device-ap)',
-  iot: 'var(--color-device-iot)',
-  storage: 'var(--color-device-storage)',
-  unknown: 'var(--color-device-unknown)',
+  router: "var(--color-device-router)",
+  switch: "var(--color-device-switch)",
+  firewall: "var(--color-device-firewall)",
+  server: "var(--color-device-server)",
+  workstation: "var(--color-device-workstation)",
+  "access-point": "var(--color-device-ap)",
+  access_point: "var(--color-device-ap)",
+  ap: "var(--color-device-ap)",
+  iot: "var(--color-device-iot)",
+  storage: "var(--color-device-storage)",
+  unknown: "var(--color-device-unknown)",
 };
 
 /**
  * Device type options for select/dropdown components
  */
 export const deviceTypeOptions: { value: DeviceType; label: string }[] = [
-  { value: 'router', label: 'Router' },
-  { value: 'switch', label: 'Switch' },
-  { value: 'access_point', label: 'Access Point' },
-  { value: 'firewall', label: 'Firewall' },
-  { value: 'server', label: 'Server' },
-  { value: 'workstation', label: 'Workstation' },
-  { value: 'iot', label: 'IoT Device' },
-  { value: 'unknown', label: 'Unknown' },
+  { value: "router", label: "Router" },
+  { value: "switch", label: "Switch" },
+  { value: "access_point", label: "Access Point" },
+  { value: "firewall", label: "Firewall" },
+  { value: "server", label: "Server" },
+  { value: "workstation", label: "Workstation" },
+  { value: "iot", label: "IoT Device" },
+  { value: "unknown", label: "Unknown" },
 ];
 
 /**
@@ -125,7 +126,7 @@ export function getDeviceColor(type: DeviceType | string): TagColorScheme {
   if (type in deviceTypeColors) {
     return deviceTypeColors[type as DeviceType];
   }
-  return 'gray';
+  return "gray";
 }
 
 /**
@@ -140,7 +141,7 @@ export function getTopologyDeviceColor(type: string): string {
  */
 export function getDeviceLabel(type: DeviceType): string {
   const option = deviceTypeOptions.find((opt) => opt.value === type);
-  return option?.label || 'Unknown';
+  return option?.label || "Unknown";
 }
 
 /**
@@ -148,12 +149,12 @@ export function getDeviceLabel(type: DeviceType): string {
  * Used for icon backgrounds and text colors
  */
 const deviceColorClasses: Record<TagColorScheme, { bg: string; text: string }> = {
-  blue: { bg: 'bg-blue-500/20', text: 'text-blue-400' },
-  green: { bg: 'bg-green-500/20', text: 'text-green-400' },
-  purple: { bg: 'bg-purple-500/20', text: 'text-purple-400' },
-  yellow: { bg: 'bg-yellow-500/20', text: 'text-yellow-400' },
-  red: { bg: 'bg-red-500/20', text: 'text-red-400' },
-  gray: { bg: 'bg-gray-500/20', text: 'text-gray-400' },
+  blue: { bg: "bg-blue-500/20", text: "text-blue-400" },
+  green: { bg: "bg-green-500/20", text: "text-green-400" },
+  purple: { bg: "bg-purple-500/20", text: "text-purple-400" },
+  yellow: { bg: "bg-yellow-500/20", text: "text-yellow-400" },
+  red: { bg: "bg-red-500/20", text: "text-red-400" },
+  gray: { bg: "bg-gray-500/20", text: "text-gray-400" },
 };
 
 /**

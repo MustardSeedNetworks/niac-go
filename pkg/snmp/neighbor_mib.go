@@ -1,10 +1,10 @@
-// Package snmp implements SNMP agent functionality including MIB management and trap sending
 package snmp
 
 import (
 	"encoding/hex"
 	"fmt"
-	"log"
+	"log/slog"
+	"strconv"
 	"strings"
 	"time"
 
@@ -15,14 +15,14 @@ import (
 // LLDP-MIB OID prefixes (IEEE 802.1AB)
 // Reference: http://www.ieee802.org/1/files/public/MIBs/LLDP-MIB-200505060000Z.txt
 const (
-	// lldpMIB (1.0.8802.1.1.2)
+	// lldpMIB (1.0.8802.1.1.2).
 	lldpMIBBase = "1.0.8802.1.1.2"
 
-	// lldpObjects (1.0.8802.1.1.2.1)
+	// lldpObjects (1.0.8802.1.1.2.1).
 	lldpObjects = lldpMIBBase + ".1"
 
-	// lldpLocalSystemData (1.0.8802.1.1.2.1.3)
-	lldpLocalSystemData = lldpObjects + ".3"
+	// lldpLocalSystemData (1.0.8802.1.1.2.1.3).
+	lldpLocalSystemData     = lldpObjects + ".3"
 	lldpLocChassisIdSubtype = lldpLocalSystemData + ".1.0"
 	lldpLocChassisId        = lldpLocalSystemData + ".2.0"
 	lldpLocSysName          = lldpLocalSystemData + ".3.0"
@@ -30,204 +30,204 @@ const (
 	lldpLocSysCapSupported  = lldpLocalSystemData + ".5.0"
 	lldpLocSysCapEnabled    = lldpLocalSystemData + ".6.0"
 
-	// lldpLocPortTable (1.0.8802.1.1.2.1.3.7)
+	// lldpLocPortTable (1.0.8802.1.1.2.1.3.7).
 	lldpLocPortTable = lldpLocalSystemData + ".7"
 
-	// lldpRemoteSystemsData (1.0.8802.1.1.2.1.4)
+	// lldpRemoteSystemsData (1.0.8802.1.1.2.1.4).
 	lldpRemoteSystemsData = lldpObjects + ".4"
 
 	// lldpRemTable (1.0.8802.1.1.2.1.4.1)
-	// Index: lldpRemTimeMark, lldpRemLocalPortNum, lldpRemIndex
+	// Index: lldpRemTimeMark, lldpRemLocalPortNum, lldpRemIndex.
 	lldpRemTable = lldpRemoteSystemsData + ".1"
 )
 
 // CDP-MIB OID prefixes (Cisco Discovery Protocol)
 // Reference: https://www.cisco.com/c/en/us/td/docs/net_mgmt/prime/network/3-8/reference/guide/CiscoPrimeNetworkMIBs/CiscoCdpMib.html
 const (
-	// ciscoCdpMIB (1.3.6.1.4.1.9.9.23)
+	// ciscoCdpMIB (1.3.6.1.4.1.9.9.23).
 	cdpMIBBase = "1.3.6.1.4.1.9.9.23"
 
-	// cdpGlobal (1.3.6.1.4.1.9.9.23.1.1)
-	cdpGlobal            = cdpMIBBase + ".1.1"
-	cdpGlobalRun         = cdpGlobal + ".1.0" // Is CDP running (TruthValue)
+	// cdpGlobal (1.3.6.1.4.1.9.9.23.1.1).
+	cdpGlobal                = cdpMIBBase + ".1.1"
+	cdpGlobalRun             = cdpGlobal + ".1.0" // Is CDP running (TruthValue)
 	cdpGlobalMessageInterval = cdpGlobal + ".2.0" // CDP message interval (seconds)
-	cdpGlobalHoldTime    = cdpGlobal + ".3.0" // CDP holdtime (seconds)
-	cdpGlobalDeviceId    = cdpGlobal + ".6.0" // Local device ID
+	cdpGlobalHoldTime        = cdpGlobal + ".3.0" // CDP holdtime (seconds)
+	cdpGlobalDeviceId        = cdpGlobal + ".6.0" // Local device ID
 
-	// cdpCache (1.3.6.1.4.1.9.9.23.1.2)
+	// cdpCache (1.3.6.1.4.1.9.9.23.1.2).
 	cdpCache = cdpMIBBase + ".1.2"
 
 	// cdpCacheTable (1.3.6.1.4.1.9.9.23.1.2.1)
-	// Index: cdpCacheIfIndex, cdpCacheDeviceIndex
+	// Index: cdpCacheIfIndex, cdpCacheDeviceIndex.
 	cdpCacheTable = cdpCache + ".1"
 )
 
-// IP-MIB OID prefixes
+// IP-MIB OID prefixes.
 const (
-	// ip (1.3.6.1.2.1.4)
+	// ip (1.3.6.1.2.1.4).
 	ipMIBBase = "1.3.6.1.2.1.4"
 
-	// ipAddrTable (1.3.6.1.2.1.4.20)
-	ipAddrTable = ipMIBBase + ".20"
-	ipAddrEntry = ipAddrTable + ".1"
-	ipAdEntAddr      = ipAddrEntry + ".1" // IP address (index)
-	ipAdEntIfIndex   = ipAddrEntry + ".2" // Interface index
-	ipAdEntNetMask   = ipAddrEntry + ".3" // Subnet mask
-	ipAdEntBcastAddr = ipAddrEntry + ".4" // Broadcast address LSB (0 or 1)
+	// ipAddrTable (1.3.6.1.2.1.4.20).
+	ipAddrTable         = ipMIBBase + ".20"
+	ipAddrEntry         = ipAddrTable + ".1"
+	ipAdEntAddr         = ipAddrEntry + ".1" // IP address (index)
+	ipAdEntIfIndex      = ipAddrEntry + ".2" // Interface index
+	ipAdEntNetMask      = ipAddrEntry + ".3" // Subnet mask
+	ipAdEntBcastAddr    = ipAddrEntry + ".4" // Broadcast address LSB (0 or 1)
 	ipAdEntReasmMaxSize = ipAddrEntry + ".5" // Max reassembly size
 
-	// ipRouteTable (1.3.6.1.2.1.4.21) - deprecated but still commonly used
-	ipRouteTable = ipMIBBase + ".21"
-	ipRouteEntry = ipRouteTable + ".1"
-	ipRouteDest     = ipRouteEntry + ".1"  // Destination
-	ipRouteIfIndex  = ipRouteEntry + ".2"  // Interface index
-	ipRouteMetric1  = ipRouteEntry + ".3"  // Metric
-	ipRouteNextHop  = ipRouteEntry + ".7"  // Next hop
-	ipRouteType     = ipRouteEntry + ".8"  // Route type (1=other,2=invalid,3=direct,4=indirect)
-	ipRouteProto    = ipRouteEntry + ".9"  // Protocol (1=other,2=local,3=netmgmt,4=icmp,etc.)
-	ipRouteMask     = ipRouteEntry + ".11" // Subnet mask
+	// ipRouteTable (1.3.6.1.2.1.4.21) - deprecated but still commonly used.
+	ipRouteTable   = ipMIBBase + ".21"
+	ipRouteEntry   = ipRouteTable + ".1"
+	ipRouteDest    = ipRouteEntry + ".1"  // Destination
+	ipRouteIfIndex = ipRouteEntry + ".2"  // Interface index
+	ipRouteMetric1 = ipRouteEntry + ".3"  // Metric
+	ipRouteNextHop = ipRouteEntry + ".7"  // Next hop
+	ipRouteType    = ipRouteEntry + ".8"  // Route type (1=other,2=invalid,3=direct,4=indirect)
+	ipRouteProto   = ipRouteEntry + ".9"  // Protocol (1=other,2=local,3=netmgmt,4=icmp,etc.)
+	ipRouteMask    = ipRouteEntry + ".11" // Subnet mask
 
-	// ipNetToMediaTable (1.3.6.1.2.1.4.22) - ARP table
-	ipNetToMediaTable = ipMIBBase + ".22"
-	ipNetToMediaEntry = ipNetToMediaTable + ".1"
+	// ipNetToMediaTable (1.3.6.1.2.1.4.22) - ARP table.
+	ipNetToMediaTable       = ipMIBBase + ".22"
+	ipNetToMediaEntry       = ipNetToMediaTable + ".1"
 	ipNetToMediaIfIndex     = ipNetToMediaEntry + ".1" // Interface index (index)
 	ipNetToMediaPhysAddress = ipNetToMediaEntry + ".2" // MAC address
 	ipNetToMediaNetAddress  = ipNetToMediaEntry + ".3" // IP address (index)
 	ipNetToMediaType        = ipNetToMediaEntry + ".4" // Type (1=other,2=invalid,3=dynamic,4=static)
 )
 
-// BRIDGE-MIB OID prefixes (dot1dBridge)
+// BRIDGE-MIB OID prefixes (dot1dBridge).
 const (
-	// dot1dBridge (1.3.6.1.2.1.17)
+	// dot1dBridge (1.3.6.1.2.1.17).
 	dot1dBridge = "1.3.6.1.2.1.17"
 
-	// dot1dBase (1.3.6.1.2.1.17.1)
-	dot1dBase            = dot1dBridge + ".1"
+	// dot1dBase (1.3.6.1.2.1.17.1).
+	dot1dBase              = dot1dBridge + ".1"
 	dot1dBaseBridgeAddress = dot1dBase + ".1.0" // Bridge MAC address
-	dot1dBaseNumPorts    = dot1dBase + ".2.0"   // Number of ports
-	dot1dBaseType        = dot1dBase + ".3.0"   // Bridge type (1=unknown,2=transparent-only,3=sourceroute-only,4=srt)
+	dot1dBaseNumPorts      = dot1dBase + ".2.0" // Number of ports
+	dot1dBaseType          = dot1dBase + ".3.0" // Bridge type (1=unknown,2=transparent-only,3=sourceroute-only,4=srt)
 
-	// dot1dBasePortTable (1.3.6.1.2.1.17.1.4)
-	dot1dBasePortTable = dot1dBase + ".4"
-	dot1dBasePortEntry = dot1dBasePortTable + ".1"
-	dot1dBasePort         = dot1dBasePortEntry + ".1" // Port number (index)
-	dot1dBasePortIfIndex  = dot1dBasePortEntry + ".2" // IF-MIB interface index
-	dot1dBasePortCircuit  = dot1dBasePortEntry + ".3" // Circuit ID
+	// dot1dBasePortTable (1.3.6.1.2.1.17.1.4).
+	dot1dBasePortTable                 = dot1dBase + ".4"
+	dot1dBasePortEntry                 = dot1dBasePortTable + ".1"
+	dot1dBasePort                      = dot1dBasePortEntry + ".1" // Port number (index)
+	dot1dBasePortIfIndex               = dot1dBasePortEntry + ".2" // IF-MIB interface index
+	dot1dBasePortCircuit               = dot1dBasePortEntry + ".3" // Circuit ID
 	dot1dBasePortDelayExceededDiscards = dot1dBasePortEntry + ".4"
 	dot1dBasePortMtuExceededDiscards   = dot1dBasePortEntry + ".5"
 
-	// dot1dStp (1.3.6.1.2.1.17.2) - Spanning Tree
-	dot1dStp              = dot1dBridge + ".2"
-	dot1dStpProtocolSpecification = dot1dStp + ".1.0" // STP spec (1=unknown,2=decLb100,3=ieee8021d)
-	dot1dStpPriority      = dot1dStp + ".2.0"         // Bridge priority
+	// dot1dStp (1.3.6.1.2.1.17.2) - Spanning Tree.
+	dot1dStp                        = dot1dBridge + ".2"
+	dot1dStpProtocolSpecification   = dot1dStp + ".1.0" // STP spec (1=unknown,2=decLb100,3=ieee8021d)
+	dot1dStpPriority                = dot1dStp + ".2.0" // Bridge priority
 	dot1dStpTimeSinceTopologyChange = dot1dStp + ".3.0"
-	dot1dStpTopChanges    = dot1dStp + ".4.0"
-	dot1dStpDesignatedRoot = dot1dStp + ".5.0"
-	dot1dStpRootCost      = dot1dStp + ".6.0"
-	dot1dStpRootPort      = dot1dStp + ".7.0"
-	dot1dStpMaxAge        = dot1dStp + ".8.0"  // hundredths of second
-	dot1dStpHelloTime     = dot1dStp + ".9.0"
-	dot1dStpHoldTime      = dot1dStp + ".10.0"
-	dot1dStpForwardDelay  = dot1dStp + ".11.0"
-	dot1dStpBridgeMaxAge  = dot1dStp + ".12.0"
-	dot1dStpBridgeHelloTime = dot1dStp + ".13.0"
-	dot1dStpBridgeForwardDelay = dot1dStp + ".14.0"
+	dot1dStpTopChanges              = dot1dStp + ".4.0"
+	dot1dStpDesignatedRoot          = dot1dStp + ".5.0"
+	dot1dStpRootCost                = dot1dStp + ".6.0"
+	dot1dStpRootPort                = dot1dStp + ".7.0"
+	dot1dStpMaxAge                  = dot1dStp + ".8.0" // hundredths of second
+	dot1dStpHelloTime               = dot1dStp + ".9.0"
+	dot1dStpHoldTime                = dot1dStp + ".10.0"
+	dot1dStpForwardDelay            = dot1dStp + ".11.0"
+	dot1dStpBridgeMaxAge            = dot1dStp + ".12.0"
+	dot1dStpBridgeHelloTime         = dot1dStp + ".13.0"
+	dot1dStpBridgeForwardDelay      = dot1dStp + ".14.0"
 
-	// dot1dStpPortTable (1.3.6.1.2.1.17.2.15)
-	dot1dStpPortTable = dot1dStp + ".15"
-	dot1dStpPortEntry = dot1dStpPortTable + ".1"
-	dot1dStpPort         = dot1dStpPortEntry + ".1"  // Port number (index)
-	dot1dStpPortPriority = dot1dStpPortEntry + ".2"
-	dot1dStpPortState    = dot1dStpPortEntry + ".3"  // 1=disabled,2=blocking,3=listening,4=learning,5=forwarding,6=broken
-	dot1dStpPortEnable   = dot1dStpPortEntry + ".4"  // 1=enabled,2=disabled
-	dot1dStpPortPathCost = dot1dStpPortEntry + ".5"
-	dot1dStpPortDesignatedRoot   = dot1dStpPortEntry + ".6"
-	dot1dStpPortDesignatedCost   = dot1dStpPortEntry + ".7"
-	dot1dStpPortDesignatedBridge = dot1dStpPortEntry + ".8"
-	dot1dStpPortDesignatedPort   = dot1dStpPortEntry + ".9"
+	// dot1dStpPortTable (1.3.6.1.2.1.17.2.15).
+	dot1dStpPortTable              = dot1dStp + ".15"
+	dot1dStpPortEntry              = dot1dStpPortTable + ".1"
+	dot1dStpPort                   = dot1dStpPortEntry + ".1" // Port number (index)
+	dot1dStpPortPriority           = dot1dStpPortEntry + ".2"
+	dot1dStpPortState              = dot1dStpPortEntry + ".3" // 1=disabled,2=blocking,3=listening,4=learning,5=forwarding,6=broken
+	dot1dStpPortEnable             = dot1dStpPortEntry + ".4" // 1=enabled,2=disabled
+	dot1dStpPortPathCost           = dot1dStpPortEntry + ".5"
+	dot1dStpPortDesignatedRoot     = dot1dStpPortEntry + ".6"
+	dot1dStpPortDesignatedCost     = dot1dStpPortEntry + ".7"
+	dot1dStpPortDesignatedBridge   = dot1dStpPortEntry + ".8"
+	dot1dStpPortDesignatedPort     = dot1dStpPortEntry + ".9"
 	dot1dStpPortForwardTransitions = dot1dStpPortEntry + ".10"
 
-	// dot1dTp (1.3.6.1.2.1.17.4) - Transparent Bridging
-	dot1dTp = dot1dBridge + ".4"
+	// dot1dTp (1.3.6.1.2.1.17.4) - Transparent Bridging.
+	dot1dTp                     = dot1dBridge + ".4"
 	dot1dTpLearnedEntryDiscards = dot1dTp + ".1.0"
-	dot1dTpAgingTime = dot1dTp + ".2.0"
+	dot1dTpAgingTime            = dot1dTp + ".2.0"
 
-	// dot1dTpFdbTable (1.3.6.1.2.1.17.4.3) - Forwarding Database
-	dot1dTpFdbTable = dot1dTp + ".3"
-	dot1dTpFdbEntry = dot1dTpFdbTable + ".1"
+	// dot1dTpFdbTable (1.3.6.1.2.1.17.4.3) - Forwarding Database.
+	dot1dTpFdbTable   = dot1dTp + ".3"
+	dot1dTpFdbEntry   = dot1dTpFdbTable + ".1"
 	dot1dTpFdbAddress = dot1dTpFdbEntry + ".1" // MAC address (index)
 	dot1dTpFdbPort    = dot1dTpFdbEntry + ".2" // Port learned on
 	dot1dTpFdbStatus  = dot1dTpFdbEntry + ".3" // 1=other,2=invalid,3=learned,4=self,5=mgmt
 
-	// dot1dTpPortTable (1.3.6.1.2.1.17.4.4)
-	dot1dTpPortTable = dot1dTp + ".4"
-	dot1dTpPortEntry = dot1dTpPortTable + ".1"
-	dot1dTpPort        = dot1dTpPortEntry + ".1" // Port number (index)
-	dot1dTpPortMaxInfo = dot1dTpPortEntry + ".2" // Max frame size
-	dot1dTpPortInFrames  = dot1dTpPortEntry + ".3"
-	dot1dTpPortOutFrames = dot1dTpPortEntry + ".4"
+	// dot1dTpPortTable (1.3.6.1.2.1.17.4.4).
+	dot1dTpPortTable      = dot1dTp + ".4"
+	dot1dTpPortEntry      = dot1dTpPortTable + ".1"
+	dot1dTpPort           = dot1dTpPortEntry + ".1" // Port number (index)
+	dot1dTpPortMaxInfo    = dot1dTpPortEntry + ".2" // Max frame size
+	dot1dTpPortInFrames   = dot1dTpPortEntry + ".3"
+	dot1dTpPortOutFrames  = dot1dTpPortEntry + ".4"
 	dot1dTpPortInDiscards = dot1dTpPortEntry + ".5"
 )
 
-// IF-MIB OID prefixes
+// IF-MIB OID prefixes.
 const (
-	// ifMIB (1.3.6.1.2.1.2)
+	// ifMIB (1.3.6.1.2.1.2).
 	ifMIBBase = "1.3.6.1.2.1.2"
 	ifNumber  = ifMIBBase + ".1.0" // Number of interfaces
 
 	// ifTable (1.3.6.1.2.1.2.2)
-	// Index: ifIndex
-	ifTable        = ifMIBBase + ".2"
-	ifEntry        = ifTable + ".1"
-	ifIndex        = ifEntry + ".1"  // Interface index
-	ifDescr        = ifEntry + ".2"  // Interface description
-	ifType         = ifEntry + ".3"  // Interface type (6=ethernetCsmacd)
-	ifMtu          = ifEntry + ".4"  // MTU
-	ifSpeed        = ifEntry + ".5"  // Speed (bps) - 32-bit, may overflow for high speeds
-	ifPhysAddress  = ifEntry + ".6"  // MAC address
-	ifAdminStatus  = ifEntry + ".7"  // Admin status (up=1, down=2, testing=3)
-	ifOperStatus   = ifEntry + ".8"  // Oper status (up=1, down=2, etc.)
-	ifLastChange   = ifEntry + ".9"  // Last state change (timeticks)
-	ifInOctets     = ifEntry + ".10" // Input octets (bytes)
-	ifInUcastPkts  = ifEntry + ".11" // Input unicast packets
-	ifInNUcastPkts = ifEntry + ".12" // Input non-unicast packets (broadcast/multicast)
-	ifInDiscards   = ifEntry + ".13" // Input discards
-	ifInErrors     = ifEntry + ".14" // Input errors
+	// Index: ifIndex.
+	ifTable           = ifMIBBase + ".2"
+	ifEntry           = ifTable + ".1"
+	ifIndex           = ifEntry + ".1"  // Interface index
+	ifDescr           = ifEntry + ".2"  // Interface description
+	ifType            = ifEntry + ".3"  // Interface type (6=ethernetCsmacd)
+	ifMtu             = ifEntry + ".4"  // MTU
+	ifSpeed           = ifEntry + ".5"  // Speed (bps) - 32-bit, may overflow for high speeds
+	ifPhysAddress     = ifEntry + ".6"  // MAC address
+	ifAdminStatus     = ifEntry + ".7"  // Admin status (up=1, down=2, testing=3)
+	ifOperStatus      = ifEntry + ".8"  // Oper status (up=1, down=2, etc.)
+	ifLastChange      = ifEntry + ".9"  // Last state change (timeticks)
+	ifInOctets        = ifEntry + ".10" // Input octets (bytes)
+	ifInUcastPkts     = ifEntry + ".11" // Input unicast packets
+	ifInNUcastPkts    = ifEntry + ".12" // Input non-unicast packets (broadcast/multicast)
+	ifInDiscards      = ifEntry + ".13" // Input discards
+	ifInErrors        = ifEntry + ".14" // Input errors
 	ifInUnknownProtos = ifEntry + ".15" // Unknown protocol packets
-	ifOutOctets    = ifEntry + ".16" // Output octets
-	ifOutUcastPkts = ifEntry + ".17" // Output unicast packets
-	ifOutNUcastPkts = ifEntry + ".18" // Output non-unicast packets
-	ifOutDiscards  = ifEntry + ".19" // Output discards
-	ifOutErrors    = ifEntry + ".20" // Output errors
-	ifOutQLen      = ifEntry + ".21" // Output queue length
-	ifSpecific     = ifEntry + ".22" // Specific pointer (deprecated)
+	ifOutOctets       = ifEntry + ".16" // Output octets
+	ifOutUcastPkts    = ifEntry + ".17" // Output unicast packets
+	ifOutNUcastPkts   = ifEntry + ".18" // Output non-unicast packets
+	ifOutDiscards     = ifEntry + ".19" // Output discards
+	ifOutErrors       = ifEntry + ".20" // Output errors
+	ifOutQLen         = ifEntry + ".21" // Output queue length
+	ifSpecific        = ifEntry + ".22" // Specific pointer (deprecated)
 
-	// ifXTable (1.3.6.1.2.1.31.1.1) - Extended interface table for high-speed interfaces
-	ifMIBObjects     = "1.3.6.1.2.1.31.1"
-	ifXTable         = ifMIBObjects + ".1"
-	ifXEntry         = ifXTable + ".1"
-	ifName           = ifXEntry + ".1"  // Interface name (canonical)
-	ifInMulticastPkts = ifXEntry + ".2"  // Input multicast packets
-	ifInBroadcastPkts = ifXEntry + ".3"  // Input broadcast packets
-	ifOutMulticastPkts = ifXEntry + ".4" // Output multicast packets
-	ifOutBroadcastPkts = ifXEntry + ".5" // Output broadcast packets
-	ifHCInOctets     = ifXEntry + ".6"   // Input octets (64-bit)
-	ifHCInUcastPkts  = ifXEntry + ".7"   // Input unicast packets (64-bit)
-	ifHCInMulticastPkts = ifXEntry + ".8" // Input multicast packets (64-bit)
-	ifHCInBroadcastPkts = ifXEntry + ".9" // Input broadcast packets (64-bit)
-	ifHCOutOctets    = ifXEntry + ".10"  // Output octets (64-bit)
-	ifHCOutUcastPkts = ifXEntry + ".11"  // Output unicast packets (64-bit)
-	ifHCOutMulticastPkts = ifXEntry + ".12" // Output multicast packets (64-bit)
-	ifHCOutBroadcastPkts = ifXEntry + ".13" // Output broadcast packets (64-bit)
-	ifLinkUpDownTrapEnable = ifXEntry + ".14" // Link trap enable
-	ifHighSpeed      = ifXEntry + ".15"  // Interface speed in Mbps (for high-speed)
-	ifPromiscuousMode = ifXEntry + ".16" // Promiscuous mode
-	ifConnectorPresent = ifXEntry + ".17" // Physical connector present
-	ifAlias          = ifXEntry + ".18"  // Interface alias/description
+	// ifXTable (1.3.6.1.2.1.31.1.1) - Extended interface table for high-speed interfaces.
+	ifMIBObjects               = "1.3.6.1.2.1.31.1"
+	ifXTable                   = ifMIBObjects + ".1"
+	ifXEntry                   = ifXTable + ".1"
+	ifName                     = ifXEntry + ".1"  // Interface name (canonical)
+	ifInMulticastPkts          = ifXEntry + ".2"  // Input multicast packets
+	ifInBroadcastPkts          = ifXEntry + ".3"  // Input broadcast packets
+	ifOutMulticastPkts         = ifXEntry + ".4"  // Output multicast packets
+	ifOutBroadcastPkts         = ifXEntry + ".5"  // Output broadcast packets
+	ifHCInOctets               = ifXEntry + ".6"  // Input octets (64-bit)
+	ifHCInUcastPkts            = ifXEntry + ".7"  // Input unicast packets (64-bit)
+	ifHCInMulticastPkts        = ifXEntry + ".8"  // Input multicast packets (64-bit)
+	ifHCInBroadcastPkts        = ifXEntry + ".9"  // Input broadcast packets (64-bit)
+	ifHCOutOctets              = ifXEntry + ".10" // Output octets (64-bit)
+	ifHCOutUcastPkts           = ifXEntry + ".11" // Output unicast packets (64-bit)
+	ifHCOutMulticastPkts       = ifXEntry + ".12" // Output multicast packets (64-bit)
+	ifHCOutBroadcastPkts       = ifXEntry + ".13" // Output broadcast packets (64-bit)
+	ifLinkUpDownTrapEnable     = ifXEntry + ".14" // Link trap enable
+	ifHighSpeed                = ifXEntry + ".15" // Interface speed in Mbps (for high-speed)
+	ifPromiscuousMode          = ifXEntry + ".16" // Promiscuous mode
+	ifConnectorPresent         = ifXEntry + ".17" // Physical connector present
+	ifAlias                    = ifXEntry + ".18" // Interface alias/description
 	ifCounterDiscontinuityTime = ifXEntry + ".19" // Counter discontinuity time
 )
 
-// initializeNeighborMIBs initializes LLDP-MIB, CDP-MIB, IF-MIB, IP-MIB, and BRIDGE-MIB based on device configuration
+// initializeNeighborMIBs initializes LLDP-MIB, CDP-MIB, IF-MIB, IP-MIB, and BRIDGE-MIB based on device configuration.
 func (a *Agent) initializeNeighborMIBs() {
 	device := a.device
 	if device == nil {
@@ -255,7 +255,7 @@ func (a *Agent) initializeNeighborMIBs() {
 	}
 }
 
-// initializeIFMIB populates IF-MIB interface table
+// initializeIFMIB populates IF-MIB interface table.
 func (a *Agent) initializeIFMIB() {
 	device := a.device
 	if device == nil {
@@ -289,13 +289,13 @@ func (a *Agent) initializeIFMIB() {
 	}
 
 	if a.debugLevel >= 2 {
-		log.Printf("Initialized IF-MIB with %d interfaces for device %s", numInterfaces, device.Name)
+		slog.Info("Initialized IF-MIB", "interfaces", numInterfaces, "device", device.Name)
 	}
 }
 
-// createInterfaceEntry creates a single interface entry in IF-MIB with complete counters
+// createInterfaceEntry creates a single interface entry in IF-MIB with complete counters.
 func (a *Agent) createInterfaceEntry(ifIdx int, interfaceName, mac string, speedBps uint64) {
-	idxStr := fmt.Sprintf("%d", ifIdx)
+	idxStr := strconv.Itoa(ifIdx)
 
 	// =========== ifTable entries ===========
 
@@ -324,13 +324,13 @@ func (a *Agent) createInterfaceEntry(ifIdx int, interfaceName, mac string, speed
 	})
 
 	// ifSpeed (32-bit, wraps for speeds > 4.29 Gbps)
-	ifSpeedVal := speedBps
-	if ifSpeedVal > 0xFFFFFFFF {
-		ifSpeedVal = 0xFFFFFFFF // Use ifHighSpeed for accurate high-speed
-	}
+	ifSpeedVal := min(speedBps,
+		// Use ifHighSpeed for accurate high-speed
+		0xFFFFFFFF)
+
 	a.mib.Set(ifSpeed+"."+idxStr, &OIDValue{
 		Type:  gosnmp.Gauge32,
-		Value: uint32(ifSpeedVal),
+		Value: uint32(ifSpeedVal), //nolint:gosec // G115: ifSpeedVal is bounds-checked above
 	})
 
 	// ifPhysAddress (MAC)
@@ -355,7 +355,8 @@ func (a *Agent) createInterfaceEntry(ifIdx int, interfaceName, mac string, speed
 	// ifLastChange (dynamic - timeticks since last status change)
 	a.mib.SetDynamic(ifLastChange+"."+idxStr, func() *OIDValue {
 		uptime := time.Since(a.startTime)
-		ticks := uint32(uptime.Milliseconds() / 10)
+		ticks := uint32(uptime.Milliseconds() / 10) //nolint:gosec // G115: SNMP timeticks wrap by design
+
 		return &OIDValue{
 			Type:  gosnmp.TimeTicks,
 			Value: ticks,
@@ -369,6 +370,7 @@ func (a *Agent) createInterfaceEntry(ifIdx int, interfaceName, mac string, speed
 	a.mib.SetDynamic(ifInOctets+"."+idxStr, func() *OIDValue {
 		elapsed := time.Since(startTime).Seconds()
 		octets := uint32((elapsed * 1000000 * float64(ifIdx%10+1)) / 10)
+
 		return &OIDValue{Type: gosnmp.Counter32, Value: octets}
 	})
 
@@ -376,6 +378,7 @@ func (a *Agent) createInterfaceEntry(ifIdx int, interfaceName, mac string, speed
 	a.mib.SetDynamic(ifInUcastPkts+"."+idxStr, func() *OIDValue {
 		elapsed := time.Since(startTime).Seconds()
 		pkts := uint32((elapsed * 1000 * float64(ifIdx%10+1)) / 10)
+
 		return &OIDValue{Type: gosnmp.Counter32, Value: pkts}
 	})
 
@@ -383,6 +386,7 @@ func (a *Agent) createInterfaceEntry(ifIdx int, interfaceName, mac string, speed
 	a.mib.SetDynamic(ifInNUcastPkts+"."+idxStr, func() *OIDValue {
 		elapsed := time.Since(startTime).Seconds()
 		pkts := uint32((elapsed * 10 * float64(ifIdx%10+1)) / 10)
+
 		return &OIDValue{Type: gosnmp.Counter32, Value: pkts}
 	})
 
@@ -399,6 +403,7 @@ func (a *Agent) createInterfaceEntry(ifIdx int, interfaceName, mac string, speed
 	a.mib.SetDynamic(ifOutOctets+"."+idxStr, func() *OIDValue {
 		elapsed := time.Since(startTime).Seconds()
 		octets := uint32((elapsed * 800000 * float64(ifIdx%10+1)) / 10)
+
 		return &OIDValue{Type: gosnmp.Counter32, Value: octets}
 	})
 
@@ -406,6 +411,7 @@ func (a *Agent) createInterfaceEntry(ifIdx int, interfaceName, mac string, speed
 	a.mib.SetDynamic(ifOutUcastPkts+"."+idxStr, func() *OIDValue {
 		elapsed := time.Since(startTime).Seconds()
 		pkts := uint32((elapsed * 800 * float64(ifIdx%10+1)) / 10)
+
 		return &OIDValue{Type: gosnmp.Counter32, Value: pkts}
 	})
 
@@ -413,6 +419,7 @@ func (a *Agent) createInterfaceEntry(ifIdx int, interfaceName, mac string, speed
 	a.mib.SetDynamic(ifOutNUcastPkts+"."+idxStr, func() *OIDValue {
 		elapsed := time.Since(startTime).Seconds()
 		pkts := uint32((elapsed * 5 * float64(ifIdx%10+1)) / 10)
+
 		return &OIDValue{Type: gosnmp.Counter32, Value: pkts}
 	})
 
@@ -443,6 +450,7 @@ func (a *Agent) createInterfaceEntry(ifIdx int, interfaceName, mac string, speed
 	a.mib.SetDynamic(ifInMulticastPkts+"."+idxStr, func() *OIDValue {
 		elapsed := time.Since(startTime).Seconds()
 		pkts := uint32((elapsed * 5 * float64(ifIdx%10+1)) / 10)
+
 		return &OIDValue{Type: gosnmp.Counter32, Value: pkts}
 	})
 
@@ -450,6 +458,7 @@ func (a *Agent) createInterfaceEntry(ifIdx int, interfaceName, mac string, speed
 	a.mib.SetDynamic(ifInBroadcastPkts+"."+idxStr, func() *OIDValue {
 		elapsed := time.Since(startTime).Seconds()
 		pkts := uint32((elapsed * 2 * float64(ifIdx%10+1)) / 10)
+
 		return &OIDValue{Type: gosnmp.Counter32, Value: pkts}
 	})
 
@@ -457,6 +466,7 @@ func (a *Agent) createInterfaceEntry(ifIdx int, interfaceName, mac string, speed
 	a.mib.SetDynamic(ifOutMulticastPkts+"."+idxStr, func() *OIDValue {
 		elapsed := time.Since(startTime).Seconds()
 		pkts := uint32((elapsed * 3 * float64(ifIdx%10+1)) / 10)
+
 		return &OIDValue{Type: gosnmp.Counter32, Value: pkts}
 	})
 
@@ -464,6 +474,7 @@ func (a *Agent) createInterfaceEntry(ifIdx int, interfaceName, mac string, speed
 	a.mib.SetDynamic(ifOutBroadcastPkts+"."+idxStr, func() *OIDValue {
 		elapsed := time.Since(startTime).Seconds()
 		pkts := uint32((elapsed * 1 * float64(ifIdx%10+1)) / 10)
+
 		return &OIDValue{Type: gosnmp.Counter32, Value: pkts}
 	})
 
@@ -471,24 +482,28 @@ func (a *Agent) createInterfaceEntry(ifIdx int, interfaceName, mac string, speed
 	a.mib.SetDynamic(ifHCInOctets+"."+idxStr, func() *OIDValue {
 		elapsed := time.Since(startTime).Seconds()
 		octets := uint64(elapsed * 1000000 * float64(ifIdx%10+1) / 10)
+
 		return &OIDValue{Type: gosnmp.Counter64, Value: octets}
 	})
 
 	a.mib.SetDynamic(ifHCInUcastPkts+"."+idxStr, func() *OIDValue {
 		elapsed := time.Since(startTime).Seconds()
 		pkts := uint64(elapsed * 1000 * float64(ifIdx%10+1) / 10)
+
 		return &OIDValue{Type: gosnmp.Counter64, Value: pkts}
 	})
 
 	a.mib.SetDynamic(ifHCOutOctets+"."+idxStr, func() *OIDValue {
 		elapsed := time.Since(startTime).Seconds()
 		octets := uint64(elapsed * 800000 * float64(ifIdx%10+1) / 10)
+
 		return &OIDValue{Type: gosnmp.Counter64, Value: octets}
 	})
 
 	a.mib.SetDynamic(ifHCOutUcastPkts+"."+idxStr, func() *OIDValue {
 		elapsed := time.Since(startTime).Seconds()
 		pkts := uint64(elapsed * 800 * float64(ifIdx%10+1) / 10)
+
 		return &OIDValue{Type: gosnmp.Counter64, Value: pkts}
 	})
 
@@ -502,7 +517,7 @@ func (a *Agent) createInterfaceEntry(ifIdx int, interfaceName, mac string, speed
 	highSpeedMbps := speedBps / 1000000
 	a.mib.Set(ifHighSpeed+"."+idxStr, &OIDValue{
 		Type:  gosnmp.Gauge32,
-		Value: uint32(highSpeedMbps),
+		Value: uint32(highSpeedMbps), //nolint:gosec // G115: network speed bounded by physical limits
 	})
 
 	// ifPromiscuousMode (2 = false)
@@ -530,7 +545,7 @@ func (a *Agent) createInterfaceEntry(ifIdx int, interfaceName, mac string, speed
 	})
 }
 
-// initializeIPMIB populates IP-MIB tables (ipAddrTable, ipRouteTable, ipNetToMediaTable)
+// initializeIPMIB populates IP-MIB tables (ipAddrTable, ipRouteTable, ipNetToMediaTable).
 func (a *Agent) initializeIPMIB() {
 	device := a.device
 	if device == nil {
@@ -552,6 +567,7 @@ func (a *Agent) initializeIPMIB() {
 
 		// IP address as index (dotted decimal)
 		ipStr := ip.String()
+
 		ifIndex := 1 // Default to interface 1
 		if idx < len(device.TrunkPorts) {
 			ifIndex = idx + 1
@@ -610,6 +626,7 @@ func (a *Agent) initializeIPMIB() {
 			Value: gateway,
 		})
 	}
+
 	a.mib.Set(ipRouteType+".0.0.0.0", &OIDValue{
 		Type:  gosnmp.Integer,
 		Value: 4, // indirect
@@ -625,6 +642,7 @@ func (a *Agent) initializeIPMIB() {
 
 	// Create ARP table entries (ipNetToMediaTable) for neighbors
 	arpIndex := 1
+
 	for _, trunk := range device.TrunkPorts {
 		if trunk.RemoteDevice == "" {
 			continue
@@ -666,11 +684,11 @@ func (a *Agent) initializeIPMIB() {
 	}
 
 	if a.debugLevel >= 2 {
-		log.Printf("Initialized IP-MIB for device %s with %d IP addresses", device.Name, len(ips))
+		slog.Info("Initialized IP-MIB", "device", device.Name, "ipAddresses", len(ips))
 	}
 }
 
-// initializeBridgeMIB populates BRIDGE-MIB (dot1dBridge) for switches
+// initializeBridgeMIB populates BRIDGE-MIB (dot1dBridge) for switches.
 func (a *Agent) initializeBridgeMIB() {
 	device := a.device
 	if device == nil {
@@ -707,7 +725,7 @@ func (a *Agent) initializeBridgeMIB() {
 
 	// dot1dBasePortTable entries
 	for portIdx := 1; portIdx <= numPorts; portIdx++ {
-		portStr := fmt.Sprintf("%d", portIdx)
+		portStr := strconv.Itoa(portIdx)
 
 		// dot1dBasePort
 		a.mib.Set(dot1dBasePort+"."+portStr, &OIDValue{
@@ -755,6 +773,7 @@ func (a *Agent) initializeBridgeMIB() {
 		if priority == 0 {
 			priority = 32768
 		}
+
 		a.mib.Set(dot1dStpPriority, &OIDValue{
 			Type:  gosnmp.Integer,
 			Value: priority,
@@ -763,7 +782,8 @@ func (a *Agent) initializeBridgeMIB() {
 		// dot1dStpTimeSinceTopologyChange (dynamic)
 		a.mib.SetDynamic(dot1dStpTimeSinceTopologyChange, func() *OIDValue {
 			uptime := time.Since(a.startTime)
-			ticks := uint32(uptime.Milliseconds() / 10)
+			ticks := uint32(uptime.Milliseconds() / 10) //nolint:gosec // G115: SNMP timeticks wrap by design
+
 			return &OIDValue{Type: gosnmp.TimeTicks, Value: ticks}
 		})
 
@@ -800,6 +820,7 @@ func (a *Agent) initializeBridgeMIB() {
 		if maxAge == 0 {
 			maxAge = 20
 		}
+
 		a.mib.Set(dot1dStpMaxAge, &OIDValue{
 			Type:  gosnmp.Integer,
 			Value: maxAge * 100,
@@ -809,6 +830,7 @@ func (a *Agent) initializeBridgeMIB() {
 		if helloTime == 0 {
 			helloTime = 2
 		}
+
 		a.mib.Set(dot1dStpHelloTime, &OIDValue{
 			Type:  gosnmp.Integer,
 			Value: helloTime * 100,
@@ -823,6 +845,7 @@ func (a *Agent) initializeBridgeMIB() {
 		if forwardDelay == 0 {
 			forwardDelay = 15
 		}
+
 		a.mib.Set(dot1dStpForwardDelay, &OIDValue{
 			Type:  gosnmp.Integer,
 			Value: forwardDelay * 100,
@@ -844,7 +867,7 @@ func (a *Agent) initializeBridgeMIB() {
 
 		// dot1dStpPortTable entries
 		for portIdx := 1; portIdx <= numPorts; portIdx++ {
-			portStr := fmt.Sprintf("%d", portIdx)
+			portStr := strconv.Itoa(portIdx)
 
 			// dot1dStpPort
 			a.mib.Set(dot1dStpPort+"."+portStr, &OIDValue{
@@ -941,7 +964,7 @@ func (a *Agent) initializeBridgeMIB() {
 
 	// dot1dTpPortTable entries
 	for portIdx := 1; portIdx <= numPorts; portIdx++ {
-		portStr := fmt.Sprintf("%d", portIdx)
+		portStr := strconv.Itoa(portIdx)
 		startTime := a.startTime
 
 		// dot1dTpPort
@@ -960,6 +983,7 @@ func (a *Agent) initializeBridgeMIB() {
 		a.mib.SetDynamic(dot1dTpPortInFrames+"."+portStr, func() *OIDValue {
 			elapsed := time.Since(startTime).Seconds()
 			frames := uint32(elapsed * 100 * float64(portIdx%10+1))
+
 			return &OIDValue{Type: gosnmp.Counter32, Value: frames}
 		})
 
@@ -967,6 +991,7 @@ func (a *Agent) initializeBridgeMIB() {
 		a.mib.SetDynamic(dot1dTpPortOutFrames+"."+portStr, func() *OIDValue {
 			elapsed := time.Since(startTime).Seconds()
 			frames := uint32(elapsed * 80 * float64(portIdx%10+1))
+
 			return &OIDValue{Type: gosnmp.Counter32, Value: frames}
 		})
 
@@ -978,23 +1003,27 @@ func (a *Agent) initializeBridgeMIB() {
 	}
 
 	if a.debugLevel >= 2 {
-		log.Printf("Initialized BRIDGE-MIB for device %s with %d ports", device.Name, numPorts)
+		slog.Info("Initialized BRIDGE-MIB", "device", device.Name, "ports", numPorts)
 	}
 }
 
-// macToOIDIndex converts a MAC address to OID index format (decimal octets separated by dots)
+// macToOIDIndex converts a MAC address to OID index format (decimal octets separated by dots).
 func macToOIDIndex(mac string) string {
 	macBytes := parseMACBytes(mac)
+
 	parts := make([]string, 6)
+
 	for i, b := range macBytes {
-		parts[i] = fmt.Sprintf("%d", b)
+		parts[i] = strconv.FormatUint(uint64(b), 10)
 	}
+
 	return strings.Join(parts, ".")
 }
 
-// initializeLLDPLocalMIB populates LLDP local system data
+// initializeLLDPLocalMIB populates LLDP local system data.
 func (a *Agent) initializeLLDPLocalMIB() {
 	device := a.device
+
 	lldp := device.LLDPConfig
 	if lldp == nil {
 		return
@@ -1025,6 +1054,7 @@ func (a *Agent) initializeLLDPLocalMIB() {
 	if sysDesc == "" {
 		sysDesc = fmt.Sprintf("%s %s", device.Type, device.Name)
 	}
+
 	a.mib.Set(lldpLocSysDesc, &OIDValue{
 		Type:  gosnmp.OctetString,
 		Value: sysDesc,
@@ -1050,13 +1080,13 @@ func (a *Agent) initializeLLDPLocalMIB() {
 	}
 
 	if a.debugLevel >= 2 {
-		log.Printf("Initialized LLDP local MIB for device %s", device.Name)
+		slog.Info("Initialized LLDP local MIB", "device", device.Name)
 	}
 }
 
-// createLLDPLocalPortEntry creates a local port entry in LLDP-MIB
+// createLLDPLocalPortEntry creates a local port entry in LLDP-MIB.
 func (a *Agent) createLLDPLocalPortEntry(portNum int, ifName, portDesc string) {
-	portNumStr := fmt.Sprintf("%d", portNum)
+	portNumStr := strconv.Itoa(portNum)
 	baseOID := lldpLocPortTable + ".1"
 
 	// lldpLocPortIdSubtype (5 = interfaceName)
@@ -1076,13 +1106,14 @@ func (a *Agent) createLLDPLocalPortEntry(portNum int, ifName, portDesc string) {
 	if desc == "" {
 		desc = ifName
 	}
+
 	a.mib.Set(baseOID+".4."+portNumStr, &OIDValue{
 		Type:  gosnmp.OctetString,
 		Value: desc,
 	})
 }
 
-// initializeLLDPRemoteMIB populates LLDP remote (neighbor) table
+// initializeLLDPRemoteMIB populates LLDP remote (neighbor) table.
 func (a *Agent) initializeLLDPRemoteMIB() {
 	device := a.device
 	if device == nil || len(device.TrunkPorts) == 0 {
@@ -1090,6 +1121,7 @@ func (a *Agent) initializeLLDPRemoteMIB() {
 	}
 
 	remIndex := 1
+
 	for portIdx, trunk := range device.TrunkPorts {
 		if trunk.RemoteDevice == "" {
 			continue
@@ -1100,16 +1132,16 @@ func (a *Agent) initializeLLDPRemoteMIB() {
 
 		// Create remote entry
 		a.createLLDPRemoteEntry(timeMark, portNum, remIndex, trunk)
+
 		remIndex++
 	}
 
 	if a.debugLevel >= 2 {
-		log.Printf("Initialized LLDP remote MIB with %d neighbors for device %s",
-			remIndex-1, device.Name)
+		slog.Info("Initialized LLDP remote MIB", "neighbors", remIndex-1, "device", device.Name)
 	}
 }
 
-// createLLDPRemoteEntry creates a remote (neighbor) entry in LLDP-MIB
+// createLLDPRemoteEntry creates a remote (neighbor) entry in LLDP-MIB.
 func (a *Agent) createLLDPRemoteEntry(timeMark, portNum, remIndex int, trunk config.TrunkPort) {
 	// lldpRemEntry index: timeMark.portNum.remIndex
 	indexStr := fmt.Sprintf("%d.%d.%d", timeMark, portNum, remIndex)
@@ -1155,13 +1187,14 @@ func (a *Agent) createLLDPRemoteEntry(timeMark, portNum, remIndex int, trunk con
 	// lldpRemSysDesc (use device name as placeholder)
 	a.mib.Set(entryBase+".10."+indexStr, &OIDValue{
 		Type:  gosnmp.OctetString,
-		Value: fmt.Sprintf("LLDP neighbor: %s", trunk.RemoteDevice),
+		Value: "LLDP neighbor: " + trunk.RemoteDevice,
 	})
 }
 
-// initializeCDPMIB populates Cisco CDP MIB
+// initializeCDPMIB populates Cisco CDP MIB.
 func (a *Agent) initializeCDPMIB() {
 	device := a.device
+
 	cdp := device.CDPConfig
 	if cdp == nil {
 		return
@@ -1178,6 +1211,7 @@ func (a *Agent) initializeCDPMIB() {
 	if interval == 0 {
 		interval = 60
 	}
+
 	a.mib.Set(cdpGlobalMessageInterval, &OIDValue{
 		Type:  gosnmp.Integer,
 		Value: interval,
@@ -1188,6 +1222,7 @@ func (a *Agent) initializeCDPMIB() {
 	if holdtime == 0 {
 		holdtime = 180
 	}
+
 	a.mib.Set(cdpGlobalHoldTime, &OIDValue{
 		Type:  gosnmp.Integer,
 		Value: holdtime,
@@ -1201,6 +1236,7 @@ func (a *Agent) initializeCDPMIB() {
 
 	// CDP Cache entries (neighbors)
 	deviceIndex := 1
+
 	for ifIdx, trunk := range device.TrunkPorts {
 		if trunk.RemoteDevice == "" {
 			continue
@@ -1208,16 +1244,16 @@ func (a *Agent) initializeCDPMIB() {
 
 		ifIndex := ifIdx + 1
 		a.createCDPCacheEntry(ifIndex, deviceIndex, trunk, cdp)
+
 		deviceIndex++
 	}
 
 	if a.debugLevel >= 2 {
-		log.Printf("Initialized CDP MIB with %d neighbors for device %s",
-			deviceIndex-1, device.Name)
+		slog.Info("Initialized CDP MIB", "neighbors", deviceIndex-1, "device", device.Name)
 	}
 }
 
-// createCDPCacheEntry creates a CDP cache (neighbor) entry
+// createCDPCacheEntry creates a CDP cache (neighbor) entry.
 func (a *Agent) createCDPCacheEntry(ifIndex, deviceIndex int, trunk config.TrunkPort, cdp *config.CDPConfig) {
 	// cdpCacheEntry index: ifIndex.deviceIndex
 	indexStr := fmt.Sprintf("%d.%d", ifIndex, deviceIndex)
@@ -1238,8 +1274,9 @@ func (a *Agent) createCDPCacheEntry(ifIndex, deviceIndex int, trunk config.Trunk
 	// cdpCacheVersion
 	version := cdp.SoftwareVersion
 	if version == "" {
-		version = "Unknown"
+		version = unknownPlaceholder
 	}
+
 	a.mib.Set(entryBase+".5."+indexStr, &OIDValue{
 		Type:  gosnmp.OctetString,
 		Value: version,
@@ -1260,8 +1297,9 @@ func (a *Agent) createCDPCacheEntry(ifIndex, deviceIndex int, trunk config.Trunk
 	// cdpCachePlatform
 	platform := cdp.Platform
 	if platform == "" {
-		platform = "Unknown"
+		platform = unknownPlaceholder
 	}
+
 	a.mib.Set(entryBase+".8."+indexStr, &OIDValue{
 		Type:  gosnmp.OctetString,
 		Value: platform,
@@ -1284,6 +1322,7 @@ func (a *Agent) createCDPCacheEntry(ifIndex, deviceIndex int, trunk config.Trunk
 	if nativeVLAN == 0 {
 		nativeVLAN = 1
 	}
+
 	a.mib.Set(entryBase+".11."+indexStr, &OIDValue{
 		Type:  gosnmp.Integer,
 		Value: nativeVLAN,
@@ -1298,7 +1337,7 @@ func (a *Agent) createCDPCacheEntry(ifIndex, deviceIndex int, trunk config.Trunk
 
 // Helper functions
 
-// parseMACBytes parses a MAC address string to bytes
+// parseMACBytes parses a MAC address string to bytes.
 func parseMACBytes(mac string) []byte {
 	// Remove colons, dashes, etc.
 	mac = strings.ReplaceAll(mac, ":", "")
@@ -1309,10 +1348,11 @@ func parseMACBytes(mac string) []byte {
 	if err != nil || len(bytes) != 6 {
 		return []byte{0, 0, 0, 0, 0, 0}
 	}
+
 	return bytes
 }
 
-// getInterfaceSpeed returns interface speed based on interface name
+// getInterfaceSpeed returns interface speed based on interface name.
 func getInterfaceSpeed(ifName string) uint64 {
 	ifNameLower := strings.ToLower(ifName)
 
@@ -1340,7 +1380,7 @@ func getInterfaceSpeed(ifName string) uint64 {
 	}
 }
 
-// getCapabilitiesBitfield returns LLDP/CDP capability bits based on device type
+// getCapabilitiesBitfield returns LLDP/CDP capability bits based on device type.
 func getCapabilitiesBitfield(deviceType string) int {
 	// LLDP System Capabilities bitmap:
 	// Bit 0: Other
@@ -1351,20 +1391,18 @@ func getCapabilitiesBitfield(deviceType string) int {
 	// Bit 5: Telephone
 	// Bit 6: DOCSIS cable device
 	// Bit 7: Station Only
-
 	deviceTypeLower := strings.ToLower(deviceType)
 
-	switch {
-	case deviceTypeLower == "router":
+	switch deviceTypeLower {
+	case "router":
 		return 0x14 // Router + Bridge
-	case deviceTypeLower == "switch":
+	case "switch":
 		return 0x04 // Bridge
-	case deviceTypeLower == "ap" || deviceTypeLower == "access-point":
+	case "ap", "access-point":
 		return 0x08 // WLAN AP
-	case deviceTypeLower == "server" || deviceTypeLower == "host":
+	case "server", "host":
 		return 0x80 // Station Only
 	default:
 		return 0x01 // Other
 	}
 }
-

@@ -1,32 +1,18 @@
-import { type FC, useState, useCallback, memo } from 'react';
+import { Activity, BellRing, FileCog, Network, PlugZap } from "lucide-react";
+import { type FC, memo, useCallback, useState } from "react";
 import {
-  Activity,
-  Network,
-  BellRing,
-  PlugZap,
-  FileCog,
-} from 'lucide-react';
-import {
-  Card,
-  CardContent,
-  Button,
-  Tag,
-  H2,
-  SmallText,
-  P,
-} from '../ui';
-import { useApiResource } from '../hooks/useApiResource';
-import {
+  fetchInterfaces,
   fetchSimulationStatus,
   startSimulation,
   stopSimulation,
-  fetchInterfaces,
-} from '../api/client';
-import type { NetworkInterface } from '../api/types';
-import { POLL_INTERVALS } from '../constants';
-import { formatBytes, formatUptime, formatTime, getErrorMessage } from '../utils';
-import { StatBlock } from '../components/StatBlock';
-import { fileToText } from '../utils/file';
+} from "../api/client";
+import type { NetworkInterface } from "../api/types";
+import { StatBlock } from "../components/StatBlock";
+import { POLL_INTERVALS } from "../constants";
+import { useApiResource } from "../hooks/useApiResource";
+import { Button, Card, CardContent, H2, P, SmallText, Tag } from "../ui";
+import { formatBytes, formatTime, formatUptime, getErrorMessage } from "../utils";
+import { fileToText } from "../utils/file";
 
 /**
  * Runtime Control Page
@@ -36,21 +22,23 @@ import { fileToText } from '../utils/file';
  */
 export const RuntimeControlPage: FC = () => {
   const [refetchTrigger, setRefetchTrigger] = useState(0);
-  const { data: simStatus } = useApiResource(fetchSimulationStatus, [refetchTrigger], { intervalMs: POLL_INTERVALS.FAST });
+  const { data: simStatus } = useApiResource(fetchSimulationStatus, [refetchTrigger], {
+    intervalMs: POLL_INTERVALS.FAST,
+  });
   const { data: interfaces } = useApiResource(fetchInterfaces, []);
 
-  const [selectedInterface, setSelectedInterface] = useState('');
-  const [configPath, setConfigPath] = useState('');
+  const [selectedInterface, setSelectedInterface] = useState("");
+  const [configPath, setConfigPath] = useState("");
   const [configFile, setConfigFile] = useState<File | null>(null);
   const [starting, setStarting] = useState(false);
   const [stopping, setStopping] = useState(false);
-  const [message, setMessage] = useState<{ tone: 'success' | 'error'; text: string } | null>(null);
+  const [message, setMessage] = useState<{ tone: "success" | "error"; text: string } | null>(null);
 
   const isDaemonMode = simStatus !== null;
 
   const handleStart = useCallback(async () => {
     if (!selectedInterface && !configPath && !configFile) {
-      setMessage({ tone: 'error', text: 'Please select an interface and provide a config file' });
+      setMessage({ tone: "error", text: "Please select an interface and provide a config file" });
       return;
     }
 
@@ -70,18 +58,22 @@ export const RuntimeControlPage: FC = () => {
         config_data: configData,
       });
 
-      setMessage({ tone: 'success', text: 'Simulation started successfully!' });
+      setMessage({ tone: "success", text: "Simulation started successfully!" });
       setRefetchTrigger((t) => t + 1);
       setConfigFile(null);
     } catch (err) {
-      setMessage({ tone: 'error', text: getErrorMessage(err) });
+      setMessage({ tone: "error", text: getErrorMessage(err) });
     } finally {
       setStarting(false);
     }
   }, [selectedInterface, configPath, configFile]);
 
   const handleStop = useCallback(async () => {
-    if (!window.confirm('Are you sure you want to stop the simulation? This will interrupt the current run.')) {
+    if (
+      !window.confirm(
+        "Are you sure you want to stop the simulation? This will interrupt the current run.",
+      )
+    ) {
       return;
     }
 
@@ -90,10 +82,10 @@ export const RuntimeControlPage: FC = () => {
 
     try {
       await stopSimulation();
-      setMessage({ tone: 'success', text: 'Simulation stopped' });
+      setMessage({ tone: "success", text: "Simulation stopped" });
       setRefetchTrigger((t) => t + 1);
     } catch (err) {
-      setMessage({ tone: 'error', text: getErrorMessage(err) });
+      setMessage({ tone: "error", text: getErrorMessage(err) });
     } finally {
       setStopping(false);
     }
@@ -147,7 +139,8 @@ export const RuntimeControlPage: FC = () => {
                   <option value="">Select interface...</option>
                   {interfaces?.interfaces.map((iface) => (
                     <option key={iface.name} value={iface.name}>
-                      {iface.name} {iface.description ? `- ${iface.description}` : ''} {iface.addresses.length > 0 ? `(${iface.addresses[0]})` : ''}
+                      {iface.name} {iface.description ? `- ${iface.description}` : ""}{" "}
+                      {iface.addresses.length > 0 ? `(${iface.addresses[0]})` : ""}
                     </option>
                   ))}
                 </select>
@@ -187,22 +180,22 @@ export const RuntimeControlPage: FC = () => {
                       return;
                     }
 
-                    const MAX_SIZE = 10 * 1024 * 1024;
-                    if (file.size > MAX_SIZE) {
+                    const MaxSize = 10 * 1024 * 1024;
+                    if (file.size > MaxSize) {
                       setMessage({
-                        tone: 'error',
-                        text: `File too large. Maximum size is ${formatBytes(MAX_SIZE)}`
+                        tone: "error",
+                        text: `File too large. Maximum size is ${formatBytes(MaxSize)}`,
                       });
-                      e.target.value = '';
+                      e.target.value = "";
                       return;
                     }
 
                     if (!file.name.match(/\.(yaml|yml)$/i)) {
                       setMessage({
-                        tone: 'error',
-                        text: 'Please select a YAML file (.yaml or .yml)'
+                        tone: "error",
+                        text: "Please select a YAML file (.yaml or .yml)",
                       });
-                      e.target.value = '';
+                      e.target.value = "";
                       return;
                     }
 
@@ -219,7 +212,7 @@ export const RuntimeControlPage: FC = () => {
 
               {message && (
                 <SmallText
-                  className={message.tone === 'success' ? 'text-emerald-300' : 'text-red-400'}
+                  className={message.tone === "success" ? "text-emerald-300" : "text-red-400"}
                   role="alert"
                   aria-live="polite"
                 >
@@ -234,7 +227,7 @@ export const RuntimeControlPage: FC = () => {
                 onClick={handleStart}
                 leftIcon={<Activity className="h-5 w-5" />}
               >
-                {starting ? 'Starting...' : 'Start Simulation'}
+                {starting ? "Starting..." : "Start Simulation"}
               </Button>
             </div>
           </CardContent>
@@ -253,15 +246,37 @@ export const RuntimeControlPage: FC = () => {
             </div>
 
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              <StatBlock label="Interface" value={simStatus.interface || '—'} helper="Network interface" />
-              <StatBlock label="Config" value={simStatus.config_name || '—'} helper={simStatus.config_path || 'Configuration file'} />
-              <StatBlock label="Devices" value={simStatus.device_count.toString()} helper="Simulated devices" />
-              <StatBlock label="Uptime" value={formatUptime(simStatus.uptime_seconds)} helper="Time running" />
-              <StatBlock label="Started" value={simStatus.started_at ? formatTime(simStatus.started_at) : '—'} helper="Start time" />
+              <StatBlock
+                label="Interface"
+                value={simStatus.interface || "—"}
+                helper="Network interface"
+              />
+              <StatBlock
+                label="Config"
+                value={simStatus.config_name || "—"}
+                helper={simStatus.config_path || "Configuration file"}
+              />
+              <StatBlock
+                label="Devices"
+                value={simStatus.device_count.toString()}
+                helper="Simulated devices"
+              />
+              <StatBlock
+                label="Uptime"
+                value={formatUptime(simStatus.uptime_seconds)}
+                helper="Time running"
+              />
+              <StatBlock
+                label="Started"
+                value={simStatus.started_at ? formatTime(simStatus.started_at) : "—"}
+                helper="Start time"
+              />
             </div>
 
             {message && (
-              <SmallText className={message.tone === 'success' ? 'text-emerald-300' : 'text-red-400'}>
+              <SmallText
+                className={message.tone === "success" ? "text-emerald-300" : "text-red-400"}
+              >
                 {message.text}
               </SmallText>
             )}
@@ -273,9 +288,13 @@ export const RuntimeControlPage: FC = () => {
                 onClick={handleStop}
                 leftIcon={<Activity className="h-4 w-4" />}
               >
-                {stopping ? 'Stopping...' : 'Stop Simulation'}
+                {stopping ? "Stopping..." : "Stop Simulation"}
               </Button>
-              <Button variant="ghost" leftIcon={<FileCog className="h-4 w-4" />} onClick={() => window.location.href = '/devices'}>
+              <Button
+                variant="ghost"
+                leftIcon={<FileCog className="h-4 w-4" />}
+                onClick={() => (window.location.href = "/devices")}
+              >
                 View Devices
               </Button>
             </div>
@@ -302,7 +321,7 @@ export const RuntimeControlPage: FC = () => {
 };
 
 const InterfaceList = memo(({ interfaces }: { interfaces: NetworkInterface[] }) => {
-  if (!interfaces.length) {
+  if (interfaces.length === 0) {
     return <SmallText className="text-gray-400">No network interfaces found.</SmallText>;
   }
 
@@ -313,8 +332,8 @@ const InterfaceList = memo(({ interfaces }: { interfaces: NetworkInterface[] }) 
           key={iface.name}
           className={`rounded-lg border p-4 ${
             iface.current
-              ? 'border-violet-500/50 bg-violet-900/20'
-              : 'border-white/10 bg-gray-950/50'
+              ? "border-violet-500/50 bg-violet-900/20"
+              : "border-white/10 bg-gray-950/50"
           }`}
         >
           <div className="flex items-center justify-between">
@@ -323,11 +342,16 @@ const InterfaceList = memo(({ interfaces }: { interfaces: NetworkInterface[] }) 
                 <p className="font-semibold text-white">{iface.name}</p>
                 {iface.current && <Tag colorScheme="purple">ACTIVE</Tag>}
               </div>
-              {iface.description && <SmallText className="text-gray-400">{iface.description}</SmallText>}
+              {iface.description && (
+                <SmallText className="text-gray-400">{iface.description}</SmallText>
+              )}
               {iface.addresses.length > 0 && (
                 <div className="mt-1 flex flex-wrap gap-2">
                   {iface.addresses.map((addr) => (
-                    <code key={addr} className="rounded bg-black/30 px-2 py-0.5 font-mono text-xs text-blue-300">
+                    <code
+                      key={addr}
+                      className="rounded bg-black/30 px-2 py-0.5 font-mono text-xs text-blue-300"
+                    >
                       {addr}
                     </code>
                   ))}
@@ -341,6 +365,6 @@ const InterfaceList = memo(({ interfaces }: { interfaces: NetworkInterface[] }) 
   );
 });
 
-InterfaceList.displayName = 'InterfaceList';
+InterfaceList.displayName = "InterfaceList";
 
 export default RuntimeControlPage;

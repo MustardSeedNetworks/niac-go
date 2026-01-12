@@ -1,4 +1,4 @@
-import type { Device, FileEntry } from '../../api/types';
+import type { Device, FileEntry } from "../../api/types";
 
 /**
  * Common props for all protocol section components
@@ -27,16 +27,16 @@ export interface SNMPSectionProps extends ProtocolSectionProps {
  * Common input class names for device editor forms
  */
 export const inputClassName =
-  'w-full rounded-lg border border-white/10 bg-gray-950/60 p-3 text-sm text-white placeholder-gray-500 focus:border-violet-400 focus:outline-none';
+  "w-full rounded-lg border border-white/10 bg-gray-950/60 p-3 text-sm text-white placeholder-gray-500 focus:border-violet-400 focus:outline-none";
 
 export const monoInputClassName =
-  'w-full rounded-lg border border-white/10 bg-gray-950/60 p-3 text-sm text-white placeholder-gray-500 focus:border-violet-400 focus:outline-none font-mono';
+  "w-full rounded-lg border border-white/10 bg-gray-950/60 p-3 text-sm text-white placeholder-gray-500 focus:border-violet-400 focus:outline-none font-mono";
 
 export const selectClassName =
-  'w-full rounded-lg border border-white/10 bg-gray-950/60 p-3 text-sm text-white focus:border-violet-400 focus:outline-none';
+  "w-full rounded-lg border border-white/10 bg-gray-950/60 p-3 text-sm text-white focus:border-violet-400 focus:outline-none";
 
 export const checkboxClassName =
-  'w-4 h-4 rounded border-gray-600 bg-gray-800 text-violet-600 focus:ring-violet-500';
+  "w-4 h-4 rounded border-gray-600 bg-gray-800 text-violet-600 focus:ring-violet-500";
 
 export const smallInputClassName =
-  'flex-1 rounded-lg border border-white/10 bg-gray-950/60 p-2 text-sm text-white placeholder-gray-500 focus:border-violet-400 focus:outline-none font-mono';
+  "flex-1 rounded-lg border border-white/10 bg-gray-950/60 p-2 text-sm text-white placeholder-gray-500 focus:border-violet-400 focus:outline-none font-mono";

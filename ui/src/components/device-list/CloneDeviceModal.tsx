@@ -1,6 +1,6 @@
-import { type FC, useState } from 'react';
-import { Copy } from 'lucide-react';
-import { Button } from '../../ui';
+import { Copy } from "lucide-react";
+import { type FC, useState } from "react";
+import { Button } from "../../ui";
 
 interface CloneDeviceModalProps {
   hostname: string;
@@ -8,11 +8,7 @@ interface CloneDeviceModalProps {
   onCancel: () => void;
 }
 
-export const CloneDeviceModal: FC<CloneDeviceModalProps> = ({
-  hostname,
-  onClone,
-  onCancel,
-}) => {
+export const CloneDeviceModal: FC<CloneDeviceModalProps> = ({ hostname, onClone, onCancel }) => {
   const [newHostname, setNewHostname] = useState(`${hostname}-copy`);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -51,7 +47,6 @@ export const CloneDeviceModal: FC<CloneDeviceModalProps> = ({
               value={newHostname}
               onChange={(e) => setNewHostname(e.target.value)}
               className="w-full rounded-lg border border-white/10 bg-gray-950/60 p-3 text-sm text-white placeholder-gray-500 focus:border-violet-400 focus:outline-none"
-              autoFocus
             />
           </div>
           <div className="flex justify-end gap-3 pt-2">

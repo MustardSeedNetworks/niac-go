@@ -1,24 +1,10 @@
-import { type FC, useState, useEffect } from 'react';
-import {
-  Workflow,
-  BellRing,
-} from 'lucide-react';
-import {
-  Card,
-  CardContent,
-  Button,
-  H2,
-  P,
-  SmallText,
-} from '../ui';
-import { useApiResource } from '../hooks/useApiResource';
-import {
-  fetchStats,
-  fetchAlerts,
-  updateAlerts,
-} from '../api/client';
-import type { AlertConfig } from '../api/types';
-import { getErrorMessage } from '../utils';
+import { BellRing, Workflow } from "lucide-react";
+import { type FC, useEffect, useState } from "react";
+import { fetchAlerts, fetchStats, updateAlerts } from "../api/client";
+import type { AlertConfig } from "../api/types";
+import { useApiResource } from "../hooks/useApiResource";
+import { Button, Card, CardContent, H2, P, SmallText } from "../ui";
+import { getErrorMessage } from "../utils";
 
 /**
  * Automation Page - Automation & Alerts
@@ -37,13 +23,21 @@ export const AutomationPage: FC = () => {
             Automation roadmap
           </H2>
           <P>
-            Define alert thresholds, webhook routes, and (soon) runnable workflow automations. Use the CLI flags today,
-            then manage them graphically here as the 2.0 UI matures. Current alert counter: {stats?.stack.errors ?? 0}.
+            Define alert thresholds, webhook routes, and (soon) runnable workflow automations. Use
+            the CLI flags today, then manage them graphically here as the 2.0 UI matures. Current
+            alert counter: {stats?.stack.errors ?? 0}.
           </P>
           <ul className="space-y-3 text-sm text-gray-300">
-            <li className="rounded-lg border border-white/5 bg-gray-950/50 p-3">Webhooks inherit settings from the `--alert-webhook` flag and can be overridden per run.</li>
-            <li className="rounded-lg border border-white/5 bg-gray-950/50 p-3">Packet thresholds mirror CLI/TUI options so headless and web control stay aligned.</li>
-            <li className="rounded-lg border border-white/5 bg-gray-950/50 p-3">Future: orchestrate multi-run scenarios and publish signed run reports.</li>
+            <li className="rounded-lg border border-white/5 bg-gray-950/50 p-3">
+              Webhooks inherit settings from the `--alert-webhook` flag and can be overridden per
+              run.
+            </li>
+            <li className="rounded-lg border border-white/5 bg-gray-950/50 p-3">
+              Packet thresholds mirror CLI/TUI options so headless and web control stay aligned.
+            </li>
+            <li className="rounded-lg border border-white/5 bg-gray-950/50 p-3">
+              Future: orchestrate multi-run scenarios and publish signed run reports.
+            </li>
           </ul>
         </CardContent>
       </Card>
@@ -57,16 +51,16 @@ export const AutomationPage: FC = () => {
  */
 const AlertConfigCard: FC = () => {
   const { data, loading, error } = useApiResource(fetchAlerts, [], { intervalMs: 15000 });
-  const [threshold, setThreshold] = useState('');
-  const [webhook, setWebhook] = useState('');
+  const [threshold, setThreshold] = useState("");
+  const [webhook, setWebhook] = useState("");
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [status, setStatus] = useState<{ tone: 'success' | 'error'; text: string } | null>(null);
+  const [status, setStatus] = useState<{ tone: "success" | "error"; text: string } | null>(null);
 
   useEffect(() => {
     if (data && !dirty) {
-      setThreshold(data.packets_threshold ? String(data.packets_threshold) : '');
-      setWebhook(data.webhook_url ?? '');
+      setThreshold(data.packets_threshold ? String(data.packets_threshold) : "");
+      setWebhook(data.webhook_url ?? "");
     }
   }, [data, dirty]);
 
@@ -81,9 +75,9 @@ const AlertConfigCard: FC = () => {
       };
       await updateAlerts(payload);
       setDirty(false);
-      setStatus({ tone: 'success', text: 'Alert configuration saved' });
+      setStatus({ tone: "success", text: "Alert configuration saved" });
     } catch (err) {
-      setStatus({ tone: 'error', text: getErrorMessage(err) });
+      setStatus({ tone: "error", text: getErrorMessage(err) });
     } finally {
       setSaving(false);
     }
@@ -91,8 +85,8 @@ const AlertConfigCard: FC = () => {
 
   const reset = () => {
     if (!data) return;
-    setThreshold(data.packets_threshold ? String(data.packets_threshold) : '');
-    setWebhook(data.webhook_url ?? '');
+    setThreshold(data.packets_threshold ? String(data.packets_threshold) : "");
+    setWebhook(data.webhook_url ?? "");
     setDirty(false);
     setStatus(null);
   };
@@ -105,11 +99,13 @@ const AlertConfigCard: FC = () => {
           Alert policy
         </H2>
         <P className="text-gray-300">
-          Updates take effect immediately—no CLI restart required. Leave the threshold blank or zero to disable packet
-          alerts entirely.
+          Updates take effect immediately—no CLI restart required. Leave the threshold blank or zero
+          to disable packet alerts entirely.
         </P>
         {loading && <SmallText className="text-gray-400">Loading alert configuration…</SmallText>}
-        {error && <SmallText className="text-red-400">Unable to load alerts: {error.message}</SmallText>}
+        {error && (
+          <SmallText className="text-red-400">Unable to load alerts: {error.message}</SmallText>
+        )}
         {data && (
           <>
             <div className="grid gap-4 md:grid-cols-2">
@@ -143,13 +139,15 @@ const AlertConfigCard: FC = () => {
               </div>
             </div>
             {status && (
-              <SmallText className={status.tone === 'success' ? 'text-emerald-300' : 'text-red-400'}>
+              <SmallText
+                className={status.tone === "success" ? "text-emerald-300" : "text-red-400"}
+              >
                 {status.text}
               </SmallText>
             )}
             <div className="flex flex-wrap gap-3">
               <Button tone="violet" disabled={!dirty || saving} onClick={commit}>
-                {saving ? 'Saving…' : 'Save alerts'}
+                {saving ? "Saving…" : "Save alerts"}
               </Button>
               <Button variant="outline" disabled={!dirty || saving} onClick={reset}>
                 Reset

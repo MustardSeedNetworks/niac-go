@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-// TestPadRight tests string padding functionality
+// TestPadRight tests string padding functionality.
 func TestPadRight(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -33,7 +33,7 @@ func TestPadRight(t *testing.T) {
 	}
 }
 
-// TestFormatDuration tests duration formatting
+// TestFormatDuration tests duration formatting.
 func TestFormatDuration(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -61,7 +61,7 @@ func TestFormatDuration(t *testing.T) {
 	}
 }
 
-// TestPrintBanner tests that printBanner doesn't panic
+// TestPrintBanner tests that printBanner doesn't panic.
 func TestPrintBanner(t *testing.T) {
 	// Just verify it doesn't panic - we can't easily test the output
 	defer func() {
@@ -72,7 +72,7 @@ func TestPrintBanner(t *testing.T) {
 	printBanner()
 }
 
-// TestPrintUsage tests that printUsage doesn't panic
+// TestPrintUsage tests that printUsage doesn't panic.
 func TestPrintUsage(t *testing.T) {
 	// Just verify it doesn't panic - we can't easily test the output
 	defer func() {

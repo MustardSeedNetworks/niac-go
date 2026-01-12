@@ -13,7 +13,7 @@ import (
 	"github.com/krisarmstrong/niac-go/pkg/protocols"
 )
 
-// TestFormatDuration tests duration formatting
+// TestFormatDuration tests duration formatting.
 func TestFormatDuration(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -40,7 +40,7 @@ func TestFormatDuration(t *testing.T) {
 	}
 }
 
-// TestGetDebugLevelName tests debug level name mapping
+// TestGetDebugLevelName tests debug level name mapping.
 func TestGetDebugLevelName(t *testing.T) {
 	tests := []struct {
 		level    int
@@ -65,7 +65,7 @@ func TestGetDebugLevelName(t *testing.T) {
 	}
 }
 
-// createTestModel creates a test model with basic config
+// createTestModel creates a test model with basic config.
 func createTestModel() model {
 	mac, _ := net.ParseMAC("00:11:22:33:44:55")
 	cfg := &config.Config{
@@ -96,7 +96,7 @@ func createTestModel() model {
 	}
 }
 
-// TestModel_Init tests model initialization
+// TestModel_Init tests model initialization.
 func TestModel_Init(t *testing.T) {
 	m := createTestModel()
 
@@ -106,7 +106,7 @@ func TestModel_Init(t *testing.T) {
 	}
 }
 
-// TestModel_DebugLog tests debug log functionality
+// TestModel_DebugLog tests debug log functionality.
 func TestModel_DebugLog(t *testing.T) {
 	m := createTestModel()
 
@@ -127,12 +127,12 @@ func TestModel_DebugLog(t *testing.T) {
 	}
 }
 
-// TestModel_DebugLog_MaxSize tests log size limit
+// TestModel_DebugLog_MaxSize tests log size limit.
 func TestModel_DebugLog_MaxSize(t *testing.T) {
 	m := createTestModel()
 
 	// Add 150 log entries (more than the 100 limit)
-	for i := 0; i < 150; i++ {
+	for range 150 {
 		m.addDebugLog("test message")
 	}
 
@@ -141,7 +141,7 @@ func TestModel_DebugLog_MaxSize(t *testing.T) {
 	}
 }
 
-// TestModel_Update_QuitKey tests quit key handling
+// TestModel_Update_QuitKey tests quit key handling.
 func TestModel_Update_QuitKey(t *testing.T) {
 	m := createTestModel()
 
@@ -154,7 +154,7 @@ func TestModel_Update_QuitKey(t *testing.T) {
 	}
 }
 
-// TestModel_Update_DebugCycle tests debug level cycling
+// TestModel_Update_DebugCycle tests debug level cycling.
 func TestModel_Update_DebugCycle(t *testing.T) {
 	m := createTestModel()
 	m.debugLevel = 0
@@ -165,14 +165,16 @@ func TestModel_Update_DebugCycle(t *testing.T) {
 	for i := 1; i <= 4; i++ {
 		result, _ := m.Update(msg)
 		m = result.(model)
+
 		expected := i % 4
+
 		if m.debugLevel != expected {
 			t.Errorf("After %d presses, expected debug level %d, got %d", i, expected, m.debugLevel)
 		}
 	}
 }
 
-// TestModel_Update_MenuToggle tests menu toggle
+// TestModel_Update_MenuToggle tests menu toggle.
 func TestModel_Update_MenuToggle(t *testing.T) {
 	m := createTestModel()
 	m.menuVisible = false
@@ -195,7 +197,7 @@ func TestModel_Update_MenuToggle(t *testing.T) {
 	}
 }
 
-// TestModel_Update_HelpToggle tests help screen toggle
+// TestModel_Update_HelpToggle tests help screen toggle.
 func TestModel_Update_HelpToggle(t *testing.T) {
 	m := createTestModel()
 
@@ -214,7 +216,7 @@ func TestModel_Update_HelpToggle(t *testing.T) {
 	}
 }
 
-// TestModel_Update_LogsToggle tests logs viewer toggle
+// TestModel_Update_LogsToggle tests logs viewer toggle.
 func TestModel_Update_LogsToggle(t *testing.T) {
 	m := createTestModel()
 
@@ -233,7 +235,7 @@ func TestModel_Update_LogsToggle(t *testing.T) {
 	}
 }
 
-// TestModel_Update_StatsToggle tests statistics viewer toggle
+// TestModel_Update_StatsToggle tests statistics viewer toggle.
 func TestModel_Update_StatsToggle(t *testing.T) {
 	m := createTestModel()
 
@@ -252,7 +254,7 @@ func TestModel_Update_StatsToggle(t *testing.T) {
 	}
 }
 
-// TestModel_Update_ClearErrors tests clear all errors command
+// TestModel_Update_ClearErrors tests clear all errors command.
 func TestModel_Update_ClearErrors(t *testing.T) {
 	m := createTestModel()
 
@@ -276,7 +278,7 @@ func TestModel_Update_ClearErrors(t *testing.T) {
 	}
 }
 
-// TestModel_Update_MenuNavigation tests menu navigation
+// TestModel_Update_MenuNavigation tests menu navigation.
 func TestModel_Update_MenuNavigation(t *testing.T) {
 	m := createTestModel()
 	m.menuVisible = true
@@ -317,7 +319,7 @@ func TestModel_Update_MenuNavigation(t *testing.T) {
 	}
 }
 
-// TestModel_InjectError tests error injection
+// TestModel_InjectError tests error injection.
 func TestModel_InjectError(t *testing.T) {
 	m := createTestModel()
 
@@ -351,7 +353,7 @@ func TestModel_InjectError(t *testing.T) {
 	}
 }
 
-// TestModel_InjectError_NoDevices tests error injection with no devices
+// TestModel_InjectError_NoDevices tests error injection with no devices.
 func TestModel_InjectError_NoDevices(t *testing.T) {
 	m := createTestModel()
 	m.cfg.Devices = []config.Device{} // Clear devices
@@ -371,7 +373,7 @@ func TestModel_InjectError_NoDevices(t *testing.T) {
 	}
 }
 
-// TestModel_HandleMenuSelection tests menu selection handling
+// TestModel_HandleMenuSelection tests menu selection handling.
 func TestModel_HandleMenuSelection(t *testing.T) {
 	m := createTestModel()
 
@@ -408,7 +410,7 @@ func TestModel_HandleMenuSelection(t *testing.T) {
 	}
 }
 
-// TestModel_HandleMenuSelection_ClearAll tests clear all menu option
+// TestModel_HandleMenuSelection_ClearAll tests clear all menu option.
 func TestModel_HandleMenuSelection_ClearAll(t *testing.T) {
 	m := createTestModel()
 
@@ -431,7 +433,7 @@ func TestModel_HandleMenuSelection_ClearAll(t *testing.T) {
 	}
 }
 
-// TestModel_View tests view rendering
+// TestModel_View tests view rendering.
 func TestModel_View(t *testing.T) {
 	m := createTestModel()
 
@@ -459,7 +461,7 @@ func TestModel_View(t *testing.T) {
 	}
 }
 
-// TestModel_RenderMenu tests menu rendering
+// TestModel_RenderMenu tests menu rendering.
 func TestModel_RenderMenu(t *testing.T) {
 	m := createTestModel()
 	m.selectedItem = 0
@@ -481,7 +483,7 @@ func TestModel_RenderMenu(t *testing.T) {
 	}
 }
 
-// TestModel_RenderHelp tests help screen rendering
+// TestModel_RenderHelp tests help screen rendering.
 func TestModel_RenderHelp(t *testing.T) {
 	m := createTestModel()
 
@@ -505,14 +507,14 @@ func TestModel_RenderHelp(t *testing.T) {
 	}
 
 	// Verify all debug levels are documented
-	for level := 0; level <= 3; level++ {
+	for level := range 4 {
 		if !strings.Contains(help, getDebugLevelName(level)) {
 			t.Errorf("Help should document debug level %d (%s)", level, getDebugLevelName(level))
 		}
 	}
 }
 
-// TestModel_RenderLogs tests log viewer rendering
+// TestModel_RenderLogs tests log viewer rendering.
 func TestModel_RenderLogs(t *testing.T) {
 	m := createTestModel()
 
@@ -534,10 +536,12 @@ func TestModel_RenderLogs(t *testing.T) {
 
 func TestRenderNeighborsEmpty(t *testing.T) {
 	m := createTestModel()
+
 	output := m.renderNeighbors()
 	if !strings.Contains(output, "Neighbor Discovery Table") {
 		t.Fatal("neighbor panel should include title")
 	}
+
 	if !strings.Contains(output, "No neighbors discovered yet") {
 		t.Error("expected empty-state message when no neighbors exist")
 	}
@@ -555,6 +559,7 @@ func TestRenderNeighborsWithEntries(t *testing.T) {
 			LastSeen:          time.Now().Add(-5 * time.Second),
 		},
 	}
+
 	output := m.renderNeighbors()
 	for _, token := range []string{"Neighbor Discovery Table", "Core", "Edge", "10.0.0.2", "LLDP"} {
 		if !strings.Contains(output, token) {
@@ -565,12 +570,15 @@ func TestRenderNeighborsWithEntries(t *testing.T) {
 
 func TestFormatRelativeTime(t *testing.T) {
 	now := time.Now()
+
 	if got := formatRelativeTime(time.Time{}); got != "never" {
 		t.Errorf("expected 'never' for zero time, got %q", got)
 	}
+
 	if got := formatRelativeTime(now); got != "now" {
 		t.Errorf("expected 'now' for immediate timestamps, got %q", got)
 	}
+
 	past := now.Add(-45 * time.Second)
 	if got := formatRelativeTime(past); !strings.Contains(got, "ago") {
 		t.Errorf("expected relative string to contain 'ago', got %q", got)
@@ -581,13 +589,17 @@ func TestToggleNeighborView_NoNeighbors(t *testing.T) {
 	m := createTestModel()
 	m.statusMessage = ""
 	m.toggleNeighborView()
+
 	if !m.showNeighbors {
 		t.Fatal("expected neighbor view enabled")
 	}
+
 	if !strings.Contains(m.statusMessage, "waiting for discovery") {
 		t.Errorf("expected waiting message, got %q", m.statusMessage)
 	}
+
 	m.toggleNeighborView()
+
 	if m.showNeighbors {
 		t.Error("expected neighbor view to be disabled after second toggle")
 	}
@@ -601,15 +613,17 @@ func TestToggleNeighborView_WithNeighbors(t *testing.T) {
 		RemoteDevice: "Edge",
 	}}
 	m.toggleNeighborView()
+
 	if !m.showNeighbors {
 		t.Fatal("expected neighbor view enabled")
 	}
+
 	if !strings.Contains(m.statusMessage, "Showing 1") {
 		t.Errorf("expected success message, got %q", m.statusMessage)
 	}
 }
 
-// TestModel_RenderStatistics tests statistics rendering
+// TestModel_RenderStatistics tests statistics rendering.
 func TestModel_RenderStatistics(t *testing.T) {
 	m := createTestModel()
 	m.stackStats = stackStatsSnapshot{
@@ -649,7 +663,7 @@ func TestModel_RenderStatistics(t *testing.T) {
 	}
 }
 
-// TestModel_TickUpdate tests tick message handling
+// TestModel_TickUpdate tests tick message handling.
 func TestModel_TickUpdate(t *testing.T) {
 	m := createTestModel()
 
@@ -681,7 +695,7 @@ func TestModel_TickUpdate(t *testing.T) {
 	}
 }
 
-// TestTickCmd tests tick command creation
+// TestTickCmd tests tick command creation.
 func TestTickCmd(t *testing.T) {
 	cmd := tickCmd()
 
@@ -698,7 +712,7 @@ func TestTickCmd(t *testing.T) {
 	}
 }
 
-// TestRun_NilConfig tests Run with nil config
+// TestRun_NilConfig tests Run with nil config.
 func TestRun_NilConfig(t *testing.T) {
 	// Create minimal debug config
 	debugConfig := logging.NewDebugConfig(0)
@@ -709,40 +723,38 @@ func TestRun_NilConfig(t *testing.T) {
 	_ = debugConfig
 }
 
-// BenchmarkFormatDuration benchmarks duration formatting
+// BenchmarkFormatDuration benchmarks duration formatting.
 func BenchmarkFormatDuration(b *testing.B) {
 	d := 2*time.Hour + 34*time.Minute + 56*time.Second
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = formatDuration(d)
 	}
 }
 
-// BenchmarkGetDebugLevelName benchmarks debug level name lookup
+// BenchmarkGetDebugLevelName benchmarks debug level name lookup.
 func BenchmarkGetDebugLevelName(b *testing.B) {
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+
+	for i := range b.N {
 		_ = getDebugLevelName(i % 4)
 	}
 }
 
-// BenchmarkModel_View benchmarks view rendering
+// BenchmarkModel_View benchmarks view rendering.
 func BenchmarkModel_View(b *testing.B) {
 	m := createTestModel()
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = m.View()
 	}
 }
 
-// BenchmarkModel_AddDebugLog benchmarks log addition
+// BenchmarkModel_AddDebugLog benchmarks log addition.
 func BenchmarkModel_AddDebugLog(b *testing.B) {
 	m := createTestModel()
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		m.addDebugLog("test message")
 	}
 }

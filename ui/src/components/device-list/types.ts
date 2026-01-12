@@ -1,4 +1,4 @@
-import type { Device } from '../../api/types';
+import type { Device } from "../../api/types";
 
 export interface DeviceViewProps {
   devices: Device[];

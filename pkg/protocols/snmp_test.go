@@ -31,14 +31,18 @@ func TestSNMPHandler_HandlePacket(t *testing.T) {
 	}
 
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
+
 	handler := stack.snmpHandler
 	if handler == nil {
 		t.Fatal("snmp handler should be initialized")
 	}
+
 	t.Logf("device community: %s", cfg.Devices[0].SNMPConfig.Community)
+
 	if !snmpEnabled(cfg.Devices[0].SNMPConfig) {
 		t.Fatalf("expected snmpEnabled true")
 	}
+
 	if len(stack.snmpAgents) != 1 {
 		t.Fatalf("expected 1 SNMP agent, got %d", len(stack.snmpAgents))
 	}
@@ -88,10 +92,12 @@ func TestSNMPHandler_HandlePacket(t *testing.T) {
 	select {
 	case resp := <-stack.sendQueue:
 		decoded := gopacket.NewPacket(resp.Buffer, layers.LayerTypeEthernet, gopacket.Default)
+
 		udpLayerResp := decoded.Layer(layers.LayerTypeUDP)
 		if udpLayerResp == nil {
 			t.Fatal("expected UDP layer in response")
 		}
+
 		respUDP := udpLayerResp.(*layers.UDP)
 
 		decoder := gosnmp.GoSNMP{
@@ -99,6 +105,7 @@ func TestSNMPHandler_HandlePacket(t *testing.T) {
 			Version:   gosnmp.Version2c,
 			Community: "public",
 		}
+
 		respSNMP, err := decoder.SnmpDecodePacket(respUDP.Payload)
 		if err != nil {
 			t.Fatalf("decode response: %v", err)
@@ -107,9 +114,11 @@ func TestSNMPHandler_HandlePacket(t *testing.T) {
 		if respSNMP.PDUType != gosnmp.GetResponse {
 			t.Fatalf("expected GetResponse, got %v", respSNMP.PDUType)
 		}
+
 		if len(respSNMP.Variables) != 1 {
 			t.Fatalf("expected 1 varbind, got %d", len(respSNMP.Variables))
 		}
+
 		switch v := respSNMP.Variables[0].Value.(type) {
 		case string:
 			if v != "snmp-device" {

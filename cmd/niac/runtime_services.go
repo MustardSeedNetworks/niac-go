@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -30,7 +31,12 @@ type runtimeServices struct {
 	replay        api.ReplayManager
 }
 
-func startRuntimeServices(engine *capture.Engine, stack *protocols.Stack, cfg *config.Config, interfaceName, configFile string) (*runtimeServices, error) {
+func startRuntimeServices(
+	engine *capture.Engine,
+	stack *protocols.Stack,
+	cfg *config.Config,
+	interfaceName, configFile string,
+) (*runtimeServices, error) {
 	configPath := configFile
 	if abs, err := filepath.Abs(configFile); err == nil {
 		configPath = abs
@@ -102,7 +108,8 @@ func startRuntimeServices(engine *capture.Engine, stack *protocols.Stack, cfg *c
 		}
 
 		rs.apiServer = api.NewServer(*cfgCopy)
-		if err := rs.apiServer.Start(); err != nil {
+		err := rs.apiServer.Start()
+		if err != nil {
 			if rs.storage != nil {
 				rs.storage.Close() // #nosec G104 -- error logged or non-critical
 			}
@@ -115,10 +122,11 @@ func startRuntimeServices(engine *capture.Engine, stack *protocols.Stack, cfg *c
 
 func (rs *runtimeServices) applyConfig(newCfg *config.Config) error {
 	if rs == nil || newCfg == nil {
-		return fmt.Errorf("runtime services not initialized")
+		return errors.New("runtime services not initialized")
 	}
-	if err := rs.stack.ReloadConfig(newCfg); err != nil {
-		return err
+	err := rs.stack.ReloadConfig(newCfg)
+	if err != nil {
+		return fmt.Errorf("failed to reload config: %w", err)
 	}
 	configureServiceHandlers(rs.stack, newCfg, rs.stack.GetDebugLevel())
 	rs.deviceCount = len(newCfg.Devices)
@@ -137,7 +145,8 @@ func (rs *runtimeServices) Stop() {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		// SECURITY FIX #106: Log API server shutdown errors
-		if err := rs.apiServer.Shutdown(ctx); err != nil {
+		err := rs.apiServer.Shutdown(ctx)
+		if err != nil {
 			log.Printf("Error shutting down API server: %v", err)
 		}
 	}
@@ -155,7 +164,8 @@ func (rs *runtimeServices) Stop() {
 			Errors:          stats.Errors,
 		}
 		// SECURITY FIX #106: Log storage errors during shutdown
-		if err := rs.storage.AddRun(record); err != nil {
+		err := rs.storage.AddRun(record)
+		if err != nil {
 			log.Printf("Error saving run record during shutdown: %v", err)
 		}
 		rs.storage.Close() // #nosec G104 -- error logged or non-critical
@@ -189,10 +199,10 @@ func (rc *replayController) Start(req api.ReplayRequest) (api.ReplayState, error
 	defer rc.mu.Unlock()
 
 	if rc.engine == nil {
-		return rc.state, fmt.Errorf("capture engine unavailable for replay")
+		return rc.state, errors.New("capture engine unavailable for replay")
 	}
 	if strings.TrimSpace(req.File) == "" {
-		return rc.state, fmt.Errorf("pcap file path is required")
+		return rc.state, errors.New("pcap file path is required")
 	}
 
 	if rc.current != nil {
@@ -207,11 +217,12 @@ func (rc *replayController) Start(req api.ReplayRequest) (api.ReplayState, error
 		ScaleTime: req.Scale,
 	}
 	player := capture.NewPlaybackEngine(rc.engine, cfg, rc.debugLevel)
-	if err := player.Start(); err != nil {
+	err := player.Start()
+	if err != nil {
 		if req.Uploaded {
 			os.Remove(req.File) // #nosec G104 -- error logged or non-critical
 		}
-		return rc.state, err
+		return rc.state, fmt.Errorf("failed to start playback: %w", err)
 	}
 
 	rc.current = player

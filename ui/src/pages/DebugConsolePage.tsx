@@ -1,11 +1,11 @@
-import { useState, useCallback, useMemo, type FC } from 'react';
-import { Settings2, ChevronDown, ChevronUp } from 'lucide-react';
-import { Card, CardContent, Tag, Button } from '../ui';
-import { useLogStream } from '../hooks/useEventSource';
-import { LogFilters } from '../components/LogFilters';
-import { LogViewer } from '../components/LogViewer';
-import { ProtocolDebugLevels } from '../components/debug/ProtocolDebugLevels';
-import type { LogEntry, LogLevel, Protocol } from '../api/types';
+import { ChevronDown, ChevronUp, Settings2 } from "lucide-react";
+import { type FC, useCallback, useMemo, useState } from "react";
+import type { LogEntry, LogLevel, Protocol } from "../api/types";
+import { ProtocolDebugLevels } from "../components/debug/ProtocolDebugLevels";
+import { LogFilters } from "../components/LogFilters";
+import { LogViewer } from "../components/LogViewer";
+import { useLogStream } from "../hooks/useEventSource";
+import { Button, Card, CardContent, Tag } from "../ui";
 
 // Maximum number of logs to buffer
 const MAX_LOG_BUFFER = 1000;
@@ -17,7 +17,7 @@ function generateLogId(): string {
 
 // Map incoming SSE data to LogEntry format
 function mapToLogEntry(data: unknown): LogEntry | null {
-  if (!data || typeof data !== 'object') {
+  if (!data || typeof data !== "object") {
     return null;
   }
 
@@ -25,13 +25,13 @@ function mapToLogEntry(data: unknown): LogEntry | null {
 
   // Handle different log formats from the SSE stream
   const level = (rawLog.level as string)?.toUpperCase() as LogLevel;
-  const validLevels: LogLevel[] = ['ERROR', 'WARN', 'INFO', 'DEBUG'];
+  const validLevels: LogLevel[] = ["ERROR", "WARN", "INFO", "DEBUG"];
 
   return {
     id: (rawLog.id as string) || generateLogId(),
     timestamp: (rawLog.timestamp as string) || new Date().toISOString(),
-    level: validLevels.includes(level) ? level : 'INFO',
-    protocol: (rawLog.protocol as Protocol) || (rawLog.source as string) || 'SYSTEM',
+    level: validLevels.includes(level) ? level : "INFO",
+    protocol: (rawLog.protocol as Protocol) || (rawLog.source as string) || "SYSTEM",
     message: (rawLog.message as string) || JSON.stringify(rawLog),
     source: rawLog.sourceIP as string | undefined,
     details: rawLog.details as Record<string, unknown> | undefined,
@@ -41,34 +41,37 @@ function mapToLogEntry(data: unknown): LogEntry | null {
 export const DebugConsolePage: FC = () => {
   // Log storage and filters
   const [logs, setLogs] = useState<LogEntry[]>([]);
-  const [levelFilter, setLevelFilter] = useState<LogLevel | 'All'>('All');
-  const [protocolFilter, setProtocolFilter] = useState<Protocol | 'All'>('All');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [levelFilter, setLevelFilter] = useState<LogLevel | "All">("All");
+  const [protocolFilter, setProtocolFilter] = useState<Protocol | "All">("All");
+  const [searchQuery, setSearchQuery] = useState("");
   const [autoScroll, setAutoScroll] = useState(true);
   const [paused, setPaused] = useState(false);
   const [showDebugSettings, setShowDebugSettings] = useState(false);
 
   // Handle incoming log messages
-  const handleMessage = useCallback((data: unknown) => {
-    // Skip adding logs when paused
-    if (paused) return;
+  const handleMessage = useCallback(
+    (data: unknown) => {
+      // Skip adding logs when paused
+      if (paused) return;
 
-    const logEntry = mapToLogEntry(data);
-    if (logEntry) {
-      setLogs((prevLogs) => {
-        const newLogs = [...prevLogs, logEntry];
-        // Trim to max buffer size
-        if (newLogs.length > MAX_LOG_BUFFER) {
-          return newLogs.slice(-MAX_LOG_BUFFER);
-        }
-        return newLogs;
-      });
-    }
-  }, [paused]);
+      const logEntry = mapToLogEntry(data);
+      if (logEntry) {
+        setLogs((prevLogs) => {
+          const newLogs = [...prevLogs, logEntry];
+          // Trim to max buffer size
+          if (newLogs.length > MAX_LOG_BUFFER) {
+            return newLogs.slice(-MAX_LOG_BUFFER);
+          }
+          return newLogs;
+        });
+      }
+    },
+    [paused],
+  );
 
   // Toggle pause state
   const handlePauseToggle = useCallback(() => {
-    setPaused(prev => !prev);
+    setPaused((prev) => !prev);
   }, []);
 
   // SSE connection for log streaming (auto-reconnects)
@@ -80,12 +83,12 @@ export const DebugConsolePage: FC = () => {
   const filteredLogs = useMemo(() => {
     return logs.filter((log) => {
       // Level filter
-      if (levelFilter !== 'All' && log.level !== levelFilter) {
+      if (levelFilter !== "All" && log.level !== levelFilter) {
         return false;
       }
 
       // Protocol filter
-      if (protocolFilter !== 'All' && log.protocol !== protocolFilter) {
+      if (protocolFilter !== "All" && log.protocol !== protocolFilter) {
         return false;
       }
 
@@ -111,13 +114,13 @@ export const DebugConsolePage: FC = () => {
         const timestamp = new Date(log.timestamp).toISOString();
         return `[${timestamp}] [${log.level}] [${log.protocol}] ${log.message}`;
       })
-      .join('\n');
+      .join("\n");
 
-    const blob = new Blob([content], { type: 'text/plain' });
+    const blob = new Blob([content], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
+    const link = document.createElement("a");
     link.href = url;
-    link.download = `niac-debug-${new Date().toISOString().replace(/[:.]/g, '-')}.log`;
+    link.download = `niac-debug-${new Date().toISOString().replace(/[:.]/g, "-")}.log`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -126,7 +129,7 @@ export const DebugConsolePage: FC = () => {
 
   // Clear all logs
   const handleClear = useCallback(() => {
-    if (window.confirm('Clear all logs? This action cannot be undone.')) {
+    if (window.confirm("Clear all logs? This action cannot be undone.")) {
       setLogs([]);
     }
   }, []);
@@ -135,23 +138,23 @@ export const DebugConsolePage: FC = () => {
   const connectionStatus = useMemo(() => {
     if (paused) {
       return {
-        label: 'Paused',
-        color: 'yellow' as const,
-        indicator: 'bg-yellow-400',
+        label: "Paused",
+        color: "yellow" as const,
+        indicator: "bg-yellow-400",
       };
     }
     if (connected) {
       return {
-        label: 'Live',
-        color: 'green' as const,
-        indicator: 'bg-green-400 animate-pulse',
+        label: "Live",
+        color: "green" as const,
+        indicator: "bg-green-400 animate-pulse",
       };
     }
     // SSE auto-reconnects, so disconnected state is brief
     return {
-      label: 'Connecting...',
-      color: 'yellow' as const,
-      indicator: 'bg-yellow-400 animate-pulse',
+      label: "Connecting...",
+      color: "yellow" as const,
+      indicator: "bg-yellow-400 animate-pulse",
     };
   }, [connected, paused]);
 
@@ -170,7 +173,13 @@ export const DebugConsolePage: FC = () => {
                 size="sm"
                 onClick={() => setShowDebugSettings(!showDebugSettings)}
                 leftIcon={<Settings2 className="h-4 w-4" />}
-                rightIcon={showDebugSettings ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                rightIcon={
+                  showDebugSettings ? (
+                    <ChevronUp className="h-4 w-4" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4" />
+                  )
+                }
                 aria-expanded={showDebugSettings}
                 aria-controls="debug-settings-panel"
               >
@@ -180,7 +189,7 @@ export const DebugConsolePage: FC = () => {
               <button
                 onClick={reconnect}
                 className="flex items-center gap-2 rounded-lg border border-white/10 bg-gray-950/50 px-3 py-1.5 text-sm transition-colors hover:bg-gray-800/50"
-                title={connected ? 'Connected to log stream' : 'Click to reconnect'}
+                title={connected ? "Connected to log stream" : "Click to reconnect"}
               >
                 <span className={`h-2 w-2 rounded-full ${connectionStatus.indicator}`} />
                 <Tag colorScheme={connectionStatus.color}>{connectionStatus.label}</Tag>
@@ -206,23 +215,19 @@ export const DebugConsolePage: FC = () => {
           />
 
           {/* Filter Status */}
-          {(levelFilter !== 'All' || protocolFilter !== 'All' || searchQuery) && (
+          {(levelFilter !== "All" || protocolFilter !== "All" || searchQuery) && (
             <div className="flex flex-wrap items-center gap-2 text-sm text-gray-400">
-              <span>Showing {filteredLogs.length} of {logs.length} logs</span>
-              {levelFilter !== 'All' && (
-                <Tag colorScheme="purple">Level: {levelFilter}</Tag>
-              )}
-              {protocolFilter !== 'All' && (
-                <Tag colorScheme="blue">Protocol: {protocolFilter}</Tag>
-              )}
-              {searchQuery && (
-                <Tag colorScheme="gray">Search: "{searchQuery}"</Tag>
-              )}
+              <span>
+                Showing {filteredLogs.length} of {logs.length} logs
+              </span>
+              {levelFilter !== "All" && <Tag colorScheme="purple">Level: {levelFilter}</Tag>}
+              {protocolFilter !== "All" && <Tag colorScheme="blue">Protocol: {protocolFilter}</Tag>}
+              {searchQuery && <Tag colorScheme="gray">Search: "{searchQuery}"</Tag>}
               <button
                 onClick={() => {
-                  setLevelFilter('All');
-                  setProtocolFilter('All');
-                  setSearchQuery('');
+                  setLevelFilter("All");
+                  setProtocolFilter("All");
+                  setSearchQuery("");
                 }}
                 className="text-violet-400 hover:text-violet-300 underline"
               >
@@ -232,21 +237,15 @@ export const DebugConsolePage: FC = () => {
           )}
 
           {/* Log Viewer */}
-          <LogViewer
-            logs={filteredLogs}
-            searchQuery={searchQuery}
-            autoScroll={autoScroll}
-          />
+          <LogViewer logs={filteredLogs} searchQuery={searchQuery} autoScroll={autoScroll} />
 
           {/* Footer Info */}
           <div className="flex items-center justify-between text-xs text-gray-500">
             <span>
               Buffer: {logs.length}/{MAX_LOG_BUFFER} logs
-              {logs.length >= MAX_LOG_BUFFER && ' (oldest logs will be removed)'}
+              {logs.length >= MAX_LOG_BUFFER && " (oldest logs will be removed)"}
             </span>
-            <span>
-              SSE: /api/v1/stream/logs
-            </span>
+            <span>SSE: /api/v1/stream/logs</span>
           </div>
         </CardContent>
       </Card>

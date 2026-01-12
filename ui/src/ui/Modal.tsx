@@ -1,7 +1,7 @@
-import { type FC, type ReactNode, useEffect, useCallback, type KeyboardEvent } from 'react';
-import { X } from 'lucide-react';
+import { X } from "lucide-react";
+import { type FC, type KeyboardEvent, type ReactNode, useCallback, useEffect } from "react";
 
-export type ModalSize = 'sm' | 'md' | 'lg' | 'xl' | 'full';
+export type ModalSize = "sm" | "md" | "lg" | "xl" | "full";
 
 export interface ModalProps {
   isOpen: boolean;
@@ -16,11 +16,11 @@ export interface ModalProps {
 }
 
 const sizeClasses: Record<ModalSize, string> = {
-  sm: 'max-w-sm',
-  md: 'max-w-md',
-  lg: 'max-w-lg',
-  xl: 'max-w-xl',
-  full: 'max-w-4xl',
+  sm: "max-w-sm",
+  md: "max-w-md",
+  lg: "max-w-lg",
+  xl: "max-w-xl",
+  full: "max-w-4xl",
 };
 
 export const Modal: FC<ModalProps> = ({
@@ -28,28 +28,31 @@ export const Modal: FC<ModalProps> = ({
   onClose,
   title,
   children,
-  size = 'md',
+  size = "md",
   showCloseButton = true,
   closeOnBackdropClick = true,
   closeOnEscape = true,
-  className = '',
+  className = "",
 }) => {
   // Handle escape key
-  const handleKeyDown = useCallback((e: globalThis.KeyboardEvent) => {
-    if (closeOnEscape && e.key === 'Escape') {
-      onClose();
-    }
-  }, [closeOnEscape, onClose]);
+  const handleKeyDown = useCallback(
+    (e: globalThis.KeyboardEvent) => {
+      if (closeOnEscape && e.key === "Escape") {
+        onClose();
+      }
+    },
+    [closeOnEscape, onClose],
+  );
 
   useEffect(() => {
     if (isOpen) {
-      document.addEventListener('keydown', handleKeyDown);
+      document.addEventListener("keydown", handleKeyDown);
       // Prevent body scroll when modal is open
-      document.body.style.overflow = 'hidden';
+      document.body.style.overflow = "hidden";
     }
     return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = '';
+      document.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = "";
     };
   }, [isOpen, handleKeyDown]);
 
@@ -63,7 +66,7 @@ export const Modal: FC<ModalProps> = ({
 
   const handleContentKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     // Prevent escape from bubbling if handled
-    if (e.key === 'Escape') {
+    if (e.key === "Escape") {
       e.stopPropagation();
     }
   };
@@ -74,7 +77,7 @@ export const Modal: FC<ModalProps> = ({
       onClick={handleBackdropClick}
       role="dialog"
       aria-modal="true"
-      aria-labelledby={title ? 'modal-title' : undefined}
+      aria-labelledby={title ? "modal-title" : undefined}
     >
       <div
         className={`mx-4 w-full ${sizeClasses[size]} rounded-2xl border border-white/10 bg-gray-900/95 shadow-2xl ${className}`}
@@ -99,9 +102,7 @@ export const Modal: FC<ModalProps> = ({
             )}
           </div>
         )}
-        <div className="p-6">
-          {children}
-        </div>
+        <div className="p-6">{children}</div>
       </div>
     </div>
   );
@@ -110,25 +111,17 @@ export const Modal: FC<ModalProps> = ({
 // Convenience components for modal sections
 export const ModalHeader: FC<{ children: ReactNode; className?: string }> = ({
   children,
-  className = '',
-}) => (
-  <div className={`mb-4 ${className}`}>
-    {children}
-  </div>
-);
+  className = "",
+}) => <div className={`mb-4 ${className}`}>{children}</div>;
 
 export const ModalBody: FC<{ children: ReactNode; className?: string }> = ({
   children,
-  className = '',
-}) => (
-  <div className={`space-y-4 ${className}`}>
-    {children}
-  </div>
-);
+  className = "",
+}) => <div className={`space-y-4 ${className}`}>{children}</div>;
 
 export const ModalFooter: FC<{ children: ReactNode; className?: string }> = ({
   children,
-  className = '',
+  className = "",
 }) => (
   <div className={`flex justify-end gap-3 pt-4 mt-4 border-t border-white/10 ${className}`}>
     {children}

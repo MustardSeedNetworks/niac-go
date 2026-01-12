@@ -10,7 +10,7 @@ import (
 	"github.com/krisarmstrong/niac-go/pkg/logging"
 )
 
-// TestNewCDPHandler verifies CDP handler creation
+// TestNewCDPHandler verifies CDP handler creation.
 func TestNewCDPHandler(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -19,20 +19,22 @@ func TestNewCDPHandler(t *testing.T) {
 	if handler == nil {
 		t.Fatal("Expected CDP handler, got nil")
 	}
+
 	if handler.stack != stack {
 		t.Error("Stack not set correctly")
 	}
+
 	if handler.stopChan == nil {
 		t.Error("Stop channel not initialized")
 	}
 }
 
-// TestCDPConstants verifies CDP protocol constants
+// TestCDPConstants verifies CDP protocol constants.
 func TestCDPConstants(t *testing.T) {
 	tests := []struct {
 		name     string
-		value    interface{}
-		expected interface{}
+		value    any
+		expected any
 	}{
 		{"Multicast MAC", CDPMulticastMAC, "\x01\x00\x0c\xcc\xcc\xcc"},
 		{"LLC DSAP", CDPLLCDSAP, 0xAAAA},
@@ -51,7 +53,7 @@ func TestCDPConstants(t *testing.T) {
 	}
 }
 
-// TestCDPTLVTypes verifies TLV type constants
+// TestCDPTLVTypes verifies TLV type constants.
 func TestCDPTLVTypes(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -84,7 +86,7 @@ func TestCDPTLVTypes(t *testing.T) {
 	}
 }
 
-// TestCDPCapabilities verifies capability flags
+// TestCDPCapabilities verifies capability flags.
 func TestCDPCapabilities(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -111,7 +113,7 @@ func TestCDPCapabilities(t *testing.T) {
 	}
 }
 
-// TestBuildLLCSNAPHeader verifies LLC/SNAP header construction
+// TestBuildLLCSNAPHeader verifies LLC/SNAP header construction.
 func TestBuildLLCSNAPHeader(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -127,9 +129,11 @@ func TestBuildLLCSNAPHeader(t *testing.T) {
 	if header[0] != 0xAA {
 		t.Errorf("Expected DSAP 0xAA, got 0x%02X", header[0])
 	}
+
 	if header[1] != 0xAA {
 		t.Errorf("Expected SSAP 0xAA, got 0x%02X", header[1])
 	}
+
 	if header[2] != 0x03 {
 		t.Errorf("Expected Control 0x03, got 0x%02X", header[2])
 	}
@@ -146,7 +150,7 @@ func TestBuildLLCSNAPHeader(t *testing.T) {
 	}
 }
 
-// TestBuildDeviceIDTLV verifies Device ID TLV construction
+// TestBuildDeviceIDTLV verifies Device ID TLV construction.
 func TestBuildDeviceIDTLV(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -165,7 +169,9 @@ func TestBuildDeviceIDTLV(t *testing.T) {
 	}
 
 	tlvLength := binary.BigEndian.Uint16(tlv[2:4])
+
 	expectedLength := 4 + len(device.Name)
+
 	if int(tlvLength) != expectedLength {
 		t.Errorf("Expected length %d, got %d", expectedLength, tlvLength)
 	}
@@ -177,7 +183,7 @@ func TestBuildDeviceIDTLV(t *testing.T) {
 	}
 }
 
-// TestBuildAddressesTLV verifies Addresses TLV construction
+// TestBuildAddressesTLV verifies Addresses TLV construction.
 func TestBuildAddressesTLV(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -225,7 +231,7 @@ func TestBuildAddressesTLV(t *testing.T) {
 	}
 }
 
-// TestBuildAddressesTLV_NoAddresses verifies handling when no IP addresses are present
+// TestBuildAddressesTLV_NoAddresses verifies handling when no IP addresses are present.
 func TestBuildAddressesTLV_NoAddresses(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -242,7 +248,7 @@ func TestBuildAddressesTLV_NoAddresses(t *testing.T) {
 	}
 }
 
-// TestBuildPortIDTLVCDP verifies Port ID TLV construction for CDP
+// TestBuildPortIDTLVCDP verifies Port ID TLV construction for CDP.
 func TestBuildPortIDTLVCDP(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -297,7 +303,7 @@ func TestBuildPortIDTLVCDP(t *testing.T) {
 	}
 }
 
-// TestBuildCapabilitiesTLV verifies Capabilities TLV construction
+// TestBuildCapabilitiesTLV verifies Capabilities TLV construction.
 func TestBuildCapabilitiesTLV(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -346,7 +352,7 @@ func TestBuildCapabilitiesTLV(t *testing.T) {
 	}
 }
 
-// TestBuildSoftwareVersionTLV verifies Software Version TLV construction
+// TestBuildSoftwareVersionTLV verifies Software Version TLV construction.
 func TestBuildSoftwareVersionTLV(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -392,7 +398,7 @@ func TestBuildSoftwareVersionTLV(t *testing.T) {
 	}
 }
 
-// TestBuildPlatformTLV verifies Platform TLV construction
+// TestBuildPlatformTLV verifies Platform TLV construction.
 func TestBuildPlatformTLV(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -440,7 +446,7 @@ func TestBuildPlatformTLV(t *testing.T) {
 	}
 }
 
-// TestCalculateChecksum verifies CDP checksum calculation
+// TestCalculateChecksum verifies CDP checksum calculation.
 func TestCalculateChecksum(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -486,7 +492,7 @@ func TestCalculateChecksum(t *testing.T) {
 	}
 }
 
-// TestBuildCDPFrame verifies complete CDP frame construction
+// TestBuildCDPFrame verifies complete CDP frame construction.
 func TestBuildCDPFrame(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -537,11 +543,10 @@ func TestBuildCDPFrame(t *testing.T) {
 	if holdtime != CDPHoldtime {
 		t.Errorf("Expected holdtime %d, got %d", CDPHoldtime, holdtime)
 	}
-
 	// Checksum is in bytes 10-11 (verified by calculation test)
 }
 
-// TestBuildCDPFrame_CustomConfig verifies CDP frame with custom configuration
+// TestBuildCDPFrame_CustomConfig verifies CDP frame with custom configuration.
 func TestBuildCDPFrame_CustomConfig(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -581,7 +586,7 @@ func TestBuildCDPFrame_CustomConfig(t *testing.T) {
 	}
 }
 
-// TestCDPLifecycle verifies Start/Stop functionality
+// TestCDPLifecycle verifies Start/Stop functionality.
 func TestCDPLifecycle(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -609,7 +614,7 @@ func TestCDPLifecycle(t *testing.T) {
 	}
 }
 
-// TestSendAdvertisements verifies advertisement sending logic
+// TestSendAdvertisements verifies advertisement sending logic.
 func TestSendAdvertisements(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -633,7 +638,7 @@ func TestSendAdvertisements(t *testing.T) {
 	}
 }
 
-// TestSendAdvertisements_DisabledDevice verifies CDP disabled devices are skipped
+// TestSendAdvertisements_DisabledDevice verifies CDP disabled devices are skipped.
 func TestSendAdvertisements_DisabledDevice(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -660,7 +665,7 @@ func TestSendAdvertisements_DisabledDevice(t *testing.T) {
 	}
 }
 
-// TestSendAdvertisements_NoMACAddress verifies devices without MAC are skipped
+// TestSendAdvertisements_NoMACAddress verifies devices without MAC are skipped.
 func TestSendAdvertisements_NoMACAddress(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -683,7 +688,7 @@ func TestSendAdvertisements_NoMACAddress(t *testing.T) {
 	}
 }
 
-// TestHandlePacket verifies incoming packet handling stub
+// TestHandlePacket verifies incoming packet handling stub.
 func TestHandlePacket(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -702,7 +707,7 @@ func TestHandlePacket(t *testing.T) {
 
 // Benchmarks
 
-// BenchmarkBuildCDPFrame benchmarks CDP frame construction
+// BenchmarkBuildCDPFrame benchmarks CDP frame construction.
 func BenchmarkBuildCDPFrame(b *testing.B) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -718,25 +723,23 @@ func BenchmarkBuildCDPFrame(b *testing.B) {
 		},
 	}
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		handler.buildCDPFrame(device)
 	}
 }
 
-// BenchmarkBuildLLCSNAPHeader benchmarks LLC/SNAP header construction
+// BenchmarkBuildLLCSNAPHeader benchmarks LLC/SNAP header construction.
 func BenchmarkBuildLLCSNAPHeader(b *testing.B) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
 	handler := NewCDPHandler(stack)
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		handler.buildLLCSNAPHeader()
 	}
 }
 
-// BenchmarkCalculateChecksum benchmarks checksum calculation
+// BenchmarkCalculateChecksum benchmarks checksum calculation.
 func BenchmarkCalculateChecksum(b *testing.B) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -747,8 +750,7 @@ func BenchmarkCalculateChecksum(b *testing.B) {
 		data[i] = byte(i)
 	}
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		handler.calculateChecksum(data)
 	}
 }

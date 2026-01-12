@@ -15,9 +15,11 @@ func TestNewStatistics(t *testing.T) {
 	if stats.Interface != "en0" {
 		t.Errorf("Expected interface 'en0', got '%s'", stats.Interface)
 	}
+
 	if stats.ConfigFile != "/path/to/config.yaml" {
 		t.Errorf("Expected config file '/path/to/config.yaml', got '%s'", stats.ConfigFile)
 	}
+
 	if stats.Version != "v1.19.0" {
 		t.Errorf("Expected version 'v1.19.0', got '%s'", stats.Version)
 	}
@@ -36,6 +38,7 @@ func TestIncrementPacketCount(t *testing.T) {
 	if snapshot.PacketCounts["ARP"] != 2 {
 		t.Errorf("Expected ARP count 2, got %d", snapshot.PacketCounts["ARP"])
 	}
+
 	if snapshot.PacketCounts["ICMP"] != 1 {
 		t.Errorf("Expected ICMP count 1, got %d", snapshot.PacketCounts["ICMP"])
 	}
@@ -52,6 +55,7 @@ func TestIncrementErrorCount(t *testing.T) {
 	if snapshot.ErrorCounts["router-1"] != 2 {
 		t.Errorf("Expected router-1 error count 2, got %d", snapshot.ErrorCounts["router-1"])
 	}
+
 	if snapshot.ErrorCounts["switch-1"] != 1 {
 		t.Errorf("Expected switch-1 error count 1, got %d", snapshot.ErrorCounts["switch-1"])
 	}
@@ -68,9 +72,11 @@ func TestUpdate(t *testing.T) {
 	if stats.Uptime == 0 {
 		t.Error("Uptime should be greater than 0 after Update()")
 	}
+
 	if stats.GoroutineCount == 0 {
 		t.Error("GoroutineCount should be greater than 0")
 	}
+
 	if stats.CPUCount == 0 {
 		t.Error("CPUCount should be greater than 0")
 	}
@@ -121,12 +127,15 @@ func TestUpdateProtocolStat(t *testing.T) {
 	if dnsStat.RequestsReceived != 8 {
 		t.Errorf("Expected DNS requests 8, got %d", dnsStat.RequestsReceived)
 	}
+
 	if dnsStat.ResponsesSent != 7 {
 		t.Errorf("Expected DNS responses 7, got %d", dnsStat.ResponsesSent)
 	}
+
 	if dnsStat.ErrorsEncountered != 1 {
 		t.Errorf("Expected DNS errors 1, got %d", dnsStat.ErrorsEncountered)
 	}
+
 	if dnsStat.BytesProcessed != 1536 {
 		t.Errorf("Expected DNS bytes 1536, got %d", dnsStat.BytesProcessed)
 	}
@@ -142,9 +151,11 @@ func TestSetters(t *testing.T) {
 	if stats.DeviceCount != 10 {
 		t.Errorf("Expected device count 10, got %d", stats.DeviceCount)
 	}
+
 	if stats.SNMPDeviceCount != 5 {
 		t.Errorf("Expected SNMP device count 5, got %d", stats.SNMPDeviceCount)
 	}
+
 	if stats.DHCPLeaseCount != 20 {
 		t.Errorf("Expected DHCP lease count 20, got %d", stats.DHCPLeaseCount)
 	}
@@ -188,12 +199,15 @@ func TestExportJSON(t *testing.T) {
 	if loaded.Interface != "en0" {
 		t.Errorf("Expected interface 'en0', got '%s'", loaded.Interface)
 	}
+
 	if loaded.DeviceCount != 5 {
 		t.Errorf("Expected device count 5, got %d", loaded.DeviceCount)
 	}
+
 	if loaded.PacketCounts["ARP"] != 2 {
 		t.Errorf("Expected ARP count 2, got %d", loaded.PacketCounts["ARP"])
 	}
+
 	if loaded.SNMPQueryCount != 1 {
 		t.Errorf("Expected SNMP query count 1, got %d", loaded.SNMPQueryCount)
 	}
@@ -228,9 +242,11 @@ func TestExportCSV(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to open CSV file: %v", err)
 	}
-	defer file.Close()
+
+	defer func() { _ = file.Close() }()
 
 	reader := csv.NewReader(file)
+
 	records, err := reader.ReadAll()
 	if err != nil {
 		t.Fatalf("Failed to read CSV: %v", err)
@@ -240,6 +256,7 @@ func TestExportCSV(t *testing.T) {
 	if len(records) < 2 {
 		t.Fatal("CSV should have at least header and one row")
 	}
+
 	header := records[0]
 	if len(header) != 3 || header[0] != "Metric" || header[1] != "Value" || header[2] != "Category" {
 		t.Errorf("Invalid CSV header: %v", header)
@@ -248,13 +265,16 @@ func TestExportCSV(t *testing.T) {
 	// Verify some content exists
 	foundDeviceCount := false
 	foundInterface := false
+
 	for _, record := range records[1:] {
 		if len(record) != 3 {
 			continue
 		}
+
 		if record[0] == "Device Count" && record[1] == "3" {
 			foundDeviceCount = true
 		}
+
 		if record[0] == "Interface" && record[1] == "en0" {
 			foundInterface = true
 		}
@@ -263,6 +283,7 @@ func TestExportCSV(t *testing.T) {
 	if !foundDeviceCount {
 		t.Error("CSV should contain Device Count = 3")
 	}
+
 	if !foundInterface {
 		t.Error("CSV should contain Interface = en0")
 	}
@@ -282,6 +303,7 @@ func TestGetSnapshot(t *testing.T) {
 	if snapshot.DeviceCount != 5 {
 		t.Errorf("Snapshot device count should be 5, got %d", snapshot.DeviceCount)
 	}
+
 	if snapshot.PacketCounts["ARP"] != 1 {
 		t.Errorf("Snapshot ARP count should be 1, got %d", snapshot.PacketCounts["ARP"])
 	}
@@ -304,20 +326,22 @@ func TestConcurrentAccess(t *testing.T) {
 
 	// Test concurrent reads and writes
 	done := make(chan bool)
-	for i := 0; i < 10; i++ {
+
+	for range 10 {
 		go func() {
-			for j := 0; j < 100; j++ {
+			for range 100 {
 				stats.IncrementPacketCount("ARP")
 				stats.IncrementSNMPQuery()
 				stats.Update()
 				_ = stats.GetSnapshot()
 			}
+
 			done <- true
 		}()
 	}
 
 	// Wait for all goroutines
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		<-done
 	}
 
@@ -326,6 +350,7 @@ func TestConcurrentAccess(t *testing.T) {
 	if snapshot.PacketCounts["ARP"] != 1000 {
 		t.Errorf("Expected ARP count 1000, got %d", snapshot.PacketCounts["ARP"])
 	}
+
 	if stats.SNMPQueryCount.Load() != 1000 {
 		t.Errorf("Expected SNMP query count 1000, got %d", stats.SNMPQueryCount.Load())
 	}

@@ -1,22 +1,15 @@
-import { type FC, useState, useCallback, useMemo } from 'react';
-import {
-  Card,
-  CardContent,
-  Button,
-  Tag,
-  SmallText,
-  H2,
-} from '../ui';
-import { FileSearch, Download, Trash2, Info } from 'lucide-react';
-import { PcapUploader } from '../components/pcap/PcapUploader';
-import { PcapPacketList } from '../components/pcap/PcapPacketList';
-import { PcapStats } from '../components/pcap/PcapStats';
-import { HexDumpViewer } from '../components/HexDumpViewer';
-import { PacketDetails } from '../components/PacketDetails';
-import { uploadPcap, fetchPcapAnalysis } from '../api/client';
-import type { PcapPacket, PcapAnalysisResult } from '../api/types';
-import type { Packet } from '../components/PacketList';
-import { getErrorMessage, fileToBase64 } from '../utils';
+import { Download, FileSearch, Info, Trash2 } from "lucide-react";
+import { type FC, useCallback, useMemo, useState } from "react";
+import { fetchPcapAnalysis, uploadPcap } from "../api/client";
+import type { PcapAnalysisResult, PcapPacket } from "../api/types";
+import { HexDumpViewer } from "../components/HexDumpViewer";
+import { PacketDetails } from "../components/PacketDetails";
+import type { Packet } from "../components/PacketList";
+import { PcapPacketList } from "../components/pcap/PcapPacketList";
+import { PcapStats } from "../components/pcap/PcapStats";
+import { PcapUploader } from "../components/pcap/PcapUploader";
+import { Button, Card, CardContent, H2, SmallText, Tag } from "../ui";
+import { fileToBase64, getErrorMessage } from "../utils";
 
 /**
  * Convert PcapPacket to Packet for PacketDetails component
@@ -32,7 +25,7 @@ function pcapPacketToPacket(pcapPacket: PcapPacket): Packet {
     destPort: pcapPacket.destPort,
     size: pcapPacket.length,
     summary: pcapPacket.info,
-    rawData: pcapPacket.rawData || '',
+    rawData: pcapPacket.rawData || "",
     headers: pcapPacket.headers,
   };
 }
@@ -58,13 +51,13 @@ export const PcapAnalyzerPage: FC = () => {
   const [selectedPacket, setSelectedPacket] = useState<PcapPacket | null>(null);
 
   // Filter state
-  const [protocolFilter, setProtocolFilter] = useState('All');
-  const [sourceFilter, setSourceFilter] = useState('');
-  const [destFilter, setDestFilter] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [protocolFilter, setProtocolFilter] = useState("All");
+  const [sourceFilter, setSourceFilter] = useState("");
+  const [destFilter, setDestFilter] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
 
   // View mode state
-  const [viewMode, setViewMode] = useState<'packets' | 'stats'>('packets');
+  const [viewMode, setViewMode] = useState<"packets" | "stats">("packets");
 
   // Handle file selection
   const handleFileSelect = useCallback((file: File) => {
@@ -74,10 +67,10 @@ export const PcapAnalyzerPage: FC = () => {
     setError(null);
     setSuccess(null);
     // Reset filters
-    setProtocolFilter('All');
-    setSourceFilter('');
-    setDestFilter('');
-    setSearchQuery('');
+    setProtocolFilter("All");
+    setSourceFilter("");
+    setDestFilter("");
+    setSearchQuery("");
   }, []);
 
   // Handle analysis
@@ -94,7 +87,7 @@ export const PcapAnalyzerPage: FC = () => {
       const uploadResponse = await uploadPcap({ filename: selectedFile.name, data: base64Data });
 
       if (!uploadResponse.success) {
-        throw new Error(uploadResponse.message || 'Upload failed');
+        throw new Error(uploadResponse.message || "Upload failed");
       }
 
       // Fetch the analysis result
@@ -108,7 +101,7 @@ export const PcapAnalyzerPage: FC = () => {
         setSelectedPacket(result.packets[0]);
       }
     } catch (err) {
-      const errorMessage = getErrorMessage(err) || 'Failed to analyze PCAP file';
+      const errorMessage = getErrorMessage(err) || "Failed to analyze PCAP file";
       setError(errorMessage);
     } finally {
       setIsAnalyzing(false);
@@ -127,10 +120,10 @@ export const PcapAnalyzerPage: FC = () => {
     setSelectedPacket(null);
     setError(null);
     setSuccess(null);
-    setProtocolFilter('All');
-    setSourceFilter('');
-    setDestFilter('');
-    setSearchQuery('');
+    setProtocolFilter("All");
+    setSourceFilter("");
+    setDestFilter("");
+    setSearchQuery("");
   }, []);
 
   // Export packets as JSON
@@ -138,11 +131,11 @@ export const PcapAnalyzerPage: FC = () => {
     if (!analysisResult) return;
 
     const exportData = JSON.stringify(analysisResult, null, 2);
-    const blob = new Blob([exportData], { type: 'application/json' });
+    const blob = new Blob([exportData], { type: "application/json" });
     const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
+    const link = document.createElement("a");
     link.href = url;
-    link.download = `pcap-analysis-${new Date().toISOString().slice(0, 19).replace(/[:.]/g, '-')}.json`;
+    link.download = `pcap-analysis-${new Date().toISOString().slice(0, 19).replace(/[:.]/g, "-")}.json`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -190,22 +183,22 @@ export const PcapAnalyzerPage: FC = () => {
                   <div className="flex rounded-lg border border-white/10 bg-gray-950/50 p-1">
                     <button
                       type="button"
-                      onClick={() => setViewMode('packets')}
+                      onClick={() => setViewMode("packets")}
                       className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
-                        viewMode === 'packets'
-                          ? 'bg-violet-600 text-white'
-                          : 'text-gray-400 hover:text-white'
+                        viewMode === "packets"
+                          ? "bg-violet-600 text-white"
+                          : "text-gray-400 hover:text-white"
                       }`}
                     >
                       Packets
                     </button>
                     <button
                       type="button"
-                      onClick={() => setViewMode('stats')}
+                      onClick={() => setViewMode("stats")}
                       className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
-                        viewMode === 'stats'
-                          ? 'bg-violet-600 text-white'
-                          : 'text-gray-400 hover:text-white'
+                        viewMode === "stats"
+                          ? "bg-violet-600 text-white"
+                          : "text-gray-400 hover:text-white"
                       }`}
                     >
                       Statistics
@@ -235,7 +228,7 @@ export const PcapAnalyzerPage: FC = () => {
           </Card>
 
           {/* Packets View */}
-          {viewMode === 'packets' && (
+          {viewMode === "packets" && (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               {/* Packet List */}
               <div className="lg:col-span-7 xl:col-span-8">
@@ -265,10 +258,7 @@ export const PcapAnalyzerPage: FC = () => {
                       Hex Dump
                     </SmallText>
                     <div className="flex-1 min-h-0">
-                      <HexDumpViewer
-                        rawData={selectedPacket?.rawData ?? ''}
-                        headerLength={14}
-                      />
+                      <HexDumpViewer rawData={selectedPacket?.rawData ?? ""} headerLength={14} />
                     </div>
                   </CardContent>
                 </Card>
@@ -289,7 +279,7 @@ export const PcapAnalyzerPage: FC = () => {
           )}
 
           {/* Statistics View */}
-          {viewMode === 'stats' && (
+          {viewMode === "stats" && (
             <PcapStats
               stats={analysisResult.stats}
               filename={analysisResult.filename}

@@ -67,7 +67,7 @@ another invalid line
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			walkFile := filepath.Join(tmpDir, tt.name+".walk")
-			err := os.WriteFile(walkFile, []byte(tt.walkData), 0644)
+			err := os.WriteFile(walkFile, []byte(tt.walkData), 0o644)
 			if err != nil {
 				t.Fatalf("Failed to write walk file: %v", err)
 			}
@@ -104,7 +104,7 @@ func TestAnalyzeReadability(t *testing.T) {
 .1.3.6.1.2.1.1.5.0 = STRING: test-switch-01
 `
 
-	err := os.WriteFile(walkFile, []byte(testData), 0644)
+	err := os.WriteFile(walkFile, []byte(testData), 0o644)
 	if err != nil {
 		t.Fatalf("Failed to write walk file: %v", err)
 	}
@@ -203,7 +203,7 @@ func TestAnalyzeWalkFileMalformedInput(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			walkFile := filepath.Join(tmpDir, tt.name+".walk")
-			err := os.WriteFile(walkFile, []byte(tt.walkData), 0644)
+			err := os.WriteFile(walkFile, []byte(tt.walkData), 0o644)
 			if err != nil {
 				t.Fatalf("Failed to write walk file: %v", err)
 			}

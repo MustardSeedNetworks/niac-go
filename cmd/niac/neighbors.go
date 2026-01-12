@@ -15,7 +15,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// NeighborEntry represents a neighbor record for display
+// NeighborEntry represents a neighbor record for display.
 type NeighborEntry struct {
 	Device    string    `json:"device"`
 	Interface string    `json:"interface"`
@@ -151,7 +151,8 @@ func runNeighbors(cmd *cobra.Command, args []string) error {
 
 func runNeighborsWatch(cmd *cobra.Command, args []string) error {
 	// Validate protocol flag
-	if err := validateProtocolFlag(neighborsOpts.protocol); err != nil {
+	err := validateProtocolFlag(neighborsOpts.protocol)
+	if err != nil {
 		return err
 	}
 
@@ -185,7 +186,8 @@ func runNeighborsWatchLoop(ctx context.Context, client *ipc.Client) error {
 	defer ticker.Stop()
 
 	// Initial fetch
-	if err := displayNeighborsUpdate(client); err != nil {
+	err := displayNeighborsUpdate(client)
+	if err != nil {
 		return fmt.Errorf("failed to fetch initial neighbors: %w", err)
 	}
 
@@ -197,12 +199,13 @@ func runNeighborsWatchLoop(ctx context.Context, client *ipc.Client) error {
 			}
 			return nil
 		case <-ticker.C:
-			if err := displayNeighborsUpdate(client); err != nil {
+			err := displayNeighborsUpdate(client)
+			if err != nil {
 				// Connection lost, but don't exit immediately
 				if !neighborsOpts.jsonOutput {
 					fmt.Printf("\r[%s] Connection lost: %v\n", time.Now().Format("15:04:05"), err)
 				} else {
-					errObj := map[string]interface{}{
+					errObj := map[string]any{
 						"error": err.Error(),
 						"time":  time.Now().Format(time.RFC3339),
 					}
@@ -226,7 +229,7 @@ func displayNeighborsUpdate(client *ipc.Client) error {
 
 	if neighborsOpts.jsonOutput {
 		// JSON Lines format for watch mode
-		output := map[string]interface{}{
+		output := map[string]any{
 			"timestamp": time.Now().Format(time.RFC3339),
 			"count":     len(filtered),
 			"neighbors": filtered,
@@ -246,7 +249,8 @@ func displayNeighborsUpdate(client *ipc.Client) error {
 		}
 		fmt.Println(strings.Repeat("-", 90))
 
-		if err := outputNeighborsTable(filtered); err != nil {
+		err := outputNeighborsTable(filtered)
+		if err != nil {
 			return err
 		}
 	}
@@ -274,7 +278,7 @@ func getNeighborsClient() *ipc.Client {
 func fetchNeighbors(client *ipc.Client) ([]NeighborEntry, error) {
 	neighbors, err := client.GetNeighbors()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get neighbors: %w", err)
 	}
 
 	entries := make([]NeighborEntry, 0, len(neighbors))
@@ -331,13 +335,21 @@ func outputNeighborsTable(neighbors []NeighborEntry) error {
 			n.Device, n.Interface, n.Neighbor, n.Protocol, lastSeen)
 	}
 
-	return w.Flush()
+	err := w.Flush()
+	if err != nil {
+		return fmt.Errorf("failed to flush output: %w", err)
+	}
+	return nil
 }
 
 func outputNeighborsJSON(neighbors []NeighborEntry) error {
 	encoder := json.NewEncoder(os.Stdout)
 	encoder.SetIndent("", "  ")
-	return encoder.Encode(neighbors)
+	err := encoder.Encode(neighbors)
+	if err != nil {
+		return fmt.Errorf("failed to encode neighbors: %w", err)
+	}
+	return nil
 }
 
 func formatLastSeen(t time.Time) string {

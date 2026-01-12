@@ -1,20 +1,29 @@
-// Package config provides configuration validation
 package config
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"regexp"
+	"slices"
 	"strings"
 )
 
-// Validator validates configuration files
+// Sentinel errors for validation.
+var (
+	ErrThresholdOutOfRange  = errors.New("threshold must be between 0 and 100")
+	ErrInvalidIPAddressVal  = errors.New("invalid IP address")
+	ErrInvalidMACAddressVal = errors.New("invalid MAC address")
+	ErrInvalidPort          = errors.New("invalid port (must be 1-65535)")
+)
+
+// Validator validates configuration files.
 type Validator struct {
 	errors *ConfigErrorList
 	file   string
 }
 
-// NewValidator creates a new configuration validator
+// NewValidator creates a new configuration validator.
 func NewValidator(file string) *Validator {
 	return &Validator{
 		errors: &ConfigErrorList{File: file, Valid: true},
@@ -22,10 +31,11 @@ func NewValidator(file string) *Validator {
 	}
 }
 
-// Validate validates a complete configuration
+// Validate validates a complete configuration.
 func (v *Validator) Validate(cfg *Config) *ConfigErrorList {
 	if cfg == nil {
 		v.addError("", "configuration is nil")
+
 		return v.errors
 	}
 
@@ -45,8 +55,14 @@ func (v *Validator) Validate(cfg *Config) *ConfigErrorList {
 	return v.errors
 }
 
-// validateDevice validates a single device configuration
-func (v *Validator) validateDevice(device *Device, index int, names map[string]bool, ips map[string]string, macs map[string]string) {
+// validateDevice validates a single device configuration.
+func (v *Validator) validateDevice(
+	device *Device,
+	index int,
+	names map[string]bool,
+	ips map[string]string,
+	macs map[string]string,
+) {
 	prefix := fmt.Sprintf("devices[%d]", index)
 
 	// Validate device name
@@ -54,8 +70,9 @@ func (v *Validator) validateDevice(device *Device, index int, names map[string]b
 		v.addError(prefix+".name", "device name is required")
 	} else {
 		if names[device.Name] {
-			v.addError(prefix+".name", fmt.Sprintf("duplicate device name: %s", device.Name))
+			v.addError(prefix+".name", "duplicate device name: "+device.Name)
 		}
+
 		names[device.Name] = true
 	}
 
@@ -80,6 +97,7 @@ func (v *Validator) validateDevice(device *Device, index int, names map[string]b
 				v.addError(prefix+".mac_address",
 					fmt.Sprintf("duplicate MAC address %s (also used by %s)", mac, existingDevice))
 			}
+
 			macs[mac] = device.Name
 		}
 	}
@@ -88,6 +106,7 @@ func (v *Validator) validateDevice(device *Device, index int, names map[string]b
 	for j, ip := range device.IPAddresses {
 		if ip == nil {
 			v.addError(fmt.Sprintf("%s.ip_addresses[%d]", prefix, j), "IP address is nil")
+
 			continue
 		}
 
@@ -96,6 +115,7 @@ func (v *Validator) validateDevice(device *Device, index int, names map[string]b
 			v.addError(fmt.Sprintf("%s.ip_addresses[%d]", prefix, j),
 				fmt.Sprintf("duplicate IP address %s (also used by %s)", ipStr, existingDevice))
 		}
+
 		ips[ipStr] = device.Name
 	}
 
@@ -116,12 +136,15 @@ func (v *Validator) validateTTLConfig(device *Device, prefix string) {
 	if device.TTLConfig == nil {
 		return
 	}
+
 	if device.TTLConfig.TTL < 1 || device.TTLConfig.TTL > 255 {
 		v.addError(prefix+".ttl.ttl", fmt.Sprintf("TTL must be between 1 and 255, got %d", device.TTLConfig.TTL))
 	}
+
 	if device.TTLConfig.IP != nil && device.TTLConfig.IP.To4() == nil {
 		v.addError(prefix+".ttl.ip", "TTL IP must be IPv4")
 	}
+
 	if device.TTLConfig.Mask != nil && len(device.TTLConfig.Mask) != 4 {
 		v.addError(prefix+".ttl.mask", "TTL mask must be IPv4 netmask")
 	}
@@ -132,6 +155,7 @@ func (v *Validator) validateSNMPAccessList(device *Device, prefix string) {
 	if len(device.SNMPConfig.AccessList) == 0 {
 		return
 	}
+
 	for i, ip := range device.SNMPConfig.AccessList {
 		if ip == nil {
 			v.addError(fmt.Sprintf("%s.snmp.access_list[%d]", prefix, i), "SNMP access list IP is nil")
@@ -144,18 +168,21 @@ func (v *Validator) validateNetBIOSNames(device *Device, prefix string) {
 	if device.NetBIOSConfig == nil {
 		return
 	}
+
 	for i, name := range device.NetBIOSConfig.Names {
 		if name.Name == "" {
 			v.addError(fmt.Sprintf("%s.netbios.names[%d].name", prefix, i), "NetBIOS name is required")
+
 			continue
 		}
+
 		if len(name.Name) > 15 {
 			v.addError(fmt.Sprintf("%s.netbios.names[%d].name", prefix, i), "NetBIOS name exceeds 15 characters")
 		}
 	}
 }
 
-// validateSNMPTraps validates SNMP trap configuration
+// validateSNMPTraps validates SNMP trap configuration.
 func (v *Validator) validateSNMPTraps(device *Device, prefix string) {
 	if device.SNMPConfig.Traps == nil || !device.SNMPConfig.Traps.Enabled {
 		return
@@ -166,13 +193,15 @@ func (v *Validator) validateSNMPTraps(device *Device, prefix string) {
 
 	// Validate threshold configurations
 	if traps.HighCPU != nil && traps.HighCPU.Threshold > 0 {
-		if err := v.validateThreshold(traps.HighCPU.Threshold, trapPrefix+".high_cpu.threshold"); err != nil {
+		err := v.validateThreshold(traps.HighCPU.Threshold, trapPrefix+".high_cpu.threshold")
+		if err != nil {
 			v.addError(trapPrefix+".high_cpu.threshold", err.Error())
 		}
 	}
 
 	if traps.HighMemory != nil && traps.HighMemory.Threshold > 0 {
-		if err := v.validateThreshold(traps.HighMemory.Threshold, trapPrefix+".high_memory.threshold"); err != nil {
+		err := v.validateThreshold(traps.HighMemory.Threshold, trapPrefix+".high_memory.threshold")
+		if err != nil {
 			v.addError(trapPrefix+".high_memory.threshold", err.Error())
 		}
 	}
@@ -181,6 +210,7 @@ func (v *Validator) validateSNMPTraps(device *Device, prefix string) {
 	for i, receiver := range traps.Receivers {
 		if receiver == "" {
 			v.addError(fmt.Sprintf("%s.receivers[%d]", trapPrefix, i), "trap receiver cannot be empty")
+
 			continue
 		}
 
@@ -190,18 +220,18 @@ func (v *Validator) validateSNMPTraps(device *Device, prefix string) {
 			// Try parsing as just IP
 			if ip := net.ParseIP(receiver); ip == nil {
 				v.addError(fmt.Sprintf("%s.receivers[%d]", trapPrefix, i),
-					fmt.Sprintf("invalid trap receiver format: %s", receiver))
+					"invalid trap receiver format: "+receiver)
 			}
 		} else {
 			if ip := net.ParseIP(host); ip == nil {
 				v.addError(fmt.Sprintf("%s.receivers[%d]", trapPrefix, i),
-					fmt.Sprintf("invalid IP in trap receiver: %s", host))
+					"invalid IP in trap receiver: "+host)
 			}
 		}
 	}
 }
 
-// validateDNSRecords validates DNS record configurations
+// validateDNSRecords validates DNS record configurations.
 func (v *Validator) validateDNSRecords(device *Device, prefix string) {
 	if device.DNSConfig == nil {
 		return
@@ -216,15 +246,14 @@ func (v *Validator) validateDNSRecords(device *Device, prefix string) {
 
 		if record.Name == "" {
 			v.addError(recordPrefix+".name", "DNS record name is required")
-		} else {
-			if !isValidDomainName(record.Name) {
-				v.addError(recordPrefix+".name", fmt.Sprintf("invalid domain name: %s", record.Name))
-			}
+		} else if !isValidDomainName(record.Name) {
+			v.addError(recordPrefix+".name", "invalid domain name: "+record.Name)
 		}
 
 		if record.IP == nil {
 			v.addError(recordPrefix+".ip", "DNS record IP is required")
 		}
+
 		if record.RCode < 0 || record.RCode > 15 {
 			v.addError(recordPrefix+".rcode", fmt.Sprintf("DNS RCode must be 0-15, got %d", record.RCode))
 		}
@@ -241,17 +270,19 @@ func (v *Validator) validateDNSRecords(device *Device, prefix string) {
 		if record.Name == "" {
 			v.addError(recordPrefix+".name", "reverse DNS record name is required")
 		}
+
 		if record.RCode < 0 || record.RCode > 15 {
 			v.addError(recordPrefix+".rcode", fmt.Sprintf("DNS RCode must be 0-15, got %d", record.RCode))
 		}
 	}
 }
 
-// validateThreshold validates a threshold value (0-100)
+// validateThreshold validates a threshold value (0-100).
 func (v *Validator) validateThreshold(value int, field string) error {
 	if value < 0 || value > 100 {
-		return fmt.Errorf("threshold must be between 0 and 100, got %d", value)
+		return fmt.Errorf("%w: got %d", ErrThresholdOutOfRange, value)
 	}
+
 	return nil
 }
 
@@ -268,33 +299,32 @@ func (v *Validator) addWarning(field, message string) {
 }
 
 func contains(slice []string, item string) bool {
-	for _, s := range slice {
-		if s == item {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(slice, item)
 }
 
-var domainRegex = regexp.MustCompile(`^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)*[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$`)
+var domainRegex = regexp.MustCompile(
+	`^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)*[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$`,
+)
 
 func isValidDomainName(domain string) bool {
 	if len(domain) > 253 {
 		return false
 	}
+
 	return domainRegex.MatchString(domain)
 }
 
-// ValidateIPAddress validates an IP address string
+// ValidateIPAddress validates an IP address string.
 func ValidateIPAddress(ipStr string) error {
 	ip := net.ParseIP(ipStr)
 	if ip == nil {
-		return fmt.Errorf("invalid IP address: %s", ipStr)
+		return fmt.Errorf("%w: %s", ErrInvalidIPAddressVal, ipStr)
 	}
+
 	return nil
 }
 
-// validatePortChannels validates port-channel configuration (v1.23.0)
+// validatePortChannels validates port-channel configuration (v1.23.0).
 func (v *Validator) validatePortChannels(device *Device, prefix string) {
 	if len(device.PortChannels) == 0 {
 		return
@@ -312,6 +342,7 @@ func (v *Validator) validatePortChannels(device *Device, prefix string) {
 		} else if seenIDs[pc.ID] {
 			v.addError(pcPrefix+".id", fmt.Sprintf("duplicate port-channel ID: %d", pc.ID))
 		}
+
 		seenIDs[pc.ID] = true
 
 		// Validate members
@@ -341,7 +372,7 @@ func (v *Validator) validatePortChannels(device *Device, prefix string) {
 	}
 }
 
-// validateTrunkPorts validates trunk port configuration (v1.23.0)
+// validateTrunkPorts validates trunk port configuration (v1.23.0).
 func (v *Validator) validateTrunkPorts(device *Device, prefix string, deviceNames map[string]bool) {
 	if len(device.TrunkPorts) == 0 {
 		return
@@ -356,8 +387,12 @@ func (v *Validator) validateTrunkPorts(device *Device, prefix string, deviceName
 		if trunk.Interface == "" {
 			v.addError(trunkPrefix+".interface", "trunk interface name is required")
 		} else if seenInterfaces[trunk.Interface] {
-			v.addError(trunkPrefix+".interface", fmt.Sprintf("duplicate trunk configuration for interface: %s", trunk.Interface))
+			v.addError(
+				trunkPrefix+".interface",
+				"duplicate trunk configuration for interface: "+trunk.Interface,
+			)
 		}
+
 		seenInterfaces[trunk.Interface] = true
 
 		// Validate VLANs
@@ -374,7 +409,10 @@ func (v *Validator) validateTrunkPorts(device *Device, prefix string, deviceName
 
 		// Validate native VLAN
 		if trunk.NativeVLAN != 0 && (trunk.NativeVLAN < 1 || trunk.NativeVLAN > 4094) {
-			v.addError(trunkPrefix+".native_vlan", fmt.Sprintf("invalid native VLAN: %d (must be 1-4094)", trunk.NativeVLAN))
+			v.addError(
+				trunkPrefix+".native_vlan",
+				fmt.Sprintf("invalid native VLAN: %d (must be 1-4094)", trunk.NativeVLAN),
+			)
 		}
 
 		// Validate remote device reference
@@ -393,19 +431,21 @@ func (v *Validator) validateTrunkPorts(device *Device, prefix string, deviceName
 	}
 }
 
-// ValidateMACAddress validates a MAC address string
+// ValidateMACAddress validates a MAC address string.
 func ValidateMACAddress(macStr string) error {
 	_, err := net.ParseMAC(macStr)
 	if err != nil {
-		return fmt.Errorf("invalid MAC address: %s", macStr)
+		return fmt.Errorf("%w: %s", ErrInvalidMACAddressVal, macStr)
 	}
+
 	return nil
 }
 
-// ValidatePort validates a port number
+// ValidatePort validates a port number.
 func ValidatePort(port int) error {
 	if port < 1 || port > 65535 {
-		return fmt.Errorf("invalid port: %d (must be 1-65535)", port)
+		return fmt.Errorf("%w: %d", ErrInvalidPort, port)
 	}
+
 	return nil
 }

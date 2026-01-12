@@ -2,13 +2,18 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 
 	"github.com/krisarmstrong/niac-go/internal/converter"
 )
+
+// ErrNoCfgFilesFound is returned when no .cfg files are found in the directory.
+var ErrNoCfgFilesFound = errors.New("no .cfg files found")
 
 func main() {
 	inputFile := flag.String("input", "", "Input Java DSL config file (.cfg)")
@@ -26,10 +31,12 @@ func main() {
 
 	// Batch conversion mode
 	if *batchDir != "" {
-		if err := convertBatch(*batchDir, *verbose); err != nil {
+		err := convertBatch(*batchDir, *verbose)
+		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
+
 		return
 	}
 
@@ -42,16 +49,17 @@ func main() {
 	}
 
 	if *verbose {
-		fmt.Printf("Converting %s -> %s\n", *inputFile, *outputFile)
+		slog.Info("Converting", "input", *inputFile, "output", *outputFile)
 	}
 
-	if err := converter.ConvertFile(*inputFile, *outputFile, *verbose); err != nil {
+	err := converter.ConvertFile(*inputFile, *outputFile, *verbose)
+	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
 
 	if *verbose {
-		fmt.Println("Conversion successful!")
+		slog.Info("Conversion successful!")
 	}
 }
 
@@ -62,10 +70,10 @@ func convertBatch(dir string, verbose bool) error {
 	}
 
 	if len(files) == 0 {
-		return fmt.Errorf("no .cfg files found in %s", dir)
+		return fmt.Errorf("%w in %s", ErrNoCfgFilesFound, dir)
 	}
 
-	fmt.Printf("Found %d config files to convert\n", len(files))
+	_, _ = fmt.Fprintf(os.Stdout, "Found %d config files to convert\n", len(files))
 
 	for _, file := range files {
 		base := filepath.Base(file)
@@ -74,19 +82,22 @@ func convertBatch(dir string, verbose bool) error {
 		output := filepath.Join(dir, name+".yaml")
 
 		if verbose {
-			fmt.Printf("Converting %s -> %s\n", file, output)
+			slog.Info("Converting", "input", file, "output", output)
 		}
 
-		if err := converter.ConvertFile(file, output, verbose); err != nil {
+		err := converter.ConvertFile(file, output, verbose)
+		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error converting %s: %v\n", file, err)
+
 			continue
 		}
 
 		if verbose {
-			fmt.Printf("  ✓ %s\n", base)
+			slog.Info("Converted successfully", "file", base)
 		}
 	}
 
-	fmt.Printf("Batch conversion complete\n")
+	_, _ = fmt.Fprintf(os.Stdout, "Batch conversion complete\n")
+
 	return nil
 }

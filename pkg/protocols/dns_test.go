@@ -11,7 +11,7 @@ import (
 	"github.com/krisarmstrong/niac-go/pkg/logging"
 )
 
-// TestNewDNSHandler tests DNS handler creation
+// TestNewDNSHandler tests DNS handler creation.
 func TestNewDNSHandler(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -38,7 +38,7 @@ func TestNewDNSHandler(t *testing.T) {
 	}
 }
 
-// TestAddRecord tests adding DNS records
+// TestAddRecord tests adding DNS records.
 func TestAddRecord(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -97,7 +97,7 @@ func TestAddRecord(t *testing.T) {
 	}
 }
 
-// TestAddRecord_Multiple tests multiple IPs for same hostname
+// TestAddRecord_Multiple tests multiple IPs for same hostname.
 func TestAddRecord_Multiple(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -129,15 +129,17 @@ func TestAddRecord_Multiple(t *testing.T) {
 	if !found[ip1.String()] {
 		t.Errorf("IP %s not found", ip1)
 	}
+
 	if !found[ip2.String()] {
 		t.Errorf("IP %s not found", ip2)
 	}
+
 	if !found[ip3.String()] {
 		t.Errorf("IP %s not found", ip3)
 	}
 }
 
-// TestAddRecord_CaseInsensitive tests case-insensitive hostname handling
+// TestAddRecord_CaseInsensitive tests case-insensitive hostname handling.
 func TestAddRecord_CaseInsensitive(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -154,7 +156,7 @@ func TestAddRecord_CaseInsensitive(t *testing.T) {
 	}
 }
 
-// TestSetDomain tests setting the default domain
+// TestSetDomain tests setting the default domain.
 func TestSetDomain(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -171,7 +173,7 @@ func TestSetDomain(t *testing.T) {
 	}
 }
 
-// TestLookupHost tests hostname lookups
+// TestLookupHost tests hostname lookups.
 func TestLookupHost(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -228,8 +230,10 @@ func TestLookupHost(t *testing.T) {
 			if tt.expectFound {
 				if ips == nil {
 					t.Errorf("Expected to find hostname %s, got nil", tt.hostname)
+
 					return
 				}
+
 				if len(ips) != tt.expectedCount {
 					t.Errorf("Expected %d IPs, got %d", tt.expectedCount, len(ips))
 				}
@@ -247,6 +251,7 @@ func TestParsePTRNameIPv4(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected IPv4 PTR parse success")
 	}
+
 	expected := net.ParseIP("1.2.3.4").To4()
 	if !ip.Equal(expected) {
 		t.Fatalf("expected %s, got %s", expected, ip)
@@ -256,10 +261,12 @@ func TestParsePTRNameIPv4(t *testing.T) {
 func TestParsePTRNameIPv6(t *testing.T) {
 	expected := net.ParseIP("2001:db8::1")
 	ptr := ipv6PTRString(expected)
+
 	ip, ok, _ := parsePTRName([]byte(ptr))
 	if !ok {
 		t.Fatalf("expected IPv6 PTR parse success")
 	}
+
 	if !ip.Equal(expected) {
 		t.Fatalf("expected %s, got %s", expected, ip)
 	}
@@ -282,9 +289,11 @@ func TestResolveQuestionsPTR(t *testing.T) {
 	if code != layers.DNSResponseCodeNoErr {
 		t.Fatalf("expected no error response, got %v", code)
 	}
+
 	if len(answers) != 1 {
 		t.Fatalf("expected 1 answer, got %d", len(answers))
 	}
+
 	if string(answers[0].PTR) != "router.example.com." {
 		t.Fatalf("expected PTR router.example.com., got %s", answers[0].PTR)
 	}
@@ -292,14 +301,17 @@ func TestResolveQuestionsPTR(t *testing.T) {
 
 func ipv6PTRString(ip net.IP) string {
 	hexDigits := strings.ToLower(hex.EncodeToString(ip.To16()))
+
 	parts := make([]string, 0, len(hexDigits))
+
 	for i := len(hexDigits) - 1; i >= 0; i-- {
 		parts = append(parts, string(hexDigits[i]))
 	}
+
 	return strings.Join(parts, ".") + ".ip6.arpa."
 }
 
-// TestLookupHost_WithDomain tests short name lookup with default domain
+// TestLookupHost_WithDomain tests short name lookup with default domain.
 func TestLookupHost_WithDomain(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -323,7 +335,7 @@ func TestLookupHost_WithDomain(t *testing.T) {
 	}
 }
 
-// TestLoadDeviceRecords tests loading DNS records from devices
+// TestLoadDeviceRecords tests loading DNS records from devices.
 func TestLoadDeviceRecords(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -366,6 +378,7 @@ func TestLoadDeviceRecords(t *testing.T) {
 	if ips == nil {
 		t.Fatal("Expected to find 'core-router-01'")
 	}
+
 	if len(ips) != 2 {
 		t.Errorf("Expected 2 IPs for core-router-01, got %d", len(ips))
 	}
@@ -375,6 +388,7 @@ func TestLoadDeviceRecords(t *testing.T) {
 	if ips == nil {
 		t.Fatal("Expected to find 'switch1'")
 	}
+
 	if len(ips) != 1 {
 		t.Errorf("Expected 1 IP for switch1, got %d", len(ips))
 	}
@@ -386,7 +400,7 @@ func TestLoadDeviceRecords(t *testing.T) {
 	}
 }
 
-// TestLookupHost_IPv4Only tests filtering for IPv4 addresses
+// TestLookupHost_IPv4Only tests filtering for IPv4 addresses.
 func TestLookupHost_IPv4Only(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -405,6 +419,7 @@ func TestLookupHost_IPv4Only(t *testing.T) {
 	// Count IPv4 addresses
 	ipv4Count := 0
 	ipv6Count := 0
+
 	for _, ip := range ips {
 		if ip.ip.To4() != nil {
 			ipv4Count++
@@ -422,7 +437,7 @@ func TestLookupHost_IPv4Only(t *testing.T) {
 	}
 }
 
-// TestLookupHost_IPv6Only tests filtering for IPv6 addresses
+// TestLookupHost_IPv6Only tests filtering for IPv6 addresses.
 func TestLookupHost_IPv6Only(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -441,13 +456,14 @@ func TestLookupHost_IPv6Only(t *testing.T) {
 		if ip.ip.To4() != nil {
 			t.Error("Expected only IPv6 addresses, found IPv4")
 		}
+
 		if ip.ip.To16() == nil {
 			t.Error("Invalid IPv6 address")
 		}
 	}
 }
 
-// TestPTRRecords tests reverse DNS (PTR) record storage
+// TestPTRRecords tests reverse DNS (PTR) record storage.
 func TestPTRRecords(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -477,7 +493,7 @@ func TestPTRRecords(t *testing.T) {
 	}
 }
 
-// TestThreadSafety tests concurrent access to DNS handler
+// TestThreadSafety tests concurrent access to DNS handler.
 func TestThreadSafety(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -487,36 +503,40 @@ func TestThreadSafety(t *testing.T) {
 
 	// Concurrent writes
 	go func() {
-		for i := 0; i < 100; i++ {
+		for range 100 {
 			handler.AddRecord("server1.example.com", net.ParseIP("192.168.1.10"))
 		}
+
 		done <- true
 	}()
 
 	go func() {
-		for i := 0; i < 100; i++ {
+		for range 100 {
 			handler.AddRecord("server2.example.com", net.ParseIP("192.168.1.20"))
 		}
+
 		done <- true
 	}()
 
 	// Concurrent reads
 	go func() {
-		for i := 0; i < 100; i++ {
+		for range 100 {
 			handler.lookupHost("server1.example.com", nil)
 		}
+
 		done <- true
 	}()
 
 	go func() {
-		for i := 0; i < 100; i++ {
+		for range 100 {
 			handler.SetDomain("example.com")
 		}
+
 		done <- true
 	}()
 
 	// Wait for all goroutines
-	for i := 0; i < 4; i++ {
+	for range 4 {
 		<-done
 	}
 
@@ -527,12 +547,13 @@ func TestThreadSafety(t *testing.T) {
 	if ips1 == nil {
 		t.Error("server1.example.com records corrupted")
 	}
+
 	if ips2 == nil {
 		t.Error("server2.example.com records corrupted")
 	}
 }
 
-// TestEmptyHostname tests handling of empty hostname
+// TestEmptyHostname tests handling of empty hostname.
 func TestEmptyHostname(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -547,7 +568,7 @@ func TestEmptyHostname(t *testing.T) {
 	}
 }
 
-// TestSpecialCharacters tests hostname with special characters
+// TestSpecialCharacters tests hostname with special characters.
 func TestSpecialCharacters(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -570,7 +591,7 @@ func TestSpecialCharacters(t *testing.T) {
 	}
 }
 
-// TestDNSDefaultPort tests DNS uses standard port 53
+// TestDNSDefaultPort tests DNS uses standard port 53.
 func TestDNSDefaultPort(t *testing.T) {
 	// DNS should use port 53 as defined in RFC 1035
 	// This is tested implicitly in SendDNSResponse which hardcodes port 53
@@ -584,7 +605,7 @@ func TestDNSDefaultPort(t *testing.T) {
 
 // Benchmarks
 
-// BenchmarkAddRecord benchmarks adding DNS records
+// BenchmarkAddRecord benchmarks adding DNS records.
 func BenchmarkAddRecord(b *testing.B) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -593,31 +614,29 @@ func BenchmarkAddRecord(b *testing.B) {
 	hostname := "server.example.com"
 	ip := net.ParseIP("192.168.1.10")
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		handler.AddRecord(hostname, ip)
 	}
 }
 
-// BenchmarkLookupHost benchmarks DNS lookups
+// BenchmarkLookupHost benchmarks DNS lookups.
 func BenchmarkLookupHost(b *testing.B) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
 	handler := NewDNSHandler(stack)
 
 	// Pre-populate with 100 records
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		hostname := "server" + string(rune('0'+i%10)) + ".example.com"
 		handler.AddRecord(hostname, net.ParseIP("192.168.1.10"))
 	}
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		handler.lookupHost("server5.example.com", nil)
 	}
 }
 
-// BenchmarkLoadDeviceRecords benchmarks loading device records
+// BenchmarkLoadDeviceRecords benchmarks loading device records.
 func BenchmarkLoadDeviceRecords(b *testing.B) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -625,7 +644,7 @@ func BenchmarkLoadDeviceRecords(b *testing.B) {
 
 	// Create 50 test devices
 	devices := make([]*config.Device, 50)
-	for i := 0; i < 50; i++ {
+	for i := range 50 {
 		devices[i] = &config.Device{
 			Name: "device" + string(rune('0'+i%10)),
 			SNMPConfig: config.SNMPConfig{
@@ -637,20 +656,19 @@ func BenchmarkLoadDeviceRecords(b *testing.B) {
 		}
 	}
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		handler.LoadDeviceRecords(devices)
 	}
 }
 
-// BenchmarkConcurrentLookups benchmarks concurrent DNS lookups
+// BenchmarkConcurrentLookups benchmarks concurrent DNS lookups.
 func BenchmarkConcurrentLookups(b *testing.B) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
 	handler := NewDNSHandler(stack)
 
 	// Pre-populate
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		hostname := "server" + string(rune('0'+i)) + ".example.com"
 		handler.AddRecord(hostname, net.ParseIP("192.168.1.10"))
 	}

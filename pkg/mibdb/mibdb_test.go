@@ -10,7 +10,8 @@ func TestNewInMemory(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create in-memory database: %v", err)
 	}
-	defer db.Close()
+
+	defer func() { _ = db.Close() }()
 
 	stats, err := db.Stats()
 	if err != nil {
@@ -27,7 +28,8 @@ func TestResolveOIDName(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create database: %v", err)
 	}
-	defer db.Close()
+
+	defer func() { _ = db.Close() }()
 
 	tests := []struct {
 		name     string
@@ -54,6 +56,7 @@ func TestResolveOIDName(t *testing.T) {
 				if err != nil {
 					t.Errorf("Unexpected error: %v", err)
 				}
+
 				if result != tt.expected {
 					t.Errorf("Expected %s, got %s", tt.expected, result)
 				}
@@ -67,15 +70,18 @@ func TestGetOIDByName(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create database: %v", err)
 	}
-	defer db.Close()
+
+	defer func() { _ = db.Close() }()
 
 	entry, err := db.GetOIDByName("sysDescr")
 	if err != nil {
 		t.Fatalf("Failed to get OID: %v", err)
 	}
+
 	if entry == nil {
 		t.Fatal("Expected entry, got nil")
 	}
+
 	if entry.OID != "1.3.6.1.2.1.1.1" {
 		t.Errorf("Expected OID 1.3.6.1.2.1.1.1, got %s", entry.OID)
 	}
@@ -86,7 +92,8 @@ func TestGetOIDsByPrefix(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create database: %v", err)
 	}
-	defer db.Close()
+
+	defer func() { _ = db.Close() }()
 
 	// Get all system MIB OIDs
 	entries, err := db.GetOIDsByPrefix("1.3.6.1.2.1.1")
@@ -123,6 +130,7 @@ func TestParseVariMibIntegral(t *testing.T) {
 				if err != nil {
 					t.Errorf("Unexpected error: %v", err)
 				}
+
 				if len(result.Intervals) != tt.expected {
 					t.Errorf("Expected %d intervals, got %d", tt.expected, len(result.Intervals))
 				}
@@ -154,6 +162,7 @@ func TestParseVariMibString(t *testing.T) {
 				if err != nil {
 					t.Errorf("Unexpected error: %v", err)
 				}
+
 				if len(result.Intervals) != tt.expected {
 					t.Errorf("Expected %d intervals, got %d", tt.expected, len(result.Intervals))
 				}
@@ -182,6 +191,7 @@ func TestVariMibIntegralHandler(t *testing.T) {
 
 	// Wait a bit and check value increased (50ms = 5 centiseconds = 5 intervals)
 	time.Sleep(50 * time.Millisecond)
+
 	after := handler.Value()
 	if after <= initial {
 		t.Errorf("Value should have increased after 50ms, initial=%d, after=%d", initial, after)
@@ -213,7 +223,8 @@ func TestAddVariMibHandler(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create database: %v", err)
 	}
-	defer db.Close()
+
+	defer func() { _ = db.Close() }()
 
 	handler := VariMibHandler{
 		OIDPattern:  "1.3.6.1.2.1.2.2.1.10.1",
@@ -229,9 +240,11 @@ func TestAddVariMibHandler(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to get handler: %v", err)
 	}
+
 	if retrieved == nil {
 		t.Fatal("Expected handler, got nil")
 	}
+
 	if retrieved.HandlerType != "integral" {
 		t.Errorf("Expected handler type 'integral', got %s", retrieved.HandlerType)
 	}

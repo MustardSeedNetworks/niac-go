@@ -13,19 +13,16 @@ import (
 
 // FDP protocol constants.
 const (
-	// FDP multicast destination MAC address (01:E0:52:CC:CC:CC).
+	// FDPMulticastMAC is the FDP multicast destination MAC address (01:E0:52:CC:CC:CC).
 	FDPMulticastMAC = "\x01\xE0\x52\xCC\xCC\xCC"
 
-	// FDP uses SNAP encapsulation similar to CDP
-	// EtherType 0x8037 or LLC/SNAP with OUI 00:E0:52.
-
-	// FDP advertisement interval (default 60 seconds).
+	// FDPAdvertiseInterval is the default FDP advertisement interval.
 	FDPAdvertiseInterval = 60 * time.Second
 
-	// FDP holdtime (typically 180 seconds).
-	FDPHoldtime = 180 // seconds
+	// FDPHoldtime is the FDP holdtime in seconds.
+	FDPHoldtime = 180
 
-	// FDP version.
+	// FDPVersion is the FDP protocol version.
 	FDPVersion = 1
 )
 
@@ -188,10 +185,9 @@ func (h *FDPHandler) buildLLCSNAPHeader() []byte {
 func (h *FDPHandler) buildDeviceIDTLV(device *config.Device) []byte {
 	deviceID := []byte(device.Name)
 
-	length := 4 + len(deviceID) // Type (2) + Length (2) + Value
-	if length > 65535 {
-		length = 65535
-	}
+	length := min(
+		// Type (2) + Length (2) + Value
+		4+len(deviceID), 65535)
 
 	tlv := make([]byte, length)
 	binary.BigEndian.PutUint16(tlv[0:2], FDPTLVTypeDeviceID)
@@ -215,10 +211,7 @@ func (h *FDPHandler) buildPortTLV(device *config.Device) []byte {
 		portName = []byte("Port 1")
 	}
 
-	length := 4 + len(portName)
-	if length > 65535 {
-		length = 65535
-	}
+	length := min(4+len(portName), 65535)
 
 	tlv := make([]byte, length)
 	binary.BigEndian.PutUint16(tlv[0:2], FDPTLVTypePort)
@@ -238,10 +231,7 @@ func (h *FDPHandler) buildPlatformTLV(device *config.Device) []byte {
 		platform = []byte("NIAC-Go Simulated " + device.Type)
 	}
 
-	length := 4 + len(platform)
-	if length > 65535 {
-		length = 65535
-	}
+	length := min(4+len(platform), 65535)
 
 	tlv := make([]byte, length)
 	binary.BigEndian.PutUint16(tlv[0:2], FDPTLVTypePlatform)
@@ -285,10 +275,7 @@ func (h *FDPHandler) buildSoftwareTLV(device *config.Device) []byte {
 		software = []byte("NIAC-Go v1.5.0")
 	}
 
-	length := 4 + len(software)
-	if length > 65535 {
-		length = 65535
-	}
+	length := min(4+len(software), 65535)
 
 	tlv := make([]byte, length)
 	binary.BigEndian.PutUint16(tlv[0:2], FDPTLVTypeSoftware)
@@ -314,10 +301,7 @@ func (h *FDPHandler) buildIPAddressTLV(device *config.Device) []byte {
 		ipBytes = ip.To16()
 	}
 
-	length := 4 + len(ipBytes)
-	if length > 65535 {
-		length = 65535
-	}
+	length := min(4+len(ipBytes), 65535)
 
 	tlv := make([]byte, length)
 	binary.BigEndian.PutUint16(tlv[0:2], FDPTLVTypeIPAddress)
@@ -454,7 +438,13 @@ func (h *FDPHandler) HandlePacket(pkt *Packet) {
 	}
 
 	if debugLevel >= 2 {
-		_, _ = fmt.Fprintf(os.Stdout, "FDP: Neighbor %s via %s (local %s)\n", entry.RemoteDevice, entry.RemotePort, entry.LocalDevice)
+		_, _ = fmt.Fprintf(
+			os.Stdout,
+			"FDP: Neighbor %s via %s (local %s)\n",
+			entry.RemoteDevice,
+			entry.RemotePort,
+			entry.LocalDevice,
+		)
 	}
 
 	h.stack.recordNeighbor(entry)

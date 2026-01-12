@@ -1,37 +1,24 @@
-import { type FC, useState } from 'react';
-import {
-  Card,
-  CardContent,
-  Button,
-  Tag,
-  SmallText,
-} from '../ui';
-import { useApiResource } from '../hooks/useApiResource';
-import {
-  fetchFiles,
-  fetchReplayStatus,
-  startReplay,
-  stopReplay,
-} from '../api/client';
-import { getErrorMessage } from '../utils';
+import { type FC, useState } from "react";
+import { fetchFiles, fetchReplayStatus, startReplay, stopReplay } from "../api/client";
+import { useApiResource } from "../hooks/useApiResource";
+import { Button, Card, CardContent, SmallText, Tag } from "../ui";
+import { getErrorMessage } from "../utils";
 
 export const ReplayControlPanel: FC = () => {
-  const { data: pcapFiles } = useApiResource(() => fetchFiles('pcaps'), []);
-  const { data: replayStatus, refetch: refetchStatus } = useApiResource(
-    fetchReplayStatus,
-    [],
-    { intervalMs: 2000 }
-  );
+  const { data: pcapFiles } = useApiResource(() => fetchFiles("pcaps"), []);
+  const { data: replayStatus, refetch: refetchStatus } = useApiResource(fetchReplayStatus, [], {
+    intervalMs: 2000,
+  });
 
-  const [selectedFile, setSelectedFile] = useState('');
+  const [selectedFile, setSelectedFile] = useState("");
   const [loopMs, setLoopMs] = useState(0);
   const [scale, setScale] = useState(1.0);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const handleStart = async () => {
     if (!selectedFile) {
-      setMessage({ type: 'error', text: 'Please select a PCAP file' });
+      setMessage({ type: "error", text: "Please select a PCAP file" });
       return;
     }
 
@@ -44,10 +31,10 @@ export const ReplayControlPanel: FC = () => {
         loop_ms: loopMs,
         scale: scale,
       });
-      setMessage({ type: 'success', text: 'Replay started successfully' });
+      setMessage({ type: "success", text: "Replay started successfully" });
       refetchStatus();
     } catch (err: unknown) {
-      setMessage({ type: 'error', text: getErrorMessage(err) || 'Failed to start replay' });
+      setMessage({ type: "error", text: getErrorMessage(err) || "Failed to start replay" });
     } finally {
       setIsSubmitting(false);
     }
@@ -57,10 +44,10 @@ export const ReplayControlPanel: FC = () => {
     setIsSubmitting(true);
     try {
       await stopReplay();
-      setMessage({ type: 'success', text: 'Replay stopped' });
+      setMessage({ type: "success", text: "Replay stopped" });
       refetchStatus();
     } catch (err: unknown) {
-      setMessage({ type: 'error', text: getErrorMessage(err) || 'Failed to stop replay' });
+      setMessage({ type: "error", text: getErrorMessage(err) || "Failed to stop replay" });
     } finally {
       setIsSubmitting(false);
     }
@@ -79,16 +66,15 @@ export const ReplayControlPanel: FC = () => {
                   <span className="font-medium">{replayStatus.file}</span>
                 </div>
                 <SmallText className="text-gray-400">
-                  Started: {replayStatus.started_at ? new Date(replayStatus.started_at).toLocaleString() : 'Unknown'}
+                  Started:{" "}
+                  {replayStatus.started_at
+                    ? new Date(replayStatus.started_at).toLocaleString()
+                    : "Unknown"}
                   {replayStatus.loop_ms > 0 && ` • Looping every ${replayStatus.loop_ms}ms`}
                   {replayStatus.scale !== 1.0 && ` • Scale: ${replayStatus.scale}x`}
                 </SmallText>
               </div>
-              <Button
-                onClick={handleStop}
-                disabled={isSubmitting}
-                variant="secondary"
-              >
+              <Button onClick={handleStop} disabled={isSubmitting} variant="secondary">
                 Stop Replay
               </Button>
             </div>
@@ -102,7 +88,9 @@ export const ReplayControlPanel: FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* File Selector */}
             <div className="col-span-full">
-              <label htmlFor="replay-file" className="block text-sm font-medium mb-2">PCAP File</label>
+              <label htmlFor="replay-file" className="block text-sm font-medium mb-2">
+                PCAP File
+              </label>
               <select
                 id="replay-file"
                 value={selectedFile}
@@ -130,7 +118,7 @@ export const ReplayControlPanel: FC = () => {
                 min="0"
                 step="1000"
                 value={loopMs}
-                onChange={(e) => setLoopMs(parseInt(e.target.value) || 0)}
+                onChange={(e) => setLoopMs(parseInt(e.target.value, 10) || 0)}
                 placeholder="0 = no loop"
                 disabled={replayStatus?.running}
                 className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
@@ -164,23 +152,21 @@ export const ReplayControlPanel: FC = () => {
 
           {/* Message Display */}
           {message && (
-            <div className={`p-3 rounded ${
-              message.type === 'success'
-                ? 'bg-green-500/10 text-green-400 border border-green-500/20'
-                : 'bg-red-500/10 text-red-400 border border-red-500/20'
-            }`}>
+            <div
+              className={`p-3 rounded ${
+                message.type === "success"
+                  ? "bg-green-500/10 text-green-400 border border-green-500/20"
+                  : "bg-red-500/10 text-red-400 border border-red-500/20"
+              }`}
+            >
               {message.text}
             </div>
           )}
 
           {/* Action Button */}
           {!replayStatus?.running && (
-            <Button
-              onClick={handleStart}
-              disabled={isSubmitting}
-              className="w-full"
-            >
-              {isSubmitting ? 'Starting...' : 'Start Replay'}
+            <Button onClick={handleStart} disabled={isSubmitting} className="w-full">
+              {isSubmitting ? "Starting..." : "Start Replay"}
             </Button>
           )}
         </CardContent>

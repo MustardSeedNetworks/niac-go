@@ -9,7 +9,7 @@ import (
 	"github.com/krisarmstrong/niac-go/pkg/config"
 )
 
-// TestNewTrapSender_ValidConfig tests creating a trap sender with valid configuration
+// TestNewTrapSender_ValidConfig tests creating a trap sender with valid configuration.
 func TestNewTrapSender_ValidConfig(t *testing.T) {
 	trapConfig := &config.TrapConfig{
 		Enabled:   true,
@@ -21,26 +21,30 @@ func TestNewTrapSender_ValidConfig(t *testing.T) {
 	}
 
 	deviceIP := net.ParseIP("192.168.1.1")
-	ts, err := NewTrapSender("test-device", deviceIP, trapConfig, 1)
 
+	ts, err := NewTrapSender("test-device", deviceIP, trapConfig, 1)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
+
 	if ts == nil {
 		t.Fatal("Expected trap sender, got nil")
 	}
+
 	if ts.deviceName != "test-device" {
 		t.Errorf("Expected device name 'test-device', got '%s'", ts.deviceName)
 	}
+
 	if !ts.deviceIP.Equal(deviceIP) {
 		t.Errorf("Expected device IP %s, got %s", deviceIP, ts.deviceIP)
 	}
+
 	if len(ts.receivers) != 1 {
 		t.Errorf("Expected 1 receiver, got %d", len(ts.receivers))
 	}
 }
 
-// TestNewTrapSender_MultipleReceivers tests creating trap sender with multiple receivers
+// TestNewTrapSender_MultipleReceivers tests creating trap sender with multiple receivers.
 func TestNewTrapSender_MultipleReceivers(t *testing.T) {
 	trapConfig := &config.TrapConfig{
 		Enabled: true,
@@ -52,11 +56,12 @@ func TestNewTrapSender_MultipleReceivers(t *testing.T) {
 	}
 
 	deviceIP := net.ParseIP("192.168.1.1")
-	ts, err := NewTrapSender("test-device", deviceIP, trapConfig, 1)
 
+	ts, err := NewTrapSender("test-device", deviceIP, trapConfig, 1)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
+
 	if len(ts.receivers) != 3 {
 		t.Errorf("Expected 3 receivers, got %d", len(ts.receivers))
 	}
@@ -65,15 +70,17 @@ func TestNewTrapSender_MultipleReceivers(t *testing.T) {
 	if ts.receivers[0].Target != "192.168.1.100" {
 		t.Errorf("Expected first receiver target '192.168.1.100', got '%s'", ts.receivers[0].Target)
 	}
+
 	if ts.receivers[0].Port != 162 {
 		t.Errorf("Expected first receiver port 162, got %d", ts.receivers[0].Port)
 	}
+
 	if ts.receivers[2].Port != 1162 {
 		t.Errorf("Expected third receiver port 1162, got %d", ts.receivers[2].Port)
 	}
 }
 
-// TestNewTrapSender_ReceiverWithoutPort tests receiver address without explicit port
+// TestNewTrapSender_ReceiverWithoutPort tests receiver address without explicit port.
 func TestNewTrapSender_ReceiverWithoutPort(t *testing.T) {
 	trapConfig := &config.TrapConfig{
 		Enabled:   true,
@@ -81,11 +88,12 @@ func TestNewTrapSender_ReceiverWithoutPort(t *testing.T) {
 	}
 
 	deviceIP := net.ParseIP("192.168.1.1")
-	ts, err := NewTrapSender("test-device", deviceIP, trapConfig, 1)
 
+	ts, err := NewTrapSender("test-device", deviceIP, trapConfig, 1)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
+
 	if len(ts.receivers) != 1 {
 		t.Errorf("Expected 1 receiver, got %d", len(ts.receivers))
 	}
@@ -95,7 +103,7 @@ func TestNewTrapSender_ReceiverWithoutPort(t *testing.T) {
 	}
 }
 
-// TestNewTrapSender_DisabledConfig tests creating trap sender with disabled config
+// TestNewTrapSender_DisabledConfig tests creating trap sender with disabled config.
 func TestNewTrapSender_DisabledConfig(t *testing.T) {
 	trapConfig := &config.TrapConfig{
 		Enabled:   false,
@@ -103,30 +111,32 @@ func TestNewTrapSender_DisabledConfig(t *testing.T) {
 	}
 
 	deviceIP := net.ParseIP("192.168.1.1")
-	ts, err := NewTrapSender("test-device", deviceIP, trapConfig, 1)
 
+	ts, err := NewTrapSender("test-device", deviceIP, trapConfig, 1)
 	if err == nil {
 		t.Fatal("Expected error for disabled trap config, got nil")
 	}
+
 	if ts != nil {
 		t.Error("Expected nil trap sender for disabled config")
 	}
 }
 
-// TestNewTrapSender_NilConfig tests creating trap sender with nil config
+// TestNewTrapSender_NilConfig tests creating trap sender with nil config.
 func TestNewTrapSender_NilConfig(t *testing.T) {
 	deviceIP := net.ParseIP("192.168.1.1")
-	ts, err := NewTrapSender("test-device", deviceIP, nil, 1)
 
+	ts, err := NewTrapSender("test-device", deviceIP, nil, 1)
 	if err == nil {
 		t.Fatal("Expected error for nil trap config, got nil")
 	}
+
 	if ts != nil {
 		t.Error("Expected nil trap sender for nil config")
 	}
 }
 
-// TestNewTrapSender_NoReceivers tests creating trap sender without receivers
+// TestNewTrapSender_NoReceivers tests creating trap sender without receivers.
 func TestNewTrapSender_NoReceivers(t *testing.T) {
 	trapConfig := &config.TrapConfig{
 		Enabled:   true,
@@ -134,17 +144,18 @@ func TestNewTrapSender_NoReceivers(t *testing.T) {
 	}
 
 	deviceIP := net.ParseIP("192.168.1.1")
-	ts, err := NewTrapSender("test-device", deviceIP, trapConfig, 1)
 
+	ts, err := NewTrapSender("test-device", deviceIP, trapConfig, 1)
 	if err == nil {
 		t.Fatal("Expected error for empty receivers list, got nil")
 	}
+
 	if ts != nil {
 		t.Error("Expected nil trap sender for empty receivers")
 	}
 }
 
-// TestParsePort tests port parsing function
+// TestParsePort tests port parsing function.
 func TestParsePort(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -171,7 +182,7 @@ func TestParsePort(t *testing.T) {
 	}
 }
 
-// TestTrapSender_Configuration tests trap sender configuration handling
+// TestTrapSender_Configuration tests trap sender configuration handling.
 func TestTrapSender_Configuration(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -252,6 +263,7 @@ func TestTrapSender_Configuration(t *testing.T) {
 				if err != nil {
 					t.Errorf("Expected no error for %s, got %v", tt.description, err)
 				}
+
 				if ts == nil {
 					t.Errorf("Expected trap sender for %s, got nil", tt.description)
 				}
@@ -260,7 +272,7 @@ func TestTrapSender_Configuration(t *testing.T) {
 	}
 }
 
-// TestTrapSender_Lifecycle tests trap sender start/stop lifecycle
+// TestTrapSender_Lifecycle tests trap sender start/stop lifecycle.
 func TestTrapSender_Lifecycle(t *testing.T) {
 	trapConfig := &config.TrapConfig{
 		Enabled:   true,
@@ -272,6 +284,7 @@ func TestTrapSender_Lifecycle(t *testing.T) {
 	}
 
 	deviceIP := net.ParseIP("192.168.1.1")
+
 	ts, err := NewTrapSender("test-device", deviceIP, trapConfig, 0)
 	if err != nil {
 		t.Fatalf("Failed to create trap sender: %v", err)
@@ -311,7 +324,7 @@ func TestTrapSender_Lifecycle(t *testing.T) {
 	}
 }
 
-// TestTrapOIDs tests that standard trap OIDs are correctly defined
+// TestTrapOIDs tests that standard trap OIDs are correctly defined.
 func TestTrapOIDs(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -335,7 +348,7 @@ func TestTrapOIDs(t *testing.T) {
 	}
 }
 
-// TestTrapSender_ThresholdDefaults tests default threshold values
+// TestTrapSender_ThresholdDefaults tests default threshold values.
 func TestTrapSender_ThresholdDefaults(t *testing.T) {
 	trapConfig := &config.TrapConfig{
 		Enabled:   true,
@@ -347,8 +360,8 @@ func TestTrapSender_ThresholdDefaults(t *testing.T) {
 	}
 
 	deviceIP := net.ParseIP("192.168.1.1")
-	ts, err := NewTrapSender("test-device", deviceIP, trapConfig, 0)
 
+	ts, err := NewTrapSender("test-device", deviceIP, trapConfig, 0)
 	if err != nil {
 		t.Fatalf("Failed to create trap sender: %v", err)
 	}
@@ -364,7 +377,7 @@ func TestTrapSender_ThresholdDefaults(t *testing.T) {
 	}
 }
 
-// TestTrapSender_DebugLevels tests trap sender with different debug levels
+// TestTrapSender_DebugLevels tests trap sender with different debug levels.
 func TestTrapSender_DebugLevels(t *testing.T) {
 	trapConfig := &config.TrapConfig{
 		Enabled:   true,
@@ -380,6 +393,7 @@ func TestTrapSender_DebugLevels(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Failed to create trap sender with debug level %d: %v", level, err)
 			}
+
 			if ts.debugLevel != level {
 				t.Errorf("Expected debug level %d, got %d", level, ts.debugLevel)
 			}
@@ -387,7 +401,7 @@ func TestTrapSender_DebugLevels(t *testing.T) {
 	}
 }
 
-// TestTrapSender_IPv4AndIPv6 tests trap sender with different IP versions
+// TestTrapSender_IPv4AndIPv6 tests trap sender with different IP versions.
 func TestTrapSender_IPv4AndIPv6(t *testing.T) {
 	trapConfig := &config.TrapConfig{
 		Enabled:   true,
@@ -407,10 +421,12 @@ func TestTrapSender_IPv4AndIPv6(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			deviceIP := net.ParseIP(tt.deviceIP)
+
 			ts, err := NewTrapSender("test-device", deviceIP, trapConfig, 0)
 			if err != nil {
 				t.Fatalf("Failed to create trap sender for %s: %v", tt.deviceIP, err)
 			}
+
 			if !ts.deviceIP.Equal(deviceIP) {
 				t.Errorf("Expected device IP %s, got %s", deviceIP, ts.deviceIP)
 			}
@@ -418,7 +434,7 @@ func TestTrapSender_IPv4AndIPv6(t *testing.T) {
 	}
 }
 
-// BenchmarkNewTrapSender benchmarks trap sender creation
+// BenchmarkNewTrapSender benchmarks trap sender creation.
 func BenchmarkNewTrapSender(b *testing.B) {
 	trapConfig := &config.TrapConfig{
 		Enabled:   true,
@@ -430,18 +446,18 @@ func BenchmarkNewTrapSender(b *testing.B) {
 	}
 	deviceIP := net.ParseIP("192.168.1.1")
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_, _ = NewTrapSender("test-device", deviceIP, trapConfig, 0)
 	}
 }
 
-// BenchmarkParsePort benchmarks port parsing
+// BenchmarkParsePort benchmarks port parsing.
 func BenchmarkParsePort(b *testing.B) {
 	ports := []string{"162", "1162", "10162", "invalid", "0", "70000"}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+
+	for i := range b.N {
 		parsePort(ports[i%len(ports)])
 	}
 }

@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-// Neighbor discovery protocol identifiers
+// Neighbor discovery protocol identifiers.
 const (
 	ProtocolLLDP = "LLDP" // Link Layer Discovery Protocol (IEEE 802.1AB)
 	ProtocolCDP  = "CDP"  // Cisco Discovery Protocol
@@ -15,7 +15,7 @@ const (
 	ProtocolFDP  = "FDP"  // Foundry Discovery Protocol
 )
 
-// NeighborRecord represents a discovered network neighbor from LLDP/CDP/EDP/FDP protocols
+// NeighborRecord represents a discovered network neighbor from LLDP/CDP/EDP/FDP protocols.
 type NeighborRecord struct {
 	Protocol          string
 	LocalDevice       string
@@ -44,6 +44,7 @@ func newNeighborTable() *neighborTable {
 func (t *neighborTable) reset() {
 	t.mu.Lock()
 	defer t.mu.Unlock()
+
 	t.entries = make(map[string]map[string]*NeighborRecord)
 }
 
@@ -84,6 +85,7 @@ func (t *neighborTable) cleanupExpired() {
 				delete(neighbors, key)
 			}
 		}
+
 		if len(neighbors) == 0 {
 			delete(t.entries, local)
 		}
@@ -95,11 +97,13 @@ func (t *neighborTable) list() []NeighborRecord {
 	defer t.mu.RUnlock()
 
 	var out []NeighborRecord
+
 	for _, neighbors := range t.entries {
 		for _, record := range neighbors {
 			out = append(out, *record)
 		}
 	}
+
 	return out
 }
 
@@ -111,18 +115,25 @@ func dedupStrings(values []string) []string {
 	if len(values) == 0 {
 		return values
 	}
+
 	seen := make(map[string]struct{}, len(values))
+
 	out := make([]string, 0, len(values))
+
 	for _, v := range values {
 		v = strings.TrimSpace(v)
 		if v == "" {
 			continue
 		}
+
 		if _, ok := seen[v]; ok {
 			continue
 		}
+
 		seen[v] = struct{}{}
+
 		out = append(out, v)
 	}
+
 	return out
 }

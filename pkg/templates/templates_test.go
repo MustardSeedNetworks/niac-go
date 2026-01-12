@@ -8,7 +8,7 @@ import (
 	"github.com/krisarmstrong/niac-go/pkg/config"
 )
 
-// TestList verifies that all expected templates are listed
+// TestList verifies that all expected templates are listed.
 func TestList(t *testing.T) {
 	templates := List()
 
@@ -22,9 +22,11 @@ func TestList(t *testing.T) {
 		if tmpl.Name == "" {
 			t.Error("Template has empty name")
 		}
+
 		if tmpl.Description == "" {
 			t.Errorf("Template %s has empty description", tmpl.Name)
 		}
+
 		if tmpl.UseCase == "" {
 			t.Errorf("Template %s has empty use case", tmpl.Name)
 		}
@@ -44,19 +46,22 @@ func TestList(t *testing.T) {
 
 	for _, expected := range expectedNames {
 		found := false
+
 		for _, tmpl := range templates {
 			if tmpl.Name == expected {
 				found = true
+
 				break
 			}
 		}
+
 		if !found {
 			t.Errorf("Expected template %s not found in list", expected)
 		}
 	}
 }
 
-// TestListNames verifies that ListNames returns correct template names
+// TestListNames verifies that ListNames returns correct template names.
 func TestListNames(t *testing.T) {
 	names := ListNames()
 
@@ -72,7 +77,7 @@ func TestListNames(t *testing.T) {
 	}
 }
 
-// TestGet verifies that templates can be loaded
+// TestGet verifies that templates can be loaded.
 func TestGet(t *testing.T) {
 	testCases := []string{
 		"basic-network",
@@ -96,12 +101,15 @@ func TestGet(t *testing.T) {
 			if tmpl.Name != name {
 				t.Errorf("Expected name %s, got %s", name, tmpl.Name)
 			}
+
 			if tmpl.Description == "" {
 				t.Error("Template has empty description")
 			}
+
 			if tmpl.UseCase == "" {
 				t.Error("Template has empty use case")
 			}
+
 			if tmpl.Content == "" {
 				t.Error("Template has empty content")
 			}
@@ -114,7 +122,7 @@ func TestGet(t *testing.T) {
 	}
 }
 
-// TestGetWithYamlExtension verifies that .yaml extension is handled
+// TestGetWithYamlExtension verifies that .yaml extension is handled.
 func TestGetWithYamlExtension(t *testing.T) {
 	// Should work with or without .yaml extension
 	tmpl1, err1 := Get("basic-network")
@@ -129,7 +137,7 @@ func TestGetWithYamlExtension(t *testing.T) {
 	}
 }
 
-// TestGetNonExistent verifies error handling for missing templates
+// TestGetNonExistent verifies error handling for missing templates.
 func TestGetNonExistent(t *testing.T) {
 	_, err := Get("non-existent-template")
 	if err == nil {
@@ -141,7 +149,7 @@ func TestGetNonExistent(t *testing.T) {
 	}
 }
 
-// TestExists verifies template existence checking
+// TestExists verifies template existence checking.
 func TestExists(t *testing.T) {
 	testCases := []struct {
 		name   string
@@ -169,7 +177,7 @@ func TestExists(t *testing.T) {
 	}
 }
 
-// TestValidate verifies template content validation
+// TestValidate verifies template content validation.
 func TestValidate(t *testing.T) {
 	testCases := []struct {
 		name    string
@@ -203,7 +211,7 @@ func TestValidate(t *testing.T) {
 	}
 }
 
-// TestTemplateConfigValidity verifies all templates are valid YAML configs
+// TestTemplateConfigValidity verifies all templates are valid YAML configs.
 func TestTemplateConfigValidity(t *testing.T) {
 	templates := List()
 
@@ -216,23 +224,26 @@ func TestTemplateConfigValidity(t *testing.T) {
 			}
 
 			// Create temporary file
-			tmpFile, err := os.CreateTemp("", "niac-test-*.yaml")
+			tmpFile, err := os.CreateTemp(t.TempDir(), "niac-test-*.yaml")
 			if err != nil {
 				t.Fatalf("Failed to create temp file: %v", err)
 			}
-			defer os.Remove(tmpFile.Name())
-			defer tmpFile.Close()
+
+			defer func() { _ = os.Remove(tmpFile.Name()) }()
+			defer func() { _ = tmpFile.Close() }()
 
 			// Write template content
 			if _, err := tmpFile.WriteString(fullTmpl.Content); err != nil {
 				t.Fatalf("Failed to write temp file: %v", err)
 			}
-			tmpFile.Close()
+
+			_ = tmpFile.Close()
 
 			// Try to load as config
 			cfg, err := config.Load(tmpFile.Name())
 			if err != nil {
 				t.Errorf("Template %s failed to load as valid config: %v", tmpl.Name, err)
+
 				return
 			}
 
@@ -246,9 +257,11 @@ func TestTemplateConfigValidity(t *testing.T) {
 				if device.Name == "" {
 					t.Errorf("Template %s device %d has empty name", tmpl.Name, i)
 				}
+
 				if device.Type == "" {
 					t.Errorf("Template %s device %s has empty type", tmpl.Name, device.Name)
 				}
+
 				if len(device.MACAddress) == 0 {
 					t.Errorf("Template %s device %s has empty MAC address", tmpl.Name, device.Name)
 				}
@@ -257,7 +270,7 @@ func TestTemplateConfigValidity(t *testing.T) {
 	}
 }
 
-// TestBasicNetworkTemplate verifies basic-network template specifics
+// TestBasicNetworkTemplate verifies basic-network template specifics.
 func TestBasicNetworkTemplate(t *testing.T) {
 	tmpl, err := Get("basic-network")
 	if err != nil {
@@ -265,15 +278,16 @@ func TestBasicNetworkTemplate(t *testing.T) {
 	}
 
 	// Create temp file and load config
-	tmpFile, err := os.CreateTemp("", "niac-test-*.yaml")
+	tmpFile, err := os.CreateTemp(t.TempDir(), "niac-test-*.yaml")
 	if err != nil {
 		t.Fatalf("Failed to create temp file: %v", err)
 	}
-	defer os.Remove(tmpFile.Name())
-	defer tmpFile.Close()
 
-	tmpFile.WriteString(tmpl.Content)
-	tmpFile.Close()
+	defer func() { _ = os.Remove(tmpFile.Name()) }()
+	defer func() { _ = tmpFile.Close() }()
+
+	_, _ = tmpFile.WriteString(tmpl.Content)
+	_ = tmpFile.Close()
 
 	cfg, err := config.Load(tmpFile.Name())
 	if err != nil {
@@ -287,6 +301,7 @@ func TestBasicNetworkTemplate(t *testing.T) {
 
 	// Verify both devices have basic protocols enabled
 	lldpCount := 0
+
 	for _, device := range cfg.Devices {
 		if device.LLDPConfig != nil && device.LLDPConfig.Enabled {
 			lldpCount++
@@ -298,22 +313,23 @@ func TestBasicNetworkTemplate(t *testing.T) {
 	}
 }
 
-// TestSmallOfficeTemplate verifies small-office template specifics
+// TestSmallOfficeTemplate verifies small-office template specifics.
 func TestSmallOfficeTemplate(t *testing.T) {
 	tmpl, err := Get("small-office")
 	if err != nil {
 		t.Fatalf("Failed to get small-office template: %v", err)
 	}
 
-	tmpFile, err := os.CreateTemp("", "niac-test-*.yaml")
+	tmpFile, err := os.CreateTemp(t.TempDir(), "niac-test-*.yaml")
 	if err != nil {
 		t.Fatalf("Failed to create temp file: %v", err)
 	}
-	defer os.Remove(tmpFile.Name())
-	defer tmpFile.Close()
 
-	tmpFile.WriteString(tmpl.Content)
-	tmpFile.Close()
+	defer func() { _ = os.Remove(tmpFile.Name()) }()
+	defer func() { _ = tmpFile.Close() }()
+
+	_, _ = tmpFile.WriteString(tmpl.Content)
+	_ = tmpFile.Close()
 
 	cfg, err := config.Load(tmpFile.Name())
 	if err != nil {
@@ -328,10 +344,12 @@ func TestSmallOfficeTemplate(t *testing.T) {
 	// Check for DHCP and DNS servers
 	foundDHCP := false
 	foundDNS := false
+
 	for _, device := range cfg.Devices {
 		if device.DHCPConfig != nil {
 			foundDHCP = true
 		}
+
 		if device.DNSConfig != nil {
 			foundDNS = true
 		}
@@ -340,27 +358,29 @@ func TestSmallOfficeTemplate(t *testing.T) {
 	if !foundDHCP {
 		t.Error("Small office should have DHCP server")
 	}
+
 	if !foundDNS {
 		t.Error("Small office should have DNS server")
 	}
 }
 
-// TestDataCenterTemplate verifies data-center template specifics
+// TestDataCenterTemplate verifies data-center template specifics.
 func TestDataCenterTemplate(t *testing.T) {
 	tmpl, err := Get("data-center")
 	if err != nil {
 		t.Fatalf("Failed to get data-center template: %v", err)
 	}
 
-	tmpFile, err := os.CreateTemp("", "niac-test-*.yaml")
+	tmpFile, err := os.CreateTemp(t.TempDir(), "niac-test-*.yaml")
 	if err != nil {
 		t.Fatalf("Failed to create temp file: %v", err)
 	}
-	defer os.Remove(tmpFile.Name())
-	defer tmpFile.Close()
 
-	tmpFile.WriteString(tmpl.Content)
-	tmpFile.Close()
+	defer func() { _ = os.Remove(tmpFile.Name()) }()
+	defer func() { _ = tmpFile.Close() }()
+
+	_, _ = tmpFile.WriteString(tmpl.Content)
+	_ = tmpFile.Close()
 
 	cfg, err := config.Load(tmpFile.Name())
 	if err != nil {
@@ -381,9 +401,11 @@ func TestDataCenterTemplate(t *testing.T) {
 		if device.LLDPConfig != nil && device.LLDPConfig.Enabled {
 			lldpDevices++
 		}
+
 		if device.STPConfig != nil && device.STPConfig.Enabled {
 			stpDevices++
 		}
+
 		if device.DHCPConfig != nil {
 			dhcpServers++
 		}
@@ -393,30 +415,33 @@ func TestDataCenterTemplate(t *testing.T) {
 	if lldpDevices < 4 {
 		t.Errorf("Expected at least 4 devices with LLDP (routers+switches), got %d", lldpDevices)
 	}
+
 	if stpDevices < 2 {
 		t.Errorf("Expected at least 2 switches with STP, got %d", stpDevices)
 	}
+
 	if dhcpServers < 1 {
 		t.Errorf("Expected at least 1 DHCP server, got %d", dhcpServers)
 	}
 }
 
-// TestIoTNetworkTemplate verifies iot-network template specifics
+// TestIoTNetworkTemplate verifies iot-network template specifics.
 func TestIoTNetworkTemplate(t *testing.T) {
 	tmpl, err := Get("iot-network")
 	if err != nil {
 		t.Fatalf("Failed to get iot-network template: %v", err)
 	}
 
-	tmpFile, err := os.CreateTemp("", "niac-test-*.yaml")
+	tmpFile, err := os.CreateTemp(t.TempDir(), "niac-test-*.yaml")
 	if err != nil {
 		t.Fatalf("Failed to create temp file: %v", err)
 	}
-	defer os.Remove(tmpFile.Name())
-	defer tmpFile.Close()
 
-	tmpFile.WriteString(tmpl.Content)
-	tmpFile.Close()
+	defer func() { _ = os.Remove(tmpFile.Name()) }()
+	defer func() { _ = tmpFile.Close() }()
+
+	_, _ = tmpFile.WriteString(tmpl.Content)
+	_ = tmpFile.Close()
 
 	cfg, err := config.Load(tmpFile.Name())
 	if err != nil {
@@ -430,9 +455,11 @@ func TestIoTNetworkTemplate(t *testing.T) {
 
 	// Check for gateway with DHCP
 	foundGateway := false
+
 	for _, device := range cfg.Devices {
 		if device.DHCPConfig != nil {
 			foundGateway = true
+
 			break
 		}
 	}
@@ -442,22 +469,23 @@ func TestIoTNetworkTemplate(t *testing.T) {
 	}
 }
 
-// TestTestLabTemplate verifies test-lab template specifics
+// TestTestLabTemplate verifies test-lab template specifics.
 func TestTestLabTemplate(t *testing.T) {
 	tmpl, err := Get("test-lab")
 	if err != nil {
 		t.Fatalf("Failed to get test-lab template: %v", err)
 	}
 
-	tmpFile, err := os.CreateTemp("", "niac-test-*.yaml")
+	tmpFile, err := os.CreateTemp(t.TempDir(), "niac-test-*.yaml")
 	if err != nil {
 		t.Fatalf("Failed to create temp file: %v", err)
 	}
-	defer os.Remove(tmpFile.Name())
-	defer tmpFile.Close()
 
-	tmpFile.WriteString(tmpl.Content)
-	tmpFile.Close()
+	defer func() { _ = os.Remove(tmpFile.Name()) }()
+	defer func() { _ = tmpFile.Close() }()
+
+	_, _ = tmpFile.WriteString(tmpl.Content)
+	_ = tmpFile.Close()
 
 	cfg, err := config.Load(tmpFile.Name())
 	if err != nil {
@@ -467,6 +495,7 @@ func TestTestLabTemplate(t *testing.T) {
 	// Test lab should have comprehensive protocol support
 	// Check for device with multiple discovery protocols
 	foundMultiProtocol := false
+
 	for _, device := range cfg.Devices {
 		hasLLDP := device.LLDPConfig != nil && device.LLDPConfig.Enabled
 		hasCDP := device.CDPConfig != nil && device.CDPConfig.Enabled
@@ -474,6 +503,7 @@ func TestTestLabTemplate(t *testing.T) {
 
 		if hasLLDP && hasCDP && hasEDP {
 			foundMultiProtocol = true
+
 			break
 		}
 	}
@@ -484,6 +514,7 @@ func TestTestLabTemplate(t *testing.T) {
 
 	// Check for server with DHCP, DNS, HTTP
 	foundFullServer := false
+
 	for _, device := range cfg.Devices {
 		hasDHCP := device.DHCPConfig != nil
 		hasDNS := device.DNSConfig != nil
@@ -491,6 +522,7 @@ func TestTestLabTemplate(t *testing.T) {
 
 		if hasDHCP && hasDNS && hasHTTP {
 			foundFullServer = true
+
 			break
 		}
 	}
@@ -500,9 +532,9 @@ func TestTestLabTemplate(t *testing.T) {
 	}
 }
 
-// BenchmarkGet benchmarks template loading performance
+// BenchmarkGet benchmarks template loading performance.
 func BenchmarkGet(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_, err := Get("basic-network")
 		if err != nil {
 			b.Fatal(err)
@@ -510,9 +542,9 @@ func BenchmarkGet(b *testing.B) {
 	}
 }
 
-// BenchmarkList benchmarks template listing performance
+// BenchmarkList benchmarks template listing performance.
 func BenchmarkList(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = List()
 	}
 }

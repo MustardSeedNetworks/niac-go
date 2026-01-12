@@ -67,9 +67,15 @@ func runGenerate(cmd *cobra.Command, args []string) {
 	reader := bufio.NewReader(os.Stdin)
 
 	// Print header
-	color.New(color.Bold, color.FgCyan).Println("\n╔════════════════════════════════════════════════════════════╗") // #nosec G104 -- cosmetic output
-	color.New(color.Bold, color.FgCyan).Println("║      NIAC Configuration Generator (v1.19.0)               ║")    // #nosec G104 -- cosmetic output
-	color.New(color.Bold, color.FgCyan).Print("╚════════════════════════════════════════════════════════════╝\n\n") // #nosec G104 -- cosmetic output
+	color.New(color.Bold, color.FgCyan).
+		Println("\n╔════════════════════════════════════════════════════════════╗")
+		// #nosec G104 -- cosmetic output
+	color.New(color.Bold, color.FgCyan).
+		Println("║      NIAC Configuration Generator (v1.19.0)               ║")
+		// #nosec G104 -- cosmetic output
+	color.New(color.Bold, color.FgCyan).
+		Print("╚════════════════════════════════════════════════════════════╝\n\n")
+		// #nosec G104 -- cosmetic output
 
 	color.Yellow("This wizard will guide you through creating a complete YAML")
 	color.Yellow("configuration file for your network simulation.\n\n")
@@ -86,7 +92,11 @@ func runGenerate(cmd *cobra.Command, args []string) {
 	cfg.networkName = promptString(reader, color.CyanString("Network name: "), "simulation-network")
 
 	// Subnet
-	cfg.subnet = promptString(reader, color.CyanString("Network subnet (CIDR, e.g., 192.168.1.0/24): "), "192.168.1.0/24")
+	cfg.subnet = promptString(
+		reader,
+		color.CyanString("Network subnet (CIDR, e.g., 192.168.1.0/24): "),
+		"192.168.1.0/24",
+	)
 
 	// Include path for walk files
 	cfg.includePath = promptString(reader, color.CyanString("Path for SNMP walk files (leave empty for none): "), "")
@@ -100,8 +110,10 @@ func runGenerate(cmd *cobra.Command, args []string) {
 	deviceCount := mustPromptInt(reader, "How many devices to create (1-20): ", 1, 20)
 	fmt.Println()
 
-	for i := 0; i < deviceCount; i++ {
-		color.New(color.Bold, color.FgYellow).Printf("Device %d/%d:\n", i+1, deviceCount) // #nosec G104 -- cosmetic output
+	for i := range deviceCount {
+		color.New(color.Bold, color.FgYellow).
+			Printf("Device %d/%d:\n", i+1, deviceCount)
+			// #nosec G104 -- cosmetic output
 		color.White("──────────────────────────────────────────────────────────────\n")
 
 		device := generatedDevice{
@@ -161,7 +173,8 @@ func runGenerate(cmd *cobra.Command, args []string) {
 	yamlContent := generateYAML(cfg)
 
 	// Write to file
-	if err := os.WriteFile(outputFile, []byte(yamlContent), 0600); err != nil {
+	err := os.WriteFile(outputFile, []byte(yamlContent), 0o600)
+	if err != nil {
 		color.Red("Error writing file: %v\n", err)
 		os.Exit(1)
 	}
@@ -188,7 +201,10 @@ func runGenerate(cmd *cobra.Command, args []string) {
 	fmt.Printf("   %s\n", color.CyanString("niac validate %s", outputFile)) // #nosec G104 -- cosmetic output
 	fmt.Println()
 	fmt.Println("2. Run the simulation:")
-	fmt.Printf("   %s\n", color.CyanString("sudo niac interactive en0 %s", outputFile)) // #nosec G104 -- cosmetic output
+	fmt.Printf(
+		"   %s\n",
+		color.CyanString("sudo niac interactive en0 %s", outputFile),
+	) // #nosec G104 -- cosmetic output
 	fmt.Println()
 }
 

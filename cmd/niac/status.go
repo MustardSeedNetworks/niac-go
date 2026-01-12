@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/krisarmstrong/niac-go/pkg/ipc"
@@ -98,7 +100,7 @@ func runStatus(cmd *cobra.Command, args []string) {
 	defer conn.Close()
 
 	// Set timeout for socket operations
-	conn.SetDeadline(time.Now().Add(5 * time.Second))
+	_ = conn.SetDeadline(time.Now().Add(5 * time.Second))
 
 	// Send status request
 	req := ipc.Request{
@@ -209,7 +211,7 @@ func runStatus(cmd *cobra.Command, args []string) {
 	os.Exit(0)
 }
 
-// printHumanStatus prints the status in human-readable format
+// printHumanStatus prints the status in human-readable format.
 func printHumanStatus(status *ipc.StatusData) {
 	statusStr := "STOPPED"
 	if status.Running {
@@ -226,13 +228,13 @@ func printHumanStatus(status *ipc.StatusData) {
 	fmt.Printf("Errors Active: %d\n", status.ErrorsActive)
 }
 
-// formatDurationFromSeconds formats a duration in seconds as "2h 15m 43s"
+// formatDurationFromSeconds formats a duration in seconds as "2h 15m 43s".
 func formatDurationFromSeconds(seconds float64) string {
 	d := time.Duration(seconds * float64(time.Second))
 	return formatDurationHMS(d)
 }
 
-// formatDurationHMS formats a time.Duration as "2h 15m 43s"
+// formatDurationHMS formats a time.Duration as "2h 15m 43s".
 func formatDurationHMS(d time.Duration) string {
 	h := int(d.Hours())
 	m := int(d.Minutes()) % 60
@@ -247,30 +249,32 @@ func formatDurationHMS(d time.Duration) string {
 	return fmt.Sprintf("%ds", s)
 }
 
-// formatStatusNumber formats a number with thousand separators (e.g., 125432 -> "125,432")
+// formatStatusNumber formats a number with thousand separators (e.g., 125432 -> "125,432").
 func formatStatusNumber(n uint64) string {
 	if n < 1000 {
-		return fmt.Sprintf("%d", n)
+		return strconv.FormatUint(n, 10)
 	}
 
 	// Convert to string and add separators
-	str := fmt.Sprintf("%d", n)
+	str := strconv.FormatUint(n, 10)
 	result := ""
 	length := len(str)
 
+	var resultSb262 strings.Builder
 	for i, char := range str {
 		if i > 0 && (length-i)%3 == 0 {
-			result += ","
+			resultSb262.WriteString(",")
 		}
-		result += string(char)
+		resultSb262.WriteString(string(char))
 	}
+	result += resultSb262.String()
 
 	return result
 }
 
-// outputStatusJSON outputs data as formatted JSON
+// outputStatusJSON outputs data as formatted JSON.
 func outputStatusJSON(data interface{}) {
 	encoder := json.NewEncoder(os.Stdout)
 	encoder.SetIndent("", "  ")
-	encoder.Encode(data) // #nosec G104 -- stdout write error is non-critical
+	_ = encoder.Encode(data)
 }

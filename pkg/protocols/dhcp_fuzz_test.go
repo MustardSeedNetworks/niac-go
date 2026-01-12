@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-// FuzzDHCPMACLookup tests DHCP MAC address operations with arbitrary input
+// FuzzDHCPMACLookup tests DHCP MAC address operations with arbitrary input.
 func FuzzDHCPMACLookup(f *testing.F) {
 	// Seed with valid MAC addresses
 	f.Add([]byte{0x00, 0x11, 0x22, 0x33, 0x44, 0x55})
@@ -39,7 +39,7 @@ func FuzzDHCPMACLookup(f *testing.F) {
 	})
 }
 
-// FuzzDHCPIPAllocation tests IP address allocation with arbitrary input
+// FuzzDHCPIPAllocation tests IP address allocation with arbitrary input.
 func FuzzDHCPIPAllocation(f *testing.F) {
 	// Seed with valid IPs
 	f.Add([]byte{192, 168, 1, 100})
@@ -72,7 +72,7 @@ func FuzzDHCPIPAllocation(f *testing.F) {
 	})
 }
 
-// FuzzDHCPHostname tests hostname validation with arbitrary input
+// FuzzDHCPHostname tests hostname validation with arbitrary input.
 func FuzzDHCPHostname(f *testing.F) {
 	// Seed with valid hostnames
 	f.Add("host1")

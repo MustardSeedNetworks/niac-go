@@ -208,7 +208,7 @@ func TestInitCommandFileCreation(t *testing.T) {
 
 	// Test that we can write to a file
 	testContent := []byte("test: content")
-	err := os.WriteFile(outputFile, testContent, 0644)
+	err := os.WriteFile(outputFile, testContent, 0o644)
 	if err != nil {
 		t.Fatalf("Failed to write test file: %v", err)
 	}
@@ -235,7 +235,7 @@ func TestInitCommandFileOverwrite(t *testing.T) {
 
 	// Create existing file
 	originalContent := []byte("original: content")
-	err := os.WriteFile(outputFile, originalContent, 0644)
+	err := os.WriteFile(outputFile, originalContent, 0o644)
 	if err != nil {
 		t.Fatalf("Failed to create existing file: %v", err)
 	}
@@ -247,7 +247,7 @@ func TestInitCommandFileOverwrite(t *testing.T) {
 
 	// Overwrite with new content
 	newContent := []byte("new: content")
-	err = os.WriteFile(outputFile, newContent, 0644)
+	err = os.WriteFile(outputFile, newContent, 0o644)
 	if err != nil {
 		t.Fatalf("Failed to overwrite file: %v", err)
 	}
@@ -268,7 +268,7 @@ func TestInitCommandPermissions(t *testing.T) {
 	outputFile := filepath.Join(tmpDir, "perms-test.yaml")
 
 	// Write file with specific permissions
-	err := os.WriteFile(outputFile, []byte("test"), 0644)
+	err := os.WriteFile(outputFile, []byte("test"), 0o644)
 	if err != nil {
 		t.Fatalf("Failed to write file: %v", err)
 	}
@@ -281,7 +281,7 @@ func TestInitCommandPermissions(t *testing.T) {
 
 	mode := info.Mode()
 	// On Unix-like systems, should be 0644 (rw-r--r--)
-	expectedPerm := os.FileMode(0644)
+	expectedPerm := os.FileMode(0o644)
 	if mode.Perm() != expectedPerm {
 		t.Logf("File permissions: got %v, expected %v (may vary by OS)", mode.Perm(), expectedPerm)
 	}
@@ -290,7 +290,7 @@ func TestInitCommandPermissions(t *testing.T) {
 func TestInitCommandInvalidDirectory(t *testing.T) {
 	// Try to write to a non-existent directory
 	nonExistentDir := "/nonexistent/path/to/file.yaml"
-	err := os.WriteFile(nonExistentDir, []byte("test"), 0644)
+	err := os.WriteFile(nonExistentDir, []byte("test"), 0o644)
 
 	if err == nil {
 		t.Error("Expected error when writing to non-existent directory, got nil")
@@ -302,7 +302,7 @@ func TestInitCommandFileExists(t *testing.T) {
 	testFile := filepath.Join(tmpDir, "existing-file.yaml")
 
 	// Create file
-	err := os.WriteFile(testFile, []byte("test"), 0644)
+	err := os.WriteFile(testFile, []byte("test"), 0o644)
 	if err != nil {
 		t.Fatalf("Failed to create test file: %v", err)
 	}

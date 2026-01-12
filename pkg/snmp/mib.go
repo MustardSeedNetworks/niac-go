@@ -9,14 +9,14 @@ import (
 	"github.com/gosnmp/gosnmp"
 )
 
-// OIDValue represents an OID value with type
+// OIDValue represents an OID value with type.
 type OIDValue struct {
 	Type    gosnmp.Asn1BER
-	Value   interface{}
+	Value   any
 	Dynamic func() *OIDValue // For dynamic values like sysUpTime
 }
 
-// MIB represents a Management Information Base
+// MIB represents a Management Information Base.
 type MIB struct {
 	mu      sync.RWMutex
 	entries map[string]*OIDValue // OID string -> value
@@ -24,7 +24,7 @@ type MIB struct {
 	dirty   bool                 // True if sorted list needs updating
 }
 
-// NewMIB creates a new MIB
+// NewMIB creates a new MIB.
 func NewMIB() *MIB {
 	return &MIB{
 		entries: make(map[string]*OIDValue),
@@ -33,7 +33,7 @@ func NewMIB() *MIB {
 	}
 }
 
-// Set sets an OID value
+// Set sets an OID value.
 func (m *MIB) Set(oid string, value *OIDValue) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -45,7 +45,7 @@ func (m *MIB) Set(oid string, value *OIDValue) {
 	m.dirty = true
 }
 
-// SetDynamic sets a dynamic OID value (computed on each access)
+// SetDynamic sets a dynamic OID value (computed on each access).
 func (m *MIB) SetDynamic(oid string, fn func() *OIDValue) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -59,7 +59,7 @@ func (m *MIB) SetDynamic(oid string, fn func() *OIDValue) {
 	m.dirty = true
 }
 
-// Get retrieves an OID value
+// Get retrieves an OID value.
 func (m *MIB) Get(oid string) *OIDValue {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -80,7 +80,7 @@ func (m *MIB) Get(oid string) *OIDValue {
 	return value
 }
 
-// GetNext retrieves the next OID in lexicographical order
+// GetNext retrieves the next OID in lexicographical order.
 func (m *MIB) GetNext(oid string) (string, *OIDValue) {
 	// Normalize OID
 	oid = strings.TrimPrefix(oid, ".")
@@ -97,6 +97,7 @@ func (m *MIB) GetNext(oid string) (string, *OIDValue) {
 		if m.dirty {
 			m.updateSortedList()
 		}
+
 		m.mu.Unlock()
 	}
 
@@ -122,7 +123,7 @@ func (m *MIB) GetNext(oid string) (string, *OIDValue) {
 	return "", nil
 }
 
-// updateSortedList updates the sorted OID list (caller must hold write lock)
+// updateSortedList updates the sorted OID list (caller must hold write lock).
 func (m *MIB) updateSortedList() {
 	m.sorted = make([]string, 0, len(m.entries))
 	for oid := range m.entries {
@@ -138,7 +139,7 @@ func (m *MIB) updateSortedList() {
 }
 
 // Delete removes an OID from the MIB.
-// FEATURE #116: Added godoc for utility functions
+// FEATURE #116: Added godoc for utility functions.
 func (m *MIB) Delete(oid string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -152,14 +153,15 @@ func (m *MIB) Delete(oid string) {
 	}
 }
 
-// Count returns the number of OIDs in the MIB
+// Count returns the number of OIDs in the MIB.
 func (m *MIB) Count() int {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
+
 	return len(m.entries)
 }
 
-// AllOIDs returns all OIDs in sorted order
+// AllOIDs returns all OIDs in sorted order.
 func (m *MIB) AllOIDs() []string {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -175,27 +177,26 @@ func (m *MIB) AllOIDs() []string {
 	// Return copy
 	result := make([]string, len(m.sorted))
 	copy(result, m.sorted)
+
 	return result
 }
 
 // compareOIDs compares two OID strings lexicographically.
 // Returns -1 if oid1 < oid2, 0 if equal, 1 if oid1 > oid2.
-// FEATURE #116: Added godoc for utility functions
+// FEATURE #116: Added godoc for utility functions.
 func compareOIDs(oid1, oid2 string) int {
 	// Parse both OIDs
 	parts1 := parseOIDParts(oid1)
 	parts2 := parseOIDParts(oid2)
 
 	// Compare component by component
-	minLen := len(parts1)
-	if len(parts2) < minLen {
-		minLen = len(parts2)
-	}
+	minLen := min(len(parts1), len(parts2))
 
-	for i := 0; i < minLen; i++ {
+	for i := range minLen {
 		if parts1[i] < parts2[i] {
 			return -1
 		}
+
 		if parts1[i] > parts2[i] {
 			return 1
 		}
@@ -205,6 +206,7 @@ func compareOIDs(oid1, oid2 string) int {
 	if len(parts1) < len(parts2) {
 		return -1
 	}
+
 	if len(parts1) > len(parts2) {
 		return 1
 	}
@@ -214,7 +216,7 @@ func compareOIDs(oid1, oid2 string) int {
 
 // parseOIDParts parses an OID string into integer components.
 // Examples: "1.3.6.1" -> [1, 3, 6, 1], ".1.3.6" -> [1, 3, 6]
-// FEATURE #116: Added godoc for utility functions
+// FEATURE #116: Added godoc for utility functions.
 func parseOIDParts(oid string) []int {
 	parts := strings.Split(oid, ".")
 	result := make([]int, 0, len(parts))
@@ -223,7 +225,9 @@ func parseOIDParts(oid string) []int {
 		if part == "" {
 			continue
 		}
+
 		var num int
+
 		_, err := fmt.Sscanf(part, "%d", &num)
 		if err == nil {
 			result = append(result, num)
@@ -233,33 +237,36 @@ func parseOIDParts(oid string) []int {
 	return result
 }
 
-// FormatOID formats an OID for display
+// FormatOID formats an OID for display.
 func FormatOID(oid string) string {
 	// Add leading dot if not present
 	if !strings.HasPrefix(oid, ".") {
 		return "." + oid
 	}
+
 	return oid
 }
 
-// IsValidOID checks if an OID string is valid
+// IsValidOID checks if an OID string is valid.
 func IsValidOID(oid string) bool {
 	if oid == "" {
 		return false
 	}
 
 	oid = strings.TrimPrefix(oid, ".")
-	parts := strings.Split(oid, ".")
 
-	for _, part := range parts {
+	for part := range strings.SplitSeq(oid, ".") {
 		if part == "" {
 			return false
 		}
+
 		var num int
+
 		_, err := fmt.Sscanf(part, "%d", &num)
 		if err != nil {
 			return false
 		}
+
 		if num < 0 {
 			return false
 		}
@@ -268,7 +275,7 @@ func IsValidOID(oid string) bool {
 	return true
 }
 
-// StandardOIDs contains common MIB-II OID prefixes
+// StandardOIDs contains common MIB-II OID prefixes.
 var StandardOIDs = map[string]string{
 	"system":     "1.3.6.1.2.1.1",
 	"interfaces": "1.3.6.1.2.1.2",
@@ -280,8 +287,9 @@ var StandardOIDs = map[string]string{
 	"snmp":       "1.3.6.1.2.1.11",
 }
 
-// GetStandardOID returns the OID for a standard MIB-II group
+// GetStandardOID returns the OID for a standard MIB-II group.
 func GetStandardOID(name string) (string, bool) {
 	oid, exists := StandardOIDs[name]
+
 	return oid, exists
 }

@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-// TestMapDeviceType tests device type mapping
+// TestMapDeviceType tests device type mapping.
 func TestMapDeviceType(t *testing.T) {
 	tests := []struct {
 		input    string
@@ -27,7 +27,7 @@ func TestMapDeviceType(t *testing.T) {
 	}
 }
 
-// TestGenerateDefaultIP tests IP address generation
+// TestGenerateDefaultIP tests IP address generation.
 func TestGenerateDefaultIP(t *testing.T) {
 	tests := []struct {
 		subnet    string
@@ -52,7 +52,7 @@ func TestGenerateDefaultIP(t *testing.T) {
 	}
 }
 
-// TestGenerateDefaultMAC tests MAC address generation
+// TestGenerateDefaultMAC tests MAC address generation.
 func TestGenerateDefaultMAC(t *testing.T) {
 	tests := []struct {
 		deviceNum int
@@ -72,7 +72,7 @@ func TestGenerateDefaultMAC(t *testing.T) {
 	}
 }
 
-// TestCountEnabledProtocols tests protocol counting
+// TestCountEnabledProtocols tests protocol counting.
 func TestCountEnabledProtocols(t *testing.T) {
 	protocols := map[string]protocolConfig{
 		"lldp": {enabled: true, params: map[string]string{}},
@@ -89,7 +89,7 @@ func TestCountEnabledProtocols(t *testing.T) {
 	}
 }
 
-// TestCountEnabledProtocolsEmpty tests with no protocols
+// TestCountEnabledProtocolsEmpty tests with no protocols.
 func TestCountEnabledProtocolsEmpty(t *testing.T) {
 	protocols := map[string]protocolConfig{}
 	count := countEnabledProtocols(protocols)
@@ -99,7 +99,7 @@ func TestCountEnabledProtocolsEmpty(t *testing.T) {
 	}
 }
 
-// TestCountEnabledProtocolsAllDisabled tests with all disabled
+// TestCountEnabledProtocolsAllDisabled tests with all disabled.
 func TestCountEnabledProtocolsAllDisabled(t *testing.T) {
 	protocols := map[string]protocolConfig{
 		"lldp": {enabled: false, params: map[string]string{}},
@@ -114,7 +114,7 @@ func TestCountEnabledProtocolsAllDisabled(t *testing.T) {
 	}
 }
 
-// TestPromptString tests the promptString function
+// TestPromptString tests the promptString function.
 func TestPromptString(t *testing.T) {
 	// We can't easily test interactive input, but we can test the default value logic
 	// This would require mocking stdin, which is complex
@@ -128,7 +128,7 @@ func TestPromptString(t *testing.T) {
 	}
 }
 
-// TestGenerateYAMLStructure tests YAML generation produces valid structure
+// TestGenerateYAMLStructure tests YAML generation produces valid structure.
 func TestGenerateYAMLStructure(t *testing.T) {
 	cfg := &generatedConfig{
 		networkName: "test-network",
@@ -175,7 +175,7 @@ func TestGenerateYAMLStructure(t *testing.T) {
 	}
 }
 
-// TestGenerateYAMLWithMultipleProtocols tests YAML with multiple protocols
+// TestGenerateYAMLWithMultipleProtocols tests YAML with multiple protocols.
 func TestGenerateYAMLWithMultipleProtocols(t *testing.T) {
 	cfg := &generatedConfig{
 		networkName: "complex-network",
@@ -232,7 +232,7 @@ func TestGenerateYAMLWithMultipleProtocols(t *testing.T) {
 	}
 }
 
-// TestGenerateYAMLMultipleDevices tests YAML generation with multiple devices
+// TestGenerateYAMLMultipleDevices tests YAML generation with multiple devices.
 func TestGenerateYAMLMultipleDevices(t *testing.T) {
 	cfg := &generatedConfig{
 		networkName: "multi-device",

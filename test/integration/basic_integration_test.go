@@ -11,7 +11,7 @@ import (
 	"github.com/krisarmstrong/niac-go/pkg/snmp"
 )
 
-// TestIntegration_ConfigToDevice tests the full config → device flow
+// TestIntegration_ConfigToDevice tests the full config → device flow.
 func TestIntegration_ConfigToDevice(t *testing.T) {
 	// Create a temporary config file
 	tmpDir := t.TempDir()
@@ -31,7 +31,7 @@ devices:
       sysContact: "admin@test.com"
 `
 
-	if err := os.WriteFile(configFile, []byte(configContent), 0644); err != nil {
+	if err := os.WriteFile(configFile, []byte(configContent), 0o600); err != nil {
 		t.Fatalf("Failed to create config file: %v", err)
 	}
 
@@ -75,7 +75,7 @@ devices:
 	}
 }
 
-// TestIntegration_SNMPAgentOperations tests SNMP agent end-to-end
+// TestIntegration_SNMPAgentOperations tests SNMP agent end-to-end.
 func TestIntegration_SNMPAgentOperations(t *testing.T) {
 	mac, _ := net.ParseMAC("00:11:22:33:44:55")
 	dev := &config.Device{
@@ -147,7 +147,7 @@ func TestIntegration_SNMPAgentOperations(t *testing.T) {
 	})
 }
 
-// TestIntegration_ProtocolTable tests device table operations
+// TestIntegration_ProtocolTable tests device table operations.
 func TestIntegration_ProtocolTable(t *testing.T) {
 	// Create multiple devices
 	mac1, _ := net.ParseMAC("00:11:22:33:44:55")
@@ -187,7 +187,7 @@ func TestIntegration_ProtocolTable(t *testing.T) {
 	}
 }
 
-// TestIntegration_ConfigDeviceCollection tests config with multiple devices
+// TestIntegration_ConfigDeviceCollection tests config with multiple devices.
 func TestIntegration_ConfigDeviceCollection(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "multi.yaml")
@@ -207,7 +207,7 @@ devices:
       - "192.168.1.2"
 `
 
-	if err := os.WriteFile(configFile, []byte(configContent), 0644); err != nil {
+	if err := os.WriteFile(configFile, []byte(configContent), 0o600); err != nil {
 		t.Fatalf("Failed to create config: %v", err)
 	}
 
@@ -232,7 +232,7 @@ devices:
 	}
 }
 
-// TestIntegration_MultipleDevices tests simulation with multiple devices
+// TestIntegration_MultipleDevices tests simulation with multiple devices.
 func TestIntegration_MultipleDevices(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "multi.yaml")
@@ -264,7 +264,7 @@ devices:
       community: public
 `
 
-	if err := os.WriteFile(configFile, []byte(configContent), 0644); err != nil {
+	if err := os.WriteFile(configFile, []byte(configContent), 0o600); err != nil {
 		t.Fatalf("Failed to create config: %v", err)
 	}
 
@@ -302,7 +302,7 @@ devices:
 	}
 }
 
-// TestIntegration_ConfigurationValidation tests config validation
+// TestIntegration_ConfigurationValidation tests config validation.
 func TestIntegration_ConfigurationValidation(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -360,7 +360,7 @@ devices:
 			tmpDir := t.TempDir()
 			configFile := filepath.Join(tmpDir, "test.yaml")
 
-			if err := os.WriteFile(configFile, []byte(tt.config), 0644); err != nil {
+			if err := os.WriteFile(configFile, []byte(tt.config), 0o600); err != nil {
 				t.Fatalf("Failed to create config: %v", err)
 			}
 
@@ -379,7 +379,7 @@ devices:
 	}
 }
 
-// TestIntegration_ConcurrentOperations tests concurrent access patterns
+// TestIntegration_ConcurrentOperations tests concurrent access patterns.
 func TestIntegration_ConcurrentOperations(t *testing.T) {
 	mac, _ := net.ParseMAC("00:11:22:33:44:55")
 	dev := &config.Device{
@@ -397,7 +397,7 @@ func TestIntegration_ConcurrentOperations(t *testing.T) {
 	// Concurrent SNMP GET operations
 	done := make(chan bool, 100)
 
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		go func() {
 			_, _ = agent.HandleGet("1.3.6.1.2.1.1.3.0") // sysUpTime
 			done <- true
@@ -406,7 +406,7 @@ func TestIntegration_ConcurrentOperations(t *testing.T) {
 
 	// Wait for all goroutines with timeout
 	timeout := time.After(5 * time.Second)
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		select {
 		case <-done:
 			// Success
@@ -416,7 +416,7 @@ func TestIntegration_ConcurrentOperations(t *testing.T) {
 	}
 }
 
-// TestIntegration_FullConfigToAgentLifecycle tests config → SNMP agent lifecycle
+// TestIntegration_FullConfigToAgentLifecycle tests config → SNMP agent lifecycle.
 func TestIntegration_FullConfigToAgentLifecycle(t *testing.T) {
 	// 1. Create configuration
 	tmpDir := t.TempDir()
@@ -435,7 +435,7 @@ devices:
       sysDescr: "Simulation Router"
 `
 
-	if err := os.WriteFile(configFile, []byte(configContent), 0644); err != nil {
+	if err := os.WriteFile(configFile, []byte(configContent), 0o600); err != nil {
 		t.Fatalf("Failed to create config: %v", err)
 	}
 

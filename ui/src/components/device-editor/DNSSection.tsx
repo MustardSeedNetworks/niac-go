@@ -1,10 +1,10 @@
-import { type FC } from 'react';
-import { Globe, Plus, X } from 'lucide-react';
-import { Button } from '../../ui';
-import { CollapsibleSection } from '../form';
-import type { DNSConfig, DNSRecord } from '../../api/types';
-import type { ProtocolSectionProps } from './types';
-import { smallInputClassName } from './types';
+import { Globe, Plus, X } from "lucide-react";
+import type { FC } from "react";
+import type { DNSConfig, DNSRecord } from "../../api/types";
+import { Button } from "../../ui";
+import { CollapsibleSection } from "../form";
+import type { ProtocolSectionProps } from "./types";
+import { smallInputClassName } from "./types";
 
 export const DNSSection: FC<ProtocolSectionProps> = ({
   device,
@@ -12,8 +12,8 @@ export const DNSSection: FC<ProtocolSectionProps> = ({
   onToggle,
   onUpdate,
 }) => {
-  const updateDNS = (config: DNSConfig | undefined) => {
-    onUpdate('dns', config);
+  const updateDns = (config: DNSConfig | undefined) => {
+    onUpdate("dns", config);
   };
 
   return (
@@ -24,9 +24,9 @@ export const DNSSection: FC<ProtocolSectionProps> = ({
       enabled={!!device.dns}
       onEnableChange={(enabled) => {
         if (enabled) {
-          updateDNS({ forward_records: [], reverse_records: [] } as DNSConfig);
+          updateDns({ forward_records: [], reverse_records: [] } as DNSConfig);
         } else {
-          updateDNS(undefined);
+          updateDns(undefined);
         }
       }}
     >
@@ -42,22 +42,22 @@ export const DNSSection: FC<ProtocolSectionProps> = ({
               <div key={index} className="flex gap-2 items-center">
                 <input
                   type="text"
-                  value={record.name || ''}
+                  value={record.name || ""}
                   onChange={(e) => {
-                    const records = [...(device.dns!.forward_records || [])];
+                    const records = [...(device.dns?.forward_records || [])];
                     records[index] = { ...records[index], name: e.target.value };
-                    updateDNS({ ...device.dns!, forward_records: records });
+                    updateDns({ ...device.dns!, forward_records: records });
                   }}
                   placeholder="Hostname (e.g., www.example.com)"
                   className={smallInputClassName}
                 />
                 <input
                   type="text"
-                  value={record.ip || ''}
+                  value={record.ip || ""}
                   onChange={(e) => {
-                    const records = [...(device.dns!.forward_records || [])];
+                    const records = [...(device.dns?.forward_records || [])];
                     records[index] = { ...records[index], ip: e.target.value };
-                    updateDNS({ ...device.dns!, forward_records: records });
+                    updateDns({ ...device.dns!, forward_records: records });
                   }}
                   placeholder="IP Address"
                   className="w-40 rounded-lg border border-white/10 bg-gray-950/60 p-2 text-sm text-white placeholder-gray-500 focus:border-violet-400 focus:outline-none font-mono"
@@ -66,9 +66,9 @@ export const DNSSection: FC<ProtocolSectionProps> = ({
                   type="number"
                   value={record.ttl ?? 300}
                   onChange={(e) => {
-                    const records = [...(device.dns!.forward_records || [])];
-                    records[index] = { ...records[index], ttl: parseInt(e.target.value) };
-                    updateDNS({ ...device.dns!, forward_records: records });
+                    const records = [...(device.dns?.forward_records || [])];
+                    records[index] = { ...records[index], ttl: parseInt(e.target.value, 10) };
+                    updateDns({ ...device.dns!, forward_records: records });
                   }}
                   placeholder="TTL"
                   className="w-24 rounded-lg border border-white/10 bg-gray-950/60 p-2 text-sm text-white placeholder-gray-500 focus:border-violet-400 focus:outline-none"
@@ -78,8 +78,10 @@ export const DNSSection: FC<ProtocolSectionProps> = ({
                   tone="red"
                   size="sm"
                   onClick={() => {
-                    const records = (device.dns!.forward_records || []).filter((_, i) => i !== index);
-                    updateDNS({ ...device.dns!, forward_records: records });
+                    const records = (device.dns?.forward_records || []).filter(
+                      (_, i) => i !== index,
+                    );
+                    updateDns({ ...device.dns!, forward_records: records });
                   }}
                 >
                   <X className="h-4 w-4" />
@@ -91,8 +93,11 @@ export const DNSSection: FC<ProtocolSectionProps> = ({
               size="sm"
               leftIcon={<Plus className="h-4 w-4" />}
               onClick={() => {
-                const records = [...(device.dns!.forward_records || []), { name: '', ip: '', ttl: 300 } as DNSRecord];
-                updateDNS({ ...device.dns!, forward_records: records });
+                const records = [
+                  ...(device.dns?.forward_records || []),
+                  { name: "", ip: "", ttl: 300 } as DNSRecord,
+                ];
+                updateDns({ ...device.dns!, forward_records: records });
               }}
             >
               Add Forward Record
@@ -109,22 +114,22 @@ export const DNSSection: FC<ProtocolSectionProps> = ({
               <div key={index} className="flex gap-2 items-center">
                 <input
                   type="text"
-                  value={record.ip || ''}
+                  value={record.ip || ""}
                   onChange={(e) => {
-                    const records = [...(device.dns!.reverse_records || [])];
+                    const records = [...(device.dns?.reverse_records || [])];
                     records[index] = { ...records[index], ip: e.target.value };
-                    updateDNS({ ...device.dns!, reverse_records: records });
+                    updateDns({ ...device.dns!, reverse_records: records });
                   }}
                   placeholder="IP Address"
                   className="w-40 rounded-lg border border-white/10 bg-gray-950/60 p-2 text-sm text-white placeholder-gray-500 focus:border-violet-400 focus:outline-none font-mono"
                 />
                 <input
                   type="text"
-                  value={record.name || ''}
+                  value={record.name || ""}
                   onChange={(e) => {
-                    const records = [...(device.dns!.reverse_records || [])];
+                    const records = [...(device.dns?.reverse_records || [])];
                     records[index] = { ...records[index], name: e.target.value };
-                    updateDNS({ ...device.dns!, reverse_records: records });
+                    updateDns({ ...device.dns!, reverse_records: records });
                   }}
                   placeholder="Hostname (e.g., server.example.com)"
                   className={smallInputClassName}
@@ -134,8 +139,10 @@ export const DNSSection: FC<ProtocolSectionProps> = ({
                   tone="red"
                   size="sm"
                   onClick={() => {
-                    const records = (device.dns!.reverse_records || []).filter((_, i) => i !== index);
-                    updateDNS({ ...device.dns!, reverse_records: records });
+                    const records = (device.dns?.reverse_records || []).filter(
+                      (_, i) => i !== index,
+                    );
+                    updateDns({ ...device.dns!, reverse_records: records });
                   }}
                 >
                   <X className="h-4 w-4" />
@@ -147,8 +154,11 @@ export const DNSSection: FC<ProtocolSectionProps> = ({
               size="sm"
               leftIcon={<Plus className="h-4 w-4" />}
               onClick={() => {
-                const records = [...(device.dns!.reverse_records || []), { ip: '', name: '', ttl: 300 } as DNSRecord];
-                updateDNS({ ...device.dns!, reverse_records: records });
+                const records = [
+                  ...(device.dns?.reverse_records || []),
+                  { ip: "", name: "", ttl: 300 } as DNSRecord,
+                ];
+                updateDns({ ...device.dns!, reverse_records: records });
               }}
             >
               Add Reverse Record

@@ -4,7 +4,9 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"io"
 	"net"
+	"os"
 	"strings"
 	"time"
 
@@ -13,19 +15,19 @@ import (
 	"github.com/krisarmstrong/niac-go/pkg/config"
 )
 
-// HTTPHandler handles HTTP requests and responses
+// HTTPHandler handles HTTP requests and responses.
 type HTTPHandler struct {
 	stack *Stack
 }
 
-// NewHTTPHandler creates a new HTTP handler
+// NewHTTPHandler creates a new HTTP handler.
 func NewHTTPHandler(stack *Stack) *HTTPHandler {
 	return &HTTPHandler{
 		stack: stack,
 	}
 }
 
-// HandleRequest processes an HTTP request
+// HandleRequest processes an HTTP request.
 func (h *HTTPHandler) HandleRequest(pkt *Packet, ipLayer *layers.IPv4, tcpLayer *layers.TCP, devices []*config.Device) {
 	debugLevel := h.stack.GetDebugLevel()
 
@@ -37,13 +39,14 @@ func (h *HTTPHandler) HandleRequest(pkt *Packet, ipLayer *layers.IPv4, tcpLayer 
 	request, err := parseHTTPRequest(tcpLayer.Payload)
 	if err != nil {
 		if debugLevel >= 3 {
-			fmt.Printf("Failed to parse HTTP request: %v\n", err)
+			_, _ = fmt.Fprintf(os.Stdout, "Failed to parse HTTP request: %v\n", err)
 		}
+
 		return
 	}
 
 	if debugLevel >= 2 {
-		fmt.Printf("HTTP %s %s from %s (device: %v)\n",
+		_, _ = fmt.Fprintf(os.Stdout, "HTTP %s %s from %s (device: %v)\n",
 			request.Method, request.Path, ipLayer.SrcIP, getDeviceNames(devices))
 	}
 
@@ -54,7 +57,7 @@ func (h *HTTPHandler) HandleRequest(pkt *Packet, ipLayer *layers.IPv4, tcpLayer 
 	h.sendResponse(ipLayer, tcpLayer, response, devices)
 }
 
-// HTTPRequest represents a parsed HTTP request
+// HTTPRequest represents a parsed HTTP request.
 type HTTPRequest struct {
 	Method  string
 	Path    string
@@ -63,19 +66,19 @@ type HTTPRequest struct {
 	Body    []byte
 }
 
-// parseHTTPRequest parses HTTP request from payload
+// parseHTTPRequest parses HTTP request from payload.
 func parseHTTPRequest(payload []byte) (*HTTPRequest, error) {
 	reader := bufio.NewReader(bytes.NewReader(payload))
 
 	// Read request line
 	requestLine, err := reader.ReadString('\n')
 	if err != nil {
-		return nil, fmt.Errorf("failed to read request line: %v", err)
+		return nil, fmt.Errorf("failed to read request line: %w", err)
 	}
 
 	parts := strings.SplitN(strings.TrimSpace(requestLine), " ", 3)
 	if len(parts) != 3 {
-		return nil, fmt.Errorf("invalid request line: %s", requestLine)
+		return nil, fmt.Errorf("%w: %s", ErrInvalidRequestLine, requestLine)
 	}
 
 	request := &HTTPRequest{
@@ -88,11 +91,17 @@ func parseHTTPRequest(payload []byte) (*HTTPRequest, error) {
 	// Parse headers
 	// SECURITY FIX MEDIUM-3: Limit number of headers to prevent resource exhaustion
 	const MaxHeaders = 100
+
 	headerCount := 0
 
 	for {
-		line, err := reader.ReadString('\n')
-		if err != nil {
+		line, readErr := reader.ReadString('\n')
+		if readErr != nil {
+			// EOF is expected when we reach the end of headers
+			if readErr != io.EOF {
+				return nil, fmt.Errorf("failed to read header: %w", readErr)
+			}
+
 			break
 		}
 
@@ -109,6 +118,7 @@ func parseHTTPRequest(payload []byte) (*HTTPRequest, error) {
 				// Silently ignore excessive headers
 				break
 			}
+
 			request.Headers[strings.TrimSpace(headerParts[0])] = strings.TrimSpace(headerParts[1])
 			headerCount++
 		}
@@ -117,13 +127,14 @@ func parseHTTPRequest(payload []byte) (*HTTPRequest, error) {
 	return request, nil
 }
 
-// generateResponse generates an HTTP response
+// generateResponse generates an HTTP response.
 func (h *HTTPHandler) generateResponse(request *HTTPRequest, devices []*config.Device) []byte {
 	var response strings.Builder
 
 	// Get device info for response
 	deviceName := "Unknown"
 	deviceType := "device"
+
 	var device *config.Device
 	if len(devices) > 0 {
 		device = devices[0]
@@ -139,6 +150,7 @@ func (h *HTTPHandler) generateResponse(request *HTTPRequest, devices []*config.D
 
 	// Check for custom endpoints in config first
 	var customEndpoint *config.HTTPEndpoint
+
 	if device != nil && device.HTTPConfig != nil && device.HTTPConfig.Enabled {
 		for i := range device.HTTPConfig.Endpoints {
 			ep := &device.HTTPConfig.Endpoints[i]
@@ -148,8 +160,10 @@ func (h *HTTPHandler) generateResponse(request *HTTPRequest, devices []*config.D
 				if epMethod == "" {
 					epMethod = "GET"
 				}
+
 				if epMethod == request.Method {
 					customEndpoint = ep
+
 					break
 				}
 			}
@@ -160,6 +174,7 @@ func (h *HTTPHandler) generateResponse(request *HTTPRequest, devices []*config.D
 	statusCode := 200
 	statusText := "OK"
 	contentType := "text/html"
+
 	var body string
 
 	if customEndpoint != nil {
@@ -168,10 +183,12 @@ func (h *HTTPHandler) generateResponse(request *HTTPRequest, devices []*config.D
 		if statusCode == 0 {
 			statusCode = 200
 		}
+
 		contentType = customEndpoint.ContentType
 		if contentType == "" {
 			contentType = "text/html"
 		}
+
 		body = customEndpoint.Body
 		statusText = getStatusText(statusCode)
 	} else {
@@ -249,7 +266,7 @@ func (h *HTTPHandler) generateResponse(request *HTTPRequest, devices []*config.D
 	return []byte(response.String())
 }
 
-// getStatusText returns HTTP status text for a status code
+// getStatusText returns HTTP status text for a status code.
 func getStatusText(code int) string {
 	switch code {
 	case 200:
@@ -283,8 +300,13 @@ func getStatusText(code int) string {
 	}
 }
 
-// sendResponse sends an HTTP response
-func (h *HTTPHandler) sendResponse(ipLayer *layers.IPv4, tcpLayer *layers.TCP, response []byte, devices []*config.Device) {
+// sendResponse sends an HTTP response.
+func (h *HTTPHandler) sendResponse(
+	ipLayer *layers.IPv4,
+	tcpLayer *layers.TCP,
+	response []byte,
+	devices []*config.Device,
+) {
 	debugLevel := h.stack.GetDebugLevel()
 
 	if len(devices) == 0 {
@@ -298,14 +320,17 @@ func (h *HTTPHandler) sendResponse(ipLayer *layers.IPv4, tcpLayer *layers.TCP, r
 
 	// Get source MAC (lookup by source IP)
 	srcDevices := h.stack.GetDevices().GetByIP(ipLayer.SrcIP)
+
 	var srcMAC []byte
+
 	if len(srcDevices) > 0 && len(srcDevices[0].MACAddress) > 0 {
 		srcMAC = srcDevices[0].MACAddress
 	} else {
 		// Cannot find source MAC - skip sending
 		if debugLevel >= 2 {
-			fmt.Printf("Cannot send HTTP response: no MAC for %s\n", ipLayer.SrcIP)
+			_, _ = fmt.Fprintf(os.Stdout, "Cannot send HTTP response: no MAC for %s\n", ipLayer.SrcIP)
 		}
+
 		return
 	}
 
@@ -327,20 +352,20 @@ func (h *HTTPHandler) sendResponse(ipLayer *layers.IPv4, tcpLayer *layers.TCP, r
 	}
 
 	// Build TCP header
-	payloadLen := len(tcpLayer.Payload)
-	if payloadLen > 0xFFFFFFFF {
-		payloadLen = 0xFFFFFFFF
-	}
+	payloadLen := min(len(tcpLayer.Payload), 0xFFFFFFFF)
+
 	tcpReply := &layers.TCP{
 		SrcPort: tcpLayer.DstPort,
 		DstPort: tcpLayer.SrcPort,
 		Seq:     tcpLayer.Ack,
-		Ack:     tcpLayer.Seq + uint32(payloadLen), // #nosec G115 -- sequence number from TCP layer, bounded by protocol
-		PSH:     true,
-		ACK:     true,
-		Window:  65535,
+		Ack: tcpLayer.Seq + uint32(
+			payloadLen,
+		),
+		PSH:    true,
+		ACK:    true,
+		Window: 65535,
 	}
-	tcpReply.SetNetworkLayerForChecksum(ipReply) // #nosec G104 -- error logged or non-critical
+	_ = tcpReply.SetNetworkLayerForChecksum(ipReply) // error is non-critical for simulation
 
 	// Serialize
 	buffer := gopacket.NewSerializeBuffer()
@@ -357,8 +382,9 @@ func (h *HTTPHandler) sendResponse(ipLayer *layers.IPv4, tcpLayer *layers.TCP, r
 	)
 	if err != nil {
 		if debugLevel >= 2 {
-			fmt.Printf("Error serializing HTTP response: %v\n", err)
+			_, _ = fmt.Fprintf(os.Stdout, "Error serializing HTTP response: %v\n", err)
 		}
+
 		return
 	}
 
@@ -379,25 +405,33 @@ func (h *HTTPHandler) sendResponse(ipLayer *layers.IPv4, tcpLayer *layers.TCP, r
 	h.stack.Send(responsePkt)
 
 	if debugLevel >= 2 {
-		fmt.Printf("Sent HTTP response: %d bytes from %s to %s (device: %s)\n",
+		_, _ = fmt.Fprintf(os.Stdout, "Sent HTTP response: %d bytes from %s to %s (device: %s)\n",
 			len(response), ipReply.SrcIP, ipReply.DstIP, device.Name)
 	}
 }
 
-// getDeviceNames returns comma-separated device names
+// getDeviceNames returns comma-separated device names.
 func getDeviceNames(devices []*config.Device) string {
 	if len(devices) == 0 {
 		return "unknown"
 	}
+
 	names := make([]string, len(devices))
 	for i, d := range devices {
 		names[i] = d.Name
 	}
+
 	return strings.Join(names, ", ")
 }
 
-// HandleRequestV6 processes an HTTP request over IPv6
-func (h *HTTPHandler) HandleRequestV6(pkt *Packet, packet gopacket.Packet, ipv6 *layers.IPv6, tcpLayer *layers.TCP, devices []*config.Device) {
+// HandleRequestV6 processes an HTTP request over IPv6.
+func (h *HTTPHandler) HandleRequestV6(
+	pkt *Packet,
+	packet gopacket.Packet,
+	ipv6 *layers.IPv6,
+	tcpLayer *layers.TCP,
+	devices []*config.Device,
+) {
 	debugLevel := h.stack.GetDebugLevel()
 
 	// Parse HTTP request
@@ -408,13 +442,14 @@ func (h *HTTPHandler) HandleRequestV6(pkt *Packet, packet gopacket.Packet, ipv6 
 	request, err := parseHTTPRequest(tcpLayer.Payload)
 	if err != nil {
 		if debugLevel >= 3 {
-			fmt.Printf("Failed to parse HTTP/IPv6 request: %v\n", err)
+			_, _ = fmt.Fprintf(os.Stdout, "Failed to parse HTTP/IPv6 request: %v\n", err)
 		}
+
 		return
 	}
 
 	if debugLevel >= 2 {
-		fmt.Printf("HTTP/IPv6 %s %s from [%s] (device: %v)\n",
+		_, _ = fmt.Fprintf(os.Stdout, "HTTP/IPv6 %s %s from [%s] (device: %v)\n",
 			request.Method, request.Path, ipv6.SrcIP, getDeviceNames(devices))
 	}
 
@@ -426,7 +461,13 @@ func (h *HTTPHandler) HandleRequestV6(pkt *Packet, packet gopacket.Packet, ipv6 
 }
 
 // sendResponseV6 sends HTTP response over IPv6.
-func (h *HTTPHandler) sendResponseV6(ipv6 *layers.IPv6, tcpLayer *layers.TCP, response []byte, devices []*config.Device, dstMAC net.HardwareAddr) {
+func (h *HTTPHandler) sendResponseV6(
+	ipv6 *layers.IPv6,
+	tcpLayer *layers.TCP,
+	response []byte,
+	devices []*config.Device,
+	dstMAC net.HardwareAddr,
+) {
 	debugLevel := h.stack.GetDebugLevel()
 
 	if len(devices) == 0 {
@@ -436,8 +477,9 @@ func (h *HTTPHandler) sendResponseV6(ipv6 *layers.IPv6, tcpLayer *layers.TCP, re
 	device := devices[0]
 	if len(device.MACAddress) == 0 || dstMAC == nil {
 		if debugLevel >= 2 {
-			fmt.Printf("HTTP/IPv6: Cannot send response, missing MAC info\n")
+			_, _ = fmt.Fprintf(os.Stdout, "HTTP/IPv6: Cannot send response, missing MAC info\n")
 		}
+
 		return
 	}
 
@@ -451,20 +493,20 @@ func (h *HTTPHandler) sendResponseV6(ipv6 *layers.IPv6, tcpLayer *layers.TCP, re
 		DstIP:        ipv6.SrcIP,
 	}
 
-	payloadLen2 := len(tcpLayer.Payload)
-	if payloadLen2 > 0xFFFFFFFF {
-		payloadLen2 = 0xFFFFFFFF
-	}
+	payloadLen2 := min(len(tcpLayer.Payload), 0xFFFFFFFF)
+
 	tcpReply := &layers.TCP{
 		SrcPort: tcpLayer.DstPort,
 		DstPort: tcpLayer.SrcPort,
 		Seq:     tcpLayer.Ack,
-		Ack:     tcpLayer.Seq + uint32(payloadLen2), // #nosec G115 -- sequence number from TCP layer, bounded by protocol
-		PSH:     true,
-		ACK:     true,
-		Window:  65535,
+		Ack: tcpLayer.Seq + uint32(
+			payloadLen2,
+		),
+		PSH:    true,
+		ACK:    true,
+		Window: 65535,
 	}
-	tcpReply.SetNetworkLayerForChecksum(ipReply) // #nosec G104 -- error logged or non-critical
+	_ = tcpReply.SetNetworkLayerForChecksum(ipReply) // error is non-critical for simulation
 
 	buffer := gopacket.NewSerializeBuffer()
 	opts := gopacket.SerializeOptions{
@@ -478,10 +520,12 @@ func (h *HTTPHandler) sendResponseV6(ipv6 *layers.IPv6, tcpLayer *layers.TCP, re
 		EthernetType: layers.EthernetTypeIPv6,
 	}
 
-	if err := gopacket.SerializeLayers(buffer, opts, eth, ipReply, tcpReply, gopacket.Payload(response)); err != nil {
+	err := gopacket.SerializeLayers(buffer, opts, eth, ipReply, tcpReply, gopacket.Payload(response))
+	if err != nil {
 		if debugLevel >= 1 {
-			fmt.Printf("HTTP/IPv6: Failed to serialize response: %v\n", err)
+			_, _ = fmt.Fprintf(os.Stdout, "HTTP/IPv6: Failed to serialize response: %v\n", err)
 		}
+
 		return
 	}
 
@@ -500,7 +544,7 @@ func (h *HTTPHandler) sendResponseV6(ipv6 *layers.IPv6, tcpLayer *layers.TCP, re
 	h.stack.Send(respPkt)
 
 	if debugLevel >= 2 {
-		fmt.Printf("Sent HTTP/IPv6 response: %d bytes from [%s] to [%s] (device: %s)\n",
+		_, _ = fmt.Fprintf(os.Stdout, "Sent HTTP/IPv6 response: %d bytes from [%s] to [%s] (device: %s)\n",
 			len(response), ipReply.SrcIP, ipReply.DstIP, device.Name)
 	}
 }

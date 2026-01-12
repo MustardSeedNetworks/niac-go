@@ -9,44 +9,47 @@ import (
 	"testing"
 )
 
-// TestInitColors_Enabled tests that colors are enabled when requested
+// TestInitColors_Enabled tests that colors are enabled when requested.
 func TestInitColors_Enabled(t *testing.T) {
 	t.Setenv("NO_COLOR", "")
 	InitColors(true)
+
 	if !AreColorsEnabled() {
 		t.Error("Colors should be enabled")
 	}
 }
 
-// TestInitColors_Disabled tests that colors are disabled when requested
+// TestInitColors_Disabled tests that colors are disabled when requested.
 func TestInitColors_Disabled(t *testing.T) {
 	InitColors(false)
+
 	if AreColorsEnabled() {
 		t.Error("Colors should be disabled")
 	}
 }
 
-// TestInitColors_NO_COLOR_Env tests that NO_COLOR environment variable is respected
+// TestInitColors_NO_COLOR_Env tests that NO_COLOR environment variable is respected.
 func TestInitColors_NO_COLOR_Env(t *testing.T) {
-	os.Setenv("NO_COLOR", "1")
-	defer os.Unsetenv("NO_COLOR")
+	t.Setenv("NO_COLOR", "1")
 
 	InitColors(true) // Try to enable, but NO_COLOR should override
+
 	if AreColorsEnabled() {
 		t.Error("Colors should be disabled when NO_COLOR is set")
 	}
 }
 
-// TestInitColors_NO_COLOR_Empty tests that empty NO_COLOR doesn't disable colors
+// TestInitColors_NO_COLOR_Empty tests that empty NO_COLOR doesn't disable colors.
 func TestInitColors_NO_COLOR_Empty(t *testing.T) {
-	os.Unsetenv("NO_COLOR")
+	t.Setenv("NO_COLOR", "")
 	InitColors(true)
+
 	if !AreColorsEnabled() {
 		t.Error("Colors should be enabled when NO_COLOR is not set")
 	}
 }
 
-// captureOutput captures stdout for testing print functions
+// captureOutput captures stdout for testing print functions.
 func captureOutput(f func()) string {
 	old := os.Stdout
 	r, w, _ := os.Pipe()
@@ -54,15 +57,17 @@ func captureOutput(f func()) string {
 
 	f()
 
-	w.Close()
+	_ = w.Close()
 	os.Stdout = old
 
 	var buf bytes.Buffer
-	io.Copy(&buf, r)
+
+	_, _ = io.Copy(&buf, r)
+
 	return buf.String()
 }
 
-// TestError_WithColors tests Error function with colors enabled
+// TestError_WithColors tests Error function with colors enabled.
 func TestError_WithColors(t *testing.T) {
 	t.Skip("Skipping due to stdout capture issues with ANSI codes in test environment")
 	InitColors(true)
@@ -72,9 +77,10 @@ func TestError_WithColors(t *testing.T) {
 	Error("test error %s", "message")
 }
 
-// TestError_WithoutColors tests Error function with colors disabled
+// TestError_WithoutColors tests Error function with colors disabled.
 func TestError_WithoutColors(t *testing.T) {
 	InitColors(false)
+
 	output := captureOutput(func() {
 		Error("test error %s", "message")
 	})
@@ -88,9 +94,10 @@ func TestError_WithoutColors(t *testing.T) {
 	}
 }
 
-// TestWarning tests Warning function
+// TestWarning tests Warning function.
 func TestWarning(t *testing.T) {
 	InitColors(false) // Disable colors for predictable output
+
 	output := captureOutput(func() {
 		Warning("test warning %d", 42)
 	})
@@ -100,9 +107,10 @@ func TestWarning(t *testing.T) {
 	}
 }
 
-// TestSuccess tests Success function
+// TestSuccess tests Success function.
 func TestSuccess(t *testing.T) {
 	InitColors(false)
+
 	output := captureOutput(func() {
 		Success("operation completed")
 	})
@@ -112,9 +120,10 @@ func TestSuccess(t *testing.T) {
 	}
 }
 
-// TestInfo tests Info function
+// TestInfo tests Info function.
 func TestInfo(t *testing.T) {
 	InitColors(false)
+
 	output := captureOutput(func() {
 		Info("information message")
 	})
@@ -124,9 +133,10 @@ func TestInfo(t *testing.T) {
 	}
 }
 
-// TestDebug tests Debug function
+// TestDebug tests Debug function.
 func TestDebug(t *testing.T) {
 	InitColors(false)
+
 	output := captureOutput(func() {
 		Debug("debug message")
 	})
@@ -136,9 +146,10 @@ func TestDebug(t *testing.T) {
 	}
 }
 
-// TestProtocol tests Protocol function
+// TestProtocol tests Protocol function.
 func TestProtocol(t *testing.T) {
 	InitColors(false)
+
 	output := captureOutput(func() {
 		Protocol("ARP", "sending reply to %s", "192.168.1.1")
 	})
@@ -149,9 +160,10 @@ func TestProtocol(t *testing.T) {
 	}
 }
 
-// TestDevice tests Device function
+// TestDevice tests Device function.
 func TestDevice(t *testing.T) {
 	InitColors(false)
+
 	output := captureOutput(func() {
 		Device("router-01", "interface up")
 	})
@@ -162,7 +174,7 @@ func TestDevice(t *testing.T) {
 	}
 }
 
-// TestProtocolDebug tests ProtocolDebug with different debug levels
+// TestProtocolDebug tests ProtocolDebug with different debug levels.
 func TestProtocolDebug(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -178,6 +190,7 @@ func TestProtocolDebug(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			InitColors(false)
+
 			output := captureOutput(func() {
 				ProtocolDebug("LLDP", tt.debugLevel, tt.minLevel, "test message")
 			})
@@ -195,7 +208,7 @@ func TestProtocolDebug(t *testing.T) {
 	}
 }
 
-// TestDeviceDebug tests DeviceDebug with different debug levels
+// TestDeviceDebug tests DeviceDebug with different debug levels.
 func TestDeviceDebug(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -211,6 +224,7 @@ func TestDeviceDebug(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			InitColors(false)
+
 			output := captureOutput(func() {
 				DeviceDebug("switch-01", tt.debugLevel, tt.minLevel, "test message")
 			})
@@ -228,24 +242,24 @@ func TestDeviceDebug(t *testing.T) {
 	}
 }
 
-// TestSprintf tests Sprintf with different color types
+// TestSprintf tests Sprintf with different color types.
 func TestSprintf(t *testing.T) {
 	InitColors(false) // Disable colors for predictable output
 
 	tests := []struct {
 		colorType string
 		format    string
-		args      []interface{}
+		args      []any
 		expected  string
 	}{
-		{"error", "error: %s", []interface{}{"failed"}, "error: failed"},
-		{"warning", "warning: %d", []interface{}{404}, "warning: 404"},
-		{"success", "success: %s", []interface{}{"ok"}, "success: ok"},
-		{"info", "info: %s", []interface{}{"data"}, "info: data"},
-		{"protocol", "[%s]", []interface{}{"CDP"}, "[CDP]"},
-		{"device", "[%s]", []interface{}{"router"}, "[router]"},
-		{"debug", "debug: %v", []interface{}{true}, "debug: true"},
-		{"unknown", "plain %s", []interface{}{"text"}, "plain text"},
+		{"error", "error: %s", []any{"failed"}, "error: failed"},
+		{"warning", "warning: %d", []any{404}, "warning: 404"},
+		{"success", "success: %s", []any{"ok"}, "success: ok"},
+		{"info", "info: %s", []any{"data"}, "info: data"},
+		{"protocol", "[%s]", []any{"CDP"}, "[CDP]"},
+		{"device", "[%s]", []any{"router"}, "[router]"},
+		{"debug", "debug: %v", []any{true}, "debug: true"},
+		{"unknown", "plain %s", []any{"text"}, "plain text"},
 	}
 
 	for _, tt := range tests {
@@ -258,9 +272,10 @@ func TestSprintf(t *testing.T) {
 	}
 }
 
-// TestSprintf_WithColors tests that Sprintf returns same text with colors disabled
+// TestSprintf_WithColors tests that Sprintf returns same text with colors disabled.
 func TestSprintf_WithColors(t *testing.T) {
 	InitColors(true)
+
 	result := Sprintf("error", "test")
 
 	// Should contain the text
@@ -269,7 +284,7 @@ func TestSprintf_WithColors(t *testing.T) {
 	}
 }
 
-// TestColorStrings tests all *String functions
+// TestColorStrings tests all *String functions.
 func TestColorStrings(t *testing.T) {
 	InitColors(false) // Disable colors for predictable output
 
@@ -297,7 +312,7 @@ func TestColorStrings(t *testing.T) {
 	}
 }
 
-// TestColorStrings_WithColors tests that *String functions work with colors enabled
+// TestColorStrings_WithColors tests that *String functions work with colors enabled.
 func TestColorStrings_WithColors(t *testing.T) {
 	InitColors(true)
 
@@ -325,7 +340,7 @@ func TestColorStrings_WithColors(t *testing.T) {
 	}
 }
 
-// TestMultipleFormatArgs tests functions with multiple format arguments
+// TestMultipleFormatArgs tests functions with multiple format arguments.
 func TestMultipleFormatArgs(t *testing.T) {
 	InitColors(false)
 
@@ -339,7 +354,7 @@ func TestMultipleFormatArgs(t *testing.T) {
 	}
 }
 
-// TestProtocol_MultipleArgs tests Protocol with multiple format arguments
+// TestProtocol_MultipleArgs tests Protocol with multiple format arguments.
 func TestProtocol_MultipleArgs(t *testing.T) {
 	InitColors(false)
 
@@ -353,7 +368,7 @@ func TestProtocol_MultipleArgs(t *testing.T) {
 	}
 }
 
-// TestDevice_MultipleArgs tests Device with multiple format arguments
+// TestDevice_MultipleArgs tests Device with multiple format arguments.
 func TestDevice_MultipleArgs(t *testing.T) {
 	InitColors(false)
 
@@ -367,29 +382,31 @@ func TestDevice_MultipleArgs(t *testing.T) {
 	}
 }
 
-// TestAreColorsEnabled tests the getter function
+// TestAreColorsEnabled tests the getter function.
 func TestAreColorsEnabled(t *testing.T) {
 	// Test enabled
 	InitColors(true)
+
 	if !AreColorsEnabled() {
 		t.Error("AreColorsEnabled() should return true after InitColors(true)")
 	}
 
 	// Test disabled
 	InitColors(false)
+
 	if AreColorsEnabled() {
 		t.Error("AreColorsEnabled() should return false after InitColors(false)")
 	}
 }
 
-// TestConcurrentAccess tests that color functions are safe for concurrent use
+// TestConcurrentAccess tests that color functions are safe for concurrent use.
 func TestConcurrentAccess(t *testing.T) {
 	InitColors(false)
 
 	done := make(chan bool, 10)
 
 	// Launch multiple goroutines calling different logging functions
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		go func(id int) {
 			Error("error %d", id)
 			Warning("warning %d", id)
@@ -397,14 +414,14 @@ func TestConcurrentAccess(t *testing.T) {
 			Info("info %d", id)
 			Protocol("TEST", "protocol %d", id)
 			Device(fmt.Sprintf("device-%d", id), "message")
+
 			done <- true
 		}(i)
 	}
 
 	// Wait for all goroutines
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		<-done
 	}
-
 	// If we get here without data races, test passes
 }

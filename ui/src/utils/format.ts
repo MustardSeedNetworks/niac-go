@@ -11,13 +11,13 @@ export function formatTime(value: string): string {
 }
 
 export function formatDuration(value: string): string {
-  return value || '—';
+  return value || "—";
 }
 
 export function formatRelativeTime(timestamp: string): string {
-  if (!timestamp) return '—';
+  if (!timestamp) return "—";
   const diff = Date.now() - new Date(timestamp).getTime();
-  if (diff < 0) return 'just now';
+  if (diff < 0) return "just now";
   const seconds = Math.floor(diff / 1000);
   if (seconds < 60) return `${seconds}s ago`;
   const minutes = Math.floor(seconds / 60);
@@ -30,9 +30,9 @@ export function formatRelativeTime(timestamp: string): string {
 
 export function formatBytes(size: number): string {
   if (!Number.isFinite(size) || size <= 0) {
-    return '0 B';
+    return "0 B";
   }
-  const units = ['B', 'KB', 'MB', 'GB'];
+  const units = ["B", "KB", "MB", "GB"];
   let idx = 0;
   let value = size;
   while (value >= 1024 && idx < units.length - 1) {
@@ -57,6 +57,6 @@ export function formatUptime(seconds: number): string {
  */
 export function getErrorMessage(err: unknown): string {
   if (err instanceof Error) return err.message;
-  if (typeof err === 'string') return err;
-  return 'An unexpected error occurred';
+  if (typeof err === "string") return err;
+  return "An unexpected error occurred";
 }

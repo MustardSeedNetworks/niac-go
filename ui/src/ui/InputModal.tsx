@@ -1,6 +1,6 @@
-import { type FC, useState, useEffect, useRef } from 'react';
-import { Modal } from './Modal';
-import { Button } from './Button';
+import { type FC, useEffect, useRef, useState } from "react";
+import { Button } from "./Button";
+import { Modal } from "./Modal";
 
 export interface InputModalProps {
   isOpen: boolean;
@@ -12,7 +12,7 @@ export interface InputModalProps {
   defaultValue?: string;
   submitLabel?: string;
   cancelLabel?: string;
-  submitTone?: 'violet' | 'blue' | 'green' | 'red';
+  submitTone?: "violet" | "blue" | "green" | "red";
 }
 
 export const InputModal: FC<InputModalProps> = ({
@@ -21,11 +21,11 @@ export const InputModal: FC<InputModalProps> = ({
   onCancel,
   title,
   message,
-  placeholder = '',
-  defaultValue = '',
-  submitLabel = 'Submit',
-  cancelLabel = 'Cancel',
-  submitTone = 'violet',
+  placeholder = "",
+  defaultValue = "",
+  submitLabel = "Submit",
+  cancelLabel = "Cancel",
+  submitTone = "violet",
 }) => {
   const [value, setValue] = useState(defaultValue);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -47,19 +47,14 @@ export const InputModal: FC<InputModalProps> = ({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       e.preventDefault();
       handleSubmit();
     }
   };
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onCancel}
-      size="sm"
-      showCloseButton={false}
-    >
+    <Modal isOpen={isOpen} onClose={onCancel} size="sm" showCloseButton={false}>
       <div className="space-y-4">
         <div>
           <h2 className="text-lg font-semibold text-white">{title}</h2>

@@ -1,9 +1,9 @@
-import { type FC } from 'react';
-import { Network } from 'lucide-react';
-import { CollapsibleSection, FormField } from '../form';
-import type { NetBIOSConfig, NetBIOSService } from '../../api/types';
-import type { ProtocolSectionProps } from './types';
-import { inputClassName } from './types';
+import { Network } from "lucide-react";
+import type { FC } from "react";
+import type { NetBIOSConfig, NetBIOSService } from "../../api/types";
+import { CollapsibleSection, FormField } from "../form";
+import type { ProtocolSectionProps } from "./types";
+import { inputClassName } from "./types";
 
 export const NetBIOSSection: FC<ProtocolSectionProps> = ({
   device,
@@ -11,8 +11,8 @@ export const NetBIOSSection: FC<ProtocolSectionProps> = ({
   onToggle,
   onUpdate,
 }) => {
-  const updateNetBIOS = (config: NetBIOSConfig | undefined) => {
-    onUpdate('netbios', config);
+  const updateNetBios = (config: NetBIOSConfig | undefined) => {
+    onUpdate("netbios", config);
   };
 
   return (
@@ -22,7 +22,7 @@ export const NetBIOSSection: FC<ProtocolSectionProps> = ({
       onToggle={onToggle}
       enabled={device.netbios?.enabled ?? false}
       onEnableChange={(enabled) => {
-        updateNetBIOS(enabled ? { enabled: true, node_type: 'B' } as NetBIOSConfig : undefined);
+        updateNetBios(enabled ? ({ enabled: true, node_type: "B" } as NetBIOSConfig) : undefined);
       }}
     >
       {device.netbios?.enabled && (
@@ -31,9 +31,12 @@ export const NetBIOSSection: FC<ProtocolSectionProps> = ({
             <FormField label="NetBIOS Name" helpText="NetBIOS computer name (max 15 chars)">
               <input
                 type="text"
-                value={device.netbios.name || ''}
+                value={device.netbios.name || ""}
                 onChange={(e) =>
-                  updateNetBIOS({ ...device.netbios!, name: e.target.value.toUpperCase().slice(0, 15) })
+                  updateNetBios({
+                    ...device.netbios!,
+                    name: e.target.value.toUpperCase().slice(0, 15),
+                  })
                 }
                 placeholder="FILESERVER"
                 maxLength={15}
@@ -44,9 +47,9 @@ export const NetBIOSSection: FC<ProtocolSectionProps> = ({
             <FormField label="Workgroup" helpText="NetBIOS workgroup/domain">
               <input
                 type="text"
-                value={device.netbios.workgroup || ''}
+                value={device.netbios.workgroup || ""}
                 onChange={(e) =>
-                  updateNetBIOS({ ...device.netbios!, workgroup: e.target.value.toUpperCase() })
+                  updateNetBios({ ...device.netbios!, workgroup: e.target.value.toUpperCase() })
                 }
                 placeholder="WORKGROUP"
                 className={`${inputClassName} uppercase`}
@@ -55,9 +58,12 @@ export const NetBIOSSection: FC<ProtocolSectionProps> = ({
 
             <FormField label="Node Type" helpText="NetBIOS node type">
               <select
-                value={device.netbios.node_type || 'B'}
+                value={device.netbios.node_type || "B"}
                 onChange={(e) =>
-                  updateNetBIOS({ ...device.netbios!, node_type: e.target.value as NetBIOSConfig['node_type'] })
+                  updateNetBios({
+                    ...device.netbios!,
+                    node_type: e.target.value as NetBIOSConfig["node_type"],
+                  })
                 }
                 className={inputClassName}
               >
@@ -73,7 +79,7 @@ export const NetBIOSSection: FC<ProtocolSectionProps> = ({
                 type="number"
                 value={device.netbios.ttl ?? 300000}
                 onChange={(e) =>
-                  updateNetBIOS({ ...device.netbios!, ttl: parseInt(e.target.value) })
+                  updateNetBios({ ...device.netbios!, ttl: parseInt(e.target.value, 10) })
                 }
                 min={60000}
                 max={604800000}
@@ -89,17 +95,20 @@ export const NetBIOSSection: FC<ProtocolSectionProps> = ({
               NetBIOS Services
             </h4>
             <div className="flex flex-wrap gap-4">
-              {(['workstation', 'fileserver', 'messenger'] as NetBIOSService[]).map((service) => (
+              {(["workstation", "fileserver", "messenger"] as NetBIOSService[]).map((service) => (
                 <label key={service} className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
-                    checked={(device.netbios!.services || []).includes(service)}
+                    checked={(device.netbios?.services || []).includes(service)}
                     onChange={(e) => {
-                      const services = device.netbios!.services || [];
+                      const services = device.netbios?.services || [];
                       if (e.target.checked) {
-                        updateNetBIOS({ ...device.netbios!, services: [...services, service] });
+                        updateNetBios({ ...device.netbios!, services: [...services, service] });
                       } else {
-                        updateNetBIOS({ ...device.netbios!, services: services.filter(s => s !== service) });
+                        updateNetBios({
+                          ...device.netbios!,
+                          services: services.filter((s) => s !== service),
+                        });
                       }
                     }}
                     className="w-4 h-4 rounded border-gray-600 bg-gray-800 text-violet-600 focus:ring-violet-500"
@@ -113,9 +122,7 @@ export const NetBIOSSection: FC<ProtocolSectionProps> = ({
               <input
                 type="checkbox"
                 checked={device.netbios.msbrowse ?? false}
-                onChange={(e) =>
-                  updateNetBIOS({ ...device.netbios!, msbrowse: e.target.checked })
-                }
+                onChange={(e) => updateNetBios({ ...device.netbios!, msbrowse: e.target.checked })}
                 className="w-4 h-4 rounded border-gray-600 bg-gray-800 text-violet-600 focus:ring-violet-500"
               />
               <span className="text-sm text-gray-300">Master Browser (MSBROWSE)</span>

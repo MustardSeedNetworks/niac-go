@@ -4,31 +4,41 @@ import (
 	"encoding/binary"
 	"fmt"
 	"net"
+	"os"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/krisarmstrong/niac-go/pkg/config"
 )
 
-// ICMPv6 message type constants
+// ICMPv6 message type constants.
 const (
-	// Error messages (type < 128)
-	ICMPv6TypeDestUnreachable  = 1
-	ICMPv6TypePacketTooBig     = 2
-	ICMPv6TypeTimeExceeded     = 3
+	// ICMPv6TypeDestUnreachable is the destination unreachable error type.
+	ICMPv6TypeDestUnreachable = 1
+	// ICMPv6TypePacketTooBig is the packet too big error type.
+	ICMPv6TypePacketTooBig = 2
+	// ICMPv6TypeTimeExceeded is the time exceeded error type.
+	ICMPv6TypeTimeExceeded = 3
+	// ICMPv6TypeParameterProblem is the parameter problem error type.
 	ICMPv6TypeParameterProblem = 4
 
-	// Informational messages (type >= 128)
-	ICMPv6TypeEchoRequest           = 128
-	ICMPv6TypeEchoReply             = 129
-	ICMPv6TypeRouterSolicitation    = 133
-	ICMPv6TypeRouterAdvertisement   = 134
-	ICMPv6TypeNeighborSolicitation  = 135
+	// ICMPv6TypeEchoRequest is the echo request (ping) type.
+	ICMPv6TypeEchoRequest = 128
+	// ICMPv6TypeEchoReply is the echo reply (pong) type.
+	ICMPv6TypeEchoReply = 129
+	// ICMPv6TypeRouterSolicitation is the router solicitation type.
+	ICMPv6TypeRouterSolicitation = 133
+	// ICMPv6TypeRouterAdvertisement is the router advertisement type.
+	ICMPv6TypeRouterAdvertisement = 134
+	// ICMPv6TypeNeighborSolicitation is the neighbor solicitation type.
+	ICMPv6TypeNeighborSolicitation = 135
+	// ICMPv6TypeNeighborAdvertisement is the neighbor advertisement type.
 	ICMPv6TypeNeighborAdvertisement = 136
-	ICMPv6TypeRedirect              = 137
+	// ICMPv6TypeRedirect is the redirect type.
+	ICMPv6TypeRedirect = 137
 )
 
-// ICMPv6 option types
+// ICMPv6 option types.
 const (
 	ICMPv6OptSourceLinkAddr = 1
 	ICMPv6OptTargetLinkAddr = 2
@@ -37,26 +47,26 @@ const (
 	ICMPv6OptMTU            = 5
 )
 
-// ICMPv6 Neighbor Discovery flags
+// ICMPv6 Neighbor Discovery flags.
 const (
 	NDFlagRouter    = 0x80
 	NDFlagSolicited = 0x40
 	NDFlagOverride  = 0x20
 )
 
-// Neighbor Discovery prefix flags
+// Neighbor Discovery prefix flags.
 const (
 	NDPrefixFlagOnLink     = 0x80 // Prefix can be used for on-link determination
 	NDPrefixFlagAutonomous = 0x40 // Prefix can be used for autonomous address configuration
 )
 
-// ICMPv6Handler handles ICMPv6 packets (IPv6's version of ICMP)
+// ICMPv6Handler handles ICMPv6 packets (IPv6's version of ICMP).
 type ICMPv6Handler struct {
 	stack      *Stack
 	debugLevel int
 }
 
-// NewICMPv6Handler creates a new ICMPv6 handler
+// NewICMPv6Handler creates a new ICMPv6 handler.
 func NewICMPv6Handler(stack *Stack, debugLevel int) *ICMPv6Handler {
 	return &ICMPv6Handler{
 		stack:      stack,
@@ -64,13 +74,19 @@ func NewICMPv6Handler(stack *Stack, debugLevel int) *ICMPv6Handler {
 	}
 }
 
-// HandlePacket processes an incoming ICMPv6 packet
-func (h *ICMPv6Handler) HandlePacket(pkt *Packet, packet gopacket.Packet, ipv6Layer *layers.IPv6, devices []*config.Device) {
+// HandlePacket processes an incoming ICMPv6 packet.
+func (h *ICMPv6Handler) HandlePacket(
+	pkt *Packet,
+	packet gopacket.Packet,
+	ipv6Layer *layers.IPv6,
+	devices []*config.Device,
+) {
 	icmpv6Layer := packet.Layer(layers.LayerTypeICMPv6)
 	if icmpv6Layer == nil {
 		if h.debugLevel >= 2 {
-			fmt.Printf("ICMPv6 packet missing ICMPv6 layer sn=%d\n", pkt.SerialNumber)
+			_, _ = fmt.Fprintf(os.Stdout, "ICMPv6 packet missing ICMPv6 layer sn=%d\n", pkt.SerialNumber)
 		}
+
 		return
 	}
 
@@ -82,7 +98,7 @@ func (h *ICMPv6Handler) HandlePacket(pkt *Packet, packet gopacket.Packet, ipv6La
 	msgType := uint8(icmpv6.TypeCode.Type())
 
 	if h.debugLevel >= 3 {
-		fmt.Printf("ICMPv6: type %d (%s) sn=%d\n", msgType, h.getTypeName(msgType), pkt.SerialNumber)
+		_, _ = fmt.Fprintf(os.Stdout, "ICMPv6: type %d (%s) sn=%d\n", msgType, h.getTypeName(msgType), pkt.SerialNumber)
 	}
 
 	// Handle based on ICMPv6 message type
@@ -102,29 +118,45 @@ func (h *ICMPv6Handler) HandlePacket(pkt *Packet, packet gopacket.Packet, ipv6La
 		// Silently accept router advertisements
 	default:
 		if h.debugLevel >= 2 {
-			fmt.Printf("ICMPv6: Unhandled type: %d sn=%d\n", msgType, pkt.SerialNumber)
+			_, _ = fmt.Fprintf(os.Stdout, "ICMPv6: Unhandled type: %d sn=%d\n", msgType, pkt.SerialNumber)
 		}
 	}
 }
 
-// handleEchoRequest responds to ICMPv6 Echo Request (ping6)
-func (h *ICMPv6Handler) handleEchoRequest(pkt *Packet, packet gopacket.Packet, ipv6 *layers.IPv6, icmpv6 *layers.ICMPv6, devices []*config.Device) {
+// handleEchoRequest responds to ICMPv6 Echo Request (ping6).
+func (h *ICMPv6Handler) handleEchoRequest(
+	pkt *Packet,
+	packet gopacket.Packet,
+	ipv6 *layers.IPv6,
+	icmpv6 *layers.ICMPv6,
+	devices []*config.Device,
+) {
 	if len(devices) == 0 {
 		if h.debugLevel >= 3 {
-			fmt.Printf("ICMPv6: No device for Echo Request to %s sn=%d\n", ipv6.DstIP, pkt.SerialNumber)
+			_, _ = fmt.Fprintf(
+				os.Stdout,
+				"ICMPv6: No device for Echo Request to %s sn=%d\n",
+				ipv6.DstIP,
+				pkt.SerialNumber,
+			)
 		}
+
 		return
 	}
 
 	if h.debugLevel >= 2 {
-		fmt.Printf("ICMPv6: Echo Request %s -> %s sn=%d\n", ipv6.SrcIP, ipv6.DstIP, pkt.SerialNumber)
+		_, _ = fmt.Fprintf(os.Stdout, "ICMPv6: Echo Request %s -> %s sn=%d\n", ipv6.SrcIP, ipv6.DstIP, pkt.SerialNumber)
 	}
 
 	ethLayer := packet.Layer(layers.LayerTypeEthernet)
 	if ethLayer == nil {
 		return
 	}
-	eth := ethLayer.(*layers.Ethernet)
+
+	eth, ok := ethLayer.(*layers.Ethernet)
+	if !ok {
+		return
+	}
 
 	// Send reply from each matching device
 	for _, device := range devices {
@@ -134,12 +166,15 @@ func (h *ICMPv6Handler) handleEchoRequest(pkt *Packet, packet gopacket.Packet, i
 
 		// Check if device has this IPv6
 		hasIP := false
+
 		for _, deviceIP := range device.IPAddresses {
 			if deviceIP.Equal(ipv6.DstIP) {
 				hasIP = true
+
 				break
 			}
 		}
+
 		if !hasIP {
 			continue
 		}
@@ -159,32 +194,45 @@ func (h *ICMPv6Handler) handleEchoRequest(pkt *Packet, packet gopacket.Packet, i
 		)
 		if err != nil {
 			if h.debugLevel >= 2 {
-				fmt.Printf("ICMPv6: Error sending Echo Reply sn=%d: %v\n", pkt.SerialNumber, err)
+				_, _ = fmt.Fprintf(os.Stdout, "ICMPv6: Error sending Echo Reply sn=%d: %v\n", pkt.SerialNumber, err)
 			}
+
 			return
 		}
 
 		h.stack.IncrementStat("icmp_replies")
+
 		if h.debugLevel >= 2 {
-			fmt.Printf("ICMPv6: Sent Echo Reply %s -> %s sn=%d\n", ipv6.DstIP, ipv6.SrcIP, pkt.SerialNumber)
+			_, _ = fmt.Fprintf(
+				os.Stdout,
+				"ICMPv6: Sent Echo Reply %s -> %s sn=%d\n",
+				ipv6.DstIP,
+				ipv6.SrcIP,
+				pkt.SerialNumber,
+			)
 		}
 	}
 }
 
-// handleNeighborSolicitation responds to Neighbor Solicitation (NDP - like ARP for IPv6)
+// handleNeighborSolicitation responds to Neighbor Solicitation (NDP - like ARP for IPv6).
 func (h *ICMPv6Handler) handleNeighborSolicitation(pkt *Packet, packet gopacket.Packet, ipv6 *layers.IPv6) {
 	ethLayer := packet.Layer(layers.LayerTypeEthernet)
 	if ethLayer == nil {
 		return
 	}
-	eth := ethLayer.(*layers.Ethernet)
+
+	eth, ok := ethLayer.(*layers.Ethernet)
+	if !ok {
+		return
+	}
 
 	// Parse NS message: Type(1) | Code(1) | Checksum(2) | Reserved(4) | Target Address(16) | Options...
 	data := packet.ApplicationLayer().Payload()
 	if len(data) < 20 {
 		if h.debugLevel >= 2 {
-			fmt.Printf("ICMPv6: NS too short sn=%d\n", pkt.SerialNumber)
+			_, _ = fmt.Fprintf(os.Stdout, "ICMPv6: NS too short sn=%d\n", pkt.SerialNumber)
 		}
+
 		return
 	}
 
@@ -192,15 +240,16 @@ func (h *ICMPv6Handler) handleNeighborSolicitation(pkt *Packet, packet gopacket.
 	targetIP := net.IP(data[4:20])
 
 	if h.debugLevel >= 2 {
-		fmt.Printf("ICMPv6: NS for %s from %s sn=%d\n", targetIP, ipv6.SrcIP, pkt.SerialNumber)
+		_, _ = fmt.Fprintf(os.Stdout, "ICMPv6: NS for %s from %s sn=%d\n", targetIP, ipv6.SrcIP, pkt.SerialNumber)
 	}
 
 	// Find device with target IPv6
 	devices := h.stack.devices.GetByIPv6(targetIP)
 	if len(devices) == 0 {
 		if h.debugLevel >= 3 {
-			fmt.Printf("ICMPv6: No device for target %s sn=%d\n", targetIP, pkt.SerialNumber)
+			_, _ = fmt.Fprintf(os.Stdout, "ICMPv6: No device for target %s sn=%d\n", targetIP, pkt.SerialNumber)
 		}
+
 		return
 	}
 
@@ -209,51 +258,58 @@ func (h *ICMPv6Handler) handleNeighborSolicitation(pkt *Packet, packet gopacket.
 		err := h.sendNeighborAdvertisement(device, ipv6.SrcIP, eth.SrcMAC, targetIP)
 		if err != nil {
 			if h.debugLevel >= 2 {
-				fmt.Printf("ICMPv6: Error sending NA sn=%d: %v\n", pkt.SerialNumber, err)
+				_, _ = fmt.Fprintf(os.Stdout, "ICMPv6: Error sending NA sn=%d: %v\n", pkt.SerialNumber, err)
 			}
+
 			continue
 		}
 
 		if h.debugLevel >= 2 {
-			fmt.Printf("ICMPv6: Sent NA for %s (MAC: %s) sn=%d\n", targetIP, device.MACAddress, pkt.SerialNumber)
+			_, _ = fmt.Fprintf(
+				os.Stdout,
+				"ICMPv6: Sent NA for %s (MAC: %s) sn=%d\n",
+				targetIP,
+				device.MACAddress,
+				pkt.SerialNumber,
+			)
 		}
 	}
 }
 
-// sendNeighborAdvertisement sends a Neighbor Advertisement response
+// sendNeighborAdvertisement sends a Neighbor Advertisement response.
 func (h *ICMPv6Handler) sendNeighborAdvertisement(device *config.Device, dstIP net.IP,
-	dstMAC net.HardwareAddr, targetIP net.IP) error {
-
+	dstMAC net.HardwareAddr, targetIP net.IP,
+) error {
 	// Build Neighbor Advertisement message
 	// Format: Type(1) | Code(1) | Checksum(2) | Flags(1) | Reserved(3) | Target Address(16) | Options...
-	payload := make([]byte, 24) // 4 header + 16 target + 8 option
+	payloadHeader := make([]byte, 24) // 4 header + 4 flags/reserved + 16 target
 
 	// Type = 136 (Neighbor Advertisement)
-	payload[0] = ICMPv6TypeNeighborAdvertisement
+	payloadHeader[0] = ICMPv6TypeNeighborAdvertisement
 
 	// Code = 0
-	payload[1] = 0
+	payloadHeader[1] = 0
 
 	// Checksum = 0 (will be calculated)
-	payload[2] = 0
-	payload[3] = 0
+	payloadHeader[2] = 0
+	payloadHeader[3] = 0
 
 	// Flags: Solicited + Override
-	payload[4] = NDFlagSolicited | NDFlagOverride
+	payloadHeader[4] = NDFlagSolicited | NDFlagOverride
 
 	// Reserved (3 bytes)
-	payload[5] = 0
-	payload[6] = 0
-	payload[7] = 0
+	payloadHeader[5] = 0
+	payloadHeader[6] = 0
+	payloadHeader[7] = 0
 
 	// Target Address (16 bytes)
-	copy(payload[8:24], targetIP.To16())
+	copy(payloadHeader[8:24], targetIP.To16())
 
 	// Option: Target Link-Layer Address
 	// Type(1) | Length(1) | Link-Layer Address(6)
-	payload = append(payload, ICMPv6OptTargetLinkAddr) // Type
-	payload = append(payload, 1)                       // Length (in units of 8 bytes)
-	payload = append(payload, device.MACAddress...)    // MAC address (6 bytes)
+	payload := append(payloadHeader, ICMPv6OptTargetLinkAddr) // Type
+	payload = append(payload, 1)                              // Length (in units of 8 bytes)
+	payload = append(payload, device.MACAddress...)           // MAC address (6 bytes)
 
 	// Calculate ICMPv6 checksum
 	checksum := CalculateIPv6Checksum(device.IPAddresses[0], dstIP, IPv6NextHeaderICMPv6, payload)
@@ -275,39 +331,64 @@ func (h *ICMPv6Handler) sendNeighborAdvertisement(device *config.Device, dstIP n
 	)
 }
 
-// handleRouterSolicitation responds to Router Solicitation messages
+// handleRouterSolicitation responds to Router Solicitation messages.
 func (h *ICMPv6Handler) handleRouterSolicitation(pkt *Packet, packet gopacket.Packet, ipv6 *layers.IPv6) {
 	ethLayer := packet.Layer(layers.LayerTypeEthernet)
 	if ethLayer == nil {
 		return
 	}
-	dstMAC := ethLayer.(*layers.Ethernet).SrcMAC
+
+	eth, ok := ethLayer.(*layers.Ethernet)
+	if !ok {
+		return
+	}
+
+	dstMAC := eth.SrcMAC
 
 	if h.debugLevel >= 2 {
-		fmt.Printf("ICMPv6: Router Solicitation from %s sn=%d\n", ipv6.SrcIP, pkt.SerialNumber)
+		_, _ = fmt.Fprintf(os.Stdout, "ICMPv6: Router Solicitation from %s sn=%d\n", ipv6.SrcIP, pkt.SerialNumber)
 	}
 
 	for _, device := range h.stack.devices.GetAll() {
 		if !deviceCanAdvertiseIPv6(device) {
 			continue
 		}
+
 		srcIP := firstIPv6Address(device)
 		if srcIP == nil {
 			continue
 		}
-		if err := h.sendRouterAdvertisement(device, srcIP, ipv6.SrcIP, dstMAC); err != nil {
+		err := h.sendRouterAdvertisement(device, srcIP, ipv6.SrcIP, dstMAC)
+		if err != nil {
 			if h.debugLevel >= 2 {
-				fmt.Printf("ICMPv6: Failed to send RA from %s: %v sn=%d\n", device.Name, err, pkt.SerialNumber)
+				_, _ = fmt.Fprintf(
+					os.Stdout,
+					"ICMPv6: Failed to send RA from %s: %v sn=%d\n",
+					device.Name,
+					err,
+					pkt.SerialNumber,
+				)
 			}
+
 			continue
 		}
+
 		if h.debugLevel >= 2 {
-			fmt.Printf("ICMPv6: Sent Router Advertisement from %s to %s sn=%d\n", device.Name, ipv6.SrcIP, pkt.SerialNumber)
+			_, _ = fmt.Fprintf(os.Stdout,
+				"ICMPv6: Sent Router Advertisement from %s to %s sn=%d\n",
+				device.Name,
+				ipv6.SrcIP,
+				pkt.SerialNumber,
+			)
 		}
 	}
 }
 
-func (h *ICMPv6Handler) sendRouterAdvertisement(device *config.Device, srcIP, dstIP net.IP, dstMAC net.HardwareAddr) error {
+func (h *ICMPv6Handler) sendRouterAdvertisement(
+	device *config.Device,
+	srcIP, dstIP net.IP,
+	dstMAC net.HardwareAddr,
+) error {
 	body := h.buildRouterAdvertisementBody(device, srcIP)
 	icmpv6 := &layers.ICMPv6{
 		TypeCode: layers.CreateICMPv6TypeCode(ICMPv6TypeRouterAdvertisement, 0),
@@ -334,48 +415,56 @@ func (h *ICMPv6Handler) buildRouterAdvertisementBody(device *config.Device, srcI
 	if device.ICMPv6Config != nil && device.ICMPv6Config.HopLimit > 0 {
 		hopLimit = device.ICMPv6Config.HopLimit
 	}
+
 	if raCfg != nil && raCfg.CurHopLimit > 0 {
-		hopLimit = uint8(raCfg.CurHopLimit)
+		hopLimit = uint8(raCfg.CurHopLimit) //nolint:gosec // G115: hop limit bounded by protocol (0-255)
 	}
 
-	body := make([]byte, 12)
-	body[0] = hopLimit
+	bodyHeader := make([]byte, 12)
+	bodyHeader[0] = hopLimit
 
 	flags := byte(0)
+
 	if raCfg != nil {
 		if raCfg.Managed != 0 {
 			flags |= 0x80
 		}
+
 		if raCfg.Other != 0 {
 			flags |= 0x40
 		}
 	}
-	body[1] = flags
+
+	bodyHeader[1] = flags
 
 	lifetime := uint16(1800)
 	if raCfg != nil && raCfg.Lifetime > 0 {
-		lifetime = uint16(raCfg.Lifetime)
+		lifetime = uint16(raCfg.Lifetime) //nolint:gosec // G115: RA lifetime bounded by protocol
 	}
-	binary.BigEndian.PutUint16(body[2:4], lifetime)
+
+	binary.BigEndian.PutUint16(bodyHeader[2:4], lifetime)
 
 	reachable := uint32(0)
 	retrans := uint32(0)
+
 	if raCfg != nil {
-		reachable = uint32(raCfg.ReachableTime)
-		retrans = uint32(raCfg.RetransTimer)
+		reachable = uint32(raCfg.ReachableTime) //nolint:gosec // G115: reachable time bounded by protocol
+		retrans = uint32(raCfg.RetransTimer)    //nolint:gosec // G115: retrans timer bounded by protocol
 	}
-	binary.BigEndian.PutUint32(body[4:8], reachable)
-	binary.BigEndian.PutUint32(body[8:12], retrans)
+
+	binary.BigEndian.PutUint32(bodyHeader[4:8], reachable)
+	binary.BigEndian.PutUint32(bodyHeader[8:12], retrans)
 
 	// Source link-layer option
-	body = append(body, ICMPv6OptSourceLinkAddr, 1)
+	body := append(bodyHeader, ICMPv6OptSourceLinkAddr, 1)
 	body = append(body, device.MACAddress...)
 
 	// MTU option
 	mtuVal := uint32(1500)
 	if raCfg != nil && raCfg.MTU > 0 {
-		mtuVal = uint32(raCfg.MTU)
+		mtuVal = uint32(raCfg.MTU) //nolint:gosec // G115: MTU bounded by network standards
 	}
+
 	body = append(body, ICMPv6OptMTU, 1, 0, 0)
 	mtu := make([]byte, 4)
 	binary.BigEndian.PutUint32(mtu, mtuVal)
@@ -387,29 +476,41 @@ func (h *ICMPv6Handler) buildRouterAdvertisementBody(device *config.Device, srcI
 			if prefix == nil || prefix.To16() == nil {
 				continue
 			}
+
 			body = append(body, ICMPv6OptPrefixInfo, 4)
 			body = append(body, byte(p.PrefixLength))
+
 			pFlags := byte(0)
 			if p.Onlink != 0 {
 				pFlags |= NDPrefixFlagOnLink
 			}
+
 			if p.Auto != 0 {
 				pFlags |= NDPrefixFlagAutonomous
 			}
+
 			body = append(body, pFlags)
 			valid := make([]byte, 4)
-			binary.BigEndian.PutUint32(valid, uint32(p.ValidLifetime))
+			binary.BigEndian.PutUint32(
+				valid,
+				uint32(p.ValidLifetime),
+			)
 			body = append(body, valid...)
-			binary.BigEndian.PutUint32(valid, uint32(p.PreferredLifetime))
+			binary.BigEndian.PutUint32(
+				valid,
+				uint32(p.PreferredLifetime),
+			)
 			body = append(body, valid...)
 			body = append(body, []byte{0, 0, 0, 0}...)
 			body = append(body, prefix.To16()...)
 		}
+
 		return body
 	}
 
 	// Default prefix if none configured
 	prefix := deriveIPv6Prefix(srcIP, 64)
+
 	body = append(body, ICMPv6OptPrefixInfo, 4)
 	body = append(body, byte(64))
 	body = append(body, NDPrefixFlagOnLink|NDPrefixFlagAutonomous)
@@ -424,16 +525,17 @@ func (h *ICMPv6Handler) buildRouterAdvertisementBody(device *config.Device, srcI
 	return body
 }
 
-// sendICMPv6Packet sends an ICMPv6 packet
+// sendICMPv6Packet sends an ICMPv6 packet.
 func (h *ICMPv6Handler) sendICMPv6Packet(srcIP, dstIP net.IP, srcMAC, dstMAC net.HardwareAddr,
-	icmpv6 *layers.ICMPv6, payload []byte) error {
+	icmpv6 *layers.ICMPv6, payload []byte,
+) error {
 	return h.sendICMPv6PacketWithDevice(srcIP, dstIP, srcMAC, dstMAC, icmpv6, payload, nil)
 }
 
-// sendICMPv6PacketWithDevice sends an ICMPv6 packet with device config
+// sendICMPv6PacketWithDevice sends an ICMPv6 packet with device config.
 func (h *ICMPv6Handler) sendICMPv6PacketWithDevice(srcIP, dstIP net.IP, srcMAC, dstMAC net.HardwareAddr,
-	icmpv6 *layers.ICMPv6, payload []byte, device *config.Device) error {
-
+	icmpv6 *layers.ICMPv6, payload []byte, device *config.Device,
+) error {
 	// Determine hop limit based on ICMPv6 type
 	hopLimit := uint8(255) // Default to 255 for NDP (RFC 4861)
 	msgType := icmpv6.TypeCode.Type()
@@ -458,10 +560,10 @@ func (h *ICMPv6Handler) sendICMPv6PacketWithDevice(srcIP, dstIP net.IP, srcMAC, 
 	}
 
 	// Build IPv6 layer
-	icmpLen := 8 + len(payload) // ICMPv6 header + payload
-	if icmpLen > 65535 {
-		icmpLen = 65535
-	}
+	icmpLen := min(
+		// ICMPv6 header + payload
+		8+len(payload), 65535)
+
 	ipv6 := &layers.IPv6{
 		Version:      6,
 		TrafficClass: 0,
@@ -489,7 +591,7 @@ func (h *ICMPv6Handler) sendICMPv6PacketWithDevice(srcIP, dstIP net.IP, srcMAC, 
 	}
 
 	if h.debugLevel >= 3 {
-		fmt.Printf("ICMPv6: Sending packet %s -> %s, type %d, size %d bytes\n",
+		_, _ = fmt.Fprintf(os.Stdout, "ICMPv6: Sending packet %s -> %s, type %d, size %d bytes\n",
 			srcIP, dstIP, icmpv6.TypeCode.Type(), len(buf.Bytes()))
 	}
 
@@ -497,7 +599,7 @@ func (h *ICMPv6Handler) sendICMPv6PacketWithDevice(srcIP, dstIP net.IP, srcMAC, 
 	return h.stack.SendRawPacket(buf.Bytes())
 }
 
-// getTypeName returns a human-readable name for an ICMPv6 type
+// getTypeName returns a human-readable name for an ICMPv6 type.
 func (h *ICMPv6Handler) getTypeName(msgType uint8) string {
 	switch msgType {
 	case ICMPv6TypeDestUnreachable:
@@ -527,7 +629,7 @@ func (h *ICMPv6Handler) getTypeName(msgType uint8) string {
 	}
 }
 
-// SetDebugLevel updates the debug level
+// SetDebugLevel updates the debug level.
 func (h *ICMPv6Handler) SetDebugLevel(level int) {
 	h.debugLevel = level
 }
@@ -536,9 +638,11 @@ func deviceCanAdvertiseIPv6(device *config.Device) bool {
 	if device == nil {
 		return false
 	}
+
 	if device.ICMPv6Config == nil || device.ICMPv6Config.RouterAdvertisement == nil {
 		return false
 	}
+
 	return firstIPv6Address(device) != nil
 }
 
@@ -546,11 +650,13 @@ func firstIPv6Address(device *config.Device) net.IP {
 	if device == nil {
 		return nil
 	}
+
 	for _, ip := range device.IPAddresses {
 		if ip.To4() == nil && ip.To16() != nil {
 			return ip
 		}
 	}
+
 	return nil
 }
 
@@ -559,5 +665,6 @@ func deriveIPv6Prefix(ip net.IP, prefixLen int) net.IP {
 	masked := ip.Mask(mask)
 	prefix := make(net.IP, len(masked))
 	copy(prefix, masked)
+
 	return prefix
 }

@@ -1,8 +1,12 @@
-import { type FC, type KeyboardEvent } from 'react';
-import { Network, Edit3, Copy, Trash2 } from 'lucide-react';
-import { Card, CardContent, Tag } from '../../ui';
-import { deviceTypeIcons, deviceTypeColors, getDeviceColorClasses } from '../../constants/deviceTypes';
-import type { DeviceViewProps } from './types';
+import { Copy, Edit3, Network, Trash2 } from "lucide-react";
+import type { FC, KeyboardEvent } from "react";
+import {
+  deviceTypeColors,
+  deviceTypeIcons,
+  getDeviceColorClasses,
+} from "../../constants/deviceTypes";
+import { Card, CardContent, Tag } from "../../ui";
+import type { DeviceViewProps } from "./types";
 
 export const DeviceCardView: FC<DeviceViewProps> = ({
   devices,
@@ -14,7 +18,7 @@ export const DeviceCardView: FC<DeviceViewProps> = ({
   getDeviceProtocols,
 }) => {
   const handleCardKeyDown = (e: KeyboardEvent, hostname: string) => {
-    if (e.key === 'Enter' || e.key === ' ') {
+    if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
       onEdit(hostname);
     }
@@ -23,8 +27,8 @@ export const DeviceCardView: FC<DeviceViewProps> = ({
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
       {devices.map((device) => {
-        const DeviceIcon = deviceTypeIcons[device.type ?? 'unknown'];
-        const typeColor = deviceTypeColors[device.type ?? 'unknown'];
+        const DeviceIcon = deviceTypeIcons[device.type ?? "unknown"];
+        const typeColor = deviceTypeColors[device.type ?? "unknown"];
         const colorClasses = getDeviceColorClasses(typeColor);
         const deviceProtocols = getDeviceProtocols(device);
 
@@ -40,7 +44,9 @@ export const DeviceCardView: FC<DeviceViewProps> = ({
           >
             <Card
               className={`border-white/5 bg-gray-900/70 hover:border-violet-500/30 transition-all h-full ${
-                selectedDevices.has(device.hostname) ? 'ring-2 ring-violet-500/50 border-violet-500/30' : ''
+                selectedDevices.has(device.hostname)
+                  ? "ring-2 ring-violet-500/50 border-violet-500/30"
+                  : ""
               }`}
             >
               <CardContent className="p-4 space-y-3">
@@ -66,7 +72,7 @@ export const DeviceCardView: FC<DeviceViewProps> = ({
                     </div>
                   </div>
                   <Tag colorScheme={typeColor} className="text-xs capitalize">
-                    {device.type?.replace('_', ' ') || 'unknown'}
+                    {device.type?.replace("_", " ") || "unknown"}
                   </Tag>
                 </div>
 
@@ -78,20 +84,16 @@ export const DeviceCardView: FC<DeviceViewProps> = ({
                   <div className="flex items-center gap-1 mt-1">
                     <Network className="h-3.5 w-3.5 text-gray-500" />
                     <span className="text-sm text-gray-400 font-mono">
-                      {device.ip || device.ips?.[0] || 'No IP'}
+                      {device.ip || device.ips?.[0] || "No IP"}
                     </span>
                     {device.ips && device.ips.length > 1 && (
-                      <span className="text-xs text-gray-500">
-                        +{device.ips.length - 1}
-                      </span>
+                      <span className="text-xs text-gray-500">+{device.ips.length - 1}</span>
                     )}
                   </div>
                 </div>
 
                 {/* MAC Address */}
-                <div className="text-xs text-gray-500 font-mono truncate">
-                  {device.mac}
-                </div>
+                <div className="text-xs text-gray-500 font-mono truncate">{device.mac}</div>
 
                 {/* Protocols */}
                 <div className="flex flex-wrap gap-1">

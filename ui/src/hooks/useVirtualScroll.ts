@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from "react";
 
 interface VirtualScrollOptions {
   itemHeight: number;
@@ -16,10 +16,7 @@ interface VirtualScrollOptions {
  * @param options - Configuration for virtual scrolling
  * @returns Virtual scroll state and container props
  */
-export function useVirtualScroll<T>(
-  items: T[],
-  options: VirtualScrollOptions
-) {
+export function useVirtualScroll<T>(items: T[], options: VirtualScrollOptions) {
   const { itemHeight, containerHeight, overscan = 3 } = options;
   const [scrollTop, setScrollTop] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -48,8 +45,8 @@ export function useVirtualScroll<T>(
       setScrollTop(container.scrollTop);
     };
 
-    container.addEventListener('scroll', handleScroll, { passive: true });
-    return () => container.removeEventListener('scroll', handleScroll);
+    container.addEventListener("scroll", handleScroll, { passive: true });
+    return () => container.removeEventListener("scroll", handleScroll);
   }, []);
 
   return {
@@ -61,20 +58,20 @@ export function useVirtualScroll<T>(
       ref: containerRef,
       style: {
         height: `${containerHeight}px`,
-        overflow: 'auto',
-        position: 'relative' as const,
+        overflow: "auto",
+        position: "relative" as const,
       },
     },
     spacerProps: {
       style: {
         height: `${totalHeight}px`,
-        position: 'relative' as const,
+        position: "relative" as const,
       },
     },
     contentProps: {
       style: {
         transform: `translateY(${offsetY}px)`,
-        position: 'absolute' as const,
+        position: "absolute" as const,
         top: 0,
         left: 0,
         right: 0,

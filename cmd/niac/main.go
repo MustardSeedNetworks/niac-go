@@ -44,7 +44,7 @@ func runLegacyMode(osArgs []string) {
 	flag.Usage = printUsage
 	// Parse the provided arguments (skip first element which is program name)
 	if len(osArgs) > 1 {
-		flag.CommandLine.Parse(osArgs[1:]) // #nosec G104 -- error logged elsewhere
+		_ = flag.CommandLine.Parse(osArgs[1:])
 	} else {
 		flag.Parse()
 	}
@@ -500,7 +500,10 @@ func runInteractiveMode(interfaceName string, cfg *config.Config, debugConfig *l
 	}()
 
 	reloadFunc := buildReloadFunc(stack, configFile, services)
-	return interactive.Run(interfaceName, cfg, debugConfig, stack, startTime, reloadFunc)
+	if err := interactive.Run(interfaceName, cfg, debugConfig, stack, startTime, reloadFunc); err != nil {
+		return fmt.Errorf("failed to run interactive mode: %w", err)
+	}
+	return nil
 }
 
 // initializeCaptureEngine initializes the packet capture engine
@@ -734,15 +737,15 @@ func buildReloadFunc(stack *protocols.Stack, configFile string, services *runtim
 	return func() (*config.Config, error) {
 		newCfg, err := config.Load(abs)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to load config: %w", err)
 		}
 		if services != nil {
 			if err := services.applyConfig(newCfg); err != nil {
-				return nil, err
+				return nil, fmt.Errorf("failed to apply config: %w", err)
 			}
 		} else {
 			if err := stack.ReloadConfig(newCfg); err != nil {
-				return nil, err
+				return nil, fmt.Errorf("failed to reload config: %w", err)
 			}
 			configureServiceHandlers(stack, newCfg, stack.GetDebugLevel())
 		}

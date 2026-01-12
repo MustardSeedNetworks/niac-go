@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-// TestConfigExportCommand tests the config export command
+// TestConfigExportCommand tests the config export command.
 func TestConfigExportCommand(t *testing.T) {
 	// Create temp directory for test files
 	tmpDir := t.TempDir()
@@ -21,7 +21,7 @@ func TestConfigExportCommand(t *testing.T) {
     ips:
       - "192.168.1.1"
 `
-	if err := os.WriteFile(inputFile, []byte(configContent), 0644); err != nil {
+	if err := os.WriteFile(inputFile, []byte(configContent), 0o644); err != nil {
 		t.Fatalf("Failed to create test input file: %v", err)
 	}
 
@@ -50,14 +50,14 @@ func TestConfigExportCommand(t *testing.T) {
 
 // TestConfigExportOverwriteProtection tests that export doesn't overwrite existing files
 // Note: This test cannot fully verify os.Exit(1) behavior in unit tests
-// It verifies the check exists by ensuring file is not modified
+// It verifies the check exists by ensuring file is not modified.
 func TestConfigExportOverwriteProtection(t *testing.T) {
 	t.Skip("Skipping test that requires os.Exit() - cannot be unit tested")
 	// The actual protection logic exists in runConfigExport lines 103-106
 	// Manual/integration testing confirms this works correctly
 }
 
-// TestConfigDiffCommand tests the config diff command
+// TestConfigDiffCommand tests the config diff command.
 func TestConfigDiffCommand(t *testing.T) {
 	tmpDir := t.TempDir()
 	file1 := filepath.Join(tmpDir, "config1.yaml")
@@ -71,7 +71,8 @@ func TestConfigDiffCommand(t *testing.T) {
       - "192.168.1.1"
     type: "router"
 `
-	if err := os.WriteFile(file1, []byte(config1), 0644); err != nil {
+	err := os.WriteFile(file1, []byte(config1), 0o644)
+	if err != nil {
 		t.Fatalf("Failed to create config1: %v", err)
 	}
 
@@ -88,13 +89,15 @@ func TestConfigDiffCommand(t *testing.T) {
       - "192.168.1.2"
     type: "router"
 `
-	if err := os.WriteFile(file2, []byte(config2), 0644); err != nil {
+	err = os.WriteFile(file2, []byte(config2), 0o644)
+	if err != nil {
 		t.Fatalf("Failed to create config2: %v", err)
 	}
 
 	// Test diff - should succeed and show differences
 	rootCmd.SetArgs([]string{"config", "diff", file1, file2})
-	if err := rootCmd.Execute(); err != nil {
+	err = rootCmd.Execute()
+	if err != nil {
 		t.Errorf("Config diff failed: %v", err)
 	}
 
@@ -102,7 +105,7 @@ func TestConfigDiffCommand(t *testing.T) {
 	// but we verify the command doesn't error
 }
 
-// TestConfigDiffIdentical tests diff on identical configs
+// TestConfigDiffIdentical tests diff on identical configs.
 func TestConfigDiffIdentical(t *testing.T) {
 	tmpDir := t.TempDir()
 	file1 := filepath.Join(tmpDir, "config1.yaml")
@@ -115,21 +118,24 @@ func TestConfigDiffIdentical(t *testing.T) {
     ips:
       - "192.168.1.1"
 `
-	if err := os.WriteFile(file1, []byte(config), 0644); err != nil {
+	err := os.WriteFile(file1, []byte(config), 0o644)
+	if err != nil {
 		t.Fatalf("Failed to create config1: %v", err)
 	}
-	if err := os.WriteFile(file2, []byte(config), 0644); err != nil {
+	err = os.WriteFile(file2, []byte(config), 0o644)
+	if err != nil {
 		t.Fatalf("Failed to create config2: %v", err)
 	}
 
 	// Test diff - should succeed with no differences
 	rootCmd.SetArgs([]string{"config", "diff", file1, file2})
-	if err := rootCmd.Execute(); err != nil {
+	err = rootCmd.Execute()
+	if err != nil {
 		t.Errorf("Config diff failed: %v", err)
 	}
 }
 
-// TestConfigMergeCommand tests the config merge command
+// TestConfigMergeCommand tests the config merge command.
 func TestConfigMergeCommand(t *testing.T) {
 	tmpDir := t.TempDir()
 	baseFile := filepath.Join(tmpDir, "base.yaml")
@@ -149,7 +155,7 @@ func TestConfigMergeCommand(t *testing.T) {
       - "192.168.1.2"
     type: "switch"
 `
-	if err := os.WriteFile(baseFile, []byte(baseConfig), 0644); err != nil {
+	if err := os.WriteFile(baseFile, []byte(baseConfig), 0o644); err != nil {
 		t.Fatalf("Failed to create base config: %v", err)
 	}
 
@@ -166,7 +172,7 @@ func TestConfigMergeCommand(t *testing.T) {
       - "192.168.1.3"
     type: "router"
 `
-	if err := os.WriteFile(overlayFile, []byte(overlayConfig), 0644); err != nil {
+	if err := os.WriteFile(overlayFile, []byte(overlayConfig), 0o644); err != nil {
 		t.Fatalf("Failed to create overlay config: %v", err)
 	}
 
@@ -208,7 +214,7 @@ func TestConfigMergeCommand(t *testing.T) {
 }
 
 // TestConfigMergeOverwriteProtection tests merge doesn't overwrite existing files
-// Note: Cannot fully test os.Exit(1) in unit tests
+// Note: Cannot fully test os.Exit(1) in unit tests.
 func TestConfigMergeOverwriteProtection(t *testing.T) {
 	t.Skip("Skipping test that requires os.Exit() - cannot be unit tested")
 	// The actual protection logic exists in runConfigMerge lines 214-217
@@ -216,7 +222,7 @@ func TestConfigMergeOverwriteProtection(t *testing.T) {
 }
 
 // TestConfigInvalidInput tests error handling for invalid input files
-// Note: Cannot fully test os.Exit(1) in unit tests
+// Note: Cannot fully test os.Exit(1) in unit tests.
 func TestConfigInvalidInput(t *testing.T) {
 	t.Skip("Skipping test that requires os.Exit() - cannot be unit tested")
 	// The actual error handling exists in config.Load() calls throughout config.go
@@ -224,7 +230,7 @@ func TestConfigInvalidInput(t *testing.T) {
 }
 
 // TestConfigMissingFiles tests error handling for missing files
-// Note: Cannot fully test os.Exit(1) in unit tests
+// Note: Cannot fully test os.Exit(1) in unit tests.
 func TestConfigMissingFiles(t *testing.T) {
 	t.Skip("Skipping test that requires os.Exit() - cannot be unit tested")
 	// The actual error handling exists in config.Load() calls which use os.Exit(1)

@@ -1,8 +1,11 @@
 package logging
 
-import "sync"
+import (
+	"maps"
+	"sync"
+)
 
-// DebugConfig stores per-protocol debug levels
+// DebugConfig stores per-protocol debug levels.
 type DebugConfig struct {
 	mu sync.RWMutex
 
@@ -13,7 +16,7 @@ type DebugConfig struct {
 	protocols map[string]int
 }
 
-// NewDebugConfig creates a new debug configuration with a global default
+// NewDebugConfig creates a new debug configuration with a global default.
 func NewDebugConfig(globalLevel int) *DebugConfig {
 	return &DebugConfig{
 		Global:    globalLevel,
@@ -21,15 +24,16 @@ func NewDebugConfig(globalLevel int) *DebugConfig {
 	}
 }
 
-// SetProtocolLevel sets the debug level for a specific protocol
+// SetProtocolLevel sets the debug level for a specific protocol.
 func (d *DebugConfig) SetProtocolLevel(protocol string, level int) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
+
 	d.protocols[protocol] = level
 }
 
 // GetProtocolLevel returns the debug level for a specific protocol
-// If not set, returns the global level
+// If not set, returns the global level.
 func (d *DebugConfig) GetProtocolLevel(protocol string) int {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
@@ -37,44 +41,48 @@ func (d *DebugConfig) GetProtocolLevel(protocol string) int {
 	if level, ok := d.protocols[protocol]; ok {
 		return level
 	}
+
 	return d.Global
 }
 
-// SetGlobal sets the global debug level
+// SetGlobal sets the global debug level.
 func (d *DebugConfig) SetGlobal(level int) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
+
 	d.Global = level
 }
 
-// GetGlobal returns the global debug level
+// GetGlobal returns the global debug level.
 func (d *DebugConfig) GetGlobal() int {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
+
 	return d.Global
 }
 
-// GetAllLevels returns a copy of all protocol-specific levels
+// GetAllLevels returns a copy of all protocol-specific levels.
 func (d *DebugConfig) GetAllLevels() map[string]int {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
 
 	levels := make(map[string]int, len(d.protocols))
-	for protocolName, level := range d.protocols {
-		levels[protocolName] = level
-	}
+	maps.Copy(levels, d.protocols)
+
 	return levels
 }
 
-// HasProtocolLevel returns true if a protocol has a specific level set
+// HasProtocolLevel returns true if a protocol has a specific level set.
 func (d *DebugConfig) HasProtocolLevel(protocol string) bool {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
+
 	_, ok := d.protocols[protocol]
+
 	return ok
 }
 
-// Protocol names (constants for consistency)
+// Protocol names (constants for consistency).
 const (
 	ProtocolARP     = "ARP"
 	ProtocolIP      = "IP"

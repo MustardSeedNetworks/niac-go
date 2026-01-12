@@ -2,7 +2,9 @@
 package ipc
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -10,18 +12,38 @@ import (
 	"time"
 
 	"github.com/krisarmstrong/niac-go/pkg/api"
-	"github.com/krisarmstrong/niac-go/pkg/errors"
+	pkgerrors "github.com/krisarmstrong/niac-go/pkg/errors"
+)
+
+// Sentinel errors for IPC commands.
+var (
+	ErrStatusCommandFailed    = errors.New("status command failed")
+	ErrMissingStatusData      = errors.New("response missing status data")
+	ErrReloadCommandFailed    = errors.New("reload command failed")
+	ErrInjectCommandFailed    = errors.New("inject command failed")
+	ErrListCommandFailed      = errors.New("list command failed")
+	ErrMissingInjectionsData  = errors.New("response missing injections data")
+	ErrClearCommandFailed     = errors.New("clear command failed")
+	ErrShutdownCommandFailed  = errors.New("shutdown command failed")
+	ErrDumpCommandFailed      = errors.New("dump command failed")
+	ErrMissingPacketsData     = errors.New("response missing packets data")
+	ErrTopologyCommandFailed  = errors.New("topology command failed")
+	ErrMissingTopologyData    = errors.New("response missing topology data")
+	ErrLogsCommandFailed      = errors.New("logs command failed")
+	ErrMissingLogsData        = errors.New("response missing logs data")
+	ErrNeighborsCommandFailed = errors.New("neighbors command failed")
+	ErrMissingNeighborsData   = errors.New("response missing neighbors data")
 )
 
 const (
-	// DefaultTimeout is the default timeout for IPC operations
+	// DefaultTimeout is the default timeout for IPC operations.
 	DefaultTimeout = 5 * time.Second
 
-	// EnvSocketPath is the environment variable for custom socket path
+	// EnvSocketPath is the environment variable for custom socket path.
 	EnvSocketPath = "NIAC_SOCKET_PATH"
 )
 
-// Client is an IPC client for communicating with the NIAC server
+// Client is an IPC client for communicating with the NIAC server.
 type Client struct {
 	socketPath string
 	timeout    time.Duration
@@ -33,6 +55,7 @@ func NewClient(socketPath string) *Client {
 	if socketPath == "" {
 		socketPath = DefaultSocketPath()
 	}
+
 	return &Client{
 		socketPath: socketPath,
 		timeout:    DefaultTimeout,
@@ -51,13 +74,19 @@ func (c *Client) SocketPath() string {
 
 // SendCommand sends a command to the IPC server and returns the response.
 // This is the core method that all convenience methods use.
-func (c *Client) SendCommand(cmd Command, args map[string]interface{}) (*Response, error) {
+func (c *Client) SendCommand(cmd Command, args map[string]any) (*Response, error) {
 	// Connect to socket
-	conn, err := net.DialTimeout("unix", c.socketPath, c.timeout)
+	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
+	defer cancel()
+
+	dialer := net.Dialer{Timeout: c.timeout}
+
+	conn, err := dialer.DialContext(ctx, "unix", c.socketPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to IPC socket: %w", err)
 	}
-	defer conn.Close()
+
+	defer func() { _ = conn.Close() }()
 
 	// Set deadline for the entire operation
 	if err := conn.SetDeadline(time.Now().Add(c.timeout)); err != nil {
@@ -77,6 +106,7 @@ func (c *Client) SendCommand(cmd Command, args map[string]interface{}) (*Respons
 
 	// Read response
 	var resp Response
+
 	decoder := json.NewDecoder(conn)
 	if err := decoder.Decode(&resp); err != nil {
 		return nil, fmt.Errorf("failed to read response: %w", err)
@@ -93,13 +123,13 @@ func (c *Client) GetStatus() (*StatusData, error) {
 	}
 
 	if !resp.Success {
-		return nil, fmt.Errorf("status command failed: %s", resp.Error)
+		return nil, fmt.Errorf("%w: %s", ErrStatusCommandFailed, resp.Error)
 	}
 
 	// Extract status from response data
 	statusData, ok := resp.Data["status"]
 	if !ok {
-		return nil, fmt.Errorf("response missing status data")
+		return nil, ErrMissingStatusData
 	}
 
 	// Convert map to StatusData struct
@@ -124,7 +154,7 @@ func (c *Client) Reload() error {
 	}
 
 	if !resp.Success {
-		return fmt.Errorf("reload command failed: %s", resp.Error)
+		return fmt.Errorf("%w: %s", ErrReloadCommandFailed, resp.Error)
 	}
 
 	return nil
@@ -134,7 +164,7 @@ func (c *Client) Reload() error {
 // The errorType should be one of the ErrorType constants (e.g., "FCS Errors", "Packet Discards").
 // The value represents the error rate or percentage depending on the error type.
 func (c *Client) InjectError(device, errorType string, value int) error {
-	args := map[string]interface{}{
+	args := map[string]any{
 		"device":     device,
 		"error_type": errorType,
 		"value":      value,
@@ -146,14 +176,14 @@ func (c *Client) InjectError(device, errorType string, value int) error {
 	}
 
 	if !resp.Success {
-		return fmt.Errorf("inject command failed: %s", resp.Error)
+		return fmt.Errorf("%w: %s", ErrInjectCommandFailed, resp.Error)
 	}
 
 	return nil
 }
 
 // InjectErrorType is a convenience method that accepts an errors.ErrorType.
-func (c *Client) InjectErrorType(device string, errorType errors.ErrorType, value int) error {
+func (c *Client) InjectErrorType(device string, errorType pkgerrors.ErrorType, value int) error {
 	return c.InjectError(device, string(errorType), value)
 }
 
@@ -165,13 +195,13 @@ func (c *Client) ListInjections() ([]ErrorInjectionData, error) {
 	}
 
 	if !resp.Success {
-		return nil, fmt.Errorf("list command failed: %s", resp.Error)
+		return nil, fmt.Errorf("%w: %s", ErrListCommandFailed, resp.Error)
 	}
 
 	// Extract injections from response data
 	injectionsData, ok := resp.Data["injections"]
 	if !ok {
-		return nil, fmt.Errorf("response missing injections data")
+		return nil, ErrMissingInjectionsData
 	}
 
 	// Convert to slice of ErrorInjectionData
@@ -192,9 +222,9 @@ func (c *Client) ListInjections() ([]ErrorInjectionData, error) {
 // If device is empty, all injections are cleared.
 // If device is specified, only injections for that device are cleared.
 func (c *Client) ClearInjections(device string) error {
-	var args map[string]interface{}
+	var args map[string]any
 	if device != "" {
-		args = map[string]interface{}{
+		args = map[string]any{
 			"device": device,
 		}
 	}
@@ -205,7 +235,7 @@ func (c *Client) ClearInjections(device string) error {
 	}
 
 	if !resp.Success {
-		return fmt.Errorf("clear command failed: %s", resp.Error)
+		return fmt.Errorf("%w: %s", ErrClearCommandFailed, resp.Error)
 	}
 
 	return nil
@@ -219,7 +249,7 @@ func (c *Client) Shutdown() error {
 	}
 
 	if !resp.Success {
-		return fmt.Errorf("shutdown command failed: %s", resp.Error)
+		return fmt.Errorf("%w: %s", ErrShutdownCommandFailed, resp.Error)
 	}
 
 	return nil
@@ -229,6 +259,7 @@ func (c *Client) Shutdown() error {
 // It does this by sending a status command and checking for a valid response.
 func (c *Client) Ping() error {
 	_, err := c.GetStatus()
+
 	return err
 }
 
@@ -238,6 +269,7 @@ func (c *Client) IsRunning() bool {
 	if err != nil {
 		return false
 	}
+
 	return status.Running
 }
 
@@ -248,6 +280,7 @@ func GetDefaultSocketPath() string {
 	if path := os.Getenv(EnvSocketPath); path != "" {
 		return path
 	}
+
 	return filepath.Join(os.TempDir(), "niac.sock")
 }
 
@@ -260,13 +293,15 @@ func DefaultClient() *Client {
 // Packets can be filtered by device name, interface name, and limited by count.
 // Pass empty strings or 0 to skip filters.
 func (c *Client) DumpPackets(device, iface string, count int) ([]PacketData, error) {
-	args := make(map[string]interface{})
+	args := make(map[string]any)
 	if device != "" {
 		args["device"] = device
 	}
+
 	if iface != "" {
 		args["interface"] = iface
 	}
+
 	if count > 0 {
 		args["count"] = count
 	}
@@ -277,13 +312,13 @@ func (c *Client) DumpPackets(device, iface string, count int) ([]PacketData, err
 	}
 
 	if !resp.Success {
-		return nil, fmt.Errorf("dump command failed: %s", resp.Error)
+		return nil, fmt.Errorf("%w: %s", ErrDumpCommandFailed, resp.Error)
 	}
 
 	// Extract packets from response data
 	packetsData, ok := resp.Data["packets"]
 	if !ok {
-		return nil, fmt.Errorf("response missing packets data")
+		return nil, ErrMissingPacketsData
 	}
 
 	// Handle nil packets (no packets captured)
@@ -314,13 +349,13 @@ func (c *Client) GetTopology() (*api.Topology, error) {
 	}
 
 	if !resp.Success {
-		return nil, fmt.Errorf("topology command failed: %s", resp.Error)
+		return nil, fmt.Errorf("%w: %s", ErrTopologyCommandFailed, resp.Error)
 	}
 
 	// Extract topology from response data
 	topologyData, ok := resp.Data["topology"]
 	if !ok {
-		return nil, fmt.Errorf("response missing topology data")
+		return nil, ErrMissingTopologyData
 	}
 
 	// Convert map to Topology struct
@@ -341,10 +376,11 @@ func (c *Client) GetTopology() (*api.Topology, error) {
 // The level parameter filters logs by minimum severity (debug, info, warn, error).
 // The count parameter limits the number of logs returned.
 func (c *Client) GetLogs(level string, count int) ([]LogEntry, error) {
-	args := make(map[string]interface{})
+	args := make(map[string]any)
 	if level != "" {
 		args["level"] = level
 	}
+
 	if count > 0 {
 		args["count"] = count
 	}
@@ -355,13 +391,13 @@ func (c *Client) GetLogs(level string, count int) ([]LogEntry, error) {
 	}
 
 	if !resp.Success {
-		return nil, fmt.Errorf("logs command failed: %s", resp.Error)
+		return nil, fmt.Errorf("%w: %s", ErrLogsCommandFailed, resp.Error)
 	}
 
 	// Extract logs from response data
 	logsData, ok := resp.Data["logs"]
 	if !ok {
-		return nil, fmt.Errorf("response missing logs data")
+		return nil, ErrMissingLogsData
 	}
 
 	// Handle nil logs
@@ -383,7 +419,7 @@ func (c *Client) GetLogs(level string, count int) ([]LogEntry, error) {
 	return logs, nil
 }
 
-// LogSubscription represents an active log subscription for streaming logs
+// LogSubscription represents an active log subscription for streaming logs.
 type LogSubscription struct {
 	client   *Client
 	level    string
@@ -417,22 +453,22 @@ func (c *Client) SubscribeLogs(level, filter string, interval time.Duration) *Lo
 	return sub
 }
 
-// Logs returns the channel for receiving log entries
+// Logs returns the channel for receiving log entries.
 func (s *LogSubscription) Logs() <-chan LogEntry {
 	return s.logCh
 }
 
-// Errors returns the channel for receiving errors
+// Errors returns the channel for receiving errors.
 func (s *LogSubscription) Errors() <-chan error {
 	return s.errCh
 }
 
-// Stop terminates the log subscription
+// Stop terminates the log subscription.
 func (s *LogSubscription) Stop() {
 	close(s.stopCh)
 }
 
-// run is the background goroutine that polls for logs
+// run is the background goroutine that polls for logs.
 func (s *LogSubscription) run() {
 	ticker := time.NewTicker(s.interval)
 	defer ticker.Stop()
@@ -452,6 +488,7 @@ func (s *LogSubscription) run() {
 				case s.errCh <- err:
 				default:
 				}
+
 				continue
 			}
 
@@ -486,53 +523,63 @@ func (s *LogSubscription) run() {
 	}
 }
 
-// matchesFilter checks if a message matches the given filter pattern
+// matchesFilter checks if a message matches the given filter pattern.
 func matchesFilter(message, filter string) bool {
 	// Simple substring match for now
 	return len(filter) == 0 || containsIgnoreCase(message, filter)
 }
 
-// containsIgnoreCase checks if s contains substr (case-insensitive)
+// containsIgnoreCase checks if s contains substr (case-insensitive).
 func containsIgnoreCase(s, substr string) bool {
 	sLower := make([]byte, len(s))
+
 	substrLower := make([]byte, len(substr))
-	for i := 0; i < len(s); i++ {
+
+	for i := range len(s) {
 		if s[i] >= 'A' && s[i] <= 'Z' {
 			sLower[i] = s[i] + 32
 		} else {
 			sLower[i] = s[i]
 		}
 	}
-	for i := 0; i < len(substr); i++ {
+
+	for i := range len(substr) {
 		if substr[i] >= 'A' && substr[i] <= 'Z' {
 			substrLower[i] = substr[i] + 32
 		} else {
 			substrLower[i] = substr[i]
 		}
 	}
+
 	return bytesContains(sLower, substrLower)
 }
 
-// bytesContains checks if b contains sub
+// bytesContains checks if b contains sub.
 func bytesContains(b, sub []byte) bool {
 	if len(sub) == 0 {
 		return true
 	}
+
 	if len(b) < len(sub) {
 		return false
 	}
-	for i := 0; i <= len(b)-len(sub); i++ {
+
+	for i := range len(b) - len(sub) + 1 {
 		match := true
-		for j := 0; j < len(sub); j++ {
+
+		for j := range sub {
 			if b[i+j] != sub[j] {
 				match = false
+
 				break
 			}
 		}
+
 		if match {
 			return true
 		}
 	}
+
 	return false
 }
 
@@ -545,13 +592,13 @@ func (c *Client) GetNeighbors() ([]NeighborData, error) {
 	}
 
 	if !resp.Success {
-		return nil, fmt.Errorf("neighbors command failed: %s", resp.Error)
+		return nil, fmt.Errorf("%w: %s", ErrNeighborsCommandFailed, resp.Error)
 	}
 
 	// Extract neighbors from response data
 	neighborsData, ok := resp.Data["neighbors"]
 	if !ok {
-		return nil, fmt.Errorf("response missing neighbors data")
+		return nil, ErrMissingNeighborsData
 	}
 
 	// Handle nil neighbors (no neighbors discovered)

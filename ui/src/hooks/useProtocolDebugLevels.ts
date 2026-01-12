@@ -1,68 +1,68 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   fetchProtocolDebugLevels,
-  updateProtocolDebugLevels,
   resetProtocolDebugLevels,
-} from '../api/client';
+  updateProtocolDebugLevels,
+} from "../api/client";
 import type {
   DebugLevel,
   DebugProtocol,
   ProtocolCategory,
   ProtocolDebugConfig,
-} from '../api/types';
-import { getErrorMessage } from '../utils';
+} from "../api/types";
+import { getErrorMessage } from "../utils";
 
 // Default protocol configurations with categories
 const DEFAULT_PROTOCOL_CONFIGS: ProtocolDebugConfig[] = [
   // Discovery protocols
-  { protocol: 'SNMP', level: 'INFO', category: 'discovery' },
-  { protocol: 'LLDP', level: 'INFO', category: 'discovery' },
-  { protocol: 'CDP', level: 'INFO', category: 'discovery' },
+  { protocol: "SNMP", level: "INFO", category: "discovery" },
+  { protocol: "LLDP", level: "INFO", category: "discovery" },
+  { protocol: "CDP", level: "INFO", category: "discovery" },
   // Switching protocols
-  { protocol: 'STP', level: 'INFO', category: 'switching' },
-  { protocol: 'LACP', level: 'INFO', category: 'switching' },
+  { protocol: "STP", level: "INFO", category: "switching" },
+  { protocol: "LACP", level: "INFO", category: "switching" },
   // Routing protocols
-  { protocol: 'OSPF', level: 'INFO', category: 'routing' },
-  { protocol: 'BGP', level: 'INFO', category: 'routing' },
-  { protocol: 'EIGRP', level: 'INFO', category: 'routing' },
-  { protocol: 'RIP', level: 'INFO', category: 'routing' },
-  { protocol: 'ISIS', level: 'INFO', category: 'routing' },
+  { protocol: "OSPF", level: "INFO", category: "routing" },
+  { protocol: "BGP", level: "INFO", category: "routing" },
+  { protocol: "EIGRP", level: "INFO", category: "routing" },
+  { protocol: "RIP", level: "INFO", category: "routing" },
+  { protocol: "ISIS", level: "INFO", category: "routing" },
   // Redundancy protocols
-  { protocol: 'VRRP', level: 'INFO', category: 'redundancy' },
-  { protocol: 'HSRP', level: 'INFO', category: 'redundancy' },
-  { protocol: 'GLBP', level: 'INFO', category: 'redundancy' },
-  { protocol: 'BFD', level: 'INFO', category: 'redundancy' },
+  { protocol: "VRRP", level: "INFO", category: "redundancy" },
+  { protocol: "HSRP", level: "INFO", category: "redundancy" },
+  { protocol: "GLBP", level: "INFO", category: "redundancy" },
+  { protocol: "BFD", level: "INFO", category: "redundancy" },
   // MPLS (routing category)
-  { protocol: 'MPLS', level: 'INFO', category: 'routing' },
+  { protocol: "MPLS", level: "INFO", category: "routing" },
   // Multicast protocols
-  { protocol: 'PIM', level: 'INFO', category: 'multicast' },
-  { protocol: 'IGMP', level: 'INFO', category: 'multicast' },
-  { protocol: 'MSDP', level: 'INFO', category: 'multicast' },
+  { protocol: "PIM", level: "INFO", category: "multicast" },
+  { protocol: "IGMP", level: "INFO", category: "multicast" },
+  { protocol: "MSDP", level: "INFO", category: "multicast" },
   // Monitoring protocols
-  { protocol: 'NetFlow', level: 'INFO', category: 'monitoring' },
+  { protocol: "NetFlow", level: "INFO", category: "monitoring" },
 ];
 
 // Debug levels in order from least to most verbose
-export const DEBUG_LEVELS: DebugLevel[] = ['OFF', 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'];
+export const DEBUG_LEVELS: DebugLevel[] = ["OFF", "ERROR", "WARN", "INFO", "DEBUG", "TRACE"];
 
 // Protocol categories with display names
 export const PROTOCOL_CATEGORIES: Record<ProtocolCategory, string> = {
-  discovery: 'Discovery Protocols',
-  switching: 'Switching Protocols',
-  routing: 'Routing Protocols',
-  redundancy: 'Redundancy Protocols',
-  multicast: 'Multicast Protocols',
-  monitoring: 'Monitoring Protocols',
+  discovery: "Discovery Protocols",
+  switching: "Switching Protocols",
+  routing: "Routing Protocols",
+  redundancy: "Redundancy Protocols",
+  multicast: "Multicast Protocols",
+  monitoring: "Monitoring Protocols",
 };
 
 // Order for displaying categories
 export const CATEGORY_ORDER: ProtocolCategory[] = [
-  'discovery',
-  'switching',
-  'routing',
-  'redundancy',
-  'multicast',
-  'monitoring',
+  "discovery",
+  "switching",
+  "routing",
+  "redundancy",
+  "multicast",
+  "monitoring",
 ];
 
 export interface UseProtocolDebugLevelsResult {
@@ -94,7 +94,8 @@ export interface UseProtocolDebugLevelsResult {
 
 export function useProtocolDebugLevels(): UseProtocolDebugLevelsResult {
   const [protocols, setProtocols] = useState<ProtocolDebugConfig[]>(DEFAULT_PROTOCOL_CONFIGS);
-  const [savedProtocols, setSavedProtocols] = useState<ProtocolDebugConfig[]>(DEFAULT_PROTOCOL_CONFIGS);
+  const [savedProtocols, setSavedProtocols] =
+    useState<ProtocolDebugConfig[]>(DEFAULT_PROTOCOL_CONFIGS);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -166,14 +167,13 @@ export function useProtocolDebugLevels(): UseProtocolDebugLevelsResult {
   });
 
   // Update the level for a specific protocol
-  const updateLevel = useCallback((protocol: DebugProtocol, level: DebugLevel) => {
-    setProtocols((prev) =>
-      prev.map((p) =>
-        p.protocol === protocol ? { ...p, level } : p
-      )
-    );
-    clearMessage();
-  }, [clearMessage]);
+  const updateLevel = useCallback(
+    (protocol: DebugProtocol, level: DebugLevel) => {
+      setProtocols((prev) => prev.map((p) => (p.protocol === protocol ? { ...p, level } : p)));
+      clearMessage();
+    },
+    [clearMessage],
+  );
 
   // Save changes to API
   const saveChanges = useCallback(async () => {
@@ -189,7 +189,7 @@ export function useProtocolDebugLevels(): UseProtocolDebugLevelsResult {
       });
 
       if (changedProtocols.length === 0) {
-        showMessage('No changes to save', false);
+        showMessage("No changes to save", false);
         setSaving(false);
         return;
       }
@@ -205,7 +205,7 @@ export function useProtocolDebugLevels(): UseProtocolDebugLevelsResult {
       setSavedProtocols(response.protocols);
       showMessage(`Updated ${changedProtocols.length} protocol(s)`, false);
     } catch (err) {
-      showMessage(getErrorMessage(err) || 'Failed to save changes', true);
+      showMessage(getErrorMessage(err) || "Failed to save changes", true);
     } finally {
       setSaving(false);
     }
@@ -222,12 +222,12 @@ export function useProtocolDebugLevels(): UseProtocolDebugLevelsResult {
       const response = await resetProtocolDebugLevels();
       setProtocols(response.protocols);
       setSavedProtocols(response.protocols);
-      showMessage('All protocols reset to default levels', false);
+      showMessage("All protocols reset to default levels", false);
     } catch {
       // If API fails, reset locally
       setProtocols(DEFAULT_PROTOCOL_CONFIGS);
       setSavedProtocols(DEFAULT_PROTOCOL_CONFIGS);
-      showMessage('Reset to defaults (local only)', false);
+      showMessage("Reset to defaults (local only)", false);
     } finally {
       setSaving(false);
     }

@@ -63,6 +63,7 @@ func TestMibZipRoundTrip(t *testing.T) {
 		if exp.OID != orig.OID {
 			t.Errorf("Entry %d: OID mismatch: expected %s, got %s", i, orig.OID, exp.OID)
 		}
+
 		if exp.Type != orig.Type {
 			t.Errorf("Entry %d: Type mismatch: expected %v, got %v", i, orig.Type, exp.Type)
 		}
@@ -95,7 +96,9 @@ func TestMibZipIntegerTypes(t *testing.T) {
 	for i, orig := range entries {
 		exp := expanded[i]
 		origVal := orig.Value.(int)
+
 		expVal := exp.Value.(int)
+
 		if expVal != origVal {
 			t.Errorf("Entry %d: Value mismatch: expected %d, got %d", i, origVal, expVal)
 		}
@@ -134,6 +137,7 @@ func TestMibZipCounterTypes(t *testing.T) {
 	if v := expanded[0].Value.(uint32); v != 1000000 {
 		t.Errorf("Counter32 mismatch: expected 1000000, got %d", v)
 	}
+
 	if v := expanded[1].Value.(uint32); v != 0xFFFFFFFF {
 		t.Errorf("Counter32 max mismatch: expected %d, got %d", uint32(0xFFFFFFFF), v)
 	}
@@ -172,6 +176,7 @@ func TestMibZipIPAddress(t *testing.T) {
 	if v := expanded[0].Value.(string); v != "10.0.0.1" {
 		t.Errorf("IP address mismatch: expected 10.0.0.1, got %s", v)
 	}
+
 	if v := expanded[1].Value.(string); v != "192.168.1.1" {
 		t.Errorf("IP address mismatch: expected 192.168.1.1, got %s", v)
 	}
@@ -238,28 +243,27 @@ func TestMibZipOIDValue(t *testing.T) {
 
 func TestIsMibZipFile(t *testing.T) {
 	// Create temp directory
-	tmpDir, err := os.MkdirTemp("", "mibzip-test")
-	if err != nil {
-		t.Fatalf("Failed to create temp dir: %v", err)
-	}
-	defer os.RemoveAll(tmpDir)
+	tmpDir := t.TempDir()
 
 	// Create a valid mibzip file
 	mibzipPath := filepath.Join(tmpDir, "test.mibzip")
 	writer := NewMibZipWriter()
+
 	entries := []WalkEntry{
 		{OID: "1.3.6.1.2.1.1.1.0", Type: gosnmp.OctetString, Value: "test"},
 	}
+
 	if err := writer.Compress(entries); err != nil {
 		t.Fatalf("Compress failed: %v", err)
 	}
-	if err := os.WriteFile(mibzipPath, writer.Bytes(), 0644); err != nil {
+
+	if err := os.WriteFile(mibzipPath, writer.Bytes(), 0o600); err != nil {
 		t.Fatalf("Failed to write mibzip file: %v", err)
 	}
 
 	// Create a non-mibzip file
 	textPath := filepath.Join(tmpDir, "test.txt")
-	if err := os.WriteFile(textPath, []byte("not a mibzip file"), 0644); err != nil {
+	if err := os.WriteFile(textPath, []byte("not a mibzip file"), 0o600); err != nil {
 		t.Fatalf("Failed to write text file: %v", err)
 	}
 
@@ -268,6 +272,7 @@ func TestIsMibZipFile(t *testing.T) {
 	if err != nil {
 		t.Errorf("IsMibZipFile error: %v", err)
 	}
+
 	if !isMibzip {
 		t.Error("Expected mibzip file to be detected as mibzip")
 	}
@@ -276,6 +281,7 @@ func TestIsMibZipFile(t *testing.T) {
 	if err != nil {
 		t.Errorf("IsMibZipFile error for text: %v", err)
 	}
+
 	if isText {
 		t.Error("Text file should not be detected as mibzip")
 	}
@@ -283,7 +289,8 @@ func TestIsMibZipFile(t *testing.T) {
 
 func TestMibZipEmptyEntries(t *testing.T) {
 	writer := NewMibZipWriter()
-	if err := writer.Compress([]WalkEntry{}); err != nil {
+	err := writer.Compress([]WalkEntry{})
+	if err != nil {
 		t.Fatalf("Compress failed: %v", err)
 	}
 
@@ -352,6 +359,7 @@ func TestCompareOIDs(t *testing.T) {
 
 func TestMibZipInvalidMagic(t *testing.T) {
 	invalidData := []byte("notamib")
+
 	_, err := NewMibZipReader(invalidData)
 	if err == nil {
 		t.Error("Expected error for invalid magic")
@@ -360,6 +368,7 @@ func TestMibZipInvalidMagic(t *testing.T) {
 
 func TestMibZipDataTooShort(t *testing.T) {
 	shortData := []byte("mib")
+
 	_, err := NewMibZipReader(shortData)
 	if err == nil {
 		t.Error("Expected error for data too short")
@@ -375,6 +384,7 @@ func TestEncodeDecodeOID(t *testing.T) {
 
 	for _, oid := range testOIDs {
 		encoded := encodeOID(oid)
+
 		decoded := decodeOID(encoded)
 		if decoded != oid {
 			t.Errorf("OID round-trip failed: original %s, got %s", oid, decoded)
@@ -400,6 +410,7 @@ func TestBERLengthEncoding(t *testing.T) {
 	for _, tt := range tests {
 		writer.buf.Reset()
 		writer.putLength(tt.value)
+
 		result := writer.buf.Bytes()
 		if !bytes.Equal(result, tt.expected) {
 			t.Errorf("putLength(%d) = %v, expected %v", tt.value, result, tt.expected)
@@ -414,7 +425,7 @@ func TestMibZipInterfaceTable(t *testing.T) {
 		{OID: "1.3.6.1.2.1.2.2.1.1.2", Type: gosnmp.Integer, Value: 2},
 		{OID: "1.3.6.1.2.1.2.2.1.2.1", Type: gosnmp.OctetString, Value: "eth0"},
 		{OID: "1.3.6.1.2.1.2.2.1.2.2", Type: gosnmp.OctetString, Value: "eth1"},
-		{OID: "1.3.6.1.2.1.2.2.1.3.1", Type: gosnmp.Integer, Value: 6},  // ethernetCsmacd
+		{OID: "1.3.6.1.2.1.2.2.1.3.1", Type: gosnmp.Integer, Value: 6}, // ethernetCsmacd
 		{OID: "1.3.6.1.2.1.2.2.1.3.2", Type: gosnmp.Integer, Value: 6},
 		{OID: "1.3.6.1.2.1.2.2.1.5.1", Type: gosnmp.Gauge32, Value: uint32(1000000000)},
 		{OID: "1.3.6.1.2.1.2.2.1.5.2", Type: gosnmp.Gauge32, Value: uint32(1000000000)},
@@ -430,10 +441,12 @@ func TestMibZipInterfaceTable(t *testing.T) {
 	}
 
 	compressed := writer.Bytes()
+
 	originalSize := 0
 	for _, e := range entries {
 		originalSize += len(e.OID) + 10 // Rough estimate
 	}
+
 	t.Logf("Compressed interface table: %d entries, %d -> %d bytes",
 		len(entries), originalSize, len(compressed))
 

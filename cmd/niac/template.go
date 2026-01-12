@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/fatih/color"
 	"github.com/krisarmstrong/niac-go/pkg/config"
@@ -166,7 +167,7 @@ func runTemplateUse(cmd *cobra.Command, args []string) {
 	}
 
 	// Write to file
-	if err := os.WriteFile(outputFile, []byte(tmpl.Content), 0600); err != nil {
+	if err := os.WriteFile(outputFile, []byte(tmpl.Content), 0o600); err != nil {
 		color.Red("Error writing file: %v", err)
 		os.Exit(1)
 	}
@@ -285,8 +286,10 @@ func joinStrings(strs []string, sep string) string {
 		return ""
 	}
 	result := strs[0]
+	var resultSb289 strings.Builder
 	for i := 1; i < len(strs); i++ {
-		result += sep + strs[i]
+		resultSb289.WriteString(sep + strs[i])
 	}
+	result += resultSb289.String()
 	return result
 }

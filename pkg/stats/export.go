@@ -5,15 +5,17 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"os"
 	"runtime"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
 )
 
 // Statistics holds all runtime statistics for NIAC
-// PERFORMANCE FIX MEDIUM-1: Use atomic operations and sync.Map for high-throughput counters
+// PERFORMANCE FIX MEDIUM-1: Use atomic operations and sync.Map for high-throughput counters.
 type Statistics struct {
 	mu sync.RWMutex
 
@@ -50,7 +52,7 @@ type Statistics struct {
 	ProtocolStats map[string]ProtocolStat `json:"protocol_stats"`
 }
 
-// ProtocolStat holds statistics for a specific protocol
+// ProtocolStat holds statistics for a specific protocol.
 type ProtocolStat struct {
 	RequestsReceived  int64 `json:"requests_received"`
 	ResponsesSent     int64 `json:"responses_sent"`
@@ -58,7 +60,7 @@ type ProtocolStat struct {
 	BytesProcessed    int64 `json:"bytes_processed"`
 }
 
-// StatisticsSnapshot is a mutex-free copy of Statistics for export
+// StatisticsSnapshot is a mutex-free copy of Statistics for export.
 type StatisticsSnapshot struct {
 	// General stats
 	StartTime   time.Time     `json:"start_time"`
@@ -93,7 +95,7 @@ type StatisticsSnapshot struct {
 }
 
 // NewStatistics creates a new Statistics instance
-// PERFORMANCE FIX MEDIUM-1: sync.Map doesn't need initialization
+// PERFORMANCE FIX MEDIUM-1: sync.Map doesn't need initialization.
 func NewStatistics(interfaceName, configFile, version string) *Statistics {
 	return &Statistics{
 		StartTime:     time.Now(),
@@ -106,7 +108,7 @@ func NewStatistics(interfaceName, configFile, version string) *Statistics {
 	}
 }
 
-// Update refreshes runtime statistics (should be called periodically)
+// Update refreshes runtime statistics (should be called periodically).
 func (s *Statistics) Update() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -117,46 +119,57 @@ func (s *Statistics) Update() {
 
 	// Get memory stats
 	var m runtime.MemStats
+
 	runtime.ReadMemStats(&m)
 	s.MemoryUsageMB = m.Alloc / 1024 / 1024
 }
 
 // IncrementPacketCount increments the packet count for a protocol
-// PERFORMANCE FIX MEDIUM-1: Lock-free atomic increment (10-20% CPU reduction at high load)
+// PERFORMANCE FIX MEDIUM-1: Lock-free atomic increment (10-20% CPU reduction at high load).
 func (s *Statistics) IncrementPacketCount(protocol string) {
 	// Load or create atomic counter for this protocol
 	val, _ := s.packetCounts.LoadOrStore(protocol, &atomic.Int64{})
-	counter := val.(*atomic.Int64)
+
+	counter, ok := val.(*atomic.Int64)
+	if !ok {
+		return
+	}
+
 	counter.Add(1)
 }
 
 // IncrementErrorCount increments the error count for a device
-// PERFORMANCE FIX MEDIUM-1: Lock-free atomic increment
+// PERFORMANCE FIX MEDIUM-1: Lock-free atomic increment.
 func (s *Statistics) IncrementErrorCount(deviceName string) {
 	val, _ := s.errorCounts.LoadOrStore(deviceName, &atomic.Int64{})
-	counter := val.(*atomic.Int64)
+
+	counter, ok := val.(*atomic.Int64)
+	if !ok {
+		return
+	}
+
 	counter.Add(1)
 }
 
 // IncrementSNMPQuery increments SNMP query counter
-// PERFORMANCE FIX MEDIUM-1: Lock-free atomic increment
+// PERFORMANCE FIX MEDIUM-1: Lock-free atomic increment.
 func (s *Statistics) IncrementSNMPQuery() {
 	s.SNMPQueryCount.Add(1)
 }
 
 // IncrementSNMPTrap increments SNMP trap counter
-// PERFORMANCE FIX MEDIUM-1: Lock-free atomic increment
+// PERFORMANCE FIX MEDIUM-1: Lock-free atomic increment.
 func (s *Statistics) IncrementSNMPTrap() {
 	s.SNMPTrapsSent.Add(1)
 }
 
 // IncrementDHCPRequest increments DHCP request counter
-// PERFORMANCE FIX MEDIUM-1: Lock-free atomic increment
+// PERFORMANCE FIX MEDIUM-1: Lock-free atomic increment.
 func (s *Statistics) IncrementDHCPRequest() {
 	s.DHCPRequestCount.Add(1)
 }
 
-// UpdateProtocolStat updates statistics for a specific protocol
+// UpdateProtocolStat updates statistics for a specific protocol.
 func (s *Statistics) UpdateProtocolStat(protocol string, requests, responses, errors, bytes int64) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -169,28 +182,31 @@ func (s *Statistics) UpdateProtocolStat(protocol string, requests, responses, er
 	s.ProtocolStats[protocol] = stat
 }
 
-// SetDeviceCount sets the total device count
+// SetDeviceCount sets the total device count.
 func (s *Statistics) SetDeviceCount(count int) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
 	s.DeviceCount = count
 }
 
-// SetSNMPDeviceCount sets the SNMP-enabled device count
+// SetSNMPDeviceCount sets the SNMP-enabled device count.
 func (s *Statistics) SetSNMPDeviceCount(count int) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
 	s.SNMPDeviceCount = count
 }
 
-// SetDHCPLeaseCount sets the DHCP lease count
+// SetDHCPLeaseCount sets the DHCP lease count.
 func (s *Statistics) SetDHCPLeaseCount(count int) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
 	s.DHCPLeaseCount = count
 }
 
-// ExportJSON exports statistics to a JSON file
+// ExportJSON exports statistics to a JSON file.
 func (s *Statistics) ExportJSON(filename string) error {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -205,24 +221,25 @@ func (s *Statistics) ExportJSON(filename string) error {
 	}
 
 	// Write to file
-	if err := os.WriteFile(filename, data, 0600); err != nil {
+	if err := os.WriteFile(filename, data, 0o600); err != nil {
 		return fmt.Errorf("failed to write JSON file: %w", err)
 	}
 
 	return nil
 }
 
-// ExportCSV exports statistics to a CSV file
+// ExportCSV exports statistics to a CSV file.
 func (s *Statistics) ExportCSV(filename string) error {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	// Create CSV file
-	file, err := os.Create(filename) // #nosec G304 -- user-provided file path, validated by caller
+	// SECURITY FIX #163: Create CSV file with restricted permissions (owner-only)
+	file, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600) // #nosec G304 -- user-provided file path
 	if err != nil {
 		return fmt.Errorf("failed to create CSV file: %w", err)
 	}
-	defer file.Close()
+
+	defer func() { _ = file.Close() }()
 
 	writer := csv.NewWriter(file)
 	defer writer.Flush()
@@ -233,55 +250,77 @@ func (s *Statistics) ExportCSV(filename string) error {
 		return fmt.Errorf("failed to write CSV header: %w", err)
 	}
 
-	// Helper function to write rows
-	writeRow := func(metric, value, category string) error {
-		return writer.Write([]string{metric, value, category})
+	// Helper function to write rows (errors handled by writer.Error() after flush)
+	writeRow := func(metric, value, category string) {
+		_ = writer.Write([]string{metric, value, category})
 	}
 
 	// General stats
-	writeRow("Start Time", s.StartTime.Format(time.RFC3339), "General")              // #nosec G104 -- CSV write errors handled by writer.Error()
-	writeRow("Uptime (seconds)", fmt.Sprintf("%.0f", s.Uptime.Seconds()), "General") // #nosec G104 -- CSV write errors handled by writer.Error()
-	writeRow("Interface", s.Interface, "General")                                    // #nosec G104 -- CSV write errors handled by writer.Error()
-	writeRow("Config File", s.ConfigFile, "General")                                 // #nosec G104 -- CSV write errors handled by writer.Error()
-	writeRow("Device Count", fmt.Sprintf("%d", s.DeviceCount), "General")            // #nosec G104 -- CSV write errors handled by writer.Error()
-	writeRow("Version", s.Version, "General")                                        // #nosec G104 -- CSV write errors handled by writer.Error()
+	writeRow("Start Time", s.StartTime.Format(time.RFC3339), "General")
+	writeRow("Uptime (seconds)", fmt.Sprintf("%.0f", s.Uptime.Seconds()), "General")
+	writeRow("Interface", s.Interface, "General")
+	writeRow("Config File", s.ConfigFile, "General")
+	writeRow("Device Count", strconv.Itoa(s.DeviceCount), "General")
+	writeRow("Version", s.Version, "General")
 
 	// System stats
-	writeRow("Memory Usage (MB)", fmt.Sprintf("%d", s.MemoryUsageMB), "System") // #nosec G104 -- CSV write errors handled by writer.Error()
-	writeRow("Goroutine Count", fmt.Sprintf("%d", s.GoroutineCount), "System")  // #nosec G104 -- CSV write errors handled by writer.Error()
-	writeRow("CPU Count", fmt.Sprintf("%d", s.CPUCount), "System")              // #nosec G104 -- CSV write errors handled by writer.Error()
+	writeRow("Memory Usage (MB)", strconv.FormatUint(s.MemoryUsageMB, 10), "System")
+	writeRow("Goroutine Count", strconv.Itoa(s.GoroutineCount), "System")
+	writeRow("CPU Count", strconv.Itoa(s.CPUCount), "System")
 
 	// SNMP stats - PERFORMANCE FIX MEDIUM-1: Read from atomic counters
-	writeRow("SNMP Query Count", fmt.Sprintf("%d", s.SNMPQueryCount.Load()), "SNMP") // #nosec G104 -- CSV write errors handled by writer.Error()
-	writeRow("SNMP Device Count", fmt.Sprintf("%d", s.SNMPDeviceCount), "SNMP")      // #nosec G104 -- CSV write errors handled by writer.Error()
-	writeRow("SNMP Traps Sent", fmt.Sprintf("%d", s.SNMPTrapsSent.Load()), "SNMP")   // #nosec G104 -- CSV write errors handled by writer.Error()
+	writeRow("SNMP Query Count", strconv.FormatInt(s.SNMPQueryCount.Load(), 10), "SNMP")
+	writeRow("SNMP Device Count", strconv.Itoa(s.SNMPDeviceCount), "SNMP")
+	writeRow("SNMP Traps Sent", strconv.FormatInt(s.SNMPTrapsSent.Load(), 10), "SNMP")
 
 	// DHCP stats - PERFORMANCE FIX MEDIUM-1: Read from atomic counters
-	writeRow("DHCP Lease Count", fmt.Sprintf("%d", s.DHCPLeaseCount), "DHCP")            // #nosec G104 -- CSV write errors handled by writer.Error()
-	writeRow("DHCP Request Count", fmt.Sprintf("%d", s.DHCPRequestCount.Load()), "DHCP") // #nosec G104 -- CSV write errors handled by writer.Error()
+	writeRow("DHCP Lease Count", strconv.Itoa(s.DHCPLeaseCount), "DHCP")
+	writeRow("DHCP Request Count", strconv.FormatInt(s.DHCPRequestCount.Load(), 10), "DHCP")
 
 	// Packet counts - PERFORMANCE FIX MEDIUM-1: Iterate sync.Map
-	s.packetCounts.Range(func(key, value interface{}) bool {
-		protocol := key.(string)
-		counter := value.(*atomic.Int64)
-		writeRow(fmt.Sprintf("Packet Count (%s)", protocol), fmt.Sprintf("%d", counter.Load()), "Packets") // #nosec G104 -- CSV write errors handled by writer.Error()
+	s.packetCounts.Range(func(key, value any) bool {
+		protocol, ok := key.(string)
+		if !ok {
+			return true
+		}
+
+		counter, ok := value.(*atomic.Int64)
+		if !ok {
+			return true
+		}
+
+		writeRow(fmt.Sprintf("Packet Count (%s)", protocol), strconv.FormatInt(counter.Load(), 10), "Packets")
+
 		return true
 	})
 
 	// Error counts - PERFORMANCE FIX MEDIUM-1: Iterate sync.Map
-	s.errorCounts.Range(func(key, value interface{}) bool {
-		device := key.(string)
-		counter := value.(*atomic.Int64)
-		writeRow(fmt.Sprintf("Error Count (%s)", device), fmt.Sprintf("%d", counter.Load()), "Errors") // #nosec G104 -- CSV write errors handled by writer.Error()
+	s.errorCounts.Range(func(key, value any) bool {
+		device, ok := key.(string)
+		if !ok {
+			return true
+		}
+
+		counter, ok := value.(*atomic.Int64)
+		if !ok {
+			return true
+		}
+
+		writeRow(fmt.Sprintf("Error Count (%s)", device), strconv.FormatInt(counter.Load(), 10), "Errors")
+
 		return true
 	})
 
 	// Protocol stats
 	for protocol, stat := range s.ProtocolStats {
-		writeRow(fmt.Sprintf("%s - Requests Received", protocol), fmt.Sprintf("%d", stat.RequestsReceived), "Protocol") // #nosec G104 -- CSV write errors handled by writer.Error()
-		writeRow(fmt.Sprintf("%s - Responses Sent", protocol), fmt.Sprintf("%d", stat.ResponsesSent), "Protocol")       // #nosec G104 -- CSV write errors handled by writer.Error()
-		writeRow(fmt.Sprintf("%s - Errors", protocol), fmt.Sprintf("%d", stat.ErrorsEncountered), "Protocol")           // #nosec G104 -- CSV write errors handled by writer.Error()
-		writeRow(fmt.Sprintf("%s - Bytes Processed", protocol), fmt.Sprintf("%d", stat.BytesProcessed), "Protocol")     // #nosec G104 -- CSV write errors handled by writer.Error()
+		writeRow(
+			protocol+" - Requests Received",
+			strconv.FormatInt(stat.RequestsReceived, 10),
+			"Protocol",
+		)
+		writeRow(protocol+" - Responses Sent", strconv.FormatInt(stat.ResponsesSent, 10), "Protocol")
+		writeRow(protocol+" - Errors", strconv.FormatInt(stat.ErrorsEncountered, 10), "Protocol")
+		writeRow(protocol+" - Bytes Processed", strconv.FormatInt(stat.BytesProcessed, 10), "Protocol")
 	}
 
 	return nil
@@ -289,7 +328,7 @@ func (s *Statistics) ExportCSV(filename string) error {
 
 // snapshot creates a read-safe copy of statistics
 // PERFORMANCE FIX MEDIUM-1: Read from atomic counters and sync.Map
-// Must be called with read lock held
+// Must be called with read lock held.
 func (s *Statistics) snapshot() StatisticsSnapshot {
 	snapshot := StatisticsSnapshot{
 		StartTime:        s.StartTime,
@@ -312,36 +351,53 @@ func (s *Statistics) snapshot() StatisticsSnapshot {
 	}
 
 	// Copy from sync.Map to regular map for JSON serialization
-	s.packetCounts.Range(func(key, value interface{}) bool {
-		protocol := key.(string)
-		counter := value.(*atomic.Int64)
+	s.packetCounts.Range(func(key, value any) bool {
+		protocol, ok := key.(string)
+		if !ok {
+			return true
+		}
+
+		counter, ok := value.(*atomic.Int64)
+		if !ok {
+			return true
+		}
+
 		snapshot.PacketCounts[protocol] = counter.Load()
+
 		return true
 	})
 
-	s.errorCounts.Range(func(key, value interface{}) bool {
-		device := key.(string)
-		counter := value.(*atomic.Int64)
+	s.errorCounts.Range(func(key, value any) bool {
+		device, ok := key.(string)
+		if !ok {
+			return true
+		}
+
+		counter, ok := value.(*atomic.Int64)
+		if !ok {
+			return true
+		}
+
 		snapshot.ErrorCounts[device] = counter.Load()
+
 		return true
 	})
 
 	// Deep copy protocol stats (still under mutex protection)
-	for protocol, stats := range s.ProtocolStats {
-		snapshot.ProtocolStats[protocol] = stats
-	}
+	maps.Copy(snapshot.ProtocolStats, s.ProtocolStats)
 
 	return snapshot
 }
 
-// GetSnapshot returns a thread-safe snapshot of current statistics
+// GetSnapshot returns a thread-safe snapshot of current statistics.
 func (s *Statistics) GetSnapshot() StatisticsSnapshot {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
+
 	return s.snapshot()
 }
 
-// String returns a human-readable summary of statistics
+// String returns a human-readable summary of statistics.
 func (s *Statistics) String() string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()

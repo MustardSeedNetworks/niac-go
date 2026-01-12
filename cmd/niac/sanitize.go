@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -16,13 +17,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// IPMapping tracks IP address transformations
+// IPMapping tracks IP address transformations.
 type IPMapping struct {
 	Original  string `json:"original"`
 	Sanitized string `json:"sanitized"`
 }
 
-// SanitizationMapping stores all transformations
+// SanitizationMapping stores all transformations.
 type SanitizationMapping struct {
 	IPMappings map[string]string `json:"ip_mappings"`
 	Hostnames  map[string]string `json:"hostnames"`
@@ -70,13 +71,13 @@ What is TRANSFORMED (deterministic):
 			inputDir, _ := cmd.Flags().GetString("input-dir")
 			outputDir, _ := cmd.Flags().GetString("output-dir")
 			if inputDir == "" || outputDir == "" {
-				return fmt.Errorf("batch mode requires --input-dir and --output-dir")
+				return errors.New("batch mode requires --input-dir and --output-dir")
 			}
 			return nil
 		}
 		// Single file mode requires exactly 2 args
 		if len(args) != 2 {
-			return fmt.Errorf("requires <input-walk> and <output-walk> arguments")
+			return errors.New("requires <input-walk> and <output-walk> arguments")
 		}
 		return nil
 	},
@@ -125,7 +126,8 @@ func runSanitize(cmd *cobra.Command, args []string) error {
 
 	// Validate mapping file path if provided
 	if mappingFile != "" {
-		if err := validateFilePath(mappingFile, true); err != nil {
+		err := validateFilePath(mappingFile, true)
+		if err != nil {
 			return fmt.Errorf("invalid mapping file path: %w", err)
 		}
 	}
@@ -137,7 +139,8 @@ func runSanitize(cmd *cobra.Command, args []string) error {
 	}
 
 	if mappingFile != "" {
-		if err := loadMapping(mappingFile, mapping); err != nil && !os.IsNotExist(err) {
+		err := loadMapping(mappingFile, mapping)
+		if err != nil && !os.IsNotExist(err) {
 			fmt.Fprintf(os.Stderr, "⚠️  Warning: Could not load mapping file: %v\n", err)
 		}
 	}
@@ -152,13 +155,15 @@ func runSanitize(cmd *cobra.Command, args []string) error {
 	inputFile := args[0]
 	outputFile := args[1]
 
-	if err := sanitizeFile(inputFile, outputFile, mapping, domain, location, contact, community); err != nil {
+	err := sanitizeFile(inputFile, outputFile, mapping, domain, location, contact, community)
+	if err != nil {
 		return fmt.Errorf("sanitization failed: %w", err)
 	}
 
 	// Save mapping if file specified
 	if mappingFile != "" {
-		if err := saveMapping(mappingFile, mapping); err != nil {
+		err := saveMapping(mappingFile, mapping)
+		if err != nil {
 			return fmt.Errorf("failed to save mapping: %w", err)
 		}
 	}
@@ -170,9 +175,13 @@ func runSanitize(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func sanitizeBatch(inputDir, outputDir string, mapping *SanitizationMapping, domain, location, contact, community, mappingFile string) error {
+func sanitizeBatch(
+	inputDir, outputDir string,
+	mapping *SanitizationMapping,
+	domain, location, contact, community, mappingFile string,
+) error {
 	// Create output directory
-	if err := os.MkdirAll(outputDir, 0750); err != nil {
+	if err := os.MkdirAll(outputDir, 0o750); err != nil {
 		return fmt.Errorf("failed to create output directory: %w", err)
 	}
 
@@ -194,7 +203,8 @@ func sanitizeBatch(inputDir, outputDir string, mapping *SanitizationMapping, dom
 
 		fmt.Printf("[%d/%d] Sanitizing %s...\n", i+1, len(walkFiles), basename)
 
-		if err := sanitizeFile(inputFile, outputFile, mapping, domain, location, contact, community); err != nil {
+		err := sanitizeFile(inputFile, outputFile, mapping, domain, location, contact, community)
+		if err != nil {
 			fmt.Fprintf(os.Stderr, "   ⚠️  Error: %v\n", err)
 			continue
 		}
@@ -204,7 +214,8 @@ func sanitizeBatch(inputDir, outputDir string, mapping *SanitizationMapping, dom
 
 	// Save mapping
 	if mappingFile != "" {
-		if err := saveMapping(mappingFile, mapping); err != nil {
+		err := saveMapping(mappingFile, mapping)
+		if err != nil {
 			return fmt.Errorf("failed to save mapping: %w", err)
 		}
 		fmt.Printf("\n💾 Saved mapping to %s\n", mappingFile)
@@ -218,14 +229,19 @@ func sanitizeBatch(inputDir, outputDir string, mapping *SanitizationMapping, dom
 	return nil
 }
 
-func sanitizeFile(inputFile, outputFile string, mapping *SanitizationMapping, domain, location, contact, community string) error {
+func sanitizeFile(
+	inputFile, outputFile string,
+	mapping *SanitizationMapping,
+	domain, location, contact, community string,
+) error {
 	// Fix #59: Ensure proper file handle cleanup with explicit error handling
 	input, err := os.Open(inputFile) // #nosec G304 -- user-provided file path, validated by caller
 	if err != nil {
 		return fmt.Errorf("failed to open input file: %w", err)
 	}
 	defer func() {
-		if cerr := input.Close(); cerr != nil && err == nil {
+		cerr := input.Close()
+		if cerr != nil && err == nil {
 			err = fmt.Errorf("failed to close input file: %w", cerr)
 		}
 	}()
@@ -238,7 +254,8 @@ func sanitizeFile(inputFile, outputFile string, mapping *SanitizationMapping, do
 		return fmt.Errorf("failed to create output file: %w", err)
 	}
 	defer func() {
-		if cerr := output.Close(); cerr != nil && err == nil {
+		cerr := output.Close()
+		if cerr != nil && err == nil {
 			err = fmt.Errorf("failed to close output file: %w", cerr)
 		}
 		// Clean up temp file if operation failed
@@ -306,7 +323,8 @@ func sanitizeLine(line string, mapping *SanitizationMapping, domain, location, c
 
 	// 2. System location
 	if strings.Contains(line, "sysLocation") {
-		line = regexp.MustCompile(`= STRING:.*`).ReplaceAllString(line, fmt.Sprintf("= STRING: NiAC-Go - %s - Network Operations", location))
+		line = regexp.MustCompile(`= STRING:.*`).
+			ReplaceAllString(line, fmt.Sprintf("= STRING: NiAC-Go - %s - Network Operations", location))
 	}
 
 	// 3. System name (hostname)
@@ -509,17 +527,20 @@ func looksLikeIPOctet(s string) bool {
 
 	// Parse and check range
 	var val int
-	fmt.Sscanf(s, "%d", &val) // #nosec G104 -- error logged or non-critical
+	_, _ = fmt.Sscanf(s, "%d", &val)
 	return val >= 0 && val <= 255
 }
 
 func loadMapping(filename string, mapping *SanitizationMapping) error {
 	data, err := os.ReadFile(filename) // #nosec G304 -- user-provided file path, validated by caller
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to read mapping file: %w", err)
 	}
 
-	return json.Unmarshal(data, mapping)
+	if err := json.Unmarshal(data, mapping); err != nil {
+		return fmt.Errorf("failed to unmarshal mapping: %w", err)
+	}
+	return nil
 }
 
 func saveMapping(filename string, mapping *SanitizationMapping) error {
@@ -529,23 +550,26 @@ func saveMapping(filename string, mapping *SanitizationMapping) error {
 	mapping.mu.RUnlock()
 
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to marshal mapping: %w", err)
 	}
 
 	// Fix #68: Atomic write for mapping file
 	tempFile := filename + ".tmp"
-	if err := os.WriteFile(tempFile, data, 0600); err != nil {
-		return err
+	if err := os.WriteFile(tempFile, data, 0o600); err != nil {
+		return fmt.Errorf("failed to write temp mapping file: %w", err)
 	}
 
-	return os.Rename(tempFile, filename)
+	if err := os.Rename(tempFile, filename); err != nil {
+		return fmt.Errorf("failed to rename mapping file: %w", err)
+	}
+	return nil
 }
 
 // validateFilePath validates file paths to prevent path traversal attacks
-// Fix #67: Input validation
+// Fix #67: Input validation.
 func validateFilePath(path string, allowCreate bool) error {
 	if path == "" {
-		return fmt.Errorf("empty path")
+		return errors.New("empty path")
 	}
 
 	// Clean the path to normalize it
@@ -615,10 +639,10 @@ func validateFilePath(path string, allowCreate bool) error {
 }
 
 // validateDirPath validates directory paths
-// Fix #67: Input validation
+// Fix #67: Input validation.
 func validateDirPath(path string, allowCreate bool) error {
 	if path == "" {
-		return fmt.Errorf("empty path")
+		return errors.New("empty path")
 	}
 
 	// Clean the path

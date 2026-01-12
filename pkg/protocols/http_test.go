@@ -8,7 +8,7 @@ import (
 	"github.com/krisarmstrong/niac-go/pkg/logging"
 )
 
-// TestNewHTTPHandler tests HTTP handler creation
+// TestNewHTTPHandler tests HTTP handler creation.
 func TestNewHTTPHandler(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -23,7 +23,7 @@ func TestNewHTTPHandler(t *testing.T) {
 	}
 }
 
-// TestParseHTTPRequest tests HTTP request parsing
+// TestParseHTTPRequest tests HTTP request parsing.
 func TestParseHTTPRequest(t *testing.T) {
 	tests := []struct {
 		name            string
@@ -93,6 +93,7 @@ func TestParseHTTPRequest(t *testing.T) {
 				if err == nil {
 					t.Error("Expected error but got nil")
 				}
+
 				return
 			}
 
@@ -115,7 +116,7 @@ func TestParseHTTPRequest(t *testing.T) {
 	}
 }
 
-// TestParseHTTPRequest_Headers tests header parsing
+// TestParseHTTPRequest_Headers tests header parsing.
 func TestParseHTTPRequest_Headers(t *testing.T) {
 	payload := "GET /test HTTP/1.1\r\n" +
 		"Host: example.com\r\n" +
@@ -145,16 +146,17 @@ func TestParseHTTPRequest_Headers(t *testing.T) {
 	}
 }
 
-// TestParseHTTPRequest_Methods tests different HTTP methods
+// TestParseHTTPRequest_Methods tests different HTTP methods.
 func TestParseHTTPRequest_Methods(t *testing.T) {
 	methods := []string{"GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS", "PATCH"}
 
 	for _, method := range methods {
 		payload := method + " /test HTTP/1.1\r\n\r\n"
-		request, err := parseHTTPRequest([]byte(payload))
 
+		request, err := parseHTTPRequest([]byte(payload))
 		if err != nil {
 			t.Errorf("Failed to parse %s request: %v", method, err)
+
 			continue
 		}
 
@@ -164,7 +166,7 @@ func TestParseHTTPRequest_Methods(t *testing.T) {
 	}
 }
 
-// TestGenerateResponse_DefaultEndpoints tests default HTTP endpoints
+// TestGenerateResponse_DefaultEndpoints tests default HTTP endpoints.
 func TestGenerateResponse_DefaultEndpoints(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -227,10 +229,20 @@ func TestGenerateResponse_DefaultEndpoints(t *testing.T) {
 			responseStr := string(response)
 
 			// Check status code
-			if !strings.Contains(responseStr, "HTTP/1.1 "+string(rune('0'+tt.expectedStatusCode/100))+string(rune('0'+(tt.expectedStatusCode/10)%10))+string(rune('0'+tt.expectedStatusCode%10))) {
+			if !strings.Contains(
+				responseStr,
+				"HTTP/1.1 "+string(
+					rune('0'+tt.expectedStatusCode/100),
+				)+string(
+					rune('0'+(tt.expectedStatusCode/10)%10),
+				)+string(
+					rune('0'+tt.expectedStatusCode%10),
+				),
+			) {
 				if !strings.Contains(responseStr, "200") && tt.expectedStatusCode == 200 {
 					t.Errorf("Expected status code %d not found in response", tt.expectedStatusCode)
 				}
+
 				if !strings.Contains(responseStr, "404") && tt.expectedStatusCode == 404 {
 					t.Errorf("Expected status code %d not found in response", tt.expectedStatusCode)
 				}
@@ -246,7 +258,7 @@ func TestGenerateResponse_DefaultEndpoints(t *testing.T) {
 	}
 }
 
-// TestGenerateResponse_CustomEndpoints tests custom configured endpoints
+// TestGenerateResponse_CustomEndpoints tests custom configured endpoints.
 func TestGenerateResponse_CustomEndpoints(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -333,7 +345,7 @@ func TestGenerateResponse_CustomEndpoints(t *testing.T) {
 	}
 }
 
-// TestGenerateResponse_ServerName tests custom server name
+// TestGenerateResponse_ServerName tests custom server name.
 func TestGenerateResponse_ServerName(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -389,7 +401,7 @@ func TestGenerateResponse_ServerName(t *testing.T) {
 	}
 }
 
-// TestGenerateResponse_Headers tests HTTP response headers
+// TestGenerateResponse_Headers tests HTTP response headers.
 func TestGenerateResponse_Headers(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -426,7 +438,7 @@ func TestGenerateResponse_Headers(t *testing.T) {
 	}
 }
 
-// TestGenerateResponse_ContentTypes tests different content types
+// TestGenerateResponse_ContentTypes tests different content types.
 func TestGenerateResponse_ContentTypes(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -492,7 +504,7 @@ func TestGenerateResponse_ContentTypes(t *testing.T) {
 	}
 }
 
-// TestGetStatusText tests HTTP status code to text mapping
+// TestGetStatusText tests HTTP status code to text mapping.
 func TestGetStatusText(t *testing.T) {
 	tests := []struct {
 		code         int
@@ -524,7 +536,7 @@ func TestGetStatusText(t *testing.T) {
 	}
 }
 
-// TestGetDeviceNames tests device name formatting
+// TestGetDeviceNames tests device name formatting.
 func TestGetDeviceNames(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -564,7 +576,7 @@ func TestGetDeviceNames(t *testing.T) {
 	}
 }
 
-// TestGenerateResponse_MethodDefaulting tests method defaulting for endpoints
+// TestGenerateResponse_MethodDefaulting tests method defaulting for endpoints.
 func TestGenerateResponse_MethodDefaulting(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -601,7 +613,7 @@ func TestGenerateResponse_MethodDefaulting(t *testing.T) {
 	}
 }
 
-// TestGenerateResponse_StatusCodeDefaulting tests status code defaulting
+// TestGenerateResponse_StatusCodeDefaulting tests status code defaulting.
 func TestGenerateResponse_StatusCodeDefaulting(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -637,7 +649,7 @@ func TestGenerateResponse_StatusCodeDefaulting(t *testing.T) {
 	}
 }
 
-// TestGenerateResponse_EmptyDevices tests behavior with no devices
+// TestGenerateResponse_EmptyDevices tests behavior with no devices.
 func TestGenerateResponse_EmptyDevices(t *testing.T) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -664,7 +676,7 @@ func TestGenerateResponse_EmptyDevices(t *testing.T) {
 
 // Benchmarks
 
-// BenchmarkParseHTTPRequest benchmarks HTTP request parsing
+// BenchmarkParseHTTPRequest benchmarks HTTP request parsing.
 func BenchmarkParseHTTPRequest(b *testing.B) {
 	payload := []byte("GET /index.html HTTP/1.1\r\n" +
 		"Host: example.com\r\n" +
@@ -672,13 +684,12 @@ func BenchmarkParseHTTPRequest(b *testing.B) {
 		"Accept: text/html\r\n" +
 		"\r\n")
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		parseHTTPRequest(payload)
+	for b.Loop() {
+		_, _ = parseHTTPRequest(payload)
 	}
 }
 
-// BenchmarkGenerateResponse benchmarks response generation
+// BenchmarkGenerateResponse benchmarks response generation.
 func BenchmarkGenerateResponse(b *testing.B) {
 	cfg := &config.Config{}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -697,18 +708,18 @@ func BenchmarkGenerateResponse(b *testing.B) {
 		Version: "HTTP/1.1",
 	}
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		handler.generateResponse(request, devices)
 	}
 }
 
-// BenchmarkGetStatusText benchmarks status text lookup
+// BenchmarkGetStatusText benchmarks status text lookup.
 func BenchmarkGetStatusText(b *testing.B) {
 	codes := []int{200, 404, 500, 301, 403}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+
+	for i := range b.N {
 		getStatusText(codes[i%len(codes)])
 	}
 }
