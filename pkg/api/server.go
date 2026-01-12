@@ -2229,23 +2229,93 @@ func (s *Server) prepareReplayRequest(req ReplayRequest) (ReplayRequest, error) 
 		return req, nil
 	}
 
-	abs, err := filepath.Abs(req.File)
+	// SECURITY FIX #162: Validate PCAP file path to prevent arbitrary file access
+	validatedPath, err := s.validatePcapFilePath(req.File)
 	if err != nil {
-		return req, fmt.Errorf("resolve path: %w", err)
+		return req, err
 	}
 
-	info, err := os.Stat(abs)
-	if err != nil {
-		return req, fmt.Errorf("stat %s: %w", abs, err)
-	}
-
-	if info.IsDir() {
-		return req, fmt.Errorf("%w: %s", ErrPathIsADirectory, abs)
-	}
-
-	req.File = abs
+	req.File = validatedPath
 
 	return req, nil
+}
+
+// SECURITY FIX #162: validatePcapFilePath ensures the file path is safe and doesn't traverse outside allowed directories.
+func (s *Server) validatePcapFilePath(filename string) (string, error) {
+	// Empty filename is invalid
+	if filename == "" {
+		return "", errors.New("filename cannot be empty")
+	}
+
+	// Clean the path to normalize it
+	cleanPath := filepath.Clean(filename)
+
+	// Reject paths containing null bytes (potential bypass attempt)
+	if strings.ContainsRune(cleanPath, 0) {
+		return "", errors.New("filename contains invalid characters")
+	}
+
+	// Get config directory as the allowed base directory
+	cfgPath := s.configPath()
+	var allowedDir string
+	if cfgPath != "" {
+		allowedDir = filepath.Dir(cfgPath)
+	} else {
+		// If no config path, use current working directory
+		var err error
+		allowedDir, err = os.Getwd()
+		if err != nil {
+			return "", fmt.Errorf("cannot determine allowed directory: %w", err)
+		}
+	}
+
+	// Resolve to absolute path
+	var absPath string
+	if !filepath.IsAbs(cleanPath) {
+		absPath = filepath.Join(allowedDir, cleanPath)
+	} else {
+		absPath = cleanPath
+	}
+
+	// Clean the absolute path and resolve symlinks for security
+	absPath = filepath.Clean(absPath)
+	realPath, err := filepath.EvalSymlinks(absPath)
+	if err != nil {
+		// If symlink resolution fails, file may not exist yet or symlink is broken
+		realPath = absPath
+	}
+
+	// Resolve allowed directory to real path for comparison
+	realAllowedDir, err := filepath.EvalSymlinks(allowedDir)
+	if err != nil {
+		realAllowedDir = allowedDir
+	}
+
+	// Verify the file is within the allowed directory (prevent path traversal)
+	if !strings.HasPrefix(realPath, realAllowedDir+string(filepath.Separator)) && realPath != realAllowedDir {
+		return "", fmt.Errorf("access denied: file must be within %s", allowedDir)
+	}
+
+	// Verify the path exists and is a file (not a directory)
+	info, err := os.Stat(absPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return "", fmt.Errorf("pcap file not found: %s", filename)
+		}
+		return "", fmt.Errorf("cannot access pcap file: %w", err)
+	}
+	if info.IsDir() {
+		return "", fmt.Errorf("%w: %s", ErrPathIsADirectory, absPath)
+	}
+
+	// Verify file has a valid pcap extension
+	ext := strings.ToLower(filepath.Ext(absPath))
+	validExts := map[string]bool{".pcap": true, ".pcapng": true, ".cap": true}
+	if !validExts[ext] {
+		return "", fmt.Errorf("invalid pcap file extension: %s (allowed: .pcap, .pcapng, .cap)", ext)
+	}
+
+	return absPath, nil
 }
 
 func (s *Server) writeUploadedFile(data []byte) (string, error) {
