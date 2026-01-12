@@ -1,4 +1,30 @@
-# Code Owners
-# These users will be automatically requested for review on PRs
-
+# =============================================================================
+# Code Owners - NIAC Go Project
+# =============================================================================
+# Default owner for all files
 * @krisarmstrong
+
+# =============================================================================
+# CRITICAL FILES - Require explicit approval
+# =============================================================================
+# These files define code quality, security, and build standards.
+# Changes MUST be approved to prevent degradation of platinum standards.
+
+# Linting configurations (124 Go linters, 200+ JS/TS rules)
+/.golangci.yml @krisarmstrong
+/ui/biome.json @krisarmstrong
+
+# CI/CD workflows (enforce all quality checks)
+/.github/workflows/*.yml @krisarmstrong
+
+# Dependency management
+/go.mod @krisarmstrong
+/go.sum @krisarmstrong
+/ui/package.json @krisarmstrong
+/ui/package-lock.json @krisarmstrong
+
+# Version pinning
+/ui/.node-version @krisarmstrong
+
+# Security scanning
+/.pre-commit-config.yaml @krisarmstrong
