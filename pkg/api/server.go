@@ -72,6 +72,17 @@ const (
 	// DefaultBurst is the default burst size for rate limiting.
 	DefaultBurst = 200
 
+	// SECURITY FIX #156: Per-endpoint rate limits for sensitive operations
+	// Upload endpoints: stricter limits to prevent abuse
+	UploadRateLimit = 5  // 5 requests per second
+	UploadBurst     = 10 // Burst of 10
+	// Write operations: moderate limits
+	WriteRateLimit = 20 // 20 requests per second
+	WriteBurst     = 40 // Burst of 40
+	// Walk file operations: moderate limits
+	WalkRateLimit = 10 // 10 requests per second
+	WalkBurst     = 20 // Burst of 20
+
 	// ErrMsgRequestBodyTooLarge is the error message when HTTP request body is too large.
 	ErrMsgRequestBodyTooLarge = "http: request body too large"
 )
@@ -186,6 +197,54 @@ func (rl *RateLimiter) CleanupStale() {
 
 	if count > 0 {
 		slog.Info("[API] Cleaned up stale rate limiters", "cleaned", count, "total", len(rl.limiters))
+	}
+}
+
+// SECURITY FIX #156: Per-endpoint rate limiting middleware wrappers
+
+// uploadRateLimit applies stricter rate limiting for upload endpoints.
+func (s *Server) uploadRateLimit(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		clientIP := getClientIP(r)
+		if !s.uploadLimiter.GetLimiter(clientIP).Allow() {
+			writeError(w, r, http.StatusTooManyRequests, "upload_rate_limit_exceeded",
+				"Upload rate limit exceeded. Please wait before uploading again.", nil)
+			slog.Warn("[API] Upload rate limit exceeded", "clientIP", clientIP, "path", r.URL.Path)
+			return
+		}
+		next(w, r)
+	}
+}
+
+// writeRateLimit applies moderate rate limiting for write operations.
+func (s *Server) writeRateLimit(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Only apply to mutating methods
+		if r.Method == http.MethodPost || r.Method == http.MethodPut ||
+			r.Method == http.MethodPatch || r.Method == http.MethodDelete {
+			clientIP := getClientIP(r)
+			if !s.writeLimiter.GetLimiter(clientIP).Allow() {
+				writeError(w, r, http.StatusTooManyRequests, "write_rate_limit_exceeded",
+					"Write rate limit exceeded. Please wait before making more changes.", nil)
+				slog.Warn("[API] Write rate limit exceeded", "clientIP", clientIP, "path", r.URL.Path)
+				return
+			}
+		}
+		next(w, r)
+	}
+}
+
+// walkRateLimit applies rate limiting for walk file operations.
+func (s *Server) walkRateLimit(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		clientIP := getClientIP(r)
+		if !s.walkLimiter.GetLimiter(clientIP).Allow() {
+			writeError(w, r, http.StatusTooManyRequests, "walk_rate_limit_exceeded",
+				"Walk file operation rate limit exceeded. Please wait before trying again.", nil)
+			slog.Warn("[API] Walk rate limit exceeded", "clientIP", clientIP, "path", r.URL.Path)
+			return
+		}
+		next(w, r)
 	}
 }
 
@@ -647,7 +706,7 @@ type ReplayState struct {
 	File      string    `json:"file"`
 	LoopMs    int       `json:"loop_ms"`
 	Scale     float64   `json:"scale"`
-	StartedAt time.Time `json:"started_at,omitempty"`
+	StartedAt time.Time `json:"started_at,omitzero"`
 }
 
 // FileEntry represents a discovered file (pcap, walk, etc.).
@@ -696,7 +755,7 @@ type SimulationStatus struct {
 	ConfigPath    string    `json:"config_path,omitempty"`
 	ConfigName    string    `json:"config_name,omitempty"`
 	DeviceCount   int       `json:"device_count"`
-	StartedAt     time.Time `json:"started_at,omitempty"`
+	StartedAt     time.Time `json:"started_at,omitzero"`
 	UptimeSeconds float64   `json:"uptime_seconds"`
 }
 
@@ -720,7 +779,11 @@ type Server struct {
 	startTime     time.Time        // Track server start time for uptime
 	rateLimiter   *RateLimiter     // FEATURE #104: Per-IP rate limiting
 	csrfToken     string           // SECURITY FIX LOW-1: CSRF protection token
-	sseHub *SSEHub // SSE hub for real-time streaming
+	sseHub        *SSEHub          // SSE hub for real-time streaming
+	// SECURITY FIX #156: Per-endpoint rate limiters for sensitive operations
+	uploadLimiter *RateLimiter // Stricter limits for upload endpoints
+	writeLimiter  *RateLimiter // Moderate limits for write operations
+	walkLimiter   *RateLimiter // Limits for walk file operations
 }
 
 // generateCSRFToken generates a cryptographically secure random token
@@ -743,8 +806,12 @@ func NewServer(cfg ServerConfig) *Server {
 		cfg:         cfg,
 		startTime:   time.Now(),
 		rateLimiter: NewRateLimiter(DefaultRateLimit, DefaultBurst),
-		csrfToken: csrfToken,
-		sseHub:    NewSSEHub(),
+		csrfToken:   csrfToken,
+		sseHub:      NewSSEHub(),
+		// SECURITY FIX #156: Initialize per-endpoint rate limiters
+		uploadLimiter: NewRateLimiter(UploadRateLimit, UploadBurst),
+		writeLimiter:  NewRateLimiter(WriteRateLimit, WriteBurst),
+		walkLimiter:   NewRateLimiter(WalkRateLimit, WalkBurst),
 	}
 }
 
@@ -775,12 +842,13 @@ func (s *Server) Start() error {
 		mux.HandleFunc("/api/v1/devices", s.recoverMiddleware(s.auth(s.handleDevices)))
 		mux.HandleFunc("/api/v1/history", s.recoverMiddleware(s.auth(s.handleHistory)))
 		// SECURITY FIX LOW-1: Protect state-changing endpoints with CSRF
-		mux.HandleFunc("/api/v1/config", s.recoverMiddleware(s.auth(s.csrfProtect(s.handleConfig))))
-		mux.HandleFunc("/api/v1/config/devices", s.recoverMiddleware(s.auth(s.csrfProtect(s.handleDevicesV2))))
-		mux.HandleFunc("/api/v1/config/devices/", s.recoverMiddleware(s.auth(s.csrfProtect(s.handleDevicesV2))))
+		// SECURITY FIX #156: Apply write rate limiting to state-changing endpoints
+		mux.HandleFunc("/api/v1/config", s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.handleConfig)))))
+		mux.HandleFunc("/api/v1/config/devices", s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.handleDevicesV2)))))
+		mux.HandleFunc("/api/v1/config/devices/", s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.handleDevicesV2)))))
 		mux.HandleFunc("/api/v1/config/schema", s.recoverMiddleware(s.auth(s.handleConfigSchema)))
-		mux.HandleFunc("/api/v1/replay", s.recoverMiddleware(s.auth(s.csrfProtect(s.handleReplay))))
-		mux.HandleFunc("/api/v1/alerts", s.recoverMiddleware(s.auth(s.csrfProtect(s.handleAlerts))))
+		mux.HandleFunc("/api/v1/replay", s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.handleReplay)))))
+		mux.HandleFunc("/api/v1/alerts", s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.handleAlerts)))))
 		mux.HandleFunc("/api/v1/files", s.recoverMiddleware(s.auth(s.handleFiles)))
 		mux.HandleFunc("/api/v1/topology", s.recoverMiddleware(s.auth(s.handleTopology)))
 		mux.HandleFunc("/api/v1/topology/export", s.recoverMiddleware(s.auth(s.handleTopologyExport)))
@@ -792,16 +860,18 @@ func (s *Server) Start() error {
 		mux.HandleFunc("/api/v1/neighbors", s.recoverMiddleware(s.auth(s.handleNeighbors)))
 
 		// Walk file validation endpoints
-		mux.HandleFunc("/api/v1/walk/validate", s.recoverMiddleware(s.auth(s.csrfProtect(s.handleWalkValidation))))
-		mux.HandleFunc("/api/v1/walk/fix", s.recoverMiddleware(s.auth(s.csrfProtect(s.handleWalkValidation))))
-		mux.HandleFunc("/api/v1/walk/list", s.recoverMiddleware(s.auth(s.handleWalkList)))
+		// SECURITY FIX #156: Apply walk-specific rate limiting
+		mux.HandleFunc("/api/v1/walk/validate", s.recoverMiddleware(s.auth(s.walkRateLimit(s.csrfProtect(s.handleWalkValidation)))))
+		mux.HandleFunc("/api/v1/walk/fix", s.recoverMiddleware(s.auth(s.walkRateLimit(s.csrfProtect(s.handleWalkValidation)))))
+		mux.HandleFunc("/api/v1/walk/list", s.recoverMiddleware(s.auth(s.walkRateLimit(s.handleWalkList))))
 		mux.HandleFunc(
 			"/api/v1/walk/validate-all",
-			s.recoverMiddleware(s.auth(s.csrfProtect(s.handleWalkBatchValidate))),
+			s.recoverMiddleware(s.auth(s.walkRateLimit(s.csrfProtect(s.handleWalkBatchValidate)))),
 		)
 
 		// PCAP analysis endpoints
-		mux.HandleFunc("/api/v1/pcap/upload", s.recoverMiddleware(s.auth(s.csrfProtect(s.handlePcapUpload))))
+		// SECURITY FIX #156: Apply upload-specific rate limiting for uploads
+		mux.HandleFunc("/api/v1/pcap/upload", s.recoverMiddleware(s.auth(s.uploadRateLimit(s.csrfProtect(s.handlePcapUpload)))))
 		mux.HandleFunc("/api/v1/pcap/", s.recoverMiddleware(s.auth(s.handlePcapAnalysis)))
 
 		// SSE (Server-Sent Events) endpoints for real-time streaming
