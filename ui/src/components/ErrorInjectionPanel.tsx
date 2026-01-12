@@ -1,37 +1,33 @@
-import { type FC, useState } from 'react';
+import { type FC, useState } from "react";
 import {
-  Card,
-  CardContent,
-  Button,
-  Tag,
-  SmallText,
-  ConfirmModal,
-} from '../ui';
-import { useApiResource } from '../hooks/useApiResource';
-import {
+  clearAllErrors,
+  clearError,
   fetchDevices,
   fetchErrorTypes,
   injectError,
-  clearError,
-  clearAllErrors,
-} from '../api/client';
-import { getErrorMessage } from '../utils';
+} from "../api/client";
+import type { ErrorType } from "../api/types";
+import { useApiResource } from "../hooks/useApiResource";
+import { Button, Card, CardContent, ConfirmModal, SmallText, Tag } from "../ui";
+import { getErrorMessage } from "../utils";
 
 export const ErrorInjectionPanel: FC = () => {
   const { data: devices } = useApiResource(fetchDevices, []);
-  const { data: errorInfo, refetch: refetchErrors } = useApiResource(fetchErrorTypes, [], { intervalMs: 5000 });
+  const { data: errorInfo, refetch: refetchErrors } = useApiResource(fetchErrorTypes, [], {
+    intervalMs: 5000,
+  });
 
-  const [selectedDevice, setSelectedDevice] = useState('');
-  const [selectedInterface, setSelectedInterface] = useState('');
-  const [selectedErrorType, setSelectedErrorType] = useState('');
+  const [selectedDevice, setSelectedDevice] = useState("");
+  const [selectedInterface, setSelectedInterface] = useState("");
+  const [selectedErrorType, setSelectedErrorType] = useState("");
   const [errorValue, setErrorValue] = useState(50);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
 
   const handleInject = async () => {
     if (!selectedDevice || !selectedInterface || !selectedErrorType) {
-      setMessage({ type: 'error', text: 'Please select device, interface, and error type' });
+      setMessage({ type: "error", text: "Please select device, interface, and error type" });
       return;
     }
 
@@ -45,10 +41,10 @@ export const ErrorInjectionPanel: FC = () => {
         error_type: selectedErrorType,
         value: errorValue,
       });
-      setMessage({ type: 'success', text: 'Error injected successfully' });
+      setMessage({ type: "success", text: "Error injected successfully" });
       refetchErrors();
     } catch (err: unknown) {
-      setMessage({ type: 'error', text: getErrorMessage(err) || 'Failed to inject error' });
+      setMessage({ type: "error", text: getErrorMessage(err) || "Failed to inject error" });
     } finally {
       setIsSubmitting(false);
     }
@@ -59,23 +55,23 @@ export const ErrorInjectionPanel: FC = () => {
     setIsSubmitting(true);
     try {
       await clearAllErrors();
-      setMessage({ type: 'success', text: 'All errors cleared' });
+      setMessage({ type: "success", text: "All errors cleared" });
       refetchErrors();
     } catch (err: unknown) {
-      setMessage({ type: 'error', text: getErrorMessage(err) || 'Failed to clear errors' });
+      setMessage({ type: "error", text: getErrorMessage(err) || "Failed to clear errors" });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleClearSpecific = async (deviceIP: string, iface: string) => {
+  const handleClearSpecific = async (deviceIp: string, iface: string) => {
     setIsSubmitting(true);
     try {
-      await clearError(deviceIP, iface);
-      setMessage({ type: 'success', text: `Cleared error on ${deviceIP} ${iface}` });
+      await clearError(deviceIp, iface);
+      setMessage({ type: "success", text: `Cleared error on ${deviceIp} ${iface}` });
       refetchErrors();
     } catch (err: unknown) {
-      setMessage({ type: 'error', text: getErrorMessage(err) || 'Failed to clear error' });
+      setMessage({ type: "error", text: getErrorMessage(err) || "Failed to clear error" });
     } finally {
       setIsSubmitting(false);
     }
@@ -89,7 +85,9 @@ export const ErrorInjectionPanel: FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Device Selector */}
             <div>
-              <label htmlFor="error-device" className="block text-sm font-medium mb-2">Device</label>
+              <label htmlFor="error-device" className="block text-sm font-medium mb-2">
+                Device
+              </label>
               <select
                 id="error-device"
                 value={selectedDevice}
@@ -107,7 +105,9 @@ export const ErrorInjectionPanel: FC = () => {
 
             {/* Interface Input */}
             <div>
-              <label htmlFor="error-interface" className="block text-sm font-medium mb-2">Interface</label>
+              <label htmlFor="error-interface" className="block text-sm font-medium mb-2">
+                Interface
+              </label>
               <input
                 id="error-interface"
                 type="text"
@@ -120,7 +120,9 @@ export const ErrorInjectionPanel: FC = () => {
 
             {/* Error Type Selector */}
             <div>
-              <label htmlFor="error-type" className="block text-sm font-medium mb-2">Error Type</label>
+              <label htmlFor="error-type" className="block text-sm font-medium mb-2">
+                Error Type
+              </label>
               <select
                 id="error-type"
                 value={selectedErrorType}
@@ -128,7 +130,7 @@ export const ErrorInjectionPanel: FC = () => {
                 className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">Select error type...</option>
-                {errorInfo?.available_types?.map((type: any) => (
+                {errorInfo?.available_types?.map((type: ErrorType) => (
                   <option key={type.type} value={type.type}>
                     {type.type}
                   </option>
@@ -136,7 +138,10 @@ export const ErrorInjectionPanel: FC = () => {
               </select>
               {selectedErrorType && errorInfo?.available_types && (
                 <SmallText className="text-gray-400 mt-1">
-                  {errorInfo.available_types.find((t: any) => t.type === selectedErrorType)?.description}
+                  {
+                    errorInfo.available_types.find((t: ErrorType) => t.type === selectedErrorType)
+                      ?.description
+                  }
                 </SmallText>
               )}
             </div>
@@ -152,33 +157,30 @@ export const ErrorInjectionPanel: FC = () => {
                 min="0"
                 max="100"
                 value={errorValue}
-                onChange={(e) => setErrorValue(parseInt(e.target.value))}
+                onChange={(e) => setErrorValue(parseInt(e.target.value, 10))}
                 className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
               />
-              <SmallText className="text-gray-400">
-                0 = No errors, 100 = Maximum errors
-              </SmallText>
+              <SmallText className="text-gray-400">0 = No errors, 100 = Maximum errors</SmallText>
             </div>
           </div>
 
           {/* Message Display */}
           {message && (
-            <div className={`p-3 rounded ${
-              message.type === 'success'
-                ? 'bg-green-500/10 text-green-400 border border-green-500/20'
-                : 'bg-red-500/10 text-red-400 border border-red-500/20'
-            }`}>
+            <div
+              className={`p-3 rounded ${
+                message.type === "success"
+                  ? "bg-green-500/10 text-green-400 border border-green-500/20"
+                  : "bg-red-500/10 text-red-400 border border-red-500/20"
+              }`}
+            >
               {message.text}
             </div>
           )}
 
           {/* Action Buttons */}
           <div className="flex gap-3">
-            <Button
-              onClick={handleInject}
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? 'Injecting...' : 'Inject Error'}
+            <Button onClick={handleInject} disabled={isSubmitting}>
+              {isSubmitting ? "Injecting..." : "Inject Error"}
             </Button>
             <Button
               onClick={() => setShowClearAllConfirm(true)}
@@ -208,29 +210,33 @@ export const ErrorInjectionPanel: FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {Object.entries(errorInfo.active_errors).map(([deviceIP, interfaces]: [string, any]) =>
-                    Object.entries(interfaces).map(([iface, errorTypes]: [string, any]) =>
-                      Object.entries(errorTypes).map(([errorType, value]: [string, any]) => (
-                        <tr key={`${deviceIP}-${iface}-${errorType}`} className="border-b border-gray-800">
-                          <td className="py-2 px-2">{deviceIP}</td>
-                          <td className="py-2 px-2">{iface}</td>
-                          <td className="py-2 px-2">{errorType}</td>
-                          <td className="py-2 px-2">
-                            <Tag colorScheme="yellow">{value}%</Tag>
-                          </td>
-                          <td className="py-2 px-2">
-                            <button
-                              onClick={() => handleClearSpecific(deviceIP, iface)}
-                              disabled={isSubmitting}
-                              className="text-blue-400 hover:text-blue-300 text-sm"
-                              aria-label={`Clear error on ${deviceIP} ${iface}`}
-                            >
-                              Clear
-                            </button>
-                          </td>
-                        </tr>
-                      ))
-                    )
+                  {Object.entries(errorInfo.active_errors).map(
+                    ([deviceIp, interfaces]: [string, any]) =>
+                      Object.entries(interfaces).map(([iface, errorTypes]: [string, any]) =>
+                        Object.entries(errorTypes).map(([errorType, value]: [string, any]) => (
+                          <tr
+                            key={`${deviceIp}-${iface}-${errorType}`}
+                            className="border-b border-gray-800"
+                          >
+                            <td className="py-2 px-2">{deviceIp}</td>
+                            <td className="py-2 px-2">{iface}</td>
+                            <td className="py-2 px-2">{errorType}</td>
+                            <td className="py-2 px-2">
+                              <Tag colorScheme="yellow">{value}%</Tag>
+                            </td>
+                            <td className="py-2 px-2">
+                              <button
+                                onClick={() => handleClearSpecific(deviceIp, iface)}
+                                disabled={isSubmitting}
+                                className="text-blue-400 hover:text-blue-300 text-sm"
+                                aria-label={`Clear error on ${deviceIp} ${iface}`}
+                              >
+                                Clear
+                              </button>
+                            </td>
+                          </tr>
+                        )),
+                      ),
                   )}
                 </tbody>
               </table>
