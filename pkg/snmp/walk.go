@@ -241,7 +241,8 @@ func parseTypeAndValue(typeStr, valueStr string) (gosnmp.Asn1BER, any, error) {
 
 // ExportToWalkFile exports MIB entries to a walk file format.
 func ExportToWalkFile(filename string, mib *MIB) error {
-	file, err := os.Create(filename) // #nosec G304 -- user-provided file path, validated by caller
+	// SECURITY FIX #163: Create file with restricted permissions (owner-only)
+	file, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600) // #nosec G304 -- user-provided
 	if err != nil {
 		return fmt.Errorf("%w: %w", ErrFailedToCreateWalkFile, err)
 	}
