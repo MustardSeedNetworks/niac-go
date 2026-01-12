@@ -35,6 +35,7 @@ import (
 	"mime"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -435,6 +436,7 @@ func validateAlertConfig(cfg AlertConfig) []ErrorDetail {
 	}
 
 	// Validate webhook URL if provided
+	// SECURITY FIX #158: Enhanced SSRF protection for webhook URLs
 	if cfg.WebhookURL != "" {
 		if len(cfg.WebhookURL) > 2048 {
 			errors = append(errors, ErrorDetail{
@@ -451,9 +453,85 @@ func validateAlertConfig(cfg AlertConfig) []ErrorDetail {
 				Value: cfg.WebhookURL[:min(50, len(cfg.WebhookURL))],
 			})
 		}
+		// SSRF protection: check for internal/private addresses
+		if err := validateWebhookURLSSRF(cfg.WebhookURL); err != nil {
+			errors = append(errors, ErrorDetail{
+				Field: "webhook_url",
+				Issue: err.Error(),
+				Value: "[redacted]",
+			})
+		}
 	}
 
 	return errors
+}
+
+// validateWebhookURLSSRF validates a webhook URL to prevent SSRF attacks.
+// SECURITY FIX #158: Prevents requests to internal/private networks.
+func validateWebhookURLSSRF(urlStr string) error {
+	// Parse the URL
+	parsedURL, err := url.Parse(urlStr)
+	if err != nil {
+		return fmt.Errorf("invalid URL format")
+	}
+
+	// Extract hostname (without port)
+	host := parsedURL.Hostname()
+	if host == "" {
+		return fmt.Errorf("URL must have a hostname")
+	}
+
+	// Check for localhost aliases
+	lowerHost := strings.ToLower(host)
+	blockedHosts := []string{
+		"localhost",
+		"127.0.0.1",
+		"::1",
+		"0.0.0.0",
+		"0",
+		"[::1]",
+	}
+	for _, blocked := range blockedHosts {
+		if lowerHost == blocked {
+			return fmt.Errorf("localhost addresses not allowed")
+		}
+	}
+
+	// Check for metadata service endpoints (cloud environments)
+	metadataHosts := []string{
+		"169.254.169.254", // AWS/GCP/Azure metadata service
+		"metadata.google.internal",
+		"metadata.goog",
+	}
+	for _, meta := range metadataHosts {
+		if lowerHost == meta {
+			return fmt.Errorf("metadata service addresses not allowed")
+		}
+	}
+
+	// Parse as IP address
+	ip := net.ParseIP(host)
+	if ip != nil {
+		// Check for private/internal IP ranges
+		if ip.IsLoopback() {
+			return fmt.Errorf("loopback addresses not allowed")
+		}
+		if ip.IsPrivate() {
+			return fmt.Errorf("private network addresses not allowed")
+		}
+		if ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() {
+			return fmt.Errorf("link-local addresses not allowed")
+		}
+		if ip.IsUnspecified() {
+			return fmt.Errorf("unspecified addresses not allowed")
+		}
+		// Block 169.254.0.0/16 (link-local) explicitly
+		if ip4 := ip.To4(); ip4 != nil && ip4[0] == 169 && ip4[1] == 254 {
+			return fmt.Errorf("link-local addresses not allowed")
+		}
+	}
+
+	return nil
 }
 
 // validateSimulationRequest validates simulation request fields
