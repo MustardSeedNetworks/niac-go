@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
@@ -359,8 +360,19 @@ func (s *Server) handlePcapAnalysis(w http.ResponseWriter, r *http.Request) {
 // ============================================================================
 
 func analyzePcapData(data []byte, filename string) (*PcapAnalysisResult, error) {
+	// SECURITY FIX #167: Use dedicated temp directory with restrictive permissions
+	dir := filepath.Join(os.TempDir(), "niac-pcap-analysis")
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return nil, fmt.Errorf("create temp dir: %w", err)
+	}
+
+	// Ensure directory permissions are correct even if it already exists
+	if err := os.Chmod(dir, 0o700); err != nil {
+		return nil, fmt.Errorf("secure temp dir: %w", err)
+	}
+
 	// Write to temp file (gopacket requires file path)
-	tmpFile, err := os.CreateTemp("", "pcap-analysis-*.pcap")
+	tmpFile, err := os.CreateTemp(dir, "pcap-analysis-*.pcap")
 	if err != nil {
 		return nil, fmt.Errorf("create temp file: %w", err)
 	}
@@ -369,13 +381,23 @@ func analyzePcapData(data []byte, filename string) (*PcapAnalysisResult, error) 
 
 	defer func() { _ = os.Remove(tmpPath) }()
 
+	// SECURITY FIX #167: Write data while file is still open to minimize race window
 	if _, err := tmpFile.Write(data); err != nil {
 		_ = tmpFile.Close()
 
 		return nil, fmt.Errorf("write temp file: %w", err)
 	}
 
-	_ = tmpFile.Close()
+	// Sync before close to ensure data is written
+	if err := tmpFile.Sync(); err != nil {
+		_ = tmpFile.Close()
+
+		return nil, fmt.Errorf("sync temp file: %w", err)
+	}
+
+	if err := tmpFile.Close(); err != nil {
+		return nil, fmt.Errorf("close temp file: %w", err)
+	}
 
 	// Open pcap from temp file
 	handle, err := pcap.OpenOffline(tmpPath)

@@ -2319,9 +2319,15 @@ func (s *Server) validatePcapFilePath(filename string) (string, error) {
 }
 
 func (s *Server) writeUploadedFile(data []byte) (string, error) {
+	// SECURITY FIX #167: Use restrictive permissions for temp directory (owner-only)
 	dir := filepath.Join(os.TempDir(), "niac-replay")
-	if err := os.MkdirAll(dir, 0o750); err != nil {
+	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return "", fmt.Errorf("create upload dir: %w", err)
+	}
+
+	// Ensure directory permissions are correct even if it already exists
+	if err := os.Chmod(dir, 0o700); err != nil {
+		return "", fmt.Errorf("secure upload dir: %w", err)
 	}
 
 	tmp, err := os.CreateTemp(dir, "upload-*.pcap")
@@ -2329,21 +2335,31 @@ func (s *Server) writeUploadedFile(data []byte) (string, error) {
 		return "", fmt.Errorf("create temp file: %w", err)
 	}
 
-	defer func() { _ = tmp.Close() }()
+	tmpPath := tmp.Name()
 
+	// SECURITY FIX #167: Write data while file is still open (no race window)
 	if _, err := tmp.Write(data); err != nil {
-		_ = os.Remove(tmp.Name())
+		_ = tmp.Close()
+		_ = os.Remove(tmpPath)
 
 		return "", fmt.Errorf("write upload: %w", err)
 	}
 
 	if err := tmp.Sync(); err != nil {
-		_ = os.Remove(tmp.Name())
+		_ = tmp.Close()
+		_ = os.Remove(tmpPath)
 
 		return "", fmt.Errorf("sync upload: %w", err)
 	}
 
-	return tmp.Name(), nil
+	// Close file but don't use defer - we need to return path on success
+	if err := tmp.Close(); err != nil {
+		_ = os.Remove(tmpPath)
+
+		return "", fmt.Errorf("close temp file: %w", err)
+	}
+
+	return tmpPath, nil
 }
 
 func (s *Server) getAlertConfig() AlertConfig {
