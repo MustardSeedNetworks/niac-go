@@ -466,8 +466,46 @@ func validateAlertConfig(cfg AlertConfig) []ErrorDetail {
 	return errors
 }
 
+// normalizeAndParseIP parses an IP address string, handling various edge cases.
+// SECURITY FIX #168: Handle IPv6 zone identifiers, mapped addresses, and decimal notation.
+func normalizeAndParseIP(host string) net.IP {
+	// Strip IPv6 zone identifier (e.g., "::1%eth0" -> "::1")
+	if idx := strings.Index(host, "%"); idx != -1 {
+		host = host[:idx]
+	}
+
+	// Try standard parsing first
+	ip := net.ParseIP(host)
+	if ip != nil {
+		return ip
+	}
+
+	// Try parsing as decimal IPv4 (e.g., "2130706433" = 127.0.0.1)
+	if decimal, err := strconv.ParseUint(host, 10, 32); err == nil {
+		return net.IPv4(
+			byte(decimal>>24),
+			byte(decimal>>16),
+			byte(decimal>>8),
+			byte(decimal),
+		)
+	}
+
+	return nil
+}
+
+// isIPv6MappedLoopback checks if an IPv6 address is a mapped IPv4 loopback.
+// SECURITY FIX #168: Detect ::ffff:127.0.0.1 and similar mapped loopback addresses.
+func isIPv6MappedLoopback(ip net.IP) bool {
+	// Check if it's an IPv6-mapped IPv4 address
+	if ip4 := ip.To4(); ip4 != nil && len(ip) == net.IPv6len {
+		// This is an IPv6-mapped IPv4 address, check the IPv4 part
+		return ip4.IsLoopback()
+	}
+	return false
+}
+
 // validateWebhookURLSSRF validates a webhook URL to prevent SSRF attacks.
-// SECURITY FIX #158: Prevents requests to internal/private networks.
+// SECURITY FIX #158, #168: Prevents requests to internal/private networks.
 func validateWebhookURLSSRF(urlStr string) error {
 	// Parse the URL
 	parsedURL, err := url.Parse(urlStr)
@@ -475,16 +513,17 @@ func validateWebhookURLSSRF(urlStr string) error {
 		return errors.New("invalid URL format")
 	}
 
-	// Extract hostname (without port)
+	// Extract hostname (without port) - handles both IPv4 and IPv6 with brackets
 	host := parsedURL.Hostname()
 	if host == "" {
 		return errors.New("URL must have a hostname")
 	}
 
-	// Check for localhost aliases
+	// Check for localhost aliases (case-insensitive)
 	lowerHost := strings.ToLower(host)
 	blockedHosts := []string{
 		"localhost",
+		"localhost.localdomain",
 		"127.0.0.1",
 		"::1",
 		"0.0.0.0",
@@ -492,6 +531,12 @@ func validateWebhookURLSSRF(urlStr string) error {
 		"[::1]",
 	}
 	if slices.Contains(blockedHosts, lowerHost) {
+		return errors.New("localhost addresses not allowed")
+	}
+
+	// SECURITY FIX #168: Check for short-form localhost variations
+	// 127.1, 127.0.1, 0177.0.0.1 (octal) can resolve to localhost on some systems
+	if strings.HasPrefix(lowerHost, "127.") || lowerHost == "127" {
 		return errors.New("localhost addresses not allowed")
 	}
 
@@ -505,13 +550,19 @@ func validateWebhookURLSSRF(urlStr string) error {
 		return errors.New("metadata service addresses not allowed")
 	}
 
-	// Parse as IP address
-	ip := net.ParseIP(host)
+	// SECURITY FIX #168: Parse with normalization for edge cases
+	ip := normalizeAndParseIP(host)
 	if ip != nil {
 		// Check for private/internal IP ranges
 		if ip.IsLoopback() {
 			return errors.New("loopback addresses not allowed")
 		}
+
+		// SECURITY FIX #168: Check for IPv6-mapped IPv4 loopback (::ffff:127.0.0.1)
+		if isIPv6MappedLoopback(ip) {
+			return errors.New("loopback addresses not allowed")
+		}
+
 		if ip.IsPrivate() {
 			return errors.New("private network addresses not allowed")
 		}
@@ -521,9 +572,17 @@ func validateWebhookURLSSRF(urlStr string) error {
 		if ip.IsUnspecified() {
 			return errors.New("unspecified addresses not allowed")
 		}
+
 		// Block 169.254.0.0/16 (link-local) explicitly
 		if ip4 := ip.To4(); ip4 != nil && ip4[0] == 169 && ip4[1] == 254 {
 			return errors.New("link-local addresses not allowed")
+		}
+
+		// SECURITY FIX #168: Additional check for IPv6-mapped private addresses
+		if ip4 := ip.To4(); ip4 != nil && len(ip) == net.IPv6len {
+			if ip4.IsPrivate() || ip4.IsLoopback() || ip4.IsLinkLocalUnicast() {
+				return errors.New("private/loopback addresses not allowed (IPv6-mapped)")
+			}
 		}
 	}
 
@@ -2326,7 +2385,8 @@ func (s *Server) writeUploadedFile(data []byte) (string, error) {
 	}
 
 	// Ensure directory permissions are correct even if it already exists
-	if err := os.Chmod(dir, 0o700); err != nil {
+	// G302: 0700 is appropriate for directories (owner rwx, no group/other access)
+	if err := os.Chmod(dir, 0o700); err != nil { //nolint:gosec // G302: directory needs execute permission
 		return "", fmt.Errorf("secure upload dir: %w", err)
 	}
 
