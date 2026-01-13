@@ -38,19 +38,19 @@ func startRuntimeServices(
 	interfaceName, configFile string,
 ) (*runtimeServices, error) {
 	configPath := configFile
-	if abs, err := filepath.Abs(configFile); err == nil {
+	abs, absErr := filepath.Abs(configFile)
+	if absErr == nil {
 		configPath = abs
 	}
 
-	rs := &runtimeServices{
-		stack:         stack,
-		engine:        engine,
-		startTime:     time.Now(),
-		interfaceName: interfaceName,
-		configName:    filepath.Base(configPath),
-		configPath:    configPath,
-		deviceCount:   len(cfg.Devices),
-	}
+	rs := new(runtimeServices)
+	rs.stack = stack
+	rs.engine = engine
+	rs.startTime = time.Now()
+	rs.interfaceName = interfaceName
+	rs.configName = filepath.Base(configPath)
+	rs.configPath = configPath
+	rs.deviceCount = len(cfg.Devices)
 
 	var err error
 	storagePath := servicesOpts.storagePath
@@ -108,7 +108,8 @@ func startRuntimeServices(
 		}
 
 		rs.apiServer = api.NewServer(*cfgCopy)
-		if startErr := rs.apiServer.Start(); startErr != nil {
+		startErr := rs.apiServer.Start()
+		if startErr != nil {
 			if rs.storage != nil {
 				rs.storage.Close() // #nosec G104 -- error logged or non-critical
 			}
@@ -137,8 +138,9 @@ func (rs *runtimeServices) Stop() {
 
 	if rs.replay != nil {
 		// SECURITY FIX #106: Log errors during shutdown instead of silently discarding
-		if _, err := rs.replay.Stop(); err != nil {
-			logger.Error("Error stopping replay during shutdown", "error", err)
+		_, stopErr := rs.replay.Stop()
+		if stopErr != nil {
+			logger.Error("Error stopping replay during shutdown", "error", stopErr)
 		}
 	}
 
@@ -154,16 +156,15 @@ func (rs *runtimeServices) Stop() {
 
 	if rs.storage != nil {
 		stats := rs.stack.GetStats()
-		record := storage.RunRecord{
-			StartedAt:       rs.startTime,
-			Duration:        time.Since(rs.startTime),
-			Interface:       rs.interfaceName,
-			ConfigName:      rs.configName,
-			DeviceCount:     rs.deviceCount,
-			PacketsSent:     stats.PacketsSent,
-			PacketsReceived: stats.PacketsReceived,
-			Errors:          stats.Errors,
-		}
+		var record storage.RunRecord
+		record.StartedAt = rs.startTime
+		record.Duration = time.Since(rs.startTime)
+		record.Interface = rs.interfaceName
+		record.ConfigName = rs.configName
+		record.DeviceCount = rs.deviceCount
+		record.PacketsSent = stats.PacketsSent
+		record.PacketsReceived = stats.PacketsReceived
+		record.Errors = stats.Errors
 		// SECURITY FIX #106: Log storage errors during shutdown
 		err := rs.storage.AddRun(record)
 		if err != nil {
@@ -183,10 +184,10 @@ type replayController struct {
 }
 
 func newReplayController(engine *capture.Engine, debugLevel int) *replayController {
-	return &replayController{
-		engine:     engine,
-		debugLevel: debugLevel,
-	}
+	controller := new(replayController)
+	controller.engine = engine
+	controller.debugLevel = debugLevel
+	return controller
 }
 
 func (rc *replayController) Status() api.ReplayState {

@@ -14,7 +14,7 @@ type serviceOptions struct {
 	alertWebhook          string
 }
 
-var servicesOpts = serviceOptions{}
+var servicesOpts serviceOptions
 
 func defaultStoragePath() string {
 	home, err := os.UserHomeDir()

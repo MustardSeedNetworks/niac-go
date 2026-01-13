@@ -9,38 +9,29 @@ import (
 	"github.com/krisarmstrong/niac-go/pkg/ipc"
 )
 
+func makeLogEntry(
+	ts time.Time,
+	level ipc.LogLevel,
+	message, source, device, protocol string,
+) ipc.LogEntry {
+	var entry ipc.LogEntry
+	entry.Timestamp = ts
+	entry.Level = level
+	entry.Message = message
+	entry.Source = source
+	entry.Device = device
+	entry.Protocol = protocol
+	return entry
+}
+
 func TestFilterLogs(t *testing.T) {
 	now := time.Now()
 
 	logs := []ipc.LogEntry{
-		{
-			Timestamp: now,
-			Level:     ipc.LogLevelInfo,
-			Message:   "Device router-1 active",
-			Source:    "device",
-			Device:    "router-1",
-		},
-		{
-			Timestamp: now,
-			Level:     ipc.LogLevelWarn,
-			Message:   "Error injection started",
-			Source:    "error-injection",
-			Device:    "switch-1",
-		},
-		{
-			Timestamp: now,
-			Level:     ipc.LogLevelInfo,
-			Message:   "LLDP packet received",
-			Source:    "system",
-			Protocol:  "LLDP",
-		},
-		{
-			Timestamp: now,
-			Level:     ipc.LogLevelError,
-			Message:   "Connection failed to router-2",
-			Source:    "system",
-			Device:    "router-2",
-		},
+		makeLogEntry(now, ipc.LogLevelInfo, "Device router-1 active", "device", "router-1", ""),
+		makeLogEntry(now, ipc.LogLevelWarn, "Error injection started", "error-injection", "switch-1", ""),
+		makeLogEntry(now, ipc.LogLevelInfo, "LLDP packet received", "system", "", "LLDP"),
+		makeLogEntry(now, ipc.LogLevelError, "Connection failed to router-2", "system", "router-2", ""),
 	}
 
 	tests := []struct {
@@ -131,16 +122,14 @@ func TestLogLevelValidation(t *testing.T) {
 	}
 }
 
-//nolint:govet // unusedwrite: false positive, fields are read in assertions
 func TestOutputLogJSON(t *testing.T) {
-	log := ipc.LogEntry{
-		Timestamp: time.Date(2024, 1, 15, 10, 30, 0, 0, time.UTC),
-		Level:     ipc.LogLevelInfo,
-		Message:   "Test message",
-		Source:    "test-source",
-		Device:    "test-device",
-		Protocol:  "TEST",
-	}
+	var log ipc.LogEntry
+	log.Timestamp = time.Date(2024, 1, 15, 10, 30, 0, 0, time.UTC)
+	log.Level = ipc.LogLevelInfo
+	log.Message = "Test message"
+	log.Source = "test-source"
+	log.Device = "test-device"
+	log.Protocol = "TEST"
 
 	// Capture stdout
 	var buf bytes.Buffer
@@ -170,11 +159,10 @@ func TestLogEntryFields(t *testing.T) {
 	now := time.Now()
 
 	// Test minimal log entry
-	minimalLog := ipc.LogEntry{
-		Timestamp: now,
-		Level:     ipc.LogLevelDebug,
-		Message:   "Debug message",
-	}
+	var minimalLog ipc.LogEntry
+	minimalLog.Timestamp = now
+	minimalLog.Level = ipc.LogLevelDebug
+	minimalLog.Message = "Debug message"
 
 	if minimalLog.Timestamp != now {
 		t.Error("Timestamp not set correctly")
@@ -196,15 +184,13 @@ func TestLogEntryFields(t *testing.T) {
 	}
 
 	// Test full log entry
-	//nolint:govet // unusedwrite: false positive, fields are read in assertions
-	fullLog := ipc.LogEntry{
-		Timestamp: now,
-		Level:     ipc.LogLevelError,
-		Message:   "Full error message",
-		Source:    "error-injection",
-		Device:    "router-1",
-		Protocol:  "SNMP",
-	}
+	var fullLog ipc.LogEntry
+	fullLog.Timestamp = now
+	fullLog.Level = ipc.LogLevelError
+	fullLog.Message = "Full error message"
+	fullLog.Source = "error-injection"
+	fullLog.Device = "router-1"
+	fullLog.Protocol = "SNMP"
 
 	if fullLog.Source != "error-injection" {
 		t.Error("Source not set correctly for full log")
@@ -325,24 +311,9 @@ func TestLogFilterCaseSensitivity(t *testing.T) {
 	now := time.Now()
 
 	logs := []ipc.LogEntry{
-		{
-			Timestamp: now,
-			Level:     ipc.LogLevelInfo,
-			Message:   "UPPERCASE MESSAGE",
-			Source:    "Test",
-		},
-		{
-			Timestamp: now,
-			Level:     ipc.LogLevelInfo,
-			Message:   "lowercase message",
-			Source:    "test",
-		},
-		{
-			Timestamp: now,
-			Level:     ipc.LogLevelInfo,
-			Message:   "MixedCase Message",
-			Source:    "TeSt",
-		},
+		makeLogEntry(now, ipc.LogLevelInfo, "UPPERCASE MESSAGE", "Test", "", ""),
+		makeLogEntry(now, ipc.LogLevelInfo, "lowercase message", "test", "", ""),
+		makeLogEntry(now, ipc.LogLevelInfo, "MixedCase Message", "TeSt", "", ""),
 	}
 
 	// Filter should be case-insensitive

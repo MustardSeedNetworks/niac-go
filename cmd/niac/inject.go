@@ -330,10 +330,10 @@ func sendInjectionCommand(device, errorType string, value int) (*InjectionRespon
 		return nil, fmt.Errorf("failed to send injection command: %w", err)
 	}
 
-	return &InjectionResponse{
-		Success: true,
-		Message: fmt.Sprintf("Injected %s at %d%% on %s", errorType, value, device),
-	}, nil
+	resp := new(InjectionResponse)
+	resp.Success = true
+	resp.Message = fmt.Sprintf("Injected %s at %d%% on %s", errorType, value, device)
+	return resp, nil
 }
 
 // fetchInjections fetches the list of active injections via IPC.
@@ -357,10 +357,10 @@ func fetchInjections() (*InjectionResponse, error) {
 		}
 	}
 
-	return &InjectionResponse{
-		Success:    true,
-		Injections: result,
-	}, nil
+	resp := new(InjectionResponse)
+	resp.Success = true
+	resp.Injections = result
+	return resp, nil
 }
 
 // clearAllInjections clears all injections on all devices via IPC.
@@ -373,10 +373,10 @@ func clearAllInjections() (*InjectionResponse, error) {
 		return nil, fmt.Errorf("failed to clear all injections: %w", err)
 	}
 
-	return &InjectionResponse{
-		Success: true,
-		Message: "All injections cleared",
-	}, nil
+	resp := new(InjectionResponse)
+	resp.Success = true
+	resp.Message = "All injections cleared"
+	return resp, nil
 }
 
 // clearDeviceInjections clears all injections on a specific device via IPC.
@@ -388,8 +388,8 @@ func clearDeviceInjections(device string) (*InjectionResponse, error) {
 		return nil, fmt.Errorf("failed to clear device injections: %w", err)
 	}
 
-	return &InjectionResponse{
-		Success: true,
-		Message: fmt.Sprintf("Cleared all injections on %s", device),
-	}, nil
+	resp := new(InjectionResponse)
+	resp.Success = true
+	resp.Message = fmt.Sprintf("Cleared all injections on %s", device)
+	return resp, nil
 }

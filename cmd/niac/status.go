@@ -80,14 +80,15 @@ func runStatus(cmd *cobra.Command, args []string) {
 				"error":   "socket not found",
 			})
 		} else {
-			fmt.Println("Status: NOT RUNNING")
-			fmt.Printf("Socket not found: %s\n", socketPath)
+			fmt.Fprintln(os.Stdout, "Status: NOT RUNNING")
+			fmt.Fprintf(os.Stdout, "Socket not found: %s\n", socketPath)
 		}
 		os.Exit(1)
 	}
 
 	// Connect to socket
-	dialer := net.Dialer{Timeout: 5 * time.Second}
+	var dialer net.Dialer
+	dialer.Timeout = 5 * time.Second
 	conn, err := dialer.DialContext(context.Background(), "unix", socketPath)
 	if err != nil {
 		if statusOptions.jsonOutput {
@@ -96,8 +97,8 @@ func runStatus(cmd *cobra.Command, args []string) {
 				"error":   fmt.Sprintf("connection failed: %v", err),
 			})
 		} else {
-			fmt.Println("Status: NOT RUNNING")
-			fmt.Printf("Failed to connect: %v\n", err)
+			fmt.Fprintln(os.Stdout, "Status: NOT RUNNING")
+			fmt.Fprintf(os.Stdout, "Failed to connect: %v\n", err)
 		}
 		os.Exit(1)
 	}
@@ -109,9 +110,8 @@ func runStatus(cmd *cobra.Command, args []string) {
 	_ = conn.SetDeadline(time.Now().Add(5 * time.Second))
 
 	// Send status request
-	req := ipc.Request{
-		Command: ipc.CommandStatus,
-	}
+	var req ipc.Request
+	req.Command = ipc.CommandStatus
 
 	encoder := json.NewEncoder(conn)
 	if encodeErr := encoder.Encode(&req); encodeErr != nil {
@@ -231,14 +231,14 @@ func printHumanStatus(status *ipc.StatusData) {
 		statusStr = "RUNNING"
 	}
 
-	fmt.Printf("Status: %s\n", statusStr)
-	fmt.Printf("Interface: %s\n", status.Interface)
-	fmt.Printf("Config: %s\n", status.ConfigPath)
-	fmt.Printf("Devices: %d\n", status.DeviceCount)
-	fmt.Printf("Uptime: %s\n", formatDurationFromSeconds(status.Uptime))
-	fmt.Printf("Packets RX: %s\n", formatStatusNumber(status.PacketsRX))
-	fmt.Printf("Packets TX: %s\n", formatStatusNumber(status.PacketsTX))
-	fmt.Printf("Errors Active: %d\n", status.ErrorsActive)
+	fmt.Fprintf(os.Stdout, "Status: %s\n", statusStr)
+	fmt.Fprintf(os.Stdout, "Interface: %s\n", status.Interface)
+	fmt.Fprintf(os.Stdout, "Config: %s\n", status.ConfigPath)
+	fmt.Fprintf(os.Stdout, "Devices: %d\n", status.DeviceCount)
+	fmt.Fprintf(os.Stdout, "Uptime: %s\n", formatDurationFromSeconds(status.Uptime))
+	fmt.Fprintf(os.Stdout, "Packets RX: %s\n", formatStatusNumber(status.PacketsRX))
+	fmt.Fprintf(os.Stdout, "Packets TX: %s\n", formatStatusNumber(status.PacketsTX))
+	fmt.Fprintf(os.Stdout, "Errors Active: %d\n", status.ErrorsActive)
 }
 
 // formatDurationFromSeconds formats a duration in seconds as "2h 15m 43s".

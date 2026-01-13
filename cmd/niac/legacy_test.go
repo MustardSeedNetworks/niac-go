@@ -8,12 +8,15 @@ import (
 	"github.com/krisarmstrong/niac-go/pkg/logging"
 )
 
+func newLegacyFlags() *legacyFlags {
+	return new(legacyFlags)
+}
+
 // TestProcessFlags_Verbose tests verbose flag override.
 func TestProcessFlags_Verbose(t *testing.T) {
-	flags := &legacyFlags{
-		debugLevel: 1,
-		verbose:    true,
-	}
+	flags := newLegacyFlags()
+	flags.debugLevel = 1
+	flags.verbose = true
 
 	processFlags(flags)
 
@@ -24,10 +27,9 @@ func TestProcessFlags_Verbose(t *testing.T) {
 
 // TestProcessFlags_Quiet tests quiet flag override.
 func TestProcessFlags_Quiet(t *testing.T) {
-	flags := &legacyFlags{
-		debugLevel: 2,
-		quiet:      true,
-	}
+	flags := newLegacyFlags()
+	flags.debugLevel = 2
+	flags.quiet = true
 
 	processFlags(flags)
 
@@ -38,11 +40,10 @@ func TestProcessFlags_Quiet(t *testing.T) {
 
 // TestProcessFlags_VerboseOverridesQuiet tests verbose takes precedence.
 func TestProcessFlags_VerboseOverridesQuiet(t *testing.T) {
-	flags := &legacyFlags{
-		debugLevel: 1,
-		verbose:    true,
-		quiet:      true,
-	}
+	flags := newLegacyFlags()
+	flags.debugLevel = 1
+	flags.verbose = true
+	flags.quiet = true
 
 	processFlags(flags)
 
@@ -57,11 +58,10 @@ func TestProcessFlags_VerboseOverridesQuiet(t *testing.T) {
 
 // TestProcessFlags_NoOverride tests no override when flags not set.
 func TestProcessFlags_NoOverride(t *testing.T) {
-	flags := &legacyFlags{
-		debugLevel: 2,
-		verbose:    false,
-		quiet:      false,
-	}
+	flags := newLegacyFlags()
+	flags.debugLevel = 2
+	flags.verbose = false
+	flags.quiet = false
 
 	processFlags(flags)
 
@@ -134,28 +134,27 @@ func TestValidateLegacyArguments_ExtraArgs(t *testing.T) {
 
 // TestSetupDebugConfig_GlobalLevel tests debug config with global level only.
 func TestSetupDebugConfig_GlobalLevel(t *testing.T) {
-	flags := &legacyFlags{
-		debugLevel:   2,
-		debugARP:     -1,
-		debugIP:      -1,
-		debugICMP:    -1,
-		debugIPv6:    -1,
-		debugICMPv6:  -1,
-		debugUDP:     -1,
-		debugTCP:     -1,
-		debugDNS:     -1,
-		debugDHCP:    -1,
-		debugDHCPv6:  -1,
-		debugHTTP:    -1,
-		debugFTP:     -1,
-		debugNetBIOS: -1,
-		debugSTP:     -1,
-		debugLLDP:    -1,
-		debugCDP:     -1,
-		debugEDP:     -1,
-		debugFDP:     -1,
-		debugSNMP:    -1,
-	}
+	flags := newLegacyFlags()
+	flags.debugLevel = 2
+	flags.debugARP = -1
+	flags.debugIP = -1
+	flags.debugICMP = -1
+	flags.debugIPv6 = -1
+	flags.debugICMPv6 = -1
+	flags.debugUDP = -1
+	flags.debugTCP = -1
+	flags.debugDNS = -1
+	flags.debugDHCP = -1
+	flags.debugDHCPv6 = -1
+	flags.debugHTTP = -1
+	flags.debugFTP = -1
+	flags.debugNetBIOS = -1
+	flags.debugSTP = -1
+	flags.debugLLDP = -1
+	flags.debugCDP = -1
+	flags.debugEDP = -1
+	flags.debugFDP = -1
+	flags.debugSNMP = -1
 
 	debugConfig := setupDebugConfig(flags)
 
@@ -171,28 +170,27 @@ func TestSetupDebugConfig_GlobalLevel(t *testing.T) {
 
 // TestSetupDebugConfig_PerProtocol tests per-protocol debug levels.
 func TestSetupDebugConfig_PerProtocol(t *testing.T) {
-	flags := &legacyFlags{
-		debugLevel:   1,
-		debugARP:     3,
-		debugIP:      2,
-		debugICMP:    -1, // Should use global
-		debugIPv6:    0,
-		debugICMPv6:  -1,
-		debugUDP:     -1,
-		debugTCP:     -1,
-		debugDNS:     -1,
-		debugDHCP:    3,
-		debugDHCPv6:  -1,
-		debugHTTP:    -1,
-		debugFTP:     -1,
-		debugNetBIOS: -1,
-		debugSTP:     -1,
-		debugLLDP:    -1,
-		debugCDP:     -1,
-		debugEDP:     -1,
-		debugFDP:     -1,
-		debugSNMP:    2,
-	}
+	flags := newLegacyFlags()
+	flags.debugLevel = 1
+	flags.debugARP = 3
+	flags.debugIP = 2
+	flags.debugICMP = -1 // Should use global
+	flags.debugIPv6 = 0
+	flags.debugICMPv6 = -1
+	flags.debugUDP = -1
+	flags.debugTCP = -1
+	flags.debugDNS = -1
+	flags.debugDHCP = 3
+	flags.debugDHCPv6 = -1
+	flags.debugHTTP = -1
+	flags.debugFTP = -1
+	flags.debugNetBIOS = -1
+	flags.debugSTP = -1
+	flags.debugLLDP = -1
+	flags.debugCDP = -1
+	flags.debugEDP = -1
+	flags.debugFDP = -1
+	flags.debugSNMP = 2
 
 	debugConfig := setupDebugConfig(flags)
 
@@ -225,28 +223,27 @@ func TestSetupDebugConfig_PerProtocol(t *testing.T) {
 
 // TestSetupDebugConfig_AllProtocols tests all protocol debug levels can be set.
 func TestSetupDebugConfig_AllProtocols(t *testing.T) {
-	flags := &legacyFlags{
-		debugLevel:   1,
-		debugARP:     0,
-		debugIP:      1,
-		debugICMP:    2,
-		debugIPv6:    3,
-		debugICMPv6:  0,
-		debugUDP:     1,
-		debugTCP:     2,
-		debugDNS:     3,
-		debugDHCP:    0,
-		debugDHCPv6:  1,
-		debugHTTP:    2,
-		debugFTP:     3,
-		debugNetBIOS: 0,
-		debugSTP:     1,
-		debugLLDP:    2,
-		debugCDP:     3,
-		debugEDP:     0,
-		debugFDP:     1,
-		debugSNMP:    2,
-	}
+	flags := newLegacyFlags()
+	flags.debugLevel = 1
+	flags.debugARP = 0
+	flags.debugIP = 1
+	flags.debugICMP = 2
+	flags.debugIPv6 = 3
+	flags.debugICMPv6 = 0
+	flags.debugUDP = 1
+	flags.debugTCP = 2
+	flags.debugDNS = 3
+	flags.debugDHCP = 0
+	flags.debugDHCPv6 = 1
+	flags.debugHTTP = 2
+	flags.debugFTP = 3
+	flags.debugNetBIOS = 0
+	flags.debugSTP = 1
+	flags.debugLLDP = 2
+	flags.debugCDP = 3
+	flags.debugEDP = 0
+	flags.debugFDP = 1
+	flags.debugSNMP = 2
 
 	debugConfig := setupDebugConfig(flags)
 
@@ -287,9 +284,8 @@ func TestSetupDebugConfig_AllProtocols(t *testing.T) {
 
 // TestHandleInformationalFlags_Version tests version flag handling.
 func TestHandleInformationalFlags_Version(t *testing.T) {
-	flags := &legacyFlags{
-		showVersion: true,
-	}
+	flags := newLegacyFlags()
+	flags.showVersion = true
 
 	// Can't easily test the actual printVersion() call without capturing stdout,
 	// but we can test that it returns true (indicating program should exit)
@@ -302,9 +298,8 @@ func TestHandleInformationalFlags_Version(t *testing.T) {
 
 // TestHandleInformationalFlags_ListInterfaces tests list interfaces flag.
 func TestHandleInformationalFlags_ListInterfaces(t *testing.T) {
-	flags := &legacyFlags{
-		listInterfaces: true,
-	}
+	flags := newLegacyFlags()
+	flags.listInterfaces = true
 
 	handled := handleInformationalFlags(flags, []string{})
 
@@ -323,11 +318,10 @@ func TestHandleInformationalFlags_ListDevices_NoConfig(t *testing.T) {
 
 // TestHandleInformationalFlags_NoFlags tests no informational flags.
 func TestHandleInformationalFlags_NoFlags(t *testing.T) {
-	flags := &legacyFlags{
-		showVersion:    false,
-		listInterfaces: false,
-		listDevices:    false,
-	}
+	flags := newLegacyFlags()
+	flags.showVersion = false
+	flags.listInterfaces = false
+	flags.listDevices = false
 
 	handled := handleInformationalFlags(flags, []string{"eth0", "config.yaml"})
 
@@ -338,15 +332,9 @@ func TestHandleInformationalFlags_NoFlags(t *testing.T) {
 
 // TestDefineLegacyFlags tests that all flags are defined.
 func TestDefineLegacyFlags(t *testing.T) {
-	// Reset flag.CommandLine to avoid conflicts
-	oldCommandLine := flag.CommandLine
-	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
-	defer func() {
-		flag.CommandLine = oldCommandLine
-	}()
-
-	flags := &legacyFlags{}
-	defineLegacyFlags(flags)
+	flagSet := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+	flags := newLegacyFlags()
+	defineLegacyFlags(flagSet, flags)
 
 	// Test that some key flags can be looked up
 	flagTests := []string{
@@ -380,7 +368,7 @@ func TestDefineLegacyFlags(t *testing.T) {
 
 	for _, flagName := range flagTests {
 		t.Run(flagName, func(t *testing.T) {
-			f := flag.CommandLine.Lookup(flagName)
+			f := flagSet.Lookup(flagName)
 			if f == nil {
 				t.Errorf("Flag '%s' not defined", flagName)
 			}
@@ -389,10 +377,8 @@ func TestDefineLegacyFlags(t *testing.T) {
 }
 
 // TestLegacyFlags_AllFieldsPresent tests that legacyFlags struct has all expected fields.
-//
-//nolint:govet // unusedwrite: intentional writes to verify struct field existence
 func TestLegacyFlags_AllFieldsPresent(t *testing.T) {
-	flags := &legacyFlags{}
+	flags := newLegacyFlags()
 	_ = flags // Use blank identifier to avoid unused variable error
 
 	// Set all fields to ensure they exist

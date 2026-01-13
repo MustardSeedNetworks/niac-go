@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/cobra/doc"
@@ -26,13 +27,14 @@ func init() {
 	rootCmd.AddCommand(manCmd)
 }
 
-func runMan(cmd *cobra.Command, args []string) {
-	header := &doc.GenManHeader{
-		Title:   "NIAC",
-		Section: "1",
-		Source:  fmt.Sprintf("NIAC %s", version),
-		Manual:  "NIAC Manual",
-	}
+func runMan(_ *cobra.Command, _ []string) {
+	header := new(doc.GenManHeader)
+	header.Title = "NIAC"
+	header.Section = "1"
+	header.Source = fmt.Sprintf("NIAC %s", version)
+	header.Manual = "NIAC Manual"
+	now := time.Now()
+	header.Date = &now
 
 	manDir := "docs/man"
 	err := os.MkdirAll(manDir, 0o750)
@@ -47,8 +49,8 @@ func runMan(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	fmt.Printf("Man pages generated in %s/\n", manDir)
-	fmt.Println("\nTo install:")
-	fmt.Println("  sudo cp docs/man/* /usr/local/share/man/man1/")
-	fmt.Println("  sudo mandb")
+	fmt.Fprintf(os.Stdout, "Man pages generated in %s/\n", manDir)
+	fmt.Fprintln(os.Stdout, "\nTo install:")
+	fmt.Fprintln(os.Stdout, "  sudo cp docs/man/* /usr/local/share/man/man1/")
+	fmt.Fprintln(os.Stdout, "  sudo mandb")
 }

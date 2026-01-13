@@ -13,9 +13,10 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/spf13/cobra"
+
 	"github.com/krisarmstrong/niac-go/pkg/ipc"
 	"github.com/krisarmstrong/niac-go/pkg/logging"
-	"github.com/spf13/cobra"
 )
 
 // OutputFormat represents the output format type for monitor command.
@@ -97,7 +98,7 @@ func init() {
 		"IPC socket path (default: "+ipc.DefaultSocketPath()+")")
 }
 
-func runMonitor(cmd *cobra.Command, args []string) error {
+func runMonitor(_ *cobra.Command, _ []string) error {
 	// Parse interval
 	interval, err := time.ParseDuration(monitorOpts.interval)
 	if err != nil {
@@ -179,16 +180,16 @@ func runTableMonitor(ctx context.Context, client *ipc.Client, interval time.Dura
 			fmt.Println("\nMonitoring stopped.")
 			return nil
 		case <-ticker.C:
-			stats, err := fetchStats(client, prevStats, interval)
-			if err != nil {
+			latestStats, fetchErr := fetchStats(client, prevStats, interval)
+			if fetchErr != nil {
 				// Connection lost, but don't exit immediately
-				fmt.Printf("\r[%s] Connection lost: %v\n", time.Now().Format("15:04:05"), err)
+				fmt.Printf("\r[%s] Connection lost: %v\n", time.Now().Format("15:04:05"), fetchErr)
 				continue
 			}
 			clearScreen()
 			printTableHeader()
-			printTableRow(stats)
-			prevStats = stats
+			printTableRow(latestStats)
+			prevStats = latestStats
 		}
 	}
 }
@@ -212,19 +213,19 @@ func runJSONMonitor(ctx context.Context, client *ipc.Client, interval time.Durat
 		case <-ctx.Done():
 			return nil
 		case <-ticker.C:
-			stats, err := fetchStats(client, prevStats, interval)
-			if err != nil {
+			latestStats, fetchErr := fetchStats(client, prevStats, interval)
+			if fetchErr != nil {
 				// Output error as JSON
 				errObj := map[string]any{
-					"error": err.Error(),
+					"error": fetchErr.Error(),
 					"time":  time.Now().Format(time.RFC3339),
 				}
 				jsonBytes, _ := json.Marshal(errObj)
 				fmt.Println(string(jsonBytes))
 				continue
 			}
-			outputMonitorJSON(stats)
-			prevStats = stats
+			outputMonitorJSON(latestStats)
+			prevStats = latestStats
 		}
 	}
 }
@@ -270,13 +271,13 @@ func runCSVMonitor(ctx context.Context, client *ipc.Client, interval time.Durati
 		case <-ctx.Done():
 			return nil
 		case <-ticker.C:
-			stats, err := fetchStats(client, prevStats, interval)
-			if err != nil {
+			latestStats, fetchErr := fetchStats(client, prevStats, interval)
+			if fetchErr != nil {
 				// Skip this interval on error
 				continue
 			}
-			outputCSVRow(writer, stats)
-			prevStats = stats
+			outputCSVRow(writer, latestStats)
+			prevStats = latestStats
 		}
 	}
 }
@@ -291,16 +292,15 @@ func fetchStats(client *ipc.Client, prev *monitorStats, interval time.Duration) 
 	// Safe conversion: ErrorsActive is an int from IPC status, bounded by protocol
 	var errorsActive uint64
 	if status.ErrorsActive >= 0 {
-		errorsActive = uint64(status.ErrorsActive) //nolint:gosec // G115: bounded by IPC protocol
+		errorsActive = uint64(status.ErrorsActive)
 	}
 
-	stats := &monitorStats{
-		Time:      time.Now(),
-		PacketsRX: status.PacketsRX,
-		PacketsTX: status.PacketsTX,
-		Errors:    errorsActive,
-		Uptime:    status.Uptime,
-	}
+	stats := new(monitorStats)
+	stats.Time = time.Now()
+	stats.PacketsRX = status.PacketsRX
+	stats.PacketsTX = status.PacketsTX
+	stats.Errors = errorsActive
+	stats.Uptime = status.Uptime
 
 	// Note: The IPC StatusData currently only has PacketsRX, PacketsTX, ErrorsActive
 	// Protocol-specific stats (ARP, ICMP, DNS, etc.) would need to be added to the IPC protocol
@@ -320,23 +320,23 @@ func fetchStats(client *ipc.Client, prev *monitorStats, interval time.Duration) 
 
 // clearScreen clears the terminal screen and moves cursor to top-left.
 func clearScreen() {
-	fmt.Print("\033[2J\033[H")
+	fmt.Fprint(os.Stdout, "\033[2J\033[H")
 }
 
 // printTableHeader prints the table header.
 func printTableHeader() {
-	fmt.Println("NIAC Monitor - Press Ctrl+C to stop")
-	fmt.Println(strings.Repeat("-", 80))
-	fmt.Printf("%-10s | %10s | %10s | %8s | %8s | %8s | %8s\n",
+	fmt.Fprintln(os.Stdout, "NIAC Monitor - Press Ctrl+C to stop")
+	fmt.Fprintln(os.Stdout, strings.Repeat("-", 80))
+	fmt.Fprintf(os.Stdout, "%-10s | %10s | %10s | %8s | %8s | %8s | %8s\n",
 		"TIME", "RX PKT", "TX PKT", "RX/s", "TX/s", "UPTIME", "ERRORS")
-	fmt.Println(strings.Repeat("-", 80))
+	fmt.Fprintln(os.Stdout, strings.Repeat("-", 80))
 }
 
 // printTableRow prints a single statistics row.
 func printTableRow(stats *monitorStats) {
 	uptime := formatMonitorDuration(time.Duration(stats.Uptime) * time.Second)
 
-	fmt.Printf("%-10s | %10s | %10s | %8.1f | %8.1f | %8s | %8d\n",
+	fmt.Fprintf(os.Stdout, "%-10s | %10s | %10s | %8.1f | %8.1f | %8s | %8d\n",
 		stats.Time.Format("15:04:05"),
 		formatMonitorNumber(stats.PacketsRX),
 		formatMonitorNumber(stats.PacketsTX),
@@ -354,7 +354,7 @@ func outputMonitorJSON(stats *monitorStats) {
 		fmt.Fprintf(os.Stderr, "JSON encoding error: %v\n", err)
 		return
 	}
-	fmt.Println(string(jsonBytes))
+	fmt.Fprintln(os.Stdout, string(jsonBytes))
 }
 
 // outputCSVRow writes a single CSV row.
@@ -400,9 +400,9 @@ func formatMonitorNumber(n uint64) string {
 func formatMonitorDuration(d time.Duration) string {
 	d = d.Round(time.Second)
 	h := d / time.Hour
-	d -= h * time.Hour
+	d %= time.Hour
 	m := d / time.Minute
-	d -= m * time.Minute
+	d %= time.Minute
 	s := d / time.Second
 
 	if h > 0 {

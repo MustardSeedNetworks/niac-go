@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/krisarmstrong/niac-go/pkg/config"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v3"
+
+	"github.com/krisarmstrong/niac-go/pkg/config"
 )
 
 var configCmd = &cobra.Command{
@@ -95,7 +95,7 @@ func init() {
 	configCmd.AddCommand(configMergeCmd)
 }
 
-func runConfigExport(cmd *cobra.Command, args []string) {
+func runConfigExport(_ *cobra.Command, args []string) {
 	inputFile := args[0]
 	outputFile := args[1]
 
@@ -122,15 +122,15 @@ func runConfigExport(cmd *cobra.Command, args []string) {
 	}
 
 	// Marshal to YAML
-	data, err := yaml.Marshal(cfg)
+	data, err := config.MarshalConfigYAML(cfg)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error marshaling configuration: %v\n", err)
 		os.Exit(1)
 	}
 
 	// Write to file
-	if err := os.WriteFile(outputFile, data, 0o600); err != nil {
-		fmt.Fprintf(os.Stderr, "Error writing file: %v\n", err)
+	if writeErr := os.WriteFile(outputFile, data, 0o600); writeErr != nil {
+		fmt.Fprintf(os.Stderr, "Error writing file: %v\n", writeErr)
 		os.Exit(1)
 	}
 
@@ -138,7 +138,7 @@ func runConfigExport(cmd *cobra.Command, args []string) {
 	fmt.Printf("Devices: %d\n", len(cfg.Devices))
 }
 
-func runConfigDiff(cmd *cobra.Command, args []string) {
+func runConfigDiff(_ *cobra.Command, args []string) {
 	file1 := args[0]
 	file2 := args[1]
 
@@ -231,9 +231,8 @@ func runConfigMerge(cmd *cobra.Command, args []string) {
 	}
 
 	// Build merged config
-	merged := &config.Config{
-		Devices: make([]config.Device, 0),
-	}
+	merged := new(config.Config)
+	merged.Devices = make([]config.Device, 0)
 
 	// Create map of overlay devices by name
 	overlayDevices := make(map[string]*config.Device)
@@ -259,15 +258,15 @@ func runConfigMerge(cmd *cobra.Command, args []string) {
 	}
 
 	// Marshal to YAML
-	data, err := yaml.Marshal(merged)
+	data, err := config.MarshalConfigYAML(merged)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error marshaling configuration: %v\n", err)
 		os.Exit(1)
 	}
 
 	// Write to file
-	if err := os.WriteFile(outputFile, data, 0o600); err != nil {
-		fmt.Fprintf(os.Stderr, "Error writing file: %v\n", err)
+	if writeErr := os.WriteFile(outputFile, data, 0o600); writeErr != nil {
+		fmt.Fprintf(os.Stderr, "Error writing file: %v\n", writeErr)
 		os.Exit(1)
 	}
 

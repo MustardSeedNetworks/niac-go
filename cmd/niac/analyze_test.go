@@ -122,40 +122,38 @@ func TestAnalyzeReadability(t *testing.T) {
 
 func TestWalkAnalysisStructs(t *testing.T) {
 	// Test that analysis structs can be created
-	analysis := WalkAnalysis{
-		Device: DeviceInfo{
-			SysName:     "test-switch",
-			SysDescr:    "Cisco IOS",
-			SysObjectID: ".1.3.6.1.4.1.9.1.1719",
-			SysContact:  "admin@test.com",
-			SysLocation: "DC-WEST",
-		},
-		Interfaces: []InterfaceInfo{
-			{
-				Index:       1,
-				Name:        "GigabitEthernet0/1",
-				Description: "Uplink",
-				Type:        "ethernetCsmacd",
-				Speed:       1000000000,
-				AdminStatus: "up",
-				OperStatus:  "up",
-			},
-		},
-		Neighbors: []NeighborInfo{
-			{
-				LocalInterface:  "GigabitEthernet0/1",
-				RemoteDevice:    "core-switch-01",
-				RemoteInterface: "GigabitEthernet1/1",
-				Protocol:        "lldp",
-			},
-		},
-		Statistics: AnalysisStats{
-			TotalInterfaces:    10,
-			PhysicalInterfaces: 8,
-			LogicalInterfaces:  2,
-			TotalNeighbors:     3,
-		},
-	}
+	var analysis WalkAnalysis
+	var device DeviceInfo
+	device.SysName = "test-switch"
+	device.SysDescr = "Cisco IOS"
+	device.SysObjectID = ".1.3.6.1.4.1.9.1.1719"
+	device.SysContact = "admin@test.com"
+	device.SysLocation = "DC-WEST"
+	analysis.Device = device
+
+	var iface InterfaceInfo
+	iface.Index = 1
+	iface.Name = "GigabitEthernet0/1"
+	iface.Description = "Uplink"
+	iface.Type = "ethernetCsmacd"
+	iface.Speed = 1000000000
+	iface.AdminStatus = "up"
+	iface.OperStatus = "up"
+	analysis.Interfaces = append(analysis.Interfaces, iface)
+
+	var neighbor NeighborInfo
+	neighbor.LocalInterface = "GigabitEthernet0/1"
+	neighbor.RemoteDevice = "core-switch-01"
+	neighbor.RemoteInterface = "GigabitEthernet1/1"
+	neighbor.Protocol = "lldp"
+	analysis.Neighbors = append(analysis.Neighbors, neighbor)
+
+	var stats AnalysisStats
+	stats.TotalInterfaces = 10
+	stats.PhysicalInterfaces = 8
+	stats.LogicalInterfaces = 2
+	stats.TotalNeighbors = 3
+	analysis.Statistics = stats
 
 	// Verify struct fields
 	if analysis.Device.SysName != "test-switch" {

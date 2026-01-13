@@ -234,33 +234,34 @@ func TestGenerateYAMLWithMultipleProtocols(t *testing.T) {
 
 // TestGenerateYAMLMultipleDevices tests YAML generation with multiple devices.
 func TestGenerateYAMLMultipleDevices(t *testing.T) {
-	cfg := &generatedConfig{
-		networkName: "multi-device",
-		subnet:      "192.168.1.0/24",
-		devices: []generatedDevice{
-			{
-				name:      "router-1",
-				devType:   "router",
-				ip:        "192.168.1.1",
-				mac:       "00:11:22:33:44:01",
-				protocols: map[string]protocolConfig{},
-			},
-			{
-				name:      "switch-1",
-				devType:   "switch",
-				ip:        "192.168.1.2",
-				mac:       "00:11:22:33:44:02",
-				protocols: map[string]protocolConfig{},
-			},
-			{
-				name:      "ap-1",
-				devType:   "access-point",
-				ip:        "192.168.1.3",
-				mac:       "00:11:22:33:44:03",
-				protocols: map[string]protocolConfig{},
-			},
-		},
-	}
+	cfg := new(generatedConfig)
+	cfg.networkName = "multi-device"
+	cfg.subnet = "192.168.1.0/24"
+	cfg.devices = make([]generatedDevice, 0, 3)
+
+	var router generatedDevice
+	router.name = "router-1"
+	router.devType = "router"
+	router.ip = "192.168.1.1"
+	router.mac = "00:11:22:33:44:01"
+	router.protocols = map[string]protocolConfig{}
+	cfg.devices = append(cfg.devices, router)
+
+	var sw generatedDevice
+	sw.name = "switch-1"
+	sw.devType = "switch"
+	sw.ip = "192.168.1.2"
+	sw.mac = "00:11:22:33:44:02"
+	sw.protocols = map[string]protocolConfig{}
+	cfg.devices = append(cfg.devices, sw)
+
+	var ap generatedDevice
+	ap.name = "ap-1"
+	ap.devType = "access-point"
+	ap.ip = "192.168.1.3"
+	ap.mac = "00:11:22:33:44:03"
+	ap.protocols = map[string]protocolConfig{}
+	cfg.devices = append(cfg.devices, ap)
 
 	yaml := generateYAML(cfg)
 

@@ -175,12 +175,10 @@ func runTopologyExport(cmd *cobra.Command, args []string) error {
 // exportTopologyJSON exports topology as formatted JSON.
 func exportTopologyJSON(topology *api.Topology) (string, error) {
 	// Create an extended structure with more details
-	export := TopologyExport{
-		Nodes:       make([]TopologyNodeExport, len(topology.Nodes)),
-		Links:       make([]TopologyLinkExport, len(topology.Links)),
-		Summary:     TopologySummary{},
-		GeneratedAt: "",
-	}
+	var export TopologyExport
+	export.Nodes = make([]TopologyNodeExport, len(topology.Nodes))
+	export.Links = make([]TopologyLinkExport, len(topology.Links))
+	export.GeneratedAt = ""
 
 	// Convert nodes
 	for i, node := range topology.Nodes {
@@ -210,12 +208,12 @@ func exportTopologyJSON(topology *api.Topology) (string, error) {
 	}
 
 	// Build summary
-	export.Summary = TopologySummary{
-		TotalNodes:    len(topology.Nodes),
-		TotalLinks:    len(topology.Links),
-		LinksByType:   linkTypeCount,
-		DevicesByType: countDevicesByType(topology.Nodes),
-	}
+	var summary TopologySummary
+	summary.TotalNodes = len(topology.Nodes)
+	summary.TotalLinks = len(topology.Links)
+	summary.LinksByType = linkTypeCount
+	summary.DevicesByType = countDevicesByType(topology.Nodes)
+	export.Summary = summary
 
 	data, err := json.MarshalIndent(export, "", "  ")
 	if err != nil {
@@ -227,12 +225,10 @@ func exportTopologyJSON(topology *api.Topology) (string, error) {
 // exportTopologyYAML exports topology as YAML.
 func exportTopologyYAML(topology *api.Topology) (string, error) {
 	// Create an extended structure with more details
-	export := TopologyExport{
-		Nodes:       make([]TopologyNodeExport, len(topology.Nodes)),
-		Links:       make([]TopologyLinkExport, len(topology.Links)),
-		Summary:     TopologySummary{},
-		GeneratedAt: "",
-	}
+	var export TopologyExport
+	export.Nodes = make([]TopologyNodeExport, len(topology.Nodes))
+	export.Links = make([]TopologyLinkExport, len(topology.Links))
+	export.GeneratedAt = ""
 
 	// Convert nodes
 	for i, node := range topology.Nodes {
@@ -262,12 +258,12 @@ func exportTopologyYAML(topology *api.Topology) (string, error) {
 	}
 
 	// Build summary
-	export.Summary = TopologySummary{
-		TotalNodes:    len(topology.Nodes),
-		TotalLinks:    len(topology.Links),
-		LinksByType:   linkTypeCount,
-		DevicesByType: countDevicesByType(topology.Nodes),
-	}
+	var summary TopologySummary
+	summary.TotalNodes = len(topology.Nodes)
+	summary.TotalLinks = len(topology.Links)
+	summary.LinksByType = linkTypeCount
+	summary.DevicesByType = countDevicesByType(topology.Nodes)
+	export.Summary = summary
 
 	data, err := yaml.Marshal(export)
 	if err != nil {

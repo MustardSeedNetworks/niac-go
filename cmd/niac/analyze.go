@@ -205,7 +205,7 @@ func parseWalkFile(filename string) (*WalkAnalysis, error) {
 		if matches := ifDescrRe.FindStringSubmatch(line); matches != nil {
 			interfaceCounter++
 			ifName := strings.TrimSpace(matches[1])
-			ifaceInfo := &InterfaceInfo{}
+			ifaceInfo := new(InterfaceInfo)
 			ifaceInfo.Index = interfaceCounter
 			ifaceInfo.Name = ifName
 			ifaceInfo.Type = getInterfaceTypeFromName(ifName)

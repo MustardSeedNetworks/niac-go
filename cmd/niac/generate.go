@@ -81,9 +81,8 @@ func runGenerate(cmd *cobra.Command, args []string) {
 	color.New(color.Bold, color.FgCyan).Println("Step 1: Network Information") // #nosec G104 -- cosmetic output
 	color.White("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
 
-	cfg := &generatedConfig{
-		devices: make([]generatedDevice, 0),
-	}
+	cfg := new(generatedConfig)
+	cfg.devices = make([]generatedDevice, 0)
 
 	// Network name
 	cfg.networkName = promptString(reader, color.CyanString("Network name: "), "simulation-network")
@@ -112,9 +111,8 @@ func runGenerate(cmd *cobra.Command, args []string) {
 			Printf("Device %d/%d:\n", i+1, deviceCount)
 		color.White("──────────────────────────────────────────────────────────────\n")
 
-		device := generatedDevice{
-			protocols: make(map[string]protocolConfig),
-		}
+		var device generatedDevice
+		device.protocols = make(map[string]protocolConfig)
 
 		// Device type
 		fmt.Println(color.CyanString("Device type:")) // #nosec G104 -- cosmetic output

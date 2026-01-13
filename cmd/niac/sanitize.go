@@ -107,39 +107,43 @@ func runSanitize(cmd *cobra.Command, args []string) error {
 
 	// Validate input paths (Fix #67 - Input validation)
 	if !batch {
-		if err := validateFilePath(args[0], false); err != nil {
-			return fmt.Errorf("invalid input file: %w", err)
+		pathErr := validateFilePath(args[0], false)
+		if pathErr != nil {
+			return fmt.Errorf("invalid input file: %w", pathErr)
 		}
-		if err := validateFilePath(args[1], true); err != nil {
-			return fmt.Errorf("invalid output file: %w", err)
+		pathErr = validateFilePath(args[1], true)
+		if pathErr != nil {
+			return fmt.Errorf("invalid output file: %w", pathErr)
 		}
 	} else {
 		inputDir, _ := cmd.Flags().GetString("input-dir")
 		outputDir, _ := cmd.Flags().GetString("output-dir")
-		if err := validateDirPath(inputDir, false); err != nil {
-			return fmt.Errorf("invalid input directory: %w", err)
+		dirErr := validateDirPath(inputDir, false)
+		if dirErr != nil {
+			return fmt.Errorf("invalid input directory: %w", dirErr)
 		}
-		if err := validateDirPath(outputDir, true); err != nil {
-			return fmt.Errorf("invalid output directory: %w", err)
+		dirErr = validateDirPath(outputDir, true)
+		if dirErr != nil {
+			return fmt.Errorf("invalid output directory: %w", dirErr)
 		}
 	}
 
 	// Validate mapping file path if provided
 	if mappingFile != "" {
-		err := validateFilePath(mappingFile, true)
-		if err != nil {
-			return fmt.Errorf("invalid mapping file path: %w", err)
+		pathErr := validateFilePath(mappingFile, true)
+		if pathErr != nil {
+			return fmt.Errorf("invalid mapping file path: %w", pathErr)
 		}
 	}
 
 	// Load or create mapping
-	mapping := &SanitizationMapping{
-		IPMappings: make(map[string]string),
-		Hostnames:  make(map[string]string),
-	}
+	mapping := new(SanitizationMapping)
+	mapping.IPMappings = make(map[string]string)
+	mapping.Hostnames = make(map[string]string)
 
 	if mappingFile != "" {
-		if loadErr := loadMapping(mappingFile, mapping); loadErr != nil && !os.IsNotExist(loadErr) {
+		loadErr := loadMapping(mappingFile, mapping)
+		if loadErr != nil && !os.IsNotExist(loadErr) {
 			fmt.Fprintf(os.Stderr, "⚠️  Warning: Could not load mapping file: %v\n", loadErr)
 		}
 	}
@@ -154,20 +158,22 @@ func runSanitize(cmd *cobra.Command, args []string) error {
 	inputFile := args[0]
 	outputFile := args[1]
 
-	if sanitizeErr := sanitizeFile(inputFile, outputFile, mapping, domain, location, contact, community); sanitizeErr != nil {
+	sanitizeErr := sanitizeFile(inputFile, outputFile, mapping, domain, location, contact, community)
+	if sanitizeErr != nil {
 		return fmt.Errorf("sanitization failed: %w", sanitizeErr)
 	}
 
 	// Save mapping if file specified
 	if mappingFile != "" {
-		if saveErr := saveMapping(mappingFile, mapping); saveErr != nil {
+		saveErr := saveMapping(mappingFile, mapping)
+		if saveErr != nil {
 			return fmt.Errorf("failed to save mapping: %w", saveErr)
 		}
 	}
 
-	fmt.Printf("✅ Sanitized %s → %s\n", inputFile, outputFile)
-	fmt.Printf("   IPs transformed: %d\n", mapping.Statistics.IPsTransformed)
-	fmt.Printf("   Hostnames transformed: %d\n", mapping.Statistics.HostnamesTransformed)
+	fmt.Fprintf(os.Stdout, "✅ Sanitized %s → %s\n", inputFile, outputFile)
+	fmt.Fprintf(os.Stdout, "   IPs transformed: %d\n", mapping.Statistics.IPsTransformed)
+	fmt.Fprintf(os.Stdout, "   Hostnames transformed: %d\n", mapping.Statistics.HostnamesTransformed)
 
 	return nil
 }
@@ -178,8 +184,9 @@ func sanitizeBatch(
 	domain, location, contact, community, mappingFile string,
 ) error {
 	// Create output directory
-	if err := os.MkdirAll(outputDir, 0o750); err != nil {
-		return fmt.Errorf("failed to create output directory: %w", err)
+	mkdirErr := os.MkdirAll(outputDir, 0o750)
+	if mkdirErr != nil {
+		return fmt.Errorf("failed to create output directory: %w", mkdirErr)
 	}
 
 	// Find all .walk files
@@ -192,15 +199,16 @@ func sanitizeBatch(
 		return fmt.Errorf("no .walk files found in %s", inputDir)
 	}
 
-	fmt.Printf("🔍 Found %d walk files\n", len(walkFiles))
+	fmt.Fprintf(os.Stdout, "🔍 Found %d walk files\n", len(walkFiles))
 
 	for i, inputFile := range walkFiles {
 		basename := filepath.Base(inputFile)
 		outputFile := filepath.Join(outputDir, basename)
 
-		fmt.Printf("[%d/%d] Sanitizing %s...\n", i+1, len(walkFiles), basename)
+		fmt.Fprintf(os.Stdout, "[%d/%d] Sanitizing %s...\n", i+1, len(walkFiles), basename)
 
-		if sanitizeErr := sanitizeFile(inputFile, outputFile, mapping, domain, location, contact, community); sanitizeErr != nil {
+		sanitizeErr := sanitizeFile(inputFile, outputFile, mapping, domain, location, contact, community)
+		if sanitizeErr != nil {
 			fmt.Fprintf(os.Stderr, "   ⚠️  Error: %v\n", sanitizeErr)
 			continue
 		}
@@ -210,16 +218,17 @@ func sanitizeBatch(
 
 	// Save mapping
 	if mappingFile != "" {
-		if saveErr := saveMapping(mappingFile, mapping); saveErr != nil {
+		saveErr := saveMapping(mappingFile, mapping)
+		if saveErr != nil {
 			return fmt.Errorf("failed to save mapping: %w", saveErr)
 		}
-		fmt.Printf("\n💾 Saved mapping to %s\n", mappingFile)
+		fmt.Fprintf(os.Stdout, "\n💾 Saved mapping to %s\n", mappingFile)
 	}
 
-	fmt.Printf("\n✅ Batch sanitization complete!\n")
-	fmt.Printf("   Files processed: %d\n", mapping.Statistics.FilesProcessed)
-	fmt.Printf("   IPs transformed: %d\n", mapping.Statistics.IPsTransformed)
-	fmt.Printf("   Hostnames transformed: %d\n", mapping.Statistics.HostnamesTransformed)
+	fmt.Fprintf(os.Stdout, "\n✅ Batch sanitization complete!\n")
+	fmt.Fprintf(os.Stdout, "   Files processed: %d\n", mapping.Statistics.FilesProcessed)
+	fmt.Fprintf(os.Stdout, "   IPs transformed: %d\n", mapping.Statistics.IPsTransformed)
+	fmt.Fprintf(os.Stdout, "   Hostnames transformed: %d\n", mapping.Statistics.HostnamesTransformed)
 
 	return nil
 }
@@ -271,31 +280,37 @@ func sanitizeFile(
 	for scanner.Scan() {
 		line := scanner.Text()
 		sanitized := sanitizeLine(line, mapping, domain, location, contact, community)
-		if _, writeErr := fmt.Fprintln(writer, sanitized); writeErr != nil {
+		_, writeErr := fmt.Fprintln(writer, sanitized)
+		if writeErr != nil {
 			return fmt.Errorf("failed to write line: %w", writeErr)
 		}
 	}
 
-	if scanErr := scanner.Err(); scanErr != nil {
+	scanErr := scanner.Err()
+	if scanErr != nil {
 		return fmt.Errorf("scanner error: %w", scanErr)
 	}
 
-	if flushErr := writer.Flush(); flushErr != nil {
+	flushErr := writer.Flush()
+	if flushErr != nil {
 		return fmt.Errorf("failed to flush writer: %w", flushErr)
 	}
 
 	// Sync to disk before closing
-	if syncErr := output.Sync(); syncErr != nil {
+	syncErr := output.Sync()
+	if syncErr != nil {
 		return fmt.Errorf("failed to sync output: %w", syncErr)
 	}
 
 	// Close output file explicitly before rename
-	if closeErr := output.Close(); closeErr != nil {
+	closeErr := output.Close()
+	if closeErr != nil {
 		return fmt.Errorf("failed to close output file: %w", closeErr)
 	}
 
 	// Fix #68: Atomic rename to prevent TOCTOU
-	if renameErr := os.Rename(tempFile, outputFile); renameErr != nil {
+	renameErr := os.Rename(tempFile, outputFile)
+	if renameErr != nil {
 		return fmt.Errorf("failed to rename temp file: %w", renameErr)
 	}
 
@@ -532,7 +547,8 @@ func loadMapping(filename string, mapping *SanitizationMapping) error {
 		return fmt.Errorf("failed to read mapping file: %w", err)
 	}
 
-	if unmarshalErr := json.Unmarshal(data, mapping); unmarshalErr != nil {
+	unmarshalErr := json.Unmarshal(data, mapping)
+	if unmarshalErr != nil {
 		return fmt.Errorf("failed to unmarshal mapping: %w", unmarshalErr)
 	}
 	return nil
@@ -550,11 +566,13 @@ func saveMapping(filename string, mapping *SanitizationMapping) error {
 
 	// Fix #68: Atomic write for mapping file
 	tempFile := filename + ".tmp"
-	if writeErr := os.WriteFile(tempFile, data, 0o600); writeErr != nil {
+	writeErr := os.WriteFile(tempFile, data, 0o600)
+	if writeErr != nil {
 		return fmt.Errorf("failed to write temp mapping file: %w", writeErr)
 	}
 
-	if renameErr := os.Rename(tempFile, filename); renameErr != nil {
+	renameErr := os.Rename(tempFile, filename)
+	if renameErr != nil {
 		return fmt.Errorf("failed to rename mapping file: %w", renameErr)
 	}
 	return nil

@@ -7,6 +7,13 @@ import (
 	"testing"
 )
 
+func newSanitizationMapping() *SanitizationMapping {
+	mapping := new(SanitizationMapping)
+	mapping.IPMappings = make(map[string]string)
+	mapping.Hostnames = make(map[string]string)
+	return mapping
+}
+
 func TestSanitizeIP(t *testing.T) {
 	tests := []struct {
 		name       string
@@ -42,10 +49,7 @@ func TestSanitizeIP(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mapping := &SanitizationMapping{
-				IPMappings: make(map[string]string),
-				Hostnames:  make(map[string]string),
-			}
+			mapping := newSanitizationMapping()
 
 			result := sanitizeIP(tt.ip, mapping)
 
@@ -103,10 +107,7 @@ func TestSanitizeIPSpecialCases(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mapping := &SanitizationMapping{
-				IPMappings: make(map[string]string),
-				Hostnames:  make(map[string]string),
-			}
+			mapping := newSanitizationMapping()
 
 			result := sanitizeIP(tt.ip, mapping)
 
@@ -264,10 +265,7 @@ func TestSanitizeHostname(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mapping := &SanitizationMapping{
-				IPMappings: make(map[string]string),
-				Hostnames:  make(map[string]string),
-			}
+			mapping := newSanitizationMapping()
 
 			result := sanitizeHostname(tt.hostname, mapping)
 
@@ -325,10 +323,7 @@ func TestSanitizeLine(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mapping := &SanitizationMapping{
-				IPMappings: make(map[string]string),
-				Hostnames:  make(map[string]string),
-			}
+			mapping := newSanitizationMapping()
 
 			result := sanitizeLine(tt.line, mapping, "niac-go.com", "DC-WEST", "netadmin@niac-go.com", "public")
 
@@ -355,10 +350,7 @@ SNMPv2-MIB::sysContact.0 = STRING: admin@test.com
 		t.Fatalf("Failed to create test file: %v", err)
 	}
 
-	mapping := &SanitizationMapping{
-		IPMappings: make(map[string]string),
-		Hostnames:  make(map[string]string),
-	}
+	mapping := newSanitizationMapping()
 
 	// Run sanitization
 	err := sanitizeFile(inputFile, outputFile, mapping, "niac-go.com", "DC-WEST", "netadmin@niac-go.com", "public")
@@ -439,10 +431,7 @@ func TestSanitizeFileErrors(t *testing.T) {
 				os.WriteFile(tt.inputFile, []byte("test"), 0o644)
 			}
 
-			mapping := &SanitizationMapping{
-				IPMappings: make(map[string]string),
-				Hostnames:  make(map[string]string),
-			}
+			mapping := newSanitizationMapping()
 
 			err := sanitizeFile(
 				tt.inputFile,
@@ -470,14 +459,13 @@ func TestLoadSaveMapping(t *testing.T) {
 	mappingFile := filepath.Join(tmpDir, "mapping.json")
 
 	// Create test mapping
-	original := &SanitizationMapping{
-		IPMappings: map[string]string{
-			"192.168.1.1": "10.0.0.1",
-			"10.0.0.2":    "10.0.0.2",
-		},
-		Hostnames: map[string]string{
-			"old-switch": "niac-core-sw-01",
-		},
+	original := newSanitizationMapping()
+	original.IPMappings = map[string]string{
+		"192.168.1.1": "10.0.0.1",
+		"10.0.0.2":    "10.0.0.2",
+	}
+	original.Hostnames = map[string]string{
+		"old-switch": "niac-core-sw-01",
 	}
 	original.Statistics.FilesProcessed = 5
 	original.Statistics.IPsTransformed = 100
@@ -490,10 +478,7 @@ func TestLoadSaveMapping(t *testing.T) {
 	}
 
 	// Load mapping
-	loaded := &SanitizationMapping{
-		IPMappings: make(map[string]string),
-		Hostnames:  make(map[string]string),
-	}
+	loaded := newSanitizationMapping()
 	err = loadMapping(mappingFile, loaded)
 	if err != nil {
 		t.Fatalf("loadMapping() error = %v", err)
@@ -521,10 +506,7 @@ func TestLoadMappingErrors(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Test loading non-existent file
-	mapping := &SanitizationMapping{
-		IPMappings: make(map[string]string),
-		Hostnames:  make(map[string]string),
-	}
+	mapping := newSanitizationMapping()
 
 	err := loadMapping(filepath.Join(tmpDir, "nonexistent.json"), mapping)
 	if err == nil {
