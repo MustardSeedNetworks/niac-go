@@ -11,8 +11,9 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/krisarmstrong/niac-go/pkg/ipc"
 	"github.com/spf13/cobra"
+
+	"github.com/krisarmstrong/niac-go/pkg/ipc"
 )
 
 // Default socket path for IPC communication.
@@ -229,9 +230,8 @@ func runInjectList(cmd *cobra.Command, args []string) error {
 	if injectListJSON {
 		encoder := json.NewEncoder(os.Stdout)
 		encoder.SetIndent("", "  ")
-		err := encoder.Encode(injections)
-		if err != nil {
-			return fmt.Errorf("failed to encode injections: %w", err)
+		if encodeErr := encoder.Encode(injections); encodeErr != nil {
+			return fmt.Errorf("failed to encode injections: %w", encodeErr)
 		}
 		return nil
 	}
@@ -256,8 +256,8 @@ func runInjectList(cmd *cobra.Command, args []string) error {
 			inj.Device, iface, inj.ErrorType, inj.Value, injectedAt)
 	}
 
-	if err := w.Flush(); err != nil {
-		return fmt.Errorf("failed to flush output: %w", err)
+	if flushErr := w.Flush(); flushErr != nil {
+		return fmt.Errorf("failed to flush output: %w", flushErr)
 	}
 	return nil
 }

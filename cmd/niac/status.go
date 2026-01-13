@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -9,8 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/krisarmstrong/niac-go/pkg/ipc"
 	"github.com/spf13/cobra"
+
+	"github.com/krisarmstrong/niac-go/pkg/ipc"
 )
 
 var statusOptions struct {
@@ -73,7 +75,7 @@ func runStatus(cmd *cobra.Command, args []string) {
 	// Check if socket exists
 	if _, err := os.Stat(socketPath); os.IsNotExist(err) {
 		if statusOptions.jsonOutput {
-			outputStatusJSON(map[string]interface{}{
+			outputStatusJSON(map[string]any{
 				"running": false,
 				"error":   "socket not found",
 			})
@@ -85,10 +87,11 @@ func runStatus(cmd *cobra.Command, args []string) {
 	}
 
 	// Connect to socket
-	conn, err := net.DialTimeout("unix", socketPath, 5*time.Second)
+	dialer := net.Dialer{Timeout: 5 * time.Second}
+	conn, err := dialer.DialContext(context.Background(), "unix", socketPath)
 	if err != nil {
 		if statusOptions.jsonOutput {
-			outputStatusJSON(map[string]interface{}{
+			outputStatusJSON(map[string]any{
 				"running": false,
 				"error":   fmt.Sprintf("connection failed: %v", err),
 			})
@@ -98,7 +101,9 @@ func runStatus(cmd *cobra.Command, args []string) {
 		}
 		os.Exit(1)
 	}
-	defer conn.Close()
+	closeConn := func() {
+		_ = conn.Close()
+	}
 
 	// Set timeout for socket operations
 	_ = conn.SetDeadline(time.Now().Add(5 * time.Second))
@@ -109,43 +114,46 @@ func runStatus(cmd *cobra.Command, args []string) {
 	}
 
 	encoder := json.NewEncoder(conn)
-	if err := encoder.Encode(&req); err != nil {
+	if encodeErr := encoder.Encode(&req); encodeErr != nil {
 		if statusOptions.jsonOutput {
-			outputStatusJSON(map[string]interface{}{
+			outputStatusJSON(map[string]any{
 				"running": false,
-				"error":   fmt.Sprintf("failed to send request: %v", err),
+				"error":   fmt.Sprintf("failed to send request: %v", encodeErr),
 			})
 		} else {
-			fmt.Fprintf(os.Stderr, "Error: failed to send request: %v\n", err)
+			fmt.Fprintf(os.Stderr, "Error: failed to send request: %v\n", encodeErr)
 		}
+		closeConn()
 		os.Exit(2)
 	}
 
 	// Read response
 	var resp ipc.Response
 	decoder := json.NewDecoder(conn)
-	if err := decoder.Decode(&resp); err != nil {
+	if decodeErr := decoder.Decode(&resp); decodeErr != nil {
 		if statusOptions.jsonOutput {
-			outputStatusJSON(map[string]interface{}{
+			outputStatusJSON(map[string]any{
 				"running": false,
-				"error":   fmt.Sprintf("failed to read response: %v", err),
+				"error":   fmt.Sprintf("failed to read response: %v", decodeErr),
 			})
 		} else {
-			fmt.Fprintf(os.Stderr, "Error: failed to read response: %v\n", err)
+			fmt.Fprintf(os.Stderr, "Error: failed to read response: %v\n", decodeErr)
 		}
+		closeConn()
 		os.Exit(2)
 	}
 
 	// Check for error in response
 	if !resp.Success {
 		if statusOptions.jsonOutput {
-			outputStatusJSON(map[string]interface{}{
+			outputStatusJSON(map[string]any{
 				"running": false,
 				"error":   resp.Error,
 			})
 		} else {
 			fmt.Fprintf(os.Stderr, "Error: %s\n", resp.Error)
 		}
+		closeConn()
 		os.Exit(2)
 	}
 
@@ -153,13 +161,14 @@ func runStatus(cmd *cobra.Command, args []string) {
 	statusData, ok := resp.Data["status"]
 	if !ok {
 		if statusOptions.jsonOutput {
-			outputStatusJSON(map[string]interface{}{
+			outputStatusJSON(map[string]any{
 				"running": false,
 				"error":   "status data not found in response",
 			})
 		} else {
 			fmt.Fprintf(os.Stderr, "Error: status data not found in response\n")
 		}
+		closeConn()
 		os.Exit(2)
 	}
 
@@ -167,32 +176,34 @@ func runStatus(cmd *cobra.Command, args []string) {
 	statusBytes, err := json.Marshal(statusData)
 	if err != nil {
 		if statusOptions.jsonOutput {
-			outputStatusJSON(map[string]interface{}{
+			outputStatusJSON(map[string]any{
 				"running": false,
 				"error":   fmt.Sprintf("failed to parse status: %v", err),
 			})
 		} else {
 			fmt.Fprintf(os.Stderr, "Error: failed to parse status: %v\n", err)
 		}
+		closeConn()
 		os.Exit(2)
 	}
 
 	var status ipc.StatusData
-	if err := json.Unmarshal(statusBytes, &status); err != nil {
+	if unmarshalErr := json.Unmarshal(statusBytes, &status); unmarshalErr != nil {
 		if statusOptions.jsonOutput {
-			outputStatusJSON(map[string]interface{}{
+			outputStatusJSON(map[string]any{
 				"running": false,
-				"error":   fmt.Sprintf("failed to unmarshal status: %v", err),
+				"error":   fmt.Sprintf("failed to unmarshal status: %v", unmarshalErr),
 			})
 		} else {
-			fmt.Fprintf(os.Stderr, "Error: failed to unmarshal status: %v\n", err)
+			fmt.Fprintf(os.Stderr, "Error: failed to unmarshal status: %v\n", unmarshalErr)
 		}
+		closeConn()
 		os.Exit(2)
 	}
 
 	// Output based on format
 	if statusOptions.jsonOutput {
-		outputStatusJSON(map[string]interface{}{
+		outputStatusJSON(map[string]any{
 			"running":          status.Running,
 			"interface":        status.Interface,
 			"config":           status.ConfigPath,
@@ -209,6 +220,7 @@ func runStatus(cmd *cobra.Command, args []string) {
 	}
 
 	// Exit with code 0 for running
+	closeConn()
 	os.Exit(0)
 }
 
@@ -258,7 +270,6 @@ func formatStatusNumber(n uint64) string {
 
 	// Convert to string and add separators
 	str := strconv.FormatUint(n, 10)
-	result := ""
 	length := len(str)
 
 	var resultSb262 strings.Builder
@@ -266,15 +277,14 @@ func formatStatusNumber(n uint64) string {
 		if i > 0 && (length-i)%3 == 0 {
 			resultSb262.WriteString(",")
 		}
-		resultSb262.WriteString(string(char))
+		resultSb262.WriteRune(char)
 	}
-	result += resultSb262.String()
 
-	return result
+	return resultSb262.String()
 }
 
 // outputStatusJSON outputs data as formatted JSON.
-func outputStatusJSON(data interface{}) {
+func outputStatusJSON(data any) {
 	encoder := json.NewEncoder(os.Stdout)
 	encoder.SetIndent("", "  ")
 	_ = encoder.Encode(data)

@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -108,12 +108,11 @@ func startRuntimeServices(
 		}
 
 		rs.apiServer = api.NewServer(*cfgCopy)
-		err := rs.apiServer.Start()
-		if err != nil {
+		if startErr := rs.apiServer.Start(); startErr != nil {
 			if rs.storage != nil {
 				rs.storage.Close() // #nosec G104 -- error logged or non-critical
 			}
-			return nil, fmt.Errorf("start API server: %w", err)
+			return nil, fmt.Errorf("start API server: %w", startErr)
 		}
 	}
 
@@ -134,10 +133,12 @@ func (rs *runtimeServices) applyConfig(newCfg *config.Config) error {
 }
 
 func (rs *runtimeServices) Stop() {
+	logger := slog.Default()
+
 	if rs.replay != nil {
 		// SECURITY FIX #106: Log errors during shutdown instead of silently discarding
 		if _, err := rs.replay.Stop(); err != nil {
-			log.Printf("Error stopping replay during shutdown: %v", err)
+			logger.Error("Error stopping replay during shutdown", "error", err)
 		}
 	}
 
@@ -147,7 +148,7 @@ func (rs *runtimeServices) Stop() {
 		// SECURITY FIX #106: Log API server shutdown errors
 		err := rs.apiServer.Shutdown(ctx)
 		if err != nil {
-			log.Printf("Error shutting down API server: %v", err)
+			logger.Error("Error shutting down API server", "error", err)
 		}
 	}
 
@@ -166,7 +167,7 @@ func (rs *runtimeServices) Stop() {
 		// SECURITY FIX #106: Log storage errors during shutdown
 		err := rs.storage.AddRun(record)
 		if err != nil {
-			log.Printf("Error saving run record during shutdown: %v", err)
+			logger.Error("Error saving run record during shutdown", "error", err)
 		}
 		rs.storage.Close() // #nosec G104 -- error logged or non-critical
 	}

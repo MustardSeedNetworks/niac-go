@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/spf13/cobra"
+
 	"github.com/krisarmstrong/niac-go/pkg/config"
 	"github.com/krisarmstrong/niac-go/pkg/logging"
-	"github.com/spf13/cobra"
 )
 
 var (
@@ -60,15 +61,15 @@ func runValidate(cmd *cobra.Command, args []string) {
 	configFile := args[0]
 
 	// Check if file exists
-	if _, err := os.Stat(configFile); os.IsNotExist(err) {
-		logging.Error("Configuration file not found: %s", configFile)
+	if _, statErr := os.Stat(configFile); os.IsNotExist(statErr) {
+		logging.Errorf("Configuration file not found: %s", configFile)
 		os.Exit(1)
 	}
 
 	// Load configuration
 	cfg, err := config.Load(configFile)
 	if err != nil {
-		logging.Error("Failed to load configuration: %v", err)
+		logging.Errorf("Failed to load configuration: %v", err)
 		os.Exit(1)
 	}
 
@@ -78,9 +79,9 @@ func runValidate(cmd *cobra.Command, args []string) {
 
 	// Output results
 	if validateJSON {
-		jsonOutput, err := result.ToJSON()
-		if err != nil {
-			logging.Error("Failed to generate JSON output: %v", err)
+		jsonOutput, jsonErr := result.ToJSON()
+		if jsonErr != nil {
+			logging.Errorf("Failed to generate JSON output: %v", jsonErr)
 			os.Exit(1)
 		}
 		fmt.Println(jsonOutput)
@@ -88,7 +89,7 @@ func runValidate(cmd *cobra.Command, args []string) {
 		if result.HasErrors() || result.HasWarnings() {
 			fmt.Println(result.Format())
 		} else {
-			logging.Success("Configuration is valid: %s", configFile)
+			logging.Successf("Configuration is valid: %s", configFile)
 			if validateVerbose {
 				fmt.Printf("\nDevices: %d\n", len(cfg.Devices))
 			}

@@ -279,9 +279,9 @@ func (s *Server) handlePcapUpload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validate PCAP magic number
-	if err := validatePCAPMagic(pcapData); err != nil {
+	if validateErr := validatePCAPMagic(pcapData); validateErr != nil {
 		writeError(w, r, http.StatusBadRequest, "invalid_pcap",
-			err.Error(), nil)
+			validateErr.Error(), nil)
 
 		return
 	}
@@ -367,6 +367,7 @@ func analyzePcapData(data []byte, filename string) (*PcapAnalysisResult, error) 
 	}
 
 	// Ensure directory permissions are correct even if it already exists
+	// #nosec G302 -- directory needs execute bit; 0700 is intended
 	if err := os.Chmod(dir, 0o700); err != nil {
 		return nil, fmt.Errorf("secure temp dir: %w", err)
 	}
@@ -382,10 +383,10 @@ func analyzePcapData(data []byte, filename string) (*PcapAnalysisResult, error) 
 	defer func() { _ = os.Remove(tmpPath) }()
 
 	// SECURITY FIX #167: Write data while file is still open to minimize race window
-	if _, err := tmpFile.Write(data); err != nil {
+	if _, writeErr := tmpFile.Write(data); writeErr != nil {
 		_ = tmpFile.Close()
 
-		return nil, fmt.Errorf("write temp file: %w", err)
+		return nil, fmt.Errorf("write temp file: %w", writeErr)
 	}
 
 	// Sync before close to ensure data is written
@@ -482,10 +483,7 @@ func parsePacket(packet gopacket.Packet, num int) PcapPacket {
 	}
 
 	// Get raw hex data (first 128 bytes)
-	rawLen := len(packet.Data())
-	if rawLen > 128 {
-		rawLen = 128
-	}
+	rawLen := min(len(packet.Data()), 128)
 
 	pkt.RawData = hex.EncodeToString(packet.Data()[:rawLen])
 

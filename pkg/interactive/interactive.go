@@ -15,6 +15,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
 	"github.com/krisarmstrong/niac-go/pkg/api"
 	"github.com/krisarmstrong/niac-go/pkg/config"
 	"github.com/krisarmstrong/niac-go/pkg/errors"
@@ -73,11 +74,6 @@ var (
 	diffHeaderStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("39")).
 			Bold(true) // Blue for headers
-
-		// Search styles.
-	searchMatchStyle = lipgloss.NewStyle().
-				Background(lipgloss.Color("226")).
-				Foreground(lipgloss.Color("0")) // Yellow highlight
 
 		// Topology styles.
 	topologyNodeStyle = lipgloss.NewStyle().
@@ -237,7 +233,6 @@ type model struct {
 
 	// PCAP replay state
 	showPcapReplay    bool
-	pcapFilePath      string
 	pcapPackets       []CapturedPacket
 	pcapPlaybackIndex int
 	pcapPlaying       bool
@@ -261,19 +256,15 @@ type model struct {
 	historyScrollY     int
 
 	// SNMP walk browser state
-	showSnmpWalk     bool
-	snmpOidTree      []SnmpOidEntry
-	selectedSnmpOid  int
-	snmpScrollY      int
-	snmpExpandedOids map[string]bool
-	snmpSearchMode   bool
-	snmpSearchQuery  string
+	showSnmpWalk    bool
+	snmpOidTree     []SnmpOidEntry
+	selectedSnmpOid int
+	snmpScrollY     int
 }
 
 type (
-	tickMsg     time.Time
-	pcapTickMsg time.Time
-	reloadMsg   struct {
+	tickMsg   time.Time
+	reloadMsg struct {
 		cfg *config.Config
 		err error
 	}
@@ -293,7 +284,7 @@ type searchResult struct {
 }
 
 // Init initializes the interactive TUI model.
-func (m model) Init() tea.Cmd {
+func (m *model) Init() tea.Cmd {
 	return tea.Batch(
 		tickCmd(),
 		tea.EnterAltScreen,
@@ -303,16 +294,6 @@ func (m model) Init() tea.Cmd {
 func tickCmd() tea.Cmd {
 	return tea.Tick(time.Second, func(t time.Time) tea.Msg {
 		return tickMsg(t)
-	})
-}
-
-func pcapTickCmd(speed float64) tea.Cmd {
-	// Calculate interval based on playback speed
-	// Normal speed (1.0) = 100ms per packet
-	interval := time.Duration(float64(100*time.Millisecond) / speed)
-
-	return tea.Tick(interval, func(t time.Time) tea.Msg {
-		return pcapTickMsg(t)
 	})
 }
 
@@ -329,7 +310,7 @@ func reloadCmd(fn func() (*config.Config, error)) tea.Cmd {
 }
 
 // Update handles messages and updates the TUI model state.
-func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case reloadMsg:
 		if msg.err != nil {
@@ -1099,14 +1080,14 @@ func (m *model) handleMenuSelection() {
 }
 
 func (m *model) promptForValue(errorType errors.ErrorType, prompt string) {
-	m.selectedErrorType = int(getErrorTypeIndex(errorType))
+	m.selectedErrorType = getErrorTypeIndex(errorType)
 	m.valueInputPrompt = prompt
 	m.valueInputBuffer = ""
 	m.valueInputMode = true
 	m.menuVisible = false
 }
 
-func (m model) handleValueInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m *model) handleValueInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case keyEnter:
 		// Process the input
@@ -1205,7 +1186,7 @@ func (m *model) injectError(errorType errors.ErrorType, value int) {
 }
 
 // View renders the TUI display to the terminal.
-func (m model) View() string {
+func (m *model) View() string {
 	var s strings.Builder
 
 	// Title
@@ -1444,7 +1425,7 @@ func (m model) View() string {
 	return s.String()
 }
 
-func (m model) renderValueInput() string {
+func (m *model) renderValueInput() string {
 	var input strings.Builder
 
 	input.WriteString("╔══════════════════════════════════════════════════════════════════╗\n")
@@ -1467,7 +1448,7 @@ func (m model) renderValueInput() string {
 	return input.String()
 }
 
-func (m model) renderMenu() string {
+func (m *model) renderMenu() string {
 	var menu strings.Builder
 
 	// Get selected device info
@@ -1599,7 +1580,7 @@ func (m *model) addDebugLog(message string) {
 	}
 }
 
-func (m model) renderHelp() string {
+func (m *model) renderHelp() string {
 	var help strings.Builder
 
 	help.WriteString("╔══════════════════════════════════════════════════════════════════╗\n")
@@ -1663,7 +1644,7 @@ func (m model) renderHelp() string {
 	return help.String()
 }
 
-func (m model) renderLogs() string {
+func (m *model) renderLogs() string {
 	var logs strings.Builder
 
 	logs.WriteString("╔══════════════════════════════════════════════════════════════════╗\n")
@@ -1681,7 +1662,7 @@ func (m model) renderLogs() string {
 
 		for _, log := range m.debugLogs[start:] {
 			// Pad to 66 characters for alignment
-			padded := log
+			var padded string
 			if len(log) > 64 {
 				padded = log[:64]
 			} else {
@@ -1697,7 +1678,7 @@ func (m model) renderLogs() string {
 	return logs.String()
 }
 
-func (m model) renderStatistics() string {
+func (m *model) renderStatistics() string {
 	var stats strings.Builder
 
 	totalPackets := m.stackStats.PacketsReceived + m.stackStats.PacketsSent
@@ -1774,7 +1755,7 @@ func (m model) renderStatistics() string {
 	return stats.String()
 }
 
-func (m model) renderNeighbors() string {
+func (m *model) renderNeighbors() string {
 	var panel strings.Builder
 
 	panel.WriteString("╔══════════════════════════════════════════════════════════════════╗\n")
@@ -1848,7 +1829,7 @@ func (m model) renderNeighbors() string {
 	return panel.String()
 }
 
-func (m model) renderHexDump() string {
+func (m *model) renderHexDump() string {
 	var dump strings.Builder
 
 	dump.WriteString("╔══════════════════════════════════════════════════════════════════╗\n")
@@ -1937,7 +1918,7 @@ func (m model) renderHexDump() string {
 	return dump.String()
 }
 
-func (m model) renderTemplateBrowser() string {
+func (m *model) renderTemplateBrowser() string {
 	var panel strings.Builder
 
 	if m.showTemplatePreview {
@@ -2011,7 +1992,7 @@ func (m model) renderTemplateBrowser() string {
 	return panel.String()
 }
 
-func (m model) renderValidation() string {
+func (m *model) renderValidation() string {
 	var panel strings.Builder
 
 	panel.WriteString("╔══════════════════════════════════════════════════════════════════╗\n")
@@ -2199,7 +2180,7 @@ func RunWithConfigPath(
 	m.addDebugLog(fmt.Sprintf("Simulating %d device(s)", len(cfg.Devices)))
 
 	// Start TUI
-	p := tea.NewProgram(m, tea.WithAltScreen())
+	p := tea.NewProgram(&m, tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
 		return fmt.Errorf("error running program: %w", err)
 	}
@@ -2222,7 +2203,7 @@ func (m *model) closeAllOverlays() {
 }
 
 // handleSearchInput handles keyboard input during search mode.
-func (m model) handleSearchInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m *model) handleSearchInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case keyEsc:
 		m.searchMode = false
@@ -2384,7 +2365,7 @@ func (m *model) performSearch() {
 }
 
 // handleExportInput handles keyboard input during export panel.
-func (m model) handleExportInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m *model) handleExportInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case keyEsc:
 		m.showExport = false
@@ -2916,7 +2897,7 @@ func truncateName(name string, maxLen int) string {
 }
 
 // renderConfigDiff renders the config diff view.
-func (m model) renderConfigDiff() string {
+func (m *model) renderConfigDiff() string {
 	var panel strings.Builder
 
 	panel.WriteString("╔══════════════════════════════════════════════════════════════════╗\n")
@@ -2962,7 +2943,7 @@ func (m model) renderConfigDiff() string {
 }
 
 // renderSearch renders the search panel.
-func (m model) renderSearch() string {
+func (m *model) renderSearch() string {
 	var panel strings.Builder
 
 	panel.WriteString("╔══════════════════════════════════════════════════════════════════╗\n")
@@ -3036,7 +3017,7 @@ func (m model) renderSearch() string {
 }
 
 // renderExport renders the export panel.
-func (m model) renderExport() string {
+func (m *model) renderExport() string {
 	var panel strings.Builder
 
 	panel.WriteString("╔══════════════════════════════════════════════════════════════════╗\n")
@@ -3084,7 +3065,7 @@ func (m model) renderExport() string {
 }
 
 // renderTopology renders the topology view.
-func (m model) renderTopology() string {
+func (m *model) renderTopology() string {
 	var panel strings.Builder
 
 	panel.WriteString("╔══════════════════════════════════════════════════════════════════╗\n")
@@ -3130,7 +3111,7 @@ func (m model) renderTopology() string {
 }
 
 // handleAlertConfigInput handles keyboard input in alert config panel.
-func (m model) handleAlertConfigInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m *model) handleAlertConfigInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	alertTypes := []string{"CPU", "Memory", "Disk", "PacketLoss", "Latency"}
 
 	switch msg.String() {
@@ -3198,7 +3179,7 @@ func (m model) handleAlertConfigInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 // renderAlertConfig renders the alert configuration panel.
-func (m model) renderAlertConfig() string {
+func (m *model) renderAlertConfig() string {
 	var panel strings.Builder
 
 	panel.WriteString("╔══════════════════════════════════════════════════════════════════╗\n")
@@ -3258,7 +3239,7 @@ func (m model) renderAlertConfig() string {
 }
 
 // handlePcapReplayInput handles keyboard input in PCAP replay panel.
-func (m model) handlePcapReplayInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m *model) handlePcapReplayInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case keyEsc:
 		m.showPcapReplay = false
@@ -3326,7 +3307,7 @@ func (m model) handlePcapReplayInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 // renderPcapReplay renders the PCAP replay control panel.
-func (m model) renderPcapReplay() string {
+func (m *model) renderPcapReplay() string {
 	var panel strings.Builder
 
 	panel.WriteString("╔══════════════════════════════════════════════════════════════════╗\n")
@@ -3377,7 +3358,7 @@ func (m model) renderPcapReplay() string {
 }
 
 // renderHistory renders the run history viewer panel.
-func (m model) renderHistory() string {
+func (m *model) renderHistory() string {
 	var panel strings.Builder
 
 	panel.WriteString("╔══════════════════════════════════════════════════════════════════╗\n")
@@ -3438,7 +3419,7 @@ func (m model) renderHistory() string {
 }
 
 // renderSnmpWalk renders the SNMP walk browser panel.
-func (m model) renderSnmpWalk() string {
+func (m *model) renderSnmpWalk() string {
 	var panel strings.Builder
 
 	panel.WriteString("╔══════════════════════════════════════════════════════════════════╗\n")
@@ -3482,7 +3463,7 @@ func (m model) renderSnmpWalk() string {
 }
 
 // renderDeviceConfig renders the device configuration panel.
-func (m model) renderDeviceConfig() string {
+func (m *model) renderDeviceConfig() string {
 	var panel strings.Builder
 
 	panel.WriteString("╔══════════════════════════════════════════════════════════════════╗\n")
@@ -3602,7 +3583,7 @@ func boolToEnabled(b bool) string {
 func handleScrollInput(
 	key string,
 	selectedIdx, scrollY, listLen, visibleRows int,
-) (newSelectedIdx, newScrollY int, handled bool) {
+) (int, int, bool) {
 	switch key {
 	case "up":
 		if selectedIdx > 0 {
@@ -3641,7 +3622,7 @@ func handleScrollInput(
 }
 
 // handleHistoryInput handles keyboard input in history viewer.
-func (m model) handleHistoryInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m *model) handleHistoryInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	key := msg.String()
 	if key == keyEsc {
 		m.showHistory = false
@@ -3667,7 +3648,7 @@ func (m model) handleHistoryInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 // handleSnmpWalkInput handles keyboard input in SNMP walk browser.
-func (m model) handleSnmpWalkInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m *model) handleSnmpWalkInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	key := msg.String()
 	if key == keyEsc {
 		m.showSnmpWalk = false
@@ -3693,7 +3674,7 @@ func (m model) handleSnmpWalkInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 // handleDeviceConfigInput handles keyboard input in device config panel.
-func (m model) handleDeviceConfigInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m *model) handleDeviceConfigInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case keyEsc:
 		m.showDeviceConfig = false

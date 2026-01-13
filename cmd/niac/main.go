@@ -1,4 +1,4 @@
-// Package main provides the NIAC command-line interface for network device simulation
+// Package main provides the NIAC command-line interface for network device simulation.
 package main
 
 import (
@@ -10,6 +10,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -22,10 +23,10 @@ import (
 	"github.com/krisarmstrong/niac-go/pkg/stats"
 )
 
-// Version information is now managed in root.go
+// Version information is now managed in root.go.
 // Build-time variables can be set with: go build -ldflags "-X main.version=..."
 
-// Global statistics instance
+// Global statistics instance.
 var globalStats *stats.Statistics
 
 func main() {
@@ -33,20 +34,17 @@ func main() {
 }
 
 // runLegacyMode maintains backward compatibility with original command-line interface
-// Refactored into smaller, testable functions
+// Refactored into smaller, testable functions.
 func runLegacyMode(osArgs []string) {
-	// Reset flag.CommandLine to avoid conflicts with cobra
-	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
-
-	// Define and parse flags
+	flagSet := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
 	var flags legacyFlags
-	defineLegacyFlags(&flags)
-	flag.Usage = printUsage
+	defineLegacyFlags(flagSet, &flags)
+	flagSet.Usage = printUsage
 	// Parse the provided arguments (skip first element which is program name)
 	if len(osArgs) > 1 {
-		_ = flag.CommandLine.Parse(osArgs[1:])
+		_ = flagSet.Parse(osArgs[1:])
 	} else {
-		flag.Parse()
+		_ = flagSet.Parse(nil)
 	}
 
 	// Process flag overrides (verbose/quiet)
@@ -57,18 +55,18 @@ func runLegacyMode(osArgs []string) {
 	logging.InitColors(!flags.noColor)
 
 	// Get remaining arguments
-	args := flag.Args()
+	args := flagSet.Args()
 
 	// Handle informational flags (version, list-interfaces, list-devices)
 	if handleInformationalFlags(&flags, args) {
-		os.Exit(0)
+		exitWithStats(0, &flags)
 	}
 
 	// Validate required arguments
 	interfaceName, configFile, err := validateLegacyArguments(args)
 	if err != nil {
 		printUsage()
-		os.Exit(1)
+		exitWithStats(1, &flags)
 	}
 
 	// Start profiling server if enabled
@@ -82,15 +80,15 @@ func runLegacyMode(osArgs []string) {
 	}
 
 	// Validate interface exists
-	if err := validateInterface(interfaceName); err != nil {
-		os.Exit(2)
+	if err = validateInterface(interfaceName); err != nil {
+		exitWithStats(2, &flags)
 	}
 
 	// Load configuration
 	cfg, err := loadAndPrintConfig(configFile, interfaceName, &flags)
 	if err != nil {
-		logging.Error("%v", err)
-		os.Exit(1)
+		logging.Errorf("%v", err)
+		exitWithStats(1, &flags)
 	}
 
 	// Handle dry run mode
@@ -115,37 +113,39 @@ func runLegacyMode(osArgs []string) {
 	}
 	globalStats.SetSNMPDeviceCount(snmpCount)
 
-	// Setup deferred stats export on exit
-	if flags.exportStatsJSON != "" || flags.exportStatsCSV != "" {
-		defer exportStatistics(&flags)
-	}
-
 	// Start simulation based on mode
 	if flags.interactiveMode {
-		if err := runInteractiveMode(interfaceName, cfg, debugConfig, configFile); err != nil {
-			fmt.Printf("Error: %v\n", err)
-			os.Exit(1)
+		if runErr := runInteractiveMode(interfaceName, cfg, debugConfig, configFile); runErr != nil {
+			fmt.Printf("Error: %v\n", runErr)
+			exitWithStats(1, &flags)
 		}
 	} else {
-		if err := runNormalMode(interfaceName, cfg, debugConfig, configFile); err != nil {
-			fmt.Printf("Error: %v\n", err)
-			os.Exit(1)
+		if runErr := runNormalMode(interfaceName, cfg, debugConfig, configFile); runErr != nil {
+			fmt.Printf("Error: %v\n", runErr)
+			exitWithStats(1, &flags)
 		}
 	}
 }
 
-// startProfilingServer starts the pprof HTTP server for performance profiling
+func exitWithStats(code int, flags *legacyFlags) {
+	if flags != nil && (flags.exportStatsJSON != "" || flags.exportStatsCSV != "") {
+		exportStatistics(flags)
+	}
+	os.Exit(code)
+}
+
+// startProfilingServer starts the pprof HTTP server for performance profiling.
 func startProfilingServer(port int, debugLevel int) {
 	// Security: bind to localhost only to prevent external access
 	addr := fmt.Sprintf("127.0.0.1:%d", port)
 
 	go func() {
 		if debugLevel >= 1 {
-			logging.Info("Starting pprof server on http://%s/debug/pprof/", addr)
-			logging.Info("  CPU profile:    http://%s/debug/pprof/profile?seconds=30", addr)
-			logging.Info("  Heap profile:   http://%s/debug/pprof/heap", addr)
-			logging.Info("  Goroutines:     http://%s/debug/pprof/goroutine", addr)
-			logging.Warning("Profiling server is for local development only - do not expose publicly")
+			logging.Infof("Starting pprof server on http://%s/debug/pprof/", addr)
+			logging.Infof("  CPU profile:    http://%s/debug/pprof/profile?seconds=30", addr)
+			logging.Infof("  Heap profile:   http://%s/debug/pprof/heap", addr)
+			logging.Infof("  Goroutines:     http://%s/debug/pprof/goroutine", addr)
+			logging.Warningf("Profiling server is for local development only - do not expose publicly")
 			fmt.Println()
 		}
 
@@ -158,7 +158,7 @@ func startProfilingServer(port int, debugLevel int) {
 			IdleTimeout:  60 * time.Second,
 		}
 		if err := server.ListenAndServe(); err != nil {
-			logging.Error("Failed to start pprof server: %v", err)
+			logging.Errorf("Failed to start pprof server: %v", err)
 		}
 	}()
 }
@@ -338,7 +338,7 @@ func printDeviceList(configFile string) {
 			ipAddr = device.IPAddresses[0].String()
 			// Indicate if device has multiple IPs
 			if len(device.IPAddresses) > 1 {
-				ipAddr = ipAddr + " +" + fmt.Sprintf("%d", len(device.IPAddresses)-1)
+				ipAddr = ipAddr + " +" + strconv.Itoa(len(device.IPAddresses)-1)
 			}
 		}
 
@@ -402,8 +402,12 @@ func padRight(str string, length int) string {
 	return str + strings.Repeat(" ", length-len(str))
 }
 
-// startSimulation initializes the capture engine and protocol stack, returning running handles
-func startSimulation(interfaceName string, cfg *config.Config, debugConfig *logging.DebugConfig) (*capture.Engine, *protocols.Stack, time.Time, error) {
+// startSimulation initializes the capture engine and protocol stack, returning running handles.
+func startSimulation(
+	interfaceName string,
+	cfg *config.Config,
+	debugConfig *logging.DebugConfig,
+) (*capture.Engine, *protocols.Stack, time.Time, error) {
 	debugLevel := debugConfig.GetGlobal()
 
 	if debugLevel >= 1 {
@@ -440,12 +444,12 @@ func startSimulation(interfaceName string, cfg *config.Config, debugConfig *logg
 	if debugLevel >= 1 {
 		fmt.Printf("⏳ Starting %d simulated device(s)... ", len(cfg.Devices))
 	}
-	if err := stack.Start(); err != nil {
+	if startErr := stack.Start(); startErr != nil {
 		if debugLevel >= 1 {
 			fmt.Println("❌")
 		}
 		engine.Close()
-		return nil, nil, time.Time{}, fmt.Errorf("failed to start stack: %w", err)
+		return nil, nil, time.Time{}, fmt.Errorf("failed to start stack: %w", startErr)
 	}
 	if debugLevel >= 1 {
 		fmt.Println("✓")
@@ -455,8 +459,13 @@ func startSimulation(interfaceName string, cfg *config.Config, debugConfig *logg
 	return engine, stack, time.Now(), nil
 }
 
-// runNormalMode runs NIAC in normal (non-interactive) mode
-func runNormalMode(interfaceName string, cfg *config.Config, debugConfig *logging.DebugConfig, configFile string) error {
+// runNormalMode runs NIAC in normal (non-interactive) mode.
+func runNormalMode(
+	interfaceName string,
+	cfg *config.Config,
+	debugConfig *logging.DebugConfig,
+	configFile string,
+) error {
 	engine, stack, startTime, err := startSimulation(interfaceName, cfg, debugConfig)
 	if err != nil {
 		return err
@@ -478,8 +487,13 @@ func runNormalMode(interfaceName string, cfg *config.Config, debugConfig *loggin
 	return runSimulationLoop(stack, debugConfig.GetGlobal(), startTime, reloadFunc)
 }
 
-// runInteractiveMode runs NIAC with the interactive TUI layered on the live simulator
-func runInteractiveMode(interfaceName string, cfg *config.Config, debugConfig *logging.DebugConfig, configFile string) error {
+// runInteractiveMode runs NIAC with the interactive TUI layered on the live simulator.
+func runInteractiveMode(
+	interfaceName string,
+	cfg *config.Config,
+	debugConfig *logging.DebugConfig,
+	configFile string,
+) error {
 	engine, stack, startTime, err := startSimulation(interfaceName, cfg, debugConfig)
 	if err != nil {
 		return err
@@ -501,13 +515,13 @@ func runInteractiveMode(interfaceName string, cfg *config.Config, debugConfig *l
 	}()
 
 	reloadFunc := buildReloadFunc(stack, configFile, services)
-	if err := interactive.Run(interfaceName, cfg, debugConfig, stack, startTime, reloadFunc); err != nil {
-		return fmt.Errorf("failed to run interactive mode: %w", err)
+	if runErr := interactive.Run(interfaceName, cfg, debugConfig, stack, startTime, reloadFunc); runErr != nil {
+		return fmt.Errorf("failed to run interactive mode: %w", runErr)
 	}
 	return nil
 }
 
-// initializeCaptureEngine initializes the packet capture engine
+// initializeCaptureEngine initializes the packet capture engine.
 func initializeCaptureEngine(interfaceName string, debugLevel int) (*capture.Engine, error) {
 	if debugLevel >= 1 {
 		fmt.Print("⏳ Initializing capture engine... ")
@@ -526,6 +540,7 @@ func initializeCaptureEngine(interfaceName string, debugLevel int) (*capture.Eng
 }
 
 // configureServiceHandlers configures DHCP and DNS service handlers
+//
 //nolint:gocognit // Service handler configuration involves many protocol options
 func configureServiceHandlers(stack *protocols.Stack, cfg *config.Config, debugLevel int) (dhcpCount, dnsCount int) {
 	for _, device := range cfg.Devices {
@@ -547,7 +562,10 @@ func configureServiceHandlers(stack *protocols.Stack, cfg *config.Config, debugL
 			}
 
 			// Advanced DHCPv4 options
-			if len(dhcp.NTPServers) > 0 || len(dhcp.DomainSearch) > 0 || dhcp.TFTPServerName != "" || dhcp.BootfileName != "" {
+			if len(dhcp.NTPServers) > 0 ||
+				len(dhcp.DomainSearch) > 0 ||
+				dhcp.TFTPServerName != "" ||
+				dhcp.BootfileName != "" {
 				dhcpHandler.SetAdvancedOptions(
 					dhcp.NTPServers,
 					dhcp.DomainSearch,
@@ -558,7 +576,10 @@ func configureServiceHandlers(stack *protocols.Stack, cfg *config.Config, debugL
 			}
 
 			// DHCPv6 configuration
-			if len(dhcp.SNTPServersV6) > 0 || len(dhcp.NTPServersV6) > 0 || len(dhcp.SIPServersV6) > 0 || len(dhcp.SIPDomainsV6) > 0 {
+			if len(dhcp.SNTPServersV6) > 0 ||
+				len(dhcp.NTPServersV6) > 0 ||
+				len(dhcp.SIPServersV6) > 0 ||
+				len(dhcp.SIPDomainsV6) > 0 {
 				dhcpv6Handler.SetAdvancedOptions(
 					dhcp.SNTPServersV6,
 					dhcp.NTPServersV6,
@@ -583,7 +604,7 @@ func configureServiceHandlers(stack *protocols.Stack, cfg *config.Config, debugL
 	return dhcpCount, dnsCount
 }
 
-// printStartupSummary displays the enabled features summary
+// printStartupSummary displays the enabled features summary.
 func printStartupSummary(cfg *config.Config, debugLevel int) {
 	fmt.Println()
 
@@ -631,8 +652,14 @@ func printStartupSummary(cfg *config.Config, debugLevel int) {
 }
 
 // runSimulationLoop runs the main simulation loop with signal handling and stats
+//
 //nolint:gocognit // Main event loop handles multiple signal types
-func runSimulationLoop(stack *protocols.Stack, debugLevel int, startTime time.Time, reloadConfig func() (*config.Config, error)) error {
+func runSimulationLoop(
+	stack *protocols.Stack,
+	debugLevel int,
+	startTime time.Time,
+	reloadConfig func() (*config.Config, error),
+) error {
 	// Setup signal handler for graceful shutdown
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
@@ -684,12 +711,14 @@ func runSimulationLoop(stack *protocols.Stack, debugLevel int, startTime time.Ti
 	}
 }
 
-// printPeriodicStats prints periodic statistics
+// printPeriodicStats prints periodic statistics.
 func printPeriodicStats(stack *protocols.Stack, uptime time.Duration) {
 	stats := stack.GetStats()
 	neighbors := len(stack.GetNeighbors())
 
-	fmt.Printf("[%s] Uptime: %s | Packets: RX=%d TX=%d | ARP: %d/%d | ICMP: %d/%d | DNS: %d | DHCP: %d | Neighbors: %d\n",
+	fmt.Printf(
+		"[%s] Uptime: %s | Packets: RX=%d TX=%d | ARP: %d/%d | ICMP: %d/%d | "+
+			"DNS: %d | DHCP: %d | Neighbors: %d\n",
 		time.Now().Format("15:04:05"),
 		formatDuration(uptime),
 		stats.PacketsReceived,
@@ -704,7 +733,7 @@ func printPeriodicStats(stack *protocols.Stack, uptime time.Duration) {
 	)
 }
 
-// printFinalStats prints final statistics on shutdown
+// printFinalStats prints final statistics on shutdown.
 func printFinalStats(stack *protocols.Stack, uptime time.Duration) {
 	stats := stack.GetStats()
 	neighbors := len(stack.GetNeighbors())
@@ -738,17 +767,17 @@ func buildReloadFunc(stack *protocols.Stack, configFile string, services *runtim
 		abs = configFile
 	}
 	return func() (*config.Config, error) {
-		newCfg, err := config.Load(abs)
-		if err != nil {
-			return nil, fmt.Errorf("failed to load config: %w", err)
+		newCfg, loadErr := config.Load(abs)
+		if loadErr != nil {
+			return nil, fmt.Errorf("failed to load config: %w", loadErr)
 		}
 		if services != nil {
-			if err := services.applyConfig(newCfg); err != nil {
-				return nil, fmt.Errorf("failed to apply config: %w", err)
+			if applyErr := services.applyConfig(newCfg); applyErr != nil {
+				return nil, fmt.Errorf("failed to apply config: %w", applyErr)
 			}
 		} else {
-			if err := stack.ReloadConfig(newCfg); err != nil {
-				return nil, fmt.Errorf("failed to reload config: %w", err)
+			if reloadErr := stack.ReloadConfig(newCfg); reloadErr != nil {
+				return nil, fmt.Errorf("failed to reload config: %w", reloadErr)
 			}
 			configureServiceHandlers(stack, newCfg, stack.GetDebugLevel())
 		}
@@ -756,7 +785,7 @@ func buildReloadFunc(stack *protocols.Stack, configFile string, services *runtim
 	}
 }
 
-// formatDuration formats a duration in a readable way
+// formatDuration formats a duration in a readable way.
 func formatDuration(d time.Duration) string {
 	if d < time.Minute {
 		return fmt.Sprintf("%ds", int(d.Seconds()))
@@ -767,7 +796,7 @@ func formatDuration(d time.Duration) string {
 	return fmt.Sprintf("%dh%dm", int(d.Hours()), int(d.Minutes())%60)
 }
 
-// exportStatistics exports runtime statistics to JSON and/or CSV files (v1.19.0)
+// exportStatistics exports runtime statistics to JSON and/or CSV files (v1.19.0).
 func exportStatistics(flags *legacyFlags) {
 	if globalStats == nil {
 		return
@@ -779,18 +808,18 @@ func exportStatistics(flags *legacyFlags) {
 	// Export to JSON if requested
 	if flags.exportStatsJSON != "" {
 		if err := globalStats.ExportJSON(flags.exportStatsJSON); err != nil {
-			logging.Error("Failed to export statistics to JSON: %v", err)
+			logging.Errorf("Failed to export statistics to JSON: %v", err)
 		} else {
-			logging.Info("Statistics exported to JSON: %s", flags.exportStatsJSON)
+			logging.Infof("Statistics exported to JSON: %s", flags.exportStatsJSON)
 		}
 	}
 
 	// Export to CSV if requested
 	if flags.exportStatsCSV != "" {
 		if err := globalStats.ExportCSV(flags.exportStatsCSV); err != nil {
-			logging.Error("Failed to export statistics to CSV: %v", err)
+			logging.Errorf("Failed to export statistics to CSV: %v", err)
 		} else {
-			logging.Info("Statistics exported to CSV: %s", flags.exportStatsCSV)
+			logging.Infof("Statistics exported to CSV: %s", flags.exportStatsCSV)
 		}
 	}
 }

@@ -91,6 +91,12 @@ The tool parses standard SNMP MIBs including:
 	RunE: runAnalyze,
 }
 
+const (
+	analyzeOutputJSON = "json"
+	analyzeOutputYAML = "yaml"
+	analyzeOutputText = "text"
+)
+
 func init() {
 	rootCmd.AddCommand(analyzeCmd)
 
@@ -114,9 +120,8 @@ func runAnalyze(cmd *cobra.Command, args []string) error {
 	}
 
 	if graphvizPath != "" {
-		err := writeGraphviz(analysis, graphvizPath)
-		if err != nil {
-			return err
+		if graphvizErr := writeGraphviz(analysis, graphvizPath); graphvizErr != nil {
+			return graphvizErr
 		}
 	}
 
@@ -127,11 +132,11 @@ func runAnalyze(cmd *cobra.Command, args []string) error {
 
 	// Output results
 	switch outputFormat {
-	case "json":
+	case analyzeOutputJSON:
 		return outputJSON(analysis)
-	case "yaml":
+	case analyzeOutputYAML:
 		return outputYAML(analysis)
-	case "text":
+	case analyzeOutputText:
 		return outputText(analysis)
 	default:
 		return fmt.Errorf("unknown output format: %s", outputFormat)
@@ -152,10 +157,9 @@ func parseWalkFile(filename string) (*WalkAnalysis, error) {
 	}
 	defer file.Close() // #nosec G104 -- deferred close
 
-	analysis := &WalkAnalysis{
-		Interfaces: make([]InterfaceInfo, 0),
-		Neighbors:  make([]NeighborInfo, 0),
-	}
+	analysis := new(WalkAnalysis)
+	analysis.Interfaces = make([]InterfaceInfo, 0)
+	analysis.Neighbors = make([]NeighborInfo, 0)
 
 	scanner := bufio.NewScanner(file)
 	interfaceMap := make(map[int]*InterfaceInfo)
@@ -201,11 +205,11 @@ func parseWalkFile(filename string) (*WalkAnalysis, error) {
 		if matches := ifDescrRe.FindStringSubmatch(line); matches != nil {
 			interfaceCounter++
 			ifName := strings.TrimSpace(matches[1])
-			interfaceMap[interfaceCounter] = &InterfaceInfo{
-				Index: interfaceCounter,
-				Name:  ifName,
-				Type:  getInterfaceTypeFromName(ifName),
-			}
+			ifaceInfo := &InterfaceInfo{}
+			ifaceInfo.Index = interfaceCounter
+			ifaceInfo.Name = ifName
+			ifaceInfo.Type = getInterfaceTypeFromName(ifName)
+			interfaceMap[interfaceCounter] = ifaceInfo
 		}
 	}
 
@@ -227,8 +231,8 @@ func parseWalkFile(filename string) (*WalkAnalysis, error) {
 		}
 	}
 
-	if err := scanner.Err(); err != nil {
-		return nil, fmt.Errorf("failed to scan walk file: %w", err)
+	if scanErr := scanner.Err(); scanErr != nil {
+		return nil, fmt.Errorf("failed to scan walk file: %w", scanErr)
 	}
 
 	// Convert map to sorted slice
@@ -313,38 +317,38 @@ func outputYAML(analysis *WalkAnalysis) error {
 }
 
 func outputText(analysis *WalkAnalysis) error {
-	fmt.Printf("Device: %s\n", analysis.Device.SysName)
-	fmt.Printf("Description: %s\n", analysis.Device.SysDescr)
+	fmt.Fprintf(os.Stdout, "Device: %s\n", analysis.Device.SysName)
+	fmt.Fprintf(os.Stdout, "Description: %s\n", analysis.Device.SysDescr)
 	if analysis.Device.SysContact != "" {
-		fmt.Printf("Contact: %s\n", analysis.Device.SysContact)
+		fmt.Fprintf(os.Stdout, "Contact: %s\n", analysis.Device.SysContact)
 	}
 	if analysis.Device.SysLocation != "" {
-		fmt.Printf("Location: %s\n", analysis.Device.SysLocation)
+		fmt.Fprintf(os.Stdout, "Location: %s\n", analysis.Device.SysLocation)
 	}
-	fmt.Println()
+	fmt.Fprintln(os.Stdout)
 
-	fmt.Printf("Interfaces (%d total, %d physical, %d logical):\n",
+	fmt.Fprintf(os.Stdout, "Interfaces (%d total, %d physical, %d logical):\n",
 		analysis.Statistics.TotalInterfaces,
 		analysis.Statistics.PhysicalInterfaces,
 		analysis.Statistics.LogicalInterfaces)
 	for _, iface := range analysis.Interfaces {
-		fmt.Printf("  [%d] %s (%s)\n", iface.Index, iface.Name, iface.Type)
+		fmt.Fprintf(os.Stdout, "  [%d] %s (%s)\n", iface.Index, iface.Name, iface.Type)
 		if iface.Speed > 0 {
-			fmt.Printf("      Speed: %d bps\n", iface.Speed)
+			fmt.Fprintf(os.Stdout, "      Speed: %d bps\n", iface.Speed)
 		}
 		if iface.AdminStatus != "" {
-			fmt.Printf("      Status: %s/%s\n", iface.AdminStatus, iface.OperStatus)
+			fmt.Fprintf(os.Stdout, "      Status: %s/%s\n", iface.AdminStatus, iface.OperStatus)
 		}
 		if iface.MACAddress != "" {
-			fmt.Printf("      MAC: %s\n", iface.MACAddress)
+			fmt.Fprintf(os.Stdout, "      MAC: %s\n", iface.MACAddress)
 		}
 	}
-	fmt.Println()
+	fmt.Fprintln(os.Stdout)
 
 	if len(analysis.Neighbors) > 0 {
-		fmt.Printf("Neighbors (%d):\n", len(analysis.Neighbors))
+		fmt.Fprintf(os.Stdout, "Neighbors (%d):\n", len(analysis.Neighbors))
 		for _, neighbor := range analysis.Neighbors {
-			fmt.Printf("  %s (%s) -> %s (%s)\n",
+			fmt.Fprintf(os.Stdout, "  %s (%s) -> %s (%s)\n",
 				neighbor.LocalInterface, neighbor.Protocol,
 				neighbor.RemoteDevice, neighbor.RemoteInterface)
 		}
@@ -398,7 +402,7 @@ func writeGraphviz(analysis *WalkAnalysis, target string) error {
 
 	data := []byte(builder.String())
 	if target == "-" {
-		fmt.Print(builder.String())
+		_, _ = os.Stdout.WriteString(builder.String())
 		return nil
 	}
 	err := os.WriteFile(target, data, 0o600)
@@ -413,7 +417,7 @@ func outputNeighbors(neighbors []NeighborInfo, format string) error {
 	case "json":
 		encoder := json.NewEncoder(os.Stdout)
 		encoder.SetIndent("", "  ")
-		err := encoder.Encode(map[string]interface{}{"neighbors": neighbors})
+		err := encoder.Encode(map[string]any{"neighbors": neighbors})
 		if err != nil {
 			return fmt.Errorf("failed to encode neighbors JSON: %w", err)
 		}
@@ -422,14 +426,14 @@ func outputNeighbors(neighbors []NeighborInfo, format string) error {
 		encoder := yaml.NewEncoder(os.Stdout)
 		defer encoder.Close() // #nosec G104 -- deferred close
 		encoder.SetIndent(2)
-		err := encoder.Encode(map[string]interface{}{"neighbors": neighbors})
+		err := encoder.Encode(map[string]any{"neighbors": neighbors})
 		if err != nil {
 			return fmt.Errorf("failed to encode neighbors YAML: %w", err)
 		}
 		return nil
 	case "text":
 		for _, neighbor := range neighbors {
-			fmt.Printf("%s (%s) -> %s (%s)\n",
+			fmt.Fprintf(os.Stdout, "%s (%s) -> %s (%s)\n",
 				neighbor.LocalInterface, neighbor.Protocol,
 				neighbor.RemoteDevice, neighbor.RemoteInterface)
 		}

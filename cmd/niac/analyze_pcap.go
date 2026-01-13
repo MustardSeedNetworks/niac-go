@@ -46,20 +46,19 @@ func runAnalyzePcap(cmd *cobra.Command, args []string) error {
 	switch outputFormat {
 	case "json":
 		data, _ := json.MarshalIndent(summary, "", "  ")
-		fmt.Println(string(data))
+		_, _ = os.Stdout.WriteString(string(data) + "\n")
 	case "yaml":
 		data, _ := yaml.Marshal(summary)
-		fmt.Println(string(data))
+		_, _ = os.Stdout.WriteString(string(data) + "\n")
 	default:
-		fmt.Printf("File: %s\nPackets: %d\n", summary.File, summary.Packets)
+		fmt.Fprintf(os.Stdout, "File: %s\nPackets: %d\n", summary.File, summary.Packets)
 		for proto, count := range summary.ProtocolMap {
-			fmt.Printf("  %s: %d\n", proto, count)
+			fmt.Fprintf(os.Stdout, "  %s: %d\n", proto, count)
 		}
 	}
 	return nil
 }
 
-//nolint:gocognit // PCAP parsing requires handling many packet types
 func summarizePCAP(filename string) (*pcapSummary, error) {
 	handle, err := pcap.OpenOffline(filename)
 	if err != nil {
@@ -69,11 +68,10 @@ func summarizePCAP(filename string) (*pcapSummary, error) {
 
 	source := gopacket.NewPacketSource(handle, handle.LinkType())
 
-	summary := &pcapSummary{
-		File:        filename,
-		CapturedAt:  time.Now().UTC(),
-		ProtocolMap: make(map[string]int),
-	}
+	summary := new(pcapSummary)
+	summary.File = filename
+	summary.CapturedAt = time.Now().UTC()
+	summary.ProtocolMap = make(map[string]int)
 
 	for packet := range source.Packets() {
 		summary.Packets++
@@ -104,10 +102,8 @@ func summarizePCAP(filename string) (*pcapSummary, error) {
 		}
 	}
 
-	if _, err := os.Stat(filename); err == nil {
-		if info, err := os.Stat(filename); err == nil {
-			summary.CapturedAt = info.ModTime()
-		}
+	if info, statErr := os.Stat(filename); statErr == nil {
+		summary.CapturedAt = info.ModTime()
 	}
 	return summary, nil
 }

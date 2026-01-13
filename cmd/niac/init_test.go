@@ -214,7 +214,7 @@ func TestInitCommandFileCreation(t *testing.T) {
 	}
 
 	// Verify file exists
-	if _, err := os.Stat(outputFile); os.IsNotExist(err) {
+	if _, statErr := os.Stat(outputFile); os.IsNotExist(statErr) {
 		t.Error("Output file should exist")
 	}
 
@@ -241,7 +241,7 @@ func TestInitCommandFileOverwrite(t *testing.T) {
 	}
 
 	// Verify file exists
-	if _, err := os.Stat(outputFile); os.IsNotExist(err) {
+	if _, statErr := os.Stat(outputFile); os.IsNotExist(statErr) {
 		t.Error("Original file should exist")
 	}
 

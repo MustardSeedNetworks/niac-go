@@ -4,13 +4,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log/slog"
 	"net"
 	"net/http"
 	"strings"
 
-	"github.com/krisarmstrong/niac-go/pkg/config"
 	"gopkg.in/yaml.v3"
+
+	"github.com/krisarmstrong/niac-go/pkg/config"
 )
 
 // Sentinel errors for API devices.
@@ -366,7 +366,7 @@ func (s *Server) handleDeviceCreate(w http.ResponseWriter, r *http.Request) {
 	newCfg := *cfg
 	newCfg.Devices = append(newCfg.Devices, *newDevice)
 
-	if err := s.saveConfig(&newCfg); err != nil {
+	if saveErr := s.saveConfig(&newCfg); saveErr != nil {
 		writeError(w, r, http.StatusInternalServerError, "save_failed", "Failed to save configuration", nil)
 
 		return
@@ -425,16 +425,16 @@ func (s *Server) handleDeviceUpdate(w http.ResponseWriter, r *http.Request, host
 
 	if req.RawYAML != "" {
 		// SECURITY FIX #153: Validate YAML input before parsing
-		if err := validateYAMLInput(req.RawYAML); err != nil {
-			writeError(w, r, http.StatusBadRequest, "invalid_yaml", err.Error(), nil)
+		if validateErr := validateYAMLInput(req.RawYAML); validateErr != nil {
+			writeError(w, r, http.StatusBadRequest, "invalid_yaml", validateErr.Error(), nil)
 
 			return
 		}
 
 		// Parse into device structure (includes depth validation)
-		updatedDevice, err := parseDeviceFromYAML(req.RawYAML, hostname)
-		if err != nil {
-			writeError(w, r, http.StatusBadRequest, "parse_failed", err.Error(), nil)
+		updatedDevice, parseErr := parseDeviceFromYAML(req.RawYAML, hostname)
+		if parseErr != nil {
+			writeError(w, r, http.StatusBadRequest, "parse_failed", parseErr.Error(), nil)
 
 			return
 		}
@@ -448,9 +448,9 @@ func (s *Server) handleDeviceUpdate(w http.ResponseWriter, r *http.Request, host
 		}
 
 		if req.MAC != "" {
-			mac, err := parseMAC(req.MAC)
-			if err != nil {
-				writeError(w, r, http.StatusBadRequest, "invalid_mac", err.Error(), nil)
+			mac, parseErr := parseMAC(req.MAC)
+			if parseErr != nil {
+				writeError(w, r, http.StatusBadRequest, "invalid_mac", parseErr.Error(), nil)
 
 				return
 			}
@@ -459,9 +459,9 @@ func (s *Server) handleDeviceUpdate(w http.ResponseWriter, r *http.Request, host
 		}
 
 		if req.IP != "" {
-			ip, err := parseIP(req.IP)
-			if err != nil {
-				writeError(w, r, http.StatusBadRequest, "invalid_ip", err.Error(), nil)
+			ip, parseErr := parseIP(req.IP)
+			if parseErr != nil {
+				writeError(w, r, http.StatusBadRequest, "invalid_ip", parseErr.Error(), nil)
 
 				return
 			}
@@ -622,16 +622,16 @@ func (s *Server) saveConfig(cfg *config.Config) error {
 	// Serialize to YAML
 	yamlContent, err := serializeConfigToYAML(cfg)
 	if err != nil {
-		slog.Error("[API] Failed to serialize config", "error", err)
+		s.logger.Error("[API] Failed to serialize config", "error", err)
 
 		return err
 	}
 
 	// Write to file
-	if err := s.writeConfigFile(yamlContent); err != nil {
-		slog.Error("[API] Failed to write config file", "error", err)
+	if writeErr := s.writeConfigFile(yamlContent); writeErr != nil {
+		s.logger.Error("[API] Failed to write config file", "error", writeErr)
 
-		return err
+		return writeErr
 	}
 
 	// Update in-memory config
@@ -639,9 +639,9 @@ func (s *Server) saveConfig(cfg *config.Config) error {
 
 	// Apply config if handler is set
 	if s.cfg.ApplyConfig != nil {
-		err := s.cfg.ApplyConfig(cfg)
-		if err != nil {
-			slog.Warn("[API] Failed to apply config", "error", err)
+		applyErr := s.cfg.ApplyConfig(cfg)
+		if applyErr != nil {
+			s.logger.Warn("[API] Failed to apply config", "error", applyErr)
 			// Don't fail - file is saved, runtime may be restarted
 		}
 	}
@@ -916,8 +916,8 @@ func parseIP(s string) (net.IP, error) {
 
 func parseDeviceFromYAML(yamlStr, hostname string) (*config.Device, error) {
 	// SECURITY FIX #153: Validate YAML input before parsing
-	if err := validateYAMLInput(yamlStr); err != nil {
-		return nil, fmt.Errorf("YAML validation failed: %w", err)
+	if validateErr := validateYAMLInput(yamlStr); validateErr != nil {
+		return nil, fmt.Errorf("YAML validation failed: %w", validateErr)
 	}
 
 	// This is a simplified parser - in production, use the full config loader
@@ -928,14 +928,13 @@ func parseDeviceFromYAML(yamlStr, hostname string) (*config.Device, error) {
 
 	// Parse YAML into map for basic fields
 	var data map[string]any
-	err := yaml.Unmarshal([]byte(yamlStr), &data)
-	if err != nil {
-		return nil, fmt.Errorf("invalid YAML: %w", err)
+	if unmarshalErr := yaml.Unmarshal([]byte(yamlStr), &data); unmarshalErr != nil {
+		return nil, fmt.Errorf("invalid YAML: %w", unmarshalErr)
 	}
 
 	// SECURITY FIX #153: Check YAML depth to prevent DoS attacks
-	if err := checkYAMLDepth(data, 0); err != nil {
-		return nil, err
+	if depthErr := checkYAMLDepth(data, 0); depthErr != nil {
+		return nil, depthErr
 	}
 
 	if t, ok := data["type"].(string); ok {
@@ -943,7 +942,7 @@ func parseDeviceFromYAML(yamlStr, hostname string) (*config.Device, error) {
 	}
 
 	if mac, ok := data["mac"].(string); ok {
-		if parsed, err := parseMAC(mac); err == nil {
+		if parsed, parseErr := parseMAC(mac); parseErr == nil {
 			dev.MACAddress = parsed
 		}
 	}
@@ -958,14 +957,14 @@ func cloneDevice(src *config.Device, newHostname, newIP, newMAC string) *config.
 
 	// Update IP if provided
 	if newIP != "" {
-		if ip, err := parseIP(newIP); err == nil {
+		if ip, parseErr := parseIP(newIP); parseErr == nil {
 			cloned.IPAddresses = []net.IP{ip}
 		}
 	}
 
 	// Update MAC if provided
 	if newMAC != "" {
-		if mac, err := parseMAC(newMAC); err == nil {
+		if mac, parseErr := parseMAC(newMAC); parseErr == nil {
 			cloned.MACAddress = mac
 		}
 	}
@@ -1034,155 +1033,10 @@ func serializeDeviceToYAML(dev *config.Device) ([]byte, error) {
 }
 
 func serializeConfigToYAML(cfg *config.Config) (string, error) {
-	// Build YAML representation
-	data := map[string]any{}
-
-	if cfg.IncludePath != "" {
-		data["include_path"] = cfg.IncludePath
-	}
-
-	devices := make([]any, 0, len(cfg.Devices))
-
-	for _, dev := range cfg.Devices {
-		devMap := buildDeviceMap(&dev)
-		devices = append(devices, devMap)
-	}
-
-	data["devices"] = devices
-
-	yamlBytes, err := yaml.Marshal(data)
+	yamlBytes, err := config.MarshalConfigYAML(cfg)
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal config YAML: %w", err)
 	}
 
 	return string(yamlBytes), nil
-}
-
-func buildDeviceMap(dev *config.Device) map[string]any {
-	data := map[string]any{
-		"name": dev.Name,
-		"type": dev.Type,
-	}
-
-	if dev.MACAddress != nil {
-		data["mac"] = dev.MACAddress.String()
-	}
-
-	if len(dev.IPAddresses) > 0 {
-		if len(dev.IPAddresses) == 1 {
-			data["ip"] = dev.IPAddresses[0].String()
-		} else {
-			ips := make([]string, 0, len(dev.IPAddresses))
-			for _, ip := range dev.IPAddresses {
-				ips = append(ips, ip.String())
-			}
-
-			data["ips"] = ips
-		}
-	}
-
-	if dev.VLAN > 0 {
-		data["vlan"] = dev.VLAN
-	}
-
-	// SNMP Agent
-	if dev.SNMPConfig.Community != "" || dev.SNMPConfig.WalkFile != "" {
-		snmp := map[string]any{
-			"enabled": true,
-		}
-		if dev.SNMPConfig.Community != "" {
-			snmp["community"] = dev.SNMPConfig.Community
-		}
-
-		if dev.SNMPConfig.SysName != "" {
-			snmp["sysname"] = dev.SNMPConfig.SysName
-		}
-
-		if dev.SNMPConfig.SysLocation != "" {
-			snmp["syslocation"] = dev.SNMPConfig.SysLocation
-		}
-
-		if dev.SNMPConfig.SysDescr != "" {
-			snmp["sysdescr"] = dev.SNMPConfig.SysDescr
-		}
-
-		if dev.SNMPConfig.SysContact != "" {
-			snmp["syscontact"] = dev.SNMPConfig.SysContact
-		}
-
-		if dev.SNMPConfig.WalkFile != "" {
-			snmp["walk_file"] = dev.SNMPConfig.WalkFile
-		}
-
-		if len(dev.SNMPConfig.AddMibs) > 0 {
-			addMibs := make([]map[string]any, 0, len(dev.SNMPConfig.AddMibs))
-			for _, mib := range dev.SNMPConfig.AddMibs {
-				addMibs = append(addMibs, map[string]any{
-					"oid":   mib.OID,
-					"type":  mib.Type,
-					"value": mib.Value,
-				})
-			}
-
-			snmp["add_mibs"] = addMibs
-		}
-
-		data["snmp_agent"] = snmp
-	}
-
-	// CDP
-	if dev.CDPConfig != nil && dev.CDPConfig.Enabled {
-		cdp := map[string]any{
-			"enabled": true,
-		}
-		if dev.CDPConfig.Platform != "" {
-			cdp["platform"] = dev.CDPConfig.Platform
-		}
-
-		if dev.CDPConfig.SoftwareVersion != "" {
-			cdp["software_version"] = dev.CDPConfig.SoftwareVersion
-		}
-
-		if dev.CDPConfig.PortID != "" {
-			cdp["port_id"] = dev.CDPConfig.PortID
-		}
-
-		if dev.CDPConfig.Version > 0 {
-			cdp["version"] = dev.CDPConfig.Version
-		}
-
-		if dev.CDPConfig.Holdtime > 0 {
-			cdp["holdtime"] = dev.CDPConfig.Holdtime
-		}
-
-		data["cdp"] = cdp
-	}
-
-	// LLDP
-	if dev.LLDPConfig != nil && dev.LLDPConfig.Enabled {
-		lldp := map[string]any{
-			"enabled": true,
-		}
-		if dev.LLDPConfig.SystemDescription != "" {
-			lldp["system_description"] = dev.LLDPConfig.SystemDescription
-		}
-
-		if dev.LLDPConfig.PortDescription != "" {
-			lldp["port_description"] = dev.LLDPConfig.PortDescription
-		}
-
-		if dev.LLDPConfig.ChassisIDType != "" {
-			lldp["chassis_id_type"] = dev.LLDPConfig.ChassisIDType
-		}
-
-		if dev.LLDPConfig.TTL > 0 {
-			lldp["ttl"] = dev.LLDPConfig.TTL
-		}
-
-		data["lldp"] = lldp
-	}
-
-	// Add more protocol serialization as needed...
-
-	return data
 }

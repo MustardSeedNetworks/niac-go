@@ -3,9 +3,10 @@ package main
 import (
 	"fmt"
 
+	"github.com/spf13/cobra"
+
 	"github.com/krisarmstrong/niac-go/pkg/config"
 	"github.com/krisarmstrong/niac-go/pkg/logging"
-	"github.com/spf13/cobra"
 )
 
 var runOptions struct {
@@ -83,9 +84,9 @@ func runSimulation(cmd *cobra.Command, args []string) error {
 
 	// Dry run mode - just validate
 	if runOptions.dryRun {
-		logging.Success("✓ Configuration valid: %s", configFile)
-		logging.Info("  Interface: %s", interfaceName)
-		logging.Info("  Devices: %d", len(cfg.Devices))
+		logging.Successf("✓ Configuration valid: %s", configFile)
+		logging.Infof("  Interface: %s", interfaceName)
+		logging.Infof("  Devices: %d", len(cfg.Devices))
 		return nil
 	}
 
@@ -99,19 +100,19 @@ func runSimulation(cmd *cobra.Command, args []string) error {
 	// Print banner unless quiet
 	if debugLevel > 0 {
 		printBanner()
-		logging.Info("Interface: %s", interfaceName)
-		logging.Info("Config: %s (%d devices)", configFile, len(cfg.Devices))
+		logging.Infof("Interface: %s", interfaceName)
+		logging.Infof("Config: %s (%d devices)", configFile, len(cfg.Devices))
 		if runOptions.web {
-			logging.Info("Web UI: http://localhost:%s", runOptions.webPort)
+			logging.Infof("Web UI: http://localhost:%s", runOptions.webPort)
 		}
 		if runOptions.tui {
-			logging.Info("TUI: Enabled")
+			logging.Infof("TUI: Enabled")
 		}
 		fmt.Println()
 	}
 
 	// Validate interface
-	if err := validateInterface(interfaceName); err != nil {
+	if err = validateInterface(interfaceName); err != nil {
 		return err
 	}
 

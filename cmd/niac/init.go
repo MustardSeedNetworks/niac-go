@@ -11,9 +11,12 @@ import (
 	"strings"
 
 	"github.com/fatih/color"
-	"github.com/krisarmstrong/niac-go/pkg/templates"
 	"github.com/spf13/cobra"
+
+	"github.com/krisarmstrong/niac-go/pkg/templates"
 )
+
+const defaultInitOutputFile = "config.yaml"
 
 var initCmd = &cobra.Command{
 	Use:   "init [output-file]",
@@ -23,14 +26,10 @@ a configuration file for your network simulation needs.
 
 The wizard will ask about your network type, size, and requirements,
 then suggest the most appropriate template.`,
-	Example: `  # Start interactive wizard
-  niac init
-
-  # Start wizard with specific output file
-  niac init my-network.yaml
-
-  # Quick workflow
-  niac init && niac validate config.yaml`,
+	Example: fmt.Sprintf(
+		"  # Start interactive wizard\n  niac init\n\n  # Start wizard with specific output file\n  niac init my-network.yaml\n\n  # Quick workflow\n  niac init && niac validate %s",
+		defaultInitOutputFile,
+	),
 	Run: runInit,
 }
 
@@ -38,7 +37,7 @@ func init() {
 	rootCmd.AddCommand(initCmd)
 }
 
-func runInit(cmd *cobra.Command, args []string) {
+func runInit(_ *cobra.Command, args []string) {
 	reader := bufio.NewReader(os.Stdin)
 
 	// Print header
@@ -124,20 +123,20 @@ func runInit(cmd *cobra.Command, args []string) {
 	if len(args) > 0 {
 		outputFile = args[0]
 	} else {
-		fmt.Print("2. Enter output filename [config.yaml]: ")
-		filename, err := readLine(reader)
-		if err != nil && !errors.Is(err, io.EOF) {
-			handleInputError(err)
+		fmt.Printf("2. Enter output filename [%s]: ", defaultInitOutputFile)
+		filename, readErr := readLine(reader)
+		if readErr != nil && !errors.Is(readErr, io.EOF) {
+			handleInputError(readErr)
 		}
 		if filename == "" {
-			outputFile = "config.yaml"
+			outputFile = defaultInitOutputFile
 		} else {
 			outputFile = filename
 		}
 	}
 
 	// Check if file exists
-	if _, err := os.Stat(outputFile); err == nil {
+	if _, statErr := os.Stat(outputFile); statErr == nil {
 		fmt.Println()
 		color.Yellow("Warning: File %s already exists!", outputFile)
 		overwrite := mustPromptYesNo(reader, "Overwrite? (y/n): ")
@@ -148,8 +147,8 @@ func runInit(cmd *cobra.Command, args []string) {
 	}
 
 	// Write template to file
-	if err := os.WriteFile(outputFile, []byte(tmpl.Content), 0o600); err != nil {
-		color.Red("Error writing file: %v", err)
+	if writeErr := os.WriteFile(outputFile, []byte(tmpl.Content), 0o600); writeErr != nil {
+		color.Red("Error writing file: %v", writeErr)
 		os.Exit(1)
 	}
 
@@ -228,7 +227,7 @@ func promptYesNo(reader *bufio.Reader, prompt string) (bool, error) {
 }
 
 // promptInt prompts for an integer within a range.
-func promptInt(reader *bufio.Reader, prompt string, min, max int) (int, error) {
+func promptInt(reader *bufio.Reader, prompt string, minValue, maxValue int) (int, error) {
 	for {
 		fmt.Print(prompt)
 		input, err := readLine(reader)
@@ -243,8 +242,8 @@ func promptInt(reader *bufio.Reader, prompt string, min, max int) (int, error) {
 			continue
 		}
 
-		if value < min || value > max {
-			color.Red("Please enter a number between %d and %d", min, max)
+		if value < minValue || value > maxValue {
+			color.Red("Please enter a number between %d and %d", minValue, maxValue)
 			continue
 		}
 
@@ -293,8 +292,8 @@ func mustPromptYesNo(reader *bufio.Reader, prompt string) bool {
 	return value
 }
 
-func mustPromptInt(reader *bufio.Reader, prompt string, min, max int) int {
-	value, err := promptInt(reader, prompt, min, max)
+func mustPromptInt(reader *bufio.Reader, prompt string, minValue, maxValue int) int {
+	value, err := promptInt(reader, prompt, minValue, maxValue)
 	if err != nil {
 		handleInputError(err)
 	}

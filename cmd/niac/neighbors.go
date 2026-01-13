@@ -11,8 +11,9 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/krisarmstrong/niac-go/pkg/ipc"
 	"github.com/spf13/cobra"
+
+	"github.com/krisarmstrong/niac-go/pkg/ipc"
 )
 
 // NeighborEntry represents a neighbor record for display.
@@ -31,6 +32,8 @@ var neighborsOpts struct {
 	socketPath string
 	jsonOutput bool
 }
+
+const neighborsProtocolAll = "all"
 
 var neighborsCmd = &cobra.Command{
 	Use:   "neighbors [watch]",
@@ -199,14 +202,13 @@ func runNeighborsWatchLoop(ctx context.Context, client *ipc.Client) error {
 			}
 			return nil
 		case <-ticker.C:
-			err := displayNeighborsUpdate(client)
-			if err != nil {
+			if updateErr := displayNeighborsUpdate(client); updateErr != nil {
 				// Connection lost, but don't exit immediately
 				if !neighborsOpts.jsonOutput {
-					fmt.Printf("\r[%s] Connection lost: %v\n", time.Now().Format("15:04:05"), err)
+					fmt.Printf("\r[%s] Connection lost: %v\n", time.Now().Format("15:04:05"), updateErr)
 				} else {
 					errObj := map[string]any{
-						"error": err.Error(),
+						"error": updateErr.Error(),
 						"time":  time.Now().Format(time.RFC3339),
 					}
 					jsonBytes, _ := json.Marshal(errObj)
@@ -244,14 +246,13 @@ func displayNeighborsUpdate(client *ipc.Client) error {
 		if neighborsOpts.device != "" {
 			fmt.Printf("Device filter: %s\n", neighborsOpts.device)
 		}
-		if neighborsOpts.protocol != "all" && neighborsOpts.protocol != "" {
+		if neighborsOpts.protocol != neighborsProtocolAll && neighborsOpts.protocol != "" {
 			fmt.Printf("Protocol filter: %s\n", strings.ToUpper(neighborsOpts.protocol))
 		}
 		fmt.Println(strings.Repeat("-", 90))
 
-		err := outputNeighborsTable(filtered)
-		if err != nil {
-			return err
+		if tableErr := outputNeighborsTable(filtered); tableErr != nil {
+			return tableErr
 		}
 	}
 	return nil
@@ -260,10 +261,10 @@ func displayNeighborsUpdate(client *ipc.Client) error {
 func validateProtocolFlag(protocol string) error {
 	protocol = strings.ToLower(protocol)
 	switch protocol {
-	case "lldp", "cdp", "all", "":
+	case "lldp", "cdp", neighborsProtocolAll, "":
 		return nil
 	default:
-		return fmt.Errorf("invalid protocol %q: must be lldp, cdp, or all", protocol)
+		return fmt.Errorf("invalid protocol %q: must be lldp, cdp, or %s", protocol, neighborsProtocolAll)
 	}
 }
 

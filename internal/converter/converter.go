@@ -465,8 +465,8 @@ func ConvertFile(inputPath, outputPath string, verbose bool) error {
 	}
 
 	// Write output file
-	if err := os.WriteFile(outputPath, yamlData, 0o600); err != nil {
-		return fmt.Errorf("error writing output file: %w", err)
+	if writeErr := os.WriteFile(outputPath, yamlData, 0o600); writeErr != nil {
+		return fmt.Errorf("error writing output file: %w", writeErr)
 	}
 
 	return nil
@@ -524,8 +524,7 @@ func (p *Parser) Parse() (*Config, error) {
 	return config, nil
 }
 
-// parseCapturePlayback parses a CapturePlayback block
-// nolint:unparam // Error return reserved for future validation
+// parseCapturePlayback parses a CapturePlayback block.
 func (p *Parser) parseCapturePlayback() (*CapturePlayback, error) {
 	p.pos++ // Skip opening line
 	playback := &CapturePlayback{}
@@ -624,10 +623,7 @@ func (p *Parser) parseDevice(deviceNum int) (*Device, error) {
 
 			continue
 		} else if strings.HasPrefix(line, "SnmpAccessList(") {
-			accessList, err := p.parseSnmpAccessList()
-			if err != nil {
-				return nil, err
-			}
+			accessList := p.parseSnmpAccessList()
 			if device.SnmpAgent == nil {
 				device.SnmpAgent = &SnmpAgent{}
 			}
@@ -635,10 +631,7 @@ func (p *Parser) parseDevice(deviceNum int) (*Device, error) {
 
 			continue
 		} else if strings.HasPrefix(line, "NetBiosStatus(") {
-			netbios, err := p.parseNetBiosStatus()
-			if err != nil {
-				return nil, err
-			}
+			netbios := p.parseNetBiosStatus()
 			device.Netbios = mergeNetbios(device.Netbios, netbios)
 
 			continue
@@ -651,11 +644,7 @@ func (p *Parser) parseDevice(deviceNum int) (*Device, error) {
 
 			continue
 		} else if strings.HasPrefix(line, "Icmp6(") {
-			icmp6, err := p.parseIcmp6()
-			if err != nil {
-				return nil, err
-			}
-			device.Icmpv6 = icmp6
+			device.Icmpv6 = p.parseIcmp6()
 
 			continue
 		} else if strings.HasPrefix(line, "Dhcp(") {
@@ -744,7 +733,8 @@ func mergeNetbios(base *NetbiosConfig, incoming *NetbiosConfig) *NetbiosConfig {
 }
 
 // parseSnmpAgent parses an SnmpAgent block
-// nolint:unparam // Error return reserved for future validation
+//
+//nolint:unparam // Error return reserved for future validation
 func (p *Parser) parseSnmpAgent() (*SnmpAgent, error) {
 	p.pos++ // Skip opening line
 	agent := &SnmpAgent{}
@@ -806,7 +796,7 @@ func (p *Parser) parseSnmpAgent() (*SnmpAgent, error) {
 }
 
 // parseSnmpAccessList parses SnmpAccessList block.
-func (p *Parser) parseSnmpAccessList() ([]string, error) {
+func (p *Parser) parseSnmpAccessList() []string {
 	p.pos++ // Skip opening line
 	var accessList []string
 
@@ -831,7 +821,7 @@ func (p *Parser) parseSnmpAccessList() ([]string, error) {
 		p.pos++
 	}
 
-	return accessList, nil
+	return accessList
 }
 
 // parseTTL parses TTL(ttl ip mask).
@@ -858,7 +848,7 @@ func (p *Parser) parseTTL(line string) *TTLConfig {
 }
 
 // parseNetBiosStatus parses NetBiosStatus block.
-func (p *Parser) parseNetBiosStatus() (*NetbiosConfig, error) {
+func (p *Parser) parseNetBiosStatus() *NetbiosConfig {
 	p.pos++ // Skip opening line
 	netbios := &NetbiosConfig{
 		Enabled: true,
@@ -897,7 +887,7 @@ func (p *Parser) parseNetBiosStatus() (*NetbiosConfig, error) {
 		p.pos++
 	}
 
-	return netbios, nil
+	return netbios
 }
 
 // parseNetBiosName parses NetBiosName("name" suffix groupflag).
@@ -1034,7 +1024,7 @@ func (p *Parser) parseIcmpRouterAdvertisement() (*IcmpRouterAdvertisement, error
 }
 
 // parseIcmp6 parses Icmp6 block.
-func (p *Parser) parseIcmp6() (*Icmpv6Config, error) {
+func (p *Parser) parseIcmp6() *Icmpv6Config {
 	p.pos++ // Skip opening line
 	icmp6 := &Icmpv6Config{Enabled: true}
 
@@ -1052,10 +1042,7 @@ func (p *Parser) parseIcmp6() (*Icmpv6Config, error) {
 		}
 
 		if strings.HasPrefix(line, "RouterAdvertisement(") {
-			ra, err := p.parseIcmpv6RouterAdvertisement()
-			if err != nil {
-				return nil, err
-			}
+			ra := p.parseIcmpv6RouterAdvertisement()
 			icmp6.RouterAdvertisement = ra
 
 			continue
@@ -1064,11 +1051,11 @@ func (p *Parser) parseIcmp6() (*Icmpv6Config, error) {
 		p.pos++
 	}
 
-	return icmp6, nil
+	return icmp6
 }
 
 // parseIcmpv6RouterAdvertisement parses IPv6 RouterAdvertisement block.
-func (p *Parser) parseIcmpv6RouterAdvertisement() (*Icmpv6RouterAdvertisement, error) {
+func (p *Parser) parseIcmpv6RouterAdvertisement() *Icmpv6RouterAdvertisement {
 	p.pos++ // Skip opening line
 	ra := &Icmpv6RouterAdvertisement{}
 
@@ -1119,10 +1106,7 @@ func (p *Parser) parseIcmpv6RouterAdvertisement() (*Icmpv6RouterAdvertisement, e
 			_, _ = fmt.Sscanf(line, "MTU(%d)", &v)
 			ra.MTU = v
 		case strings.HasPrefix(line, "PrefixInformation("):
-			prefix, err := p.parseIcmpv6PrefixInformation()
-			if err != nil {
-				return nil, err
-			}
+			prefix := p.parseIcmpv6PrefixInformation()
 			if prefix != nil {
 				ra.PrefixInfo = append(ra.PrefixInfo, *prefix)
 			}
@@ -1133,11 +1117,11 @@ func (p *Parser) parseIcmpv6RouterAdvertisement() (*Icmpv6RouterAdvertisement, e
 		p.pos++
 	}
 
-	return ra, nil
+	return ra
 }
 
 // parseIcmpv6PrefixInformation parses PrefixInformation block.
-func (p *Parser) parseIcmpv6PrefixInformation() (*Icmpv6PrefixInfo, error) {
+func (p *Parser) parseIcmpv6PrefixInformation() *Icmpv6PrefixInfo {
 	p.pos++ // Skip opening line
 	prefix := &Icmpv6PrefixInfo{}
 
@@ -1180,7 +1164,7 @@ func (p *Parser) parseIcmpv6PrefixInformation() (*Icmpv6PrefixInfo, error) {
 		p.pos++
 	}
 
-	return prefix, nil
+	return prefix
 }
 
 // collectQuotedDirective joins lines until at least minQuotes quoted strings are present.
@@ -1269,9 +1253,7 @@ func (p *Parser) parseFdbTable(line string, dot1d bool) *FdbTableConfig {
 	return cfg
 }
 
-// parseDhcp parses a Dhcp block
-// nolint:gocyclo // DHCP parser handles many option types
-// nolint:unparam // Error return reserved for future validation
+// parseDhcp parses a Dhcp block.
 func (p *Parser) parseDhcp() (*DhcpServer, error) {
 	p.pos++ // Skip opening line
 	dhcp := &DhcpServer{
@@ -1354,7 +1336,8 @@ func (p *Parser) parseDhcp() (*DhcpServer, error) {
 }
 
 // parseDns parses a Dns block
-// nolint:unparam // Error return reserved for future validation
+//
+//nolint:unparam // Error return reserved for future validation
 func (p *Parser) parseDns() (*DnsServer, error) {
 	p.pos++ // Skip opening line
 	dns := &DnsServer{

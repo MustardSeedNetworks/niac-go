@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/spf13/cobra"
+
 	"github.com/krisarmstrong/niac-go/pkg/config"
 	"github.com/krisarmstrong/niac-go/pkg/logging"
-	"github.com/spf13/cobra"
 )
 
 var interactiveOptions struct {
@@ -58,7 +59,7 @@ func runInteractive(cmd *cobra.Command, args []string) {
 	// Load configuration
 	cfg, err := config.Load(configFile)
 	if err != nil {
-		logging.Error("Failed to load configuration: %v", err)
+		logging.Errorf("Failed to load configuration: %v", err)
 		os.Exit(1)
 	}
 
@@ -74,8 +75,8 @@ func runInteractive(cmd *cobra.Command, args []string) {
 	debugConfig := logging.NewDebugConfig(debugLevel)
 
 	// Start interactive mode
-	if err := runInteractiveMode(interfaceName, cfg, debugConfig, configFile); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+	if runErr := runInteractiveMode(interfaceName, cfg, debugConfig, configFile); runErr != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", runErr)
 		os.Exit(1)
 	}
 }

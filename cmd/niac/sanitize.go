@@ -139,9 +139,8 @@ func runSanitize(cmd *cobra.Command, args []string) error {
 	}
 
 	if mappingFile != "" {
-		err := loadMapping(mappingFile, mapping)
-		if err != nil && !os.IsNotExist(err) {
-			fmt.Fprintf(os.Stderr, "⚠️  Warning: Could not load mapping file: %v\n", err)
+		if loadErr := loadMapping(mappingFile, mapping); loadErr != nil && !os.IsNotExist(loadErr) {
+			fmt.Fprintf(os.Stderr, "⚠️  Warning: Could not load mapping file: %v\n", loadErr)
 		}
 	}
 
@@ -155,16 +154,14 @@ func runSanitize(cmd *cobra.Command, args []string) error {
 	inputFile := args[0]
 	outputFile := args[1]
 
-	err := sanitizeFile(inputFile, outputFile, mapping, domain, location, contact, community)
-	if err != nil {
-		return fmt.Errorf("sanitization failed: %w", err)
+	if sanitizeErr := sanitizeFile(inputFile, outputFile, mapping, domain, location, contact, community); sanitizeErr != nil {
+		return fmt.Errorf("sanitization failed: %w", sanitizeErr)
 	}
 
 	// Save mapping if file specified
 	if mappingFile != "" {
-		err := saveMapping(mappingFile, mapping)
-		if err != nil {
-			return fmt.Errorf("failed to save mapping: %w", err)
+		if saveErr := saveMapping(mappingFile, mapping); saveErr != nil {
+			return fmt.Errorf("failed to save mapping: %w", saveErr)
 		}
 	}
 
@@ -203,9 +200,8 @@ func sanitizeBatch(
 
 		fmt.Printf("[%d/%d] Sanitizing %s...\n", i+1, len(walkFiles), basename)
 
-		err := sanitizeFile(inputFile, outputFile, mapping, domain, location, contact, community)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "   ⚠️  Error: %v\n", err)
+		if sanitizeErr := sanitizeFile(inputFile, outputFile, mapping, domain, location, contact, community); sanitizeErr != nil {
+			fmt.Fprintf(os.Stderr, "   ⚠️  Error: %v\n", sanitizeErr)
 			continue
 		}
 
@@ -214,9 +210,8 @@ func sanitizeBatch(
 
 	// Save mapping
 	if mappingFile != "" {
-		err := saveMapping(mappingFile, mapping)
-		if err != nil {
-			return fmt.Errorf("failed to save mapping: %w", err)
+		if saveErr := saveMapping(mappingFile, mapping); saveErr != nil {
+			return fmt.Errorf("failed to save mapping: %w", saveErr)
 		}
 		fmt.Printf("\n💾 Saved mapping to %s\n", mappingFile)
 	}
@@ -276,32 +271,32 @@ func sanitizeFile(
 	for scanner.Scan() {
 		line := scanner.Text()
 		sanitized := sanitizeLine(line, mapping, domain, location, contact, community)
-		if _, err := fmt.Fprintln(writer, sanitized); err != nil {
-			return fmt.Errorf("failed to write line: %w", err)
+		if _, writeErr := fmt.Fprintln(writer, sanitized); writeErr != nil {
+			return fmt.Errorf("failed to write line: %w", writeErr)
 		}
 	}
 
-	if err := scanner.Err(); err != nil {
-		return fmt.Errorf("scanner error: %w", err)
+	if scanErr := scanner.Err(); scanErr != nil {
+		return fmt.Errorf("scanner error: %w", scanErr)
 	}
 
-	if err := writer.Flush(); err != nil {
-		return fmt.Errorf("failed to flush writer: %w", err)
+	if flushErr := writer.Flush(); flushErr != nil {
+		return fmt.Errorf("failed to flush writer: %w", flushErr)
 	}
 
 	// Sync to disk before closing
-	if err := output.Sync(); err != nil {
-		return fmt.Errorf("failed to sync output: %w", err)
+	if syncErr := output.Sync(); syncErr != nil {
+		return fmt.Errorf("failed to sync output: %w", syncErr)
 	}
 
 	// Close output file explicitly before rename
-	if err := output.Close(); err != nil {
-		return fmt.Errorf("failed to close output file: %w", err)
+	if closeErr := output.Close(); closeErr != nil {
+		return fmt.Errorf("failed to close output file: %w", closeErr)
 	}
 
 	// Fix #68: Atomic rename to prevent TOCTOU
-	if err := os.Rename(tempFile, outputFile); err != nil {
-		return fmt.Errorf("failed to rename temp file: %w", err)
+	if renameErr := os.Rename(tempFile, outputFile); renameErr != nil {
+		return fmt.Errorf("failed to rename temp file: %w", renameErr)
 	}
 
 	// Update statistics with lock
@@ -537,8 +532,8 @@ func loadMapping(filename string, mapping *SanitizationMapping) error {
 		return fmt.Errorf("failed to read mapping file: %w", err)
 	}
 
-	if err := json.Unmarshal(data, mapping); err != nil {
-		return fmt.Errorf("failed to unmarshal mapping: %w", err)
+	if unmarshalErr := json.Unmarshal(data, mapping); unmarshalErr != nil {
+		return fmt.Errorf("failed to unmarshal mapping: %w", unmarshalErr)
 	}
 	return nil
 }
@@ -555,18 +550,19 @@ func saveMapping(filename string, mapping *SanitizationMapping) error {
 
 	// Fix #68: Atomic write for mapping file
 	tempFile := filename + ".tmp"
-	if err := os.WriteFile(tempFile, data, 0o600); err != nil {
-		return fmt.Errorf("failed to write temp mapping file: %w", err)
+	if writeErr := os.WriteFile(tempFile, data, 0o600); writeErr != nil {
+		return fmt.Errorf("failed to write temp mapping file: %w", writeErr)
 	}
 
-	if err := os.Rename(tempFile, filename); err != nil {
-		return fmt.Errorf("failed to rename mapping file: %w", err)
+	if renameErr := os.Rename(tempFile, filename); renameErr != nil {
+		return fmt.Errorf("failed to rename mapping file: %w", renameErr)
 	}
 	return nil
 }
 
 // validateFilePath validates file paths to prevent path traversal attacks
 // Fix #67: Input validation.
+//
 //nolint:gocognit // Path validation requires multiple security checks
 func validateFilePath(path string, allowCreate bool) error {
 	if path == "" {
@@ -595,14 +591,14 @@ func validateFilePath(path string, allowCreate bool) error {
 
 	// Allow paths within CWD, /tmp, or user's home directory
 	validPrefixes := []string{cwd, os.TempDir()}
-	if homeDir, err := os.UserHomeDir(); err == nil {
+	if homeDir, homeErr := os.UserHomeDir(); homeErr == nil {
 		validPrefixes = append(validPrefixes, homeDir)
 	}
 
 	isValid := false
 	for _, prefix := range validPrefixes {
-		absPrefix, err := filepath.Abs(prefix)
-		if err != nil {
+		absPrefix, absErr := filepath.Abs(prefix)
+		if absErr != nil {
 			continue
 		}
 		if strings.HasPrefix(absPath+string(filepath.Separator), absPrefix+string(filepath.Separator)) {
@@ -617,12 +613,12 @@ func validateFilePath(path string, allowCreate bool) error {
 
 	// For input files, ensure they exist and are regular files
 	if !allowCreate {
-		info, err := os.Lstat(absPath)
-		if err != nil {
-			if os.IsNotExist(err) {
+		info, statErr := os.Lstat(absPath)
+		if statErr != nil {
+			if os.IsNotExist(statErr) {
 				return fmt.Errorf("file does not exist: %s", path)
 			}
-			return fmt.Errorf("cannot access file: %w", err)
+			return fmt.Errorf("cannot access file: %w", statErr)
 		}
 
 		// Reject symlinks for security
@@ -667,14 +663,14 @@ func validateDirPath(path string, allowCreate bool) error {
 	}
 
 	validPrefixes := []string{cwd, os.TempDir()}
-	if homeDir, err := os.UserHomeDir(); err == nil {
+	if homeDir, homeErr := os.UserHomeDir(); homeErr == nil {
 		validPrefixes = append(validPrefixes, homeDir)
 	}
 
 	isValid := false
 	for _, prefix := range validPrefixes {
-		absPrefix, err := filepath.Abs(prefix)
-		if err != nil {
+		absPrefix, absErr := filepath.Abs(prefix)
+		if absErr != nil {
 			continue
 		}
 		if strings.HasPrefix(absPath+string(filepath.Separator), absPrefix+string(filepath.Separator)) {
@@ -689,12 +685,12 @@ func validateDirPath(path string, allowCreate bool) error {
 
 	// For input dirs, ensure they exist
 	if !allowCreate {
-		info, err := os.Stat(absPath)
-		if err != nil {
-			if os.IsNotExist(err) {
+		info, statErr := os.Stat(absPath)
+		if statErr != nil {
+			if os.IsNotExist(statErr) {
 				return fmt.Errorf("directory does not exist: %s", path)
 			}
-			return fmt.Errorf("cannot access directory: %w", err)
+			return fmt.Errorf("cannot access directory: %w", statErr)
 		}
 
 		if !info.IsDir() {

@@ -6,10 +6,17 @@ import (
 	"os"
 	"strings"
 
-	"github.com/krisarmstrong/niac-go/pkg/api"
-	"github.com/krisarmstrong/niac-go/pkg/ipc"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
+
+	"github.com/krisarmstrong/niac-go/pkg/api"
+	"github.com/krisarmstrong/niac-go/pkg/ipc"
+)
+
+const (
+	topologyFormatDOT  = "dot"
+	topologyFormatJSON = "json"
+	topologyFormatYAML = "yaml"
 )
 
 // topologyOptions holds command-line options for the topology command.
@@ -102,8 +109,14 @@ func init() {
 func runTopologyExport(cmd *cobra.Command, args []string) error {
 	// Validate format
 	format := strings.ToLower(topologyOptions.format)
-	if format != "dot" && format != "json" && format != "yaml" {
-		return fmt.Errorf("invalid format %q: must be one of: dot, json, yaml", topologyOptions.format)
+	if format != topologyFormatDOT && format != topologyFormatJSON && format != topologyFormatYAML {
+		return fmt.Errorf(
+			"invalid format %q: must be one of: %s, %s, %s",
+			topologyOptions.format,
+			topologyFormatDOT,
+			topologyFormatJSON,
+			topologyFormatYAML,
+		)
 	}
 
 	// Determine socket path
@@ -113,7 +126,7 @@ func runTopologyExport(cmd *cobra.Command, args []string) error {
 	}
 
 	// Check if socket exists
-	if _, err := os.Stat(socketPath); os.IsNotExist(err) {
+	if _, statErr := os.Stat(socketPath); os.IsNotExist(statErr) {
 		fmt.Fprintf(os.Stderr, "Error: NIAC is not running (socket not found: %s)\n", socketPath)
 		os.Exit(1)
 	}
@@ -129,15 +142,15 @@ func runTopologyExport(cmd *cobra.Command, args []string) error {
 	// Generate output based on format
 	var output string
 	switch format {
-	case "dot":
+	case topologyFormatDOT:
 		output = topology.ExportDOT()
-	case "json":
+	case topologyFormatJSON:
 		output, err = exportTopologyJSON(topology)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: failed to export JSON: %v\n", err)
 			os.Exit(2)
 		}
-	case "yaml":
+	case topologyFormatYAML:
 		output, err = exportTopologyYAML(topology)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: failed to export YAML: %v\n", err)
@@ -147,9 +160,8 @@ func runTopologyExport(cmd *cobra.Command, args []string) error {
 
 	// Write output
 	if topologyOptions.outputFile != "" {
-		err := os.WriteFile(topologyOptions.outputFile, []byte(output), 0o600)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: failed to write to file %s: %v\n", topologyOptions.outputFile, err)
+		if writeErr := os.WriteFile(topologyOptions.outputFile, []byte(output), 0o600); writeErr != nil {
+			fmt.Fprintf(os.Stderr, "Error: failed to write to file %s: %v\n", topologyOptions.outputFile, writeErr)
 			os.Exit(2)
 		}
 		fmt.Fprintf(os.Stderr, "Topology exported to %s\n", topologyOptions.outputFile)

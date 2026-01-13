@@ -6,9 +6,10 @@ import (
 	"strings"
 
 	"github.com/fatih/color"
+	"github.com/spf13/cobra"
+
 	"github.com/krisarmstrong/niac-go/pkg/config"
 	"github.com/krisarmstrong/niac-go/pkg/templates"
-	"github.com/spf13/cobra"
 )
 
 var templateCmd = &cobra.Command{
@@ -95,7 +96,7 @@ func init() {
 	templateCmd.AddCommand(templateApplyCmd)
 }
 
-func runTemplateList(cmd *cobra.Command, args []string) {
+func runTemplateList(_ *cobra.Command, _ []string) {
 	templateList := templates.List()
 
 	color.New(color.Bold).Println("Available Templates:") // #nosec G104 -- cosmetic output
@@ -127,7 +128,7 @@ func runTemplateList(cmd *cobra.Command, args []string) {
 	fmt.Println("  niac init                                  # Interactive template wizard")
 }
 
-func runTemplateShow(cmd *cobra.Command, args []string) {
+func runTemplateShow(_ *cobra.Command, args []string) {
 	templateName := args[0]
 
 	tmpl, err := templates.Get(templateName)
@@ -144,12 +145,12 @@ func runTemplateShow(cmd *cobra.Command, args []string) {
 	fmt.Print(tmpl.Content)
 }
 
-func runTemplateUse(cmd *cobra.Command, args []string) {
+func runTemplateUse(_ *cobra.Command, args []string) {
 	templateName := args[0]
 	outputFile := args[1]
 
 	// Check if output file exists
-	if _, err := os.Stat(outputFile); err == nil {
+	if _, statErr := os.Stat(outputFile); statErr == nil {
 		color.Red("Error: file already exists: %s", outputFile)
 		os.Exit(1)
 	}
@@ -167,8 +168,8 @@ func runTemplateUse(cmd *cobra.Command, args []string) {
 	}
 
 	// Write to file
-	if err := os.WriteFile(outputFile, []byte(tmpl.Content), 0o600); err != nil {
-		color.Red("Error writing file: %v", err)
+	if writeErr := os.WriteFile(outputFile, []byte(tmpl.Content), 0o600); writeErr != nil {
+		color.Red("Error writing file: %v", writeErr)
 		os.Exit(1)
 	}
 
@@ -183,7 +184,7 @@ func runTemplateUse(cmd *cobra.Command, args []string) {
 }
 
 //nolint:gocognit // Template application involves interactive prompts
-func runTemplateApply(cmd *cobra.Command, args []string) {
+func runTemplateApply(_ *cobra.Command, args []string) {
 	templateName := args[0]
 
 	// Get template
@@ -208,21 +209,27 @@ func runTemplateApply(cmd *cobra.Command, args []string) {
 		color.Red("Error creating temporary file: %v", err)
 		os.Exit(1)
 	}
-	defer os.Remove(tmpFile.Name())
-	defer tmpFile.Close() // #nosec G104 -- deferred close
+	cleanup := func() {
+		_ = tmpFile.Close()
+		_ = os.Remove(tmpFile.Name())
+	}
 
-	if _, err := tmpFile.WriteString(tmpl.Content); err != nil {
-		color.Red("Error writing temporary file: %v", err)
+	if _, writeErr := tmpFile.WriteString(tmpl.Content); writeErr != nil {
+		color.Red("Error writing temporary file: %v", writeErr)
+		cleanup()
 		os.Exit(1)
 	}
-	tmpFile.Close() // #nosec G104 -- error logged elsewhere
+	_ = tmpFile.Close() // #nosec G104 -- error logged elsewhere
 
 	// Load and validate
 	cfg, err := config.Load(tmpFile.Name())
 	if err != nil {
 		color.Red("✗ Template validation failed: %v", err)
+		cleanup()
 		os.Exit(1)
 	}
+
+	cleanup()
 
 	color.Green("✓ Template is valid")
 	fmt.Println()

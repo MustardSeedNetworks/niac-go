@@ -122,7 +122,7 @@ func TestTemplateUseFileCreation(t *testing.T) {
 			}
 
 			// Verify file exists
-			if _, err := os.Stat(tt.outputFile); os.IsNotExist(err) {
+			if _, statErr := os.Stat(tt.outputFile); os.IsNotExist(statErr) {
 				t.Error("Output file should exist")
 			}
 
