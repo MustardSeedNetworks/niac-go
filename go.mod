@@ -12,7 +12,7 @@ require (
 	go.etcd.io/bbolt v1.4.3
 	golang.org/x/time v0.14.0
 	gopkg.in/yaml.v3 v3.0.1
-	modernc.org/sqlite v1.43.0
+	modernc.org/sqlite v1.44.0
 )
 
 require (
