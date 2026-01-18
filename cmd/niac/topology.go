@@ -9,8 +9,8 @@ import (
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 
-	"github.com/krisarmstrong/niac-go/pkg/httpapi"
-	"github.com/krisarmstrong/niac-go/pkg/ipc"
+	"github.com/krisarmstrong/niac-go/internal/api"
+	"github.com/krisarmstrong/niac-go/internal/ipc"
 )
 
 const (
@@ -177,7 +177,7 @@ func runTopologyExport(options *topologyOptions) error {
 }
 
 // exportTopologyJSON exports topology as formatted JSON.
-func exportTopologyJSON(topology *httpapi.Topology) (string, error) {
+func exportTopologyJSON(topology *api.Topology) (string, error) {
 	// Create an extended structure with more details
 	var export TopologyExport
 	export.Nodes = make([]TopologyNodeExport, len(topology.Nodes))
@@ -227,7 +227,7 @@ func exportTopologyJSON(topology *httpapi.Topology) (string, error) {
 }
 
 // exportTopologyYAML exports topology as YAML.
-func exportTopologyYAML(topology *httpapi.Topology) (string, error) {
+func exportTopologyYAML(topology *api.Topology) (string, error) {
 	// Create an extended structure with more details
 	var export TopologyExport
 	export.Nodes = make([]TopologyNodeExport, len(topology.Nodes))
@@ -277,7 +277,7 @@ func exportTopologyYAML(topology *httpapi.Topology) (string, error) {
 }
 
 // countDevicesByType counts devices by their type.
-func countDevicesByType(nodes []httpapi.TopologyNode) map[string]int {
+func countDevicesByType(nodes []api.TopologyNode) map[string]int {
 	counts := make(map[string]int)
 	for _, node := range nodes {
 		deviceType := node.Type

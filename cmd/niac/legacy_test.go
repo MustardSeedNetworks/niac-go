@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/krisarmstrong/niac-go/pkg/logging"
+	"github.com/krisarmstrong/niac-go/internal/logging"
 )
 
 func newLegacyFlags() *legacyFlags {

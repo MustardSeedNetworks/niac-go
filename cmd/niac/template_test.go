@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/krisarmstrong/niac-go/pkg/templates"
+	"github.com/krisarmstrong/niac-go/internal/templates"
 )
 
 func TestTemplateList(t *testing.T) {

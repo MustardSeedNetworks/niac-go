@@ -10,8 +10,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/krisarmstrong/niac-go/pkg/daemon"
-	"github.com/krisarmstrong/niac-go/pkg/logging"
+	"github.com/krisarmstrong/niac-go/internal/daemon"
+	"github.com/krisarmstrong/niac-go/internal/logging"
 )
 
 type daemonOptions struct {

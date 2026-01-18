@@ -8,8 +8,8 @@ import (
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 
-	"github.com/krisarmstrong/niac-go/pkg/config"
-	"github.com/krisarmstrong/niac-go/pkg/templates"
+	"github.com/krisarmstrong/niac-go/internal/config"
+	"github.com/krisarmstrong/niac-go/internal/templates"
 )
 
 func addTemplateCommand(root *cobra.Command, _ *serviceOptions) {

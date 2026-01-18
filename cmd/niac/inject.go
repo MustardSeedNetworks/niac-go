@@ -13,7 +13,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/krisarmstrong/niac-go/pkg/ipc"
+	"github.com/krisarmstrong/niac-go/internal/ipc"
 )
 
 // Default socket path for IPC communication.

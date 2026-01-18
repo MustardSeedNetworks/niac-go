@@ -11,16 +11,16 @@ import (
 	"sync"
 	"time"
 
-	"github.com/krisarmstrong/niac-go/pkg/capture"
-	"github.com/krisarmstrong/niac-go/pkg/config"
-	"github.com/krisarmstrong/niac-go/pkg/httpapi"
-	"github.com/krisarmstrong/niac-go/pkg/protocols"
-	"github.com/krisarmstrong/niac-go/pkg/storage"
+	"github.com/krisarmstrong/niac-go/internal/api"
+	"github.com/krisarmstrong/niac-go/internal/capture"
+	"github.com/krisarmstrong/niac-go/internal/config"
+	"github.com/krisarmstrong/niac-go/internal/protocols"
+	"github.com/krisarmstrong/niac-go/internal/storage"
 )
 
 type runtimeServices struct {
 	storage       *storage.Storage
-	apiServer     *httpapi.Server
+	apiServer     *api.Server
 	stack         *protocols.Stack
 	engine        *capture.Engine
 	startTime     time.Time
@@ -28,7 +28,7 @@ type runtimeServices struct {
 	configName    string
 	configPath    string
 	deviceCount   int
-	replay        httpapi.ReplayManager
+	replay        api.ReplayManager
 }
 
 // resolveAPIToken returns the API token, preferring environment variable over CLI flag.
@@ -55,9 +55,9 @@ func (rs *runtimeServices) initAPIServer(
 	interfaceName string,
 	services *serviceOptions,
 ) error {
-	topology := httpapi.BuildTopology(cfg)
+	topology := api.BuildTopology(cfg)
 	info := readVersionInfo()
-	cfgCopy := &httpapi.ServerConfig{
+	cfgCopy := &api.ServerConfig{
 		Addr:        apiAddr,
 		MetricsAddr: metricsAddr,
 		Token:       resolveAPIToken(services.apiToken),
@@ -68,7 +68,7 @@ func (rs *runtimeServices) initAPIServer(
 		Interface:   interfaceName,
 		Version:     info.version,
 		Topology:    topology,
-		Alert: httpapi.AlertConfig{
+		Alert: api.AlertConfig{
 			PacketsThreshold: services.alertPacketsThreshold,
 			WebhookURL:       services.alertWebhook,
 		},
@@ -76,7 +76,7 @@ func (rs *runtimeServices) initAPIServer(
 		Replay:      rs.replay,
 	}
 
-	rs.apiServer = httpapi.NewServer(*cfgCopy)
+	rs.apiServer = api.NewServer(*cfgCopy)
 
 	if startErr := rs.apiServer.Start(); startErr != nil {
 		return fmt.Errorf("start API server: %w", startErr)
@@ -205,7 +205,7 @@ type replayController struct {
 	debugLevel int
 	mu         sync.Mutex
 	current    *capture.PlaybackEngine
-	state      httpapi.ReplayState
+	state      api.ReplayState
 	cleanup    string
 }
 
@@ -216,13 +216,13 @@ func newReplayController(engine *capture.Engine, debugLevel int) *replayControll
 	return controller
 }
 
-func (rc *replayController) Status() httpapi.ReplayState {
+func (rc *replayController) Status() api.ReplayState {
 	rc.mu.Lock()
 	defer rc.mu.Unlock()
 	return rc.state
 }
 
-func (rc *replayController) Start(req httpapi.ReplayRequest) (httpapi.ReplayState, error) {
+func (rc *replayController) Start(req api.ReplayRequest) (api.ReplayState, error) {
 	rc.mu.Lock()
 	defer rc.mu.Unlock()
 
@@ -254,7 +254,7 @@ func (rc *replayController) Start(req httpapi.ReplayRequest) (httpapi.ReplayStat
 	}
 
 	rc.current = player
-	rc.state = httpapi.ReplayState{
+	rc.state = api.ReplayState{
 		Running:   true,
 		File:      req.File,
 		LoopMs:    req.LoopMs,
@@ -269,7 +269,7 @@ func (rc *replayController) Start(req httpapi.ReplayRequest) (httpapi.ReplayStat
 	return rc.state, nil
 }
 
-func (rc *replayController) Stop() (httpapi.ReplayState, error) {
+func (rc *replayController) Stop() (api.ReplayState, error) {
 	rc.mu.Lock()
 	defer rc.mu.Unlock()
 

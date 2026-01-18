@@ -12,8 +12,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/krisarmstrong/niac-go/pkg/ipc"
-	"github.com/krisarmstrong/niac-go/pkg/logging"
+	"github.com/krisarmstrong/niac-go/internal/ipc"
+	"github.com/krisarmstrong/niac-go/internal/logging"
 )
 
 type logsOptions struct {

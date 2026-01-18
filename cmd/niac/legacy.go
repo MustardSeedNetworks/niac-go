@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/krisarmstrong/niac-go/pkg/capture"
-	"github.com/krisarmstrong/niac-go/pkg/config"
-	"github.com/krisarmstrong/niac-go/pkg/logging"
+	"github.com/krisarmstrong/niac-go/internal/capture"
+	"github.com/krisarmstrong/niac-go/internal/config"
+	"github.com/krisarmstrong/niac-go/internal/logging"
 )
 
 // legacyFlags holds all command-line flags for legacy mode.

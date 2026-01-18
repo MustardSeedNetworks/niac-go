@@ -18,12 +18,12 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/krisarmstrong/niac-go/pkg/capture"
-	"github.com/krisarmstrong/niac-go/pkg/config"
-	"github.com/krisarmstrong/niac-go/pkg/interactive"
-	"github.com/krisarmstrong/niac-go/pkg/logging"
-	"github.com/krisarmstrong/niac-go/pkg/protocols"
-	"github.com/krisarmstrong/niac-go/pkg/stats"
+	"github.com/krisarmstrong/niac-go/internal/capture"
+	"github.com/krisarmstrong/niac-go/internal/config"
+	"github.com/krisarmstrong/niac-go/internal/interactive"
+	"github.com/krisarmstrong/niac-go/internal/logging"
+	"github.com/krisarmstrong/niac-go/internal/protocols"
+	"github.com/krisarmstrong/niac-go/internal/stats"
 )
 
 // CLI constants for cobra commands and common values.
