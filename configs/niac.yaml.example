@@ -1,0 +1,24 @@
+# NIAC Configuration Example
+#
+# Copy this file to niac.yaml and modify as needed.
+# See docs/ for full configuration reference.
+
+# Server settings
+server:
+  host: "0.0.0.0"
+  port: 8080
+
+# Logging configuration
+logging:
+  level: "info"  # debug, info, warn, error
+  format: "json" # json, text
+
+# Storage settings
+storage:
+  path: "./data"
+
+# SNMP settings
+snmp:
+  community: "public"
+  timeout: "5s"
+  retries: 3
