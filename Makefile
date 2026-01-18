@@ -1,13 +1,11 @@
 # NIAC Makefile
 # Builds frontend and backend into a single binary
 
-# Version info
-VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
-BUILD_DATE := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
-GIT_COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+# Include shared build infrastructure
+include Makefile.common
 
-# Build flags
-LDFLAGS := -X main.version=$(VERSION) -X main.date=$(BUILD_DATE) -X main.commit=$(GIT_COMMIT)
+# Build flags (uses VERSION, COMMIT, BUILD_TIME from Makefile.common)
+LDFLAGS := -X main.version=$(VERSION) -X main.date=$(BUILD_TIME) -X main.commit=$(COMMIT)
 
 # Directories
 UI_DIR := ui
@@ -18,12 +16,6 @@ BIN_DIR := .
 # Binary names
 BINARY := niac
 CONVERTER := niac-convert
-
-# Colors for output
-CYAN := \033[36m
-GREEN := \033[32m
-YELLOW := \033[33m
-RESET := \033[0m
 
 .PHONY: all build clean dev frontend backend help lint lint-go lint-frontend test release security version deps quick converter clean-go fmt fmt-go fmt-frontend
 
@@ -159,11 +151,8 @@ release: build converter
 	@cp $(CONVERTER) releases/$(VERSION)/$(CONVERTER)-$(VERSION)-$$(go env GOOS)-$$(go env GOARCH)
 	@echo "$(GREEN)✓ Release built in releases/$(VERSION)/$(RESET)"
 
-# Show version info
-version:
-	@echo "Version: $(VERSION)"
-	@echo "Commit:  $(GIT_COMMIT)"
-	@echo "Date:    $(BUILD_DATE)"
+# Show version info (uses common-info from Makefile.common)
+version: common-info
 
 # ==============================================================================
 # Help

@@ -4,7 +4,7 @@
 # Mustard Seed Networks - Common Makefile Infrastructure
 #
 # Usage: Include at the top of project Makefile
-#   include Makefile.common
+#   include ../Makefile.common
 #
 # This file provides:
 #   - Version information extraction from git
