@@ -1,15 +1,15 @@
-import { createContext, type ReactNode, useContext, useMemo } from "react";
+import { createContext, type ReactNode, useContext, useMemo } from 'react';
 import {
-	fetchDevices,
-	fetchErrorTypes,
-	fetchHistory,
-	fetchInterfaces,
-	fetchNeighbors,
-	fetchStats,
-	fetchVersion,
-} from "../api/client";
-import { POLL_INTERVALS } from "../constants/polling";
-import { useApiResource } from "../hooks/useApiResource";
+  fetchDevices,
+  fetchErrorTypes,
+  fetchHistory,
+  fetchInterfaces,
+  fetchNeighbors,
+  fetchStats,
+  fetchVersion,
+} from '../api/client';
+import { POLL_INTERVALS } from '../constants/polling';
+import { useApiResource } from '../hooks/useApiResource';
 
 /**
  * FEATURE #133: Centralized state management using React Context
@@ -19,54 +19,54 @@ import { useApiResource } from "../hooks/useApiResource";
  */
 
 interface AppContextValue {
-	stats: ReturnType<typeof useApiResource>;
-	devices: ReturnType<typeof useApiResource>;
-	history: ReturnType<typeof useApiResource>;
-	neighbors: ReturnType<typeof useApiResource>;
-	version: ReturnType<typeof useApiResource>;
-	errorTypes: ReturnType<typeof useApiResource>;
-	interfaces: ReturnType<typeof useApiResource>;
-	pollIntervals: typeof POLL_INTERVALS;
+  stats: ReturnType<typeof useApiResource>;
+  devices: ReturnType<typeof useApiResource>;
+  history: ReturnType<typeof useApiResource>;
+  neighbors: ReturnType<typeof useApiResource>;
+  version: ReturnType<typeof useApiResource>;
+  errorTypes: ReturnType<typeof useApiResource>;
+  interfaces: ReturnType<typeof useApiResource>;
+  pollIntervals: typeof POLL_INTERVALS;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
 
 export function AppProvider({ children }: { children: ReactNode }) {
-	// Fetch shared data at the top level
-	const stats = useApiResource(fetchStats, [], {
-		intervalMs: POLL_INTERVALS.MEDIUM,
-	});
-	const devices = useApiResource(fetchDevices, [], {
-		intervalMs: POLL_INTERVALS.SLOW,
-	});
-	const history = useApiResource(fetchHistory, [], {
-		intervalMs: POLL_INTERVALS.SLOW,
-	});
-	const neighbors = useApiResource(fetchNeighbors, [], {
-		intervalMs: POLL_INTERVALS.MEDIUM,
-	});
-	const version = useApiResource(fetchVersion, [], {
-		intervalMs: POLL_INTERVALS.VERY_SLOW,
-	});
-	const errorTypes = useApiResource(fetchErrorTypes, []);
-	const interfaces = useApiResource(fetchInterfaces, []);
+  // Fetch shared data at the top level
+  const stats = useApiResource(fetchStats, [], {
+    intervalMs: POLL_INTERVALS.MEDIUM,
+  });
+  const devices = useApiResource(fetchDevices, [], {
+    intervalMs: POLL_INTERVALS.SLOW,
+  });
+  const history = useApiResource(fetchHistory, [], {
+    intervalMs: POLL_INTERVALS.SLOW,
+  });
+  const neighbors = useApiResource(fetchNeighbors, [], {
+    intervalMs: POLL_INTERVALS.MEDIUM,
+  });
+  const version = useApiResource(fetchVersion, [], {
+    intervalMs: POLL_INTERVALS.VERY_SLOW,
+  });
+  const errorTypes = useApiResource(fetchErrorTypes, []);
+  const interfaces = useApiResource(fetchInterfaces, []);
 
-	// Memoize context value to prevent unnecessary re-renders
-	const value = useMemo(
-		() => ({
-			stats,
-			devices,
-			history,
-			neighbors,
-			version,
-			errorTypes,
-			interfaces,
-			pollIntervals: POLL_INTERVALS,
-		}),
-		[stats, devices, history, neighbors, version, errorTypes, interfaces],
-	);
+  // Memoize context value to prevent unnecessary re-renders
+  const value = useMemo(
+    () => ({
+      stats,
+      devices,
+      history,
+      neighbors,
+      version,
+      errorTypes,
+      interfaces,
+      pollIntervals: POLL_INTERVALS,
+    }),
+    [stats, devices, history, neighbors, version, errorTypes, interfaces],
+  );
 
-	return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
+  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }
 
 /**
@@ -75,11 +75,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
  * @throws Error if used outside AppProvider
  */
 export function useAppContext() {
-	const context = useContext(AppContext);
-	if (!context) {
-		throw new Error("useAppContext must be used within AppProvider");
-	}
-	return context;
+  const context = useContext(AppContext);
+  if (!context) {
+    throw new Error('useAppContext must be used within AppProvider');
+  }
+  return context;
 }
 
 /**
@@ -87,9 +87,7 @@ export function useAppContext() {
  *
  * Prevents components from re-rendering when unrelated state changes.
  */
-export function useAppState<K extends keyof AppContextValue>(
-	key: K,
-): AppContextValue[K] {
-	const context = useAppContext();
-	return context[key];
+export function useAppState<K extends keyof AppContextValue>(key: K): AppContextValue[K] {
+  const context = useAppContext();
+  return context[key];
 }
