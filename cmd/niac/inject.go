@@ -19,30 +19,12 @@ import (
 // Default socket path for IPC communication.
 const defaultSocketPath = "/var/run/niac/niac.sock"
 
-// Valid error types for injection (must match pkg/errors/errors.go ErrorType constants).
-var validErrorTypes = []string{
-	"FCS Errors",
-	"Packet Discards",
-	"Interface Errors",
-	"High Utilization",
-	"High CPU",
-	"High Memory",
-	"High Disk",
+type injectOptions struct {
+	socketPath string
+	listJSON   bool
+	clearDev   string
+	clearAll   bool
 }
-
-// errorTypeAliases maps user-friendly snake_case names to internal error type names.
-var errorTypeAliases = map[string]string{
-	"fcs_errors":       "FCS Errors",
-	"packet_discards":  "Packet Discards",
-	"interface_errors": "Interface Errors",
-	"high_utilization": "High Utilization",
-	"high_cpu":         "High CPU",
-	"high_memory":      "High Memory",
-	"high_disk":        "High Disk",
-}
-
-// Global socket path flag.
-var injectSocketPath string
 
 // Injection represents an active error injection.
 type Injection struct {
@@ -60,10 +42,13 @@ type InjectionResponse struct {
 	Injections []Injection `json:"injections,omitempty"`
 }
 
-var injectCmd = &cobra.Command{
-	Use:   "inject <device> <error-type> <value>",
-	Short: "Inject network errors on simulated devices",
-	Long: `Inject network errors on simulated devices via IPC socket.
+func addInjectCommand(root *cobra.Command, _ *serviceOptions) {
+	options := new(injectOptions)
+
+	injectCmd := &cobra.Command{
+		Use:   "inject <device> <error-type> <value>",
+		Short: "Inject network errors on simulated devices",
+		Long: `Inject network errors on simulated devices via IPC socket.
 
 This command allows you to simulate various network error conditions
 on devices managed by a running NIAC daemon. Error injection is useful
@@ -82,7 +67,7 @@ VALUE:
   0-100   Percentage value for the error injection
           0 = clear the injection
           1-100 = set error rate/percentage`,
-	Example: `  # Inject 50% FCS errors on router-1
+		Example: `  # Inject 50% FCS errors on router-1
   niac inject router-1 fcs_errors 50
 
   # Simulate high CPU on switch-2
@@ -105,67 +90,66 @@ VALUE:
 
   # Clear all injections on all devices
   niac inject clear --all`,
-	Args: cobra.ExactArgs(3),
-	RunE: runInject,
-}
+		Args: cobra.ExactArgs(argsCountThree),
+		RunE: func(_ *cobra.Command, args []string) error {
+			return runInject(args, options)
+		},
+	}
 
-var injectListCmd = &cobra.Command{
-	Use:   "list",
-	Short: "List active error injections",
-	Long: `List all active error injections on simulated devices.
+	injectListCmd := &cobra.Command{
+		Use:   "list",
+		Short: "List active error injections",
+		Long: `List all active error injections on simulated devices.
 
 By default, output is displayed as a formatted table. Use --json
 for machine-readable JSON output suitable for scripting.`,
-	Example: `  # List active injections in table format
+		Example: `  # List active injections in table format
   niac inject list
 
   # List active injections in JSON format
   niac inject list --json`,
-	Args: cobra.NoArgs,
-	RunE: runInjectList,
-}
+		Args: cobra.NoArgs,
+		RunE: func(_ *cobra.Command, _ []string) error {
+			return runInjectList(options)
+		},
+	}
 
-var injectClearCmd = &cobra.Command{
-	Use:   "clear",
-	Short: "Clear error injections",
-	Long: `Clear error injections from simulated devices.
+	injectClearCmd := &cobra.Command{
+		Use:   "clear",
+		Short: "Clear error injections",
+		Long: `Clear error injections from simulated devices.
 
 You must specify either --device to clear injections on a specific
 device, or --all to clear all injections on all devices.`,
-	Example: `  # Clear all injections on router-1
+		Example: `  # Clear all injections on router-1
   niac inject clear --device router-1
 
   # Clear all injections on all devices
   niac inject clear --all`,
-	Args: cobra.NoArgs,
-	RunE: runInjectClear,
-}
-
-var (
-	injectListJSON bool
-	injectClearDev string
-	injectClearAll bool
-)
-
-func init() {
-	rootCmd.AddCommand(injectCmd)
+		Args: cobra.NoArgs,
+		RunE: func(_ *cobra.Command, _ []string) error {
+			return runInjectClear(options)
+		},
+	}
 
 	// Global socket path flag for all inject subcommands
-	injectCmd.PersistentFlags().StringVar(&injectSocketPath, "socket", defaultSocketPath, "Path to NIAC IPC socket")
+	injectCmd.PersistentFlags().StringVar(&options.socketPath, "socket", defaultSocketPath, "Path to NIAC IPC socket")
 
 	// Add subcommands
 	injectCmd.AddCommand(injectListCmd)
 	injectCmd.AddCommand(injectClearCmd)
 
 	// List subcommand flags
-	injectListCmd.Flags().BoolVar(&injectListJSON, "json", false, "Output in JSON format")
+	injectListCmd.Flags().BoolVar(&options.listJSON, "json", false, "Output in JSON format")
 
 	// Clear subcommand flags
-	injectClearCmd.Flags().StringVar(&injectClearDev, "device", "", "Device name to clear injections from")
-	injectClearCmd.Flags().BoolVar(&injectClearAll, "all", false, "Clear all injections on all devices")
+	injectClearCmd.Flags().StringVar(&options.clearDev, "device", "", "Device name to clear injections from")
+	injectClearCmd.Flags().BoolVar(&options.clearAll, "all", false, "Clear all injections on all devices")
+
+	root.AddCommand(injectCmd)
 }
 
-func runInject(cmd *cobra.Command, args []string) error {
+func runInject(args []string, options *injectOptions) error {
 	device := args[0]
 	errorType := args[1]
 	valueStr := args[2]
@@ -173,12 +157,13 @@ func runInject(cmd *cobra.Command, args []string) error {
 	// Validate error type
 	if !isValidErrorType(errorType) {
 		// Show both snake_case and canonical formats in error message
-		aliasKeys := make([]string, 0, len(errorTypeAliases))
-		for k := range errorTypeAliases {
+		aliases := errorTypeAliases()
+		aliasKeys := make([]string, 0, len(aliases))
+		for k := range aliases {
 			aliasKeys = append(aliasKeys, k)
 		}
 		return fmt.Errorf("invalid error type: %s\n\nValid error types are:\n  %s\n\nOr use snake_case aliases:\n  %s",
-			errorType, strings.Join(validErrorTypes, "\n  "), strings.Join(aliasKeys, "\n  "))
+			errorType, strings.Join(validErrorTypes(), "\n  "), strings.Join(aliasKeys, "\n  "))
 	}
 
 	// Normalize error type (convert snake_case to canonical name)
@@ -194,7 +179,7 @@ func runInject(cmd *cobra.Command, args []string) error {
 	}
 
 	// Connect to IPC socket and send injection command
-	resp, err := sendInjectionCommand(device, normalizedType, value)
+	resp, err := sendInjectionCommand(device, normalizedType, value, options.socketPath)
 	if err != nil {
 		return fmt.Errorf("failed to inject error: %w", err)
 	}
@@ -205,17 +190,17 @@ func runInject(cmd *cobra.Command, args []string) error {
 
 	// Print success message with checkmark
 	if value == 0 {
-		fmt.Printf("\u2713 Cleared %s injection on %s\n", normalizedType, device)
+		fmt.Fprintf(os.Stdout, "\u2713 Cleared %s injection on %s\n", normalizedType, device)
 	} else {
-		fmt.Printf("\u2713 Injected %s at %d%% on %s\n", normalizedType, value, device)
+		fmt.Fprintf(os.Stdout, "\u2713 Injected %s at %d%% on %s\n", normalizedType, value, device)
 	}
 
 	return nil
 }
 
-func runInjectList(cmd *cobra.Command, args []string) error {
+func runInjectList(options *injectOptions) error {
 	// Fetch active injections from IPC
-	resp, err := fetchInjections()
+	resp, err := fetchInjections(options.socketPath)
 	if err != nil {
 		return fmt.Errorf("failed to fetch injections: %w", err)
 	}
@@ -227,7 +212,7 @@ func runInjectList(cmd *cobra.Command, args []string) error {
 	injections := resp.Injections
 
 	// JSON output
-	if injectListJSON {
+	if options.listJSON {
 		encoder := json.NewEncoder(os.Stdout)
 		encoder.SetIndent("", "  ")
 		if encodeErr := encoder.Encode(injections); encodeErr != nil {
@@ -238,11 +223,11 @@ func runInjectList(cmd *cobra.Command, args []string) error {
 
 	// Table output
 	if len(injections) == 0 {
-		fmt.Println("No active injections")
+		fmt.Fprintln(os.Stdout, "No active injections")
 		return nil
 	}
 
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, tabPadding, ' ', 0)
 	fmt.Fprintln(w, "DEVICE\tINTERFACE\tERROR TYPE\tVALUE\tINJECTED")
 	fmt.Fprintln(w, "------\t---------\t----------\t-----\t--------")
 
@@ -262,37 +247,46 @@ func runInjectList(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func runInjectClear(cmd *cobra.Command, args []string) error {
+func runInjectClear(options *injectOptions) error {
 	// Validate flags: require either --device or --all
-	if injectClearDev == "" && !injectClearAll {
+	if options.clearDev == "" && !options.clearAll {
 		return errors.New("must specify either --device <name> or --all")
 	}
-	if injectClearDev != "" && injectClearAll {
+	if options.clearDev != "" && options.clearAll {
 		return errors.New("cannot specify both --device and --all")
 	}
 
-	var resp *InjectionResponse
-	var err error
-
-	if injectClearAll {
-		resp, err = clearAllInjections()
-		if err != nil {
-			return fmt.Errorf("failed to clear all injections: %w", err)
-		}
-		if !resp.Success {
-			return fmt.Errorf("failed to clear injections: %s", resp.Message)
-		}
-		fmt.Println("\u2713 Cleared all injections on all devices")
-	} else {
-		resp, err = clearDeviceInjections(injectClearDev)
-		if err != nil {
-			return fmt.Errorf("failed to clear injections for %s: %w", injectClearDev, err)
-		}
-		if !resp.Success {
-			return fmt.Errorf("failed to clear injections: %s", resp.Message)
-		}
-		fmt.Printf("\u2713 Cleared all injections on %s\n", injectClearDev)
+	if options.clearAll {
+		return executeClearAllInjections(options.socketPath)
 	}
+
+	return executeClearDeviceInjections(options.socketPath, options.clearDev)
+}
+
+// executeClearAllInjections clears injections on all devices.
+func executeClearAllInjections(socketPath string) error {
+	resp, err := clearAllInjections(socketPath)
+	if err != nil {
+		return fmt.Errorf("failed to clear all injections: %w", err)
+	}
+	if !resp.Success {
+		return fmt.Errorf("failed to clear injections: %s", resp.Message)
+	}
+	fmt.Fprintln(os.Stdout, "\u2713 Cleared all injections on all devices")
+
+	return nil
+}
+
+// executeClearDeviceInjections clears injections on a specific device.
+func executeClearDeviceInjections(socketPath, deviceName string) error {
+	resp, err := clearDeviceInjections(socketPath, deviceName)
+	if err != nil {
+		return fmt.Errorf("failed to clear injections for %s: %w", deviceName, err)
+	}
+	if !resp.Success {
+		return fmt.Errorf("failed to clear injections: %s", resp.Message)
+	}
+	fmt.Fprintf(os.Stdout, "\u2713 Cleared all injections on %s\n", deviceName)
 
 	return nil
 }
@@ -300,30 +294,30 @@ func runInjectClear(cmd *cobra.Command, args []string) error {
 // isValidErrorType checks if the given error type is valid.
 func isValidErrorType(errorType string) bool {
 	// Check if it's a valid canonical name
-	if slices.Contains(validErrorTypes, errorType) {
+	if slices.Contains(validErrorTypes(), errorType) {
 		return true
 	}
 	// Check if it's a valid alias
-	_, ok := errorTypeAliases[errorType]
+	_, ok := errorTypeAliases()[errorType]
 	return ok
 }
 
 // normalizeErrorType converts snake_case aliases to canonical error type names.
 func normalizeErrorType(errorType string) string {
-	if canonical, ok := errorTypeAliases[errorType]; ok {
+	if canonical, ok := errorTypeAliases()[errorType]; ok {
 		return canonical
 	}
 	return errorType
 }
 
 // getIPCClient creates an IPC client with the configured socket path.
-func getIPCClient() *ipc.Client {
-	return ipc.NewClient(injectSocketPath)
+func getIPCClient(socketPath string) *ipc.Client {
+	return ipc.NewClient(socketPath)
 }
 
 // sendInjectionCommand sends an injection command via IPC.
-func sendInjectionCommand(device, errorType string, value int) (*InjectionResponse, error) {
-	client := getIPCClient()
+func sendInjectionCommand(device, errorType string, value int, socketPath string) (*InjectionResponse, error) {
+	client := getIPCClient(socketPath)
 
 	err := client.InjectError(device, errorType, value)
 	if err != nil {
@@ -337,8 +331,8 @@ func sendInjectionCommand(device, errorType string, value int) (*InjectionRespon
 }
 
 // fetchInjections fetches the list of active injections via IPC.
-func fetchInjections() (*InjectionResponse, error) {
-	client := getIPCClient()
+func fetchInjections(socketPath string) (*InjectionResponse, error) {
+	client := getIPCClient(socketPath)
 
 	injections, err := client.ListInjections()
 	if err != nil {
@@ -364,8 +358,8 @@ func fetchInjections() (*InjectionResponse, error) {
 }
 
 // clearAllInjections clears all injections on all devices via IPC.
-func clearAllInjections() (*InjectionResponse, error) {
-	client := getIPCClient()
+func clearAllInjections(socketPath string) (*InjectionResponse, error) {
+	client := getIPCClient(socketPath)
 
 	// Pass empty string to clear all injections
 	err := client.ClearInjections("")
@@ -380,8 +374,8 @@ func clearAllInjections() (*InjectionResponse, error) {
 }
 
 // clearDeviceInjections clears all injections on a specific device via IPC.
-func clearDeviceInjections(device string) (*InjectionResponse, error) {
-	client := getIPCClient()
+func clearDeviceInjections(socketPath string, device string) (*InjectionResponse, error) {
+	client := getIPCClient(socketPath)
 
 	err := client.ClearInjections(device)
 	if err != nil {
@@ -392,4 +386,28 @@ func clearDeviceInjections(device string) (*InjectionResponse, error) {
 	resp.Success = true
 	resp.Message = fmt.Sprintf("Cleared all injections on %s", device)
 	return resp, nil
+}
+
+func validErrorTypes() []string {
+	return []string{
+		"FCS Errors",
+		"Packet Discards",
+		"Interface Errors",
+		"High Utilization",
+		"High CPU",
+		"High Memory",
+		"High Disk",
+	}
+}
+
+func errorTypeAliases() map[string]string {
+	return map[string]string{
+		"fcs_errors":       "FCS Errors",
+		"packet_discards":  "Packet Discards",
+		"interface_errors": "Interface Errors",
+		"high_utilization": "High Utilization",
+		"high_cpu":         "High CPU",
+		"high_memory":      "High Memory",
+		"high_disk":        "High Disk",
+	}
 }

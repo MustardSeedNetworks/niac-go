@@ -10,9 +10,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/krisarmstrong/niac-go/pkg/api"
 	"github.com/krisarmstrong/niac-go/pkg/capture"
 	"github.com/krisarmstrong/niac-go/pkg/config"
+	"github.com/krisarmstrong/niac-go/pkg/httpapi"
 	"github.com/krisarmstrong/niac-go/pkg/logging"
 	"github.com/krisarmstrong/niac-go/pkg/protocols"
 	"github.com/krisarmstrong/niac-go/pkg/storage"
@@ -43,7 +43,7 @@ type Config struct {
 // Daemon manages the NIAC simulation lifecycle.
 type Daemon struct {
 	cfg       Config
-	apiServer *api.Server
+	apiServer *httpapi.Server
 	storage   *storage.Storage
 
 	mu         sync.RWMutex
@@ -60,7 +60,7 @@ type Simulation struct {
 	engine *capture.Engine
 	stack  *protocols.Stack
 	cfg    *config.Config
-	replay api.ReplayManager
+	replay httpapi.ReplayManager
 	cancel context.CancelFunc
 }
 
@@ -88,7 +88,7 @@ func NewDaemon(cfg Config) (*Daemon, error) {
 // Start starts the daemon's API server.
 func (d *Daemon) Start() error {
 	// Create API server
-	serverCfg := api.ServerConfig{
+	serverCfg := httpapi.ServerConfig{
 		Addr:    d.cfg.ListenAddr,
 		Token:   d.cfg.Token,
 		Version: d.cfg.Version,
@@ -96,7 +96,7 @@ func (d *Daemon) Start() error {
 		// Stack, Config, etc. will be nil until simulation starts
 	}
 
-	d.apiServer = api.NewServer(serverCfg)
+	d.apiServer = httpapi.NewServer(serverCfg)
 
 	// Set daemon controller on the API server
 	// This allows the API to call our Start/Stop/Status methods
@@ -107,7 +107,7 @@ func (d *Daemon) Start() error {
 		if d.storage != nil {
 			closeErr := d.storage.Close()
 			if closeErr != nil {
-				logging.Error("Error closing storage during cleanup: %v", closeErr)
+				logging.Errorf("Error closing storage during cleanup: %v", closeErr)
 			}
 		}
 
@@ -120,24 +120,24 @@ func (d *Daemon) Start() error {
 // Shutdown gracefully shuts down the daemon.
 func (d *Daemon) Shutdown(ctx context.Context) error {
 	// Stop simulation if running
-	err := d.StopSimulation()
-	if err != nil {
-		logging.Error("Error stopping simulation: %v", err)
+	stopErr := d.StopSimulation()
+	if stopErr != nil {
+		logging.Errorf("Error stopping simulation: %v", stopErr)
 	}
 
 	// Shutdown API server
 	if d.apiServer != nil {
-		err := d.apiServer.Shutdown(ctx)
-		if err != nil {
-			return fmt.Errorf("shutdown API server: %w", err)
+		shutdownErr := d.apiServer.Shutdown(ctx)
+		if shutdownErr != nil {
+			return fmt.Errorf("shutdown API server: %w", shutdownErr)
 		}
 	}
 
 	// Close storage
 	if d.storage != nil {
-		err := d.storage.Close()
-		if err != nil {
-			logging.Error("Error closing storage: %v", err)
+		closeErr := d.storage.Close()
+		if closeErr != nil {
+			logging.Errorf("Error closing storage: %v", closeErr)
 		}
 	}
 
@@ -145,7 +145,7 @@ func (d *Daemon) Shutdown(ctx context.Context) error {
 }
 
 // StartSimulation starts a new simulation.
-func (d *Daemon) StartSimulation(req api.SimulationRequest) error {
+func (d *Daemon) StartSimulation(req httpapi.SimulationRequest) error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
@@ -214,11 +214,12 @@ func (d *Daemon) StartSimulation(req api.SimulationRequest) error {
 	_ = ctx // context reserved for future use
 
 	// Start protocol stack
-	if err := stack.Start(); err != nil {
+	startErr := stack.Start()
+	if startErr != nil {
 		cancel()
 		engine.Close()
 
-		return fmt.Errorf("start protocol stack: %w", err)
+		return fmt.Errorf("start protocol stack: %w", startErr)
 	}
 
 	// Create replay manager
@@ -240,7 +241,7 @@ func (d *Daemon) StartSimulation(req api.SimulationRequest) error {
 	// Update API server with simulation components
 	d.apiServer.UpdateSimulation(stack, cfg, configPath, req.Interface, replay)
 
-	logging.Success("✓ Simulation started on %s with %d devices", req.Interface, len(cfg.Devices))
+	logging.Successf("✓ Simulation started on %s with %d devices", req.Interface, len(cfg.Devices))
 
 	return nil
 }
@@ -301,17 +302,17 @@ func (d *Daemon) stopSimulationLocked() error {
 	// Clear simulation from API server
 	d.apiServer.ClearSimulation()
 
-	logging.Info("Simulation stopped")
+	logging.Infof("Simulation stopped")
 
 	return nil
 }
 
 // GetStatus returns the current simulation status.
-func (d *Daemon) GetStatus() api.SimulationStatus {
+func (d *Daemon) GetStatus() httpapi.SimulationStatus {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
 
-	status := api.SimulationStatus{
+	status := httpapi.SimulationStatus{
 		Running: d.simulation != nil,
 	}
 
@@ -347,7 +348,7 @@ type replayController struct {
 	engine     *capture.Engine
 	debugLevel int
 	mu         sync.Mutex
-	state      api.ReplayState
+	state      httpapi.ReplayState
 }
 
 func newReplayController(engine *capture.Engine, debugLevel int) *replayController {
@@ -358,7 +359,7 @@ func newReplayController(engine *capture.Engine, debugLevel int) *replayControll
 }
 
 // Status returns the current replay state.
-func (rc *replayController) Status() api.ReplayState {
+func (rc *replayController) Status() httpapi.ReplayState {
 	rc.mu.Lock()
 	defer rc.mu.Unlock()
 
@@ -366,14 +367,14 @@ func (rc *replayController) Status() api.ReplayState {
 }
 
 // Start begins PCAP replay with the given request.
-func (rc *replayController) Start(req api.ReplayRequest) (api.ReplayState, error) {
+func (rc *replayController) Start(_ httpapi.ReplayRequest) (httpapi.ReplayState, error) {
 	// Implementation same as in runtime_services.go
 	// Simplified for now
 	return rc.state, ErrReplayNotImplemented
 }
 
 // Stop halts the current PCAP replay.
-func (rc *replayController) Stop() (api.ReplayState, error) {
+func (rc *replayController) Stop() (httpapi.ReplayState, error) {
 	rc.mu.Lock()
 	defer rc.mu.Unlock()
 

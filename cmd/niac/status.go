@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -15,15 +16,18 @@ import (
 	"github.com/krisarmstrong/niac-go/pkg/ipc"
 )
 
-var statusOptions struct {
+type statusOptions struct {
 	jsonOutput bool
 	socketPath string
 }
 
-var statusCmd = &cobra.Command{
-	Use:   "status",
-	Short: "Query the status of a running NIAC simulation",
-	Long: `Query the status of a running NIAC simulation via IPC socket.
+func addStatusCommand(root *cobra.Command, _ *serviceOptions) {
+	options := new(statusOptions)
+
+	statusCmd := &cobra.Command{
+		Use:   "status",
+		Short: "Query the status of a running NIAC simulation",
+		Long: `Query the status of a running NIAC simulation via IPC socket.
 
 This command connects to a running NIAC simulation and retrieves
 current status information including:
@@ -39,7 +43,7 @@ Exit codes:
   0 - Simulation is running
   1 - Simulation is not running (socket not found or connection refused)
   2 - Error occurred (socket error, parse error, etc.)`,
-	Example: `  # Check simulation status
+		Example: `  # Check simulation status
   niac status
 
   # Output status as JSON
@@ -54,174 +58,204 @@ Exit codes:
   else
     echo "NIAC is not running"
   fi`,
-	Args: cobra.NoArgs,
-	Run:  runStatus,
-}
-
-func init() {
-	rootCmd.AddCommand(statusCmd)
-	statusCmd.Flags().BoolVar(&statusOptions.jsonOutput, "json", false, "Output status as JSON")
-	statusCmd.Flags().StringVar(&statusOptions.socketPath, "socket", "", "Path to IPC socket (default: /tmp/niac.sock)")
-}
-
-//nolint:gocognit // Status display aggregates multiple data sources
-func runStatus(cmd *cobra.Command, args []string) {
-	// Determine socket path
-	socketPath := statusOptions.socketPath
-	if socketPath == "" {
-		socketPath = ipc.DefaultSocketPath()
+		Args: cobra.NoArgs,
+		Run: func(_ *cobra.Command, _ []string) {
+			runStatus(options)
+		},
 	}
 
-	// Check if socket exists
+	statusCmd.Flags().BoolVar(&options.jsonOutput, "json", false, "Output status as JSON")
+	statusCmd.Flags().StringVar(&options.socketPath, "socket", "", "Path to IPC socket (default: /tmp/niac.sock)")
+
+	root.AddCommand(statusCmd)
+}
+
+// Status exit codes.
+const (
+	exitCodeNotRunning = 1
+	exitCodeSuccess    = 0
+)
+
+// statusResult holds the result of a status check operation.
+type statusResult struct {
+	status   *ipc.StatusData
+	exitCode int
+	err      error
+}
+
+func runStatus(options *statusOptions) {
+	socketPath := resolveSocketPath(options.socketPath)
+
+	result := checkStatus(socketPath)
+
+	outputResult(result, options.jsonOutput)
+	os.Exit(result.exitCode)
+}
+
+// resolveSocketPath returns the socket path, using default if not specified.
+func resolveSocketPath(path string) string {
+	if path == "" {
+		return ipc.DefaultSocketPath()
+	}
+	return path
+}
+
+// checkStatus performs the full status check workflow.
+func checkStatus(socketPath string) statusResult {
+	if err := verifySocketExists(socketPath); err != nil {
+		return statusResult{exitCode: exitCodeNotRunning, err: err}
+	}
+
+	conn, err := connectToSocket(socketPath)
+	if err != nil {
+		return statusResult{exitCode: exitCodeNotRunning, err: err}
+	}
+	defer conn.Close()
+
+	status, err := requestStatus(conn)
+	if err != nil {
+		return statusResult{exitCode: exitCodeError, err: err}
+	}
+
+	return statusResult{status: status, exitCode: exitCodeSuccess}
+}
+
+// verifySocketExists checks if the IPC socket file exists.
+func verifySocketExists(socketPath string) error {
 	if _, err := os.Stat(socketPath); os.IsNotExist(err) {
-		if statusOptions.jsonOutput {
-			outputStatusJSON(map[string]any{
-				"running": false,
-				"error":   "socket not found",
-			})
-		} else {
-			fmt.Fprintln(os.Stdout, "Status: NOT RUNNING")
-			fmt.Fprintf(os.Stdout, "Socket not found: %s\n", socketPath)
-		}
-		os.Exit(1)
+		return fmt.Errorf("socket not found: %s", socketPath)
 	}
+	return nil
+}
 
-	// Connect to socket
-	var dialer net.Dialer
-	dialer.Timeout = 5 * time.Second
+// connectToSocket establishes a connection to the IPC socket.
+func connectToSocket(socketPath string) (net.Conn, error) {
+	dialer := net.Dialer{Timeout: shortTimeout * time.Second}
+
 	conn, err := dialer.DialContext(context.Background(), "unix", socketPath)
 	if err != nil {
-		if statusOptions.jsonOutput {
-			outputStatusJSON(map[string]any{
-				"running": false,
-				"error":   fmt.Sprintf("connection failed: %v", err),
-			})
-		} else {
-			fmt.Fprintln(os.Stdout, "Status: NOT RUNNING")
-			fmt.Fprintf(os.Stdout, "Failed to connect: %v\n", err)
-		}
-		os.Exit(1)
-	}
-	closeConn := func() {
-		_ = conn.Close()
+		return nil, fmt.Errorf("connection failed: %w", err)
 	}
 
-	// Set timeout for socket operations
-	_ = conn.SetDeadline(time.Now().Add(5 * time.Second))
+	_ = conn.SetDeadline(time.Now().Add(shortTimeout * time.Second))
 
-	// Send status request
-	var req ipc.Request
-	req.Command = ipc.CommandStatus
+	return conn, nil
+}
 
+// requestStatus sends a status request and parses the response.
+func requestStatus(conn net.Conn) (*ipc.StatusData, error) {
+	if err := sendStatusRequest(conn); err != nil {
+		return nil, err
+	}
+
+	resp, err := receiveResponse(conn)
+	if err != nil {
+		return nil, err
+	}
+
+	return parseStatusResponse(resp)
+}
+
+// sendStatusRequest sends the status command to the IPC server.
+func sendStatusRequest(conn net.Conn) error {
+	req := ipc.Request{Command: ipc.CommandStatus}
 	encoder := json.NewEncoder(conn)
-	if encodeErr := encoder.Encode(&req); encodeErr != nil {
-		if statusOptions.jsonOutput {
-			outputStatusJSON(map[string]any{
-				"running": false,
-				"error":   fmt.Sprintf("failed to send request: %v", encodeErr),
-			})
-		} else {
-			fmt.Fprintf(os.Stderr, "Error: failed to send request: %v\n", encodeErr)
-		}
-		closeConn()
-		os.Exit(2)
+
+	if err := encoder.Encode(&req); err != nil {
+		return fmt.Errorf("failed to send request: %w", err)
 	}
 
-	// Read response
+	return nil
+}
+
+// receiveResponse reads and decodes the IPC response.
+func receiveResponse(conn net.Conn) (*ipc.Response, error) {
 	var resp ipc.Response
 	decoder := json.NewDecoder(conn)
-	if decodeErr := decoder.Decode(&resp); decodeErr != nil {
-		if statusOptions.jsonOutput {
-			outputStatusJSON(map[string]any{
-				"running": false,
-				"error":   fmt.Sprintf("failed to read response: %v", decodeErr),
-			})
-		} else {
-			fmt.Fprintf(os.Stderr, "Error: failed to read response: %v\n", decodeErr)
-		}
-		closeConn()
-		os.Exit(2)
+
+	if err := decoder.Decode(&resp); err != nil {
+		return nil, fmt.Errorf("failed to read response: %w", err)
 	}
 
-	// Check for error in response
 	if !resp.Success {
-		if statusOptions.jsonOutput {
-			outputStatusJSON(map[string]any{
-				"running": false,
-				"error":   resp.Error,
-			})
-		} else {
-			fmt.Fprintf(os.Stderr, "Error: %s\n", resp.Error)
-		}
-		closeConn()
-		os.Exit(2)
+		return nil, fmt.Errorf("%s", resp.Error)
 	}
 
-	// Parse status data
+	return &resp, nil
+}
+
+// parseStatusResponse extracts and parses StatusData from the response.
+func parseStatusResponse(resp *ipc.Response) (*ipc.StatusData, error) {
 	statusData, ok := resp.Data["status"]
 	if !ok {
-		if statusOptions.jsonOutput {
-			outputStatusJSON(map[string]any{
-				"running": false,
-				"error":   "status data not found in response",
-			})
-		} else {
-			fmt.Fprintf(os.Stderr, "Error: status data not found in response\n")
-		}
-		closeConn()
-		os.Exit(2)
+		return nil, errors.New("status data not found in response")
 	}
 
-	// Convert to StatusData struct
 	statusBytes, err := json.Marshal(statusData)
 	if err != nil {
-		if statusOptions.jsonOutput {
-			outputStatusJSON(map[string]any{
-				"running": false,
-				"error":   fmt.Sprintf("failed to parse status: %v", err),
-			})
-		} else {
-			fmt.Fprintf(os.Stderr, "Error: failed to parse status: %v\n", err)
-		}
-		closeConn()
-		os.Exit(2)
+		return nil, fmt.Errorf("failed to parse status: %w", err)
 	}
 
 	var status ipc.StatusData
-	if unmarshalErr := json.Unmarshal(statusBytes, &status); unmarshalErr != nil {
-		if statusOptions.jsonOutput {
-			outputStatusJSON(map[string]any{
-				"running": false,
-				"error":   fmt.Sprintf("failed to unmarshal status: %v", unmarshalErr),
-			})
-		} else {
-			fmt.Fprintf(os.Stderr, "Error: failed to unmarshal status: %v\n", unmarshalErr)
-		}
-		closeConn()
-		os.Exit(2)
+	if err = json.Unmarshal(statusBytes, &status); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal status: %w", err)
 	}
 
-	// Output based on format
-	if statusOptions.jsonOutput {
+	return &status, nil
+}
+
+// outputResult formats and outputs the status result.
+func outputResult(result statusResult, jsonOutput bool) {
+	if result.err != nil {
+		outputError(result.err, result.exitCode, jsonOutput)
+		return
+	}
+
+	outputSuccess(result.status, jsonOutput)
+}
+
+// outputError outputs an error in the appropriate format.
+func outputError(err error, exitCode int, jsonOutput bool) {
+	if jsonOutput {
 		outputStatusJSON(map[string]any{
-			"running":          status.Running,
-			"interface":        status.Interface,
-			"config":           status.ConfigPath,
-			"devices":          status.DeviceCount,
-			"uptime_seconds":   status.Uptime,
-			"uptime_formatted": formatDurationFromSeconds(status.Uptime),
-			"packets_rx":       status.PacketsRX,
-			"packets_tx":       status.PacketsTX,
-			"errors_active":    status.ErrorsActive,
-			"started_at":       status.StartedAt,
+			"running": false,
+			"error":   err.Error(),
 		})
-	} else {
-		printHumanStatus(&status)
+		return
 	}
 
-	// Exit with code 0 for running
-	closeConn()
-	os.Exit(0)
+	if exitCode == exitCodeNotRunning {
+		fmt.Fprintln(os.Stdout, "Status: NOT RUNNING")
+		fmt.Fprintf(os.Stdout, "%v\n", err)
+	} else {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+	}
+}
+
+// outputSuccess outputs successful status in the appropriate format.
+func outputSuccess(status *ipc.StatusData, jsonOutput bool) {
+	if jsonOutput {
+		outputStatusJSON(buildStatusMap(status))
+		return
+	}
+
+	printHumanStatus(status)
+}
+
+// buildStatusMap creates a map representation of status data for JSON output.
+func buildStatusMap(status *ipc.StatusData) map[string]any {
+	return map[string]any{
+		"running":          status.Running,
+		"interface":        status.Interface,
+		"config":           status.ConfigPath,
+		"devices":          status.DeviceCount,
+		"uptime_seconds":   status.Uptime,
+		"uptime_formatted": formatDurationFromSeconds(status.Uptime),
+		"packets_rx":       status.PacketsRX,
+		"packets_tx":       status.PacketsTX,
+		"errors_active":    status.ErrorsActive,
+		"started_at":       status.StartedAt,
+	}
 }
 
 // printHumanStatus prints the status in human-readable format.
@@ -247,11 +281,11 @@ func formatDurationFromSeconds(seconds float64) string {
 	return formatDurationHMS(d)
 }
 
-// formatDurationHMS formats a time.Duration as "2h 15m 43s".
+// formatDurationHMS formats a [time.Duration] as "2h 15m 43s".
 func formatDurationHMS(d time.Duration) string {
 	h := int(d.Hours())
-	m := int(d.Minutes()) % 60
-	s := int(d.Seconds()) % 60
+	m := int(d.Minutes()) % secondsPerMinute
+	s := int(d.Seconds()) % secondsPerMinute
 
 	if h > 0 {
 		return fmt.Sprintf("%dh %dm %ds", h, m, s)
@@ -264,7 +298,7 @@ func formatDurationHMS(d time.Duration) string {
 
 // formatStatusNumber formats a number with thousand separators (e.g., 125432 -> "125,432").
 func formatStatusNumber(n uint64) string {
-	if n < 1000 {
+	if n < millisecondsThreshold {
 		return strconv.FormatUint(n, 10)
 	}
 

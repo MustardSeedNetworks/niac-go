@@ -9,8 +9,8 @@ import (
 	"sync"
 	"time"
 
+	apperr "github.com/krisarmstrong/niac-go/pkg/apperr"
 	"github.com/krisarmstrong/niac-go/pkg/config"
-	pkgerrors "github.com/krisarmstrong/niac-go/pkg/errors"
 	"github.com/krisarmstrong/niac-go/pkg/protocols"
 	"github.com/krisarmstrong/niac-go/pkg/snmp"
 )
@@ -25,7 +25,7 @@ var (
 type Simulator struct {
 	config       *config.Config
 	stack        *protocols.Stack
-	errorManager *pkgerrors.StateManager
+	errorManager *apperr.StateManager
 	devices      map[string]*SimulatedDevice
 	mu           sync.RWMutex
 	running      bool
@@ -39,26 +39,37 @@ type SimulatedDevice struct {
 	Config       *config.Device
 	SNMPAgent    *snmp.Agent
 	TrapSender   *snmp.TrapSender // SNMP trap sender (v1.6.0)
-	State        DeviceState
+	State        State
 	LastActivity time.Time
-	Counters     *DeviceCounters
+	Counters     *Counters
 	mu           sync.RWMutex
 }
 
-// DeviceState represents the current state of a device.
-type DeviceState string
+// State represents the current state of a device.
+type State string
 
 // Device state constants.
 const (
-	StateUp          DeviceState = "up"          // Device is running normally
-	StateDown        DeviceState = "down"        // Device is offline
-	StateStarting    DeviceState = "starting"    // Device is booting up
-	StateStopping    DeviceState = "stopping"    // Device is shutting down
-	StateMaintenance DeviceState = "maintenance" // Device is in maintenance mode
+	StateUp          State = "up"          // Device is running normally
+	StateDown        State = "down"        // Device is offline
+	StateStarting    State = "starting"    // Device is booting up
+	StateStopping    State = "stopping"    // Device is shutting down
+	StateMaintenance State = "maintenance" // Device is in maintenance mode
 )
 
-// DeviceCounters holds per-device statistics.
-type DeviceCounters struct {
+// Simulator behavior constants.
+const (
+	// deviceBehaviorInterval is the interval for device-specific periodic behavior.
+	deviceBehaviorInterval = 30 * time.Second
+
+	// Debug level constants for logging.
+	debugLevelBasic   = 1 // Basic logging
+	debugLevelInfo    = 2 // Informational logging
+	debugLevelVerbose = 3 // Verbose debug logging
+)
+
+// Counters holds per-device statistics.
+type Counters struct {
 	ARPRequestsReceived    uint64
 	ARPRepliesSent         uint64
 	ICMPRequestsReceived   uint64
@@ -75,7 +86,7 @@ type DeviceCounters struct {
 func NewSimulator(
 	cfg *config.Config,
 	stack *protocols.Stack,
-	errorMgr *pkgerrors.StateManager,
+	errorMgr *apperr.StateManager,
 	debugLevel int,
 ) *Simulator {
 	sim := &Simulator{
@@ -98,6 +109,7 @@ func NewSimulator(
 
 // addDevice adds a device to the simulator.
 func (s *Simulator) addDevice(device *config.Device) {
+	logger := slog.Default()
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -106,14 +118,14 @@ func (s *Simulator) addDevice(device *config.Device) {
 		SNMPAgent:    snmp.NewAgent(device, s.debugLevel),
 		State:        StateUp,
 		LastActivity: time.Now(),
-		Counters:     &DeviceCounters{},
+		Counters:     &Counters{},
 	}
 
 	// Load SNMP walk file if specified
 	if device.SNMPConfig.WalkFile != "" {
 		err := simDevice.SNMPAgent.LoadWalkFile(device.SNMPConfig.WalkFile)
 		if err != nil && s.debugLevel >= 1 {
-			slog.Warn("Failed to load walk file", "device", device.Name, "error", err)
+			logger.Warn("Failed to load walk file", "device", device.Name, "error", err)
 		}
 	}
 
@@ -129,7 +141,7 @@ func (s *Simulator) addDevice(device *config.Device) {
 			if err == nil {
 				simDevice.TrapSender = trapSender
 			} else if s.debugLevel >= 1 {
-				slog.Warn("Failed to create trap sender", "device", device.Name, "error", err)
+				logger.Warn("Failed to create trap sender", "device", device.Name, "error", err)
 			}
 		}
 	}
@@ -142,12 +154,13 @@ func (s *Simulator) addDevice(device *config.Device) {
 			ipAddr = device.IPAddresses[0].String()
 		}
 
-		slog.Info("Added simulated device", "name", device.Name, "type", device.Type, "ip", ipAddr)
+		logger.Info("Added simulated device", "name", device.Name, "type", device.Type, "ip", ipAddr)
 	}
 }
 
 // Start starts the device simulator.
 func (s *Simulator) Start() error {
+	logger := slog.Default()
 	s.mu.Lock()
 
 	if s.running {
@@ -169,13 +182,13 @@ func (s *Simulator) Start() error {
 		if device.TrapSender != nil {
 			err := device.TrapSender.Start()
 			if err != nil && s.debugLevel >= 1 {
-				slog.Warn("Failed to start trap sender", "device", name, "error", err)
+				logger.Warn("Failed to start trap sender", "device", name, "error", err)
 			}
 		}
 	}
 
 	if s.debugLevel >= 1 {
-		slog.Info("Device simulator started", "deviceCount", len(s.devices))
+		logger.Info("Device simulator started", "deviceCount", len(s.devices))
 	}
 
 	return nil
@@ -183,6 +196,7 @@ func (s *Simulator) Start() error {
 
 // Stop stops the device simulator.
 func (s *Simulator) Stop() {
+	logger := slog.Default()
 	s.mu.Lock()
 
 	if !s.running {
@@ -213,7 +227,7 @@ func (s *Simulator) Stop() {
 	s.mu.Unlock()
 
 	if s.debugLevel >= 1 {
-		slog.Info("Device simulator stopped")
+		logger.Info("Device simulator stopped")
 	}
 }
 
@@ -221,7 +235,7 @@ func (s *Simulator) Stop() {
 func (s *Simulator) deviceBehaviorLoop(name string, device *SimulatedDevice) {
 	defer s.wg.Done()
 
-	ticker := time.NewTicker(30 * time.Second)
+	ticker := time.NewTicker(deviceBehaviorInterval)
 	defer ticker.Stop()
 
 	for {
@@ -244,6 +258,7 @@ func (s *Simulator) deviceBehaviorLoop(name string, device *SimulatedDevice) {
 
 // performDeviceBehavior executes device-specific periodic behavior.
 func (s *Simulator) performDeviceBehavior(name string, device *SimulatedDevice) {
+	logger := slog.Default()
 	device.mu.Lock()
 	defer device.mu.Unlock()
 
@@ -264,13 +279,13 @@ func (s *Simulator) performDeviceBehavior(name string, device *SimulatedDevice) 
 		s.genericBehavior(device)
 	}
 
-	if s.debugLevel >= 3 {
-		slog.Debug("Device performed periodic behavior", "device", name, "state", device.State)
+	if s.debugLevel >= debugLevelVerbose {
+		logger.Debug("Device performed periodic behavior", "device", name, "state", device.State)
 	}
 }
 
 // routerBehavior implements router-specific behavior.
-func (s *Simulator) routerBehavior(device *SimulatedDevice) {
+func (s *Simulator) routerBehavior(_ *SimulatedDevice) {
 	// Routers typically:
 	// - Send periodic routing updates
 	// - Respond to ARP requests
@@ -282,7 +297,7 @@ func (s *Simulator) routerBehavior(device *SimulatedDevice) {
 }
 
 // switchBehavior implements switch-specific behavior.
-func (s *Simulator) switchBehavior(device *SimulatedDevice) {
+func (s *Simulator) switchBehavior(_ *SimulatedDevice) {
 	// Switches typically:
 	// - Maintain MAC address table
 	// - Send STP BPDUs
@@ -293,7 +308,7 @@ func (s *Simulator) switchBehavior(device *SimulatedDevice) {
 }
 
 // apBehavior implements access point behavior.
-func (s *Simulator) apBehavior(device *SimulatedDevice) {
+func (s *Simulator) apBehavior(_ *SimulatedDevice) {
 	// APs typically:
 	// - Send beacons
 	// - Respond to probe requests
@@ -304,7 +319,7 @@ func (s *Simulator) apBehavior(device *SimulatedDevice) {
 }
 
 // serverBehavior implements server-specific behavior.
-func (s *Simulator) serverBehavior(device *SimulatedDevice) {
+func (s *Simulator) serverBehavior(_ *SimulatedDevice) {
 	// Servers typically:
 	// - Respond to service requests (HTTP, FTP, etc.)
 	// - Generate application logs
@@ -314,7 +329,7 @@ func (s *Simulator) serverBehavior(device *SimulatedDevice) {
 }
 
 // genericBehavior implements generic device behavior.
-func (s *Simulator) genericBehavior(device *SimulatedDevice) {
+func (s *Simulator) genericBehavior(_ *SimulatedDevice) {
 	// Generic devices:
 	// - Respond to ping
 	// - Respond to ARP
@@ -341,8 +356,11 @@ func (s *Simulator) GetAllDevices() map[string]*SimulatedDevice {
 	return devices
 }
 
+// primaryInterfaceIndex is the default interface index for SNMP traps.
+const primaryInterfaceIndex = 1
+
 // SetDeviceState sets the state of a device.
-func (s *Simulator) SetDeviceState(name string, state DeviceState) error {
+func (s *Simulator) SetDeviceState(name string, state State) error {
 	s.mu.RLock()
 	device, exists := s.devices[name]
 	s.mu.RUnlock()
@@ -357,53 +375,78 @@ func (s *Simulator) SetDeviceState(name string, state DeviceState) error {
 	oldState := device.State
 	device.State = state
 
-	if s.debugLevel >= 1 {
+	if s.debugLevel >= debugLevelBasic {
 		slog.Info("Device state changed", "device", name, "oldState", oldState, "newState", state)
 	}
 
-	// Generate SNMP traps for state changes (issue #76)
-	if device.TrapSender != nil {
-		// Send linkDown trap when transitioning to down/stopping states
-		if (state == StateDown || state == StateStopping) && oldState != StateDown && oldState != StateStopping {
-			// Get interface index - use 1 for primary interface
-			ifIndex := 1
-
-			ifDescr := "Primary Interface"
-			if len(device.Config.IPAddresses) > 0 {
-				ifDescr = fmt.Sprintf("Interface %s", device.Config.IPAddresses[0])
-			}
-
-			err := device.TrapSender.SendLinkDown(ifIndex, ifDescr)
-			if err != nil {
-				if s.debugLevel >= 1 {
-					slog.Error("Failed to send linkDown trap", "device", name, "error", err)
-				}
-			} else if s.debugLevel >= 2 {
-				slog.Info("Sent linkDown trap", "device", name, "ifIndex", ifIndex)
-			}
-		}
-
-		// Send linkUp trap when transitioning to up state
-		if state == StateUp && oldState != StateUp {
-			ifIndex := 1
-
-			ifDescr := "Primary Interface"
-			if len(device.Config.IPAddresses) > 0 {
-				ifDescr = fmt.Sprintf("Interface %s", device.Config.IPAddresses[0])
-			}
-
-			err := device.TrapSender.SendLinkUp(ifIndex, ifDescr)
-			if err != nil {
-				if s.debugLevel >= 1 {
-					slog.Error("Failed to send linkUp trap", "device", name, "error", err)
-				}
-			} else if s.debugLevel >= 2 {
-				slog.Info("Sent linkUp trap", "device", name, "ifIndex", ifIndex)
-			}
-		}
-	}
+	s.sendStateChangeTraps(device, name, oldState, state)
 
 	return nil
+}
+
+// sendStateChangeTraps sends SNMP traps for device state changes.
+func (s *Simulator) sendStateChangeTraps(device *SimulatedDevice, name string, oldState, newState State) {
+	if device.TrapSender == nil {
+		return
+	}
+
+	ifDescr := s.getInterfaceDescription(device)
+
+	if s.isTransitionToDown(oldState, newState) {
+		s.sendLinkDownTrap(device, name, ifDescr)
+	}
+
+	if s.isTransitionToUp(oldState, newState) {
+		s.sendLinkUpTrap(device, name, ifDescr)
+	}
+}
+
+// getInterfaceDescription returns a description for the device's primary interface.
+func (s *Simulator) getInterfaceDescription(device *SimulatedDevice) string {
+	if len(device.Config.IPAddresses) > 0 {
+		return fmt.Sprintf("Interface %s", device.Config.IPAddresses[0])
+	}
+	return "Primary Interface"
+}
+
+// isTransitionToDown returns true if the state change represents a link going down.
+func (s *Simulator) isTransitionToDown(oldState, newState State) bool {
+	wasUp := oldState != StateDown && oldState != StateStopping
+	goingDown := newState == StateDown || newState == StateStopping
+	return wasUp && goingDown
+}
+
+// isTransitionToUp returns true if the state change represents a link coming up.
+func (s *Simulator) isTransitionToUp(oldState, newState State) bool {
+	return newState == StateUp && oldState != StateUp
+}
+
+// sendLinkDownTrap sends a linkDown SNMP trap for the device.
+func (s *Simulator) sendLinkDownTrap(device *SimulatedDevice, name, ifDescr string) {
+	err := device.TrapSender.SendLinkDown(primaryInterfaceIndex, ifDescr)
+	if err != nil {
+		if s.debugLevel >= debugLevelBasic {
+			slog.Error("Failed to send linkDown trap", "device", name, "error", err)
+		}
+		return
+	}
+	if s.debugLevel >= debugLevelInfo {
+		slog.Info("Sent linkDown trap", "device", name, "ifIndex", primaryInterfaceIndex)
+	}
+}
+
+// sendLinkUpTrap sends a linkUp SNMP trap for the device.
+func (s *Simulator) sendLinkUpTrap(device *SimulatedDevice, name, ifDescr string) {
+	err := device.TrapSender.SendLinkUp(primaryInterfaceIndex, ifDescr)
+	if err != nil {
+		if s.debugLevel >= debugLevelBasic {
+			slog.Error("Failed to send linkUp trap", "device", name, "error", err)
+		}
+		return
+	}
+	if s.debugLevel >= debugLevelInfo {
+		slog.Info("Sent linkUp trap", "device", name, "ifIndex", primaryInterfaceIndex)
+	}
 }
 
 // IncrementCounter increments a device counter.
@@ -444,20 +487,20 @@ func (s *Simulator) IncrementCounter(deviceName, counterName string) {
 }
 
 // GetCounters returns counters for a device.
-func (s *Simulator) GetCounters(deviceName string) *DeviceCounters {
+func (s *Simulator) GetCounters(deviceName string) *Counters {
 	s.mu.RLock()
 	device, exists := s.devices[deviceName]
 	s.mu.RUnlock()
 
 	if !exists {
-		return &DeviceCounters{}
+		return &Counters{}
 	}
 
 	device.mu.RLock()
 	defer device.mu.RUnlock()
 
 	// Return copy
-	return &DeviceCounters{
+	return &Counters{
 		ARPRequestsReceived:    device.Counters.ARPRequestsReceived,
 		ARPRepliesSent:         device.Counters.ARPRepliesSent,
 		ICMPRequestsReceived:   device.Counters.ICMPRequestsReceived,
@@ -471,108 +514,148 @@ func (s *Simulator) GetCounters(deviceName string) *DeviceCounters {
 	}
 }
 
-// Reload gracefully reloads the configuration without stopping the simulator
+// Reload gracefully reloads the configuration without stopping the simulator.
 // It performs a diff-based reload: adds new devices, removes deleted devices, and updates existing devices.
 func (s *Simulator) Reload(newConfig *config.Config) error {
+	wasRunning := s.stopIfRunning()
+
+	newDeviceNames := s.buildDeviceNameSet(newConfig)
+
+	s.mu.Lock()
+	s.removeDeletedDevices(newDeviceNames)
+	s.updateOrAddDevices(newConfig)
+	s.config = newConfig
+	s.mu.Unlock()
+
+	return s.restartIfNeeded(wasRunning)
+}
+
+// stopIfRunning stops the simulator if it's running and returns true if it was running.
+func (s *Simulator) stopIfRunning() bool {
 	s.mu.Lock()
 	wasRunning := s.running
 	s.mu.Unlock()
 
-	// If running, stop gracefully
 	if wasRunning {
-		if s.debugLevel >= 1 {
+		if s.debugLevel >= debugLevelBasic {
 			slog.Info("Stopping simulator for config reload...")
 		}
-
 		s.Stop()
 	}
+	return wasRunning
+}
 
-	// Build map of new device names
-	newDeviceNames := make(map[string]bool)
+// buildDeviceNameSet creates a set of device names from the new configuration.
+func (s *Simulator) buildDeviceNameSet(newConfig *config.Config) map[string]bool {
+	names := make(map[string]bool, len(newConfig.Devices))
 	for i := range newConfig.Devices {
-		newDeviceNames[newConfig.Devices[i].Name] = true
+		names[newConfig.Devices[i].Name] = true
 	}
+	return names
+}
 
-	// Remove devices that no longer exist in new config
-	s.mu.Lock()
-
+// removeDeletedDevices removes devices that no longer exist in the new configuration.
+// Must be called with s.mu held.
+func (s *Simulator) removeDeletedDevices(newDeviceNames map[string]bool) {
 	for name := range s.devices {
-		if !newDeviceNames[name] {
-			if s.debugLevel >= 1 {
-				slog.Info("Removing device (no longer in config)", "device", name)
-			}
-
-			delete(s.devices, name)
+		if newDeviceNames[name] {
+			continue
 		}
+		if s.debugLevel >= debugLevelBasic {
+			slog.Info("Removing device (no longer in config)", "device", name)
+		}
+		delete(s.devices, name)
 	}
+}
 
-	// Add or update devices from new config
+// updateOrAddDevices updates existing devices or adds new ones from the configuration.
+// Must be called with s.mu held.
+func (s *Simulator) updateOrAddDevices(newConfig *config.Config) {
 	for i := range newConfig.Devices {
 		device := &newConfig.Devices[i]
 		if existingDevice, exists := s.devices[device.Name]; exists {
-			// Update existing device configuration
-			if s.debugLevel >= 1 {
-				slog.Info("Updating device configuration", "device", device.Name)
-			}
-
-			existingDevice.Config = device
-			// Recreate SNMP agent with updated configuration
-			existingDevice.SNMPAgent = snmp.NewAgent(device, s.debugLevel)
-			if device.SNMPConfig.WalkFile != "" {
-				err := existingDevice.SNMPAgent.LoadWalkFile(
-					device.SNMPConfig.WalkFile,
-				)
-				if err != nil &&
-					s.debugLevel >= 1 {
-					slog.Warn("Failed to reload walk file", "device", device.Name, "error", err)
-				}
-			}
-
-			// Recreate trap sender if traps are enabled
-			existingDevice.TrapSender = nil
-
-			if device.SNMPConfig.Traps != nil && device.SNMPConfig.Traps.Enabled {
-				if len(device.IPAddresses) > 0 {
-					trapSender, err := snmp.NewTrapSender(
-						device.Name,
-						device.IPAddresses[0],
-						device.SNMPConfig.Traps,
-						s.debugLevel,
-					)
-					if err == nil {
-						existingDevice.TrapSender = trapSender
-					} else if s.debugLevel >= 1 {
-						slog.Warn("Failed to recreate trap sender", "device", device.Name, "error", err)
-					}
-				}
-			}
+			s.updateExistingDevice(existingDevice, device)
 		} else {
-			// Add new device
-			if s.debugLevel >= 1 {
-				slog.Info("Adding new device", "device", device.Name)
-			}
-
-			s.addDevice(device)
+			s.addNewDevice(device)
 		}
 	}
+}
 
-	// Update config reference
-	s.config = newConfig
-	s.mu.Unlock()
+// updateExistingDevice updates an existing device's configuration.
+// Must be called with s.mu held.
+func (s *Simulator) updateExistingDevice(existingDevice *SimulatedDevice, device *config.Device) {
+	if s.debugLevel >= debugLevelBasic {
+		slog.Info("Updating device configuration", "device", device.Name)
+	}
 
-	// Restart if was running before
+	existingDevice.Config = device
+	s.recreateSNMPAgent(existingDevice, device)
+	s.recreateTrapSender(existingDevice, device)
+}
+
+// recreateSNMPAgent recreates the SNMP agent for a device with updated configuration.
+func (s *Simulator) recreateSNMPAgent(existingDevice *SimulatedDevice, device *config.Device) {
+	existingDevice.SNMPAgent = snmp.NewAgent(device, s.debugLevel)
+	if device.SNMPConfig.WalkFile == "" {
+		return
+	}
+	err := existingDevice.SNMPAgent.LoadWalkFile(device.SNMPConfig.WalkFile)
+	if err != nil && s.debugLevel >= debugLevelBasic {
+		slog.Warn("Failed to reload walk file", "device", device.Name, "error", err)
+	}
+}
+
+// recreateTrapSender recreates the SNMP trap sender for a device if traps are enabled.
+func (s *Simulator) recreateTrapSender(existingDevice *SimulatedDevice, device *config.Device) {
+	existingDevice.TrapSender = nil
+
+	if !s.shouldCreateTrapSender(device) {
+		return
+	}
+
+	trapSender, err := snmp.NewTrapSender(
+		device.Name,
+		device.IPAddresses[0],
+		device.SNMPConfig.Traps,
+		s.debugLevel,
+	)
+	if err != nil {
+		if s.debugLevel >= debugLevelBasic {
+			slog.Warn("Failed to recreate trap sender", "device", device.Name, "error", err)
+		}
+		return
+	}
+	existingDevice.TrapSender = trapSender
+}
+
+// shouldCreateTrapSender returns true if a trap sender should be created for the device.
+func (s *Simulator) shouldCreateTrapSender(device *config.Device) bool {
+	return device.SNMPConfig.Traps != nil &&
+		device.SNMPConfig.Traps.Enabled &&
+		len(device.IPAddresses) > 0
+}
+
+// addNewDevice adds a new device during reload.
+// Must be called with s.mu held.
+func (s *Simulator) addNewDevice(device *config.Device) {
+	if s.debugLevel >= debugLevelBasic {
+		slog.Info("Adding new device", "device", device.Name)
+	}
+	s.addDevice(device)
+}
+
+// restartIfNeeded restarts the simulator if it was running before reload.
+func (s *Simulator) restartIfNeeded(wasRunning bool) error {
 	if wasRunning {
-		if s.debugLevel >= 1 {
+		if s.debugLevel >= debugLevelBasic {
 			slog.Info("Restarting simulator with new configuration...")
 		}
-
 		return s.Start()
 	}
 
-	if s.debugLevel >= 1 {
+	if s.debugLevel >= debugLevelBasic {
 		slog.Info("Configuration reloaded successfully")
 	}
-
 	return nil
 }
 
@@ -581,7 +664,7 @@ func (s *Simulator) GetStats() map[string]any {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	totalCounters := &DeviceCounters{}
+	totalCounters := &Counters{}
 	deviceStates := make(map[string]string)
 
 	for name, device := range s.devices {

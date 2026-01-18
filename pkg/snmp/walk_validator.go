@@ -33,37 +33,50 @@ type ValidationResult struct {
 
 // ValidateWalkFile validates a walk file and returns detailed results.
 func ValidateWalkFile(filename string) (*ValidationResult, error) {
-	// Security: validate path
-	cleanPath := filepath.Clean(filename)
-	if strings.Contains(cleanPath, "..") {
-		return nil, ErrDirectoryTraversal
-	}
-
-	absPath, err := filepath.Abs(cleanPath)
+	absPath, err := validateAndResolvePath(filename)
 	if err != nil {
-		return nil, fmt.Errorf("invalid walk file path: %w", err)
-	}
-
-	fileInfo, err := os.Lstat(absPath)
-	if err != nil {
-		return nil, fmt.Errorf("%w: %w", ErrFailedToAccessWalkFile, err)
-	}
-
-	if fileInfo.Mode()&os.ModeSymlink != 0 {
-		return nil, ErrWalkFileSymlink
-	}
-
-	if fileInfo.IsDir() {
-		return nil, ErrWalkFileIsDirectory
+		return nil, err
 	}
 
 	file, err := os.Open(absPath)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrFailedToOpenWalkFile, err)
 	}
-
 	defer func() { _ = file.Close() }()
 
+	return scanWalkFile(filename, file)
+}
+
+// validateAndResolvePath validates the path for security issues and returns the absolute path.
+func validateAndResolvePath(filename string) (string, error) {
+	cleanPath := filepath.Clean(filename)
+	if strings.Contains(cleanPath, "..") {
+		return "", ErrDirectoryTraversal
+	}
+
+	absPath, err := filepath.Abs(cleanPath)
+	if err != nil {
+		return "", fmt.Errorf("invalid walk file path: %w", err)
+	}
+
+	fileInfo, err := os.Lstat(absPath)
+	if err != nil {
+		return "", fmt.Errorf("%w: %w", ErrFailedToAccessWalkFile, err)
+	}
+
+	if fileInfo.Mode()&os.ModeSymlink != 0 {
+		return "", ErrWalkFileSymlink
+	}
+
+	if fileInfo.IsDir() {
+		return "", ErrWalkFileIsDirectory
+	}
+
+	return absPath, nil
+}
+
+// scanWalkFile reads and validates each line in the walk file.
+func scanWalkFile(filename string, file *os.File) (*ValidationResult, error) {
 	result := &ValidationResult{
 		Filename: filename,
 		Valid:    true,
@@ -76,37 +89,52 @@ func ValidateWalkFile(filename string) (*ValidationResult, error) {
 	for scanner.Scan() {
 		lineNum++
 		line := scanner.Text()
-		trimmedLine := strings.TrimSpace(line)
-
 		result.TotalLines++
 
-		// Skip empty lines and comments
-		if trimmedLine == "" || strings.HasPrefix(trimmedLine, "#") {
-			result.ValidLines++
-
-			continue
-		}
-
-		// Validate the line
-		issues := validateWalkLine(lineNum, line)
-		if len(issues) > 0 {
-			result.Issues = append(result.Issues, issues...)
-			// Check if any issue is an error
-			for _, issue := range issues {
-				if issue.Severity == "error" {
-					result.Valid = false
-				}
-			}
-		} else {
-			result.ValidLines++
-		}
+		processWalkLine(lineNum, line, result)
 	}
 
-	if err := scanner.Err(); err != nil {
-		return nil, fmt.Errorf("%w: %w", ErrReadingWalkFile, err)
+	if scanErr := scanner.Err(); scanErr != nil {
+		return nil, fmt.Errorf("%w: %w", ErrReadingWalkFile, scanErr)
 	}
 
 	return result, nil
+}
+
+// processWalkLine validates a single line and updates the result.
+func processWalkLine(lineNum int, line string, result *ValidationResult) {
+	trimmedLine := strings.TrimSpace(line)
+
+	if isSkippableLine(trimmedLine) {
+		result.ValidLines++
+		return
+	}
+
+	issues := validateWalkLine(lineNum, line)
+	if len(issues) == 0 {
+		result.ValidLines++
+		return
+	}
+
+	result.Issues = append(result.Issues, issues...)
+	if containsError(issues) {
+		result.Valid = false
+	}
+}
+
+// isSkippableLine returns true if the line should be skipped (empty or comment).
+func isSkippableLine(trimmedLine string) bool {
+	return trimmedLine == "" || strings.HasPrefix(trimmedLine, "#")
+}
+
+// containsError checks if any issue in the slice has error severity.
+func containsError(issues []ValidationIssue) bool {
+	for _, issue := range issues {
+		if issue.Severity == "error" {
+			return true
+		}
+	}
+	return false
 }
 
 // validateWalkLine validates a single line and returns any issues found.
@@ -140,7 +168,7 @@ func validateWalkLine(lineNum int, line string) []ValidationIssue {
 		return issues
 	}
 
-	parts := strings.SplitN(trimmedLine, "=", 2)
+	parts := strings.SplitN(trimmedLine, "=", OIDPartsMinPDU)
 	oid := strings.TrimSpace(parts[0])
 	rest := strings.TrimSpace(parts[1])
 
@@ -161,7 +189,7 @@ func validateWalkLine(lineNum int, line string) []ValidationIssue {
 		return issues
 	}
 
-	typeParts := strings.SplitN(rest, ":", 2)
+	typeParts := strings.SplitN(rest, ":", OIDPartsMinPDU)
 	typeStr := strings.TrimSpace(typeParts[0])
 	valueStr := strings.TrimSpace(typeParts[1])
 
@@ -194,12 +222,14 @@ func validateOID(lineNum int, oid, originalLine string) []ValidationIssue {
 	}
 
 	// Numeric OID validation
-	if strings.HasPrefix(oid, ".") {
+	switch {
+	case strings.HasPrefix(oid, "."):
 		// Check for valid numeric OID format
 		oidPattern := regexp.MustCompile(`^\.(\d+\.)*\d+$`)
 		if !oidPattern.MatchString(oid) {
 			// Check for common issues
-			if strings.Contains(oid, "..") {
+			switch {
+			case strings.Contains(oid, ".."):
 				issues = append(issues, ValidationIssue{
 					Line:       lineNum,
 					Severity:   "error",
@@ -208,20 +238,23 @@ func validateOID(lineNum int, oid, originalLine string) []ValidationIssue {
 					Suggestion: strings.ReplaceAll(oid, "..", "."),
 					AutoFix:    true,
 				})
-			} else if trimmedOID, found := strings.CutSuffix(oid, "."); found {
-				issues = append(issues, ValidationIssue{
-					Line:       lineNum,
-					Severity:   "warning",
-					Message:    "OID ends with a trailing dot",
-					Original:   originalLine,
-					Suggestion: trimmedOID,
-					AutoFix:    true,
-				})
+			default:
+				if trimmedOID, found := strings.CutSuffix(oid, "."); found {
+					issues = append(issues, ValidationIssue{
+						Line:       lineNum,
+						Severity:   "warning",
+						Message:    "OID ends with a trailing dot",
+						Original:   originalLine,
+						Suggestion: trimmedOID,
+						AutoFix:    true,
+					})
+				}
 			}
 		}
-	} else if strings.Contains(oid, "::") {
-		// Named OID like SNMPv2-MIB::sysDescr.0 - valid format, no action needed
-	} else if !strings.Contains(oid, ".") && !strings.Contains(oid, "::") {
+	case strings.Contains(oid, "::"):
+		// Named OID like SNMPv2-MIB::sysDescr.0 - valid format, no action needed.
+		return issues
+	case !strings.Contains(oid, "."):
 		// Check if it looks like a malformed OID
 		issues = append(issues, ValidationIssue{
 			Line:     lineNum,
@@ -237,11 +270,34 @@ func validateOID(lineNum int, oid, originalLine string) []ValidationIssue {
 
 // validateType checks if the type is valid and properly formatted.
 func validateType(lineNum int, typeStr, _ /*valueStr*/, originalLine string) []ValidationIssue {
-	var issues []ValidationIssue
-
 	upperType := strings.ToUpper(typeStr)
 
-	// Valid types
+	if isValidSNMPType(upperType) {
+		return nil
+	}
+
+	// Check for case mismatch first (original is different case but valid when uppercased)
+	if issue := checkCaseMismatch(lineNum, typeStr, upperType, originalLine); issue != nil {
+		return []ValidationIssue{*issue}
+	}
+
+	// Check for common misspellings
+	if issue := checkMisspelling(lineNum, typeStr, upperType, originalLine); issue != nil {
+		return []ValidationIssue{*issue}
+	}
+
+	// Unknown type - will be treated as STRING
+	return []ValidationIssue{{
+		Line:     lineNum,
+		Severity: "warning",
+		Message:  fmt.Sprintf("Unknown type '%s' - will be treated as STRING", typeStr),
+		Original: originalLine,
+		AutoFix:  false,
+	}}
+}
+
+// isValidSNMPType checks if the given uppercase type string is a valid SNMP type.
+func isValidSNMPType(upperType string) bool {
 	validTypes := map[string]bool{
 		"STRING": true, "OCTET STRING": true,
 		"INTEGER": true, "INT": true,
@@ -262,184 +318,225 @@ func validateType(lineNum int, typeStr, _ /*valueStr*/, originalLine string) []V
 		"NO SUCH INSTANCE":           true,
 		"ENDOFMIBVIEW":               true,
 	}
+	return validTypes[upperType]
+}
 
-	if !validTypes[upperType] {
-		// Check for common misspellings or case issues
-		if typeStr != upperType && validTypes[upperType] {
-			issues = append(issues, ValidationIssue{
-				Line:       lineNum,
-				Severity:   "warning",
-				Message:    fmt.Sprintf("Type '%s' should be uppercase '%s'", typeStr, upperType),
-				Original:   originalLine,
-				Suggestion: strings.Replace(originalLine, typeStr+":", upperType+":", 1),
-				AutoFix:    true,
-			})
-		} else {
-			// Check for common misspellings
-			corrections := map[string]string{
-				"STRNG":    "STRING",
-				"STRIGN":   "STRING",
-				"INTGER":   "INTEGER",
-				"INTEGR":   "INTEGER",
-				"GAUGE":    "GAUGE",
-				"GUAGE32":  "GAUGE32",
-				"CONTER":   "COUNTER",
-				"CONTER32": "COUNTER32",
-				"TIMTICKS": "TIMETICKS",
-				"TIMETICK": "TIMETICKS",
-				"IPADRESS": "IPADDRESS",
-				"IPADDRES": "IPADDRESS",
-			}
-			if correction, ok := corrections[upperType]; ok {
-				issues = append(issues, ValidationIssue{
-					Line:     lineNum,
-					Severity: "warning",
-					Message: fmt.Sprintf(
-						"Type '%s' appears to be misspelled, did you mean '%s'?",
-						typeStr,
-						correction,
-					),
-					Original:   originalLine,
-					Suggestion: strings.Replace(originalLine, typeStr+":", correction+":", 1),
-					AutoFix:    true,
-				})
-			} else {
-				issues = append(issues, ValidationIssue{
-					Line:     lineNum,
-					Severity: "warning",
-					Message:  fmt.Sprintf("Unknown type '%s' - will be treated as STRING", typeStr),
-					Original: originalLine,
-					AutoFix:  false,
-				})
-			}
+// checkCaseMismatch checks if the type is valid but has case issues.
+func checkCaseMismatch(lineNum int, typeStr, upperType, originalLine string) *ValidationIssue {
+	// If the original differs from uppercase AND uppercase is valid, it's a case issue
+	if typeStr != upperType && isValidSNMPType(upperType) {
+		return &ValidationIssue{
+			Line:       lineNum,
+			Severity:   "warning",
+			Message:    fmt.Sprintf("Type '%s' should be uppercase '%s'", typeStr, upperType),
+			Original:   originalLine,
+			Suggestion: strings.Replace(originalLine, typeStr+":", upperType+":", 1),
+			AutoFix:    true,
 		}
 	}
+	return nil
+}
 
-	return issues
+// checkMisspelling checks for common type misspellings.
+func checkMisspelling(lineNum int, typeStr, upperType, originalLine string) *ValidationIssue {
+	corrections := map[string]string{
+		"STRNG":    "STRING",
+		"STRIGN":   "STRING",
+		"INTGER":   "INTEGER",
+		"INTEGR":   "INTEGER",
+		"GUAGE32":  "GAUGE32",
+		"CONTER":   "COUNTER",
+		"CONTER32": "COUNTER32",
+		"TIMTICKS": "TIMETICKS",
+		"TIMETICK": "TIMETICKS",
+		"IPADRESS": "IPADDRESS",
+		"IPADDRES": "IPADDRESS",
+	}
+	if correction, ok := corrections[upperType]; ok {
+		return &ValidationIssue{
+			Line:     lineNum,
+			Severity: "warning",
+			Message: fmt.Sprintf(
+				"Type '%s' appears to be misspelled, did you mean '%s'?",
+				typeStr,
+				correction,
+			),
+			Original:   originalLine,
+			Suggestion: strings.Replace(originalLine, typeStr+":", correction+":", 1),
+			AutoFix:    true,
+		}
+	}
+	return nil
 }
 
 // validateValue checks if the value is valid for the given type.
 func validateValue(lineNum int, typeStr, valueStr, originalLine string) []ValidationIssue {
-	var issues []ValidationIssue
-
 	upperType := strings.ToUpper(typeStr)
 
 	switch upperType {
 	case "STRING", "OCTET STRING":
-		// Strings should ideally be quoted
-		if valueStr != "" && !strings.HasPrefix(valueStr, "\"") {
-			// Check if it looks like it should be quoted
-			if !strings.HasPrefix(valueStr, "0x") && !strings.HasPrefix(valueStr, "varimib") &&
-				!strings.HasPrefix(valueStr, "fixed") {
-				issues = append(issues, ValidationIssue{
-					Line:       lineNum,
-					Severity:   "info",
-					Message:    "String value is not quoted (recommended for clarity)",
-					Original:   originalLine,
-					Suggestion: strings.Replace(originalLine, valueStr, fmt.Sprintf("\"%s\"", valueStr), 1),
-					AutoFix:    true,
-				})
-			}
-		}
-
+		return validateStringValue(lineNum, valueStr, originalLine)
 	case "INTEGER", "INT":
-		if valueStr == "" {
-			issues = append(issues, ValidationIssue{
-				Line:     lineNum,
-				Severity: "error",
-				Message:  "INTEGER value is empty",
-				Original: originalLine,
-				AutoFix:  false,
-			})
-		} else if _, err := strconv.ParseInt(valueStr, 10, 32); err != nil {
-			issues = append(issues, ValidationIssue{
-				Line:     lineNum,
-				Severity: "error",
-				Message:  fmt.Sprintf("Invalid INTEGER value '%s': %v", valueStr, err),
-				Original: originalLine,
-				AutoFix:  false,
-			})
-		}
-
+		return validateIntegerValue(lineNum, valueStr, originalLine)
 	case "GAUGE", "GAUGE32", "COUNTER", "COUNTER32":
-		if valueStr == "" {
-			issues = append(issues, ValidationIssue{
-				Line:     lineNum,
-				Severity: "error",
-				Message:  upperType + " value is empty",
-				Original: originalLine,
-				AutoFix:  false,
-			})
-		} else if _, err := strconv.ParseUint(valueStr, 10, 32); err != nil {
-			issues = append(issues, ValidationIssue{
-				Line:     lineNum,
-				Severity: "error",
-				Message:  fmt.Sprintf("Invalid %s value '%s': %v", upperType, valueStr, err),
-				Original: originalLine,
-				AutoFix:  false,
-			})
-		}
-
+		return validateUnsigned32Value(lineNum, upperType, valueStr, originalLine)
 	case "COUNTER64":
-		if valueStr == "" {
-			issues = append(issues, ValidationIssue{
-				Line:     lineNum,
-				Severity: "error",
-				Message:  "COUNTER64 value is empty",
-				Original: originalLine,
-				AutoFix:  false,
-			})
-		} else if _, err := strconv.ParseUint(valueStr, 10, 64); err != nil {
-			issues = append(issues, ValidationIssue{
-				Line:     lineNum,
-				Severity: "error",
-				Message:  fmt.Sprintf("Invalid COUNTER64 value '%s': %v", valueStr, err),
-				Original: originalLine,
-				AutoFix:  false,
-			})
-		}
-
+		return validateCounter64Value(lineNum, valueStr, originalLine)
 	case "TIMETICKS":
-		// Valid formats: (12345) or 12345 or (12345) 0:02:03.45
-		re := regexp.MustCompile(`^\(?\d+\)?`)
-		if !re.MatchString(valueStr) {
-			issues = append(issues, ValidationIssue{
-				Line:     lineNum,
-				Severity: "error",
-				Message:  fmt.Sprintf("Invalid Timeticks format '%s' - expected (number) or number", valueStr),
-				Original: originalLine,
-				AutoFix:  false,
-			})
-		}
-
+		return validateTimeticksValue(lineNum, valueStr, originalLine)
 	case "IPADDRESS", "IP ADDRESS", "IPADDR":
-		// Basic IP validation
-		ipPattern := regexp.MustCompile(`^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$`)
-		if valueStr != "" && !ipPattern.MatchString(valueStr) {
-			issues = append(issues, ValidationIssue{
-				Line:     lineNum,
-				Severity: "warning",
-				Message:  fmt.Sprintf("IP address '%s' may be malformed", valueStr),
-				Original: originalLine,
-				AutoFix:  false,
-			})
-		}
-
+		return validateIPAddressValue(lineNum, valueStr, originalLine)
 	case "OID", "OBJECT IDENTIFIER":
-		// Should start with . or be empty
-		if valueStr != "" && !strings.HasPrefix(valueStr, ".") && !strings.Contains(valueStr, "::") {
-			issues = append(issues, ValidationIssue{
-				Line:       lineNum,
-				Severity:   "warning",
-				Message:    "OID value should start with '.'",
-				Original:   originalLine,
-				Suggestion: strings.Replace(originalLine, ": "+valueStr, ": ."+valueStr, 1),
-				AutoFix:    true,
-			})
-		}
+		return validateOIDValue(lineNum, valueStr, originalLine)
+	default:
+		return nil
+	}
+}
+
+// validateStringValue validates string/octet string values.
+func validateStringValue(lineNum int, valueStr, originalLine string) []ValidationIssue {
+	if valueStr == "" || strings.HasPrefix(valueStr, "\"") {
+		return nil
 	}
 
-	return issues
+	if strings.HasPrefix(valueStr, "0x") || strings.HasPrefix(valueStr, "varimib") ||
+		strings.HasPrefix(valueStr, "fixed") {
+		return nil
+	}
+
+	return []ValidationIssue{{
+		Line:       lineNum,
+		Severity:   "info",
+		Message:    "String value is not quoted (recommended for clarity)",
+		Original:   originalLine,
+		Suggestion: strings.Replace(originalLine, valueStr, fmt.Sprintf("\"%s\"", valueStr), 1),
+		AutoFix:    true,
+	}}
+}
+
+// validateIntegerValue validates INTEGER values.
+func validateIntegerValue(lineNum int, valueStr, originalLine string) []ValidationIssue {
+	if valueStr == "" {
+		return []ValidationIssue{{
+			Line:     lineNum,
+			Severity: "error",
+			Message:  "INTEGER value is empty",
+			Original: originalLine,
+			AutoFix:  false,
+		}}
+	}
+
+	if _, err := strconv.ParseInt(valueStr, 10, 32); err != nil {
+		return []ValidationIssue{{
+			Line:     lineNum,
+			Severity: "error",
+			Message:  fmt.Sprintf("Invalid INTEGER value '%s': %v", valueStr, err),
+			Original: originalLine,
+			AutoFix:  false,
+		}}
+	}
+
+	return nil
+}
+
+// validateUnsigned32Value validates GAUGE32/COUNTER32 values.
+func validateUnsigned32Value(lineNum int, typeName, valueStr, originalLine string) []ValidationIssue {
+	if valueStr == "" {
+		return []ValidationIssue{{
+			Line:     lineNum,
+			Severity: "error",
+			Message:  typeName + " value is empty",
+			Original: originalLine,
+			AutoFix:  false,
+		}}
+	}
+
+	if _, err := strconv.ParseUint(valueStr, 10, 32); err != nil {
+		return []ValidationIssue{{
+			Line:     lineNum,
+			Severity: "error",
+			Message:  fmt.Sprintf("Invalid %s value '%s': %v", typeName, valueStr, err),
+			Original: originalLine,
+			AutoFix:  false,
+		}}
+	}
+
+	return nil
+}
+
+// validateCounter64Value validates COUNTER64 values.
+func validateCounter64Value(lineNum int, valueStr, originalLine string) []ValidationIssue {
+	if valueStr == "" {
+		return []ValidationIssue{{
+			Line:     lineNum,
+			Severity: "error",
+			Message:  "COUNTER64 value is empty",
+			Original: originalLine,
+			AutoFix:  false,
+		}}
+	}
+
+	if _, err := strconv.ParseUint(valueStr, 10, 64); err != nil {
+		return []ValidationIssue{{
+			Line:     lineNum,
+			Severity: "error",
+			Message:  fmt.Sprintf("Invalid COUNTER64 value '%s': %v", valueStr, err),
+			Original: originalLine,
+			AutoFix:  false,
+		}}
+	}
+
+	return nil
+}
+
+// validateTimeticksValue validates TIMETICKS values.
+func validateTimeticksValue(lineNum int, valueStr, originalLine string) []ValidationIssue {
+	re := regexp.MustCompile(`^\(?\d+\)?`)
+	if !re.MatchString(valueStr) {
+		return []ValidationIssue{{
+			Line:     lineNum,
+			Severity: "error",
+			Message:  fmt.Sprintf("Invalid Timeticks format '%s' - expected (number) or number", valueStr),
+			Original: originalLine,
+			AutoFix:  false,
+		}}
+	}
+	return nil
+}
+
+// validateIPAddressValue validates IP address values.
+func validateIPAddressValue(lineNum int, valueStr, originalLine string) []ValidationIssue {
+	if valueStr == "" {
+		return nil
+	}
+
+	ipPattern := regexp.MustCompile(`^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$`)
+	if !ipPattern.MatchString(valueStr) {
+		return []ValidationIssue{{
+			Line:     lineNum,
+			Severity: "warning",
+			Message:  fmt.Sprintf("IP address '%s' may be malformed", valueStr),
+			Original: originalLine,
+			AutoFix:  false,
+		}}
+	}
+	return nil
+}
+
+// validateOIDValue validates OID values.
+func validateOIDValue(lineNum int, valueStr, originalLine string) []ValidationIssue {
+	if valueStr == "" || strings.HasPrefix(valueStr, ".") || strings.Contains(valueStr, "::") {
+		return nil
+	}
+
+	return []ValidationIssue{{
+		Line:       lineNum,
+		Severity:   "warning",
+		Message:    "OID value should start with '.'",
+		Original:   originalLine,
+		Suggestion: strings.Replace(originalLine, ": "+valueStr, ": ."+valueStr, 1),
+		AutoFix:    true,
+	}}
 }
 
 // AutoFixWalkFile attempts to fix common issues in a walk file
@@ -493,17 +590,16 @@ func AutoFixWalkFile(filename string, outputPath string) (*ValidationResult, err
 	if outputPath == "" {
 		// Create backup and overwrite original
 		backupPath := absPath + ".bak"
-		err := os.WriteFile(backupPath, content, 0o600)
-		if err != nil {
-			return nil, fmt.Errorf("%w: %w", ErrFailedToCreateBackup, err)
+		if writeErr := os.WriteFile(backupPath, content, 0o600); writeErr != nil {
+			return nil, fmt.Errorf("%w: %w", ErrFailedToCreateBackup, writeErr)
 		}
 
 		outputPath = absPath
 	}
 
 	// Write fixed content
-	if err := os.WriteFile(outputPath, []byte(strings.Join(fixedContent, "\n")), 0o600); err != nil {
-		return nil, fmt.Errorf("%w: %w", ErrFailedToWriteFixedFile, err)
+	if writeErr := os.WriteFile(outputPath, []byte(strings.Join(fixedContent, "\n")), 0o600); writeErr != nil {
+		return nil, fmt.Errorf("%w: %w", ErrFailedToWriteFixedFile, writeErr)
 	}
 
 	// Build list of fixed line numbers
@@ -528,7 +624,7 @@ func ValidateAndSummarize(filename string) (string, error) {
 	var sb strings.Builder
 
 	fmt.Fprintf(&sb, "Walk File Validation: %s\n", filename)
-	sb.WriteString(strings.Repeat("=", 60) + "\n")
+	sb.WriteString(strings.Repeat("=", SecondsPerMinute) + "\n")
 	fmt.Fprintf(&sb, "Total Lines: %d\n", result.TotalLines)
 	fmt.Fprintf(&sb, "Valid Lines: %d\n", result.ValidLines)
 	fmt.Fprintf(&sb, "Issues Found: %d\n", len(result.Issues))
@@ -541,7 +637,7 @@ func ValidateAndSummarize(filename string) (string, error) {
 
 	if len(result.Issues) > 0 {
 		sb.WriteString("\nIssues:\n")
-		sb.WriteString(strings.Repeat("-", 60) + "\n")
+		sb.WriteString(strings.Repeat("-", SecondsPerMinute) + "\n")
 
 		errorCount := 0
 		warningCount := 0
@@ -569,7 +665,7 @@ func ValidateAndSummarize(filename string) (string, error) {
 			}
 		}
 
-		sb.WriteString(strings.Repeat("-", 60) + "\n")
+		sb.WriteString(strings.Repeat("-", SecondsPerMinute) + "\n")
 		fmt.Fprintf(&sb, "Summary: %d errors, %d warnings, %d info\n", errorCount, warningCount, infoCount)
 		fmt.Fprintf(&sb, "Auto-fixable: %d issues\n", autoFixable)
 	}

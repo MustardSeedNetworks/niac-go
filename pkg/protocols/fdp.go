@@ -43,6 +43,22 @@ const (
 	FDPCapHost   = 0x04
 )
 
+// FDP protocol ID for LLC/SNAP header.
+const fdpProtocolID = 0x2000
+
+// FDP encoding constants.
+const (
+	fdpNullByte          = 0x00   // null byte for checksum placeholder
+	fdpTLVHeaderSize     = 4      // TLV header size (Type 2 + Length 2)
+	fdpMaxLen            = 65535  // max uint16 for lengths
+	fdpLLCSNAPHeaderSize = 8      // LLC/SNAP header size in bytes
+	fdpCapabilitiesLen   = 8      // Capabilities TLV length (Type + Length + Value)
+	fdpCapValueSize      = 4      // Capabilities value size (uint32)
+	fdpChecksumByteShift = 8      // Bit shift for high byte in checksum
+	fdpChecksumWordShift = 16     // Bit shift for folding 32-bit to 16-bit
+	fdpChecksumWordMask  = 0xffff // Mask for 16-bit value in checksum fold
+)
+
 // Device type string constant for FDP specific types.
 const deviceTypeHost = "host"
 
@@ -112,9 +128,9 @@ func (h *FDPHandler) sendAdvertisements() {
 		frame := h.buildFDPFrame(device)
 		if frame != nil {
 			err := h.sendFrame(device, frame)
-			if err != nil && debugLevel >= 2 {
+			if err != nil && debugLevel >= DebugLevelInfo {
 				_, _ = fmt.Fprintf(os.Stdout, "FDP: Error sending advertisement for %s: %v\n", device.Name, err)
-			} else if debugLevel >= 3 {
+			} else if debugLevel >= DebugLevelVerbose {
 				_, _ = fmt.Fprintf(os.Stdout, "FDP: Sent advertisement for %s (%d bytes)\n", device.Name, len(frame))
 			}
 		}
@@ -134,7 +150,7 @@ func (h *FDPHandler) buildFDPFrame(device *config.Device) []byte {
 	// FDP header: Version (1 byte) + TTL/Holdtime (1 byte) + Checksum (2 bytes)
 	payload = append(payload, FDPVersion)
 	payload = append(payload, holdtime)
-	payload = append(payload, 0x00, 0x00) // Checksum placeholder
+	payload = append(payload, fdpNullByte, fdpNullByte) // Checksum placeholder
 
 	// Add TLVs
 	payload = append(payload, h.buildDeviceIDTLV(device)...)
@@ -162,7 +178,7 @@ func (h *FDPHandler) buildFDPFrame(device *config.Device) []byte {
 
 // buildLLCSNAPHeader builds the LLC/SNAP header for FDP.
 func (h *FDPHandler) buildLLCSNAPHeader() []byte {
-	header := make([]byte, 8)
+	header := make([]byte, fdpLLCSNAPHeaderSize)
 
 	// LLC header (3 bytes)
 	header[0] = 0xAA // DSAP
@@ -175,8 +191,8 @@ func (h *FDPHandler) buildLLCSNAPHeader() []byte {
 	header[4] = 0xE0
 	header[5] = 0x52
 
-	// Protocol ID (2 bytes): 0x2000 (similar to CDP)
-	binary.BigEndian.PutUint16(header[6:8], 0x2000)
+	// Protocol ID (2 bytes): FDP protocol (similar to CDP)
+	binary.BigEndian.PutUint16(header[6:8], fdpProtocolID)
 
 	return header
 }
@@ -187,11 +203,11 @@ func (h *FDPHandler) buildDeviceIDTLV(device *config.Device) []byte {
 
 	length := min(
 		// Type (2) + Length (2) + Value
-		4+len(deviceID), 65535)
+		fdpTLVHeaderSize+len(deviceID), fdpMaxLen)
 
 	tlv := make([]byte, length)
 	binary.BigEndian.PutUint16(tlv[0:2], FDPTLVTypeDeviceID)
-	binary.BigEndian.PutUint16(tlv[2:4], uint16(length)) // #nosec G115 -- TLV length limited by protocol specification
+	binary.BigEndian.PutUint16(tlv[2:4], safeUint16(length))
 	copy(tlv[4:], deviceID)
 
 	return tlv
@@ -202,20 +218,21 @@ func (h *FDPHandler) buildPortTLV(device *config.Device) []byte {
 	var portName []byte
 
 	// Use port ID from config if available
-	if device.FDPConfig != nil && device.FDPConfig.PortID != "" {
+	switch {
+	case device.FDPConfig != nil && device.FDPConfig.PortID != "":
 		portName = []byte(device.FDPConfig.PortID)
-	} else if len(device.Interfaces) > 0 && device.Interfaces[0].Name != "" {
+	case len(device.Interfaces) > 0 && device.Interfaces[0].Name != "":
 		// Try to use first interface name if available
 		portName = []byte(device.Interfaces[0].Name)
-	} else {
+	default:
 		portName = []byte("Port 1")
 	}
 
-	length := min(4+len(portName), 65535)
+	length := min(fdpTLVHeaderSize+len(portName), fdpMaxLen)
 
 	tlv := make([]byte, length)
 	binary.BigEndian.PutUint16(tlv[0:2], FDPTLVTypePort)
-	binary.BigEndian.PutUint16(tlv[2:4], uint16(length)) // #nosec G115 -- TLV length limited by protocol specification
+	binary.BigEndian.PutUint16(tlv[2:4], safeUint16(length))
 	copy(tlv[4:], portName)
 
 	return tlv
@@ -231,11 +248,11 @@ func (h *FDPHandler) buildPlatformTLV(device *config.Device) []byte {
 		platform = []byte("NIAC-Go Simulated " + device.Type)
 	}
 
-	length := min(4+len(platform), 65535)
+	length := min(fdpTLVHeaderSize+len(platform), fdpMaxLen)
 
 	tlv := make([]byte, length)
 	binary.BigEndian.PutUint16(tlv[0:2], FDPTLVTypePlatform)
-	binary.BigEndian.PutUint16(tlv[2:4], uint16(length)) // #nosec G115 -- TLV length limited by protocol specification
+	binary.BigEndian.PutUint16(tlv[2:4], safeUint16(length))
 	copy(tlv[4:], platform)
 
 	return tlv
@@ -255,11 +272,11 @@ func (h *FDPHandler) buildCapabilitiesTLV(device *config.Device) []byte {
 		capabilities = FDPCapHost
 	}
 
-	length := 8 // Type (2) + Length (2) + Capabilities (4)
+	length := fdpCapabilitiesLen // Type (2) + Length (2) + Capabilities (4)
 
 	tlv := make([]byte, length)
 	binary.BigEndian.PutUint16(tlv[0:2], FDPTLVTypeCapabilities)
-	binary.BigEndian.PutUint16(tlv[2:4], 8) // length is constant 8
+	binary.BigEndian.PutUint16(tlv[2:4], fdpCapabilitiesLen) // fixed capabilities TLV length
 	binary.BigEndian.PutUint32(tlv[4:8], capabilities)
 
 	return tlv
@@ -275,11 +292,11 @@ func (h *FDPHandler) buildSoftwareTLV(device *config.Device) []byte {
 		software = []byte("NIAC-Go v1.5.0")
 	}
 
-	length := min(4+len(software), 65535)
+	length := min(fdpTLVHeaderSize+len(software), fdpMaxLen)
 
 	tlv := make([]byte, length)
 	binary.BigEndian.PutUint16(tlv[0:2], FDPTLVTypeSoftware)
-	binary.BigEndian.PutUint16(tlv[2:4], uint16(length)) // #nosec G115 -- TLV length limited by protocol specification
+	binary.BigEndian.PutUint16(tlv[2:4], safeUint16(length))
 	copy(tlv[4:], software)
 
 	return tlv
@@ -301,11 +318,11 @@ func (h *FDPHandler) buildIPAddressTLV(device *config.Device) []byte {
 		ipBytes = ip.To16()
 	}
 
-	length := min(4+len(ipBytes), 65535)
+	length := min(fdpTLVHeaderSize+len(ipBytes), fdpMaxLen)
 
 	tlv := make([]byte, length)
 	binary.BigEndian.PutUint16(tlv[0:2], FDPTLVTypeIPAddress)
-	binary.BigEndian.PutUint16(tlv[2:4], uint16(length)) // #nosec G115 -- TLV length limited by protocol specification
+	binary.BigEndian.PutUint16(tlv[2:4], safeUint16(length))
 	copy(tlv[4:], ipBytes)
 
 	return tlv
@@ -322,13 +339,13 @@ func (h *FDPHandler) calculateChecksum(data []byte) uint16 {
 	}
 
 	// Handle odd byte
-	if len(data)%2 == 1 {
-		sum += uint32(data[len(data)-1]) << 8
+	if len(data)%fdpTLVHeaderSize/fdpTLVHeaderSize == 1 {
+		sum += uint32(data[len(data)-1]) << fdpChecksumByteShift
 	}
 
 	// Fold 32-bit sum to 16 bits
-	for sum > 0xffff {
-		sum = (sum >> 16) + (sum & 0xffff)
+	for sum > fdpChecksumWordMask {
+		sum = (sum >> fdpChecksumWordShift) + (sum & fdpChecksumWordMask)
 	}
 
 	// Return one's complement
@@ -340,76 +357,108 @@ func (h *FDPHandler) sendFrame(device *config.Device, fdpPayload []byte) error {
 	return sendDiscoveryFrame(FDPMulticastMAC, device, fdpPayload, h.stack)
 }
 
+// fdpTLVData holds parsed TLV data from an FDP frame.
+type fdpTLVData struct {
+	deviceID string
+	portID   string
+	platform string
+	software string
+	mgmtIP   net.IP
+	caps     []string
+	ttl      int
+}
+
 // HandlePacket parses inbound FDP frames and records neighbor metadata.
 func (h *FDPHandler) HandlePacket(pkt *Packet) {
-	debugLevel := h.stack.GetDebugLevel()
-
-	payload, ok := ethernetPayload(pkt.Buffer)
-	if !ok || len(payload) < 4 {
+	fdpData := h.extractFDPData(pkt)
+	if fdpData == nil {
 		return
 	}
 
-	fdpData := payload
-	if len(payload) >= 8 && payload[0] == 0xAA && payload[1] == 0xAA {
-		fdpData = payload[8:]
-	}
-
-	if len(fdpData) < 4 {
-		return
-	}
-
-	// Header: Version(1) + Holdtime(1) + Checksum(2)
-	ttl := int(fdpData[1])
-	cursor := 4
-	limit := len(fdpData)
-
-	var (
-		deviceID, portID, platform, software string
-		mgmtIP                               net.IP
-		caps                                 []string
-	)
-
-	for cursor+4 <= limit {
-		tlvt := binary.BigEndian.Uint16(fdpData[cursor : cursor+2])
-
-		length := int(binary.BigEndian.Uint16(fdpData[cursor+2 : cursor+4]))
-		if length < 4 || cursor+length > limit {
-			break
-		}
-
-		value := fdpData[cursor+4 : cursor+length]
-
-		switch tlvt {
-		case FDPTLVTypeDeviceID:
-			deviceID = strings.TrimSpace(string(value))
-		case FDPTLVTypePort:
-			portID = strings.TrimSpace(string(value))
-		case FDPTLVTypePlatform:
-			platform = strings.TrimSpace(string(value))
-		case FDPTLVTypeCapabilities:
-			if len(value) >= 4 {
-				capBits := binary.BigEndian.Uint32(value[:4])
-				caps = fdpCapabilitiesToStrings(capBits)
-			}
-		case FDPTLVTypeSoftware:
-			software = strings.TrimSpace(string(value))
-		case FDPTLVTypeIPAddress:
-			if len(value) == net.IPv4len || len(value) == net.IPv6len {
-				ip := make(net.IP, len(value))
-				copy(ip, value)
-				mgmtIP = ip
-			}
-		}
-
-		cursor += length
-	}
+	tlvData := h.parseFDPTLVs(fdpData)
 
 	device := h.stack.selectDiscoveryDevice(ProtocolFDP)
 	if device == nil {
 		return
 	}
 
-	ttlSeconds := ttl
+	entry := h.buildFDPNeighborRecord(device, tlvData)
+	h.logFDPNeighbor(entry, pkt)
+	h.stack.recordNeighbor(entry)
+}
+
+// extractFDPData extracts the FDP payload from the packet.
+func (h *FDPHandler) extractFDPData(pkt *Packet) []byte {
+	payload, ok := ethernetPayload(pkt.Buffer)
+	if !ok || len(payload) < fdpTLVHeaderSize {
+		return nil
+	}
+
+	fdpData := payload
+	if len(payload) >= fdpLLCSNAPHeaderSize && payload[0] == 0xAA && payload[1] == 0xAA {
+		fdpData = payload[fdpLLCSNAPHeaderSize:]
+	}
+
+	if len(fdpData) < fdpTLVHeaderSize {
+		return nil
+	}
+
+	return fdpData
+}
+
+// parseFDPTLVs parses all TLVs from FDP data.
+func (h *FDPHandler) parseFDPTLVs(fdpData []byte) *fdpTLVData {
+	data := &fdpTLVData{
+		ttl: int(fdpData[1]),
+	}
+
+	cursor := fdpTLVHeaderSize
+	limit := len(fdpData)
+
+	for cursor+fdpTLVHeaderSize <= limit {
+		tlvType := binary.BigEndian.Uint16(fdpData[cursor : cursor+2])
+		length := int(binary.BigEndian.Uint16(fdpData[cursor+2 : cursor+fdpTLVHeaderSize]))
+
+		if length < fdpTLVHeaderSize || cursor+length > limit {
+			break
+		}
+
+		value := fdpData[cursor+fdpTLVHeaderSize : cursor+length]
+		h.processFDPTLV(data, tlvType, value)
+		cursor += length
+	}
+
+	return data
+}
+
+// processFDPTLV processes a single FDP TLV.
+func (h *FDPHandler) processFDPTLV(data *fdpTLVData, tlvType uint16, value []byte) {
+	switch tlvType {
+	case FDPTLVTypeDeviceID:
+		data.deviceID = strings.TrimSpace(string(value))
+	case FDPTLVTypePort:
+		data.portID = strings.TrimSpace(string(value))
+	case FDPTLVTypePlatform:
+		data.platform = strings.TrimSpace(string(value))
+	case FDPTLVTypeCapabilities:
+		if len(value) >= fdpCapValueSize {
+			capBits := binary.BigEndian.Uint32(value[:fdpCapValueSize])
+			data.caps = fdpCapabilitiesToStrings(capBits)
+		}
+	case FDPTLVTypeSoftware:
+		data.software = strings.TrimSpace(string(value))
+	case FDPTLVTypeIPAddress:
+		if len(value) == net.IPv4len || len(value) == net.IPv6len {
+			ip := make(net.IP, len(value))
+			copy(ip, value)
+			data.mgmtIP = ip
+		}
+	}
+}
+
+// buildFDPNeighborRecord constructs a NeighborRecord from parsed FDP data.
+func (h *FDPHandler) buildFDPNeighborRecord(device *config.Device, data *fdpTLVData) NeighborRecord {
+	ttlSeconds := data.ttl
 	if ttlSeconds <= 0 {
 		ttlSeconds = FDPHoldtime
 	}
@@ -417,18 +466,18 @@ func (h *FDPHandler) HandlePacket(pkt *Packet) {
 	entry := NeighborRecord{
 		Protocol:        ProtocolFDP,
 		LocalDevice:     device.Name,
-		RemoteDevice:    coalesceStrings(deviceID, platform),
-		RemoteChassisID: coalesceStrings(deviceID, platform),
-		RemotePort:      portID,
-		Description:     joinNonEmpty(" / ", platform, software),
+		RemoteDevice:    coalesceStrings(data.deviceID, data.platform),
+		RemoteChassisID: coalesceStrings(data.deviceID, data.platform),
+		RemotePort:      data.portID,
+		Description:     joinNonEmpty(" / ", data.platform, data.software),
 		TTL:             time.Duration(ttlSeconds) * time.Second,
-		Capabilities:    caps,
-	}
-	if mgmtIP != nil {
-		entry.ManagementAddress = mgmtIP.String()
+		Capabilities:    dedupStrings(data.caps),
 	}
 
-	entry.Capabilities = dedupStrings(entry.Capabilities)
+	if data.mgmtIP != nil {
+		entry.ManagementAddress = data.mgmtIP.String()
+	}
+
 	if entry.RemoteDevice == "" {
 		entry.RemoteDevice = "unknown-fdp"
 	}
@@ -437,7 +486,13 @@ func (h *FDPHandler) HandlePacket(pkt *Packet) {
 		entry.RemoteChassisID = entry.RemoteDevice
 	}
 
-	if debugLevel >= 2 {
+	return entry
+}
+
+// logFDPNeighbor logs FDP neighbor information if debug is enabled.
+func (h *FDPHandler) logFDPNeighbor(entry NeighborRecord, _ *Packet) {
+	debugLevel := h.stack.GetDebugLevel()
+	if debugLevel >= DebugLevelInfo {
 		_, _ = fmt.Fprintf(
 			os.Stdout,
 			"FDP: Neighbor %s via %s (local %s)\n",
@@ -446,8 +501,6 @@ func (h *FDPHandler) HandlePacket(pkt *Packet) {
 			entry.LocalDevice,
 		)
 	}
-
-	h.stack.recordNeighbor(entry)
 }
 
 func fdpCapabilitiesToStrings(bits uint32) []string {

@@ -47,6 +47,7 @@ var (
 	ErrInvalidUnsignedInt   = errors.New("invalid unsigned integer")
 	ErrInvalidCounter64     = errors.New("invalid counter64")
 	ErrInvalidTimeticks     = errors.New("invalid timeticks")
+	ErrNoPatternMatch       = errors.New("no pattern match")
 )
 
 // Sentinel errors for walk file operations.

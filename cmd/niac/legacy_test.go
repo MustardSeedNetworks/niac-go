@@ -286,10 +286,11 @@ func TestSetupDebugConfig_AllProtocols(t *testing.T) {
 func TestHandleInformationalFlags_Version(t *testing.T) {
 	flags := newLegacyFlags()
 	flags.showVersion = true
+	info := versionInfo{version: "test", commit: "test", date: "test"}
 
 	// Can't easily test the actual printVersion() call without capturing stdout,
 	// but we can test that it returns true (indicating program should exit)
-	handled := handleInformationalFlags(flags, []string{})
+	handled := handleInformationalFlags(flags, []string{}, info)
 
 	if !handled {
 		t.Error("Expected handleInformationalFlags to return true for version flag")
@@ -300,8 +301,9 @@ func TestHandleInformationalFlags_Version(t *testing.T) {
 func TestHandleInformationalFlags_ListInterfaces(t *testing.T) {
 	flags := newLegacyFlags()
 	flags.listInterfaces = true
+	info := versionInfo{version: "test", commit: "test", date: "test"}
 
-	handled := handleInformationalFlags(flags, []string{})
+	handled := handleInformationalFlags(flags, []string{}, info)
 
 	if !handled {
 		t.Error("Expected handleInformationalFlags to return true for list-interfaces flag")
@@ -322,8 +324,9 @@ func TestHandleInformationalFlags_NoFlags(t *testing.T) {
 	flags.showVersion = false
 	flags.listInterfaces = false
 	flags.listDevices = false
+	info := versionInfo{version: "test", commit: "test", date: "test"}
 
-	handled := handleInformationalFlags(flags, []string{"eth0", "config.yaml"})
+	handled := handleInformationalFlags(flags, []string{"eth0", "config.yaml"}, info)
 
 	if handled {
 		t.Error("Expected handleInformationalFlags to return false when no flags are set")

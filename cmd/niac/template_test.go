@@ -29,114 +29,81 @@ func TestTemplateList(t *testing.T) {
 }
 
 func TestTemplateGet(t *testing.T) {
-	tests := []struct {
-		name         string
-		templateName string
-		expectError  bool
-	}{
-		{
-			name:         "Get basic-network template",
-			templateName: "basic-network",
-			expectError:  false,
-		},
-		{
-			name:         "Get non-existent template",
-			templateName: "nonexistent-template-xyz",
-			expectError:  true,
-		},
+	t.Run("Get basic-network template", func(t *testing.T) {
+		tmpl, err := templates.Get("basic-network")
+		if err != nil {
+			t.Fatalf("Unexpected error getting template: %v", err)
+		}
+
+		assertTemplateValid(t, tmpl)
+	})
+
+	t.Run("Get non-existent template", func(t *testing.T) {
+		_, err := templates.Get("nonexistent-template-xyz")
+		if err == nil {
+			t.Error("Expected error for non-existent template, got nil")
+		}
+	})
+}
+
+// assertTemplateValid validates that a template has required fields.
+func assertTemplateValid(t *testing.T, tmpl *templates.Template) {
+	t.Helper()
+
+	if tmpl == nil {
+		t.Fatal("Expected template, got nil")
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tmpl, err := templates.Get(tt.templateName)
+	if tmpl.Name == "" {
+		t.Error("Template name should not be empty")
+	}
 
-			if tt.expectError {
-				if err == nil {
-					t.Error("Expected error for non-existent template, got nil")
-				}
-			} else {
-				if err != nil {
-					t.Errorf("Unexpected error getting template: %v", err)
-				}
-				if tmpl == nil {
-					t.Error("Expected template, got nil")
-				}
-				if tmpl != nil {
-					if tmpl.Name == "" {
-						t.Error("Template name should not be empty")
-					}
-					if tmpl.Content == "" {
-						t.Error("Template content should not be empty")
-					}
-				}
-			}
-		})
+	if tmpl.Content == "" {
+		t.Error("Template content should not be empty")
 	}
 }
 
 func TestTemplateUseFileCreation(t *testing.T) {
-	tmpDir := t.TempDir()
+	t.Run("Create basic-network config", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		outputFile := filepath.Join(tmpDir, "basic.yaml")
 
-	tests := []struct {
-		name         string
-		templateName string
-		outputFile   string
-		expectError  bool
-	}{
-		{
-			name:         "Create basic-network config",
-			templateName: "basic-network",
-			outputFile:   filepath.Join(tmpDir, "basic.yaml"),
-			expectError:  false,
-		},
-		{
-			name:         "Non-existent template",
-			templateName: "invalid-template",
-			outputFile:   filepath.Join(tmpDir, "invalid.yaml"),
-			expectError:  true,
-		},
+		tmpl, err := templates.Get("basic-network")
+		if err != nil {
+			t.Fatalf("Unexpected error: %v", err)
+		}
+
+		assertTemplateWriteable(t, tmpl, outputFile)
+	})
+
+	t.Run("Non-existent template", func(t *testing.T) {
+		_, err := templates.Get("invalid-template")
+		if err == nil {
+			t.Error("Expected error for invalid template, got nil")
+		}
+	})
+}
+
+// assertTemplateWriteable writes a template to file and validates it.
+func assertTemplateWriteable(t *testing.T, tmpl *templates.Template, outputFile string) {
+	t.Helper()
+
+	err := os.WriteFile(outputFile, []byte(tmpl.Content), 0o644)
+	if err != nil {
+		t.Fatalf("Failed to write template: %v", err)
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Get template
-			tmpl, err := templates.Get(tt.templateName)
+	if _, statErr := os.Stat(outputFile); os.IsNotExist(statErr) {
+		t.Error("Output file should exist")
+	}
 
-			if tt.expectError {
-				if err == nil {
-					t.Error("Expected error for invalid template, got nil")
-				}
-				return
-			}
+	content, err := os.ReadFile(outputFile)
+	if err != nil {
+		t.Fatalf("Failed to read output file: %v", err)
+	}
 
-			if err != nil {
-				t.Errorf("Unexpected error: %v", err)
-				return
-			}
-
-			// Write template to file
-			err = os.WriteFile(tt.outputFile, []byte(tmpl.Content), 0o644)
-			if err != nil {
-				t.Errorf("Failed to write template: %v", err)
-				return
-			}
-
-			// Verify file exists
-			if _, statErr := os.Stat(tt.outputFile); os.IsNotExist(statErr) {
-				t.Error("Output file should exist")
-			}
-
-			// Verify content
-			content, err := os.ReadFile(tt.outputFile)
-			if err != nil {
-				t.Errorf("Failed to read output file: %v", err)
-				return
-			}
-
-			if len(content) == 0 {
-				t.Error("Template content should not be empty")
-			}
-		})
+	if len(content) == 0 {
+		t.Error("Template content should not be empty")
 	}
 }
 

@@ -1,4 +1,4 @@
-package protocols
+package protocols_test
 
 import (
 	"net"
@@ -7,24 +7,25 @@ import (
 
 	"github.com/krisarmstrong/niac-go/pkg/config"
 	"github.com/krisarmstrong/niac-go/pkg/logging"
+	"github.com/krisarmstrong/niac-go/pkg/protocols"
 )
 
 // TestNewLLDPHandler tests creating a new LLDP handler.
 func TestNewLLDPHandler(t *testing.T) {
 	cfg := &config.Config{}
-	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
 
-	handler := NewLLDPHandler(stack)
+	handler := protocols.NewLLDPHandler(stack)
 
 	if handler == nil {
 		t.Fatal("Expected LLDP handler, got nil")
 	}
 
-	if handler.stack != stack {
+	if handler.LLDPHandlerStack() != stack {
 		t.Error("Stack not set correctly")
 	}
 
-	if handler.stopChan == nil {
+	if handler.LLDPHandlerStopChan() == nil {
 		t.Error("stopChan not initialized")
 	}
 }
@@ -32,8 +33,8 @@ func TestNewLLDPHandler(t *testing.T) {
 // TestLLDPHandler_Lifecycle tests start and stop.
 func TestLLDPHandler_Lifecycle(t *testing.T) {
 	cfg := &config.Config{}
-	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
-	handler := NewLLDPHandler(stack)
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	handler := protocols.NewLLDPHandler(stack)
 
 	// Start handler
 	handler.Start()
@@ -41,7 +42,7 @@ func TestLLDPHandler_Lifecycle(t *testing.T) {
 	// Give it a moment to initialize
 	time.Sleep(50 * time.Millisecond)
 
-	if handler.advertiseTicker == nil {
+	if handler.LLDPHandlerAdvertiseTicker() == nil {
 		t.Error("Advertisement ticker not initialized after Start()")
 	}
 
@@ -55,15 +56,15 @@ func TestLLDPHandler_Lifecycle(t *testing.T) {
 // TestBuildChassisIDTLV tests building Chassis ID TLV.
 func TestBuildChassisIDTLV(t *testing.T) {
 	cfg := &config.Config{}
-	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
-	handler := NewLLDPHandler(stack)
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	handler := protocols.NewLLDPHandler(stack)
 
 	device := &config.Device{
 		Name:       "test-device",
 		MACAddress: net.HardwareAddr{0x00, 0x11, 0x22, 0x33, 0x44, 0x55},
 	}
 
-	tlv := handler.buildChassisIDTLV(device)
+	tlv := handler.BuildChassisIDTLV(device)
 
 	if len(tlv) == 0 {
 		t.Fatal("Expected Chassis ID TLV, got empty slice")
@@ -71,8 +72,8 @@ func TestBuildChassisIDTLV(t *testing.T) {
 
 	// Check TLV type (should be 1 for Chassis ID)
 	tlvType := (tlv[0] >> 1) & 0x7f
-	if tlvType != LLDPTLVTypeChassisID {
-		t.Errorf("Expected TLV type %d, got %d", LLDPTLVTypeChassisID, tlvType)
+	if tlvType != protocols.LLDPTLVTypeChassisID {
+		t.Errorf("Expected TLV type %d, got %d", protocols.LLDPTLVTypeChassisID, tlvType)
 	}
 
 	// Check that TLV contains the MAC address
@@ -95,8 +96,8 @@ func TestBuildChassisIDTLV_WithConfig(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := &config.Config{}
-			stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
-			handler := NewLLDPHandler(stack)
+			stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+			handler := protocols.NewLLDPHandler(stack)
 
 			device := &config.Device{
 				Name:        "test-device",
@@ -108,7 +109,7 @@ func TestBuildChassisIDTLV_WithConfig(t *testing.T) {
 				},
 			}
 
-			tlv := handler.buildChassisIDTLV(device)
+			tlv := handler.BuildChassisIDTLV(device)
 
 			if len(tlv) == 0 {
 				t.Errorf("Expected Chassis ID TLV for type %s, got empty slice", tt.chassisIDType)
@@ -120,15 +121,15 @@ func TestBuildChassisIDTLV_WithConfig(t *testing.T) {
 // TestBuildPortIDTLV tests building Port ID TLV.
 func TestBuildPortIDTLV(t *testing.T) {
 	cfg := &config.Config{}
-	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
-	handler := NewLLDPHandler(stack)
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	handler := protocols.NewLLDPHandler(stack)
 
 	device := &config.Device{
 		Name:       "test-device",
 		MACAddress: net.HardwareAddr{0x00, 0x11, 0x22, 0x33, 0x44, 0x55},
 	}
 
-	tlv := handler.buildPortIDTLV(device)
+	tlv := handler.LLDPBuildPortIDTLV(device)
 
 	if len(tlv) == 0 {
 		t.Fatal("Expected Port ID TLV, got empty slice")
@@ -136,23 +137,23 @@ func TestBuildPortIDTLV(t *testing.T) {
 
 	// Check TLV type (should be 2 for Port ID)
 	tlvType := (tlv[0] >> 1) & 0x7f
-	if tlvType != LLDPTLVTypePortID {
-		t.Errorf("Expected TLV type %d, got %d", LLDPTLVTypePortID, tlvType)
+	if tlvType != protocols.LLDPTLVTypePortID {
+		t.Errorf("Expected TLV type %d, got %d", protocols.LLDPTLVTypePortID, tlvType)
 	}
 }
 
 // TestBuildTTLTLV tests building TTL TLV.
 func TestBuildTTLTLV(t *testing.T) {
 	cfg := &config.Config{}
-	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
-	handler := NewLLDPHandler(stack)
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	handler := protocols.NewLLDPHandler(stack)
 
 	device := &config.Device{
 		Name:       "test-device",
 		MACAddress: net.HardwareAddr{0x00, 0x11, 0x22, 0x33, 0x44, 0x55},
 	}
 
-	tlv := handler.buildTTLTLV(device)
+	tlv := handler.BuildTTLTLV(device)
 
 	if len(tlv) == 0 {
 		t.Fatal("Expected TTL TLV, got empty slice")
@@ -160,8 +161,8 @@ func TestBuildTTLTLV(t *testing.T) {
 
 	// Check TLV type (should be 3 for TTL)
 	tlvType := (tlv[0] >> 1) & 0x7f
-	if tlvType != LLDPTLVTypeTTL {
-		t.Errorf("Expected TLV type %d, got %d", LLDPTLVTypeTTL, tlvType)
+	if tlvType != protocols.LLDPTLVTypeTTL {
+		t.Errorf("Expected TLV type %d, got %d", protocols.LLDPTLVTypeTTL, tlvType)
 	}
 
 	// TTL TLV should be 4 bytes (type/length + 2 bytes TTL value)
@@ -173,8 +174,8 @@ func TestBuildTTLTLV(t *testing.T) {
 // TestBuildTTLTLV_CustomTTL tests TTL with custom value.
 func TestBuildTTLTLV_CustomTTL(t *testing.T) {
 	cfg := &config.Config{}
-	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
-	handler := NewLLDPHandler(stack)
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	handler := protocols.NewLLDPHandler(stack)
 
 	customTTL := 240
 	device := &config.Device{
@@ -186,7 +187,7 @@ func TestBuildTTLTLV_CustomTTL(t *testing.T) {
 		},
 	}
 
-	tlv := handler.buildTTLTLV(device)
+	tlv := handler.BuildTTLTLV(device)
 
 	if len(tlv) != 4 {
 		t.Fatalf("Expected TTL TLV length 4, got %d", len(tlv))
@@ -202,8 +203,8 @@ func TestBuildTTLTLV_CustomTTL(t *testing.T) {
 // TestBuildPortDescriptionTLV tests building Port Description TLV.
 func TestBuildPortDescriptionTLV(t *testing.T) {
 	cfg := &config.Config{}
-	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
-	handler := NewLLDPHandler(stack)
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	handler := protocols.NewLLDPHandler(stack)
 
 	portDesc := "GigabitEthernet0/1"
 	device := &config.Device{
@@ -215,7 +216,7 @@ func TestBuildPortDescriptionTLV(t *testing.T) {
 		},
 	}
 
-	tlv := handler.buildPortDescriptionTLV(device)
+	tlv := handler.BuildPortDescriptionTLV(device)
 
 	if len(tlv) == 0 {
 		t.Fatal("Expected Port Description TLV, got empty slice")
@@ -223,8 +224,8 @@ func TestBuildPortDescriptionTLV(t *testing.T) {
 
 	// Check TLV type (should be 4 for Port Description)
 	tlvType := (tlv[0] >> 1) & 0x7f
-	if tlvType != LLDPTLVTypePortDescription {
-		t.Errorf("Expected TLV type %d, got %d", LLDPTLVTypePortDescription, tlvType)
+	if tlvType != protocols.LLDPTLVTypePortDescription {
+		t.Errorf("Expected TLV type %d, got %d", protocols.LLDPTLVTypePortDescription, tlvType)
 	}
 
 	// Check that port description is in TLV (after 2-byte header)
@@ -236,15 +237,15 @@ func TestBuildPortDescriptionTLV(t *testing.T) {
 // TestBuildSystemNameTLV tests building System Name TLV.
 func TestBuildSystemNameTLV(t *testing.T) {
 	cfg := &config.Config{}
-	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
-	handler := NewLLDPHandler(stack)
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	handler := protocols.NewLLDPHandler(stack)
 
 	device := &config.Device{
 		Name:       "test-router",
 		MACAddress: net.HardwareAddr{0x00, 0x11, 0x22, 0x33, 0x44, 0x55},
 	}
 
-	tlv := handler.buildSystemNameTLV(device)
+	tlv := handler.BuildSystemNameTLV(device)
 
 	if len(tlv) == 0 {
 		t.Fatal("Expected System Name TLV, got empty slice")
@@ -252,16 +253,16 @@ func TestBuildSystemNameTLV(t *testing.T) {
 
 	// Check TLV type (should be 5 for System Name)
 	tlvType := (tlv[0] >> 1) & 0x7f
-	if tlvType != LLDPTLVTypeSystemName {
-		t.Errorf("Expected TLV type %d, got %d", LLDPTLVTypeSystemName, tlvType)
+	if tlvType != protocols.LLDPTLVTypeSystemName {
+		t.Errorf("Expected TLV type %d, got %d", protocols.LLDPTLVTypeSystemName, tlvType)
 	}
 }
 
 // TestBuildSystemDescriptionTLV tests building System Description TLV.
 func TestBuildSystemDescriptionTLV(t *testing.T) {
 	cfg := &config.Config{}
-	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
-	handler := NewLLDPHandler(stack)
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	handler := protocols.NewLLDPHandler(stack)
 
 	sysDesc := "Cisco IOS 15.4"
 	device := &config.Device{
@@ -273,7 +274,7 @@ func TestBuildSystemDescriptionTLV(t *testing.T) {
 		},
 	}
 
-	tlv := handler.buildSystemDescriptionTLV(device)
+	tlv := handler.BuildSystemDescriptionTLV(device)
 
 	if len(tlv) == 0 {
 		t.Fatal("Expected System Description TLV, got empty slice")
@@ -281,18 +282,18 @@ func TestBuildSystemDescriptionTLV(t *testing.T) {
 
 	// Check TLV type (should be 6 for System Description)
 	tlvType := (tlv[0] >> 1) & 0x7f
-	if tlvType != LLDPTLVTypeSystemDescription {
-		t.Errorf("Expected TLV type %d, got %d", LLDPTLVTypeSystemDescription, tlvType)
+	if tlvType != protocols.LLDPTLVTypeSystemDescription {
+		t.Errorf("Expected TLV type %d, got %d", protocols.LLDPTLVTypeSystemDescription, tlvType)
 	}
 }
 
 // TestBuildEndTLV tests building End TLV.
 func TestBuildEndTLV(t *testing.T) {
 	cfg := &config.Config{}
-	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
-	handler := NewLLDPHandler(stack)
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	handler := protocols.NewLLDPHandler(stack)
 
-	tlv := handler.buildEndTLV()
+	tlv := handler.BuildEndTLV()
 
 	if len(tlv) != 2 {
 		t.Errorf("Expected End TLV length 2, got %d", len(tlv))
@@ -300,8 +301,8 @@ func TestBuildEndTLV(t *testing.T) {
 
 	// Check TLV type (should be 0 for End)
 	tlvType := (tlv[0] >> 1) & 0x7f
-	if tlvType != LLDPTLVTypeEnd {
-		t.Errorf("Expected TLV type %d, got %d", LLDPTLVTypeEnd, tlvType)
+	if tlvType != protocols.LLDPTLVTypeEnd {
+		t.Errorf("Expected TLV type %d, got %d", protocols.LLDPTLVTypeEnd, tlvType)
 	}
 
 	// Length should be 0
@@ -314,8 +315,8 @@ func TestBuildEndTLV(t *testing.T) {
 // TestBuildLLDPFrame tests building a complete LLDP frame.
 func TestBuildLLDPFrame(t *testing.T) {
 	cfg := &config.Config{}
-	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
-	handler := NewLLDPHandler(stack)
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	handler := protocols.NewLLDPHandler(stack)
 
 	device := &config.Device{
 		Name:        "test-router",
@@ -328,7 +329,7 @@ func TestBuildLLDPFrame(t *testing.T) {
 		},
 	}
 
-	frame := handler.buildLLDPFrame(device)
+	frame := handler.BuildLLDPFrame(device)
 
 	if len(frame) == 0 {
 		t.Fatal("Expected LLDP frame, got empty slice")
@@ -342,13 +343,15 @@ func TestBuildLLDPFrame(t *testing.T) {
 
 	// Check that frame ends with End TLV (type 0)
 	lastTLVType := (frame[len(frame)-2] >> 1) & 0x7f
-	if lastTLVType != LLDPTLVTypeEnd {
+	if lastTLVType != protocols.LLDPTLVTypeEnd {
 		t.Errorf("Expected frame to end with End TLV (type 0), got type %d", lastTLVType)
 	}
 }
 
 // TestBuildLLDPFrame_DisabledDevice tests that disabled LLDP devices don't advertise.
 func TestBuildLLDPFrame_DisabledDevice(t *testing.T) {
+	t.Parallel() // Enable parallel test execution
+
 	cfg := &config.Config{
 		Devices: []config.Device{
 			{
@@ -361,74 +364,74 @@ func TestBuildLLDPFrame_DisabledDevice(t *testing.T) {
 		},
 	}
 
-	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
-	handler := NewLLDPHandler(stack)
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	handler := protocols.NewLLDPHandler(stack)
 
 	// sendAdvertisements should skip disabled devices
-	handler.sendAdvertisements()
+	handler.LLDPSendAdvertisements()
 	// If this doesn't crash, the test passes
 }
 
 // TestLLDPConstants tests LLDP constant values.
 func TestLLDPConstants(t *testing.T) {
 	// Check TLV type constants
-	if LLDPTLVTypeEnd != 0 {
-		t.Errorf("LLDPTLVTypeEnd should be 0, got %d", LLDPTLVTypeEnd)
+	if protocols.LLDPTLVTypeEnd != 0 {
+		t.Errorf("LLDPTLVTypeEnd should be 0, got %d", protocols.LLDPTLVTypeEnd)
 	}
 
-	if LLDPTLVTypeChassisID != 1 {
-		t.Errorf("LLDPTLVTypeChassisID should be 1, got %d", LLDPTLVTypeChassisID)
+	if protocols.LLDPTLVTypeChassisID != 1 {
+		t.Errorf("LLDPTLVTypeChassisID should be 1, got %d", protocols.LLDPTLVTypeChassisID)
 	}
 
-	if LLDPTLVTypePortID != 2 {
-		t.Errorf("LLDPTLVTypePortID should be 2, got %d", LLDPTLVTypePortID)
+	if protocols.LLDPTLVTypePortID != 2 {
+		t.Errorf("LLDPTLVTypePortID should be 2, got %d", protocols.LLDPTLVTypePortID)
 	}
 
-	if LLDPTLVTypeTTL != 3 {
-		t.Errorf("LLDPTLVTypeTTL should be 3, got %d", LLDPTLVTypeTTL)
+	if protocols.LLDPTLVTypeTTL != 3 {
+		t.Errorf("LLDPTLVTypeTTL should be 3, got %d", protocols.LLDPTLVTypeTTL)
 	}
 
 	// Check default TTL
-	if LLDPTTL != 120 {
-		t.Errorf("LLDPTTL should be 120 seconds, got %d", LLDPTTL)
+	if protocols.LLDPTTL != 120 {
+		t.Errorf("LLDPTTL should be 120 seconds, got %d", protocols.LLDPTTL)
 	}
 
 	// Check advertisement interval
 	expectedInterval := 30 * time.Second
-	if LLDPAdvertiseInterval != expectedInterval {
-		t.Errorf("LLDPAdvertiseInterval should be %v, got %v", expectedInterval, LLDPAdvertiseInterval)
+	if protocols.LLDPAdvertiseInterval != expectedInterval {
+		t.Errorf("LLDPAdvertiseInterval should be %v, got %v", expectedInterval, protocols.LLDPAdvertiseInterval)
 	}
 
 	// Check multicast MAC
-	if LLDPMulticastMAC != "\x01\x80\xc2\x00\x00\x0e" {
+	if protocols.LLDPMulticastMAC != "\x01\x80\xc2\x00\x00\x0e" {
 		t.Error("LLDPMulticastMAC has incorrect value")
 	}
 }
 
 // TestLLDPCapabilities tests capability constants.
 func TestLLDPCapabilities(t *testing.T) {
-	if LLDPCapOther != 1<<0 {
-		t.Errorf("LLDPCapOther should be %d, got %d", 1<<0, LLDPCapOther)
+	if protocols.LLDPCapOther != 1<<0 {
+		t.Errorf("LLDPCapOther should be %d, got %d", 1<<0, protocols.LLDPCapOther)
 	}
 
-	if LLDPCapRepeater != 1<<1 {
-		t.Errorf("LLDPCapRepeater should be %d, got %d", 1<<1, LLDPCapRepeater)
+	if protocols.LLDPCapRepeater != 1<<1 {
+		t.Errorf("LLDPCapRepeater should be %d, got %d", 1<<1, protocols.LLDPCapRepeater)
 	}
 
-	if LLDPCapBridge != 1<<2 {
-		t.Errorf("LLDPCapBridge should be %d, got %d", 1<<2, LLDPCapBridge)
+	if protocols.LLDPCapBridge != 1<<2 {
+		t.Errorf("LLDPCapBridge should be %d, got %d", 1<<2, protocols.LLDPCapBridge)
 	}
 
-	if LLDPCapRouter != 1<<4 {
-		t.Errorf("LLDPCapRouter should be %d, got %d", 1<<4, LLDPCapRouter)
+	if protocols.LLDPCapRouter != 1<<4 {
+		t.Errorf("LLDPCapRouter should be %d, got %d", 1<<4, protocols.LLDPCapRouter)
 	}
 }
 
 // BenchmarkBuildLLDPFrame benchmarks LLDP frame construction.
 func BenchmarkBuildLLDPFrame(b *testing.B) {
 	cfg := &config.Config{}
-	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
-	handler := NewLLDPHandler(stack)
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	handler := protocols.NewLLDPHandler(stack)
 
 	device := &config.Device{
 		Name:        "test-router",
@@ -442,15 +445,15 @@ func BenchmarkBuildLLDPFrame(b *testing.B) {
 	}
 
 	for b.Loop() {
-		handler.buildLLDPFrame(device)
+		handler.BuildLLDPFrame(device)
 	}
 }
 
 // BenchmarkBuildChassisIDTLV benchmarks Chassis ID TLV construction.
 func BenchmarkBuildChassisIDTLV(b *testing.B) {
 	cfg := &config.Config{}
-	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
-	handler := NewLLDPHandler(stack)
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	handler := protocols.NewLLDPHandler(stack)
 
 	device := &config.Device{
 		Name:       "test-device",
@@ -458,6 +461,6 @@ func BenchmarkBuildChassisIDTLV(b *testing.B) {
 	}
 
 	for b.Loop() {
-		handler.buildChassisIDTLV(device)
+		handler.BuildChassisIDTLV(device)
 	}
 }

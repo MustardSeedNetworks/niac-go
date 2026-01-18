@@ -1,4 +1,4 @@
-package protocols
+package protocols_test
 
 import (
 	"strings"
@@ -114,8 +114,6 @@ func FuzzDNSTTL(f *testing.F) {
 		_ = ttl / 2
 
 		// Check reasonable ranges (though all uint32 values are technically valid)
-		if ttl > 2147483647 {
-			// Large TTL but valid
-		}
+		// Note: Large TTLs > 2147483647 are valid uint32 values
 	})
 }

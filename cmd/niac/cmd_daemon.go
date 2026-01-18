@@ -8,15 +8,25 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/spf13/cobra"
+
 	"github.com/krisarmstrong/niac-go/pkg/daemon"
 	"github.com/krisarmstrong/niac-go/pkg/logging"
-	"github.com/spf13/cobra"
 )
 
-var daemonCmd = &cobra.Command{
-	Use:   "daemon",
-	Short: "Run NIAC in daemon mode with web UI control",
-	Long: `Start NIAC as a daemon process that serves the web UI and allows
+type daemonOptions struct {
+	listen      string
+	token       string
+	storagePath string
+}
+
+func addDaemonCommand(root *cobra.Command, info versionInfo) {
+	options := new(daemonOptions)
+
+	daemonCmd := &cobra.Command{
+		Use:   "daemon",
+		Short: "Run NIAC in daemon mode with web UI control",
+		Long: `Start NIAC as a daemon process that serves the web UI and allows
 starting/stopping simulations dynamically without restarting the daemon.
 
 The daemon runs the API server and web UI independently from the simulation
@@ -30,70 +40,65 @@ Example:
   niac daemon --listen :8080 --token mysecrettoken
 
 The web UI will be available at http://localhost:8080`,
-	RunE: runDaemon,
-}
+		RunE: func(_ *cobra.Command, _ []string) error {
+			return runDaemon(options, info)
+		},
+	}
 
-var daemonOpts struct {
-	listen      string
-	token       string
-	storagePath string
-}
-
-func init() {
-	rootCmd.AddCommand(daemonCmd)
-
-	daemonCmd.Flags().StringVar(&daemonOpts.listen, "listen", ":8080", "Address to listen on for API and web UI")
-	daemonCmd.Flags().StringVar(&daemonOpts.token, "token", "", "Bearer token for API authentication (optional)")
+	daemonCmd.Flags().StringVar(&options.listen, "listen", ":8080", "Address to listen on for API and web UI")
+	daemonCmd.Flags().StringVar(&options.token, "token", "", "Bearer token for API authentication (optional)")
 	daemonCmd.Flags().
-		StringVar(&daemonOpts.storagePath, "storage", "~/.niac/niac.db", "Path to run history database (use 'disabled' to disable)")
+		StringVar(&options.storagePath, "storage", "~/.niac/niac.db", "Path to run history database (use 'disabled' to disable)")
+
+	root.AddCommand(daemonCmd)
 }
 
-func runDaemon(cmd *cobra.Command, args []string) error {
+func runDaemon(options *daemonOptions, info versionInfo) error {
 	logging.InitColors(true)
 
-	logging.Info("Starting NIAC Daemon v%s", version)
-	logging.Info("Web UI will be available at http://localhost%s", daemonOpts.listen)
-	if daemonOpts.token != "" {
-		logging.Info("API authentication enabled")
+	logging.Infof("Starting NIAC Daemon v%s", info.version)
+	logging.Infof("Web UI will be available at http://localhost%s", options.listen)
+	if options.token != "" {
+		logging.Infof("API authentication enabled")
 	} else {
-		logging.Info("WARNING: No API token set - consider using --token for security")
+		logging.Infof("WARNING: No API token set - consider using --token for security")
 	}
 
 	// Create daemon instance
 	d, err := daemon.NewDaemon(daemon.Config{
-		ListenAddr:  daemonOpts.listen,
-		Token:       daemonOpts.token,
-		StoragePath: daemonOpts.storagePath,
-		Version:     version,
+		ListenAddr:  options.listen,
+		Token:       options.token,
+		StoragePath: options.storagePath,
+		Version:     info.version,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create daemon: %w", err)
 	}
 
 	// Start the daemon
-	if err := d.Start(); err != nil {
-		return fmt.Errorf("failed to start daemon: %w", err)
+	if startErr := d.Start(); startErr != nil {
+		return fmt.Errorf("failed to start daemon: %w", startErr)
 	}
 
-	logging.Success("✓ Daemon started successfully")
-	logging.Info("Press Ctrl+C to stop")
+	logging.Successf("✓ Daemon started successfully")
+	logging.Infof("Press Ctrl+C to stop")
 
 	// Wait for interrupt signal
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 	<-sigChan
 
-	logging.Info("\nShutting down daemon...")
+	logging.Infof("\nShutting down daemon...")
 
 	// Graceful shutdown
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), statsTickerInterval*time.Second)
 	defer cancel()
 
-	if err := d.Shutdown(ctx); err != nil {
-		logging.Error("Error during shutdown: %v", err)
-		return fmt.Errorf("failed to shutdown daemon: %w", err)
+	if shutdownErr := d.Shutdown(ctx); shutdownErr != nil {
+		logging.Errorf("Error during shutdown: %v", shutdownErr)
+		return fmt.Errorf("failed to shutdown daemon: %w", shutdownErr)
 	}
 
-	logging.Success("✓ Daemon stopped gracefully")
+	logging.Successf("✓ Daemon stopped gracefully")
 	return nil
 }

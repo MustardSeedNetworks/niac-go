@@ -46,16 +46,19 @@ type monitorStats struct {
 	RateTX float64 `json:"rate_tx,omitempty"`
 }
 
-var monitorOpts struct {
+type monitorOptions struct {
 	format   string
 	interval string
 	socket   string
 }
 
-var monitorCmd = &cobra.Command{
-	Use:   "monitor",
-	Short: "Stream real-time statistics from a running NIAC simulation",
-	Long: `Monitor a running NIAC simulation in real-time.
+func addMonitorCommand(root *cobra.Command, _ *serviceOptions) {
+	options := new(monitorOptions)
+
+	monitorCmd := &cobra.Command{
+		Use:   "monitor",
+		Short: "Stream real-time statistics from a running NIAC simulation",
+		Long: `Monitor a running NIAC simulation in real-time.
 
 This command connects to a running NIAC instance via IPC socket and
 continuously displays statistics, similar to 'top' or 'watch'.
@@ -67,7 +70,7 @@ The monitor supports multiple output formats:
 
 The table format clears the screen and redraws on each update, while
 JSON and CSV formats append new lines for pipe-friendly output.`,
-	Example: `  # Monitor with default settings (table format, 1s interval)
+		Example: `  # Monitor with default settings (table format, 1s interval)
   niac monitor
 
   # Monitor with JSON output for piping to jq
@@ -84,25 +87,26 @@ JSON and CSV formats append new lines for pipe-friendly output.`,
 
   # Monitor with fast 500ms updates
   niac monitor --interval 500ms`,
-	RunE: runMonitor,
-}
+		RunE: func(_ *cobra.Command, _ []string) error {
+			return runMonitor(options)
+		},
+	}
 
-func init() {
-	rootCmd.AddCommand(monitorCmd)
-
-	monitorCmd.Flags().StringVar(&monitorOpts.format, "format", "table",
+	monitorCmd.Flags().StringVar(&options.format, "format", "table",
 		"Output format: table, json, or csv")
-	monitorCmd.Flags().StringVar(&monitorOpts.interval, "interval", "1s",
+	monitorCmd.Flags().StringVar(&options.interval, "interval", "1s",
 		"Update interval (e.g., 1s, 500ms, 2s)")
-	monitorCmd.Flags().StringVar(&monitorOpts.socket, "socket", "",
+	monitorCmd.Flags().StringVar(&options.socket, "socket", "",
 		"IPC socket path (default: "+ipc.DefaultSocketPath()+")")
+
+	root.AddCommand(monitorCmd)
 }
 
-func runMonitor(_ *cobra.Command, _ []string) error {
+func runMonitor(options *monitorOptions) error {
 	// Parse interval
-	interval, err := time.ParseDuration(monitorOpts.interval)
+	interval, err := time.ParseDuration(options.interval)
 	if err != nil {
-		return fmt.Errorf("invalid interval %q: %w", monitorOpts.interval, err)
+		return fmt.Errorf("invalid interval %q: %w", options.interval, err)
 	}
 
 	if interval < 100*time.Millisecond {
@@ -110,16 +114,16 @@ func runMonitor(_ *cobra.Command, _ []string) error {
 	}
 
 	// Validate format
-	format := OutputFormat(strings.ToLower(monitorOpts.format))
+	format := OutputFormat(strings.ToLower(options.format))
 	switch format {
 	case FormatTable, FormatJSON, FormatCSV:
 		// Valid
 	default:
-		return fmt.Errorf("invalid format %q: must be table, json, or csv", monitorOpts.format)
+		return fmt.Errorf("invalid format %q: must be table, json, or csv", options.format)
 	}
 
 	// Create IPC client
-	socketPath := monitorOpts.socket
+	socketPath := options.socket
 	if socketPath == "" {
 		socketPath = ipc.GetDefaultSocketPath()
 	}
@@ -177,13 +181,13 @@ func runTableMonitor(ctx context.Context, client *ipc.Client, interval time.Dura
 	for {
 		select {
 		case <-ctx.Done():
-			fmt.Println("\nMonitoring stopped.")
+			fmt.Fprintln(os.Stdout, "\nMonitoring stopped.")
 			return nil
 		case <-ticker.C:
 			latestStats, fetchErr := fetchStats(client, prevStats, interval)
 			if fetchErr != nil {
 				// Connection lost, but don't exit immediately
-				fmt.Printf("\r[%s] Connection lost: %v\n", time.Now().Format("15:04:05"), fetchErr)
+				fmt.Fprintf(os.Stdout, "\r[%s] Connection lost: %v\n", time.Now().Format("15:04:05"), fetchErr)
 				continue
 			}
 			clearScreen()
@@ -221,7 +225,7 @@ func runJSONMonitor(ctx context.Context, client *ipc.Client, interval time.Durat
 					"time":  time.Now().Format(time.RFC3339),
 				}
 				jsonBytes, _ := json.Marshal(errObj)
-				fmt.Println(string(jsonBytes))
+				fmt.Fprintln(os.Stdout, string(jsonBytes))
 				continue
 			}
 			outputMonitorJSON(latestStats)
@@ -326,10 +330,10 @@ func clearScreen() {
 // printTableHeader prints the table header.
 func printTableHeader() {
 	fmt.Fprintln(os.Stdout, "NIAC Monitor - Press Ctrl+C to stop")
-	fmt.Fprintln(os.Stdout, strings.Repeat("-", 80))
+	fmt.Fprintln(os.Stdout, strings.Repeat("-", lineWidthStandard))
 	fmt.Fprintf(os.Stdout, "%-10s | %10s | %10s | %8s | %8s | %8s | %8s\n",
 		"TIME", "RX PKT", "TX PKT", "RX/s", "TX/s", "UPTIME", "ERRORS")
-	fmt.Fprintln(os.Stdout, strings.Repeat("-", 80))
+	fmt.Fprintln(os.Stdout, strings.Repeat("-", lineWidthStandard))
 }
 
 // printTableRow prints a single statistics row.
@@ -378,7 +382,7 @@ func outputCSVRow(writer *csv.Writer, stats *monitorStats) {
 
 // formatMonitorNumber formats a number with thousands separators.
 func formatMonitorNumber(n uint64) string {
-	if n < 1000 {
+	if n < millisecondsThreshold {
 		return strconv.FormatUint(n, 10)
 	}
 

@@ -1,7 +1,7 @@
 # This file is licensed under the terms of the MIT license https://opensource.org/license/mit
 # Copyright (c) 2021-2025 Marat Reimers
 
-## Golden config for golangci-lint v2.7.2
+## Golden config for golangci-lint v2.8.0
 #
 # This is the best config for golangci-lint based on my experience and opinion.
 # It is very strict, but not extremely strict.
@@ -11,6 +11,13 @@
 # Based on https://github.com/maratori/golangci-lint-config
 
 version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+  modules-download-mode: readonly
+  allow-parallel-runners: true
+  relative-path-mode: gomod
 
 issues:
   # Maximum count of issues with the same text.
@@ -24,7 +31,7 @@ formatters:
     - golines # checks if code is formatted, and fixes long lines
 
     ## you may want to enable
-    - gci # checks if code and import statements are formatted, with additional rules
+    #- gci # checks if code and import statements are formatted, with additional rules
     #- gofmt # checks if the code is formatted according to 'gofmt' command
     - gofumpt # enforces a stricter format than 'gofmt', while being backwards compatible
     #- swaggo # formats swaggo comments
@@ -36,7 +43,7 @@ formatters:
       # with the given prefixes are grouped after 3rd-party packages.
       # Default: []
       local-prefixes:
-        - github.com/krisarmstrong/niac
+        - github.com/krisarmstrong/niac-go
 
     golines:
       # Target maximum line length.
@@ -88,7 +95,7 @@ linters:
     - mirror # reports wrong mirror patterns of bytes/strings usage
     - mnd # detects magic numbers
     - modernize # suggests simplifications to Go code, using modern language and library features
-    - musttag # enforces field tags in (un)marshaled structs
+    # - musttag # enforces field tags in (un)marshaled structs (disabled: health check endpoints stored as JSON in DB, not YAML)
     - nakedret # finds naked returns in functions greater than a specified function length
     - nestif # reports deeply nested if statements
     - nilerr # finds the code that returns nil even if it checks that the error is not nil
@@ -124,21 +131,21 @@ linters:
     - whitespace # detects leading and trailing whitespace
 
     ## you may want to enable
-    - arangolint # opinionated best practices for arangodb client
+    #- arangolint # opinionated best practices for arangodb client
     - decorder # checks declaration order and count of types, constants, variables and functions
-    - exhaustruct # [highly recommend to enable] checks if all structure fields are initialized
-    - ginkgolinter # [if you use ginkgo/gomega] enforces standards of using ginkgo and gomega
-    - godox # detects usage of FIXME, TODO and other keywords inside comments
-    - goheader # checks is file header matches to pattern
+    #- exhaustruct # [highly recommend to enable] checks if all structure fields are initialized
+    #- ginkgolinter # [if you use ginkgo/gomega] enforces standards of using ginkgo and gomega
+    #- godox # detects usage of FIXME, TODO and other keywords inside comments
+    #- goheader # checks is file header matches to pattern
     #- inamedparam # [great idea, but too strict, need to ignore a lot of cases by default] reports interfaces with unnamed method parameters
     - interfacebloat # checks the number of methods inside an interface
-    - ireturn # accept interfaces, return concrete types
-    - noinlineerr # disallows inline error handling `if err := ...; err != nil {`
+    #- ireturn # accept interfaces, return concrete types
+    #- noinlineerr # disallows inline error handling `if err := ...; err != nil {`
     #- prealloc # [premature optimization, but can be used in some cases] finds slice declarations that could potentially be preallocated
-    - tagalign # checks that struct tags are well aligned
+    #- tagalign # checks that struct tags are well aligned
     #- varnamelen # [great idea, but too many false positives] checks that the length of a variable's name matches its scope
-    - wrapcheck # checks that errors returned from external packages are wrapped
-    - zerologlint # detects the wrong usage of zerolog that a user forgets to dispatch zerolog.Event
+    #- wrapcheck # checks that errors returned from external packages are wrapped
+    #- zerologlint # detects the wrong usage of zerolog that a user forgets to dispatch zerolog.Event
 
     ## disabled
     #- containedctx # detects struct contained context.Context field
@@ -271,8 +278,6 @@ linters:
         - ^golang.org/x/tools/go/analysis.Analyzer$
         - ^google.golang.org/protobuf/.+Options$
         - ^gopkg.in/yaml.v3.Node$
-        # Local types with optional fields
-        - ^github.com/krisarmstrong/niac/internal/help\.ConfigOption$
       # Allows empty structures in return statements.
       # Default: false
       allow-empty-returns: true
@@ -280,7 +285,7 @@ linters:
     funcorder:
       # Checks if the exported methods of a structure are placed before the non-exported ones.
       # Default: true
-      struct-method: true
+      struct-method: false
 
     funlen:
       # Checks the number of lines in a function.
@@ -323,6 +328,9 @@ linters:
         # Assert no unused link in godocs.
         # https://github.com/godoc-lint/godoc-lint?tab=readme-ov-file#no-unused-link
         - no-unused-link
+        # Require proper doc links to standard library declarations where applicable.
+        # https://github.com/godoc-lint/godoc-lint?tab=readme-ov-file#require-stdlib-doclink
+        - require-stdlib-doclink
 
     govet:
       # Enable all analyzers.
@@ -344,17 +352,6 @@ linters:
       # Skips check for interface methods with only a single parameter.
       # Default: false
       skip-single-param: true
-
-    ireturn:
-      # Allow returning these interfaces - legitimate polymorphism patterns
-      # Default: []
-      allow:
-        - anon
-        - error
-        - empty
-        - stdlib
-        # Module system uses interface-based polymorphism by design
-        - github.com/krisarmstrong/niac/internal/modules.Module
 
     mnd:
       # List of function patterns to exclude from analysis.
@@ -418,7 +415,8 @@ linters:
       # - "default": report only the default slog logger
       # https://github.com/go-simpler/sloglint?tab=readme-ov-file#no-global
       # Default: ""
-      no-global: all
+      # Disabled: codebase uses mixed logging patterns
+      no-global: ""
       # Enforce using methods that accept a context.
       # Values:
       # - "": disabled
@@ -443,6 +441,11 @@ linters:
         # Omit embedded fields from selector expression.
         # https://staticcheck.dev/docs/checks/#QF1008
         - -QF1008
+
+    testpackage:
+      # Regexp pattern to skip files in _test package checking.
+      # Default: "(export|internal)_test\\.go"
+      skip-regexp: (export|internal)_test\.go
 
     usetesting:
       # Enable/disable `os.TempDir()` detections.
@@ -482,7 +485,75 @@ linters:
           - gosec
           - noctx
           - wrapcheck
-      # i18n message files have intentionally similar structure
-      - path: 'internal/i18n/messages_.*\.go'
+      # cmd/niac tests must use package main to test unexported functions.
+      - path: 'cmd/.*_test\.go'
         linters:
-          - dupl
+          - testpackage
+      # Integration tests have their own package organization.
+      - path: 'test/integration/.*_test\.go'
+        linters:
+          - testpackage
+      # Interactive tests require access to unexported functions.
+      - path: 'pkg/interactive/.*_test\.go'
+        linters:
+          - testpackage
+      # Daemon tests require access to unexported functions.
+      - path: 'pkg/daemon/.*_test\.go'
+        linters:
+          - testpackage
+      # IPC tests require access to unexported functions.
+      - path: 'pkg/ipc/.*_test\.go'
+        linters:
+          - testpackage
+      # Capture tests require internal testing for race condition handling.
+      - path: 'pkg/capture/.*_test\.go'
+        linters:
+          - testpackage
+      # Config tests require access to validation internals.
+      - path: 'pkg/config/.*_test\.go'
+        linters:
+          - testpackage
+      # Device tests require access to simulator internals.
+      - path: 'pkg/device/.*_test\.go'
+        linters:
+          - testpackage
+      # HTTPAPI tests require access to handler internals.
+      - path: 'pkg/httpapi/.*_test\.go'
+        linters:
+          - testpackage
+      # SNMP tests require access to agent internals.
+      - path: 'pkg/snmp/.*_test\.go'
+        linters:
+          - testpackage
+      # Interactive UI styles are idiomatic globals for lipgloss/bubbletea.
+      - path: 'pkg/interactive/interactive\.go'
+        linters:
+          - gochecknoglobals
+      # Logging color codes are package-level constants (immutable after init).
+      - path: 'pkg/logging/colors\.go'
+        linters:
+          - gochecknoglobals
+      # PCAP cache is a package-level singleton (common pattern).
+      - path: 'pkg/httpapi/pcap\.go'
+        linters:
+          - gochecknoglobals
+      # Device random source is a package-level singleton.
+      - path: 'pkg/device/random\.go'
+        linters:
+          - gochecknoglobals
+      # SNMP MIB standard OIDs are package-level constants.
+      - path: 'pkg/snmp/mib\.go'
+        linters:
+          - gochecknoglobals
+      # SNMP secure random is a package-level singleton.
+      - path: 'pkg/snmp/securerandom\.go'
+        linters:
+          - gochecknoglobals
+      # Template registry is a package-level singleton.
+      - path: 'pkg/templates/template\.go'
+        linters:
+          - gochecknoglobals
+      # HTTP security block lists are idiomatic package-level lookup tables.
+      - path: 'pkg/httpapi/server\.go'
+        linters:
+          - gochecknoglobals

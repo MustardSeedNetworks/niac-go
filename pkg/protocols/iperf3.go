@@ -4,13 +4,13 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"math/rand/v2"
 	"os"
 	"strings"
 	"time"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
+
 	"github.com/krisarmstrong/niac-go/pkg/config"
 )
 
@@ -44,17 +44,58 @@ const (
 	iperf3MsgServerBusy   = -2
 )
 
+// iPerf3 protocol constants.
+const (
+	iperf3SessionCleanupMin = 5          // Session cleanup interval in minutes
+	iperf3RetransmitMult    = 100        // Retransmit percentage multiplier
+	iperf3RTTMicrosPerMilli = 1000       // Microseconds per millisecond for RTT
+	iperf3MinRTTPercent     = 800        // Min RTT as percentage (80% = 800/1000)
+	iperf3MeanRTTPercent    = 900        // Mean RTT as percentage (90% = 900/1000)
+	iperf3SenderRetransMult = 10         // Sender retransmit factor
+	iperf3LengthPrefixSize  = 4          // Length prefix size (uint32)
+	iperf3MaxUint32         = 0xFFFFFFFF // Max uint32 value
+	iperf3MinJSONCheckSize  = 4          // Minimum size to check for JSON start
+	iperf3CookieSize        = 32         // iPerf3 cookie size in bytes
+	iperf3BitsPerMbps       = 1_000_000  // Bits per Mbps for bandwidth conversion
+	iperf3VarianceRange     = 0.1        // Bandwidth variance range (±5%)
+)
+
+// iPerf3 default configuration values.
+const (
+	iperf3DefaultMaxBandwidth  = 1000.0 // 1 Gbps default max bandwidth
+	iperf3DefaultLatencyMs     = 1.0    // 1ms default latency
+	iperf3DefaultJitterMs      = 0.1    // 0.1ms default jitter
+	iperf3DefaultUploadMbps    = 100.0  // 100 Mbps upload
+	iperf3DefaultDownloadMbps  = 100.0  // 100 Mbps download
+	iperf3BandwidthThreshold   = 0.95   // 95% of configured bandwidth
+	iperf3LowBandwidthUpload   = 2.5    // Low bandwidth upload range max
+	iperf3LowBandwidthDownload = 1.5    // Low bandwidth download range max
+	iperf3MedBandwidthUpload   = 0.5    // Medium bandwidth upload range min
+	iperf3MedBandwidthJitter   = 3.0    // Medium bandwidth jitter
+	iperf3HighBandwidthLatency = 2.0    // High bandwidth latency
+	iperf3HighBandwidthJitter  = 0.5    // High bandwidth jitter
+)
+
+// IP protocol constants for iPerf3.
+const (
+	iperf3IPv4Version   = 4     // IPv4 version field
+	iperf3IPv4IHL       = 5     // IPv4 header length (5 = 20 bytes)
+	iperf3IPv4TTL       = 64    // IPv4 default TTL
+	iperf3TCPWindowSize = 65535 // Default TCP window size
+	iperf3TCPInitialSeq = 1000  // Initial TCP sequence number
+)
+
 // DefaultIPerf3Config returns default iPerf3 emulation configuration.
 func DefaultIPerf3Config() *config.IPerf3Config {
 	return &config.IPerf3Config{
 		Enabled:           false,
 		Port:              TCPPortIPerf3,
-		MaxBandwidthMbps:  1000.0, // 1 Gbps
-		TypicalLatencyMs:  1.0,    // 1ms
-		JitterMs:          0.1,    // 0.1ms
-		PacketLossPercent: 0.0,    // No loss
-		UploadMbps:        100.0,  // 100 Mbps
-		DownloadMbps:      100.0,  // 100 Mbps
+		MaxBandwidthMbps:  iperf3DefaultMaxBandwidth, // 1 Gbps
+		TypicalLatencyMs:  iperf3DefaultLatencyMs,    // 1ms
+		JitterMs:          iperf3DefaultJitterMs,     // 0.1ms
+		PacketLossPercent: 0.0,                       // No loss
+		UploadMbps:        iperf3DefaultUploadMbps,   // 100 Mbps
+		DownloadMbps:      iperf3DefaultDownloadMbps, // 100 Mbps
 	}
 }
 
@@ -217,7 +258,7 @@ func (h *IPerf3Handler) HandleIPerf3Request(
 	}
 
 	if !cfg.Enabled {
-		if debugLevel >= 2 {
+		if debugLevel >= DebugLevelInfo {
 			_, _ = fmt.Fprintf(os.Stdout, "iPerf3 disabled for device, ignoring request\n")
 		}
 
@@ -226,7 +267,7 @@ func (h *IPerf3Handler) HandleIPerf3Request(
 
 	// Handle TCP SYN - initial connection
 	if tcpLayer.SYN && !tcpLayer.ACK {
-		if debugLevel >= 2 {
+		if debugLevel >= DebugLevelInfo {
 			_, _ = fmt.Fprintf(os.Stdout, "iPerf3: New connection from %s:%d\n", ipLayer.SrcIP, tcpLayer.SrcPort)
 		}
 
@@ -243,12 +284,12 @@ func (h *IPerf3Handler) HandleIPerf3Request(
 	}
 
 	// Periodic cleanup
-	h.cleanupStaleSessions(5 * time.Minute)
+	h.cleanupStaleSessions(iperf3SessionCleanupMin * time.Minute)
 }
 
 // handleIPerf3Data processes iPerf3 protocol messages.
 func (h *IPerf3Handler) handleIPerf3Data(
-	pkt *Packet,
+	_ *Packet,
 	ipLayer *layers.IPv4,
 	tcpLayer *layers.TCP,
 	devices []*config.Device,
@@ -257,7 +298,7 @@ func (h *IPerf3Handler) handleIPerf3Data(
 	debugLevel := h.stack.GetDebugLevel()
 	payload := tcpLayer.Payload
 
-	if debugLevel >= 3 {
+	if debugLevel >= DebugLevelVerbose {
 		_, _ = fmt.Fprintf(os.Stdout, "iPerf3: Received %d bytes from %s:%d in state %d\n",
 			len(payload), ipLayer.SrcIP, tcpLayer.SrcPort, session.State)
 	}
@@ -270,11 +311,11 @@ func (h *IPerf3Handler) handleIPerf3Data(
 	switch session.State {
 	case iperf3StateInit:
 		// Expecting cookie (32 bytes) or parameters
-		if len(payload) >= 4 {
+		if len(payload) >= iperf3MinJSONCheckSize {
 			// Check if this looks like JSON parameters
-			if payload[0] == '{' || (len(payload) > 4 && payload[4] == '{') {
+			if payload[0] == '{' || (len(payload) > iperf3MinJSONCheckSize && payload[iperf3MinJSONCheckSize] == '{') {
 				h.handleParamExchange(ipLayer, tcpLayer, devices, session, payload)
-			} else if len(payload) >= 32 {
+			} else if len(payload) >= iperf3CookieSize {
 				// Cookie received, acknowledge and move to param exchange
 				session.State = iperf3StateParamExch
 
@@ -308,7 +349,7 @@ func (h *IPerf3Handler) handleIPerf3Data(
 
 	case iperf3StateExchResult:
 		// Exchange results phase
-		if debugLevel >= 2 {
+		if debugLevel >= DebugLevelInfo {
 			_, _ = fmt.Fprintf(os.Stdout, "iPerf3: Test complete, sending results\n")
 		}
 
@@ -357,7 +398,7 @@ func (h *IPerf3Handler) handleParamExchange(
 	var params iperf3TestParams
 	err := json.Unmarshal(jsonData, &params)
 	if err != nil {
-		if debugLevel >= 2 {
+		if debugLevel >= DebugLevelInfo {
 			_, _ = fmt.Fprintf(os.Stdout, "iPerf3: Failed to parse params: %v (data: %s)\n", err, string(jsonData))
 		}
 		// Send acknowledgment anyway
@@ -374,7 +415,7 @@ func (h *IPerf3Handler) handleParamExchange(
 		params.Time = 10 // Default 10 second test
 	}
 
-	if debugLevel >= 2 {
+	if debugLevel >= DebugLevelInfo {
 		_, _ = fmt.Fprintf(os.Stdout, "iPerf3: Test params - Duration: %ds, Parallel: %d, TCP: %v, Reverse: %v\n",
 			params.Time, params.Parallel, params.TCP, params.Reverse)
 	}
@@ -413,11 +454,11 @@ func (h *IPerf3Handler) sendResults(
 	}
 
 	// Use configured bandwidth or calculate from bytes received
-	downloadBps := cfg.DownloadMbps * 1_000_000
-	uploadBps := cfg.UploadMbps * 1_000_000
+	downloadBps := cfg.DownloadMbps * iperf3BitsPerMbps
+	uploadBps := cfg.UploadMbps * iperf3BitsPerMbps
 
 	// Add some realistic variance (±5%)
-	variance := 0.95 + rand.Float64()*0.1 // #nosec G404 -- simulation variance, not security-sensitive
+	variance := iperf3BandwidthThreshold + getSimRand().Float64()*iperf3VarianceRange
 	downloadBps *= variance
 	uploadBps *= variance
 
@@ -425,15 +466,14 @@ func (h *IPerf3Handler) sendResults(
 	uploadBytes := uint64(uploadBps / 8 * duration)
 
 	// Build result JSON
-	// #nosec G404 -- all rand usage below is for simulation variance, not security-sensitive
 	result := &iperf3ServerResult{
 		CPU: &iperf3CPUUtil{
-			HostTotal:    2.5 + rand.Float64()*2,
-			HostUser:     1.5 + rand.Float64()*1,
-			HostSystem:   0.5 + rand.Float64()*0.5,
-			RemoteTotal:  3.0 + rand.Float64()*2,
-			RemoteUser:   2.0 + rand.Float64()*1,
-			RemoteSystem: 0.5 + rand.Float64()*0.5,
+			HostTotal:    iperf3LowBandwidthUpload + getSimRand().Float64()*iperf3HighBandwidthLatency,
+			HostUser:     iperf3LowBandwidthDownload + getSimRand().Float64()*iperf3DefaultLatencyMs,
+			HostSystem:   iperf3MedBandwidthUpload + getSimRand().Float64()*iperf3HighBandwidthJitter,
+			RemoteTotal:  iperf3MedBandwidthJitter + getSimRand().Float64()*iperf3HighBandwidthLatency,
+			RemoteUser:   iperf3HighBandwidthLatency + getSimRand().Float64()*iperf3DefaultLatencyMs,
+			RemoteSystem: iperf3HighBandwidthJitter + getSimRand().Float64()*iperf3HighBandwidthJitter,
 		},
 		SenderTCP: &iperf3TCPInfo{
 			Congestion: "cubic",
@@ -446,10 +486,10 @@ func (h *IPerf3Handler) sendResults(
 				ID:          1,
 				Bytes:       downloadBytes,
 				BPS:         downloadBps,
-				Retransmits: int(cfg.PacketLossPercent * 100),
-				MaxRtt:      int(cfg.TypicalLatencyMs * 1000),
-				MinRtt:      int(cfg.TypicalLatencyMs * 800),
-				MeanRtt:     int(cfg.TypicalLatencyMs * 900),
+				Retransmits: int(cfg.PacketLossPercent * iperf3RetransmitMult),
+				MaxRtt:      int(cfg.TypicalLatencyMs * iperf3RTTMicrosPerMilli),
+				MinRtt:      int(cfg.TypicalLatencyMs * iperf3MinRTTPercent),
+				MeanRtt:     int(cfg.TypicalLatencyMs * iperf3MeanRTTPercent),
 				Sender:      false,
 			},
 		},
@@ -467,7 +507,7 @@ func (h *IPerf3Handler) sendResults(
 			Seconds:     duration,
 			Bytes:       uploadBytes,
 			BPS:         uploadBps,
-			Retransmits: int(cfg.PacketLossPercent * 10),
+			Retransmits: int(cfg.PacketLossPercent * iperf3SenderRetransMult),
 			Sender:      true,
 		},
 	}
@@ -479,10 +519,10 @@ func (h *IPerf3Handler) sendResults(
 
 	// Send with length prefix
 	// Safe conversion: JSON data length is bounded by iperf3 protocol limits
-	response := make([]byte, 4+len(jsonData))
+	response := make([]byte, iperf3LengthPrefixSize+len(jsonData))
 	binary.BigEndian.PutUint32(
 		response[:4],
-		uint32(len(jsonData)), //nolint:gosec // G115: bounded by protocol
+		safeUint32(len(jsonData)),
 	)
 	copy(response[4:], jsonData)
 
@@ -513,7 +553,7 @@ func (h *IPerf3Handler) sendSYNACK(ipLayer *layers.IPv4, tcpLayer *layers.TCP, d
 	if len(srcDevices) > 0 && len(srcDevices[0].MACAddress) > 0 {
 		srcMAC = srcDevices[0].MACAddress
 	} else {
-		if debugLevel >= 2 {
+		if debugLevel >= DebugLevelInfo {
 			_, _ = fmt.Fprintf(os.Stdout, "iPerf3: Cannot send SYN-ACK: no MAC for %s\n", ipLayer.SrcIP)
 		}
 
@@ -529,9 +569,9 @@ func (h *IPerf3Handler) sendSYNACK(ipLayer *layers.IPv4, tcpLayer *layers.TCP, d
 
 	// Build IP header
 	ipReply := &layers.IPv4{
-		Version:  4,
-		IHL:      5,
-		TTL:      64,
+		Version:  iperf3IPv4Version,
+		IHL:      iperf3IPv4IHL,
+		TTL:      iperf3IPv4TTL,
 		Protocol: layers.IPProtocolTCP,
 		SrcIP:    ipLayer.DstIP,
 		DstIP:    ipLayer.SrcIP,
@@ -541,11 +581,11 @@ func (h *IPerf3Handler) sendSYNACK(ipLayer *layers.IPv4, tcpLayer *layers.TCP, d
 	tcpReply := &layers.TCP{
 		SrcPort: tcpLayer.DstPort,
 		DstPort: tcpLayer.SrcPort,
-		Seq:     1000,
+		Seq:     iperf3TCPInitialSeq,
 		Ack:     tcpLayer.Seq + 1,
 		SYN:     true,
 		ACK:     true,
-		Window:  65535,
+		Window:  iperf3TCPWindowSize,
 	}
 	_ = tcpReply.SetNetworkLayerForChecksum(ipReply) // error is non-critical for simulation
 
@@ -558,7 +598,7 @@ func (h *IPerf3Handler) sendSYNACK(ipLayer *layers.IPv4, tcpLayer *layers.TCP, d
 
 	err := gopacket.SerializeLayers(buffer, opts, eth, ipReply, tcpReply)
 	if err != nil {
-		if debugLevel >= 2 {
+		if debugLevel >= DebugLevelInfo {
 			_, _ = fmt.Fprintf(os.Stdout, "iPerf3: Error serializing SYN-ACK: %v\n", err)
 		}
 
@@ -579,7 +619,7 @@ func (h *IPerf3Handler) sendSYNACK(ipLayer *layers.IPv4, tcpLayer *layers.TCP, d
 
 	h.stack.Send(pktOut)
 
-	if debugLevel >= 3 {
+	if debugLevel >= DebugLevelVerbose {
 		_, _ = fmt.Fprintf(os.Stdout, "iPerf3: Sent TCP SYN-ACK from %s:%d to %s:%d\n",
 			ipReply.SrcIP, tcpReply.SrcPort, ipReply.DstIP, tcpReply.DstPort)
 	}
@@ -620,25 +660,25 @@ func (h *IPerf3Handler) sendTCPResponse(
 	}
 
 	ipReply := &layers.IPv4{
-		Version:  4,
-		IHL:      5,
-		TTL:      64,
+		Version:  iperf3IPv4Version,
+		IHL:      iperf3IPv4IHL,
+		TTL:      iperf3IPv4TTL,
 		Protocol: layers.IPProtocolTCP,
 		SrcIP:    ipLayer.DstIP,
 		DstIP:    ipLayer.SrcIP,
 	}
 
 	// Safe conversion: min() bounds payloadLen to 0xFFFFFFFF which fits in uint32
-	payloadLen := min(len(tcpLayer.Payload), 0xFFFFFFFF)
+	payloadLen := min(len(tcpLayer.Payload), iperf3MaxUint32)
 
 	tcpReply := &layers.TCP{
 		SrcPort: tcpLayer.DstPort,
 		DstPort: tcpLayer.SrcPort,
 		Seq:     tcpLayer.Ack,
-		Ack:     tcpLayer.Seq + uint32(payloadLen), //nolint:gosec // G115: bounded by min()
-		PSH:    true,
-		ACK:    true,
-		Window: 65535,
+		Ack:     tcpLayer.Seq + safeUint32(payloadLen),
+		PSH:     true,
+		ACK:     true,
+		Window:  iperf3TCPWindowSize,
 	}
 	_ = tcpReply.SetNetworkLayerForChecksum(ipReply) // error is non-critical for simulation
 
@@ -650,7 +690,7 @@ func (h *IPerf3Handler) sendTCPResponse(
 
 	err := gopacket.SerializeLayers(buffer, opts, eth, ipReply, tcpReply, gopacket.Payload(payload))
 	if err != nil {
-		if debugLevel >= 2 {
+		if debugLevel >= DebugLevelInfo {
 			_, _ = fmt.Fprintf(os.Stdout, "iPerf3: Error serializing TCP response: %v\n", err)
 		}
 
@@ -671,7 +711,7 @@ func (h *IPerf3Handler) sendTCPResponse(
 
 	h.stack.Send(pktOut)
 
-	if debugLevel >= 3 {
+	if debugLevel >= DebugLevelVerbose {
 		_, _ = fmt.Fprintf(os.Stdout, "iPerf3: Sent %d bytes to %s:%d\n", len(payload), ipLayer.DstIP, tcpLayer.SrcPort)
 	}
 }

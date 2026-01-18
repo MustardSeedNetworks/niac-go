@@ -9,12 +9,12 @@ import (
 func TestConfigError_Error(t *testing.T) {
 	tests := []struct {
 		name     string
-		err      *ConfigError
+		err      *Error
 		expected string
 	}{
 		{
 			name: "with line and column",
-			err: &ConfigError{
+			err: &Error{
 				File:    "config.yaml",
 				Line:    45,
 				Column:  12,
@@ -24,7 +24,7 @@ func TestConfigError_Error(t *testing.T) {
 		},
 		{
 			name: "with line only",
-			err: &ConfigError{
+			err: &Error{
 				File:    "config.yaml",
 				Line:    45,
 				Message: "invalid value",
@@ -33,7 +33,7 @@ func TestConfigError_Error(t *testing.T) {
 		},
 		{
 			name: "file only",
-			err: &ConfigError{
+			err: &Error{
 				File:    "config.yaml",
 				Message: "invalid value",
 			},
@@ -52,7 +52,7 @@ func TestConfigError_Error(t *testing.T) {
 }
 
 func TestConfigError_Format(t *testing.T) {
-	err := &ConfigError{
+	err := &Error{
 		File:       "config.yaml",
 		Line:       45,
 		Column:     12,
@@ -92,11 +92,11 @@ func TestConfigError_Format(t *testing.T) {
 	}
 }
 
-func TestConfigErrorList_Add(t *testing.T) {
-	list := &ConfigErrorList{File: "config.yaml", Valid: true}
+func TestConfigListError_Add(t *testing.T) {
+	list := &ListError{File: "config.yaml", Valid: true}
 
 	// Add an error
-	err := &ConfigError{
+	err := &Error{
 		File:     "config.yaml",
 		Message:  "error message",
 		Severity: SeverityError,
@@ -112,7 +112,7 @@ func TestConfigErrorList_Add(t *testing.T) {
 	}
 
 	// Add a warning
-	warn := &ConfigError{
+	warn := &Error{
 		File:     "config.yaml",
 		Message:  "warning message",
 		Severity: SeverityWarning,
@@ -128,46 +128,46 @@ func TestConfigErrorList_Add(t *testing.T) {
 	}
 }
 
-func TestConfigErrorList_HasErrors(t *testing.T) {
-	list := &ConfigErrorList{File: "config.yaml"}
+func TestConfigListError_HasErrors(t *testing.T) {
+	list := &ListError{File: "config.yaml"}
 
 	if list.HasErrors() {
 		t.Error("HasErrors() should be false for empty list")
 	}
 
-	list.Add(&ConfigError{Severity: SeverityWarning, Message: "warning"})
+	list.Add(&Error{Severity: SeverityWarning, Message: "warning"})
 
 	if list.HasErrors() {
 		t.Error("HasErrors() should be false for warnings only")
 	}
 
-	list.Add(&ConfigError{Severity: SeverityError, Message: "error"})
+	list.Add(&Error{Severity: SeverityError, Message: "error"})
 
 	if !list.HasErrors() {
 		t.Error("HasErrors() should be true after adding error")
 	}
 }
 
-func TestConfigErrorList_HasWarnings(t *testing.T) {
-	list := &ConfigErrorList{File: "config.yaml"}
+func TestConfigListError_HasWarnings(t *testing.T) {
+	list := &ListError{File: "config.yaml"}
 
 	if list.HasWarnings() {
 		t.Error("HasWarnings() should be false for empty list")
 	}
 
-	list.Add(&ConfigError{Severity: SeverityWarning, Message: "warning"})
+	list.Add(&Error{Severity: SeverityWarning, Message: "warning"})
 
 	if !list.HasWarnings() {
 		t.Error("HasWarnings() should be true after adding warning")
 	}
 }
 
-func TestConfigErrorList_ToJSON(t *testing.T) {
-	list := &ConfigErrorList{
+func TestConfigListError_ToJSON(t *testing.T) {
+	list := &ListError{
 		File:  "config.yaml",
 		Valid: false,
 	}
-	list.Add(&ConfigError{
+	list.Add(&Error{
 		File:     "config.yaml",
 		Line:     45,
 		Message:  "test error",
@@ -180,9 +180,10 @@ func TestConfigErrorList_ToJSON(t *testing.T) {
 	}
 
 	// Parse JSON to verify it's valid
-	var parsed ConfigErrorList
-	if err := json.Unmarshal([]byte(jsonStr), &parsed); err != nil {
-		t.Fatalf("Invalid JSON output: %v", err)
+	var parsed ListError
+	parseErr := json.Unmarshal([]byte(jsonStr), &parsed)
+	if parseErr != nil {
+		t.Fatalf("Invalid JSON output: %v", parseErr)
 	}
 
 	if parsed.File != "config.yaml" {
@@ -226,14 +227,14 @@ func TestNewConfigWarning(t *testing.T) {
 	}
 }
 
-func TestConfigErrorList_Format(t *testing.T) {
-	list := &ConfigErrorList{File: "config.yaml"}
-	list.Add(&ConfigError{
+func TestListError_Format(t *testing.T) {
+	list := &ListError{File: "config.yaml"}
+	list.Add(&Error{
 		File:     "config.yaml",
 		Message:  "error 1",
 		Severity: SeverityError,
 	})
-	list.Add(&ConfigError{
+	list.Add(&Error{
 		File:     "config.yaml",
 		Message:  "warning 1",
 		Severity: SeverityWarning,

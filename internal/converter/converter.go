@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -22,6 +23,19 @@ var (
 	ErrAddMibMissingOID           = errors.New("AddMib missing OID")
 	ErrAddMibMissingType          = errors.New("AddMib missing type")
 	ErrCapturePlaybackMissingFile = errors.New("CapturePlayback missing file name")
+)
+
+// Parser constants for field counts and lengths.
+const (
+	addMibQuotedArgs       = 3  // number of quoted args in AddMib directive
+	minRegexMatchParts     = 2  // minimum parts from regex match
+	ttlFieldCount          = 3  // TTL has ttl, ip, mask
+	routerFieldCount       = 2  // Router has address, preference
+	addMibFieldCount       = 3  // AddMib has OID, type, value
+	communityIncludeFields = 2  // CommunityInclude has community, walkfile
+	dnsPartsWithTTL        = 3  // DNS record with TTL
+	dnsPartsWithRCode      = 4  // DNS record with RCode
+	macAddressRawLen       = 12 // MAC address hex chars (XXXXXXXXXXXX)
 )
 
 // Config represents the YAML configuration structure.
@@ -66,13 +80,13 @@ type Device struct {
 	TTL           *TTLConfig           `yaml:"ttl,omitempty"`
 	SnmpAgent     *SnmpAgent           `yaml:"snmp_agent,omitempty"`
 	Dhcp          *DhcpServer          `yaml:"dhcp,omitempty"`
-	Dns           *DnsServer           `yaml:"dns,omitempty"`
+	DNS           *DNSServer           `yaml:"dns,omitempty"`
 	Lldp          *LldpConfig          `yaml:"lldp,omitempty"`
 	Cdp           *CdpConfig           `yaml:"cdp,omitempty"`
 	Edp           *EdpConfig           `yaml:"edp,omitempty"`
 	Fdp           *FdpConfig           `yaml:"fdp,omitempty"`
 	Stp           *StpConfig           `yaml:"stp,omitempty"`
-	Http          *HttpConfig          `yaml:"http,omitempty"`
+	HTTP          *HTTPConfig          `yaml:"http,omitempty"`
 	Ftp           *FtpConfig           `yaml:"ftp,omitempty"`
 	Netbios       *NetbiosConfig       `yaml:"netbios,omitempty"`
 	Icmp          *IcmpConfig          `yaml:"icmp,omitempty"`
@@ -180,14 +194,14 @@ type DhcpLease struct {
 	MacAddrMask  string `yaml:"mac_addr_mask,omitempty"`
 }
 
-// DnsServer represents DNS server configuration.
-type DnsServer struct {
-	ForwardRecords []DnsRecord `yaml:"forward_records,omitempty"`
-	ReverseRecords []DnsRecord `yaml:"reverse_records,omitempty"`
+// DNSServer represents DNS server configuration.
+type DNSServer struct {
+	ForwardRecords []DNSRecord `yaml:"forward_records,omitempty"`
+	ReverseRecords []DNSRecord `yaml:"reverse_records,omitempty"`
 }
 
-// DnsRecord represents a DNS A or PTR record.
-type DnsRecord struct {
+// DNSRecord represents a DNS A or PTR record.
+type DNSRecord struct {
 	Name  string `yaml:"name"`
 	IP    string `yaml:"ip"`
 	TTL   int    `yaml:"ttl,omitempty"`
@@ -243,15 +257,15 @@ type StpConfig struct {
 	Version        string `yaml:"version,omitempty"`
 }
 
-// HttpConfig represents HTTP server configuration.
-type HttpConfig struct {
+// HTTPConfig represents HTTP server configuration.
+type HTTPConfig struct {
 	Enabled    bool           `yaml:"enabled,omitempty"`
 	ServerName string         `yaml:"server_name,omitempty"`
-	Endpoints  []HttpEndpoint `yaml:"endpoints,omitempty"`
+	Endpoints  []HTTPEndpoint `yaml:"endpoints,omitempty"`
 }
 
-// HttpEndpoint represents an HTTP endpoint configuration.
-type HttpEndpoint struct {
+// HTTPEndpoint represents an HTTP endpoint configuration.
+type HTTPEndpoint struct {
 	Path        string `yaml:"path,omitempty"`
 	Method      string `yaml:"method,omitempty"`
 	StatusCode  int    `yaml:"status_code,omitempty"`
@@ -441,7 +455,7 @@ type Parser struct {
 // ConvertFile converts a Java DSL config file to YAML.
 func ConvertFile(inputPath, outputPath string, verbose bool) error {
 	// Read input file
-	data, err := os.ReadFile(inputPath) // #nosec G304 -- user-provided file path, validated by caller
+	data, err := os.ReadFile(filepath.Clean(inputPath))
 	if err != nil {
 		return fmt.Errorf("error reading input file: %w", err)
 	}
@@ -538,16 +552,17 @@ func (p *Parser) parseCapturePlayback() (*CapturePlayback, error) {
 			break
 		}
 
-		if strings.HasPrefix(line, "FileName(") {
+		switch {
+		case strings.HasPrefix(line, "FileName("):
 			playback.FileName = p.extractString(line)
-		} else if strings.HasPrefix(line, "LoopTime(") {
+		case strings.HasPrefix(line, "LoopTime("):
 			var loopTime int
 			n, err := fmt.Sscanf(line, "LoopTime(%d)", &loopTime)
 			if err != nil || n != 1 {
 				return nil, fmt.Errorf("line %d: %w: %s", p.pos+1, ErrInvalidLoopTimeFormat, line)
 			}
 			playback.LoopTime = loopTime
-		} else if strings.HasPrefix(line, "ScaleTime(") {
+		case strings.HasPrefix(line, "ScaleTime("):
 			var scaleTime float64
 			n, err := fmt.Sscanf(line, "ScaleTime(%f)", &scaleTime)
 			if err != nil || n != 1 {
@@ -560,6 +575,107 @@ func (p *Parser) parseCapturePlayback() (*CapturePlayback, error) {
 	}
 
 	return playback, nil
+}
+
+// parseDeviceSimpleField handles simple device fields that don't require nested parsing.
+// Returns true if the field was handled.
+func (p *Parser) parseDeviceSimpleField(line string, device *Device) bool {
+	switch {
+	case strings.HasPrefix(line, "MacAddr("):
+		device.MAC = p.formatMAC(p.extractValue(line))
+	case strings.HasPrefix(line, "IpAddr("):
+		p.parseDeviceIPAddr(line, device)
+	case strings.HasPrefix(line, "Ip6Addr("):
+		if ip := p.extractValue(line); ip != "" {
+			device.IPs = append(device.IPs, ip)
+		}
+	case strings.HasPrefix(line, "MapToIp("):
+		device.MapToIP = p.extractValue(line)
+	case strings.HasPrefix(line, "Babble("):
+		device.Babble = true
+	case strings.HasPrefix(line, "TTL("):
+		if ttlCfg := p.parseTTL(line); ttlCfg != nil {
+			device.TTL = ttlCfg
+		}
+	case strings.HasPrefix(line, "SpanningTree("):
+		p.parseDeviceSpanningTree(device)
+	default:
+		return false
+	}
+
+	return true
+}
+
+// parseDeviceIPAddr handles IpAddr field parsing.
+func (p *Parser) parseDeviceIPAddr(line string, device *Device) {
+	ip := p.extractValue(line)
+	if device.IP == "" {
+		device.IP = ip
+	} else if ip != "" {
+		device.IPs = append(device.IPs, ip)
+	}
+}
+
+// parseDeviceSpanningTree handles SpanningTree field parsing.
+func (p *Parser) parseDeviceSpanningTree(device *Device) {
+	if device.Stp == nil {
+		device.Stp = &StpConfig{Enabled: true}
+	} else {
+		device.Stp.Enabled = true
+	}
+}
+
+// parseDeviceVlan parses the VLAN field and returns an error if invalid.
+func (p *Parser) parseDeviceVlan(line string) (int, error) {
+	var vlan int
+	n, err := fmt.Sscanf(line, "Vlan(%d)", &vlan)
+	if err != nil || n != 1 {
+		return 0, fmt.Errorf("line %d: %w: %s", p.pos+1, ErrInvalidVlanFormat, line)
+	}
+
+	return vlan, nil
+}
+
+// parseDeviceNestedBlock handles device fields that require nested block parsing.
+// Returns true if parsing occurred and pos should not be incremented.
+func (p *Parser) parseDeviceNestedBlock(line string, device *Device) bool {
+	switch {
+	case strings.HasPrefix(line, "SnmpAgent("):
+		agent := p.parseSnmpAgent()
+		device.SnmpAgent = mergeSnmpAgent(device.SnmpAgent, agent)
+
+		return true
+	case strings.HasPrefix(line, "SnmpAccessList("):
+		accessList := p.parseSnmpAccessList()
+		if device.SnmpAgent == nil {
+			device.SnmpAgent = &SnmpAgent{}
+		}
+		device.SnmpAgent.AccessList = append(device.SnmpAgent.AccessList, accessList...)
+
+		return true
+	case strings.HasPrefix(line, "NetBiosStatus("):
+		device.Netbios = mergeNetbios(device.Netbios, p.parseNetBiosStatus())
+
+		return true
+	case strings.HasPrefix(line, "Icmp("):
+		device.Icmp = p.parseIcmp()
+
+		return true
+	case strings.HasPrefix(line, "Icmp6("):
+		device.Icmpv6 = p.parseIcmp6()
+
+		return true
+	case strings.HasPrefix(line, "Dhcp("):
+		device.Dhcp = p.parseDhcp()
+
+		return true
+	case strings.HasPrefix(line, "Dns("):
+		device.DNS = p.parseDNS()
+
+		return true
+	}
+
+	return false
 }
 
 // parseDevice parses a Device block.
@@ -578,90 +694,27 @@ func (p *Parser) parseDevice(deviceNum int) (*Device, error) {
 			break
 		}
 
-		if strings.HasPrefix(line, "MacAddr(") {
-			device.MAC = p.formatMAC(p.extractValue(line))
-		} else if strings.HasPrefix(line, "IpAddr(") {
-			ip := p.extractValue(line)
-			if device.IP == "" {
-				device.IP = ip
-			} else if ip != "" {
-				device.IPs = append(device.IPs, ip)
-			}
-		} else if strings.HasPrefix(line, "Ip6Addr(") {
-			ip := p.extractValue(line)
-			if ip != "" {
-				device.IPs = append(device.IPs, ip)
-			}
-		} else if strings.HasPrefix(line, "MapToIp(") {
-			device.MapToIP = p.extractValue(line)
-		} else if strings.HasPrefix(line, "Babble(") {
-			device.Babble = true
-		} else if strings.HasPrefix(line, "TTL(") {
-			ttlCfg := p.parseTTL(line)
-			if ttlCfg != nil {
-				device.TTL = ttlCfg
-			}
-		} else if strings.HasPrefix(line, "Vlan(") {
-			var vlan int
-			n, err := fmt.Sscanf(line, "Vlan(%d)", &vlan)
-			if err != nil || n != 1 {
-				return nil, fmt.Errorf("line %d: %w: %s", p.pos+1, ErrInvalidVlanFormat, line)
+		// Handle simple fields first
+		if p.parseDeviceSimpleField(line, device) {
+			p.pos++
+
+			continue
+		}
+
+		// Handle VLAN separately due to error return
+		if strings.HasPrefix(line, "Vlan(") {
+			vlan, err := p.parseDeviceVlan(line)
+			if err != nil {
+				return nil, err
 			}
 			device.VLAN = vlan
-		} else if strings.HasPrefix(line, "SpanningTree(") {
-			if device.Stp == nil {
-				device.Stp = &StpConfig{Enabled: true}
-			} else {
-				device.Stp.Enabled = true
-			}
-		} else if strings.HasPrefix(line, "SnmpAgent(") {
-			agent, err := p.parseSnmpAgent()
-			if err != nil {
-				return nil, err
-			}
-			device.SnmpAgent = mergeSnmpAgent(device.SnmpAgent, agent)
+			p.pos++
 
 			continue
-		} else if strings.HasPrefix(line, "SnmpAccessList(") {
-			accessList := p.parseSnmpAccessList()
-			if device.SnmpAgent == nil {
-				device.SnmpAgent = &SnmpAgent{}
-			}
-			device.SnmpAgent.AccessList = append(device.SnmpAgent.AccessList, accessList...)
+		}
 
-			continue
-		} else if strings.HasPrefix(line, "NetBiosStatus(") {
-			netbios := p.parseNetBiosStatus()
-			device.Netbios = mergeNetbios(device.Netbios, netbios)
-
-			continue
-		} else if strings.HasPrefix(line, "Icmp(") {
-			icmp, err := p.parseIcmp()
-			if err != nil {
-				return nil, err
-			}
-			device.Icmp = icmp
-
-			continue
-		} else if strings.HasPrefix(line, "Icmp6(") {
-			device.Icmpv6 = p.parseIcmp6()
-
-			continue
-		} else if strings.HasPrefix(line, "Dhcp(") {
-			dhcp, err := p.parseDhcp()
-			if err != nil {
-				return nil, err
-			}
-			device.Dhcp = dhcp
-
-			continue
-		} else if strings.HasPrefix(line, "Dns(") {
-			dns, err := p.parseDns()
-			if err != nil {
-				return nil, err
-			}
-			device.Dns = dns
-
+		// Handle nested blocks
+		if p.parseDeviceNestedBlock(line, device) {
 			continue
 		}
 
@@ -732,10 +785,58 @@ func mergeNetbios(base *NetbiosConfig, incoming *NetbiosConfig) *NetbiosConfig {
 	return base
 }
 
-// parseSnmpAgent parses an SnmpAgent block
-//
-//nolint:unparam // Error return reserved for future validation
-func (p *Parser) parseSnmpAgent() (*SnmpAgent, error) {
+// parseSnmpAgentInclude handles Include directive for SNMP agent.
+func (p *Parser) parseSnmpAgentInclude(line string, agent *SnmpAgent) {
+	walk := p.extractString(line)
+	if walk == "" {
+		return
+	}
+
+	if agent.WalkFile == "" {
+		agent.WalkFile = walk
+	}
+	agent.WalkFiles = append(agent.WalkFiles, walk)
+}
+
+// parseSnmpAgentCommunityInclude handles CommunityInclude directive.
+func (p *Parser) parseSnmpAgentCommunityInclude(line string, agent *SnmpAgent) {
+	community, walk := p.parseCommunityInclude(line)
+	if community == "" || walk == "" {
+		return
+	}
+	agent.CommunityIncludes = append(agent.CommunityIncludes, CommunityInclude{
+		Community: community,
+		WalkFile:  walk,
+	})
+}
+
+// parseSnmpAgentField parses a single SNMP agent field.
+func (p *Parser) parseSnmpAgentField(line string, agent *SnmpAgent) {
+	switch {
+	case strings.HasPrefix(line, "Include("):
+		p.parseSnmpAgentInclude(line, agent)
+	case strings.HasPrefix(line, "CommunityInclude("):
+		p.parseSnmpAgentCommunityInclude(line, agent)
+	case strings.HasPrefix(line, "SnmpAddr("):
+		agent.SnmpAddr = p.extractValue(line)
+	case strings.HasPrefix(line, "Dot1D_FdbTable("):
+		if cfg := p.parseFdbTable(line, true); cfg != nil {
+			agent.Dot1DFdbTable = cfg
+		}
+	case strings.HasPrefix(line, "Dot1Q_FdbTable("):
+		if cfg := p.parseFdbTable(line, false); cfg != nil {
+			agent.Dot1QFdbTable = cfg
+		}
+	case strings.HasPrefix(line, "AddMib("):
+		mibLine := p.collectQuotedDirective(line, addMibQuotedArgs)
+		if mib := p.parseAddMib(mibLine); mib != nil {
+			agent.AddMibs = append(agent.AddMibs, *mib)
+		}
+	}
+}
+
+// parseSnmpAgent parses an SnmpAgent block.
+func (p *Parser) parseSnmpAgent() *SnmpAgent {
 	p.pos++ // Skip opening line
 	agent := &SnmpAgent{}
 
@@ -755,44 +856,11 @@ func (p *Parser) parseSnmpAgent() (*SnmpAgent, error) {
 			continue
 		}
 
-		if strings.HasPrefix(line, "Include(") {
-			walk := p.extractString(line)
-			if walk != "" {
-				if agent.WalkFile == "" {
-					agent.WalkFile = walk
-				}
-				agent.WalkFiles = append(agent.WalkFiles, walk)
-			}
-		} else if strings.HasPrefix(line, "CommunityInclude(") {
-			community, walk := p.parseCommunityInclude(line)
-			if community != "" && walk != "" {
-				agent.CommunityIncludes = append(agent.CommunityIncludes, CommunityInclude{
-					Community: community,
-					WalkFile:  walk,
-				})
-			}
-		} else if strings.HasPrefix(line, "SnmpAddr(") {
-			agent.SnmpAddr = p.extractValue(line)
-		} else if strings.HasPrefix(line, "Dot1D_FdbTable(") {
-			if cfg := p.parseFdbTable(line, true); cfg != nil {
-				agent.Dot1DFdbTable = cfg
-			}
-		} else if strings.HasPrefix(line, "Dot1Q_FdbTable(") {
-			if cfg := p.parseFdbTable(line, false); cfg != nil {
-				agent.Dot1QFdbTable = cfg
-			}
-		} else if strings.HasPrefix(line, "AddMib(") {
-			mibLine := p.collectQuotedDirective(line, 3)
-			mib := p.parseAddMib(mibLine)
-			if mib != nil {
-				agent.AddMibs = append(agent.AddMibs, *mib)
-			}
-		}
-
+		p.parseSnmpAgentField(line, agent)
 		p.pos++
 	}
 
-	return agent, nil
+	return agent
 }
 
 // parseSnmpAccessList parses SnmpAccessList block.
@@ -828,11 +896,11 @@ func (p *Parser) parseSnmpAccessList() []string {
 func (p *Parser) parseTTL(line string) *TTLConfig {
 	re := regexp.MustCompile(`\(([^)]*)\)`)
 	match := re.FindStringSubmatch(line)
-	if len(match) < 2 {
+	if len(match) < minRegexMatchParts {
 		return nil
 	}
 	parts := strings.Fields(match[1])
-	if len(parts) < 3 {
+	if len(parts) < ttlFieldCount {
 		return nil
 	}
 	var ttl int
@@ -938,7 +1006,7 @@ func (p *Parser) parseNetBiosName(line string) *NetbiosName {
 }
 
 // parseIcmp parses Icmp block.
-func (p *Parser) parseIcmp() (*IcmpConfig, error) {
+func (p *Parser) parseIcmp() *IcmpConfig {
 	p.pos++ // Skip opening line
 	icmp := &IcmpConfig{Enabled: true}
 
@@ -958,11 +1026,7 @@ func (p *Parser) parseIcmp() (*IcmpConfig, error) {
 		if strings.HasPrefix(line, "AddressMaskReply(") {
 			icmp.AddressMaskReply = p.extractValue(line)
 		} else if strings.HasPrefix(line, "RouterAdvertisement(") {
-			ra, err := p.parseIcmpRouterAdvertisement()
-			if err != nil {
-				return nil, err
-			}
-			icmp.RouterAdvertisement = ra
+			icmp.RouterAdvertisement = p.parseIcmpRouterAdvertisement()
 
 			continue
 		}
@@ -970,11 +1034,53 @@ func (p *Parser) parseIcmp() (*IcmpConfig, error) {
 		p.pos++
 	}
 
-	return icmp, nil
+	return icmp
+}
+
+// parseIcmpRouter parses a single Router directive and returns an IcmpRouter.
+func (p *Parser) parseIcmpRouter(line string) *IcmpRouter {
+	re := regexp.MustCompile(`\(([^)]*)\)`)
+	match := re.FindStringSubmatch(line)
+	if len(match) < minRegexMatchParts {
+		return nil
+	}
+
+	parts := strings.Fields(match[1])
+	if len(parts) < routerFieldCount {
+		return nil
+	}
+
+	var pref int
+	_, _ = fmt.Sscanf(parts[1], "%d", &pref)
+
+	return &IcmpRouter{
+		Address:    parts[0],
+		Preference: pref,
+	}
+}
+
+// parseIcmpRAField parses a single field in the RouterAdvertisement block.
+func (p *Parser) parseIcmpRAField(line string, ra *IcmpRouterAdvertisement) {
+	switch {
+	case strings.HasPrefix(line, "Period("):
+		var period int
+		if _, err := fmt.Sscanf(line, "Period(%d)", &period); err == nil {
+			ra.Period = period
+		}
+	case strings.HasPrefix(line, "Lifetime("):
+		var lifetime int
+		if _, err := fmt.Sscanf(line, "Lifetime(%d)", &lifetime); err == nil {
+			ra.Lifetime = lifetime
+		}
+	case strings.HasPrefix(line, "Router("):
+		if router := p.parseIcmpRouter(line); router != nil {
+			ra.Routers = append(ra.Routers, *router)
+		}
+	}
 }
 
 // parseIcmpRouterAdvertisement parses RouterAdvertisement block for IPv4.
-func (p *Parser) parseIcmpRouterAdvertisement() (*IcmpRouterAdvertisement, error) {
+func (p *Parser) parseIcmpRouterAdvertisement() *IcmpRouterAdvertisement {
 	p.pos++ // Skip opening line
 	ra := &IcmpRouterAdvertisement{}
 
@@ -991,36 +1097,11 @@ func (p *Parser) parseIcmpRouterAdvertisement() (*IcmpRouterAdvertisement, error
 			continue
 		}
 
-		if strings.HasPrefix(line, "Period(") {
-			var period int
-			if _, err := fmt.Sscanf(line, "Period(%d)", &period); err == nil {
-				ra.Period = period
-			}
-		} else if strings.HasPrefix(line, "Lifetime(") {
-			var lifetime int
-			if _, err := fmt.Sscanf(line, "Lifetime(%d)", &lifetime); err == nil {
-				ra.Lifetime = lifetime
-			}
-		} else if strings.HasPrefix(line, "Router(") {
-			re := regexp.MustCompile(`\(([^)]*)\)`)
-			match := re.FindStringSubmatch(line)
-			if len(match) >= 2 {
-				parts := strings.Fields(match[1])
-				if len(parts) >= 2 {
-					var pref int
-					_, _ = fmt.Sscanf(parts[1], "%d", &pref)
-					ra.Routers = append(ra.Routers, IcmpRouter{
-						Address:    parts[0],
-						Preference: pref,
-					})
-				}
-			}
-		}
-
+		p.parseIcmpRAField(line, ra)
 		p.pos++
 	}
 
-	return ra, nil
+	return ra
 }
 
 // parseIcmp6 parses Icmp6 block.
@@ -1207,7 +1288,7 @@ func (p *Parser) parseAddMib(line string) *AddMib {
 	// Extract quoted strings (OID, type, value)
 	re := regexp.MustCompile(`"([^"]+)"`)
 	matches := re.FindAllStringSubmatch(line, -1)
-	if len(matches) < 3 {
+	if len(matches) < addMibFieldCount {
 		return nil
 	}
 
@@ -1222,7 +1303,7 @@ func (p *Parser) parseAddMib(line string) *AddMib {
 func (p *Parser) parseCommunityInclude(line string) (string, string) {
 	re := regexp.MustCompile(`"([^"]+)"`)
 	matches := re.FindAllStringSubmatch(line, -1)
-	if len(matches) < 2 {
+	if len(matches) < communityIncludeFields {
 		return "", ""
 	}
 
@@ -1233,7 +1314,7 @@ func (p *Parser) parseCommunityInclude(line string) (string, string) {
 func (p *Parser) parseFdbTable(line string, dot1d bool) *FdbTableConfig {
 	re := regexp.MustCompile(`\(([^)]*)\)`)
 	match := re.FindStringSubmatch(line)
-	if len(match) < 2 {
+	if len(match) < minRegexMatchParts {
 		return nil
 	}
 	parts := strings.Fields(match[1])
@@ -1253,22 +1334,79 @@ func (p *Parser) parseFdbTable(line string, dot1d bool) *FdbTableConfig {
 	return cfg
 }
 
-// parseDhcp parses a Dhcp block.
-func (p *Parser) parseDhcp() (*DhcpServer, error) {
-	p.pos++ // Skip opening line
-	dhcp := &DhcpServer{
-		ClientLeases: make([]DhcpLease, 0),
+// dhcpParseState holds state during DHCP parsing.
+type dhcpParseState struct {
+	dhcp         *DhcpServer
+	currentLease *DhcpLease
+}
+
+// parseDhcpClientIP parses YourClientIpAddr and starts a new lease.
+func (p *Parser) parseDhcpClientIP(line string) *DhcpLease {
+	ip := p.extractValue(line)
+	if ip == "" {
+		// No closing paren on same line, extract everything after (
+		if _, after, found := strings.Cut(line, "("); found {
+			ip = strings.TrimSpace(after)
+		}
 	}
 
-	var currentLease *DhcpLease
+	return &DhcpLease{ClientIP: ip}
+}
+
+// parseDhcpMacAddrMask handles MacAddrMask and finalizes the current lease.
+// Returns true if the caller should continue (skip pos increment).
+func (p *Parser) parseDhcpMacAddrMask(line string, state *dhcpParseState) bool {
+	if state.currentLease == nil {
+		return false
+	}
+
+	state.currentLease.MacAddrMask = p.formatMAC(p.extractValue(line))
+	state.dhcp.ClientLeases = append(state.dhcp.ClientLeases, *state.currentLease)
+	state.currentLease = nil
+
+	// Skip the closing paren of YourClientIpAddr block on next line
+	p.pos++
+	if p.pos < len(p.lines) && strings.TrimSpace(p.lines[p.pos]) == ")" {
+		p.pos++ // Skip the closing paren
+	}
+
+	return true
+}
+
+// parseDhcpServerField parses server-level DHCP fields (not lease-specific).
+func (p *Parser) parseDhcpServerField(line string, dhcp *DhcpServer) {
+	switch {
+	case strings.HasPrefix(line, "SubnetMask"):
+		dhcp.SubnetMask = p.extractValue(line)
+	case strings.HasPrefix(line, "Router"):
+		if value := p.extractValue(line); value != "" {
+			dhcp.Router = strings.Fields(value)[0]
+		}
+	case strings.HasPrefix(line, "DomainNameServer"):
+		dhcp.DomainNameServer = p.extractValue(line)
+	case strings.HasPrefix(line, "NextServerIpAddr"):
+		dhcp.NextServerIP = p.extractValue(line)
+	case strings.HasPrefix(line, "ServerIdentifier"):
+		dhcp.ServerIdentifier = p.extractValue(line)
+	}
+}
+
+// parseDhcp parses a Dhcp block.
+func (p *Parser) parseDhcp() *DhcpServer {
+	p.pos++ // Skip opening line
+	state := &dhcpParseState{
+		dhcp: &DhcpServer{
+			ClientLeases: make([]DhcpLease, 0),
+		},
+	}
 
 	for p.pos < len(p.lines) {
 		line := strings.TrimSpace(p.lines[p.pos])
 
 		if line == ")" {
 			// Save current lease if exists
-			if currentLease != nil {
-				dhcp.ClientLeases = append(dhcp.ClientLeases, *currentLease)
+			if state.currentLease != nil {
+				state.dhcp.ClientLeases = append(state.dhcp.ClientLeases, *state.currentLease)
 			}
 			p.pos++
 
@@ -1282,67 +1420,35 @@ func (p *Parser) parseDhcp() (*DhcpServer, error) {
 			continue
 		}
 
-		if strings.HasPrefix(line, "YourClientIpAddr") {
-			// Handle multiline format: YourClientIpAddr(10.250.1.138
-			// where the IP is on the same line but closing paren is on a later line
-			ip := p.extractValue(line)
-			if ip == "" {
-				// No closing paren on same line, extract everything after (
-				if _, after, found := strings.Cut(line, "("); found {
-					ip = strings.TrimSpace(after)
-				}
+		// Handle lease-specific fields
+		switch {
+		case strings.HasPrefix(line, "YourClientIpAddr"):
+			state.currentLease = p.parseDhcpClientIP(line)
+		case strings.HasPrefix(line, "MacAddrValue"):
+			if state.currentLease != nil {
+				state.currentLease.MacAddrValue = p.formatMAC(p.extractValue(line))
 			}
-			currentLease = &DhcpLease{ClientIP: ip}
-		} else if strings.HasPrefix(line, "MacAddrValue") {
-			if currentLease != nil {
-				currentLease.MacAddrValue = p.formatMAC(p.extractValue(line))
+		case strings.HasPrefix(line, "MacAddrMask"):
+			if p.parseDhcpMacAddrMask(line, state) {
+				continue
 			}
-		} else if strings.HasPrefix(line, "MacAddrMask") {
-			if currentLease != nil {
-				currentLease.MacAddrMask = p.formatMAC(p.extractValue(line))
-			}
-			// End of this lease, save it
-			if currentLease != nil {
-				dhcp.ClientLeases = append(dhcp.ClientLeases, *currentLease)
-				currentLease = nil
-			}
-			// Skip the closing paren of YourClientIpAddr block on next line
-			p.pos++
-			if p.pos < len(p.lines) && strings.TrimSpace(p.lines[p.pos]) == ")" {
-				p.pos++ // Skip the closing paren
-			}
-
-			continue // Continue to next iteration without incrementing again
-		} else if strings.HasPrefix(line, "SubnetMask") {
-			dhcp.SubnetMask = p.extractValue(line)
-		} else if strings.HasPrefix(line, "Router") {
-			// Extract just the IP, ignore priority number
-			value := p.extractValue(line)
-			if value != "" {
-				dhcp.Router = strings.Fields(value)[0]
-			}
-		} else if strings.HasPrefix(line, "DomainNameServer") {
-			dhcp.DomainNameServer = p.extractValue(line)
-		} else if strings.HasPrefix(line, "NextServerIpAddr") {
-			dhcp.NextServerIP = p.extractValue(line)
-		} else if strings.HasPrefix(line, "ServerIdentifier") {
-			dhcp.ServerIdentifier = p.extractValue(line)
+		default:
+			// Handle server-level fields
+			p.parseDhcpServerField(line, state.dhcp)
 		}
 
 		p.pos++
 	}
 
-	return dhcp, nil
+	return state.dhcp
 }
 
-// parseDns parses a Dns block
-//
-//nolint:unparam // Error return reserved for future validation
-func (p *Parser) parseDns() (*DnsServer, error) {
+// parseDNS parses a DNS block.
+func (p *Parser) parseDNS() *DNSServer {
 	p.pos++ // Skip opening line
-	dns := &DnsServer{
-		ForwardRecords: make([]DnsRecord, 0),
-		ReverseRecords: make([]DnsRecord, 0),
+	dns := &DNSServer{
+		ForwardRecords: make([]DNSRecord, 0),
+		ReverseRecords: make([]DNSRecord, 0),
 	}
 
 	for p.pos < len(p.lines) {
@@ -1361,23 +1467,14 @@ func (p *Parser) parseDns() (*DnsServer, error) {
 			continue
 		}
 
-		if strings.HasPrefix(line, "Forward2(") {
-			record := p.parseDnsRecord(line, true)
+		switch {
+		case strings.HasPrefix(line, "Forward2("), strings.HasPrefix(line, "Forward("):
+			record := p.parseDNSRecord(line, true)
 			if record != nil {
 				dns.ForwardRecords = append(dns.ForwardRecords, *record)
 			}
-		} else if strings.HasPrefix(line, "Forward(") {
-			record := p.parseDnsRecord(line, true)
-			if record != nil {
-				dns.ForwardRecords = append(dns.ForwardRecords, *record)
-			}
-		} else if strings.HasPrefix(line, "Reverse2(") {
-			record := p.parseDnsRecord(line, false)
-			if record != nil {
-				dns.ReverseRecords = append(dns.ReverseRecords, *record)
-			}
-		} else if strings.HasPrefix(line, "Reverse(") {
-			record := p.parseDnsRecord(line, false)
+		case strings.HasPrefix(line, "Reverse2("), strings.HasPrefix(line, "Reverse("):
+			record := p.parseDNSRecord(line, false)
 			if record != nil {
 				dns.ReverseRecords = append(dns.ReverseRecords, *record)
 			}
@@ -1386,49 +1483,50 @@ func (p *Parser) parseDns() (*DnsServer, error) {
 		p.pos++
 	}
 
-	return dns, nil
+	return dns
 }
 
-// parseDnsRecord parses a Forward() or Reverse() DNS record.
-func (p *Parser) parseDnsRecord(line string, isForward bool) *DnsRecord {
+// parseDNSRecordTTLAndRCode parses optional TTL and RCode fields from DNS record parts.
+func (p *Parser) parseDNSRecordTTLAndRCode(parts []string, record *DNSRecord) {
+	if len(parts) >= dnsPartsWithTTL {
+		_, _ = fmt.Sscanf(parts[2], "%d", &record.TTL)
+	}
+
+	if len(parts) >= dnsPartsWithRCode {
+		_, _ = fmt.Sscanf(parts[3], "%d", &record.RCode)
+	}
+}
+
+// parseDNSRecord parses a Forward() or Reverse() DNS record.
+func (p *Parser) parseDNSRecord(line string, isForward bool) *DNSRecord {
 	// Forward("hostname" IP TTL)
 	// Forward2("hostname" IP TTL RCODE)
 	// Reverse(IP "hostname" TTL)
 	// Reverse2(IP "hostname" TTL RCODE)
 	re := regexp.MustCompile(`\((.*?)\)`)
 	match := re.FindStringSubmatch(line)
-	if len(match) < 2 {
+	if len(match) < minRegexMatchParts {
 		return nil
 	}
 
 	parts := strings.Fields(match[1])
-	if len(parts) < 2 {
+	if len(parts) < routerFieldCount {
 		return nil
 	}
 
-	record := &DnsRecord{}
+	record := &DNSRecord{}
 
 	if isForward {
 		// Forward("hostname" IP TTL)
 		record.Name = strings.Trim(parts[0], "\"")
 		record.IP = parts[1]
-		if len(parts) >= 3 {
-			_, _ = fmt.Sscanf(parts[2], "%d", &record.TTL)
-		}
-		if len(parts) >= 4 {
-			_, _ = fmt.Sscanf(parts[3], "%d", &record.RCode)
-		}
 	} else {
 		// Reverse(IP "hostname" TTL)
 		record.IP = parts[0]
 		record.Name = strings.Trim(parts[1], "\"")
-		if len(parts) >= 3 {
-			_, _ = fmt.Sscanf(parts[2], "%d", &record.TTL)
-		}
-		if len(parts) >= 4 {
-			_, _ = fmt.Sscanf(parts[3], "%d", &record.RCode)
-		}
 	}
+
+	p.parseDNSRecordTTLAndRCode(parts, record)
 
 	return record
 }
@@ -1463,7 +1561,7 @@ func (p *Parser) extractValue(line string) string {
 
 // formatMAC converts XXXXXXXXXXXX to XX:XX:XX:XX:XX:XX.
 func (p *Parser) formatMAC(mac string) string {
-	if len(mac) != 12 {
+	if len(mac) != macAddressRawLen {
 		return mac
 	}
 
@@ -1473,7 +1571,7 @@ func (p *Parser) formatMAC(mac string) string {
 
 // LoadYAMLConfig loads a YAML config file into Go config structure.
 func LoadYAMLConfig(filename string) (*Config, error) {
-	data, err := os.ReadFile(filename) // #nosec G304 -- user-provided file path, validated by caller
+	data, err := os.ReadFile(filepath.Clean(filename))
 	if err != nil {
 		return nil, fmt.Errorf("error reading YAML file: %w", err)
 	}

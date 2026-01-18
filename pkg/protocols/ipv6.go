@@ -8,12 +8,40 @@ import (
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
+
+	"github.com/krisarmstrong/niac-go/pkg/config"
 )
 
 // IPv6 protocol constants.
 const (
 	// IPv6HeaderSize is the size of an IPv6 header in bytes.
 	IPv6HeaderSize = 40
+
+	// ipv6PseudoHeaderSize is the size of the IPv6 pseudo-header for checksum calculation.
+	ipv6PseudoHeaderSize = 40
+
+	// ipv6MaxUint32 is the maximum uint32 value.
+	ipv6MaxUint32 = 0xFFFFFFFF
+
+	// ipv6MaxUint16 is the maximum uint16 value for payload length.
+	ipv6MaxUint16 = 65535
+
+	// ipv6ExtHdrUnitSize is the size of one unit for extension header length field (8 bytes).
+	ipv6ExtHdrUnitSize = 8
+
+	// Checksum calculation constants.
+	ipv6ChecksumByteShift = 8      // Bit shift for high byte in 16-bit checksum word
+	ipv6ChecksumWordShift = 16     // Bit shift for folding 32-bit to 16-bit
+	ipv6ChecksumWordMask  = 0xffff // Mask for 16-bit value in checksum fold
+	ipv6ChecksumWordStep  = 2      // Step size for 16-bit word iteration
+
+	// Note: ipv6AddrSize is declared in dhcpv6.go.
+
+	// IPv6 multicast prefix.
+	ipv6MulticastPrefix = 0xff // First byte for IPv6 multicast addresses
+
+	// IPv6 version field.
+	ipv6Version = 6 // IPv6 version
 
 	// IPv6NextHeaderHopByHop is the hop-by-hop options header.
 	IPv6NextHeaderHopByHop = 0
@@ -37,11 +65,15 @@ const (
 	IPv6NextHeaderDestOptions = 60
 )
 
-// IPv6 special multicast addresses.
-var (
-	AllNodesMulticast   = net.ParseIP("ff02::1")
-	AllRoutersMulticast = net.ParseIP("ff02::2")
-)
+// GetAllNodesMulticast returns the IPv6 all nodes multicast address.
+func GetAllNodesMulticast() net.IP {
+	return net.ParseIP("ff02::1")
+}
+
+// GetAllRoutersMulticast returns the IPv6 all routers multicast address.
+func GetAllRoutersMulticast() net.IP {
+	return net.ParseIP("ff02::2")
+}
 
 // IPv6Handler handles IPv6 packets.
 type IPv6Handler struct {
@@ -59,57 +91,75 @@ func NewIPv6Handler(stack *Stack, debugLevel int) *IPv6Handler {
 
 // HandlePacket processes an incoming IPv6 packet.
 func (h *IPv6Handler) HandlePacket(pkt *Packet) {
-	// Parse using gopacket
 	packet := gopacket.NewPacket(pkt.Buffer, layers.LayerTypeEthernet, gopacket.Default)
 
-	ipv6Layer := packet.Layer(layers.LayerTypeIPv6)
-	if ipv6Layer == nil {
-		if h.debugLevel >= 2 {
-			_, _ = fmt.Fprintf(os.Stdout, "IPv6 packet missing IPv6 layer sn=%d\n", pkt.SerialNumber)
-		}
-
+	ipv6 := h.parseIPv6Layer(packet, pkt.SerialNumber)
+	if ipv6 == nil {
 		return
 	}
 
-	ipv6, ok := ipv6Layer.(*layers.IPv6)
-	if !ok {
-		return
-	}
-
-	if h.debugLevel >= 3 {
+	if h.debugLevel >= DebugLevelVerbose {
 		_, _ = fmt.Fprintf(os.Stdout, "IPv6: %s -> %s, Next Header: %d, Hop Limit: %d sn=%d\n",
 			ipv6.SrcIP, ipv6.DstIP, ipv6.NextHeader, ipv6.HopLimit, pkt.SerialNumber)
 	}
 
-	// Check if packet is for one of our devices
-	devices := h.stack.GetDevices().GetByIP(ipv6.DstIP)
-	if len(devices) == 0 {
-		// Check for multicast addresses we should respond to
-		if !IsIPv6Multicast(ipv6.DstIP) {
-			if h.debugLevel >= 3 {
-				_, _ = fmt.Fprintf(
-					os.Stdout,
-					"IPv6 packet not for our devices: %s sn=%d\n",
-					ipv6.DstIP,
-					pkt.SerialNumber,
-				)
-			}
-
-			return
-		}
-		// Multicast - continue processing for NDP, MLD, etc.
+	devices := h.getIPv6TargetDevices(ipv6, pkt.SerialNumber)
+	if devices == nil && !IsIPv6Multicast(ipv6.DstIP) {
+		return
 	}
 
-	// Walk extension headers to find the actual next protocol
 	nextHeader, offset := h.walkExtensionHeaders(packet, ipv6)
 
-	if h.debugLevel >= 3 {
+	if h.debugLevel >= DebugLevelVerbose {
 		_, _ = fmt.Fprintf(os.Stdout, "IPv6: Final protocol after extension headers: %d at offset %d sn=%d\n",
 			nextHeader, offset, pkt.SerialNumber)
 	}
 
-	// Handle based on the final next header
-	//nolint:exhaustive // Only ICMPv6, UDP, TCP, and NoNext protocols are implemented
+	h.routeIPv6Protocol(pkt, packet, ipv6, devices, nextHeader)
+}
+
+// parseIPv6Layer extracts the IPv6 layer from a packet.
+func (h *IPv6Handler) parseIPv6Layer(packet gopacket.Packet, serialNum int) *layers.IPv6 {
+	ipv6Layer := packet.Layer(layers.LayerTypeIPv6)
+	if ipv6Layer == nil {
+		if h.debugLevel >= DebugLevelInfo {
+			_, _ = fmt.Fprintf(os.Stdout, "IPv6 packet missing IPv6 layer sn=%d\n", serialNum)
+		}
+
+		return nil
+	}
+
+	ipv6, ok := ipv6Layer.(*layers.IPv6)
+	if !ok {
+		return nil
+	}
+
+	return ipv6
+}
+
+// getIPv6TargetDevices returns devices that should receive this packet, or nil if not for us.
+func (h *IPv6Handler) getIPv6TargetDevices(ipv6 *layers.IPv6, serialNum int) []*config.Device {
+	devices := h.stack.GetDevices().GetByIP(ipv6.DstIP)
+	if len(devices) > 0 {
+		return devices
+	}
+
+	if h.debugLevel >= DebugLevelVerbose {
+		_, _ = fmt.Fprintf(os.Stdout, "IPv6 packet not for our devices: %s sn=%d\n", ipv6.DstIP, serialNum)
+	}
+
+	return nil
+}
+
+// routeIPv6Protocol dispatches the packet to the appropriate protocol handler.
+func (h *IPv6Handler) routeIPv6Protocol(
+	pkt *Packet,
+	packet gopacket.Packet,
+	ipv6 *layers.IPv6,
+	devices []*config.Device,
+	nextHeader layers.IPProtocol,
+) {
+	//exhaustive:ignore
 	switch nextHeader {
 	case layers.IPProtocolICMPv6:
 		if h.stack.icmpv6Handler != nil {
@@ -124,18 +174,13 @@ func (h *IPv6Handler) HandlePacket(pkt *Packet) {
 			h.stack.tcpHandler.HandlePacketV6(pkt, packet, ipv6, devices)
 		}
 	case IPv6NextHeaderNoNext:
-		// No next header, packet ends here
-		if h.debugLevel >= 2 {
+		if h.debugLevel >= DebugLevelInfo {
 			_, _ = fmt.Fprintf(os.Stdout, "IPv6: No next header, packet complete sn=%d\n", pkt.SerialNumber)
 		}
 	default:
-		if h.debugLevel >= 2 {
-			_, _ = fmt.Fprintf(
-				os.Stdout,
-				"IPv6: Unhandled next header protocol: %d sn=%d\n",
-				nextHeader,
-				pkt.SerialNumber,
-			)
+		if h.debugLevel >= DebugLevelInfo {
+			_, _ = fmt.Fprintf(os.Stdout, "IPv6: Unhandled next header protocol: %d sn=%d\n",
+				nextHeader, pkt.SerialNumber)
 		}
 	}
 }
@@ -154,7 +199,7 @@ func (h *IPv6Handler) walkExtensionHeaders(packet gopacket.Packet, ipv6 *layers.
 	}
 
 	// Extension header types that need processing
-	//nolint:exhaustive // Only specific extension header types are processed
+	//exhaustive:ignore
 	extensionHeaders := map[layers.IPProtocol]bool{
 		IPv6NextHeaderHopByHop:    true,
 		IPv6NextHeaderRouting:     true,
@@ -190,10 +235,10 @@ func (h *IPv6Handler) walkExtensionHeaders(packet gopacket.Packet, ipv6 *layers.
 
 		// Calculate extension header size
 		// Length is in 8-byte units, not including the first 8 bytes
-		extHeaderSize := (hdrExtLen + 1) * 8
+		extHeaderSize := (hdrExtLen + 1) * ipv6ExtHdrUnitSize
 		offset += extHeaderSize
 
-		if h.debugLevel >= 3 {
+		if h.debugLevel >= DebugLevelVerbose {
 			_, _ = fmt.Fprintf(os.Stdout, "IPv6: Processed extension header, next: %d, length: %d bytes\n",
 				nextHeader, extHeaderSize)
 		}
@@ -206,12 +251,10 @@ func (h *IPv6Handler) walkExtensionHeaders(packet gopacket.Packet, ipv6 *layers.
 // Per RFC 2464: 33:33 followed by the last 4 bytes of the IPv6 address.
 func IPv6MulticastToMAC(ipv6 net.IP) net.HardwareAddr {
 	// Ensure we have a 16-byte IPv6 address
-	if len(ipv6) == 16 {
-		mac := make(net.HardwareAddr, 6)
-		mac[0] = 0x33 // #nosec G602 -- bounds checked above, len(ipv6) == 16
-		mac[1] = 0x33 // #nosec G602 -- bounds checked above, len(ipv6) == 16
-		// Copy last 4 bytes of IPv6 address
-		copy(mac[2:], ipv6[12:16])
+	if len(ipv6) == ipv6AddrSize {
+		// Create MAC with initial multicast prefix 33:33
+		// then copy last 4 bytes of IPv6 address
+		mac := net.HardwareAddr{0x33, 0x33, ipv6[12], ipv6[13], ipv6[14], ipv6[15]}
 
 		return mac
 	}
@@ -221,8 +264,8 @@ func IPv6MulticastToMAC(ipv6 net.IP) net.HardwareAddr {
 
 // IsIPv6Multicast checks if an IPv6 address is multicast (starts with ff).
 func IsIPv6Multicast(ipv6 net.IP) bool {
-	if len(ipv6) == 16 {
-		return ipv6[0] == 0xff
+	if len(ipv6) == ipv6AddrSize {
+		return ipv6[0] == ipv6MulticastPrefix
 	}
 
 	return false
@@ -237,7 +280,7 @@ func CalculateIPv6Checksum(srcIP, dstIP net.IP, nextHeader uint8, payload []byte
 	// - Upper-Layer Packet Length (4 bytes)
 	// - Zero (3 bytes)
 	// - Next Header (1 byte)
-	pseudoHeader := make([]byte, 40)
+	pseudoHeader := make([]byte, ipv6PseudoHeaderSize)
 
 	// Source IP
 	copy(pseudoHeader[0:16], srcIP.To16())
@@ -246,39 +289,36 @@ func CalculateIPv6Checksum(srcIP, dstIP net.IP, nextHeader uint8, payload []byte
 	copy(pseudoHeader[16:32], dstIP.To16())
 
 	// Upper-layer packet length (32-bit)
-	payloadLen2 := min(len(payload), 0xFFFFFFFF)
+	payloadLen2 := min(len(payload), ipv6MaxUint32)
 
-	binary.BigEndian.PutUint32(
-		pseudoHeader[32:36],
-		uint32(payloadLen2),
-	) // #nosec G115 -- flow label from random source, 20-bit value
+	binary.BigEndian.PutUint32(pseudoHeader[32:36], safeUint32(payloadLen2))
 
 	// Zero padding (3 bytes) at 36:39
 
 	// Next header
-	pseudoHeader[39] = nextHeader // #nosec G602 -- pseudoHeader is 40 bytes, index 39 is valid
+	pseudoHeader[39] = nextHeader
 
 	// Calculate checksum over pseudo-header + payload
 	sum := uint32(0)
 
 	// Sum pseudo-header
-	for i := 0; i < len(pseudoHeader); i += 2 {
-		sum += uint32(pseudoHeader[i])<<8 | uint32(pseudoHeader[i+1])
+	for i := 0; i < len(pseudoHeader); i += ipv6ChecksumWordStep {
+		sum += uint32(pseudoHeader[i])<<ipv6ChecksumByteShift | uint32(pseudoHeader[i+1])
 	}
 
 	// Sum payload
-	for i := 0; i < len(payload)-1; i += 2 {
-		sum += uint32(payload[i])<<8 | uint32(payload[i+1])
+	for i := 0; i < len(payload)-1; i += ipv6ChecksumWordStep {
+		sum += uint32(payload[i])<<ipv6ChecksumByteShift | uint32(payload[i+1])
 	}
 
 	// Handle odd-length payload
-	if len(payload)%2 == 1 {
-		sum += uint32(payload[len(payload)-1]) << 8
+	if len(payload)%ipv6ChecksumWordStep == 1 {
+		sum += uint32(payload[len(payload)-1]) << ipv6ChecksumByteShift
 	}
 
 	// Fold 32-bit sum to 16 bits
-	for sum > 0xffff {
-		sum = (sum >> 16) + (sum & 0xffff)
+	for sum > ipv6ChecksumWordMask {
+		sum = (sum >> ipv6ChecksumWordShift) + (sum & ipv6ChecksumWordMask)
 	}
 
 	// Return one's complement
@@ -297,13 +337,13 @@ func (h *IPv6Handler) SendIPv6Packet(srcIP, dstIP net.IP, srcMAC, dstMAC net.Har
 	}
 
 	// Build IPv6 layer
-	payloadLen := min(len(payload), 65535)
+	payloadLen := min(len(payload), ipv6MaxUint16)
 
 	ipv6 := &layers.IPv6{
-		Version:      6,
+		Version:      ipv6Version,
 		TrafficClass: 0,
 		FlowLabel:    0,
-		Length:       uint16(payloadLen), // #nosec G115 -- payload length calculated from packet structure
+		Length:       safeUint16(payloadLen),
 		NextHeader:   nextHeader,
 		HopLimit:     hopLimit,
 		SrcIP:        srcIP,
@@ -326,7 +366,7 @@ func (h *IPv6Handler) SendIPv6Packet(srcIP, dstIP net.IP, srcMAC, dstMAC net.Har
 		return fmt.Errorf("failed to serialize IPv6 packet: %w", err)
 	}
 
-	if h.debugLevel >= 3 {
+	if h.debugLevel >= DebugLevelVerbose {
 		_, _ = fmt.Fprintf(os.Stdout, "IPv6: Sending packet %s -> %s, protocol: %d, size: %d bytes\n",
 			srcIP, dstIP, nextHeader, len(buf.Bytes()))
 	}

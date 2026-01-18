@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
+
 	"github.com/krisarmstrong/niac-go/pkg/config"
 )
 
@@ -67,6 +68,32 @@ const (
 	NBNSFlagBroadcast  = 0x0010
 )
 
+// NetBIOS encoding constants.
+const (
+	nbnsMinHeader        = 12     // Minimum NBNS header size
+	nbDGMMinHeader       = 10     // Minimum Datagram header size
+	nbnsRecordTypeNB     = 0x0020 // NB record type
+	nbnsClassIN          = 0x0001 // IN class
+	nbnsDefaultTTL       = 300    // Default TTL in seconds
+	nbnsDefaultNodeFlags = 0x0000 // Default B-node, unique name
+	nbnsRDATALen         = 6      // RDATA length (2 bytes flags + 4 bytes IP)
+	nbnsEncodedNameCap   = 34     // Encoded name capacity
+	nbnsEncodedNameLen   = 0x20   // Encoded name length (32 bytes)
+	nbnsTerminator       = 0x00   // Terminating byte
+	nbnsDecodedNameLen   = 16     // Decoded name length
+	nbnsNameMaxLen       = 15     // Maximum NetBIOS name length before padding
+	nbnsNibbleMask       = 0x0F   // Mask for extracting 4-bit nibble
+	nbnsNibbleShift      = 4      // Bit shift for nibble operations
+	nbnsOpcodeShift      = 11     // Bit shift for opcode extraction
+)
+
+// NetBIOS Datagram message types.
+const (
+	nbDGMDirectUnique = 0x10 // Direct unique datagram
+	nbDGMDirectGroup  = 0x11 // Direct group datagram
+	nbDGMBroadcast    = 0x12 // Broadcast datagram
+)
+
 // NetBIOSHandler handles NetBIOS Name Service and Datagram Service.
 type NetBIOSHandler struct {
 	stack      *Stack
@@ -90,8 +117,8 @@ func (h *NetBIOSHandler) HandleNameService(
 	udp *layers.UDP,
 	devices []*config.Device,
 ) {
-	if len(udp.Payload) < 12 {
-		if h.debugLevel >= 2 {
+	if len(udp.Payload) < nbnsMinHeader {
+		if h.debugLevel >= DebugLevelInfo {
 			_, _ = fmt.Fprintf(os.Stdout, "NetBIOS NS: Packet too short sn=%d\n", pkt.SerialNumber)
 		}
 
@@ -107,9 +134,9 @@ func (h *NetBIOSHandler) HandleNameService(
 	anCount := binary.BigEndian.Uint16(payload[6:8])
 
 	isResponse := (flags & NBNSFlagResponse) != 0
-	opcode := (flags >> 11) & 0x0F
+	opcode := (flags >> nbnsOpcodeShift) & nbnsNibbleMask
 
-	if h.debugLevel >= 3 {
+	if h.debugLevel >= DebugLevelVerbose {
 		_, _ = fmt.Fprintf(os.Stdout, "NetBIOS NS: TID=0x%04x Op=%d QD=%d AN=%d Response=%v sn=%d\n",
 			transactionID, opcode, qdCount, anCount, isResponse, pkt.SerialNumber)
 	}
@@ -122,7 +149,7 @@ func (h *NetBIOSHandler) HandleNameService(
 	// Handle queries
 	if opcode == NBNSOpQuery && qdCount > 0 {
 		h.handleNameQuery(pkt, packet, transactionID, flags, payload[12:], devices)
-	} else if h.debugLevel >= 2 {
+	} else if h.debugLevel >= DebugLevelInfo {
 		_, _ = fmt.Fprintf(os.Stdout, "NetBIOS NS: Unhandled opcode %d sn=%d\n", opcode, pkt.SerialNumber)
 	}
 }
@@ -132,117 +159,107 @@ func (h *NetBIOSHandler) handleNameQuery(
 	pkt *Packet,
 	packet gopacket.Packet,
 	transactionID uint16,
-	flags uint16,
+	_ uint16,
 	data []byte,
 	devices []*config.Device,
 ) {
-	// Decode NetBIOS name from query
 	name, nameType, _ := h.decodeNetBIOSName(data)
 	if name == "" {
-		if h.debugLevel >= 2 {
+		if h.debugLevel >= DebugLevelInfo {
 			_, _ = fmt.Fprintf(os.Stdout, "NetBIOS NS: Failed to decode name sn=%d\n", pkt.SerialNumber)
 		}
 
 		return
 	}
 
-	if h.debugLevel >= 2 {
+	if h.debugLevel >= DebugLevelInfo {
 		_, _ = fmt.Fprintf(os.Stdout, "NetBIOS NS: Query for '%s'<%02X> sn=%d\n", name, nameType, pkt.SerialNumber)
 	}
 
-	// Check if any device matches this NetBIOS name
-	ipv4Layer := packet.Layer(layers.LayerTypeIPv4)
-	if ipv4Layer == nil {
+	ipv4, eth := extractNameQueryLayers(packet)
+	if ipv4 == nil || eth == nil {
 		return
 	}
 
-	ipv4, ok := ipv4Layer.(*layers.IPv4)
-	if !ok {
-		return
-	}
-
-	ethLayer := packet.Layer(layers.LayerTypeEthernet)
-	if ethLayer == nil {
-		return
-	}
-
-	eth, ok := ethLayer.(*layers.Ethernet)
-	if !ok {
-		return
-	}
-
-	// Look for matching device
-	var (
-		matchedDevice *config.Device
-		matchedGroup  bool
-	)
-
-	targetName := strings.ToUpper(strings.TrimSpace(name))
-
-	for _, device := range devices {
-		if ok, group := matchNetBIOSName(device, targetName, nameType); ok {
-			matchedDevice = device
-			matchedGroup = group
-
-			break
-		}
-	}
-
+	matchedDevice, matchedGroup := findMatchingNetBIOSDevice(devices, name, nameType)
 	if matchedDevice == nil {
-		// Name not found
-		if h.debugLevel >= 3 {
+		if h.debugLevel >= DebugLevelVerbose {
 			_, _ = fmt.Fprintf(os.Stdout, "NetBIOS NS: Name '%s' not found sn=%d\n", name, pkt.SerialNumber)
 		}
 
 		return
 	}
 
-	// Get IPv4 address for response
-	var deviceIPv4 net.IP
-
-	for _, ip := range matchedDevice.IPAddresses {
-		if ip.To4() != nil {
-			deviceIPv4 = ip
-
-			break
-		}
-	}
-
+	deviceIPv4 := getFirstIPv4(matchedDevice.IPAddresses)
 	if deviceIPv4 == nil {
-		if h.debugLevel >= 2 {
+		if h.debugLevel >= DebugLevelInfo {
 			_, _ = fmt.Fprintf(os.Stdout, "NetBIOS NS: Device '%s' has no IPv4 address sn=%d\n", name, pkt.SerialNumber)
 		}
 
 		return
 	}
 
-	// Send positive name query response
-	h.sendNameQueryResponse(
-		pkt,
-		transactionID,
-		name,
-		nameType,
-		matchedGroup,
-		deviceIPv4,
-		ipv4.SrcIP,
-		matchedDevice.MACAddress,
-		eth.SrcMAC,
-	)
+	h.sendNameQueryResponse(pkt, transactionID, name, nameType, matchedGroup,
+		deviceIPv4, ipv4.SrcIP, matchedDevice.MACAddress, eth.SrcMAC)
 
-	if h.debugLevel >= 2 {
-		_, _ = fmt.Fprintf(
-			os.Stdout,
-			"NetBIOS NS: Sent positive response for '%s' -> %s sn=%d\n",
-			name,
-			deviceIPv4,
-			pkt.SerialNumber,
-		)
+	if h.debugLevel >= DebugLevelInfo {
+		_, _ = fmt.Fprintf(os.Stdout, "NetBIOS NS: Sent positive response for '%s' -> %s sn=%d\n",
+			name, deviceIPv4, pkt.SerialNumber)
 	}
+}
+
+// extractNameQueryLayers extracts IPv4 and Ethernet layers from a packet.
+func extractNameQueryLayers(packet gopacket.Packet) (*layers.IPv4, *layers.Ethernet) {
+	ipv4Layer := packet.Layer(layers.LayerTypeIPv4)
+	if ipv4Layer == nil {
+		return nil, nil
+	}
+
+	ipv4, ok := ipv4Layer.(*layers.IPv4)
+	if !ok {
+		return nil, nil
+	}
+
+	ethLayer := packet.Layer(layers.LayerTypeEthernet)
+	if ethLayer == nil {
+		return nil, nil
+	}
+
+	eth, ok := ethLayer.(*layers.Ethernet)
+	if !ok {
+		return nil, nil
+	}
+
+	return ipv4, eth
+}
+
+// findMatchingNetBIOSDevice finds a device matching the NetBIOS name query.
+func findMatchingNetBIOSDevice(devices []*config.Device, name string, nameType byte) (*config.Device, bool) {
+	targetName := strings.ToUpper(strings.TrimSpace(name))
+
+	for _, device := range devices {
+		if matched, group := matchNetBIOSName(device, targetName, nameType); matched {
+			return device, group
+		}
+	}
+
+	return nil, false
+}
+
+// getFirstIPv4 returns the first IPv4 address from the list.
+func getFirstIPv4(ips []net.IP) net.IP {
+	for _, ip := range ips {
+		if ip.To4() != nil {
+			return ip
+		}
+	}
+
+	return nil
 }
 
 // sendNameQueryResponse sends a NetBIOS name query response.
 func (h *NetBIOSHandler) sendNameQueryResponse(
-	pkt *Packet,
+	_ *Packet,
 	transactionID uint16,
 	name string,
 	nameType byte,
@@ -261,7 +278,6 @@ func (h *NetBIOSHandler) sendNameQueryResponse(
 	_ = binary.Write(buf, binary.BigEndian, flags) // error is non-critical for simulation
 
 	// Question count = 0, Answer count = 1
-	// #nosec G104 -- binary.Write errors not critical for network simulation
 	_ = binary.Write(buf, binary.BigEndian, uint16(0)) // QDCOUNT
 	_ = binary.Write(buf, binary.BigEndian, uint16(1)) // ANCOUNT
 	_ = binary.Write(buf, binary.BigEndian, uint16(0)) // NSCOUNT
@@ -272,13 +288,12 @@ func (h *NetBIOSHandler) sendNameQueryResponse(
 	buf.Write(encodedName)
 
 	// Type = NB (0x0020), Class = IN (0x0001)
-	// #nosec G104 -- binary.Write errors not critical for network simulation
-	_ = binary.Write(buf, binary.BigEndian, uint16(0x0020)) // NB record
-	_ = binary.Write(buf, binary.BigEndian, uint16(0x0001)) // IN class
+	_ = binary.Write(buf, binary.BigEndian, uint16(nbnsRecordTypeNB)) // NB record
+	_ = binary.Write(buf, binary.BigEndian, uint16(nbnsClassIN))      // IN class
 
 	// Get TTL and node flags from matched device config (default: 300 seconds)
-	ttl := uint32(300)
-	nodeFlags := uint16(0x0000) // Default: B-node, unique name
+	ttl := uint32(nbnsDefaultTTL)
+	nodeFlags := uint16(nbnsDefaultNodeFlags) // Default: B-node, unique name
 
 	if matched := h.stack.GetDevices().GetByMAC(srcMAC); matched != nil && matched.NetBIOSConfig != nil {
 		if matched.NetBIOSConfig.TTL > 0 {
@@ -305,7 +320,7 @@ func (h *NetBIOSHandler) sendNameQueryResponse(
 	_ = binary.Write(buf, binary.BigEndian, ttl) // error is non-critical for simulation
 
 	// RDATA length = 6 (2 bytes flags + 4 bytes IP)
-	_ = binary.Write(buf, binary.BigEndian, uint16(6)) // error is non-critical for simulation
+	_ = binary.Write(buf, binary.BigEndian, uint16(nbnsRDATALen)) // error is non-critical for simulation
 
 	// Name flags
 	_ = binary.Write(buf, binary.BigEndian, nodeFlags) // error is non-critical for simulation
@@ -328,12 +343,12 @@ func (h *NetBIOSHandler) sendNameQueryResponse(
 // HandleDatagramService processes NetBIOS Datagram Service packets (UDP port 138).
 func (h *NetBIOSHandler) HandleDatagramService(
 	pkt *Packet,
-	packet gopacket.Packet,
+	_ gopacket.Packet,
 	udp *layers.UDP,
-	devices []*config.Device,
+	_ []*config.Device,
 ) {
-	if len(udp.Payload) < 10 {
-		if h.debugLevel >= 2 {
+	if len(udp.Payload) < nbDGMMinHeader {
+		if h.debugLevel >= DebugLevelInfo {
 			_, _ = fmt.Fprintf(os.Stdout, "NetBIOS DGM: Packet too short sn=%d\n", pkt.SerialNumber)
 		}
 
@@ -345,15 +360,15 @@ func (h *NetBIOSHandler) HandleDatagramService(
 	// Parse NetBIOS Datagram header
 	msgType := payload[0]
 
-	if h.debugLevel >= 3 {
+	if h.debugLevel >= DebugLevelVerbose {
 		_, _ = fmt.Fprintf(os.Stdout, "NetBIOS DGM: Type=0x%02x sn=%d\n", msgType, pkt.SerialNumber)
 	}
 
 	// Types: 0x10=Direct Unique, 0x11=Direct Group, 0x12=Broadcast
 	switch msgType {
-	case 0x10, 0x11, 0x12:
+	case nbDGMDirectUnique, nbDGMDirectGroup, nbDGMBroadcast:
 		// Silently accept datagrams (we're simulating passive devices)
-		if h.debugLevel >= 3 {
+		if h.debugLevel >= DebugLevelVerbose {
 			_, _ = fmt.Fprintf(
 				os.Stdout,
 				"NetBIOS DGM: Received datagram type 0x%02x sn=%d\n",
@@ -362,7 +377,7 @@ func (h *NetBIOSHandler) HandleDatagramService(
 			)
 		}
 	default:
-		if h.debugLevel >= 2 {
+		if h.debugLevel >= DebugLevelInfo {
 			_, _ = fmt.Fprintf(os.Stdout, "NetBIOS DGM: Unknown message type 0x%02x sn=%d\n", msgType, pkt.SerialNumber)
 		}
 	}
@@ -373,11 +388,11 @@ func (h *NetBIOSHandler) HandleDatagramService(
 func (h *NetBIOSHandler) encodeNetBIOSName(name string, nameType byte) []byte {
 	// Pad name to 15 characters
 	name = strings.ToUpper(name)
-	if len(name) > 15 {
-		name = name[:15]
+	if len(name) > nbnsNameMaxLen {
+		name = name[:nbnsNameMaxLen]
 	}
 
-	for len(name) < 15 {
+	for len(name) < nbnsNameMaxLen {
 		name += " "
 	}
 
@@ -386,20 +401,20 @@ func (h *NetBIOSHandler) encodeNetBIOSName(name string, nameType byte) []byte {
 
 	// First-level encoding: each byte becomes two bytes
 	// Each nibble is encoded as 'A' + nibble value
-	encoded := make([]byte, 0, 34)
+	encoded := make([]byte, 0, nbnsEncodedNameCap)
 
 	// Length byte (32 for encoded 16-byte name)
-	encoded = append(encoded, 0x20)
+	encoded = append(encoded, nbnsEncodedNameLen)
 
 	// Encode each byte
 	for i := range 16 {
 		b := name[i]
-		encoded = append(encoded, 'A'+((b>>4)&0x0F))
-		encoded = append(encoded, 'A'+(b&0x0F))
+		encoded = append(encoded, 'A'+((b>>nbnsNibbleShift)&nbnsNibbleMask))
+		encoded = append(encoded, 'A'+(b&nbnsNibbleMask))
 	}
 
 	// Terminating zero
-	encoded = append(encoded, 0x00)
+	encoded = append(encoded, nbnsTerminator)
 
 	return encoded
 }
@@ -407,22 +422,22 @@ func (h *NetBIOSHandler) encodeNetBIOSName(name string, nameType byte) []byte {
 // decodeNetBIOSName decodes a NetBIOS name from first-level encoding
 // Returns: name, nameType, bytesConsumed.
 func (h *NetBIOSHandler) decodeNetBIOSName(data []byte) (string, byte, int) {
-	if len(data) < 34 {
+	if len(data) < nbnsEncodedNameCap {
 		return "", 0, 0
 	}
 
 	length := int(data[0])
-	if length != 0x20 {
+	if length != nbnsEncodedNameLen {
 		return "", 0, 0
 	}
 
 	// Decode 32 bytes into 16 bytes
-	decoded := make([]byte, 16)
+	decoded := make([]byte, nbnsDecodedNameLen)
 
 	for i := range 16 {
 		high := data[1+i*2] - 'A'
 		low := data[2+i*2] - 'A'
-		decoded[i] = (high << 4) | low
+		decoded[i] = (high << nbnsNibbleShift) | low
 	}
 
 	// Extract name (first 15 bytes, trimmed) and type (16th byte)
@@ -445,28 +460,45 @@ func matchNetBIOSName(device *config.Device, targetName string, nameType byte) (
 		return false, false
 	}
 
-	if device.NetBIOSConfig != nil {
-		if !device.NetBIOSConfig.Enabled {
-			return false, false
-		}
-		// Check explicit NetBIOS names first
-		if len(device.NetBIOSConfig.Names) > 0 {
-			for _, n := range device.NetBIOSConfig.Names {
-				if strings.EqualFold(strings.TrimSpace(n.Name), targetName) && n.Suffix == nameType {
-					return true, n.Group
-				}
-			}
-		}
-
-		// Derive names from services if explicit list not provided
-		for _, entry := range deriveNetBIOSNames(device) {
-			if strings.EqualFold(strings.TrimSpace(entry.Name), targetName) && entry.Suffix == nameType {
-				return true, entry.Group
-			}
-		}
+	// Check NetBIOS config if present
+	if match, group, found := matchNetBIOSNameFromConfig(device, targetName, nameType); found {
+		return match, group
 	}
 
 	// Fallback to device and sysName (legacy behavior)
+	return matchNetBIOSNameFallback(device, targetName)
+}
+
+// matchNetBIOSNameFromConfig checks NetBIOS config for name match.
+// Returns (matched, isGroup, found) where found indicates if config was checked.
+func matchNetBIOSNameFromConfig(device *config.Device, targetName string, nameType byte) (bool, bool, bool) {
+	if device.NetBIOSConfig == nil {
+		return false, false, false
+	}
+
+	if !device.NetBIOSConfig.Enabled {
+		return false, false, true // Found config, but disabled
+	}
+
+	// Check explicit NetBIOS names first
+	for _, n := range device.NetBIOSConfig.Names {
+		if strings.EqualFold(strings.TrimSpace(n.Name), targetName) && n.Suffix == nameType {
+			return true, n.Group, true
+		}
+	}
+
+	// Derive names from services if explicit list not provided
+	for _, entry := range deriveNetBIOSNames(device) {
+		if strings.EqualFold(strings.TrimSpace(entry.Name), targetName) && entry.Suffix == nameType {
+			return true, entry.Group, true
+		}
+	}
+
+	return false, false, true
+}
+
+// matchNetBIOSNameFallback checks device name and sysName (legacy behavior).
+func matchNetBIOSNameFallback(device *config.Device, targetName string) (bool, bool) {
 	deviceName := strings.ToUpper(strings.TrimSpace(device.Name))
 	if deviceName == targetName {
 		return true, false
@@ -534,7 +566,7 @@ func deriveNetBIOSNames(device *config.Device) []netbiosNameEntry {
 	}
 
 	if cfg.MsBrowse {
-		result = append(result, netbiosNameEntry{Name: "__MSBROWSE__", Suffix: 0x01, Group: true})
+		result = append(result, netbiosNameEntry{Name: "__MSBROWSE__", Suffix: NBNameMsBrowse, Group: true})
 	}
 
 	return result

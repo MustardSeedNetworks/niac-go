@@ -7,6 +7,8 @@ import (
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
+
+	"github.com/krisarmstrong/niac-go/pkg/config"
 )
 
 // IP protocol numbers.
@@ -14,6 +16,13 @@ const (
 	IPProtocolICMP = 1
 	IPProtocolTCP  = 6
 	IPProtocolUDP  = 17
+)
+
+// IPv4 header field constants.
+const (
+	ipIPv4Version = 4  // IPv4 version field
+	ipIPv4IHL     = 5  // IPv4 header length (5 = 20 bytes)
+	ipIPv4TTL     = 64 // IPv4 default TTL
 )
 
 // IPHandler handles IP packets.
@@ -32,68 +41,87 @@ func NewIPHandler(stack *Stack) *IPHandler {
 func (h *IPHandler) HandlePacket(pkt *Packet) {
 	debugLevel := h.stack.GetDebugLevel()
 
-	// Parse using gopacket
-	packet := gopacket.NewPacket(pkt.Buffer, layers.LayerTypeEthernet, gopacket.Default)
-
-	// Get IP layer
-	ipLayer := packet.Layer(layers.LayerTypeIPv4)
-	if ipLayer == nil {
-		if debugLevel >= 2 {
-			_, _ = fmt.Fprintf(os.Stdout, "IP packet missing IPv4 layer sn=%d\n", pkt.SerialNumber)
-		}
-
+	ip := h.parseIPv4Layer(pkt, debugLevel)
+	if ip == nil {
 		return
 	}
 
-	ip, ok := ipLayer.(*layers.IPv4)
-	if !ok {
-		return
-	}
-
-	if debugLevel >= 3 {
+	if debugLevel >= DebugLevelVerbose {
 		_, _ = fmt.Fprintf(os.Stdout, "IP packet: %s -> %s protocol=%d sn=%d\n",
 			ip.SrcIP, ip.DstIP, ip.Protocol, pkt.SerialNumber)
 	}
 
-	// Check if packet is for one of our devices
-	// Also accept broadcast packets (255.255.255.255) for DHCP and other broadcast protocols
+	devices := h.getTargetDevices(ip, pkt.SerialNumber, debugLevel)
+	if devices == nil {
+		return
+	}
+
+	if h.shouldProcessTTL(ip, devices) && h.handleTTLTimeout(pkt, ip) {
+		return
+	}
+
+	h.routeToProtocolHandler(pkt, ip, devices, debugLevel)
+}
+
+// parseIPv4Layer extracts the IPv4 layer from a packet.
+func (h *IPHandler) parseIPv4Layer(pkt *Packet, debugLevel int) *layers.IPv4 {
+	packet := gopacket.NewPacket(pkt.Buffer, layers.LayerTypeEthernet, gopacket.Default)
+
+	ipLayer := packet.Layer(layers.LayerTypeIPv4)
+	if ipLayer == nil {
+		if debugLevel >= DebugLevelInfo {
+			_, _ = fmt.Fprintf(os.Stdout, "IP packet missing IPv4 layer sn=%d\n", pkt.SerialNumber)
+		}
+
+		return nil
+	}
+
+	ip, ok := ipLayer.(*layers.IPv4)
+	if !ok {
+		return nil
+	}
+
+	return ip
+}
+
+// getTargetDevices returns devices that should receive this packet.
+func (h *IPHandler) getTargetDevices(ip *layers.IPv4, serialNum int, debugLevel int) []*config.Device {
 	isBroadcast := ip.DstIP.Equal([]byte{255, 255, 255, 255})
 	devices := h.stack.GetDevices().GetByIP(ip.DstIP)
 
 	if len(devices) == 0 && !isBroadcast {
-		// Not for us and not broadcast
-		if debugLevel >= 3 {
-			_, _ = fmt.Fprintf(os.Stdout, "IP packet not for our devices: %s sn=%d\n", ip.DstIP, pkt.SerialNumber)
+		if debugLevel >= DebugLevelVerbose {
+			_, _ = fmt.Fprintf(os.Stdout, "IP packet not for our devices: %s sn=%d\n", ip.DstIP, serialNum)
 		}
 
-		return
+		return nil
 	}
 
-	// For broadcast packets, deliver to all devices (for DHCP, etc.)
 	if isBroadcast && len(devices) == 0 {
 		devices = h.stack.GetDevices().GetAll()
 	}
 
-	// If this is UDP and a device has MapToIP configured, skip TTL handling
-	skipTTL := false
+	return devices
+}
 
-	if ip.Protocol == IPProtocolUDP {
-		for _, device := range devices {
-			if device.MapToIP != nil {
-				skipTTL = true
+// shouldProcessTTL determines if TTL handling should be applied.
+func (h *IPHandler) shouldProcessTTL(ip *layers.IPv4, devices []*config.Device) bool {
+	if ip.Protocol != IPProtocolUDP {
+		return true
+	}
 
-				break
-			}
+	for _, device := range devices {
+		if device.MapToIP != nil {
+			return false
 		}
 	}
 
-	// Handle TTL timeout (traceroute simulation)
-	if !skipTTL && h.handleTTLTimeout(pkt, ip) {
-		return
-	}
+	return true
+}
 
-	// Route to layer 4 protocol handler
-	//nolint:exhaustive // Only ICMP, UDP, and TCP protocols are implemented
+// routeToProtocolHandler dispatches the packet to the appropriate L4 handler.
+func (h *IPHandler) routeToProtocolHandler(pkt *Packet, ip *layers.IPv4, devices []*config.Device, debugLevel int) {
+	//exhaustive:ignore
 	switch ip.Protocol {
 	case IPProtocolICMP:
 		h.stack.icmpHandler.HandlePacket(pkt, ip, devices)
@@ -102,10 +130,32 @@ func (h *IPHandler) HandlePacket(pkt *Packet) {
 	case IPProtocolTCP:
 		h.stack.tcpHandler.HandlePacket(pkt, ip, devices)
 	default:
-		if debugLevel >= 2 {
+		if debugLevel >= DebugLevelInfo {
 			_, _ = fmt.Fprintf(os.Stdout, "Unhandled IP protocol %d sn=%d\n", ip.Protocol, pkt.SerialNumber)
 		}
 	}
+}
+
+// isDestInTTLSubnet checks if the destination IP is in the device's TTL subnet.
+func isDestInTTLSubnet(device *config.Device, dstIP net.IP) bool {
+	if device.TTLConfig == nil || device.TTLConfig.IP == nil || device.TTLConfig.Mask == nil {
+		return false
+	}
+
+	dst := dstIP.To4()
+	ttlIP := device.TTLConfig.IP.To4()
+
+	if dst == nil || ttlIP == nil {
+		return false
+	}
+
+	for i := range 4 {
+		if (dst[i] & device.TTLConfig.Mask[i]) != ttlIP[i] {
+			return false
+		}
+	}
+
+	return true
 }
 
 func (h *IPHandler) handleTTLTimeout(pkt *Packet, ipLayer *layers.IPv4) bool {
@@ -137,22 +187,8 @@ func (h *IPHandler) handleTTLTimeout(pkt *Packet, ipLayer *layers.IPv4) bool {
 	}
 
 	// Skip if destination is in TTL subnet
-	if device.TTLConfig != nil && device.TTLConfig.IP != nil && device.TTLConfig.Mask != nil {
-		if dst := ipLayer.DstIP.To4(); dst != nil && device.TTLConfig.IP.To4() != nil {
-			sameSubnet := true
-
-			for i := range 4 {
-				if (dst[i] & device.TTLConfig.Mask[i]) != device.TTLConfig.IP.To4()[i] {
-					sameSubnet = false
-
-					break
-				}
-			}
-
-			if sameSubnet {
-				return false
-			}
-		}
+	if isDestInTTLSubnet(device, ipLayer.DstIP) {
+		return false
 	}
 
 	dstMAC := pkt.GetSourceMAC()
@@ -193,9 +229,9 @@ func (h *IPHandler) SendIPPacket(
 
 	// Build IP header
 	ipLayer := &layers.IPv4{
-		Version:  4,
-		IHL:      5,
-		TTL:      64,
+		Version:  ipIPv4Version,
+		IHL:      ipIPv4IHL,
+		TTL:      ipIPv4TTL,
 		Protocol: protocol,
 		SrcIP:    srcIP,
 		DstIP:    dstIP,
@@ -232,7 +268,7 @@ func (h *IPHandler) SendIPPacket(
 
 	h.stack.Send(pkt)
 
-	if h.stack.GetDebugLevel() >= 3 {
+	if h.stack.GetDebugLevel() >= DebugLevelVerbose {
 		_, _ = fmt.Fprintf(os.Stdout, "Sent IP packet: %s -> %s protocol=%d length=%d sn=%d\n",
 			srcIP, dstIP, protocol, len(payload), serialNum)
 	}

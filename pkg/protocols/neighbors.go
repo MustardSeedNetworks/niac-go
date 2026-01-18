@@ -15,6 +15,11 @@ const (
 	ProtocolFDP  = "FDP"  // Foundry Discovery Protocol
 )
 
+// Neighbor table constants.
+const (
+	neighborDefaultTTLSeconds = 180 // Default TTL for neighbor entries in seconds
+)
+
 // NeighborRecord represents a discovered network neighbor from LLDP/CDP/EDP/FDP protocols.
 type NeighborRecord struct {
 	Protocol          string
@@ -54,7 +59,7 @@ func (t *neighborTable) upsert(entry NeighborRecord) {
 	}
 
 	if entry.TTL <= 0 {
-		entry.TTL = 180 * time.Second
+		entry.TTL = neighborDefaultTTLSeconds * time.Second
 	}
 
 	entry.LastSeen = time.Now().UTC()

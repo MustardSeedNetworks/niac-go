@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
+
 	"github.com/krisarmstrong/niac-go/pkg/config"
 )
 
@@ -28,6 +29,97 @@ const (
 	TCPPortSMB      = 445
 )
 
+// Health check protocol encoding constants.
+const (
+	// maxUint32Val is the maximum uint32 value for bounds checking.
+	maxUint32Val = 0xFFFFFFFF
+
+	// maxUint16Val is the maximum uint16 value for TCP window and other fields.
+	healthCheckMaxUint16 = 65535
+
+	// Byte shift constants.
+	hcByteShift8  = 8
+	hcByteShift16 = 16
+
+	// IP protocol constants for healthcheck responses.
+	hcIPv4Version   = 4     // IPv4 version field
+	hcIPv4IHL       = 5     // IPv4 header length (5 = 20 bytes)
+	hcIPv4TTL       = 64    // IPv4 default TTL
+	hcTCPWindowSize = 65535 // Default TCP window size
+	hcTCPInitialSeq = 1000  // Initial TCP sequence number for SYN-ACK
+
+	// TDS header size.
+	tdsHeaderSize = 8 // TDS packet header size
+
+	// MySQL protocol constants.
+	mysqlPacketHeader = 4  // Packet header size
+	mysqlProtocolVer  = 10 // Protocol version 10
+
+	// MySQL capability flags.
+	mysqlCapFlagsLower = 0xF7FF // Lower capability flags
+	mysqlStatusFlags   = 0x0002 // Status flags (autocommit)
+	mysqlCapFlagsUpper = 0x81FF // Upper capability flags
+
+	// MSSQL/TDS protocol constants.
+	mssqlTokenDataCap   = 32   // Token data capacity
+	mssqlLoginAckToken  = 0xAD // LOGINACK token type
+	mssqlLengthExtra    = 10   // Extra bytes for length calculation
+	mssqlLengthHigh     = 0x00 // Length high byte
+	mssqlInterface      = 0x01 // Interface (SQL Server)
+	mssqlTDSVersion1    = 0x74 // TDS version byte 1
+	mssqlProgramVersion = 0x00 // Program version (zero)
+
+	// Modbus protocol constants.
+	modbusResponseLen = 9 // Basic response length
+	modbusDataLen     = 3 // Data length field value
+
+	// DICOM protocol constants.
+	dicomResponseLen = 74 // A-ASSOCIATE-AC response length
+	dicomPDUDataLen  = 68 // PDU data length
+
+	// OPC-UA protocol constants.
+	opcuaAckLen = 28 // OPC-UA ACK length
+
+	// PostgreSQL protocol constants.
+	postgresResponseLen = 39 // AuthenticationOk + ReadyForQuery length
+
+	// SMB protocol constants.
+	smbResponseLen  = 68 // SMB2 response length
+	smbHeaderLen    = 64 // SMB2 header/structure size
+	smb1ResponseLen = 39 // SMB1 response length
+
+	// HL7 MLLP constants.
+	hl7MLLPEnvelopeExtra = 3    // Extra bytes for MLLP envelope (start + end + CR)
+	hl7StartBlock        = 0x0B // MLLP start block character
+	hl7EndBlock          = 0x1C // MLLP end block character
+	hl7CarriageReturn    = 0x0D // Carriage return character
+
+	// Protocol minimum header sizes.
+	modbusMinHeader      = 8    // Modbus TCP header + function code
+	dicomMinHeader       = 6    // DICOM PDU header minimum
+	mllpMinEnvelope      = 3    // MLLP envelope minimum (start + end + CR)
+	opcuaMinHeader       = 8    // OPC UA header minimum
+	netbiosSessionHeader = 4    // NetBIOS session header minimum
+	ldapMinRequest       = 5    // LDAP minimum request size
+	ldapSequenceTag      = 0x30 // LDAP SEQUENCE tag
+	ldapIntegerTag       = 0x02 // LDAP INTEGER tag for message ID
+
+	// Protocol response/parsing sizes.
+	mysqlMinHeader       = 8    // MySQL handshake minimum header
+	postgresMinHeader    = 8    // PostgreSQL minimum header
+	smbMinHeader         = 8    // SMB minimum header
+	smbSignature         = 16   // SMB signature size
+	mssqlMinHeader       = 8    // TDS minimum header
+	rtspMinHeader        = 9    // RTSP minimum request size ("OPTIONS ")
+	modbusMinResponse    = 4    // Modbus minimum response header
+	dicomAssocItemLen    = 36   // DICOM Association Context Item length
+	macAddrSizeHC        = 6    // MAC address size for healthcheck
+	dicomAssocRQ         = 0x01 // DICOM A-ASSOCIATE-RQ PDU type
+	dicomAETitleLen      = 16   // DICOM AE title max length
+	hl7MSHControlIDIndex = 9    // HL7 MSH Control ID field index (MSH-10)
+	smbMinWithNetbiosHdr = 36   // SMB minimum size with NetBIOS header
+)
+
 // HealthCheckHandler handles various health check protocol requests.
 type HealthCheckHandler struct {
 	stack *Stack
@@ -42,7 +134,7 @@ func NewHealthCheckHandler(stack *Stack) *HealthCheckHandler {
 
 // HandleTCPConnect handles TCP SYN for health check ports (returns SYN-ACK to indicate service is up).
 func (h *HealthCheckHandler) HandleTCPConnect(
-	pkt *Packet,
+	_ *Packet,
 	ipLayer *layers.IPv4,
 	tcpLayer *layers.TCP,
 	devices []*config.Device,
@@ -55,7 +147,7 @@ func (h *HealthCheckHandler) HandleTCPConnect(
 		return
 	}
 
-	if debugLevel >= 2 {
+	if debugLevel >= DebugLevelInfo {
 		_, _ = fmt.Fprintf(os.Stdout, "Health check TCP SYN on port %d from %s (devices: %v)\n",
 			port, ipLayer.SrcIP, getDeviceNames(devices))
 	}
@@ -66,7 +158,7 @@ func (h *HealthCheckHandler) HandleTCPConnect(
 
 // HandleLDAPRequest handles LDAP bind/search requests.
 func (h *HealthCheckHandler) HandleLDAPRequest(
-	pkt *Packet,
+	_ *Packet,
 	ipLayer *layers.IPv4,
 	tcpLayer *layers.TCP,
 	devices []*config.Device,
@@ -77,7 +169,7 @@ func (h *HealthCheckHandler) HandleLDAPRequest(
 		return
 	}
 
-	if debugLevel >= 2 {
+	if debugLevel >= DebugLevelInfo {
 		_, _ = fmt.Fprintf(os.Stdout, "LDAP request from %s (devices: %v)\n",
 			ipLayer.SrcIP, getDeviceNames(devices))
 	}
@@ -91,7 +183,7 @@ func (h *HealthCheckHandler) HandleLDAPRequest(
 
 // HandleRTSPRequest handles RTSP OPTIONS/DESCRIBE requests.
 func (h *HealthCheckHandler) HandleRTSPRequest(
-	pkt *Packet,
+	_ *Packet,
 	ipLayer *layers.IPv4,
 	tcpLayer *layers.TCP,
 	devices []*config.Device,
@@ -102,7 +194,7 @@ func (h *HealthCheckHandler) HandleRTSPRequest(
 		return
 	}
 
-	if debugLevel >= 2 {
+	if debugLevel >= DebugLevelInfo {
 		_, _ = fmt.Fprintf(os.Stdout, "RTSP request from %s (devices: %v)\n",
 			ipLayer.SrcIP, getDeviceNames(devices))
 	}
@@ -115,7 +207,7 @@ func (h *HealthCheckHandler) HandleRTSPRequest(
 
 // HandleMySQLRequest handles MySQL connection handshake.
 func (h *HealthCheckHandler) HandleMySQLRequest(
-	pkt *Packet,
+	_ *Packet,
 	ipLayer *layers.IPv4,
 	tcpLayer *layers.TCP,
 	devices []*config.Device,
@@ -124,7 +216,7 @@ func (h *HealthCheckHandler) HandleMySQLRequest(
 
 	// For initial connection, send MySQL greeting packet
 	if tcpLayer.SYN && !tcpLayer.ACK {
-		if debugLevel >= 2 {
+		if debugLevel >= DebugLevelInfo {
 			_, _ = fmt.Fprintf(os.Stdout, "MySQL connection from %s (devices: %v)\n",
 				ipLayer.SrcIP, getDeviceNames(devices))
 		}
@@ -141,7 +233,7 @@ func (h *HealthCheckHandler) HandleMySQLRequest(
 
 // HandlePostgresRequest handles PostgreSQL connection handshake.
 func (h *HealthCheckHandler) HandlePostgresRequest(
-	pkt *Packet,
+	_ *Packet,
 	ipLayer *layers.IPv4,
 	tcpLayer *layers.TCP,
 	devices []*config.Device,
@@ -152,7 +244,7 @@ func (h *HealthCheckHandler) HandlePostgresRequest(
 		return
 	}
 
-	if debugLevel >= 2 {
+	if debugLevel >= DebugLevelInfo {
 		_, _ = fmt.Fprintf(os.Stdout, "PostgreSQL request from %s (devices: %v)\n",
 			ipLayer.SrcIP, getDeviceNames(devices))
 	}
@@ -166,7 +258,7 @@ func (h *HealthCheckHandler) HandlePostgresRequest(
 
 // HandleMSSQLRequest handles MS SQL Server connection.
 func (h *HealthCheckHandler) HandleMSSQLRequest(
-	pkt *Packet,
+	_ *Packet,
 	ipLayer *layers.IPv4,
 	tcpLayer *layers.TCP,
 	devices []*config.Device,
@@ -177,7 +269,7 @@ func (h *HealthCheckHandler) HandleMSSQLRequest(
 		return
 	}
 
-	if debugLevel >= 2 {
+	if debugLevel >= DebugLevelInfo {
 		_, _ = fmt.Fprintf(os.Stdout, "MSSQL request from %s (devices: %v)\n",
 			ipLayer.SrcIP, getDeviceNames(devices))
 	}
@@ -190,18 +282,18 @@ func (h *HealthCheckHandler) HandleMSSQLRequest(
 
 // HandleModbusRequest handles Modbus TCP requests.
 func (h *HealthCheckHandler) HandleModbusRequest(
-	pkt *Packet,
+	_ *Packet,
 	ipLayer *layers.IPv4,
 	tcpLayer *layers.TCP,
 	devices []*config.Device,
 ) {
 	debugLevel := h.stack.GetDebugLevel()
 
-	if len(tcpLayer.Payload) < 8 { // Modbus TCP header is 7 bytes + function code
+	if len(tcpLayer.Payload) < modbusMinHeader { // Modbus TCP header is 7 bytes + function code
 		return
 	}
 
-	if debugLevel >= 2 {
+	if debugLevel >= DebugLevelInfo {
 		_, _ = fmt.Fprintf(os.Stdout, "Modbus TCP request from %s (devices: %v)\n",
 			ipLayer.SrcIP, getDeviceNames(devices))
 	}
@@ -214,18 +306,18 @@ func (h *HealthCheckHandler) HandleModbusRequest(
 
 // HandleDICOMRequest handles DICOM association requests.
 func (h *HealthCheckHandler) HandleDICOMRequest(
-	pkt *Packet,
+	_ *Packet,
 	ipLayer *layers.IPv4,
 	tcpLayer *layers.TCP,
 	devices []*config.Device,
 ) {
 	debugLevel := h.stack.GetDebugLevel()
 
-	if len(tcpLayer.Payload) < 6 { // Minimum DICOM PDU header
+	if len(tcpLayer.Payload) < dicomMinHeader { // Minimum DICOM PDU header
 		return
 	}
 
-	if debugLevel >= 2 {
+	if debugLevel >= DebugLevelInfo {
 		_, _ = fmt.Fprintf(os.Stdout, "DICOM request from %s (devices: %v)\n",
 			ipLayer.SrcIP, getDeviceNames(devices))
 	}
@@ -238,18 +330,18 @@ func (h *HealthCheckHandler) HandleDICOMRequest(
 
 // HandleHL7Request handles HL7 MLLP messages.
 func (h *HealthCheckHandler) HandleHL7Request(
-	pkt *Packet,
+	_ *Packet,
 	ipLayer *layers.IPv4,
 	tcpLayer *layers.TCP,
 	devices []*config.Device,
 ) {
 	debugLevel := h.stack.GetDebugLevel()
 
-	if len(tcpLayer.Payload) < 3 { // Minimum MLLP envelope
+	if len(tcpLayer.Payload) < mllpMinEnvelope { // Minimum MLLP envelope
 		return
 	}
 
-	if debugLevel >= 2 {
+	if debugLevel >= DebugLevelInfo {
 		_, _ = fmt.Fprintf(os.Stdout, "HL7 MLLP request from %s (devices: %v)\n",
 			ipLayer.SrcIP, getDeviceNames(devices))
 	}
@@ -262,18 +354,18 @@ func (h *HealthCheckHandler) HandleHL7Request(
 
 // HandleOPCUARequest handles OPC UA connection requests.
 func (h *HealthCheckHandler) HandleOPCUARequest(
-	pkt *Packet,
+	_ *Packet,
 	ipLayer *layers.IPv4,
 	tcpLayer *layers.TCP,
 	devices []*config.Device,
 ) {
 	debugLevel := h.stack.GetDebugLevel()
 
-	if len(tcpLayer.Payload) < 8 { // Minimum OPC UA header
+	if len(tcpLayer.Payload) < opcuaMinHeader { // Minimum OPC UA header
 		return
 	}
 
-	if debugLevel >= 2 {
+	if debugLevel >= DebugLevelInfo {
 		_, _ = fmt.Fprintf(os.Stdout, "OPC UA request from %s (devices: %v)\n",
 			ipLayer.SrcIP, getDeviceNames(devices))
 	}
@@ -286,18 +378,18 @@ func (h *HealthCheckHandler) HandleOPCUARequest(
 
 // HandleSMBRequest handles SMB/CIFS connection requests.
 func (h *HealthCheckHandler) HandleSMBRequest(
-	pkt *Packet,
+	_ *Packet,
 	ipLayer *layers.IPv4,
 	tcpLayer *layers.TCP,
 	devices []*config.Device,
 ) {
 	debugLevel := h.stack.GetDebugLevel()
 
-	if len(tcpLayer.Payload) < 4 { // Minimum NetBIOS session header
+	if len(tcpLayer.Payload) < netbiosSessionHeader { // Minimum NetBIOS session header
 		return
 	}
 
-	if debugLevel >= 2 {
+	if debugLevel >= DebugLevelInfo {
 		_, _ = fmt.Fprintf(os.Stdout, "SMB request from %s (devices: %v)\n",
 			ipLayer.SrcIP, getDeviceNames(devices))
 	}
@@ -329,7 +421,7 @@ func (h *HealthCheckHandler) sendSYNACK(ipLayer *layers.IPv4, tcpLayer *layers.T
 	if len(srcDevices) > 0 && len(srcDevices[0].MACAddress) > 0 {
 		srcMAC = srcDevices[0].MACAddress
 	} else {
-		if debugLevel >= 2 {
+		if debugLevel >= DebugLevelInfo {
 			_, _ = fmt.Fprintf(os.Stdout, "Cannot send SYN-ACK: no MAC for %s\n", ipLayer.SrcIP)
 		}
 
@@ -345,9 +437,9 @@ func (h *HealthCheckHandler) sendSYNACK(ipLayer *layers.IPv4, tcpLayer *layers.T
 
 	// Build IP header
 	ipReply := &layers.IPv4{
-		Version:  4,
-		IHL:      5,
-		TTL:      64,
+		Version:  hcIPv4Version,
+		IHL:      hcIPv4IHL,
+		TTL:      hcIPv4TTL,
 		Protocol: layers.IPProtocolTCP,
 		SrcIP:    ipLayer.DstIP,
 		DstIP:    ipLayer.SrcIP,
@@ -357,11 +449,11 @@ func (h *HealthCheckHandler) sendSYNACK(ipLayer *layers.IPv4, tcpLayer *layers.T
 	tcpReply := &layers.TCP{
 		SrcPort: tcpLayer.DstPort,
 		DstPort: tcpLayer.SrcPort,
-		Seq:     1000, // Initial sequence number
+		Seq:     hcTCPInitialSeq, // Initial sequence number
 		Ack:     tcpLayer.Seq + 1,
 		SYN:     true,
 		ACK:     true,
-		Window:  65535,
+		Window:  hcTCPWindowSize,
 	}
 	_ = tcpReply.SetNetworkLayerForChecksum(ipReply) // error is non-critical for simulation
 
@@ -374,7 +466,7 @@ func (h *HealthCheckHandler) sendSYNACK(ipLayer *layers.IPv4, tcpLayer *layers.T
 
 	err := gopacket.SerializeLayers(buffer, opts, eth, ipReply, tcpReply)
 	if err != nil {
-		if debugLevel >= 2 {
+		if debugLevel >= DebugLevelInfo {
 			_, _ = fmt.Fprintf(os.Stdout, "Error serializing SYN-ACK: %v\n", err)
 		}
 
@@ -395,7 +487,7 @@ func (h *HealthCheckHandler) sendSYNACK(ipLayer *layers.IPv4, tcpLayer *layers.T
 
 	h.stack.Send(pkt)
 
-	if debugLevel >= 3 {
+	if debugLevel >= DebugLevelVerbose {
 		_, _ = fmt.Fprintf(os.Stdout, "Sent TCP SYN-ACK from %s:%d to %s:%d device=%s\n",
 			ipReply.SrcIP, tcpReply.SrcPort, ipReply.DstIP, tcpReply.DstPort, device.Name)
 	}
@@ -436,25 +528,25 @@ func (h *HealthCheckHandler) sendTCPResponse(
 	}
 
 	ipReply := &layers.IPv4{
-		Version:  4,
-		IHL:      5,
-		TTL:      64,
+		Version:  hcIPv4Version,
+		IHL:      hcIPv4IHL,
+		TTL:      hcIPv4TTL,
 		Protocol: layers.IPProtocolTCP,
 		SrcIP:    ipLayer.DstIP,
 		DstIP:    ipLayer.SrcIP,
 	}
 
 	// Safe conversion: min() bounds payloadLen to 0xFFFFFFFF which fits in uint32
-	payloadLen := min(len(tcpLayer.Payload), 0xFFFFFFFF)
+	payloadLen := min(len(tcpLayer.Payload), maxUint32Val)
 
 	tcpReply := &layers.TCP{
 		SrcPort: tcpLayer.DstPort,
 		DstPort: tcpLayer.SrcPort,
 		Seq:     tcpLayer.Ack,
-		Ack:     tcpLayer.Seq + uint32(payloadLen), //nolint:gosec // G115: bounded by min()
-		PSH:    true,
-		ACK:    true,
-		Window: 65535,
+		Ack:     tcpLayer.Seq + safeUint32(payloadLen),
+		PSH:     true,
+		ACK:     true,
+		Window:  hcTCPWindowSize,
 	}
 	_ = tcpReply.SetNetworkLayerForChecksum(ipReply) // error is non-critical for simulation
 
@@ -466,7 +558,7 @@ func (h *HealthCheckHandler) sendTCPResponse(
 
 	err := gopacket.SerializeLayers(buffer, opts, eth, ipReply, tcpReply, gopacket.Payload(payload))
 	if err != nil {
-		if debugLevel >= 2 {
+		if debugLevel >= DebugLevelInfo {
 			_, _ = fmt.Fprintf(os.Stdout, "Error serializing TCP response: %v\n", err)
 		}
 
@@ -489,18 +581,18 @@ func (h *HealthCheckHandler) sendTCPResponse(
 }
 
 // generateLDAPResponse creates an LDAP BindResponse or SearchResultDone.
-func (h *HealthCheckHandler) generateLDAPResponse(request []byte, devices []*config.Device) []byte {
+func (h *HealthCheckHandler) generateLDAPResponse(request []byte, _ []*config.Device) []byte {
 	// LDAP uses BER/DER encoding. We'll send a simple BindResponse success.
 	// Message format: SEQUENCE { messageID INTEGER, BindResponse APPLICATION 1 { resultCode, matchedDN, diagnosticMessage } }
-	if len(request) < 5 {
+	if len(request) < ldapMinRequest {
 		return nil
 	}
 
 	// Extract message ID from request (simplified parsing)
 	var messageID byte = 1
 
-	if len(request) > 4 && request[0] == 0x30 { // SEQUENCE tag
-		if request[2] == 0x02 { // INTEGER tag for messageID
+	if len(request) > 4 && request[0] == ldapSequenceTag { // SEQUENCE tag
+		if request[2] == ldapIntegerTag { // INTEGER tag for messageID
 			messageID = request[4]
 		}
 	}
@@ -583,12 +675,12 @@ func (h *HealthCheckHandler) generateMySQLGreeting(devices []*config.Device) []b
 
 	payloadLen := 1 + len(versionBytes) + 1 + 4 + 8 + 1 + 2 + 1 + 2 + 2 + 1 + 10 + 13 + len(authPluginName) + 1
 
-	packet := make([]byte, 4+payloadLen)
+	packet := make([]byte, mysqlPacketHeader+payloadLen)
 
 	// Packet header
 	packet[0] = byte(payloadLen)
-	packet[1] = byte(payloadLen >> 8)
-	packet[2] = byte(payloadLen >> 16)
+	packet[1] = byte(payloadLen >> hcByteShift8)
+	packet[2] = byte(payloadLen >> hcByteShift16)
 	packet[3] = 0 // sequence id
 
 	offset := 4
@@ -612,18 +704,18 @@ func (h *HealthCheckHandler) generateMySQLGreeting(devices []*config.Device) []b
 	offset++
 
 	// Capability flags (lower)
-	binary.LittleEndian.PutUint16(packet[offset:], 0xF7FF)
+	binary.LittleEndian.PutUint16(packet[offset:], mysqlCapFlagsLower)
 	offset += 2
 
 	packet[offset] = 0x21 // character set (utf8)
 	offset++
 
 	// Status flags
-	binary.LittleEndian.PutUint16(packet[offset:], 0x0002)
+	binary.LittleEndian.PutUint16(packet[offset:], mysqlStatusFlags)
 	offset += 2
 
 	// Capability flags (upper)
-	binary.LittleEndian.PutUint16(packet[offset:], 0x81FF)
+	binary.LittleEndian.PutUint16(packet[offset:], mysqlCapFlagsUpper)
 	offset += 2
 
 	packet[offset] = 21 // auth plugin data length
@@ -647,13 +739,13 @@ func (h *HealthCheckHandler) generateMySQLGreeting(devices []*config.Device) []b
 }
 
 // generatePostgresResponse creates a PostgreSQL response.
-func (h *HealthCheckHandler) generatePostgresResponse(request []byte, devices []*config.Device) []byte {
-	if len(request) < 8 {
+func (h *HealthCheckHandler) generatePostgresResponse(request []byte, _ []*config.Device) []byte {
+	if len(request) < postgresMinHeader {
 		return nil
 	}
 
 	// Check for SSL request (8 bytes: length + 80877103)
-	if len(request) >= 8 {
+	if len(request) >= postgresMinHeader {
 		msgLen := binary.BigEndian.Uint32(request[:4])
 
 		sslCode := binary.BigEndian.Uint32(request[4:8])
@@ -677,7 +769,7 @@ func (h *HealthCheckHandler) generatePostgresResponse(request []byte, devices []
 
 // generateMSSQLResponse creates an MS SQL TDS response.
 func (h *HealthCheckHandler) generateMSSQLResponse(request []byte, devices []*config.Device) []byte {
-	if len(request) < 8 {
+	if len(request) < postgresMinHeader {
 		return nil
 	}
 
@@ -695,24 +787,48 @@ func (h *HealthCheckHandler) generateMSSQLResponse(request []byte, devices []*co
 		serverName = []byte(devices[0].Name)
 	}
 
-	tokenData := make([]byte, 0, 32)
-	tokenData = append(tokenData, 0xAD)                     // LOGINACK token
-	tokenData = append(tokenData, byte(10+len(serverName))) // length (low byte)
-	tokenData = append(tokenData, 0x00)                     // length (high byte)
-	tokenData = append(tokenData, 0x01)                     // interface (SQL Server)
-	tokenData = append(tokenData, 0x74, 0x00, 0x00, 0x04)   // TDS version 7.4
+	tokenData := make([]byte, 0, mssqlTokenDataCap)
+	tokenData = append(
+		tokenData,
+		mssqlLoginAckToken,
+	) // LOGINACK token
+	tokenData = append(
+		tokenData,
+		byte(mssqlLengthExtra+len(serverName)),
+	) // length (low byte)
+	tokenData = append(
+		tokenData,
+		mssqlLengthHigh,
+	) // length (high byte)
+	tokenData = append(
+		tokenData,
+		mssqlInterface,
+	) // interface (SQL Server) (SQL Server)
+	tokenData = append(
+		tokenData,
+		mssqlTDSVersion1,
+		mssqlProgramVersion,
+		mssqlProgramVersion,
+		mysqlPacketHeader,
+	) // TDS version 7.4
 	tokenData = append(tokenData, byte(len(serverName)))
 	tokenData = append(tokenData, serverName...)
-	tokenData = append(tokenData, 0x00, 0x00, 0x00, 0x00) // program version
+	tokenData = append(
+		tokenData,
+		mssqlProgramVersion,
+		mssqlProgramVersion,
+		mssqlProgramVersion,
+		mssqlProgramVersion,
+	) // program version
 
-	packetLen := 8 + len(tokenData)
+	packetLen := tdsHeaderSize + len(tokenData)
 	response := make([]byte, packetLen)
 	response[0] = 0x04 // type: response
 	response[1] = 0x01 // status: EOM
 	// Safe conversion: packetLen is small (8 + tokenData length ~= 50 bytes)
 	binary.BigEndian.PutUint16(
 		response[2:],
-		uint16(packetLen), //nolint:gosec // G115: packetLen is small, bounded
+		safeUint16(packetLen),
 	)
 	response[4] = 0x00 // SPID
 	response[5] = 0x00
@@ -724,8 +840,8 @@ func (h *HealthCheckHandler) generateMSSQLResponse(request []byte, devices []*co
 }
 
 // generateModbusResponse creates a Modbus TCP response.
-func (h *HealthCheckHandler) generateModbusResponse(request []byte, devices []*config.Device) []byte {
-	if len(request) < 8 {
+func (h *HealthCheckHandler) generateModbusResponse(request []byte, _ []*config.Device) []byte {
+	if len(request) < postgresMinHeader {
 		return nil
 	}
 
@@ -743,10 +859,10 @@ func (h *HealthCheckHandler) generateModbusResponse(request []byte, devices []*c
 	functionCode := request[7]
 
 	// Build response
-	response := make([]byte, 9)
+	response := make([]byte, modbusResponseLen)
 	binary.BigEndian.PutUint16(response[0:], transactionID)
 	binary.BigEndian.PutUint16(response[2:], protocolID)
-	binary.BigEndian.PutUint16(response[4:], 3) // length
+	binary.BigEndian.PutUint16(response[4:], modbusDataLen) // length
 	response[6] = unitID
 	response[7] = functionCode
 	response[8] = 0x00 // Success (no exception)
@@ -756,7 +872,7 @@ func (h *HealthCheckHandler) generateModbusResponse(request []byte, devices []*c
 
 // generateDICOMResponse creates a DICOM A-ASSOCIATE-AC response.
 func (h *HealthCheckHandler) generateDICOMResponse(request []byte, devices []*config.Device) []byte {
-	if len(request) < 6 {
+	if len(request) < dicomMinHeader {
 		return nil
 	}
 
@@ -766,7 +882,7 @@ func (h *HealthCheckHandler) generateDICOMResponse(request []byte, devices []*co
 	// 4 bytes: PDU length (big endian)
 
 	pduType := request[0]
-	if pduType != 0x01 { // Only respond to A-ASSOCIATE-RQ
+	if pduType != dicomAssocRQ { // Only respond to A-ASSOCIATE-RQ
 		return nil
 	}
 
@@ -776,7 +892,7 @@ func (h *HealthCheckHandler) generateDICOMResponse(request []byte, devices []*co
 
 	if len(devices) > 0 {
 		name := devices[0].Name
-		if len(name) > 16 {
+		if len(name) > dicomAETitleLen {
 			name = name[:16]
 		}
 
@@ -784,12 +900,12 @@ func (h *HealthCheckHandler) generateDICOMResponse(request []byte, devices []*co
 	}
 
 	// Minimal A-ASSOCIATE-AC
-	response := make([]byte, 74)
+	response := make([]byte, dicomResponseLen)
 	response[0] = 0x02 // A-ASSOCIATE-AC
 	response[1] = 0x00 // reserved
 
 	// PDU length (68 bytes for minimal response)
-	binary.BigEndian.PutUint32(response[2:], 68)
+	binary.BigEndian.PutUint32(response[2:], dicomPDUDataLen)
 
 	// Protocol version
 	binary.BigEndian.PutUint16(response[6:], 1)
@@ -824,7 +940,7 @@ func (h *HealthCheckHandler) generateHL7Response(request []byte, devices []*conf
 	if idx := strings.Index(msgStr, "MSH|"); idx >= 0 {
 		// Extract control ID from MSH-10
 		segments := strings.Split(msgStr[idx:], "|")
-		if len(segments) > 9 {
+		if len(segments) > hl7MSHControlIDIndex {
 			msgID = segments[9]
 		}
 	}
@@ -840,17 +956,17 @@ func (h *HealthCheckHandler) generateHL7Response(request []byte, devices []*conf
 		sendingApp, timestamp, msgID, msgID)
 
 	// Wrap in MLLP envelope
-	response := make([]byte, 0, len(ack)+3)
-	response = append(response, 0x0B) // Start block
+	response := make([]byte, 0, len(ack)+hl7MLLPEnvelopeExtra)
+	response = append(response, hl7StartBlock) // Start block
 	response = append(response, []byte(ack)...)
-	response = append(response, 0x1C, 0x0D) // End block + CR
+	response = append(response, hl7EndBlock, hl7CarriageReturn) // End block + CR
 
 	return response
 }
 
 // generateOPCUAResponse creates an OPC UA Hello acknowledgment.
-func (h *HealthCheckHandler) generateOPCUAResponse(request []byte, devices []*config.Device) []byte {
-	if len(request) < 8 {
+func (h *HealthCheckHandler) generateOPCUAResponse(request []byte, _ []*config.Device) []byte {
+	if len(request) < postgresMinHeader {
 		return nil
 	}
 
@@ -865,21 +981,21 @@ func (h *HealthCheckHandler) generateOPCUAResponse(request []byte, devices []*co
 	}
 
 	// Build ACK response
-	response := make([]byte, 28)
+	response := make([]byte, opcuaAckLen)
 	copy(response[0:3], "ACK")
 	response[3] = 'F' // final chunk
 
 	// Message size (28 bytes)
-	binary.LittleEndian.PutUint32(response[4:8], 28)
+	binary.LittleEndian.PutUint32(response[4:8], opcuaAckLen)
 
 	// Protocol version
 	binary.LittleEndian.PutUint32(response[8:12], 0)
 
 	// Receive buffer size
-	binary.LittleEndian.PutUint32(response[12:16], 65535)
+	binary.LittleEndian.PutUint32(response[12:16], healthCheckMaxUint16)
 
 	// Send buffer size
-	binary.LittleEndian.PutUint32(response[16:20], 65535)
+	binary.LittleEndian.PutUint32(response[16:20], healthCheckMaxUint16)
 
 	// Max message size
 	binary.LittleEndian.PutUint32(response[20:24], 0) // 0 = no limit
@@ -892,13 +1008,13 @@ func (h *HealthCheckHandler) generateOPCUAResponse(request []byte, devices []*co
 
 // generateSMBResponse creates an SMB negotiate response.
 func (h *HealthCheckHandler) generateSMBResponse(request []byte, devices []*config.Device) []byte {
-	if len(request) < 4 {
+	if len(request) < netbiosSessionHeader {
 		return nil
 	}
 
 	// NetBIOS session header (4 bytes) + SMB header
 	// Check for SMB signature (0xFF 'S' 'M' 'B')
-	if len(request) < 36 {
+	if len(request) < smbMinWithNetbiosHdr {
 		return nil
 	}
 
@@ -916,7 +1032,7 @@ func (h *HealthCheckHandler) generateSMBResponse(request []byte, devices []*conf
 	}
 
 	// Build SMB1 negotiate response (simplified)
-	response := make([]byte, 39)
+	response := make([]byte, postgresResponseLen)
 
 	// NetBIOS header
 	response[0] = 0x00 // session message
@@ -945,21 +1061,21 @@ func (h *HealthCheckHandler) generateSMBResponse(request []byte, devices []*conf
 }
 
 // generateSMB2Response creates an SMB2 negotiate response.
-func (h *HealthCheckHandler) generateSMB2Response(request []byte, devices []*config.Device) []byte {
+func (h *HealthCheckHandler) generateSMB2Response(_ []byte, _ []*config.Device) []byte {
 	// Build minimal SMB2 negotiate response
-	response := make([]byte, 68)
+	response := make([]byte, smbResponseLen)
 
 	// NetBIOS header
 	response[0] = 0x00
 	response[1] = 0x00
 	response[2] = 0x00
-	response[3] = 64
+	response[3] = smbHeaderLen
 
 	// SMB2 header
 	copy(response[4:8], []byte{0xFE, 'S', 'M', 'B'})
 
 	// Structure size (64)
-	binary.LittleEndian.PutUint16(response[8:], 64)
+	binary.LittleEndian.PutUint16(response[8:], smbHeaderLen)
 
 	// Credit charge
 	binary.LittleEndian.PutUint16(response[10:], 0)

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"maps"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"sync"
@@ -14,8 +15,11 @@ import (
 	"time"
 )
 
+// Byte conversion constants.
+const bytesPerKB = 1024
+
 // Statistics holds all runtime statistics for NIAC
-// PERFORMANCE FIX MEDIUM-1: Use atomic operations and sync.Map for high-throughput counters.
+// PERFORMANCE FIX MEDIUM-1: Use atomic operations and [sync.Map] for high-throughput counters.
 type Statistics struct {
 	mu sync.RWMutex
 
@@ -95,7 +99,7 @@ type StatisticsSnapshot struct {
 }
 
 // NewStatistics creates a new Statistics instance
-// PERFORMANCE FIX MEDIUM-1: sync.Map doesn't need initialization.
+// PERFORMANCE FIX MEDIUM-1: [sync.Map] doesn't need initialization.
 func NewStatistics(interfaceName, configFile, version string) *Statistics {
 	return &Statistics{
 		StartTime:     time.Now(),
@@ -121,7 +125,7 @@ func (s *Statistics) Update() {
 	var m runtime.MemStats
 
 	runtime.ReadMemStats(&m)
-	s.MemoryUsageMB = m.Alloc / 1024 / 1024
+	s.MemoryUsageMB = m.Alloc / bytesPerKB / bytesPerKB
 }
 
 // IncrementPacketCount increments the packet count for a protocol
@@ -221,8 +225,8 @@ func (s *Statistics) ExportJSON(filename string) error {
 	}
 
 	// Write to file
-	if err := os.WriteFile(filename, data, 0o600); err != nil {
-		return fmt.Errorf("failed to write JSON file: %w", err)
+	if writeErr := os.WriteFile(filename, data, 0o600); writeErr != nil {
+		return fmt.Errorf("failed to write JSON file: %w", writeErr)
 	}
 
 	return nil
@@ -234,7 +238,11 @@ func (s *Statistics) ExportCSV(filename string) error {
 	defer s.mu.RUnlock()
 
 	// SECURITY FIX #163: Create CSV file with restricted permissions (owner-only)
-	file, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600) // #nosec G304 -- user-provided file path
+	file, err := os.OpenFile(
+		filepath.Clean(filename),
+		os.O_WRONLY|os.O_CREATE|os.O_TRUNC,
+		0o600,
+	)
 	if err != nil {
 		return fmt.Errorf("failed to create CSV file: %w", err)
 	}
@@ -246,8 +254,8 @@ func (s *Statistics) ExportCSV(filename string) error {
 
 	// Write header
 	header := []string{"Metric", "Value", "Category"}
-	if err := writer.Write(header); err != nil {
-		return fmt.Errorf("failed to write CSV header: %w", err)
+	if writeErr := writer.Write(header); writeErr != nil {
+		return fmt.Errorf("failed to write CSV header: %w", writeErr)
 	}
 
 	// Helper function to write rows (errors handled by writer.Error() after flush)
@@ -327,7 +335,7 @@ func (s *Statistics) ExportCSV(filename string) error {
 }
 
 // snapshot creates a read-safe copy of statistics
-// PERFORMANCE FIX MEDIUM-1: Read from atomic counters and sync.Map
+// PERFORMANCE FIX MEDIUM-1: Read from atomic counters and [sync.Map]
 // Must be called with read lock held.
 func (s *Statistics) snapshot() StatisticsSnapshot {
 	snapshot := StatisticsSnapshot{

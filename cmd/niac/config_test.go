@@ -5,7 +5,26 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/spf13/cobra"
 )
+
+func newTestRootCommand() *cobra.Command {
+	info := versionInfo{
+		version: "test",
+		commit:  "test",
+		date:    "test",
+	}
+	services := new(serviceOptions)
+	return newRootCommand(
+		info,
+		services,
+		func([]string) {},
+		[]func(*cobra.Command, *serviceOptions){
+			addConfigCommand,
+		},
+	)
+}
 
 // TestConfigExportCommand tests the config export command.
 func TestConfigExportCommand(t *testing.T) {
@@ -26,6 +45,7 @@ func TestConfigExportCommand(t *testing.T) {
 	}
 
 	// Test export
+	rootCmd := newTestRootCommand()
 	rootCmd.SetArgs([]string{"config", "export", inputFile, outputFile})
 	if err := rootCmd.Execute(); err != nil {
 		t.Errorf("Config export failed: %v", err)
@@ -48,8 +68,8 @@ func TestConfigExportCommand(t *testing.T) {
 	}
 }
 
-// TestConfigExportOverwriteProtection tests that export doesn't overwrite existing files
-// Note: This test cannot fully verify os.Exit(1) behavior in unit tests
+// TestConfigExportOverwriteProtection tests that export doesn't overwrite existing files via [os.Exit]
+// Note: This test cannot fully verify [os.Exit(1)] behavior in unit tests
 // It verifies the check exists by ensuring file is not modified.
 func TestConfigExportOverwriteProtection(t *testing.T) {
 	t.Skip("Skipping test that requires os.Exit() - cannot be unit tested")
@@ -95,6 +115,7 @@ func TestConfigDiffCommand(t *testing.T) {
 	}
 
 	// Test diff - should succeed and show differences
+	rootCmd := newTestRootCommand()
 	rootCmd.SetArgs([]string{"config", "diff", file1, file2})
 	err = rootCmd.Execute()
 	if err != nil {
@@ -128,6 +149,7 @@ func TestConfigDiffIdentical(t *testing.T) {
 	}
 
 	// Test diff - should succeed with no differences
+	rootCmd := newTestRootCommand()
 	rootCmd.SetArgs([]string{"config", "diff", file1, file2})
 	err = rootCmd.Execute()
 	if err != nil {
@@ -177,6 +199,7 @@ func TestConfigMergeCommand(t *testing.T) {
 	}
 
 	// Test merge
+	rootCmd := newTestRootCommand()
 	rootCmd.SetArgs([]string{"config", "merge", baseFile, overlayFile, outputFile})
 	if err := rootCmd.Execute(); err != nil {
 		t.Errorf("Config merge failed: %v", err)
@@ -204,35 +227,34 @@ func TestConfigMergeCommand(t *testing.T) {
 	if !strings.Contains(content, "router-2") {
 		t.Error("Merged file missing router-2 from overlay")
 	}
-	// router-1 should have overlay's MAC (0x99 = 153 decimal in byte array)
-	// YAML marshals MAC as byte array, so check for decimal 153
-	if !strings.Contains(content, "153") {
-		t.Errorf("Merged file should have overlay's MAC for router-1 (153 = 0x99). Content:\n%s", content)
+	// router-1 should have overlay's MAC (ending in :99)
+	if !strings.Contains(content, "44:99") {
+		t.Errorf("Merged file should have overlay's MAC for router-1 (44:99). Content:\n%s", content)
 	}
-	// Verify base MAC (0x55 = 85 decimal) is NOT present for router-1
-	// (it should only appear in switch-1 which wasn't replaced)
+	// Verify base MAC (:55) for router-1 is replaced
+	// (switch-1 keeps its original MAC which also ends in a different value)
 }
 
-// TestConfigMergeOverwriteProtection tests merge doesn't overwrite existing files
-// Note: Cannot fully test os.Exit(1) in unit tests.
+// TestConfigMergeOverwriteProtection tests merge doesn't overwrite existing files via [os.Exit]
+// Note: Cannot fully test [os.Exit(1)] in unit tests.
 func TestConfigMergeOverwriteProtection(t *testing.T) {
 	t.Skip("Skipping test that requires os.Exit() - cannot be unit tested")
 	// The actual protection logic exists in runConfigMerge lines 214-217
 	// Manual/integration testing confirms this works correctly
 }
 
-// TestConfigInvalidInput tests error handling for invalid input files
-// Note: Cannot fully test os.Exit(1) in unit tests.
+// TestConfigInvalidInput tests error handling for invalid input files that call [os.Exit]
+// Note: Cannot fully test [os.Exit(1)] in unit tests.
 func TestConfigInvalidInput(t *testing.T) {
 	t.Skip("Skipping test that requires os.Exit() - cannot be unit tested")
 	// The actual error handling exists in config.Load() calls throughout config.go
 	// Manual/integration testing confirms this works correctly
 }
 
-// TestConfigMissingFiles tests error handling for missing files
-// Note: Cannot fully test os.Exit(1) in unit tests.
+// TestConfigMissingFiles tests error handling for missing files that call [os.Exit]
+// Note: Cannot fully test [os.Exit(1)] in unit tests.
 func TestConfigMissingFiles(t *testing.T) {
 	t.Skip("Skipping test that requires os.Exit() - cannot be unit tested")
-	// The actual error handling exists in config.Load() calls which use os.Exit(1)
+	// The actual error handling exists in config.Load() calls which use [os.Exit(1)]
 	// Manual/integration testing confirms this works correctly
 }

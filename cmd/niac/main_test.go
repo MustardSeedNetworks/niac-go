@@ -69,7 +69,7 @@ func TestPrintBanner(t *testing.T) {
 			t.Errorf("printBanner() panicked: %v", r)
 		}
 	}()
-	printBanner()
+	printBanner("test")
 }
 
 // TestPrintUsage tests that printUsage doesn't panic.

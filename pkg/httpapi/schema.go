@@ -1,9 +1,55 @@
-package api
+package httpapi
 
 import (
 	"encoding/json"
-	"log/slog"
+	"maps"
 	"net/http"
+)
+
+// Schema validation constants.
+const (
+	maxHostnameLen          = 253     // RFC 1035 max domain name length
+	lldpDefaultAdvertise    = 30      // LLDP default advertise interval seconds
+	lldpDefaultTTL          = 120     // LLDP default TTL seconds
+	cdpDefaultAdvertise     = 60      // CDP default advertise interval seconds
+	cdpDefaultHoldtime      = 180     // CDP default holdtime seconds
+	minHoldtime             = 10      // minimum holdtime seconds
+	maxHoldtime             = 255     // maximum holdtime (byte max)
+	maxAdvertiseInterval    = 3600    // max advertise interval (1 hour)
+	maxTTLValue             = 65535   // max TTL value (uint16 max)
+	stpDefaultHelloTime     = 2       // STP hello time default
+	stpMaxHelloTime         = 10      // STP max hello time
+	stpDefaultMaxAge        = 20      // STP max age default
+	stpMinMaxAge            = 6       // STP min max age
+	stpMaxMaxAge            = 40      // STP max max age
+	stpDefaultForwardDelay  = 15      // STP forward delay default
+	stpMinForwardDelay      = 4       // STP min forward delay
+	stpMaxForwardDelay      = 30      // STP max forward delay
+	stpDefaultPriority      = 32768   // STP default bridge priority
+	httpDefaultStatusCode   = 200     // HTTP OK status
+	httpMinStatusCode       = 100     // HTTP min status code
+	httpMaxStatusCode       = 599     // HTTP max status code
+	netbiosMaxNameLen       = 15      // NetBIOS name max length
+	netbiosDefaultTTL       = 300     // NetBIOS default TTL seconds
+	maxServerPreference     = 255     // max DHCPv6 server preference
+	maxIPTTL                = 255     // max IP TTL value
+	maxTCPWindowScale       = 14      // max TCP window scale option
+	maxPacketLossPercent    = 100     // max packet loss percentage
+	cdpDefaultVersion       = 2       // CDP default version
+	edpDefaultAdvertise     = 30      // EDP default advertise interval
+	fdpDefaultAdvertise     = 60      // FDP default advertise interval
+	fdpDefaultHoldtime      = 180     // FDP default holdtime
+	defaultDNSTTL           = 3600    // DNS default TTL (1 hour)
+	defaultICMPTTL          = 64      // default ICMP TTL
+	dhcpv6PreferredLifetime = 604800  // DHCPv6 preferred lifetime (7 days)
+	dhcpv6ValidLifetime     = 2592000 // DHCPv6 valid lifetime (30 days)
+	defaultPingInterval     = 120     // default periodic ping interval
+	defaultPingPayload      = 32      // default ping payload size
+	defaultTrafficInterval  = 180     // default random traffic interval
+	defaultTrafficPacketCnt = 5       // default traffic packet count
+	defaultIperfPort        = 5201    // default iperf port
+	defaultIperfDuration    = 1000    // default iperf duration ms
+	defaultBandwidthMbps    = 100     // default bandwidth in Mbps
 )
 
 // SchemaProperty represents a JSON Schema property definition.
@@ -54,21 +100,145 @@ func (s *Server) handleConfigSchema(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	err := json.NewEncoder(w).Encode(schema)
 	if err != nil {
-		slog.Error("[API] Failed to encode schema response", "error", err)
+		s.logger.Error("[API] Failed to encode schema response", "error", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
+	}
+}
+
+// buildCoreDeviceProperties returns the core device schema properties (hostname, mac, ip, etc).
+func buildCoreDeviceProperties() map[string]*SchemaProperty {
+	maxVLAN := 4094.0
+	macLen := 17 // xx:xx:xx:xx:xx:xx
+
+	return map[string]*SchemaProperty{
+		"hostname": {
+			Type:        "string",
+			Title:       "Hostname",
+			Description: "Unique device hostname/identifier",
+			MinLength:   intPtr(1),
+			MaxLength:   intPtr(maxHostnameLen),
+			Pattern:     `^[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?$`,
+			UIHelp:      "Enter a unique hostname for this device",
+		},
+		"mac": {
+			Type:          "string",
+			Title:         "MAC Address",
+			Description:   "Device MAC address in format XX:XX:XX:XX:XX:XX",
+			Pattern:       `^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$`,
+			MinLength:     &macLen,
+			MaxLength:     &macLen,
+			UIPlaceholder: "00:11:22:33:44:55",
+			UIHelp:        "MAC address in colon-separated format",
+		},
+		"ip": {
+			Type:          "string",
+			Title:         "IP Address",
+			Description:   "Primary IPv4 or IPv6 address",
+			Format:        "ipv4",
+			UIPlaceholder: "192.168.1.1",
+		},
+		"ips": {
+			Type:        "array",
+			Title:       "Additional IP Addresses",
+			Description: "Additional IP addresses for this device",
+			Items:       &SchemaProperty{Type: "string", Format: "ipv4"},
+		},
+		"type": buildDeviceTypeSchema(),
+		"vlan": {
+			Type:        "integer",
+			Title:       "VLAN",
+			Description: "VLAN membership ID (1-4094)",
+			Minimum:     floatPtr(1),
+			Maximum:     &maxVLAN,
+		},
+		"babble": {
+			Type:        "boolean",
+			Title:       "Enable Babble Traffic",
+			Description: "Periodically emit background network traffic",
+			Default:     false,
+		},
+		"map_to_ip": {
+			Type:        "string",
+			Title:       "Map to IP",
+			Description: "Map UDP traffic to an external IP address",
+			Format:      "ipv4",
+		},
+	}
+}
+
+// buildDeviceTypeSchema returns the device type enum schema.
+func buildDeviceTypeSchema() *SchemaProperty {
+	return &SchemaProperty{
+		Type:        "string",
+		Title:       "Device Type",
+		Description: "Type of network device",
+		Enum: []any{
+			"router",
+			"switch",
+			"access_point",
+			"firewall",
+			"server",
+			"workstation",
+			"iot",
+			"unknown",
+		},
+		EnumNames: []string{
+			"Router",
+			"Switch",
+			"Access Point",
+			"Firewall",
+			"Server",
+			"Workstation",
+			"IoT Device",
+			"Unknown",
+		},
+		Default: "switch",
+	}
+}
+
+// buildProtocolSchemaProperties returns all protocol-related schema properties.
+func buildProtocolSchemaProperties() map[string]*SchemaProperty {
+	minZero := 0.0
+	maxPort := 65535.0
+	maxPriority := 61440.0
+	maxTTL := 255.0
+
+	return map[string]*SchemaProperty{
+		"snmp_agent":     buildSNMPAgentSchema(),
+		"lldp":           buildLLDPSchema(),
+		"cdp":            buildCDPSchema(),
+		"edp":            buildEDPSchema(),
+		"fdp":            buildFDPSchema(),
+		"stp":            buildSTPSchema(&maxPriority),
+		"dhcp":           buildDHCPSchema(),
+		"dns":            buildDNSSchema(),
+		"http":           buildHTTPSchema(&maxPort),
+		"ftp":            buildFTPSchema(),
+		"netbios":        buildNetBIOSSchema(&maxTTL),
+		"icmp":           buildICMPSchema(&maxTTL),
+		"icmpv6":         buildICMPv6Schema(&maxTTL),
+		"dhcpv6":         buildDHCPv6Schema(),
+		"traffic":        buildTrafficSchema(&minZero),
+		"ttl":            buildTTLConfigSchema(&maxTTL),
+		"os_fingerprint": buildOSFingerprintSchema(),
+		"iperf3":         buildIPerf3Schema(&maxPort),
+	}
+}
+
+// buildSchemaDefinitions returns the common type definitions for the schema.
+func buildSchemaDefinitions() map[string]*SchemaProperty {
+	return map[string]*SchemaProperty{
+		"ipv4": {Type: "string", Format: "ipv4", Pattern: `^(\d{1,3}\.){3}\d{1,3}$`},
+		"ipv6": {Type: "string", Format: "ipv6"},
+		"mac":  {Type: "string", Pattern: `^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$`},
 	}
 }
 
 // buildDeviceSchema creates the JSON Schema for device configuration.
 func buildDeviceSchema() *ConfigSchema {
-	// Helper functions for pointer values
-	minZero := 0.0
-	maxPort := 65535.0
-	maxPriority := 61440.0
-	maxVLAN := 4094.0
-	maxTTL := 255.0
-	maxMAC := 17 // xx:xx:xx:xx:xx:xx
-	minMAC := 17
+	// Merge core and protocol properties
+	properties := buildCoreDeviceProperties()
+	maps.Copy(properties, buildProtocolSchemaProperties())
 
 	return &ConfigSchema{
 		Schema:      "http://json-schema.org/draft-07/schema#",
@@ -76,121 +246,8 @@ func buildDeviceSchema() *ConfigSchema {
 		Title:       "Device Configuration",
 		Description: "NIAC network device configuration schema",
 		Required:    []string{"hostname", "mac"},
-		Properties: map[string]*SchemaProperty{
-			"hostname": {
-				Type:        "string",
-				Title:       "Hostname",
-				Description: "Unique device hostname/identifier",
-				MinLength:   intPtr(1),
-				MaxLength:   intPtr(253),
-				Pattern:     `^[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?$`,
-				UIHelp:      "Enter a unique hostname for this device",
-			},
-			"mac": {
-				Type:          "string",
-				Title:         "MAC Address",
-				Description:   "Device MAC address in format XX:XX:XX:XX:XX:XX",
-				Pattern:       `^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$`,
-				MinLength:     &minMAC,
-				MaxLength:     &maxMAC,
-				UIPlaceholder: "00:11:22:33:44:55",
-				UIHelp:        "MAC address in colon-separated format",
-			},
-			"ip": {
-				Type:          "string",
-				Title:         "IP Address",
-				Description:   "Primary IPv4 or IPv6 address",
-				Format:        "ipv4",
-				UIPlaceholder: "192.168.1.1",
-			},
-			"ips": {
-				Type:        "array",
-				Title:       "Additional IP Addresses",
-				Description: "Additional IP addresses for this device",
-				Items: &SchemaProperty{
-					Type:   "string",
-					Format: "ipv4",
-				},
-			},
-			"type": {
-				Type:        "string",
-				Title:       "Device Type",
-				Description: "Type of network device",
-				Enum: []any{
-					"router",
-					"switch",
-					"access_point",
-					"firewall",
-					"server",
-					"workstation",
-					"iot",
-					"unknown",
-				},
-				EnumNames: []string{
-					"Router",
-					"Switch",
-					"Access Point",
-					"Firewall",
-					"Server",
-					"Workstation",
-					"IoT Device",
-					"Unknown",
-				},
-				Default: "switch",
-			},
-			"vlan": {
-				Type:        "integer",
-				Title:       "VLAN",
-				Description: "VLAN membership ID (1-4094)",
-				Minimum:     floatPtr(1),
-				Maximum:     &maxVLAN,
-			},
-			"babble": {
-				Type:        "boolean",
-				Title:       "Enable Babble Traffic",
-				Description: "Periodically emit background network traffic",
-				Default:     false,
-			},
-			"map_to_ip": {
-				Type:        "string",
-				Title:       "Map to IP",
-				Description: "Map UDP traffic to an external IP address",
-				Format:      "ipv4",
-			},
-			"snmp_agent":     buildSNMPAgentSchema(),
-			"lldp":           buildLLDPSchema(),
-			"cdp":            buildCDPSchema(),
-			"edp":            buildEDPSchema(),
-			"fdp":            buildFDPSchema(),
-			"stp":            buildSTPSchema(&maxPriority),
-			"dhcp":           buildDHCPSchema(),
-			"dns":            buildDNSSchema(),
-			"http":           buildHTTPSchema(&maxPort),
-			"ftp":            buildFTPSchema(),
-			"netbios":        buildNetBIOSSchema(&maxTTL),
-			"icmp":           buildICMPSchema(&maxTTL),
-			"icmpv6":         buildICMPv6Schema(&maxTTL),
-			"dhcpv6":         buildDHCPv6Schema(),
-			"traffic":        buildTrafficSchema(&minZero),
-			"ttl":            buildTTLConfigSchema(&maxTTL),
-			"os_fingerprint": buildOSFingerprintSchema(),
-			"iperf3":         buildIPerf3Schema(&maxPort),
-		},
-		Definitions: map[string]*SchemaProperty{
-			"ipv4": {
-				Type:    "string",
-				Format:  "ipv4",
-				Pattern: `^(\d{1,3}\.){3}\d{1,3}$`,
-			},
-			"ipv6": {
-				Type:   "string",
-				Format: "ipv6",
-			},
-			"mac": {
-				Type:    "string",
-				Pattern: `^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$`,
-			},
-		},
+		Properties:  properties,
+		Definitions: buildSchemaDefinitions(),
 	}
 }
 
@@ -306,17 +363,17 @@ func buildLLDPSchema() *SchemaProperty {
 				Type:        "integer",
 				Title:       "Advertise Interval",
 				Description: "Advertisement interval in seconds",
-				Default:     30,
+				Default:     lldpDefaultAdvertise,
 				Minimum:     floatPtr(1),
-				Maximum:     floatPtr(3600),
+				Maximum:     floatPtr(maxAdvertiseInterval),
 			},
 			"ttl": {
 				Type:        "integer",
 				Title:       "TTL",
 				Description: "Time-to-live in seconds",
-				Default:     120,
+				Default:     lldpDefaultTTL,
 				Minimum:     floatPtr(1),
-				Maximum:     floatPtr(65535),
+				Maximum:     floatPtr(maxTTLValue),
 			},
 			"chassis_id_type": {
 				Type:      "string",
@@ -355,23 +412,23 @@ func buildCDPSchema() *SchemaProperty {
 				Type:        "integer",
 				Title:       "Advertise Interval",
 				Description: "Advertisement interval in seconds",
-				Default:     60,
+				Default:     cdpDefaultAdvertise,
 				Minimum:     floatPtr(1),
-				Maximum:     floatPtr(3600),
+				Maximum:     floatPtr(maxAdvertiseInterval),
 			},
 			"holdtime": {
 				Type:        "integer",
 				Title:       "Holdtime",
 				Description: "CDP holdtime in seconds",
-				Default:     180,
-				Minimum:     floatPtr(10),
-				Maximum:     floatPtr(255),
+				Default:     cdpDefaultHoldtime,
+				Minimum:     floatPtr(minHoldtime),
+				Maximum:     floatPtr(maxHoldtime),
 			},
 			"version": {
 				Type:    "integer",
 				Title:   "CDP Version",
 				Enum:    []any{1, 2},
-				Default: 2,
+				Default: cdpDefaultVersion,
 			},
 			"platform": {
 				Type:          "string",
@@ -408,7 +465,7 @@ func buildEDPSchema() *SchemaProperty {
 			"advertise_interval": {
 				Type:    "integer",
 				Title:   "Advertise Interval",
-				Default: 30,
+				Default: edpDefaultAdvertise,
 				Minimum: floatPtr(1),
 			},
 			"version_string": {
@@ -437,13 +494,13 @@ func buildFDPSchema() *SchemaProperty {
 			"advertise_interval": {
 				Type:    "integer",
 				Title:   "Advertise Interval",
-				Default: 60,
+				Default: fdpDefaultAdvertise,
 				Minimum: floatPtr(1),
 			},
 			"holdtime": {
 				Type:    "integer",
 				Title:   "Holdtime",
-				Default: 180,
+				Default: fdpDefaultHoldtime,
 			},
 			"software_version": {
 				Type:  "string",
@@ -483,7 +540,7 @@ func buildSTPSchema(maxPriority *float64) *SchemaProperty {
 				Type:        "integer",
 				Title:       "Bridge Priority",
 				Description: "Bridge priority (0-61440, increments of 4096)",
-				Default:     32768,
+				Default:     stpDefaultPriority,
 				Minimum:     floatPtr(0),
 				Maximum:     maxPriority,
 			},
@@ -491,25 +548,25 @@ func buildSTPSchema(maxPriority *float64) *SchemaProperty {
 				Type:        "integer",
 				Title:       "Hello Time",
 				Description: "Hello time in seconds",
-				Default:     2,
+				Default:     stpDefaultHelloTime,
 				Minimum:     floatPtr(1),
-				Maximum:     floatPtr(10),
+				Maximum:     floatPtr(stpMaxHelloTime),
 			},
 			"max_age": {
 				Type:        "integer",
 				Title:       "Max Age",
 				Description: "Max age in seconds",
-				Default:     20,
-				Minimum:     floatPtr(6),
-				Maximum:     floatPtr(40),
+				Default:     stpDefaultMaxAge,
+				Minimum:     floatPtr(stpMinMaxAge),
+				Maximum:     floatPtr(stpMaxMaxAge),
 			},
 			"forward_delay": {
 				Type:        "integer",
 				Title:       "Forward Delay",
 				Description: "Forward delay in seconds",
-				Default:     15,
-				Minimum:     floatPtr(4),
-				Maximum:     floatPtr(30),
+				Default:     stpDefaultForwardDelay,
+				Minimum:     floatPtr(stpMinForwardDelay),
+				Maximum:     floatPtr(stpMaxForwardDelay),
 			},
 		},
 	}
@@ -602,7 +659,7 @@ func buildDNSSchema() *SchemaProperty {
 						"ttl": {
 							Type:    "integer",
 							Title:   "TTL",
-							Default: 3600,
+							Default: defaultDNSTTL,
 						},
 					},
 					Required: []string{"name", "ip"},
@@ -627,7 +684,7 @@ func buildDNSSchema() *SchemaProperty {
 						"ttl": {
 							Type:    "integer",
 							Title:   "TTL",
-							Default: 3600,
+							Default: defaultDNSTTL,
 						},
 					},
 					Required: []string{"name", "ip"},
@@ -637,7 +694,7 @@ func buildDNSSchema() *SchemaProperty {
 	}
 }
 
-func buildHTTPSchema(maxPort *float64) *SchemaProperty {
+func buildHTTPSchema(_ *float64) *SchemaProperty {
 	return &SchemaProperty{
 		Type:        "object",
 		Title:       "HTTP Server",
@@ -675,9 +732,9 @@ func buildHTTPSchema(maxPort *float64) *SchemaProperty {
 						"status_code": {
 							Type:    "integer",
 							Title:   "Status Code",
-							Default: 200,
-							Minimum: floatPtr(100),
-							Maximum: floatPtr(599),
+							Default: httpDefaultStatusCode,
+							Minimum: floatPtr(httpMinStatusCode),
+							Maximum: floatPtr(httpMaxStatusCode),
 						},
 						"content_type": {
 							Type:    "string",
@@ -751,7 +808,7 @@ func buildFTPSchema() *SchemaProperty {
 	}
 }
 
-func buildNetBIOSSchema(maxTTL *float64) *SchemaProperty {
+func buildNetBIOSSchema(_ *float64) *SchemaProperty {
 	return &SchemaProperty{
 		Type:        "object",
 		Title:       "NetBIOS Service",
@@ -766,7 +823,7 @@ func buildNetBIOSSchema(maxTTL *float64) *SchemaProperty {
 				Type:        "string",
 				Title:       "NetBIOS Name",
 				Description: "NetBIOS name (max 15 characters)",
-				MaxLength:   intPtr(15),
+				MaxLength:   intPtr(netbiosMaxNameLen),
 			},
 			"workgroup": {
 				Type:        "string",
@@ -795,7 +852,7 @@ func buildNetBIOSSchema(maxTTL *float64) *SchemaProperty {
 				Type:        "integer",
 				Title:       "TTL",
 				Description: "Name registration TTL in seconds",
-				Default:     300,
+				Default:     netbiosDefaultTTL,
 				Minimum:     floatPtr(1),
 			},
 			"msbrowse": {
@@ -823,7 +880,7 @@ func buildICMPSchema(maxTTL *float64) *SchemaProperty {
 				Type:        "integer",
 				Title:       "TTL",
 				Description: "Time-to-live for ICMP packets",
-				Default:     64,
+				Default:     defaultICMPTTL,
 				Minimum:     floatPtr(1),
 				Maximum:     maxTTL,
 			},
@@ -859,7 +916,7 @@ func buildICMPv6Schema(maxTTL *float64) *SchemaProperty {
 				Type:        "integer",
 				Title:       "Hop Limit",
 				Description: "Hop limit for ICMPv6 packets",
-				Default:     64,
+				Default:     defaultICMPTTL,
 				Minimum:     floatPtr(1),
 				Maximum:     maxTTL,
 			},
@@ -912,13 +969,13 @@ func buildDHCPv6Schema() *SchemaProperty {
 				Type:        "integer",
 				Title:       "Preferred Lifetime",
 				Description: "Preferred lifetime in seconds",
-				Default:     604800,
+				Default:     dhcpv6PreferredLifetime,
 			},
 			"valid_lifetime": {
 				Type:        "integer",
 				Title:       "Valid Lifetime",
 				Description: "Valid lifetime in seconds",
-				Default:     2592000,
+				Default:     dhcpv6ValidLifetime,
 			},
 			"preference": {
 				Type:        "integer",
@@ -926,7 +983,7 @@ func buildDHCPv6Schema() *SchemaProperty {
 				Description: "Server preference (0-255, higher is better)",
 				Default:     0,
 				Minimum:     floatPtr(0),
-				Maximum:     floatPtr(255),
+				Maximum:     floatPtr(maxHoldtime),
 			},
 			"dns_servers": {
 				Type:  "array",
@@ -971,7 +1028,7 @@ func buildTrafficSchema(minZero *float64) *SchemaProperty {
 						Type:        "integer",
 						Title:       "Interval",
 						Description: "Interval in seconds",
-						Default:     60,
+						Default:     cdpDefaultAdvertise,
 						Minimum:     floatPtr(1),
 					},
 				},
@@ -988,14 +1045,14 @@ func buildTrafficSchema(minZero *float64) *SchemaProperty {
 					"interval": {
 						Type:    "integer",
 						Title:   "Interval",
-						Default: 120,
+						Default: defaultPingInterval,
 						Minimum: floatPtr(1),
 					},
 					"payload_size": {
 						Type:        "integer",
 						Title:       "Payload Size",
 						Description: "Payload size in bytes",
-						Default:     32,
+						Default:     defaultPingPayload,
 						Minimum:     minZero,
 					},
 				},
@@ -1012,14 +1069,14 @@ func buildTrafficSchema(minZero *float64) *SchemaProperty {
 					"interval": {
 						Type:    "integer",
 						Title:   "Interval",
-						Default: 180,
+						Default: defaultTrafficInterval,
 						Minimum: floatPtr(1),
 					},
 					"packet_count": {
 						Type:        "integer",
 						Title:       "Packet Count",
 						Description: "Number of packets per interval",
-						Default:     5,
+						Default:     defaultTrafficPacketCnt,
 						Minimum:     floatPtr(1),
 					},
 					"patterns": {
@@ -1102,7 +1159,7 @@ func buildOSFingerprintSchema() *SchemaProperty {
 				Title:       "Default TTL",
 				Description: "Default IP TTL (Linux=64, Windows=128, Cisco=255)",
 				Minimum:     floatPtr(1),
-				Maximum:     floatPtr(255),
+				Maximum:     floatPtr(maxHoldtime),
 			},
 			"window_size": {
 				Type:        "integer",
@@ -1114,7 +1171,7 @@ func buildOSFingerprintSchema() *SchemaProperty {
 				Title:       "TCP Window Scale",
 				Description: "TCP window scale option",
 				Minimum:     floatPtr(0),
-				Maximum:     floatPtr(14),
+				Maximum:     floatPtr(maxTCPWindowScale),
 			},
 			"mss": {
 				Type:        "integer",
@@ -1161,7 +1218,7 @@ func buildIPerf3Schema(maxPort *float64) *SchemaProperty {
 				Type:        "integer",
 				Title:       "Port",
 				Description: "Listen port",
-				Default:     5201,
+				Default:     defaultIperfPort,
 				Minimum:     floatPtr(1),
 				Maximum:     maxPort,
 			},
@@ -1169,7 +1226,7 @@ func buildIPerf3Schema(maxPort *float64) *SchemaProperty {
 				Type:        "number",
 				Title:       "Max Bandwidth (Mbps)",
 				Description: "Maximum simulated bandwidth",
-				Default:     1000,
+				Default:     defaultIperfDuration,
 			},
 			"typical_latency_ms": {
 				Type:        "number",
@@ -1189,19 +1246,19 @@ func buildIPerf3Schema(maxPort *float64) *SchemaProperty {
 				Description: "Simulated packet loss percentage",
 				Default:     0,
 				Minimum:     floatPtr(0),
-				Maximum:     floatPtr(100),
+				Maximum:     floatPtr(maxPacketLossPercent),
 			},
 			"upload_mbps": {
 				Type:        "number",
 				Title:       "Upload (Mbps)",
 				Description: "Simulated upload bandwidth",
-				Default:     100,
+				Default:     defaultBandwidthMbps,
 			},
 			"download_mbps": {
 				Type:        "number",
 				Title:       "Download (Mbps)",
 				Description: "Simulated download bandwidth",
-				Default:     100,
+				Default:     defaultBandwidthMbps,
 			},
 		},
 	}

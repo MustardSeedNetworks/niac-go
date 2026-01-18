@@ -145,8 +145,8 @@ func TestVariMibIntegralHandler_CounterWrap(t *testing.T) {
 
 	value := handler.GetValue().(uint32)
 	// Value should have wrapped around
-	if value < 0xFFFFFFF0 && value > 1000000 {
-		// This is expected - wrapped around
+	if value >= 0xFFFFFFF0 {
+		t.Errorf("expected wrapped counter value, got %d", value)
 	}
 }
 

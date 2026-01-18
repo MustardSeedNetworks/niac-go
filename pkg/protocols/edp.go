@@ -34,6 +34,22 @@ const (
 	EDPTLVTypeNull    = 0x99 // End marker
 )
 
+// EDP encoding constants.
+const (
+	edpReservedByte      = 0x00   // reserved/null byte
+	edpSeqNumHigh        = 0x00   // sequence number high byte (initial value)
+	edpSeqNumLow         = 0x01   // sequence number low byte (initial value)
+	edpMaxLen            = 65535  // max uint16 for lengths
+	edpLengthFieldSize   = 2      // length field size in bytes
+	edpTLVHeaderSize     = 3      // TLV header size (Type 1 + Length 2)
+	edpEthHeaderSize     = 14     // Ethernet header size
+	edpChecksumByteShift = 8      // Bit shift for high byte in checksum
+	edpChecksumWordShift = 16     // Bit shift for folding 32-bit to 16-bit
+	edpChecksumWordMask  = 0xffff // Mask for 16-bit value in checksum fold
+	edpChecksumSize      = 2      // Checksum size in bytes
+	edpMinHeaderSize     = 8      // Minimum EDP header size (version, reserved, length, seq, id_length)
+)
+
 // EDPHandler handles EDP advertisements.
 type EDPHandler struct {
 	stack           *Stack
@@ -99,10 +115,8 @@ func (h *EDPHandler) sendAdvertisements() {
 		// Build and send EDP frame
 		frame := h.buildEDPFrame(device)
 		if frame != nil {
-			err := h.sendFrame(device, frame)
-			if err != nil && debugLevel >= 2 {
-				_, _ = fmt.Fprintf(os.Stdout, "EDP: Error sending advertisement for %s: %v\n", device.Name, err)
-			} else if debugLevel >= 3 {
+			h.sendFrame(device, frame)
+			if debugLevel >= DebugLevelVerbose {
 				_, _ = fmt.Fprintf(os.Stdout, "EDP: Sent advertisement for %s (%d bytes)\n", device.Name, len(frame))
 			}
 		}
@@ -118,26 +132,26 @@ func (h *EDPHandler) buildEDPFrame(device *config.Device) []byte {
 	payload = append(payload, EDPVersion)
 
 	// Reserved (1 byte)
-	payload = append(payload, 0x00)
+	payload = append(payload, edpReservedByte)
 
-	// Sequence number (2 bytes) - could be incremented, using 0 for simplicity
-	payload = append(payload, 0x00, 0x01)
+	// Sequence number (2 bytes) - could be incremented, using initial value
+	payload = append(payload, edpSeqNumHigh, edpSeqNumLow)
 
 	// ID Length (2 bytes) - length of device ID
 	deviceID := []byte(device.Name)
 
-	deviceIDLen := min(len(deviceID), 65535)
+	deviceIDLen := min(len(deviceID), edpMaxLen)
 
 	binary.BigEndian.PutUint16(
 		payload[len(payload):len(payload)+2],
-		uint16(deviceIDLen),
-	) // #nosec G115 -- length calculation limited by packet structure
+		safeUint16(deviceIDLen),
+	)
 
-	payload = append(payload, make([]byte, 2)...)
+	payload = append(payload, make([]byte, edpLengthFieldSize)...)
 	binary.BigEndian.PutUint16(
 		payload[4:6],
-		uint16(deviceIDLen),
-	) // #nosec G115 -- length calculation limited by packet structure
+		safeUint16(deviceIDLen),
+	)
 
 	// Device ID
 	payload = append(payload, deviceID...)
@@ -151,7 +165,7 @@ func (h *EDPHandler) buildEDPFrame(device *config.Device) []byte {
 
 	// Checksum (2 bytes) at the end
 	checksum := h.calculateChecksum(payload)
-	checksumBytes := make([]byte, 2)
+	checksumBytes := make([]byte, edpLengthFieldSize)
 	binary.BigEndian.PutUint16(checksumBytes, checksum)
 	payload = append(payload, checksumBytes...)
 
@@ -169,14 +183,14 @@ func (h *EDPHandler) buildDisplayTLV(device *config.Device) []byte {
 	}
 
 	// TLV: Type (1 byte) + Length (2 bytes) + Value
-	displayLen := min(len(display), 65535)
+	displayLen := min(len(display), edpMaxLen)
 
-	tlv := make([]byte, 3+displayLen)
+	tlv := make([]byte, edpTLVHeaderSize+displayLen)
 	tlv[0] = EDPTLVTypeDisplay
 	binary.BigEndian.PutUint16(
 		tlv[1:3],
-		uint16(displayLen),
-	) // #nosec G115 -- TLV length limited by protocol specification
+		safeUint16(displayLen),
+	)
 	copy(tlv[3:], display[:displayLen])
 
 	return tlv
@@ -208,12 +222,12 @@ func (h *EDPHandler) buildInfoTLV(device *config.Device) []byte {
 
 	infoBytes := []byte(info)
 
-	infoLen := min(len(infoBytes), 65535)
+	infoLen := min(len(infoBytes), edpMaxLen)
 
 	// TLV: Type (1 byte) + Length (2 bytes) + Value
-	tlv := make([]byte, 3+infoLen)
+	tlv := make([]byte, edpTLVHeaderSize+infoLen)
 	tlv[0] = EDPTLVTypeInfo
-	binary.BigEndian.PutUint16(tlv[1:3], uint16(infoLen)) // #nosec G115 -- TLV length limited by protocol specification
+	binary.BigEndian.PutUint16(tlv[1:3], safeUint16(infoLen))
 	copy(tlv[3:], infoBytes[:infoLen])
 
 	return tlv
@@ -236,13 +250,13 @@ func (h *EDPHandler) calculateChecksum(data []byte) uint16 {
 	}
 
 	// Handle odd byte
-	if len(data)%2 == 1 {
-		sum += uint32(data[len(data)-1]) << 8
+	if len(data)%edpChecksumSize == 1 {
+		sum += uint32(data[len(data)-1]) << edpChecksumByteShift
 	}
 
 	// Fold 32-bit sum to 16 bits
-	for sum > 0xffff {
-		sum = (sum >> 16) + (sum & 0xffff)
+	for sum > edpChecksumWordMask {
+		sum = (sum >> edpChecksumWordShift) + (sum & edpChecksumWordMask)
 	}
 
 	// Return one's complement
@@ -250,12 +264,12 @@ func (h *EDPHandler) calculateChecksum(data []byte) uint16 {
 }
 
 // sendFrame sends an EDP frame.
-func (h *EDPHandler) sendFrame(device *config.Device, edpPayload []byte) error {
+func (h *EDPHandler) sendFrame(device *config.Device, edpPayload []byte) {
 	// Build Ethernet header
 	dstMAC, _ := net.ParseMAC(EDPMulticastMAC)
 
 	// Build raw Ethernet frame
-	frame := make([]byte, 14+len(edpPayload))
+	frame := make([]byte, edpEthHeaderSize+len(edpPayload))
 
 	// Destination MAC
 	copy(frame[0:6], dstMAC)
@@ -284,47 +298,51 @@ func (h *EDPHandler) sendFrame(device *config.Device, edpPayload []byte) error {
 	}
 
 	h.stack.Send(pkt)
-
-	return nil
 }
 
-// HandlePacket parses incoming Extreme Discovery Protocol frames and records neighbors.
-func (h *EDPHandler) HandlePacket(pkt *Packet) {
-	debugLevel := h.stack.GetDebugLevel()
+// edpParsedData holds the parsed data from an EDP packet.
+type edpParsedData struct {
+	deviceID string
+	display  string
+	info     string
+}
 
-	payload, ok := ethernetPayload(pkt.Buffer)
-	if !ok || len(payload) < 8 {
-		return
+// parseEDPHeader parses the EDP header and returns the device ID and cursor position.
+// Returns empty string and -1 if parsing fails.
+func parseEDPHeader(payload []byte) (string, int) {
+	if len(payload) < edpMinHeaderSize {
+		return "", -1
 	}
 
-	// Header: Version(1) Reserved(1) Seq(2) IDLen(2)
 	idLen := int(binary.BigEndian.Uint16(payload[4:6]))
-
 	cursor := 6
 
-	if cursor+idLen+2 > len(payload) { // +2 to leave room for checksum
-		return
+	if cursor+idLen+edpChecksumSize > len(payload) {
+		return "", -1
 	}
 
 	deviceID := strings.TrimSpace(string(payload[cursor : cursor+idLen]))
 	cursor += idLen
 
-	checksumBoundary := len(payload) - 2
+	return deviceID, cursor
+}
+
+// parseEDPTLVs parses TLVs from the payload starting at cursor.
+func parseEDPTLVs(payload []byte, cursor int) (string, string) {
+	checksumBoundary := len(payload) - edpChecksumSize
 	if checksumBoundary <= cursor {
-		return
+		return "", ""
 	}
 
 	var display, info string
-
 	for cursor < checksumBoundary {
-		if cursor+3 > checksumBoundary {
+		if cursor+edpTLVHeaderSize > checksumBoundary {
 			break
 		}
 
 		tlvt := payload[cursor]
 		tlvLen := int(binary.BigEndian.Uint16(payload[cursor+1 : cursor+3]))
-
-		cursor += 3
+		cursor += edpTLVHeaderSize
 
 		if cursor+tlvLen > checksumBoundary {
 			break
@@ -338,39 +356,31 @@ func (h *EDPHandler) HandlePacket(pkt *Packet) {
 			display = strings.TrimSpace(string(value))
 		case EDPTLVTypeInfo:
 			info = strings.TrimSpace(string(value))
-		case EDPTLVTypeWarning:
-			// ignore warnings for now
 		case EDPTLVTypeNull:
-			cursor = checksumBoundary
+			return display, info
 		}
 	}
 
-	fields := parseKeyValueFields(info)
-	remoteMAC := fields["MAC"]
-	remoteIP := fields["IP"]
-	remotePort := fields["PORT"]
-	remoteType := strings.ToLower(fields["TYPE"])
+	return display, info
+}
 
-	device := h.stack.selectDiscoveryDevice(ProtocolEDP)
-	if device == nil {
-		return
-	}
-
+// buildEDPNeighborRecord creates a neighbor record from parsed EDP data.
+func buildEDPNeighborRecord(deviceName string, parsed edpParsedData, fields map[string]string) NeighborRecord {
 	entry := NeighborRecord{
 		Protocol:        ProtocolEDP,
-		LocalDevice:     device.Name,
-		RemoteDevice:    coalesceStrings(display, deviceID, remoteMAC),
-		RemoteChassisID: coalesceStrings(remoteMAC, deviceID),
-		RemotePort:      strings.TrimSpace(remotePort),
-		Description:     strings.TrimSpace(info),
+		LocalDevice:     deviceName,
+		RemoteDevice:    coalesceStrings(parsed.display, parsed.deviceID, fields["MAC"]),
+		RemoteChassisID: coalesceStrings(fields["MAC"], parsed.deviceID),
+		RemotePort:      strings.TrimSpace(fields["PORT"]),
+		Description:     strings.TrimSpace(parsed.info),
 		TTL:             time.Duration(EDPDefaultTTL) * time.Second,
 	}
 
-	if remoteIP != "" {
-		entry.ManagementAddress = remoteIP
+	if ip := fields["IP"]; ip != "" {
+		entry.ManagementAddress = ip
 	}
 
-	if remoteType != "" {
+	if remoteType := strings.ToLower(fields["TYPE"]); remoteType != "" {
 		entry.Capabilities = []string{remoteType}
 	}
 
@@ -384,14 +394,35 @@ func (h *EDPHandler) HandlePacket(pkt *Packet) {
 		entry.RemoteChassisID = entry.RemoteDevice
 	}
 
-	if debugLevel >= 2 && entry.RemoteDevice != "" {
-		_, _ = fmt.Fprintf(
-			os.Stdout,
-			"EDP: Neighbor %s via %s (local %s)\n",
-			entry.RemoteDevice,
-			entry.RemotePort,
-			entry.LocalDevice,
-		)
+	return entry
+}
+
+// HandlePacket parses incoming Extreme Discovery Protocol frames and records neighbors.
+func (h *EDPHandler) HandlePacket(pkt *Packet) {
+	payload, ok := ethernetPayload(pkt.Buffer)
+	if !ok {
+		return
+	}
+
+	deviceID, cursor := parseEDPHeader(payload)
+	if cursor < 0 {
+		return
+	}
+
+	display, info := parseEDPTLVs(payload, cursor)
+	parsed := edpParsedData{deviceID: deviceID, display: display, info: info}
+
+	device := h.stack.selectDiscoveryDevice(ProtocolEDP)
+	if device == nil {
+		return
+	}
+
+	fields := parseKeyValueFields(info)
+	entry := buildEDPNeighborRecord(device.Name, parsed, fields)
+
+	if h.stack.GetDebugLevel() >= DebugLevelInfo && entry.RemoteDevice != "" {
+		_, _ = fmt.Fprintf(os.Stdout, "EDP: Neighbor %s via %s (local %s)\n",
+			entry.RemoteDevice, entry.RemotePort, entry.LocalDevice)
 	}
 
 	h.stack.recordNeighbor(entry)

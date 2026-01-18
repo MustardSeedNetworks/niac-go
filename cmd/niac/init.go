@@ -18,179 +18,193 @@ import (
 
 const defaultInitOutputFile = "config.yaml"
 
-var initCmd = &cobra.Command{
-	Use:   "init [output-file]",
-	Short: "Interactive template wizard for quick configuration setup",
-	Long: `Interactive wizard that helps you choose the right template and create
+func addInitCommand(root *cobra.Command, _ *serviceOptions) {
+	initCmd := &cobra.Command{
+		Use:   "init [output-file]",
+		Short: "Interactive template wizard for quick configuration setup",
+		Long: `Interactive wizard that helps you choose the right template and create
 a configuration file for your network simulation needs.
 
 The wizard will ask about your network type, size, and requirements,
 then suggest the most appropriate template.`,
-	Example: fmt.Sprintf(
-		"  # Start interactive wizard\n  niac init\n\n  # Start wizard with specific output file\n  niac init my-network.yaml\n\n  # Quick workflow\n  niac init && niac validate %s",
-		defaultInitOutputFile,
-	),
-	Run: runInit,
-}
-
-func init() {
-	rootCmd.AddCommand(initCmd)
-}
-
-func runInit(_ *cobra.Command, args []string) {
-	reader := bufio.NewReader(os.Stdin)
-
-	// Print header
-	_, _ = color.New(color.Bold, color.FgCyan).
-		Println("\n╔════════════════════════════════════════════════════════════╗")
-	_, _ = color.New(color.Bold, color.FgCyan).
-		Println("║         NIAC Configuration Template Wizard                ║")
-	_, _ = color.New(color.Bold, color.FgCyan).
-		Print("╚════════════════════════════════════════════════════════════╝\n")
-
-	fmt.Println("This wizard will help you choose the right template for your")
-	fmt.Print("network simulation.\n")
-
-	// Question 1: Network type
-	fmt.Println(color.CyanString("1. What type of network are you simulating?")) // #nosec G104 -- cosmetic output
-	fmt.Println("   a) Basic network (router + switch)")
-	fmt.Println("   b) Small office network")
-	fmt.Println("   c) Data center / enterprise core")
-	fmt.Println("   d) IoT / sensor network")
-	fmt.Println("   e) Enterprise campus (multi-building)")
-	fmt.Println("   f) Service provider / ISP")
-	fmt.Println("   g) Home network")
-	fmt.Println("   h) Test lab / protocol testing")
-	fmt.Println()
-
-	networkType := mustPromptChoice(
-		reader,
-		"Enter your choice (a-h): ",
-		[]string{"a", "b", "c", "d", "e", "f", "g", "h"},
-	)
-
-	// Map choice to template
-	var selectedTemplate string
-	var templateDesc string
-
-	switch networkType {
-	case "a":
-		selectedTemplate = "basic-network"
-		templateDesc = "Basic Network - Simple router and switch setup"
-	case "b":
-		selectedTemplate = "small-office"
-		templateDesc = "Small Office - Router, switch, AP, and services"
-	case "c":
-		selectedTemplate = "data-center"
-		templateDesc = "Data Center - Multiple routers, switches, and servers"
-	case "d":
-		selectedTemplate = "iot-network"
-		templateDesc = "IoT Network - Sensor devices with lightweight protocols"
-	case "e":
-		selectedTemplate = "enterprise-campus"
-		templateDesc = "Enterprise Campus - Multi-building network"
-	case "f":
-		selectedTemplate = "service-provider"
-		templateDesc = "Service Provider - ISP-style topology"
-	case "g":
-		selectedTemplate = "home-network"
-		templateDesc = "Home Network - Residential gateway and devices"
-	case "h":
-		selectedTemplate = "test-lab"
-		templateDesc = "Test Lab - Comprehensive protocol testing"
+		Example: fmt.Sprintf(
+			"  # Start interactive wizard\n  niac init\n\n  # Start wizard with specific output file\n  niac init my-network.yaml\n\n  # Quick workflow\n  niac init && niac validate %s",
+			defaultInitOutputFile,
+		),
+		Run: func(_ *cobra.Command, args []string) {
+			runInit(args)
+		},
 	}
 
-	fmt.Println()
-	color.Green("✓ Selected: %s", templateDesc)
-	fmt.Println()
+	root.AddCommand(initCmd)
+}
 
-	// Get template
+func runInit(args []string) {
+	reader := bufio.NewReader(os.Stdin)
+
+	printInitHeader()
+
+	networkType := promptNetworkType(reader)
+	selectedTemplate, templateDesc := mapNetworkTypeToTemplate(networkType)
+
+	fmt.Fprintln(os.Stdout)
+	color.Green("Selected: %s", templateDesc)
+	fmt.Fprintln(os.Stdout)
+
 	tmpl, err := templates.Get(selectedTemplate)
 	if err != nil {
 		color.Red("Error loading template: %v", err)
 		os.Exit(1)
 	}
 
-	// Show template details
-	fmt.Println(color.YellowString("Template Details:")) // #nosec G104 -- cosmetic output
-	fmt.Printf("  Name: %s\n", tmpl.Name)
-	fmt.Printf("  Description: %s\n", tmpl.Description)
-	fmt.Printf("  Use case: %s\n", tmpl.UseCase)
-	fmt.Println()
+	printTemplateDetails(tmpl)
 
-	// Question 2: Output filename
-	var outputFile string
-	if len(args) > 0 {
-		outputFile = args[0]
-	} else {
-		fmt.Printf("2. Enter output filename [%s]: ", defaultInitOutputFile)
-		filename, readErr := readLine(reader)
-		if readErr != nil && !errors.Is(readErr, io.EOF) {
-			handleInputError(readErr)
-		}
-		if filename == "" {
-			outputFile = defaultInitOutputFile
-		} else {
-			outputFile = filename
-		}
+	outputFile := promptOutputFile(reader, args)
+
+	if !confirmOverwriteIfExists(reader, outputFile) {
+		fmt.Fprintln(os.Stdout, "Aborted.")
+		os.Exit(0)
 	}
 
-	// Check if file exists
-	if _, statErr := os.Stat(outputFile); statErr == nil {
-		fmt.Println()
-		color.Yellow("Warning: File %s already exists!", outputFile)
-		overwrite := mustPromptYesNo(reader, "Overwrite? (y/n): ")
-		if !overwrite {
-			fmt.Println("Aborted.")
-			os.Exit(0)
-		}
-	}
-
-	// Write template to file
 	if writeErr := os.WriteFile(outputFile, []byte(tmpl.Content), 0o600); writeErr != nil {
 		color.Red("Error writing file: %v", writeErr)
 		os.Exit(1)
 	}
 
-	// Success message
-	fmt.Println()
-	color.Green("✓ Successfully created %s", outputFile)
-	fmt.Println()
+	printInitSuccess(outputFile, selectedTemplate)
+}
 
-	// Next steps
-	color.New(color.Bold).Println("Next Steps:") // #nosec G104 -- cosmetic output
-	fmt.Println()
-	fmt.Println("1. Validate your configuration:")
-	fmt.Printf("   %s\n", color.CyanString("niac validate %s", outputFile)) // #nosec G104 -- cosmetic output
-	fmt.Println()
-	fmt.Println("2. Edit the configuration (optional):")
-	fmt.Printf("   %s\n", color.CyanString("vi %s", outputFile)) // #nosec G104 -- cosmetic output
-	fmt.Println()
-	fmt.Println("3. Run the simulation:")
-	fmt.Printf(
-		"   %s\n",
-		color.CyanString("sudo niac interactive en0 %s", outputFile),
-	) // #nosec G104 -- cosmetic output
-	fmt.Println()
-	fmt.Println("4. Or use dry-run mode to test without running:")
-	fmt.Printf("   %s\n", color.CyanString("niac --dry-run en0 %s", outputFile)) // #nosec G104 -- cosmetic output
-	fmt.Println()
+// printInitHeader displays the wizard header banner.
+func printInitHeader() {
+	_, _ = color.New(color.Bold, color.FgCyan).
+		Println("\n+============================================================+")
+	_, _ = color.New(color.Bold, color.FgCyan).
+		Println("|         NIAC Configuration Template Wizard                |")
+	_, _ = color.New(color.Bold, color.FgCyan).
+		Print("+============================================================+\n")
 
-	// Optional: Show device count
-	fmt.Println(
-		color.YellowString("Tip:") + " To see what devices are in this configuration:",
-	) // #nosec G104 -- cosmetic output
-	fmt.Printf(
+	fmt.Fprintln(os.Stdout, "This wizard will help you choose the right template for your")
+	fmt.Fprint(os.Stdout, "network simulation.\n")
+}
+
+// promptNetworkType displays network type menu and prompts for selection.
+func promptNetworkType(reader *bufio.Reader) string {
+	_, _ = fmt.Fprintln(
+		os.Stdout,
+		color.CyanString("1. What type of network are you simulating?"),
+	)
+	fmt.Fprintln(os.Stdout, "   a) Basic network (router + switch)")
+	fmt.Fprintln(os.Stdout, "   b) Small office network")
+	fmt.Fprintln(os.Stdout, "   c) Data center / enterprise core")
+	fmt.Fprintln(os.Stdout, "   d) IoT / sensor network")
+	fmt.Fprintln(os.Stdout, "   e) Enterprise campus (multi-building)")
+	fmt.Fprintln(os.Stdout, "   f) Service provider / ISP")
+	fmt.Fprintln(os.Stdout, "   g) Home network")
+	fmt.Fprintln(os.Stdout, "   h) Test lab / protocol testing")
+	fmt.Fprintln(os.Stdout)
+
+	return mustPromptChoice(
+		reader,
+		"Enter your choice (a-h): ",
+		[]string{"a", "b", "c", "d", "e", "f", "g", "h"},
+	)
+}
+
+// mapNetworkTypeToTemplate maps user selection to template name and description.
+func mapNetworkTypeToTemplate(networkType string) (string, string) {
+	templateMap := map[string][2]string{
+		"a": {"basic-network", "Basic Network - Simple router and switch setup"},
+		"b": {"small-office", "Small Office - Router, switch, AP, and services"},
+		"c": {"data-center", "Data Center - Multiple routers, switches, and servers"},
+		"d": {"iot-network", "IoT Network - Sensor devices with lightweight protocols"},
+		"e": {"enterprise-campus", "Enterprise Campus - Multi-building network"},
+		"f": {"service-provider", "Service Provider - ISP-style topology"},
+		"g": {"home-network", "Home Network - Residential gateway and devices"},
+		"h": {"test-lab", "Test Lab - Comprehensive protocol testing"},
+	}
+
+	if entry, ok := templateMap[networkType]; ok {
+		return entry[0], entry[1]
+	}
+	return "basic-network", "Basic Network - Simple router and switch setup"
+}
+
+// printTemplateDetails displays information about the selected template.
+func printTemplateDetails(tmpl *templates.Template) {
+	_, _ = fmt.Fprintln(os.Stdout, color.YellowString("Template Details:"))
+	fmt.Fprintf(os.Stdout, "  Name: %s\n", tmpl.Name)
+	fmt.Fprintf(os.Stdout, "  Description: %s\n", tmpl.Description)
+	fmt.Fprintf(os.Stdout, "  Use case: %s\n", tmpl.UseCase)
+	fmt.Fprintln(os.Stdout)
+}
+
+// promptOutputFile prompts for output filename or uses provided argument.
+func promptOutputFile(reader *bufio.Reader, args []string) string {
+	if len(args) > 0 {
+		return args[0]
+	}
+
+	fmt.Fprintf(os.Stdout, "2. Enter output filename [%s]: ", defaultInitOutputFile)
+	filename, readErr := readLine(reader)
+	if readErr != nil && !errors.Is(readErr, io.EOF) {
+		handleInputError(readErr)
+	}
+	if filename == "" {
+		return defaultInitOutputFile
+	}
+	return filename
+}
+
+// confirmOverwriteIfExists checks if file exists and prompts for overwrite confirmation.
+// Returns true if file doesn't exist or user confirms overwrite.
+func confirmOverwriteIfExists(reader *bufio.Reader, outputFile string) bool {
+	if _, statErr := os.Stat(outputFile); statErr == nil {
+		fmt.Fprintln(os.Stdout)
+		color.Yellow("Warning: File %s already exists!", outputFile)
+		return mustPromptYesNo(reader, "Overwrite? (y/n): ")
+	}
+	return true
+}
+
+// printInitSuccess displays success message and next steps.
+func printInitSuccess(outputFile, selectedTemplate string) {
+	fmt.Fprintln(os.Stdout)
+	color.Green("Successfully created %s", outputFile)
+	fmt.Fprintln(os.Stdout)
+
+	_, _ = color.New(color.Bold).Println("Next Steps:")
+	fmt.Fprintln(os.Stdout)
+
+	printNextStep("1", "Validate your configuration:",
+		color.CyanString("niac validate %s", outputFile))
+	printNextStep("2", "Edit the configuration (optional):",
+		color.CyanString("vi %s", outputFile))
+	printNextStep("3", "Run the simulation:",
+		color.CyanString("sudo niac interactive en0 %s", outputFile))
+	printNextStep("4", "Or use dry-run mode to test without running:",
+		color.CyanString("niac --dry-run en0 %s", outputFile))
+
+	_, _ = fmt.Fprintln(os.Stdout,
+		color.YellowString("Tip:")+" To see what devices are in this configuration:",
+	)
+	_, _ = fmt.Fprintf(os.Stdout,
 		"     %s\n",
 		color.CyanString("niac template apply %s", selectedTemplate),
-	) // #nosec G104 -- cosmetic output
-	fmt.Println()
+	)
+	fmt.Fprintln(os.Stdout)
+}
+
+// printNextStep prints a numbered step with description and command.
+func printNextStep(num, description, command string) {
+	fmt.Fprintf(os.Stdout, "%s. %s\n", num, description)
+	_, _ = fmt.Fprintf(os.Stdout, "   %s\n", command)
+	fmt.Fprintln(os.Stdout)
 }
 
 // promptChoice prompts for a choice from a list of valid options.
 func promptChoice(reader *bufio.Reader, prompt string, validChoices []string) (string, error) {
 	for {
-		fmt.Print(prompt)
+		fmt.Fprint(os.Stdout, prompt)
 		input, err := readLine(reader)
 		if err != nil {
 			return "", err
@@ -208,7 +222,7 @@ func promptChoice(reader *bufio.Reader, prompt string, validChoices []string) (s
 // promptYesNo prompts for a yes/no answer.
 func promptYesNo(reader *bufio.Reader, prompt string) (bool, error) {
 	for {
-		fmt.Print(prompt)
+		fmt.Fprint(os.Stdout, prompt)
 		input, err := readLine(reader)
 		if err != nil {
 			return false, err
@@ -229,7 +243,7 @@ func promptYesNo(reader *bufio.Reader, prompt string) (bool, error) {
 // promptInt prompts for an integer within a range.
 func promptInt(reader *bufio.Reader, prompt string, minValue, maxValue int) (int, error) {
 	for {
-		fmt.Print(prompt)
+		fmt.Fprint(os.Stdout, prompt)
 		input, err := readLine(reader)
 		if err != nil {
 			return 0, err
@@ -268,7 +282,7 @@ func readLine(reader *bufio.Reader) (string, error) {
 
 func handleInputError(err error) {
 	if errors.Is(err, io.EOF) {
-		fmt.Println()
+		fmt.Fprintln(os.Stdout)
 		color.Yellow("Input cancelled.")
 		os.Exit(0)
 	}

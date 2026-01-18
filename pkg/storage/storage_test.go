@@ -1,9 +1,11 @@
-package storage
+package storage_test
 
 import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/krisarmstrong/niac-go/pkg/storage"
 )
 
 func TestStorageAddAndListRuns(t *testing.T) {
@@ -12,7 +14,7 @@ func TestStorageAddAndListRuns(t *testing.T) {
 	tmp := t.TempDir()
 	path := filepath.Join(tmp, "runs.db")
 
-	store, err := Open(path)
+	store, err := storage.Open(path)
 	if err != nil {
 		t.Fatalf("Open() error = %v", err)
 	}
@@ -21,7 +23,7 @@ func TestStorageAddAndListRuns(t *testing.T) {
 		_ = store.Close()
 	})
 
-	rec1 := RunRecord{
+	rec1 := storage.RunRecord{
 		StartedAt:       time.Now().Add(-1 * time.Hour),
 		Duration:        time.Minute,
 		Interface:       "en0",
@@ -31,7 +33,7 @@ func TestStorageAddAndListRuns(t *testing.T) {
 		PacketsReceived: 90,
 		Errors:          1,
 	}
-	rec2 := RunRecord{
+	rec2 := storage.RunRecord{
 		StartedAt:       time.Now(),
 		Duration:        2 * time.Minute,
 		Interface:       "en1",
@@ -42,11 +44,13 @@ func TestStorageAddAndListRuns(t *testing.T) {
 		Errors:          0,
 	}
 
-	if err := store.AddRun(rec1); err != nil {
+	err = store.AddRun(rec1)
+	if err != nil {
 		t.Fatalf("AddRun(rec1) error = %v", err)
 	}
 
-	if err := store.AddRun(rec2); err != nil {
+	err = store.AddRun(rec2)
+	if err != nil {
 		t.Fatalf("AddRun(rec2) error = %v", err)
 	}
 
@@ -71,7 +75,7 @@ func TestStorageAddAndListRuns(t *testing.T) {
 func TestOpenDisabled(t *testing.T) {
 	t.Parallel()
 
-	if _, err := Open("disabled"); err == nil {
+	if _, err := storage.Open("disabled"); err == nil {
 		t.Fatalf("Open(\"disabled\") expected error, got nil")
 	}
 }

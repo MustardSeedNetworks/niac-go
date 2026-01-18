@@ -6,8 +6,36 @@ import (
 	"testing"
 	"time"
 
+	"github.com/spf13/cobra"
+
 	"github.com/krisarmstrong/niac-go/pkg/ipc"
 )
+
+func buildLogsCommand() (*cobra.Command, *cobra.Command) {
+	root := &cobra.Command{Use: "niac"}
+	addLogsCommand(root, new(serviceOptions))
+
+	var logsCmd *cobra.Command
+	for _, cmd := range root.Commands() {
+		if cmd.Use == "logs" {
+			logsCmd = cmd
+			break
+		}
+	}
+	if logsCmd == nil {
+		return nil, nil
+	}
+
+	var tailCmd *cobra.Command
+	for _, cmd := range logsCmd.Commands() {
+		if cmd.Use == "tail" {
+			tailCmd = cmd
+			break
+		}
+	}
+
+	return logsCmd, tailCmd
+}
 
 func makeLogEntry(
 	ts time.Time,
@@ -124,7 +152,8 @@ func TestLogLevelValidation(t *testing.T) {
 
 func TestOutputLogJSON(t *testing.T) {
 	var log ipc.LogEntry
-	log.Timestamp = time.Date(2024, 1, 15, 10, 30, 0, 0, time.UTC)
+	expectedTime := time.Date(2024, 1, 15, 10, 30, 0, 0, time.UTC)
+	log.Timestamp = expectedTime
 	log.Level = ipc.LogLevelInfo
 	log.Message = "Test message"
 	log.Source = "test-source"
@@ -149,6 +178,9 @@ func TestOutputLogJSON(t *testing.T) {
 	}
 	if log.Protocol != "TEST" {
 		t.Error("Expected protocol to be 'TEST'")
+	}
+	if !log.Timestamp.Equal(expectedTime) {
+		t.Error("Expected timestamp to match test value")
 	}
 
 	// Suppress unused variable warning
@@ -192,6 +224,15 @@ func TestLogEntryFields(t *testing.T) {
 	fullLog.Device = "router-1"
 	fullLog.Protocol = "SNMP"
 
+	if !fullLog.Timestamp.Equal(now) {
+		t.Error("Timestamp not set correctly for full log")
+	}
+	if fullLog.Level != ipc.LogLevelError {
+		t.Error("Level not set correctly for full log")
+	}
+	if fullLog.Message != "Full error message" {
+		t.Error("Message not set correctly for full log")
+	}
 	if fullLog.Source != "error-injection" {
 		t.Error("Source not set correctly for full log")
 	}
@@ -253,12 +294,17 @@ func TestLogsCommandFlags(t *testing.T) {
 	// Test that the command and flags are properly registered
 	// We can verify by checking the Use field and flag definitions
 
+	logsCmd, tailCmd := buildLogsCommand()
+	if logsCmd == nil || tailCmd == nil {
+		t.Fatal("Expected logs and tail commands to be registered")
+	}
+
 	if logsCmd.Use != "logs" {
 		t.Errorf("Expected logsCmd.Use to be 'logs', got %q", logsCmd.Use)
 	}
 
-	if logsTailCmd.Use != "tail" {
-		t.Errorf("Expected logsTailCmd.Use to be 'tail', got %q", logsTailCmd.Use)
+	if tailCmd.Use != "tail" {
+		t.Errorf("Expected logsTailCmd.Use to be 'tail', got %q", tailCmd.Use)
 	}
 
 	// Check that tail is a subcommand of logs
@@ -274,7 +320,7 @@ func TestLogsCommandFlags(t *testing.T) {
 	}
 
 	// Check flags on tail command
-	flags := logsTailCmd.Flags()
+	flags := tailCmd.Flags()
 
 	if flags.Lookup("follow") == nil {
 		t.Error("Expected --follow flag to be defined")

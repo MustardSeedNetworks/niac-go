@@ -67,7 +67,7 @@ func ParseWalkFile(filename string) ([]WalkEntry, error) {
 		return nil, ErrWalkFileIsDirectory
 	}
 
-	file, err := os.Open(absPath) // #nosec G304 -- user-provided file path, validated by caller
+	file, err := os.Open(absPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open walk file: %w", err)
 	}
@@ -88,10 +88,10 @@ func ParseWalkFile(filename string) ([]WalkEntry, error) {
 			continue
 		}
 
-		entry, err := parseWalkLine(line)
-		if err != nil {
+		entry, parseErr := parseWalkLine(line)
+		if parseErr != nil {
 			// Log error but continue parsing
-			_, _ = fmt.Fprintf(os.Stdout, "Warning: line %d: %v\n", lineNum, err)
+			_, _ = fmt.Fprintf(os.Stdout, "Warning: line %d: %v\n", lineNum, parseErr)
 
 			continue
 		}
@@ -99,8 +99,9 @@ func ParseWalkFile(filename string) ([]WalkEntry, error) {
 		entries = append(entries, *entry)
 	}
 
-	if err := scanner.Err(); err != nil {
-		return nil, fmt.Errorf("error reading walk file: %w", err)
+	scanErr := scanner.Err()
+	if scanErr != nil {
+		return nil, fmt.Errorf("error reading walk file: %w", scanErr)
 	}
 
 	return entries, nil
@@ -110,8 +111,8 @@ func ParseWalkFile(filename string) ([]WalkEntry, error) {
 func parseWalkLine(line string) (*WalkEntry, error) {
 	// Match pattern: OID = TYPE: VALUE
 	// Example: .1.3.6.1.2.1.1.1.0 = STRING: "Cisco IOS"
-	parts := strings.SplitN(line, "=", 2)
-	if len(parts) != 2 {
+	parts := strings.SplitN(line, "=", OIDPartsMinPDU)
+	if len(parts) != OIDPartsMinPDU {
 		return nil, ErrInvalidWalkFormat
 	}
 
@@ -119,8 +120,8 @@ func parseWalkLine(line string) (*WalkEntry, error) {
 	rest := strings.TrimSpace(parts[1])
 
 	// Parse TYPE: VALUE
-	typeParts := strings.SplitN(rest, ":", 2)
-	if len(typeParts) != 2 {
+	typeParts := strings.SplitN(rest, ":", OIDPartsMinPDU)
+	if len(typeParts) != OIDPartsMinPDU {
 		return nil, ErrMissingColon
 	}
 
@@ -144,105 +145,105 @@ func parseWalkLine(line string) (*WalkEntry, error) {
 func parseTypeAndValue(typeStr, valueStr string) (gosnmp.Asn1BER, any, error) {
 	switch typeStr {
 	case snmpTypeSTRING, "OCTET STRING":
-		// Remove quotes if present
-		value := strings.Trim(valueStr, "\"")
-
-		return gosnmp.OctetString, value, nil
-
+		return gosnmp.OctetString, strings.Trim(valueStr, "\""), nil
 	case snmpTypeINTEGER, "INT":
-		value, err := strconv.ParseInt(valueStr, 10, 32)
-		if err != nil {
-			return 0, nil, fmt.Errorf("failed to parse integer: %w", err)
-		}
-
-		return gosnmp.Integer, int(value), nil
-
+		return parseIntegerValue(valueStr)
 	case "GAUGE", "GAUGE32":
-		value, err := strconv.ParseUint(valueStr, 10, 32)
-		if err != nil {
-			return 0, nil, fmt.Errorf("failed to parse gauge: %w", err)
-		}
-
-		return gosnmp.Gauge32, uint(value), nil
-
+		return parseGaugeValue(valueStr)
 	case "COUNTER", "COUNTER32":
-		value, err := strconv.ParseUint(valueStr, 10, 32)
-		if err != nil {
-			return 0, nil, fmt.Errorf("failed to parse counter32: %w", err)
-		}
-
-		return gosnmp.Counter32, uint(value), nil
-
+		return parseCounter32Value(valueStr)
 	case "COUNTER64":
-		value, err := strconv.ParseUint(valueStr, 10, 64)
-		if err != nil {
-			return 0, nil, fmt.Errorf("failed to parse counter64: %w", err)
-		}
-
-		return gosnmp.Counter64, value, nil
-
+		return parseCounter64Value(valueStr)
 	case "TIMETICKS":
-		// Parse format: (12345) or just 12345
-		re := regexp.MustCompile(`\((\d+)\)|(\d+)`)
-
-		matches := re.FindStringSubmatch(valueStr)
-		if len(matches) == 0 {
-			return 0, nil, fmt.Errorf("%w: %s", ErrInvalidTimeticksFormat, valueStr)
-		}
-
-		var numStr string
-		if matches[1] != "" {
-			numStr = matches[1]
-		} else {
-			numStr = matches[2]
-		}
-
-		value, err := strconv.ParseUint(numStr, 10, 32)
-		if err != nil {
-			return 0, nil, fmt.Errorf("failed to parse timeticks: %w", err)
-		}
-
-		return gosnmp.TimeTicks, uint32(value), nil
-
+		return parseTimeticksValue(valueStr)
 	case snmpTypeOID, "OBJECT IDENTIFIER":
-		// Remove leading dot if present for consistency
-		value := strings.TrimPrefix(valueStr, ".")
-
-		return gosnmp.ObjectIdentifier, value, nil
-
+		return gosnmp.ObjectIdentifier, strings.TrimPrefix(valueStr, "."), nil
 	case "IPADDRESS", "IP ADDRESS", "IPADDR":
-		// Parse IP address
 		return gosnmp.IPAddress, valueStr, nil
-
 	case "BITS":
-		// BITS type - store as hex string
-		value := strings.TrimPrefix(valueStr, "0x")
-
-		return gosnmp.OctetString, value, nil
-
+		return gosnmp.OctetString, strings.TrimPrefix(valueStr, "0x"), nil
 	case "HEX-STRING", "HEX":
-		// Hex string - parse to bytes
-		value := strings.ReplaceAll(valueStr, " ", "")
-		value = strings.TrimPrefix(value, "0x")
-
-		return gosnmp.OctetString, value, nil
-
+		return parseHexStringValue(valueStr)
 	case "OPAQUE":
 		return gosnmp.Opaque, valueStr, nil
-
 	case "NULL":
 		return gosnmp.Null, nil, nil
-
 	default:
-		// Unknown type - treat as string
 		return gosnmp.OctetString, valueStr, nil
 	}
+}
+
+func parseIntegerValue(valueStr string) (gosnmp.Asn1BER, any, error) {
+	value, err := strconv.ParseInt(valueStr, 10, 32)
+	if err != nil {
+		return 0, nil, fmt.Errorf("failed to parse integer: %w", err)
+	}
+
+	return gosnmp.Integer, int(value), nil
+}
+
+func parseGaugeValue(valueStr string) (gosnmp.Asn1BER, any, error) {
+	value, err := strconv.ParseUint(valueStr, 10, 32)
+	if err != nil {
+		return 0, nil, fmt.Errorf("failed to parse gauge: %w", err)
+	}
+
+	return gosnmp.Gauge32, uint(value), nil
+}
+
+func parseCounter32Value(valueStr string) (gosnmp.Asn1BER, any, error) {
+	value, err := strconv.ParseUint(valueStr, 10, 32)
+	if err != nil {
+		return 0, nil, fmt.Errorf("failed to parse counter32: %w", err)
+	}
+
+	return gosnmp.Counter32, uint(value), nil
+}
+
+func parseCounter64Value(valueStr string) (gosnmp.Asn1BER, any, error) {
+	value, err := strconv.ParseUint(valueStr, 10, 64)
+	if err != nil {
+		return 0, nil, fmt.Errorf("failed to parse counter64: %w", err)
+	}
+
+	return gosnmp.Counter64, value, nil
+}
+
+func parseTimeticksValue(valueStr string) (gosnmp.Asn1BER, any, error) {
+	// Parse format: (12345) or just 12345
+	re := regexp.MustCompile(`\((\d+)\)|(\d+)`)
+
+	matches := re.FindStringSubmatch(valueStr)
+	if len(matches) == 0 {
+		return 0, nil, fmt.Errorf("%w: %s", ErrInvalidTimeticksFormat, valueStr)
+	}
+
+	var numStr string
+	if matches[1] != "" {
+		numStr = matches[1]
+	} else {
+		numStr = matches[2]
+	}
+
+	value, err := strconv.ParseUint(numStr, 10, 32)
+	if err != nil {
+		return 0, nil, fmt.Errorf("failed to parse timeticks: %w", err)
+	}
+
+	return gosnmp.TimeTicks, uint32(value), nil
+}
+
+func parseHexStringValue(valueStr string) (gosnmp.Asn1BER, any, error) {
+	value := strings.ReplaceAll(valueStr, " ", "")
+	value = strings.TrimPrefix(value, "0x")
+
+	return gosnmp.OctetString, value, nil
 }
 
 // ExportToWalkFile exports MIB entries to a walk file format.
 func ExportToWalkFile(filename string, mib *MIB) error {
 	// SECURITY FIX #163: Create file with restricted permissions (owner-only)
-	file, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600) // #nosec G304 -- user-provided
+	file, err := os.OpenFile(filepath.Clean(filename), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
 	if err != nil {
 		return fmt.Errorf("%w: %w", ErrFailedToCreateWalkFile, err)
 	}
@@ -265,9 +266,9 @@ func ExportToWalkFile(filename string, mib *MIB) error {
 		// Format as OID = TYPE: VALUE
 		line := formatWalkEntry(oid, value)
 
-		_, err := writer.WriteString(line + "\n")
-		if err != nil {
-			return fmt.Errorf("%w: %w", ErrFailedToWriteEntry, err)
+		_, writeErr := writer.WriteString(line + "\n")
+		if writeErr != nil {
+			return fmt.Errorf("%w: %w", ErrFailedToWriteEntry, writeErr)
 		}
 	}
 
@@ -313,9 +314,22 @@ func formatTypeName(asnType gosnmp.Asn1BER) string {
 		return "Opaque"
 	case gosnmp.Null:
 		return "NULL"
-	default:
+	case gosnmp.EndOfContents, // Also covers UnknownType (same value)
+		gosnmp.Boolean,
+		gosnmp.BitString,
+		gosnmp.ObjectDescription,
+		gosnmp.NsapAddress,
+		gosnmp.Uinteger32,
+		gosnmp.OpaqueFloat,
+		gosnmp.OpaqueDouble,
+		gosnmp.NoSuchObject,
+		gosnmp.NoSuchInstance,
+		gosnmp.EndOfMibView:
 		return snmpTypeUnknown
 	}
+
+	// Unreachable - all cases handled above
+	return snmpTypeUnknown
 }
 
 // formatValue formats a value for walk file output.
@@ -338,7 +352,21 @@ func formatValue(asnType gosnmp.Asn1BER, value any) string {
 		return fmt.Sprintf("%v", value)
 	case gosnmp.Null:
 		return ""
-	default:
+	case gosnmp.EndOfContents, // Also covers UnknownType (same value)
+		gosnmp.Boolean,
+		gosnmp.BitString,
+		gosnmp.ObjectDescription,
+		gosnmp.Opaque,
+		gosnmp.NsapAddress,
+		gosnmp.Uinteger32,
+		gosnmp.OpaqueFloat,
+		gosnmp.OpaqueDouble,
+		gosnmp.NoSuchObject,
+		gosnmp.NoSuchInstance,
+		gosnmp.EndOfMibView:
 		return fmt.Sprintf("%v", value)
 	}
+
+	// Unreachable - all cases handled above
+	return fmt.Sprintf("%v", value)
 }

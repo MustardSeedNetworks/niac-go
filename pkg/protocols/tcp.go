@@ -2,10 +2,12 @@ package protocols
 
 import (
 	"fmt"
+	"net"
 	"os"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
+
 	"github.com/krisarmstrong/niac-go/pkg/config"
 )
 
@@ -16,6 +18,26 @@ const (
 	TCPPortTelnet = 23
 	TCPPortHTTP   = 80
 	TCPPortHTTPS  = 443
+)
+
+// TCP flag masks.
+const (
+	tcpFlagSYN = 0x02 // SYN flag mask
+	tcpFlagACK = 0x10 // ACK flag mask
+	tcpFlagFIN = 0x01 // FIN flag mask
+	tcpFlagRST = 0x04 // RST flag mask
+	tcpFlagPSH = 0x08 // PSH flag mask
+)
+
+// IP protocol constants for TCP handler.
+const (
+	tcpIPv4Version  = 4     // IPv4 version field
+	tcpIPv4IHL      = 5     // IPv4 header length (5 = 20 bytes)
+	tcpIPv4TTL      = 64    // IPv4 default TTL
+	tcpIPv6Version  = 6     // IPv6 version field
+	tcpIPv6HopLimit = 64    // IPv6 default hop limit
+	tcpWindowSize   = 65535 // Default TCP window size
+	tcpInitialSeq   = 1000  // Initial TCP sequence number
 )
 
 // TCPHandler handles TCP packets.
@@ -34,141 +56,182 @@ func NewTCPHandler(stack *Stack) *TCPHandler {
 func (h *TCPHandler) HandlePacket(pkt *Packet, ipLayer *layers.IPv4, devices []*config.Device) {
 	debugLevel := h.stack.GetDebugLevel()
 
-	// Parse TCP layer
-	packet := gopacket.NewPacket(pkt.Buffer, layers.LayerTypeEthernet, gopacket.Default)
-
-	tcpLayer := packet.Layer(layers.LayerTypeTCP)
-	if tcpLayer == nil {
-		if debugLevel >= 2 {
-			_, _ = fmt.Fprintf(os.Stdout, "TCP packet missing TCP layer sn=%d\n", pkt.SerialNumber)
-		}
-
-		return
-	}
-
-	tcp, ok := tcpLayer.(*layers.TCP)
+	tcp, ok := h.parseTCPLayer(pkt, debugLevel)
 	if !ok {
 		return
 	}
 
-	if debugLevel >= 3 {
-		flags := ""
-		if tcp.SYN {
-			flags += "SYN "
+	h.logTCPPacket(ipLayer.SrcIP, ipLayer.DstIP, tcp, debugLevel, pkt.SerialNumber)
+	h.routeToHandler(pkt, ipLayer, tcp, devices)
+}
+
+// parseTCPLayer extracts the TCP layer from the packet.
+func (h *TCPHandler) parseTCPLayer(pkt *Packet, debugLevel int) (*layers.TCP, bool) {
+	packet := gopacket.NewPacket(pkt.Buffer, layers.LayerTypeEthernet, gopacket.Default)
+
+	tcpLayer := packet.Layer(layers.LayerTypeTCP)
+	if tcpLayer == nil {
+		if debugLevel >= DebugLevelInfo {
+			_, _ = fmt.Fprintf(os.Stdout, "TCP packet missing TCP layer sn=%d\n", pkt.SerialNumber)
 		}
 
-		if tcp.ACK {
-			flags += "ACK "
-		}
-
-		if tcp.FIN {
-			flags += "FIN "
-		}
-
-		if tcp.RST {
-			flags += "RST "
-		}
-
-		_, _ = fmt.Fprintf(os.Stdout, "TCP packet: %s:%d -> %s:%d flags=[%s] seq=%d ack=%d sn=%d\n",
-			ipLayer.SrcIP, tcp.SrcPort, ipLayer.DstIP, tcp.DstPort,
-			flags, tcp.Seq, tcp.Ack, pkt.SerialNumber)
+		return nil, false
 	}
 
-	// Route to application handlers based on destination port
+	tcp, ok := tcpLayer.(*layers.TCP)
+
+	return tcp, ok
+}
+
+// logTCPPacket logs TCP packet details at verbose debug level.
+func (h *TCPHandler) logTCPPacket(
+	srcIP, dstIP any,
+	tcp *layers.TCP,
+	debugLevel int,
+	serial int,
+) {
+	if debugLevel < DebugLevelVerbose {
+		return
+	}
+
+	flags := buildTCPFlagsString(tcp)
+	_, _ = fmt.Fprintf(os.Stdout, "TCP packet: %s:%d -> %s:%d flags=[%s] seq=%d ack=%d sn=%d\n",
+		srcIP, tcp.SrcPort, dstIP, tcp.DstPort,
+		flags, tcp.Seq, tcp.Ack, serial)
+}
+
+// buildTCPFlagsString builds a human-readable TCP flags string.
+func buildTCPFlagsString(tcp *layers.TCP) string {
+	flags := ""
+	if tcp.SYN {
+		flags += "SYN "
+	}
+
+	if tcp.ACK {
+		flags += "ACK "
+	}
+
+	if tcp.FIN {
+		flags += "FIN "
+	}
+
+	if tcp.RST {
+		flags += "RST "
+	}
+
+	return flags
+}
+
+// routeToHandler routes the TCP packet to the appropriate application handler.
+func (h *TCPHandler) routeToHandler(
+	pkt *Packet,
+	ipLayer *layers.IPv4,
+	tcp *layers.TCP,
+	devices []*config.Device,
+) {
+	isSYNOnly := tcp.SYN && !tcp.ACK
+	hasPayload := len(tcp.Payload) > 0
+
 	switch tcp.DstPort {
 	case TCPPortHTTP:
-		// HTTP traffic
-		if len(tcp.Payload) > 0 {
-			h.stack.httpHandler.HandleRequest(pkt, ipLayer, tcp, devices)
-		}
+		h.handleHTTP(pkt, ipLayer, tcp, devices, hasPayload)
 	case TCPPortHTTPS:
-		// HTTPS - respond to TCP connection (TLS handshake not simulated at packet level)
-		if tcp.SYN && !tcp.ACK {
-			h.stack.healthCheckHandler.HandleTCPConnect(pkt, ipLayer, tcp, devices, TCPPortHTTPS)
-		}
+		h.handleHealthCheckPort(pkt, ipLayer, tcp, devices, TCPPortHTTPS, isSYNOnly, nil)
 	case TCPPortFTP:
-		// FTP control connection
-		if len(tcp.Payload) > 0 {
-			h.stack.ftpHandler.HandleRequest(pkt, ipLayer, tcp, devices)
-		}
+		h.handleFTP(pkt, ipLayer, tcp, devices, hasPayload)
 	case TCPPortLDAP, TCPPortLDAPS:
-		// LDAP/LDAPS
-		if tcp.SYN && !tcp.ACK {
-			h.stack.healthCheckHandler.HandleTCPConnect(pkt, ipLayer, tcp, devices, uint16(tcp.DstPort))
-		} else if len(tcp.Payload) > 0 {
-			h.stack.healthCheckHandler.HandleLDAPRequest(pkt, ipLayer, tcp, devices)
-		}
+		h.handleLDAP(pkt, ipLayer, tcp, devices, isSYNOnly, hasPayload)
 	case TCPPortRTSP:
-		// RTSP
-		if tcp.SYN && !tcp.ACK {
-			h.stack.healthCheckHandler.HandleTCPConnect(pkt, ipLayer, tcp, devices, TCPPortRTSP)
-		} else if len(tcp.Payload) > 0 {
-			h.stack.healthCheckHandler.HandleRTSPRequest(pkt, ipLayer, tcp, devices)
-		}
+		h.handleHealthCheckPort(pkt, ipLayer, tcp, devices, TCPPortRTSP, isSYNOnly,
+			func() { h.stack.healthCheckHandler.HandleRTSPRequest(pkt, ipLayer, tcp, devices) })
 	case TCPPortMySQL:
-		// MySQL
-		if tcp.SYN && !tcp.ACK {
-			h.stack.healthCheckHandler.HandleTCPConnect(pkt, ipLayer, tcp, devices, TCPPortMySQL)
-		} else if len(tcp.Payload) > 0 {
-			h.stack.healthCheckHandler.HandleMySQLRequest(pkt, ipLayer, tcp, devices)
-		}
+		h.handleHealthCheckPort(pkt, ipLayer, tcp, devices, TCPPortMySQL, isSYNOnly,
+			func() { h.stack.healthCheckHandler.HandleMySQLRequest(pkt, ipLayer, tcp, devices) })
 	case TCPPortPostgres:
-		// PostgreSQL
-		if tcp.SYN && !tcp.ACK {
-			h.stack.healthCheckHandler.HandleTCPConnect(pkt, ipLayer, tcp, devices, TCPPortPostgres)
-		} else if len(tcp.Payload) > 0 {
-			h.stack.healthCheckHandler.HandlePostgresRequest(pkt, ipLayer, tcp, devices)
-		}
+		h.handleHealthCheckPort(pkt, ipLayer, tcp, devices, TCPPortPostgres, isSYNOnly,
+			func() { h.stack.healthCheckHandler.HandlePostgresRequest(pkt, ipLayer, tcp, devices) })
 	case TCPPortMSSQL:
-		// MS SQL Server
-		if tcp.SYN && !tcp.ACK {
-			h.stack.healthCheckHandler.HandleTCPConnect(pkt, ipLayer, tcp, devices, TCPPortMSSQL)
-		} else if len(tcp.Payload) > 0 {
-			h.stack.healthCheckHandler.HandleMSSQLRequest(pkt, ipLayer, tcp, devices)
-		}
+		h.handleHealthCheckPort(pkt, ipLayer, tcp, devices, TCPPortMSSQL, isSYNOnly,
+			func() { h.stack.healthCheckHandler.HandleMSSQLRequest(pkt, ipLayer, tcp, devices) })
 	case TCPPortModbus:
-		// Modbus TCP
-		if tcp.SYN && !tcp.ACK {
-			h.stack.healthCheckHandler.HandleTCPConnect(pkt, ipLayer, tcp, devices, TCPPortModbus)
-		} else if len(tcp.Payload) > 0 {
-			h.stack.healthCheckHandler.HandleModbusRequest(pkt, ipLayer, tcp, devices)
-		}
+		h.handleHealthCheckPort(pkt, ipLayer, tcp, devices, TCPPortModbus, isSYNOnly,
+			func() { h.stack.healthCheckHandler.HandleModbusRequest(pkt, ipLayer, tcp, devices) })
 	case TCPPortDICOM:
-		// DICOM
-		if tcp.SYN && !tcp.ACK {
-			h.stack.healthCheckHandler.HandleTCPConnect(pkt, ipLayer, tcp, devices, TCPPortDICOM)
-		} else if len(tcp.Payload) > 0 {
-			h.stack.healthCheckHandler.HandleDICOMRequest(pkt, ipLayer, tcp, devices)
-		}
+		h.handleHealthCheckPort(pkt, ipLayer, tcp, devices, TCPPortDICOM, isSYNOnly,
+			func() { h.stack.healthCheckHandler.HandleDICOMRequest(pkt, ipLayer, tcp, devices) })
 	case TCPPortHL7:
-		// HL7 MLLP
-		if tcp.SYN && !tcp.ACK {
-			h.stack.healthCheckHandler.HandleTCPConnect(pkt, ipLayer, tcp, devices, TCPPortHL7)
-		} else if len(tcp.Payload) > 0 {
-			h.stack.healthCheckHandler.HandleHL7Request(pkt, ipLayer, tcp, devices)
-		}
+		h.handleHealthCheckPort(pkt, ipLayer, tcp, devices, TCPPortHL7, isSYNOnly,
+			func() { h.stack.healthCheckHandler.HandleHL7Request(pkt, ipLayer, tcp, devices) })
 	case TCPPortOPCUA:
-		// OPC UA
-		if tcp.SYN && !tcp.ACK {
-			h.stack.healthCheckHandler.HandleTCPConnect(pkt, ipLayer, tcp, devices, TCPPortOPCUA)
-		} else if len(tcp.Payload) > 0 {
-			h.stack.healthCheckHandler.HandleOPCUARequest(pkt, ipLayer, tcp, devices)
-		}
+		h.handleHealthCheckPort(pkt, ipLayer, tcp, devices, TCPPortOPCUA, isSYNOnly,
+			func() { h.stack.healthCheckHandler.HandleOPCUARequest(pkt, ipLayer, tcp, devices) })
 	case TCPPortSMB:
-		// SMB/CIFS
-		if tcp.SYN && !tcp.ACK {
-			h.stack.healthCheckHandler.HandleTCPConnect(pkt, ipLayer, tcp, devices, TCPPortSMB)
-		} else if len(tcp.Payload) > 0 {
-			h.stack.healthCheckHandler.HandleSMBRequest(pkt, ipLayer, tcp, devices)
-		}
+		h.handleHealthCheckPort(pkt, ipLayer, tcp, devices, TCPPortSMB, isSYNOnly,
+			func() { h.stack.healthCheckHandler.HandleSMBRequest(pkt, ipLayer, tcp, devices) })
 	case TCPPortIPerf3:
-		// iPerf3 bandwidth testing
 		h.stack.iperf3Handler.HandleIPerf3Request(pkt, ipLayer, tcp, devices)
 	default:
-		// For unsupported ports, send RST on SYN
-		if tcp.SYN && !tcp.ACK {
+		if isSYNOnly {
 			h.sendRST(ipLayer, tcp, devices)
 		}
+	}
+}
+
+// handleHTTP routes HTTP traffic.
+func (h *TCPHandler) handleHTTP(
+	pkt *Packet,
+	ipLayer *layers.IPv4,
+	tcp *layers.TCP,
+	devices []*config.Device,
+	hasPayload bool,
+) {
+	if hasPayload {
+		h.stack.httpHandler.HandleRequest(pkt, ipLayer, tcp, devices)
+	}
+}
+
+// handleFTP routes FTP control connection traffic.
+func (h *TCPHandler) handleFTP(
+	pkt *Packet,
+	ipLayer *layers.IPv4,
+	tcp *layers.TCP,
+	devices []*config.Device,
+	hasPayload bool,
+) {
+	if hasPayload {
+		h.stack.ftpHandler.HandleRequest(pkt, ipLayer, tcp, devices)
+	}
+}
+
+// handleLDAP routes LDAP/LDAPS traffic.
+func (h *TCPHandler) handleLDAP(
+	pkt *Packet,
+	ipLayer *layers.IPv4,
+	tcp *layers.TCP,
+	devices []*config.Device,
+	isSYNOnly, hasPayload bool,
+) {
+	if isSYNOnly {
+		h.stack.healthCheckHandler.HandleTCPConnect(pkt, ipLayer, tcp, devices, uint16(tcp.DstPort))
+	} else if hasPayload {
+		h.stack.healthCheckHandler.HandleLDAPRequest(pkt, ipLayer, tcp, devices)
+	}
+}
+
+// handleHealthCheckPort handles ports that follow the standard health check pattern.
+func (h *TCPHandler) handleHealthCheckPort(
+	pkt *Packet,
+	ipLayer *layers.IPv4,
+	tcp *layers.TCP,
+	devices []*config.Device,
+	port uint16,
+	isSYNOnly bool,
+	payloadHandler func(),
+) {
+	if isSYNOnly {
+		h.stack.healthCheckHandler.HandleTCPConnect(pkt, ipLayer, tcp, devices, port)
+	} else if len(tcp.Payload) > 0 && payloadHandler != nil {
+		payloadHandler()
 	}
 }
 
@@ -176,113 +239,143 @@ func (h *TCPHandler) HandlePacket(pkt *Packet, ipLayer *layers.IPv4, devices []*
 func (h *TCPHandler) sendRST(ipLayer *layers.IPv4, tcp *layers.TCP, devices []*config.Device) {
 	debugLevel := h.stack.GetDebugLevel()
 
-	// Get source device
+	device := h.findDeviceWithIP(devices, ipLayer.DstIP)
+	if device == nil {
+		return
+	}
+
+	dstMAC := h.lookupDestinationMAC(ipLayer.SrcIP, debugLevel)
+	if dstMAC == nil {
+		return
+	}
+
+	h.sendRSTPacket(device, dstMAC, ipLayer, tcp, debugLevel)
+}
+
+// findDeviceWithIP finds a device that has the specified IP address and MAC.
+func (h *TCPHandler) findDeviceWithIP(devices []*config.Device, targetIP any) *config.Device {
 	for _, device := range devices {
 		if len(device.MACAddress) == 0 {
 			continue
 		}
 
-		// Check if device has the destination IP
-		hasIP := false
+		if h.deviceHasIP(device, targetIP) {
+			return device
+		}
+	}
 
-		for _, deviceIP := range device.IPAddresses {
-			if deviceIP.Equal(ipLayer.DstIP) {
-				hasIP = true
+	return nil
+}
 
-				break
-			}
+// deviceHasIP checks if a device has the specified IP address.
+func (h *TCPHandler) deviceHasIP(device *config.Device, targetIP any) bool {
+	ip, ok := targetIP.(net.IP)
+	if !ok {
+		return false
+	}
+
+	for _, deviceIP := range device.IPAddresses {
+		if deviceIP.Equal(ip) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// lookupDestinationMAC looks up the MAC address for a destination IP.
+func (h *TCPHandler) lookupDestinationMAC(srcIP any, debugLevel int) []byte {
+	ip, ok := srcIP.(net.IP)
+	if !ok {
+		return nil
+	}
+
+	srcDevice := h.stack.GetDevices().GetByIP(ip)
+	if len(srcDevice) > 0 && len(srcDevice[0].MACAddress) > 0 {
+		return srcDevice[0].MACAddress
+	}
+
+	if debugLevel >= DebugLevelInfo {
+		_, _ = fmt.Fprintf(os.Stdout, "Cannot send RST: no MAC for %s\n", srcIP)
+	}
+
+	return nil
+}
+
+// sendRSTPacket builds and sends a TCP RST packet.
+func (h *TCPHandler) sendRSTPacket(
+	device *config.Device,
+	dstMAC []byte,
+	ipLayer *layers.IPv4,
+	tcp *layers.TCP,
+	debugLevel int,
+) {
+	eth := &layers.Ethernet{
+		SrcMAC:       device.MACAddress,
+		DstMAC:       dstMAC,
+		EthernetType: layers.EthernetTypeIPv4,
+	}
+
+	ipReply := &layers.IPv4{
+		Version:  tcpIPv4Version,
+		IHL:      tcpIPv4IHL,
+		TTL:      tcpIPv4TTL,
+		Protocol: layers.IPProtocolTCP,
+		SrcIP:    ipLayer.DstIP,
+		DstIP:    ipLayer.SrcIP,
+	}
+
+	tcpReply := &layers.TCP{
+		SrcPort: tcp.DstPort,
+		DstPort: tcp.SrcPort,
+		Seq:     0,
+		Ack:     tcp.Seq + 1,
+		RST:     true,
+		ACK:     true,
+		Window:  0,
+	}
+	_ = tcpReply.SetNetworkLayerForChecksum(ipReply)
+
+	buffer := gopacket.NewSerializeBuffer()
+	opts := gopacket.SerializeOptions{FixLengths: true, ComputeChecksums: true}
+
+	if err := gopacket.SerializeLayers(buffer, opts, eth, ipReply, tcpReply); err != nil {
+		if debugLevel >= DebugLevelInfo {
+			_, _ = fmt.Fprintf(os.Stdout, "Error serializing TCP RST: %v\n", err)
 		}
 
-		if !hasIP {
-			continue
-		}
+		return
+	}
 
-		// Build RST packet
-		// Get source MAC from device table lookup by source IP
-		srcDevice := h.stack.GetDevices().GetByIP(ipLayer.SrcIP)
+	h.sendSerializedPacket(buffer.Bytes(), device, ipReply, tcpReply, debugLevel)
+}
 
-		var dstMAC []byte
+// sendSerializedPacket sends a serialized packet and logs the result.
+func (h *TCPHandler) sendSerializedPacket(
+	data []byte,
+	device *config.Device,
+	ipReply *layers.IPv4,
+	tcpReply *layers.TCP,
+	debugLevel int,
+) {
+	h.stack.mu.Lock()
+	h.stack.serialNumber++
+	serialNum := h.stack.serialNumber
+	h.stack.mu.Unlock()
 
-		if len(srcDevice) > 0 && len(srcDevice[0].MACAddress) > 0 {
-			dstMAC = srcDevice[0].MACAddress
-		} else {
-			// Use MAC from original packet (reverse lookup)
-			// For now, skip if we can't find it
-			if debugLevel >= 2 {
-				_, _ = fmt.Fprintf(os.Stdout, "Cannot send RST: no MAC for %s\n", ipLayer.SrcIP)
-			}
+	pkt := &Packet{
+		Buffer:       data,
+		Length:       len(data),
+		SerialNumber: serialNum,
+		Device:       device,
+	}
 
-			continue
-		}
+	h.stack.Send(pkt)
 
-		// Build Ethernet header
-		eth := &layers.Ethernet{
-			SrcMAC:       device.MACAddress,
-			DstMAC:       dstMAC,
-			EthernetType: layers.EthernetTypeIPv4,
-		}
-
-		// Build IP header
-		ipReply := &layers.IPv4{
-			Version:  4,
-			IHL:      5,
-			TTL:      64,
-			Protocol: layers.IPProtocolTCP,
-			SrcIP:    ipLayer.DstIP,
-			DstIP:    ipLayer.SrcIP,
-		}
-
-		// Build TCP header with RST
-		tcpReply := &layers.TCP{
-			SrcPort: tcp.DstPort,
-			DstPort: tcp.SrcPort,
-			Seq:     0,
-			Ack:     tcp.Seq + 1,
-			RST:     true,
-			ACK:     true,
-			Window:  0,
-		}
-		_ = tcpReply.SetNetworkLayerForChecksum(ipReply) // error is non-critical for simulation
-
-		// Serialize
-		buffer := gopacket.NewSerializeBuffer()
-		opts := gopacket.SerializeOptions{
-			FixLengths:       true,
-			ComputeChecksums: true,
-		}
-
-		err := gopacket.SerializeLayers(buffer, opts, eth, ipReply, tcpReply)
-		if err != nil {
-			if debugLevel >= 2 {
-				_, _ = fmt.Fprintf(os.Stdout, "Error serializing TCP RST: %v\n", err)
-			}
-
-			continue
-		}
-
-		// Get serial number
-		h.stack.mu.Lock()
-		h.stack.serialNumber++
-		serialNum := h.stack.serialNumber
-		h.stack.mu.Unlock()
-
-		// Create and send packet
-		pkt := &Packet{
-			Buffer:       buffer.Bytes(),
-			Length:       len(buffer.Bytes()),
-			SerialNumber: serialNum,
-			Device:       device,
-		}
-
-		h.stack.Send(pkt)
-
-		if debugLevel >= 3 {
-			_, _ = fmt.Fprintf(os.Stdout, "Sent TCP RST from %s:%d to %s:%d device=%s sn=%d\n",
-				ipReply.SrcIP, tcpReply.SrcPort, ipReply.DstIP, tcpReply.DstPort,
-				device.Name, serialNum)
-		}
-
-		break // Only send one RST
+	if debugLevel >= DebugLevelVerbose {
+		_, _ = fmt.Fprintf(os.Stdout, "Sent TCP RST from %s:%d to %s:%d device=%s sn=%d\n",
+			ipReply.SrcIP, tcpReply.SrcPort, ipReply.DstIP, tcpReply.DstPort,
+			device.Name, serialNum)
 	}
 }
 
@@ -304,9 +397,9 @@ func (h *TCPHandler) SendTCP(
 
 	// Build IP header
 	ipLayer := &layers.IPv4{
-		Version:  4,
-		IHL:      5,
-		TTL:      64,
+		Version:  tcpIPv4Version,
+		IHL:      tcpIPv4IHL,
+		TTL:      tcpIPv4TTL,
 		Protocol: layers.IPProtocolTCP,
 		SrcIP:    srcIP,
 		DstIP:    dstIP,
@@ -318,15 +411,15 @@ func (h *TCPHandler) SendTCP(
 		DstPort: layers.TCPPort(dstPort),
 		Seq:     seq,
 		Ack:     ack,
-		Window:  65535,
+		Window:  tcpWindowSize,
 	}
 
 	// Set flags
-	tcpLayer.SYN = (flags & 0x02) != 0
-	tcpLayer.ACK = (flags & 0x10) != 0
-	tcpLayer.FIN = (flags & 0x01) != 0
-	tcpLayer.RST = (flags & 0x04) != 0
-	tcpLayer.PSH = (flags & 0x08) != 0
+	tcpLayer.SYN = (flags & tcpFlagSYN) != 0
+	tcpLayer.ACK = (flags & tcpFlagACK) != 0
+	tcpLayer.FIN = (flags & tcpFlagFIN) != 0
+	tcpLayer.RST = (flags & tcpFlagRST) != 0
+	tcpLayer.PSH = (flags & tcpFlagPSH) != 0
 
 	_ = tcpLayer.SetNetworkLayerForChecksum(ipLayer) // error is non-critical for simulation
 
@@ -362,7 +455,7 @@ func (h *TCPHandler) SendTCP(
 
 	h.stack.Send(pkt)
 
-	if h.stack.GetDebugLevel() >= 3 {
+	if h.stack.GetDebugLevel() >= DebugLevelVerbose {
 		_, _ = fmt.Fprintf(os.Stdout, "Sent TCP packet: %s:%d -> %s:%d length=%d sn=%d\n",
 			srcIP, srcPort, dstIP, dstPort, len(payload), serialNum)
 	}
@@ -371,62 +464,82 @@ func (h *TCPHandler) SendTCP(
 }
 
 // HandlePacketV6 processes a TCP packet over IPv6.
-func (h *TCPHandler) HandlePacketV6(pkt *Packet, packet gopacket.Packet, ipv6 *layers.IPv6, devices []*config.Device) {
+func (h *TCPHandler) HandlePacketV6(
+	pkt *Packet,
+	packet gopacket.Packet,
+	ipv6 *layers.IPv6,
+	devices []*config.Device,
+) {
 	debugLevel := h.stack.GetDebugLevel()
 
-	// Parse TCP layer
-	tcpLayer := packet.Layer(layers.LayerTypeTCP)
-	if tcpLayer == nil {
-		if debugLevel >= 2 {
-			_, _ = fmt.Fprintf(os.Stdout, "TCP/IPv6 packet missing TCP layer sn=%d\n", pkt.SerialNumber)
-		}
-
-		return
-	}
-
-	tcp, ok := tcpLayer.(*layers.TCP)
+	tcp, ok := h.parseTCPLayerFromPacket(packet, debugLevel, pkt.SerialNumber)
 	if !ok {
 		return
 	}
 
-	if debugLevel >= 3 {
-		flags := ""
-		if tcp.SYN {
-			flags += "SYN "
+	h.logTCPPacketV6(ipv6, tcp, debugLevel, pkt.SerialNumber)
+	h.routeToHandlerV6(pkt, packet, ipv6, tcp, devices)
+}
+
+// parseTCPLayerFromPacket extracts the TCP layer from a parsed packet.
+func (h *TCPHandler) parseTCPLayerFromPacket(
+	packet gopacket.Packet,
+	debugLevel int,
+	serial int,
+) (*layers.TCP, bool) {
+	tcpLayer := packet.Layer(layers.LayerTypeTCP)
+	if tcpLayer == nil {
+		if debugLevel >= DebugLevelInfo {
+			_, _ = fmt.Fprintf(os.Stdout, "TCP/IPv6 packet missing TCP layer sn=%d\n", serial)
 		}
 
-		if tcp.ACK {
-			flags += "ACK "
-		}
-
-		if tcp.FIN {
-			flags += "FIN "
-		}
-
-		if tcp.RST {
-			flags += "RST "
-		}
-
-		_, _ = fmt.Fprintf(os.Stdout, "TCP/IPv6 packet: [%s]:%d -> [%s]:%d flags=[%s] seq=%d ack=%d sn=%d\n",
-			ipv6.SrcIP, tcp.SrcPort, ipv6.DstIP, tcp.DstPort,
-			flags, tcp.Seq, tcp.Ack, pkt.SerialNumber)
+		return nil, false
 	}
 
-	// Route to application handlers based on destination port
+	tcp, ok := tcpLayer.(*layers.TCP)
+
+	return tcp, ok
+}
+
+// logTCPPacketV6 logs IPv6 TCP packet details at verbose debug level.
+func (h *TCPHandler) logTCPPacketV6(
+	ipv6 *layers.IPv6,
+	tcp *layers.TCP,
+	debugLevel int,
+	serial int,
+) {
+	if debugLevel < DebugLevelVerbose {
+		return
+	}
+
+	flags := buildTCPFlagsString(tcp)
+	_, _ = fmt.Fprintf(os.Stdout, "TCP/IPv6 packet: [%s]:%d -> [%s]:%d flags=[%s] seq=%d ack=%d sn=%d\n",
+		ipv6.SrcIP, tcp.SrcPort, ipv6.DstIP, tcp.DstPort,
+		flags, tcp.Seq, tcp.Ack, serial)
+}
+
+// routeToHandlerV6 routes IPv6 TCP packets to the appropriate application handler.
+func (h *TCPHandler) routeToHandlerV6(
+	pkt *Packet,
+	packet gopacket.Packet,
+	ipv6 *layers.IPv6,
+	tcp *layers.TCP,
+	devices []*config.Device,
+) {
+	hasPayload := len(tcp.Payload) > 0
+	isSYNOnly := tcp.SYN && !tcp.ACK
+
 	switch tcp.DstPort {
 	case TCPPortHTTP:
-		// HTTP traffic over IPv6
-		if len(tcp.Payload) > 0 {
+		if hasPayload {
 			h.stack.httpHandler.HandleRequestV6(pkt, packet, ipv6, tcp, devices)
 		}
 	case TCPPortFTP:
-		// FTP control connection over IPv6
-		if len(tcp.Payload) > 0 {
+		if hasPayload {
 			h.stack.ftpHandler.HandleRequestV6(pkt, packet, ipv6, tcp, devices)
 		}
 	default:
-		// For unsupported ports, send RST on SYN
-		if tcp.SYN && !tcp.ACK {
+		if isSYNOnly {
 			h.sendRSTV6(ipv6, tcp, devices)
 		}
 	}
@@ -436,107 +549,105 @@ func (h *TCPHandler) HandlePacketV6(pkt *Packet, packet gopacket.Packet, ipv6 *l
 func (h *TCPHandler) sendRSTV6(ipv6 *layers.IPv6, tcp *layers.TCP, devices []*config.Device) {
 	debugLevel := h.stack.GetDebugLevel()
 
-	// Get source device
-	for _, device := range devices {
-		if len(device.MACAddress) == 0 {
-			continue
+	device := h.findDeviceWithIP(devices, ipv6.DstIP)
+	if device == nil {
+		return
+	}
+
+	dstMAC := h.lookupDestinationMACV6(ipv6.SrcIP, debugLevel)
+	if dstMAC == nil {
+		return
+	}
+
+	h.sendRSTPacketV6(device, dstMAC, ipv6, tcp, debugLevel)
+}
+
+// lookupDestinationMACV6 looks up the MAC address for an IPv6 destination.
+func (h *TCPHandler) lookupDestinationMACV6(srcIP net.IP, debugLevel int) []byte {
+	srcDevice := h.stack.GetDevices().GetByIP(srcIP)
+	if len(srcDevice) > 0 && len(srcDevice[0].MACAddress) > 0 {
+		return srcDevice[0].MACAddress
+	}
+
+	if debugLevel >= DebugLevelInfo {
+		_, _ = fmt.Fprintf(os.Stdout, "Cannot send RST: no MAC for [%s]\n", srcIP)
+	}
+
+	return nil
+}
+
+// sendRSTPacketV6 builds and sends a TCP RST packet over IPv6.
+func (h *TCPHandler) sendRSTPacketV6(
+	device *config.Device,
+	dstMAC []byte,
+	ipv6 *layers.IPv6,
+	tcp *layers.TCP,
+	debugLevel int,
+) {
+	eth := &layers.Ethernet{
+		SrcMAC:       device.MACAddress,
+		DstMAC:       dstMAC,
+		EthernetType: layers.EthernetTypeIPv6,
+	}
+
+	ipv6Reply := &layers.IPv6{
+		Version:    tcpIPv6Version,
+		HopLimit:   tcpIPv6HopLimit,
+		NextHeader: layers.IPProtocolTCP,
+		SrcIP:      ipv6.DstIP,
+		DstIP:      ipv6.SrcIP,
+	}
+
+	tcpReply := &layers.TCP{
+		SrcPort: tcp.DstPort,
+		DstPort: tcp.SrcPort,
+		Seq:     0,
+		Ack:     tcp.Seq + 1,
+		RST:     true,
+		ACK:     true,
+		Window:  0,
+	}
+	_ = tcpReply.SetNetworkLayerForChecksum(ipv6Reply)
+
+	buffer := gopacket.NewSerializeBuffer()
+	opts := gopacket.SerializeOptions{FixLengths: true, ComputeChecksums: true}
+
+	if err := gopacket.SerializeLayers(buffer, opts, eth, ipv6Reply, tcpReply); err != nil {
+		if debugLevel >= DebugLevelInfo {
+			_, _ = fmt.Fprintf(os.Stdout, "Error serializing TCP/IPv6 RST: %v\n", err)
 		}
 
-		// Check if device has the destination IPv6
-		hasIP := false
+		return
+	}
 
-		for _, deviceIP := range device.IPAddresses {
-			if deviceIP.Equal(ipv6.DstIP) {
-				hasIP = true
+	h.sendSerializedPacketV6(buffer.Bytes(), device, ipv6Reply, tcpReply, debugLevel)
+}
 
-				break
-			}
-		}
+// sendSerializedPacketV6 sends a serialized IPv6 packet and logs the result.
+func (h *TCPHandler) sendSerializedPacketV6(
+	data []byte,
+	device *config.Device,
+	ipv6Reply *layers.IPv6,
+	tcpReply *layers.TCP,
+	debugLevel int,
+) {
+	h.stack.mu.Lock()
+	h.stack.serialNumber++
+	serialNum := h.stack.serialNumber
+	h.stack.mu.Unlock()
 
-		if !hasIP {
-			continue
-		}
+	pkt := &Packet{
+		Buffer:       data,
+		Length:       len(data),
+		SerialNumber: serialNum,
+		Device:       device,
+	}
 
-		// Get destination MAC
-		srcDevice := h.stack.GetDevices().GetByIP(ipv6.SrcIP)
+	h.stack.Send(pkt)
 
-		var dstMAC []byte
-
-		if len(srcDevice) > 0 && len(srcDevice[0].MACAddress) > 0 {
-			dstMAC = srcDevice[0].MACAddress
-		} else {
-			if debugLevel >= 2 {
-				_, _ = fmt.Fprintf(os.Stdout, "Cannot send RST: no MAC for [%s]\n", ipv6.SrcIP)
-			}
-
-			continue
-		}
-
-		// Build Ethernet header
-		eth := &layers.Ethernet{
-			SrcMAC:       device.MACAddress,
-			DstMAC:       dstMAC,
-			EthernetType: layers.EthernetTypeIPv6,
-		}
-
-		// Build IPv6 header
-		ipv6Reply := &layers.IPv6{
-			Version:    6,
-			HopLimit:   64,
-			NextHeader: layers.IPProtocolTCP,
-			SrcIP:      ipv6.DstIP,
-			DstIP:      ipv6.SrcIP,
-		}
-
-		// Build TCP header with RST
-		tcpReply := &layers.TCP{
-			SrcPort: tcp.DstPort,
-			DstPort: tcp.SrcPort,
-			Seq:     0,
-			Ack:     tcp.Seq + 1,
-			RST:     true,
-			ACK:     true,
-			Window:  0,
-		}
-		_ = tcpReply.SetNetworkLayerForChecksum(ipv6Reply) // error is non-critical for simulation
-
-		// Serialize
-		buffer := gopacket.NewSerializeBuffer()
-		opts := gopacket.SerializeOptions{
-			FixLengths:       true,
-			ComputeChecksums: true,
-		}
-
-		err := gopacket.SerializeLayers(buffer, opts, eth, ipv6Reply, tcpReply)
-		if err != nil {
-			if debugLevel >= 2 {
-				_, _ = fmt.Fprintf(os.Stdout, "Error serializing TCP/IPv6 RST: %v\n", err)
-			}
-
-			continue
-		}
-
-		// Send packet
-		h.stack.mu.Lock()
-		h.stack.serialNumber++
-		serialNum := h.stack.serialNumber
-		h.stack.mu.Unlock()
-
-		pkt := &Packet{
-			Buffer:       buffer.Bytes(),
-			Length:       len(buffer.Bytes()),
-			SerialNumber: serialNum,
-			Device:       device,
-		}
-
-		h.stack.Send(pkt)
-
-		if debugLevel >= 3 {
-			_, _ = fmt.Fprintf(os.Stdout, "Sent TCP/IPv6 RST from [%s]:%d to [%s]:%d device=%s sn=%d\n",
-				ipv6Reply.SrcIP, tcpReply.SrcPort, ipv6Reply.DstIP, tcpReply.DstPort,
-				device.Name, serialNum)
-		}
-
-		break
+	if debugLevel >= DebugLevelVerbose {
+		_, _ = fmt.Fprintf(os.Stdout, "Sent TCP/IPv6 RST from [%s]:%d to [%s]:%d device=%s sn=%d\n",
+			ipv6Reply.SrcIP, tcpReply.SrcPort, ipv6Reply.DstIP, tcpReply.DstPort,
+			device.Name, serialNum)
 	}
 }

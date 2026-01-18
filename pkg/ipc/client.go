@@ -11,8 +11,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/krisarmstrong/niac-go/pkg/api"
-	pkgerrors "github.com/krisarmstrong/niac-go/pkg/errors"
+	apperr "github.com/krisarmstrong/niac-go/pkg/apperr"
+	"github.com/krisarmstrong/niac-go/pkg/httpapi"
 )
 
 // Sentinel errors for IPC commands.
@@ -41,6 +41,13 @@ const (
 
 	// EnvSocketPath is the environment variable for custom socket path.
 	EnvSocketPath = "NIAC_SOCKET_PATH"
+
+	// Client configuration constants.
+	minPollingIntervalMs = 100  // minimum polling interval
+	defaultPollingMs     = 500  // default polling interval
+	logChannelBuffer     = 100  // log channel buffer size
+	maxSeenLogs          = 1000 // max seen logs before map cleanup
+	asciiCaseOffset      = 32   // ASCII case conversion offset (a-A)
 )
 
 // Client is an IPC client for communicating with the NIAC server.
@@ -89,7 +96,8 @@ func (c *Client) SendCommand(cmd Command, args map[string]any) (*Response, error
 	defer func() { _ = conn.Close() }()
 
 	// Set deadline for the entire operation
-	if err := conn.SetDeadline(time.Now().Add(c.timeout)); err != nil {
+	err = conn.SetDeadline(time.Now().Add(c.timeout))
+	if err != nil {
 		return nil, fmt.Errorf("failed to set connection deadline: %w", err)
 	}
 
@@ -100,7 +108,8 @@ func (c *Client) SendCommand(cmd Command, args map[string]any) (*Response, error
 	}
 
 	encoder := json.NewEncoder(conn)
-	if err := encoder.Encode(&req); err != nil {
+	err = encoder.Encode(&req)
+	if err != nil {
 		return nil, fmt.Errorf("failed to send request: %w", err)
 	}
 
@@ -108,7 +117,8 @@ func (c *Client) SendCommand(cmd Command, args map[string]any) (*Response, error
 	var resp Response
 
 	decoder := json.NewDecoder(conn)
-	if err := decoder.Decode(&resp); err != nil {
+	err = decoder.Decode(&resp)
+	if err != nil {
 		return nil, fmt.Errorf("failed to read response: %w", err)
 	}
 
@@ -139,7 +149,8 @@ func (c *Client) GetStatus() (*StatusData, error) {
 	}
 
 	var status StatusData
-	if err := json.Unmarshal(statusBytes, &status); err != nil {
+	err = json.Unmarshal(statusBytes, &status)
+	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal status data: %w", err)
 	}
 
@@ -183,7 +194,7 @@ func (c *Client) InjectError(device, errorType string, value int) error {
 }
 
 // InjectErrorType is a convenience method that accepts an errors.ErrorType.
-func (c *Client) InjectErrorType(device string, errorType pkgerrors.ErrorType, value int) error {
+func (c *Client) InjectErrorType(device string, errorType apperr.ErrorType, value int) error {
 	return c.InjectError(device, string(errorType), value)
 }
 
@@ -211,7 +222,8 @@ func (c *Client) ListInjections() ([]ErrorInjectionData, error) {
 	}
 
 	var injections []ErrorInjectionData
-	if err := json.Unmarshal(injectionsBytes, &injections); err != nil {
+	err = json.Unmarshal(injectionsBytes, &injections)
+	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal injections data: %w", err)
 	}
 
@@ -333,7 +345,9 @@ func (c *Client) DumpPackets(device, iface string, count int) ([]PacketData, err
 	}
 
 	var packets []PacketData
-	if err := json.Unmarshal(packetsBytes, &packets); err != nil {
+
+	err = json.Unmarshal(packetsBytes, &packets)
+	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal packets data: %w", err)
 	}
 
@@ -342,7 +356,7 @@ func (c *Client) DumpPackets(device, iface string, count int) ([]PacketData, err
 
 // GetTopology retrieves the current network topology from the server.
 // Returns the topology graph with nodes (devices) and links (connections).
-func (c *Client) GetTopology() (*api.Topology, error) {
+func (c *Client) GetTopology() (*httpapi.Topology, error) {
 	resp, err := c.SendCommand(CommandTopology, nil)
 	if err != nil {
 		return nil, err
@@ -364,8 +378,10 @@ func (c *Client) GetTopology() (*api.Topology, error) {
 		return nil, fmt.Errorf("failed to marshal topology data: %w", err)
 	}
 
-	var topology api.Topology
-	if err := json.Unmarshal(topologyBytes, &topology); err != nil {
+	var topology httpapi.Topology
+
+	err = json.Unmarshal(topologyBytes, &topology)
+	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal topology data: %w", err)
 	}
 
@@ -412,7 +428,9 @@ func (c *Client) GetLogs(level string, count int) ([]LogEntry, error) {
 	}
 
 	var logs []LogEntry
-	if err := json.Unmarshal(logsBytes, &logs); err != nil {
+
+	err = json.Unmarshal(logsBytes, &logs)
+	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal logs data: %w", err)
 	}
 
@@ -434,8 +452,8 @@ type LogSubscription struct {
 // The subscription runs in a background goroutine and sends logs to the returned channel.
 // Call Stop() on the subscription to terminate it.
 func (c *Client) SubscribeLogs(level, filter string, interval time.Duration) *LogSubscription {
-	if interval < 100*time.Millisecond {
-		interval = 500 * time.Millisecond
+	if interval < minPollingIntervalMs*time.Millisecond {
+		interval = defaultPollingMs * time.Millisecond
 	}
 
 	sub := &LogSubscription{
@@ -444,7 +462,7 @@ func (c *Client) SubscribeLogs(level, filter string, interval time.Duration) *Lo
 		filter:   filter,
 		interval: interval,
 		stopCh:   make(chan struct{}),
-		logCh:    make(chan LogEntry, 100),
+		logCh:    make(chan LogEntry, logChannelBuffer),
 		errCh:    make(chan error, 1),
 	}
 
@@ -482,45 +500,84 @@ func (s *LogSubscription) run() {
 		case <-s.stopCh:
 			return
 		case <-ticker.C:
-			logs, err := s.client.GetLogs(s.level, 100)
-			if err != nil {
-				select {
-				case s.errCh <- err:
-				default:
-				}
-
-				continue
+			stopped := s.pollAndProcessLogs(seenLogs)
+			if stopped {
+				return
 			}
 
-			for _, log := range logs {
-				// Create a unique key for this log entry
-				key := fmt.Sprintf("%s:%s:%s", log.Timestamp.Format(time.RFC3339Nano), log.Level, log.Message)
-
-				// Skip if we've seen this log before
-				if seenLogs[key] {
-					continue
-				}
-
-				// Apply text filter if specified
-				if s.filter != "" && !matchesFilter(log.Message, s.filter) {
-					continue
-				}
-
-				seenLogs[key] = true
-
-				select {
-				case s.logCh <- log:
-				case <-s.stopCh:
-					return
-				}
-			}
-
-			// Clean up old entries from the seen map to prevent unbounded growth
-			if len(seenLogs) > 1000 {
-				seenLogs = make(map[string]bool)
-			}
+			seenLogs = s.cleanupSeenLogs(seenLogs)
 		}
 	}
+}
+
+// pollAndProcessLogs fetches logs and processes them, returning true if stopped.
+func (s *LogSubscription) pollAndProcessLogs(seenLogs map[string]bool) bool {
+	logs, err := s.client.GetLogs(s.level, logChannelBuffer)
+	if err != nil {
+		s.sendError(err)
+		return false
+	}
+
+	for _, log := range logs {
+		if s.shouldSkipLog(log, seenLogs) {
+			continue
+		}
+
+		seenLogs[s.logKey(log)] = true
+
+		if s.sendLogOrStop(log) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// sendError sends an error to the error channel without blocking.
+func (s *LogSubscription) sendError(err error) {
+	select {
+	case s.errCh <- err:
+	default:
+	}
+}
+
+// logKey creates a unique key for a log entry.
+func (s *LogSubscription) logKey(log LogEntry) string {
+	return fmt.Sprintf("%s:%s:%s", log.Timestamp.Format(time.RFC3339Nano), log.Level, log.Message)
+}
+
+// shouldSkipLog returns true if the log should be skipped (already seen or filtered).
+func (s *LogSubscription) shouldSkipLog(log LogEntry, seenLogs map[string]bool) bool {
+	key := s.logKey(log)
+
+	if seenLogs[key] {
+		return true
+	}
+
+	if s.filter != "" && !matchesFilter(log.Message, s.filter) {
+		return true
+	}
+
+	return false
+}
+
+// sendLogOrStop sends a log to the channel, returning true if the subscription was stopped.
+func (s *LogSubscription) sendLogOrStop(log LogEntry) bool {
+	select {
+	case s.logCh <- log:
+		return false
+	case <-s.stopCh:
+		return true
+	}
+}
+
+// cleanupSeenLogs resets the seen logs map if it grows too large.
+func (s *LogSubscription) cleanupSeenLogs(seenLogs map[string]bool) map[string]bool {
+	if len(seenLogs) > maxSeenLogs {
+		return make(map[string]bool)
+	}
+
+	return seenLogs
 }
 
 // matchesFilter checks if a message matches the given filter pattern.
@@ -537,7 +594,7 @@ func containsIgnoreCase(s, substr string) bool {
 
 	for i := range len(s) {
 		if s[i] >= 'A' && s[i] <= 'Z' {
-			sLower[i] = s[i] + 32
+			sLower[i] = s[i] + asciiCaseOffset
 		} else {
 			sLower[i] = s[i]
 		}
@@ -545,7 +602,7 @@ func containsIgnoreCase(s, substr string) bool {
 
 	for i := range len(substr) {
 		if substr[i] >= 'A' && substr[i] <= 'Z' {
-			substrLower[i] = substr[i] + 32
+			substrLower[i] = substr[i] + asciiCaseOffset
 		} else {
 			substrLower[i] = substr[i]
 		}
@@ -613,7 +670,9 @@ func (c *Client) GetNeighbors() ([]NeighborData, error) {
 	}
 
 	var neighbors []NeighborData
-	if err := json.Unmarshal(neighborsBytes, &neighbors); err != nil {
+
+	err = json.Unmarshal(neighborsBytes, &neighbors)
+	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal neighbors data: %w", err)
 	}
 

@@ -86,7 +86,7 @@ func TestRateLimiter_Wait_RateLimiting(t *testing.T) {
 }
 
 // TestRateLimiter_Stop tests clean shutdown.
-func TestRateLimiter_Stop(t *testing.T) {
+func TestRateLimiter_Stop(_ *testing.T) {
 	rl := NewRateLimiter(100)
 
 	// Stop should not panic
@@ -97,7 +97,7 @@ func TestRateLimiter_Stop(t *testing.T) {
 }
 
 // TestRateLimiter_Stop_NoLeaks tests that goroutine exits after Stop.
-func TestRateLimiter_Stop_NoLeaks(t *testing.T) {
+func TestRateLimiter_Stop_NoLeaks(_ *testing.T) {
 	// This test verifies goroutine cleanup by creating/stopping many rate limiters
 	for range 100 {
 		rl := NewRateLimiter(100)
@@ -194,7 +194,7 @@ func TestGetInterface_NonExistent(t *testing.T) {
 }
 
 // TestListInterfaces tests listing all interfaces.
-func TestListInterfaces(t *testing.T) {
+func TestListInterfaces(_ *testing.T) {
 	// This test just verifies ListInterfaces doesn't panic
 	// We can't easily capture stdout to verify output
 	ListInterfaces()

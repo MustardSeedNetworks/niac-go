@@ -11,14 +11,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/krisarmstrong/niac-go/pkg/api"
+	apperr "github.com/krisarmstrong/niac-go/pkg/apperr"
 	"github.com/krisarmstrong/niac-go/pkg/config"
-	pkgerrors "github.com/krisarmstrong/niac-go/pkg/errors"
+	"github.com/krisarmstrong/niac-go/pkg/httpapi"
 	"github.com/krisarmstrong/niac-go/pkg/logging"
 	"github.com/krisarmstrong/niac-go/pkg/protocols"
 )
 
-// Sentinel errors for IPC server.
+// ErrIPCServerAlreadyRunning is returned when the IPC server is already running.
 var ErrIPCServerAlreadyRunning = errors.New("IPC server already running")
 
 // Command represents an IPC command.
@@ -45,6 +45,14 @@ const (
 	CommandDump Command = "dump"
 	// CommandNeighbors retrieves the neighbor discovery table.
 	CommandNeighbors Command = "neighbors"
+)
+
+// Socket configuration constants.
+const (
+	connectionTimeoutSec = 5   // timeout for IPC connections
+	shutdownDelayMs      = 500 // delay before shutdown signal processing
+	logLevelWarnPriority = 2   // log level priority for warn
+	logLevelErrPriority  = 3   // log level priority for error
 )
 
 // PacketBufferSize is the maximum number of packets to store in the ring buffer.
@@ -98,11 +106,11 @@ type StatusData struct {
 
 // ErrorInjectionData contains error injection information.
 type ErrorInjectionData struct {
-	Device    string              `json:"device"`
-	Interface string              `json:"interface"`
-	ErrorType pkgerrors.ErrorType `json:"error_type"`
-	Value     int                 `json:"value"`
-	Injected  time.Time           `json:"injected_at"`
+	Device    string           `json:"device"`
+	Interface string           `json:"interface"`
+	ErrorType apperr.ErrorType `json:"error_type"`
+	Value     int              `json:"value"`
+	Injected  time.Time        `json:"injected_at"`
 }
 
 // PacketData contains captured packet information for hex dump display.
@@ -128,7 +136,7 @@ type Server struct {
 	listener      net.Listener
 	stack         *protocols.Stack
 	cfg           *config.Config
-	stateManager  *pkgerrors.StateManager
+	stateManager  *apperr.StateManager
 	interfaceName string
 	configPath    string
 	startTime     time.Time
@@ -140,7 +148,7 @@ type Server struct {
 
 // NewServer creates a new IPC server.
 func NewServer(socketPath string, stack *protocols.Stack, cfg *config.Config,
-	stateManager *pkgerrors.StateManager, interfaceName, configPath string,
+	stateManager *apperr.StateManager, interfaceName, configPath string,
 ) *Server {
 	return &Server{
 		socketPath:    socketPath,
@@ -262,10 +270,11 @@ func (s *Server) Start() error {
 	}
 
 	// Set socket permissions (owner only)
-	if err := os.Chmod(s.socketPath, 0o600); err != nil {
+	chmodErr := os.Chmod(s.socketPath, 0o600)
+	if chmodErr != nil {
 		_ = listener.Close()
 
-		return fmt.Errorf("failed to set socket permissions: %w", err)
+		return fmt.Errorf("failed to set socket permissions: %w", chmodErr)
 	}
 
 	s.listener = listener
@@ -274,7 +283,7 @@ func (s *Server) Start() error {
 	// Start accepting connections in background
 	go s.acceptLoop()
 
-	logging.Info("IPC server started on %s", s.socketPath)
+	logging.Infof("IPC server started on %s", s.socketPath)
 
 	return nil
 }
@@ -298,7 +307,7 @@ func (s *Server) Stop() error {
 	// Remove socket file
 	_ = os.RemoveAll(s.socketPath)
 
-	logging.Info("IPC server stopped")
+	logging.Infof("IPC server stopped")
 
 	return nil
 }
@@ -319,7 +328,7 @@ func (s *Server) acceptLoop() {
 			case <-s.shutdownChan:
 				return
 			default:
-				logging.Error("IPC accept error: %v", err)
+				logging.Errorf("IPC accept error: %v", err)
 
 				continue
 			}
@@ -335,7 +344,9 @@ func (s *Server) handleConnection(conn net.Conn) {
 	defer func() { _ = conn.Close() }()
 
 	// Set read/write timeouts
-	_ = conn.SetDeadline(time.Now().Add(5 * time.Second)) // error is non-critical, connection will timeout naturally
+	_ = conn.SetDeadline(
+		time.Now().Add(connectionTimeoutSec * time.Second),
+	) // error is non-critical, connection will timeout naturally
 
 	// Read request
 	decoder := json.NewDecoder(conn)
@@ -355,7 +366,7 @@ func (s *Server) handleConnection(conn net.Conn) {
 	encoder := json.NewEncoder(conn)
 	err = encoder.Encode(response)
 	if err != nil {
-		logging.Error("Failed to send IPC response: %v", err)
+		logging.Errorf("Failed to send IPC response: %v", err)
 	}
 }
 
@@ -391,7 +402,7 @@ func (s *Server) processCommand(req *Request) *Response {
 }
 
 // handleStatus returns simulation status.
-func (s *Server) handleStatus(req *Request) *Response {
+func (s *Server) handleStatus(_ *Request) *Response {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -419,7 +430,7 @@ func (s *Server) handleStatus(req *Request) *Response {
 }
 
 // handleReload reloads the configuration.
-func (s *Server) handleReload(req *Request) *Response {
+func (s *Server) handleReload(_ *Request) *Response {
 	// Load new config
 	newCfg, err := config.Load(s.configPath)
 	if err != nil {
@@ -445,7 +456,7 @@ func (s *Server) handleReload(req *Request) *Response {
 
 	// Note: Full hot-reload would require updating the stack
 	// For now, we just update the config reference
-	logging.Info("Configuration reloaded from %s", s.configPath)
+	logging.Infof("Configuration reloaded from %s", s.configPath)
 
 	return &Response{
 		Success: true,
@@ -502,7 +513,7 @@ func (s *Server) handleInject(req *Request) *Response {
 	}
 
 	// Parse error type
-	errorType := pkgerrors.ErrorType(errorTypeStr)
+	errorType := apperr.ErrorType(errorTypeStr)
 
 	// Get interface (use first available)
 	interfaceName := s.interfaceName
@@ -514,7 +525,7 @@ func (s *Server) handleInject(req *Request) *Response {
 	// Inject error
 	s.stateManager.SetError(deviceName, interfaceName, errorType, int(value))
 
-	logging.Info("Error injected via IPC: device=%s, type=%s, value=%d",
+	logging.Infof("Error injected via IPC: device=%s, type=%s, value=%d",
 		deviceName, errorType, int(value))
 
 	return &Response{
@@ -529,7 +540,7 @@ func (s *Server) handleInject(req *Request) *Response {
 }
 
 // handleList lists active error injections.
-func (s *Server) handleList(req *Request) *Response {
+func (s *Server) handleList(_ *Request) *Response {
 	states := s.stateManager.GetAllStates()
 
 	injections := make([]ErrorInjectionData, 0, len(states))
@@ -568,7 +579,7 @@ func (s *Server) handleClear(req *Request) *Response {
 			}
 		}
 
-		logging.Info("Cleared %d error injections for device %s", cleared, deviceName)
+		logging.Infof("Cleared %d error injections for device %s", cleared, deviceName)
 
 		return &Response{
 			Success: true,
@@ -581,7 +592,7 @@ func (s *Server) handleClear(req *Request) *Response {
 
 	// Clear all
 	s.stateManager.ClearAll()
-	logging.Info("All error injections cleared via IPC")
+	logging.Infof("All error injections cleared via IPC")
 
 	return &Response{
 		Success: true,
@@ -592,8 +603,8 @@ func (s *Server) handleClear(req *Request) *Response {
 }
 
 // handleShutdown initiates graceful shutdown.
-func (s *Server) handleShutdown(req *Request) *Response {
-	logging.Info("Shutdown requested via IPC")
+func (s *Server) handleShutdown(_ *Request) *Response {
+	logging.Infof("Shutdown requested via IPC")
 
 	// Send response before shutting down
 	response := &Response{
@@ -605,10 +616,10 @@ func (s *Server) handleShutdown(req *Request) *Response {
 
 	// Schedule shutdown in background
 	go func() {
-		time.Sleep(500 * time.Millisecond)
+		time.Sleep(shutdownDelayMs * time.Millisecond)
 		// The caller should handle this signal
 		// For now, just log it
-		logging.Info("IPC shutdown signal processed")
+		logging.Infof("IPC shutdown signal processed")
 	}()
 
 	return response
@@ -715,8 +726,8 @@ func compareLevels(a, b LogLevel) int {
 	levels := map[LogLevel]int{
 		LogLevelDebug: 0,
 		LogLevelInfo:  1,
-		LogLevelWarn:  2,
-		LogLevelError: 3,
+		LogLevelWarn:  logLevelWarnPriority,
+		LogLevelError: logLevelErrPriority,
 	}
 
 	aVal, bVal := levels[a], levels[b]
@@ -732,12 +743,12 @@ func compareLevels(a, b LogLevel) int {
 }
 
 // handleTopology returns the current network topology.
-func (s *Server) handleTopology(req *Request) *Response {
+func (s *Server) handleTopology(_ *Request) *Response {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
 	// Build topology from current configuration
-	topology := api.BuildTopology(s.cfg)
+	topology := httpapi.BuildTopology(s.cfg)
 
 	return &Response{
 		Success: true,
@@ -762,7 +773,7 @@ type NeighborData struct {
 }
 
 // handleNeighbors returns the neighbor discovery table.
-func (s *Server) handleNeighbors(req *Request) *Response {
+func (s *Server) handleNeighbors(_ *Request) *Response {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 

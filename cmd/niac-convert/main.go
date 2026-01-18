@@ -21,6 +21,7 @@ func main() {
 	batchDir := flag.String("batch", "", "Convert all .cfg files in directory")
 	verbose := flag.Bool("v", false, "Verbose output")
 	flag.Parse()
+	logger := slog.Default()
 
 	if *inputFile == "" && *batchDir == "" {
 		fmt.Fprintf(os.Stderr, "Usage: niac-convert -input <file.cfg> [-output <file.yaml>] [-v]\n")
@@ -49,7 +50,7 @@ func main() {
 	}
 
 	if *verbose {
-		slog.Info("Converting", "input", *inputFile, "output", *outputFile)
+		logger.Info("Converting", "input", *inputFile, "output", *outputFile)
 	}
 
 	err := converter.ConvertFile(*inputFile, *outputFile, *verbose)
@@ -59,11 +60,12 @@ func main() {
 	}
 
 	if *verbose {
-		slog.Info("Conversion successful!")
+		logger.Info("Conversion successful!")
 	}
 }
 
 func convertBatch(dir string, verbose bool) error {
+	logger := slog.Default()
 	files, err := filepath.Glob(filepath.Join(dir, "*.cfg"))
 	if err != nil {
 		return fmt.Errorf("error finding .cfg files: %w", err)
@@ -82,18 +84,17 @@ func convertBatch(dir string, verbose bool) error {
 		output := filepath.Join(dir, name+".yaml")
 
 		if verbose {
-			slog.Info("Converting", "input", file, "output", output)
+			logger.Info("Converting", "input", file, "output", output)
 		}
 
-		err := converter.ConvertFile(file, output, verbose)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error converting %s: %v\n", file, err)
+		if convertErr := converter.ConvertFile(file, output, verbose); convertErr != nil {
+			fmt.Fprintf(os.Stderr, "Error converting %s: %v\n", file, convertErr)
 
 			continue
 		}
 
 		if verbose {
-			slog.Info("Converted successfully", "file", base)
+			logger.Info("Converted successfully", "file", base)
 		}
 	}
 

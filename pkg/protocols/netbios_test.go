@@ -1,12 +1,14 @@
-package protocols
+package protocols_test
 
 import (
 	"strings"
 	"testing"
+
+	"github.com/krisarmstrong/niac-go/pkg/protocols"
 )
 
 func TestNetBIOSNameEncoding(t *testing.T) {
-	handler := &NetBIOSHandler{}
+	handler := &protocols.NetBIOSHandler{}
 
 	tests := []struct {
 		name     string
@@ -15,24 +17,24 @@ func TestNetBIOSNameEncoding(t *testing.T) {
 	}{
 		{
 			name:     "WORKSTATION",
-			nameType: NBNameWorkstation,
+			nameType: protocols.NBNameWorkstation,
 			expected: 34, // 1 length + 32 encoded + 1 terminator
 		},
 		{
 			name:     "SERVER",
-			nameType: NBNameFileServer,
+			nameType: protocols.NBNameFileServer,
 			expected: 34,
 		},
 		{
 			name:     "A", // Short name
-			nameType: NBNameWorkstation,
+			nameType: protocols.NBNameWorkstation,
 			expected: 34, // Still 34 bytes (padded)
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			encoded := handler.encodeNetBIOSName(tt.name, tt.nameType)
+			encoded := handler.EncodeNetBIOSName(tt.name, tt.nameType)
 
 			if len(encoded) != tt.expected {
 				t.Errorf("Expected length %d, got %d", tt.expected, len(encoded))
@@ -59,7 +61,7 @@ func TestNetBIOSNameEncoding(t *testing.T) {
 }
 
 func TestNetBIOSNameDecoding(t *testing.T) {
-	handler := &NetBIOSHandler{}
+	handler := &protocols.NetBIOSHandler{}
 
 	tests := []struct {
 		name     string
@@ -67,25 +69,25 @@ func TestNetBIOSNameDecoding(t *testing.T) {
 	}{
 		{
 			name:     "TESTPC",
-			nameType: NBNameWorkstation,
+			nameType: protocols.NBNameWorkstation,
 		},
 		{
 			name:     "FILESERVER",
-			nameType: NBNameFileServer,
+			nameType: protocols.NBNameFileServer,
 		},
 		{
 			name:     "MASTER",
-			nameType: NBNameMasterBrowser,
+			nameType: protocols.NBNameMasterBrowser,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Encode
-			encoded := handler.encodeNetBIOSName(tt.name, tt.nameType)
+			encoded := handler.EncodeNetBIOSName(tt.name, tt.nameType)
 
 			// Decode
-			decodedName, decodedType, offset := handler.decodeNetBIOSName(encoded)
+			decodedName, decodedType, offset := handler.DecodeNetBIOSName(encoded)
 
 			// Check name (should match, case-insensitive and trimmed)
 			expectedName := strings.ToUpper(strings.TrimSpace(tt.name))
@@ -115,19 +117,19 @@ func TestNetBIOSNameTypes(t *testing.T) {
 		constant byte
 		expected byte
 	}{
-		{"NBNameWorkstation", NBNameWorkstation, 0x00},
-		{"NBNameMsBrowse", NBNameMsBrowse, 0x01},
-		{"NBNameMessenger", NBNameMessenger, 0x03},
-		{"NBNameRASServer", NBNameRASServer, 0x06},
-		{"NBNameDomainMaster", NBNameDomainMaster, 0x1B},
-		{"NBNameDomainCtrl", NBNameDomainCtrl, 0x1C},
-		{"NBNameMasterBrowser", NBNameMasterBrowser, 0x1D},
-		{"NBNameBrowser", NBNameBrowser, 0x1E},
-		{"NBNameNetDDE", NBNameNetDDE, 0x1F},
-		{"NBNameFileServer", NBNameFileServer, 0x20},
-		{"NBNameRASClient", NBNameRASClient, 0x21},
-		{"NBNameNetMonAgent", NBNameNetMonAgent, 0xBE},
-		{"NBNameNetMonUtility", NBNameNetMonUtility, 0xBF},
+		{"NBNameWorkstation", protocols.NBNameWorkstation, 0x00},
+		{"NBNameMsBrowse", protocols.NBNameMsBrowse, 0x01},
+		{"NBNameMessenger", protocols.NBNameMessenger, 0x03},
+		{"NBNameRASServer", protocols.NBNameRASServer, 0x06},
+		{"NBNameDomainMaster", protocols.NBNameDomainMaster, 0x1B},
+		{"NBNameDomainCtrl", protocols.NBNameDomainCtrl, 0x1C},
+		{"NBNameMasterBrowser", protocols.NBNameMasterBrowser, 0x1D},
+		{"NBNameBrowser", protocols.NBNameBrowser, 0x1E},
+		{"NBNameNetDDE", protocols.NBNameNetDDE, 0x1F},
+		{"NBNameFileServer", protocols.NBNameFileServer, 0x20},
+		{"NBNameRASClient", protocols.NBNameRASClient, 0x21},
+		{"NBNameNetMonAgent", protocols.NBNameNetMonAgent, 0xBE},
+		{"NBNameNetMonUtility", protocols.NBNameNetMonUtility, 0xBF},
 	}
 
 	for _, tt := range tests {
@@ -139,89 +141,89 @@ func TestNetBIOSNameTypes(t *testing.T) {
 
 func TestNetBIOSOpcodes(t *testing.T) {
 	// Verify opcode constants
-	if NBNSOpQuery != 0 {
+	if protocols.NBNSOpQuery != 0 {
 		t.Error("NBNSOpQuery should be 0")
 	}
 
-	if NBNSOpRegistration != 5 {
+	if protocols.NBNSOpRegistration != 5 {
 		t.Error("NBNSOpRegistration should be 5")
 	}
 
-	if NBNSOpRelease != 6 {
+	if protocols.NBNSOpRelease != 6 {
 		t.Error("NBNSOpRelease should be 6")
 	}
 
-	if NBNSOpWACK != 7 {
+	if protocols.NBNSOpWACK != 7 {
 		t.Error("NBNSOpWACK should be 7")
 	}
 
-	if NBNSOpRefresh != 8 {
+	if protocols.NBNSOpRefresh != 8 {
 		t.Error("NBNSOpRefresh should be 8")
 	}
 }
 
 func TestNetBIOSPorts(t *testing.T) {
 	// Verify port constants
-	if NetBIOSNameServicePort != 137 {
+	if protocols.NetBIOSNameServicePort != 137 {
 		t.Error("NetBIOSNameServicePort should be 137")
 	}
 
-	if NetBIOSDatagramServicePort != 138 {
+	if protocols.NetBIOSDatagramServicePort != 138 {
 		t.Error("NetBIOSDatagramServicePort should be 138")
 	}
 
-	if NetBIOSSessionServicePort != 139 {
+	if protocols.NetBIOSSessionServicePort != 139 {
 		t.Error("NetBIOSSessionServicePort should be 139")
 	}
 }
 
 func TestNetBIOSFlags(t *testing.T) {
 	// Test flag combinations
-	flags := NBNSFlagResponse | NBNSFlagAuthAnswer
+	flags := protocols.NBNSFlagResponse | protocols.NBNSFlagAuthAnswer
 
-	if (flags & NBNSFlagResponse) == 0 {
+	if (flags & protocols.NBNSFlagResponse) == 0 {
 		t.Error("Response flag should be set")
 	}
 
-	if (flags & NBNSFlagAuthAnswer) == 0 {
+	if (flags & protocols.NBNSFlagAuthAnswer) == 0 {
 		t.Error("AuthAnswer flag should be set")
 	}
 
 	// Test broadcast flag independently
-	broadcastFlags := uint16(NBNSFlagBroadcast)
-	if (broadcastFlags & NBNSFlagBroadcast) == 0 {
+	broadcastFlags := uint16(protocols.NBNSFlagBroadcast)
+	if (broadcastFlags & protocols.NBNSFlagBroadcast) == 0 {
 		t.Error("Broadcast flag should be set")
 	}
 }
 
 func TestNetBIOSNamePadding(t *testing.T) {
-	handler := &NetBIOSHandler{}
+	handler := &protocols.NetBIOSHandler{}
 
 	// Test that short names are padded correctly
 	shortName := "PC"
-	encoded := handler.encodeNetBIOSName(shortName, NBNameWorkstation)
+	encoded := handler.EncodeNetBIOSName(shortName, protocols.NBNameWorkstation)
 
 	// Decode and check
-	decoded, nameType, _ := handler.decodeNetBIOSName(encoded)
+	decoded, nameType, _ := handler.DecodeNetBIOSName(encoded)
 
 	// Should be uppercase and trimmed
 	if decoded != "PC" {
 		t.Errorf("Expected 'PC', got '%s'", decoded)
 	}
 
-	if nameType != NBNameWorkstation {
-		t.Errorf("Expected type 0x%02x, got 0x%02x", NBNameWorkstation, nameType)
+	if nameType != protocols.NBNameWorkstation {
+		t.Errorf("Expected type 0x%02x, got 0x%02x", protocols.NBNameWorkstation, nameType)
 	}
 }
 
 func TestNetBIOSNameTruncation(t *testing.T) {
-	handler := &NetBIOSHandler{}
+	handler := &protocols.NetBIOSHandler{}
 
 	// Test that long names are truncated to 15 characters
 	longName := "VERYLONGNAMETHATEXCEEDS15CHARS"
-	encoded := handler.encodeNetBIOSName(longName, NBNameWorkstation)
+	encoded := handler.EncodeNetBIOSName(longName, protocols.NBNameWorkstation)
 
-	decoded, _, _ := handler.decodeNetBIOSName(encoded)
+	decoded, _, _ := handler.DecodeNetBIOSName(encoded)
 
 	// Should be truncated to 15 characters
 	if len(decoded) > 15 {

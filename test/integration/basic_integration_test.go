@@ -148,8 +148,6 @@ func TestIntegration_SNMPAgentOperations(t *testing.T) {
 }
 
 // TestIntegration_ProtocolTable tests device table operations.
-//
-//nolint:govet // unusedwrite: false positive, fields are read in assertions
 func TestIntegration_ProtocolTable(t *testing.T) {
 	// Create multiple devices
 	mac1, _ := net.ParseMAC("00:11:22:33:44:55")
@@ -172,6 +170,14 @@ func TestIntegration_ProtocolTable(t *testing.T) {
 	// Test that devices have valid configurations
 	if dev1.Name != "device-1" {
 		t.Errorf("Device 1 name incorrect: %s", dev1.Name)
+	}
+
+	if dev1.Type != "router" {
+		t.Errorf("Device 1 type incorrect: %s", dev1.Type)
+	}
+
+	if dev2.Name != "device-2" {
+		t.Errorf("Device 2 name incorrect: %s", dev2.Name)
 	}
 
 	if dev2.Type != "switch" {
@@ -292,9 +298,9 @@ devices:
 	// Verify each agent has correct device name
 	expectedNames := []string{"router-1", "switch-1", "ap-1"}
 	for i, agent := range agents {
-		result, err := agent.HandleGet("1.3.6.1.2.1.1.5.0") // sysName
-		if err != nil {
-			t.Fatalf("Agent %d HandleGet failed: %v", i, err)
+		result, getErr := agent.HandleGet("1.3.6.1.2.1.1.5.0") // sysName
+		if getErr != nil {
+			t.Fatalf("Agent %d HandleGet failed: %v", i, getErr)
 		}
 
 		sysName := result.Value.(string)

@@ -8,8 +8,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/krisarmstrong/niac-go/pkg/apperr"
 	"github.com/krisarmstrong/niac-go/pkg/config"
-	"github.com/krisarmstrong/niac-go/pkg/errors"
 	"github.com/krisarmstrong/niac-go/pkg/logging"
 	"github.com/krisarmstrong/niac-go/pkg/protocols"
 )
@@ -80,7 +80,7 @@ func createTestModel() *model {
 		},
 	}
 
-	sm := errors.NewStateManager()
+	sm := apperr.NewStateManager()
 
 	return &model{
 		cfg:           cfg,
@@ -260,7 +260,7 @@ func TestModel_Update_ClearErrors(t *testing.T) {
 	m := createTestModel()
 
 	// Inject some errors first
-	m.stateManager.SetError("192.168.1.1", "eth0", errors.ErrorTypeFCS, 50)
+	m.stateManager.SetError("192.168.1.1", "eth0", apperr.ErrorTypeFCS, 50)
 	m.errorsActive = 1
 
 	// Press 'c' to clear errors
@@ -328,7 +328,7 @@ func TestModel_InjectError(t *testing.T) {
 	initialActive := m.errorsActive
 
 	// Inject FCS error
-	m.injectError(errors.ErrorTypeFCS, 50)
+	m.injectError(apperr.ErrorTypeFCS, 50)
 
 	// Verify counters updated
 	if m.packetsInjected != initialInjected+1 {
@@ -345,8 +345,8 @@ func TestModel_InjectError(t *testing.T) {
 		t.Fatal("Error state not set in state manager")
 	}
 
-	if state.ErrorType != errors.ErrorTypeFCS {
-		t.Errorf("Expected error type %s, got %s", errors.ErrorTypeFCS, state.ErrorType)
+	if state.ErrorType != apperr.ErrorTypeFCS {
+		t.Errorf("Expected error type %s, got %s", apperr.ErrorTypeFCS, state.ErrorType)
 	}
 
 	if state.Value != 50 {
@@ -360,7 +360,7 @@ func TestModel_InjectError_NoDevices(t *testing.T) {
 	m.cfg.Devices = []config.Device{} // Clear devices
 
 	// Try to inject error
-	m.injectError(errors.ErrorTypeFCS, 50)
+	m.injectError(apperr.ErrorTypeFCS, 50)
 
 	// Should set error status
 	if !m.statusIsError {
@@ -381,10 +381,10 @@ func TestModel_HandleMenuSelection(t *testing.T) {
 	tests := []struct {
 		name          string
 		selectedItem  int
-		expectedError errors.ErrorType
+		expectedError apperr.ErrorType
 	}{
-		{"FCS Errors", 0, errors.ErrorTypeFCS},
-		{"Packet Discards", 1, errors.ErrorTypeDiscards},
+		{"FCS Errors", 0, apperr.ErrorTypeFCS},
+		{"Packet Discards", 1, apperr.ErrorTypeDiscards},
 	}
 
 	for _, tt := range tests {
@@ -416,7 +416,7 @@ func TestModel_HandleMenuSelection_ClearAll(t *testing.T) {
 	m := createTestModel()
 
 	// Inject an error first
-	m.stateManager.SetError("192.168.1.1", "eth0", errors.ErrorTypeFCS, 50)
+	m.stateManager.SetError("192.168.1.1", "eth0", apperr.ErrorTypeFCS, 50)
 	m.errorsActive = 1
 
 	// Select "Clear All Errors" (index 2 in our test menu)
@@ -669,15 +669,15 @@ func TestModel_TickUpdate(t *testing.T) {
 	m := createTestModel()
 
 	// Inject an error
-	m.stateManager.SetError("192.168.1.1", "eth0", errors.ErrorTypeFCS, 50)
+	m.stateManager.SetError("192.168.1.1", "eth0", apperr.ErrorTypeFCS, 50)
 
 	// Set start time to past so uptime is measurable
 	m.startTime = time.Now().Add(-5 * time.Second)
 	initialUptime := m.uptime
 
 	// Send tick message
-	tickMsg := tickMsg(time.Now())
-	result, cmd := m.Update(tickMsg)
+	tick := tickMsg(time.Now())
+	result, cmd := m.Update(tick)
 	m = result.(*model)
 
 	// Verify uptime updated

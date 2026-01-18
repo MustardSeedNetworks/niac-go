@@ -1,4 +1,4 @@
-package protocols
+package protocols_test
 
 import (
 	"net"
@@ -6,16 +6,18 @@ import (
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
+
 	"github.com/krisarmstrong/niac-go/pkg/config"
 	"github.com/krisarmstrong/niac-go/pkg/logging"
+	"github.com/krisarmstrong/niac-go/pkg/protocols"
 )
 
 // BenchmarkARPRequestHandling benchmarks processing ARP requests.
 func BenchmarkARPRequestHandling(b *testing.B) {
 	cfg := &config.Config{}
 	debugConfig := logging.NewDebugConfig(0)
-	stack := NewStack(nil, cfg, debugConfig)
-	handler := NewARPHandler(stack)
+	stack := protocols.NewStack(nil, cfg, debugConfig)
+	handler := protocols.NewARPHandler(stack)
 
 	// Create test device
 	mac, _ := net.ParseMAC("00:11:22:33:44:55")
@@ -54,7 +56,7 @@ func BenchmarkARPRequestHandling(b *testing.B) {
 	opts := gopacket.SerializeOptions{FixLengths: true, ComputeChecksums: true}
 	_ = gopacket.SerializeLayers(buffer, opts, eth, arp)
 
-	pkt := &Packet{
+	pkt := &protocols.Packet{
 		Buffer:       buffer.Bytes(),
 		Length:       len(buffer.Bytes()),
 		SerialNumber: 1,
@@ -71,8 +73,8 @@ func BenchmarkARPRequestHandling(b *testing.B) {
 func BenchmarkARPReplyGeneration(b *testing.B) {
 	cfg := &config.Config{}
 	debugConfig := logging.NewDebugConfig(0)
-	stack := NewStack(nil, cfg, debugConfig)
-	handler := NewARPHandler(stack)
+	stack := protocols.NewStack(nil, cfg, debugConfig)
+	handler := protocols.NewARPHandler(stack)
 
 	senderMAC, _ := net.ParseMAC("00:11:22:33:44:55")
 	senderIP := net.ParseIP("192.168.1.1")
@@ -82,7 +84,7 @@ func BenchmarkARPReplyGeneration(b *testing.B) {
 	b.ReportAllocs()
 
 	for b.Loop() {
-		_ = handler.buildARPReply(senderMAC, senderIP, targetMAC, targetIP)
+		_ = handler.BuildARPReply(senderMAC, senderIP, targetMAC, targetIP)
 	}
 }
 
@@ -90,8 +92,8 @@ func BenchmarkARPReplyGeneration(b *testing.B) {
 func BenchmarkARPGratuitous(b *testing.B) {
 	cfg := &config.Config{}
 	debugConfig := logging.NewDebugConfig(0)
-	stack := NewStack(nil, cfg, debugConfig)
-	handler := NewARPHandler(stack)
+	stack := protocols.NewStack(nil, cfg, debugConfig)
+	handler := protocols.NewARPHandler(stack)
 
 	mac, _ := net.ParseMAC("00:11:22:33:44:55")
 	ip := net.ParseIP("192.168.1.1")
@@ -112,8 +114,8 @@ func BenchmarkARPGratuitous(b *testing.B) {
 func BenchmarkLLDPPacketGeneration(b *testing.B) {
 	cfg := &config.Config{}
 	debugConfig := logging.NewDebugConfig(0)
-	stack := NewStack(nil, cfg, debugConfig)
-	handler := NewLLDPHandler(stack)
+	stack := protocols.NewStack(nil, cfg, debugConfig)
+	handler := protocols.NewLLDPHandler(stack)
 
 	mac, _ := net.ParseMAC("00:11:22:33:44:55")
 	ip := net.ParseIP("192.168.1.1")
@@ -135,7 +137,7 @@ func BenchmarkLLDPPacketGeneration(b *testing.B) {
 	b.ReportAllocs()
 
 	for b.Loop() {
-		_ = handler.buildLLDPFrame(device)
+		_ = handler.BuildLLDPFrame(device)
 	}
 }
 
@@ -143,8 +145,8 @@ func BenchmarkLLDPPacketGeneration(b *testing.B) {
 func BenchmarkLLDPChassisIDTLV(b *testing.B) {
 	cfg := &config.Config{}
 	debugConfig := logging.NewDebugConfig(0)
-	stack := NewStack(nil, cfg, debugConfig)
-	handler := NewLLDPHandler(stack)
+	stack := protocols.NewStack(nil, cfg, debugConfig)
+	handler := protocols.NewLLDPHandler(stack)
 
 	mac, _ := net.ParseMAC("00:11:22:33:44:55")
 	device := &config.Device{
@@ -158,7 +160,7 @@ func BenchmarkLLDPChassisIDTLV(b *testing.B) {
 	b.ReportAllocs()
 
 	for b.Loop() {
-		_ = handler.buildChassisIDTLV(device)
+		_ = handler.BuildChassisIDTLV(device)
 	}
 }
 
@@ -166,8 +168,8 @@ func BenchmarkLLDPChassisIDTLV(b *testing.B) {
 func BenchmarkLLDPManagementAddressTLV(b *testing.B) {
 	cfg := &config.Config{}
 	debugConfig := logging.NewDebugConfig(0)
-	stack := NewStack(nil, cfg, debugConfig)
-	handler := NewLLDPHandler(stack)
+	stack := protocols.NewStack(nil, cfg, debugConfig)
+	handler := protocols.NewLLDPHandler(stack)
 
 	mac, _ := net.ParseMAC("00:11:22:33:44:55")
 	ip := net.ParseIP("192.168.1.1")
@@ -180,7 +182,7 @@ func BenchmarkLLDPManagementAddressTLV(b *testing.B) {
 	b.ReportAllocs()
 
 	for b.Loop() {
-		_ = handler.buildManagementAddressTLV(device)
+		_ = handler.BuildManagementAddressTLV(device)
 	}
 }
 
@@ -188,8 +190,8 @@ func BenchmarkLLDPManagementAddressTLV(b *testing.B) {
 func BenchmarkDHCPDiscover(b *testing.B) {
 	cfg := &config.Config{}
 	debugConfig := logging.NewDebugConfig(0)
-	stack := NewStack(nil, cfg, debugConfig)
-	handler := NewDHCPHandler(stack)
+	stack := protocols.NewStack(nil, cfg, debugConfig)
+	handler := protocols.NewDHCPHandler(stack)
 
 	// Configure DHCP handler
 	serverIP := net.ParseIP("192.168.1.1")
@@ -249,7 +251,7 @@ func BenchmarkDHCPDiscover(b *testing.B) {
 	_ = udp.SetNetworkLayerForChecksum(ip)
 	_ = gopacket.SerializeLayers(buffer, opts, eth, ip, udp, dhcp)
 
-	pkt := &Packet{
+	pkt := &protocols.Packet{
 		Buffer:       buffer.Bytes(),
 		Length:       len(buffer.Bytes()),
 		SerialNumber: 1,
@@ -266,8 +268,8 @@ func BenchmarkDHCPDiscover(b *testing.B) {
 func BenchmarkDHCPOfferGeneration(b *testing.B) {
 	cfg := &config.Config{}
 	debugConfig := logging.NewDebugConfig(0)
-	stack := NewStack(nil, cfg, debugConfig)
-	handler := NewDHCPHandler(stack)
+	stack := protocols.NewStack(nil, cfg, debugConfig)
+	handler := protocols.NewDHCPHandler(stack)
 
 	serverIP := net.ParseIP("192.168.1.1")
 	gateway := net.ParseIP("192.168.1.1")
@@ -289,8 +291,8 @@ func BenchmarkDHCPOfferGeneration(b *testing.B) {
 func BenchmarkDHCPAckGeneration(b *testing.B) {
 	cfg := &config.Config{}
 	debugConfig := logging.NewDebugConfig(0)
-	stack := NewStack(nil, cfg, debugConfig)
-	handler := NewDHCPHandler(stack)
+	stack := protocols.NewStack(nil, cfg, debugConfig)
+	handler := protocols.NewDHCPHandler(stack)
 
 	serverIP := net.ParseIP("192.168.1.1")
 	gateway := net.ParseIP("192.168.1.1")
@@ -312,8 +314,8 @@ func BenchmarkDHCPAckGeneration(b *testing.B) {
 func BenchmarkDHCPLeaseAllocation(b *testing.B) {
 	cfg := &config.Config{}
 	debugConfig := logging.NewDebugConfig(0)
-	stack := NewStack(nil, cfg, debugConfig)
-	handler := NewDHCPHandler(stack)
+	stack := protocols.NewStack(nil, cfg, debugConfig)
+	handler := protocols.NewDHCPHandler(stack)
 	handler.SetPool(net.ParseIP("192.168.1.100"), net.ParseIP("192.168.1.200"))
 
 	clientMAC, _ := net.ParseMAC("aa:bb:cc:dd:ee:ff")
@@ -321,7 +323,7 @@ func BenchmarkDHCPLeaseAllocation(b *testing.B) {
 	b.ReportAllocs()
 
 	for b.Loop() {
-		_, _ = handler.allocateLease(clientMAC, nil, "test-host")
+		_, _ = handler.AllocateLease(clientMAC, nil, "test-host")
 	}
 }
 
@@ -329,8 +331,8 @@ func BenchmarkDHCPLeaseAllocation(b *testing.B) {
 func BenchmarkDHCPFullCycle(b *testing.B) {
 	cfg := &config.Config{}
 	debugConfig := logging.NewDebugConfig(0)
-	stack := NewStack(nil, cfg, debugConfig)
-	handler := NewDHCPHandler(stack)
+	stack := protocols.NewStack(nil, cfg, debugConfig)
+	handler := protocols.NewDHCPHandler(stack)
 
 	serverIP := net.ParseIP("192.168.1.1")
 	gateway := net.ParseIP("192.168.1.1")
@@ -349,7 +351,7 @@ func BenchmarkDHCPFullCycle(b *testing.B) {
 		clientMAC[5] = byte(i % 256)
 
 		// Allocate lease (DISCOVER/OFFER)
-		lease, _ := handler.allocateLease(clientMAC, nil, "test-host")
+		lease, _ := handler.AllocateLease(clientMAC, nil, "test-host")
 		if lease != nil {
 			// Send OFFER
 			_ = handler.SendDHCPOffer(uint32(i), clientMAC, lease.IP, serverIP, serverMAC)
@@ -363,8 +365,8 @@ func BenchmarkDHCPFullCycle(b *testing.B) {
 func BenchmarkICMPEchoRequest(b *testing.B) {
 	cfg := &config.Config{}
 	debugConfig := logging.NewDebugConfig(0)
-	stack := NewStack(nil, cfg, debugConfig)
-	handler := NewICMPHandler(stack)
+	stack := protocols.NewStack(nil, cfg, debugConfig)
+	handler := protocols.NewICMPHandler(stack)
 
 	// Create test device
 	mac, _ := net.ParseMAC("00:11:22:33:44:55")
@@ -409,7 +411,7 @@ func BenchmarkICMPEchoRequest(b *testing.B) {
 	opts := gopacket.SerializeOptions{FixLengths: true, ComputeChecksums: true}
 	gopacket.SerializeLayers(buffer, opts, eth, ipLayer, icmp, gopacket.Payload([]byte("test payload")))
 
-	pkt := &Packet{
+	pkt := &protocols.Packet{
 		Buffer:       buffer.Bytes(),
 		Length:       len(buffer.Bytes()),
 		SerialNumber: 1,
@@ -471,8 +473,6 @@ func BenchmarkSNMPGetBulkRequest(b *testing.B) {
 }
 
 // BenchmarkDNSQueryProcessing benchmarks processing DNS queries.
-//
-//nolint:govet // unusedwrite: field is used in benchmark loop
 func BenchmarkDNSQueryProcessing(b *testing.B) {
 	// Configure DNS records
 	device := &config.Device{
@@ -488,6 +488,7 @@ func BenchmarkDNSQueryProcessing(b *testing.B) {
 
 	for b.Loop() {
 		// Simulate DNS query lookup
+		_ = device.Name // Use device name
 		for _, record := range device.DNSConfig.ForwardRecords {
 			_ = record.Name
 			_ = record.IP

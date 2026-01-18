@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/krisarmstrong/niac-go/pkg/api"
+	"github.com/krisarmstrong/niac-go/pkg/httpapi"
 )
 
 // TestDaemon_StartupShutdown verifies daemon can start and shutdown cleanly.
@@ -30,7 +30,8 @@ func TestDaemon_StartupShutdown(t *testing.T) {
 	}
 
 	// Start daemon
-	if err := daemon.Start(); err != nil {
+	err = daemon.Start()
+	if err != nil {
 		t.Fatalf("Failed to start daemon: %v", err)
 	}
 
@@ -48,7 +49,8 @@ func TestDaemon_StartupShutdown(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	if err := daemon.Shutdown(ctx); err != nil {
+	err = daemon.Shutdown(ctx)
+	if err != nil {
 		t.Fatalf("Failed to shutdown daemon: %v", err)
 	}
 }
@@ -74,7 +76,8 @@ func TestDaemon_SimulationLifecycle(t *testing.T) {
 		t.Fatalf("Failed to create daemon: %v", err)
 	}
 
-	if err := daemon.Start(); err != nil {
+	err = daemon.Start()
+	if err != nil {
 		t.Fatalf("Failed to start daemon: %v", err)
 	}
 
@@ -100,12 +103,13 @@ devices:
 `
 
 	// Start simulation
-	req := api.SimulationRequest{
+	req := httpapi.SimulationRequest{
 		Interface:  "lo0", // Loopback interface should exist
 		ConfigData: configData,
 	}
 
-	if err := daemon.StartSimulation(req); err != nil {
+	err = daemon.StartSimulation(req)
+	if err != nil {
 		t.Fatalf("Failed to start simulation: %v", err)
 	}
 
@@ -120,7 +124,8 @@ devices:
 	}
 
 	// Stop simulation
-	if err := daemon.StopSimulation(); err != nil {
+	err = daemon.StopSimulation()
+	if err != nil {
 		t.Fatalf("Failed to stop simulation: %v", err)
 	}
 
@@ -148,7 +153,8 @@ func TestDaemon_ErrorRecovery(t *testing.T) {
 		t.Fatalf("Failed to create daemon: %v", err)
 	}
 
-	if err := daemon.Start(); err != nil {
+	err = daemon.Start()
+	if err != nil {
 		t.Fatalf("Failed to start daemon: %v", err)
 	}
 
@@ -160,7 +166,7 @@ func TestDaemon_ErrorRecovery(t *testing.T) {
 	}()
 
 	// Test 1: Invalid interface
-	req := api.SimulationRequest{
+	req := httpapi.SimulationRequest{
 		Interface:  "nonexistent-interface-xyz",
 		ConfigData: "devices: []",
 	}
@@ -175,7 +181,7 @@ func TestDaemon_ErrorRecovery(t *testing.T) {
 	}
 
 	// Test 2: Invalid config
-	req = api.SimulationRequest{
+	req = httpapi.SimulationRequest{
 		Interface:  "lo0",
 		ConfigData: "invalid: yaml: syntax: [[[",
 	}
@@ -186,7 +192,7 @@ func TestDaemon_ErrorRecovery(t *testing.T) {
 	}
 
 	// Test 3: Missing config
-	req = api.SimulationRequest{
+	req = httpapi.SimulationRequest{
 		Interface: "lo0",
 		// No ConfigData or ConfigPath
 	}
@@ -218,12 +224,14 @@ func TestDaemon_ResourceCleanup(t *testing.T) {
 		t.Fatalf("Failed to create daemon: %v", err)
 	}
 
-	if err := daemon.Start(); err != nil {
+	err = daemon.Start()
+	if err != nil {
 		t.Fatalf("Failed to start daemon: %v", err)
 	}
 
 	// Verify storage file exists
-	if _, err := os.Stat(storagePath); os.IsNotExist(err) {
+	_, err = os.Stat(storagePath)
+	if os.IsNotExist(err) {
 		t.Errorf("Storage file should exist: %s", storagePath)
 	}
 
@@ -231,13 +239,15 @@ func TestDaemon_ResourceCleanup(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	if err := daemon.Shutdown(ctx); err != nil {
+	err = daemon.Shutdown(ctx)
+	if err != nil {
 		t.Fatalf("Failed to shutdown daemon: %v", err)
 	}
 
 	// Note: Storage file should still exist after shutdown (persistent data)
 	// but it should be closed properly
-	if _, err := os.Stat(storagePath); os.IsNotExist(err) {
+	_, err = os.Stat(storagePath)
+	if os.IsNotExist(err) {
 		t.Errorf("Storage file should still exist after shutdown: %s", storagePath)
 	}
 }
@@ -259,7 +269,8 @@ func TestDaemon_ConfigSizeValidation(t *testing.T) {
 		t.Fatalf("Failed to create daemon: %v", err)
 	}
 
-	if err := daemon.Start(); err != nil {
+	err = daemon.Start()
+	if err != nil {
 		t.Fatalf("Failed to start daemon: %v", err)
 	}
 
@@ -273,7 +284,7 @@ func TestDaemon_ConfigSizeValidation(t *testing.T) {
 	// Test config that exceeds 10MB limit
 	largeConfig := strings.Repeat("x", 11*1024*1024) // 11MB
 
-	req := api.SimulationRequest{
+	req := httpapi.SimulationRequest{
 		Interface:  "lo0",
 		ConfigData: largeConfig,
 	}
@@ -307,14 +318,16 @@ func TestDaemon_StorageDisabled(t *testing.T) {
 		t.Error("Storage should be nil when disabled")
 	}
 
-	if err := daemon.Start(); err != nil {
+	err = daemon.Start()
+	if err != nil {
 		t.Fatalf("Failed to start daemon: %v", err)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	if err := daemon.Shutdown(ctx); err != nil {
+	err = daemon.Shutdown(ctx)
+	if err != nil {
 		t.Fatalf("Failed to shutdown daemon: %v", err)
 	}
 }
@@ -340,7 +353,8 @@ func TestDaemon_MultipleStartStop(t *testing.T) {
 		t.Fatalf("Failed to create daemon: %v", err)
 	}
 
-	if err := daemon.Start(); err != nil {
+	err = daemon.Start()
+	if err != nil {
 		t.Fatalf("Failed to start daemon: %v", err)
 	}
 
@@ -364,14 +378,14 @@ devices:
 
 	// Start/stop simulation 3 times
 	for i := range 3 {
-		req := api.SimulationRequest{
+		req := httpapi.SimulationRequest{
 			Interface:  "lo0",
 			ConfigData: configData,
 		}
 
-		err := daemon.StartSimulation(req)
-		if err != nil {
-			t.Fatalf("Cycle %d: Failed to start simulation: %v", i, err)
+		startErr := daemon.StartSimulation(req)
+		if startErr != nil {
+			t.Fatalf("Cycle %d: Failed to start simulation: %v", i, startErr)
 		}
 
 		status := daemon.GetStatus()
@@ -379,9 +393,9 @@ devices:
 			t.Errorf("Cycle %d: Simulation should be running", i)
 		}
 
-		err = daemon.StopSimulation()
-		if err != nil {
-			t.Fatalf("Cycle %d: Failed to stop simulation: %v", i, err)
+		stopErr := daemon.StopSimulation()
+		if stopErr != nil {
+			t.Fatalf("Cycle %d: Failed to stop simulation: %v", i, stopErr)
 		}
 
 		status = daemon.GetStatus()

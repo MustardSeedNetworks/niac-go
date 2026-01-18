@@ -1,4 +1,4 @@
-// Package api provides the REST API server and web UI for NIAC.
+// Package httpapi provides the REST API server and web UI for NIAC.
 //
 // The API server exposes endpoints for:
 //   - Configuration management (read, update, validate)
@@ -18,7 +18,7 @@
 // The server can operate in two modes:
 //   - Standard mode: API for a running simulation
 //   - Daemon mode: Full simulation lifecycle control via API
-package api
+package httpapi
 
 import (
 	"bytes"
@@ -30,6 +30,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"log/slog"
 	"mime"
@@ -47,12 +48,13 @@ import (
 	"sync"
 	"time"
 
+	"golang.org/x/time/rate"
+
+	apperr "github.com/krisarmstrong/niac-go/pkg/apperr"
 	"github.com/krisarmstrong/niac-go/pkg/capture"
 	"github.com/krisarmstrong/niac-go/pkg/config"
-	niacerrors "github.com/krisarmstrong/niac-go/pkg/errors"
 	"github.com/krisarmstrong/niac-go/pkg/protocols"
 	"github.com/krisarmstrong/niac-go/pkg/storage"
-	"golang.org/x/time/rate"
 )
 
 const (
@@ -72,33 +74,70 @@ const (
 	// DefaultBurst is the default burst size for rate limiting.
 	DefaultBurst = 200
 
-	// SECURITY FIX #156: Per-endpoint rate limits for sensitive operations
-	// Upload endpoints: stricter limits to prevent abuse.
+	// UploadRateLimit controls per-endpoint limits for upload operations.
 	UploadRateLimit = 5  // 5 requests per second
 	UploadBurst     = 10 // Burst of 10
-	// Write operations: moderate limits.
+	// WriteRateLimit controls per-endpoint limits for write operations.
 	WriteRateLimit = 20 // 20 requests per second
 	WriteBurst     = 40 // Burst of 40
-	// Walk file operations: moderate limits.
+	// WalkRateLimit controls per-endpoint limits for walk file operations.
 	WalkRateLimit = 10 // 10 requests per second
 	WalkBurst     = 20 // Burst of 20
 
 	// ErrMsgRequestBodyTooLarge is the error message when HTTP request body is too large.
 	ErrMsgRequestBodyTooLarge = "http: request body too large"
+
+	// Validation and limit constants.
+	requestIDBytes      = 16       // bytes for unique request ID
+	csrfTokenBytes      = 32       // bytes for CSRF token
+	maxURLLength        = 2048     // max webhook URL length
+	maxInterfaceNameLen = 255      // max interface name length
+	maxPathLength       = 4096     // max file path length
+	maxQueryParamLen    = 1024     // max query parameter length
+	maxLoopMs           = 86400000 // max loop ms (24 hours)
+	maxScaleFactor      = 1000.0   // max scale factor
+	truncateErrorValue  = 50       // truncate value for error messages
+	protocolCapacity    = 8        // initial protocol slice capacity
+	historyListLimit    = 20       // limit for history listing
+	maxFileEntries      = 200      // max file entries to return
+	minPCAPSize         = 4        // minimum PCAP file size
+
+	// HTTP server timeout constants.
+	httpReadTimeout       = 10 // seconds
+	httpWriteTimeout      = 10 // seconds
+	httpIdleTimeout       = 60 // seconds
+	httpReadHeaderTimeout = 5  // seconds
+
+	// Background task interval constants.
+	rateLimiterCleanupMins = 5 // minutes between rate limiter cleanup
+	alertTickerSecs        = 5 // seconds between alert checks
+	webhookTimeoutSecs     = 5 // seconds for webhook timeout
+
+	// Bit shift constants for IP parsing.
+	bitShift24 = 24
+	bitShift16 = 16
+	bitShift8  = 8
+
+	// Base64 encoding ratio (4/3).
+	base64Ratio = 3
 )
 
 // Sentinel errors for API server.
 var (
-	ErrAPIServerRequiresStackAndConfig = errors.New("api server requires stack and config references")
-	ErrFileTooSmallForPCAP             = errors.New("file too small to be a valid PCAP (< 4 bytes)")
-	ErrInvalidPCAPMagicNumber          = errors.New("invalid PCAP magic number")
-	ErrPcapFilePathOrDataRequired      = errors.New("pcap file path or data is required")
-	ErrPCAPDataExceedsSizeLimit        = errors.New("PCAP data exceeds size limit (max 100MB)")
-	ErrDecodedPCAPExceedsSizeLimit     = errors.New("decoded PCAP exceeds size limit (max 100MB)")
-	ErrPathIsADirectory                = errors.New("path is a directory")
-	ErrConfigPathNotAvailable          = errors.New("config path not available")
-	ErrConfigFileNotFound              = errors.New("config file not found")
-	ErrUnsupportedFileKind             = errors.New("unsupported file kind")
+	ErrAPIServerRequiresStackAndConfig = errors.New(
+		"api server requires stack and config references",
+	)
+	ErrFileTooSmallForPCAP         = errors.New("file too small to be a valid PCAP (< 4 bytes)")
+	ErrInvalidPCAPMagicNumber      = errors.New("invalid PCAP magic number")
+	ErrPcapFilePathOrDataRequired  = errors.New("pcap file path or data is required")
+	ErrPCAPDataExceedsSizeLimit    = errors.New("PCAP data exceeds size limit (max 100MB)")
+	ErrDecodedPCAPExceedsSizeLimit = errors.New("decoded PCAP exceeds size limit (max 100MB)")
+	ErrPathIsADirectory            = errors.New("path is a directory")
+	ErrConfigPathNotAvailable      = errors.New("config path not available")
+	ErrConfigFileNotFound          = errors.New("config file not found")
+	ErrUnsupportedFileKind         = errors.New("unsupported file kind")
+	ErrNotADirectory               = errors.New("path is not a directory")
+	ErrPathOutsideRoot             = errors.New("path is outside allowed directory")
 )
 
 // rateLimiterEntry tracks a rate limiter with its last access time
@@ -115,6 +154,7 @@ type RateLimiter struct {
 	mu       sync.RWMutex
 	rate     rate.Limit
 	burst    int
+	logger   *slog.Logger
 }
 
 // NewRateLimiter creates a new rate limiter with the given rate and burst.
@@ -123,7 +163,35 @@ func NewRateLimiter(r rate.Limit, b int) *RateLimiter {
 		limiters: make(map[string]*rateLimiterEntry),
 		rate:     r,
 		burst:    b,
+		logger:   slog.Default(),
 	}
+}
+
+// evictOldestLimiter removes the oldest rate limiter entry (FIFO eviction).
+// Must be called while holding rl.mu.
+func (rl *RateLimiter) evictOldestLimiter() {
+	var oldestIP string
+
+	oldestTime := time.Now()
+	for checkIP, checkEntry := range rl.limiters {
+		if checkEntry.lastSeen.Before(oldestTime) {
+			oldestTime = checkEntry.lastSeen
+			oldestIP = checkIP
+		}
+	}
+
+	if oldestIP == "" {
+		return
+	}
+
+	delete(rl.limiters, oldestIP)
+	rl.logger.Info(
+		"[API] Rate limiter at capacity, evicted oldest IP",
+		"capacity",
+		MaxRateLimiterCount,
+		"evictedIP",
+		oldestIP,
+	)
 }
 
 // GetLimiter returns the rate limiter for the given IP address
@@ -133,41 +201,22 @@ func (rl *RateLimiter) GetLimiter(ip string) *rate.Limiter {
 	defer rl.mu.Unlock()
 
 	entry, exists := rl.limiters[ip]
-	if !exists {
-		// SECURITY FIX #2.8.1: Enforce max size limit
-		if len(rl.limiters) >= MaxRateLimiterCount {
-			// Remove oldest entry (FIFO eviction)
-			var oldestIP string
-
-			oldestTime := time.Now()
-			for checkIP, checkEntry := range rl.limiters {
-				if checkEntry.lastSeen.Before(oldestTime) {
-					oldestTime = checkEntry.lastSeen
-					oldestIP = checkIP
-				}
-			}
-
-			if oldestIP != "" {
-				delete(rl.limiters, oldestIP)
-				slog.Info(
-					"[API] Rate limiter at capacity, evicted oldest IP",
-					"capacity",
-					MaxRateLimiterCount,
-					"evictedIP",
-					oldestIP,
-				)
-			}
-		}
-
-		entry = &rateLimiterEntry{
-			limiter:  rate.NewLimiter(rl.rate, rl.burst),
-			lastSeen: time.Now(),
-		}
-		rl.limiters[ip] = entry
-	} else {
-		// Update last seen time
+	if exists {
 		entry.lastSeen = time.Now()
+
+		return entry.limiter
 	}
+
+	// SECURITY FIX #2.8.1: Enforce max size limit
+	if len(rl.limiters) >= MaxRateLimiterCount {
+		rl.evictOldestLimiter()
+	}
+
+	entry = &rateLimiterEntry{
+		limiter:  rate.NewLimiter(rl.rate, rl.burst),
+		lastSeen: time.Now(),
+	}
+	rl.limiters[ip] = entry
 
 	return entry.limiter
 }
@@ -196,7 +245,53 @@ func (rl *RateLimiter) CleanupStale() {
 	}
 
 	if count > 0 {
-		slog.Info("[API] Cleaned up stale rate limiters", "cleaned", count, "total", len(rl.limiters))
+		rl.logger.Info(
+			"[API] Cleaned up stale rate limiters",
+			"cleaned",
+			count,
+			"total",
+			len(rl.limiters),
+		)
+	}
+}
+
+// Server exposes the REST API, metrics endpoint, and Web UI.
+type Server struct {
+	cfg           ServerConfig
+	logger        *slog.Logger
+	httpServer    *http.Server
+	metricsServer *http.Server
+	alertStop     chan struct{}
+	lastAlert     uint64
+	alertMu       sync.RWMutex
+	configMu      sync.RWMutex
+	daemon        DaemonController // Optional: only set in daemon mode
+	startTime     time.Time        // Track server start time for uptime
+	rateLimiter   *RateLimiter     // FEATURE #104: Per-IP rate limiting
+	csrfToken     string           // SECURITY FIX LOW-1: CSRF protection token
+	sseHub        *SSEHub          // SSE hub for real-time streaming
+	// SECURITY FIX #156: Per-endpoint rate limiters for sensitive operations
+	uploadLimiter *RateLimiter // Stricter limits for upload endpoints
+	writeLimiter  *RateLimiter // Moderate limits for write operations
+	walkLimiter   *RateLimiter // Limits for walk file operations
+}
+
+// NewServer returns a configured API server.
+func NewServer(cfg ServerConfig) *Server {
+	// Generate CSRF token (ignore errors, fallback to empty which disables CSRF check)
+	csrfToken, _ := generateCSRFToken()
+
+	return &Server{
+		cfg:         cfg,
+		logger:      slog.Default(),
+		startTime:   time.Now(),
+		rateLimiter: NewRateLimiter(DefaultRateLimit, DefaultBurst),
+		csrfToken:   csrfToken,
+		sseHub:      NewSSEHub(),
+		// SECURITY FIX #156: Initialize per-endpoint rate limiters
+		uploadLimiter: NewRateLimiter(UploadRateLimit, UploadBurst),
+		writeLimiter:  NewRateLimiter(WriteRateLimit, WriteBurst),
+		walkLimiter:   NewRateLimiter(WalkRateLimit, WalkBurst),
 	}
 }
 
@@ -209,7 +304,13 @@ func (s *Server) uploadRateLimit(next http.HandlerFunc) http.HandlerFunc {
 		if !s.uploadLimiter.GetLimiter(clientIP).Allow() {
 			writeError(w, r, http.StatusTooManyRequests, "upload_rate_limit_exceeded",
 				"Upload rate limit exceeded. Please wait before uploading again.", nil)
-			slog.Warn("[API] Upload rate limit exceeded", "clientIP", clientIP, "path", r.URL.Path)
+			s.logger.Warn(
+				"[API] Upload rate limit exceeded",
+				"clientIP",
+				clientIP,
+				"path",
+				r.URL.Path,
+			)
 			return
 		}
 		next(w, r)
@@ -226,7 +327,13 @@ func (s *Server) writeRateLimit(next http.HandlerFunc) http.HandlerFunc {
 			if !s.writeLimiter.GetLimiter(clientIP).Allow() {
 				writeError(w, r, http.StatusTooManyRequests, "write_rate_limit_exceeded",
 					"Write rate limit exceeded. Please wait before making more changes.", nil)
-				slog.Warn("[API] Write rate limit exceeded", "clientIP", clientIP, "path", r.URL.Path)
+				s.logger.Warn(
+					"[API] Write rate limit exceeded",
+					"clientIP",
+					clientIP,
+					"path",
+					r.URL.Path,
+				)
 				return
 			}
 		}
@@ -241,11 +348,53 @@ func (s *Server) walkRateLimit(next http.HandlerFunc) http.HandlerFunc {
 		if !s.walkLimiter.GetLimiter(clientIP).Allow() {
 			writeError(w, r, http.StatusTooManyRequests, "walk_rate_limit_exceeded",
 				"Walk file operation rate limit exceeded. Please wait before trying again.", nil)
-			slog.Warn("[API] Walk rate limit exceeded", "clientIP", clientIP, "path", r.URL.Path)
+			s.logger.Warn(
+				"[API] Walk rate limit exceeded",
+				"clientIP",
+				clientIP,
+				"path",
+				r.URL.Path,
+			)
 			return
 		}
 		next(w, r)
 	}
+}
+
+// parseValidIP extracts and validates an IP from a string.
+// Returns the trimmed IP string if valid, empty string otherwise.
+func parseValidIP(rawIP string) string {
+	trimmedIP := strings.TrimSpace(rawIP)
+	if net.ParseIP(trimmedIP) != nil {
+		return trimmedIP
+	}
+
+	return ""
+}
+
+// extractXForwardedForIP extracts the original client IP from X-Forwarded-For header.
+// Returns empty string if header is missing or contains invalid IP.
+func extractXForwardedForIP(r *http.Request) string {
+	xff := r.Header.Get("X-Forwarded-For")
+	if xff == "" {
+		return ""
+	}
+
+	// Take the first IP in the chain (leftmost = original client)
+	firstIP, _, _ := strings.Cut(xff, ",")
+
+	return parseValidIP(firstIP)
+}
+
+// extractXRealIP extracts the client IP from X-Real-IP header.
+// Returns empty string if header is missing or contains invalid IP.
+func extractXRealIP(r *http.Request) string {
+	xri := r.Header.Get("X-Real-IP")
+	if xri == "" {
+		return ""
+	}
+
+	return parseValidIP(xri)
 }
 
 // getClientIP extracts the real client IP from the request
@@ -259,35 +408,21 @@ func getClientIP(r *http.Request) string {
 
 	// SECURITY: Only trust X-Forwarded-For/X-Real-IP if coming from localhost/private networks
 	// This prevents header spoofing attacks where clients forge these headers to bypass rate limiting
-	// In production behind a reverse proxy, configure trusted proxy ranges
-	if isTrustedProxy(remoteIP) {
-		// Check X-Forwarded-For header (for proxies/load balancers)
-		if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-			// Take the first IP in the chain (leftmost = original client)
-			if clientIP, _, found := strings.Cut(xff, ","); found {
-				clientIP = strings.TrimSpace(clientIP)
-				// Validate it's a valid IP before trusting it
-				if net.ParseIP(clientIP) != nil {
-					return clientIP
-				}
-			} else {
-				clientIP := strings.TrimSpace(xff)
-				if net.ParseIP(clientIP) != nil {
-					return clientIP
-				}
-			}
-		}
-
-		// Check X-Real-IP header
-		if xri := r.Header.Get("X-Real-IP"); xri != "" {
-			clientIP := strings.TrimSpace(xri)
-			if net.ParseIP(clientIP) != nil {
-				return clientIP
-			}
-		}
+	if !isTrustedProxy(remoteIP) {
+		return remoteIP
 	}
 
-	// Use direct connection IP (not trusted proxy or invalid forwarded IP)
+	// Check X-Forwarded-For header (for proxies/load balancers)
+	if ip := extractXForwardedForIP(r); ip != "" {
+		return ip
+	}
+
+	// Check X-Real-IP header
+	if ip := extractXRealIP(r); ip != "" {
+		return ip
+	}
+
+	// Use direct connection IP (forwarded headers invalid or missing)
 	return remoteIP
 }
 
@@ -320,7 +455,7 @@ func isTrustedProxy(ip string) bool {
 // generateRequestID creates a unique request ID for tracing
 // FEATURE #118: Request tracing for debugging and monitoring.
 func generateRequestID() string {
-	bytes := make([]byte, 16)
+	bytes := make([]byte, requestIDBytes)
 	_, _ = rand.Read(bytes) // crypto/rand read errors will result in zero bytes, still usable
 
 	return hex.EncodeToString(bytes)
@@ -343,8 +478,14 @@ func (s *Server) csrfProtect(next http.HandlerFunc) http.HandlerFunc {
 			// Get CSRF token from header
 			clientToken := r.Header.Get("X-Csrf-Token")
 			if clientToken == "" {
-				writeError(w, r, http.StatusForbidden, "csrf_token_missing",
-					"CSRF token required for state-changing requests. Include X-CSRF-Token header.", nil)
+				writeError(
+					w,
+					r,
+					http.StatusForbidden,
+					"csrf_token_missing",
+					"CSRF token required for state-changing requests. Include X-CSRF-Token header.",
+					nil,
+				)
 
 				return
 			}
@@ -437,7 +578,7 @@ func validateAlertConfig(cfg AlertConfig) []ErrorDetail {
 	// Validate webhook URL if provided
 	// SECURITY FIX #158: Enhanced SSRF protection for webhook URLs
 	if cfg.WebhookURL != "" {
-		if len(cfg.WebhookURL) > 2048 {
+		if len(cfg.WebhookURL) > maxURLLength {
 			errors = append(errors, ErrorDetail{
 				Field: "webhook_url",
 				Issue: "URL exceeds maximum length of 2048 characters",
@@ -445,11 +586,12 @@ func validateAlertConfig(cfg AlertConfig) []ErrorDetail {
 			})
 		}
 		// Basic URL format validation
-		if !strings.HasPrefix(cfg.WebhookURL, "http://") && !strings.HasPrefix(cfg.WebhookURL, "https://") {
+		if !strings.HasPrefix(cfg.WebhookURL, "http://") &&
+			!strings.HasPrefix(cfg.WebhookURL, "https://") {
 			errors = append(errors, ErrorDetail{
 				Field: "webhook_url",
 				Issue: "URL must start with http:// or https://",
-				Value: cfg.WebhookURL[:min(50, len(cfg.WebhookURL))],
+				Value: cfg.WebhookURL[:min(truncateErrorValue, len(cfg.WebhookURL))],
 			})
 		}
 		// SSRF protection: check for internal/private addresses
@@ -483,9 +625,9 @@ func normalizeAndParseIP(host string) net.IP {
 	// Try parsing as decimal IPv4 (e.g., "2130706433" = 127.0.0.1)
 	if decimal, err := strconv.ParseUint(host, 10, 32); err == nil {
 		return net.IPv4(
-			byte(decimal>>24),
-			byte(decimal>>16),
-			byte(decimal>>8),
+			byte(decimal>>bitShift24),
+			byte(decimal>>bitShift16),
+			byte(decimal>>bitShift8),
 			byte(decimal),
 		)
 	}
@@ -504,84 +646,143 @@ func isIPv6MappedLoopback(ip net.IP) bool {
 	return false
 }
 
+// Blocked hosts for SSRF protection.
+var blockedHosts = []string{
+	"localhost",
+	"localhost.localdomain",
+	"127.0.0.1",
+	"::1",
+	"0.0.0.0",
+	"0",
+	"[::1]",
+}
+
+// Metadata service hosts to block.
+var metadataHosts = []string{
+	"169.254.169.254", // AWS/GCP/Azure metadata service
+	"metadata.google.internal",
+	"metadata.goog",
+}
+
+// isBlockedHostname checks if a hostname is in the blocked list.
+func isBlockedHostname(host string) bool {
+	lowerHost := strings.ToLower(host)
+
+	if slices.Contains(blockedHosts, lowerHost) {
+		return true
+	}
+
+	// Check for short-form localhost variations
+	if strings.HasPrefix(lowerHost, "127.") || lowerHost == "127" {
+		return true
+	}
+
+	return slices.Contains(metadataHosts, lowerHost)
+}
+
+// isBlockedIP checks if an IP address should be blocked for SSRF.
+func isBlockedIP(ip net.IP) error {
+	if ip.IsLoopback() {
+		return errors.New("loopback addresses not allowed")
+	}
+
+	if isIPv6MappedLoopback(ip) {
+		return errors.New("loopback addresses not allowed")
+	}
+
+	if ip.IsPrivate() {
+		return errors.New("private network addresses not allowed")
+	}
+
+	if ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() {
+		return errors.New("link-local addresses not allowed")
+	}
+
+	if ip.IsUnspecified() {
+		return errors.New("unspecified addresses not allowed")
+	}
+
+	// Block 169.254.0.0/16 (link-local) explicitly
+	if ip4 := ip.To4(); ip4 != nil && ip4[0] == 169 && ip4[1] == 254 {
+		return errors.New("link-local addresses not allowed")
+	}
+
+	return nil
+}
+
+// isBlockedIPv6Mapped checks for IPv6-mapped private addresses.
+func isBlockedIPv6Mapped(ip net.IP) error {
+	ip4 := ip.To4()
+	if ip4 == nil || len(ip) != net.IPv6len {
+		return nil
+	}
+
+	if ip4.IsPrivate() || ip4.IsLoopback() || ip4.IsLinkLocalUnicast() {
+		return errors.New("private/loopback addresses not allowed (IPv6-mapped)")
+	}
+
+	return nil
+}
+
 // validateWebhookURLSSRF validates a webhook URL to prevent SSRF attacks.
 // SECURITY FIX #158, #168: Prevents requests to internal/private networks.
 func validateWebhookURLSSRF(urlStr string) error {
-	// Parse the URL
 	parsedURL, err := url.Parse(urlStr)
 	if err != nil {
 		return errors.New("invalid URL format")
 	}
 
-	// Extract hostname (without port) - handles both IPv4 and IPv6 with brackets
 	host := parsedURL.Hostname()
 	if host == "" {
 		return errors.New("URL must have a hostname")
 	}
 
-	// Check for localhost aliases (case-insensitive)
-	lowerHost := strings.ToLower(host)
-	blockedHosts := []string{
-		"localhost",
-		"localhost.localdomain",
-		"127.0.0.1",
-		"::1",
-		"0.0.0.0",
-		"0",
-		"[::1]",
-	}
-	if slices.Contains(blockedHosts, lowerHost) {
-		return errors.New("localhost addresses not allowed")
+	if isBlockedHostname(host) {
+		return errors.New("blocked hostname")
 	}
 
-	// SECURITY FIX #168: Check for short-form localhost variations
-	// 127.1, 127.0.1, 0177.0.0.1 (octal) can resolve to localhost on some systems
-	if strings.HasPrefix(lowerHost, "127.") || lowerHost == "127" {
-		return errors.New("localhost addresses not allowed")
-	}
-
-	// Check for metadata service endpoints (cloud environments)
-	metadataHosts := []string{
-		"169.254.169.254", // AWS/GCP/Azure metadata service
-		"metadata.google.internal",
-		"metadata.goog",
-	}
-	if slices.Contains(metadataHosts, lowerHost) {
-		return errors.New("metadata service addresses not allowed")
-	}
-
-	// SECURITY FIX #168: Parse with normalization for edge cases
 	ip := normalizeAndParseIP(host)
-	if ip != nil {
-		// Check for private/internal IP ranges
-		if ip.IsLoopback() {
-			return errors.New("loopback addresses not allowed")
-		}
+	if ip == nil {
+		return nil
+	}
 
-		// SECURITY FIX #168: Check for IPv6-mapped IPv4 loopback (::ffff:127.0.0.1)
-		if isIPv6MappedLoopback(ip) {
-			return errors.New("loopback addresses not allowed")
-		}
+	if err = isBlockedIP(ip); err != nil {
+		return err
+	}
 
-		if ip.IsPrivate() {
-			return errors.New("private network addresses not allowed")
-		}
-		if ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() {
-			return errors.New("link-local addresses not allowed")
-		}
-		if ip.IsUnspecified() {
-			return errors.New("unspecified addresses not allowed")
-		}
+	return isBlockedIPv6Mapped(ip)
+}
 
-		// Block 169.254.0.0/16 (link-local) explicitly
-		if ip4 := ip.To4(); ip4 != nil && ip4[0] == 169 && ip4[1] == 254 {
-			return errors.New("link-local addresses not allowed")
-		}
+// isValidInterfaceChar checks if a character is valid in an interface name.
+func isValidInterfaceChar(c rune) bool {
+	isLowerLetter := c >= 'a' && c <= 'z'
+	isUpperLetter := c >= 'A' && c <= 'Z'
+	isDigit := c >= '0' && c <= '9'
+	isAllowedSpecial := c == '-' || c == '_' || c == '.'
 
-		// SECURITY FIX #168: Additional check for IPv6-mapped private addresses
-		if ip4 := ip.To4(); ip4 != nil && len(ip) == net.IPv6len {
-			if ip4.IsPrivate() || ip4.IsLoopback() || ip4.IsLinkLocalUnicast() {
-				return errors.New("private/loopback addresses not allowed (IPv6-mapped)")
+	return isLowerLetter || isUpperLetter || isDigit || isAllowedSpecial
+}
+
+// validateInterfaceName validates interface name characters and length.
+func validateInterfaceName(iface string) *ErrorDetail {
+	if iface == "" {
+		return nil
+	}
+
+	if len(iface) > maxInterfaceNameLen {
+		return &ErrorDetail{
+			Field: "interface",
+			Issue: "interface name exceeds 255 characters",
+			Value: iface[:truncateErrorValue],
+		}
+	}
+
+	for _, c := range iface {
+		if !isValidInterfaceChar(c) {
+			return &ErrorDetail{
+				Field: "interface",
+				Issue: "interface name contains invalid characters (only alphanumeric, dash, underscore, dot allowed)",
+				Value: iface[:min(truncateErrorValue, len(iface))],
 			}
 		}
 	}
@@ -589,67 +790,50 @@ func validateWebhookURLSSRF(urlStr string) error {
 	return nil
 }
 
+// validateConfigPath checks for path traversal and length.
+func validateConfigPath(path string) []ErrorDetail {
+	if path == "" {
+		return nil
+	}
+
+	var errs []ErrorDetail
+
+	if strings.Contains(path, "..") {
+		errs = append(errs, ErrorDetail{
+			Field: "config_path",
+			Issue: "path traversal detected (.. not allowed)",
+			Value: "[redacted]",
+		})
+	}
+
+	if len(path) > maxPathLength {
+		errs = append(errs, ErrorDetail{
+			Field: "config_path",
+			Issue: "path exceeds maximum length of 4096 characters",
+			Value: "[too long]",
+		})
+	}
+
+	return errs
+}
+
 // validateSimulationRequest validates simulation request fields
 // SECURITY FIX MEDIUM-3: Prevent injection and resource exhaustion.
 func validateSimulationRequest(req SimulationRequest) []ErrorDetail {
 	var errors []ErrorDetail
 
-	// Validate interface name (alphanumeric + limited special chars only)
-	if req.Interface != "" {
-		if len(req.Interface) > 255 {
-			errors = append(errors, ErrorDetail{
-				Field: "interface",
-				Issue: "interface name exceeds 255 characters",
-				Value: req.Interface[:50],
-			})
-		}
-		// Allow letters, numbers, dash, underscore, dot (common in interface names)
-		for _, c := range req.Interface {
-			isLowerLetter := c >= 'a' && c <= 'z'
-			isUpperLetter := c >= 'A' && c <= 'Z'
-			isDigit := c >= '0' && c <= '9'
-
-			isAllowedSpecial := c == '-' || c == '_' || c == '.'
-			if !isLowerLetter && !isUpperLetter && !isDigit && !isAllowedSpecial {
-				errors = append(errors, ErrorDetail{
-					Field: "interface",
-					Issue: "interface name contains invalid characters (only alphanumeric, dash, underscore, dot allowed)",
-					Value: req.Interface[:min(50, len(req.Interface))],
-				})
-
-				break
-			}
-		}
+	if err := validateInterfaceName(req.Interface); err != nil {
+		errors = append(errors, *err)
 	}
 
-	// Validate config path (prevent path traversal)
-	if req.ConfigPath != "" {
-		if strings.Contains(req.ConfigPath, "..") {
-			errors = append(errors, ErrorDetail{
-				Field: "config_path",
-				Issue: "path traversal detected (.. not allowed)",
-				Value: "[redacted]",
-			})
-		}
+	errors = append(errors, validateConfigPath(req.ConfigPath)...)
 
-		if len(req.ConfigPath) > 4096 {
-			errors = append(errors, ErrorDetail{
-				Field: "config_path",
-				Issue: "path exceeds maximum length of 4096 characters",
-				Value: "[too long]",
-			})
-		}
-	}
-
-	// Validate config data size
-	if req.ConfigData != "" {
-		if len(req.ConfigData) > MaxRequestBodySize {
-			errors = append(errors, ErrorDetail{
-				Field: "config_data",
-				Issue: fmt.Sprintf("config data exceeds maximum size of %d bytes", MaxRequestBodySize),
-				Value: "[too large]",
-			})
-		}
+	if req.ConfigData != "" && len(req.ConfigData) > MaxRequestBodySize {
+		errors = append(errors, ErrorDetail{
+			Field: "config_data",
+			Issue: fmt.Sprintf("config data exceeds maximum size of %d bytes", MaxRequestBodySize),
+			Value: "[too large]",
+		})
 	}
 
 	return errors
@@ -661,10 +845,13 @@ func validateReplayRequest(req ReplayRequest) []ErrorDetail {
 	var errors []ErrorDetail
 
 	// Validate inline data size
-	if len(req.InlineData) > MaxPCAPUploadSize*4/3 {
+	if len(req.InlineData) > MaxPCAPUploadSize*4/base64Ratio {
 		errors = append(errors, ErrorDetail{
 			Field: "data",
-			Issue: fmt.Sprintf("inline data exceeds maximum size of %d bytes (100MB base64)", MaxPCAPUploadSize*4/3),
+			Issue: fmt.Sprintf(
+				"inline data exceeds maximum size of %d bytes (100MB base64)",
+				MaxPCAPUploadSize*4/base64Ratio,
+			),
 			Value: "[too large]",
 		})
 	}
@@ -679,7 +866,7 @@ func validateReplayRequest(req ReplayRequest) []ErrorDetail {
 			})
 		}
 
-		if len(req.File) > 4096 {
+		if len(req.File) > maxPathLength {
 			errors = append(errors, ErrorDetail{
 				Field: "file",
 				Issue: "file path exceeds maximum length of 4096 characters",
@@ -697,7 +884,7 @@ func validateReplayRequest(req ReplayRequest) []ErrorDetail {
 		})
 	}
 
-	if req.LoopMs > 86400000 { // Max 24 hours
+	if req.LoopMs > maxLoopMs { // Max 24 hours
 		errors = append(errors, ErrorDetail{
 			Field: "loop_ms",
 			Issue: "loop_ms exceeds maximum of 24 hours (86400000ms)",
@@ -714,7 +901,7 @@ func validateReplayRequest(req ReplayRequest) []ErrorDetail {
 		})
 	}
 
-	if req.Scale > 1000.0 {
+	if req.Scale > maxScaleFactor {
 		errors = append(errors, ErrorDetail{
 			Field: "scale",
 			Issue: "scale exceeds maximum of 1000x",
@@ -733,11 +920,11 @@ func validateQueryParam(name, value string, allowedValues []string) *ErrorDetail
 	}
 
 	// Length check
-	if len(value) > 1024 {
+	if len(value) > maxQueryParamLen {
 		return &ErrorDetail{
 			Field: name,
 			Issue: "parameter value exceeds maximum length of 1024 characters",
-			Value: value[:50],
+			Value: value[:truncateErrorValue],
 		}
 	}
 
@@ -747,7 +934,7 @@ func validateQueryParam(name, value string, allowedValues []string) *ErrorDetail
 			return &ErrorDetail{
 				Field: name,
 				Issue: fmt.Sprintf("invalid value (allowed: %v)", allowedValues),
-				Value: value[:min(50, len(value))],
+				Value: value[:min(truncateErrorValue, len(value))],
 			}
 		}
 	}
@@ -763,8 +950,8 @@ func (s *Server) recoverMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			if err := recover(); err != nil {
 				requestID := r.Header.Get("X-Request-ID")
 				// Log panic with stack trace
-				slog.Error("[API] PANIC recovered", "requestID", requestID, "error", err)
-				slog.Error("[API] Stack trace", "stack", string(debug.Stack()))
+				s.logger.Error("[API] PANIC recovered", "requestID", requestID, "error", err)
+				s.logger.Error("[API] Stack trace", "stack", string(debug.Stack()))
 
 				// Return 500 error to client
 				writeError(w, r, http.StatusInternalServerError,
@@ -778,7 +965,13 @@ func (s *Server) recoverMiddleware(next http.HandlerFunc) http.HandlerFunc {
 }
 
 // writeError writes a standardized error response.
-func writeError(w http.ResponseWriter, r *http.Request, status int, errorCode, message string, details []ErrorDetail) {
+func writeError(
+	w http.ResponseWriter,
+	r *http.Request,
+	status int,
+	errorCode, message string,
+	details []ErrorDetail,
+) {
 	response := ErrorResponse{
 		Error:     errorCode,
 		Message:   message,
@@ -791,7 +984,8 @@ func writeError(w http.ResponseWriter, r *http.Request, status int, errorCode, m
 	// FEATURE #118: Include request ID in error logging
 	requestID := r.Header.Get("X-Request-ID")
 	if requestID != "" {
-		slog.Error(
+		logger := slog.Default()
+		logger.Error(
 			"[API] Error response",
 			"requestID",
 			requestID,
@@ -890,30 +1084,10 @@ type DaemonController interface {
 	GetStatus() SimulationStatus
 }
 
-// Server exposes the REST API, metrics endpoint, and Web UI.
-type Server struct {
-	cfg           ServerConfig
-	httpServer    *http.Server
-	metricsServer *http.Server
-	alertStop     chan struct{}
-	lastAlert     uint64
-	alertMu       sync.RWMutex
-	configMu      sync.RWMutex
-	daemon        DaemonController // Optional: only set in daemon mode
-	startTime     time.Time        // Track server start time for uptime
-	rateLimiter   *RateLimiter     // FEATURE #104: Per-IP rate limiting
-	csrfToken     string           // SECURITY FIX LOW-1: CSRF protection token
-	sseHub        *SSEHub          // SSE hub for real-time streaming
-	// SECURITY FIX #156: Per-endpoint rate limiters for sensitive operations
-	uploadLimiter *RateLimiter // Stricter limits for upload endpoints
-	writeLimiter  *RateLimiter // Moderate limits for write operations
-	walkLimiter   *RateLimiter // Limits for walk file operations
-}
-
 // generateCSRFToken generates a cryptographically secure random token
 // SECURITY FIX LOW-1: CSRF protection.
 func generateCSRFToken() (string, error) {
-	bytes := make([]byte, 32)
+	bytes := make([]byte, csrfTokenBytes)
 	if _, err := rand.Read(bytes); err != nil {
 		return "", fmt.Errorf("failed to generate random bytes: %w", err)
 	}
@@ -921,22 +1095,133 @@ func generateCSRFToken() (string, error) {
 	return hex.EncodeToString(bytes), nil
 }
 
-// NewServer returns a configured API server.
-func NewServer(cfg ServerConfig) *Server {
-	// Generate CSRF token (ignore errors, fallback to empty which disables CSRF check)
-	csrfToken, _ := generateCSRFToken()
+// registerAPIRoutes registers all API endpoints on the provided mux.
+func (s *Server) registerAPIRoutes(mux *http.ServeMux) {
+	// SECURITY FIX #2.8.1: Wrap all handlers with panic recovery middleware
+	// SECURITY FIX LOW-1: CSRF token endpoint for clients to retrieve token
+	mux.HandleFunc("/api/v1/csrf-token", s.recoverMiddleware(s.auth(s.handleCSRFToken)))
+	mux.HandleFunc("/api/v1/stats", s.recoverMiddleware(s.auth(s.handleStats)))
+	mux.HandleFunc("/api/v1/devices", s.recoverMiddleware(s.auth(s.handleDevices)))
+	mux.HandleFunc("/api/v1/history", s.recoverMiddleware(s.auth(s.handleHistory)))
 
-	return &Server{
-		cfg:         cfg,
-		startTime:   time.Now(),
-		rateLimiter: NewRateLimiter(DefaultRateLimit, DefaultBurst),
-		csrfToken:   csrfToken,
-		sseHub:      NewSSEHub(),
-		// SECURITY FIX #156: Initialize per-endpoint rate limiters
-		uploadLimiter: NewRateLimiter(UploadRateLimit, UploadBurst),
-		writeLimiter:  NewRateLimiter(WriteRateLimit, WriteBurst),
-		walkLimiter:   NewRateLimiter(WalkRateLimit, WalkBurst),
+	// SECURITY FIX LOW-1: Protect state-changing endpoints with CSRF
+	// SECURITY FIX #156: Apply write rate limiting to state-changing endpoints
+	s.registerWriteProtectedRoutes(mux)
+	s.registerReadOnlyRoutes(mux)
+	s.registerWalkRoutes(mux)
+	s.registerPcapRoutes(mux)
+	s.registerSSERoutes(mux)
+
+	mux.HandleFunc("/metrics", s.recoverMiddleware(s.handleMetrics))
+	mux.HandleFunc("/", s.recoverMiddleware(s.auth(s.serveSPA())))
+}
+
+// registerWriteProtectedRoutes registers routes that require write protection (CSRF + rate limiting).
+func (s *Server) registerWriteProtectedRoutes(mux *http.ServeMux) {
+	mux.HandleFunc(
+		"/api/v1/config",
+		s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.handleConfig)))),
+	)
+	mux.HandleFunc(
+		"/api/v1/config/devices",
+		s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.handleDevicesV2)))),
+	)
+	mux.HandleFunc(
+		"/api/v1/config/devices/",
+		s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.handleDevicesV2)))),
+	)
+	mux.HandleFunc(
+		"/api/v1/replay",
+		s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.handleReplay)))),
+	)
+	mux.HandleFunc(
+		"/api/v1/alerts",
+		s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.handleAlerts)))),
+	)
+}
+
+// registerReadOnlyRoutes registers routes that only require authentication.
+func (s *Server) registerReadOnlyRoutes(mux *http.ServeMux) {
+	mux.HandleFunc("/api/v1/config/schema", s.recoverMiddleware(s.auth(s.handleConfigSchema)))
+	mux.HandleFunc("/api/v1/files", s.recoverMiddleware(s.auth(s.handleFiles)))
+	mux.HandleFunc("/api/v1/topology", s.recoverMiddleware(s.auth(s.handleTopology)))
+	mux.HandleFunc("/api/v1/topology/export", s.recoverMiddleware(s.auth(s.handleTopologyExport)))
+	mux.HandleFunc("/api/v1/errors", s.recoverMiddleware(s.auth(s.handleErrors)))
+	mux.HandleFunc("/api/v1/interfaces", s.recoverMiddleware(s.auth(s.handleInterfaces)))
+	mux.HandleFunc("/api/v1/runtime", s.recoverMiddleware(s.auth(s.handleRuntime)))
+	mux.HandleFunc("/api/v1/simulation", s.recoverMiddleware(s.auth(s.handleSimulation)))
+	mux.HandleFunc("/api/v1/version", s.recoverMiddleware(s.auth(s.handleVersion)))
+	mux.HandleFunc("/api/v1/neighbors", s.recoverMiddleware(s.auth(s.handleNeighbors)))
+}
+
+// registerWalkRoutes registers SNMP walk file validation endpoints.
+func (s *Server) registerWalkRoutes(mux *http.ServeMux) {
+	// SECURITY FIX #156: Apply walk-specific rate limiting
+	mux.HandleFunc(
+		"/api/v1/walk/validate",
+		s.recoverMiddleware(s.auth(s.walkRateLimit(s.csrfProtect(s.handleWalkValidation)))),
+	)
+	mux.HandleFunc(
+		"/api/v1/walk/fix",
+		s.recoverMiddleware(s.auth(s.walkRateLimit(s.csrfProtect(s.handleWalkValidation)))),
+	)
+	mux.HandleFunc(
+		"/api/v1/walk/list",
+		s.recoverMiddleware(s.auth(s.walkRateLimit(s.handleWalkList))),
+	)
+	mux.HandleFunc(
+		"/api/v1/walk/validate-all",
+		s.recoverMiddleware(s.auth(s.walkRateLimit(s.csrfProtect(s.handleWalkBatchValidate)))),
+	)
+}
+
+// registerPcapRoutes registers PCAP analysis endpoints.
+func (s *Server) registerPcapRoutes(mux *http.ServeMux) {
+	// SECURITY FIX #156: Apply upload-specific rate limiting for uploads
+	mux.HandleFunc(
+		"/api/v1/pcap/upload",
+		s.recoverMiddleware(s.auth(s.uploadRateLimit(s.csrfProtect(s.handlePcapUpload)))),
+	)
+	mux.HandleFunc("/api/v1/pcap/", s.recoverMiddleware(s.auth(s.handlePcapAnalysis)))
+}
+
+// registerSSERoutes registers Server-Sent Events endpoints for real-time streaming.
+func (s *Server) registerSSERoutes(mux *http.ServeMux) {
+	mux.HandleFunc("/api/v1/stream/packets", s.recoverMiddleware(s.auth(s.handleSSEPackets)))
+	mux.HandleFunc("/api/v1/stream/logs", s.recoverMiddleware(s.auth(s.handleSSELogs)))
+	mux.HandleFunc("/api/v1/stream/stats", s.recoverMiddleware(s.auth(s.handleSSEStats)))
+	mux.HandleFunc("/api/v1/stream/status", s.recoverMiddleware(s.auth(s.handleSSEStatus)))
+}
+
+// newSecureHTTPServer creates an HTTP server with security timeouts configured.
+func newSecureHTTPServer(addr string, handler http.Handler) *http.Server {
+	// SECURITY FIX #99: Add HTTP timeouts to prevent slowloris attacks
+	return &http.Server{
+		Addr:              addr,
+		Handler:           handler,
+		ReadTimeout:       httpReadTimeout * time.Second,
+		WriteTimeout:      httpWriteTimeout * time.Second,
+		IdleTimeout:       httpIdleTimeout * time.Second,
+		ReadHeaderTimeout: httpReadHeaderTimeout * time.Second,
+		MaxHeaderBytes:    MaxRequestBodySize, // 1MB
 	}
+}
+
+// startBackgroundTasks starts the rate limiter cleanup and SSE hub goroutines.
+func (s *Server) startBackgroundTasks() {
+	// FEATURE #104: Start periodic cleanup of stale rate limiters
+	go func() {
+		ticker := time.NewTicker(rateLimiterCleanupMins * time.Minute)
+		defer ticker.Stop()
+
+		for range ticker.C {
+			s.rateLimiter.CleanupStale()
+		}
+	}()
+
+	// Start SSE hub for real-time streaming
+	go s.sseHub.Run()
+	s.logger.Info("[SSE] Server-Sent Events hub started")
 }
 
 // Start boots the HTTP listeners.
@@ -958,91 +1243,22 @@ func (s *Server) Start() error {
 
 	// SECURITY FIX #107: Warn if API is running without authentication
 	if s.cfg.Token == "" && s.cfg.Addr != "" {
-		slog.Warn("API server running WITHOUT authentication - all endpoints are publicly accessible")
-		slog.Warn("Set NIAC_API_TOKEN environment variable to enable authentication")
-		slog.Info("Example: export NIAC_API_TOKEN=$(openssl rand -base64 32)")
+		s.logger.Warn(
+			"API server running WITHOUT authentication - all endpoints are publicly accessible",
+		)
+		s.logger.Warn("Set NIAC_API_TOKEN environment variable to enable authentication")
+		s.logger.Info("Example: export NIAC_API_TOKEN=$(openssl rand -base64 32)")
 	}
 
 	if s.cfg.Addr != "" {
 		mux := http.NewServeMux()
-		// SECURITY FIX #2.8.1: Wrap all handlers with panic recovery middleware
-		// SECURITY FIX LOW-1: CSRF token endpoint for clients to retrieve token
-		mux.HandleFunc("/api/v1/csrf-token", s.recoverMiddleware(s.auth(s.handleCSRFToken)))
-		mux.HandleFunc("/api/v1/stats", s.recoverMiddleware(s.auth(s.handleStats)))
-		mux.HandleFunc("/api/v1/devices", s.recoverMiddleware(s.auth(s.handleDevices)))
-		mux.HandleFunc("/api/v1/history", s.recoverMiddleware(s.auth(s.handleHistory)))
-		// SECURITY FIX LOW-1: Protect state-changing endpoints with CSRF
-		// SECURITY FIX #156: Apply write rate limiting to state-changing endpoints
-		mux.HandleFunc("/api/v1/config", s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.handleConfig)))))
-		mux.HandleFunc(
-			"/api/v1/config/devices",
-			s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.handleDevicesV2)))),
-		)
-		mux.HandleFunc(
-			"/api/v1/config/devices/",
-			s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.handleDevicesV2)))),
-		)
-		mux.HandleFunc("/api/v1/config/schema", s.recoverMiddleware(s.auth(s.handleConfigSchema)))
-		mux.HandleFunc("/api/v1/replay", s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.handleReplay)))))
-		mux.HandleFunc("/api/v1/alerts", s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.handleAlerts)))))
-		mux.HandleFunc("/api/v1/files", s.recoverMiddleware(s.auth(s.handleFiles)))
-		mux.HandleFunc("/api/v1/topology", s.recoverMiddleware(s.auth(s.handleTopology)))
-		mux.HandleFunc("/api/v1/topology/export", s.recoverMiddleware(s.auth(s.handleTopologyExport)))
-		mux.HandleFunc("/api/v1/errors", s.recoverMiddleware(s.auth(s.handleErrors)))
-		mux.HandleFunc("/api/v1/interfaces", s.recoverMiddleware(s.auth(s.handleInterfaces)))
-		mux.HandleFunc("/api/v1/runtime", s.recoverMiddleware(s.auth(s.handleRuntime)))
-		mux.HandleFunc("/api/v1/simulation", s.recoverMiddleware(s.auth(s.handleSimulation)))
-		mux.HandleFunc("/api/v1/version", s.recoverMiddleware(s.auth(s.handleVersion)))
-		mux.HandleFunc("/api/v1/neighbors", s.recoverMiddleware(s.auth(s.handleNeighbors)))
-
-		// Walk file validation endpoints
-		// SECURITY FIX #156: Apply walk-specific rate limiting
-		mux.HandleFunc(
-			"/api/v1/walk/validate",
-			s.recoverMiddleware(s.auth(s.walkRateLimit(s.csrfProtect(s.handleWalkValidation)))),
-		)
-		mux.HandleFunc(
-			"/api/v1/walk/fix",
-			s.recoverMiddleware(s.auth(s.walkRateLimit(s.csrfProtect(s.handleWalkValidation)))),
-		)
-		mux.HandleFunc("/api/v1/walk/list", s.recoverMiddleware(s.auth(s.walkRateLimit(s.handleWalkList))))
-		mux.HandleFunc(
-			"/api/v1/walk/validate-all",
-			s.recoverMiddleware(s.auth(s.walkRateLimit(s.csrfProtect(s.handleWalkBatchValidate)))),
-		)
-
-		// PCAP analysis endpoints
-		// SECURITY FIX #156: Apply upload-specific rate limiting for uploads
-		mux.HandleFunc(
-			"/api/v1/pcap/upload",
-			s.recoverMiddleware(s.auth(s.uploadRateLimit(s.csrfProtect(s.handlePcapUpload)))),
-		)
-		mux.HandleFunc("/api/v1/pcap/", s.recoverMiddleware(s.auth(s.handlePcapAnalysis)))
-
-		// SSE (Server-Sent Events) endpoints for real-time streaming
-		mux.HandleFunc("/api/v1/stream/packets", s.recoverMiddleware(s.auth(s.handleSSEPackets)))
-		mux.HandleFunc("/api/v1/stream/logs", s.recoverMiddleware(s.auth(s.handleSSELogs)))
-		mux.HandleFunc("/api/v1/stream/stats", s.recoverMiddleware(s.auth(s.handleSSEStats)))
-		mux.HandleFunc("/api/v1/stream/status", s.recoverMiddleware(s.auth(s.handleSSEStatus)))
-
-		mux.HandleFunc("/metrics", s.recoverMiddleware(s.handleMetrics))
-		mux.HandleFunc("/", s.recoverMiddleware(s.auth(s.serveSPA())))
-
-		// SECURITY FIX #99: Add HTTP timeouts to prevent slowloris attacks
-		s.httpServer = &http.Server{
-			Addr:              s.cfg.Addr,
-			Handler:           mux,
-			ReadTimeout:       10 * time.Second,
-			WriteTimeout:      10 * time.Second,
-			IdleTimeout:       60 * time.Second,
-			ReadHeaderTimeout: 5 * time.Second,
-			MaxHeaderBytes:    1 << 20, // 1MB
-		}
+		s.registerAPIRoutes(mux)
+		s.httpServer = newSecureHTTPServer(s.cfg.Addr, mux)
 
 		go func() {
-			err := s.httpServer.ListenAndServe()
-			if err != nil && !errors.Is(err, http.ErrServerClosed) {
-				slog.Error("API server stopped", "error", err)
+			if err := s.httpServer.ListenAndServe(); err != nil &&
+				!errors.Is(err, http.ErrServerClosed) {
+				s.logger.Error("API server stopped", "error", err)
 			}
 		}()
 	}
@@ -1050,40 +1266,17 @@ func (s *Server) Start() error {
 	if s.cfg.MetricsAddr != "" && s.cfg.MetricsAddr != s.cfg.Addr {
 		mux := http.NewServeMux()
 		mux.HandleFunc("/metrics", s.recoverMiddleware(s.handleMetrics))
-
-		// SECURITY FIX #99: Add HTTP timeouts to metrics server too
-		s.metricsServer = &http.Server{
-			Addr:              s.cfg.MetricsAddr,
-			Handler:           mux,
-			ReadTimeout:       10 * time.Second,
-			WriteTimeout:      10 * time.Second,
-			IdleTimeout:       60 * time.Second,
-			ReadHeaderTimeout: 5 * time.Second,
-			MaxHeaderBytes:    1 << 20, // 1MB
-		}
+		s.metricsServer = newSecureHTTPServer(s.cfg.MetricsAddr, mux)
 
 		go func() {
-			err := s.metricsServer.ListenAndServe()
-			if err != nil && !errors.Is(err, http.ErrServerClosed) {
-				slog.Error("Metrics server stopped", "error", err)
+			if err := s.metricsServer.ListenAndServe(); err != nil &&
+				!errors.Is(err, http.ErrServerClosed) {
+				s.logger.Error("Metrics server stopped", "error", err)
 			}
 		}()
 	}
 
-	// FEATURE #104: Start periodic cleanup of stale rate limiters
-	go func() {
-		ticker := time.NewTicker(5 * time.Minute)
-		defer ticker.Stop()
-
-		for range ticker.C {
-			s.rateLimiter.CleanupStale()
-		}
-	}()
-
-	// Start SSE hub for real-time streaming
-	go s.sseHub.Run()
-	slog.Info("[SSE] Server-Sent Events hub started")
-
+	s.startBackgroundTasks()
 	s.updateAlertConfig(s.cfg.Alert)
 
 	return nil
@@ -1103,34 +1296,30 @@ func (s *Server) Shutdown(ctx context.Context) error {
 
 	s.alertMu.Unlock()
 
-	var firstErr error
+	var errs []error
 
 	// Shutdown metrics server first (less critical)
 	if s.metricsServer != nil {
-		err := s.metricsServer.Shutdown(ctx)
-		if err != nil {
-			slog.Error("Error shutting down metrics server", "error", err)
-
-			if firstErr == nil { //nolint:govet // nilness: intentionally checking nil for first error capture
-				firstErr = err
-			}
+		if err := s.metricsServer.Shutdown(ctx); err != nil {
+			s.logger.ErrorContext(ctx, "Error shutting down metrics server", "error", err)
+			errs = append(errs, err)
 		}
 	}
 
 	// Shutdown main HTTP server
 	if s.httpServer != nil {
-		err := s.httpServer.Shutdown(ctx)
-		if err != nil {
-			slog.Error("Error shutting down HTTP server", "error", err)
-
-			if firstErr == nil {
-				firstErr = err
-			}
+		if err := s.httpServer.Shutdown(ctx); err != nil {
+			s.logger.ErrorContext(ctx, "Error shutting down HTTP server", "error", err)
+			errs = append(errs, err)
 		}
 	}
 
 	// Return first error encountered, if any
-	return firstErr
+	if len(errs) > 0 {
+		return errs[0]
+	}
+
+	return nil
 }
 
 // SetDaemonController sets the daemon controller (for daemon mode).
@@ -1185,7 +1374,7 @@ func (s *Server) auth(next http.HandlerFunc) http.HandlerFunc {
 			// FEATURE #105: Use standardized error response
 			writeError(w, r, http.StatusTooManyRequests, "rate_limit_exceeded",
 				"Rate limit exceeded. Please try again later.", nil)
-			slog.Warn("[API] Rate limit exceeded", "requestID", requestID, "clientIP", clientIP)
+			s.logger.Warn("[API] Rate limit exceeded", "requestID", requestID, "clientIP", clientIP)
 
 			return
 		}
@@ -1206,7 +1395,13 @@ func (s *Server) auth(next http.HandlerFunc) http.HandlerFunc {
 			// FEATURE #105: Use standardized error response
 			writeError(w, r, http.StatusUnauthorized, "unauthorized",
 				"Invalid or missing authentication token", nil)
-			slog.Warn("[API] Unauthorized request", "requestID", requestID, "clientIP", clientIP)
+			s.logger.Warn(
+				"[API] Unauthorized request",
+				"requestID",
+				requestID,
+				"clientIP",
+				clientIP,
+			)
 
 			return
 		}
@@ -1275,7 +1470,7 @@ func (s *Server) handleCSRFToken(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (s *Server) handleStats(w http.ResponseWriter, r *http.Request) {
+func (s *Server) handleStats(w http.ResponseWriter, _ *http.Request) {
 	// SECURITY FIX #161: Thread-safe access to all config fields
 	s.configMu.RLock()
 	stack := s.cfg.Stack
@@ -1321,7 +1516,52 @@ func (s *Server) handleStats(w http.ResponseWriter, r *http.Request) {
 	s.writeJSON(w, payload)
 }
 
-func (s *Server) handleDevices(w http.ResponseWriter, r *http.Request) {
+// getDeviceProtocols extracts the list of enabled protocols for a device.
+func getDeviceProtocols(dev *config.Device) []string {
+	protos := make([]string, 0, protocolCapacity)
+
+	if dev.SNMPConfig.Community != "" || dev.SNMPConfig.WalkFile != "" {
+		protos = append(protos, "SNMP")
+	}
+
+	if dev.DHCPConfig != nil {
+		protos = append(protos, "DHCP")
+	}
+
+	if dev.DNSConfig != nil {
+		protos = append(protos, "DNS")
+	}
+
+	if dev.HTTPConfig != nil {
+		protos = append(protos, "HTTP")
+	}
+
+	if dev.FTPConfig != nil {
+		protos = append(protos, "FTP")
+	}
+
+	if dev.LLDPConfig != nil && dev.LLDPConfig.Enabled {
+		protos = append(protos, "LLDP")
+	}
+
+	if dev.CDPConfig != nil && dev.CDPConfig.Enabled {
+		protos = append(protos, "CDP")
+	}
+
+	return protos
+}
+
+// ipAddressesToStrings converts a slice of [net.IP] to string representations.
+func ipAddressesToStrings(ips []net.IP) []string {
+	result := make([]string, 0, len(ips))
+	for _, ip := range ips {
+		result = append(result, ip.String())
+	}
+
+	return result
+}
+
+func (s *Server) handleDevices(w http.ResponseWriter, _ *http.Request) {
 	cfg := s.currentConfig()
 	if cfg == nil {
 		s.writeJSON(w, []map[string]any{})
@@ -1330,46 +1570,13 @@ func (s *Server) handleDevices(w http.ResponseWriter, r *http.Request) {
 	}
 
 	devices := make([]map[string]any, 0, len(cfg.Devices))
-	for _, dev := range cfg.Devices {
-		ips := make([]string, 0, len(dev.IPAddresses))
-		for _, ip := range dev.IPAddresses {
-			ips = append(ips, ip.String())
-		}
-
-		protos := make([]string, 0, 8)
-		if dev.SNMPConfig.Community != "" || dev.SNMPConfig.WalkFile != "" {
-			protos = append(protos, "SNMP")
-		}
-
-		if dev.DHCPConfig != nil {
-			protos = append(protos, "DHCP")
-		}
-
-		if dev.DNSConfig != nil {
-			protos = append(protos, "DNS")
-		}
-
-		if dev.HTTPConfig != nil {
-			protos = append(protos, "HTTP")
-		}
-
-		if dev.FTPConfig != nil {
-			protos = append(protos, "FTP")
-		}
-
-		if dev.LLDPConfig != nil && dev.LLDPConfig.Enabled {
-			protos = append(protos, "LLDP")
-		}
-
-		if dev.CDPConfig != nil && dev.CDPConfig.Enabled {
-			protos = append(protos, "CDP")
-		}
-
+	for i := range cfg.Devices {
+		dev := &cfg.Devices[i]
 		devices = append(devices, map[string]any{
 			"name":      dev.Name,
 			"type":      dev.Type,
-			"ips":       ips,
-			"protocols": protos,
+			"ips":       ipAddressesToStrings(dev.IPAddresses),
+			"protocols": getDeviceProtocols(dev),
 		})
 	}
 
@@ -1383,10 +1590,10 @@ func (s *Server) handleHistory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	history, err := s.cfg.Storage.ListRuns(20)
+	history, err := s.cfg.Storage.ListRuns(historyListLimit)
 	if err != nil {
 		// SECURITY FIX MEDIUM-6: Don't expose internal error details
-		slog.Error("[API] Failed to list run history", "error", err)
+		s.logger.Error("[API] Failed to list run history", "error", err)
 		writeError(w, r, http.StatusInternalServerError, "storage_error",
 			"Failed to retrieve run history", nil)
 
@@ -1412,7 +1619,7 @@ func (s *Server) handleConfigGet(w http.ResponseWriter, r *http.Request) {
 	doc, status, err := s.readConfigDocument()
 	if err != nil {
 		// SECURITY FIX MEDIUM-6: Don't expose internal error details
-		slog.Error("[API] Failed to read config", "error", err)
+		s.logger.Error("[API] Failed to read config", "error", err)
 		writeError(w, r, status, "config_read_failed",
 			"Failed to read configuration", nil)
 
@@ -1438,8 +1645,17 @@ func (s *Server) handleConfigUpdate(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		if err.Error() == ErrMsgRequestBodyTooLarge {
-			writeError(w, r, http.StatusRequestEntityTooLarge, "request_too_large",
-				fmt.Sprintf("Request body exceeds maximum size of %d bytes", MaxRequestBodySize), nil)
+			writeError(
+				w,
+				r,
+				http.StatusRequestEntityTooLarge,
+				"request_too_large",
+				fmt.Sprintf(
+					"Request body exceeds maximum size of %d bytes",
+					MaxRequestBodySize,
+				),
+				nil,
+			)
 
 			return
 		}
@@ -1460,7 +1676,7 @@ func (s *Server) handleConfigUpdate(w http.ResponseWriter, r *http.Request) {
 	newCfg, err := config.LoadYAMLBytes([]byte(req.Content))
 	if err != nil {
 		// SECURITY FIX MEDIUM-6: Log details server-side, return generic message
-		slog.Error("[API] Config validation failed", "error", err)
+		s.logger.Error("[API] Config validation failed", "error", err)
 		writeError(w, r, http.StatusBadRequest, "config_invalid",
 			"Configuration validation failed", nil)
 
@@ -1469,10 +1685,10 @@ func (s *Server) handleConfigUpdate(w http.ResponseWriter, r *http.Request) {
 
 	prevCfg := s.currentConfig()
 	if s.cfg.ApplyConfig != nil {
-		err := s.cfg.ApplyConfig(newCfg)
-		if err != nil {
+		applyErr := s.cfg.ApplyConfig(newCfg)
+		if applyErr != nil {
 			// SECURITY FIX MEDIUM-6: Don't expose internal error details
-			slog.Error("[API] Failed to apply config", "error", err)
+			s.logger.Error("[API] Failed to apply config", "error", applyErr)
 			writeError(w, r, http.StatusInternalServerError, "config_apply_failed",
 				"Failed to apply configuration", nil)
 
@@ -1480,13 +1696,14 @@ func (s *Server) handleConfigUpdate(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if err := s.writeConfigFile(req.Content); err != nil {
+	writeErr := s.writeConfigFile(req.Content)
+	if writeErr != nil {
 		if s.cfg.ApplyConfig != nil && prevCfg != nil {
 			// Attempt rollback to previous config to avoid divergence.
 			_ = s.cfg.ApplyConfig(prevCfg)
 		}
 		// SECURITY FIX MEDIUM-6: Don't expose file paths
-		slog.Error("[API] Failed to write config file", "error", err)
+		s.logger.Error("[API] Failed to write config file", "error", writeErr)
 		writeError(w, r, http.StatusInternalServerError, "config_write_failed",
 			"Failed to save configuration", nil)
 
@@ -1498,7 +1715,7 @@ func (s *Server) handleConfigUpdate(w http.ResponseWriter, r *http.Request) {
 	doc, status, err := s.readConfigDocument()
 	if err != nil {
 		// SECURITY FIX MEDIUM-6: Don't expose internal error details
-		slog.Error("[API] Failed to read updated config", "error", err)
+		s.logger.Error("[API] Failed to read updated config", "error", err)
 		writeError(w, r, status, "config_read_failed",
 			"Configuration updated but failed to retrieve", nil)
 
@@ -1574,7 +1791,7 @@ func (s *Server) handleReplay(w http.ResponseWriter, r *http.Request) {
 		state, err := s.cfg.Replay.Stop()
 		if err != nil {
 			// SECURITY FIX MEDIUM-6: Don't expose internal error details
-			slog.Error("[API] Failed to stop replay", "error", err)
+			s.logger.Error("[API] Failed to stop replay", "error", err)
 			writeError(w, r, http.StatusInternalServerError, "replay_stop_failed",
 				"Failed to stop replay", nil)
 
@@ -1600,8 +1817,17 @@ func (s *Server) handleAlerts(w http.ResponseWriter, r *http.Request) {
 		err := json.NewDecoder(r.Body).Decode(&req)
 		if err != nil {
 			if err.Error() == ErrMsgRequestBodyTooLarge {
-				writeError(w, r, http.StatusRequestEntityTooLarge, "request_too_large",
-					fmt.Sprintf("Request body exceeds maximum size of %d bytes", MaxRequestBodySize), nil)
+				writeError(
+					w,
+					r,
+					http.StatusRequestEntityTooLarge,
+					"request_too_large",
+					fmt.Sprintf(
+						"Request body exceeds maximum size of %d bytes",
+						MaxRequestBodySize,
+					),
+					nil,
+				)
 
 				return
 			}
@@ -1651,7 +1877,7 @@ func (s *Server) handleFiles(w http.ResponseWriter, r *http.Request) {
 	s.writeJSON(w, entries)
 }
 
-func (s *Server) handleTopology(w http.ResponseWriter, r *http.Request) {
+func (s *Server) handleTopology(w http.ResponseWriter, _ *http.Request) {
 	s.writeJSON(w, s.currentTopology())
 }
 
@@ -1698,11 +1924,11 @@ func (s *Server) handleTopologyExport(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *Server) handleVersion(w http.ResponseWriter, r *http.Request) {
+func (s *Server) handleVersion(w http.ResponseWriter, _ *http.Request) {
 	s.writeJSON(w, map[string]string{"version": s.cfg.Version})
 }
 
-func (s *Server) handleNeighbors(w http.ResponseWriter, r *http.Request) {
+func (s *Server) handleNeighbors(w http.ResponseWriter, _ *http.Request) {
 	// SECURITY FIX #161: Thread-safe access to Stack
 	stack := s.currentStack()
 	if stack == nil {
@@ -1719,6 +1945,59 @@ func (s *Server) handleNeighbors(w http.ResponseWriter, r *http.Request) {
 	s.writeJSON(w, neighbors)
 }
 
+// errorInjectionRequest represents a request to inject an error.
+type errorInjectionRequest struct {
+	DeviceIP  string `json:"device_ip"`
+	Interface string `json:"interface"`
+	ErrorType string `json:"error_type"`
+	Value     int    `json:"value"`
+}
+
+// validateErrorInjectionRequest validates the error injection request fields.
+func (req *errorInjectionRequest) validate(w http.ResponseWriter, r *http.Request) bool {
+	if req.DeviceIP == "" {
+		writeError(w, r, http.StatusBadRequest, "validation_failed", "device_ip is required", nil)
+		return false
+	}
+
+	if req.Interface == "" {
+		writeError(w, r, http.StatusBadRequest, "validation_failed", "interface is required", nil)
+		return false
+	}
+
+	if req.ErrorType == "" {
+		writeError(w, r, http.StatusBadRequest, "validation_failed", "error_type is required", nil)
+		return false
+	}
+
+	if req.Value < 0 || req.Value > 100 {
+		writeError(
+			w,
+			r,
+			http.StatusBadRequest,
+			"validation_failed",
+			"value must be between 0 and 100",
+			nil,
+		)
+		return false
+	}
+
+	return true
+}
+
+// availableErrorTypes returns the list of available error types for injection.
+func availableErrorTypes() []map[string]string {
+	return []map[string]string{
+		{"type": "FCS Errors", "description": "Frame Check Sequence errors (0-100)"},
+		{"type": "Packet Discards", "description": "Dropped packets (0-100)"},
+		{"type": "Interface Errors", "description": "Generic interface errors (0-100)"},
+		{"type": "High Utilization", "description": "Interface bandwidth saturation (0-100%)"},
+		{"type": "High CPU", "description": "Device CPU load (0-100%)"},
+		{"type": "High Memory", "description": "Device memory usage (0-100%)"},
+		{"type": "High Disk", "description": "Device disk usage (0-100%)"},
+	}
+}
+
 func (s *Server) handleErrors(w http.ResponseWriter, r *http.Request) {
 	s.configMu.RLock()
 	stack := s.cfg.Stack
@@ -1726,128 +2005,104 @@ func (s *Server) handleErrors(w http.ResponseWriter, r *http.Request) {
 
 	if stack == nil {
 		http.Error(w, "no simulation running", http.StatusServiceUnavailable)
-
 		return
 	}
 
 	errorMgr := stack.GetErrorManager()
 	if errorMgr == nil {
 		http.Error(w, "error manager not available", http.StatusServiceUnavailable)
-
 		return
 	}
 
 	switch r.Method {
 	case http.MethodGet:
-		// List available error types and current active errors
-		errorTypes := []map[string]string{
-			{"type": "FCS Errors", "description": "Frame Check Sequence errors (0-100)"},
-			{"type": "Packet Discards", "description": "Dropped packets (0-100)"},
-			{"type": "Interface Errors", "description": "Generic interface errors (0-100)"},
-			{"type": "High Utilization", "description": "Interface bandwidth saturation (0-100%)"},
-			{"type": "High CPU", "description": "Device CPU load (0-100%)"},
-			{"type": "High Memory", "description": "Device memory usage (0-100%)"},
-			{"type": "High Disk", "description": "Device disk usage (0-100%)"},
-		}
-
-		activeErrors := errorMgr.GetAllStates()
 		s.writeJSON(w, map[string]any{
-			"available_types": errorTypes,
-			"active_errors":   activeErrors,
+			"available_types": availableErrorTypes(),
+			"active_errors":   errorMgr.GetAllStates(),
 		})
 
 	case http.MethodPost, http.MethodPut:
-		// SECURITY FIX #111: Enforce request body size limit
-		r.Body = http.MaxBytesReader(w, r.Body, MaxRequestBodySize)
-
-		// Inject or update error
-		var req struct {
-			DeviceIP  string `json:"device_ip"`
-			Interface string `json:"interface"`
-			ErrorType string `json:"error_type"`
-			Value     int    `json:"value"`
-		}
-
-		err := json.NewDecoder(r.Body).Decode(&req)
-		if err != nil {
-			// SECURITY FIX MEDIUM-6: Don't expose internal error details
-			writeError(w, r, http.StatusBadRequest, "invalid_request",
-				"Failed to parse request body", nil)
-
-			return
-		}
-
-		// Validate inputs
-		if req.DeviceIP == "" {
-			writeError(w, r, http.StatusBadRequest, "validation_failed",
-				"device_ip is required", nil)
-
-			return
-		}
-
-		if req.Interface == "" {
-			writeError(w, r, http.StatusBadRequest, "validation_failed",
-				"interface is required", nil)
-
-			return
-		}
-
-		if req.ErrorType == "" {
-			writeError(w, r, http.StatusBadRequest, "validation_failed",
-				"error_type is required", nil)
-
-			return
-		}
-
-		if req.Value < 0 || req.Value > 100 {
-			writeError(w, r, http.StatusBadRequest, "validation_failed",
-				"value must be between 0 and 100", nil)
-
-			return
-		}
-
-		// Inject error
-		errorMgr.SetError(req.DeviceIP, req.Interface, niacerrors.ErrorType(req.ErrorType), req.Value)
-
-		s.writeJSON(w, map[string]any{
-			"success":    true,
-			"message":    "error injected successfully",
-			"device_ip":  req.DeviceIP,
-			"interface":  req.Interface,
-			"error_type": req.ErrorType,
-			"value":      req.Value,
-		})
+		s.handleErrorInjection(w, r, errorMgr)
 
 	case http.MethodDelete:
-		// Clear errors
-		query := r.URL.Query()
-		deviceIP := query.Get("device_ip")
-		iface := query.Get("interface")
-
-		switch {
-		case deviceIP == "" && iface == "":
-			// Clear all errors
-			errorMgr.ClearAll()
-			s.writeJSON(w, map[string]any{
-				"success": true,
-				"message": "all errors cleared",
-			})
-		case deviceIP != "" && iface != "":
-			// Clear specific device/interface error
-			errorMgr.ClearError(deviceIP, iface)
-			s.writeJSON(w, map[string]any{
-				"success":   true,
-				"message":   "error cleared",
-				"device_ip": deviceIP,
-				"interface": iface,
-			})
-		default:
-			http.Error(w, "both device_ip and interface are required, or omit both to clear all", http.StatusBadRequest)
-		}
+		s.handleErrorClear(w, r, errorMgr)
 
 	default:
 		w.Header().Set("Allow", "GET, POST, PUT, DELETE")
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+// handleErrorInjection handles POST/PUT requests to inject errors.
+func (s *Server) handleErrorInjection(
+	w http.ResponseWriter,
+	r *http.Request,
+	errorMgr *apperr.StateManager,
+) {
+	// SECURITY FIX #111: Enforce request body size limit
+	r.Body = http.MaxBytesReader(w, r.Body, MaxRequestBodySize)
+
+	var req errorInjectionRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		// SECURITY FIX MEDIUM-6: Don't expose internal error details
+		writeError(
+			w,
+			r,
+			http.StatusBadRequest,
+			"invalid_request",
+			"Failed to parse request body",
+			nil,
+		)
+		return
+	}
+
+	if !req.validate(w, r) {
+		return
+	}
+
+	errorMgr.SetError(req.DeviceIP, req.Interface, apperr.ErrorType(req.ErrorType), req.Value)
+
+	s.writeJSON(w, map[string]any{
+		"success":    true,
+		"message":    "error injected successfully",
+		"device_ip":  req.DeviceIP,
+		"interface":  req.Interface,
+		"error_type": req.ErrorType,
+		"value":      req.Value,
+	})
+}
+
+// handleErrorClear handles DELETE requests to clear errors.
+func (s *Server) handleErrorClear(
+	w http.ResponseWriter,
+	r *http.Request,
+	errorMgr *apperr.StateManager,
+) {
+	query := r.URL.Query()
+	deviceIP := query.Get("device_ip")
+	iface := query.Get("interface")
+
+	switch {
+	case deviceIP == "" && iface == "":
+		errorMgr.ClearAll()
+		s.writeJSON(w, map[string]any{"success": true, "message": "all errors cleared"})
+	case deviceIP != "" && iface != "":
+		errorMgr.ClearError(deviceIP, iface)
+		s.writeJSON(
+			w,
+			map[string]any{
+				"success":   true,
+				"message":   "error cleared",
+				"device_ip": deviceIP,
+				"interface": iface,
+			},
+		)
+	default:
+		http.Error(
+			w,
+			"both device_ip and interface are required, or omit both to clear all",
+			http.StatusBadRequest,
+		)
 	}
 }
 
@@ -1863,7 +2118,7 @@ func (s *Server) handleInterfaces(w http.ResponseWriter, r *http.Request) {
 	ifaces, err := capture.GetAllInterfaces()
 	if err != nil {
 		// SECURITY FIX MEDIUM-6: Don't expose internal error details
-		slog.Error("[API] Failed to list interfaces", "error", err)
+		s.logger.Error("[API] Failed to list interfaces", "error", err)
 		writeError(w, r, http.StatusInternalServerError, "interface_list_failed",
 			"Failed to retrieve network interfaces", nil)
 
@@ -1951,189 +2206,237 @@ func (s *Server) handleSimulation(w http.ResponseWriter, r *http.Request) {
 			"Simulation control is only available in daemon mode. Start NIAC with 'niac daemon' command.",
 			http.StatusNotImplemented,
 		)
-
 		return
 	}
 
 	switch r.Method {
 	case http.MethodGet:
-		// Get simulation status
 		status := s.daemon.GetStatus()
 		s.writeJSON(w, status)
-
 	case http.MethodPost:
-		// Start simulation
-		// SECURITY FIX MEDIUM-3: Request body size limit
-		r.Body = http.MaxBytesReader(w, r.Body, MaxRequestBodySize)
-
-		var req SimulationRequest
-		err := json.NewDecoder(r.Body).Decode(&req)
-		if err != nil {
-			if err.Error() == ErrMsgRequestBodyTooLarge {
-				writeError(w, r, http.StatusRequestEntityTooLarge, "request_too_large",
-					fmt.Sprintf("Request body exceeds maximum size of %d bytes", MaxRequestBodySize), nil)
-
-				return
-			}
-
-			writeError(w, r, http.StatusBadRequest, "invalid_request",
-				"Failed to parse request body", nil)
-
-			return
-		}
-
-		// Validate required fields
-		if req.Interface == "" {
-			writeError(w, r, http.StatusBadRequest, "validation_failed",
-				"Validation failed", []ErrorDetail{{Field: "interface", Issue: "interface is required"}})
-
-			return
-		}
-
-		if req.ConfigPath == "" && req.ConfigData == "" {
-			writeError(
-				w,
-				r,
-				http.StatusBadRequest,
-				"validation_failed",
-				"Validation failed",
-				[]ErrorDetail{{Field: "config", Issue: "either config_path or config_data must be provided"}},
-			)
-
-			return
-		}
-
-		// SECURITY FIX MEDIUM-3: Comprehensive input validation
-		if validationErrors := validateSimulationRequest(req); len(validationErrors) > 0 {
-			writeError(w, r, http.StatusBadRequest, "validation_failed",
-				"Simulation request validation failed", validationErrors)
-
-			return
-		}
-
-		err = s.daemon.StartSimulation(req)
-		if err != nil {
-			writeError(w, r, http.StatusInternalServerError, "simulation_start_failed",
-				"Failed to start simulation", nil)
-
-			return
-		}
-
-		status := s.daemon.GetStatus()
-
-		w.WriteHeader(http.StatusCreated)
-		s.writeJSON(w, status)
-
+		s.handleSimulationStart(w, r)
 	case http.MethodDelete:
-		// Stop simulation
-		err := s.daemon.StopSimulation()
-		if err != nil {
-			// SECURITY FIX MEDIUM-6: Don't expose internal error details
-			slog.Error("[API] Failed to stop simulation", "error", err)
-			writeError(w, r, http.StatusInternalServerError, "simulation_stop_failed",
-				"Failed to stop simulation", nil)
-
-			return
-		}
-
-		s.writeJSON(w, map[string]string{"status": "stopped"})
-
+		s.handleSimulationStop(w, r)
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
 }
 
-func (s *Server) handleMetrics(w http.ResponseWriter, r *http.Request) {
-	s.configMu.RLock()
-	stack := s.cfg.Stack
-	cfg := s.cfg.Config
-	s.configMu.RUnlock()
+// handleSimulationStart processes POST requests to start a simulation.
+func (s *Server) handleSimulationStart(w http.ResponseWriter, r *http.Request) {
+	// SECURITY FIX MEDIUM-3: Request body size limit
+	r.Body = http.MaxBytesReader(w, r.Body, MaxRequestBodySize)
 
-	if stack == nil {
-		http.Error(w, "no simulation running", http.StatusServiceUnavailable)
-
+	var req SimulationRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		if err.Error() == ErrMsgRequestBodyTooLarge {
+			writeError(w, r, http.StatusRequestEntityTooLarge, "request_too_large",
+				fmt.Sprintf("Request body exceeds maximum size of %d bytes", MaxRequestBodySize), nil)
+			return
+		}
+		writeError(w, r, http.StatusBadRequest, "invalid_request", "Failed to parse request body", nil)
 		return
 	}
 
-	stats := stack.GetStats()
+	if err := validateSimulationStartRequest(req); err != nil {
+		writeError(w, r, http.StatusBadRequest, "validation_failed", "Validation failed", err)
+		return
+	}
+
+	if validationErrors := validateSimulationRequest(req); len(validationErrors) > 0 {
+		writeError(w, r, http.StatusBadRequest, "validation_failed",
+			"Simulation request validation failed", validationErrors)
+		return
+	}
+
+	if err := s.daemon.StartSimulation(req); err != nil {
+		writeError(w, r, http.StatusInternalServerError, "simulation_start_failed",
+			"Failed to start simulation", nil)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
+	s.writeJSON(w, s.daemon.GetStatus())
+}
+
+// handleSimulationStop processes DELETE requests to stop a simulation.
+func (s *Server) handleSimulationStop(w http.ResponseWriter, r *http.Request) {
+	if err := s.daemon.StopSimulation(); err != nil {
+		// SECURITY FIX MEDIUM-6: Don't expose internal error details
+		s.logger.Error("[API] Failed to stop simulation", "error", err)
+		writeError(w, r, http.StatusInternalServerError, "simulation_stop_failed",
+			"Failed to stop simulation", nil)
+		return
+	}
+	s.writeJSON(w, map[string]string{"status": "stopped"})
+}
+
+// validateSimulationStartRequest validates required fields for simulation start.
+func validateSimulationStartRequest(req SimulationRequest) []ErrorDetail {
+	var errors []ErrorDetail
+	if req.Interface == "" {
+		errors = append(errors, ErrorDetail{Field: "interface", Issue: "interface is required"})
+	}
+	if req.ConfigPath == "" && req.ConfigData == "" {
+		errors = append(errors, ErrorDetail{
+			Field: "config",
+			Issue: "either config_path or config_data must be provided",
+		})
+	}
+	return errors
+}
+
+// writePrometheusMetric writes a single Prometheus metric with help text, type, and value.
+func writePrometheusMetric(w io.Writer, name, help, metricType string, value any) {
+	_, _ = fmt.Fprintf(w, "# HELP %s %s\n", name, help)
+	_, _ = fmt.Fprintf(w, "# TYPE %s %s\n", name, metricType)
+	_, _ = fmt.Fprintf(w, "%s %v\n", name, value)
+}
+
+// writeBasicMetrics writes packet and error metrics.
+func writeBasicMetrics(w io.Writer, stats *protocols.Statistics, deviceCount int) {
+	writePrometheusMetric(
+		w,
+		"niac_packets_sent_total",
+		"Total packets sent",
+		"counter",
+		stats.PacketsSent,
+	)
+	writePrometheusMetric(
+		w,
+		"niac_packets_received_total",
+		"Total packets received",
+		"counter",
+		stats.PacketsReceived,
+	)
+	writePrometheusMetric(
+		w,
+		"niac_snmp_queries_total",
+		"Total SNMP queries processed",
+		"counter",
+		stats.SNMPQueries,
+	)
+	writePrometheusMetric(w, "niac_errors_total", "Total errors", "counter", stats.Errors)
+	writePrometheusMetric(
+		w,
+		"niac_devices_total",
+		"Number of simulated devices",
+		"gauge",
+		deviceCount,
+	)
+}
+
+// writeProtocolMetrics writes protocol-specific metrics (ARP, ICMP, DNS, DHCP).
+func writeProtocolMetrics(w io.Writer, stats *protocols.Statistics) {
+	writePrometheusMetric(
+		w,
+		"niac_arp_requests_total",
+		"Total ARP requests sent",
+		"counter",
+		stats.ARPRequests,
+	)
+	writePrometheusMetric(
+		w,
+		"niac_arp_replies_total",
+		"Total ARP replies sent",
+		"counter",
+		stats.ARPReplies,
+	)
+	writePrometheusMetric(
+		w,
+		"niac_icmp_requests_total",
+		"Total ICMP requests sent",
+		"counter",
+		stats.ICMPRequests,
+	)
+	writePrometheusMetric(
+		w,
+		"niac_icmp_replies_total",
+		"Total ICMP replies sent",
+		"counter",
+		stats.ICMPReplies,
+	)
+	writePrometheusMetric(
+		w,
+		"niac_dns_queries_total",
+		"Total DNS queries processed",
+		"counter",
+		stats.DNSQueries,
+	)
+	writePrometheusMetric(
+		w,
+		"niac_dhcp_requests_total",
+		"Total DHCP requests processed",
+		"counter",
+		stats.DHCPRequests,
+	)
+}
+
+// writeSystemMetrics writes runtime and memory metrics.
+func writeSystemMetrics(w io.Writer, startTime time.Time, memStats *runtime.MemStats) {
+	writePrometheusMetric(
+		w,
+		"niac_uptime_seconds",
+		"Server uptime in seconds",
+		"gauge",
+		int64(time.Since(startTime).Seconds()),
+	)
+	writePrometheusMetric(
+		w,
+		"niac_goroutines_total",
+		"Number of goroutines",
+		"gauge",
+		runtime.NumGoroutine(),
+	)
+	writePrometheusMetric(
+		w,
+		"niac_memory_usage_bytes",
+		"Memory usage in bytes",
+		"gauge",
+		memStats.Alloc,
+	)
+	writePrometheusMetric(
+		w,
+		"niac_memory_sys_bytes",
+		"Total memory obtained from OS in bytes",
+		"gauge",
+		memStats.Sys,
+	)
+	writePrometheusMetric(
+		w,
+		"niac_gc_runs_total",
+		"Total number of GC runs",
+		"counter",
+		memStats.NumGC,
+	)
+}
+
+func (s *Server) handleMetrics(w http.ResponseWriter, _ *http.Request) {
+	s.configMu.RLock()
+	stk := s.cfg.Stack
+	cfg := s.cfg.Config
+	s.configMu.RUnlock()
+
+	if stk == nil {
+		http.Error(w, "no simulation running", http.StatusServiceUnavailable)
+		return
+	}
+
+	stats := stk.GetStats()
 
 	deviceCount := 0
 	if cfg != nil {
 		deviceCount = len(cfg.Devices)
 	}
 
-	// Get system metrics
 	var memStats runtime.MemStats
 	runtime.ReadMemStats(&memStats)
 
 	w.Header().Set("Content-Type", "text/plain; version=0.0.4")
 
-	// Existing basic metrics
-	_, _ = fmt.Fprintf(w, "# HELP niac_packets_sent_total Total packets sent\n")
-	_, _ = fmt.Fprintf(w, "# TYPE niac_packets_sent_total counter\n")
-	_, _ = fmt.Fprintf(w, "niac_packets_sent_total %d\n", stats.PacketsSent)
-
-	_, _ = fmt.Fprintf(w, "# HELP niac_packets_received_total Total packets received\n")
-	_, _ = fmt.Fprintf(w, "# TYPE niac_packets_received_total counter\n")
-	_, _ = fmt.Fprintf(w, "niac_packets_received_total %d\n", stats.PacketsReceived)
-
-	_, _ = fmt.Fprintf(w, "# HELP niac_snmp_queries_total Total SNMP queries processed\n")
-	_, _ = fmt.Fprintf(w, "# TYPE niac_snmp_queries_total counter\n")
-	_, _ = fmt.Fprintf(w, "niac_snmp_queries_total %d\n", stats.SNMPQueries)
-
-	_, _ = fmt.Fprintf(w, "# HELP niac_errors_total Total errors\n")
-	_, _ = fmt.Fprintf(w, "# TYPE niac_errors_total counter\n")
-	_, _ = fmt.Fprintf(w, "niac_errors_total %d\n", stats.Errors)
-
-	_, _ = fmt.Fprintf(w, "# HELP niac_devices_total Number of simulated devices\n")
-	_, _ = fmt.Fprintf(w, "# TYPE niac_devices_total gauge\n")
-	_, _ = fmt.Fprintf(w, "niac_devices_total %d\n", deviceCount)
-
-	// Protocol-specific metrics
-	_, _ = fmt.Fprintf(w, "# HELP niac_arp_requests_total Total ARP requests sent\n")
-	_, _ = fmt.Fprintf(w, "# TYPE niac_arp_requests_total counter\n")
-	_, _ = fmt.Fprintf(w, "niac_arp_requests_total %d\n", stats.ARPRequests)
-
-	_, _ = fmt.Fprintf(w, "# HELP niac_arp_replies_total Total ARP replies sent\n")
-	_, _ = fmt.Fprintf(w, "# TYPE niac_arp_replies_total counter\n")
-	_, _ = fmt.Fprintf(w, "niac_arp_replies_total %d\n", stats.ARPReplies)
-
-	_, _ = fmt.Fprintf(w, "# HELP niac_icmp_requests_total Total ICMP requests sent\n")
-	_, _ = fmt.Fprintf(w, "# TYPE niac_icmp_requests_total counter\n")
-	_, _ = fmt.Fprintf(w, "niac_icmp_requests_total %d\n", stats.ICMPRequests)
-
-	_, _ = fmt.Fprintf(w, "# HELP niac_icmp_replies_total Total ICMP replies sent\n")
-	_, _ = fmt.Fprintf(w, "# TYPE niac_icmp_replies_total counter\n")
-	_, _ = fmt.Fprintf(w, "niac_icmp_replies_total %d\n", stats.ICMPReplies)
-
-	_, _ = fmt.Fprintf(w, "# HELP niac_dns_queries_total Total DNS queries processed\n")
-	_, _ = fmt.Fprintf(w, "# TYPE niac_dns_queries_total counter\n")
-	_, _ = fmt.Fprintf(w, "niac_dns_queries_total %d\n", stats.DNSQueries)
-
-	_, _ = fmt.Fprintf(w, "# HELP niac_dhcp_requests_total Total DHCP requests processed\n")
-	_, _ = fmt.Fprintf(w, "# TYPE niac_dhcp_requests_total counter\n")
-	_, _ = fmt.Fprintf(w, "niac_dhcp_requests_total %d\n", stats.DHCPRequests)
-
-	// System performance metrics
-	_, _ = fmt.Fprintf(w, "# HELP niac_uptime_seconds Server uptime in seconds\n")
-	_, _ = fmt.Fprintf(w, "# TYPE niac_uptime_seconds gauge\n")
-	_, _ = fmt.Fprintf(w, "niac_uptime_seconds %d\n", int64(time.Since(s.startTime).Seconds()))
-
-	_, _ = fmt.Fprintf(w, "# HELP niac_goroutines_total Number of goroutines\n")
-	_, _ = fmt.Fprintf(w, "# TYPE niac_goroutines_total gauge\n")
-	_, _ = fmt.Fprintf(w, "niac_goroutines_total %d\n", runtime.NumGoroutine())
-
-	_, _ = fmt.Fprintf(w, "# HELP niac_memory_usage_bytes Memory usage in bytes\n")
-	_, _ = fmt.Fprintf(w, "# TYPE niac_memory_usage_bytes gauge\n")
-	_, _ = fmt.Fprintf(w, "niac_memory_usage_bytes %d\n", memStats.Alloc)
-
-	_, _ = fmt.Fprintf(w, "# HELP niac_memory_sys_bytes Total memory obtained from OS in bytes\n")
-	_, _ = fmt.Fprintf(w, "# TYPE niac_memory_sys_bytes gauge\n")
-	_, _ = fmt.Fprintf(w, "niac_memory_sys_bytes %d\n", memStats.Sys)
-
-	_, _ = fmt.Fprintf(w, "# HELP niac_gc_runs_total Total number of GC runs\n")
-	_, _ = fmt.Fprintf(w, "# TYPE niac_gc_runs_total counter\n")
-	_, _ = fmt.Fprintf(w, "niac_gc_runs_total %d\n", memStats.NumGC)
+	writeBasicMetrics(w, &stats, deviceCount)
+	writeProtocolMetrics(w, &stats)
+	writeSystemMetrics(w, s.startTime, &memStats)
 }
 
 func (s *Server) writeJSON(w http.ResponseWriter, payload any) {
@@ -2144,7 +2447,7 @@ func (s *Server) writeJSON(w http.ResponseWriter, payload any) {
 }
 
 func (s *Server) alertLoop(stop <-chan struct{}) {
-	ticker := time.NewTicker(5 * time.Second)
+	ticker := time.NewTicker(alertTickerSecs * time.Second)
 	defer ticker.Stop()
 
 	for {
@@ -2183,7 +2486,7 @@ func (s *Server) alertLoop(stop <-chan struct{}) {
 }
 
 func (s *Server) sendAlert(total uint64) {
-	slog.Warn("Alert: packet threshold exceeded", "total", total)
+	s.logger.Warn("Alert: packet threshold exceeded", "total", total)
 
 	cfg := s.getAlertConfig()
 	if cfg.WebhookURL == "" {
@@ -2199,30 +2502,39 @@ func (s *Server) sendAlert(total uint64) {
 		"triggeredAt": time.Now().UTC(),
 	})
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), webhookTimeoutSecs*time.Second)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, cfg.WebhookURL, strings.NewReader(string(body)))
+	req, err := http.NewRequestWithContext(
+		ctx,
+		http.MethodPost,
+		cfg.WebhookURL,
+		strings.NewReader(string(body)),
+	)
 	if err != nil {
-		slog.Error("Alert webhook error", "error", err)
+		s.logger.Error("Alert webhook error", "error", err)
 
 		return
 	}
 
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{Timeout: 5 * time.Second}
-	if resp, err := client.Do(req); err != nil {
-		slog.Error("Alert webhook request failed", "error", err)
-	} else {
-		_ = resp.Body.Close()
+	client := &http.Client{Timeout: webhookTimeoutSecs * time.Second}
+
+	resp, doErr := client.Do(req)
+	if doErr != nil {
+		s.logger.Error("Alert webhook request failed", "error", doErr)
+
+		return
 	}
+
+	_ = resp.Body.Close()
 }
 
 // validatePCAPMagic validates that the file begins with a valid PCAP magic number
 // SECURITY FIX LOW-2: Prevents processing of non-PCAP files that could exploit parser bugs.
 func validatePCAPMagic(data []byte) error {
-	if len(data) < 4 {
+	if len(data) < minPCAPSize {
 		return ErrFileTooSmallForPCAP
 	}
 
@@ -2246,7 +2558,38 @@ func validatePCAPMagic(data []byte) error {
 		return nil
 	}
 
-	return fmt.Errorf("%w: 0x%08x (expected pcap or pcapng format)", ErrInvalidPCAPMagicNumber, magic)
+	return fmt.Errorf(
+		"%w: 0x%08x (expected pcap or pcapng format)",
+		ErrInvalidPCAPMagicNumber,
+		magic,
+	)
+}
+
+// processInlineData decodes and validates inline PCAP data, writes it to a temp file.
+// Returns the file path and any error encountered.
+func (s *Server) processInlineData(inlineData string) (string, error) {
+	// SECURITY FIX #97: Additional check on base64 encoded data size
+	// Base64 encoding increases size by ~4/3, so check before decode
+	if len(inlineData) > MaxPCAPUploadSize*4/base64Ratio {
+		return "", ErrPCAPDataExceedsSizeLimit
+	}
+
+	data, decodeErr := base64.StdEncoding.DecodeString(inlineData)
+	if decodeErr != nil {
+		return "", fmt.Errorf("decode replay data: %w", decodeErr)
+	}
+
+	// Double-check decoded size
+	if len(data) > MaxPCAPUploadSize {
+		return "", ErrDecodedPCAPExceedsSizeLimit
+	}
+
+	// SECURITY FIX LOW-2: Validate PCAP file magic number
+	if magicErr := validatePCAPMagic(data); magicErr != nil {
+		return "", fmt.Errorf("invalid PCAP file: %w", magicErr)
+	}
+
+	return s.writeUploadedFile(data)
 }
 
 func (s *Server) prepareReplayRequest(req ReplayRequest) (ReplayRequest, error) {
@@ -2254,47 +2597,26 @@ func (s *Server) prepareReplayRequest(req ReplayRequest) (ReplayRequest, error) 
 		return req, ErrPcapFilePathOrDataRequired
 	}
 
-	if req.InlineData != "" {
-		// SECURITY FIX #97: Additional check on base64 encoded data size
-		// Base64 encoding increases size by ~4/3, so check before decode
-		if len(req.InlineData) > MaxPCAPUploadSize*4/3 {
-			return req, ErrPCAPDataExceedsSizeLimit
-		}
-
-		data, err := base64.StdEncoding.DecodeString(req.InlineData)
-		if err != nil {
-			return req, fmt.Errorf("decode replay data: %w", err)
-		}
-
-		// Double-check decoded size
-		if len(data) > MaxPCAPUploadSize {
-			return req, ErrDecodedPCAPExceedsSizeLimit
-		}
-
-		// SECURITY FIX LOW-2: Validate PCAP file magic number
-		if err := validatePCAPMagic(data); err != nil {
-			return req, fmt.Errorf("invalid PCAP file: %w", err)
-		}
-
-		path, err := s.writeUploadedFile(data)
+	if req.InlineData == "" {
+		// SECURITY FIX #162: Validate PCAP file path to prevent arbitrary file access
+		validatedPath, err := s.validatePcapFilePath(req.File)
 		if err != nil {
 			return req, err
 		}
 
-		req.File = path
-		req.Uploaded = true
-		req.InlineData = ""
+		req.File = validatedPath
 
 		return req, nil
 	}
 
-	// SECURITY FIX #162: Validate PCAP file path to prevent arbitrary file access
-	validatedPath, err := s.validatePcapFilePath(req.File)
+	path, err := s.processInlineData(req.InlineData)
 	if err != nil {
 		return req, err
 	}
 
-	req.File = validatedPath
+	req.File = path
+	req.Uploaded = true
+	req.InlineData = ""
 
 	return req, nil
 }
@@ -2351,7 +2673,8 @@ func (s *Server) validatePcapFilePath(filename string) (string, error) {
 	}
 
 	// Verify the file is within the allowed directory (prevent path traversal)
-	if !strings.HasPrefix(realPath, realAllowedDir+string(filepath.Separator)) && realPath != realAllowedDir {
+	if !strings.HasPrefix(realPath, realAllowedDir+string(filepath.Separator)) &&
+		realPath != realAllowedDir {
 		return "", fmt.Errorf("access denied: file must be within %s", allowedDir)
 	}
 
@@ -2371,7 +2694,10 @@ func (s *Server) validatePcapFilePath(filename string) (string, error) {
 	ext := strings.ToLower(filepath.Ext(absPath))
 	validExts := map[string]bool{".pcap": true, ".pcapng": true, ".cap": true}
 	if !validExts[ext] {
-		return "", fmt.Errorf("invalid pcap file extension: %s (allowed: .pcap, .pcapng, .cap)", ext)
+		return "", fmt.Errorf(
+			"invalid pcap file extension: %s (allowed: .pcap, .pcapng, .cap)",
+			ext,
+		)
 	}
 
 	return absPath, nil
@@ -2380,43 +2706,51 @@ func (s *Server) validatePcapFilePath(filename string) (string, error) {
 func (s *Server) writeUploadedFile(data []byte) (string, error) {
 	// SECURITY FIX #167: Use restrictive permissions for temp directory (owner-only)
 	dir := filepath.Join(os.TempDir(), "niac-replay")
-	if err := os.MkdirAll(dir, 0o700); err != nil {
-		return "", fmt.Errorf("create upload dir: %w", err)
+
+	mkdirErr := os.MkdirAll(dir, 0o700)
+	if mkdirErr != nil {
+		return "", fmt.Errorf("create upload dir: %w", mkdirErr)
 	}
 
-	// Ensure directory permissions are correct even if it already exists
-	// G302: 0700 is appropriate for directories (owner rwx, no group/other access)
-	if err := os.Chmod(dir, 0o700); err != nil { //nolint:gosec // G302: directory needs execute permission
-		return "", fmt.Errorf("secure upload dir: %w", err)
+	// Ensure directory permissions are correct even if it already exists.
+	// 0o700 = owner rwx only, restrictive for upload directories.
+	const secureDirPerm = 0o700
+
+	chmodErr := os.Chmod(dir, secureDirPerm)
+	if chmodErr != nil {
+		return "", fmt.Errorf("secure upload dir: %w", chmodErr)
 	}
 
-	tmp, err := os.CreateTemp(dir, "upload-*.pcap")
-	if err != nil {
-		return "", fmt.Errorf("create temp file: %w", err)
+	tmp, createErr := os.CreateTemp(dir, "upload-*.pcap")
+	if createErr != nil {
+		return "", fmt.Errorf("create temp file: %w", createErr)
 	}
 
 	tmpPath := tmp.Name()
 
 	// SECURITY FIX #167: Write data while file is still open (no race window)
-	if _, err := tmp.Write(data); err != nil {
+	_, writeErr := tmp.Write(data)
+	if writeErr != nil {
 		_ = tmp.Close()
 		_ = os.Remove(tmpPath)
 
-		return "", fmt.Errorf("write upload: %w", err)
+		return "", fmt.Errorf("write upload: %w", writeErr)
 	}
 
-	if err := tmp.Sync(); err != nil {
+	syncErr := tmp.Sync()
+	if syncErr != nil {
 		_ = tmp.Close()
 		_ = os.Remove(tmpPath)
 
-		return "", fmt.Errorf("sync upload: %w", err)
+		return "", fmt.Errorf("sync upload: %w", syncErr)
 	}
 
 	// Close file but don't use defer - we need to return path on success
-	if err := tmp.Close(); err != nil {
+	closeErr := tmp.Close()
+	if closeErr != nil {
 		_ = os.Remove(tmpPath)
 
-		return "", fmt.Errorf("close temp file: %w", err)
+		return "", fmt.Errorf("close temp file: %w", closeErr)
 	}
 
 	return tmpPath, nil
@@ -2512,41 +2846,47 @@ func (s *Server) writeConfigFile(content string) error {
 	cfgPath := s.configPath()
 	dir := filepath.Dir(cfgPath)
 
-	if err := os.MkdirAll(dir, 0o750); err != nil {
-		return fmt.Errorf("create config directory: %w", err)
+	mkdirErr := os.MkdirAll(dir, 0o750)
+	if mkdirErr != nil {
+		return fmt.Errorf("create config directory: %w", mkdirErr)
 	}
 
-	tmp, err := os.CreateTemp(dir, ".niac-config-*")
-	if err != nil {
-		return fmt.Errorf("create temp file: %w", err)
+	tmp, createErr := os.CreateTemp(dir, ".niac-config-*")
+	if createErr != nil {
+		return fmt.Errorf("create temp file: %w", createErr)
 	}
 
 	tmpPath := tmp.Name()
 
 	defer func() { _ = os.Remove(tmpPath) }()
 
-	if _, err := tmp.WriteString(content); err != nil {
+	_, writeErr := tmp.WriteString(content)
+	if writeErr != nil {
 		_ = tmp.Close()
 
-		return fmt.Errorf("write temp file: %w", err)
+		return fmt.Errorf("write temp file: %w", writeErr)
 	}
 
-	if err := tmp.Sync(); err != nil {
+	syncErr := tmp.Sync()
+	if syncErr != nil {
 		_ = tmp.Close()
 
-		return fmt.Errorf("sync temp file: %w", err)
+		return fmt.Errorf("sync temp file: %w", syncErr)
 	}
 
-	if err := tmp.Close(); err != nil {
-		return fmt.Errorf("close temp file: %w", err)
+	closeErr := tmp.Close()
+	if closeErr != nil {
+		return fmt.Errorf("close temp file: %w", closeErr)
 	}
 
-	if err := os.Chmod(tmpPath, 0o600); err != nil {
-		return fmt.Errorf("chmod temp file: %w", err)
+	chmodErr := os.Chmod(tmpPath, 0o600)
+	if chmodErr != nil {
+		return fmt.Errorf("chmod temp file: %w", chmodErr)
 	}
 
-	if err := os.Rename(tmpPath, cfgPath); err != nil {
-		return fmt.Errorf("replace config: %w", err)
+	renameErr := os.Rename(tmpPath, cfgPath)
+	if renameErr != nil {
+		return fmt.Errorf("replace config: %w", renameErr)
 	}
 
 	return nil
@@ -2597,50 +2937,95 @@ func (s *Server) currentInterface() string {
 	return s.cfg.Interface
 }
 
-func (s *Server) collectFiles(kind string) ([]FileEntry, error) {
-	var (
-		root string
-		exts []string
-	)
-
+// getFileKindConfig returns root path and extensions for a file kind.
+func (s *Server) getFileKindConfig(kind string) (string, []string, error) {
 	switch kind {
 	case "walks":
-		root = s.resolveIncludePath()
-		exts = []string{".walk"}
+		return s.resolveIncludePath(), []string{".walk"}, nil
 	case "pcaps":
-		// SECURITY FIX #161: Thread-safe access to ConfigPath
 		if cfgPath := s.configPath(); cfgPath != "" {
-			root = filepath.Dir(cfgPath)
+			return filepath.Dir(cfgPath), []string{".pcap", ".pcapng"}, nil
 		}
 
-		exts = []string{".pcap", ".pcapng"}
+		return "", []string{".pcap", ".pcapng"}, nil
 	default:
-		return nil, fmt.Errorf("%w: %s", ErrUnsupportedFileKind, kind)
+		return "", nil, fmt.Errorf("%w: %s", ErrUnsupportedFileKind, kind)
+	}
+}
+
+// resolveSecureRoot validates and resolves the root path for file collection.
+func resolveSecureRoot(root string) (string, error) {
+	rootInfo, statErr := os.Stat(root)
+	if statErr != nil {
+		return "", statErr
+	}
+
+	if !rootInfo.IsDir() {
+		return "", ErrNotADirectory
+	}
+
+	rootAbs, absErr := filepath.Abs(root)
+	if absErr != nil {
+		return "", fmt.Errorf("failed to resolve root path: %w", absErr)
+	}
+
+	// Fall back to absolute path if symlink resolution fails
+	rootReal, _ := filepath.EvalSymlinks(rootAbs)
+	if rootReal == "" {
+		return rootAbs, nil
+	}
+
+	return rootReal, nil
+}
+
+// processFileEntry validates and creates a FileEntry for a collected file.
+func processFileEntry(path string, d fs.DirEntry, rootReal string) (*FileEntry, error) {
+	info, infoErr := d.Info()
+	if infoErr != nil {
+		return nil, fmt.Errorf("failed to get file info: %w", infoErr)
+	}
+
+	absPath, absErr := filepath.Abs(path)
+	if absErr != nil {
+		return nil, fmt.Errorf("failed to get absolute path: %w", absErr)
+	}
+
+	// SECURITY FIX #95: Validate path stays within root directory
+	realPath, evalErr := filepath.EvalSymlinks(absPath)
+	if evalErr != nil {
+		return nil, fmt.Errorf("failed to evaluate symlinks: %w", evalErr)
+	}
+
+	// Ensure resolved path is within the allowed root directory
+	if !strings.HasPrefix(realPath, rootReal+string(os.PathSeparator)) && realPath != rootReal {
+		return nil, ErrPathOutsideRoot
+	}
+
+	return &FileEntry{
+		Path:      absPath,
+		Name:      filepath.Base(path),
+		SizeBytes: info.Size(),
+		Modified:  info.ModTime().UTC(),
+	}, nil
+}
+
+func (s *Server) collectFiles(kind string) ([]FileEntry, error) {
+	root, exts, err := s.getFileKindConfig(kind)
+	if err != nil {
+		return nil, err
 	}
 
 	if root == "" {
 		return []FileEntry{}, nil
 	}
 
-	info, err := os.Stat(root)
+	rootReal, err := resolveSecureRoot(root)
 	if err != nil {
+		if errors.Is(err, ErrNotADirectory) {
+			return []FileEntry{}, nil
+		}
+
 		return []FileEntry{}, fmt.Errorf("failed to stat root: %w", err)
-	}
-
-	if !info.IsDir() {
-		return []FileEntry{}, nil
-	}
-
-	// Resolve canonical root path to prevent path traversal attacks
-	rootAbs, err := filepath.Abs(root)
-	if err != nil {
-		return nil, fmt.Errorf("failed to resolve root path: %w", err)
-	}
-	// Resolve symlinks in root path
-	rootReal, err := filepath.EvalSymlinks(rootAbs)
-	if err != nil {
-		// If symlink resolution fails, use absolute path
-		rootReal = rootAbs
 	}
 
 	var entries []FileEntry
@@ -2659,37 +3044,17 @@ func (s *Server) collectFiles(kind string) ([]FileEntry, error) {
 			return nil
 		}
 
-		info, infoErr := d.Info()
-		if infoErr != nil {
-			return fmt.Errorf("failed to get file info: %w", infoErr)
+		entry, procErr := processFileEntry(path, d, rootReal)
+		if procErr != nil {
+			if errors.Is(procErr, ErrPathOutsideRoot) {
+				return nil // Skip files outside allowed directory
+			}
+
+			return procErr
 		}
 
-		absPath, absErr := filepath.Abs(path)
-		if absErr != nil {
-			return fmt.Errorf("failed to get absolute path: %w", absErr)
-		}
-
-		// SECURITY FIX #95: Validate path stays within root directory
-		// Resolve symlinks to prevent symlink attacks (#96)
-		realPath, evalErr := filepath.EvalSymlinks(absPath)
-		if evalErr != nil {
-			// If symlink resolution fails, skip this file
-			return fmt.Errorf("failed to evaluate symlinks: %w", evalErr)
-		}
-
-		// Ensure resolved path is within the allowed root directory
-		if !strings.HasPrefix(realPath, rootReal+string(os.PathSeparator)) && realPath != rootReal {
-			// Path is outside allowed directory, skip it
-			return nil
-		}
-
-		entries = append(entries, FileEntry{
-			Path:      absPath,
-			Name:      filepath.Base(path),
-			SizeBytes: info.Size(),
-			Modified:  info.ModTime().UTC(),
-		})
-		if len(entries) >= 200 {
+		entries = append(entries, *entry)
+		if len(entries) >= maxFileEntries {
 			return filepath.SkipDir
 		}
 

@@ -1,15 +1,15 @@
-package protocols
+package protocols_test
 
 import (
 	"net"
 	"testing"
-	"time"
 
 	"github.com/krisarmstrong/niac-go/pkg/config"
+	"github.com/krisarmstrong/niac-go/pkg/protocols"
 )
 
 func TestNewPacket(t *testing.T) {
-	pkt := NewPacket(1500)
+	pkt := protocols.NewPacket(1500)
 	if pkt == nil {
 		t.Fatal("NewPacket returned nil")
 	}
@@ -24,7 +24,7 @@ func TestNewPacket(t *testing.T) {
 }
 
 func TestPacketClone(t *testing.T) {
-	pkt := NewPacket(100)
+	pkt := protocols.NewPacket(100)
 	pkt.Buffer[0] = 0xAA
 	pkt.Length = 50
 	pkt.SerialNumber = 123
@@ -56,7 +56,7 @@ func TestPacketClone(t *testing.T) {
 }
 
 func TestPacket16BitOperations(t *testing.T) {
-	pkt := NewPacket(100)
+	pkt := protocols.NewPacket(100)
 
 	// Test Put16 and Get16
 	pkt.Put16(0x1234, 0)
@@ -75,7 +75,7 @@ func TestPacket16BitOperations(t *testing.T) {
 }
 
 func TestPacket32BitOperations(t *testing.T) {
-	pkt := NewPacket(100)
+	pkt := protocols.NewPacket(100)
 
 	// Test Put32 and Get32
 	pkt.Put32(0x12345678, 0)
@@ -87,7 +87,7 @@ func TestPacket32BitOperations(t *testing.T) {
 }
 
 func TestPacketMACOperations(t *testing.T) {
-	pkt := NewPacket(100)
+	pkt := protocols.NewPacket(100)
 
 	srcMAC := net.HardwareAddr{0x00, 0x11, 0x22, 0x33, 0x44, 0x55}
 	dstMAC := net.HardwareAddr{0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF}
@@ -118,7 +118,7 @@ func TestPacketMACOperations(t *testing.T) {
 }
 
 func TestPacketIPOperations(t *testing.T) {
-	pkt := NewPacket(100)
+	pkt := protocols.NewPacket(100)
 
 	ip := net.ParseIP("192.168.1.1")
 
@@ -134,7 +134,7 @@ func TestBuildEthernetHeader(t *testing.T) {
 	srcMAC := net.HardwareAddr{0x00, 0x11, 0x22, 0x33, 0x44, 0x55}
 	dstMAC := net.HardwareAddr{0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF}
 
-	header := BuildEthernetHeader(dstMAC, srcMAC, EtherTypeIP)
+	header := protocols.BuildEthernetHeader(dstMAC, srcMAC, protocols.EtherTypeIP)
 
 	if len(header) != 14 {
 		t.Errorf("Expected header length 14, got %d", len(header))
@@ -152,13 +152,13 @@ func TestBuildEthernetHeader(t *testing.T) {
 
 	// Check EtherType
 	etherType := uint16(header[12])<<8 | uint16(header[13])
-	if etherType != EtherTypeIP {
-		t.Errorf("EtherType mismatch: got 0x%x, want 0x%x", etherType, EtherTypeIP)
+	if etherType != protocols.EtherTypeIP {
+		t.Errorf("EtherType mismatch: got 0x%x, want 0x%x", etherType, protocols.EtherTypeIP)
 	}
 }
 
 func TestDeviceTable(t *testing.T) {
-	dt := NewDeviceTable()
+	dt := protocols.NewDeviceTable()
 
 	// Create test device
 	device := &config.Device{
@@ -210,7 +210,7 @@ func TestDeviceTable(t *testing.T) {
 }
 
 func TestDeviceTableMultiple(t *testing.T) {
-	dt := NewDeviceTable()
+	dt := protocols.NewDeviceTable()
 
 	// Add multiple devices
 	for i := range 10 {
@@ -234,17 +234,16 @@ func TestDeviceTableMultiple(t *testing.T) {
 	}
 }
 
-//nolint:govet // unusedwrite: false positive, ARPRequests field is being tested for concurrent access
+// TestStatistics tests basic statistics struct instantiation.
+// Note: The internal mutex is not accessible from external test packages,
+// so we only test that the struct can be created and fields can be set.
 func TestStatistics(t *testing.T) {
-	stats := &Statistics{}
+	stats := &protocols.Statistics{}
 
-	stats.mu.Lock()
+	// Set fields directly (these are exported)
 	stats.PacketsReceived = 100
 	stats.PacketsSent = 50
 	stats.ARPRequests = 10
-	stats.mu.Unlock()
-
-	stats.mu.RLock()
 
 	if stats.PacketsReceived != 100 {
 		t.Errorf("Expected 100 packets received, got %d", stats.PacketsReceived)
@@ -254,7 +253,9 @@ func TestStatistics(t *testing.T) {
 		t.Errorf("Expected 50 packets sent, got %d", stats.PacketsSent)
 	}
 
-	stats.mu.RUnlock()
+	if stats.ARPRequests != 10 {
+		t.Errorf("Expected 10 ARP requests, got %d", stats.ARPRequests)
+	}
 }
 
 // Helper function to compare MAC addresses.
@@ -273,7 +274,7 @@ func macEqual(a, b net.HardwareAddr) bool {
 }
 
 func BenchmarkPacketClone(b *testing.B) {
-	pkt := NewPacket(1500)
+	pkt := protocols.NewPacket(1500)
 	pkt.Length = 1500
 
 	for b.Loop() {
@@ -282,7 +283,7 @@ func BenchmarkPacketClone(b *testing.B) {
 }
 
 func BenchmarkPacket16BitOps(b *testing.B) {
-	pkt := NewPacket(1500)
+	pkt := protocols.NewPacket(1500)
 
 	for b.Loop() {
 		pkt.Put16(0x1234, 0)
@@ -291,7 +292,7 @@ func BenchmarkPacket16BitOps(b *testing.B) {
 }
 
 func BenchmarkDeviceTableLookup(b *testing.B) {
-	dt := NewDeviceTable()
+	dt := protocols.NewDeviceTable()
 
 	// Add 100 devices
 	devices := make([]*config.Device, 100)
@@ -319,16 +320,16 @@ func BenchmarkDeviceTableLookup(b *testing.B) {
 
 func TestParsePacketVLAN(t *testing.T) {
 	// Create a packet with VLAN tag
-	pkt := NewPacket(100)
+	pkt := protocols.NewPacket(100)
 
 	// Ethernet header with VLAN
 	pkt.PutDestMAC(net.HardwareAddr{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF})
 	pkt.PutSourceMAC(net.HardwareAddr{0x00, 0x11, 0x22, 0x33, 0x44, 0x55})
-	pkt.Put16(EtherTypeVLAN, 12) // VLAN tag
-	pkt.Put16(0x0064, 14)        // VLAN ID 100
-	pkt.Put16(EtherTypeIP, 16)   // Actual EtherType after VLAN
+	pkt.Put16(protocols.EtherTypeVLAN, 12) // VLAN tag
+	pkt.Put16(0x0064, 14)                  // VLAN ID 100
+	pkt.Put16(protocols.EtherTypeIP, 16)   // Actual EtherType after VLAN
 
-	parsed, err := ParsePacket(pkt.Buffer, 1)
+	parsed, err := protocols.ParsePacket(pkt.Buffer, 1)
 	if err != nil {
 		t.Fatalf("ParsePacket failed: %v", err)
 	}
@@ -351,7 +352,7 @@ func TestCalculateIPChecksum(t *testing.T) {
 		0xC0, 0xA8, 0x01, 0x02, // Dest IP 192.168.1.2
 	}
 
-	checksum := CalculateIPChecksum(header)
+	checksum := protocols.CalculateIPChecksum(header)
 
 	// Checksum should not be zero (this is a basic sanity check)
 	if checksum == 0 {
@@ -362,13 +363,8 @@ func TestCalculateIPChecksum(t *testing.T) {
 	header[10] = byte(checksum >> 8)
 	header[11] = byte(checksum)
 
-	verify := CalculateIPChecksum(header)
+	verify := protocols.CalculateIPChecksum(header)
 	if verify != 0xFFFF && verify != 0x0000 {
 		t.Errorf("Checksum verification failed: got 0x%04x", verify)
 	}
-}
-
-func init() {
-	// Set shorter timeout for tests
-	_ = time.Second
 }

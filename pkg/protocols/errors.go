@@ -2,7 +2,7 @@ package protocols
 
 import "errors"
 
-// Sentinel errors for ARP.
+// ErrDeviceMissingMACOrIP is a sentinel error for ARP indicating device missing MAC or IP address.
 var ErrDeviceMissingMACOrIP = errors.New("device missing MAC or IP address")
 
 // Sentinel errors for DHCP.
@@ -22,13 +22,13 @@ var (
 	ErrNoAvailableAddresses = errors.New("no available addresses")
 )
 
-// Sentinel errors for HTTP.
+// ErrInvalidRequestLine is a sentinel error for HTTP indicating an invalid request line.
 var ErrInvalidRequestLine = errors.New("invalid request line")
 
-// Sentinel errors for ICMP.
+// ErrOriginalIPLayerMissing is a sentinel error for ICMP indicating the original IP layer is missing.
 var ErrOriginalIPLayerMissing = errors.New("original IP layer missing")
 
-// Sentinel errors for packet decoding.
+// ErrDecodingPacket is a sentinel error for packet decoding failures.
 var ErrDecodingPacket = errors.New("error decoding packet")
 
 // Sentinel errors for Stack.
@@ -37,5 +37,5 @@ var (
 	ErrNilConfig           = errors.New("reload config: nil config")
 )
 
-// Sentinel errors for STP.
+// ErrDeviceNoMACAddress is a sentinel error for STP indicating device has no MAC address.
 var ErrDeviceNoMACAddress = errors.New("device has no MAC address")

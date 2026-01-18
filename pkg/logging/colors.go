@@ -3,6 +3,7 @@ package logging
 
 import (
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/fatih/color"
@@ -19,7 +20,8 @@ var (
 	debugColor    = color.New(color.FgWhite, color.Faint)
 
 	// Control flags.
-	colorsEnabled = true
+	colorsEnabled           = true
+	output        io.Writer = os.Stdout
 )
 
 // InitColors initializes the color system.
@@ -31,8 +33,38 @@ func InitColors(enabled bool) {
 		colorsEnabled = false
 	}
 
-	// Disable colors if output is not a terminal
-	color.NoColor = !colorsEnabled
+	setColorEnabled(colorsEnabled)
+}
+
+// SetOutput sets the output writer for log messages.
+// Passing nil resets output to [os.Stdout].
+func SetOutput(w io.Writer) {
+	if w == nil {
+		output = os.Stdout
+	} else {
+		output = w
+	}
+}
+
+func setColorEnabled(enabled bool) {
+	if enabled {
+		errorColor.EnableColor()
+		warningColor.EnableColor()
+		successColor.EnableColor()
+		infoColor.EnableColor()
+		protocolColor.EnableColor()
+		deviceColor.EnableColor()
+		debugColor.EnableColor()
+		return
+	}
+
+	errorColor.DisableColor()
+	warningColor.DisableColor()
+	successColor.DisableColor()
+	infoColor.DisableColor()
+	protocolColor.DisableColor()
+	deviceColor.DisableColor()
+	debugColor.DisableColor()
 }
 
 // AreColorsEnabled returns whether colors are currently enabled.
@@ -40,82 +72,82 @@ func AreColorsEnabled() bool {
 	return colorsEnabled
 }
 
-// Error prints an error message in red.
-func Error(format string, args ...any) {
+// Errorf prints an error message in red.
+func Errorf(format string, args ...any) {
 	if colorsEnabled {
-		_, _ = errorColor.Printf("ERROR: "+format+"\n", args...)
+		_, _ = fmt.Fprintln(output, errorColor.Sprintf("ERROR: "+format, args...))
 	} else {
-		_, _ = fmt.Fprintf(os.Stdout, "ERROR: "+format+"\n", args...)
+		_, _ = fmt.Fprintf(output, "ERROR: "+format+"\n", args...)
 	}
 }
 
-// Warning prints a warning message in yellow.
-func Warning(format string, args ...any) {
+// Warningf prints a warning message in yellow.
+func Warningf(format string, args ...any) {
 	if colorsEnabled {
-		_, _ = warningColor.Printf("WARN: "+format+"\n", args...)
+		_, _ = fmt.Fprintln(output, warningColor.Sprintf("WARN: "+format, args...))
 	} else {
-		_, _ = fmt.Fprintf(os.Stdout, "WARN: "+format+"\n", args...)
+		_, _ = fmt.Fprintf(output, "WARN: "+format+"\n", args...)
 	}
 }
 
-// Success prints a success message in green.
-func Success(format string, args ...any) {
+// Successf prints a success message in green.
+func Successf(format string, args ...any) {
 	if colorsEnabled {
-		_, _ = successColor.Printf("✓ "+format+"\n", args...)
+		_, _ = fmt.Fprintln(output, successColor.Sprintf("✓ "+format, args...))
 	} else {
-		_, _ = fmt.Fprintf(os.Stdout, "✓ "+format+"\n", args...)
+		_, _ = fmt.Fprintf(output, "✓ "+format+"\n", args...)
 	}
 }
 
-// Info prints an info message in blue.
-func Info(format string, args ...any) {
+// Infof prints an info message in blue.
+func Infof(format string, args ...any) {
 	if colorsEnabled {
-		_, _ = infoColor.Printf(format+"\n", args...)
+		_, _ = fmt.Fprintln(output, infoColor.Sprintf(format, args...))
 	} else {
-		_, _ = fmt.Fprintf(os.Stdout, format+"\n", args...)
+		_, _ = fmt.Fprintf(output, format+"\n", args...)
 	}
 }
 
-// Debug prints a debug message in faint white.
-func Debug(format string, args ...any) {
+// Debugf prints a debug message in faint white.
+func Debugf(format string, args ...any) {
 	if colorsEnabled {
-		_, _ = debugColor.Printf(format+"\n", args...)
+		_, _ = fmt.Fprintln(output, debugColor.Sprintf(format, args...))
 	} else {
-		_, _ = fmt.Fprintf(os.Stdout, format+"\n", args...)
+		_, _ = fmt.Fprintf(output, format+"\n", args...)
 	}
 }
 
-// Protocol prints a protocol-specific message with the protocol name in cyan.
-func Protocol(protocol string, format string, args ...any) {
+// Protocolf prints a protocol-specific message with the protocol name in cyan.
+func Protocolf(protocol string, format string, args ...any) {
 	if colorsEnabled {
-		_, _ = protocolColor.Printf("[%s] ", protocol)
-		_, _ = fmt.Fprintf(os.Stdout, format+"\n", args...)
+		prefix := protocolColor.Sprintf("[%s] ", protocol)
+		_, _ = fmt.Fprintf(output, prefix+format+"\n", args...)
 	} else {
-		_, _ = fmt.Fprintf(os.Stdout, "[%s] "+format+"\n", append([]any{protocol}, args...)...)
+		_, _ = fmt.Fprintf(output, "[%s] "+format+"\n", append([]any{protocol}, args...)...)
 	}
 }
 
-// Device prints a device-specific message with the device name in magenta.
-func Device(device string, format string, args ...any) {
+// Devicef prints a device-specific message with the device name in magenta.
+func Devicef(device string, format string, args ...any) {
 	if colorsEnabled {
-		_, _ = deviceColor.Printf("[%s] ", device)
-		_, _ = fmt.Fprintf(os.Stdout, format+"\n", args...)
+		prefix := deviceColor.Sprintf("[%s] ", device)
+		_, _ = fmt.Fprintf(output, prefix+format+"\n", args...)
 	} else {
-		_, _ = fmt.Fprintf(os.Stdout, "[%s] "+format+"\n", append([]any{device}, args...)...)
+		_, _ = fmt.Fprintf(output, "[%s] "+format+"\n", append([]any{device}, args...)...)
 	}
 }
 
-// ProtocolDebug prints a debug message for a specific protocol.
-func ProtocolDebug(protocol string, debugLevel int, minLevel int, format string, args ...any) {
+// ProtocolDebugf prints a debug message for a specific protocol.
+func ProtocolDebugf(protocol string, debugLevel int, minLevel int, format string, args ...any) {
 	if debugLevel >= minLevel {
-		Protocol(protocol, format, args...)
+		Protocolf(protocol, format, args...)
 	}
 }
 
-// DeviceDebug prints a debug message for a specific device.
-func DeviceDebug(device string, debugLevel int, minLevel int, format string, args ...any) {
+// DeviceDebugf prints a debug message for a specific device.
+func DeviceDebugf(device string, debugLevel int, minLevel int, format string, args ...any) {
 	if debugLevel >= minLevel {
-		Device(device, format, args...)
+		Devicef(device, format, args...)
 	}
 }
 

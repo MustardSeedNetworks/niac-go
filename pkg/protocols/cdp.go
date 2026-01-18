@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
+
 	"github.com/krisarmstrong/niac-go/pkg/config"
 )
 
@@ -70,6 +71,20 @@ const (
 	deviceTypeSwitch = "switch"
 )
 
+// CDP encoding constants.
+const (
+	cdpNullByte           = 0x00   // null byte for padding/checksum
+	cdpBitShift           = 8      // bit shift for uint16 encoding
+	cdpWordShift          = 16     // bit shift for folding 32-bit to 16-bit
+	cdpWordMask           = 0xffff // mask for 16-bit value
+	cdpCapBytes           = 4      // capability field size in bytes
+	cdpMaxUint16          = 65535  // max uint16 value for lengths
+	llcSnapHeaderSize     = 8      // LLC/SNAP header size in bytes
+	cdpTLVHeaderSize      = 4      // TLV header overhead (Type 2 + Length 2)
+	capabilitiesTLVLen    = 8      // fixed capabilities TLV length
+	cdpAddressLenFieldLen = 2      // address length field size (2 bytes)
+)
+
 // CDPHandler handles CDP advertisements.
 type CDPHandler struct {
 	stack           *Stack
@@ -87,10 +102,11 @@ func NewCDPHandler(stack *Stack) *CDPHandler {
 
 // Start begins periodic CDP advertisements.
 func (h *CDPHandler) Start() {
+	logger := slog.Default()
 	debugLevel := h.stack.GetDebugLevel()
 
 	if debugLevel >= 1 {
-		slog.Info("CDP: Starting periodic advertisements", "interval", CDPAdvertiseInterval)
+		logger.Info("CDP: Starting periodic advertisements", "interval", CDPAdvertiseInterval)
 	}
 
 	h.advertiseTicker = time.NewTicker(CDPAdvertiseInterval)
@@ -119,6 +135,7 @@ func (h *CDPHandler) Stop() {
 
 // sendAdvertisements sends CDP advertisements for all devices.
 func (h *CDPHandler) sendAdvertisements() {
+	logger := slog.Default()
 	debugLevel := h.stack.GetDebugLevel()
 
 	devices := h.stack.GetDevices().GetAll()
@@ -136,10 +153,10 @@ func (h *CDPHandler) sendAdvertisements() {
 		frame := h.buildCDPFrame(device)
 		if frame != nil {
 			err := h.sendFrame(device, frame)
-			if err != nil && debugLevel >= 2 {
-				slog.Debug("CDP: Error sending advertisement", "device", device.Name, "error", err)
-			} else if debugLevel >= 3 {
-				slog.Debug("CDP: Sent advertisement", "device", device.Name, "bytes", len(frame))
+			if err != nil && debugLevel >= DebugLevelInfo {
+				logger.Debug("CDP: Error sending advertisement", "device", device.Name, "error", err)
+			} else if debugLevel >= DebugLevelVerbose {
+				logger.Debug("CDP: Sent advertisement", "device", device.Name, "bytes", len(frame))
 			}
 		}
 	}
@@ -166,7 +183,7 @@ func (h *CDPHandler) buildCDPFrame(device *config.Device) []byte {
 	// CDP header: Version (1 byte) + TTL (1 byte) + Checksum (2 bytes)
 	payload = append(payload, version)
 	payload = append(payload, holdtime)
-	payload = append(payload, 0x00, 0x00) // Checksum placeholder
+	payload = append(payload, cdpNullByte, cdpNullByte) // Checksum placeholder
 
 	// Add TLVs
 	payload = append(payload, h.buildDeviceIDTLV(device)...)
@@ -193,7 +210,7 @@ func (h *CDPHandler) buildCDPFrame(device *config.Device) []byte {
 
 // buildLLCSNAPHeader builds the LLC/SNAP header for CDP.
 func (h *CDPHandler) buildLLCSNAPHeader() []byte {
-	header := make([]byte, 8)
+	header := make([]byte, llcSnapHeaderSize)
 
 	// LLC header (3 bytes)
 	header[0] = 0xAA // DSAP
@@ -215,11 +232,11 @@ func (h *CDPHandler) buildLLCSNAPHeader() []byte {
 // buildDeviceIDTLV builds the Device ID TLV.
 func (h *CDPHandler) buildDeviceIDTLV(device *config.Device) []byte {
 	deviceID := []byte(device.Name)
-	length := min(4+len(deviceID), 65535) // Type (2) + Length (2) + Value, capped at max uint16
+	length := min(cdpTLVHeaderSize+len(deviceID), cdpMaxUint16) // Type (2) + Length (2) + Value, capped at max uint16
 
 	tlv := make([]byte, length)
 	binary.BigEndian.PutUint16(tlv[0:2], CDPTLVTypeDeviceID)
-	binary.BigEndian.PutUint16(tlv[2:4], uint16(length)) // #nosec G115 -- length capped at 65535 above
+	binary.BigEndian.PutUint16(tlv[2:4], safeUint16(length))
 	copy(tlv[4:], deviceID)
 
 	return tlv
@@ -258,13 +275,13 @@ func (h *CDPHandler) buildAddressesTLV(device *config.Device) []byte {
 	//   Address Length (2 bytes)
 	//   Address (variable)
 
-	addrLen := 1 + 1 + 1 + 2 + len(addrBytes)
-	length := min(4+4+addrLen, 65535) // Type + Length + NumAddrs + Address, capped at max uint16
+	addrLen := 1 + 1 + 1 + cdpAddressLenFieldLen + len(addrBytes)
+	length := min(4+4+addrLen, cdpMaxUint16) // Type + Length + NumAddrs + Address, capped at max uint16
 
 	tlv := make([]byte, length)
 	binary.BigEndian.PutUint16(tlv[0:2], CDPTLVTypeAddresses)
-	binary.BigEndian.PutUint16(tlv[2:4], uint16(length)) // #nosec G115 -- length capped at 65535 above
-	binary.BigEndian.PutUint32(tlv[4:8], 1)              // Number of addresses
+	binary.BigEndian.PutUint16(tlv[2:4], safeUint16(length))
+	binary.BigEndian.PutUint32(tlv[4:8], 1) // Number of addresses
 
 	offset := 8
 	tlv[offset] = protoType
@@ -273,11 +290,11 @@ func (h *CDPHandler) buildAddressesTLV(device *config.Device) []byte {
 	offset++
 	tlv[offset] = protoType // Protocol value
 	offset++
-	addrBytesLen := min(len(addrBytes), 65535)
+	addrBytesLen := min(len(addrBytes), cdpMaxUint16)
 	binary.BigEndian.PutUint16(
 		tlv[offset:offset+2],
-		uint16(addrBytesLen),
-	) // #nosec G115 -- addrBytesLen capped at 65535 above
+		safeUint16(addrBytesLen),
+	)
 	offset += 2
 	copy(tlv[offset:], addrBytes)
 
@@ -300,11 +317,11 @@ func (h *CDPHandler) buildPortIDTLV(device *config.Device) []byte {
 		portID = []byte("Port 1")
 	}
 
-	length := min(4+len(portID), 65535)
+	length := min(cdpTLVHeaderSize+len(portID), cdpMaxUint16)
 
 	tlv := make([]byte, length)
 	binary.BigEndian.PutUint16(tlv[0:2], CDPTLVTypePortID)
-	binary.BigEndian.PutUint16(tlv[2:4], uint16(length)) // #nosec G115 -- length capped at 65535 above
+	binary.BigEndian.PutUint16(tlv[2:4], safeUint16(length))
 	copy(tlv[4:], portID)
 
 	return tlv
@@ -328,11 +345,11 @@ func (h *CDPHandler) buildCapabilitiesTLV(device *config.Device) []byte {
 		capabilities = CDPCapHost
 	}
 
-	length := 8 // Type (2) + Length (2) + Capabilities (4)
+	length := capabilitiesTLVLen // Type (2) + Length (2) + Capabilities (4)
 
 	tlv := make([]byte, length)
 	binary.BigEndian.PutUint16(tlv[0:2], CDPTLVTypeCapabilities)
-	binary.BigEndian.PutUint16(tlv[2:4], 8) // length is constant 8
+	binary.BigEndian.PutUint16(tlv[2:4], capabilitiesTLVLen) // length is constant
 	binary.BigEndian.PutUint32(tlv[4:8], capabilities)
 
 	return tlv
@@ -348,11 +365,11 @@ func (h *CDPHandler) buildSoftwareVersionTLV(device *config.Device) []byte {
 		version = []byte("NIAC-Go v1.5.0")
 	}
 
-	length := min(4+len(version), 65535)
+	length := min(cdpTLVHeaderSize+len(version), cdpMaxUint16)
 
 	tlv := make([]byte, length)
 	binary.BigEndian.PutUint16(tlv[0:2], CDPTLVTypeSoftwareVersion)
-	binary.BigEndian.PutUint16(tlv[2:4], uint16(length)) // #nosec G115 -- length capped at 65535 above
+	binary.BigEndian.PutUint16(tlv[2:4], safeUint16(length))
 	copy(tlv[4:], version)
 
 	return tlv
@@ -368,11 +385,11 @@ func (h *CDPHandler) buildPlatformTLV(device *config.Device) []byte {
 		platform = []byte("Simulated " + device.Type)
 	}
 
-	length := min(4+len(platform), 65535)
+	length := min(cdpTLVHeaderSize+len(platform), cdpMaxUint16)
 
 	tlv := make([]byte, length)
 	binary.BigEndian.PutUint16(tlv[0:2], CDPTLVTypePlatform)
-	binary.BigEndian.PutUint16(tlv[2:4], uint16(length)) // #nosec G115 -- length capped at 65535 above
+	binary.BigEndian.PutUint16(tlv[2:4], safeUint16(length))
 	copy(tlv[4:], platform)
 
 	return tlv
@@ -390,12 +407,12 @@ func (h *CDPHandler) calculateChecksum(data []byte) uint16 {
 
 	// Handle odd byte
 	if len(data)%2 == 1 {
-		sum += uint32(data[len(data)-1]) << 8
+		sum += uint32(data[len(data)-1]) << cdpBitShift
 	}
 
 	// Fold 32-bit sum to 16 bits
-	for sum > 0xffff {
-		sum = (sum >> 16) + (sum & 0xffff)
+	for sum > cdpWordMask {
+		sum = (sum >> cdpWordShift) + (sum & cdpWordMask)
 	}
 
 	// Return one's complement
@@ -409,6 +426,7 @@ func (h *CDPHandler) sendFrame(device *config.Device, cdpPayload []byte) error {
 
 // HandlePacket processes an incoming CDP packet (for future use).
 func (h *CDPHandler) HandlePacket(pkt *Packet) {
+	logger := slog.Default()
 	debugLevel := h.stack.GetDebugLevel()
 
 	packet := gopacket.NewPacket(pkt.Buffer, layers.LayerTypeEthernet, gopacket.Default)
@@ -459,8 +477,8 @@ func (h *CDPHandler) HandlePacket(pkt *Packet) {
 		entry.ManagementAddress = info.Addresses[0].String()
 	}
 
-	if debugLevel >= 2 {
-		slog.Debug(
+	if debugLevel >= DebugLevelInfo {
+		logger.Debug(
 			"CDP: Neighbor discovered",
 			"remoteDevice",
 			entry.RemoteDevice,
@@ -474,37 +492,37 @@ func (h *CDPHandler) HandlePacket(pkt *Packet) {
 	h.stack.recordNeighbor(entry)
 }
 
-func cdpCapabilitiesToStrings(cap layers.CDPCapabilities) []string {
+func cdpCapabilitiesToStrings(caps layers.CDPCapabilities) []string {
 	var out []string
-	if cap.L3Router {
+	if caps.L3Router {
 		out = append(out, deviceTypeRouter)
 	}
 
-	if cap.L2Switch {
+	if caps.L2Switch {
 		out = append(out, deviceTypeSwitch)
 	}
 
-	if cap.TBBridge || cap.SPBridge {
+	if caps.TBBridge || caps.SPBridge {
 		out = append(out, "bridge")
 	}
 
-	if cap.IsHost {
+	if caps.IsHost {
 		out = append(out, "host")
 	}
 
-	if cap.L1Repeater {
+	if caps.L1Repeater {
 		out = append(out, "repeater")
 	}
 
-	if cap.IsPhone {
+	if caps.IsPhone {
 		out = append(out, "phone")
 	}
 
-	if cap.RemotelyManaged {
+	if caps.RemotelyManaged {
 		out = append(out, "remote")
 	}
 
-	if cap.IGMPFilter {
+	if caps.IGMPFilter {
 		out = append(out, "igmp-filter")
 	}
 

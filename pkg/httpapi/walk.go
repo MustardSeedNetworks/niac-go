@@ -1,10 +1,9 @@
-package api
+package httpapi
 
 import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -141,7 +140,7 @@ func (s *Server) handleWalkValidation(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Log the validation request with sanitized path
-	slog.Info("[API] Walk file validation request", "filename", validatedPath, "autoFix", isAutoFix || req.AutoFix)
+	s.logger.Info("[API] Walk file validation request", "filename", validatedPath, "autoFix", isAutoFix || req.AutoFix)
 
 	var (
 		result *snmp.ValidationResult
@@ -152,7 +151,7 @@ func (s *Server) handleWalkValidation(w http.ResponseWriter, r *http.Request) {
 		// Validate and auto-fix using validated path
 		result, err = snmp.AutoFixWalkFile(validatedPath, "")
 		if err != nil {
-			slog.Error("[API] Walk file auto-fix error", "error", err)
+			s.logger.Error("[API] Walk file auto-fix error", "error", err)
 			writeError(
 				w,
 				r,
@@ -165,12 +164,12 @@ func (s *Server) handleWalkValidation(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		slog.Info("[API] Walk file auto-fixed", "fixedCount", result.FixedCount, "filename", validatedPath)
+		s.logger.Info("[API] Walk file auto-fixed", "fixedCount", result.FixedCount, "filename", validatedPath)
 	} else {
 		// Validate only using validated path
 		result, err = snmp.ValidateWalkFile(validatedPath)
 		if err != nil {
-			slog.Error("[API] Walk file validation error", "error", err)
+			s.logger.Error("[API] Walk file validation error", "error", err)
 			writeError(
 				w,
 				r,
@@ -183,7 +182,7 @@ func (s *Server) handleWalkValidation(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		slog.Info(
+		s.logger.Info(
 			"[API] Walk file validated",
 			"filename",
 			validatedPath,
@@ -363,7 +362,7 @@ func (s *Server) handleWalkBatchValidate(w http.ResponseWriter, r *http.Request)
 		response.Message = fmt.Sprintf("%d of %d walk files have issues", invalidCount, len(walkFiles))
 	}
 
-	slog.Info(
+	s.logger.Info(
 		"[API] Batch walk file validation",
 		"totalFiles",
 		len(walkFiles),

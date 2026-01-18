@@ -387,8 +387,8 @@ type DebugConfig struct {
 
 **Example**:
 ```go
-logging.Protocol("LLDP", "Sent advertisement from %s", device.Name)
-logging.Error("Failed to parse config: %v", err)
+logging.Protocolf("LLDP", "Sent advertisement from %s", device.Name)
+logging.Errorf("Failed to parse config: %v", err)
 ```
 
 ---

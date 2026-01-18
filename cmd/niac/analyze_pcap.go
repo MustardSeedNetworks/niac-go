@@ -21,29 +21,37 @@ type pcapSummary struct {
 	Notes       map[string]string `json:"notes,omitempty" yaml:"notes,omitempty"`
 }
 
-var analyzePcapCmd = &cobra.Command{
-	Use:   "analyze-pcap <pcap-file>",
-	Short: "Summarise a packet capture by protocol",
-	Long: `Parse a PCAP file and emit protocol counters for rapid troubleshooting.
+type analyzePcapOptions struct {
+	outputFormat string
+}
+
+func addAnalyzePcapCommand(root *cobra.Command, _ *serviceOptions) {
+	options := new(analyzePcapOptions)
+
+	analyzePcapCmd := &cobra.Command{
+		Use:   "analyze-pcap <pcap-file>",
+		Short: "Summarise a packet capture by protocol",
+		Long: `Parse a PCAP file and emit protocol counters for rapid troubleshooting.
 The tool classifies packets into ARP, LLDP, CDP, STP, IPv4, IPv6, TCP, UDP,
 and generic application protocols.`,
-	Args: cobra.ExactArgs(1),
-	RunE: runAnalyzePcap,
+		Args: cobra.ExactArgs(1),
+		RunE: func(_ *cobra.Command, args []string) error {
+			return runAnalyzePcap(args, options)
+		},
+	}
+
+	analyzePcapCmd.Flags().StringVar(&options.outputFormat, "output", "text", "Output format (text, json, yaml)")
+
+	root.AddCommand(analyzePcapCmd)
 }
 
-func init() {
-	rootCmd.AddCommand(analyzePcapCmd)
-	analyzePcapCmd.Flags().String("output", "text", "Output format (text, json, yaml)")
-}
-
-func runAnalyzePcap(cmd *cobra.Command, args []string) error {
-	outputFormat, _ := cmd.Flags().GetString("output")
+func runAnalyzePcap(args []string, options *analyzePcapOptions) error {
 	summary, err := summarizePCAP(args[0])
 	if err != nil {
 		return err
 	}
 
-	switch outputFormat {
+	switch options.outputFormat {
 	case "json":
 		data, _ := json.MarshalIndent(summary, "", "  ")
 		_, _ = os.Stdout.WriteString(string(data) + "\n")

@@ -9,14 +9,15 @@ import (
 	"github.com/google/gopacket/pcap"
 )
 
-// Sentinel errors for interfaces.
+// ErrInterfaceNotFound is returned when a network interface is missing.
 var ErrInterfaceNotFound = errors.New("interface not found")
 
 // InterfaceExists checks if a network interface exists.
 func InterfaceExists(name string) bool {
 	devices, err := pcap.FindAllDevs()
 	if err != nil {
-		slog.Error("Error finding devices", "error", err)
+		logger := slog.Default()
+		logger.Error("Error finding devices", "error", err)
 
 		return false
 	}
@@ -34,7 +35,8 @@ func InterfaceExists(name string) bool {
 func ListInterfaces() {
 	devices, err := pcap.FindAllDevs()
 	if err != nil {
-		slog.Error("Error finding devices", "error", err)
+		logger := slog.Default()
+		logger.Error("Error finding devices", "error", err)
 
 		return
 	}

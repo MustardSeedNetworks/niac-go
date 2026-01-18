@@ -108,6 +108,17 @@ const (
 
 	// DefaultDNSTTL is the default DNS TTL in seconds.
 	DefaultDNSTTL = 3600
+
+	// Parser constants.
+	minDeviceDeclParts   = 2          // minimum parts for device declaration (device name)
+	keyValueParts        = 2          // key-value pair after SplitN
+	netbiosMaxNameLen    = 15         // NetBIOS name max length
+	maxDNSTTL            = 2147483647 // max int32 (~68 years)
+	minSimpleConfigParts = 4          // minimum fields: name type ip mac
+	simpleConfigWithWalk = 5          // simple config with walkfile
+	macAddressBytes      = 6          // MAC address length in bytes
+	macPatternMultiplier = 17         // pattern multiplier for test MAC generation
+	gbpsToMbps           = 1000       // conversion factor Gbps to Mbps
 )
 
 // Config represents the network configuration.
@@ -578,7 +589,7 @@ func Load(filename string) (*Config, error) {
 // LoadLegacy loads a legacy key-value configuration file
 // Format: device <name> { key = value ... }.
 func LoadLegacy(filename string) (*Config, error) {
-	file, err := os.Open(filename) // #nosec G304 -- user-provided file path, validated by caller
+	file, err := os.Open(filepath.Clean(filename))
 	if err != nil {
 		return nil, fmt.Errorf("failed to open config file: %w", err)
 	}
@@ -598,86 +609,106 @@ func LoadLegacy(filename string) (*Config, error) {
 		lineNum++
 		line := strings.TrimSpace(scanner.Text())
 
-		// Skip empty lines and comments
-		if line == "" || strings.HasPrefix(line, "#") || strings.HasPrefix(line, "//") {
+		if isCommentOrEmpty(line) {
 			continue
 		}
 
-		// Parse device declaration
 		if strings.HasPrefix(line, "device ") {
-			parts := strings.Fields(line)
-			if len(parts) < 2 {
-				return nil, fmt.Errorf("%w: line %d", ErrInvalidDeviceDeclaration, lineNum)
+			device, parseErr := parseDeviceDeclaration(line, lineNum)
+			if parseErr != nil {
+				return nil, parseErr
 			}
 
-			device := Device{
-				Name:       parts[1],
-				Interfaces: make([]Interface, 0),
-				Properties: make(map[string]string),
-			}
 			cfg.Devices = append(cfg.Devices, device)
 			currentDevice = &cfg.Devices[len(cfg.Devices)-1]
 
 			continue
 		}
 
-		// Parse device properties
-		if currentDevice != nil {
-			if strings.HasPrefix(line, "}") {
-				currentDevice = nil
-
-				continue
-			}
-
-			// Parse key-value pairs
-			parts := strings.SplitN(line, "=", 2)
-			if len(parts) == 2 {
-				key := strings.TrimSpace(parts[0])
-				value := strings.Trim(strings.TrimSpace(parts[1]), "\"")
-
-				switch key {
-				case "type":
-					currentDevice.Type = value
-				case "mac":
-					mac, err := net.ParseMAC(value)
-					if err == nil {
-						currentDevice.MACAddress = mac
-					}
-				case "ip", "ipv6":
-					// Both "ip" and "ipv6" work - net.ParseIP handles both IPv4 and IPv6
-					ip := net.ParseIP(value)
-					if ip != nil {
-						currentDevice.IPAddresses = append(currentDevice.IPAddresses, ip)
-					}
-				case "snmp_community":
-					currentDevice.SNMPConfig.Community = value
-				case "sysName":
-					currentDevice.SNMPConfig.SysName = value
-				case "sysDescr":
-					currentDevice.SNMPConfig.SysDescr = value
-				case "sysContact":
-					currentDevice.SNMPConfig.SysContact = value
-				case "sysLocation":
-					currentDevice.SNMPConfig.SysLocation = value
-				case "walk":
-					currentDevice.SNMPConfig.WalkFile = value
-				default:
-					currentDevice.Properties[key] = value
-				}
-			}
+		if currentDevice == nil {
+			continue
 		}
+
+		if strings.HasPrefix(line, "}") {
+			currentDevice = nil
+
+			continue
+		}
+
+		parseLegacyKeyValue(line, currentDevice)
 	}
 
-	if err := scanner.Err(); err != nil {
-		return nil, fmt.Errorf("error reading config file: %w", err)
+	if scanErr := scanner.Err(); scanErr != nil {
+		return nil, fmt.Errorf("error reading config file: %w", scanErr)
 	}
 
-	// Validate config
 	if len(cfg.Devices) == 0 {
 		return nil, ErrNoDevicesDefined
 	}
 
 	return cfg, nil
+}
+
+// isCommentOrEmpty checks if a line is empty or a comment.
+func isCommentOrEmpty(line string) bool {
+	return line == "" || strings.HasPrefix(line, "#") || strings.HasPrefix(line, "//")
+}
+
+// parseDeviceDeclaration parses a device declaration line.
+func parseDeviceDeclaration(line string, lineNum int) (Device, error) {
+	parts := strings.Fields(line)
+	if len(parts) < minDeviceDeclParts {
+		return Device{}, fmt.Errorf("%w: line %d", ErrInvalidDeviceDeclaration, lineNum)
+	}
+
+	return Device{
+		Name:       parts[1],
+		Interfaces: make([]Interface, 0),
+		Properties: make(map[string]string),
+	}, nil
+}
+
+// parseLegacyKeyValue parses a key=value pair and applies it to the device.
+func parseLegacyKeyValue(line string, device *Device) {
+	parts := strings.SplitN(line, "=", keyValueParts)
+	if len(parts) != keyValueParts {
+		return
+	}
+
+	key := strings.TrimSpace(parts[0])
+	value := strings.Trim(strings.TrimSpace(parts[1]), "\"")
+
+	applyLegacyDeviceProperty(device, key, value)
+}
+
+// applyLegacyDeviceProperty applies a parsed key-value property to a device.
+func applyLegacyDeviceProperty(device *Device, key, value string) {
+	switch key {
+	case "type":
+		device.Type = value
+	case ChassisIDTypeMAC:
+		if mac, err := net.ParseMAC(value); err == nil {
+			device.MACAddress = mac
+		}
+	case "ip", "ipv6":
+		if ip := net.ParseIP(value); ip != nil {
+			device.IPAddresses = append(device.IPAddresses, ip)
+		}
+	case "snmp_community":
+		device.SNMPConfig.Community = value
+	case "sysName":
+		device.SNMPConfig.SysName = value
+	case "sysDescr":
+		device.SNMPConfig.SysDescr = value
+	case "sysContact":
+		device.SNMPConfig.SysContact = value
+	case "sysLocation":
+		device.SNMPConfig.SysLocation = value
+	case "walk":
+		device.SNMPConfig.WalkFile = value
+	default:
+		device.Properties[key] = value
+	}
 }
 
 // GetDeviceByMAC finds a device by MAC address.
@@ -825,93 +856,122 @@ func createBaseConfig(yamlConfig *converter.Config) *Config {
 
 // convertYAMLDevice converts a YAML device to a runtime Device.
 func convertYAMLDevice(yamlDevice converter.Device, includePath string) (Device, error) {
-	// Determine device type (default to "unknown" if not specified)
-	deviceType := yamlDevice.Type
-	if deviceType == "" {
-		deviceType = "unknown"
-	}
+	device := createBaseDevice(yamlDevice)
 
-	device := Device{
-		Name:       yamlDevice.Name,
-		Type:       deviceType,
-		Interfaces: make([]Interface, 0),
-		Properties: make(map[string]string),
-		SNMPConfig: SNMPConfig{
-			Community: "public", // Default
-			SysName:   yamlDevice.Name,
-		},
-	}
-
-	// Parse MAC address
-	if yamlDevice.MAC != "" {
-		mac, err := net.ParseMAC(yamlDevice.MAC)
-		if err != nil {
-			return device, fmt.Errorf("device %s: invalid MAC address %s: %w", yamlDevice.Name, yamlDevice.MAC, err)
-		}
-
-		device.MACAddress = mac
-	}
-
-	// Parse IP addresses
-	err := parseDeviceIPAddresses(&device, &yamlDevice)
-	if err != nil {
+	if err := parseDeviceMACAddress(&device, &yamlDevice); err != nil {
 		return device, err
 	}
 
-	// MapToIP (Java MapToIp)
-	if yamlDevice.MapToIP != "" {
-		if ip := net.ParseIP(yamlDevice.MapToIP); ip != nil {
-			device.MapToIP = ip
-		} else {
-			return device, fmt.Errorf("device %s: %w: %s", yamlDevice.Name, ErrInvalidMapToIP, yamlDevice.MapToIP)
-		}
+	if err := parseDeviceIPAddresses(&device, &yamlDevice); err != nil {
+		return device, err
 	}
 
-	// Babble (periodic traffic)
+	if err := parseDeviceMapToIP(&device, &yamlDevice); err != nil {
+		return device, err
+	}
+
 	device.Babble = yamlDevice.Babble
 
-	// TTL config (traceroute simulation)
-	if yamlDevice.TTL != nil {
-		ttlCfg := &TTLConfig{TTL: yamlDevice.TTL.TTL}
-
-		if yamlDevice.TTL.IP != "" {
-			if ip := net.ParseIP(yamlDevice.TTL.IP); ip != nil {
-				ttlCfg.IP = ip.To4()
-			} else {
-				return device, fmt.Errorf("device %s: %w: %s", yamlDevice.Name, ErrInvalidTTLIP, yamlDevice.TTL.IP)
-			}
-		}
-
-		if yamlDevice.TTL.Mask != "" {
-			if ip := net.ParseIP(yamlDevice.TTL.Mask); ip != nil {
-				ttlCfg.Mask = net.IPMask(ip.To4())
-			} else {
-				return device, fmt.Errorf("device %s: %w: %s", yamlDevice.Name, ErrInvalidTTLMask, yamlDevice.TTL.Mask)
-			}
-		}
-
-		device.TTLConfig = ttlCfg
-	}
-
-	// Handle SNMP configuration
-	err = parseDeviceSNMPConfig(&device, &yamlDevice, includePath)
-	if err != nil {
+	if err := parseDeviceTTLConfig(&device, &yamlDevice); err != nil {
 		return device, err
 	}
 
-	// Store VLAN if present
+	if err := parseDeviceSNMPConfig(&device, &yamlDevice, includePath); err != nil {
+		return device, err
+	}
+
 	if yamlDevice.VLAN > 0 {
 		device.Properties["vlan"] = strconv.Itoa(yamlDevice.VLAN)
 		device.VLAN = yamlDevice.VLAN
 	}
 
-	// Parse protocol configurations
-	err = parseDeviceProtocolConfigs(&device, &yamlDevice)
-	if err != nil {
+	if err := parseDeviceProtocolConfigs(&device, &yamlDevice); err != nil {
 		return device, err
 	}
 
 	return device, nil
+}
+
+// createBaseDevice creates a device with default values.
+func createBaseDevice(yamlDevice converter.Device) Device {
+	deviceType := yamlDevice.Type
+	if deviceType == "" {
+		deviceType = "unknown"
+	}
+
+	return Device{
+		Name:       yamlDevice.Name,
+		Type:       deviceType,
+		Interfaces: make([]Interface, 0),
+		Properties: make(map[string]string),
+		SNMPConfig: SNMPConfig{
+			Community: DefaultSNMPCommunity,
+			SysName:   yamlDevice.Name,
+		},
+	}
+}
+
+// parseDeviceMACAddress parses the MAC address for a device.
+func parseDeviceMACAddress(device *Device, yamlDevice *converter.Device) error {
+	if yamlDevice.MAC == "" {
+		return nil
+	}
+
+	mac, err := net.ParseMAC(yamlDevice.MAC)
+	if err != nil {
+		return fmt.Errorf("device %s: invalid MAC address %s: %w", yamlDevice.Name, yamlDevice.MAC, err)
+	}
+
+	device.MACAddress = mac
+
+	return nil
+}
+
+// parseDeviceMapToIP parses the MapToIP configuration.
+func parseDeviceMapToIP(device *Device, yamlDevice *converter.Device) error {
+	if yamlDevice.MapToIP == "" {
+		return nil
+	}
+
+	ip := net.ParseIP(yamlDevice.MapToIP)
+	if ip == nil {
+		return fmt.Errorf("device %s: %w: %s", yamlDevice.Name, ErrInvalidMapToIP, yamlDevice.MapToIP)
+	}
+
+	device.MapToIP = ip
+
+	return nil
+}
+
+// parseDeviceTTLConfig parses TTL configuration for traceroute simulation.
+func parseDeviceTTLConfig(device *Device, yamlDevice *converter.Device) error {
+	if yamlDevice.TTL == nil {
+		return nil
+	}
+
+	ttlCfg := &TTLConfig{TTL: yamlDevice.TTL.TTL}
+
+	if yamlDevice.TTL.IP != "" {
+		ip := net.ParseIP(yamlDevice.TTL.IP)
+		if ip == nil {
+			return fmt.Errorf("device %s: %w: %s", yamlDevice.Name, ErrInvalidTTLIP, yamlDevice.TTL.IP)
+		}
+
+		ttlCfg.IP = ip.To4()
+	}
+
+	if yamlDevice.TTL.Mask != "" {
+		ip := net.ParseIP(yamlDevice.TTL.Mask)
+		if ip == nil {
+			return fmt.Errorf("device %s: %w: %s", yamlDevice.Name, ErrInvalidTTLMask, yamlDevice.TTL.Mask)
+		}
+
+		ttlCfg.Mask = net.IPMask(ip.To4())
+	}
+
+	device.TTLConfig = ttlCfg
+
+	return nil
 }
 
 // parseDeviceIPAddresses parses IP addresses for a device.
@@ -941,115 +1001,145 @@ func parseDeviceIPAddresses(device *Device, yamlDevice *converter.Device) error 
 
 // parseDeviceSNMPConfig parses SNMP configuration for a device.
 func parseDeviceSNMPConfig(device *Device, yamlDevice *converter.Device, includePath string) error {
-	if yamlDevice.SnmpAgent != nil {
-		// Resolve primary walk file
-		if yamlDevice.SnmpAgent.WalkFile != "" {
-			// Resolve and validate walk file path (security: prevent path traversal)
-			walkFile, err := validateWalkFilePath(includePath, yamlDevice.SnmpAgent.WalkFile, yamlDevice.Name)
-			if err != nil {
-				return err
-			}
+	if yamlDevice.SnmpAgent == nil {
+		return nil
+	}
 
-			device.SNMPConfig.WalkFile = walkFile
-			device.SNMPConfig.WalkFiles = append(device.SNMPConfig.WalkFiles, walkFile)
-		}
+	snmpAgent := yamlDevice.SnmpAgent
 
-		// Resolve additional walk files
-		for _, walk := range yamlDevice.SnmpAgent.WalkFiles {
-			walkFile, err := validateWalkFilePath(includePath, walk, yamlDevice.Name)
-			if err != nil {
-				return err
-			}
+	if err := parseSNMPWalkFiles(device, snmpAgent, includePath, yamlDevice.Name); err != nil {
+		return err
+	}
 
-			device.SNMPConfig.WalkFiles = append(device.SNMPConfig.WalkFiles, walkFile)
-		}
+	parseSNMPAddMibs(device, snmpAgent)
 
-		// Store custom MIBs
-		if len(yamlDevice.SnmpAgent.AddMibs) > 0 {
-			device.Properties["custom_mibs_count"] = strconv.Itoa(len(yamlDevice.SnmpAgent.AddMibs))
-			for _, mib := range yamlDevice.SnmpAgent.AddMibs {
-				device.SNMPConfig.AddMibs = append(device.SNMPConfig.AddMibs, AddMib{
-					OID:   mib.OID,
-					Type:  mib.Type,
-					Value: mib.Value,
-				})
-			}
-		}
+	if err := parseSNMPCommunityIncludes(device, snmpAgent, includePath, yamlDevice.Name); err != nil {
+		return err
+	}
 
-		// Community includes
-		for _, include := range yamlDevice.SnmpAgent.CommunityIncludes {
-			walkFile, err := validateWalkFilePath(includePath, include.WalkFile, yamlDevice.Name)
-			if err != nil {
-				return err
-			}
+	parseSNMPAccessList(device, snmpAgent)
 
-			device.SNMPConfig.CommunityIncludes = append(device.SNMPConfig.CommunityIncludes, CommunityInclude{
-				Community: include.Community,
-				WalkFile:  walkFile,
-			})
-		}
+	if err := parseSNMPAddr(device, snmpAgent, yamlDevice.Name); err != nil {
+		return err
+	}
 
-		// Access list
-		for _, ipStr := range yamlDevice.SnmpAgent.AccessList {
-			if ip := net.ParseIP(ipStr); ip != nil {
-				device.SNMPConfig.AccessList = append(device.SNMPConfig.AccessList, ip)
-			}
-		}
+	parseSNMPFdbTables(device, snmpAgent)
 
-		// SnmpAddr mapping
-		if yamlDevice.SnmpAgent.SnmpAddr != "" {
-			if ip := net.ParseIP(yamlDevice.SnmpAgent.SnmpAddr); ip != nil {
-				device.SNMPConfig.SnmpAddr = ip
-			} else {
-				return fmt.Errorf(
-					"device %s: %w: %s",
-					yamlDevice.Name,
-					ErrInvalidSNMPAddr,
-					yamlDevice.SnmpAgent.SnmpAddr,
-				)
-			}
-		}
-
-		// Dot1D/Dot1Q FDB tables
-		if yamlDevice.SnmpAgent.Dot1DFdbTable != nil {
-			device.SNMPConfig.Dot1DFdbTable = &FdbTableConfig{
-				Port: yamlDevice.SnmpAgent.Dot1DFdbTable.Port,
-				VLAN: yamlDevice.SnmpAgent.Dot1DFdbTable.VLAN,
-			}
-		}
-
-		if yamlDevice.SnmpAgent.Dot1QFdbTable != nil {
-			device.SNMPConfig.Dot1QFdbTable = &FdbTableConfig{
-				Port: yamlDevice.SnmpAgent.Dot1QFdbTable.Port,
-				VLAN: yamlDevice.SnmpAgent.Dot1QFdbTable.VLAN,
-			}
-		}
-
-		// Parse SNMP Traps configuration
-		if yamlDevice.SnmpAgent.Traps != nil {
-			trapsCfg, err := parseSNMPTrapsConfig(yamlDevice.SnmpAgent.Traps)
-			if err != nil {
-				return err
-			}
-
-			device.SNMPConfig.Traps = trapsCfg
-		}
+	if snmpAgent.Traps != nil {
+		device.SNMPConfig.Traps = parseSNMPTrapsConfig(snmpAgent.Traps)
 	}
 
 	return nil
 }
 
-// parseDeviceProtocolConfigs parses all protocol configurations for a device.
-func parseDeviceProtocolConfigs(device *Device, yamlDevice *converter.Device) error {
-	var err error
+// parseSNMPWalkFiles parses and validates SNMP walk files.
+func parseSNMPWalkFiles(device *Device, snmpAgent *converter.SnmpAgent, includePath, deviceName string) error {
+	if snmpAgent.WalkFile != "" {
+		walkFile, err := validateWalkFilePath(includePath, snmpAgent.WalkFile, deviceName)
+		if err != nil {
+			return err
+		}
 
-	// Handle DHCP configuration
-	if device.DHCPConfig, err = parseDHCPConfig(yamlDevice.Dhcp, yamlDevice.Name); err != nil {
-		return err
+		device.SNMPConfig.WalkFile = walkFile
+		device.SNMPConfig.WalkFiles = append(device.SNMPConfig.WalkFiles, walkFile)
 	}
 
+	for _, walk := range snmpAgent.WalkFiles {
+		walkFile, err := validateWalkFilePath(includePath, walk, deviceName)
+		if err != nil {
+			return err
+		}
+
+		device.SNMPConfig.WalkFiles = append(device.SNMPConfig.WalkFiles, walkFile)
+	}
+
+	return nil
+}
+
+// parseSNMPAddMibs parses custom MIB overrides.
+func parseSNMPAddMibs(device *Device, snmpAgent *converter.SnmpAgent) {
+	if len(snmpAgent.AddMibs) == 0 {
+		return
+	}
+
+	device.Properties["custom_mibs_count"] = strconv.Itoa(len(snmpAgent.AddMibs))
+
+	for _, mib := range snmpAgent.AddMibs {
+		device.SNMPConfig.AddMibs = append(device.SNMPConfig.AddMibs, AddMib{
+			OID:   mib.OID,
+			Type:  mib.Type,
+			Value: mib.Value,
+		})
+	}
+}
+
+// parseSNMPCommunityIncludes parses community-specific walk includes.
+func parseSNMPCommunityIncludes(device *Device, snmpAgent *converter.SnmpAgent, includePath, deviceName string) error {
+	for _, include := range snmpAgent.CommunityIncludes {
+		walkFile, err := validateWalkFilePath(includePath, include.WalkFile, deviceName)
+		if err != nil {
+			return err
+		}
+
+		device.SNMPConfig.CommunityIncludes = append(device.SNMPConfig.CommunityIncludes, CommunityInclude{
+			Community: include.Community,
+			WalkFile:  walkFile,
+		})
+	}
+
+	return nil
+}
+
+// parseSNMPAccessList parses the SNMP access list.
+func parseSNMPAccessList(device *Device, snmpAgent *converter.SnmpAgent) {
+	for _, ipStr := range snmpAgent.AccessList {
+		if ip := net.ParseIP(ipStr); ip != nil {
+			device.SNMPConfig.AccessList = append(device.SNMPConfig.AccessList, ip)
+		}
+	}
+}
+
+// parseSNMPAddr parses the SNMP address mapping.
+func parseSNMPAddr(device *Device, snmpAgent *converter.SnmpAgent, deviceName string) error {
+	if snmpAgent.SnmpAddr == "" {
+		return nil
+	}
+
+	ip := net.ParseIP(snmpAgent.SnmpAddr)
+	if ip == nil {
+		return fmt.Errorf("device %s: %w: %s", deviceName, ErrInvalidSNMPAddr, snmpAgent.SnmpAddr)
+	}
+
+	device.SNMPConfig.SnmpAddr = ip
+
+	return nil
+}
+
+// parseSNMPFdbTables parses Dot1D/Dot1Q FDB table configurations.
+func parseSNMPFdbTables(device *Device, snmpAgent *converter.SnmpAgent) {
+	if snmpAgent.Dot1DFdbTable != nil {
+		device.SNMPConfig.Dot1DFdbTable = &FdbTableConfig{
+			Port: snmpAgent.Dot1DFdbTable.Port,
+			VLAN: snmpAgent.Dot1DFdbTable.VLAN,
+		}
+	}
+
+	if snmpAgent.Dot1QFdbTable != nil {
+		device.SNMPConfig.Dot1QFdbTable = &FdbTableConfig{
+			Port: snmpAgent.Dot1QFdbTable.Port,
+			VLAN: snmpAgent.Dot1QFdbTable.VLAN,
+		}
+	}
+}
+
+// parseDeviceProtocolConfigs parses all protocol configurations for a device.
+func parseDeviceProtocolConfigs(device *Device, yamlDevice *converter.Device) error {
+	// Handle DHCP configuration
+	device.DHCPConfig = parseDHCPConfig(yamlDevice.Dhcp)
+
 	// Handle DNS configuration
-	if device.DNSConfig, err = parseDNSConfig(yamlDevice.Dns, yamlDevice.Name); err != nil {
+	var err error
+	if device.DNSConfig, err = parseDNSConfig(yamlDevice.DNS, yamlDevice.Name); err != nil {
 		return err
 	}
 
@@ -1061,7 +1151,7 @@ func parseDeviceProtocolConfigs(device *Device, yamlDevice *converter.Device) er
 	device.STPConfig = parseSTPConfig(yamlDevice.Stp)
 
 	// Handle service protocols
-	device.HTTPConfig = parseHTTPConfig(yamlDevice.Http, device.Name)
+	device.HTTPConfig = parseHTTPConfig(yamlDevice.HTTP, device.Name)
 	device.FTPConfig = parseFTPConfig(yamlDevice.Ftp, device.Name)
 	device.NetBIOSConfig = parseNetBIOSConfig(yamlDevice.Netbios, device.Name)
 
@@ -1070,9 +1160,7 @@ func parseDeviceProtocolConfigs(device *Device, yamlDevice *converter.Device) er
 	device.ICMPv6Config = parseICMPv6Config(yamlDevice.Icmpv6)
 
 	// Handle DHCPv6 configuration
-	if device.DHCPv6Config, err = parseDHCPv6Config(yamlDevice.Dhcpv6); err != nil {
-		return err
-	}
+	device.DHCPv6Config = parseDHCPv6Config(yamlDevice.Dhcpv6)
 
 	// Handle Traffic configuration
 	device.TrafficConfig = parseTrafficConfig(yamlDevice.Traffic)
@@ -1197,8 +1285,8 @@ func parseNetBIOSConfig(yamlNetbios *converter.NetbiosConfig, deviceName string)
 	// Set defaults
 	if netbiosCfg.Name == "" {
 		netbiosCfg.Name = deviceName
-		if len(netbiosCfg.Name) > 15 {
-			netbiosCfg.Name = netbiosCfg.Name[:15]
+		if len(netbiosCfg.Name) > netbiosMaxNameLen {
+			netbiosCfg.Name = netbiosCfg.Name[:netbiosMaxNameLen]
 		}
 	}
 
@@ -1335,11 +1423,11 @@ func parseICMPv6Config(yamlIcmpv6 *converter.Icmpv6Config) *ICMPv6Config {
 	return icmpv6Cfg
 }
 
-// parseDHCPv6Config parses DHCPv6 configuration from YAML
+// parseDHCPv6Config parses DHCPv6 configuration from YAML.
 // Returns an empty DHCPv6Config if input is nil (not an error condition).
-func parseDHCPv6Config(yamlDhcpv6 *converter.Dhcpv6Config) (*DHCPv6Config, error) {
+func parseDHCPv6Config(yamlDhcpv6 *converter.Dhcpv6Config) *DHCPv6Config {
 	if yamlDhcpv6 == nil {
-		return &DHCPv6Config{}, nil
+		return &DHCPv6Config{}
 	}
 
 	dhcpv6Cfg := &DHCPv6Config{
@@ -1398,7 +1486,7 @@ func parseDHCPv6Config(yamlDhcpv6 *converter.Dhcpv6Config) (*DHCPv6Config, error
 		}
 	}
 
-	return dhcpv6Cfg, nil
+	return dhcpv6Cfg
 }
 
 // parseTrafficConfig parses traffic configuration from YAML.
@@ -1469,7 +1557,7 @@ func parseTrafficConfig(yamlTraffic *converter.TrafficConfig) *TrafficConfig {
 }
 
 // parseSNMPTrapsConfig parses SNMP traps configuration from YAML.
-func parseSNMPTrapsConfig(yamlTraps *converter.TrapsConfig) (*TrapConfig, error) {
+func parseSNMPTrapsConfig(yamlTraps *converter.TrapsConfig) *TrapConfig {
 	trapsCfg := &TrapConfig{
 		Enabled:   yamlTraps.Enabled,
 		Receivers: yamlTraps.Receivers,
@@ -1555,193 +1643,201 @@ func parseSNMPTrapsConfig(yamlTraps *converter.TrapsConfig) (*TrapConfig, error)
 		trapsCfg.InterfaceErrors = ifErrCfg
 	}
 
-	return trapsCfg, nil
+	return trapsCfg
 }
 
 // parseDHCPConfig parses DHCP configuration from YAML
 // Returns an empty DHCPConfig if input is nil (not an error condition).
-func parseDHCPConfig(yamlDhcp *converter.DhcpServer, deviceName string) (*DHCPConfig, error) {
+func parseDHCPConfig(yamlDhcp *converter.DhcpServer) *DHCPConfig {
 	if yamlDhcp == nil {
-		return &DHCPConfig{}, nil
+		return &DHCPConfig{}
 	}
 
 	dhcpCfg := &DHCPConfig{}
 
-	// Basic options
+	parseDHCPBasicOptions(dhcpCfg, yamlDhcp)
+	parseDHCPPoolConfig(dhcpCfg, yamlDhcp)
+	parseDHCPv4Options(dhcpCfg, yamlDhcp)
+	parseDHCPv6Options(dhcpCfg, yamlDhcp)
+	parseDHCPClientLeases(dhcpCfg, yamlDhcp)
+
+	return dhcpCfg
+}
+
+// parseDHCPBasicOptions parses basic DHCP options.
+func parseDHCPBasicOptions(cfg *DHCPConfig, yamlDhcp *converter.DhcpServer) {
 	if yamlDhcp.SubnetMask != "" {
 		if ip := net.ParseIP(yamlDhcp.SubnetMask); ip != nil {
-			dhcpCfg.SubnetMask = net.IPMask(ip.To4())
+			cfg.SubnetMask = net.IPMask(ip.To4())
 		}
 	}
 
 	if yamlDhcp.Router != "" {
-		dhcpCfg.Router = net.ParseIP(yamlDhcp.Router)
+		cfg.Router = net.ParseIP(yamlDhcp.Router)
 	}
 
 	if yamlDhcp.DomainNameServer != "" {
 		if ip := net.ParseIP(yamlDhcp.DomainNameServer); ip != nil {
-			dhcpCfg.DomainNameServer = append(dhcpCfg.DomainNameServer, ip)
+			cfg.DomainNameServer = append(cfg.DomainNameServer, ip)
 		}
 	}
 
 	if yamlDhcp.ServerIdentifier != "" {
-		dhcpCfg.ServerIdentifier = net.ParseIP(yamlDhcp.ServerIdentifier)
+		cfg.ServerIdentifier = net.ParseIP(yamlDhcp.ServerIdentifier)
 	}
 
 	if yamlDhcp.NextServerIP != "" {
-		dhcpCfg.NextServerIP = net.ParseIP(yamlDhcp.NextServerIP)
+		cfg.NextServerIP = net.ParseIP(yamlDhcp.NextServerIP)
 	}
+}
 
-	// Pool configuration
+// parseDHCPPoolConfig parses DHCP address pool configuration.
+func parseDHCPPoolConfig(cfg *DHCPConfig, yamlDhcp *converter.DhcpServer) {
 	if yamlDhcp.PoolStart != "" {
-		dhcpCfg.PoolStart = net.ParseIP(yamlDhcp.PoolStart)
+		cfg.PoolStart = net.ParseIP(yamlDhcp.PoolStart)
 	}
 
 	if yamlDhcp.PoolEnd != "" {
-		dhcpCfg.PoolEnd = net.ParseIP(yamlDhcp.PoolEnd)
+		cfg.PoolEnd = net.ParseIP(yamlDhcp.PoolEnd)
 	}
+}
 
-	// DHCPv4 high priority options
-	for _, ntpStr := range yamlDhcp.NTPServers {
-		if ip := net.ParseIP(ntpStr); ip != nil {
-			dhcpCfg.NTPServers = append(dhcpCfg.NTPServers, ip)
-		}
-	}
-
-	dhcpCfg.DomainSearch = yamlDhcp.DomainSearch
-	dhcpCfg.TFTPServerName = yamlDhcp.TFTPServerName
-
-	dhcpCfg.BootfileName = yamlDhcp.BootfileName
+// parseDHCPv4Options parses DHCPv4 high priority options.
+func parseDHCPv4Options(cfg *DHCPConfig, yamlDhcp *converter.DhcpServer) {
+	cfg.NTPServers = parseIPList(yamlDhcp.NTPServers)
+	cfg.DomainSearch = yamlDhcp.DomainSearch
+	cfg.TFTPServerName = yamlDhcp.TFTPServerName
+	cfg.BootfileName = yamlDhcp.BootfileName
 
 	if yamlDhcp.VendorSpecific != "" {
-		// Parse hex string to bytes
-		dhcpCfg.VendorSpecific = []byte(yamlDhcp.VendorSpecific)
+		cfg.VendorSpecific = []byte(yamlDhcp.VendorSpecific)
 	}
+}
 
-	// DHCPv6 options
-	for _, sntpStr := range yamlDhcp.SNTPServersV6 {
-		if ip := net.ParseIP(sntpStr); ip != nil {
-			dhcpCfg.SNTPServersV6 = append(dhcpCfg.SNTPServersV6, ip)
-		}
-	}
+// parseDHCPv6Options parses DHCPv6 options.
+func parseDHCPv6Options(cfg *DHCPConfig, yamlDhcp *converter.DhcpServer) {
+	cfg.SNTPServersV6 = parseIPList(yamlDhcp.SNTPServersV6)
+	cfg.NTPServersV6 = parseIPList(yamlDhcp.NTPServersV6)
+	cfg.SIPServersV6 = parseIPList(yamlDhcp.SIPServersV6)
+	cfg.SIPDomainsV6 = yamlDhcp.SIPDomainsV6
+}
 
-	for _, ntpStr := range yamlDhcp.NTPServersV6 {
-		if ip := net.ParseIP(ntpStr); ip != nil {
-			dhcpCfg.NTPServersV6 = append(dhcpCfg.NTPServersV6, ip)
-		}
-	}
-
-	for _, sipStr := range yamlDhcp.SIPServersV6 {
-		if ip := net.ParseIP(sipStr); ip != nil {
-			dhcpCfg.SIPServersV6 = append(dhcpCfg.SIPServersV6, ip)
-		}
-	}
-
-	dhcpCfg.SIPDomainsV6 = yamlDhcp.SIPDomainsV6
-
-	// Static leases
+// parseDHCPClientLeases parses static DHCP lease assignments.
+func parseDHCPClientLeases(cfg *DHCPConfig, yamlDhcp *converter.DhcpServer) {
 	for _, lease := range yamlDhcp.ClientLeases {
-		clientIP := net.ParseIP(lease.ClientIP)
-		if clientIP == nil {
-			continue
+		dhcpLease := parseSingleDHCPLease(lease)
+		if dhcpLease != nil {
+			cfg.ClientLeases = append(cfg.ClientLeases, *dhcpLease)
 		}
+	}
+}
 
-		macAddr, err := net.ParseMAC(lease.MacAddrValue)
-		if err != nil {
-			continue
-		}
-
-		dhcpLease := DHCPLease{
-			ClientIP:   clientIP,
-			MACAddress: macAddr,
-		}
-
-		if lease.MacAddrMask != "" {
-			if mask, err := net.ParseMAC(lease.MacAddrMask); err == nil {
-				dhcpLease.MACMask = mask
-			}
-		}
-
-		dhcpCfg.ClientLeases = append(dhcpCfg.ClientLeases, dhcpLease)
+// parseSingleDHCPLease parses a single DHCP lease entry.
+func parseSingleDHCPLease(lease converter.DhcpLease) *DHCPLease {
+	clientIP := net.ParseIP(lease.ClientIP)
+	if clientIP == nil {
+		return nil
 	}
 
-	return dhcpCfg, nil
+	macAddr, err := net.ParseMAC(lease.MacAddrValue)
+	if err != nil {
+		return nil
+	}
+
+	dhcpLease := &DHCPLease{
+		ClientIP:   clientIP,
+		MACAddress: macAddr,
+	}
+
+	if lease.MacAddrMask != "" {
+		if mask, maskErr := net.ParseMAC(lease.MacAddrMask); maskErr == nil {
+			dhcpLease.MACMask = mask
+		}
+	}
+
+	return dhcpLease
+}
+
+// parseIPList parses a list of IP address strings into a [net.IP] slice.
+func parseIPList(ipStrings []string) []net.IP {
+	var ips []net.IP
+
+	for _, ipStr := range ipStrings {
+		if ip := net.ParseIP(ipStr); ip != nil {
+			ips = append(ips, ip)
+		}
+	}
+
+	return ips
 }
 
 // parseDNSConfig parses DNS configuration from YAML
 // Returns an empty DNSConfig if input is nil (not an error condition).
-func parseDNSConfig(yamlDns *converter.DnsServer, deviceName string) (*DNSConfig, error) {
-	if yamlDns == nil {
+func parseDNSConfig(yamlDNS *converter.DNSServer, deviceName string) (*DNSConfig, error) {
+	if yamlDNS == nil {
 		return &DNSConfig{}, nil
 	}
 
 	dnsCfg := &DNSConfig{}
 
-	// Forward records (A records)
-	for _, record := range yamlDns.ForwardRecords {
-		ip := net.ParseIP(record.IP)
-		if ip == nil {
-			continue
-		}
-
-		ttl := uint32(DefaultDNSTTL)
-
-		if record.TTL > 0 {
-			// Validate TTL is in reasonable range before conversion
-			if record.TTL < 0 {
-				return nil, fmt.Errorf("device %s: %w: %d",
-					deviceName, ErrDNSTTLNegative, record.TTL)
-			}
-
-			if record.TTL > 2147483647 { // Max int32 (~68 years)
-				return nil, fmt.Errorf("device %s: %w: %d",
-					deviceName, ErrDNSTTLExceedsMax, record.TTL)
-			}
-
-			ttl = uint32(record.TTL)
-		}
-
-		dnsCfg.ForwardRecords = append(dnsCfg.ForwardRecords, DNSRecord{
-			Name:  record.Name,
-			IP:    ip,
-			TTL:   ttl,
-			RCode: record.RCode,
-		})
+	forwardRecords, err := parseDNSRecords(yamlDNS.ForwardRecords, deviceName)
+	if err != nil {
+		return nil, err
 	}
 
-	// Reverse records (PTR records)
-	for _, record := range yamlDns.ReverseRecords {
-		ip := net.ParseIP(record.IP)
-		if ip == nil {
-			continue
-		}
+	dnsCfg.ForwardRecords = forwardRecords
 
-		ttl := uint32(DefaultDNSTTL)
-
-		if record.TTL > 0 {
-			// Validate TTL is in reasonable range before conversion
-			if record.TTL < 0 {
-				return nil, fmt.Errorf("device %s: %w: %d",
-					deviceName, ErrDNSTTLNegative, record.TTL)
-			}
-
-			if record.TTL > 2147483647 { // Max int32 (~68 years)
-				return nil, fmt.Errorf("device %s: %w: %d",
-					deviceName, ErrDNSTTLExceedsMax, record.TTL)
-			}
-
-			ttl = uint32(record.TTL)
-		}
-
-		dnsCfg.ReverseRecords = append(dnsCfg.ReverseRecords, DNSRecord{
-			Name:  record.Name,
-			IP:    ip,
-			TTL:   ttl,
-			RCode: record.RCode,
-		})
+	reverseRecords, err := parseDNSRecords(yamlDNS.ReverseRecords, deviceName)
+	if err != nil {
+		return nil, err
 	}
+
+	dnsCfg.ReverseRecords = reverseRecords
 
 	return dnsCfg, nil
+}
+
+// parseDNSRecords parses a list of DNS records with TTL validation.
+func parseDNSRecords(records []converter.DNSRecord, deviceName string) ([]DNSRecord, error) {
+	var result []DNSRecord
+
+	for _, record := range records {
+		ip := net.ParseIP(record.IP)
+		if ip == nil {
+			continue
+		}
+
+		ttl, err := validateDNSTTL(record.TTL, deviceName)
+		if err != nil {
+			return nil, err
+		}
+
+		result = append(result, DNSRecord{
+			Name:  record.Name,
+			IP:    ip,
+			TTL:   ttl,
+			RCode: record.RCode,
+		})
+	}
+
+	return result, nil
+}
+
+// validateDNSTTL validates and returns the DNS TTL value.
+func validateDNSTTL(ttl int, deviceName string) (uint32, error) {
+	if ttl <= 0 {
+		return uint32(DefaultDNSTTL), nil
+	}
+
+	if ttl < 0 {
+		return 0, fmt.Errorf("device %s: %w: %d", deviceName, ErrDNSTTLNegative, ttl)
+	}
+
+	if ttl > maxDNSTTL {
+		return 0, fmt.Errorf("device %s: %w: %d", deviceName, ErrDNSTTLExceedsMax, ttl)
+	}
+
+	return uint32(ttl), nil
 }
 
 // parseLLDPConfig parses LLDP configuration from YAML.
@@ -1890,14 +1986,14 @@ func parseSTPConfig(yamlStp *converter.StpConfig) *STPConfig {
 }
 
 // parseHTTPConfig parses HTTP configuration from YAML.
-func parseHTTPConfig(yamlHttp *converter.HttpConfig, deviceName string) *HTTPConfig {
-	if yamlHttp == nil {
+func parseHTTPConfig(yamlHTTP *converter.HTTPConfig, _ string) *HTTPConfig {
+	if yamlHTTP == nil {
 		return nil
 	}
 
 	httpCfg := &HTTPConfig{
-		Enabled:    yamlHttp.Enabled,
-		ServerName: yamlHttp.ServerName,
+		Enabled:    yamlHTTP.Enabled,
+		ServerName: yamlHTTP.ServerName,
 		Endpoints:  make([]HTTPEndpoint, 0),
 	}
 	// Set default server name if not specified
@@ -1905,7 +2001,7 @@ func parseHTTPConfig(yamlHttp *converter.HttpConfig, deviceName string) *HTTPCon
 		httpCfg.ServerName = "NIAC-Go/1.0.0"
 	}
 	// Parse endpoints
-	for _, ep := range yamlHttp.Endpoints {
+	for _, ep := range yamlHTTP.Endpoints {
 		endpoint := HTTPEndpoint{
 			Path:        ep.Path,
 			Method:      ep.Method,
@@ -1984,7 +2080,7 @@ func ParseSimpleConfig(lines []string) (*Config, error) {
 		}
 
 		parts := strings.Fields(line)
-		if len(parts) < 4 {
+		if len(parts) < minSimpleConfigParts {
 			return nil, fmt.Errorf("%w: line %d", ErrInsufficientFields, lineNum+1)
 		}
 
@@ -2010,7 +2106,7 @@ func ParseSimpleConfig(lines []string) (*Config, error) {
 			},
 		}
 
-		if len(parts) >= 5 {
+		if len(parts) >= simpleConfigWithWalk {
 			device.SNMPConfig.WalkFile = parts[4]
 		}
 
@@ -2022,11 +2118,11 @@ func ParseSimpleConfig(lines []string) (*Config, error) {
 
 // GenerateMAC generates a random MAC address.
 func GenerateMAC() net.HardwareAddr {
-	mac := make(net.HardwareAddr, 6)
+	mac := make(net.HardwareAddr, macAddressBytes)
 	// Set locally administered bit
 	mac[0] = 0x02
 	for i := 1; i < 6; i++ {
-		mac[i] = byte(i * 17) // Simple pattern for testing
+		mac[i] = byte(i * macPatternMultiplier) // Simple pattern for testing
 	}
 
 	return mac
@@ -2106,7 +2202,7 @@ func ParseSpeed(speedStr string) (int, error) {
 			return 0, fmt.Errorf("failed to parse speed value: %w", err)
 		}
 
-		return num * 1000, nil // Convert to Mbps
+		return num * gbpsToMbps, nil // Convert to Mbps
 	}
 
 	if val, found := strings.CutSuffix(speedStr, "M"); found {

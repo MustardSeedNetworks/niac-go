@@ -9,11 +9,12 @@ import (
 	"github.com/krisarmstrong/niac-go/pkg/config"
 )
 
-var configCmd = &cobra.Command{
-	Use:   "config",
-	Short: "Configuration management tools",
-	Long:  `Tools for exporting, comparing, and merging NIAC configurations.`,
-	Example: `  # Export configuration to new file
+func addConfigCommand(root *cobra.Command, _ *serviceOptions) {
+	configCmd := &cobra.Command{
+		Use:   "config",
+		Short: "Configuration management tools",
+		Long:  `Tools for exporting, comparing, and merging NIAC configurations.`,
+		Example: `  # Export configuration to new file
   niac config export input.yaml output.yaml
 
   # Compare two configurations
@@ -21,19 +22,19 @@ var configCmd = &cobra.Command{
 
   # Merge configurations
   niac config merge base.yaml overlay.yaml merged.yaml`,
-}
+	}
 
-var configExportCmd = &cobra.Command{
-	Use:   "export <input-file> <output-file>",
-	Short: "Export configuration to YAML",
-	Long: `Export a NIAC configuration file to normalized YAML format.
+	configExportCmd := &cobra.Command{
+		Use:   "export <input-file> <output-file>",
+		Short: "Export configuration to YAML",
+		Long: `Export a NIAC configuration file to normalized YAML format.
 
 This command:
 - Loads and validates the input configuration
 - Normalizes all fields and structures
 - Exports to clean YAML format
 - Useful for converting legacy .cfg to YAML`,
-	Example: `  # Export to new file
+		Example: `  # Export to new file
   niac config export config.yaml normalized.yaml
 
   # Convert legacy .cfg to YAML
@@ -41,21 +42,23 @@ This command:
 
   # Validate and normalize
   niac config export messy.yaml clean.yaml`,
-	Args: cobra.ExactArgs(2),
-	Run:  runConfigExport,
-}
+		Args: cobra.ExactArgs(argsCountTwo),
+		Run: func(_ *cobra.Command, args []string) {
+			runConfigExport(args)
+		},
+	}
 
-var configDiffCmd = &cobra.Command{
-	Use:   "diff <file1> <file2>",
-	Short: "Compare two configurations",
-	Long: `Compare two NIAC configuration files and show differences.
+	configDiffCmd := &cobra.Command{
+		Use:   "diff <file1> <file2>",
+		Short: "Compare two configurations",
+		Long: `Compare two NIAC configuration files and show differences.
 
 Compares:
 - Device additions/removals
 - Device name changes
 - MAC/IP address changes
 - Protocol configuration changes`,
-	Example: `  # Compare two configs
+		Example: `  # Compare two configs
   niac config diff prod.yaml staging.yaml
 
   # Check for drift
@@ -63,20 +66,22 @@ Compares:
 
   # Compare before/after changes
   niac config diff config.yaml config.new.yaml`,
-	Args: cobra.ExactArgs(2),
-	Run:  runConfigDiff,
-}
+		Args: cobra.ExactArgs(argsCountTwo),
+		Run: func(_ *cobra.Command, args []string) {
+			runConfigDiff(args)
+		},
+	}
 
-var configMergeCmd = &cobra.Command{
-	Use:   "merge <base-file> <overlay-file> <output-file>",
-	Short: "Merge two configurations",
-	Long: `Merge two NIAC configuration files.
+	configMergeCmd := &cobra.Command{
+		Use:   "merge <base-file> <overlay-file> <output-file>",
+		Short: "Merge two configurations",
+		Long: `Merge two NIAC configuration files.
 
 The overlay file takes precedence:
 - Devices with same name are replaced
 - New devices are added
 - Base devices not in overlay are kept`,
-	Example: `  # Merge overlay into base
+		Example: `  # Merge overlay into base
   niac config merge base.yaml overlay.yaml merged.yaml
 
   # Apply environment-specific overrides
@@ -84,18 +89,20 @@ The overlay file takes precedence:
 
   # Combine device configs
   niac config merge routers.yaml switches.yaml network.yaml`,
-	Args: cobra.ExactArgs(3),
-	Run:  runConfigMerge,
-}
+		Args: cobra.ExactArgs(argsCountThree),
+		Run: func(_ *cobra.Command, args []string) {
+			runConfigMerge(args)
+		},
+	}
 
-func init() {
-	rootCmd.AddCommand(configCmd)
 	configCmd.AddCommand(configExportCmd)
 	configCmd.AddCommand(configDiffCmd)
 	configCmd.AddCommand(configMergeCmd)
+	addGenerateCommand(configCmd)
+	root.AddCommand(configCmd)
 }
 
-func runConfigExport(_ *cobra.Command, args []string) {
+func runConfigExport(args []string) {
 	inputFile := args[0]
 	outputFile := args[1]
 
@@ -134,11 +141,11 @@ func runConfigExport(_ *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	fmt.Printf("Configuration exported to %s\n", outputFile)
-	fmt.Printf("Devices: %d\n", len(cfg.Devices))
+	fmt.Fprintf(os.Stdout, "Configuration exported to %s\n", outputFile)
+	fmt.Fprintf(os.Stdout, "Devices: %d\n", len(cfg.Devices))
 }
 
-func runConfigDiff(_ *cobra.Command, args []string) {
+func runConfigDiff(args []string) {
 	file1 := args[0]
 	file2 := args[1]
 
@@ -171,7 +178,7 @@ func runConfigDiff(_ *cobra.Command, args []string) {
 	// Check for removed devices
 	for name := range devices1 {
 		if _, exists := devices2[name]; !exists {
-			fmt.Printf("- Device removed: %s\n", name)
+			fmt.Fprintf(os.Stdout, "- Device removed: %s\n", name)
 			hasChanges = true
 		}
 	}
@@ -179,7 +186,7 @@ func runConfigDiff(_ *cobra.Command, args []string) {
 	// Check for added devices
 	for name := range devices2 {
 		if _, exists := devices1[name]; !exists {
-			fmt.Printf("+ Device added: %s\n", name)
+			fmt.Fprintf(os.Stdout, "+ Device added: %s\n", name)
 			hasChanges = true
 		}
 	}
@@ -188,12 +195,12 @@ func runConfigDiff(_ *cobra.Command, args []string) {
 	for name, dev1 := range devices1 {
 		if dev2, exists := devices2[name]; exists {
 			if dev1.MACAddress.String() != dev2.MACAddress.String() {
-				fmt.Printf("~ Device %s: MAC changed from %s to %s\n",
+				fmt.Fprintf(os.Stdout, "~ Device %s: MAC changed from %s to %s\n",
 					name, dev1.MACAddress, dev2.MACAddress)
 				hasChanges = true
 			}
 			if dev1.Type != dev2.Type {
-				fmt.Printf("~ Device %s: Type changed from %s to %s\n",
+				fmt.Fprintf(os.Stdout, "~ Device %s: Type changed from %s to %s\n",
 					name, dev1.Type, dev2.Type)
 				hasChanges = true
 			}
@@ -201,11 +208,11 @@ func runConfigDiff(_ *cobra.Command, args []string) {
 	}
 
 	if !hasChanges {
-		fmt.Println("No differences found")
+		fmt.Fprintln(os.Stdout, "No differences found")
 	}
 }
 
-func runConfigMerge(cmd *cobra.Command, args []string) {
+func runConfigMerge(args []string) {
 	baseFile := args[0]
 	overlayFile := args[1]
 	outputFile := args[2]
@@ -270,8 +277,8 @@ func runConfigMerge(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	fmt.Printf("Merged configuration written to %s\n", outputFile)
-	fmt.Printf("Base devices: %d\n", len(base.Devices))
-	fmt.Printf("Overlay devices: %d\n", len(overlay.Devices))
-	fmt.Printf("Merged devices: %d\n", len(merged.Devices))
+	fmt.Fprintf(os.Stdout, "Merged configuration written to %s\n", outputFile)
+	fmt.Fprintf(os.Stdout, "Base devices: %d\n", len(base.Devices))
+	fmt.Fprintf(os.Stdout, "Overlay devices: %d\n", len(overlay.Devices))
+	fmt.Fprintf(os.Stdout, "Merged devices: %d\n", len(merged.Devices))
 }

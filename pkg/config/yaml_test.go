@@ -561,12 +561,14 @@ func createTempYAML(t *testing.T, content string) string {
 		t.Fatal(err)
 	}
 
-	if _, err := tmpfile.WriteString(content); err != nil {
-		t.Fatal(err)
+	_, writeErr := tmpfile.WriteString(content)
+	if writeErr != nil {
+		t.Fatal(writeErr)
 	}
 
-	if err := tmpfile.Close(); err != nil {
-		t.Fatal(err)
+	closeErr := tmpfile.Close()
+	if closeErr != nil {
+		t.Fatal(closeErr)
 	}
 
 	return tmpfile.Name()

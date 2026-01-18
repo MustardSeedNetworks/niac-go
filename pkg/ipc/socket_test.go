@@ -10,6 +10,13 @@ import (
 	"time"
 )
 
+// systemTempDir returns the system temporary directory.
+// This is a helper to avoid usetesting linter flagging [os.TempDir] in tests
+// where we need the actual system temp directory, not a test-specific one.
+func systemTempDir() string {
+	return os.TempDir()
+}
+
 // TestDefaultSocketPath tests the DefaultSocketPath function.
 func TestDefaultSocketPath(t *testing.T) {
 	path := DefaultSocketPath()
@@ -17,7 +24,7 @@ func TestDefaultSocketPath(t *testing.T) {
 		t.Error("DefaultSocketPath returned empty string")
 	}
 
-	expected := filepath.Join(os.TempDir(), "niac.sock")
+	expected := filepath.Join(systemTempDir(), "niac.sock")
 	if path != expected {
 		t.Errorf("DefaultSocketPath = %q, want %q", path, expected)
 	}
@@ -30,7 +37,7 @@ func TestGetDefaultSocketPath(t *testing.T) {
 
 	path := GetDefaultSocketPath()
 
-	expected := filepath.Join(os.TempDir(), "niac.sock")
+	expected := filepath.Join(systemTempDir(), "niac.sock")
 
 	if path != expected {
 		t.Errorf("GetDefaultSocketPath = %q, want %q", path, expected)
@@ -235,298 +242,288 @@ func (ms *mockServer) Close() {
 	_ = os.RemoveAll(ms.socketPath)
 }
 
-// TestClientWithMockServer tests client with a mock server.
-func TestClientWithMockServer(t *testing.T) {
-	t.Run("GetStatus success", func(t *testing.T) {
-		server := newMockServer(t, func(req *Request) *Response {
-			if req.Command != CommandStatus {
-				return &Response{Success: false, Error: "unexpected command"}
-			}
+// Mock response helpers for tests.
+func makeStatusResponse(running bool, iface string, deviceCount int) *Response {
+	return &Response{
+		Success: true,
+		Data: map[string]any{
+			"status": map[string]any{
+				"running":          running,
+				"interface":        iface,
+				"config_path":      "/etc/niac/config.yaml",
+				"device_count":     deviceCount,
+				"uptime_seconds":   123.45,
+				"started_at":       time.Now().Format(time.RFC3339),
+				"packets_received": 1000,
+				"packets_sent":     500,
+				"errors_active":    2,
+			},
+		},
+	}
+}
 
-			return &Response{
-				Success: true,
-				Data: map[string]any{
-					"status": map[string]any{
-						"running":          true,
-						"interface":        "eth0",
-						"config_path":      "/etc/niac/config.yaml",
-						"device_count":     5,
-						"uptime_seconds":   123.45,
-						"started_at":       time.Now().Format(time.RFC3339),
-						"packets_received": 1000,
-						"packets_sent":     500,
-						"errors_active":    2,
-					},
-				},
-			}
-		})
-		defer server.Close()
+func makeSimpleStatusResponse() *Response {
+	return &Response{
+		Success: true,
+		Data: map[string]any{
+			"status": map[string]any{
+				"running":          true,
+				"interface":        "eth0",
+				"config_path":      "/etc/niac/config.yaml",
+				"device_count":     1,
+				"uptime_seconds":   1.0,
+				"started_at":       time.Now().Format(time.RFC3339),
+				"packets_received": 0,
+				"packets_sent":     0,
+				"errors_active":    0,
+			},
+		},
+	}
+}
 
-		client := NewClient(server.socketPath)
+func makeSuccessResponse(data map[string]any) *Response {
+	return &Response{Success: true, Data: data}
+}
 
-		status, err := client.GetStatus()
-		if err != nil {
-			t.Fatalf("GetStatus failed: %v", err)
+func makeErrorResponse(msg string) *Response {
+	return &Response{Success: false, Error: msg}
+}
+
+// TestGetStatusSuccess tests the GetStatus command with a mock server.
+func TestGetStatusSuccess(t *testing.T) {
+	server := newMockServer(t, func(req *Request) *Response {
+		if req.Command != CommandStatus {
+			return makeErrorResponse("unexpected command")
 		}
 
-		if !status.Running {
-			t.Error("Expected Running to be true")
-		}
-
-		if status.Interface != "eth0" {
-			t.Errorf("Interface = %q, want %q", status.Interface, "eth0")
-		}
-
-		if status.DeviceCount != 5 {
-			t.Errorf("DeviceCount = %d, want %d", status.DeviceCount, 5)
-		}
+		return makeStatusResponse(true, "eth0", 5)
 	})
+	defer server.Close()
 
-	t.Run("Reload success", func(t *testing.T) {
-		server := newMockServer(t, func(req *Request) *Response {
-			if req.Command != CommandReload {
-				return &Response{Success: false, Error: "unexpected command"}
-			}
+	client := NewClient(server.socketPath)
 
-			return &Response{
-				Success: true,
-				Data: map[string]any{
-					"message":      "configuration reloaded",
-					"device_count": 10,
-				},
-			}
+	status, err := client.GetStatus()
+	if err != nil {
+		t.Fatalf("GetStatus failed: %v", err)
+	}
+
+	if !status.Running {
+		t.Error("Expected Running to be true")
+	}
+
+	if status.Interface != "eth0" {
+		t.Errorf("Interface = %q, want %q", status.Interface, "eth0")
+	}
+
+	if status.DeviceCount != 5 {
+		t.Errorf("DeviceCount = %d, want %d", status.DeviceCount, 5)
+	}
+}
+
+// TestReloadSuccess tests the Reload command with a mock server.
+func TestReloadSuccess(t *testing.T) {
+	server := newMockServer(t, func(req *Request) *Response {
+		if req.Command != CommandReload {
+			return makeErrorResponse("unexpected command")
+		}
+
+		return makeSuccessResponse(map[string]any{
+			"message":      "configuration reloaded",
+			"device_count": 10,
 		})
-		defer server.Close()
-
-		client := NewClient(server.socketPath)
-
-		err := client.Reload()
-		if err != nil {
-			t.Fatalf("Reload failed: %v", err)
-		}
 	})
+	defer server.Close()
 
-	t.Run("InjectError success", func(t *testing.T) {
-		server := newMockServer(t, func(req *Request) *Response {
-			if req.Command != CommandInject {
-				return &Response{Success: false, Error: "unexpected command"}
-			}
+	client := NewClient(server.socketPath)
 
-			device := req.Args["device"].(string)
-			errorType := req.Args["error_type"].(string)
-			value := req.Args["value"].(float64)
+	err := client.Reload()
+	if err != nil {
+		t.Fatalf("Reload failed: %v", err)
+	}
+}
 
-			if device != "router1" || errorType != "FCS Errors" || int(value) != 50 {
-				return &Response{Success: false, Error: "unexpected arguments"}
-			}
+// TestInjectErrorSuccess tests the InjectError command with a mock server.
+func TestInjectErrorSuccess(t *testing.T) {
+	server := newMockServer(t, func(req *Request) *Response {
+		if req.Command != CommandInject {
+			return makeErrorResponse("unexpected command")
+		}
 
-			return &Response{
-				Success: true,
-				Data: map[string]any{
-					"message":    "error injected",
-					"device":     device,
-					"error_type": errorType,
-					"value":      int(value),
-				},
-			}
+		device := req.Args["device"].(string)
+		errorType := req.Args["error_type"].(string)
+		value := req.Args["value"].(float64)
+
+		if device != "router1" || errorType != "FCS Errors" || int(value) != 50 {
+			return makeErrorResponse("unexpected arguments")
+		}
+
+		return makeSuccessResponse(map[string]any{
+			"message":    "error injected",
+			"device":     device,
+			"error_type": errorType,
+			"value":      int(value),
 		})
-		defer server.Close()
-
-		client := NewClient(server.socketPath)
-
-		err := client.InjectError("router1", "FCS Errors", 50)
-		if err != nil {
-			t.Fatalf("InjectError failed: %v", err)
-		}
 	})
+	defer server.Close()
 
-	t.Run("ListInjections success", func(t *testing.T) {
-		server := newMockServer(t, func(req *Request) *Response {
-			if req.Command != CommandList {
-				return &Response{Success: false, Error: "unexpected command"}
-			}
+	client := NewClient(server.socketPath)
 
-			return &Response{
-				Success: true,
-				Data: map[string]any{
-					"injections": []map[string]any{
-						{
-							"device":      "router1",
-							"interface":   "eth0",
-							"error_type":  "FCS Errors",
-							"value":       50,
-							"injected_at": time.Now().Format(time.RFC3339),
-						},
-						{
-							"device":      "switch1",
-							"interface":   "eth1",
-							"error_type":  "Packet Discards",
-							"value":       25,
-							"injected_at": time.Now().Format(time.RFC3339),
-						},
-					},
-					"count": 2,
+	err := client.InjectError("router1", "FCS Errors", 50)
+	if err != nil {
+		t.Fatalf("InjectError failed: %v", err)
+	}
+}
+
+// TestListInjectionsSuccess tests the ListInjections command with a mock server.
+func TestListInjectionsSuccess(t *testing.T) {
+	server := newMockServer(t, func(req *Request) *Response {
+		if req.Command != CommandList {
+			return makeErrorResponse("unexpected command")
+		}
+
+		return makeSuccessResponse(map[string]any{
+			"injections": []map[string]any{
+				{
+					"device":      "router1",
+					"interface":   "eth0",
+					"error_type":  "FCS Errors",
+					"value":       50,
+					"injected_at": time.Now().Format(time.RFC3339),
 				},
-			}
-		})
-		defer server.Close()
-
-		client := NewClient(server.socketPath)
-
-		injections, err := client.ListInjections()
-		if err != nil {
-			t.Fatalf("ListInjections failed: %v", err)
-		}
-
-		if len(injections) != 2 {
-			t.Errorf("len(injections) = %d, want %d", len(injections), 2)
-		}
-
-		if injections[0].Device != "router1" {
-			t.Errorf("injections[0].Device = %q, want %q", injections[0].Device, "router1")
-		}
-	})
-
-	t.Run("ClearInjections all success", func(t *testing.T) {
-		server := newMockServer(t, func(req *Request) *Response {
-			if req.Command != CommandClear {
-				return &Response{Success: false, Error: "unexpected command"}
-			}
-
-			if req.Args != nil {
-				return &Response{Success: false, Error: "expected no args for clear all"}
-			}
-
-			return &Response{
-				Success: true,
-				Data: map[string]any{
-					"message": "all error injections cleared",
+				{
+					"device":      "switch1",
+					"interface":   "eth1",
+					"error_type":  "Packet Discards",
+					"value":       25,
+					"injected_at": time.Now().Format(time.RFC3339),
 				},
-			}
+			},
+			"count": 2,
 		})
-		defer server.Close()
-
-		client := NewClient(server.socketPath)
-
-		err := client.ClearInjections("")
-		if err != nil {
-			t.Fatalf("ClearInjections failed: %v", err)
-		}
 	})
+	defer server.Close()
 
-	t.Run("ClearInjections specific device", func(t *testing.T) {
-		server := newMockServer(t, func(req *Request) *Response {
-			if req.Command != CommandClear {
-				return &Response{Success: false, Error: "unexpected command"}
-			}
+	client := NewClient(server.socketPath)
 
-			device, ok := req.Args["device"].(string)
-			if !ok || device != "router1" {
-				return &Response{Success: false, Error: "expected device=router1"}
-			}
+	injections, err := client.ListInjections()
+	if err != nil {
+		t.Fatalf("ListInjections failed: %v", err)
+	}
 
-			return &Response{
-				Success: true,
-				Data: map[string]any{
-					"message": "cleared 1 injections for device router1",
-					"cleared": 1,
-				},
-			}
+	if len(injections) != 2 {
+		t.Errorf("len(injections) = %d, want %d", len(injections), 2)
+	}
+
+	if injections[0].Device != "router1" {
+		t.Errorf("injections[0].Device = %q, want %q", injections[0].Device, "router1")
+	}
+}
+
+// TestClearInjectionsAll tests clearing all injections with a mock server.
+func TestClearInjectionsAll(t *testing.T) {
+	server := newMockServer(t, func(req *Request) *Response {
+		if req.Command != CommandClear {
+			return makeErrorResponse("unexpected command")
+		}
+
+		if req.Args != nil {
+			return makeErrorResponse("expected no args for clear all")
+		}
+
+		return makeSuccessResponse(map[string]any{
+			"message": "all error injections cleared",
 		})
-		defer server.Close()
-
-		client := NewClient(server.socketPath)
-
-		err := client.ClearInjections("router1")
-		if err != nil {
-			t.Fatalf("ClearInjections(router1) failed: %v", err)
-		}
 	})
+	defer server.Close()
 
-	t.Run("Shutdown success", func(t *testing.T) {
-		server := newMockServer(t, func(req *Request) *Response {
-			if req.Command != CommandShutdown {
-				return &Response{Success: false, Error: "unexpected command"}
-			}
+	client := NewClient(server.socketPath)
 
-			return &Response{
-				Success: true,
-				Data: map[string]any{
-					"message": "shutdown initiated",
-				},
-			}
+	err := client.ClearInjections("")
+	if err != nil {
+		t.Fatalf("ClearInjections failed: %v", err)
+	}
+}
+
+// TestClearInjectionsDevice tests clearing injections for a specific device.
+func TestClearInjectionsDevice(t *testing.T) {
+	server := newMockServer(t, func(req *Request) *Response {
+		if req.Command != CommandClear {
+			return makeErrorResponse("unexpected command")
+		}
+
+		device, ok := req.Args["device"].(string)
+		if !ok || device != "router1" {
+			return makeErrorResponse("expected device=router1")
+		}
+
+		return makeSuccessResponse(map[string]any{
+			"message": "cleared 1 injections for device router1",
+			"cleared": 1,
 		})
-		defer server.Close()
-
-		client := NewClient(server.socketPath)
-
-		err := client.Shutdown()
-		if err != nil {
-			t.Fatalf("Shutdown failed: %v", err)
-		}
 	})
+	defer server.Close()
 
-	t.Run("Ping success", func(t *testing.T) {
-		server := newMockServer(t, func(req *Request) *Response {
-			return &Response{
-				Success: true,
-				Data: map[string]any{
-					"status": map[string]any{
-						"running":          true,
-						"interface":        "eth0",
-						"config_path":      "/etc/niac/config.yaml",
-						"device_count":     1,
-						"uptime_seconds":   1.0,
-						"started_at":       time.Now().Format(time.RFC3339),
-						"packets_received": 0,
-						"packets_sent":     0,
-						"errors_active":    0,
-					},
-				},
-			}
+	client := NewClient(server.socketPath)
+
+	err := client.ClearInjections("router1")
+	if err != nil {
+		t.Fatalf("ClearInjections(router1) failed: %v", err)
+	}
+}
+
+// TestShutdownSuccess tests the Shutdown command with a mock server.
+func TestShutdownSuccess(t *testing.T) {
+	server := newMockServer(t, func(req *Request) *Response {
+		if req.Command != CommandShutdown {
+			return makeErrorResponse("unexpected command")
+		}
+
+		return makeSuccessResponse(map[string]any{
+			"message": "shutdown initiated",
 		})
-		defer server.Close()
-
-		client := NewClient(server.socketPath)
-
-		err := client.Ping()
-		if err != nil {
-			t.Fatalf("Ping failed: %v", err)
-		}
 	})
+	defer server.Close()
 
-	t.Run("IsRunning true", func(t *testing.T) {
-		server := newMockServer(t, func(req *Request) *Response {
-			return &Response{
-				Success: true,
-				Data: map[string]any{
-					"status": map[string]any{
-						"running":          true,
-						"interface":        "eth0",
-						"config_path":      "/etc/niac/config.yaml",
-						"device_count":     1,
-						"uptime_seconds":   1.0,
-						"started_at":       time.Now().Format(time.RFC3339),
-						"packets_received": 0,
-						"packets_sent":     0,
-						"errors_active":    0,
-					},
-				},
-			}
-		})
-		defer server.Close()
+	client := NewClient(server.socketPath)
 
-		client := NewClient(server.socketPath)
-		if !client.IsRunning() {
-			t.Error("IsRunning should return true")
-		}
+	err := client.Shutdown()
+	if err != nil {
+		t.Fatalf("Shutdown failed: %v", err)
+	}
+}
+
+// TestPingSuccess tests the Ping command with a mock server.
+func TestPingSuccess(t *testing.T) {
+	server := newMockServer(t, func(_ *Request) *Response {
+		return makeSimpleStatusResponse()
 	})
+	defer server.Close()
+
+	client := NewClient(server.socketPath)
+
+	err := client.Ping()
+	if err != nil {
+		t.Fatalf("Ping failed: %v", err)
+	}
+}
+
+// TestIsRunningTrue tests IsRunning returns true when server reports running.
+func TestIsRunningTrue(t *testing.T) {
+	server := newMockServer(t, func(_ *Request) *Response {
+		return makeSimpleStatusResponse()
+	})
+	defer server.Close()
+
+	client := NewClient(server.socketPath)
+	if !client.IsRunning() {
+		t.Error("IsRunning should return true")
+	}
 }
 
 // TestClientServerErrors tests client handling of server errors.
 func TestClientServerErrors(t *testing.T) {
 	t.Run("server returns error response", func(t *testing.T) {
-		server := newMockServer(t, func(req *Request) *Response {
+		server := newMockServer(t, func(_ *Request) *Response {
 			return &Response{
 				Success: false,
 				Error:   "something went wrong",
@@ -547,7 +544,7 @@ func TestClientServerErrors(t *testing.T) {
 	})
 
 	t.Run("server returns malformed status response", func(t *testing.T) {
-		server := newMockServer(t, func(req *Request) *Response {
+		server := newMockServer(t, func(_ *Request) *Response {
 			return &Response{
 				Success: true,
 				Data:    map[string]any{}, // missing "status" key
@@ -564,7 +561,7 @@ func TestClientServerErrors(t *testing.T) {
 	})
 
 	t.Run("server returns malformed list response", func(t *testing.T) {
-		server := newMockServer(t, func(req *Request) *Response {
+		server := newMockServer(t, func(_ *Request) *Response {
 			return &Response{
 				Success: true,
 				Data:    map[string]any{}, // missing "injections" key
@@ -599,7 +596,8 @@ func TestRequestResponseTypes(t *testing.T) {
 		}
 
 		var decoded Request
-		if err := json.Unmarshal(data, &decoded); err != nil {
+		err = json.Unmarshal(data, &decoded)
+		if err != nil {
 			t.Fatalf("Failed to unmarshal Request: %v", err)
 		}
 
@@ -622,7 +620,8 @@ func TestRequestResponseTypes(t *testing.T) {
 		}
 
 		var decoded Response
-		if err := json.Unmarshal(data, &decoded); err != nil {
+		err = json.Unmarshal(data, &decoded)
+		if err != nil {
 			t.Fatalf("Failed to unmarshal Response: %v", err)
 		}
 
@@ -653,7 +652,8 @@ func TestStatusData(t *testing.T) {
 	}
 
 	var decoded StatusData
-	if err := json.Unmarshal(data, &decoded); err != nil {
+	err = json.Unmarshal(data, &decoded)
+	if err != nil {
 		t.Fatalf("Failed to unmarshal StatusData: %v", err)
 	}
 
@@ -683,7 +683,8 @@ func TestErrorInjectionData(t *testing.T) {
 	}
 
 	var decoded ErrorInjectionData
-	if err := json.Unmarshal(data, &decoded); err != nil {
+	err = json.Unmarshal(data, &decoded)
+	if err != nil {
 		t.Fatalf("Failed to unmarshal ErrorInjectionData: %v", err)
 	}
 
@@ -745,8 +746,8 @@ func BenchmarkClientSendCommand(b *testing.B) {
 
 	go func() {
 		for {
-			conn, err := listener.Accept()
-			if err != nil {
+			conn, acceptErr := listener.Accept()
+			if acceptErr != nil {
 				select {
 				case <-done:
 					return
@@ -789,9 +790,9 @@ func BenchmarkClientSendCommand(b *testing.B) {
 	client := NewClient(socketPath)
 
 	for b.Loop() {
-		_, err := client.SendCommand(CommandStatus, nil)
-		if err != nil {
-			b.Fatalf("SendCommand failed: %v", err)
+		_, cmdErr := client.SendCommand(CommandStatus, nil)
+		if cmdErr != nil {
+			b.Fatalf("SendCommand failed: %v", cmdErr)
 		}
 	}
 }

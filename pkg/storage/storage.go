@@ -55,6 +55,10 @@ const (
 	runBucket = "runs"
 	// SECURITY FIX MEDIUM-2: Database operation timeout.
 	dbOperationTimeout = 5 * time.Second
+	// File permissions for database file (owner read/write only).
+	dbFilePermissions = 0o600
+	// Size of uint64 in bytes for key encoding.
+	uint64ByteSize = 8
 )
 
 // Storage wraps a BoltDB instance for persisting NIAC run history.
@@ -85,21 +89,22 @@ func Open(path string) (*Storage, error) {
 		return nil, fmt.Errorf("failed to create storage directory: %w", err)
 	}
 
-	db, err := bbolt.Open(path, 0o600, &bbolt.Options{Timeout: time.Second})
+	db, err := bbolt.Open(path, dbFilePermissions, &bbolt.Options{Timeout: time.Second})
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
 
-	if err := db.Update(func(tx *bbolt.Tx) error {
+	initErr := db.Update(func(tx *bbolt.Tx) error {
 		_, bucketErr := tx.CreateBucketIfNotExists([]byte(runBucket))
 		if bucketErr != nil {
 			return fmt.Errorf("failed to create bucket: %w", bucketErr)
 		}
 		return nil
-	}); err != nil {
+	})
+	if initErr != nil {
 		_ = db.Close()
 
-		return nil, fmt.Errorf("failed to initialize database: %w", err)
+		return nil, fmt.Errorf("failed to initialize database: %w", initErr)
 	}
 
 	return &Storage{db: db}, nil
@@ -203,9 +208,10 @@ func (s *Storage) ListRuns(limit int) ([]RunRecord, error) {
 }
 
 func itob(v uint64) []byte {
-	b := make([]byte, 8)
-	for i := range 8 {
-		b[7-i] = byte(v >> (uint(i) * 8)) //nolint:gosec // G115: i bounded by loop 0-7
+	b := make([]byte, uint64ByteSize)
+
+	for i := range uint64ByteSize {
+		b[uint64ByteSize-1-i] = byte(v >> (i * uint64ByteSize))
 	}
 
 	return b

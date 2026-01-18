@@ -10,12 +10,13 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/spf13/cobra"
+
 	"github.com/krisarmstrong/niac-go/pkg/ipc"
 	"github.com/krisarmstrong/niac-go/pkg/logging"
-	"github.com/spf13/cobra"
 )
 
-var logsOpts struct {
+type logsOptions struct {
 	follow     bool
 	level      string
 	filter     string
@@ -24,15 +25,18 @@ var logsOpts struct {
 	count      int
 }
 
-var logsCmd = &cobra.Command{
-	Use:   "logs",
-	Short: "View and stream simulation logs",
-	Long: `View and stream logs from a running NIAC simulation.
+func addLogsCommand(root *cobra.Command, _ *serviceOptions) {
+	options := new(logsOptions)
+
+	logsCmd := &cobra.Command{
+		Use:   "logs",
+		Short: "View and stream simulation logs",
+		Long: `View and stream logs from a running NIAC simulation.
 
 The logs command provides access to simulation logs including device activity,
 protocol messages, and error injections. Logs can be filtered by level and
 text pattern, and can be streamed in real-time with the tail subcommand.`,
-	Example: `  # View recent logs
+		Example: `  # View recent logs
   niac logs tail
 
   # Stream logs in real-time
@@ -46,12 +50,12 @@ text pattern, and can be streamed in real-time with the tail subcommand.`,
 
   # Output as JSON
   niac logs tail --json`,
-}
+	}
 
-var logsTailCmd = &cobra.Command{
-	Use:   "tail",
-	Short: "Stream logs from a running simulation",
-	Long: `Stream logs from a running NIAC simulation in real-time.
+	logsTailCmd := &cobra.Command{
+		Use:   "tail",
+		Short: "Stream logs from a running simulation",
+		Long: `Stream logs from a running NIAC simulation in real-time.
 
 The tail command connects to the running simulation via IPC socket and
 displays log messages. Use --follow to continuously stream new logs.
@@ -63,7 +67,7 @@ Log levels (from most to least verbose):
   - error: Error messages about failures
 
 The --filter option performs case-insensitive substring matching on log messages.`,
-	Example: `  # View recent logs (one-shot)
+		Example: `  # View recent logs (one-shot)
   niac logs tail
 
   # Stream logs continuously
@@ -83,41 +87,43 @@ The --filter option performs case-insensitive substring matching on log messages
 
   # Custom socket path
   niac logs tail --socket /var/run/niac.sock`,
-	Args: cobra.NoArgs,
-	RunE: runLogsTail,
-}
+		Args: cobra.NoArgs,
+		RunE: func(_ *cobra.Command, _ []string) error {
+			return runLogsTail(options)
+		},
+	}
 
-func init() {
-	rootCmd.AddCommand(logsCmd)
 	logsCmd.AddCommand(logsTailCmd)
 
 	// Tail command flags
-	logsTailCmd.Flags().BoolVarP(&logsOpts.follow, "follow", "f", false,
+	logsTailCmd.Flags().BoolVarP(&options.follow, "follow", "f", false,
 		"Continuously stream new logs (like tail -f)")
-	logsTailCmd.Flags().StringVarP(&logsOpts.level, "level", "l", "info",
+	logsTailCmd.Flags().StringVarP(&options.level, "level", "l", "info",
 		"Minimum log level: debug, info, warn, error")
-	logsTailCmd.Flags().StringVar(&logsOpts.filter, "filter", "",
+	logsTailCmd.Flags().StringVar(&options.filter, "filter", "",
 		"Filter logs by text pattern (case-insensitive)")
-	logsTailCmd.Flags().StringVar(&logsOpts.socketPath, "socket", "",
+	logsTailCmd.Flags().StringVar(&options.socketPath, "socket", "",
 		"Path to IPC socket (default: "+ipc.DefaultSocketPath()+")")
-	logsTailCmd.Flags().BoolVar(&logsOpts.jsonOutput, "json", false,
+	logsTailCmd.Flags().BoolVar(&options.jsonOutput, "json", false,
 		"Output logs as JSON (one object per line)")
-	logsTailCmd.Flags().IntVarP(&logsOpts.count, "count", "n", 100,
+	logsTailCmd.Flags().IntVarP(&options.count, "count", "n", maxLogEntries,
 		"Number of recent logs to display (default: 100)")
+
+	root.AddCommand(logsCmd)
 }
 
-func runLogsTail(cmd *cobra.Command, args []string) error {
+func runLogsTail(options *logsOptions) error {
 	// Validate log level
-	level := strings.ToLower(logsOpts.level)
+	level := strings.ToLower(options.level)
 	switch level {
 	case "debug", "info", "warn", "error":
 		// Valid
 	default:
-		return fmt.Errorf("invalid log level %q: must be debug, info, warn, or error", logsOpts.level)
+		return fmt.Errorf("invalid log level %q: must be debug, info, warn, or error", options.level)
 	}
 
 	// Create IPC client
-	socketPath := logsOpts.socketPath
+	socketPath := options.socketPath
 	if socketPath == "" {
 		socketPath = ipc.GetDefaultSocketPath()
 	}
@@ -142,24 +148,24 @@ func runLogsTail(cmd *cobra.Command, args []string) error {
 		cancel()
 	}()
 
-	if logsOpts.follow {
-		return runLogsFollow(ctx, client, level)
+	if options.follow {
+		return runLogsFollow(ctx, client, level, options)
 	}
 
-	return runLogsOnce(client, level)
+	return runLogsOnce(client, level, options)
 }
 
 // runLogsOnce fetches and displays logs once (no follow mode).
-func runLogsOnce(client *ipc.Client, level string) error {
-	logs, err := client.GetLogs(level, logsOpts.count)
+func runLogsOnce(client *ipc.Client, level string, options *logsOptions) error {
+	logs, err := client.GetLogs(level, options.count)
 	if err != nil {
 		return fmt.Errorf("failed to get logs: %w", err)
 	}
 
 	// Apply text filter
-	filtered := filterLogs(logs, logsOpts.filter)
+	filtered := filterLogs(logs, options.filter)
 
-	if logsOpts.jsonOutput {
+	if options.jsonOutput {
 		for _, log := range filtered {
 			outputLogJSON(log)
 		}
@@ -174,34 +180,34 @@ func runLogsOnce(client *ipc.Client, level string) error {
 }
 
 // runLogsFollow streams logs continuously.
-func runLogsFollow(ctx context.Context, client *ipc.Client, level string) error {
-	sub := client.SubscribeLogs(level, logsOpts.filter, 500*time.Millisecond)
+func runLogsFollow(ctx context.Context, client *ipc.Client, level string, options *logsOptions) error {
+	sub := client.SubscribeLogs(level, options.filter, logPollMilliseconds*time.Millisecond)
 	defer sub.Stop()
 
-	if !logsOpts.jsonOutput {
+	if !options.jsonOutput {
 		logging.InitColors(true)
-		fmt.Println("Streaming logs (press Ctrl+C to stop)...")
-		fmt.Println(strings.Repeat("-", 80))
+		fmt.Fprintln(os.Stdout, "Streaming logs (press Ctrl+C to stop)...")
+		fmt.Fprintln(os.Stdout, strings.Repeat("-", lineWidthStandard))
 	}
 
 	for {
 		select {
 		case <-ctx.Done():
-			if !logsOpts.jsonOutput {
-				fmt.Println("\nLog streaming stopped.")
+			if !options.jsonOutput {
+				fmt.Fprintln(os.Stdout, "\nLog streaming stopped.")
 			}
 			return nil
 		case log, ok := <-sub.Logs():
 			if !ok {
 				return nil
 			}
-			if logsOpts.jsonOutput {
+			if options.jsonOutput {
 				outputLogJSON(log)
 			} else {
 				printLogEntry(log)
 			}
 		case err := <-sub.Errors():
-			if !logsOpts.jsonOutput {
+			if !options.jsonOutput {
 				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			}
 		}
@@ -261,9 +267,9 @@ func printLogEntry(log ipc.LogEntry) {
 	}
 
 	if context != "" {
-		fmt.Printf("%s %s %s: %s\n", timestamp, levelStr, context, log.Message)
+		fmt.Fprintf(os.Stdout, "%s %s %s: %s\n", timestamp, levelStr, context, log.Message)
 	} else {
-		fmt.Printf("%s %s %s\n", timestamp, levelStr, log.Message)
+		fmt.Fprintf(os.Stdout, "%s %s %s\n", timestamp, levelStr, log.Message)
 	}
 }
 
@@ -289,5 +295,5 @@ func outputLogJSON(log ipc.LogEntry) {
 		fmt.Fprintf(os.Stderr, "JSON encoding error: %v\n", err)
 		return
 	}
-	fmt.Println(string(jsonBytes))
+	fmt.Fprintln(os.Stdout, string(jsonBytes))
 }

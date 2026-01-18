@@ -191,8 +191,8 @@ func TestExportJSON(t *testing.T) {
 
 	// PERFORMANCE FIX MEDIUM-1: JSON exports StatisticsSnapshot, not Statistics
 	var loaded StatisticsSnapshot
-	if err := json.Unmarshal(data, &loaded); err != nil {
-		t.Fatalf("Failed to unmarshal JSON: %v", err)
+	if unmarshalErr := json.Unmarshal(data, &loaded); unmarshalErr != nil {
+		t.Fatalf("Failed to unmarshal JSON: %v", unmarshalErr)
 	}
 
 	// Verify contents

@@ -64,10 +64,26 @@ type AnalysisStats struct {
 	TotalNeighbors     int `json:"total_neighbors"     yaml:"total_neighbors"`
 }
 
-var analyzeCmd = &cobra.Command{
-	Use:   "analyze-walk <walk-file>",
-	Short: "Analyze SNMP walk file and extract network relationships",
-	Long: `Analyze an SNMP walk file and extract device information, interfaces,
+type analyzeOptions struct {
+	outputFormat    string
+	extractTopology bool
+	showNeighbors   bool
+	graphvizPath    string
+}
+
+const (
+	analyzeOutputJSON = "json"
+	analyzeOutputYAML = "yaml"
+	analyzeOutputText = "text"
+)
+
+func addAnalyzeCommand(root *cobra.Command, _ *serviceOptions) {
+	options := new(analyzeOptions)
+
+	analyzeCmd := &cobra.Command{
+		Use:   "analyze-walk <walk-file>",
+		Short: "Analyze SNMP walk file and extract network relationships",
+		Long: `Analyze an SNMP walk file and extract device information, interfaces,
 port-channels, and neighbor relationships.
 
 The tool parses standard SNMP MIBs including:
@@ -76,7 +92,7 @@ The tool parses standard SNMP MIBs including:
   • LLDP-MIB (LLDP neighbors)
   • CISCO-CDP-MIB (CDP neighbors)
   • LAG-MIB (port-channels)`,
-	Example: `  # Analyze and output as YAML
+		Example: `  # Analyze and output as YAML
   niac analyze-walk device.walk
 
   # Output as JSON
@@ -87,31 +103,31 @@ The tool parses standard SNMP MIBs including:
 
   # Show only neighbors
   niac analyze-walk --show-neighbors device.walk`,
-	Args: cobra.ExactArgs(1),
-	RunE: runAnalyze,
+		Args: cobra.ExactArgs(1),
+		RunE: func(_ *cobra.Command, args []string) error {
+			return runAnalyze(args, options)
+		},
+	}
+
+	analyzeCmd.Flags().StringVar(&options.outputFormat, "output", "yaml", "Output format (yaml, json, text)")
+	analyzeCmd.Flags().BoolVar(&options.extractTopology, "extract-topology", false, "Extract full topology")
+	analyzeCmd.Flags().BoolVar(&options.showNeighbors, "show-neighbors", false, "Show neighbor relationships only")
+	analyzeCmd.Flags().StringVar(
+		&options.graphvizPath,
+		"graphviz",
+		"",
+		"Write Graphviz (DOT) output to file (use '-' for stdout)",
+	)
+
+	root.AddCommand(analyzeCmd)
 }
 
-const (
-	analyzeOutputJSON = "json"
-	analyzeOutputYAML = "yaml"
-	analyzeOutputText = "text"
-)
-
-func init() {
-	rootCmd.AddCommand(analyzeCmd)
-
-	analyzeCmd.Flags().String("output", "yaml", "Output format (yaml, json, text)")
-	analyzeCmd.Flags().Bool("extract-topology", false, "Extract full topology")
-	analyzeCmd.Flags().Bool("show-neighbors", false, "Show neighbor relationships only")
-	analyzeCmd.Flags().String("graphviz", "", "Write Graphviz (DOT) output to file (use '-' for stdout)")
-}
-
-func runAnalyze(cmd *cobra.Command, args []string) error {
+func runAnalyze(args []string, options *analyzeOptions) error {
 	walkFile := args[0]
-	outputFormat, _ := cmd.Flags().GetString("output")
-	_, _ = cmd.Flags().GetBool("extract-topology") // Reserved for future use
-	showNeighbors, _ := cmd.Flags().GetBool("show-neighbors")
-	graphvizPath, _ := cmd.Flags().GetString("graphviz")
+	_ = options.extractTopology // Reserved for future use
+	outputFormat := options.outputFormat
+	showNeighbors := options.showNeighbors
+	graphvizPath := options.graphvizPath
 
 	// Parse walk file
 	analysis, err := parseWalkFile(walkFile)
@@ -143,96 +159,37 @@ func runAnalyze(cmd *cobra.Command, args []string) error {
 	}
 }
 
-//nolint:gocognit // SNMP walk parsing requires complex pattern matching
 func parseWalkFile(filename string) (*WalkAnalysis, error) {
-	// Validate file path
 	cleanPath := filepath.Clean(filename)
 	if strings.Contains(cleanPath, "..") {
 		return nil, errors.New("path traversal detected in filename")
 	}
 
-	file, err := os.Open(cleanPath) // #nosec G304 -- path validated above
+	file, err := os.Open(cleanPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open walk file: %w", err)
 	}
-	defer file.Close() // #nosec G104 -- deferred close
+	defer func() { _ = file.Close() }()
 
 	analysis := new(WalkAnalysis)
 	analysis.Interfaces = make([]InterfaceInfo, 0)
 	analysis.Neighbors = make([]NeighborInfo, 0)
 
-	scanner := bufio.NewScanner(file)
 	interfaceMap := make(map[int]*InterfaceInfo)
 
-	// Regular expressions for parsing numeric OIDs
-	// NOTE: Sanitized walk files have mangled OIDs where IP-like patterns were replaced
-	// Original: .1.3.6.1.2.1.1.x.0  Sanitized: .1.3.6.1.2.10.100.x.x
-	// We use flexible patterns to match both original and sanitized formats
-
-	// SNMPv2-MIB::system group - Match the value patterns with quoted strings
 	sysDescrRe := regexp.MustCompile(`= STRING: "(.+?Cisco.+?)"`)
 	sysObjectIDRe := regexp.MustCompile(`= OID: (\.1\.3\.6\.[\d.]+)`)
-
-	// IF-MIB::ifTable - Match interface data patterns
-	// Interface descriptions contain names like "FastEthernet", "GigabitEthernet", "Serial", etc.
 	ifDescrRe := regexp.MustCompile(
 		`\.1\.3\.6\.1\.2\.[\d.]+\s*=\s*STRING:\s*"((?:Fast|Gigabit)?Ethernet[\d/]+|Serial[\d/]+|Loopback\d+|Null\d+|Async[\d/]+|Port-channel\d+|Vlan\d+|Tunnel\d+)"`,
 	)
-
-	// For sanitized files, extract interface info from the contextifDescr matches interface names, we can build a basic map
-	interfaceCounter := 0
-
-	for scanner.Scan() {
-		line := scanner.Text()
-
-		// Parse system information
-		if analysis.Device.SysDescr == "" {
-			if matches := sysDescrRe.FindStringSubmatch(line); matches != nil {
-				analysis.Device.SysDescr = strings.TrimSpace(matches[1])
-				// Try to extract hostname from sysDescr if available
-				continue
-			}
-		}
-
-		if analysis.Device.SysObjectID == "" {
-			if matches := sysObjectIDRe.FindStringSubmatch(line); matches != nil {
-				analysis.Device.SysObjectID = strings.TrimSpace(matches[1])
-				continue
-			}
-		}
-
-		// Parse interface descriptions - these give us interface names
-		if matches := ifDescrRe.FindStringSubmatch(line); matches != nil {
-			interfaceCounter++
-			ifName := strings.TrimSpace(matches[1])
-			ifaceInfo := new(InterfaceInfo)
-			ifaceInfo.Index = interfaceCounter
-			ifaceInfo.Name = ifName
-			ifaceInfo.Type = getInterfaceTypeFromName(ifName)
-			interfaceMap[interfaceCounter] = ifaceInfo
-		}
-	}
-
-	// Try to find sysName by looking for short hostnames in STRING fields
-	_, _ = file.Seek(0, 0) // seek errors handled by subsequent read
-	scanner = bufio.NewScanner(file)
 	hostnameRe := regexp.MustCompile(`= STRING: "([a-z0-9\-]{3,30})"$`)
-	for scanner.Scan() {
-		line := scanner.Text()
-		if analysis.Device.SysName == "" {
-			if matches := hostnameRe.FindStringSubmatch(line); matches != nil {
-				name := matches[1]
-				// Likely a hostname if it's short and doesn't contain common noise
-				if len(name) < 25 && !strings.Contains(name, " ") && !strings.Contains(strings.ToLower(name), "cisco") {
-					analysis.Device.SysName = name
-					break
-				}
-			}
-		}
+
+	if err = parseSystemAndInterfaces(file, analysis, interfaceMap, sysDescrRe, sysObjectIDRe, ifDescrRe); err != nil {
+		return nil, err
 	}
 
-	if scanErr := scanner.Err(); scanErr != nil {
-		return nil, fmt.Errorf("failed to scan walk file: %w", scanErr)
+	if err = extractHostname(file, analysis, hostnameRe); err != nil {
+		return nil, err
 	}
 
 	// Convert map to sorted slice
@@ -261,6 +218,74 @@ func parseWalkFile(filename string) (*WalkAnalysis, error) {
 	analysis.Statistics.TotalNeighbors = len(analysis.Neighbors)
 
 	return analysis, nil
+}
+
+func parseSystemAndInterfaces(
+	file *os.File,
+	analysis *WalkAnalysis,
+	interfaceMap map[int]*InterfaceInfo,
+	sysDescrRe, sysObjectIDRe, ifDescrRe *regexp.Regexp,
+) error {
+	scanner := bufio.NewScanner(file)
+	interfaceCounter := 0
+
+	for scanner.Scan() {
+		line := scanner.Text()
+
+		if analysis.Device.SysDescr == "" {
+			if matches := sysDescrRe.FindStringSubmatch(line); matches != nil {
+				analysis.Device.SysDescr = strings.TrimSpace(matches[1])
+				continue
+			}
+		}
+
+		if analysis.Device.SysObjectID == "" {
+			if matches := sysObjectIDRe.FindStringSubmatch(line); matches != nil {
+				analysis.Device.SysObjectID = strings.TrimSpace(matches[1])
+				continue
+			}
+		}
+
+		if matches := ifDescrRe.FindStringSubmatch(line); matches != nil {
+			interfaceCounter++
+			ifName := strings.TrimSpace(matches[1])
+			ifaceInfo := new(InterfaceInfo)
+			ifaceInfo.Index = interfaceCounter
+			ifaceInfo.Name = ifName
+			ifaceInfo.Type = getInterfaceTypeFromName(ifName)
+			interfaceMap[interfaceCounter] = ifaceInfo
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return fmt.Errorf("failed to scan walk file: %w", err)
+	}
+	return nil
+}
+
+func extractHostname(file *os.File, analysis *WalkAnalysis, hostnameRe *regexp.Regexp) error {
+	if _, err := file.Seek(0, 0); err != nil {
+		return fmt.Errorf("failed to reset walk file: %w", err)
+	}
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if analysis.Device.SysName == "" {
+			if matches := hostnameRe.FindStringSubmatch(line); matches != nil {
+				name := matches[1]
+				if len(name) < 25 && !strings.Contains(name, " ") && !strings.Contains(strings.ToLower(name), "cisco") {
+					analysis.Device.SysName = name
+					break
+				}
+			}
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return fmt.Errorf("failed to scan walk file: %w", err)
+	}
+	return nil
 }
 
 func getInterfaceTypeFromName(name string) string {
@@ -307,8 +332,8 @@ func outputJSON(analysis *WalkAnalysis) error {
 
 func outputYAML(analysis *WalkAnalysis) error {
 	encoder := yaml.NewEncoder(os.Stdout)
-	defer encoder.Close() // #nosec G104 -- deferred close
-	encoder.SetIndent(2)
+	defer func() { _ = encoder.Close() }()
+	encoder.SetIndent(tabPadding)
 	err := encoder.Encode(analysis)
 	if err != nil {
 		return fmt.Errorf("failed to encode YAML: %w", err)
@@ -424,8 +449,8 @@ func outputNeighbors(neighbors []NeighborInfo, format string) error {
 		return nil
 	case "yaml":
 		encoder := yaml.NewEncoder(os.Stdout)
-		defer encoder.Close() // #nosec G104 -- deferred close
-		encoder.SetIndent(2)
+		defer func() { _ = encoder.Close() }()
+		encoder.SetIndent(tabPadding)
 		err := encoder.Encode(map[string]any{"neighbors": neighbors})
 		if err != nil {
 			return fmt.Errorf("failed to encode neighbors YAML: %w", err)

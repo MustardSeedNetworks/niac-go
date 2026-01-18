@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gosnmp/gosnmp"
+
 	"github.com/krisarmstrong/niac-go/pkg/config"
 )
 
@@ -235,15 +236,15 @@ func TestAgent_MIB_GetSet(t *testing.T) {
 }
 
 // TestAgent_ConcurrentAccess tests concurrent access to agent.
-func TestAgent_ConcurrentAccess(t *testing.T) {
+func TestAgent_ConcurrentAccess(_ *testing.T) {
 	device := createTestDevice()
 	agent := NewAgent(device, 0)
 
 	done := make(chan bool, 100)
 
 	// Launch multiple goroutines accessing MIB
-	for i := range 100 {
-		go func(id int) {
+	for range 100 {
+		go func() {
 			// Read sysUpTime
 			_ = agent.mib.Get("1.3.6.1.2.1.1.3.0")
 
@@ -251,7 +252,7 @@ func TestAgent_ConcurrentAccess(t *testing.T) {
 			_ = agent.mib.Get("1.3.6.1.2.1.1.5.0")
 
 			done <- true
-		}(i)
+		}()
 	}
 
 	// Wait for all goroutines
@@ -860,7 +861,7 @@ func TestAgent_DebugLevels(t *testing.T) {
 }
 
 // TestAgent_ConcurrentReadWrite tests concurrent read/write operations.
-func TestAgent_ConcurrentReadWrite(t *testing.T) {
+func TestAgent_ConcurrentReadWrite(_ *testing.T) {
 	device := createTestDevice()
 	agent := NewAgent(device, 0)
 

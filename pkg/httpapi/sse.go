@@ -1,5 +1,5 @@
-// Package api provides Server-Sent Events (SSE) infrastructure for real-time streaming.
-//
+package httpapi
+
 // SSE endpoints:
 //   - /api/v1/stream/packets - Real-time packet stream
 //   - /api/v1/stream/logs - Real-time log stream
@@ -11,10 +11,10 @@
 //   - Better proxy/CDN compatibility
 //   - Unidirectional (server → client) which is all we need
 
-package api
-
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -25,10 +25,11 @@ import (
 
 const (
 	// SSE configuration.
-	sseBufferSize   = 256 // Client send buffer size
-	sseMaxClients   = 100 // Max clients per stream
-	sseMaxMsgPerSec = 100 // Rate limit: max messages per second
-	sseHeartbeatSec = 30  // Send heartbeat comment every N seconds
+	sseBufferSize      = 256  // Client send buffer size
+	sseMaxClients      = 100  // Max clients per stream
+	sseMaxMsgPerSec    = 100  // Rate limit: max messages per second
+	sseHeartbeatSec    = 30   // Send heartbeat comment every N seconds
+	millisecsPerSecond = 1000 // Milliseconds per second for rate limiter
 )
 
 // SSEStream represents a stream type.
@@ -88,7 +89,7 @@ type sseRateLimiter struct {
 func newSSERateLimiter(maxPerSecond int64) *sseRateLimiter {
 	rl := &sseRateLimiter{
 		maxTokens: maxPerSecond,
-		refillMs:  1000 / maxPerSecond,
+		refillMs:  millisecsPerSecond / maxPerSecond,
 	}
 	rl.tokens.Store(maxPerSecond)
 	rl.lastRefill.Store(time.Now().UnixMilli())
@@ -107,10 +108,7 @@ func (rl *sseRateLimiter) allow() bool {
 	if elapsed >= rl.refillMs {
 		tokensToAdd := elapsed / rl.refillMs
 
-		newTokens := rl.tokens.Load() + tokensToAdd
-		if newTokens > rl.maxTokens {
-			newTokens = rl.maxTokens
-		}
+		newTokens := min(rl.tokens.Load()+tokensToAdd, rl.maxTokens)
 
 		rl.tokens.Store(newTokens)
 		rl.lastRefill.Store(now)
@@ -129,7 +127,7 @@ func (rl *sseRateLimiter) allow() bool {
 func NewSSEHub() *SSEHub {
 	hub := &SSEHub{
 		clients:      make(map[SSEStream]map[*SSEClient]bool),
-		broadcast:    make(chan *streamMessage, 256),
+		broadcast:    make(chan *streamMessage, sseBufferSize),
 		register:     make(chan *SSEClient),
 		unregister:   make(chan *SSEClient),
 		rateLimiters: make(map[SSEStream]*sseRateLimiter),
@@ -177,13 +175,14 @@ func (h *SSEHub) Stop() {
 }
 
 func (h *SSEHub) registerClient(client *SSEClient) {
+	logger := slog.Default()
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
 	streamClients := h.clients[client.stream]
 
 	if len(streamClients) >= sseMaxClients {
-		slog.Warn(
+		logger.Warn(
 			"[SSE] Rejecting client for stream: max clients reached",
 			"stream",
 			client.stream,
@@ -197,7 +196,7 @@ func (h *SSEHub) registerClient(client *SSEClient) {
 	}
 
 	streamClients[client] = true
-	slog.Info(
+	logger.Info(
 		"[SSE] Client connected to stream",
 		"stream",
 		client.stream,
@@ -209,6 +208,7 @@ func (h *SSEHub) registerClient(client *SSEClient) {
 }
 
 func (h *SSEHub) unregisterClient(client *SSEClient) {
+	logger := slog.Default()
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
@@ -221,7 +221,7 @@ func (h *SSEHub) unregisterClient(client *SSEClient) {
 			close(client.send)
 		}
 
-		slog.Info("[SSE] Client disconnected from stream", "stream", client.stream, "remaining", len(streamClients))
+		logger.Info("[SSE] Client disconnected from stream", "stream", client.stream, "remaining", len(streamClients))
 	}
 }
 
@@ -249,6 +249,7 @@ func (h *SSEHub) broadcastMessage(msg *streamMessage) {
 }
 
 func (h *SSEHub) closeAllClients() {
+	logger := slog.Default()
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
@@ -263,11 +264,12 @@ func (h *SSEHub) closeAllClients() {
 		h.clients[stream] = make(map[*SSEClient]bool)
 	}
 
-	slog.Info("[SSE] All clients disconnected")
+	logger.Info("[SSE] All clients disconnected")
 }
 
 // Broadcast sends a message to all clients of a stream.
 func (h *SSEHub) Broadcast(stream SSEStream, data any) {
+	logger := slog.Default()
 	if !h.running.Load() {
 		return
 	}
@@ -278,7 +280,7 @@ func (h *SSEHub) Broadcast(stream SSEStream, data any) {
 	// Format as SSE
 	jsonData, err := json.Marshal(data)
 	if err != nil {
-		slog.Error("[SSE] Failed to marshal message", "error", err)
+		logger.Error("[SSE] Failed to marshal message", "error", err)
 
 		return
 	}
@@ -342,92 +344,109 @@ func (h *SSEHub) TotalClientCount() int {
 	return total
 }
 
+// sseStreamContext holds the context for an SSE streaming session.
+type sseStreamContext struct {
+	writer    http.ResponseWriter
+	flusher   http.Flusher
+	client    *SSEClient
+	heartbeat *time.Ticker
+	ctx       context.Context
+}
+
+// setSSEHeaders configures HTTP headers for SSE streaming.
+func setSSEHeaders(w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("X-Accel-Buffering", "no") // Disable nginx buffering
+}
+
+// setupSSEConnection prepares the SSE connection and returns a stream context.
+func (s *Server) setupSSEConnection(
+	w http.ResponseWriter,
+	r *http.Request,
+	stream SSEStream,
+) (*sseStreamContext, error) {
+	setSSEHeaders(w)
+
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		return nil, errors.New("streaming not supported")
+	}
+
+	rc := http.NewResponseController(w)
+	if err := rc.SetWriteDeadline(time.Time{}); err != nil {
+		s.logger.Warn("[SSE] Could not disable write deadline", "error", err)
+	}
+
+	client := &SSEClient{
+		hub:      s.sseHub,
+		send:     make(chan []byte, sseBufferSize),
+		stream:   stream,
+		clientIP: r.RemoteAddr,
+	}
+
+	return &sseStreamContext{
+		writer:    w,
+		flusher:   flusher,
+		client:    client,
+		heartbeat: time.NewTicker(sseHeartbeatSec * time.Second),
+		ctx:       r.Context(),
+	}, nil
+}
+
+// runSSEMessageLoop handles the main SSE message streaming loop.
+func (sc *sseStreamContext) runSSEMessageLoop() {
+	for {
+		select {
+		case <-sc.ctx.Done():
+			return
+
+		case msg, msgOk := <-sc.client.send:
+			if !msgOk {
+				return
+			}
+
+			if _, writeErr := sc.writer.Write(msg); writeErr != nil {
+				return
+			}
+
+			sc.flusher.Flush()
+
+		case <-sc.heartbeat.C:
+			if _, err := fmt.Fprintf(sc.writer, ": heartbeat %d\n\n", time.Now().Unix()); err != nil {
+				return
+			}
+
+			sc.flusher.Flush()
+		}
+	}
+}
+
 // serveSSE handles SSE connections for a specific stream.
 func (s *Server) serveSSE(stream SSEStream) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Check if SSE hub is available
 		if s.sseHub == nil {
 			writeError(w, r, http.StatusServiceUnavailable, "sse_unavailable", "SSE streaming not available", nil)
-
 			return
 		}
 
-		// Set SSE headers
-		w.Header().Set("Content-Type", "text/event-stream")
-		w.Header().Set("Cache-Control", "no-cache")
-		w.Header().Set("Connection", "keep-alive")
-		w.Header().Set("X-Accel-Buffering", "no") // Disable nginx buffering
-
-		// Get flusher
-		flusher, ok := w.(http.Flusher)
-		if !ok {
-			writeError(w, r, http.StatusInternalServerError, "sse_not_supported", "Streaming not supported", nil)
-
-			return
-		}
-
-		// Disable write deadline for long-lived SSE connections (Go 1.20+)
-		rc := http.NewResponseController(w)
-		err := rc.SetWriteDeadline(time.Time{})
+		sc, err := s.setupSSEConnection(w, r, stream)
 		if err != nil {
-			slog.Warn("[SSE] Could not disable write deadline", "error", err)
+			writeError(w, r, http.StatusInternalServerError, "sse_not_supported", err.Error(), nil)
+			return
 		}
+		defer sc.heartbeat.Stop()
 
-		// Create client
-		client := &SSEClient{
-			hub:      s.sseHub,
-			send:     make(chan []byte, sseBufferSize),
-			stream:   stream,
-			clientIP: r.RemoteAddr,
-		}
-
-		// Register client
-		s.sseHub.register <- client
-
-		// Ensure cleanup on disconnect
+		s.sseHub.register <- sc.client
 		defer func() {
-			s.sseHub.unregister <- client
+			s.sseHub.unregister <- sc.client
 		}()
 
-		// Send initial connection event
 		_, _ = fmt.Fprintf(w, "event: connected\ndata: {\"stream\":\"%s\"}\n\n", stream)
+		sc.flusher.Flush()
 
-		flusher.Flush()
-
-		// Heartbeat ticker to keep connection alive
-		heartbeat := time.NewTicker(sseHeartbeatSec * time.Second)
-		defer heartbeat.Stop()
-
-		// Stream messages to client
-		for {
-			select {
-			case <-r.Context().Done():
-				// Client disconnected
-				return
-
-			case msg, ok := <-client.send:
-				if !ok {
-					// Channel closed
-					return
-				}
-
-				_, err := w.Write(msg)
-				if err != nil {
-					return
-				}
-
-				flusher.Flush()
-
-			case <-heartbeat.C:
-				// Send heartbeat comment to keep connection alive
-				_, err := fmt.Fprintf(w, ": heartbeat %d\n\n", time.Now().Unix())
-				if err != nil {
-					return
-				}
-
-				flusher.Flush()
-			}
-		}
+		sc.runSSEMessageLoop()
 	}
 }
 

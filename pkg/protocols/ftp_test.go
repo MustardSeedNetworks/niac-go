@@ -1,4 +1,4 @@
-package protocols
+package protocols_test
 
 import (
 	"net"
@@ -7,19 +7,20 @@ import (
 
 	"github.com/krisarmstrong/niac-go/pkg/config"
 	"github.com/krisarmstrong/niac-go/pkg/logging"
+	"github.com/krisarmstrong/niac-go/pkg/protocols"
 )
 
 // TestNewFTPHandler tests FTP handler creation.
 func TestNewFTPHandler(t *testing.T) {
 	cfg := &config.Config{}
-	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
-	handler := NewFTPHandler(stack)
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	handler := protocols.NewFTPHandler(stack)
 
 	if handler == nil {
 		t.Fatal("NewFTPHandler returned nil")
 	}
 
-	if handler.stack != stack {
+	if handler.FTPHandlerStack() != stack {
 		t.Error("Handler stack not set correctly")
 	}
 }
@@ -210,10 +211,10 @@ func TestFTPCommands(t *testing.T) {
 // generateFTPResponse simulates FTP response generation (helper for testing).
 func generateFTPResponse(command string, devices []*config.Device) string {
 	cfg := &config.Config{}
-	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
-	handler := NewFTPHandler(stack)
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	handler := protocols.NewFTPHandler(stack)
 
-	return handler.buildFTPResponse(command, false, devices)
+	return handler.BuildFTPResponse(command, false, devices)
 }
 
 // TestFTPCommandParsing tests FTP command parsing.
@@ -280,8 +281,8 @@ func TestFTPCommandParsing(t *testing.T) {
 
 func TestFTPIPv6PassiveModes(t *testing.T) {
 	cfg := &config.Config{}
-	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
-	handler := NewFTPHandler(stack)
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	handler := protocols.NewFTPHandler(stack)
 
 	devices := []*config.Device{
 		{
@@ -294,12 +295,12 @@ func TestFTPIPv6PassiveModes(t *testing.T) {
 		},
 	}
 
-	resp := handler.buildFTPResponse("PASV", true, devices)
+	resp := handler.BuildFTPResponse("PASV", true, devices)
 	if !strings.HasPrefix(resp, "522") {
 		t.Fatalf("expected PASV over IPv6 to return 522, got %s", resp)
 	}
 
-	resp = handler.buildFTPResponse("EPSV", true, devices)
+	resp = handler.BuildFTPResponse("EPSV", true, devices)
 	if !strings.HasPrefix(resp, "229") {
 		t.Fatalf("expected EPSV over IPv6 to return 229, got %s", resp)
 	}

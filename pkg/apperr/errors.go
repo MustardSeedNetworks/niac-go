@@ -1,9 +1,16 @@
-// Package errors provides error injection state management for network simulation testing
-package errors
+// Package apperr provides error injection state management for network simulation testing.
+package apperr
 
 import (
 	"fmt"
 	"sync"
+)
+
+// Default interface configuration constants.
+const (
+	defaultSpeedMbps  = 1000 // default interface speed (1Gbps)
+	defaultDuplex     = "full"
+	percentageDivisor = 100 // divisor for percentage calculations
 )
 
 // ErrorType represents types of errors that can be injected.
@@ -75,8 +82,8 @@ func (sm *StateManager) SetError(deviceIP, iface string, errorType ErrorType, va
 			DeviceIP:  deviceIP,
 			Interface: iface,
 			IfConfig: InterfaceConfig{
-				Speed:  1000, // Default 1Gbps
-				Duplex: "full",
+				Speed:  defaultSpeedMbps,
+				Duplex: defaultDuplex,
 			},
 		}
 		sm.states[key] = state
@@ -173,8 +180,8 @@ func (sm *StateManager) GetInterfaceConfig(deviceIP, iface string) InterfaceConf
 	}
 
 	return InterfaceConfig{
-		Speed:  1000,
-		Duplex: "full",
+		Speed:  defaultSpeedMbps,
+		Duplex: defaultDuplex,
 	}
 }
 
@@ -186,7 +193,7 @@ func (sm *StateManager) makeKey(deviceIP, iface string) string {
 func ShouldInjectError(errorRate int) bool {
 	// Simple implementation - can be enhanced with real randomization
 	// For now, inject errors based on a percentage
-	return errorRate > 0 && (errorRate >= 100)
+	return errorRate > 0 && (errorRate >= percentageDivisor)
 }
 
 // CalculateErrorValue calculates the error value based on type and rate.
@@ -201,7 +208,7 @@ func CalculateErrorValue(errorType ErrorType, baseValue, errorRate int) int {
 		return errorRate
 	case ErrorTypeFCS, ErrorTypeDiscards, ErrorTypeInterface:
 		// For counter-based errors, scale based on rate
-		return baseValue + (baseValue * errorRate / 100)
+		return baseValue + (baseValue * errorRate / percentageDivisor)
 	default:
 		return baseValue
 	}

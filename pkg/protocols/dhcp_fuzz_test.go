@@ -1,4 +1,4 @@
-package protocols
+package protocols_test
 
 import (
 	"net"

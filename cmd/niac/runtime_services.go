@@ -11,16 +11,16 @@ import (
 	"sync"
 	"time"
 
-	"github.com/krisarmstrong/niac-go/pkg/api"
 	"github.com/krisarmstrong/niac-go/pkg/capture"
 	"github.com/krisarmstrong/niac-go/pkg/config"
+	"github.com/krisarmstrong/niac-go/pkg/httpapi"
 	"github.com/krisarmstrong/niac-go/pkg/protocols"
 	"github.com/krisarmstrong/niac-go/pkg/storage"
 )
 
 type runtimeServices struct {
 	storage       *storage.Storage
-	apiServer     *api.Server
+	apiServer     *httpapi.Server
 	stack         *protocols.Stack
 	engine        *capture.Engine
 	startTime     time.Time
@@ -28,7 +28,61 @@ type runtimeServices struct {
 	configName    string
 	configPath    string
 	deviceCount   int
-	replay        api.ReplayManager
+	replay        httpapi.ReplayManager
+}
+
+// resolveAPIToken returns the API token, preferring environment variable over CLI flag.
+// SECURITY FIX #101: Prefer NIAC_API_TOKEN environment variable over CLI flag.
+func resolveAPIToken(cliToken string) string {
+	if envToken := os.Getenv("NIAC_API_TOKEN"); envToken != "" {
+		return envToken
+	}
+
+	// Warn if using deprecated CLI flag
+	if cliToken != "" {
+		fmt.Fprintln(os.Stderr, "WARNING: --api-token flag is deprecated and exposes token in process list")
+		fmt.Fprintln(os.Stderr, "    Please use NIAC_API_TOKEN environment variable instead")
+	}
+
+	return cliToken
+}
+
+// initAPIServer creates and starts the API server with the given configuration.
+func (rs *runtimeServices) initAPIServer(
+	apiAddr, metricsAddr string,
+	stack *protocols.Stack,
+	cfg *config.Config,
+	interfaceName string,
+	services *serviceOptions,
+) error {
+	topology := httpapi.BuildTopology(cfg)
+	info := readVersionInfo()
+	cfgCopy := &httpapi.ServerConfig{
+		Addr:        apiAddr,
+		MetricsAddr: metricsAddr,
+		Token:       resolveAPIToken(services.apiToken),
+		Stack:       stack,
+		Config:      cfg,
+		ConfigPath:  rs.configPath,
+		Storage:     rs.storage,
+		Interface:   interfaceName,
+		Version:     info.version,
+		Topology:    topology,
+		Alert: httpapi.AlertConfig{
+			PacketsThreshold: services.alertPacketsThreshold,
+			WebhookURL:       services.alertWebhook,
+		},
+		ApplyConfig: rs.applyConfig,
+		Replay:      rs.replay,
+	}
+
+	rs.apiServer = httpapi.NewServer(*cfgCopy)
+
+	if startErr := rs.apiServer.Start(); startErr != nil {
+		return fmt.Errorf("start API server: %w", startErr)
+	}
+
+	return nil
 }
 
 func startRuntimeServices(
@@ -36,6 +90,7 @@ func startRuntimeServices(
 	stack *protocols.Stack,
 	cfg *config.Config,
 	interfaceName, configFile string,
+	services *serviceOptions,
 ) (*runtimeServices, error) {
 	configPath := configFile
 	abs, absErr := filepath.Abs(configFile)
@@ -53,10 +108,11 @@ func startRuntimeServices(
 	rs.deviceCount = len(cfg.Devices)
 
 	var err error
-	storagePath := servicesOpts.storagePath
+	storagePath := services.storagePath
 	if strings.EqualFold(storagePath, "disabled") {
 		storagePath = ""
 	}
+
 	if storagePath != "" {
 		rs.storage, err = storage.Open(storagePath)
 		if err != nil {
@@ -68,69 +124,26 @@ func startRuntimeServices(
 		rs.replay = newReplayController(engine, stack.GetDebugLevel())
 	}
 
-	apiAddr := servicesOpts.apiListen
-	metricsAddr := servicesOpts.metricsListen
+	apiAddr := services.apiListen
+	metricsAddr := services.metricsListen
 	if apiAddr == "" && metricsAddr != "" {
 		apiAddr = metricsAddr
 		metricsAddr = ""
 	}
 
-	if apiAddr != "" {
-		// SECURITY FIX #101: Prefer NIAC_API_TOKEN environment variable over CLI flag
-		apiToken := os.Getenv("NIAC_API_TOKEN")
-		if apiToken == "" {
-			apiToken = servicesOpts.apiToken
-			// Warn if using deprecated CLI flag
-			if apiToken != "" {
-				fmt.Fprintln(os.Stderr, "⚠️  WARNING: --api-token flag is deprecated and exposes token in process list")
-				fmt.Fprintln(os.Stderr, "    Please use NIAC_API_TOKEN environment variable instead")
-			}
+	if apiAddr == "" {
+		return rs, nil
+	}
+
+	if initErr := rs.initAPIServer(apiAddr, metricsAddr, stack, cfg, interfaceName, services); initErr != nil {
+		if rs.storage != nil {
+			_ = rs.storage.Close()
 		}
 
-		topology := api.BuildTopology(cfg)
-		cfgCopy := &api.ServerConfig{
-			Addr:        apiAddr,
-			MetricsAddr: metricsAddr,
-			Token:       apiToken,
-			Stack:       stack,
-			Config:      cfg,
-			ConfigPath:  rs.configPath,
-			Storage:     rs.storage,
-			Interface:   interfaceName,
-			Version:     version,
-			Topology:    topology,
-			Alert: api.AlertConfig{
-				PacketsThreshold: servicesOpts.alertPacketsThreshold,
-				WebhookURL:       servicesOpts.alertWebhook,
-			},
-			ApplyConfig: rs.applyConfig,
-			Replay:      rs.replay,
-		}
-
-		rs.apiServer = api.NewServer(*cfgCopy)
-		startErr := rs.apiServer.Start()
-		if startErr != nil {
-			if rs.storage != nil {
-				rs.storage.Close() // #nosec G104 -- error logged or non-critical
-			}
-			return nil, fmt.Errorf("start API server: %w", startErr)
-		}
+		return nil, initErr
 	}
 
 	return rs, nil
-}
-
-func (rs *runtimeServices) applyConfig(newCfg *config.Config) error {
-	if rs == nil || newCfg == nil {
-		return errors.New("runtime services not initialized")
-	}
-	err := rs.stack.ReloadConfig(newCfg)
-	if err != nil {
-		return fmt.Errorf("failed to reload config: %w", err)
-	}
-	configureServiceHandlers(rs.stack, newCfg, rs.stack.GetDebugLevel())
-	rs.deviceCount = len(newCfg.Devices)
-	return nil
 }
 
 func (rs *runtimeServices) Stop() {
@@ -145,7 +158,7 @@ func (rs *runtimeServices) Stop() {
 	}
 
 	if rs.apiServer != nil {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), shortTimeout*time.Second)
 		defer cancel()
 		// SECURITY FIX #106: Log API server shutdown errors
 		err := rs.apiServer.Shutdown(ctx)
@@ -170,8 +183,21 @@ func (rs *runtimeServices) Stop() {
 		if err != nil {
 			logger.Error("Error saving run record during shutdown", "error", err)
 		}
-		rs.storage.Close() // #nosec G104 -- error logged or non-critical
+		_ = rs.storage.Close()
 	}
+}
+
+func (rs *runtimeServices) applyConfig(newCfg *config.Config) error {
+	if rs == nil || newCfg == nil {
+		return errors.New("runtime services not initialized")
+	}
+	err := rs.stack.ReloadConfig(newCfg)
+	if err != nil {
+		return fmt.Errorf("failed to reload config: %w", err)
+	}
+	configureServiceHandlers(rs.stack, newCfg, rs.stack.GetDebugLevel())
+	rs.deviceCount = len(newCfg.Devices)
+	return nil
 }
 
 type replayController struct {
@@ -179,7 +205,7 @@ type replayController struct {
 	debugLevel int
 	mu         sync.Mutex
 	current    *capture.PlaybackEngine
-	state      api.ReplayState
+	state      httpapi.ReplayState
 	cleanup    string
 }
 
@@ -190,13 +216,13 @@ func newReplayController(engine *capture.Engine, debugLevel int) *replayControll
 	return controller
 }
 
-func (rc *replayController) Status() api.ReplayState {
+func (rc *replayController) Status() httpapi.ReplayState {
 	rc.mu.Lock()
 	defer rc.mu.Unlock()
 	return rc.state
 }
 
-func (rc *replayController) Start(req api.ReplayRequest) (api.ReplayState, error) {
+func (rc *replayController) Start(req httpapi.ReplayRequest) (httpapi.ReplayState, error) {
 	rc.mu.Lock()
 	defer rc.mu.Unlock()
 
@@ -222,13 +248,13 @@ func (rc *replayController) Start(req api.ReplayRequest) (api.ReplayState, error
 	err := player.Start()
 	if err != nil {
 		if req.Uploaded {
-			os.Remove(req.File) // #nosec G104 -- error logged or non-critical
+			_ = os.Remove(req.File)
 		}
 		return rc.state, fmt.Errorf("failed to start playback: %w", err)
 	}
 
 	rc.current = player
-	rc.state = api.ReplayState{
+	rc.state = httpapi.ReplayState{
 		Running:   true,
 		File:      req.File,
 		LoopMs:    req.LoopMs,
@@ -243,7 +269,7 @@ func (rc *replayController) Start(req api.ReplayRequest) (api.ReplayState, error
 	return rc.state, nil
 }
 
-func (rc *replayController) Stop() (api.ReplayState, error) {
+func (rc *replayController) Stop() (httpapi.ReplayState, error) {
 	rc.mu.Lock()
 	defer rc.mu.Unlock()
 

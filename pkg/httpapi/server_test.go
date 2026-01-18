@@ -1,9 +1,10 @@
-package api
+package httpapi
 
 import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -62,6 +63,7 @@ func newTestServer(t *testing.T) (*Server, string) {
 			Interface:  "lo0",
 			Version:    "test",
 		},
+		logger: slog.Default(),
 	}
 
 	return server, configPath

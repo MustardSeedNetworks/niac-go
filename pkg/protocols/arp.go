@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
+
 	"github.com/krisarmstrong/niac-go/pkg/config"
 )
 
@@ -18,6 +19,12 @@ const (
 	ARPSenderProtocolAddress = 14 // Sender protocol address
 	ARPTargetHWAddress       = 18 // Target hardware address
 	ARPTargetProtocolAddress = 24 // Target protocol address
+)
+
+// ARP address sizes.
+const (
+	arpHWAddressSize   = 6 // Ethernet MAC address size
+	arpProtAddressSize = 4 // IPv4 address size
 )
 
 // ARPHandler handles ARP requests and replies.
@@ -34,6 +41,7 @@ func NewARPHandler(stack *Stack) *ARPHandler {
 
 // HandlePacket processes an ARP packet.
 func (h *ARPHandler) HandlePacket(pkt *Packet) {
+	logger := slog.Default()
 	debugLevel := h.stack.GetDebugLevel()
 
 	// Parse using gopacket for easier handling
@@ -42,8 +50,8 @@ func (h *ARPHandler) HandlePacket(pkt *Packet) {
 	// Get ARP layer
 	arpLayer := packet.Layer(layers.LayerTypeARP)
 	if arpLayer == nil {
-		if debugLevel >= 2 {
-			slog.Debug("ARP packet missing ARP layer", "sn", pkt.SerialNumber)
+		if debugLevel >= DebugLevelInfo {
+			logger.Debug("ARP packet missing ARP layer", "sn", pkt.SerialNumber)
 		}
 
 		return
@@ -56,8 +64,8 @@ func (h *ARPHandler) HandlePacket(pkt *Packet) {
 
 	// Only handle ARP requests for IPv4 over Ethernet
 	if arp.AddrType != layers.LinkTypeEthernet || arp.Protocol != layers.EthernetTypeIPv4 {
-		if debugLevel >= 2 {
-			slog.Debug("ARP packet with unsupported type", "sn", pkt.SerialNumber)
+		if debugLevel >= DebugLevelInfo {
+			logger.Debug("ARP packet with unsupported type", "sn", pkt.SerialNumber)
 		}
 
 		return
@@ -70,8 +78,8 @@ func (h *ARPHandler) HandlePacket(pkt *Packet) {
 		// Could log/track replies if needed
 		h.stack.IncrementStat("arp_replies")
 
-		if debugLevel >= 3 {
-			slog.Debug(
+		if debugLevel >= DebugLevelVerbose {
+			logger.Debug(
 				"ARP Reply",
 				"sourceIP",
 				net.IP(arp.SourceProtAddress),
@@ -86,6 +94,7 @@ func (h *ARPHandler) HandlePacket(pkt *Packet) {
 
 // handleARPRequest processes an ARP request and generates reply if we have the target IP.
 func (h *ARPHandler) handleARPRequest(pkt *Packet, arp *layers.ARP) {
+	logger := slog.Default()
 	debugLevel := h.stack.GetDebugLevel()
 
 	targetIP := net.IP(arp.DstProtAddress)
@@ -94,8 +103,8 @@ func (h *ARPHandler) handleARPRequest(pkt *Packet, arp *layers.ARP) {
 
 	h.stack.IncrementStat("arp_requests")
 
-	if debugLevel >= 3 {
-		slog.Debug(
+	if debugLevel >= DebugLevelVerbose {
+		logger.Debug(
 			"ARP Request",
 			"targetIP",
 			targetIP,
@@ -111,8 +120,8 @@ func (h *ARPHandler) handleARPRequest(pkt *Packet, arp *layers.ARP) {
 	// Look up devices with this IP (considering VLAN)
 	devices := h.stack.GetDevices().GetByIP(targetIP)
 	if len(devices) == 0 {
-		if debugLevel >= 3 {
-			slog.Debug("ARP Request: No device found for IP", "ip", targetIP)
+		if debugLevel >= DebugLevelVerbose {
+			logger.Debug("ARP Request: No device found for IP", "ip", targetIP)
 		}
 
 		return
@@ -132,8 +141,8 @@ func (h *ARPHandler) handleARPRequest(pkt *Packet, arp *layers.ARP) {
 			h.stack.Send(reply)
 			h.stack.IncrementStat("arp_replies")
 
-			if debugLevel >= 3 {
-				slog.Debug(
+			if debugLevel >= DebugLevelVerbose {
+				logger.Debug(
 					"ARP Reply",
 					"ip",
 					targetIP,
@@ -156,6 +165,7 @@ func (h *ARPHandler) buildARPReply(
 	targetMAC net.HardwareAddr,
 	targetIP net.IP,
 ) *Packet {
+	logger := slog.Default()
 	// Build Ethernet header
 	eth := &layers.Ethernet{
 		SrcMAC:       senderMAC,
@@ -167,8 +177,8 @@ func (h *ARPHandler) buildARPReply(
 	arpLayer := &layers.ARP{
 		AddrType:          layers.LinkTypeEthernet,
 		Protocol:          layers.EthernetTypeIPv4,
-		HwAddressSize:     6,
-		ProtAddressSize:   4,
+		HwAddressSize:     arpHWAddressSize,
+		ProtAddressSize:   arpProtAddressSize,
 		Operation:         layers.ARPReply,
 		SourceHwAddress:   senderMAC,
 		SourceProtAddress: senderIP.To4(),
@@ -185,8 +195,8 @@ func (h *ARPHandler) buildARPReply(
 
 	err := gopacket.SerializeLayers(buffer, opts, eth, arpLayer)
 	if err != nil {
-		if h.stack.GetDebugLevel() >= 2 {
-			slog.Debug("Error serializing ARP reply", "error", err)
+		if h.stack.GetDebugLevel() >= DebugLevelInfo {
+			logger.Debug("Error serializing ARP reply", "error", err)
 		}
 
 		return nil
@@ -210,6 +220,7 @@ func (h *ARPHandler) buildARPReply(
 
 // SendGratuitousARP sends a gratuitous ARP announcement.
 func (h *ARPHandler) SendGratuitousARP(device *config.Device) error {
+	logger := slog.Default()
 	if len(device.MACAddress) == 0 || len(device.IPAddresses) == 0 {
 		return ErrDeviceMissingMACOrIP
 	}
@@ -227,8 +238,8 @@ func (h *ARPHandler) SendGratuitousARP(device *config.Device) error {
 	arpLayer := &layers.ARP{
 		AddrType:          layers.LinkTypeEthernet,
 		Protocol:          layers.EthernetTypeIPv4,
-		HwAddressSize:     6,
-		ProtAddressSize:   4,
+		HwAddressSize:     arpHWAddressSize,
+		ProtAddressSize:   arpProtAddressSize,
 		Operation:         layers.ARPRequest,
 		SourceHwAddress:   device.MACAddress,
 		SourceProtAddress: ip.To4(),
@@ -263,8 +274,8 @@ func (h *ARPHandler) SendGratuitousARP(device *config.Device) error {
 
 	h.stack.Send(pkt)
 
-	if h.stack.GetDebugLevel() >= 3 {
-		slog.Debug("Sent gratuitous ARP", "ip", ip, "mac", device.MACAddress, "device", device.Name)
+	if h.stack.GetDebugLevel() >= DebugLevelVerbose {
+		logger.Debug("Sent gratuitous ARP", "ip", ip, "mac", device.MACAddress, "device", device.Name)
 	}
 
 	return nil

@@ -64,9 +64,9 @@ func TestGetInterface_AllInterfaces(t *testing.T) {
 
 	// Test getting each interface
 	for _, device := range devices {
-		iface, err := GetInterface(device.Name)
-		if err != nil {
-			t.Errorf("GetInterface(%s) failed: %v", device.Name, err)
+		iface, getErr := GetInterface(device.Name)
+		if getErr != nil {
+			t.Errorf("GetInterface(%s) failed: %v", device.Name, getErr)
 
 			continue
 		}
@@ -156,7 +156,7 @@ func TestGetInterface_VeryLongName(t *testing.T) {
 }
 
 // TestInterfaceExists_Concurrency tests concurrent calls.
-func TestInterfaceExists_Concurrency(t *testing.T) {
+func TestInterfaceExists_Concurrency(_ *testing.T) {
 	done := make(chan bool, 10)
 
 	// Launch multiple goroutines
@@ -228,8 +228,8 @@ func TestGetInterface_InterfaceFields(t *testing.T) {
 	}
 
 	for _, device := range devices {
-		iface, err := GetInterface(device.Name)
-		if err != nil {
+		iface, getErr := GetInterface(device.Name)
+		if getErr != nil {
 			continue
 		}
 

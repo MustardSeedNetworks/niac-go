@@ -1,4 +1,4 @@
-package api
+package httpapi
 
 import (
 	"encoding/json"
@@ -25,6 +25,9 @@ const (
 	MaxYAMLSize  = 1024 * 1024 // 1MB max YAML input
 	MaxYAMLDepth = 20          // Maximum nesting depth
 )
+
+// Device protocol collection constant.
+const deviceProtocolCapacity = 10 // Expected max protocols per device
 
 // validateYAMLInput checks YAML input for size and complexity limits.
 // SECURITY FIX #153: Prevents memory exhaustion and DoS attacks.
@@ -383,101 +386,108 @@ func (s *Server) handleDeviceCreate(w http.ResponseWriter, r *http.Request) {
 	s.writeJSON(w, resp)
 }
 
+// findDeviceIndex finds the index of a device by hostname, returns -1 if not found.
+func findDeviceIndex(devices []config.Device, hostname string) int {
+	for i, dev := range devices {
+		if dev.Name == hostname {
+			return i
+		}
+	}
+
+	return -1
+}
+
+// updateDeviceFromYAML updates a device from raw YAML content.
+func updateDeviceFromYAML(rawYAML, hostname string) (*config.Device, error) {
+	if validateErr := validateYAMLInput(rawYAML); validateErr != nil {
+		return nil, validateErr
+	}
+
+	return parseDeviceFromYAML(rawYAML, hostname)
+}
+
+// applyPartialDeviceUpdate applies partial updates to a device.
+func applyPartialDeviceUpdate(dev *config.Device, req DeviceUpdateRequest) error {
+	if req.Type != "" {
+		dev.Type = req.Type
+	}
+
+	if req.MAC != "" {
+		mac, parseErr := parseMAC(req.MAC)
+		if parseErr != nil {
+			return fmt.Errorf("invalid_mac: %w", parseErr)
+		}
+
+		dev.MACAddress = mac
+	}
+
+	if req.IP != "" {
+		ip, parseErr := parseIP(req.IP)
+		if parseErr != nil {
+			return fmt.Errorf("invalid_ip: %w", parseErr)
+		}
+
+		dev.IPAddresses = []net.IP{ip}
+	}
+
+	return nil
+}
+
 // handleDeviceUpdate updates an existing device.
 func (s *Server) handleDeviceUpdate(w http.ResponseWriter, r *http.Request, hostname string) {
 	r.Body = http.MaxBytesReader(w, r.Body, MaxRequestBodySize)
 
 	var req DeviceUpdateRequest
-	err := json.NewDecoder(r.Body).Decode(&req)
-	if err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, r, http.StatusBadRequest, "invalid_request", "Failed to parse request", nil)
-
 		return
 	}
 
 	cfg := s.currentConfig()
 	if cfg == nil {
 		writeError(w, r, http.StatusNotFound, "config_not_found", "No configuration loaded", nil)
-
 		return
 	}
 
-	// Find device index
-	deviceIdx := -1
-
-	for i, dev := range cfg.Devices {
-		if dev.Name == hostname {
-			deviceIdx = i
-
-			break
-		}
-	}
-
+	deviceIdx := findDeviceIndex(cfg.Devices, hostname)
 	if deviceIdx == -1 {
 		writeError(w, r, http.StatusNotFound, "device_not_found",
 			fmt.Sprintf("Device '%s' not found", hostname), nil)
-
 		return
 	}
 
-	// Update device
 	newCfg := *cfg
 
 	if req.RawYAML != "" {
-		// SECURITY FIX #153: Validate YAML input before parsing
-		if validateErr := validateYAMLInput(req.RawYAML); validateErr != nil {
-			writeError(w, r, http.StatusBadRequest, "invalid_yaml", validateErr.Error(), nil)
-
-			return
-		}
-
-		// Parse into device structure (includes depth validation)
-		updatedDevice, parseErr := parseDeviceFromYAML(req.RawYAML, hostname)
+		updatedDevice, parseErr := updateDeviceFromYAML(req.RawYAML, hostname)
 		if parseErr != nil {
 			writeError(w, r, http.StatusBadRequest, "parse_failed", parseErr.Error(), nil)
-
 			return
 		}
 
 		newCfg.Devices[deviceIdx] = *updatedDevice
 	} else {
-		// Partial update
-		dev := &newCfg.Devices[deviceIdx]
-		if req.Type != "" {
-			dev.Type = req.Type
-		}
+		if err := applyPartialDeviceUpdate(&newCfg.Devices[deviceIdx], req); err != nil {
+			errMsg := err.Error()
 
-		if req.MAC != "" {
-			mac, parseErr := parseMAC(req.MAC)
-			if parseErr != nil {
-				writeError(w, r, http.StatusBadRequest, "invalid_mac", parseErr.Error(), nil)
-
-				return
+			switch {
+			case strings.HasPrefix(errMsg, "invalid_mac:"):
+				writeError(w, r, http.StatusBadRequest, "invalid_mac", strings.TrimPrefix(errMsg, "invalid_mac: "), nil)
+			case strings.HasPrefix(errMsg, "invalid_ip:"):
+				writeError(w, r, http.StatusBadRequest, "invalid_ip", strings.TrimPrefix(errMsg, "invalid_ip: "), nil)
+			default:
+				writeError(w, r, http.StatusBadRequest, "update_failed", errMsg, nil)
 			}
 
-			dev.MACAddress = mac
-		}
-
-		if req.IP != "" {
-			ip, parseErr := parseIP(req.IP)
-			if parseErr != nil {
-				writeError(w, r, http.StatusBadRequest, "invalid_ip", parseErr.Error(), nil)
-
-				return
-			}
-
-			dev.IPAddresses = []net.IP{ip}
+			return
 		}
 	}
 
-	err = s.saveConfig(&newCfg)
-	if err != nil {
+	if err := s.saveConfig(&newCfg); err != nil {
 		writeError(w, r, http.StatusInternalServerError, "save_failed", "Failed to save configuration", nil)
-
 		return
 	}
 
-	// Broadcast change via WebSocket
 	if s.sseHub != nil {
 		s.sseHub.BroadcastLog("info", "Device updated: "+hostname)
 	}
@@ -649,204 +659,226 @@ func (s *Server) saveConfig(cfg *config.Config) error {
 	return nil
 }
 
+// collectDeviceProtocols returns a list of enabled protocols for a device.
+func collectDeviceProtocols(dev *config.Device) []string {
+	protocols := make([]string, 0, deviceProtocolCapacity)
+
+	if dev.SNMPConfig.Community != "" || dev.SNMPConfig.WalkFile != "" {
+		protocols = append(protocols, "SNMP")
+	}
+
+	if dev.DHCPConfig != nil {
+		protocols = append(protocols, "DHCP")
+	}
+
+	if dev.DNSConfig != nil {
+		protocols = append(protocols, "DNS")
+	}
+
+	if dev.HTTPConfig != nil {
+		protocols = append(protocols, "HTTP")
+	}
+
+	if dev.FTPConfig != nil {
+		protocols = append(protocols, "FTP")
+	}
+
+	if dev.LLDPConfig != nil && dev.LLDPConfig.Enabled {
+		protocols = append(protocols, "LLDP")
+	}
+
+	if dev.CDPConfig != nil && dev.CDPConfig.Enabled {
+		protocols = append(protocols, "CDP")
+	}
+
+	if dev.NetBIOSConfig != nil && dev.NetBIOSConfig.Enabled {
+		protocols = append(protocols, "NetBIOS")
+	}
+
+	if dev.STPConfig != nil && dev.STPConfig.Enabled {
+		protocols = append(protocols, "STP")
+	}
+
+	return protocols
+}
+
+// buildSNMPAgentResponse creates an SNMPAgentResponse from device config.
+func buildSNMPAgentResponse(dev *config.Device) *SNMPAgentResponse {
+	if dev.SNMPConfig.Community == "" && dev.SNMPConfig.WalkFile == "" {
+		return nil
+	}
+
+	resp := &SNMPAgentResponse{
+		Enabled:     true,
+		Community:   dev.SNMPConfig.Community,
+		SysName:     dev.SNMPConfig.SysName,
+		SysLocation: dev.SNMPConfig.SysLocation,
+		SysDescr:    dev.SNMPConfig.SysDescr,
+		SysContact:  dev.SNMPConfig.SysContact,
+		WalkFile:    dev.SNMPConfig.WalkFile,
+	}
+
+	if len(dev.SNMPConfig.AddMibs) > 0 {
+		resp.AddMibs = make([]AddMibResponse, 0, len(dev.SNMPConfig.AddMibs))
+		for _, mib := range dev.SNMPConfig.AddMibs {
+			resp.AddMibs = append(resp.AddMibs, AddMibResponse{
+				OID:   mib.OID,
+				Type:  mib.Type,
+				Value: mib.Value,
+			})
+		}
+	}
+
+	return resp
+}
+
+// buildDHCPResponse creates a DHCPResponse from device config.
+func buildDHCPResponse(dev *config.Device) *DHCPResponse {
+	if dev.DHCPConfig == nil {
+		return nil
+	}
+
+	resp := &DHCPResponse{Enabled: true}
+
+	if dev.DHCPConfig.PoolStart != nil {
+		resp.PoolStart = dev.DHCPConfig.PoolStart.String()
+	}
+
+	if dev.DHCPConfig.PoolEnd != nil {
+		resp.PoolEnd = dev.DHCPConfig.PoolEnd.String()
+	}
+
+	if dev.DHCPConfig.SubnetMask != nil {
+		resp.SubnetMask = net.IP(dev.DHCPConfig.SubnetMask).String()
+	}
+
+	if dev.DHCPConfig.Router != nil {
+		resp.Router = dev.DHCPConfig.Router.String()
+	}
+
+	resp.DNS = make([]string, 0, len(dev.DHCPConfig.DomainNameServer))
+	for _, dns := range dev.DHCPConfig.DomainNameServer {
+		resp.DNS = append(resp.DNS, dns.String())
+	}
+
+	return resp
+}
+
+// buildTrafficConfigResponse creates a TrafficConfigResponse from device config.
+func buildTrafficConfigResponse(dev *config.Device) *TrafficConfigResponse {
+	if dev.TrafficConfig == nil || !dev.TrafficConfig.Enabled {
+		return nil
+	}
+
+	tc := &TrafficConfigResponse{Enabled: true}
+
+	if dev.TrafficConfig.ARPAnnouncements != nil {
+		tc.ARPEnabled = dev.TrafficConfig.ARPAnnouncements.Enabled
+		tc.ARPInterval = dev.TrafficConfig.ARPAnnouncements.Interval
+	}
+
+	if dev.TrafficConfig.PeriodicPings != nil {
+		tc.PingEnabled = dev.TrafficConfig.PeriodicPings.Enabled
+		tc.PingInterval = dev.TrafficConfig.PeriodicPings.Interval
+		tc.PingPayloadSize = dev.TrafficConfig.PeriodicPings.PayloadSize
+	}
+
+	return tc
+}
+
+// populateProtocolDetails fills in protocol detail fields on DeviceResponse.
+func populateProtocolDetails(resp *DeviceResponse, dev *config.Device) {
+	resp.SNMPAgent = buildSNMPAgentResponse(dev)
+
+	if dev.CDPConfig != nil && dev.CDPConfig.Enabled {
+		resp.CDP = &CDPResponse{
+			Enabled:         true,
+			Platform:        dev.CDPConfig.Platform,
+			SoftwareVersion: dev.CDPConfig.SoftwareVersion,
+			PortID:          dev.CDPConfig.PortID,
+			Version:         dev.CDPConfig.Version,
+			Holdtime:        dev.CDPConfig.Holdtime,
+		}
+	}
+
+	if dev.LLDPConfig != nil && dev.LLDPConfig.Enabled {
+		resp.LLDP = &LLDPResponse{
+			Enabled:           true,
+			ChassisIDType:     dev.LLDPConfig.ChassisIDType,
+			PortDescription:   dev.LLDPConfig.PortDescription,
+			SystemDescription: dev.LLDPConfig.SystemDescription,
+			TTL:               dev.LLDPConfig.TTL,
+		}
+	}
+
+	resp.DHCP = buildDHCPResponse(dev)
+
+	if dev.DNSConfig != nil {
+		resp.DNS = &DNSResponse{
+			Enabled: true,
+			Records: len(dev.DNSConfig.ForwardRecords) + len(dev.DNSConfig.ReverseRecords),
+		}
+	}
+
+	if dev.HTTPConfig != nil && dev.HTTPConfig.Enabled {
+		resp.HTTP = &HTTPResponse{
+			Enabled:       true,
+			ServerName:    dev.HTTPConfig.ServerName,
+			EndpointCount: len(dev.HTTPConfig.Endpoints),
+		}
+	}
+
+	if dev.FTPConfig != nil && dev.FTPConfig.Enabled {
+		resp.FTP = &FTPResponse{
+			Enabled:        true,
+			WelcomeBanner:  dev.FTPConfig.WelcomeBanner,
+			AllowAnonymous: dev.FTPConfig.AllowAnonymous,
+		}
+	}
+
+	if dev.NetBIOSConfig != nil && dev.NetBIOSConfig.Enabled {
+		resp.NetBIOS = &NetBIOSResponse{
+			Enabled:   true,
+			Name:      dev.NetBIOSConfig.Name,
+			Workgroup: dev.NetBIOSConfig.Workgroup,
+		}
+	}
+
+	if dev.STPConfig != nil && dev.STPConfig.Enabled {
+		resp.STP = &STPResponse{
+			Enabled:  true,
+			Priority: dev.STPConfig.BridgePriority,
+		}
+	}
+
+	resp.TrafficConfig = buildTrafficConfigResponse(dev)
+}
+
 // deviceToResponse converts a Device to DeviceResponse.
 func deviceToResponse(dev *config.Device, includeDetails, includeYAML bool) DeviceResponse {
 	resp := DeviceResponse{
 		Hostname:  dev.Name,
 		Type:      dev.Type,
 		VLAN:      dev.VLAN,
-		Protocols: []string{},
+		Protocols: collectDeviceProtocols(dev),
 	}
 
-	// MAC address
 	if dev.MACAddress != nil {
 		resp.MAC = dev.MACAddress.String()
 	}
 
-	// IP addresses
 	resp.IPs = make([]string, 0, len(dev.IPAddresses))
 	for _, ip := range dev.IPAddresses {
 		resp.IPs = append(resp.IPs, ip.String())
 	}
 
-	// Interfaces
 	resp.Interfaces = make([]string, 0, len(dev.Interfaces))
 	for _, iface := range dev.Interfaces {
 		resp.Interfaces = append(resp.Interfaces, iface.Name)
 	}
 
-	// Collect protocols
-	if dev.SNMPConfig.Community != "" || dev.SNMPConfig.WalkFile != "" {
-		resp.Protocols = append(resp.Protocols, "SNMP")
-	}
-
-	if dev.DHCPConfig != nil {
-		resp.Protocols = append(resp.Protocols, "DHCP")
-	}
-
-	if dev.DNSConfig != nil {
-		resp.Protocols = append(resp.Protocols, "DNS")
-	}
-
-	if dev.HTTPConfig != nil {
-		resp.Protocols = append(resp.Protocols, "HTTP")
-	}
-
-	if dev.FTPConfig != nil {
-		resp.Protocols = append(resp.Protocols, "FTP")
-	}
-
-	if dev.LLDPConfig != nil && dev.LLDPConfig.Enabled {
-		resp.Protocols = append(resp.Protocols, "LLDP")
-	}
-
-	if dev.CDPConfig != nil && dev.CDPConfig.Enabled {
-		resp.Protocols = append(resp.Protocols, "CDP")
-	}
-
-	if dev.NetBIOSConfig != nil && dev.NetBIOSConfig.Enabled {
-		resp.Protocols = append(resp.Protocols, "NetBIOS")
-	}
-
-	if dev.STPConfig != nil && dev.STPConfig.Enabled {
-		resp.Protocols = append(resp.Protocols, "STP")
-	}
-
 	if includeDetails {
-		// SNMP Agent details
-		if dev.SNMPConfig.Community != "" || dev.SNMPConfig.WalkFile != "" {
-			resp.SNMPAgent = &SNMPAgentResponse{
-				Enabled:     true,
-				Community:   dev.SNMPConfig.Community,
-				SysName:     dev.SNMPConfig.SysName,
-				SysLocation: dev.SNMPConfig.SysLocation,
-				SysDescr:    dev.SNMPConfig.SysDescr,
-				SysContact:  dev.SNMPConfig.SysContact,
-				WalkFile:    dev.SNMPConfig.WalkFile,
-			}
-			if len(dev.SNMPConfig.AddMibs) > 0 {
-				resp.SNMPAgent.AddMibs = make([]AddMibResponse, 0, len(dev.SNMPConfig.AddMibs))
-				for _, mib := range dev.SNMPConfig.AddMibs {
-					resp.SNMPAgent.AddMibs = append(resp.SNMPAgent.AddMibs, AddMibResponse{
-						OID:   mib.OID,
-						Type:  mib.Type,
-						Value: mib.Value,
-					})
-				}
-			}
-		}
-
-		// CDP details
-		if dev.CDPConfig != nil && dev.CDPConfig.Enabled {
-			resp.CDP = &CDPResponse{
-				Enabled:         true,
-				Platform:        dev.CDPConfig.Platform,
-				SoftwareVersion: dev.CDPConfig.SoftwareVersion,
-				PortID:          dev.CDPConfig.PortID,
-				Version:         dev.CDPConfig.Version,
-				Holdtime:        dev.CDPConfig.Holdtime,
-			}
-		}
-
-		// LLDP details
-		if dev.LLDPConfig != nil && dev.LLDPConfig.Enabled {
-			resp.LLDP = &LLDPResponse{
-				Enabled:           true,
-				ChassisIDType:     dev.LLDPConfig.ChassisIDType,
-				PortDescription:   dev.LLDPConfig.PortDescription,
-				SystemDescription: dev.LLDPConfig.SystemDescription,
-				TTL:               dev.LLDPConfig.TTL,
-			}
-		}
-
-		// DHCP details
-		if dev.DHCPConfig != nil {
-			resp.DHCP = &DHCPResponse{
-				Enabled: true,
-			}
-			if dev.DHCPConfig.PoolStart != nil {
-				resp.DHCP.PoolStart = dev.DHCPConfig.PoolStart.String()
-			}
-
-			if dev.DHCPConfig.PoolEnd != nil {
-				resp.DHCP.PoolEnd = dev.DHCPConfig.PoolEnd.String()
-			}
-
-			if dev.DHCPConfig.SubnetMask != nil {
-				resp.DHCP.SubnetMask = net.IP(dev.DHCPConfig.SubnetMask).String()
-			}
-
-			if dev.DHCPConfig.Router != nil {
-				resp.DHCP.Router = dev.DHCPConfig.Router.String()
-			}
-
-			resp.DHCP.DNS = make([]string, 0, len(dev.DHCPConfig.DomainNameServer))
-			for _, dns := range dev.DHCPConfig.DomainNameServer {
-				resp.DHCP.DNS = append(resp.DHCP.DNS, dns.String())
-			}
-		}
-
-		// DNS details
-		if dev.DNSConfig != nil {
-			resp.DNS = &DNSResponse{
-				Enabled: true,
-				Records: len(dev.DNSConfig.ForwardRecords) + len(dev.DNSConfig.ReverseRecords),
-			}
-		}
-
-		// HTTP details
-		if dev.HTTPConfig != nil && dev.HTTPConfig.Enabled {
-			resp.HTTP = &HTTPResponse{
-				Enabled:       true,
-				ServerName:    dev.HTTPConfig.ServerName,
-				EndpointCount: len(dev.HTTPConfig.Endpoints),
-			}
-		}
-
-		// FTP details
-		if dev.FTPConfig != nil && dev.FTPConfig.Enabled {
-			resp.FTP = &FTPResponse{
-				Enabled:        true,
-				WelcomeBanner:  dev.FTPConfig.WelcomeBanner,
-				AllowAnonymous: dev.FTPConfig.AllowAnonymous,
-			}
-		}
-
-		// NetBIOS details
-		if dev.NetBIOSConfig != nil && dev.NetBIOSConfig.Enabled {
-			resp.NetBIOS = &NetBIOSResponse{
-				Enabled:   true,
-				Name:      dev.NetBIOSConfig.Name,
-				Workgroup: dev.NetBIOSConfig.Workgroup,
-			}
-		}
-
-		// STP details
-		if dev.STPConfig != nil && dev.STPConfig.Enabled {
-			resp.STP = &STPResponse{
-				Enabled:  true,
-				Priority: dev.STPConfig.BridgePriority,
-			}
-		}
-
-		// Traffic config details
-		if dev.TrafficConfig != nil && dev.TrafficConfig.Enabled {
-			tc := &TrafficConfigResponse{
-				Enabled: true,
-			}
-			if dev.TrafficConfig.ARPAnnouncements != nil {
-				tc.ARPEnabled = dev.TrafficConfig.ARPAnnouncements.Enabled
-				tc.ARPInterval = dev.TrafficConfig.ARPAnnouncements.Interval
-			}
-
-			if dev.TrafficConfig.PeriodicPings != nil {
-				tc.PingEnabled = dev.TrafficConfig.PeriodicPings.Enabled
-				tc.PingInterval = dev.TrafficConfig.PeriodicPings.Interval
-				tc.PingPayloadSize = dev.TrafficConfig.PeriodicPings.PayloadSize
-			}
-
-			resp.TrafficConfig = tc
-		}
+		populateProtocolDetails(&resp, dev)
 	}
 
 	if includeYAML {

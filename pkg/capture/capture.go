@@ -14,7 +14,16 @@ import (
 	"github.com/google/gopacket/pcap"
 )
 
-// Sentinel errors for capture package.
+// Capture engine constants.
+const (
+	snapshotLength    = 1600 // pcap snapshot length in bytes
+	captureTimeoutMs  = 100  // capture timeout for responsive shutdown
+	debugLevelVerbose = 3    // debug level for verbose packet logging
+	macAddressSize    = 6    // MAC/hardware address size in bytes
+	ipv4AddressSize   = 4    // IPv4 protocol address size in bytes
+)
+
+// ErrNoMACAddressFound is returned when an interface has no MAC address.
 var ErrNoMACAddressFound = errors.New("no MAC address found for interface")
 
 // Engine handles packet capture and injection.
@@ -30,9 +39,9 @@ func New(interfaceName string, debugLevel int) (*Engine, error) {
 	// Use 100ms timeout to allow responsive shutdown on Ctrl+C
 	handle, err := pcap.OpenLive(
 		interfaceName,
-		1600,                 // snapshot length
-		true,                 // promiscuous mode
-		100*time.Millisecond, // timeout for responsive shutdown
+		snapshotLength,                    // snapshot length
+		true,                              // promiscuous mode
+		captureTimeoutMs*time.Millisecond, // timeout for responsive shutdown
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open interface %s: %w", interfaceName, err)
@@ -59,8 +68,9 @@ func (e *Engine) SendPacket(packet []byte) error {
 		return fmt.Errorf("failed to send packet: %w", err)
 	}
 
-	if e.debugLevel >= 3 {
-		slog.Debug("Sent packet", "bytes", len(packet))
+	if e.debugLevel >= debugLevelVerbose {
+		logger := slog.Default()
+		logger.Debug("Sent packet", "bytes", len(packet))
 	}
 
 	return nil
@@ -119,7 +129,8 @@ func (e *Engine) StartCapture(handler func(gopacket.Packet)) error {
 	packetSource := gopacket.NewPacketSource(e.handle, e.handle.LinkType())
 
 	if e.debugLevel >= 1 {
-		slog.Info("Started packet capture", "interface", e.interfaceName)
+		logger := slog.Default()
+		logger.Info("Started packet capture", "interface", e.interfaceName)
 	}
 
 	for packet := range packetSource.Packets() {
@@ -157,8 +168,8 @@ func (e *Engine) SendARP(srcMAC, dstMAC []byte, srcIP, dstIP string, isRequest b
 	arp := &layers.ARP{
 		AddrType:          layers.LinkTypeEthernet,
 		Protocol:          layers.EthernetTypeIPv4,
-		HwAddressSize:     6,
-		ProtAddressSize:   4,
+		HwAddressSize:     macAddressSize,
+		ProtAddressSize:   ipv4AddressSize,
 		Operation:         operation,
 		SourceHwAddress:   srcMAC,
 		SourceProtAddress: []byte(srcIP),
@@ -195,7 +206,7 @@ func (e *Engine) GetInterfaceMAC() ([]byte, error) {
 
 	// Get first MAC address from interface
 	for _, addr := range iface.Addresses {
-		if len(addr.Broadaddr) == 6 {
+		if len(addr.Broadaddr) == macAddressSize {
 			return addr.Broadaddr, nil
 		}
 	}

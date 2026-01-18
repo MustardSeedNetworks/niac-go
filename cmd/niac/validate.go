@@ -10,15 +10,18 @@ import (
 	"github.com/krisarmstrong/niac-go/pkg/logging"
 )
 
-var (
-	validateVerbose bool
-	validateJSON    bool
-)
+type validateOptions struct {
+	verbose bool
+	json    bool
+}
 
-var validateCmd = &cobra.Command{
-	Use:   "validate <config-file>",
-	Short: "Validate a NIAC configuration file",
-	Long: `Validate a NIAC configuration file for errors and warnings.
+func addValidateCommand(root *cobra.Command, _ *serviceOptions) {
+	options := new(validateOptions)
+
+	validateCmd := &cobra.Command{
+		Use:   "validate <config-file>",
+		Short: "Validate a NIAC configuration file",
+		Long: `Validate a NIAC configuration file for errors and warnings.
 
 This command performs comprehensive validation including:
 - Device name uniqueness
@@ -31,7 +34,7 @@ This command performs comprehensive validation including:
 Exit codes:
   0 - Configuration is valid
   1 - Configuration has errors`,
-	Example: `  # Validate a configuration file
+		Example: `  # Validate a configuration file
   niac validate config.yaml
 
   # Verbose output with details
@@ -47,17 +50,45 @@ Exit codes:
     echo "Config validation failed!"
     exit 1
   fi`,
-	Args: cobra.ExactArgs(1),
-	Run:  runValidate,
+		Args: cobra.ExactArgs(1),
+		Run: func(_ *cobra.Command, args []string) {
+			runValidate(args, options)
+		},
+	}
+
+	validateCmd.Flags().BoolVarP(&options.verbose, "verbose", "v", false, "Show detailed validation information")
+	validateCmd.Flags().BoolVar(&options.json, "json", false, "Output validation results as JSON")
+
+	root.AddCommand(validateCmd)
 }
 
-func init() {
-	rootCmd.AddCommand(validateCmd)
-	validateCmd.Flags().BoolVarP(&validateVerbose, "verbose", "v", false, "Show detailed validation information")
-	validateCmd.Flags().BoolVar(&validateJSON, "json", false, "Output validation results as JSON")
+// outputJSONResult outputs validation results as JSON.
+func outputJSONResult(result *config.ListError) {
+	jsonOutput, jsonErr := result.ToJSON()
+	if jsonErr != nil {
+		logging.Errorf("Failed to generate JSON output: %v", jsonErr)
+		os.Exit(1)
+	}
+
+	fmt.Fprintln(os.Stdout, jsonOutput)
 }
 
-func runValidate(cmd *cobra.Command, args []string) {
+// outputTextResult outputs validation results as human-readable text.
+func outputTextResult(result *config.ListError, configFile string, verbose bool, deviceCount int) {
+	if result.HasErrors() || result.HasWarnings() {
+		fmt.Fprintln(os.Stdout, result.Format())
+
+		return
+	}
+
+	logging.Successf("Configuration is valid: %s", configFile)
+
+	if verbose {
+		fmt.Fprintf(os.Stdout, "\nDevices: %d\n", deviceCount)
+	}
+}
+
+func runValidate(args []string, options *validateOptions) {
 	configFile := args[0]
 
 	// Check if file exists
@@ -78,22 +109,10 @@ func runValidate(cmd *cobra.Command, args []string) {
 	result := validator.Validate(cfg)
 
 	// Output results
-	if validateJSON {
-		jsonOutput, jsonErr := result.ToJSON()
-		if jsonErr != nil {
-			logging.Errorf("Failed to generate JSON output: %v", jsonErr)
-			os.Exit(1)
-		}
-		fmt.Println(jsonOutput)
+	if options.json {
+		outputJSONResult(result)
 	} else {
-		if result.HasErrors() || result.HasWarnings() {
-			fmt.Println(result.Format())
-		} else {
-			logging.Successf("Configuration is valid: %s", configFile)
-			if validateVerbose {
-				fmt.Printf("\nDevices: %d\n", len(cfg.Devices))
-			}
-		}
+		outputTextResult(result, configFile, options.verbose, len(cfg.Devices))
 	}
 
 	// Exit with appropriate code

@@ -14,8 +14,6 @@ type serviceOptions struct {
 	alertWebhook          string
 }
 
-var servicesOpts serviceOptions
-
 func defaultStoragePath() string {
 	home, err := os.UserHomeDir()
 	if err != nil || home == "" {
@@ -24,8 +22,11 @@ func defaultStoragePath() string {
 	return filepath.Join(home, ".niac", "niac.db")
 }
 
-func resolveServiceDefaults() {
-	if servicesOpts.storagePath == "" {
-		servicesOpts.storagePath = defaultStoragePath()
+func resolveServiceDefaults(services *serviceOptions) {
+	if services == nil {
+		return
+	}
+	if services.storagePath == "" {
+		services.storagePath = defaultStoragePath()
 	}
 }

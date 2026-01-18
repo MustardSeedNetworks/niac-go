@@ -1,4 +1,4 @@
-package api
+package httpapi
 
 import (
 	"fmt"
@@ -6,6 +6,12 @@ import (
 	"strings"
 
 	"github.com/krisarmstrong/niac-go/pkg/config"
+)
+
+// VLAN display formatting constants.
+const (
+	vlanDisplayThreshold = 3 // max VLANs to show individually before summarizing
+	vlanRangeEndpoints   = 2 // number of endpoints shown in range (first and last)
 )
 
 // Topology describes a simple graph for visualization.
@@ -36,19 +42,100 @@ type TopologyLink struct {
 	Utilization     float64 `json:"utilization_percent,omitempty"`
 }
 
-// BuildTopology derives a topology graph from the configuration.
-func BuildTopology(cfg *config.Config) Topology {
-	nodes := make(map[string]TopologyNode)
-	links := make([]TopologyLink, 0)
-
-	// Create interface lookup map for speed/duplex/status info
+// buildInterfaceMap creates a lookup map of device interfaces.
+func buildInterfaceMap(devices []config.Device) map[string]map[string]config.Interface {
 	interfaceMap := make(map[string]map[string]config.Interface)
-	for _, dev := range cfg.Devices {
+	for _, dev := range devices {
 		interfaceMap[dev.Name] = make(map[string]config.Interface)
 		for _, iface := range dev.Interfaces {
 			interfaceMap[dev.Name][iface.Name] = iface
 		}
 	}
+
+	return interfaceMap
+}
+
+// determineLinkType determines the type of a trunk link.
+func determineLinkType(trunk config.TrunkPort) string {
+	if len(trunk.VLANs) == 1 {
+		return "access"
+	}
+
+	lowerIface := strings.ToLower(trunk.Interface)
+	if strings.Contains(lowerIface, "port-channel") || strings.Contains(lowerIface, "po") {
+		return "lag"
+	}
+
+	return "trunk"
+}
+
+// buildTrunkLabel creates the label for a trunk link.
+func buildTrunkLabel(trunk config.TrunkPort) string {
+	label := trunk.Interface
+	if trunk.RemoteInterface != "" {
+		label += " ↔ " + trunk.RemoteInterface
+	}
+
+	if len(trunk.VLANs) > 0 {
+		label += fmt.Sprintf(" (VLANs: %s)", formatVLANList(trunk.VLANs))
+	}
+
+	return label
+}
+
+// getInterfaceDetails retrieves speed, duplex, and status from interface map.
+func getInterfaceDetails(
+	interfaceMap map[string]map[string]config.Interface,
+	deviceName, ifaceName string,
+) (int, string, string) {
+	const defaultStatus = "up"
+
+	iface, ok := interfaceMap[deviceName][ifaceName]
+	if !ok {
+		return 0, "", defaultStatus
+	}
+
+	status := defaultStatus
+	if iface.AdminStatus != "" {
+		status = iface.AdminStatus
+	}
+
+	if iface.OperStatus != "" {
+		status = iface.OperStatus
+	}
+
+	return iface.Speed, iface.Duplex, status
+}
+
+// processTrunkPort creates a TopologyLink from a trunk port configuration.
+func processTrunkPort(
+	trunk config.TrunkPort,
+	deviceName string,
+	interfaceMap map[string]map[string]config.Interface,
+) TopologyLink {
+	speed, duplex, status := getInterfaceDetails(interfaceMap, deviceName, trunk.Interface)
+
+	return TopologyLink{
+		Source:          deviceName,
+		Target:          trunk.RemoteDevice,
+		Label:           buildTrunkLabel(trunk),
+		SourceInterface: trunk.Interface,
+		TargetInterface: trunk.RemoteInterface,
+		LinkType:        determineLinkType(trunk),
+		VLANs:           trunk.VLANs,
+		NativeVLAN:      trunk.NativeVLAN,
+		Speed:           speed,
+		Duplex:          duplex,
+		Status:          status,
+		Utilization:     0.0,
+	}
+}
+
+// BuildTopology derives a topology graph from the configuration.
+func BuildTopology(cfg *config.Config) Topology {
+	nodes := make(map[string]TopologyNode)
+	links := make([]TopologyLink, 0)
+	interfaceMap := buildInterfaceMap(cfg.Devices)
 
 	for _, dev := range cfg.Devices {
 		nodes[dev.Name] = TopologyNode{
@@ -68,60 +155,7 @@ func BuildTopology(cfg *config.Config) Topology {
 				}
 			}
 
-			// Build label with VLAN info
-			label := trunk.Interface
-			if trunk.RemoteInterface != "" {
-				label += " ↔ " + trunk.RemoteInterface
-			}
-
-			if len(trunk.VLANs) > 0 {
-				label += fmt.Sprintf(" (VLANs: %s)", formatVLANList(trunk.VLANs))
-			}
-
-			// Determine link type
-			linkType := "trunk"
-			if len(trunk.VLANs) == 1 {
-				linkType = "access"
-			} else if strings.Contains(strings.ToLower(trunk.Interface), "port-channel") ||
-				strings.Contains(strings.ToLower(trunk.Interface), "po") {
-				linkType = "lag"
-			}
-
-			// Get interface details if available
-			var (
-				speed  int
-				duplex string
-			)
-
-			status := "up" // Default to up
-
-			if iface, ok := interfaceMap[dev.Name][trunk.Interface]; ok {
-				speed = iface.Speed
-
-				duplex = iface.Duplex
-				if iface.AdminStatus != "" {
-					status = iface.AdminStatus
-				}
-
-				if iface.OperStatus != "" {
-					status = iface.OperStatus
-				}
-			}
-
-			links = append(links, TopologyLink{
-				Source:          dev.Name,
-				Target:          trunk.RemoteDevice,
-				Label:           label,
-				SourceInterface: trunk.Interface,
-				TargetInterface: trunk.RemoteInterface,
-				LinkType:        linkType,
-				VLANs:           trunk.VLANs,
-				NativeVLAN:      trunk.NativeVLAN,
-				Speed:           speed,
-				Duplex:          duplex,
-				Status:          status,
-				Utilization:     0.0, // Could be enhanced with real-time metrics later
-			})
+			links = append(links, processTrunkPort(trunk, dev.Name, interfaceMap))
 		}
 	}
 
@@ -146,7 +180,7 @@ func formatVLANList(vlans []int) string {
 		return strconv.Itoa(vlans[0])
 	}
 
-	if len(vlans) <= 3 {
+	if len(vlans) <= vlanDisplayThreshold {
 		// Show all for small lists
 		parts := make([]string, len(vlans))
 		for i, v := range vlans {
@@ -156,7 +190,7 @@ func formatVLANList(vlans []int) string {
 		return strings.Join(parts, ",")
 	}
 	// For longer lists, show count
-	return fmt.Sprintf("%d-%d (+%d more)", vlans[0], vlans[len(vlans)-1], len(vlans)-2)
+	return fmt.Sprintf("%d-%d (+%d more)", vlans[0], vlans[len(vlans)-1], len(vlans)-vlanRangeEndpoints)
 }
 
 // ExportGraphML exports the topology in GraphML format (for yEd, Gephi).

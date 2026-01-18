@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
+
 	"github.com/krisarmstrong/niac-go/pkg/config"
 )
 
@@ -60,6 +61,27 @@ const (
 	NDPrefixFlagAutonomous = 0x40 // Prefix can be used for autonomous address configuration
 )
 
+// ICMPv6 encoding constants.
+const (
+	icmpv6IPv6Version       = 6       // IPv6 version field
+	icmpv6NAPayloadSize     = 32      // NA payload header (4 header + 4 flags/reserved + 16 target + 8 option)
+	icmpv6DefaultHopLimit   = 64      // Default IPv6 hop limit
+	icmpv6RABodyHeaderSize  = 12      // RA body header size
+	icmpv6DefaultRALifetime = 1800    // Default RA lifetime in seconds (30 min)
+	icmpv6OptionsCapacity   = 32      // Options initial capacity
+	icmpv6DefaultMTU        = 1500    // Default MTU value
+	icmpv6Uint32Size        = 4       // Size of uint32 in bytes
+	icmpv6PrefixInfoOptLen  = 4       // Prefix info option length in 8-byte units
+	icmpv6DefaultPrefixLen  = 64      // Default prefix length in bits
+	icmpv6ValidLifetime     = 2592000 // 30 days in seconds
+	icmpv6PreferredLifetime = 604800  // 7 days in seconds
+	icmpv6NDPHopLimit       = 255     // NDP hop limit per RFC 4861
+	icmpv6HeaderSize        = 8       // ICMPv6 header size
+	icmpv6IPv6AddrBits      = 128     // IPv6 address length in bits
+	icmpv6MaxUint16         = 65535   // Max uint16 for length fields
+	icmpv6NSMinSize         = 20      // NS minimum size (4 reserved + 16 target address)
+)
+
 // ICMPv6Handler handles ICMPv6 packets (IPv6's version of ICMP).
 type ICMPv6Handler struct {
 	stack      *Stack
@@ -83,7 +105,7 @@ func (h *ICMPv6Handler) HandlePacket(
 ) {
 	icmpv6Layer := packet.Layer(layers.LayerTypeICMPv6)
 	if icmpv6Layer == nil {
-		if h.debugLevel >= 2 {
+		if h.debugLevel >= DebugLevelInfo {
 			_, _ = fmt.Fprintf(os.Stdout, "ICMPv6 packet missing ICMPv6 layer sn=%d\n", pkt.SerialNumber)
 		}
 
@@ -95,9 +117,9 @@ func (h *ICMPv6Handler) HandlePacket(
 		return
 	}
 
-	msgType := uint8(icmpv6.TypeCode.Type())
+	msgType := icmpv6.TypeCode.Type()
 
-	if h.debugLevel >= 3 {
+	if h.debugLevel >= DebugLevelVerbose {
 		_, _ = fmt.Fprintf(os.Stdout, "ICMPv6: type %d (%s) sn=%d\n", msgType, h.getTypeName(msgType), pkt.SerialNumber)
 	}
 
@@ -117,7 +139,7 @@ func (h *ICMPv6Handler) HandlePacket(
 	case ICMPv6TypeRouterAdvertisement:
 		// Silently accept router advertisements
 	default:
-		if h.debugLevel >= 2 {
+		if h.debugLevel >= DebugLevelInfo {
 			_, _ = fmt.Fprintf(os.Stdout, "ICMPv6: Unhandled type: %d sn=%d\n", msgType, pkt.SerialNumber)
 		}
 	}
@@ -132,85 +154,118 @@ func (h *ICMPv6Handler) handleEchoRequest(
 	devices []*config.Device,
 ) {
 	if len(devices) == 0 {
-		if h.debugLevel >= 3 {
-			_, _ = fmt.Fprintf(
-				os.Stdout,
-				"ICMPv6: No device for Echo Request to %s sn=%d\n",
-				ipv6.DstIP,
-				pkt.SerialNumber,
-			)
-		}
-
+		h.logNoDeviceForEcho(ipv6, pkt)
 		return
 	}
 
-	if h.debugLevel >= 2 {
+	h.logEchoRequest(ipv6, pkt)
+
+	eth := h.extractEthernetLayer(packet)
+	if eth == nil {
+		return
+	}
+
+	for _, device := range devices {
+		h.sendEchoReply(pkt, device, ipv6, icmpv6, eth)
+	}
+}
+
+// logNoDeviceForEcho logs when no device is found for an echo request.
+func (h *ICMPv6Handler) logNoDeviceForEcho(ipv6 *layers.IPv6, pkt *Packet) {
+	if h.debugLevel >= DebugLevelVerbose {
+		_, _ = fmt.Fprintf(
+			os.Stdout,
+			"ICMPv6: No device for Echo Request to %s sn=%d\n",
+			ipv6.DstIP,
+			pkt.SerialNumber,
+		)
+	}
+}
+
+// logEchoRequest logs an incoming echo request.
+func (h *ICMPv6Handler) logEchoRequest(ipv6 *layers.IPv6, pkt *Packet) {
+	if h.debugLevel >= DebugLevelInfo {
 		_, _ = fmt.Fprintf(os.Stdout, "ICMPv6: Echo Request %s -> %s sn=%d\n", ipv6.SrcIP, ipv6.DstIP, pkt.SerialNumber)
 	}
+}
 
+// extractEthernetLayer extracts the Ethernet layer from a packet.
+func (h *ICMPv6Handler) extractEthernetLayer(packet gopacket.Packet) *layers.Ethernet {
 	ethLayer := packet.Layer(layers.LayerTypeEthernet)
 	if ethLayer == nil {
-		return
+		return nil
 	}
 
 	eth, ok := ethLayer.(*layers.Ethernet)
 	if !ok {
+		return nil
+	}
+
+	return eth
+}
+
+// sendEchoReply sends an ICMPv6 echo reply from a device.
+func (h *ICMPv6Handler) sendEchoReply(
+	pkt *Packet,
+	device *config.Device,
+	ipv6 *layers.IPv6,
+	icmpv6 *layers.ICMPv6,
+	eth *layers.Ethernet,
+) {
+	if len(device.MACAddress) == 0 {
 		return
 	}
 
-	// Send reply from each matching device
-	for _, device := range devices {
-		if len(device.MACAddress) == 0 {
-			continue
+	if !h.deviceHasIP(device, ipv6.DstIP) {
+		return
+	}
+
+	reply := &layers.ICMPv6{
+		TypeCode: layers.CreateICMPv6TypeCode(ICMPv6TypeEchoReply, 0),
+	}
+
+	err := h.sendICMPv6PacketWithDevice(
+		ipv6.DstIP,
+		ipv6.SrcIP,
+		device.MACAddress,
+		eth.SrcMAC,
+		reply,
+		icmpv6.Payload,
+		device,
+	)
+	if err != nil {
+		if h.debugLevel >= DebugLevelInfo {
+			_, _ = fmt.Fprintf(os.Stdout, "ICMPv6: Error sending Echo Reply sn=%d: %v\n", pkt.SerialNumber, err)
 		}
 
-		// Check if device has this IPv6
-		hasIP := false
+		return
+	}
 
-		for _, deviceIP := range device.IPAddresses {
-			if deviceIP.Equal(ipv6.DstIP) {
-				hasIP = true
+	h.stack.IncrementStat("icmp_replies")
+	h.logEchoReplySent(ipv6, pkt)
+}
 
-				break
-			}
+// deviceHasIP checks if a device has a specific IP address.
+func (h *ICMPv6Handler) deviceHasIP(device *config.Device, ip net.IP) bool {
+	for _, deviceIP := range device.IPAddresses {
+		if deviceIP.Equal(ip) {
+			return true
 		}
+	}
 
-		if !hasIP {
-			continue
-		}
+	return false
+}
 
-		reply := &layers.ICMPv6{
-			TypeCode: layers.CreateICMPv6TypeCode(ICMPv6TypeEchoReply, 0),
-		}
-
-		err := h.sendICMPv6PacketWithDevice(
+// logEchoReplySent logs when an echo reply is sent.
+func (h *ICMPv6Handler) logEchoReplySent(ipv6 *layers.IPv6, pkt *Packet) {
+	if h.debugLevel >= DebugLevelInfo {
+		_, _ = fmt.Fprintf(
+			os.Stdout,
+			"ICMPv6: Sent Echo Reply %s -> %s sn=%d\n",
 			ipv6.DstIP,
 			ipv6.SrcIP,
-			device.MACAddress,
-			eth.SrcMAC,
-			reply,
-			icmpv6.Payload,
-			device, // Pass device for config
+			pkt.SerialNumber,
 		)
-		if err != nil {
-			if h.debugLevel >= 2 {
-				_, _ = fmt.Fprintf(os.Stdout, "ICMPv6: Error sending Echo Reply sn=%d: %v\n", pkt.SerialNumber, err)
-			}
-
-			return
-		}
-
-		h.stack.IncrementStat("icmp_replies")
-
-		if h.debugLevel >= 2 {
-			_, _ = fmt.Fprintf(
-				os.Stdout,
-				"ICMPv6: Sent Echo Reply %s -> %s sn=%d\n",
-				ipv6.DstIP,
-				ipv6.SrcIP,
-				pkt.SerialNumber,
-			)
-		}
 	}
 }
 
@@ -228,8 +283,8 @@ func (h *ICMPv6Handler) handleNeighborSolicitation(pkt *Packet, packet gopacket.
 
 	// Parse NS message: Type(1) | Code(1) | Checksum(2) | Reserved(4) | Target Address(16) | Options...
 	data := packet.ApplicationLayer().Payload()
-	if len(data) < 20 {
-		if h.debugLevel >= 2 {
+	if len(data) < icmpv6NSMinSize {
+		if h.debugLevel >= DebugLevelInfo {
 			_, _ = fmt.Fprintf(os.Stdout, "ICMPv6: NS too short sn=%d\n", pkt.SerialNumber)
 		}
 
@@ -239,14 +294,14 @@ func (h *ICMPv6Handler) handleNeighborSolicitation(pkt *Packet, packet gopacket.
 	// Extract target IPv6 address (bytes 4-20)
 	targetIP := net.IP(data[4:20])
 
-	if h.debugLevel >= 2 {
+	if h.debugLevel >= DebugLevelInfo {
 		_, _ = fmt.Fprintf(os.Stdout, "ICMPv6: NS for %s from %s sn=%d\n", targetIP, ipv6.SrcIP, pkt.SerialNumber)
 	}
 
 	// Find device with target IPv6
 	devices := h.stack.devices.GetByIPv6(targetIP)
 	if len(devices) == 0 {
-		if h.debugLevel >= 3 {
+		if h.debugLevel >= DebugLevelVerbose {
 			_, _ = fmt.Fprintf(os.Stdout, "ICMPv6: No device for target %s sn=%d\n", targetIP, pkt.SerialNumber)
 		}
 
@@ -257,14 +312,14 @@ func (h *ICMPv6Handler) handleNeighborSolicitation(pkt *Packet, packet gopacket.
 	for _, device := range devices {
 		err := h.sendNeighborAdvertisement(device, ipv6.SrcIP, eth.SrcMAC, targetIP)
 		if err != nil {
-			if h.debugLevel >= 2 {
+			if h.debugLevel >= DebugLevelInfo {
 				_, _ = fmt.Fprintf(os.Stdout, "ICMPv6: Error sending NA sn=%d: %v\n", pkt.SerialNumber, err)
 			}
 
 			continue
 		}
 
-		if h.debugLevel >= 2 {
+		if h.debugLevel >= DebugLevelInfo {
 			_, _ = fmt.Fprintf(
 				os.Stdout,
 				"ICMPv6: Sent NA for %s (MAC: %s) sn=%d\n",
@@ -282,7 +337,7 @@ func (h *ICMPv6Handler) sendNeighborAdvertisement(device *config.Device, dstIP n
 ) error {
 	// Build Neighbor Advertisement message
 	// Format: Type(1) | Code(1) | Checksum(2) | Flags(1) | Reserved(3) | Target Address(16) | Options...
-	payloadHeader := make([]byte, 24) // 4 header + 4 flags/reserved + 16 target
+	payloadHeader := make([]byte, icmpv6NAPayloadSize) // 4 header + 4 flags/reserved + 16 target + 8 option bytes
 
 	// Type = 136 (Neighbor Advertisement)
 	payloadHeader[0] = ICMPv6TypeNeighborAdvertisement
@@ -307,9 +362,9 @@ func (h *ICMPv6Handler) sendNeighborAdvertisement(device *config.Device, dstIP n
 
 	// Option: Target Link-Layer Address
 	// Type(1) | Length(1) | Link-Layer Address(6)
-	payloadHeader = append(payloadHeader, ICMPv6OptTargetLinkAddr) // Type
-	payloadHeader = append(payloadHeader, 1)                       // Length (in units of 8 bytes)
-	payloadHeader = append(payloadHeader, device.MACAddress...)    // MAC address (6 bytes)
+	payloadHeader[24] = ICMPv6OptTargetLinkAddr // Type
+	payloadHeader[25] = 1                       // Length (in units of 8 bytes)
+	copy(payloadHeader[26:], device.MACAddress) // MAC address (6 bytes)
 
 	// Calculate ICMPv6 checksum
 	checksum := CalculateIPv6Checksum(device.IPAddresses[0], dstIP, IPv6NextHeaderICMPv6, payloadHeader)
@@ -345,7 +400,7 @@ func (h *ICMPv6Handler) handleRouterSolicitation(pkt *Packet, packet gopacket.Pa
 
 	dstMAC := eth.SrcMAC
 
-	if h.debugLevel >= 2 {
+	if h.debugLevel >= DebugLevelInfo {
 		_, _ = fmt.Fprintf(os.Stdout, "ICMPv6: Router Solicitation from %s sn=%d\n", ipv6.SrcIP, pkt.SerialNumber)
 	}
 
@@ -360,7 +415,7 @@ func (h *ICMPv6Handler) handleRouterSolicitation(pkt *Packet, packet gopacket.Pa
 		}
 		err := h.sendRouterAdvertisement(device, srcIP, ipv6.SrcIP, dstMAC)
 		if err != nil {
-			if h.debugLevel >= 2 {
+			if h.debugLevel >= DebugLevelInfo {
 				_, _ = fmt.Fprintf(
 					os.Stdout,
 					"ICMPv6: Failed to send RA from %s: %v sn=%d\n",
@@ -373,7 +428,7 @@ func (h *ICMPv6Handler) handleRouterSolicitation(pkt *Packet, packet gopacket.Pa
 			continue
 		}
 
-		if h.debugLevel >= 2 {
+		if h.debugLevel >= DebugLevelInfo {
 			_, _ = fmt.Fprintf(os.Stdout,
 				"ICMPv6: Sent Router Advertisement from %s to %s sn=%d\n",
 				device.Name,
@@ -406,124 +461,179 @@ func (h *ICMPv6Handler) sendRouterAdvertisement(
 }
 
 func (h *ICMPv6Handler) buildRouterAdvertisementBody(device *config.Device, srcIP net.IP) []byte {
-	raCfg := (*config.Icmpv6RouterAdvertisement)(nil)
-	if device != nil && device.ICMPv6Config != nil {
-		raCfg = device.ICMPv6Config.RouterAdvertisement
+	raCfg := getRAConfig(device)
+	bodyHeader := buildRAHeader(device, raCfg)
+	options := buildRAOptions(device, raCfg, srcIP)
+
+	payload := make([]byte, len(bodyHeader)+len(options))
+	copy(payload, bodyHeader)
+	copy(payload[len(bodyHeader):], options)
+
+	return payload
+}
+
+// getRAConfig returns the router advertisement config for a device.
+func getRAConfig(device *config.Device) *config.Icmpv6RouterAdvertisement {
+	if device == nil || device.ICMPv6Config == nil {
+		return nil
 	}
 
-	hopLimit := uint8(64)
-	if device.ICMPv6Config != nil && device.ICMPv6Config.HopLimit > 0 {
+	return device.ICMPv6Config.RouterAdvertisement
+}
+
+// buildRAHeader builds the router advertisement body header.
+func buildRAHeader(device *config.Device, raCfg *config.Icmpv6RouterAdvertisement) []byte {
+	hopLimit := getRAHopLimit(device, raCfg)
+	flags := getRAFlags(raCfg)
+	lifetime := getRALifetime(raCfg)
+	reachable, retrans := getRATimers(raCfg)
+
+	bodyHeader := make([]byte, icmpv6RABodyHeaderSize)
+	bodyHeader[0] = hopLimit
+	bodyHeader[1] = flags
+	binary.BigEndian.PutUint16(bodyHeader[2:4], lifetime)
+	binary.BigEndian.PutUint32(bodyHeader[4:8], reachable)
+	binary.BigEndian.PutUint32(bodyHeader[8:12], retrans)
+
+	return bodyHeader
+}
+
+func getRAHopLimit(device *config.Device, raCfg *config.Icmpv6RouterAdvertisement) uint8 {
+	hopLimit := uint8(icmpv6DefaultHopLimit)
+	if device != nil && device.ICMPv6Config != nil && device.ICMPv6Config.HopLimit > 0 {
 		hopLimit = device.ICMPv6Config.HopLimit
 	}
 
 	if raCfg != nil && raCfg.CurHopLimit > 0 {
-		hopLimit = uint8(raCfg.CurHopLimit) //nolint:gosec // G115: hop limit bounded by protocol (0-255)
+		hopLimit = safeUint8(raCfg.CurHopLimit)
 	}
 
-	bodyHeader := make([]byte, 12)
-	bodyHeader[0] = hopLimit
+	return hopLimit
+}
+
+func getRAFlags(raCfg *config.Icmpv6RouterAdvertisement) byte {
+	if raCfg == nil {
+		return 0
+	}
 
 	flags := byte(0)
-
-	if raCfg != nil {
-		if raCfg.Managed != 0 {
-			flags |= 0x80
-		}
-
-		if raCfg.Other != 0 {
-			flags |= 0x40
-		}
+	if raCfg.Managed != 0 {
+		flags |= 0x80
 	}
 
-	bodyHeader[1] = flags
+	if raCfg.Other != 0 {
+		flags |= 0x40
+	}
 
-	lifetime := uint16(1800)
+	return flags
+}
+
+func getRALifetime(raCfg *config.Icmpv6RouterAdvertisement) uint16 {
 	if raCfg != nil && raCfg.Lifetime > 0 {
-		lifetime = uint16(raCfg.Lifetime) //nolint:gosec // G115: RA lifetime bounded by protocol
+		return safeUint16(raCfg.Lifetime)
 	}
 
-	binary.BigEndian.PutUint16(bodyHeader[2:4], lifetime)
+	return uint16(icmpv6DefaultRALifetime)
+}
 
-	reachable := uint32(0)
-	retrans := uint32(0)
-
-	if raCfg != nil {
-		reachable = uint32(raCfg.ReachableTime) //nolint:gosec // G115: reachable time bounded by protocol
-		retrans = uint32(raCfg.RetransTimer)    //nolint:gosec // G115: retrans timer bounded by protocol
+func getRATimers(raCfg *config.Icmpv6RouterAdvertisement) (uint32, uint32) {
+	if raCfg == nil {
+		return 0, 0
 	}
 
-	binary.BigEndian.PutUint32(bodyHeader[4:8], reachable)
-	binary.BigEndian.PutUint32(bodyHeader[8:12], retrans)
+	return safeUint32(raCfg.ReachableTime), safeUint32(raCfg.RetransTimer)
+}
+
+// buildRAOptions builds the router advertisement options.
+func buildRAOptions(device *config.Device, raCfg *config.Icmpv6RouterAdvertisement, srcIP net.IP) []byte {
+	options := make([]byte, 0, icmpv6OptionsCapacity)
 
 	// Source link-layer option
-	bodyHeader = append(bodyHeader, ICMPv6OptSourceLinkAddr, 1)
-	bodyHeader = append(bodyHeader, device.MACAddress...)
+	options = append(options, ICMPv6OptSourceLinkAddr, 1)
+	options = append(options, device.MACAddress...)
 
 	// MTU option
-	mtuVal := uint32(1500)
+	options = appendMTUOption(options, raCfg)
+
+	// Prefix options
+	options = appendPrefixOptions(options, raCfg, srcIP)
+
+	return options
+}
+
+func appendMTUOption(options []byte, raCfg *config.Icmpv6RouterAdvertisement) []byte {
+	mtuVal := uint32(icmpv6DefaultMTU)
 	if raCfg != nil && raCfg.MTU > 0 {
-		mtuVal = uint32(raCfg.MTU) //nolint:gosec // G115: MTU bounded by network standards
+		mtuVal = safeUint32(raCfg.MTU)
 	}
 
-	bodyHeader = append(bodyHeader, ICMPv6OptMTU, 1, 0, 0)
-	mtu := make([]byte, 4)
+	options = append(options, ICMPv6OptMTU, 1, 0, 0)
+	mtu := make([]byte, icmpv6Uint32Size)
 	binary.BigEndian.PutUint32(mtu, mtuVal)
-	bodyHeader = append(bodyHeader, mtu...)
 
+	return append(options, mtu...)
+}
+
+func appendPrefixOptions(options []byte, raCfg *config.Icmpv6RouterAdvertisement, srcIP net.IP) []byte {
 	if raCfg != nil && len(raCfg.PrefixInfo) > 0 {
-		for _, p := range raCfg.PrefixInfo {
-			prefix := p.Prefix
-			if prefix == nil || prefix.To16() == nil {
-				continue
-			}
+		return appendConfiguredPrefixes(options, raCfg.PrefixInfo)
+	}
 
-			bodyHeader = append(bodyHeader, ICMPv6OptPrefixInfo, 4)
-			bodyHeader = append(bodyHeader, byte(p.PrefixLength))
+	return appendDefaultPrefix(options, srcIP)
+}
 
-			pFlags := byte(0)
-			if p.Onlink != 0 {
-				pFlags |= NDPrefixFlagOnLink
-			}
-
-			if p.Auto != 0 {
-				pFlags |= NDPrefixFlagAutonomous
-			}
-
-			bodyHeader = append(bodyHeader, pFlags)
-			valid := make([]byte, 4)
-			// Safe conversion: IPv6 RA lifetimes are bounded by protocol
-			binary.BigEndian.PutUint32(
-				valid,
-				uint32(p.ValidLifetime), //nolint:gosec // G115: bounded by RA protocol
-			)
-			bodyHeader = append(bodyHeader, valid...)
-			binary.BigEndian.PutUint32(
-				valid,
-				uint32(p.PreferredLifetime), //nolint:gosec // G115: bounded by RA protocol
-			)
-			bodyHeader = append(bodyHeader, valid...)
-			bodyHeader = append(bodyHeader, []byte{0, 0, 0, 0}...)
-			bodyHeader = append(bodyHeader, prefix.To16()...)
+func appendConfiguredPrefixes(options []byte, prefixes []config.Icmpv6PrefixInfo) []byte {
+	for _, p := range prefixes {
+		if p.Prefix == nil || p.Prefix.To16() == nil {
+			continue
 		}
 
-		return bodyHeader
+		options = appendSinglePrefix(options, &p)
 	}
 
-	// Default prefix if none configured
-	prefix := deriveIPv6Prefix(srcIP, 64)
+	return options
+}
 
-	bodyHeader = append(bodyHeader, ICMPv6OptPrefixInfo, 4)
-	bodyHeader = append(bodyHeader, byte(64))
-	bodyHeader = append(bodyHeader, NDPrefixFlagOnLink|NDPrefixFlagAutonomous)
-	valid := make([]byte, 4)
-	binary.BigEndian.PutUint32(valid, 2592000)
-	bodyHeader = append(bodyHeader, valid...)
-	binary.BigEndian.PutUint32(valid, 604800)
-	bodyHeader = append(bodyHeader, valid...)
-	bodyHeader = append(bodyHeader, []byte{0, 0, 0, 0}...)
-	bodyHeader = append(bodyHeader, prefix.To16()...)
+func appendSinglePrefix(options []byte, p *config.Icmpv6PrefixInfo) []byte {
+	options = append(options, ICMPv6OptPrefixInfo, icmpv6PrefixInfoOptLen)
+	options = append(options, byte(p.PrefixLength))
 
-	return bodyHeader
+	pFlags := byte(0)
+	if p.Onlink != 0 {
+		pFlags |= NDPrefixFlagOnLink
+	}
+
+	if p.Auto != 0 {
+		pFlags |= NDPrefixFlagAutonomous
+	}
+
+	options = append(options, pFlags)
+
+	valid := make([]byte, icmpv6Uint32Size)
+	binary.BigEndian.PutUint32(valid, safeUint32(p.ValidLifetime))
+	options = append(options, valid...)
+	binary.BigEndian.PutUint32(valid, safeUint32(p.PreferredLifetime))
+	options = append(options, valid...)
+	options = append(options, []byte{0, 0, 0, 0}...)
+
+	return append(options, p.Prefix.To16()...)
+}
+
+func appendDefaultPrefix(options []byte, srcIP net.IP) []byte {
+	prefix := deriveIPv6Prefix(srcIP, icmpv6DefaultPrefixLen)
+
+	options = append(options, ICMPv6OptPrefixInfo, icmpv6PrefixInfoOptLen)
+	options = append(options, byte(icmpv6DefaultPrefixLen))
+	options = append(options, NDPrefixFlagOnLink|NDPrefixFlagAutonomous)
+
+	valid := make([]byte, icmpv6Uint32Size)
+	binary.BigEndian.PutUint32(valid, icmpv6ValidLifetime)
+	options = append(options, valid...)
+	binary.BigEndian.PutUint32(valid, icmpv6PreferredLifetime)
+	options = append(options, valid...)
+	options = append(options, []byte{0, 0, 0, 0}...)
+
+	return append(options, prefix.To16()...)
 }
 
 // sendICMPv6Packet sends an ICMPv6 packet.
@@ -538,7 +648,7 @@ func (h *ICMPv6Handler) sendICMPv6PacketWithDevice(srcIP, dstIP net.IP, srcMAC, 
 	icmpv6 *layers.ICMPv6, payload []byte, device *config.Device,
 ) error {
 	// Determine hop limit based on ICMPv6 type
-	hopLimit := uint8(255) // Default to 255 for NDP (RFC 4861)
+	hopLimit := uint8(icmpv6NDPHopLimit) // Default to 255 for NDP (RFC 4861)
 	msgType := icmpv6.TypeCode.Type()
 
 	// NDP types MUST use hop limit 255 per RFC 4861
@@ -563,13 +673,13 @@ func (h *ICMPv6Handler) sendICMPv6PacketWithDevice(srcIP, dstIP net.IP, srcMAC, 
 	// Build IPv6 layer
 	icmpLen := min(
 		// ICMPv6 header + payload
-		8+len(payload), 65535)
+		icmpv6HeaderSize+len(payload), icmpv6MaxUint16)
 
 	ipv6 := &layers.IPv6{
-		Version:      6,
+		Version:      icmpv6IPv6Version,
 		TrafficClass: 0,
 		FlowLabel:    0,
-		Length:       uint16(icmpLen), // #nosec G115 -- payload length limited by packet MTU
+		Length:       safeUint16(icmpLen),
 		NextHeader:   layers.IPProtocolICMPv6,
 		HopLimit:     hopLimit,
 		SrcIP:        srcIP,
@@ -591,7 +701,7 @@ func (h *ICMPv6Handler) sendICMPv6PacketWithDevice(srcIP, dstIP net.IP, srcMAC, 
 		return fmt.Errorf("failed to serialize ICMPv6 packet: %w", err)
 	}
 
-	if h.debugLevel >= 3 {
+	if h.debugLevel >= DebugLevelVerbose {
 		_, _ = fmt.Fprintf(os.Stdout, "ICMPv6: Sending packet %s -> %s, type %d, size %d bytes\n",
 			srcIP, dstIP, icmpv6.TypeCode.Type(), len(buf.Bytes()))
 	}
@@ -662,7 +772,7 @@ func firstIPv6Address(device *config.Device) net.IP {
 }
 
 func deriveIPv6Prefix(ip net.IP, prefixLen int) net.IP {
-	mask := net.CIDRMask(prefixLen, 128)
+	mask := net.CIDRMask(prefixLen, icmpv6IPv6AddrBits)
 	masked := ip.Mask(mask)
 	prefix := make(net.IP, len(masked))
 	copy(prefix, masked)

@@ -4,8 +4,8 @@ import (
 	"net"
 	"testing"
 
+	"github.com/krisarmstrong/niac-go/pkg/apperr"
 	"github.com/krisarmstrong/niac-go/pkg/config"
-	"github.com/krisarmstrong/niac-go/pkg/errors"
 	"github.com/krisarmstrong/niac-go/pkg/logging"
 	"github.com/krisarmstrong/niac-go/pkg/protocols"
 )
@@ -35,7 +35,7 @@ func BenchmarkDeviceCreation(b *testing.B) {
 
 	debugConfig := logging.NewDebugConfig(0)
 	stack := protocols.NewStack(nil, cfg, debugConfig)
-	errorMgr := errors.NewStateManager()
+	errorMgr := apperr.NewStateManager()
 
 	b.ReportAllocs()
 
@@ -71,7 +71,7 @@ func BenchmarkDeviceCreation_WithMultipleIPs(b *testing.B) {
 
 	debugConfig := logging.NewDebugConfig(0)
 	stack := protocols.NewStack(nil, cfg, debugConfig)
-	errorMgr := errors.NewStateManager()
+	errorMgr := apperr.NewStateManager()
 
 	b.ReportAllocs()
 
@@ -105,7 +105,7 @@ func BenchmarkDeviceCreation_MultipleDevices(b *testing.B) {
 	cfg := &config.Config{Devices: devices}
 	debugConfig := logging.NewDebugConfig(0)
 	stack := protocols.NewStack(nil, cfg, debugConfig)
-	errorMgr := errors.NewStateManager()
+	errorMgr := apperr.NewStateManager()
 
 	b.ReportAllocs()
 
@@ -136,7 +136,7 @@ func BenchmarkProtocolHandlerRegistration(b *testing.B) {
 
 	debugConfig := logging.NewDebugConfig(0)
 	stack := protocols.NewStack(nil, cfg, debugConfig)
-	errorMgr := errors.NewStateManager()
+	errorMgr := apperr.NewStateManager()
 
 	b.ReportAllocs()
 
@@ -169,7 +169,7 @@ func BenchmarkDeviceStateLookup(b *testing.B) {
 
 	debugConfig := logging.NewDebugConfig(0)
 	stack := protocols.NewStack(nil, cfg, debugConfig)
-	errorMgr := errors.NewStateManager()
+	errorMgr := apperr.NewStateManager()
 	sim := NewSimulator(cfg, stack, errorMgr, 0)
 
 	b.ReportAllocs()
@@ -204,7 +204,7 @@ func BenchmarkDeviceCounterIncrement(b *testing.B) {
 
 	debugConfig := logging.NewDebugConfig(0)
 	stack := protocols.NewStack(nil, cfg, debugConfig)
-	errorMgr := errors.NewStateManager()
+	errorMgr := apperr.NewStateManager()
 	sim := NewSimulator(cfg, stack, errorMgr, 0)
 	dev := sim.GetDevice("test-device")
 
@@ -246,7 +246,7 @@ func BenchmarkDeviceWithLLDPConfig(b *testing.B) {
 
 	debugConfig := logging.NewDebugConfig(0)
 	stack := protocols.NewStack(nil, cfg, debugConfig)
-	errorMgr := errors.NewStateManager()
+	errorMgr := apperr.NewStateManager()
 
 	b.ReportAllocs()
 
@@ -287,7 +287,7 @@ func BenchmarkDeviceWithDHCPConfig(b *testing.B) {
 
 	debugConfig := logging.NewDebugConfig(0)
 	stack := protocols.NewStack(nil, cfg, debugConfig)
-	errorMgr := errors.NewStateManager()
+	errorMgr := apperr.NewStateManager()
 
 	b.ReportAllocs()
 
@@ -364,7 +364,7 @@ func BenchmarkDeviceWithFullConfig(b *testing.B) {
 
 	debugConfig := logging.NewDebugConfig(0)
 	stack := protocols.NewStack(nil, cfg, debugConfig)
-	errorMgr := errors.NewStateManager()
+	errorMgr := apperr.NewStateManager()
 
 	b.ReportAllocs()
 

@@ -9,6 +9,7 @@ import (
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcapgo"
+
 	"github.com/krisarmstrong/niac-go/pkg/config"
 )
 
@@ -27,8 +28,9 @@ func createTestPCAP(t *testing.T, packetCount int) string {
 	defer func() { _ = f.Close() }()
 
 	w := pcapgo.NewWriter(f)
-	if err := w.WriteFileHeader(1600, layers.LinkTypeEthernet); err != nil {
-		t.Fatalf("Failed to write PCAP header: %v", err)
+	headerErr := w.WriteFileHeader(1600, layers.LinkTypeEthernet)
+	if headerErr != nil {
+		t.Fatalf("Failed to write PCAP header: %v", headerErr)
 	}
 
 	// Write test packets
@@ -47,9 +49,9 @@ func createTestPCAP(t *testing.T, packetCount int) string {
 		opts := gopacket.SerializeOptions{}
 		payload := []byte{byte(i), 0x01, 0x02, 0x03}
 
-		err := gopacket.SerializeLayers(buf, opts, eth, gopacket.Payload(payload))
-		if err != nil {
-			t.Fatalf("Failed to serialize packet: %v", err)
+		serializeErr := gopacket.SerializeLayers(buf, opts, eth, gopacket.Payload(payload))
+		if serializeErr != nil {
+			t.Fatalf("Failed to serialize packet: %v", serializeErr)
 		}
 
 		// Write packet with incremental timestamp

@@ -1,4 +1,4 @@
-package api
+package httpapi
 
 import (
 	"crypto/rand"
@@ -359,11 +359,9 @@ func TestPanicRecovery_NilPointerPanic(t *testing.T) {
 
 	defer func() { _ = os.RemoveAll(tmpDir) }()
 
-	// Create a handler that deliberately panics with nil pointer
-	panicHandler := func(w http.ResponseWriter, r *http.Request) {
-		var ptr *int
-
-		_ = *ptr //nolint:govet // nilness: intentional nil dereference to test panic recovery
+	// Create a handler that deliberately panics
+	panicHandler := func(_ http.ResponseWriter, _ *http.Request) {
+		panic("intentional panic for testing recovery middleware")
 	}
 
 	req := httptest.NewRequest(http.MethodGet, "/test", nil)
@@ -397,7 +395,7 @@ func TestPanicRecovery_ArrayOutOfBounds(t *testing.T) {
 	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	// Create a handler that panics with array out of bounds
-	panicHandler := func(w http.ResponseWriter, r *http.Request) {
+	panicHandler := func(_ http.ResponseWriter, _ *http.Request) {
 		arr := []int{1, 2, 3}
 		_ = arr[10]
 	}
@@ -420,7 +418,7 @@ func TestPanicRecovery_NormalOperation(t *testing.T) {
 	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	// Normal handler that doesn't panic
-	normalHandler := func(w http.ResponseWriter, r *http.Request) {
+	normalHandler := func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("OK"))
 	}

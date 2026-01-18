@@ -8,12 +8,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/krisarmstrong/niac-go/pkg/ipc"
 	"github.com/spf13/cobra"
+
+	"github.com/krisarmstrong/niac-go/pkg/ipc"
 )
 
 // dumpOptions holds command-line options for the dump command.
-var dumpOptions struct {
+type dumpOptions struct {
 	device     string
 	iface      string
 	count      int
@@ -21,10 +22,13 @@ var dumpOptions struct {
 	jsonOutput bool
 }
 
-var dumpCmd = &cobra.Command{
-	Use:   "dump",
-	Short: "Dump captured packets from a running NIAC simulation",
-	Long: `Dump captured packets from a running NIAC simulation via IPC socket.
+func addDumpCommand(root *cobra.Command, _ *serviceOptions) {
+	options := new(dumpOptions)
+
+	dumpCmd := &cobra.Command{
+		Use:   "dump",
+		Short: "Dump captured packets from a running NIAC simulation",
+		Long: `Dump captured packets from a running NIAC simulation via IPC socket.
 
 This command connects to a running NIAC simulation and retrieves
 hex dumps of recently captured packets. The output format is similar
@@ -37,7 +41,7 @@ Exit codes:
   0 - Success
   1 - Connection failed (socket not found or connection refused)
   2 - Error occurred (request failed, parse error, etc.)`,
-	Example: `  # Dump all captured packets
+		Example: `  # Dump all captured packets
   niac dump
 
   # Dump packets for a specific device
@@ -57,17 +61,19 @@ Exit codes:
 
   # Use a custom socket path
   niac dump --socket /var/run/niac/niac.sock`,
-	Args: cobra.NoArgs,
-	RunE: runDump,
-}
+		Args: cobra.NoArgs,
+		RunE: func(_ *cobra.Command, _ []string) error {
+			return runDump(options)
+		},
+	}
 
-func init() {
-	rootCmd.AddCommand(dumpCmd)
-	dumpCmd.Flags().StringVar(&dumpOptions.device, "device", "", "Filter by device name")
-	dumpCmd.Flags().StringVar(&dumpOptions.iface, "interface", "", "Filter by interface name")
-	dumpCmd.Flags().IntVar(&dumpOptions.count, "count", 0, "Maximum number of packets to display (0 = all)")
-	dumpCmd.Flags().StringVar(&dumpOptions.socketPath, "socket", "", "Path to IPC socket (default: /tmp/niac.sock)")
-	dumpCmd.Flags().BoolVar(&dumpOptions.jsonOutput, "json", false, "Output packets as JSON")
+	dumpCmd.Flags().StringVar(&options.device, "device", "", "Filter by device name")
+	dumpCmd.Flags().StringVar(&options.iface, "interface", "", "Filter by interface name")
+	dumpCmd.Flags().IntVar(&options.count, "count", 0, "Maximum number of packets to display (0 = all)")
+	dumpCmd.Flags().StringVar(&options.socketPath, "socket", "", "Path to IPC socket (default: /tmp/niac.sock)")
+	dumpCmd.Flags().BoolVar(&options.jsonOutput, "json", false, "Output packets as JSON")
+
+	root.AddCommand(dumpCmd)
 }
 
 // PacketDump represents a captured packet for display.
@@ -82,16 +88,16 @@ type PacketDump struct {
 }
 
 // runDump executes the dump command.
-func runDump(cmd *cobra.Command, args []string) error {
+func runDump(options *dumpOptions) error {
 	// Determine socket path
-	socketPath := dumpOptions.socketPath
+	socketPath := options.socketPath
 	if socketPath == "" {
 		socketPath = ipc.DefaultSocketPath()
 	}
 
 	// Check if socket exists
 	if _, err := os.Stat(socketPath); os.IsNotExist(err) {
-		if dumpOptions.jsonOutput {
+		if options.jsonOutput {
 			outputDumpJSON(map[string]any{
 				"success": false,
 				"error":   "socket not found",
@@ -107,9 +113,9 @@ func runDump(cmd *cobra.Command, args []string) error {
 	client := ipc.NewClient(socketPath)
 
 	// Request packet dump
-	packets, err := client.DumpPackets(dumpOptions.device, dumpOptions.iface, dumpOptions.count)
+	packets, err := client.DumpPackets(options.device, options.iface, options.count)
 	if err != nil {
-		if dumpOptions.jsonOutput {
+		if options.jsonOutput {
 			outputDumpJSON(map[string]any{
 				"success": false,
 				"error":   err.Error(),
@@ -117,24 +123,24 @@ func runDump(cmd *cobra.Command, args []string) error {
 		} else {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		}
-		os.Exit(2)
+		os.Exit(exitCodeError)
 	}
 
 	if len(packets) == 0 {
-		if dumpOptions.jsonOutput {
+		if options.jsonOutput {
 			outputDumpJSON(map[string]any{
 				"success": true,
 				"packets": []any{},
 				"count":   0,
 			})
 		} else {
-			fmt.Println("No packets captured")
+			fmt.Fprintln(os.Stdout, "No packets captured")
 		}
 		return nil
 	}
 
 	// Output based on format
-	if dumpOptions.jsonOutput {
+	if options.jsonOutput {
 		outputPacketsJSON(packets)
 	} else {
 		printPacketsHexDump(packets)
@@ -147,29 +153,28 @@ func runDump(cmd *cobra.Command, args []string) error {
 func printPacketsHexDump(packets []ipc.PacketData) {
 	for i, pkt := range packets {
 		// Print packet header
-		fmt.Printf("Packet #%d: %d bytes @ %s\n",
+		fmt.Fprintf(os.Stdout, "Packet #%d: %d bytes @ %s\n",
 			i+1,
 			pkt.Length,
 			pkt.Timestamp.Format("15:04:05.000"))
 
 		if pkt.Device != "" {
-			fmt.Printf("  Device: %s", pkt.Device)
+			fmt.Fprintf(os.Stdout, "  Device: %s", pkt.Device)
 			if pkt.Interface != "" {
-				fmt.Printf("  Interface: %s", pkt.Interface)
+				fmt.Fprintf(os.Stdout, "  Interface: %s", pkt.Interface)
 			}
-			fmt.Println()
+			fmt.Fprintln(os.Stdout)
 		}
 
 		// Print hex dump
-		fmt.Println(formatHexDump(pkt.Data))
-		fmt.Println()
+		fmt.Fprintln(os.Stdout, formatHexDump(pkt.Data))
+		fmt.Fprintln(os.Stdout)
 	}
 
-	fmt.Printf("Total: %d packet(s)\n", len(packets))
+	fmt.Fprintf(os.Stdout, "Total: %d packet(s)\n", len(packets))
 }
 
 // formatHexDump formats binary data as a hex dump (xxd-style).
-//nolint:gocognit // Hex dump formatting requires byte-by-byte processing
 func formatHexDump(data []byte) string {
 	if len(data) == 0 {
 		return ""
@@ -179,51 +184,59 @@ func formatHexDump(data []byte) string {
 	bytesPerLine := 16
 
 	for offset := 0; offset < len(data); offset += bytesPerLine {
-		// Address column
-		sb.WriteString(fmt.Sprintf("%08x: ", offset))
-
-		// Hex bytes
 		end := min(offset+bytesPerLine, len(data))
-
-		hexPart := hex.EncodeToString(data[offset:end])
-
-		// Add spaces between byte pairs
-		var hexFormatted strings.Builder
-		for j := 0; j < len(hexPart); j += 2 {
-			if j > 0 && j%4 == 0 {
-				hexFormatted.WriteString(" ")
-			}
-			if j+2 <= len(hexPart) {
-				hexFormatted.WriteString(hexPart[j : j+2])
-			}
-		}
-
-		// Pad hex part if needed
-		hexStr := hexFormatted.String()
-		paddedLen := (bytesPerLine/2)*2 + (bytesPerLine/4 - 1) // 8 pairs + 3 spaces
-		for len(hexStr) < paddedLen {
-			hexStr += " "
-		}
-		sb.WriteString(hexStr)
-
-		sb.WriteString("  ")
-
-		// ASCII representation
-		for j := offset; j < end; j++ {
-			b := data[j]
-			if b >= 32 && b < 127 {
-				sb.WriteByte(b)
-			} else {
-				sb.WriteByte('.')
-			}
-		}
-
-		if offset+bytesPerLine < len(data) {
-			sb.WriteString("\n")
-		}
+		formatHexLine(&sb, data[offset:end], offset, bytesPerLine, offset+bytesPerLine < len(data))
 	}
 
 	return sb.String()
+}
+
+// formatHexLine formats a single line of hex dump output.
+func formatHexLine(sb *strings.Builder, lineData []byte, offset, bytesPerLine int, hasMore bool) {
+	_, _ = fmt.Fprintf(sb, "%08x: ", offset)
+
+	hexStr := formatHexBytes(lineData, bytesPerLine)
+	sb.WriteString(hexStr)
+	sb.WriteString("  ")
+
+	formatASCII(sb, lineData)
+
+	if hasMore {
+		sb.WriteString("\n")
+	}
+}
+
+// formatHexBytes formats bytes as hex with spacing.
+func formatHexBytes(data []byte, bytesPerLine int) string {
+	hexPart := hex.EncodeToString(data)
+
+	var hexFormatted strings.Builder
+	for j := 0; j < len(hexPart); j += 2 {
+		if j > 0 && j%4 == 0 {
+			hexFormatted.WriteString(" ")
+		}
+		if j+2 <= len(hexPart) {
+			hexFormatted.WriteString(hexPart[j : j+2])
+		}
+	}
+
+	hexStr := hexFormatted.String()
+	paddedLen := (bytesPerLine/hexCharsPerByte)*hexCharsPerByte + (bytesPerLine/4 - 1)
+	for len(hexStr) < paddedLen {
+		hexStr += " "
+	}
+	return hexStr
+}
+
+// formatASCII writes the ASCII representation of bytes.
+func formatASCII(sb *strings.Builder, data []byte) {
+	for _, b := range data {
+		if b >= 32 && b < 127 {
+			sb.WriteByte(b)
+		} else {
+			sb.WriteByte('.')
+		}
+	}
 }
 
 // outputPacketsJSON outputs packets as formatted JSON.

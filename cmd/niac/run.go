@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/spf13/cobra"
 
@@ -9,7 +10,7 @@ import (
 	"github.com/krisarmstrong/niac-go/pkg/logging"
 )
 
-var runOptions struct {
+type runOptions struct {
 	debugLevel int
 	verbose    bool
 	quiet      bool
@@ -20,14 +21,17 @@ var runOptions struct {
 	dryRun     bool
 }
 
-var runCmd = &cobra.Command{
-	Use:   "run <interface> <config-file>",
-	Short: "Run network simulation",
-	Long: `Run NIAC network simulation with optional TUI and/or WebUI.
+func addRunCommand(root *cobra.Command, services *serviceOptions, info versionInfo) {
+	options := new(runOptions)
+
+	runCmd := &cobra.Command{
+		Use:   "run <interface> <config-file>",
+		Short: "Run network simulation",
+		Long: `Run NIAC network simulation with optional TUI and/or WebUI.
 
 By default, runs in headless mode. Add --tui for interactive terminal UI,
 --web for browser-based UI, or both for full control.`,
-	Example: `  # Headless simulation
+		Example: `  # Headless simulation
   sudo niac run en0 config.yaml
 
   # With Terminal UI (TUI)
@@ -44,37 +48,43 @@ By default, runs in headless mode. Add --tui for interactive terminal UI,
 
   # Validate config without running
   niac run en0 config.yaml --dry-run`,
-	Args: cobra.ExactArgs(2),
-	RunE: runSimulation,
+		Args: cobra.ExactArgs(argsCountTwo),
+		RunE: func(_ *cobra.Command, args []string) error {
+			return runSimulation(args, options, services, info)
+		},
+	}
+
+	runCmd.Flags().IntVarP(&options.debugLevel, "debug", "d", 1, "Debug level (0-3)")
+	runCmd.Flags().BoolVarP(&options.verbose, "verbose", "v", false, "Verbose output (equivalent to -d 3)")
+	runCmd.Flags().BoolVarP(&options.quiet, "quiet", "q", false, "Quiet mode (equivalent to -d 0)")
+	runCmd.Flags().BoolVar(&options.noColor, "no-color", false, "Disable colored output")
+	runCmd.Flags().BoolVar(&options.tui, "tui", false, "Enable interactive Terminal UI")
+	runCmd.Flags().BoolVar(&options.web, "web", false, "Enable Web UI")
+	runCmd.Flags().StringVar(&options.webPort, "port", "8080", "Web UI port (used with --web)")
+	runCmd.Flags().BoolVarP(&options.dryRun, "dry-run", "n", false, "Validate config without starting simulation")
+
+	root.AddCommand(runCmd)
 }
 
-func init() {
-	rootCmd.AddCommand(runCmd)
-
-	runCmd.Flags().IntVarP(&runOptions.debugLevel, "debug", "d", 1, "Debug level (0-3)")
-	runCmd.Flags().BoolVarP(&runOptions.verbose, "verbose", "v", false, "Verbose output (equivalent to -d 3)")
-	runCmd.Flags().BoolVarP(&runOptions.quiet, "quiet", "q", false, "Quiet mode (equivalent to -d 0)")
-	runCmd.Flags().BoolVar(&runOptions.noColor, "no-color", false, "Disable colored output")
-	runCmd.Flags().BoolVar(&runOptions.tui, "tui", false, "Enable interactive Terminal UI")
-	runCmd.Flags().BoolVar(&runOptions.web, "web", false, "Enable Web UI")
-	runCmd.Flags().StringVar(&runOptions.webPort, "port", "8080", "Web UI port (used with --web)")
-	runCmd.Flags().BoolVarP(&runOptions.dryRun, "dry-run", "n", false, "Validate config without starting simulation")
-}
-
-func runSimulation(cmd *cobra.Command, args []string) error {
+func runSimulation(
+	args []string,
+	options *runOptions,
+	services *serviceOptions,
+	info versionInfo,
+) error {
 	interfaceName := args[0]
 	configFile := args[1]
 
 	// Determine debug level
-	debugLevel := runOptions.debugLevel
-	if runOptions.verbose {
+	debugLevel := options.debugLevel
+	if options.verbose {
 		debugLevel = 3
 	}
-	if runOptions.quiet {
+	if options.quiet {
 		debugLevel = 0
 	}
 
-	logging.InitColors(!runOptions.noColor)
+	logging.InitColors(!options.noColor)
 
 	// Load configuration
 	cfg, err := config.Load(configFile)
@@ -83,7 +93,7 @@ func runSimulation(cmd *cobra.Command, args []string) error {
 	}
 
 	// Dry run mode - just validate
-	if runOptions.dryRun {
+	if options.dryRun {
 		logging.Successf("✓ Configuration valid: %s", configFile)
 		logging.Infof("  Interface: %s", interfaceName)
 		logging.Infof("  Devices: %d", len(cfg.Devices))
@@ -91,24 +101,24 @@ func runSimulation(cmd *cobra.Command, args []string) error {
 	}
 
 	// Set up API listen address if web is enabled
-	if runOptions.web {
-		servicesOpts.apiListen = ":" + runOptions.webPort
+	if options.web {
+		services.apiListen = ":" + options.webPort
 	}
 
 	debugConfig := logging.NewDebugConfig(debugLevel)
 
 	// Print banner unless quiet
 	if debugLevel > 0 {
-		printBanner()
+		printBanner(info.version)
 		logging.Infof("Interface: %s", interfaceName)
 		logging.Infof("Config: %s (%d devices)", configFile, len(cfg.Devices))
-		if runOptions.web {
-			logging.Infof("Web UI: http://localhost:%s", runOptions.webPort)
+		if options.web {
+			logging.Infof("Web UI: http://localhost:%s", options.webPort)
 		}
-		if runOptions.tui {
+		if options.tui {
 			logging.Infof("TUI: Enabled")
 		}
-		fmt.Println()
+		fmt.Fprintln(os.Stdout)
 	}
 
 	// Validate interface
@@ -117,8 +127,8 @@ func runSimulation(cmd *cobra.Command, args []string) error {
 	}
 
 	// Run in appropriate mode
-	if runOptions.tui {
-		return runInteractiveMode(interfaceName, cfg, debugConfig, configFile)
+	if options.tui {
+		return runInteractiveMode(interfaceName, cfg, debugConfig, configFile, services)
 	}
-	return runNormalMode(interfaceName, cfg, debugConfig, configFile)
+	return runNormalMode(interfaceName, cfg, debugConfig, configFile, services)
 }

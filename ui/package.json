@@ -20,7 +20,7 @@
     "@codemirror/lang-yaml": "^6.1.2",
     "@codemirror/language": "^6.12.1",
     "@codemirror/state": "^6.5.3",
-    "@codemirror/view": "^6.39.9",
+    "@codemirror/view": "^6.39.10",
     "@lezer/highlight": "^1.2.3",
     "@xyflow/react": "^12.10.0",
     "lucide-react": "^0.562.0",
@@ -31,7 +31,7 @@
   "devDependencies": {
     "@biomejs/biome": "^2.3.11",
     "@tailwindcss/postcss": "^4.1.18",
-    "@types/node": "^25.0.6",
+    "@types/node": "^25.0.8",
     "@types/react": "^19.2.8",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.2",

@@ -14,10 +14,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var generateCmd = &cobra.Command{
-	Use:   "generate [output-file]",
-	Short: "Interactive configuration generator",
-	Long: `Interactive configuration generator for NIAC.
+func addGenerateCommand(configCmd *cobra.Command) {
+	generateCmd := &cobra.Command{
+		Use:   "generate [output-file]",
+		Short: "Interactive configuration generator",
+		Long: `Interactive configuration generator for NIAC.
 
 Prompts you for all configuration details and generates a complete YAML
 configuration file. More detailed than 'niac init' template wizard.
@@ -28,7 +29,7 @@ The generator will ask you for:
   - Device details (type, name, IP, MAC)
   - Protocols to enable (LLDP, CDP, SNMP, DHCP, DNS, etc.)
   - Protocol-specific configuration`,
-	Example: `  # Generate configuration interactively
+		Example: `  # Generate configuration interactively
   niac config generate
 
   # Generate with specific output file
@@ -36,10 +37,11 @@ The generator will ask you for:
 
   # Validate and run
   niac config generate network.yaml && niac validate network.yaml`,
-	Run: runGenerate,
-}
+		Run: func(_ *cobra.Command, args []string) {
+			runGenerate(args)
+		},
+	}
 
-func init() {
 	configCmd.AddCommand(generateCmd)
 }
 
@@ -63,10 +65,39 @@ type protocolConfig struct {
 	params  map[string]string
 }
 
-func runGenerate(cmd *cobra.Command, args []string) {
-	reader := bufio.NewReader(os.Stdin)
+const defaultGenerateOutputFile = "config.yaml"
 
-	// Print header
+type deviceTypeOption struct {
+	key   string
+	label string
+}
+
+func deviceTypeOptions() []deviceTypeOption {
+	return []deviceTypeOption{
+		{"1", "router"},
+		{"2", "switch"},
+		{"3", "access-point"},
+		{"4", "server"},
+		{"5", "workstation"},
+		{"6", "firewall"},
+	}
+}
+
+func runGenerate(args []string) {
+	reader := bufio.NewReader(os.Stdin)
+	printGeneratorHeader()
+
+	cfg := collectNetworkInfo(reader)
+	devices := collectDevices(reader, cfg)
+	cfg.devices = devices
+
+	outputFile := chooseOutputFile(args, reader)
+	writeConfiguration(outputFile, cfg)
+
+	printSummary(outputFile, cfg)
+}
+
+func printGeneratorHeader() {
 	_, _ = color.New(color.Bold, color.FgCyan).
 		Println("\n╔════════════════════════════════════════════════════════════╗")
 	_, _ = color.New(color.Bold, color.FgCyan).
@@ -76,130 +107,55 @@ func runGenerate(cmd *cobra.Command, args []string) {
 
 	color.Yellow("This wizard will guide you through creating a complete YAML")
 	color.Yellow("configuration file for your network simulation.\n\n")
+}
 
-	// Step 1: Network Information
-	color.New(color.Bold, color.FgCyan).Println("Step 1: Network Information") // #nosec G104 -- cosmetic output
+func collectNetworkInfo(reader *bufio.Reader) *generatedConfig {
+	_, _ = color.New(color.Bold, color.FgCyan).Println("Step 1: Network Information")
 	color.White("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
 
 	cfg := new(generatedConfig)
 	cfg.devices = make([]generatedDevice, 0)
-
-	// Network name
 	cfg.networkName = promptString(reader, color.CyanString("Network name: "), "simulation-network")
-
-	// Subnet
 	cfg.subnet = promptString(
 		reader,
 		color.CyanString("Network subnet (CIDR, e.g., 192.168.1.0/24): "),
 		"192.168.1.0/24",
 	)
-
-	// Include path for walk files
 	cfg.includePath = promptString(reader, color.CyanString("Path for SNMP walk files (leave empty for none): "), "")
+	fmt.Fprintln(os.Stdout)
 
-	fmt.Println()
+	return cfg
+}
 
-	// Step 2: Device Configuration
-	color.New(color.Bold, color.FgCyan).Println("Step 2: Device Configuration") // #nosec G104 -- cosmetic output
+func collectDevices(reader *bufio.Reader, cfg *generatedConfig) []generatedDevice {
+	_, _ = color.New(color.Bold, color.FgCyan).Println("Step 2: Device Configuration")
 	color.White("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
 
-	deviceCount := mustPromptInt(reader, "How many devices to create (1-20): ", 1, 20)
-	fmt.Println()
+	deviceCount := mustPromptInt(reader, "How many devices to create (1-20): ", 1, maxDeviceCount)
+	fmt.Fprintln(os.Stdout)
 
+	devices := make([]generatedDevice, 0, deviceCount)
 	for i := range deviceCount {
-		_, _ = color.New(color.Bold, color.FgYellow).
-			Printf("Device %d/%d:\n", i+1, deviceCount)
+		_, _ = color.New(color.Bold, color.FgYellow).Printf("Device %d/%d:\n", i+1, deviceCount)
 		color.White("──────────────────────────────────────────────────────────────\n")
 
-		var device generatedDevice
-		device.protocols = make(map[string]protocolConfig)
+		device := generatedDevice{
+			protocols: make(map[string]protocolConfig),
+		}
 
-		// Device type
-		fmt.Println(color.CyanString("Device type:")) // #nosec G104 -- cosmetic output
-		fmt.Println("  1) router       2) switch       3) access-point")
-		fmt.Println("  4) server       5) workstation  6) firewall")
-		typeChoice := mustPromptChoice(reader, "Select type (1-6): ", []string{"1", "2", "3", "4", "5", "6"})
-		device.devType = mapDeviceType(typeChoice)
+		device.devType = promptDeviceType(reader)
+		device.name = promptDeviceName(reader, device.devType, i+1)
+		device.ip = promptDeviceIP(reader, cfg.subnet, i+1)
+		device.mac = promptDeviceMAC(reader, i+1)
 
-		// Device name
-		defaultName := fmt.Sprintf("%s-%d", device.devType, i+1)
-		device.name = promptString(reader, fmt.Sprintf("Device name [%s]: ", defaultName), defaultName)
-
-		// IP address
-		defaultIP := generateDefaultIP(cfg.subnet, i+1)
-		device.ip = promptString(reader, fmt.Sprintf("IP address [%s]: ", defaultIP), defaultIP)
-
-		// MAC address
-		defaultMAC := generateDefaultMAC(i + 1)
-		device.mac = promptString(reader, fmt.Sprintf("MAC address [%s]: ", defaultMAC), defaultMAC)
-
-		fmt.Println()
-
-		// Protocol selection
 		color.Cyan("Select protocols to enable for %s:\n", device.name)
 		device.protocols = selectProtocols(reader, device.devType)
 
-		cfg.devices = append(cfg.devices, device)
-		fmt.Println()
+		devices = append(devices, device)
+		fmt.Fprintln(os.Stdout)
 	}
 
-	// Step 3: Output File
-	color.New(color.Bold, color.FgCyan).Println("Step 3: Save Configuration") // #nosec G104 -- cosmetic output
-	color.White("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
-
-	var outputFile string
-	if len(args) > 0 {
-		outputFile = args[0]
-	} else {
-		outputFile = promptString(reader, "Output filename [config.yaml]: ", "config.yaml")
-	}
-
-	// Check if file exists
-	if _, err := os.Stat(outputFile); err == nil {
-		color.Yellow("Warning: File %s already exists!\n", outputFile)
-		if !mustPromptYesNo(reader, "Overwrite? (y/n): ") {
-			color.Red("Aborted.\n")
-			os.Exit(0)
-		}
-	}
-
-	// Generate YAML
-	yamlContent := generateYAML(cfg)
-
-	// Write to file
-	err := os.WriteFile(outputFile, []byte(yamlContent), 0o600)
-	if err != nil {
-		color.Red("Error writing file: %v\n", err)
-		os.Exit(1)
-	}
-
-	// Success message
-	fmt.Println()
-	color.Green("✓ Successfully created %s\n", outputFile)
-	fmt.Println()
-
-	// Summary
-	color.New(color.Bold).Println("Configuration Summary:") // #nosec G104 -- cosmetic output
-	fmt.Printf("  Network:  %s (%s)\n", cfg.networkName, cfg.subnet)
-	fmt.Printf("  Devices:  %d\n", len(cfg.devices))
-	for i, dev := range cfg.devices {
-		enabledProtos := countEnabledProtocols(dev.protocols)
-		fmt.Printf("    %d. %s (%s) - %s - %d protocol(s)\n", i+1, dev.name, dev.devType, dev.ip, enabledProtos)
-	}
-	fmt.Println()
-
-	// Next steps
-	color.New(color.Bold).Println("Next Steps:") // #nosec G104 -- cosmetic output
-	fmt.Println()
-	fmt.Println("1. Validate your configuration:")
-	fmt.Printf("   %s\n", color.CyanString("niac validate %s", outputFile)) // #nosec G104 -- cosmetic output
-	fmt.Println()
-	fmt.Println("2. Run the simulation:")
-	fmt.Printf(
-		"   %s\n",
-		color.CyanString("sudo niac interactive en0 %s", outputFile),
-	) // #nosec G104 -- cosmetic output
-	fmt.Println()
+	return devices
 }
 
 func mapDeviceType(choice string) string {
@@ -217,22 +173,22 @@ func mapDeviceType(choice string) string {
 func generateDefaultIP(subnet string, deviceNum int) string {
 	// Parse subnet to extract base IP
 	parts := strings.Split(subnet, "/")
-	if len(parts) != 2 {
-		return fmt.Sprintf("192.168.1.%d", deviceNum+10)
+	if len(parts) != cidrParts {
+		return fmt.Sprintf("192.168.1.%d", deviceNum+baseIPOffset)
 	}
 
 	ip := net.ParseIP(parts[0])
 	if ip == nil {
-		return fmt.Sprintf("192.168.1.%d", deviceNum+10)
+		return fmt.Sprintf("192.168.1.%d", deviceNum+baseIPOffset)
 	}
 
 	ip4 := ip.To4()
 	if ip4 == nil {
-		return fmt.Sprintf("192.168.1.%d", deviceNum+10)
+		return fmt.Sprintf("192.168.1.%d", deviceNum+baseIPOffset)
 	}
 
 	// Increment last octet
-	ip4[3] = byte(int(ip4[3]) + deviceNum + 10)
+	ip4[3] = byte(int(ip4[3]) + deviceNum + baseIPOffset)
 	return ip4.String()
 }
 
@@ -244,7 +200,7 @@ func selectProtocols(reader *bufio.Reader, devType string) map[string]protocolCo
 	protocols := make(map[string]protocolConfig)
 
 	// Discovery protocols
-	fmt.Println()
+	fmt.Fprintln(os.Stdout)
 	color.Yellow("Discovery Protocols:")
 	if mustPromptYesNo(reader, "  Enable LLDP? (y/n): ") {
 		protocols["lldp"] = protocolConfig{
@@ -266,7 +222,7 @@ func selectProtocols(reader *bufio.Reader, devType string) map[string]protocolCo
 	}
 
 	// Management protocols
-	fmt.Println()
+	fmt.Fprintln(os.Stdout)
 	color.Yellow("Management Protocols:")
 	if mustPromptYesNo(reader, "  Enable SNMP? (y/n): ") {
 		community := promptString(reader, "    SNMP community [public]: ", "public")
@@ -281,7 +237,7 @@ func selectProtocols(reader *bufio.Reader, devType string) map[string]protocolCo
 	}
 
 	// Network services
-	fmt.Println()
+	fmt.Fprintln(os.Stdout)
 	color.Yellow("Network Services:")
 	if devType == "router" || devType == "server" {
 		if mustPromptYesNo(reader, "  Enable DHCP server? (y/n): ") {
@@ -303,7 +259,7 @@ func selectProtocols(reader *bufio.Reader, devType string) map[string]protocolCo
 
 	// Application protocols
 	if devType == "server" || devType == "workstation" {
-		fmt.Println()
+		fmt.Fprintln(os.Stdout)
 		color.Yellow("Application Protocols:")
 		if mustPromptYesNo(reader, "  Enable HTTP server? (y/n): ") {
 			protocols["http"] = protocolConfig{
@@ -326,91 +282,123 @@ func selectProtocols(reader *bufio.Reader, devType string) map[string]protocolCo
 	return protocols
 }
 
-//nolint:gocognit // YAML generation requires handling many device fields
 func generateYAML(cfg *generatedConfig) string {
 	var sb strings.Builder
 
-	// Header comment
+	writeYAMLHeader(&sb, cfg)
+	writeYAMLDevices(&sb, cfg.devices)
+
+	return sb.String()
+}
+
+func writeYAMLHeader(sb *strings.Builder, cfg *generatedConfig) {
 	sb.WriteString("# NIAC Configuration File\n")
-	sb.WriteString(fmt.Sprintf("# Network: %s\n", cfg.networkName))
-	sb.WriteString(fmt.Sprintf("# Generated: %s\n", time.Now().Format("2006-01-02 15:04:05")))
+	_, _ = fmt.Fprintf(sb, "# Network: %s\n", cfg.networkName)
+	_, _ = fmt.Fprintf(sb, "# Generated: %s\n", time.Now().Format("2006-01-02 15:04:05"))
 	sb.WriteString("# NIAC version: v1.19.0\n\n")
 
-	// Include path
 	if cfg.includePath != "" {
-		sb.WriteString(fmt.Sprintf("includePath: \"%s\"\n\n", cfg.includePath))
+		_, _ = fmt.Fprintf(sb, "includePath: \"%s\"\n\n", cfg.includePath)
 	}
+}
 
-	// Devices
+func writeYAMLDevices(sb *strings.Builder, devices []generatedDevice) {
 	sb.WriteString("devices:\n")
-	for _, dev := range cfg.devices {
-		sb.WriteString(fmt.Sprintf("  - name: \"%s\"\n", dev.name))
-		sb.WriteString(fmt.Sprintf("    mac: \"%s\"\n", dev.mac))
-		sb.WriteString(fmt.Sprintf("    ip: \"%s\"\n", dev.ip))
+	for _, dev := range devices {
+		_, _ = fmt.Fprintf(sb, "  - name: \"%s\"\n", dev.name)
+		_, _ = fmt.Fprintf(sb, "    mac: \"%s\"\n", dev.mac)
+		_, _ = fmt.Fprintf(sb, "    ip: \"%s\"\n", dev.ip)
 
-		// SNMP configuration
-		if proto, ok := dev.protocols["snmp"]; ok && proto.enabled {
-			sb.WriteString("    snmpAgent:\n")
-			sb.WriteString(fmt.Sprintf("      community: \"%s\"\n", proto.params["community"]))
-			if proto.params["walk_file"] != "" {
-				sb.WriteString(fmt.Sprintf("      walkFile: \"%s\"\n", proto.params["walk_file"]))
-			}
-		}
-
-		// LLDP configuration
-		if proto, ok := dev.protocols["lldp"]; ok && proto.enabled {
-			sb.WriteString("    lldp:\n")
-			sb.WriteString("      enabled: true\n")
-			sb.WriteString(fmt.Sprintf("      advertiseInterval: %s\n", proto.params["advertise_interval"]))
-			sb.WriteString(fmt.Sprintf("      ttl: %s\n", proto.params["ttl"]))
-			sb.WriteString(fmt.Sprintf("      systemDescription: \"%s on %s\"\n", dev.devType, dev.name))
-		}
-
-		// CDP configuration
-		if proto, ok := dev.protocols["cdp"]; ok && proto.enabled {
-			sb.WriteString("    cdp:\n")
-			sb.WriteString("      enabled: true\n")
-			sb.WriteString(fmt.Sprintf("      advertiseInterval: %s\n", proto.params["advertise_interval"]))
-			sb.WriteString(fmt.Sprintf("      holdtime: %s\n", proto.params["holdtime"]))
-			sb.WriteString(fmt.Sprintf("      platform: \"NIAC %s\"\n", dev.devType))
-		}
-
-		// DHCP configuration
-		if proto, ok := dev.protocols["dhcp"]; ok && proto.enabled {
-			sb.WriteString("    dhcp:\n")
-			sb.WriteString(fmt.Sprintf("      subnetMask: \"%s\"\n", proto.params["subnet_mask"]))
-			if proto.params["router"] != "" {
-				sb.WriteString(fmt.Sprintf("      router: \"%s\"\n", proto.params["router"]))
-			}
-		}
-
-		// DNS configuration
-		if proto, ok := dev.protocols["dns"]; ok && proto.enabled {
-			sb.WriteString("    dns:\n")
-			sb.WriteString("      forwardRecords:\n")
-			sb.WriteString(fmt.Sprintf("        - name: \"%s.local\"\n", dev.name))
-			sb.WriteString(fmt.Sprintf("          ip: \"%s\"\n", dev.ip))
-			sb.WriteString("          ttl: 3600\n")
-		}
-
-		// HTTP configuration
-		if proto, ok := dev.protocols["http"]; ok && proto.enabled {
-			sb.WriteString("    http:\n")
-			sb.WriteString("      enabled: true\n")
-			sb.WriteString(fmt.Sprintf("      serverName: \"%s\"\n", proto.params["server_name"]))
-		}
-
-		// FTP configuration
-		if proto, ok := dev.protocols["ftp"]; ok && proto.enabled {
-			sb.WriteString("    ftp:\n")
-			sb.WriteString("      enabled: true\n")
-			sb.WriteString(fmt.Sprintf("      allowAnonymous: %s\n", proto.params["allow_anonymous"]))
-		}
+		writeYAMLSNMP(sb, dev.protocols)
+		writeYAMLLLDP(sb, dev)
+		writeYAMLCDP(sb, dev)
+		writeYAMLDHCP(sb, dev.protocols)
+		writeYAMLDNS(sb, dev)
+		writeYAMLHTTP(sb, dev.protocols)
+		writeYAMLFTP(sb, dev.protocols)
 
 		sb.WriteString("\n")
 	}
+}
 
-	return sb.String()
+func writeYAMLSNMP(sb *strings.Builder, protocols map[string]protocolConfig) {
+	proto, ok := protocols["snmp"]
+	if !ok || !proto.enabled {
+		return
+	}
+	sb.WriteString("    snmpAgent:\n")
+	_, _ = fmt.Fprintf(sb, "      community: \"%s\"\n", proto.params["community"])
+	if proto.params["walk_file"] != "" {
+		_, _ = fmt.Fprintf(sb, "      walkFile: \"%s\"\n", proto.params["walk_file"])
+	}
+}
+
+func writeYAMLLLDP(sb *strings.Builder, dev generatedDevice) {
+	proto, ok := dev.protocols["lldp"]
+	if !ok || !proto.enabled {
+		return
+	}
+	sb.WriteString("    lldp:\n")
+	sb.WriteString("      enabled: true\n")
+	_, _ = fmt.Fprintf(sb, "      advertiseInterval: %s\n", proto.params["advertise_interval"])
+	_, _ = fmt.Fprintf(sb, "      ttl: %s\n", proto.params["ttl"])
+	_, _ = fmt.Fprintf(sb, "      systemDescription: \"%s on %s\"\n", dev.devType, dev.name)
+}
+
+func writeYAMLCDP(sb *strings.Builder, dev generatedDevice) {
+	proto, ok := dev.protocols["cdp"]
+	if !ok || !proto.enabled {
+		return
+	}
+	sb.WriteString("    cdp:\n")
+	sb.WriteString("      enabled: true\n")
+	_, _ = fmt.Fprintf(sb, "      advertiseInterval: %s\n", proto.params["advertise_interval"])
+	_, _ = fmt.Fprintf(sb, "      holdtime: %s\n", proto.params["holdtime"])
+	_, _ = fmt.Fprintf(sb, "      platform: \"NIAC %s\"\n", dev.devType)
+}
+
+func writeYAMLDHCP(sb *strings.Builder, protocols map[string]protocolConfig) {
+	proto, ok := protocols["dhcp"]
+	if !ok || !proto.enabled {
+		return
+	}
+	sb.WriteString("    dhcp:\n")
+	_, _ = fmt.Fprintf(sb, "      subnetMask: \"%s\"\n", proto.params["subnet_mask"])
+	if proto.params["router"] != "" {
+		_, _ = fmt.Fprintf(sb, "      router: \"%s\"\n", proto.params["router"])
+	}
+}
+
+func writeYAMLDNS(sb *strings.Builder, dev generatedDevice) {
+	proto, ok := dev.protocols["dns"]
+	if !ok || !proto.enabled {
+		return
+	}
+	sb.WriteString("    dns:\n")
+	sb.WriteString("      forwardRecords:\n")
+	_, _ = fmt.Fprintf(sb, "        - name: \"%s.local\"\n", dev.name)
+	_, _ = fmt.Fprintf(sb, "          ip: \"%s\"\n", dev.ip)
+	sb.WriteString("          ttl: 3600\n")
+}
+
+func writeYAMLHTTP(sb *strings.Builder, protocols map[string]protocolConfig) {
+	proto, ok := protocols["http"]
+	if !ok || !proto.enabled {
+		return
+	}
+	sb.WriteString("    http:\n")
+	sb.WriteString("      enabled: true\n")
+	_, _ = fmt.Fprintf(sb, "      serverName: \"%s\"\n", proto.params["server_name"])
+}
+
+func writeYAMLFTP(sb *strings.Builder, protocols map[string]protocolConfig) {
+	proto, ok := protocols["ftp"]
+	if !ok || !proto.enabled {
+		return
+	}
+	sb.WriteString("    ftp:\n")
+	sb.WriteString("      enabled: true\n")
+	_, _ = fmt.Fprintf(sb, "      allowAnonymous: %s\n", proto.params["allow_anonymous"])
 }
 
 func countEnabledProtocols(protocols map[string]protocolConfig) int {
@@ -423,9 +411,122 @@ func countEnabledProtocols(protocols map[string]protocolConfig) int {
 	return count
 }
 
+func chooseOutputFile(args []string, reader *bufio.Reader) string {
+	var output string
+
+	if len(args) > 0 {
+		output = args[0]
+	} else {
+		fmt.Fprintln(os.Stdout)
+		color.Yellow("Step 3: Save Configuration")
+		output = promptString(
+			reader,
+			fmt.Sprintf("  Output filename [%s]: ", defaultGenerateOutputFile),
+			defaultGenerateOutputFile,
+		)
+	}
+
+	if _, err := os.Stat(output); err == nil {
+		fmt.Fprintln(os.Stdout)
+		color.Yellow("Warning: %s already exists!", output)
+		if !mustPromptYesNo(reader, "Overwrite? (y/n): ") {
+			color.Red("Aborted.")
+			os.Exit(0)
+		}
+	}
+
+	return output
+}
+
+func writeConfiguration(outputFile string, cfg *generatedConfig) {
+	yaml := generateYAML(cfg)
+	if err := os.WriteFile(outputFile, []byte(yaml), 0o600); err != nil {
+		color.Red("Failed to write configuration: %v", err)
+		os.Exit(1)
+	}
+}
+
+func printSummary(outputFile string, cfg *generatedConfig) {
+	fmt.Fprintln(os.Stdout)
+	color.Green("✓ Configuration generated: %s", outputFile)
+	fmt.Fprintf(os.Stdout, "  Network: %s\n", cfg.networkName)
+	fmt.Fprintf(os.Stdout, "  Subnet: %s\n", cfg.subnet)
+	fmt.Fprintf(os.Stdout, "  Devices: %d\n", len(cfg.devices))
+	if cfg.includePath != "" {
+		fmt.Fprintf(os.Stdout, "  SNMP walk path: %s\n", cfg.includePath)
+	}
+
+	totalProtocols := 0
+	for _, device := range cfg.devices {
+		totalProtocols += countEnabledProtocols(device.protocols)
+	}
+	fmt.Fprintf(os.Stdout, "  Enabled protocols: %d\n", totalProtocols)
+	fmt.Fprintln(os.Stdout)
+
+	_, _ = color.New(color.Bold).Println("Next steps:")
+	_, _ = fmt.Fprintf(
+		os.Stdout,
+		"  %s\n",
+		color.CyanString("niac validate %s", outputFile),
+	)
+	_, _ = fmt.Fprintf(
+		os.Stdout,
+		"  %s\n",
+		color.CyanString("niac interactive en0 %s", outputFile),
+	)
+}
+
+func promptDeviceType(reader *bufio.Reader) string {
+	fmt.Fprintln(os.Stdout, "    Select a device type:")
+	options := deviceTypeOptions()
+	for _, option := range options {
+		fmt.Fprintf(os.Stdout, "      %s) %s\n", option.key, option.label)
+	}
+
+	keys := make([]string, len(options))
+	for i, option := range options {
+		keys[i] = option.key
+	}
+
+	choice := mustPromptChoice(reader, "    Choice (1-6): ", keys)
+	if devType := mapDeviceType(choice); devType != "" {
+		return devType
+	}
+
+	color.Red("Invalid device type selected")
+	return promptDeviceType(reader)
+}
+
+func promptDeviceName(reader *bufio.Reader, devType string, deviceNum int) string {
+	defaultName := fmt.Sprintf("%s-%d", devType, deviceNum)
+	return promptString(reader, fmt.Sprintf("    Name [%s]: ", defaultName), defaultName)
+}
+
+func promptDeviceIP(reader *bufio.Reader, subnet string, deviceNum int) string {
+	defaultIP := generateDefaultIP(subnet, deviceNum)
+	for {
+		ip := promptString(reader, fmt.Sprintf("    IP [%s]: ", defaultIP), defaultIP)
+		if net.ParseIP(ip) != nil {
+			return ip
+		}
+		color.Red("Please enter a valid IP address")
+	}
+}
+
+func promptDeviceMAC(reader *bufio.Reader, deviceNum int) string {
+	defaultMAC := generateDefaultMAC(deviceNum)
+	for {
+		mac := promptString(reader, fmt.Sprintf("    MAC [%s]: ", defaultMAC), defaultMAC)
+		if _, err := net.ParseMAC(mac); err == nil {
+			return mac
+		}
+		color.Red("Please enter a valid MAC address")
+	}
+}
+
 func promptString(reader *bufio.Reader, prompt string, defaultValue string) string {
 	for {
-		fmt.Print(prompt)
+		fmt.Fprint(os.Stdout, prompt)
 		input, err := readLine(reader)
 		if err != nil {
 			if errors.Is(err, io.EOF) && defaultValue != "" {

@@ -12,8 +12,8 @@ import (
 	"github.com/gosnmp/gosnmp"
 )
 
-// SNMPNull represents an SNMP Null value (distinct from Go nil).
-type SNMPNull struct{}
+// Null represents an SNMP Null value (distinct from Go nil).
+type Null struct{}
 
 // AddMib applies an AddMib directive to the agent.
 func (a *Agent) AddMib(oid, typeStr, valueStr string) error {
@@ -40,7 +40,7 @@ func (a *Agent) AddMib(oid, typeStr, valueStr string) error {
 		})
 
 		return nil
-	case strings.HasPrefix(handler, "fixed"):
+	default:
 		// fallthrough to fixed parsing
 	}
 
@@ -85,63 +85,95 @@ func (a *Agent) addVariMib(oid, typeStr, valueStr string) error {
 		return ErrInvalidVarimibIntervals
 	}
 
-	//nolint:exhaustive // Only string-like and integral ASN types are handled for dynamic values
-	switch asnType {
-	case gosnmp.OctetString, gosnmp.IPAddress, gosnmp.ObjectIdentifier, gosnmp.Opaque:
-		// String/IP variants
-		a.mib.SetDynamic(oid, func() *OIDValue {
-			ticks := int(a.sysUpTimeTicks())
-			mod := ticks % totalInterval
-
-			value := pairs[len(pairs)-1].value
-
-			for _, p := range pairs {
-				if mod < p.interval {
-					break
-				}
-
-				value = p.value
-				mod -= p.interval
-			}
-
-			parsed, _ := parseValue(typeStr, asnType, value)
-
-			return &OIDValue{Type: asnType, Value: parsed}
-		})
-
-		return nil
-	default:
-		// Integral variants
-		totalValue := int64(0)
-
-		for _, p := range pairs {
-			inc, _ := strconv.ParseInt(p.value, 10, 64)
-			totalValue += inc
-		}
-
-		a.mib.SetDynamic(oid, func() *OIDValue {
-			ticks := int(a.sysUpTimeTicks())
-			multiple := ticks / totalInterval
-			leftOver := ticks % totalInterval
-			nowValue := totalValue * int64(multiple)
-
-			for _, p := range pairs {
-				inc, _ := strconv.ParseInt(p.value, 10, 64)
-				if p.interval >= leftOver {
-					nowValue += inc * int64(leftOver) / int64(p.interval)
-
-					break
-				}
-
-				nowValue += inc
-				leftOver -= p.interval
-			}
-
-			return &OIDValue{Type: asnType, Value: castIntegral(asnType, nowValue)}
-		})
-
+	if isStringVarimibType(asnType) {
+		a.setStringVarimib(oid, typeStr, asnType, pairs, totalInterval)
 		return nil
 	}
+
+	a.setIntegralVarimib(oid, asnType, pairs, totalInterval)
+	return nil
+}
+
+// isStringVarimibType returns true if the ASN type represents a string/IP variant.
+func isStringVarimibType(asnType gosnmp.Asn1BER) bool {
+	switch asnType {
+	case gosnmp.OctetString, gosnmp.IPAddress, gosnmp.ObjectIdentifier, gosnmp.Opaque:
+		return true
+	case gosnmp.EndOfContents, gosnmp.Boolean, gosnmp.Integer,
+		gosnmp.BitString, gosnmp.Null, gosnmp.ObjectDescription, gosnmp.Counter32,
+		gosnmp.Gauge32, gosnmp.TimeTicks, gosnmp.NsapAddress, gosnmp.Counter64,
+		gosnmp.Uinteger32, gosnmp.OpaqueFloat, gosnmp.OpaqueDouble, gosnmp.NoSuchObject,
+		gosnmp.NoSuchInstance, gosnmp.EndOfMibView:
+		// Note: EndOfContents and UnknownType have the same value (0), so only listing one
+		return false
+	}
+
+	return false
+}
+
+// setStringVarimib sets up a dynamic MIB handler for string/IP type varimib values.
+func (a *Agent) setStringVarimib(oid, typeStr string, asnType gosnmp.Asn1BER, pairs []varimibPair, totalInterval int) {
+	a.mib.SetDynamic(oid, func() *OIDValue {
+		value := computeStringVarimibValue(a.sysUpTimeTicks(), pairs, totalInterval)
+		parsed, _ := parseValue(typeStr, asnType, value)
+		return &OIDValue{Type: asnType, Value: parsed}
+	})
+}
+
+// computeStringVarimibValue determines the current string value based on elapsed ticks.
+func computeStringVarimibValue(ticks uint32, pairs []varimibPair, totalInterval int) string {
+	mod := int(ticks) % totalInterval
+	value := pairs[len(pairs)-1].value
+
+	for _, p := range pairs {
+		if mod < p.interval {
+			break
+		}
+		value = p.value
+		mod -= p.interval
+	}
+
+	return value
+}
+
+// setIntegralVarimib sets up a dynamic MIB handler for integral type varimib values.
+func (a *Agent) setIntegralVarimib(oid string, asnType gosnmp.Asn1BER, pairs []varimibPair, totalInterval int) {
+	totalValue := computeTotalVarimibValue(pairs)
+
+	a.mib.SetDynamic(oid, func() *OIDValue {
+		nowValue := computeIntegralVarimibValue(a.sysUpTimeTicks(), pairs, totalInterval, totalValue)
+		return &OIDValue{Type: asnType, Value: castIntegral(asnType, nowValue)}
+	})
+}
+
+// computeTotalVarimibValue sums up all delta values from varimib pairs.
+func computeTotalVarimibValue(pairs []varimibPair) int64 {
+	var total int64
+	for _, p := range pairs {
+		inc, _ := strconv.ParseInt(p.value, 10, 64)
+		total += inc
+	}
+	return total
+}
+
+// computeIntegralVarimibValue calculates the current integral value based on elapsed ticks.
+func computeIntegralVarimibValue(ticks uint32, pairs []varimibPair, totalInterval int, totalValue int64) int64 {
+	ticksInt := int(ticks)
+	multiple := ticksInt / totalInterval
+	leftOver := ticksInt % totalInterval
+	nowValue := totalValue * int64(multiple)
+
+	for _, p := range pairs {
+		inc, _ := strconv.ParseInt(p.value, 10, 64)
+		if p.interval >= leftOver {
+			nowValue += inc * int64(leftOver) / int64(p.interval)
+			break
+		}
+		nowValue += inc
+		leftOver -= p.interval
+	}
+
+	return nowValue
 }
 
 type varimibPair struct {
@@ -162,7 +194,7 @@ func parseVarimibPairs(valueStr string) ([]varimibPair, error) {
 
 	for _, match := range matches {
 		fields := strings.Fields(match[1])
-		if len(fields) < 2 {
+		if len(fields) < OIDPartsMinPDU {
 			continue
 		}
 
@@ -220,7 +252,7 @@ func asnTypeFromString(typeStr string) (gosnmp.Asn1BER, error) {
 }
 
 func parseValue(typeStr string, asnType gosnmp.Asn1BER, value string) (any, error) {
-	//nolint:exhaustive // Only commonly used ASN.1 types are parsed; others use default byte handling
+	//exhaustive:ignore
 	switch asnType {
 	case gosnmp.OctetString:
 		if strings.EqualFold(typeStr, "Hex-STRING") {
@@ -266,9 +298,9 @@ func parseValue(typeStr string, asnType gosnmp.Asn1BER, value string) (any, erro
 			return nil, fmt.Errorf("failed to parse uint64: %w", err)
 		}
 
-		return uint64(u), nil
+		return u, nil
 	case gosnmp.Null:
-		return SNMPNull{}, nil
+		return Null{}, nil
 	default:
 		return []byte(value), nil
 	}
@@ -277,26 +309,35 @@ func parseValue(typeStr string, asnType gosnmp.Asn1BER, value string) (any, erro
 func castIntegral(asnType gosnmp.Asn1BER, value int64) any {
 	switch asnType {
 	case gosnmp.Counter32, gosnmp.Gauge32, gosnmp.TimeTicks:
-		if value < 0 {
-			value = 0
-		}
-
-		return uint32(value) //nolint:gosec // G115: value is bounds-checked above
+		return safeUint32(value)
 	case gosnmp.Counter64:
-		if value < 0 {
-			value = 0
-		}
-
-		return uint64(value) //nolint:gosec // G115: value is bounds-checked above
-	default:
+		return safeUint64(value)
+	case gosnmp.EndOfContents, // Also covers UnknownType (same value)
+		gosnmp.Boolean,
+		gosnmp.Integer,
+		gosnmp.BitString,
+		gosnmp.OctetString,
+		gosnmp.Null,
+		gosnmp.ObjectIdentifier,
+		gosnmp.ObjectDescription,
+		gosnmp.IPAddress,
+		gosnmp.Opaque,
+		gosnmp.NsapAddress,
+		gosnmp.Uinteger32,
+		gosnmp.OpaqueFloat,
+		gosnmp.OpaqueDouble,
+		gosnmp.NoSuchObject,
+		gosnmp.NoSuchInstance,
+		gosnmp.EndOfMibView:
 		return int(value)
 	}
+
+	return int(value)
 }
 
 func (a *Agent) sysUpTimeTicks() uint32 {
 	uptime := time.Since(a.startTime)
+	ms := uptime.Milliseconds() / MillisecsPerCentisec
 
-	ms := min(uptime.Milliseconds()/10, 0xFFFFFFFF)
-
-	return uint32(ms) //nolint:gosec // G115: value is bounds-checked above
+	return safeUint32(ms)
 }

@@ -18,8 +18,8 @@ const (
 	SeverityInfo ErrorSeverity = "info"
 )
 
-// ConfigError represents a structured configuration error with context.
-type ConfigError struct {
+// Error represents a structured configuration error with context.
+type Error struct {
 	File       string        `json:"file"`                 // Configuration file path
 	Line       int           `json:"line"`                 // Line number (0 if unknown)
 	Column     int           `json:"column"`               // Column number (0 if unknown)
@@ -31,8 +31,28 @@ type ConfigError struct {
 	Severity   ErrorSeverity `json:"severity"`             // Error severity
 }
 
+// NewConfigError creates a new configuration error.
+func NewConfigError(file, field, message string) *Error {
+	return &Error{
+		File:     file,
+		Field:    field,
+		Message:  message,
+		Severity: SeverityError,
+	}
+}
+
+// NewConfigWarning creates a new configuration warning.
+func NewConfigWarning(file, field, message string) *Error {
+	return &Error{
+		File:     file,
+		Field:    field,
+		Message:  message,
+		Severity: SeverityWarning,
+	}
+}
+
 // Error implements the error interface.
-func (e *ConfigError) Error() string {
+func (e *Error) Error() string {
 	if e.Line > 0 && e.Column > 0 {
 		return fmt.Sprintf("%s:%d:%d: %s", e.File, e.Line, e.Column, e.Message)
 	}
@@ -45,7 +65,7 @@ func (e *ConfigError) Error() string {
 }
 
 // Format returns a beautifully formatted error message for terminal display.
-func (e *ConfigError) Format() string {
+func (e *Error) Format() string {
 	var b strings.Builder
 
 	// Error icon and location
@@ -117,16 +137,16 @@ func (e *ConfigError) Format() string {
 	return b.String()
 }
 
-// ConfigErrorList holds multiple configuration errors.
-type ConfigErrorList struct {
-	File     string         `json:"file"`
-	Errors   []*ConfigError `json:"errors"`
-	Warnings []*ConfigError `json:"warnings,omitempty"`
-	Valid    bool           `json:"valid"`
+// ListError holds multiple configuration errors.
+type ListError struct {
+	File     string   `json:"file"`
+	Errors   []*Error `json:"errors"`
+	Warnings []*Error `json:"warnings,omitempty"`
+	Valid    bool     `json:"valid"`
 }
 
-// Error implements the error interface for ConfigErrorList.
-func (l *ConfigErrorList) Error() string {
+// Error implements the error interface for ConfigListError.
+func (l *ListError) Error() string {
 	if len(l.Errors) == 0 {
 		return "no errors"
 	}
@@ -139,7 +159,7 @@ func (l *ConfigErrorList) Error() string {
 }
 
 // Add adds an error to the list.
-func (l *ConfigErrorList) Add(err *ConfigError) {
+func (l *ListError) Add(err *Error) {
 	switch err.Severity {
 	case SeverityError:
 		l.Errors = append(l.Errors, err)
@@ -152,17 +172,17 @@ func (l *ConfigErrorList) Add(err *ConfigError) {
 }
 
 // HasErrors returns true if there are any errors (not warnings).
-func (l *ConfigErrorList) HasErrors() bool {
+func (l *ListError) HasErrors() bool {
 	return len(l.Errors) > 0
 }
 
 // HasWarnings returns true if there are any warnings.
-func (l *ConfigErrorList) HasWarnings() bool {
+func (l *ListError) HasWarnings() bool {
 	return len(l.Warnings) > 0
 }
 
 // Format returns a formatted string with all errors and warnings.
-func (l *ConfigErrorList) Format() string {
+func (l *ListError) Format() string {
 	var b strings.Builder
 
 	if len(l.Errors) > 0 {
@@ -201,31 +221,11 @@ func (l *ConfigErrorList) Format() string {
 }
 
 // ToJSON converts the error list to JSON format for CI/CD integration.
-func (l *ConfigErrorList) ToJSON() (string, error) {
+func (l *ListError) ToJSON() (string, error) {
 	data, err := json.MarshalIndent(l, "", "  ")
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal errors to JSON: %w", err)
 	}
 
 	return string(data), nil
-}
-
-// NewConfigError creates a new configuration error.
-func NewConfigError(file, field, message string) *ConfigError {
-	return &ConfigError{
-		File:     file,
-		Field:    field,
-		Message:  message,
-		Severity: SeverityError,
-	}
-}
-
-// NewConfigWarning creates a new configuration warning.
-func NewConfigWarning(file, field, message string) *ConfigError {
-	return &ConfigError{
-		File:     file,
-		Field:    field,
-		Message:  message,
-		Severity: SeverityWarning,
-	}
 }

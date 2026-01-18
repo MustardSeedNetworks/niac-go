@@ -23,16 +23,21 @@ type Packet struct {
 
 // Constants for packet parsing.
 const (
-	SizeOfMac     = 6
-	SizeOfIP      = 4
-	SizeOfIPv6    = 16
-	EtherTypeIP   = 0x0800
-	EtherTypeARP  = 0x0806
-	EtherTypeIPv6 = 0x86dd
-	EtherTypeVLAN = 0x8100
-	EtherTypeLLDP = 0x88cc
-	EtherTypeEDP  = 0x00E02B
-	EtherTypeFDP  = 0x8037
+	SizeOfMac         = 6
+	SizeOfIP          = 4
+	SizeOfIPv6        = 16
+	EtherTypeIP       = 0x0800
+	EtherTypeARP      = 0x0806
+	EtherTypeIPv6     = 0x86dd
+	EtherTypeVLAN     = 0x8100
+	EtherTypeLLDP     = 0x88cc
+	EtherTypeEDP      = 0x00E02B
+	EtherTypeFDP      = 0x8037
+	etherHeaderSize   = 14     // Ethernet header size
+	vlanIDMask        = 0x0FFF // VLAN ID mask (12 bits)
+	ethTypeOffsetMult = 2      // Multiplier for EtherType offset (src+dst MACs)
+	checksumWordMask  = 0xFFFF // Mask for 16-bit word in checksum calculation
+	checksumWordShift = 16     // Bit shift for folding 32-bit to 16-bit checksum
 )
 
 // MaxPacketSize is the maximum IP packet size (IPv4/IPv6)
@@ -168,7 +173,7 @@ func (p *Packet) CopySourceMACToDest() {
 
 // GetEtherType returns the EtherType field.
 func (p *Packet) GetEtherType() uint16 {
-	return p.Get16(SizeOfMac * 2)
+	return p.Get16(SizeOfMac * ethTypeOffsetMult)
 }
 
 // ParsePacket parses raw bytes into a Packet.
@@ -185,8 +190,8 @@ func ParsePacket(data []byte, serialNum int) (*Packet, error) {
 	etherType := pkt.GetEtherType()
 	if etherType == EtherTypeVLAN {
 		// VLAN tag present
-		vlanInfo := pkt.Get16(SizeOfMac*2 + 2)
-		pkt.VLAN = int(vlanInfo & 0x0FFF)
+		vlanInfo := pkt.Get16(SizeOfMac*ethTypeOffsetMult + ethTypeOffsetMult)
+		pkt.VLAN = int(vlanInfo & vlanIDMask)
 	}
 
 	return pkt, nil
@@ -194,7 +199,7 @@ func ParsePacket(data []byte, serialNum int) (*Packet, error) {
 
 // BuildEthernetHeader builds an Ethernet II header.
 func BuildEthernetHeader(dst, src net.HardwareAddr, etherType uint16) []byte {
-	header := make([]byte, 14)
+	header := make([]byte, etherHeaderSize)
 	copy(header[0:6], dst)
 	copy(header[6:12], src)
 	binary.BigEndian.PutUint16(header[12:14], etherType)
@@ -209,8 +214,8 @@ func CalculateIPChecksum(header []byte) uint16 {
 		sum += uint32(binary.BigEndian.Uint16(header[i:]))
 	}
 	// Add carry
-	for sum > 0xFFFF {
-		sum = (sum & 0xFFFF) + (sum >> 16)
+	for sum > checksumWordMask {
+		sum = (sum & checksumWordMask) + (sum >> checksumWordShift)
 	}
 
 	return ^uint16(sum)

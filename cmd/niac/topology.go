@@ -9,7 +9,7 @@ import (
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 
-	"github.com/krisarmstrong/niac-go/pkg/api"
+	"github.com/krisarmstrong/niac-go/pkg/httpapi"
 	"github.com/krisarmstrong/niac-go/pkg/ipc"
 )
 
@@ -20,21 +20,24 @@ const (
 )
 
 // topologyOptions holds command-line options for the topology command.
-var topologyOptions struct {
+type topologyOptions struct {
 	format     string
 	outputFile string
 	socketPath string
 }
 
 // topologyCmd is the parent command for topology operations.
-var topologyCmd = &cobra.Command{
-	Use:   "topology",
-	Short: "Network topology management commands",
-	Long: `Network topology management commands for NIAC simulations.
+func addTopologyCommand(root *cobra.Command, _ *serviceOptions) {
+	options := new(topologyOptions)
+
+	topologyCmd := &cobra.Command{
+		Use:   "topology",
+		Short: "Network topology management commands",
+		Long: `Network topology management commands for NIAC simulations.
 
 These commands allow you to export and visualize the current network
 topology from a running NIAC simulation.`,
-	Example: `  # Export topology in DOT format for Graphviz
+		Example: `  # Export topology in DOT format for Graphviz
   niac topology export --format dot
 
   # Export topology as JSON
@@ -45,13 +48,13 @@ topology from a running NIAC simulation.`,
 
   # Generate a PNG using Graphviz
   niac topology export --format dot | dot -Tpng -o network.png`,
-}
+	}
 
-// topologyExportCmd exports the current network topology.
-var topologyExportCmd = &cobra.Command{
-	Use:   "export",
-	Short: "Export current network topology",
-	Long: `Export the current network topology from a running NIAC simulation.
+	// topologyExportCmd exports the current network topology.
+	topologyExportCmd := &cobra.Command{
+		Use:   "export",
+		Short: "Export current network topology",
+		Long: `Export the current network topology from a running NIAC simulation.
 
 Supported output formats:
   dot   - Graphviz DOT format for visualization (can be rendered with Graphviz tools)
@@ -67,7 +70,7 @@ Exit codes:
   0 - Success
   1 - Connection failed (simulation not running)
   2 - Error occurred (export failed, invalid format, etc.)`,
-	Example: `  # Export to stdout in DOT format (default)
+		Example: `  # Export to stdout in DOT format (default)
   niac topology export
 
   # Export as JSON
@@ -88,31 +91,32 @@ Exit codes:
 
   # Process with jq
   niac topology export --format json | jq '.nodes[] | .name'`,
-	Args: cobra.NoArgs,
-	RunE: runTopologyExport,
-}
-
-func init() {
-	rootCmd.AddCommand(topologyCmd)
-	topologyCmd.AddCommand(topologyExportCmd)
+		Args: cobra.NoArgs,
+		RunE: func(_ *cobra.Command, _ []string) error {
+			return runTopologyExport(options)
+		},
+	}
 
 	// Export subcommand flags
-	topologyExportCmd.Flags().StringVarP(&topologyOptions.format, "format", "f", "dot",
+	topologyExportCmd.Flags().StringVarP(&options.format, "format", "f", "dot",
 		"Output format: dot, json, yaml")
-	topologyExportCmd.Flags().StringVarP(&topologyOptions.outputFile, "output", "o", "",
+	topologyExportCmd.Flags().StringVarP(&options.outputFile, "output", "o", "",
 		"Output file path (default: stdout)")
-	topologyExportCmd.Flags().StringVar(&topologyOptions.socketPath, "socket", "",
+	topologyExportCmd.Flags().StringVar(&options.socketPath, "socket", "",
 		"Path to IPC socket (default: /tmp/niac.sock)")
+
+	topologyCmd.AddCommand(topologyExportCmd)
+	root.AddCommand(topologyCmd)
 }
 
 // runTopologyExport executes the topology export command.
-func runTopologyExport(cmd *cobra.Command, args []string) error {
+func runTopologyExport(options *topologyOptions) error {
 	// Validate format
-	format := strings.ToLower(topologyOptions.format)
+	format := strings.ToLower(options.format)
 	if format != topologyFormatDOT && format != topologyFormatJSON && format != topologyFormatYAML {
 		return fmt.Errorf(
 			"invalid format %q: must be one of: %s, %s, %s",
-			topologyOptions.format,
+			options.format,
 			topologyFormatDOT,
 			topologyFormatJSON,
 			topologyFormatYAML,
@@ -120,7 +124,7 @@ func runTopologyExport(cmd *cobra.Command, args []string) error {
 	}
 
 	// Determine socket path
-	socketPath := topologyOptions.socketPath
+	socketPath := options.socketPath
 	if socketPath == "" {
 		socketPath = ipc.DefaultSocketPath()
 	}
@@ -148,32 +152,32 @@ func runTopologyExport(cmd *cobra.Command, args []string) error {
 		output, err = exportTopologyJSON(topology)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: failed to export JSON: %v\n", err)
-			os.Exit(2)
+			os.Exit(exitCodeError)
 		}
 	case topologyFormatYAML:
 		output, err = exportTopologyYAML(topology)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: failed to export YAML: %v\n", err)
-			os.Exit(2)
+			os.Exit(exitCodeError)
 		}
 	}
 
 	// Write output
-	if topologyOptions.outputFile != "" {
-		if writeErr := os.WriteFile(topologyOptions.outputFile, []byte(output), 0o600); writeErr != nil {
-			fmt.Fprintf(os.Stderr, "Error: failed to write to file %s: %v\n", topologyOptions.outputFile, writeErr)
-			os.Exit(2)
+	if options.outputFile != "" {
+		if writeErr := os.WriteFile(options.outputFile, []byte(output), 0o600); writeErr != nil {
+			fmt.Fprintf(os.Stderr, "Error: failed to write to file %s: %v\n", options.outputFile, writeErr)
+			os.Exit(exitCodeError)
 		}
-		fmt.Fprintf(os.Stderr, "Topology exported to %s\n", topologyOptions.outputFile)
+		fmt.Fprintf(os.Stderr, "Topology exported to %s\n", options.outputFile)
 	} else {
-		fmt.Print(output)
+		fmt.Fprint(os.Stdout, output)
 	}
 
 	return nil
 }
 
 // exportTopologyJSON exports topology as formatted JSON.
-func exportTopologyJSON(topology *api.Topology) (string, error) {
+func exportTopologyJSON(topology *httpapi.Topology) (string, error) {
 	// Create an extended structure with more details
 	var export TopologyExport
 	export.Nodes = make([]TopologyNodeExport, len(topology.Nodes))
@@ -223,7 +227,7 @@ func exportTopologyJSON(topology *api.Topology) (string, error) {
 }
 
 // exportTopologyYAML exports topology as YAML.
-func exportTopologyYAML(topology *api.Topology) (string, error) {
+func exportTopologyYAML(topology *httpapi.Topology) (string, error) {
 	// Create an extended structure with more details
 	var export TopologyExport
 	export.Nodes = make([]TopologyNodeExport, len(topology.Nodes))
@@ -273,7 +277,7 @@ func exportTopologyYAML(topology *api.Topology) (string, error) {
 }
 
 // countDevicesByType counts devices by their type.
-func countDevicesByType(nodes []api.TopologyNode) map[string]int {
+func countDevicesByType(nodes []httpapi.TopologyNode) map[string]int {
 	counts := make(map[string]int)
 	for _, node := range nodes {
 		deviceType := node.Type

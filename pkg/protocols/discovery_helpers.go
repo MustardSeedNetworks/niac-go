@@ -8,18 +8,26 @@ import (
 	"github.com/krisarmstrong/niac-go/pkg/config"
 )
 
+// Discovery helper constants.
+const (
+	keyValueParts          = 2     // number of parts in key:value format
+	maxPayloadLen          = 65535 // max uint16 for 802.3 frame length
+	ethernetHeaderSize     = 14    // Ethernet header size (no VLAN tag)
+	ethernetHeaderSizeVLAN = 18    // Ethernet header size with VLAN tag
+)
+
 // ethernetPayload returns the payload that follows the Ethernet header,
 // handling optional single VLAN tag. Returns false if the frame is too short.
 func ethernetPayload(frame []byte) ([]byte, bool) {
-	if len(frame) < 14 {
+	if len(frame) < ethernetHeaderSize {
 		return nil, false
 	}
 
-	offset := 14
+	offset := ethernetHeaderSize
 
 	etherType := binary.BigEndian.Uint16(frame[12:14])
 	if etherType == EtherTypeVLAN {
-		if len(frame) < 18 {
+		if len(frame) < ethernetHeaderSizeVLAN {
 			return nil, false
 		}
 
@@ -38,8 +46,8 @@ func parseKeyValueFields(s string) map[string]string {
 	result := make(map[string]string)
 
 	for token := range strings.FieldsSeq(s) {
-		parts := strings.SplitN(token, ":", 2)
-		if len(parts) != 2 {
+		parts := strings.SplitN(token, ":", keyValueParts)
+		if len(parts) != keyValueParts {
 			continue
 		}
 
@@ -88,12 +96,12 @@ func sendDiscoveryFrame(dstMACString string, device *config.Device, payload []by
 	dstMAC, _ := net.ParseMAC(dstMACString)
 
 	// Discovery protocols use length field instead of EtherType (802.3 format)
-	payloadLen := min(len(payload), 65535)
+	payloadLen := min(len(payload), maxPayloadLen)
 
-	length := uint16(payloadLen) // #nosec G115 -- payloadLen capped at 65535 above
+	length := safeUint16(payloadLen)
 
 	// Build raw Ethernet frame with 802.3 format
-	frame := make([]byte, 14+len(payload))
+	frame := make([]byte, ethernetHeaderSize+len(payload))
 
 	// Destination MAC
 	copy(frame[0:6], dstMAC)

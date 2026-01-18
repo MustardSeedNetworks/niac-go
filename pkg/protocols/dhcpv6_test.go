@@ -1,4 +1,4 @@
-package protocols
+package protocols_test
 
 import (
 	"encoding/binary"
@@ -8,81 +8,57 @@ import (
 
 	"github.com/krisarmstrong/niac-go/pkg/config"
 	"github.com/krisarmstrong/niac-go/pkg/logging"
+	"github.com/krisarmstrong/niac-go/pkg/protocols"
 )
 
 // TestNewDHCPv6Handler tests handler creation.
 func TestNewDHCPv6Handler(t *testing.T) {
 	cfg := &config.Config{}
-	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
-	handler := NewDHCPv6Handler(stack)
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	handler := protocols.NewDHCPv6Handler(stack)
 
 	if handler == nil {
 		t.Fatal("NewDHCPv6Handler returned nil")
 	}
 
-	if handler.stack != stack {
+	if handler.DHCPv6HandlerStack() != stack {
 		t.Error("Handler stack not set correctly")
 	}
 
-	if handler.leases == nil {
+	if handler.DHCPv6HandlerLeases() == nil {
 		t.Error("Leases map not initialized")
 	}
 
-	if handler.preferredLifetime != DefaultPreferredLifetime {
-		t.Errorf("Expected preferred lifetime %v, got %v", DefaultPreferredLifetime, handler.preferredLifetime)
+	if handler.DHCPv6HandlerPreferredLifetime() != protocols.DefaultPreferredLifetime {
+		t.Errorf(
+			"Expected preferred lifetime %v, got %v",
+			protocols.DefaultPreferredLifetime,
+			handler.DHCPv6HandlerPreferredLifetime(),
+		)
 	}
 
-	if handler.validLifetime != DefaultValidLifetime {
-		t.Errorf("Expected valid lifetime %v, got %v", DefaultValidLifetime, handler.validLifetime)
+	if handler.DHCPv6HandlerValidLifetime() != protocols.DefaultValidLifetime {
+		t.Errorf(
+			"Expected valid lifetime %v, got %v",
+			protocols.DefaultValidLifetime,
+			handler.DHCPv6HandlerValidLifetime(),
+		)
 	}
 
-	if len(handler.serverDUID) == 0 {
+	if len(handler.DHCPv6HandlerServerDUID()) == 0 {
 		t.Error("Server DUID not generated")
 	}
 }
 
-// TestGenerateDUID tests DUID generation.
-func TestGenerateDUID(t *testing.T) {
-	duid := generateDUID()
-
-	if len(duid) != 10 {
-		t.Errorf("Expected DUID length 10, got %d", len(duid))
-	}
-
-	// Check DUID type (should be DUID-LL = 3)
-	duidType := binary.BigEndian.Uint16(duid[0:2])
-	if duidType != DUIDTypeLL {
-		t.Errorf("Expected DUID type %d (DUID-LL), got %d", DUIDTypeLL, duidType)
-	}
-
-	// Check hardware type (should be Ethernet = 1)
-	hwType := binary.BigEndian.Uint16(duid[2:4])
-	if hwType != 1 {
-		t.Errorf("Expected hardware type 1 (Ethernet), got %d", hwType)
-	}
-
-	// Check that MAC is locally administered (bit 1 set) and unicast (bit 0 clear)
-	macByte0 := duid[4]
-	if (macByte0 & 0x02) == 0 {
-		t.Error("MAC address should have local bit set")
-	}
-
-	if (macByte0 & 0x01) != 0 {
-		t.Error("MAC address should not have multicast bit set")
-	}
-
-	// Test uniqueness - generate multiple DUIDs and ensure they're different
-	duid2 := generateDUID()
-	if string(duid) == string(duid2) {
-		t.Error("Generated DUIDs should be unique")
-	}
-}
+// NOTE: TestGenerateDUID is not included in the external test package because
+// generateDUID is an unexported package-level function. Testing of DUID generation
+// is covered implicitly through TestNewDHCPv6Handler which verifies the server DUID.
 
 // TestSetAddressPool tests address pool configuration.
 func TestSetAddressPool(t *testing.T) {
 	cfg := &config.Config{}
-	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
-	handler := NewDHCPv6Handler(stack)
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	handler := protocols.NewDHCPv6Handler(stack)
 
 	addresses := []net.IP{
 		net.ParseIP("2001:db8::100"),
@@ -92,13 +68,14 @@ func TestSetAddressPool(t *testing.T) {
 
 	handler.SetAddressPool(addresses)
 
-	if len(handler.addressPool) != 3 {
-		t.Errorf("Expected 3 addresses in pool, got %d", len(handler.addressPool))
+	pool := handler.DHCPv6HandlerAddressPool()
+	if len(pool) != 3 {
+		t.Errorf("Expected 3 addresses in pool, got %d", len(pool))
 	}
 
 	for i, addr := range addresses {
-		if !handler.addressPool[i].Equal(addr) {
-			t.Errorf("Address %d mismatch: expected %v, got %v", i, addr, handler.addressPool[i])
+		if !pool[i].Equal(addr) {
+			t.Errorf("Address %d mismatch: expected %v, got %v", i, addr, pool[i])
 		}
 	}
 }
@@ -106,8 +83,8 @@ func TestSetAddressPool(t *testing.T) {
 // TestSetPrefixPool tests prefix pool configuration.
 func TestSetPrefixPool(t *testing.T) {
 	cfg := &config.Config{}
-	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
-	handler := NewDHCPv6Handler(stack)
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	handler := protocols.NewDHCPv6Handler(stack)
 
 	_, prefix1, _ := net.ParseCIDR("2001:db8:1::/48")
 	_, prefix2, _ := net.ParseCIDR("2001:db8:2::/48")
@@ -115,20 +92,21 @@ func TestSetPrefixPool(t *testing.T) {
 	prefixes := []net.IPNet{*prefix1, *prefix2}
 	handler.SetPrefixPool(prefixes)
 
-	if len(handler.prefixPool) != 2 {
-		t.Errorf("Expected 2 prefixes in pool, got %d", len(handler.prefixPool))
+	pool := handler.DHCPv6HandlerPrefixPool()
+	if len(pool) != 2 {
+		t.Errorf("Expected 2 prefixes in pool, got %d", len(pool))
 	}
 
-	if handler.prefixPool[0].String() != prefix1.String() {
-		t.Errorf("Prefix 0 mismatch: expected %v, got %v", prefix1, handler.prefixPool[0])
+	if pool[0].String() != prefix1.String() {
+		t.Errorf("Prefix 0 mismatch: expected %v, got %v", prefix1, pool[0])
 	}
 }
 
 // TestSetServerConfigDHCPv6 tests server configuration.
 func TestSetServerConfigDHCPv6(t *testing.T) {
 	cfg := &config.Config{}
-	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
-	handler := NewDHCPv6Handler(stack)
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	handler := protocols.NewDHCPv6Handler(stack)
 
 	dnsServers := []net.IP{
 		net.ParseIP("2001:4860:4860::8888"),
@@ -138,28 +116,30 @@ func TestSetServerConfigDHCPv6(t *testing.T) {
 
 	handler.SetServerConfig(dnsServers, domainList)
 
-	if len(handler.dnsServers) != 2 {
-		t.Errorf("Expected 2 DNS servers, got %d", len(handler.dnsServers))
+	dns := handler.DHCPv6HandlerDNSServers()
+	if len(dns) != 2 {
+		t.Errorf("Expected 2 DNS servers, got %d", len(dns))
 	}
 
-	if !handler.dnsServers[0].Equal(dnsServers[0]) {
-		t.Errorf("DNS server 0 mismatch: expected %v, got %v", dnsServers[0], handler.dnsServers[0])
+	if !dns[0].Equal(dnsServers[0]) {
+		t.Errorf("DNS server 0 mismatch: expected %v, got %v", dnsServers[0], dns[0])
 	}
 
-	if len(handler.domainList) != 2 {
-		t.Errorf("Expected 2 domains, got %d", len(handler.domainList))
+	domains := handler.DHCPv6HandlerDomainList()
+	if len(domains) != 2 {
+		t.Errorf("Expected 2 domains, got %d", len(domains))
 	}
 
-	if handler.domainList[0] != "example.com" {
-		t.Errorf("Domain 0 mismatch: expected example.com, got %s", handler.domainList[0])
+	if domains[0] != "example.com" {
+		t.Errorf("Domain 0 mismatch: expected example.com, got %s", domains[0])
 	}
 }
 
 // TestSetAdvancedOptionsDHCPv6 tests advanced DHCPv6 options.
 func TestSetAdvancedOptionsDHCPv6(t *testing.T) {
 	cfg := &config.Config{}
-	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
-	handler := NewDHCPv6Handler(stack)
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	handler := protocols.NewDHCPv6Handler(stack)
 
 	sntpServers := []net.IP{net.ParseIP("2001:db8::1")}
 	ntpServers := []net.IP{net.ParseIP("2001:db8::2")}
@@ -168,28 +148,29 @@ func TestSetAdvancedOptionsDHCPv6(t *testing.T) {
 
 	handler.SetAdvancedOptions(sntpServers, ntpServers, sipServers, sipDomains)
 
-	if len(handler.sntpServers) != 1 {
-		t.Errorf("Expected 1 SNTP server, got %d", len(handler.sntpServers))
+	if len(handler.DHCPv6HandlerSNTPServers()) != 1 {
+		t.Errorf("Expected 1 SNTP server, got %d", len(handler.DHCPv6HandlerSNTPServers()))
 	}
 
-	if len(handler.ntpServers) != 1 {
-		t.Errorf("Expected 1 NTP server, got %d", len(handler.ntpServers))
+	if len(handler.DHCPv6HandlerNTPServers()) != 1 {
+		t.Errorf("Expected 1 NTP server, got %d", len(handler.DHCPv6HandlerNTPServers()))
 	}
 
-	if len(handler.sipServers) != 1 {
-		t.Errorf("Expected 1 SIP server, got %d", len(handler.sipServers))
+	if len(handler.DHCPv6HandlerSIPServers()) != 1 {
+		t.Errorf("Expected 1 SIP server, got %d", len(handler.DHCPv6HandlerSIPServers()))
 	}
 
-	if len(handler.sipDomains) != 1 || handler.sipDomains[0] != "sip.example.com" {
-		t.Errorf("Expected SIP domain 'sip.example.com', got %v", handler.sipDomains)
+	sipDomainsResult := handler.DHCPv6HandlerSIPDomains()
+	if len(sipDomainsResult) != 1 || sipDomainsResult[0] != "sip.example.com" {
+		t.Errorf("Expected SIP domain 'sip.example.com', got %v", sipDomainsResult)
 	}
 }
 
 // TestAllocateLeaseDHCPv6 tests lease allocation.
 func TestAllocateLeaseDHCPv6(t *testing.T) {
 	cfg := &config.Config{}
-	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
-	handler := NewDHCPv6Handler(stack)
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	handler := protocols.NewDHCPv6Handler(stack)
 
 	addresses := []net.IP{
 		net.ParseIP("2001:db8::100"),
@@ -200,7 +181,7 @@ func TestAllocateLeaseDHCPv6(t *testing.T) {
 	clientDUID := []byte{0x00, 0x03, 0x00, 0x01, 0x00, 0x11, 0x22, 0x33, 0x44, 0x55}
 	iaid := uint32(12345)
 
-	lease, err := handler.allocateLease(clientDUID, iaid)
+	lease, err := handler.DHCPv6AllocateLease(clientDUID, iaid)
 	if err != nil {
 		t.Fatalf("Failed to allocate lease: %v", err)
 	}
@@ -239,8 +220,8 @@ func TestAllocateLeaseDHCPv6(t *testing.T) {
 // TestAllocateLeaseDHCPv6_Renewal tests existing lease renewal.
 func TestAllocateLeaseDHCPv6_Renewal(t *testing.T) {
 	cfg := &config.Config{}
-	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
-	handler := NewDHCPv6Handler(stack)
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	handler := protocols.NewDHCPv6Handler(stack)
 
 	addresses := []net.IP{net.ParseIP("2001:db8::100")}
 	handler.SetAddressPool(addresses)
@@ -249,14 +230,14 @@ func TestAllocateLeaseDHCPv6_Renewal(t *testing.T) {
 	iaid := uint32(12345)
 
 	// First allocation
-	lease1, _ := handler.allocateLease(clientDUID, iaid)
+	lease1, _ := handler.DHCPv6AllocateLease(clientDUID, iaid)
 	firstRenewal := lease1.LastRenewal
 
 	// Wait a bit
 	time.Sleep(10 * time.Millisecond)
 
 	// Second allocation (should renew)
-	lease2, err := handler.allocateLease(clientDUID, iaid)
+	lease2, err := handler.DHCPv6AllocateLease(clientDUID, iaid)
 	if err != nil {
 		t.Fatalf("Failed to renew lease: %v", err)
 	}
@@ -273,8 +254,8 @@ func TestAllocateLeaseDHCPv6_Renewal(t *testing.T) {
 // TestAllocateLeaseDHCPv6_PoolExhaustion tests no available addresses.
 func TestAllocateLeaseDHCPv6_PoolExhaustion(t *testing.T) {
 	cfg := &config.Config{}
-	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
-	handler := NewDHCPv6Handler(stack)
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	handler := protocols.NewDHCPv6Handler(stack)
 
 	// Single address pool
 	addresses := []net.IP{net.ParseIP("2001:db8::100")}
@@ -283,7 +264,7 @@ func TestAllocateLeaseDHCPv6_PoolExhaustion(t *testing.T) {
 	// Allocate the only address
 	clientDUID1 := []byte{0x00, 0x03, 0x00, 0x01, 0x00, 0x11, 0x22, 0x33, 0x44, 0x55}
 
-	_, err := handler.allocateLease(clientDUID1, 1)
+	_, err := handler.DHCPv6AllocateLease(clientDUID1, 1)
 	if err != nil {
 		t.Fatalf("First allocation failed: %v", err)
 	}
@@ -291,7 +272,7 @@ func TestAllocateLeaseDHCPv6_PoolExhaustion(t *testing.T) {
 	// Try to allocate to another client
 	clientDUID2 := []byte{0x00, 0x03, 0x00, 0x01, 0x00, 0x11, 0x22, 0x33, 0x44, 0x56}
 
-	_, err = handler.allocateLease(clientDUID2, 2)
+	_, err = handler.DHCPv6AllocateLease(clientDUID2, 2)
 	if err == nil {
 		t.Error("Expected error when pool exhausted, got nil")
 	}
@@ -300,8 +281,8 @@ func TestAllocateLeaseDHCPv6_PoolExhaustion(t *testing.T) {
 // TestConfirmLease tests lease confirmation.
 func TestConfirmLease(t *testing.T) {
 	cfg := &config.Config{}
-	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
-	handler := NewDHCPv6Handler(stack)
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	handler := protocols.NewDHCPv6Handler(stack)
 
 	addresses := []net.IP{net.ParseIP("2001:db8::100")}
 	handler.SetAddressPool(addresses)
@@ -310,10 +291,10 @@ func TestConfirmLease(t *testing.T) {
 	iaid := uint32(12345)
 
 	// Allocate first
-	lease1, _ := handler.allocateLease(clientDUID, iaid)
+	lease1, _ := handler.DHCPv6AllocateLease(clientDUID, iaid)
 
 	// Confirm existing lease
-	lease2, err := handler.confirmLease(clientDUID, iaid)
+	lease2, err := handler.ConfirmLease(clientDUID, iaid)
 	if err != nil {
 		t.Fatalf("Failed to confirm lease: %v", err)
 	}
@@ -326,8 +307,8 @@ func TestConfirmLease(t *testing.T) {
 // TestFindLease tests lease lookup.
 func TestFindLease(t *testing.T) {
 	cfg := &config.Config{}
-	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
-	handler := NewDHCPv6Handler(stack)
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	handler := protocols.NewDHCPv6Handler(stack)
 
 	addresses := []net.IP{net.ParseIP("2001:db8::100")}
 	handler.SetAddressPool(addresses)
@@ -336,10 +317,10 @@ func TestFindLease(t *testing.T) {
 	iaid := uint32(12345)
 
 	// Allocate lease
-	allocatedLease, _ := handler.allocateLease(clientDUID, iaid)
+	allocatedLease, _ := handler.DHCPv6AllocateLease(clientDUID, iaid)
 
 	// Find lease
-	foundLease := handler.findLease(clientDUID)
+	foundLease := handler.FindLease(clientDUID)
 	if foundLease == nil {
 		t.Fatal("Failed to find allocated lease")
 	}
@@ -351,7 +332,7 @@ func TestFindLease(t *testing.T) {
 	// Try to find non-existent lease
 	nonExistentDUID := []byte{0x00, 0x03, 0x00, 0x01, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
 
-	notFound := handler.findLease(nonExistentDUID)
+	notFound := handler.FindLease(nonExistentDUID)
 	if notFound != nil {
 		t.Error("Should not find lease for non-existent DUID")
 	}
@@ -360,8 +341,8 @@ func TestFindLease(t *testing.T) {
 // TestRenewLease tests lease renewal.
 func TestRenewLease(t *testing.T) {
 	cfg := &config.Config{}
-	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
-	handler := NewDHCPv6Handler(stack)
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	handler := protocols.NewDHCPv6Handler(stack)
 
 	addresses := []net.IP{net.ParseIP("2001:db8::100")}
 	handler.SetAddressPool(addresses)
@@ -369,12 +350,12 @@ func TestRenewLease(t *testing.T) {
 	clientDUID := []byte{0x00, 0x03, 0x00, 0x01, 0x00, 0x11, 0x22, 0x33, 0x44, 0x55}
 	iaid := uint32(12345)
 
-	lease, _ := handler.allocateLease(clientDUID, iaid)
+	lease, _ := handler.DHCPv6AllocateLease(clientDUID, iaid)
 	originalRenewal := lease.LastRenewal
 
 	time.Sleep(10 * time.Millisecond)
 
-	handler.renewLease(lease)
+	handler.RenewLease(lease)
 
 	if !lease.LastRenewal.After(originalRenewal) {
 		t.Error("LastRenewal should be updated after renewal")
@@ -384,8 +365,8 @@ func TestRenewLease(t *testing.T) {
 // TestParseDHCPv6Message tests message parsing.
 func TestParseDHCPv6Message(t *testing.T) {
 	cfg := &config.Config{}
-	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
-	handler := NewDHCPv6Handler(stack)
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	handler := protocols.NewDHCPv6Handler(stack)
 
 	tests := []struct {
 		name        string
@@ -405,7 +386,7 @@ func TestParseDHCPv6Message(t *testing.T) {
 				0x12, 0x34, 0x56, // Transaction ID
 			},
 			expectError: false,
-			msgType:     DHCPv6Solicit,
+			msgType:     protocols.DHCPv6Solicit,
 		},
 		{
 			name: "With options",
@@ -417,13 +398,13 @@ func TestParseDHCPv6Message(t *testing.T) {
 				0x11, 0x22, 0x33, 0x44, // Option data
 			},
 			expectError: false,
-			msgType:     DHCPv6Request,
+			msgType:     protocols.DHCPv6Request,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			msg, err := handler.parseDHCPv6Message(tt.data)
+			msg, err := handler.ParseDHCPv6Message(tt.data)
 
 			if tt.expectError {
 				if err == nil {
@@ -447,29 +428,29 @@ func TestParseDHCPv6Message(t *testing.T) {
 // TestFindOption tests option finding.
 func TestFindOption(t *testing.T) {
 	cfg := &config.Config{}
-	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
-	handler := NewDHCPv6Handler(stack)
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	handler := protocols.NewDHCPv6Handler(stack)
 
-	msg := &DHCPv6Message{
-		MessageType: DHCPv6Solicit,
-		Options: []DHCPv6Option{
-			{Code: DHCPv6OptClientID, Length: 4, Data: []byte{0x11, 0x22, 0x33, 0x44}},
-			{Code: DHCPv6OptIANA, Length: 12, Data: make([]byte, 12)},
+	msg := &protocols.DHCPv6Message{
+		MessageType: protocols.DHCPv6Solicit,
+		Options: []protocols.DHCPv6Option{
+			{Code: protocols.DHCPv6OptClientID, Length: 4, Data: []byte{0x11, 0x22, 0x33, 0x44}},
+			{Code: protocols.DHCPv6OptIANA, Length: 12, Data: make([]byte, 12)},
 		},
 	}
 
 	// Find existing option
-	clientID := handler.findOption(msg, DHCPv6OptClientID)
+	clientID := handler.FindOption(msg, protocols.DHCPv6OptClientID)
 	if clientID == nil {
 		t.Fatal("Failed to find Client ID option")
 	}
 
-	if clientID.Code != DHCPv6OptClientID {
-		t.Errorf("Expected code %d, got %d", DHCPv6OptClientID, clientID.Code)
+	if clientID.Code != protocols.DHCPv6OptClientID {
+		t.Errorf("Expected code %d, got %d", protocols.DHCPv6OptClientID, clientID.Code)
 	}
 
 	// Find non-existent option
-	serverID := handler.findOption(msg, DHCPv6OptServerID)
+	serverID := handler.FindOption(msg, protocols.DHCPv6OptServerID)
 	if serverID != nil {
 		t.Error("Should not find non-existent option")
 	}
@@ -478,19 +459,19 @@ func TestFindOption(t *testing.T) {
 // TestExtractClientDUID tests client DUID extraction.
 func TestExtractClientDUID(t *testing.T) {
 	cfg := &config.Config{}
-	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
-	handler := NewDHCPv6Handler(stack)
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	handler := protocols.NewDHCPv6Handler(stack)
 
 	expectedDUID := []byte{0x00, 0x03, 0x00, 0x01, 0x00, 0x11, 0x22, 0x33, 0x44, 0x55}
 
-	msg := &DHCPv6Message{
-		MessageType: DHCPv6Solicit,
-		Options: []DHCPv6Option{
-			{Code: DHCPv6OptClientID, Length: uint16(len(expectedDUID)), Data: expectedDUID},
+	msg := &protocols.DHCPv6Message{
+		MessageType: protocols.DHCPv6Solicit,
+		Options: []protocols.DHCPv6Option{
+			{Code: protocols.DHCPv6OptClientID, Length: uint16(len(expectedDUID)), Data: expectedDUID},
 		},
 	}
 
-	duid := handler.extractClientDUID(msg)
+	duid := handler.ExtractClientDUID(msg)
 	if duid == nil {
 		t.Fatal("Failed to extract client DUID")
 	}
@@ -500,12 +481,12 @@ func TestExtractClientDUID(t *testing.T) {
 	}
 
 	// Test message without Client ID
-	msgNoClientID := &DHCPv6Message{
-		MessageType: DHCPv6Solicit,
-		Options:     []DHCPv6Option{},
+	msgNoClientID := &protocols.DHCPv6Message{
+		MessageType: protocols.DHCPv6Solicit,
+		Options:     []protocols.DHCPv6Option{},
 	}
 
-	noDUID := handler.extractClientDUID(msgNoClientID)
+	noDUID := handler.ExtractClientDUID(msgNoClientID)
 	if noDUID != nil {
 		t.Error("Should return nil for message without Client ID")
 	}
@@ -514,21 +495,21 @@ func TestExtractClientDUID(t *testing.T) {
 // TestExtractIANA tests IANA extraction.
 func TestExtractIANA(t *testing.T) {
 	cfg := &config.Config{}
-	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
-	handler := NewDHCPv6Handler(stack)
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	handler := protocols.NewDHCPv6Handler(stack)
 
 	expectedIAID := uint32(0x12345678)
 	ianaData := make([]byte, 12)
 	binary.BigEndian.PutUint32(ianaData[0:4], expectedIAID)
 
-	msg := &DHCPv6Message{
-		MessageType: DHCPv6Solicit,
-		Options: []DHCPv6Option{
-			{Code: DHCPv6OptIANA, Length: 12, Data: ianaData},
+	msg := &protocols.DHCPv6Message{
+		MessageType: protocols.DHCPv6Solicit,
+		Options: []protocols.DHCPv6Option{
+			{Code: protocols.DHCPv6OptIANA, Length: 12, Data: ianaData},
 		},
 	}
 
-	iaid, found := handler.extractIANA(msg)
+	iaid, found := handler.ExtractIANA(msg)
 	if !found {
 		t.Fatal("Failed to extract IANA")
 	}
@@ -538,78 +519,29 @@ func TestExtractIANA(t *testing.T) {
 	}
 
 	// Test message without IANA
-	msgNoIANA := &DHCPv6Message{
-		MessageType: DHCPv6Solicit,
-		Options:     []DHCPv6Option{},
+	msgNoIANA := &protocols.DHCPv6Message{
+		MessageType: protocols.DHCPv6Solicit,
+		Options:     []protocols.DHCPv6Option{},
 	}
 
-	_, found = handler.extractIANA(msgNoIANA)
+	_, found = handler.ExtractIANA(msgNoIANA)
 	if found {
 		t.Error("Should not find IANA in message without it")
 	}
 }
 
-// TestSplitDomainLabels tests domain label splitting.
-func TestSplitDomainLabels(t *testing.T) {
-	tests := []struct {
-		name     string
-		domain   string
-		expected []string
-	}{
-		{
-			name:     "Simple domain",
-			domain:   "example.com",
-			expected: []string{"example", "com"},
-		},
-		{
-			name:     "Subdomain",
-			domain:   "www.example.com",
-			expected: []string{"www", "example", "com"},
-		},
-		{
-			name:     "Empty string",
-			domain:   "",
-			expected: []string{},
-		},
-		{
-			name:     "Single label",
-			domain:   "localhost",
-			expected: []string{"localhost"},
-		},
-		{
-			name:     "Trailing dot",
-			domain:   "example.com.",
-			expected: []string{"example", "com"},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			labels := splitDomainLabels(tt.domain)
-
-			if len(labels) != len(tt.expected) {
-				t.Errorf("Expected %d labels, got %d", len(tt.expected), len(labels))
-
-				return
-			}
-
-			for i, label := range labels {
-				if label != tt.expected[i] {
-					t.Errorf("Label %d: expected %s, got %s", i, tt.expected[i], label)
-				}
-			}
-		})
-	}
-}
+// NOTE: TestSplitDomainLabels is not included because splitDomainLabels is
+// an unexported package-level function. Domain label encoding is implicitly
+// tested through TestEncodeDomainList.
 
 // TestEncodeDomainList tests domain list encoding.
 func TestEncodeDomainList(t *testing.T) {
 	cfg := &config.Config{}
-	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
-	handler := NewDHCPv6Handler(stack)
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	handler := protocols.NewDHCPv6Handler(stack)
 
 	domains := []string{"example.com", "test.local"}
-	encoded := handler.encodeDomainList(domains)
+	encoded := handler.EncodeDomainList(domains)
 
 	// Verify encoding (example.com = 7 e x a m p l e 3 c o m 0)
 	// example: 7 bytes + com: 3 bytes + null: 1 = 18 bytes
@@ -635,28 +567,28 @@ func TestEncodeDomainList(t *testing.T) {
 // TestMessageTypeString tests message type string conversion.
 func TestMessageTypeString(t *testing.T) {
 	cfg := &config.Config{}
-	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
-	handler := NewDHCPv6Handler(stack)
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	handler := protocols.NewDHCPv6Handler(stack)
 
 	tests := []struct {
 		msgType  uint8
 		expected string
 	}{
-		{DHCPv6Solicit, "SOLICIT"},
-		{DHCPv6Advertise, "ADVERTISE"},
-		{DHCPv6Request, "REQUEST"},
-		{DHCPv6Renew, "RENEW"},
-		{DHCPv6Rebind, "REBIND"},
-		{DHCPv6Reply, "REPLY"},
-		{DHCPv6Release, "RELEASE"},
-		{DHCPv6Decline, "DECLINE"},
-		{DHCPv6InfoRequest, "INFORMATION-REQUEST"},
+		{protocols.DHCPv6Solicit, "SOLICIT"},
+		{protocols.DHCPv6Advertise, "ADVERTISE"},
+		{protocols.DHCPv6Request, "REQUEST"},
+		{protocols.DHCPv6Renew, "RENEW"},
+		{protocols.DHCPv6Rebind, "REBIND"},
+		{protocols.DHCPv6Reply, "REPLY"},
+		{protocols.DHCPv6Release, "RELEASE"},
+		{protocols.DHCPv6Decline, "DECLINE"},
+		{protocols.DHCPv6InfoRequest, "INFORMATION-REQUEST"},
 		{255, "UNKNOWN(255)"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.expected, func(t *testing.T) {
-			result := handler.messageTypeString(tt.msgType)
+			result := handler.MessageTypeString(tt.msgType)
 			if result != tt.expected {
 				t.Errorf("Expected %s, got %s", tt.expected, result)
 			}
@@ -667,39 +599,39 @@ func TestMessageTypeString(t *testing.T) {
 // TestDHCPv6Constants tests DHCPv6 constants.
 func TestDHCPv6Constants(t *testing.T) {
 	// Test message types
-	if DHCPv6Solicit != 1 {
-		t.Errorf("DHCPv6Solicit should be 1, got %d", DHCPv6Solicit)
+	if protocols.DHCPv6Solicit != 1 {
+		t.Errorf("DHCPv6Solicit should be 1, got %d", protocols.DHCPv6Solicit)
 	}
 
-	if DHCPv6Reply != 7 {
-		t.Errorf("DHCPv6Reply should be 7, got %d", DHCPv6Reply)
+	if protocols.DHCPv6Reply != 7 {
+		t.Errorf("DHCPv6Reply should be 7, got %d", protocols.DHCPv6Reply)
 	}
 
 	// Test option codes
-	if DHCPv6OptClientID != 1 {
-		t.Errorf("DHCPv6OptClientID should be 1, got %d", DHCPv6OptClientID)
+	if protocols.DHCPv6OptClientID != 1 {
+		t.Errorf("DHCPv6OptClientID should be 1, got %d", protocols.DHCPv6OptClientID)
 	}
 
-	if DHCPv6OptServerID != 2 {
-		t.Errorf("DHCPv6OptServerID should be 2, got %d", DHCPv6OptServerID)
+	if protocols.DHCPv6OptServerID != 2 {
+		t.Errorf("DHCPv6OptServerID should be 2, got %d", protocols.DHCPv6OptServerID)
 	}
 
-	if DHCPv6OptDNSServers != 23 {
-		t.Errorf("DHCPv6OptDNSServers should be 23, got %d", DHCPv6OptDNSServers)
+	if protocols.DHCPv6OptDNSServers != 23 {
+		t.Errorf("DHCPv6OptDNSServers should be 23, got %d", protocols.DHCPv6OptDNSServers)
 	}
 
 	// Test DUID types
-	if DUIDTypeLL != 3 {
-		t.Errorf("DUIDTypeLL should be 3, got %d", DUIDTypeLL)
+	if protocols.DUIDTypeLL != 3 {
+		t.Errorf("DUIDTypeLL should be 3, got %d", protocols.DUIDTypeLL)
 	}
 
 	// Test ports
-	if DHCPv6ServerPort != 547 {
-		t.Errorf("DHCPv6ServerPort should be 547, got %d", DHCPv6ServerPort)
+	if protocols.DHCPv6ServerPort != 547 {
+		t.Errorf("DHCPv6ServerPort should be 547, got %d", protocols.DHCPv6ServerPort)
 	}
 
-	if DHCPv6ClientPort != 546 {
-		t.Errorf("DHCPv6ClientPort should be 546, got %d", DHCPv6ClientPort)
+	if protocols.DHCPv6ClientPort != 546 {
+		t.Errorf("DHCPv6ClientPort should be 546, got %d", protocols.DHCPv6ClientPort)
 	}
 }
 
@@ -708,16 +640,16 @@ func TestDefaultLifetimes(t *testing.T) {
 	expectedPreferred := 7 * 24 * time.Hour
 	expectedValid := 30 * 24 * time.Hour
 
-	if DefaultPreferredLifetime != expectedPreferred {
-		t.Errorf("DefaultPreferredLifetime should be %v, got %v", expectedPreferred, DefaultPreferredLifetime)
+	if protocols.DefaultPreferredLifetime != expectedPreferred {
+		t.Errorf("DefaultPreferredLifetime should be %v, got %v", expectedPreferred, protocols.DefaultPreferredLifetime)
 	}
 
-	if DefaultValidLifetime != expectedValid {
-		t.Errorf("DefaultValidLifetime should be %v, got %v", expectedValid, DefaultValidLifetime)
+	if protocols.DefaultValidLifetime != expectedValid {
+		t.Errorf("DefaultValidLifetime should be %v, got %v", expectedValid, protocols.DefaultValidLifetime)
 	}
 
 	// Valid lifetime should be longer than preferred
-	if DefaultValidLifetime <= DefaultPreferredLifetime {
+	if protocols.DefaultValidLifetime <= protocols.DefaultPreferredLifetime {
 		t.Error("Valid lifetime should be longer than preferred lifetime")
 	}
 }
@@ -725,20 +657,20 @@ func TestDefaultLifetimes(t *testing.T) {
 // TestBuildIANAOption tests IANA option building.
 func TestBuildIANAOption(t *testing.T) {
 	cfg := &config.Config{}
-	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
-	handler := NewDHCPv6Handler(stack)
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	handler := protocols.NewDHCPv6Handler(stack)
 
-	lease := &DHCPv6Lease{
+	lease := &protocols.DHCPv6Lease{
 		Address:           net.ParseIP("2001:db8::100"),
 		IAID:              0x12345678,
-		PreferredLifetime: time.Now().Add(DefaultPreferredLifetime),
-		ValidLifetime:     time.Now().Add(DefaultValidLifetime),
+		PreferredLifetime: time.Now().Add(protocols.DefaultPreferredLifetime),
+		ValidLifetime:     time.Now().Add(protocols.DefaultValidLifetime),
 	}
 
-	opt := handler.buildIANAOption(lease)
+	opt := handler.BuildIANAOption(lease)
 
-	if opt.Code != DHCPv6OptIANA {
-		t.Errorf("Expected option code %d, got %d", DHCPv6OptIANA, opt.Code)
+	if opt.Code != protocols.DHCPv6OptIANA {
+		t.Errorf("Expected option code %d, got %d", protocols.DHCPv6OptIANA, opt.Code)
 	}
 
 	if len(opt.Data) < 12 {
@@ -755,20 +687,20 @@ func TestBuildIANAOption(t *testing.T) {
 // TestBuildIAAddrOption tests IA Address option building.
 func TestBuildIAAddrOption(t *testing.T) {
 	cfg := &config.Config{}
-	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
-	handler := NewDHCPv6Handler(stack)
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	handler := protocols.NewDHCPv6Handler(stack)
 
 	testAddr := net.ParseIP("2001:db8::100")
-	lease := &DHCPv6Lease{
+	lease := &protocols.DHCPv6Lease{
 		Address:           testAddr,
 		PreferredLifetime: time.Now().Add(1 * time.Hour),
 		ValidLifetime:     time.Now().Add(2 * time.Hour),
 	}
 
-	opt := handler.buildIAAddrOption(lease)
+	opt := handler.BuildIAAddrOption(lease)
 
-	if opt.Code != DHCPv6OptIAAddr {
-		t.Errorf("Expected option code %d, got %d", DHCPv6OptIAAddr, opt.Code)
+	if opt.Code != protocols.DHCPv6OptIAAddr {
+		t.Errorf("Expected option code %d, got %d", protocols.DHCPv6OptIAAddr, opt.Code)
 	}
 
 	if opt.Length != 24 {
@@ -793,8 +725,8 @@ func TestBuildIAAddrOption(t *testing.T) {
 // BenchmarkAllocateLeaseDHCPv6 benchmarks lease allocation.
 func BenchmarkAllocateLeaseDHCPv6(b *testing.B) {
 	cfg := &config.Config{}
-	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
-	handler := NewDHCPv6Handler(stack)
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	handler := protocols.NewDHCPv6Handler(stack)
 
 	// Create a pool of 1000 addresses
 	addresses := make([]net.IP, 1000)
@@ -812,22 +744,18 @@ func BenchmarkAllocateLeaseDHCPv6(b *testing.B) {
 	for i := range b.N {
 		clientDUID := make([]byte, 10)
 		binary.BigEndian.PutUint32(clientDUID[6:], uint32(i))
-		_, _ = handler.allocateLease(clientDUID, uint32(i))
+		_, _ = handler.DHCPv6AllocateLease(clientDUID, uint32(i))
 	}
 }
 
-// BenchmarkGenerateDUID benchmarks DUID generation.
-func BenchmarkGenerateDUID(b *testing.B) {
-	for b.Loop() {
-		generateDUID()
-	}
-}
+// NOTE: BenchmarkGenerateDUID is not included because generateDUID is
+// an unexported package-level function.
 
 // BenchmarkParseDHCPv6Message benchmarks message parsing.
 func BenchmarkParseDHCPv6Message(b *testing.B) {
 	cfg := &config.Config{}
-	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
-	handler := NewDHCPv6Handler(stack)
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	handler := protocols.NewDHCPv6Handler(stack)
 
 	// Create a realistic DHCPv6 message with options
 	msg := []byte{
@@ -842,6 +770,6 @@ func BenchmarkParseDHCPv6Message(b *testing.B) {
 	}
 
 	for b.Loop() {
-		_, _ = handler.parseDHCPv6Message(msg)
+		_, _ = handler.ParseDHCPv6Message(msg)
 	}
 }

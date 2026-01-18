@@ -1,8 +1,10 @@
-package protocols
+package protocols_test
 
 import (
 	"net"
 	"testing"
+
+	"github.com/krisarmstrong/niac-go/pkg/protocols"
 )
 
 func TestIPv6MulticastToMAC(t *testing.T) {
@@ -35,7 +37,7 @@ func TestIPv6MulticastToMAC(t *testing.T) {
 				t.Fatalf("Failed to parse IPv6: %s", tt.ipv6)
 			}
 
-			mac := IPv6MulticastToMAC(ipv6)
+			mac := protocols.IPv6MulticastToMAC(ipv6)
 			if mac == nil {
 				t.Fatal("IPv6MulticastToMAC returned nil")
 			}
@@ -77,7 +79,7 @@ func TestIsIPv6Multicast(t *testing.T) {
 				t.Fatalf("Failed to parse IPv6: %s", tt.ipv6)
 			}
 
-			result := IsIPv6Multicast(ipv6)
+			result := protocols.IsIPv6Multicast(ipv6)
 			if result != tt.expected {
 				t.Errorf("Expected %v, got %v", tt.expected, result)
 			}
@@ -96,7 +98,7 @@ func TestCalculateIPv6Checksum(t *testing.T) {
 		0x48, 0x65, 0x6c, 0x6c, 0x6f, // "Hello"
 	}
 
-	checksum := CalculateIPv6Checksum(srcIP, dstIP, IPv6NextHeaderICMPv6, payload)
+	checksum := protocols.CalculateIPv6Checksum(srcIP, dstIP, protocols.IPv6NextHeaderICMPv6, payload)
 
 	// Checksum should be non-zero
 	if checksum == 0 {
@@ -107,7 +109,7 @@ func TestCalculateIPv6Checksum(t *testing.T) {
 	// The result should give 0 when including the checksum
 	payload[2] = byte(checksum >> 8)
 	payload[3] = byte(checksum & 0xff)
-	verify := CalculateIPv6Checksum(srcIP, dstIP, IPv6NextHeaderICMPv6, payload)
+	verify := protocols.CalculateIPv6Checksum(srcIP, dstIP, protocols.IPv6NextHeaderICMPv6, payload)
 
 	// When checksum is included, result should be 0xFFFF (all ones complement)
 	if verify != 0xFFFF && verify != 0 {

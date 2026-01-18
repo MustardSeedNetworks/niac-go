@@ -36,9 +36,9 @@ func TestReadPacketTimeout(t *testing.T) {
 
 	go func() {
 		// Should timeout and return nil within 100ms
-		data, err := engine.ReadPacket(buffer)
-		if err != nil {
-			t.Errorf("ReadPacket returned error on timeout: %v", err)
+		data, readErr := engine.ReadPacket(buffer)
+		if readErr != nil {
+			t.Errorf("ReadPacket returned error on timeout: %v", readErr)
 		}
 
 		if data != nil {
@@ -58,7 +58,7 @@ func TestReadPacketTimeout(t *testing.T) {
 }
 
 // TestRateLimiterStop tests that RateLimiter cleanup works.
-func TestRateLimiterStop(t *testing.T) {
+func TestRateLimiterStop(_ *testing.T) {
 	rl := NewRateLimiter(100)
 
 	// Use it a bit

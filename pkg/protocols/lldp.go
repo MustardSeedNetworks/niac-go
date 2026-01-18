@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
+
 	"github.com/krisarmstrong/niac-go/pkg/config"
 )
 
@@ -36,7 +37,7 @@ const (
 	LLDPTLVTypeSystemDescription  = 6
 	LLDPTLVTypeSystemCapabilities = 7
 	LLDPTLVTypeManagementAddress  = 8
-	// 9-126 reserved for future standardization.
+	// LLDPTLVTypeOrganizationSpecific is reserved for future standardization (9-126).
 	LLDPTLVTypeOrganizationSpecific = 127
 )
 
@@ -72,6 +73,21 @@ const (
 	LLDPCapTelephone   = 1 << 5
 	LLDPCapDOCSIS      = 1 << 6
 	LLDPCapStationOnly = 1 << 7
+)
+
+// LLDP encoding constants.
+const (
+	lldpTLVHeaderSize       = 2     // TLV header size (Type+Length fields)
+	lldpTTLFieldSize        = 2     // TTL field size in bytes
+	lldpLengthHighBit       = 0x01  // Mask for extracting length high bit from Type|Length byte
+	lldpLengthLowMask       = 0xff  // Mask for extracting length low byte
+	lldpLengthHighByteShift = 8     // Bit shift to extract high byte of length
+	lldpMaxTTL              = 65535 // Maximum TTL value (uint16 max)
+	lldpIfIndexSubtype      = 2     // Interface numbering subtype: ifIndex
+	lldpIfIndexSize         = 4     // Interface index size (uint32)
+	lldpIPv4AddrLen         = 4     // IPv4 address length in bytes
+	lldpIPv6AddrLen         = 16    // IPv6 address length in bytes
+	lldpMACAddrLen          = 6     // MAC address length in bytes
 )
 
 // LLDPHandler handles LLDP advertisements.
@@ -140,9 +156,9 @@ func (h *LLDPHandler) sendAdvertisements() {
 		frame := h.buildLLDPFrame(device)
 		if frame != nil {
 			err := h.sendFrame(device, frame)
-			if err != nil && debugLevel >= 2 {
+			if err != nil && debugLevel >= DebugLevelInfo {
 				_, _ = fmt.Fprintf(os.Stdout, "LLDP: Error sending advertisement for %s: %v\n", device.Name, err)
-			} else if debugLevel >= 3 {
+			} else if debugLevel >= DebugLevelVerbose {
 				_, _ = fmt.Fprintf(os.Stdout, "LLDP: Sent advertisement for %s (%d bytes)\n", device.Name, len(frame))
 			}
 		}
@@ -210,9 +226,9 @@ func (h *LLDPHandler) buildChassisIDTLV(device *config.Device) []byte {
 	// TLV: Type(7 bits) | Length(9 bits) | Subtype(1 byte) | Chassis ID
 	length := 1 + len(chassisID) // subtype + chassis ID
 
-	tlv := make([]byte, 2+length)
-	tlv[0] = byte(LLDPTLVTypeChassisID<<1) | byte((length>>8)&0x01)
-	tlv[1] = byte(length & 0xff)
+	tlv := make([]byte, lldpTLVHeaderSize+length)
+	tlv[0] = byte(LLDPTLVTypeChassisID<<1) | byte((length>>lldpLengthHighByteShift)&lldpLengthHighBit)
+	tlv[1] = byte(length & lldpLengthLowMask)
 	tlv[2] = subtype
 	copy(tlv[3:], chassisID)
 
@@ -236,9 +252,9 @@ func (h *LLDPHandler) buildPortIDTLV(device *config.Device) []byte {
 
 	length := 1 + len(portID) // subtype + port ID
 
-	tlv := make([]byte, 2+length)
-	tlv[0] = byte(LLDPTLVTypePortID<<1) | byte((length>>8)&0x01)
-	tlv[1] = byte(length & 0xff)
+	tlv := make([]byte, lldpTLVHeaderSize+length)
+	tlv[0] = byte(LLDPTLVTypePortID<<1) | byte((length>>lldpLengthHighByteShift)&lldpLengthHighBit)
+	tlv[1] = byte(length & lldpLengthLowMask)
 	tlv[2] = subtype
 	copy(tlv[3:], portID)
 
@@ -251,14 +267,14 @@ func (h *LLDPHandler) buildTTLTLV(device *config.Device) []byte {
 	ttl := uint16(LLDPTTL)
 
 	if device.LLDPConfig != nil && device.LLDPConfig.TTL > 0 {
-		ttlVal := min(device.LLDPConfig.TTL, 65535)
+		ttlVal := min(device.LLDPConfig.TTL, lldpMaxTTL)
 
-		ttl = uint16(ttlVal) // #nosec G115 -- TLV length limited by protocol specification
+		ttl = safeUint16(ttlVal)
 	}
 
-	length := 2 // TTL is 2 bytes
+	length := lldpTTLFieldSize // TTL is 2 bytes
 
-	tlv := make([]byte, 2+length)
+	tlv := make([]byte, lldpTLVHeaderSize+length)
 	tlv[0] = byte(LLDPTLVTypeTTL << 1)
 	tlv[1] = byte(length)
 	binary.BigEndian.PutUint16(tlv[2:4], ttl)
@@ -281,9 +297,9 @@ func (h *LLDPHandler) buildPortDescriptionTLV(device *config.Device) []byte {
 		return nil
 	}
 
-	tlv := make([]byte, 2+length)
-	tlv[0] = byte(LLDPTLVTypePortDescription<<1) | byte((length>>8)&0x01)
-	tlv[1] = byte(length & 0xff)
+	tlv := make([]byte, lldpTLVHeaderSize+length)
+	tlv[0] = byte(LLDPTLVTypePortDescription<<1) | byte((length>>lldpLengthHighByteShift)&lldpLengthHighBit)
+	tlv[1] = byte(length & lldpLengthLowMask)
 	copy(tlv[2:], description)
 
 	return tlv
@@ -298,9 +314,9 @@ func (h *LLDPHandler) buildSystemNameTLV(device *config.Device) []byte {
 		return nil
 	}
 
-	tlv := make([]byte, 2+length)
-	tlv[0] = byte(LLDPTLVTypeSystemName<<1) | byte((length>>8)&0x01)
-	tlv[1] = byte(length & 0xff)
+	tlv := make([]byte, lldpTLVHeaderSize+length)
+	tlv[0] = byte(LLDPTLVTypeSystemName<<1) | byte((length>>lldpLengthHighByteShift)&lldpLengthHighBit)
+	tlv[1] = byte(length & lldpLengthLowMask)
 	copy(tlv[2:], name)
 
 	return tlv
@@ -321,9 +337,9 @@ func (h *LLDPHandler) buildSystemDescriptionTLV(device *config.Device) []byte {
 		return nil
 	}
 
-	tlv := make([]byte, 2+length)
-	tlv[0] = byte(LLDPTLVTypeSystemDescription<<1) | byte((length>>8)&0x01)
-	tlv[1] = byte(length & 0xff)
+	tlv := make([]byte, lldpTLVHeaderSize+length)
+	tlv[0] = byte(LLDPTLVTypeSystemDescription<<1) | byte((length>>lldpLengthHighByteShift)&lldpLengthHighBit)
+	tlv[1] = byte(length & lldpLengthLowMask)
 	copy(tlv[2:], description)
 
 	return tlv
@@ -357,7 +373,7 @@ func (h *LLDPHandler) buildSystemCapabilitiesTLV(device *config.Device) []byte {
 
 	length := 4 // 2 bytes capabilities + 2 bytes enabled
 
-	tlv := make([]byte, 2+length)
+	tlv := make([]byte, lldpTLVHeaderSize+length)
 	tlv[0] = byte(LLDPTLVTypeSystemCapabilities << 1)
 	tlv[1] = byte(length)
 	binary.BigEndian.PutUint16(tlv[2:4], capabilities)
@@ -381,13 +397,14 @@ func (h *LLDPHandler) buildManagementAddressTLV(device *config.Device) []byte {
 		addressBytes   []byte
 	)
 
-	if len(ip) == 4 {
+	switch len(ip) {
+	case lldpIPv4AddrLen:
 		addressSubtype = 1 // IPv4
 		addressBytes = ip
-	} else if len(ip) == 16 {
+	case lldpIPv6AddrLen:
 		addressSubtype = 2 // IPv6
 		addressBytes = ip
-	} else {
+	default:
 		return nil
 	}
 
@@ -400,15 +417,15 @@ func (h *LLDPHandler) buildManagementAddressTLV(device *config.Device) []byte {
 	// - OID String Length (1 byte)
 
 	addressStringLength := 1 + len(addressBytes) // subtype + address
-	interfaceSubtype := byte(2)                  // ifIndex
+	interfaceSubtype := byte(lldpIfIndexSubtype) // ifIndex
 	interfaceNumber := uint32(1)                 // Interface index
 	oidStringLength := byte(0)                   // No OID
 
-	length := 1 + addressStringLength + 1 + 4 + 1 // total TLV value length
+	length := 1 + addressStringLength + 1 + lldpIfIndexSize + 1 // total TLV value length
 
-	tlv := make([]byte, 2+length)
-	tlv[0] = byte(LLDPTLVTypeManagementAddress<<1) | byte((length>>8)&0x01)
-	tlv[1] = byte(length & 0xff)
+	tlv := make([]byte, lldpTLVHeaderSize+length)
+	tlv[0] = byte(LLDPTLVTypeManagementAddress<<1) | byte((length>>lldpLengthHighByteShift)&lldpLengthHighBit)
+	tlv[1] = byte(length & lldpLengthLowMask)
 
 	offset := 2
 	tlv[offset] = byte(addressStringLength)
@@ -437,7 +454,7 @@ func (h *LLDPHandler) sendFrame(device *config.Device, lldpPayload []byte) error
 	dstMAC, _ := net.ParseMAC(LLDPMulticastMAC)
 
 	eth := &layers.Ethernet{
-		SrcMAC:       net.HardwareAddr(device.MACAddress),
+		SrcMAC:       device.MACAddress,
 		DstMAC:       dstMAC,
 		EthernetType: layers.EthernetType(EtherTypeLLDP),
 	}
@@ -509,7 +526,7 @@ func (h *LLDPHandler) HandlePacket(pkt *Packet) {
 	}
 
 	if infoLayer := packet.Layer(layers.LayerTypeLinkLayerDiscoveryInfo); infoLayer != nil {
-		if info, ok := infoLayer.(*layers.LinkLayerDiscoveryInfo); ok {
+		if info, infoOk := infoLayer.(*layers.LinkLayerDiscoveryInfo); infoOk {
 			entry.RemoteDevice = strings.TrimSpace(info.SysName)
 			entry.Description = strings.TrimSpace(info.SysDescription)
 
@@ -524,7 +541,7 @@ func (h *LLDPHandler) HandlePacket(pkt *Packet) {
 		entry.RemoteDevice = entry.RemoteChassisID
 	}
 
-	if debugLevel >= 2 {
+	if debugLevel >= DebugLevelInfo {
 		_, _ = fmt.Fprintf(
 			os.Stdout,
 			"LLDP: Neighbor %s via %s (local %s)\n",
@@ -538,10 +555,10 @@ func (h *LLDPHandler) HandlePacket(pkt *Packet) {
 }
 
 func lldpChassisIDToString(id layers.LLDPChassisID) string {
-	//nolint:exhaustive // Only MAC address subtype needs special handling
+	//exhaustive:ignore
 	switch id.Subtype {
 	case layers.LLDPChassisIDSubTypeMACAddr:
-		if len(id.ID) == 6 {
+		if len(id.ID) == lldpMACAddrLen {
 			return net.HardwareAddr(id.ID).String()
 		}
 	default:
@@ -551,10 +568,10 @@ func lldpChassisIDToString(id layers.LLDPChassisID) string {
 }
 
 func lldpPortIDToString(id layers.LLDPPortID) string {
-	//nolint:exhaustive // Only MAC address subtype needs special handling
+	//exhaustive:ignore
 	switch id.Subtype {
 	case layers.LLDPPortIDSubtypeMACAddr:
-		if len(id.ID) == 6 {
+		if len(id.ID) == lldpMACAddrLen {
 			return net.HardwareAddr(id.ID).String()
 		}
 	default:

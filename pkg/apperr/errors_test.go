@@ -1,14 +1,16 @@
-package errors
+package apperr_test
 
 import (
 	"testing"
+
+	"github.com/krisarmstrong/niac-go/pkg/apperr"
 )
 
 func TestStateManager(t *testing.T) {
-	sm := NewStateManager()
+	sm := apperr.NewStateManager()
 
 	// Test SetError
-	sm.SetError("192.168.1.1", "eth0", ErrorTypeFCS, 50)
+	sm.SetError("192.168.1.1", "eth0", apperr.ErrorTypeFCS, 50)
 
 	// Test GetError
 	state := sm.GetError("192.168.1.1", "eth0")
@@ -16,8 +18,8 @@ func TestStateManager(t *testing.T) {
 		t.Fatal("GetError returned nil")
 	}
 
-	if state.ErrorType != ErrorTypeFCS {
-		t.Errorf("Expected ErrorTypeFCS, got %v", state.ErrorType)
+	if state.ErrorType != apperr.ErrorTypeFCS {
+		t.Errorf("Expected apperr.ErrorTypeFCS, got %v", state.ErrorType)
 	}
 
 	if state.Value != 50 {
@@ -38,12 +40,12 @@ func TestStateManager(t *testing.T) {
 }
 
 func TestStateManagerMultipleDevices(t *testing.T) {
-	sm := NewStateManager()
+	sm := apperr.NewStateManager()
 
 	// Set errors on multiple devices
-	sm.SetError("192.168.1.1", "eth0", ErrorTypeFCS, 50)
-	sm.SetError("192.168.1.2", "eth0", ErrorTypeDiscards, 25)
-	sm.SetError("192.168.1.3", "eth1", ErrorTypeCPU, 90)
+	sm.SetError("192.168.1.1", "eth0", apperr.ErrorTypeFCS, 50)
+	sm.SetError("192.168.1.2", "eth0", apperr.ErrorTypeDiscards, 25)
+	sm.SetError("192.168.1.3", "eth1", apperr.ErrorTypeCPU, 90)
 
 	// Get all states
 	states := sm.GetAllStates()
@@ -61,7 +63,7 @@ func TestStateManagerMultipleDevices(t *testing.T) {
 }
 
 func TestInterfaceConfig(t *testing.T) {
-	sm := NewStateManager()
+	sm := apperr.NewStateManager()
 
 	// Set interface config
 	sm.SetInterfaceConfig("192.168.1.1", "eth0", 10000, "full")
@@ -88,20 +90,20 @@ func TestInterfaceConfig(t *testing.T) {
 }
 
 func TestAllErrorTypes(t *testing.T) {
-	types := AllErrorTypes()
+	types := apperr.AllErrorTypes()
 	if len(types) != 7 {
 		t.Errorf("Expected 7 error types, got %d", len(types))
 	}
 
 	// Verify all expected types are present
-	expectedTypes := map[ErrorType]bool{
-		ErrorTypeFCS:         false,
-		ErrorTypeDiscards:    false,
-		ErrorTypeInterface:   false,
-		ErrorTypeUtilization: false,
-		ErrorTypeCPU:         false,
-		ErrorTypeMemory:      false,
-		ErrorTypeDisk:        false,
+	expectedTypes := map[apperr.ErrorType]bool{
+		apperr.ErrorTypeFCS:         false,
+		apperr.ErrorTypeDiscards:    false,
+		apperr.ErrorTypeInterface:   false,
+		apperr.ErrorTypeUtilization: false,
+		apperr.ErrorTypeCPU:         false,
+		apperr.ErrorTypeMemory:      false,
+		apperr.ErrorTypeDisk:        false,
 	}
 
 	for _, et := range types {
@@ -121,20 +123,20 @@ func TestAllErrorTypes(t *testing.T) {
 
 func TestCalculateErrorValue(t *testing.T) {
 	tests := []struct {
-		errorType ErrorType
+		errorType apperr.ErrorType
 		baseValue int
 		errorRate int
 		expected  int
 	}{
-		{ErrorTypeCPU, 50, 90, 90},        // Percentage-based
-		{ErrorTypeMemory, 60, 85, 85},     // Percentage-based
-		{ErrorTypeFCS, 100, 50, 150},      // Counter-based: 100 + (100 * 50 / 100)
-		{ErrorTypeDiscards, 100, 25, 125}, // Counter-based
-		{ErrorTypeFCS, 100, 0, 100},       // Zero rate
+		{apperr.ErrorTypeCPU, 50, 90, 90},        // Percentage-based
+		{apperr.ErrorTypeMemory, 60, 85, 85},     // Percentage-based
+		{apperr.ErrorTypeFCS, 100, 50, 150},      // Counter-based: 100 + (100 * 50 / 100)
+		{apperr.ErrorTypeDiscards, 100, 25, 125}, // Counter-based
+		{apperr.ErrorTypeFCS, 100, 0, 100},       // Zero rate
 	}
 
 	for _, tt := range tests {
-		result := CalculateErrorValue(tt.errorType, tt.baseValue, tt.errorRate)
+		result := apperr.CalculateErrorValue(tt.errorType, tt.baseValue, tt.errorRate)
 		if result != tt.expected {
 			t.Errorf("%v: expected %d, got %d", tt.errorType, tt.expected, result)
 		}
@@ -142,19 +144,19 @@ func TestCalculateErrorValue(t *testing.T) {
 }
 
 func TestConcurrentAccess(t *testing.T) {
-	sm := NewStateManager()
+	sm := apperr.NewStateManager()
 
 	// Test concurrent writes
 	done := make(chan bool)
 
-	for i := range 10 {
-		go func(id int) {
+	for range 10 {
+		go func() {
 			for j := range 100 {
-				sm.SetError("192.168.1.1", "eth0", ErrorTypeFCS, j)
+				sm.SetError("192.168.1.1", "eth0", apperr.ErrorTypeFCS, j)
 			}
 
 			done <- true
-		}(i)
+		}()
 	}
 
 	// Wait for all goroutines
@@ -170,16 +172,16 @@ func TestConcurrentAccess(t *testing.T) {
 }
 
 func BenchmarkSetError(b *testing.B) {
-	sm := NewStateManager()
+	sm := apperr.NewStateManager()
 
 	for b.Loop() {
-		sm.SetError("192.168.1.1", "eth0", ErrorTypeFCS, 50)
+		sm.SetError("192.168.1.1", "eth0", apperr.ErrorTypeFCS, 50)
 	}
 }
 
 func BenchmarkGetError(b *testing.B) {
-	sm := NewStateManager()
-	sm.SetError("192.168.1.1", "eth0", ErrorTypeFCS, 50)
+	sm := apperr.NewStateManager()
+	sm.SetError("192.168.1.1", "eth0", apperr.ErrorTypeFCS, 50)
 
 	for b.Loop() {
 		_ = sm.GetError("192.168.1.1", "eth0")
@@ -187,9 +189,9 @@ func BenchmarkGetError(b *testing.B) {
 }
 
 func BenchmarkGetAllStates(b *testing.B) {
-	sm := NewStateManager()
+	sm := apperr.NewStateManager()
 	for range 100 {
-		sm.SetError("192.168.1.1", "eth0", ErrorTypeFCS, 50)
+		sm.SetError("192.168.1.1", "eth0", apperr.ErrorTypeFCS, 50)
 	}
 
 	for b.Loop() {

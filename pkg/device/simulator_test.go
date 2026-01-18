@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/krisarmstrong/niac-go/pkg/apperr"
 	"github.com/krisarmstrong/niac-go/pkg/config"
-	"github.com/krisarmstrong/niac-go/pkg/errors"
 	"github.com/krisarmstrong/niac-go/pkg/logging"
 	"github.com/krisarmstrong/niac-go/pkg/protocols"
 )
@@ -41,7 +41,7 @@ func createTestConfig(deviceCount int) *config.Config {
 func TestNewSimulator(t *testing.T) {
 	cfg := createTestConfig(3)
 	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
-	errorMgr := errors.NewStateManager()
+	errorMgr := apperr.NewStateManager()
 
 	sim := NewSimulator(cfg, stack, errorMgr, 0)
 
@@ -76,7 +76,7 @@ func TestNewSimulator_EmptyConfig(t *testing.T) {
 		Devices: []config.Device{},
 	}
 	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
-	errorMgr := errors.NewStateManager()
+	errorMgr := apperr.NewStateManager()
 
 	sim := NewSimulator(cfg, stack, errorMgr, 0)
 
@@ -93,7 +93,7 @@ func TestNewSimulator_EmptyConfig(t *testing.T) {
 func TestSimulator_GetDevice(t *testing.T) {
 	cfg := createTestConfig(2)
 	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
-	errorMgr := errors.NewStateManager()
+	errorMgr := apperr.NewStateManager()
 	sim := NewSimulator(cfg, stack, errorMgr, 0)
 
 	// Get existing device
@@ -117,7 +117,7 @@ func TestSimulator_GetDevice(t *testing.T) {
 func TestSimulator_GetAllDevices(t *testing.T) {
 	cfg := createTestConfig(3)
 	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
-	errorMgr := errors.NewStateManager()
+	errorMgr := apperr.NewStateManager()
 	sim := NewSimulator(cfg, stack, errorMgr, 0)
 
 	devices := sim.GetAllDevices()
@@ -139,7 +139,7 @@ func TestSimulator_GetAllDevices(t *testing.T) {
 func TestSimulator_Lifecycle(t *testing.T) {
 	cfg := createTestConfig(1)
 	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
-	errorMgr := errors.NewStateManager()
+	errorMgr := apperr.NewStateManager()
 	sim := NewSimulator(cfg, stack, errorMgr, 0)
 
 	// Initial state
@@ -179,7 +179,7 @@ func TestSimulator_Lifecycle(t *testing.T) {
 func TestSimulator_SetDeviceState(t *testing.T) {
 	cfg := createTestConfig(1)
 	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
-	errorMgr := errors.NewStateManager()
+	errorMgr := apperr.NewStateManager()
 	sim := NewSimulator(cfg, stack, errorMgr, 0)
 
 	deviceName := "test-device-0"
@@ -221,7 +221,7 @@ func TestSimulator_SetDeviceState(t *testing.T) {
 
 // TestSimulator_DeviceStates tests all device state constants.
 func TestSimulator_DeviceStates(t *testing.T) {
-	states := []DeviceState{
+	states := []State{
 		StateUp,
 		StateDown,
 		StateStarting,
@@ -231,7 +231,7 @@ func TestSimulator_DeviceStates(t *testing.T) {
 
 	cfg := createTestConfig(1)
 	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
-	errorMgr := errors.NewStateManager()
+	errorMgr := apperr.NewStateManager()
 	sim := NewSimulator(cfg, stack, errorMgr, 0)
 
 	deviceName := "test-device-0"
@@ -253,7 +253,7 @@ func TestSimulator_DeviceStates(t *testing.T) {
 func TestSimulator_IncrementCounter(t *testing.T) {
 	cfg := createTestConfig(1)
 	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
-	errorMgr := errors.NewStateManager()
+	errorMgr := apperr.NewStateManager()
 	sim := NewSimulator(cfg, stack, errorMgr, 0)
 
 	deviceName := "test-device-0"
@@ -287,10 +287,10 @@ func TestSimulator_IncrementCounter(t *testing.T) {
 }
 
 // TestSimulator_IncrementCounter_NonExistentDevice tests incrementing counter for non-existent device.
-func TestSimulator_IncrementCounter_NonExistentDevice(t *testing.T) {
+func TestSimulator_IncrementCounter_NonExistentDevice(_ *testing.T) {
 	cfg := createTestConfig(1)
 	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
-	errorMgr := errors.NewStateManager()
+	errorMgr := apperr.NewStateManager()
 	sim := NewSimulator(cfg, stack, errorMgr, 0)
 
 	// Should not panic
@@ -301,7 +301,7 @@ func TestSimulator_IncrementCounter_NonExistentDevice(t *testing.T) {
 func TestSimulator_ConcurrentAccess(t *testing.T) {
 	cfg := createTestConfig(5)
 	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
-	errorMgr := errors.NewStateManager()
+	errorMgr := apperr.NewStateManager()
 	sim := NewSimulator(cfg, stack, errorMgr, 0)
 
 	var wg sync.WaitGroup
@@ -399,7 +399,7 @@ func TestSimulator_DeviceTypes(t *testing.T) {
 			}
 
 			stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
-			errorMgr := errors.NewStateManager()
+			errorMgr := apperr.NewStateManager()
 			sim := NewSimulator(cfg, stack, errorMgr, 0)
 
 			device := sim.GetDevice("test-device")
@@ -439,7 +439,7 @@ func TestSimulator_WithTrapSender(t *testing.T) {
 	}
 
 	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
-	errorMgr := errors.NewStateManager()
+	errorMgr := apperr.NewStateManager()
 	sim := NewSimulator(cfg, stack, errorMgr, 0)
 
 	device := sim.GetDevice("router-with-traps")
@@ -457,7 +457,7 @@ func TestSimulator_WithTrapSender(t *testing.T) {
 func TestSimulator_LastActivity(t *testing.T) {
 	cfg := createTestConfig(1)
 	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
-	errorMgr := errors.NewStateManager()
+	errorMgr := apperr.NewStateManager()
 	sim := NewSimulator(cfg, stack, errorMgr, 0)
 
 	device := sim.GetDevice("test-device-0")
@@ -480,7 +480,7 @@ func TestSimulator_LastActivity(t *testing.T) {
 func TestDeviceCounters_Initial(t *testing.T) {
 	cfg := createTestConfig(1)
 	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
-	errorMgr := errors.NewStateManager()
+	errorMgr := apperr.NewStateManager()
 	sim := NewSimulator(cfg, stack, errorMgr, 0)
 
 	device := sim.GetDevice("test-device-0")
@@ -510,7 +510,7 @@ func TestDeviceCounters_Initial(t *testing.T) {
 func TestSimulator_ReloadUpdatesSNMPAgent(t *testing.T) {
 	cfg := createTestConfig(1)
 	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
-	errorMgr := errors.NewStateManager()
+	errorMgr := apperr.NewStateManager()
 	sim := NewSimulator(cfg, stack, errorMgr, 0)
 
 	originalDevice := sim.GetDevice("test-device-0")
@@ -567,7 +567,7 @@ func TestSimulator_ReloadUpdatesSNMPAgent(t *testing.T) {
 func BenchmarkNewSimulator(b *testing.B) {
 	cfg := createTestConfig(10)
 	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
-	errorMgr := errors.NewStateManager()
+	errorMgr := apperr.NewStateManager()
 
 	for b.Loop() {
 		NewSimulator(cfg, stack, errorMgr, 0)
@@ -578,7 +578,7 @@ func BenchmarkNewSimulator(b *testing.B) {
 func BenchmarkGetDevice(b *testing.B) {
 	cfg := createTestConfig(10)
 	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
-	errorMgr := errors.NewStateManager()
+	errorMgr := apperr.NewStateManager()
 	sim := NewSimulator(cfg, stack, errorMgr, 0)
 
 	for b.Loop() {
@@ -590,7 +590,7 @@ func BenchmarkGetDevice(b *testing.B) {
 func BenchmarkIncrementCounter(b *testing.B) {
 	cfg := createTestConfig(1)
 	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
-	errorMgr := errors.NewStateManager()
+	errorMgr := apperr.NewStateManager()
 	sim := NewSimulator(cfg, stack, errorMgr, 0)
 
 	for b.Loop() {

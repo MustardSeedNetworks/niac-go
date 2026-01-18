@@ -75,91 +75,262 @@ type legacyFlags struct {
 }
 
 // defineLegacyFlags defines all command-line flags for legacy mode.
-//nolint:funlen // Flag definitions are declarative and straightforward
-func defineLegacyFlags(flags *legacyFlags) {
-	// Core flags
-	flag.IntVar(&flags.debugLevel, "d", 1, "Debug level (0-3)")
-	flag.IntVar(&flags.debugLevel, "debug", 1, "Debug level (0-3)")
-	flag.BoolVar(&flags.verbose, "v", false, "Verbose output (equivalent to -d 3)")
-	flag.BoolVar(&flags.verbose, "verbose", false, "Verbose output (equivalent to -d 3)")
-	flag.BoolVar(&flags.quiet, "q", false, "Quiet mode (equivalent to -d 0)")
-	flag.BoolVar(&flags.quiet, "quiet", false, "Quiet mode (equivalent to -d 0)")
+func defineLegacyFlags(flagSet *flag.FlagSet, flags *legacyFlags) {
+	defineCoreFlags(flagSet, flags)
+	defineInfoFlags(flagSet, flags)
+	defineOutputFlags(flagSet, flags)
+	defineAdvancedFlags(flagSet, flags)
+	defineProfilingFlags(flagSet, flags)
+	defineProtocolDebugFlags(flagSet, flags)
+	defineServiceFlags(flagSet, flags)
+}
 
-	flag.BoolVar(&flags.interactiveMode, "i", false, "Enable interactive TUI mode")
-	flag.BoolVar(&flags.interactiveMode, "interactive", false, "Enable interactive TUI mode")
-	flag.BoolVar(&flags.dryRun, "n", false, "Dry run - validate configuration without starting")
-	flag.BoolVar(&flags.dryRun, "dry-run", false, "Dry run - validate configuration without starting")
+func defineCoreFlags(flagSet *flag.FlagSet, flags *legacyFlags) {
+	flagSet.IntVar(&flags.debugLevel, "d", 1, "Debug level (0-3)")
+	flagSet.IntVar(&flags.debugLevel, "debug", 1, "Debug level (0-3)")
+	flagSet.BoolVar(&flags.verbose, "v", false, "Verbose output (equivalent to -d 3)")
+	flagSet.BoolVar(&flags.verbose, "verbose", false, "Verbose output (equivalent to -d 3)")
+	flagSet.BoolVar(&flags.quiet, "q", false, "Quiet mode (equivalent to -d 0)")
+	flagSet.BoolVar(&flags.quiet, "quiet", false, "Quiet mode (equivalent to -d 0)")
+	flagSet.BoolVar(&flags.interactiveMode, "i", false, "Enable interactive TUI mode")
+	flagSet.BoolVar(&flags.interactiveMode, "interactive", false, "Enable interactive TUI mode")
+	flagSet.BoolVar(&flags.dryRun, "n", false, "Dry run - validate configuration without starting")
+	flagSet.BoolVar(
+		&flags.dryRun,
+		"dry-run",
+		false,
+		"Dry run - validate configuration without starting",
+	)
+}
 
-	// Information flags
-	flag.BoolVar(&flags.showVersion, "V", false, "Show version information")
-	flag.BoolVar(&flags.showVersion, "version", false, "Show version information")
-	flag.BoolVar(&flags.listInterfaces, "l", false, "List available network interfaces")
-	flag.BoolVar(&flags.listInterfaces, "list-interfaces", false, "List available network interfaces")
-	flag.BoolVar(&flags.listDevices, "list-devices", false, "List devices in configuration file")
+func defineInfoFlags(flagSet *flag.FlagSet, flags *legacyFlags) {
+	flagSet.BoolVar(&flags.showVersion, "V", false, "Show version information")
+	flagSet.BoolVar(&flags.showVersion, "version", false, "Show version information")
+	flagSet.BoolVar(&flags.listInterfaces, "l", false, "List available network interfaces")
+	flagSet.BoolVar(
+		&flags.listInterfaces,
+		"list-interfaces",
+		false,
+		"List available network interfaces",
+	)
+	flagSet.BoolVar(&flags.listDevices, "list-devices", false, "List devices in configuration file")
+}
 
-	// Output flags
-	flag.BoolVar(&flags.noColor, "no-color", false, "Disable colored output")
-	flag.StringVar(&flags.logFile, "log-file", "", "Write log to file")
-	flag.IntVar(&flags.statsInterval, "stats-interval", 1, "Statistics update interval in seconds")
+func defineOutputFlags(flagSet *flag.FlagSet, flags *legacyFlags) {
+	flagSet.BoolVar(&flags.noColor, "no-color", false, "Disable colored output")
+	flagSet.StringVar(&flags.logFile, "log-file", "", "Write log to file")
+	flagSet.IntVar(
+		&flags.statsInterval,
+		"stats-interval",
+		1,
+		"Statistics update interval in seconds",
+	)
+}
 
-	// Advanced flags
-	flag.IntVar(&flags.babbleInterval, "babble-interval", 60, "Traffic generation interval in seconds")
-	flag.BoolVar(&flags.noTraffic, "no-traffic", false, "Disable background traffic generation")
-	flag.StringVar(&flags.snmpCommunity, "snmp-community", "", "Default SNMP community string")
-	flag.IntVar(&flags.maxPacketSize, "max-packet-size", 1514, "Maximum packet size in bytes")
+func defineAdvancedFlags(flagSet *flag.FlagSet, flags *legacyFlags) {
+	flagSet.IntVar(
+		&flags.babbleInterval,
+		"babble-interval",
+		legacyDefaultSecs,
+		"Traffic generation interval in seconds",
+	)
+	flagSet.BoolVar(&flags.noTraffic, "no-traffic", false, "Disable background traffic generation")
+	flagSet.StringVar(&flags.snmpCommunity, "snmp-community", "", "Default SNMP community string")
+	flagSet.IntVar(
+		&flags.maxPacketSize,
+		"max-packet-size",
+		defaultMTU,
+		"Maximum packet size in bytes",
+	)
+}
 
-	// Profiling flags
-	flag.BoolVar(&flags.enableProfiling, "profile", false, "Enable pprof performance profiling")
-	flag.BoolVar(&flags.enableProfiling, "p", false, "Enable pprof performance profiling")
-	flag.IntVar(&flags.profilePort, "profile-port", 6060, "Port for pprof HTTP server (default: 6060)")
+func defineProfilingFlags(flagSet *flag.FlagSet, flags *legacyFlags) {
+	flagSet.BoolVar(&flags.enableProfiling, "profile", false, "Enable pprof performance profiling")
+	flagSet.BoolVar(&flags.enableProfiling, "p", false, "Enable pprof performance profiling")
+	flagSet.IntVar(
+		&flags.profilePort,
+		"profile-port",
+		legacyPprofPort,
+		"Port for pprof HTTP server (default: 6060)",
+	)
+	flagSet.StringVar(
+		&flags.exportStatsJSON,
+		"export-stats-json",
+		"",
+		"Export statistics to JSON file on exit",
+	)
+	flagSet.StringVar(
+		&flags.exportStatsCSV,
+		"export-stats-csv",
+		"",
+		"Export statistics to CSV file on exit",
+	)
+}
 
-	// Statistics export flags
-	flag.StringVar(&flags.exportStatsJSON, "export-stats-json", "", "Export statistics to JSON file on exit")
-	flag.StringVar(&flags.exportStatsCSV, "export-stats-csv", "", "Export statistics to CSV file on exit")
+func defineProtocolDebugFlags(flagSet *flag.FlagSet, flags *legacyFlags) {
+	defineNetworkProtocolDebugFlags(flagSet, flags)
+	defineApplicationProtocolDebugFlags(flagSet, flags)
+	defineDiscoveryProtocolDebugFlags(flagSet, flags)
+}
 
-	// Per-protocol debug flags (-1 means use global level)
-	flag.IntVar(&flags.debugARP, "debug-arp", -1, "ARP protocol debug level (0-3, default: global level)")
-	flag.IntVar(&flags.debugIP, "debug-ip", -1, "IP protocol debug level (0-3, default: global level)")
-	flag.IntVar(&flags.debugICMP, "debug-icmp", -1, "ICMP protocol debug level (0-3, default: global level)")
-	flag.IntVar(&flags.debugIPv6, "debug-ipv6", -1, "IPv6 protocol debug level (0-3, default: global level)")
-	flag.IntVar(&flags.debugICMPv6, "debug-icmpv6", -1, "ICMPv6 protocol debug level (0-3, default: global level)")
-	flag.IntVar(&flags.debugUDP, "debug-udp", -1, "UDP protocol debug level (0-3, default: global level)")
-	flag.IntVar(&flags.debugTCP, "debug-tcp", -1, "TCP protocol debug level (0-3, default: global level)")
-	flag.IntVar(&flags.debugDNS, "debug-dns", -1, "DNS protocol debug level (0-3, default: global level)")
-	flag.IntVar(&flags.debugDHCP, "debug-dhcp", -1, "DHCP protocol debug level (0-3, default: global level)")
-	flag.IntVar(&flags.debugDHCPv6, "debug-dhcpv6", -1, "DHCPv6 protocol debug level (0-3, default: global level)")
-	flag.IntVar(&flags.debugHTTP, "debug-http", -1, "HTTP protocol debug level (0-3, default: global level)")
-	flag.IntVar(&flags.debugFTP, "debug-ftp", -1, "FTP protocol debug level (0-3, default: global level)")
-	flag.IntVar(&flags.debugNetBIOS, "debug-netbios", -1, "NetBIOS protocol debug level (0-3, default: global level)")
-	flag.IntVar(&flags.debugSTP, "debug-stp", -1, "STP protocol debug level (0-3, default: global level)")
-	flag.IntVar(&flags.debugLLDP, "debug-lldp", -1, "LLDP protocol debug level (0-3, default: global level)")
-	flag.IntVar(&flags.debugCDP, "debug-cdp", -1, "CDP protocol debug level (0-3, default: global level)")
-	flag.IntVar(&flags.debugEDP, "debug-edp", -1, "EDP protocol debug level (0-3, default: global level)")
-	flag.IntVar(&flags.debugFDP, "debug-fdp", -1, "FDP protocol debug level (0-3, default: global level)")
-	flag.IntVar(&flags.debugSNMP, "debug-snmp", -1, "SNMP protocol debug level (0-3, default: global level)")
+// defineNetworkProtocolDebugFlags defines debug flags for network layer protocols.
+func defineNetworkProtocolDebugFlags(flagSet *flag.FlagSet, flags *legacyFlags) {
+	flagSet.IntVar(
+		&flags.debugARP,
+		"debug-arp",
+		-1,
+		"ARP protocol debug level (0-3, default: global level)",
+	)
+	flagSet.IntVar(
+		&flags.debugIP,
+		"debug-ip",
+		-1,
+		"IP protocol debug level (0-3, default: global level)",
+	)
+	flagSet.IntVar(
+		&flags.debugICMP,
+		"debug-icmp",
+		-1,
+		"ICMP protocol debug level (0-3, default: global level)",
+	)
+	flagSet.IntVar(
+		&flags.debugIPv6,
+		"debug-ipv6",
+		-1,
+		"IPv6 protocol debug level (0-3, default: global level)",
+	)
+	flagSet.IntVar(
+		&flags.debugICMPv6,
+		"debug-icmpv6",
+		-1,
+		"ICMPv6 protocol debug level (0-3, default: global level)",
+	)
+	flagSet.IntVar(
+		&flags.debugUDP,
+		"debug-udp",
+		-1,
+		"UDP protocol debug level (0-3, default: global level)",
+	)
+	flagSet.IntVar(
+		&flags.debugTCP,
+		"debug-tcp",
+		-1,
+		"TCP protocol debug level (0-3, default: global level)",
+	)
+}
 
-	// Service / API flags
-	flag.StringVar(&flags.apiListen, "api-listen", "", "Expose REST API and Web UI on this address (e.g., :8080)")
-	flag.StringVar(&flags.apiToken, "api-token", "", "Bearer token required for API/Web UI access")
-	flag.StringVar(
+// defineApplicationProtocolDebugFlags defines debug flags for application layer protocols.
+func defineApplicationProtocolDebugFlags(flagSet *flag.FlagSet, flags *legacyFlags) {
+	flagSet.IntVar(
+		&flags.debugDNS,
+		"debug-dns",
+		-1,
+		"DNS protocol debug level (0-3, default: global level)",
+	)
+	flagSet.IntVar(
+		&flags.debugDHCP,
+		"debug-dhcp",
+		-1,
+		"DHCP protocol debug level (0-3, default: global level)",
+	)
+	flagSet.IntVar(
+		&flags.debugDHCPv6,
+		"debug-dhcpv6",
+		-1,
+		"DHCPv6 protocol debug level (0-3, default: global level)",
+	)
+	flagSet.IntVar(
+		&flags.debugHTTP,
+		"debug-http",
+		-1,
+		"HTTP protocol debug level (0-3, default: global level)",
+	)
+	flagSet.IntVar(
+		&flags.debugFTP,
+		"debug-ftp",
+		-1,
+		"FTP protocol debug level (0-3, default: global level)",
+	)
+	flagSet.IntVar(
+		&flags.debugNetBIOS,
+		"debug-netbios",
+		-1,
+		"NetBIOS protocol debug level (0-3, default: global level)",
+	)
+	flagSet.IntVar(
+		&flags.debugSNMP,
+		"debug-snmp",
+		-1,
+		"SNMP protocol debug level (0-3, default: global level)",
+	)
+}
+
+// defineDiscoveryProtocolDebugFlags defines debug flags for discovery protocols.
+func defineDiscoveryProtocolDebugFlags(flagSet *flag.FlagSet, flags *legacyFlags) {
+	flagSet.IntVar(
+		&flags.debugSTP,
+		"debug-stp",
+		-1,
+		"STP protocol debug level (0-3, default: global level)",
+	)
+	flagSet.IntVar(
+		&flags.debugLLDP,
+		"debug-lldp",
+		-1,
+		"LLDP protocol debug level (0-3, default: global level)",
+	)
+	flagSet.IntVar(
+		&flags.debugCDP,
+		"debug-cdp",
+		-1,
+		"CDP protocol debug level (0-3, default: global level)",
+	)
+	flagSet.IntVar(
+		&flags.debugEDP,
+		"debug-edp",
+		-1,
+		"EDP protocol debug level (0-3, default: global level)",
+	)
+	flagSet.IntVar(
+		&flags.debugFDP,
+		"debug-fdp",
+		-1,
+		"FDP protocol debug level (0-3, default: global level)",
+	)
+}
+
+func defineServiceFlags(flagSet *flag.FlagSet, flags *legacyFlags) {
+	flagSet.StringVar(
+		&flags.apiListen,
+		"api-listen",
+		"",
+		"Expose REST API and Web UI on this address (e.g., :8080)",
+	)
+	flagSet.StringVar(
+		&flags.apiToken,
+		"api-token",
+		"",
+		"Bearer token required for API/Web UI access",
+	)
+	flagSet.StringVar(
 		&flags.metricsListen,
 		"metrics-listen",
 		"",
-		"Expose Prometheus metrics on this address (defaults to --api-listen)",
+		"Expose Prometheus metrics on this address",
 	)
-	flag.StringVar(
-		&flags.storagePath,
-		"storage-path",
-		"",
-		"Path to NIAC run history database (default: ~/.niac/niac.db)",
-	)
-	flag.Uint64Var(
+	flagSet.StringVar(&flags.storagePath, "storage-path", "", "Path to NIAC run history database")
+	flagSet.Uint64Var(
 		&flags.alertPacketsThreshold,
 		"alert-packets-threshold",
 		0,
 		"Trigger alerts when total packet count exceeds this value",
 	)
-	flag.StringVar(&flags.alertWebhook, "alert-webhook", "", "Optional webhook URL to notify when alerts fire")
+	flagSet.StringVar(
+		&flags.alertWebhook,
+		"alert-webhook",
+		"",
+		"Optional webhook URL to notify when alerts fire",
+	)
 }
 
 // processFlags applies flag transformations (verbose/quiet override).
@@ -172,27 +343,27 @@ func processFlags(flags *legacyFlags) {
 	}
 }
 
-func applyLegacyServiceFlags(flags *legacyFlags) {
+func applyLegacyServiceFlags(flags *legacyFlags, services *serviceOptions) {
 	if flags.apiListen != "" {
-		servicesOpts.apiListen = flags.apiListen
+		services.apiListen = flags.apiListen
 	}
 	if flags.apiToken != "" {
-		servicesOpts.apiToken = flags.apiToken
+		services.apiToken = flags.apiToken
 	}
 	if flags.metricsListen != "" {
-		servicesOpts.metricsListen = flags.metricsListen
+		services.metricsListen = flags.metricsListen
 	}
 	if flags.storagePath != "" {
-		servicesOpts.storagePath = flags.storagePath
+		services.storagePath = flags.storagePath
 	}
 	if flags.alertPacketsThreshold > 0 {
-		servicesOpts.alertPacketsThreshold = flags.alertPacketsThreshold
+		services.alertPacketsThreshold = flags.alertPacketsThreshold
 	}
 	if flags.alertWebhook != "" {
-		servicesOpts.alertWebhook = flags.alertWebhook
+		services.alertWebhook = flags.alertWebhook
 	}
-	if servicesOpts.storagePath == "" {
-		servicesOpts.storagePath = defaultStoragePath()
+	if services.storagePath == "" {
+		services.storagePath = defaultStoragePath()
 	}
 }
 
@@ -264,16 +435,16 @@ func setupDebugConfig(flags *legacyFlags) *logging.DebugConfig {
 
 // handleInformationalFlags processes version/list flags and exits if handled
 // Returns true if a flag was handled and program should exit.
-func handleInformationalFlags(flags *legacyFlags, args []string) bool {
+func handleInformationalFlags(flags *legacyFlags, args []string, info versionInfo) bool {
 	// Handle version flag
 	if flags.showVersion {
-		printVersion()
+		printVersion(info)
 		return true
 	}
 
 	// Handle list interfaces flag
 	if flags.listInterfaces {
-		fmt.Println("Available network interfaces:")
+		fmt.Fprintln(os.Stdout, "Available network interfaces:")
 		capture.ListInterfaces()
 		return true
 	}
@@ -281,8 +452,8 @@ func handleInformationalFlags(flags *legacyFlags, args []string) bool {
 	// Handle list devices flag (needs config file)
 	if flags.listDevices {
 		if len(args) < 1 {
-			fmt.Println("Error: --list-devices requires a configuration file")
-			fmt.Println()
+			fmt.Fprintln(os.Stdout, "Error: --list-devices requires a configuration file")
+			fmt.Fprintln(os.Stdout)
 			printUsage()
 			os.Exit(1)
 		}
@@ -294,8 +465,8 @@ func handleInformationalFlags(flags *legacyFlags, args []string) bool {
 }
 
 // validateLegacyArguments validates required command-line arguments.
-func validateLegacyArguments(args []string) (interfaceName, configFile string, err error) {
-	if len(args) < 2 {
+func validateLegacyArguments(args []string) (string, string, error) {
+	if len(args) < minArgsForConfig {
 		return "", "", errors.New("missing required arguments: interface and config file")
 	}
 	return args[0], args[1], nil
@@ -304,8 +475,8 @@ func validateLegacyArguments(args []string) (interfaceName, configFile string, e
 // validateInterface checks if interface exists.
 func validateInterface(interfaceName string) error {
 	if !capture.InterfaceExists(interfaceName) {
-		logging.Error("Interface '%s' not found", interfaceName)
-		fmt.Println("\nAvailable interfaces:")
+		logging.Errorf("Interface '%s' not found", interfaceName)
+		fmt.Fprintln(os.Stdout, "\nAvailable interfaces:")
 		capture.ListInterfaces()
 		return fmt.Errorf("interface not found: %s", interfaceName)
 	}
@@ -313,33 +484,56 @@ func validateInterface(interfaceName string) error {
 }
 
 // loadAndPrintConfig loads config and prints info.
-func loadAndPrintConfig(configFile, interfaceName string, flags *legacyFlags) (*config.Config, error) {
+func loadAndPrintConfig(
+	configFile, interfaceName string,
+	flags *legacyFlags,
+) (*config.Config, error) {
 	cfg, err := config.Load(configFile)
 	if err != nil {
 		return nil, fmt.Errorf("loading configuration: %w", err)
 	}
 
 	if flags.debugLevel >= 1 {
-		logging.Success("Loaded configuration: %s", configFile)
-		logging.Info("  Devices: %d", len(cfg.Devices))
-		logging.Info("  Interface: %s", interfaceName)
-		logging.Info("  Debug level: %d (%s)", flags.debugLevel, getDebugLevelName(flags.debugLevel))
-		if flags.interactiveMode {
-			logging.Info("  Mode: Interactive TUI")
-		}
-		if cfg.CapturePlayback != nil {
-			logging.Info("  PCAP Playback: %s", cfg.CapturePlayback.FileName)
-			if cfg.CapturePlayback.LoopTime > 0 {
-				logging.Info("    Loop interval: %dms", cfg.CapturePlayback.LoopTime)
-			}
-			if cfg.CapturePlayback.ScaleTime > 0 && cfg.CapturePlayback.ScaleTime != 1.0 {
-				logging.Info("    Time scaling: %.2fx", cfg.CapturePlayback.ScaleTime)
-			}
-		}
-		fmt.Println()
+		logConfigurationDebug(configFile, interfaceName, flags, cfg)
 	}
 
 	return cfg, nil
+}
+
+// logConfigurationDebug logs configuration details when debug level >= 1.
+func logConfigurationDebug(configFile, interfaceName string, flags *legacyFlags, cfg *config.Config) {
+	logging.Successf("Loaded configuration: %s", configFile)
+	logging.Infof("  Devices: %d", len(cfg.Devices))
+	logging.Infof("  Interface: %s", interfaceName)
+	logging.Infof(
+		"  Debug level: %d (%s)",
+		flags.debugLevel,
+		getDebugLevelName(flags.debugLevel),
+	)
+
+	if flags.interactiveMode {
+		logging.Infof("  Mode: Interactive TUI")
+	}
+
+	logCapturePlaybackDebug(cfg)
+	fmt.Fprintln(os.Stdout)
+}
+
+// logCapturePlaybackDebug logs PCAP playback configuration if present.
+func logCapturePlaybackDebug(cfg *config.Config) {
+	if cfg.CapturePlayback == nil {
+		return
+	}
+
+	logging.Infof("  PCAP Playback: %s", cfg.CapturePlayback.FileName)
+
+	if cfg.CapturePlayback.LoopTime > 0 {
+		logging.Infof("    Loop interval: %dms", cfg.CapturePlayback.LoopTime)
+	}
+
+	if cfg.CapturePlayback.ScaleTime > 0 && cfg.CapturePlayback.ScaleTime != 1.0 {
+		logging.Infof("    Time scaling: %.2fx", cfg.CapturePlayback.ScaleTime)
+	}
 }
 
 // runDryRunValidation runs dry-run validation and exits.
@@ -349,18 +543,18 @@ func runDryRunValidation(configFile, interfaceName string, cfg *config.Config) {
 	result := validator.Validate(cfg)
 
 	if result.HasErrors() || result.HasWarnings() {
-		fmt.Println(result.Format())
+		fmt.Fprintln(os.Stdout, result.Format())
 	}
 
 	if !result.Valid {
-		logging.Error("Configuration validation failed")
+		logging.Errorf("Configuration validation failed")
 		os.Exit(1)
 	}
 
 	// Additional runtime checks
-	logging.Success("Interface exists and is accessible")
-	logging.Success("Ready to simulate %d devices on %s", len(cfg.Devices), interfaceName)
-	fmt.Println()
-	fmt.Println("Configuration is valid. Use without --dry-run to start simulation.")
+	logging.Successf("Interface exists and is accessible")
+	logging.Successf("Ready to simulate %d devices on %s", len(cfg.Devices), interfaceName)
+	fmt.Fprintln(os.Stdout)
+	fmt.Fprintln(os.Stdout, "Configuration is valid. Use without --dry-run to start simulation.")
 	os.Exit(0)
 }

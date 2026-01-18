@@ -3,11 +3,11 @@ package snmp
 import (
 	"fmt"
 	"log/slog"
-	"math/rand/v2" // Note: math/rand used for simulation traffic generation (not security-critical)
 	"net"
 	"time"
 
 	"github.com/gosnmp/gosnmp"
+
 	"github.com/krisarmstrong/niac-go/pkg/config"
 )
 
@@ -76,7 +76,7 @@ func NewTrapSender(
 			Port:      parsePort(port),
 			Community: community,
 			Version:   gosnmp.Version2c,
-			Timeout:   time.Duration(2) * time.Second,
+			Timeout:   time.Duration(TrapTimeoutSeconds) * time.Second,
 			Retries:   1,
 		}
 
@@ -92,8 +92,8 @@ func parsePort(portStr string) uint16 {
 
 	_, _ = fmt.Sscanf(portStr, "%d", &port) // error is handled by range check below
 
-	if port < 1 || port > 65535 {
-		return 162 // Default SNMP trap port
+	if port < 1 || port > MaxIPPort {
+		return DefaultSNMPTrapPort
 	}
 
 	return uint16(port)
@@ -101,6 +101,7 @@ func parsePort(portStr string) uint16 {
 
 // Start starts the trap sender and monitoring loops.
 func (ts *TrapSender) Start() error {
+	logger := slog.Default()
 	if ts.running {
 		return ErrTrapSenderRunning
 	}
@@ -130,7 +131,7 @@ func (ts *TrapSender) Start() error {
 	}
 
 	if ts.debugLevel >= 1 {
-		slog.Info("SNMP trap sender started", "device", ts.deviceName, "receivers", len(ts.receivers))
+		logger.Info("SNMP trap sender started", "device", ts.deviceName, "receivers", len(ts.receivers))
 	}
 
 	return nil
@@ -138,6 +139,7 @@ func (ts *TrapSender) Start() error {
 
 // Stop stops the trap sender.
 func (ts *TrapSender) Stop() {
+	logger := slog.Default()
 	if !ts.running {
 		return
 	}
@@ -146,7 +148,7 @@ func (ts *TrapSender) Stop() {
 	close(ts.stopChan)
 
 	if ts.debugLevel >= 1 {
-		slog.Info("SNMP trap sender stopped", "device", ts.deviceName)
+		logger.Info("SNMP trap sender stopped", "device", ts.deviceName)
 	}
 }
 
@@ -162,10 +164,10 @@ func (ts *TrapSender) SendLinkDown(ifIndex int, ifDescr string) error {
 	}
 
 	varbinds := []gosnmp.SnmpPDU{
-		{Name: ".1.3.6.1.2.1.2.2.1.1", Type: gosnmp.Integer, Value: ifIndex},     // ifIndex
-		{Name: ".1.3.6.1.2.1.2.2.1.7", Type: gosnmp.Integer, Value: 2},           // ifAdminStatus = down
-		{Name: ".1.3.6.1.2.1.2.2.1.8", Type: gosnmp.Integer, Value: 2},           // ifOperStatus = down
-		{Name: ".1.3.6.1.2.1.2.2.1.2", Type: gosnmp.OctetString, Value: ifDescr}, // ifDescr
+		{Name: ".1.3.6.1.2.1.2.2.1.1", Type: gosnmp.Integer, Value: ifIndex},      // ifIndex
+		{Name: ".1.3.6.1.2.1.2.2.1.7", Type: gosnmp.Integer, Value: IfStatusDown}, // ifAdminStatus = down
+		{Name: ".1.3.6.1.2.1.2.2.1.8", Type: gosnmp.Integer, Value: IfStatusDown}, // ifOperStatus = down
+		{Name: ".1.3.6.1.2.1.2.2.1.2", Type: gosnmp.OctetString, Value: ifDescr},  // ifDescr
 	}
 
 	return ts.sendTrap(OIDLinkDown, "linkDown", varbinds)
@@ -193,10 +195,9 @@ func (ts *TrapSender) SendAuthenticationFailure() error {
 		return nil
 	}
 
-	uptime := min(time.Now().Unix(), 0xFFFFFFFF)
-	// #nosec G115 -- uptime capped at 0xFFFFFFFF above
+	uptime := min(time.Now().Unix(), MaxUint32Value)
 	varbinds := []gosnmp.SnmpPDU{
-		{Name: ".1.3.6.1.2.1.1.3.0", Type: gosnmp.TimeTicks, Value: uint32(uptime)}, // sysUpTime
+		{Name: ".1.3.6.1.2.1.1.3.0", Type: gosnmp.TimeTicks, Value: safeUint32(uptime)}, // sysUpTime
 	}
 
 	return ts.sendTrap(OIDAuthenticationFailure, "authenticationFailure", varbinds)
@@ -216,7 +217,7 @@ func (ts *TrapSender) monitorCPU() {
 			return
 		case <-ticker.C:
 			// Simulate CPU usage (in real implementation, this would read actual CPU)
-			cpuUsage := rand.IntN(100) // #nosec G404 -- trap request ID, not cryptographic
+			cpuUsage := simRand.IntN(HundredthsPerSecond)
 
 			if cpuUsage > cfg.Threshold {
 				_ = ts.SendHighCPU(cpuUsage) // error is non-critical for monitoring trap
@@ -239,7 +240,7 @@ func (ts *TrapSender) monitorMemory() {
 			return
 		case <-ticker.C:
 			// Simulate memory usage (in real implementation, this would read actual memory)
-			memUsage := rand.IntN(100) // #nosec G404 -- trap request ID, not cryptographic
+			memUsage := simRand.IntN(HundredthsPerSecond)
 
 			if memUsage > cfg.Threshold {
 				_ = ts.SendHighMemory(memUsage) // error is non-critical for monitoring trap
@@ -262,7 +263,7 @@ func (ts *TrapSender) monitorInterfaceErrors() {
 			return
 		case <-ticker.C:
 			// Simulate error count (in real implementation, this would read actual errors)
-			errorCount := rand.IntN(cfg.Threshold * 2) // #nosec G404 -- trap request ID, not cryptographic
+			errorCount := simRand.IntN(cfg.Threshold * SimulatedThresholdMultiplier)
 
 			if errorCount > cfg.Threshold {
 				_ = ts.SendInterfaceErrors(1, "eth0", errorCount) // error is non-critical for monitoring trap
@@ -273,13 +274,14 @@ func (ts *TrapSender) monitorInterfaceErrors() {
 
 // SendHighCPU sends a trap for high CPU utilization.
 func (ts *TrapSender) SendHighCPU(cpuPercent int) error {
+	logger := slog.Default()
 	varbinds := []gosnmp.SnmpPDU{
 		{Name: ".1.3.6.1.4.1.9.9.109.1.1.1.1.5", Type: gosnmp.Integer, Value: cpuPercent}, // Cisco CPU 5-min average
 		{Name: ".1.3.6.1.2.1.25.3.3.1.2", Type: gosnmp.Integer, Value: cpuPercent},        // hrProcessorLoad
 	}
 
-	if ts.debugLevel >= 2 {
-		slog.Info(
+	if ts.debugLevel >= DebugLevelMinimum {
+		logger.Info(
 			"High CPU trap",
 			"device",
 			ts.deviceName,
@@ -295,13 +297,14 @@ func (ts *TrapSender) SendHighCPU(cpuPercent int) error {
 
 // SendHighMemory sends a trap for high memory utilization.
 func (ts *TrapSender) SendHighMemory(memPercent int) error {
+	logger := slog.Default()
 	varbinds := []gosnmp.SnmpPDU{
 		{Name: ".1.3.6.1.4.1.9.9.48.1.1.1.5", Type: gosnmp.Integer, Value: memPercent}, // Cisco memory used
 		{Name: ".1.3.6.1.2.1.25.2.3.1.6", Type: gosnmp.Integer, Value: memPercent},     // hrStorageUsed
 	}
 
-	if ts.debugLevel >= 2 {
-		slog.Info(
+	if ts.debugLevel >= DebugLevelMinimum {
+		logger.Info(
 			"High Memory trap",
 			"device",
 			ts.deviceName,
@@ -317,17 +320,17 @@ func (ts *TrapSender) SendHighMemory(memPercent int) error {
 
 // SendInterfaceErrors sends a trap for high interface error count.
 func (ts *TrapSender) SendInterfaceErrors(ifIndex int, ifDescr string, errorCount int) error {
+	logger := slog.Default()
 	errCount := max(errorCount, 0)
-	// #nosec G115 -- errCount validated as non-negative above, safe conversion to uint
 	varbinds := []gosnmp.SnmpPDU{
-		{Name: ".1.3.6.1.2.1.2.2.1.1", Type: gosnmp.Integer, Value: ifIndex},           // ifIndex
-		{Name: ".1.3.6.1.2.1.2.2.1.2", Type: gosnmp.OctetString, Value: ifDescr},       // ifDescr
-		{Name: ".1.3.6.1.2.1.2.2.1.14", Type: gosnmp.Counter32, Value: uint(errCount)}, // ifInErrors
-		{Name: ".1.3.6.1.2.1.2.2.1.20", Type: gosnmp.Counter32, Value: uint(errCount)}, // ifOutErrors
+		{Name: ".1.3.6.1.2.1.2.2.1.1", Type: gosnmp.Integer, Value: ifIndex},                        // ifIndex
+		{Name: ".1.3.6.1.2.1.2.2.1.2", Type: gosnmp.OctetString, Value: ifDescr},                    // ifDescr
+		{Name: ".1.3.6.1.2.1.2.2.1.14", Type: gosnmp.Counter32, Value: safeUint32FromInt(errCount)}, // ifInErrors
+		{Name: ".1.3.6.1.2.1.2.2.1.20", Type: gosnmp.Counter32, Value: safeUint32FromInt(errCount)}, // ifOutErrors
 	}
 
-	if ts.debugLevel >= 2 {
-		slog.Info(
+	if ts.debugLevel >= DebugLevelMinimum {
+		logger.Info(
 			"Interface Errors trap",
 			"device",
 			ts.deviceName,
@@ -343,14 +346,15 @@ func (ts *TrapSender) SendInterfaceErrors(ifIndex int, ifDescr string, errorCoun
 
 // sendTrap sends an SNMPv2c trap to all configured receivers.
 func (ts *TrapSender) sendTrap(trapOID string, trapName string, varbinds []gosnmp.SnmpPDU) error {
+	logger := slog.Default()
 	// Build trap PDU
-	uptime2 := max(time.Now().Unix()%4294967296, 0)
+	uptime2 := max(time.Now().Unix()%Uint32Overflow, 0)
 	trap := gosnmp.SnmpTrap{
 		Variables: []gosnmp.SnmpPDU{
 			{
 				Name:  ".1.3.6.1.2.1.1.3.0", // sysUpTime
 				Type:  gosnmp.TimeTicks,
-				Value: uint32(uptime2), // #nosec G115 -- timestamp from time calculation, bounded
+				Value: safeUint32(uptime2),
 			},
 			{
 				Name:  ".1.3.6.1.6.3.1.1.4.1.0", // snmpTrapOID
@@ -371,8 +375,8 @@ func (ts *TrapSender) sendTrap(trapOID string, trapName string, varbinds []gosnm
 	for _, receiver := range ts.receivers {
 		err := receiver.Connect()
 		if err != nil {
-			if ts.debugLevel >= 2 {
-				slog.Error(
+			if ts.debugLevel >= DebugLevelMinimum {
+				logger.Error(
 					"Failed to connect to trap receiver",
 					"device",
 					ts.deviceName,
@@ -394,8 +398,8 @@ func (ts *TrapSender) sendTrap(trapOID string, trapName string, varbinds []gosnm
 		_ = receiver.Conn.Close()
 
 		if err != nil {
-			if ts.debugLevel >= 2 {
-				slog.Error(
+			if ts.debugLevel >= DebugLevelMinimum {
+				logger.Error(
 					"Failed to send trap",
 					"device",
 					ts.deviceName,
@@ -412,8 +416,8 @@ func (ts *TrapSender) sendTrap(trapOID string, trapName string, varbinds []gosnm
 		} else {
 			sentCount++
 
-			if ts.debugLevel >= 3 {
-				slog.Debug(
+			if ts.debugLevel >= DebugLevelTraps {
+				logger.Debug(
 					"Sent trap",
 					"device",
 					ts.deviceName,
@@ -433,7 +437,7 @@ func (ts *TrapSender) sendTrap(trapOID string, trapName string, varbinds []gosnm
 	}
 
 	if ts.debugLevel >= 2 && sentCount > 0 {
-		slog.Info(
+		logger.Info(
 			"Sent trap",
 			"device",
 			ts.deviceName,

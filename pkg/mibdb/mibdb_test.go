@@ -1,12 +1,14 @@
-package mibdb
+package mibdb_test
 
 import (
 	"testing"
 	"time"
+
+	"github.com/krisarmstrong/niac-go/pkg/mibdb"
 )
 
 func TestNewInMemory(t *testing.T) {
-	db, err := NewInMemory()
+	db, err := mibdb.NewInMemory()
 	if err != nil {
 		t.Fatalf("Failed to create in-memory database: %v", err)
 	}
@@ -24,7 +26,7 @@ func TestNewInMemory(t *testing.T) {
 }
 
 func TestResolveOIDName(t *testing.T) {
-	db, err := NewInMemory()
+	db, err := mibdb.NewInMemory()
 	if err != nil {
 		t.Fatalf("Failed to create database: %v", err)
 	}
@@ -47,14 +49,14 @@ func TestResolveOIDName(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := db.ResolveOIDName(tt.input)
+			result, resolveErr := db.ResolveOIDName(tt.input)
 			if tt.wantErr {
-				if err == nil {
+				if resolveErr == nil {
 					t.Errorf("Expected error for input %s", tt.input)
 				}
 			} else {
-				if err != nil {
-					t.Errorf("Unexpected error: %v", err)
+				if resolveErr != nil {
+					t.Errorf("Unexpected error: %v", resolveErr)
 				}
 
 				if result != tt.expected {
@@ -66,7 +68,7 @@ func TestResolveOIDName(t *testing.T) {
 }
 
 func TestGetOIDByName(t *testing.T) {
-	db, err := NewInMemory()
+	db, err := mibdb.NewInMemory()
 	if err != nil {
 		t.Fatalf("Failed to create database: %v", err)
 	}
@@ -88,7 +90,7 @@ func TestGetOIDByName(t *testing.T) {
 }
 
 func TestGetOIDsByPrefix(t *testing.T) {
-	db, err := NewInMemory()
+	db, err := mibdb.NewInMemory()
 	if err != nil {
 		t.Fatalf("Failed to create database: %v", err)
 	}
@@ -121,7 +123,7 @@ func TestParseVariMibIntegral(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := ParseVariMibIntegral(tt.input)
+			result, err := mibdb.ParseVariMibIntegral(tt.input)
 			if tt.wantErr {
 				if err == nil {
 					t.Errorf("Expected error for input %s", tt.input)
@@ -153,7 +155,7 @@ func TestParseVariMibString(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := ParseVariMibString(tt.input)
+			result, err := mibdb.ParseVariMibString(tt.input)
 			if tt.wantErr {
 				if err == nil {
 					t.Errorf("Expected error for input %s", tt.input)
@@ -172,7 +174,7 @@ func TestParseVariMibString(t *testing.T) {
 }
 
 func TestVariMibIntegralHandler(t *testing.T) {
-	config := &VariMibIntegralConfig{
+	config := &mibdb.VariMibIntegralConfig{
 		Intervals: []struct {
 			CentiSeconds int64
 			Delta        int64
@@ -181,7 +183,7 @@ func TestVariMibIntegralHandler(t *testing.T) {
 		},
 	}
 
-	handler := NewVariMibIntegralHandler(config, 1000)
+	handler := mibdb.NewVariMibIntegralHandler(config, 1000)
 
 	// Initial value should be base value
 	initial := handler.Value()
@@ -199,7 +201,7 @@ func TestVariMibIntegralHandler(t *testing.T) {
 }
 
 func TestVariMibStringHandler(t *testing.T) {
-	config := &VariMibStringConfig{
+	config := &mibdb.VariMibStringConfig{
 		Intervals: []struct {
 			CentiSeconds int64
 			Value        string
@@ -209,7 +211,7 @@ func TestVariMibStringHandler(t *testing.T) {
 		},
 	}
 
-	handler := NewVariMibStringHandler(config)
+	handler := mibdb.NewVariMibStringHandler(config)
 
 	// Should get one of the values
 	value := handler.Value()
@@ -219,21 +221,22 @@ func TestVariMibStringHandler(t *testing.T) {
 }
 
 func TestAddVariMibHandler(t *testing.T) {
-	db, err := NewInMemory()
+	db, err := mibdb.NewInMemory()
 	if err != nil {
 		t.Fatalf("Failed to create database: %v", err)
 	}
 
 	defer func() { _ = db.Close() }()
 
-	handler := VariMibHandler{
+	handler := mibdb.VariMibHandler{
 		OIDPattern:  "1.3.6.1.2.1.2.2.1.10.1",
 		HandlerType: "integral",
 		Config:      "varimib((200 10))",
 	}
 
-	if err := db.AddVariMibHandler(handler); err != nil {
-		t.Fatalf("Failed to add handler: %v", err)
+	addErr := db.AddVariMibHandler(handler)
+	if addErr != nil {
+		t.Fatalf("Failed to add handler: %v", addErr)
 	}
 
 	retrieved, err := db.GetVariMibHandler("1.3.6.1.2.1.2.2.1.10.1")

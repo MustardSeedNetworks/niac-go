@@ -1,4 +1,4 @@
-package protocols
+package protocols_test
 
 import (
 	"net"
@@ -7,42 +7,43 @@ import (
 
 	"github.com/krisarmstrong/niac-go/pkg/config"
 	"github.com/krisarmstrong/niac-go/pkg/logging"
+	"github.com/krisarmstrong/niac-go/pkg/protocols"
 )
 
 // TestNewDHCPHandler tests creating a new DHCP handler.
 func TestNewDHCPHandler(t *testing.T) {
 	cfg := &config.Config{}
-	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
 
-	handler := NewDHCPHandler(stack)
+	handler := protocols.NewDHCPHandler(stack)
 
 	if handler == nil {
 		t.Fatal("Expected DHCP handler, got nil")
 	}
 
-	if handler.stack != stack {
+	if handler.DHCPHandlerStack() != stack {
 		t.Error("Stack not set correctly")
 	}
 
-	if handler.leases == nil {
+	if handler.DHCPHandlerLeases() == nil {
 		t.Error("Leases map not initialized")
 	}
 
-	if handler.ipPool == nil {
+	if handler.DHCPHandlerIPPool() == nil {
 		t.Error("IP pool not initialized")
 	}
 	// Check default subnet mask
 	expectedMask := net.IPv4(255, 255, 255, 0)
-	if !handler.subnetMask.Equal(expectedMask) {
-		t.Errorf("Expected default subnet mask %v, got %v", expectedMask, handler.subnetMask)
+	if !handler.DHCPHandlerSubnetMask().Equal(expectedMask) {
+		t.Errorf("Expected default subnet mask %v, got %v", expectedMask, handler.DHCPHandlerSubnetMask())
 	}
 }
 
 // TestSetServerConfig tests setting server configuration.
 func TestSetServerConfig(t *testing.T) {
 	cfg := &config.Config{}
-	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
-	handler := NewDHCPHandler(stack)
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	handler := protocols.NewDHCPHandler(stack)
 
 	serverIP := net.ParseIP("192.168.1.1")
 	gateway := net.ParseIP("192.168.1.1")
@@ -51,28 +52,28 @@ func TestSetServerConfig(t *testing.T) {
 
 	handler.SetServerConfig(serverIP, gateway, dnsServers, domain)
 
-	if !handler.serverIP.Equal(serverIP) {
-		t.Errorf("Expected server IP %v, got %v", serverIP, handler.serverIP)
+	if !handler.DHCPHandlerServerIP().Equal(serverIP) {
+		t.Errorf("Expected server IP %v, got %v", serverIP, handler.DHCPHandlerServerIP())
 	}
 
-	if !handler.gateway.Equal(gateway) {
-		t.Errorf("Expected gateway %v, got %v", gateway, handler.gateway)
+	if !handler.DHCPHandlerGateway().Equal(gateway) {
+		t.Errorf("Expected gateway %v, got %v", gateway, handler.DHCPHandlerGateway())
 	}
 
-	if len(handler.dnsServers) != 2 {
-		t.Errorf("Expected 2 DNS servers, got %d", len(handler.dnsServers))
+	if len(handler.DHCPHandlerDNSServers()) != 2 {
+		t.Errorf("Expected 2 DNS servers, got %d", len(handler.DHCPHandlerDNSServers()))
 	}
 
-	if handler.domainName != domain {
-		t.Errorf("Expected domain %s, got %s", domain, handler.domainName)
+	if handler.DHCPHandlerDomainName() != domain {
+		t.Errorf("Expected domain %s, got %s", domain, handler.DHCPHandlerDomainName())
 	}
 }
 
 // TestSetAdvancedOptions tests setting advanced DHCP options.
 func TestSetAdvancedOptions(t *testing.T) {
 	cfg := &config.Config{}
-	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
-	handler := NewDHCPHandler(stack)
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	handler := protocols.NewDHCPHandler(stack)
 
 	ntpServers := []net.IP{net.ParseIP("192.168.1.123")}
 	domainSearch := []string{"example.com", "test.com"}
@@ -82,63 +83,64 @@ func TestSetAdvancedOptions(t *testing.T) {
 
 	handler.SetAdvancedOptions(ntpServers, domainSearch, tftpServer, bootfile, vendorInfo)
 
-	if len(handler.ntpServers) != 1 {
-		t.Errorf("Expected 1 NTP server, got %d", len(handler.ntpServers))
+	if len(handler.DHCPHandlerNTPServers()) != 1 {
+		t.Errorf("Expected 1 NTP server, got %d", len(handler.DHCPHandlerNTPServers()))
 	}
 
-	if len(handler.domainSearch) != 2 {
-		t.Errorf("Expected 2 domain search entries, got %d", len(handler.domainSearch))
+	if len(handler.DHCPHandlerDomainSearch()) != 2 {
+		t.Errorf("Expected 2 domain search entries, got %d", len(handler.DHCPHandlerDomainSearch()))
 	}
 
-	if handler.tftpServerName != tftpServer {
-		t.Errorf("Expected TFTP server %s, got %s", tftpServer, handler.tftpServerName)
+	if handler.DHCPHandlerTFTPServerName() != tftpServer {
+		t.Errorf("Expected TFTP server %s, got %s", tftpServer, handler.DHCPHandlerTFTPServerName())
 	}
 
-	if handler.bootfileName != bootfile {
-		t.Errorf("Expected bootfile %s, got %s", bootfile, handler.bootfileName)
+	if handler.DHCPHandlerBootfileName() != bootfile {
+		t.Errorf("Expected bootfile %s, got %s", bootfile, handler.DHCPHandlerBootfileName())
 	}
 }
 
 // TestSetPool tests setting the DHCP IP pool.
 func TestSetPool(t *testing.T) {
 	cfg := &config.Config{}
-	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
-	handler := NewDHCPHandler(stack)
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	handler := protocols.NewDHCPHandler(stack)
 
 	start := net.ParseIP("192.168.1.100")
 	end := net.ParseIP("192.168.1.200")
 
 	handler.SetPool(start, end)
 
-	if !handler.poolStart.Equal(start) {
-		t.Errorf("Expected pool start %v, got %v", start, handler.poolStart)
+	if !handler.DHCPHandlerPoolStart().Equal(start) {
+		t.Errorf("Expected pool start %v, got %v", start, handler.DHCPHandlerPoolStart())
 	}
 
-	if !handler.poolEnd.Equal(end) {
-		t.Errorf("Expected pool end %v, got %v", end, handler.poolEnd)
+	if !handler.DHCPHandlerPoolEnd().Equal(end) {
+		t.Errorf("Expected pool end %v, got %v", end, handler.DHCPHandlerPoolEnd())
 	}
 
 	// Pool should have 101 IPs (100-200 inclusive)
 	expectedSize := 101
-	if len(handler.ipPool) != expectedSize {
-		t.Errorf("Expected pool size %d, got %d", expectedSize, len(handler.ipPool))
+	if len(handler.DHCPHandlerIPPool()) != expectedSize {
+		t.Errorf("Expected pool size %d, got %d", expectedSize, len(handler.DHCPHandlerIPPool()))
 	}
 
 	// Check first and last IPs in pool
-	if !handler.ipPool[0].Equal(start) {
-		t.Errorf("Expected first IP %v, got %v", start, handler.ipPool[0])
+	pool := handler.DHCPHandlerIPPool()
+	if !pool[0].Equal(start) {
+		t.Errorf("Expected first IP %v, got %v", start, pool[0])
 	}
 
-	if !handler.ipPool[len(handler.ipPool)-1].Equal(end) {
-		t.Errorf("Expected last IP %v, got %v", end, handler.ipPool[len(handler.ipPool)-1])
+	if !pool[len(pool)-1].Equal(end) {
+		t.Errorf("Expected last IP %v, got %v", end, pool[len(pool)-1])
 	}
 }
 
 // TestGenerateIPPool tests IP pool generation.
 func TestGenerateIPPool(t *testing.T) {
 	cfg := &config.Config{}
-	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
-	handler := NewDHCPHandler(stack)
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	handler := protocols.NewDHCPHandler(stack)
 
 	tests := []struct {
 		name          string
@@ -168,7 +170,7 @@ func TestGenerateIPPool(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			pool, err := handler.generateIPPool(tt.start, tt.end)
+			pool, err := handler.GenerateIPPool(tt.start, tt.end)
 			if err != nil {
 				t.Fatalf("Failed to generate IP pool: %v", err)
 			}
@@ -191,15 +193,15 @@ func TestGenerateIPPool(t *testing.T) {
 // TestFindAvailableIP tests finding available IPs.
 func TestFindAvailableIP(t *testing.T) {
 	cfg := &config.Config{}
-	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
-	handler := NewDHCPHandler(stack)
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	handler := protocols.NewDHCPHandler(stack)
 
 	start := net.ParseIP("192.168.1.10")
 	end := net.ParseIP("192.168.1.12")
 	handler.SetPool(start, end)
 
 	// First call should return first IP
-	ip1 := handler.findAvailableIP()
+	ip1 := handler.FindAvailableIP()
 	if !ip1.Equal(start) {
 		t.Errorf("Expected first available IP %v, got %v", start, ip1)
 	}
@@ -207,13 +209,13 @@ func TestFindAvailableIP(t *testing.T) {
 	// Allocate first IP
 	mac1 := net.HardwareAddr{0x00, 0x11, 0x22, 0x33, 0x44, 0x55}
 
-	_, err := handler.allocateLease(mac1, nil, "")
+	_, err := handler.AllocateLease(mac1, nil, "")
 	if err != nil {
 		t.Fatalf("Failed to allocate lease: %v", err)
 	}
 
 	// Next call should return second IP
-	ip2 := handler.findAvailableIP()
+	ip2 := handler.FindAvailableIP()
 
 	expectedIP2 := net.ParseIP("192.168.1.11")
 
@@ -225,8 +227,8 @@ func TestFindAvailableIP(t *testing.T) {
 // TestAllocateLease tests lease allocation.
 func TestAllocateLease(t *testing.T) {
 	cfg := &config.Config{}
-	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
-	handler := NewDHCPHandler(stack)
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	handler := protocols.NewDHCPHandler(stack)
 
 	start := net.ParseIP("192.168.1.100")
 	end := net.ParseIP("192.168.1.200")
@@ -236,7 +238,7 @@ func TestAllocateLease(t *testing.T) {
 	hostname := "test-host"
 
 	// Allocate new lease
-	lease, err := handler.allocateLease(mac, nil, hostname)
+	lease, err := handler.AllocateLease(mac, nil, hostname)
 	if err != nil {
 		t.Fatalf("Failed to allocate lease: %v", err)
 	}
@@ -253,11 +255,11 @@ func TestAllocateLease(t *testing.T) {
 		t.Errorf("Expected hostname %s, got %s", hostname, lease.Hostname)
 	}
 
-	if lease.LeaseTime != DefaultLeaseTime {
-		t.Errorf("Expected lease time %v, got %v", DefaultLeaseTime, lease.LeaseTime)
+	if lease.LeaseTime != protocols.DefaultLeaseTime {
+		t.Errorf("Expected lease time %v, got %v", protocols.DefaultLeaseTime, lease.LeaseTime)
 	}
 
-	if time.Until(lease.Expiry) > DefaultLeaseTime {
+	if time.Until(lease.Expiry) > protocols.DefaultLeaseTime {
 		t.Error("Lease expiry is too far in the future")
 	}
 }
@@ -265,8 +267,8 @@ func TestAllocateLease(t *testing.T) {
 // TestAllocateLease_Renewal tests lease renewal.
 func TestAllocateLease_Renewal(t *testing.T) {
 	cfg := &config.Config{}
-	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
-	handler := NewDHCPHandler(stack)
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	handler := protocols.NewDHCPHandler(stack)
 
 	start := net.ParseIP("192.168.1.100")
 	end := net.ParseIP("192.168.1.200")
@@ -275,7 +277,7 @@ func TestAllocateLease_Renewal(t *testing.T) {
 	mac := net.HardwareAddr{0x00, 0x11, 0x22, 0x33, 0x44, 0x55}
 
 	// First allocation
-	lease1, err := handler.allocateLease(mac, nil, "host1")
+	lease1, err := handler.AllocateLease(mac, nil, "host1")
 	if err != nil {
 		t.Fatalf("Failed to allocate lease: %v", err)
 	}
@@ -287,7 +289,7 @@ func TestAllocateLease_Renewal(t *testing.T) {
 	time.Sleep(10 * time.Millisecond)
 
 	// Renew lease (same MAC)
-	lease2, err := handler.allocateLease(mac, nil, "host2")
+	lease2, err := handler.AllocateLease(mac, nil, "host2")
 	if err != nil {
 		t.Fatalf("Failed to renew lease: %v", err)
 	}
@@ -316,8 +318,8 @@ func TestAllocateLease_Renewal(t *testing.T) {
 // TestAllocateLease_RequestedIP tests allocating a specific requested IP.
 func TestAllocateLease_RequestedIP(t *testing.T) {
 	cfg := &config.Config{}
-	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
-	handler := NewDHCPHandler(stack)
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	handler := protocols.NewDHCPHandler(stack)
 
 	start := net.ParseIP("192.168.1.100")
 	end := net.ParseIP("192.168.1.200")
@@ -327,7 +329,7 @@ func TestAllocateLease_RequestedIP(t *testing.T) {
 	requestedIP := net.ParseIP("192.168.1.150")
 
 	// Allocate with requested IP
-	lease, err := handler.allocateLease(mac, requestedIP, "")
+	lease, err := handler.AllocateLease(mac, requestedIP, "")
 	if err != nil {
 		t.Fatalf("Failed to allocate lease: %v", err)
 	}
@@ -340,8 +342,8 @@ func TestAllocateLease_RequestedIP(t *testing.T) {
 // TestAllocateLease_RequestedIPOutOfPool tests requesting IP outside pool.
 func TestAllocateLease_RequestedIPOutOfPool(t *testing.T) {
 	cfg := &config.Config{}
-	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
-	handler := NewDHCPHandler(stack)
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	handler := protocols.NewDHCPHandler(stack)
 
 	start := net.ParseIP("192.168.1.100")
 	end := net.ParseIP("192.168.1.200")
@@ -351,7 +353,7 @@ func TestAllocateLease_RequestedIPOutOfPool(t *testing.T) {
 	requestedIP := net.ParseIP("192.168.1.50") // Outside pool
 
 	// Should allocate from pool instead
-	lease, err := handler.allocateLease(mac, requestedIP, "")
+	lease, err := handler.AllocateLease(mac, requestedIP, "")
 	if err != nil {
 		t.Fatalf("Failed to allocate lease: %v", err)
 	}
@@ -368,8 +370,8 @@ func TestAllocateLease_RequestedIPOutOfPool(t *testing.T) {
 // TestAllocateLease_PoolExhaustion tests behavior when pool is exhausted.
 func TestAllocateLease_PoolExhaustion(t *testing.T) {
 	cfg := &config.Config{}
-	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
-	handler := NewDHCPHandler(stack)
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	handler := protocols.NewDHCPHandler(stack)
 
 	// Small pool with only 2 IPs
 	start := net.ParseIP("192.168.1.10")
@@ -380,12 +382,12 @@ func TestAllocateLease_PoolExhaustion(t *testing.T) {
 	mac1 := net.HardwareAddr{0x00, 0x11, 0x22, 0x33, 0x44, 0x01}
 	mac2 := net.HardwareAddr{0x00, 0x11, 0x22, 0x33, 0x44, 0x02}
 
-	_, err := handler.allocateLease(mac1, nil, "")
+	_, err := handler.AllocateLease(mac1, nil, "")
 	if err != nil {
 		t.Fatalf("Failed to allocate first lease: %v", err)
 	}
 
-	_, err = handler.allocateLease(mac2, nil, "")
+	_, err = handler.AllocateLease(mac2, nil, "")
 	if err != nil {
 		t.Fatalf("Failed to allocate second lease: %v", err)
 	}
@@ -393,7 +395,7 @@ func TestAllocateLease_PoolExhaustion(t *testing.T) {
 	// Try to allocate one more - should fail
 	mac3 := net.HardwareAddr{0x00, 0x11, 0x22, 0x33, 0x44, 0x03}
 
-	_, err = handler.allocateLease(mac3, nil, "")
+	_, err = handler.AllocateLease(mac3, nil, "")
 	if err == nil {
 		t.Error("Expected error when pool is exhausted, got nil")
 	}
@@ -402,8 +404,8 @@ func TestAllocateLease_PoolExhaustion(t *testing.T) {
 // TestIsIPInPool tests IP pool membership checking.
 func TestIsIPInPool(t *testing.T) {
 	cfg := &config.Config{}
-	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
-	handler := NewDHCPHandler(stack)
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	handler := protocols.NewDHCPHandler(stack)
 
 	start := net.ParseIP("192.168.1.100")
 	end := net.ParseIP("192.168.1.200")
@@ -424,7 +426,7 @@ func TestIsIPInPool(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := handler.isIPInPool(tt.ip)
+			result := handler.IsIPInPool(tt.ip)
 			if result != tt.expected {
 				t.Errorf("isIPInPool(%v) = %v, expected %v", tt.ip, result, tt.expected)
 			}
@@ -435,52 +437,52 @@ func TestIsIPInPool(t *testing.T) {
 // TestDHCPConstants tests DHCP message type constants.
 func TestDHCPConstants(t *testing.T) {
 	// Verify DHCP message type constants
-	if DHCPDiscover != 1 {
-		t.Errorf("DHCPDiscover should be 1, got %d", DHCPDiscover)
+	if protocols.DHCPDiscover != 1 {
+		t.Errorf("DHCPDiscover should be 1, got %d", protocols.DHCPDiscover)
 	}
 
-	if DHCPOffer != 2 {
-		t.Errorf("DHCPOffer should be 2, got %d", DHCPOffer)
+	if protocols.DHCPOffer != 2 {
+		t.Errorf("DHCPOffer should be 2, got %d", protocols.DHCPOffer)
 	}
 
-	if DHCPRequest != 3 {
-		t.Errorf("DHCPRequest should be 3, got %d", DHCPRequest)
+	if protocols.DHCPRequest != 3 {
+		t.Errorf("DHCPRequest should be 3, got %d", protocols.DHCPRequest)
 	}
 
-	if DHCPDecline != 4 {
-		t.Errorf("DHCPDecline should be 4, got %d", DHCPDecline)
+	if protocols.DHCPDecline != 4 {
+		t.Errorf("DHCPDecline should be 4, got %d", protocols.DHCPDecline)
 	}
 
-	if DHCPAck != 5 {
-		t.Errorf("DHCPAck should be 5, got %d", DHCPAck)
+	if protocols.DHCPAck != 5 {
+		t.Errorf("DHCPAck should be 5, got %d", protocols.DHCPAck)
 	}
 
-	if DHCPNak != 6 {
-		t.Errorf("DHCPNak should be 6, got %d", DHCPNak)
+	if protocols.DHCPNak != 6 {
+		t.Errorf("DHCPNak should be 6, got %d", protocols.DHCPNak)
 	}
 
-	if DHCPRelease != 7 {
-		t.Errorf("DHCPRelease should be 7, got %d", DHCPRelease)
+	if protocols.DHCPRelease != 7 {
+		t.Errorf("DHCPRelease should be 7, got %d", protocols.DHCPRelease)
 	}
 
-	if DHCPInform != 8 {
-		t.Errorf("DHCPInform should be 8, got %d", DHCPInform)
+	if protocols.DHCPInform != 8 {
+		t.Errorf("DHCPInform should be 8, got %d", protocols.DHCPInform)
 	}
 }
 
 // TestDefaultLeaseTime tests the default lease time constant.
 func TestDefaultLeaseTime(t *testing.T) {
 	expectedDuration := 24 * time.Hour
-	if DefaultLeaseTime != expectedDuration {
-		t.Errorf("DefaultLeaseTime should be %v, got %v", expectedDuration, DefaultLeaseTime)
+	if protocols.DefaultLeaseTime != expectedDuration {
+		t.Errorf("DefaultLeaseTime should be %v, got %v", expectedDuration, protocols.DefaultLeaseTime)
 	}
 }
 
 // BenchmarkAllocateLease benchmarks lease allocation.
 func BenchmarkAllocateLease(b *testing.B) {
 	cfg := &config.Config{}
-	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
-	handler := NewDHCPHandler(stack)
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	handler := protocols.NewDHCPHandler(stack)
 
 	start := net.ParseIP("192.168.1.1")
 	end := net.ParseIP("192.168.1.254")
@@ -490,15 +492,15 @@ func BenchmarkAllocateLease(b *testing.B) {
 
 	for i := range b.N {
 		mac := net.HardwareAddr{0x00, 0x11, 0x22, 0x33, byte(i >> 8), byte(i & 0xFF)}
-		_, _ = handler.allocateLease(mac, nil, "")
+		_, _ = handler.AllocateLease(mac, nil, "")
 	}
 }
 
 // BenchmarkFindAvailableIP benchmarks finding available IPs.
 func BenchmarkFindAvailableIP(b *testing.B) {
 	cfg := &config.Config{}
-	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
-	handler := NewDHCPHandler(stack)
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	handler := protocols.NewDHCPHandler(stack)
 
 	start := net.ParseIP("192.168.1.1")
 	end := net.ParseIP("192.168.1.254")
@@ -507,11 +509,11 @@ func BenchmarkFindAvailableIP(b *testing.B) {
 	// Allocate half the pool
 	for i := range 127 {
 		mac := net.HardwareAddr{0x00, 0x11, 0x22, 0x33, 0x44, byte(i)}
-		_, _ = handler.allocateLease(mac, nil, "")
+		_, _ = handler.AllocateLease(mac, nil, "")
 	}
 
 	for b.Loop() {
-		handler.findAvailableIP()
+		handler.FindAvailableIP()
 	}
 }
 

@@ -1,7 +1,9 @@
 package snmp
 
 import (
+	"errors"
 	"fmt"
+	"math"
 	"regexp"
 	"strconv"
 	"strings"
@@ -92,96 +94,138 @@ func ParseVariMibValue(value string, asnType gosnmp.Asn1BER, baseValue any) (Var
 
 // parseVariMibIntervals parses the varimib((t1 v1) (t2 v2) ...) format.
 func parseVariMibIntervals(value string, asnType gosnmp.Asn1BER, baseValue any) (VariMibHandler, error) {
-	// Remove varimib prefix and brackets
+	value = cleanVariMibValue(value)
+
+	// Try numeric pattern first (integral handler)
+	if handler := tryParseIntegralHandler(value, asnType, baseValue); handler != nil {
+		return handler, nil
+	}
+
+	// Try string pattern (string handler)
+	handler, err := tryParseStringHandler(value, asnType)
+	if err != nil && !errors.Is(err, ErrNoPatternMatch) {
+		return nil, err
+	}
+
+	if handler != nil {
+		return handler, nil
+	}
+
+	return nil, fmt.Errorf("%w: %s", ErrInvalidVarimibFormat, value)
+}
+
+// cleanVariMibValue removes the varimib prefix and surrounding brackets.
+func cleanVariMibValue(value string) string {
 	value = strings.TrimPrefix(value, "varimib")
 	value = strings.TrimSpace(value)
 	value = strings.TrimPrefix(value, "[")
 	value = strings.TrimSuffix(value, "]")
 	value = strings.TrimPrefix(value, "(")
 	value = strings.TrimSuffix(value, ")")
+	return value
+}
 
-	// Parse interval pairs - could be numeric (integral) or string values
-	// Numeric pattern: (200 10) or (200 -10)
-	// String pattern: (42000 10.250.0.3) or (42000 "some value")
+// tryParseIntegralHandler attempts to parse value as an integral varimib handler.
+// Returns nil if the value doesn't match the numeric pattern.
+func tryParseIntegralHandler(value string, asnType gosnmp.Asn1BER, baseValue any) *VariMibIntegralHandler {
 	numericRe := regexp.MustCompile(`\((\d+)\s+(-?\d+)\)`)
-	stringRe := regexp.MustCompile(`\((\d+)\s+([^)]+)\)`)
-
-	// Try numeric pattern first (integral handler)
 	numMatches := numericRe.FindAllStringSubmatch(value, -1)
-	if len(numMatches) > 0 {
-		// Check if all matches are numeric deltas
-		allNumeric := true
 
-		for _, match := range numMatches {
-			if _, err := strconv.ParseInt(match[2], 10, 64); err != nil {
-				allNumeric = false
-
-				break
-			}
-		}
-
-		if allNumeric {
-			var base int64
-
-			switch v := baseValue.(type) {
-			case int:
-				base = int64(v)
-			case int32:
-				base = int64(v)
-			case int64:
-				base = v
-			case uint:
-				base = int64(v) //nolint:gosec // G115: conversion for numeric base value
-			case uint32:
-				base = int64(v)
-			case uint64:
-				base = int64(v) //nolint:gosec // G115: conversion for numeric base value
-			default:
-				base = 0
-			}
-
-			intervals := make([]integralInterval, len(numMatches))
-
-			for i, match := range numMatches {
-				centisecs, _ := strconv.ParseInt(match[1], 10, 64)
-				delta, _ := strconv.ParseInt(match[2], 10, 64)
-				intervals[i] = integralInterval{centiSeconds: centisecs, delta: delta}
-			}
-
-			return &VariMibIntegralHandler{
-				startTime: time.Now(),
-				baseValue: base,
-				asnType:   asnType,
-				intervals: intervals,
-			}, nil
-		}
+	if len(numMatches) == 0 || !allMatchesNumeric(numMatches) {
+		return nil
 	}
 
-	// Try string pattern (string handler)
+	base := extractBaseValue(baseValue)
+	intervals := parseIntegralIntervals(numMatches)
+
+	return &VariMibIntegralHandler{
+		startTime: time.Now(),
+		baseValue: base,
+		asnType:   asnType,
+		intervals: intervals,
+	}
+}
+
+// allMatchesNumeric checks if all regex matches contain valid numeric deltas.
+func allMatchesNumeric(matches [][]string) bool {
+	for _, match := range matches {
+		if _, err := strconv.ParseInt(match[2], 10, 64); err != nil {
+			return false
+		}
+	}
+	return true
+}
+
+// extractBaseValue converts various numeric types to int64.
+func extractBaseValue(baseValue any) int64 {
+	switch v := baseValue.(type) {
+	case int:
+		return int64(v)
+	case int32:
+		return int64(v)
+	case int64:
+		return v
+	case uint:
+		if v <= math.MaxInt64 {
+			return int64(v)
+		}
+	case uint32:
+		return int64(v)
+	case uint64:
+		if v <= math.MaxInt64 {
+			return int64(v)
+		}
+	}
+	return 0
+}
+
+// parseIntegralIntervals converts regex matches to integralInterval slice.
+func parseIntegralIntervals(matches [][]string) []integralInterval {
+	intervals := make([]integralInterval, len(matches))
+	for i, match := range matches {
+		centisecs, _ := strconv.ParseInt(match[1], 10, 64)
+		delta, _ := strconv.ParseInt(match[2], 10, 64)
+		intervals[i] = integralInterval{centiSeconds: centisecs, delta: delta}
+	}
+	return intervals
+}
+
+// tryParseStringHandler attempts to parse value as a string varimib handler.
+// Returns ErrNoPatternMatch if the value doesn't match the string pattern.
+func tryParseStringHandler(value string, asnType gosnmp.Asn1BER) (*VariMibStringHandler, error) {
+	stringRe := regexp.MustCompile(`\((\d+)\s+([^)]+)\)`)
 	strMatches := stringRe.FindAllStringSubmatch(value, -1)
-	if len(strMatches) > 0 {
-		intervals := make([]stringInterval, len(strMatches))
 
-		for i, match := range strMatches {
-			centisecs, err := strconv.ParseInt(match[1], 10, 64)
-			if err != nil {
-				return nil, fmt.Errorf("%w: %s", ErrInvalidCentiseconds, match[1])
-			}
-
-			strVal := strings.TrimSpace(match[2])
-			// Remove quotes if present
-			strVal = strings.Trim(strVal, "\"'")
-			intervals[i] = stringInterval{centiSeconds: centisecs, value: strVal}
-		}
-
-		return &VariMibStringHandler{
-			startTime: time.Now(),
-			asnType:   asnType,
-			intervals: intervals,
-		}, nil
+	if len(strMatches) == 0 {
+		return nil, ErrNoPatternMatch
 	}
 
-	return nil, fmt.Errorf("%w: %s", ErrInvalidVarimibFormat, value)
+	intervals, err := parseStringIntervals(strMatches)
+	if err != nil {
+		return nil, err
+	}
+
+	return &VariMibStringHandler{
+		startTime: time.Now(),
+		asnType:   asnType,
+		intervals: intervals,
+	}, nil
+}
+
+// parseStringIntervals converts regex matches to stringInterval slice.
+func parseStringIntervals(matches [][]string) ([]stringInterval, error) {
+	intervals := make([]stringInterval, len(matches))
+	for i, match := range matches {
+		centisecs, err := strconv.ParseInt(match[1], 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("%w: %s", ErrInvalidCentiseconds, match[1])
+		}
+
+		strVal := strings.TrimSpace(match[2])
+		strVal = strings.Trim(strVal, "\"'")
+		intervals[i] = stringInterval{centiSeconds: centisecs, value: strVal}
+	}
+	return intervals, nil
 }
 
 // NewVariMibFixedHandler creates a fixed value handler.
@@ -230,7 +274,18 @@ func NewVariMibFixedHandler(value string, asnType gosnmp.Asn1BER) (*VariMibFixed
 	case gosnmp.OctetString:
 		parsedValue = value
 
-	default:
+	case gosnmp.EndOfContents, // Also covers UnknownType (same value)
+		gosnmp.Boolean,
+		gosnmp.BitString,
+		gosnmp.Null,
+		gosnmp.ObjectDescription,
+		gosnmp.Opaque,
+		gosnmp.NsapAddress,
+		gosnmp.OpaqueFloat,
+		gosnmp.OpaqueDouble,
+		gosnmp.NoSuchObject,
+		gosnmp.NoSuchInstance,
+		gosnmp.EndOfMibView:
 		parsedValue = value
 	}
 
@@ -256,7 +311,7 @@ func (h *VariMibIntegralHandler) GetValue() any {
 	defer h.mu.RUnlock()
 
 	elapsed := time.Since(h.startTime)
-	centisecs := elapsed.Milliseconds() / 10 // Convert to centiseconds
+	centisecs := elapsed.Milliseconds() / CentisecsPerSec // Convert to centiseconds
 
 	value := h.baseValue
 
@@ -278,18 +333,36 @@ func (h *VariMibIntegralHandler) GetValue() any {
 	// Return appropriate type based on ASN type
 	switch h.asnType {
 	case gosnmp.Counter32, gosnmp.Gauge32, gosnmp.Uinteger32:
-		if value > 0xFFFFFFFF {
-			value = value % 0x100000000 // Wrap around for 32-bit counters
+		if value > math.MaxUint32 {
+			value %= (math.MaxUint32 + 1) // Wrap around for 32-bit counters
 		}
 
-		return uint32(value) //nolint:gosec // G115: value is bounds-checked above
+		return safeUint32(value)
 	case gosnmp.Counter64:
-		return uint64(value) //nolint:gosec // G115: counter64 conversion from int64
+		return safeUint64(value)
 	case gosnmp.TimeTicks:
-		return uint32(value) //nolint:gosec // G115: timeticks wrap by design
-	default:
+		return safeUint32(value)
+	case gosnmp.EndOfContents, // Also covers UnknownType (same value)
+		gosnmp.Boolean,
+		gosnmp.Integer,
+		gosnmp.BitString,
+		gosnmp.OctetString,
+		gosnmp.Null,
+		gosnmp.ObjectIdentifier,
+		gosnmp.ObjectDescription,
+		gosnmp.IPAddress,
+		gosnmp.Opaque,
+		gosnmp.NsapAddress,
+		gosnmp.OpaqueFloat,
+		gosnmp.OpaqueDouble,
+		gosnmp.NoSuchObject,
+		gosnmp.NoSuchInstance,
+		gosnmp.EndOfMibView:
 		return int(value)
 	}
+
+	// Unreachable - all cases handled above
+	return int(value)
 }
 
 // GetType implements VariMibHandler.
@@ -307,7 +380,7 @@ func (h *VariMibStringHandler) GetValue() any {
 	}
 
 	elapsed := time.Since(h.startTime)
-	centisecs := elapsed.Milliseconds() / 10
+	centisecs := elapsed.Milliseconds() / CentisecsPerSec
 
 	// Calculate total cycle time
 	var totalCycle int64

@@ -12,11 +12,12 @@ import (
 	"github.com/krisarmstrong/niac-go/pkg/templates"
 )
 
-var templateCmd = &cobra.Command{
-	Use:   "template",
-	Short: "Manage configuration templates",
-	Long:  `List, show, and use pre-built configuration templates for common scenarios.`,
-	Example: `  # List all available templates
+func addTemplateCommand(root *cobra.Command, _ *serviceOptions) {
+	templateCmd := &cobra.Command{
+		Use:   "template",
+		Short: "Manage configuration templates",
+		Long:  `List, show, and use pre-built configuration templates for common scenarios.`,
+		Example: `  # List all available templates
   niac template list
 
   # Show template contents
@@ -27,20 +28,22 @@ var templateCmd = &cobra.Command{
 
   # Apply template directly (validate and display info)
   niac template apply data-center`,
-}
+	}
 
-var templateListCmd = &cobra.Command{
-	Use:   "list",
-	Short: "List available templates",
-	Example: `  # List all templates with descriptions
+	templateListCmd := &cobra.Command{
+		Use:   "list",
+		Short: "List available templates",
+		Example: `  # List all templates with descriptions
   niac template list`,
-	Run: runTemplateList,
-}
+		Run: func(_ *cobra.Command, _ []string) {
+			runTemplateList()
+		},
+	}
 
-var templateShowCmd = &cobra.Command{
-	Use:   "show <template-name>",
-	Short: "Show template contents",
-	Example: `  # Show basic network template
+	templateShowCmd := &cobra.Command{
+		Use:   "show <template-name>",
+		Short: "Show template contents",
+		Example: `  # Show basic network template
   niac template show basic-network
 
   # Show small office template
@@ -48,14 +51,16 @@ var templateShowCmd = &cobra.Command{
 
   # Pipe to file
   niac template show data-center > my-config.yaml`,
-	Args: cobra.ExactArgs(1),
-	Run:  runTemplateShow,
-}
+		Args: cobra.ExactArgs(1),
+		Run: func(_ *cobra.Command, args []string) {
+			runTemplateShow(args)
+		},
+	}
 
-var templateUseCmd = &cobra.Command{
-	Use:   "use <template-name> <output-file>",
-	Short: "Copy template to a new file",
-	Example: `  # Create small office config
+	templateUseCmd := &cobra.Command{
+		Use:   "use <template-name> <output-file>",
+		Short: "Copy template to a new file",
+		Example: `  # Create small office config
   niac template use small-office office.yaml
 
   # Create IoT network config
@@ -66,17 +71,19 @@ var templateUseCmd = &cobra.Command{
 
   # Quick workflow
   niac template use basic-network config.yaml && niac validate config.yaml`,
-	Args: cobra.ExactArgs(2),
-	Run:  runTemplateUse,
-}
+		Args: cobra.ExactArgs(argsCountTwo),
+		Run: func(_ *cobra.Command, args []string) {
+			runTemplateUse(args)
+		},
+	}
 
-var templateApplyCmd = &cobra.Command{
-	Use:   "apply <template-name>",
-	Short: "Validate and display template information",
-	Long: `Validate a template and display its configuration details.
+	templateApplyCmd := &cobra.Command{
+		Use:   "apply <template-name>",
+		Short: "Validate and display template information",
+		Long: `Validate a template and display its configuration details.
 This command loads the template, validates it, and shows what devices
 and protocols it contains without creating a file.`,
-	Example: `  # Validate basic network template
+		Example: `  # Validate basic network template
   niac template apply basic-network
 
   # Check data center template
@@ -84,23 +91,24 @@ and protocols it contains without creating a file.`,
 
   # Verify IoT network configuration
   niac template apply iot-network`,
-	Args: cobra.ExactArgs(1),
-	Run:  runTemplateApply,
-}
+		Args: cobra.ExactArgs(1),
+		Run: func(_ *cobra.Command, args []string) {
+			runTemplateApply(args)
+		},
+	}
 
-func init() {
-	rootCmd.AddCommand(templateCmd)
 	templateCmd.AddCommand(templateListCmd)
 	templateCmd.AddCommand(templateShowCmd)
 	templateCmd.AddCommand(templateUseCmd)
 	templateCmd.AddCommand(templateApplyCmd)
+	root.AddCommand(templateCmd)
 }
 
-func runTemplateList(_ *cobra.Command, _ []string) {
+func runTemplateList() {
 	templateList := templates.List()
 
-	color.New(color.Bold).Println("Available Templates:") // #nosec G104 -- cosmetic output
-	fmt.Println()
+	_, _ = color.New(color.Bold).Println("Available Templates:")
+	fmt.Fprintln(os.Stdout)
 
 	// Find longest name for alignment
 	maxLen := 0
@@ -111,41 +119,41 @@ func runTemplateList(_ *cobra.Command, _ []string) {
 	}
 
 	for _, t := range templateList {
-		color.New(color.FgCyan).Printf("  %-*s", maxLen+2, t.Name) // #nosec G104 -- cosmetic output
-		fmt.Printf(" - %s\n", t.Description)
+		_, _ = color.New(color.FgCyan).Printf("  %-*s", maxLen+templatePadOffset, t.Name)
+		fmt.Fprintf(os.Stdout, " - %s\n", t.Description)
 		if t.UseCase != "" {
-			fmt.Printf("  %*s   Use case: %s\n", maxLen, "", t.UseCase)
+			fmt.Fprintf(os.Stdout, "  %*s   Use case: %s\n", maxLen, "", t.UseCase)
 		}
 	}
 
-	fmt.Println()
-	fmt.Println("Usage:")
-	fmt.Println("  niac template show <template-name>         # View template content")
-	fmt.Println("  niac template use <template-name> <file>   # Create config from template")
-	fmt.Println("  niac template apply <template-name>        # Validate and show template info")
-	fmt.Println()
-	fmt.Println("Quick start:")
-	fmt.Println("  niac init                                  # Interactive template wizard")
+	fmt.Fprintln(os.Stdout)
+	fmt.Fprintln(os.Stdout, "Usage:")
+	fmt.Fprintln(os.Stdout, "  niac template show <template-name>         # View template content")
+	fmt.Fprintln(os.Stdout, "  niac template use <template-name> <file>   # Create config from template")
+	fmt.Fprintln(os.Stdout, "  niac template apply <template-name>        # Validate and show template info")
+	fmt.Fprintln(os.Stdout)
+	fmt.Fprintln(os.Stdout, "Quick start:")
+	fmt.Fprintln(os.Stdout, "  niac init                                  # Interactive template wizard")
 }
 
-func runTemplateShow(_ *cobra.Command, args []string) {
+func runTemplateShow(args []string) {
 	templateName := args[0]
 
 	tmpl, err := templates.Get(templateName)
 	if err != nil {
 		color.Red("Error: %v", err)
-		fmt.Println()
-		fmt.Println("Available templates:")
+		fmt.Fprintln(os.Stdout)
+		fmt.Fprintln(os.Stdout, "Available templates:")
 		for _, name := range templates.ListNames() {
-			fmt.Printf("  - %s\n", name)
+			fmt.Fprintf(os.Stdout, "  - %s\n", name)
 		}
 		os.Exit(1)
 	}
 
-	fmt.Print(tmpl.Content)
+	fmt.Fprint(os.Stdout, tmpl.Content)
 }
 
-func runTemplateUse(_ *cobra.Command, args []string) {
+func runTemplateUse(args []string) {
 	templateName := args[0]
 	outputFile := args[1]
 
@@ -159,10 +167,10 @@ func runTemplateUse(_ *cobra.Command, args []string) {
 	tmpl, err := templates.Get(templateName)
 	if err != nil {
 		color.Red("Error: %v", err)
-		fmt.Println()
-		fmt.Println("Available templates:")
+		fmt.Fprintln(os.Stdout)
+		fmt.Fprintln(os.Stdout, "Available templates:")
 		for _, name := range templates.ListNames() {
-			fmt.Printf("  - %s\n", name)
+			fmt.Fprintf(os.Stdout, "  - %s\n", name)
 		}
 		os.Exit(1)
 	}
@@ -174,119 +182,128 @@ func runTemplateUse(_ *cobra.Command, args []string) {
 	}
 
 	color.Green("✓ Created %s from %s template", outputFile, templateName)
-	fmt.Println()
-	fmt.Printf("Description: %s\n", tmpl.Description)
-	fmt.Printf("Use case: %s\n", tmpl.UseCase)
-	fmt.Println()
-	fmt.Println("Next steps:")
-	fmt.Printf("  niac validate %s\n", outputFile)
-	fmt.Printf("  sudo niac interactive en0 %s\n", outputFile)
+	fmt.Fprintln(os.Stdout)
+	fmt.Fprintf(os.Stdout, "Description: %s\n", tmpl.Description)
+	fmt.Fprintf(os.Stdout, "Use case: %s\n", tmpl.UseCase)
+	fmt.Fprintln(os.Stdout)
+	fmt.Fprintln(os.Stdout, "Next steps:")
+	fmt.Fprintf(os.Stdout, "  niac validate %s\n", outputFile)
+	fmt.Fprintf(os.Stdout, "  sudo niac interactive en0 %s\n", outputFile)
 }
 
-//nolint:gocognit // Template application involves interactive prompts
-func runTemplateApply(_ *cobra.Command, args []string) {
+func runTemplateApply(args []string) {
 	templateName := args[0]
 
-	// Get template
 	tmpl, err := templates.Get(templateName)
 	if err != nil {
 		color.Red("Error: %v", err)
 		os.Exit(1)
 	}
 
-	// Display template info
-	color.New(color.Bold).Printf("Template: %s\n", tmpl.Name) // #nosec G104 -- cosmetic output
-	fmt.Printf("Description: %s\n", tmpl.Description)
-	fmt.Printf("Use case: %s\n", tmpl.UseCase)
-	fmt.Println()
+	describeTemplate(tmpl)
 
-	// Validate template by loading it as config
-	color.New(color.Bold).Println("Validating template...") // #nosec G104 -- cosmetic output
-
-	// Create temporary file for validation
-	tmpFile, err := os.CreateTemp("", "niac-template-*.yaml")
-	if err != nil {
-		color.Red("Error creating temporary file: %v", err)
+	cfg, cleanup, loadErr := loadAndValidateTemplate(tmpl)
+	if loadErr != nil {
+		color.Red("✗ Template validation failed: %v", loadErr)
+		cleanup()
 		os.Exit(1)
 	}
+	cleanup()
+
+	color.Green("✓ Template is valid")
+	fmt.Fprintln(os.Stdout)
+
+	describeDevices(templateName, cfg.Devices)
+}
+
+func describeTemplate(tmpl *templates.Template) {
+	_, _ = color.New(color.Bold).Printf("Template: %s\n", tmpl.Name)
+	fmt.Fprintf(os.Stdout, "Description: %s\n", tmpl.Description)
+	fmt.Fprintf(os.Stdout, "Use case: %s\n", tmpl.UseCase)
+	fmt.Fprintln(os.Stdout)
+	_, _ = color.New(color.Bold).Println("Validating template...")
+}
+
+func loadAndValidateTemplate(tmpl *templates.Template) (*config.Config, func(), error) {
+	tmpFile, err := os.CreateTemp("", "niac-template-*.yaml")
+	if err != nil {
+		return nil, func() {}, fmt.Errorf("error creating temporary file: %w", err)
+	}
+
 	cleanup := func() {
 		_ = tmpFile.Close()
 		_ = os.Remove(tmpFile.Name())
 	}
 
 	if _, writeErr := tmpFile.WriteString(tmpl.Content); writeErr != nil {
-		color.Red("Error writing temporary file: %v", writeErr)
-		cleanup()
-		os.Exit(1)
+		return nil, cleanup, fmt.Errorf("error writing temporary file: %w", writeErr)
 	}
-	_ = tmpFile.Close() // #nosec G104 -- error logged elsewhere
+	_ = tmpFile.Close()
 
-	// Load and validate
-	cfg, err := config.Load(tmpFile.Name())
-	if err != nil {
-		color.Red("✗ Template validation failed: %v", err)
-		cleanup()
-		os.Exit(1)
+	cfg, loadErr := config.Load(tmpFile.Name())
+	if loadErr != nil {
+		return nil, cleanup, fmt.Errorf("config load error: %w", loadErr)
 	}
+	return cfg, cleanup, nil
+}
 
-	cleanup()
+func describeDevices(templateName string, devices []config.Device) {
+	_, _ = color.New(color.Bold).Println("Configuration Summary:")
+	fmt.Fprintf(os.Stdout, "  Devices: %d\n", len(devices))
+	fmt.Fprintln(os.Stdout)
+	_, _ = color.New(color.Bold).Println("Devices:")
+	for _, device := range devices {
+		describeDeviceInfo(device)
+	}
+	fmt.Fprintln(os.Stdout)
+	fmt.Fprintln(os.Stdout, "To use this template:")
+	fmt.Fprintf(os.Stdout, "  niac template use %s config.yaml\n", templateName)
+	fmt.Fprintln(os.Stdout, "  sudo niac interactive en0 config.yaml")
+}
 
-	color.Green("✓ Template is valid")
-	fmt.Println()
-
-	// Display configuration summary
-	color.New(color.Bold).Println("Configuration Summary:") // #nosec G104 -- cosmetic output
-	fmt.Printf("  Devices: %d\n", len(cfg.Devices))
-	fmt.Println()
-
-	// List devices with details
-	color.New(color.Bold).Println("Devices:") // #nosec G104 -- cosmetic output
-	for _, device := range cfg.Devices {
-		fmt.Printf("  • %s (%s)\n", device.Name, device.Type)
-		if len(device.IPAddresses) > 0 {
-			fmt.Printf("    IP: %s", device.IPAddresses[0])
-			if len(device.IPAddresses) > 1 {
-				fmt.Printf(" (+%d more)", len(device.IPAddresses)-1)
-			}
-			fmt.Println()
+func describeDeviceInfo(device config.Device) {
+	fmt.Fprintf(os.Stdout, "  • %s (%s)\n", device.Name, device.Type)
+	if len(device.IPAddresses) > 0 {
+		fmt.Fprintf(os.Stdout, "    IP: %s", device.IPAddresses[0])
+		if len(device.IPAddresses) > 1 {
+			fmt.Fprintf(os.Stdout, " (+%d more)", len(device.IPAddresses)-1)
 		}
-
-		// Show enabled protocols
-		protocols := []string{}
-		if device.ICMPConfig != nil && device.ICMPConfig.Enabled {
-			protocols = append(protocols, "ICMP")
-		}
-		if device.LLDPConfig != nil && device.LLDPConfig.Enabled {
-			protocols = append(protocols, "LLDP")
-		}
-		if device.CDPConfig != nil && device.CDPConfig.Enabled {
-			protocols = append(protocols, "CDP")
-		}
-		if device.SNMPConfig.Community != "" || device.SNMPConfig.WalkFile != "" {
-			protocols = append(protocols, "SNMP")
-		}
-		if device.DHCPConfig != nil {
-			protocols = append(protocols, "DHCP")
-		}
-		if device.DNSConfig != nil {
-			protocols = append(protocols, "DNS")
-		}
-		if device.HTTPConfig != nil && device.HTTPConfig.Enabled {
-			protocols = append(protocols, "HTTP")
-		}
-		if device.STPConfig != nil && device.STPConfig.Enabled {
-			protocols = append(protocols, "STP")
-		}
-
-		if len(protocols) > 0 {
-			fmt.Printf("    Protocols: %s\n", joinStrings(protocols, ", "))
-		}
+		fmt.Fprintln(os.Stdout)
 	}
 
-	fmt.Println()
-	fmt.Println("To use this template:")
-	fmt.Printf("  niac template use %s config.yaml\n", templateName)
-	fmt.Println("  sudo niac interactive en0 config.yaml")
+	protocols := listEnabledProtocols(device)
+	if len(protocols) > 0 {
+		fmt.Fprintf(os.Stdout, "    Protocols: %s\n", joinStrings(protocols, ", "))
+	}
+}
+
+func listEnabledProtocols(device config.Device) []string {
+	protocols := make([]string, 0, protocolCapacity)
+	if device.ICMPConfig != nil && device.ICMPConfig.Enabled {
+		protocols = append(protocols, "ICMP")
+	}
+	if device.LLDPConfig != nil && device.LLDPConfig.Enabled {
+		protocols = append(protocols, "LLDP")
+	}
+	if device.CDPConfig != nil && device.CDPConfig.Enabled {
+		protocols = append(protocols, "CDP")
+	}
+	if device.SNMPConfig.Community != "" || device.SNMPConfig.WalkFile != "" {
+		protocols = append(protocols, "SNMP")
+	}
+	if device.DHCPConfig != nil {
+		protocols = append(protocols, "DHCP")
+	}
+	if device.DNSConfig != nil {
+		protocols = append(protocols, "DNS")
+	}
+	if device.HTTPConfig != nil && device.HTTPConfig.Enabled {
+		protocols = append(protocols, "HTTP")
+	}
+	if device.STPConfig != nil && device.STPConfig.Enabled {
+		protocols = append(protocols, "STP")
+	}
+	return protocols
 }
 
 func joinStrings(strs []string, sep string) string {

@@ -10,7 +10,14 @@ import (
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/pcap"
+
 	"github.com/krisarmstrong/niac-go/pkg/config"
+)
+
+// Playback constants.
+const (
+	debugLevelBasic  = 2    // debug level for basic playback logging
+	initialPacketCap = 1000 // initial packet slice capacity
 )
 
 // Sentinel errors for playback.
@@ -48,6 +55,7 @@ func NewPlaybackEngine(engine *Engine, playbackConfig *config.CapturePlayback, d
 
 // Start begins PCAP playback.
 func (p *PlaybackEngine) Start() error {
+	logger := slog.Default()
 	if p.config == nil {
 		return ErrNoPlaybackConfiguration
 	}
@@ -69,14 +77,14 @@ func (p *PlaybackEngine) Start() error {
 	p.mu.Unlock()
 
 	if p.debugLevel >= 1 {
-		slog.Info("Starting PCAP playback", "filename", p.config.FileName)
+		logger.Info("Starting PCAP playback", "filename", p.config.FileName)
 
 		if p.config.ScaleTime > 0 && p.config.ScaleTime != 1.0 {
-			slog.Info("PCAP playback time scaling", "scale", p.config.ScaleTime)
+			logger.Info("PCAP playback time scaling", "scale", p.config.ScaleTime)
 		}
 
 		if p.config.LoopTime > 0 {
-			slog.Info("PCAP playback loop interval", "intervalMs", p.config.LoopTime)
+			logger.Info("PCAP playback loop interval", "intervalMs", p.config.LoopTime)
 		}
 	}
 
@@ -90,6 +98,7 @@ func (p *PlaybackEngine) Start() error {
 
 // Stop stops PCAP playback.
 func (p *PlaybackEngine) Stop() {
+	logger := slog.Default()
 	p.mu.Lock()
 
 	if !p.running {
@@ -105,7 +114,7 @@ func (p *PlaybackEngine) Stop() {
 	p.wg.Wait()
 
 	if p.debugLevel >= 1 {
-		slog.Info("Stopped PCAP playback")
+		logger.Info("Stopped PCAP playback")
 	}
 }
 
@@ -140,66 +149,101 @@ func (p *PlaybackEngine) playbackLoop() {
 
 // playOnce plays the PCAP file once.
 func (p *PlaybackEngine) playOnce() {
-	// Load packets from PCAP
 	packets, err := p.loadPCAP()
 	if err != nil {
-		if p.debugLevel >= 1 {
-			slog.Error("Error loading PCAP", "error", err)
-		}
-
+		p.logError("Error loading PCAP", "error", err)
 		return
 	}
 
 	if len(packets) == 0 {
-		if p.debugLevel >= 2 {
-			slog.Info("No packets found in PCAP file")
-		}
-
+		p.logBasic("No packets found in PCAP file")
 		return
 	}
 
-	if p.debugLevel >= 2 {
-		slog.Info("Replaying packets from PCAP", "count", len(packets), "filename", p.config.FileName)
-	}
+	p.logBasic("Replaying packets from PCAP", "count", len(packets), "filename", p.config.FileName)
 
-	// Replay packets with timing
+	p.replayPackets(packets)
+}
+
+// replayPackets replays all packets with proper timing.
+func (p *PlaybackEngine) replayPackets(packets []PlaybackPacket) {
 	startTime := time.Now()
 	firstPacketTime := packets[0].Timestamp
+	totalPackets := len(packets)
 
 	for i, pkt := range packets {
-		// Check if we should stop
-		select {
-		case <-p.stopChan:
+		if p.isStopped() {
 			return
-		default:
 		}
 
-		// Calculate how long to wait before sending this packet
-		sleepDuration := p.calculatePacketDelay(pkt, startTime, firstPacketTime)
-
-		// Sleep until target time if needed
-		if sleepDuration > 0 {
-			select {
-			case <-time.After(sleepDuration):
-			case <-p.stopChan:
-				return
-			}
+		if !p.waitForPacketTiming(pkt, startTime, firstPacketTime) {
+			return
 		}
 
-		// Send packet
-		err := p.engine.SendPacket(pkt.Data)
-		if err != nil {
-			if p.debugLevel >= 2 {
-				slog.Error("Error sending packet", "packetNum", i+1, "error", err)
-			}
-		} else if p.debugLevel >= 3 {
-			slog.Debug("Sent packet", "packetNum", i+1, "total", len(packets), "bytes", len(pkt.Data))
-		}
+		p.sendPacketWithLogging(pkt, i+1, totalPackets)
 	}
 
-	if p.debugLevel >= 2 {
-		elapsed := time.Since(startTime)
-		slog.Info("Playback complete", "packets", len(packets), "elapsed", elapsed)
+	p.logPlaybackComplete(startTime, totalPackets)
+}
+
+// isStopped checks if the playback should stop.
+func (p *PlaybackEngine) isStopped() bool {
+	select {
+	case <-p.stopChan:
+		return true
+	default:
+		return false
+	}
+}
+
+// waitForPacketTiming waits until it's time to send the packet.
+// Returns false if playback was stopped during the wait.
+func (p *PlaybackEngine) waitForPacketTiming(pkt PlaybackPacket, startTime, firstPacketTime time.Time) bool {
+	sleepDuration := p.calculatePacketDelay(pkt, startTime, firstPacketTime)
+	if sleepDuration <= 0 {
+		return true
+	}
+
+	select {
+	case <-time.After(sleepDuration):
+		return true
+	case <-p.stopChan:
+		return false
+	}
+}
+
+// sendPacketWithLogging sends a packet and logs the result.
+func (p *PlaybackEngine) sendPacketWithLogging(pkt PlaybackPacket, packetNum, totalPackets int) {
+	err := p.engine.SendPacket(pkt.Data)
+	if err != nil {
+		p.logBasic("Error sending packet", "packetNum", packetNum, "error", err)
+		return
+	}
+	if p.debugLevel >= debugLevelVerbose {
+		slog.Debug("Sent packet", "packetNum", packetNum, "total", totalPackets, "bytes", len(pkt.Data))
+	}
+}
+
+// logPlaybackComplete logs the playback completion message.
+func (p *PlaybackEngine) logPlaybackComplete(startTime time.Time, packetCount int) {
+	if p.debugLevel < debugLevelBasic {
+		return
+	}
+	elapsed := time.Since(startTime)
+	slog.Info("Playback complete", "packets", packetCount, "elapsed", elapsed)
+}
+
+// logError logs an error message if debug level is at least 1.
+func (p *PlaybackEngine) logError(msg string, args ...any) {
+	if p.debugLevel >= 1 {
+		slog.Error(msg, args...)
+	}
+}
+
+// logBasic logs an info message if debug level is at least debugLevelBasic.
+func (p *PlaybackEngine) logBasic(msg string, args ...any) {
+	if p.debugLevel >= debugLevelBasic {
+		slog.Info(msg, args...)
 	}
 }
 
@@ -213,7 +257,7 @@ func (p *PlaybackEngine) loadPCAP() ([]PlaybackPacket, error) {
 	defer handle.Close()
 
 	// Pre-allocate slice with reasonable initial capacity to reduce reallocations
-	packets := make([]PlaybackPacket, 0, 1000)
+	packets := make([]PlaybackPacket, 0, initialPacketCap)
 
 	// Read all packets
 	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())

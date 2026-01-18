@@ -26,7 +26,7 @@ type NeighborEntry struct {
 	LastSeen  time.Time `json:"last_seen"`
 }
 
-var neighborsOpts struct {
+type neighborsOptions struct {
 	device     string
 	protocol   string
 	socketPath string
@@ -35,10 +35,13 @@ var neighborsOpts struct {
 
 const neighborsProtocolAll = "all"
 
-var neighborsCmd = &cobra.Command{
-	Use:   "neighbors [watch]",
-	Short: "Display neighbor discovery table from LLDP/CDP protocols",
-	Long: `Display the neighbor discovery table from a running NIAC simulation.
+func addNeighborsCommand(root *cobra.Command, _ *serviceOptions) {
+	options := new(neighborsOptions)
+
+	neighborsCmd := &cobra.Command{
+		Use:   "neighbors [watch]",
+		Short: "Display neighbor discovery table from LLDP/CDP protocols",
+		Long: `Display the neighbor discovery table from a running NIAC simulation.
 
 This command shows network neighbors discovered via LLDP (Link Layer Discovery
 Protocol) and CDP (Cisco Discovery Protocol) from simulated devices.
@@ -52,7 +55,7 @@ The table displays:
 
 Without arguments, shows the current neighbor table snapshot.
 Use the 'watch' subcommand for continuous live updates.`,
-	Example: `  # Show current neighbors table
+		Example: `  # Show current neighbors table
   niac neighbors
 
   # Show neighbors in JSON format
@@ -72,21 +75,23 @@ Use the 'watch' subcommand for continuous live updates.`,
 
   # Use custom socket path
   niac neighbors --socket /tmp/my-niac.sock`,
-	Args: cobra.MaximumNArgs(1),
-	RunE: runNeighbors,
-}
+		Args: cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runNeighbors(cmd, args, options)
+		},
+	}
 
-var neighborsWatchCmd = &cobra.Command{
-	Use:   "watch",
-	Short: "Watch neighbor table for live updates",
-	Long: `Watch the neighbor discovery table in real-time.
+	neighborsWatchCmd := &cobra.Command{
+		Use:   "watch",
+		Short: "Watch neighbor table for live updates",
+		Long: `Watch the neighbor discovery table in real-time.
 
 This subcommand continuously monitors the neighbor table and displays
 updates as neighbors are discovered or expire. Similar to 'watch' command,
 the display refreshes periodically to show current state.
 
 Press Ctrl+C to stop watching.`,
-	Example: `  # Watch all neighbors
+		Example: `  # Watch all neighbors
   niac neighbors watch
 
   # Watch with JSON output
@@ -97,31 +102,32 @@ Press Ctrl+C to stop watching.`,
 
   # Watch only LLDP neighbors
   niac neighbors watch --protocol lldp`,
-	Args: cobra.NoArgs,
-	RunE: runNeighborsWatch,
-}
-
-func init() {
-	rootCmd.AddCommand(neighborsCmd)
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runNeighborsWatch(cmd, args, options)
+		},
+	}
 
 	// Global flags for neighbors command
-	neighborsCmd.PersistentFlags().StringVar(&neighborsOpts.device, "device", "",
+	neighborsCmd.PersistentFlags().StringVar(&options.device, "device", "",
 		"Filter by device name")
-	neighborsCmd.PersistentFlags().StringVar(&neighborsOpts.protocol, "protocol", "all",
+	neighborsCmd.PersistentFlags().StringVar(&options.protocol, "protocol", "all",
 		"Filter by protocol: lldp, cdp, or all")
-	neighborsCmd.PersistentFlags().StringVar(&neighborsOpts.socketPath, "socket", "",
+	neighborsCmd.PersistentFlags().StringVar(&options.socketPath, "socket", "",
 		"Path to IPC socket (default: "+ipc.DefaultSocketPath()+")")
-	neighborsCmd.PersistentFlags().BoolVar(&neighborsOpts.jsonOutput, "json", false,
+	neighborsCmd.PersistentFlags().BoolVar(&options.jsonOutput, "json", false,
 		"Output in JSON format")
 
 	// Add watch subcommand
 	neighborsCmd.AddCommand(neighborsWatchCmd)
+
+	root.AddCommand(neighborsCmd)
 }
 
-func runNeighbors(cmd *cobra.Command, args []string) error {
+func runNeighbors(cmd *cobra.Command, args []string, options *neighborsOptions) error {
 	// Check if 'watch' was provided as an argument (backward compatibility)
 	if len(args) == 1 && strings.ToLower(args[0]) == "watch" {
-		return runNeighborsWatch(cmd, []string{})
+		return runNeighborsWatch(cmd, []string{}, options)
 	}
 
 	if len(args) > 0 {
@@ -129,12 +135,12 @@ func runNeighbors(cmd *cobra.Command, args []string) error {
 	}
 
 	// Validate protocol flag
-	if err := validateProtocolFlag(neighborsOpts.protocol); err != nil {
+	if err := validateProtocolFlag(options.protocol); err != nil {
 		return err
 	}
 
 	// Create IPC client
-	client := getNeighborsClient()
+	client := getNeighborsClient(options)
 
 	// Fetch neighbors
 	neighbors, err := fetchNeighbors(client)
@@ -143,24 +149,24 @@ func runNeighbors(cmd *cobra.Command, args []string) error {
 	}
 
 	// Filter neighbors
-	filtered := filterNeighbors(neighbors, neighborsOpts.device, neighborsOpts.protocol)
+	filtered := filterNeighbors(neighbors, options.device, options.protocol)
 
 	// Output based on format
-	if neighborsOpts.jsonOutput {
+	if options.jsonOutput {
 		return outputNeighborsJSON(filtered)
 	}
 	return outputNeighborsTable(filtered)
 }
 
-func runNeighborsWatch(cmd *cobra.Command, args []string) error {
+func runNeighborsWatch(_ *cobra.Command, _ []string, options *neighborsOptions) error {
 	// Validate protocol flag
-	err := validateProtocolFlag(neighborsOpts.protocol)
+	err := validateProtocolFlag(options.protocol)
 	if err != nil {
 		return err
 	}
 
 	// Create IPC client
-	client := getNeighborsClient()
+	client := getNeighborsClient(options)
 
 	// Check if server is running
 	if !client.IsRunning() {
@@ -181,15 +187,15 @@ func runNeighborsWatch(cmd *cobra.Command, args []string) error {
 	}()
 
 	// Run watch loop
-	return runNeighborsWatchLoop(ctx, client)
+	return runNeighborsWatchLoop(ctx, client, options)
 }
 
-func runNeighborsWatchLoop(ctx context.Context, client *ipc.Client) error {
-	ticker := time.NewTicker(2 * time.Second)
+func runNeighborsWatchLoop(ctx context.Context, client *ipc.Client, options *neighborsOptions) error {
+	ticker := time.NewTicker(tickerInterval * time.Second)
 	defer ticker.Stop()
 
 	// Initial fetch
-	err := displayNeighborsUpdate(client)
+	err := displayNeighborsUpdate(client, options)
 	if err != nil {
 		return fmt.Errorf("failed to fetch initial neighbors: %w", err)
 	}
@@ -197,22 +203,22 @@ func runNeighborsWatchLoop(ctx context.Context, client *ipc.Client) error {
 	for {
 		select {
 		case <-ctx.Done():
-			if !neighborsOpts.jsonOutput {
-				fmt.Println("\nNeighbors watch stopped.")
+			if !options.jsonOutput {
+				fmt.Fprintln(os.Stdout, "\nNeighbors watch stopped.")
 			}
 			return nil
 		case <-ticker.C:
-			if updateErr := displayNeighborsUpdate(client); updateErr != nil {
+			if updateErr := displayNeighborsUpdate(client, options); updateErr != nil {
 				// Connection lost, but don't exit immediately
-				if !neighborsOpts.jsonOutput {
-					fmt.Printf("\r[%s] Connection lost: %v\n", time.Now().Format("15:04:05"), updateErr)
+				if !options.jsonOutput {
+					fmt.Fprintf(os.Stdout, "\r[%s] Connection lost: %v\n", time.Now().Format("15:04:05"), updateErr)
 				} else {
 					errObj := map[string]any{
 						"error": updateErr.Error(),
 						"time":  time.Now().Format(time.RFC3339),
 					}
 					jsonBytes, _ := json.Marshal(errObj)
-					fmt.Println(string(jsonBytes))
+					fmt.Fprintln(os.Stdout, string(jsonBytes))
 				}
 				continue
 			}
@@ -220,16 +226,16 @@ func runNeighborsWatchLoop(ctx context.Context, client *ipc.Client) error {
 	}
 }
 
-func displayNeighborsUpdate(client *ipc.Client) error {
+func displayNeighborsUpdate(client *ipc.Client, options *neighborsOptions) error {
 	neighbors, err := fetchNeighbors(client)
 	if err != nil {
 		return err
 	}
 
 	// Filter neighbors
-	filtered := filterNeighbors(neighbors, neighborsOpts.device, neighborsOpts.protocol)
+	filtered := filterNeighbors(neighbors, options.device, options.protocol)
 
-	if neighborsOpts.jsonOutput {
+	if options.jsonOutput {
 		// JSON Lines format for watch mode
 		output := map[string]any{
 			"timestamp": time.Now().Format(time.RFC3339),
@@ -237,19 +243,19 @@ func displayNeighborsUpdate(client *ipc.Client) error {
 			"neighbors": filtered,
 		}
 		jsonBytes, _ := json.Marshal(output)
-		fmt.Println(string(jsonBytes))
+		fmt.Fprintln(os.Stdout, string(jsonBytes))
 	} else {
 		// Clear screen and redraw table
 		clearScreen()
-		fmt.Println("NIAC Neighbors Watch - Press Ctrl+C to stop")
-		fmt.Printf("Last updated: %s\n", time.Now().Format("15:04:05"))
-		if neighborsOpts.device != "" {
-			fmt.Printf("Device filter: %s\n", neighborsOpts.device)
+		fmt.Fprintln(os.Stdout, "NIAC Neighbors Watch - Press Ctrl+C to stop")
+		fmt.Fprintf(os.Stdout, "Last updated: %s\n", time.Now().Format("15:04:05"))
+		if options.device != "" {
+			fmt.Fprintf(os.Stdout, "Device filter: %s\n", options.device)
 		}
-		if neighborsOpts.protocol != neighborsProtocolAll && neighborsOpts.protocol != "" {
-			fmt.Printf("Protocol filter: %s\n", strings.ToUpper(neighborsOpts.protocol))
+		if options.protocol != neighborsProtocolAll && options.protocol != "" {
+			fmt.Fprintf(os.Stdout, "Protocol filter: %s\n", strings.ToUpper(options.protocol))
 		}
-		fmt.Println(strings.Repeat("-", 90))
+		fmt.Fprintln(os.Stdout, strings.Repeat("-", lineWidthWide))
 
 		if tableErr := outputNeighborsTable(filtered); tableErr != nil {
 			return tableErr
@@ -268,8 +274,8 @@ func validateProtocolFlag(protocol string) error {
 	}
 }
 
-func getNeighborsClient() *ipc.Client {
-	socketPath := neighborsOpts.socketPath
+func getNeighborsClient(options *neighborsOptions) *ipc.Client {
+	socketPath := options.socketPath
 	if socketPath == "" {
 		socketPath = ipc.GetDefaultSocketPath()
 	}
@@ -322,11 +328,11 @@ func filterNeighbors(neighbors []NeighborEntry, device, protocol string) []Neigh
 
 func outputNeighborsTable(neighbors []NeighborEntry) error {
 	if len(neighbors) == 0 {
-		fmt.Println("No neighbors discovered")
+		fmt.Fprintln(os.Stdout, "No neighbors discovered")
 		return nil
 	}
 
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, tabPadding, ' ', 0)
 	fmt.Fprintln(w, "DEVICE\tINTERFACE\tNEIGHBOR\tPROTOCOL\tLAST SEEN")
 	fmt.Fprintln(w, "------\t---------\t--------\t--------\t---------")
 

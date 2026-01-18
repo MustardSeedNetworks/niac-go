@@ -17,7 +17,13 @@ import (
 	"sync"
 	"time"
 
-	_ "modernc.org/sqlite"
+	_ "modernc.org/sqlite" // SQLite driver
+)
+
+// Time conversion constants.
+const (
+	// msPerCentisecond is the number of milliseconds per centisecond.
+	msPerCentisecond = 10
 )
 
 // Sentinel errors for mibdb package.
@@ -102,10 +108,11 @@ func New(dbPath string) (*DB, error) {
 	}
 
 	// Initialize schema
-	if err := initSchema(db); err != nil {
+	initErr := initSchema(db)
+	if initErr != nil {
 		_ = db.Close()
 
-		return nil, fmt.Errorf("failed to initialize schema: %w", err)
+		return nil, fmt.Errorf("failed to initialize schema: %w", initErr)
 	}
 
 	return &DB{db: db}, nil
@@ -119,10 +126,11 @@ func NewInMemory() (*DB, error) {
 	}
 
 	// Load built-in OID definitions
-	if err := db.LoadBuiltinOIDs(); err != nil {
+	loadErr := db.LoadBuiltinOIDs()
+	if loadErr != nil {
 		_ = db.Close()
 
-		return nil, fmt.Errorf("failed to load builtin OIDs: %w", err)
+		return nil, fmt.Errorf("failed to load builtin OIDs: %w", loadErr)
 	}
 
 	return db, nil
@@ -180,25 +188,26 @@ func (d *DB) AddOIDs(entries []OIDEntry) error {
 
 	defer func() { _ = tx.Rollback() }() // rollback is safe to call after commit, returns ErrTxDone
 
-	stmt, err := tx.PrepareContext(ctx, `
+	stmt, prepErr := tx.PrepareContext(ctx, `
 		INSERT OR REPLACE INTO oid_names (name, oid, full_path, mib_name)
 		VALUES (?, ?, ?, ?)
 	`)
-	if err != nil {
-		return fmt.Errorf("failed to prepare statement: %w", err)
+	if prepErr != nil {
+		return fmt.Errorf("failed to prepare statement: %w", prepErr)
 	}
 
 	defer func() { _ = stmt.Close() }()
 
 	for _, entry := range entries {
-		_, err := stmt.Exec(entry.Name, entry.OID, entry.FullPath, entry.MIBName)
-		if err != nil {
-			return fmt.Errorf("failed to execute statement: %w", err)
+		_, execErr := stmt.ExecContext(ctx, entry.Name, entry.OID, entry.FullPath, entry.MIBName)
+		if execErr != nil {
+			return fmt.Errorf("failed to execute statement: %w", execErr)
 		}
 	}
 
-	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("failed to commit transaction: %w", err)
+	commitErr := tx.Commit()
+	if commitErr != nil {
+		return fmt.Errorf("failed to commit transaction: %w", commitErr)
 	}
 	return nil
 }
@@ -265,13 +274,13 @@ func (d *DB) GetOIDsByPrefix(prefix string) ([]OIDEntry, error) {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
 
-	rows, err := d.db.QueryContext(context.Background(), `
+	rows, queryErr := d.db.QueryContext(context.Background(), `
 		SELECT name, oid, COALESCE(full_path, ''), COALESCE(mib_name, '')
 		FROM oid_names WHERE oid LIKE ? || '%'
 		ORDER BY oid
 	`, prefix)
-	if err != nil {
-		return nil, fmt.Errorf("failed to query OIDs by prefix: %w", err)
+	if queryErr != nil {
+		return nil, fmt.Errorf("failed to query OIDs by prefix: %w", queryErr)
 	}
 
 	defer func() { _ = rows.Close() }()
@@ -280,16 +289,18 @@ func (d *DB) GetOIDsByPrefix(prefix string) ([]OIDEntry, error) {
 
 	for rows.Next() {
 		var entry OIDEntry
-		err := rows.Scan(&entry.Name, &entry.OID, &entry.FullPath, &entry.MIBName)
-		if err != nil {
-			return nil, fmt.Errorf("failed to scan row: %w", err)
+
+		scanErr := rows.Scan(&entry.Name, &entry.OID, &entry.FullPath, &entry.MIBName)
+		if scanErr != nil {
+			return nil, fmt.Errorf("failed to scan row: %w", scanErr)
 		}
 
 		entries = append(entries, entry)
 	}
 
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("failed to iterate rows: %w", err)
+	rowsErr := rows.Err()
+	if rowsErr != nil {
+		return nil, fmt.Errorf("failed to iterate rows: %w", rowsErr)
 	}
 	return entries, nil
 }
@@ -423,7 +434,7 @@ func NewVariMibIntegralHandler(config *VariMibIntegralConfig, baseValue int64) *
 // Value returns the current value based on elapsed time.
 func (h *VariMibIntegralHandler) Value() int64 {
 	elapsed := time.Since(h.startTime)
-	centisecs := elapsed.Milliseconds() / 10 // Convert to centiseconds
+	centisecs := elapsed.Milliseconds() / msPerCentisecond // Convert to centiseconds
 
 	value := h.baseValue
 
@@ -466,7 +477,7 @@ func (h *VariMibStringHandler) Value() string {
 	}
 
 	elapsed := time.Since(h.startTime)
-	centisecs := elapsed.Milliseconds() / 10
+	centisecs := elapsed.Milliseconds() / msPerCentisecond
 
 	// Calculate total cycle time
 	var totalCycle int64

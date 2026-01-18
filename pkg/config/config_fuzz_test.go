@@ -197,7 +197,6 @@ func FuzzValidateWalkFilePath(f *testing.F) {
 }
 
 // FuzzDeviceConfigParsing tests device configuration parsing with malformed data.
-//nolint:govet // unusedwrite: intentional writes in fuzz test to verify parsing doesn't panic
 func FuzzDeviceConfigParsing(f *testing.F) {
 	// Seed with various device config inputs
 	f.Add("mac", "00:11:22:33:44:55")
@@ -240,6 +239,11 @@ func FuzzDeviceConfigParsing(f *testing.F) {
 			// Store as property
 			device.Properties[key] = value
 		}
+
+		// Use device to verify fuzz input didn't corrupt the struct
+		_ = device.Name
+		_ = len(device.Interfaces)
+		_ = device.MACAddress
 	})
 }
 

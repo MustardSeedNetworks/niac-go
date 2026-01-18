@@ -3,12 +3,12 @@ package integration
 import (
 	"testing"
 
-	"github.com/krisarmstrong/niac-go/pkg/errors"
+	"github.com/krisarmstrong/niac-go/pkg/apperr"
 )
 
 // TestErrorInjection_FCSErrors tests FCS error injection.
 func TestErrorInjection_FCSErrors(t *testing.T) {
-	sm := errors.NewStateManager()
+	sm := apperr.NewStateManager()
 
 	// Configure interface
 	deviceIP := "192.168.1.1"
@@ -16,7 +16,7 @@ func TestErrorInjection_FCSErrors(t *testing.T) {
 	sm.SetInterfaceConfig(deviceIP, iface, 1000, "full")
 
 	// Inject FCS errors at 5% rate
-	sm.SetError(deviceIP, iface, errors.ErrorTypeFCS, 5)
+	sm.SetError(deviceIP, iface, apperr.ErrorTypeFCS, 5)
 
 	// Verify error state
 	state := sm.GetError(deviceIP, iface)
@@ -24,7 +24,7 @@ func TestErrorInjection_FCSErrors(t *testing.T) {
 		t.Fatal("Error state not set")
 	}
 
-	if state.ErrorType != errors.ErrorTypeFCS {
+	if state.ErrorType != apperr.ErrorTypeFCS {
 		t.Errorf("Expected FCSErrors, got %s", state.ErrorType)
 	}
 
@@ -45,20 +45,20 @@ func TestErrorInjection_FCSErrors(t *testing.T) {
 
 // TestErrorInjection_PacketDiscards tests packet discard injection.
 func TestErrorInjection_PacketDiscards(t *testing.T) {
-	sm := errors.NewStateManager()
+	sm := apperr.NewStateManager()
 
 	deviceIP := "192.168.1.2"
 	iface := "eth1"
 
 	// Inject packet discards at 10% rate
-	sm.SetError(deviceIP, iface, errors.ErrorTypeDiscards, 10)
+	sm.SetError(deviceIP, iface, apperr.ErrorTypeDiscards, 10)
 
 	state := sm.GetError(deviceIP, iface)
 	if state == nil {
 		t.Fatal("Error state not set")
 	}
 
-	if state.ErrorType != errors.ErrorTypeDiscards {
+	if state.ErrorType != apperr.ErrorTypeDiscards {
 		t.Errorf("Expected PacketDiscards, got %s", state.ErrorType)
 	}
 
@@ -68,7 +68,7 @@ func TestErrorInjection_PacketDiscards(t *testing.T) {
 
 	// Test error calculation
 	baseValue := 1000
-	errorValue := errors.CalculateErrorValue(errors.ErrorTypeDiscards, baseValue, 10)
+	errorValue := apperr.CalculateErrorValue(apperr.ErrorTypeDiscards, baseValue, 10)
 
 	// With 10% error rate, we expect ~100 errors added
 	if errorValue < baseValue {
@@ -78,20 +78,20 @@ func TestErrorInjection_PacketDiscards(t *testing.T) {
 
 // TestErrorInjection_InterfaceErrors tests interface error injection.
 func TestErrorInjection_InterfaceErrors(t *testing.T) {
-	sm := errors.NewStateManager()
+	sm := apperr.NewStateManager()
 
 	deviceIP := "192.168.1.3"
 	iface := "eth2"
 
 	// Inject interface errors at 3% rate
-	sm.SetError(deviceIP, iface, errors.ErrorTypeInterface, 3)
+	sm.SetError(deviceIP, iface, apperr.ErrorTypeInterface, 3)
 
 	state := sm.GetError(deviceIP, iface)
 	if state == nil {
 		t.Fatal("Error state not set")
 	}
 
-	if state.ErrorType != errors.ErrorTypeInterface {
+	if state.ErrorType != apperr.ErrorTypeInterface {
 		t.Errorf("Expected InterfaceErrors, got %s", state.ErrorType)
 	}
 
@@ -115,20 +115,20 @@ func TestErrorInjection_InterfaceErrors(t *testing.T) {
 
 // TestErrorInjection_HighUtilization tests high utilization injection.
 func TestErrorInjection_HighUtilization(t *testing.T) {
-	sm := errors.NewStateManager()
+	sm := apperr.NewStateManager()
 
 	deviceIP := "192.168.1.4"
 	iface := "eth3"
 
 	// Inject high utilization at 80% rate
-	sm.SetError(deviceIP, iface, errors.ErrorTypeUtilization, 80)
+	sm.SetError(deviceIP, iface, apperr.ErrorTypeUtilization, 80)
 
 	state := sm.GetError(deviceIP, iface)
 	if state == nil {
 		t.Fatal("Error state not set")
 	}
 
-	if state.ErrorType != errors.ErrorTypeUtilization {
+	if state.ErrorType != apperr.ErrorTypeUtilization {
 		t.Errorf("Expected HighUtilization, got %s", state.ErrorType)
 	}
 
@@ -138,7 +138,7 @@ func TestErrorInjection_HighUtilization(t *testing.T) {
 
 	// Test utilization calculation
 	baseUtilization := 20 // Base 20% utilization
-	utilization := errors.CalculateErrorValue(errors.ErrorTypeUtilization, baseUtilization, 80)
+	utilization := apperr.CalculateErrorValue(apperr.ErrorTypeUtilization, baseUtilization, 80)
 
 	// With 80% error rate, utilization should increase significantly
 	if utilization <= baseUtilization {
@@ -153,20 +153,20 @@ func TestErrorInjection_HighUtilization(t *testing.T) {
 
 // TestErrorInjection_HighCPU tests CPU utilization injection.
 func TestErrorInjection_HighCPU(t *testing.T) {
-	sm := errors.NewStateManager()
+	sm := apperr.NewStateManager()
 
 	deviceIP := "192.168.1.5"
 	iface := "cpu0"
 
 	// Inject high CPU at 90% rate
-	sm.SetError(deviceIP, iface, errors.ErrorTypeCPU, 90)
+	sm.SetError(deviceIP, iface, apperr.ErrorTypeCPU, 90)
 
 	state := sm.GetError(deviceIP, iface)
 	if state == nil {
 		t.Fatal("Error state not set")
 	}
 
-	if state.ErrorType != errors.ErrorTypeCPU {
+	if state.ErrorType != apperr.ErrorTypeCPU {
 		t.Errorf("Expected HighCPU, got %s", state.ErrorType)
 	}
 
@@ -176,7 +176,7 @@ func TestErrorInjection_HighCPU(t *testing.T) {
 
 	// Test CPU calculation
 	baseCPU := 5 // Base 5% CPU
-	cpuValue := errors.CalculateErrorValue(errors.ErrorTypeCPU, baseCPU, 90)
+	cpuValue := apperr.CalculateErrorValue(apperr.ErrorTypeCPU, baseCPU, 90)
 
 	if cpuValue <= baseCPU {
 		t.Errorf("CPU value %d should be > base %d", cpuValue, baseCPU)
@@ -185,20 +185,20 @@ func TestErrorInjection_HighCPU(t *testing.T) {
 
 // TestErrorInjection_HighMemory tests memory utilization injection.
 func TestErrorInjection_HighMemory(t *testing.T) {
-	sm := errors.NewStateManager()
+	sm := apperr.NewStateManager()
 
 	deviceIP := "192.168.1.6"
 	iface := "mem0"
 
 	// Inject high memory at 85% rate
-	sm.SetError(deviceIP, iface, errors.ErrorTypeMemory, 85)
+	sm.SetError(deviceIP, iface, apperr.ErrorTypeMemory, 85)
 
 	state := sm.GetError(deviceIP, iface)
 	if state == nil {
 		t.Fatal("Error state not set")
 	}
 
-	if state.ErrorType != errors.ErrorTypeMemory {
+	if state.ErrorType != apperr.ErrorTypeMemory {
 		t.Errorf("Expected HighMemory, got %s", state.ErrorType)
 	}
 
@@ -209,20 +209,20 @@ func TestErrorInjection_HighMemory(t *testing.T) {
 
 // TestErrorInjection_HighDisk tests disk utilization injection.
 func TestErrorInjection_HighDisk(t *testing.T) {
-	sm := errors.NewStateManager()
+	sm := apperr.NewStateManager()
 
 	deviceIP := "192.168.1.7"
 	iface := "disk0"
 
 	// Inject high disk at 95% rate
-	sm.SetError(deviceIP, iface, errors.ErrorTypeDisk, 95)
+	sm.SetError(deviceIP, iface, apperr.ErrorTypeDisk, 95)
 
 	state := sm.GetError(deviceIP, iface)
 	if state == nil {
 		t.Fatal("Error state not set")
 	}
 
-	if state.ErrorType != errors.ErrorTypeDisk {
+	if state.ErrorType != apperr.ErrorTypeDisk {
 		t.Errorf("Expected HighDisk, got %s", state.ErrorType)
 	}
 
@@ -233,15 +233,15 @@ func TestErrorInjection_HighDisk(t *testing.T) {
 
 // TestErrorInjection_MultipleDevicesAndInterfaces tests error injection across multiple devices.
 func TestErrorInjection_MultipleDevicesAndInterfaces(t *testing.T) {
-	sm := errors.NewStateManager()
+	sm := apperr.NewStateManager()
 
 	// Device 1 with 2 interfaces
-	sm.SetError("192.168.1.1", "eth0", errors.ErrorTypeFCS, 5)
-	sm.SetError("192.168.1.1", "eth1", errors.ErrorTypeDiscards, 10)
+	sm.SetError("192.168.1.1", "eth0", apperr.ErrorTypeFCS, 5)
+	sm.SetError("192.168.1.1", "eth1", apperr.ErrorTypeDiscards, 10)
 
 	// Device 2 with 2 interfaces
-	sm.SetError("192.168.1.2", "eth0", errors.ErrorTypeInterface, 3)
-	sm.SetError("192.168.1.2", "eth1", errors.ErrorTypeUtilization, 80)
+	sm.SetError("192.168.1.2", "eth0", apperr.ErrorTypeInterface, 3)
+	sm.SetError("192.168.1.2", "eth1", apperr.ErrorTypeUtilization, 80)
 
 	// Get all states
 	states := sm.GetAllStates()
@@ -250,7 +250,7 @@ func TestErrorInjection_MultipleDevicesAndInterfaces(t *testing.T) {
 	}
 
 	// Verify each state
-	stateMap := make(map[string]*errors.ErrorState)
+	stateMap := make(map[string]*apperr.ErrorState)
 	for _, state := range states {
 		key := state.DeviceIP + "-" + state.Interface
 		stateMap[key] = state
@@ -259,7 +259,7 @@ func TestErrorInjection_MultipleDevicesAndInterfaces(t *testing.T) {
 	// Check device 1, eth0
 	if state, ok := stateMap["192.168.1.1-eth0"]; !ok {
 		t.Error("Missing state for 192.168.1.1-eth0")
-	} else if state.ErrorType != errors.ErrorTypeFCS {
+	} else if state.ErrorType != apperr.ErrorTypeFCS {
 		t.Errorf("Wrong error type for 192.168.1.1-eth0: %s", state.ErrorType)
 	}
 
@@ -273,12 +273,12 @@ func TestErrorInjection_MultipleDevicesAndInterfaces(t *testing.T) {
 
 // TestErrorInjection_ClearAll tests clearing all error states.
 func TestErrorInjection_ClearAll(t *testing.T) {
-	sm := errors.NewStateManager()
+	sm := apperr.NewStateManager()
 
 	// Inject errors on multiple devices
-	sm.SetError("192.168.1.1", "eth0", errors.ErrorTypeFCS, 5)
-	sm.SetError("192.168.1.2", "eth0", errors.ErrorTypeDiscards, 10)
-	sm.SetError("192.168.1.3", "eth0", errors.ErrorTypeInterface, 3)
+	sm.SetError("192.168.1.1", "eth0", apperr.ErrorTypeFCS, 5)
+	sm.SetError("192.168.1.2", "eth0", apperr.ErrorTypeDiscards, 10)
+	sm.SetError("192.168.1.3", "eth0", apperr.ErrorTypeInterface, 3)
 
 	// Verify states exist
 	states := sm.GetAllStates()
@@ -298,13 +298,13 @@ func TestErrorInjection_ClearAll(t *testing.T) {
 
 // TestErrorInjection_UpdateValue tests updating error rates.
 func TestErrorInjection_UpdateValue(t *testing.T) {
-	sm := errors.NewStateManager()
+	sm := apperr.NewStateManager()
 
 	deviceIP := "192.168.1.1"
 	iface := "eth0"
 
 	// Set initial error rate
-	sm.SetError(deviceIP, iface, errors.ErrorTypeFCS, 5)
+	sm.SetError(deviceIP, iface, apperr.ErrorTypeFCS, 5)
 
 	state1 := sm.GetError(deviceIP, iface)
 	if state1.Value != 5 {
@@ -312,7 +312,7 @@ func TestErrorInjection_UpdateValue(t *testing.T) {
 	}
 
 	// Update to higher rate
-	sm.SetError(deviceIP, iface, errors.ErrorTypeFCS, 20)
+	sm.SetError(deviceIP, iface, apperr.ErrorTypeFCS, 20)
 
 	state2 := sm.GetError(deviceIP, iface)
 	if state2.Value != 20 {
@@ -320,14 +320,14 @@ func TestErrorInjection_UpdateValue(t *testing.T) {
 	}
 
 	// Verify it's still the same error type
-	if state2.ErrorType != errors.ErrorTypeFCS {
+	if state2.ErrorType != apperr.ErrorTypeFCS {
 		t.Errorf("Error type changed unexpectedly: %s", state2.ErrorType)
 	}
 }
 
 // TestErrorInjection_InterfaceConfigPersistence tests that interface config persists through error changes.
 func TestErrorInjection_InterfaceConfigPersistence(t *testing.T) {
-	sm := errors.NewStateManager()
+	sm := apperr.NewStateManager()
 
 	deviceIP := "192.168.1.1"
 	iface := "eth0"
@@ -342,7 +342,7 @@ func TestErrorInjection_InterfaceConfigPersistence(t *testing.T) {
 	}
 
 	// Set error
-	sm.SetError(deviceIP, iface, errors.ErrorTypeFCS, 5)
+	sm.SetError(deviceIP, iface, apperr.ErrorTypeFCS, 5)
 
 	// Verify config still exists
 	config2 := sm.GetInterfaceConfig(deviceIP, iface)
@@ -374,10 +374,10 @@ func TestErrorInjection_InterfaceConfigPersistence(t *testing.T) {
 
 // TestErrorInjection_AllErrorTypes tests all error types are supported.
 func TestErrorInjection_AllErrorTypes(t *testing.T) {
-	sm := errors.NewStateManager()
+	sm := apperr.NewStateManager()
 	deviceIP := "192.168.1.1"
 
-	allTypes := errors.AllErrorTypes()
+	allTypes := apperr.AllErrorTypes()
 	if len(allTypes) < 7 {
 		t.Errorf("Expected at least 7 error types, got %d", len(allTypes))
 	}

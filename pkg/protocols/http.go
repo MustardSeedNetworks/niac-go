@@ -12,7 +12,46 @@ import (
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
+
 	"github.com/krisarmstrong/niac-go/pkg/config"
+)
+
+// HTTP parsing constants.
+const (
+	httpRequestLineParts = 3          // method, path, version
+	httpHeaderParts      = 2          // key, value
+	maxUint32TCP         = 0xFFFFFFFF // max uint32 for TCP payload length
+
+	// IP protocol constants.
+	httpIPv4Version   = 4     // IPv4 version field
+	httpIPv4IHL       = 5     // IPv4 header length (5 = 20 bytes)
+	httpIPv4TTL       = 64    // IPv4 default TTL
+	httpIPv6Version   = 6     // IPv6 version field
+	httpIPv6HopLimit  = 64    // IPv6 default hop limit
+	httpTCPWindowSize = 65535 // Default TCP window size
+)
+
+// HTTP content types.
+const (
+	contentTypeHTML = "text/html"
+	contentTypeJSON = "application/json"
+)
+
+// HTTP status codes.
+const (
+	httpStatusOK                  = 200
+	httpStatusCreated             = 201
+	httpStatusNoContent           = 204
+	httpStatusMovedPermanently    = 301
+	httpStatusFound               = 302
+	httpStatusNotModified         = 304
+	httpStatusBadRequest          = 400
+	httpStatusUnauthorized        = 401
+	httpStatusForbidden           = 403
+	httpStatusNotFound            = 404
+	httpStatusInternalServerError = 500
+	httpStatusNotImplemented      = 501
+	httpStatusServiceUnavailable  = 503
 )
 
 // HTTPHandler handles HTTP requests and responses.
@@ -28,7 +67,7 @@ func NewHTTPHandler(stack *Stack) *HTTPHandler {
 }
 
 // HandleRequest processes an HTTP request.
-func (h *HTTPHandler) HandleRequest(pkt *Packet, ipLayer *layers.IPv4, tcpLayer *layers.TCP, devices []*config.Device) {
+func (h *HTTPHandler) HandleRequest(_ *Packet, ipLayer *layers.IPv4, tcpLayer *layers.TCP, devices []*config.Device) {
 	debugLevel := h.stack.GetDebugLevel()
 
 	// Parse HTTP request
@@ -38,14 +77,14 @@ func (h *HTTPHandler) HandleRequest(pkt *Packet, ipLayer *layers.IPv4, tcpLayer 
 
 	request, err := parseHTTPRequest(tcpLayer.Payload)
 	if err != nil {
-		if debugLevel >= 3 {
+		if debugLevel >= DebugLevelVerbose {
 			_, _ = fmt.Fprintf(os.Stdout, "Failed to parse HTTP request: %v\n", err)
 		}
 
 		return
 	}
 
-	if debugLevel >= 2 {
+	if debugLevel >= DebugLevelInfo {
 		_, _ = fmt.Fprintf(os.Stdout, "HTTP %s %s from %s (device: %v)\n",
 			request.Method, request.Path, ipLayer.SrcIP, getDeviceNames(devices))
 	}
@@ -76,8 +115,8 @@ func parseHTTPRequest(payload []byte) (*HTTPRequest, error) {
 		return nil, fmt.Errorf("failed to read request line: %w", err)
 	}
 
-	parts := strings.SplitN(strings.TrimSpace(requestLine), " ", 3)
-	if len(parts) != 3 {
+	parts := strings.SplitN(strings.TrimSpace(requestLine), " ", httpRequestLineParts)
+	if len(parts) != httpRequestLineParts {
 		return nil, fmt.Errorf("%w: %s", ErrInvalidRequestLine, requestLine)
 	}
 
@@ -111,8 +150,8 @@ func parseHTTPRequest(payload []byte) (*HTTPRequest, error) {
 		}
 
 		// Parse header
-		headerParts := strings.SplitN(line, ":", 2)
-		if len(headerParts) == 2 {
+		headerParts := strings.SplitN(line, ":", httpHeaderParts)
+		if len(headerParts) == httpHeaderParts {
 			// Check header limit to prevent header bomb attacks
 			if headerCount >= maxHeaderCount {
 				// Silently ignore excessive headers
@@ -127,75 +166,65 @@ func parseHTTPRequest(payload []byte) (*HTTPRequest, error) {
 	return request, nil
 }
 
-// generateResponse generates an HTTP response.
-func (h *HTTPHandler) generateResponse(request *HTTPRequest, devices []*config.Device) []byte {
-	var response strings.Builder
+// findCustomEndpoint finds a matching custom endpoint from device config.
+func findCustomEndpoint(device *config.Device, request *HTTPRequest) *config.HTTPEndpoint {
+	if device == nil || device.HTTPConfig == nil || !device.HTTPConfig.Enabled {
+		return nil
+	}
 
-	// Get device info for response
-	deviceName := "Unknown"
-	deviceType := "device"
+	for i := range device.HTTPConfig.Endpoints {
+		ep := &device.HTTPConfig.Endpoints[i]
+		if ep.Path != request.Path {
+			continue
+		}
 
-	var device *config.Device
+		// Check method match (default to GET if not specified)
+		epMethod := ep.Method
+		if epMethod == "" {
+			epMethod = "GET"
+		}
+
+		if epMethod == request.Method {
+			return ep
+		}
+	}
+
+	return nil
+}
+
+// httpDeviceInfo contains device info for HTTP response generation.
+type httpDeviceInfo struct {
+	name       string
+	deviceType string
+	serverName string
+	device     *config.Device
+}
+
+// getHTTPDeviceInfo extracts device info for response generation.
+func getHTTPDeviceInfo(devices []*config.Device) httpDeviceInfo {
+	info := httpDeviceInfo{
+		name:       "Unknown",
+		deviceType: "device",
+		serverName: "NIAC-Go/1.0.0",
+	}
+
 	if len(devices) > 0 {
-		device = devices[0]
-		deviceName = device.Name
-		deviceType = device.Type
-	}
-
-	// Get server name from config
-	serverName := "NIAC-Go/1.0.0"
-	if device != nil && device.HTTPConfig != nil && device.HTTPConfig.ServerName != "" {
-		serverName = device.HTTPConfig.ServerName
-	}
-
-	// Check for custom endpoints in config first
-	var customEndpoint *config.HTTPEndpoint
-
-	if device != nil && device.HTTPConfig != nil && device.HTTPConfig.Enabled {
-		for i := range device.HTTPConfig.Endpoints {
-			ep := &device.HTTPConfig.Endpoints[i]
-			if ep.Path == request.Path {
-				// Check method match (default to GET if not specified)
-				epMethod := ep.Method
-				if epMethod == "" {
-					epMethod = "GET"
-				}
-
-				if epMethod == request.Method {
-					customEndpoint = ep
-
-					break
-				}
-			}
+		info.device = devices[0]
+		info.name = info.device.Name
+		info.deviceType = info.device.Type
+		if info.device.HTTPConfig != nil && info.device.HTTPConfig.ServerName != "" {
+			info.serverName = info.device.HTTPConfig.ServerName
 		}
 	}
 
-	// Determine response based on custom endpoint or default paths
-	statusCode := 200
-	statusText := "OK"
-	contentType := "text/html"
+	return info
+}
 
-	var body string
-
-	if customEndpoint != nil {
-		// Use custom endpoint configuration
-		statusCode = customEndpoint.StatusCode
-		if statusCode == 0 {
-			statusCode = 200
-		}
-
-		contentType = customEndpoint.ContentType
-		if contentType == "" {
-			contentType = "text/html"
-		}
-
-		body = customEndpoint.Body
-		statusText = getStatusText(statusCode)
-	} else {
-		// Default endpoints
-		switch request.Path {
-		case "/", "/index.html":
-			body = fmt.Sprintf(`<!DOCTYPE html>
+// generateDefaultBody generates the body for default HTTP endpoints.
+func (h *HTTPHandler) generateDefaultBody(path string, info httpDeviceInfo) (string, int, string) {
+	switch path {
+	case "/", "/index.html":
+		return fmt.Sprintf(`<!DOCTYPE html>
 <html>
 <head><title>%s - NIAC-Go</title></head>
 <body>
@@ -205,11 +234,11 @@ func (h *HTTPHandler) generateResponse(request *HTTPRequest, devices []*config.D
 <hr>
 <small>Network In A Can - Go Edition</small>
 </body>
-</html>`, deviceName, deviceName, deviceType)
+</html>`, info.name, info.name, info.deviceType), httpStatusOK, contentTypeHTML
 
-		case "/status":
-			stats := h.stack.GetStats()
-			body = fmt.Sprintf(`<!DOCTYPE html>
+	case "/status":
+		stats := h.stack.GetStats()
+		return fmt.Sprintf(`<!DOCTYPE html>
 <html>
 <head><title>Status - %s</title></head>
 <body>
@@ -224,23 +253,20 @@ func (h *HTTPHandler) generateResponse(request *HTTPRequest, devices []*config.D
 <li>ICMP Requests: %d</li>
 </ul>
 </body>
-</html>`, deviceName, deviceName, deviceType,
-				stats.PacketsReceived, stats.PacketsSent,
-				stats.ARPRequests, stats.ICMPRequests)
+</html>`, info.name, info.name, info.deviceType,
+			stats.PacketsReceived, stats.PacketsSent,
+			stats.ARPRequests, stats.ICMPRequests), httpStatusOK, contentTypeHTML
 
-		case "/api/info":
-			contentType = "application/json"
-			body = fmt.Sprintf(`{
+	case "/api/info":
+		return fmt.Sprintf(`{
   "name": "%s",
   "type": "%s",
   "version": "NIAC-Go v1.0.0",
   "status": "running"
-}`, deviceName, deviceType)
+}`, info.name, info.deviceType), httpStatusOK, contentTypeJSON
 
-		default:
-			statusCode = 404
-			statusText = "Not Found"
-			body = fmt.Sprintf(`<!DOCTYPE html>
+	default:
+		return fmt.Sprintf(`<!DOCTYPE html>
 <html>
 <head><title>404 Not Found</title></head>
 <body>
@@ -249,11 +275,15 @@ func (h *HTTPHandler) generateResponse(request *HTTPRequest, devices []*config.D
 <hr>
 <small>%s - NIAC-Go</small>
 </body>
-</html>`, request.Path, deviceName)
-		}
+</html>`, path, info.name), httpStatusNotFound, contentTypeHTML
 	}
+}
 
-	// Build response
+// buildHTTPResponse constructs the final HTTP response bytes.
+func buildHTTPResponse(statusCode int, serverName, contentType, body string) []byte {
+	var response strings.Builder
+
+	statusText := getStatusText(statusCode)
 	response.WriteString(fmt.Sprintf("HTTP/1.1 %d %s\r\n", statusCode, statusText))
 	response.WriteString(fmt.Sprintf("Date: %s\r\n", time.Now().UTC().Format(time.RFC1123)))
 	response.WriteString(fmt.Sprintf("Server: %s\r\n", serverName))
@@ -266,34 +296,60 @@ func (h *HTTPHandler) generateResponse(request *HTTPRequest, devices []*config.D
 	return []byte(response.String())
 }
 
+// generateResponse generates an HTTP response.
+func (h *HTTPHandler) generateResponse(request *HTTPRequest, devices []*config.Device) []byte {
+	info := getHTTPDeviceInfo(devices)
+	customEndpoint := findCustomEndpoint(info.device, request)
+
+	var body string
+	var statusCode int
+	var contentType string
+
+	if customEndpoint != nil {
+		statusCode = customEndpoint.StatusCode
+		if statusCode == 0 {
+			statusCode = httpStatusOK
+		}
+		contentType = customEndpoint.ContentType
+		if contentType == "" {
+			contentType = contentTypeHTML
+		}
+		body = customEndpoint.Body
+	} else {
+		body, statusCode, contentType = h.generateDefaultBody(request.Path, info)
+	}
+
+	return buildHTTPResponse(statusCode, info.serverName, contentType, body)
+}
+
 // getStatusText returns HTTP status text for a status code.
 func getStatusText(code int) string {
 	switch code {
-	case 200:
+	case httpStatusOK:
 		return "OK"
-	case 201:
+	case httpStatusCreated:
 		return "Created"
-	case 204:
+	case httpStatusNoContent:
 		return "No Content"
-	case 301:
+	case httpStatusMovedPermanently:
 		return "Moved Permanently"
-	case 302:
+	case httpStatusFound:
 		return "Found"
-	case 304:
+	case httpStatusNotModified:
 		return "Not Modified"
-	case 400:
+	case httpStatusBadRequest:
 		return "Bad Request"
-	case 401:
+	case httpStatusUnauthorized:
 		return "Unauthorized"
-	case 403:
+	case httpStatusForbidden:
 		return "Forbidden"
-	case 404:
+	case httpStatusNotFound:
 		return "Not Found"
-	case 500:
+	case httpStatusInternalServerError:
 		return "Internal Server Error"
-	case 501:
+	case httpStatusNotImplemented:
 		return "Not Implemented"
-	case 503:
+	case httpStatusServiceUnavailable:
 		return "Service Unavailable"
 	default:
 		return "Unknown"
@@ -327,7 +383,7 @@ func (h *HTTPHandler) sendResponse(
 		srcMAC = srcDevices[0].MACAddress
 	} else {
 		// Cannot find source MAC - skip sending
-		if debugLevel >= 2 {
+		if debugLevel >= DebugLevelInfo {
 			_, _ = fmt.Fprintf(os.Stdout, "Cannot send HTTP response: no MAC for %s\n", ipLayer.SrcIP)
 		}
 
@@ -343,9 +399,9 @@ func (h *HTTPHandler) sendResponse(
 
 	// Build IP header
 	ipReply := &layers.IPv4{
-		Version:  4,
-		IHL:      5,
-		TTL:      64,
+		Version:  httpIPv4Version,
+		IHL:      httpIPv4IHL,
+		TTL:      httpIPv4TTL,
 		Protocol: layers.IPProtocolTCP,
 		SrcIP:    ipLayer.DstIP,
 		DstIP:    ipLayer.SrcIP,
@@ -353,16 +409,16 @@ func (h *HTTPHandler) sendResponse(
 
 	// Build TCP header
 	// Safe conversion: min() bounds payloadLen to 0xFFFFFFFF which fits in uint32
-	payloadLen := min(len(tcpLayer.Payload), 0xFFFFFFFF)
+	payloadLen := min(len(tcpLayer.Payload), maxUint32TCP)
 
 	tcpReply := &layers.TCP{
 		SrcPort: tcpLayer.DstPort,
 		DstPort: tcpLayer.SrcPort,
 		Seq:     tcpLayer.Ack,
-		Ack:     tcpLayer.Seq + uint32(payloadLen), //nolint:gosec // G115: bounded by min()
-		PSH:    true,
-		ACK:    true,
-		Window: 65535,
+		Ack:     tcpLayer.Seq + safeUint32(payloadLen),
+		PSH:     true,
+		ACK:     true,
+		Window:  httpTCPWindowSize,
 	}
 	_ = tcpReply.SetNetworkLayerForChecksum(ipReply) // error is non-critical for simulation
 
@@ -380,7 +436,7 @@ func (h *HTTPHandler) sendResponse(
 		gopacket.Payload(response),
 	)
 	if err != nil {
-		if debugLevel >= 2 {
+		if debugLevel >= DebugLevelInfo {
 			_, _ = fmt.Fprintf(os.Stdout, "Error serializing HTTP response: %v\n", err)
 		}
 
@@ -403,7 +459,7 @@ func (h *HTTPHandler) sendResponse(
 
 	h.stack.Send(responsePkt)
 
-	if debugLevel >= 2 {
+	if debugLevel >= DebugLevelInfo {
 		_, _ = fmt.Fprintf(os.Stdout, "Sent HTTP response: %d bytes from %s to %s (device: %s)\n",
 			len(response), ipReply.SrcIP, ipReply.DstIP, device.Name)
 	}
@@ -426,7 +482,7 @@ func getDeviceNames(devices []*config.Device) string {
 // HandleRequestV6 processes an HTTP request over IPv6.
 func (h *HTTPHandler) HandleRequestV6(
 	pkt *Packet,
-	packet gopacket.Packet,
+	_ gopacket.Packet,
 	ipv6 *layers.IPv6,
 	tcpLayer *layers.TCP,
 	devices []*config.Device,
@@ -440,14 +496,14 @@ func (h *HTTPHandler) HandleRequestV6(
 
 	request, err := parseHTTPRequest(tcpLayer.Payload)
 	if err != nil {
-		if debugLevel >= 3 {
+		if debugLevel >= DebugLevelVerbose {
 			_, _ = fmt.Fprintf(os.Stdout, "Failed to parse HTTP/IPv6 request: %v\n", err)
 		}
 
 		return
 	}
 
-	if debugLevel >= 2 {
+	if debugLevel >= DebugLevelInfo {
 		_, _ = fmt.Fprintf(os.Stdout, "HTTP/IPv6 %s %s from [%s] (device: %v)\n",
 			request.Method, request.Path, ipv6.SrcIP, getDeviceNames(devices))
 	}
@@ -475,7 +531,7 @@ func (h *HTTPHandler) sendResponseV6(
 
 	device := devices[0]
 	if len(device.MACAddress) == 0 || dstMAC == nil {
-		if debugLevel >= 2 {
+		if debugLevel >= DebugLevelInfo {
 			_, _ = fmt.Fprintf(os.Stdout, "HTTP/IPv6: Cannot send response, missing MAC info\n")
 		}
 
@@ -483,26 +539,26 @@ func (h *HTTPHandler) sendResponseV6(
 	}
 
 	ipReply := &layers.IPv6{
-		Version:      6,
+		Version:      httpIPv6Version,
 		TrafficClass: 0,
 		FlowLabel:    0,
 		NextHeader:   layers.IPProtocolTCP,
-		HopLimit:     64,
+		HopLimit:     httpIPv6HopLimit,
 		SrcIP:        ipv6.DstIP,
 		DstIP:        ipv6.SrcIP,
 	}
 
 	// Safe conversion: min() bounds payloadLen2 to 0xFFFFFFFF which fits in uint32
-	payloadLen2 := min(len(tcpLayer.Payload), 0xFFFFFFFF)
+	payloadLen2 := min(len(tcpLayer.Payload), maxUint32TCP)
 
 	tcpReply := &layers.TCP{
 		SrcPort: tcpLayer.DstPort,
 		DstPort: tcpLayer.SrcPort,
 		Seq:     tcpLayer.Ack,
-		Ack:     tcpLayer.Seq + uint32(payloadLen2), //nolint:gosec // G115: bounded by min()
-		PSH:    true,
-		ACK:    true,
-		Window: 65535,
+		Ack:     tcpLayer.Seq + safeUint32(payloadLen2),
+		PSH:     true,
+		ACK:     true,
+		Window:  httpTCPWindowSize,
 	}
 	_ = tcpReply.SetNetworkLayerForChecksum(ipReply) // error is non-critical for simulation
 
@@ -541,7 +597,7 @@ func (h *HTTPHandler) sendResponseV6(
 
 	h.stack.Send(respPkt)
 
-	if debugLevel >= 2 {
+	if debugLevel >= DebugLevelInfo {
 		_, _ = fmt.Fprintf(os.Stdout, "Sent HTTP/IPv6 response: %d bytes from [%s] to [%s] (device: %s)\n",
 			len(response), ipReply.SrcIP, ipReply.DstIP, device.Name)
 	}

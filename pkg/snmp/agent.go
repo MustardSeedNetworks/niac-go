@@ -1,15 +1,16 @@
-// Package snmp implements SNMP agent functionality including MIB management and trap sending
+// Package snmp implements SNMP agent functionality including MIB management and trap sending.
 package snmp
 
 import (
 	"fmt"
-	"log"
+	"log/slog"
 	"net"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/gosnmp/gosnmp"
+
 	"github.com/krisarmstrong/niac-go/pkg/config"
 )
 
@@ -22,6 +23,15 @@ const (
 	unknownPlaceholder = "Unknown"
 )
 
+// Package-local aliases for exported constants.
+const (
+	millisecsPerCentisec = MillisecsPerCentisec
+	maxUint32            = MaxUint32Value
+	debugLevelVerbose    = DebugLevelVerbose
+	debugLevelDebug      = DebugLevelDebug
+	minRedactLen         = MinRedactLen
+)
+
 // Agent represents an SNMP agent instance for a device.
 type Agent struct {
 	device     *config.Device
@@ -29,6 +39,7 @@ type Agent struct {
 	community  string
 	startTime  time.Time
 	debugLevel int
+	logger     *slog.Logger
 	mu         sync.RWMutex
 }
 
@@ -50,6 +61,7 @@ func NewAgentWithCommunity(device *config.Device, community string, debugLevel i
 		community:  community,
 		startTime:  time.Now(),
 		debugLevel: debugLevel,
+		logger:     slog.Default(),
 	}
 	if agent.community == "" {
 		agent.community = config.DefaultSNMPCommunity
@@ -94,9 +106,9 @@ func (a *Agent) initializeSystemMIB() {
 
 		ms := min(
 			// Convert to hundredths of second
-			uptime.Milliseconds()/10, 0xFFFFFFFF)
+			uptime.Milliseconds()/millisecsPerCentisec, maxUint32)
 
-		timeticks := uint32(ms) // #nosec G115 -- uptime from time calculation, bounded
+		timeticks := safeUint32(ms)
 
 		return &OIDValue{
 			Type:  gosnmp.TimeTicks,
@@ -148,8 +160,8 @@ func (a *Agent) initializeSystemMIB() {
 		Value: sysServices,
 	})
 
-	if a.debugLevel >= 2 {
-		log.Printf("Initialized system MIB for device %s", a.device.Name)
+	if a.debugLevel >= debugLevelVerbose {
+		a.logger.Debug("Initialized system MIB", "device", a.device.Name)
 	}
 }
 
@@ -173,8 +185,15 @@ func (a *Agent) LoadWalkFile(filename string) error {
 	}
 
 	if a.debugLevel >= 1 {
-		log.Printf("Loaded %d OIDs from walk file %s for device %s",
-			len(entries), filename, a.device.Name)
+		a.logger.Debug(
+			"Loaded OIDs from walk file",
+			"count",
+			len(entries),
+			"filename",
+			filename,
+			"device",
+			a.device.Name,
+		)
 	}
 
 	return nil
@@ -190,8 +209,8 @@ func (a *Agent) HandleGet(oid string) (*OIDValue, error) {
 		return nil, fmt.Errorf("%w: %s", ErrNoSuchObject, oid)
 	}
 
-	if a.debugLevel >= 3 {
-		log.Printf("SNMP GET %s = %v (device: %s)", oid, value.Value, a.device.Name)
+	if a.debugLevel >= debugLevelDebug {
+		a.logger.Debug("SNMP GET", "oid", oid, "value", value.Value, "device", a.device.Name)
 	}
 
 	return value, nil
@@ -207,9 +226,18 @@ func (a *Agent) HandleGetNext(oid string) (string, *OIDValue, error) {
 		return "", nil, ErrEndOfMIBView
 	}
 
-	if a.debugLevel >= 3 {
-		log.Printf("SNMP GET-NEXT %s -> %s = %v (device: %s)",
-			oid, nextOID, value.Value, a.device.Name)
+	if a.debugLevel >= debugLevelDebug {
+		a.logger.Debug(
+			"SNMP GET-NEXT",
+			"oid",
+			oid,
+			"next_oid",
+			nextOID,
+			"value",
+			value.Value,
+			"device",
+			a.device.Name,
+		)
 	}
 
 	return nextOID, value, nil
@@ -237,9 +265,18 @@ func (a *Agent) HandleGetBulk(oid string, maxRepetitions int) ([]OIDResult, erro
 		currentOID = nextOID
 	}
 
-	if a.debugLevel >= 3 {
-		log.Printf("SNMP GET-BULK %s (max=%d) returned %d results (device: %s)",
-			oid, maxRepetitions, len(results), a.device.Name)
+	if a.debugLevel >= debugLevelDebug {
+		a.logger.Debug(
+			"SNMP GET-BULK",
+			"oid",
+			oid,
+			"max_repetitions",
+			maxRepetitions,
+			"results",
+			len(results),
+			"device",
+			a.device.Name,
+		)
 	}
 
 	return results, nil
@@ -256,8 +293,8 @@ func (a *Agent) SetOID(oid string, value *OIDValue) error {
 
 	a.mib.Set(oid, value)
 
-	if a.debugLevel >= 2 {
-		log.Printf("SNMP SET %s = %v (device: %s)", oid, value.Value, a.device.Name)
+	if a.debugLevel >= debugLevelVerbose {
+		a.logger.Debug("SNMP SET", "oid", oid, "value", value.Value, "device", a.device.Name)
 	}
 
 	return nil
@@ -275,11 +312,18 @@ func (a *Agent) RedactedCommunity() string {
 		return "[EMPTY]"
 	}
 
-	if len(a.community) <= 2 {
+	if len(a.community) <= minRedactLen {
 		return "**"
 	}
 	// Show first and last character only
-	return string(a.community[0]) + strings.Repeat("*", len(a.community)-2) + string(a.community[len(a.community)-1])
+	return string(
+		a.community[0],
+	) + strings.Repeat(
+		"*",
+		len(a.community)-minRedactLen,
+	) + string(
+		a.community[len(a.community)-1],
+	)
 }
 
 // RedactCommunityString redacts a community string for safe logging
@@ -289,11 +333,11 @@ func RedactCommunityString(community string) string {
 		return "[EMPTY]"
 	}
 
-	if len(community) <= 2 {
+	if len(community) <= minRedactLen {
 		return "**"
 	}
 
-	return string(community[0]) + strings.Repeat("*", len(community)-2) + string(community[len(community)-1])
+	return string(community[0]) + strings.Repeat("*", len(community)-minRedactLen) + string(community[len(community)-1])
 }
 
 // ProcessPDU processes SNMP PDU variables and returns response variables
@@ -307,16 +351,34 @@ func (a *Agent) ProcessPDU(pduType gosnmp.PDUType, vars []gosnmp.SnmpPDU, maxRep
 	case gosnmp.GetBulkRequest:
 		reps := int(maxRepetitions)
 		if reps <= 0 {
-			reps = 10
+			reps = SNMPRetryCount
 		}
 
-		if reps > 50 {
-			reps = 50
+		if reps > MaxOIDResultSize {
+			reps = MaxOIDResultSize
 		}
 
 		return a.processGetBulkRequestVars(vars, reps)
+	case gosnmp.Sequence,
+		gosnmp.GetResponse,
+		gosnmp.SetRequest,
+		gosnmp.Trap,
+		gosnmp.InformRequest,
+		gosnmp.SNMPv2Trap,
+		gosnmp.Report:
+		// Return error PDU for unsupported PDU types
+		name := ""
+		if len(vars) > 0 {
+			name = vars[0].Name
+		}
+
+		return []gosnmp.SnmpPDU{{
+			Name:  name,
+			Type:  gosnmp.NoSuchObject,
+			Value: nil,
+		}}
 	default:
-		// Return error PDU
+		// Unknown PDU type - return error response
 		name := ""
 		if len(vars) > 0 {
 			name = vars[0].Name
