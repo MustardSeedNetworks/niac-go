@@ -1,27 +1,16 @@
 // Copyright (c) 2025 Mustard Seed Networks. All rights reserved.
 
 /**
- * State Management
+ * State Management Stores
  *
- * This directory contains state management stores.
- * Use Zustand or similar for global state management.
- *
- * Example store pattern:
- *
- * import { create } from 'zustand';
- *
- * interface DeviceStore {
- *   devices: Device[];
- *   selectedDevice: Device | null;
- *   setSelectedDevice: (device: Device | null) => void;
- * }
- *
- * export const useDeviceStore = create<DeviceStore>((set) => ({
- *   devices: [],
- *   selectedDevice: null,
- *   setSelectedDevice: (device) => set({ selectedDevice: device }),
- * }));
+ * Centralized state management using Zustand.
+ * Follows the same patterns as stem/seed projects.
  */
 
-// Placeholder - Add stores here
-export {};
+// Re-export types for convenience
+export type { DeviceStoreState } from './device-store';
+export { useDeviceStore } from './device-store';
+export type { SimulationStoreState } from './simulation-store';
+export { useSimulationStore } from './simulation-store';
+export type { UIStoreState } from './ui-store';
+export { useUIStore } from './ui-store';

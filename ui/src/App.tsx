@@ -214,7 +214,7 @@ const navGroups: SidebarNavGroup[] = [
 
 export default function App() {
   const { data: version } = useApiResource(fetchVersion, [], {
-    intervalMs: POLL_INTERVALS.VERY_SLOW,
+    intervalMs: POLL_INTERVALS.verySlow,
   });
 
   return (

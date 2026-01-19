@@ -86,7 +86,7 @@ export const TrafficSection: FC<ProtocolSectionProps> = ({
                     updateTraffic({
                       ...baseConfig,
                       arpAnnouncements: {
-                        ...baseConfig.arpAnnouncements,
+                        enabled: baseConfig.arpAnnouncements?.enabled ?? true,
                         interval: Number.parseInt(e.target.value, 10),
                       },
                     });
@@ -139,8 +139,9 @@ export const TrafficSection: FC<ProtocolSectionProps> = ({
                       updateTraffic({
                         ...baseConfig,
                         periodicPings: {
-                          ...baseConfig.periodicPings,
+                          enabled: baseConfig.periodicPings?.enabled ?? true,
                           interval: Number.parseInt(e.target.value, 10),
+                          payloadSize: baseConfig.periodicPings?.payloadSize ?? 56,
                         },
                       });
                     }}
@@ -157,7 +158,8 @@ export const TrafficSection: FC<ProtocolSectionProps> = ({
                       updateTraffic({
                         ...baseConfig,
                         periodicPings: {
-                          ...baseConfig.periodicPings,
+                          enabled: baseConfig.periodicPings?.enabled ?? true,
+                          interval: baseConfig.periodicPings?.interval ?? 30,
                           payloadSize: Number.parseInt(e.target.value, 10),
                         },
                       });
@@ -213,8 +215,10 @@ export const TrafficSection: FC<ProtocolSectionProps> = ({
                         updateTraffic({
                           ...baseConfig,
                           randomTraffic: {
-                            ...baseConfig.randomTraffic,
+                            enabled: baseConfig.randomTraffic?.enabled ?? true,
                             interval: Number.parseInt(e.target.value, 10),
+                            packetCount: baseConfig.randomTraffic?.packetCount ?? 5,
+                            patterns: baseConfig.randomTraffic?.patterns ?? [],
                           },
                         });
                       }}
@@ -231,8 +235,10 @@ export const TrafficSection: FC<ProtocolSectionProps> = ({
                         updateTraffic({
                           ...baseConfig,
                           randomTraffic: {
-                            ...baseConfig.randomTraffic,
+                            enabled: baseConfig.randomTraffic?.enabled ?? true,
+                            interval: baseConfig.randomTraffic?.interval ?? 60,
                             packetCount: Number.parseInt(e.target.value, 10),
+                            patterns: baseConfig.randomTraffic?.patterns ?? [],
                           },
                         });
                       }}
@@ -254,12 +260,14 @@ export const TrafficSection: FC<ProtocolSectionProps> = ({
                           )}
                           onChange={(e) => {
                             const baseConfig = getTrafficConfig();
-                            const patterns = baseConfig.randomTraffic.patterns || [];
+                            const patterns = baseConfig.randomTraffic?.patterns ?? [];
                             if (e.target.checked) {
                               updateTraffic({
                                 ...baseConfig,
                                 randomTraffic: {
-                                  ...baseConfig.randomTraffic,
+                                  enabled: baseConfig.randomTraffic?.enabled ?? true,
+                                  interval: baseConfig.randomTraffic?.interval ?? 60,
+                                  packetCount: baseConfig.randomTraffic?.packetCount ?? 5,
                                   patterns: [...patterns, pattern],
                                 },
                               });
@@ -267,7 +275,9 @@ export const TrafficSection: FC<ProtocolSectionProps> = ({
                               updateTraffic({
                                 ...baseConfig,
                                 randomTraffic: {
-                                  ...baseConfig.randomTraffic,
+                                  enabled: baseConfig.randomTraffic?.enabled ?? true,
+                                  interval: baseConfig.randomTraffic?.interval ?? 60,
+                                  packetCount: baseConfig.randomTraffic?.packetCount ?? 5,
                                   patterns: patterns.filter((p) => p !== pattern),
                                 },
                               });

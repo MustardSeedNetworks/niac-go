@@ -748,31 +748,31 @@ export const TopologyPage: FC = () => {
                 <tbody className="divide-y divide-white/5 text-gray-300">
                   {neighbors.map((neighbor, idx) => (
                     <tr
-                      key={`${neighbor.LocalDevice}-${neighbor.RemoteDevice}-${idx}`}
+                      key={`${neighbor.localDevice}-${neighbor.remoteDevice}-${idx}`}
                       className="hover:bg-white/5"
                     >
-                      <td className="px-4 py-3 font-semibold text-white">{neighbor.LocalDevice}</td>
-                      <td className="px-4 py-3 text-white">{neighbor.RemoteDevice}</td>
+                      <td className="px-4 py-3 font-semibold text-white">{neighbor.localDevice}</td>
+                      <td className="px-4 py-3 text-white">{neighbor.remoteDevice}</td>
                       <td className="px-4 py-3">
                         <Tag
                           colorScheme={
-                            neighbor.Protocol === 'LLDP'
+                            neighbor.protocol === 'LLDP'
                               ? 'purple'
-                              : neighbor.Protocol === 'CDP'
+                              : neighbor.protocol === 'CDP'
                                 ? 'blue'
-                                : neighbor.Protocol === 'EDP'
+                                : neighbor.protocol === 'EDP'
                                   ? 'green'
                                   : 'gray'
                           }
                         >
-                          {neighbor.Protocol}
+                          {neighbor.protocol}
                         </Tag>
                       </td>
-                      <td className="px-4 py-3 font-mono text-xs">{neighbor.RemotePort || '—'}</td>
+                      <td className="px-4 py-3 font-mono text-xs">{neighbor.remotePort || '—'}</td>
                       <td className="px-4 py-3 font-mono text-xs text-blue-300">
-                        {neighbor.ManagementAddress || '—'}
+                        {neighbor.managementAddress || '—'}
                       </td>
-                      <td className="px-4 py-3 text-gray-400">{neighbor.TTL}s</td>
+                      <td className="px-4 py-3 text-gray-400">{neighbor.ttl}s</td>
                     </tr>
                   ))}
                 </tbody>

@@ -34,19 +34,19 @@ const AppContext = createContext<AppContextValue | null>(null);
 export function AppProvider({ children }: { children: ReactNode }) {
   // Fetch shared data at the top level
   const stats = useApiResource(fetchStats, [], {
-    intervalMs: POLL_INTERVALS.MEDIUM,
+    intervalMs: POLL_INTERVALS.medium,
   });
   const devices = useApiResource(fetchDevices, [], {
-    intervalMs: POLL_INTERVALS.SLOW,
+    intervalMs: POLL_INTERVALS.slow,
   });
   const history = useApiResource(fetchHistory, [], {
-    intervalMs: POLL_INTERVALS.SLOW,
+    intervalMs: POLL_INTERVALS.slow,
   });
   const neighbors = useApiResource(fetchNeighbors, [], {
-    intervalMs: POLL_INTERVALS.MEDIUM,
+    intervalMs: POLL_INTERVALS.medium,
   });
   const version = useApiResource(fetchVersion, [], {
-    intervalMs: POLL_INTERVALS.VERY_SLOW,
+    intervalMs: POLL_INTERVALS.verySlow,
   });
   const errorTypes = useApiResource(fetchErrorTypes, []);
   const interfaces = useApiResource(fetchInterfaces, []);

@@ -29,7 +29,7 @@ type LucideIcon = FC<{ className?: string }>;
 export const deviceTypeIcons: Record<DeviceType, LucideIcon> = {
   router: Router,
   switch: Server,
-  accessPoint: Wifi,
+  access_point: Wifi,
   firewall: Shield,
   server: HardDrive,
   workstation: Monitor,
@@ -66,7 +66,7 @@ export type TagColorScheme = 'blue' | 'green' | 'purple' | 'yellow' | 'red' | 'g
 export const deviceTypeColors: Record<DeviceType, TagColorScheme> = {
   router: 'blue',
   switch: 'green',
-  accessPoint: 'purple',
+  access_point: 'purple',
   firewall: 'red',
   server: 'yellow',
   workstation: 'gray',

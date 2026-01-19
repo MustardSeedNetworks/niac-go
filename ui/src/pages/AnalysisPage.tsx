@@ -57,7 +57,7 @@ function formatRelativeTime(timestamp: string): string {
  */
 export const AnalysisPage: FC = () => {
   const { data: history } = useApiResource(fetchHistory, [], {
-    intervalMs: POLL_INTERVALS.SLOW,
+    intervalMs: POLL_INTERVALS.slow,
   });
 
   return (

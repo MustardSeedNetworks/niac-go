@@ -33,14 +33,14 @@ function formatDuration(value: string): string {
  */
 export const DashboardPage: FC = () => {
   const { data: stats } = useApiResource(fetchStats, [], {
-    intervalMs: POLL_INTERVALS.MEDIUM,
+    intervalMs: POLL_INTERVALS.medium,
   });
   const { data: history } = useApiResource(fetchHistory, [], {
-    intervalMs: POLL_INTERVALS.SLOW,
+    intervalMs: POLL_INTERVALS.slow,
   });
   const { data: errorInfo } = useApiResource(fetchErrorTypes, []);
   const { data: simStatus } = useApiResource(fetchSimulationStatus, [], {
-    intervalMs: POLL_INTERVALS.FAST,
+    intervalMs: POLL_INTERVALS.fast,
   });
   const [showErrors, setShowErrors] = useState(false);
 

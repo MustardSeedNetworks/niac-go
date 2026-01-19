@@ -62,12 +62,12 @@ const matchesSearchQuery = (device: Device, query: string): boolean => {
   if (!normalized) {
     return true;
   }
-  return (
+  return Boolean(
     device.hostname.toLowerCase().includes(normalized) ||
-    device.mac.toLowerCase().includes(normalized) ||
-    device.ip?.toLowerCase().includes(normalized) ||
-    device.ips?.some((ip) => ip.toLowerCase().includes(normalized)) ||
-    device.type?.toLowerCase().includes(normalized)
+      device.mac.toLowerCase().includes(normalized) ||
+      device.ip?.toLowerCase().includes(normalized) ||
+      device.ips?.some((ip) => ip.toLowerCase().includes(normalized)) ||
+      device.type?.toLowerCase().includes(normalized),
   );
 };
 

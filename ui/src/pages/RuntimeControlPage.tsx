@@ -26,7 +26,7 @@ import { formatBytes, formatTime, formatUptime, getErrorMessage } from '../utils
 export const RuntimeControlPage: FC = () => {
   const [refetchTrigger, setRefetchTrigger] = useState(0);
   const { data: simStatus } = useApiResource(fetchSimulationStatus, [refetchTrigger], {
-    intervalMs: POLL_INTERVALS.FAST,
+    intervalMs: POLL_INTERVALS.fast,
   });
   const { data: interfaces } = useApiResource(fetchInterfaces, []);
 

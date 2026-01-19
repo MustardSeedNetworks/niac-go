@@ -166,7 +166,7 @@ const LogEntryRow: FC<{ log: LogEntry; searchQuery: string }> = memo(({ log, sea
   }, [hasDetails]);
 
   const handleRowKeyDown = useCallback(
-    (event: React.KeyboardEvent<HTMLDivElement>) => {
+    (event: React.KeyboardEvent<HTMLButtonElement>) => {
       if (!hasDetails) {
         return;
       }

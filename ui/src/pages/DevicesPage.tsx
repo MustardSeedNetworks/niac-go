@@ -32,7 +32,7 @@ const DeviceListCard: FC = () => {
     data: devices,
     loading,
     error,
-  } = useApiResource(fetchDevices, [], { intervalMs: POLL_INTERVALS.SLOW });
+  } = useApiResource(fetchDevices, [], { intervalMs: POLL_INTERVALS.slow });
 
   return (
     <Card className="border-white/5 bg-gray-900/70">
@@ -157,10 +157,10 @@ DeviceRow.displayName = 'DeviceRow';
  */
 const ConfigEditorCard: FC = () => {
   const { data, loading, error } = useApiResource(fetchConfig, [], {
-    intervalMs: POLL_INTERVALS.VERY_SLOW,
+    intervalMs: POLL_INTERVALS.verySlow,
   });
   const { data: walkFiles } = useApiResource(() => fetchFiles('walks'), [], {
-    intervalMs: POLL_INTERVALS.VERY_SLOW,
+    intervalMs: POLL_INTERVALS.verySlow,
   });
   const [value, setValue] = useState('');
   const [dirty, setDirty] = useState(false);
