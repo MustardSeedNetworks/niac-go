@@ -475,6 +475,9 @@ linters:
       - text: 'comment on exported \S+ \S+ should be of the form ".+"'
         source: '// ?(nolint|TODO)'
         linters: [ revive, staticcheck ]
+      - text: 'avoid meaningless package names'
+        path: 'internal/api/'
+        linters: [ revive ]
       - path: '_test\.go'
         linters:
           - bodyclose
@@ -490,70 +493,70 @@ linters:
         linters:
           - testpackage
       # Integration tests have their own package organization.
-      - path: 'test/integration/.*_test\.go'
+      - path: 'tests/integration/.*_test\.go'
         linters:
           - testpackage
       # Interactive tests require access to unexported functions.
-      - path: 'pkg/interactive/.*_test\.go'
+      - path: 'internal/interactive/.*_test\.go'
         linters:
           - testpackage
       # Daemon tests require access to unexported functions.
-      - path: 'pkg/daemon/.*_test\.go'
+      - path: 'internal/daemon/.*_test\.go'
         linters:
           - testpackage
       # IPC tests require access to unexported functions.
-      - path: 'pkg/ipc/.*_test\.go'
+      - path: 'internal/ipc/.*_test\.go'
         linters:
           - testpackage
       # Capture tests require internal testing for race condition handling.
-      - path: 'pkg/capture/.*_test\.go'
+      - path: 'internal/capture/.*_test\.go'
         linters:
           - testpackage
       # Config tests require access to validation internals.
-      - path: 'pkg/config/.*_test\.go'
+      - path: 'internal/config/.*_test\.go'
         linters:
           - testpackage
       # Device tests require access to simulator internals.
-      - path: 'pkg/device/.*_test\.go'
+      - path: 'internal/device/.*_test\.go'
         linters:
           - testpackage
-      # HTTPAPI tests require access to handler internals.
-      - path: 'pkg/httpapi/.*_test\.go'
+      # API tests require access to handler internals.
+      - path: 'internal/api/.*_test\.go'
         linters:
           - testpackage
       # SNMP tests require access to agent internals.
-      - path: 'pkg/snmp/.*_test\.go'
+      - path: 'internal/protocols/snmp/.*_test\.go'
         linters:
           - testpackage
       # Interactive UI styles are idiomatic globals for lipgloss/bubbletea.
-      - path: 'pkg/interactive/interactive\.go'
+      - path: 'internal/interactive/interactive\.go'
         linters:
           - gochecknoglobals
       # Logging color codes are package-level constants (immutable after init).
-      - path: 'pkg/logging/colors\.go'
+      - path: 'internal/logging/colors\.go'
         linters:
           - gochecknoglobals
       # PCAP cache is a package-level singleton (common pattern).
-      - path: 'pkg/httpapi/pcap\.go'
+      - path: 'internal/api/pcap\.go'
         linters:
           - gochecknoglobals
       # Device random source is a package-level singleton.
-      - path: 'pkg/device/random\.go'
+      - path: 'internal/device/random\.go'
         linters:
           - gochecknoglobals
       # SNMP MIB standard OIDs are package-level constants.
-      - path: 'pkg/snmp/mib\.go'
+      - path: 'internal/protocols/snmp/mib\.go'
         linters:
           - gochecknoglobals
       # SNMP secure random is a package-level singleton.
-      - path: 'pkg/snmp/securerandom\.go'
+      - path: 'internal/protocols/snmp/securerandom\.go'
         linters:
           - gochecknoglobals
       # Template registry is a package-level singleton.
-      - path: 'pkg/templates/template\.go'
+      - path: 'internal/templates/template\.go'
         linters:
           - gochecknoglobals
       # HTTP security block lists are idiomatic package-level lookup tables.
-      - path: 'pkg/httpapi/server\.go'
+      - path: 'internal/api/server\.go'
         linters:
           - gochecknoglobals
