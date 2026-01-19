@@ -2,7 +2,7 @@
   "name": "niac",
   "version": "2.10.0",
   "private": true,
-  "description": "NIAC - Network Infrastructure Analysis & Capture",
+  "description": "NIAC - Network Infrastructure Analysis & Capture - Mustard Seed Networks",
   "type": "module",
   "engines": {
     "node": ">=25.2.1",
@@ -24,13 +24,16 @@
     "build-storybook": "cd ui && npm run build-storybook"
   },
   "devDependencies": {
-    "@commitlint/cli": "^20.2.0",
-    "@commitlint/config-conventional": "^20.2.0",
-    "husky": "^9.1.7"
+    "@commitlint/cli": "20.2.0",
+    "@commitlint/config-conventional": "20.2.0",
+    "husky": "9.1.7",
+    "lint-staged": "16.2.7"
+  },
+  "lint-staged": {
+    "ui/src/**/*.{ts,tsx}": "cd ui && npx biome check --write",
+    "*.{json,md,yml,yaml}": "cd ui && npx biome format --write"
   },
   "commitlint": {
-    "extends": [
-      "@commitlint/config-conventional"
-    ]
+    "extends": ["@commitlint/config-conventional"]
   }
 }

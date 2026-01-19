@@ -1,8 +1,10 @@
 # =============================================================================
 # NIAC CI Pipeline
 # =============================================================================
+# Network Infrastructure Analysis & Capture - Mustard Seed Networks
+#
 # Runs on: push to main, pull requests to main
-# Jobs: backend, frontend, security, build
+# Jobs: backend, frontend, security, quality, build
 # =============================================================================
 
 name: CI
@@ -157,13 +159,99 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@0.33.1
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1'
+
+      - name: Upload Trivy results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-results.sarif
+
+  # ===========================================================================
+  # Quality Checks
+  # ===========================================================================
+  quality:
+    name: Quality Checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Check for sensitive files
+        run: |
+          SENSITIVE_FILES=$(find . -type f \( \
+            -name "*.env" -o \
+            -name "*.pem" -o \
+            -name "*.key" -o \
+            -name "*secret*" -o \
+            -name "*credential*" \
+          \) ! -path "./.git/*" ! -name "*.example" ! -name "*.sample" 2>/dev/null || true)
+          if [ -n "$SENSITIVE_FILES" ]; then
+            echo "Sensitive files found:"
+            echo "$SENSITIVE_FILES"
+            exit 1
+          fi
+          echo "No sensitive files found"
+
+      - name: Check for TODO/FIXME in critical paths
+        run: |
+          if grep -rn "TODO\|FIXME" --include="*.go" internal/ cmd/ pkg/ 2>/dev/null | head -20; then
+            echo "Note: TODOs found in Go code (info only)"
+          fi
+
+      - name: Check for unsafe logging patterns
+        run: |
+          echo "Checking for dangerous logging patterns..."
+          DANGEROUS_PATTERNS=(
+            'log\.Print.*password'
+            'log\.Print.*token'
+            'log\.Print.*Authorization'
+            'log\.Print.*apikey'
+            'log\.Print.*secret'
+            'fmt\.Printf.*password'
+            'fmt\.Printf.*token'
+          )
+          VIOLATIONS=0
+          for pattern in "${DANGEROUS_PATTERNS[@]}"; do
+            if grep -rn -E "$pattern" --include="*.go" --exclude="*_test.go" internal/ cmd/ pkg/ 2>/dev/null; then
+              echo "Found dangerous logging pattern: $pattern"
+              VIOLATIONS=$((VIOLATIONS + 1))
+            fi
+          done
+          if [ $VIOLATIONS -gt 0 ]; then
+            echo ""
+            echo "ERROR: Found $VIOLATIONS unsafe logging pattern(s)"
+            echo "Avoid logging sensitive data like passwords, tokens, or secrets"
+            exit 1
+          fi
+          echo "No unsafe logging patterns detected"
+
   # ===========================================================================
   # Build
   # ===========================================================================
   build:
-    name: Build
+    name: Build (${{ matrix.os }}-${{ matrix.arch }})
     needs: [backend, frontend]
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: linux
+            arch: amd64
+            goos: linux
+            goarch: amd64
+          - os: linux
+            arch: arm64
+            goos: linux
+            goarch: arm64
     steps:
       - uses: actions/checkout@v6
 
@@ -184,24 +272,28 @@ jobs:
 
       - name: Copy UI dist to embed directory
         run: |
-          rm -rf pkg/api/ui/*
+          rm -rf pkg/api/ui/* 2>/dev/null || true
+          mkdir -p pkg/api/ui
           cp -r ui/dist/* pkg/api/ui/
 
       - name: Build binary
         env:
-          CGO_ENABLED: '1'
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: '0'
         run: |
           VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo "dev")
-          go build -trimpath \
+          go build -trimpath -buildvcs=false \
             -ldflags="-s -w -X main.version=${VERSION}" \
-            -o niac ./cmd/niac
+            -o niac-${{ matrix.os }}-${{ matrix.arch }} ./cmd/niac
 
       - name: Verify binary
-        run: ./niac --help || ./niac version || echo "Binary runs"
+        if: matrix.arch == 'amd64'
+        run: ./niac-${{ matrix.os }}-${{ matrix.arch }} --help || ./niac-${{ matrix.os }}-${{ matrix.arch }} version || echo "Binary runs"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v6
         with:
-          name: niac-linux-amd64
-          path: niac
+          name: niac-${{ matrix.os }}-${{ matrix.arch }}
+          path: niac-${{ matrix.os }}-${{ matrix.arch }}
           retention-days: 7
