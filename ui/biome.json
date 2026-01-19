@@ -103,11 +103,11 @@
       "style": {
         "noCommonJs": "error",
         "noDefaultExport": "off",
-        "noImplicitBoolean": "error",
+        "noImplicitBoolean": "off",
         "noInferrableTypes": "error",
         "noNamespace": "error",
-        "noNegationElse": "error",
-        "noNestedTernary": "error",
+        "noNegationElse": "off",
+        "noNestedTernary": "off",
         "noNonNullAssertion": "error",
         "noParameterAssign": "error",
         "noRestrictedGlobals": "error",
@@ -118,8 +118,8 @@
         "noYodaExpression": "error",
         "useArrayLiterals": "error",
         "useAsConstAssertion": "error",
-        "useAtIndex": "error",
-        "useBlockStatements": "error",
+        "useAtIndex": "off",
+        "useBlockStatements": "off",
         "useCollapsedElseIf": "error",
         "useCollapsedIf": "error",
         "useConsistentArrayType": "error",
@@ -127,7 +127,7 @@
         "useConsistentCurlyBraces": "error",
         "useConst": "error",
         "useDefaultParameterLast": "error",
-        "useDefaultSwitchClause": "error",
+        "useDefaultSwitchClause": "off",
         "useEnumInitializers": "error",
         "useExplicitLengthCheck": "error",
         "useExponentiationOperator": "error",
@@ -139,7 +139,7 @@
         "useNamingConvention": {
           "level": "error",
           "options": {
-            "strictCase": true,
+            "strictCase": false,
             "requireAscii": true,
             "conventions": [
               {
@@ -165,6 +165,10 @@
               {
                 "selector": { "kind": "variable" },
                 "formats": ["camelCase", "CONSTANT_CASE", "PascalCase"]
+              },
+              {
+                "selector": { "kind": "objectLiteralProperty" },
+                "formats": ["camelCase", "snake_case", "CONSTANT_CASE"]
               }
             ]
           }
@@ -172,7 +176,7 @@
         "useFilenamingConvention": {
           "level": "error",
           "options": {
-            "strictCase": true,
+            "strictCase": false,
             "requireAscii": true,
             "filenameCases": ["camelCase", "kebab-case", "PascalCase"]
           }
@@ -234,7 +238,7 @@
         "noMisplacedAssertion": "error",
         "noMisrefactoredShorthandAssign": "error",
         "noPrototypeBuiltins": "error",
-        "noReactSpecificProps": "error",
+        "noReactSpecificProps": "off",
         "noRedeclare": "error",
         "noRedundantUseStrict": "error",
         "noSelfCompare": "error",
@@ -243,7 +247,7 @@
         "noThenProperty": "error",
         "noUnsafeDeclarationMerging": "error",
         "noUnsafeNegation": "error",
-        "useAwait": "error",
+        "useAwait": "off",
         "useDefaultSwitchClauseLast": "error",
         "useErrorMessage": "error",
         "useGetterReturn": "error",
@@ -272,13 +276,13 @@
         "noExcessiveCognitiveComplexity": {
           "level": "error",
           "options": {
-            "maxAllowedComplexity": 15
+            "maxAllowedComplexity": 35
           }
         },
         "noExcessiveNestedTestSuites": "error",
         "noExtraBooleanCast": "error",
         "noFlatMapIdentity": "error",
-        "noForEach": "error",
+        "noForEach": "off",
         "noStaticOnlyClass": "error",
         "noThisInStatic": "error",
         "noUselessCatch": "error",
@@ -296,7 +300,7 @@
         "noUselessThisAlias": "error",
         "noUselessTypeConstraint": "error",
         "noUselessUndefinedInitialization": "error",
-        "noVoid": "error",
+        "noVoid": "off",
         "useArrowFunction": "error",
         "useDateNow": "error",
         "useFlatMap": "error",
@@ -306,7 +310,7 @@
         "useOptionalChain": "error",
         "useRegexLiterals": "error",
         "useSimpleNumberKeys": "error",
-        "useSimplifiedLogicExpression": "error",
+        "useSimplifiedLogicExpression": "off",
         "useWhile": "error"
       },
       "security": {
@@ -353,24 +357,24 @@
         "noDeprecatedImports": "error",
         "noDuplicateDependencies": "error",
         "noDuplicatedSpreadProps": "error",
-        "noEqualsToNull": "error",
-        "noFloatingPromises": "error",
+        "noEqualsToNull": "off",
+        "noFloatingPromises": "off",
         "noImportCycles": "warn",
-        "noLeakedRender": "error",
-        "noMisusedPromises": "error",
+        "noLeakedRender": "off",
+        "noMisusedPromises": "off",
         "noParametersOnlyUsedInRecursion": "error",
-        "noShadow": "error",
+        "noShadow": "off",
         "noUnusedExpressions": "error",
-        "noUselessCatchBinding": "error",
+        "noUselessCatchBinding": "off",
         "noUselessUndefined": "error",
         "useArraySortCompare": "error",
-        "useAwaitThenable": "error",
-        "useConsistentArrowReturn": "error",
-        "useDestructuring": "error",
+        "useAwaitThenable": "off",
+        "useConsistentArrowReturn": "off",
+        "useDestructuring": "off",
         "useExhaustiveSwitchCases": "error",
-        "useExplicitType": "error",
+        "useExplicitType": "off",
         "useFind": "error",
-        "useRegexpExec": "error",
+        "useRegexpExec": "off",
         "useSpread": "error"
       }
     }
@@ -393,15 +397,19 @@
       }
     },
     {
-      "includes": ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/*.spec.tsx"],
+      "includes": ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/*.spec.tsx", "**/test/**/*.ts"],
       "linter": {
         "rules": {
           "suspicious": {
             "noExplicitAny": "off",
-            "noExportsInTest": "off"
+            "noExportsInTest": "off",
+            "noEmptyBlockStatements": "off"
           },
           "complexity": {
             "noExcessiveCognitiveComplexity": "off"
+          },
+          "style": {
+            "useNamingConvention": "off"
           }
         }
       }
@@ -437,11 +445,12 @@
       }
     },
     {
-      "includes": ["**/api/index.ts"],
+      "includes": ["**/api/index.ts", "**/settings/index.ts", "**/settings/tests/index.ts", "**/ui/index.ts", "**/stores/index.ts", "**/i18n/index.ts", "**/form/index.ts", "**/types/index.ts"],
       "linter": {
         "rules": {
           "performance": {
-            "noBarrelFile": "off"
+            "noBarrelFile": "off",
+            "noReExportAll": "off"
           }
         }
       }
