@@ -537,7 +537,7 @@ func (s *Server) handleDeviceDelete(w http.ResponseWriter, r *http.Request, host
 		return
 	}
 
-	// Broadcast change via WebSocket
+	// Broadcast change via SSE
 	if s.sseHub != nil {
 		s.sseHub.BroadcastLog("info", "Device deleted: "+hostname)
 	}
@@ -616,7 +616,7 @@ func (s *Server) handleDeviceClone(w http.ResponseWriter, r *http.Request, hostn
 		return
 	}
 
-	// Broadcast change via WebSocket
+	// Broadcast change via SSE
 	if s.sseHub != nil {
 		s.sseHub.BroadcastLog("info", fmt.Sprintf("Device cloned: %s -> %s", hostname, req.NewHostname))
 	}

@@ -294,32 +294,32 @@
 
 **Priority:** P0/P1 - Critical for WebUI parity
 
-#### Task 3.1: WebSocket Infrastructure
-**Status:** Not Started  
-**Time:** 5 days  
+#### Task 3.1: ~~WebSocket~~ SSE Infrastructure ✅ COMPLETE
+**Status:** COMPLETE
+**Time:** 5 days
 **Files:**
-- `internal/server/websocket.go` (see guide line 1650)
-- `webui/src/hooks/useWebSocket.ts` (see guide line 1750)
+- `internal/api/sse.go` (implemented)
+- `ui/src/hooks/useEventSource.ts` (implemented)
 - Tests
 
 **Deliverables:**
-- [ ] WebSocket hub (Go backend)
-- [ ] Endpoints: /ws/packets, /ws/logs, /ws/stats
-- [ ] React hook for WS connection
-- [ ] Auto-reconnect logic
-- [ ] Rate limiting
+- [x] SSE hub (Go backend)
+- [x] Endpoints: /api/v1/stream/logs, /api/v1/stream/stats
+- [x] React hook for SSE connection
+- [x] Auto-reconnect logic (browser native)
+- [x] Rate limiting
 
 **Acceptance:**
-- Connect to ws://localhost:8080/ws/packets
-- Receive packet stream
-- Auto-reconnect on disconnect
+- Connect to /api/v1/stream/logs
+- Receive log stream
+- Auto-reconnect on disconnect (browser native)
 
 ---
 
 #### Task 3.2: Packet Inspector Page
-**Status:** Not Started  
-**Time:** 7 days  
-**Dependencies:** WebSocket infrastructure  
+**Status:** Not Started
+**Time:** 7 days
+**Dependencies:** SSE infrastructure (DONE)  
 **Files:**
 - `webui/src/pages/PacketInspectorPage.tsx` (see guide line 1850)
 - `webui/src/components/HexDumpViewer.tsx`
@@ -327,7 +327,7 @@
 - `webui/src/components/PacketDetails.tsx`
 
 **Deliverables:**
-- [ ] Real-time packet stream via WS
+- [ ] Real-time packet stream via SSE
 - [ ] Packet list (last 100)
 - [ ] Hex dump viewer
 - [ ] Packet details (parsed fields)
@@ -345,14 +345,14 @@
 #### Task 3.3: Debug Console Page
 **Status:** Not Started  
 **Time:** 5 days  
-**Dependencies:** WebSocket infrastructure  
+**Dependencies:** SSE infrastructure (DONE)
 **Files:**
 - `webui/src/pages/DebugConsolePage.tsx` (see guide line 2000)
 - `webui/src/components/LogViewer.tsx`
 - `webui/src/components/LogFilters.tsx`
 
 **Deliverables:**
-- [ ] Real-time log stream via WS
+- [ ] Real-time log stream via SSE
 - [ ] Filter by level
 - [ ] Filter by protocol
 - [ ] Search/highlight
@@ -489,7 +489,7 @@
 ```
 Week 1-4:   Dev1 [IPC + status + inject + monitor + logs]
 Week 5-9:   Dev2 [TUI validation + templates + edit + PCAP + alerts]
-Week 10-17: Dev3 [WebSocket + packets + logs + debug + diff + PCAP + SNMP + templates]
+Week 10-17: Dev3 [SSE + packets + logs + debug + diff + PCAP + SNMP + templates]
 Week 18-20: ALL [Integration testing]
 Week 21-24: ALL [Polish, docs, bug fixes]
 Week 25-34: ALL [Advanced features (remote, plugins), final QA]
@@ -521,7 +521,7 @@ Week 25-34: ALL [Advanced features (remote, plugins), final QA]
 - ✅ Run history
 
 ### Week 10-12: WebUI Foundation
-- ✅ WebSocket infrastructure
+- ✅ SSE infrastructure
 - ✅ Packet Inspector page
 
 ### Week 13-15: WebUI Enhanced
@@ -560,7 +560,7 @@ Week 25-34: ALL [Advanced features (remote, plugins), final QA]
 ```
 Dev1: Completed IPC client, starting status command. No blockers.
 Dev2: Config validation 80% done, need review on modal UI. No blockers.
-Dev3: WebSocket infrastructure working, starting packet inspector. No blockers.
+Dev3: SSE infrastructure working, starting packet inspector. No blockers.
 ```
 
 ---

@@ -657,41 +657,38 @@ case "v":
 
 ### Phase 4: WebUI Live Features (Weeks 15-20)
 
-#### Feature 4.1: WebSocket Infrastructure
-**Files:** `internal/server/websocket.go`, `webui/src/hooks/useWebSocket.ts`  
-**Effort:** 5 days
+#### Feature 4.1: SSE Infrastructure ✅ COMPLETE
+**Files:** `internal/api/sse.go`, `ui/src/hooks/useEventSource.ts`
+**Status:** IMPLEMENTED
 
 **Specification:**
-- WebSocket endpoints: `/ws/packets`, `/ws/logs`, `/ws/stats`
-- Auto-reconnect on disconnect
-- Backpressure handling
-- Rate limiting (max 100 msg/sec)
+- SSE endpoints: `/api/v1/stream/logs`, `/api/v1/stream/stats`
+- Auto-reconnect (browser native)
+- Rate limiting
+- Heartbeat support
 
 **Backend:**
 ```go
-// internal/server/websocket.go
-type WSHub struct {
-    clients    map[*Client]bool
-    broadcast  chan []byte
-    register   chan *Client
-    unregister chan *Client
-}
+// internal/api/sse.go
+func (s *Server) handleSSEStream(w http.ResponseWriter, r *http.Request) {
+    w.Header().Set("Content-Type", "text/event-stream")
+    w.Header().Set("Cache-Control", "no-cache")
+    w.Header().Set("Connection", "keep-alive")
 
-func (h *WSHub) Run() {
+    flusher, ok := w.(http.Flusher)
+    if !ok {
+        http.Error(w, "SSE not supported", http.StatusInternalServerError)
+        return
+    }
+
+    // Stream data
     for {
         select {
-        case client := <-h.register:
-            h.clients[client] = true
-        case client := <-h.unregister:
-            delete(h.clients, client)
-        case message := <-h.broadcast:
-            for client := range h.clients {
-                select {
-                case client.send <- message:
-                default:
-                    delete(h.clients, client)
-                }
-            }
+        case data := <-s.dataChan:
+            fmt.Fprintf(w, "data: %s\n\n", data)
+            flusher.Flush()
+        case <-r.Context().Done():
+            return
         }
     }
 }
@@ -699,32 +696,28 @@ func (h *WSHub) Run() {
 
 **Frontend:**
 ```typescript
-// webui/src/hooks/useWebSocket.ts
-export function useWebSocket(url: string) {
+// ui/src/hooks/useEventSource.ts
+export function useEventSource(url: string) {
   const [data, setData] = useState<any>(null);
   const [connected, setConnected] = useState(false);
 
   useEffect(() => {
-    const ws = new WebSocket(url);
-    
-    ws.onopen = () => setConnected(true);
-    ws.onclose = () => {
-      setConnected(false);
-      // Auto-reconnect after 2s
-      setTimeout(() => window.location.reload(), 2000);
-    };
-    ws.onmessage = (event) => {
+    const eventSource = new EventSource(url);
+
+    eventSource.onopen = () => setConnected(true);
+    eventSource.onerror = () => setConnected(false);
+    eventSource.onmessage = (event) => {
       setData(JSON.parse(event.data));
     };
 
-    return () => ws.close();
+    return () => eventSource.close();
   }, [url]);
 
   return { data, connected };
 }
 ```
 
-**Time Estimate:** 5 days
+**Time Estimate:** COMPLETED
 
 ---
 
@@ -806,7 +799,7 @@ func TestStatusCommand(t *testing.T) {
 
 **Test Scenarios:**
 1. CLI → IPC Server → TUI (status query)
-2. WebUI → WebSocket → Backend (packet stream)
+2. WebUI → SSE → Backend (packet stream)
 3. TUI → Config Edit → Reload → Validation
 
 ### End-to-End Tests
@@ -914,7 +907,7 @@ Brief description of changes
 - **Total: 25 days (~5 weeks)**
 
 ### Phase 3: WebUI Live Features (Weeks 10-17)
-- WebSocket Infrastructure: 5 days
+- SSE Infrastructure: DONE (already implemented)
 - Packet Inspector Page: 7 days
 - Debug Console Page: 5 days
 - Per-Protocol Debug Levels: 3 days
@@ -942,7 +935,7 @@ Brief description of changes
 1. ✅ IPC Socket Infrastructure (IN PROGRESS)
 2. `niac status` Command
 3. `niac inject` Command
-4. WebSocket Infrastructure
+4. ✅ SSE Infrastructure (DONE)
 
 ### P1 (High Value)
 5. `niac monitor` Command
@@ -1018,9 +1011,9 @@ Brief description of changes
 | CLI monitor | 🔴 Not Started | - | 4d | - | - |
 | TUI validation | 🔴 Not Started | - | 2d | - | - |
 | TUI templates | 🔴 Not Started | - | 3d | - | - |
-| WebSocket | 🔴 Not Started | - | 5d | - | - |
-| Packet Inspector | 🔴 Not Started | - | 7d | - | Blocked by WS |
-| Debug Console | 🔴 Not Started | - | 5d | - | Blocked by WS |
+| SSE Infrastructure | 🟢 Done | - | 5d | - | Implemented |
+| Packet Inspector | 🔴 Not Started | - | 7d | - | SSE ready |
+| Debug Console | 🔴 Not Started | - | 5d | - | SSE ready |
 
 Legend: 🟢 Done | 🟡 In Progress | 🔴 Not Started | 🔵 Blocked
 
@@ -1047,9 +1040,9 @@ case "v": // New key binding
     return m, nil
 ```
 
-**3. WebUI WebSocket:**
+**3. WebUI SSE:**
 ```typescript
-const { data, connected } = useWebSocket('/ws/packets');
+const { data, connected } = useEventSource('/api/v1/stream/packets');
 
 useEffect(() => {
     if (data) {
@@ -1065,10 +1058,11 @@ useEffect(() => {
 - Secure by default (filesystem permissions)
 - No port conflicts
 
-**Why WebSockets for WebUI?**
+**Why SSE for WebUI?**
 - Low latency for real-time updates
-- Browser native support
-- Bidirectional communication
+- Browser native support with auto-reconnect
+- Simpler than WebSocket (HTTP-based)
+- No CORS issues (same-origin by default)
 
 **Why Separate IPC Package?**
 - Reusable across CLI/TUI/WebUI

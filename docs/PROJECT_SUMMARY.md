@@ -54,8 +54,8 @@ Achieve **100% feature parity** across all three NiAC interfaces (CLI, TUI, WebU
 12. Search mode ([/] key)
 
 **WebUI: 8 features**
-1. Live packet hex dump (WebSocket)
-2. Live debug console (WebSocket)
+1. Live packet hex dump (SSE)
+2. Live debug console (SSE)
 3. Per-protocol debug levels (19 protocols)
 4. Config diff/merge tool
 5. PCAP analyzer
@@ -152,10 +152,10 @@ Achieve **100% feature parity** across all three NiAC interfaces (CLI, TUI, WebU
 - Enhanced interactivity
 
 ### Developer 3: WebUI Lead
-**Focus:** Web user interface and real-time features  
-**Workload:** 40 days (8 weeks)  
+**Focus:** Web user interface and real-time features
+**Workload:** 40 days (8 weeks)
 **Key Deliverables:**
-- WebSocket infrastructure
+- SSE infrastructure (implemented)
 - 8 new pages/features
 - Live streaming capabilities
 
@@ -175,7 +175,7 @@ Achieve **100% feature parity** across all three NiAC interfaces (CLI, TUI, WebU
 ├─────────────────────────────────────────────────────┤
 │ Phase 3: TUI Complete (Weeks 9-14)                  │
 │ - All 12 TUI features                               │
-│ - WebUI WebSocket infrastructure                    │
+│ - WebUI SSE infrastructure (done)                   │
 ├─────────────────────────────────────────────────────┤
 │ Phase 4: WebUI Complete (Weeks 15-20)               │
 │ - Live pages (packets, logs)                        │
@@ -292,13 +292,10 @@ cd pkg/interactive
 
 **Developer 3 (WebUI Lead):**
 ```bash
-git checkout -b feature/websocket-infrastructure
-cd internal/server
-# Create websocket.go (see guide line 1650)
-cd ../../webui/src/hooks
-# Create useWebSocket.ts (see guide line 1750)
-# Add tests
-# Submit PR
+# SSE infrastructure already implemented in:
+# - internal/api/sse.go
+# - ui/src/hooks/useEventSource.ts
+# Focus on new pages/features using existing SSE hooks
 ```
 
 ---

@@ -16,59 +16,10 @@
 
 ## Critical Issues
 
-### CRIT-001: WebSocket CheckOrigin Always Returns True
-**Category:** Security | **File:** `pkg/api/websocket.go:360-373`
+### CRIT-001: ~~WebSocket CheckOrigin Always Returns True~~ RESOLVED
+**Status:** RESOLVED - Migrated to SSE
 
-**Problem:**
-```go
-CheckOrigin: func(r *http.Request) bool {
-    origin := r.Header.Get("Origin")
-    if origin == "" {
-        return true  // Allows any origin
-    }
-    return true  // Always allows
-},
-```
-
-**Risk:** Cross-origin WebSocket hijacking, real-time data exfiltration
-
-**Fix:**
-```go
-CheckOrigin: func(r *http.Request) bool {
-    origin := r.Header.Get("Origin")
-    if origin == "" {
-        return true // Same-origin requests don't send Origin
-    }
-    
-    // Parse and validate origin
-    parsedOrigin, err := url.Parse(origin)
-    if err != nil {
-        return false
-    }
-    
-    // Check against allowed origins (configure via environment)
-    allowedOrigins := getAllowedOrigins() // from config
-    for _, allowed := range allowedOrigins {
-        if parsedOrigin.Host == allowed {
-            return true
-        }
-    }
-    
-    // Allow same-host requests
-    if parsedOrigin.Host == r.Host {
-        return true
-    }
-    
-    slog.Warn("[WS] Rejected cross-origin request", "origin", origin, "host", r.Host)
-    return false
-},
-```
-
-**Testing:**
-- [ ] Unit test: Reject unknown origins
-- [ ] Unit test: Accept configured origins
-- [ ] Unit test: Accept same-origin requests
-- [ ] Integration test: WebSocket connection from different origin fails
+**Resolution:** The WebSocket implementation has been removed and replaced with Server-Sent Events (SSE) via `internal/api/sse.go`. SSE does not require WebSocket upgrade handshakes and uses standard HTTP CORS headers for origin validation. The `sse.go` implementation includes proper origin validation via the CORS middleware.
 
 ---
 
@@ -674,10 +625,9 @@ test.describe('Dashboard', () => {
 **Problem:** Window between create and delete where file readable
 **Fix:** Use `os.CreateTemp` with immediate `os.Chmod(0600)`
 
-### HIGH-003: Localhost Check Missing Port/IPv6
-**File:** `pkg/api/websocket.go:369`
-**Problem:** `r.Host` might be `localhost:8080`
-**Fix:** Parse host properly, handle IPv6
+### HIGH-003: ~~Localhost Check Missing Port/IPv6~~ RESOLVED
+**Status:** RESOLVED - Migrated to SSE
+**Resolution:** WebSocket code removed. SSE implementation uses standard HTTP CORS middleware.
 
 ### HIGH-004: No Device Hostname Format Validation
 **File:** `pkg/api/devices.go:271-276`
@@ -823,7 +773,7 @@ test.describe('Dashboard', () => {
 ## Implementation Timeline
 
 ### Phase 1: Critical Security (Week 1)
-- [ ] CRIT-001: WebSocket CORS fix
+- [x] CRIT-001: ~~WebSocket CORS fix~~ RESOLVED (migrated to SSE)
 - [ ] CRIT-002: YAML validation
 - [ ] CRIT-003: Path traversal fix
 - [ ] CRIT-004: PCAP cache limits
@@ -855,7 +805,7 @@ test.describe('Dashboard', () => {
 ## Verification Checklist
 
 ### Security Verification
-- [ ] Penetration test WebSocket endpoints
+- [ ] Penetration test SSE endpoints
 - [ ] Fuzz test YAML parser
 - [ ] Path traversal testing with symlinks
 - [ ] Load test with memory monitoring
@@ -874,7 +824,7 @@ test.describe('Dashboard', () => {
 - [ ] Bundle size < 500KB gzipped
 - [ ] Lighthouse score > 90
 - [ ] No memory leaks (heap profiling)
-- [ ] WebSocket reconnection works
+- [ ] SSE reconnection works
 
 ---
 

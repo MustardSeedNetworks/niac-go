@@ -107,7 +107,7 @@
 ### v2.1.0 - Enhanced Web Features
 **Target**: 3-4 months
 
-- [ ] WebSocket for true real-time updates (if SSE not sufficient)
+- [x] SSE for true real-time updates (implemented)
 - [ ] Device topology visualization (simple SVG/Canvas, no heavy library)
 - [ ] Configuration editor (YAML textarea with validation)
 - [ ] Log viewer with filtering
@@ -235,7 +235,7 @@ docker run -p 8080:8080 niac-go web eth0 config.yaml
 ### v2.0
 - **Backend**: Go with Gin/Echo web framework
 - **Frontend**: React/Vue/Svelte (TBD)
-- **API**: REST + WebSocket
+- **API**: REST + SSE (Server-Sent Events)
 - **Container**: Docker, Kubernetes
 - **Database**: SQLite (embedded) or PostgreSQL (optional)
 - **Auth**: JWT tokens
@@ -272,7 +272,7 @@ docker run -p 8080:8080 niac-go web eth0 config.yaml
 ## Open Questions
 
 1. **Config v1.3**: Should we support config encryption for sensitive data (SNMP communities, passwords)?
-2. **Web UI v2.0**: Real-time vs polling for updates? (WebSocket vs HTTP polling)
+2. **Web UI v2.0**: Real-time vs polling for updates? → RESOLVED: SSE (Server-Sent Events) implemented
 3. **Containers v2.0**: Support rootless containers or require privileged mode?
 4. **Cloud v2.x**: Should we build a hosted SaaS version?
 5. **Licensing**: Keep open source or dual-license (open + commercial)?

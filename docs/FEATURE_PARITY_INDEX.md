@@ -124,7 +124,7 @@ niac/
 
 **Key Takeaways:**
 - IPC socket for CLI remote control
-- WebSocket for WebUI real-time features
+- SSE for WebUI real-time features
 - No breaking changes, all additive
 
 ---
@@ -306,8 +306,8 @@ git checkout -b feature/your-feature-name
 12. [/] Search mode
 
 ### WebUI (8 features)
-1. Live packet hex dump (WebSocket)
-2. Live debug console (WebSocket)
+1. Live packet hex dump (SSE)
+2. Live debug console (SSE)
 3. Per-protocol debug levels (19 protocols)
 4. Config diff/merge tool
 5. PCAP analyzer
@@ -326,7 +326,7 @@ git checkout -b feature/your-feature-name
 | **CLI inject** | 🔴 Not Started | 0% | Needs IPC client |
 | **TUI validation** | 🔴 Not Started | 0% | Can start now |
 | **TUI templates** | 🔴 Not Started | 0% | Can start now |
-| **WebSocket** | 🔴 Not Started | 0% | Can start now |
+| **SSE** | 🟢 Done | 100% | Implemented in sse.go |
 | **All others** | 🔴 Not Started | 0% | See dependencies |
 
 **Legend:**

@@ -53,10 +53,10 @@
 
 ### Week 8-12: WebUI Live Features
 
-#### 4.1 WebSocket Infrastructure
-**Files:** 
-- `internal/server/websocket.go`
-- `webui/src/hooks/useWebSocket.ts`
+#### 4.1 SSE Infrastructure ✅ COMPLETE
+**Files:**
+- `internal/api/sse.go` (implemented)
+- `ui/src/hooks/useEventSource.ts` (implemented)
 
 #### 4.2 Live Packet Inspector Page
 **Files:**
@@ -76,7 +76,7 @@
 1. ✅ IPC socket infrastructure (enables CLI remote control)
 2. ✅ `niac status` command (most requested)
 3. ✅ `niac inject` command (critical for automation)
-4. ✅ WebSocket infrastructure (enables WebUI live features)
+4. ✅ SSE infrastructure (enables WebUI live features) - DONE
 5. ✅ TUI template browser (quick wins)
 
 ### Medium Priority (Do Next)
@@ -113,7 +113,7 @@ git checkout -b feature/ipc-socket
 git checkout -b feature/cli-status
 git checkout -b feature/cli-inject
 git checkout -b feature/tui-templates
-git checkout -b feature/websocket-infra
+git checkout -b feature/sse-infra  # Already implemented
 git checkout -b feature/webui-hex-dump
 
 # Merge to main after review
@@ -130,7 +130,7 @@ git checkout -b feature/webui-hex-dump
 - [ ] Phase 2.1: TUI Config Validation
 - [ ] Phase 2.2: TUI Template Browser
 - [ ] Phase 2.3: TUI Quick Edit
-- [ ] Phase 3.1: WebSocket Infrastructure
+- [x] Phase 3.1: SSE Infrastructure (DONE)
 - [ ] Phase 3.2: WebUI Packet Inspector
 - [ ] Phase 3.3: WebUI Debug Console
 
