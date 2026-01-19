@@ -1,0 +1,33 @@
+#!/bin/bash
+set -e
+
+# Create niac user if it doesn't exist
+if ! getent passwd niac > /dev/null; then
+    useradd --system --no-create-home --shell /usr/sbin/nologin niac
+fi
+
+# Create required directories
+mkdir -p /etc/niac
+mkdir -p /var/lib/niac
+mkdir -p /var/log/niac
+
+# Set ownership
+chown -R niac:niac /etc/niac
+chown -R niac:niac /var/lib/niac
+chown -R niac:niac /var/log/niac
+
+# Set permissions
+chmod 750 /etc/niac
+chmod 750 /var/lib/niac
+chmod 750 /var/log/niac
+
+# Enable and start service
+systemctl daemon-reload
+systemctl enable niac.service
+
+echo "NIAC installed successfully."
+echo "Start with: systemctl start niac"
+
+#DEBHELPER#
+
+exit 0

@@ -27,10 +27,10 @@
 # =============================================================================
 
 # =============================================================================
-# Shared Infrastructure (version, colors, timers)
+# Shared Infrastructure (version, platform, colors)
 # =============================================================================
 
-include Makefile.common
+include mk/vars.mk
 
 # =============================================================================
 # Project Configuration
@@ -57,7 +57,9 @@ include mk/build.mk
 include mk/test.mk
 include mk/lint.mk
 include mk/security.mk
+include mk/package.mk
 include mk/deps.mk
+include mk/container.mk
 
 # =============================================================================
 # Version Information

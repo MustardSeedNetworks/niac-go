@@ -1,0 +1,25 @@
+#!/bin/bash
+set -e
+
+case "$1" in
+    purge)
+        # Remove user
+        if getent passwd niac > /dev/null; then
+            userdel niac || true
+        fi
+        # Remove directories
+        rm -rf /etc/niac
+        rm -rf /var/lib/niac
+        rm -rf /var/log/niac
+        ;;
+    remove|upgrade|failed-upgrade|abort-install|abort-upgrade|disappear)
+        ;;
+    *)
+        echo "postrm called with unknown argument '$1'" >&2
+        exit 1
+        ;;
+esac
+
+#DEBHELPER#
+
+exit 0

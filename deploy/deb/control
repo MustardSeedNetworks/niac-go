@@ -1,0 +1,24 @@
+Source: niac
+Section: net
+Priority: optional
+Maintainer: Kris Armstrong <kris@mustardseednetworks.com>
+Build-Depends: debhelper-compat (= 13), golang-go (>= 1.21), make
+Standards-Version: 4.6.0
+Homepage: https://github.com/krisarmstrong/niac
+Vcs-Browser: https://github.com/krisarmstrong/niac
+Vcs-Git: https://github.com/krisarmstrong/niac.git
+Rules-Requires-Root: no
+
+Package: niac
+Architecture: amd64 arm64
+Depends: ${shlibs:Depends}, ${misc:Depends}, systemd
+Description: NIAC - Network Infrastructure Agent Cluster
+ NIAC is a network device simulator supporting:
+  - SNMP agent simulation
+  - Device template management
+  - Walk file capture and replay
+  - Multi-device orchestration
+  - WebUI for configuration
+ .
+ This package provides the niac binary, systemd service,
+ and default configuration files.

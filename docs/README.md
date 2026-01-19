@@ -13,14 +13,14 @@ Comprehensive documentation for Network In A Can - Go Edition.
 ### User Guides
 
 - **[FAQ](FAQ.md)** - Frequently asked questions and troubleshooting
-- **[API Examples](API-EXAMPLES.md)** - curl, Python, JavaScript, Go, PowerShell examples
+- **[API Examples](API_EXAMPLES.md)** - curl, Python, JavaScript, Go, PowerShell examples
 - **[Performance Tuning](PERFORMANCE.md)** - Optimization guide for different workloads
 - **[Deployment Guide](DEPLOYMENT.md)** - Docker, Kubernetes, systemd, cloud deployments
-- **[CI/CD Integration](CI-CD.md)** - GitHub Actions, GitLab CI, Jenkins examples
+- **[CI/CD Integration](CI_CD.md)** - GitHub Actions, GitLab CI, Jenkins examples
 
 ### Protocol Guides
 
-- **[SNMP Walk Files](SNMP-WALKS.md)** - Creating, optimizing, and contributing walk files
+- **[SNMP Walk Files](SNMP_WALKS.md)** - Creating, optimizing, and contributing walk files
 - **DNS Configuration** - See [examples/dns-server.yaml](../examples/)
 - **DHCP Configuration** - See [examples/dhcp-server.yaml](../examples/)
 - **HTTP/FTP Configuration** - See [examples/](../examples/)
@@ -29,7 +29,7 @@ Comprehensive documentation for Network In A Can - Go Edition.
 
 - **[Architecture](../ARCHITECTURE.md)** - System design and internals
 - **[Contributing](../CONTRIBUTING.md)** - How to contribute
-- **[Breaking Changes Policy](BREAKING-CHANGES.md)** - Versioning and compatibility
+- **[Breaking Changes Policy](BREAKING_CHANGES.md)** - Versioning and compatibility
 
 ## API Reference
 
@@ -54,7 +54,7 @@ Comprehensive documentation for Network In A Can - Go Edition.
 | GET | `/csrf-token` | Get CSRF token | Yes | No |
 | GET | `/version` | API version | Yes | No |
 
-See [API-EXAMPLES.md](API-EXAMPLES.md) for detailed usage or [openapi.yaml](openapi.yaml) for the complete OpenAPI specification.
+See [API_EXAMPLES.md](API_EXAMPLES.md) for detailed usage or [openapi.yaml](openapi.yaml) for the complete OpenAPI specification.
 
 ### Prometheus Metrics
 

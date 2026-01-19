@@ -1,3 +1,7 @@
+# Build caches (never commit)
+.gocache/
+.gomodcache/
+
 # Binaries
 /niac
 /niac-convert
