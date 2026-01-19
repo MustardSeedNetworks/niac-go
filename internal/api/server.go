@@ -646,26 +646,26 @@ func isIPv6MappedLoopback(ip net.IP) bool {
 	return false
 }
 
-// Blocked hosts for SSRF protection.
-var blockedHosts = []string{
-	"localhost",
-	"localhost.localdomain",
-	"127.0.0.1",
-	"::1",
-	"0.0.0.0",
-	"0",
-	"[::1]",
-}
-
-// Metadata service hosts to block.
-var metadataHosts = []string{
-	"169.254.169.254", // AWS/GCP/Azure metadata service
-	"metadata.google.internal",
-	"metadata.goog",
-}
-
 // isBlockedHostname checks if a hostname is in the blocked list.
 func isBlockedHostname(host string) bool {
+	// Blocked hosts for SSRF protection.
+	blockedHosts := []string{
+		"localhost",
+		"localhost.localdomain",
+		"127.0.0.1",
+		"::1",
+		"0.0.0.0",
+		"0",
+		"[::1]",
+	}
+
+	// Metadata service hosts to block.
+	metadataHosts := []string{
+		"169.254.169.254", // AWS/GCP/Azure metadata service
+		"metadata.google.internal",
+		"metadata.goog",
+	}
+
 	lowerHost := strings.ToLower(host)
 
 	if slices.Contains(blockedHosts, lowerHost) {

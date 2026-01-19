@@ -556,7 +556,3 @@ linters:
       - path: 'internal/templates/template\.go'
         linters:
           - gochecknoglobals
-      # HTTP security block lists are idiomatic package-level lookup tables.
-      - path: 'internal/api/server\.go'
-        linters:
-          - gochecknoglobals
