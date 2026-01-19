@@ -9,7 +9,19 @@
     "npm": ">=11.7.0"
   },
   "scripts": {
-    "prepare": "husky"
+    "prepare": "husky",
+    "dev": "cd ui && npm run dev",
+    "build": "cd ui && npm run build",
+    "preview": "cd ui && npm run preview",
+    "lint": "cd ui && npm run lint",
+    "lint:fix": "cd ui && npm run lint:fix",
+    "format": "cd ui && npm run format",
+    "test": "cd ui && npm run test",
+    "test:watch": "cd ui && npm run test:watch",
+    "test:coverage": "cd ui && npm run test:coverage",
+    "test:e2e": "cd ui && npm run test:e2e",
+    "storybook": "cd ui && npm run storybook",
+    "build-storybook": "cd ui && npm run build-storybook"
   },
   "devDependencies": {
     "@commitlint/cli": "^20.2.0",
