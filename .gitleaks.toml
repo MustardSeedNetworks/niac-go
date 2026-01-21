@@ -39,6 +39,20 @@ paths = [
     '''docs/NetAllyAirMapper/.*''',
     '''docs/.*\.md$''',
     '''configs/.*\.yaml$''',
+    # Build artifacts and caches (gitignored)
+    '''build/.*''',
+    '''dist/.*''',
+    '''ui/dist/.*''',
+    '''ui/certs/.*''',
+    '''certs/.*''',
+    '''\.serena/.*''',
+    '''node_modules/.*''',
+    '''\.next/.*''',
+    '''coverage/.*''',
+    '''\.turbo/.*''',
+    '''pkg/.*''',
+    '''examples/.*''',
+    '''internal/templates/builtin/.*''',
 ]
 
 # Example/placeholder values commonly used in documentation
