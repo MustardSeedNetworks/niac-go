@@ -8,22 +8,36 @@ Wants=network-online.target
 Type=simple
 User=niac
 Group=niac
-ExecStart=/usr/bin/niac serve
+ExecStart=/usr/bin/niac daemon
 Restart=on-failure
 RestartSec=5
 StandardOutput=journal
 StandardError=journal
+
+# Network capabilities for packet capture and raw socket access
+AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN
+CapabilityBoundingSet=CAP_NET_RAW CAP_NET_ADMIN
 
 # Security hardening
 NoNewPrivileges=yes
 ProtectSystem=strict
 ProtectHome=yes
 PrivateTmp=yes
-ReadWritePaths=/var/lib/niac /var/log/niac
+ReadWritePaths=/var/lib/niac /var/log/niac /etc/niac
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+PrivateDevices=no
+# Note: PrivateDevices=no required for network interface access
 
 # Resource limits
 LimitNOFILE=65535
 LimitNPROC=4096
+
+# Environment
+Environment=HOME=/var/lib/niac
 
 [Install]
 WantedBy=multi-user.target

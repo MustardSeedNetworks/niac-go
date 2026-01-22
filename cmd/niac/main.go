@@ -106,6 +106,7 @@ func main() {
 		addMonitorCommand,
 		addNeighborsCommand,
 		addSanitizeCommand,
+		addServiceCommand,
 		addStatusCommand,
 		addTemplateCommand,
 		addTopologyCommand,

@@ -1,32 +1,87 @@
 #!/bin/bash
+# =============================================================================
+# NiAC - Post-installation Script (deb)
+# =============================================================================
+# Creates service user/group, sets capabilities, configures directories,
+# and enables the systemd service.
+# =============================================================================
 set -e
 
-# Create niac user if it doesn't exist
-if ! getent passwd niac > /dev/null; then
-    useradd --system --no-create-home --shell /usr/sbin/nologin niac
+SERVICE_USER="niac"
+SERVICE_GROUP="niac"
+BINARY_PATH="/usr/bin/niac"
+CONFIG_DIR="/etc/niac"
+DATA_DIR="/var/lib/niac"
+LOG_DIR="/var/log/niac"
+
+# Create service group if it doesn't exist
+if ! getent group "$SERVICE_GROUP" > /dev/null 2>&1; then
+    echo "Creating group: $SERVICE_GROUP"
+    groupadd --system "$SERVICE_GROUP"
 fi
 
-# Create required directories
-mkdir -p /etc/niac
-mkdir -p /var/lib/niac
-mkdir -p /var/log/niac
+# Create service user if it doesn't exist
+if ! getent passwd "$SERVICE_USER" > /dev/null 2>&1; then
+    echo "Creating user: $SERVICE_USER"
+    useradd --system \
+        --gid "$SERVICE_GROUP" \
+        --home-dir "$DATA_DIR" \
+        --no-create-home \
+        --shell /usr/sbin/nologin \
+        --comment "NiAC Network Device Simulator" \
+        "$SERVICE_USER"
+fi
 
-# Set ownership
-chown -R niac:niac /etc/niac
-chown -R niac:niac /var/lib/niac
-chown -R niac:niac /var/log/niac
+# Create and set permissions on directories
+for dir in "$CONFIG_DIR" "$DATA_DIR" "$LOG_DIR"; do
+    if [ ! -d "$dir" ]; then
+        mkdir -p "$dir"
+    fi
+    chown "$SERVICE_USER:$SERVICE_GROUP" "$dir"
+    chmod 750 "$dir"
+done
 
-# Set permissions
-chmod 750 /etc/niac
-chmod 750 /var/lib/niac
-chmod 750 /var/log/niac
+# Set capabilities for raw socket access (required for packet capture)
+# - CAP_NET_RAW: Required for raw packet capture and injection
+# - CAP_NET_ADMIN: Required for network interface control
+if command -v setcap &> /dev/null; then
+    setcap 'cap_net_raw,cap_net_admin=+ep' "$BINARY_PATH" || {
+        echo "Warning: Could not set capabilities on $BINARY_PATH"
+        echo "The service may need to run as root for full functionality."
+    }
+else
+    echo "Warning: setcap not found. Install libcap2-bin for non-root operation."
+    echo "  sudo apt install libcap2-bin"
+fi
 
-# Enable and start service
+# Reload systemd daemon
 systemctl daemon-reload
+
+# Enable service to start on boot
 systemctl enable niac.service
 
-echo "NIAC installed successfully."
-echo "Start with: systemctl start niac"
+# Start the service
+if systemctl is-active --quiet niac.service; then
+    echo "Restarting niac service..."
+    systemctl restart niac.service
+else
+    echo "Starting niac service..."
+    systemctl start niac.service || true
+fi
+
+echo ""
+echo "=========================================="
+echo "  NiAC installed successfully!"
+echo "=========================================="
+echo ""
+echo "Web interface: http://localhost:8080"
+echo ""
+echo "Commands:"
+echo "  View logs:      journalctl -u niac -f"
+echo "  Restart:        sudo systemctl restart niac"
+echo "  Status:         sudo systemctl status niac"
+echo "  Stop:           sudo systemctl stop niac"
+echo ""
 
 #DEBHELPER#
 
