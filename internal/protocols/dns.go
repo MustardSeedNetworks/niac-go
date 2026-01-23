@@ -14,6 +14,7 @@ import (
 	"github.com/google/gopacket/layers"
 
 	"github.com/krisarmstrong/niac-go/internal/config"
+	"github.com/krisarmstrong/niac-go/internal/safeconv"
 )
 
 // DNS protocol constants.
@@ -230,7 +231,7 @@ func (h *DNSHandler) LoadDeviceDNSConfig(device *config.Device) {
 		set.forward[name] = append(set.forward[name], dnsRecord{
 			ip:    rec.IP,
 			ttl:   rec.TTL,
-			rcode: layers.DNSResponseCode(safeDNSRCode(rec.RCode)),
+			rcode: layers.DNSResponseCode(safeconv.DNSRCode(rec.RCode)),
 		})
 	}
 
@@ -238,7 +239,7 @@ func (h *DNSHandler) LoadDeviceDNSConfig(device *config.Device) {
 		set.reverse[rec.IP.String()] = dnsPTR{
 			name:  strings.ToLower(strings.TrimSuffix(rec.Name, ".")),
 			ttl:   rec.TTL,
-			rcode: layers.DNSResponseCode(safeDNSRCode(rec.RCode)),
+			rcode: layers.DNSResponseCode(safeconv.DNSRCode(rec.RCode)),
 		}
 	}
 

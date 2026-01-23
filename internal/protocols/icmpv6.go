@@ -10,6 +10,7 @@ import (
 	"github.com/google/gopacket/layers"
 
 	"github.com/krisarmstrong/niac-go/internal/config"
+	"github.com/krisarmstrong/niac-go/internal/safeconv"
 )
 
 // ICMPv6 message type constants.
@@ -505,7 +506,7 @@ func getRAHopLimit(device *config.Device, raCfg *config.Icmpv6RouterAdvertisemen
 	}
 
 	if raCfg != nil && raCfg.CurHopLimit > 0 {
-		hopLimit = safeUint8(raCfg.CurHopLimit)
+		hopLimit = safeconv.Uint8(raCfg.CurHopLimit)
 	}
 
 	return hopLimit
@@ -530,7 +531,7 @@ func getRAFlags(raCfg *config.Icmpv6RouterAdvertisement) byte {
 
 func getRALifetime(raCfg *config.Icmpv6RouterAdvertisement) uint16 {
 	if raCfg != nil && raCfg.Lifetime > 0 {
-		return safeUint16(raCfg.Lifetime)
+		return safeconv.Uint16(raCfg.Lifetime)
 	}
 
 	return uint16(icmpv6DefaultRALifetime)
@@ -541,7 +542,7 @@ func getRATimers(raCfg *config.Icmpv6RouterAdvertisement) (uint32, uint32) {
 		return 0, 0
 	}
 
-	return safeUint32(raCfg.ReachableTime), safeUint32(raCfg.RetransTimer)
+	return safeconv.Uint32(raCfg.ReachableTime), safeconv.Uint32(raCfg.RetransTimer)
 }
 
 // buildRAOptions builds the router advertisement options.
@@ -564,7 +565,7 @@ func buildRAOptions(device *config.Device, raCfg *config.Icmpv6RouterAdvertiseme
 func appendMTUOption(options []byte, raCfg *config.Icmpv6RouterAdvertisement) []byte {
 	mtuVal := uint32(icmpv6DefaultMTU)
 	if raCfg != nil && raCfg.MTU > 0 {
-		mtuVal = safeUint32(raCfg.MTU)
+		mtuVal = safeconv.Uint32(raCfg.MTU)
 	}
 
 	options = append(options, ICMPv6OptMTU, 1, 0, 0)
@@ -610,9 +611,9 @@ func appendSinglePrefix(options []byte, p *config.Icmpv6PrefixInfo) []byte {
 	options = append(options, pFlags)
 
 	valid := make([]byte, icmpv6Uint32Size)
-	binary.BigEndian.PutUint32(valid, safeUint32(p.ValidLifetime))
+	binary.BigEndian.PutUint32(valid, safeconv.Uint32(p.ValidLifetime))
 	options = append(options, valid...)
-	binary.BigEndian.PutUint32(valid, safeUint32(p.PreferredLifetime))
+	binary.BigEndian.PutUint32(valid, safeconv.Uint32(p.PreferredLifetime))
 	options = append(options, valid...)
 	options = append(options, []byte{0, 0, 0, 0}...)
 
@@ -679,7 +680,7 @@ func (h *ICMPv6Handler) sendICMPv6PacketWithDevice(srcIP, dstIP net.IP, srcMAC, 
 		Version:      icmpv6IPv6Version,
 		TrafficClass: 0,
 		FlowLabel:    0,
-		Length:       safeUint16(icmpLen),
+		Length:       safeconv.Uint16(icmpLen),
 		NextHeader:   layers.IPProtocolICMPv6,
 		HopLimit:     hopLimit,
 		SrcIP:        srcIP,

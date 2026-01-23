@@ -52,9 +52,7 @@ export const ProtocolTreeLayer: FC<ProtocolTreeLayerProps> = memo(({ layer, onFi
                 type="button"
                 onClick={() => handleFieldClick(field)}
                 className={`block w-full text-left py-0.5 px-1 -ml-1 rounded text-xs ${
-                  hasRange
-                    ? 'hover:bg-yellow-900/30 cursor-pointer'
-                    : 'cursor-default'
+                  hasRange ? 'hover:bg-yellow-900/30 cursor-pointer' : 'cursor-default'
                 }`}
                 disabled={!hasRange}
               >

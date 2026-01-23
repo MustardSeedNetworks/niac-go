@@ -1,10 +1,10 @@
 import { ArrowDown, ArrowUp, Plus, RotateCcw, Trash2, X } from 'lucide-react';
 import { type FC, memo, useCallback, useState } from 'react';
+import { Button } from '../ui/Button';
+import { SmallText } from '../ui/Typography';
 import type { ColoringRule } from '../utils/coloring-rules';
 import { generateRuleId } from '../utils/coloring-rules';
 import { validate } from '../utils/filter/parser';
-import { Button } from '../ui/Button';
-import { SmallText } from '../ui/Typography';
 
 interface ColoringRulesPanelProps {
   rules: ColoringRule[];
@@ -60,7 +60,9 @@ const RuleRow: FC<{
         value={rule.filter}
         onChange={(e) => onChange({ ...rule, filter: e.target.value })}
         className={`flex-1 bg-transparent border-b text-sm font-mono text-white focus:outline-none px-1 ${
-          filterError ? 'border-red-500/60 focus:border-red-400' : 'border-white/10 focus:border-violet-400'
+          filterError
+            ? 'border-red-500/60 focus:border-red-400'
+            : 'border-white/10 focus:border-violet-400'
         }`}
         placeholder="Filter expression"
       />
@@ -188,11 +190,7 @@ export const ColoringRulesPanel: FC<ColoringRulesPanelProps> = memo(
           {/* Header */}
           <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
             <h3 className="text-lg font-semibold text-white">Coloring Rules</h3>
-            <button
-              type="button"
-              onClick={onClose}
-              className="p-1 text-gray-400 hover:text-white"
-            >
+            <button type="button" onClick={onClose} className="p-1 text-gray-400 hover:text-white">
               <X className="h-5 w-5" />
             </button>
           </div>

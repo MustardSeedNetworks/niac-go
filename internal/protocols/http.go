@@ -14,6 +14,7 @@ import (
 	"github.com/google/gopacket/layers"
 
 	"github.com/krisarmstrong/niac-go/internal/config"
+	"github.com/krisarmstrong/niac-go/internal/safeconv"
 )
 
 // HTTP parsing constants.
@@ -415,7 +416,7 @@ func (h *HTTPHandler) sendResponse(
 		SrcPort: tcpLayer.DstPort,
 		DstPort: tcpLayer.SrcPort,
 		Seq:     tcpLayer.Ack,
-		Ack:     tcpLayer.Seq + safeUint32(payloadLen),
+		Ack:     tcpLayer.Seq + safeconv.Uint32(payloadLen),
 		PSH:     true,
 		ACK:     true,
 		Window:  httpTCPWindowSize,
@@ -555,7 +556,7 @@ func (h *HTTPHandler) sendResponseV6(
 		SrcPort: tcpLayer.DstPort,
 		DstPort: tcpLayer.SrcPort,
 		Seq:     tcpLayer.Ack,
-		Ack:     tcpLayer.Seq + safeUint32(payloadLen2),
+		Ack:     tcpLayer.Seq + safeconv.Uint32(payloadLen2),
 		PSH:     true,
 		ACK:     true,
 		Window:  httpTCPWindowSize,

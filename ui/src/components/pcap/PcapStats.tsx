@@ -4,43 +4,13 @@ import type { PcapStats as PcapStatsType } from '../../api/types';
 import { Card, CardContent } from '../../ui/Card';
 import { Tag } from '../../ui/Tag';
 import { H2, SmallText } from '../../ui/Typography';
+import { formatBytes, formatDurationMs } from '../../utils/format';
+import { getProtocolColor } from '../../utils/protocol-colors';
 
 interface PcapStatsProps {
   stats: PcapStatsType | null;
   filename: string | null;
   fileSize: number | null;
-}
-
-/**
- * Format bytes to human-readable string
- */
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) {
-    return `${bytes} B`;
-  }
-  if (bytes < 1024 * 1024) {
-    return `${(bytes / 1024).toFixed(1)} KB`;
-  }
-  if (bytes < 1024 * 1024 * 1024) {
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  }
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
-}
-
-/**
- * Format duration in milliseconds to human-readable string
- */
-function formatDuration(ms: number): string {
-  if (ms < 1000) {
-    return `${ms.toFixed(0)} ms`;
-  }
-  if (ms < 60000) {
-    return `${(ms / 1000).toFixed(2)} s`;
-  }
-  if (ms < 3600000) {
-    return `${(ms / 60000).toFixed(1)} min`;
-  }
-  return `${(ms / 3600000).toFixed(1)} hr`;
 }
 
 /**
@@ -60,27 +30,6 @@ function formatTimestamp(timestamp: string): string {
   } catch {
     return timestamp;
   }
-}
-
-/**
- * Get color scheme for protocol tag
- */
-function getProtocolColor(
-  protocol: string,
-): 'blue' | 'green' | 'yellow' | 'purple' | 'gray' | 'red' {
-  const colors: Record<string, 'blue' | 'green' | 'yellow' | 'purple' | 'gray' | 'red'> = {
-    arp: 'yellow',
-    icmp: 'blue',
-    dns: 'green',
-    tcp: 'purple',
-    udp: 'gray',
-    http: 'blue',
-    https: 'green',
-    dhcp: 'yellow',
-    ssh: 'red',
-    tls: 'green',
-  };
-  return colors[protocol.toLowerCase()] || 'gray';
 }
 
 /**
@@ -292,7 +241,7 @@ export const PcapStats: FC<PcapStatsProps> = memo(({ stats, filename, fileSize }
             <StatBlock
               icon={<Clock className="h-4 w-4 text-green-400" />}
               label="Duration"
-              value={formatDuration(stats.timeRange.durationMs)}
+              value={formatDurationMs(stats.timeRange.durationMs)}
             />
             <StatBlock
               icon={<Network className="h-4 w-4 text-yellow-400" />}

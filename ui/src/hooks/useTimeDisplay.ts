@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { safeGetItem, safeSetItem } from '../utils/storage';
-import { type TimeDisplayMode, nextTimeDisplayMode } from '../utils/time-display';
+import { nextTimeDisplayMode, type TimeDisplayMode } from '../utils/time-display';
 
 const STORAGE_KEY = 'niac-time-display-mode';
 

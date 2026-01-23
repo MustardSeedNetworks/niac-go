@@ -12,6 +12,7 @@ import (
 	"github.com/google/gopacket/layers"
 
 	"github.com/krisarmstrong/niac-go/internal/config"
+	"github.com/krisarmstrong/niac-go/internal/safeconv"
 )
 
 // iPerf3 default port.
@@ -522,7 +523,7 @@ func (h *IPerf3Handler) sendResults(
 	response := make([]byte, iperf3LengthPrefixSize+len(jsonData))
 	binary.BigEndian.PutUint32(
 		response[:4],
-		safeUint32(len(jsonData)),
+		safeconv.Uint32(len(jsonData)),
 	)
 	copy(response[4:], jsonData)
 
@@ -675,7 +676,7 @@ func (h *IPerf3Handler) sendTCPResponse(
 		SrcPort: tcpLayer.DstPort,
 		DstPort: tcpLayer.SrcPort,
 		Seq:     tcpLayer.Ack,
-		Ack:     tcpLayer.Seq + safeUint32(payloadLen),
+		Ack:     tcpLayer.Seq + safeconv.Uint32(payloadLen),
 		PSH:     true,
 		ACK:     true,
 		Window:  iperf3TCPWindowSize,

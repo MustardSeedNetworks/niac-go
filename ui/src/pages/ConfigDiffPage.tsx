@@ -11,6 +11,7 @@ import { MergeControls, MergePreviewModal } from '../components/config/MergeCont
 import { Card, CardContent } from '../ui/Card';
 import { Tag } from '../ui/Tag';
 import { H2, P, SmallText } from '../ui/Typography';
+import { formatBytes } from '../utils/format';
 
 interface UploadedFile {
   name: string;
@@ -156,23 +157,6 @@ const FileUploadZone: FC<{
     </div>
   );
 };
-
-/**
- * Format bytes to human-readable string
- */
-function formatBytes(size: number): string {
-  if (!Number.isFinite(size) || size <= 0) {
-    return '0 B';
-  }
-  const units = ['B', 'KB', 'MB', 'GB'];
-  let idx = 0;
-  let value = size;
-  while (value >= 1024 && idx < units.length - 1) {
-    value /= 1024;
-    idx++;
-  }
-  return `${value.toFixed(value >= 10 ? 0 : 1)} ${units[idx]}`;
-}
 
 /**
  * Config Diff/Merge Page

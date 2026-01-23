@@ -1,7 +1,7 @@
 import { type FC, memo, useMemo } from 'react';
-import type { Packet } from './PacketList';
 import type { PcapPacket } from '../api/types';
 import { buildProtocolLayers } from '../utils/protocol-layers';
+import type { Packet } from './PacketList';
 import { ProtocolTreeLayer } from './ProtocolTreeLayer';
 
 interface ProtocolTreeProps {
@@ -29,10 +29,7 @@ export const ProtocolTree: FC<ProtocolTreeProps> = memo(({ packet, onFieldSelect
       number: 'number' in packet ? (packet as PcapPacket).number : undefined,
     };
 
-    return buildProtocolLayers(
-      packet.headers as Record<string, unknown> | undefined,
-      pkt,
-    );
+    return buildProtocolLayers(packet.headers as Record<string, unknown> | undefined, pkt);
   }, [packet]);
 
   if (!packet) {
@@ -54,11 +51,7 @@ export const ProtocolTree: FC<ProtocolTreeProps> = memo(({ packet, onFieldSelect
   return (
     <div className="h-full overflow-y-auto space-y-1">
       {layers.map((layer) => (
-        <ProtocolTreeLayer
-          key={layer.name}
-          layer={layer}
-          onFieldSelect={onFieldSelect}
-        />
+        <ProtocolTreeLayer key={layer.name} layer={layer} onFieldSelect={onFieldSelect} />
       ))}
     </div>
   );

@@ -11,6 +11,7 @@ import (
 	"github.com/google/gopacket/layers"
 
 	"github.com/krisarmstrong/niac-go/internal/config"
+	"github.com/krisarmstrong/niac-go/internal/safeconv"
 )
 
 // FTP response constants.
@@ -136,7 +137,7 @@ func (h *FTPHandler) sendResponse(
 		SrcPort: tcpLayer.DstPort,
 		DstPort: tcpLayer.SrcPort,
 		Seq:     tcpLayer.Ack,
-		Ack:     tcpLayer.Seq + safeUint32(payloadLen),
+		Ack:     tcpLayer.Seq + safeconv.Uint32(payloadLen),
 		PSH:     true,
 		ACK:     true,
 		Window:  ftpTCPWindowSize,
@@ -236,7 +237,7 @@ func (h *FTPHandler) sendResponseV6(
 		SrcPort: tcpLayer.DstPort,
 		DstPort: tcpLayer.SrcPort,
 		Seq:     tcpLayer.Ack,
-		Ack:     tcpLayer.Seq + safeUint32(payloadLen2),
+		Ack:     tcpLayer.Seq + safeconv.Uint32(payloadLen2),
 		PSH:     true,
 		ACK:     true,
 		Window:  ftpTCPWindowSize,

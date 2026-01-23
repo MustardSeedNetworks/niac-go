@@ -14,6 +14,7 @@ import (
 	"github.com/google/gopacket/layers"
 
 	"github.com/krisarmstrong/niac-go/internal/config"
+	"github.com/krisarmstrong/niac-go/internal/safeconv"
 )
 
 // DHCPv6 message types (RFC 8415).
@@ -833,7 +834,7 @@ func (h *DHCPv6Handler) buildDHCPv6Response(
 	serverDUIDLen := min(len(h.serverDUID), maxUint16Val)
 	response.Options = append(response.Options, DHCPv6Option{
 		Code:   DHCPv6OptServerID,
-		Length: safeUint16(serverDUIDLen),
+		Length: safeconv.Uint16(serverDUIDLen),
 		Data:   h.serverDUID,
 	})
 
@@ -863,7 +864,7 @@ func (h *DHCPv6Handler) appendDNSOptions(response *DHCPv6Message) {
 		dnsData := encodeIPv6List(h.dnsServers)
 		response.Options = append(response.Options, DHCPv6Option{
 			Code:   DHCPv6OptDNSServers,
-			Length: safeUint16(min(len(dnsData), maxUint16Val)),
+			Length: safeconv.Uint16(min(len(dnsData), maxUint16Val)),
 			Data:   dnsData,
 		})
 	}
@@ -872,7 +873,7 @@ func (h *DHCPv6Handler) appendDNSOptions(response *DHCPv6Message) {
 		domainData := h.encodeDomainList(h.domainList)
 		response.Options = append(response.Options, DHCPv6Option{
 			Code:   DHCPv6OptDomainList,
-			Length: safeUint16(min(len(domainData), maxUint16Val)),
+			Length: safeconv.Uint16(min(len(domainData), maxUint16Val)),
 			Data:   domainData,
 		})
 	}
@@ -884,7 +885,7 @@ func (h *DHCPv6Handler) appendTimeServerOptions(response *DHCPv6Message) {
 		sntpData := encodeIPv6List(h.sntpServers)
 		response.Options = append(response.Options, DHCPv6Option{
 			Code:   DHCPv6OptSNTPServers,
-			Length: safeUint16(min(len(sntpData), maxUint16Val)),
+			Length: safeconv.Uint16(min(len(sntpData), maxUint16Val)),
 			Data:   sntpData,
 		})
 	}
@@ -893,7 +894,7 @@ func (h *DHCPv6Handler) appendTimeServerOptions(response *DHCPv6Message) {
 		ntpData := encodeIPv6List(h.ntpServers)
 		response.Options = append(response.Options, DHCPv6Option{
 			Code:   DHCPv6OptNTPServer,
-			Length: safeUint16(min(len(ntpData), maxUint16Val)),
+			Length: safeconv.Uint16(min(len(ntpData), maxUint16Val)),
 			Data:   ntpData,
 		})
 	}
@@ -905,7 +906,7 @@ func (h *DHCPv6Handler) appendSIPOptions(response *DHCPv6Message) {
 		sipData := encodeIPv6List(h.sipServers)
 		response.Options = append(response.Options, DHCPv6Option{
 			Code:   DHCPv6OptSIPServerAddrs,
-			Length: safeUint16(min(len(sipData), maxUint16Val)),
+			Length: safeconv.Uint16(min(len(sipData), maxUint16Val)),
 			Data:   sipData,
 		})
 	}
@@ -914,7 +915,7 @@ func (h *DHCPv6Handler) appendSIPOptions(response *DHCPv6Message) {
 		sipDomainData := h.encodeDomainList(h.sipDomains)
 		response.Options = append(response.Options, DHCPv6Option{
 			Code:   DHCPv6OptSIPServers,
-			Length: safeUint16(min(len(sipDomainData), maxUint16Val)),
+			Length: safeconv.Uint16(min(len(sipDomainData), maxUint16Val)),
 			Data:   sipDomainData,
 		})
 	}
@@ -992,7 +993,7 @@ func (h *DHCPv6Handler) sendDHCPv6Response(msgType uint8, clientMsg *DHCPv6Messa
 	// Calculate UDP length and checksum
 	msgBytesLen := min(len(msgBytes), maxUDPPayload)
 
-	udp.Length = safeUint16(udpHeaderSize + msgBytesLen)
+	udp.Length = safeconv.Uint16(udpHeaderSize + msgBytesLen)
 
 	// Serialize packet
 	buf := gopacket.NewSerializeBuffer()
@@ -1041,7 +1042,7 @@ func (h *DHCPv6Handler) buildIANAOption(lease *DHCPv6Lease) DHCPv6Option {
 
 	return DHCPv6Option{
 		Code:   DHCPv6OptIANA,
-		Length: safeUint16(ianaDataLen),
+		Length: safeconv.Uint16(ianaDataLen),
 		Data:   ianaHeader,
 	}
 }

@@ -5,10 +5,11 @@ import type { DeviceSummary, FileEntry } from '../api/types';
 import { POLL_INTERVALS } from '../constants/polling';
 import { useApiResource } from '../hooks/useApiResource';
 import { useVirtualScroll } from '../hooks/useVirtualScroll';
+import { BaseCard } from '../ui/BaseCard';
 import { Button } from '../ui/Button';
-import { Card, CardContent } from '../ui/Card';
+import { CardRow } from '../ui/Card';
 import { Tag } from '../ui/Tag';
-import { H2, SmallText } from '../ui/Typography';
+import { SmallText } from '../ui/Typography';
 import { copyToClipboard } from '../utils/file';
 import { formatBytes, formatTime, getErrorMessage } from '../utils/format';
 
@@ -35,23 +36,18 @@ const DeviceListCard: FC = () => {
   } = useApiResource(fetchDevices, [], { intervalMs: POLL_INTERVALS.slow });
 
   return (
-    <Card className="border-white/5 bg-gray-900/70">
-      <CardContent className="space-y-4">
-        <H2 className="mb-0 flex items-center gap-2">
-          <Server className="h-5 w-5 text-cyan-300" />
-          Config workspace
-        </H2>
-        {loading && <SmallText className="text-gray-400">Loading devices...</SmallText>}
-        {error && (
-          <SmallText className="text-red-400">Unable to load devices: {error.message}</SmallText>
-        )}
-        {!(loading || error) && <DeviceTable devices={devices ?? []} />}
-        <SmallText className="text-gray-400">
-          Devices are rendered directly from the active YAML config so the CLI/TUI and Web UI always
-          agree.
-        </SmallText>
-      </CardContent>
-    </Card>
+    <BaseCard<DeviceSummary[]>
+      title="Config workspace"
+      subtitle="Devices rendered from active YAML config"
+      icon={<Server className="h-5 w-5 text-cyan-300" />}
+      data={devices}
+      loading={loading && !devices}
+      error={error?.message}
+      getStatus={(d) => (d.length > 0 ? 'success' : 'unknown')}
+      emptyMessage="No devices defined in the loaded configuration"
+    >
+      {(data) => <DeviceTable devices={data} />}
+    </BaseCard>
   );
 };
 
@@ -221,56 +217,48 @@ const ConfigEditorCard: FC = () => {
   };
 
   return (
-    <Card className="border-white/5 bg-gray-900/70">
-      <CardContent className="space-y-4">
-        <H2 className="mb-0 flex items-center gap-2">
-          <FileCog className="h-5 w-5 text-emerald-300" />
-          YAML editor
-        </H2>
-        {loading && <SmallText className="text-gray-400">Loading configuration...</SmallText>}
-        {error && (
-          <SmallText className="text-red-400">Unable to load config: {error.message}</SmallText>
-        )}
-        {data && (
-          <>
-            <div className="flex flex-wrap gap-4 text-xs text-gray-400">
-              <span>
-                Path: <code className="font-mono text-white">{data.path}</code>
-              </span>
-              <span>Updated: {formatTime(data.modifiedAt)}</span>
-              <span>Size: {formatBytes(data.sizeBytes)}</span>
-            </div>
-            <textarea
-              className="h-72 w-full rounded-xl border border-white/10 bg-gray-950/70 p-3 font-mono text-sm text-white shadow-inner focus:border-violet-400 focus:outline-none"
-              value={value}
-              onChange={handleChange}
-              spellCheck={false}
-              disabled={loading || saving}
-            />
-            {status && (
-              <SmallText
-                className={status.tone === 'success' ? 'text-emerald-300' : 'text-red-400'}
-              >
-                {status.message}
-              </SmallText>
-            )}
-            <div className="flex flex-wrap gap-3">
-              <Button tone="violet" disabled={!dirty || saving} onClick={handleSave}>
-                {saving ? 'Saving…' : 'Save changes'}
-              </Button>
-              <Button variant="outline" disabled={!dirty || saving} onClick={handleReset}>
-                Discard
-              </Button>
-            </div>
-            <SmallText className="text-gray-400">
-              Saving runs full validation (same as `niac validate`) before persisting so runtime
-              changes stay safe.
+    <BaseCard<{ content: string; path: string; modifiedAt: string; sizeBytes: number }>
+      title="YAML editor"
+      subtitle="Edit active configuration"
+      icon={<FileCog className="h-5 w-5 text-emerald-300" />}
+      data={data}
+      loading={loading && !data}
+      error={error?.message}
+      getStatus={() => (dirty ? 'warning' : 'success')}
+    >
+      {(cfg) => (
+        <>
+          <CardRow label="Path" value={cfg.path} mono />
+          <CardRow label="Updated" value={formatTime(cfg.modifiedAt)} />
+          <CardRow label="Size" value={formatBytes(cfg.sizeBytes)} />
+          <textarea
+            className="mt-3 h-72 w-full rounded-xl border border-white/10 bg-gray-950/70 p-3 font-mono text-sm text-white shadow-inner focus:border-violet-400 focus:outline-none"
+            value={value}
+            onChange={handleChange}
+            spellCheck={false}
+            disabled={loading || saving}
+          />
+          {status && (
+            <SmallText className={status.tone === 'success' ? 'text-emerald-300' : 'text-red-400'}>
+              {status.message}
             </SmallText>
-            <WalkFileBrowser files={walkFiles ?? []} onCopy={handleWalkCopy} />
-          </>
-        )}
-      </CardContent>
-    </Card>
+          )}
+          <div className="flex flex-wrap gap-3 mt-3">
+            <Button tone="violet" disabled={!dirty || saving} onClick={handleSave}>
+              {saving ? 'Saving…' : 'Save changes'}
+            </Button>
+            <Button variant="outline" disabled={!dirty || saving} onClick={handleReset}>
+              Discard
+            </Button>
+          </div>
+          <SmallText className="mt-2 text-gray-400">
+            Saving runs full validation (same as `niac validate`) before persisting so runtime
+            changes stay safe.
+          </SmallText>
+          <WalkFileBrowser files={walkFiles ?? []} onCopy={handleWalkCopy} />
+        </>
+      )}
+    </BaseCard>
   );
 };
 

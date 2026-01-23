@@ -322,8 +322,6 @@ export const PacketInspectorPage: FC = () => {
                   packets={filteredPackets}
                   selectedPacketId={selectedPacket?.id ?? null}
                   onSelectPacket={handleSelectPacket}
-                  protocolFilter="All"
-                  searchQuery=""
                   autoScroll={autoScroll}
                   getRowStyle={getRowStyle}
                 />

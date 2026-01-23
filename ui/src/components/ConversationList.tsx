@@ -6,10 +6,9 @@ import { SmallText } from '../ui/Typography';
 import {
   type Conversation,
   extractConversations,
-  formatBytes,
-  formatDuration,
   getConversationDuration,
 } from '../utils/conversations';
+import { formatBytes, formatDurationSeconds } from '../utils/format';
 import { getProtocolColor } from '../utils/protocol-colors';
 import type { Packet } from './PacketList';
 
@@ -177,7 +176,7 @@ const ConversationRow: FC<{
         {formatBytes(conversation.bytes)}
       </td>
       <td className="px-3 py-2 text-gray-400 text-sm text-right font-mono">
-        {formatDuration(duration)}
+        {formatDurationSeconds(duration)}
       </td>
     </tr>
   );

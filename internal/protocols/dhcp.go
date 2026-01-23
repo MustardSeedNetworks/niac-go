@@ -14,6 +14,7 @@ import (
 
 	"github.com/krisarmstrong/niac-go/internal/config"
 	"github.com/krisarmstrong/niac-go/internal/logging"
+	"github.com/krisarmstrong/niac-go/internal/safeconv"
 )
 
 // DHCP message types.
@@ -692,14 +693,14 @@ func (h *DHCPHandler) appendNetworkOptions(options []layers.DHCPOption) []layers
 
 		dnsLen := min(len(dnsData), dhcpMaxByte)
 		options = append(options, layers.DHCPOption{
-			Type: layers.DHCPOptDNS, Length: safeUint8(dnsLen), Data: dnsData[:dnsLen],
+			Type: layers.DHCPOptDNS, Length: safeconv.Uint8(dnsLen), Data: dnsData[:dnsLen],
 		})
 	}
 
 	if h.domainName != "" {
 		domainLen := min(len(h.domainName), dhcpMaxByte)
 		options = append(options, layers.DHCPOption{
-			Type: layers.DHCPOptDomainName, Length: safeUint8(domainLen), Data: []byte(h.domainName[:domainLen]),
+			Type: layers.DHCPOptDomainName, Length: safeconv.Uint8(domainLen), Data: []byte(h.domainName[:domainLen]),
 		})
 	}
 
@@ -730,7 +731,7 @@ func (h *DHCPHandler) appendTimingOptions(options []layers.DHCPOption) []layers.
 
 		ntpLen := min(len(ntpData), dhcpMaxByte)
 		options = append(options, layers.DHCPOption{
-			Type: DHCPOptNTP, Length: safeUint8(ntpLen), Data: ntpData[:ntpLen],
+			Type: DHCPOptNTP, Length: safeconv.Uint8(ntpLen), Data: ntpData[:ntpLen],
 		})
 	}
 
@@ -743,14 +744,14 @@ func (h *DHCPHandler) appendBootOptions(options []layers.DHCPOption) []layers.DH
 	if h.tftpServerName != "" {
 		tftpLen := min(len(h.tftpServerName), dhcpMaxByte)
 		options = append(options, layers.DHCPOption{
-			Type: DHCPOptTFTPServer, Length: safeUint8(tftpLen), Data: []byte(h.tftpServerName[:tftpLen]),
+			Type: DHCPOptTFTPServer, Length: safeconv.Uint8(tftpLen), Data: []byte(h.tftpServerName[:tftpLen]),
 		})
 	}
 
 	if h.bootfileName != "" {
 		bootLen := min(len(h.bootfileName), dhcpMaxByte)
 		options = append(options, layers.DHCPOption{
-			Type: DHCPOptBootfileName, Length: safeUint8(bootLen), Data: []byte(h.bootfileName[:bootLen]),
+			Type: DHCPOptBootfileName, Length: safeconv.Uint8(bootLen), Data: []byte(h.bootfileName[:bootLen]),
 		})
 	}
 
@@ -761,7 +762,7 @@ func (h *DHCPHandler) appendBootOptions(options []layers.DHCPOption) []layers.DH
 		} else if len(searchData) > 0 {
 			searchLen := min(len(searchData), dhcpMaxByte)
 			options = append(options, layers.DHCPOption{
-				Type: DHCPOptDomainSearch, Length: safeUint8(searchLen), Data: searchData[:searchLen],
+				Type: DHCPOptDomainSearch, Length: safeconv.Uint8(searchLen), Data: searchData[:searchLen],
 			})
 		}
 	}
@@ -775,14 +776,14 @@ func (h *DHCPHandler) appendMiscOptions(options []layers.DHCPOption, clientMAC n
 	if len(h.vendorSpecificInfo) > 0 {
 		vendorLen := min(len(h.vendorSpecificInfo), dhcpMaxByte)
 		options = append(options, layers.DHCPOption{
-			Type: layers.DHCPOptVendorOption, Length: safeUint8(vendorLen), Data: h.vendorSpecificInfo[:vendorLen],
+			Type: layers.DHCPOptVendorOption, Length: safeconv.Uint8(vendorLen), Data: h.vendorSpecificInfo[:vendorLen],
 		})
 	}
 
 	if lease, ok := h.leases[clientMAC.String()]; ok && lease.Hostname != "" {
 		hostnameLen := min(len(lease.Hostname), dhcpMaxByte)
 		options = append(options, layers.DHCPOption{
-			Type: layers.DHCPOptHostname, Length: safeUint8(hostnameLen), Data: []byte(lease.Hostname[:hostnameLen]),
+			Type: layers.DHCPOptHostname, Length: safeconv.Uint8(hostnameLen), Data: []byte(lease.Hostname[:hostnameLen]),
 		})
 	}
 

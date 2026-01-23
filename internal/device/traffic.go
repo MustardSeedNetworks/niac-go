@@ -11,6 +11,7 @@ import (
 
 	"github.com/krisarmstrong/niac-go/internal/config"
 	"github.com/krisarmstrong/niac-go/internal/protocols"
+	"github.com/krisarmstrong/niac-go/internal/safeconv"
 )
 
 // Traffic generation constants.
@@ -38,19 +39,7 @@ const (
 // ErrTrafficGeneratorAlreadyRunning is returned when starting an active generator.
 var ErrTrafficGeneratorAlreadyRunning = errors.New("traffic generator already running")
 
-// TrafficGenerator generates background network traffic.
-type TrafficGenerator struct {
-	simulator    *Simulator
-	stack        *protocols.Stack
-	running      bool
-	stopChan     chan struct{}
-	debugLevel   int
-	lastARPTime  map[string]time.Time // Last ARP announcement time per device
-	lastPingTime map[string]time.Time // Last ping time per device
-	lastRandTime map[string]time.Time // Last random traffic time per device
-}
-
-// TrafficPattern represents a traffic generation pattern.
+// TrafficPattern represents a traffic generation pattern with timing state.
 type TrafficPattern struct {
 	Name     string
 	Interval time.Duration
@@ -58,17 +47,47 @@ type TrafficPattern struct {
 	LastRun  time.Time
 }
 
+// Pattern name constants.
+const (
+	patternARP    = "arp_announcements"
+	patternPing   = "periodic_pings"
+	patternRandom = "random_traffic"
+)
+
+// TrafficGenerator generates background network traffic.
+type TrafficGenerator struct {
+	simulator  *Simulator
+	stack      *protocols.Stack
+	running    bool
+	stopChan   chan struct{}
+	debugLevel int
+	patterns   map[string]map[string]*TrafficPattern // device name → pattern name → state
+}
+
 // NewTrafficGenerator creates a new traffic generator.
 func NewTrafficGenerator(sim *Simulator, stack *protocols.Stack, debugLevel int) *TrafficGenerator {
 	return &TrafficGenerator{
-		simulator:    sim,
-		stack:        stack,
-		stopChan:     make(chan struct{}),
-		debugLevel:   debugLevel,
-		lastARPTime:  make(map[string]time.Time),
-		lastPingTime: make(map[string]time.Time),
-		lastRandTime: make(map[string]time.Time),
+		simulator:  sim,
+		stack:      stack,
+		stopChan:   make(chan struct{}),
+		debugLevel: debugLevel,
+		patterns:   make(map[string]map[string]*TrafficPattern),
 	}
+}
+
+// getPattern returns the TrafficPattern for a device/pattern pair, creating it on first access.
+func (tg *TrafficGenerator) getPattern(deviceName, patternName string) *TrafficPattern {
+	devicePatterns, ok := tg.patterns[deviceName]
+	if !ok {
+		devicePatterns = make(map[string]*TrafficPattern)
+		tg.patterns[deviceName] = devicePatterns
+	}
+	p, ok := devicePatterns[patternName]
+	if !ok {
+		p = &TrafficPattern{Name: patternName}
+		devicePatterns[patternName] = p
+	}
+	return p
 }
 
 // Start starts the traffic generator.
@@ -167,13 +186,16 @@ func (tg *TrafficGenerator) checkARPAnnouncements(
 		return
 	}
 
-	interval := time.Duration(cfg.ARPAnnouncements.Interval) * time.Second
-	if now.Sub(tg.lastARPTime[name]) < interval {
+	p := tg.getPattern(name, patternARP)
+	p.Interval = time.Duration(cfg.ARPAnnouncements.Interval) * time.Second
+	p.Enabled = true
+
+	if now.Sub(p.LastRun) < p.Interval {
 		return
 	}
 
 	tg.sendARPAnnouncement(device)
-	tg.lastARPTime[name] = now
+	p.LastRun = now
 }
 
 // checkPeriodicPings sends periodic pings if the interval has elapsed.
@@ -187,13 +209,16 @@ func (tg *TrafficGenerator) checkPeriodicPings(
 		return
 	}
 
-	interval := time.Duration(cfg.PeriodicPings.Interval) * time.Second
-	if now.Sub(tg.lastPingTime[name]) < interval {
+	p := tg.getPattern(name, patternPing)
+	p.Interval = time.Duration(cfg.PeriodicPings.Interval) * time.Second
+	p.Enabled = true
+
+	if now.Sub(p.LastRun) < p.Interval {
 		return
 	}
 
 	tg.sendPeriodicPing(device, cfg.PeriodicPings.PayloadSize)
-	tg.lastPingTime[name] = now
+	p.LastRun = now
 }
 
 // checkRandomTraffic generates random traffic if the interval has elapsed.
@@ -207,8 +232,11 @@ func (tg *TrafficGenerator) checkRandomTraffic(
 		return
 	}
 
-	interval := time.Duration(cfg.RandomTraffic.Interval) * time.Second
-	if now.Sub(tg.lastRandTime[name]) < interval {
+	p := tg.getPattern(name, patternRandom)
+	p.Interval = time.Duration(cfg.RandomTraffic.Interval) * time.Second
+	p.Enabled = true
+
+	if now.Sub(p.LastRun) < p.Interval {
 		return
 	}
 
@@ -217,7 +245,7 @@ func (tg *TrafficGenerator) checkRandomTraffic(
 		cfg.RandomTraffic.PacketCount,
 		cfg.RandomTraffic.Patterns,
 	)
-	tg.lastRandTime[name] = now
+	p.LastRun = now
 }
 
 // sendARPAnnouncement sends a gratuitous ARP for a single device (v1.6.0).
@@ -380,8 +408,8 @@ func (tg *TrafficGenerator) sendPing(src, dst *SimulatedDevice) error {
 	// Build ICMP Echo Request
 	icmpLayer := &layers.ICMPv4{
 		TypeCode: layers.CreateICMPv4TypeCode(layers.ICMPv4TypeEchoRequest, 0),
-		Id:       safeUint16(simRand.IntN(maxUint16PlusOne)),
-		Seq:      safeUint16(simRand.IntN(maxUint16PlusOne)),
+		Id:       safeconv.Uint16(simRand.IntN(maxUint16PlusOne)),
+		Seq:      safeconv.Uint16(simRand.IntN(maxUint16PlusOne)),
 	}
 
 	// Payload
@@ -520,8 +548,8 @@ func (tg *TrafficGenerator) sendRandomUDP(src, dst *SimulatedDevice) error {
 	}
 
 	udpLayer := &layers.UDP{
-		SrcPort: layers.UDPPort(safeUint16(simRand.IntN(ephemeralPortMax) + ephemeralPortMin)),
-		DstPort: layers.UDPPort(safeUint16(simRand.IntN(ephemeralPortMax) + ephemeralPortMin)),
+		SrcPort: layers.UDPPort(safeconv.Uint16(simRand.IntN(ephemeralPortMax) + ephemeralPortMin)),
+		DstPort: layers.UDPPort(safeconv.Uint16(simRand.IntN(ephemeralPortMax) + ephemeralPortMin)),
 	}
 	_ = udpLayer.SetNetworkLayerForChecksum(ipLayer) // error is non-critical for checksum setup
 

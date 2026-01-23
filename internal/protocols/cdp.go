@@ -9,6 +9,7 @@ import (
 	"github.com/google/gopacket/layers"
 
 	"github.com/krisarmstrong/niac-go/internal/config"
+	"github.com/krisarmstrong/niac-go/internal/safeconv"
 )
 
 // CDP protocol constants.
@@ -236,7 +237,7 @@ func (h *CDPHandler) buildDeviceIDTLV(device *config.Device) []byte {
 
 	tlv := make([]byte, length)
 	binary.BigEndian.PutUint16(tlv[0:2], CDPTLVTypeDeviceID)
-	binary.BigEndian.PutUint16(tlv[2:4], safeUint16(length))
+	binary.BigEndian.PutUint16(tlv[2:4], safeconv.Uint16(length))
 	copy(tlv[4:], deviceID)
 
 	return tlv
@@ -280,7 +281,7 @@ func (h *CDPHandler) buildAddressesTLV(device *config.Device) []byte {
 
 	tlv := make([]byte, length)
 	binary.BigEndian.PutUint16(tlv[0:2], CDPTLVTypeAddresses)
-	binary.BigEndian.PutUint16(tlv[2:4], safeUint16(length))
+	binary.BigEndian.PutUint16(tlv[2:4], safeconv.Uint16(length))
 	binary.BigEndian.PutUint32(tlv[4:8], 1) // Number of addresses
 
 	offset := 8
@@ -293,7 +294,7 @@ func (h *CDPHandler) buildAddressesTLV(device *config.Device) []byte {
 	addrBytesLen := min(len(addrBytes), cdpMaxUint16)
 	binary.BigEndian.PutUint16(
 		tlv[offset:offset+2],
-		safeUint16(addrBytesLen),
+		safeconv.Uint16(addrBytesLen),
 	)
 	offset += 2
 	copy(tlv[offset:], addrBytes)
@@ -321,7 +322,7 @@ func (h *CDPHandler) buildPortIDTLV(device *config.Device) []byte {
 
 	tlv := make([]byte, length)
 	binary.BigEndian.PutUint16(tlv[0:2], CDPTLVTypePortID)
-	binary.BigEndian.PutUint16(tlv[2:4], safeUint16(length))
+	binary.BigEndian.PutUint16(tlv[2:4], safeconv.Uint16(length))
 	copy(tlv[4:], portID)
 
 	return tlv
@@ -369,7 +370,7 @@ func (h *CDPHandler) buildSoftwareVersionTLV(device *config.Device) []byte {
 
 	tlv := make([]byte, length)
 	binary.BigEndian.PutUint16(tlv[0:2], CDPTLVTypeSoftwareVersion)
-	binary.BigEndian.PutUint16(tlv[2:4], safeUint16(length))
+	binary.BigEndian.PutUint16(tlv[2:4], safeconv.Uint16(length))
 	copy(tlv[4:], version)
 
 	return tlv
@@ -389,7 +390,7 @@ func (h *CDPHandler) buildPlatformTLV(device *config.Device) []byte {
 
 	tlv := make([]byte, length)
 	binary.BigEndian.PutUint16(tlv[0:2], CDPTLVTypePlatform)
-	binary.BigEndian.PutUint16(tlv[2:4], safeUint16(length))
+	binary.BigEndian.PutUint16(tlv[2:4], safeconv.Uint16(length))
 	copy(tlv[4:], platform)
 
 	return tlv

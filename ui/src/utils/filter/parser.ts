@@ -3,12 +3,11 @@ import type { ASTNode, ComparisonOperator, Token } from './types';
 import { BARE_PROTOCOLS } from './types';
 
 export class ParseError extends Error {
-  constructor(
-    message: string,
-    public position: number,
-  ) {
+  position: number;
+  constructor(message: string, position: number) {
     super(message);
     this.name = 'ParseError';
+    this.position = position;
   }
 }
 
@@ -49,8 +48,11 @@ export function validate(input: string): string | null {
 
 class Parser {
   private pos = 0;
+  private tokens: Token[];
 
-  constructor(private tokens: Token[]) {}
+  constructor(tokens: Token[]) {
+    this.tokens = tokens;
+  }
 
   parseExpression(): ASTNode {
     return this.parseOr();

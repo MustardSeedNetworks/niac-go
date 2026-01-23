@@ -16,10 +16,8 @@ import {
 } from 'lucide-react';
 import { type FC, memo, type ReactNode } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
-import { fetchVersion } from './api/client';
 import { ErrorBoundary, PageErrorBoundary } from './components/ErrorBoundary';
-import { POLL_INTERVALS } from './constants/polling';
-import { useApiResource } from './hooks/useApiResource';
+import { AppProvider, useAppState } from './contexts/AppContext';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { AnalysisPage } from './pages/AnalysisPage';
 import { AutomationPage } from './pages/AutomationPage';
@@ -216,73 +214,79 @@ const navGroups: SidebarNavGroup[] = [
 ];
 
 export default function App() {
-  const { data: version } = useApiResource(fetchVersion, [], {
-    intervalMs: POLL_INTERVALS.verySlow,
-  });
+  return (
+    <ErrorBoundary>
+      <AppProvider>
+        <AppShell />
+      </AppProvider>
+    </ErrorBoundary>
+  );
+}
+
+function AppShell() {
+  const { data: version } = useAppState('version');
 
   useKeyboardShortcuts();
 
   return (
-    <ErrorBoundary>
-      <SidebarLayout groups={navGroups} version={version?.version}>
-        <ToastContainer />
-        <Routes>
-          {pages.map((page) => (
-            <Route
-              key={page.path}
-              path={page.path}
-              element={
-                <PageTemplate page={page}>
-                  <PageErrorBoundary>
-                    <page.component />
-                  </PageErrorBoundary>
-                </PageTemplate>
-              }
-            />
-          ))}
-          {/* Dynamic routes for device editor */}
+    <SidebarLayout groups={navGroups} version={version?.version}>
+      <ToastContainer />
+      <Routes>
+        {pages.map((page) => (
           <Route
-            path="/device-config/new"
+            key={page.path}
+            path={page.path}
             element={
-              <PageTemplate
-                page={{
-                  path: '/device-config/new',
-                  label: 'New Device',
-                  title: 'New Device',
-                  description: 'Create a new network device configuration.',
-                  icon: Wrench,
-                  component: DeviceEditorPage,
-                }}
-              >
+              <PageTemplate page={page}>
                 <PageErrorBoundary>
-                  <DeviceEditorPage />
+                  <page.component />
                 </PageErrorBoundary>
               </PageTemplate>
             }
           />
-          <Route
-            path="/device-config/:hostname"
-            element={
-              <PageTemplate
-                page={{
-                  path: '/device-config/:hostname',
-                  label: 'Edit Device',
-                  title: 'Edit Device',
-                  description: 'Edit device configuration settings.',
-                  icon: Wrench,
-                  component: DeviceEditorPage,
-                }}
-              >
-                <PageErrorBoundary>
-                  <DeviceEditorPage />
-                </PageErrorBoundary>
-              </PageTemplate>
-            }
-          />
-          <Route path="*" element={<Navigate to="/" replace={true} />} />
-        </Routes>
-      </SidebarLayout>
-    </ErrorBoundary>
+        ))}
+        {/* Dynamic routes for device editor */}
+        <Route
+          path="/device-config/new"
+          element={
+            <PageTemplate
+              page={{
+                path: '/device-config/new',
+                label: 'New Device',
+                title: 'New Device',
+                description: 'Create a new network device configuration.',
+                icon: Wrench,
+                component: DeviceEditorPage,
+              }}
+            >
+              <PageErrorBoundary>
+                <DeviceEditorPage />
+              </PageErrorBoundary>
+            </PageTemplate>
+          }
+        />
+        <Route
+          path="/device-config/:hostname"
+          element={
+            <PageTemplate
+              page={{
+                path: '/device-config/:hostname',
+                label: 'Edit Device',
+                title: 'Edit Device',
+                description: 'Edit device configuration settings.',
+                icon: Wrench,
+                component: DeviceEditorPage,
+              }}
+            >
+              <PageErrorBoundary>
+                <DeviceEditorPage />
+              </PageErrorBoundary>
+            </PageTemplate>
+          }
+        />
+        <Route path="*" element={<Navigate to="/" replace={true} />} />
+      </Routes>
+    </SidebarLayout>
   );
 }
 

@@ -17,6 +17,7 @@ import (
 	"github.com/krisarmstrong/niac-go/internal/capture"
 	"github.com/krisarmstrong/niac-go/internal/config"
 	"github.com/krisarmstrong/niac-go/internal/logging"
+	"github.com/krisarmstrong/niac-go/internal/safeconv"
 )
 
 const (
@@ -756,7 +757,7 @@ func (s *Stack) sendBabble(device *config.Device) {
 		dot1q := &layers.Dot1Q{
 			Priority:       0,
 			DropEligible:   false,
-			VLANIdentifier: safeUint16(vlan),
+			VLANIdentifier: safeconv.Uint16(vlan),
 			Type:           layers.EthernetTypeARP,
 		}
 		_ = gopacket.SerializeLayers(buf, opts, eth, dot1q, arp)

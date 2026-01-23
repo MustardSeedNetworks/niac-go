@@ -10,6 +10,7 @@ import (
 	"github.com/google/gopacket/layers"
 
 	"github.com/krisarmstrong/niac-go/internal/config"
+	"github.com/krisarmstrong/niac-go/internal/safeconv"
 )
 
 // ICMP default TTL values.
@@ -226,7 +227,7 @@ func buildRouterAdvertisementPayload(ra *config.IcmpRouterAdvertisement) []byte 
 	// Safe conversion: RA lifetime is bounded by protocol definition
 	binary.BigEndian.PutUint16(
 		payload[2:4],
-		safeUint16(ra.Lifetime),
+		safeconv.Uint16(ra.Lifetime),
 	)
 
 	offset := 4
@@ -237,7 +238,7 @@ func buildRouterAdvertisementPayload(ra *config.IcmpRouterAdvertisement) []byte 
 			// Safe conversion: router preference is bounded by protocol definition
 			binary.BigEndian.PutUint32(
 				payload[offset+4:offset+8],
-				safeUint32(router.Preference),
+				safeconv.Uint32(router.Preference),
 			)
 			offset += 8
 		}

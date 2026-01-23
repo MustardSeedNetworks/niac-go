@@ -9,22 +9,16 @@ import {
   Zap,
 } from 'lucide-react';
 import { type FC, memo, useState } from 'react';
-import { fetchErrorTypes, fetchHistory, fetchSimulationStatus, fetchStats } from '../api/client';
+import { fetchSimulationStatus } from '../api/client';
 import type { ErrorType, HistoryRecord } from '../api/types';
 import { POLL_INTERVALS } from '../constants/polling';
+import { useAppState } from '../contexts/AppContext';
 import { useApiResource } from '../hooks/useApiResource';
 import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
 import { Tag } from '../ui/Tag';
 import { AccentLink, H2, SmallText } from '../ui/Typography';
-import { formatNumber, formatTime, formatUptime } from '../utils/format';
-
-/**
- * Format duration string with fallback
- */
-function formatDuration(value: string): string {
-  return value || '—';
-}
+import { formatDuration, formatNumber, formatTime, formatUptime } from '../utils/format';
 
 /**
  * Dashboard Page - Command Center
@@ -32,13 +26,9 @@ function formatDuration(value: string): string {
  * Live counters, run snapshots, and automation status for the active NIAC stack.
  */
 export const DashboardPage: FC = () => {
-  const { data: stats } = useApiResource(fetchStats, [], {
-    intervalMs: POLL_INTERVALS.medium,
-  });
-  const { data: history } = useApiResource(fetchHistory, [], {
-    intervalMs: POLL_INTERVALS.slow,
-  });
-  const { data: errorInfo } = useApiResource(fetchErrorTypes, []);
+  const { data: stats } = useAppState('stats');
+  const { data: history } = useAppState('history');
+  const { data: errorInfo } = useAppState('errorTypes');
   const { data: simStatus } = useApiResource(fetchSimulationStatus, [], {
     intervalMs: POLL_INTERVALS.fast,
   });

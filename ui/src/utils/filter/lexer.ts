@@ -17,21 +17,10 @@ export function tokenize(input: string): Token[] {
       continue;
     }
 
-    // Parentheses
-    if (input[pos] === '(') {
-      tokens.push({ type: 'LPAREN', value: '(', position: pos });
-      pos++;
-      continue;
-    }
-    if (input[pos] === ')') {
-      tokens.push({ type: 'RPAREN', value: ')', position: pos });
-      pos++;
-      continue;
-    }
-
-    // NOT operator
-    if (input[pos] === '!' && input[pos + 1] !== '=') {
-      tokens.push({ type: 'NOT', value: '!', position: pos });
+    // Single-character tokens
+    const singleChar = matchSingleChar(input, pos);
+    if (singleChar) {
+      tokens.push(singleChar);
       pos++;
       continue;
     }
@@ -54,42 +43,13 @@ export function tokenize(input: string): Token[] {
 
     // Quoted string literal
     if (input[pos] === '"' || input[pos] === "'") {
-      const quote = input[pos];
-      const startPos = pos;
-      pos++;
-      let value = '';
-      while (pos < input.length && input[pos] !== quote) {
-        if (input[pos] === '\\' && pos + 1 < input.length) {
-          pos++;
-        }
-        value += input[pos];
-        pos++;
-      }
-      if (pos < input.length) {
-        pos++; // skip closing quote
-      }
-      tokens.push({ type: 'LITERAL', value, position: startPos });
+      pos = tokenizeQuotedString(input, pos, tokens);
       continue;
     }
 
     // Field names (dotted identifiers) or bare literals/keywords
     if (/[a-zA-Z0-9_.]/.test(input[pos])) {
-      const startPos = pos;
-      let value = '';
-      while (pos < input.length && /[a-zA-Z0-9_./:-]/.test(input[pos])) {
-        value += input[pos];
-        pos++;
-      }
-
-      // Check if this is the keyword 'contains'
-      if (value === 'contains') {
-        tokens.push({ type: 'OPERATOR', value: 'contains', position: startPos });
-        continue;
-      }
-
-      // Determine if this looks like a field name or a literal
-      const tokenType = classifyIdentifier(value, tokens);
-      tokens.push({ type: tokenType, value, position: startPos });
+      pos = tokenizeIdentifier(input, pos, tokens);
       continue;
     }
 
@@ -99,6 +59,48 @@ export function tokenize(input: string): Token[] {
 
   tokens.push({ type: 'EOF', value: '', position: pos });
   return tokens;
+}
+
+function matchSingleChar(input: string, pos: number): Token | null {
+  if (input[pos] === '(') return { type: 'LPAREN', value: '(', position: pos };
+  if (input[pos] === ')') return { type: 'RPAREN', value: ')', position: pos };
+  if (input[pos] === '!' && input[pos + 1] !== '=')
+    return { type: 'NOT', value: '!', position: pos };
+  return null;
+}
+
+function tokenizeQuotedString(input: string, startPos: number, tokens: Token[]): number {
+  const quote = input[startPos];
+  let pos = startPos + 1;
+  let value = '';
+  while (pos < input.length && input[pos] !== quote) {
+    if (input[pos] === '\\' && pos + 1 < input.length) {
+      pos++;
+    }
+    value += input[pos];
+    pos++;
+  }
+  if (pos < input.length) {
+    pos++; // skip closing quote
+  }
+  tokens.push({ type: 'LITERAL', value, position: startPos });
+  return pos;
+}
+
+function tokenizeIdentifier(input: string, startPos: number, tokens: Token[]): number {
+  let pos = startPos;
+  let value = '';
+  while (pos < input.length && /[a-zA-Z0-9_./:-]/.test(input[pos])) {
+    value += input[pos];
+    pos++;
+  }
+  if (value === 'contains') {
+    tokens.push({ type: 'OPERATOR', value: 'contains', position: startPos });
+  } else {
+    const tokenType = classifyIdentifier(value, tokens);
+    tokens.push({ type: tokenType, value, position: startPos });
+  }
+  return pos;
 }
 
 function matchOperator(input: string, pos: number): string | null {
@@ -124,7 +126,7 @@ function matchLogical(input: string, pos: number): string | null {
  * Classify an identifier as FIELD or LITERAL based on context.
  * After an operator, it's a literal. Otherwise, it's a field.
  */
-function classifyIdentifier(value: string, precedingTokens: Token[]): TokenType {
+function classifyIdentifier(_value: string, precedingTokens: Token[]): TokenType {
   const lastToken = precedingTokens.length > 0 ? precedingTokens[precedingTokens.length - 1] : null;
   if (lastToken?.type === 'OPERATOR') {
     return 'LITERAL';

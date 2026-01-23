@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/krisarmstrong/niac-go/internal/config"
+	"github.com/krisarmstrong/niac-go/internal/safeconv"
 )
 
 // FDP protocol constants.
@@ -207,7 +208,7 @@ func (h *FDPHandler) buildDeviceIDTLV(device *config.Device) []byte {
 
 	tlv := make([]byte, length)
 	binary.BigEndian.PutUint16(tlv[0:2], FDPTLVTypeDeviceID)
-	binary.BigEndian.PutUint16(tlv[2:4], safeUint16(length))
+	binary.BigEndian.PutUint16(tlv[2:4], safeconv.Uint16(length))
 	copy(tlv[4:], deviceID)
 
 	return tlv
@@ -232,7 +233,7 @@ func (h *FDPHandler) buildPortTLV(device *config.Device) []byte {
 
 	tlv := make([]byte, length)
 	binary.BigEndian.PutUint16(tlv[0:2], FDPTLVTypePort)
-	binary.BigEndian.PutUint16(tlv[2:4], safeUint16(length))
+	binary.BigEndian.PutUint16(tlv[2:4], safeconv.Uint16(length))
 	copy(tlv[4:], portName)
 
 	return tlv
@@ -252,7 +253,7 @@ func (h *FDPHandler) buildPlatformTLV(device *config.Device) []byte {
 
 	tlv := make([]byte, length)
 	binary.BigEndian.PutUint16(tlv[0:2], FDPTLVTypePlatform)
-	binary.BigEndian.PutUint16(tlv[2:4], safeUint16(length))
+	binary.BigEndian.PutUint16(tlv[2:4], safeconv.Uint16(length))
 	copy(tlv[4:], platform)
 
 	return tlv
@@ -296,7 +297,7 @@ func (h *FDPHandler) buildSoftwareTLV(device *config.Device) []byte {
 
 	tlv := make([]byte, length)
 	binary.BigEndian.PutUint16(tlv[0:2], FDPTLVTypeSoftware)
-	binary.BigEndian.PutUint16(tlv[2:4], safeUint16(length))
+	binary.BigEndian.PutUint16(tlv[2:4], safeconv.Uint16(length))
 	copy(tlv[4:], software)
 
 	return tlv
@@ -322,7 +323,7 @@ func (h *FDPHandler) buildIPAddressTLV(device *config.Device) []byte {
 
 	tlv := make([]byte, length)
 	binary.BigEndian.PutUint16(tlv[0:2], FDPTLVTypeIPAddress)
-	binary.BigEndian.PutUint16(tlv[2:4], safeUint16(length))
+	binary.BigEndian.PutUint16(tlv[2:4], safeconv.Uint16(length))
 	copy(tlv[4:], ipBytes)
 
 	return tlv

@@ -167,24 +167,3 @@ export function getConversationDuration(conv: Conversation): number {
   const end = new Date(conv.endTime).getTime();
   return Math.max(0, (end - start) / 1000);
 }
-
-/**
- * Format bytes to human readable string.
- */
-export function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-/**
- * Format duration in seconds to human readable string.
- */
-export function formatDuration(seconds: number): string {
-  if (seconds < 0.001) return '<1ms';
-  if (seconds < 1) return `${(seconds * 1000).toFixed(0)}ms`;
-  if (seconds < 60) return `${seconds.toFixed(1)}s`;
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  return `${mins}m ${secs.toFixed(0)}s`;
-}

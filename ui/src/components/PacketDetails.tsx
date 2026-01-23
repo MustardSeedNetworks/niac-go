@@ -1,66 +1,14 @@
 import { type FC, memo } from 'react';
 import { Tag } from '../ui/Tag';
 import { SmallText } from '../ui/Typography';
+import { formatBytes } from '../utils/format';
+import { getProtocolColor } from '../utils/protocol-colors';
 import type { Packet } from './PacketList';
 import { ProtocolTree } from './ProtocolTree';
 
 interface PacketDetailsProps {
   packet: Packet | null;
   onFieldSelect?: (byteStart: number, byteEnd: number) => void;
-}
-
-/**
- * Format bytes to human-readable string
- */
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) {
-    return `${bytes} B`;
-  }
-  if (bytes < 1024 * 1024) {
-    return `${(bytes / 1024).toFixed(1)} KB`;
-  }
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-/**
- * Format timestamp to full date/time string
- */
-function formatTimestamp(timestamp: string): string {
-  try {
-    const date = new Date(timestamp);
-    return date.toLocaleString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      fractionalSecondDigits: 3,
-      hour12: false,
-    });
-  } catch {
-    return timestamp;
-  }
-}
-
-/**
- * Get protocol color for tag display
- */
-function getProtocolColor(
-  protocol: string,
-): 'blue' | 'green' | 'yellow' | 'purple' | 'gray' | 'red' {
-  const colors = {
-    arp: 'yellow',
-    icmp: 'blue',
-    dns: 'green',
-    tcp: 'purple',
-    udp: 'gray',
-    http: 'blue',
-    https: 'green',
-    dhcp: 'yellow',
-  } as const satisfies Record<string, 'blue' | 'green' | 'yellow' | 'purple' | 'gray' | 'red'>;
-  const protocolKey = protocol.toLowerCase() as keyof typeof colors;
-  return colors[protocolKey] || 'gray';
 }
 
 /**

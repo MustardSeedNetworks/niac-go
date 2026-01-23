@@ -1,4 +1,4 @@
-import { type FC, memo, useMemo } from 'react';
+import { type FC, memo } from 'react';
 import { useTimeDisplay } from '../hooks/useTimeDisplay';
 import { Tag } from '../ui/Tag';
 import { SmallText } from '../ui/Typography';
@@ -26,8 +26,6 @@ interface PacketListProps {
   packets: Packet[];
   selectedPacketId: string | null;
   onSelectPacket: (packet: Packet) => void;
-  protocolFilter: string;
-  searchQuery: string;
   autoScroll: boolean;
   getRowStyle?: (packet: Packet) => React.CSSProperties | undefined;
 }
@@ -86,59 +84,15 @@ PacketRow.displayName = 'PacketRow';
  * Clicking a packet selects it for detailed viewing.
  */
 export const PacketList: FC<PacketListProps> = memo(
-  ({ packets, selectedPacketId, onSelectPacket, protocolFilter, searchQuery, autoScroll, getRowStyle }) => {
+  ({ packets, selectedPacketId, onSelectPacket, autoScroll, getRowStyle }) => {
     const { mode: timeMode, cycleMode: cycleTimeMode } = useTimeDisplay();
-
-    // Filter packets based on protocol and search query
-    const filteredPackets = useMemo(() => {
-      return packets.filter((packet) => {
-        // Protocol filter
-        if (
-          protocolFilter !== 'All' &&
-          packet.protocol.toUpperCase() !== protocolFilter.toUpperCase()
-        ) {
-          return false;
-        }
-
-        // Search filter
-        if (searchQuery) {
-          const query = searchQuery.toLowerCase();
-          const searchableText = [
-            packet.protocol,
-            packet.sourceIp,
-            packet.destIp,
-            packet.summary,
-            packet.sourcePort?.toString(),
-            packet.destPort?.toString(),
-          ]
-            .filter(Boolean)
-            .join(' ')
-            .toLowerCase();
-
-          return searchableText.includes(query);
-        }
-
-        return true;
-      });
-    }, [packets, protocolFilter, searchQuery]);
 
     if (packets.length === 0) {
       return (
         <div className="h-full flex items-center justify-center text-gray-400">
           <div className="text-center">
-            <p className="text-sm">No packets captured</p>
+            <p className="text-sm">No packets to display</p>
             <SmallText>Waiting for packet stream...</SmallText>
-          </div>
-        </div>
-      );
-    }
-
-    if (filteredPackets.length === 0) {
-      return (
-        <div className="h-full flex items-center justify-center text-gray-400">
-          <div className="text-center">
-            <p className="text-sm">No packets match filter</p>
-            <SmallText>Try adjusting the filter criteria</SmallText>
           </div>
         </div>
       );
@@ -158,7 +112,7 @@ export const PacketList: FC<PacketListProps> = memo(
           className={`flex-1 overflow-y-auto space-y-1 pr-2 ${autoScroll ? 'scroll-smooth' : ''}`}
           style={{ scrollBehavior: autoScroll ? 'smooth' : 'auto' }}
         >
-          {filteredPackets.map((packet, idx) => (
+          {packets.map((packet, idx) => (
             <PacketRow
               key={packet.id}
               packet={packet}
@@ -167,8 +121,8 @@ export const PacketList: FC<PacketListProps> = memo(
               formattedTime={formatTimeByMode(
                 packet.timestamp,
                 timeMode,
-                filteredPackets[0]?.timestamp ?? null,
-                idx > 0 ? filteredPackets[idx - 1].timestamp : null,
+                packets[0]?.timestamp ?? null,
+                idx > 0 ? packets[idx - 1].timestamp : null,
               )}
               rowStyle={getRowStyle?.(packet)}
             />

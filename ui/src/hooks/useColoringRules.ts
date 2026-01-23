@@ -1,15 +1,15 @@
 import { type CSSProperties, useCallback, useMemo, useState } from 'react';
 import type { PcapPacket } from '../api/types';
 import type { Packet } from '../components/PacketList';
-import { evaluate } from '../utils/filter/evaluator';
-import { parse, validate } from '../utils/filter/parser';
-import type { ASTNode } from '../utils/filter/types';
 import {
   type ColoringRule,
   getDefaultRules,
   loadColoringRules,
   saveColoringRules,
 } from '../utils/coloring-rules';
+import { evaluate } from '../utils/filter/evaluator';
+import { parse, validate } from '../utils/filter/parser';
+import type { ASTNode } from '../utils/filter/types';
 
 interface CompiledRule {
   rule: ColoringRule;
@@ -29,7 +29,7 @@ export function useColoringRules() {
   const [rules, setRulesState] = useState<ColoringRule[]>(loadColoringRules);
 
   // Compile rules into ASTs for fast evaluation
-  const compiledRules = useMemo<CompiledRule[]>(() => {
+  const compiledRules = useMemo(() => {
     return rules
       .filter((r) => r.enabled)
       .map((rule) => {
@@ -74,7 +74,7 @@ export function useColoringRules() {
           // Skip invalid rules
         }
       }
-      return undefined;
+      return;
     },
     [compiledRules],
   );

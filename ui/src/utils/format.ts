@@ -38,6 +38,22 @@ export function formatRelativeTime(timestamp: string): string {
   return `${days}d ago`;
 }
 
+export function formatDurationSeconds(seconds: number): string {
+  if (seconds < 0.001) return '<1ms';
+  if (seconds < 1) return `${(seconds * 1000).toFixed(0)}ms`;
+  if (seconds < 60) return `${seconds.toFixed(1)}s`;
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins}m ${secs.toFixed(0)}s`;
+}
+
+export function formatDurationMs(ms: number): string {
+  if (ms < 1000) return `${ms.toFixed(0)} ms`;
+  if (ms < 60000) return `${(ms / 1000).toFixed(2)} s`;
+  if (ms < 3600000) return `${(ms / 60000).toFixed(1)} min`;
+  return `${(ms / 3600000).toFixed(1)} hr`;
+}
+
 export function formatBytes(size: number): string {
   if (!Number.isFinite(size) || size <= 0) {
     return '0 B';

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/krisarmstrong/niac-go/internal/config"
+	"github.com/krisarmstrong/niac-go/internal/safeconv"
 )
 
 // Discovery helper constants.
@@ -98,7 +99,7 @@ func sendDiscoveryFrame(dstMACString string, device *config.Device, payload []by
 	// Discovery protocols use length field instead of EtherType (802.3 format)
 	payloadLen := min(len(payload), maxPayloadLen)
 
-	length := safeUint16(payloadLen)
+	length := safeconv.Uint16(payloadLen)
 
 	// Build raw Ethernet frame with 802.3 format
 	frame := make([]byte, ethernetHeaderSize+len(payload))

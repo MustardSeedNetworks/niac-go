@@ -12,6 +12,7 @@ import (
 	"github.com/google/gopacket/layers"
 
 	"github.com/krisarmstrong/niac-go/internal/config"
+	"github.com/krisarmstrong/niac-go/internal/safeconv"
 )
 
 // LLDP protocol constants.
@@ -269,7 +270,7 @@ func (h *LLDPHandler) buildTTLTLV(device *config.Device) []byte {
 	if device.LLDPConfig != nil && device.LLDPConfig.TTL > 0 {
 		ttlVal := min(device.LLDPConfig.TTL, lldpMaxTTL)
 
-		ttl = safeUint16(ttlVal)
+		ttl = safeconv.Uint16(ttlVal)
 	}
 
 	length := lldpTTLFieldSize // TTL is 2 bytes

@@ -22,7 +22,9 @@ export function getAutocompleteSuggestions(
   }
 
   // Check if we're after an operator - suggest values
-  const beforeWord = textBeforeCursor.substring(0, textBeforeCursor.length - currentWord.length).trimEnd();
+  const beforeWord = textBeforeCursor
+    .substring(0, textBeforeCursor.length - currentWord.length)
+    .trimEnd();
   if (beforeWord.endsWith('==') || beforeWord.endsWith('!=') || beforeWord.endsWith('contains')) {
     return getValueSuggestions(currentWord, beforeWord);
   }

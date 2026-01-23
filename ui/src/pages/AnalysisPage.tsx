@@ -14,41 +14,14 @@ import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
 import { H2, P, SmallText } from '../ui/Typography';
 import { copyToClipboard, fileToBase64 } from '../utils/file';
-import { formatBytes, formatNumber, formatTime, getErrorMessage } from '../utils/format';
-
-/**
- * Format duration string with fallback
- */
-function formatDuration(value: string): string {
-  return value || '—';
-}
-
-/**
- * Format relative time from timestamp
- */
-function formatRelativeTime(timestamp: string): string {
-  if (!timestamp) {
-    return '—';
-  }
-  const diff = Date.now() - new Date(timestamp).getTime();
-  if (diff < 0) {
-    return 'just now';
-  }
-  const seconds = Math.floor(diff / 1000);
-  if (seconds < 60) {
-    return `${seconds}s ago`;
-  }
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) {
-    return `${minutes}m ago`;
-  }
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) {
-    return `${hours}h ago`;
-  }
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
-}
+import {
+  formatBytes,
+  formatDuration,
+  formatNumber,
+  formatRelativeTime,
+  formatTime,
+  getErrorMessage,
+} from '../utils/format';
 
 /**
  * Analysis Page - Capture & Walk Analysis

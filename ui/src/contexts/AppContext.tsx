@@ -8,6 +8,15 @@ import {
   fetchStats,
   fetchVersion,
 } from '../api/client';
+import type {
+  DeviceSummary,
+  ErrorInjectionInfo,
+  HistoryRecord,
+  InterfacesResponse,
+  NeighborRecord,
+  StackStatsResponse,
+  VersionInfo,
+} from '../api/types';
 import { POLL_INTERVALS } from '../constants/polling';
 import { useApiResource } from '../hooks/useApiResource';
 
@@ -18,14 +27,21 @@ import { useApiResource } from '../hooks/useApiResource';
  * duplicate API calls. Memoized to prevent unnecessary re-renders.
  */
 
+type ApiResourceResult<T> = {
+  data: T | null;
+  loading: boolean;
+  error: Error | null;
+  refetch: () => void;
+};
+
 interface AppContextValue {
-  stats: ReturnType<typeof useApiResource>;
-  devices: ReturnType<typeof useApiResource>;
-  history: ReturnType<typeof useApiResource>;
-  neighbors: ReturnType<typeof useApiResource>;
-  version: ReturnType<typeof useApiResource>;
-  errorTypes: ReturnType<typeof useApiResource>;
-  interfaces: ReturnType<typeof useApiResource>;
+  stats: ApiResourceResult<StackStatsResponse>;
+  devices: ApiResourceResult<DeviceSummary[]>;
+  history: ApiResourceResult<HistoryRecord[]>;
+  neighbors: ApiResourceResult<NeighborRecord[]>;
+  version: ApiResourceResult<VersionInfo>;
+  errorTypes: ApiResourceResult<ErrorInjectionInfo>;
+  interfaces: ApiResourceResult<InterfacesResponse>;
   pollIntervals: typeof POLL_INTERVALS;
 }
 

@@ -1,8 +1,9 @@
 import { useMemo } from 'react';
-import type { Packet } from '../components/PacketList';
 import type { PcapPacket } from '../api/types';
-import { evaluate, parse, validate } from '../utils/filter';
-import type { ASTNode } from '../utils/filter';
+import type { Packet } from '../components/PacketList';
+import { evaluate } from '../utils/filter/evaluator';
+import { parse, validate } from '../utils/filter/parser';
+import type { ASTNode } from '../utils/filter/types';
 
 interface UseDisplayFilterResult<T> {
   filteredPackets: T[];

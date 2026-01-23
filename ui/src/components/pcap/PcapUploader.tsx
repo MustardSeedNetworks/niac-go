@@ -4,6 +4,7 @@ import { Button } from '../../ui/Button';
 import { Card, CardContent } from '../../ui/Card';
 import { Tag } from '../../ui/Tag';
 import { SmallText } from '../../ui/Typography';
+import { formatBytes } from '../../utils/format';
 
 interface PcapUploaderProps {
   onFileSelect: (file: File) => void;
@@ -19,19 +20,6 @@ const MAX_FILE_SIZE = 100 * 1024 * 1024;
 
 /** Accepted file extensions */
 const ACCEPTED_EXTENSIONS = ['.pcap', '.pcapng', '.cap'];
-
-/**
- * Format bytes to human-readable string
- */
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) {
-    return `${bytes} B`;
-  }
-  if (bytes < 1024 * 1024) {
-    return `${(bytes / 1024).toFixed(1)} KB`;
-  }
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
 
 /**
  * Validate file for PCAP upload

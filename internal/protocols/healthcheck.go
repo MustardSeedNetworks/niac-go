@@ -11,6 +11,7 @@ import (
 	"github.com/google/gopacket/layers"
 
 	"github.com/krisarmstrong/niac-go/internal/config"
+	"github.com/krisarmstrong/niac-go/internal/safeconv"
 )
 
 // Additional TCP port constants for health check protocols
@@ -543,7 +544,7 @@ func (h *HealthCheckHandler) sendTCPResponse(
 		SrcPort: tcpLayer.DstPort,
 		DstPort: tcpLayer.SrcPort,
 		Seq:     tcpLayer.Ack,
-		Ack:     tcpLayer.Seq + safeUint32(payloadLen),
+		Ack:     tcpLayer.Seq + safeconv.Uint32(payloadLen),
 		PSH:     true,
 		ACK:     true,
 		Window:  hcTCPWindowSize,
@@ -828,7 +829,7 @@ func (h *HealthCheckHandler) generateMSSQLResponse(request []byte, devices []*co
 	// Safe conversion: packetLen is small (8 + tokenData length ~= 50 bytes)
 	binary.BigEndian.PutUint16(
 		response[2:],
-		safeUint16(packetLen),
+		safeconv.Uint16(packetLen),
 	)
 	response[4] = 0x00 // SPID
 	response[5] = 0x00

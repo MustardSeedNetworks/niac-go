@@ -1,5 +1,5 @@
-import type { Packet } from '../../components/PacketList';
 import type { PcapPacket } from '../../api/types';
+import type { Packet } from '../../components/PacketList';
 import type { ASTNode } from './types';
 import { BARE_PROTOCOLS } from './types';
 

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/krisarmstrong/niac-go/internal/config"
+	"github.com/krisarmstrong/niac-go/internal/safeconv"
 )
 
 // EDP protocol constants.
@@ -144,13 +145,13 @@ func (h *EDPHandler) buildEDPFrame(device *config.Device) []byte {
 
 	binary.BigEndian.PutUint16(
 		payload[len(payload):len(payload)+2],
-		safeUint16(deviceIDLen),
+		safeconv.Uint16(deviceIDLen),
 	)
 
 	payload = append(payload, make([]byte, edpLengthFieldSize)...)
 	binary.BigEndian.PutUint16(
 		payload[4:6],
-		safeUint16(deviceIDLen),
+		safeconv.Uint16(deviceIDLen),
 	)
 
 	// Device ID
@@ -189,7 +190,7 @@ func (h *EDPHandler) buildDisplayTLV(device *config.Device) []byte {
 	tlv[0] = EDPTLVTypeDisplay
 	binary.BigEndian.PutUint16(
 		tlv[1:3],
-		safeUint16(displayLen),
+		safeconv.Uint16(displayLen),
 	)
 	copy(tlv[3:], display[:displayLen])
 
@@ -227,7 +228,7 @@ func (h *EDPHandler) buildInfoTLV(device *config.Device) []byte {
 	// TLV: Type (1 byte) + Length (2 bytes) + Value
 	tlv := make([]byte, edpTLVHeaderSize+infoLen)
 	tlv[0] = EDPTLVTypeInfo
-	binary.BigEndian.PutUint16(tlv[1:3], safeUint16(infoLen))
+	binary.BigEndian.PutUint16(tlv[1:3], safeconv.Uint16(infoLen))
 	copy(tlv[3:], infoBytes[:infoLen])
 
 	return tlv

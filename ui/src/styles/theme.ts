@@ -557,16 +557,3 @@ export function getDeviceColor(type: string): (typeof deviceColor)[keyof typeof 
   }
   return deviceColor.unknown;
 }
-
-/**
- * Get protocol color config by name
- */
-export function getProtocolColor(
-  protocol: string,
-): (typeof protocolColor)[keyof typeof protocolColor] | null {
-  const normalizedProtocol = protocol.toLowerCase().replace(/[^a-z]/g, '');
-  if (normalizedProtocol in protocolColor) {
-    return protocolColor[normalizedProtocol as keyof typeof protocolColor];
-  }
-  return null;
-}

@@ -12,10 +12,7 @@ function buildUrl(path: string): string {
   return `${API_BASE}/${path}`;
 }
 
-async function captureRequest<T>(
-  path: string,
-  init: RequestInit = {},
-): Promise<T> {
+async function captureRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 

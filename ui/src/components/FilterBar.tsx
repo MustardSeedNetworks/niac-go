@@ -1,7 +1,9 @@
 import { type FC, memo, useCallback, useEffect, useRef, useState } from 'react';
-import { getAutocompleteSuggestions } from '../utils/filter/autocomplete';
+import {
+  type AutocompleteSuggestion,
+  getAutocompleteSuggestions,
+} from '../utils/filter/autocomplete';
 import { validate } from '../utils/filter/parser';
-import type { AutocompleteSuggestion } from '../utils/filter/types';
 
 interface FilterBarProps {
   value: string;
@@ -52,8 +54,7 @@ export const FilterBar: FC<FilterBarProps> = memo(({ value, onChange, placeholde
       const wordMatch = textBefore.match(/([a-zA-Z0-9_.]+)$/);
       const wordStart = wordMatch ? cursorPos - wordMatch[1].length : cursorPos;
 
-      const newValue =
-        value.substring(0, wordStart) + suggestion.insertText + textAfter;
+      const newValue = value.substring(0, wordStart) + suggestion.insertText + textAfter;
       onChange(newValue);
       setSuggestions([]);
 

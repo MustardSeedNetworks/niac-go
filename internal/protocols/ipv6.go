@@ -10,6 +10,7 @@ import (
 	"github.com/google/gopacket/layers"
 
 	"github.com/krisarmstrong/niac-go/internal/config"
+	"github.com/krisarmstrong/niac-go/internal/safeconv"
 )
 
 // IPv6 protocol constants.
@@ -291,7 +292,7 @@ func CalculateIPv6Checksum(srcIP, dstIP net.IP, nextHeader uint8, payload []byte
 	// Upper-layer packet length (32-bit)
 	payloadLen2 := min(len(payload), ipv6MaxUint32)
 
-	binary.BigEndian.PutUint32(pseudoHeader[32:36], safeUint32(payloadLen2))
+	binary.BigEndian.PutUint32(pseudoHeader[32:36], safeconv.Uint32(payloadLen2))
 
 	// Zero padding (3 bytes) at 36:39
 
@@ -343,7 +344,7 @@ func (h *IPv6Handler) SendIPv6Packet(srcIP, dstIP net.IP, srcMAC, dstMAC net.Har
 		Version:      ipv6Version,
 		TrafficClass: 0,
 		FlowLabel:    0,
-		Length:       safeUint16(payloadLen),
+		Length:       safeconv.Uint16(payloadLen),
 		NextHeader:   nextHeader,
 		HopLimit:     hopLimit,
 		SrcIP:        srcIP,

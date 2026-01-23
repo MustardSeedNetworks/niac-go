@@ -66,72 +66,81 @@ interface HexRowProps {
 /**
  * Individual hex dump row - memoized for performance
  */
-const HexRow = memo(({ offset, bytes, bytesPerRow, headerLength, startIndex, highlightStart, highlightEnd }: HexRowProps) => {
-  // Build hex column with color coding
-  const hexCells = bytes.map((byte, idx) => {
-    const globalIndex = startIndex + idx;
-    const isHeader = globalIndex < headerLength;
-    const isHighlighted = highlightStart >= 0 && globalIndex >= highlightStart && globalIndex < highlightEnd;
+const HexRow = memo(
+  ({
+    offset,
+    bytes,
+    bytesPerRow,
+    headerLength,
+    startIndex,
+    highlightStart,
+    highlightEnd,
+  }: HexRowProps) => {
+    // Build hex column with color coding
+    const hexCells = bytes.map((byte, idx) => {
+      const globalIndex = startIndex + idx;
+      const isHeader = globalIndex < headerLength;
+      const isHighlighted =
+        highlightStart >= 0 && globalIndex >= highlightStart && globalIndex < highlightEnd;
 
-    let className = isHeader ? 'text-cyan-400' : 'text-gray-300';
-    if (isHighlighted) {
-      className = 'text-yellow-200 bg-yellow-700/40 rounded-sm';
-    }
+      let className = isHeader ? 'text-cyan-400' : 'text-gray-300';
+      if (isHighlighted) {
+        className = 'text-yellow-200 bg-yellow-700/40 rounded-sm';
+      }
+
+      return (
+        <span key={globalIndex} className={`${className} ${idx === 7 ? 'mr-1' : ''}`}>
+          {formatByte(byte)}
+          {idx < bytes.length - 1 ? ' ' : ''}
+        </span>
+      );
+    });
+
+    // Pad with spaces if row is not full
+    const paddingCount = bytesPerRow - bytes.length;
+    const padding =
+      paddingCount > 0 ? <span className="text-gray-700">{'   '.repeat(paddingCount)}</span> : null;
+
+    // Build ASCII column
+    const asciiChars = bytes.map((byte, idx) => {
+      const globalIndex = startIndex + idx;
+      const isHeader = globalIndex < headerLength;
+      const isHighlighted =
+        highlightStart >= 0 && globalIndex >= highlightStart && globalIndex < highlightEnd;
+      const char = byteToChar(byte);
+
+      let asciiClass = isHeader ? 'text-cyan-400' : 'text-gray-300';
+      if (isHighlighted) {
+        asciiClass = 'text-yellow-200 bg-yellow-700/40';
+      }
+
+      return (
+        <span key={globalIndex} className={asciiClass}>
+          {char}
+        </span>
+      );
+    });
 
     return (
-      <span
-        key={globalIndex}
-        className={`${className} ${idx === 7 ? 'mr-1' : ''}`}
-      >
-        {formatByte(byte)}
-        {idx < bytes.length - 1 ? ' ' : ''}
-      </span>
+      <div className="flex font-mono text-xs leading-5">
+        {/* Offset column */}
+        <span className="text-violet-400 w-20 flex-shrink-0">{formatOffset(offset)}:</span>
+
+        {/* Hex column */}
+        <span className="flex-1 min-w-0">
+          {hexCells}
+          {padding}
+        </span>
+
+        {/* Separator */}
+        <span className="text-gray-600 mx-2">|</span>
+
+        {/* ASCII column */}
+        <span className="w-16 flex-shrink-0 text-right">{asciiChars}</span>
+      </div>
     );
-  });
-
-  // Pad with spaces if row is not full
-  const paddingCount = bytesPerRow - bytes.length;
-  const padding =
-    paddingCount > 0 ? <span className="text-gray-700">{'   '.repeat(paddingCount)}</span> : null;
-
-  // Build ASCII column
-  const asciiChars = bytes.map((byte, idx) => {
-    const globalIndex = startIndex + idx;
-    const isHeader = globalIndex < headerLength;
-    const isHighlighted = highlightStart >= 0 && globalIndex >= highlightStart && globalIndex < highlightEnd;
-    const char = byteToChar(byte);
-
-    let asciiClass = isHeader ? 'text-cyan-400' : 'text-gray-300';
-    if (isHighlighted) {
-      asciiClass = 'text-yellow-200 bg-yellow-700/40';
-    }
-
-    return (
-      <span key={globalIndex} className={asciiClass}>
-        {char}
-      </span>
-    );
-  });
-
-  return (
-    <div className="flex font-mono text-xs leading-5">
-      {/* Offset column */}
-      <span className="text-violet-400 w-20 flex-shrink-0">{formatOffset(offset)}:</span>
-
-      {/* Hex column */}
-      <span className="flex-1 min-w-0">
-        {hexCells}
-        {padding}
-      </span>
-
-      {/* Separator */}
-      <span className="text-gray-600 mx-2">|</span>
-
-      {/* ASCII column */}
-      <span className="w-16 flex-shrink-0 text-right">{asciiChars}</span>
-    </div>
-  );
-});
+  },
+);
 
 HexRow.displayName = 'HexRow';
 
