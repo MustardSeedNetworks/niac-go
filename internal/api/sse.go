@@ -433,7 +433,10 @@ func (s *Server) serveSSE(stream SSEStream) http.HandlerFunc {
 
 		sc, err := s.setupSSEConnection(w, r, stream)
 		if err != nil {
-			writeError(w, r, http.StatusInternalServerError, "sse_not_supported", err.Error(), nil)
+			// SECURITY FIX #183: Don't expose internal error details
+			s.logger.Error("[API] SSE connection setup failed", "error", err)
+			writeError(w, r, http.StatusInternalServerError, "sse_not_supported",
+				"Failed to establish SSE connection", nil)
 			return
 		}
 		defer sc.heartbeat.Stop()

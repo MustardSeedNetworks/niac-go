@@ -19,6 +19,99 @@ var (
 	ErrInvalidIPAddress  = errors.New("invalid IP address")
 )
 
+const (
+	// MaxDeviceCount is the maximum number of devices allowed.
+	// SECURITY FIX #173: Prevents resource exhaustion via unbounded device creation.
+	MaxDeviceCount = 1000
+
+	// maxLabelLen is the max length of a hostname label (RFC 1123).
+	maxLabelLen = 63
+)
+
+// validateHostname validates a device hostname per RFC 1123.
+// SECURITY FIX #169: Prevents invalid or dangerous hostname values.
+func validateHostname(hostname string) *ErrorDetail {
+	if hostname == "" {
+		return &ErrorDetail{
+			Field: "hostname",
+			Issue: "hostname is required",
+		}
+	}
+
+	if len(hostname) > maxHostnameLen {
+		return &ErrorDetail{
+			Field: "hostname",
+			Issue: fmt.Sprintf("hostname exceeds maximum length of %d characters", maxHostnameLen),
+			Value: hostname[:min(truncateErrorValue, len(hostname))],
+		}
+	}
+
+	// Must not be an IP address
+	if net.ParseIP(hostname) != nil {
+		return &ErrorDetail{
+			Field: "hostname",
+			Issue: "hostname must not be an IP address",
+			Value: hostname,
+		}
+	}
+
+	// Validate each label
+	labels := strings.Split(hostname, ".")
+	for _, label := range labels {
+		if len(label) == 0 {
+			return &ErrorDetail{
+				Field: "hostname",
+				Issue: "hostname contains empty label (consecutive dots)",
+				Value: hostname[:min(truncateErrorValue, len(hostname))],
+			}
+		}
+
+		if len(label) > maxLabelLen {
+			return &ErrorDetail{
+				Field: "hostname",
+				Issue: fmt.Sprintf("hostname label exceeds maximum length of %d characters", maxLabelLen),
+				Value: hostname[:min(truncateErrorValue, len(hostname))],
+			}
+		}
+
+		// Must start with alphanumeric
+		if !isAlphanumeric(label[0]) {
+			return &ErrorDetail{
+				Field: "hostname",
+				Issue: "hostname labels must start with an alphanumeric character",
+				Value: hostname[:min(truncateErrorValue, len(hostname))],
+			}
+		}
+
+		// Must end with alphanumeric (not hyphen)
+		if !isAlphanumeric(label[len(label)-1]) {
+			return &ErrorDetail{
+				Field: "hostname",
+				Issue: "hostname labels must not end with a hyphen",
+				Value: hostname[:min(truncateErrorValue, len(hostname))],
+			}
+		}
+
+		// Only alphanumeric and hyphens allowed
+		for _, c := range label {
+			if !isAlphanumeric(byte(c)) && c != '-' {
+				return &ErrorDetail{
+					Field: "hostname",
+					Issue: "hostname contains invalid characters (only alphanumeric and hyphens allowed)",
+					Value: hostname[:min(truncateErrorValue, len(hostname))],
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+// isAlphanumeric checks if a byte is alphanumeric.
+func isAlphanumeric(c byte) bool {
+	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')
+}
+
 // YAML validation constants to prevent resource exhaustion attacks.
 // SECURITY FIX #153: Limit YAML input size and complexity.
 const (
@@ -332,10 +425,10 @@ func (s *Server) handleDeviceCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validate required fields
-	if req.Hostname == "" {
+	// SECURITY FIX #169: Validate hostname format
+	if detail := validateHostname(req.Hostname); detail != nil {
 		writeError(w, r, http.StatusBadRequest, "validation_failed",
-			"hostname is required", []ErrorDetail{{Field: "hostname", Issue: "required"}})
+			detail.Issue, []ErrorDetail{*detail})
 
 		return
 	}
@@ -343,6 +436,14 @@ func (s *Server) handleDeviceCreate(w http.ResponseWriter, r *http.Request) {
 	cfg := s.currentConfig()
 	if cfg == nil {
 		writeError(w, r, http.StatusBadRequest, "config_not_found", "No configuration loaded", nil)
+
+		return
+	}
+
+	// SECURITY FIX #173: Enforce device count limit
+	if len(cfg.Devices) >= MaxDeviceCount {
+		writeError(w, r, http.StatusTooManyRequests, "device_limit_reached",
+			fmt.Sprintf("Maximum device count of %d reached", MaxDeviceCount), nil)
 
 		return
 	}
@@ -360,7 +461,10 @@ func (s *Server) handleDeviceCreate(w http.ResponseWriter, r *http.Request) {
 	// Create device from request
 	newDevice, err := createDeviceFromRequest(req)
 	if err != nil {
-		writeError(w, r, http.StatusBadRequest, "device_creation_failed", err.Error(), nil)
+		// SECURITY FIX #183: Don't expose internal error details
+		s.logger.Error("[API] Device creation failed", "error", err, "hostname", req.Hostname)
+		writeError(w, r, http.StatusBadRequest, "device_creation_failed",
+			"Failed to create device from request", nil)
 
 		return
 	}
@@ -560,9 +664,11 @@ func (s *Server) handleDeviceClone(w http.ResponseWriter, r *http.Request, hostn
 		return
 	}
 
-	if req.NewHostname == "" {
+	// SECURITY FIX #169: Validate new hostname format
+	if detail := validateHostname(req.NewHostname); detail != nil {
+		detail.Field = "new_hostname"
 		writeError(w, r, http.StatusBadRequest, "validation_failed",
-			"new_hostname is required", []ErrorDetail{{Field: "new_hostname", Issue: "required"}})
+			detail.Issue, []ErrorDetail{*detail})
 
 		return
 	}
@@ -570,6 +676,14 @@ func (s *Server) handleDeviceClone(w http.ResponseWriter, r *http.Request, hostn
 	cfg := s.currentConfig()
 	if cfg == nil {
 		writeError(w, r, http.StatusNotFound, "config_not_found", "No configuration loaded", nil)
+
+		return
+	}
+
+	// SECURITY FIX #173: Enforce device count limit
+	if len(cfg.Devices) >= MaxDeviceCount {
+		writeError(w, r, http.StatusTooManyRequests, "device_limit_reached",
+			fmt.Sprintf("Maximum device count of %d reached", MaxDeviceCount), nil)
 
 		return
 	}

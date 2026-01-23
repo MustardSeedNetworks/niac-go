@@ -304,7 +304,7 @@ func (s *Server) handlePcapUpload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validate PCAP magic number
-	if validateErr := validatePCAPMagic(pcapData); validateErr != nil {
+	if validateErr := validatePCAPStructure(pcapData); validateErr != nil {
 		writeError(w, r, http.StatusBadRequest, "invalid_pcap",
 			validateErr.Error(), nil)
 
@@ -329,8 +329,10 @@ func (s *Server) handlePcapUpload(w http.ResponseWriter, r *http.Request) {
 	// Analyze the PCAP
 	result, err := analyzePcapData(pcapData, req.Filename)
 	if err != nil {
+		// SECURITY FIX #183: Don't expose internal error details
+		s.logger.Error("[API] PCAP analysis failed", "error", err, "filename", req.Filename)
 		writeError(w, r, http.StatusInternalServerError, "analysis_failed",
-			fmt.Sprintf("Failed to analyze PCAP: %v", err), nil)
+			"Failed to analyze PCAP file", nil)
 
 		return
 	}

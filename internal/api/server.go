@@ -80,6 +80,10 @@ const (
 	// WriteRateLimit controls per-endpoint limits for write operations.
 	WriteRateLimit = 20 // 20 requests per second
 	WriteBurst     = 40 // Burst of 40
+	// FileRateLimit controls per-endpoint limits for file listing operations.
+	// SECURITY FIX #171: Prevent enumeration attacks on file listing endpoint.
+	FileRateLimit = 30 // 30 requests per second
+	FileBurst     = 60 // Burst of 60
 	// WalkRateLimit controls per-endpoint limits for walk file operations.
 	WalkRateLimit = 10 // 10 requests per second
 	WalkBurst     = 20 // Burst of 20
@@ -91,7 +95,7 @@ const (
 	requestIDBytes      = 16       // bytes for unique request ID
 	csrfTokenBytes      = 32       // bytes for CSRF token
 	maxURLLength        = 2048     // max webhook URL length
-	maxInterfaceNameLen = 255      // max interface name length
+	maxInterfaceNameLen = 15       // SECURITY FIX #182: Linux IFNAMSIZ limit
 	maxPathLength       = 4096     // max file path length
 	maxQueryParamLen    = 1024     // max query parameter length
 	maxLoopMs           = 86400000 // max loop ms (24 hours)
@@ -274,6 +278,7 @@ type Server struct {
 	uploadLimiter *RateLimiter // Stricter limits for upload endpoints
 	writeLimiter  *RateLimiter // Moderate limits for write operations
 	walkLimiter   *RateLimiter // Limits for walk file operations
+	fileLimiter   *RateLimiter // SECURITY FIX #171: Limits for file listing operations
 }
 
 // NewServer returns a configured API server.
@@ -292,6 +297,7 @@ func NewServer(cfg ServerConfig) *Server {
 		uploadLimiter: NewRateLimiter(UploadRateLimit, UploadBurst),
 		writeLimiter:  NewRateLimiter(WriteRateLimit, WriteBurst),
 		walkLimiter:   NewRateLimiter(WalkRateLimit, WalkBurst),
+		fileLimiter:   NewRateLimiter(FileRateLimit, FileBurst),
 	}
 }
 
@@ -350,6 +356,27 @@ func (s *Server) walkRateLimit(next http.HandlerFunc) http.HandlerFunc {
 				"Walk file operation rate limit exceeded. Please wait before trying again.", nil)
 			s.logger.Warn(
 				"[API] Walk rate limit exceeded",
+				"clientIP",
+				clientIP,
+				"path",
+				r.URL.Path,
+			)
+			return
+		}
+		next(w, r)
+	}
+}
+
+// fileRateLimit applies rate limiting for file listing operations.
+// SECURITY FIX #171: Prevent rapid enumeration of file listing endpoint.
+func (s *Server) fileRateLimit(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		clientIP := getClientIP(r)
+		if !s.fileLimiter.GetLimiter(clientIP).Allow() {
+			writeError(w, r, http.StatusTooManyRequests, "file_rate_limit_exceeded",
+				"File listing rate limit exceeded. Please wait before trying again.", nil)
+			s.logger.Warn(
+				"[API] File rate limit exceeded",
 				"clientIP",
 				clientIP,
 				"path",
@@ -764,16 +791,38 @@ func isValidInterfaceChar(c rune) bool {
 }
 
 // validateInterfaceName validates interface name characters and length.
+// SECURITY FIX #182: Stricter validation to prevent path traversal and dangerous names.
 func validateInterfaceName(iface string) *ErrorDetail {
 	if iface == "" {
-		return nil
+		return &ErrorDetail{
+			Field: "interface",
+			Issue: "interface name is required",
+		}
 	}
 
 	if len(iface) > maxInterfaceNameLen {
 		return &ErrorDetail{
 			Field: "interface",
-			Issue: "interface name exceeds 255 characters",
-			Value: iface[:truncateErrorValue],
+			Issue: fmt.Sprintf("interface name exceeds %d characters (Linux IFNAMSIZ limit)", maxInterfaceNameLen),
+			Value: iface[:min(truncateErrorValue, len(iface))],
+		}
+	}
+
+	// Must start with a letter
+	if iface[0] == '-' || iface[0] == '.' || !((iface[0] >= 'a' && iface[0] <= 'z') || (iface[0] >= 'A' && iface[0] <= 'Z')) {
+		return &ErrorDetail{
+			Field: "interface",
+			Issue: "interface name must start with a letter",
+			Value: iface[:min(truncateErrorValue, len(iface))],
+		}
+	}
+
+	// Must not contain path traversal sequences
+	if iface == ".." || strings.Contains(iface, "..") {
+		return &ErrorDetail{
+			Field: "interface",
+			Issue: "interface name must not contain path traversal sequences",
+			Value: iface[:min(truncateErrorValue, len(iface))],
 		}
 	}
 
@@ -1112,7 +1161,8 @@ func (s *Server) registerAPIRoutes(mux *http.ServeMux) {
 	s.registerPcapRoutes(mux)
 	s.registerSSERoutes(mux)
 
-	mux.HandleFunc("/metrics", s.recoverMiddleware(s.handleMetrics))
+	// SECURITY FIX #172: Metrics endpoint requires authentication
+	mux.HandleFunc("/metrics", s.recoverMiddleware(s.auth(s.handleMetrics)))
 	mux.HandleFunc("/", s.recoverMiddleware(s.auth(s.serveSPA())))
 }
 
@@ -1143,7 +1193,8 @@ func (s *Server) registerWriteProtectedRoutes(mux *http.ServeMux) {
 // registerReadOnlyRoutes registers routes that only require authentication.
 func (s *Server) registerReadOnlyRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/v1/config/schema", s.recoverMiddleware(s.auth(s.handleConfigSchema)))
-	mux.HandleFunc("/api/v1/files", s.recoverMiddleware(s.auth(s.handleFiles)))
+	// SECURITY FIX #171: Apply file-specific rate limiting
+	mux.HandleFunc("/api/v1/files", s.recoverMiddleware(s.auth(s.fileRateLimit(s.handleFiles))))
 	mux.HandleFunc("/api/v1/topology", s.recoverMiddleware(s.auth(s.handleTopology)))
 	mux.HandleFunc("/api/v1/topology/export", s.recoverMiddleware(s.auth(s.handleTopologyExport)))
 	mux.HandleFunc("/api/v1/errors", s.recoverMiddleware(s.auth(s.handleErrors)))
@@ -1265,7 +1316,8 @@ func (s *Server) Start() error {
 
 	if s.cfg.MetricsAddr != "" && s.cfg.MetricsAddr != s.cfg.Addr {
 		mux := http.NewServeMux()
-		mux.HandleFunc("/metrics", s.recoverMiddleware(s.handleMetrics))
+		// SECURITY FIX #172: Metrics endpoint requires authentication
+		mux.HandleFunc("/metrics", s.recoverMiddleware(s.auth(s.handleMetrics)))
 		s.metricsServer = newSecureHTTPServer(s.cfg.MetricsAddr, mux)
 
 		go func() {
@@ -2531,9 +2583,35 @@ func (s *Server) sendAlert(total uint64) {
 	_ = resp.Body.Close()
 }
 
-// validatePCAPMagic validates that the file begins with a valid PCAP magic number
-// SECURITY FIX LOW-2: Prevents processing of non-PCAP files that could exploit parser bugs.
-func validatePCAPMagic(data []byte) error {
+// Known PCAP link-layer types for validation.
+// SECURITY FIX #170: Only accept recognized link-layer types.
+var validLinkTypes = map[uint32]bool{
+	0:   true, // NULL/Loopback
+	1:   true, // Ethernet
+	6:   true, // Token Ring
+	8:   true, // SLIP
+	9:   true, // PPP
+	12:  true, // Raw IP (BSD)
+	101: true, // Raw IP
+	105: true, // IEEE 802.11
+	113: true, // Linux cooked capture
+	127: true, // IEEE 802.11 radiotap
+	140: true, // MTP2 with pseudo-header
+	147: true, // 802.11 with AVS header
+	162: true, // Raw IP (DLT_RAW on OpenBSD)
+	163: true, // NFLOG
+	187: true, // Bluetooth HCI
+	189: true, // USB 2.0/1.1/1.0 packets
+	195: true, // IEEE 802.15.4
+	204: true, // PPP
+	228: true, // Raw IPv4
+	229: true, // Raw IPv6
+	253: true, // NFQUEUE
+}
+
+// validatePCAPStructure validates that the file has a valid PCAP/pcapng structure.
+// SECURITY FIX #170: Enhanced beyond magic-only validation to check header structure.
+func validatePCAPStructure(data []byte) error {
 	if len(data) < minPCAPSize {
 		return ErrFileTooSmallForPCAP
 	}
@@ -2546,23 +2624,77 @@ func validatePCAPMagic(data []byte) error {
 	// 0x0a0d0d0a = pcapng format
 	magic := uint32(data[0])<<24 | uint32(data[1])<<16 | uint32(data[2])<<8 | uint32(data[3])
 
-	validMagics := []uint32{
-		0xa1b2c3d4, // pcap microsecond BE
-		0xd4c3b2a1, // pcap microsecond LE
-		0xa1b23c4d, // pcap nanosecond BE
-		0x4d3cb2a1, // pcap nanosecond LE
-		0x0a0d0d0a, // pcapng
+	switch magic {
+	case 0xa1b2c3d4, 0xa1b23c4d:
+		// Big-endian pcap format
+		return validatePCAPGlobalHeader(data, true)
+	case 0xd4c3b2a1, 0x4d3cb2a1:
+		// Little-endian pcap format
+		return validatePCAPGlobalHeader(data, false)
+	case 0x0a0d0d0a:
+		// pcapng format: validate Section Header Block
+		return validatePCAPngSHB(data)
+	default:
+		return fmt.Errorf(
+			"%w: 0x%08x (expected pcap or pcapng format)",
+			ErrInvalidPCAPMagicNumber,
+			magic,
+		)
+	}
+}
+
+// validatePCAPGlobalHeader validates the pcap global header structure (24 bytes).
+func validatePCAPGlobalHeader(data []byte, bigEndian bool) error {
+	const pcapGlobalHeaderLen = 24
+
+	if len(data) < pcapGlobalHeaderLen {
+		return fmt.Errorf("%w: file too small for pcap global header (need %d bytes, got %d)",
+			ErrInvalidPCAPMagicNumber, pcapGlobalHeaderLen, len(data))
 	}
 
-	if slices.Contains(validMagics, magic) {
-		return nil
+	var versionMajor, versionMinor, linkType uint32
+	if bigEndian {
+		versionMajor = uint32(data[4])<<8 | uint32(data[5])
+		versionMinor = uint32(data[6])<<8 | uint32(data[7])
+		linkType = uint32(data[20])<<24 | uint32(data[21])<<16 | uint32(data[22])<<8 | uint32(data[23])
+	} else {
+		versionMajor = uint32(data[5])<<8 | uint32(data[4])
+		versionMinor = uint32(data[7])<<8 | uint32(data[6])
+		linkType = uint32(data[23])<<24 | uint32(data[22])<<16 | uint32(data[21])<<8 | uint32(data[20])
 	}
 
-	return fmt.Errorf(
-		"%w: 0x%08x (expected pcap or pcapng format)",
-		ErrInvalidPCAPMagicNumber,
-		magic,
-	)
+	// Validate version (must be 2.4)
+	if versionMajor != 2 || versionMinor != 4 {
+		return fmt.Errorf("%w: unsupported pcap version %d.%d (expected 2.4)",
+			ErrInvalidPCAPMagicNumber, versionMajor, versionMinor)
+	}
+
+	// Validate link-layer type
+	if !validLinkTypes[linkType] {
+		return fmt.Errorf("%w: unknown link-layer type %d",
+			ErrInvalidPCAPMagicNumber, linkType)
+	}
+
+	return nil
+}
+
+// validatePCAPngSHB validates the pcapng Section Header Block.
+func validatePCAPngSHB(data []byte) error {
+	const minSHBLen = 28 // Block Type(4) + Block Length(4) + Byte-Order Magic(4) + Version(4) + Section Length(8) + Block Length(4)
+
+	if len(data) < minSHBLen {
+		return fmt.Errorf("%w: file too small for pcapng Section Header Block (need %d bytes, got %d)",
+			ErrInvalidPCAPMagicNumber, minSHBLen, len(data))
+	}
+
+	// Bytes 8-11 contain Byte-Order Magic to determine endianness
+	bom := uint32(data[8])<<24 | uint32(data[9])<<16 | uint32(data[10])<<8 | uint32(data[11])
+	if bom != 0x1a2b3c4d && bom != 0x4d3c2b1a {
+		return fmt.Errorf("%w: invalid pcapng byte-order magic 0x%08x",
+			ErrInvalidPCAPMagicNumber, bom)
+	}
+
+	return nil
 }
 
 // processInlineData decodes and validates inline PCAP data, writes it to a temp file.
@@ -2585,7 +2717,7 @@ func (s *Server) processInlineData(inlineData string) (string, error) {
 	}
 
 	// SECURITY FIX LOW-2: Validate PCAP file magic number
-	if magicErr := validatePCAPMagic(data); magicErr != nil {
+	if magicErr := validatePCAPStructure(data); magicErr != nil {
 		return "", fmt.Errorf("invalid PCAP file: %w", magicErr)
 	}
 
