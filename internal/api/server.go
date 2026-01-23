@@ -292,7 +292,7 @@ func NewServer(cfg ServerConfig) *Server {
 		startTime:   time.Now(),
 		rateLimiter: NewRateLimiter(DefaultRateLimit, DefaultBurst),
 		csrfToken:   csrfToken,
-		sseHub:      NewSSEHub(),
+		sseHub:      NewSSEHub(SSEConfig{}),
 		// SECURITY FIX #156: Initialize per-endpoint rate limiters
 		uploadLimiter: NewRateLimiter(UploadRateLimit, UploadBurst),
 		writeLimiter:  NewRateLimiter(WriteRateLimit, WriteBurst),
@@ -1501,6 +1501,13 @@ func (s *Server) serveSPA() http.HandlerFunc {
 			w.Header().Set("Content-Type", "application/javascript")
 		} else if strings.HasSuffix(requestPath, ".css") {
 			w.Header().Set("Content-Type", "text/css")
+		}
+
+		// Cache headers: hashed assets get long-lived cache, index.html is never cached
+		if requestPath == "index.html" {
+			w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+		} else if strings.HasPrefix(requestPath, "assets/") {
+			w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
 		}
 
 		http.ServeContent(w, r, requestPath, time.Time{}, bytes.NewReader(data))

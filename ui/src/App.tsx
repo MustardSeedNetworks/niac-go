@@ -20,6 +20,7 @@ import { fetchVersion } from './api/client';
 import { ErrorBoundary, PageErrorBoundary } from './components/ErrorBoundary';
 import { POLL_INTERVALS } from './constants/polling';
 import { useApiResource } from './hooks/useApiResource';
+import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { AnalysisPage } from './pages/AnalysisPage';
 import { AutomationPage } from './pages/AutomationPage';
 import { ConfigDiffPage } from './pages/ConfigDiffPage';
@@ -34,6 +35,7 @@ import { RuntimeControlPage } from './pages/RuntimeControlPage';
 import { TemplatesPage } from './pages/TemplatesPage';
 import { TopologyPage } from './pages/TopologyPage';
 import { TrafficInjectionPage } from './pages/TrafficInjectionPage';
+import { Breadcrumbs } from './ui/Breadcrumbs';
 import { PageHeader } from './ui/Layout';
 import type { SidebarNavGroup } from './ui/Sidebar';
 import { SidebarLayout } from './ui/Sidebar';
@@ -218,6 +220,8 @@ export default function App() {
     intervalMs: POLL_INTERVALS.verySlow,
   });
 
+  useKeyboardShortcuts();
+
   return (
     <ErrorBoundary>
       <SidebarLayout groups={navGroups} version={version?.version}>
@@ -285,6 +289,7 @@ export default function App() {
 // Memoize PageTemplate to prevent unnecessary re-renders
 const PageTemplate = memo(({ page, children }: { page: PageConfig; children: ReactNode }) => (
   <section className="space-y-6">
+    <Breadcrumbs />
     <PageHeader icon={page.icon} title={page.title} description={page.description} />
     {children}
   </section>

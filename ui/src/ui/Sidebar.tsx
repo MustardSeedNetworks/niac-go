@@ -4,7 +4,9 @@ import { createElement, type FC, type ReactNode, useEffect, useState } from 'rea
 import { useLocation, useNavigate } from 'react-router-dom';
 import { HelpDrawer } from '../components/HelpDrawer';
 import { SettingsDrawer } from '../components/SettingsDrawer';
+import { prefetchRoute } from '../utils/prefetch';
 import { safeGetItem, safeSetItem } from '../utils/storage';
+import { ConnectionStatus } from './ConnectionStatus';
 
 export interface SidebarNavItem {
   path: string;
@@ -57,6 +59,7 @@ export const SidebarLayout: FC<SidebarProps> = ({ groups, version, children }) =
         type="button"
         key={item.path}
         onClick={() => navigate(item.path)}
+        onMouseEnter={() => prefetchRoute(item.path)}
         className={`
           group flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium
           transition-all duration-200
@@ -177,6 +180,9 @@ export const SidebarLayout: FC<SidebarProps> = ({ groups, version, children }) =
             {!collapsed && <span>Settings</span>}
           </button>
         </div>
+
+        {/* Connection Status */}
+        {!collapsed && <ConnectionStatus />}
 
         {/* Version Info */}
         {version && (

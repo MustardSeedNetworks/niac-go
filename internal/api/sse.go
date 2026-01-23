@@ -24,13 +24,43 @@ import (
 )
 
 const (
-	// SSE configuration.
-	sseBufferSize      = 256  // Client send buffer size
-	sseMaxClients      = 100  // Max clients per stream
-	sseMaxMsgPerSec    = 100  // Rate limit: max messages per second
-	sseHeartbeatSec    = 30   // Send heartbeat comment every N seconds
-	millisecsPerSecond = 1000 // Milliseconds per second for rate limiter
+	// SSE default configuration.
+	defaultSSEBufferSize   = 256  // Client send buffer size
+	defaultSSEMaxClients   = 100  // Max clients per stream
+	defaultSSEMaxMsgPerSec = 100  // Rate limit: max messages per second
+	defaultSSEHeartbeatSec = 30   // Send heartbeat comment every N seconds
+	defaultSSEMaxConnSec   = 86400 // Max connection duration (24h) before forced reconnect
+	millisecsPerSecond     = 1000 // Milliseconds per second for rate limiter
 )
+
+// SSEConfig holds configurable parameters for the SSE hub.
+type SSEConfig struct {
+	BufferSize   int // Client send buffer size (default: 256)
+	MaxClients   int // Max clients per stream (default: 100)
+	MaxMsgPerSec int // Rate limit: max messages per second (default: 100)
+	HeartbeatSec int // Heartbeat interval in seconds (default: 30)
+	MaxConnSec   int // Max connection duration in seconds (default: 86400)
+}
+
+// withDefaults returns a config with zero values replaced by defaults.
+func (c SSEConfig) withDefaults() SSEConfig {
+	if c.BufferSize <= 0 {
+		c.BufferSize = defaultSSEBufferSize
+	}
+	if c.MaxClients <= 0 {
+		c.MaxClients = defaultSSEMaxClients
+	}
+	if c.MaxMsgPerSec <= 0 {
+		c.MaxMsgPerSec = defaultSSEMaxMsgPerSec
+	}
+	if c.HeartbeatSec <= 0 {
+		c.HeartbeatSec = defaultSSEHeartbeatSec
+	}
+	if c.MaxConnSec <= 0 {
+		c.MaxConnSec = defaultSSEMaxConnSec
+	}
+	return c
+}
 
 // SSEStream represents a stream type.
 type SSEStream string
@@ -68,6 +98,7 @@ type SSEHub struct {
 	stopChan     chan struct{}
 	running      atomic.Bool
 	eventID      atomic.Uint64 // Global event ID counter
+	config       SSEConfig
 }
 
 // streamMessage wraps a message with its target stream.
@@ -123,21 +154,23 @@ func (rl *sseRateLimiter) allow() bool {
 	return false
 }
 
-// NewSSEHub creates a new SSE hub.
-func NewSSEHub() *SSEHub {
+// NewSSEHub creates a new SSE hub with the given configuration.
+func NewSSEHub(cfg SSEConfig) *SSEHub {
+	cfg = cfg.withDefaults()
 	hub := &SSEHub{
 		clients:      make(map[SSEStream]map[*SSEClient]bool),
-		broadcast:    make(chan *streamMessage, sseBufferSize),
+		broadcast:    make(chan *streamMessage, cfg.BufferSize),
 		register:     make(chan *SSEClient),
 		unregister:   make(chan *SSEClient),
 		rateLimiters: make(map[SSEStream]*sseRateLimiter),
 		stopChan:     make(chan struct{}),
+		config:       cfg,
 	}
 
 	// Initialize per-stream structures
 	for _, stream := range []SSEStream{SSEStreamPackets, SSEStreamLogs, SSEStreamStats} {
 		hub.clients[stream] = make(map[*SSEClient]bool)
-		hub.rateLimiters[stream] = newSSERateLimiter(sseMaxMsgPerSec)
+		hub.rateLimiters[stream] = newSSERateLimiter(int64(cfg.MaxMsgPerSec))
 	}
 
 	return hub
@@ -181,13 +214,13 @@ func (h *SSEHub) registerClient(client *SSEClient) {
 
 	streamClients := h.clients[client.stream]
 
-	if len(streamClients) >= sseMaxClients {
+	if len(streamClients) >= h.config.MaxClients {
 		logger.Warn(
 			"[SSE] Rejecting client for stream: max clients reached",
 			"stream",
 			client.stream,
 			"maxClients",
-			sseMaxClients,
+			h.config.MaxClients,
 		)
 		client.closed.Store(true)
 		close(client.send)
@@ -346,11 +379,12 @@ func (h *SSEHub) TotalClientCount() int {
 
 // sseStreamContext holds the context for an SSE streaming session.
 type sseStreamContext struct {
-	writer    http.ResponseWriter
-	flusher   http.Flusher
-	client    *SSEClient
-	heartbeat *time.Ticker
-	ctx       context.Context
+	writer     http.ResponseWriter
+	flusher    http.Flusher
+	client     *SSEClient
+	heartbeat  *time.Ticker
+	maxConnDur *time.Timer
+	ctx        context.Context
 }
 
 // setSSEHeaders configures HTTP headers for SSE streaming.
@@ -381,25 +415,32 @@ func (s *Server) setupSSEConnection(
 
 	client := &SSEClient{
 		hub:      s.sseHub,
-		send:     make(chan []byte, sseBufferSize),
+		send:     make(chan []byte, s.sseHub.config.BufferSize),
 		stream:   stream,
 		clientIP: r.RemoteAddr,
 	}
 
 	return &sseStreamContext{
-		writer:    w,
-		flusher:   flusher,
-		client:    client,
-		heartbeat: time.NewTicker(sseHeartbeatSec * time.Second),
-		ctx:       r.Context(),
+		writer:     w,
+		flusher:    flusher,
+		client:     client,
+		heartbeat:  time.NewTicker(time.Duration(s.sseHub.config.HeartbeatSec) * time.Second),
+		maxConnDur: time.NewTimer(time.Duration(s.sseHub.config.MaxConnSec) * time.Second),
+		ctx:        r.Context(),
 	}, nil
 }
 
 // runSSEMessageLoop handles the main SSE message streaming loop.
 func (sc *sseStreamContext) runSSEMessageLoop() {
+	defer sc.maxConnDur.Stop()
+
 	for {
 		select {
 		case <-sc.ctx.Done():
+			return
+
+		case <-sc.maxConnDur.C:
+			// Max connection duration reached; client will auto-reconnect
 			return
 
 		case msg, msgOk := <-sc.client.send:
@@ -488,9 +529,9 @@ func (s *Server) handleSSEStatus(w http.ResponseWriter, r *http.Request) {
 				"total":   s.sseHub.TotalClientCount(),
 			},
 			"limits": map[string]int{
-				"max_clients_per_stream": sseMaxClients,
-				"max_msg_per_sec":        sseMaxMsgPerSec,
-				"buffer_size":            sseBufferSize,
+				"max_clients_per_stream": s.sseHub.config.MaxClients,
+				"max_msg_per_sec":        s.sseHub.config.MaxMsgPerSec,
+				"buffer_size":            s.sseHub.config.BufferSize,
 			},
 		}
 	} else {

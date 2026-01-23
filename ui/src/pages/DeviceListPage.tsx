@@ -1,5 +1,6 @@
 import {
   AlertCircle,
+  Download,
   Filter,
   LayoutGrid,
   LayoutList,
@@ -25,6 +26,7 @@ import { Card, CardContent } from '../ui/Card';
 import { ConfirmModal } from '../ui/ConfirmModal';
 import { DeviceCardGridSkeleton, DeviceTableSkeleton } from '../ui/Skeleton';
 import { H2, P, SmallText } from '../ui/Typography';
+import { exportDevicesAsCSV, exportDevicesAsJSON } from '../utils/export';
 import { getErrorMessage } from '../utils/format';
 import { safeGetItem, safeSetItem } from '../utils/storage';
 
@@ -287,6 +289,22 @@ export const DeviceListPage: FC = () => {
                 disabled={loading}
               >
                 Refresh
+              </Button>
+              <Button
+                variant="outline"
+                leftIcon={<Download className="h-4 w-4" />}
+                onClick={() => exportDevicesAsJSON(filteredDevices)}
+                disabled={filteredDevices.length === 0}
+              >
+                JSON
+              </Button>
+              <Button
+                variant="outline"
+                leftIcon={<Download className="h-4 w-4" />}
+                onClick={() => exportDevicesAsCSV(filteredDevices)}
+                disabled={filteredDevices.length === 0}
+              >
+                CSV
               </Button>
               <Button
                 tone="violet"
