@@ -1,17 +1,51 @@
 # Complete NIAC-Go Configuration Example - "Kitchen Sink"
-# This file demonstrates EVERY configurable feature currently available in NIAC-Go v1.5.0
+# This file demonstrates EVERY configurable feature currently available in NIAC-Go v1.6.0+
 # Use this as a reference for all possible configuration options
+#
+# Topology:
+# =========
+#                        [cisco-router-full] (Core Router)
+#                       /         |          \
+#        Gi0/1         Gi0/2        Gi0/3
+#        (VLANs 1,10,20,30)      (VLANs 1,10,20)
+#                     /           |              \
+#   [extreme-switch-01]  [brocade-switch-01]  [multi-protocol-device]
+#      /      |     \        /         \
+#    1:2    1:3    1:4    1/1/2       1/1/3
+#     |      |      |      |           |
+# [multi-  [router- [router- [ipv6-only- [silent-
+#  homed]   traps]  traffic]  device]    device]
+#
 
 devices:
   # =================================================================
   # Device 1: Cisco Router with EVERYTHING
   # =================================================================
   - name: cisco-router-full
+    type: router
     mac: "00:1a:2b:3c:4d:01"
     ips:
       - "192.168.1.1"                    # IPv4
       - "fe80::21a:2bff:fe3c:4d01"      # IPv6 link-local
       - "2001:db8::1"                    # IPv6 global
+
+    # Trunk Port Topology Connections
+    trunk_ports:
+      - interface: "GigabitEthernet0/1"
+        vlans: [1, 10, 20, 30]
+        native_vlan: 1
+        remote_device: "extreme-switch-01"
+        remote_interface: "1:1"
+      - interface: "GigabitEthernet0/2"
+        vlans: [1, 10, 20, 30]
+        native_vlan: 1
+        remote_device: "brocade-switch-01"
+        remote_interface: "1/1/1"
+      - interface: "GigabitEthernet0/3"
+        vlans: [1, 10, 20]
+        native_vlan: 1
+        remote_device: "multi-protocol-device"
+        remote_interface: "eth0"
 
     # LLDP Configuration (IEEE 802.1AB)
     lldp:
@@ -168,8 +202,32 @@ devices:
   # Device 2: Extreme Switch with EDP
   # =================================================================
   - name: extreme-switch-01
+    type: switch
     mac: "00:04:96:ab:cd:02"
     ip: "192.168.1.20"
+
+    # Trunk Port Topology Connections
+    trunk_ports:
+      - interface: "1:1"
+        vlans: [1, 10, 20, 30]
+        native_vlan: 1
+        remote_device: "cisco-router-full"
+        remote_interface: "GigabitEthernet0/1"
+      - interface: "1:2"
+        vlans: [10]
+        native_vlan: 10
+        remote_device: "multi-homed-server"
+        remote_interface: "eth0"
+      - interface: "1:3"
+        vlans: [10, 20]
+        native_vlan: 10
+        remote_device: "router-with-traps"
+        remote_interface: "eth0"
+      - interface: "1:4"
+        vlans: [10, 20]
+        native_vlan: 10
+        remote_device: "router-with-traffic"
+        remote_interface: "eth0"
 
     lldp:
       enabled: true
@@ -196,8 +254,27 @@ devices:
   # Device 3: Brocade/Ruckus Switch with FDP
   # =================================================================
   - name: brocade-switch-01
+    type: switch
     mac: "00:e0:52:11:22:03"
     ip: "192.168.1.30"
+
+    # Trunk Port Topology Connections
+    trunk_ports:
+      - interface: "1/1/1"
+        vlans: [1, 10, 20, 30]
+        native_vlan: 1
+        remote_device: "cisco-router-full"
+        remote_interface: "GigabitEthernet0/2"
+      - interface: "1/1/2"
+        vlans: [10]
+        native_vlan: 10
+        remote_device: "ipv6-only-device"
+        remote_interface: "eth0"
+      - interface: "1/1/3"
+        vlans: [10]
+        native_vlan: 10
+        remote_device: "silent-device"
+        remote_interface: "eth0"
 
     lldp:
       enabled: true
@@ -224,6 +301,7 @@ devices:
   # Device 4: Multi-Homed Server (Multiple IPs)
   # =================================================================
   - name: multi-homed-server
+    type: server
     mac: "00:11:22:33:44:04"
     ips:
       - "192.168.1.50"                   # Management network
@@ -231,6 +309,13 @@ devices:
       - "10.0.0.50"                      # Storage network
       - "fe80::211:22ff:fe33:4404"      # IPv6 link-local
       - "2001:db8::50"                   # IPv6 global
+
+    trunk_ports:
+      - interface: "eth0"
+        vlans: [10]
+        native_vlan: 10
+        remote_device: "extreme-switch-01"
+        remote_interface: "1:2"
 
     lldp:
       enabled: true
@@ -270,11 +355,19 @@ devices:
   # Device 5: IPv6-Only Device
   # =================================================================
   - name: ipv6-only-device
+    type: server
     mac: "00:11:22:33:44:05"
     ips:
       - "fe80::211:22ff:fe33:4405"      # Link-local
       - "2001:db8::100"                  # Global unicast
       - "fd00::100"                      # Unique local
+
+    trunk_ports:
+      - interface: "eth0"
+        vlans: [10]
+        native_vlan: 10
+        remote_device: "brocade-switch-01"
+        remote_interface: "1/1/2"
 
     lldp:
       enabled: true
@@ -285,8 +378,16 @@ devices:
   # Device 6: All Discovery Protocols Enabled (Multi-Vendor)
   # =================================================================
   - name: multi-protocol-device
+    type: switch
     mac: "00:11:22:33:44:06"
     ip: "192.168.1.60"
+
+    trunk_ports:
+      - interface: "eth0"
+        vlans: [1, 10, 20]
+        native_vlan: 1
+        remote_device: "cisco-router-full"
+        remote_interface: "GigabitEthernet0/3"
 
     lldp:
       enabled: true
@@ -301,8 +402,16 @@ devices:
   # Device 7: Configurable Traffic Patterns (v1.6.0)
   # =================================================================
   - name: router-with-traffic
+    type: router
     mac: "00:11:22:33:44:07"
     ip: "192.168.1.70"
+
+    trunk_ports:
+      - interface: "eth0"
+        vlans: [10, 20]
+        native_vlan: 10
+        remote_device: "extreme-switch-01"
+        remote_interface: "1:4"
 
     lldp:
       enabled: true
@@ -334,8 +443,16 @@ devices:
   # Device 8: SNMP Trap Generation (v1.6.0)
   # =================================================================
   - name: router-with-traps
+    type: router
     mac: "00:11:22:33:44:08"
     ip: "192.168.1.80"
+
+    trunk_ports:
+      - interface: "eth0"
+        vlans: [10, 20]
+        native_vlan: 10
+        remote_device: "extreme-switch-01"
+        remote_interface: "1:3"
 
     lldp:
       enabled: true
@@ -382,8 +499,16 @@ devices:
   # Device 9: All Discovery Protocols Disabled (Silent Device)
   # =================================================================
   - name: silent-device
+    type: host
     mac: "00:11:22:33:44:09"
     ip: "192.168.1.90"
+
+    trunk_ports:
+      - interface: "eth0"
+        vlans: [10]
+        native_vlan: 10
+        remote_device: "brocade-switch-01"
+        remote_interface: "1/1/3"
 
     lldp:
       enabled: false
@@ -396,7 +521,14 @@ devices:
 
 # Configuration Summary:
 # =====================
-# This file demonstrates ALL v1.6.0 features:
+# This file demonstrates ALL v1.6.0+ features:
+#
+# Topology Features:
+# - Trunk port connections between all 9 devices (11 links total)
+# - Bidirectional link references for proper topology graph generation
+# - VLAN tagging (VLANs 1, 10, 20, 30) with native VLAN
+# - Device type annotations (router, switch, server, host)
+#
 #
 # Phase 1 Features:
 # - Multiple IP addresses per device (IPv4 and IPv6)
