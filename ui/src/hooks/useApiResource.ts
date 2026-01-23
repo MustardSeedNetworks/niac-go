@@ -6,7 +6,7 @@ interface Options<T> {
 }
 
 export function useApiResource<T>(
-  fetcher: () => Promise<T>,
+  fetcher: (signal?: AbortSignal) => Promise<T>,
   deps: unknown[] = [],
   options: Options<T> = {},
 ) {
@@ -15,45 +15,49 @@ export function useApiResource<T>(
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const timerRef = useRef<number | null>(null);
-  const fetcherRef = useRef<() => Promise<T>>(fetcher);
+  const fetcherRef = useRef<(signal?: AbortSignal) => Promise<T>>(fetcher);
 
   // Update fetcher ref when it changes
   useEffect(() => {
     fetcherRef.current = fetcher;
   }, [fetcher]);
 
-  const run = useCallback(async () => {
-    try {
-      const result = await fetcherRef.current();
-      setData(transform ? transform(result) : result);
-      setError(null);
-    } catch (err) {
-      setError(err as Error);
-    } finally {
-      setLoading(false);
-    }
-  }, [transform]);
+  const run = useCallback(
+    async (signal?: AbortSignal) => {
+      try {
+        const result = await fetcherRef.current(signal);
+        // FIX #179: Don't update state if aborted
+        if (signal?.aborted) return;
+        setData(transform ? transform(result) : result);
+        setError(null);
+      } catch (err) {
+        // FIX #179: Suppress AbortError from state updates
+        if (err instanceof DOMException && err.name === 'AbortError') return;
+        if (signal?.aborted) return;
+        setError(err as Error);
+      } finally {
+        if (!signal?.aborted) {
+          setLoading(false);
+        }
+      }
+    },
+    [transform],
+  );
 
   useEffect(() => {
-    let cancelled = false;
+    // FIX #179: AbortController for cleanup on unmount/dependency change
+    const controller = new AbortController();
 
-    const runWithCancellation = async () => {
-      if (cancelled) {
-        return;
-      }
-      await run();
-    };
-
-    void runWithCancellation();
+    void run(controller.signal);
 
     if (intervalMs) {
       timerRef.current = window.setInterval(() => {
-        void run();
+        void run(controller.signal);
       }, intervalMs);
     }
 
     return () => {
-      cancelled = true;
+      controller.abort();
       if (timerRef.current) {
         clearInterval(timerRef.current);
         timerRef.current = null;
@@ -61,5 +65,7 @@ export function useApiResource<T>(
     };
   }, [...deps, intervalMs, run]);
 
-  return { data, loading, error, refetch: run } as const;
+  const refetch = useCallback(() => run(), [run]);
+
+  return { data, loading, error, refetch } as const;
 }

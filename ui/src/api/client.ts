@@ -1,3 +1,4 @@
+import { ApiError, NetworkError, TimeoutError } from './errors';
 import type {
   AlertConfig,
   CloneDeviceRequest,
@@ -97,18 +98,61 @@ function buildUrl(path: string) {
   return `${API_BASE}/${path}`;
 }
 
-async function request<T>(path: string, init: RequestInit = {}) {
-  try {
-    const headers = new Headers(init.headers);
-    headers.set('Accept', 'application/json');
-    if (API_TOKEN) {
-      headers.set('Authorization', `Bearer ${API_TOKEN}`);
+// FIX #175: Retry configuration for transient errors.
+interface RetryConfig {
+  readonly maxRetries: number;
+  readonly baseDelay: number;
+}
+
+const DEFAULT_RETRY: RetryConfig = { maxRetries: 3, baseDelay: 1000 };
+
+// FIX #175: Check if an error is retryable (network errors and 5xx responses).
+function isRetryableError(error: unknown): boolean {
+  if (error instanceof TypeError) return true; // Network error
+  if (error instanceof Response && error.status >= 500) return true;
+  return false;
+}
+
+// FIX #175: Check if a response status is retryable.
+function isRetryableStatus(status: number): boolean {
+  return status >= 500;
+}
+
+// FIX #179: Accept optional signal parameter to allow caller-provided AbortController.
+async function request<T>(
+  path: string,
+  init: RequestInit = {},
+  retry: RetryConfig = DEFAULT_RETRY,
+) {
+  const externalSignal = init.signal;
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt <= retry.maxRetries; attempt++) {
+    // FIX #175: Exponential backoff between retries
+    if (attempt > 0) {
+      const delay = retry.baseDelay * 2 ** (attempt - 1);
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+
+    // Don't retry if the caller's signal was already aborted
+    if (externalSignal?.aborted) {
+      throw new DOMException('Request aborted', 'AbortError');
     }
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30000); // 30s timeout
+    const timeout = setTimeout(() => controller.abort(), 30000);
+
+    // If caller provides a signal, abort our controller when it fires
+    const onExternalAbort = () => controller.abort();
+    externalSignal?.addEventListener('abort', onExternalAbort);
 
     try {
+      const headers = new Headers(init.headers);
+      headers.set('Accept', 'application/json');
+      if (API_TOKEN) {
+        headers.set('Authorization', `Bearer ${API_TOKEN}`);
+      }
+
       const response = await fetch(buildUrl(path), {
         ...init,
         headers,
@@ -119,25 +163,50 @@ async function request<T>(path: string, init: RequestInit = {}) {
       clearTimeout(timeout);
 
       if (!response.ok) {
+        // FIX #175: Retry on 5xx, don't retry on 4xx
+        if (isRetryableStatus(response.status) && attempt < retry.maxRetries) {
+          lastError = new Error(response.statusText);
+          continue;
+        }
         const text = await response.text();
-        throw new Error(text || response.statusText);
+        throw new ApiError(text || response.statusText, response.status);
       }
 
       const data = (await response.json()) as T;
       return toCamelCase(data);
+    } catch (err) {
+      clearTimeout(timeout);
+
+      // Never retry aborts from caller's signal
+      if (externalSignal?.aborted) {
+        throw new DOMException('Request aborted', 'AbortError');
+      }
+
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        throw new TimeoutError();
+      }
+
+      // FIX #175: Retry network errors
+      if (isRetryableError(err) && attempt < retry.maxRetries) {
+        lastError = err;
+        continue;
+      }
+
+      if (err instanceof TypeError) {
+        throw new NetworkError();
+      }
+      throw err;
     } finally {
       clearTimeout(timeout);
+      externalSignal?.removeEventListener('abort', onExternalAbort);
     }
-  } catch (err) {
-    // Handle different error types
-    if (err instanceof TypeError) {
-      throw new Error('Network error: Unable to reach the server');
-    }
-    if (err instanceof DOMException && err.name === 'AbortError') {
-      throw new Error('Request timeout');
-    }
-    throw err;
   }
+
+  // All retries exhausted
+  if (lastError instanceof TypeError) {
+    throw new NetworkError();
+  }
+  throw lastError ?? new ApiError('Request failed after retries', 0);
 }
 
 const requestJson = <T>(path: string, payload: unknown, init: RequestInit = {}) =>
