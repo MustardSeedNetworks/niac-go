@@ -161,7 +161,7 @@ DOCKER_TAG?=$(VERSION)
 # Directories
 UI_DIR := ui
 UI_DIST := $(UI_DIR)/dist
-EMBED_DIR := pkg/api/ui
+EMBED_DIR := internal/api/ui
 
 # =============================================================================
 # Include Domain-Specific Makefiles

@@ -64,3 +64,6 @@ coverage.xml
 .tox/
 .nox/
 coverage.out
+
+# Legacy embed output (migrated to internal/api/ui/)
+pkg/
