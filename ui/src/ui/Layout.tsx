@@ -36,6 +36,13 @@ export const PageShell: FC<PageShellProps> = ({ children, className = '' }) => (
   </div>
 );
 
+/**
+ * PrimaryNav Component
+ *
+ * Top-level horizontal navigation bar with grouped nav items,
+ * active-state highlighting, optional logo, and version display.
+ * Supports both flat item lists and grouped navigation sections.
+ */
 interface PrimaryNavProps {
   items: NavItem[];
   groups?: NavGroup[];
@@ -217,6 +224,13 @@ export const PrimaryNav: FC<PrimaryNavProps> = ({
   );
 };
 
+/**
+ * PageHeader Component
+ *
+ * Renders a consistent page title area with optional icon, description,
+ * action buttons, and breadcrumb navigation. Used at the top of every page
+ * via the PageTemplate wrapper.
+ */
 interface PageHeaderProps {
   title: string;
   description?: string;

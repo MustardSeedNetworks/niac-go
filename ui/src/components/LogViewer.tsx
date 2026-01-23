@@ -2,6 +2,13 @@ import { AlertCircle, Check, ChevronDown, ChevronRight, Copy, Terminal } from 'l
 import { type FC, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { LogEntry, LogLevel } from '../api/types';
 
+/**
+ * LogViewer Component
+ *
+ * Renders a scrollable list of log entries with level-based coloring,
+ * search highlighting, expandable details, and copy-to-clipboard.
+ * Supports auto-scroll to keep the latest entries visible.
+ */
 export interface LogViewerProps {
   logs: LogEntry[];
   searchQuery: string;
@@ -84,7 +91,13 @@ function formatFullTimestamp(timestamp: string): string {
   }
 }
 
-// Highlight matching text in a string
+/**
+ * Highlight matching substrings within text.
+ *
+ * Escapes regex special characters in the query, splits the text on matches,
+ * and wraps matched portions in a `<mark>` element. Returns the original
+ * text unchanged if the query is empty or the regex fails.
+ */
 function highlightText(text: string, query: string): React.ReactNode {
   if (!query.trim()) {
     return text;

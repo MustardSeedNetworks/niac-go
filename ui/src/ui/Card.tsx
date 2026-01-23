@@ -27,7 +27,7 @@
  * ```
  */
 
-import type { FC, KeyboardEvent, ReactNode } from 'react';
+import type { FC, HTMLAttributes, KeyboardEvent, ReactNode } from 'react';
 import { type Status, StatusBadge } from './StatusBadge';
 
 // Re-export Status type for convenience
@@ -62,7 +62,7 @@ const paddingClasses: Record<string, string> = {
 // Base Card Component (backwards compatible)
 // ============================================================================
 
-interface BaseCardProps {
+interface BaseCardProps extends Omit<HTMLAttributes<HTMLDivElement>, 'children'> {
   children: ReactNode;
   className?: string;
   variant?: CardVariant;
@@ -80,12 +80,14 @@ export const Card: FC<BaseCardProps> = ({
   variant = 'default',
   hover = false,
   padding,
+  ...rest
 }) => {
   const paddingClass = padding ? (paddingClasses[padding] ?? '') : '';
 
   return (
     <div
       className={`rounded-xl ${variantStyles[variant]} ${hover ? hoverStyles : ''} ${paddingClass} ${className}`}
+      {...rest}
     >
       {children}
     </div>

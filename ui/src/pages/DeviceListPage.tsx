@@ -10,7 +10,7 @@ import {
   Trash2,
   X,
 } from 'lucide-react';
-import { type FC, useCallback, useMemo, useState } from 'react';
+import { type FC, useCallback, useDeferredValue, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { cloneDevice, deleteDevice, fetchConfigDevices } from '../api/client';
 import type { Device, DeviceType } from '../api/types';
@@ -18,6 +18,7 @@ import { CloneDeviceModal } from '../components/device-list/CloneDeviceModal';
 import { ConfirmDeleteModal } from '../components/device-list/ConfirmDeleteModal';
 import { DeviceCardView } from '../components/device-list/DeviceCardView';
 import { DeviceTableView } from '../components/device-list/DeviceTableView';
+import { DeviceListProvider } from '../contexts/DeviceListContext';
 import { useApiResource } from '../hooks/useApiResource';
 import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
@@ -25,6 +26,7 @@ import { ConfirmModal } from '../ui/ConfirmModal';
 import { DeviceCardGridSkeleton, DeviceTableSkeleton } from '../ui/Skeleton';
 import { H2, P, SmallText } from '../ui/Typography';
 import { getErrorMessage } from '../utils/format';
+import { safeGetItem, safeSetItem } from '../utils/storage';
 
 const PROTOCOL_RULES = [
   { label: 'SNMP', isEnabled: (device: Device) => Boolean(device.snmpAgent) },
@@ -93,7 +95,7 @@ export const DeviceListPage: FC = () => {
   const [typeFilter, setTypeFilter] = useState<DeviceType | 'all'>('all');
   const [protocolFilter, setProtocolFilter] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'cards' | 'table'>(() => {
-    const stored = localStorage.getItem('niac-device-view-mode');
+    const stored = safeGetItem('niac-device-view-mode');
     return stored === 'cards' || stored === 'table' ? stored : 'table';
   });
   const [message, setMessage] = useState<{
@@ -108,8 +110,10 @@ export const DeviceListPage: FC = () => {
   // Persist view mode
   const handleViewModeChange = useCallback((mode: 'cards' | 'table') => {
     setViewMode(mode);
-    localStorage.setItem('niac-device-view-mode', mode);
+    safeSetItem('niac-device-view-mode', mode);
   }, []);
+
+  const deferredSearchQuery = useDeferredValue(searchQuery);
 
   const devices = deviceList?.devices ?? [];
 
@@ -139,10 +143,9 @@ export const DeviceListPage: FC = () => {
 
   // Filter devices
   const filteredDevices = useMemo(() => {
-    const normalizedQuery = searchQuery.trim().toLowerCase();
     return devices.filter((device) => {
-      // Search filter
-      if (normalizedQuery && !matchesSearchQuery(device, normalizedQuery)) {
+      // Search filter (uses deferred value for debouncing)
+      if (!matchesSearchQuery(device, deferredSearchQuery)) {
         return false;
       }
 
@@ -158,7 +161,7 @@ export const DeviceListPage: FC = () => {
 
       return true;
     });
-  }, [devices, searchQuery, typeFilter, protocolFilter]);
+  }, [devices, deferredSearchQuery, typeFilter, protocolFilter]);
 
   // Get protocols enabled for a device
   const handleDeviceProtocols = useCallback((device: Device) => getDeviceProtocols(device), []);
@@ -515,9 +518,9 @@ export const DeviceListPage: FC = () => {
         </Card>
       )}
 
-      {/* Device list - Table View */}
-      {filteredDevices.length > 0 && viewMode === 'table' && (
-        <DeviceTableView
+      {/* Device list views */}
+      {filteredDevices.length > 0 && (
+        <DeviceListProvider
           devices={filteredDevices}
           selectedDevices={selectedDevices}
           onSelectDevice={toggleDeviceSelection}
@@ -526,21 +529,10 @@ export const DeviceListPage: FC = () => {
           onClone={(hostname) => setShowCloneModal(hostname)}
           onDelete={(hostname) => setShowDeleteConfirm(hostname)}
           getDeviceProtocols={handleDeviceProtocols}
-        />
-      )}
-
-      {/* Device list - Card View */}
-      {filteredDevices.length > 0 && viewMode === 'cards' && (
-        <DeviceCardView
-          devices={filteredDevices}
-          selectedDevices={selectedDevices}
-          onSelectDevice={toggleDeviceSelection}
-          onSelectAll={handleSelectAll}
-          onEdit={(hostname) => navigate(`/device-config/${encodeURIComponent(hostname)}`)}
-          onClone={(hostname) => setShowCloneModal(hostname)}
-          onDelete={(hostname) => setShowDeleteConfirm(hostname)}
-          getDeviceProtocols={handleDeviceProtocols}
-        />
+        >
+          {viewMode === 'table' && <DeviceTableView />}
+          {viewMode === 'cards' && <DeviceCardView />}
+        </DeviceListProvider>
       )}
 
       {/* Delete confirmation modal */}

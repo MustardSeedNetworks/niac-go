@@ -5,19 +5,20 @@ import {
   deviceTypeIcons,
   getDeviceColorClasses,
 } from '../../constants/device-types';
+import { useDeviceList } from '../../contexts/DeviceListContext';
 import { Card, CardContent } from '../../ui/Card';
 import { Tag } from '../../ui/Tag';
-import type { DeviceViewProps } from './types';
 
-export const DeviceCardView: FC<DeviceViewProps> = ({
-  devices,
-  selectedDevices,
-  onSelectDevice,
-  onEdit,
-  onClone,
-  onDelete,
-  getDeviceProtocols,
-}) => {
+export const DeviceCardView: FC = () => {
+  const {
+    devices,
+    selectedDevices,
+    onSelectDevice,
+    onEdit,
+    onClone,
+    onDelete,
+    getDeviceProtocols,
+  } = useDeviceList();
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
       {devices.map((device) => {

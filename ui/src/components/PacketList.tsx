@@ -1,6 +1,8 @@
 import { type FC, memo, useMemo } from 'react';
 import { Tag } from '../ui/Tag';
 import { SmallText } from '../ui/Typography';
+import { getProtocolColor } from '../utils/protocol-colors';
+import { formatPacketTimestamp } from '../utils/timestamp';
 
 /**
  * Packet data structure for display in the list
@@ -26,43 +28,6 @@ interface PacketListProps {
   protocolFilter: string;
   searchQuery: string;
   autoScroll: boolean;
-}
-
-/**
- * Get color scheme for protocol tag
- */
-function getProtocolColor(
-  protocol: string,
-): 'blue' | 'green' | 'yellow' | 'purple' | 'gray' | 'red' {
-  const colors: Record<string, 'blue' | 'green' | 'yellow' | 'purple' | 'gray' | 'red'> = {
-    arp: 'yellow',
-    icmp: 'blue',
-    dns: 'green',
-    tcp: 'purple',
-    udp: 'gray',
-    http: 'blue',
-    https: 'green',
-    dhcp: 'yellow',
-  };
-  return colors[protocol.toLowerCase()] || 'gray';
-}
-
-/**
- * Format timestamp to show only time portion
- */
-function formatTime(timestamp: string): string {
-  try {
-    const date = new Date(timestamp);
-    return date.toLocaleTimeString('en-US', {
-      hour12: false,
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      fractionalSecondDigits: 3,
-    });
-  } catch {
-    return timestamp;
-  }
 }
 
 /**
@@ -92,7 +57,7 @@ const PacketRow = memo(
           {packet.protocol}
         </Tag>
         <SmallText className="text-gray-400 font-mono text-xs">
-          {formatTime(packet.timestamp)}
+          {formatPacketTimestamp(packet.timestamp)}
         </SmallText>
       </div>
       <div className="mt-1 text-sm text-white truncate">

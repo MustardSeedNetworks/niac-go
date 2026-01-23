@@ -38,7 +38,7 @@ describe('API Client', () => {
 
       const { fetchVersion } = await import('./client');
       const result = await fetchVersion();
-      const typed = result as Record<string, Record<string, string>>;
+      const typed = result as unknown as Record<string, Record<string, string>>;
       expect(typed.outerKey).toBeDefined();
       expect(typed.outerKey.innerKey).toBe('value');
     });

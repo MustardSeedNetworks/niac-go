@@ -1,37 +1,41 @@
 import { Copy, Edit3, Trash2 } from 'lucide-react';
 import type { FC } from 'react';
 import { deviceTypeColors, deviceTypeIcons } from '../../constants/device-types';
+import { useDeviceList } from '../../contexts/DeviceListContext';
 import { Card, CardContent } from '../../ui/Card';
 import { Tag } from '../../ui/Tag';
-import type { DeviceViewProps } from './types';
 
-export const DeviceTableView: FC<DeviceViewProps> = ({
-  devices,
-  selectedDevices,
-  onSelectDevice,
-  onSelectAll,
-  onEdit,
-  onClone,
-  onDelete,
-  getDeviceProtocols,
-}) => {
+export const DeviceTableView: FC = () => {
+  const {
+    devices,
+    selectedDevices,
+    onSelectDevice,
+    onSelectAll,
+    onEdit,
+    onClone,
+    onDelete,
+    getDeviceProtocols,
+  } = useDeviceList();
   return (
     <Card className="border-white/5 bg-gray-900/70">
       <CardContent className="p-0">
         {/* Table header */}
-        <div className="flex items-center gap-4 border-b border-white/10 px-4 py-3 bg-gray-950/40">
-          <input
-            type="checkbox"
-            checked={selectedDevices.size === devices.length && devices.length > 0}
-            onChange={onSelectAll}
-            className="h-4 w-4 rounded border-gray-600 bg-gray-800 text-violet-500 focus:ring-violet-500"
-          />
-          <div className="flex-1 grid grid-cols-12 gap-4 text-sm font-medium text-gray-400">
-            <div className="col-span-3">Hostname</div>
-            <div className="col-span-2">Type</div>
-            <div className="col-span-2">IP Address</div>
-            <div className="col-span-3">Protocols</div>
-            <div className="col-span-2 text-right">Actions</div>
+        <div>
+          <div className="flex items-center gap-4 border-b border-white/10 px-4 py-3 bg-gray-950/40">
+            <input
+              type="checkbox"
+              checked={selectedDevices.size === devices.length && devices.length > 0}
+              onChange={onSelectAll}
+              className="h-4 w-4 rounded border-gray-600 bg-gray-800 text-violet-500 focus:ring-violet-500"
+              aria-label="Select all devices"
+            />
+            <div className="flex-1 grid grid-cols-12 gap-4 text-sm font-medium text-gray-400">
+              <div className="col-span-3">Hostname</div>
+              <div className="col-span-2">Type</div>
+              <div className="col-span-2">IP Address</div>
+              <div className="col-span-3">Protocols</div>
+              <div className="col-span-2 text-right">Actions</div>
+            </div>
           </div>
         </div>
 
@@ -54,6 +58,7 @@ export const DeviceTableView: FC<DeviceViewProps> = ({
                   checked={selectedDevices.has(device.hostname)}
                   onChange={() => onSelectDevice(device.hostname)}
                   className="h-4 w-4 rounded border-gray-600 bg-gray-800 text-violet-500 focus:ring-violet-500"
+                  aria-label={`Select ${device.hostname}`}
                 />
                 <div className="flex-1 grid grid-cols-12 gap-4 items-center">
                   {/* Hostname */}

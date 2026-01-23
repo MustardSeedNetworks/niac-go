@@ -1,3 +1,4 @@
+import path from "node:path";
 import react from "@vitejs/plugin-react";
 import { visualizer } from "rollup-plugin-visualizer";
 import { type PluginOption, defineConfig, loadEnv } from "vite";
@@ -19,6 +20,9 @@ export default defineConfig(({ mode }) => {
         }) as PluginOption),
     ],
     resolve: {
+      alias: {
+        "@": path.resolve(__dirname, "src"),
+      },
       dedupe: ["react", "react-dom", "react-router-dom", "lucide-react"],
     },
     // FIX #180: Code splitting for optimal bundle sizes

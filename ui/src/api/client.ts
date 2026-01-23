@@ -98,13 +98,16 @@ function buildUrl(path: string) {
   return `${API_BASE}/${path}`;
 }
 
-// FIX #175: Retry configuration for transient errors.
+const REQUEST_TIMEOUT_MS = 30_000;
+const MAX_RETRIES = 3;
+const BASE_DELAY_MS = 1_000;
+
 interface RetryConfig {
   readonly maxRetries: number;
   readonly baseDelay: number;
 }
 
-const DEFAULT_RETRY: RetryConfig = { maxRetries: 3, baseDelay: 1000 };
+const DEFAULT_RETRY: RetryConfig = { maxRetries: MAX_RETRIES, baseDelay: BASE_DELAY_MS };
 
 // FIX #175: Check if an error is retryable (network errors and 5xx responses).
 function isRetryableError(error: unknown): boolean {
@@ -140,7 +143,7 @@ async function request<T>(
     }
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30000);
+    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
     // If caller provides a signal, abort our controller when it fires
     const onExternalAbort = () => controller.abort();
@@ -216,28 +219,42 @@ const requestJson = <T>(path: string, payload: unknown, init: RequestInit = {}) 
     body: JSON.stringify(toSnakeCase(payload)),
   });
 
-export const fetchStats = () => request<StackStatsResponse>('/api/v1/stats');
-export const fetchDevices = () => request<DeviceSummary[]>('/api/v1/devices');
-export const fetchHistory = () => request<HistoryRecord[]>('/api/v1/history');
-export const fetchNeighbors = () => request<NeighborRecord[]>('/api/v1/neighbors');
-export const fetchConfig = () => request<ConfigDocument>('/api/v1/config');
+// Request deduplication for concurrent identical GET requests
+const inflightRequests = new Map<string, Promise<unknown>>();
+
+function deduplicatedGet<T>(path: string): Promise<T> {
+  const existing = inflightRequests.get(path);
+  if (existing) return existing as Promise<T>;
+
+  const promise = request<T>(path).finally(() => {
+    inflightRequests.delete(path);
+  });
+  inflightRequests.set(path, promise);
+  return promise;
+}
+
+export const fetchStats = () => deduplicatedGet<StackStatsResponse>('/api/v1/stats');
+export const fetchDevices = () => deduplicatedGet<DeviceSummary[]>('/api/v1/devices');
+export const fetchHistory = () => deduplicatedGet<HistoryRecord[]>('/api/v1/history');
+export const fetchNeighbors = () => deduplicatedGet<NeighborRecord[]>('/api/v1/neighbors');
+export const fetchConfig = () => deduplicatedGet<ConfigDocument>('/api/v1/config');
 export const updateConfig = (payload: ConfigUpdateRequest) =>
   requestJson<ConfigDocument>('/api/v1/config', payload, { method: 'PUT' });
-export const fetchReplayStatus = () => request<ReplayState>('/api/v1/replay');
+export const fetchReplayStatus = () => deduplicatedGet<ReplayState>('/api/v1/replay');
 export const startReplay = (payload: ReplayRequest) =>
   requestJson<ReplayState>('/api/v1/replay', payload, { method: 'POST' });
 export const stopReplay = () =>
   request<ReplayState>('/api/v1/replay', {
     method: 'DELETE',
   });
-export const fetchAlerts = () => request<AlertConfig>('/api/v1/alerts');
+export const fetchAlerts = () => deduplicatedGet<AlertConfig>('/api/v1/alerts');
 export const updateAlerts = (payload: AlertConfig) =>
   requestJson<AlertConfig>('/api/v1/alerts', payload, { method: 'PUT' });
 export const fetchFiles = (kind: 'pcaps' | 'walks') =>
   request<FileEntry[]>(`/api/v1/files?kind=${kind}`);
-export const fetchVersion = () => request<VersionInfo>('/api/v1/version');
-export const fetchTopology = () => request<TopologyGraph>('/api/v1/topology');
-export const fetchErrorTypes = () => request<ErrorInjectionInfo>('/api/v1/errors');
+export const fetchVersion = () => deduplicatedGet<VersionInfo>('/api/v1/version');
+export const fetchTopology = () => deduplicatedGet<TopologyGraph>('/api/v1/topology');
+export const fetchErrorTypes = () => deduplicatedGet<ErrorInjectionInfo>('/api/v1/errors');
 
 export const injectError = (payload: {
   deviceIp: string;
@@ -270,9 +287,9 @@ export const clearAllErrors = () =>
     method: 'DELETE',
   });
 
-export const fetchInterfaces = () => request<InterfacesResponse>('/api/v1/interfaces');
-export const fetchRuntimeStatus = () => request<RuntimeStatus>('/api/v1/runtime');
-export const fetchSimulationStatus = () => request<SimulationStatus>('/api/v1/simulation');
+export const fetchInterfaces = () => deduplicatedGet<InterfacesResponse>('/api/v1/interfaces');
+export const fetchRuntimeStatus = () => deduplicatedGet<RuntimeStatus>('/api/v1/runtime');
+export const fetchSimulationStatus = () => deduplicatedGet<SimulationStatus>('/api/v1/simulation');
 export const startSimulation = (payload: SimulationRequest) =>
   requestJson<SimulationStatus>('/api/v1/simulation', payload, {
     method: 'POST',
@@ -283,7 +300,7 @@ export const stopSimulation = () =>
   });
 
 // Template API functions
-export const fetchTemplates = () => request<Template[]>('/api/v1/templates');
+export const fetchTemplates = () => deduplicatedGet<Template[]>('/api/v1/templates');
 
 export const fetchTemplateContent = (name: string) =>
   request<TemplateContent>(`/api/v1/templates/${encodeURIComponent(name)}`);
@@ -305,7 +322,7 @@ export const deleteTemplate = (name: string) =>
 
 // Protocol Debug Levels API functions
 export const fetchProtocolDebugLevels = () =>
-  request<ProtocolDebugLevelsResponse>('/api/v1/debug/levels');
+  deduplicatedGet<ProtocolDebugLevelsResponse>('/api/v1/debug/levels');
 
 export const updateProtocolDebugLevels = (payload: UpdateProtocolDebugLevelsRequest) =>
   requestJson<ProtocolDebugLevelsResponse>('/api/v1/debug/levels', payload, {
@@ -337,7 +354,8 @@ export const fetchPcapAnalysis = (analysisId: string) =>
 /**
  * Fetch all devices from the configuration
  */
-export const fetchConfigDevices = () => request<DeviceListResponse>('/api/v1/config/devices');
+export const fetchConfigDevices = () =>
+  deduplicatedGet<DeviceListResponse>('/api/v1/config/devices');
 
 /**
  * Fetch a single device by hostname
@@ -389,7 +407,7 @@ export const cloneDevice = (hostname: string, payload: CloneDeviceRequest) =>
  * Fetch the JSON Schema for device configuration
  * Used for dynamic form generation
  */
-export const fetchConfigSchema = () => request<ConfigSchema>('/api/v1/config/schema');
+export const fetchConfigSchema = () => deduplicatedGet<ConfigSchema>('/api/v1/config/schema');
 
 /**
  * Fetch available walk files for SNMP configuration

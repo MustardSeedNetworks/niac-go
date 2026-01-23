@@ -4,6 +4,8 @@ import type { PcapPacket } from '../../api/types';
 import { Card, CardContent } from '../../ui/Card';
 import { Tag } from '../../ui/Tag';
 import { SmallText } from '../../ui/Typography';
+import { getProtocolColor } from '../../utils/protocol-colors';
+import { formatPacketTimestamp } from '../../utils/timestamp';
 
 interface PcapPacketListProps {
   packets: PcapPacket[];
@@ -35,45 +37,6 @@ const PROTOCOL_OPTIONS = [
 ] as const;
 
 /**
- * Get color scheme for protocol tag
- */
-function getProtocolColor(
-  protocol: string,
-): 'blue' | 'green' | 'yellow' | 'purple' | 'gray' | 'red' {
-  const colors: Record<string, 'blue' | 'green' | 'yellow' | 'purple' | 'gray' | 'red'> = {
-    arp: 'yellow',
-    icmp: 'blue',
-    dns: 'green',
-    tcp: 'purple',
-    udp: 'gray',
-    http: 'blue',
-    https: 'green',
-    dhcp: 'yellow',
-    ssh: 'red',
-    tls: 'green',
-  };
-  return colors[protocol.toLowerCase()] || 'gray';
-}
-
-/**
- * Format timestamp to show time with milliseconds
- */
-function formatTimestamp(timestamp: string): string {
-  try {
-    const date = new Date(timestamp);
-    return date.toLocaleTimeString('en-US', {
-      hour12: false,
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      fractionalSecondDigits: 3,
-    });
-  } catch {
-    return timestamp;
-  }
-}
-
-/**
  * Individual packet row component - memoized for performance
  */
 const PacketRow = memo(
@@ -94,7 +57,7 @@ const PacketRow = memo(
     >
       <td className="px-3 py-2 text-gray-400 text-xs font-mono">{packet.number}</td>
       <td className="px-3 py-2 text-gray-300 text-xs font-mono">
-        {formatTimestamp(packet.timestamp)}
+        {formatPacketTimestamp(packet.timestamp)}
       </td>
       <td className="px-3 py-2 text-white text-sm font-mono">{packet.sourceIp}</td>
       <td className="px-3 py-2 text-white text-sm font-mono">{packet.destIp}</td>

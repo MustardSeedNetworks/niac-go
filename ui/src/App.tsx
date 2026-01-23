@@ -37,6 +37,7 @@ import { TrafficInjectionPage } from './pages/TrafficInjectionPage';
 import { PageHeader } from './ui/Layout';
 import type { SidebarNavGroup } from './ui/Sidebar';
 import { SidebarLayout } from './ui/Sidebar';
+import { ToastContainer } from './ui/ToastContainer';
 import './App.css';
 
 type PageConfig = {
@@ -220,6 +221,7 @@ export default function App() {
   return (
     <ErrorBoundary>
       <SidebarLayout groups={navGroups} version={version?.version}>
+        <ToastContainer />
         <Routes>
           {pages.map((page) => (
             <Route

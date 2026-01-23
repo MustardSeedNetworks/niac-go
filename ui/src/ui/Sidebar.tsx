@@ -4,6 +4,7 @@ import { createElement, type FC, type ReactNode, useEffect, useState } from 'rea
 import { useLocation, useNavigate } from 'react-router-dom';
 import { HelpDrawer } from '../components/HelpDrawer';
 import { SettingsDrawer } from '../components/SettingsDrawer';
+import { safeGetItem, safeSetItem } from '../utils/storage';
 
 export interface SidebarNavItem {
   path: string;
@@ -30,8 +31,7 @@ export const SidebarLayout: FC<SidebarProps> = ({ groups, version, children }) =
   const location = useLocation();
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored === 'true';
+    return safeGetItem(STORAGE_KEY) === 'true';
   });
   const [mobileOpen, setMobileOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -39,7 +39,7 @@ export const SidebarLayout: FC<SidebarProps> = ({ groups, version, children }) =
 
   // Save collapsed state
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, String(collapsed));
+    safeSetItem(STORAGE_KEY, String(collapsed));
   }, [collapsed]);
 
   // Close mobile menu on navigation
@@ -203,8 +203,16 @@ export const SidebarLayout: FC<SidebarProps> = ({ groups, version, children }) =
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950">
+      {/* Skip to main content link for accessibility */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:px-4 focus:py-2 focus:rounded-lg focus:bg-violet-600 focus:text-white focus:outline-none"
+      >
+        Skip to main content
+      </a>
+
       {/* Mobile header */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 py-3 bg-gray-900/95 backdrop-blur-xl border-b border-white/10">
+      <header className="lg:hidden fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 py-3 bg-gray-900/95 backdrop-blur-xl border-b border-white/10">
         <div className="flex items-center gap-2">
           <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-violet-500 to-violet-700 flex items-center justify-center">
             <Network className="h-4 w-4 text-white" />
@@ -219,7 +227,7 @@ export const SidebarLayout: FC<SidebarProps> = ({ groups, version, children }) =
         >
           {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
-      </div>
+      </header>
 
       {/* Mobile sidebar overlay */}
       {mobileOpen && (
@@ -256,6 +264,7 @@ export const SidebarLayout: FC<SidebarProps> = ({ groups, version, children }) =
 
       {/* Main content */}
       <main
+        id="main-content"
         className={`
           transition-all duration-300 ease-in-out
           pt-16 lg:pt-0
