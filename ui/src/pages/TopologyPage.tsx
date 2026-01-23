@@ -506,18 +506,40 @@ export const TopologyPage: FC = () => {
   const [showLegend, setShowLegend] = useState(true);
   const [showMinimap, setShowMinimap] = useState(true);
 
-  // Build graph from API data
+  // Build graph from API data, merging trunk port links with neighbor-discovered links
   useEffect(() => {
     if (!(devices && topology)) {
       return;
     }
 
-    const layoutedNodes = layoutNodes(devices, topology.links);
-    const layoutedEdges = createEdges(topology.links);
+    // Start with trunk port links from config
+    const allLinks = [...topology.links];
+
+    // Merge neighbor-discovered edges that aren't already represented by trunk ports
+    if (neighbors && neighbors.length > 0) {
+      const existingEdges = new Set(
+        topology.links.map((l) => [l.source, l.target].sort().join('|')),
+      );
+
+      for (const neighbor of neighbors) {
+        const key = [neighbor.localDevice, neighbor.remoteDevice].sort().join('|');
+        if (!existingEdges.has(key)) {
+          existingEdges.add(key);
+          allLinks.push({
+            source: neighbor.localDevice,
+            target: neighbor.remoteDevice,
+            label: `${neighbor.protocol} discovery`,
+          });
+        }
+      }
+    }
+
+    const layoutedNodes = layoutNodes(devices, allLinks);
+    const layoutedEdges = createEdges(allLinks);
 
     setNodes(layoutedNodes);
     setEdges(layoutedEdges);
-  }, [devices, topology, setNodes, setEdges]);
+  }, [devices, topology, neighbors, setNodes, setEdges]);
 
   // Handle node selection
   const handleNodeClick = useCallback(
