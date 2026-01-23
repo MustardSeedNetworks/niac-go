@@ -317,7 +317,7 @@ jobs:
       - name: Verify binary
         run: |
           file dist/niac-windows-amd64.exe
-          echo "Windows binary built"
+          echo "Windows amd64 binary built"
 
       - name: Create Windows distribution
         env:

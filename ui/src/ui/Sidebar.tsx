@@ -1,7 +1,9 @@
 import type { LucideIcon } from 'lucide-react';
-import { ChevronLeft, ChevronRight, Menu, Network, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, HelpCircle, Menu, Network, Settings, X } from 'lucide-react';
 import { createElement, type FC, type ReactNode, useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { HelpDrawer } from '../components/HelpDrawer';
+import { SettingsDrawer } from '../components/SettingsDrawer';
 
 export interface SidebarNavItem {
   path: string;
@@ -32,6 +34,8 @@ export const SidebarLayout: FC<SidebarProps> = ({ groups, version, children }) =
     return stored === 'true';
   });
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
 
   // Save collapsed state
   useEffect(() => {
@@ -140,6 +144,41 @@ export const SidebarLayout: FC<SidebarProps> = ({ groups, version, children }) =
 
       {/* Footer */}
       <div className={`px-3 py-4 border-t border-white/10 ${collapsed ? 'text-center' : ''}`}>
+        {/* Action Buttons */}
+        <div className={`${collapsed ? 'space-y-2' : 'flex items-center gap-2'} mb-3`}>
+          <button
+            type="button"
+            onClick={() => setHelpOpen(true)}
+            className={`
+              ${collapsed ? 'w-full' : 'flex-1'}
+              flex items-center ${collapsed ? 'justify-center' : 'gap-2'} px-3 py-2 rounded-lg
+              text-gray-400 hover:text-white hover:bg-white/10 transition-colors
+              text-sm font-medium
+            `}
+            title={collapsed ? 'Help' : undefined}
+            aria-label="Open help"
+          >
+            <HelpCircle className="h-4 w-4 flex-shrink-0" />
+            {!collapsed && <span>Help</span>}
+          </button>
+          <button
+            type="button"
+            onClick={() => setSettingsOpen(true)}
+            className={`
+              ${collapsed ? 'w-full' : 'flex-1'}
+              flex items-center ${collapsed ? 'justify-center' : 'gap-2'} px-3 py-2 rounded-lg
+              text-gray-400 hover:text-white hover:bg-white/10 transition-colors
+              text-sm font-medium
+            `}
+            title={collapsed ? 'Settings' : undefined}
+            aria-label="Open settings"
+          >
+            <Settings className="h-4 w-4 flex-shrink-0" />
+            {!collapsed && <span>Settings</span>}
+          </button>
+        </div>
+
+        {/* Version Info */}
         {version && (
           <div
             className={`text-xs font-mono text-gray-500 ${collapsed ? '' : 'flex items-center justify-between'}`}
@@ -225,6 +264,14 @@ export const SidebarLayout: FC<SidebarProps> = ({ groups, version, children }) =
       >
         <div className="p-4 sm:p-6 lg:p-8">{children}</div>
       </main>
+
+      {/* Drawers */}
+      <SettingsDrawer
+        isOpen={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        version={version}
+      />
+      <HelpDrawer isOpen={helpOpen} onClose={() => setHelpOpen(false)} />
     </div>
   );
 };

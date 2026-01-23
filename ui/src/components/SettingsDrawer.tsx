@@ -1,0 +1,440 @@
+// Copyright (c) 2025 Mustard Seed Networks. All rights reserved.
+
+/**
+ * SettingsDrawer Component
+ *
+ * Main configuration panel for NIAC.
+ *
+ * Features:
+ * - Appearance settings (theme toggle placeholder for future)
+ * - Network interface display
+ * - Debug logging controls
+ * - About/version information
+ *
+ * Uses theme tokens and useFocusTrap for accessibility.
+ */
+
+import { Bug, ChevronRight, Info, Monitor, Network, Palette, Settings, X } from 'lucide-react';
+import type { ReactElement, ReactNode } from 'react';
+import { useState } from 'react';
+import { useFocusTrap } from '../hooks/useFocusTrap';
+import { badge, cn, drawer, layout, spacing } from '../styles/theme';
+
+interface SettingsDrawerProps {
+  isOpen: boolean;
+  onClose: () => void;
+  version?: string;
+}
+
+type SettingsTab = 'appearance' | 'network' | 'debug' | 'about';
+
+interface TabConfig {
+  id: SettingsTab;
+  label: string;
+  icon: ReactNode;
+}
+
+const TABS: TabConfig[] = [
+  { id: 'appearance', label: 'Appearance', icon: <Palette className="w-4 h-4" /> },
+  { id: 'network', label: 'Network', icon: <Network className="w-4 h-4" /> },
+  { id: 'debug', label: 'Debug', icon: <Bug className="w-4 h-4" /> },
+  { id: 'about', label: 'About', icon: <Info className="w-4 h-4" /> },
+];
+
+export function SettingsDrawer({
+  isOpen,
+  onClose,
+  version = '0.0.0',
+}: SettingsDrawerProps): ReactElement | null {
+  const [activeTab, setActiveTab] = useState<SettingsTab>('appearance');
+
+  const drawerRef = useFocusTrap<HTMLDivElement>({
+    isActive: isOpen,
+    onEscape: onClose,
+  });
+
+  if (!isOpen) {
+    return null;
+  }
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div className={drawer.overlay}>
+        <button
+          type="button"
+          className={cn(drawer.backdrop, 'cursor-default')}
+          onClick={onClose}
+          aria-label="Close settings drawer"
+        />
+
+        {/* Drawer */}
+        <div
+          ref={drawerRef}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Settings"
+          className={cn(drawer.content, drawer.size.lg, 'animate-slide-in-right')}
+        >
+          {/* Header */}
+          <div className="sticky top-0 bg-gray-900 border-b border-white/10 px-4 py-3 flex items-center justify-between z-10">
+            <div className={layout.inline.default}>
+              <Settings className="w-5 h-5 text-violet-400" aria-hidden="true" />
+              <h2 className="text-lg font-semibold text-white">Settings</h2>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className={cn(
+                'p-2 hover:bg-white/10 rounded-lg transition-colors',
+                'text-gray-400 hover:text-white',
+              )}
+              aria-label="Close settings"
+            >
+              <X className="w-5 h-5" aria-hidden="true" />
+            </button>
+          </div>
+
+          {/* Tab Navigation */}
+          <div className="border-b border-white/10 px-2">
+            <nav className="flex gap-1 -mb-px">
+              {TABS.map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={activeTab === tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={cn(
+                    'flex items-center gap-2 px-3 py-2.5 text-sm font-medium transition-colors',
+                    'border-b-2 -mb-[2px]',
+                    activeTab === tab.id
+                      ? 'border-violet-500 text-white'
+                      : 'border-transparent text-gray-400 hover:text-white hover:border-white/20',
+                  )}
+                >
+                  {tab.icon}
+                  <span>{tab.label}</span>
+                </button>
+              ))}
+            </nav>
+          </div>
+
+          {/* Content */}
+          <div className={cn(spacing.drawer, 'space-y-6')}>
+            {activeTab === 'appearance' && <AppearanceSection />}
+            {activeTab === 'network' && <NetworkSection />}
+            {activeTab === 'debug' && <DebugSection />}
+            {activeTab === 'about' && <AboutSection version={version} />}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// =============================================================================
+// Section Components
+// =============================================================================
+
+interface SectionProps {
+  title: string;
+  description?: string;
+  children: ReactNode;
+}
+
+const Section = ({ title, description, children }: SectionProps): ReactElement => (
+  <div className="space-y-3">
+    <div>
+      <h3 className="text-sm font-semibold text-white">{title}</h3>
+      {description && <p className="text-xs text-gray-500 mt-0.5">{description}</p>}
+    </div>
+    <div className="space-y-2">{children}</div>
+  </div>
+);
+
+interface SettingRowProps {
+  label: string;
+  description?: string;
+  children: ReactNode;
+}
+
+const SettingRow = ({ label, description, children }: SettingRowProps): ReactElement => (
+  <div className="flex items-center justify-between gap-4 py-2 px-3 bg-white/5 rounded-lg">
+    <div className="flex-1 min-w-0">
+      <div className="text-sm text-gray-200">{label}</div>
+      {description && <div className="text-xs text-gray-500 truncate">{description}</div>}
+    </div>
+    <div className="flex-shrink-0">{children}</div>
+  </div>
+);
+
+// =============================================================================
+// Appearance Section
+// =============================================================================
+
+function AppearanceSection(): ReactElement {
+  // Theme state would be managed by a global context in the future
+  const [theme, setTheme] = useState<'dark' | 'light' | 'system'>('dark');
+
+  return (
+    <Section title="Theme" description="Customize the appearance of NIAC">
+      <div className="grid grid-cols-3 gap-2">
+        {(['dark', 'light', 'system'] as const).map((option) => (
+          <button
+            key={option}
+            type="button"
+            onClick={() => setTheme(option)}
+            className={cn(
+              'flex flex-col items-center gap-2 p-3 rounded-lg border transition-all',
+              theme === option
+                ? 'border-violet-500 bg-violet-500/10'
+                : 'border-white/10 hover:border-white/20 hover:bg-white/5',
+            )}
+          >
+            <div
+              className={cn(
+                'w-8 h-8 rounded-lg flex items-center justify-center',
+                option === 'dark' && 'bg-gray-800',
+                option === 'light' && 'bg-gray-200',
+                option === 'system' && 'bg-gradient-to-br from-gray-200 to-gray-800',
+              )}
+            >
+              <Monitor
+                className={cn('w-4 h-4', option === 'light' ? 'text-gray-800' : 'text-white')}
+              />
+            </div>
+            <span
+              className={cn(
+                'text-xs font-medium capitalize',
+                theme === option ? 'text-white' : 'text-gray-400',
+              )}
+            >
+              {option}
+            </span>
+          </button>
+        ))}
+      </div>
+      <p className="text-xs text-gray-500 mt-2">
+        Light mode coming soon. Currently only dark mode is available.
+      </p>
+    </Section>
+  );
+}
+
+// =============================================================================
+// Network Section
+// =============================================================================
+
+function NetworkSection(): ReactElement {
+  return (
+    <>
+      <Section
+        title="Network Interfaces"
+        description="Available network interfaces for traffic injection"
+      >
+        <div className="space-y-2">
+          <InterfaceItem name="eth0" type="Ethernet" status="active" ip="192.168.1.100" />
+          <InterfaceItem name="eth1" type="Ethernet" status="inactive" ip="—" />
+          <InterfaceItem name="lo" type="Loopback" status="active" ip="127.0.0.1" />
+        </div>
+        <p className="text-xs text-gray-500 mt-2">
+          Interface selection is managed from the Runtime Control page.
+        </p>
+      </Section>
+
+      <Section title="Connection Settings" description="Configure backend connection">
+        <SettingRow label="Backend URL" description="NIAC backend server address">
+          <code className="text-xs text-violet-400 bg-violet-500/10 px-2 py-1 rounded">
+            localhost:8080
+          </code>
+        </SettingRow>
+        <SettingRow label="WebSocket" description="Real-time event streaming">
+          <span className={cn(badge.base, badge.variant.success, badge.size.sm)}>Connected</span>
+        </SettingRow>
+      </Section>
+    </>
+  );
+}
+
+interface InterfaceItemProps {
+  name: string;
+  type: string;
+  status: 'active' | 'inactive';
+  ip: string;
+}
+
+function InterfaceItem({ name, type, status, ip }: InterfaceItemProps): ReactElement {
+  return (
+    <div className="flex items-center justify-between py-2 px-3 bg-white/5 rounded-lg">
+      <div className={layout.inline.default}>
+        <Network
+          className={cn('w-4 h-4', status === 'active' ? 'text-emerald-500' : 'text-gray-500')}
+        />
+        <div>
+          <div className="text-sm text-white font-mono">{name}</div>
+          <div className="text-xs text-gray-500">{type}</div>
+        </div>
+      </div>
+      <div className="text-right">
+        <div className="text-sm text-gray-300 font-mono">{ip}</div>
+        <div className={cn('text-xs', status === 'active' ? 'text-emerald-400' : 'text-gray-500')}>
+          {status}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// =============================================================================
+// Debug Section
+// =============================================================================
+
+function DebugSection(): ReactElement {
+  const [logLevel, setLogLevel] = useState<'error' | 'warn' | 'info' | 'debug'>('info');
+
+  return (
+    <>
+      <Section title="Logging" description="Configure debug output verbosity">
+        <SettingRow label="Log Level" description="Console output verbosity">
+          <select
+            value={logLevel}
+            onChange={(e) => setLogLevel(e.target.value as typeof logLevel)}
+            className={cn(
+              'bg-gray-800 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white',
+              'focus:outline-none focus:ring-2 focus:ring-violet-500/50',
+            )}
+          >
+            <option value="error">Error</option>
+            <option value="warn">Warning</option>
+            <option value="info">Info</option>
+            <option value="debug">Debug</option>
+          </select>
+        </SettingRow>
+      </Section>
+
+      <Section title="Developer Tools" description="Advanced debugging features">
+        <button
+          type="button"
+          className={cn(
+            layout.flex.between,
+            'w-full py-2 px-3 bg-white/5 rounded-lg',
+            'hover:bg-white/10 transition-colors text-left',
+          )}
+        >
+          <div>
+            <div className="text-sm text-gray-200">Protocol Debug Levels</div>
+            <div className="text-xs text-gray-500">Configure per-protocol logging</div>
+          </div>
+          <ChevronRight className="w-4 h-4 text-gray-500" />
+        </button>
+
+        <button
+          type="button"
+          className={cn(
+            layout.flex.between,
+            'w-full py-2 px-3 bg-white/5 rounded-lg',
+            'hover:bg-white/10 transition-colors text-left',
+          )}
+        >
+          <div>
+            <div className="text-sm text-gray-200">Export Diagnostics</div>
+            <div className="text-xs text-gray-500">Download debug information</div>
+          </div>
+          <ChevronRight className="w-4 h-4 text-gray-500" />
+        </button>
+      </Section>
+    </>
+  );
+}
+
+// =============================================================================
+// About Section
+// =============================================================================
+
+interface AboutSectionProps {
+  version: string;
+}
+
+function AboutSection({ version }: AboutSectionProps): ReactElement {
+  return (
+    <>
+      <Section title="Application">
+        <div className="bg-white/5 rounded-lg p-4 space-y-3">
+          <div className="flex items-center gap-3">
+            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-violet-500 to-violet-700 flex items-center justify-center shadow-lg shadow-violet-500/30">
+              <Network className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <h4 className="text-lg font-bold text-white">NIAC</h4>
+              <p className="text-sm text-gray-400">Network Injection & Analysis Console</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2 pt-2 border-t border-white/10">
+            <InfoItem label="Version" value={version} />
+            <InfoItem label="Build" value="Production" />
+            <InfoItem label="React" value="19.2" />
+            <InfoItem label="TypeScript" value="5.9" />
+          </div>
+        </div>
+      </Section>
+
+      <Section title="Legal">
+        <div className="space-y-2 text-xs text-gray-500">
+          <p>Copyright (c) 2025 Mustard Seed Networks. All rights reserved.</p>
+          <p>
+            NIAC is proprietary software. Unauthorized copying, modification, or distribution is
+            prohibited.
+          </p>
+        </div>
+      </Section>
+
+      <Section title="Links">
+        <div className="space-y-2">
+          <a
+            href="https://github.com/mustardseednetworks"
+            target="_blank"
+            rel="noopener noreferrer"
+            className={cn(
+              layout.flex.between,
+              'w-full py-2 px-3 bg-white/5 rounded-lg',
+              'hover:bg-white/10 transition-colors',
+            )}
+          >
+            <span className="text-sm text-gray-200">GitHub</span>
+            <ChevronRight className="w-4 h-4 text-gray-500" />
+          </a>
+          <a
+            href="https://mustardseednetworks.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className={cn(
+              layout.flex.between,
+              'w-full py-2 px-3 bg-white/5 rounded-lg',
+              'hover:bg-white/10 transition-colors',
+            )}
+          >
+            <span className="text-sm text-gray-200">Website</span>
+            <ChevronRight className="w-4 h-4 text-gray-500" />
+          </a>
+        </div>
+      </Section>
+    </>
+  );
+}
+
+interface InfoItemProps {
+  label: string;
+  value: string;
+}
+
+function InfoItem({ label, value }: InfoItemProps): ReactElement {
+  return (
+    <div>
+      <div className="text-xs text-gray-500">{label}</div>
+      <div className="text-sm text-white font-mono">{value}</div>
+    </div>
+  );
+}
+
+export default SettingsDrawer;
