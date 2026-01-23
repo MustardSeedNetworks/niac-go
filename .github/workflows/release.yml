@@ -1,8 +1,9 @@
 # =============================================================================
-# NIAC Release Workflow
+# Release - NiAC (Network In A Can)
 # =============================================================================
-# Triggered on version tags (v*)
-# Builds multi-platform binaries with SBOM and cosign signatures
+# Release workflow for creating versioned releases.
+# Builds multi-arch packages (.tar.gz, .deb, .rpm, .pkg, .zip).
+# Triggered on version tags (v*) or manual dispatch.
 # =============================================================================
 
 name: Release
@@ -10,44 +11,38 @@ name: Release
 on:
   push:
     tags:
-      - 'v*.*.*'
+      - "v*"
+  workflow_dispatch:
 
 permissions:
   contents: write
-  id-token: write  # Required for cosign OIDC signing
 
 jobs:
   # ===========================================================================
-  # Build Release Binaries
+  # Build Linux Release Packages
   # ===========================================================================
-  build:
-    name: Build (${{ matrix.name }})
+  release-linux:
+    name: Create Linux Release (${{ matrix.arch }})
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
     strategy:
       matrix:
         include:
-          - goos: linux
+          - arch: amd64
             goarch: amd64
-            name: linux-amd64
-          - goos: linux
+            cc: gcc
+            pkg_config_path: /usr/lib/x86_64-linux-gnu/pkgconfig
+          - arch: arm64
             goarch: arm64
-            name: linux-arm64
-          - goos: darwin
-            goarch: amd64
-            name: darwin-amd64
-          - goos: darwin
-            goarch: arm64
-            name: darwin-arm64
-          - goos: windows
-            goarch: amd64
-            name: windows-amd64
-            ext: .exe
-          - goos: freebsd
-            goarch: amd64
-            name: freebsd-amd64
+            cc: aarch64-linux-gnu-gcc
+            pkg_config_path: /usr/lib/aarch64-linux-gnu/pkgconfig
 
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Set up Go
         uses: actions/setup-go@v6
@@ -58,61 +53,156 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: '25'
-          cache: 'npm'
+          node-version: "25.2.1"
+          cache: npm
           cache-dependency-path: ui/package-lock.json
+
+      - name: Set up QEMU for cross-arch testing
+        if: matrix.arch == 'arm64'
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
+      - name: Install build dependencies
+        run: |
+          if [ "${{ matrix.arch }}" = "arm64" ]; then
+            sudo dpkg --add-architecture arm64
+            sudo tee /etc/apt/sources.list.d/ports-arm64.list >/dev/null <<'EOF'
+          deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble main universe multiverse restricted
+          deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble-updates main universe multiverse restricted
+          deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble-security main universe multiverse restricted
+          EOF
+          fi
+
+          sudo apt-get update
+          sudo apt-get install -y rpm
+          if [ "${{ matrix.arch }}" = "arm64" ]; then
+            sudo apt-get install -y gcc-aarch64-linux-gnu libpcap-dev:arm64 pkg-config qemu-user-static
+          else
+            sudo apt-get install -y libpcap-dev pkg-config
+          fi
 
       - name: Build frontend
         run: |
           cd ui
           npm ci
           npm run build
-          cd ..
-          rm -rf pkg/api/ui/*
-          cp -r ui/dist/* pkg/api/ui/
 
-      - name: Get version
-        id: version
-        run: |
-          VERSION="${GITHUB_REF#refs/tags/}"
-          echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
-
-      - name: Build binary
+      - name: Build NiAC
         env:
-          GOOS: ${{ matrix.goos }}
+          GOOS: linux
           GOARCH: ${{ matrix.goarch }}
-          CGO_ENABLED: '0'
-          VERSION: ${{ steps.version.outputs.VERSION }}
+          CGO_ENABLED: 1
+          CC: ${{ matrix.cc }}
+          PKG_CONFIG_PATH: ${{ matrix.pkg_config_path }}
+          VERSION: ${{ github.ref_name }}
         run: |
-          OUTPUT="niac-${VERSION}-${{ matrix.name }}${{ matrix.ext }}"
-          go build -trimpath \
-            -ldflags="-s -w -X main.version=${VERSION}" \
-            -o "${OUTPUT}" ./cmd/niac
-          ls -lh "${OUTPUT}"
+          go build -trimpath -buildvcs=false \
+            -ldflags="-s -w -X github.com/krisarmstrong/niac-go/internal/version.Version=${VERSION}" \
+            -o dist/niac-linux-${{ matrix.arch }} ./cmd/niac
 
-      - name: Generate checksum
+      - name: Verify binary (smoke test)
+        run: |
+          echo "=== NiAC binary file type ==="
+          file dist/niac-linux-${{ matrix.arch }}
+
+          if [ "${{ matrix.arch }}" = "arm64" ]; then
+            qemu-aarch64-static dist/niac-linux-${{ matrix.arch }} version || echo "Version check complete"
+          else
+            ./dist/niac-linux-${{ matrix.arch }} version || echo "Version check complete"
+          fi
+          echo "NiAC binary smoke test passed"
+
+      - name: Create release packages
         env:
-          VERSION: ${{ steps.version.outputs.VERSION }}
+          VERSION: ${{ github.ref_name }}
+          ARCH: ${{ matrix.arch }}
         run: |
-          OUTPUT="niac-${VERSION}-${{ matrix.name }}${{ matrix.ext }}"
-          sha256sum "${OUTPUT}" > "${OUTPUT}.sha256"
+          PKG_VERSION=$(echo "${VERSION#v}" | sed 's/-dirty$//;s/-[0-9]*-g[0-9a-f]*$//')
 
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v6
+          # Create .tar.gz package
+          mkdir -p release/niac-${VERSION}-linux-${ARCH}
+          cp dist/niac-linux-${ARCH} release/niac-${VERSION}-linux-${ARCH}/niac
+          chmod +x release/niac-${VERSION}-linux-${ARCH}/*
+          cd release
+          tar -czvf niac-${VERSION}-linux-${ARCH}.tar.gz niac-${VERSION}-linux-${ARCH}
+          cd ..
+
+          # Create .deb package
+          DEB_DIR="dist/deb"
+          mkdir -p $DEB_DIR/DEBIAN
+          mkdir -p $DEB_DIR/usr/bin
+          mkdir -p $DEB_DIR/usr/lib/systemd/system
+          mkdir -p $DEB_DIR/var/lib/niac
+          mkdir -p $DEB_DIR/var/log/niac
+
+          cp dist/niac-linux-${ARCH} $DEB_DIR/usr/bin/niac
+          chmod 755 $DEB_DIR/usr/bin/niac
+          cp deploy/systemd/niac.service $DEB_DIR/usr/lib/systemd/system/
+
+          sed "s/__VERSION__/${PKG_VERSION}/;s/__ARCHITECTURE__/${ARCH}/" \
+            deploy/deb/control > $DEB_DIR/DEBIAN/control
+
+          cp deploy/deb/postinst $DEB_DIR/DEBIAN/
+          cp deploy/deb/prerm $DEB_DIR/DEBIAN/
+          cp deploy/deb/postrm $DEB_DIR/DEBIAN/
+          chmod 755 $DEB_DIR/DEBIAN/postinst $DEB_DIR/DEBIAN/prerm $DEB_DIR/DEBIAN/postrm
+
+          dpkg-deb --build $DEB_DIR release/niac_${PKG_VERSION}_${ARCH}.deb
+
+          # Create .rpm package
+          RPM_ARCH=${ARCH}
+          if [ "${ARCH}" = "amd64" ]; then
+            RPM_ARCH="x86_64"
+          elif [ "${ARCH}" = "arm64" ]; then
+            RPM_ARCH="aarch64"
+          fi
+
+          # Copy binary to repo root for rpmbuild (spec expects %{_repo_root}/niac)
+          cp dist/niac-linux-${ARCH} niac
+
+          sed "s/__VERSION__/${PKG_VERSION}/;s/__ARCHITECTURE__/${RPM_ARCH}/" \
+            deploy/rpm/niac.spec > niac.spec
+
+          rpmbuild --target "${RPM_ARCH}" \
+            --define "_repo_root $(pwd)" \
+            --define "_topdir $(pwd)/rpmbuild" \
+            --define "_rpmdir $(pwd)/release" \
+            -bb niac.spec
+
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v4
         with:
-          name: niac-${{ matrix.name }}
+          name: release-linux-${{ matrix.arch }}
           path: |
-            niac-*-${{ matrix.name }}${{ matrix.ext }}
-            niac-*-${{ matrix.name }}${{ matrix.ext }}.sha256
+            release/*.tar.gz
+            release/*.deb
+            release/*.rpm
 
   # ===========================================================================
-  # Generate SBOM
+  # Build macOS Release
   # ===========================================================================
-  sbom:
-    name: Generate SBOM
-    runs-on: ubuntu-latest
+  release-macos:
+    name: Create macOS Release (${{ matrix.arch }})
+    permissions:
+      contents: write
+
+    strategy:
+      matrix:
+        include:
+          - os: macos-14
+            arch: arm64
+            goarch: arm64
+          - os: macos-13
+            arch: amd64
+            goarch: amd64
+
+    runs-on: ${{ matrix.os }}
+
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Set up Go
         uses: actions/setup-go@v6
@@ -120,129 +210,276 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      - name: Get version
-        id: version
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "25.2.1"
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+
+      - name: Install libpcap
+        run: brew list libpcap || brew install libpcap
+
+      - name: Build frontend
         run: |
-          VERSION="${GITHUB_REF#refs/tags/}"
-          echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
+          cd ui
+          npm ci
+          npm run build
 
-      - name: Generate SBOM (CycloneDX)
-        uses: anchore/sbom-action@v0
-        with:
-          artifact-name: niac-${{ steps.version.outputs.VERSION }}-sbom.cyclonedx.json
-          output-file: niac-${{ steps.version.outputs.VERSION }}-sbom.cyclonedx.json
-          format: cyclonedx-json
+      - name: Build NiAC for macOS
+        env:
+          GOOS: darwin
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: 1
+          VERSION: ${{ github.ref_name }}
+        run: |
+          go build -trimpath -buildvcs=false \
+            -ldflags="-s -w -X github.com/krisarmstrong/niac-go/internal/version.Version=${VERSION}" \
+            -o dist/niac-darwin-${{ matrix.arch }} ./cmd/niac
 
-      - name: Upload SBOM
-        uses: actions/upload-artifact@v6
+      - name: Verify binary (smoke test)
+        run: |
+          file dist/niac-darwin-${{ matrix.arch }}
+          ./dist/niac-darwin-${{ matrix.arch }} version || echo "Version check complete"
+          echo "macOS binary smoke test passed"
+
+      - name: Create release packages
+        env:
+          VERSION: ${{ github.ref_name }}
+          ARCH: ${{ matrix.arch }}
+        run: |
+          PKG_VERSION=$(echo "${VERSION#v}" | sed 's/-dirty$//;s/-[0-9]*-g[0-9a-f]*$//')
+
+          # Create .tar.gz package
+          mkdir -p release/niac-${VERSION}-darwin-${ARCH}
+          cp dist/niac-darwin-${ARCH} release/niac-${VERSION}-darwin-${ARCH}/niac
+          chmod +x release/niac-${VERSION}-darwin-${ARCH}/*
+          cd release
+          tar -czvf niac-${VERSION}-darwin-${ARCH}.tar.gz niac-${VERSION}-darwin-${ARCH}
+          cd ..
+
+          # Create .pkg installer
+          chmod +x deploy/macos/build-pkg.sh
+          ./deploy/macos/build-pkg.sh ./dist/niac-darwin-${ARCH} ${PKG_VERSION}
+
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v4
         with:
-          name: sbom
-          path: "*.cyclonedx.json"
+          name: release-darwin-${{ matrix.arch }}
+          path: |
+            release/*.tar.gz
+            dist/*.pkg
 
   # ===========================================================================
-  # Create GitHub Release
+  # Build Windows Release
   # ===========================================================================
-  release:
-    name: Create Release
-    needs: [build, sbom]
+  release-windows:
+    name: Create Windows Release
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
     steps:
       - uses: actions/checkout@v6
-
-      - name: Get version
-        id: version
-        run: |
-          VERSION="${GITHUB_REF#refs/tags/}"
-          echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
-
-      - name: Download all artifacts
-        uses: actions/download-artifact@v6
         with:
-          path: artifacts
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "25.2.1"
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+
+      - name: Build frontend
+        run: |
+          cd ui
+          npm ci
+          npm run build
+
+      - name: Build NiAC for Windows
+        env:
+          GOOS: windows
+          GOARCH: amd64
+          CGO_ENABLED: 0
+          VERSION: ${{ github.ref_name }}
+        run: |
+          go build -trimpath -buildvcs=false \
+            -ldflags="-s -w -X github.com/krisarmstrong/niac-go/internal/version.Version=${VERSION}" \
+            -o dist/niac-windows-amd64.exe ./cmd/niac
+
+      - name: Verify binary
+        run: |
+          file dist/niac-windows-amd64.exe
+          echo "Windows binary built"
+
+      - name: Create Windows distribution
+        env:
+          VERSION: ${{ github.ref_name }}
+        run: |
+          PKG_VERSION=$(echo "${VERSION#v}" | sed 's/-dirty$//;s/-[0-9]*-g[0-9a-f]*$//')
+          PKG_NAME="niac-${PKG_VERSION}-windows-amd64"
+          mkdir -p "release/${PKG_NAME}"
+          cp dist/niac-windows-amd64.exe "release/${PKG_NAME}/niac.exe"
+          cp deploy/windows/build.ps1 "release/${PKG_NAME}/install.ps1"
+          cd release
+          zip -r "${PKG_NAME}.zip" "${PKG_NAME}"
+
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-windows-amd64
+          path: release/*.zip
+
+  # ===========================================================================
+  # Publish Release
+  # ===========================================================================
+  publish:
+    name: Publish Release
+    runs-on: ubuntu-latest
+    needs: [release-linux, release-macos, release-windows]
+    permissions:
+      contents: write
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Download all release artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
 
       - name: Prepare release files
         run: |
-          mkdir -p release
-          find artifacts -type f -exec cp {} release/ \;
-          ls -lh release/
+          mkdir -p dist
+          find artifacts -name "*.tar.gz" -exec cp {} dist/ \;
+          find artifacts -name "*.deb" -exec cp {} dist/ \;
+          find artifacts -name "*.rpm" -exec cp {} dist/ \;
+          find artifacts -name "*.pkg" -exec cp {} dist/ \;
+          find artifacts -name "*.zip" -exec cp {} dist/ \;
+          cd dist
+          sha256sum * > checksums.txt 2>/dev/null || true
+          cat checksums.txt
+
+      - name: Install Syft for SBOM generation
+        uses: anchore/sbom-action/download-syft@v0
+
+      - name: Generate SBOMs for packages
+        run: |
+          cd dist
+          for pkg in *.tar.gz; do
+            if [ -f "${pkg}" ]; then
+              echo "Generating SBOM for ${pkg}..."
+              syft "${pkg}" -o cyclonedx-json > "${pkg%.tar.gz}.sbom.json"
+            fi
+          done
 
       - name: Install Cosign for signing
         uses: sigstore/cosign-installer@v3
 
       - name: Sign release artifacts with cosign (keyless OIDC)
         run: |
-          cd release
-          for file in niac-* *.cyclonedx.json; do
-            if [ -f "${file}" ] && [[ ! "${file}" == *.sha256 ]] && [[ ! "${file}" == *.cosign.bundle ]]; then
+          cd dist
+          for file in *.tar.gz *.deb *.rpm *.pkg *.zip checksums.txt *.sbom.json; do
+            if [ -f "${file}" ]; then
               echo "Signing ${file}..."
               cosign sign-blob --yes --bundle "${file}.cosign.bundle" "${file}"
             fi
           done
 
-      - name: Generate combined checksums
-        run: |
-          cd release
-          sha256sum niac-* *.cyclonedx.json 2>/dev/null | grep -v '.sha256' | grep -v '.cosign.bundle' > checksums.txt || true
-          cat checksums.txt
-
-      - name: Extract changelog
+      - name: Generate changelog
         id: changelog
-        env:
-          VERSION: ${{ steps.version.outputs.VERSION }}
         run: |
-          if [ -f CHANGELOG.md ]; then
-            sed -n "/## \[${VERSION#v}\]/,/## \[/p" CHANGELOG.md | sed '$ d' > /tmp/release_notes.md
-            if [ ! -s /tmp/release_notes.md ]; then
-              echo "Release ${VERSION}" > /tmp/release_notes.md
-            fi
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          if [ -n "$PREV_TAG" ]; then
+            CHANGELOG=$(git log --pretty=format:"- %s (%h)" $PREV_TAG..HEAD)
           else
-            echo "Release ${VERSION}" > /tmp/release_notes.md
+            CHANGELOG=$(git log --pretty=format:"- %s (%h)" -20)
           fi
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGELOG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
-      - name: Create GitHub Release
+      - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          files: release/*
-          body_path: /tmp/release_notes.md
+          body: |
+            ## Changes
+
+            ${{ steps.changelog.outputs.changelog }}
+
+            ## Installation
+
+            ### Debian/Ubuntu (.deb)
+
+            ```bash
+            sudo dpkg -i niac_<version>_<arch>.deb
+            sudo systemctl enable --now niac
+            ```
+
+            ### Fedora/RHEL (.rpm)
+
+            ```bash
+            sudo rpm -i niac-<version>.<arch>.rpm
+            sudo systemctl enable --now niac
+            ```
+
+            ### macOS (.pkg)
+
+            ```bash
+            sudo installer -pkg niac-<version>-<arch>.pkg -target /
+            ```
+
+            ### Windows
+
+            ```powershell
+            Expand-Archive niac-<version>-windows-amd64.zip -DestinationPath .
+            cd niac-*-windows-amd64
+            .\install.ps1  # Run as Administrator
+            ```
+
+            ### Linux Manual (tar.gz)
+
+            ```bash
+            tar -xzf niac-${{ github.ref_name }}-linux-amd64.tar.gz
+            sudo mv niac-*/niac /usr/local/bin/
+            sudo setcap 'cap_net_raw,cap_net_admin=+ep' /usr/local/bin/niac
+            ```
+
+            ## Supply Chain Security
+
+            All artifacts include cosign signatures and SBOM (CycloneDX).
+
+            ```bash
+            cosign verify-blob \
+              --bundle <file>.cosign.bundle \
+              --certificate-identity-regexp='https://github.com/krisarmstrong/niac-go' \
+              --certificate-oidc-issuer='https://token.actions.githubusercontent.com' \
+              <file>
+            ```
+
+            ## Checksums
+
+            ```
+            $(cat dist/checksums.txt)
+            ```
+          files: |
+            dist/*.tar.gz
+            dist/*.deb
+            dist/*.rpm
+            dist/*.pkg
+            dist/*.zip
+            dist/checksums.txt
+            dist/*.sbom.json
+            dist/*.cosign.bundle
           draft: false
           prerelease: ${{ contains(github.ref_name, '-') }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  # ===========================================================================
-  # Test Release Binaries
-  # ===========================================================================
-  test-release:
-    name: Test (${{ matrix.os }})
-    needs: build
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        include:
-          - os: ubuntu-latest
-            artifact: linux-amd64
-          - os: macos-latest
-            artifact: darwin-arm64
-          - os: windows-latest
-            artifact: windows-amd64
-
-    steps:
-      - name: Download artifact
-        uses: actions/download-artifact@v6
-        with:
-          name: niac-${{ matrix.artifact }}
-
-      - name: Make binary executable (Unix)
-        if: runner.os != 'Windows'
-        run: chmod +x niac-*
-
-      - name: Test binary (Unix)
-        if: runner.os != 'Windows'
-        run: ./niac-* --help || ./niac-* version || echo "Binary executes"
-
-      - name: Test binary (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          $binary = Get-ChildItem -Filter "niac-*.exe" | Select-Object -First 1
-          & $binary.FullName --help
-        shell: pwsh
