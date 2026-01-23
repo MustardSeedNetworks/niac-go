@@ -121,13 +121,7 @@ func (s *Simulator) addDevice(device *config.Device) {
 		Counters:     &Counters{},
 	}
 
-	// Load SNMP walk file if specified
-	if device.SNMPConfig.WalkFile != "" {
-		err := simDevice.SNMPAgent.LoadWalkFile(device.SNMPConfig.WalkFile)
-		if err != nil && s.debugLevel >= 1 {
-			logger.Warn("Failed to load walk file", "device", device.Name, "error", err)
-		}
-	}
+	s.loadSNMPWalkFiles(simDevice, device)
 
 	// Initialize SNMP trap sender if configured (v1.6.0)
 	if device.SNMPConfig.Traps != nil && device.SNMPConfig.Traps.Enabled {
@@ -593,16 +587,37 @@ func (s *Simulator) updateExistingDevice(existingDevice *SimulatedDevice, device
 	s.recreateTrapSender(existingDevice, device)
 }
 
+// loadSNMPWalkFiles loads all configured SNMP walk files into the device's agent.
+func (s *Simulator) loadSNMPWalkFiles(simDevice *SimulatedDevice, device *config.Device) {
+	for _, walkFile := range device.SNMPConfig.WalkFiles {
+		err := simDevice.SNMPAgent.LoadWalkFile(walkFile)
+		if err != nil && s.debugLevel >= debugLevelBasic {
+			slog.Warn("Failed to load walk file",
+				"device", device.Name, "file", walkFile, "error", err)
+		}
+	}
+	// Backward compat: singular WalkFile only if WalkFiles[] empty
+	if len(device.SNMPConfig.WalkFiles) == 0 && device.SNMPConfig.WalkFile != "" {
+		err := simDevice.SNMPAgent.LoadWalkFile(device.SNMPConfig.WalkFile)
+		if err != nil && s.debugLevel >= debugLevelBasic {
+			slog.Warn("Failed to load walk file",
+				"device", device.Name, "error", err)
+		}
+	}
+	for _, include := range device.SNMPConfig.CommunityIncludes {
+		err := simDevice.SNMPAgent.LoadWalkFile(include.WalkFile)
+		if err != nil && s.debugLevel >= debugLevelBasic {
+			slog.Warn("Failed to load community walk",
+				"device", device.Name,
+				"community", include.Community, "error", err)
+		}
+	}
+}
+
 // recreateSNMPAgent recreates the SNMP agent for a device with updated configuration.
 func (s *Simulator) recreateSNMPAgent(existingDevice *SimulatedDevice, device *config.Device) {
 	existingDevice.SNMPAgent = snmp.NewAgent(device, s.debugLevel)
-	if device.SNMPConfig.WalkFile == "" {
-		return
-	}
-	err := existingDevice.SNMPAgent.LoadWalkFile(device.SNMPConfig.WalkFile)
-	if err != nil && s.debugLevel >= debugLevelBasic {
-		slog.Warn("Failed to reload walk file", "device", device.Name, "error", err)
-	}
+	s.loadSNMPWalkFiles(existingDevice, device)
 }
 
 // recreateTrapSender recreates the SNMP trap sender for a device if traps are enabled.

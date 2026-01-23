@@ -1,11 +1,17 @@
 # Cisco Network Configuration Example
 # Simulates a Cisco-only environment with CDP and LLDP
 
+include_path: ".."
+
 devices:
   # Cisco Core Switch
   - name: core-sw-01
     mac: "00:1a:2b:3c:4d:01"
     ip: "10.0.0.1"
+
+    snmp_agent:
+      community: "public"
+      walk_file: "device_walks_sanitized/cisco/niac-cisco-c9300-48p.walk"
 
     lldp:
       enabled: true
@@ -29,6 +35,10 @@ devices:
     mac: "00:1a:2b:3c:4d:02"
     ip: "10.0.1.1"
 
+    snmp_agent:
+      community: "public"
+      walk_file: "device_walks_sanitized/cisco/niac-cisco-c3750-16.walk"
+
     lldp:
       enabled: true
       system_description: "Cisco IOS Software, C3750 Software (C3750-IPSERVICESK9-M), Version 15.0(2)SE11"
@@ -44,6 +54,10 @@ devices:
   - name: access-sw-01
     mac: "00:1a:2b:3c:4d:03"
     ip: "10.0.2.10"
+
+    snmp_agent:
+      community: "public"
+      walk_file: "device_walks_sanitized/cisco/niac-cisco-c2960-70.walk"
 
     lldp:
       enabled: true

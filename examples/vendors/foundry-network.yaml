@@ -1,11 +1,17 @@
 # Foundry/Brocade/Ruckus Network Configuration Example
 # Simulates a Foundry/Brocade environment with FDP and LLDP
 
+include_path: ".."
+
 devices:
   # Brocade ICX 7750 Core Switch
   - name: core-icx7750-01
     mac: "00:e0:52:11:22:01"
     ip: "10.0.0.1"
+
+    snmp_agent:
+      community: "public"
+      walk_file: "device_walks_sanitized/brocade/niac-brocade-communications.walk"
 
     lldp:
       enabled: true

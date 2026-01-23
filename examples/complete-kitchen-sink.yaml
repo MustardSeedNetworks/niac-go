@@ -17,6 +17,13 @@
 #  homed]   traps]  traffic]  device]    device]
 #
 
+include_path: "."
+
+capture_playbacks:
+  - file_name: "pcaps/lldp-cdp-mixed.pcap"
+    loop_time: 30000
+    scale_time: 1.0
+
 devices:
   # =================================================================
   # Device 1: Cisco Router with EVERYTHING
@@ -115,6 +122,10 @@ devices:
       location: "Data Center - Rack A1"
       contact: "Network Admin <netadmin@example.com>"
       engine_id: "80000009030011223344"
+      walk_file: "device_walks_sanitized/cisco/niac-cisco-c3850-48p.walk"
+      community_includes:
+        - community: "private"
+          walk_file: "device_walks_sanitized/cisco/niac-cisco-c9300-48p.walk"
 
     # HTTP Server Configuration
     http:
@@ -211,6 +222,10 @@ devices:
     mac: "00:04:96:ab:cd:02"
     ip: "192.168.1.20"
 
+    snmp_agent:
+      community: "public"
+      walk_file: "device_walks_sanitized/extreme/niac-extreme-x465-48w.walk"
+
     # OS Fingerprinting
     os_fingerprint:
       os_type: "linux"
@@ -274,6 +289,10 @@ devices:
     mac: "00:e0:52:11:22:03"
     ip: "192.168.1.30"
 
+    snmp_agent:
+      community: "public"
+      walk_file: "device_walks_sanitized/brocade/niac-brocade-communications.walk"
+
     # OS Fingerprinting
     os_fingerprint:
       os_type: "linux"
@@ -324,6 +343,11 @@ devices:
   - name: multi-homed-server
     type: server
     mac: "00:11:22:33:44:04"
+
+    snmp_agent:
+      community: "public"
+      walk_file: "device_walks_sanitized/misc/niac-misc-c3900.walk"
+
     os_fingerprint:
       os_type: "linux"
       ttl: 64
@@ -489,6 +513,7 @@ devices:
     # SNMP agent with trap generation (v1.6.0)
     snmp_agent:
       community: "public"
+      walk_file: "device_walks_sanitized/cisco/niac-cisco-2800-67.walk"
       traps:
         enabled: true
         receivers:

@@ -1,0 +1,23 @@
+# Palo Alto Firewall Configuration Example
+# PA-440 next-generation firewall with LLDP and SNMP walk file
+
+include_path: ".."
+
+devices:
+  # Palo Alto PA-440
+  - name: pa-440-01
+    type: router
+    mac: "00:86:b2:a1:b2:01"
+    ip: "10.50.0.1"
+
+    snmp_agent:
+      community: "public"
+      walk_file: "device_walks_sanitized/paloalto/niac-paloalto-pa-440.walk"
+
+    lldp:
+      enabled: true
+      advertise_interval: 30
+      ttl: 120
+      system_description: "Palo Alto Networks PA-440, PAN-OS 11.1.2-h3"
+      port_description: "ethernet1/1"
+      chassis_id_type: "mac"

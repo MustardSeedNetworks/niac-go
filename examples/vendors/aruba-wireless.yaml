@@ -1,0 +1,55 @@
+# Aruba Wireless/Switching Configuration Example
+# CX6300 and CX8360 switches with LLDP and SNMP walk files
+
+include_path: ".."
+
+devices:
+  # Aruba CX6300-48G
+  - name: aruba-cx6300-01
+    type: switch
+    mac: "64:e8:81:a1:b2:01"
+    ip: "10.70.0.1"
+
+    snmp_agent:
+      community: "public"
+      walk_file: "device_walks_sanitized/aruba/niac-aruba-cx6300-48g.walk"
+
+    lldp:
+      enabled: true
+      advertise_interval: 30
+      ttl: 120
+      system_description: "Aruba JL668A 6300M 48G CL4 PoE 4SFP56 Sw, ArubaOS-CX FL.10.10.1030"
+      port_description: "1/1/1"
+      chassis_id_type: "mac"
+
+    trunk_ports:
+      - interface: "1/1/49"
+        vlans: [1, 10, 20, 30]
+        native_vlan: 1
+        remote_device: "aruba-cx8360-01"
+        remote_interface: "1/1/1"
+
+  # Aruba CX8360-48Y8C
+  - name: aruba-cx8360-01
+    type: switch
+    mac: "64:e8:81:a1:b2:02"
+    ip: "10.70.1.1"
+
+    snmp_agent:
+      community: "public"
+      walk_file: "device_walks_sanitized/aruba/niac-aruba-cx8360-48y8c.walk"
+
+    lldp:
+      enabled: true
+      advertise_interval: 30
+      ttl: 120
+      system_description: "Aruba JL706C 8360-48Y8C v2 Sw, ArubaOS-CX FL.10.10.1030"
+      port_description: "1/1/1"
+      chassis_id_type: "mac"
+
+    trunk_ports:
+      - interface: "1/1/1"
+        vlans: [1, 10, 20, 30]
+        native_vlan: 1
+        remote_device: "aruba-cx6300-01"
+        remote_interface: "1/1/49"

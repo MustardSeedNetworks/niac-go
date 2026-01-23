@@ -1,11 +1,17 @@
 # Extreme Networks Configuration Example
 # Simulates an Extreme-only environment with EDP and LLDP
 
+include_path: ".."
+
 devices:
   # Extreme X670 Core Switch
   - name: core-x670-01
     mac: "00:04:96:ab:cd:01"
     ip: "10.0.0.1"
+
+    snmp_agent:
+      community: "public"
+      walk_file: "device_walks_sanitized/extreme/niac-extreme-x465-48w.walk"
 
     lldp:
       enabled: true
@@ -25,6 +31,10 @@ devices:
   - name: dist-x460-01
     mac: "00:04:96:ab:cd:02"
     ip: "10.0.1.1"
+
+    snmp_agent:
+      community: "public"
+      walk_file: "device_walks_sanitized/extreme/niac-extreme-extremexos-x440-8p-197.walk"
 
     lldp:
       enabled: true

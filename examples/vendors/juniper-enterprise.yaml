@@ -1,0 +1,85 @@
+# Juniper Enterprise Configuration Example
+# Mixed EX/QFX deployment with LLDP discovery and SNMP walk files
+
+include_path: ".."
+
+devices:
+  # Juniper EX4300 Access Switch
+  - name: juniper-ex4300-01
+    type: switch
+    mac: "00:05:86:a1:b2:01"
+    ip: "10.20.0.1"
+
+    snmp_agent:
+      community: "public"
+      walk_file: "device_walks_sanitized/juniper/niac-juniper-ex4300-48p.walk"
+
+    lldp:
+      enabled: true
+      advertise_interval: 30
+      ttl: 120
+      system_description: "Juniper Networks, Inc. ex4300-48p Ethernet Switch, kernel JUNOS 20.4R3-S4"
+      port_description: "ge-0/0/0"
+      chassis_id_type: "mac"
+
+    trunk_ports:
+      - interface: "ge-0/0/47"
+        vlans: [1, 10, 20, 30]
+        native_vlan: 1
+        remote_device: "juniper-qfx5100-01"
+        remote_interface: "xe-0/0/0"
+
+  # Juniper QFX5100 Distribution Switch
+  - name: juniper-qfx5100-01
+    type: switch
+    mac: "00:05:86:a1:b2:02"
+    ip: "10.20.1.1"
+
+    snmp_agent:
+      community: "public"
+      walk_file: "device_walks_sanitized/juniper/niac-juniper-qfx5100-48s.walk"
+
+    lldp:
+      enabled: true
+      advertise_interval: 30
+      ttl: 120
+      system_description: "Juniper Networks, Inc. qfx5100-48s-6q Ethernet Switch, kernel JUNOS 21.2R3-S5"
+      port_description: "xe-0/0/0"
+      chassis_id_type: "mac"
+
+    trunk_ports:
+      - interface: "xe-0/0/0"
+        vlans: [1, 10, 20, 30]
+        native_vlan: 1
+        remote_device: "juniper-ex4300-01"
+        remote_interface: "ge-0/0/47"
+      - interface: "et-0/0/48"
+        vlans: [1, 10, 20, 30, 40]
+        native_vlan: 1
+        remote_device: "juniper-ex-core-01"
+        remote_interface: "xe-0/0/0"
+
+  # Juniper EX Core Router
+  - name: juniper-ex-core-01
+    type: switch
+    mac: "00:05:86:a1:b2:03"
+    ip: "10.20.2.1"
+
+    snmp_agent:
+      community: "public"
+      walk_file: "device_walks_sanitized/juniper/niac-juniper-jp-exxre-00.walk"
+
+    lldp:
+      enabled: true
+      advertise_interval: 30
+      ttl: 120
+      system_description: "Juniper Networks, Inc. EX Series Routing Engine"
+      port_description: "xe-0/0/0"
+      chassis_id_type: "mac"
+
+    trunk_ports:
+      - interface: "xe-0/0/0"
+        vlans: [1, 10, 20, 30, 40]
+        native_vlan: 1
+        remote_device: "juniper-qfx5100-01"
+        remote_interface: "et-0/0/48"
