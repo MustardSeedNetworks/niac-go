@@ -7,6 +7,8 @@ interface HexDumpViewerProps {
   bytesPerRow?: number;
   /** Header length in bytes for color coding */
   headerLength?: number;
+  /** Optional byte range to highlight (from protocol tree field selection) */
+  highlightRange?: [number, number];
 }
 
 /**
@@ -57,21 +59,29 @@ interface HexRowProps {
   bytesPerRow: number;
   headerLength: number;
   startIndex: number;
+  highlightStart: number;
+  highlightEnd: number;
 }
 
 /**
  * Individual hex dump row - memoized for performance
  */
-const HexRow = memo(({ offset, bytes, bytesPerRow, headerLength, startIndex }: HexRowProps) => {
+const HexRow = memo(({ offset, bytes, bytesPerRow, headerLength, startIndex, highlightStart, highlightEnd }: HexRowProps) => {
   // Build hex column with color coding
   const hexCells = bytes.map((byte, idx) => {
     const globalIndex = startIndex + idx;
     const isHeader = globalIndex < headerLength;
+    const isHighlighted = highlightStart >= 0 && globalIndex >= highlightStart && globalIndex < highlightEnd;
+
+    let className = isHeader ? 'text-cyan-400' : 'text-gray-300';
+    if (isHighlighted) {
+      className = 'text-yellow-200 bg-yellow-700/40 rounded-sm';
+    }
 
     return (
       <span
         key={globalIndex}
-        className={`${isHeader ? 'text-cyan-400' : 'text-gray-300'} ${idx === 7 ? 'mr-1' : ''}`}
+        className={`${className} ${idx === 7 ? 'mr-1' : ''}`}
       >
         {formatByte(byte)}
         {idx < bytes.length - 1 ? ' ' : ''}
@@ -88,10 +98,16 @@ const HexRow = memo(({ offset, bytes, bytesPerRow, headerLength, startIndex }: H
   const asciiChars = bytes.map((byte, idx) => {
     const globalIndex = startIndex + idx;
     const isHeader = globalIndex < headerLength;
+    const isHighlighted = highlightStart >= 0 && globalIndex >= highlightStart && globalIndex < highlightEnd;
     const char = byteToChar(byte);
 
+    let asciiClass = isHeader ? 'text-cyan-400' : 'text-gray-300';
+    if (isHighlighted) {
+      asciiClass = 'text-yellow-200 bg-yellow-700/40';
+    }
+
     return (
-      <span key={globalIndex} className={isHeader ? 'text-cyan-400' : 'text-gray-300'}>
+      <span key={globalIndex} className={asciiClass}>
         {char}
       </span>
     );
@@ -134,7 +150,10 @@ export const HexDumpViewer: FC<HexDumpViewerProps> = memo(
     rawData,
     bytesPerRow = 16,
     headerLength = 14, // Default Ethernet header length
+    highlightRange,
   }) => {
+    const highlightStart = highlightRange?.[0] ?? -1;
+    const highlightEnd = highlightRange?.[1] ?? -1;
     // Parse hex data into rows
     const rows = useMemo(() => {
       if (!rawData) {
@@ -179,6 +198,12 @@ export const HexDumpViewer: FC<HexDumpViewerProps> = memo(
               <span className="w-3 h-3 bg-gray-300/30 rounded" />
               <span className="text-gray-400">Payload</span>
             </div>
+            {highlightStart >= 0 && (
+              <div className="flex items-center gap-2">
+                <span className="w-3 h-3 bg-yellow-700/40 rounded" />
+                <span className="text-gray-400">Selected</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -193,6 +218,8 @@ export const HexDumpViewer: FC<HexDumpViewerProps> = memo(
                 bytesPerRow={bytesPerRow}
                 headerLength={headerLength}
                 startIndex={row.startIndex}
+                highlightStart={highlightStart}
+                highlightEnd={highlightEnd}
               />
             ))}
           </div>

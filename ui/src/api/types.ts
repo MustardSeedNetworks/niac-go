@@ -340,6 +340,11 @@ export interface PcapUploadResponse {
   message: string;
 }
 
+export interface CaptureFilterResponse {
+  active: boolean;
+  filter: string;
+}
+
 // ============================================================================
 // Device Configuration Types (matches Go config.go)
 // ============================================================================

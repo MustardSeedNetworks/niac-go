@@ -1188,6 +1188,10 @@ func (s *Server) registerWriteProtectedRoutes(mux *http.ServeMux) {
 		"/api/v1/alerts",
 		s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.handleAlerts)))),
 	)
+	mux.HandleFunc(
+		"/api/v1/capture/filter",
+		s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.handleCaptureFilter)))),
+	)
 }
 
 // registerReadOnlyRoutes registers routes that only require authentication.

@@ -1,8 +1,9 @@
 import { type FC, memo, useMemo } from 'react';
+import { useTimeDisplay } from '../hooks/useTimeDisplay';
 import { Tag } from '../ui/Tag';
 import { SmallText } from '../ui/Typography';
 import { getProtocolColor } from '../utils/protocol-colors';
-import { formatPacketTimestamp } from '../utils/timestamp';
+import { formatTimeByMode, getTimeDisplayLabel } from '../utils/time-display';
 
 /**
  * Packet data structure for display in the list
@@ -28,6 +29,7 @@ interface PacketListProps {
   protocolFilter: string;
   searchQuery: string;
   autoScroll: boolean;
+  getRowStyle?: (packet: Packet) => React.CSSProperties | undefined;
 }
 
 /**
@@ -38,10 +40,14 @@ const PacketRow = memo(
     packet,
     isSelected,
     onClick,
+    formattedTime,
+    rowStyle,
   }: {
     packet: Packet;
     isSelected: boolean;
     onClick: () => void;
+    formattedTime: string;
+    rowStyle?: React.CSSProperties;
   }) => (
     <button
       type="button"
@@ -51,14 +57,13 @@ const PacketRow = memo(
           ? 'border-violet-500/50 bg-violet-900/30'
           : 'border-white/5 bg-gray-950/50 hover:bg-gray-900/50 hover:border-white/10'
       }`}
+      style={rowStyle}
     >
       <div className="flex items-center gap-2">
         <Tag colorScheme={getProtocolColor(packet.protocol)} className="text-xs">
           {packet.protocol}
         </Tag>
-        <SmallText className="text-gray-400 font-mono text-xs">
-          {formatPacketTimestamp(packet.timestamp)}
-        </SmallText>
+        <SmallText className="text-gray-400 font-mono text-xs">{formattedTime}</SmallText>
       </div>
       <div className="mt-1 text-sm text-white truncate">
         {packet.sourceIp}
@@ -81,7 +86,9 @@ PacketRow.displayName = 'PacketRow';
  * Clicking a packet selects it for detailed viewing.
  */
 export const PacketList: FC<PacketListProps> = memo(
-  ({ packets, selectedPacketId, onSelectPacket, protocolFilter, searchQuery, autoScroll }) => {
+  ({ packets, selectedPacketId, onSelectPacket, protocolFilter, searchQuery, autoScroll, getRowStyle }) => {
+    const { mode: timeMode, cycleMode: cycleTimeMode } = useTimeDisplay();
+
     // Filter packets based on protocol and search query
     const filteredPackets = useMemo(() => {
       return packets.filter((packet) => {
@@ -138,18 +145,35 @@ export const PacketList: FC<PacketListProps> = memo(
     }
 
     return (
-      <div
-        className={`h-full overflow-y-auto space-y-1 pr-2 ${autoScroll ? 'scroll-smooth' : ''}`}
-        style={{ scrollBehavior: autoScroll ? 'smooth' : 'auto' }}
-      >
-        {filteredPackets.map((packet) => (
-          <PacketRow
-            key={packet.id}
-            packet={packet}
-            isSelected={selectedPacketId === packet.id}
-            onClick={() => onSelectPacket(packet)}
-          />
-        ))}
+      <div className="h-full flex flex-col">
+        <button
+          type="button"
+          onClick={cycleTimeMode}
+          className="text-xs text-gray-500 hover:text-violet-300 mb-1 text-left select-none"
+          title="Click to cycle: Absolute / Relative / Delta"
+        >
+          Mode: {getTimeDisplayLabel(timeMode)}
+        </button>
+        <div
+          className={`flex-1 overflow-y-auto space-y-1 pr-2 ${autoScroll ? 'scroll-smooth' : ''}`}
+          style={{ scrollBehavior: autoScroll ? 'smooth' : 'auto' }}
+        >
+          {filteredPackets.map((packet, idx) => (
+            <PacketRow
+              key={packet.id}
+              packet={packet}
+              isSelected={selectedPacketId === packet.id}
+              onClick={() => onSelectPacket(packet)}
+              formattedTime={formatTimeByMode(
+                packet.timestamp,
+                timeMode,
+                filteredPackets[0]?.timestamp ?? null,
+                idx > 0 ? filteredPackets[idx - 1].timestamp : null,
+              )}
+              rowStyle={getRowStyle?.(packet)}
+            />
+          ))}
+        </div>
       </div>
     );
   },

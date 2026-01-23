@@ -1,17 +1,24 @@
-import { Download, FileSearch, Info, Trash2 } from 'lucide-react';
+import { Download, FileSearch, Info, Palette, Share2, Trash2 } from 'lucide-react';
 import { type FC, useCallback, useMemo, useState } from 'react';
 import { fetchPcapAnalysis, uploadPcap } from '../api/client';
 import type { PcapAnalysisResult, PcapPacket } from '../api/types';
+import { ColoringRulesPanel } from '../components/ColoringRulesPanel';
+import { ConversationList } from '../components/ConversationList';
+import { FilterBar } from '../components/FilterBar';
 import { HexDumpViewer } from '../components/HexDumpViewer';
 import { PacketDetails } from '../components/PacketDetails';
 import type { Packet } from '../components/PacketList';
 import { PcapPacketList } from '../components/pcap/PcapPacketList';
 import { PcapStats } from '../components/pcap/PcapStats';
 import { PcapUploader } from '../components/pcap/PcapUploader';
+import { StreamView } from '../components/StreamView';
+import { useColoringRules } from '../hooks/useColoringRules';
+import { useDisplayFilter } from '../hooks/useDisplayFilter';
 import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
 import { Tag } from '../ui/Tag';
 import { H2, SmallText } from '../ui/Typography';
+import { getStreamFilter } from '../utils/conversations';
 import { fileToBase64 } from '../utils/file';
 import { getErrorMessage } from '../utils/format';
 
@@ -53,15 +60,26 @@ export const PcapAnalyzerPage: FC = () => {
 
   // Selected packet state
   const [selectedPacket, setSelectedPacket] = useState<PcapPacket | null>(null);
+  const [highlightRange, setHighlightRange] = useState<[number, number] | undefined>(undefined);
 
-  // Filter state
-  const [protocolFilter, setProtocolFilter] = useState('All');
-  const [sourceFilter, setSourceFilter] = useState('');
-  const [destFilter, setDestFilter] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
+  // Filter state - single expression replaces 4 separate filters
+  const [filterExpression, setFilterExpression] = useState('');
 
   // View mode state
-  const [viewMode, setViewMode] = useState<'packets' | 'stats'>('packets');
+  const [viewMode, setViewMode] = useState<'packets' | 'stats' | 'conversations'>('packets');
+  const [showColoringRules, setShowColoringRules] = useState(false);
+  const [showStreamView, setShowStreamView] = useState(false);
+
+  // Coloring rules
+  const {
+    rules: coloringRules,
+    setRules: setColoringRules,
+    getRowStyle,
+    resetRules: resetColoringRules,
+  } = useColoringRules();
+
+  // Apply display filter to packets
+  const { filteredPackets } = useDisplayFilter(analysisResult?.packets ?? [], filterExpression);
 
   // Handle file selection
   const handleFileSelect = useCallback((file: File) => {
@@ -70,11 +88,7 @@ export const PcapAnalyzerPage: FC = () => {
     setSelectedPacket(null);
     setError(null);
     setSuccess(null);
-    // Reset filters
-    setProtocolFilter('All');
-    setSourceFilter('');
-    setDestFilter('');
-    setSearchQuery('');
+    setFilterExpression('');
   }, []);
 
   // Handle analysis
@@ -120,6 +134,7 @@ export const PcapAnalyzerPage: FC = () => {
   // Handle packet selection
   const handleSelectPacket = useCallback((packet: PcapPacket) => {
     setSelectedPacket(packet);
+    setHighlightRange(undefined);
   }, []);
 
   // Handle clear
@@ -129,10 +144,7 @@ export const PcapAnalyzerPage: FC = () => {
     setSelectedPacket(null);
     setError(null);
     setSuccess(null);
-    setProtocolFilter('All');
-    setSourceFilter('');
-    setDestFilter('');
-    setSearchQuery('');
+    setFilterExpression('');
   }, []);
 
   // Export packets as JSON
@@ -152,6 +164,42 @@ export const PcapAnalyzerPage: FC = () => {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   }, [analysisResult]);
+
+  // Handle conversation selection - switch to packets view with filter
+  const handleSelectConversation = useCallback((filter: string) => {
+    setFilterExpression(filter);
+    setViewMode('packets');
+  }, []);
+
+  // Follow Stream
+  const handleFollowStream = useCallback(() => {
+    if (!selectedPacket) return;
+    const filter = getStreamFilter(selectedPacket);
+    if (filter) {
+      setFilterExpression(filter);
+      setShowStreamView(true);
+    }
+  }, [selectedPacket]);
+
+  const canFollowStream = useMemo(() => {
+    if (!selectedPacket) return false;
+    const proto = selectedPacket.protocol.toUpperCase();
+    return (
+      (proto === 'TCP' || proto === 'UDP') &&
+      !!selectedPacket.sourcePort &&
+      !!selectedPacket.destPort
+    );
+  }, [selectedPacket]);
+
+  const streamPackets = useMemo(() => {
+    if (!selectedPacket || !showStreamView) return [];
+    return filteredPackets;
+  }, [selectedPacket, showStreamView, filteredPackets]);
+
+  const clientEndpoint = useMemo(() => {
+    if (!selectedPacket) return '';
+    return `${selectedPacket.sourceIp}:${selectedPacket.sourcePort ?? 0}`;
+  }, [selectedPacket]);
 
   // Convert selected packet for PacketDetails component
   const selectedPacketForDetails = useMemo(
@@ -215,6 +263,17 @@ export const PcapAnalyzerPage: FC = () => {
                     >
                       Statistics
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => setViewMode('conversations')}
+                      className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                        viewMode === 'conversations'
+                          ? 'bg-violet-600 text-white'
+                          : 'text-gray-400 hover:text-white'
+                      }`}
+                    >
+                      Conversations
+                    </button>
                   </div>
 
                   <Button
@@ -224,6 +283,25 @@ export const PcapAnalyzerPage: FC = () => {
                     leftIcon={<Download className="h-4 w-4" />}
                   >
                     Export
+                  </Button>
+
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowColoringRules(true)}
+                    leftIcon={<Palette className="h-4 w-4" />}
+                  >
+                    Colors
+                  </Button>
+
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleFollowStream}
+                    leftIcon={<Share2 className="h-4 w-4" />}
+                    disabled={!canFollowStream}
+                  >
+                    Follow Stream
                   </Button>
 
                   <Button
@@ -241,53 +319,61 @@ export const PcapAnalyzerPage: FC = () => {
 
           {/* Packets View */}
           {viewMode === 'packets' && (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-              {/* Packet List */}
-              <div className="lg:col-span-7 xl:col-span-8">
-                <div className="h-[600px]">
-                  <PcapPacketList
-                    packets={analysisResult.packets}
-                    selectedPacketId={selectedPacket?.id ?? null}
-                    onSelectPacket={handleSelectPacket}
-                    protocolFilter={protocolFilter}
-                    sourceFilter={sourceFilter}
-                    destFilter={destFilter}
-                    searchQuery={searchQuery}
-                    onProtocolFilterChange={setProtocolFilter}
-                    onSourceFilterChange={setSourceFilter}
-                    onDestFilterChange={setDestFilter}
-                    onSearchQueryChange={setSearchQuery}
-                  />
+            <>
+              {/* Filter Bar */}
+              <div className="mb-4">
+                <FilterBar value={filterExpression} onChange={setFilterExpression} />
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                {/* Packet List */}
+                <div className="lg:col-span-7 xl:col-span-8">
+                  <div className="h-[600px]">
+                    <PcapPacketList
+                      packets={filteredPackets}
+                      totalPackets={analysisResult.packets.length}
+                      selectedPacketId={selectedPacket?.id ?? null}
+                      onSelectPacket={handleSelectPacket}
+                      getRowStyle={getRowStyle}
+                    />
+                  </div>
+                </div>
+
+                {/* Right panel - Details */}
+                <div className="lg:col-span-5 xl:col-span-4 space-y-6">
+                  {/* Hex Dump Viewer */}
+                  <Card className="border-white/5 bg-gray-900/70 h-[280px]">
+                    <CardContent className="h-full flex flex-col">
+                      <SmallText className="text-gray-400 uppercase tracking-wide font-semibold mb-3">
+                        Hex Dump
+                      </SmallText>
+                      <div className="flex-1 min-h-0">
+                        <HexDumpViewer
+                          rawData={selectedPacket?.rawData ?? ''}
+                          headerLength={14}
+                          highlightRange={highlightRange}
+                        />
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Packet Details */}
+                  <Card className="border-white/5 bg-gray-900/70 h-[280px]">
+                    <CardContent className="h-full flex flex-col">
+                      <SmallText className="text-gray-400 uppercase tracking-wide font-semibold mb-3">
+                        Packet Details
+                      </SmallText>
+                      <div className="flex-1 min-h-0 overflow-y-auto">
+                        <PacketDetails
+                          packet={selectedPacketForDetails}
+                          onFieldSelect={(start, end) => setHighlightRange([start, end])}
+                        />
+                      </div>
+                    </CardContent>
+                  </Card>
                 </div>
               </div>
-
-              {/* Right panel - Details */}
-              <div className="lg:col-span-5 xl:col-span-4 space-y-6">
-                {/* Hex Dump Viewer */}
-                <Card className="border-white/5 bg-gray-900/70 h-[280px]">
-                  <CardContent className="h-full flex flex-col">
-                    <SmallText className="text-gray-400 uppercase tracking-wide font-semibold mb-3">
-                      Hex Dump
-                    </SmallText>
-                    <div className="flex-1 min-h-0">
-                      <HexDumpViewer rawData={selectedPacket?.rawData ?? ''} headerLength={14} />
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Packet Details */}
-                <Card className="border-white/5 bg-gray-900/70 h-[280px]">
-                  <CardContent className="h-full flex flex-col">
-                    <SmallText className="text-gray-400 uppercase tracking-wide font-semibold mb-3">
-                      Packet Details
-                    </SmallText>
-                    <div className="flex-1 min-h-0 overflow-y-auto">
-                      <PacketDetails packet={selectedPacketForDetails} />
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
+            </>
           )}
 
           {/* Statistics View */}
@@ -296,6 +382,14 @@ export const PcapAnalyzerPage: FC = () => {
               stats={analysisResult.stats}
               filename={analysisResult.filename}
               fileSize={analysisResult.fileSize}
+            />
+          )}
+
+          {/* Conversations View */}
+          {viewMode === 'conversations' && (
+            <ConversationList
+              packets={analysisResult.packets}
+              onSelectConversation={handleSelectConversation}
             />
           )}
         </>
@@ -323,6 +417,25 @@ export const PcapAnalyzerPage: FC = () => {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Coloring Rules Panel */}
+      {showColoringRules && (
+        <ColoringRulesPanel
+          rules={coloringRules}
+          onRulesChange={setColoringRules}
+          onReset={resetColoringRules}
+          onClose={() => setShowColoringRules(false)}
+        />
+      )}
+
+      {/* Stream View */}
+      {showStreamView && selectedPacket && (
+        <StreamView
+          packets={streamPackets}
+          clientEndpoint={clientEndpoint}
+          onClose={() => setShowStreamView(false)}
+        />
       )}
     </div>
   );

@@ -31,6 +31,8 @@ type Engine struct {
 	interfaceName string
 	handle        *pcap.Handle
 	debugLevel    int
+	activeFilter  string
+	filterMu      sync.RWMutex
 }
 
 // New creates a new capture engine.
@@ -145,7 +147,20 @@ func (e *Engine) SetFilter(filter string) error {
 	if err := e.handle.SetBPFFilter(filter); err != nil {
 		return fmt.Errorf("failed to set BPF filter: %w", err)
 	}
+
+	e.filterMu.Lock()
+	e.activeFilter = filter
+	e.filterMu.Unlock()
+
 	return nil
+}
+
+// Filter returns the currently active BPF filter expression.
+func (e *Engine) Filter() string {
+	e.filterMu.RLock()
+	defer e.filterMu.RUnlock()
+
+	return e.activeFilter
 }
 
 // Stats returns capture statistics.

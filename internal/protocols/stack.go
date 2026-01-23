@@ -1,6 +1,7 @@
 package protocols
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -1131,6 +1132,24 @@ func (s *Stack) GetNeighbors() []NeighborRecord {
 // GetErrorManager returns the error state manager.
 func (s *Stack) GetErrorManager() *apperr.StateManager {
 	return s.errorManager
+}
+
+// SetCaptureFilter sets a BPF filter on the underlying capture engine.
+func (s *Stack) SetCaptureFilter(filter string) error {
+	if s.capture == nil {
+		return errors.New("capture engine not initialized")
+	}
+
+	return s.capture.SetFilter(filter)
+}
+
+// CaptureFilter returns the currently active BPF filter expression.
+func (s *Stack) CaptureFilter() string {
+	if s.capture == nil {
+		return ""
+	}
+
+	return s.capture.Filter()
 }
 
 func (s *Stack) recordNeighbor(entry NeighborRecord) {

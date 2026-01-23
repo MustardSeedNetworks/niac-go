@@ -1,19 +1,23 @@
-import { Download, Pause, Play, Trash2, Wifi, WifiOff } from 'lucide-react';
-import { type FC, useCallback, useEffect, useRef, useState } from 'react';
+import { Download, Palette, Pause, Play, Share2, Trash2, Wifi, WifiOff } from 'lucide-react';
+import { type FC, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { BpfFilterBar } from '../components/BpfFilterBar';
+import { ColoringRulesPanel } from '../components/ColoringRulesPanel';
+import { FilterBar } from '../components/FilterBar';
 import { HexDumpViewer } from '../components/HexDumpViewer';
 import { PacketDetails } from '../components/PacketDetails';
 import { type Packet, PacketList } from '../components/PacketList';
+import { StreamView } from '../components/StreamView';
+import { useColoringRules } from '../hooks/useColoringRules';
+import { useDisplayFilter } from '../hooks/useDisplayFilter';
 import { usePacketStream } from '../hooks/useEventSource';
 import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
 import { Tag } from '../ui/Tag';
 import { H2, SmallText } from '../ui/Typography';
+import { getStreamFilter } from '../utils/conversations';
 
 /** Maximum number of packets to buffer */
 const MAX_PACKETS = 100;
-
-/** Available protocol filters */
-const PROTOCOL_FILTERS = ['All', 'ARP', 'ICMP', 'DNS', 'TCP', 'UDP', 'HTTP', 'DHCP'] as const;
 
 /**
  * Generate unique packet ID
@@ -62,14 +66,27 @@ export const PacketInspectorPage: FC = () => {
   // Packet buffer state
   const [packets, setPackets] = useState<Packet[]>([]);
   const [selectedPacket, setSelectedPacket] = useState<Packet | null>(null);
+  const [highlightRange, setHighlightRange] = useState<[number, number] | undefined>(undefined);
 
-  // Filter state
-  const [protocolFilter, setProtocolFilter] = useState<string>('All');
-  const [searchQuery, setSearchQuery] = useState('');
+  // Filter state - single expression-based filter
+  const [filterExpression, setFilterExpression] = useState('');
 
   // UI state
   const [autoScroll, setAutoScroll] = useState(true);
   const [isPaused, setIsPaused] = useState(false);
+  const [showColoringRules, setShowColoringRules] = useState(false);
+  const [showStreamView, setShowStreamView] = useState(false);
+
+  // Coloring rules
+  const {
+    rules: coloringRules,
+    setRules: setColoringRules,
+    getRowStyle,
+    resetRules: resetColoringRules,
+  } = useColoringRules();
+
+  // Apply display filter
+  const { filteredPackets } = useDisplayFilter(packets, filterExpression);
 
   // Ref to track pause state in callback
   const isPausedRef = useRef(isPaused);
@@ -145,7 +162,41 @@ export const PacketInspectorPage: FC = () => {
   // Select packet handler
   const handleSelectPacket = useCallback((packet: Packet) => {
     setSelectedPacket(packet);
+    setHighlightRange(undefined);
   }, []);
+
+  // Follow Stream - filter to conversation and show stream view
+  const handleFollowStream = useCallback(() => {
+    if (!selectedPacket) return;
+    const filter = getStreamFilter(selectedPacket);
+    if (filter) {
+      setFilterExpression(filter);
+      setShowStreamView(true);
+    }
+  }, [selectedPacket]);
+
+  // Can the selected packet be followed as a stream?
+  const canFollowStream = useMemo(() => {
+    if (!selectedPacket) return false;
+    const proto = selectedPacket.protocol.toUpperCase();
+    return (
+      (proto === 'TCP' || proto === 'UDP') &&
+      !!selectedPacket.sourcePort &&
+      !!selectedPacket.destPort
+    );
+  }, [selectedPacket]);
+
+  // Stream packets for StreamView (all packets in current conversation)
+  const streamPackets = useMemo(() => {
+    if (!selectedPacket || !showStreamView) return [];
+    return filteredPackets;
+  }, [selectedPacket, showStreamView, filteredPackets]);
+
+  // Client endpoint for StreamView
+  const clientEndpoint = useMemo(() => {
+    if (!selectedPacket) return '';
+    return `${selectedPacket.sourceIp}:${selectedPacket.sourcePort ?? 0}`;
+  }, [selectedPacket]);
 
   return (
     <div className="space-y-6">
@@ -190,6 +241,25 @@ export const PacketInspectorPage: FC = () => {
                 Export
               </Button>
 
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowColoringRules(true)}
+                leftIcon={<Palette className="h-4 w-4" />}
+              >
+                Colors
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleFollowStream}
+                leftIcon={<Share2 className="h-4 w-4" />}
+                disabled={!canFollowStream}
+              >
+                Follow Stream
+              </Button>
+
               {/* SSE auto-reconnects, but manual reconnect is available */}
               {!connected && (
                 <Button tone="violet" size="sm" onClick={reconnect}>
@@ -199,33 +269,10 @@ export const PacketInspectorPage: FC = () => {
             </div>
           </div>
 
-          {/* Filters row */}
+          {/* Filter row */}
           <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
-            {/* Protocol filter */}
-            <div className="flex items-center gap-2">
-              <SmallText className="text-gray-400">Protocol:</SmallText>
-              <select
-                value={protocolFilter}
-                onChange={(e) => setProtocolFilter(e.target.value)}
-                className="rounded-lg border border-white/10 bg-gray-950/60 px-3 py-1.5 text-sm text-white focus:border-violet-400 focus:outline-none"
-              >
-                {PROTOCOL_FILTERS.map((protocol) => (
-                  <option key={protocol} value={protocol}>
-                    {protocol}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Search box */}
             <div className="flex-1">
-              <input
-                type="text"
-                placeholder="Search packets (IP, port, protocol...)"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full rounded-lg border border-white/10 bg-gray-950/60 px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:border-violet-400 focus:outline-none"
-              />
+              <FilterBar value={filterExpression} onChange={setFilterExpression} />
             </div>
 
             {/* Auto-scroll toggle */}
@@ -241,9 +288,16 @@ export const PacketInspectorPage: FC = () => {
 
             {/* Packet count */}
             <SmallText className="text-gray-400">
-              {packets.length} / {MAX_PACKETS} packets
+              {filteredPackets.length} / {packets.length} packets
             </SmallText>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* BPF Capture Filter */}
+      <Card className="border-white/5 bg-gray-900/70">
+        <CardContent>
+          <BpfFilterBar />
         </CardContent>
       </Card>
 
@@ -265,12 +319,13 @@ export const PacketInspectorPage: FC = () => {
               </div>
               <div className="flex-1 min-h-0">
                 <PacketList
-                  packets={packets}
+                  packets={filteredPackets}
                   selectedPacketId={selectedPacket?.id ?? null}
                   onSelectPacket={handleSelectPacket}
-                  protocolFilter={protocolFilter}
-                  searchQuery={searchQuery}
+                  protocolFilter="All"
+                  searchQuery=""
                   autoScroll={autoScroll}
+                  getRowStyle={getRowStyle}
                 />
               </div>
             </CardContent>
@@ -288,7 +343,8 @@ export const PacketInspectorPage: FC = () => {
               <div className="flex-1 min-h-0">
                 <HexDumpViewer
                   rawData={selectedPacket?.rawData ?? ''}
-                  headerLength={14} // Ethernet header
+                  headerLength={14}
+                  highlightRange={highlightRange}
                 />
               </div>
             </CardContent>
@@ -301,12 +357,34 @@ export const PacketInspectorPage: FC = () => {
                 Packet Details
               </SmallText>
               <div className="flex-1 min-h-0 overflow-y-auto">
-                <PacketDetails packet={selectedPacket} />
+                <PacketDetails
+                  packet={selectedPacket}
+                  onFieldSelect={(start, end) => setHighlightRange([start, end])}
+                />
               </div>
             </CardContent>
           </Card>
         </div>
       </div>
+
+      {/* Coloring Rules Panel */}
+      {showColoringRules && (
+        <ColoringRulesPanel
+          rules={coloringRules}
+          onRulesChange={setColoringRules}
+          onReset={resetColoringRules}
+          onClose={() => setShowColoringRules(false)}
+        />
+      )}
+
+      {/* Stream View */}
+      {showStreamView && selectedPacket && (
+        <StreamView
+          packets={streamPackets}
+          clientEndpoint={clientEndpoint}
+          onClose={() => setShowStreamView(false)}
+        />
+      )}
     </div>
   );
 };

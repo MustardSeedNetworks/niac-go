@@ -1,40 +1,19 @@
-import { ChevronDown, ChevronUp, Filter, Search } from 'lucide-react';
-import { type FC, memo, useCallback, useMemo, useState } from 'react';
+import { type FC, memo, useCallback } from 'react';
 import type { PcapPacket } from '../../api/types';
+import { useTimeDisplay } from '../../hooks/useTimeDisplay';
 import { Card, CardContent } from '../../ui/Card';
 import { Tag } from '../../ui/Tag';
 import { SmallText } from '../../ui/Typography';
 import { getProtocolColor } from '../../utils/protocol-colors';
-import { formatPacketTimestamp } from '../../utils/timestamp';
+import { formatTimeByMode, getTimeDisplayLabel } from '../../utils/time-display';
 
 interface PcapPacketListProps {
   packets: PcapPacket[];
+  totalPackets: number;
   selectedPacketId: string | null;
   onSelectPacket: (packet: PcapPacket) => void;
-  protocolFilter: string;
-  sourceFilter: string;
-  destFilter: string;
-  searchQuery: string;
-  onProtocolFilterChange: (protocol: string) => void;
-  onSourceFilterChange: (source: string) => void;
-  onDestFilterChange: (dest: string) => void;
-  onSearchQueryChange: (query: string) => void;
+  getRowStyle?: (packet: PcapPacket) => React.CSSProperties | undefined;
 }
-
-/** Available protocol filters */
-const PROTOCOL_OPTIONS = [
-  'All',
-  'TCP',
-  'UDP',
-  'ICMP',
-  'ARP',
-  'DNS',
-  'HTTP',
-  'HTTPS',
-  'DHCP',
-  'SSH',
-  'TLS',
-] as const;
 
 /**
  * Individual packet row component - memoized for performance
@@ -44,21 +23,24 @@ const PacketRow = memo(
     packet,
     isSelected,
     onClick,
+    formattedTime,
+    rowStyle,
   }: {
     packet: PcapPacket;
     isSelected: boolean;
     onClick: () => void;
+    formattedTime: string;
+    rowStyle?: React.CSSProperties;
   }) => (
     <tr
       onClick={onClick}
       className={`cursor-pointer transition-colors ${
         isSelected ? 'bg-violet-900/30' : 'hover:bg-gray-900/50'
       }`}
+      style={rowStyle}
     >
       <td className="px-3 py-2 text-gray-400 text-xs font-mono">{packet.number}</td>
-      <td className="px-3 py-2 text-gray-300 text-xs font-mono">
-        {formatPacketTimestamp(packet.timestamp)}
-      </td>
+      <td className="px-3 py-2 text-gray-300 text-xs font-mono">{formattedTime}</td>
       <td className="px-3 py-2 text-white text-sm font-mono">{packet.sourceIp}</td>
       <td className="px-3 py-2 text-white text-sm font-mono">{packet.destIp}</td>
       <td className="px-3 py-2">
@@ -75,210 +57,15 @@ const PacketRow = memo(
 PacketRow.displayName = 'PacketRow';
 
 /**
- * Filter Panel Component
- */
-const FilterPanel: FC<{
-  protocolFilter: string;
-  sourceFilter: string;
-  destFilter: string;
-  searchQuery: string;
-  onProtocolFilterChange: (protocol: string) => void;
-  onSourceFilterChange: (source: string) => void;
-  onDestFilterChange: (dest: string) => void;
-  onSearchQueryChange: (query: string) => void;
-  uniqueSources: string[];
-  uniqueDests: string[];
-}> = memo(
-  ({
-    protocolFilter,
-    sourceFilter,
-    destFilter,
-    searchQuery,
-    onProtocolFilterChange,
-    onSourceFilterChange,
-    onDestFilterChange,
-    onSearchQueryChange,
-    uniqueSources,
-    uniqueDests,
-  }) => {
-    const [isExpanded, setIsExpanded] = useState(true);
-
-    return (
-      <div className="space-y-3">
-        <button
-          type="button"
-          onClick={() => setIsExpanded(!isExpanded)}
-          className="flex w-full items-center justify-between text-left"
-        >
-          <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-gray-400" />
-            <SmallText className="text-gray-400 uppercase tracking-wide font-semibold">
-              Filters
-            </SmallText>
-          </div>
-          {isExpanded ? (
-            <ChevronUp className="h-4 w-4 text-gray-400" />
-          ) : (
-            <ChevronDown className="h-4 w-4 text-gray-400" />
-          )}
-        </button>
-
-        {isExpanded && (
-          <div className="space-y-3">
-            {/* Search */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
-              <input
-                type="text"
-                placeholder="Search packets..."
-                value={searchQuery}
-                onChange={(e) => onSearchQueryChange(e.target.value)}
-                className="w-full rounded-lg border border-white/10 bg-gray-950/60 py-2 pl-10 pr-3 text-sm text-white placeholder-gray-500 focus:border-violet-400 focus:outline-none"
-              />
-            </div>
-
-            {/* Protocol Filter */}
-            <div>
-              <SmallText className="text-gray-500 mb-1 block">Protocol</SmallText>
-              <select
-                value={protocolFilter}
-                onChange={(e) => onProtocolFilterChange(e.target.value)}
-                className="w-full rounded-lg border border-white/10 bg-gray-950/60 px-3 py-2 text-sm text-white focus:border-violet-400 focus:outline-none"
-              >
-                {PROTOCOL_OPTIONS.map((protocol) => (
-                  <option key={protocol} value={protocol}>
-                    {protocol}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Source Filter */}
-            <div>
-              <SmallText className="text-gray-500 mb-1 block">Source IP</SmallText>
-              <select
-                value={sourceFilter}
-                onChange={(e) => onSourceFilterChange(e.target.value)}
-                className="w-full rounded-lg border border-white/10 bg-gray-950/60 px-3 py-2 text-sm text-white focus:border-violet-400 focus:outline-none"
-              >
-                <option value="">All Sources</option>
-                {uniqueSources.map((source) => (
-                  <option key={source} value={source}>
-                    {source}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Destination Filter */}
-            <div>
-              <SmallText className="text-gray-500 mb-1 block">Destination IP</SmallText>
-              <select
-                value={destFilter}
-                onChange={(e) => onDestFilterChange(e.target.value)}
-                className="w-full rounded-lg border border-white/10 bg-gray-950/60 px-3 py-2 text-sm text-white focus:border-violet-400 focus:outline-none"
-              >
-                <option value="">All Destinations</option>
-                {uniqueDests.map((dest) => (
-                  <option key={dest} value={dest}>
-                    {dest}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  },
-);
-
-FilterPanel.displayName = 'FilterPanel';
-
-/**
  * PCAP Packet List Component
  *
- * Displays a table of captured packets with filtering and selection.
- * Supports filtering by protocol, source IP, destination IP, and search query.
+ * Displays a table of pre-filtered packets with time mode cycling.
+ * Filtering is handled externally via the FilterBar + useDisplayFilter hook.
  */
 export const PcapPacketList: FC<PcapPacketListProps> = memo(
-  ({
-    packets,
-    selectedPacketId,
-    onSelectPacket,
-    protocolFilter,
-    sourceFilter,
-    destFilter,
-    searchQuery,
-    onProtocolFilterChange,
-    onSourceFilterChange,
-    onDestFilterChange,
-    onSearchQueryChange,
-  }) => {
-    // Extract unique sources and destinations for filter dropdowns
-    const { uniqueSources, uniqueDests } = useMemo(() => {
-      const sources = new Set<string>();
-      const dests = new Set<string>();
+  ({ packets, totalPackets, selectedPacketId, onSelectPacket, getRowStyle }) => {
+    const { mode: timeMode, cycleMode: cycleTimeMode } = useTimeDisplay();
 
-      for (const packet of packets) {
-        if (packet.sourceIp) {
-          sources.add(packet.sourceIp);
-        }
-        if (packet.destIp) {
-          dests.add(packet.destIp);
-        }
-      }
-
-      return {
-        uniqueSources: Array.from(sources).sort(),
-        uniqueDests: Array.from(dests).sort(),
-      };
-    }, [packets]);
-
-    // Filter packets based on all criteria
-    const filteredPackets = useMemo(() => {
-      return packets.filter((packet) => {
-        // Protocol filter
-        if (
-          protocolFilter !== 'All' &&
-          packet.protocol.toUpperCase() !== protocolFilter.toUpperCase()
-        ) {
-          return false;
-        }
-
-        // Source filter
-        if (sourceFilter && packet.sourceIp !== sourceFilter) {
-          return false;
-        }
-
-        // Destination filter
-        if (destFilter && packet.destIp !== destFilter) {
-          return false;
-        }
-
-        // Search filter
-        if (searchQuery) {
-          const query = searchQuery.toLowerCase();
-          const searchableText = [
-            packet.protocol,
-            packet.sourceIp,
-            packet.destIp,
-            packet.info,
-            packet.sourcePort?.toString(),
-            packet.destPort?.toString(),
-          ]
-            .filter(Boolean)
-            .join(' ')
-            .toLowerCase();
-
-          return searchableText.includes(query);
-        }
-
-        return true;
-      });
-    }, [packets, protocolFilter, sourceFilter, destFilter, searchQuery]);
-
-    // Handle packet selection
     const handleSelectPacket = useCallback(
       (packet: PcapPacket) => {
         onSelectPacket(packet);
@@ -286,7 +73,7 @@ export const PcapPacketList: FC<PcapPacketListProps> = memo(
       [onSelectPacket],
     );
 
-    if (packets.length === 0) {
+    if (totalPackets === 0) {
       return (
         <Card className="border-white/5 bg-gray-900/70 h-full">
           <CardContent className="h-full flex items-center justify-center text-gray-400">
@@ -302,36 +89,20 @@ export const PcapPacketList: FC<PcapPacketListProps> = memo(
     return (
       <Card className="border-white/5 bg-gray-900/70 h-full flex flex-col">
         <CardContent className="h-full flex flex-col">
-          {/* Filter Panel */}
-          <div className="mb-4">
-            <FilterPanel
-              protocolFilter={protocolFilter}
-              sourceFilter={sourceFilter}
-              destFilter={destFilter}
-              searchQuery={searchQuery}
-              onProtocolFilterChange={onProtocolFilterChange}
-              onSourceFilterChange={onSourceFilterChange}
-              onDestFilterChange={onDestFilterChange}
-              onSearchQueryChange={onSearchQueryChange}
-              uniqueSources={uniqueSources}
-              uniqueDests={uniqueDests}
-            />
-          </div>
-
           {/* Packet count */}
           <div className="mb-3 flex items-center justify-between">
             <SmallText className="text-gray-400">
-              Showing {filteredPackets.length} of {packets.length} packets
+              Showing {packets.length} of {totalPackets} packets
             </SmallText>
           </div>
 
           {/* Packet Table */}
           <div className="flex-1 min-h-0 overflow-auto rounded-lg border border-white/5">
-            {filteredPackets.length === 0 ? (
+            {packets.length === 0 ? (
               <div className="h-full flex items-center justify-center text-gray-400">
                 <div className="text-center">
                   <p className="text-sm">No packets match filter</p>
-                  <SmallText>Try adjusting the filter criteria</SmallText>
+                  <SmallText>Try adjusting the filter expression</SmallText>
                 </div>
               </div>
             ) : (
@@ -341,8 +112,12 @@ export const PcapPacketList: FC<PcapPacketListProps> = memo(
                     <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-400">
                       #
                     </th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-400">
-                      Time
+                    <th
+                      className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-400 cursor-pointer hover:text-violet-300 select-none"
+                      onClick={cycleTimeMode}
+                      title="Click to cycle: Absolute / Relative / Delta"
+                    >
+                      {getTimeDisplayLabel(timeMode)}
                     </th>
                     <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-400">
                       Source
@@ -362,12 +137,19 @@ export const PcapPacketList: FC<PcapPacketListProps> = memo(
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
-                  {filteredPackets.map((packet) => (
+                  {packets.map((packet, idx) => (
                     <PacketRow
                       key={packet.id}
                       packet={packet}
                       isSelected={selectedPacketId === packet.id}
                       onClick={() => handleSelectPacket(packet)}
+                      formattedTime={formatTimeByMode(
+                        packet.timestamp,
+                        timeMode,
+                        packets[0]?.timestamp ?? null,
+                        idx > 0 ? packets[idx - 1].timestamp : null,
+                      )}
+                      rowStyle={getRowStyle?.(packet)}
                     />
                   ))}
                 </tbody>

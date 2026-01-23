@@ -2,9 +2,11 @@ import { type FC, memo } from 'react';
 import { Tag } from '../ui/Tag';
 import { SmallText } from '../ui/Typography';
 import type { Packet } from './PacketList';
+import { ProtocolTree } from './ProtocolTree';
 
 interface PacketDetailsProps {
   packet: Packet | null;
+  onFieldSelect?: (byteStart: number, byteEnd: number) => void;
 }
 
 /**
@@ -124,7 +126,7 @@ HeadersSection.displayName = 'HeadersSection';
  * - Source and destination addresses with ports
  * - Protocol-specific headers when available
  */
-export const PacketDetails: FC<PacketDetailsProps> = memo(({ packet }) => {
+export const PacketDetails: FC<PacketDetailsProps> = memo(({ packet, onFieldSelect }) => {
   if (!packet) {
     return (
       <div className="h-full flex items-center justify-center text-gray-400">
@@ -136,53 +138,23 @@ export const PacketDetails: FC<PacketDetailsProps> = memo(({ packet }) => {
   return (
     <div className="h-full overflow-y-auto">
       {/* Header with protocol tag */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-3">
         <Tag colorScheme={getProtocolColor(packet.protocol)} className="text-sm">
           {packet.protocol}
         </Tag>
         <SmallText className="text-gray-400">{formatBytes(packet.size)}</SmallText>
       </div>
 
-      {/* Main details */}
-      <div className="space-y-1">
-        <DetailRow label="Timestamp" value={formatTimestamp(packet.timestamp)} mono={true} />
-        <DetailRow label="Size" value={`${packet.size} bytes`} />
+      {/* Protocol dissection tree */}
+      <ProtocolTree packet={packet} onFieldSelect={onFieldSelect} />
 
-        {/* Source */}
-        <div className="pt-2">
-          <SmallText className="text-gray-500 uppercase text-xs tracking-wide">Source</SmallText>
+      {/* Summary */}
+      {packet.summary && (
+        <div className="mt-3 pt-2 border-t border-white/5">
+          <SmallText className="text-gray-500 uppercase text-xs tracking-wide">Summary</SmallText>
+          <p className="text-sm text-gray-300 py-1">{packet.summary}</p>
         </div>
-        <DetailRow label="IP Address" value={packet.sourceIp} mono={true} />
-        {packet.sourcePort !== undefined && (
-          <DetailRow label="Port" value={packet.sourcePort} mono={true} />
-        )}
-
-        {/* Destination */}
-        <div className="pt-2">
-          <SmallText className="text-gray-500 uppercase text-xs tracking-wide">
-            Destination
-          </SmallText>
-        </div>
-        <DetailRow label="IP Address" value={packet.destIp} mono={true} />
-        {packet.destPort !== undefined && (
-          <DetailRow label="Port" value={packet.destPort} mono={true} />
-        )}
-
-        {/* Summary */}
-        {packet.summary && (
-          <>
-            <div className="pt-2">
-              <SmallText className="text-gray-500 uppercase text-xs tracking-wide">
-                Summary
-              </SmallText>
-            </div>
-            <p className="text-sm text-gray-300 py-1.5">{packet.summary}</p>
-          </>
-        )}
-      </div>
-
-      {/* Protocol headers */}
-      <HeadersSection headers={packet.headers} />
+      )}
     </div>
   );
 });
