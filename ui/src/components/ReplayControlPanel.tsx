@@ -165,6 +165,8 @@ export const ReplayControlPanel: FC = () => {
           {/* Message Display */}
           {message && (
             <div
+              role="alert"
+              aria-live="polite"
               className={`p-3 rounded ${
                 message.type === 'success'
                   ? 'bg-green-500/10 text-green-400 border border-green-500/20'

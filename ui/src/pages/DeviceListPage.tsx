@@ -272,7 +272,7 @@ export const DeviceListPage: FC = () => {
               <P className="text-gray-400 mt-1">
                 Manage network device configurations for simulation.
                 {devices.length > 0 && (
-                  <span className="ml-2 text-violet-300">{devices.length} devices</span>
+                  <output className="ml-2 text-violet-300">{devices.length} devices</output>
                 )}
               </P>
             </div>
@@ -454,7 +454,7 @@ export const DeviceListPage: FC = () => {
 
       {/* Error state */}
       {error && (
-        <Card className="border-red-500/30 bg-red-900/20">
+        <Card className="border-red-500/30 bg-red-900/20" role="alert" aria-live="assertive">
           <CardContent className="space-y-3">
             <div className="flex items-start gap-3">
               <AlertCircle className="mt-1 h-5 w-5 text-red-400" />

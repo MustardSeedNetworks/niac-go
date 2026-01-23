@@ -5,6 +5,7 @@
 
 import { AlertCircle, RefreshCw } from 'lucide-react';
 import { Component, type ErrorInfo, type ReactNode } from 'react';
+import { reportError } from '../utils/error-reporter';
 
 interface Props {
   children: ReactNode;
@@ -41,8 +42,10 @@ export class ErrorBoundary extends Component<Props, State> {
     // Store error info for display
     this.setState({ errorInfo });
 
+    // FIX #190: Report error to error tracking
+    reportError(error, 'ErrorBoundary');
+
     // Call optional error handler for external error tracking (e.g., Sentry)
-    // In production, errors should be reported via this callback
     this.props.onError?.(error, errorInfo);
   }
 
