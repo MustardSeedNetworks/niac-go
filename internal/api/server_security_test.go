@@ -453,7 +453,7 @@ func TestGetClientIP_DirectConnection(t *testing.T) {
 // TestGetClientIP_XForwardedFor verifies IP extraction from X-Forwarded-For header.
 func TestGetClientIP_XForwardedFor(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/test", nil)
-	req.RemoteAddr = "10.0.0.1:54321"
+	req.RemoteAddr = "127.0.0.1:54321"
 	req.Header.Set("X-Forwarded-For", "203.0.113.5, 198.51.100.1")
 
 	ip := getClientIP(req, nil)
@@ -467,7 +467,7 @@ func TestGetClientIP_XForwardedFor(t *testing.T) {
 // TestGetClientIP_XRealIP verifies IP extraction from X-Real-IP header.
 func TestGetClientIP_XRealIP(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/test", nil)
-	req.RemoteAddr = "10.0.0.1:54321"
+	req.RemoteAddr = "127.0.0.1:54321"
 	req.Header.Set("X-Real-IP", "203.0.113.10")
 
 	ip := getClientIP(req, nil)

@@ -113,9 +113,10 @@ const (
 	httpReadHeaderTimeout = 5  // seconds
 
 	// Background task interval constants.
-	rateLimiterCleanupMins = 5 // minutes between rate limiter cleanup
-	alertTickerSecs        = 5 // seconds between alert checks
-	webhookTimeoutSecs     = 5 // seconds for webhook timeout
+	rateLimiterCleanupMins = 5  // minutes between rate limiter cleanup
+	sseTokenCleanupSecs    = 60 // seconds between SSE token cleanup
+	alertTickerSecs        = 5  // seconds between alert checks
+	webhookTimeoutSecs     = 5  // seconds for webhook timeout
 
 	// Bit shift constants for IP parsing.
 	bitShift24 = 24
@@ -279,6 +280,7 @@ type Server struct {
 	daemon        DaemonController // Optional: only set in daemon mode
 	startTime     time.Time        // Track server start time for uptime
 	rateLimiter   *RateLimiter     // FEATURE #104: Per-IP rate limiting
+	csrfMu        sync.RWMutex     // Protects csrfToken, csrfPrevToken, csrfExpiry
 	csrfToken     string           // SECURITY FIX LOW-1: CSRF protection token
 	csrfPrevToken string           // FIX #293: Previous CSRF token for rotation window
 	csrfExpiry    time.Time        // FIX #293: CSRF token expiry time
@@ -469,19 +471,17 @@ func isTrustedProxy(ip string, trustedCIDRs []*net.IPNet) bool {
 		return false
 	}
 
-	// Default: trust localhost and private networks
-	if parsedIP.IsLoopback() {
-		return true
-	}
-
-	return parsedIP.IsPrivate()
+	// Default: only trust loopback when no CIDRs configured
+	return parsedIP.IsLoopback()
 }
 
 // generateRequestID creates a unique request ID for tracing
 // FEATURE #118: Request tracing for debugging and monitoring.
 func generateRequestID() string {
 	bytes := make([]byte, requestIDBytes)
-	_, _ = rand.Read(bytes) // crypto/rand read errors will result in zero bytes, still usable
+	if _, err := rand.Read(bytes); err != nil {
+		slog.Warn("crypto/rand read failed for request ID", "error", err)
+	}
 
 	return hex.EncodeToString(bytes)
 }
@@ -493,8 +493,13 @@ func (s *Server) csrfProtect(next http.HandlerFunc) http.HandlerFunc {
 		// Only check CSRF for state-changing methods
 		if r.Method == http.MethodPost || r.Method == http.MethodPut ||
 			r.Method == http.MethodPatch || r.Method == http.MethodDelete {
+			s.csrfMu.RLock()
+			currentToken := s.csrfToken
+			prevToken := s.csrfPrevToken
+			s.csrfMu.RUnlock()
+
 			// FIX #273: Block requests if CSRF token unavailable (don't silently bypass)
-			if s.csrfToken == "" {
+			if currentToken == "" {
 				writeError(w, r, http.StatusServiceUnavailable, "csrf_unavailable",
 					"CSRF protection is unavailable (token generation failed at startup)", nil)
 
@@ -517,9 +522,9 @@ func (s *Server) csrfProtect(next http.HandlerFunc) http.HandlerFunc {
 			}
 
 			// FIX #293: Accept both current and previous token during rotation window
-			currentMatch := subtle.ConstantTimeCompare([]byte(clientToken), []byte(s.csrfToken)) == 1
-			prevMatch := s.csrfPrevToken != "" &&
-				subtle.ConstantTimeCompare([]byte(clientToken), []byte(s.csrfPrevToken)) == 1
+			currentMatch := subtle.ConstantTimeCompare([]byte(clientToken), []byte(currentToken)) == 1
+			prevMatch := prevToken != "" &&
+				subtle.ConstantTimeCompare([]byte(clientToken), []byte(prevToken)) == 1
 
 			if !currentMatch && !prevMatch {
 				writeError(w, r, http.StatusForbidden, "csrf_token_invalid",
@@ -816,6 +821,22 @@ func validateWebhookURLSSRF(urlStr string) error {
 
 	ip := normalizeAndParseIP(host)
 	if ip == nil {
+		// FIX #313: Hostname - resolve and validate all resolved IPs
+		addrs, lookupErr := net.DefaultResolver.LookupIPAddr(context.Background(), host)
+		if lookupErr != nil {
+			return fmt.Errorf("cannot resolve hostname: %s", host)
+		}
+
+		for _, addr := range addrs {
+			if blockedErr := isBlockedIP(addr.IP); blockedErr != nil {
+				return fmt.Errorf("hostname resolves to blocked address: %w", blockedErr)
+			}
+
+			if mappedErr := isBlockedIPv6Mapped(addr.IP); mappedErr != nil {
+				return fmt.Errorf("hostname resolves to blocked address: %w", mappedErr)
+			}
+		}
+
 		return nil
 	}
 
@@ -1191,7 +1212,7 @@ func (s *Server) registerAPIRoutes(mux *http.ServeMux) {
 	s.registerDebugRoutes(mux)
 	s.registerSSERoutes(mux)
 
-	mux.HandleFunc("/metrics", s.recoverMiddleware(s.handleMetrics))
+	mux.HandleFunc("/metrics", s.recoverMiddleware(s.auth(s.handleMetrics)))
 	mux.HandleFunc("/", s.recoverMiddleware(s.auth(s.serveSPA())))
 }
 
@@ -1339,9 +1360,36 @@ func (s *Server) startBackgroundTasks() {
 		}
 	}()
 
+	// FIX #301: Periodically clean up expired SSE tokens
+	go func() {
+		ticker := time.NewTicker(sseTokenCleanupSecs * time.Second)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ticker.C:
+				s.cleanupSSETokens()
+			case <-s.bgDone:
+				return
+			}
+		}
+	}()
+
 	// Start SSE hub for real-time streaming
 	go s.sseHub.Run()
 	s.logger.Info("[SSE] Server-Sent Events hub started")
+}
+
+// cleanupSSETokens removes expired SSE tokens from the [sync.Map].
+func (s *Server) cleanupSSETokens() {
+	now := time.Now()
+	s.sseTokens.Range(func(key, value any) bool {
+		entry, ok := value.(*sseTokenEntry)
+		if !ok || !now.Before(entry.expiresAt) {
+			s.sseTokens.Delete(key)
+		}
+		return true
+	})
 }
 
 // Start boots the HTTP listeners.
@@ -1408,9 +1456,10 @@ func (s *Server) Shutdown(ctx context.Context) error {
 	// FIX #271: Stop background goroutines
 	close(s.bgDone)
 
-	// FIX #274: Stop SSE hub
+	// FIX #274: Stop SSE hub and wait for it to finish
 	if s.sseHub != nil {
 		s.sseHub.Stop()
+		<-s.sseHub.Done()
 	}
 
 	// Acquire lock before closing channel to prevent race with updateAlertConfig
@@ -1515,6 +1564,7 @@ func (s *Server) auth(next http.HandlerFunc) http.HandlerFunc {
 		}
 
 		if s.cfg.Token == "" {
+			w.Header().Set("X-Auth-Mode", "none")
 			next(w, r)
 
 			return
@@ -1524,14 +1574,11 @@ func (s *Server) auth(next http.HandlerFunc) http.HandlerFunc {
 		token := r.Header.Get("Authorization")
 		token = strings.TrimPrefix(token, "Bearer ")
 
-		// FIX #283: For SSE endpoints, validate short-lived tokens first, then fall back to main token
+		// FIX #283: For SSE endpoints, only accept short-lived SSE tokens (no main token fallback)
 		if token == "" && strings.HasPrefix(r.URL.Path, "/api/v1/stream/") {
 			if s.trySSEToken(w, r, next) {
 				return
 			}
-
-			// Fall back to query token as main token
-			token = r.URL.Query().Get("token")
 		}
 
 		// SECURITY FIX #100: Use constant-time comparison to prevent timing attacks
@@ -1635,6 +1682,7 @@ func (s *Server) handleCSRFToken(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// FIX #293: Check if token needs rotation
+	s.csrfMu.Lock()
 	if time.Now().After(s.csrfExpiry) {
 		newToken, err := generateCSRFToken()
 		if err == nil {
@@ -1644,9 +1692,11 @@ func (s *Server) handleCSRFToken(w http.ResponseWriter, r *http.Request) {
 			s.logger.Info("[API] CSRF token rotated")
 		}
 	}
+	token := s.csrfToken
+	s.csrfMu.Unlock()
 
 	s.writeJSON(w, map[string]string{
-		"token": s.csrfToken,
+		"token": token,
 	})
 }
 
@@ -1913,7 +1963,9 @@ func (s *Server) handleConfigUpdate(w http.ResponseWriter, r *http.Request) {
 	if writeErr != nil {
 		if s.cfg.ApplyConfig != nil && prevCfg != nil {
 			// Attempt rollback to previous config to avoid divergence.
-			_ = s.cfg.ApplyConfig(prevCfg)
+			if rollbackErr := s.cfg.ApplyConfig(prevCfg); rollbackErr != nil {
+				s.logger.Error("[API] CRITICAL: config rollback failed", "error", rollbackErr)
+			}
 		}
 		// SECURITY FIX MEDIUM-6: Don't expose file paths
 		s.logger.Error("[API] Failed to write config file", "error", writeErr)
@@ -2166,10 +2218,29 @@ type errorInjectionRequest struct {
 	Value     int    `json:"value"`
 }
 
+// getKnownErrorTypes returns the set of valid error types for injection.
+func getKnownErrorTypes() map[string]bool {
+	return map[string]bool{
+		"FCS Errors":       true,
+		"Packet Discards":  true,
+		"Interface Errors": true,
+		"High Utilization": true,
+		"High CPU":         true,
+		"High Memory":      true,
+		"High Disk":        true,
+	}
+}
+
 // validateErrorInjectionRequest validates the error injection request fields.
 func (req *errorInjectionRequest) validate(w http.ResponseWriter, r *http.Request) bool {
 	if req.DeviceIP == "" {
 		writeError(w, r, http.StatusBadRequest, "validation_failed", "device_ip is required", nil)
+		return false
+	}
+
+	// Validate DeviceIP is a valid IP address
+	if net.ParseIP(req.DeviceIP) == nil {
+		writeError(w, r, http.StatusBadRequest, "validation_failed", "device_ip must be a valid IP address", nil)
 		return false
 	}
 
@@ -2180,6 +2251,12 @@ func (req *errorInjectionRequest) validate(w http.ResponseWriter, r *http.Reques
 
 	if req.ErrorType == "" {
 		writeError(w, r, http.StatusBadRequest, "validation_failed", "error_type is required", nil)
+		return false
+	}
+
+	// Validate ErrorType against known types
+	if !getKnownErrorTypes()[req.ErrorType] {
+		writeError(w, r, http.StatusBadRequest, "validation_failed", "unknown error_type", nil)
 		return false
 	}
 
@@ -2410,7 +2487,7 @@ func (s *Server) handleRuntime(w http.ResponseWriter, r *http.Request) {
 	runtime := map[string]any{
 		"running":          true, // API server is running
 		"interface":        iface,
-		"config_path":      cfgPath,
+		"config_path":      filepath.Base(cfgPath),
 		"version":          s.cfg.Version,
 		"device_count":     0,
 		"packets_sent":     stats.PacketsSent,
@@ -2670,7 +2747,9 @@ func (s *Server) writeJSON(w http.ResponseWriter, payload any) {
 	w.Header().Set("Content-Type", "application/json")
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "  ")
-	_ = enc.Encode(payload)
+	if err := enc.Encode(payload); err != nil {
+		s.logger.Debug("[API] JSON encode/write error", "error", err)
+	}
 }
 
 func (s *Server) alertLoop(stop <-chan struct{}) {
@@ -2746,7 +2825,38 @@ func (s *Server) sendAlert(total uint64) {
 
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{Timeout: webhookTimeoutSecs * time.Second}
+	// FIX #314, #315: Custom transport to validate resolved IPs and deny redirects
+	dialer := &net.Dialer{Timeout: webhookTimeoutSecs * time.Second}
+	transport := &http.Transport{
+		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+			host, port, splitErr := net.SplitHostPort(addr)
+			if splitErr != nil {
+				return nil, fmt.Errorf("invalid address: %s", addr)
+			}
+
+			addrs, resolveErr := net.DefaultResolver.LookupIPAddr(ctx, host)
+			if resolveErr != nil {
+				return nil, fmt.Errorf("cannot resolve host: %s", host)
+			}
+
+			for _, addr := range addrs {
+				if blockedErr := isBlockedIP(addr.IP); blockedErr != nil {
+					return nil, fmt.Errorf("blocked destination: %w", blockedErr)
+				}
+			}
+
+			// Connect to first allowed IP
+			return dialer.DialContext(ctx, network, net.JoinHostPort(addrs[0].IP.String(), port))
+		},
+	}
+
+	client := &http.Client{
+		Timeout:   webhookTimeoutSecs * time.Second,
+		Transport: transport,
+		CheckRedirect: func(_ *http.Request, _ []*http.Request) error {
+			return errors.New("redirects not allowed for webhook URLs")
+		},
+	}
 
 	resp, doErr := client.Do(req)
 	if doErr != nil {

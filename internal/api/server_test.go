@@ -139,7 +139,7 @@ func TestServerHandleAlertsLifecycle(t *testing.T) {
 
 	// Update
 	rec = httptest.NewRecorder()
-	body := `{"packets_threshold":12345,"webhook_url":"https://hooks.example.com"}`
+	body := `{"packets_threshold":12345,"webhook_url":"https://198.51.100.1"}`
 	req = httptest.NewRequest(http.MethodPut, "/api/v1/alerts", strings.NewReader(body))
 	server.handleAlerts(rec, req)
 
@@ -151,7 +151,7 @@ func TestServerHandleAlertsLifecycle(t *testing.T) {
 		t.Fatalf("decode updated: %v", err)
 	}
 
-	if resp.PacketsThreshold != 12345 || resp.WebhookURL != "https://hooks.example.com" {
+	if resp.PacketsThreshold != 12345 || resp.WebhookURL != "https://198.51.100.1" {
 		t.Fatalf("alert values not applied: %+v", resp)
 	}
 }

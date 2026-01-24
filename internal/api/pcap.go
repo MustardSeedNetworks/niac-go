@@ -339,8 +339,9 @@ func (s *Server) handlePcapUpload(w http.ResponseWriter, r *http.Request) {
 	// Analyze the PCAP
 	result, err := analyzePcapData(pcapData, req.Filename)
 	if err != nil {
+		s.logger.Error("[API] PCAP analysis failed", "error", err)
 		writeError(w, r, http.StatusInternalServerError, "analysis_failed",
-			fmt.Sprintf("Failed to analyze PCAP: %v", err), nil)
+			"PCAP analysis failed", nil)
 
 		return
 	}
@@ -374,6 +375,14 @@ func (s *Server) handlePcapAnalysis(w http.ResponseWriter, r *http.Request) {
 	if analysisID == "" {
 		writeError(w, r, http.StatusBadRequest, "missing_id",
 			"Analysis ID is required", nil)
+
+		return
+	}
+
+	// FIX #319: Validate analysis ID format (hex-encoded SHA256 prefix = 16 hex chars)
+	if len(analysisID) != 16 || !isHexString(analysisID) {
+		writeError(w, r, http.StatusBadRequest, "invalid_id",
+			"Invalid analysis ID format", nil)
 
 		return
 	}
@@ -859,6 +868,16 @@ func getProtocolByPort(srcPort, dstPort int, baseProto string) string {
 	}
 
 	return baseProto
+}
+
+// isHexString checks if a string contains only valid hexadecimal characters.
+func isHexString(s string) bool {
+	for _, c := range s {
+		if (c < '0' || c > '9') && (c < 'a' || c > 'f') && (c < 'A' || c > 'F') {
+			return false
+		}
+	}
+	return true
 }
 
 func topNFromMap(m map[string]int, n int) []PcapIPCount {

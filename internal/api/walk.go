@@ -124,10 +124,12 @@ func (s *Server) handleWalkValidation(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Path
 	isAutoFix := strings.HasSuffix(path, "/fix")
 
-	// Parse request body
+	// Parse request body with size limit
+	r.Body = http.MaxBytesReader(w, r.Body, MaxRequestBodySize)
+
 	var req WalkValidationRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, r, http.StatusBadRequest, "invalid_request", fmt.Sprintf("Invalid request body: %v", err), nil)
+		writeError(w, r, http.StatusBadRequest, "invalid_request", "Invalid request body", nil)
 
 		return
 	}
@@ -151,15 +153,9 @@ func (s *Server) handleWalkValidation(w http.ResponseWriter, r *http.Request) {
 		// Validate and auto-fix using validated path
 		result, err = snmp.AutoFixWalkFile(validatedPath, "")
 		if err != nil {
-			s.logger.Error("[API] Walk file auto-fix error", "error", err)
-			writeError(
-				w,
-				r,
-				http.StatusInternalServerError,
-				"fix_failed",
-				fmt.Sprintf("Failed to fix walk file: %v", err),
-				nil,
-			)
+			s.logger.Error("[API] Walk file auto-fix error", "error", err, "filename", validatedPath)
+			writeError(w, r, http.StatusInternalServerError, "fix_failed",
+				"Walk file auto-fix failed", nil)
 
 			return
 		}
@@ -169,15 +165,9 @@ func (s *Server) handleWalkValidation(w http.ResponseWriter, r *http.Request) {
 		// Validate only using validated path
 		result, err = snmp.ValidateWalkFile(validatedPath)
 		if err != nil {
-			s.logger.Error("[API] Walk file validation error", "error", err)
-			writeError(
-				w,
-				r,
-				http.StatusInternalServerError,
-				"validation_failed",
-				fmt.Sprintf("Failed to validate walk file: %v", err),
-				nil,
-			)
+			s.logger.Error("[API] Walk file validation error", "error", err, "filename", validatedPath)
+			writeError(w, r, http.StatusInternalServerError, "validation_failed",
+				"Walk file validation failed", nil)
 
 			return
 		}
@@ -316,9 +306,9 @@ func (s *Server) handleWalkBatchValidate(w http.ResponseWriter, r *http.Request)
 	)
 
 	for file := range walkFiles {
-		result, err := snmp.ValidateWalkFile(file)
-		if err != nil {
-			// Create an error result
+		// Validate each file path before processing
+		validatedPath, pathErr := s.validateWalkFilePath(file)
+		if pathErr != nil {
 			results[file] = &snmp.ValidationResult{
 				Filename: file,
 				Valid:    false,
@@ -326,10 +316,29 @@ func (s *Server) handleWalkBatchValidate(w http.ResponseWriter, r *http.Request)
 					{
 						Line:     0,
 						Severity: "error",
-						Message:  err.Error(),
+						Message:  "Invalid file path",
 					},
 				},
 			}
+			invalidCount++
+
+			continue
+		}
+
+		result, err := snmp.ValidateWalkFile(validatedPath)
+		if err != nil {
+			results[file] = &snmp.ValidationResult{
+				Filename: file,
+				Valid:    false,
+				Issues: []snmp.ValidationIssue{
+					{
+						Line:     0,
+						Severity: "error",
+						Message:  "Validation failed",
+					},
+				},
+			}
+			s.logger.Error("[API] Walk file batch validation error", "error", err, "filename", validatedPath)
 			invalidCount++
 		} else {
 			results[file] = result
