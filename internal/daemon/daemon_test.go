@@ -515,9 +515,6 @@ func TestDaemon_SimulationLifecycle_Mock(t *testing.T) {
 		},
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	_ = ctx
-
 	daemon.mu.Lock()
 	daemon.simulation = &Simulation{
 		Interface:  "lo0",
@@ -525,7 +522,6 @@ func TestDaemon_SimulationLifecycle_Mock(t *testing.T) {
 		ConfigName: "test.yaml",
 		StartedAt:  time.Now().Add(-10 * time.Second),
 		cfg:        testCfg,
-		cancel:     cancel,
 		// engine, stack, replay left nil - stopSimulationLocked handles nil
 	}
 	daemon.mu.Unlock()

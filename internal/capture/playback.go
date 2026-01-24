@@ -27,6 +27,8 @@ var (
 )
 
 // PlaybackEngine handles PCAP file playback.
+// Note: PlaybackEngine is single-use. Once Stop() is called, the instance
+// cannot be restarted. Create a new PlaybackEngine for subsequent playback.
 type PlaybackEngine struct {
 	engine     *Engine
 	config     *config.CapturePlayback
@@ -89,9 +91,7 @@ func (p *PlaybackEngine) Start() error {
 	}
 
 	// Start playback goroutine
-	p.wg.Add(1)
-
-	go p.playbackLoop()
+	p.wg.Go(p.playbackLoop)
 
 	return nil
 }
@@ -120,8 +120,6 @@ func (p *PlaybackEngine) Stop() {
 
 // playbackLoop is the main playback loop.
 func (p *PlaybackEngine) playbackLoop() {
-	defer p.wg.Done()
-
 	// If LoopTime is specified, loop playback at that interval
 	if p.config.LoopTime > 0 {
 		loopInterval := time.Duration(p.config.LoopTime) * time.Millisecond

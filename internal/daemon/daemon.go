@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"sync"
@@ -61,7 +62,6 @@ type Simulation struct {
 	stack  *protocols.Stack
 	cfg    *config.Config
 	replay api.ReplayManager
-	cancel context.CancelFunc
 }
 
 // NewDaemon creates a new daemon instance.
@@ -209,16 +209,10 @@ func (d *Daemon) StartSimulation(req api.SimulationRequest) error {
 	// Create protocol stack with nil debug config (uses defaults)
 	stack := protocols.NewStack(engine, cfg, nil)
 
-	// Create context for lifecycle management
-	ctx, cancel := context.WithCancel(context.Background())
-	_ = ctx // context reserved for future use
-
 	// Start protocol stack
 	startErr := stack.Start()
 	if startErr != nil {
-		cancel()
 		engine.Close()
-
 		return fmt.Errorf("start protocol stack: %w", startErr)
 	}
 
@@ -235,7 +229,6 @@ func (d *Daemon) StartSimulation(req api.SimulationRequest) error {
 		stack:      stack,
 		cfg:        cfg,
 		replay:     replay,
-		cancel:     cancel,
 	}
 
 	// Update API server with simulation components
@@ -263,12 +256,9 @@ func (d *Daemon) stopSimulationLocked() error {
 
 	// Stop replay if running
 	if sim.replay != nil {
-		_, _ = sim.replay.Stop()
-	}
-
-	// Cancel context first to signal shutdown
-	if sim.cancel != nil {
-		sim.cancel()
+		if _, stopErr := sim.replay.Stop(); stopErr != nil {
+			slog.Warn("replay stop error", "error", stopErr)
+		}
 	}
 
 	// Stop stack
@@ -294,7 +284,9 @@ func (d *Daemon) stopSimulationLocked() error {
 			PacketsReceived: stats.PacketsReceived,
 			Errors:          stats.Errors,
 		}
-		_ = d.storage.AddRun(record)
+		if addErr := d.storage.AddRun(record); addErr != nil {
+			slog.Error("failed to save run history", "error", addErr)
+		}
 	}
 
 	d.simulation = nil
@@ -320,7 +312,7 @@ func (d *Daemon) GetStatus() api.SimulationStatus {
 
 	if d.simulation != nil {
 		status.Interface = d.simulation.Interface
-		status.ConfigPath = d.simulation.ConfigPath
+		status.ConfigPath = filepath.Base(d.simulation.ConfigPath)
 		status.ConfigName = d.simulation.ConfigName
 		status.StartedAt = d.simulation.StartedAt
 
@@ -336,7 +328,9 @@ func (d *Daemon) GetStatus() api.SimulationStatus {
 func expandPath(path string) string {
 	if len(path) > 0 && path[0] == '~' {
 		home, err := os.UserHomeDir()
-		if err == nil {
+		if err != nil {
+			slog.Warn("failed to resolve home directory for path expansion", "path", path, "error", err)
+		} else {
 			path = filepath.Join(home, path[1:])
 		}
 	}

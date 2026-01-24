@@ -174,9 +174,9 @@ func (s *Simulator) Start() error {
 
 	// Start behavior threads for each device
 	for name, device := range s.devices {
-		s.wg.Add(1)
-
-		go s.deviceBehaviorLoop(name, device)
+		s.wg.Go(func() {
+			s.deviceBehaviorLoop(name, device)
+		})
 
 		// Start trap sender if configured (v1.6.0)
 		if device.TrapSender != nil {
@@ -233,8 +233,6 @@ func (s *Simulator) Stop() {
 
 // deviceBehaviorLoop runs device-specific behavior.
 func (s *Simulator) deviceBehaviorLoop(name string, device *SimulatedDevice) {
-	defer s.wg.Done()
-
 	ticker := time.NewTicker(deviceBehaviorInterval)
 	defer ticker.Stop()
 
