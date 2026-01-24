@@ -87,7 +87,7 @@ func (h *FDPHandler) Start() {
 
 	h.advertiseTicker = time.NewTicker(FDPAdvertiseInterval)
 
-	go func() {
+	h.stack.wg.Go(func() {
 		// Send initial advertisement immediately
 		h.sendAdvertisements()
 
@@ -101,7 +101,7 @@ func (h *FDPHandler) Start() {
 				return
 			}
 		}
-	}()
+	})
 }
 
 // Stop halts FDP advertisements.

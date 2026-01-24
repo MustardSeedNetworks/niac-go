@@ -66,6 +66,8 @@ type SSEHub struct {
 	mu           sync.RWMutex
 	rateLimiters map[SSEStream]*sseRateLimiter
 	stopChan     chan struct{}
+	stopOnce     sync.Once
+	done         chan struct{} // closed when Run() exits
 	running      atomic.Bool
 	eventID      atomic.Uint64 // Global event ID counter
 }
@@ -132,6 +134,7 @@ func NewSSEHub() *SSEHub {
 		unregister:   make(chan *SSEClient),
 		rateLimiters: make(map[SSEStream]*sseRateLimiter),
 		stopChan:     make(chan struct{}),
+		done:         make(chan struct{}),
 	}
 
 	// Initialize per-stream structures
@@ -146,7 +149,10 @@ func NewSSEHub() *SSEHub {
 // Run starts the hub's main event loop.
 func (h *SSEHub) Run() {
 	h.running.Store(true)
-	defer h.running.Store(false)
+	defer func() {
+		h.running.Store(false)
+		close(h.done)
+	}()
 
 	for {
 		select {
@@ -169,9 +175,14 @@ func (h *SSEHub) Run() {
 
 // Stop gracefully shuts down the hub.
 func (h *SSEHub) Stop() {
-	if h.running.Load() {
+	h.stopOnce.Do(func() {
 		close(h.stopChan)
-	}
+	})
+}
+
+// Done returns a channel that is closed when Run() exits.
+func (h *SSEHub) Done() <-chan struct{} {
+	return h.done
 }
 
 func (h *SSEHub) registerClient(client *SSEClient) {

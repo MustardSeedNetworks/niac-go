@@ -115,7 +115,7 @@ func (h *LLDPHandler) Start() {
 
 	h.advertiseTicker = time.NewTicker(LLDPAdvertiseInterval)
 
-	go func() {
+	h.stack.wg.Go(func() {
 		// Send initial advertisement immediately
 		h.sendAdvertisements()
 
@@ -129,7 +129,7 @@ func (h *LLDPHandler) Start() {
 				return
 			}
 		}
-	}()
+	})
 }
 
 // Stop halts LLDP advertisements.

@@ -75,7 +75,7 @@ func (h *EDPHandler) Start() {
 
 	h.advertiseTicker = time.NewTicker(EDPAdvertiseInterval)
 
-	go func() {
+	h.stack.wg.Go(func() {
 		// Send initial advertisement immediately
 		h.sendAdvertisements()
 
@@ -89,7 +89,7 @@ func (h *EDPHandler) Start() {
 				return
 			}
 		}
-	}()
+	})
 }
 
 // Stop halts EDP advertisements.

@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/google/gopacket"
@@ -108,7 +109,7 @@ type Stack struct {
 	stats *Statistics
 
 	// Control
-	running  bool
+	running  atomic.Bool
 	stopChan chan struct{}
 	wg       sync.WaitGroup
 
@@ -332,31 +333,21 @@ func (s *Stack) applySNMPAddrMappings(cfg *config.Config) {
 
 // Start starts the protocol stack processing.
 func (s *Stack) Start() error {
-	if s.running {
+	if !s.running.CompareAndSwap(false, true) {
 		return ErrStackAlreadyRunning
 	}
 
-	s.running = true
-
 	// Start receive thread
-	s.wg.Add(1)
-
-	go s.receiveThread()
+	s.wg.Go(s.receiveThread)
 
 	// Start decode thread
-	s.wg.Add(1)
-
-	go s.decodeThread()
+	s.wg.Go(s.decodeThread)
 
 	// Start send thread
-	s.wg.Add(1)
-
-	go s.sendThread()
+	s.wg.Go(s.sendThread)
 
 	// Start babble thread (periodic packet generation)
-	s.wg.Add(1)
-
-	go s.babbleThread()
+	s.wg.Go(s.babbleThread)
 
 	// Start discovery protocol periodic advertisements
 	s.lldpHandler.Start()
@@ -374,11 +365,9 @@ func (s *Stack) Start() error {
 
 // Stop stops the protocol stack.
 func (s *Stack) Stop() {
-	if !s.running {
+	if !s.running.CompareAndSwap(true, false) {
 		return
 	}
-
-	s.running = false
 
 	// Stop discovery protocol handlers
 	s.lldpHandler.Stop()
@@ -396,11 +385,9 @@ func (s *Stack) Stop() {
 
 // receiveThread receives packets from the network.
 func (s *Stack) receiveThread() {
-	defer s.wg.Done()
-
 	buffer := make([]byte, stackReceiveBufferSize)
 
-	for s.running {
+	for s.running.Load() {
 		select {
 		case <-s.stopChan:
 			return
@@ -469,16 +456,24 @@ func (s *Stack) queuePacket(pkt *Packet) {
 
 // decodeThread decodes and routes packets to protocol handlers.
 func (s *Stack) decodeThread() {
-	defer s.wg.Done()
+	timer := time.NewTimer(stackSelectTimeoutMs * time.Millisecond)
+	defer timer.Stop()
 
-	for s.running {
+	for s.running.Load() {
 		select {
 		case <-s.stopChan:
 			return
 		case pkt := <-s.recvQueue:
 			s.decodePacket(pkt)
-		case <-time.After(stackSelectTimeoutMs * time.Millisecond):
-			// Periodic check
+			if !timer.Stop() {
+				select {
+				case <-timer.C:
+				default:
+				}
+			}
+			timer.Reset(stackSelectTimeoutMs * time.Millisecond)
+		case <-timer.C:
+			timer.Reset(stackSelectTimeoutMs * time.Millisecond)
 		}
 	}
 }
@@ -630,16 +625,24 @@ func (s *Stack) routeByEtherType(pkt *Packet) {
 
 // sendThread sends packets to the network.
 func (s *Stack) sendThread() {
-	defer s.wg.Done()
+	timer := time.NewTimer(stackSelectTimeoutMs * time.Millisecond)
+	defer timer.Stop()
 
-	for s.running {
+	for s.running.Load() {
 		select {
 		case <-s.stopChan:
 			return
 		case pkt := <-s.sendQueue:
 			s.sendPacket(pkt)
-		case <-time.After(stackSelectTimeoutMs * time.Millisecond):
-			// Periodic check
+			if !timer.Stop() {
+				select {
+				case <-timer.C:
+				default:
+				}
+			}
+			timer.Reset(stackSelectTimeoutMs * time.Millisecond)
+		case <-timer.C:
+			timer.Reset(stackSelectTimeoutMs * time.Millisecond)
 		}
 	}
 }
@@ -673,24 +676,24 @@ func (s *Stack) sendPacket(pkt *Packet) {
 
 	// Reschedule if looping
 	if pkt.LoopTime > 0 {
-		go func() {
-			time.Sleep(pkt.LoopTime)
-
-			if s.running {
-				s.Send(pkt)
+		s.wg.Go(func() {
+			select {
+			case <-time.After(pkt.LoopTime):
+				if s.running.Load() {
+					s.Send(pkt)
+				}
+			case <-s.stopChan:
 			}
-		}()
+		})
 	}
 }
 
 // babbleThread generates periodic network traffic.
 func (s *Stack) babbleThread() {
-	defer s.wg.Done()
-
 	ticker := time.NewTicker(stackBabbleIntervalSec * time.Second)
 	defer ticker.Stop()
 
-	for s.running {
+	for s.running.Load() {
 		select {
 		case <-s.stopChan:
 			return
@@ -750,6 +753,7 @@ func (s *Stack) sendBabble(device *config.Device) {
 		}
 	}
 
+	var serErr error
 	if vlan > 0 {
 		eth.EthernetType = layers.EthernetTypeDot1Q
 		dot1q := &layers.Dot1Q{
@@ -758,9 +762,12 @@ func (s *Stack) sendBabble(device *config.Device) {
 			VLANIdentifier: safeUint16(vlan),
 			Type:           layers.EthernetTypeARP,
 		}
-		_ = gopacket.SerializeLayers(buf, opts, eth, dot1q, arp)
+		serErr = gopacket.SerializeLayers(buf, opts, eth, dot1q, arp)
 	} else {
-		_ = gopacket.SerializeLayers(buf, opts, eth, arp)
+		serErr = gopacket.SerializeLayers(buf, opts, eth, arp)
+	}
+	if serErr != nil {
+		return
 	}
 
 	_ = s.SendRawPacket(buf.Bytes())

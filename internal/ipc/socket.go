@@ -53,6 +53,7 @@ const (
 	shutdownDelayMs      = 500 // delay before shutdown signal processing
 	logLevelWarnPriority = 2   // log level priority for warn
 	logLevelErrPriority  = 3   // log level priority for error
+	maxConcurrentConns   = 100 // maximum concurrent IPC connections
 )
 
 // PacketBufferSize is the maximum number of packets to store in the ring buffer.
@@ -144,6 +145,8 @@ type Server struct {
 	mu            sync.RWMutex
 	shutdownChan  chan struct{}
 	packetBuffer  *PacketBuffer
+	connWg        sync.WaitGroup // tracks active connections
+	connSem       chan struct{}  // semaphore limiting concurrent connections
 }
 
 // NewServer creates a new IPC server.
@@ -161,6 +164,7 @@ func NewServer(socketPath string, stack *protocols.Stack, cfg *config.Config,
 		running:       false,
 		shutdownChan:  make(chan struct{}),
 		packetBuffer:  NewPacketBuffer(PacketBufferSize),
+		connSem:       make(chan struct{}, maxConcurrentConns),
 	}
 }
 
@@ -304,6 +308,9 @@ func (s *Server) Stop() error {
 		_ = s.listener.Close()
 	}
 
+	// Wait for active connections to finish
+	s.connWg.Wait()
+
 	// Remove socket file
 	_ = os.RemoveAll(s.socketPath)
 
@@ -334,8 +341,19 @@ func (s *Server) acceptLoop() {
 			}
 		}
 
-		// Handle connection in goroutine
-		go s.handleConnection(conn)
+		// Acquire connection semaphore
+		select {
+		case s.connSem <- struct{}{}:
+		case <-s.shutdownChan:
+			_ = conn.Close()
+			return
+		}
+
+		// Handle connection in goroutine with WaitGroup tracking
+		s.connWg.Go(func() {
+			defer func() { <-s.connSem }()
+			s.handleConnection(conn)
+		})
 	}
 }
 

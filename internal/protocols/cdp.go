@@ -111,7 +111,7 @@ func (h *CDPHandler) Start() {
 
 	h.advertiseTicker = time.NewTicker(CDPAdvertiseInterval)
 
-	go func() {
+	h.stack.wg.Go(func() {
 		// Send initial advertisement immediately
 		h.sendAdvertisements()
 
@@ -125,7 +125,7 @@ func (h *CDPHandler) Start() {
 				return
 			}
 		}
-	}()
+	})
 }
 
 // Stop halts CDP advertisements.

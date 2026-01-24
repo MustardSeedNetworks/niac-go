@@ -33,7 +33,6 @@
 package storage
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -53,8 +52,6 @@ var (
 
 const (
 	runBucket = "runs"
-	// SECURITY FIX MEDIUM-2: Database operation timeout.
-	dbOperationTimeout = 5 * time.Second
 	// File permissions for database file (owner read/write only).
 	dbFilePermissions = 0o600
 	// Size of uint64 in bytes for key encoding.
@@ -123,42 +120,30 @@ func (s *Storage) Close() error {
 }
 
 // AddRun stores a run record.
-// SECURITY FIX MEDIUM-2: Add timeout to prevent API hangs on slow storage.
+// BoltDB serializes writes internally. The caller (API handler) provides its
+// own request-scoped timeout, so we do not wrap in a goroutine which would
+// leak if the context expired before the transaction completed.
 func (s *Storage) AddRun(record RunRecord) error {
 	if s == nil || s.db == nil {
 		return nil
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), dbOperationTimeout)
-	defer cancel()
+	return s.db.Update(func(tx *bbolt.Tx) error {
+		bucket := tx.Bucket([]byte(runBucket))
+		id, _ := bucket.NextSequence()
+		record.ID = id
 
-	errChan := make(chan error, 1)
+		data, err := json.Marshal(record)
+		if err != nil {
+			return fmt.Errorf("failed to marshal record: %w", err)
+		}
 
-	go func() {
-		errChan <- s.db.Update(func(tx *bbolt.Tx) error {
-			bucket := tx.Bucket([]byte(runBucket))
-			id, _ := bucket.NextSequence()
-			record.ID = id
-
-			data, err := json.Marshal(record)
-			if err != nil {
-				return fmt.Errorf("failed to marshal record: %w", err)
-			}
-
-			return bucket.Put(itob(id), data)
-		})
-	}()
-
-	select {
-	case err := <-errChan:
-		return err
-	case <-ctx.Done():
-		return fmt.Errorf("database operation timeout after %v: %w", dbOperationTimeout, ctx.Err())
-	}
+		return bucket.Put(itob(id), data)
+	})
 }
 
 // ListRuns returns the most recent run records up to the requested limit.
-// SECURITY FIX MEDIUM-2: Add timeout to prevent API hangs on slow storage.
+// BoltDB serializes reads internally. The caller provides timeout via request context.
 func (s *Storage) ListRuns(limit int) ([]RunRecord, error) {
 	if s == nil || s.db == nil {
 		return nil, ErrStorageNotInitialised
@@ -168,43 +153,24 @@ func (s *Storage) ListRuns(limit int) ([]RunRecord, error) {
 		limit = 20
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), dbOperationTimeout)
-	defer cancel()
+	records := make([]RunRecord, 0, limit)
 
-	type result struct {
-		records []RunRecord
-		err     error
-	}
+	err := s.db.View(func(tx *bbolt.Tx) error {
+		cursor := tx.Bucket([]byte(runBucket)).Cursor()
 
-	resultChan := make(chan result, 1)
-
-	go func() {
-		records := make([]RunRecord, 0, limit)
-
-		err := s.db.View(func(tx *bbolt.Tx) error {
-			cursor := tx.Bucket([]byte(runBucket)).Cursor()
-
-			for key, value := cursor.Last(); key != nil && len(records) < limit; key, value = cursor.Prev() {
-				var rec RunRecord
-				err := json.Unmarshal(value, &rec)
-				if err != nil {
-					return fmt.Errorf("failed to unmarshal record: %w", err)
-				}
-
-				records = append(records, rec)
+		for key, value := cursor.Last(); key != nil && len(records) < limit; key, value = cursor.Prev() {
+			var rec RunRecord
+			if unmarshalErr := json.Unmarshal(value, &rec); unmarshalErr != nil {
+				return fmt.Errorf("failed to unmarshal record: %w", unmarshalErr)
 			}
 
-			return nil
-		})
-		resultChan <- result{records: records, err: err}
-	}()
+			records = append(records, rec)
+		}
 
-	select {
-	case res := <-resultChan:
-		return res.records, res.err
-	case <-ctx.Done():
-		return nil, fmt.Errorf("database operation timeout after %v: %w", dbOperationTimeout, ctx.Err())
-	}
+		return nil
+	})
+
+	return records, err
 }
 
 func itob(v uint64) []byte {
