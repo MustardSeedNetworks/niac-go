@@ -250,14 +250,14 @@ test_api_endpoints() {
     log_header "WebUI"
     assert_http_status "${base_url}/" "200" "WebUI serves content"
 
-    log_header "Health Endpoint"
-    assert_http_status "${base_url}/api/v1/health" "200" "Health endpoint responds"
-    assert_json_key "${base_url}/api/v1/health" "status" "Health has status field"
+    log_header "Version Endpoint"
+    assert_http_status "${base_url}/api/v1/version" "200" "Version endpoint responds"
+    assert_json_key "${base_url}/api/v1/version" "version" "Version has version field"
 
-    log_header "Device Endpoints"
+    log_header "API Endpoints"
     assert_http_status "${base_url}/api/v1/devices" "200" "Devices endpoint responds"
-    assert_http_status "${base_url}/api/v1/templates" "200" "Templates endpoint responds"
-    assert_http_status "${base_url}/api/v1/simulations" "200" "Simulations endpoint responds"
+    assert_http_status "${base_url}/api/v1/stats" "200" "Stats endpoint responds"
+    assert_http_status "${base_url}/api/v1/simulation" "200" "Simulation endpoint responds"
 
     log_header "JSON Response Validation"
     local devices_body
@@ -271,19 +271,29 @@ test_api_endpoints() {
         TESTS_FAILED=$((TESTS_FAILED + 1))
     fi
 
-    local templates_body
-    templates_body=$(curl -s "${base_url}/api/v1/templates" 2>/dev/null)
+    local version_body
+    version_body=$(curl -s "${base_url}/api/v1/version" 2>/dev/null)
     TESTS_RUN=$((TESTS_RUN + 1))
-    if echo "$templates_body" | python3 -c "import sys,json; json.load(sys.stdin)" 2>/dev/null; then
-        log_pass "Templates endpoint returns valid JSON"
+    if echo "$version_body" | python3 -c "import sys,json; json.load(sys.stdin)" 2>/dev/null; then
+        log_pass "Version endpoint returns valid JSON"
         TESTS_PASSED=$((TESTS_PASSED + 1))
     else
-        log_fail "Templates endpoint returns invalid JSON"
+        log_fail "Version endpoint returns invalid JSON"
         TESTS_FAILED=$((TESTS_FAILED + 1))
     fi
 
-    log_header "Invalid Endpoints"
-    assert_http_status "${base_url}/api/v1/nonexistent" "404" "Nonexistent path returns 404"
+    log_header "SPA Catch-All"
+    # NiAC serves the SPA for unknown routes (returns 200 with HTML)
+    local unknown_body
+    unknown_body=$(curl -s "${base_url}/api/v1/nonexistent" 2>/dev/null)
+    TESTS_RUN=$((TESTS_RUN + 1))
+    if echo "$unknown_body" | grep -q "<!doctype html\|<html"; then
+        log_pass "Unknown routes serve SPA (catch-all works)"
+        TESTS_PASSED=$((TESTS_PASSED + 1))
+    else
+        log_fail "Unknown routes should serve SPA HTML"
+        TESTS_FAILED=$((TESTS_FAILED + 1))
+    fi
 
     log_header "WebUI Assets"
     local html
@@ -341,14 +351,14 @@ test_concurrent_requests() {
 
     # Send 20 concurrent requests
     for i in $(seq 1 20); do
-        curl -s -o /dev/null "${base_url}/api/v1/health" &
+        curl -s -o /dev/null "${base_url}/api/v1/version" &
     done
     wait
 
     # Verify service still responds
     TESTS_RUN=$((TESTS_RUN + 1))
     local status
-    status=$(curl -s -o /dev/null -w "%{http_code}" "${base_url}/api/v1/health" 2>/dev/null)
+    status=$(curl -s -o /dev/null -w "%{http_code}" "${base_url}/api/v1/version" 2>/dev/null)
     if [[ "$status" == "200" ]]; then
         log_pass "Service stable after 20 concurrent requests"
         TESTS_PASSED=$((TESTS_PASSED + 1))
