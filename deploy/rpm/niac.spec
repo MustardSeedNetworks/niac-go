@@ -7,6 +7,9 @@ URL:        https://github.com/krisarmstrong/niac
 BuildArch:  __ARCHITECTURE__
 
 Requires:   libpcap, systemd, libcap
+Requires(pre): shadow-utils
+Provides: user(niac)
+Provides: group(niac)
 
 %description
 NiAC (Network In A Can) is a network device simulator supporting:
