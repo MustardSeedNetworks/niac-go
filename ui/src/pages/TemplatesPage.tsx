@@ -145,11 +145,11 @@ export const TemplatesPage: FC = () => {
       textarea.value = templateContent.content;
       document.body.appendChild(textarea);
       textarea.select();
-      document.execCommand('copy');
+      const copied = document.execCommand('copy');
       document.body.removeChild(textarea);
       setMessage({
-        type: 'success',
-        text: 'Template content copied to clipboard',
+        type: copied ? 'success' : 'error',
+        text: copied ? 'Template content copied to clipboard' : 'Failed to copy to clipboard',
       });
     }
   }, [templateContent]);

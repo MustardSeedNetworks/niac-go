@@ -207,6 +207,7 @@ export const PacketInspectorPage: FC = () => {
               <select
                 value={protocolFilter}
                 onChange={(e) => setProtocolFilter(e.target.value)}
+                aria-label="Protocol filter"
                 className="rounded-lg border border-white/10 bg-gray-950/60 px-3 py-1.5 text-sm text-white focus:border-violet-400 focus:outline-none"
               >
                 {PROTOCOL_FILTERS.map((protocol) => (
@@ -224,6 +225,7 @@ export const PacketInspectorPage: FC = () => {
                 placeholder="Search packets (IP, port, protocol...)"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                aria-label="Search packets"
                 className="w-full rounded-lg border border-white/10 bg-gray-950/60 px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:border-violet-400 focus:outline-none"
               />
             </div>
