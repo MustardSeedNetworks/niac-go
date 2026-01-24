@@ -354,8 +354,8 @@ export interface Device {
   ips?: string[];
   type?: DeviceType;
   vlan?: number;
-  babble?: boolean;
-  mapToIp?: string;
+  interfaces?: string[];
+  protocols?: string[];
   snmpAgent?: SNMPAgent;
   lldp?: LLDPConfig;
   cdp?: CDPConfig;
@@ -525,7 +525,7 @@ export type STPVersion = 'stp' | 'rstp' | 'mstp';
 export interface DHCPConfig {
   subnetMask?: string;
   router?: string;
-  domainNameServer?: string;
+  dns?: string[];
   serverIdentifier?: string;
   nextServerIp?: string;
   poolStart?: string;
@@ -807,9 +807,13 @@ export interface CreateDeviceRequest {
 
 /**
  * Request body for PUT /api/v1/config/devices/:id
+ * FIX #295: Matches backend DeviceUpdateRequest fields
  */
 export interface UpdateDeviceRequest {
-  device: Partial<Device>;
+  type?: string;
+  mac?: string;
+  ip?: string;
+  rawYaml?: string;
 }
 
 /**

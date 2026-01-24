@@ -59,17 +59,20 @@ export const DhcpSection: FC<ProtocolSectionProps> = ({
               />
             </FormField>
 
-            <FormField label="DNS Server" helpText="Domain name server for clients">
+            <FormField label="DNS Servers" helpText="Comma-separated DNS servers for clients">
               <input
                 type="text"
-                value={device.dhcp.domainNameServer || ''}
+                value={(device.dhcp.dns ?? []).join(', ')}
                 onChange={(e) =>
                   updateDhcp({
                     ...getDhcpConfig(),
-                    domainNameServer: e.target.value,
+                    dns: e.target.value
+                      .split(',')
+                      .map((s) => s.trim())
+                      .filter(Boolean),
                   })
                 }
-                placeholder="8.8.8.8"
+                placeholder="8.8.8.8, 8.8.4.4"
                 className={monoInputClassName}
               />
             </FormField>

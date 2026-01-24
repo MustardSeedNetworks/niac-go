@@ -6,7 +6,6 @@ import type {
   ConfigUpdateRequest,
   // Device Configuration Types
   CreateDeviceRequest,
-  Device,
   DeviceDetailResponse,
   DeviceListResponse,
   DeviceMutationResponse,
@@ -30,6 +29,7 @@ import type {
   Template,
   TemplateContent,
   TopologyGraph,
+  UpdateDeviceRequest,
   UpdateProtocolDebugLevelsRequest,
   UploadTemplateRequest,
   UploadTemplateResponse,
@@ -41,11 +41,23 @@ import type {
 const API_BASE = import.meta.env.VITE_API_BASE ?? '';
 const API_TOKEN = import.meta.env.VITE_API_TOKEN ?? '';
 
-// FIX #262: CSRF token management - fetch and cache the token
+// FIX #262, #331: CSRF token management with TTL tracking
 let csrfToken = '';
+let csrfTokenFetchedAt = 0;
+const CSRF_TOKEN_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+function clearCsrfToken(): void {
+  csrfToken = '';
+  csrfTokenFetchedAt = 0;
+}
 
 async function fetchCsrfToken(): Promise<string> {
-  if (csrfToken) return csrfToken;
+  // FIX #331: Check TTL and refetch if expired
+  if (csrfToken && Date.now() - csrfTokenFetchedAt < CSRF_TOKEN_TTL_MS) {
+    return csrfToken;
+  }
+  csrfToken = '';
+
   try {
     const headers = new Headers();
     headers.set('Accept', 'application/json');
@@ -56,6 +68,7 @@ async function fetchCsrfToken(): Promise<string> {
     if (response.ok) {
       const data = (await response.json()) as { token: string };
       csrfToken = data.token;
+      csrfTokenFetchedAt = Date.now();
     }
   } catch {
     // CSRF token fetch failed - state-changing requests will be rejected by server
@@ -154,6 +167,27 @@ async function request<T>(path: string, init: RequestInit = {}) {
       });
 
       clearTimeout(timeout);
+
+      // FIX #331: On 403, clear CSRF token and retry once
+      if (response.status === 403 && method !== 'GET') {
+        clearCsrfToken();
+        const retryToken = await fetchCsrfToken();
+        if (retryToken) {
+          headers.set('X-Csrf-Token', retryToken);
+          const retryResponse = await fetch(buildUrl(path), {
+            ...init,
+            headers,
+            credentials: 'same-origin',
+            signal: controller.signal,
+          });
+          if (retryResponse.ok) {
+            const retryData = (await retryResponse.json()) as T;
+            return toCamelCase(retryData);
+          }
+          const retryText = await retryResponse.text();
+          throw new Error(retryText || retryResponse.statusText);
+        }
+      }
 
       if (!response.ok) {
         const text = await response.text();
@@ -324,11 +358,12 @@ export const createDevice = (device: CreateDeviceRequest) =>
 
 /**
  * Update an existing device
+ * FIX #295: Accept UpdateDeviceRequest matching backend format
  */
-export const updateDevice = (hostname: string, device: Partial<Device>) =>
+export const updateDevice = (hostname: string, update: UpdateDeviceRequest) =>
   requestJson<DeviceMutationResponse>(
     `/api/v1/config/devices/${encodeURIComponent(hostname)}`,
-    device,
+    update,
     {
       method: 'PUT',
     },

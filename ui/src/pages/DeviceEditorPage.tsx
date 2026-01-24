@@ -1,5 +1,5 @@
 import { AlertCircle, ArrowLeft, Check, Plus, RefreshCw, Save, Trash2, X } from 'lucide-react';
-import { type FC, useCallback, useEffect, useMemo, useState } from 'react';
+import { type FC, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   createDevice,
@@ -29,6 +29,103 @@ import { Card, CardContent } from '../ui/Card';
 import { Tag } from '../ui/Tag';
 import { H2, SmallText } from '../ui/Typography';
 import { getErrorMessage } from '../utils/format';
+
+// FIX #294, #295: Build raw YAML for the backend create/update API
+function appendRawSnmpLines(lines: string[], agent: NonNullable<Device['snmpAgent']>) {
+  lines.push('snmpAgent:');
+  if (agent.community) lines.push(`  community: "${agent.community}"`);
+  if (agent.sysName) lines.push(`  sysName: "${agent.sysName}"`);
+  if (agent.sysDescr) lines.push(`  sysDescr: "${agent.sysDescr}"`);
+  if (agent.sysContact) lines.push(`  sysContact: "${agent.sysContact}"`);
+  if (agent.sysLocation) lines.push(`  sysLocation: "${agent.sysLocation}"`);
+  if (agent.walkFile) lines.push(`  walkFile: "${agent.walkFile}"`);
+  if (agent.walkFiles && agent.walkFiles.length > 0) {
+    lines.push('  walkFiles:');
+    for (const wf of agent.walkFiles) lines.push(`    - "${wf}"`);
+  }
+}
+
+function appendNetworkProtocolLines(lines: string[], device: Device) {
+  if (device.lldp?.enabled) {
+    lines.push('lldp:');
+    lines.push('  enabled: true');
+    if (device.lldp.systemDescription)
+      lines.push(`  systemDescription: "${device.lldp.systemDescription}"`);
+    if (device.lldp.ttl) lines.push(`  ttl: ${device.lldp.ttl}`);
+  }
+  if (device.cdp?.enabled) {
+    lines.push('cdp:');
+    lines.push('  enabled: true');
+    if (device.cdp.platform) lines.push(`  platform: "${device.cdp.platform}"`);
+    if (device.cdp.version) lines.push(`  version: ${device.cdp.version}`);
+  }
+  if (device.stp?.enabled) {
+    lines.push('stp:');
+    lines.push('  enabled: true');
+    if (device.stp.bridgePriority !== undefined)
+      lines.push(`  bridgePriority: ${device.stp.bridgePriority}`);
+  }
+}
+
+function appendServiceLines(lines: string[], device: Device) {
+  if (device.dhcp) {
+    lines.push('dhcp:');
+    if (device.dhcp.subnetMask) lines.push(`  subnetMask: "${device.dhcp.subnetMask}"`);
+    if (device.dhcp.router) lines.push(`  router: "${device.dhcp.router}"`);
+    if (device.dhcp.dns && device.dhcp.dns.length > 0) {
+      lines.push('  dns:');
+      for (const d of device.dhcp.dns) lines.push(`    - "${d}"`);
+    }
+    if (device.dhcp.poolStart) lines.push(`  poolStart: "${device.dhcp.poolStart}"`);
+    if (device.dhcp.poolEnd) lines.push(`  poolEnd: "${device.dhcp.poolEnd}"`);
+  }
+  if (device.dns) {
+    lines.push('dns:');
+    if (device.dns.forwardRecords && device.dns.forwardRecords.length > 0) {
+      lines.push('  forwardRecords:');
+      for (const r of device.dns.forwardRecords) {
+        lines.push(`    - name: "${r.name}"`);
+        lines.push(`      ip: "${r.ip}"`);
+      }
+    }
+  }
+  if (device.http?.enabled) {
+    lines.push('http:');
+    lines.push('  enabled: true');
+    if (device.http.serverName) lines.push(`  serverName: "${device.http.serverName}"`);
+  }
+  if (device.ftp?.enabled) {
+    lines.push('ftp:');
+    lines.push('  enabled: true');
+    if (device.ftp.welcomeBanner) lines.push(`  welcomeBanner: "${device.ftp.welcomeBanner}"`);
+  }
+  if (device.netbios?.enabled) {
+    lines.push('netbios:');
+    lines.push('  enabled: true');
+    if (device.netbios.name) lines.push(`  name: "${device.netbios.name}"`);
+    if (device.netbios.workgroup) lines.push(`  workgroup: "${device.netbios.workgroup}"`);
+  }
+  if (device.traffic?.enabled) {
+    lines.push('traffic:');
+    lines.push('  enabled: true');
+  }
+}
+
+const buildDeviceRawYaml = (device: Device): string => {
+  const lines: string[] = [];
+  if (device.type) lines.push(`type: ${device.type}`);
+  if (device.mac) lines.push(`mac: "${device.mac}"`);
+  if (device.ip) lines.push(`ip: "${device.ip}"`);
+  if (device.ips && device.ips.length > 0) {
+    lines.push('ips:');
+    for (const ip of device.ips) lines.push(`  - "${ip}"`);
+  }
+  if (device.vlan) lines.push(`vlan: ${device.vlan}`);
+  if (device.snmpAgent) appendRawSnmpLines(lines, device.snmpAgent);
+  appendNetworkProtocolLines(lines, device);
+  appendServiceLines(lines, device);
+  return lines.join('\n');
+};
 
 const appendBaseDeviceLines = (lines: string[], device: Device) => {
   lines.push(`  - hostname: "${device.hostname}"`);
@@ -107,8 +204,11 @@ const appendDhcpLines = (lines: string[], device: Device) => {
   if (device.dhcp.router) {
     lines.push(`      router: "${device.dhcp.router}"`);
   }
-  if (device.dhcp.domainNameServer) {
-    lines.push(`      domainNameServer: "${device.dhcp.domainNameServer}"`);
+  if (device.dhcp.dns && device.dhcp.dns.length > 0) {
+    lines.push('      dns:');
+    for (const d of device.dhcp.dns) {
+      lines.push(`        - "${d}"`);
+    }
   }
 };
 
@@ -278,6 +378,10 @@ export const DeviceEditorPage: FC = () => {
   const [showYamlPreview, setShowYamlPreview] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
+  // Stable key counter for IP entries (avoids using array index as key)
+  const ipKeyCounter = useRef(0);
+  const ipKeysRef = useRef<number[]>([]);
+
   // Fetch existing device if editing
   const {
     data: fetchedDevice,
@@ -348,8 +452,17 @@ export const DeviceEditorPage: FC = () => {
     setMessage(null);
 
     try {
+      // FIX #294, #295: Serialize device config to rawYaml for backend
+      const rawYaml = buildDeviceRawYaml(device);
+
       if (isNewDevice) {
-        await createDevice(device);
+        await createDevice({
+          hostname: device.hostname,
+          type: device.type,
+          mac: device.mac,
+          ip: device.ip,
+          rawYaml: rawYaml,
+        });
         setMessage({ type: 'success', text: 'Device created successfully' });
         // Navigate to the new device's edit page
         setTimeout(() => {
@@ -361,7 +474,7 @@ export const DeviceEditorPage: FC = () => {
           setSaving(false);
           return;
         }
-        await updateDevice(hostname, device);
+        await updateDevice(hostname, { rawYaml: rawYaml });
         setMessage({ type: 'success', text: 'Device updated successfully' });
         setOriginalDevice(device);
         // If hostname changed, navigate to new URL
@@ -622,32 +735,39 @@ export const DeviceEditorPage: FC = () => {
           <SmallText className="text-gray-400">
             Add secondary IP addresses for multi-homed or VLAN configurations.
           </SmallText>
-          {(device.ips || []).map((ip, index) => (
-            <div key={ip} className="flex gap-2">
-              <input
-                type="text"
-                value={ip}
-                onChange={(e) => {
-                  const newIps = [...(device.ips || [])];
-                  newIps[index] = e.target.value;
-                  updateField('ips', newIps);
-                }}
-                placeholder="e.g., 192.168.2.1"
-                className="flex-1 rounded-lg border border-white/10 bg-gray-950/60 p-3 text-sm text-white placeholder-gray-500 focus:border-violet-400 focus:outline-none font-mono"
-              />
-              <Button
-                variant="ghost"
-                tone="red"
-                size="sm"
-                onClick={() => {
-                  const newIps = (device.ips || []).filter((_, i) => i !== index);
-                  updateField('ips', newIps);
-                }}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-          ))}
+          {(() => {
+            const ips = device.ips || [];
+            while (ipKeysRef.current.length < ips.length) {
+              ipKeysRef.current.push(ipKeyCounter.current++);
+            }
+            return ips.map((ip, i) => (
+              <div key={ipKeysRef.current[i]} className="flex gap-2">
+                <input
+                  type="text"
+                  value={ip}
+                  onChange={(e) => {
+                    const newIps = [...ips];
+                    newIps[i] = e.target.value;
+                    updateField('ips', newIps);
+                  }}
+                  placeholder="e.g., 192.168.2.1"
+                  className="flex-1 rounded-lg border border-white/10 bg-gray-950/60 p-3 text-sm text-white placeholder-gray-500 focus:border-violet-400 focus:outline-none font-mono"
+                />
+                <Button
+                  variant="ghost"
+                  tone="red"
+                  size="sm"
+                  onClick={() => {
+                    const newIps = ips.filter((_, idx) => idx !== i);
+                    ipKeysRef.current = ipKeysRef.current.filter((_, idx) => idx !== i);
+                    updateField('ips', newIps);
+                  }}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ));
+          })()}
           <Button
             variant="outline"
             size="sm"
