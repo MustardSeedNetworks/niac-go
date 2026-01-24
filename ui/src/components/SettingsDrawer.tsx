@@ -16,7 +16,9 @@
 
 import { Bug, ChevronRight, Info, Monitor, Network, Palette, Settings, X } from 'lucide-react';
 import type { ReactElement, ReactNode } from 'react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { fetchInterfaces } from '../api/client';
+import type { NetworkInterface } from '../api/types';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import { badge, cn, drawer, layout, spacing } from '../styles/theme';
 
@@ -226,7 +228,34 @@ function AppearanceSection(): ReactElement {
 // Network Section
 // =============================================================================
 
+const virtualInterfacePatterns = /^(nflog|nfqueue|dbus-|bluetooth-monitor)/;
+
+function deriveInterfaceType(name: string): string {
+  if (/^(eth|enp|eno|ens)/.test(name)) return 'Ethernet';
+  if (/^(wl|wlan)/.test(name)) return 'WiFi';
+  if (name === 'lo' || name === 'lo0') return 'Loopback';
+  if (/^(br|bridge)/.test(name)) return 'Bridge';
+  if (/^(veth|docker|virbr)/.test(name)) return 'Virtual';
+  if (/^(tun|tap)/.test(name)) return 'Tunnel';
+  return 'Other';
+}
+
 function NetworkSection(): ReactElement {
+  const [interfaces, setInterfaces] = useState<NetworkInterface[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchInterfaces()
+      .then((resp) => {
+        const filtered = resp.interfaces.filter(
+          (iface) => !virtualInterfacePatterns.test(iface.name),
+        );
+        setInterfaces(filtered);
+      })
+      .catch(() => setInterfaces([]))
+      .finally(() => setLoading(false));
+  }, []);
+
   return (
     <>
       <Section
@@ -234,9 +263,19 @@ function NetworkSection(): ReactElement {
         description="Available network interfaces for traffic injection"
       >
         <div className="space-y-2">
-          <InterfaceItem name="eth0" type="Ethernet" status="active" ip="192.168.1.100" />
-          <InterfaceItem name="eth1" type="Ethernet" status="inactive" ip="—" />
-          <InterfaceItem name="lo" type="Loopback" status="active" ip="127.0.0.1" />
+          {loading && <p className="text-xs text-gray-500">Loading interfaces...</p>}
+          {!loading && interfaces.length === 0 && (
+            <p className="text-xs text-gray-500">No interfaces found</p>
+          )}
+          {interfaces.map((iface) => (
+            <InterfaceItem
+              key={iface.name}
+              name={iface.name}
+              type={deriveInterfaceType(iface.name)}
+              status={(iface.addresses?.length ?? 0) > 0 ? 'active' : 'inactive'}
+              ip={iface.addresses?.[0] ?? '—'}
+            />
+          ))}
         </div>
         <p className="text-xs text-gray-500 mt-2">
           Interface selection is managed from the Runtime Control page.
