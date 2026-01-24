@@ -9,6 +9,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// Populated by -ldflags at build time.
+var (
+	version = ""
+	commit  = ""
+	date    = ""
+)
+
 type versionInfo struct {
 	version string
 	commit  string
@@ -34,7 +41,23 @@ func readVersionInfo() versionInfo {
 		date:    defaultDate,
 	}
 
-	populateFromBuildInfo(&info)
+	// Priority 1: ldflags-injected values (set during go build)
+	if version != "" {
+		info.version = version
+	}
+	if commit != "" {
+		info.commit = commit
+	}
+	if date != "" {
+		info.date = date
+	}
+
+	// Priority 2: Go build metadata (if ldflags didn't set values)
+	if info.version == defaultVersion || info.commit == defaultCommit {
+		populateFromBuildInfo(&info)
+	}
+
+	// Priority 3: VERSION file fallback
 	populateVersionFromFile(&info)
 
 	return info
