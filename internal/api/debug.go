@@ -250,11 +250,30 @@ func (s *Server) handleDebugLevelsUpdate(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	// FIX #344: Validate protocols and levels
+	knownProtos := make(map[string]bool, len(getKnownProtocols()))
+	for _, p := range getKnownProtocols() {
+		knownProtos[p] = true
+	}
+	validLevels := map[string]bool{
+		debugLevelOff: true, debugLevelError: true, debugLevelWarn: true,
+		debugLevelInfo: true, debugLevelDebug: true, debugLevelTrace: true,
+	}
+
 	for _, update := range req.Protocols {
 		if update.Protocol == "" {
 			continue
 		}
-
+		if !knownProtos[update.Protocol] {
+			writeError(w, r, http.StatusBadRequest, "unknown_protocol",
+				"Unknown protocol: "+update.Protocol, nil)
+			return
+		}
+		if !validLevels[update.Level] {
+			writeError(w, r, http.StatusBadRequest, "invalid_level",
+				"Invalid debug level: "+update.Level, nil)
+			return
+		}
 		debugConfig.SetProtocolLevel(update.Protocol, levelToInt(update.Level))
 	}
 
