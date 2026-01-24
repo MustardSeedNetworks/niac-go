@@ -294,11 +294,18 @@ function useStreamUrl(path: string, enabled: boolean): string {
     }
 
     let cancelled = false;
-    buildStreamUrl(path).then((resolvedUrl) => {
-      if (!cancelled) {
-        setUrl(resolvedUrl);
-      }
-    });
+    buildStreamUrl(path)
+      .then((resolvedUrl) => {
+        if (!cancelled) {
+          setUrl(resolvedUrl);
+        }
+      })
+      .catch(() => {
+        // FIX #332: Handle token fetch failure gracefully
+        if (!cancelled) {
+          setUrl('');
+        }
+      });
 
     return () => {
       cancelled = true;

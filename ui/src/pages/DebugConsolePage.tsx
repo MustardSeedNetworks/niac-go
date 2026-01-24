@@ -1,5 +1,5 @@
 import { ChevronDown, ChevronUp, Settings2 } from 'lucide-react';
-import { type FC, useCallback, useMemo, useState } from 'react';
+import { type FC, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { LogEntry, LogLevel, Protocol } from '../api/types';
 import { ProtocolDebugLevels } from '../components/debug/ProtocolDebugLevels';
 import { LogFilters } from '../components/LogFilters';
@@ -14,7 +14,7 @@ const MAX_LOG_BUFFER = 1000;
 
 // Generate a unique ID for each log entry
 function generateLogId(): string {
-  return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
 }
 
 // Map incoming SSE data to LogEntry format
@@ -50,28 +50,31 @@ export const DebugConsolePage: FC = () => {
   const [paused, setPaused] = useState(false);
   const [showDebugSettings, setShowDebugSettings] = useState(false);
 
-  // Handle incoming log messages
-  const handleMessage = useCallback(
-    (data: unknown) => {
-      // Skip adding logs when paused
-      if (paused) {
-        return;
-      }
+  // FIX #307: Use ref for paused state to avoid stale closure in SSE callback
+  const pausedRef = useRef(paused);
+  useEffect(() => {
+    pausedRef.current = paused;
+  }, [paused]);
 
-      const logEntry = mapToLogEntry(data);
-      if (logEntry) {
-        setLogs((prevLogs) => {
-          const newLogs = [...prevLogs, logEntry];
-          // Trim to max buffer size
-          if (newLogs.length > MAX_LOG_BUFFER) {
-            return newLogs.slice(-MAX_LOG_BUFFER);
-          }
-          return newLogs;
-        });
-      }
-    },
-    [paused],
-  );
+  // Handle incoming log messages
+  const handleMessage = useCallback((data: unknown) => {
+    // Skip adding logs when paused (use ref to avoid stale closure)
+    if (pausedRef.current) {
+      return;
+    }
+
+    const logEntry = mapToLogEntry(data);
+    if (logEntry) {
+      setLogs((prevLogs) => {
+        const newLogs = [...prevLogs, logEntry];
+        // Trim to max buffer size
+        if (newLogs.length > MAX_LOG_BUFFER) {
+          return newLogs.slice(-MAX_LOG_BUFFER);
+        }
+        return newLogs;
+      });
+    }
+  }, []);
 
   // Toggle pause state
   const handlePauseToggle = useCallback(() => {

@@ -234,43 +234,23 @@ export default function App() {
               }
             />
           ))}
-          {/* Dynamic routes for device editor */}
+          {/* Device editor sub-routes */}
           <Route
             path="/device-config/new"
             element={
-              <PageTemplate
-                page={{
-                  path: '/device-config/new',
-                  label: 'New Device',
-                  title: 'New Device',
-                  description: 'Create a new network device configuration.',
-                  icon: Wrench,
-                  component: DeviceEditorPage,
-                }}
-              >
-                <PageErrorBoundary>
-                  <DeviceEditorPage />
-                </PageErrorBoundary>
-              </PageTemplate>
+              <DeviceEditorTemplate
+                title="New Device"
+                description="Create a new network device configuration."
+              />
             }
           />
           <Route
             path="/device-config/:hostname"
             element={
-              <PageTemplate
-                page={{
-                  path: '/device-config/:hostname',
-                  label: 'Edit Device',
-                  title: 'Edit Device',
-                  description: 'Edit device configuration settings.',
-                  icon: Wrench,
-                  component: DeviceEditorPage,
-                }}
-              >
-                <PageErrorBoundary>
-                  <DeviceEditorPage />
-                </PageErrorBoundary>
-              </PageTemplate>
+              <DeviceEditorTemplate
+                title="Edit Device"
+                description="Edit device configuration settings."
+              />
             }
           />
           <Route path="*" element={<Navigate to="/" replace={true} />} />
@@ -289,3 +269,24 @@ const PageTemplate = memo(({ page, children }: { page: PageConfig; children: Rea
 ));
 
 PageTemplate.displayName = 'PageTemplate';
+
+// FIX #337: Extracted device editor template to reduce route duplication
+const DeviceEditorTemplate: FC<{ title: string; description: string }> = ({
+  title,
+  description,
+}) => (
+  <PageTemplate
+    page={{
+      path: '',
+      label: title,
+      title,
+      description,
+      icon: Wrench,
+      component: DeviceEditorPage,
+    }}
+  >
+    <PageErrorBoundary>
+      <DeviceEditorPage />
+    </PageErrorBoundary>
+  </PageTemplate>
+);

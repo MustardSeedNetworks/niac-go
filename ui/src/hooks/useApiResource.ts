@@ -5,6 +5,7 @@ interface Options<T> {
   transform?: (value: T) => T;
 }
 
+// FIX #306: Race condition fix with cancellation ref checked inside run()
 export function useApiResource<T>(
   fetcher: () => Promise<T>,
   deps: unknown[] = [],
@@ -16,6 +17,7 @@ export function useApiResource<T>(
   const [error, setError] = useState<Error | null>(null);
   const timerRef = useRef<number | null>(null);
   const fetcherRef = useRef<() => Promise<T>>(fetcher);
+  const cancelledRef = useRef(false);
 
   // Update fetcher ref when it changes
   useEffect(() => {
@@ -25,35 +27,34 @@ export function useApiResource<T>(
   const run = useCallback(async () => {
     try {
       const result = await fetcherRef.current();
+      if (cancelledRef.current) return;
       setData(transform ? transform(result) : result);
       setError(null);
     } catch (err) {
+      if (cancelledRef.current) return;
       setError(err as Error);
     } finally {
-      setLoading(false);
+      if (!cancelledRef.current) {
+        setLoading(false);
+      }
     }
   }, [transform]);
 
   useEffect(() => {
-    let cancelled = false;
+    cancelledRef.current = false;
 
-    const runWithCancellation = async () => {
-      if (cancelled) {
-        return;
-      }
-      await run();
-    };
-
-    void runWithCancellation();
+    void run();
 
     if (intervalMs) {
       timerRef.current = window.setInterval(() => {
-        void run();
+        if (!cancelledRef.current) {
+          void run();
+        }
       }, intervalMs);
     }
 
     return () => {
-      cancelled = true;
+      cancelledRef.current = true;
       if (timerRef.current) {
         clearInterval(timerRef.current);
         timerRef.current = null;

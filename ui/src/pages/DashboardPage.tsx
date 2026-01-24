@@ -81,7 +81,7 @@ export const DashboardPage: FC = () => {
       </Card>
 
       {/* Stat cards row */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Card hover={true} className="group">
           <CardContent className="space-y-1">
             <div className="flex items-center justify-between">
@@ -283,6 +283,7 @@ ErrorInjectionPanel.displayName = 'ErrorInjectionPanel';
  */
 const AutomationTimeline = memo(({ history }: { history: HistoryRecord[] | null }) => {
   const timeline = (history ?? []).slice(0, 4).map((run) => ({
+    id: run.id,
     title: run.configName,
     detail: `${run.deviceCount} devices • duration ${formatDuration(run.duration)}`,
     time: formatTime(run.startedAt),
@@ -313,7 +314,7 @@ const AutomationTimeline = memo(({ history }: { history: HistoryRecord[] | null 
         <div className="space-y-4">
           {timeline.map((event) => (
             <div
-              key={event.title}
+              key={event.id}
               className="flex flex-col gap-1 rounded-lg border border-white/5 bg-gray-950/50 p-4 sm:flex-row sm:items-center sm:justify-between"
             >
               <div>

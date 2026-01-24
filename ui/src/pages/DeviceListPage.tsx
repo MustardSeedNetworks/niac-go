@@ -101,6 +101,9 @@ export const DeviceListPage: FC = () => {
     text: string;
   } | null>(null);
   const [selectedDevices, setSelectedDevices] = useState<Set<string>>(new Set());
+  const [deleteProgress, setDeleteProgress] = useState<{ current: number; total: number } | null>(
+    null,
+  );
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [showCloneModal, setShowCloneModal] = useState<string | null>(null);
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
@@ -226,22 +229,35 @@ export const DeviceListPage: FC = () => {
     [refetch],
   );
 
-  // Handle bulk delete confirmation
+  // FIX #329: Handle bulk delete with progress tracking and batching
   const handleBulkDeleteConfirm = useCallback(async () => {
     setShowBulkDeleteConfirm(false);
 
+    const hostnames = Array.from(selectedDevices);
+    const total = hostnames.length;
     let successCount = 0;
     let errorCount = 0;
 
-    for (const hostname of selectedDevices) {
-      try {
-        await deleteDevice(hostname);
-        successCount++;
-      } catch {
-        errorCount++;
+    setDeleteProgress({ current: 0, total });
+
+    // Process in batches of 5
+    const batchSize = 5;
+    for (let i = 0; i < hostnames.length; i += batchSize) {
+      const batch = hostnames.slice(i, i + batchSize);
+      const results = await Promise.allSettled(batch.map((h) => deleteDevice(h)));
+
+      for (const result of results) {
+        if (result.status === 'fulfilled') {
+          successCount++;
+        } else {
+          errorCount++;
+        }
       }
+
+      setDeleteProgress({ current: successCount + errorCount, total });
     }
 
+    setDeleteProgress(null);
     setSelectedDevices(new Set());
     refetch();
 
@@ -400,6 +416,16 @@ export const DeviceListPage: FC = () => {
               <Button variant="ghost" size="sm" onClick={() => setSelectedDevices(new Set())}>
                 Clear Selection
               </Button>
+            </div>
+          )}
+
+          {/* FIX #329: Bulk delete progress indicator */}
+          {deleteProgress && (
+            <div className="flex items-center gap-3 rounded-lg bg-blue-50 p-3 dark:bg-blue-900/20">
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
+              <span className="text-sm text-blue-700 dark:text-blue-300">
+                Deleting devices: {deleteProgress.current} / {deleteProgress.total}
+              </span>
             </div>
           )}
 
