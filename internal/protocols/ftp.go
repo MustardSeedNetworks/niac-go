@@ -481,10 +481,10 @@ func (h *FTPHandler) SendWelcome(ipLayer *layers.IPv4, tcpLayer *layers.TCP, dev
 	}
 
 	// Small delay to let connection establish
-	go func() {
+	h.stack.wg.Go(func() {
 		time.Sleep(ftpConnectionDelayMs * time.Millisecond)
 		h.sendResponse(ipLayer, tcpLayer, []byte(welcome), devices)
-	}()
+	})
 
 	if debugLevel >= DebugLevelInfo {
 		_, _ = fmt.Fprintf(os.Stdout, "Scheduled FTP welcome banner for %s\n", deviceName)
