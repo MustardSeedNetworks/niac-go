@@ -54,6 +54,14 @@ else
     echo "  sudo apt install libcap2-bin"
 fi
 
+# Configure firewall (ufw) if available and active
+if command -v ufw >/dev/null 2>&1; then
+    if ufw status 2>/dev/null | grep -q "Status: active"; then
+        ufw allow 8080/tcp comment 'NiAC WebUI HTTP' >/dev/null 2>&1 || true
+        echo "Firewall configured for NiAC service (port 8080)"
+    fi
+fi
+
 # Reload systemd daemon
 systemctl daemon-reload
 

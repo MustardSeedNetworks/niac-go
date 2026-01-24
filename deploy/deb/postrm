@@ -3,6 +3,10 @@ set -e
 
 case "$1" in
     purge)
+        # Remove firewall rules if ufw is available
+        if command -v ufw >/dev/null 2>&1; then
+            ufw delete allow 8080/tcp >/dev/null 2>&1 || true
+        fi
         # Remove user
         if getent passwd niac > /dev/null; then
             userdel niac || true

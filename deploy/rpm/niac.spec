@@ -56,6 +56,13 @@ chown -R niac:niac /etc/niac /var/lib/niac /var/log/niac
 # Set capabilities for raw socket access
 /usr/sbin/setcap 'cap_net_raw,cap_net_admin=+ep' /usr/bin/niac || true
 
+# Configure firewall if firewalld is running
+if systemctl is-active --quiet firewalld 2>/dev/null; then
+    firewall-cmd --permanent --add-port=8080/tcp 2>/dev/null || true
+    firewall-cmd --reload 2>/dev/null || true
+    echo "Firewall configured for NiAC service (port 8080)"
+fi
+
 %systemd_post niac.service
 
 %preun
@@ -64,13 +71,24 @@ chown -R niac:niac /etc/niac /var/lib/niac /var/log/niac
 %postun
 %systemd_postun_with_restart niac.service
 
-# On complete removal (not upgrade), optionally remove user/group
+# On complete removal (not upgrade), clean up
 if [ $1 -eq 0 ]; then
+    # Remove firewall rules
+    if systemctl is-active --quiet firewalld 2>/dev/null; then
+        firewall-cmd --permanent --remove-port=8080/tcp 2>/dev/null || true
+        firewall-cmd --reload 2>/dev/null || true
+    fi
+
+    # Remove user/group
     userdel niac 2>/dev/null || true
     groupdel niac 2>/dev/null || true
 fi
 
 %changelog
+* Fri Jan 24 2025 Kris Armstrong <kris@mustardseednetworks.com>
+- Added firewalld integration for automatic port configuration
+- Added user/group Provides for Fedora compatibility
+
 * Wed Jan 22 2025 Kris Armstrong <kris@mustardseednetworks.com>
 - Initial RPM packaging
 - Added systemd service with security hardening
