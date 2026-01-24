@@ -5,6 +5,7 @@ import type {
   ConfigSchema,
   ConfigUpdateRequest,
   // Device Configuration Types
+  CreateDeviceRequest,
   Device,
   DeviceDetailResponse,
   DeviceListResponse,
@@ -39,6 +40,33 @@ import type {
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? '';
 const API_TOKEN = import.meta.env.VITE_API_TOKEN ?? '';
+
+// FIX #262: CSRF token management - fetch and cache the token
+let csrfToken = '';
+
+async function fetchCsrfToken(): Promise<string> {
+  if (csrfToken) return csrfToken;
+  try {
+    const headers = new Headers();
+    headers.set('Accept', 'application/json');
+    if (API_TOKEN) {
+      headers.set('Authorization', `Bearer ${API_TOKEN}`);
+    }
+    const response = await fetch(buildUrl('/api/v1/csrf-token'), { headers });
+    if (response.ok) {
+      const data = (await response.json()) as { token: string };
+      csrfToken = data.token;
+    }
+  } catch {
+    // CSRF token fetch failed - state-changing requests will be rejected by server
+  }
+  return csrfToken;
+}
+
+// FIX #270: Export API_BASE for EventSource URL consistency
+export function getApiBase(): string {
+  return API_BASE;
+}
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> =>
   value !== null &&
@@ -103,6 +131,15 @@ async function request<T>(path: string, init: RequestInit = {}) {
     headers.set('Accept', 'application/json');
     if (API_TOKEN) {
       headers.set('Authorization', `Bearer ${API_TOKEN}`);
+    }
+
+    // FIX #262: Include CSRF token for state-changing requests
+    const method = (init.method ?? 'GET').toUpperCase();
+    if (method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE') {
+      const token = await fetchCsrfToken();
+      if (token) {
+        headers.set('X-Csrf-Token', token);
+      }
     }
 
     const controller = new AbortController();
@@ -249,14 +286,14 @@ export const resetProtocolDebugLevels = () =>
   });
 
 // PCAP Analyzer API functions
-// Note: These are stub implementations - backend endpoint needs to be implemented
 export const uploadPcap = (payload: PcapUploadRequest) =>
   requestJson<PcapUploadResponse>('/api/v1/pcap/upload', payload, {
     method: 'POST',
   });
 
+// FIX #265: Corrected URL to match backend route /api/v1/pcap/{id}
 export const analyzePcap = (analysisId: string) =>
-  request<PcapAnalysisResult>(`/api/v1/pcap/analyze/${encodeURIComponent(analysisId)}`);
+  request<PcapAnalysisResult>(`/api/v1/pcap/${encodeURIComponent(analysisId)}`);
 
 export const fetchPcapAnalysis = (analysisId: string) =>
   request<PcapAnalysisResult>(`/api/v1/pcap/${encodeURIComponent(analysisId)}`);
@@ -278,8 +315,9 @@ export const fetchConfigDevice = (hostname: string) =>
 
 /**
  * Create a new device
+ * FIX #287: Accept CreateDeviceRequest matching backend DeviceCreateRequest
  */
-export const createDevice = (device: Device) =>
+export const createDevice = (device: CreateDeviceRequest) =>
   requestJson<DeviceMutationResponse>('/api/v1/config/devices', device, {
     method: 'POST',
   });

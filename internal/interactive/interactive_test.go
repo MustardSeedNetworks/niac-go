@@ -713,16 +713,30 @@ func TestTickCmd(t *testing.T) {
 	}
 }
 
-// TestRun_NilConfig tests Run with nil config.
-func TestRun_NilConfig(t *testing.T) {
-	t.Skip("TODO: integration test for running TUI with nil config")
-	// Create minimal debug config
-	debugConfig := logging.NewDebugConfig(0)
+// TestNilDebugConfig_DefaultsApplied tests that nil debugConfig is replaced with a default.
+func TestNilDebugConfig_DefaultsApplied(t *testing.T) {
+	// Verify NewDebugConfig creates a valid config with expected default level
+	dc := logging.NewDebugConfig(1)
+	if dc.GetGlobal() != 1 {
+		t.Errorf("expected global debug level 1, got %d", dc.GetGlobal())
+	}
 
-	// Run with nil config should handle gracefully
-	// Note: This will actually start the TUI, so we can't easily test in unit tests
-	// This is a placeholder for integration testing
-	_ = debugConfig
+	// Verify protocol levels fall back to global when unset
+	level := dc.GetProtocolLevel("SNMP")
+	if level != 1 {
+		t.Errorf("expected SNMP level to fall back to global (1), got %d", level)
+	}
+
+	// Verify SetProtocolLevel overrides the global
+	dc.SetProtocolLevel("SNMP", 3)
+	if dc.GetProtocolLevel("SNMP") != 3 {
+		t.Errorf("expected SNMP level 3 after set, got %d", dc.GetProtocolLevel("SNMP"))
+	}
+
+	// Other protocols still fall back to global
+	if dc.GetProtocolLevel("ARP") != 1 {
+		t.Errorf("expected ARP level to remain at global (1), got %d", dc.GetProtocolLevel("ARP"))
+	}
 }
 
 // BenchmarkFormatDuration benchmarks duration formatting.

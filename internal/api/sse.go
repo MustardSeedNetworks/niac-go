@@ -423,11 +423,41 @@ func (sc *sseStreamContext) runSSEMessageLoop() {
 	}
 }
 
+// validateSSEOrigin checks the Origin header against configured CORS origins.
+// FIX #289: Reject SSE connections from unauthorized origins.
+func (s *Server) validateSSEOrigin(r *http.Request) bool {
+	origin := r.Header.Get("Origin")
+	if origin == "" {
+		// No origin header (e.g., same-origin or non-browser client) - allow
+		return true
+	}
+
+	if len(s.cfg.CORSAllowOrigins) == 0 {
+		// No CORS config = same-origin only, reject cross-origin
+		return false
+	}
+
+	for _, allowed := range s.cfg.CORSAllowOrigins {
+		if allowed == "*" || allowed == origin {
+			return true
+		}
+	}
+
+	return false
+}
+
 // serveSSE handles SSE connections for a specific stream.
 func (s *Server) serveSSE(stream SSEStream) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if s.sseHub == nil {
 			writeError(w, r, http.StatusServiceUnavailable, "sse_unavailable", "SSE streaming not available", nil)
+			return
+		}
+
+		// FIX #289: Validate origin before establishing SSE connection
+		if !s.validateSSEOrigin(r) {
+			writeError(w, r, http.StatusForbidden, "origin_not_allowed",
+				"SSE connection rejected: origin not allowed", nil)
 			return
 		}
 

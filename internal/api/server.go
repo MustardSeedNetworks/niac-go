@@ -102,6 +102,10 @@ const (
 	maxFileEntries      = 200      // max file entries to return
 	minPCAPSize         = 4        // minimum PCAP file size
 
+	// MaxHeaderBytesSize is the maximum size for HTTP request headers (64KB).
+	// SECURITY FIX #282: Reduced from 1MB to prevent header-based resource exhaustion.
+	MaxHeaderBytesSize = 64 << 10 // 64KB
+
 	// HTTP server timeout constants.
 	httpReadTimeout       = 10 // seconds
 	httpWriteTimeout      = 10 // seconds
@@ -255,6 +259,12 @@ func (rl *RateLimiter) CleanupStale() {
 	}
 }
 
+// sseTokenEntry represents a short-lived SSE authentication token.
+// FIX #283: Used instead of exposing the main API token in URL query params.
+type sseTokenEntry struct {
+	expiresAt time.Time
+}
+
 // Server exposes the REST API, metrics endpoint, and Web UI.
 type Server struct {
 	cfg           ServerConfig
@@ -262,6 +272,7 @@ type Server struct {
 	httpServer    *http.Server
 	metricsServer *http.Server
 	alertStop     chan struct{}
+	bgDone        chan struct{} // FIX #271: Signal background goroutines to stop
 	lastAlert     uint64
 	alertMu       sync.RWMutex
 	configMu      sync.RWMutex
@@ -269,7 +280,12 @@ type Server struct {
 	startTime     time.Time        // Track server start time for uptime
 	rateLimiter   *RateLimiter     // FEATURE #104: Per-IP rate limiting
 	csrfToken     string           // SECURITY FIX LOW-1: CSRF protection token
+	csrfPrevToken string           // FIX #293: Previous CSRF token for rotation window
+	csrfExpiry    time.Time        // FIX #293: CSRF token expiry time
 	sseHub        *SSEHub          // SSE hub for real-time streaming
+	sseTokens     sync.Map         // FIX #283: Short-lived SSE tokens (map[string]*sseTokenEntry)
+	pcapCache     *pcapCache       // FIX #280: Per-server PCAP cache (not global)
+	templateStore *templateStore   // FIX #263: Template management store
 	// SECURITY FIX #156: Per-endpoint rate limiters for sensitive operations
 	uploadLimiter *RateLimiter // Stricter limits for upload endpoints
 	writeLimiter  *RateLimiter // Moderate limits for write operations
@@ -278,16 +294,26 @@ type Server struct {
 
 // NewServer returns a configured API server.
 func NewServer(cfg ServerConfig) *Server {
-	// Generate CSRF token (ignore errors, fallback to empty which disables CSRF check)
-	csrfToken, _ := generateCSRFToken()
+	logger := slog.Default()
+
+	// FIX #273: Log critical warning if CSRF token generation fails
+	csrfToken, csrfErr := generateCSRFToken()
+	if csrfErr != nil {
+		logger.Error("[API] CRITICAL: Failed to generate CSRF token - CSRF protection disabled",
+			"error", csrfErr)
+	}
 
 	return &Server{
-		cfg:         cfg,
-		logger:      slog.Default(),
-		startTime:   time.Now(),
-		rateLimiter: NewRateLimiter(DefaultRateLimit, DefaultBurst),
-		csrfToken:   csrfToken,
-		sseHub:      NewSSEHub(),
+		cfg:           cfg,
+		logger:        logger,
+		startTime:     time.Now(),
+		rateLimiter:   NewRateLimiter(DefaultRateLimit, DefaultBurst),
+		csrfToken:     csrfToken,
+		csrfExpiry:    time.Now().Add(1 * time.Hour), // FIX #293: Token valid for 1 hour
+		sseHub:        NewSSEHub(),
+		bgDone:        make(chan struct{}),                        // FIX #271: Background goroutine stop signal
+		pcapCache:     newPcapCacheWithLimit(cfg.PcapCacheMemory), // FIX #290: Configurable cache
+		templateStore: newTemplateStore(cfg.TemplatesDir),         // FIX #263: Template store
 		// SECURITY FIX #156: Initialize per-endpoint rate limiters
 		uploadLimiter: NewRateLimiter(UploadRateLimit, UploadBurst),
 		writeLimiter:  NewRateLimiter(WriteRateLimit, WriteBurst),
@@ -300,7 +326,7 @@ func NewServer(cfg ServerConfig) *Server {
 // uploadRateLimit applies stricter rate limiting for upload endpoints.
 func (s *Server) uploadRateLimit(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		clientIP := getClientIP(r)
+		clientIP := getClientIP(r, s.cfg.TrustedProxies)
 		if !s.uploadLimiter.GetLimiter(clientIP).Allow() {
 			writeError(w, r, http.StatusTooManyRequests, "upload_rate_limit_exceeded",
 				"Upload rate limit exceeded. Please wait before uploading again.", nil)
@@ -323,7 +349,7 @@ func (s *Server) writeRateLimit(next http.HandlerFunc) http.HandlerFunc {
 		// Only apply to mutating methods
 		if r.Method == http.MethodPost || r.Method == http.MethodPut ||
 			r.Method == http.MethodPatch || r.Method == http.MethodDelete {
-			clientIP := getClientIP(r)
+			clientIP := getClientIP(r, s.cfg.TrustedProxies)
 			if !s.writeLimiter.GetLimiter(clientIP).Allow() {
 				writeError(w, r, http.StatusTooManyRequests, "write_rate_limit_exceeded",
 					"Write rate limit exceeded. Please wait before making more changes.", nil)
@@ -344,7 +370,7 @@ func (s *Server) writeRateLimit(next http.HandlerFunc) http.HandlerFunc {
 // walkRateLimit applies rate limiting for walk file operations.
 func (s *Server) walkRateLimit(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		clientIP := getClientIP(r)
+		clientIP := getClientIP(r, s.cfg.TrustedProxies)
 		if !s.walkLimiter.GetLimiter(clientIP).Allow() {
 			writeError(w, r, http.StatusTooManyRequests, "walk_rate_limit_exceeded",
 				"Walk file operation rate limit exceeded. Please wait before trying again.", nil)
@@ -397,18 +423,17 @@ func extractXRealIP(r *http.Request) string {
 	return parseValidIP(xri)
 }
 
-// getClientIP extracts the real client IP from the request
-// SECURITY FIX HIGH-1: Only trust forwarded headers from trusted proxies.
-func getClientIP(r *http.Request) string {
+// getClientIP extracts the real client IP from the request.
+// FIX #277: Accepts trusted CIDRs for proxy trust decisions.
+func getClientIP(r *http.Request, trustedCIDRs []*net.IPNet) string {
 	// Get the direct connection IP first
 	remoteIP, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
 		remoteIP = r.RemoteAddr
 	}
 
-	// SECURITY: Only trust X-Forwarded-For/X-Real-IP if coming from localhost/private networks
-	// This prevents header spoofing attacks where clients forge these headers to bypass rate limiting
-	if !isTrustedProxy(remoteIP) {
+	// SECURITY: Only trust X-Forwarded-For/X-Real-IP if coming from trusted proxies
+	if !isTrustedProxy(remoteIP, trustedCIDRs) {
 		return remoteIP
 	}
 
@@ -426,30 +451,30 @@ func getClientIP(r *http.Request) string {
 	return remoteIP
 }
 
-// isTrustedProxy checks if an IP is from a trusted proxy/load balancer
-// SECURITY: Prevents header spoofing by only trusting forwarded headers from known proxies.
-func isTrustedProxy(ip string) bool {
-	// Parse the IP
+// isTrustedProxy checks if an IP is from a trusted proxy/load balancer.
+// FIX #277: Uses configurable CIDRs when available, falls back to localhost+private.
+func isTrustedProxy(ip string, trustedCIDRs []*net.IPNet) bool {
 	parsedIP := net.ParseIP(ip)
 	if parsedIP == nil {
 		return false
 	}
 
-	// Trust localhost (127.0.0.0/8, ::1)
+	// If custom trusted CIDRs are configured, use only those
+	if len(trustedCIDRs) > 0 {
+		for _, cidr := range trustedCIDRs {
+			if cidr.Contains(parsedIP) {
+				return true
+			}
+		}
+		return false
+	}
+
+	// Default: trust localhost and private networks
 	if parsedIP.IsLoopback() {
 		return true
 	}
 
-	// Trust private networks (10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16)
-	// This is safe for internal deployments behind a reverse proxy
-	// For internet-facing deployments, configure specific proxy IPs
-	if parsedIP.IsPrivate() {
-		return true
-	}
-
-	// TODO: Add configuration option for custom trusted proxy CIDRs
-	// For now, only trust localhost and private networks
-	return false
+	return parsedIP.IsPrivate()
 }
 
 // generateRequestID creates a unique request ID for tracing
@@ -468,9 +493,10 @@ func (s *Server) csrfProtect(next http.HandlerFunc) http.HandlerFunc {
 		// Only check CSRF for state-changing methods
 		if r.Method == http.MethodPost || r.Method == http.MethodPut ||
 			r.Method == http.MethodPatch || r.Method == http.MethodDelete {
-			// Skip CSRF check if no token was generated (error during startup)
+			// FIX #273: Block requests if CSRF token unavailable (don't silently bypass)
 			if s.csrfToken == "" {
-				next(w, r)
+				writeError(w, r, http.StatusServiceUnavailable, "csrf_unavailable",
+					"CSRF protection is unavailable (token generation failed at startup)", nil)
 
 				return
 			}
@@ -490,8 +516,12 @@ func (s *Server) csrfProtect(next http.HandlerFunc) http.HandlerFunc {
 				return
 			}
 
-			// Constant-time comparison to prevent timing attacks
-			if subtle.ConstantTimeCompare([]byte(clientToken), []byte(s.csrfToken)) != 1 {
+			// FIX #293: Accept both current and previous token during rotation window
+			currentMatch := subtle.ConstantTimeCompare([]byte(clientToken), []byte(s.csrfToken)) == 1
+			prevMatch := s.csrfPrevToken != "" &&
+				subtle.ConstantTimeCompare([]byte(clientToken), []byte(s.csrfPrevToken)) == 1
+
+			if !currentMatch && !prevMatch {
 				writeError(w, r, http.StatusForbidden, "csrf_token_invalid",
 					"Invalid CSRF token", nil)
 
@@ -515,11 +545,10 @@ func addSecurityHeaders(w http.ResponseWriter, r *http.Request) {
 	// Enable XSS protection (legacy, but still useful for older browsers)
 	w.Header().Set("X-XSS-Protection", "1; mode=block")
 
-	// Content Security Policy - restrict resource loading
-	// Note: fonts.googleapis.com and fonts.gstatic.com allowed for Google Fonts
+	// FIX #279: Content Security Policy - removed unsafe-inline for scripts
 	w.Header().Set("Content-Security-Policy",
 		"default-src 'self'; "+
-			"script-src 'self' 'unsafe-inline'; "+
+			"script-src 'self'; "+
 			"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "+
 			"img-src 'self' data:; "+
 			"font-src 'self' https://fonts.gstatic.com; "+
@@ -540,6 +569,50 @@ func addSecurityHeaders(w http.ResponseWriter, r *http.Request) {
 
 	// Control referrer information
 	w.Header().Set("Referrer-Policy", "no-referrer")
+}
+
+// addCORSHeaders adds Cross-Origin Resource Sharing headers.
+// FIX #267: Enables cross-origin requests for development and production.
+func (s *Server) addCORSHeaders(w http.ResponseWriter, r *http.Request) {
+	origin := r.Header.Get("Origin")
+	if origin == "" {
+		return
+	}
+
+	if len(s.cfg.CORSAllowOrigins) == 0 {
+		// Default: allow same-origin only (no CORS headers needed)
+		return
+	}
+
+	isWildcard := false
+	allowed := false
+	for _, o := range s.cfg.CORSAllowOrigins {
+		if o == "*" {
+			isWildcard = true
+			allowed = true
+			break
+		}
+		if o == origin {
+			allowed = true
+			break
+		}
+	}
+
+	if !allowed {
+		return
+	}
+
+	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Csrf-Token, Accept")
+	w.Header().Set("Access-Control-Max-Age", "86400")
+
+	// SECURITY: Wildcard origins must NOT include credentials
+	if isWildcard {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+	} else {
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+		w.Header().Set("Access-Control-Allow-Credentials", "true")
+	}
 }
 
 // ErrorResponse represents a standardized API error response
@@ -1044,19 +1117,23 @@ type ReplayManager interface {
 
 // ServerConfig defines API server options.
 type ServerConfig struct {
-	Addr        string
-	MetricsAddr string
-	Token       string
-	Stack       *protocols.Stack
-	Config      *config.Config
-	ConfigPath  string
-	Storage     *storage.Storage
-	Interface   string
-	Version     string
-	Topology    Topology
-	Alert       AlertConfig
-	ApplyConfig func(*config.Config) error
-	Replay      ReplayManager
+	Addr             string
+	MetricsAddr      string
+	Token            string
+	Stack            *protocols.Stack
+	Config           *config.Config
+	ConfigPath       string
+	Storage          *storage.Storage
+	Interface        string
+	Version          string
+	Topology         Topology
+	Alert            AlertConfig
+	ApplyConfig      func(*config.Config) error
+	Replay           ReplayManager
+	TrustedProxies   []*net.IPNet // FIX #277: Configurable trusted proxy CIDRs
+	CORSAllowOrigins []string     // FIX #267: Configurable CORS allowed origins
+	TemplatesDir     string       // FIX #263: Directory for template files
+	PcapCacheMemory  int64        // FIX #290: Configurable PCAP cache memory (bytes), default 100MB
 }
 
 // SimulationRequest represents a request to start a simulation.
@@ -1110,6 +1187,8 @@ func (s *Server) registerAPIRoutes(mux *http.ServeMux) {
 	s.registerReadOnlyRoutes(mux)
 	s.registerWalkRoutes(mux)
 	s.registerPcapRoutes(mux)
+	s.registerTemplateRoutes(mux)
+	s.registerDebugRoutes(mux)
 	s.registerSSERoutes(mux)
 
 	mux.HandleFunc("/metrics", s.recoverMiddleware(s.handleMetrics))
@@ -1146,10 +1225,14 @@ func (s *Server) registerReadOnlyRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/v1/files", s.recoverMiddleware(s.auth(s.handleFiles)))
 	mux.HandleFunc("/api/v1/topology", s.recoverMiddleware(s.auth(s.handleTopology)))
 	mux.HandleFunc("/api/v1/topology/export", s.recoverMiddleware(s.auth(s.handleTopologyExport)))
-	mux.HandleFunc("/api/v1/errors", s.recoverMiddleware(s.auth(s.handleErrors)))
+	// FIX #291: Split /api/v1/errors - GET is read-only, POST/DELETE need write protection
+	mux.HandleFunc("/api/v1/errors", s.recoverMiddleware(s.auth(s.handleErrorsRouter)))
 	mux.HandleFunc("/api/v1/interfaces", s.recoverMiddleware(s.auth(s.handleInterfaces)))
 	mux.HandleFunc("/api/v1/runtime", s.recoverMiddleware(s.auth(s.handleRuntime)))
-	mux.HandleFunc("/api/v1/simulation", s.recoverMiddleware(s.auth(s.handleSimulation)))
+	mux.HandleFunc(
+		"/api/v1/simulation",
+		s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.handleSimulation)))),
+	)
 	mux.HandleFunc("/api/v1/version", s.recoverMiddleware(s.auth(s.handleVersion)))
 	mux.HandleFunc("/api/v1/neighbors", s.recoverMiddleware(s.auth(s.handleNeighbors)))
 }
@@ -1187,10 +1270,42 @@ func (s *Server) registerPcapRoutes(mux *http.ServeMux) {
 
 // registerSSERoutes registers Server-Sent Events endpoints for real-time streaming.
 func (s *Server) registerSSERoutes(mux *http.ServeMux) {
+	// FIX #283: SSE token endpoint for short-lived authentication tokens
+	mux.HandleFunc("/api/v1/stream/token", s.recoverMiddleware(s.auth(s.handleSSEToken)))
 	mux.HandleFunc("/api/v1/stream/packets", s.recoverMiddleware(s.auth(s.handleSSEPackets)))
 	mux.HandleFunc("/api/v1/stream/logs", s.recoverMiddleware(s.auth(s.handleSSELogs)))
 	mux.HandleFunc("/api/v1/stream/stats", s.recoverMiddleware(s.auth(s.handleSSEStats)))
 	mux.HandleFunc("/api/v1/stream/status", s.recoverMiddleware(s.auth(s.handleSSEStatus)))
+}
+
+// registerTemplateRoutes registers template management endpoints.
+// FIX #263: Implements backend for template CRUD operations.
+func (s *Server) registerTemplateRoutes(mux *http.ServeMux) {
+	mux.HandleFunc(
+		"/api/v1/templates",
+		s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.handleTemplates)))),
+	)
+	mux.HandleFunc(
+		"/api/v1/templates/use",
+		s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.handleTemplateUse)))),
+	)
+	mux.HandleFunc(
+		"/api/v1/templates/",
+		s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.handleTemplateByName)))),
+	)
+}
+
+// registerDebugRoutes registers protocol debug level endpoints.
+// FIX #264: Implements backend for debug level management.
+func (s *Server) registerDebugRoutes(mux *http.ServeMux) {
+	mux.HandleFunc(
+		"/api/v1/debug/levels",
+		s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.handleDebugLevels)))),
+	)
+	mux.HandleFunc(
+		"/api/v1/debug/levels/reset",
+		s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.handleDebugLevelsReset)))),
+	)
 }
 
 // newSecureHTTPServer creates an HTTP server with security timeouts configured.
@@ -1203,19 +1318,24 @@ func newSecureHTTPServer(addr string, handler http.Handler) *http.Server {
 		WriteTimeout:      httpWriteTimeout * time.Second,
 		IdleTimeout:       httpIdleTimeout * time.Second,
 		ReadHeaderTimeout: httpReadHeaderTimeout * time.Second,
-		MaxHeaderBytes:    MaxRequestBodySize, // 1MB
+		MaxHeaderBytes:    MaxHeaderBytesSize, // 64KB - SECURITY FIX #282
 	}
 }
 
 // startBackgroundTasks starts the rate limiter cleanup and SSE hub goroutines.
+// FIX #271: Background goroutines now respect bgDone channel for clean shutdown.
 func (s *Server) startBackgroundTasks() {
-	// FEATURE #104: Start periodic cleanup of stale rate limiters
 	go func() {
 		ticker := time.NewTicker(rateLimiterCleanupMins * time.Minute)
 		defer ticker.Stop()
 
-		for range ticker.C {
-			s.rateLimiter.CleanupStale()
+		for {
+			select {
+			case <-ticker.C:
+				s.rateLimiter.CleanupStale()
+			case <-s.bgDone:
+				return
+			}
 		}
 	}()
 
@@ -1282,10 +1402,17 @@ func (s *Server) Start() error {
 	return nil
 }
 
-// Shutdown stops the HTTP listeners.
-// Shutdown gracefully shuts down the API and metrics servers
-// SECURITY FIX #98: Proper server shutdown to prevent goroutine leaks.
+// Shutdown gracefully shuts down the API and metrics servers.
+// FIX #271, #274: Stops background goroutines and SSE hub.
 func (s *Server) Shutdown(ctx context.Context) error {
+	// FIX #271: Stop background goroutines
+	close(s.bgDone)
+
+	// FIX #274: Stop SSE hub
+	if s.sseHub != nil {
+		s.sseHub.Stop()
+	}
+
 	// Acquire lock before closing channel to prevent race with updateAlertConfig
 	s.alertMu.Lock()
 
@@ -1363,15 +1490,23 @@ func (s *Server) auth(next http.HandlerFunc) http.HandlerFunc {
 		r.Header.Set("X-Request-ID", requestID)
 		w.Header().Set("X-Request-ID", requestID)
 
+		// FIX #267: Add CORS headers
+		s.addCORSHeaders(w, r)
+
+		// Handle CORS preflight
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+
 		// Add security headers to all responses
 		addSecurityHeaders(w, r)
 
 		// FEATURE #104: Apply rate limiting per IP address
-		clientIP := getClientIP(r)
+		clientIP := getClientIP(r, s.cfg.TrustedProxies)
 
 		limiter := s.rateLimiter.GetLimiter(clientIP)
 		if !limiter.Allow() {
-			// FEATURE #105: Use standardized error response
 			writeError(w, r, http.StatusTooManyRequests, "rate_limit_exceeded",
 				"Rate limit exceeded. Please try again later.", nil)
 			s.logger.Warn("[API] Rate limit exceeded", "requestID", requestID, "clientIP", clientIP)
@@ -1385,9 +1520,19 @@ func (s *Server) auth(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		// Only accept Authorization header (not query parameters for security)
+		// Accept Authorization header
 		token := r.Header.Get("Authorization")
 		token = strings.TrimPrefix(token, "Bearer ")
+
+		// FIX #283: For SSE endpoints, validate short-lived tokens first, then fall back to main token
+		if token == "" && strings.HasPrefix(r.URL.Path, "/api/v1/stream/") {
+			if s.trySSEToken(w, r, next) {
+				return
+			}
+
+			// Fall back to query token as main token
+			token = r.URL.Query().Get("token")
+		}
 
 		// SECURITY FIX #100: Use constant-time comparison to prevent timing attacks
 		// Standard string comparison (!=) could leak token information via timing
@@ -1408,6 +1553,29 @@ func (s *Server) auth(next http.HandlerFunc) http.HandlerFunc {
 
 		next(w, r)
 	}
+}
+
+// trySSEToken attempts to validate a short-lived SSE token from the query string.
+// Returns true if the token was valid and the request was served, false otherwise.
+func (s *Server) trySSEToken(w http.ResponseWriter, r *http.Request, next http.HandlerFunc) bool {
+	queryToken := r.URL.Query().Get("token")
+	if queryToken == "" {
+		return false
+	}
+
+	entry, ok := s.sseTokens.LoadAndDelete(queryToken)
+	if !ok {
+		return false
+	}
+
+	sseEntry, entryOK := entry.(*sseTokenEntry)
+	if !entryOK || !time.Now().Before(sseEntry.expiresAt) {
+		return false
+	}
+
+	next(w, r)
+
+	return true
 }
 
 func (s *Server) serveSPA() http.HandlerFunc {
@@ -1455,7 +1623,8 @@ func (s *Server) serveSPA() http.HandlerFunc {
 	}
 }
 
-// handleCSRFToken returns the CSRF token for the client
+// handleCSRFToken returns the CSRF token for the client.
+// FIX #293: Rotates the CSRF token if it has expired (> 1 hour).
 // SECURITY FIX LOW-1: Clients must retrieve this token and include it in state-changing requests.
 func (s *Server) handleCSRFToken(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
@@ -1465,8 +1634,52 @@ func (s *Server) handleCSRFToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// FIX #293: Check if token needs rotation
+	if time.Now().After(s.csrfExpiry) {
+		newToken, err := generateCSRFToken()
+		if err == nil {
+			s.csrfPrevToken = s.csrfToken
+			s.csrfToken = newToken
+			s.csrfExpiry = time.Now().Add(1 * time.Hour)
+			s.logger.Info("[API] CSRF token rotated")
+		}
+	}
+
 	s.writeJSON(w, map[string]string{
 		"token": s.csrfToken,
+	})
+}
+
+// sseTokenExpiry is the validity duration for short-lived SSE tokens.
+const sseTokenExpiry = 60 * time.Second
+
+// handleSSEToken generates a short-lived, one-time-use token for SSE connections.
+// FIX #283: Prevents exposing the main API token in URL query parameters.
+func (s *Server) handleSSEToken(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.Header().Set("Allow", "GET")
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+
+		return
+	}
+
+	tokenBytes := make([]byte, csrfTokenBytes)
+	if _, err := rand.Read(tokenBytes); err != nil {
+		writeError(w, r, http.StatusInternalServerError, "token_generation_failed",
+			"Failed to generate SSE token", nil)
+
+		return
+	}
+
+	token := base64.URLEncoding.EncodeToString(tokenBytes)
+
+	// Store with expiry
+	s.sseTokens.Store(token, &sseTokenEntry{
+		expiresAt: time.Now().Add(sseTokenExpiry),
+	})
+
+	s.writeJSON(w, map[string]string{
+		"token": token,
 	})
 }
 
@@ -1996,6 +2209,20 @@ func availableErrorTypes() []map[string]string {
 		{"type": "High Memory", "description": "Device memory usage (0-100%)"},
 		{"type": "High Disk", "description": "Device disk usage (0-100%)"},
 	}
+}
+
+// handleErrorsRouter routes /api/v1/errors - GET is read-only, mutations need write protection.
+// FIX #291: Prevents write rate limiting on read-only GET /errors endpoint.
+func (s *Server) handleErrorsRouter(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodGet {
+		// Read-only: no write rate limit or CSRF needed
+		s.handleErrors(w, r)
+
+		return
+	}
+
+	// Mutating methods: apply write rate limit and CSRF protection
+	s.writeRateLimit(s.csrfProtect(s.handleErrors))(w, r)
 }
 
 func (s *Server) handleErrors(w http.ResponseWriter, r *http.Request) {

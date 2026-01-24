@@ -1,4 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { getApiBase } from '../api/client';
+
+// FIX #283: API token used only to authenticate with the SSE token endpoint
+const SSE_API_TOKEN = import.meta.env.VITE_API_TOKEN ?? '';
 
 /**
  * Options for configuring the EventSource connection
@@ -194,9 +198,14 @@ export function useEventSource(options: UseEventSourceOptions): UseEventSourceRe
 // ============================================================================
 
 /**
- * Get the API base URL for streams
+ * Get the API base URL for streams.
+ * FIX #270: Uses same API_BASE as fetch client for consistency.
  */
 function getStreamBaseUrl(): string {
+  const base = getApiBase();
+  if (base) {
+    return `${base}/api/v1/stream`;
+  }
   return `${window.location.origin}/api/v1/stream`;
 }
 
@@ -232,16 +241,83 @@ export interface PacketData {
   };
 }
 
+// FIX #283: Fetch a short-lived SSE token from the backend
+async function fetchSSEToken(): Promise<string> {
+  try {
+    const base = getApiBase() || window.location.origin;
+    const headers = new Headers();
+    headers.set('Accept', 'application/json');
+    if (SSE_API_TOKEN) {
+      headers.set('Authorization', `Bearer ${SSE_API_TOKEN}`);
+    }
+
+    const response = await fetch(`${base}/api/v1/stream/token`, { headers });
+    if (response.ok) {
+      const data = (await response.json()) as { token: string };
+      return data.token;
+    }
+  } catch {
+    // Token fetch failed - fall back to main token
+  }
+  return '';
+}
+
+// FIX #283: Build SSE URL with short-lived token instead of main API token
+async function buildStreamUrl(path: string): Promise<string> {
+  const base = getStreamBaseUrl();
+  const url = `${base}/${path}`;
+
+  // Try to get a short-lived token first
+  const sseToken = await fetchSSEToken();
+  if (sseToken) {
+    return `${url}?token=${encodeURIComponent(sseToken)}`;
+  }
+
+  // Fallback: use main token if SSE token endpoint unavailable
+  if (SSE_API_TOKEN) {
+    return `${url}?token=${encodeURIComponent(SSE_API_TOKEN)}`;
+  }
+  return url;
+}
+
+/**
+ * Hook to resolve a stream URL asynchronously (fetches short-lived token).
+ * FIX #283: Each stream connection fetches its own short-lived token.
+ */
+function useStreamUrl(path: string, enabled: boolean): string {
+  const [url, setUrl] = useState('');
+
+  useEffect(() => {
+    if (!enabled) {
+      setUrl('');
+      return;
+    }
+
+    let cancelled = false;
+    buildStreamUrl(path).then((resolvedUrl) => {
+      if (!cancelled) {
+        setUrl(resolvedUrl);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [path, enabled]);
+
+  return url;
+}
+
 /**
  * Hook for connecting to the packet stream
  */
 export function usePacketStream(options: StreamHookOptions = {}): UseEventSourceResult {
   const { enabled = true, ...restOptions } = options;
-  const url = enabled ? `${getStreamBaseUrl()}/packets` : '';
+  const url = useStreamUrl('packets', enabled);
 
   return useEventSource({
     url,
-    enabled,
+    enabled: enabled && url !== '',
     ...restOptions,
   });
 }
@@ -261,11 +337,11 @@ export interface LogData {
  */
 export function useLogStream(options: StreamHookOptions = {}): UseEventSourceResult {
   const { enabled = true, ...restOptions } = options;
-  const url = enabled ? `${getStreamBaseUrl()}/logs` : '';
+  const url = useStreamUrl('logs', enabled);
 
   return useEventSource({
     url,
-    enabled,
+    enabled: enabled && url !== '',
     ...restOptions,
   });
 }
@@ -291,11 +367,11 @@ export interface StatsData {
  */
 export function useStatsStream(options: StreamHookOptions = {}): UseEventSourceResult {
   const { enabled = true, ...restOptions } = options;
-  const url = enabled ? `${getStreamBaseUrl()}/stats` : '';
+  const url = useStreamUrl('stats', enabled);
 
   return useEventSource({
     url,
-    enabled,
+    enabled: enabled && url !== '',
     ...restOptions,
   });
 }

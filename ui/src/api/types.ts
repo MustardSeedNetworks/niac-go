@@ -794,9 +794,15 @@ export interface DeviceDetailResponse {
 
 /**
  * Request body for POST /api/v1/config/devices
+ * FIX #287: Matches backend DeviceCreateRequest fields directly
  */
 export interface CreateDeviceRequest {
-  device: Device;
+  hostname: string;
+  type?: string;
+  mac?: string;
+  ip?: string;
+  template?: string;
+  rawYaml?: string;
 }
 
 /**

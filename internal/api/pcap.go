@@ -42,6 +42,7 @@ const (
 	arpOperationReply   = 2 // ARP Reply operation
 	icmpTypeEchoRequest = 8 // ICMP Echo Request type
 	icmpTypeEchoReply   = 0 // ICMP Echo Reply type
+	ipv4AddrLen         = 4 // IPv4 address length in bytes (FIX #269)
 )
 
 // ============================================================================
@@ -117,8 +118,9 @@ type PcapUploadResponse struct {
 
 // Cache memory limits to prevent denial of service attacks.
 const (
-	// MaxPcapCacheMemory is the maximum total memory for cached PCAP analyses (500MB).
-	MaxPcapCacheMemory = 500 * 1024 * 1024
+	// DefaultPcapCacheMemory is the default max memory for cached PCAP analyses (100MB).
+	// FIX #290: Reduced from 500MB to 100MB to prevent excessive memory usage.
+	DefaultPcapCacheMemory = 100 * 1024 * 1024
 	// MaxPcapCacheEntries is the maximum number of cached analyses.
 	MaxPcapCacheEntries = 50
 )
@@ -138,11 +140,19 @@ type pcapCache struct {
 	currentMem int64
 }
 
-var globalPcapCache = &pcapCache{
-	entries:    make(map[string]*pcapCacheEntry),
-	maxEntries: MaxPcapCacheEntries,
-	maxMemory:  MaxPcapCacheMemory,
-	currentMem: 0,
+// newPcapCacheWithLimit creates a new PCAP cache with configurable memory limit.
+// FIX #290: Allow configurable cache memory via ServerConfig.PcapCacheMemory.
+func newPcapCacheWithLimit(maxMem int64) *pcapCache {
+	if maxMem <= 0 {
+		maxMem = DefaultPcapCacheMemory
+	}
+
+	return &pcapCache{
+		entries:    make(map[string]*pcapCacheEntry),
+		maxEntries: MaxPcapCacheEntries,
+		maxMemory:  maxMem,
+		currentMem: 0,
+	}
 }
 
 // estimateResultSize calculates approximate memory size of an analysis result.
@@ -316,7 +326,7 @@ func (s *Server) handlePcapUpload(w http.ResponseWriter, r *http.Request) {
 	analysisID := hex.EncodeToString(hash[:8])
 
 	// Check if we already have this analysis cached
-	if existing, ok := globalPcapCache.Get(analysisID); ok {
+	if existing, ok := s.pcapCache.Get(analysisID); ok {
 		s.writeJSON(w, PcapUploadResponse{
 			Success:    true,
 			AnalysisID: analysisID,
@@ -339,7 +349,7 @@ func (s *Server) handlePcapUpload(w http.ResponseWriter, r *http.Request) {
 	result.CreatedAt = time.Now().UTC().Format(time.RFC3339)
 
 	// Cache the result
-	globalPcapCache.Set(analysisID, result)
+	s.pcapCache.Set(analysisID, result)
 
 	s.writeJSON(w, PcapUploadResponse{
 		Success:    true,
@@ -369,7 +379,7 @@ func (s *Server) handlePcapAnalysis(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Look up in cache
-	result, ok := globalPcapCache.Get(analysisID)
+	result, ok := s.pcapCache.Get(analysisID)
 	if !ok {
 		writeError(w, r, http.StatusNotFound, "not_found",
 			"Analysis not found. It may have expired or was never created.", nil)
@@ -599,6 +609,13 @@ func parseARPLayer(packet gopacket.Packet, pkt *PcapPacket) {
 	}
 
 	pkt.Protocol = "ARP"
+
+	// FIX #269: Bounds check before accessing address bytes to prevent panic on malformed packets
+	if len(arp.SourceProtAddress) < ipv4AddrLen || len(arp.DstProtAddress) < ipv4AddrLen {
+		pkt.Info = "ARP: malformed packet (address too short)"
+		return
+	}
+
 	pkt.SourceIP = fmt.Sprintf(
 		"%d.%d.%d.%d",
 		arp.SourceProtAddress[0],

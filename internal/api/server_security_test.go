@@ -443,7 +443,7 @@ func TestGetClientIP_DirectConnection(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/test", nil)
 	req.RemoteAddr = "192.168.1.100:54321"
 
-	ip := getClientIP(req)
+	ip := getClientIP(req, nil)
 
 	if ip != "192.168.1.100" {
 		t.Errorf("Expected IP 192.168.1.100, got: %s", ip)
@@ -456,7 +456,7 @@ func TestGetClientIP_XForwardedFor(t *testing.T) {
 	req.RemoteAddr = "10.0.0.1:54321"
 	req.Header.Set("X-Forwarded-For", "203.0.113.5, 198.51.100.1")
 
-	ip := getClientIP(req)
+	ip := getClientIP(req, nil)
 
 	// Should use first IP from X-Forwarded-For
 	if ip != "203.0.113.5" {
@@ -470,7 +470,7 @@ func TestGetClientIP_XRealIP(t *testing.T) {
 	req.RemoteAddr = "10.0.0.1:54321"
 	req.Header.Set("X-Real-IP", "203.0.113.10")
 
-	ip := getClientIP(req)
+	ip := getClientIP(req, nil)
 
 	if ip != "203.0.113.10" {
 		t.Errorf("Expected IP 203.0.113.10, got: %s", ip)

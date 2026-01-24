@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"net"
 	"net/http"
 	"strings"
@@ -217,8 +218,8 @@ type DeviceCloneRequest struct {
 
 // DeviceListResponse represents the response for listing devices.
 type DeviceListResponse struct {
-	Devices    []DeviceResponse `json:"devices"`
-	TotalCount int              `json:"total_count"`
+	Devices []DeviceResponse `json:"devices"`
+	Total   int              `json:"total"`
 }
 
 // handleDevicesV2 handles device CRUD operations
@@ -277,7 +278,7 @@ func (s *Server) handleDevicesV2(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleDeviceList(w http.ResponseWriter, r *http.Request) {
 	cfg := s.currentConfig()
 	if cfg == nil {
-		s.writeJSON(w, DeviceListResponse{Devices: []DeviceResponse{}, TotalCount: 0})
+		s.writeJSON(w, DeviceListResponse{Devices: []DeviceResponse{}, Total: 0})
 
 		return
 	}
@@ -294,8 +295,8 @@ func (s *Server) handleDeviceList(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.writeJSON(w, DeviceListResponse{
-		Devices:    devices,
-		TotalCount: len(devices),
+		Devices: devices,
+		Total:   len(devices),
 	})
 }
 
@@ -311,7 +312,8 @@ func (s *Server) handleDeviceGet(w http.ResponseWriter, r *http.Request, hostnam
 	for _, dev := range cfg.Devices {
 		if dev.Name == hostname {
 			resp := deviceToResponse(&dev, true, true)
-			s.writeJSON(w, resp)
+			// FIX #285: Wrap response in { "device": ... } to match frontend expectation
+			s.writeJSON(w, map[string]any{"device": resp})
 
 			return
 		}
@@ -322,6 +324,7 @@ func (s *Server) handleDeviceGet(w http.ResponseWriter, r *http.Request, hostnam
 }
 
 // handleDeviceCreate creates a new device.
+// FIX #272: Uses write lock for entire read-modify-write to prevent races.
 func (s *Server) handleDeviceCreate(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, MaxRequestBodySize)
 
@@ -340,8 +343,11 @@ func (s *Server) handleDeviceCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cfg := s.currentConfig()
+	// FIX #272: Hold write lock for entire read-modify-write operation
+	s.configMu.Lock()
+	cfg := s.cfg.Config
 	if cfg == nil {
+		s.configMu.Unlock()
 		writeError(w, r, http.StatusBadRequest, "config_not_found", "No configuration loaded", nil)
 
 		return
@@ -350,6 +356,7 @@ func (s *Server) handleDeviceCreate(w http.ResponseWriter, r *http.Request) {
 	// Check if device already exists
 	for _, dev := range cfg.Devices {
 		if dev.Name == req.Hostname {
+			s.configMu.Unlock()
 			writeError(w, r, http.StatusConflict, "device_exists",
 				fmt.Sprintf("Device '%s' already exists", req.Hostname), nil)
 
@@ -360,6 +367,7 @@ func (s *Server) handleDeviceCreate(w http.ResponseWriter, r *http.Request) {
 	// Create device from request
 	newDevice, err := createDeviceFromRequest(req)
 	if err != nil {
+		s.configMu.Unlock()
 		writeError(w, r, http.StatusBadRequest, "device_creation_failed", err.Error(), nil)
 
 		return
@@ -368,6 +376,7 @@ func (s *Server) handleDeviceCreate(w http.ResponseWriter, r *http.Request) {
 	// Add to config and save
 	newCfg := *cfg
 	newCfg.Devices = append(newCfg.Devices, *newDevice)
+	s.configMu.Unlock()
 
 	if saveErr := s.saveConfig(&newCfg); saveErr != nil {
 		writeError(w, r, http.StatusInternalServerError, "save_failed", "Failed to save configuration", nil)
@@ -382,8 +391,13 @@ func (s *Server) handleDeviceCreate(w http.ResponseWriter, r *http.Request) {
 
 	resp := deviceToResponse(newDevice, true, false)
 
+	// FIX #286: Wrap response in mutation format { success, device, message }
 	w.WriteHeader(http.StatusCreated)
-	s.writeJSON(w, resp)
+	s.writeJSON(w, map[string]any{
+		"success": true,
+		"device":  resp,
+		"message": fmt.Sprintf("Device '%s' created successfully", req.Hostname),
+	})
 }
 
 // findDeviceIndex finds the index of a device by hostname, returns -1 if not found.
@@ -443,24 +457,30 @@ func (s *Server) handleDeviceUpdate(w http.ResponseWriter, r *http.Request, host
 		return
 	}
 
-	cfg := s.currentConfig()
+	// FIX: Hold write lock for entire read-modify-write to prevent TOCTOU race
+	s.configMu.Lock()
+	cfg := s.cfg.Config
 	if cfg == nil {
+		s.configMu.Unlock()
 		writeError(w, r, http.StatusNotFound, "config_not_found", "No configuration loaded", nil)
 		return
 	}
 
 	deviceIdx := findDeviceIndex(cfg.Devices, hostname)
 	if deviceIdx == -1 {
+		s.configMu.Unlock()
 		writeError(w, r, http.StatusNotFound, "device_not_found",
 			fmt.Sprintf("Device '%s' not found", hostname), nil)
 		return
 	}
 
 	newCfg := *cfg
+	newCfg.Devices = append([]config.Device(nil), cfg.Devices...)
 
 	if req.RawYAML != "" {
 		updatedDevice, parseErr := updateDeviceFromYAML(req.RawYAML, hostname)
 		if parseErr != nil {
+			s.configMu.Unlock()
 			writeError(w, r, http.StatusBadRequest, "parse_failed", parseErr.Error(), nil)
 			return
 		}
@@ -468,6 +488,7 @@ func (s *Server) handleDeviceUpdate(w http.ResponseWriter, r *http.Request, host
 		newCfg.Devices[deviceIdx] = *updatedDevice
 	} else {
 		if err := applyPartialDeviceUpdate(&newCfg.Devices[deviceIdx], req); err != nil {
+			s.configMu.Unlock()
 			errMsg := err.Error()
 
 			switch {
@@ -482,6 +503,7 @@ func (s *Server) handleDeviceUpdate(w http.ResponseWriter, r *http.Request, host
 			return
 		}
 	}
+	s.configMu.Unlock()
 
 	if err := s.saveConfig(&newCfg); err != nil {
 		writeError(w, r, http.StatusInternalServerError, "save_failed", "Failed to save configuration", nil)
@@ -493,15 +515,22 @@ func (s *Server) handleDeviceUpdate(w http.ResponseWriter, r *http.Request, host
 	}
 
 	resp := deviceToResponse(&newCfg.Devices[deviceIdx], true, false)
-	s.writeJSON(w, resp)
+	// FIX #286: Wrap response in mutation format { success, device, message }
+	s.writeJSON(w, map[string]any{
+		"success": true,
+		"device":  resp,
+		"message": fmt.Sprintf("Device '%s' updated successfully", hostname),
+	})
 }
 
 // handleDeviceDelete deletes a device.
 func (s *Server) handleDeviceDelete(w http.ResponseWriter, r *http.Request, hostname string) {
-	cfg := s.currentConfig()
+	// FIX: Hold write lock for entire read-modify-write to prevent TOCTOU race
+	s.configMu.Lock()
+	cfg := s.cfg.Config
 	if cfg == nil {
+		s.configMu.Unlock()
 		writeError(w, r, http.StatusNotFound, "config_not_found", "No configuration loaded", nil)
-
 		return
 	}
 
@@ -509,31 +538,29 @@ func (s *Server) handleDeviceDelete(w http.ResponseWriter, r *http.Request, host
 	newCfg := *cfg
 	found := false
 
-	newDevices := make([]config.Device, 0, len(cfg.Devices)-1)
+	newDevices := make([]config.Device, 0, len(cfg.Devices))
 
 	for _, dev := range cfg.Devices {
 		if dev.Name == hostname {
 			found = true
-
 			continue
 		}
-
 		newDevices = append(newDevices, dev)
 	}
 
 	if !found {
+		s.configMu.Unlock()
 		writeError(w, r, http.StatusNotFound, "device_not_found",
 			fmt.Sprintf("Device '%s' not found", hostname), nil)
-
 		return
 	}
 
 	newCfg.Devices = newDevices
+	s.configMu.Unlock()
 
 	err := s.saveConfig(&newCfg)
 	if err != nil {
 		writeError(w, r, http.StatusInternalServerError, "save_failed", "Failed to save configuration", nil)
-
 		return
 	}
 
@@ -542,9 +569,12 @@ func (s *Server) handleDeviceDelete(w http.ResponseWriter, r *http.Request, host
 		s.sseHub.BroadcastLog("info", "Device deleted: "+hostname)
 	}
 
-	s.writeJSON(w, map[string]string{
+	// FIX #286: Include success field in delete response
+	s.writeJSON(w, map[string]any{
+		"success":  true,
 		"status":   "deleted",
 		"hostname": hostname,
+		"message":  fmt.Sprintf("Device '%s' deleted successfully", hostname),
 	})
 }
 
@@ -556,21 +586,21 @@ func (s *Server) handleDeviceClone(w http.ResponseWriter, r *http.Request, hostn
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
 		writeError(w, r, http.StatusBadRequest, "invalid_request", "Failed to parse request", nil)
-
 		return
 	}
 
 	if req.NewHostname == "" {
 		writeError(w, r, http.StatusBadRequest, "validation_failed",
 			"new_hostname is required", []ErrorDetail{{Field: "new_hostname", Issue: "required"}})
-
 		return
 	}
 
-	cfg := s.currentConfig()
+	// FIX: Hold write lock for entire read-modify-write to prevent TOCTOU race
+	s.configMu.Lock()
+	cfg := s.cfg.Config
 	if cfg == nil {
+		s.configMu.Unlock()
 		writeError(w, r, http.StatusNotFound, "config_not_found", "No configuration loaded", nil)
-
 		return
 	}
 
@@ -580,24 +610,23 @@ func (s *Server) handleDeviceClone(w http.ResponseWriter, r *http.Request, hostn
 	for i := range cfg.Devices {
 		if cfg.Devices[i].Name == hostname {
 			sourceDevice = &cfg.Devices[i]
-
 			break
 		}
 	}
 
 	if sourceDevice == nil {
+		s.configMu.Unlock()
 		writeError(w, r, http.StatusNotFound, "device_not_found",
 			fmt.Sprintf("Device '%s' not found", hostname), nil)
-
 		return
 	}
 
 	// Check if new hostname already exists
 	for _, dev := range cfg.Devices {
 		if dev.Name == req.NewHostname {
+			s.configMu.Unlock()
 			writeError(w, r, http.StatusConflict, "device_exists",
 				fmt.Sprintf("Device '%s' already exists", req.NewHostname), nil)
-
 			return
 		}
 	}
@@ -605,14 +634,14 @@ func (s *Server) handleDeviceClone(w http.ResponseWriter, r *http.Request, hostn
 	// Clone device
 	clonedDevice := cloneDevice(sourceDevice, req.NewHostname, req.NewIP, req.NewMAC)
 
-	// Add to config and save
+	// Add to config and save (deep copy devices slice)
 	newCfg := *cfg
-	newCfg.Devices = append(newCfg.Devices, *clonedDevice)
+	newCfg.Devices = append(append([]config.Device(nil), cfg.Devices...), *clonedDevice)
+	s.configMu.Unlock()
 
 	err = s.saveConfig(&newCfg)
 	if err != nil {
 		writeError(w, r, http.StatusInternalServerError, "save_failed", "Failed to save configuration", nil)
-
 		return
 	}
 
@@ -622,9 +651,13 @@ func (s *Server) handleDeviceClone(w http.ResponseWriter, r *http.Request, hostn
 	}
 
 	resp := deviceToResponse(clonedDevice, true, false)
-
+	// FIX #286: Wrap response in mutation format { success, device, message }
 	w.WriteHeader(http.StatusCreated)
-	s.writeJSON(w, resp)
+	s.writeJSON(w, map[string]any{
+		"success": true,
+		"device":  resp,
+		"message": fmt.Sprintf("Device '%s' cloned from '%s' successfully", req.NewHostname, hostname),
+	})
 }
 
 // saveConfig saves the config to file and updates the server state.
@@ -952,13 +985,11 @@ func parseDeviceFromYAML(yamlStr, hostname string) (*config.Device, error) {
 		return nil, fmt.Errorf("YAML validation failed: %w", validateErr)
 	}
 
-	// This is a simplified parser - in production, use the full config loader
-	// For now, return a basic device
 	dev := &config.Device{
 		Name: hostname,
 	}
 
-	// Parse YAML into map for basic fields
+	// Parse YAML into map for all fields
 	var data map[string]any
 	if unmarshalErr := yaml.Unmarshal([]byte(yamlStr), &data); unmarshalErr != nil {
 		return nil, fmt.Errorf("invalid YAML: %w", unmarshalErr)
@@ -969,6 +1000,9 @@ func parseDeviceFromYAML(yamlStr, hostname string) (*config.Device, error) {
 		return nil, depthErr
 	}
 
+	// FIX #288: Parse all device fields from YAML
+
+	// Basic fields
 	if t, ok := data["type"].(string); ok {
 		dev.Type = t
 	}
@@ -979,13 +1013,300 @@ func parseDeviceFromYAML(yamlStr, hostname string) (*config.Device, error) {
 		}
 	}
 
+	// Parse IP addresses
+	parseDeviceIPs(data, dev)
+
+	// Parse VLAN
+	if vlan, ok := data["vlan"].(int); ok {
+		dev.VLAN = vlan
+	}
+
+	// Parse SNMP config
+	parseDeviceSNMP(data, dev)
+
+	// Parse LLDP config
+	parseDeviceLLDP(data, dev)
+
+	// Parse CDP config
+	parseDeviceCDP(data, dev)
+
+	// Parse DHCP config
+	parseDeviceDHCP(data, dev)
+
+	// Parse interfaces
+	parseDeviceInterfaces(data, dev)
+
+	// Parse traffic config
+	parseDeviceTraffic(data, dev)
+
 	return dev, nil
 }
 
+// parseDeviceIPs extracts IP addresses from YAML data.
+func parseDeviceIPs(data map[string]any, dev *config.Device) {
+	if ip, ok := data["ip"].(string); ok {
+		if parsed := net.ParseIP(ip); parsed != nil {
+			dev.IPAddresses = []net.IP{parsed}
+		}
+	}
+
+	if ips, ok := data["ips"].([]any); ok {
+		for _, ipVal := range ips {
+			if ipStr, strOK := ipVal.(string); strOK {
+				if parsed := net.ParseIP(ipStr); parsed != nil {
+					dev.IPAddresses = append(dev.IPAddresses, parsed)
+				}
+			}
+		}
+	}
+}
+
+// parseDeviceSNMP extracts SNMP configuration from YAML data.
+func parseDeviceSNMP(data map[string]any, dev *config.Device) {
+	snmpData, ok := data["snmp_agent"].(map[string]any)
+	if !ok {
+		return
+	}
+
+	if community, cOK := snmpData["community"].(string); cOK {
+		dev.SNMPConfig.Community = community
+	}
+
+	if sysName, sOK := snmpData["sysname"].(string); sOK {
+		dev.SNMPConfig.SysName = sysName
+	}
+
+	if sysLocation, lOK := snmpData["syslocation"].(string); lOK {
+		dev.SNMPConfig.SysLocation = sysLocation
+	}
+
+	if sysDescr, dOK := snmpData["sysdescr"].(string); dOK {
+		dev.SNMPConfig.SysDescr = sysDescr
+	}
+
+	if sysContact, cOK := snmpData["syscontact"].(string); cOK {
+		dev.SNMPConfig.SysContact = sysContact
+	}
+
+	if walkFile, wOK := snmpData["walk_file"].(string); wOK {
+		dev.SNMPConfig.WalkFile = walkFile
+	}
+
+	// Parse add_mibs
+	if mibs, mOK := snmpData["add_mibs"].([]any); mOK {
+		dev.SNMPConfig.AddMibs = parseSNMPMibs(mibs)
+	}
+}
+
+// parseSNMPMibs extracts a slice of AddMib from raw YAML list data.
+func parseSNMPMibs(mibs []any) []config.AddMib {
+	result := make([]config.AddMib, 0, len(mibs))
+
+	for _, mibVal := range mibs {
+		mibMap, mapOK := mibVal.(map[string]any)
+		if !mapOK {
+			continue
+		}
+
+		mib := config.AddMib{}
+		if oid, oOK := mibMap["oid"].(string); oOK {
+			mib.OID = oid
+		}
+
+		if mType, tOK := mibMap["type"].(string); tOK {
+			mib.Type = mType
+		}
+
+		if val, vOK := mibMap["value"].(string); vOK {
+			mib.Value = val
+		}
+
+		result = append(result, mib)
+	}
+
+	return result
+}
+
+// parseDeviceLLDP extracts LLDP configuration from YAML data.
+func parseDeviceLLDP(data map[string]any, dev *config.Device) {
+	lldpData, ok := data["lldp"].(map[string]any)
+	if !ok {
+		return
+	}
+
+	lldp := &config.LLDPConfig{}
+
+	if enabled, eOK := lldpData["enabled"].(bool); eOK {
+		lldp.Enabled = enabled
+	}
+
+	if chassisIDType, cOK := lldpData["chassis_id_type"].(string); cOK {
+		lldp.ChassisIDType = chassisIDType
+	}
+
+	if portDesc, pOK := lldpData["port_description"].(string); pOK {
+		lldp.PortDescription = portDesc
+	}
+
+	if sysDesc, sOK := lldpData["system_description"].(string); sOK {
+		lldp.SystemDescription = sysDesc
+	}
+
+	if ttl, tOK := lldpData["ttl"].(int); tOK {
+		lldp.TTL = ttl
+	}
+
+	dev.LLDPConfig = lldp
+}
+
+// parseDeviceCDP extracts CDP configuration from YAML data.
+func parseDeviceCDP(data map[string]any, dev *config.Device) {
+	cdpData, ok := data["cdp"].(map[string]any)
+	if !ok {
+		return
+	}
+
+	cdp := &config.CDPConfig{}
+
+	if enabled, eOK := cdpData["enabled"].(bool); eOK {
+		cdp.Enabled = enabled
+	}
+
+	if platform, pOK := cdpData["platform"].(string); pOK {
+		cdp.Platform = platform
+	}
+
+	if sv, sOK := cdpData["software_version"].(string); sOK {
+		cdp.SoftwareVersion = sv
+	}
+
+	if portID, pOK := cdpData["port_id"].(string); pOK {
+		cdp.PortID = portID
+	}
+
+	if version, vOK := cdpData["version"].(int); vOK {
+		cdp.Version = version
+	}
+
+	if holdtime, hOK := cdpData["holdtime"].(int); hOK {
+		cdp.Holdtime = holdtime
+	}
+
+	dev.CDPConfig = cdp
+}
+
+// parseDeviceDHCP extracts DHCP configuration from YAML data.
+func parseDeviceDHCP(data map[string]any, dev *config.Device) {
+	dhcpData, ok := data["dhcp"].(map[string]any)
+	if !ok {
+		return
+	}
+
+	dhcp := &config.DHCPConfig{}
+
+	if poolStart, pOK := dhcpData["pool_start"].(string); pOK {
+		dhcp.PoolStart = net.ParseIP(poolStart)
+	}
+
+	if poolEnd, pOK := dhcpData["pool_end"].(string); pOK {
+		dhcp.PoolEnd = net.ParseIP(poolEnd)
+	}
+
+	if subnetMask, sOK := dhcpData["subnet_mask"].(string); sOK {
+		mask := net.ParseIP(subnetMask)
+		if mask != nil {
+			dhcp.SubnetMask = net.IPMask(mask.To4())
+		}
+	}
+
+	if router, rOK := dhcpData["router"].(string); rOK {
+		dhcp.Router = net.ParseIP(router)
+	}
+
+	if dns, dOK := dhcpData["dns"].([]any); dOK {
+		for _, dnsVal := range dns {
+			if dnsStr, strOK := dnsVal.(string); strOK {
+				if parsed := net.ParseIP(dnsStr); parsed != nil {
+					dhcp.DomainNameServer = append(dhcp.DomainNameServer, parsed)
+				}
+			}
+		}
+	}
+
+	dev.DHCPConfig = dhcp
+}
+
+// parseDeviceInterfaces extracts interface configuration from YAML data.
+func parseDeviceInterfaces(data map[string]any, dev *config.Device) {
+	interfaces, ok := data["interfaces"].([]any)
+	if !ok {
+		return
+	}
+
+	for _, ifaceVal := range interfaces {
+		ifaceMap, mapOK := ifaceVal.(map[string]any)
+		if !mapOK {
+			continue
+		}
+
+		iface := config.Interface{}
+		if name, nOK := ifaceMap["name"].(string); nOK {
+			iface.Name = name
+		}
+
+		dev.Interfaces = append(dev.Interfaces, iface)
+	}
+}
+
+// parseDeviceTraffic extracts traffic configuration from YAML data.
+func parseDeviceTraffic(data map[string]any, dev *config.Device) {
+	trafficData, ok := data["traffic"].(map[string]any)
+	if !ok {
+		return
+	}
+
+	traffic := &config.TrafficConfig{}
+
+	if enabled, eOK := trafficData["enabled"].(bool); eOK {
+		traffic.Enabled = enabled
+	}
+
+	if arp, aOK := trafficData["arp_announcements"].(map[string]any); aOK {
+		traffic.ARPAnnouncements = &config.ARPAnnouncementConfig{}
+		if enabled, eOK := arp["enabled"].(bool); eOK {
+			traffic.ARPAnnouncements.Enabled = enabled
+		}
+
+		if interval, iOK := arp["interval"].(int); iOK {
+			traffic.ARPAnnouncements.Interval = interval
+		}
+	}
+
+	if pings, pOK := trafficData["periodic_pings"].(map[string]any); pOK {
+		traffic.PeriodicPings = &config.PeriodicPingConfig{}
+		if enabled, eOK := pings["enabled"].(bool); eOK {
+			traffic.PeriodicPings.Enabled = enabled
+		}
+
+		if interval, iOK := pings["interval"].(int); iOK {
+			traffic.PeriodicPings.Interval = interval
+		}
+
+		if payloadSize, psOK := pings["payload_size"].(int); psOK {
+			traffic.PeriodicPings.PayloadSize = payloadSize
+		}
+	}
+
+	dev.TrafficConfig = traffic
+}
+
 func cloneDevice(src *config.Device, newHostname, newIP, newMAC string) *config.Device {
-	// Deep copy the device
+	// FIX #268: Deep copy the device including all pointer fields
 	cloned := *src
 	cloned.Name = newHostname
+
+	cloneDeviceSlices(src, &cloned)
+	cloneDevicePointers(src, &cloned)
 
 	// Update IP if provided
 	if newIP != "" {
@@ -1005,12 +1326,130 @@ func cloneDevice(src *config.Device, newHostname, newIP, newMAC string) *config.
 	if cloned.SNMPConfig.SysName != "" {
 		cloned.SNMPConfig.SysName = newHostname
 	}
-	// CDP/LLDP derive device ID/system name from hostname automatically
+
 	if cloned.NetBIOSConfig != nil && cloned.NetBIOSConfig.Name != "" {
 		cloned.NetBIOSConfig.Name = strings.ToUpper(newHostname)
 	}
 
 	return &cloned
+}
+
+// cloneDeviceSlices deep copies all slice and map fields from src to dst.
+func cloneDeviceSlices(src, dst *config.Device) {
+	if src.IPAddresses != nil {
+		dst.IPAddresses = make([]net.IP, len(src.IPAddresses))
+		for i, ip := range src.IPAddresses {
+			dst.IPAddresses[i] = make(net.IP, len(ip))
+			copy(dst.IPAddresses[i], ip)
+		}
+	}
+
+	if src.MACAddress != nil {
+		dst.MACAddress = make(net.HardwareAddr, len(src.MACAddress))
+		copy(dst.MACAddress, src.MACAddress)
+	}
+
+	if src.Interfaces != nil {
+		dst.Interfaces = make([]config.Interface, len(src.Interfaces))
+		copy(dst.Interfaces, src.Interfaces)
+	}
+
+	if src.PortChannels != nil {
+		dst.PortChannels = make([]config.PortChannel, len(src.PortChannels))
+		copy(dst.PortChannels, src.PortChannels)
+	}
+
+	if src.TrunkPorts != nil {
+		dst.TrunkPorts = make([]config.TrunkPort, len(src.TrunkPorts))
+		copy(dst.TrunkPorts, src.TrunkPorts)
+	}
+
+	if src.Properties != nil {
+		dst.Properties = make(map[string]string, len(src.Properties))
+		maps.Copy(dst.Properties, src.Properties)
+	}
+}
+
+// cloneDevicePointers deep copies all pointer fields from src to dst.
+func cloneDevicePointers(src, dst *config.Device) {
+	cloneDeviceNetworkPointers(src, dst)
+	cloneDeviceServicePointers(src, dst)
+}
+
+// cloneDeviceNetworkPointers copies network protocol pointer fields.
+func cloneDeviceNetworkPointers(src, dst *config.Device) {
+	if src.TTLConfig != nil {
+		c := *src.TTLConfig
+		dst.TTLConfig = &c
+	}
+	if src.DHCPConfig != nil {
+		c := *src.DHCPConfig
+		dst.DHCPConfig = &c
+	}
+	if src.DNSConfig != nil {
+		c := *src.DNSConfig
+		dst.DNSConfig = &c
+	}
+	if src.LLDPConfig != nil {
+		c := *src.LLDPConfig
+		dst.LLDPConfig = &c
+	}
+	if src.CDPConfig != nil {
+		c := *src.CDPConfig
+		dst.CDPConfig = &c
+	}
+	if src.EDPConfig != nil {
+		c := *src.EDPConfig
+		dst.EDPConfig = &c
+	}
+	if src.FDPConfig != nil {
+		c := *src.FDPConfig
+		dst.FDPConfig = &c
+	}
+	if src.STPConfig != nil {
+		c := *src.STPConfig
+		dst.STPConfig = &c
+	}
+}
+
+// cloneDeviceServicePointers copies service and traffic pointer fields.
+func cloneDeviceServicePointers(src, dst *config.Device) {
+	if src.HTTPConfig != nil {
+		c := *src.HTTPConfig
+		dst.HTTPConfig = &c
+	}
+	if src.FTPConfig != nil {
+		c := *src.FTPConfig
+		dst.FTPConfig = &c
+	}
+	if src.NetBIOSConfig != nil {
+		c := *src.NetBIOSConfig
+		dst.NetBIOSConfig = &c
+	}
+	if src.ICMPConfig != nil {
+		c := *src.ICMPConfig
+		dst.ICMPConfig = &c
+	}
+	if src.ICMPv6Config != nil {
+		c := *src.ICMPv6Config
+		dst.ICMPv6Config = &c
+	}
+	if src.DHCPv6Config != nil {
+		c := *src.DHCPv6Config
+		dst.DHCPv6Config = &c
+	}
+	if src.TrafficConfig != nil {
+		c := *src.TrafficConfig
+		dst.TrafficConfig = &c
+	}
+	if src.OSFingerprintConfig != nil {
+		c := *src.OSFingerprintConfig
+		dst.OSFingerprintConfig = &c
+	}
+	if src.IPerf3 != nil {
+		c := *src.IPerf3
+		dst.IPerf3 = &c
+	}
 }
 
 func serializeDeviceToYAML(dev *config.Device) ([]byte, error) {

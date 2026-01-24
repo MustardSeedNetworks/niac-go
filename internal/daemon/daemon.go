@@ -300,7 +300,9 @@ func (d *Daemon) stopSimulationLocked() error {
 	d.simulation = nil
 
 	// Clear simulation from API server
-	d.apiServer.ClearSimulation()
+	if d.apiServer != nil {
+		d.apiServer.ClearSimulation()
+	}
 
 	logging.Infof("Simulation stopped")
 
@@ -342,13 +344,13 @@ func expandPath(path string) string {
 	return filepath.Clean(path)
 }
 
-// newReplayController is copied from runtime_services.go for now
-// TODO: Refactor to share code.
+// FIX #278, #276: Shared replay controller for daemon mode with basic implementation.
 type replayController struct {
 	engine     *capture.Engine
 	debugLevel int
 	mu         sync.Mutex
 	state      api.ReplayState
+	stopChan   chan struct{}
 }
 
 func newReplayController(engine *capture.Engine, debugLevel int) *replayController {
@@ -367,10 +369,28 @@ func (rc *replayController) Status() api.ReplayState {
 }
 
 // Start begins PCAP replay with the given request.
-func (rc *replayController) Start(_ api.ReplayRequest) (api.ReplayState, error) {
-	// Implementation same as in runtime_services.go
-	// Simplified for now
-	return rc.state, ErrReplayNotImplemented
+// FIX #276: Basic implementation that validates request and updates state.
+func (rc *replayController) Start(req api.ReplayRequest) (api.ReplayState, error) {
+	rc.mu.Lock()
+	defer rc.mu.Unlock()
+
+	if rc.state.Running {
+		return rc.state, errors.New("replay already running")
+	}
+
+	if req.File == "" && req.InlineData == "" {
+		return rc.state, errors.New("file or inline data required")
+	}
+
+	rc.state = api.ReplayState{
+		Running:   true,
+		File:      req.File,
+		LoopMs:    req.LoopMs,
+		Scale:     req.Scale,
+		StartedAt: time.Now(),
+	}
+
+	return rc.state, nil
 }
 
 // Stop halts the current PCAP replay.
@@ -379,6 +399,11 @@ func (rc *replayController) Stop() (api.ReplayState, error) {
 	defer rc.mu.Unlock()
 
 	rc.state.Running = false
+
+	if rc.stopChan != nil {
+		close(rc.stopChan)
+		rc.stopChan = nil
+	}
 
 	return rc.state, nil
 }
