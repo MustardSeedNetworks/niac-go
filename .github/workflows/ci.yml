@@ -332,6 +332,11 @@ jobs:
           fi
           echo "No unsafe logging patterns detected"
 
+      - name: Check file length limits
+        run: |
+          chmod +x ./scripts/check-file-length.sh
+          ./scripts/check-file-length.sh
+
   # ===========================================================================
   # Build
   # ===========================================================================
