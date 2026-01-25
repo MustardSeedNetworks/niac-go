@@ -14,7 +14,7 @@ import { Card, CardContent } from '../../ui/Card';
 import { ConfirmModal } from '../../ui/ConfirmModal';
 import { Tag } from '../../ui/Tag';
 import { H2, SmallText } from '../../ui/Typography';
-import type { DiffBlock, MergeDecision } from './DiffViewer';
+import type { DiffBlock, MergeDecision } from './diffUtils';
 import { YamlViewer } from './YamlEditor';
 
 interface MergeControlsProps {

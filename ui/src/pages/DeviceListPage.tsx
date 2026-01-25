@@ -1,83 +1,27 @@
-import {
-  AlertCircle,
-  Filter,
-  LayoutGrid,
-  LayoutList,
-  Plus,
-  RefreshCw,
-  Search,
-  Server,
-  Trash2,
-  X,
-} from 'lucide-react';
 import { type FC, useCallback, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { cloneDevice, deleteDevice, fetchConfigDevices } from '../api/client';
+import { fetchConfigDevices } from '../api/client';
 import type { Device, DeviceType } from '../api/types';
 import { CloneDeviceModal } from '../components/device-list/CloneDeviceModal';
 import { ConfirmDeleteModal } from '../components/device-list/ConfirmDeleteModal';
 import { DeviceCardView } from '../components/device-list/DeviceCardView';
+import { DeviceListHeader } from '../components/device-list/DeviceListHeader';
+import {
+  EmptyState,
+  ErrorState,
+  LoadingState,
+  NoResultsState,
+} from '../components/device-list/DeviceListStates';
 import { DeviceTableView } from '../components/device-list/DeviceTableView';
+import {
+  getDeviceProtocols,
+  matchesProtocolFilter,
+  matchesSearchQuery,
+  PROTOCOL_RULES,
+} from '../components/device-list/deviceListUtils';
+import { useDeviceListHandlers } from '../components/device-list/useDeviceListHandlers';
 import { useApiResource } from '../hooks/useApiResource';
-import { Button } from '../ui/Button';
-import { Card, CardContent } from '../ui/Card';
 import { ConfirmModal } from '../ui/ConfirmModal';
-import { DeviceCardGridSkeleton, DeviceTableSkeleton } from '../ui/Skeleton';
-import { H2, P, SmallText } from '../ui/Typography';
-import { getErrorMessage } from '../utils/format';
-
-const PROTOCOL_RULES = [
-  { label: 'SNMP', isEnabled: (device: Device) => Boolean(device.snmpAgent) },
-  {
-    label: 'LLDP',
-    isEnabled: (device: Device) => Boolean(device.lldp?.enabled),
-  },
-  { label: 'CDP', isEnabled: (device: Device) => Boolean(device.cdp?.enabled) },
-  { label: 'STP', isEnabled: (device: Device) => Boolean(device.stp?.enabled) },
-  { label: 'DHCP', isEnabled: (device: Device) => Boolean(device.dhcp) },
-  { label: 'DNS', isEnabled: (device: Device) => Boolean(device.dns) },
-  {
-    label: 'HTTP',
-    isEnabled: (device: Device) => Boolean(device.http?.enabled),
-  },
-  { label: 'FTP', isEnabled: (device: Device) => Boolean(device.ftp?.enabled) },
-  {
-    label: 'NetBIOS',
-    isEnabled: (device: Device) => Boolean(device.netbios?.enabled),
-  },
-] as const;
-
-const getDeviceProtocols = (device: Device): string[] => {
-  const protos: string[] = [];
-  for (const rule of PROTOCOL_RULES) {
-    if (rule.isEnabled(device)) {
-      protos.push(rule.label);
-    }
-  }
-  return protos;
-};
-
-const matchesSearchQuery = (device: Device, query: string): boolean => {
-  const normalized = query.trim().toLowerCase();
-  if (!normalized) {
-    return true;
-  }
-  return Boolean(
-    device.hostname.toLowerCase().includes(normalized) ||
-      device.mac.toLowerCase().includes(normalized) ||
-      device.ip?.toLowerCase().includes(normalized) ||
-      device.ips?.some((ip) => ip.toLowerCase().includes(normalized)) ||
-      device.type?.toLowerCase().includes(normalized),
-  );
-};
-
-const matchesProtocolFilter = (device: Device, filter: string): boolean => {
-  if (filter === 'all') {
-    return true;
-  }
-  const rule = PROTOCOL_RULES.find((entry) => entry.label === filter);
-  return rule ? rule.isEnabled(device) : false;
-};
 
 export const DeviceListPage: FC = () => {
   const navigate = useNavigate();
@@ -96,19 +40,26 @@ export const DeviceListPage: FC = () => {
     const stored = localStorage.getItem('niac-device-view-mode');
     return stored === 'cards' || stored === 'table' ? stored : 'table';
   });
-  const [message, setMessage] = useState<{
-    type: 'success' | 'error';
-    text: string;
-  } | null>(null);
-  const [selectedDevices, setSelectedDevices] = useState<Set<string>>(new Set());
-  const [deleteProgress, setDeleteProgress] = useState<{ current: number; total: number } | null>(
-    null,
-  );
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
-  const [showCloneModal, setShowCloneModal] = useState<string | null>(null);
-  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
 
-  // Persist view mode
+  const {
+    message,
+    setMessage,
+    deleteProgress,
+    selectedDevices,
+    showDeleteConfirm,
+    setShowDeleteConfirm,
+    showCloneModal,
+    setShowCloneModal,
+    showBulkDeleteConfirm,
+    setShowBulkDeleteConfirm,
+    toggleDeviceSelection,
+    selectAllDevices,
+    clearSelection,
+    handleDelete,
+    handleClone,
+    handleBulkDeleteConfirm,
+  } = useDeviceListHandlers({ refetch });
+
   const handleViewModeChange = useCallback((mode: 'cards' | 'table') => {
     setViewMode(mode);
     localStorage.setItem('niac-device-view-mode', mode);
@@ -116,7 +67,6 @@ export const DeviceListPage: FC = () => {
 
   const devices = deviceList?.devices ?? [];
 
-  // Get unique device types for filter
   const deviceTypes = useMemo(() => {
     const types = new Set<DeviceType>();
     for (const d of devices) {
@@ -127,7 +77,6 @@ export const DeviceListPage: FC = () => {
     return Array.from(types);
   }, [devices]);
 
-  // Get unique protocols for filter
   const protocols = useMemo(() => {
     const protos = new Set<string>();
     for (const d of devices) {
@@ -140,408 +89,75 @@ export const DeviceListPage: FC = () => {
     return Array.from(protos).sort();
   }, [devices]);
 
-  // Filter devices
   const filteredDevices = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
     return devices.filter((device) => {
-      // Search filter
       if (normalizedQuery && !matchesSearchQuery(device, normalizedQuery)) {
         return false;
       }
-
-      // Type filter
       if (typeFilter !== 'all' && device.type !== typeFilter) {
         return false;
       }
-
-      // Protocol filter
       if (!matchesProtocolFilter(device, protocolFilter)) {
         return false;
       }
-
       return true;
     });
   }, [devices, searchQuery, typeFilter, protocolFilter]);
 
-  // Get protocols enabled for a device
   const handleDeviceProtocols = useCallback((device: Device) => getDeviceProtocols(device), []);
 
-  // Handle device selection
-  const toggleDeviceSelection = useCallback((hostname: string) => {
-    setSelectedDevices((prev) => {
-      const next = new Set(prev);
-      if (next.has(hostname)) {
-        next.delete(hostname);
-      } else {
-        next.add(hostname);
-      }
-      return next;
-    });
-  }, []);
-
-  // Handle select all
   const handleSelectAll = useCallback(() => {
     if (selectedDevices.size === filteredDevices.length) {
-      setSelectedDevices(new Set());
+      clearSelection();
     } else {
-      setSelectedDevices(new Set(filteredDevices.map((d) => d.hostname)));
+      selectAllDevices(filteredDevices.map((d) => d.hostname));
     }
-  }, [selectedDevices.size, filteredDevices]);
+  }, [selectedDevices.size, filteredDevices, clearSelection, selectAllDevices]);
 
-  // Handle device deletion
-  const handleDelete = useCallback(
-    async (hostname: string) => {
-      try {
-        await deleteDevice(hostname);
-        setMessage({
-          type: 'success',
-          text: `Device "${hostname}" deleted successfully`,
-        });
-        setShowDeleteConfirm(null);
-        setSelectedDevices((prev) => {
-          const next = new Set(prev);
-          next.delete(hostname);
-          return next;
-        });
-        refetch();
-      } catch (err) {
-        setMessage({ type: 'error', text: getErrorMessage(err) });
-      }
-    },
-    [refetch],
-  );
+  const clearFilters = useCallback(() => {
+    setSearchQuery('');
+    setTypeFilter('all');
+    setProtocolFilter('all');
+  }, []);
 
-  // Handle device clone
-  const handleClone = useCallback(
-    async (hostname: string, newHostname: string) => {
-      try {
-        await cloneDevice(hostname, { newHostname: newHostname });
-        setMessage({
-          type: 'success',
-          text: `Device cloned as "${newHostname}"`,
-        });
-        setShowCloneModal(null);
-        refetch();
-      } catch (err) {
-        setMessage({ type: 'error', text: getErrorMessage(err) });
-      }
-    },
-    [refetch],
-  );
-
-  // FIX #329: Handle bulk delete with progress tracking and batching
-  const handleBulkDeleteConfirm = useCallback(async () => {
-    setShowBulkDeleteConfirm(false);
-
-    const hostnames = Array.from(selectedDevices);
-    const total = hostnames.length;
-    let successCount = 0;
-    let errorCount = 0;
-
-    setDeleteProgress({ current: 0, total });
-
-    // Process in batches of 5
-    const batchSize = 5;
-    for (let i = 0; i < hostnames.length; i += batchSize) {
-      const batch = hostnames.slice(i, i + batchSize);
-      const results = await Promise.allSettled(batch.map((h) => deleteDevice(h)));
-
-      for (const result of results) {
-        if (result.status === 'fulfilled') {
-          successCount++;
-        } else {
-          errorCount++;
-        }
-      }
-
-      setDeleteProgress({ current: successCount + errorCount, total });
-    }
-
-    setDeleteProgress(null);
-    setSelectedDevices(new Set());
-    refetch();
-
-    if (errorCount === 0) {
-      setMessage({
-        type: 'success',
-        text: `${successCount} devices deleted successfully`,
-      });
-    } else {
-      setMessage({
-        type: 'error',
-        text: `Deleted ${successCount} devices, ${errorCount} failed`,
-      });
-    }
-  }, [selectedDevices, refetch]);
+  const navigateToAddDevice = useCallback(() => navigate('/device-config/new'), [navigate]);
 
   return (
     <div className="space-y-6">
-      {/* Header section */}
-      <Card className="border-white/5 bg-gray-900/70">
-        <CardContent className="space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <H2 className="mb-0 flex items-center gap-2">
-                <Server className="h-5 w-5 text-violet-300" />
-                Device Configuration
-              </H2>
-              <P className="text-gray-400 mt-1">
-                Manage network device configurations for simulation.
-                {devices.length > 0 && (
-                  <span className="ml-2 text-violet-300">{devices.length} devices</span>
-                )}
-              </P>
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                leftIcon={<RefreshCw className="h-4 w-4" />}
-                onClick={() => refetch()}
-                disabled={loading}
-              >
-                Refresh
-              </Button>
-              <Button
-                tone="violet"
-                leftIcon={<Plus className="h-4 w-4" />}
-                onClick={() => navigate('/device-config/new')}
-              >
-                Add Device
-              </Button>
-            </div>
-          </div>
+      <DeviceListHeader
+        deviceCount={devices.length}
+        loading={loading}
+        onRefresh={refetch}
+        onAddDevice={navigateToAddDevice}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        typeFilter={typeFilter}
+        onTypeFilterChange={setTypeFilter}
+        protocolFilter={protocolFilter}
+        onProtocolFilterChange={setProtocolFilter}
+        viewMode={viewMode}
+        onViewModeChange={handleViewModeChange}
+        deviceTypes={deviceTypes}
+        protocols={protocols}
+        selectedCount={selectedDevices.size}
+        onDeleteSelected={() => setShowBulkDeleteConfirm(true)}
+        onClearSelection={clearSelection}
+        deleteProgress={deleteProgress}
+        message={message}
+        onDismissMessage={() => setMessage(null)}
+      />
 
-          {/* Search and filters */}
-          <div className="flex flex-wrap gap-4">
-            {/* Search */}
-            <div className="relative flex-1 min-w-[250px]">
-              <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search by hostname, MAC, or IP..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full rounded-lg border border-white/10 bg-gray-950/60 py-2.5 pl-10 pr-10 text-sm text-white placeholder-gray-500 focus:border-violet-400 focus:outline-none"
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
-                  aria-label="Clear search"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              )}
-            </div>
+      {loading && !deviceList && <LoadingState viewMode={viewMode} />}
 
-            {/* Type filter */}
-            <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-gray-400" />
-              <select
-                value={typeFilter}
-                onChange={(e) => setTypeFilter(e.target.value as DeviceType | 'all')}
-                className="rounded-lg border border-white/10 bg-gray-950/60 py-2 px-3 text-sm text-white focus:border-violet-400 focus:outline-none"
-              >
-                <option value="all">All Types</option>
-                {deviceTypes.map((type) => (
-                  <option key={type} value={type}>
-                    {type.replace('_', ' ')}
-                  </option>
-                ))}
-              </select>
-            </div>
+      {error && <ErrorState errorMessage={error.message} onRetry={refetch} />}
 
-            {/* Protocol filter */}
-            <select
-              value={protocolFilter}
-              onChange={(e) => setProtocolFilter(e.target.value)}
-              className="rounded-lg border border-white/10 bg-gray-950/60 py-2 px-3 text-sm text-white focus:border-violet-400 focus:outline-none"
-            >
-              <option value="all">All Protocols</option>
-              {protocols.map((proto) => (
-                <option key={proto} value={proto}>
-                  {proto}
-                </option>
-              ))}
-            </select>
+      {deviceList && devices.length === 0 && <EmptyState onAddDevice={navigateToAddDevice} />}
 
-            {/* View toggle */}
-            <div className="flex items-center gap-1 p-1 rounded-lg bg-gray-950/60 border border-white/10">
-              <button
-                type="button"
-                onClick={() => handleViewModeChange('table')}
-                className={`p-2 rounded-md transition-colors ${
-                  viewMode === 'table'
-                    ? 'bg-violet-600 text-white'
-                    : 'text-gray-400 hover:text-white hover:bg-white/10'
-                }`}
-                title="Table view"
-                aria-label="Table view"
-              >
-                <LayoutList className="h-4 w-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => handleViewModeChange('cards')}
-                className={`p-2 rounded-md transition-colors ${
-                  viewMode === 'cards'
-                    ? 'bg-violet-600 text-white'
-                    : 'text-gray-400 hover:text-white hover:bg-white/10'
-                }`}
-                title="Card view"
-                aria-label="Card view"
-              >
-                <LayoutGrid className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-
-          {/* Bulk actions */}
-          {selectedDevices.size > 0 && (
-            <div className="flex items-center gap-4 p-3 rounded-lg bg-violet-500/10 border border-violet-500/30">
-              <span className="text-sm text-violet-200">
-                {selectedDevices.size} device
-                {selectedDevices.size !== 1 ? 's' : ''} selected
-              </span>
-              <Button
-                variant="ghost"
-                size="sm"
-                leftIcon={<Trash2 className="h-4 w-4" />}
-                onClick={() => setShowBulkDeleteConfirm(true)}
-                className="text-red-400 hover:text-red-300 hover:bg-red-500/20"
-              >
-                Delete Selected
-              </Button>
-              <Button variant="ghost" size="sm" onClick={() => setSelectedDevices(new Set())}>
-                Clear Selection
-              </Button>
-            </div>
-          )}
-
-          {/* FIX #329: Bulk delete progress indicator */}
-          {deleteProgress && (
-            <div className="flex items-center gap-3 rounded-lg bg-blue-50 p-3 dark:bg-blue-900/20">
-              <div className="h-4 w-4 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
-              <span className="text-sm text-blue-700 dark:text-blue-300">
-                Deleting devices: {deleteProgress.current} / {deleteProgress.total}
-              </span>
-            </div>
-          )}
-
-          {/* Status message */}
-          {message && (
-            <div
-              className={`flex items-center gap-2 rounded-lg p-3 ${
-                message.type === 'success'
-                  ? 'border border-green-500/30 bg-green-500/10 text-green-300'
-                  : 'border border-red-500/30 bg-red-500/10 text-red-300'
-              }`}
-              role="alert"
-            >
-              {message.type === 'error' && <AlertCircle className="h-4 w-4" />}
-              <span>{message.text}</span>
-              <button
-                type="button"
-                onClick={() => setMessage(null)}
-                className="ml-auto text-current hover:opacity-70"
-                aria-label="Dismiss message"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Loading state */}
-      {loading &&
-        !deviceList &&
-        (viewMode === 'table' ? (
-          <Card className="border-white/5 bg-gray-900/70">
-            <CardContent className="p-0">
-              {/* Table header skeleton */}
-              <div className="flex items-center gap-4 border-b border-white/10 px-4 py-3 bg-gray-950/40">
-                <div className="h-4 w-4 rounded bg-gray-700/50" />
-                <div className="flex-1 grid grid-cols-12 gap-4 text-sm font-medium text-gray-400">
-                  <div className="col-span-3">Hostname</div>
-                  <div className="col-span-2">Type</div>
-                  <div className="col-span-2">IP Address</div>
-                  <div className="col-span-3">Protocols</div>
-                  <div className="col-span-2 text-right">Actions</div>
-                </div>
-              </div>
-              <DeviceTableSkeleton rows={8} />
-            </CardContent>
-          </Card>
-        ) : (
-          <DeviceCardGridSkeleton count={8} />
-        ))}
-
-      {/* Error state */}
-      {error && (
-        <Card className="border-red-500/30 bg-red-900/20">
-          <CardContent className="space-y-3">
-            <div className="flex items-start gap-3">
-              <AlertCircle className="mt-1 h-5 w-5 text-red-400" />
-              <div>
-                <p className="font-semibold text-red-200">Failed to Load Devices</p>
-                <SmallText className="text-red-300/90">{error.message}</SmallText>
-                <Button variant="outline" size="sm" className="mt-3" onClick={() => refetch()}>
-                  Retry
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Empty state */}
-      {deviceList && devices.length === 0 && (
-        <Card className="border-white/5 bg-gray-900/70">
-          <CardContent className="py-12 text-center">
-            <Server className="mx-auto h-12 w-12 text-gray-600" />
-            <H2 className="mt-4 mb-2">No Devices Configured</H2>
-            <P className="text-gray-400">
-              Add your first device to start configuring your network simulation.
-            </P>
-            <Button
-              tone="violet"
-              className="mt-4"
-              leftIcon={<Plus className="h-4 w-4" />}
-              onClick={() => navigate('/device-config/new')}
-            >
-              Add Device
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* No search results */}
       {devices.length > 0 && filteredDevices.length === 0 && (
-        <Card className="border-white/5 bg-gray-900/70">
-          <CardContent className="py-12 text-center">
-            <Search className="mx-auto h-12 w-12 text-gray-600" />
-            <H2 className="mt-4 mb-2">No Matching Devices</H2>
-            <P className="text-gray-400">
-              No devices match your current filters. Try adjusting your search.
-            </P>
-            <Button
-              variant="outline"
-              className="mt-4"
-              onClick={() => {
-                setSearchQuery('');
-                setTypeFilter('all');
-                setProtocolFilter('all');
-              }}
-            >
-              Clear Filters
-            </Button>
-          </CardContent>
-        </Card>
+        <NoResultsState onClearFilters={clearFilters} />
       )}
 
-      {/* Device list - Table View */}
       {filteredDevices.length > 0 && viewMode === 'table' && (
         <DeviceTableView
           devices={filteredDevices}
@@ -555,7 +171,6 @@ export const DeviceListPage: FC = () => {
         />
       )}
 
-      {/* Device list - Card View */}
       {filteredDevices.length > 0 && viewMode === 'cards' && (
         <DeviceCardView
           devices={filteredDevices}
@@ -569,7 +184,6 @@ export const DeviceListPage: FC = () => {
         />
       )}
 
-      {/* Delete confirmation modal */}
       {showDeleteConfirm && (
         <ConfirmDeleteModal
           hostname={showDeleteConfirm}
@@ -578,7 +192,6 @@ export const DeviceListPage: FC = () => {
         />
       )}
 
-      {/* Clone device modal */}
       {showCloneModal && (
         <CloneDeviceModal
           hostname={showCloneModal}
@@ -587,7 +200,6 @@ export const DeviceListPage: FC = () => {
         />
       )}
 
-      {/* Bulk delete confirmation modal */}
       <ConfirmModal
         isOpen={showBulkDeleteConfirm}
         onConfirm={handleBulkDeleteConfirm}

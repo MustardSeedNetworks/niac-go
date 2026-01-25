@@ -1,12 +1,8 @@
 import { AlertCircle, FileCheck, FileCode, GitCompare, Upload, X } from 'lucide-react';
 import { type FC, useCallback, useMemo, useState } from 'react';
-import {
-  computeDiff,
-  type DiffBlock,
-  DiffViewer,
-  generateMergedContent,
-  type MergeDecision,
-} from '../components/config/DiffViewer';
+import { DiffViewer } from '../components/config/DiffViewer';
+import type { DiffBlock, MergeDecision } from '../components/config/diffUtils';
+import { computeDiff, generateMergedContent } from '../components/config/diffUtils';
 import { MergeControls, MergePreviewModal } from '../components/config/MergeControls';
 import { Card, CardContent } from '../ui/Card';
 import { Tag } from '../ui/Tag';
