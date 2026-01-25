@@ -283,6 +283,11 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - name: Check file sizes
+        run: |
+          chmod +x scripts/check-file-size.sh
+          ./scripts/check-file-size.sh
+
       - name: Check for sensitive files
         run: |
           SENSITIVE_FILES=$(find . -type f \( \

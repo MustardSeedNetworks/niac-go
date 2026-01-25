@@ -29,7 +29,7 @@ ALL_STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM || true)
 # 1. Secret Detection (ALL FILES)
 # ============================================
 echo "┌──────────────────────────────────────┐"
-echo "│ 1/5 Secret Detection                 │"
+echo "│ 1/6 Secret Detection                 │"
 echo "└──────────────────────────────────────┘"
 
 if command -v gitleaks >/dev/null 2>&1; then
@@ -58,7 +58,7 @@ fi
 if [ -n "$STAGED_GO_FILES" ]; then
   echo ""
   echo "┌──────────────────────────────────────┐"
-  echo "│ 2/5 Go Backend Checks                │"
+  echo "│ 2/6 Go Backend Checks                │"
   echo "└──────────────────────────────────────┘"
 
   # Find golangci-lint
@@ -126,7 +126,7 @@ fi
 if [ -n "$STAGED_UI_FILES" ]; then
   echo ""
   echo "┌──────────────────────────────────────┐"
-  echo "│ 3/5 Frontend Checks (Biome)          │"
+  echo "│ 3/6 Frontend Checks (Biome)          │"
   echo "└──────────────────────────────────────┘"
 
   if [ ! -d "ui/node_modules" ]; then
@@ -177,12 +177,28 @@ if [ -n "$STAGED_UI_FILES" ]; then
 fi
 
 # ============================================
-# 4. Markdown Formatting
+# 4. File Size Check
+# ============================================
+echo ""
+echo "┌──────────────────────────────────────┐"
+echo "│ 4/6 File Size Check                  │"
+echo "└──────────────────────────────────────┘"
+
+if [ -f "scripts/check-file-size.sh" ]; then
+  if ! bash scripts/check-file-size.sh; then
+    FAILED=1
+  fi
+else
+  echo "⚠ scripts/check-file-size.sh not found, skipping"
+fi
+
+# ============================================
+# 5. Markdown Formatting
 # ============================================
 if [ -n "$STAGED_MD_FILES" ]; then
   echo ""
   echo "┌──────────────────────────────────────┐"
-  echo "│ 4/5 Markdown Check                   │"
+  echo "│ 5/6 Markdown Check                   │"
   echo "└──────────────────────────────────────┘"
 
   # Use markdownlint if available
@@ -200,11 +216,11 @@ if [ -n "$STAGED_MD_FILES" ]; then
 fi
 
 # ============================================
-# 5. Sensitive File Check
+# 6. Sensitive File Check
 # ============================================
 echo ""
 echo "┌──────────────────────────────────────┐"
-echo "│ 5/5 Sensitive File Check             │"
+echo "│ 6/6 Sensitive File Check             │"
 echo "└──────────────────────────────────────┘"
 
 # Check for files that should never be committed
