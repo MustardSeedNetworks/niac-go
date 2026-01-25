@@ -293,12 +293,15 @@ func processSanitizeFile(
 	mapping *SanitizationMapping,
 	domain, location, contact, community string,
 ) error {
+	// #nosec G304 -- CLI command accepts user-specified paths by design;
+	// paths are validated by validateSingleFilePaths() or validateBatchPaths() before use
 	input, err := os.Open(inputFile)
 	if err != nil {
 		return fmt.Errorf("failed to open input file: %w", err)
 	}
 	defer input.Close()
 
+	// #nosec G304 -- tempFile is derived from validated outputFile path
 	output, err := os.Create(tempFile)
 	if err != nil {
 		return fmt.Errorf("failed to create output file: %w", err)
@@ -576,6 +579,8 @@ func looksLikeIPOctet(s string) bool {
 }
 
 func loadMapping(filename string, mapping *SanitizationMapping) error {
+	// #nosec G304 -- CLI command accepts user-specified paths by design;
+	// mapping file path is validated by validateFilePath() before use
 	data, err := os.ReadFile(filename)
 	if err != nil {
 		return fmt.Errorf("failed to read mapping file: %w", err)

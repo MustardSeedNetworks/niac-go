@@ -15,9 +15,10 @@ devices:
       port_id: "GigabitEthernet0/1"
       ttl: 120
       capabilities: ["router"]
+    # WARNING: Change community string for production use!
     snmp:
       enabled: true
-      community: "public"
+      community: "public"  # CHANGE IN PRODUCTION
       sys_name: "core-router"
       sys_descr: "Cisco IOS Router"
 

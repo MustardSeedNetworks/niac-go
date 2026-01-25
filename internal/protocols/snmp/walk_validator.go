@@ -38,6 +38,8 @@ func ValidateWalkFile(filename string) (*ValidationResult, error) {
 		return nil, err
 	}
 
+	// #nosec G304 -- Path validated by validateAndResolvePath() which enforces:
+	// directory containment, symlink resolution, and extension whitelist
 	file, err := os.Open(absPath)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrFailedToOpenWalkFile, err)
@@ -556,6 +558,8 @@ func AutoFixWalkFile(filename string, outputPath string) (*ValidationResult, err
 		return nil, fmt.Errorf("invalid walk file path: %w", err)
 	}
 
+	// #nosec G304 -- Path validated by ValidateWalkFile() which performs full path
+	// security checks before this function is called
 	content, err := os.ReadFile(absPath)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrFailedToReadWalkFile, err)

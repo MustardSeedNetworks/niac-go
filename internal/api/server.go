@@ -3147,6 +3147,8 @@ func (s *Server) readConfigDocument() (*configDocument, int, error) {
 		return nil, http.StatusBadRequest, ErrConfigPathNotAvailable
 	}
 
+	// #nosec G304 -- cfgPath is validated by configPath() which ensures thread-safe
+	// access and path validation before use
 	data, err := os.ReadFile(cfgPath)
 	if err != nil {
 		if os.IsNotExist(err) {

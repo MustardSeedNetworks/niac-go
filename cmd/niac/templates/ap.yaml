@@ -37,9 +37,11 @@ devices:
       ttl: 180
 
     # SNMP
+    # WARNING: Change community string for production use!
+    # "public" is a well-known default targeted by attackers
     snmp:
       enabled: true
-      community: "public"
+      community: "public"  # CHANGE IN PRODUCTION
       sys_name: "wifi-ap-01"
       sys_descr: "Cisco Aironet Access Point"
       sys_location: "Building A - Floor 2 - Room 201"

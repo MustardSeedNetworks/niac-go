@@ -435,6 +435,29 @@ dot -Tpng topology.dot -o topology.png
 niac analyze-pcap captures/demo.pcap --output json
 ```
 
+## Security Considerations
+
+### SNMP Community Strings
+
+Example configurations use `public` as the SNMP community string for demonstration purposes. **For production deployments:**
+
+- Use unique, complex community strings (treat them like passwords)
+- Consider SNMPv3 with authentication and encryption
+- Restrict SNMP access by IP address or network segment
+- Never expose SNMP to untrusted networks
+
+### API Token
+
+When deploying with Kubernetes, the API token is stored in a Kubernetes Secret (`niac-secrets`). **Before deploying:**
+
+1. Generate a secure token: `openssl rand -base64 32`
+2. Update the secret in `deploy/kubernetes/niac-secret.yaml`
+3. Never commit production secrets to version control
+
+### File Path Security
+
+NiAC-Go validates all file paths to prevent directory traversal attacks. Walk files and configuration files are restricted to the configuration directory and validated before access.
+
 ## Development
 Run the full local checks:
 

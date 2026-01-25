@@ -46,9 +46,11 @@ devices:
       root_id: "00:1A:2B:3C:4D:01"
 
     # SNMP
+    # WARNING: Change community string for production use!
+    # "public" is a well-known default targeted by attackers
     snmp:
       enabled: true
-      community: "public"
+      community: "public"  # CHANGE IN PRODUCTION
       sys_name: "access-switch-01"
       sys_descr: "Cisco Catalyst 9300 Switch"
       sys_location: "Building A - Floor 2 - IDF"

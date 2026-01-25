@@ -724,6 +724,425 @@ func TestCommands(t *testing.T) {
 	}
 }
 
+// TestContainsIgnoreCase tests the containsIgnoreCase function.
+func TestContainsIgnoreCase(t *testing.T) {
+	tests := []struct {
+		name   string
+		s      string
+		substr string
+		want   bool
+	}{
+		{
+			name:   "Exact match",
+			s:      "Hello World",
+			substr: "Hello World",
+			want:   true,
+		},
+		{
+			name:   "Case insensitive match",
+			s:      "Hello World",
+			substr: "HELLO",
+			want:   true,
+		},
+		{
+			name:   "Lowercase search in mixed case",
+			s:      "HELLO WORLD",
+			substr: "world",
+			want:   true,
+		},
+		{
+			name:   "Substring match",
+			s:      "Hello World",
+			substr: "lo Wo",
+			want:   true,
+		},
+		{
+			name:   "No match",
+			s:      "Hello World",
+			substr: "xyz",
+			want:   false,
+		},
+		{
+			name:   "Empty substring",
+			s:      "Hello World",
+			substr: "",
+			want:   true,
+		},
+		{
+			name:   "Empty string",
+			s:      "",
+			substr: "test",
+			want:   false,
+		},
+		{
+			name:   "Both empty",
+			s:      "",
+			substr: "",
+			want:   true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := containsIgnoreCase(tt.s, tt.substr)
+			if got != tt.want {
+				t.Errorf("containsIgnoreCase(%q, %q) = %v, want %v", tt.s, tt.substr, got, tt.want)
+			}
+		})
+	}
+}
+
+// TestBytesContains tests the bytesContains function.
+func TestBytesContains(t *testing.T) {
+	tests := []struct {
+		name string
+		b    []byte
+		sub  []byte
+		want bool
+	}{
+		{
+			name: "Contains at start",
+			b:    []byte("hello world"),
+			sub:  []byte("hello"),
+			want: true,
+		},
+		{
+			name: "Contains at end",
+			b:    []byte("hello world"),
+			sub:  []byte("world"),
+			want: true,
+		},
+		{
+			name: "Contains in middle",
+			b:    []byte("hello world"),
+			sub:  []byte("lo wo"),
+			want: true,
+		},
+		{
+			name: "Does not contain",
+			b:    []byte("hello world"),
+			sub:  []byte("xyz"),
+			want: false,
+		},
+		{
+			name: "Empty sub",
+			b:    []byte("hello"),
+			sub:  []byte{},
+			want: true,
+		},
+		{
+			name: "Sub longer than b",
+			b:    []byte("hi"),
+			sub:  []byte("hello"),
+			want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := bytesContains(tt.b, tt.sub)
+			if got != tt.want {
+				t.Errorf("bytesContains(%q, %q) = %v, want %v", tt.b, tt.sub, got, tt.want)
+			}
+		})
+	}
+}
+
+// TestMatchesFilter tests the matchesFilter function.
+func TestMatchesFilter(t *testing.T) {
+	tests := []struct {
+		name    string
+		message string
+		filter  string
+		want    bool
+	}{
+		{
+			name:    "Empty filter matches anything",
+			message: "any message",
+			filter:  "",
+			want:    true,
+		},
+		{
+			name:    "Filter matches",
+			message: "Error: connection refused",
+			filter:  "connection",
+			want:    true,
+		},
+		{
+			name:    "Filter does not match",
+			message: "Success: connected",
+			filter:  "error",
+			want:    false,
+		},
+		{
+			name:    "Case insensitive filter",
+			message: "ERROR: something wrong",
+			filter:  "error",
+			want:    true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := matchesFilter(tt.message, tt.filter)
+			if got != tt.want {
+				t.Errorf("matchesFilter(%q, %q) = %v, want %v", tt.message, tt.filter, got, tt.want)
+			}
+		})
+	}
+}
+
+// TestLogSubscription tests the LogSubscription type.
+func TestLogSubscription(t *testing.T) {
+	t.Run("Logs channel accessible", func(t *testing.T) {
+		sub := &LogSubscription{
+			logCh: make(chan LogEntry, 10),
+		}
+		ch := sub.Logs()
+		if ch == nil {
+			t.Error("Logs() returned nil channel")
+		}
+	})
+
+	t.Run("Errors channel accessible", func(t *testing.T) {
+		sub := &LogSubscription{
+			errCh: make(chan error, 1),
+		}
+		ch := sub.Errors()
+		if ch == nil {
+			t.Error("Errors() returned nil channel")
+		}
+	})
+
+	t.Run("Stop closes stopCh", func(t *testing.T) {
+		sub := &LogSubscription{
+			stopCh: make(chan struct{}),
+		}
+		sub.Stop()
+		select {
+		case <-sub.stopCh:
+			// expected
+		default:
+			t.Error("Stop() should close stopCh")
+		}
+	})
+}
+
+// TestLogSubscriptionHelpers tests helper functions of LogSubscription.
+func TestLogSubscriptionHelpers(t *testing.T) {
+	t.Run("logKey generates unique keys", func(t *testing.T) {
+		sub := &LogSubscription{}
+		log1 := LogEntry{
+			Timestamp: time.Now(),
+			Level:     "info",
+			Message:   "test message",
+		}
+		log2 := LogEntry{
+			Timestamp: time.Now().Add(time.Second),
+			Level:     "error",
+			Message:   "another message",
+		}
+
+		key1 := sub.logKey(log1)
+		key2 := sub.logKey(log2)
+
+		if key1 == key2 {
+			t.Error("Different logs should have different keys")
+		}
+	})
+
+	t.Run("cleanupSeenLogs clears when over max", func(t *testing.T) {
+		sub := &LogSubscription{}
+		seenLogs := make(map[string]bool)
+
+		// Add more than maxSeenLogs entries
+		for i := range 1100 {
+			seenLogs[fmt.Sprintf("key%d", i)] = true
+		}
+
+		result := sub.cleanupSeenLogs(seenLogs)
+		if len(result) != 0 {
+			t.Errorf("Expected empty map after cleanup, got %d entries", len(result))
+		}
+	})
+
+	t.Run("cleanupSeenLogs keeps when under max", func(t *testing.T) {
+		sub := &LogSubscription{}
+		seenLogs := make(map[string]bool)
+
+		for i := range 100 {
+			seenLogs[fmt.Sprintf("key%d", i)] = true
+		}
+
+		result := sub.cleanupSeenLogs(seenLogs)
+		if len(result) != 100 {
+			t.Errorf("Expected 100 entries, got %d", len(result))
+		}
+	})
+
+	t.Run("shouldSkipLog skips seen logs", func(t *testing.T) {
+		sub := &LogSubscription{}
+		log := LogEntry{
+			Timestamp: time.Now(),
+			Level:     "info",
+			Message:   "test",
+		}
+		seenLogs := map[string]bool{
+			sub.logKey(log): true,
+		}
+
+		if !sub.shouldSkipLog(log, seenLogs) {
+			t.Error("Should skip already seen log")
+		}
+	})
+
+	t.Run("shouldSkipLog respects filter", func(t *testing.T) {
+		sub := &LogSubscription{
+			filter: "error",
+		}
+		log := LogEntry{
+			Timestamp: time.Now(),
+			Level:     "info",
+			Message:   "success message",
+		}
+		seenLogs := make(map[string]bool)
+
+		if !sub.shouldSkipLog(log, seenLogs) {
+			t.Error("Should skip log that doesn't match filter")
+		}
+	})
+}
+
+// TestDumpPackets tests the DumpPackets method with a mock server.
+func TestDumpPackets(t *testing.T) {
+	server := newMockServer(t, func(req *Request) *Response {
+		if req.Command != CommandDump {
+			return makeErrorResponse("unexpected command")
+		}
+
+		return makeSuccessResponse(map[string]any{
+			"packets": []map[string]any{
+				{
+					"timestamp": time.Now().Format(time.RFC3339),
+					"src_mac":   "00:11:22:33:44:55",
+					"dst_mac":   "66:77:88:99:AA:BB",
+					"eth_type":  0x0800,
+					"length":    64,
+					"device":    "router1",
+				},
+			},
+		})
+	})
+	defer server.Close()
+
+	client := NewClient(server.socketPath)
+
+	packets, err := client.DumpPackets("", "", 10)
+	if err != nil {
+		t.Fatalf("DumpPackets failed: %v", err)
+	}
+
+	if len(packets) != 1 {
+		t.Errorf("Expected 1 packet, got %d", len(packets))
+	}
+}
+
+// TestGetTopology tests the GetTopology method with a mock server.
+func TestGetTopology(t *testing.T) {
+	server := newMockServer(t, func(req *Request) *Response {
+		if req.Command != CommandTopology {
+			return makeErrorResponse("unexpected command")
+		}
+
+		return makeSuccessResponse(map[string]any{
+			"topology": map[string]any{
+				"nodes": []map[string]any{
+					{"id": "router1", "type": "router"},
+					{"id": "switch1", "type": "switch"},
+				},
+				"links": []map[string]any{
+					{"source": "router1", "target": "switch1"},
+				},
+			},
+		})
+	})
+	defer server.Close()
+
+	client := NewClient(server.socketPath)
+
+	topology, err := client.GetTopology()
+	if err != nil {
+		t.Fatalf("GetTopology failed: %v", err)
+	}
+
+	if topology == nil {
+		t.Error("Expected non-nil topology")
+	}
+}
+
+// TestGetLogs tests the GetLogs method with a mock server.
+func TestGetLogs(t *testing.T) {
+	server := newMockServer(t, func(req *Request) *Response {
+		if req.Command != CommandLogs {
+			return makeErrorResponse("unexpected command")
+		}
+
+		return makeSuccessResponse(map[string]any{
+			"logs": []map[string]any{
+				{
+					"timestamp": time.Now().Format(time.RFC3339),
+					"level":     "info",
+					"message":   "test log message",
+				},
+			},
+		})
+	})
+	defer server.Close()
+
+	client := NewClient(server.socketPath)
+
+	logs, err := client.GetLogs("info", 10)
+	if err != nil {
+		t.Fatalf("GetLogs failed: %v", err)
+	}
+
+	if len(logs) != 1 {
+		t.Errorf("Expected 1 log, got %d", len(logs))
+	}
+}
+
+// TestGetNeighbors tests the GetNeighbors method with a mock server.
+func TestGetNeighbors(t *testing.T) {
+	server := newMockServer(t, func(req *Request) *Response {
+		if req.Command != CommandNeighbors {
+			return makeErrorResponse("unexpected command")
+		}
+
+		return makeSuccessResponse(map[string]any{
+			"neighbors": []map[string]any{
+				{
+					"device":    "router1",
+					"interface": "eth0",
+					"protocol":  "LLDP",
+					"neighbor":  "switch1",
+				},
+			},
+		})
+	})
+	defer server.Close()
+
+	client := NewClient(server.socketPath)
+
+	neighbors, err := client.GetNeighbors()
+	if err != nil {
+		t.Fatalf("GetNeighbors failed: %v", err)
+	}
+
+	if len(neighbors) != 1 {
+		t.Errorf("Expected 1 neighbor, got %d", len(neighbors))
+	}
+}
+
 // BenchmarkClientSendCommand benchmarks the SendCommand method.
 func BenchmarkClientSendCommand(b *testing.B) {
 	// Create socket in /tmp with a unique name because b.TempDir() creates paths that are

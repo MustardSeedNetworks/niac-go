@@ -259,37 +259,24 @@ func (s *Server) handleWalkList(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(response) // HTTP write errors are non-critical
 }
 
-// handleWalkBatchValidate validates multiple walk files at once
-// POST /api/v1/walk/validate-all - Validate all configured walk files.
-func (s *Server) handleWalkBatchValidate(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		writeError(w, r, http.StatusMethodNotAllowed, "method_not_allowed", "Method not allowed", nil)
+// walkBatchValidationResponse holds the batch validation response data.
+type walkBatchValidationResponse struct {
+	Success      bool                              `json:"success"`
+	Message      string                            `json:"message"`
+	TotalFiles   int                               `json:"total_files"`
+	InvalidFiles int                               `json:"invalid_files"`
+	TotalIssues  int                               `json:"total_issues"`
+	Results      map[string]*snmp.ValidationResult `json:"results"`
+}
 
-		return
-	}
-
-	if s.cfg.Config == nil {
-		writeError(
-			w,
-			r,
-			http.StatusInternalServerError,
-			"config_unavailable",
-			"Server configuration not available",
-			nil,
-		)
-
-		return
-	}
-
-	// Find all unique walk files
+// collectConfiguredWalkFiles extracts all unique walk files from device configurations.
+func (s *Server) collectConfiguredWalkFiles() map[string]bool {
 	walkFiles := make(map[string]bool)
 
 	for _, device := range s.cfg.Config.Devices {
-		// Add single WalkFile if specified
 		if device.SNMPConfig.WalkFile != "" {
 			walkFiles[device.SNMPConfig.WalkFile] = true
 		}
-		// Add multiple WalkFiles if specified
 		for _, wf := range device.SNMPConfig.WalkFiles {
 			if wf != "" {
 				walkFiles[wf] = true
@@ -297,90 +284,105 @@ func (s *Server) handleWalkBatchValidate(w http.ResponseWriter, r *http.Request)
 		}
 	}
 
-	// Validate each file
-	results := make(map[string]*snmp.ValidationResult)
+	return walkFiles
+}
 
-	var (
-		totalIssues  int
-		invalidCount int
-	)
-
-	for file := range walkFiles {
-		// Validate each file path before processing
-		validatedPath, pathErr := s.validateWalkFilePath(file)
-		if pathErr != nil {
-			results[file] = &snmp.ValidationResult{
-				Filename: file,
-				Valid:    false,
-				Issues: []snmp.ValidationIssue{
-					{
-						Line:     0,
-						Severity: "error",
-						Message:  "Invalid file path",
-					},
+// validateSingleWalkFile validates a single walk file and returns the result.
+func (s *Server) validateSingleWalkFile(file string) (*snmp.ValidationResult, error) {
+	validatedPath, pathErr := s.validateWalkFilePath(file)
+	if pathErr != nil {
+		return &snmp.ValidationResult{
+			Filename: file,
+			Valid:    false,
+			Issues: []snmp.ValidationIssue{
+				{
+					Line:     0,
+					Severity: "error",
+					Message:  "Invalid file path",
 				},
-			}
-			invalidCount++
+			},
+		}, pathErr
+	}
 
-			continue
-		}
-
-		result, err := snmp.ValidateWalkFile(validatedPath)
-		if err != nil {
-			results[file] = &snmp.ValidationResult{
-				Filename: file,
-				Valid:    false,
-				Issues: []snmp.ValidationIssue{
-					{
-						Line:     0,
-						Severity: "error",
-						Message:  "Validation failed",
-					},
+	result, err := snmp.ValidateWalkFile(validatedPath)
+	if err != nil {
+		s.logger.Error("[API] Walk file batch validation error", "error", err, "filename", validatedPath)
+		return &snmp.ValidationResult{
+			Filename: file,
+			Valid:    false,
+			Issues: []snmp.ValidationIssue{
+				{
+					Line:     0,
+					Severity: "error",
+					Message:  "Validation failed",
 				},
-			}
-			s.logger.Error("[API] Walk file batch validation error", "error", err, "filename", validatedPath)
-			invalidCount++
-		} else {
-			results[file] = result
+			},
+		}, err
+	}
 
-			totalIssues += len(result.Issues)
-			if !result.Valid {
-				invalidCount++
-			}
+	return result, nil
+}
+
+// buildBatchValidationResponse constructs the response from validation results.
+func buildBatchValidationResponse(
+	results map[string]*snmp.ValidationResult,
+	totalFiles int,
+) *walkBatchValidationResponse {
+	var totalIssues, invalidCount int
+
+	for _, result := range results {
+		totalIssues += len(result.Issues)
+		if !result.Valid {
+			invalidCount++
 		}
 	}
 
-	response := struct {
-		Success      bool                              `json:"success"`
-		Message      string                            `json:"message"`
-		TotalFiles   int                               `json:"total_files"`
-		InvalidFiles int                               `json:"invalid_files"`
-		TotalIssues  int                               `json:"total_issues"`
-		Results      map[string]*snmp.ValidationResult `json:"results"`
-	}{
+	resp := &walkBatchValidationResponse{
 		Success:      invalidCount == 0,
-		TotalFiles:   len(walkFiles),
+		TotalFiles:   totalFiles,
 		InvalidFiles: invalidCount,
 		TotalIssues:  totalIssues,
 		Results:      results,
 	}
 
 	if invalidCount == 0 {
-		response.Message = fmt.Sprintf("All %d walk files are valid", len(walkFiles))
+		resp.Message = fmt.Sprintf("All %d walk files are valid", totalFiles)
 	} else {
-		response.Message = fmt.Sprintf("%d of %d walk files have issues", invalidCount, len(walkFiles))
+		resp.Message = fmt.Sprintf("%d of %d walk files have issues", invalidCount, totalFiles)
 	}
 
-	s.logger.Info(
-		"[API] Batch walk file validation",
-		"totalFiles",
-		len(walkFiles),
-		"invalidFiles",
-		invalidCount,
-		"totalIssues",
-		totalIssues,
-	)
+	return resp
+}
+
+// handleWalkBatchValidate validates multiple walk files at once
+// POST /api/v1/walk/validate-all - Validate all configured walk files.
+func (s *Server) handleWalkBatchValidate(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeError(w, r, http.StatusMethodNotAllowed, "method_not_allowed", "Method not allowed", nil)
+		return
+	}
+
+	if s.cfg.Config == nil {
+		writeError(w, r, http.StatusInternalServerError, "config_unavailable",
+			"Server configuration not available", nil)
+		return
+	}
+
+	walkFiles := s.collectConfiguredWalkFiles()
+	results := make(map[string]*snmp.ValidationResult)
+
+	for file := range walkFiles {
+		result, _ := s.validateSingleWalkFile(file)
+		results[file] = result
+	}
+
+	response := buildBatchValidationResponse(results, len(walkFiles))
+
+	s.logger.Info("[API] Batch walk file validation",
+		"totalFiles", response.TotalFiles,
+		"invalidFiles", response.InvalidFiles,
+		"totalIssues", response.TotalIssues)
 
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(response) // HTTP write errors are non-critical
+	_ = json.NewEncoder(w).Encode(response)
 }

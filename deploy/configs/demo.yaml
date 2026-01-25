@@ -9,7 +9,9 @@ devices:
     snmp:
       enabled: true
     snmp_agent:
-      community: "public"
+      # WARNING: Change community string for production use!
+      # "public" is a well-known default targeted by attackers
+      community: "public"  # CHANGE IN PRODUCTION
       sysname: "api-router"
     http:
       enabled: true

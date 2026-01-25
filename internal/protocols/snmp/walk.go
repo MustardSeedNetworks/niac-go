@@ -67,6 +67,8 @@ func ParseWalkFile(filename string) ([]WalkEntry, error) {
 		return nil, ErrWalkFileIsDirectory
 	}
 
+	// #nosec G304 -- Path validated above: directory traversal check, symlink rejection,
+	// and directory check performed before opening
 	file, err := os.Open(absPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open walk file: %w", err)

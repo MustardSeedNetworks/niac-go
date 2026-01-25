@@ -25,9 +25,11 @@ devices:
       capabilities: ["station-only"]
 
     # SNMP
+    # WARNING: Change community string for production use!
+    # "public" is a well-known default targeted by attackers
     snmp:
       enabled: true
-      community: "public"
+      community: "public"  # CHANGE IN PRODUCTION
       sys_name: "server-01"
       sys_descr: "Ubuntu 22.04.3 LTS"
       sys_location: "Data Center A - Rack 5"

@@ -522,3 +522,228 @@ func TestLoadMappingErrors(t *testing.T) {
 		t.Error("loadMapping() expected error for invalid JSON, got nil")
 	}
 }
+
+func TestValidateFilePath(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Create a test file
+	testFile := filepath.Join(tmpDir, "test.walk")
+	writeErr := os.WriteFile(testFile, []byte("test"), 0o600)
+	if writeErr != nil {
+		t.Fatalf("Failed to create test file: %v", writeErr)
+	}
+
+	tests := []struct {
+		name        string
+		path        string
+		allowCreate bool
+		wantErr     bool
+	}{
+		{
+			name:        "Empty path",
+			path:        "",
+			allowCreate: false,
+			wantErr:     true,
+		},
+		{
+			name:        "Path traversal attack",
+			path:        "../../../etc/passwd",
+			allowCreate: false,
+			wantErr:     true,
+		},
+		{
+			name:        "Valid existing file",
+			path:        testFile,
+			allowCreate: false,
+			wantErr:     false,
+		},
+		{
+			name:        "Non-existent file without allowCreate",
+			path:        filepath.Join(tmpDir, "nonexistent.walk"),
+			allowCreate: false,
+			wantErr:     true,
+		},
+		{
+			name:        "Non-existent file with allowCreate",
+			path:        filepath.Join(tmpDir, "new.walk"),
+			allowCreate: true,
+			wantErr:     false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			pathErr := validateFilePath(tt.path, tt.allowCreate)
+			if (pathErr != nil) != tt.wantErr {
+				t.Errorf("validateFilePath() error = %v, wantErr %v", pathErr, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestValidateDirPath(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	tests := []struct {
+		name        string
+		path        string
+		allowCreate bool
+		wantErr     bool
+	}{
+		{
+			name:        "Empty path",
+			path:        "",
+			allowCreate: false,
+			wantErr:     true,
+		},
+		{
+			name:        "Path traversal attack",
+			path:        "../../../etc",
+			allowCreate: false,
+			wantErr:     true,
+		},
+		{
+			name:        "Valid existing directory",
+			path:        tmpDir,
+			allowCreate: false,
+			wantErr:     false,
+		},
+		{
+			name:        "Non-existent directory without allowCreate",
+			path:        filepath.Join(tmpDir, "nonexistent"),
+			allowCreate: false,
+			wantErr:     true,
+		},
+		{
+			name:        "Non-existent directory with allowCreate",
+			path:        filepath.Join(tmpDir, "newdir"),
+			allowCreate: true,
+			wantErr:     false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateDirPath(tt.path, tt.allowCreate)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("validateDirPath() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestValidateSingleFilePaths(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Create input file
+	inputFile := filepath.Join(tmpDir, "input.walk")
+	writeErr := os.WriteFile(inputFile, []byte("test"), 0o600)
+	if writeErr != nil {
+		t.Fatalf("Failed to create input file: %v", writeErr)
+	}
+
+	outputFile := filepath.Join(tmpDir, "output.walk")
+
+	tests := []struct {
+		name       string
+		inputFile  string
+		outputFile string
+		wantErr    bool
+	}{
+		{
+			name:       "Valid input and output",
+			inputFile:  inputFile,
+			outputFile: outputFile,
+			wantErr:    false,
+		},
+		{
+			name:       "Invalid input file",
+			inputFile:  filepath.Join(tmpDir, "nonexistent.walk"),
+			outputFile: outputFile,
+			wantErr:    true,
+		},
+		{
+			name:       "Input with path traversal",
+			inputFile:  "../../../etc/passwd",
+			outputFile: outputFile,
+			wantErr:    true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateSingleFilePaths(tt.inputFile, tt.outputFile)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("validateSingleFilePaths() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestValidateBatchPaths(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Create input directory
+	inputDir := filepath.Join(tmpDir, "input")
+	mkdirErr := os.MkdirAll(inputDir, 0o750)
+	if mkdirErr != nil {
+		t.Fatalf("Failed to create input dir: %v", mkdirErr)
+	}
+
+	outputDir := filepath.Join(tmpDir, "output")
+
+	tests := []struct {
+		name      string
+		inputDir  string
+		outputDir string
+		wantErr   bool
+	}{
+		{
+			name:      "Valid directories",
+			inputDir:  inputDir,
+			outputDir: outputDir,
+			wantErr:   false,
+		},
+		{
+			name:      "Non-existent input directory",
+			inputDir:  filepath.Join(tmpDir, "nonexistent"),
+			outputDir: outputDir,
+			wantErr:   true,
+		},
+		{
+			name:      "Input with path traversal",
+			inputDir:  "../../../etc",
+			outputDir: outputDir,
+			wantErr:   true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateBatchPaths(tt.inputDir, tt.outputDir)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("validateBatchPaths() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestConcurrentSanitization(t *testing.T) {
+	t.Parallel()
+	mapping := newSanitizationMapping()
+
+	// Test concurrent IP sanitization
+	done := make(chan bool, 10)
+	for i := range 10 {
+		go func(num int) {
+			ip := "192.168.1." + string(rune('0'+num%10))
+			_ = sanitizeIP(ip, mapping)
+			done <- true
+		}(i)
+	}
+
+	// Wait for all goroutines
+	for range 10 {
+		<-done
+	}
+}

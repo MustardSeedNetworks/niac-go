@@ -22,13 +22,17 @@ spec:
             [
               "--api-listen",
               ":8080",
-              "--api-token",
-              "changeme",
               "--storage-path",
               "/data/niac.db",
               "lo",
               "/data/demo.yaml",
             ]
+          env:
+            - name: NIAC_API_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: niac-secrets
+                  key: api-token
           ports:
             - name: http
               containerPort: 8080
@@ -60,7 +64,9 @@ data:
         snmp:
           enabled: true
         snmp_agent:
-          community: "public"
+          # WARNING: Change community string for production use!
+          # "public" is a well-known default targeted by attackers
+          community: "public"  # CHANGE IN PRODUCTION
 ---
 apiVersion: v1
 kind: Service
