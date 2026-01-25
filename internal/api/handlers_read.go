@@ -1,0 +1,549 @@
+package api
+
+import (
+	"encoding/json"
+	"fmt"
+	"net"
+	"net/http"
+	"path/filepath"
+	"runtime"
+	"strings"
+	"time"
+
+	"github.com/krisarmstrong/niac-go/internal/capture"
+	"github.com/krisarmstrong/niac-go/internal/config"
+	"github.com/krisarmstrong/niac-go/internal/protocols"
+	"github.com/krisarmstrong/niac-go/internal/storage"
+)
+
+func (s *Server) handleStats(w http.ResponseWriter, _ *http.Request) {
+	// SECURITY FIX #161: Thread-safe access to all config fields
+	s.configMu.RLock()
+	stack := s.cfg.Stack
+	cfg := s.cfg.Config
+	iface := s.cfg.Interface
+	s.configMu.RUnlock()
+
+	if stack == nil {
+		http.Error(w, "no simulation running", http.StatusServiceUnavailable)
+
+		return
+	}
+
+	stats := stack.GetStats()
+
+	deviceCount := 0
+	if cfg != nil {
+		deviceCount = len(cfg.Devices)
+	}
+
+	// FEATURE #119: Include goroutine count for debugging and monitoring
+	goroutineCount := runtime.NumGoroutine()
+
+	payload := map[string]any{
+		"timestamp":    time.Now().UTC(),
+		"interface":    iface,
+		"version":      s.cfg.Version,
+		"device_count": deviceCount,
+		"goroutines":   goroutineCount, // FEATURE #119: Monitor goroutine count
+		"stack": map[string]uint64{
+			"packets_sent":     stats.PacketsSent,
+			"packets_received": stats.PacketsReceived,
+			"arp_requests":     stats.ARPRequests,
+			"arp_replies":      stats.ARPReplies,
+			"icmp_requests":    stats.ICMPRequests,
+			"icmp_replies":     stats.ICMPReplies,
+			"dns_queries":      stats.DNSQueries,
+			"dhcp_requests":    stats.DHCPRequests,
+			"snmp_queries":     stats.SNMPQueries,
+			"errors":           stats.Errors,
+		},
+	}
+	s.writeJSON(w, payload)
+}
+
+// getDeviceProtocols extracts the list of enabled protocols for a device.
+func getDeviceProtocols(dev *config.Device) []string {
+	protos := make([]string, 0, protocolCapacity)
+
+	if dev.SNMPConfig.Community != "" || dev.SNMPConfig.WalkFile != "" {
+		protos = append(protos, "SNMP")
+	}
+
+	if dev.DHCPConfig != nil {
+		protos = append(protos, "DHCP")
+	}
+
+	if dev.DNSConfig != nil {
+		protos = append(protos, "DNS")
+	}
+
+	if dev.HTTPConfig != nil {
+		protos = append(protos, "HTTP")
+	}
+
+	if dev.FTPConfig != nil {
+		protos = append(protos, "FTP")
+	}
+
+	if dev.LLDPConfig != nil && dev.LLDPConfig.Enabled {
+		protos = append(protos, "LLDP")
+	}
+
+	if dev.CDPConfig != nil && dev.CDPConfig.Enabled {
+		protos = append(protos, "CDP")
+	}
+
+	return protos
+}
+
+// ipAddressesToStrings converts a slice of [net.IP] to string representations.
+func ipAddressesToStrings(ips []net.IP) []string {
+	result := make([]string, 0, len(ips))
+	for _, ip := range ips {
+		result = append(result, ip.String())
+	}
+
+	return result
+}
+
+func (s *Server) handleDevices(w http.ResponseWriter, _ *http.Request) {
+	cfg := s.currentConfig()
+	if cfg == nil {
+		s.writeJSON(w, []map[string]any{})
+
+		return
+	}
+
+	devices := make([]map[string]any, 0, len(cfg.Devices))
+	for i := range cfg.Devices {
+		dev := &cfg.Devices[i]
+		devices = append(devices, map[string]any{
+			"name":      dev.Name,
+			"type":      dev.Type,
+			"ips":       ipAddressesToStrings(dev.IPAddresses),
+			"protocols": getDeviceProtocols(dev),
+		})
+	}
+
+	s.writeJSON(w, devices)
+}
+
+func (s *Server) handleHistory(w http.ResponseWriter, r *http.Request) {
+	if s.cfg.Storage == nil {
+		s.writeJSON(w, []storage.RunRecord{})
+
+		return
+	}
+
+	history, err := s.cfg.Storage.ListRuns(historyListLimit)
+	if err != nil {
+		// SECURITY FIX MEDIUM-6: Don't expose internal error details
+		s.logger.Error("[API] Failed to list run history", "error", err)
+		writeError(w, r, http.StatusInternalServerError, "storage_error",
+			"Failed to retrieve run history", nil)
+
+		return
+	}
+
+	s.writeJSON(w, history)
+}
+
+func (s *Server) handleConfig(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		s.handleConfigGet(w, r)
+	case http.MethodPut, http.MethodPatch, http.MethodPost:
+		s.handleConfigUpdate(w, r)
+	default:
+		w.Header().Set("Allow", "GET, PUT, PATCH, POST")
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func (s *Server) handleConfigGet(w http.ResponseWriter, r *http.Request) {
+	doc, status, err := s.readConfigDocument()
+	if err != nil {
+		// SECURITY FIX MEDIUM-6: Don't expose internal error details
+		s.logger.Error("[API] Failed to read config", "error", err)
+		writeError(w, r, status, "config_read_failed",
+			"Failed to read configuration", nil)
+
+		return
+	}
+
+	s.writeJSON(w, doc)
+}
+
+func (s *Server) handleConfigUpdate(w http.ResponseWriter, r *http.Request) {
+	// SECURITY FIX #111: Enforce request body size limit
+	r.Body = http.MaxBytesReader(w, r.Body, MaxRequestBodySize)
+
+	// SECURITY FIX #161: Thread-safe access to ConfigPath
+	if s.configPath() == "" {
+		http.Error(w, "config path not available", http.StatusBadRequest)
+
+		return
+	}
+
+	var req struct {
+		Content string `json:"content"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		if err.Error() == ErrMsgRequestBodyTooLarge {
+			writeError(
+				w,
+				r,
+				http.StatusRequestEntityTooLarge,
+				"request_too_large",
+				fmt.Sprintf(
+					"Request body exceeds maximum size of %d bytes",
+					MaxRequestBodySize,
+				),
+				nil,
+			)
+
+			return
+		}
+		// SECURITY FIX MEDIUM-6: Don't expose internal error details
+		writeError(w, r, http.StatusBadRequest, "invalid_request",
+			"Failed to parse request body", nil)
+
+		return
+	}
+
+	if strings.TrimSpace(req.Content) == "" {
+		writeError(w, r, http.StatusBadRequest, "validation_failed",
+			"Configuration content is required", nil)
+
+		return
+	}
+
+	newCfg, err := config.LoadYAMLBytes([]byte(req.Content))
+	if err != nil {
+		// SECURITY FIX MEDIUM-6: Log details server-side, return generic message
+		s.logger.Error("[API] Config validation failed", "error", err)
+		writeError(w, r, http.StatusBadRequest, "config_invalid",
+			"Configuration validation failed", nil)
+
+		return
+	}
+
+	prevCfg := s.currentConfig()
+	if s.cfg.ApplyConfig != nil {
+		applyErr := s.cfg.ApplyConfig(newCfg)
+		if applyErr != nil {
+			// SECURITY FIX MEDIUM-6: Don't expose internal error details
+			s.logger.Error("[API] Failed to apply config", "error", applyErr)
+			writeError(w, r, http.StatusInternalServerError, "config_apply_failed",
+				"Failed to apply configuration", nil)
+
+			return
+		}
+	}
+
+	writeErr := s.writeConfigFile(req.Content)
+	if writeErr != nil {
+		if s.cfg.ApplyConfig != nil && prevCfg != nil {
+			// Attempt rollback to previous config to avoid divergence.
+			_ = s.cfg.ApplyConfig(prevCfg)
+		}
+		// SECURITY FIX MEDIUM-6: Don't expose file paths
+		s.logger.Error("[API] Failed to write config file", "error", writeErr)
+		writeError(w, r, http.StatusInternalServerError, "config_write_failed",
+			"Failed to save configuration", nil)
+
+		return
+	}
+
+	s.replaceConfig(newCfg)
+
+	doc, status, err := s.readConfigDocument()
+	if err != nil {
+		// SECURITY FIX MEDIUM-6: Don't expose internal error details
+		s.logger.Error("[API] Failed to read updated config", "error", err)
+		writeError(w, r, status, "config_read_failed",
+			"Configuration updated but failed to retrieve", nil)
+
+		return
+	}
+
+	s.writeJSON(w, doc)
+}
+
+func (s *Server) handleReplay(w http.ResponseWriter, r *http.Request) {
+	// FEATURE #132: Graceful degradation when replay engine is unavailable
+	if s.cfg.Replay == nil {
+		writeError(
+			w,
+			r,
+			http.StatusServiceUnavailable,
+			"replay_unavailable",
+			"PCAP replay functionality is not available in this mode. Start niac with a configuration to enable replay.",
+			nil,
+		)
+
+		return
+	}
+
+	switch r.Method {
+	case http.MethodGet:
+		s.writeJSON(w, s.cfg.Replay.Status())
+	case http.MethodPost:
+		// SECURITY FIX #97: Enforce request body size limit for PCAP uploads
+		r.Body = http.MaxBytesReader(w, r.Body, MaxPCAPUploadSize)
+
+		var req ReplayRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			if err.Error() == ErrMsgRequestBodyTooLarge {
+				writeError(w, r, http.StatusRequestEntityTooLarge, "request_too_large",
+					"PCAP file too large (max 100MB)", nil)
+
+				return
+			}
+
+			writeError(w, r, http.StatusBadRequest, "invalid_request",
+				"Failed to parse request body", nil)
+
+			return
+		}
+
+		// SECURITY FIX MEDIUM-3: Comprehensive validation
+		if validationErrors := validateReplayRequest(req); len(validationErrors) > 0 {
+			writeError(w, r, http.StatusBadRequest, "validation_failed",
+				"Replay request validation failed", validationErrors)
+
+			return
+		}
+
+		prepared, err := s.prepareReplayRequest(req)
+		if err != nil {
+			writeError(w, r, http.StatusBadRequest, "replay_preparation_failed",
+				"Failed to prepare replay request", nil)
+
+			return
+		}
+
+		state, err := s.cfg.Replay.Start(prepared)
+		if err != nil {
+			writeError(w, r, http.StatusBadRequest, "replay_start_failed",
+				"Failed to start replay", nil)
+
+			return
+		}
+
+		s.writeJSON(w, state)
+	case http.MethodDelete:
+		state, err := s.cfg.Replay.Stop()
+		if err != nil {
+			// SECURITY FIX MEDIUM-6: Don't expose internal error details
+			s.logger.Error("[API] Failed to stop replay", "error", err)
+			writeError(w, r, http.StatusInternalServerError, "replay_stop_failed",
+				"Failed to stop replay", nil)
+
+			return
+		}
+
+		s.writeJSON(w, state)
+	default:
+		w.Header().Set("Allow", "GET, POST, DELETE")
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func (s *Server) handleFiles(w http.ResponseWriter, r *http.Request) {
+	kind := r.URL.Query().Get("kind")
+
+	// SECURITY FIX MEDIUM-3: Validate query parameter
+	allowedKinds := []string{"", "snmp", "config", "pcap", "walks", "pcaps"}
+	if err := validateQueryParam("kind", kind, allowedKinds); err != nil {
+		writeError(w, r, http.StatusBadRequest, "invalid_parameter",
+			"Invalid query parameter", []ErrorDetail{*err})
+
+		return
+	}
+
+	entries, err := s.collectFiles(kind)
+	if err != nil {
+		writeError(w, r, http.StatusBadRequest, "file_collection_failed",
+			"Failed to collect files", nil)
+
+		return
+	}
+
+	s.writeJSON(w, entries)
+}
+
+func (s *Server) handleTopology(w http.ResponseWriter, _ *http.Request) {
+	s.writeJSON(w, s.currentTopology())
+}
+
+func (s *Server) handleTopologyExport(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.Header().Set("Allow", "GET")
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+
+		return
+	}
+
+	format := r.URL.Query().Get("format")
+	if format == "" {
+		format = "json"
+	}
+
+	// SECURITY FIX MEDIUM-3: Validate format parameter
+	allowedFormats := []string{"json", "graphml", "dot"}
+	if err := validateQueryParam("format", format, allowedFormats); err != nil {
+		writeError(w, r, http.StatusBadRequest, "invalid_parameter",
+			"Invalid format parameter", []ErrorDetail{*err})
+
+		return
+	}
+
+	topology := s.currentTopology()
+
+	// Note: format is validated above, so only json/graphml/dot can reach here
+	switch format {
+	case "json":
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Content-Disposition", "attachment; filename=\"topology.json\"")
+		s.writeJSON(w, topology)
+
+	case "graphml":
+		w.Header().Set("Content-Type", "application/xml")
+		w.Header().Set("Content-Disposition", "attachment; filename=\"topology.graphml\"")
+		_, _ = fmt.Fprint(w, topology.ExportGraphML())
+
+	case "dot":
+		w.Header().Set("Content-Type", "text/vnd.graphviz")
+		w.Header().Set("Content-Disposition", "attachment; filename=\"topology.dot\"")
+		_, _ = fmt.Fprint(w, topology.ExportDOT())
+	}
+}
+
+func (s *Server) handleVersion(w http.ResponseWriter, _ *http.Request) {
+	s.writeJSON(w, map[string]string{"version": s.cfg.Version})
+}
+
+func (s *Server) handleNeighbors(w http.ResponseWriter, _ *http.Request) {
+	// SECURITY FIX #161: Thread-safe access to Stack
+	stack := s.currentStack()
+	if stack == nil {
+		http.Error(w, "no simulation running", http.StatusServiceUnavailable)
+
+		return
+	}
+
+	neighbors := stack.GetNeighbors()
+	if neighbors == nil {
+		neighbors = []protocols.NeighborRecord{}
+	}
+
+	s.writeJSON(w, neighbors)
+}
+
+func (s *Server) handleInterfaces(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.Header().Set("Allow", "GET")
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+
+		return
+	}
+
+	// Get available network interfaces from pcap
+	ifaces, err := capture.GetAllInterfaces()
+	if err != nil {
+		// SECURITY FIX MEDIUM-6: Don't expose internal error details
+		s.logger.Error("[API] Failed to list interfaces", "error", err)
+		writeError(w, r, http.StatusInternalServerError, "interface_list_failed",
+			"Failed to retrieve network interfaces", nil)
+
+		return
+	}
+
+	type interfaceInfo struct {
+		Name        string   `json:"name"`
+		Description string   `json:"description"`
+		Addresses   []string `json:"addresses"`
+		Current     bool     `json:"current"`
+	}
+
+	// SECURITY FIX #161: Thread-safe access to Interface
+	currentIface := s.currentInterface()
+
+	result := make([]interfaceInfo, 0, len(ifaces))
+	for _, iface := range ifaces {
+		addrs := make([]string, 0, len(iface.Addresses))
+		for _, addr := range iface.Addresses {
+			addrs = append(addrs, addr.IP.String())
+		}
+
+		result = append(result, interfaceInfo{
+			Name:        iface.Name,
+			Description: iface.Description,
+			Addresses:   addrs,
+			Current:     iface.Name == currentIface,
+		})
+	}
+
+	s.writeJSON(w, map[string]any{
+		"interfaces":        result,
+		"current_interface": currentIface,
+	})
+}
+
+func (s *Server) handleRuntime(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.Header().Set("Allow", "GET")
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+
+		return
+	}
+
+	// SECURITY FIX #161: Thread-safe access to all config fields
+	s.configMu.RLock()
+	stack := s.cfg.Stack
+	cfg := s.cfg.Config
+	iface := s.cfg.Interface
+	cfgPath := s.cfg.ConfigPath
+	s.configMu.RUnlock()
+
+	if stack == nil {
+		http.Error(w, "no simulation running", http.StatusServiceUnavailable)
+
+		return
+	}
+
+	stats := stack.GetStats()
+
+	runtimeInfo := map[string]any{
+		"running":          true, // API server is running
+		"interface":        iface,
+		"config_path":      cfgPath,
+		"version":          s.cfg.Version,
+		"device_count":     0,
+		"packets_sent":     stats.PacketsSent,
+		"packets_received": stats.PacketsReceived,
+		"uptime_seconds":   time.Since(s.startTime).Seconds(),
+	}
+
+	if cfg != nil {
+		runtimeInfo["device_count"] = len(cfg.Devices)
+		runtimeInfo["config_name"] = filepath.Base(cfgPath)
+	}
+
+	s.writeJSON(w, runtimeInfo)
+}
+
+func (s *Server) handleCSRFToken(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.Header().Set("Allow", "GET")
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+
+		return
+	}
+
+	s.writeJSON(w, map[string]string{
+		"token": s.csrfToken,
+	})
+}
