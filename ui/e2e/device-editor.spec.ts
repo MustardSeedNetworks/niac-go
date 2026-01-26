@@ -11,12 +11,12 @@ import { expect, test } from '@playwright/test';
 
 test.describe('Device Editor', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/device/edit');
-    await page.waitForLoadState('networkidle');
+    await page.goto('/device-config/new');
+    await page.waitForLoadState('domcontentloaded');
   });
 
   test('should navigate to device editor page', async ({ page }) => {
-    await expect(page).toHaveURL(/device|edit/);
+    await expect(page).toHaveURL(/device-config/);
   });
 
   test('should display editor form', async ({ page }) => {
@@ -62,12 +62,11 @@ test.describe('Device Editor', () => {
   });
 
   test('should validate required fields', async ({ page }) => {
-    // Try to submit empty form
+    // Submit button should be disabled when form is invalid/empty
     const submitButton = page.getByRole('button', { name: /save|submit|create/i }).first();
     if (await submitButton.isVisible()) {
-      await submitButton.click();
-      // Should show validation errors or prevent submission
-      await expect(page.locator('body')).toBeVisible();
+      // Button should be disabled for empty/invalid form
+      await expect(submitButton).toBeDisabled();
     }
   });
 });

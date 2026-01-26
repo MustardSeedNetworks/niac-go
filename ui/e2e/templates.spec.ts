@@ -12,7 +12,7 @@ import { expect, test } from '@playwright/test';
 test.describe('Templates', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/templates');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
   });
 
   test('should navigate to templates page', async ({ page }) => {

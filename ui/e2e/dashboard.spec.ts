@@ -12,7 +12,7 @@ import { expect, test } from '@playwright/test';
 test.describe('Dashboard', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
   });
 
   test('should display dashboard overview', async ({ page }) => {
@@ -21,9 +21,9 @@ test.describe('Dashboard', () => {
   });
 
   test('should display navigation menu', async ({ page }) => {
-    // Navigation should be visible
-    const nav = page.locator('nav, [role="navigation"], aside');
-    await expect(nav.first()).toBeVisible();
+    // Navigation should be visible (use :visible to handle hidden mobile nav)
+    const nav = page.locator('nav:visible, [role="navigation"]:visible, aside:visible').first();
+    await expect(nav).toBeVisible({ timeout: 5000 });
   });
 
   test('should have quick access links', async ({ page }) => {

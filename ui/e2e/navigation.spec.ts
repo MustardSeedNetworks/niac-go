@@ -12,12 +12,13 @@ import { expect, test } from '@playwright/test';
 test.describe('Navigation', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
   });
 
   test('should have main navigation', async ({ page }) => {
-    const nav = page.locator('nav, aside, [role="navigation"]').first();
-    await expect(nav).toBeVisible();
+    // Use :visible to find a visible nav element (mobile nav may be hidden)
+    const nav = page.locator('nav:visible, aside:visible, [role="navigation"]:visible').first();
+    await expect(nav).toBeVisible({ timeout: 5000 });
   });
 
   test('should navigate to devices page', async ({ page }) => {
@@ -47,11 +48,11 @@ test.describe('Navigation', () => {
   test('should have working back navigation', async ({ page }) => {
     // Navigate to a page
     await page.goto('/devices');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Navigate to another page
     await page.goto('/topology');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Go back
     await page.goBack();
@@ -61,7 +62,7 @@ test.describe('Navigation', () => {
   test('should preserve page state on navigation', async ({ page }) => {
     // This is a basic check - more specific tests would be needed
     await page.goto('/devices');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Navigate away and back
     await page.goto('/');

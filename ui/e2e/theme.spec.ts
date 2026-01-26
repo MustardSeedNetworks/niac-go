@@ -12,7 +12,7 @@ import { expect, test } from '@playwright/test';
 test.describe('Theme', () => {
   test('should have theme toggle button', async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Look for theme toggle (sun/moon icons)
     const themeButton = page.getByRole('button', { name: /dark|light|theme/i });
@@ -22,7 +22,7 @@ test.describe('Theme', () => {
 
   test('should toggle between dark and light mode', async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     const html = page.locator('html');
     const initialDark = await html.evaluate((el) => el.classList.contains('dark'));
@@ -40,7 +40,7 @@ test.describe('Theme', () => {
 
   test('should apply dark mode styles', async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Force dark mode
     await page.evaluate(() => {
@@ -54,7 +54,7 @@ test.describe('Theme', () => {
 
   test('should apply light mode styles', async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Force light mode
     await page.evaluate(() => {
@@ -70,7 +70,7 @@ test.describe('Theme', () => {
     // Emulate dark color scheme
     await page.emulateMedia({ colorScheme: 'dark' });
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Page should render
     await expect(page.locator('body')).toBeVisible();

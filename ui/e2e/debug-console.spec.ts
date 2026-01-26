@@ -12,7 +12,7 @@ import { expect, test } from '@playwright/test';
 test.describe('Debug Console', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/debug');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
   });
 
   test('should navigate to debug console page', async ({ page }) => {

@@ -12,7 +12,7 @@ import { expect, test } from '@playwright/test';
 test.describe('Packet Inspector', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/packets');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
   });
 
   test('should navigate to packet inspector page', async ({ page }) => {

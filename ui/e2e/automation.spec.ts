@@ -12,7 +12,7 @@ import { expect, test } from '@playwright/test';
 test.describe('Automation', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/automation');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
   });
 
   test('should navigate to automation page', async ({ page }) => {

@@ -12,7 +12,7 @@ import { expect, test } from '@playwright/test';
 test.describe('Runtime Control', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/runtime');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
   });
 
   test('should navigate to runtime control page', async ({ page }) => {

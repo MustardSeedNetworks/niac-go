@@ -11,8 +11,8 @@ import { expect, test } from '@playwright/test';
 
 test.describe('PCAP Analyzer', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/pcap');
-    await page.waitForLoadState('networkidle');
+    await page.goto('/pcap-analyzer');
+    await page.waitForLoadState('domcontentloaded');
   });
 
   test('should navigate to pcap analyzer page', async ({ page }) => {

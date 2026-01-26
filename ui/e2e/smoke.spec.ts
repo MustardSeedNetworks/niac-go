@@ -30,7 +30,7 @@ test.describe('Smoke Tests', () => {
     });
 
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Filter out expected errors (favicon, 404, 503 when no simulation running)
     const criticalErrors = errors.filter(

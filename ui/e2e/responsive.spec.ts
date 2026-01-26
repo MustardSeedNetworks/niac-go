@@ -36,7 +36,7 @@ test.describe('Responsive Design', () => {
   test('should display correctly on mobile', async ({ page }) => {
     await page.setViewportSize(viewports.mobile);
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Page should render
     await expect(page.locator('body')).toBeVisible();
@@ -53,7 +53,7 @@ test.describe('Responsive Design', () => {
   test('should display correctly on tablet', async ({ page }) => {
     await page.setViewportSize(viewports.tablet);
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     await expect(page.locator('body')).toBeVisible();
     await checkTouchTargets(page);
@@ -62,7 +62,7 @@ test.describe('Responsive Design', () => {
   test('should display correctly on desktop', async ({ page }) => {
     await page.setViewportSize(viewports.desktop);
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     await expect(page.locator('body')).toBeVisible();
   });
@@ -70,7 +70,7 @@ test.describe('Responsive Design', () => {
   test('should show mobile navigation on small screens', async ({ page }) => {
     await page.setViewportSize(viewports.mobile);
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Look for hamburger menu or mobile nav
     const mobileNav = page.locator('[class*="mobile"], [class*="hamburger"], [class*="menu"]');
@@ -85,7 +85,7 @@ test.describe('Responsive Design', () => {
     for (const url of pages) {
       await page.setViewportSize(viewports.mobile);
       await page.goto(url);
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Page should not be completely blank
       const content = await page.locator('body').textContent();

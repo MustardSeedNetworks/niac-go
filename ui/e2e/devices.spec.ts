@@ -12,7 +12,7 @@ import { expect, test } from '@playwright/test';
 test.describe('Devices', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/devices');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
   });
 
   test('should navigate to devices page', async ({ page }) => {

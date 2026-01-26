@@ -12,7 +12,7 @@ import { expect, test } from '@playwright/test';
 test.describe('Config Diff', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/config-diff');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
   });
 
   test('should navigate to config diff page', async ({ page }) => {
