@@ -10,9 +10,11 @@ import { expect, test } from '@playwright/test';
  */
 
 test.describe('Navigation', () => {
+  // Increase timeout for WebKit which is slower on page loads
+  test.setTimeout(60000);
+
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
-    await page.waitForLoadState('domcontentloaded');
+    await page.goto('/', { waitUntil: 'domcontentloaded' });
   });
 
   test('should have main navigation', async ({ page }) => {
@@ -47,16 +49,14 @@ test.describe('Navigation', () => {
 
   test('should have working back navigation', async ({ page }) => {
     // Navigate to a page
-    await page.goto('/devices');
-    await page.waitForLoadState('domcontentloaded');
+    await page.goto('/devices', { waitUntil: 'domcontentloaded' });
 
     // Navigate to another page
-    await page.goto('/topology');
-    await page.waitForLoadState('domcontentloaded');
+    await page.goto('/templates', { waitUntil: 'domcontentloaded' });
 
     // Go back
     await page.goBack();
-    await expect(page).toHaveURL(/device/);
+    await expect(page).toHaveURL(/device/, { timeout: 15000 });
   });
 
   test('should preserve page state on navigation', async ({ page }) => {

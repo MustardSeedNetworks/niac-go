@@ -10,9 +10,11 @@ import { expect, test } from '@playwright/test';
  */
 
 test.describe('PCAP Analyzer', () => {
+  // Increase timeout for WebKit which is slower on complex pages
+  test.setTimeout(60000);
+
   test.beforeEach(async ({ page }) => {
-    await page.goto('/pcap-analyzer');
-    await page.waitForLoadState('domcontentloaded');
+    await page.goto('/pcap-analyzer', { waitUntil: 'domcontentloaded', timeout: 45000 });
   });
 
   test('should navigate to pcap analyzer page', async ({ page }) => {

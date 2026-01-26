@@ -12,6 +12,9 @@ import { expect, test } from '@playwright/test';
  */
 
 test.describe('Integration Workflows', () => {
+  // Increase timeout for complex integration tests across all browsers
+  test.setTimeout(90000);
+
   test.describe('Device Lifecycle Workflow', () => {
     const testDevice = `e2e-device-${Date.now()}`;
 

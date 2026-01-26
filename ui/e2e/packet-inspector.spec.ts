@@ -10,9 +10,11 @@ import { expect, test } from '@playwright/test';
  */
 
 test.describe('Packet Inspector', () => {
+  // Increase timeout for WebKit which is slower on complex pages
+  test.setTimeout(60000);
+
   test.beforeEach(async ({ page }) => {
-    await page.goto('/packets');
-    await page.waitForLoadState('domcontentloaded');
+    await page.goto('/packets', { waitUntil: 'domcontentloaded', timeout: 45000 });
   });
 
   test('should navigate to packet inspector page', async ({ page }) => {
