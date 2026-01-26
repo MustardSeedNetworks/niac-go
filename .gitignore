@@ -67,3 +67,45 @@ coverage.out
 
 # Legacy embed output (migrated to internal/api/ui/)
 pkg/
+
+# Secrets and certificates
+*.pem
+*.key
+*.crt
+certs/
+!certs/.gitkeep
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Local configs
+config.yaml
+configs/*.local.yaml
+configs/*.local.json
+
+# Temporary files
+*.tmp
+temp/
+tmp/
+logs/
+data/
+
+# Frontend
+node_modules/
+web/node_modules/
+web/dist/
+web/.vite/
+web/coverage/
+storybook-static/
+*storybook.log
+npm-debug.log*
+
+# Agent tools
+.gemini/
+.serena/
+_project_specs
+
+# Go workspace
+go.work.sum
