@@ -15,9 +15,10 @@ test.describe('Smoke Tests', () => {
 
   test('navigation is visible', async ({ page }) => {
     await page.goto('/');
-    // Adjust selector based on actual navigation structure
-    const nav = page.locator('nav, [role="navigation"]');
-    await expect(nav).toBeVisible();
+    // Wait for page to fully load, then check for any visible navigation
+    await page.waitForLoadState('domcontentloaded');
+    const visibleNav = page.locator('nav:visible, [role="navigation"]:visible').first();
+    await expect(visibleNav).toBeVisible({ timeout: 5000 });
   });
 
   test('no console errors on load', async ({ page }) => {
@@ -31,9 +32,13 @@ test.describe('Smoke Tests', () => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
 
-    // Filter out expected errors (e.g., missing favicon)
+    // Filter out expected errors (favicon, 404, 503 when no simulation running)
     const criticalErrors = errors.filter(
-      (e) => !e.includes('favicon') && !e.includes('404')
+      (e) =>
+        !e.includes('favicon') &&
+        !e.includes('404') &&
+        !e.includes('503') &&
+        !e.includes('Service Unavailable')
     );
     expect(criticalErrors).toHaveLength(0);
   });
