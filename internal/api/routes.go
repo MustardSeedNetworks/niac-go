@@ -60,6 +60,10 @@ func (s *Server) registerReadOnlyRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/v1/config/schema", s.recoverMiddleware(s.auth(s.handleConfigSchema)))
 	// SECURITY FIX #171: Apply file-specific rate limiting
 	mux.HandleFunc("/api/v1/files", s.recoverMiddleware(s.auth(s.fileRateLimit(s.handleFiles))))
+
+	// Templates API
+	mux.HandleFunc("/api/v1/templates", s.recoverMiddleware(s.auth(s.handleTemplates)))
+	mux.HandleFunc("/api/v1/templates/", s.recoverMiddleware(s.auth(s.handleTemplateByName)))
 	mux.HandleFunc("/api/v1/topology", s.recoverMiddleware(s.auth(s.handleTopology)))
 	mux.HandleFunc("/api/v1/topology/export", s.recoverMiddleware(s.auth(s.handleTopologyExport)))
 	mux.HandleFunc("/api/v1/errors", s.recoverMiddleware(s.auth(s.handleErrors)))
