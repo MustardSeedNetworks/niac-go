@@ -33,6 +33,10 @@ import type {
   UpdateProtocolDebugLevelsRequest,
   UploadTemplateRequest,
   UploadTemplateResponse,
+  UploadUserConfigRequest,
+  UploadUserConfigResponse,
+  UserConfigContent,
+  UserConfigsResponse,
   UseTemplateRequest,
   UseTemplateResponse,
   VersionInfo,
@@ -288,6 +292,10 @@ export const clearAllErrors = () =>
   });
 
 export const fetchInterfaces = () => deduplicatedGet<InterfacesResponse>('/api/v1/interfaces');
+
+// Fetch only usable interfaces (ethernet, WiFi, loopback)
+export const fetchUsableInterfaces = () =>
+  deduplicatedGet<InterfacesResponse>('/api/v1/interfaces?filter=usable');
 export const fetchRuntimeStatus = () => deduplicatedGet<RuntimeStatus>('/api/v1/runtime');
 export const fetchSimulationStatus = () => deduplicatedGet<SimulationStatus>('/api/v1/simulation');
 export const startSimulation = (payload: SimulationRequest) =>
@@ -413,3 +421,34 @@ export const fetchConfigSchema = () => deduplicatedGet<ConfigSchema>('/api/v1/co
  * Fetch available walk files for SNMP configuration
  */
 export const fetchWalkFiles = () => request<FileEntry[]>('/api/v1/files?kind=walks');
+
+// ============================================================================
+// User Config API functions
+// ============================================================================
+
+/**
+ * Fetch all user-uploaded configs
+ */
+export const fetchUserConfigs = () => deduplicatedGet<UserConfigsResponse>('/api/v1/configs');
+
+/**
+ * Fetch content of a specific user config
+ */
+export const fetchUserConfigContent = (name: string) =>
+  request<UserConfigContent>(`/api/v1/configs/${encodeURIComponent(name)}`);
+
+/**
+ * Upload a new user config
+ */
+export const uploadUserConfig = (payload: UploadUserConfigRequest) =>
+  requestJson<UploadUserConfigResponse>('/api/v1/configs', payload, {
+    method: 'POST',
+  });
+
+/**
+ * Delete a user config
+ */
+export const deleteUserConfig = (name: string) =>
+  request<{ success: boolean; message: string }>(`/api/v1/configs/${encodeURIComponent(name)}`, {
+    method: 'DELETE',
+  });

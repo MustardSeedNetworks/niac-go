@@ -450,8 +450,28 @@ func (s *Server) handleInterfaces(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Check for filter parameter
+	filter := r.URL.Query().Get("filter")
+
+	// SECURITY FIX MEDIUM-3: Validate filter parameter
+	allowedFilters := []string{"", "usable", "all"}
+	if err := validateQueryParam("filter", filter, allowedFilters); err != nil {
+		writeError(w, r, http.StatusBadRequest, "invalid_parameter",
+			"Invalid filter parameter", []ErrorDetail{*err})
+
+		return
+	}
+
 	// Get available network interfaces from pcap
-	ifaces, err := capture.GetAllInterfaces()
+	var ifaces []capture.PcapInterface
+	var err error
+
+	if filter == "usable" {
+		ifaces, err = capture.GetUsableInterfaces()
+	} else {
+		ifaces, err = capture.GetAllInterfaces()
+	}
+
 	if err != nil {
 		// SECURITY FIX MEDIUM-6: Don't expose internal error details
 		s.logger.Error("[API] Failed to list interfaces", "error", err)

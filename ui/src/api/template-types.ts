@@ -42,3 +42,34 @@ export interface UploadTemplateResponse {
   template: Template;
   message: string;
 }
+
+// User Config Types
+
+export interface UserConfig {
+  name: string;
+  path: string;
+  deviceCount: number;
+  modifiedAt: string;
+  size: number;
+}
+
+export interface UserConfigContent {
+  name: string;
+  content: string;
+  format: 'yaml' | 'json';
+}
+
+export interface UserConfigsResponse {
+  configs: UserConfig[];
+}
+
+export interface UploadUserConfigRequest {
+  name: string;
+  content: string;
+}
+
+export interface UploadUserConfigResponse {
+  success: boolean;
+  message: string;
+  path: string;
+}

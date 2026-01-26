@@ -126,6 +126,11 @@ export type {
   TemplateContent,
   UploadTemplateRequest,
   UploadTemplateResponse,
+  UploadUserConfigRequest,
+  UploadUserConfigResponse,
+  UserConfig,
+  UserConfigContent,
+  UserConfigsResponse,
   UseTemplateRequest,
   UseTemplateResponse,
 } from './template-types';

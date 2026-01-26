@@ -29,6 +29,9 @@ export interface UIStoreState {
   theme: 'dark' | 'light' | 'system';
   compactMode: boolean;
 
+  // Simulation settings
+  simulationSettings: SimulationSettings;
+
   // Actions
   setSidebarOpen: (open: boolean) => void;
   toggleSidebar: () => void;
@@ -48,6 +51,10 @@ export interface UIStoreState {
 
   setTheme: (theme: 'dark' | 'light' | 'system') => void;
   setCompactMode: (compact: boolean) => void;
+
+  // Simulation settings actions
+  setSimulationSettings: (settings: Partial<SimulationSettings>) => void;
+  resetSimulationSettings: () => void;
 
   reset: () => void;
 }
@@ -77,7 +84,24 @@ export interface Notification {
   duration?: number;
 }
 
+// Simulation settings for Settings-driven workflow
+export type ConfigSource = 'template' | 'userConfig' | 'upload';
+
+export interface SimulationSettings {
+  selectedInterface: string;
+  configSource: ConfigSource;
+  configName: string;
+  configPath?: string;
+}
+
 const DEFAULT_DEBUG_CONSOLE_HEIGHT = 300;
+
+const DEFAULT_SIMULATION_SETTINGS: SimulationSettings = {
+  selectedInterface: '',
+  configSource: 'template',
+  configName: '',
+  configPath: undefined,
+};
 
 export const useUIStore = create<UIStoreState>()(
   devtools(
@@ -93,6 +117,7 @@ export const useUIStore = create<UIStoreState>()(
         debugConsoleHeight: DEFAULT_DEBUG_CONSOLE_HEIGHT,
         theme: 'dark',
         compactMode: false,
+        simulationSettings: DEFAULT_SIMULATION_SETTINGS,
 
         // Sidebar actions
         setSidebarOpen: (open) =>
@@ -176,6 +201,17 @@ export const useUIStore = create<UIStoreState>()(
             state.compactMode = compact;
           }),
 
+        // Simulation settings actions
+        setSimulationSettings: (settings) =>
+          set((state) => {
+            state.simulationSettings = { ...state.simulationSettings, ...settings };
+          }),
+
+        resetSimulationSettings: () =>
+          set((state) => {
+            state.simulationSettings = DEFAULT_SIMULATION_SETTINGS;
+          }),
+
         // Reset
         reset: () =>
           set((state) => {
@@ -192,6 +228,7 @@ export const useUIStore = create<UIStoreState>()(
           debugConsoleHeight: state.debugConsoleHeight,
           theme: state.theme,
           compactMode: state.compactMode,
+          simulationSettings: state.simulationSettings,
         }),
       },
     ),

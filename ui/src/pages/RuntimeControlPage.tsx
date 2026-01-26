@@ -1,38 +1,43 @@
-import { Activity, BellRing, FileCog, Network, PlugZap } from 'lucide-react';
-import { type FC, memo, useCallback, useState } from 'react';
+import { Activity, BellRing, FileCog, FileUp, PlugZap, Settings } from 'lucide-react';
+import { type FC, useCallback, useState } from 'react';
 import {
-  fetchInterfaces,
   fetchSimulationStatus,
+  fetchTemplateContent,
+  fetchUserConfigContent,
   startSimulation,
   stopSimulation,
 } from '../api/client';
-import type { NetworkInterface } from '../api/types';
 import { StatBlock } from '../components/StatBlock';
 import { POLL_INTERVALS } from '../constants/polling';
 import { useApiResource } from '../hooks/useApiResource';
+import { useUIStore } from '../stores/ui-store';
 import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
 import { Tag } from '../ui/Tag';
-import { H2, P, SmallText } from '../ui/Typography';
+import { H2, SmallText } from '../ui/Typography';
 import { fileToText } from '../utils/file';
 import { formatBytes, formatTime, formatUptime, getErrorMessage } from '../utils/format';
 
 /**
- * Runtime Control Page
+ * Simulation Control Page (formerly RuntimeControlPage)
  *
- * Allows starting/stopping simulations and viewing network interfaces.
- * Requires NIAC to be running in daemon mode.
+ * Simplified interface for starting/stopping simulations.
+ * Configuration is managed via Settings drawer.
+ *
+ * Features:
+ * - Status display when simulation is running
+ * - Start/Stop controls using settings from UI store
+ * - Quick override with file upload
+ * - Link to Settings for configuration management
  */
 export const RuntimeControlPage: FC = () => {
   const [refetchTrigger, setRefetchTrigger] = useState(0);
   const { data: simStatus } = useApiResource(fetchSimulationStatus, [refetchTrigger], {
     intervalMs: POLL_INTERVALS.fast,
   });
-  const { data: interfaces } = useApiResource(fetchInterfaces, []);
 
-  const [selectedInterface, setSelectedInterface] = useState('');
-  const [configPath, setConfigPath] = useState('');
-  const [configFile, setConfigFile] = useState<File | null>(null);
+  const { simulationSettings, openModal } = useUIStore();
+  const [quickUploadFile, setQuickUploadFile] = useState<File | null>(null);
   const [starting, setStarting] = useState(false);
   const [stopping, setStopping] = useState(false);
   const [message, setMessage] = useState<{
@@ -41,12 +46,22 @@ export const RuntimeControlPage: FC = () => {
   } | null>(null);
 
   const isDaemonMode = simStatus !== null;
+  const hasValidConfig =
+    simulationSettings.selectedInterface && (simulationSettings.configName || quickUploadFile);
 
   const handleStart = useCallback(async () => {
-    if (!(selectedInterface || configPath || configFile)) {
+    if (!simulationSettings.selectedInterface) {
       setMessage({
         tone: 'error',
-        text: 'Please select an interface and provide a config file',
+        text: 'Please select an interface in Settings',
+      });
+      return;
+    }
+
+    if (!simulationSettings.configName && !quickUploadFile) {
+      setMessage({
+        tone: 'error',
+        text: 'Please select a configuration in Settings or upload a config file',
       });
       return;
     }
@@ -56,26 +71,44 @@ export const RuntimeControlPage: FC = () => {
 
     try {
       let configData: string | undefined;
+      let configPath: string | undefined;
 
-      if (configFile) {
-        configData = await fileToText(configFile);
+      // Handle quick upload file
+      if (quickUploadFile) {
+        configData = await fileToText(quickUploadFile);
+      }
+      // Handle template - need to apply it first to get a config path
+      else if (simulationSettings.configSource === 'template') {
+        // Fetch template content and send as configData
+        const templateContent = await fetchTemplateContent(simulationSettings.configName);
+        configData = templateContent.content;
+      }
+      // Handle user config - use the stored path
+      else if (simulationSettings.configSource === 'userConfig') {
+        if (simulationSettings.configPath) {
+          configPath = simulationSettings.configPath;
+        } else {
+          // Fetch user config content and send as configData
+          const userConfigContent = await fetchUserConfigContent(simulationSettings.configName);
+          configData = userConfigContent.content;
+        }
       }
 
       await startSimulation({
-        interface: selectedInterface,
-        configPath: configPath || undefined,
+        interface: simulationSettings.selectedInterface,
+        configPath: configPath,
         configData: configData,
       });
 
       setMessage({ tone: 'success', text: 'Simulation started successfully!' });
       setRefetchTrigger((t) => t + 1);
-      setConfigFile(null);
+      setQuickUploadFile(null);
     } catch (err) {
       setMessage({ tone: 'error', text: getErrorMessage(err) });
     } finally {
       setStarting(false);
     }
-  }, [selectedInterface, configPath, configFile]);
+  }, [simulationSettings, quickUploadFile]);
 
   const handleStop = useCallback(async () => {
     if (
@@ -100,8 +133,43 @@ export const RuntimeControlPage: FC = () => {
     }
   }, []);
 
+  const handleQuickUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) {
+      setQuickUploadFile(null);
+      return;
+    }
+
+    const MaxSize = 10 * 1024 * 1024;
+    if (file.size > MaxSize) {
+      setMessage({
+        tone: 'error',
+        text: `File too large. Maximum size is ${formatBytes(MaxSize)}`,
+      });
+      e.target.value = '';
+      return;
+    }
+
+    if (!file.name.match(/\.(yaml|yml)$/i)) {
+      setMessage({
+        tone: 'error',
+        text: 'Please select a YAML file (.yaml or .yml)',
+      });
+      e.target.value = '';
+      return;
+    }
+
+    setQuickUploadFile(file);
+    setMessage(null);
+  }, []);
+
+  const openSettings = useCallback(() => {
+    openModal('settings');
+  }, [openModal]);
+
   return (
     <div className="space-y-6">
+      {/* Daemon Mode Warning */}
       {!isDaemonMode && (
         <Card className="border-yellow-500/30 bg-yellow-900/20">
           <CardContent className="space-y-3">
@@ -115,134 +183,124 @@ export const RuntimeControlPage: FC = () => {
                 <code className="mt-2 block rounded bg-black/40 p-3 font-mono text-sm text-yellow-100">
                   niac daemon --listen :8080 --token yourtoken
                 </code>
-                <SmallText className="mt-2 text-yellow-300/80">
-                  Legacy mode (<code>niac --api-listen</code>) doesn't support start/stop controls.
-                </SmallText>
               </div>
             </div>
           </CardContent>
         </Card>
       )}
 
+      {/* Start Simulation Card */}
       {isDaemonMode && !simStatus?.running && (
         <Card className="border-white/5 bg-gradient-to-br from-violet-900/30 to-gray-900/70">
           <CardContent className="space-y-5">
-            <div className="flex items-center gap-3">
-              <PlugZap className="h-6 w-6 text-violet-400" />
-              <H2 className="mb-0">Start Simulation</H2>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label htmlFor="network-interface" className="block text-sm text-gray-400">
-                  Network Interface *
-                </label>
-                <select
-                  id="network-interface"
-                  className="mt-1 w-full rounded-lg border border-white/10 bg-gray-950/60 p-2 text-sm text-white focus:border-violet-400 focus:outline-none"
-                  value={selectedInterface}
-                  onChange={(e) => setSelectedInterface(e.target.value)}
-                  aria-required="true"
-                  aria-label="Select network interface for simulation"
-                >
-                  <option value="">Select interface...</option>
-                  {interfaces?.interfaces.map((iface) => (
-                    <option key={iface.name} value={iface.name}>
-                      {iface.name} {iface.description ? `- ${iface.description}` : ''}{' '}
-                      {iface.addresses.length > 0 ? `(${iface.addresses[0]})` : ''}
-                    </option>
-                  ))}
-                </select>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <PlugZap className="h-6 w-6 text-violet-400" />
+                <H2 className="mb-0">Start Simulation</H2>
               </div>
-
-              <div>
-                <label htmlFor="config-path" className="block text-sm text-gray-400">
-                  Config File Path
-                </label>
-                <input
-                  id="config-path"
-                  type="text"
-                  className="mt-1 w-full rounded-lg border border-white/10 bg-gray-950/60 p-2 font-mono text-sm text-white focus:border-violet-400 focus:outline-none"
-                  placeholder="/path/to/config.yaml"
-                  value={configPath}
-                  onChange={(e) => setConfigPath(e.target.value)}
-                  aria-describedby="config-path-help"
-                />
-                <SmallText id="config-path-help" className="text-gray-500">
-                  Or upload a config file below
-                </SmallText>
-              </div>
-
-              <div>
-                <label htmlFor="config-file-upload" className="block text-sm text-gray-400">
-                  Upload Config File
-                </label>
-                <input
-                  id="config-file-upload"
-                  type="file"
-                  accept=".yaml,.yml"
-                  className="mt-1 w-full cursor-pointer rounded-lg border border-dashed border-white/10 bg-gray-950/40 p-2 text-sm text-white file:mr-3 file:rounded-md file:border-0 file:bg-violet-600 file:px-3 file:py-1 file:text-sm file:font-medium"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (!file) {
-                      setConfigFile(null);
-                      return;
-                    }
-
-                    const MaxSize = 10 * 1024 * 1024;
-                    if (file.size > MaxSize) {
-                      setMessage({
-                        tone: 'error',
-                        text: `File too large. Maximum size is ${formatBytes(MaxSize)}`,
-                      });
-                      e.target.value = '';
-                      return;
-                    }
-
-                    if (!file.name.match(/\.(yaml|yml)$/i)) {
-                      setMessage({
-                        tone: 'error',
-                        text: 'Please select a YAML file (.yaml or .yml)',
-                      });
-                      e.target.value = '';
-                      return;
-                    }
-
-                    setConfigFile(file);
-                  }}
-                  aria-describedby="config-file-help"
-                />
-                {configFile && (
-                  <SmallText id="config-file-help" className="mt-1 text-green-400">
-                    Selected: {configFile.name}
-                  </SmallText>
-                )}
-              </div>
-
-              {message && (
-                <SmallText
-                  className={message.tone === 'success' ? 'text-emerald-300' : 'text-red-400'}
-                  role="alert"
-                  aria-live="polite"
-                >
-                  {message.text}
-                </SmallText>
-              )}
-
               <Button
-                tone="violet"
-                size="lg"
-                disabled={!(selectedInterface && (configPath || configFile)) || starting}
-                onClick={handleStart}
-                leftIcon={<Activity className="h-5 w-5" />}
+                variant="ghost"
+                size="sm"
+                leftIcon={<Settings className="h-4 w-4" />}
+                onClick={openSettings}
               >
-                {starting ? 'Starting...' : 'Start Simulation'}
+                Configure
               </Button>
             </div>
+
+            {/* Current Settings Display */}
+            <div className="p-4 bg-gray-900/50 rounded-lg border border-white/5 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-400">Interface:</span>
+                <span className="text-sm text-white font-medium">
+                  {simulationSettings.selectedInterface || (
+                    <span className="text-gray-500 italic">Not selected</span>
+                  )}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-400">Configuration:</span>
+                <span className="text-sm text-white font-medium">
+                  {quickUploadFile ? (
+                    <>
+                      {quickUploadFile.name}
+                      <span className="text-gray-500 ml-1">(upload)</span>
+                    </>
+                  ) : simulationSettings.configName ? (
+                    <>
+                      {simulationSettings.configName}
+                      <span className="text-gray-500 ml-1">
+                        ({simulationSettings.configSource === 'template' ? 'template' : 'config'})
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-gray-500 italic">Not selected</span>
+                  )}
+                </span>
+              </div>
+            </div>
+
+            {/* Quick Override Upload */}
+            <div className="space-y-2">
+              <span className="block text-sm text-gray-400">Quick Override (optional)</span>
+              <div className="flex items-center gap-3">
+                <label
+                  htmlFor="quick-upload"
+                  className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 border border-white/10 rounded-lg cursor-pointer transition-colors"
+                >
+                  <FileUp className="h-4 w-4 text-gray-400" />
+                  <span className="text-sm text-white">
+                    {quickUploadFile ? 'Change File' : 'Browse...'}
+                  </span>
+                </label>
+                <input
+                  id="quick-upload"
+                  type="file"
+                  accept=".yaml,.yml"
+                  onChange={handleQuickUpload}
+                  className="sr-only"
+                />
+                {quickUploadFile && (
+                  <button
+                    type="button"
+                    onClick={() => setQuickUploadFile(null)}
+                    className="text-sm text-red-400 hover:text-red-300"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+              <SmallText className="text-gray-500">
+                Upload a config to use instead of the saved configuration.
+              </SmallText>
+            </div>
+
+            {/* Messages */}
+            {message && (
+              <SmallText
+                className={message.tone === 'success' ? 'text-emerald-300' : 'text-red-400'}
+                role="alert"
+                aria-live="polite"
+              >
+                {message.text}
+              </SmallText>
+            )}
+
+            {/* Start Button */}
+            <Button
+              tone="violet"
+              size="lg"
+              disabled={!hasValidConfig || starting}
+              onClick={handleStart}
+              leftIcon={<Activity className="h-5 w-5" />}
+            >
+              {starting ? 'Starting...' : 'Start Simulation'}
+            </Button>
           </CardContent>
         </Card>
       )}
 
+      {/* Running Simulation Card */}
       {isDaemonMode && simStatus?.running && (
         <Card className="border-green-500/30 bg-gradient-to-br from-green-900/30 to-gray-900/70">
           <CardContent className="space-y-5">
@@ -312,70 +370,8 @@ export const RuntimeControlPage: FC = () => {
           </CardContent>
         </Card>
       )}
-
-      {interfaces && (
-        <Card className="border-white/5 bg-gray-900/70">
-          <CardContent className="space-y-4">
-            <H2 className="mb-0 flex items-center gap-2">
-              <Network className="h-5 w-5 text-cyan-300" />
-              Available Network Interfaces
-            </H2>
-            <P className="text-gray-300">
-              Network interfaces available on this system. Select one to use for simulation.
-            </P>
-            <InterfaceList interfaces={interfaces.interfaces} />
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 };
-
-const InterfaceList = memo(({ interfaces }: { interfaces: NetworkInterface[] }) => {
-  if (interfaces.length === 0) {
-    return <SmallText className="text-gray-400">No network interfaces found.</SmallText>;
-  }
-
-  return (
-    <div className="space-y-2">
-      {interfaces.map((iface) => (
-        <div
-          key={iface.name}
-          className={`rounded-lg border p-4 ${
-            iface.current
-              ? 'border-violet-500/50 bg-violet-900/20'
-              : 'border-white/10 bg-gray-950/50'
-          }`}
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="flex items-center gap-2">
-                <p className="font-semibold text-white">{iface.name}</p>
-                {iface.current && <Tag colorScheme="purple">ACTIVE</Tag>}
-              </div>
-              {iface.description && (
-                <SmallText className="text-gray-400">{iface.description}</SmallText>
-              )}
-              {iface.addresses.length > 0 && (
-                <div className="mt-1 flex flex-wrap gap-2">
-                  {iface.addresses.map((addr) => (
-                    <code
-                      key={addr}
-                      className="rounded bg-black/30 px-2 py-0.5 font-mono text-xs text-blue-300"
-                    >
-                      {addr}
-                    </code>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-});
-
-InterfaceList.displayName = 'InterfaceList';
 
 export default RuntimeControlPage;

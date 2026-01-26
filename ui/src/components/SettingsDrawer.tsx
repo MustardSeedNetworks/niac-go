@@ -14,13 +14,24 @@
  * Uses theme tokens and useFocusTrap for accessibility.
  */
 
-import { Bug, ChevronRight, Info, Monitor, Network, Palette, Settings, X } from 'lucide-react';
+import {
+  Bug,
+  ChevronRight,
+  Info,
+  Monitor,
+  Network,
+  Palette,
+  PlugZap,
+  Settings,
+  X,
+} from 'lucide-react';
 import type { ReactElement, ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import { fetchInterfaces } from '../api/client';
 import type { NetworkInterface } from '../api/types';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import { badge, cn, drawer, layout, spacing } from '../styles/theme';
+import { SimulationSection } from './settings/SimulationSection';
 
 interface SettingsDrawerProps {
   isOpen: boolean;
@@ -28,7 +39,7 @@ interface SettingsDrawerProps {
   version?: string;
 }
 
-type SettingsTab = 'appearance' | 'network' | 'debug' | 'about';
+type SettingsTab = 'simulation' | 'appearance' | 'network' | 'debug' | 'about';
 
 interface TabConfig {
   id: SettingsTab;
@@ -37,6 +48,7 @@ interface TabConfig {
 }
 
 const TABS: TabConfig[] = [
+  { id: 'simulation', label: 'Simulation', icon: <PlugZap className="w-4 h-4" /> },
   { id: 'appearance', label: 'Appearance', icon: <Palette className="w-4 h-4" /> },
   { id: 'network', label: 'Network', icon: <Network className="w-4 h-4" /> },
   { id: 'debug', label: 'Debug', icon: <Bug className="w-4 h-4" /> },
@@ -48,7 +60,7 @@ export function SettingsDrawer({
   onClose,
   version = '0.0.0',
 }: SettingsDrawerProps): ReactElement | null {
-  const [activeTab, setActiveTab] = useState<SettingsTab>('appearance');
+  const [activeTab, setActiveTab] = useState<SettingsTab>('simulation');
 
   const drawerRef = useFocusTrap<HTMLDivElement>({
     isActive: isOpen,
@@ -124,6 +136,7 @@ export function SettingsDrawer({
 
           {/* Content */}
           <div className={cn(spacing.drawer, 'space-y-6')}>
+            {activeTab === 'simulation' && <SimulationSection />}
             {activeTab === 'appearance' && <AppearanceSection />}
             {activeTab === 'network' && <NetworkSection />}
             {activeTab === 'debug' && <DebugSection />}
