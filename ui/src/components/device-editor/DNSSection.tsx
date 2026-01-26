@@ -44,7 +44,7 @@ export const DnsSection: FC<ProtocolSectionProps> = ({
               <Globe className="h-4 w-4 text-violet-400" />
               Forward Records (A Records)
             </h4>
-            {(device.dns.forwardRecords || []).map((record, index) => (
+            {(device.dns.forwardRecords || []).map((record: DNSRecord, index: number) => (
               <div
                 key={`${record.name || record.ip || 'record'}`}
                 className="flex gap-2 items-center"
@@ -94,7 +94,7 @@ export const DnsSection: FC<ProtocolSectionProps> = ({
                   size="sm"
                   onClick={() => {
                     const records = (device.dns?.forwardRecords || []).filter(
-                      (_, i) => i !== index,
+                      (_: DNSRecord, i: number) => i !== index,
                     );
                     updateDns({ ...getDnsConfig(), forwardRecords: records });
                   }}
@@ -125,7 +125,7 @@ export const DnsSection: FC<ProtocolSectionProps> = ({
               <Globe className="h-4 w-4 text-violet-400" />
               Reverse Records (PTR Records)
             </h4>
-            {(device.dns.reverseRecords || []).map((record, index) => (
+            {(device.dns.reverseRecords || []).map((record: DNSRecord, index: number) => (
               <div
                 key={`${record.name || record.ip || 'record'}`}
                 className="flex gap-2 items-center"
@@ -161,7 +161,7 @@ export const DnsSection: FC<ProtocolSectionProps> = ({
                   size="sm"
                   onClick={() => {
                     const records = (device.dns?.reverseRecords || []).filter(
-                      (_, i) => i !== index,
+                      (_: DNSRecord, i: number) => i !== index,
                     );
                     updateDns({ ...getDnsConfig(), reverseRecords: records });
                   }}

@@ -92,7 +92,7 @@ export const FtpSection: FC<ProtocolSectionProps> = ({
               <Folder className="h-4 w-4 text-violet-400" />
               FTP Users
             </h4>
-            {(device.ftp.users || []).map((user, index) => (
+            {(device.ftp.users || []).map((user: FTPUser, index: number) => (
               <div
                 key={`${user.username || user.homeDir || 'user'}`}
                 className="flex gap-2 items-center"
@@ -141,7 +141,7 @@ export const FtpSection: FC<ProtocolSectionProps> = ({
                   tone="red"
                   size="sm"
                   onClick={() => {
-                    const users = (device.ftp?.users || []).filter((_, i) => i !== index);
+                    const users = (device.ftp?.users || []).filter((_: FTPUser, i: number) => i !== index);
                     updateFtp({ ...getFtpConfig(), users });
                   }}
                 >

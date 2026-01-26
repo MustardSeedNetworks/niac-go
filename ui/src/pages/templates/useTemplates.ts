@@ -11,7 +11,7 @@ export interface StatusMessage {
 
 export interface UseTemplatesReturn {
   // Data
-  templates: Template[] | undefined;
+  templates: Template[] | null;
   filteredTemplates: Template[];
   templatesByType: Record<string, Template[]>;
   // Loading/Error states

@@ -53,7 +53,7 @@ export const HttpSection: FC<ProtocolSectionProps> = ({
               <FileText className="h-4 w-4 text-violet-400" />
               Endpoints
             </h4>
-            {(device.http.endpoints || []).map((endpoint, index) => (
+            {(device.http.endpoints || []).map((endpoint: HTTPEndpoint, index: number) => (
               <div
                 key={`${endpoint.method || 'GET'}-${endpoint.path || endpoint.statusCode || 'endpoint'}`}
                 className="rounded-lg border border-white/5 bg-gray-950/40 p-4 space-y-3"
@@ -110,7 +110,7 @@ export const HttpSection: FC<ProtocolSectionProps> = ({
                     size="sm"
                     onClick={() => {
                       const endpoints = (device.http?.endpoints || []).filter(
-                        (_, i) => i !== index,
+                        (_: HTTPEndpoint, i: number) => i !== index,
                       );
                       updateHttp({ ...getHttpConfig(), endpoints });
                     }}

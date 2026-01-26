@@ -111,7 +111,7 @@ export const DhcpSection: FC<ProtocolSectionProps> = ({
               <Database className="h-4 w-4 text-violet-400" />
               Static Leases
             </h4>
-            {(device.dhcp.clientLeases || []).map((lease, index) => (
+            {(device.dhcp.clientLeases || []).map((lease: DHCPLease, index: number) => (
               <div
                 key={`${lease.macAddress || lease.clientIp || 'lease'}`}
                 className="flex gap-2 items-center"
@@ -149,7 +149,7 @@ export const DhcpSection: FC<ProtocolSectionProps> = ({
                   tone="red"
                   size="sm"
                   onClick={() => {
-                    const leases = (device.dhcp?.clientLeases || []).filter((_, i) => i !== index);
+                    const leases = (device.dhcp?.clientLeases || []).filter((_: DHCPLease, i: number) => i !== index);
                     updateDhcp({ ...getDhcpConfig(), clientLeases: leases });
                   }}
                 >

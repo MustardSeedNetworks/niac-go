@@ -5,24 +5,27 @@
 
 import type {
   CDPConfig,
-  DHCPConfig,
-  DHCPv6Config,
-  DNSConfig,
   EDPConfig,
   FDPConfig,
-  FTPConfig,
-  HTTPConfig,
   ICMPConfig,
   ICMPv6Config,
   IPerf3Config,
   LLDPConfig,
-  NetBIOSConfig,
   OSFingerprintConfig,
-  SNMPAgent,
   STPConfig,
   TrafficConfig,
   TTLConfig,
 } from './network-protocol-types';
+
+import type {
+  DHCPConfig,
+  DHCPv6Config,
+  DNSConfig,
+  FTPConfig,
+  HTTPConfig,
+  NetBIOSConfig,
+  SNMPAgent,
+} from './service-protocol-types';
 
 // Re-export all service protocol types
 export type {

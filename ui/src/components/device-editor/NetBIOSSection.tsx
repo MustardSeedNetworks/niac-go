@@ -123,7 +123,7 @@ export const NetBiosSection: FC<ProtocolSectionProps> = ({
                       } else {
                         updateNetBios({
                           ...getNetbiosConfig(),
-                          services: services.filter((s) => s !== service),
+                          services: services.filter((s: NetBIOSService) => s !== service),
                         });
                       }
                     }}

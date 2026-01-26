@@ -7,7 +7,7 @@ import {
   fetchWalkFiles,
   updateDevice,
 } from '../../api/client';
-import type { Device } from '../../api/types';
+import type { Device, FileEntry } from '../../api/types';
 import { useApiResource } from '../../hooks/useApiResource';
 import { getErrorMessage } from '../../utils/format';
 import type { StatusMessage } from './DeviceEditorHeader';
@@ -39,7 +39,7 @@ export interface UseDeviceEditorReturn {
   refetch: () => void;
 
   // Walk files for SNMP
-  walkFiles: ReturnType<typeof useApiResource<ReturnType<typeof fetchWalkFiles>>>['data'];
+  walkFiles: FileEntry[] | null;
 
   // UI state
   saving: boolean;
