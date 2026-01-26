@@ -8,23 +8,19 @@ The UI has features that the backend doesn't support, and the page naming/struct
 
 ## 1. Missing Backend API Endpoints
 
-### Templates API (HIGH PRIORITY)
+### Templates API ✅ COMPLETE
 
 Templates are the example YAML config files in `cmd/niac/templates/` and `examples/`.
 
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `/api/v1/templates` | GET | List available templates |
-| `/api/v1/templates/{name}` | GET | Get template content |
-| `/api/v1/templates/use` | POST | Create config from template |
-| `/api/v1/templates` | POST | Upload new template |
-| `/api/v1/templates/{name}` | DELETE | Delete template |
+| Endpoint | Method | Status |
+|----------|--------|--------|
+| `/api/v1/templates` | GET | ✅ Implemented |
+| `/api/v1/templates/{name}` | GET | ✅ Implemented |
+| `/api/v1/templates/use` | POST | ✅ Implemented |
+| `/api/v1/templates` | POST | ⏳ Not Implemented |
+| `/api/v1/templates/{name}` | DELETE | ⏳ Not Implemented |
 
-**Implementation Notes:**
-- Scan `cmd/niac/templates/` and `examples/` directories
-- Parse YAML frontmatter for metadata (name, description, type, tags)
-- Return template list with metadata
-- "Use" creates a copy in a configs directory
+**Implemented in:** `internal/api/templates.go`
 
 ### Server Configs API (MEDIUM PRIORITY)
 
@@ -86,6 +82,41 @@ Allow selecting server-side configs instead of just local file browse.
 - Cleaner separation of concerns
 
 **Recommendation:** Option A - Most users want status AND control in one place.
+
+### Merge Packet Inspector + PCAP Analyzer
+
+**Current Problem:**
+- Two separate pages for similar functionality
+- Packet Inspector shows Wi-Fi symbol (hardcoded) even without Wi-Fi adapter
+- No interface selection for live capture
+
+**Proposed: Single "Traffic Analysis" Page**
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Traffic Analysis                                             │
+├─────────────────────────────────────────────────────────────┤
+│ Mode: ○ Live Capture  ○ Load PCAP                           │
+│                                                              │
+│ [Live Capture selected]                                      │
+│ Interface: [dropdown: eth0, en0, etc.]  [▶ Start Capture]   │
+│                                                              │
+│ [Load PCAP selected]                                         │
+│ File: [Browse...]  or drag & drop                            │
+├─────────────────────────────────────────────────────────────┤
+│ [Unified packet list / analysis view]                        │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Backend Changes:**
+- `/api/v1/interfaces` endpoint already exists - use it
+- Return actual available interfaces, not hardcoded icons
+
+**UI Changes:**
+- Merge PacketInspectorPage + PcapAnalyzerPage
+- Add interface dropdown populated from API
+- Remove hardcoded Wi-Fi symbol
+- Show actual interface type icon based on name (eth* = wired, wlan*/wlp* = wireless)
 
 ---
 
