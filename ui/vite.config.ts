@@ -36,12 +36,16 @@ export default defineConfig(({ mode }) => {
     },
     // FIX #180: Code splitting for optimal bundle sizes
     build: {
-      // Target modern browsers for smaller bundles
+      // Vite 7: Target modern browsers for smaller bundles
       target: "es2022",
       // Enable CSS code splitting
       cssCodeSplit: true,
       // Smaller chunk size warning threshold
       chunkSizeWarningLimit: 300,
+      // Module preload optimization
+      modulePreload: {
+        polyfill: false, // Modern browsers don't need polyfill
+      },
       rollupOptions: {
         output: {
           manualChunks: {

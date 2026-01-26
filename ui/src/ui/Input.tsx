@@ -1,8 +1,8 @@
 import {
   type FC,
-  forwardRef,
   type InputHTMLAttributes,
   type ReactNode,
+  type Ref,
   type TextareaHTMLAttributes,
 } from 'react';
 
@@ -12,7 +12,7 @@ const inputBaseStyles =
 const inputFocusStyles = 'focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20';
 const inputBorderStyles = 'border-white/10 hover:border-white/20';
 
-// Text Input
+// React 19: ref as regular prop instead of forwardRef
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   error?: string;
@@ -20,112 +20,113 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   leftIcon?: ReactNode;
   rightIcon?: ReactNode;
   containerClassName?: string;
+  ref?: Ref<HTMLInputElement>;
 }
 
-export const Input = forwardRef<HTMLInputElement, InputProps>(
-  (
-    {
-      label,
-      error,
-      hint,
-      leftIcon,
-      rightIcon,
-      className = '',
-      containerClassName = '',
-      id,
-      ...props
-    },
-    ref,
-  ) => {
-    const inputId = id || label?.toLowerCase().replace(/\s+/g, '-');
-    const hasError = !!error;
+export const Input: FC<InputProps> = ({
+  label,
+  error,
+  hint,
+  leftIcon,
+  rightIcon,
+  className = '',
+  containerClassName = '',
+  id,
+  ref,
+  ...props
+}) => {
+  const inputId = id || label?.toLowerCase().replace(/\s+/g, '-');
+  const hasError = !!error;
 
-    return (
-      <div className={containerClassName}>
-        {label && (
-          <label htmlFor={inputId} className="block text-sm font-medium text-gray-300 mb-2">
-            {label}
-          </label>
+  return (
+    <div className={containerClassName}>
+      {label && (
+        <label htmlFor={inputId} className="block text-sm font-medium text-gray-300 mb-2">
+          {label}
+        </label>
+      )}
+      <div className="relative">
+        {leftIcon && (
+          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">{leftIcon}</div>
         )}
-        <div className="relative">
-          {leftIcon && (
-            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">{leftIcon}</div>
-          )}
-          <input
-            ref={ref}
-            id={inputId}
-            className={`
-              ${inputBaseStyles}
-              ${hasError ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' : `${inputBorderStyles} ${inputFocusStyles}`}
-              ${leftIcon ? 'pl-10' : 'px-4'}
-              ${rightIcon ? 'pr-10' : 'px-4'}
-              py-2.5
-              ${className}
-            `}
-            {...props}
-          />
-          {rightIcon && (
-            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
-              {rightIcon}
-            </div>
-          )}
-        </div>
-        {(error || hint) && (
-          <p className={`mt-1.5 text-sm ${hasError ? 'text-red-400' : 'text-gray-500'}`}>
-            {error || hint}
-          </p>
+        <input
+          ref={ref}
+          id={inputId}
+          className={`
+            ${inputBaseStyles}
+            ${hasError ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' : `${inputBorderStyles} ${inputFocusStyles}`}
+            ${leftIcon ? 'pl-10' : 'px-4'}
+            ${rightIcon ? 'pr-10' : 'px-4'}
+            py-2.5
+            ${className}
+          `}
+          {...props}
+        />
+        {rightIcon && (
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+            {rightIcon}
+          </div>
         )}
       </div>
-    );
-  },
-);
+      {(error || hint) && (
+        <p className={`mt-1.5 text-sm ${hasError ? 'text-red-400' : 'text-gray-500'}`}>
+          {error || hint}
+        </p>
+      )}
+    </div>
+  );
+};
 
-Input.displayName = 'Input';
-
-// Textarea
+// Textarea - React 19 ref as prop
 interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
   label?: string;
   error?: string;
   hint?: string;
   containerClassName?: string;
+  ref?: Ref<HTMLTextAreaElement>;
 }
 
-export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
-  ({ label, error, hint, className = '', containerClassName = '', id, ...props }, ref) => {
-    const textareaId = id || label?.toLowerCase().replace(/\s+/g, '-');
-    const hasError = !!error;
+export const Textarea: FC<TextareaProps> = ({
+  label,
+  error,
+  hint,
+  className = '',
+  containerClassName = '',
+  id,
+  ref,
+  ...props
+}) => {
+  const textareaId = id || label?.toLowerCase().replace(/\s+/g, '-');
+  const hasError = !!error;
 
-    return (
-      <div className={containerClassName}>
-        {label && (
-          <label htmlFor={textareaId} className="block text-sm font-medium text-gray-300 mb-2">
-            {label}
-          </label>
-        )}
-        <textarea
-          ref={ref}
-          id={textareaId}
-          className={`
-            ${inputBaseStyles}
-            ${hasError ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' : `${inputBorderStyles} ${inputFocusStyles}`}
-            px-4 py-2.5 min-h-[100px] resize-y
-            ${className}
-          `}
-          {...props}
-        />
-        {(error || hint) && (
-          <p className={`mt-1.5 text-sm ${hasError ? 'text-red-400' : 'text-gray-500'}`}>
-            {error || hint}
-          </p>
-        )}
-      </div>
-    );
-  },
-);
+  return (
+    <div className={containerClassName}>
+      {label && (
+        <label htmlFor={textareaId} className="block text-sm font-medium text-gray-300 mb-2">
+          {label}
+        </label>
+      )}
+      <textarea
+        ref={ref}
+        id={textareaId}
+        className={`
+          ${inputBaseStyles}
+          ${hasError ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' : `${inputBorderStyles} ${inputFocusStyles}`}
+          px-4 py-2.5 min-h-[100px] resize-y
+          ${className}
+        `}
+        {...props}
+      />
+      {(error || hint) && (
+        <p className={`mt-1.5 text-sm ${hasError ? 'text-red-400' : 'text-gray-500'}`}>
+          {error || hint}
+        </p>
+      )}
+    </div>
+  );
+};
 
-Textarea.displayName = 'Textarea';
-
-// Select
+// Select - React 19 ref as prop
 interface SelectOption {
   value: string;
   label: string;
@@ -140,202 +141,259 @@ interface SelectProps extends Omit<InputHTMLAttributes<HTMLSelectElement>, 'onCh
   placeholder?: string;
   containerClassName?: string;
   onChange?: (value: string) => void;
+  ref?: Ref<HTMLSelectElement>;
 }
 
-export const Select = forwardRef<HTMLSelectElement, SelectProps>(
-  (
-    {
-      label,
-      error,
-      hint,
-      options,
-      placeholder,
-      className = '',
-      containerClassName = '',
-      id,
-      onChange,
-      ...props
-    },
-    ref,
-  ) => {
-    const selectId = id || label?.toLowerCase().replace(/\s+/g, '-');
-    const hasError = !!error;
+export const Select: FC<SelectProps> = ({
+  label,
+  error,
+  hint,
+  options,
+  placeholder,
+  className = '',
+  containerClassName = '',
+  id,
+  onChange,
+  ref,
+  ...props
+}) => {
+  const selectId = id || label?.toLowerCase().replace(/\s+/g, '-');
+  const hasError = !!error;
 
-    return (
-      <div className={containerClassName}>
-        {label && (
-          <label htmlFor={selectId} className="block text-sm font-medium text-gray-300 mb-2">
-            {label}
-          </label>
+  return (
+    <div className={containerClassName}>
+      {label && (
+        <label htmlFor={selectId} className="block text-sm font-medium text-gray-300 mb-2">
+          {label}
+        </label>
+      )}
+      <select
+        ref={ref}
+        id={selectId}
+        className={`
+          ${inputBaseStyles}
+          ${hasError ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' : `${inputBorderStyles} ${inputFocusStyles}`}
+          px-4 py-2.5 appearance-none cursor-pointer
+          bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2024%2024%22%20stroke%3D%22%239ca3af%22%3E%3Cpath%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%222%22%20d%3D%22M19%209l-7%207-7-7%22%2F%3E%3C%2Fsvg%3E')]
+          bg-[length:1.25rem] bg-[right_0.75rem_center] bg-no-repeat pr-10
+          ${className}
+        `}
+        onChange={(e) => onChange?.(e.target.value)}
+        {...props}
+      >
+        {placeholder && (
+          <option value="" disabled={true}>
+            {placeholder}
+          </option>
         )}
-        <select
-          ref={ref}
-          id={selectId}
-          className={`
-            ${inputBaseStyles}
-            ${hasError ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' : `${inputBorderStyles} ${inputFocusStyles}`}
-            px-4 py-2.5 appearance-none cursor-pointer
-            bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2024%2024%22%20stroke%3D%22%239ca3af%22%3E%3Cpath%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%222%22%20d%3D%22M19%209l-7%207-7-7%22%2F%3E%3C%2Fsvg%3E')]
-            bg-[length:1.25rem] bg-[right_0.75rem_center] bg-no-repeat pr-10
-            ${className}
-          `}
-          onChange={(e) => onChange?.(e.target.value)}
-          {...props}
-        >
-          {placeholder && (
-            <option value="" disabled={true}>
-              {placeholder}
-            </option>
-          )}
-          {options.map((option) => (
-            <option key={option.value} value={option.value} disabled={option.disabled}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-        {(error || hint) && (
-          <p className={`mt-1.5 text-sm ${hasError ? 'text-red-400' : 'text-gray-500'}`}>
-            {error || hint}
-          </p>
-        )}
-      </div>
-    );
-  },
-);
+        {options.map((option) => (
+          <option key={option.value} value={option.value} disabled={option.disabled}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+      {(error || hint) && (
+        <p className={`mt-1.5 text-sm ${hasError ? 'text-red-400' : 'text-gray-500'}`}>
+          {error || hint}
+        </p>
+      )}
+    </div>
+  );
+};
 
-Select.displayName = 'Select';
-
-// Checkbox
+// Checkbox - React 19 ref as prop
 interface CheckboxProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> {
   label: string;
   description?: string;
   containerClassName?: string;
+  ref?: Ref<HTMLInputElement>;
 }
 
-export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
-  ({ label, description, className = '', containerClassName = '', id, ...props }, ref) => {
-    const checkboxId = id || label.toLowerCase().replace(/\s+/g, '-');
+export const Checkbox: FC<CheckboxProps> = ({
+  label,
+  description,
+  className = '',
+  containerClassName = '',
+  id,
+  ref,
+  ...props
+}) => {
+  const checkboxId = id || label.toLowerCase().replace(/\s+/g, '-');
 
-    return (
-      <div className={`flex items-start gap-3 ${containerClassName}`}>
-        <input
-          ref={ref}
-          type="checkbox"
-          id={checkboxId}
-          className={`
-            mt-0.5 h-4 w-4 rounded border-gray-600 bg-gray-800 text-violet-500
-            focus:ring-2 focus:ring-violet-500/50 focus:ring-offset-0
-            transition-colors cursor-pointer
-            ${className}
-          `}
-          {...props}
-        />
-        <div>
-          <label htmlFor={checkboxId} className="text-sm font-medium text-gray-200 cursor-pointer">
-            {label}
-          </label>
-          {description && <p className="text-sm text-gray-500 mt-0.5">{description}</p>}
-        </div>
+  return (
+    <div className={`flex items-start gap-3 ${containerClassName}`}>
+      <input
+        ref={ref}
+        type="checkbox"
+        id={checkboxId}
+        className={`
+          mt-0.5 h-4 w-4 rounded border-gray-600 bg-gray-800 text-violet-500
+          focus:ring-2 focus:ring-violet-500/50 focus:ring-offset-0
+          transition-colors cursor-pointer
+          ${className}
+        `}
+        {...props}
+      />
+      <div>
+        <label htmlFor={checkboxId} className="text-sm font-medium text-gray-200 cursor-pointer">
+          {label}
+        </label>
+        {description && <p className="text-sm text-gray-500 mt-0.5">{description}</p>}
       </div>
-    );
-  },
-);
+    </div>
+  );
+};
 
-Checkbox.displayName = 'Checkbox';
-
-// Toggle/Switch
+// Toggle/Switch - React 19 ref as prop
 interface ToggleProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> {
   label: string;
   description?: string;
   containerClassName?: string;
+  ref?: Ref<HTMLInputElement>;
 }
 
-export const Toggle = forwardRef<HTMLInputElement, ToggleProps>(
-  ({ label, description, className = '', containerClassName = '', id, checked, ...props }, ref) => {
-    const toggleId = id || label.toLowerCase().replace(/\s+/g, '-');
+export const Toggle: FC<ToggleProps> = ({
+  label,
+  description,
+  className = '',
+  containerClassName = '',
+  id,
+  checked,
+  ref,
+  ...props
+}) => {
+  const toggleId = id || label.toLowerCase().replace(/\s+/g, '-');
 
-    return (
-      <div className={`flex items-center justify-between gap-4 ${containerClassName}`}>
-        <div>
-          <label htmlFor={toggleId} className="text-sm font-medium text-gray-200 cursor-pointer">
-            {label}
-          </label>
-          {description && <p className="text-sm text-gray-500 mt-0.5">{description}</p>}
-        </div>
-        <button
-          type="button"
-          role="switch"
-          aria-checked={checked}
-          onClick={() => {
-            const input = document.getElementById(toggleId) as HTMLInputElement;
-            if (input) {
-              input.click();
-            }
-          }}
-          className={`
-            relative inline-flex h-6 w-11 items-center rounded-full transition-colors
-            focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:ring-offset-2 focus:ring-offset-gray-900
-            ${checked ? 'bg-violet-600' : 'bg-gray-700'}
-            ${className}
-          `}
-        >
-          <span
-            className={`
-              inline-block h-4 w-4 transform rounded-full bg-white shadow-lg transition-transform
-              ${checked ? 'translate-x-6' : 'translate-x-1'}
-            `}
-          />
-        </button>
-        <input
-          ref={ref}
-          type="checkbox"
-          id={toggleId}
-          checked={checked}
-          className="sr-only"
-          {...props}
-        />
+  return (
+    <div className={`flex items-center justify-between gap-4 ${containerClassName}`}>
+      <div>
+        <label htmlFor={toggleId} className="text-sm font-medium text-gray-200 cursor-pointer">
+          {label}
+        </label>
+        {description && <p className="text-sm text-gray-500 mt-0.5">{description}</p>}
       </div>
-    );
-  },
-);
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        onClick={() => {
+          const input = document.getElementById(toggleId) as HTMLInputElement;
+          if (input) {
+            input.click();
+          }
+        }}
+        className={`
+          relative inline-flex h-6 w-11 items-center rounded-full transition-colors
+          focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:ring-offset-2 focus:ring-offset-gray-900
+          ${checked ? 'bg-violet-600' : 'bg-gray-700'}
+          ${className}
+        `}
+      >
+        <span
+          className={`
+            inline-block h-4 w-4 transform rounded-full bg-white shadow-lg transition-transform
+            ${checked ? 'translate-x-6' : 'translate-x-1'}
+          `}
+        />
+      </button>
+      <input
+        ref={ref}
+        type="checkbox"
+        id={toggleId}
+        checked={checked}
+        className="sr-only"
+        {...props}
+      />
+    </div>
+  );
+};
 
-Toggle.displayName = 'Toggle';
-
-// Search Input with clear button
+// Search Input with clear button - React 19 ref as prop
 interface SearchInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> {
   label?: string;
   onClear?: () => void;
   containerClassName?: string;
+  ref?: Ref<HTMLInputElement>;
 }
 
-export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(
-  ({ label, onClear, className = '', containerClassName = '', id, value, onChange, ...props }, ref) => {
-    const inputId = id || label?.toLowerCase().replace(/\s+/g, '-') || 'search-input';
-    const hasValue = value !== undefined && value !== '';
+export const SearchInput: FC<SearchInputProps> = ({
+  label,
+  onClear,
+  className = '',
+  containerClassName = '',
+  id,
+  value,
+  onChange,
+  ref,
+  ...props
+}) => {
+  const inputId = id || label?.toLowerCase().replace(/\s+/g, '-') || 'search-input';
+  const hasValue = value !== undefined && value !== '';
 
-    const handleClear = () => {
-      if (onClear) {
-        onClear();
-      } else if (onChange) {
-        // Create synthetic event to clear the value
-        const syntheticEvent = {
-          target: { value: '' },
-          currentTarget: { value: '' },
-        } as React.ChangeEvent<HTMLInputElement>;
-        onChange(syntheticEvent);
-      }
-    };
+  const handleClear = () => {
+    if (onClear) {
+      onClear();
+    } else if (onChange) {
+      // Create synthetic event to clear the value
+      const syntheticEvent = {
+        target: { value: '' },
+        currentTarget: { value: '' },
+      } as React.ChangeEvent<HTMLInputElement>;
+      onChange(syntheticEvent);
+    }
+  };
 
-    return (
-      <div className={containerClassName}>
-        {label && (
-          <label htmlFor={inputId} className="block text-sm font-medium text-gray-300 mb-2">
-            {label}
-          </label>
-        )}
-        <div className="relative">
-          {/* Search icon */}
-          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+  return (
+    <div className={containerClassName}>
+      {label && (
+        <label htmlFor={inputId} className="block text-sm font-medium text-gray-300 mb-2">
+          {label}
+        </label>
+      )}
+      <div className="relative">
+        {/* Search icon */}
+        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-4 w-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+            />
+          </svg>
+        </div>
+        <input
+          ref={ref}
+          id={inputId}
+          type="search"
+          value={value}
+          onChange={onChange}
+          placeholder={props.placeholder || 'Search...'}
+          className={`
+            ${inputBaseStyles}
+            ${inputBorderStyles}
+            ${inputFocusStyles}
+            pl-10
+            ${hasValue ? 'pr-10' : 'pr-4'}
+            py-2.5
+            ${className}
+          `}
+          {...props}
+        />
+        {/* Clear button */}
+        {hasValue && (
+          <button
+            type="button"
+            onClick={handleClear}
+            aria-label="Clear search"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-200 transition-colors focus:outline-none focus:ring-2 focus:ring-violet-500/50 rounded"
+          >
             <svg
               xmlns="http://www.w3.org/2000/svg"
               className="h-4 w-4"
@@ -344,58 +402,14 @@ export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(
               stroke="currentColor"
               strokeWidth={2}
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-              />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
-          </div>
-          <input
-            ref={ref}
-            id={inputId}
-            type="search"
-            value={value}
-            onChange={onChange}
-            placeholder={props.placeholder || 'Search...'}
-            className={`
-              ${inputBaseStyles}
-              ${inputBorderStyles}
-              ${inputFocusStyles}
-              pl-10
-              ${hasValue ? 'pr-10' : 'pr-4'}
-              py-2.5
-              ${className}
-            `}
-            {...props}
-          />
-          {/* Clear button */}
-          {hasValue && (
-            <button
-              type="button"
-              onClick={handleClear}
-              aria-label="Clear search"
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-200 transition-colors focus:outline-none focus:ring-2 focus:ring-violet-500/50 rounded"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-4 w-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          )}
-        </div>
+          </button>
+        )}
       </div>
-    );
-  },
-);
-
-SearchInput.displayName = 'SearchInput';
+    </div>
+  );
+};
 
 // Form group wrapper
 interface FormGroupProps {

@@ -1,9 +1,10 @@
-import { type ButtonHTMLAttributes, type FC, forwardRef, type ReactNode } from 'react';
+import { type ButtonHTMLAttributes, type FC, type ReactNode, type Ref } from 'react';
 
 type ButtonVariant = 'solid' | 'outline' | 'ghost' | 'secondary';
 type ButtonTone = 'violet' | 'red' | 'green' | 'blue' | 'gray';
 type ButtonSize = 'xs' | 'sm' | 'md' | 'lg';
 
+// React 19: ref is now a regular prop, no forwardRef needed
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   children: ReactNode;
   variant?: ButtonVariant;
@@ -13,6 +14,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   rightIcon?: ReactNode;
   loading?: boolean;
   className?: string;
+  ref?: Ref<HTMLButtonElement>;
 }
 
 const baseStyles =
@@ -81,37 +83,32 @@ const LoadingSpinner: FC<{ size: ButtonSize }> = ({ size }) => {
   );
 };
 
-export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  (
-    {
-      children,
-      variant = 'solid',
-      tone = 'violet',
-      size = 'md',
-      leftIcon,
-      rightIcon,
-      loading = false,
-      className = '',
-      disabled,
-      ...props
-    },
-    ref,
-  ) => (
-    <button
-      type="button"
-      ref={ref}
-      className={`${baseStyles} ${sizeStyles[size]} ${variantStyles[variant][tone]} ${className}`}
-      disabled={disabled || loading}
-      {...props}
-    >
-      {loading ? <LoadingSpinner size={size} /> : leftIcon}
-      {children}
-      {!loading && rightIcon}
-    </button>
-  ),
+// React 19: ref as a regular prop instead of forwardRef
+export const Button: FC<ButtonProps> = ({
+  children,
+  variant = 'solid',
+  tone = 'violet',
+  size = 'md',
+  leftIcon,
+  rightIcon,
+  loading = false,
+  className = '',
+  disabled,
+  ref,
+  ...props
+}) => (
+  <button
+    type="button"
+    ref={ref}
+    className={`${baseStyles} ${sizeStyles[size]} ${variantStyles[variant][tone]} ${className}`}
+    disabled={disabled || loading}
+    {...props}
+  >
+    {loading ? <LoadingSpinner size={size} /> : leftIcon}
+    {children}
+    {!loading && rightIcon}
+  </button>
 );
-
-Button.displayName = 'Button';
 
 // Icon button for compact actions
 interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {

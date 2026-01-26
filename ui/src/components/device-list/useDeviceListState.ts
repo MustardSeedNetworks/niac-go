@@ -1,4 +1,4 @@
-import { useCallback, useDeferredValue, useMemo, useState } from 'react';
+import { useCallback, useDeferredValue, useMemo, useOptimistic, useState, useTransition } from 'react';
 import { cloneDevice, deleteDevice, fetchConfigDevices } from '../../api/client';
 import type { Device, DeviceListResponse, DeviceType } from '../../api/types';
 import { useApiResource } from '../../hooks/useApiResource';
@@ -21,6 +21,8 @@ export interface UseDeviceListStateReturn {
   protocols: string[];
   loading: boolean;
   error: Error | null;
+  // React 19: isPending indicates non-blocking filter updates
+  isFilterPending: boolean;
 
   // Filters
   searchQuery: string;
@@ -70,8 +72,8 @@ export const useDeviceListState = (): UseDeviceListStateReturn => {
   } = useApiResource(fetchConfigDevices, [], { intervalMs: 30000 });
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [typeFilter, setTypeFilter] = useState<DeviceType | 'all'>('all');
-  const [protocolFilter, setProtocolFilter] = useState<string>('all');
+  const [typeFilter, setTypeFilterState] = useState<DeviceType | 'all'>('all');
+  const [protocolFilter, setProtocolFilterState] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'cards' | 'table'>(() => {
     const stored = safeGetItem('niac-device-view-mode');
     return stored === 'cards' || stored === 'table' ? stored : 'table';
@@ -82,8 +84,19 @@ export const useDeviceListState = (): UseDeviceListStateReturn => {
   const [showCloneModal, setShowCloneModal] = useState<string | null>(null);
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
 
+  // React 19: useTransition for non-blocking filter updates
+  const [isFilterPending, startTransition] = useTransition();
+
+  // React 19: useOptimistic for instant UI feedback during delete
+  const actualDevices = deviceList?.devices ?? [];
+  const [optimisticDevices, removeOptimisticDevice] = useOptimistic(
+    actualDevices,
+    (state: Device[], hostnameToRemove: string) =>
+      state.filter((d) => d.hostname !== hostnameToRemove),
+  );
+
   const deferredSearchQuery = useDeferredValue(searchQuery);
-  const devices = deviceList?.devices ?? [];
+  const devices = optimisticDevices;
 
   // Persist view mode
   const handleViewModeChange = useCallback((mode: 'cards' | 'table') => {
@@ -161,34 +174,60 @@ export const useDeviceListState = (): UseDeviceListStateReturn => {
     setSelectedDevices(new Set());
   }, []);
 
+  // React 19: Wrap filter updates in startTransition for non-blocking UI
+  const setTypeFilter = useCallback(
+    (type: DeviceType | 'all') => {
+      startTransition(() => {
+        setTypeFilterState(type);
+      });
+    },
+    [startTransition],
+  );
+
+  const setProtocolFilter = useCallback(
+    (protocol: string) => {
+      startTransition(() => {
+        setProtocolFilterState(protocol);
+      });
+    },
+    [startTransition],
+  );
+
   // Clear filters
   const clearFilters = useCallback(() => {
     setSearchQuery('');
-    setTypeFilter('all');
-    setProtocolFilter('all');
-  }, []);
+    startTransition(() => {
+      setTypeFilterState('all');
+      setProtocolFilterState('all');
+    });
+  }, [startTransition]);
 
-  // Handle device deletion
+  // Handle device deletion with React 19 optimistic update
   const handleDelete = useCallback(
     async (hostname: string) => {
+      // React 19: Optimistically remove device for instant feedback
+      removeOptimisticDevice(hostname);
+      setShowDeleteConfirm(null);
+      setSelectedDevices((prev) => {
+        const next = new Set(prev);
+        next.delete(hostname);
+        return next;
+      });
+
       try {
         await deleteDevice(hostname);
         setMessage({
           type: 'success',
           text: `Device "${hostname}" deleted successfully`,
         });
-        setShowDeleteConfirm(null);
-        setSelectedDevices((prev) => {
-          const next = new Set(prev);
-          next.delete(hostname);
-          return next;
-        });
         refetch();
       } catch (err) {
+        // On error, refetch will restore the actual state
         setMessage({ type: 'error', text: getErrorMessage(err) });
+        refetch();
       }
     },
-    [refetch],
+    [refetch, removeOptimisticDevice],
   );
 
   // Handle device clone
@@ -249,6 +288,8 @@ export const useDeviceListState = (): UseDeviceListStateReturn => {
     protocols,
     loading,
     error,
+    // React 19: Expose filter pending state for UI feedback
+    isFilterPending,
     searchQuery,
     setSearchQuery,
     typeFilter,
