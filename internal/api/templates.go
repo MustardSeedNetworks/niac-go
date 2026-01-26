@@ -13,21 +13,31 @@ import (
 	"strings"
 )
 
+// Template type constants matching the UI interface.
+const (
+	templateTypeBasic       = "basic"
+	templateTypeRouter      = "router"
+	templateTypeSwitch      = "switch"
+	templateTypeAccessPoint = "access-point"
+	templateTypeServer      = "server"
+	templateTypeComplete    = "complete"
+	templateTypeCustom      = "custom"
+)
+
 // Template represents a configuration template.
 type Template struct {
 	Name        string   `json:"name"`
-	Path        string   `json:"path"`
+	Description string   `json:"description"`
+	DeviceCount int      `json:"deviceCount"`
 	Type        string   `json:"type"`
-	Description string   `json:"description,omitempty"`
 	Tags        []string `json:"tags,omitempty"`
-	Size        int64    `json:"size"`
 }
 
 // TemplateContent represents the full content of a template.
 type TemplateContent struct {
 	Name    string `json:"name"`
 	Content string `json:"content"`
-	Path    string `json:"path"`
+	Format  string `json:"format"`
 }
 
 // UseTemplateRequest is the request to create a config from a template.
@@ -148,48 +158,86 @@ func scanTemplateDir(baseDir string) ([]Template, error) {
 }
 
 // parseTemplateFile extracts template metadata from a file.
-func parseTemplateFile(path string, info fs.FileInfo) Template {
-	// Determine type from directory structure
-	templateType := determineTemplateType(path)
-
+func parseTemplateFile(path string, _ fs.FileInfo) Template {
 	// Extract name from filename without extension
 	name := strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
 
 	// Try to extract description from first comment line
 	description := extractDescription(path)
+	if description == "" {
+		description = name + " configuration template"
+	}
+
+	// Count devices in the YAML file
+	deviceCount := countDevicesInFile(path)
+
+	// Determine type from filename and content
+	templateType := determineTemplateType(path, name)
 
 	// Generate tags from path components
 	tags := generateTags(path)
 
 	return Template{
 		Name:        name,
-		Path:        path,
-		Type:        templateType,
 		Description: description,
+		DeviceCount: deviceCount,
+		Type:        templateType,
 		Tags:        tags,
-		Size:        info.Size(),
 	}
 }
 
-// determineTemplateType determines the template type from its path.
-func determineTemplateType(path string) string {
-	pathLower := strings.ToLower(path)
+// countDevicesInFile counts the number of devices defined in a YAML config.
+func countDevicesInFile(path string) int {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return 1 // Default to 1 if can't read
+	}
 
+	// Simple heuristic: count lines that start with "  - name:" (device entries)
+	count := 0
+	for line := range strings.SplitSeq(string(data), "\n") {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "- name:") {
+			count++
+		}
+	}
+
+	if count == 0 {
+		return 1 // At least 1 device assumed
+	}
+	return count
+}
+
+// determineTemplateType determines the template type from its path and name.
+func determineTemplateType(path, name string) string {
+	pathLower := strings.ToLower(path)
+	nameLower := strings.ToLower(name)
+
+	// Check filename first for specific types
 	switch {
-	case strings.Contains(pathLower, "/vendors/"):
-		return "vendor"
-	case strings.Contains(pathLower, "/topology/"):
-		return "topology"
-	case strings.Contains(pathLower, "/snmp/"):
-		return "snmp"
-	case strings.Contains(pathLower, "/combinations/"):
-		return "combination"
+	case strings.Contains(nameLower, "router"):
+		return templateTypeRouter
+	case strings.Contains(nameLower, "switch"):
+		return templateTypeSwitch
+	case strings.Contains(nameLower, "ap") || strings.Contains(nameLower, "wireless") ||
+		strings.Contains(nameLower, "access-point"):
+		return templateTypeAccessPoint
+	case strings.Contains(nameLower, "server"):
+		return templateTypeServer
+	case strings.Contains(nameLower, "complete") || strings.Contains(nameLower, "full"):
+		return templateTypeComplete
+	}
+
+	// Check path for type hints
+	switch {
 	case strings.Contains(pathLower, "/services/"):
-		return "service"
-	case strings.Contains(pathLower, "cmd/niac/templates/"):
-		return "builtin"
+		return templateTypeServer
+	case strings.Contains(pathLower, "/combinations/"):
+		return templateTypeComplete
+	case strings.Contains(pathLower, "/vendors/"):
+		return templateTypeCustom
 	default:
-		return "example"
+		return templateTypeBasic
 	}
 }
 
@@ -279,7 +327,7 @@ func (s *Server) handleTemplateContent(w http.ResponseWriter, r *http.Request, n
 	response := TemplateContent{
 		Name:    name,
 		Content: string(content),
-		Path:    foundPath,
+		Format:  "yaml",
 	}
 
 	s.writeJSON(w, response)
