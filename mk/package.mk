@@ -31,10 +31,13 @@ deb: build ## Build Debian package (.deb)
 	@mkdir -p dist/deb/usr/bin
 	@mkdir -p dist/deb/usr/lib/systemd/system
 	@mkdir -p dist/deb/var/lib/niac
+	@mkdir -p dist/deb/var/lib/niac/templates
 	@mkdir -p dist/deb/var/log/niac
 	@cp $(BINARY_NAME) dist/deb/usr/bin/niac
 	@chmod 755 dist/deb/usr/bin/niac
 	@cp deploy/systemd/niac.service dist/deb/usr/lib/systemd/system/
+	@cp -r cmd/niac/templates/* dist/deb/var/lib/niac/templates/ 2>/dev/null || true
+	@cp -r examples/* dist/deb/var/lib/niac/templates/ 2>/dev/null || true
 	@sed 's/__VERSION__/$(PKG_VERSION)/g; s/__ARCHITECTURE__/$(DEB_ARCH)/g' \
 		deploy/deb/control > dist/deb/DEBIAN/control
 	@cp deploy/deb/postinst dist/deb/DEBIAN/

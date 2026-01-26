@@ -44,11 +44,25 @@ type UseTemplateResponse struct {
 }
 
 // getTemplateDirs returns the directories to scan for templates.
+// Checks multiple locations for compatibility with both development and installed deployments.
 func getTemplateDirs() []string {
-	return []string{
+	dirs := []string{
+		// Development paths (relative to working directory)
 		"cmd/niac/templates",
 		"examples",
+		// System-wide installed paths
+		"/usr/share/niac/templates",
+		"/var/lib/niac/templates",
+		// User-specific paths
+		os.ExpandEnv("$HOME/.niac/templates"),
 	}
+
+	// Add custom directory from environment variable
+	if customDir := os.Getenv("NIAC_TEMPLATES_DIR"); customDir != "" {
+		dirs = append([]string{customDir}, dirs...)
+	}
+
+	return dirs
 }
 
 // handleTemplates handles GET /api/v1/templates (list) and POST (upload).

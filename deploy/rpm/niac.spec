@@ -26,6 +26,7 @@ mkdir -p %{buildroot}/usr/bin
 mkdir -p %{buildroot}/usr/lib/systemd/system
 mkdir -p %{buildroot}/etc/niac
 mkdir -p %{buildroot}/var/lib/niac
+mkdir -p %{buildroot}/var/lib/niac/templates
 mkdir -p %{buildroot}/var/log/niac
 
 # Copy binary
@@ -34,11 +35,17 @@ install -m 755 %{_repo_root}/niac %{buildroot}/usr/bin/niac
 # Copy systemd service file
 install -m 644 %{_repo_root}/deploy/systemd/niac.service %{buildroot}/usr/lib/systemd/system/niac.service
 
+# Copy templates
+cp -r %{_repo_root}/cmd/niac/templates/* %{buildroot}/var/lib/niac/templates/
+cp -r %{_repo_root}/examples/* %{buildroot}/var/lib/niac/templates/
+
 %files
 %attr(755, root, root) /usr/bin/niac
 %attr(644, root, root) /usr/lib/systemd/system/niac.service
 %dir %attr(750, niac, niac) /etc/niac
 %dir %attr(750, niac, niac) /var/lib/niac
+%dir %attr(755, root, root) /var/lib/niac/templates
+/var/lib/niac/templates/*
 %dir %attr(750, niac, niac) /var/log/niac
 
 %pre
