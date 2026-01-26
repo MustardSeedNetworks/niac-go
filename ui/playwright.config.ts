@@ -39,29 +39,52 @@ export default defineConfig({
     // Desktop browsers
     {
       name: 'chromium',
+      testIgnore: /visual\//,
       use: { ...devices['Desktop Chrome'] },
     },
     {
       name: 'firefox',
+      testIgnore: /visual\//,
       use: { ...devices['Desktop Firefox'] },
     },
     {
       name: 'webkit',
+      testIgnore: /visual\//,
       use: { ...devices['Desktop Safari'] },
     },
     // Mobile viewports
     {
       name: 'mobile-chrome',
+      testIgnore: /visual\//,
       use: { ...devices['Pixel 5'] },
     },
     {
       name: 'mobile-safari',
+      testIgnore: /visual\//,
       use: { ...devices['iPhone 12'] },
     },
     // Tablet viewport
     {
       name: 'tablet',
+      testIgnore: /visual\//,
       use: { ...devices['iPad (gen 7)'] },
+    },
+    // Visual regression testing
+    {
+      name: 'visual',
+      testDir: './e2e/visual',
+      use: {
+        ...devices['Desktop Chrome'],
+        // Consistent viewport for visual comparison
+        viewport: { width: 1280, height: 720 },
+      },
+      // Stricter comparison for visual tests
+      expect: {
+        toHaveScreenshot: {
+          maxDiffPixels: 100,
+          threshold: 0.1,
+        },
+      },
     },
   ],
   // Run local dev server before tests if not in CI
