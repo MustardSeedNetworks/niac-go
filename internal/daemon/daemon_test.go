@@ -4,12 +4,21 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/krisarmstrong/niac-go/internal/api"
 )
+
+// loopbackInterface returns the loopback interface name for the current OS.
+func loopbackInterface() string {
+	if runtime.GOOS == "darwin" {
+		return "lo0"
+	}
+	return "lo" // Linux
+}
 
 // TestDaemon_StartupShutdown verifies daemon can start and shutdown cleanly.
 func TestDaemon_StartupShutdown(t *testing.T) {
@@ -104,7 +113,7 @@ devices:
 
 	// Start simulation
 	req := api.SimulationRequest{
-		Interface:  "lo0", // Loopback interface should exist
+		Interface:  loopbackInterface(), // Loopback interface should exist
 		ConfigData: configData,
 	}
 
@@ -119,8 +128,8 @@ devices:
 		t.Error("Simulation should be running")
 	}
 
-	if status.Interface != "lo0" {
-		t.Errorf("Expected interface lo0, got: %s", status.Interface)
+	if status.Interface != loopbackInterface() {
+		t.Errorf("Expected interface %s, got: %s", loopbackInterface(), status.Interface)
 	}
 
 	// Stop simulation
@@ -182,7 +191,7 @@ func TestDaemon_ErrorRecovery(t *testing.T) {
 
 	// Test 2: Invalid config
 	req = api.SimulationRequest{
-		Interface:  "lo0",
+		Interface:  loopbackInterface(),
 		ConfigData: "invalid: yaml: syntax: [[[",
 	}
 
@@ -193,7 +202,7 @@ func TestDaemon_ErrorRecovery(t *testing.T) {
 
 	// Test 3: Missing config
 	req = api.SimulationRequest{
-		Interface: "lo0",
+		Interface: loopbackInterface(),
 		// No ConfigData or ConfigPath
 	}
 
@@ -285,7 +294,7 @@ func TestDaemon_ConfigSizeValidation(t *testing.T) {
 	largeConfig := strings.Repeat("x", 11*1024*1024) // 11MB
 
 	req := api.SimulationRequest{
-		Interface:  "lo0",
+		Interface:  loopbackInterface(),
 		ConfigData: largeConfig,
 	}
 
@@ -544,7 +553,7 @@ devices:
 	// Start/stop simulation 3 times
 	for i := range 3 {
 		req := api.SimulationRequest{
-			Interface:  "lo0",
+			Interface:  loopbackInterface(),
 			ConfigData: configData,
 		}
 
