@@ -131,6 +131,64 @@
   --color-proto-tcp: #06b6d4;
   --color-proto-udp: #8b5cf6;
 
+  /* ========================================
+   * Log Level Colors (Industry Standard)
+   * Syslog/RFC 5424 severity levels
+   * ======================================== */
+  --color-log-trace: #64748b;    /* Gray - lowest priority */
+  --color-log-debug: #06b6d4;    /* Cyan - debug info */
+  --color-log-info: #3b82f6;     /* Blue - informational */
+  --color-log-warn: #f59e0b;     /* Amber - warning */
+  --color-log-error: #ef4444;    /* Red - error */
+  --color-log-fatal: #dc2626;    /* Dark red - critical/fatal */
+
+  /* ========================================
+   * Syntax Highlighting (One Dark Standard)
+   * Industry-standard code editor colors
+   * ======================================== */
+  --color-syntax-keyword: #c678dd;     /* Purple - keywords */
+  --color-syntax-string: #98c379;      /* Green - strings */
+  --color-syntax-number: #d19a66;      /* Orange - numbers */
+  --color-syntax-boolean: #56b6c2;     /* Cyan - booleans */
+  --color-syntax-property: #e06c75;    /* Red - property names */
+  --color-syntax-comment: #5c6370;     /* Gray - comments */
+  --color-syntax-punctuation: #abb2bf; /* Light gray - punctuation */
+  --color-syntax-function: #61afef;    /* Blue - functions */
+  --color-syntax-variable: #e5c07b;    /* Yellow - variables */
+  --color-syntax-type: #e06c75;        /* Red - types */
+
+  /* ========================================
+   * Data Visualization (Categorical Palette)
+   * Colorblind-friendly chart colors
+   * Based on Tableau/D3 categorical schemes
+   * ======================================== */
+  --color-chart-1: #3b82f6;  /* Blue */
+  --color-chart-2: #22c55e;  /* Green */
+  --color-chart-3: #f59e0b;  /* Amber */
+  --color-chart-4: #ef4444;  /* Red */
+  --color-chart-5: #8b5cf6;  /* Purple */
+  --color-chart-6: #06b6d4;  /* Cyan */
+  --color-chart-7: #ec4899;  /* Pink */
+  --color-chart-8: #f97316;  /* Orange */
+  --color-chart-9: #14b8a6;  /* Teal */
+  --color-chart-10: #6366f1; /* Indigo */
+
+  /* ========================================
+   * Neutral Scale (Gray)
+   * Complete grayscale for UI elements
+   * ======================================== */
+  --color-neutral-50: #f8fafc;
+  --color-neutral-100: #f1f5f9;
+  --color-neutral-200: #e2e8f0;
+  --color-neutral-300: #cbd5e1;
+  --color-neutral-400: #94a3b8;
+  --color-neutral-500: #64748b;
+  --color-neutral-600: #475569;
+  --color-neutral-700: #334155;
+  --color-neutral-800: #1e293b;
+  --color-neutral-900: #0f172a;
+  --color-neutral-950: #020617;
+
   /* Apply base colors */
   color: var(--color-text-primary);
   background-color: var(--color-bg-base);
