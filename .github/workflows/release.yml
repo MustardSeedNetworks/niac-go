@@ -28,6 +28,7 @@ jobs:
       contents: write
 
     strategy:
+      fail-fast: false
       matrix:
         include:
           - arch: amd64
@@ -67,6 +68,10 @@ jobs:
         run: |
           if [ "${{ matrix.arch }}" = "arm64" ]; then
             sudo dpkg --add-architecture arm64
+            # Restrict existing sources to amd64 only
+            sudo sed -i 's/^deb /deb [arch=amd64] /' /etc/apt/sources.list.d/*.list 2>/dev/null || true
+            sudo sed -i 's/^deb /deb [arch=amd64] /' /etc/apt/sources.list 2>/dev/null || true
+            # Add arm64 sources from ports.ubuntu.com
             sudo tee /etc/apt/sources.list.d/ports-arm64.list >/dev/null <<'EOF'
           deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble main universe multiverse restricted
           deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble-updates main universe multiverse restricted
@@ -188,12 +193,13 @@ jobs:
       contents: write
 
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: macos-14
             arch: arm64
             goarch: arm64
-          - os: macos-13
+          - os: macos-15-intel
             arch: amd64
             goarch: amd64
 
