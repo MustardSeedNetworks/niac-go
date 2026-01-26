@@ -171,15 +171,28 @@ Currently, Runtime Control only has:
 
 | Page | Issue | Fix |
 |------|-------|-----|
-| `/templates` | "Failed to Load Templates" | Implement Templates API |
+| `/templates` | ✅ Fixed - Templates API implemented | Backend complete |
 | `/topology` | Page Error (sometimes) | Needs config loaded first |
 | `/analysis` | Replay unavailable | Expected - needs config |
 | `/debug` | Debug levels don't work | Implement Debug Levels API |
 | `/pcap-analyzer` | Open file does nothing | Needs investigation |
 
+## 6. UI Bugs
+
+### Error State Persistence Across Pages
+
+**Issue:** When an API error occurs on one page, navigating to other pages may still show the error until the user manually reloads.
+
+**Cause:** React state not being reset when navigating between pages.
+
+**Fix:**
+- Clear error state in `useEffect` cleanup or navigation handlers
+- Consider using React Router's loader pattern for data fetching
+- Reset error boundaries on route change
+
 ---
 
-## 6. Quick Wins
+## 7. Quick Wins
 
 1. **Rename pages** - UI only, no backend changes
 2. **Better error messages** - Show "No config loaded" instead of JSON errors
