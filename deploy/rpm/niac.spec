@@ -35,12 +35,14 @@ install -m 755 %{_repo_root}/niac %{buildroot}/usr/bin/niac
 # Copy systemd service file
 install -m 644 %{_repo_root}/deploy/systemd/niac.service %{buildroot}/usr/lib/systemd/system/niac.service
 
-# Copy templates (YAML configs only, not large walk files)
+# Copy templates (YAML configs only, not large walk files or captures)
 cp -r %{_repo_root}/cmd/niac/templates/* %{buildroot}/var/lib/niac/templates/
-find %{_repo_root}/examples -name "*.yaml" -o -name "*.yml" | while read f; do \
-    dir=$(dirname "$f" | sed "s|^%{_repo_root}/examples/||"); \
-    mkdir -p "%{buildroot}/var/lib/niac/templates/$dir"; \
-    cp "$f" "%{buildroot}/var/lib/niac/templates/$dir/"; \
+for dir in combinations layer2 network services snmp vendors; do \
+    if [ -d "%{_repo_root}/examples/$dir" ]; then \
+        mkdir -p "%{buildroot}/var/lib/niac/templates/$dir"; \
+        cp %{_repo_root}/examples/$dir/*.yaml %{buildroot}/var/lib/niac/templates/$dir/ 2>/dev/null || true; \
+        cp %{_repo_root}/examples/$dir/*.yml %{buildroot}/var/lib/niac/templates/$dir/ 2>/dev/null || true; \
+    fi; \
 done
 
 %files
