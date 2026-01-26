@@ -94,3 +94,8 @@ data/
 
 # Agent artifacts
 .gemini/
+.claude/
+.vscode/
+.serena/
+_project_specs
+
