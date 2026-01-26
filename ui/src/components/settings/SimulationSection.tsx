@@ -18,7 +18,7 @@ import { FileUp, FolderOpen, LayoutTemplate, Network, PlugZap } from 'lucide-rea
 import type { ReactElement } from 'react';
 import { useCallback, useEffect, useState } from 'react';
 import { fetchTemplates, fetchUsableInterfaces, fetchUserConfigs } from '../../api/client';
-import type { Template, UserConfig } from '../../api/types';
+import type { NetworkInterface, Template, UserConfig } from '../../api/types';
 import { type ConfigSource, useUIStore } from '../../stores/ui-store';
 import { cn } from '../../styles/theme';
 
