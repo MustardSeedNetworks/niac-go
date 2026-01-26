@@ -32,13 +32,20 @@ test.describe('Smoke Tests', () => {
     await page.goto('/');
     await page.waitForLoadState('domcontentloaded');
 
-    // Filter out expected errors (favicon, 404, 503 when no simulation running)
+    // Filter out expected errors:
+    // - favicon: Not always present in dev
+    // - 404/500/503: Backend may not be running during E2E tests
+    // - Failed to load resource: Network errors when backend is down
+    // - Service Unavailable: Backend service errors
     const criticalErrors = errors.filter(
       (e) =>
         !e.includes('favicon') &&
         !e.includes('404') &&
+        !e.includes('500') &&
         !e.includes('503') &&
-        !e.includes('Service Unavailable')
+        !e.includes('Failed to load resource') &&
+        !e.includes('Service Unavailable') &&
+        !e.includes('Internal Server Error')
     );
     expect(criticalErrors).toHaveLength(0);
   });

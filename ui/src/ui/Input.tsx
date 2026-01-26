@@ -301,6 +301,102 @@ export const Toggle = forwardRef<HTMLInputElement, ToggleProps>(
 
 Toggle.displayName = 'Toggle';
 
+// Search Input with clear button
+interface SearchInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> {
+  label?: string;
+  onClear?: () => void;
+  containerClassName?: string;
+}
+
+export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(
+  ({ label, onClear, className = '', containerClassName = '', id, value, onChange, ...props }, ref) => {
+    const inputId = id || label?.toLowerCase().replace(/\s+/g, '-') || 'search-input';
+    const hasValue = value !== undefined && value !== '';
+
+    const handleClear = () => {
+      if (onClear) {
+        onClear();
+      } else if (onChange) {
+        // Create synthetic event to clear the value
+        const syntheticEvent = {
+          target: { value: '' },
+          currentTarget: { value: '' },
+        } as React.ChangeEvent<HTMLInputElement>;
+        onChange(syntheticEvent);
+      }
+    };
+
+    return (
+      <div className={containerClassName}>
+        {label && (
+          <label htmlFor={inputId} className="block text-sm font-medium text-gray-300 mb-2">
+            {label}
+          </label>
+        )}
+        <div className="relative">
+          {/* Search icon */}
+          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-4 w-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
+          </div>
+          <input
+            ref={ref}
+            id={inputId}
+            type="search"
+            value={value}
+            onChange={onChange}
+            placeholder={props.placeholder || 'Search...'}
+            className={`
+              ${inputBaseStyles}
+              ${inputBorderStyles}
+              ${inputFocusStyles}
+              pl-10
+              ${hasValue ? 'pr-10' : 'pr-4'}
+              py-2.5
+              ${className}
+            `}
+            {...props}
+          />
+          {/* Clear button */}
+          {hasValue && (
+            <button
+              type="button"
+              onClick={handleClear}
+              aria-label="Clear search"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-200 transition-colors focus:outline-none focus:ring-2 focus:ring-violet-500/50 rounded"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  },
+);
+
+SearchInput.displayName = 'SearchInput';
+
 // Form group wrapper
 interface FormGroupProps {
   children: ReactNode;

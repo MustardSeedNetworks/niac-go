@@ -269,8 +269,9 @@ test.describe('API Error Handling', () => {
 
       await page.goto('/devices');
       await page.waitForLoadState('domcontentloaded');
+      await page.waitForTimeout(500);
 
-      // Should handle gracefully
+      // Should handle gracefully - page renders without crashing
       await expect(page.locator('body')).toBeVisible();
     });
 
@@ -285,14 +286,15 @@ test.describe('API Error Handling', () => {
 
       await page.goto('/devices');
       await page.waitForLoadState('domcontentloaded');
+      await page.waitForTimeout(500);
 
-      // Should show service unavailable message
+      // Should handle gracefully - page renders without crashing
       await expect(page.locator('body')).toBeVisible();
     });
   });
 
   test.describe('Error Recovery', () => {
-    test('should allow retry after error', async ({ page }) => {
+    test('should recover on navigation retry', async ({ page }) => {
       let requestCount = 0;
       await page.route('**/api/v1/config/devices', (route) => {
         requestCount++;
@@ -312,19 +314,17 @@ test.describe('API Error Handling', () => {
 
       await page.goto('/devices');
       await page.waitForLoadState('domcontentloaded');
+      await page.waitForTimeout(500);
 
-      // Look for retry button
-      const retryButton = page.getByRole('button', { name: /retry|try again|refresh/i }).first();
-      if (await retryButton.isVisible()) {
-        await retryButton.click();
-        await page.waitForTimeout(1000);
+      // Retry via navigation (reload or navigate away and back)
+      await page.reload();
+      await page.waitForLoadState('domcontentloaded');
 
-        // Should succeed on retry
-        await expect(page.locator('body')).toBeVisible();
-      }
+      // Should succeed on retry
+      await expect(page.locator('body')).toBeVisible();
     });
 
-    test('should clear error state on successful retry', async ({ page }) => {
+    test('should clear error state on page reload', async ({ page }) => {
       let requestCount = 0;
       await page.route('**/api/v1/config/devices', (route) => {
         requestCount++;
@@ -336,15 +336,14 @@ test.describe('API Error Handling', () => {
       });
 
       await page.goto('/devices');
-      await page.waitForTimeout(1000);
-
-      // Navigate away and back to retry
-      await page.goto('/');
       await page.waitForLoadState('domcontentloaded');
-      await page.goto('/devices');
+      await page.waitForTimeout(500);
+
+      // Reload to retry
+      await page.reload();
       await page.waitForLoadState('domcontentloaded');
 
-      // Error should be cleared
+      // Error should be cleared on successful request
       await expect(page.locator('body')).toBeVisible();
     });
   });
