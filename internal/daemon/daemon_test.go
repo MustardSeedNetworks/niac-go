@@ -332,6 +332,171 @@ func TestDaemon_StorageDisabled(t *testing.T) {
 	}
 }
 
+// TestExpandPath verifies path expansion handles tilde and relative paths.
+func TestExpandPath(t *testing.T) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		t.Skip("Cannot get user home directory")
+	}
+
+	tests := []struct {
+		name string
+		path string
+		want string
+	}{
+		{
+			name: "tilde path",
+			path: "~/test/path",
+			want: filepath.Join(home, "test/path"),
+		},
+		{
+			name: "tilde only",
+			path: "~",
+			want: home,
+		},
+		{
+			name: "absolute path unchanged",
+			path: "/var/log/test.log",
+			want: "/var/log/test.log",
+		},
+		{
+			name: "relative path cleaned",
+			path: "./test/../data/file.txt",
+			want: "data/file.txt",
+		},
+		{
+			name: "empty path",
+			path: "",
+			want: ".",
+		},
+		{
+			name: "dot dot path cleaned",
+			path: "/foo/bar/../baz",
+			want: "/foo/baz",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := expandPath(tt.path)
+			if got != tt.want {
+				t.Errorf("expandPath(%q) = %q, want %q", tt.path, got, tt.want)
+			}
+		})
+	}
+}
+
+// TestReplayController_Status verifies replay controller status method.
+func TestReplayController_Status(t *testing.T) {
+	rc := newReplayController(nil, 0)
+
+	// Initial status should have Running = false
+	status := rc.Status()
+	if status.Running {
+		t.Error("Initial replay state should not be running")
+	}
+}
+
+// TestReplayController_Start verifies replay start returns not implemented error.
+func TestReplayController_Start(t *testing.T) {
+	rc := newReplayController(nil, 0)
+
+	req := api.ReplayRequest{
+		File: "/tmp/test.pcap",
+	}
+
+	_, err := rc.Start(req)
+	if err == nil {
+		t.Error("Expected error from Start")
+	}
+	if err != ErrReplayNotImplemented {
+		t.Errorf("Expected ErrReplayNotImplemented, got: %v", err)
+	}
+}
+
+// TestReplayController_Stop verifies replay stop method.
+func TestReplayController_Stop(t *testing.T) {
+	rc := newReplayController(nil, 0)
+
+	// Set state to running manually for test
+	rc.mu.Lock()
+	rc.state.Running = true
+	rc.mu.Unlock()
+
+	state, err := rc.Stop()
+	if err != nil {
+		t.Errorf("Stop returned error: %v", err)
+	}
+	if state.Running {
+		t.Error("State should not be running after Stop")
+	}
+}
+
+// TestGetStatus_NoSimulation verifies GetStatus when no simulation is running.
+func TestGetStatus_NoSimulation(t *testing.T) {
+	cfg := Config{
+		ListenAddr:  "127.0.0.1:0",
+		StoragePath: "disabled",
+		Version:     "test",
+	}
+
+	daemon, err := NewDaemon(cfg)
+	if err != nil {
+		t.Fatalf("Failed to create daemon: %v", err)
+	}
+
+	status := daemon.GetStatus()
+	if status.Running {
+		t.Error("Status should show not running")
+	}
+	if status.Interface != "" {
+		t.Errorf("Interface should be empty, got: %s", status.Interface)
+	}
+	if status.DeviceCount != 0 {
+		t.Errorf("DeviceCount should be 0, got: %d", status.DeviceCount)
+	}
+}
+
+// TestStopSimulation_NoSimulation verifies StopSimulation error when none running.
+func TestStopSimulation_NoSimulation(t *testing.T) {
+	cfg := Config{
+		ListenAddr:  "127.0.0.1:0",
+		StoragePath: "disabled",
+		Version:     "test",
+	}
+
+	daemon, err := NewDaemon(cfg)
+	if err != nil {
+		t.Fatalf("Failed to create daemon: %v", err)
+	}
+
+	err = daemon.StopSimulation()
+	if err == nil {
+		t.Error("Expected error when stopping non-existent simulation")
+	}
+	if err != ErrNoSimulationRunning {
+		t.Errorf("Expected ErrNoSimulationRunning, got: %v", err)
+	}
+}
+
+// TestNewDaemon_EmptyStoragePath verifies daemon with empty storage path.
+func TestNewDaemon_EmptyStoragePath(t *testing.T) {
+	cfg := Config{
+		ListenAddr:  "127.0.0.1:0",
+		StoragePath: "",
+		Version:     "test",
+	}
+
+	daemon, err := NewDaemon(cfg)
+	if err != nil {
+		t.Fatalf("Failed to create daemon: %v", err)
+	}
+
+	if daemon.storage != nil {
+		t.Error("Storage should be nil when path is empty")
+	}
+}
+
 // TestDaemon_MultipleStartStop verifies daemon handles multiple start/stop cycles.
 func TestDaemon_MultipleStartStop(t *testing.T) {
 	if os.Getenv("CI") == "true" || os.Geteuid() != 0 {

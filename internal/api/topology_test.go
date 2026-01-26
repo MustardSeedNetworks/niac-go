@@ -295,3 +295,226 @@ func TestTopologyLinkFields(t *testing.T) {
 		t.Errorf("VLANs count = %d, want 2", len(link.VLANs))
 	}
 }
+
+func TestEscapeXML(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{name: "no escaping needed", input: "hello", want: "hello"},
+		{name: "ampersand", input: "foo & bar", want: "foo &amp; bar"},
+		{name: "less than", input: "a < b", want: "a &lt; b"},
+		{name: "greater than", input: "a > b", want: "a &gt; b"},
+		{name: "double quote", input: `say "hello"`, want: "say &quot;hello&quot;"},
+		{name: "single quote", input: "it's", want: "it&apos;s"},
+		{name: "multiple special chars", input: `<tag attr="value">`, want: "&lt;tag attr=&quot;value&quot;&gt;"},
+		{name: "empty string", input: "", want: ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := escapeXML(tt.input)
+			if got != tt.want {
+				t.Errorf("escapeXML(%q) = %q, want %q", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestEscapeDOT(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{name: "no escaping needed", input: "hello", want: "hello"},
+		{name: "double quote", input: `say "hello"`, want: `say \"hello\"`},
+		{name: "newline", input: "line1\nline2", want: "line1\\nline2"},
+		{name: "both", input: "\"quote\"\nnewline", want: "\\\"quote\\\"\\nnewline"},
+		{name: "empty string", input: "", want: ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := escapeDOT(tt.input)
+			if got != tt.want {
+				t.Errorf("escapeDOT(%q) = %q, want %q", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestExportGraphML(t *testing.T) {
+	topology := &Topology{
+		Nodes: []TopologyNode{
+			{Name: "router1", Type: "router"},
+			{Name: "switch1", Type: "switch"},
+		},
+		Links: []TopologyLink{
+			{
+				Source:          "switch1",
+				Target:          "router1",
+				Label:           "trunk",
+				SourceInterface: "ge-0/0/1",
+				TargetInterface: "eth0",
+				LinkType:        "trunk",
+				VLANs:           []int{100, 200},
+				Speed:           10000,
+				Status:          "up",
+			},
+		},
+	}
+
+	result := topology.ExportGraphML()
+
+	// Check XML header
+	if !contains(result, `<?xml version="1.0" encoding="UTF-8"?>`) {
+		t.Error("Missing XML header")
+	}
+
+	// Check graphml namespace
+	if !contains(result, `<graphml xmlns="http://graphml.graphdrawing.org/xmlns"`) {
+		t.Error("Missing graphml namespace")
+	}
+
+	// Check nodes
+	if !contains(result, `<node id="router1">`) {
+		t.Error("Missing router1 node")
+	}
+	if !contains(result, `<node id="switch1">`) {
+		t.Error("Missing switch1 node")
+	}
+
+	// Check edge
+	if !contains(result, `<edge id="e0" source="switch1" target="router1">`) {
+		t.Error("Missing edge from switch1 to router1")
+	}
+
+	// Check data keys
+	if !contains(result, `<data key="d6">10000</data>`) {
+		t.Error("Missing speed data")
+	}
+}
+
+func TestExportDOT(t *testing.T) {
+	topology := &Topology{
+		Nodes: []TopologyNode{
+			{Name: "router1", Type: "router"},
+			{Name: "switch1", Type: "switch"},
+			{Name: "ap1", Type: "ap"},
+			{Name: "device1", Type: "unknown"},
+		},
+		Links: []TopologyLink{
+			{
+				Source:          "switch1",
+				Target:          "router1",
+				SourceInterface: "ge-0/0/1",
+				TargetInterface: "eth0",
+				LinkType:        "trunk",
+				VLANs:           []int{100, 200},
+				Speed:           10000,
+				Status:          "up",
+			},
+			{
+				Source:          "switch1",
+				Target:          "ap1",
+				SourceInterface: "ge-0/0/2",
+				TargetInterface: "eth0",
+				LinkType:        "access",
+				Status:          "down",
+			},
+			{
+				Source:          "switch1",
+				Target:          "device1",
+				SourceInterface: "ge-0/0/3",
+				TargetInterface: "eth0",
+				LinkType:        "lag",
+				Status:          "up",
+			},
+		},
+	}
+
+	result := topology.ExportDOT()
+
+	// Check DOT header
+	if !contains(result, "graph niac_topology {") {
+		t.Error("Missing DOT header")
+	}
+
+	// Check node shapes
+	if !contains(result, `"router1" [shape=ellipse`) {
+		t.Error("Missing router1 with ellipse shape")
+	}
+	if !contains(result, `"switch1" [shape=box`) {
+		t.Error("Missing switch1 with box shape")
+	}
+	if !contains(result, `"ap1" [shape=diamond`) {
+		t.Error("Missing ap1 with diamond shape")
+	}
+
+	// Check link styles
+	if !contains(result, "style=bold, color=blue") {
+		t.Error("Missing trunk style (bold/blue)")
+	}
+	if !contains(result, "style=dashed, color=red") {
+		t.Error("Missing down link style (dashed/red)")
+	}
+	if !contains(result, "color=orange") {
+		t.Error("Missing lag style (orange)")
+	}
+
+	// Check closing brace
+	if !contains(result, "}") {
+		t.Error("Missing closing brace")
+	}
+}
+
+func TestExportGraphMLEmpty(t *testing.T) {
+	topology := &Topology{
+		Nodes: []TopologyNode{},
+		Links: []TopologyLink{},
+	}
+
+	result := topology.ExportGraphML()
+
+	// Should still produce valid GraphML
+	if !contains(result, `<graphml`) {
+		t.Error("Missing graphml tag in empty topology")
+	}
+	if !contains(result, `</graphml>`) {
+		t.Error("Missing closing graphml tag")
+	}
+}
+
+func TestExportDOTEmpty(t *testing.T) {
+	topology := &Topology{
+		Nodes: []TopologyNode{},
+		Links: []TopologyLink{},
+	}
+
+	result := topology.ExportDOT()
+
+	// Should still produce valid DOT
+	if !contains(result, "graph niac_topology {") {
+		t.Error("Missing DOT header in empty topology")
+	}
+	if !contains(result, "}") {
+		t.Error("Missing closing brace")
+	}
+}
+
+// helper function for string contains
+func contains(s, substr string) bool {
+	return len(s) >= len(substr) && (s == substr || len(substr) == 0 ||
+		(len(s) > 0 && len(substr) > 0 && findSubstring(s, substr)))
+}
+
+func findSubstring(s, substr string) bool {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
+}
