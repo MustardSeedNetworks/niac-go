@@ -1,5 +1,11 @@
 # FTP Server Configuration Example
 # Demonstrates FTP welcome banners, system types, and user accounts
+#
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# SECURITY WARNING: This file contains example credentials for
+# demonstration purposes ONLY. DO NOT use these passwords in production.
+# Replace all passwords with strong, unique values before deployment.
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 devices:
   # =================================================================
