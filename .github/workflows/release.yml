@@ -101,9 +101,10 @@ jobs:
           CC: ${{ matrix.cc }}
           PKG_CONFIG_PATH: ${{ matrix.pkg_config_path }}
           VERSION: ${{ github.ref_name }}
+          COMMIT: ${{ github.sha }}
         run: |
           go build -trimpath -buildvcs=false \
-            -ldflags="-s -w -X github.com/krisarmstrong/niac-go/internal/version.Version=${VERSION}" \
+            -ldflags="-s -w -X main.version=${VERSION} -X main.commit=${COMMIT} -X main.date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
             -o dist/niac-linux-${{ matrix.arch }} ./cmd/niac
 
       - name: Verify binary (smoke test)
@@ -175,6 +176,9 @@ jobs:
             --define "_rpmdir $(pwd)/release" \
             -bb niac.spec
 
+          # Move RPM from arch subdirectory to release/
+          mv release/${RPM_ARCH}/*.rpm release/ || true
+
       - name: Upload release artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -238,9 +242,10 @@ jobs:
           GOARCH: ${{ matrix.goarch }}
           CGO_ENABLED: 1
           VERSION: ${{ github.ref_name }}
+          COMMIT: ${{ github.sha }}
         run: |
           go build -trimpath -buildvcs=false \
-            -ldflags="-s -w -X github.com/krisarmstrong/niac-go/internal/version.Version=${VERSION}" \
+            -ldflags="-s -w -X main.version=${VERSION} -X main.commit=${COMMIT} -X main.date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
             -o dist/niac-darwin-${{ matrix.arch }} ./cmd/niac
 
       - name: Verify binary (smoke test)
@@ -315,9 +320,10 @@ jobs:
           GOARCH: amd64
           CGO_ENABLED: 0
           VERSION: ${{ github.ref_name }}
+          COMMIT: ${{ github.sha }}
         run: |
           go build -trimpath -buildvcs=false \
-            -ldflags="-s -w -X github.com/krisarmstrong/niac-go/internal/version.Version=${VERSION}" \
+            -ldflags="-s -w -X main.version=${VERSION} -X main.commit=${COMMIT} -X main.date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
             -o dist/niac-windows-amd64.exe ./cmd/niac
 
       - name: Verify binary
