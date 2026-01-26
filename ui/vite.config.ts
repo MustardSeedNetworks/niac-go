@@ -3,6 +3,11 @@ import react from "@vitejs/plugin-react";
 import { visualizer } from "rollup-plugin-visualizer";
 import { type PluginOption, defineConfig, loadEnv } from "vite";
 
+// React 19 Compiler configuration
+const reactCompilerConfig = {
+  target: "19", // React 19 target
+};
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   const proxyTarget = env.VITE_DEV_API_PROXY || "http://localhost:8080";
@@ -10,7 +15,11 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [
-      react(),
+      react({
+        babel: {
+          plugins: [["babel-plugin-react-compiler", reactCompilerConfig]],
+        },
+      }),
       // FIX #181: Bundle analysis when ANALYZE=true
       analyze &&
         (visualizer({
