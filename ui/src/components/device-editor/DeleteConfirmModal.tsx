@@ -34,13 +34,18 @@ export const DeleteConfirmModal: FC<DeleteConfirmModalProps> = ({
             <h2 className="text-lg font-semibold">Delete Device</h2>
           </div>
           <p className="text-gray-300">
-            Are you sure you want to delete <strong>{deviceHostname}</strong>? This action cannot be undone.
+            Are you sure you want to delete <strong>{deviceHostname}</strong>? This action cannot be
+            undone.
           </p>
           <div className="flex justify-end gap-3 pt-2">
             <Button variant="outline" onClick={onCancel}>
               Cancel
             </Button>
-            <Button className="bg-red-600 hover:bg-red-700 text-white" onClick={onConfirm} disabled={deleting}>
+            <Button
+              className="bg-red-600 hover:bg-red-700 text-white"
+              onClick={onConfirm}
+              disabled={deleting}
+            >
               {deleting ? 'Deleting...' : 'Delete'}
             </Button>
           </div>

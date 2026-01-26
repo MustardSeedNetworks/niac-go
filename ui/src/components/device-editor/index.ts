@@ -3,6 +3,7 @@ export { AdditionalIPsSection } from './AdditionalIPsSection';
 export { BasicSettingsSection } from './BasicSettingsSection';
 export { CdpSection } from './CDPSection';
 export { DeleteConfirmModal } from './DeleteConfirmModal';
+export type { StatusMessage } from './DeviceEditorHeader';
 export { DeviceEditorHeader } from './DeviceEditorHeader';
 export { DeviceEditorStatusView } from './DeviceEditorStatusView';
 export { DhcpSection } from './DHCPSection';
@@ -14,11 +15,6 @@ export { NetBiosSection } from './NetBIOSSection';
 export { SnmpSection } from './SNMPSection';
 export { StpSection } from './STPSection';
 export { TrafficSection } from './TrafficSection';
-export { YamlPreviewSection } from './YamlPreviewSection';
-
-// Utilities
-export { buildYamlPreview } from './yamlBuilder';
-
 // Types
 export type { ProtocolSectionBaseProps, ProtocolSectionProps, SNMPSectionProps } from './types';
 export {
@@ -28,8 +24,10 @@ export {
   selectClassName,
   smallInputClassName,
 } from './types';
+export type { UseDeviceEditorReturn } from './useDeviceEditor';
 
 // Hooks
 export { createEmptyDevice, useDeviceEditor } from './useDeviceEditor';
-export type { UseDeviceEditorReturn } from './useDeviceEditor';
-export type { StatusMessage } from './DeviceEditorHeader';
+export { YamlPreviewSection } from './YamlPreviewSection';
+// Utilities
+export { buildYamlPreview } from './yamlBuilder';

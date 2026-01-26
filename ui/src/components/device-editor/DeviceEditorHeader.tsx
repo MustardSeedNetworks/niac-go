@@ -59,7 +59,9 @@ export const DeviceEditorHeader: FC<DeviceEditorHeaderProps> = ({
             </button>
             <DeviceIcon className="h-6 w-6 text-violet-300" />
             <div>
-              <H2 className="mb-0">{isNewDevice ? 'New Device' : device.hostname || 'Edit Device'}</H2>
+              <H2 className="mb-0">
+                {isNewDevice ? 'New Device' : device.hostname || 'Edit Device'}
+              </H2>
               <SmallText className="text-gray-400">
                 {isNewDevice ? 'Create a new network device' : 'Edit device configuration'}
               </SmallText>
@@ -90,7 +92,13 @@ export const DeviceEditorHeader: FC<DeviceEditorHeaderProps> = ({
             </Button>
             <Button
               tone="violet"
-              leftIcon={saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              leftIcon={
+                saving ? (
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4" />
+                )
+              }
               onClick={onSave}
               disabled={!isDirty || saving}
             >
@@ -109,7 +117,11 @@ export const DeviceEditorHeader: FC<DeviceEditorHeaderProps> = ({
             }`}
             role="alert"
           >
-            {message.type === 'success' ? <Check className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
+            {message.type === 'success' ? (
+              <Check className="h-4 w-4" />
+            ) : (
+              <AlertCircle className="h-4 w-4" />
+            )}
             <span>{message.text}</span>
           </div>
         )}

@@ -61,13 +61,7 @@ export const TopologyHeader: FC<TopologyHeaderProps> = ({
           </Button>
         )}
         {onZoomIn && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onZoomIn}
-            title="Zoom in"
-            aria-label="Zoom in"
-          >
+          <Button variant="ghost" size="sm" onClick={onZoomIn} title="Zoom in" aria-label="Zoom in">
             <ZoomIn className="w-4 h-4" />
           </Button>
         )}

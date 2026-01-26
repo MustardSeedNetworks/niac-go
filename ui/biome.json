@@ -445,7 +445,22 @@
       }
     },
     {
-      "includes": ["**/api/index.ts", "**/settings/index.ts", "**/settings/tests/index.ts", "**/ui/index.ts", "**/stores/index.ts", "**/i18n/index.ts", "**/form/index.ts", "**/types/index.ts"],
+      "includes": [
+        "**/api/index.ts",
+        "**/settings/index.ts",
+        "**/settings/tests/index.ts",
+        "**/ui/index.ts",
+        "**/stores/index.ts",
+        "**/i18n/index.ts",
+        "**/form/index.ts",
+        "**/types/index.ts",
+        "**/components/config/index.ts",
+        "**/components/config/diff-viewer/index.ts",
+        "**/components/device-editor/index.ts",
+        "**/pages/templates/index.ts",
+        "**/pages/topology/index.ts",
+        "**/components/config/DiffViewer.tsx"
+      ],
       "linter": {
         "rules": {
           "performance": {

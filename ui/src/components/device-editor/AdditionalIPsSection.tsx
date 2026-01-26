@@ -54,7 +54,12 @@ export const AdditionalIPsSection: FC<AdditionalIPsSectionProps> = ({
             </Button>
           </div>
         ))}
-        <Button variant="outline" size="sm" leftIcon={<Plus className="h-4 w-4" />} onClick={handleAddIp}>
+        <Button
+          variant="outline"
+          size="sm"
+          leftIcon={<Plus className="h-4 w-4" />}
+          onClick={handleAddIp}
+        >
           Add IP Address
         </Button>
       </div>

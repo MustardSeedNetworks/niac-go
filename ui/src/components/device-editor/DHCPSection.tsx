@@ -149,7 +149,9 @@ export const DhcpSection: FC<ProtocolSectionProps> = ({
                   tone="red"
                   size="sm"
                   onClick={() => {
-                    const leases = (device.dhcp?.clientLeases || []).filter((_: DHCPLease, i: number) => i !== index);
+                    const leases = (device.dhcp?.clientLeases || []).filter(
+                      (_: DHCPLease, i: number) => i !== index,
+                    );
                     updateDhcp({ ...getDhcpConfig(), clientLeases: leases });
                   }}
                 >

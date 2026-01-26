@@ -19,7 +19,12 @@ export const BasicSettingsSection: FC<BasicSettingsSectionProps> = ({
   onUpdate,
 }) => {
   return (
-    <CollapsibleSection title="Basic Settings" isExpanded={isExpanded} onToggle={onToggle} required={true}>
+    <CollapsibleSection
+      title="Basic Settings"
+      isExpanded={isExpanded}
+      onToggle={onToggle}
+      required={true}
+    >
       <div className="grid gap-4 md:grid-cols-2">
         <FormField label="Hostname" required={true} helpText="Unique identifier for the device">
           <input
@@ -31,7 +36,11 @@ export const BasicSettingsSection: FC<BasicSettingsSectionProps> = ({
           />
         </FormField>
 
-        <FormField label="MAC Address" required={true} helpText="Hardware address in format XX:XX:XX:XX:XX:XX">
+        <FormField
+          label="MAC Address"
+          required={true}
+          helpText="Hardware address in format XX:XX:XX:XX:XX:XX"
+        >
           <input
             type="text"
             value={device.mac}

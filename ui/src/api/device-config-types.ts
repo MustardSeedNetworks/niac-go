@@ -27,32 +27,6 @@ import type {
   SNMPAgent,
 } from './service-protocol-types';
 
-// Re-export all service protocol types
-export type {
-  AddMib,
-  DHCPConfig,
-  DHCPLease,
-  DHCPv6Config,
-  DHCPv6Pool,
-  DNSConfig,
-  DNSRecord,
-  FdbTableConfig,
-  FTPConfig,
-  FTPUser,
-  HTTPConfig,
-  HTTPEndpoint,
-  LinkStateTrapConfig,
-  MibType,
-  NetBIOSConfig,
-  NetBIOSName,
-  NetBIOSNodeType,
-  NetBIOSService,
-  SNMPAgent,
-  ThresholdTrapConfig,
-  TrapConfig,
-  TrapTriggerConfig,
-} from './service-protocol-types';
-
 // Re-export all network protocol types
 export type {
   ARPAnnouncementConfig,
@@ -78,6 +52,31 @@ export type {
   TrafficConfig,
   TTLConfig,
 } from './network-protocol-types';
+// Re-export all service protocol types
+export type {
+  AddMib,
+  DHCPConfig,
+  DHCPLease,
+  DHCPv6Config,
+  DHCPv6Pool,
+  DNSConfig,
+  DNSRecord,
+  FdbTableConfig,
+  FTPConfig,
+  FTPUser,
+  HTTPConfig,
+  HTTPEndpoint,
+  LinkStateTrapConfig,
+  MibType,
+  NetBIOSConfig,
+  NetBIOSName,
+  NetBIOSNodeType,
+  NetBIOSService,
+  SNMPAgent,
+  ThresholdTrapConfig,
+  TrapConfig,
+  TrapTriggerConfig,
+} from './service-protocol-types';
 
 // ============================================================================
 // Core Device Types

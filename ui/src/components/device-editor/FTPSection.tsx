@@ -141,7 +141,9 @@ export const FtpSection: FC<ProtocolSectionProps> = ({
                   tone="red"
                   size="sm"
                   onClick={() => {
-                    const users = (device.ftp?.users || []).filter((_: FTPUser, i: number) => i !== index);
+                    const users = (device.ftp?.users || []).filter(
+                      (_: FTPUser, i: number) => i !== index,
+                    );
                     updateFtp({ ...getFtpConfig(), users });
                   }}
                 >

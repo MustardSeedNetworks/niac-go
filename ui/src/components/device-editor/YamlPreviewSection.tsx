@@ -1,8 +1,8 @@
 import type { FC } from 'react';
-import { YamlEditor } from '../config/YamlEditor';
 import { Card, CardContent } from '../../ui/Card';
 import { Tag } from '../../ui/Tag';
 import { H2 } from '../../ui/Typography';
+import { YamlEditor } from '../config/YamlEditor';
 
 export interface YamlPreviewSectionProps {
   yamlContent: string;
@@ -16,7 +16,13 @@ export const YamlPreviewSection: FC<YamlPreviewSectionProps> = ({ yamlContent })
           <span>YAML Preview</span>
           <Tag colorScheme="gray">Read-only</Tag>
         </H2>
-        <YamlEditor value={yamlContent} readOnly={true} height="auto" minHeight="150px" maxHeight="300px" />
+        <YamlEditor
+          value={yamlContent}
+          readOnly={true}
+          height="auto"
+          minHeight="150px"
+          maxHeight="300px"
+        />
       </CardContent>
     </Card>
   );
