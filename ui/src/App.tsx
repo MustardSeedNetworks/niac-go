@@ -14,31 +14,67 @@ import {
   Wrench,
   Zap,
 } from 'lucide-react';
-import { type FC, memo, type ReactNode } from 'react';
+import { type FC, lazy, memo, type ReactNode, Suspense } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { ErrorBoundary, PageErrorBoundary } from './components/ErrorBoundary';
 import { AppProvider, useAppState } from './contexts/AppContext';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
-import { AnalysisPage } from './pages/AnalysisPage';
-import { AutomationPage } from './pages/AutomationPage';
-import { ConfigDiffPage } from './pages/ConfigDiffPage';
-import { DashboardPage } from './pages/DashboardPage';
-import { DebugConsolePage } from './pages/DebugConsolePage';
-import { DeviceEditorPage } from './pages/DeviceEditorPage';
-import { DeviceListPage } from './pages/DeviceListPage';
-import { DevicesPage } from './pages/DevicesPage';
-import { PacketInspectorPage } from './pages/PacketInspectorPage';
-import { PcapAnalyzerPage } from './pages/PcapAnalyzerPage';
-import { RuntimeControlPage } from './pages/RuntimeControlPage';
-import { TemplatesPage } from './pages/TemplatesPage';
-import { TopologyPage } from './pages/TopologyPage';
-import { TrafficInjectionPage } from './pages/TrafficInjectionPage';
 import { Breadcrumbs } from './ui/Breadcrumbs';
 import { PageHeader } from './ui/Layout';
 import type { SidebarNavGroup } from './ui/Sidebar';
 import { SidebarLayout } from './ui/Sidebar';
 import { ToastContainer } from './ui/ToastContainer';
 import './App.css';
+
+// Eagerly loaded pages (small, frequently used)
+import { DashboardPage } from './pages/DashboardPage';
+import { DevicesPage } from './pages/DevicesPage';
+import { RuntimeControlPage } from './pages/RuntimeControlPage';
+
+// Lazy loaded pages (large dependencies or infrequently used)
+const TopologyPage = lazy(() =>
+  import('./pages/TopologyPage').then((m) => ({ default: m.TopologyPage }))
+);
+const ConfigDiffPage = lazy(() =>
+  import('./pages/ConfigDiffPage').then((m) => ({ default: m.ConfigDiffPage }))
+);
+const DeviceEditorPage = lazy(() =>
+  import('./pages/DeviceEditorPage').then((m) => ({ default: m.DeviceEditorPage }))
+);
+const DeviceListPage = lazy(() =>
+  import('./pages/DeviceListPage').then((m) => ({ default: m.DeviceListPage }))
+);
+const TemplatesPage = lazy(() =>
+  import('./pages/TemplatesPage').then((m) => ({ default: m.TemplatesPage }))
+);
+const AnalysisPage = lazy(() =>
+  import('./pages/AnalysisPage').then((m) => ({ default: m.AnalysisPage }))
+);
+const AutomationPage = lazy(() =>
+  import('./pages/AutomationPage').then((m) => ({ default: m.AutomationPage }))
+);
+const DebugConsolePage = lazy(() =>
+  import('./pages/DebugConsolePage').then((m) => ({ default: m.DebugConsolePage }))
+);
+const PacketInspectorPage = lazy(() =>
+  import('./pages/PacketInspectorPage').then((m) => ({ default: m.PacketInspectorPage }))
+);
+const PcapAnalyzerPage = lazy(() =>
+  import('./pages/PcapAnalyzerPage').then((m) => ({ default: m.PcapAnalyzerPage }))
+);
+const TrafficInjectionPage = lazy(() =>
+  import('./pages/TrafficInjectionPage').then((m) => ({ default: m.TrafficInjectionPage }))
+);
+
+// Loading fallback for lazy-loaded pages
+const PageLoader = () => (
+  <div className="flex items-center justify-center min-h-[400px]">
+    <div className="flex flex-col items-center gap-3">
+      <div className="h-8 w-8 animate-spin rounded-full border-4 border-violet-500 border-t-transparent" />
+      <p className="text-sm text-gray-400">Loading...</p>
+    </div>
+  </div>
+);
 
 type PageConfig = {
   path: string;
@@ -231,61 +267,63 @@ function AppShell() {
   return (
     <SidebarLayout groups={navGroups} version={version?.version}>
       <ToastContainer />
-      <Routes>
-        {pages.map((page) => (
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          {pages.map((page) => (
+            <Route
+              key={page.path}
+              path={page.path}
+              element={
+                <PageTemplate page={page}>
+                  <PageErrorBoundary>
+                    <page.component />
+                  </PageErrorBoundary>
+                </PageTemplate>
+              }
+            />
+          ))}
+          {/* Dynamic routes for device editor */}
           <Route
-            key={page.path}
-            path={page.path}
+            path="/device-config/new"
             element={
-              <PageTemplate page={page}>
+              <PageTemplate
+                page={{
+                  path: '/device-config/new',
+                  label: 'New Device',
+                  title: 'New Device',
+                  description: 'Create a new network device configuration.',
+                  icon: Wrench,
+                  component: DeviceEditorPage,
+                }}
+              >
                 <PageErrorBoundary>
-                  <page.component />
+                  <DeviceEditorPage />
                 </PageErrorBoundary>
               </PageTemplate>
             }
           />
-        ))}
-        {/* Dynamic routes for device editor */}
-        <Route
-          path="/device-config/new"
-          element={
-            <PageTemplate
-              page={{
-                path: '/device-config/new',
-                label: 'New Device',
-                title: 'New Device',
-                description: 'Create a new network device configuration.',
-                icon: Wrench,
-                component: DeviceEditorPage,
-              }}
-            >
-              <PageErrorBoundary>
-                <DeviceEditorPage />
-              </PageErrorBoundary>
-            </PageTemplate>
-          }
-        />
-        <Route
-          path="/device-config/:hostname"
-          element={
-            <PageTemplate
-              page={{
-                path: '/device-config/:hostname',
-                label: 'Edit Device',
-                title: 'Edit Device',
-                description: 'Edit device configuration settings.',
-                icon: Wrench,
-                component: DeviceEditorPage,
-              }}
-            >
-              <PageErrorBoundary>
-                <DeviceEditorPage />
-              </PageErrorBoundary>
-            </PageTemplate>
-          }
-        />
-        <Route path="*" element={<Navigate to="/" replace={true} />} />
-      </Routes>
+          <Route
+            path="/device-config/:hostname"
+            element={
+              <PageTemplate
+                page={{
+                  path: '/device-config/:hostname',
+                  label: 'Edit Device',
+                  title: 'Edit Device',
+                  description: 'Edit device configuration settings.',
+                  icon: Wrench,
+                  component: DeviceEditorPage,
+                }}
+              >
+                <PageErrorBoundary>
+                  <DeviceEditorPage />
+                </PageErrorBoundary>
+              </PageTemplate>
+            }
+          />
+          <Route path="*" element={<Navigate to="/" replace={true} />} />
+        </Routes>
+      </Suspense>
     </SidebarLayout>
   );
 }

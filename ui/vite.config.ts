@@ -27,6 +27,12 @@ export default defineConfig(({ mode }) => {
     },
     // FIX #180: Code splitting for optimal bundle sizes
     build: {
+      // Target modern browsers for smaller bundles
+      target: "es2022",
+      // Enable CSS code splitting
+      cssCodeSplit: true,
+      // Smaller chunk size warning threshold
+      chunkSizeWarningLimit: 300,
       rollupOptions: {
         output: {
           manualChunks: {
