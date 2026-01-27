@@ -25,12 +25,12 @@ import (
 
 const (
 	// SSE default configuration.
-	defaultSSEBufferSize   = 256  // Client send buffer size
-	defaultSSEMaxClients   = 100  // Max clients per stream
-	defaultSSEMaxMsgPerSec = 100  // Rate limit: max messages per second
-	defaultSSEHeartbeatSec = 30   // Send heartbeat comment every N seconds
+	defaultSSEBufferSize   = 256   // Client send buffer size
+	defaultSSEMaxClients   = 100   // Max clients per stream
+	defaultSSEMaxMsgPerSec = 100   // Rate limit: max messages per second
+	defaultSSEHeartbeatSec = 30    // Send heartbeat comment every N seconds
 	defaultSSEMaxConnSec   = 86400 // Max connection duration (24h) before forced reconnect
-	millisecsPerSecond     = 1000 // Milliseconds per second for rate limiter
+	millisecsPerSecond     = 1000  // Milliseconds per second for rate limiter
 )
 
 // SSEConfig holds configurable parameters for the SSE hub.

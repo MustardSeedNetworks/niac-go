@@ -388,14 +388,27 @@ func (tg *TrafficGenerator) sendGratuitousARP(device *SimulatedDevice) error {
 
 // sendPing sends an ICMP Echo Request.
 func (tg *TrafficGenerator) sendPing(src, dst *SimulatedDevice) error {
-	// Build Ethernet header
+	eth, ipLayer, icmpLayer := buildPingLayers(src, dst)
+	payload := []byte("NIAC-Go ping test data")
+
+	buffer, err := serializeLayers(eth, ipLayer, icmpLayer, gopacket.Payload(payload))
+	if err != nil {
+		return fmt.Errorf("failed to serialize ping: %w", err)
+	}
+
+	tg.stack.Send(&protocols.Packet{Buffer: buffer, Length: len(buffer), Device: src.Config})
+	tg.simulator.IncrementCounter(src.Config.Name, "packets_sent")
+
+	return nil
+}
+
+// buildPingLayers creates the Ethernet, IP, and ICMP layers for a ping packet.
+func buildPingLayers(src, dst *SimulatedDevice) (*layers.Ethernet, *layers.IPv4, *layers.ICMPv4) {
 	eth := &layers.Ethernet{
 		SrcMAC:       src.Config.MACAddress,
 		DstMAC:       dst.Config.MACAddress,
 		EthernetType: layers.EthernetTypeIPv4,
 	}
-
-	// Build IP header
 	ipLayer := &layers.IPv4{
 		Version:  ipv4Version,
 		IHL:      ipv4IHL,
@@ -404,49 +417,22 @@ func (tg *TrafficGenerator) sendPing(src, dst *SimulatedDevice) error {
 		SrcIP:    src.Config.IPAddresses[0].To4(),
 		DstIP:    dst.Config.IPAddresses[0].To4(),
 	}
-
-	// Build ICMP Echo Request
 	icmpLayer := &layers.ICMPv4{
 		TypeCode: layers.CreateICMPv4TypeCode(layers.ICMPv4TypeEchoRequest, 0),
 		Id:       safeconv.Uint16(simRand.IntN(maxUint16PlusOne)),
 		Seq:      safeconv.Uint16(simRand.IntN(maxUint16PlusOne)),
 	}
+	return eth, ipLayer, icmpLayer
+}
 
-	// Payload
-	payload := []byte("NIAC-Go ping test data")
-
-	// Serialize
+// serializeLayers serializes packet layers into a byte buffer.
+func serializeLayers(layersList ...gopacket.SerializableLayer) ([]byte, error) {
 	buffer := gopacket.NewSerializeBuffer()
-	opts := gopacket.SerializeOptions{
-		FixLengths:       true,
-		ComputeChecksums: true,
+	opts := gopacket.SerializeOptions{FixLengths: true, ComputeChecksums: true}
+	if err := gopacket.SerializeLayers(buffer, opts, layersList...); err != nil {
+		return nil, err
 	}
-
-	err := gopacket.SerializeLayers(
-		buffer,
-		opts,
-		eth,
-		ipLayer,
-		icmpLayer,
-		gopacket.Payload(payload),
-	)
-	if err != nil {
-		return fmt.Errorf("failed to serialize ping: %w", err)
-	}
-
-	// Send packet
-	pkt := &protocols.Packet{
-		Buffer: buffer.Bytes(),
-		Length: len(buffer.Bytes()),
-		Device: src.Config,
-	}
-
-	tg.stack.Send(pkt)
-
-	// Update counters
-	tg.simulator.IncrementCounter(src.Config.Name, "packets_sent")
-
-	return nil
+	return buffer.Bytes(), nil
 }
 
 // sendBroadcastARP sends a broadcast ARP request.

@@ -17,6 +17,7 @@ import (
 var (
 	ErrInvalidMACAddress = errors.New("invalid MAC address")
 	ErrInvalidIPAddress  = errors.New("invalid IP address")
+	errValidationFailed  = errors.New("validation failed")
 )
 
 const (
@@ -32,10 +33,7 @@ const (
 // SECURITY FIX #169: Prevents invalid or dangerous hostname values.
 func validateHostname(hostname string) *ErrorDetail {
 	if hostname == "" {
-		return &ErrorDetail{
-			Field: "hostname",
-			Issue: "hostname is required",
-		}
+		return &ErrorDetail{Field: "hostname", Issue: "hostname is required"}
 	}
 
 	if len(hostname) > maxHostnameLen {
@@ -46,65 +44,44 @@ func validateHostname(hostname string) *ErrorDetail {
 		}
 	}
 
-	// Must not be an IP address
 	if net.ParseIP(hostname) != nil {
-		return &ErrorDetail{
-			Field: "hostname",
-			Issue: "hostname must not be an IP address",
-			Value: hostname,
-		}
+		return &ErrorDetail{Field: "hostname", Issue: "hostname must not be an IP address", Value: hostname}
 	}
 
-	// Validate each label
 	labels := strings.Split(hostname, ".")
 	for _, label := range labels {
-		if len(label) == 0 {
+		if issue := validateHostnameLabel(label); issue != "" {
 			return &ErrorDetail{
 				Field: "hostname",
-				Issue: "hostname contains empty label (consecutive dots)",
+				Issue: issue,
 				Value: hostname[:min(truncateErrorValue, len(hostname))],
-			}
-		}
-
-		if len(label) > maxLabelLen {
-			return &ErrorDetail{
-				Field: "hostname",
-				Issue: fmt.Sprintf("hostname label exceeds maximum length of %d characters", maxLabelLen),
-				Value: hostname[:min(truncateErrorValue, len(hostname))],
-			}
-		}
-
-		// Must start with alphanumeric
-		if !isAlphanumeric(label[0]) {
-			return &ErrorDetail{
-				Field: "hostname",
-				Issue: "hostname labels must start with an alphanumeric character",
-				Value: hostname[:min(truncateErrorValue, len(hostname))],
-			}
-		}
-
-		// Must end with alphanumeric (not hyphen)
-		if !isAlphanumeric(label[len(label)-1]) {
-			return &ErrorDetail{
-				Field: "hostname",
-				Issue: "hostname labels must not end with a hyphen",
-				Value: hostname[:min(truncateErrorValue, len(hostname))],
-			}
-		}
-
-		// Only alphanumeric and hyphens allowed
-		for _, c := range label {
-			if !isAlphanumeric(byte(c)) && c != '-' {
-				return &ErrorDetail{
-					Field: "hostname",
-					Issue: "hostname contains invalid characters (only alphanumeric and hyphens allowed)",
-					Value: hostname[:min(truncateErrorValue, len(hostname))],
-				}
 			}
 		}
 	}
 
 	return nil
+}
+
+// validateHostnameLabel validates a single hostname label per RFC 1123.
+func validateHostnameLabel(label string) string {
+	if len(label) == 0 {
+		return "hostname contains empty label (consecutive dots)"
+	}
+	if len(label) > maxLabelLen {
+		return fmt.Sprintf("hostname label exceeds maximum length of %d characters", maxLabelLen)
+	}
+	if !isAlphanumeric(label[0]) {
+		return "hostname labels must start with an alphanumeric character"
+	}
+	if !isAlphanumeric(label[len(label)-1]) {
+		return "hostname labels must not end with a hyphen"
+	}
+	for _, c := range label {
+		if !isAlphanumeric(byte(c)) && c != '-' {
+			return "hostname contains invalid characters (only alphanumeric and hyphens allowed)"
+		}
+	}
+	return ""
 }
 
 // isAlphanumeric checks if a byte is alphanumeric.
@@ -421,73 +398,88 @@ func (s *Server) handleDeviceCreate(w http.ResponseWriter, r *http.Request) {
 	var req DeviceCreateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, r, http.StatusBadRequest, "invalid_request", "Failed to parse request", nil)
-
 		return
 	}
 
-	// SECURITY FIX #169: Validate hostname format
 	if detail := validateHostname(req.Hostname); detail != nil {
-		writeError(w, r, http.StatusBadRequest, "validation_failed",
-			detail.Issue, []ErrorDetail{*detail})
-
+		writeError(w, r, http.StatusBadRequest, "validation_failed", detail.Issue, []ErrorDetail{*detail})
 		return
 	}
 
+	cfg, err := s.validateDeviceCreatePreconditions(w, r, req.Hostname)
+	if err != nil {
+		return // Error already written
+	}
+
+	newDevice, err := s.createAndSaveDevice(w, r, cfg, req)
+	if err != nil {
+		return // Error already written
+	}
+
+	if s.sseHub != nil {
+		s.sseHub.BroadcastLog("info", "Device created: "+req.Hostname)
+	}
+
+	w.WriteHeader(http.StatusCreated)
+	s.writeJSON(w, deviceToResponse(newDevice, true, false))
+}
+
+// validateDeviceCreatePreconditions checks config and device limits.
+func (s *Server) validateDeviceCreatePreconditions(
+	w http.ResponseWriter, r *http.Request, hostname string,
+) (*config.Config, error) {
 	cfg := s.currentConfig()
 	if cfg == nil {
 		writeError(w, r, http.StatusBadRequest, "config_not_found", "No configuration loaded", nil)
-
-		return
+		return nil, errValidationFailed
 	}
 
-	// SECURITY FIX #173: Enforce device count limit
 	if len(cfg.Devices) >= MaxDeviceCount {
 		writeError(w, r, http.StatusTooManyRequests, "device_limit_reached",
 			fmt.Sprintf("Maximum device count of %d reached", MaxDeviceCount), nil)
-
-		return
+		return nil, errValidationFailed
 	}
 
-	// Check if device already exists
-	for _, dev := range cfg.Devices {
-		if dev.Name == req.Hostname {
-			writeError(w, r, http.StatusConflict, "device_exists",
-				fmt.Sprintf("Device '%s' already exists", req.Hostname), nil)
+	if deviceExists(cfg.Devices, hostname) {
+		writeError(w, r, http.StatusConflict, "device_exists",
+			fmt.Sprintf("Device '%s' already exists", hostname), nil)
+		return nil, errValidationFailed
+	}
 
-			return
+	return cfg, nil
+}
+
+// deviceExists checks if a device with the given hostname exists.
+func deviceExists(devices []config.Device, hostname string) bool {
+	for _, dev := range devices {
+		if dev.Name == hostname {
+			return true
 		}
 	}
+	return false
+}
 
-	// Create device from request
+// createAndSaveDevice creates a device from request and saves the config.
+func (s *Server) createAndSaveDevice(
+	w http.ResponseWriter, r *http.Request, cfg *config.Config, req DeviceCreateRequest,
+) (*config.Device, error) {
 	newDevice, err := createDeviceFromRequest(req)
 	if err != nil {
-		// SECURITY FIX #183: Don't expose internal error details
 		s.logger.Error("[API] Device creation failed", "error", err, "hostname", req.Hostname)
 		writeError(w, r, http.StatusBadRequest, "device_creation_failed",
 			"Failed to create device from request", nil)
-
-		return
+		return nil, err
 	}
 
-	// Add to config and save
 	newCfg := *cfg
 	newCfg.Devices = append(newCfg.Devices, *newDevice)
 
 	if saveErr := s.saveConfig(&newCfg); saveErr != nil {
 		writeError(w, r, http.StatusInternalServerError, "save_failed", "Failed to save configuration", nil)
-
-		return
+		return nil, saveErr
 	}
 
-	// Broadcast change via SSE
-	if s.sseHub != nil {
-		s.sseHub.BroadcastLog("info", "Device created: "+req.Hostname)
-	}
-
-	resp := deviceToResponse(newDevice, true, false)
-
-	w.WriteHeader(http.StatusCreated)
-	s.writeJSON(w, resp)
+	return newDevice, nil
 }
 
 // findDeviceIndex finds the index of a device by hostname, returns -1 if not found.

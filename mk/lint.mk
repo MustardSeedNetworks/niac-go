@@ -155,7 +155,7 @@ fmt-check: ## Check all formatting (Go + frontend + markdown) without fixing
 		echo "✅ Go formatting OK"; \
 	fi; \
 	echo "Checking frontend formatting (Biome)..."; \
-	if ! (cd $(UI_DIR) && npx @biomejs/biome format --check src/ 2>/dev/null); then \
+	if ! (cd $(UI_DIR) && npx @biomejs/biome check --formatter-enabled=true src/ 2>/dev/null); then \
 		echo "❌ Frontend files need formatting"; \
 		FAILED=1; \
 	else \

@@ -171,10 +171,21 @@ func parseWalkFile(filename string) (*WalkAnalysis, error) {
 	}
 	defer func() { _ = file.Close() }()
 
+	analysis, interfaceMap, err := parseWalkFileContent(file)
+	if err != nil {
+		return nil, err
+	}
+
+	analysis.Interfaces = collectInterfacesFromMap(interfaceMap)
+	calculateStatistics(analysis)
+
+	return analysis, nil
+}
+
+func parseWalkFileContent(file *os.File) (*WalkAnalysis, map[int]*InterfaceInfo, error) {
 	analysis := new(WalkAnalysis)
 	analysis.Interfaces = make([]InterfaceInfo, 0)
 	analysis.Neighbors = make([]NeighborInfo, 0)
-
 	interfaceMap := make(map[int]*InterfaceInfo)
 
 	sysDescrRe := regexp.MustCompile(`= STRING: "(.+?Cisco.+?)"`)
@@ -184,29 +195,35 @@ func parseWalkFile(filename string) (*WalkAnalysis, error) {
 	)
 	hostnameRe := regexp.MustCompile(`= STRING: "([a-z0-9\-]{3,30})"$`)
 
-	if err = parseSystemAndInterfaces(file, analysis, interfaceMap, sysDescrRe, sysObjectIDRe, ifDescrRe); err != nil {
-		return nil, err
+	if err := parseSystemAndInterfaces(file, analysis, interfaceMap, sysDescrRe, sysObjectIDRe, ifDescrRe); err != nil {
+		return nil, nil, err
 	}
 
-	if err = extractHostname(file, analysis, hostnameRe); err != nil {
-		return nil, err
+	if err := extractHostname(file, analysis, hostnameRe); err != nil {
+		return nil, nil, err
 	}
 
-	// Convert map to sorted slice
+	return analysis, interfaceMap, nil
+}
+
+func collectInterfacesFromMap(interfaceMap map[int]*InterfaceInfo) []InterfaceInfo {
 	indices := make([]int, 0, len(interfaceMap))
 	for idx := range interfaceMap {
 		indices = append(indices, idx)
 	}
 	sort.Ints(indices)
 
+	interfaces := make([]InterfaceInfo, 0, len(interfaceMap))
 	for _, idx := range indices {
 		iface := interfaceMap[idx]
-		if iface.Name != "" { // Only include interfaces with names
-			analysis.Interfaces = append(analysis.Interfaces, *iface)
+		if iface.Name != "" {
+			interfaces = append(interfaces, *iface)
 		}
 	}
+	return interfaces
+}
 
-	// Calculate statistics
+func calculateStatistics(analysis *WalkAnalysis) {
 	analysis.Statistics.TotalInterfaces = len(analysis.Interfaces)
 	for _, iface := range analysis.Interfaces {
 		if iface.Type == "physical" || iface.Type == "ethernet" {
@@ -216,8 +233,6 @@ func parseWalkFile(filename string) (*WalkAnalysis, error) {
 		}
 	}
 	analysis.Statistics.TotalNeighbors = len(analysis.Neighbors)
-
-	return analysis, nil
 }
 
 func parseSystemAndInterfaces(
@@ -387,6 +402,11 @@ func writeGraphviz(analysis *WalkAnalysis, target string) error {
 		return errors.New("no neighbor information available for graph export")
 	}
 
+	content := buildGraphvizContent(analysis)
+	return writeGraphvizOutput(content, target)
+}
+
+func buildGraphvizContent(analysis *WalkAnalysis) string {
 	local := analysis.Device.SysName
 	if local == "" {
 		local = "local-device"
@@ -395,9 +415,7 @@ func writeGraphviz(analysis *WalkAnalysis, target string) error {
 	var builder strings.Builder
 	builder.WriteString("digraph niac_topology {\n")
 	builder.WriteString("  rankdir=LR;\n")
-	builder.WriteString(
-		fmt.Sprintf("  \"%s\" [shape=box, style=filled, fillcolor=\"#2563EB\", fontcolor=\"white\"];\n", local),
-	)
+	fmt.Fprintf(&builder, "  \"%s\" [shape=box, style=filled, fillcolor=\"#2563EB\", fontcolor=\"white\"];\n", local)
 
 	seen := make(map[string]struct{})
 	for _, neighbor := range analysis.Neighbors {
@@ -406,32 +424,28 @@ func writeGraphviz(analysis *WalkAnalysis, target string) error {
 		}
 		key := strings.ToLower(neighbor.RemoteDevice)
 		if _, ok := seen[key]; !ok {
-			builder.WriteString(
-				fmt.Sprintf(
-					"  \"%s\" [shape=ellipse, style=filled, fillcolor=\"#0f172a\", fontcolor=\"white\"];\n",
-					neighbor.RemoteDevice,
-				),
+			fmt.Fprintf(&builder,
+				"  \"%s\" [shape=ellipse, style=filled, fillcolor=\"#0f172a\", fontcolor=\"white\"];\n",
+				neighbor.RemoteDevice,
 			)
 			seen[key] = struct{}{}
 		}
 
-		label := fmt.Sprintf(
-			"%s → %s (%s)",
-			neighbor.LocalInterface,
-			neighbor.RemoteInterface,
-			strings.ToUpper(neighbor.Protocol),
-		)
-		builder.WriteString(fmt.Sprintf("  \"%s\" -> \"%s\" [label=\"%s\"];\n", local, neighbor.RemoteDevice, label))
+		label := fmt.Sprintf("%s → %s (%s)",
+			neighbor.LocalInterface, neighbor.RemoteInterface, strings.ToUpper(neighbor.Protocol))
+		fmt.Fprintf(&builder, "  \"%s\" -> \"%s\" [label=\"%s\"];\n", local, neighbor.RemoteDevice, label)
 	}
 	builder.WriteString("}\n")
 
-	data := []byte(builder.String())
+	return builder.String()
+}
+
+func writeGraphvizOutput(content, target string) error {
 	if target == "-" {
-		_, _ = os.Stdout.WriteString(builder.String())
+		_, _ = os.Stdout.WriteString(content)
 		return nil
 	}
-	err := os.WriteFile(target, data, 0o600)
-	if err != nil {
+	if err := os.WriteFile(target, []byte(content), 0o600); err != nil {
 		return fmt.Errorf("failed to write DOT file: %w", err)
 	}
 	return nil
