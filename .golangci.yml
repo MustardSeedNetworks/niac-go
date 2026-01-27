@@ -323,14 +323,11 @@ linters:
 
     godoclint:
       # List of rules to enable in addition to the default set.
+      # Valid options: pkg-doc, single-pkg-doc, require-pkg-doc, start-with-name, require-doc, deprecated, max-len, no-unused-link
       # Default: empty
       enable:
         # Assert no unused link in godocs.
-        # https://github.com/godoc-lint/godoc-lint?tab=readme-ov-file#no-unused-link
         - no-unused-link
-        # Require proper doc links to standard library declarations where applicable.
-        # https://github.com/godoc-lint/godoc-lint?tab=readme-ov-file#require-stdlib-doclink
-        - require-stdlib-doclink
 
     govet:
       # Enable all analyzers.
