@@ -96,7 +96,6 @@ func (s *Server) collectFiles(kind string) ([]FileEntry, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	if root == "" {
 		return []FileEntry{}, nil
 	}
@@ -106,46 +105,37 @@ func (s *Server) collectFiles(kind string) ([]FileEntry, error) {
 		if errors.Is(err, ErrNotADirectory) {
 			return []FileEntry{}, nil
 		}
-
 		return []FileEntry{}, fmt.Errorf("failed to stat root: %w", err)
 	}
 
-	var entries []FileEntry
+	return walkAndCollectFiles(root, rootReal, exts)
+}
 
-	err = filepath.WalkDir(root, func(path string, d fs.DirEntry, walkErr error) error {
-		if walkErr != nil {
+func walkAndCollectFiles(root, rootReal string, exts []string) ([]FileEntry, error) {
+	var entries []FileEntry
+	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, walkErr error) error {
+		if walkErr != nil || d.IsDir() {
 			return walkErr
 		}
-
-		if d.IsDir() {
+		if !slices.Contains(exts, strings.ToLower(filepath.Ext(path))) {
 			return nil
 		}
-
-		ext := strings.ToLower(filepath.Ext(path))
-		if !slices.Contains(exts, ext) {
-			return nil
-		}
-
 		entry, procErr := processFileEntry(path, d, rootReal)
 		if procErr != nil {
 			if errors.Is(procErr, ErrPathOutsideRoot) {
-				return nil // Skip files outside allowed directory
+				return nil
 			}
-
 			return procErr
 		}
-
 		entries = append(entries, *entry)
 		if len(entries) >= maxFileEntries {
 			return filepath.SkipDir
 		}
-
 		return nil
 	})
 	if err != nil && !errors.Is(err, filepath.SkipDir) {
 		return nil, fmt.Errorf("failed to walk directory: %w", err)
 	}
-
 	return entries, nil
 }
 

@@ -225,13 +225,18 @@ func validateInterfaceName(iface string) *ErrorDetail {
 	if len(iface) > maxInterfaceNameLen {
 		return &ErrorDetail{
 			Field: "interface",
-			Issue: fmt.Sprintf("interface name exceeds %d characters (Linux IFNAMSIZ limit)", maxInterfaceNameLen),
+			Issue: fmt.Sprintf(
+				"interface name exceeds %d characters (Linux IFNAMSIZ limit)",
+				maxInterfaceNameLen,
+			),
 			Value: iface[:min(truncateErrorValue, len(iface))],
 		}
 	}
 
-	// Must start with a letter
-	if iface[0] == '-' || iface[0] == '.' || !((iface[0] >= 'a' && iface[0] <= 'z') || (iface[0] >= 'A' && iface[0] <= 'Z')) {
+	// Must start with a letter (apply De Morgan's law for clarity)
+	isLowerLetter := iface[0] >= 'a' && iface[0] <= 'z'
+	isUpperLetter := iface[0] >= 'A' && iface[0] <= 'Z'
+	if iface[0] == '-' || iface[0] == '.' || (!isLowerLetter && !isUpperLetter) {
 		return &ErrorDetail{
 			Field: "interface",
 			Issue: "interface name must start with a letter",

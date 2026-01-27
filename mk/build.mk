@@ -47,22 +47,17 @@ frontend-deps: ## Install frontend dependencies (cached)
 		echo "Frontend dependencies up to date"; \
 	fi
 
-build-frontend: frontend-deps ## Build React frontend
+build-frontend: frontend-deps ## Build React frontend (outputs directly to embed dir)
 	@printf "$(BOLD)🔨 Building frontend...$(RESET)\n"
 	@cd $(UI_DIR) && npm run build
-	@rm -rf $(EMBED_DIR)/*
-	@cp -r $(UI_DIST)/* $(EMBED_DIR)/
 	@printf "$(GREEN)✓ Frontend build complete$(RESET)\n"
 
 build-frontend-quiet: frontend-deps
 	@printf "   Bundling React application...\n"
 	@command -v npm >/dev/null 2>&1 || { printf "$(RED)ERROR: npm not found. Frontend build requires npm.$(RESET)\n"; exit 1; }
 	@cd $(UI_DIR) && npm run build
-	@rm -rf $(EMBED_DIR)/* 2>/dev/null || true
-	@mkdir -p $(EMBED_DIR)
-	@cp -r $(UI_DIST)/* $(EMBED_DIR)/
-	@SIZE=$$(du -sh $(UI_DIST) 2>/dev/null | cut -f1 || echo "unknown"); \
-	printf "   Output: $(UI_DIST) ($$SIZE)\n"
+	@SIZE=$$(du -sh $(EMBED_DIR) 2>/dev/null | cut -f1 || echo "unknown"); \
+	printf "   Output: $(EMBED_DIR) ($$SIZE)\n"
 
 # =============================================================================
 # Backend Build

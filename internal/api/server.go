@@ -36,13 +36,13 @@ import (
 const (
 	// MaxRequestBodySize is the maximum size for API request bodies (1MB).
 	MaxRequestBodySize = 1 << 20 // 1MB
-	// MaxPCAPUploadSize is the maximum size for PCAP file uploads (100MB)
+	// MaxPCAPUploadSize is the maximum size for PCAP file uploads (100MB).
 	MaxPCAPUploadSize = 100 << 20 // 100MB
 
-	// MaxRateLimiterCount is the maximum number of IP addresses tracked by rate limiter
+	// MaxRateLimiterCount is the maximum number of IP addresses tracked by rate limiter.
 	MaxRateLimiterCount = 10000
 
-	// DefaultRateLimit is the default requests per second allowed per IP
+	// DefaultRateLimit is the default requests per second allowed per IP.
 	DefaultRateLimit = 100
 	// DefaultBurst is the default burst size for rate limiting.
 	DefaultBurst = 200

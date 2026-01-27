@@ -285,11 +285,35 @@ func TestTopologyLinkFields(t *testing.T) {
 	if link.Source != "switch1" {
 		t.Errorf("Source = %q, want %q", link.Source, "switch1")
 	}
+	if link.Target != "router1" {
+		t.Errorf("Target = %q, want %q", link.Target, "router1")
+	}
+	if link.Label != "trunk" {
+		t.Errorf("Label = %q, want %q", link.Label, "trunk")
+	}
+	if link.SourceInterface != "ge-0/0/1" {
+		t.Errorf("SourceInterface = %q, want %q", link.SourceInterface, "ge-0/0/1")
+	}
+	if link.TargetInterface != "eth0" {
+		t.Errorf("TargetInterface = %q, want %q", link.TargetInterface, "eth0")
+	}
 	if link.LinkType != "trunk" {
 		t.Errorf("LinkType = %q, want %q", link.LinkType, "trunk")
 	}
+	if link.NativeVLAN != 1 {
+		t.Errorf("NativeVLAN = %d, want %d", link.NativeVLAN, 1)
+	}
+	if link.Speed != 10000 {
+		t.Errorf("Speed = %d, want %d", link.Speed, 10000)
+	}
+	if link.Duplex != "full" {
+		t.Errorf("Duplex = %q, want %q", link.Duplex, "full")
+	}
 	if link.Status != "up" {
 		t.Errorf("Status = %q, want %q", link.Status, "up")
+	}
+	if link.Utilization != 45.5 {
+		t.Errorf("Utilization = %f, want %f", link.Utilization, 45.5)
 	}
 	if len(link.VLANs) != 2 {
 		t.Errorf("VLANs count = %d, want 2", len(link.VLANs))
@@ -504,7 +528,7 @@ func TestExportDOTEmpty(t *testing.T) {
 	}
 }
 
-// helper function for string contains
+// helper function for string contains.
 func contains(s, substr string) bool {
 	return len(s) >= len(substr) && (s == substr || len(substr) == 0 ||
 		(len(s) > 0 && len(substr) > 0 && findSubstring(s, substr)))

@@ -11,7 +11,7 @@ import (
 	"github.com/krisarmstrong/niac-go/internal/protocols"
 )
 
-// createTestServerForMiddleware creates a minimal server for middleware tests
+// createTestServerForMiddleware creates a minimal server for middleware tests.
 func createTestServerForMiddleware(t *testing.T) *Server {
 	t.Helper()
 	cfg, err := config.LoadYAMLBytes([]byte(`
@@ -39,7 +39,7 @@ devices:
 func TestRecoverMiddlewareReturnsInternalError(t *testing.T) {
 	server := createTestServerForMiddleware(t)
 
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
 		panic("test panic message")
 	})
 
@@ -59,7 +59,7 @@ func TestRecoverMiddlewareReturnsInternalError(t *testing.T) {
 func TestRecoverMiddlewareNoPanic(t *testing.T) {
 	server := createTestServerForMiddleware(t)
 
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusCreated)
 	})
 
@@ -79,7 +79,7 @@ func TestCSRFProtectionGETAllowed(t *testing.T) {
 	server := createTestServerForMiddleware(t)
 	server.csrfToken = "test-token"
 
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
 
@@ -104,7 +104,7 @@ func TestCSRFProtectionStateMethods(t *testing.T) {
 	server := createTestServerForMiddleware(t)
 	server.csrfToken = "valid-csrf-token"
 
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
 
@@ -153,7 +153,7 @@ func TestCSRFProtectionSkippedWhenNoToken(t *testing.T) {
 	server := createTestServerForMiddleware(t)
 	server.csrfToken = "" // No CSRF token set
 
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
 
@@ -175,7 +175,7 @@ func TestAuthMiddlewareWithoutToken(t *testing.T) {
 	server.cfg.Token = "secret-api-token"
 	server.rateLimiter = NewRateLimiter(100, 200)
 
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
 
@@ -197,7 +197,7 @@ func TestAuthMiddlewareWithValidToken(t *testing.T) {
 	server.cfg.Token = "secret-api-token"
 	server.rateLimiter = NewRateLimiter(100, 200)
 
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
 
@@ -220,7 +220,7 @@ func TestAuthMiddlewareWithInvalidToken(t *testing.T) {
 	server.cfg.Token = "secret-api-token"
 	server.rateLimiter = NewRateLimiter(100, 200)
 
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
 
@@ -243,7 +243,7 @@ func TestAuthMiddlewareNoTokenConfigured(t *testing.T) {
 	server.cfg.Token = "" // No API token configured
 	server.rateLimiter = NewRateLimiter(100, 200)
 
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
 

@@ -143,7 +143,8 @@ func TestErrorResponseStructure(t *testing.T) {
 
 	// Unmarshal into map to verify JSON field names
 	var m map[string]any
-	if err := json.Unmarshal(data, &m); err != nil {
+	err = json.Unmarshal(data, &m)
+	if err != nil {
 		t.Fatalf("unmarshal error: %v", err)
 	}
 
@@ -168,7 +169,8 @@ func TestErrorDetailStructure(t *testing.T) {
 	}
 
 	var m map[string]any
-	if err := json.Unmarshal(data, &m); err != nil {
+	err = json.Unmarshal(data, &m)
+	if err != nil {
 		t.Fatalf("unmarshal error: %v", err)
 	}
 
@@ -194,7 +196,8 @@ func TestErrorDetailOmitEmpty(t *testing.T) {
 	}
 
 	var m map[string]any
-	if err := json.Unmarshal(data, &m); err != nil {
+	err = json.Unmarshal(data, &m)
+	if err != nil {
 		t.Fatalf("unmarshal error: %v", err)
 	}
 

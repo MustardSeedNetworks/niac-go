@@ -36,6 +36,7 @@ lint-backend: ## Run Go linter
 		printf "📦 Installing golangci-lint v2...\n"; \
 		go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest; \
 	fi; \
+	$$GOLANGCI_LINT cache clean && \
 	$$GOLANGCI_LINT run --timeout=5m
 	@printf "$(GREEN)✓ Backend lint complete$(RESET)\n"
 
@@ -45,8 +46,9 @@ lint-backend-quiet:
 		printf "   Installing golangci-lint v2...\n"; \
 		go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest; \
 	fi; \
+	$$GOLANGCI_LINT cache clean >/dev/null 2>&1; \
 	LINTER_COUNT=$$(grep -c "^    - " .golangci.yml 2>/dev/null || echo "30+"); \
-	printf "   Running $$LINTER_COUNT linters...\n"; \
+	printf "   Running $$LINTER_COUNT linters (cache cleared)...\n"; \
 	$$GOLANGCI_LINT run --timeout=5m 2>&1 | head -20 || true
 
 lint-frontend: ## Run frontend linter (Biome)

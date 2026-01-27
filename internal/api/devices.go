@@ -48,8 +48,7 @@ func validateHostname(hostname string) *ErrorDetail {
 		return &ErrorDetail{Field: "hostname", Issue: "hostname must not be an IP address", Value: hostname}
 	}
 
-	labels := strings.Split(hostname, ".")
-	for _, label := range labels {
+	for label := range strings.SplitSeq(hostname, ".") {
 		if issue := validateHostnameLabel(label); issue != "" {
 			return &ErrorDetail{
 				Field: "hostname",
@@ -895,69 +894,95 @@ func buildTrafficConfigResponse(dev *config.Device) *TrafficConfigResponse {
 // populateProtocolDetails fills in protocol detail fields on DeviceResponse.
 func populateProtocolDetails(resp *DeviceResponse, dev *config.Device) {
 	resp.SNMPAgent = buildSNMPAgentResponse(dev)
-
-	if dev.CDPConfig != nil && dev.CDPConfig.Enabled {
-		resp.CDP = &CDPResponse{
-			Enabled:         true,
-			Platform:        dev.CDPConfig.Platform,
-			SoftwareVersion: dev.CDPConfig.SoftwareVersion,
-			PortID:          dev.CDPConfig.PortID,
-			Version:         dev.CDPConfig.Version,
-			Holdtime:        dev.CDPConfig.Holdtime,
-		}
-	}
-
-	if dev.LLDPConfig != nil && dev.LLDPConfig.Enabled {
-		resp.LLDP = &LLDPResponse{
-			Enabled:           true,
-			ChassisIDType:     dev.LLDPConfig.ChassisIDType,
-			PortDescription:   dev.LLDPConfig.PortDescription,
-			SystemDescription: dev.LLDPConfig.SystemDescription,
-			TTL:               dev.LLDPConfig.TTL,
-		}
-	}
-
+	resp.CDP = buildCDPResponse(dev)
+	resp.LLDP = buildLLDPResponse(dev)
 	resp.DHCP = buildDHCPResponse(dev)
-
-	if dev.DNSConfig != nil {
-		resp.DNS = &DNSResponse{
-			Enabled: true,
-			Records: len(dev.DNSConfig.ForwardRecords) + len(dev.DNSConfig.ReverseRecords),
-		}
-	}
-
-	if dev.HTTPConfig != nil && dev.HTTPConfig.Enabled {
-		resp.HTTP = &HTTPResponse{
-			Enabled:       true,
-			ServerName:    dev.HTTPConfig.ServerName,
-			EndpointCount: len(dev.HTTPConfig.Endpoints),
-		}
-	}
-
-	if dev.FTPConfig != nil && dev.FTPConfig.Enabled {
-		resp.FTP = &FTPResponse{
-			Enabled:        true,
-			WelcomeBanner:  dev.FTPConfig.WelcomeBanner,
-			AllowAnonymous: dev.FTPConfig.AllowAnonymous,
-		}
-	}
-
-	if dev.NetBIOSConfig != nil && dev.NetBIOSConfig.Enabled {
-		resp.NetBIOS = &NetBIOSResponse{
-			Enabled:   true,
-			Name:      dev.NetBIOSConfig.Name,
-			Workgroup: dev.NetBIOSConfig.Workgroup,
-		}
-	}
-
-	if dev.STPConfig != nil && dev.STPConfig.Enabled {
-		resp.STP = &STPResponse{
-			Enabled:  true,
-			Priority: dev.STPConfig.BridgePriority,
-		}
-	}
-
+	resp.DNS = buildDNSResponse(dev)
+	resp.HTTP = buildHTTPResponse(dev)
+	resp.FTP = buildFTPResponse(dev)
+	resp.NetBIOS = buildNetBIOSResponse(dev)
+	resp.STP = buildSTPResponse(dev)
 	resp.TrafficConfig = buildTrafficConfigResponse(dev)
+}
+
+func buildCDPResponse(dev *config.Device) *CDPResponse {
+	if dev.CDPConfig == nil || !dev.CDPConfig.Enabled {
+		return nil
+	}
+	return &CDPResponse{
+		Enabled:         true,
+		Platform:        dev.CDPConfig.Platform,
+		SoftwareVersion: dev.CDPConfig.SoftwareVersion,
+		PortID:          dev.CDPConfig.PortID,
+		Version:         dev.CDPConfig.Version,
+		Holdtime:        dev.CDPConfig.Holdtime,
+	}
+}
+
+func buildLLDPResponse(dev *config.Device) *LLDPResponse {
+	if dev.LLDPConfig == nil || !dev.LLDPConfig.Enabled {
+		return nil
+	}
+	return &LLDPResponse{
+		Enabled:           true,
+		ChassisIDType:     dev.LLDPConfig.ChassisIDType,
+		PortDescription:   dev.LLDPConfig.PortDescription,
+		SystemDescription: dev.LLDPConfig.SystemDescription,
+		TTL:               dev.LLDPConfig.TTL,
+	}
+}
+
+func buildDNSResponse(dev *config.Device) *DNSResponse {
+	if dev.DNSConfig == nil {
+		return nil
+	}
+	return &DNSResponse{
+		Enabled: true,
+		Records: len(dev.DNSConfig.ForwardRecords) + len(dev.DNSConfig.ReverseRecords),
+	}
+}
+
+func buildHTTPResponse(dev *config.Device) *HTTPResponse {
+	if dev.HTTPConfig == nil || !dev.HTTPConfig.Enabled {
+		return nil
+	}
+	return &HTTPResponse{
+		Enabled:       true,
+		ServerName:    dev.HTTPConfig.ServerName,
+		EndpointCount: len(dev.HTTPConfig.Endpoints),
+	}
+}
+
+func buildFTPResponse(dev *config.Device) *FTPResponse {
+	if dev.FTPConfig == nil || !dev.FTPConfig.Enabled {
+		return nil
+	}
+	return &FTPResponse{
+		Enabled:        true,
+		WelcomeBanner:  dev.FTPConfig.WelcomeBanner,
+		AllowAnonymous: dev.FTPConfig.AllowAnonymous,
+	}
+}
+
+func buildNetBIOSResponse(dev *config.Device) *NetBIOSResponse {
+	if dev.NetBIOSConfig == nil || !dev.NetBIOSConfig.Enabled {
+		return nil
+	}
+	return &NetBIOSResponse{
+		Enabled:   true,
+		Name:      dev.NetBIOSConfig.Name,
+		Workgroup: dev.NetBIOSConfig.Workgroup,
+	}
+}
+
+func buildSTPResponse(dev *config.Device) *STPResponse {
+	if dev.STPConfig == nil || !dev.STPConfig.Enabled {
+		return nil
+	}
+	return &STPResponse{
+		Enabled:  true,
+		Priority: dev.STPConfig.BridgePriority,
+	}
 }
 
 // deviceToResponse converts a Device to DeviceResponse.

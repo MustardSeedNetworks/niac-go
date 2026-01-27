@@ -45,8 +45,10 @@ The web UI will be available at http://localhost:8080`,
 		},
 	}
 
-	daemonCmd.Flags().StringVar(&options.listen, "listen", ":8080", "Address to listen on for API and web UI")
-	daemonCmd.Flags().StringVar(&options.token, "token", "", "Bearer token for API authentication (RECOMMENDED for network-exposed instances)")
+	daemonCmd.Flags().
+		StringVar(&options.listen, "listen", ":8080", "Address to listen on for API and web UI")
+	daemonCmd.Flags().
+		StringVar(&options.token, "token", "", "Bearer token for API authentication (RECOMMENDED for network-exposed instances)")
 	daemonCmd.Flags().
 		StringVar(&options.storagePath, "storage", "~/.niac/niac.db", "Path to run history database (use 'disabled' to disable)")
 
@@ -61,7 +63,9 @@ func runDaemon(options *daemonOptions, info versionInfo) error {
 	if options.token != "" {
 		logging.Infof("API authentication enabled")
 	} else {
-		logging.Warningf("SECURITY: No API token set. Anyone with network access can control simulations.")
+		logging.Warningf(
+			"SECURITY: No API token set. Anyone with network access can control simulations.",
+		)
 		logging.Warningf("         Use --token for production or network-exposed deployments.")
 	}
 

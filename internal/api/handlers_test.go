@@ -15,7 +15,7 @@ import (
 	"github.com/krisarmstrong/niac-go/internal/protocols"
 )
 
-// Helper to create test server
+// Helper to create test server.
 func createTestServer(t *testing.T) (*Server, string) {
 	t.Helper()
 	cfg, err := config.LoadYAMLBytes([]byte(`
@@ -350,7 +350,7 @@ func TestRecoverMiddleware(t *testing.T) {
 	server, _ := createTestServer(t)
 
 	// Handler that panics
-	panicHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	panicHandler := http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
 		panic("test panic")
 	})
 
@@ -372,7 +372,7 @@ func TestCSRFProtection(t *testing.T) {
 	// Set a CSRF token to enable CSRF protection
 	server.csrfToken = "test-csrf-token"
 
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
 

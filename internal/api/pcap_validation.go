@@ -9,30 +9,53 @@ import (
 	"strings"
 )
 
-// Known PCAP link-layer types for validation.
+// PCAP magic number constants.
+const (
+	pcapMagicBigEndian        = 0xa1b2c3d4 // Standard pcap big-endian
+	pcapMagicBigEndianNano    = 0xa1b23c4d // Nanosecond pcap big-endian
+	pcapMagicLittleEndian     = 0xd4c3b2a1 // Standard pcap little-endian
+	pcapMagicLittleEndianNano = 0x4d3cb2a1 // Nanosecond pcap little-endian
+	pcapngMagic               = 0x0a0d0d0a // pcapng Section Header Block
+)
+
+// PCAP Data Link Type (DLT) constants from libpcap.
+// See: https://www.tcpdump.org/linktypes.html
+const (
+	dltNull              uint32 = 0   // BSD loopback encapsulation
+	dltEN10MB            uint32 = 1   // Ethernet (10Mb, 100Mb, 1000Mb, and up)
+	dltIEEE802           uint32 = 6   // 802.5 Token Ring
+	dltSLIP              uint32 = 8   // SLIP
+	dltPPP               uint32 = 9   // PPP
+	dltFDDI              uint32 = 12  // FDDI
+	dltRaw               uint32 = 101 // Raw IP
+	dltIEEE80211         uint32 = 105 // IEEE 802.11 wireless
+	dltLinuxSLL          uint32 = 113 // Linux cooked capture
+	dltIEEE80211Radiotap uint32 = 127 // Radiotap link-layer information
+	dltMTP2Pseudoheader  uint32 = 140 // MTP2 with pseudo-header
+	dltIEEE80211AVS      uint32 = 147 // AVS header + 802.11 frame
+	dltRawOpenBSD        uint32 = 162 // Raw IP (OpenBSD)
+	dltNFLOG             uint32 = 163 // NFLOG
+	dltBluetoothHCI      uint32 = 187 // Bluetooth HCI UART transport
+	dltUSB               uint32 = 189 // USB packets
+	dltIEEE802154        uint32 = 195 // IEEE 802.15.4
+	dltPPP2              uint32 = 204 // PPP (alternative)
+	dltIPv4              uint32 = 228 // Raw IPv4
+	dltIPv6              uint32 = 229 // Raw IPv6
+	dltNFQUEUE           uint32 = 253 // NFQUEUE
+)
+
+// isValidLinkType checks if a link-layer type is recognized.
 // SECURITY FIX #170: Only accept recognized link-layer types.
-var validLinkTypes = map[uint32]bool{
-	0:   true, // NULL/Loopback
-	1:   true, // Ethernet
-	6:   true, // Token Ring
-	8:   true, // SLIP
-	9:   true, // PPP
-	12:  true, // Raw IP (BSD)
-	101: true, // Raw IP
-	105: true, // IEEE 802.11
-	113: true, // Linux cooked capture
-	127: true, // IEEE 802.11 radiotap
-	140: true, // MTP2 with pseudo-header
-	147: true, // 802.11 with AVS header
-	162: true, // Raw IP (DLT_RAW on OpenBSD)
-	163: true, // NFLOG
-	187: true, // Bluetooth HCI
-	189: true, // USB 2.0/1.1/1.0 packets
-	195: true, // IEEE 802.15.4
-	204: true, // PPP
-	228: true, // Raw IPv4
-	229: true, // Raw IPv6
-	253: true, // NFQUEUE
+func isValidLinkType(linkType uint32) bool {
+	switch linkType {
+	case dltNull, dltEN10MB, dltIEEE802, dltSLIP, dltPPP, dltFDDI,
+		dltRaw, dltIEEE80211, dltLinuxSLL, dltIEEE80211Radiotap,
+		dltMTP2Pseudoheader, dltIEEE80211AVS, dltRawOpenBSD, dltNFLOG,
+		dltBluetoothHCI, dltUSB, dltIEEE802154, dltPPP2, dltIPv4, dltIPv6, dltNFQUEUE:
+		return true
+	default:
+		return false
+	}
 }
 
 // validatePCAPStructure validates that the file has a valid PCAP/pcapng structure.
@@ -46,13 +69,13 @@ func validatePCAPStructure(data []byte) error {
 	magic := uint32(data[0])<<24 | uint32(data[1])<<16 | uint32(data[2])<<8 | uint32(data[3])
 
 	switch magic {
-	case 0xa1b2c3d4, 0xa1b23c4d:
+	case pcapMagicBigEndian, pcapMagicBigEndianNano:
 		// Big-endian pcap format
 		return validatePCAPGlobalHeader(data, true)
-	case 0xd4c3b2a1, 0x4d3cb2a1:
+	case pcapMagicLittleEndian, pcapMagicLittleEndianNano:
 		// Little-endian pcap format
 		return validatePCAPGlobalHeader(data, false)
-	case 0x0a0d0d0a:
+	case pcapngMagic:
 		// pcapng format: validate Section Header Block
 		return validatePCAPngSHB(data)
 	default:
@@ -75,13 +98,29 @@ func validatePCAPGlobalHeader(data []byte, bigEndian bool) error {
 
 	var versionMajor, versionMinor, linkType uint32
 	if bigEndian {
-		versionMajor = uint32(data[4])<<8 | uint32(data[5])
-		versionMinor = uint32(data[6])<<8 | uint32(data[7])
-		linkType = uint32(data[20])<<24 | uint32(data[21])<<16 | uint32(data[22])<<8 | uint32(data[23])
+		versionMajor = uint32(data[4])<<bitShift8 | uint32(data[5])
+		versionMinor = uint32(data[6])<<bitShift8 | uint32(data[7])
+		linkType = uint32(
+			data[20],
+		)<<bitShift24 | uint32(
+			data[21],
+		)<<bitShift16 | uint32(
+			data[22],
+		)<<bitShift8 | uint32(
+			data[23],
+		)
 	} else {
-		versionMajor = uint32(data[5])<<8 | uint32(data[4])
-		versionMinor = uint32(data[7])<<8 | uint32(data[6])
-		linkType = uint32(data[23])<<24 | uint32(data[22])<<16 | uint32(data[21])<<8 | uint32(data[20])
+		versionMajor = uint32(data[5])<<bitShift8 | uint32(data[4])
+		versionMinor = uint32(data[7])<<bitShift8 | uint32(data[6])
+		linkType = uint32(
+			data[23],
+		)<<bitShift24 | uint32(
+			data[22],
+		)<<bitShift16 | uint32(
+			data[21],
+		)<<bitShift8 | uint32(
+			data[20],
+		)
 	}
 
 	// Validate version (must be 2.4)
@@ -91,7 +130,7 @@ func validatePCAPGlobalHeader(data []byte, bigEndian bool) error {
 	}
 
 	// Validate link-layer type
-	if !validLinkTypes[linkType] {
+	if !isValidLinkType(linkType) {
 		return fmt.Errorf("%w: unknown link-layer type %d",
 			ErrInvalidPCAPMagicNumber, linkType)
 	}
@@ -104,8 +143,12 @@ func validatePCAPngSHB(data []byte) error {
 	const minSHBLen = 28
 
 	if len(data) < minSHBLen {
-		return fmt.Errorf("%w: file too small for pcapng Section Header Block (need %d bytes, got %d)",
-			ErrInvalidPCAPMagicNumber, minSHBLen, len(data))
+		return fmt.Errorf(
+			"%w: file too small for pcapng Section Header Block (need %d bytes, got %d)",
+			ErrInvalidPCAPMagicNumber,
+			minSHBLen,
+			len(data),
+		)
 	}
 
 	// Bytes 8-11 contain Byte-Order Magic to determine endianness

@@ -176,99 +176,93 @@ func (s *Server) handleConfigGet(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleConfigUpdate(w http.ResponseWriter, r *http.Request) {
-	// SECURITY FIX #111: Enforce request body size limit
 	r.Body = http.MaxBytesReader(w, r.Body, MaxRequestBodySize)
 
-	// SECURITY FIX #161: Thread-safe access to ConfigPath
 	if s.configPath() == "" {
 		http.Error(w, "config path not available", http.StatusBadRequest)
-
 		return
 	}
 
+	content, ok := s.parseConfigUpdateRequest(w, r)
+	if !ok {
+		return
+	}
+
+	newCfg, valid := s.validateConfigContent(w, r, content)
+	if !valid {
+		return
+	}
+
+	if !s.applyAndSaveConfig(w, r, newCfg, content) {
+		return
+	}
+
+	doc, status, err := s.readConfigDocument()
+	if err != nil {
+		s.logger.Error("[API] Failed to read updated config", "error", err)
+		writeError(w, r, status, "config_read_failed",
+			"Configuration updated but failed to retrieve", nil)
+		return
+	}
+	s.writeJSON(w, doc)
+}
+
+func (s *Server) parseConfigUpdateRequest(w http.ResponseWriter, r *http.Request) (string, bool) {
 	var req struct {
 		Content string `json:"content"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		if err.Error() == ErrMsgRequestBodyTooLarge {
-			writeError(
-				w,
-				r,
-				http.StatusRequestEntityTooLarge,
-				"request_too_large",
-				fmt.Sprintf(
-					"Request body exceeds maximum size of %d bytes",
-					MaxRequestBodySize,
-				),
-				nil,
-			)
-
-			return
+			writeError(w, r, http.StatusRequestEntityTooLarge, "request_too_large",
+				fmt.Sprintf("Request body exceeds maximum size of %d bytes", MaxRequestBodySize), nil)
+		} else {
+			writeError(w, r, http.StatusBadRequest, "invalid_request", "Failed to parse request body", nil)
 		}
-		// SECURITY FIX MEDIUM-6: Don't expose internal error details
-		writeError(w, r, http.StatusBadRequest, "invalid_request",
-			"Failed to parse request body", nil)
-
-		return
+		return "", false
 	}
-
 	if strings.TrimSpace(req.Content) == "" {
-		writeError(w, r, http.StatusBadRequest, "validation_failed",
-			"Configuration content is required", nil)
-
-		return
+		writeError(w, r, http.StatusBadRequest, "validation_failed", "Configuration content is required", nil)
+		return "", false
 	}
+	return req.Content, true
+}
 
-	newCfg, err := config.LoadYAMLBytes([]byte(req.Content))
+func (s *Server) validateConfigContent(
+	w http.ResponseWriter, r *http.Request, content string,
+) (*config.Config, bool) {
+	newCfg, err := config.LoadYAMLBytes([]byte(content))
 	if err != nil {
-		// SECURITY FIX MEDIUM-6: Log details server-side, return generic message
 		s.logger.Error("[API] Config validation failed", "error", err)
-		writeError(w, r, http.StatusBadRequest, "config_invalid",
-			"Configuration validation failed", nil)
-
-		return
+		writeError(w, r, http.StatusBadRequest, "config_invalid", "Configuration validation failed", nil)
+		return nil, false
 	}
+	return newCfg, true
+}
 
+func (s *Server) applyAndSaveConfig(
+	w http.ResponseWriter, r *http.Request, newCfg *config.Config, content string,
+) bool {
 	prevCfg := s.currentConfig()
 	if s.cfg.ApplyConfig != nil {
-		applyErr := s.cfg.ApplyConfig(newCfg)
-		if applyErr != nil {
-			// SECURITY FIX MEDIUM-6: Don't expose internal error details
-			s.logger.Error("[API] Failed to apply config", "error", applyErr)
+		if err := s.cfg.ApplyConfig(newCfg); err != nil {
+			s.logger.Error("[API] Failed to apply config", "error", err)
 			writeError(w, r, http.StatusInternalServerError, "config_apply_failed",
 				"Failed to apply configuration", nil)
-
-			return
+			return false
 		}
 	}
 
-	writeErr := s.writeConfigFile(req.Content)
-	if writeErr != nil {
+	if err := s.writeConfigFile(content); err != nil {
 		if s.cfg.ApplyConfig != nil && prevCfg != nil {
-			// Attempt rollback to previous config to avoid divergence.
 			_ = s.cfg.ApplyConfig(prevCfg)
 		}
-		// SECURITY FIX MEDIUM-6: Don't expose file paths
-		s.logger.Error("[API] Failed to write config file", "error", writeErr)
+		s.logger.Error("[API] Failed to write config file", "error", err)
 		writeError(w, r, http.StatusInternalServerError, "config_write_failed",
 			"Failed to save configuration", nil)
-
-		return
+		return false
 	}
-
 	s.replaceConfig(newCfg)
-
-	doc, status, err := s.readConfigDocument()
-	if err != nil {
-		// SECURITY FIX MEDIUM-6: Don't expose internal error details
-		s.logger.Error("[API] Failed to read updated config", "error", err)
-		writeError(w, r, status, "config_read_failed",
-			"Configuration updated but failed to retrieve", nil)
-
-		return
-	}
-
-	s.writeJSON(w, doc)
+	return true
 }
 
 func (s *Server) handleReplay(w http.ResponseWriter, r *http.Request) {

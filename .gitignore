@@ -41,6 +41,11 @@ test_walk_loader.go
 bin/
 dist/
 build/
+
+# Frontend build outputs (Vite builds directly to internal/api/ui)
+ui/dist/
+internal/api/ui/*
+!internal/api/ui/.gitkeep
 *.tar.gz
 *.zip
 

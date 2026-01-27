@@ -14,6 +14,18 @@ const (
 	vlanRangeEndpoints   = 2 // number of endpoints shown in range (first and last)
 )
 
+// Link type constants.
+const (
+	linkTypeTrunk = "trunk"
+)
+
+// Device type constants for topology.
+const (
+	deviceTypeRouter = "router"
+	deviceTypeSwitch = "switch"
+	deviceTypeAP     = "ap"
+)
+
 // Topology describes a simple graph for visualization.
 type Topology struct {
 	Nodes []TopologyNode `json:"nodes"`
@@ -66,7 +78,7 @@ func determineLinkType(trunk config.TrunkPort) string {
 		return "lag"
 	}
 
-	return "trunk"
+	return linkTypeTrunk
 }
 
 // buildTrunkLabel creates the label for a trunk link.
@@ -262,11 +274,11 @@ func (t *Topology) ExportDOT() string {
 		var shape string
 
 		switch node.Type {
-		case "router":
+		case deviceTypeRouter:
 			shape = "ellipse"
-		case "switch":
+		case deviceTypeSwitch:
 			shape = "box"
-		case "ap":
+		case deviceTypeAP:
 			shape = "diamond"
 		default:
 			shape = "box"
@@ -284,7 +296,7 @@ func (t *Topology) ExportDOT() string {
 		color := "black"
 
 		switch link.LinkType {
-		case "trunk":
+		case linkTypeTrunk:
 			style = "bold"
 			color = "blue"
 		case "lag":

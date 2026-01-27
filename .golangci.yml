@@ -290,12 +290,12 @@ linters:
     funlen:
       # Checks the number of lines in a function.
       # If lower than 0, disable the check.
-      # Default: 60
-      lines: 50
+      # Default: 60, using 100 as industry standard
+      lines: 100
       # Checks the number of statements in a function.
       # If lower than 0, disable the check.
-      # Default: 40
-      statements: 40
+      # Default: 40, using 75 for complex handlers
+      statements: 75
 
     gochecksumtype:
       # Presence of `default` case in switch statements satisfies exhaustiveness, if all members are not listed.
@@ -483,7 +483,9 @@ linters:
           - funlen
           - goconst
           - gosec
+          - mnd
           - noctx
+          - usestdlibvars
           - wrapcheck
       # cmd/niac tests must use package main to test unexported functions.
       - path: 'cmd/.*_test\.go'

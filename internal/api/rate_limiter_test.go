@@ -55,7 +55,7 @@ func TestRateLimiter_GetLimiter_MaxCount(t *testing.T) {
 	rl := NewRateLimiter(rate.Limit(10), 5)
 
 	// Fill up to max capacity
-	for i := 0; i < MaxRateLimiterCount; i++ {
+	for i := range MaxRateLimiterCount {
 		ip := "192.168.1." + string(rune('0'+i%10)) + string(rune('0'+i/10))
 		rl.GetLimiter(ip)
 	}
@@ -134,7 +134,7 @@ func TestRateLimitMiddleware(t *testing.T) {
 	// Create a test server with rate limiting
 	rl := NewRateLimiter(rate.Limit(100), 5)
 
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
 

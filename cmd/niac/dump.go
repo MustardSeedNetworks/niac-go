@@ -22,13 +22,7 @@ type dumpOptions struct {
 	jsonOutput bool
 }
 
-func addDumpCommand(root *cobra.Command, _ *serviceOptions) {
-	options := new(dumpOptions)
-
-	dumpCmd := &cobra.Command{
-		Use:   "dump",
-		Short: "Dump captured packets from a running NIAC simulation",
-		Long: `Dump captured packets from a running NIAC simulation via IPC socket.
+const dumpLongHelp = `Dump captured packets from a running NIAC simulation via IPC socket.
 
 This command connects to a running NIAC simulation and retrieves
 hex dumps of recently captured packets. The output format is similar
@@ -40,8 +34,9 @@ Packets can be filtered by device name or interface name. Use the
 Exit codes:
   0 - Success
   1 - Connection failed (socket not found or connection refused)
-  2 - Error occurred (request failed, parse error, etc.)`,
-		Example: `  # Dump all captured packets
+  2 - Error occurred (request failed, parse error, etc.)`
+
+const dumpExample = `  # Dump all captured packets
   niac dump
 
   # Dump packets for a specific device
@@ -60,20 +55,28 @@ Exit codes:
   niac dump --device router-1 --interface eth0 --count 5
 
   # Use a custom socket path
-  niac dump --socket /var/run/niac/niac.sock`,
-		Args: cobra.NoArgs,
-		RunE: func(_ *cobra.Command, _ []string) error {
-			return runDump(options)
-		},
+  niac dump --socket /var/run/niac/niac.sock`
+
+func addDumpCommand(root *cobra.Command, _ *serviceOptions) {
+	options := new(dumpOptions)
+	dumpCmd := &cobra.Command{
+		Use:     "dump",
+		Short:   "Dump captured packets from a running NIAC simulation",
+		Long:    dumpLongHelp,
+		Example: dumpExample,
+		Args:    cobra.NoArgs,
+		RunE:    func(_ *cobra.Command, _ []string) error { return runDump(options) },
 	}
-
-	dumpCmd.Flags().StringVar(&options.device, "device", "", "Filter by device name")
-	dumpCmd.Flags().StringVar(&options.iface, "interface", "", "Filter by interface name")
-	dumpCmd.Flags().IntVar(&options.count, "count", 0, "Maximum number of packets to display (0 = all)")
-	dumpCmd.Flags().StringVar(&options.socketPath, "socket", "", "Path to IPC socket (default: /tmp/niac.sock)")
-	dumpCmd.Flags().BoolVar(&options.jsonOutput, "json", false, "Output packets as JSON")
-
+	addDumpFlags(dumpCmd, options)
 	root.AddCommand(dumpCmd)
+}
+
+func addDumpFlags(cmd *cobra.Command, options *dumpOptions) {
+	cmd.Flags().StringVar(&options.device, "device", "", "Filter by device name")
+	cmd.Flags().StringVar(&options.iface, "interface", "", "Filter by interface name")
+	cmd.Flags().IntVar(&options.count, "count", 0, "Maximum number of packets to display (0 = all)")
+	cmd.Flags().StringVar(&options.socketPath, "socket", "", "Path to IPC socket (default: /tmp/niac.sock)")
+	cmd.Flags().BoolVar(&options.jsonOutput, "json", false, "Output packets as JSON")
 }
 
 // PacketDump represents a captured packet for display.
@@ -89,64 +92,57 @@ type PacketDump struct {
 
 // runDump executes the dump command.
 func runDump(options *dumpOptions) error {
-	// Determine socket path
-	socketPath := options.socketPath
-	if socketPath == "" {
-		socketPath = ipc.DefaultSocketPath()
+	socketPath := resolveSocketPath(options.socketPath)
+	if err := checkSocketExists(socketPath, options.jsonOutput); err != nil {
+		return err
 	}
 
-	// Check if socket exists
+	packets, err := ipc.NewClient(socketPath).DumpPackets(options.device, options.iface, options.count)
+	if err != nil {
+		return handleDumpError(err, options.jsonOutput)
+	}
+
+	outputPackets(packets, options.jsonOutput)
+	return nil
+}
+
+func checkSocketExists(socketPath string, jsonOutput bool) error {
 	if _, err := os.Stat(socketPath); os.IsNotExist(err) {
-		if options.jsonOutput {
-			outputDumpJSON(map[string]any{
-				"success": false,
-				"error":   "socket not found",
-			})
+		if jsonOutput {
+			outputDumpJSON(map[string]any{"success": false, "error": "socket not found"})
 		} else {
 			fmt.Fprintf(os.Stderr, "Error: Socket not found: %s\n", socketPath)
 			fmt.Fprintf(os.Stderr, "Is the NIAC simulation running?\n")
 		}
 		os.Exit(1)
 	}
+	return nil
+}
 
-	// Create IPC client
-	client := ipc.NewClient(socketPath)
-
-	// Request packet dump
-	packets, err := client.DumpPackets(options.device, options.iface, options.count)
-	if err != nil {
-		if options.jsonOutput {
-			outputDumpJSON(map[string]any{
-				"success": false,
-				"error":   err.Error(),
-			})
-		} else {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		}
-		os.Exit(exitCodeError)
+func handleDumpError(err error, jsonOutput bool) error {
+	if jsonOutput {
+		outputDumpJSON(map[string]any{"success": false, "error": err.Error()})
+	} else {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 	}
+	os.Exit(exitCodeError)
+	return nil
+}
 
+func outputPackets(packets []ipc.PacketData, jsonOutput bool) {
 	if len(packets) == 0 {
-		if options.jsonOutput {
-			outputDumpJSON(map[string]any{
-				"success": true,
-				"packets": []any{},
-				"count":   0,
-			})
+		if jsonOutput {
+			outputDumpJSON(map[string]any{"success": true, "packets": []any{}, "count": 0})
 		} else {
 			fmt.Fprintln(os.Stdout, "No packets captured")
 		}
-		return nil
+		return
 	}
-
-	// Output based on format
-	if options.jsonOutput {
+	if jsonOutput {
 		outputPacketsJSON(packets)
 	} else {
 		printPacketsHexDump(packets)
 	}
-
-	return nil
 }
 
 // printPacketsHexDump prints packets in hex dump format (similar to xxd).

@@ -24,7 +24,15 @@ func addConfigCommand(root *cobra.Command, _ *serviceOptions) {
   niac config merge base.yaml overlay.yaml merged.yaml`,
 	}
 
-	configExportCmd := &cobra.Command{
+	configCmd.AddCommand(newConfigExportCmd())
+	configCmd.AddCommand(newConfigDiffCmd())
+	configCmd.AddCommand(newConfigMergeCmd())
+	addGenerateCommand(configCmd)
+	root.AddCommand(configCmd)
+}
+
+func newConfigExportCmd() *cobra.Command {
+	return &cobra.Command{
 		Use:   "export <input-file> <output-file>",
 		Short: "Export configuration to YAML",
 		Long: `Export a NIAC configuration file to normalized YAML format.
@@ -47,8 +55,10 @@ This command:
 			runConfigExport(args)
 		},
 	}
+}
 
-	configDiffCmd := &cobra.Command{
+func newConfigDiffCmd() *cobra.Command {
+	return &cobra.Command{
 		Use:   "diff <file1> <file2>",
 		Short: "Compare two configurations",
 		Long: `Compare two NIAC configuration files and show differences.
@@ -71,8 +81,10 @@ Compares:
 			runConfigDiff(args)
 		},
 	}
+}
 
-	configMergeCmd := &cobra.Command{
+func newConfigMergeCmd() *cobra.Command {
+	return &cobra.Command{
 		Use:   "merge <base-file> <overlay-file> <output-file>",
 		Short: "Merge two configurations",
 		Long: `Merge two NIAC configuration files.
@@ -94,12 +106,6 @@ The overlay file takes precedence:
 			runConfigMerge(args)
 		},
 	}
-
-	configCmd.AddCommand(configExportCmd)
-	configCmd.AddCommand(configDiffCmd)
-	configCmd.AddCommand(configMergeCmd)
-	addGenerateCommand(configCmd)
-	root.AddCommand(configCmd)
 }
 
 func runConfigExport(args []string) {
@@ -146,52 +152,52 @@ func runConfigExport(args []string) {
 }
 
 func runConfigDiff(args []string) {
-	file1 := args[0]
-	file2 := args[1]
+	cfg1, cfg2 := loadConfigPair(args[0], args[1])
+	devices1 := buildDeviceMap(cfg1)
+	devices2 := buildDeviceMap(cfg2)
+	hasChanges := compareDeviceMaps(devices1, devices2)
 
-	// Load configurations
+	if !hasChanges {
+		fmt.Fprintln(os.Stdout, "No differences found")
+	}
+}
+
+func loadConfigPair(file1, file2 string) (*config.Config, *config.Config) {
 	cfg1, err := config.Load(file1)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error loading %s: %v\n", file1, err)
 		os.Exit(1)
 	}
-
 	cfg2, err := config.Load(file2)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error loading %s: %v\n", file2, err)
 		os.Exit(1)
 	}
+	return cfg1, cfg2
+}
 
-	// Build device maps
-	devices1 := make(map[string]*config.Device)
-	devices2 := make(map[string]*config.Device)
-
-	for i := range cfg1.Devices {
-		devices1[cfg1.Devices[i].Name] = &cfg1.Devices[i]
+func buildDeviceMap(cfg *config.Config) map[string]*config.Device {
+	devices := make(map[string]*config.Device)
+	for i := range cfg.Devices {
+		devices[cfg.Devices[i].Name] = &cfg.Devices[i]
 	}
-	for i := range cfg2.Devices {
-		devices2[cfg2.Devices[i].Name] = &cfg2.Devices[i]
-	}
+	return devices
+}
 
+func compareDeviceMaps(devices1, devices2 map[string]*config.Device) bool {
 	hasChanges := false
-
-	// Check for removed devices
 	for name := range devices1 {
 		if _, exists := devices2[name]; !exists {
 			fmt.Fprintf(os.Stdout, "- Device removed: %s\n", name)
 			hasChanges = true
 		}
 	}
-
-	// Check for added devices
 	for name := range devices2 {
 		if _, exists := devices1[name]; !exists {
 			fmt.Fprintf(os.Stdout, "+ Device added: %s\n", name)
 			hasChanges = true
 		}
 	}
-
-	// Check for modified devices
 	for name, dev1 := range devices1 {
 		if dev2, exists := devices2[name]; exists {
 			if dev1.MACAddress.String() != dev2.MACAddress.String() {
@@ -206,78 +212,70 @@ func runConfigDiff(args []string) {
 			}
 		}
 	}
-
-	if !hasChanges {
-		fmt.Fprintln(os.Stdout, "No differences found")
-	}
+	return hasChanges
 }
 
 func runConfigMerge(args []string) {
-	baseFile := args[0]
-	overlayFile := args[1]
-	outputFile := args[2]
+	baseFile, overlayFile, outputFile := args[0], args[1], args[2]
+	checkOutputNotExists(outputFile)
 
-	// Check if output exists
-	if _, err := os.Stat(outputFile); err == nil {
-		fmt.Fprintf(os.Stderr, "Error: output file already exists: %s\n", outputFile)
+	base := loadConfigOrExit(baseFile, "base")
+	overlay := loadConfigOrExit(overlayFile, "overlay")
+	merged := mergeConfigs(base, overlay)
+
+	writeConfigOrExit(merged, outputFile)
+	printMergeStats(base, overlay, merged, outputFile)
+}
+
+func checkOutputNotExists(path string) {
+	if _, err := os.Stat(path); err == nil {
+		fmt.Fprintf(os.Stderr, "Error: output file already exists: %s\n", path)
 		os.Exit(1)
 	}
+}
 
-	// Load base configuration
-	base, err := config.Load(baseFile)
+func loadConfigOrExit(path, label string) *config.Config {
+	cfg, err := config.Load(path)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error loading base: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error loading %s: %v\n", label, err)
 		os.Exit(1)
 	}
+	return cfg
+}
 
-	// Load overlay configuration
-	overlay, err := config.Load(overlayFile)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error loading overlay: %v\n", err)
-		os.Exit(1)
-	}
+func mergeConfigs(base, overlay *config.Config) *config.Config {
+	merged := &config.Config{Devices: make([]config.Device, 0)}
+	overlayDevices := buildDeviceMap(overlay)
 
-	// Build merged config
-	merged := new(config.Config)
-	merged.Devices = make([]config.Device, 0)
-
-	// Create map of overlay devices by name
-	overlayDevices := make(map[string]*config.Device)
-	for i := range overlay.Devices {
-		overlayDevices[overlay.Devices[i].Name] = &overlay.Devices[i]
-	}
-
-	// Add/replace devices from base
 	for _, dev := range base.Devices {
 		if overlayDev, exists := overlayDevices[dev.Name]; exists {
-			// Use overlay version
 			merged.Devices = append(merged.Devices, *overlayDev)
 			delete(overlayDevices, dev.Name)
 		} else {
-			// Keep base version
 			merged.Devices = append(merged.Devices, dev)
 		}
 	}
-
-	// Add remaining overlay devices
 	for _, dev := range overlayDevices {
 		merged.Devices = append(merged.Devices, *dev)
 	}
+	return merged
+}
 
-	// Marshal to YAML
-	data, err := config.MarshalConfigYAML(merged)
+func writeConfigOrExit(cfg *config.Config, path string) {
+	data, err := config.MarshalConfigYAML(cfg)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error marshaling configuration: %v\n", err)
 		os.Exit(1)
 	}
-
-	// Write to file
-	if writeErr := os.WriteFile(outputFile, data, 0o600); writeErr != nil {
-		fmt.Fprintf(os.Stderr, "Error writing file: %v\n", writeErr)
+	err = os.WriteFile(path, data, 0o600)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error writing file: %v\n", err)
 		os.Exit(1)
 	}
+}
 
-	fmt.Fprintf(os.Stdout, "Merged configuration written to %s\n", outputFile)
+func printMergeStats(base, overlay, merged *config.Config, output string) {
+	fmt.Fprintf(os.Stdout, "Merged configuration written to %s\n", output)
 	fmt.Fprintf(os.Stdout, "Base devices: %d\n", len(base.Devices))
 	fmt.Fprintf(os.Stdout, "Overlay devices: %d\n", len(overlay.Devices))
 	fmt.Fprintf(os.Stdout, "Merged devices: %d\n", len(merged.Devices))

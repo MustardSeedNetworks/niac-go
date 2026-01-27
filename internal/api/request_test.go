@@ -169,9 +169,11 @@ func TestGenerateRequestID(t *testing.T) {
 		t.Error("generateRequestID() returned empty string")
 	}
 
-	// Should be hex encoded
+	// Should be hex encoded (apply De Morgan's law for clarity)
 	for _, c := range id1 {
-		if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f')) {
+		isDigit := c >= '0' && c <= '9'
+		isHexLetter := c >= 'a' && c <= 'f'
+		if !isDigit && !isHexLetter {
 			t.Errorf("generateRequestID() contains non-hex character: %c", c)
 		}
 	}
