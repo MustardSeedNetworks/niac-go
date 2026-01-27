@@ -147,11 +147,18 @@ VERSION_PKG=github.com/krisarmstrong/niac/internal/version
 GO_BUILD_FLAGS := -trimpath -buildvcs=false
 GOFLAGS=$(GO_BUILD_FLAGS)
 
+# UI build hash for deployment verification (generated from embedded assets)
+UI_BUILD_HASH := $(shell if [ -d "$(EMBED_DIR)" ] && [ -n "$$(ls -A $(EMBED_DIR) 2>/dev/null)" ]; then \
+	find $(EMBED_DIR) -type f -exec md5 -q {} \; 2>/dev/null | sort | md5 -q 2>/dev/null || \
+	find $(EMBED_DIR) -type f -exec md5sum {} \; 2>/dev/null | sort | md5sum 2>/dev/null | cut -d' ' -f1; \
+else echo ""; fi)
+
 # Standard linker flags with version injection
 GO_LDFLAGS = -s -w \
 	-X main.version=$(VERSION) \
 	-X main.commit=$(COMMIT) \
-	-X main.date=$(BUILD_TIME)
+	-X main.date=$(BUILD_TIME) \
+	-X main.uiBuildHash=$(UI_BUILD_HASH)
 LDFLAGS=$(GO_LDFLAGS)
 
 # Docker settings

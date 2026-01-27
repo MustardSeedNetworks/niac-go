@@ -1,7 +1,7 @@
 // Device editor components
 export { AdditionalIPsSection } from './AdditionalIPsSection';
 export { BasicSettingsSection } from './BasicSettingsSection';
-export { CdpSection } from './CDPSection';
+export { CdpSection } from './CdpSection';
 export { DeleteConfirmModal } from './DeleteConfirmModal';
 export type { StatusMessage } from './DeviceEditorHeader';
 export { DeviceEditorHeader } from './DeviceEditorHeader';
@@ -10,10 +10,10 @@ export { DhcpSection } from './DHCPSection';
 export { DnsSection } from './DNSSection';
 export { FtpSection } from './FTPSection';
 export { HttpSection } from './HTTPSection';
-export { LldpSection } from './LLDPSection';
+export { LldpSection } from './LldpSection';
 export { NetBiosSection } from './NetBIOSSection';
-export { SnmpSection } from './SNMPSection';
-export { StpSection } from './STPSection';
+export { SnmpSection } from './SnmpSection';
+export { StpSection } from './StpSection';
 export { TrafficSection } from './TrafficSection';
 // Types
 export type { ProtocolSectionBaseProps, ProtocolSectionProps, SNMPSectionProps } from './types';

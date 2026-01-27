@@ -15,7 +15,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { type FC, lazy, memo, type ReactNode, Suspense } from 'react';
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { ErrorBoundary, PageErrorBoundary } from './components/ErrorBoundary';
 import { AppProvider, useAppState } from './contexts/AppContext';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
@@ -33,37 +33,37 @@ import { RuntimeControlPage } from './pages/RuntimeControlPage';
 
 // Lazy loaded pages (large dependencies or infrequently used)
 const TopologyPage = lazy(() =>
-  import('./pages/TopologyPage').then((m) => ({ default: m.TopologyPage }))
+  import('./pages/TopologyPage').then((m) => ({ default: m.TopologyPage })),
 );
 const ConfigDiffPage = lazy(() =>
-  import('./pages/ConfigDiffPage').then((m) => ({ default: m.ConfigDiffPage }))
+  import('./pages/ConfigDiffPage').then((m) => ({ default: m.ConfigDiffPage })),
 );
 const DeviceEditorPage = lazy(() =>
-  import('./pages/DeviceEditorPage').then((m) => ({ default: m.DeviceEditorPage }))
+  import('./pages/DeviceEditorPage').then((m) => ({ default: m.DeviceEditorPage })),
 );
 const DeviceListPage = lazy(() =>
-  import('./pages/DeviceListPage').then((m) => ({ default: m.DeviceListPage }))
+  import('./pages/DeviceListPage').then((m) => ({ default: m.DeviceListPage })),
 );
 const TemplatesPage = lazy(() =>
-  import('./pages/TemplatesPage').then((m) => ({ default: m.TemplatesPage }))
+  import('./pages/TemplatesPage').then((m) => ({ default: m.TemplatesPage })),
 );
 const AnalysisPage = lazy(() =>
-  import('./pages/AnalysisPage').then((m) => ({ default: m.AnalysisPage }))
+  import('./pages/AnalysisPage').then((m) => ({ default: m.AnalysisPage })),
 );
 const AutomationPage = lazy(() =>
-  import('./pages/AutomationPage').then((m) => ({ default: m.AutomationPage }))
+  import('./pages/AutomationPage').then((m) => ({ default: m.AutomationPage })),
 );
 const DebugConsolePage = lazy(() =>
-  import('./pages/DebugConsolePage').then((m) => ({ default: m.DebugConsolePage }))
+  import('./pages/DebugConsolePage').then((m) => ({ default: m.DebugConsolePage })),
 );
 const PacketInspectorPage = lazy(() =>
-  import('./pages/PacketInspectorPage').then((m) => ({ default: m.PacketInspectorPage }))
+  import('./pages/PacketInspectorPage').then((m) => ({ default: m.PacketInspectorPage })),
 );
 const PcapAnalyzerPage = lazy(() =>
-  import('./pages/PcapAnalyzerPage').then((m) => ({ default: m.PcapAnalyzerPage }))
+  import('./pages/PcapAnalyzerPage').then((m) => ({ default: m.PcapAnalyzerPage })),
 );
 const TrafficInjectionPage = lazy(() =>
-  import('./pages/TrafficInjectionPage').then((m) => ({ default: m.TrafficInjectionPage }))
+  import('./pages/TrafficInjectionPage').then((m) => ({ default: m.TrafficInjectionPage })),
 );
 
 // Loading fallback for lazy-loaded pages
@@ -89,16 +89,16 @@ type PageConfig = {
 const pages: PageConfig[] = [
   {
     path: '/',
-    label: 'Command Center',
-    title: 'Command Center',
+    label: 'Dashboard',
+    title: 'Dashboard',
     description: 'Live counters, run snapshots, and automation status for the active NIAC stack.',
     icon: Activity,
     component: DashboardPage,
   },
   {
     path: '/runtime',
-    label: 'Runtime Control',
-    title: 'Runtime Control',
+    label: 'Simulation',
+    title: 'Simulation Control',
     description: 'Monitor runtime status, view network interfaces, and manage NIAC configuration.',
     icon: PlugZap,
     component: RuntimeControlPage,
@@ -131,8 +131,8 @@ const pages: PageConfig[] = [
   },
   {
     path: '/analysis',
-    label: 'Analysis',
-    title: 'Analysis & Playback',
+    label: 'Replay',
+    title: 'Replay & Playback',
     description: 'Replay PCAPs, inspect SNMP walks, and publish bundles directly from the UI.',
     icon: LineChart,
     component: AnalysisPage,
@@ -156,16 +156,16 @@ const pages: PageConfig[] = [
   },
   {
     path: '/debug',
-    label: 'Debug Console',
-    title: 'Debug Console',
+    label: 'Protocol Debug',
+    title: 'Protocol Debug',
     description: 'Real-time log streaming and debugging tools for monitoring NIAC operations.',
     icon: Terminal,
     component: DebugConsolePage,
   },
   {
     path: '/packets',
-    label: 'Packet Inspector',
-    title: 'Packet Inspector',
+    label: 'Live Packets',
+    title: 'Live Packets',
     description:
       'Real-time packet hex dump viewing with protocol filtering and search capabilities.',
     icon: FileSearch,
@@ -189,8 +189,8 @@ const pages: PageConfig[] = [
   },
   {
     path: '/pcap-analyzer',
-    label: 'PCAP Analyzer',
-    title: 'PCAP Analyzer',
+    label: 'PCAP Analysis',
+    title: 'PCAP Analysis',
     description: 'Upload and analyze PCAP files with packet inspection, filtering, and statistics.',
     icon: FileBox,
     component: PcapAnalyzerPage,
@@ -202,8 +202,8 @@ const navGroups: SidebarNavGroup[] = [
   {
     label: 'Control',
     items: [
-      { path: '/', label: 'Command Center', icon: Activity },
-      { path: '/runtime', label: 'Runtime Control', icon: PlugZap },
+      { path: '/', label: 'Dashboard', icon: Activity },
+      { path: '/runtime', label: 'Simulation', icon: PlugZap },
     ],
   },
   {
@@ -230,10 +230,10 @@ const navGroups: SidebarNavGroup[] = [
   {
     label: 'Analysis',
     items: [
-      { path: '/analysis', label: 'Playback', icon: LineChart },
-      { path: '/debug', label: 'Debug Console', icon: Terminal },
-      { path: '/packets', label: 'Packet Inspector', icon: FileSearch },
-      { path: '/pcap-analyzer', label: 'PCAP Analyzer', icon: FileBox },
+      { path: '/analysis', label: 'Replay', icon: LineChart },
+      { path: '/debug', label: 'Protocol Debug', icon: Terminal },
+      { path: '/packets', label: 'Live Packets', icon: FileSearch },
+      { path: '/pcap-analyzer', label: 'PCAP Analysis', icon: FileBox },
     ],
   },
   {
@@ -274,11 +274,9 @@ function AppShell() {
               key={page.path}
               path={page.path}
               element={
-                <PageTemplate page={page}>
-                  <PageErrorBoundary>
-                    <page.component />
-                  </PageErrorBoundary>
-                </PageTemplate>
+                <PageWithErrorBoundary page={page}>
+                  <page.component />
+                </PageWithErrorBoundary>
               }
             />
           ))}
@@ -286,7 +284,7 @@ function AppShell() {
           <Route
             path="/device-config/new"
             element={
-              <PageTemplate
+              <PageWithErrorBoundary
                 page={{
                   path: '/device-config/new',
                   label: 'New Device',
@@ -296,16 +294,14 @@ function AppShell() {
                   component: DeviceEditorPage,
                 }}
               >
-                <PageErrorBoundary>
-                  <DeviceEditorPage />
-                </PageErrorBoundary>
-              </PageTemplate>
+                <DeviceEditorPage />
+              </PageWithErrorBoundary>
             }
           />
           <Route
             path="/device-config/:hostname"
             element={
-              <PageTemplate
+              <PageWithErrorBoundary
                 page={{
                   path: '/device-config/:hostname',
                   label: 'Edit Device',
@@ -315,10 +311,8 @@ function AppShell() {
                   component: DeviceEditorPage,
                 }}
               >
-                <PageErrorBoundary>
-                  <DeviceEditorPage />
-                </PageErrorBoundary>
-              </PageTemplate>
+                <DeviceEditorPage />
+              </PageWithErrorBoundary>
             }
           />
           <Route path="*" element={<Navigate to="/" replace={true} />} />
@@ -328,13 +322,23 @@ function AppShell() {
   );
 }
 
-// Memoize PageTemplate to prevent unnecessary re-renders
-const PageTemplate = memo(({ page, children }: { page: PageConfig; children: ReactNode }) => (
-  <section className="space-y-6">
-    <Breadcrumbs />
-    <PageHeader icon={page.icon} title={page.title} description={page.description} />
-    {children}
-  </section>
-));
+// Wrapper component to provide location-based key for error boundary reset
+// FIX: Error state was persisting across pages because PageErrorBoundary
+// wasn't resetting on route changes. Using location.pathname as key forces
+// React to unmount/remount the error boundary when navigating.
+const PageWithErrorBoundary = memo(
+  ({ page, children }: { page: PageConfig; children: ReactNode }) => {
+    const location = useLocation();
+    return (
+      <PageErrorBoundary key={location.pathname}>
+        <section className="space-y-6">
+          <Breadcrumbs />
+          <PageHeader icon={page.icon} title={page.title} description={page.description} />
+          {children}
+        </section>
+      </PageErrorBoundary>
+    );
+  },
+);
 
-PageTemplate.displayName = 'PageTemplate';
+PageWithErrorBoundary.displayName = 'PageWithErrorBoundary';

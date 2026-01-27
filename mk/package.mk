@@ -11,7 +11,8 @@
 #
 # =============================================================================
 
-.PHONY: deb rpm pkg windows-zip packages install-service container
+.PHONY: deb rpm pkg windows-zip packages install-service container \
+        deploy-ubuntu deploy-fedora deploy-all deploy-validate
 
 # =============================================================================
 # Package Variables
@@ -139,3 +140,71 @@ container: ## Build container image locally (Pack/Buildpacks)
 		--env BP_GO_TARGETS="./cmd/niac" \
 		--env BP_GO_BUILD_LDFLAGS="-s -w -X $(VERSION_PKG).Version=$(VERSION) -X $(VERSION_PKG).Commit=$(COMMIT)"
 	@printf "$(GREEN)Container: $(CONTAINER_IMAGE):$(VERSION) (local)$(RESET)\n"
+
+# =============================================================================
+# Deployment Targets
+# =============================================================================
+# These targets deploy packages to test servers and validate the installation.
+#
+# Prerequisites:
+#   - SSH access to target servers (key-based auth recommended)
+#   - Packages built with 'make packages'
+#   - Target servers: niac-srv-ubuntu, niac-srv-fedora in ~/.ssh/config
+#
+# =============================================================================
+
+# Deployment server hostnames (configure in ~/.ssh/config)
+DEPLOY_UBUNTU_HOST ?= niac-srv-ubuntu
+DEPLOY_FEDORA_HOST ?= niac-srv-fedora
+DEPLOY_PORT ?= 8080
+
+deploy-validate: ## Validate deployment on a remote host (HOST=hostname)
+	@if [ -z "$(HOST)" ]; then \
+		printf "$(RED)ERROR: HOST is required. Usage: make deploy-validate HOST=hostname$(RESET)\n"; \
+		exit 1; \
+	fi
+	@printf "$(BOLD)Validating deployment on $(HOST)...$(RESET)\n"
+	./scripts/deploy-validate.sh $(VERSION) $(COMMIT) $(HOST) $(DEPLOY_PORT)
+
+deploy-ubuntu: packages ## Deploy .deb to Ubuntu test server and validate
+	@printf "$(BOLD)Deploying to $(DEPLOY_UBUNTU_HOST)...$(RESET)\n"
+	@DEB_FILE=$$(ls -t dist/niac_*_amd64.deb 2>/dev/null | head -1); \
+	if [ -z "$$DEB_FILE" ]; then \
+		printf "$(RED)ERROR: No .deb file found in dist/. Run 'make packages' first.$(RESET)\n"; \
+		exit 1; \
+	fi; \
+	printf "  Uploading $$DEB_FILE...\n"; \
+	scp "$$DEB_FILE" $(DEPLOY_UBUNTU_HOST):/tmp/niac.deb; \
+	printf "  Installing package...\n"; \
+	ssh $(DEPLOY_UBUNTU_HOST) 'sudo dpkg -i /tmp/niac.deb'; \
+	printf "  Restarting service...\n"; \
+	ssh $(DEPLOY_UBUNTU_HOST) 'sudo systemctl restart niac || sudo systemctl start niac'; \
+	printf "  Waiting for service startup...\n"; \
+	sleep 3; \
+	printf "  Validating deployment...\n"
+	@./scripts/deploy-validate.sh $(VERSION) $(COMMIT) $(DEPLOY_UBUNTU_HOST) $(DEPLOY_PORT)
+	@printf "$(GREEN)✓ Ubuntu deployment complete and validated$(RESET)\n"
+
+deploy-fedora: packages ## Deploy .rpm to Fedora test server and validate
+	@printf "$(BOLD)Deploying to $(DEPLOY_FEDORA_HOST)...$(RESET)\n"
+	@RPM_FILE=$$(ls -t dist/niac-*-1.*.rpm 2>/dev/null | head -1); \
+	if [ -z "$$RPM_FILE" ]; then \
+		printf "$(RED)ERROR: No .rpm file found in dist/. Run 'make packages' first.$(RESET)\n"; \
+		exit 1; \
+	fi; \
+	printf "  Uploading $$RPM_FILE...\n"; \
+	scp "$$RPM_FILE" $(DEPLOY_FEDORA_HOST):/tmp/niac.rpm; \
+	printf "  Installing package...\n"; \
+	ssh $(DEPLOY_FEDORA_HOST) 'sudo rpm -Uvh --nodeps /tmp/niac.rpm || sudo rpm -ivh --nodeps /tmp/niac.rpm'; \
+	printf "  Restarting service...\n"; \
+	ssh $(DEPLOY_FEDORA_HOST) 'sudo systemctl restart niac || sudo systemctl start niac'; \
+	printf "  Waiting for service startup...\n"; \
+	sleep 3; \
+	printf "  Validating deployment...\n"
+	@./scripts/deploy-validate.sh $(VERSION) $(COMMIT) $(DEPLOY_FEDORA_HOST) $(DEPLOY_PORT)
+	@printf "$(GREEN)✓ Fedora deployment complete and validated$(RESET)\n"
+
+deploy-all: deploy-ubuntu deploy-fedora ## Deploy to all test servers
+	@printf "\n$(GREEN)╔══════════════════════════════════════════════════════════════════════════════╗$(RESET)\n"
+	@printf "$(GREEN)║                    ✓ ALL DEPLOYMENTS VALIDATED                                ║$(RESET)\n"
+	@printf "$(GREEN)╚══════════════════════════════════════════════════════════════════════════════╝$(RESET)\n"

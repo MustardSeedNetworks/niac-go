@@ -1,4 +1,11 @@
-import { useCallback, useDeferredValue, useMemo, useOptimistic, useState, useTransition } from 'react';
+import {
+  useCallback,
+  useDeferredValue,
+  useMemo,
+  useOptimistic,
+  useState,
+  useTransition,
+} from 'react';
 import { cloneDevice, deleteDevice, fetchConfigDevices } from '../../api/client';
 import type { Device, DeviceListResponse, DeviceType } from '../../api/types';
 import { useApiResource } from '../../hooks/useApiResource';
@@ -175,23 +182,17 @@ export const useDeviceListState = (): UseDeviceListStateReturn => {
   }, []);
 
   // React 19: Wrap filter updates in startTransition for non-blocking UI
-  const setTypeFilter = useCallback(
-    (type: DeviceType | 'all') => {
-      startTransition(() => {
-        setTypeFilterState(type);
-      });
-    },
-    [startTransition],
-  );
+  const setTypeFilter = useCallback((type: DeviceType | 'all') => {
+    startTransition(() => {
+      setTypeFilterState(type);
+    });
+  }, []);
 
-  const setProtocolFilter = useCallback(
-    (protocol: string) => {
-      startTransition(() => {
-        setProtocolFilterState(protocol);
-      });
-    },
-    [startTransition],
-  );
+  const setProtocolFilter = useCallback((protocol: string) => {
+    startTransition(() => {
+      setProtocolFilterState(protocol);
+    });
+  }, []);
 
   // Clear filters
   const clearFilters = useCallback(() => {
@@ -200,7 +201,7 @@ export const useDeviceListState = (): UseDeviceListStateReturn => {
       setTypeFilterState('all');
       setProtocolFilterState('all');
     });
-  }, [startTransition]);
+  }, []);
 
   // Handle device deletion with React 19 optimistic update
   const handleDelete = useCallback(

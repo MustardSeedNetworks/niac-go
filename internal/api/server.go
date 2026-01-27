@@ -158,6 +158,9 @@ type ServerConfig struct {
 	Storage     *storage.Storage
 	Interface   string
 	Version     string
+	Commit      string
+	BuildTime   string
+	UIBuildHash string
 	Topology    Topology
 	Alert       AlertConfig
 	ApplyConfig func(*config.Config) error

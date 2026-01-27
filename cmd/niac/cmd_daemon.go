@@ -71,6 +71,9 @@ func runDaemon(options *daemonOptions, info versionInfo) error {
 		Token:       options.token,
 		StoragePath: options.storagePath,
 		Version:     info.version,
+		Commit:      info.commit,
+		BuildTime:   info.date,
+		UIBuildHash: info.uiBuildHash,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create daemon: %w", err)

@@ -38,6 +38,9 @@ type Config struct {
 	Token       string
 	StoragePath string
 	Version     string
+	Commit      string
+	BuildTime   string
+	UIBuildHash string
 }
 
 // Daemon manages the NIAC simulation lifecycle.
@@ -89,10 +92,13 @@ func NewDaemon(cfg Config) (*Daemon, error) {
 func (d *Daemon) Start() error {
 	// Create API server
 	serverCfg := api.ServerConfig{
-		Addr:    d.cfg.ListenAddr,
-		Token:   d.cfg.Token,
-		Version: d.cfg.Version,
-		Storage: d.storage,
+		Addr:        d.cfg.ListenAddr,
+		Token:       d.cfg.Token,
+		Version:     d.cfg.Version,
+		Commit:      d.cfg.Commit,
+		BuildTime:   d.cfg.BuildTime,
+		UIBuildHash: d.cfg.UIBuildHash,
+		Storage:     d.storage,
 		// Stack, Config, etc. will be nil until simulation starts
 	}
 

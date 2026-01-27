@@ -67,6 +67,9 @@ func (rs *runtimeServices) initAPIServer(
 		Storage:     rs.storage,
 		Interface:   interfaceName,
 		Version:     info.version,
+		Commit:      info.commit,
+		BuildTime:   info.date,
+		UIBuildHash: info.uiBuildHash,
 		Topology:    topology,
 		Alert: api.AlertConfig{
 			PacketsThreshold: services.alertPacketsThreshold,

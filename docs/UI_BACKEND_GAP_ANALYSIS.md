@@ -58,16 +58,16 @@ Allow selecting server-side configs instead of just local file browse.
 | `/packets` | Packet Inspector | Live packet viewing |
 | `/pcap-analyzer` | PCAP Analyzer | Upload and analyze PCAP files |
 
-### Proposed Renaming
+### Proposed Renaming ✅ COMPLETE
 
-| Path | New Name | Rationale |
-|------|----------|-----------|
-| `/` | **Dashboard** | Industry-standard name for status overview |
-| `/runtime` | **Simulation** | Clear what it controls |
-| `/analysis` | **Replay** | Direct description of function |
-| `/debug` | **Protocol Debug** | More specific |
-| `/packets` | **Live Packets** | Distinguishes from PCAP |
-| `/pcap-analyzer` | **PCAP Analysis** | Consistent naming |
+| Path | New Name | Status |
+|------|----------|--------|
+| `/` | **Dashboard** | ✅ Done |
+| `/runtime` | **Simulation** | ✅ Done |
+| `/analysis` | **Replay** | ✅ Done |
+| `/debug` | **Protocol Debug** | ✅ Done |
+| `/packets` | **Live Packets** | ✅ Done |
+| `/pcap-analyzer` | **PCAP Analysis** | ✅ Done |
 
 ### Consider Merging
 
@@ -145,21 +145,22 @@ Currently, Runtime Control only has:
 
 ## 4. Implementation Priority
 
-### Phase 1: Templates API
-1. Add `/api/v1/templates` endpoint (list)
-2. Add `/api/v1/templates/{name}` endpoint (get content)
-3. Add `/api/v1/templates/use` endpoint (create from template)
-4. Templates page will work
+### Phase 1: Templates API ✅ COMPLETE
+1. ✅ Add `/api/v1/templates` endpoint (list)
+2. ✅ Add `/api/v1/templates/{name}` endpoint (get content)
+3. ✅ Add `/api/v1/templates/use` endpoint (create from template)
+4. ✅ Templates page works
 
-### Phase 2: Server Configs
+### Phase 2: Server Configs (PENDING - awaiting discussion)
 1. Add `/api/v1/configs` endpoint
 2. Update RuntimeControlPage with dropdown
 3. Connect dropdown to start simulation
 
-### Phase 3: UI Cleanup
-1. Rename pages
-2. Consider merge of Dashboard + Runtime
-3. Fix any remaining broken features
+### Phase 3: UI Cleanup ✅ PARTIAL
+1. ✅ Rename pages (Dashboard, Simulation, Replay, etc.)
+2. ✅ Fix error state persistence across pages
+3. ⏳ Consider merge of Packet Inspector + PCAP Analyzer (awaiting discussion)
+4. ⏳ Consider merge of Dashboard + Simulation
 
 ### Phase 4: Debug Levels API
 1. Add debug levels endpoints
@@ -179,16 +180,16 @@ Currently, Runtime Control only has:
 
 ## 6. UI Bugs
 
-### Error State Persistence Across Pages
+### Error State Persistence Across Pages ✅ FIXED
 
 **Issue:** When an API error occurs on one page, navigating to other pages may still show the error until the user manually reloads.
 
 **Cause:** React state not being reset when navigating between pages.
 
-**Fix:**
-- Clear error state in `useEffect` cleanup or navigation handlers
-- Consider using React Router's loader pattern for data fetching
-- Reset error boundaries on route change
+**Fix Applied:**
+- Added `PageWithErrorBoundary` wrapper in `App.tsx` that uses `location.pathname` as a key
+- This forces React to unmount/remount the error boundary when navigating
+- Each page now gets a fresh error boundary instance
 
 ---
 

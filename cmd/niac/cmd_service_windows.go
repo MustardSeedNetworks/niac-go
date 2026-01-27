@@ -69,6 +69,9 @@ func (p *niacProgram) run() {
 		Token:       "",
 		StoragePath: "~/.niac/niac.db",
 		Version:     p.info.version,
+		Commit:      p.info.commit,
+		BuildTime:   p.info.date,
+		UIBuildHash: p.info.uiBuildHash,
 	})
 	if err != nil {
 		logging.Errorf("Failed to create daemon: %v", err)

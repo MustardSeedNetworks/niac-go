@@ -93,6 +93,21 @@ jobs:
           npm ci
           npm run build
 
+      - name: Copy frontend to embed directory
+        run: |
+          rm -rf internal/api/ui/*
+          mkdir -p internal/api/ui
+          cp -r ui/dist/* internal/api/ui/
+          echo "Frontend copied to internal/api/ui/"
+          ls -la internal/api/ui/
+
+      - name: Generate UI build hash
+        id: ui-hash
+        run: |
+          UI_HASH=$(find internal/api/ui -type f -exec md5sum {} \; | sort | md5sum | cut -d' ' -f1)
+          echo "hash=$UI_HASH" >> $GITHUB_OUTPUT
+          echo "UI Build Hash: $UI_HASH"
+
       - name: Build NiAC
         env:
           GOOS: linux
@@ -102,9 +117,10 @@ jobs:
           PKG_CONFIG_PATH: ${{ matrix.pkg_config_path }}
           VERSION: ${{ github.ref_name }}
           COMMIT: ${{ github.sha }}
+          UI_HASH: ${{ steps.ui-hash.outputs.hash }}
         run: |
           go build -trimpath -buildvcs=false \
-            -ldflags="-s -w -X main.version=${VERSION} -X main.commit=${COMMIT} -X main.date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            -ldflags="-s -w -X main.version=${VERSION} -X main.commit=${COMMIT} -X main.date=$(date -u +%Y-%m-%dT%H:%M:%SZ) -X main.uiBuildHash=${UI_HASH}" \
             -o dist/niac-linux-${{ matrix.arch }} ./cmd/niac
 
       - name: Verify binary (smoke test)
@@ -236,6 +252,21 @@ jobs:
           npm ci
           npm run build
 
+      - name: Copy frontend to embed directory
+        run: |
+          rm -rf internal/api/ui/*
+          mkdir -p internal/api/ui
+          cp -r ui/dist/* internal/api/ui/
+          echo "Frontend copied to internal/api/ui/"
+          ls -la internal/api/ui/
+
+      - name: Generate UI build hash
+        id: ui-hash
+        run: |
+          UI_HASH=$(find internal/api/ui -type f -exec md5 -q {} 2>/dev/null || find internal/api/ui -type f -exec md5sum {} \; | sort | md5sum | cut -d' ' -f1)
+          echo "hash=$UI_HASH" >> $GITHUB_OUTPUT
+          echo "UI Build Hash: $UI_HASH"
+
       - name: Build NiAC for macOS
         env:
           GOOS: darwin
@@ -243,9 +274,10 @@ jobs:
           CGO_ENABLED: 1
           VERSION: ${{ github.ref_name }}
           COMMIT: ${{ github.sha }}
+          UI_HASH: ${{ steps.ui-hash.outputs.hash }}
         run: |
           go build -trimpath -buildvcs=false \
-            -ldflags="-s -w -X main.version=${VERSION} -X main.commit=${COMMIT} -X main.date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            -ldflags="-s -w -X main.version=${VERSION} -X main.commit=${COMMIT} -X main.date=$(date -u +%Y-%m-%dT%H:%M:%SZ) -X main.uiBuildHash=${UI_HASH}" \
             -o dist/niac-darwin-${{ matrix.arch }} ./cmd/niac
 
       - name: Verify binary (smoke test)
@@ -314,6 +346,21 @@ jobs:
           npm ci
           npm run build
 
+      - name: Copy frontend to embed directory
+        run: |
+          rm -rf internal/api/ui/*
+          mkdir -p internal/api/ui
+          cp -r ui/dist/* internal/api/ui/
+          echo "Frontend copied to internal/api/ui/"
+          ls -la internal/api/ui/
+
+      - name: Generate UI build hash
+        id: ui-hash
+        run: |
+          UI_HASH=$(find internal/api/ui -type f -exec md5sum {} \; | sort | md5sum | cut -d' ' -f1)
+          echo "hash=$UI_HASH" >> $GITHUB_OUTPUT
+          echo "UI Build Hash: $UI_HASH"
+
       - name: Build NiAC for Windows
         env:
           GOOS: windows
@@ -321,9 +368,10 @@ jobs:
           CGO_ENABLED: 0
           VERSION: ${{ github.ref_name }}
           COMMIT: ${{ github.sha }}
+          UI_HASH: ${{ steps.ui-hash.outputs.hash }}
         run: |
           go build -trimpath -buildvcs=false \
-            -ldflags="-s -w -X main.version=${VERSION} -X main.commit=${COMMIT} -X main.date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            -ldflags="-s -w -X main.version=${VERSION} -X main.commit=${COMMIT} -X main.date=$(date -u +%Y-%m-%dT%H:%M:%SZ) -X main.uiBuildHash=${UI_HASH}" \
             -o dist/niac-windows-amd64.exe ./cmd/niac
 
       - name: Verify binary

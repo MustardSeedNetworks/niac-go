@@ -14,7 +14,8 @@
         build-linux-amd64 build-linux-arm64 build-linux-docker \
         build-darwin build-windows build-all \
         docker-build docker-test docker docker-push \
-        run dev dev-frontend frontend-deps converter quick
+        run dev dev-frontend frontend-deps converter quick \
+        check-frontend-exists verify-build
 
 # =============================================================================
 # Main Build Target
@@ -67,19 +68,59 @@ build-frontend-quiet: frontend-deps
 # Backend Build
 # =============================================================================
 
-build-backend: ## Build Go backend with embedded frontend
+# =============================================================================
+# Build Verification
+# =============================================================================
+
+check-frontend-exists: ## Verify frontend assets exist before backend build
+	@if [ ! -f "$(EMBED_DIR)/index.html" ]; then \
+		printf "$(RED)ERROR: Frontend not built. Run 'make build-frontend' first.$(RESET)\n"; \
+		exit 1; \
+	fi
+	@if [ ! -d "$(EMBED_DIR)/assets" ]; then \
+		printf "$(RED)ERROR: Frontend assets missing. Run 'make build-frontend' first.$(RESET)\n"; \
+		exit 1; \
+	fi
+
+verify-build: build ## Verify build produces valid binary with embedded UI
+	@printf "$(BOLD)$(CYAN)=== Build Verification ===$(RESET)\n"
+	@printf "Checking binary version...\n"
+	@./$(BINARY_NAME) version || ./$(BINARY_NAME) --version || true
+	@printf "\n"
+	@printf "Checking embedded UI...\n"
+	@if strings ./$(BINARY_NAME) 2>/dev/null | grep -q "index.html"; then \
+		printf "$(GREEN)✓ UI embedded correctly$(RESET)\n"; \
+	else \
+		printf "$(RED)ERROR: UI not embedded!$(RESET)\n"; \
+		exit 1; \
+	fi
+	@printf "\n"
+	@printf "Checking version injection...\n"
+	@if ./$(BINARY_NAME) version 2>&1 | grep -q "$(VERSION)" || ./$(BINARY_NAME) --version 2>&1 | grep -q "$(VERSION)"; then \
+		printf "$(GREEN)✓ Version embedded correctly$(RESET)\n"; \
+	else \
+		printf "$(YELLOW)⚠ Version may not match exactly (expected: $(VERSION))$(RESET)\n"; \
+	fi
+	@printf "\n$(GREEN)✓ Build verification complete$(RESET)\n"
+
+# =============================================================================
+# Backend Build
+# =============================================================================
+
+build-backend: check-frontend-exists ## Build Go backend with embedded frontend
 	@printf "$(BOLD)🔨 Building backend...$(RESET)\n"
 	@CGO_ENABLED=1 go build $(GOFLAGS) -ldflags="$(LDFLAGS)" -o $(BINARY_NAME) ./cmd/niac
 	@printf "$(GREEN)✓ Backend build complete: $(BINARY_NAME)$(RESET)\n"
 
-build-backend-quiet:
+build-backend-quiet: check-frontend-exists
 	@printf "   Compiling Go binary...\n"
 	@CGO_ENABLED=1 go build $(GOFLAGS) -ldflags="$(LDFLAGS)" -o $(BINARY_NAME) ./cmd/niac
 	@SIZE=$$(ls -lh $(BINARY_NAME) | awk '{print $$5}'); \
 	printf "   Output: $(BINARY_NAME) ($$SIZE)\n"
 
-quick: ## Quick backend rebuild (skip frontend)
-	@printf "$(BOLD)Quick rebuild (backend only)...$(RESET)\n"
+quick: ## Quick backend rebuild (skip frontend) - FOR DEVELOPMENT ONLY
+	@printf "$(YELLOW)⚠ Quick build - frontend NOT updated$(RESET)\n"
+	@printf "$(YELLOW)  Use 'make build' for release builds$(RESET)\n"
 	@CGO_ENABLED=1 go build $(GOFLAGS) -ldflags="$(LDFLAGS)" -o $(BINARY_NAME) ./cmd/niac
 	@printf "$(GREEN)✓ Quick build complete: $(BINARY_NAME)$(RESET)\n"
 

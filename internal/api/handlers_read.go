@@ -425,6 +425,28 @@ func (s *Server) handleVersion(w http.ResponseWriter, _ *http.Request) {
 	s.writeJSON(w, map[string]string{"version": s.cfg.Version})
 }
 
+// handleBuildVersion returns full build information for deployment verification.
+// This endpoint is intentionally public (no auth) to allow health checks and
+// deployment validation scripts to verify the running version.
+func (s *Server) handleBuildVersion(w http.ResponseWriter, _ *http.Request) {
+	const shortCommitLen = 7
+	commit := s.cfg.Commit
+	commitShort := commit
+	if len(commit) > shortCommitLen {
+		commitShort = commit[:shortCommitLen]
+	}
+
+	s.writeJSON(w, map[string]any{
+		"version":     s.cfg.Version,
+		"commit":      commitShort,
+		"commitFull":  commit,
+		"buildTime":   s.cfg.BuildTime,
+		"uiBuildHash": s.cfg.UIBuildHash,
+		"goVersion":   runtime.Version(),
+		"platform":    runtime.GOOS + "/" + runtime.GOARCH,
+	})
+}
+
 func (s *Server) handleNeighbors(w http.ResponseWriter, _ *http.Request) {
 	// SECURITY FIX #161: Thread-safe access to Stack
 	stack := s.currentStack()

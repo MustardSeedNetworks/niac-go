@@ -532,6 +532,10 @@ linters:
       - path: 'internal/interactive/types\.go'
         linters:
           - gochecknoglobals
+      # Build-time ldflags injection variables (standard Go pattern).
+      - path: 'cmd/niac/root\.go'
+        linters:
+          - gochecknoglobals
       # Logging color codes are package-level constants (immutable after init).
       - path: 'internal/logging/colors\.go'
         linters:

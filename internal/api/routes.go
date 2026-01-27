@@ -7,6 +7,10 @@ import (
 
 // registerAPIRoutes registers all API endpoints on the provided mux.
 func (s *Server) registerAPIRoutes(mux *http.ServeMux) {
+	// Public version endpoint for deployment validation (no auth required)
+	// Intentionally placed before authenticated routes for clarity
+	mux.HandleFunc("/__version", s.recoverMiddleware(s.handleBuildVersion))
+
 	// SECURITY FIX #2.8.1: Wrap all handlers with panic recovery middleware
 	// SECURITY FIX LOW-1: CSRF token endpoint for clients to retrieve token
 	mux.HandleFunc("/api/v1/csrf-token", s.recoverMiddleware(s.auth(s.handleCSRFToken)))

@@ -11,15 +11,17 @@ import (
 
 // Populated by -ldflags at build time.
 var (
-	version = ""
-	commit  = ""
-	date    = ""
+	version     = ""
+	commit      = ""
+	date        = ""
+	uiBuildHash = ""
 )
 
 type versionInfo struct {
-	version string
-	commit  string
-	date    string
+	version     string
+	commit      string
+	date        string
+	uiBuildHash string
 }
 
 // Version info constants.
@@ -36,9 +38,10 @@ const (
 
 func readVersionInfo() versionInfo {
 	info := versionInfo{
-		version: defaultVersion,
-		commit:  defaultCommit,
-		date:    defaultDate,
+		version:     defaultVersion,
+		commit:      defaultCommit,
+		date:        defaultDate,
+		uiBuildHash: "",
 	}
 
 	// Priority 1: ldflags-injected values (set during go build)
@@ -50,6 +53,9 @@ func readVersionInfo() versionInfo {
 	}
 	if date != "" {
 		info.date = date
+	}
+	if uiBuildHash != "" {
+		info.uiBuildHash = uiBuildHash
 	}
 
 	// Priority 2: Go build metadata (if ldflags didn't set values)
