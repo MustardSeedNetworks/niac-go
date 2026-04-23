@@ -210,8 +210,16 @@ func BuildEthernetHeader(dst, src net.HardwareAddr, etherType uint16) []byte {
 // CalculateIPChecksum calculates IP header checksum.
 func CalculateIPChecksum(header []byte) uint16 {
 	sum := uint32(0)
-	for i := 0; i < len(header); i += 2 {
+	// Walk pairs of bytes. An odd-length header would panic the previous
+	// loop on the trailing byte (binary.BigEndian.Uint16 reads 2 bytes);
+	// per RFC 1071 a lone trailing octet is promoted to the high byte of
+	// a notional 16-bit word padded with zeros.
+	n := len(header) &^ 1
+	for i := 0; i < n; i += 2 {
 		sum += uint32(binary.BigEndian.Uint16(header[i:]))
+	}
+	if len(header)%2 == 1 {
+		sum += uint32(header[len(header)-1]) << 8
 	}
 	// Add carry
 	for sum > checksumWordMask {
