@@ -601,20 +601,29 @@ func parseARPLayer(packet gopacket.Packet, pkt *PcapPacket) {
 	}
 
 	pkt.Protocol = "ARP"
-	pkt.SourceIP = fmt.Sprintf(
-		"%d.%d.%d.%d",
-		arp.SourceProtAddress[0],
-		arp.SourceProtAddress[1],
-		arp.SourceProtAddress[2],
-		arp.SourceProtAddress[3],
-	)
-	pkt.DestIP = fmt.Sprintf(
-		"%d.%d.%d.%d",
-		arp.DstProtAddress[0],
-		arp.DstProtAddress[1],
-		arp.DstProtAddress[2],
-		arp.DstProtAddress[3],
-	)
+	// Guard against ARP-over-IPv6 and truncated ARP frames: addresses
+	// shorter than 4 bytes would have panicked the parse goroutine
+	// (recoverMiddleware caught it, but it still aborted analysis of
+	// the uploaded capture). Fall back to empty IPs for unsupported
+	// ProtAddressSize so the higher-level parser can skip the packet.
+	if len(arp.SourceProtAddress) >= 4 {
+		pkt.SourceIP = fmt.Sprintf(
+			"%d.%d.%d.%d",
+			arp.SourceProtAddress[0],
+			arp.SourceProtAddress[1],
+			arp.SourceProtAddress[2],
+			arp.SourceProtAddress[3],
+		)
+	}
+	if len(arp.DstProtAddress) >= 4 {
+		pkt.DestIP = fmt.Sprintf(
+			"%d.%d.%d.%d",
+			arp.DstProtAddress[0],
+			arp.DstProtAddress[1],
+			arp.DstProtAddress[2],
+			arp.DstProtAddress[3],
+		)
+	}
 
 	opStr := "Unknown"
 	switch arp.Operation {
