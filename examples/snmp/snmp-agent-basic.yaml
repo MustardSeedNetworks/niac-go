@@ -8,6 +8,8 @@
 # Protocol: SNMPv2c with community string authentication
 # Added: v1.6.0
 
+include_path: ".."
+
 devices:
   - name: niac-core-sw-01
     type: switch

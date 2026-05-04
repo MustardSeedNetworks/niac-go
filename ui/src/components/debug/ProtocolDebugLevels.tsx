@@ -215,12 +215,14 @@ export const ProtocolDebugLevels: FC = () => {
   const protocolsByCategory = getProtocolsByCategory();
 
   const handleReset = useCallback(async () => {
+    // TODO: Replace with custom Modal component
     if (window.confirm('Reset all protocols to default debug levels? This cannot be undone.')) {
       await resetToDefaults();
     }
   }, [resetToDefaults]);
 
   const handleDiscard = useCallback(() => {
+    // TODO: Replace with custom Modal component
     if (window.confirm('Discard unsaved changes?')) {
       discardChanges();
     }

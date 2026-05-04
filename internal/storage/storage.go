@@ -43,6 +43,8 @@ import (
 	"time"
 
 	"go.etcd.io/bbolt"
+
+	"github.com/krisarmstrong/niac-go/internal/safeconv"
 )
 
 // Sentinel errors for storage operations.
@@ -123,38 +125,27 @@ func (s *Storage) Close() error {
 }
 
 // AddRun stores a run record.
-// SECURITY FIX MEDIUM-2: Add timeout to prevent API hangs on slow storage.
+// Note: bbolt does not honor context cancellation mid-transaction, so a
+// timeout wrapper would report failure while the goroutine still writes and
+// consumes a sequence ID, creating caller/state desync. Callers should instead
+// ensure bbolt's own file lock timeout (see bolt.Open) is tuned appropriately.
 func (s *Storage) AddRun(record RunRecord) error {
 	if s == nil || s.db == nil {
-		return nil
+		return ErrStorageNotInitialised
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), dbOperationTimeout)
-	defer cancel()
+	return s.db.Update(func(tx *bbolt.Tx) error {
+		bucket := tx.Bucket([]byte(runBucket))
+		id, _ := bucket.NextSequence()
+		record.ID = id
 
-	errChan := make(chan error, 1)
+		data, err := json.Marshal(record)
+		if err != nil {
+			return fmt.Errorf("failed to marshal record: %w", err)
+		}
 
-	go func() {
-		errChan <- s.db.Update(func(tx *bbolt.Tx) error {
-			bucket := tx.Bucket([]byte(runBucket))
-			id, _ := bucket.NextSequence()
-			record.ID = id
-
-			data, err := json.Marshal(record)
-			if err != nil {
-				return fmt.Errorf("failed to marshal record: %w", err)
-			}
-
-			return bucket.Put(itob(id), data)
-		})
-	}()
-
-	select {
-	case err := <-errChan:
-		return err
-	case <-ctx.Done():
-		return fmt.Errorf("database operation timeout after %v: %w", dbOperationTimeout, ctx.Err())
-	}
+		return bucket.Put(itob(id), data)
+	})
 }
 
 // ListRuns returns the most recent run records up to the requested limit.
@@ -211,7 +202,7 @@ func itob(v uint64) []byte {
 	b := make([]byte, uint64ByteSize)
 
 	for i := range uint64ByteSize {
-		b[uint64ByteSize-1-i] = byte(v >> (i * uint64ByteSize))
+		b[uint64ByteSize-1-i] = safeconv.ByteFromUint64(v >> (i * uint64ByteSize))
 	}
 
 	return b

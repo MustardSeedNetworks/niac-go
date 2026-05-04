@@ -172,8 +172,11 @@ export function useTemplates(): UseTemplatesReturn {
       textarea.value = templateContent.content;
       document.body.appendChild(textarea);
       textarea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textarea);
+      try {
+        document.execCommand('copy');
+      } finally {
+        document.body.removeChild(textarea);
+      }
       setMessage({
         type: 'success',
         text: 'Template content copied to clipboard',

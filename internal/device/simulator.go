@@ -107,11 +107,17 @@ func NewSimulator(
 	return sim
 }
 
-// addDevice adds a device to the simulator.
+// addDevice adds a device to the simulator, acquiring s.mu.
 func (s *Simulator) addDevice(device *config.Device) {
-	logger := slog.Default()
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
+	s.addDeviceLocked(device)
+}
+
+// addDeviceLocked adds a device to the simulator. Caller must hold s.mu.
+func (s *Simulator) addDeviceLocked(device *config.Device) {
+	logger := slog.Default()
 
 	simDevice := &SimulatedDevice{
 		Config:       device,
@@ -338,7 +344,10 @@ func (s *Simulator) GetDevice(name string) *SimulatedDevice {
 	return s.devices[name]
 }
 
-// GetAllDevices returns all simulated devices.
+// GetAllDevices returns a shallow copy of the simulated devices map.
+// Note: the returned map is a copy, but the *SimulatedDevice pointers reference the
+// internal device objects. Callers should not modify the returned SimulatedDevice values
+// without holding appropriate locks.
 func (s *Simulator) GetAllDevices() map[string]*SimulatedDevice {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -510,6 +519,10 @@ func (s *Simulator) GetCounters(deviceName string) *Counters {
 
 // Reload gracefully reloads the configuration without stopping the simulator.
 // It performs a diff-based reload: adds new devices, removes deleted devices, and updates existing devices.
+//
+// Known limitation: there is a brief window during reload where the simulator is stopped
+// and restarted. Concurrent callers of GetAllDevices or traffic generators may observe
+// an inconsistent state during this window.
 func (s *Simulator) Reload(newConfig *config.Config) error {
 	wasRunning := s.stopIfRunning()
 
@@ -656,7 +669,7 @@ func (s *Simulator) addNewDevice(device *config.Device) {
 	if s.debugLevel >= debugLevelBasic {
 		slog.Info("Adding new device", "device", device.Name)
 	}
-	s.addDevice(device)
+	s.addDeviceLocked(device)
 }
 
 // restartIfNeeded restarts the simulator if it was running before reload.

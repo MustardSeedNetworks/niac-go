@@ -1,4 +1,4 @@
-import { type ButtonHTMLAttributes, type FC, type ReactNode, type Ref } from 'react';
+import type { ButtonHTMLAttributes, FC, ReactNode, Ref } from 'react';
 
 type ButtonVariant = 'solid' | 'outline' | 'ghost' | 'secondary';
 type ButtonTone = 'violet' | 'red' | 'green' | 'blue' | 'gray';

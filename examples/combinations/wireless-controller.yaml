@@ -7,6 +7,8 @@
 # Protocols: SNMP v2c, HTTP, DHCP, DNS, ICMP
 # Added: v1.23.0
 
+include_path: ".."
+
 devices:
   - name: niac-wlc-01
     type: server  # Wireless controllers are treated as specialized servers

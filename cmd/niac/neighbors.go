@@ -33,7 +33,10 @@ type neighborsOptions struct {
 	jsonOutput bool
 }
 
-const neighborsProtocolAll = "all"
+const (
+	neighborsProtocolAll  = "all"
+	neighborsProtocolLLDP = "lldp"
+)
 
 func addNeighborsCommand(root *cobra.Command, _ *serviceOptions) {
 	options := new(neighborsOptions)
@@ -180,6 +183,7 @@ func runNeighborsWatch(_ *cobra.Command, _ []string, options *neighborsOptions) 
 	// Set up signal handling
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+	defer signal.Stop(sigChan)
 
 	go func() {
 		<-sigChan
@@ -267,7 +271,7 @@ func displayNeighborsUpdate(client *ipc.Client, options *neighborsOptions) error
 func validateProtocolFlag(protocol string) error {
 	protocol = strings.ToLower(protocol)
 	switch protocol {
-	case "lldp", "cdp", neighborsProtocolAll, "":
+	case neighborsProtocolLLDP, "cdp", neighborsProtocolAll, "":
 		return nil
 	default:
 		return fmt.Errorf("invalid protocol %q: must be lldp, cdp, or %s", protocol, neighborsProtocolAll)
@@ -303,7 +307,7 @@ func fetchNeighbors(client *ipc.Client) ([]NeighborEntry, error) {
 }
 
 func filterNeighbors(neighbors []NeighborEntry, device, protocol string) []NeighborEntry {
-	if device == "" && (protocol == "" || protocol == "all") {
+	if device == "" && (protocol == "" || protocol == neighborsProtocolAll) {
 		return neighbors
 	}
 
@@ -315,7 +319,7 @@ func filterNeighbors(neighbors []NeighborEntry, device, protocol string) []Neigh
 		}
 
 		// Filter by protocol
-		if protocol != "" && protocol != "all" {
+		if protocol != "" && protocol != neighborsProtocolAll {
 			if !strings.EqualFold(n.Protocol, protocol) {
 				continue
 			}

@@ -2,6 +2,7 @@ package daemon
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -418,7 +419,7 @@ func TestReplayController_Start(t *testing.T) {
 	if err == nil {
 		t.Error("Expected error from Start")
 	}
-	if err != ErrReplayNotImplemented {
+	if !errors.Is(err, ErrReplayNotImplemented) {
 		t.Errorf("Expected ErrReplayNotImplemented, got: %v", err)
 	}
 }
@@ -483,7 +484,7 @@ func TestStopSimulation_NoSimulation(t *testing.T) {
 	if err == nil {
 		t.Error("Expected error when stopping non-existent simulation")
 	}
-	if err != ErrNoSimulationRunning {
+	if !errors.Is(err, ErrNoSimulationRunning) {
 		t.Errorf("Expected ErrNoSimulationRunning, got: %v", err)
 	}
 }

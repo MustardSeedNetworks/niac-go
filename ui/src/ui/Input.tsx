@@ -1,10 +1,4 @@
-import {
-  type FC,
-  type InputHTMLAttributes,
-  type ReactNode,
-  type Ref,
-  type TextareaHTMLAttributes,
-} from 'react';
+import type { FC, InputHTMLAttributes, ReactNode, Ref, TextareaHTMLAttributes } from 'react';
 
 // Base input styles
 const inputBaseStyles =
@@ -63,9 +57,7 @@ export const Input: FC<InputProps> = ({
           {...props}
         />
         {rightIcon && (
-          <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
-            {rightIcon}
-          </div>
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">{rightIcon}</div>
         )}
       </div>
       {(error || hint) && (
@@ -356,6 +348,7 @@ export const SearchInput: FC<SearchInputProps> = ({
           <svg
             xmlns="http://www.w3.org/2000/svg"
             className="h-4 w-4"
+            aria-hidden="true"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -397,6 +390,7 @@ export const SearchInput: FC<SearchInputProps> = ({
             <svg
               xmlns="http://www.w3.org/2000/svg"
               className="h-4 w-4"
+              aria-hidden="true"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"

@@ -182,10 +182,40 @@ func (s *Server) handleConfigUpdate(w http.ResponseWriter, r *http.Request) {
 	// SECURITY FIX #161: Thread-safe access to ConfigPath
 	if s.configPath() == "" {
 		http.Error(w, "config path not available", http.StatusBadRequest)
-
 		return
 	}
 
+	content, ok := s.decodeConfigUpdateBody(w, r)
+	if !ok {
+		return
+	}
+
+	newCfg, err := config.LoadYAMLBytes([]byte(content))
+	if err != nil {
+		s.logger.Error("[API] Config validation failed", "error", err)
+		writeError(w, r, http.StatusBadRequest, "config_invalid",
+			"Configuration validation failed", nil)
+		return
+	}
+
+	if !s.applyAndPersistConfig(w, r, newCfg, content) {
+		return
+	}
+
+	doc, status, err := s.readConfigDocument()
+	if err != nil {
+		s.logger.Error("[API] Failed to read updated config", "error", err)
+		writeError(w, r, status, "config_read_failed",
+			"Configuration updated but failed to retrieve", nil)
+		return
+	}
+
+	s.writeJSON(w, doc)
+}
+
+// decodeConfigUpdateBody reads and validates the JSON body for handleConfigUpdate.
+// Returns the content string and true on success; writes an error and returns false otherwise.
+func (s *Server) decodeConfigUpdateBody(w http.ResponseWriter, r *http.Request) (string, bool) {
 	var req struct {
 		Content string `json:"content"`
 	}
@@ -196,79 +226,53 @@ func (s *Server) handleConfigUpdate(w http.ResponseWriter, r *http.Request) {
 				r,
 				http.StatusRequestEntityTooLarge,
 				"request_too_large",
-				fmt.Sprintf(
-					"Request body exceeds maximum size of %d bytes",
-					MaxRequestBodySize,
-				),
+				fmt.Sprintf("Request body exceeds maximum size of %d bytes", MaxRequestBodySize),
 				nil,
 			)
-
-			return
+			return "", false
 		}
-		// SECURITY FIX MEDIUM-6: Don't expose internal error details
 		writeError(w, r, http.StatusBadRequest, "invalid_request",
 			"Failed to parse request body", nil)
-
-		return
+		return "", false
 	}
 
 	if strings.TrimSpace(req.Content) == "" {
 		writeError(w, r, http.StatusBadRequest, "validation_failed",
 			"Configuration content is required", nil)
-
-		return
+		return "", false
 	}
 
-	newCfg, err := config.LoadYAMLBytes([]byte(req.Content))
-	if err != nil {
-		// SECURITY FIX MEDIUM-6: Log details server-side, return generic message
-		s.logger.Error("[API] Config validation failed", "error", err)
-		writeError(w, r, http.StatusBadRequest, "config_invalid",
-			"Configuration validation failed", nil)
+	return req.Content, true
+}
 
-		return
-	}
-
+// applyAndPersistConfig runs ApplyConfig (with rollback on write failure) and persists the file.
+// Returns true on success; writes an error and returns false otherwise.
+func (s *Server) applyAndPersistConfig(
+	w http.ResponseWriter, r *http.Request, newCfg *config.Config, content string,
+) bool {
 	prevCfg := s.currentConfig()
 	if s.cfg.ApplyConfig != nil {
-		applyErr := s.cfg.ApplyConfig(newCfg)
-		if applyErr != nil {
-			// SECURITY FIX MEDIUM-6: Don't expose internal error details
+		if applyErr := s.cfg.ApplyConfig(newCfg); applyErr != nil {
 			s.logger.Error("[API] Failed to apply config", "error", applyErr)
 			writeError(w, r, http.StatusInternalServerError, "config_apply_failed",
 				"Failed to apply configuration", nil)
-
-			return
+			return false
 		}
 	}
 
-	writeErr := s.writeConfigFile(req.Content)
-	if writeErr != nil {
+	if writeErr := s.writeConfigFile(content); writeErr != nil {
 		if s.cfg.ApplyConfig != nil && prevCfg != nil {
 			// Attempt rollback to previous config to avoid divergence.
 			_ = s.cfg.ApplyConfig(prevCfg)
 		}
-		// SECURITY FIX MEDIUM-6: Don't expose file paths
 		s.logger.Error("[API] Failed to write config file", "error", writeErr)
 		writeError(w, r, http.StatusInternalServerError, "config_write_failed",
 			"Failed to save configuration", nil)
-
-		return
+		return false
 	}
 
 	s.replaceConfig(newCfg)
-
-	doc, status, err := s.readConfigDocument()
-	if err != nil {
-		// SECURITY FIX MEDIUM-6: Don't expose internal error details
-		s.logger.Error("[API] Failed to read updated config", "error", err)
-		writeError(w, r, status, "config_read_failed",
-			"Configuration updated but failed to retrieve", nil)
-
-		return
-	}
-
-	s.writeJSON(w, doc)
+	return true
 }
 
 func (s *Server) handleReplay(w http.ResponseWriter, r *http.Request) {
@@ -290,65 +294,66 @@ func (s *Server) handleReplay(w http.ResponseWriter, r *http.Request) {
 	case http.MethodGet:
 		s.writeJSON(w, s.cfg.Replay.Status())
 	case http.MethodPost:
-		// SECURITY FIX #97: Enforce request body size limit for PCAP uploads
-		r.Body = http.MaxBytesReader(w, r.Body, MaxPCAPUploadSize)
-
-		var req ReplayRequest
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			if err.Error() == ErrMsgRequestBodyTooLarge {
-				writeError(w, r, http.StatusRequestEntityTooLarge, "request_too_large",
-					"PCAP file too large (max 100MB)", nil)
-
-				return
-			}
-
-			writeError(w, r, http.StatusBadRequest, "invalid_request",
-				"Failed to parse request body", nil)
-
-			return
-		}
-
-		// SECURITY FIX MEDIUM-3: Comprehensive validation
-		if validationErrors := validateReplayRequest(req); len(validationErrors) > 0 {
-			writeError(w, r, http.StatusBadRequest, "validation_failed",
-				"Replay request validation failed", validationErrors)
-
-			return
-		}
-
-		prepared, err := s.prepareReplayRequest(req)
-		if err != nil {
-			writeError(w, r, http.StatusBadRequest, "replay_preparation_failed",
-				"Failed to prepare replay request", nil)
-
-			return
-		}
-
-		state, err := s.cfg.Replay.Start(prepared)
-		if err != nil {
-			writeError(w, r, http.StatusBadRequest, "replay_start_failed",
-				"Failed to start replay", nil)
-
-			return
-		}
-
-		s.writeJSON(w, state)
+		s.handleReplayStart(w, r)
 	case http.MethodDelete:
-		state, err := s.cfg.Replay.Stop()
-		if err != nil {
-			// SECURITY FIX MEDIUM-6: Don't expose internal error details
-			s.logger.Error("[API] Failed to stop replay", "error", err)
-			writeError(w, r, http.StatusInternalServerError, "replay_stop_failed",
-				"Failed to stop replay", nil)
-
-			return
-		}
-
-		s.writeJSON(w, state)
+		s.handleReplayStop(w, r)
 	default:
 		w.Header().Set("Allow", "GET, POST, DELETE")
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 	}
+}
+
+// handleReplayStart handles POST /replay to start PCAP replay.
+func (s *Server) handleReplayStart(w http.ResponseWriter, r *http.Request) {
+	// SECURITY FIX #97: Enforce request body size limit for PCAP uploads
+	r.Body = http.MaxBytesReader(w, r.Body, MaxPCAPUploadSize)
+
+	var req ReplayRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		if err.Error() == ErrMsgRequestBodyTooLarge {
+			writeError(w, r, http.StatusRequestEntityTooLarge, "request_too_large",
+				"PCAP file too large (max 100MB)", nil)
+			return
+		}
+		writeError(w, r, http.StatusBadRequest, "invalid_request",
+			"Failed to parse request body", nil)
+		return
+	}
+
+	if validationErrors := validateReplayRequest(req); len(validationErrors) > 0 {
+		writeError(w, r, http.StatusBadRequest, "validation_failed",
+			"Replay request validation failed", validationErrors)
+		return
+	}
+
+	prepared, err := s.prepareReplayRequest(req)
+	if err != nil {
+		writeError(w, r, http.StatusBadRequest, "replay_preparation_failed",
+			"Failed to prepare replay request", nil)
+		return
+	}
+
+	state, err := s.cfg.Replay.Start(prepared)
+	if err != nil {
+		writeError(w, r, http.StatusBadRequest, "replay_start_failed",
+			"Failed to start replay", nil)
+		return
+	}
+
+	s.writeJSON(w, state)
+}
+
+// handleReplayStop handles DELETE /replay to stop an ongoing PCAP replay.
+func (s *Server) handleReplayStop(w http.ResponseWriter, r *http.Request) {
+	state, err := s.cfg.Replay.Stop()
+	if err != nil {
+		s.logger.Error("[API] Failed to stop replay", "error", err)
+		writeError(w, r, http.StatusInternalServerError, "replay_stop_failed",
+			"Failed to stop replay", nil)
+		return
+	}
+
+	s.writeJSON(w, state)
 }
 
 func (s *Server) handleFiles(w http.ResponseWriter, r *http.Request) {

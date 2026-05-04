@@ -1203,8 +1203,8 @@ func buildNBSTATQuestion(q layers.DNSQuestion, encodedQName []byte) []byte {
 	question := make([]byte, 0, len(encodedQName)+dnsQuestionExtra+1)
 	question = append(question, encodedQName...)
 	question = append(question, dnsTerminator)
-	question = append(question, byte(q.Type>>dnsByteShift), byte(q.Type))
-	question = append(question, byte(q.Class>>dnsByteShift), byte(q.Class))
+	question = append(question, byte(q.Type>>dnsByteShift), safeconv.ByteFromUint16(uint16(q.Type)))
+	question = append(question, byte(q.Class>>dnsByteShift), safeconv.ByteFromUint16(uint16(q.Class)))
 
 	return question
 }
@@ -1221,14 +1221,14 @@ func buildNBSTATAnswer(
 
 	// NAME pointer to question at offset 12 -> 0xC00C
 	answer = append(answer, dnsPointerByte, dnsPointerOffset)
-	answer = append(answer, byte(q.Type>>dnsByteShift), byte(q.Type))
-	answer = append(answer, byte(q.Class>>dnsByteShift), byte(q.Class))
+	answer = append(answer, byte(q.Type>>dnsByteShift), safeconv.ByteFromUint16(uint16(q.Type)))
+	answer = append(answer, byte(q.Class>>dnsByteShift), safeconv.ByteFromUint16(uint16(q.Class)))
 	// TTL = 0
 	answer = append(answer, dnsTerminator, dnsTerminator, dnsTerminator, dnsTerminator)
-	answer = append(answer, byte(rdLength>>dnsByteShift), byte(rdLength))
+	answer = append(answer, safeconv.Byte(rdLength>>dnsByteShift), safeconv.Byte(rdLength))
 
 	// RDATA: name count + name entries
-	answer = append(answer, byte(len(names)))
+	answer = append(answer, safeconv.Byte(len(names)))
 	answer = appendNBSTATNameEntries(answer, names, ownerNodeType)
 	answer = appendNBSTATMACAndStats(answer, macAddr)
 
@@ -1258,7 +1258,7 @@ func appendNBSTATNameEntries(answer []byte, names []nbstatNameEntry, ownerNodeTy
 			nameFlags |= netbiosGroupFlag
 		}
 
-		answer = append(answer, byte(nameFlags>>dnsByteShift), byte(nameFlags))
+		answer = append(answer, byte(nameFlags>>dnsByteShift), safeconv.ByteFromUint16(nameFlags))
 	}
 
 	return answer
@@ -1322,7 +1322,7 @@ func encodeDNSName(name []byte) []byte {
 			continue
 		}
 
-		buf = append(buf, byte(len(label)))
+		buf = append(buf, safeconv.Byte(len(label)))
 		buf = append(buf, []byte(label)...)
 	}
 

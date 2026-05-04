@@ -162,7 +162,7 @@ func TestCheckYAMLDepth(t *testing.T) {
 	}
 }
 
-// createNestedMap creates a nested map structure to specified depth
+// createNestedMap creates a nested map structure to specified depth.
 func createNestedMap(depth int) map[string]any {
 	if depth == 0 {
 		return map[string]any{"leaf": "value"}

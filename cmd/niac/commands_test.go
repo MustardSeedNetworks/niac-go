@@ -1,0 +1,422 @@
+package main
+
+import (
+	"testing"
+
+	"github.com/spf13/cobra"
+)
+
+func newTestRoot() (*cobra.Command, *serviceOptions) {
+	info := versionInfo{version: "test", commit: "abc123", date: "2024-01-01"}
+	services := new(serviceOptions)
+	root := &cobra.Command{Use: "niac"}
+	root.SetVersionTemplate("test")
+	_ = info
+	return root, services
+}
+
+func TestAddAnalyzeCommand(t *testing.T) {
+	root, services := newTestRoot()
+	addAnalyzeCommand(root, services)
+
+	cmd := findSubcommand(root, "analyze-walk")
+	if cmd == nil {
+		t.Fatal("Expected analyze-walk command to be registered")
+	}
+	if cmd.Use != "analyze-walk <walk-file>" {
+		t.Errorf("Unexpected Use: %q", cmd.Use)
+	}
+
+	// Verify flags
+	if cmd.Flags().Lookup("output") == nil {
+		t.Error("Expected --output flag")
+	}
+	if cmd.Flags().Lookup("extract-topology") == nil {
+		t.Error("Expected --extract-topology flag")
+	}
+	if cmd.Flags().Lookup("show-neighbors") == nil {
+		t.Error("Expected --show-neighbors flag")
+	}
+	if cmd.Flags().Lookup("graphviz") == nil {
+		t.Error("Expected --graphviz flag")
+	}
+}
+
+func TestAddAnalyzePcapCommand(t *testing.T) {
+	root, services := newTestRoot()
+	addAnalyzePcapCommand(root, services)
+
+	cmd := findSubcommand(root, "analyze-pcap")
+	if cmd == nil {
+		t.Fatal("Expected analyze-pcap command to be registered")
+	}
+	if cmd.Flags().Lookup("output") == nil {
+		t.Error("Expected --output flag")
+	}
+}
+
+func TestAddDumpCommand(t *testing.T) {
+	root, services := newTestRoot()
+	addDumpCommand(root, services)
+
+	cmd := findSubcommand(root, "dump")
+	if cmd == nil {
+		t.Fatal("Expected dump command to be registered")
+	}
+	if cmd.Flags().Lookup("device") == nil {
+		t.Error("Expected --device flag")
+	}
+	if cmd.Flags().Lookup("interface") == nil {
+		t.Error("Expected --interface flag")
+	}
+	if cmd.Flags().Lookup("count") == nil {
+		t.Error("Expected --count flag")
+	}
+	if cmd.Flags().Lookup("socket") == nil {
+		t.Error("Expected --socket flag")
+	}
+	if cmd.Flags().Lookup("json") == nil {
+		t.Error("Expected --json flag")
+	}
+}
+
+func TestAddStatusCommand(t *testing.T) {
+	root, services := newTestRoot()
+	addStatusCommand(root, services)
+
+	cmd := findSubcommand(root, "status")
+	if cmd == nil {
+		t.Fatal("Expected status command to be registered")
+	}
+	if cmd.Flags().Lookup("json") == nil {
+		t.Error("Expected --json flag")
+	}
+	if cmd.Flags().Lookup("socket") == nil {
+		t.Error("Expected --socket flag")
+	}
+}
+
+func TestAddTemplateCommand(t *testing.T) {
+	root, services := newTestRoot()
+	addTemplateCommand(root, services)
+
+	cmd := findSubcommand(root, "template")
+	if cmd == nil {
+		t.Fatal("Expected template command to be registered")
+	}
+
+	// Check subcommands
+	subcommands := []string{"list", "show", "use", "apply"}
+	for _, name := range subcommands {
+		sub := findSubcommand(cmd, name)
+		if sub == nil {
+			t.Errorf("Expected template subcommand %q", name)
+		}
+	}
+}
+
+func TestAddTopologyCommand(t *testing.T) {
+	root, services := newTestRoot()
+	addTopologyCommand(root, services)
+
+	cmd := findSubcommand(root, "topology")
+	if cmd == nil {
+		t.Fatal("Expected topology command to be registered")
+	}
+
+	exportCmd := findSubcommand(cmd, "export")
+	if exportCmd == nil {
+		t.Fatal("Expected topology export subcommand")
+	}
+	if exportCmd.Flags().Lookup("format") == nil {
+		t.Error("Expected --format flag")
+	}
+	if exportCmd.Flags().Lookup("output") == nil {
+		t.Error("Expected --output flag")
+	}
+	if exportCmd.Flags().Lookup("socket") == nil {
+		t.Error("Expected --socket flag")
+	}
+}
+
+func TestAddInjectCommand(t *testing.T) {
+	root, services := newTestRoot()
+	addInjectCommand(root, services)
+
+	cmd := findSubcommand(root, "inject")
+	if cmd == nil {
+		t.Fatal("Expected inject command to be registered")
+	}
+
+	listCmd := findSubcommand(cmd, "list")
+	if listCmd == nil {
+		t.Fatal("Expected inject list subcommand")
+	}
+	if listCmd.Flags().Lookup("json") == nil {
+		t.Error("Expected --json flag on list")
+	}
+
+	clearCmd := findSubcommand(cmd, "clear")
+	if clearCmd == nil {
+		t.Fatal("Expected inject clear subcommand")
+	}
+	if clearCmd.Flags().Lookup("device") == nil {
+		t.Error("Expected --device flag on clear")
+	}
+	if clearCmd.Flags().Lookup("all") == nil {
+		t.Error("Expected --all flag on clear")
+	}
+}
+
+func TestAddValidateCommand(t *testing.T) {
+	root, services := newTestRoot()
+	addValidateCommand(root, services)
+
+	cmd := findSubcommand(root, "validate")
+	if cmd == nil {
+		t.Fatal("Expected validate command to be registered")
+	}
+	if cmd.Flags().Lookup("verbose") == nil {
+		t.Error("Expected --verbose flag")
+	}
+	if cmd.Flags().Lookup("json") == nil {
+		t.Error("Expected --json flag")
+	}
+}
+
+func TestAddSanitizeCommand(t *testing.T) {
+	root, services := newTestRoot()
+	addSanitizeCommand(root, services)
+
+	cmd := findSubcommand(root, "sanitize")
+	if cmd == nil {
+		t.Fatal("Expected sanitize command to be registered")
+	}
+	expectedFlags := []string{
+		"mapping-file", "domain", "location", "contact",
+		"community", "batch", "input-dir", "output-dir",
+	}
+	for _, flag := range expectedFlags {
+		if cmd.Flags().Lookup(flag) == nil {
+			t.Errorf("Expected --%s flag", flag)
+		}
+	}
+}
+
+func TestAddInitCommand(t *testing.T) {
+	root, services := newTestRoot()
+	addInitCommand(root, services)
+
+	cmd := findSubcommand(root, "init")
+	if cmd == nil {
+		t.Fatal("Expected init command to be registered")
+	}
+}
+
+func TestAddCompletionCommand(t *testing.T) {
+	root := &cobra.Command{Use: "niac"}
+	addCompletionCommand(root)
+
+	cmd := findSubcommand(root, "completion")
+	if cmd == nil {
+		t.Fatal("Expected completion command to be registered")
+	}
+}
+
+func TestAddServiceCommand(t *testing.T) {
+	root, services := newTestRoot()
+	addServiceCommand(root, services)
+
+	cmd := findSubcommand(root, "service")
+	if cmd == nil {
+		// On non-Windows, service may not register or may behave differently
+		t.Skip("Service command may not be available on this platform")
+	}
+}
+
+func TestAddDaemonCommand(t *testing.T) {
+	root := &cobra.Command{Use: "niac"}
+	info := versionInfo{version: "test", commit: "abc", date: "now"}
+	addDaemonCommand(root, info)
+
+	cmd := findSubcommand(root, "daemon")
+	if cmd == nil {
+		t.Fatal("Expected daemon command to be registered")
+	}
+}
+
+func TestAddLogsCommand(t *testing.T) {
+	root, services := newTestRoot()
+	addLogsCommand(root, services)
+
+	cmd := findSubcommand(root, "logs")
+	if cmd == nil {
+		t.Fatal("Expected logs command to be registered")
+	}
+}
+
+func TestAddMonitorCommand(t *testing.T) {
+	root, services := newTestRoot()
+	addMonitorCommand(root, services)
+
+	cmd := findSubcommand(root, "monitor")
+	if cmd == nil {
+		t.Fatal("Expected monitor command to be registered")
+	}
+}
+
+func TestAddNeighborsCommand(t *testing.T) {
+	root, services := newTestRoot()
+	addNeighborsCommand(root, services)
+
+	cmd := findSubcommand(root, "neighbors")
+	if cmd == nil {
+		t.Fatal("Expected neighbors command to be registered")
+	}
+}
+
+func TestNewRootCommand(t *testing.T) {
+	info := versionInfo{version: "1.0.0", commit: "abc123", date: "2024-01-01"}
+	services := new(serviceOptions)
+	legacyCalled := false
+
+	root := newRootCommand(info, services, func(_ []string) {
+		legacyCalled = true
+	}, []func(*cobra.Command, *serviceOptions){
+		addConfigCommand,
+		addValidateCommand,
+	})
+
+	if root == nil {
+		t.Fatal("newRootCommand returned nil")
+	}
+	if root.Use != "niac" {
+		t.Errorf("Expected root.Use = 'niac', got %q", root.Use)
+	}
+
+	// Check that subcommands were added
+	configCmd := findSubcommand(root, "config")
+	if configCmd == nil {
+		t.Error("Expected config command to be added")
+	}
+	validateCmd := findSubcommand(root, "validate")
+	if validateCmd == nil {
+		t.Error("Expected validate command to be added")
+	}
+
+	// Verify persistent flags
+	if root.PersistentFlags().Lookup("api-listen") == nil {
+		t.Error("Expected --api-listen persistent flag")
+	}
+	if root.PersistentFlags().Lookup("api-token") == nil {
+		t.Error("Expected --api-token persistent flag")
+	}
+	if root.PersistentFlags().Lookup("metrics-listen") == nil {
+		t.Error("Expected --metrics-listen persistent flag")
+	}
+	if root.PersistentFlags().Lookup("storage-path") == nil {
+		t.Error("Expected --storage-path persistent flag")
+	}
+
+	_ = legacyCalled
+}
+
+func TestRootCommandForwardsLegacyArgs(t *testing.T) {
+	info := versionInfo{version: "1.0.0", commit: "abc123", date: "2024-01-01"}
+	services := new(serviceOptions)
+	var gotArgs []string
+
+	root := newRootCommand(info, services, func(args []string) {
+		gotArgs = append([]string(nil), args...)
+	}, nil)
+	root.SetArgs([]string{"lo0", "config.yaml"})
+
+	if err := root.Execute(); err != nil {
+		t.Fatalf("Execute() returned error: %v", err)
+	}
+
+	wantArgs := []string{"lo0", "config.yaml"}
+	if len(gotArgs) != len(wantArgs)+1 {
+		t.Fatalf("legacy runner args length = %d, want %d; args=%v", len(gotArgs), len(wantArgs)+1, gotArgs)
+	}
+	for i, want := range wantArgs {
+		if gotArgs[i+1] != want {
+			t.Fatalf("legacy runner arg %d = %q, want %q; args=%v", i+1, gotArgs[i+1], want, gotArgs)
+		}
+	}
+}
+
+func TestShouldUseLegacyCommand(t *testing.T) {
+	info := versionInfo{version: "1.0.0", commit: "abc123", date: "2024-01-01"}
+	services := new(serviceOptions)
+	root := newRootCommand(info, services, func(_ []string) {}, []func(*cobra.Command, *serviceOptions){
+		func(root *cobra.Command, services *serviceOptions) { addRunCommand(root, services, info) },
+		addValidateCommand,
+	})
+
+	tests := []struct {
+		name string
+		args []string
+		want bool
+	}{
+		{name: "legacy positional", args: []string{"en0", "config.yaml"}, want: true},
+		{name: "legacy dry run", args: []string{"--dry-run", "lo0", "config.yaml"}, want: true},
+		{name: "legacy verbose with value flag", args: []string{"--debug", "2", "en0", "config.yaml"}, want: true},
+		{name: "legacy informational flag", args: []string{"--list-interfaces"}, want: true},
+		{name: "cobra subcommand", args: []string{"run", "en0", "config.yaml"}, want: false},
+		{
+			name: "cobra persistent flag before subcommand",
+			args: []string{"--api-listen", ":8080", "run", "en0", "config.yaml"},
+			want: false,
+		},
+		{name: "help", args: []string{"help"}, want: false},
+		{name: "double dash compatibility", args: []string{"--", "--dry-run", "lo0", "config.yaml"}, want: false},
+		{name: "no args", args: nil, want: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := shouldUseLegacyCommand(tt.args, root); got != tt.want {
+				t.Fatalf("shouldUseLegacyCommand(%v) = %v, want %v", tt.args, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestVersionInfoFunctions(t *testing.T) {
+	t.Run("isValidVersion", func(t *testing.T) {
+		tests := []struct {
+			version string
+			valid   bool
+		}{
+			{"v1.0.0", true},
+			{"1.0.0", true},
+			{"", false},
+			{"(devel)", false},
+		}
+
+		for _, tt := range tests {
+			result := isValidVersion(tt.version)
+			if result != tt.valid {
+				t.Errorf("isValidVersion(%q) = %v, want %v", tt.version, result, tt.valid)
+			}
+		}
+	})
+
+	t.Run("readVersionInfo", func(t *testing.T) {
+		info := readVersionInfo()
+		if info.version == "" {
+			t.Error("Expected version to be non-empty")
+		}
+	})
+}
+
+// findSubcommand finds a subcommand by name.
+func findSubcommand(cmd *cobra.Command, name string) *cobra.Command {
+	for _, sub := range cmd.Commands() {
+		if sub.Name() == name {
+			return sub
+		}
+	}
+	return nil
+}

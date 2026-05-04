@@ -1,5 +1,6 @@
 import { Activity, BellRing, FileCog, Network, PlugZap } from 'lucide-react';
 import { type FC, memo, useCallback, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   fetchInterfaces,
   fetchSimulationStatus,
@@ -24,6 +25,7 @@ import { formatBytes, formatTime, formatUptime, getErrorMessage } from '../utils
  * Requires NIAC to be running in daemon mode.
  */
 export const RuntimeControlPage: FC = () => {
+  const navigate = useNavigate();
   const [refetchTrigger, setRefetchTrigger] = useState(0);
   const { data: simStatus } = useApiResource(fetchSimulationStatus, [refetchTrigger], {
     intervalMs: POLL_INTERVALS.fast,
@@ -43,7 +45,7 @@ export const RuntimeControlPage: FC = () => {
   const isDaemonMode = simStatus !== null;
 
   const handleStart = useCallback(async () => {
-    if (!(selectedInterface || configPath || configFile)) {
+    if (!selectedInterface || !(configPath || configFile)) {
       setMessage({
         tone: 'error',
         text: 'Please select an interface and provide a config file',
@@ -78,6 +80,7 @@ export const RuntimeControlPage: FC = () => {
   }, [selectedInterface, configPath, configFile]);
 
   const handleStop = useCallback(async () => {
+    // TODO: Replace with custom Modal component
     if (
       !window.confirm(
         'Are you sure you want to stop the simulation? This will interrupt the current run.',
@@ -303,7 +306,7 @@ export const RuntimeControlPage: FC = () => {
                 variant="ghost"
                 leftIcon={<FileCog className="h-4 w-4" />}
                 onClick={() => {
-                  window.location.href = '/devices';
+                  navigate('/devices');
                 }}
               >
                 View Devices

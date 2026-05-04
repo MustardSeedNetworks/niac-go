@@ -479,3 +479,129 @@ func (h *STPHandler) MakeBridgeID(priority uint16, mac net.HardwareAddr) uint64 
 
 // STPHandlerBridgePriority returns the bridge priority for testing.
 func (h *STPHandler) STPHandlerBridgePriority() uint16 { return h.bridgePriority }
+
+// STPSetDebugLevel exposes SetDebugLevel for testing.
+func (h *STPHandler) STPSetDebugLevel(level int) { h.SetDebugLevel(level) }
+
+// STPGetSTPParams exposes getSTPParams for testing.
+// Returns bridgePriority, helloTime, maxAge, forwardDelay.
+func (h *STPHandler) STPGetSTPParams(device *config.Device) (uint16, uint16, uint16, uint16) {
+	p := h.getSTPParams(device)
+	return p.bridgePriority, p.helloTime, p.maxAge, p.forwardDelay
+}
+
+// ---- DHCP unexported function exports ----
+
+// DHCPMessageTypeString exposes dhcpMessageTypeString for testing.
+func (h *DHCPHandler) DHCPMessageTypeString(msgType uint8) string {
+	return h.dhcpMessageTypeString(msgType)
+}
+
+// DHCPEncodeUint32 exposes encodeUint32 for testing.
+func (h *DHCPHandler) DHCPEncodeUint32(val uint32) []byte {
+	return h.encodeUint32(val)
+}
+
+// DHCPEncodeDomainSearchList exposes encodeDomainSearchList for testing.
+func (h *DHCPHandler) DHCPEncodeDomainSearchList(domains []string) ([]byte, error) {
+	return h.encodeDomainSearchList(domains)
+}
+
+// DHCPMatchStaticLease exposes matchStaticLease for testing.
+func (h *DHCPHandler) DHCPMatchStaticLease(mac net.HardwareAddr) net.IP {
+	return h.matchStaticLease(mac)
+}
+
+// DHCPIsIPLeased exposes isIPLeased for testing.
+func (h *DHCPHandler) DHCPIsIPLeased(ip net.IP) bool {
+	return h.isIPLeased(ip)
+}
+
+// MACMatchesMask exposes macMatchesMask for testing.
+func MACMatchesMask(mac, match, mask net.HardwareAddr) bool {
+	return macMatchesMask(mac, match, mask)
+}
+
+// SplitDomain exposes splitDomain for testing.
+func SplitDomain(domain string) []string {
+	return splitDomain(domain)
+}
+
+// ---- DHCPv6 unexported function exports ----
+
+// DHCPv6SetAddressPool exposes SetAddressPool for testing.
+func (h *DHCPv6Handler) DHCPv6SetAddressPool(addresses []net.IP) {
+	h.SetAddressPool(addresses)
+}
+
+// DHCPv6SetServerConfig exposes SetServerConfig for testing.
+func (h *DHCPv6Handler) DHCPv6SetServerConfig(dnsServers []net.IP, domainList []string) {
+	h.SetServerConfig(dnsServers, domainList)
+}
+
+// DHCPv6SetAdvancedOptions exposes SetAdvancedOptions for testing.
+func (h *DHCPv6Handler) DHCPv6SetAdvancedOptions(sntpServers, ntpServers, sipServers []net.IP, sipDomains []string) {
+	h.SetAdvancedOptions(sntpServers, ntpServers, sipServers, sipDomains)
+}
+
+// ---- DNS unexported function exports ----
+
+// DNSAddRecord exposes AddRecord for testing.
+func (h *DNSHandler) DNSAddRecord(hostname string, ip net.IP) {
+	h.AddRecord(hostname, ip)
+}
+
+// DNSAddRecordWithTTL exposes AddRecordWithTTL for testing.
+func (h *DNSHandler) DNSAddRecordWithTTL(hostname string, ip net.IP, ttl uint32, rcode layers.DNSResponseCode) {
+	h.AddRecordWithTTL(hostname, ip, ttl, rcode)
+}
+
+// DNSSetDomain exposes SetDomain for testing.
+func (h *DNSHandler) DNSSetDomain(domain string) {
+	h.SetDomain(domain)
+}
+
+// DNSLoadDeviceRecords exposes LoadDeviceRecords for testing.
+func (h *DNSHandler) DNSLoadDeviceRecords(devices []*config.Device) {
+	h.LoadDeviceRecords(devices)
+}
+
+// ---- Device table exports ----
+
+// DTRegisterTTL exposes RegisterTTL for testing.
+func (dt *DeviceTable) DTRegisterTTL(device *config.Device) {
+	dt.RegisterTTL(device)
+}
+
+// DTGetDeviceByTTL exposes GetDeviceByTTL for testing.
+func (dt *DeviceTable) DTGetDeviceByTTL(ttl int) *config.Device {
+	return dt.GetDeviceByTTL(ttl)
+}
+
+// DTIncrementTTLCount exposes IncrementTTLCount for testing.
+func (dt *DeviceTable) DTIncrementTTLCount(device *config.Device) {
+	dt.IncrementTTLCount(device)
+}
+
+// DTRegisterForwardingDevice exposes RegisterForwardingDevice for testing.
+func (dt *DeviceTable) DTRegisterForwardingDevice(device *config.Device) {
+	dt.RegisterForwardingDevice(device)
+}
+
+// DTGetForwardingDevices exposes GetForwardingDevices for testing.
+func (dt *DeviceTable) DTGetForwardingDevices() []*config.Device {
+	return dt.GetForwardingDevices()
+}
+
+// GetAllDHCPRelayAgentsAndServersExported exposes GetAllDHCPRelayAgentsAndServers for testing.
+func GetAllDHCPRelayAgentsAndServersExported() net.IP {
+	return GetAllDHCPRelayAgentsAndServers()
+}
+
+// GetAllDHCPServersExported exposes GetAllDHCPServers for testing.
+func GetAllDHCPServersExported() net.IP {
+	return GetAllDHCPServers()
+}
+
+// DHCPv6FindAvailableAddress exposes findAvailableAddress for testing via allocateLease.
+// Note: allocateLease is already exported via DHCPv6AllocateLease.

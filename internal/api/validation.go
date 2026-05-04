@@ -8,6 +8,8 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/krisarmstrong/niac-go/internal/safeconv"
 )
 
 // validateAlertConfig validates alert configuration fields
@@ -74,10 +76,10 @@ func normalizeAndParseIP(host string) net.IP {
 	// Try parsing as decimal IPv4 (e.g., "2130706433" = 127.0.0.1)
 	if decimal, err := strconv.ParseUint(host, 10, 32); err == nil {
 		return net.IPv4(
-			byte(decimal>>bitShift24),
-			byte(decimal>>bitShift16),
-			byte(decimal>>bitShift8),
-			byte(decimal),
+			safeconv.ByteFromUint64(decimal>>bitShift24),
+			safeconv.ByteFromUint64(decimal>>bitShift16),
+			safeconv.ByteFromUint64(decimal>>bitShift8),
+			safeconv.ByteFromUint64(decimal),
 		)
 	}
 
@@ -231,7 +233,8 @@ func validateInterfaceName(iface string) *ErrorDetail {
 	}
 
 	// Must start with a letter
-	if iface[0] == '-' || iface[0] == '.' || !((iface[0] >= 'a' && iface[0] <= 'z') || (iface[0] >= 'A' && iface[0] <= 'Z')) {
+	if iface[0] == '-' || iface[0] == '.' ||
+		((iface[0] < 'a' || iface[0] > 'z') && (iface[0] < 'A' || iface[0] > 'Z')) {
 		return &ErrorDetail{
 			Field: "interface",
 			Issue: "interface name must start with a letter",
@@ -315,38 +318,52 @@ func validateSimulationRequest(req SimulationRequest) []ErrorDetail {
 func validateReplayRequest(req ReplayRequest) []ErrorDetail {
 	var errs []ErrorDetail
 
-	// Validate inline data size
+	errs = append(errs, validateReplayInlineData(req)...)
+	errs = append(errs, validateReplayFilePath(req)...)
+	errs = append(errs, validateReplayLoopMs(req)...)
+	errs = append(errs, validateReplayScale(req)...)
+
+	return errs
+}
+
+func validateReplayInlineData(req ReplayRequest) []ErrorDetail {
 	if len(req.InlineData) > MaxPCAPUploadSize*4/base64Ratio {
-		errs = append(errs, ErrorDetail{
+		return []ErrorDetail{{
 			Field: "data",
 			Issue: fmt.Sprintf(
 				"inline data exceeds maximum size of %d bytes (100MB base64)",
 				MaxPCAPUploadSize*4/base64Ratio,
 			),
 			Value: "[too large]",
+		}}
+	}
+	return nil
+}
+
+func validateReplayFilePath(req ReplayRequest) []ErrorDetail {
+	if req.File == "" {
+		return nil
+	}
+	var errs []ErrorDetail
+	if strings.Contains(req.File, "..") {
+		errs = append(errs, ErrorDetail{
+			Field: "file",
+			Issue: "path traversal detected (.. not allowed)",
+			Value: "[redacted]",
 		})
 	}
-
-	// Validate file path (prevent path traversal)
-	if req.File != "" {
-		if strings.Contains(req.File, "..") {
-			errs = append(errs, ErrorDetail{
-				Field: "file",
-				Issue: "path traversal detected (.. not allowed)",
-				Value: "[redacted]",
-			})
-		}
-
-		if len(req.File) > maxPathLength {
-			errs = append(errs, ErrorDetail{
-				Field: "file",
-				Issue: "file path exceeds maximum length of 4096 characters",
-				Value: "[too long]",
-			})
-		}
+	if len(req.File) > maxPathLength {
+		errs = append(errs, ErrorDetail{
+			Field: "file",
+			Issue: "file path exceeds maximum length of 4096 characters",
+			Value: "[too long]",
+		})
 	}
+	return errs
+}
 
-	// Validate loop milliseconds (prevent extreme values)
+func validateReplayLoopMs(req ReplayRequest) []ErrorDetail {
+	var errs []ErrorDetail
 	if req.LoopMs < 0 {
 		errs = append(errs, ErrorDetail{
 			Field: "loop_ms",
@@ -354,7 +371,6 @@ func validateReplayRequest(req ReplayRequest) []ErrorDetail {
 			Value: strconv.Itoa(req.LoopMs),
 		})
 	}
-
 	if req.LoopMs > maxLoopMs { // Max 24 hours
 		errs = append(errs, ErrorDetail{
 			Field: "loop_ms",
@@ -362,8 +378,11 @@ func validateReplayRequest(req ReplayRequest) []ErrorDetail {
 			Value: strconv.Itoa(req.LoopMs),
 		})
 	}
+	return errs
+}
 
-	// Validate scale (prevent extreme values)
+func validateReplayScale(req ReplayRequest) []ErrorDetail {
+	var errs []ErrorDetail
 	if req.Scale < 0 {
 		errs = append(errs, ErrorDetail{
 			Field: "scale",
@@ -371,7 +390,6 @@ func validateReplayRequest(req ReplayRequest) []ErrorDetail {
 			Value: fmt.Sprintf("%f", req.Scale),
 		})
 	}
-
 	if req.Scale > maxScaleFactor {
 		errs = append(errs, ErrorDetail{
 			Field: "scale",
@@ -379,7 +397,6 @@ func validateReplayRequest(req ReplayRequest) []ErrorDetail {
 			Value: fmt.Sprintf("%f", req.Scale),
 		})
 	}
-
 	return errs
 }
 

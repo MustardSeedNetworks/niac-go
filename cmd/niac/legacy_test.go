@@ -357,12 +357,7 @@ func TestDefineLegacyFlags(t *testing.T) {
 		"list-interfaces",
 		"list-devices",
 		"no-color",
-		"log-file",
-		"stats-interval",
-		"babble-interval",
 		"no-traffic",
-		"snmp-community",
-		"max-packet-size",
 		"debug-arp",
 		"debug-ip",
 		"debug-dhcp",
@@ -394,12 +389,7 @@ func TestLegacyFlags_AllFieldsPresent(t *testing.T) {
 	flags.listInterfaces = true
 	flags.listDevices = true
 	flags.noColor = true
-	flags.logFile = "test.log"
-	flags.statsInterval = 5
-	flags.babbleInterval = 60
 	flags.noTraffic = true
-	flags.snmpCommunity = "public"
-	flags.maxPacketSize = 1514
 	flags.debugARP = 1
 	flags.debugIP = 1
 	flags.debugICMP = 1

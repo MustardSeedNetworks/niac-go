@@ -321,7 +321,7 @@ func appendLLDPMgmtAddr(tlvs []byte, ip net.IP) []byte {
 
 func encodeLLDPTLV(tlvType byte, value []byte) []byte {
 	length := len(value)
-	maskedLen := uint16(length & lldpTLVLenMask) //nolint:gosec // bounded by protocol
+	maskedLen := uint16(length & lldpTLVLenMask)
 	header := uint16(tlvType)<<lldpTLVShift | maskedLen
 	buf := make([]byte, lldpTTLBytes+length)
 	binary.BigEndian.PutUint16(buf[0:lldpTTLBytes], header)
@@ -336,7 +336,7 @@ func buildCDPFrame(dev deviceInfo) []byte {
 	eth := make([]byte, ethHeaderLen)
 	copy(eth[0:6], cdpMulticast())
 	copy(eth[6:12], dev.MAC)
-	binary.BigEndian.PutUint16(eth[12:ethHeaderLen], uint16(frameLen&uint16Mask)) //nolint:gosec // bounded by MTU
+	binary.BigEndian.PutUint16(eth[12:ethHeaderLen], uint16(frameLen&uint16Mask))
 
 	frame := make([]byte, 0, ethHeaderLen+cdpLLCLen+len(cdpPayload))
 	frame = append(frame, eth...)
@@ -416,7 +416,7 @@ func cdpChecksum(data []byte) uint16 {
 	for sum>>16 != 0 {
 		sum = (sum & 0xFFFF) + (sum >> 16) //nolint:mnd // RFC 1071 ones-complement fold
 	}
-	return ^uint16(sum) //nolint:gosec // ones-complement inversion, no overflow risk
+	return ^uint16(sum)
 }
 
 func padFrame(frame []byte) []byte {

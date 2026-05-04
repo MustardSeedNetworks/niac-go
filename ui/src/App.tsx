@@ -33,37 +33,37 @@ import { RuntimeControlPage } from './pages/RuntimeControlPage';
 
 // Lazy loaded pages (large dependencies or infrequently used)
 const TopologyPage = lazy(() =>
-  import('./pages/TopologyPage').then((m) => ({ default: m.TopologyPage }))
+  import('./pages/TopologyPage').then((m) => ({ default: m.TopologyPage })),
 );
 const ConfigDiffPage = lazy(() =>
-  import('./pages/ConfigDiffPage').then((m) => ({ default: m.ConfigDiffPage }))
+  import('./pages/ConfigDiffPage').then((m) => ({ default: m.ConfigDiffPage })),
 );
 const DeviceEditorPage = lazy(() =>
-  import('./pages/DeviceEditorPage').then((m) => ({ default: m.DeviceEditorPage }))
+  import('./pages/DeviceEditorPage').then((m) => ({ default: m.DeviceEditorPage })),
 );
 const DeviceListPage = lazy(() =>
-  import('./pages/DeviceListPage').then((m) => ({ default: m.DeviceListPage }))
+  import('./pages/DeviceListPage').then((m) => ({ default: m.DeviceListPage })),
 );
 const TemplatesPage = lazy(() =>
-  import('./pages/TemplatesPage').then((m) => ({ default: m.TemplatesPage }))
+  import('./pages/TemplatesPage').then((m) => ({ default: m.TemplatesPage })),
 );
 const AnalysisPage = lazy(() =>
-  import('./pages/AnalysisPage').then((m) => ({ default: m.AnalysisPage }))
+  import('./pages/AnalysisPage').then((m) => ({ default: m.AnalysisPage })),
 );
 const AutomationPage = lazy(() =>
-  import('./pages/AutomationPage').then((m) => ({ default: m.AutomationPage }))
+  import('./pages/AutomationPage').then((m) => ({ default: m.AutomationPage })),
 );
 const DebugConsolePage = lazy(() =>
-  import('./pages/DebugConsolePage').then((m) => ({ default: m.DebugConsolePage }))
+  import('./pages/DebugConsolePage').then((m) => ({ default: m.DebugConsolePage })),
 );
 const PacketInspectorPage = lazy(() =>
-  import('./pages/PacketInspectorPage').then((m) => ({ default: m.PacketInspectorPage }))
+  import('./pages/PacketInspectorPage').then((m) => ({ default: m.PacketInspectorPage })),
 );
 const PcapAnalyzerPage = lazy(() =>
-  import('./pages/PcapAnalyzerPage').then((m) => ({ default: m.PcapAnalyzerPage }))
+  import('./pages/PcapAnalyzerPage').then((m) => ({ default: m.PcapAnalyzerPage })),
 );
 const TrafficInjectionPage = lazy(() =>
-  import('./pages/TrafficInjectionPage').then((m) => ({ default: m.TrafficInjectionPage }))
+  import('./pages/TrafficInjectionPage').then((m) => ({ default: m.TrafficInjectionPage })),
 );
 
 // Loading fallback for lazy-loaded pages

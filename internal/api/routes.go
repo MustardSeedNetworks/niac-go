@@ -62,10 +62,13 @@ func (s *Server) registerReadOnlyRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/v1/files", s.recoverMiddleware(s.auth(s.fileRateLimit(s.handleFiles))))
 	mux.HandleFunc("/api/v1/topology", s.recoverMiddleware(s.auth(s.handleTopology)))
 	mux.HandleFunc("/api/v1/topology/export", s.recoverMiddleware(s.auth(s.handleTopologyExport)))
-	mux.HandleFunc("/api/v1/errors", s.recoverMiddleware(s.auth(s.handleErrors)))
+	mux.HandleFunc("/api/v1/errors", s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.handleErrors)))))
 	mux.HandleFunc("/api/v1/interfaces", s.recoverMiddleware(s.auth(s.handleInterfaces)))
 	mux.HandleFunc("/api/v1/runtime", s.recoverMiddleware(s.auth(s.handleRuntime)))
-	mux.HandleFunc("/api/v1/simulation", s.recoverMiddleware(s.auth(s.handleSimulation)))
+	mux.HandleFunc(
+		"/api/v1/simulation",
+		s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.handleSimulation)))),
+	)
 	mux.HandleFunc("/api/v1/version", s.recoverMiddleware(s.auth(s.handleVersion)))
 	mux.HandleFunc("/api/v1/neighbors", s.recoverMiddleware(s.auth(s.handleNeighbors)))
 }
@@ -130,8 +133,13 @@ func (s *Server) startBackgroundTasks() {
 		ticker := time.NewTicker(rateLimiterCleanupMins * time.Minute)
 		defer ticker.Stop()
 
-		for range ticker.C {
-			s.rateLimiter.CleanupStale()
+		for {
+			select {
+			case <-s.bgStop:
+				return
+			case <-ticker.C:
+				s.rateLimiter.CleanupStale()
+			}
 		}
 	}()
 

@@ -11,6 +11,8 @@ import (
 	"time"
 )
 
+const indexHTML = "index.html"
+
 func (s *Server) serveSPA() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet && r.Method != http.MethodHead {
@@ -21,7 +23,7 @@ func (s *Server) serveSPA() http.HandlerFunc {
 
 		requestPath := strings.TrimPrefix(r.URL.Path, "/")
 		if requestPath == "" || strings.HasSuffix(r.URL.Path, "/") {
-			requestPath = "index.html"
+			requestPath = indexHTML
 		}
 
 		if strings.Contains(requestPath, "..") {
@@ -34,14 +36,14 @@ func (s *Server) serveSPA() http.HandlerFunc {
 
 		data, err := fs.ReadFile(uiFS, lookupPath)
 		if err != nil {
-			data, err = fs.ReadFile(uiFS, path.Join("ui", "index.html"))
+			data, err = fs.ReadFile(uiFS, path.Join("ui", indexHTML))
 			if err != nil {
 				http.NotFound(w, r)
 
 				return
 			}
 
-			requestPath = "index.html"
+			requestPath = indexHTML
 		}
 
 		if ctype := mime.TypeByExtension(filepath.Ext(requestPath)); ctype != "" {
@@ -53,7 +55,7 @@ func (s *Server) serveSPA() http.HandlerFunc {
 		}
 
 		// Cache headers: hashed assets get long-lived cache, index.html is never cached
-		if requestPath == "index.html" {
+		if requestPath == indexHTML {
 			w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 		} else if strings.HasPrefix(requestPath, "assets/") {
 			w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")

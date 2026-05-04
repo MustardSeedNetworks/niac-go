@@ -23,11 +23,11 @@ func (m *model) openEditor() tea.Cmd {
 		editor = "vi" // Default fallback
 	}
 
-	c := exec.CommandContext(
+	c := exec.CommandContext( //nolint:gosec // G702: editor is from trusted EDITOR/VISUAL env var, not user-controlled input
 		context.Background(),
 		editor,
 		m.configFilePath,
-	) // #nosec G204 -- user-specified editor
+	)
 
 	return tea.ExecProcess(c, func(err error) tea.Msg {
 		return editorFinishedMsg{err: err}

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"net/http"
 	"net/http/httptest"
 	"testing"
 )
@@ -47,7 +48,7 @@ func TestExtractXForwardedForIP(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest("GET", "/test", nil)
+			req := httptest.NewRequest(http.MethodGet, "/test", nil)
 			if tt.xForwarded != "" {
 				req.Header.Set("X-Forwarded-For", tt.xForwarded)
 			}
@@ -74,7 +75,7 @@ func TestExtractXRealIP(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest("GET", "/test", nil)
+			req := httptest.NewRequest(http.MethodGet, "/test", nil)
 			if tt.xRealIP != "" {
 				req.Header.Set("X-Real-IP", tt.xRealIP)
 			}
@@ -115,7 +116,7 @@ func TestIsTrustedProxy(t *testing.T) {
 
 func TestGetClientIPDirect(t *testing.T) {
 	// Test when request comes from public IP (headers not trusted)
-	req := httptest.NewRequest("GET", "/test", nil)
+	req := httptest.NewRequest(http.MethodGet, "/test", nil)
 	req.RemoteAddr = "8.8.8.8:1234"
 	req.Header.Set("X-Forwarded-For", "192.168.1.100")
 
@@ -128,7 +129,7 @@ func TestGetClientIPDirect(t *testing.T) {
 
 func TestGetClientIPFromTrustedProxy(t *testing.T) {
 	// Test when request comes from trusted private proxy
-	req := httptest.NewRequest("GET", "/test", nil)
+	req := httptest.NewRequest(http.MethodGet, "/test", nil)
 	req.RemoteAddr = "10.0.0.1:1234"
 	req.Header.Set("X-Forwarded-For", "203.0.113.50")
 
@@ -141,7 +142,7 @@ func TestGetClientIPFromTrustedProxy(t *testing.T) {
 
 func TestGetClientIPXRealIPFromTrustedProxy(t *testing.T) {
 	// Test X-Real-IP from trusted proxy
-	req := httptest.NewRequest("GET", "/test", nil)
+	req := httptest.NewRequest(http.MethodGet, "/test", nil)
 	req.RemoteAddr = "127.0.0.1:1234"
 	req.Header.Set("X-Real-IP", "203.0.113.100")
 
@@ -153,7 +154,7 @@ func TestGetClientIPXRealIPFromTrustedProxy(t *testing.T) {
 }
 
 func TestGetClientIPNoPort(t *testing.T) {
-	req := httptest.NewRequest("GET", "/test", nil)
+	req := httptest.NewRequest(http.MethodGet, "/test", nil)
 	req.RemoteAddr = "192.168.1.1" // No port
 
 	got := getClientIP(req)
@@ -171,7 +172,7 @@ func TestGenerateRequestID(t *testing.T) {
 
 	// Should be hex encoded
 	for _, c := range id1 {
-		if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f')) {
+		if (c < '0' || c > '9') && (c < 'a' || c > 'f') {
 			t.Errorf("generateRequestID() contains non-hex character: %c", c)
 		}
 	}

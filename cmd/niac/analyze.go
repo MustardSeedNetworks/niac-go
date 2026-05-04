@@ -192,7 +192,14 @@ func parseWalkFile(filename string) (*WalkAnalysis, error) {
 		return nil, err
 	}
 
-	// Convert map to sorted slice
+	finalizeInterfaceList(analysis, interfaceMap)
+	computeWalkStatistics(analysis)
+
+	return analysis, nil
+}
+
+// finalizeInterfaceList converts the interface map into a sorted slice on the analysis.
+func finalizeInterfaceList(analysis *WalkAnalysis, interfaceMap map[int]*InterfaceInfo) {
 	indices := make([]int, 0, len(interfaceMap))
 	for idx := range interfaceMap {
 		indices = append(indices, idx)
@@ -205,8 +212,10 @@ func parseWalkFile(filename string) (*WalkAnalysis, error) {
 			analysis.Interfaces = append(analysis.Interfaces, *iface)
 		}
 	}
+}
 
-	// Calculate statistics
+// computeWalkStatistics populates the interface-type counters on the analysis.
+func computeWalkStatistics(analysis *WalkAnalysis) {
 	analysis.Statistics.TotalInterfaces = len(analysis.Interfaces)
 	for _, iface := range analysis.Interfaces {
 		if iface.Type == "physical" || iface.Type == "ethernet" {
@@ -216,8 +225,6 @@ func parseWalkFile(filename string) (*WalkAnalysis, error) {
 		}
 	}
 	analysis.Statistics.TotalNeighbors = len(analysis.Neighbors)
-
-	return analysis, nil
 }
 
 func parseSystemAndInterfaces(
@@ -392,54 +399,77 @@ func writeGraphviz(analysis *WalkAnalysis, target string) error {
 		local = "local-device"
 	}
 
+	builder := buildGraphvizDocument(local, analysis.Neighbors)
+
+	if target == "-" {
+		_, _ = os.Stdout.WriteString(builder.String())
+		return nil
+	}
+
+	if err := validateFilePath(target, true); err != nil {
+		return fmt.Errorf("invalid output path: %w", err)
+	}
+
+	if err := os.WriteFile(filepath.Clean(target), []byte(builder.String()), 0o600); err != nil {
+		return fmt.Errorf("failed to write DOT file: %w", err)
+	}
+
+	return nil
+}
+
+// buildGraphvizDocument assembles the DOT graph text for the given neighbors.
+func buildGraphvizDocument(local string, neighbors []NeighborInfo) *strings.Builder {
 	var builder strings.Builder
 	builder.WriteString("digraph niac_topology {\n")
 	builder.WriteString("  rankdir=LR;\n")
-	builder.WriteString(
-		fmt.Sprintf("  \"%s\" [shape=box, style=filled, fillcolor=\"#2563EB\", fontcolor=\"white\"];\n", local),
+	fmt.Fprintf(
+		&builder,
+		"  \"%s\" [shape=box, style=filled, fillcolor=\"#2563EB\", fontcolor=\"white\"];\n",
+		dotEscape(local),
 	)
 
 	seen := make(map[string]struct{})
-	for _, neighbor := range analysis.Neighbors {
+	for _, neighbor := range neighbors {
 		if neighbor.RemoteDevice == "" {
 			continue
 		}
 		key := strings.ToLower(neighbor.RemoteDevice)
 		if _, ok := seen[key]; !ok {
-			builder.WriteString(
-				fmt.Sprintf(
-					"  \"%s\" [shape=ellipse, style=filled, fillcolor=\"#0f172a\", fontcolor=\"white\"];\n",
-					neighbor.RemoteDevice,
-				),
+			fmt.Fprintf(
+				&builder,
+				"  \"%s\" [shape=ellipse, style=filled, fillcolor=\"#0f172a\", fontcolor=\"white\"];\n",
+				dotEscape(neighbor.RemoteDevice),
 			)
 			seen[key] = struct{}{}
 		}
 
 		label := fmt.Sprintf(
 			"%s → %s (%s)",
-			neighbor.LocalInterface,
-			neighbor.RemoteInterface,
+			dotEscape(neighbor.LocalInterface),
+			dotEscape(neighbor.RemoteInterface),
 			strings.ToUpper(neighbor.Protocol),
 		)
-		builder.WriteString(fmt.Sprintf("  \"%s\" -> \"%s\" [label=\"%s\"];\n", local, neighbor.RemoteDevice, label))
+		fmt.Fprintf(
+			&builder,
+			"  \"%s\" -> \"%s\" [label=\"%s\"];\n",
+			dotEscape(local),
+			dotEscape(neighbor.RemoteDevice),
+			dotEscape(label),
+		)
 	}
 	builder.WriteString("}\n")
+	return &builder
+}
 
-	data := []byte(builder.String())
-	if target == "-" {
-		_, _ = os.Stdout.WriteString(builder.String())
-		return nil
-	}
-	err := os.WriteFile(target, data, 0o600)
-	if err != nil {
-		return fmt.Errorf("failed to write DOT file: %w", err)
-	}
-	return nil
+// dotEscape escapes strings for safe inclusion in Graphviz DOT attributes.
+func dotEscape(s string) string {
+	r := strings.NewReplacer(`\`, `\\`, `"`, `\"`)
+	return r.Replace(s)
 }
 
 func outputNeighbors(neighbors []NeighborInfo, format string) error {
 	switch format {
-	case "json":
+	case analyzeOutputJSON:
 		encoder := json.NewEncoder(os.Stdout)
 		encoder.SetIndent("", "  ")
 		err := encoder.Encode(map[string]any{"neighbors": neighbors})
@@ -447,7 +477,7 @@ func outputNeighbors(neighbors []NeighborInfo, format string) error {
 			return fmt.Errorf("failed to encode neighbors JSON: %w", err)
 		}
 		return nil
-	case "yaml":
+	case analyzeOutputYAML:
 		encoder := yaml.NewEncoder(os.Stdout)
 		defer func() { _ = encoder.Close() }()
 		encoder.SetIndent(tabPadding)
@@ -456,7 +486,7 @@ func outputNeighbors(neighbors []NeighborInfo, format string) error {
 			return fmt.Errorf("failed to encode neighbors YAML: %w", err)
 		}
 		return nil
-	case "text":
+	case analyzeOutputText:
 		for _, neighbor := range neighbors {
 			fmt.Fprintf(os.Stdout, "%s (%s) -> %s (%s)\n",
 				neighbor.LocalInterface, neighbor.Protocol,

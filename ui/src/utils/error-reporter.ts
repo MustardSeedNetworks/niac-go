@@ -33,10 +33,11 @@ function flush(): void {
     return;
   }
 
-  // In production, send to error endpoint if available
-  void fetch('/api/v1/errors', {
+  // In production, send to client telemetry endpoint if available
+  void fetch('/api/v1/client-errors', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    credentials: 'same-origin',
     body: JSON.stringify({ errors: reports }),
   }).catch(() => {
     // Silently drop if endpoint unavailable

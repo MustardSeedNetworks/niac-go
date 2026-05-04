@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"sync/atomic"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
@@ -79,15 +80,16 @@ func GetAllRoutersMulticast() net.IP {
 // IPv6Handler handles IPv6 packets.
 type IPv6Handler struct {
 	stack      *Stack
-	debugLevel int
+	debugLevel atomic.Int32
 }
 
 // NewIPv6Handler creates a new IPv6 handler.
 func NewIPv6Handler(stack *Stack, debugLevel int) *IPv6Handler {
-	return &IPv6Handler{
-		stack:      stack,
-		debugLevel: debugLevel,
+	h := &IPv6Handler{
+		stack: stack,
 	}
+	h.debugLevel.Store(safeconv.Int32(debugLevel))
+	return h
 }
 
 // HandlePacket processes an incoming IPv6 packet.
@@ -99,7 +101,7 @@ func (h *IPv6Handler) HandlePacket(pkt *Packet) {
 		return
 	}
 
-	if h.debugLevel >= DebugLevelVerbose {
+	if h.debugLevel.Load() >= int32(DebugLevelVerbose) {
 		_, _ = fmt.Fprintf(os.Stdout, "IPv6: %s -> %s, Next Header: %d, Hop Limit: %d sn=%d\n",
 			ipv6.SrcIP, ipv6.DstIP, ipv6.NextHeader, ipv6.HopLimit, pkt.SerialNumber)
 	}
@@ -111,7 +113,7 @@ func (h *IPv6Handler) HandlePacket(pkt *Packet) {
 
 	nextHeader, offset := h.walkExtensionHeaders(packet, ipv6)
 
-	if h.debugLevel >= DebugLevelVerbose {
+	if h.debugLevel.Load() >= int32(DebugLevelVerbose) {
 		_, _ = fmt.Fprintf(os.Stdout, "IPv6: Final protocol after extension headers: %d at offset %d sn=%d\n",
 			nextHeader, offset, pkt.SerialNumber)
 	}
@@ -123,7 +125,7 @@ func (h *IPv6Handler) HandlePacket(pkt *Packet) {
 func (h *IPv6Handler) parseIPv6Layer(packet gopacket.Packet, serialNum int) *layers.IPv6 {
 	ipv6Layer := packet.Layer(layers.LayerTypeIPv6)
 	if ipv6Layer == nil {
-		if h.debugLevel >= DebugLevelInfo {
+		if h.debugLevel.Load() >= int32(DebugLevelInfo) {
 			_, _ = fmt.Fprintf(os.Stdout, "IPv6 packet missing IPv6 layer sn=%d\n", serialNum)
 		}
 
@@ -145,7 +147,7 @@ func (h *IPv6Handler) getIPv6TargetDevices(ipv6 *layers.IPv6, serialNum int) []*
 		return devices
 	}
 
-	if h.debugLevel >= DebugLevelVerbose {
+	if h.debugLevel.Load() >= int32(DebugLevelVerbose) {
 		_, _ = fmt.Fprintf(os.Stdout, "IPv6 packet not for our devices: %s sn=%d\n", ipv6.DstIP, serialNum)
 	}
 
@@ -175,11 +177,11 @@ func (h *IPv6Handler) routeIPv6Protocol(
 			h.stack.tcpHandler.HandlePacketV6(pkt, packet, ipv6, devices)
 		}
 	case IPv6NextHeaderNoNext:
-		if h.debugLevel >= DebugLevelInfo {
+		if h.debugLevel.Load() >= int32(DebugLevelInfo) {
 			_, _ = fmt.Fprintf(os.Stdout, "IPv6: No next header, packet complete sn=%d\n", pkt.SerialNumber)
 		}
 	default:
-		if h.debugLevel >= DebugLevelInfo {
+		if h.debugLevel.Load() >= int32(DebugLevelInfo) {
 			_, _ = fmt.Fprintf(os.Stdout, "IPv6: Unhandled next header protocol: %d sn=%d\n",
 				nextHeader, pkt.SerialNumber)
 		}
@@ -239,7 +241,7 @@ func (h *IPv6Handler) walkExtensionHeaders(packet gopacket.Packet, ipv6 *layers.
 		extHeaderSize := (hdrExtLen + 1) * ipv6ExtHdrUnitSize
 		offset += extHeaderSize
 
-		if h.debugLevel >= DebugLevelVerbose {
+		if h.debugLevel.Load() >= int32(DebugLevelVerbose) {
 			_, _ = fmt.Fprintf(os.Stdout, "IPv6: Processed extension header, next: %d, length: %d bytes\n",
 				nextHeader, extHeaderSize)
 		}
@@ -304,7 +306,7 @@ func CalculateIPv6Checksum(srcIP, dstIP net.IP, nextHeader uint8, payload []byte
 
 	// Sum pseudo-header
 	for i := 0; i < len(pseudoHeader); i += ipv6ChecksumWordStep {
-		sum += uint32(pseudoHeader[i])<<ipv6ChecksumByteShift | uint32(pseudoHeader[i+1])
+		sum += ipv6SumWord(pseudoHeader, i)
 	}
 
 	// Sum payload
@@ -324,6 +326,12 @@ func CalculateIPv6Checksum(srcIP, dstIP net.IP, nextHeader uint8, payload []byte
 
 	// Return one's complement
 	return ^uint16(sum)
+}
+
+// ipv6SumWord returns the big-endian 16-bit word at offset i in buf, widened to uint32.
+// Callers must ensure len(buf) is even and i+1 is within bounds.
+func ipv6SumWord(buf []byte, i int) uint32 {
+	return uint32(buf[i])<<ipv6ChecksumByteShift | uint32(buf[i+1])
 }
 
 // SendIPv6Packet constructs and sends an IPv6 packet.
@@ -367,7 +375,7 @@ func (h *IPv6Handler) SendIPv6Packet(srcIP, dstIP net.IP, srcMAC, dstMAC net.Har
 		return fmt.Errorf("failed to serialize IPv6 packet: %w", err)
 	}
 
-	if h.debugLevel >= DebugLevelVerbose {
+	if h.debugLevel.Load() >= int32(DebugLevelVerbose) {
 		_, _ = fmt.Fprintf(os.Stdout, "IPv6: Sending packet %s -> %s, protocol: %d, size: %d bytes\n",
 			srcIP, dstIP, nextHeader, len(buf.Bytes()))
 	}
@@ -378,5 +386,5 @@ func (h *IPv6Handler) SendIPv6Packet(srcIP, dstIP net.IP, srcMAC, dstMAC net.Har
 
 // SetDebugLevel updates the debug level.
 func (h *IPv6Handler) SetDebugLevel(level int) {
-	h.debugLevel = level
+	h.debugLevel.Store(safeconv.Int32(level))
 }

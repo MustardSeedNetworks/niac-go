@@ -94,7 +94,6 @@ func (h *ARPHandler) HandlePacket(pkt *Packet) {
 
 // handleARPRequest processes an ARP request and generates reply if we have the target IP.
 func (h *ARPHandler) handleARPRequest(pkt *Packet, arp *layers.ARP) {
-	logger := slog.Default()
 	debugLevel := h.stack.GetDebugLevel()
 
 	targetIP := net.IP(arp.DstProtAddress)
@@ -104,55 +103,39 @@ func (h *ARPHandler) handleARPRequest(pkt *Packet, arp *layers.ARP) {
 	h.stack.IncrementStat("arp_requests")
 
 	if debugLevel >= DebugLevelVerbose {
-		logger.Debug(
-			"ARP Request",
-			"targetIP",
-			targetIP,
-			"sourceIP",
-			sourceIP,
-			"sourceMAC",
-			sourceMAC,
-			"sn",
-			pkt.SerialNumber,
-		)
+		slog.Debug("ARP Request", "targetIP", targetIP, "sourceIP", sourceIP,
+			"sourceMAC", sourceMAC, "sn", pkt.SerialNumber)
 	}
 
-	// Look up devices with this IP (considering VLAN)
 	devices := h.stack.GetDevices().GetByIP(targetIP)
 	if len(devices) == 0 {
 		if debugLevel >= DebugLevelVerbose {
-			logger.Debug("ARP Request: No device found for IP", "ip", targetIP)
+			slog.Debug("ARP Request: No device found for IP", "ip", targetIP)
 		}
 
 		return
 	}
 
-	// Send reply for each matching device
+	h.sendARPReplies(devices, targetIP, sourceMAC, sourceIP, debugLevel)
+}
+
+// sendARPReplies sends ARP replies for all matching devices.
+func (h *ARPHandler) sendARPReplies(
+	devices []*config.Device, targetIP net.IP, sourceMAC net.HardwareAddr, sourceIP net.IP, debugLevel int,
+) {
 	for _, device := range devices {
-		// Check VLAN match if applicable (tracked in issue #77 - VLAN-aware ARP)
-		// For now, respond to all
 		if len(device.MACAddress) == 0 {
 			continue
 		}
 
-		// Create ARP reply
 		reply := h.buildARPReply(device.MACAddress, targetIP, sourceMAC, sourceIP)
 		if reply != nil {
 			h.stack.Send(reply)
 			h.stack.IncrementStat("arp_replies")
 
 			if debugLevel >= DebugLevelVerbose {
-				logger.Debug(
-					"ARP Reply",
-					"ip",
-					targetIP,
-					"mac",
-					device.MACAddress,
-					"device",
-					device.Name,
-					"sn",
-					reply.SerialNumber,
-				)
+				slog.Debug("ARP Reply", "ip", targetIP, "mac", device.MACAddress,
+					"device", device.Name, "sn", reply.SerialNumber)
 			}
 		}
 	}
@@ -160,122 +143,77 @@ func (h *ARPHandler) handleARPRequest(pkt *Packet, arp *layers.ARP) {
 
 // buildARPReply constructs an ARP reply packet.
 func (h *ARPHandler) buildARPReply(
-	senderMAC net.HardwareAddr,
-	senderIP net.IP,
-	targetMAC net.HardwareAddr,
-	targetIP net.IP,
+	senderMAC net.HardwareAddr, senderIP net.IP,
+	targetMAC net.HardwareAddr, targetIP net.IP,
 ) *Packet {
-	logger := slog.Default()
-	// Build Ethernet header
 	eth := &layers.Ethernet{
-		SrcMAC:       senderMAC,
-		DstMAC:       targetMAC,
-		EthernetType: layers.EthernetTypeARP,
+		SrcMAC: senderMAC, DstMAC: targetMAC, EthernetType: layers.EthernetTypeARP,
 	}
 
-	// Build ARP header
 	arpLayer := &layers.ARP{
-		AddrType:          layers.LinkTypeEthernet,
-		Protocol:          layers.EthernetTypeIPv4,
-		HwAddressSize:     arpHWAddressSize,
-		ProtAddressSize:   arpProtAddressSize,
-		Operation:         layers.ARPReply,
-		SourceHwAddress:   senderMAC,
-		SourceProtAddress: senderIP.To4(),
-		DstHwAddress:      targetMAC,
-		DstProtAddress:    targetIP.To4(),
+		AddrType: layers.LinkTypeEthernet, Protocol: layers.EthernetTypeIPv4,
+		HwAddressSize: arpHWAddressSize, ProtAddressSize: arpProtAddressSize,
+		Operation: layers.ARPReply, SourceHwAddress: senderMAC,
+		SourceProtAddress: senderIP.To4(), DstHwAddress: targetMAC,
+		DstProtAddress: targetIP.To4(),
 	}
 
-	// Serialize packet
 	buffer := gopacket.NewSerializeBuffer()
-	opts := gopacket.SerializeOptions{
-		FixLengths:       true,
-		ComputeChecksums: true,
-	}
+	opts := gopacket.SerializeOptions{FixLengths: true, ComputeChecksums: true}
 
-	err := gopacket.SerializeLayers(buffer, opts, eth, arpLayer)
-	if err != nil {
+	if err := gopacket.SerializeLayers(buffer, opts, eth, arpLayer); err != nil {
 		if h.stack.GetDebugLevel() >= DebugLevelInfo {
-			logger.Debug("Error serializing ARP reply", "error", err)
+			slog.Debug("Error serializing ARP reply", "error", err)
 		}
 
 		return nil
 	}
 
-	// Get serial number
 	h.stack.mu.Lock()
 	h.stack.serialNumber++
-	serialNum := h.stack.serialNumber
+	sn := h.stack.serialNumber
 	h.stack.mu.Unlock()
 
-	// Create packet
-	pkt := &Packet{
-		Buffer:       buffer.Bytes(),
-		Length:       len(buffer.Bytes()),
-		SerialNumber: serialNum,
-	}
-
-	return pkt
+	return &Packet{Buffer: buffer.Bytes(), Length: len(buffer.Bytes()), SerialNumber: sn}
 }
 
 // SendGratuitousARP sends a gratuitous ARP announcement.
 func (h *ARPHandler) SendGratuitousARP(device *config.Device) error {
-	logger := slog.Default()
 	if len(device.MACAddress) == 0 || len(device.IPAddresses) == 0 {
 		return ErrDeviceMissingMACOrIP
 	}
 
-	// Use first IP
 	ip := device.IPAddresses[0]
-
-	// Build gratuitous ARP (announce our IP)
 	eth := &layers.Ethernet{
-		SrcMAC:       device.MACAddress,
-		DstMAC:       net.HardwareAddr{0xff, 0xff, 0xff, 0xff, 0xff, 0xff}, // Broadcast
+		SrcMAC: device.MACAddress, DstMAC: net.HardwareAddr{0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
 		EthernetType: layers.EthernetTypeARP,
 	}
 
 	arpLayer := &layers.ARP{
-		AddrType:          layers.LinkTypeEthernet,
-		Protocol:          layers.EthernetTypeIPv4,
-		HwAddressSize:     arpHWAddressSize,
-		ProtAddressSize:   arpProtAddressSize,
-		Operation:         layers.ARPRequest,
-		SourceHwAddress:   device.MACAddress,
+		AddrType: layers.LinkTypeEthernet, Protocol: layers.EthernetTypeIPv4,
+		HwAddressSize: arpHWAddressSize, ProtAddressSize: arpProtAddressSize,
+		Operation: layers.ARPRequest, SourceHwAddress: device.MACAddress,
 		SourceProtAddress: ip.To4(),
 		DstHwAddress:      net.HardwareAddr{0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
-		DstProtAddress:    ip.To4(), // Target is self for gratuitous ARP
+		DstProtAddress:    ip.To4(),
 	}
 
-	// Serialize
 	buffer := gopacket.NewSerializeBuffer()
-	opts := gopacket.SerializeOptions{
-		FixLengths:       true,
-		ComputeChecksums: true,
-	}
+	opts := gopacket.SerializeOptions{FixLengths: true, ComputeChecksums: true}
 
-	err := gopacket.SerializeLayers(buffer, opts, eth, arpLayer)
-	if err != nil {
+	if err := gopacket.SerializeLayers(buffer, opts, eth, arpLayer); err != nil {
 		return fmt.Errorf("error serializing gratuitous ARP: %w", err)
 	}
 
-	// Get serial number
 	h.stack.mu.Lock()
 	h.stack.serialNumber++
-	serialNum := h.stack.serialNumber
+	sn := h.stack.serialNumber
 	h.stack.mu.Unlock()
 
-	// Create and send packet
-	pkt := &Packet{
-		Buffer:       buffer.Bytes(),
-		Length:       len(buffer.Bytes()),
-		SerialNumber: serialNum,
-	}
-
-	h.stack.Send(pkt)
+	h.stack.Send(&Packet{Buffer: buffer.Bytes(), Length: len(buffer.Bytes()), SerialNumber: sn})
 
 	if h.stack.GetDebugLevel() >= DebugLevelVerbose {
-		logger.Debug("Sent gratuitous ARP", "ip", ip, "mac", device.MACAddress, "device", device.Name)
+		slog.Debug("Sent gratuitous ARP", "ip", ip, "mac", device.MACAddress, "device", device.Name)
 	}
 
 	return nil

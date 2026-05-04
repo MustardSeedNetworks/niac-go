@@ -110,9 +110,18 @@ func (s *Server) collectFiles(kind string) ([]FileEntry, error) {
 		return []FileEntry{}, fmt.Errorf("failed to stat root: %w", err)
 	}
 
+	entries, err := walkFileEntries(root, rootReal, exts)
+	if err != nil {
+		return nil, err
+	}
+	return entries, nil
+}
+
+// walkFileEntries walks the root and collects entries whose extension is in exts.
+func walkFileEntries(root, rootReal string, exts []string) ([]FileEntry, error) {
 	var entries []FileEntry
 
-	err = filepath.WalkDir(root, func(path string, d fs.DirEntry, walkErr error) error {
+	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
 		}
@@ -131,7 +140,6 @@ func (s *Server) collectFiles(kind string) ([]FileEntry, error) {
 			if errors.Is(procErr, ErrPathOutsideRoot) {
 				return nil // Skip files outside allowed directory
 			}
-
 			return procErr
 		}
 
@@ -145,7 +153,6 @@ func (s *Server) collectFiles(kind string) ([]FileEntry, error) {
 	if err != nil && !errors.Is(err, filepath.SkipDir) {
 		return nil, fmt.Errorf("failed to walk directory: %w", err)
 	}
-
 	return entries, nil
 }
 

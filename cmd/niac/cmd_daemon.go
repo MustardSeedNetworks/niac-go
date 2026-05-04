@@ -46,7 +46,8 @@ The web UI will be available at http://localhost:8080`,
 	}
 
 	daemonCmd.Flags().StringVar(&options.listen, "listen", ":8080", "Address to listen on for API and web UI")
-	daemonCmd.Flags().StringVar(&options.token, "token", "", "Bearer token for API authentication (RECOMMENDED for network-exposed instances)")
+	daemonCmd.Flags().
+		StringVar(&options.token, "token", "", "Bearer token for API authentication (RECOMMENDED for network-exposed instances)")
 	daemonCmd.Flags().
 		StringVar(&options.storagePath, "storage", "~/.niac/niac.db", "Path to run history database (use 'disabled' to disable)")
 
@@ -68,7 +69,7 @@ func runDaemon(options *daemonOptions, info versionInfo) error {
 	// Create daemon instance
 	d, err := daemon.NewDaemon(daemon.Config{
 		ListenAddr:  options.listen,
-		Token:       options.token,
+		Token:       resolveAPIToken(options.token),
 		StoragePath: options.storagePath,
 		Version:     info.version,
 	})
@@ -87,6 +88,7 @@ func runDaemon(options *daemonOptions, info versionInfo) error {
 	// Wait for interrupt signal
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+	defer signal.Stop(sigChan)
 	<-sigChan
 
 	logging.Infof("\nShutting down daemon...")

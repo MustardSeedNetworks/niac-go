@@ -12,6 +12,7 @@ import (
 	"github.com/gosnmp/gosnmp"
 
 	"github.com/krisarmstrong/niac-go/internal/config"
+	"github.com/krisarmstrong/niac-go/internal/safeconv"
 )
 
 // LLDP-MIB OID prefixes (IEEE 802.1AB)
@@ -633,7 +634,7 @@ func (a *Agent) registerARPEntry(arpIndex int) {
 	indexStr := fmt.Sprintf("%d.%s", arpIndex, neighborIP)
 
 	a.mib.Set(ipNetToMediaIfIndex+"."+indexStr, &OIDValue{Type: gosnmp.Integer, Value: arpIndex})
-	macBytes := []byte{0x00, 0x00, 0x00, 0x00, 0x00, byte(arpIndex)}
+	macBytes := []byte{0x00, 0x00, 0x00, 0x00, 0x00, safeconv.Byte(arpIndex)}
 	a.mib.Set(
 		ipNetToMediaPhysAddress+"."+indexStr,
 		&OIDValue{Type: gosnmp.OctetString, Value: macBytes},
@@ -727,8 +728,9 @@ func (a *Agent) registerDot1dStpGroup(stp *config.STPConfig, numPorts int, macBy
 // buildBridgeID constructs an 8-byte bridge ID from priority and MAC.
 func (a *Agent) buildBridgeID(priority int, macBytes []byte) []byte {
 	bridgeID := make([]byte, BridgeIDLength)
-	bridgeID[0] = byte(priority >> BitShiftByte)
-	bridgeID[1] = byte(priority)
+	prio := safeconv.Uint32(priority)
+	bridgeID[0] = safeconv.ByteFromUint32(prio >> BitShiftByte)
+	bridgeID[1] = safeconv.ByteFromUint32(prio)
 	copy(bridgeID[2:], macBytes)
 	return bridgeID
 }
@@ -795,7 +797,7 @@ func (a *Agent) registerDot1dStpPortEntry(portIdx int, bridgeID []byte) {
 	)
 	a.mib.Set(
 		dot1dStpPortDesignatedPort+"."+portStr,
-		&OIDValue{Type: gosnmp.OctetString, Value: []byte{0x80, byte(portIdx)}},
+		&OIDValue{Type: gosnmp.OctetString, Value: []byte{0x80, safeconv.Byte(portIdx)}},
 	)
 	a.mib.Set(
 		dot1dStpPortForwardTransitions+"."+portStr,
@@ -898,16 +900,20 @@ func (a *Agent) initializeLLDPLocalMIB() {
 	})
 
 	// lldpLocSysCapSupported (bit field: bridge=2, router=4)
-	capabilities := getCapabilitiesBitfield(device.Type)
+	capabilities := safeconv.Uint32(getCapabilitiesBitfield(device.Type))
+	capBytes := []byte{
+		safeconv.ByteFromUint32(capabilities >> BitShiftByte),
+		safeconv.ByteFromUint32(capabilities),
+	}
 	a.mib.Set(lldpLocSysCapSupported, &OIDValue{
 		Type:  gosnmp.OctetString,
-		Value: []byte{byte(capabilities >> BitShiftByte), byte(capabilities)},
+		Value: capBytes,
 	})
 
 	// lldpLocSysCapEnabled
 	a.mib.Set(lldpLocSysCapEnabled, &OIDValue{
 		Type:  gosnmp.OctetString,
-		Value: []byte{byte(capabilities >> BitShiftByte), byte(capabilities)},
+		Value: capBytes,
 	})
 
 	// Local port entries

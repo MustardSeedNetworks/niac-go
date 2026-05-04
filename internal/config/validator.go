@@ -72,7 +72,26 @@ func (v *Validator) validateDevice(
 ) {
 	prefix := fmt.Sprintf("devices[%d]", index)
 
-	// Validate device name
+	v.validateDeviceIdentity(device, prefix, names)
+	v.validateDeviceMAC(device, prefix, macs)
+	v.validateDeviceIPs(device, prefix, ips)
+
+	if device.VLAN != 0 && !isValidVLANID(device.VLAN) {
+		v.addError(prefix+".vlan",
+			fmt.Sprintf("invalid VLAN ID: %d (must be %d-%d)", device.VLAN, minVLANID, maxVLANID))
+	}
+
+	v.validateSNMPTraps(device, prefix)
+	v.validateDNSRecords(device, prefix)
+	v.validateTTLConfig(device, prefix)
+	v.validateSNMPAccessList(device, prefix)
+	v.validateNetBIOSNames(device, prefix)
+	v.validatePortChannels(device, prefix)
+	v.validateTrunkPorts(device, prefix, names)
+}
+
+// validateDeviceIdentity validates device name and type fields.
+func (v *Validator) validateDeviceIdentity(device *Device, prefix string, names map[string]bool) {
 	if device.Name == "" {
 		v.addError(prefix+".name", "device name is required")
 	} else {
@@ -83,7 +102,6 @@ func (v *Validator) validateDevice(
 		names[device.Name] = true
 	}
 
-	// Validate device type
 	if device.Type == "" {
 		v.addError(prefix+".type", "device type is required")
 	} else {
@@ -93,23 +111,31 @@ func (v *Validator) validateDevice(
 				device.Type, strings.Join(validTypes, ", ")))
 		}
 	}
+}
 
-	// Validate MAC address
-	if len(device.MACAddress) > 0 {
-		mac := device.MACAddress.String()
-		if mac == "" {
-			v.addError(prefix+".mac_address", "invalid MAC address format")
-		} else {
-			if existingDevice, exists := macs[mac]; exists {
-				v.addError(prefix+".mac_address",
-					fmt.Sprintf("duplicate MAC address %s (also used by %s)", mac, existingDevice))
-			}
-
-			macs[mac] = device.Name
-		}
+// validateDeviceMAC validates MAC address and checks for duplicates.
+func (v *Validator) validateDeviceMAC(device *Device, prefix string, macs map[string]string) {
+	if len(device.MACAddress) == 0 {
+		return
 	}
 
-	// Validate IP addresses
+	mac := device.MACAddress.String()
+	if mac == "" {
+		v.addError(prefix+".mac_address", "invalid MAC address format")
+
+		return
+	}
+
+	if existingDevice, exists := macs[mac]; exists {
+		v.addError(prefix+".mac_address",
+			fmt.Sprintf("duplicate MAC address %s (also used by %s)", mac, existingDevice))
+	}
+
+	macs[mac] = device.Name
+}
+
+// validateDeviceIPs validates IP addresses and checks for duplicates.
+func (v *Validator) validateDeviceIPs(device *Device, prefix string, ips map[string]string) {
 	for j, ip := range device.IPAddresses {
 		if ip == nil {
 			v.addError(fmt.Sprintf("%s.ip_addresses[%d]", prefix, j), "IP address is nil")
@@ -125,17 +151,6 @@ func (v *Validator) validateDevice(
 
 		ips[ipStr] = device.Name
 	}
-
-	// Validate protocol-specific configurations
-	v.validateSNMPTraps(device, prefix)
-	v.validateDNSRecords(device, prefix)
-	v.validateTTLConfig(device, prefix)
-	v.validateSNMPAccessList(device, prefix)
-	v.validateNetBIOSNames(device, prefix)
-
-	// Validate topology configurations (v1.23.0)
-	v.validatePortChannels(device, prefix)
-	v.validateTrunkPorts(device, prefix, names)
 }
 
 // validateTTLConfig validates TTL configuration for traceroute simulation.

@@ -7,6 +7,8 @@
 # Protocols: LLDP, STP, SNMP v2c, ICMP
 # Added: v1.23.0
 
+include_path: ".."
+
 devices:
   - name: niac-access-sw-floor3
     type: switch

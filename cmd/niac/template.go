@@ -155,10 +155,14 @@ func runTemplateShow(args []string) {
 
 func runTemplateUse(args []string) {
 	templateName := args[0]
-	outputFile := args[1]
+	outputFile, pathErr := validateCLIPath(args[1])
+	if pathErr != nil {
+		color.Red("Error: invalid output path: %v", pathErr)
+		os.Exit(1)
+	}
 
 	// Check if output file exists
-	if _, statErr := os.Stat(outputFile); statErr == nil {
+	if _, statErr := statSafeFile(outputFile); statErr == nil {
 		color.Red("Error: file already exists: %s", outputFile)
 		os.Exit(1)
 	}
@@ -176,7 +180,7 @@ func runTemplateUse(args []string) {
 	}
 
 	// Write to file
-	if writeErr := os.WriteFile(outputFile, []byte(tmpl.Content), 0o600); writeErr != nil {
+	if writeErr := writeSafeFile(outputFile, []byte(tmpl.Content)); writeErr != nil {
 		color.Red("Error writing file: %v", writeErr)
 		os.Exit(1)
 	}
@@ -307,14 +311,5 @@ func listEnabledProtocols(device config.Device) []string {
 }
 
 func joinStrings(strs []string, sep string) string {
-	if len(strs) == 0 {
-		return ""
-	}
-	result := strs[0]
-	var resultSb289 strings.Builder
-	for i := 1; i < len(strs); i++ {
-		resultSb289.WriteString(sep + strs[i])
-	}
-	result += resultSb289.String()
-	return result
+	return strings.Join(strs, sep)
 }

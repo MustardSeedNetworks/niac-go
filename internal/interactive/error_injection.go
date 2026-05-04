@@ -180,7 +180,7 @@ func (m *model) renderValueInput() string {
 	input.WriteString("╔══════════════════════════════════════════════════════════════════╗\n")
 	input.WriteString("║                    Error Value Input                            ║\n")
 	input.WriteString("╠══════════════════════════════════════════════════════════════════╣\n")
-	input.WriteString(fmt.Sprintf("║ %s%-60s ║\n", "", m.valueInputPrompt))
+	fmt.Fprintf(&input, "║ %s%-60s ║\n", "", m.valueInputPrompt)
 	input.WriteString("║                                                                  ║\n")
 
 	// Show current input
@@ -189,7 +189,7 @@ func (m *model) renderValueInput() string {
 		inputDisplay = "_"
 	}
 
-	input.WriteString(fmt.Sprintf("║ Value: %-56s ║\n", inputDisplay))
+	fmt.Fprintf(&input, "║ Value: %-56s ║\n", inputDisplay)
 	input.WriteString("║                                                                  ║\n")
 	input.WriteString("║ Press [Enter] to confirm, [Esc] to cancel                       ║\n")
 	input.WriteString("╚══════════════════════════════════════════════════════════════════╝")
@@ -218,7 +218,7 @@ func (m *model) renderMenu() string {
 	menu.WriteString("╔══════════════════════════════════════════════════════════════════╗\n")
 	menu.WriteString("║         Interactive Error Injection Menu                        ║\n")
 	menu.WriteString("╠══════════════════════════════════════════════════════════════════╣\n")
-	menu.WriteString(fmt.Sprintf("║ Target Device: %-49s ║\n", selectedDeviceInfo))
+	fmt.Fprintf(&menu, "║ Target Device: %-49s ║\n", selectedDeviceInfo)
 	menu.WriteString("║ (Press Shift+D to change device)                                ║\n")
 	menu.WriteString("╠══════════════════════════════════════════════════════════════════╣\n")
 

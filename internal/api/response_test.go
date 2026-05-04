@@ -9,7 +9,7 @@ import (
 
 func TestWriteErrorBasic(t *testing.T) {
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest("GET", "/api/v1/test", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/test", nil)
 
 	writeError(rec, req, http.StatusBadRequest, "bad_request", "Invalid input", nil)
 
@@ -37,7 +37,7 @@ func TestWriteErrorBasic(t *testing.T) {
 	if resp.Path != "/api/v1/test" {
 		t.Errorf("path = %q, want %q", resp.Path, "/api/v1/test")
 	}
-	if resp.Method != "GET" {
+	if resp.Method != http.MethodGet {
 		t.Errorf("method = %q, want %q", resp.Method, "GET")
 	}
 	if resp.Timestamp.IsZero() {
@@ -47,7 +47,7 @@ func TestWriteErrorBasic(t *testing.T) {
 
 func TestWriteErrorWithValidationDetails(t *testing.T) {
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest("POST", "/api/v1/devices", nil)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/devices", nil)
 
 	details := []ErrorDetail{
 		{Field: "name", Issue: "required field missing"},
@@ -75,7 +75,7 @@ func TestWriteErrorWithValidationDetails(t *testing.T) {
 
 func TestWriteErrorWithRequestID(t *testing.T) {
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest("GET", "/api/v1/test", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/test", nil)
 	req.Header.Set("X-Request-ID", "test-request-123")
 
 	writeError(rec, req, http.StatusInternalServerError, "internal_error", "Something went wrong", nil)
@@ -106,7 +106,7 @@ func TestWriteErrorVariousStatusCodes(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			rec := httptest.NewRecorder()
-			req := httptest.NewRequest("GET", "/test", nil)
+			req := httptest.NewRequest(http.MethodGet, "/test", nil)
 
 			writeError(rec, req, tt.statusCode, tt.errorCode, "Test message", nil)
 
@@ -143,7 +143,7 @@ func TestErrorResponseStructure(t *testing.T) {
 
 	// Unmarshal into map to verify JSON field names
 	var m map[string]any
-	if err := json.Unmarshal(data, &m); err != nil {
+	if err = json.Unmarshal(data, &m); err != nil {
 		t.Fatalf("unmarshal error: %v", err)
 	}
 
@@ -168,7 +168,7 @@ func TestErrorDetailStructure(t *testing.T) {
 	}
 
 	var m map[string]any
-	if err := json.Unmarshal(data, &m); err != nil {
+	if err = json.Unmarshal(data, &m); err != nil {
 		t.Fatalf("unmarshal error: %v", err)
 	}
 
@@ -194,7 +194,7 @@ func TestErrorDetailOmitEmpty(t *testing.T) {
 	}
 
 	var m map[string]any
-	if err := json.Unmarshal(data, &m); err != nil {
+	if err = json.Unmarshal(data, &m); err != nil {
 		t.Fatalf("unmarshal error: %v", err)
 	}
 

@@ -12,7 +12,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
-	"strings"
 	"syscall"
 	"time"
 
@@ -119,6 +118,11 @@ func main() {
 		func(args []string) { runLegacyMode(args, info, services) },
 		builders,
 	)
+	if shouldUseLegacyCommand(os.Args[1:], rootCmd) {
+		runLegacyMode(os.Args, info, services)
+		return
+	}
+
 	executeRootCommand(rootCmd)
 }
 
@@ -526,10 +530,11 @@ func getDebugLevelName(level int) string {
 }
 
 func padRight(str string, length int) string {
-	if len(str) >= length {
-		return str[:length]
+	runes := []rune(str)
+	if len(runes) >= length {
+		return string(runes[:length])
 	}
-	return str + strings.Repeat(" ", length-len(str))
+	return fmt.Sprintf("%-*s", length, str)
 }
 
 // startSimulation initializes the capture engine and protocol stack, returning running handles.

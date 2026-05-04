@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -180,6 +181,16 @@ func (e *Engine) SendARP(srcMAC, dstMAC []byte, srcIP, dstIP string, isRequest b
 		operation = uint16(layers.ARPRequest)
 	}
 
+	srcIPBytes := net.ParseIP(srcIP).To4()
+	if srcIPBytes == nil {
+		return fmt.Errorf("invalid source IP address: %s", srcIP)
+	}
+
+	dstIPBytes := net.ParseIP(dstIP).To4()
+	if dstIPBytes == nil {
+		return fmt.Errorf("invalid destination IP address: %s", dstIP)
+	}
+
 	arp := &layers.ARP{
 		AddrType:          layers.LinkTypeEthernet,
 		Protocol:          layers.EthernetTypeIPv4,
@@ -187,9 +198,9 @@ func (e *Engine) SendARP(srcMAC, dstMAC []byte, srcIP, dstIP string, isRequest b
 		ProtAddressSize:   ipv4AddressSize,
 		Operation:         operation,
 		SourceHwAddress:   srcMAC,
-		SourceProtAddress: []byte(srcIP),
+		SourceProtAddress: srcIPBytes,
 		DstHwAddress:      dstMAC,
-		DstProtAddress:    []byte(dstIP),
+		DstProtAddress:    dstIPBytes,
 	}
 
 	eth := &layers.Ethernet{
@@ -214,19 +225,16 @@ func (e *Engine) SendARP(srcMAC, dstMAC []byte, srcIP, dstIP string, isRequest b
 
 // GetInterfaceMAC returns the MAC address of the interface.
 func (e *Engine) GetInterfaceMAC() ([]byte, error) {
-	iface, err := GetInterface(e.interfaceName)
+	iface, err := net.InterfaceByName(e.interfaceName)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("lookup interface %s: %w", e.interfaceName, err)
 	}
 
-	// Get first MAC address from interface
-	for _, addr := range iface.Addresses {
-		if len(addr.Broadaddr) == macAddressSize {
-			return addr.Broadaddr, nil
-		}
+	if len(iface.HardwareAddr) != macAddressSize {
+		return nil, fmt.Errorf("%w: %s", ErrNoMACAddressFound, e.interfaceName)
 	}
 
-	return nil, fmt.Errorf("%w: %s", ErrNoMACAddressFound, e.interfaceName)
+	return iface.HardwareAddr, nil
 }
 
 // RateLimiter controls packet sending rate.
@@ -236,11 +244,15 @@ type RateLimiter struct {
 	tokens           chan struct{}
 	done             chan struct{} // Signals goroutine to stop
 	wg               sync.WaitGroup
-	stopped          uint32 // Atomic flag for idempotent Stop()
+	stopped          atomic.Uint32 // Atomic flag for idempotent Stop()
 }
 
 // NewRateLimiter creates a rate limiter.
+// If packetsPerSecond is <= 0, it defaults to 1 to prevent panics.
 func NewRateLimiter(packetsPerSecond int) *RateLimiter {
+	if packetsPerSecond <= 0 {
+		packetsPerSecond = 1
+	}
 	rl := &RateLimiter{
 		packetsPerSecond: packetsPerSecond,
 		tokens:           make(chan struct{}, packetsPerSecond),
@@ -280,7 +292,7 @@ func (rl *RateLimiter) Wait() {
 // Stop stops the rate limiter and cleans up goroutine
 // This method is idempotent and safe to call multiple times.
 func (rl *RateLimiter) Stop() {
-	if atomic.CompareAndSwapUint32(&rl.stopped, 0, 1) {
+	if rl.stopped.CompareAndSwap(0, 1) {
 		rl.ticker.Stop()
 		close(rl.done)
 		rl.wg.Wait() // Wait for goroutine to fully exit

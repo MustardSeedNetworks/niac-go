@@ -105,6 +105,21 @@ func (s *Server) sendAlert(total uint64) {
 		return
 	}
 
+	body := s.buildAlertBody(cfg, total)
+
+	// SSRF defense-in-depth: re-validate URL at send time (config may have been
+	// written by an older version, or DNS may have been rebound since validation).
+	if err := validateWebhookURLSSRF(cfg.WebhookURL); err != nil {
+		s.logger.Error("Alert webhook rejected", "error", err)
+
+		return
+	}
+
+	s.postAlertWebhook(cfg.WebhookURL, body)
+}
+
+// buildAlertBody serializes the alert payload JSON.
+func (s *Server) buildAlertBody(cfg AlertConfig, total uint64) []byte {
 	// SECURITY FIX #161: Thread-safe access to Interface
 	body, _ := json.Marshal(map[string]any{
 		"type":        "packet_threshold",
@@ -114,14 +129,16 @@ func (s *Server) sendAlert(total uint64) {
 		"triggeredAt": time.Now().UTC(),
 	})
 
+	return body
+}
+
+// postAlertWebhook sends the alert payload to the configured webhook URL.
+func (s *Server) postAlertWebhook(webhookURL string, body []byte) {
 	ctx, cancel := context.WithTimeout(context.Background(), webhookTimeoutSecs*time.Second)
 	defer cancel()
 
 	req, err := http.NewRequestWithContext(
-		ctx,
-		http.MethodPost,
-		cfg.WebhookURL,
-		strings.NewReader(string(body)),
+		ctx, http.MethodPost, webhookURL, strings.NewReader(string(body)),
 	)
 	if err != nil {
 		s.logger.Error("Alert webhook error", "error", err)
@@ -131,7 +148,12 @@ func (s *Server) sendAlert(total uint64) {
 
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{Timeout: webhookTimeoutSecs * time.Second}
+	client := &http.Client{
+		Timeout: webhookTimeoutSecs * time.Second,
+		CheckRedirect: func(_ *http.Request, _ []*http.Request) error {
+			return http.ErrUseLastResponse // Do not follow redirects to prevent SSRF
+		},
+	}
 
 	resp, doErr := client.Do(req)
 	if doErr != nil {

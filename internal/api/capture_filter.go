@@ -24,7 +24,7 @@ func (s *Server) handleCaptureFilter(w http.ResponseWriter, r *http.Request) {
 	case http.MethodPut:
 		s.handleCaptureFilterSet(w, r)
 	case http.MethodDelete:
-		s.handleCaptureFilterClear(w)
+		s.handleCaptureFilterClear(w, r)
 	default:
 		w.Header().Set("Allow", "GET, PUT, DELETE")
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -82,7 +82,7 @@ func (s *Server) handleCaptureFilterSet(w http.ResponseWriter, r *http.Request) 
 }
 
 // handleCaptureFilterClear removes the active BPF filter.
-func (s *Server) handleCaptureFilterClear(w http.ResponseWriter) {
+func (s *Server) handleCaptureFilterClear(w http.ResponseWriter, r *http.Request) {
 	stack := s.currentStack()
 	if stack == nil {
 		http.Error(w, "no simulation running", http.StatusServiceUnavailable)
@@ -92,7 +92,7 @@ func (s *Server) handleCaptureFilterClear(w http.ResponseWriter) {
 
 	if err := stack.SetCaptureFilter(""); err != nil {
 		s.logger.Error("[API] Failed to clear capture filter", "error", err)
-		writeError(w, nil, http.StatusInternalServerError, "filter_clear_failed",
+		writeError(w, r, http.StatusInternalServerError, "filter_clear_failed",
 			"Failed to clear capture filter", nil)
 
 		return

@@ -158,7 +158,12 @@ DEVICE_TEMPLATES = {
             "ports": 48,
             "stacking": True,
             "poe": True,
-            "uplinks": ["ethernet1/1/49", "ethernet1/1/50", "ethernet1/1/51", "ethernet1/1/52"],
+            "uplinks": [
+                "ethernet1/1/49",
+                "ethernet1/1/50",
+                "ethernet1/1/51",
+                "ethernet1/1/52",
+            ],
         },
         "s5248f-on": {
             "model": "S5248F-ON",
@@ -166,7 +171,12 @@ DEVICE_TEMPLATES = {
             "ports": 48,
             "stacking": True,
             "poe": False,
-            "uplinks": ["ethernet1/1/49", "ethernet1/1/50", "ethernet1/1/51", "ethernet1/1/52"],
+            "uplinks": [
+                "ethernet1/1/49",
+                "ethernet1/1/50",
+                "ethernet1/1/51",
+                "ethernet1/1/52",
+            ],
         },
     },
     "fortinet": {
@@ -212,7 +222,9 @@ def generate_system_mib(device_info, hostname="niac-device-01"):
     """Generate System MIB (.1.3.6.1.2.1.1.x) entries."""
     lines = []
     lines.append(f".1.3.6.1.2.1.1.1.0 = STRING: {device_info['description']}")
-    lines.append(".1.3.6.1.2.1.1.2.0 = OID: .1.3.6.1.4.1.9.1.1719")  # sysObjectID (Cisco)
+    lines.append(
+        ".1.3.6.1.2.1.1.2.0 = OID: .1.3.6.1.4.1.9.1.1719"
+    )  # sysObjectID (Cisco)
     lines.append(".1.3.6.1.2.1.1.3.0 = Timeticks: (123456789) 14 days, 6:56:07.89")
     lines.append(".1.3.6.1.2.1.1.4.0 = STRING: Network Administrator")
     lines.append(f".1.3.6.1.2.1.1.5.0 = STRING: {hostname}")
@@ -234,13 +246,21 @@ def generate_interface_mib(device_info):
     for i in range(1, total_ifs + 1):
         lines.append(f".1.3.6.1.2.1.2.2.1.1.{i} = INTEGER: {i}")  # ifIndex
         if i <= num_ports:
-            lines.append(f".1.3.6.1.2.1.2.2.1.2.{i} = STRING: GigabitEthernet1/0/{i}")  # ifDescr
-            lines.append(f".1.3.6.1.2.1.2.2.1.3.{i} = INTEGER: 6")  # ifType (ethernetCsmacd)
-            lines.append(f".1.3.6.1.2.1.2.2.1.5.{i} = Gauge32: 1000000000")  # ifSpeed (1Gbps)
+            lines.append(
+                f".1.3.6.1.2.1.2.2.1.2.{i} = STRING: GigabitEthernet1/0/{i}"
+            )  # ifDescr
+            lines.append(
+                f".1.3.6.1.2.1.2.2.1.3.{i} = INTEGER: 6"
+            )  # ifType (ethernetCsmacd)
+            lines.append(
+                f".1.3.6.1.2.1.2.2.1.5.{i} = Gauge32: 1000000000"
+            )  # ifSpeed (1Gbps)
             lines.append(f".1.3.6.1.2.1.2.2.1.8.{i} = INTEGER: 1")  # ifOperStatus (up)
         elif i <= num_ports + len(device_info.get("uplinks", [])):
             uplink_idx = i - num_ports - 1
-            lines.append(f".1.3.6.1.2.1.2.2.1.2.{i} = STRING: {device_info['uplinks'][uplink_idx]}")
+            lines.append(
+                f".1.3.6.1.2.1.2.2.1.2.{i} = STRING: {device_info['uplinks'][uplink_idx]}"
+            )
             lines.append(f".1.3.6.1.2.1.2.2.1.3.{i} = INTEGER: 6")
             lines.append(f".1.3.6.1.2.1.2.2.1.5.{i} = Gauge32: 10000000000")  # 10Gbps
             lines.append(f".1.3.6.1.2.1.2.2.1.8.{i} = INTEGER: 1")
@@ -261,15 +281,21 @@ def generate_cisco_enterprise_mib(device_info):
         f".1.3.6.1.4.1.9.9.13.1.3.1.3.1 = STRING: {device_info['model']}"
     )  # entPhysicalModel
     lines.append(".1.3.6.1.4.1.9.9.13.1.3.1.5.1 = STRING: Chassis")  # entPhysicalDescr
-    lines.append(".1.3.6.1.4.1.9.9.13.1.3.1.11.1 = STRING: FOCCXXXXXXX")  # entPhysicalSerialNum
+    lines.append(
+        ".1.3.6.1.4.1.9.9.13.1.3.1.11.1 = STRING: FOCCXXXXXXX"
+    )  # entPhysicalSerialNum
 
     # CPU statistics
-    lines.append(".1.3.6.1.4.1.9.9.109.1.1.1.1.3.1 = Gauge32: 5")  # cpmCPUTotal5sec (5%)
+    lines.append(
+        ".1.3.6.1.4.1.9.9.109.1.1.1.1.3.1 = Gauge32: 5"
+    )  # cpmCPUTotal5sec (5%)
     lines.append(".1.3.6.1.4.1.9.9.109.1.1.1.1.4.1 = Gauge32: 8")  # cpmCPUTotal1min
     lines.append(".1.3.6.1.4.1.9.9.109.1.1.1.1.5.1 = Gauge32: 10")  # cpmCPUTotal5min
 
     # Memory statistics
-    lines.append(".1.3.6.1.4.1.9.9.48.1.1.1.5.1 = INTEGER: 4194304000")  # ciscoMemoryPoolUsed (4GB)
+    lines.append(
+        ".1.3.6.1.4.1.9.9.48.1.1.1.5.1 = INTEGER: 4194304000"
+    )  # ciscoMemoryPoolUsed (4GB)
     lines.append(
         ".1.3.6.1.4.1.9.9.48.1.1.1.6.1 = INTEGER: 12582912000"
     )  # ciscoMemoryPoolFree (12GB)
@@ -333,7 +359,9 @@ def generate_walk_file(vendor, model, output_file, hostname="niac-device-01"):
         f.write("\n")
 
     print(f"\n✅ Walk file generated: {output_file}")
-    print(f"   Total OIDs: {len([line for line in lines if line and not line.startswith('#')])}")
+    print(
+        f"   Total OIDs: {len([line for line in lines if line and not line.startswith('#')])}"
+    )
     return True
 
 
@@ -367,9 +395,13 @@ Examples:
         """,
     )
 
-    parser.add_argument("--list", action="store_true", help="List all available device templates")
     parser.add_argument(
-        "--vendor", type=str, help="Device vendor (cisco, juniper, aruba, extreme, paloalto)"
+        "--list", action="store_true", help="List all available device templates"
+    )
+    parser.add_argument(
+        "--vendor",
+        type=str,
+        help="Device vendor (cisco, juniper, aruba, extreme, paloalto)",
     )
     parser.add_argument(
         "--model", type=str, help="Device model (use --list to see available models)"

@@ -140,6 +140,7 @@ const ReplayPanel: FC = () => {
       return;
     }
 
+    // TODO: Replace with custom Modal component
     if (!window.confirm('Are you sure you want to stop the replay?')) {
       return;
     }

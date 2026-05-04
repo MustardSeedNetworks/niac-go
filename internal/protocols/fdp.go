@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/krisarmstrong/niac-go/internal/config"
@@ -15,7 +16,7 @@ import (
 // FDP protocol constants.
 const (
 	// FDPMulticastMAC is the FDP multicast destination MAC address (01:E0:52:CC:CC:CC).
-	FDPMulticastMAC = "\x01\xE0\x52\xCC\xCC\xCC"
+	FDPMulticastMAC = "01:E0:52:CC:CC:CC"
 
 	// FDPAdvertiseInterval is the default FDP advertisement interval.
 	FDPAdvertiseInterval = 60 * time.Second
@@ -67,6 +68,7 @@ const deviceTypeHost = "host"
 type FDPHandler struct {
 	stack           *Stack
 	stopChan        chan struct{}
+	stopOnce        sync.Once
 	advertiseTicker *time.Ticker
 }
 
@@ -107,7 +109,9 @@ func (h *FDPHandler) Start() {
 
 // Stop halts FDP advertisements.
 func (h *FDPHandler) Stop() {
-	close(h.stopChan)
+	h.stopOnce.Do(func() {
+		close(h.stopChan)
+	})
 }
 
 // sendAdvertisements sends FDP advertisements for all devices.
@@ -145,7 +149,7 @@ func (h *FDPHandler) buildFDPFrame(device *config.Device) []byte {
 	// Use holdtime from config if available, otherwise use default
 	holdtime := byte(FDPHoldtime)
 	if device.FDPConfig != nil && device.FDPConfig.Holdtime > 0 {
-		holdtime = byte(device.FDPConfig.Holdtime)
+		holdtime = safeconv.Byte(device.FDPConfig.Holdtime)
 	}
 
 	// FDP header: Version (1 byte) + TTL/Holdtime (1 byte) + Checksum (2 bytes)
@@ -340,7 +344,7 @@ func (h *FDPHandler) calculateChecksum(data []byte) uint16 {
 	}
 
 	// Handle odd byte
-	if len(data)%fdpTLVHeaderSize/fdpTLVHeaderSize == 1 {
+	if len(data)%2 == 1 {
 		sum += uint32(data[len(data)-1]) << fdpChecksumByteShift
 	}
 

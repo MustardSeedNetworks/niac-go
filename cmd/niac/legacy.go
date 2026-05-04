@@ -26,15 +26,10 @@ type legacyFlags struct {
 	listDevices    bool
 
 	// Output flags
-	noColor       bool
-	logFile       string
-	statsInterval int
+	noColor bool
 
 	// Advanced flags
-	babbleInterval int
-	noTraffic      bool
-	snmpCommunity  string
-	maxPacketSize  int
+	noTraffic bool
 
 	// Profiling flags
 	enableProfiling bool
@@ -118,30 +113,10 @@ func defineInfoFlags(flagSet *flag.FlagSet, flags *legacyFlags) {
 
 func defineOutputFlags(flagSet *flag.FlagSet, flags *legacyFlags) {
 	flagSet.BoolVar(&flags.noColor, "no-color", false, "Disable colored output")
-	flagSet.StringVar(&flags.logFile, "log-file", "", "Write log to file")
-	flagSet.IntVar(
-		&flags.statsInterval,
-		"stats-interval",
-		1,
-		"Statistics update interval in seconds",
-	)
 }
 
 func defineAdvancedFlags(flagSet *flag.FlagSet, flags *legacyFlags) {
-	flagSet.IntVar(
-		&flags.babbleInterval,
-		"babble-interval",
-		legacyDefaultSecs,
-		"Traffic generation interval in seconds",
-	)
 	flagSet.BoolVar(&flags.noTraffic, "no-traffic", false, "Disable background traffic generation")
-	flagSet.StringVar(&flags.snmpCommunity, "snmp-community", "", "Default SNMP community string")
-	flagSet.IntVar(
-		&flags.maxPacketSize,
-		"max-packet-size",
-		defaultMTU,
-		"Maximum packet size in bytes",
-	)
 }
 
 func defineProfilingFlags(flagSet *flag.FlagSet, flags *legacyFlags) {
@@ -333,13 +308,17 @@ func defineServiceFlags(flagSet *flag.FlagSet, flags *legacyFlags) {
 	)
 }
 
-// processFlags applies flag transformations (verbose/quiet override).
+// processFlags applies flag transformations (verbose/quiet override) and validates flag values.
 func processFlags(flags *legacyFlags) {
 	if flags.verbose {
 		flags.debugLevel = 3
 	}
 	if flags.quiet {
 		flags.debugLevel = 0
+	}
+	if flags.enableProfiling && (flags.profilePort < 1 || flags.profilePort > 65535) {
+		fmt.Fprintf(os.Stderr, "Error: --profile-port must be between 1 and 65535, got %d\n", flags.profilePort)
+		os.Exit(1)
 	}
 }
 

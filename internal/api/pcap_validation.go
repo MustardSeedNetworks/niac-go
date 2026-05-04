@@ -9,9 +9,21 @@ import (
 	"strings"
 )
 
+// PCAP magic number constants for file format identification.
+const (
+	pcapMagicBE = 0xa1b2c3d4 // Big-endian pcap magic
+	pcapMagicLE = 0xd4c3b2a1 // Little-endian pcap magic
+	pcapNGMagic = 0x0a0d0d0a // pcapng Section Header Block magic
+	byteShift   = 8          // Bit shift for assembling 16-bit words from bytes
+
+	// Nano-second resolution variants.
+	pcapMagicBENano = 0xa1b23c4d // Big-endian pcap nano magic
+	pcapMagicLENano = 0x4d3cb2a1 // Little-endian pcap nano magic
+)
+
 // Known PCAP link-layer types for validation.
 // SECURITY FIX #170: Only accept recognized link-layer types.
-var validLinkTypes = map[uint32]bool{
+var validLinkTypes = map[uint32]bool{ //nolint:gochecknoglobals // Package-level lookup table, initialized once
 	0:   true, // NULL/Loopback
 	1:   true, // Ethernet
 	6:   true, // Token Ring
@@ -46,13 +58,13 @@ func validatePCAPStructure(data []byte) error {
 	magic := uint32(data[0])<<24 | uint32(data[1])<<16 | uint32(data[2])<<8 | uint32(data[3])
 
 	switch magic {
-	case 0xa1b2c3d4, 0xa1b23c4d:
+	case pcapMagicBE, pcapMagicBENano:
 		// Big-endian pcap format
 		return validatePCAPGlobalHeader(data, true)
-	case 0xd4c3b2a1, 0x4d3cb2a1:
+	case pcapMagicLE, pcapMagicLENano:
 		// Little-endian pcap format
 		return validatePCAPGlobalHeader(data, false)
-	case 0x0a0d0d0a:
+	case pcapNGMagic:
 		// pcapng format: validate Section Header Block
 		return validatePCAPngSHB(data)
 	default:
@@ -75,12 +87,12 @@ func validatePCAPGlobalHeader(data []byte, bigEndian bool) error {
 
 	var versionMajor, versionMinor, linkType uint32
 	if bigEndian {
-		versionMajor = uint32(data[4])<<8 | uint32(data[5])
-		versionMinor = uint32(data[6])<<8 | uint32(data[7])
+		versionMajor = uint32(data[4])<<byteShift | uint32(data[5])
+		versionMinor = uint32(data[6])<<byteShift | uint32(data[7])
 		linkType = uint32(data[20])<<24 | uint32(data[21])<<16 | uint32(data[22])<<8 | uint32(data[23])
 	} else {
-		versionMajor = uint32(data[5])<<8 | uint32(data[4])
-		versionMinor = uint32(data[7])<<8 | uint32(data[6])
+		versionMajor = uint32(data[5])<<byteShift | uint32(data[4])
+		versionMinor = uint32(data[7])<<byteShift | uint32(data[6])
 		linkType = uint32(data[23])<<24 | uint32(data[22])<<16 | uint32(data[21])<<8 | uint32(data[20])
 	}
 
@@ -179,31 +191,51 @@ func (s *Server) validatePcapFilePath(filename string) (string, error) {
 	}
 
 	cleanPath := filepath.Clean(filename)
-
 	if strings.ContainsRune(cleanPath, 0) {
 		return "", errors.New("filename contains invalid characters")
 	}
 
-	cfgPath := s.configPath()
-	var allowedDir string
-	if cfgPath != "" {
-		allowedDir = filepath.Dir(cfgPath)
-	} else {
-		var err error
-		allowedDir, err = os.Getwd()
-		if err != nil {
-			return "", fmt.Errorf("cannot determine allowed directory: %w", err)
-		}
+	allowedDir, err := s.resolvePcapAllowedDir()
+	if err != nil {
+		return "", err
 	}
 
-	var absPath string
+	absPath := cleanPath
 	if !filepath.IsAbs(cleanPath) {
 		absPath = filepath.Join(allowedDir, cleanPath)
-	} else {
-		absPath = cleanPath
+	}
+	absPath = filepath.Clean(absPath)
+
+	if pathErr := ensurePathWithinDir(absPath, allowedDir); pathErr != nil {
+		return "", pathErr
 	}
 
-	absPath = filepath.Clean(absPath)
+	if statErr := checkPcapFileExists(absPath, filename); statErr != nil {
+		return "", statErr
+	}
+
+	if extErr := validatePcapExtension(absPath); extErr != nil {
+		return "", extErr
+	}
+
+	return absPath, nil
+}
+
+// resolvePcapAllowedDir returns the directory that PCAP files must reside under.
+func (s *Server) resolvePcapAllowedDir() (string, error) {
+	cfgPath := s.configPath()
+	if cfgPath != "" {
+		return filepath.Dir(cfgPath), nil
+	}
+	allowedDir, err := os.Getwd()
+	if err != nil {
+		return "", fmt.Errorf("cannot determine allowed directory: %w", err)
+	}
+	return allowedDir, nil
+}
+
+// ensurePathWithinDir verifies that absPath resolves under allowedDir (following symlinks).
+func ensurePathWithinDir(absPath, allowedDir string) error {
 	realPath, err := filepath.EvalSymlinks(absPath)
 	if err != nil {
 		realPath = absPath
@@ -216,30 +248,37 @@ func (s *Server) validatePcapFilePath(filename string) (string, error) {
 
 	if !strings.HasPrefix(realPath, realAllowedDir+string(filepath.Separator)) &&
 		realPath != realAllowedDir {
-		return "", fmt.Errorf("access denied: file must be within %s", allowedDir)
+		return fmt.Errorf("access denied: file must be within %s", allowedDir)
 	}
+	return nil
+}
 
+// checkPcapFileExists stats the path and ensures it is a regular file.
+func checkPcapFileExists(absPath, filename string) error {
 	info, err := os.Stat(absPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return "", fmt.Errorf("pcap file not found: %s", filename)
+			return fmt.Errorf("pcap file not found: %s", filename)
 		}
-		return "", fmt.Errorf("cannot access pcap file: %w", err)
+		return fmt.Errorf("cannot access pcap file: %w", err)
 	}
 	if info.IsDir() {
-		return "", fmt.Errorf("%w: %s", ErrPathIsADirectory, absPath)
+		return fmt.Errorf("%w: %s", ErrPathIsADirectory, absPath)
 	}
+	return nil
+}
 
+// validatePcapExtension rejects paths without a .pcap/.pcapng/.cap extension.
+func validatePcapExtension(absPath string) error {
 	ext := strings.ToLower(filepath.Ext(absPath))
 	validExts := map[string]bool{".pcap": true, ".pcapng": true, ".cap": true}
 	if !validExts[ext] {
-		return "", fmt.Errorf(
+		return fmt.Errorf(
 			"invalid pcap file extension: %s (allowed: .pcap, .pcapng, .cap)",
 			ext,
 		)
 	}
-
-	return absPath, nil
+	return nil
 }
 
 func (s *Server) writeUploadedFile(data []byte) (string, error) {

@@ -16,9 +16,6 @@ import (
 	"github.com/krisarmstrong/niac-go/internal/ipc"
 )
 
-// Default socket path for IPC communication.
-const defaultSocketPath = "/var/run/niac/niac.sock"
-
 type injectOptions struct {
 	socketPath string
 	listJSON   bool
@@ -90,7 +87,7 @@ VALUE:
 
   # Clear all injections on all devices
   niac inject clear --all`,
-		Args: cobra.ExactArgs(argsCountThree),
+		Args: cobra.MinimumNArgs(0),
 		RunE: func(_ *cobra.Command, args []string) error {
 			return runInject(args, options)
 		},
@@ -133,7 +130,8 @@ device, or --all to clear all injections on all devices.`,
 	}
 
 	// Global socket path flag for all inject subcommands
-	injectCmd.PersistentFlags().StringVar(&options.socketPath, "socket", defaultSocketPath, "Path to NIAC IPC socket")
+	injectCmd.PersistentFlags().
+		StringVar(&options.socketPath, "socket", ipc.DefaultSocketPath(), "Path to NIAC IPC socket")
 
 	// Add subcommands
 	injectCmd.AddCommand(injectListCmd)
@@ -150,6 +148,10 @@ device, or --all to clear all injections on all devices.`,
 }
 
 func runInject(args []string, options *injectOptions) error {
+	if len(args) != argsCountThree {
+		return fmt.Errorf("requires exactly 3 arguments: <device> <error-type> <value>, got %d", len(args))
+	}
+
 	device := args[0]
 	errorType := args[1]
 	valueStr := args[2]

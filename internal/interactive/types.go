@@ -107,6 +107,10 @@ const (
 	searchCategoryDevices = "devices"
 	searchCategoryLogs    = "logs"
 
+	// Search status and scope constants.
+	searchCancelled   = "Search cancelled"
+	searchScopeDevice = "device"
+
 	// Default IP placeholder when no IP is configured.
 	noIPPlaceholder = "no-ip"
 

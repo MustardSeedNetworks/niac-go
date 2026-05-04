@@ -268,18 +268,10 @@ func TestTopologyNodeJSON(t *testing.T) {
 
 func TestTopologyLinkFields(t *testing.T) {
 	link := TopologyLink{
-		Source:          "switch1",
-		Target:          "router1",
-		Label:           "trunk",
-		SourceInterface: "ge-0/0/1",
-		TargetInterface: "eth0",
-		LinkType:        "trunk",
-		VLANs:           []int{100, 200},
-		NativeVLAN:      1,
-		Speed:           10000,
-		Duplex:          "full",
-		Status:          "up",
-		Utilization:     45.5,
+		Source:   "switch1",
+		LinkType: "trunk",
+		VLANs:    []int{100, 200},
+		Status:   "up",
 	}
 
 	if link.Source != "switch1" {
@@ -504,7 +496,7 @@ func TestExportDOTEmpty(t *testing.T) {
 	}
 }
 
-// helper function for string contains
+// helper function for string contains.
 func contains(s, substr string) bool {
 	return len(s) >= len(substr) && (s == substr || len(substr) == 0 ||
 		(len(s) > 0 && len(substr) > 0 && findSubstring(s, substr)))

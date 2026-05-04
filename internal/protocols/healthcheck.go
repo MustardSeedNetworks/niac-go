@@ -637,9 +637,9 @@ func (h *HealthCheckHandler) generateRTSPResponse(request []byte, devices []*con
 	var response strings.Builder
 
 	response.WriteString("RTSP/1.0 200 OK\r\n")
-	response.WriteString(fmt.Sprintf("CSeq: %s\r\n", cseq))
-	response.WriteString(fmt.Sprintf("Server: %s RTSP Server (NIAC-Go)\r\n", deviceName))
-	response.WriteString(fmt.Sprintf("Date: %s\r\n", time.Now().UTC().Format(time.RFC1123)))
+	fmt.Fprintf(&response, "CSeq: %s\r\n", cseq)
+	fmt.Fprintf(&response, "Server: %s RTSP Server (NIAC-Go)\r\n", deviceName)
+	fmt.Fprintf(&response, "Date: %s\r\n", time.Now().UTC().Format(time.RFC1123))
 	response.WriteString("Public: OPTIONS, DESCRIBE, SETUP, PLAY, PAUSE, TEARDOWN\r\n")
 	response.WriteString("\r\n")
 
@@ -679,9 +679,9 @@ func (h *HealthCheckHandler) generateMySQLGreeting(devices []*config.Device) []b
 	packet := make([]byte, mysqlPacketHeader+payloadLen)
 
 	// Packet header
-	packet[0] = byte(payloadLen)
-	packet[1] = byte(payloadLen >> hcByteShift8)
-	packet[2] = byte(payloadLen >> hcByteShift16)
+	packet[0] = safeconv.Byte(payloadLen)
+	packet[1] = safeconv.Byte(payloadLen >> hcByteShift8)
+	packet[2] = safeconv.Byte(payloadLen >> hcByteShift16)
 	packet[3] = 0 // sequence id
 
 	offset := 4
@@ -795,7 +795,7 @@ func (h *HealthCheckHandler) generateMSSQLResponse(request []byte, devices []*co
 	) // LOGINACK token
 	tokenData = append(
 		tokenData,
-		byte(mssqlLengthExtra+len(serverName)),
+		safeconv.Byte(mssqlLengthExtra+len(serverName)),
 	) // length (low byte)
 	tokenData = append(
 		tokenData,
@@ -812,7 +812,7 @@ func (h *HealthCheckHandler) generateMSSQLResponse(request []byte, devices []*co
 		mssqlProgramVersion,
 		mysqlPacketHeader,
 	) // TDS version 7.4
-	tokenData = append(tokenData, byte(len(serverName)))
+	tokenData = append(tokenData, safeconv.Byte(len(serverName)))
 	tokenData = append(tokenData, serverName...)
 	tokenData = append(
 		tokenData,

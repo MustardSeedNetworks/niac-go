@@ -14,6 +14,13 @@ const (
 	vlanRangeEndpoints   = 2 // number of endpoints shown in range (first and last)
 )
 
+// Device and link type constants for topology graph.
+const (
+	deviceTypeRouter = "router"
+	deviceTypeSwitch = "switch"
+	linkTypeTrunk    = "trunk"
+)
+
 // Topology describes a simple graph for visualization.
 type Topology struct {
 	Nodes []TopologyNode `json:"nodes"`
@@ -66,7 +73,7 @@ func determineLinkType(trunk config.TrunkPort) string {
 		return "lag"
 	}
 
-	return "trunk"
+	return linkTypeTrunk
 }
 
 // buildTrunkLabel creates the label for a trunk link.
@@ -196,53 +203,17 @@ func formatVLANList(vlans []int) string {
 // ExportGraphML exports the topology in GraphML format (for yEd, Gephi).
 func (t *Topology) ExportGraphML() string {
 	var sb strings.Builder
-	sb.WriteString(`<?xml version="1.0" encoding="UTF-8"?>` + "\n")
-	sb.WriteString(`<graphml xmlns="http://graphml.graphdrawing.org/xmlns"` + "\n")
-	sb.WriteString(`  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"` + "\n")
-	sb.WriteString(`  xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns` + "\n")
-	sb.WriteString(`  http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd">` + "\n")
-
-	// Define keys (attributes)
-	sb.WriteString(`  <key id="d0" for="node" attr.name="type" attr.type="string"/>` + "\n")
-	sb.WriteString(`  <key id="d1" for="edge" attr.name="label" attr.type="string"/>` + "\n")
-	sb.WriteString(`  <key id="d2" for="edge" attr.name="source_interface" attr.type="string"/>` + "\n")
-	sb.WriteString(`  <key id="d3" for="edge" attr.name="target_interface" attr.type="string"/>` + "\n")
-	sb.WriteString(`  <key id="d4" for="edge" attr.name="link_type" attr.type="string"/>` + "\n")
-	sb.WriteString(`  <key id="d5" for="edge" attr.name="vlans" attr.type="string"/>` + "\n")
-	sb.WriteString(`  <key id="d6" for="edge" attr.name="speed_mbps" attr.type="int"/>` + "\n")
-	sb.WriteString(`  <key id="d7" for="edge" attr.name="status" attr.type="string"/>` + "\n")
-
+	writeGraphMLHeader(&sb)
 	sb.WriteString(`  <graph id="G" edgedefault="undirected">` + "\n")
 
-	// Nodes
 	for _, node := range t.Nodes {
 		sb.WriteString(fmt.Sprintf(`    <node id="%s">`, escapeXML(node.Name)) + "\n")
 		sb.WriteString(fmt.Sprintf(`      <data key="d0">%s</data>`, escapeXML(node.Type)) + "\n")
 		sb.WriteString(`    </node>` + "\n")
 	}
 
-	// Edges
 	for i, link := range t.Links {
-		sb.WriteString(
-			fmt.Sprintf(
-				`    <edge id="e%d" source="%s" target="%s">`,
-				i,
-				escapeXML(link.Source),
-				escapeXML(link.Target),
-			) + "\n",
-		)
-		sb.WriteString(fmt.Sprintf(`      <data key="d1">%s</data>`, escapeXML(link.Label)) + "\n")
-		sb.WriteString(fmt.Sprintf(`      <data key="d2">%s</data>`, escapeXML(link.SourceInterface)) + "\n")
-		sb.WriteString(fmt.Sprintf(`      <data key="d3">%s</data>`, escapeXML(link.TargetInterface)) + "\n")
-		sb.WriteString(fmt.Sprintf(`      <data key="d4">%s</data>`, escapeXML(link.LinkType)) + "\n")
-		sb.WriteString(fmt.Sprintf(`      <data key="d5">%s</data>`, escapeXML(formatVLANList(link.VLANs))) + "\n")
-
-		if link.Speed > 0 {
-			sb.WriteString(fmt.Sprintf(`      <data key="d6">%d</data>`, link.Speed) + "\n")
-		}
-
-		sb.WriteString(fmt.Sprintf(`      <data key="d7">%s</data>`, escapeXML(link.Status)) + "\n")
-		sb.WriteString(`    </edge>` + "\n")
+		writeGraphMLEdge(&sb, i, link)
 	}
 
 	sb.WriteString(`  </graph>` + "\n")
@@ -251,70 +222,117 @@ func (t *Topology) ExportGraphML() string {
 	return sb.String()
 }
 
+// writeGraphMLHeader writes the XML preamble and attribute-key declarations.
+func writeGraphMLHeader(sb *strings.Builder) {
+	sb.WriteString(`<?xml version="1.0" encoding="UTF-8"?>` + "\n")
+	sb.WriteString(`<graphml xmlns="http://graphml.graphdrawing.org/xmlns"` + "\n")
+	sb.WriteString(`  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"` + "\n")
+	sb.WriteString(`  xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns` + "\n")
+	sb.WriteString(`  http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd">` + "\n")
+
+	sb.WriteString(`  <key id="d0" for="node" attr.name="type" attr.type="string"/>` + "\n")
+	sb.WriteString(`  <key id="d1" for="edge" attr.name="label" attr.type="string"/>` + "\n")
+	sb.WriteString(`  <key id="d2" for="edge" attr.name="source_interface" attr.type="string"/>` + "\n")
+	sb.WriteString(`  <key id="d3" for="edge" attr.name="target_interface" attr.type="string"/>` + "\n")
+	sb.WriteString(`  <key id="d4" for="edge" attr.name="link_type" attr.type="string"/>` + "\n")
+	sb.WriteString(`  <key id="d5" for="edge" attr.name="vlans" attr.type="string"/>` + "\n")
+	sb.WriteString(`  <key id="d6" for="edge" attr.name="speed_mbps" attr.type="int"/>` + "\n")
+	sb.WriteString(`  <key id="d7" for="edge" attr.name="status" attr.type="string"/>` + "\n")
+}
+
+// writeGraphMLEdge writes a single edge element for a TopologyLink.
+func writeGraphMLEdge(sb *strings.Builder, i int, link TopologyLink) {
+	sb.WriteString(
+		fmt.Sprintf(
+			`    <edge id="e%d" source="%s" target="%s">`,
+			i,
+			escapeXML(link.Source),
+			escapeXML(link.Target),
+		) + "\n",
+	)
+	sb.WriteString(fmt.Sprintf(`      <data key="d1">%s</data>`, escapeXML(link.Label)) + "\n")
+	sb.WriteString(fmt.Sprintf(`      <data key="d2">%s</data>`, escapeXML(link.SourceInterface)) + "\n")
+	sb.WriteString(fmt.Sprintf(`      <data key="d3">%s</data>`, escapeXML(link.TargetInterface)) + "\n")
+	sb.WriteString(fmt.Sprintf(`      <data key="d4">%s</data>`, escapeXML(link.LinkType)) + "\n")
+	sb.WriteString(fmt.Sprintf(`      <data key="d5">%s</data>`, escapeXML(formatVLANList(link.VLANs))) + "\n")
+
+	if link.Speed > 0 {
+		sb.WriteString(fmt.Sprintf(`      <data key="d6">%d</data>`, link.Speed) + "\n")
+	}
+
+	sb.WriteString(fmt.Sprintf(`      <data key="d7">%s</data>`, escapeXML(link.Status)) + "\n")
+	sb.WriteString(`    </edge>` + "\n")
+}
+
 // ExportDOT exports the topology in DOT format (for Graphviz).
 func (t *Topology) ExportDOT() string {
 	var sb strings.Builder
 	sb.WriteString("graph niac_topology {\n")
 	sb.WriteString("  // Nodes\n")
 
-	// Nodes
 	for _, node := range t.Nodes {
-		var shape string
-
-		switch node.Type {
-		case "router":
-			shape = "ellipse"
-		case "switch":
-			shape = "box"
-		case "ap":
-			shape = "diamond"
-		default:
-			shape = "box"
-		}
-
-		sb.WriteString(fmt.Sprintf("  \"%s\" [shape=%s, label=\"%s\\n(%s)\"];\n",
-			escapeDOT(node.Name), shape, escapeDOT(node.Name), escapeDOT(node.Type)))
+		writeDOTNode(&sb, node)
 	}
 
 	sb.WriteString("\n  // Links\n")
 
-	// Links
 	for _, link := range t.Links {
-		style := "solid"
-		color := "black"
-
-		switch link.LinkType {
-		case "trunk":
-			style = "bold"
-			color = "blue"
-		case "lag":
-			style = "bold"
-			color = "orange"
-		case "access":
-			color = "green"
-		}
-
-		if link.Status == "down" {
-			style = "dashed"
-			color = "red"
-		}
-
-		label := fmt.Sprintf("%s-%s", escapeDOT(link.SourceInterface), escapeDOT(link.TargetInterface))
-		if len(link.VLANs) > 0 {
-			label += "\\nVLANs: " + escapeDOT(formatVLANList(link.VLANs))
-		}
-
-		if link.Speed > 0 {
-			label += fmt.Sprintf("\\n%dMbps", link.Speed)
-		}
-
-		sb.WriteString(fmt.Sprintf("  \"%s\" -- \"%s\" [label=\"%s\", style=%s, color=%s];\n",
-			escapeDOT(link.Source), escapeDOT(link.Target), label, style, color))
+		writeDOTLink(&sb, link)
 	}
 
 	sb.WriteString("}\n")
 
 	return sb.String()
+}
+
+// writeDOTNode writes a single DOT node for a topology node with a type-based shape.
+func writeDOTNode(sb *strings.Builder, node TopologyNode) {
+	var shape string
+	switch node.Type {
+	case deviceTypeRouter:
+		shape = "ellipse"
+	case deviceTypeSwitch:
+		shape = "box"
+	case "ap":
+		shape = "diamond"
+	default:
+		shape = "box"
+	}
+	fmt.Fprintf(sb, "  \"%s\" [shape=%s, label=\"%s\\n(%s)\"];\n",
+		escapeDOT(node.Name), shape, escapeDOT(node.Name), escapeDOT(node.Type))
+}
+
+// writeDOTLink writes a single DOT edge for a topology link with style and label.
+func writeDOTLink(sb *strings.Builder, link TopologyLink) {
+	style, color := dotLinkStyle(link)
+
+	label := fmt.Sprintf("%s-%s", escapeDOT(link.SourceInterface), escapeDOT(link.TargetInterface))
+	if len(link.VLANs) > 0 {
+		label += "\\nVLANs: " + escapeDOT(formatVLANList(link.VLANs))
+	}
+	if link.Speed > 0 {
+		label += fmt.Sprintf("\\n%dMbps", link.Speed)
+	}
+
+	fmt.Fprintf(sb, "  \"%s\" -- \"%s\" [label=\"%s\", style=%s, color=%s];\n",
+		escapeDOT(link.Source), escapeDOT(link.Target), label, style, color)
+}
+
+// dotLinkStyle returns the (style, color) pair to use for a topology link.
+func dotLinkStyle(link TopologyLink) (string, string) {
+	style, color := "solid", "black"
+	switch link.LinkType {
+	case linkTypeTrunk:
+		style, color = "bold", "blue"
+	case "lag":
+		style, color = "bold", "orange"
+	case "access":
+		color = "green"
+	}
+	if link.Status == "down" {
+		style, color = "dashed", "red"
+	}
+	return style, color
 }
 
 // escapeXML escapes special XML characters.

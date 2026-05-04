@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"sync/atomic"
 	"time"
 
 	"github.com/google/gopacket"
@@ -58,7 +59,7 @@ const (
 type TrafficGenerator struct {
 	simulator  *Simulator
 	stack      *protocols.Stack
-	running    bool
+	running    atomic.Bool
 	stopChan   chan struct{}
 	debugLevel int
 	patterns   map[string]map[string]*TrafficPattern // device name → pattern name → state
@@ -93,11 +94,12 @@ func (tg *TrafficGenerator) getPattern(deviceName, patternName string) *TrafficP
 // Start starts the traffic generator.
 func (tg *TrafficGenerator) Start() error {
 	logger := slog.Default()
-	if tg.running {
+	if !tg.running.CompareAndSwap(false, true) {
 		return ErrTrafficGeneratorAlreadyRunning
 	}
 
-	tg.running = true
+	// Recreate stopChan so Start→Stop→Start is safe.
+	tg.stopChan = make(chan struct{})
 
 	// Start unified traffic generation loop (v1.6.0)
 	// Uses 10-second ticker to check all devices and their configured intervals
@@ -113,11 +115,10 @@ func (tg *TrafficGenerator) Start() error {
 // Stop stops the traffic generator.
 func (tg *TrafficGenerator) Stop() {
 	logger := slog.Default()
-	if !tg.running {
+	if !tg.running.CompareAndSwap(true, false) {
 		return
 	}
 
-	tg.running = false
 	close(tg.stopChan)
 
 	if tg.debugLevel >= 1 {
@@ -131,7 +132,7 @@ func (tg *TrafficGenerator) trafficGenerationLoop() {
 	ticker := time.NewTicker(trafficTickerInterval)
 	defer ticker.Stop()
 
-	for tg.running {
+	for tg.running.Load() {
 		select {
 		case <-tg.stopChan:
 			return
@@ -336,6 +337,12 @@ func (tg *TrafficGenerator) generateRandomTrafficForDevice(
 }
 
 func (tg *TrafficGenerator) sendGratuitousARP(device *SimulatedDevice) error {
+	if len(device.Config.MACAddress) == 0 {
+		return fmt.Errorf("device %s has no MAC address", device.Config.Name)
+	}
+	if len(device.Config.IPAddresses) == 0 {
+		return fmt.Errorf("device %s has no IP addresses", device.Config.Name)
+	}
 	mac := device.Config.MACAddress
 	ip := device.Config.IPAddresses[0].To4()
 
@@ -388,14 +395,33 @@ func (tg *TrafficGenerator) sendGratuitousARP(device *SimulatedDevice) error {
 
 // sendPing sends an ICMP Echo Request.
 func (tg *TrafficGenerator) sendPing(src, dst *SimulatedDevice) error {
-	// Build Ethernet header
+	eth, ipLayer, icmpLayer := buildPingLayers(src, dst)
+	payload := []byte("NIAC-Go ping test data")
+
+	buffer, err := serializePingPacket(eth, ipLayer, icmpLayer, payload)
+	if err != nil {
+		return err
+	}
+
+	pkt := &protocols.Packet{
+		Buffer: buffer.Bytes(),
+		Length: len(buffer.Bytes()),
+		Device: src.Config,
+	}
+
+	tg.stack.Send(pkt)
+	tg.simulator.IncrementCounter(src.Config.Name, "packets_sent")
+
+	return nil
+}
+
+// buildPingLayers constructs the Ethernet/IPv4/ICMP layers for a ping from src to dst.
+func buildPingLayers(src, dst *SimulatedDevice) (*layers.Ethernet, *layers.IPv4, *layers.ICMPv4) {
 	eth := &layers.Ethernet{
 		SrcMAC:       src.Config.MACAddress,
 		DstMAC:       dst.Config.MACAddress,
 		EthernetType: layers.EthernetTypeIPv4,
 	}
-
-	// Build IP header
 	ipLayer := &layers.IPv4{
 		Version:  ipv4Version,
 		IHL:      ipv4IHL,
@@ -404,55 +430,32 @@ func (tg *TrafficGenerator) sendPing(src, dst *SimulatedDevice) error {
 		SrcIP:    src.Config.IPAddresses[0].To4(),
 		DstIP:    dst.Config.IPAddresses[0].To4(),
 	}
-
-	// Build ICMP Echo Request
 	icmpLayer := &layers.ICMPv4{
 		TypeCode: layers.CreateICMPv4TypeCode(layers.ICMPv4TypeEchoRequest, 0),
 		Id:       safeconv.Uint16(simRand.IntN(maxUint16PlusOne)),
 		Seq:      safeconv.Uint16(simRand.IntN(maxUint16PlusOne)),
 	}
+	return eth, ipLayer, icmpLayer
+}
 
-	// Payload
-	payload := []byte("NIAC-Go ping test data")
-
-	// Serialize
+// serializePingPacket serializes the ping layers with checksums/lengths computed.
+func serializePingPacket(
+	eth *layers.Ethernet, ipLayer *layers.IPv4, icmpLayer *layers.ICMPv4, payload []byte,
+) (gopacket.SerializeBuffer, error) {
 	buffer := gopacket.NewSerializeBuffer()
-	opts := gopacket.SerializeOptions{
-		FixLengths:       true,
-		ComputeChecksums: true,
+	opts := gopacket.SerializeOptions{FixLengths: true, ComputeChecksums: true}
+	if err := gopacket.SerializeLayers(
+		buffer, opts, eth, ipLayer, icmpLayer, gopacket.Payload(payload),
+	); err != nil {
+		return nil, fmt.Errorf("failed to serialize ping: %w", err)
 	}
-
-	err := gopacket.SerializeLayers(
-		buffer,
-		opts,
-		eth,
-		ipLayer,
-		icmpLayer,
-		gopacket.Payload(payload),
-	)
-	if err != nil {
-		return fmt.Errorf("failed to serialize ping: %w", err)
-	}
-
-	// Send packet
-	pkt := &protocols.Packet{
-		Buffer: buffer.Bytes(),
-		Length: len(buffer.Bytes()),
-		Device: src.Config,
-	}
-
-	tg.stack.Send(pkt)
-
-	// Update counters
-	tg.simulator.IncrementCounter(src.Config.Name, "packets_sent")
-
-	return nil
+	return buffer, nil
 }
 
 // sendBroadcastARP sends a broadcast ARP request.
 func (tg *TrafficGenerator) sendBroadcastARP(src *SimulatedDevice) error {
 	// Pick a random IP to query
-	randomIP := []byte{192, 168, 1, byte(simRand.IntN(maxHostNumber) + 1)}
+	randomIP := []byte{192, 168, 1, safeconv.Byte(simRand.IntN(maxHostNumber) + 1)}
 
 	eth := &layers.Ethernet{
 		SrcMAC:       src.Config.MACAddress,
@@ -499,9 +502,9 @@ func (tg *TrafficGenerator) sendMulticast(src *SimulatedDevice) error {
 		0x01,
 		0x00,
 		0x5e,
-		byte(simRand.IntN(multicastMask)),
-		byte(simRand.IntN(byteRange)),
-		byte(simRand.IntN(byteRange)),
+		safeconv.Byte(simRand.IntN(multicastMask)),
+		safeconv.Byte(simRand.IntN(byteRange)),
+		safeconv.Byte(simRand.IntN(byteRange)),
 	}
 
 	eth := &layers.Ethernet{

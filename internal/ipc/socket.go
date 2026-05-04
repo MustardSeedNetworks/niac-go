@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"io/fs"
 	"net"
 	"os"
 	"path/filepath"
@@ -250,8 +252,8 @@ func (s *Server) Start() error {
 		return ErrIPCServerAlreadyRunning
 	}
 
-	// Remove existing socket if present
-	if err := os.RemoveAll(s.socketPath); err != nil {
+	// Remove existing socket if present. ENOENT is expected on first run.
+	if err := os.Remove(s.socketPath); err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return fmt.Errorf("failed to remove existing socket: %w", err)
 	}
 
@@ -305,7 +307,7 @@ func (s *Server) Stop() error {
 	}
 
 	// Remove socket file
-	_ = os.RemoveAll(s.socketPath)
+	_ = os.Remove(s.socketPath)
 
 	logging.Infof("IPC server stopped")
 
@@ -348,8 +350,9 @@ func (s *Server) handleConnection(conn net.Conn) {
 		time.Now().Add(connectionTimeoutSec * time.Second),
 	) // error is non-critical, connection will timeout naturally
 
-	// Read request
-	decoder := json.NewDecoder(conn)
+	// SECURITY FIX: Limit IPC message size to prevent memory exhaustion (1MB)
+	const maxIPCMessageSize = 1 << 20
+	decoder := json.NewDecoder(io.LimitReader(conn, maxIPCMessageSize))
 
 	var req Request
 	err := decoder.Decode(&req)
@@ -467,44 +470,51 @@ func (s *Server) handleReload(_ *Request) *Response {
 	}
 }
 
-// handleInject injects an error.
-func (s *Server) handleInject(req *Request) *Response {
-	// Extract arguments
-	deviceName, ok := req.Args["device"].(string)
+// parseInjectArgs extracts and validates device/error_type/value from a request's args.
+// Returns (deviceName, errorType, value, errResp). errResp is non-nil when any arg is missing.
+func parseInjectArgs(args map[string]any) (string, string, float64, *Response) {
+	deviceName, ok := args["device"].(string)
 	if !ok {
-		return &Response{
+		return "", "", 0, &Response{
 			Success: false,
 			Error:   "missing or invalid 'device' argument",
 		}
 	}
-
-	errorTypeStr, ok := req.Args["error_type"].(string)
+	errorTypeStr, ok := args["error_type"].(string)
 	if !ok {
-		return &Response{
+		return "", "", 0, &Response{
 			Success: false,
 			Error:   "missing or invalid 'error_type' argument",
 		}
 	}
-
-	value, ok := req.Args["value"].(float64) // JSON numbers are float64
+	value, ok := args["value"].(float64) // JSON numbers are float64
 	if !ok {
-		return &Response{
+		return "", "", 0, &Response{
 			Success: false,
 			Error:   "missing or invalid 'value' argument",
 		}
 	}
+	return deviceName, errorTypeStr, value, nil
+}
 
-	// Find device
-	var device *config.Device
-
-	for i := range s.cfg.Devices {
-		if s.cfg.Devices[i].Name == deviceName {
-			device = &s.cfg.Devices[i]
-
-			break
+// findConfigDevice returns a pointer to the first device with the given name, or nil.
+func findConfigDevice(devices []config.Device, name string) *config.Device {
+	for i := range devices {
+		if devices[i].Name == name {
+			return &devices[i]
 		}
 	}
+	return nil
+}
 
+// handleInject injects an error.
+func (s *Server) handleInject(req *Request) *Response {
+	deviceName, errorTypeStr, value, errResp := parseInjectArgs(req.Args)
+	if errResp != nil {
+		return errResp
+	}
+
+	device := findConfigDevice(s.cfg.Devices, deviceName)
 	if device == nil {
 		return &Response{
 			Success: false,
@@ -512,17 +522,12 @@ func (s *Server) handleInject(req *Request) *Response {
 		}
 	}
 
-	// Parse error type
 	errorType := apperr.ErrorType(errorTypeStr)
-
-	// Get interface (use first available)
 	interfaceName := s.interfaceName
 	if len(device.IPAddresses) > 0 {
-		// Use device's first IP as identifier
 		interfaceName = device.IPAddresses[0].String()
 	}
 
-	// Inject error
 	s.stateManager.SetError(deviceName, interfaceName, errorType, int(value))
 
 	logging.Infof("Error injected via IPC: device=%s, type=%s, value=%d",
@@ -668,7 +673,6 @@ func (s *Server) getRecentLogs(count int, minLevel LogLevel) []LogEntry {
 
 	logs := make([]LogEntry, 0)
 
-	// Add a log entry showing current status
 	if compareLevels(LogLevelInfo, minLevel) >= 0 {
 		logs = append(logs, LogEntry{
 			Timestamp: time.Now(),
@@ -678,12 +682,18 @@ func (s *Server) getRecentLogs(count int, minLevel LogLevel) []LogEntry {
 		})
 	}
 
-	// Add device-related log entries
-	for _, device := range s.cfg.Devices {
+	logs = appendDeviceLogs(logs, s.cfg.Devices, count, minLevel)
+	logs = appendErrorInjectionLogs(logs, s.stateManager.GetAllStates(), count, minLevel)
+
+	return logs
+}
+
+// appendDeviceLogs adds device-active entries until count or min-level filter stops it.
+func appendDeviceLogs(logs []LogEntry, devices []config.Device, count int, minLevel LogLevel) []LogEntry {
+	for _, device := range devices {
 		if len(logs) >= count {
 			break
 		}
-
 		if compareLevels(LogLevelInfo, minLevel) >= 0 {
 			logs = append(logs, LogEntry{
 				Timestamp: time.Now(),
@@ -694,14 +704,17 @@ func (s *Server) getRecentLogs(count int, minLevel LogLevel) []LogEntry {
 			})
 		}
 	}
+	return logs
+}
 
-	// Add error injection logs
-	states := s.stateManager.GetAllStates()
+// appendErrorInjectionLogs adds warn entries for each active error-injection state.
+func appendErrorInjectionLogs(
+	logs []LogEntry, states []*apperr.ErrorState, count int, minLevel LogLevel,
+) []LogEntry {
 	for _, state := range states {
 		if len(logs) >= count {
 			break
 		}
-
 		if compareLevels(LogLevelWarn, minLevel) >= 0 {
 			logs = append(logs, LogEntry{
 				Timestamp: time.Now(),
@@ -717,7 +730,6 @@ func (s *Server) getRecentLogs(count int, minLevel LogLevel) []LogEntry {
 			})
 		}
 	}
-
 	return logs
 }
 

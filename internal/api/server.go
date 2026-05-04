@@ -36,13 +36,13 @@ import (
 const (
 	// MaxRequestBodySize is the maximum size for API request bodies (1MB).
 	MaxRequestBodySize = 1 << 20 // 1MB
-	// MaxPCAPUploadSize is the maximum size for PCAP file uploads (100MB)
+	// MaxPCAPUploadSize is the maximum size for PCAP file uploads (100MB).
 	MaxPCAPUploadSize = 100 << 20 // 100MB
 
-	// MaxRateLimiterCount is the maximum number of IP addresses tracked by rate limiter
+	// MaxRateLimiterCount is the maximum number of IP addresses tracked by rate limiter.
 	MaxRateLimiterCount = 10000
 
-	// DefaultRateLimit is the default requests per second allowed per IP
+	// DefaultRateLimit is the default requests per second allowed per IP.
 	DefaultRateLimit = 100
 	// DefaultBurst is the default burst size for rate limiting.
 	DefaultBurst = 200
@@ -208,11 +208,18 @@ type Server struct {
 	writeLimiter  *RateLimiter
 	walkLimiter   *RateLimiter
 	fileLimiter   *RateLimiter
+	bgStop        chan struct{}
+	bgStopOnce    sync.Once
 }
 
 // NewServer returns a configured API server.
 func NewServer(cfg ServerConfig) *Server {
-	csrfToken, _ := generateCSRFToken()
+	csrfToken, err := generateCSRFToken()
+	if err != nil {
+		slog.Error("[API] Failed to generate CSRF token, server cannot start securely", "error", err)
+
+		return nil
+	}
 
 	return &Server{
 		cfg:           cfg,
@@ -221,6 +228,7 @@ func NewServer(cfg ServerConfig) *Server {
 		rateLimiter:   NewRateLimiter(DefaultRateLimit, DefaultBurst),
 		csrfToken:     csrfToken,
 		sseHub:        NewSSEHub(SSEConfig{}),
+		bgStop:        make(chan struct{}),
 		uploadLimiter: NewRateLimiter(UploadRateLimit, UploadBurst),
 		writeLimiter:  NewRateLimiter(WriteRateLimit, WriteBurst),
 		walkLimiter:   NewRateLimiter(WalkRateLimit, WalkBurst),
@@ -289,6 +297,18 @@ func (s *Server) Shutdown(ctx context.Context) error {
 	}
 
 	s.alertMu.Unlock()
+
+	// Stop background goroutines (rate limiter cleanup).
+	s.bgStopOnce.Do(func() {
+		if s.bgStop != nil {
+			close(s.bgStop)
+		}
+	})
+
+	// Stop SSE hub to release its goroutine and clients.
+	if s.sseHub != nil {
+		s.sseHub.Stop()
+	}
 
 	var errs []error
 

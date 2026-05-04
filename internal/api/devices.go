@@ -11,6 +11,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/krisarmstrong/niac-go/internal/config"
+	"github.com/krisarmstrong/niac-go/internal/safeconv"
 )
 
 // Sentinel errors for API devices.
@@ -56,50 +57,58 @@ func validateHostname(hostname string) *ErrorDetail {
 	}
 
 	// Validate each label
-	labels := strings.Split(hostname, ".")
-	for _, label := range labels {
-		if len(label) == 0 {
+	labels := strings.SplitSeq(hostname, ".")
+	for label := range labels {
+		if detail := validateHostnameLabel(label, hostname); detail != nil {
+			return detail
+		}
+	}
+
+	return nil
+}
+
+// validateHostnameLabel validates a single hostname label.
+func validateHostnameLabel(label, hostname string) *ErrorDetail {
+	truncated := hostname[:min(truncateErrorValue, len(hostname))]
+
+	if len(label) == 0 {
+		return &ErrorDetail{
+			Field: "hostname",
+			Issue: "hostname contains empty label (consecutive dots)",
+			Value: truncated,
+		}
+	}
+
+	if len(label) > maxLabelLen {
+		return &ErrorDetail{
+			Field: "hostname",
+			Issue: fmt.Sprintf("hostname label exceeds maximum length of %d characters", maxLabelLen),
+			Value: truncated,
+		}
+	}
+
+	if !isAlphanumeric(label[0]) {
+		return &ErrorDetail{
+			Field: "hostname",
+			Issue: "hostname labels must start with an alphanumeric character",
+			Value: truncated,
+		}
+	}
+
+	if !isAlphanumeric(label[len(label)-1]) {
+		return &ErrorDetail{
+			Field: "hostname",
+			Issue: "hostname labels must not end with a hyphen",
+			Value: truncated,
+		}
+	}
+
+	for _, c := range label {
+		if !isAlphanumeric(safeconv.ByteFromRune(c)) && c != '-' {
 			return &ErrorDetail{
 				Field: "hostname",
-				Issue: "hostname contains empty label (consecutive dots)",
-				Value: hostname[:min(truncateErrorValue, len(hostname))],
-			}
-		}
-
-		if len(label) > maxLabelLen {
-			return &ErrorDetail{
-				Field: "hostname",
-				Issue: fmt.Sprintf("hostname label exceeds maximum length of %d characters", maxLabelLen),
-				Value: hostname[:min(truncateErrorValue, len(hostname))],
-			}
-		}
-
-		// Must start with alphanumeric
-		if !isAlphanumeric(label[0]) {
-			return &ErrorDetail{
-				Field: "hostname",
-				Issue: "hostname labels must start with an alphanumeric character",
-				Value: hostname[:min(truncateErrorValue, len(hostname))],
-			}
-		}
-
-		// Must end with alphanumeric (not hyphen)
-		if !isAlphanumeric(label[len(label)-1]) {
-			return &ErrorDetail{
-				Field: "hostname",
-				Issue: "hostname labels must not end with a hyphen",
-				Value: hostname[:min(truncateErrorValue, len(hostname))],
-			}
-		}
-
-		// Only alphanumeric and hyphens allowed
-		for _, c := range label {
-			if !isAlphanumeric(byte(c)) && c != '-' {
-				return &ErrorDetail{
-					Field: "hostname",
-					Issue: "hostname contains invalid characters (only alphanumeric and hyphens allowed)",
-					Value: hostname[:min(truncateErrorValue, len(hostname))],
-				}
+				Issue: "hostname contains invalid characters (only alphanumeric and hyphens allowed)",
+				Value: truncated,
 			}
 		}
 	}
@@ -421,73 +430,73 @@ func (s *Server) handleDeviceCreate(w http.ResponseWriter, r *http.Request) {
 	var req DeviceCreateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, r, http.StatusBadRequest, "invalid_request", "Failed to parse request", nil)
-
 		return
 	}
 
-	// SECURITY FIX #169: Validate hostname format
-	if detail := validateHostname(req.Hostname); detail != nil {
-		writeError(w, r, http.StatusBadRequest, "validation_failed",
-			detail.Issue, []ErrorDetail{*detail})
-
+	cfg, ok := s.validateDeviceCreateRequest(w, r, &req)
+	if !ok {
 		return
 	}
 
-	cfg := s.currentConfig()
-	if cfg == nil {
-		writeError(w, r, http.StatusBadRequest, "config_not_found", "No configuration loaded", nil)
-
-		return
-	}
-
-	// SECURITY FIX #173: Enforce device count limit
-	if len(cfg.Devices) >= MaxDeviceCount {
-		writeError(w, r, http.StatusTooManyRequests, "device_limit_reached",
-			fmt.Sprintf("Maximum device count of %d reached", MaxDeviceCount), nil)
-
-		return
-	}
-
-	// Check if device already exists
-	for _, dev := range cfg.Devices {
-		if dev.Name == req.Hostname {
-			writeError(w, r, http.StatusConflict, "device_exists",
-				fmt.Sprintf("Device '%s' already exists", req.Hostname), nil)
-
-			return
-		}
-	}
-
-	// Create device from request
 	newDevice, err := createDeviceFromRequest(req)
 	if err != nil {
 		// SECURITY FIX #183: Don't expose internal error details
 		s.logger.Error("[API] Device creation failed", "error", err, "hostname", req.Hostname)
 		writeError(w, r, http.StatusBadRequest, "device_creation_failed",
 			"Failed to create device from request", nil)
-
 		return
 	}
 
 	// Add to config and save
-	newCfg := *cfg
+	newCfg := deepCopyConfig(cfg)
 	newCfg.Devices = append(newCfg.Devices, *newDevice)
 
 	if saveErr := s.saveConfig(&newCfg); saveErr != nil {
 		writeError(w, r, http.StatusInternalServerError, "save_failed", "Failed to save configuration", nil)
-
 		return
 	}
 
-	// Broadcast change via SSE
 	if s.sseHub != nil {
 		s.sseHub.BroadcastLog("info", "Device created: "+req.Hostname)
 	}
 
 	resp := deviceToResponse(newDevice, true, false)
-
 	w.WriteHeader(http.StatusCreated)
 	s.writeJSON(w, resp)
+}
+
+// validateDeviceCreateRequest runs hostname/config/duplicate checks for handleDeviceCreate.
+// Returns the current config and true on success; writes an error and returns false otherwise.
+func (s *Server) validateDeviceCreateRequest(
+	w http.ResponseWriter, r *http.Request, req *DeviceCreateRequest,
+) (*config.Config, bool) {
+	if detail := validateHostname(req.Hostname); detail != nil {
+		writeError(w, r, http.StatusBadRequest, "validation_failed",
+			detail.Issue, []ErrorDetail{*detail})
+		return nil, false
+	}
+
+	cfg := s.currentConfig()
+	if cfg == nil {
+		writeError(w, r, http.StatusBadRequest, "config_not_found", "No configuration loaded", nil)
+		return nil, false
+	}
+
+	if len(cfg.Devices) >= MaxDeviceCount {
+		writeError(w, r, http.StatusTooManyRequests, "device_limit_reached",
+			fmt.Sprintf("Maximum device count of %d reached", MaxDeviceCount), nil)
+		return nil, false
+	}
+
+	for _, dev := range cfg.Devices {
+		if dev.Name == req.Hostname {
+			writeError(w, r, http.StatusConflict, "device_exists",
+				fmt.Sprintf("Device '%s' already exists", req.Hostname), nil)
+			return nil, false
+		}
+	}
+
+	return cfg, true
 }
 
 // findDeviceIndex finds the index of a device by hostname, returns -1 if not found.
@@ -537,6 +546,42 @@ func applyPartialDeviceUpdate(dev *config.Device, req DeviceUpdateRequest) error
 	return nil
 }
 
+// applyDeviceUpdateFromRequest applies either RawYAML or partial-field updates to the device slot.
+// Returns true on success; writes an error and returns false otherwise.
+func applyDeviceUpdateFromRequest(
+	w http.ResponseWriter, r *http.Request,
+	newCfg *config.Config, deviceIdx int, hostname string, req DeviceUpdateRequest,
+) bool {
+	if req.RawYAML != "" {
+		updatedDevice, parseErr := updateDeviceFromYAML(req.RawYAML, hostname)
+		if parseErr != nil {
+			writeError(w, r, http.StatusBadRequest, "parse_failed", parseErr.Error(), nil)
+			return false
+		}
+		newCfg.Devices[deviceIdx] = *updatedDevice
+		return true
+	}
+
+	if err := applyPartialDeviceUpdate(&newCfg.Devices[deviceIdx], req); err != nil {
+		writePartialUpdateError(w, r, err)
+		return false
+	}
+	return true
+}
+
+// writePartialUpdateError translates partial-update errors into HTTP responses.
+func writePartialUpdateError(w http.ResponseWriter, r *http.Request, err error) {
+	errMsg := err.Error()
+	switch {
+	case strings.HasPrefix(errMsg, "invalid_mac:"):
+		writeError(w, r, http.StatusBadRequest, "invalid_mac", strings.TrimPrefix(errMsg, "invalid_mac: "), nil)
+	case strings.HasPrefix(errMsg, "invalid_ip:"):
+		writeError(w, r, http.StatusBadRequest, "invalid_ip", strings.TrimPrefix(errMsg, "invalid_ip: "), nil)
+	default:
+		writeError(w, r, http.StatusBadRequest, "update_failed", errMsg, nil)
+	}
+}
+
 // handleDeviceUpdate updates an existing device.
 func (s *Server) handleDeviceUpdate(w http.ResponseWriter, r *http.Request, hostname string) {
 	r.Body = http.MaxBytesReader(w, r.Body, MaxRequestBodySize)
@@ -560,31 +605,10 @@ func (s *Server) handleDeviceUpdate(w http.ResponseWriter, r *http.Request, host
 		return
 	}
 
-	newCfg := *cfg
+	newCfg := deepCopyConfig(cfg)
 
-	if req.RawYAML != "" {
-		updatedDevice, parseErr := updateDeviceFromYAML(req.RawYAML, hostname)
-		if parseErr != nil {
-			writeError(w, r, http.StatusBadRequest, "parse_failed", parseErr.Error(), nil)
-			return
-		}
-
-		newCfg.Devices[deviceIdx] = *updatedDevice
-	} else {
-		if err := applyPartialDeviceUpdate(&newCfg.Devices[deviceIdx], req); err != nil {
-			errMsg := err.Error()
-
-			switch {
-			case strings.HasPrefix(errMsg, "invalid_mac:"):
-				writeError(w, r, http.StatusBadRequest, "invalid_mac", strings.TrimPrefix(errMsg, "invalid_mac: "), nil)
-			case strings.HasPrefix(errMsg, "invalid_ip:"):
-				writeError(w, r, http.StatusBadRequest, "invalid_ip", strings.TrimPrefix(errMsg, "invalid_ip: "), nil)
-			default:
-				writeError(w, r, http.StatusBadRequest, "update_failed", errMsg, nil)
-			}
-
-			return
-		}
+	if !applyDeviceUpdateFromRequest(w, r, &newCfg, deviceIdx, hostname, req) {
+		return
 	}
 
 	if err := s.saveConfig(&newCfg); err != nil {
@@ -610,7 +634,7 @@ func (s *Server) handleDeviceDelete(w http.ResponseWriter, r *http.Request, host
 	}
 
 	// Find and remove device
-	newCfg := *cfg
+	newCfg := deepCopyConfig(cfg)
 	found := false
 
 	newDevices := make([]config.Device, 0, len(cfg.Devices)-1)
@@ -652,6 +676,55 @@ func (s *Server) handleDeviceDelete(w http.ResponseWriter, r *http.Request, host
 	})
 }
 
+// validateDeviceCloneRequest runs hostname/config/source/duplicate checks for handleDeviceClone.
+// Returns (cfg, sourceDevice, true) on success; writes an error and returns (_, _, false) otherwise.
+func (s *Server) validateDeviceCloneRequest(
+	w http.ResponseWriter, r *http.Request,
+	hostname string, req *DeviceCloneRequest,
+) (*config.Config, *config.Device, bool) {
+	if detail := validateHostname(req.NewHostname); detail != nil {
+		detail.Field = "new_hostname"
+		writeError(w, r, http.StatusBadRequest, "validation_failed",
+			detail.Issue, []ErrorDetail{*detail})
+		return nil, nil, false
+	}
+
+	cfg := s.currentConfig()
+	if cfg == nil {
+		writeError(w, r, http.StatusNotFound, "config_not_found", "No configuration loaded", nil)
+		return nil, nil, false
+	}
+
+	if len(cfg.Devices) >= MaxDeviceCount {
+		writeError(w, r, http.StatusTooManyRequests, "device_limit_reached",
+			fmt.Sprintf("Maximum device count of %d reached", MaxDeviceCount), nil)
+		return nil, nil, false
+	}
+
+	var sourceDevice *config.Device
+	for i := range cfg.Devices {
+		if cfg.Devices[i].Name == hostname {
+			sourceDevice = &cfg.Devices[i]
+			break
+		}
+	}
+	if sourceDevice == nil {
+		writeError(w, r, http.StatusNotFound, "device_not_found",
+			fmt.Sprintf("Device '%s' not found", hostname), nil)
+		return nil, nil, false
+	}
+
+	for _, dev := range cfg.Devices {
+		if dev.Name == req.NewHostname {
+			writeError(w, r, http.StatusConflict, "device_exists",
+				fmt.Sprintf("Device '%s' already exists", req.NewHostname), nil)
+			return nil, nil, false
+		}
+	}
+
+	return cfg, sourceDevice, true
+}
+
 // handleDeviceClone clones an existing device.
 func (s *Server) handleDeviceClone(w http.ResponseWriter, r *http.Request, hostname string) {
 	r.Body = http.MaxBytesReader(w, r.Body, MaxRequestBodySize)
@@ -660,67 +733,19 @@ func (s *Server) handleDeviceClone(w http.ResponseWriter, r *http.Request, hostn
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
 		writeError(w, r, http.StatusBadRequest, "invalid_request", "Failed to parse request", nil)
-
 		return
 	}
 
-	// SECURITY FIX #169: Validate new hostname format
-	if detail := validateHostname(req.NewHostname); detail != nil {
-		detail.Field = "new_hostname"
-		writeError(w, r, http.StatusBadRequest, "validation_failed",
-			detail.Issue, []ErrorDetail{*detail})
-
+	cfg, sourceDevice, ok := s.validateDeviceCloneRequest(w, r, hostname, &req)
+	if !ok {
 		return
-	}
-
-	cfg := s.currentConfig()
-	if cfg == nil {
-		writeError(w, r, http.StatusNotFound, "config_not_found", "No configuration loaded", nil)
-
-		return
-	}
-
-	// SECURITY FIX #173: Enforce device count limit
-	if len(cfg.Devices) >= MaxDeviceCount {
-		writeError(w, r, http.StatusTooManyRequests, "device_limit_reached",
-			fmt.Sprintf("Maximum device count of %d reached", MaxDeviceCount), nil)
-
-		return
-	}
-
-	// Find source device
-	var sourceDevice *config.Device
-
-	for i := range cfg.Devices {
-		if cfg.Devices[i].Name == hostname {
-			sourceDevice = &cfg.Devices[i]
-
-			break
-		}
-	}
-
-	if sourceDevice == nil {
-		writeError(w, r, http.StatusNotFound, "device_not_found",
-			fmt.Sprintf("Device '%s' not found", hostname), nil)
-
-		return
-	}
-
-	// Check if new hostname already exists
-	for _, dev := range cfg.Devices {
-		if dev.Name == req.NewHostname {
-			writeError(w, r, http.StatusConflict, "device_exists",
-				fmt.Sprintf("Device '%s' already exists", req.NewHostname), nil)
-
-			return
-		}
 	}
 
 	// Clone device
 	clonedDevice := cloneDevice(sourceDevice, req.NewHostname, req.NewIP, req.NewMAC)
 
 	// Add to config and save
-	newCfg := *cfg
+	newCfg := deepCopyConfig(cfg)
 	newCfg.Devices = append(newCfg.Devices, *clonedDevice)
 
 	err = s.saveConfig(&newCfg)
@@ -903,69 +928,95 @@ func buildTrafficConfigResponse(dev *config.Device) *TrafficConfigResponse {
 // populateProtocolDetails fills in protocol detail fields on DeviceResponse.
 func populateProtocolDetails(resp *DeviceResponse, dev *config.Device) {
 	resp.SNMPAgent = buildSNMPAgentResponse(dev)
-
-	if dev.CDPConfig != nil && dev.CDPConfig.Enabled {
-		resp.CDP = &CDPResponse{
-			Enabled:         true,
-			Platform:        dev.CDPConfig.Platform,
-			SoftwareVersion: dev.CDPConfig.SoftwareVersion,
-			PortID:          dev.CDPConfig.PortID,
-			Version:         dev.CDPConfig.Version,
-			Holdtime:        dev.CDPConfig.Holdtime,
-		}
-	}
-
-	if dev.LLDPConfig != nil && dev.LLDPConfig.Enabled {
-		resp.LLDP = &LLDPResponse{
-			Enabled:           true,
-			ChassisIDType:     dev.LLDPConfig.ChassisIDType,
-			PortDescription:   dev.LLDPConfig.PortDescription,
-			SystemDescription: dev.LLDPConfig.SystemDescription,
-			TTL:               dev.LLDPConfig.TTL,
-		}
-	}
-
+	resp.CDP = buildCDPResponse(dev)
+	resp.LLDP = buildLLDPResponse(dev)
 	resp.DHCP = buildDHCPResponse(dev)
-
-	if dev.DNSConfig != nil {
-		resp.DNS = &DNSResponse{
-			Enabled: true,
-			Records: len(dev.DNSConfig.ForwardRecords) + len(dev.DNSConfig.ReverseRecords),
-		}
-	}
-
-	if dev.HTTPConfig != nil && dev.HTTPConfig.Enabled {
-		resp.HTTP = &HTTPResponse{
-			Enabled:       true,
-			ServerName:    dev.HTTPConfig.ServerName,
-			EndpointCount: len(dev.HTTPConfig.Endpoints),
-		}
-	}
-
-	if dev.FTPConfig != nil && dev.FTPConfig.Enabled {
-		resp.FTP = &FTPResponse{
-			Enabled:        true,
-			WelcomeBanner:  dev.FTPConfig.WelcomeBanner,
-			AllowAnonymous: dev.FTPConfig.AllowAnonymous,
-		}
-	}
-
-	if dev.NetBIOSConfig != nil && dev.NetBIOSConfig.Enabled {
-		resp.NetBIOS = &NetBIOSResponse{
-			Enabled:   true,
-			Name:      dev.NetBIOSConfig.Name,
-			Workgroup: dev.NetBIOSConfig.Workgroup,
-		}
-	}
-
-	if dev.STPConfig != nil && dev.STPConfig.Enabled {
-		resp.STP = &STPResponse{
-			Enabled:  true,
-			Priority: dev.STPConfig.BridgePriority,
-		}
-	}
-
+	resp.DNS = buildDNSResponse(dev)
+	resp.HTTP = buildHTTPResponse(dev)
+	resp.FTP = buildFTPResponse(dev)
+	resp.NetBIOS = buildNetBIOSResponse(dev)
+	resp.STP = buildSTPResponse(dev)
 	resp.TrafficConfig = buildTrafficConfigResponse(dev)
+}
+
+func buildCDPResponse(dev *config.Device) *CDPResponse {
+	if dev.CDPConfig == nil || !dev.CDPConfig.Enabled {
+		return nil
+	}
+	return &CDPResponse{
+		Enabled:         true,
+		Platform:        dev.CDPConfig.Platform,
+		SoftwareVersion: dev.CDPConfig.SoftwareVersion,
+		PortID:          dev.CDPConfig.PortID,
+		Version:         dev.CDPConfig.Version,
+		Holdtime:        dev.CDPConfig.Holdtime,
+	}
+}
+
+func buildLLDPResponse(dev *config.Device) *LLDPResponse {
+	if dev.LLDPConfig == nil || !dev.LLDPConfig.Enabled {
+		return nil
+	}
+	return &LLDPResponse{
+		Enabled:           true,
+		ChassisIDType:     dev.LLDPConfig.ChassisIDType,
+		PortDescription:   dev.LLDPConfig.PortDescription,
+		SystemDescription: dev.LLDPConfig.SystemDescription,
+		TTL:               dev.LLDPConfig.TTL,
+	}
+}
+
+func buildDNSResponse(dev *config.Device) *DNSResponse {
+	if dev.DNSConfig == nil {
+		return nil
+	}
+	return &DNSResponse{
+		Enabled: true,
+		Records: len(dev.DNSConfig.ForwardRecords) + len(dev.DNSConfig.ReverseRecords),
+	}
+}
+
+func buildHTTPResponse(dev *config.Device) *HTTPResponse {
+	if dev.HTTPConfig == nil || !dev.HTTPConfig.Enabled {
+		return nil
+	}
+	return &HTTPResponse{
+		Enabled:       true,
+		ServerName:    dev.HTTPConfig.ServerName,
+		EndpointCount: len(dev.HTTPConfig.Endpoints),
+	}
+}
+
+func buildFTPResponse(dev *config.Device) *FTPResponse {
+	if dev.FTPConfig == nil || !dev.FTPConfig.Enabled {
+		return nil
+	}
+	return &FTPResponse{
+		Enabled:        true,
+		WelcomeBanner:  dev.FTPConfig.WelcomeBanner,
+		AllowAnonymous: dev.FTPConfig.AllowAnonymous,
+	}
+}
+
+func buildNetBIOSResponse(dev *config.Device) *NetBIOSResponse {
+	if dev.NetBIOSConfig == nil || !dev.NetBIOSConfig.Enabled {
+		return nil
+	}
+	return &NetBIOSResponse{
+		Enabled:   true,
+		Name:      dev.NetBIOSConfig.Name,
+		Workgroup: dev.NetBIOSConfig.Workgroup,
+	}
+}
+
+func buildSTPResponse(dev *config.Device) *STPResponse {
+	if dev.STPConfig == nil || !dev.STPConfig.Enabled {
+		return nil
+	}
+	return &STPResponse{
+		Enabled:  true,
+		Priority: dev.STPConfig.BridgePriority,
+	}
 }
 
 // deviceToResponse converts a Device to DeviceResponse.
@@ -1096,9 +1147,40 @@ func parseDeviceFromYAML(yamlStr, hostname string) (*config.Device, error) {
 	return dev, nil
 }
 
+// deepCopyConfig creates a deep copy of a Config by JSON round-tripping.
+func deepCopyConfig(src *config.Config) config.Config {
+	data, err := json.Marshal(src)
+	if err != nil {
+		// Fallback to shallow copy if marshal fails (should not happen)
+		return *src
+	}
+
+	var dst config.Config
+	if err = json.Unmarshal(data, &dst); err != nil {
+		return *src
+	}
+
+	return dst
+}
+
+// deepCopyDevice creates a deep copy of a Device by JSON round-tripping.
+func deepCopyDevice(src *config.Device) config.Device {
+	data, err := json.Marshal(src)
+	if err != nil {
+		return *src
+	}
+
+	var dst config.Device
+	if err = json.Unmarshal(data, &dst); err != nil {
+		return *src
+	}
+
+	return dst
+}
+
 func cloneDevice(src *config.Device, newHostname, newIP, newMAC string) *config.Device {
 	// Deep copy the device
-	cloned := *src
+	cloned := deepCopyDevice(src)
 	cloned.Name = newHostname
 
 	// Update IP if provided

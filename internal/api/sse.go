@@ -25,12 +25,12 @@ import (
 
 const (
 	// SSE default configuration.
-	defaultSSEBufferSize   = 256  // Client send buffer size
-	defaultSSEMaxClients   = 100  // Max clients per stream
-	defaultSSEMaxMsgPerSec = 100  // Rate limit: max messages per second
-	defaultSSEHeartbeatSec = 30   // Send heartbeat comment every N seconds
+	defaultSSEBufferSize   = 256   // Client send buffer size
+	defaultSSEMaxClients   = 100   // Max clients per stream
+	defaultSSEMaxMsgPerSec = 100   // Rate limit: max messages per second
+	defaultSSEHeartbeatSec = 30    // Send heartbeat comment every N seconds
 	defaultSSEMaxConnSec   = 86400 // Max connection duration (24h) before forced reconnect
-	millisecsPerSecond     = 1000 // Milliseconds per second for rate limiter
+	millisecsPerSecond     = 1000  // Milliseconds per second for rate limiter
 )
 
 // SSEConfig holds configurable parameters for the SSE hub.
@@ -96,6 +96,7 @@ type SSEHub struct {
 	mu           sync.RWMutex
 	rateLimiters map[SSEStream]*sseRateLimiter
 	stopChan     chan struct{}
+	stopOnce     sync.Once
 	running      atomic.Bool
 	eventID      atomic.Uint64 // Global event ID counter
 	config       SSEConfig
@@ -200,11 +201,11 @@ func (h *SSEHub) Run() {
 	}
 }
 
-// Stop gracefully shuts down the hub.
+// Stop gracefully shuts down the hub. Safe to call multiple times.
 func (h *SSEHub) Stop() {
-	if h.running.Load() {
+	h.stopOnce.Do(func() {
 		close(h.stopChan)
-	}
+	})
 }
 
 func (h *SSEHub) registerClient(client *SSEClient) {
@@ -482,9 +483,20 @@ func (s *Server) serveSSE(stream SSEStream) http.HandlerFunc {
 		}
 		defer sc.heartbeat.Stop()
 
-		s.sseHub.register <- sc.client
+		// Register without blocking if the hub is shutting down.
+		select {
+		case s.sseHub.register <- sc.client:
+		case <-s.sseHub.stopChan:
+			return
+		case <-r.Context().Done():
+			return
+		}
+
 		defer func() {
-			s.sseHub.unregister <- sc.client
+			select {
+			case s.sseHub.unregister <- sc.client:
+			case <-s.sseHub.stopChan:
+			}
 		}()
 
 		_, _ = fmt.Fprintf(w, "event: connected\ndata: {\"stream\":\"%s\"}\n\n", stream)

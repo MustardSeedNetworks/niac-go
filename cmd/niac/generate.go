@@ -12,6 +12,8 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
+
+	"github.com/krisarmstrong/niac-go/internal/safeconv"
 )
 
 func addGenerateCommand(configCmd *cobra.Command) {
@@ -66,6 +68,9 @@ type protocolConfig struct {
 }
 
 const defaultGenerateOutputFile = "config.yaml"
+
+// maxIPOctet is the maximum value for the last octet of an IPv4 address (avoiding broadcast).
+const maxIPOctet = 254
 
 type deviceTypeOption struct {
 	key   string
@@ -187,8 +192,16 @@ func generateDefaultIP(subnet string, deviceNum int) string {
 		return fmt.Sprintf("192.168.1.%d", deviceNum+baseIPOffset)
 	}
 
-	// Increment last octet
-	ip4[3] = byte(int(ip4[3]) + deviceNum + baseIPOffset)
+	// Increment last octet with overflow protection
+	newOctet := int(ip4[3]) + deviceNum + baseIPOffset
+	if newOctet > maxIPOctet {
+		// Advance to next subnet for overflow
+		ip4[2] = safeconv.Byte(int(ip4[2]) + newOctet/(maxIPOctet+1))
+		ip4[3] = safeconv.Byte(newOctet % (maxIPOctet + 1))
+	} else {
+		ip4[3] = safeconv.Byte(newOctet)
+	}
+
 	return ip4.String()
 }
 
@@ -426,7 +439,14 @@ func chooseOutputFile(args []string, reader *bufio.Reader) string {
 		)
 	}
 
-	if _, err := os.Stat(output); err == nil {
+	cleaned, pathErr := validateCLIPath(output)
+	if pathErr != nil {
+		color.Red("Invalid output path: %v", pathErr)
+		os.Exit(1)
+	}
+	output = cleaned
+
+	if _, err := statSafeFile(output); err == nil {
 		fmt.Fprintln(os.Stdout)
 		color.Yellow("Warning: %s already exists!", output)
 		if !mustPromptYesNo(reader, "Overwrite? (y/n): ") {
@@ -439,8 +459,13 @@ func chooseOutputFile(args []string, reader *bufio.Reader) string {
 }
 
 func writeConfiguration(outputFile string, cfg *generatedConfig) {
+	if err := validateFilePath(outputFile, true); err != nil {
+		color.Red("Invalid output path: %v", err)
+		os.Exit(1)
+	}
+
 	yaml := generateYAML(cfg)
-	if err := os.WriteFile(outputFile, []byte(yaml), 0o600); err != nil {
+	if err := writeSafeFile(outputFile, []byte(yaml)); err != nil {
 		color.Red("Failed to write configuration: %v", err)
 		os.Exit(1)
 	}
