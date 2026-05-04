@@ -20,6 +20,9 @@ const (
 	TCPPortIPerf3 = 5201
 )
 
+// iperf3Disabled is the status string returned when iPerf3 is not enabled for a device.
+const iperf3Disabled = "disabled"
+
 // iPerf3 protocol states.
 const (
 	iperf3StateInit       = 0
@@ -389,7 +392,7 @@ func (h *IPerf3Handler) handleParamExchange(
 	}
 
 	// Handle single-byte state messages
-	if len(payload) == 1 && int8(payload[0]) == iperf3MsgTestStart {
+	if len(payload) == 1 && safeconv.Int8FromByte(payload[0]) == iperf3MsgTestStart {
 		session.State = iperf3StateTestStart
 		session.StartTime = time.Now()
 
@@ -435,7 +438,7 @@ func (h *IPerf3Handler) sendStateCode(
 	devices []*config.Device,
 	stateCode int8,
 ) {
-	response := []byte{byte(stateCode)}
+	response := []byte{safeconv.ByteFromInt8(stateCode)}
 	h.sendTCPResponse(ipLayer, tcpLayer, response, devices)
 }
 
@@ -720,7 +723,7 @@ func (h *IPerf3Handler) sendTCPResponse(
 // GetDeviceIPerf3Config extracts iPerf3 config from device name for display.
 func GetDeviceIPerf3Config(device *config.Device) string {
 	if device.IPerf3 == nil || !device.IPerf3.Enabled {
-		return "disabled"
+		return iperf3Disabled
 	}
 
 	cfg := device.IPerf3

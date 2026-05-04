@@ -1,5 +1,4 @@
 import {
-  addEdge,
   Background,
   BackgroundVariant,
   type Connection,
@@ -15,6 +14,7 @@ import {
   useNodesState,
 } from '@xyflow/react';
 import { type FC, memo, useCallback, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import '@xyflow/react/dist/style.css';
 import { Download, Eye, EyeOff, Layers, Network, RefreshCw, Wifi } from 'lucide-react';
 import { fetchDevices, fetchNeighbors, fetchTopology } from '../api/client';
@@ -490,13 +490,20 @@ const DeviceDetailsPanel: FC<{
 // ============================================================================
 
 export const TopologyPage: FC = () => {
-  const { data: topology, loading: topologyLoading } = useApiResource(fetchTopology, [], {
-    intervalMs: 15000,
-  });
-  const { data: devices, loading: devicesLoading } = useApiResource(fetchDevices, [], {
-    intervalMs: 15000,
-  });
-  const { data: neighbors } = useApiResource(fetchNeighbors, [], {
+  const navigate = useNavigate();
+
+  // Fetch topology data from the API with periodic polling
+  const {
+    data: topology,
+    loading: topologyLoading,
+    refetch: refetchTopology,
+  } = useApiResource(fetchTopology, [], { intervalMs: 15000 });
+  const {
+    data: devices,
+    loading: devicesLoading,
+    refetch: refetchDevices,
+  } = useApiResource(fetchDevices, [], { intervalMs: 15000 });
+  const { data: neighbors, refetch: refetchNeighbors } = useApiResource(fetchNeighbors, [], {
     intervalMs: 15000,
   });
 
@@ -563,22 +570,11 @@ export const TopologyPage: FC = () => {
     );
   }, [handleNodeClick, setNodes]);
 
-  // Handle new connections (for editing)
-  const onConnect = useCallback(
-    (params: Connection) => {
-      const newEdge: LinkEdge = {
-        ...params,
-        id: `e-${params.source}-${params.target}-new`,
-        source: params.source || '',
-        target: params.target || '',
-        type: 'smoothstep',
-        style: { stroke: 'var(--color-link-1g)', strokeWidth: 2 },
-        data: { linkType: 'standard' } as LinkEdgeData,
-      };
-      setEdges((eds) => addEdge(newEdge, eds) as LinkEdge[]);
-    },
-    [setEdges],
-  );
+  // onConnect is a no-op: edges come from the backend and are not user-editable
+  const onConnect = useCallback((_params: Connection) => {
+    // Intentionally empty - topology edges are derived from device configs
+    // and neighbor discovery; user-drawn edges would not persist.
+  }, []);
 
   // Export topology as JSON
   const handleExport = useCallback(() => {
@@ -610,10 +606,12 @@ export const TopologyPage: FC = () => {
     URL.revokeObjectURL(url);
   }, [nodes, edges]);
 
-  // Refresh data
+  // Refresh data by refetching from the API
   const handleRefresh = useCallback(() => {
-    window.location.reload();
-  }, []);
+    refetchTopology();
+    refetchDevices();
+    refetchNeighbors();
+  }, [refetchTopology, refetchDevices, refetchNeighbors]);
 
   const loading = topologyLoading || devicesLoading;
 
@@ -738,7 +736,7 @@ export const TopologyPage: FC = () => {
                   device={selectedDevice}
                   onClose={() => setSelectedDevice(null)}
                   onEdit={(device) => {
-                    window.location.href = `/device-config/${device.name}`;
+                    navigate(`/device-config/${device.name}`);
                   }}
                 />
               )}

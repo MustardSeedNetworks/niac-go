@@ -37,7 +37,7 @@ func TestEDPConstants(t *testing.T) {
 		value    any
 		expected any
 	}{
-		{"Multicast MAC", protocols.EDPMulticastMAC, "\x00\xE0\x2B\x00\x00\x00"},
+		{"Multicast MAC", protocols.EDPMulticastMAC, "00:E0:2B:00:00:00"},
 		{"Advertise Interval", protocols.EDPAdvertiseInterval, 30 * time.Second},
 		{"Version", protocols.EDPVersion, 1},
 	}

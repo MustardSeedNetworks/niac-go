@@ -906,7 +906,7 @@ func TestAgent_LargeWalkFile(t *testing.T) {
 	// Generate large walk file
 	var content strings.Builder
 	for i := 1; i <= 1000; i++ {
-		content.WriteString(fmt.Sprintf(".1.3.6.1.4.1.9999.%d.0 = INTEGER: %d\n", i, i))
+		fmt.Fprintf(&content, ".1.3.6.1.4.1.9999.%d.0 = INTEGER: %d\n", i, i)
 	}
 
 	if err := os.WriteFile(walkFile, []byte(content.String()), 0o600); err != nil {

@@ -110,10 +110,14 @@ The overlay file takes precedence:
 
 func runConfigExport(args []string) {
 	inputFile := args[0]
-	outputFile := args[1]
+	outputFile, pathErr := validateCLIPath(args[1])
+	if pathErr != nil {
+		fmt.Fprintf(os.Stderr, "Error: invalid output path: %v\n", pathErr)
+		os.Exit(1)
+	}
 
 	// Check if output exists
-	if _, err := os.Stat(outputFile); err == nil {
+	if _, err := statSafeFile(outputFile); err == nil {
 		fmt.Fprintf(os.Stderr, "Error: output file already exists: %s\n", outputFile)
 		os.Exit(1)
 	}
@@ -142,7 +146,7 @@ func runConfigExport(args []string) {
 	}
 
 	// Write to file
-	if writeErr := os.WriteFile(outputFile, data, 0o600); writeErr != nil {
+	if writeErr := writeSafeFile(outputFile, data); writeErr != nil {
 		fmt.Fprintf(os.Stderr, "Error writing file: %v\n", writeErr)
 		os.Exit(1)
 	}
@@ -216,7 +220,12 @@ func compareDeviceMaps(devices1, devices2 map[string]*config.Device) bool {
 }
 
 func runConfigMerge(args []string) {
-	baseFile, overlayFile, outputFile := args[0], args[1], args[2]
+	baseFile, overlayFile := args[0], args[1]
+	outputFile, pathErr := validateCLIPath(args[2])
+	if pathErr != nil {
+		fmt.Fprintf(os.Stderr, "Error: invalid output path: %v\n", pathErr)
+		os.Exit(1)
+	}
 	checkOutputNotExists(outputFile)
 
 	base := loadConfigOrExit(baseFile, "base")
@@ -228,7 +237,7 @@ func runConfigMerge(args []string) {
 }
 
 func checkOutputNotExists(path string) {
-	if _, err := os.Stat(path); err == nil {
+	if _, err := statSafeFile(path); err == nil {
 		fmt.Fprintf(os.Stderr, "Error: output file already exists: %s\n", path)
 		os.Exit(1)
 	}
@@ -267,7 +276,7 @@ func writeConfigOrExit(cfg *config.Config, path string) {
 		fmt.Fprintf(os.Stderr, "Error marshaling configuration: %v\n", err)
 		os.Exit(1)
 	}
-	err = os.WriteFile(path, data, 0o600)
+	err = writeSafeFile(path, data)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error writing file: %v\n", err)
 		os.Exit(1)

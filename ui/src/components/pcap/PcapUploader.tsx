@@ -7,7 +7,7 @@ import { SmallText } from '../../ui/Typography';
 import { formatBytes } from '../../utils/format';
 
 interface PcapUploaderProps {
-  onFileSelect: (file: File) => void;
+  onFileSelect: (file: File | null) => void;
   onAnalyze: () => void;
   isAnalyzing: boolean;
   selectedFile: File | null;
@@ -134,7 +134,7 @@ export const PcapUploader: FC<PcapUploaderProps> = ({
 
   // Clear selected file
   const handleClear = useCallback(() => {
-    onFileSelect(null as unknown as File);
+    onFileSelect(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }

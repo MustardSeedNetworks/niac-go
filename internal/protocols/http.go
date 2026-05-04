@@ -3,7 +3,9 @@ package protocols
 import (
 	"bufio"
 	"bytes"
+	"encoding/json"
 	"fmt"
+	"html"
 	"io"
 	"net"
 	"os"
@@ -259,12 +261,17 @@ func (h *HTTPHandler) generateDefaultBody(path string, info httpDeviceInfo) (str
 			stats.ARPRequests, stats.ICMPRequests), httpStatusOK, contentTypeHTML
 
 	case "/api/info":
-		return fmt.Sprintf(`{
-  "name": "%s",
-  "type": "%s",
-  "version": "NIAC-Go v1.0.0",
-  "status": "running"
-}`, info.name, info.deviceType), httpStatusOK, contentTypeJSON
+		infoMap := map[string]string{
+			"name":    info.name,
+			"type":    info.deviceType,
+			"version": "NIAC-Go v1.0.0",
+			"status":  "running",
+		}
+		jsonBytes, err := json.Marshal(infoMap)
+		if err != nil {
+			return `{"error":"internal"}`, httpStatusInternalServerError, contentTypeJSON
+		}
+		return string(jsonBytes), httpStatusOK, contentTypeJSON
 
 	default:
 		return fmt.Sprintf(`<!DOCTYPE html>
@@ -276,7 +283,7 @@ func (h *HTTPHandler) generateDefaultBody(path string, info httpDeviceInfo) (str
 <hr>
 <small>%s - NIAC-Go</small>
 </body>
-</html>`, path, info.name), httpStatusNotFound, contentTypeHTML
+</html>`, html.EscapeString(path), html.EscapeString(info.name)), httpStatusNotFound, contentTypeHTML
 	}
 }
 
@@ -285,11 +292,11 @@ func buildHTTPResponse(statusCode int, serverName, contentType, body string) []b
 	var response strings.Builder
 
 	statusText := getStatusText(statusCode)
-	response.WriteString(fmt.Sprintf("HTTP/1.1 %d %s\r\n", statusCode, statusText))
-	response.WriteString(fmt.Sprintf("Date: %s\r\n", time.Now().UTC().Format(time.RFC1123)))
-	response.WriteString(fmt.Sprintf("Server: %s\r\n", serverName))
-	response.WriteString(fmt.Sprintf("Content-Type: %s\r\n", contentType))
-	response.WriteString(fmt.Sprintf("Content-Length: %d\r\n", len(body)))
+	fmt.Fprintf(&response, "HTTP/1.1 %d %s\r\n", statusCode, statusText)
+	fmt.Fprintf(&response, "Date: %s\r\n", time.Now().UTC().Format(time.RFC1123))
+	fmt.Fprintf(&response, "Server: %s\r\n", serverName)
+	fmt.Fprintf(&response, "Content-Type: %s\r\n", contentType)
+	fmt.Fprintf(&response, "Content-Length: %d\r\n", len(body))
 	response.WriteString("Connection: close\r\n")
 	response.WriteString("\r\n")
 	response.WriteString(body)

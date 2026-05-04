@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """Apply history viewer changes to interactive.go"""
-import re
+
 
 def apply_changes():
-    with open('pkg/interactive/interactive.go', 'r') as f:
+    with open("pkg/interactive/interactive.go", "r") as f:
         content = f.read()
 
     # 1. Add HistoryEntry struct after CapturedPacket
-    old = '''// CapturedPacket stores packet data for hex dump viewer
+    old = """// CapturedPacket stores packet data for hex dump viewer
 type CapturedPacket struct {
 	Timestamp time.Time
 	Protocol  string
@@ -17,9 +17,9 @@ type CapturedPacket struct {
 	Data      []byte
 }
 
-const maxPacketBuffer = 20 // Keep last 20 packets'''
+const maxPacketBuffer = 20 // Keep last 20 packets"""
 
-    new = '''// CapturedPacket stores packet data for hex dump viewer
+    new = """// CapturedPacket stores packet data for hex dump viewer
 type CapturedPacket struct {
 	Timestamp time.Time
 	Protocol  string
@@ -40,21 +40,21 @@ type HistoryEntry struct {
 	ErrorsInjected  int
 }
 
-const maxPacketBuffer = 20 // Keep last 20 packets'''
+const maxPacketBuffer = 20 // Keep last 20 packets"""
 
     content = content.replace(old, new)
 
     # 2. Add history state fields to model struct (after alert config state)
-    old = '''	// Alert configuration state
+    old = """	// Alert configuration state
 	showAlertConfig   bool
 	alertThresholds   map[string]int
 	alertsEnabled     bool
 	selectedAlertType int
 }
 
-type tickMsg time.Time'''
+type tickMsg time.Time"""
 
-    new = '''	// Alert configuration state
+    new = """	// Alert configuration state
 	showAlertConfig   bool
 	alertThresholds   map[string]int
 	alertsEnabled     bool
@@ -67,12 +67,12 @@ type tickMsg time.Time'''
 	historyScrollY     int
 }
 
-type tickMsg time.Time'''
+type tickMsg time.Time"""
 
     content = content.replace(old, new)
 
     # 3. Add esc handler for closing history
-    old = '''			// Close alert config
+    old = """			// Close alert config
 			if m.showAlertConfig {
 				m.showAlertConfig = false
 				m.statusMessage = successStyle.Render("Alert configuration saved")
@@ -81,9 +81,9 @@ type tickMsg time.Time'''
 			}
 			return m, nil
 
-		case "v":'''
+		case "v":"""
 
-    new = '''			// Close alert config
+    new = """			// Close alert config
 			if m.showAlertConfig {
 				m.showAlertConfig = false
 				m.statusMessage = successStyle.Render("Alert configuration saved")
@@ -97,12 +97,12 @@ type tickMsg time.Time'''
 			}
 			return m, nil
 
-		case "v":'''
+		case "v":"""
 
     content = content.replace(old, new)
 
     # 4. Add 'H' key handler after 'T' (topology)
-    old = '''		case "T":
+    old = """		case "T":
 			// Toggle topology view
 			if m.showTopology {
 				m.showTopology = false
@@ -116,9 +116,9 @@ type tickMsg time.Time'''
 			}
 			return m, nil
 
-		case "/":'''
+		case "/":"""
 
-    new = '''		case "T":
+    new = """		case "T":
 			// Toggle topology view
 			if m.showTopology {
 				m.showTopology = false
@@ -150,74 +150,74 @@ type tickMsg time.Time'''
 			}
 			return m, nil
 
-		case "/":'''
+		case "/":"""
 
     content = content.replace(old, new)
 
     # 5. Add history navigation to up/down handlers
-    old = '''		case "up":
+    old = """		case "up":
 			if m.showSearch && len(m.searchResults) > 0 && m.selectedResult > 0 {
 				m.selectedResult--
-			} else if m.showConfigDiff && m.configDiffScrollY > 0 {'''
+			} else if m.showConfigDiff && m.configDiffScrollY > 0 {"""
 
-    new = '''		case "up":
+    new = """		case "up":
 			if m.showHistory && len(m.historyEntries) > 0 && m.selectedHistoryIdx > 0 {
 				m.selectedHistoryIdx--
 			} else if m.showSearch && len(m.searchResults) > 0 && m.selectedResult > 0 {
 				m.selectedResult--
-			} else if m.showConfigDiff && m.configDiffScrollY > 0 {'''
+			} else if m.showConfigDiff && m.configDiffScrollY > 0 {"""
 
     content = content.replace(old, new)
 
-    old = '''		case "down":
+    old = """		case "down":
 			if m.showSearch && len(m.searchResults) > 0 && m.selectedResult < len(m.searchResults)-1 {
 				m.selectedResult++
-			} else if m.showConfigDiff {'''
+			} else if m.showConfigDiff {"""
 
-    new = '''		case "down":
+    new = """		case "down":
 			if m.showHistory && len(m.historyEntries) > 0 && m.selectedHistoryIdx < len(m.historyEntries)-1 {
 				m.selectedHistoryIdx++
 			} else if m.showSearch && len(m.searchResults) > 0 && m.selectedResult < len(m.searchResults)-1 {
 				m.selectedResult++
-			} else if m.showConfigDiff {'''
+			} else if m.showConfigDiff {"""
 
     content = content.replace(old, new)
 
     # 6. Add pgup/pgdown handlers for history
-    old = '''		case "pgup":
+    old = """		case "pgup":
 			if m.showConfigDiff {
-				m.configDiffScrollY -= 10'''
+				m.configDiffScrollY -= 10"""
 
-    new = '''		case "pgup":
+    new = """		case "pgup":
 			if m.showHistory {
 				m.historyScrollY -= 10
 				if m.historyScrollY < 0 {
 					m.historyScrollY = 0
 				}
 			} else if m.showConfigDiff {
-				m.configDiffScrollY -= 10'''
+				m.configDiffScrollY -= 10"""
 
     content = content.replace(old, new)
 
-    old = '''		case "pgdown":
+    old = """		case "pgdown":
 			if m.showConfigDiff {
 				m.configDiffScrollY += 10
-			} else if m.showTopology {'''
+			} else if m.showTopology {"""
 
-    new = '''		case "pgdown":
+    new = """		case "pgdown":
 			if m.showHistory {
 				m.historyScrollY += 10
 			} else if m.showConfigDiff {
 				m.configDiffScrollY += 10
-			} else if m.showTopology {'''
+			} else if m.showTopology {"""
 
     content = content.replace(old, new)
 
     # 7. Add enter handler for history details
-    old = '''		case "enter":
-			if m.showTemplates && !m.showTemplatePreview {'''
+    old = """		case "enter":
+			if m.showTemplates && !m.showTemplatePreview {"""
 
-    new = '''		case "enter":
+    new = """		case "enter":
 			if m.showHistory && len(m.historyEntries) > 0 {
 				// Show details of selected history entry
 				entry := m.historyEntries[m.selectedHistoryIdx]
@@ -233,20 +233,20 @@ type tickMsg time.Time'''
 				)
 				m.statusIsError = false
 				return m, nil
-			} else if m.showTemplates && !m.showTemplatePreview {'''
+			} else if m.showTemplates && !m.showTemplatePreview {"""
 
     content = content.replace(old, new)
 
     # 8. Add history overlay to View() - after showTopology
-    old = '''	// Topology overlay
+    old = """	// Topology overlay
 	if m.showTopology {
 		s.WriteString(m.renderTopology())
 		s.WriteString("\\n")
 	}
 
-	// Controls - first row'''
+	// Controls - first row"""
 
-    new = '''	// Topology overlay
+    new = """	// Topology overlay
 	if m.showTopology {
 		s.WriteString(m.renderTopology())
 		s.WriteString("\\n")
@@ -258,12 +258,12 @@ type tickMsg time.Time'''
 		s.WriteString("\\n")
 	}
 
-	// Controls - first row'''
+	// Controls - first row"""
 
     content = content.replace(old, new)
 
     # 9. Add [H] to controls bar (second or third row)
-    old = '''	// Controls - second row
+    old = """	// Controls - second row
 	s.WriteString("          ")
 	s.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("86")).Render("[t]"))
 	s.WriteString(" Templates  ")
@@ -282,9 +282,9 @@ type tickMsg time.Time'''
 	s.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("86")).Render("[c]"))
 	s.WriteString(" Clear  ")
 	s.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("196")).Render("[q]"))
-	s.WriteString(" Quit")'''
+	s.WriteString(" Quit")"""
 
-    new = '''	// Controls - second row
+    new = """	// Controls - second row
 	s.WriteString("          ")
 	s.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("86")).Render("[t]"))
 	s.WriteString(" Templates  ")
@@ -307,23 +307,23 @@ type tickMsg time.Time'''
 	s.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("86")).Render("[c]"))
 	s.WriteString(" Clear  ")
 	s.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("196")).Render("[q]"))
-	s.WriteString(" Quit")'''
+	s.WriteString(" Quit")"""
 
     content = content.replace(old, new)
 
     # 10. Add [H] to help screen
-    old = '''	help.WriteString("║  [T]     Network topology view (ASCII diagram)                  ║\\n")
-	help.WriteString("║  [/]     Search mode (filter devices/logs by pattern)           ║\\n")'''
+    old = """	help.WriteString("║  [T]     Network topology view (ASCII diagram)                  ║\\n")
+	help.WriteString("║  [/]     Search mode (filter devices/logs by pattern)           ║\\n")"""
 
-    new = '''	help.WriteString("║  [T]     Network topology view (ASCII diagram)                  ║\\n")
+    new = """	help.WriteString("║  [T]     Network topology view (ASCII diagram)                  ║\\n")
 	help.WriteString("║  [H]     Run history viewer (past simulation sessions)          ║\\n")
-	help.WriteString("║  [/]     Search mode (filter devices/logs by pattern)           ║\\n")'''
+	help.WriteString("║  [/]     Search mode (filter devices/logs by pattern)           ║\\n")"""
 
     content = content.replace(old, new)
 
     # 11. Add renderHistory function before the final closing functions
     # Find a good place - after renderTopology
-    render_history_func = '''
+    render_history_func = """
 // renderHistory renders the run history panel
 func (m model) renderHistory() string {
 	var panel strings.Builder
@@ -461,18 +461,11 @@ func (m *model) updateCurrentHistoryEntry() {
 	m.historyEntries[idx].PacketsReceived = m.stackStats.PacketsReceived
 	m.historyEntries[idx].ErrorsInjected = m.packetsInjected
 }
-'''
-
-    # Find position after renderTopology - look for the closing of that function
-    # and insert before the next function
-    old_end = '''	return panel.String()
-}
-
-// renderTopology renders the topology view'''
+"""
 
     # Actually let's insert after the last function - find a good location
     # Let's find closeAllOverlays and insert after it
-    old_close = '''// closeAllOverlays closes all overlay panels
+    old_close = """// closeAllOverlays closes all overlay panels
 func (m *model) closeAllOverlays() {
 	m.showHelp = false
 	m.showLogs = false
@@ -484,9 +477,9 @@ func (m *model) closeAllOverlays() {
 	m.showTemplatePreview = false
 	m.menuVisible = false
 	m.valueInputMode = false
-}'''
+}"""
 
-    new_close = '''// closeAllOverlays closes all overlay panels
+    new_close = """// closeAllOverlays closes all overlay panels
 func (m *model) closeAllOverlays() {
 	m.showHelp = false
 	m.showLogs = false
@@ -499,14 +492,15 @@ func (m *model) closeAllOverlays() {
 	m.menuVisible = false
 	m.valueInputMode = false
 	m.showHistory = false
-}''' + render_history_func
+}""" + render_history_func
 
     content = content.replace(old_close, new_close)
 
-    with open('pkg/interactive/interactive.go', 'w') as f:
+    with open("pkg/interactive/interactive.go", "w") as f:
         f.write(content)
 
     print("Changes applied successfully!")
+
 
 if __name__ == "__main__":
     apply_changes()

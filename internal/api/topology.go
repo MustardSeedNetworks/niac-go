@@ -284,8 +284,8 @@ func (t *Topology) ExportDOT() string {
 			shape = "box"
 		}
 
-		sb.WriteString(fmt.Sprintf("  \"%s\" [shape=%s, label=\"%s\\n(%s)\"];\n",
-			escapeDOT(node.Name), shape, escapeDOT(node.Name), escapeDOT(node.Type)))
+		fmt.Fprintf(&sb, "  \"%s\" [shape=%s, label=\"%s\\n(%s)\"];\n",
+			escapeDOT(node.Name), shape, escapeDOT(node.Name), escapeDOT(node.Type))
 	}
 
 	sb.WriteString("\n  // Links\n")
@@ -320,8 +320,8 @@ func (t *Topology) ExportDOT() string {
 			label += fmt.Sprintf("\\n%dMbps", link.Speed)
 		}
 
-		sb.WriteString(fmt.Sprintf("  \"%s\" -- \"%s\" [label=\"%s\", style=%s, color=%s];\n",
-			escapeDOT(link.Source), escapeDOT(link.Target), label, style, color))
+		fmt.Fprintf(&sb, "  \"%s\" -- \"%s\" [label=\"%s\", style=%s, color=%s];\n",
+			escapeDOT(link.Source), escapeDOT(link.Target), label, style, color)
 	}
 
 	sb.WriteString("}\n")

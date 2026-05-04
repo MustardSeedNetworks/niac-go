@@ -3,6 +3,8 @@ package protocols
 import (
 	"encoding/binary"
 	"log/slog"
+	"math"
+	"sync"
 	"time"
 
 	"github.com/google/gopacket"
@@ -15,7 +17,7 @@ import (
 // CDP protocol constants.
 const (
 	// CDPMulticastMAC is the CDP multicast destination MAC address (01:00:0c:cc:cc:cc).
-	CDPMulticastMAC = "\x01\x00\x0c\xcc\xcc\xcc"
+	CDPMulticastMAC = "01:00:0c:cc:cc:cc"
 
 	// CDPLLCDSAP is the LLC DSAP/SSAP for SNAP encapsulation.
 	CDPLLCDSAP = 0xAAAA
@@ -90,6 +92,7 @@ const (
 type CDPHandler struct {
 	stack           *Stack
 	stopChan        chan struct{}
+	stopOnce        sync.Once
 	advertiseTicker *time.Ticker
 }
 
@@ -131,7 +134,9 @@ func (h *CDPHandler) Start() {
 
 // Stop halts CDP advertisements.
 func (h *CDPHandler) Stop() {
-	close(h.stopChan)
+	h.stopOnce.Do(func() {
+		close(h.stopChan)
+	})
 }
 
 // sendAdvertisements sends CDP advertisements for all devices.
@@ -173,11 +178,16 @@ func (h *CDPHandler) buildCDPFrame(device *config.Device) []byte {
 
 	if device.CDPConfig != nil {
 		if device.CDPConfig.Version > 0 {
-			version = byte(device.CDPConfig.Version)
+			version = safeconv.Byte(device.CDPConfig.Version)
 		}
 
 		if device.CDPConfig.Holdtime > 0 {
-			holdtime = byte(device.CDPConfig.Holdtime)
+			h := device.CDPConfig.Holdtime
+			if h > math.MaxUint8 {
+				slog.Warn("CDP: holdtime exceeds uint8 max, capping to 255", "device", device.Name, "holdtime", h)
+				h = math.MaxUint8
+			}
+			holdtime = byte(h)
 		}
 	}
 

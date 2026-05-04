@@ -54,7 +54,7 @@ devices:
 func TestHandleVersion(t *testing.T) {
 	server, _ := createTestServer(t)
 
-	req := httptest.NewRequest("GET", "/api/v1/version", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/version", nil)
 	rec := httptest.NewRecorder()
 
 	server.handleVersion(rec, req)
@@ -76,7 +76,7 @@ func TestHandleVersion(t *testing.T) {
 func TestHandleStats(t *testing.T) {
 	server, _ := createTestServer(t)
 
-	req := httptest.NewRequest("GET", "/api/v1/stats", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/stats", nil)
 	rec := httptest.NewRecorder()
 
 	server.handleStats(rec, req)
@@ -90,7 +90,7 @@ func TestHandleDevices(t *testing.T) {
 	server, _ := createTestServer(t)
 
 	t.Run("GET devices", func(t *testing.T) {
-		req := httptest.NewRequest("GET", "/api/v1/devices", nil)
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/devices", nil)
 		rec := httptest.NewRecorder()
 
 		server.handleDevices(rec, req)
@@ -113,7 +113,7 @@ func TestHandleDevices(t *testing.T) {
 func TestHandleNeighbors(t *testing.T) {
 	server, _ := createTestServer(t)
 
-	req := httptest.NewRequest("GET", "/api/v1/neighbors", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/neighbors", nil)
 	rec := httptest.NewRecorder()
 
 	server.handleNeighbors(rec, req)
@@ -126,7 +126,7 @@ func TestHandleNeighbors(t *testing.T) {
 func TestHandleHistory(t *testing.T) {
 	server, _ := createTestServer(t)
 
-	req := httptest.NewRequest("GET", "/api/v1/history", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/history", nil)
 	rec := httptest.NewRecorder()
 
 	server.handleHistory(rec, req)
@@ -139,7 +139,7 @@ func TestHandleHistory(t *testing.T) {
 func TestHandleInterfaces(t *testing.T) {
 	server, _ := createTestServer(t)
 
-	req := httptest.NewRequest("GET", "/api/v1/interfaces", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/interfaces", nil)
 	rec := httptest.NewRecorder()
 
 	server.handleInterfaces(rec, req)
@@ -153,7 +153,7 @@ func TestHandleInterfaces(t *testing.T) {
 func TestHandleRuntime(t *testing.T) {
 	server, _ := createTestServer(t)
 
-	req := httptest.NewRequest("GET", "/api/v1/runtime", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/runtime", nil)
 	rec := httptest.NewRecorder()
 
 	server.handleRuntime(rec, req)
@@ -166,7 +166,7 @@ func TestHandleRuntime(t *testing.T) {
 func TestHandleTopology(t *testing.T) {
 	server, _ := createTestServer(t)
 
-	req := httptest.NewRequest("GET", "/api/v1/topology", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/topology", nil)
 	rec := httptest.NewRecorder()
 
 	server.handleTopology(rec, req)
@@ -199,7 +199,7 @@ func TestHandleConfig(t *testing.T) {
 	server.cfg.ConfigPath = configPath
 
 	t.Run("GET config", func(t *testing.T) {
-		req := httptest.NewRequest("GET", "/api/v1/config", nil)
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/config", nil)
 		rec := httptest.NewRecorder()
 
 		server.handleConfig(rec, req)
@@ -210,7 +210,7 @@ func TestHandleConfig(t *testing.T) {
 	})
 
 	t.Run("invalid method", func(t *testing.T) {
-		req := httptest.NewRequest("DELETE", "/api/v1/config", nil)
+		req := httptest.NewRequest(http.MethodDelete, "/api/v1/config", nil)
 		rec := httptest.NewRecorder()
 
 		server.handleConfig(rec, req)
@@ -225,7 +225,7 @@ func TestHandleErrors(t *testing.T) {
 	server, _ := createTestServer(t)
 
 	t.Run("GET errors", func(t *testing.T) {
-		req := httptest.NewRequest("GET", "/api/v1/errors", nil)
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/errors", nil)
 		rec := httptest.NewRecorder()
 
 		server.handleErrors(rec, req)
@@ -236,7 +236,7 @@ func TestHandleErrors(t *testing.T) {
 	})
 
 	t.Run("DELETE all errors", func(t *testing.T) {
-		req := httptest.NewRequest("DELETE", "/api/v1/errors", nil)
+		req := httptest.NewRequest(http.MethodDelete, "/api/v1/errors", nil)
 		rec := httptest.NewRecorder()
 
 		server.handleErrors(rec, req)
@@ -251,7 +251,7 @@ func TestHandleSimulation(t *testing.T) {
 	server, _ := createTestServer(t)
 
 	t.Run("GET simulation status without daemon", func(t *testing.T) {
-		req := httptest.NewRequest("GET", "/api/v1/simulation", nil)
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/simulation", nil)
 		rec := httptest.NewRecorder()
 
 		server.handleSimulation(rec, req)
@@ -291,7 +291,7 @@ func TestServerWriteJSON(t *testing.T) {
 
 func TestWriteError(t *testing.T) {
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest("GET", "/api/v1/test", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/test", nil)
 
 	writeError(rec, req, http.StatusBadRequest, "bad_request", "Bad request message", nil)
 
@@ -319,7 +319,7 @@ func TestWriteError(t *testing.T) {
 
 func TestWriteErrorWithDetails(t *testing.T) {
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest("POST", "/api/v1/devices", nil)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/devices", nil)
 
 	details := []ErrorDetail{
 		{Field: "name", Issue: "required field missing"},
@@ -356,7 +356,7 @@ func TestRecoverMiddleware(t *testing.T) {
 
 	recovered := server.recoverMiddleware(panicHandler)
 
-	req := httptest.NewRequest("GET", "/test", nil)
+	req := httptest.NewRequest(http.MethodGet, "/test", nil)
 	rec := httptest.NewRecorder()
 
 	// Should not panic
@@ -379,7 +379,7 @@ func TestCSRFProtection(t *testing.T) {
 	protected := server.csrfProtect(handler)
 
 	t.Run("GET request allowed", func(t *testing.T) {
-		req := httptest.NewRequest("GET", "/test", nil)
+		req := httptest.NewRequest(http.MethodGet, "/test", nil)
 		rec := httptest.NewRecorder()
 
 		protected(rec, req)
@@ -390,7 +390,7 @@ func TestCSRFProtection(t *testing.T) {
 	})
 
 	t.Run("POST without CSRF token rejected", func(t *testing.T) {
-		req := httptest.NewRequest("POST", "/test", nil)
+		req := httptest.NewRequest(http.MethodPost, "/test", nil)
 		rec := httptest.NewRecorder()
 
 		protected(rec, req)
@@ -402,7 +402,7 @@ func TestCSRFProtection(t *testing.T) {
 	})
 
 	t.Run("POST with valid CSRF token allowed", func(t *testing.T) {
-		req := httptest.NewRequest("POST", "/test", bytes.NewReader([]byte(`{}`)))
+		req := httptest.NewRequest(http.MethodPost, "/test", bytes.NewReader([]byte(`{}`)))
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("X-Csrf-Token", "test-csrf-token")
 		rec := httptest.NewRecorder()
@@ -415,7 +415,7 @@ func TestCSRFProtection(t *testing.T) {
 	})
 
 	t.Run("POST with invalid CSRF token rejected", func(t *testing.T) {
-		req := httptest.NewRequest("POST", "/test", bytes.NewReader([]byte(`{}`)))
+		req := httptest.NewRequest(http.MethodPost, "/test", bytes.NewReader([]byte(`{}`)))
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("X-Csrf-Token", "wrong-token")
 		rec := httptest.NewRecorder()

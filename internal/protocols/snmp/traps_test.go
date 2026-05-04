@@ -291,7 +291,7 @@ func TestTrapSender_Lifecycle(t *testing.T) {
 	}
 
 	// Check initial state
-	if ts.running {
+	if ts.running.Load() {
 		t.Error("Expected trap sender to be not running initially")
 	}
 
@@ -302,7 +302,7 @@ func TestTrapSender_Lifecycle(t *testing.T) {
 	}
 
 	// Verify running state
-	if !ts.running {
+	if !ts.running.Load() {
 		t.Error("Expected trap sender to be running after Start()")
 	}
 
@@ -319,7 +319,7 @@ func TestTrapSender_Lifecycle(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	// Verify stopped state
-	if ts.running {
+	if ts.running.Load() {
 		t.Error("Expected trap sender to be stopped after Stop()")
 	}
 }

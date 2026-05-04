@@ -78,6 +78,113 @@ devices:
 	}
 }
 
+func TestLoadYAML_WalkFileRelativeToConfigFile(t *testing.T) {
+	dir := t.TempDir()
+	walkFile := filepath.Join(dir, "device.walk")
+	if err := os.WriteFile(walkFile, []byte("SNMPv2-MIB::sysName.0 = STRING: test-device\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	yaml := `
+devices:
+  - name: snmp-device
+    type: switch
+    mac: "00:11:22:33:44:55"
+    ip: "192.168.1.1"
+    snmp_agent:
+      community: "public"
+      walk_file: "device.walk"
+`
+	configFile := filepath.Join(dir, "config.yaml")
+	if err := os.WriteFile(configFile, []byte(yaml), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg, err := LoadYAML(configFile)
+	if err != nil {
+		t.Fatalf("LoadYAML failed: %v", err)
+	}
+
+	got := cfg.Devices[0].SNMPConfig.WalkFile
+	if got != walkFile {
+		t.Fatalf("walk file = %q, want %q", got, walkFile)
+	}
+}
+
+func TestLoadYAML_IncludePathRelativeToConfigFile(t *testing.T) {
+	dir := t.TempDir()
+	walkDir := filepath.Join(dir, "walks")
+	if err := os.Mkdir(walkDir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	walkFile := filepath.Join(walkDir, "device.walk")
+	if err := os.WriteFile(walkFile, []byte("SNMPv2-MIB::sysName.0 = STRING: test-device\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	yaml := `
+include_path: "walks"
+devices:
+  - name: snmp-device
+    type: switch
+    mac: "00:11:22:33:44:55"
+    ip: "192.168.1.1"
+    snmp_agent:
+      community: "public"
+      walk_file: "device.walk"
+`
+	configFile := filepath.Join(dir, "config.yaml")
+	if err := os.WriteFile(configFile, []byte(yaml), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg, err := LoadYAML(configFile)
+	if err != nil {
+		t.Fatalf("LoadYAML failed: %v", err)
+	}
+
+	got := cfg.Devices[0].SNMPConfig.WalkFile
+	if got != walkFile {
+		t.Fatalf("walk file = %q, want %q", got, walkFile)
+	}
+}
+
+func TestLoadYAML_InferMissingDeviceType(t *testing.T) {
+	tests := []struct {
+		name string
+		want string
+	}{
+		{name: "edge-router-01", want: "router"},
+		{name: "access-switch-01", want: "switch"},
+		{name: "office-ap-01", want: "ap"},
+		{name: "dns-server-01", want: "server"},
+		{name: "test-client-01", want: "host"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			yaml := `
+devices:
+  - name: ` + tt.name + `
+    mac: "00:11:22:33:44:55"
+    ip: "192.168.1.1"
+`
+			tmpfile := createTempYAML(t, yaml)
+			defer func() { _ = os.Remove(tmpfile) }()
+
+			cfg, err := LoadYAML(tmpfile)
+			if err != nil {
+				t.Fatalf("LoadYAML failed: %v", err)
+			}
+
+			got := cfg.Devices[0].Type
+			if got != tt.want {
+				t.Fatalf("device type = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
 // TestLoadYAML_LLDP tests LLDP protocol configuration.
 func TestLoadYAML_LLDP(t *testing.T) {
 	yaml := `

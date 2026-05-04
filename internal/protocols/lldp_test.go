@@ -403,7 +403,7 @@ func TestLLDPConstants(t *testing.T) {
 	}
 
 	// Check multicast MAC
-	if protocols.LLDPMulticastMAC != "\x01\x80\xc2\x00\x00\x0e" {
+	if protocols.LLDPMulticastMAC != "01:80:c2:00:00:0e" {
 		t.Error("LLDPMulticastMAC has incorrect value")
 	}
 }

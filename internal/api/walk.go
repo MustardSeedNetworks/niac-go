@@ -9,92 +9,105 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/krisarmstrong/niac-go/internal/config"
 	"github.com/krisarmstrong/niac-go/internal/protocols/snmp"
 )
 
 // SECURITY FIX #154, #166: Secure path validation for walk files
 // validateWalkFilePath ensures the file path is safe and doesn't traverse outside allowed directories.
 func (s *Server) validateWalkFilePath(filename string) (string, error) {
-	// Empty filename is invalid
 	if filename == "" {
 		return "", errors.New("filename cannot be empty")
 	}
 
-	// Clean the path to normalize it
 	cleanPath := filepath.Clean(filename)
-
-	// Reject paths containing null bytes (potential bypass attempt)
 	if strings.ContainsRune(cleanPath, 0) {
 		return "", errors.New("filename contains invalid characters")
 	}
 
-	// SECURITY FIX #161: Thread-safe access to ConfigPath
-	// SECURITY FIX #166: Get config directory as the allowed base directory
-	cfgPath := s.configPath()
-	var allowedDir string
-	if cfgPath != "" {
-		allowedDir = filepath.Dir(cfgPath)
-	} else {
-		// If no config path, use current working directory
-		var err error
-		allowedDir, err = os.Getwd()
-		if err != nil {
-			return "", fmt.Errorf("cannot determine allowed directory: %w", err)
-		}
+	allowedDir, err := s.resolveWalkAllowedDir()
+	if err != nil {
+		return "", err
 	}
 
-	// Resolve to absolute path
-	var absPath string
+	absPath := cleanPath
 	if !filepath.IsAbs(cleanPath) {
 		absPath = filepath.Join(allowedDir, cleanPath)
-	} else {
-		absPath = cleanPath
 	}
-
-	// Clean the absolute path
 	absPath = filepath.Clean(absPath)
 
-	// SECURITY FIX #166: Resolve symlinks to prevent symlink-based traversal attacks
+	if traversalErr := ensureWalkPathWithin(absPath, allowedDir, filename); traversalErr != nil {
+		return "", traversalErr
+	}
+
+	if statErr := checkWalkFileExists(absPath, filename); statErr != nil {
+		return "", statErr
+	}
+
+	if extErr := validateWalkExtension(absPath); extErr != nil {
+		return "", extErr
+	}
+
+	return absPath, nil
+}
+
+// resolveWalkAllowedDir returns the directory walk files must reside under.
+func (s *Server) resolveWalkAllowedDir() (string, error) {
+	cfgPath := s.configPath()
+	if cfgPath != "" {
+		return filepath.Dir(cfgPath), nil
+	}
+	allowedDir, err := os.Getwd()
+	if err != nil {
+		return "", fmt.Errorf("cannot determine allowed directory: %w", err)
+	}
+	return allowedDir, nil
+}
+
+// ensureWalkPathWithin verifies that absPath resolves under allowedDir (following symlinks).
+func ensureWalkPathWithin(absPath, allowedDir, filename string) error {
 	realPath, err := filepath.EvalSymlinks(absPath)
 	if err != nil {
-		// If symlink resolution fails, file may not exist
 		if os.IsNotExist(err) {
-			return "", fmt.Errorf("walk file not found: %s", filename)
+			return fmt.Errorf("walk file not found: %s", filename)
 		}
 		realPath = absPath
 	}
 
-	// Resolve allowed directory to real path for comparison
 	realAllowedDir, err := filepath.EvalSymlinks(allowedDir)
 	if err != nil {
 		realAllowedDir = allowedDir
 	}
 
-	// SECURITY FIX #166: Verify the file is within the allowed directory (prevent path traversal)
 	if !strings.HasPrefix(realPath, realAllowedDir+string(filepath.Separator)) && realPath != realAllowedDir {
-		return "", fmt.Errorf("access denied: file must be within %s", allowedDir)
+		return fmt.Errorf("access denied: file must be within %s", allowedDir)
 	}
+	return nil
+}
 
-	// Verify the path exists and is a file (not a directory)
+// checkWalkFileExists stats the walk path and ensures it is a regular file.
+func checkWalkFileExists(absPath, filename string) error {
 	info, err := os.Stat(absPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return "", fmt.Errorf("walk file not found: %s", filename)
+			return fmt.Errorf("walk file not found: %s", filename)
 		}
-		return "", fmt.Errorf("cannot access walk file: %w", err)
+		return fmt.Errorf("cannot access walk file: %w", err)
 	}
 	if info.IsDir() {
-		return "", errors.New("path is a directory, not a file")
+		return errors.New("path is a directory, not a file")
 	}
+	return nil
+}
 
-	// Verify file has a reasonable extension (.walk, .snmpwalk, or .txt)
+// validateWalkExtension rejects walk paths without a .walk/.snmpwalk/.txt extension.
+func validateWalkExtension(absPath string) error {
 	ext := strings.ToLower(filepath.Ext(absPath))
 	validExts := map[string]bool{".walk": true, ".snmpwalk": true, ".txt": true}
 	if !validExts[ext] {
-		return "", fmt.Errorf("invalid walk file extension: %s (allowed: .walk, .snmpwalk, .txt)", ext)
+		return fmt.Errorf("invalid walk file extension: %s (allowed: .walk, .snmpwalk, .txt)", ext)
 	}
-
-	return absPath, nil
+	return nil
 }
 
 // WalkValidationRequest is the request body for walk file validation.
@@ -113,100 +126,81 @@ type WalkValidationResponse struct {
 // handleWalkValidation handles walk file validation requests
 // POST /api/v1/walk/validate - Validate a walk file
 // POST /api/v1/walk/fix - Validate and auto-fix a walk file.
+// runWalkValidation invokes validate-or-fix on the walk file, writing errors and returning ok.
+func (s *Server) runWalkValidation(
+	w http.ResponseWriter, r *http.Request, validatedPath string, autoFix bool,
+) (*snmp.ValidationResult, bool) {
+	if autoFix {
+		result, err := snmp.AutoFixWalkFile(validatedPath, "")
+		if err != nil {
+			s.logger.Error("[API] Walk file auto-fix error", "error", err)
+			writeError(w, r, http.StatusInternalServerError, "fix_failed",
+				fmt.Sprintf("Failed to fix walk file: %v", err), nil)
+			return nil, false
+		}
+		s.logger.Info("[API] Walk file auto-fixed", "fixedCount", result.FixedCount, "filename", validatedPath)
+		return result, true
+	}
+
+	result, err := snmp.ValidateWalkFile(validatedPath)
+	if err != nil {
+		s.logger.Error("[API] Walk file validation error", "error", err)
+		writeError(w, r, http.StatusInternalServerError, "validation_failed",
+			fmt.Sprintf("Failed to validate walk file: %v", err), nil)
+		return nil, false
+	}
+	s.logger.Info(
+		"[API] Walk file validated",
+		"filename", validatedPath,
+		"valid", result.Valid,
+		"issues", len(result.Issues),
+	)
+	return result, true
+}
+
+// buildWalkValidationResponse returns the WalkValidationResponse with a contextual message.
+func buildWalkValidationResponse(result *snmp.ValidationResult, autoFix bool) WalkValidationResponse {
+	response := WalkValidationResponse{Success: true, Result: result}
+	switch {
+	case autoFix:
+		response.Message = fmt.Sprintf("Walk file validated and %d issues fixed", result.FixedCount)
+	case result.Valid:
+		response.Message = "Walk file is valid"
+	default:
+		response.Message = fmt.Sprintf("Walk file has %d issues", len(result.Issues))
+	}
+	return response
+}
+
 func (s *Server) handleWalkValidation(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		writeError(w, r, http.StatusMethodNotAllowed, "method_not_allowed", "Method not allowed", nil)
-
 		return
 	}
 
-	// Determine action from URL path
-	path := r.URL.Path
-	isAutoFix := strings.HasSuffix(path, "/fix")
+	isAutoFix := strings.HasSuffix(r.URL.Path, "/fix")
+	r.Body = http.MaxBytesReader(w, r.Body, MaxRequestBodySize)
 
-	// Parse request body
 	var req WalkValidationRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, r, http.StatusBadRequest, "invalid_request", fmt.Sprintf("Invalid request body: %v", err), nil)
-
 		return
 	}
 
-	// SECURITY FIX #154: Validate and sanitize the file path
 	validatedPath, pathErr := s.validateWalkFilePath(req.Filename)
 	if pathErr != nil {
 		writeError(w, r, http.StatusBadRequest, "invalid_path", pathErr.Error(), nil)
 		return
 	}
 
-	// Log the validation request with sanitized path
 	s.logger.Info("[API] Walk file validation request", "filename", validatedPath, "autoFix", isAutoFix || req.AutoFix)
 
-	var (
-		result *snmp.ValidationResult
-		err    error
-	)
-
-	if isAutoFix || req.AutoFix {
-		// Validate and auto-fix using validated path
-		result, err = snmp.AutoFixWalkFile(validatedPath, "")
-		if err != nil {
-			s.logger.Error("[API] Walk file auto-fix error", "error", err)
-			writeError(
-				w,
-				r,
-				http.StatusInternalServerError,
-				"fix_failed",
-				fmt.Sprintf("Failed to fix walk file: %v", err),
-				nil,
-			)
-
-			return
-		}
-
-		s.logger.Info("[API] Walk file auto-fixed", "fixedCount", result.FixedCount, "filename", validatedPath)
-	} else {
-		// Validate only using validated path
-		result, err = snmp.ValidateWalkFile(validatedPath)
-		if err != nil {
-			s.logger.Error("[API] Walk file validation error", "error", err)
-			writeError(
-				w,
-				r,
-				http.StatusInternalServerError,
-				"validation_failed",
-				fmt.Sprintf("Failed to validate walk file: %v", err),
-				nil,
-			)
-
-			return
-		}
-
-		s.logger.Info(
-			"[API] Walk file validated",
-			"filename",
-			validatedPath,
-			"valid",
-			result.Valid,
-			"issues",
-			len(result.Issues),
-		)
+	result, ok := s.runWalkValidation(w, r, validatedPath, isAutoFix || req.AutoFix)
+	if !ok {
+		return
 	}
 
-	response := WalkValidationResponse{
-		Success: true,
-		Result:  result,
-	}
-
-	if isAutoFix || req.AutoFix {
-		response.Message = fmt.Sprintf("Walk file validated and %d issues fixed", result.FixedCount)
-	} else {
-		if result.Valid {
-			response.Message = "Walk file is valid"
-		} else {
-			response.Message = fmt.Sprintf("Walk file has %d issues", len(result.Issues))
-		}
-	}
+	response := buildWalkValidationResponse(result, isAutoFix || req.AutoFix)
 
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(response) // HTTP write errors are non-critical
@@ -221,8 +215,9 @@ func (s *Server) handleWalkList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get the config from the server's config
-	if s.cfg.Config == nil {
+	// SECURITY FIX: Thread-safe access to config via currentConfig()
+	cfg := s.currentConfig()
+	if cfg == nil {
 		writeError(
 			w,
 			r,
@@ -238,7 +233,7 @@ func (s *Server) handleWalkList(w http.ResponseWriter, r *http.Request) {
 	// Find walk files referenced in device configs
 	walkFiles := make(map[string]bool)
 
-	for _, device := range s.cfg.Config.Devices {
+	for _, device := range cfg.Devices {
 		// Add single WalkFile if specified
 		if device.SNMPConfig.WalkFile != "" {
 			walkFiles[device.SNMPConfig.WalkFile] = true
@@ -271,76 +266,76 @@ func (s *Server) handleWalkList(w http.ResponseWriter, r *http.Request) {
 
 // handleWalkBatchValidate validates multiple walk files at once
 // POST /api/v1/walk/validate-all - Validate all configured walk files.
-func (s *Server) handleWalkBatchValidate(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		writeError(w, r, http.StatusMethodNotAllowed, "method_not_allowed", "Method not allowed", nil)
-
-		return
-	}
-
-	if s.cfg.Config == nil {
-		writeError(
-			w,
-			r,
-			http.StatusInternalServerError,
-			"config_unavailable",
-			"Server configuration not available",
-			nil,
-		)
-
-		return
-	}
-
-	// Find all unique walk files
+// collectConfigWalkFiles returns the set of walk-file paths referenced by any device.
+func collectConfigWalkFiles(devices []config.Device) map[string]bool {
 	walkFiles := make(map[string]bool)
-
-	for _, device := range s.cfg.Config.Devices {
-		// Add single WalkFile if specified
+	for _, device := range devices {
 		if device.SNMPConfig.WalkFile != "" {
 			walkFiles[device.SNMPConfig.WalkFile] = true
 		}
-		// Add multiple WalkFiles if specified
 		for _, wf := range device.SNMPConfig.WalkFiles {
 			if wf != "" {
 				walkFiles[wf] = true
 			}
 		}
 	}
+	return walkFiles
+}
 
-	// Validate each file
-	results := make(map[string]*snmp.ValidationResult)
-
-	var (
-		totalIssues  int
-		invalidCount int
-	)
+// validateWalkFileBatch validates every walk file in the set, returning results and counters.
+func (s *Server) validateWalkFileBatch(
+	walkFiles map[string]bool,
+) (map[string]*snmp.ValidationResult, int, int) {
+	results := make(map[string]*snmp.ValidationResult, len(walkFiles))
+	var totalIssues, invalidCount int
 
 	for file := range walkFiles {
+		if _, err := s.validateWalkFilePath(file); err != nil {
+			results[file] = makeWalkErrorResult(file, err)
+			invalidCount++
+			continue
+		}
+
 		result, err := snmp.ValidateWalkFile(file)
 		if err != nil {
-			// Create an error result
-			results[file] = &snmp.ValidationResult{
-				Filename: file,
-				Valid:    false,
-				Issues: []snmp.ValidationIssue{
-					{
-						Line:     0,
-						Severity: "error",
-						Message:  err.Error(),
-					},
-				},
-			}
+			results[file] = makeWalkErrorResult(file, err)
 			invalidCount++
-		} else {
-			results[file] = result
+			continue
+		}
 
-			totalIssues += len(result.Issues)
-			if !result.Valid {
-				invalidCount++
-			}
+		results[file] = result
+		totalIssues += len(result.Issues)
+		if !result.Valid {
+			invalidCount++
 		}
 	}
+	return results, totalIssues, invalidCount
+}
 
+// makeWalkErrorResult wraps an error into a ValidationResult for the batch response.
+func makeWalkErrorResult(file string, err error) *snmp.ValidationResult {
+	return &snmp.ValidationResult{
+		Filename: file,
+		Valid:    false,
+		Issues: []snmp.ValidationIssue{
+			{Line: 0, Severity: "error", Message: err.Error()},
+		},
+	}
+}
+
+// buildBatchWalkResponse assembles the JSON response body for handleWalkBatchValidate.
+func buildBatchWalkResponse(
+	walkFiles map[string]bool,
+	results map[string]*snmp.ValidationResult,
+	totalIssues, invalidCount int,
+) struct {
+	Success      bool                              `json:"success"`
+	Message      string                            `json:"message"`
+	TotalFiles   int                               `json:"total_files"`
+	InvalidFiles int                               `json:"invalid_files"`
+	TotalIssues  int                               `json:"total_issues"`
+	Results      map[string]*snmp.ValidationResult `json:"results"`
+} {
 	response := struct {
 		Success      bool                              `json:"success"`
 		Message      string                            `json:"message"`
@@ -361,6 +356,26 @@ func (s *Server) handleWalkBatchValidate(w http.ResponseWriter, r *http.Request)
 	} else {
 		response.Message = fmt.Sprintf("%d of %d walk files have issues", invalidCount, len(walkFiles))
 	}
+	return response
+}
+
+func (s *Server) handleWalkBatchValidate(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeError(w, r, http.StatusMethodNotAllowed, "method_not_allowed", "Method not allowed", nil)
+		return
+	}
+
+	cfg := s.currentConfig()
+	if cfg == nil {
+		writeError(w, r, http.StatusInternalServerError, "config_unavailable",
+			"Server configuration not available", nil)
+		return
+	}
+
+	walkFiles := collectConfigWalkFiles(cfg.Devices)
+	results, totalIssues, invalidCount := s.validateWalkFileBatch(walkFiles)
+
+	response := buildBatchWalkResponse(walkFiles, results, totalIssues, invalidCount)
 
 	s.logger.Info(
 		"[API] Batch walk file validation",

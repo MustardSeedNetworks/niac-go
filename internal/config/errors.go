@@ -68,7 +68,28 @@ func (e *Error) Error() string {
 func (e *Error) Format() string {
 	var b strings.Builder
 
-	// Error icon and location
+	e.writeHeader(&b)
+	e.writeLocationIndicator(&b)
+
+	fmt.Fprintf(&b, "Error: %s\n", e.Message)
+
+	if e.Expected != "" {
+		fmt.Fprintf(&b, "  Expected: %s\n", e.Expected)
+	}
+
+	if e.Got != "" {
+		fmt.Fprintf(&b, "  Got: %s\n", e.Got)
+	}
+
+	if e.Suggestion != "" {
+		fmt.Fprintf(&b, "\n💡 Suggestion: %s\n", e.Suggestion)
+	}
+
+	return b.String()
+}
+
+// writeHeader writes the severity icon and file location header.
+func (e *Error) writeHeader(b *strings.Builder) {
 	switch e.Severity {
 	case SeverityError:
 		b.WriteString("✗ ")
@@ -87,54 +108,37 @@ func (e *Error) Format() string {
 	}
 
 	b.WriteString("\n\n")
+}
 
-	// Location indicator
-	if e.Line > 0 {
-		if e.Column > 0 {
-			b.WriteString(fmt.Sprintf("%s:%d:%d\n", e.File, e.Line, e.Column))
-		} else {
-			b.WriteString(fmt.Sprintf("%s:%d\n", e.File, e.Line))
-		}
-
-		b.WriteString("  |\n")
-		b.WriteString(fmt.Sprintf("%2d| ", e.Line))
-
-		// Would need actual file content here to show the line
-		// For now, just show field if available
-		if e.Field != "" {
-			b.WriteString("    ")
-			b.WriteString(e.Field)
-		}
-
-		b.WriteString("\n")
-
-		if e.Column > 0 {
-			b.WriteString("  | ")
-			b.WriteString(strings.Repeat(" ", e.Column))
-			b.WriteString("^\n")
-		}
-
-		b.WriteString("  |\n")
+// writeLocationIndicator writes source location and pointer to the error position.
+func (e *Error) writeLocationIndicator(b *strings.Builder) {
+	if e.Line <= 0 {
+		return
 	}
 
-	// Error message
-	b.WriteString(fmt.Sprintf("Error: %s\n", e.Message))
-
-	// Expected vs Got
-	if e.Expected != "" {
-		b.WriteString(fmt.Sprintf("  Expected: %s\n", e.Expected))
+	if e.Column > 0 {
+		fmt.Fprintf(b, "%s:%d:%d\n", e.File, e.Line, e.Column)
+	} else {
+		fmt.Fprintf(b, "%s:%d\n", e.File, e.Line)
 	}
 
-	if e.Got != "" {
-		b.WriteString(fmt.Sprintf("  Got: %s\n", e.Got))
+	b.WriteString("  |\n")
+	fmt.Fprintf(b, "%2d| ", e.Line)
+
+	if e.Field != "" {
+		b.WriteString("    ")
+		b.WriteString(e.Field)
 	}
 
-	// Suggestion
-	if e.Suggestion != "" {
-		b.WriteString(fmt.Sprintf("\n💡 Suggestion: %s\n", e.Suggestion))
+	b.WriteString("\n")
+
+	if e.Column > 0 {
+		b.WriteString("  | ")
+		b.WriteString(strings.Repeat(" ", e.Column))
+		b.WriteString("^\n")
 	}
 
-	return b.String()
+	b.WriteString("  |\n")
 }
 
 // ListError holds multiple configuration errors.
@@ -186,7 +190,7 @@ func (l *ListError) Format() string {
 	var b strings.Builder
 
 	if len(l.Errors) > 0 {
-		b.WriteString(fmt.Sprintf("✗ Configuration errors found: %s\n\n", l.File))
+		fmt.Fprintf(&b, "✗ Configuration errors found: %s\n\n", l.File)
 
 		for i, err := range l.Errors {
 			if i > 0 {
@@ -202,7 +206,7 @@ func (l *ListError) Format() string {
 			b.WriteString("\n")
 		}
 
-		b.WriteString(fmt.Sprintf("⚠ Configuration warnings: %s\n\n", l.File))
+		fmt.Fprintf(&b, "⚠ Configuration warnings: %s\n\n", l.File)
 
 		for i, warn := range l.Warnings {
 			if i > 0 {
@@ -214,8 +218,8 @@ func (l *ListError) Format() string {
 	}
 
 	// Summary
-	b.WriteString(fmt.Sprintf("\nSummary: %d error(s), %d warning(s)\n",
-		len(l.Errors), len(l.Warnings)))
+	fmt.Fprintf(&b, "\nSummary: %d error(s), %d warning(s)\n",
+		len(l.Errors), len(l.Warnings))
 
 	return b.String()
 }

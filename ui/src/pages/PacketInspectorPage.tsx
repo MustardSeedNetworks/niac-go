@@ -102,20 +102,34 @@ export const PacketInspectorPage: FC = () => {
         return;
       }
 
+      // Validate incoming data is an object before casting
+      if (typeof data !== 'object' || data === null) {
+        return;
+      }
+
       // Transform incoming data to Packet format
       const incoming = data as Record<string, unknown>;
 
+      // SSE payloads bypass the shared toCamelCase converter in client.ts,
+      // so fall back to snake_case keys when the camelCase key is missing.
       const packet: Packet = {
         id: generatePacketId(),
         timestamp: (incoming.timestamp as string) || new Date().toISOString(),
         protocol: (incoming.protocol as string) || 'Unknown',
-        sourceIp: (incoming.sourceIp as string) || (incoming.sourceIp as string) || 'Unknown',
-        destIp: (incoming.destIp as string) || (incoming.destIp as string) || 'Unknown',
-        sourcePort: incoming.sourcePort as number | undefined,
-        destPort: incoming.destPort as number | undefined,
+        sourceIp: (incoming.sourceIp as string) || (incoming.source_ip as string) || 'Unknown',
+        destIp: (incoming.destIp as string) || (incoming.dest_ip as string) || 'Unknown',
+        sourcePort:
+          (incoming.sourcePort as number | undefined) ??
+          (incoming.source_port as number | undefined),
+        destPort:
+          (incoming.destPort as number | undefined) ?? (incoming.dest_port as number | undefined),
         size: (incoming.size as number) || 0,
         summary: (incoming.summary as string) || '',
-        rawData: (incoming.rawData as string) || (incoming.payload as string) || '',
+        rawData:
+          (incoming.rawData as string) ||
+          (incoming.raw_data as string) ||
+          (incoming.payload as string) ||
+          '',
         headers: incoming.headers as Record<string, unknown> | undefined,
       };
 

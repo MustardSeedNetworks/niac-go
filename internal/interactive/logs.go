@@ -102,7 +102,7 @@ func (m *model) renderLogs() string {
 				padded = log + strings.Repeat(" ", panelContentWidth-len(log))
 			}
 
-			logs.WriteString(fmt.Sprintf("║ %s ║\n", padded))
+			fmt.Fprintf(&logs, "║ %s ║\n", padded)
 		}
 	}
 

@@ -43,7 +43,8 @@ import type {
 } from './types';
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? '';
-const API_TOKEN = import.meta.env.VITE_API_TOKEN ?? '';
+// API_TOKEN is only used in development mode to avoid embedding secrets in production bundles.
+const API_TOKEN = import.meta.env.DEV ? (import.meta.env.VITE_API_TOKEN ?? '') : '';
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> =>
   value !== null &&
@@ -126,7 +127,7 @@ function isRetryableStatus(status: number): boolean {
 }
 
 // FIX #179: Accept optional signal parameter to allow caller-provided AbortController.
-async function request<T>(
+export async function request<T>(
   path: string,
   init: RequestInit = {},
   retry: RetryConfig = DEFAULT_RETRY,

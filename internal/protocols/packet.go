@@ -38,6 +38,7 @@ const (
 	ethTypeOffsetMult = 2      // Multiplier for EtherType offset (src+dst MACs)
 	checksumWordMask  = 0xFFFF // Mask for 16-bit word in checksum calculation
 	checksumWordShift = 16     // Bit shift for folding 32-bit to 16-bit checksum
+	checksumByteShift = 8      // Bit shift for padding odd-length byte in checksum
 )
 
 // MaxPacketSize is the maximum IP packet size (IPv4/IPv6)
@@ -210,8 +211,16 @@ func BuildEthernetHeader(dst, src net.HardwareAddr, etherType uint16) []byte {
 // CalculateIPChecksum calculates IP header checksum.
 func CalculateIPChecksum(header []byte) uint16 {
 	sum := uint32(0)
-	for i := 0; i < len(header); i += 2 {
+	// Sum 16-bit words, guarding against odd-length input which would slice
+	// out-of-bounds on the last iteration.
+	end := len(header) &^ 1
+
+	for i := 0; i < end; i += 2 {
 		sum += uint32(binary.BigEndian.Uint16(header[i:]))
+	}
+
+	if len(header)%2 == 1 {
+		sum += uint32(header[len(header)-1]) << checksumByteShift
 	}
 	// Add carry
 	for sum > checksumWordMask {

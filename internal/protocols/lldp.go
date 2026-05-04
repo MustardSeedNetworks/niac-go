@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/gopacket"
@@ -18,7 +19,7 @@ import (
 // LLDP protocol constants.
 const (
 	// LLDPMulticastMAC is the LLDP multicast destination MAC address (01:80:c2:00:00:0e).
-	LLDPMulticastMAC = "\x01\x80\xc2\x00\x00\x0e"
+	LLDPMulticastMAC = "01:80:c2:00:00:0e"
 
 	// LLDPAdvertiseInterval is the default LLDP advertisement interval per IEEE 802.1AB.
 	LLDPAdvertiseInterval = 30 * time.Second
@@ -83,6 +84,7 @@ const (
 	lldpLengthHighBit       = 0x01  // Mask for extracting length high bit from Type|Length byte
 	lldpLengthLowMask       = 0xff  // Mask for extracting length low byte
 	lldpLengthHighByteShift = 8     // Bit shift to extract high byte of length
+	lldpMaxTLVLength        = 511   // Maximum TLV length (9-bit field)
 	lldpMaxTTL              = 65535 // Maximum TTL value (uint16 max)
 	lldpIfIndexSubtype      = 2     // Interface numbering subtype: ifIndex
 	lldpIfIndexSize         = 4     // Interface index size (uint32)
@@ -95,6 +97,7 @@ const (
 type LLDPHandler struct {
 	stack           *Stack
 	stopChan        chan struct{}
+	stopOnce        sync.Once
 	advertiseTicker *time.Ticker
 }
 
@@ -133,9 +136,11 @@ func (h *LLDPHandler) Start() {
 	}()
 }
 
-// Stop halts LLDP advertisements.
+// Stop halts LLDP advertisements. Safe to call multiple times.
 func (h *LLDPHandler) Stop() {
-	close(h.stopChan)
+	h.stopOnce.Do(func() {
+		close(h.stopChan)
+	})
 }
 
 // sendAdvertisements sends LLDP advertisements for all devices.
@@ -225,7 +230,7 @@ func (h *LLDPHandler) buildChassisIDTLV(device *config.Device) []byte {
 	}
 
 	// TLV: Type(7 bits) | Length(9 bits) | Subtype(1 byte) | Chassis ID
-	length := 1 + len(chassisID) // subtype + chassis ID
+	length := min(1+len(chassisID), lldpMaxTLVLength) // subtype + chassis ID, clamped to 9-bit max
 
 	tlv := make([]byte, lldpTLVHeaderSize+length)
 	tlv[0] = byte(LLDPTLVTypeChassisID<<1) | byte((length>>lldpLengthHighByteShift)&lldpLengthHighBit)
@@ -251,7 +256,7 @@ func (h *LLDPHandler) buildPortIDTLV(device *config.Device) []byte {
 		portID = []byte(device.Name)
 	}
 
-	length := 1 + len(portID) // subtype + port ID
+	length := min(1+len(portID), lldpMaxTLVLength) // subtype + port ID, clamped to 9-bit max
 
 	tlv := make([]byte, lldpTLVHeaderSize+length)
 	tlv[0] = byte(LLDPTLVTypePortID<<1) | byte((length>>lldpLengthHighByteShift)&lldpLengthHighBit)
@@ -293,7 +298,7 @@ func (h *LLDPHandler) buildPortDescriptionTLV(device *config.Device) []byte {
 		description = []byte(device.Type + " interface")
 	}
 
-	length := len(description)
+	length := min(len(description), lldpMaxTLVLength) // clamped to 9-bit max
 	if length == 0 {
 		return nil
 	}
@@ -310,7 +315,7 @@ func (h *LLDPHandler) buildPortDescriptionTLV(device *config.Device) []byte {
 func (h *LLDPHandler) buildSystemNameTLV(device *config.Device) []byte {
 	name := []byte(device.Name)
 
-	length := len(name)
+	length := min(len(name), lldpMaxTLVLength) // clamped to 9-bit max
 	if length == 0 {
 		return nil
 	}
@@ -333,7 +338,7 @@ func (h *LLDPHandler) buildSystemDescriptionTLV(device *config.Device) []byte {
 		description = fmt.Appendf(nil, "NIAC-Go simulated %s device", device.Type)
 	}
 
-	length := len(description)
+	length := min(len(description), lldpMaxTLVLength) // clamped to 9-bit max
 	if length == 0 {
 		return nil
 	}
@@ -422,14 +427,17 @@ func (h *LLDPHandler) buildManagementAddressTLV(device *config.Device) []byte {
 	interfaceNumber := uint32(1)                 // Interface index
 	oidStringLength := byte(0)                   // No OID
 
-	length := 1 + addressStringLength + 1 + lldpIfIndexSize + 1 // total TLV value length
+	length := min(
+		1+addressStringLength+1+lldpIfIndexSize+1,
+		lldpMaxTLVLength,
+	) // total TLV value length, clamped to 9-bit max
 
 	tlv := make([]byte, lldpTLVHeaderSize+length)
 	tlv[0] = byte(LLDPTLVTypeManagementAddress<<1) | byte((length>>lldpLengthHighByteShift)&lldpLengthHighBit)
 	tlv[1] = byte(length & lldpLengthLowMask)
 
 	offset := 2
-	tlv[offset] = byte(addressStringLength)
+	tlv[offset] = safeconv.Byte(addressStringLength)
 	offset++
 	tlv[offset] = addressSubtype
 	offset++

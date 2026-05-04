@@ -81,7 +81,7 @@ devices:
   # Extreme X465 Distribution
   - name: extreme-x465-dist
     type: switch
-    mac: "00:04:96:x4:65:01"
+    mac: "00:04:96:04:65:01"
     ip: "10.100.2.1"
 
     snmp_agent:

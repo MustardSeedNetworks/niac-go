@@ -45,7 +45,7 @@ func TestRecoverMiddlewareReturnsInternalError(t *testing.T) {
 
 	wrapped := server.recoverMiddleware(handler)
 
-	req := httptest.NewRequest("GET", "/test", nil)
+	req := httptest.NewRequest(http.MethodGet, "/test", nil)
 	rec := httptest.NewRecorder()
 
 	// Should not panic - middleware catches it
@@ -65,7 +65,7 @@ func TestRecoverMiddlewareNoPanic(t *testing.T) {
 
 	wrapped := server.recoverMiddleware(handler)
 
-	req := httptest.NewRequest("GET", "/test", nil)
+	req := httptest.NewRequest(http.MethodGet, "/test", nil)
 	rec := httptest.NewRecorder()
 
 	wrapped(rec, req)
@@ -149,7 +149,7 @@ func TestCSRFProtectionStateMethods(t *testing.T) {
 	}
 }
 
-func TestCSRFProtectionSkippedWhenNoToken(t *testing.T) {
+func TestCSRFProtectionRejectsWhenNoToken(t *testing.T) {
 	server := createTestServerForMiddleware(t)
 	server.csrfToken = "" // No CSRF token set
 
@@ -159,14 +159,14 @@ func TestCSRFProtectionSkippedWhenNoToken(t *testing.T) {
 
 	wrapped := server.csrfProtect(handler)
 
-	// POST should be allowed when csrfToken is empty (graceful degradation)
-	req := httptest.NewRequest("POST", "/test", nil)
+	// POST must be rejected when csrfToken is empty (fail-closed security)
+	req := httptest.NewRequest(http.MethodPost, "/test", nil)
 	rec := httptest.NewRecorder()
 
 	wrapped(rec, req)
 
-	if rec.Code != http.StatusOK {
-		t.Errorf("POST without csrfToken configured: status = %d, want %d", rec.Code, http.StatusOK)
+	if rec.Code != http.StatusInternalServerError {
+		t.Errorf("POST without csrfToken configured: status = %d, want %d", rec.Code, http.StatusInternalServerError)
 	}
 }
 
@@ -181,7 +181,7 @@ func TestAuthMiddlewareWithoutToken(t *testing.T) {
 
 	wrapped := server.auth(handler)
 
-	req := httptest.NewRequest("GET", "/api/v1/test", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/test", nil)
 	req.RemoteAddr = "192.168.1.1:1234"
 	rec := httptest.NewRecorder()
 
@@ -203,7 +203,7 @@ func TestAuthMiddlewareWithValidToken(t *testing.T) {
 
 	wrapped := server.auth(handler)
 
-	req := httptest.NewRequest("GET", "/api/v1/test", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/test", nil)
 	req.RemoteAddr = "192.168.1.1:1234"
 	req.Header.Set("Authorization", "Bearer secret-api-token")
 	rec := httptest.NewRecorder()
@@ -226,7 +226,7 @@ func TestAuthMiddlewareWithInvalidToken(t *testing.T) {
 
 	wrapped := server.auth(handler)
 
-	req := httptest.NewRequest("GET", "/api/v1/test", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/test", nil)
 	req.RemoteAddr = "192.168.1.1:1234"
 	req.Header.Set("Authorization", "Bearer wrong-token")
 	rec := httptest.NewRecorder()
@@ -249,7 +249,7 @@ func TestAuthMiddlewareNoTokenConfigured(t *testing.T) {
 
 	wrapped := server.auth(handler)
 
-	req := httptest.NewRequest("GET", "/api/v1/test", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/test", nil)
 	req.RemoteAddr = "192.168.1.1:1234"
 	rec := httptest.NewRecorder()
 

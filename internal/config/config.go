@@ -596,6 +596,20 @@ func LoadLegacy(filename string) (*Config, error) {
 
 	defer func() { _ = file.Close() }()
 
+	cfg, scanErr := scanLegacyConfig(file)
+	if scanErr != nil {
+		return nil, scanErr
+	}
+
+	if len(cfg.Devices) == 0 {
+		return nil, ErrNoDevicesDefined
+	}
+
+	return cfg, nil
+}
+
+// scanLegacyConfig reads all lines from a legacy config file and populates the config.
+func scanLegacyConfig(file *os.File) (*Config, error) {
 	cfg := &Config{
 		Devices: make([]Device, 0),
 	}
@@ -642,10 +656,6 @@ func LoadLegacy(filename string) (*Config, error) {
 		return nil, fmt.Errorf("error reading config file: %w", scanErr)
 	}
 
-	if len(cfg.Devices) == 0 {
-		return nil, ErrNoDevicesDefined
-	}
-
 	return cfg, nil
 }
 
@@ -672,6 +682,7 @@ func parseDeviceDeclaration(line string, lineNum int) (Device, error) {
 func parseLegacyKeyValue(line string, device *Device) {
 	parts := strings.SplitN(line, "=", keyValueParts)
 	if len(parts) != keyValueParts {
+		fmt.Fprintf(os.Stderr, "Warning: ignoring invalid line in legacy config (no '=' found): %s\n", line)
 		return
 	}
 
@@ -742,7 +753,7 @@ func LoadYAML(filename string) (*Config, error) {
 		return nil, err
 	}
 
-	return buildConfigFromYAML(yamlConfig)
+	return buildConfigFromYAML(yamlConfig, filepath.Dir(filepath.Clean(filename)))
 }
 
 // LoadYAMLBytes builds a runtime config from in-memory YAML data.
@@ -752,7 +763,7 @@ func LoadYAMLBytes(data []byte) (*Config, error) {
 		return nil, err
 	}
 
-	return buildConfigFromYAML(yamlConfig)
+	return buildConfigFromYAML(yamlConfig, "")
 }
 
 // loadYAMLFile loads and validates a YAML configuration file.
@@ -783,8 +794,9 @@ func validateYAMLConfig(yamlConfig *converter.Config) (*converter.Config, error)
 	return yamlConfig, nil
 }
 
-func buildConfigFromYAML(yamlConfig *converter.Config) (*Config, error) {
+func buildConfigFromYAML(yamlConfig *converter.Config, configDir string) (*Config, error) {
 	cfg := createBaseConfig(yamlConfig)
+	cfg.IncludePath = resolveIncludePath(configDir, cfg.IncludePath)
 
 	for _, yamlDevice := range yamlConfig.Devices {
 		device, err := convertYAMLDevice(yamlDevice, cfg.IncludePath)
@@ -800,6 +812,17 @@ func buildConfigFromYAML(yamlConfig *converter.Config) (*Config, error) {
 	}
 
 	return cfg, nil
+}
+
+func resolveIncludePath(configDir, includePath string) string {
+	switch {
+	case includePath == "":
+		return configDir
+	case filepath.IsAbs(includePath) || configDir == "":
+		return includePath
+	default:
+		return filepath.Join(configDir, includePath)
+	}
 }
 
 // createBaseConfig creates the base configuration with global settings.
@@ -894,14 +917,9 @@ func convertYAMLDevice(yamlDevice converter.Device, includePath string) (Device,
 
 // createBaseDevice creates a device with default values.
 func createBaseDevice(yamlDevice converter.Device) Device {
-	deviceType := yamlDevice.Type
-	if deviceType == "" {
-		deviceType = "unknown"
-	}
-
 	return Device{
 		Name:       yamlDevice.Name,
-		Type:       deviceType,
+		Type:       inferYAMLDeviceType(yamlDevice),
 		Interfaces: make([]Interface, 0),
 		Properties: make(map[string]string),
 		SNMPConfig: SNMPConfig{
@@ -909,6 +927,36 @@ func createBaseDevice(yamlDevice converter.Device) Device {
 			SysName:   yamlDevice.Name,
 		},
 	}
+}
+
+func inferYAMLDeviceType(yamlDevice converter.Device) string {
+	if yamlDevice.Type != "" {
+		return yamlDevice.Type
+	}
+
+	name := strings.ToLower(yamlDevice.Name)
+	switch {
+	case containsAny(name, "router", "rtr", "gateway", "edge", "wan", "border"):
+		return "router"
+	case containsAny(name, "wlc", "controller", "server", "srv", "dns", "dhcp", "http", "ftp", "netbios", "web", "nas", "noc"):
+		return "server"
+	case containsAny(name, "ap", "wifi", "wireless"):
+		return "ap"
+	case containsAny(name, "switch", "sw", "spine", "leaf", "dist", "access", "core"):
+		return "switch"
+	default:
+		return "host"
+	}
+}
+
+func containsAny(value string, needles ...string) bool {
+	for _, needle := range needles {
+		if strings.Contains(value, needle) {
+			return true
+		}
+	}
+
+	return false
 }
 
 // parseDeviceMACAddress parses the MAC address for a device.
@@ -1282,39 +1330,49 @@ func parseNetBIOSConfig(yamlNetbios *converter.NetbiosConfig, deviceName string)
 		MsBrowse:  yamlNetbios.MsBrowse,
 	}
 
-	// Set defaults
-	if netbiosCfg.Name == "" {
-		netbiosCfg.Name = deviceName
-		if len(netbiosCfg.Name) > netbiosMaxNameLen {
-			netbiosCfg.Name = netbiosCfg.Name[:netbiosMaxNameLen]
+	applyNetBIOSDefaults(netbiosCfg, deviceName)
+	netbiosCfg.Names = parseNetBIOSNames(yamlNetbios.Names)
+
+	return netbiosCfg
+}
+
+// applyNetBIOSDefaults fills in default values for NetBIOS config fields.
+func applyNetBIOSDefaults(cfg *NetBIOSConfig, deviceName string) {
+	if cfg.Name == "" {
+		cfg.Name = deviceName
+		if len(cfg.Name) > netbiosMaxNameLen {
+			cfg.Name = cfg.Name[:netbiosMaxNameLen]
 		}
 	}
 
-	if netbiosCfg.Workgroup == "" {
-		netbiosCfg.Workgroup = "WORKGROUP"
+	if cfg.Workgroup == "" {
+		cfg.Workgroup = "WORKGROUP"
 	}
 
-	if netbiosCfg.NodeType == "" {
-		netbiosCfg.NodeType = "B"
+	if cfg.NodeType == "" {
+		cfg.NodeType = "B"
 	}
 
-	if len(netbiosCfg.Services) == 0 {
-		netbiosCfg.Services = []string{"workstation", "fileserver"}
+	if len(cfg.Services) == 0 {
+		cfg.Services = []string{"workstation", "fileserver"}
 	}
 
-	if netbiosCfg.TTL == 0 {
-		netbiosCfg.TTL = DefaultNetBIOSTTL
+	if cfg.TTL == 0 {
+		cfg.TTL = DefaultNetBIOSTTL
 	}
+}
 
-	// Parse explicit NetBIOS names
-	for _, name := range yamlNetbios.Names {
+// parseNetBIOSNames parses explicit NetBIOS name entries from YAML config.
+func parseNetBIOSNames(yamlNames []converter.NetbiosName) []NetBIOSName {
+	var names []NetBIOSName
+
+	for _, name := range yamlNames {
 		entry := NetBIOSName{
 			Name:  name.Name,
 			Group: name.Group,
 		}
 
 		if name.Suffix != "" {
-			// Parse suffix as hex (0x..) or decimal
 			if strings.HasPrefix(strings.ToLower(name.Suffix), "0x") {
 				if v, err := strconv.ParseUint(name.Suffix[2:], 16, 8); err == nil {
 					entry.Suffix = uint8(v)
@@ -1324,10 +1382,10 @@ func parseNetBIOSConfig(yamlNetbios *converter.NetbiosConfig, deviceName string)
 			}
 		}
 
-		netbiosCfg.Names = append(netbiosCfg.Names, entry)
+		names = append(names, entry)
 	}
 
-	return netbiosCfg
+	return names
 }
 
 // parseICMPConfig parses ICMP configuration from YAML.
@@ -1440,7 +1498,6 @@ func parseDHCPv6Config(yamlDhcpv6 *converter.Dhcpv6Config) *DHCPv6Config {
 		SIPDomains:        yamlDhcpv6.SIPDomains,
 	}
 
-	// Set defaults
 	if dhcpv6Cfg.PreferredLifetime == 0 {
 		dhcpv6Cfg.PreferredLifetime = DefaultDHCPv6PreferredLifetime
 	}
@@ -1449,44 +1506,31 @@ func parseDHCPv6Config(yamlDhcpv6 *converter.Dhcpv6Config) *DHCPv6Config {
 		dhcpv6Cfg.ValidLifetime = DefaultDHCPv6ValidLifetime
 	}
 
-	// Parse address pools
 	for _, pool := range yamlDhcpv6.Pools {
 		dhcpv6Cfg.Pools = append(dhcpv6Cfg.Pools, DHCPv6Pool{
-			Network:    pool.Network,
-			RangeStart: pool.RangeStart,
-			RangeEnd:   pool.RangeEnd,
+			Network: pool.Network, RangeStart: pool.RangeStart, RangeEnd: pool.RangeEnd,
 		})
 	}
 
-	// Parse DNS servers
-	for _, dnsStr := range yamlDhcpv6.DNSServers {
-		if ip := net.ParseIP(dnsStr); ip != nil {
-			dhcpv6Cfg.DNSServers = append(dhcpv6Cfg.DNSServers, ip)
-		}
-	}
-
-	// Parse SNTP servers
-	for _, sntpStr := range yamlDhcpv6.SNTPServers {
-		if ip := net.ParseIP(sntpStr); ip != nil {
-			dhcpv6Cfg.SNTPServers = append(dhcpv6Cfg.SNTPServers, ip)
-		}
-	}
-
-	// Parse NTP servers
-	for _, ntpStr := range yamlDhcpv6.NTPServers {
-		if ip := net.ParseIP(ntpStr); ip != nil {
-			dhcpv6Cfg.NTPServers = append(dhcpv6Cfg.NTPServers, ip)
-		}
-	}
-
-	// Parse SIP servers
-	for _, sipStr := range yamlDhcpv6.SIPServers {
-		if ip := net.ParseIP(sipStr); ip != nil {
-			dhcpv6Cfg.SIPServers = append(dhcpv6Cfg.SIPServers, ip)
-		}
-	}
+	dhcpv6Cfg.DNSServers = parseIPList(yamlDhcpv6.DNSServers)
+	dhcpv6Cfg.SNTPServers = parseIPList(yamlDhcpv6.SNTPServers)
+	dhcpv6Cfg.NTPServers = parseIPList(yamlDhcpv6.NTPServers)
+	dhcpv6Cfg.SIPServers = parseIPList(yamlDhcpv6.SIPServers)
 
 	return dhcpv6Cfg
+}
+
+// parseIPList parses a list of IP address strings into [net.IP] values, skipping invalid entries.
+func parseIPList(ipStrings []string) []net.IP {
+	var ips []net.IP
+
+	for _, s := range ipStrings {
+		if ip := net.ParseIP(s); ip != nil {
+			ips = append(ips, ip)
+		}
+	}
+
+	return ips
 }
 
 // parseTrafficConfig parses traffic configuration from YAML.
@@ -1499,61 +1543,72 @@ func parseTrafficConfig(yamlTraffic *converter.TrafficConfig) *TrafficConfig {
 		Enabled: yamlTraffic.Enabled,
 	}
 
-	// Parse ARP Announcements
-	if yamlTraffic.ARPAnnouncements != nil {
-		arpCfg := &ARPAnnouncementConfig{
-			Enabled:  yamlTraffic.ARPAnnouncements.Enabled,
-			Interval: yamlTraffic.ARPAnnouncements.Interval,
-		}
-		if arpCfg.Interval == 0 {
-			arpCfg.Interval = DefaultARPAnnouncementInterval
-		}
-
-		trafficCfg.ARPAnnouncements = arpCfg
-	}
-
-	// Parse Periodic Pings
-	if yamlTraffic.PeriodicPings != nil {
-		pingCfg := &PeriodicPingConfig{
-			Enabled:     yamlTraffic.PeriodicPings.Enabled,
-			Interval:    yamlTraffic.PeriodicPings.Interval,
-			PayloadSize: yamlTraffic.PeriodicPings.PayloadSize,
-		}
-		if pingCfg.Interval == 0 {
-			pingCfg.Interval = DefaultPeriodicPingInterval
-		}
-
-		if pingCfg.PayloadSize == 0 {
-			pingCfg.PayloadSize = DefaultPeriodicPingPayloadSize
-		}
-
-		trafficCfg.PeriodicPings = pingCfg
-	}
-
-	// Parse Random Traffic
-	if yamlTraffic.RandomTraffic != nil {
-		randomCfg := &RandomTrafficConfig{
-			Enabled:     yamlTraffic.RandomTraffic.Enabled,
-			Interval:    yamlTraffic.RandomTraffic.Interval,
-			PacketCount: yamlTraffic.RandomTraffic.PacketCount,
-			Patterns:    yamlTraffic.RandomTraffic.Patterns,
-		}
-		if randomCfg.Interval == 0 {
-			randomCfg.Interval = DefaultRandomTrafficInterval
-		}
-
-		if randomCfg.PacketCount == 0 {
-			randomCfg.PacketCount = DefaultRandomTrafficPacketCount
-		}
-
-		if len(randomCfg.Patterns) == 0 {
-			randomCfg.Patterns = []string{"broadcast_arp", "multicast", "udp"}
-		}
-
-		trafficCfg.RandomTraffic = randomCfg
-	}
+	trafficCfg.ARPAnnouncements = parseARPAnnouncementConfig(yamlTraffic.ARPAnnouncements)
+	trafficCfg.PeriodicPings = parsePeriodicPingConfig(yamlTraffic.PeriodicPings)
+	trafficCfg.RandomTraffic = parseRandomTrafficConfig(yamlTraffic.RandomTraffic)
 
 	return trafficCfg
+}
+
+// parseARPAnnouncementConfig parses ARP announcement sub-config.
+func parseARPAnnouncementConfig(yaml *converter.ARPAnnouncementConfig) *ARPAnnouncementConfig {
+	if yaml == nil {
+		return nil
+	}
+
+	cfg := &ARPAnnouncementConfig{Enabled: yaml.Enabled, Interval: yaml.Interval}
+	if cfg.Interval == 0 {
+		cfg.Interval = DefaultARPAnnouncementInterval
+	}
+
+	return cfg
+}
+
+// parsePeriodicPingConfig parses periodic ping sub-config.
+func parsePeriodicPingConfig(yaml *converter.PeriodicPingConfig) *PeriodicPingConfig {
+	if yaml == nil {
+		return nil
+	}
+
+	cfg := &PeriodicPingConfig{
+		Enabled: yaml.Enabled, Interval: yaml.Interval, PayloadSize: yaml.PayloadSize,
+	}
+
+	if cfg.Interval == 0 {
+		cfg.Interval = DefaultPeriodicPingInterval
+	}
+
+	if cfg.PayloadSize == 0 {
+		cfg.PayloadSize = DefaultPeriodicPingPayloadSize
+	}
+
+	return cfg
+}
+
+// parseRandomTrafficConfig parses random traffic sub-config.
+func parseRandomTrafficConfig(yaml *converter.RandomTrafficConfig) *RandomTrafficConfig {
+	if yaml == nil {
+		return nil
+	}
+
+	cfg := &RandomTrafficConfig{
+		Enabled: yaml.Enabled, Interval: yaml.Interval,
+		PacketCount: yaml.PacketCount, Patterns: yaml.Patterns,
+	}
+
+	if cfg.Interval == 0 {
+		cfg.Interval = DefaultRandomTrafficInterval
+	}
+
+	if cfg.PacketCount == 0 {
+		cfg.PacketCount = DefaultRandomTrafficPacketCount
+	}
+
+	if len(cfg.Patterns) == 0 {
+		cfg.Patterns = []string{"broadcast_arp", "multicast", "udp"}
+	}
+
+	return cfg
 }
 
 // parseSNMPTrapsConfig parses SNMP traps configuration from YAML.
@@ -1564,15 +1619,20 @@ func parseSNMPTrapsConfig(yamlTraps *converter.TrapsConfig) *TrapConfig {
 		Community: yamlTraps.Community,
 	}
 
-	// Parse Cold Start trap
+	parseSNMPTriggerTraps(trapsCfg, yamlTraps)
+	parseSNMPThresholdTraps(trapsCfg, yamlTraps)
+
+	return trapsCfg
+}
+
+// parseSNMPTriggerTraps parses ColdStart, LinkState, and AuthenticationFailure trap configs.
+func parseSNMPTriggerTraps(trapsCfg *TrapConfig, yamlTraps *converter.TrapsConfig) {
 	if yamlTraps.ColdStart != nil {
 		trapsCfg.ColdStart = &TrapTriggerConfig{
-			Enabled:   yamlTraps.ColdStart.Enabled,
-			OnStartup: yamlTraps.ColdStart.OnStartup,
+			Enabled: yamlTraps.ColdStart.Enabled, OnStartup: yamlTraps.ColdStart.OnStartup,
 		}
 	}
 
-	// Parse Link State trap
 	if yamlTraps.LinkState != nil {
 		trapsCfg.LinkState = &LinkStateTrapConfig{
 			Enabled:  yamlTraps.LinkState.Enabled,
@@ -1581,69 +1641,52 @@ func parseSNMPTrapsConfig(yamlTraps *converter.TrapsConfig) *TrapConfig {
 		}
 	}
 
-	// Parse Authentication Failure trap
 	if yamlTraps.AuthenticationFailure != nil {
 		trapsCfg.AuthenticationFailure = &TrapTriggerConfig{
-			Enabled:   yamlTraps.AuthenticationFailure.Enabled,
-			OnStartup: yamlTraps.AuthenticationFailure.OnStartup,
+			Enabled: yamlTraps.AuthenticationFailure.Enabled, OnStartup: yamlTraps.AuthenticationFailure.OnStartup,
 		}
 	}
+}
 
-	// Parse High CPU trap
+// parseSNMPThresholdTraps parses HighCPU, HighMemory, and InterfaceErrors trap configs.
+func parseSNMPThresholdTraps(trapsCfg *TrapConfig, yamlTraps *converter.TrapsConfig) {
 	if yamlTraps.HighCPU != nil {
-		highCPUCfg := &ThresholdTrapConfig{
-			Enabled:   yamlTraps.HighCPU.Enabled,
-			Threshold: yamlTraps.HighCPU.Threshold,
-			Interval:  yamlTraps.HighCPU.Interval,
-		}
-		if highCPUCfg.Threshold == 0 {
-			highCPUCfg.Threshold = DefaultHighCPUThreshold
-		}
-
-		if highCPUCfg.Interval == 0 {
-			highCPUCfg.Interval = DefaultTrapCheckInterval
-		}
-
-		trapsCfg.HighCPU = highCPUCfg
+		trapsCfg.HighCPU = parseThresholdTrap(
+			yamlTraps.HighCPU, DefaultHighCPUThreshold, DefaultTrapCheckInterval,
+		)
 	}
 
-	// Parse High Memory trap
 	if yamlTraps.HighMemory != nil {
-		highMemCfg := &ThresholdTrapConfig{
-			Enabled:   yamlTraps.HighMemory.Enabled,
-			Threshold: yamlTraps.HighMemory.Threshold,
-			Interval:  yamlTraps.HighMemory.Interval,
-		}
-		if highMemCfg.Threshold == 0 {
-			highMemCfg.Threshold = DefaultHighMemoryThreshold
-		}
-
-		if highMemCfg.Interval == 0 {
-			highMemCfg.Interval = DefaultTrapCheckInterval
-		}
-
-		trapsCfg.HighMemory = highMemCfg
+		trapsCfg.HighMemory = parseThresholdTrap(
+			yamlTraps.HighMemory, DefaultHighMemoryThreshold, DefaultTrapCheckInterval,
+		)
 	}
 
-	// Parse Interface Errors trap
 	if yamlTraps.InterfaceErrors != nil {
-		ifErrCfg := &ThresholdTrapConfig{
-			Enabled:   yamlTraps.InterfaceErrors.Enabled,
-			Threshold: yamlTraps.InterfaceErrors.Threshold,
-			Interval:  yamlTraps.InterfaceErrors.Interval,
-		}
-		if ifErrCfg.Threshold == 0 {
-			ifErrCfg.Threshold = DefaultInterfaceErrorThreshold
-		}
+		trapsCfg.InterfaceErrors = parseThresholdTrap(
+			yamlTraps.InterfaceErrors, DefaultInterfaceErrorThreshold, DefaultInterfaceErrorInterval,
+		)
+	}
+}
 
-		if ifErrCfg.Interval == 0 {
-			ifErrCfg.Interval = DefaultInterfaceErrorInterval
-		}
-
-		trapsCfg.InterfaceErrors = ifErrCfg
+// parseThresholdTrap parses a threshold-based trap config with defaults.
+func parseThresholdTrap(
+	yaml *converter.ThresholdTrapConfig,
+	defaultThreshold, defaultInterval int,
+) *ThresholdTrapConfig {
+	cfg := &ThresholdTrapConfig{
+		Enabled: yaml.Enabled, Threshold: yaml.Threshold, Interval: yaml.Interval,
 	}
 
-	return trapsCfg
+	if cfg.Threshold == 0 {
+		cfg.Threshold = defaultThreshold
+	}
+
+	if cfg.Interval == 0 {
+		cfg.Interval = defaultInterval
+	}
+
+	return cfg
 }
 
 // parseDHCPConfig parses DHCP configuration from YAML
@@ -1756,19 +1799,6 @@ func parseSingleDHCPLease(lease converter.DhcpLease) *DHCPLease {
 	}
 
 	return dhcpLease
-}
-
-// parseIPList parses a list of IP address strings into a [net.IP] slice.
-func parseIPList(ipStrings []string) []net.IP {
-	var ips []net.IP
-
-	for _, ipStr := range ipStrings {
-		if ip := net.ParseIP(ipStr); ip != nil {
-			ips = append(ips, ip)
-		}
-	}
-
-	return ips
 }
 
 // parseDNSConfig parses DNS configuration from YAML
@@ -2131,45 +2161,58 @@ func GenerateMAC() net.HardwareAddr {
 // validateWalkFilePath validates and resolves SNMP walk file paths
 // Prevents path traversal attacks and ensures file exists.
 func validateWalkFilePath(basePath, walkFile, deviceName string) (string, error) {
-	// Clean the path to normalize it FIRST
 	cleanPath := filepath.Clean(walkFile)
 
-	// Security: Check for traversal AFTER cleaning
 	if strings.Contains(cleanPath, "..") {
 		return "", fmt.Errorf("device %s: %w: %s", deviceName, ErrPathTraversalDetected, walkFile)
 	}
 
-	// Build full path
-	var fullPath string
+	fullPath := resolveWalkFilePath(basePath, cleanPath)
 
+	if err := verifyPathWithinBase(basePath, fullPath, walkFile, deviceName); err != nil {
+		return "", err
+	}
+
+	return verifyWalkFileAccess(fullPath, deviceName)
+}
+
+// resolveWalkFilePath resolves the full path of a walk file from its base and clean path.
+func resolveWalkFilePath(basePath, cleanPath string) string {
 	switch {
 	case filepath.IsAbs(cleanPath):
-		fullPath = cleanPath
+		return cleanPath
 	case basePath != "":
-		fullPath = filepath.Join(basePath, cleanPath)
+		return filepath.Join(basePath, cleanPath)
 	default:
-		fullPath = cleanPath
+		return cleanPath
+	}
+}
+
+// verifyPathWithinBase ensures the resolved path stays within the base directory.
+func verifyPathWithinBase(basePath, fullPath, walkFile, deviceName string) error {
+	if basePath == "" {
+		return nil
 	}
 
-	// CRITICAL: Verify resolved path stays within base directory
-	if basePath != "" {
-		absBase, err := filepath.Abs(basePath)
-		if err != nil {
-			return "", fmt.Errorf("device %s: invalid base path: %w", deviceName, err)
-		}
-
-		absFull, err := filepath.Abs(fullPath)
-		if err != nil {
-			return "", fmt.Errorf("device %s: invalid file path: %w", deviceName, err)
-		}
-
-		// Ensure path starts with base (add separator to prevent partial match)
-		if !strings.HasPrefix(absFull+string(filepath.Separator), absBase+string(filepath.Separator)) {
-			return "", fmt.Errorf("device %s: %w: %s", deviceName, ErrPathOutsideBaseDir, walkFile)
-		}
+	absBase, err := filepath.Abs(basePath)
+	if err != nil {
+		return fmt.Errorf("device %s: invalid base path: %w", deviceName, err)
 	}
 
-	// Use Lstat to detect symlinks (doesn't follow them)
+	absFull, err := filepath.Abs(fullPath)
+	if err != nil {
+		return fmt.Errorf("device %s: invalid file path: %w", deviceName, err)
+	}
+
+	if !strings.HasPrefix(absFull+string(filepath.Separator), absBase+string(filepath.Separator)) {
+		return fmt.Errorf("device %s: %w: %s", deviceName, ErrPathOutsideBaseDir, walkFile)
+	}
+
+	return nil
+}
+
+// verifyWalkFileAccess checks that the walk file exists, is not a symlink, and is a regular file.
+func verifyWalkFileAccess(fullPath, deviceName string) (string, error) {
 	info, err := os.Lstat(fullPath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -2179,12 +2222,10 @@ func validateWalkFilePath(basePath, walkFile, deviceName string) (string, error)
 		return "", fmt.Errorf("device %s: cannot access walk file %s: %w", deviceName, fullPath, err)
 	}
 
-	// Reject symlinks for security
 	if info.Mode()&os.ModeSymlink != 0 {
 		return "", fmt.Errorf("device %s: %w: %s", deviceName, ErrWalkFileIsSymlink, fullPath)
 	}
 
-	// Verify it's a regular file, not a directory or device
 	if !info.Mode().IsRegular() {
 		return "", fmt.Errorf("device %s: %w: %s", deviceName, ErrWalkFileNotRegular, fullPath)
 	}

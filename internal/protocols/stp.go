@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/krisarmstrong/niac-go/internal/config"
+	"github.com/krisarmstrong/niac-go/internal/safeconv"
 )
 
 // STP constants.
@@ -86,7 +88,9 @@ const (
 
 // STPHandler handles Spanning Tree Protocol packets.
 type STPHandler struct {
-	stack      *Stack
+	mu    sync.RWMutex
+	stack *Stack
+
 	debugLevel int
 
 	// Bridge configuration
@@ -119,6 +123,9 @@ func NewSTPHandler(stack *Stack, debugLevel int) *STPHandler {
 
 // HandlePacket processes an STP/RSTP BPDU packet.
 func (h *STPHandler) HandlePacket(pkt *Packet) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
 	// Check minimum packet size (Ethernet header + LLC + BPDU)
 	if len(pkt.Buffer) < stpMinPacketSize {
 		if h.debugLevel >= DebugLevelInfo {
@@ -281,14 +288,14 @@ func (h *STPHandler) getSTPParams(device *config.Device) stpParams {
 // appendBridgeID appends a bridge ID (8 bytes) to the buffer.
 func appendBridgeID(buf []byte, bridgeID uint64) []byte {
 	return append(buf,
-		byte(bridgeID>>stpBridgeIDShift56),
-		byte(bridgeID>>stpBridgeIDShift48),
-		byte(bridgeID>>stpBridgeIDShift40),
-		byte(bridgeID>>stpBridgeIDShift32),
-		byte(bridgeID>>stpBridgeIDShift24),
-		byte(bridgeID>>stpBridgeIDShift16),
-		byte(bridgeID>>stpBridgeIDShift8),
-		byte(bridgeID),
+		safeconv.ByteFromUint64(bridgeID>>stpBridgeIDShift56),
+		safeconv.ByteFromUint64(bridgeID>>stpBridgeIDShift48),
+		safeconv.ByteFromUint64(bridgeID>>stpBridgeIDShift40),
+		safeconv.ByteFromUint64(bridgeID>>stpBridgeIDShift32),
+		safeconv.ByteFromUint64(bridgeID>>stpBridgeIDShift24),
+		safeconv.ByteFromUint64(bridgeID>>stpBridgeIDShift16),
+		safeconv.ByteFromUint64(bridgeID>>stpBridgeIDShift8),
+		safeconv.ByteFromUint64(bridgeID),
 	)
 }
 
@@ -318,13 +325,13 @@ func appendBPDUTimers(buf []byte, params stpParams) []byte {
 
 	// Max Age, Hello Time, Forward Delay (each 2 bytes, scaled by 256)
 	maxAgeScaled := params.maxAge * stpTimerScale
-	buf = append(buf, byte(maxAgeScaled>>stpBridgeIDShift8), byte(maxAgeScaled))
+	buf = append(buf, byte(maxAgeScaled>>stpBridgeIDShift8), safeconv.ByteFromUint16(maxAgeScaled))
 
 	helloTimeScaled := params.helloTime * stpTimerScale
-	buf = append(buf, byte(helloTimeScaled>>stpBridgeIDShift8), byte(helloTimeScaled))
+	buf = append(buf, byte(helloTimeScaled>>stpBridgeIDShift8), safeconv.ByteFromUint16(helloTimeScaled))
 
 	forwardDelayScaled := params.forwardDelay * stpTimerScale
-	buf = append(buf, byte(forwardDelayScaled>>stpBridgeIDShift8), byte(forwardDelayScaled))
+	buf = append(buf, byte(forwardDelayScaled>>stpBridgeIDShift8), safeconv.ByteFromUint16(forwardDelayScaled))
 
 	return buf
 }
@@ -346,10 +353,8 @@ func (h *STPHandler) SendConfigBPDU(device *config.Device) error {
 
 	params := h.getSTPParams(device)
 
+	// BPDU flags are driven by simulated topology state, not by debug verbosity.
 	flags := uint8(0)
-	if h.debugLevel >= DebugLevelVerbose {
-		flags |= BPDUFlagTopologyChange
-	}
 
 	buf := buildBPDUHeader(dstMAC, device.MACAddress, flags)
 
@@ -365,7 +370,7 @@ func (h *STPHandler) SendConfigBPDU(device *config.Device) error {
 
 	// Port ID (2 bytes)
 	portID := uint16(stpDefaultPortID)
-	buf = append(buf, byte(portID>>stpBridgeIDShift8), byte(portID))
+	buf = append(buf, byte(portID>>stpBridgeIDShift8), safeconv.ByteFromUint16(portID))
 
 	buf = appendBPDUTimers(buf, params)
 
@@ -404,6 +409,9 @@ func (h *STPHandler) makeBridgeID(priority uint16, mac net.HardwareAddr) uint64 
 
 // SetBridgePriority sets the bridge priority.
 func (h *STPHandler) SetBridgePriority(priority uint16) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
 	h.bridgePriority = priority
 }
 
@@ -415,5 +423,8 @@ func (h *STPHandler) GetPortState() int {
 
 // SetDebugLevel updates the debug level.
 func (h *STPHandler) SetDebugLevel(level int) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
 	h.debugLevel = level
 }

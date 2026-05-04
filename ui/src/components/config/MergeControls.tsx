@@ -102,8 +102,9 @@ export const MergeControls: FC<MergeControlsProps> = ({
 
   const handleClearAll = useCallback(() => {
     setShowClearAllConfirm(false);
-    window.location.reload();
-  }, []);
+    // Reset merge state in place; full page reload would wipe unrelated app state.
+    onReset();
+  }, [onReset]);
 
   return (
     <Card className="border-white/5 bg-gray-900/70">

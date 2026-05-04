@@ -30,10 +30,10 @@ func (m *model) generateTopologyView() {
 	}
 
 	for nodeType, nodes := range nodesByType {
-		sb.WriteString(fmt.Sprintf("  [%s]\n", nodeType))
+		fmt.Fprintf(&sb, "  [%s]\n", nodeType)
 
 		for _, node := range nodes {
-			sb.WriteString(fmt.Sprintf("    +-- %s\n", node.Name))
+			fmt.Fprintf(&sb, "    +-- %s\n", node.Name)
 		}
 	}
 

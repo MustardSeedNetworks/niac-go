@@ -151,7 +151,7 @@ func TestRateLimitMiddleware(t *testing.T) {
 	}
 
 	// Test normal request
-	req := httptest.NewRequest("GET", "/test", nil)
+	req := httptest.NewRequest(http.MethodGet, "/test", nil)
 	req.RemoteAddr = "192.168.1.1:1234"
 	rec := httptest.NewRecorder()
 
@@ -196,7 +196,7 @@ func TestGetClientIP(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest("GET", "/test", nil)
+			req := httptest.NewRequest(http.MethodGet, "/test", nil)
 			req.RemoteAddr = tt.remoteAddr
 			if tt.xForwarded != "" {
 				req.Header.Set("X-Forwarded-For", tt.xForwarded)

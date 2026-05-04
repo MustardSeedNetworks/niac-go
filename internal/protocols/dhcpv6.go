@@ -209,9 +209,13 @@ func generateDUID() []byte {
 	binary.BigEndian.PutUint16(duid[0:2], DUIDTypeLL) // DUID-LL
 	binary.BigEndian.PutUint16(duid[2:4], 1)          // Ethernet
 
-	// Generate random MAC for server DUID
+	// Generate random MAC for server DUID. A DUID must be unique; falling back
+	// to zero bytes on entropy failure would create colliding identities across
+	// processes, so panic rather than ship a predictable DUID.
 	mac := make([]byte, macAddrSize)
-	_, _ = rand.Read(mac)                               // crypto/rand read errors will result in zero bytes
+	if _, err := rand.Read(mac); err != nil {
+		panic(fmt.Errorf("dhcpv6: entropy unavailable for DUID: %w", err))
+	}
 	mac[0] = (mac[0] | macLocalBitSet) & macUnicastMask // Set local, clear multicast
 	copy(duid[4:10], mac)
 
@@ -709,22 +713,18 @@ func (h *DHCPv6Handler) allocateLease(clientDUID []byte, iaid uint32) (*DHCPv6Le
 // confirmLease confirms an existing lease or allocates new one.
 func (h *DHCPv6Handler) confirmLease(clientDUID []byte, iaid uint32) (*DHCPv6Lease, error) {
 	h.mu.Lock()
-	defer h.mu.Unlock()
-
 	duidKey := duidString(clientDUID)
 
 	if existing, ok := h.leases[duidKey]; ok {
 		h.renewLeaseUnlocked(existing)
+		h.mu.Unlock()
 
 		return existing, nil
 	}
-
-	// Allocate new lease (unlock then relock via allocateLease)
 	h.mu.Unlock()
-	lease, err := h.allocateLease(clientDUID, iaid)
-	h.mu.Lock()
 
-	return lease, err
+	// Allocate new lease — allocateLease handles its own locking
+	return h.allocateLease(clientDUID, iaid)
 }
 
 // findLease finds a lease by client DUID.
@@ -1125,7 +1125,7 @@ func (h *DHCPv6Handler) encodeDomainList(domains []string) []byte {
 		// DNS name encoding: length-prefixed labels
 		labels := splitDomainLabels(domain)
 		for _, label := range labels {
-			data = append(data, byte(len(label)))
+			data = append(data, safeconv.Byte(len(label)))
 			data = append(data, []byte(label)...)
 		}
 

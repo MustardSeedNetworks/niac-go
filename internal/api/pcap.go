@@ -42,6 +42,7 @@ const (
 	arpOperationReply   = 2 // ARP Reply operation
 	icmpTypeEchoRequest = 8 // ICMP Echo Request type
 	icmpTypeEchoReply   = 0 // ICMP Echo Reply type
+	pcapMinHeaderLen    = 4 // Minimum header length for pcap protocol address
 )
 
 // ============================================================================
@@ -259,55 +260,56 @@ func (c *pcapCache) EntryCount() int {
 // PCAP Analysis Handlers
 // ============================================================================
 
+// decodePcapUpload parses the JSON body, decodes the base64 payload, and validates PCAP magic.
+// Returns the raw PCAP bytes, the parsed request, and true on success.
+func decodePcapUpload(w http.ResponseWriter, r *http.Request) ([]byte, PcapUploadRequest, bool) {
+	var req PcapUploadRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		if err.Error() == ErrMsgRequestBodyTooLarge {
+			writeError(w, r, http.StatusRequestEntityTooLarge, "request_too_large",
+				"PCAP file too large (max 100MB)", nil)
+			return nil, req, false
+		}
+		writeError(w, r, http.StatusBadRequest, "invalid_request",
+			"Invalid JSON request body", nil)
+		return nil, req, false
+	}
+
+	if req.Data == "" {
+		writeError(w, r, http.StatusBadRequest, "missing_data",
+			"PCAP data is required", nil)
+		return nil, req, false
+	}
+
+	pcapData, err := base64.StdEncoding.DecodeString(req.Data)
+	if err != nil {
+		writeError(w, r, http.StatusBadRequest, "invalid_base64",
+			"Invalid base64 encoded data", nil)
+		return nil, req, false
+	}
+
+	if validateErr := validatePCAPStructure(pcapData); validateErr != nil {
+		writeError(w, r, http.StatusBadRequest, "invalid_pcap",
+			validateErr.Error(), nil)
+		return nil, req, false
+	}
+
+	return pcapData, req, true
+}
+
 // handlePcapUpload handles POST /api/v1/pcap/upload.
 func (s *Server) handlePcapUpload(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		writeError(w, r, http.StatusMethodNotAllowed, "method_not_allowed",
 			"Only POST method is allowed", nil)
-
 		return
 	}
 
 	// Limit request size
 	r.Body = http.MaxBytesReader(w, r.Body, MaxPCAPUploadSize)
 
-	var req PcapUploadRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		if err.Error() == ErrMsgRequestBodyTooLarge {
-			writeError(w, r, http.StatusRequestEntityTooLarge, "request_too_large",
-				"PCAP file too large (max 100MB)", nil)
-
-			return
-		}
-
-		writeError(w, r, http.StatusBadRequest, "invalid_request",
-			"Invalid JSON request body", nil)
-
-		return
-	}
-
-	// Validate request
-	if req.Data == "" {
-		writeError(w, r, http.StatusBadRequest, "missing_data",
-			"PCAP data is required", nil)
-
-		return
-	}
-
-	// Decode base64 data
-	pcapData, err := base64.StdEncoding.DecodeString(req.Data)
-	if err != nil {
-		writeError(w, r, http.StatusBadRequest, "invalid_base64",
-			"Invalid base64 encoded data", nil)
-
-		return
-	}
-
-	// Validate PCAP magic number
-	if validateErr := validatePCAPStructure(pcapData); validateErr != nil {
-		writeError(w, r, http.StatusBadRequest, "invalid_pcap",
-			validateErr.Error(), nil)
-
+	pcapData, req, ok := decodePcapUpload(w, r)
+	if !ok {
 		return
 	}
 
@@ -316,31 +318,26 @@ func (s *Server) handlePcapUpload(w http.ResponseWriter, r *http.Request) {
 	analysisID := hex.EncodeToString(hash[:8])
 
 	// Check if we already have this analysis cached
-	if existing, ok := globalPcapCache.Get(analysisID); ok {
+	if existing, found := globalPcapCache.Get(analysisID); found {
 		s.writeJSON(w, PcapUploadResponse{
 			Success:    true,
 			AnalysisID: analysisID,
 			Message:    fmt.Sprintf("Analysis retrieved from cache (%d packets)", len(existing.Packets)),
 		})
-
 		return
 	}
 
-	// Analyze the PCAP
 	result, err := analyzePcapData(pcapData, req.Filename)
 	if err != nil {
-		// SECURITY FIX #183: Don't expose internal error details
 		s.logger.Error("[API] PCAP analysis failed", "error", err, "filename", req.Filename)
 		writeError(w, r, http.StatusInternalServerError, "analysis_failed",
 			"Failed to analyze PCAP file", nil)
-
 		return
 	}
 
 	result.ID = analysisID
 	result.CreatedAt = time.Now().UTC().Format(time.RFC3339)
 
-	// Cache the result
 	globalPcapCache.Set(analysisID, result)
 
 	s.writeJSON(w, PcapUploadResponse{
@@ -601,20 +598,26 @@ func parseARPLayer(packet gopacket.Packet, pkt *PcapPacket) {
 	}
 
 	pkt.Protocol = "ARP"
-	pkt.SourceIP = fmt.Sprintf(
-		"%d.%d.%d.%d",
-		arp.SourceProtAddress[0],
-		arp.SourceProtAddress[1],
-		arp.SourceProtAddress[2],
-		arp.SourceProtAddress[3],
-	)
-	pkt.DestIP = fmt.Sprintf(
-		"%d.%d.%d.%d",
-		arp.DstProtAddress[0],
-		arp.DstProtAddress[1],
-		arp.DstProtAddress[2],
-		arp.DstProtAddress[3],
-	)
+	// Guard against non-IPv4 ARP or truncated address fields.
+	if len(arp.SourceProtAddress) >= pcapMinHeaderLen {
+		pkt.SourceIP = fmt.Sprintf(
+			"%d.%d.%d.%d",
+			arp.SourceProtAddress[0],
+			arp.SourceProtAddress[1],
+			arp.SourceProtAddress[2],
+			arp.SourceProtAddress[3],
+		)
+	}
+
+	if len(arp.DstProtAddress) >= pcapMinHeaderLen {
+		pkt.DestIP = fmt.Sprintf(
+			"%d.%d.%d.%d",
+			arp.DstProtAddress[0],
+			arp.DstProtAddress[1],
+			arp.DstProtAddress[2],
+			arp.DstProtAddress[3],
+		)
+	}
 
 	opStr := "Unknown"
 	switch arp.Operation {

@@ -14,7 +14,8 @@ type simRandType struct{}
 
 var simRand simRandType
 
-// IntN returns a cryptographically secure random int in [0, n).
+// IntN returns a statistically adequate for simulation random int in [0, n).
+// Note: modulo reduction introduces slight bias; this is acceptable for simulation use.
 func (simRandType) IntN(n int) int {
 	if n <= 0 {
 		return 0

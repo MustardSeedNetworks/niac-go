@@ -246,80 +246,77 @@ func (s *Statistics) ExportCSV(filename string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create CSV file: %w", err)
 	}
-
 	defer func() { _ = file.Close() }()
 
 	writer := csv.NewWriter(file)
 	defer writer.Flush()
 
-	// Write header
-	header := []string{"Metric", "Value", "Category"}
-	if writeErr := writer.Write(header); writeErr != nil {
+	if writeErr := writer.Write([]string{"Metric", "Value", "Category"}); writeErr != nil {
 		return fmt.Errorf("failed to write CSV header: %w", writeErr)
 	}
 
-	// Helper function to write rows (errors handled by writer.Error() after flush)
 	writeRow := func(metric, value, category string) {
 		_ = writer.Write([]string{metric, value, category})
 	}
 
-	// General stats
+	s.writeGeneralCSV(writeRow)
+	s.writeSystemCSV(writeRow)
+	s.writeCounterCSV(writeRow)
+	s.writeProtocolCSV(writeRow)
+
+	return nil
+}
+
+func (s *Statistics) writeGeneralCSV(writeRow func(metric, value, category string)) {
 	writeRow("Start Time", s.StartTime.Format(time.RFC3339), "General")
 	writeRow("Uptime (seconds)", fmt.Sprintf("%.0f", s.Uptime.Seconds()), "General")
 	writeRow("Interface", s.Interface, "General")
 	writeRow("Config File", s.ConfigFile, "General")
 	writeRow("Device Count", strconv.Itoa(s.DeviceCount), "General")
 	writeRow("Version", s.Version, "General")
+}
 
-	// System stats
+func (s *Statistics) writeSystemCSV(writeRow func(metric, value, category string)) {
 	writeRow("Memory Usage (MB)", strconv.FormatUint(s.MemoryUsageMB, 10), "System")
 	writeRow("Goroutine Count", strconv.Itoa(s.GoroutineCount), "System")
 	writeRow("CPU Count", strconv.Itoa(s.CPUCount), "System")
+}
 
-	// SNMP stats - PERFORMANCE FIX MEDIUM-1: Read from atomic counters
+func (s *Statistics) writeCounterCSV(writeRow func(metric, value, category string)) {
 	writeRow("SNMP Query Count", strconv.FormatInt(s.SNMPQueryCount.Load(), 10), "SNMP")
 	writeRow("SNMP Device Count", strconv.Itoa(s.SNMPDeviceCount), "SNMP")
 	writeRow("SNMP Traps Sent", strconv.FormatInt(s.SNMPTrapsSent.Load(), 10), "SNMP")
-
-	// DHCP stats - PERFORMANCE FIX MEDIUM-1: Read from atomic counters
 	writeRow("DHCP Lease Count", strconv.Itoa(s.DHCPLeaseCount), "DHCP")
 	writeRow("DHCP Request Count", strconv.FormatInt(s.DHCPRequestCount.Load(), 10), "DHCP")
 
-	// Packet counts - PERFORMANCE FIX MEDIUM-1: Iterate sync.Map
 	s.packetCounts.Range(func(key, value any) bool {
 		protocol, ok := key.(string)
 		if !ok {
 			return true
 		}
-
 		counter, ok := value.(*atomic.Int64)
 		if !ok {
 			return true
 		}
-
 		writeRow(fmt.Sprintf("Packet Count (%s)", protocol), strconv.FormatInt(counter.Load(), 10), "Packets")
-
 		return true
 	})
 
-	// Error counts - PERFORMANCE FIX MEDIUM-1: Iterate sync.Map
 	s.errorCounts.Range(func(key, value any) bool {
 		device, ok := key.(string)
 		if !ok {
 			return true
 		}
-
 		counter, ok := value.(*atomic.Int64)
 		if !ok {
 			return true
 		}
-
 		writeRow(fmt.Sprintf("Error Count (%s)", device), strconv.FormatInt(counter.Load(), 10), "Errors")
-
 		return true
 	})
+}
 
-	// Protocol stats
+func (s *Statistics) writeProtocolCSV(writeRow func(metric, value, category string)) {
 	for protocol, stat := range s.ProtocolStats {
 		writeRow(
 			protocol+" - Requests Received",
@@ -330,8 +327,6 @@ func (s *Statistics) ExportCSV(filename string) error {
 		writeRow(protocol+" - Errors", strconv.FormatInt(stat.ErrorsEncountered, 10), "Protocol")
 		writeRow(protocol+" - Bytes Processed", strconv.FormatInt(stat.BytesProcessed, 10), "Protocol")
 	}
-
-	return nil
 }
 
 // snapshot creates a read-safe copy of statistics
@@ -353,48 +348,33 @@ func (s *Statistics) snapshot() StatisticsSnapshot {
 		MemoryUsageMB:    s.MemoryUsageMB,
 		GoroutineCount:   s.GoroutineCount,
 		CPUCount:         s.CPUCount,
-		PacketCounts:     make(map[string]int64),
-		ErrorCounts:      make(map[string]int64),
+		PacketCounts:     copyAtomicInt64Map(&s.packetCounts),
+		ErrorCounts:      copyAtomicInt64Map(&s.errorCounts),
 		ProtocolStats:    make(map[string]ProtocolStat),
 	}
-
-	// Copy from sync.Map to regular map for JSON serialization
-	s.packetCounts.Range(func(key, value any) bool {
-		protocol, ok := key.(string)
-		if !ok {
-			return true
-		}
-
-		counter, ok := value.(*atomic.Int64)
-		if !ok {
-			return true
-		}
-
-		snapshot.PacketCounts[protocol] = counter.Load()
-
-		return true
-	})
-
-	s.errorCounts.Range(func(key, value any) bool {
-		device, ok := key.(string)
-		if !ok {
-			return true
-		}
-
-		counter, ok := value.(*atomic.Int64)
-		if !ok {
-			return true
-		}
-
-		snapshot.ErrorCounts[device] = counter.Load()
-
-		return true
-	})
 
 	// Deep copy protocol stats (still under mutex protection)
 	maps.Copy(snapshot.ProtocolStats, s.ProtocolStats)
 
 	return snapshot
+}
+
+// copyAtomicInt64Map flattens a [sync.Map] keyed by string with [atomic.Int64] pointer values into a plain int64 map.
+func copyAtomicInt64Map(src *sync.Map) map[string]int64 {
+	out := make(map[string]int64)
+	src.Range(func(key, value any) bool {
+		k, ok := key.(string)
+		if !ok {
+			return true
+		}
+		counter, ok := value.(*atomic.Int64)
+		if !ok {
+			return true
+		}
+		out[k] = counter.Load()
+		return true
+	})
+	return out
 }
 
 // GetSnapshot returns a thread-safe snapshot of current statistics.

@@ -31,15 +31,13 @@ func (m *model) renderHexDump() string {
 	pkt := m.packetBuffer[m.hexDumpPacketIndex]
 
 	// Packet metadata
-	dump.WriteString(
-		fmt.Sprintf("║ Packet: %d/%d                                                    ║\n",
-			m.hexDumpPacketIndex+1, len(m.packetBuffer)),
-	)
-	dump.WriteString(fmt.Sprintf("║ Time:     %-54s ║\n", pkt.Timestamp.Format("15:04:05.000000")))
-	dump.WriteString(fmt.Sprintf("║ Protocol: %-54s ║\n", pkt.Protocol))
-	dump.WriteString(fmt.Sprintf("║ Source:   %-54s ║\n", pkt.SrcAddr))
-	dump.WriteString(fmt.Sprintf("║ Dest:     %-54s ║\n", pkt.DstAddr))
-	dump.WriteString(fmt.Sprintf("║ Length:   %-54d ║\n", pkt.Length))
+	fmt.Fprintf(&dump, "║ Packet: %d/%d                                                    ║\n",
+		m.hexDumpPacketIndex+1, len(m.packetBuffer))
+	fmt.Fprintf(&dump, "║ Time:     %-54s ║\n", pkt.Timestamp.Format("15:04:05.000000"))
+	fmt.Fprintf(&dump, "║ Protocol: %-54s ║\n", pkt.Protocol)
+	fmt.Fprintf(&dump, "║ Source:   %-54s ║\n", pkt.SrcAddr)
+	fmt.Fprintf(&dump, "║ Dest:     %-54s ║\n", pkt.DstAddr)
+	fmt.Fprintf(&dump, "║ Length:   %-54d ║\n", pkt.Length)
 	dump.WriteString("╠══════════════════════════════════════════════════════════════════╣\n")
 	dump.WriteString("║ Offset   Hex                                      ASCII          ║\n")
 	dump.WriteString("╠══════════════════════════════════════════════════════════════════╣\n")
@@ -88,10 +86,8 @@ func (m *model) renderHexDump() string {
 	// Show scroll indicator if needed
 	if totalLines > maxLines {
 		dump.WriteString("╠══════════════════════════════════════════════════════════════════╣\n")
-		dump.WriteString(
-			fmt.Sprintf("║ Showing lines %d-%d of %d (use ↑/↓/PgUp/PgDn to scroll)        ║\n",
-				startLine+1, endLine, totalLines),
-		)
+		fmt.Fprintf(&dump, "║ Showing lines %d-%d of %d (use ↑/↓/PgUp/PgDn to scroll)        ║\n",
+			startLine+1, endLine, totalLines)
 	}
 
 	dump.WriteString("╠══════════════════════════════════════════════════════════════════╣\n")

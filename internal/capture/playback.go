@@ -74,6 +74,8 @@ func (p *PlaybackEngine) Start() error {
 	}
 
 	p.running = true
+	// Recreate stopChan so Start→Stop→Start is safe.
+	p.stopChan = make(chan struct{})
 	p.mu.Unlock()
 
 	if p.debugLevel >= 1 {

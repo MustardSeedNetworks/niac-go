@@ -82,7 +82,7 @@ export const PcapAnalyzerPage: FC = () => {
   const { filteredPackets } = useDisplayFilter(analysisResult?.packets ?? [], filterExpression);
 
   // Handle file selection
-  const handleFileSelect = useCallback((file: File) => {
+  const handleFileSelect = useCallback((file: File | null) => {
     setSelectedFile(file);
     setAnalysisResult(null);
     setSelectedPacket(null);

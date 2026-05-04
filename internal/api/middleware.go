@@ -2,6 +2,7 @@ package api
 
 import (
 	"crypto/rand"
+	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/hex"
 	"fmt"
@@ -28,9 +29,10 @@ func (s *Server) csrfProtect(next http.HandlerFunc) http.HandlerFunc {
 		// Only check CSRF for state-changing methods
 		if r.Method == http.MethodPost || r.Method == http.MethodPut ||
 			r.Method == http.MethodPatch || r.Method == http.MethodDelete {
-			// Skip CSRF check if no token was generated (error during startup)
+			// Reject all state-changing requests if CSRF token was not generated
 			if s.csrfToken == "" {
-				next(w, r)
+				writeError(w, r, http.StatusInternalServerError, "csrf_unavailable",
+					"CSRF protection is unavailable, server misconfigured", nil)
 
 				return
 			}
@@ -100,6 +102,22 @@ func addSecurityHeaders(w http.ResponseWriter, r *http.Request) {
 
 	// Control referrer information
 	w.Header().Set("Referrer-Policy", "no-referrer")
+
+	// CORS: restrict to same-origin only
+	origin := r.Header.Get("Origin")
+	if origin != "" {
+		// Only allow same-origin requests; reject cross-origin
+		host := r.Host
+		if origin == "http://"+host || origin == "https://"+host {
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+			w.Header().Set("Access-Control-Allow-Credentials", "true")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Csrf-Token, X-Request-ID")
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		}
+	}
+
+	// Prevent caching of API responses
+	w.Header().Set("Cache-Control", "no-store")
 }
 
 // recoverMiddleware recovers from panics in HTTP handlers to prevent server crashes
@@ -158,9 +176,13 @@ func (s *Server) auth(next http.HandlerFunc) http.HandlerFunc {
 		token := r.Header.Get("Authorization")
 		token = strings.TrimPrefix(token, "Bearer ")
 
-		// SECURITY FIX #100: Use constant-time comparison to prevent timing attacks
-		// Standard string comparison (!=) could leak token information via timing
-		if subtle.ConstantTimeCompare([]byte(token), []byte(s.cfg.Token)) != 1 {
+		// Hash both sides to a constant-length digest before comparing so
+		// ConstantTimeCompare does not short-circuit on unequal-length inputs
+		// (which would leak token length via timing).
+		clientHash := sha256.Sum256([]byte(token))
+		serverHash := sha256.Sum256([]byte(s.cfg.Token))
+
+		if subtle.ConstantTimeCompare(clientHash[:], serverHash[:]) != 1 {
 			// FEATURE #105: Use standardized error response
 			writeError(w, r, http.StatusUnauthorized, "unauthorized",
 				"Invalid or missing authentication token", nil)

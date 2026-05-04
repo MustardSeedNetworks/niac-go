@@ -44,18 +44,34 @@ const (
 	dltNFQUEUE           uint32 = 253 // NFQUEUE
 )
 
+var validLinkTypes = map[uint32]bool{ //nolint:gochecknoglobals // Static DLT lookup table.
+	dltNull:              true,
+	dltEN10MB:            true,
+	dltIEEE802:           true,
+	dltSLIP:              true,
+	dltPPP:               true,
+	dltFDDI:              true,
+	dltRaw:               true,
+	dltIEEE80211:         true,
+	dltLinuxSLL:          true,
+	dltIEEE80211Radiotap: true,
+	dltMTP2Pseudoheader:  true,
+	dltIEEE80211AVS:      true,
+	dltRawOpenBSD:        true,
+	dltNFLOG:             true,
+	dltBluetoothHCI:      true,
+	dltUSB:               true,
+	dltIEEE802154:        true,
+	dltPPP2:              true,
+	dltIPv4:              true,
+	dltIPv6:              true,
+	dltNFQUEUE:           true,
+}
+
 // isValidLinkType checks if a link-layer type is recognized.
 // SECURITY FIX #170: Only accept recognized link-layer types.
 func isValidLinkType(linkType uint32) bool {
-	switch linkType {
-	case dltNull, dltEN10MB, dltIEEE802, dltSLIP, dltPPP, dltFDDI,
-		dltRaw, dltIEEE80211, dltLinuxSLL, dltIEEE80211Radiotap,
-		dltMTP2Pseudoheader, dltIEEE80211AVS, dltRawOpenBSD, dltNFLOG,
-		dltBluetoothHCI, dltUSB, dltIEEE802154, dltPPP2, dltIPv4, dltIPv6, dltNFQUEUE:
-		return true
-	default:
-		return false
-	}
+	return validLinkTypes[linkType]
 }
 
 // validatePCAPStructure validates that the file has a valid PCAP/pcapng structure.

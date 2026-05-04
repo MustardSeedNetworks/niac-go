@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
@@ -98,6 +99,7 @@ const (
 type NetBIOSHandler struct {
 	stack      *Stack
 	debugLevel int
+	mu         sync.Mutex                // protects nameTable
 	nameTable  map[string]*config.Device // NetBIOS name -> device mapping
 }
 
@@ -574,6 +576,8 @@ func deriveNetBIOSNames(device *config.Device) []netbiosNameEntry {
 
 // RegisterName registers a NetBIOS name for a device.
 func (h *NetBIOSHandler) RegisterName(name string, device *config.Device) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
 	h.nameTable[strings.ToUpper(strings.TrimSpace(name))] = device
 }
 
