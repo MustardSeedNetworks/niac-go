@@ -106,6 +106,9 @@ function buildUrl(path: string) {
 const REQUEST_TIMEOUT_MS = 30_000;
 const MAX_RETRIES = 3;
 const BASE_DELAY_MS = 1_000;
+const CSRF_TOKEN_PATH = '/api/v1/csrf-token';
+
+let csrfTokenPromise: Promise<string> | null = null;
 
 interface RetryConfig {
   readonly maxRetries: number;
@@ -113,6 +116,64 @@ interface RetryConfig {
 }
 
 const DEFAULT_RETRY: RetryConfig = { maxRetries: MAX_RETRIES, baseDelay: BASE_DELAY_MS };
+
+function isStateChangingMethod(method: string | undefined) {
+  const normalized = (method ?? 'GET').toUpperCase();
+  return (
+    normalized === 'POST' ||
+    normalized === 'PUT' ||
+    normalized === 'PATCH' ||
+    normalized === 'DELETE'
+  );
+}
+
+async function fetchCSRFToken() {
+  if (csrfTokenPromise) return csrfTokenPromise;
+
+  csrfTokenPromise = (async () => {
+    const headers = new Headers();
+    headers.set('Accept', 'application/json');
+    if (API_TOKEN) {
+      headers.set('Authorization', `Bearer ${API_TOKEN}`);
+    }
+
+    const response = await fetch(buildUrl(CSRF_TOKEN_PATH), {
+      headers,
+      credentials: 'same-origin',
+    });
+    if (!response.ok) {
+      const text = await response.text();
+      throw new ApiError(text || response.statusText, response.status);
+    }
+
+    const data = (await response.json()) as { token?: string };
+    if (!data.token) {
+      throw new ApiError('CSRF token response did not include a token', response.status);
+    }
+
+    return data.token;
+  })();
+
+  try {
+    return await csrfTokenPromise;
+  } catch (error) {
+    csrfTokenPromise = null;
+    throw error;
+  }
+}
+
+async function buildRequestHeaders(path: string, init: RequestInit) {
+  const headers = new Headers(init.headers);
+  headers.set('Accept', 'application/json');
+  if (API_TOKEN) {
+    headers.set('Authorization', `Bearer ${API_TOKEN}`);
+  }
+  if (isStateChangingMethod(init.method) && path !== CSRF_TOKEN_PATH) {
+    headers.set('X-Csrf-Token', await fetchCSRFToken());
+  }
+
+  return headers;
+}
 
 // FIX #175: Check if an error is retryable (network errors and 5xx responses).
 function isRetryableError(error: unknown): boolean {
@@ -155,11 +216,7 @@ export async function request<T>(
     externalSignal?.addEventListener('abort', onExternalAbort);
 
     try {
-      const headers = new Headers(init.headers);
-      headers.set('Accept', 'application/json');
-      if (API_TOKEN) {
-        headers.set('Authorization', `Bearer ${API_TOKEN}`);
-      }
+      const headers = await buildRequestHeaders(path, init);
 
       const response = await fetch(buildUrl(path), {
         ...init,

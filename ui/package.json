@@ -19,6 +19,7 @@
     "test:watch": "vitest --reporter=dot",
     "test:coverage": "vitest run --coverage --reporter=verbose",
     "test:e2e": "playwright test --reporter=list",
+    "test:e2e:fullstack": "playwright test --config=playwright.fullstack.config.ts --reporter=list",
     "test:visual": "playwright test --project=visual --reporter=list",
     "test:visual:update": "playwright test --project=visual --update-snapshots"
   },
