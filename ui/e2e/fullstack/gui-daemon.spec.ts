@@ -5,18 +5,16 @@ const simulationConfig = `
 devices:
   - name: sim-router-01
     type: router
-    mac_address: "02:00:00:00:00:01"
-    ip_addresses:
-      - "192.0.2.10"
+    mac: "02:00:00:00:00:01"
+    ip: "192.0.2.10"
     arp:
       enabled: true
     icmp:
       enabled: true
   - name: sim-switch-01
     type: switch
-    mac_address: "02:00:00:00:00:02"
-    ip_addresses:
-      - "192.0.2.20"
+    mac: "02:00:00:00:00:02"
+    ip: "192.0.2.20"
     lldp:
       enabled: true
 `;

@@ -248,7 +248,7 @@ func startSimulationStack(
 		return nil, nil, nil, fmt.Errorf("create capture engine: %w", err)
 	}
 
-	stack := protocols.NewStack(engine, cfg, nil)
+	stack := protocols.NewStack(engine, cfg, logging.NewDebugConfig(DefaultDebugLevel))
 
 	// Lifecycle cancel used by StopSimulation. Stack.Start() does not accept a context,
 	// so the stop signal flows via Stack.Stop() and engine.Close(). The cancel is
