@@ -31,13 +31,11 @@ test.describe('Device CRUD Operations', () => {
 
     test('should display all required form fields', async ({ page }) => {
       await page.goto('/device-config/new');
-      await page.waitForLoadState('domcontentloaded');
 
-      // Check for essential form fields
-      const hostnameField = page.locator('input[name*="hostname" i], input[placeholder*="hostname" i]');
-      const ipField = page.locator('input[name*="ip" i], input[placeholder*="ip" i]');
+      // Wait for the device form to render — domcontentloaded fires before
+      // React mounts the inputs, which made the count() race the render.
+      await expect(page.locator('input[type="text"]').first()).toBeVisible();
 
-      // At least hostname or a name field should exist
       const nameFields = await page.locator('input[type="text"]').count();
       expect(nameFields).toBeGreaterThan(0);
     });
