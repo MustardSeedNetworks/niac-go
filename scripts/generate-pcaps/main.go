@@ -336,7 +336,8 @@ func buildCDPFrame(dev deviceInfo) []byte {
 	eth := make([]byte, ethHeaderLen)
 	copy(eth[0:6], cdpMulticast())
 	copy(eth[6:12], dev.MAC)
-	binary.BigEndian.PutUint16(eth[12:ethHeaderLen], uint16(frameLen&uint16Mask))
+	frameLen16 := uint16(frameLen & uint16Mask)
+	binary.BigEndian.PutUint16(eth[12:ethHeaderLen], frameLen16)
 
 	frame := make([]byte, 0, ethHeaderLen+cdpLLCLen+len(cdpPayload))
 	frame = append(frame, eth...)

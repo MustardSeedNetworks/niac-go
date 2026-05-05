@@ -102,12 +102,12 @@ func Int32(v int) int32 {
 
 // Int8FromByte converts a byte to int8 (reinterprets the bit pattern).
 func Int8FromByte(v byte) int8 {
-	return int8(v) //nolint:gosec // Intentional bit-pattern reinterpretation
+	return int8(v) //nolint:gosec // intentional bit-pattern reinterpretation
 }
 
 // ByteFromInt8 converts an int8 to byte (reinterprets the bit pattern).
 func ByteFromInt8(v int8) byte {
-	return byte(v) //nolint:gosec // Intentional bit-pattern reinterpretation
+	return byte(v) //nolint:gosec // intentional bit-pattern reinterpretation
 }
 
 // DNSRCode converts an int to DNS response code with bounds checking.

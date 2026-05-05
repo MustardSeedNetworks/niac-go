@@ -20,14 +20,18 @@ func (m *model) openEditor() tea.Cmd {
 	}
 
 	if editor == "" {
-		editor = "vi" // Default fallback
+		editor = "vi"
 	}
 
-	c := exec.CommandContext( //nolint:gosec // G702: editor is from trusted EDITOR/VISUAL env var, not user-controlled input
-		context.Background(),
-		editor,
-		m.configFilePath,
-	)
+	editorPath, err := exec.LookPath(editor)
+	if err != nil {
+		return func() tea.Msg {
+			return editorFinishedMsg{err: fmt.Errorf("editor %q not found: %w", editor, err)}
+		}
+	}
+
+	//nolint:gosec // editorPath resolved via exec.LookPath
+	c := exec.CommandContext(context.Background(), editorPath, m.configFilePath)
 
 	return tea.ExecProcess(c, func(err error) tea.Msg {
 		return editorFinishedMsg{err: err}

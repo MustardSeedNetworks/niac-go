@@ -134,6 +134,11 @@ func (s *Server) buildAlertBody(cfg AlertConfig, total uint64) []byte {
 
 // postAlertWebhook sends the alert payload to the configured webhook URL.
 func (s *Server) postAlertWebhook(webhookURL string, body []byte) {
+	if err := validateWebhookURLSSRF(webhookURL); err != nil {
+		s.logger.Error("Alert webhook URL rejected", "error", err)
+		return
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), webhookTimeoutSecs*time.Second)
 	defer cancel()
 

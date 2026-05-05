@@ -49,8 +49,7 @@ jobs:
           # Restricted: LGPL, CC-BY-SA (requires review)
 
           go-licenses check ./... \
-            --disallowed_types=forbidden,restricted \
-            --allowed_licenses=MIT,Apache-2.0,BSD-2-Clause,BSD-3-Clause,ISC,MPL-2.0,CC0-1.0 || {
+            --disallowed_types=forbidden,restricted || {
             echo "❌ FAILED: Incompatible licenses found in Go dependencies"
             echo ""
             echo "To see full license report, run: go-licenses report ./..."

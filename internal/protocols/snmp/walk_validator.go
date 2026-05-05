@@ -48,10 +48,14 @@ func ValidateWalkFile(filename string) (*ValidationResult, error) {
 }
 
 // writeValidatedFile writes data with 0600 perms to a path that has already been
-// validated upstream. The [filepath.Clean] call inside breaks gosec taint analysis.
+// validated upstream. The defensive checks here are belt-and-suspenders so static
+// analysers (gosec, CodeQL) can see the path is bounded.
 func writeValidatedFile(path string, data []byte) error {
 	safePath := filepath.Clean(path)
-	return os.WriteFile(safePath, data, 0o600) //nolint:gosec // G703: path cleaned before write
+	if !filepath.IsAbs(safePath) || strings.Contains(safePath, "..") {
+		return fmt.Errorf("walk output path failed safety check: %s", safePath)
+	}
+	return os.WriteFile(safePath, data, 0o600) //nolint:gosec // G703: path validated above and upstream
 }
 
 // validateAndResolvePath validates the path for security issues and returns the absolute path.
@@ -555,12 +559,11 @@ func AutoFixWalkFile(filename string, outputPath string) (*ValidationResult, err
 		return nil, err
 	}
 
-	// Read the file
-	cleanPath := filepath.Clean(filename)
-
-	absPath, err := filepath.Abs(cleanPath)
+	// Reuse the same validator that produced the absolute path during ValidateWalkFile
+	// so static analysers see a single bounded source for the file read below.
+	absPath, err := validateAndResolvePath(filename)
 	if err != nil {
-		return nil, fmt.Errorf("invalid walk file path: %w", err)
+		return nil, err
 	}
 
 	content, err := os.ReadFile(absPath)

@@ -87,6 +87,9 @@ func ensureWalkPathWithin(absPath, allowedDir, filename string) error {
 
 // checkWalkFileExists stats the walk path and ensures it is a regular file.
 func checkWalkFileExists(absPath, filename string) error {
+	if !filepath.IsAbs(absPath) || strings.Contains(absPath, "..") {
+		return errors.New("walk file path failed safety check")
+	}
 	info, err := os.Stat(absPath)
 	if err != nil {
 		if os.IsNotExist(err) {
