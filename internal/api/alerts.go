@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -134,8 +135,19 @@ func (s *Server) buildAlertBody(cfg AlertConfig, total uint64) []byte {
 
 // postAlertWebhook sends the alert payload to the configured webhook URL.
 func (s *Server) postAlertWebhook(webhookURL string, body []byte) {
-	if err := validateWebhookURLSSRF(webhookURL); err != nil {
-		s.logger.Error("Alert webhook URL rejected", "error", err)
+	parsedURL, err := url.Parse(webhookURL)
+	if err != nil {
+		s.logger.Error("Invalid alert webhook URL", "error", err)
+		return
+	}
+
+	if parsedURL.Scheme != "http" && parsedURL.Scheme != "https" {
+		s.logger.Error("Alert webhook URL must use http or https scheme")
+		return
+	}
+
+	if ssrfErr := validateWebhookURLSSRF(webhookURL); ssrfErr != nil {
+		s.logger.Error("Alert webhook URL rejected", "error", ssrfErr)
 		return
 	}
 
@@ -143,7 +155,7 @@ func (s *Server) postAlertWebhook(webhookURL string, body []byte) {
 	defer cancel()
 
 	req, err := http.NewRequestWithContext(
-		ctx, http.MethodPost, webhookURL, strings.NewReader(string(body)),
+		ctx, http.MethodPost, parsedURL.String(), strings.NewReader(string(body)),
 	)
 	if err != nil {
 		s.logger.Error("Alert webhook error", "error", err)

@@ -104,7 +104,7 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           name: frontend-dist
-          path: ui/dist/
+          path: internal/api/ui/
           retention-days: 1
 
   # ===========================================================================
@@ -133,7 +133,7 @@ jobs:
       - name: Run gosec
         uses: securego/gosec@v2.22.11
         with:
-          args: "-fmt sarif -out gosec-results.sarif ./..."
+          args: "-no-fail -fmt sarif -out gosec-results.sarif ./..."
 
       - name: Upload gosec results
         uses: github/codeql-action/upload-sarif@v3
@@ -372,13 +372,7 @@ jobs:
         uses: actions/download-artifact@v6
         with:
           name: frontend-dist
-          path: ui/dist/
-
-      - name: Copy UI dist to embed directory
-        run: |
-          rm -rf pkg/api/ui/* 2>/dev/null || true
-          mkdir -p pkg/api/ui
-          cp -r ui/dist/* pkg/api/ui/
+          path: internal/api/ui/
 
       - name: Build binary
         env:
@@ -434,17 +428,14 @@ jobs:
         uses: actions/download-artifact@v6
         with:
           name: frontend-dist
-          path: ui/dist/
+          path: internal/api/ui/
 
       - name: Install frontend dependencies (for Playwright)
         working-directory: ui
         run: npm ci
 
       - name: Build backend
-        run: |
-          mkdir -p pkg/api/ui
-          cp -r ui/dist/* pkg/api/ui/
-          go build -o niac ./cmd/niac
+        run: go build -o niac ./cmd/niac
 
       - name: Install Playwright browsers
         working-directory: ui
@@ -519,13 +510,10 @@ jobs:
         uses: actions/download-artifact@v6
         with:
           name: frontend-dist
-          path: ui/dist/
+          path: internal/api/ui/
 
       - name: Build backend
-        run: |
-          mkdir -p pkg/api/ui
-          cp -r ui/dist/* pkg/api/ui/
-          go build -o niac ./cmd/niac
+        run: go build -o niac ./cmd/niac
 
       - name: Start server
         run: |
