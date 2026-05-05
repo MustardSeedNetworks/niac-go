@@ -4,8 +4,8 @@
 devices:
   - name: core-router-01
     type: router
-    mac_address: "00:1A:2B:3C:4D:01"
-    ip_addresses:
+    mac: "00:1A:2B:3C:4D:01"
+    ips:
       - "10.0.0.1"
       - "192.168.1.1"
 

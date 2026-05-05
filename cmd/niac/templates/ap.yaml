@@ -4,8 +4,8 @@
 devices:
   - name: wifi-ap-01
     type: ap
-    mac_address: "00:1C:2D:3E:4F:01"
-    ip_addresses:
+    mac: "00:1C:2D:3E:4F:01"
+    ips:
       - "10.0.2.50"
 
     # Basic protocols
