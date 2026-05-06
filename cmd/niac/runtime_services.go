@@ -251,7 +251,13 @@ func (rc *replayController) Start(req api.ReplayRequest) (api.ReplayState, error
 	err := player.Start()
 	if err != nil {
 		if req.Uploaded {
-			_ = os.Remove(req.File)
+			// Reaffirm the upload path is bounded before deleting it; the file
+			// was placed into req.File by the upload handler under a vetted
+			// directory, but the inline barrier keeps the sink explicit.
+			cleanedFile := filepath.Clean(req.File)
+			if !strings.Contains(cleanedFile, "..") {
+				_ = os.Remove(cleanedFile)
+			}
 		}
 		return rc.state, fmt.Errorf("failed to start playback: %w", err)
 	}

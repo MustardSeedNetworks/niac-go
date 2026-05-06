@@ -135,6 +135,14 @@ func (s *Server) buildAlertBody(cfg AlertConfig, total uint64) []byte {
 
 // postAlertWebhook sends the alert payload to the configured webhook URL.
 func (s *Server) postAlertWebhook(webhookURL string, body []byte) {
+	// SSRF defence runs first so CodeQL sees the URL is bounded before any
+	// downstream parse/dispatch — the function rejects blocked hostnames and
+	// private/loopback IP literals.
+	if ssrfErr := validateWebhookURLSSRF(webhookURL); ssrfErr != nil {
+		s.logger.Error("Alert webhook URL rejected", "error", ssrfErr)
+		return
+	}
+
 	parsedURL, err := url.Parse(webhookURL)
 	if err != nil {
 		s.logger.Error("Invalid alert webhook URL", "error", err)
@@ -146,16 +154,20 @@ func (s *Server) postAlertWebhook(webhookURL string, body []byte) {
 		return
 	}
 
-	if ssrfErr := validateWebhookURLSSRF(webhookURL); ssrfErr != nil {
-		s.logger.Error("Alert webhook URL rejected", "error", ssrfErr)
-		return
-	}
+	// Reconstruct the dispatched URL from validated components so the value
+	// passed to http.NewRequestWithContext is a single bounded source.
+	sanitizedURL := (&url.URL{
+		Scheme:   parsedURL.Scheme,
+		Host:     parsedURL.Host,
+		Path:     parsedURL.Path,
+		RawQuery: parsedURL.RawQuery,
+	}).String()
 
 	ctx, cancel := context.WithTimeout(context.Background(), webhookTimeoutSecs*time.Second)
 	defer cancel()
 
 	req, err := http.NewRequestWithContext(
-		ctx, http.MethodPost, parsedURL.String(), strings.NewReader(string(body)),
+		ctx, http.MethodPost, sanitizedURL, strings.NewReader(string(body)),
 	)
 	if err != nil {
 		s.logger.Error("Alert webhook error", "error", err)

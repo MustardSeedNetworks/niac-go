@@ -589,7 +589,11 @@ func Load(filename string) (*Config, error) {
 // LoadLegacy loads a legacy key-value configuration file
 // Format: device <name> { key = value ... }.
 func LoadLegacy(filename string) (*Config, error) {
-	file, err := os.Open(filepath.Clean(filename))
+	cleaned := filepath.Clean(filename)
+	if strings.Contains(cleaned, "..") {
+		return nil, fmt.Errorf("config path must not contain path traversal: %s", filename)
+	}
+	file, err := os.Open(cleaned)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open config file: %w", err)
 	}
@@ -2213,7 +2217,14 @@ func verifyPathWithinBase(basePath, fullPath, walkFile, deviceName string) error
 
 // verifyWalkFileAccess checks that the walk file exists, is not a symlink, and is a regular file.
 func verifyWalkFileAccess(fullPath, deviceName string) (string, error) {
-	info, err := os.Lstat(fullPath)
+	// Inline barrier: callers (validateWalkFilePath / verifyPathWithinBase)
+	// have already cleaned and prefix-checked the path, but make the
+	// constraint explicit at the Lstat sink for static analysers.
+	cleanedFull := filepath.Clean(fullPath)
+	if strings.Contains(cleanedFull, "..") {
+		return "", fmt.Errorf("device %s: %w: %s", deviceName, ErrPathTraversalDetected, fullPath)
+	}
+	info, err := os.Lstat(cleanedFull)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return "", fmt.Errorf("device %s: %w: %s", deviceName, ErrWalkFileNotFound, fullPath)

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -60,8 +62,14 @@ func (p *PlaybackEngine) Start() error {
 		return ErrNoPlaybackConfiguration
 	}
 
-	// Check if PCAP file exists
-	if _, err := os.Stat(p.config.FileName); err != nil {
+	// Check if PCAP file exists. The config.FileName has been validated by the
+	// API layer (validatePcapFilePath), but make the bound explicit here so
+	// static analysers see a barrier on this Stat call.
+	cleanedName := filepath.Clean(p.config.FileName)
+	if strings.Contains(cleanedName, "..") {
+		return fmt.Errorf("playback file path must not contain path traversal: %s", p.config.FileName)
+	}
+	if _, err := os.Stat(cleanedName); err != nil {
 		return fmt.Errorf("PCAP file not found: %s: %w", p.config.FileName, err)
 	}
 
@@ -251,8 +259,13 @@ func (p *PlaybackEngine) logBasic(msg string, args ...any) {
 
 // loadPCAP loads packets from a PCAP file.
 func (p *PlaybackEngine) loadPCAP() ([]PlaybackPacket, error) {
-	// Open PCAP file
-	handle, err := pcap.OpenOffline(p.config.FileName)
+	// Open PCAP file. The path was bounded in Start() but reaffirm here so
+	// each pcap.OpenOffline sink has a visible barrier on the cleaned path.
+	cleanedName := filepath.Clean(p.config.FileName)
+	if strings.Contains(cleanedName, "..") {
+		return nil, fmt.Errorf("playback file path must not contain path traversal: %s", p.config.FileName)
+	}
+	handle, err := pcap.OpenOffline(cleanedName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open PCAP file: %w", err)
 	}

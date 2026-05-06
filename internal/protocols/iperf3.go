@@ -521,8 +521,15 @@ func (h *IPerf3Handler) sendResults(
 		return
 	}
 
+	// Bound the response payload so the length prefix can't be coerced into
+	// an oversized allocation; iperf3 results are small in practice.
+	const maxIperf3JSONLen = 1 << 20 // 1 MiB
+	if len(jsonData) > maxIperf3JSONLen {
+		return
+	}
+
 	// Send with length prefix
-	// Safe conversion: JSON data length is bounded by iperf3 protocol limits
+	// Safe conversion: JSON data length is bounded by maxIperf3JSONLen above.
 	response := make([]byte, iperf3LengthPrefixSize+len(jsonData))
 	binary.BigEndian.PutUint32(
 		response[:4],

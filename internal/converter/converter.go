@@ -458,6 +458,9 @@ const maxInputFileSize = 10 * 1024 * 1024
 // ConvertFile converts a Java DSL config file to YAML.
 func ConvertFile(inputPath, outputPath string, verbose bool) error {
 	cleanInput := filepath.Clean(inputPath)
+	if strings.Contains(cleanInput, "..") {
+		return errors.New("input path must not contain path traversal")
+	}
 
 	// Check file size before reading to prevent memory exhaustion
 	info, err := os.Stat(cleanInput)
@@ -473,6 +476,9 @@ func ConvertFile(inputPath, outputPath string, verbose bool) error {
 		return errors.New("output path cannot be empty")
 	}
 	cleanOutput := filepath.Clean(outputPath)
+	if strings.Contains(cleanOutput, "..") {
+		return errors.New("output path must not contain path traversal")
+	}
 
 	// Read input file
 	data, err := os.ReadFile(cleanInput)

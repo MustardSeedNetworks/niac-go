@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"path/filepath"
 	"sort"
@@ -290,6 +291,11 @@ func (w *MibZipWriter) encodeIPAddressValue(value any) {
 
 	for _, p := range parts {
 		n, _ := strconv.Atoi(p)
+		// Inline bound check so static analysers see the [0,255] guarantee
+		// before the byte write (safeconv.Byte clamps internally too).
+		if n < 0 || n > math.MaxUint8 {
+			n = 0
+		}
 		w.buf.WriteByte(safeconv.Byte(n))
 	}
 }

@@ -263,6 +263,11 @@ func (s *Server) validatePcapFilePath(filename string) (string, error) {
 	}
 
 	absPath = filepath.Clean(absPath)
+	// Inline barrier on the EvalSymlinks/Stat sinks below so static analysers
+	// see the absolute path is bounded before any filesystem access.
+	if !filepath.IsAbs(absPath) || strings.Contains(absPath, "..") {
+		return "", errors.New("pcap file path failed safety check")
+	}
 	realPath, err := filepath.EvalSymlinks(absPath)
 	if err != nil {
 		realPath = absPath

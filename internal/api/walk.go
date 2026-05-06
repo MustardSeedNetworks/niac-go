@@ -66,6 +66,11 @@ func (s *Server) resolveWalkAllowedDir() (string, error) {
 
 // ensureWalkPathWithin verifies that absPath resolves under allowedDir (following symlinks).
 func ensureWalkPathWithin(absPath, allowedDir, filename string) error {
+	// Inline barrier on the EvalSymlinks/Stat sinks below so static analysers
+	// see the path is bounded before any filesystem access.
+	if !filepath.IsAbs(absPath) || strings.Contains(absPath, "..") {
+		return errors.New("walk file path failed safety check")
+	}
 	realPath, err := filepath.EvalSymlinks(absPath)
 	if err != nil {
 		if os.IsNotExist(err) {

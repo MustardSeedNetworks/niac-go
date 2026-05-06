@@ -566,6 +566,10 @@ func AutoFixWalkFile(filename string, outputPath string) (*ValidationResult, err
 		return nil, err
 	}
 
+	// Inline barrier on the read sink so CodeQL sees the bound at this call.
+	if !filepath.IsAbs(absPath) || strings.Contains(absPath, "..") {
+		return nil, fmt.Errorf("walk file path failed safety check: %s", absPath)
+	}
 	content, err := os.ReadFile(absPath)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrFailedToReadWalkFile, err)
