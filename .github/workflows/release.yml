@@ -213,16 +213,23 @@ jobs:
           sed "s/__VERSION__/${PKG_VERSION}/;s/__ARCHITECTURE__/${RPM_ARCH}/" \
             deploy/rpm/niac.spec > niac.spec
 
-          # Ubuntu's rpmbuild ships limited /usr/lib/rpm/platform configs and
-          # rejects `--target aarch64`/`--target aarch64-linux` with
-          # "No compatible architectures found for build". Override the
-          # platform machinery with explicit defines instead of --target.
-          rpmbuild \
-            --define "_arch ${RPM_ARCH}" \
-            --define "_build_arch ${RPM_ARCH}" \
-            --define "_target_cpu ${RPM_ARCH}" \
-            --define "_target_os linux" \
-            --define "_target_vendor unknown" \
+          # Ubuntu's `rpm` package doesn't ship a /usr/lib/rpm/platform/
+          # macros file for aarch64-linux, so the `BuildArch: aarch64`
+          # directive in our spec trips "No compatible architectures found
+          # for build". Generate the macros file inline before rpmbuild so
+          # the platform lookup succeeds. amd64 already has the file.
+          if [ ! -f "/usr/lib/rpm/platform/${RPM_ARCH}-linux/macros" ]; then
+            sudo mkdir -p "/usr/lib/rpm/platform/${RPM_ARCH}-linux"
+            sudo tee "/usr/lib/rpm/platform/${RPM_ARCH}-linux/macros" >/dev/null <<EOF
+          %_target            ${RPM_ARCH}-%{_target_vendor}-%{_target_os}%{?_gnu}
+          %_target_cpu        ${RPM_ARCH}
+          %_target_os         linux
+          %_arch              ${RPM_ARCH}
+          %_lib               lib64
+          EOF
+          fi
+
+          rpmbuild --target "${RPM_ARCH}" \
             --define "_repo_root $(pwd)" \
             --define "_topdir $(pwd)/rpmbuild" \
             --define "_rpmdir $(pwd)/release" \
