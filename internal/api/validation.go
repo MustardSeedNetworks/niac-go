@@ -8,6 +8,8 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/krisarmstrong/niac-go/internal/safeconv"
 )
 
 // validateAlertConfig validates alert configuration fields
@@ -74,10 +76,10 @@ func normalizeAndParseIP(host string) net.IP {
 	// Try parsing as decimal IPv4 (e.g., "2130706433" = 127.0.0.1)
 	if decimal, err := strconv.ParseUint(host, 10, 32); err == nil {
 		return net.IPv4(
-			byte(decimal>>bitShift24),
-			byte(decimal>>bitShift16),
-			byte(decimal>>bitShift8),
-			byte(decimal),
+			safeconv.ByteFromUint64(decimal>>bitShift24),
+			safeconv.ByteFromUint64(decimal>>bitShift16),
+			safeconv.ByteFromUint64(decimal>>bitShift8),
+			safeconv.ByteFromUint64(decimal),
 		)
 	}
 

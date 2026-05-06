@@ -8,6 +8,8 @@
 # Protocol: SNMPv2c traps
 # Added: v1.6.0
 
+include_path: ".."
+
 devices:
   - name: niac-core-rtr-01
     type: router

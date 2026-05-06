@@ -142,6 +142,7 @@ func runMonitor(options *monitorOptions) error {
 	// Set up signal handling
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+	defer signal.Stop(sigChan)
 
 	go func() {
 		<-sigChan
@@ -310,13 +311,20 @@ func fetchStats(client *ipc.Client, prev *monitorStats, interval time.Duration) 
 	// Protocol-specific stats (ARP, ICMP, DNS, etc.) would need to be added to the IPC protocol
 	// For now, we use placeholders that show 0 until the IPC protocol is extended
 
-	// Calculate rates if we have previous stats
-	if prev != nil {
-		intervalSec := interval.Seconds()
-		if intervalSec > 0 {
-			stats.RateRX = float64(stats.PacketsRX-prev.PacketsRX) / intervalSec
-			stats.RateTX = float64(stats.PacketsTX-prev.PacketsTX) / intervalSec
-		}
+	// Calculate rates if we have previous stats.
+	if prev == nil {
+		return stats, nil
+	}
+	intervalSec := interval.Seconds()
+	if intervalSec <= 0 {
+		return stats, nil
+	}
+	// Guard against uint64 underflow if counters reset.
+	if stats.PacketsRX >= prev.PacketsRX {
+		stats.RateRX = float64(stats.PacketsRX-prev.PacketsRX) / intervalSec
+	}
+	if stats.PacketsTX >= prev.PacketsTX {
+		stats.RateTX = float64(stats.PacketsTX-prev.PacketsTX) / intervalSec
 	}
 
 	return stats, nil

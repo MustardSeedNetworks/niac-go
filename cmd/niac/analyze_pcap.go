@@ -53,10 +53,18 @@ func runAnalyzePcap(args []string, options *analyzePcapOptions) error {
 
 	switch options.outputFormat {
 	case "json":
-		data, _ := json.MarshalIndent(summary, "", "  ")
+		data, marshalErr := json.MarshalIndent(summary, "", "  ")
+		if marshalErr != nil {
+			return fmt.Errorf("failed to marshal JSON: %w", marshalErr)
+		}
+
 		_, _ = os.Stdout.WriteString(string(data) + "\n")
 	case "yaml":
-		data, _ := yaml.Marshal(summary)
+		data, yamlErr := yaml.Marshal(summary)
+		if yamlErr != nil {
+			return fmt.Errorf("failed to marshal YAML: %w", yamlErr)
+		}
+
 		_, _ = os.Stdout.WriteString(string(data) + "\n")
 	default:
 		fmt.Fprintf(os.Stdout, "File: %s\nPackets: %d\n", summary.File, summary.Packets)

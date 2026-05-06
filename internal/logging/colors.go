@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
+	"sync"
 
 	"github.com/fatih/color"
 )
@@ -19,13 +21,17 @@ var (
 	deviceColor   = color.New(color.FgMagenta)
 	debugColor    = color.New(color.FgWhite, color.Faint)
 
-	// Control flags.
+	// Control flags - protected by colorsMu.
 	colorsEnabled           = true
 	output        io.Writer = os.Stdout
+	colorsMu      sync.Mutex
 )
 
 // InitColors initializes the color system.
 func InitColors(enabled bool) {
+	colorsMu.Lock()
+	defer colorsMu.Unlock()
+
 	colorsEnabled = enabled
 
 	// Respect NO_COLOR environment variable (https://no-color.org/)
@@ -39,6 +45,9 @@ func InitColors(enabled bool) {
 // SetOutput sets the output writer for log messages.
 // Passing nil resets output to [os.Stdout].
 func SetOutput(w io.Writer) {
+	colorsMu.Lock()
+	defer colorsMu.Unlock()
+
 	if w == nil {
 		output = os.Stdout
 	} else {
@@ -69,11 +78,31 @@ func setColorEnabled(enabled bool) {
 
 // AreColorsEnabled returns whether colors are currently enabled.
 func AreColorsEnabled() bool {
+	colorsMu.Lock()
+	defer colorsMu.Unlock()
+
 	return colorsEnabled
+}
+
+// stripControlChars removes CR, LF, and ESC from log format arguments to prevent log injection.
+func stripControlChars(args []any) []any {
+	cleaned := make([]any, len(args))
+	for i, arg := range args {
+		if s, ok := arg.(string); ok {
+			cleaned[i] = strings.NewReplacer("\r", "", "\n", "", "\x1b", "").Replace(s)
+		} else {
+			cleaned[i] = arg
+		}
+	}
+	return cleaned
 }
 
 // Errorf prints an error message in red.
 func Errorf(format string, args ...any) {
+	colorsMu.Lock()
+	defer colorsMu.Unlock()
+
+	args = stripControlChars(args)
 	if colorsEnabled {
 		_, _ = fmt.Fprintln(output, errorColor.Sprintf("ERROR: "+format, args...))
 	} else {
@@ -83,6 +112,10 @@ func Errorf(format string, args ...any) {
 
 // Warningf prints a warning message in yellow.
 func Warningf(format string, args ...any) {
+	colorsMu.Lock()
+	defer colorsMu.Unlock()
+
+	args = stripControlChars(args)
 	if colorsEnabled {
 		_, _ = fmt.Fprintln(output, warningColor.Sprintf("WARN: "+format, args...))
 	} else {
@@ -92,6 +125,10 @@ func Warningf(format string, args ...any) {
 
 // Successf prints a success message in green.
 func Successf(format string, args ...any) {
+	colorsMu.Lock()
+	defer colorsMu.Unlock()
+
+	args = stripControlChars(args)
 	if colorsEnabled {
 		_, _ = fmt.Fprintln(output, successColor.Sprintf("✓ "+format, args...))
 	} else {
@@ -101,6 +138,10 @@ func Successf(format string, args ...any) {
 
 // Infof prints an info message in blue.
 func Infof(format string, args ...any) {
+	colorsMu.Lock()
+	defer colorsMu.Unlock()
+
+	args = stripControlChars(args)
 	if colorsEnabled {
 		_, _ = fmt.Fprintln(output, infoColor.Sprintf(format, args...))
 	} else {
@@ -110,6 +151,10 @@ func Infof(format string, args ...any) {
 
 // Debugf prints a debug message in faint white.
 func Debugf(format string, args ...any) {
+	colorsMu.Lock()
+	defer colorsMu.Unlock()
+
+	args = stripControlChars(args)
 	if colorsEnabled {
 		_, _ = fmt.Fprintln(output, debugColor.Sprintf(format, args...))
 	} else {

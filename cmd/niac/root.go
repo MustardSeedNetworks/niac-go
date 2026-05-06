@@ -162,6 +162,10 @@ and network discovery without physical hardware.`,
   # Generate shell completion
   niac completion bash > /etc/bash_completion.d/niac`,
 		Version: info.version,
+		Args:    cobra.ArbitraryArgs,
+		FParseErrWhitelist: cobra.FParseErrWhitelist{
+			UnknownFlags: true,
+		},
 		Run: func(cmd *cobra.Command, args []string) {
 			// If no args, show help
 			if len(args) == 0 {
@@ -207,4 +211,72 @@ func executeRootCommand(cmd *cobra.Command) {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
+}
+
+func shouldUseLegacyCommand(args []string, root *cobra.Command) bool {
+	firstArg := firstCommandArg(args, root)
+	if firstArg == "" || firstArg == "--" {
+		return false
+	}
+
+	if firstArg == "help" || firstArg == cobra.ShellCompRequestCmd || firstArg == cobra.ShellCompNoDescRequestCmd {
+		return false
+	}
+
+	for _, cmd := range root.Commands() {
+		if cmd.Name() == firstArg || cmd.HasAlias(firstArg) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func firstCommandArg(args []string, root *cobra.Command) string {
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
+		if arg == "--" {
+			return arg
+		}
+		if !strings.HasPrefix(arg, "-") || arg == "-" {
+			return arg
+		}
+		if !isKnownRootFlag(arg, root) {
+			return arg
+		}
+		if shouldSkipRootFlagValue(arg, root) && i+1 < len(args) {
+			i++
+		}
+	}
+
+	return ""
+}
+
+func isKnownRootFlag(arg string, root *cobra.Command) bool {
+	name := strings.TrimLeft(arg, "-")
+	if name == "" {
+		return false
+	}
+	if flagName, _, found := strings.Cut(name, "="); found {
+		name = flagName
+	}
+
+	return root.PersistentFlags().Lookup(name) != nil || root.Flags().Lookup(name) != nil
+}
+
+func shouldSkipRootFlagValue(arg string, root *cobra.Command) bool {
+	name := strings.TrimLeft(arg, "-")
+	if name == "" || strings.Contains(name, "=") {
+		return false
+	}
+
+	flag := root.PersistentFlags().Lookup(name)
+	if flag == nil {
+		flag = root.Flags().Lookup(name)
+	}
+	if flag == nil {
+		return false
+	}
+
+	return flag.Value.Type() != "bool"
 }

@@ -415,7 +415,11 @@ func buildGraphvizContent(analysis *WalkAnalysis) string {
 	var builder strings.Builder
 	builder.WriteString("digraph niac_topology {\n")
 	builder.WriteString("  rankdir=LR;\n")
-	fmt.Fprintf(&builder, "  \"%s\" [shape=box, style=filled, fillcolor=\"#2563EB\", fontcolor=\"white\"];\n", local)
+	fmt.Fprintf(
+		&builder,
+		"  \"%s\" [shape=box, style=filled, fillcolor=\"#2563EB\", fontcolor=\"white\"];\n",
+		dotEscape(local),
+	)
 
 	seen := make(map[string]struct{})
 	for _, neighbor := range analysis.Neighbors {
@@ -426,18 +430,24 @@ func buildGraphvizContent(analysis *WalkAnalysis) string {
 		if _, ok := seen[key]; !ok {
 			fmt.Fprintf(&builder,
 				"  \"%s\" [shape=ellipse, style=filled, fillcolor=\"#0f172a\", fontcolor=\"white\"];\n",
-				neighbor.RemoteDevice,
+				dotEscape(neighbor.RemoteDevice),
 			)
 			seen[key] = struct{}{}
 		}
 
 		label := fmt.Sprintf("%s → %s (%s)",
 			neighbor.LocalInterface, neighbor.RemoteInterface, strings.ToUpper(neighbor.Protocol))
-		fmt.Fprintf(&builder, "  \"%s\" -> \"%s\" [label=\"%s\"];\n", local, neighbor.RemoteDevice, label)
+		fmt.Fprintf(&builder, "  \"%s\" -> \"%s\" [label=\"%s\"];\n",
+			dotEscape(local), dotEscape(neighbor.RemoteDevice), dotEscape(label))
 	}
 	builder.WriteString("}\n")
 
 	return builder.String()
+}
+
+func dotEscape(s string) string {
+	r := strings.NewReplacer(`\`, `\\`, `"`, `\"`)
+	return r.Replace(s)
 }
 
 func writeGraphvizOutput(content, target string) error {

@@ -222,7 +222,7 @@ func buildRouterAdvertisementPayload(ra *config.IcmpRouterAdvertisement) []byte 
 
 	numAddrs := len(ra.Routers)
 	payload := make([]byte, icmpRAHeaderSize+icmpRAEntrySize*numAddrs)
-	payload[0] = byte(numAddrs)
+	payload[0] = safeconv.Byte(numAddrs)
 	payload[1] = 2 // Address entry size (2 words)
 	// Safe conversion: RA lifetime is bounded by protocol definition
 	binary.BigEndian.PutUint16(

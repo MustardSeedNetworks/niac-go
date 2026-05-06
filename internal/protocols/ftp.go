@@ -512,8 +512,10 @@ func (h *FTPHandler) HandleRequestV6(
 	}
 
 	if debugLevel >= DebugLevelInfo {
+		// SECURITY FIX: Sanitize command for logging to prevent log injection (same as IPv4 handler)
+		sanitizedCmd := sanitizeForLogging(command)
 		_, _ = fmt.Fprintf(os.Stdout, "FTP/IPv6 command from [%s]: %s (device: %v)\n",
-			ipv6.SrcIP, command, getDeviceNames(devices))
+			ipv6.SrcIP, sanitizedCmd, getDeviceNames(devices))
 	}
 
 	response := h.buildFTPResponse(command, true, devices)

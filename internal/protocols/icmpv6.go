@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"sync/atomic"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
@@ -86,15 +87,16 @@ const (
 // ICMPv6Handler handles ICMPv6 packets (IPv6's version of ICMP).
 type ICMPv6Handler struct {
 	stack      *Stack
-	debugLevel int
+	debugLevel atomic.Int32
 }
 
 // NewICMPv6Handler creates a new ICMPv6 handler.
 func NewICMPv6Handler(stack *Stack, debugLevel int) *ICMPv6Handler {
-	return &ICMPv6Handler{
-		stack:      stack,
-		debugLevel: debugLevel,
+	h := &ICMPv6Handler{
+		stack: stack,
 	}
+	h.debugLevel.Store(safeconv.Int32(debugLevel))
+	return h
 }
 
 // HandlePacket processes an incoming ICMPv6 packet.
@@ -106,7 +108,7 @@ func (h *ICMPv6Handler) HandlePacket(
 ) {
 	icmpv6Layer := packet.Layer(layers.LayerTypeICMPv6)
 	if icmpv6Layer == nil {
-		if h.debugLevel >= DebugLevelInfo {
+		if h.debugLevel.Load() >= int32(DebugLevelInfo) {
 			_, _ = fmt.Fprintf(os.Stdout, "ICMPv6 packet missing ICMPv6 layer sn=%d\n", pkt.SerialNumber)
 		}
 
@@ -120,7 +122,7 @@ func (h *ICMPv6Handler) HandlePacket(
 
 	msgType := icmpv6.TypeCode.Type()
 
-	if h.debugLevel >= DebugLevelVerbose {
+	if h.debugLevel.Load() >= int32(DebugLevelVerbose) {
 		_, _ = fmt.Fprintf(os.Stdout, "ICMPv6: type %d (%s) sn=%d\n", msgType, h.getTypeName(msgType), pkt.SerialNumber)
 	}
 
@@ -140,7 +142,7 @@ func (h *ICMPv6Handler) HandlePacket(
 	case ICMPv6TypeRouterAdvertisement:
 		// Silently accept router advertisements
 	default:
-		if h.debugLevel >= DebugLevelInfo {
+		if h.debugLevel.Load() >= int32(DebugLevelInfo) {
 			_, _ = fmt.Fprintf(os.Stdout, "ICMPv6: Unhandled type: %d sn=%d\n", msgType, pkt.SerialNumber)
 		}
 	}
@@ -173,7 +175,7 @@ func (h *ICMPv6Handler) handleEchoRequest(
 
 // logNoDeviceForEcho logs when no device is found for an echo request.
 func (h *ICMPv6Handler) logNoDeviceForEcho(ipv6 *layers.IPv6, pkt *Packet) {
-	if h.debugLevel >= DebugLevelVerbose {
+	if h.debugLevel.Load() >= int32(DebugLevelVerbose) {
 		_, _ = fmt.Fprintf(
 			os.Stdout,
 			"ICMPv6: No device for Echo Request to %s sn=%d\n",
@@ -185,7 +187,7 @@ func (h *ICMPv6Handler) logNoDeviceForEcho(ipv6 *layers.IPv6, pkt *Packet) {
 
 // logEchoRequest logs an incoming echo request.
 func (h *ICMPv6Handler) logEchoRequest(ipv6 *layers.IPv6, pkt *Packet) {
-	if h.debugLevel >= DebugLevelInfo {
+	if h.debugLevel.Load() >= int32(DebugLevelInfo) {
 		_, _ = fmt.Fprintf(os.Stdout, "ICMPv6: Echo Request %s -> %s sn=%d\n", ipv6.SrcIP, ipv6.DstIP, pkt.SerialNumber)
 	}
 }
@@ -235,7 +237,7 @@ func (h *ICMPv6Handler) sendEchoReply(
 		device,
 	)
 	if err != nil {
-		if h.debugLevel >= DebugLevelInfo {
+		if h.debugLevel.Load() >= int32(DebugLevelInfo) {
 			_, _ = fmt.Fprintf(os.Stdout, "ICMPv6: Error sending Echo Reply sn=%d: %v\n", pkt.SerialNumber, err)
 		}
 
@@ -259,7 +261,7 @@ func (h *ICMPv6Handler) deviceHasIP(device *config.Device, ip net.IP) bool {
 
 // logEchoReplySent logs when an echo reply is sent.
 func (h *ICMPv6Handler) logEchoReplySent(ipv6 *layers.IPv6, pkt *Packet) {
-	if h.debugLevel >= DebugLevelInfo {
+	if h.debugLevel.Load() >= int32(DebugLevelInfo) {
 		_, _ = fmt.Fprintf(
 			os.Stdout,
 			"ICMPv6: Sent Echo Reply %s -> %s sn=%d\n",
@@ -283,9 +285,13 @@ func (h *ICMPv6Handler) handleNeighborSolicitation(pkt *Packet, packet gopacket.
 	}
 
 	// Parse NS message: Type(1) | Code(1) | Checksum(2) | Reserved(4) | Target Address(16) | Options...
-	data := packet.ApplicationLayer().Payload()
+	appLayer := packet.ApplicationLayer()
+	if appLayer == nil {
+		return
+	}
+	data := appLayer.Payload()
 	if len(data) < icmpv6NSMinSize {
-		if h.debugLevel >= DebugLevelInfo {
+		if h.debugLevel.Load() >= int32(DebugLevelInfo) {
 			_, _ = fmt.Fprintf(os.Stdout, "ICMPv6: NS too short sn=%d\n", pkt.SerialNumber)
 		}
 
@@ -295,14 +301,14 @@ func (h *ICMPv6Handler) handleNeighborSolicitation(pkt *Packet, packet gopacket.
 	// Extract target IPv6 address (bytes 4-20)
 	targetIP := net.IP(data[4:20])
 
-	if h.debugLevel >= DebugLevelInfo {
+	if h.debugLevel.Load() >= int32(DebugLevelInfo) {
 		_, _ = fmt.Fprintf(os.Stdout, "ICMPv6: NS for %s from %s sn=%d\n", targetIP, ipv6.SrcIP, pkt.SerialNumber)
 	}
 
 	// Find device with target IPv6
 	devices := h.stack.devices.GetByIPv6(targetIP)
 	if len(devices) == 0 {
-		if h.debugLevel >= DebugLevelVerbose {
+		if h.debugLevel.Load() >= int32(DebugLevelVerbose) {
 			_, _ = fmt.Fprintf(os.Stdout, "ICMPv6: No device for target %s sn=%d\n", targetIP, pkt.SerialNumber)
 		}
 
@@ -313,14 +319,14 @@ func (h *ICMPv6Handler) handleNeighborSolicitation(pkt *Packet, packet gopacket.
 	for _, device := range devices {
 		err := h.sendNeighborAdvertisement(device, ipv6.SrcIP, eth.SrcMAC, targetIP)
 		if err != nil {
-			if h.debugLevel >= DebugLevelInfo {
+			if h.debugLevel.Load() >= int32(DebugLevelInfo) {
 				_, _ = fmt.Fprintf(os.Stdout, "ICMPv6: Error sending NA sn=%d: %v\n", pkt.SerialNumber, err)
 			}
 
 			continue
 		}
 
-		if h.debugLevel >= DebugLevelInfo {
+		if h.debugLevel.Load() >= int32(DebugLevelInfo) {
 			_, _ = fmt.Fprintf(
 				os.Stdout,
 				"ICMPv6: Sent NA for %s (MAC: %s) sn=%d\n",
@@ -336,6 +342,12 @@ func (h *ICMPv6Handler) handleNeighborSolicitation(pkt *Packet, packet gopacket.
 func (h *ICMPv6Handler) sendNeighborAdvertisement(device *config.Device, dstIP net.IP,
 	dstMAC net.HardwareAddr, targetIP net.IP,
 ) error {
+	// Require a source IPv6 and MAC on the device.
+	srcIP := firstIPv6Address(device)
+	if srcIP == nil || len(device.MACAddress) == 0 {
+		return ErrDeviceMissingMACOrIP
+	}
+
 	// Build Neighbor Advertisement message
 	// Format: Type(1) | Code(1) | Checksum(2) | Flags(1) | Reserved(3) | Target Address(16) | Options...
 	payloadHeader := make([]byte, icmpv6NAPayloadSize) // 4 header + 4 flags/reserved + 16 target + 8 option bytes
@@ -368,7 +380,7 @@ func (h *ICMPv6Handler) sendNeighborAdvertisement(device *config.Device, dstIP n
 	copy(payloadHeader[26:], device.MACAddress) // MAC address (6 bytes)
 
 	// Calculate ICMPv6 checksum
-	checksum := CalculateIPv6Checksum(device.IPAddresses[0], dstIP, IPv6NextHeaderICMPv6, payloadHeader)
+	checksum := CalculateIPv6Checksum(srcIP, dstIP, IPv6NextHeaderICMPv6, payloadHeader)
 	binary.BigEndian.PutUint16(payloadHeader[2:4], checksum)
 
 	// Build ICMPv6 layer
@@ -378,7 +390,7 @@ func (h *ICMPv6Handler) sendNeighborAdvertisement(device *config.Device, dstIP n
 
 	// Send packet
 	return h.sendICMPv6Packet(
-		device.IPAddresses[0],
+		srcIP,
 		dstIP,
 		device.MACAddress,
 		dstMAC,
@@ -401,7 +413,7 @@ func (h *ICMPv6Handler) handleRouterSolicitation(pkt *Packet, packet gopacket.Pa
 
 	dstMAC := eth.SrcMAC
 
-	if h.debugLevel >= DebugLevelInfo {
+	if h.debugLevel.Load() >= int32(DebugLevelInfo) {
 		_, _ = fmt.Fprintf(os.Stdout, "ICMPv6: Router Solicitation from %s sn=%d\n", ipv6.SrcIP, pkt.SerialNumber)
 	}
 
@@ -416,7 +428,7 @@ func (h *ICMPv6Handler) handleRouterSolicitation(pkt *Packet, packet gopacket.Pa
 		}
 		err := h.sendRouterAdvertisement(device, srcIP, ipv6.SrcIP, dstMAC)
 		if err != nil {
-			if h.debugLevel >= DebugLevelInfo {
+			if h.debugLevel.Load() >= int32(DebugLevelInfo) {
 				_, _ = fmt.Fprintf(
 					os.Stdout,
 					"ICMPv6: Failed to send RA from %s: %v sn=%d\n",
@@ -429,7 +441,7 @@ func (h *ICMPv6Handler) handleRouterSolicitation(pkt *Packet, packet gopacket.Pa
 			continue
 		}
 
-		if h.debugLevel >= DebugLevelInfo {
+		if h.debugLevel.Load() >= int32(DebugLevelInfo) {
 			_, _ = fmt.Fprintf(os.Stdout,
 				"ICMPv6: Sent Router Advertisement from %s to %s sn=%d\n",
 				device.Name,
@@ -597,7 +609,7 @@ func appendConfiguredPrefixes(options []byte, prefixes []config.Icmpv6PrefixInfo
 
 func appendSinglePrefix(options []byte, p *config.Icmpv6PrefixInfo) []byte {
 	options = append(options, ICMPv6OptPrefixInfo, icmpv6PrefixInfoOptLen)
-	options = append(options, byte(p.PrefixLength))
+	options = append(options, safeconv.Byte(p.PrefixLength))
 
 	pFlags := byte(0)
 	if p.Onlink != 0 {
@@ -702,7 +714,7 @@ func (h *ICMPv6Handler) sendICMPv6PacketWithDevice(srcIP, dstIP net.IP, srcMAC, 
 		return fmt.Errorf("failed to serialize ICMPv6 packet: %w", err)
 	}
 
-	if h.debugLevel >= DebugLevelVerbose {
+	if h.debugLevel.Load() >= int32(DebugLevelVerbose) {
 		_, _ = fmt.Fprintf(os.Stdout, "ICMPv6: Sending packet %s -> %s, type %d, size %d bytes\n",
 			srcIP, dstIP, icmpv6.TypeCode.Type(), len(buf.Bytes()))
 	}
@@ -743,7 +755,7 @@ func (h *ICMPv6Handler) getTypeName(msgType uint8) string {
 
 // SetDebugLevel updates the debug level.
 func (h *ICMPv6Handler) SetDebugLevel(level int) {
-	h.debugLevel = level
+	h.debugLevel.Store(safeconv.Int32(level))
 }
 
 func deviceCanAdvertiseIPv6(device *config.Device) bool {

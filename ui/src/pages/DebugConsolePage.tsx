@@ -14,7 +14,7 @@ const MAX_LOG_BUFFER = 1000;
 
 // Generate a unique ID for each log entry
 function generateLogId(): string {
-  return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
 }
 
 // Map incoming SSE data to LogEntry format
@@ -133,6 +133,7 @@ export const DebugConsolePage: FC = () => {
 
   // Clear all logs
   const handleClear = useCallback(() => {
+    // TODO: Replace with custom Modal component
     if (window.confirm('Clear all logs? This action cannot be undone.')) {
       setLogs([]);
     }

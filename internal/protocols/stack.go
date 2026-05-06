@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/google/gopacket"
@@ -110,7 +111,7 @@ type Stack struct {
 	stats *Statistics
 
 	// Control
-	running  bool
+	running  atomic.Bool
 	stopChan chan struct{}
 	wg       sync.WaitGroup
 
@@ -334,11 +335,9 @@ func (s *Stack) applySNMPAddrMappings(cfg *config.Config) {
 
 // Start starts the protocol stack processing.
 func (s *Stack) Start() error {
-	if s.running {
+	if !s.running.CompareAndSwap(false, true) {
 		return ErrStackAlreadyRunning
 	}
-
-	s.running = true
 
 	// Start receive thread
 	s.wg.Add(1)
@@ -376,11 +375,9 @@ func (s *Stack) Start() error {
 
 // Stop stops the protocol stack.
 func (s *Stack) Stop() {
-	if !s.running {
+	if !s.running.CompareAndSwap(true, false) {
 		return
 	}
-
-	s.running = false
 
 	// Stop discovery protocol handlers
 	s.lldpHandler.Stop()
@@ -402,7 +399,7 @@ func (s *Stack) receiveThread() {
 
 	buffer := make([]byte, stackReceiveBufferSize)
 
-	for s.running {
+	for s.running.Load() {
 		select {
 		case <-s.stopChan:
 			return
@@ -473,7 +470,7 @@ func (s *Stack) queuePacket(pkt *Packet) {
 func (s *Stack) decodeThread() {
 	defer s.wg.Done()
 
-	for s.running {
+	for s.running.Load() {
 		select {
 		case <-s.stopChan:
 			return
@@ -634,7 +631,7 @@ func (s *Stack) routeByEtherType(pkt *Packet) {
 func (s *Stack) sendThread() {
 	defer s.wg.Done()
 
-	for s.running {
+	for s.running.Load() {
 		select {
 		case <-s.stopChan:
 			return
@@ -678,7 +675,7 @@ func (s *Stack) sendPacket(pkt *Packet) {
 		go func() {
 			time.Sleep(pkt.LoopTime)
 
-			if s.running {
+			if s.running.Load() {
 				s.Send(pkt)
 			}
 		}()
@@ -692,7 +689,7 @@ func (s *Stack) babbleThread() {
 	ticker := time.NewTicker(stackBabbleIntervalSec * time.Second)
 	defer ticker.Stop()
 
-	for s.running {
+	for s.running.Load() {
 		select {
 		case <-s.stopChan:
 			return

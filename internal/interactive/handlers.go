@@ -80,7 +80,7 @@ func (m *model) handleEscapeKey() (tea.Model, tea.Cmd) {
 		m.showSearch = false
 		m.searchQuery = ""
 		m.searchResults = nil
-		m.statusMessage = "Search cancelled"
+		m.statusMessage = searchCancelled
 		m.statusIsError = false
 
 		return m, nil

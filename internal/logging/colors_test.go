@@ -375,6 +375,8 @@ func TestDevice_MultipleArgs(t *testing.T) {
 
 // TestAreColorsEnabled tests the getter function.
 func TestAreColorsEnabled(t *testing.T) {
+	t.Setenv("NO_COLOR", "")
+
 	// Test enabled
 	logging.InitColors(true)
 

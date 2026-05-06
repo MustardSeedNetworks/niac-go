@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"path/filepath"
 	"sort"
@@ -13,6 +14,8 @@ import (
 	"strings"
 
 	"github.com/gosnmp/gosnmp"
+
+	"github.com/krisarmstrong/niac-go/internal/safeconv"
 )
 
 // MibZip command bytes.
@@ -149,7 +152,7 @@ func (w *MibZipWriter) serializeNode(node *mibNode) {
 // putLength writes a BER-encoded length.
 func (w *MibZipWriter) putLength(x int) {
 	if x < BERLongFormIndicator {
-		w.buf.WriteByte(byte(x))
+		w.buf.WriteByte(safeconv.Byte(x))
 	} else {
 		// Count bytes needed
 		size := 1
@@ -160,7 +163,7 @@ func (w *MibZipWriter) putLength(x int) {
 			size++
 		}
 
-		w.buf.WriteByte(byte(size | BERHighBitMask))
+		w.buf.WriteByte(safeconv.Byte(size | BERHighBitMask))
 
 		for i := size - 1; i >= 0; i-- {
 			w.buf.WriteByte(byte((x >> (BitShiftByte * i)) & BERFullByte))
@@ -288,7 +291,12 @@ func (w *MibZipWriter) encodeIPAddressValue(value any) {
 
 	for _, p := range parts {
 		n, _ := strconv.Atoi(p)
-		w.buf.WriteByte(byte(n))
+		// Inline bound check so static analysers see the [0,255] guarantee
+		// before the byte write (safeconv.Byte clamps internally too).
+		if n < 0 || n > math.MaxUint8 {
+			n = 0
+		}
+		w.buf.WriteByte(safeconv.Byte(n))
 	}
 }
 
@@ -742,12 +750,12 @@ func encodeOID(oid string) []byte {
 	}
 
 	// First two octets are combined
-	buf := []byte{byte(40*subIDs[0] + subIDs[1])}
+	buf := []byte{safeconv.Byte(40*subIDs[0] + subIDs[1])}
 
 	for i := 2; i < len(subIDs); i++ {
 		subID := subIDs[i]
 		if subID < OIDSubIDThreshold {
-			buf = append(buf, byte(subID))
+			buf = append(buf, safeconv.Byte(subID))
 		} else {
 			// Variable length encoding
 			var encoded []byte

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
+	"sync/atomic"
 	"time"
 
 	"github.com/gosnmp/gosnmp"
@@ -27,7 +28,7 @@ type TrapSender struct {
 	deviceIP   net.IP
 	trapConfig *config.TrapConfig
 	receivers  []*gosnmp.GoSNMP
-	running    bool
+	running    atomic.Bool
 	stopChan   chan struct{}
 	debugLevel int
 }
@@ -102,11 +103,9 @@ func parsePort(portStr string) uint16 {
 // Start starts the trap sender and monitoring loops.
 func (ts *TrapSender) Start() error {
 	logger := slog.Default()
-	if ts.running {
+	if !ts.running.CompareAndSwap(false, true) {
 		return ErrTrapSenderRunning
 	}
-
-	ts.running = true
 
 	// Send cold start trap if configured
 	if ts.trapConfig.ColdStart != nil && ts.trapConfig.ColdStart.Enabled && ts.trapConfig.ColdStart.OnStartup {
@@ -140,11 +139,10 @@ func (ts *TrapSender) Start() error {
 // Stop stops the trap sender.
 func (ts *TrapSender) Stop() {
 	logger := slog.Default()
-	if !ts.running {
+	if !ts.running.CompareAndSwap(true, false) {
 		return
 	}
 
-	ts.running = false
 	close(ts.stopChan)
 
 	if ts.debugLevel >= 1 {
@@ -211,7 +209,7 @@ func (ts *TrapSender) monitorCPU() {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
-	for ts.running {
+	for ts.running.Load() {
 		select {
 		case <-ts.stopChan:
 			return
@@ -234,7 +232,7 @@ func (ts *TrapSender) monitorMemory() {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
-	for ts.running {
+	for ts.running.Load() {
 		select {
 		case <-ts.stopChan:
 			return
@@ -257,7 +255,7 @@ func (ts *TrapSender) monitorInterfaceErrors() {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
-	for ts.running {
+	for ts.running.Load() {
 		select {
 		case <-ts.stopChan:
 			return

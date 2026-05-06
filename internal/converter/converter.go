@@ -452,10 +452,36 @@ type Parser struct {
 	verbose bool
 }
 
+// maxInputFileSize is the maximum allowed input file size (10 MB).
+const maxInputFileSize = 10 * 1024 * 1024
+
 // ConvertFile converts a Java DSL config file to YAML.
 func ConvertFile(inputPath, outputPath string, verbose bool) error {
+	cleanInput := filepath.Clean(inputPath)
+	if strings.Contains(cleanInput, "..") {
+		return errors.New("input path must not contain path traversal")
+	}
+
+	// Check file size before reading to prevent memory exhaustion
+	info, err := os.Stat(cleanInput)
+	if err != nil {
+		return fmt.Errorf("error accessing input file: %w", err)
+	}
+	if info.Size() > maxInputFileSize {
+		return fmt.Errorf("input file too large: %d bytes (max %d)", info.Size(), maxInputFileSize)
+	}
+
+	// Validate output path is not empty and is clean
+	if outputPath == "" {
+		return errors.New("output path cannot be empty")
+	}
+	cleanOutput := filepath.Clean(outputPath)
+	if strings.Contains(cleanOutput, "..") {
+		return errors.New("output path must not contain path traversal")
+	}
+
 	// Read input file
-	data, err := os.ReadFile(filepath.Clean(inputPath))
+	data, err := os.ReadFile(cleanInput)
 	if err != nil {
 		return fmt.Errorf("error reading input file: %w", err)
 	}
@@ -479,7 +505,7 @@ func ConvertFile(inputPath, outputPath string, verbose bool) error {
 	}
 
 	// Write output file
-	if writeErr := os.WriteFile(outputPath, yamlData, 0o600); writeErr != nil {
+	if writeErr := os.WriteFile(cleanOutput, yamlData, 0o600); writeErr != nil {
 		return fmt.Errorf("error writing output file: %w", writeErr)
 	}
 
@@ -1147,51 +1173,14 @@ func (p *Parser) parseIcmpv6RouterAdvertisement() *Icmpv6RouterAdvertisement {
 
 			break
 		}
+
 		if strings.HasPrefix(line, "//") || strings.HasPrefix(line, "#") {
 			p.pos++
 
 			continue
 		}
 
-		switch {
-		case strings.HasPrefix(line, "Period("):
-			var v int
-			_, _ = fmt.Sscanf(line, "Period(%d)", &v)
-			ra.Period = v
-		case strings.HasPrefix(line, "CurHopLimit("):
-			var v int
-			_, _ = fmt.Sscanf(line, "CurHopLimit(%d)", &v)
-			ra.CurHopLimit = v
-		case strings.HasPrefix(line, "Managed("):
-			var v int
-			_, _ = fmt.Sscanf(line, "Managed(%d)", &v)
-			ra.Managed = v
-		case strings.HasPrefix(line, "Other("):
-			var v int
-			_, _ = fmt.Sscanf(line, "Other(%d)", &v)
-			ra.Other = v
-		case strings.HasPrefix(line, "Lifetime("):
-			var v int
-			_, _ = fmt.Sscanf(line, "Lifetime(%d)", &v)
-			ra.Lifetime = v
-		case strings.HasPrefix(line, "ReachableTime("):
-			var v int
-			_, _ = fmt.Sscanf(line, "ReachableTime(%d)", &v)
-			ra.ReachableTime = v
-		case strings.HasPrefix(line, "RetransTimer("):
-			var v int
-			_, _ = fmt.Sscanf(line, "RetransTimer(%d)", &v)
-			ra.RetransTimer = v
-		case strings.HasPrefix(line, "MTU("):
-			var v int
-			_, _ = fmt.Sscanf(line, "MTU(%d)", &v)
-			ra.MTU = v
-		case strings.HasPrefix(line, "PrefixInformation("):
-			prefix := p.parseIcmpv6PrefixInformation()
-			if prefix != nil {
-				ra.PrefixInfo = append(ra.PrefixInfo, *prefix)
-			}
-
+		if p.parseRAField(line, ra) {
 			continue
 		}
 
@@ -1199,6 +1188,44 @@ func (p *Parser) parseIcmpv6RouterAdvertisement() *Icmpv6RouterAdvertisement {
 	}
 
 	return ra
+}
+
+// parseRAField parses a single router advertisement field line.
+// Returns true if the field was a PrefixInformation (already advanced pos).
+func (p *Parser) parseRAField(line string, ra *Icmpv6RouterAdvertisement) bool {
+	fieldParsers := []struct {
+		prefix string
+		format string
+		target *int
+	}{
+		{"Period(", "Period(%d)", &ra.Period},
+		{"CurHopLimit(", "CurHopLimit(%d)", &ra.CurHopLimit},
+		{"Managed(", "Managed(%d)", &ra.Managed},
+		{"Other(", "Other(%d)", &ra.Other},
+		{"Lifetime(", "Lifetime(%d)", &ra.Lifetime},
+		{"ReachableTime(", "ReachableTime(%d)", &ra.ReachableTime},
+		{"RetransTimer(", "RetransTimer(%d)", &ra.RetransTimer},
+		{"MTU(", "MTU(%d)", &ra.MTU},
+	}
+
+	for _, fp := range fieldParsers {
+		if strings.HasPrefix(line, fp.prefix) {
+			_, _ = fmt.Sscanf(line, fp.format, fp.target)
+
+			return false
+		}
+	}
+
+	if strings.HasPrefix(line, "PrefixInformation(") {
+		prefix := p.parseIcmpv6PrefixInformation()
+		if prefix != nil {
+			ra.PrefixInfo = append(ra.PrefixInfo, *prefix)
+		}
+
+		return true
+	}
+
+	return false
 }
 
 // parseIcmpv6PrefixInformation parses PrefixInformation block.

@@ -4,8 +4,8 @@
 devices:
   - name: iot-sensor-01
     type: host
-    mac_address: "00:1E:2F:3A:4B:01"
-    ip_addresses:
+    mac: "00:1E:2F:3A:4B:01"
+    ips:
       - "10.0.3.100"
 
     # Basic protocols only

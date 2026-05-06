@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/krisarmstrong/niac-go/internal/config"
@@ -15,7 +16,7 @@ import (
 // EDP protocol constants.
 const (
 	// EDPMulticastMAC is the EDP multicast destination MAC address (00:E0:2B:00:00:00).
-	EDPMulticastMAC = "\x00\xE0\x2B\x00\x00\x00"
+	EDPMulticastMAC = "00:E0:2B:00:00:00"
 
 	// EDPAdvertiseInterval is the default EDP advertisement interval.
 	EDPAdvertiseInterval = 30 * time.Second
@@ -55,6 +56,7 @@ const (
 type EDPHandler struct {
 	stack           *Stack
 	stopChan        chan struct{}
+	stopOnce        sync.Once
 	advertiseTicker *time.Ticker
 }
 
@@ -95,7 +97,9 @@ func (h *EDPHandler) Start() {
 
 // Stop halts EDP advertisements.
 func (h *EDPHandler) Stop() {
-	close(h.stopChan)
+	h.stopOnce.Do(func() {
+		close(h.stopChan)
+	})
 }
 
 // sendAdvertisements sends EDP advertisements for all devices.
@@ -143,16 +147,9 @@ func (h *EDPHandler) buildEDPFrame(device *config.Device) []byte {
 
 	deviceIDLen := min(len(deviceID), edpMaxLen)
 
-	binary.BigEndian.PutUint16(
-		payload[len(payload):len(payload)+2],
-		safeconv.Uint16(deviceIDLen),
-	)
-
-	payload = append(payload, make([]byte, edpLengthFieldSize)...)
-	binary.BigEndian.PutUint16(
-		payload[4:6],
-		safeconv.Uint16(deviceIDLen),
-	)
+	idLenBytes := make([]byte, edpLengthFieldSize)
+	binary.BigEndian.PutUint16(idLenBytes, safeconv.Uint16(deviceIDLen))
+	payload = append(payload, idLenBytes...)
 
 	// Device ID
 	payload = append(payload, deviceID...)

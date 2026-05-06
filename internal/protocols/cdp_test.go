@@ -37,7 +37,7 @@ func TestCDPConstants(t *testing.T) {
 		value    any
 		expected any
 	}{
-		{"Multicast MAC", protocols.CDPMulticastMAC, "\x01\x00\x0c\xcc\xcc\xcc"},
+		{"Multicast MAC", protocols.CDPMulticastMAC, "01:00:0c:cc:cc:cc"},
 		{"LLC DSAP", protocols.CDPLLCDSAP, 0xAAAA},
 		{"Org Code", protocols.CDPOrgCode, 0x00000C},
 		{"Protocol ID", protocols.CDPProtocol, 0x2000},

@@ -47,6 +47,17 @@ func ValidateWalkFile(filename string) (*ValidationResult, error) {
 	return scanWalkFile(filename, file)
 }
 
+// writeValidatedFile writes data with 0600 perms to a path that has already been
+// validated upstream. The defensive checks here are belt-and-suspenders so static
+// analysers (gosec, CodeQL) can see the path is bounded.
+func writeValidatedFile(path string, data []byte) error {
+	safePath := filepath.Clean(path)
+	if !filepath.IsAbs(safePath) || strings.Contains(safePath, "..") {
+		return fmt.Errorf("walk output path failed safety check: %s", safePath)
+	}
+	return os.WriteFile(safePath, data, 0o600) //nolint:gosec // G703: path validated above and upstream
+}
+
 // validateAndResolvePath validates the path for security issues and returns the absolute path.
 func validateAndResolvePath(filename string) (string, error) {
 	cleanPath := filepath.Clean(filename)
@@ -548,14 +559,17 @@ func AutoFixWalkFile(filename string, outputPath string) (*ValidationResult, err
 		return nil, err
 	}
 
-	// Read the file
-	cleanPath := filepath.Clean(filename)
-
-	absPath, err := filepath.Abs(cleanPath)
+	// Reuse the same validator that produced the absolute path during ValidateWalkFile
+	// so static analysers see a single bounded source for the file read below.
+	absPath, err := validateAndResolvePath(filename)
 	if err != nil {
-		return nil, fmt.Errorf("invalid walk file path: %w", err)
+		return nil, err
 	}
 
+	// Inline barrier on the read sink so CodeQL sees the bound at this call.
+	if !filepath.IsAbs(absPath) || strings.Contains(absPath, "..") {
+		return nil, fmt.Errorf("walk file path failed safety check: %s", absPath)
+	}
 	content, err := os.ReadFile(absPath)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrFailedToReadWalkFile, err)
@@ -590,7 +604,7 @@ func AutoFixWalkFile(filename string, outputPath string) (*ValidationResult, err
 	if outputPath == "" {
 		// Create backup and overwrite original
 		backupPath := absPath + ".bak"
-		if writeErr := os.WriteFile(backupPath, content, 0o600); writeErr != nil {
+		if writeErr := writeValidatedFile(backupPath, content); writeErr != nil {
 			return nil, fmt.Errorf("%w: %w", ErrFailedToCreateBackup, writeErr)
 		}
 
@@ -598,7 +612,7 @@ func AutoFixWalkFile(filename string, outputPath string) (*ValidationResult, err
 	}
 
 	// Write fixed content
-	if writeErr := os.WriteFile(outputPath, []byte(strings.Join(fixedContent, "\n")), 0o600); writeErr != nil {
+	if writeErr := writeValidatedFile(outputPath, []byte(strings.Join(fixedContent, "\n"))); writeErr != nil {
 		return nil, fmt.Errorf("%w: %w", ErrFailedToWriteFixedFile, writeErr)
 	}
 

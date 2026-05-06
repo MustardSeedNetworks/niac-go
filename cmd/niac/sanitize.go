@@ -11,11 +11,17 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 
 	"github.com/spf13/cobra"
+
+	"github.com/krisarmstrong/niac-go/internal/safeconv"
 )
+
+// defaultDeviceType is the device type abbreviation for generic/unrecognized devices.
+const defaultDeviceType = "dev"
 
 // IPMapping tracks IP address transformations.
 type IPMapping struct {
@@ -476,8 +482,8 @@ func sanitizeIP(ip string, mapping *SanitizationMapping) string {
 	}
 
 	// Use hash for host portion
-	octet3 := byte(hashInt >> bitShiftOctet)
-	octet4 := byte(hashInt)
+	octet3 := safeconv.ByteFromUint32(hashInt >> bitShiftOctet)
+	octet4 := safeconv.ByteFromUint32(hashInt)
 
 	sanitized := fmt.Sprintf("10.%d.%d.%d", subnet, octet3, octet4)
 
@@ -518,7 +524,7 @@ func sanitizeHostname(hostname string, mapping *SanitizationMapping) string {
 	case strings.Contains(lower, "fw") || strings.Contains(lower, "firewall"):
 		deviceType = "fw"
 	default:
-		deviceType = "dev"
+		deviceType = defaultDeviceType
 	}
 
 	// Generate deterministic number from hash
@@ -569,9 +575,11 @@ func looksLikeIPOctet(s string) bool {
 		}
 	}
 
-	// Parse and check range
-	var val int
-	_, _ = fmt.Sscanf(s, "%d", &val)
+	// Parse and check range (digits already validated above)
+	val, err := strconv.Atoi(s)
+	if err != nil {
+		return false
+	}
 	return val >= 0 && val <= 255
 }
 

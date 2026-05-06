@@ -3,6 +3,7 @@ package snmp
 import (
 	"encoding/hex"
 	"fmt"
+	"math"
 	"net"
 	"regexp"
 	"strconv"
@@ -282,6 +283,10 @@ func parseValue(typeStr string, asnType gosnmp.Asn1BER, value string) (any, erro
 		i, err := strconv.ParseInt(value, 10, 64)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse integer: %w", err)
+		}
+		// Bound to platform int range so 32-bit builds can't silently truncate.
+		if i < math.MinInt || i > math.MaxInt {
+			return nil, fmt.Errorf("integer value %d out of int range", i)
 		}
 
 		return int(i), nil

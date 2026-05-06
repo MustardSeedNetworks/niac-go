@@ -81,6 +81,11 @@ test.describe('Configuration Management', () => {
 
     test('should allow editing device fields', async ({ page }) => {
       const textInputs = page.locator('input[type="text"], input:not([type])');
+
+      // Wait for at least one input to render — beforeEach uses
+      // domcontentloaded, which fires before React mounts the form inputs.
+      await expect(textInputs.first()).toBeVisible();
+
       const count = await textInputs.count();
       expect(count).toBeGreaterThan(0);
     });

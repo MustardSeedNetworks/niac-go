@@ -66,7 +66,7 @@ func runInit(args []string) {
 		os.Exit(0)
 	}
 
-	if writeErr := os.WriteFile(outputFile, []byte(tmpl.Content), 0o600); writeErr != nil {
+	if writeErr := writeSafeFile(outputFile, []byte(tmpl.Content)); writeErr != nil {
 		color.Red("Error writing file: %v", writeErr)
 		os.Exit(1)
 	}
@@ -158,7 +158,7 @@ func promptOutputFile(reader *bufio.Reader, args []string) string {
 // confirmOverwriteIfExists checks if file exists and prompts for overwrite confirmation.
 // Returns true if file doesn't exist or user confirms overwrite.
 func confirmOverwriteIfExists(reader *bufio.Reader, outputFile string) bool {
-	if _, statErr := os.Stat(outputFile); statErr == nil {
+	if _, statErr := statSafeFile(outputFile); statErr == nil {
 		fmt.Fprintln(os.Stdout)
 		color.Yellow("Warning: File %s already exists!", outputFile)
 		return mustPromptYesNo(reader, "Overwrite? (y/n): ")

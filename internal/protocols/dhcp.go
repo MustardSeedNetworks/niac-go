@@ -783,7 +783,9 @@ func (h *DHCPHandler) appendMiscOptions(options []layers.DHCPOption, clientMAC n
 	if lease, ok := h.leases[clientMAC.String()]; ok && lease.Hostname != "" {
 		hostnameLen := min(len(lease.Hostname), dhcpMaxByte)
 		options = append(options, layers.DHCPOption{
-			Type: layers.DHCPOptHostname, Length: safeconv.Uint8(hostnameLen), Data: []byte(lease.Hostname[:hostnameLen]),
+			Type:   layers.DHCPOptHostname,
+			Length: safeconv.Uint8(hostnameLen),
+			Data:   []byte(lease.Hostname[:hostnameLen]),
 		})
 	}
 
@@ -887,7 +889,7 @@ func (h *DHCPHandler) encodeDomainSearchList(domains []string) ([]byte, error) {
 				continue // Invalid label
 			}
 			// Add label length byte followed by label bytes
-			labels = append(labels, byte(len(label)))
+			labels = append(labels, safeconv.Byte(len(label)))
 			labels = append(labels, []byte(label)...)
 		}
 		// Add null terminator (0x00)

@@ -81,6 +81,7 @@ export const UploadTemplateModal: FC<UploadTemplateModalProps> = ({
     }
   };
 
+  // TODO: Refactor to use shared Modal component from ui/Modal.tsx
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <button

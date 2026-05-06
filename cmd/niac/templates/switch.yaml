@@ -4,8 +4,8 @@
 devices:
   - name: access-switch-01
     type: switch
-    mac_address: "00:1B:2C:3D:4E:01"
-    ip_addresses:
+    mac: "00:1B:2C:3D:4E:01"
+    ips:
       - "10.0.1.10"
 
     # Basic protocols

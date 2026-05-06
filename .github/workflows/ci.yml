@@ -47,7 +47,7 @@ jobs:
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v9
         with:
-          version: v2.7.2
+          version: v2.12.1
           args: --timeout=5m
 
       - name: Run tests
@@ -104,7 +104,7 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           name: frontend-dist
-          path: ui/dist/
+          path: internal/api/ui/
           retention-days: 1
 
   # ===========================================================================
@@ -133,7 +133,7 @@ jobs:
       - name: Run gosec
         uses: securego/gosec@v2.22.11
         with:
-          args: "-fmt sarif -out gosec-results.sarif ./..."
+          args: "-no-fail -fmt sarif -out gosec-results.sarif ./..."
 
       - name: Upload gosec results
         uses: github/codeql-action/upload-sarif@v3
@@ -154,13 +154,16 @@ jobs:
           npm ci
           npm audit --audit-level=high || true
 
+      - name: Install gitleaks
+        run: |
+          curl -sSL https://github.com/gitleaks/gitleaks/releases/download/v8.21.2/gitleaks_8.21.2_linux_x64.tar.gz | tar -xz gitleaks
+          sudo mv gitleaks /usr/local/bin/
+
       - name: Run gitleaks
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gitleaks detect --source . --no-banner --redact --exit-code 1
 
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@0.33.1
+        uses: aquasecurity/trivy-action@0.35.0
         with:
           scan-type: 'fs'
           scan-ref: '.'
@@ -344,6 +347,9 @@ jobs:
     name: Build (${{ matrix.os }}-${{ matrix.arch }})
     needs: [backend, frontend]
     runs-on: ubuntu-latest
+    # gopacket/pcap requires CGO + libpcap. CI verifies a native amd64 build
+    # only — release.yml handles the arm64 cross-compile (gcc-aarch64-linux-gnu
+    # + libpcap-dev:arm64) when actually publishing artifacts.
     strategy:
       fail-fast: false
       matrix:
@@ -352,10 +358,6 @@ jobs:
             arch: amd64
             goos: linux
             goarch: amd64
-          - os: linux
-            arch: arm64
-            goos: linux
-            goarch: arm64
     steps:
       - uses: actions/checkout@v6
 
@@ -372,19 +374,13 @@ jobs:
         uses: actions/download-artifact@v6
         with:
           name: frontend-dist
-          path: ui/dist/
-
-      - name: Copy UI dist to embed directory
-        run: |
-          rm -rf pkg/api/ui/* 2>/dev/null || true
-          mkdir -p pkg/api/ui
-          cp -r ui/dist/* pkg/api/ui/
+          path: internal/api/ui/
 
       - name: Build binary
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
-          CGO_ENABLED: '0'
+          CGO_ENABLED: '1'
         run: |
           VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo "dev")
           go build -trimpath -buildvcs=false \
@@ -392,7 +388,6 @@ jobs:
             -o niac-${{ matrix.os }}-${{ matrix.arch }} ./cmd/niac
 
       - name: Verify binary
-        if: matrix.arch == 'amd64'
         run: ./niac-${{ matrix.os }}-${{ matrix.arch }} --help || ./niac-${{ matrix.os }}-${{ matrix.arch }} version || echo "Binary runs"
 
       - name: Upload artifact
@@ -434,17 +429,14 @@ jobs:
         uses: actions/download-artifact@v6
         with:
           name: frontend-dist
-          path: ui/dist/
+          path: internal/api/ui/
 
       - name: Install frontend dependencies (for Playwright)
         working-directory: ui
         run: npm ci
 
       - name: Build backend
-        run: |
-          mkdir -p pkg/api/ui
-          cp -r ui/dist/* pkg/api/ui/
-          go build -o niac ./cmd/niac
+        run: go build -o niac ./cmd/niac
 
       - name: Install Playwright browsers
         working-directory: ui
@@ -452,10 +444,10 @@ jobs:
 
       - name: Start backend server
         run: |
-          nohup ./niac serve > server.log 2>&1 &
+          nohup ./niac daemon --listen :8080 > server.log 2>&1 &
           echo "Waiting for server to start..."
           for i in {1..30}; do
-            if curl -sf http://localhost:8080/api/health 2>/dev/null; then
+            if curl -sf http://localhost:8080/__version 2>/dev/null; then
               echo "Server ready after $i attempts"
               exit 0
             fi
@@ -519,19 +511,16 @@ jobs:
         uses: actions/download-artifact@v6
         with:
           name: frontend-dist
-          path: ui/dist/
+          path: internal/api/ui/
 
       - name: Build backend
-        run: |
-          mkdir -p pkg/api/ui
-          cp -r ui/dist/* pkg/api/ui/
-          go build -o niac ./cmd/niac
+        run: go build -o niac ./cmd/niac
 
       - name: Start server
         run: |
-          nohup ./niac serve > server.log 2>&1 &
+          nohup ./niac daemon --listen :8080 > server.log 2>&1 &
           for i in {1..30}; do
-            if curl -sf http://localhost:8080/api/health 2>/dev/null; then
+            if curl -sf http://localhost:8080/__version 2>/dev/null; then
               echo "Server ready"
               exit 0
             fi

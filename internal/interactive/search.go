@@ -15,7 +15,7 @@ func (m *model) cancelSearch() {
 	m.showSearch = false
 	m.searchQuery = ""
 	m.searchResults = nil
-	m.statusMessage = "Search cancelled"
+	m.statusMessage = searchCancelled
 	m.statusIsError = false
 }
 
@@ -31,7 +31,7 @@ func (m *model) selectSearchResult() {
 	m.showSearch = false
 
 	switch result.Category {
-	case "device":
+	case searchScopeDevice:
 		if result.Index >= 0 && result.Index < len(m.cfg.Devices) {
 			m.selectedDeviceIdx = result.Index
 			m.statusMessage = successStyle.Render("Selected device: " + result.Title)
@@ -118,7 +118,7 @@ func (m *model) searchDeviceByNameAndType(query string, idx int, device config.D
 	}
 
 	m.searchResults = append(m.searchResults, searchResult{
-		Category: "device",
+		Category: searchScopeDevice,
 		Title:    device.Name,
 		Detail:   fmt.Sprintf("%s - %s - %s", device.Type, ip, device.MACAddress.String()),
 		Index:    idx,
@@ -130,7 +130,7 @@ func (m *model) searchDeviceByIP(query string, idx int, device config.Device) {
 	for _, ip := range device.IPAddresses {
 		if strings.Contains(ip.String(), query) {
 			m.searchResults = append(m.searchResults, searchResult{
-				Category: "device",
+				Category: searchScopeDevice,
 				Title:    device.Name,
 				Detail:   fmt.Sprintf("%s - %s", device.Type, ip.String()),
 				Index:    idx,

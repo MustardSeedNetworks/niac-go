@@ -287,14 +287,25 @@ func saveUserConfig(name string, content []byte) (string, error) {
 		return "", errors.New("failed to create configs directory")
 	}
 
-	configPath := filepath.Join(configDir, name+".yaml")
+	configPath := filepath.Clean(filepath.Join(configDir, name+".yaml"))
+
+	// Defense-in-depth: name has been sanitized upstream (sanitizeConfigName),
+	// but make the bounded path explicit so static analysers see the barrier.
+	absConfigPath, absErr := filepath.Abs(configPath)
+	if absErr != nil || strings.Contains(configPath, "..") {
+		return "", errors.New("invalid config path")
+	}
+	absConfigDir, absDirErr := filepath.Abs(configDir)
+	if absDirErr != nil || !strings.HasPrefix(absConfigPath, absConfigDir+string(filepath.Separator)) {
+		return "", errors.New("invalid config path")
+	}
 
 	// Use secure permissions: 0600 for file (owner rw only)
-	if err := os.WriteFile(configPath, content, 0o600); err != nil {
+	if err := os.WriteFile(absConfigPath, content, 0o600); err != nil {
 		return "", errors.New("failed to write config file")
 	}
 
-	return configPath, nil
+	return absConfigPath, nil
 }
 
 // handleUserConfigDelete handles DELETE /api/v1/configs/{name}.

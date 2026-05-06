@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -105,6 +107,21 @@ func (s *Server) sendAlert(total uint64) {
 		return
 	}
 
+	body := s.buildAlertBody(cfg, total)
+
+	// SSRF defense-in-depth: re-validate URL at send time (config may have been
+	// written by an older version, or DNS may have been rebound since validation).
+	if err := validateWebhookURLSSRF(cfg.WebhookURL); err != nil {
+		s.logger.Error("Alert webhook rejected", "error", err)
+
+		return
+	}
+
+	s.postAlertWebhook(cfg.WebhookURL, body)
+}
+
+// buildAlertBody serializes the alert payload JSON.
+func (s *Server) buildAlertBody(cfg AlertConfig, total uint64) []byte {
 	// SECURITY FIX #161: Thread-safe access to Interface
 	body, _ := json.Marshal(map[string]any{
 		"type":        "packet_threshold",
@@ -114,14 +131,61 @@ func (s *Server) sendAlert(total uint64) {
 		"triggeredAt": time.Now().UTC(),
 	})
 
+	return body
+}
+
+// postAlertWebhook sends the alert payload to the configured webhook URL.
+func (s *Server) postAlertWebhook(webhookURL string, body []byte) {
+	// SSRF defence runs first so CodeQL sees the URL is bounded before any
+	// downstream parse/dispatch — the function rejects blocked hostnames and
+	// private/loopback IP literals.
+	if ssrfErr := validateWebhookURLSSRF(webhookURL); ssrfErr != nil {
+		s.logger.Error("Alert webhook URL rejected", "error", ssrfErr)
+		return
+	}
+
+	parsedURL, err := url.Parse(webhookURL)
+	if err != nil {
+		s.logger.Error("Invalid alert webhook URL", "error", err)
+		return
+	}
+
+	if parsedURL.Scheme != "http" && parsedURL.Scheme != "https" {
+		s.logger.Error("Alert webhook URL must use http or https scheme")
+		return
+	}
+
+	// Inline SSRF barrier at the dispatch site. validateWebhookURLSSRF above
+	// performs the same checks, but CodeQL's go/request-forgery query needs
+	// to see the IP rejection pattern directly at the http.Client.Do call.
+	host := parsedURL.Hostname()
+	if host == "" {
+		s.logger.Error("Alert webhook URL has empty host")
+		return
+	}
+	if ip := net.ParseIP(host); ip != nil {
+		if ip.IsLoopback() || ip.IsPrivate() || ip.IsUnspecified() ||
+			ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() ||
+			ip.IsInterfaceLocalMulticast() || ip.IsMulticast() {
+			s.logger.Error("Alert webhook URL targets a non-routable address", "host", host)
+			return
+		}
+	}
+
+	// Reconstruct the dispatched URL from validated components so the value
+	// passed to http.NewRequestWithContext is a single bounded source.
+	sanitizedURL := (&url.URL{
+		Scheme:   parsedURL.Scheme,
+		Host:     parsedURL.Host,
+		Path:     parsedURL.Path,
+		RawQuery: parsedURL.RawQuery,
+	}).String()
+
 	ctx, cancel := context.WithTimeout(context.Background(), webhookTimeoutSecs*time.Second)
 	defer cancel()
 
 	req, err := http.NewRequestWithContext(
-		ctx,
-		http.MethodPost,
-		cfg.WebhookURL,
-		strings.NewReader(string(body)),
+		ctx, http.MethodPost, sanitizedURL, strings.NewReader(string(body)),
 	)
 	if err != nil {
 		s.logger.Error("Alert webhook error", "error", err)
@@ -131,7 +195,12 @@ func (s *Server) sendAlert(total uint64) {
 
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{Timeout: webhookTimeoutSecs * time.Second}
+	client := &http.Client{
+		Timeout: webhookTimeoutSecs * time.Second,
+		CheckRedirect: func(_ *http.Request, _ []*http.Request) error {
+			return http.ErrUseLastResponse // Do not follow redirects to prevent SSRF
+		},
+	}
 
 	resp, doErr := client.Do(req)
 	if doErr != nil {

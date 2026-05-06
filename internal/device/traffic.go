@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"sync/atomic"
 	"time"
 
 	"github.com/google/gopacket"
@@ -58,7 +59,7 @@ const (
 type TrafficGenerator struct {
 	simulator  *Simulator
 	stack      *protocols.Stack
-	running    bool
+	running    atomic.Bool
 	stopChan   chan struct{}
 	debugLevel int
 	patterns   map[string]map[string]*TrafficPattern // device name → pattern name → state
@@ -93,11 +94,9 @@ func (tg *TrafficGenerator) getPattern(deviceName, patternName string) *TrafficP
 // Start starts the traffic generator.
 func (tg *TrafficGenerator) Start() error {
 	logger := slog.Default()
-	if tg.running {
+	if !tg.running.CompareAndSwap(false, true) {
 		return ErrTrafficGeneratorAlreadyRunning
 	}
-
-	tg.running = true
 
 	// Start unified traffic generation loop (v1.6.0)
 	// Uses 10-second ticker to check all devices and their configured intervals
@@ -113,11 +112,10 @@ func (tg *TrafficGenerator) Start() error {
 // Stop stops the traffic generator.
 func (tg *TrafficGenerator) Stop() {
 	logger := slog.Default()
-	if !tg.running {
+	if !tg.running.CompareAndSwap(true, false) {
 		return
 	}
 
-	tg.running = false
 	close(tg.stopChan)
 
 	if tg.debugLevel >= 1 {
@@ -131,7 +129,7 @@ func (tg *TrafficGenerator) trafficGenerationLoop() {
 	ticker := time.NewTicker(trafficTickerInterval)
 	defer ticker.Stop()
 
-	for tg.running {
+	for tg.running.Load() {
 		select {
 		case <-tg.stopChan:
 			return
@@ -337,7 +335,17 @@ func (tg *TrafficGenerator) generateRandomTrafficForDevice(
 
 func (tg *TrafficGenerator) sendGratuitousARP(device *SimulatedDevice) error {
 	mac := device.Config.MACAddress
+	if len(mac) == 0 {
+		return errors.New("device has no MAC address")
+	}
+	if len(device.Config.IPAddresses) == 0 {
+		return errors.New("device has no IP address")
+	}
+
 	ip := device.Config.IPAddresses[0].To4()
+	if ip == nil {
+		return errors.New("device has no IPv4 address")
+	}
 
 	// Build Ethernet header (broadcast)
 	eth := &layers.Ethernet{
@@ -438,7 +446,7 @@ func serializeLayers(layersList ...gopacket.SerializableLayer) ([]byte, error) {
 // sendBroadcastARP sends a broadcast ARP request.
 func (tg *TrafficGenerator) sendBroadcastARP(src *SimulatedDevice) error {
 	// Pick a random IP to query
-	randomIP := []byte{192, 168, 1, byte(simRand.IntN(maxHostNumber) + 1)}
+	randomIP := []byte{192, 168, 1, safeconv.Byte(simRand.IntN(maxHostNumber) + 1)}
 
 	eth := &layers.Ethernet{
 		SrcMAC:       src.Config.MACAddress,
@@ -485,9 +493,9 @@ func (tg *TrafficGenerator) sendMulticast(src *SimulatedDevice) error {
 		0x01,
 		0x00,
 		0x5e,
-		byte(simRand.IntN(multicastMask)),
-		byte(simRand.IntN(byteRange)),
-		byte(simRand.IntN(byteRange)),
+		safeconv.Byte(simRand.IntN(multicastMask)),
+		safeconv.Byte(simRand.IntN(byteRange)),
+		safeconv.Byte(simRand.IntN(byteRange)),
 	}
 
 	eth := &layers.Ethernet{

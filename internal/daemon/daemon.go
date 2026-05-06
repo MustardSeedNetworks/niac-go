@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -75,6 +76,12 @@ func NewDaemon(cfg Config) (*Daemon, error) {
 
 	// Open storage if enabled
 	if cfg.StoragePath != "" && cfg.StoragePath != "disabled" {
+		// SECURITY: Check for path traversal in the INPUT before filepath.Clean
+		// strips it. Cleaning first would let "/etc/../etc/passwd" slip through.
+		if strings.Contains(cfg.StoragePath, "..") {
+			return nil, fmt.Errorf("storage path must not contain '..' components: %s", cfg.StoragePath)
+		}
+
 		storagePath := expandPath(cfg.StoragePath)
 
 		var err error
@@ -150,88 +157,68 @@ func (d *Daemon) Shutdown(ctx context.Context) error {
 	return nil
 }
 
+// maxSimulationConfigSize limits the size of inline-posted simulation configs.
+const maxSimulationConfigSize = 10 * 1024 * 1024 // 10MB limit
+
+// loadSimulationConfig resolves either inline ConfigData or a cleaned ConfigPath into a Config.
+func loadSimulationConfig(req api.SimulationRequest) (*config.Config, string, error) {
+	switch {
+	case req.ConfigData != "":
+		if len(req.ConfigData) > maxSimulationConfigSize {
+			return nil, "", fmt.Errorf(
+				"%w: %d bytes (got %d bytes)",
+				ErrConfigDataExceedsMaxSize,
+				maxSimulationConfigSize,
+				len(req.ConfigData),
+			)
+		}
+		cfg, err := config.LoadYAMLBytes([]byte(req.ConfigData))
+		if err != nil {
+			return nil, "", fmt.Errorf("load configuration: %w", err)
+		}
+		return cfg, "<inline>", nil
+	case req.ConfigPath != "":
+		cleanedPath := filepath.Clean(req.ConfigPath)
+		if strings.Contains(cleanedPath, "..") {
+			return nil, "", fmt.Errorf("config path must not contain '..' components: %s", req.ConfigPath)
+		}
+		cfg, err := config.Load(cleanedPath)
+		if err != nil {
+			return nil, "", fmt.Errorf("load configuration: %w", err)
+		}
+		return cfg, cleanedPath, nil
+	default:
+		return nil, "", ErrConfigPathOrDataRequired
+	}
+}
+
 // StartSimulation starts a new simulation.
 func (d *Daemon) StartSimulation(req api.SimulationRequest) error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
-	// Stop existing simulation if running
 	if d.simulation != nil {
-		err := d.stopSimulationLocked()
-		if err != nil {
+		if err := d.stopSimulationLocked(); err != nil {
 			return fmt.Errorf("stop existing simulation: %w", err)
 		}
 	}
 
-	// Validate interface
 	if !capture.InterfaceExists(req.Interface) {
 		return fmt.Errorf("%w: %s", ErrInterfaceNotExist, req.Interface)
 	}
 
-	// Load configuration
-	var (
-		cfg        *config.Config
-		configPath string
-		err        error
-	)
-
-	// SECURITY FIX #2.8.1: Validate config data size to prevent memory exhaustion
-	const maxConfigSize = 10 * 1024 * 1024 // 10MB limit
-
-	switch {
-	case req.ConfigData != "":
-		if len(req.ConfigData) > maxConfigSize {
-			return fmt.Errorf(
-				"%w: %d bytes (got %d bytes)",
-				ErrConfigDataExceedsMaxSize,
-				maxConfigSize,
-				len(req.ConfigData),
-			)
-		}
-
-		// Parse inline YAML
-		cfg, err = config.LoadYAMLBytes([]byte(req.ConfigData))
-		configPath = "<inline>"
-	case req.ConfigPath != "":
-		// Load from file
-		cfg, err = config.Load(req.ConfigPath)
-		configPath = req.ConfigPath
-	default:
-		return ErrConfigPathOrDataRequired
-	}
-
+	cfg, configPath, err := loadSimulationConfig(req)
 	if err != nil {
-		return fmt.Errorf("load configuration: %w", err)
+		return err
 	}
 
-	// Config is already validated during Load/LoadYAMLBytes
-
-	// Create capture engine
-	engine, err := capture.New(req.Interface, DefaultDebugLevel)
+	engine, stack, cancel, err := startSimulationStack(req.Interface, cfg)
 	if err != nil {
-		return fmt.Errorf("create capture engine: %w", err)
+		return err
 	}
 
-	// Create protocol stack with nil debug config (uses defaults)
-	stack := protocols.NewStack(engine, cfg, nil)
-
-	// Create context for lifecycle management
-	ctx, cancel := context.WithCancel(context.Background())
-	_ = ctx // context reserved for future use
-
-	// Start protocol stack
-	startErr := stack.Start()
-	if startErr != nil {
-		cancel()
-		engine.Close()
-
-		return fmt.Errorf("start protocol stack: %w", startErr)
-	}
-
-	// Create replay manager
 	replay := newReplayController(engine, stack.GetDebugLevel())
 
-	// Create simulation
 	d.simulation = &Simulation{
 		Interface:  req.Interface,
 		ConfigPath: configPath,
@@ -244,12 +231,37 @@ func (d *Daemon) StartSimulation(req api.SimulationRequest) error {
 		cancel:     cancel,
 	}
 
-	// Update API server with simulation components
 	d.apiServer.UpdateSimulation(stack, cfg, configPath, req.Interface, replay)
 
 	logging.Successf("✓ Simulation started on %s with %d devices", req.Interface, len(cfg.Devices))
 
 	return nil
+}
+
+// startSimulationStack creates the capture engine and starts the protocol stack.
+// Returns (engine, stack, cancel, err). Cleans up on failure.
+func startSimulationStack(
+	iface string, cfg *config.Config,
+) (*capture.Engine, *protocols.Stack, context.CancelFunc, error) {
+	engine, err := capture.New(iface, DefaultDebugLevel)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("create capture engine: %w", err)
+	}
+
+	stack := protocols.NewStack(engine, cfg, logging.NewDebugConfig(DefaultDebugLevel))
+
+	// Lifecycle cancel used by StopSimulation. Stack.Start() does not accept a context,
+	// so the stop signal flows via Stack.Stop() and engine.Close(). The cancel is
+	// retained for future context plumbing.
+	_, cancel := context.WithCancel(context.Background())
+
+	if startErr := stack.Start(); startErr != nil {
+		cancel()
+		engine.Close()
+		return nil, nil, nil, fmt.Errorf("start protocol stack: %w", startErr)
+	}
+
+	return engine, stack, cancel, nil
 }
 
 // StopSimulation stops the current simulation.

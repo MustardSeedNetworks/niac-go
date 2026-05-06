@@ -1,6 +1,7 @@
 package device
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -560,6 +561,541 @@ func TestSimulator_ReloadUpdatesSNMPAgent(t *testing.T) {
 
 	if reloadedDevice.TrapSender == nil {
 		t.Error("Trap sender should be initialized after reload when traps are enabled")
+	}
+}
+
+// TestSimulator_GetStats tests statistics aggregation.
+func TestSimulator_GetStats(t *testing.T) {
+	cfg := createTestConfig(2)
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	errorMgr := apperr.NewStateManager()
+	sim := NewSimulator(cfg, stack, errorMgr, 0)
+
+	// Increment some counters
+	sim.IncrementCounter("test-device-0", "packets_sent")
+	sim.IncrementCounter("test-device-0", "packets_sent")
+	sim.IncrementCounter("test-device-1", "packets_sent")
+	sim.IncrementCounter("test-device-0", "errors")
+
+	stats := sim.GetStats()
+
+	// Check device count
+	deviceCount, ok := stats["device_count"].(int)
+	if !ok || deviceCount != 2 {
+		t.Errorf("Expected device_count=2, got %v", stats["device_count"])
+	}
+
+	// Check running state
+	running, ok := stats["running"].(bool)
+	if !ok || running {
+		t.Errorf("Expected running=false, got %v", stats["running"])
+	}
+
+	// Check device states map
+	deviceStates, ok := stats["device_states"].(map[string]string)
+	if !ok {
+		t.Fatal("Expected device_states to be map[string]string")
+	}
+	if deviceStates["test-device-0"] != string(StateUp) {
+		t.Errorf("Expected device-0 state 'up', got '%s'", deviceStates["test-device-0"])
+	}
+
+	// Check total counters
+	total, ok := stats["total_counters"].(*Counters)
+	if !ok {
+		t.Fatal("Expected total_counters to be *Counters")
+	}
+	if total.PacketsSent != 3 {
+		t.Errorf("Expected total PacketsSent=3, got %d", total.PacketsSent)
+	}
+	if total.Errors != 1 {
+		t.Errorf("Expected total Errors=1, got %d", total.Errors)
+	}
+}
+
+// TestSimulator_GetStats_Running tests stats while simulator is running.
+func TestSimulator_GetStats_Running(t *testing.T) {
+	cfg := createTestConfig(1)
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	errorMgr := apperr.NewStateManager()
+	sim := NewSimulator(cfg, stack, errorMgr, 0)
+
+	err := sim.Start()
+	if err != nil {
+		t.Fatalf("Start failed: %v", err)
+	}
+	defer sim.Stop()
+
+	stats := sim.GetStats()
+	running, ok := stats["running"].(bool)
+	if !ok || !running {
+		t.Errorf("Expected running=true, got %v", stats["running"])
+	}
+}
+
+// TestSimulator_GetCounters tests retrieving counter copies.
+func TestSimulator_GetCounters(t *testing.T) {
+	cfg := createTestConfig(1)
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	errorMgr := apperr.NewStateManager()
+	sim := NewSimulator(cfg, stack, errorMgr, 0)
+
+	// Increment several counters
+	sim.IncrementCounter("test-device-0", "arp_requests")
+	sim.IncrementCounter("test-device-0", "arp_requests")
+	sim.IncrementCounter("test-device-0", "icmp_replies")
+	sim.IncrementCounter("test-device-0", "packets_sent")
+
+	counters := sim.GetCounters("test-device-0")
+	if counters.ARPRequestsReceived != 2 {
+		t.Errorf("Expected ARPRequestsReceived=2, got %d", counters.ARPRequestsReceived)
+	}
+	if counters.ICMPRepliesSent != 1 {
+		t.Errorf("Expected ICMPRepliesSent=1, got %d", counters.ICMPRepliesSent)
+	}
+	if counters.PacketsSent != 1 {
+		t.Errorf("Expected PacketsSent=1, got %d", counters.PacketsSent)
+	}
+
+	// Modifying returned copy should not affect original
+	counters.PacketsSent = 999
+	fresh := sim.GetCounters("test-device-0")
+	if fresh.PacketsSent != 1 {
+		t.Errorf("Modifying returned copy should not affect original, got %d", fresh.PacketsSent)
+	}
+}
+
+// TestSimulator_GetCounters_NonExistent tests GetCounters for a non-existent device.
+func TestSimulator_GetCounters_NonExistent(t *testing.T) {
+	cfg := createTestConfig(1)
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	errorMgr := apperr.NewStateManager()
+	sim := NewSimulator(cfg, stack, errorMgr, 0)
+
+	counters := sim.GetCounters("no-such-device")
+	if counters == nil {
+		t.Fatal("Expected non-nil counters for non-existent device")
+	}
+	if counters.PacketsSent != 0 {
+		t.Error("Expected zero counters for non-existent device")
+	}
+}
+
+// TestSimulator_IncrementCounter_UnknownCounter tests incrementing an unknown counter name.
+func TestSimulator_IncrementCounter_UnknownCounter(t *testing.T) {
+	cfg := createTestConfig(1)
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	errorMgr := apperr.NewStateManager()
+	sim := NewSimulator(cfg, stack, errorMgr, 0)
+
+	// Should not panic or change any counter
+	sim.IncrementCounter("test-device-0", "unknown_counter")
+
+	counters := sim.GetCounters("test-device-0")
+	total := counters.ARPRequestsReceived + counters.ARPRepliesSent +
+		counters.ICMPRequestsReceived + counters.ICMPRepliesSent +
+		counters.SNMPQueriesReceived + counters.HTTPRequestsReceived +
+		counters.FTPConnectionsReceived + counters.PacketsSent +
+		counters.PacketsReceived + counters.Errors
+	if total != 0 {
+		t.Errorf("Expected all counters to be 0 after unknown increment, total=%d", total)
+	}
+}
+
+// TestSimulator_Reload_RemoveDevice tests reload that removes a device.
+func TestSimulator_Reload_RemoveDevice(t *testing.T) {
+	cfg := createTestConfig(3) // test-device-0, test-device-1, test-device-2
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	errorMgr := apperr.NewStateManager()
+	sim := NewSimulator(cfg, stack, errorMgr, 0)
+
+	if len(sim.GetAllDevices()) != 3 {
+		t.Fatalf("Expected 3 devices initially, got %d", len(sim.GetAllDevices()))
+	}
+
+	// New config: keep device-0 and device-2, drop device-1
+	newCfg := &config.Config{
+		Devices: []config.Device{
+			{
+				Name:        "test-device-0",
+				Type:        "switch",
+				MACAddress:  net.HardwareAddr{0x00, 0x11, 0x22, 0x33, 0x44, 0x55},
+				IPAddresses: []net.IP{net.ParseIP("192.168.1.1")},
+				SNMPConfig:  config.SNMPConfig{Community: "public"},
+			},
+			{
+				Name:        "test-device-2",
+				Type:        "server",
+				MACAddress:  net.HardwareAddr{0x00, 0x11, 0x22, 0x33, 0x44, 0x57},
+				IPAddresses: []net.IP{net.ParseIP("192.168.1.3")},
+				SNMPConfig:  config.SNMPConfig{Community: "public"},
+			},
+		},
+	}
+
+	err := sim.Reload(newCfg)
+	if err != nil {
+		t.Fatalf("Reload failed: %v", err)
+	}
+
+	devices := sim.GetAllDevices()
+	if len(devices) != 2 {
+		t.Fatalf("Expected 2 devices after reload, got %d", len(devices))
+	}
+
+	if sim.GetDevice("test-device-0") == nil {
+		t.Error("test-device-0 should still exist")
+	}
+	if sim.GetDevice("test-device-1") != nil {
+		t.Error("test-device-1 should be removed")
+	}
+	if sim.GetDevice("test-device-2") == nil {
+		t.Error("test-device-2 should still exist")
+	}
+}
+
+// TestSimulator_Reload_WhileRunning tests reload while the simulator is running.
+func TestSimulator_Reload_WhileRunning(t *testing.T) {
+	cfg := createTestConfig(1)
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	errorMgr := apperr.NewStateManager()
+	sim := NewSimulator(cfg, stack, errorMgr, 0)
+
+	err := sim.Start()
+	if err != nil {
+		t.Fatalf("Start failed: %v", err)
+	}
+
+	// Reload with same device (update, not add) to avoid addDevice deadlock
+	newCfg := createTestConfig(1)
+	newCfg.Devices[0].Type = "switch" // change type to trigger update path
+	err = sim.Reload(newCfg)
+	if err != nil {
+		t.Fatalf("Reload while running failed: %v", err)
+	}
+
+	// Simulator should be running again after reload
+	if !sim.running {
+		t.Error("Simulator should be running after reload (was running before)")
+	}
+
+	sim.Stop()
+}
+
+// TestSimulator_Reload_WhileStopped tests reload while the simulator is stopped.
+func TestSimulator_Reload_WhileStopped(t *testing.T) {
+	cfg := createTestConfig(1)
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	errorMgr := apperr.NewStateManager()
+	sim := NewSimulator(cfg, stack, errorMgr, 0)
+
+	// Reload with same device name to exercise update path
+	newCfg := createTestConfig(1)
+	newCfg.Devices[0].SNMPConfig.Community = "private"
+	err := sim.Reload(newCfg)
+	if err != nil {
+		t.Fatalf("Reload while stopped failed: %v", err)
+	}
+
+	if sim.running {
+		t.Error("Simulator should not be running after reload (was stopped before)")
+	}
+
+	if len(sim.GetAllDevices()) != 1 {
+		t.Errorf("Expected 1 device after reload, got %d", len(sim.GetAllDevices()))
+	}
+}
+
+// TestSimulator_PerformDeviceBehavior tests periodic behavior dispatch for all device types.
+func TestSimulator_PerformDeviceBehavior(t *testing.T) {
+	deviceTypes := []string{"router", "switch", "ap", "access-point", "server", "unknown-type"}
+
+	for _, dt := range deviceTypes {
+		t.Run(dt, func(t *testing.T) {
+			cfg := &config.Config{
+				Devices: []config.Device{
+					{
+						Name:        "behavior-device",
+						Type:        dt,
+						MACAddress:  net.HardwareAddr{0x00, 0x11, 0x22, 0x33, 0x44, 0x55},
+						IPAddresses: []net.IP{net.ParseIP("192.168.1.1")},
+						SNMPConfig:  config.SNMPConfig{Community: "public"},
+					},
+				},
+			}
+			stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+			errorMgr := apperr.NewStateManager()
+			sim := NewSimulator(cfg, stack, errorMgr, 0)
+
+			device := sim.GetDevice("behavior-device")
+			before := device.LastActivity
+
+			// Should not panic for any device type
+			sim.performDeviceBehavior("behavior-device", device)
+
+			if device.LastActivity.Before(before) || device.LastActivity.Equal(before) {
+				t.Error("LastActivity should be updated after performDeviceBehavior")
+			}
+		})
+	}
+}
+
+// TestSimulator_StateTransitions tests isTransitionToDown and isTransitionToUp logic.
+func TestSimulator_StateTransitions(t *testing.T) {
+	cfg := createTestConfig(1)
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	errorMgr := apperr.NewStateManager()
+	sim := NewSimulator(cfg, stack, errorMgr, 0)
+
+	downTests := []struct {
+		name     string
+		old      State
+		new      State
+		expected bool
+	}{
+		{"up to down", StateUp, StateDown, true},
+		{"up to stopping", StateUp, StateStopping, true},
+		{"starting to down", StateStarting, StateDown, true},
+		{"down to down", StateDown, StateDown, false},
+		{"stopping to down", StateStopping, StateDown, false},
+		{"up to up", StateUp, StateUp, false},
+		{"up to maintenance", StateUp, StateMaintenance, false},
+	}
+
+	for _, tc := range downTests {
+		t.Run("down/"+tc.name, func(t *testing.T) {
+			got := sim.isTransitionToDown(tc.old, tc.new)
+			if got != tc.expected {
+				t.Errorf("isTransitionToDown(%s, %s) = %v, want %v", tc.old, tc.new, got, tc.expected)
+			}
+		})
+	}
+
+	upTests := []struct {
+		name     string
+		old      State
+		new      State
+		expected bool
+	}{
+		{"down to up", StateDown, StateUp, true},
+		{"starting to up", StateStarting, StateUp, true},
+		{"stopping to up", StateStopping, StateUp, true},
+		{"maintenance to up", StateMaintenance, StateUp, true},
+		{"up to up", StateUp, StateUp, false},
+		{"down to starting", StateDown, StateStarting, false},
+	}
+
+	for _, tc := range upTests {
+		t.Run("up/"+tc.name, func(t *testing.T) {
+			got := sim.isTransitionToUp(tc.old, tc.new)
+			if got != tc.expected {
+				t.Errorf("isTransitionToUp(%s, %s) = %v, want %v", tc.old, tc.new, got, tc.expected)
+			}
+		})
+	}
+}
+
+// TestSimulator_GetInterfaceDescription tests interface description generation.
+func TestSimulator_GetInterfaceDescription(t *testing.T) {
+	cfg := createTestConfig(1)
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	errorMgr := apperr.NewStateManager()
+	sim := NewSimulator(cfg, stack, errorMgr, 0)
+
+	tests := []struct {
+		name        string
+		ipAddresses []net.IP
+		expected    string
+	}{
+		{
+			name:        "device with IP",
+			ipAddresses: []net.IP{net.ParseIP("192.168.1.1")},
+			expected:    "Interface 192.168.1.1",
+		},
+		{
+			name:        "device without IP",
+			ipAddresses: nil,
+			expected:    "Primary Interface",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			device := &SimulatedDevice{
+				Config: &config.Device{
+					IPAddresses: tc.ipAddresses,
+				},
+			}
+			got := sim.getInterfaceDescription(device)
+			if got != tc.expected {
+				t.Errorf("getInterfaceDescription() = %q, want %q", got, tc.expected)
+			}
+		})
+	}
+}
+
+// TestSimulator_GetAllDevices_ReturnsCopy tests that GetAllDevices returns a separate map.
+func TestSimulator_GetAllDevices_ReturnsCopy(t *testing.T) {
+	cfg := createTestConfig(2)
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	errorMgr := apperr.NewStateManager()
+	sim := NewSimulator(cfg, stack, errorMgr, 0)
+
+	devices := sim.GetAllDevices()
+	originalLen := len(devices)
+
+	// Mutating the returned map should not affect the simulator
+	delete(devices, "test-device-0")
+
+	fresh := sim.GetAllDevices()
+	if len(fresh) != originalLen {
+		t.Errorf("Deleting from returned map affected simulator: expected %d devices, got %d",
+			originalLen, len(fresh))
+	}
+}
+
+// TestSimulator_StartStop_Restart tests that a stopped simulator can be restarted.
+func TestSimulator_StartStop_Restart(t *testing.T) {
+	cfg := createTestConfig(1)
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	errorMgr := apperr.NewStateManager()
+	sim := NewSimulator(cfg, stack, errorMgr, 0)
+
+	// First cycle
+	err := sim.Start()
+	if err != nil {
+		t.Fatalf("First start failed: %v", err)
+	}
+	sim.Stop()
+
+	// Second cycle
+	err = sim.Start()
+	if err != nil {
+		t.Fatalf("Restart failed: %v", err)
+	}
+	if !sim.running {
+		t.Error("Simulator should be running after restart")
+	}
+	sim.Stop()
+
+	if sim.running {
+		t.Error("Simulator should be stopped after second stop")
+	}
+}
+
+// TestSimulator_SetDeviceState_ErrorWrapping tests error wrapping for missing device.
+func TestSimulator_SetDeviceState_ErrorWrapping(t *testing.T) {
+	cfg := createTestConfig(1)
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	errorMgr := apperr.NewStateManager()
+	sim := NewSimulator(cfg, stack, errorMgr, 0)
+
+	err := sim.SetDeviceState("ghost", StateUp)
+	if err == nil {
+		t.Fatal("Expected error for non-existent device")
+	}
+	if !errors.Is(err, ErrDeviceNotFound) {
+		t.Errorf("Expected ErrDeviceNotFound, got %v", err)
+	}
+}
+
+// TestSimulator_SendStateChangeTraps_NilTrapSender tests that trap sending is skipped when nil.
+func TestSimulator_SendStateChangeTraps_NilTrapSender(t *testing.T) {
+	cfg := createTestConfig(1)
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	errorMgr := apperr.NewStateManager()
+	sim := NewSimulator(cfg, stack, errorMgr, 0)
+
+	device := sim.GetDevice("test-device-0")
+	// TrapSender should be nil for basic config
+	if device.TrapSender != nil {
+		t.Skip("TrapSender unexpectedly non-nil")
+	}
+
+	// Should not panic
+	sim.sendStateChangeTraps(device, "test-device-0", StateUp, StateDown)
+}
+
+// TestSimulator_DeviceNoIP tests device creation with no IP addresses.
+func TestSimulator_DeviceNoIP(t *testing.T) {
+	cfg := &config.Config{
+		Devices: []config.Device{
+			{
+				Name:       "no-ip-device",
+				Type:       "switch",
+				MACAddress: net.HardwareAddr{0x00, 0x11, 0x22, 0x33, 0x44, 0x55},
+				SNMPConfig: config.SNMPConfig{Community: "public"},
+			},
+		},
+	}
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	errorMgr := apperr.NewStateManager()
+	sim := NewSimulator(cfg, stack, errorMgr, 1) // debugLevel=1 to hit the "no-ip" branch
+
+	device := sim.GetDevice("no-ip-device")
+	if device == nil {
+		t.Fatal("Device should be created even without IP")
+	}
+}
+
+// TestSimulator_ShouldCreateTrapSender tests the shouldCreateTrapSender predicate.
+func TestSimulator_ShouldCreateTrapSender(t *testing.T) {
+	cfg := createTestConfig(1)
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	errorMgr := apperr.NewStateManager()
+	sim := NewSimulator(cfg, stack, errorMgr, 0)
+
+	tests := []struct {
+		name     string
+		device   *config.Device
+		expected bool
+	}{
+		{
+			name: "traps enabled with IP",
+			device: &config.Device{
+				IPAddresses: []net.IP{net.ParseIP("10.0.0.1")},
+				SNMPConfig: config.SNMPConfig{
+					Traps: &config.TrapConfig{Enabled: true, Receivers: []string{"10.0.0.100:162"}},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "traps disabled",
+			device: &config.Device{
+				IPAddresses: []net.IP{net.ParseIP("10.0.0.1")},
+				SNMPConfig: config.SNMPConfig{
+					Traps: &config.TrapConfig{Enabled: false},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "traps nil",
+			device: &config.Device{
+				IPAddresses: []net.IP{net.ParseIP("10.0.0.1")},
+				SNMPConfig:  config.SNMPConfig{},
+			},
+			expected: false,
+		},
+		{
+			name: "traps enabled no IP",
+			device: &config.Device{
+				SNMPConfig: config.SNMPConfig{
+					Traps: &config.TrapConfig{Enabled: true},
+				},
+			},
+			expected: false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := sim.shouldCreateTrapSender(tc.device)
+			if got != tc.expected {
+				t.Errorf("shouldCreateTrapSender() = %v, want %v", got, tc.expected)
+			}
+		})
 	}
 }
 

@@ -11,6 +11,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/krisarmstrong/niac-go/internal/config"
+	"github.com/krisarmstrong/niac-go/internal/safeconv"
 )
 
 // Sentinel errors for API devices.
@@ -76,7 +77,7 @@ func validateHostnameLabel(label string) string {
 		return "hostname labels must not end with a hyphen"
 	}
 	for _, c := range label {
-		if !isAlphanumeric(byte(c)) && c != '-' {
+		if !isAlphanumeric(safeconv.ByteFromRune(c)) && c != '-' {
 			return "hostname contains invalid characters (only alphanumeric and hyphens allowed)"
 		}
 	}
@@ -458,6 +459,71 @@ func deviceExists(devices []config.Device, hostname string) bool {
 	return false
 }
 
+func deepCopyConfig(cfg *config.Config) *config.Config {
+	if cfg == nil {
+		return nil
+	}
+
+	copied := *cfg
+	copied.Devices = make([]config.Device, len(cfg.Devices))
+	for i := range cfg.Devices {
+		copied.Devices[i] = *deepCopyDevice(&cfg.Devices[i])
+	}
+
+	return &copied
+}
+
+func deepCopyDevice(dev *config.Device) *config.Device {
+	if dev == nil {
+		return nil
+	}
+
+	copied := *dev
+	copied.MACAddress = copyHardwareAddr(dev.MACAddress)
+	copied.MapToIP = copyIP(dev.MapToIP)
+	copied.IPAddresses = copyIPSlice(dev.IPAddresses)
+	copied.Interfaces = append([]config.Interface(nil), dev.Interfaces...)
+	copied.PortChannels = append([]config.PortChannel(nil), dev.PortChannels...)
+	copied.TrunkPorts = append([]config.TrunkPort(nil), dev.TrunkPorts...)
+	if dev.Properties != nil {
+		copied.Properties = make(map[string]string, len(dev.Properties))
+		for key, value := range dev.Properties {
+			copied.Properties[key] = value
+		}
+	}
+
+	return &copied
+}
+
+func copyHardwareAddr(addr net.HardwareAddr) net.HardwareAddr {
+	if addr == nil {
+		return nil
+	}
+
+	return append(net.HardwareAddr(nil), addr...)
+}
+
+func copyIP(ip net.IP) net.IP {
+	if ip == nil {
+		return nil
+	}
+
+	return append(net.IP(nil), ip...)
+}
+
+func copyIPSlice(ips []net.IP) []net.IP {
+	if ips == nil {
+		return nil
+	}
+
+	copied := make([]net.IP, len(ips))
+	for i := range ips {
+		copied[i] = copyIP(ips[i])
+	}
+
+	return copied
+}
+
 // createAndSaveDevice creates a device from request and saves the config.
 func (s *Server) createAndSaveDevice(
 	w http.ResponseWriter, r *http.Request, cfg *config.Config, req DeviceCreateRequest,
@@ -470,7 +536,7 @@ func (s *Server) createAndSaveDevice(
 		return nil, err
 	}
 
-	newCfg := *cfg
+	newCfg := *deepCopyConfig(cfg)
 	newCfg.Devices = append(newCfg.Devices, *newDevice)
 
 	if saveErr := s.saveConfig(&newCfg); saveErr != nil {

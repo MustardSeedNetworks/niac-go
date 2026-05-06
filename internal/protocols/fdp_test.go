@@ -37,7 +37,7 @@ func TestFDPConstants(t *testing.T) {
 		value    any
 		expected any
 	}{
-		{"Multicast MAC", protocols.FDPMulticastMAC, "\x01\xE0\x52\xCC\xCC\xCC"},
+		{"Multicast MAC", protocols.FDPMulticastMAC, "01:E0:52:CC:CC:CC"},
 		{"Advertise Interval", protocols.FDPAdvertiseInterval, 60 * time.Second},
 		{"Holdtime", protocols.FDPHoldtime, 180},
 		{"Version", protocols.FDPVersion, 1},

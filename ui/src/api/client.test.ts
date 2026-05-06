@@ -126,6 +126,29 @@ describe('API Client', () => {
     });
   });
 
+  describe('csrf header', () => {
+    it('fetches and includes CSRF token for state-changing requests', async () => {
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve({ token: 'csrf-token' }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve({ packets_threshold: 100, webhook_url: '' }),
+        });
+
+      const { updateAlerts } = await import('./client');
+      await updateAlerts({ packetsThreshold: 100, webhookUrl: '' });
+
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      expect(mockFetch.mock.calls[0][0]).toContain('/api/v1/csrf-token');
+
+      const headers = mockFetch.mock.calls[1][1]?.headers as Headers;
+      expect(headers.get('X-Csrf-Token')).toBe('csrf-token');
+    });
+  });
+
   describe('retry logic', () => {
     let origSetTimeout: typeof globalThis.setTimeout;
 
