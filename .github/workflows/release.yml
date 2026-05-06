@@ -199,44 +199,29 @@ jobs:
 
           dpkg-deb --build $DEB_DIR release/niac_${PKG_VERSION}_${ARCH}.deb
 
-          # Create .rpm package
-          RPM_ARCH=${ARCH}
+          # Create .rpm package (amd64 only — Ubuntu's `rpm` package can't
+          # cross-build for aarch64 without the missing rpmrc/platform
+          # entries, and patching them in is fragile. The .deb + .tar.gz
+          # cover arm64 deployments; revisit if/when an arm64 RPM target
+          # actually has consumers).
           if [ "${ARCH}" = "amd64" ]; then
             RPM_ARCH="x86_64"
-          elif [ "${ARCH}" = "arm64" ]; then
-            RPM_ARCH="aarch64"
+
+            # Copy binary to repo root for rpmbuild (spec expects %{_repo_root}/niac)
+            cp dist/niac-linux-${ARCH} niac
+
+            sed "s/__VERSION__/${PKG_VERSION}/;s/__ARCHITECTURE__/${RPM_ARCH}/" \
+              deploy/rpm/niac.spec > niac.spec
+
+            rpmbuild --target "${RPM_ARCH}" \
+              --define "_repo_root $(pwd)" \
+              --define "_topdir $(pwd)/rpmbuild" \
+              --define "_rpmdir $(pwd)/release" \
+              -bb niac.spec
+
+            # Move RPM from arch subdirectory to release/
+            mv release/${RPM_ARCH}/*.rpm release/ || true
           fi
-
-          # Copy binary to repo root for rpmbuild (spec expects %{_repo_root}/niac)
-          cp dist/niac-linux-${ARCH} niac
-
-          sed "s/__VERSION__/${PKG_VERSION}/;s/__ARCHITECTURE__/${RPM_ARCH}/" \
-            deploy/rpm/niac.spec > niac.spec
-
-          # Ubuntu's `rpm` package doesn't ship a /usr/lib/rpm/platform/
-          # macros file for aarch64-linux, so the `BuildArch: aarch64`
-          # directive in our spec trips "No compatible architectures found
-          # for build". Generate the macros file inline before rpmbuild so
-          # the platform lookup succeeds. amd64 already has the file.
-          if [ ! -f "/usr/lib/rpm/platform/${RPM_ARCH}-linux/macros" ]; then
-            sudo mkdir -p "/usr/lib/rpm/platform/${RPM_ARCH}-linux"
-            sudo tee "/usr/lib/rpm/platform/${RPM_ARCH}-linux/macros" >/dev/null <<EOF
-          %_target            ${RPM_ARCH}-%{_target_vendor}-%{_target_os}%{?_gnu}
-          %_target_cpu        ${RPM_ARCH}
-          %_target_os         linux
-          %_arch              ${RPM_ARCH}
-          %_lib               lib64
-          EOF
-          fi
-
-          rpmbuild --target "${RPM_ARCH}" \
-            --define "_repo_root $(pwd)" \
-            --define "_topdir $(pwd)/rpmbuild" \
-            --define "_rpmdir $(pwd)/release" \
-            -bb niac.spec
-
-          # Move RPM from arch subdirectory to release/
-          mv release/${RPM_ARCH}/*.rpm release/ || true
 
       - name: Upload release artifacts
         uses: actions/upload-artifact@v4
