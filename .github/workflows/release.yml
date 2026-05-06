@@ -93,12 +93,15 @@ jobs:
           npm ci
           npm run build
 
-      - name: Copy frontend to embed directory
+      - name: Verify embedded frontend
         run: |
-          rm -rf internal/api/ui/*
-          mkdir -p internal/api/ui
-          cp -r ui/dist/* internal/api/ui/
-          echo "Frontend copied to internal/api/ui/"
+          # Vite is configured to emit directly into ../internal/api/ui, so
+          # there is no separate ui/dist to copy from. Just confirm the
+          # output landed and is non-empty before the Go build embeds it.
+          if [ ! -d internal/api/ui ] || [ -z "$(ls -A internal/api/ui)" ]; then
+            echo "internal/api/ui is missing or empty after npm run build"
+            exit 1
+          fi
           ls -la internal/api/ui/
 
       - name: Generate UI build hash
@@ -252,12 +255,15 @@ jobs:
           npm ci
           npm run build
 
-      - name: Copy frontend to embed directory
+      - name: Verify embedded frontend
         run: |
-          rm -rf internal/api/ui/*
-          mkdir -p internal/api/ui
-          cp -r ui/dist/* internal/api/ui/
-          echo "Frontend copied to internal/api/ui/"
+          # Vite is configured to emit directly into ../internal/api/ui, so
+          # there is no separate ui/dist to copy from. Just confirm the
+          # output landed and is non-empty before the Go build embeds it.
+          if [ ! -d internal/api/ui ] || [ -z "$(ls -A internal/api/ui)" ]; then
+            echo "internal/api/ui is missing or empty after npm run build"
+            exit 1
+          fi
           ls -la internal/api/ui/
 
       - name: Generate UI build hash
@@ -346,12 +352,15 @@ jobs:
           npm ci
           npm run build
 
-      - name: Copy frontend to embed directory
+      - name: Verify embedded frontend
         run: |
-          rm -rf internal/api/ui/*
-          mkdir -p internal/api/ui
-          cp -r ui/dist/* internal/api/ui/
-          echo "Frontend copied to internal/api/ui/"
+          # Vite is configured to emit directly into ../internal/api/ui, so
+          # there is no separate ui/dist to copy from. Just confirm the
+          # output landed and is non-empty before the Go build embeds it.
+          if [ ! -d internal/api/ui ] || [ -z "$(ls -A internal/api/ui)" ]; then
+            echo "internal/api/ui is missing or empty after npm run build"
+            exit 1
+          fi
           ls -la internal/api/ui/
 
       - name: Generate UI build hash
