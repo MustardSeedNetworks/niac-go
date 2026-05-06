@@ -12,7 +12,7 @@
 # =============================================================================
 
 .PHONY: deb rpm pkg windows-zip packages install-service container \
-        deploy-ubuntu deploy-fedora deploy-all deploy-validate
+        deploy-ubuntu deploy-fedora deploy-all deploy-validate ensure-nfpm
 
 # =============================================================================
 # Package Variables
@@ -23,53 +23,47 @@ DEB_ARCH := $(shell uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
 RPM_ARCH := $(shell uname -m | sed 's/amd64/x86_64/;s/arm64/aarch64/')
 
 # =============================================================================
-# Debian Package
+# Linux packages (deb + rpm via nfpm)
+# =============================================================================
+#
+# Both formats are produced from the single .nfpm.yaml that release.yml uses,
+# so local `make packages` output matches CI exactly. nfpm is pure Go (no
+# rpmbuild platform plumbing), which is why it works for cross-arch RPMs in
+# CI; locally it just keeps the toolchain unified.
 # =============================================================================
 
-deb: build ## Build Debian package (.deb)
+NFPM_VERSION := v2.46.3
+NFPM := $(shell command -v nfpm 2>/dev/null)
+
+ensure-nfpm:
+	@if [ -z "$(NFPM)" ]; then \
+		printf "$(BOLD)Installing nfpm $(NFPM_VERSION)...$(RESET)\n"; \
+		go install github.com/goreleaser/nfpm/v2/cmd/nfpm@$(NFPM_VERSION); \
+	fi
+
+# Render .nfpm.yaml with envsubst to dist/nfpm.rendered.yaml. Variables come
+# from the per-target rule via export.
+dist/nfpm.rendered.yaml: .nfpm.yaml | dist
+	@envsubst < .nfpm.yaml > dist/nfpm.rendered.yaml
+
+dist:
+	@mkdir -p dist
+
+deb: build ensure-nfpm dist ## Build Debian package (.deb) via nfpm
 	@printf "$(BOLD)Building Debian package...$(RESET)\n"
-	@mkdir -p dist/deb/DEBIAN
-	@mkdir -p dist/deb/usr/bin
-	@mkdir -p dist/deb/usr/lib/systemd/system
-	@mkdir -p dist/deb/var/lib/niac
-	@mkdir -p dist/deb/var/lib/niac/templates
-	@mkdir -p dist/deb/var/log/niac
-	@cp $(BINARY_NAME) dist/deb/usr/bin/niac
-	@chmod 755 dist/deb/usr/bin/niac
-	@cp deploy/systemd/niac.service dist/deb/usr/lib/systemd/system/
-	@cp -r cmd/niac/templates/* dist/deb/var/lib/niac/templates/ 2>/dev/null || true
-	@# Only copy YAML config examples, not large walk files or captures
-	@find examples -name "*.yaml" -o -name "*.yml" | while read f; do \
-		dir=$$(dirname "$$f" | sed 's|^examples/||'); \
-		mkdir -p "dist/deb/var/lib/niac/templates/$$dir"; \
-		cp "$$f" "dist/deb/var/lib/niac/templates/$$dir/"; \
-	done 2>/dev/null || true
-	@sed 's/__VERSION__/$(PKG_VERSION)/g; s/__ARCHITECTURE__/$(DEB_ARCH)/g' \
-		deploy/deb/control > dist/deb/DEBIAN/control
-	@cp deploy/deb/postinst dist/deb/DEBIAN/
-	@cp deploy/deb/prerm dist/deb/DEBIAN/
-	@cp deploy/deb/postrm dist/deb/DEBIAN/
-	@chmod 755 dist/deb/DEBIAN/postinst dist/deb/DEBIAN/prerm dist/deb/DEBIAN/postrm
-	@dpkg-deb --build dist/deb dist/niac_$(PKG_VERSION)_$(DEB_ARCH).deb
+	@export NIAC_VERSION="$(PKG_VERSION)" NIAC_ARCH="$(DEB_ARCH)" NIAC_BINARY="./$(BINARY_NAME)"; \
+		envsubst < .nfpm.yaml > dist/nfpm.rendered.yaml; \
+		nfpm pkg --config dist/nfpm.rendered.yaml --packager deb \
+			--target dist/niac_$(PKG_VERSION)_$(DEB_ARCH).deb
 	@printf "$(GREEN)Debian package: dist/niac_$(PKG_VERSION)_$(DEB_ARCH).deb$(RESET)\n"
 
-# =============================================================================
-# RPM Package
-# =============================================================================
-
-rpm: build ## Build RPM package (.rpm)
+rpm: build ensure-nfpm dist ## Build RPM package (.rpm) via nfpm
 	@printf "$(BOLD)Building RPM package...$(RESET)\n"
-	@mkdir -p dist/rpm/BUILD dist/rpm/RPMS dist/rpm/SOURCES dist/rpm/SPECS dist/rpm/SRPMS
-	@mkdir -p dist/rpm/SOURCES/niac-$(PKG_VERSION)
-	@cp $(BINARY_NAME) dist/rpm/SOURCES/niac-$(PKG_VERSION)/niac
-	@cp deploy/systemd/niac.service dist/rpm/SOURCES/niac-$(PKG_VERSION)/
-	@sed 's/__VERSION__/$(PKG_VERSION)/g; s/__ARCHITECTURE__/$(RPM_ARCH)/g; s|%{_repo_root}|$(CURDIR)|g' \
-		deploy/rpm/niac.spec > dist/rpm/SPECS/niac.spec
-	@rpmbuild --define "_topdir $(CURDIR)/dist/rpm" \
-		--define "_repo_root $(CURDIR)" \
-		-bb dist/rpm/SPECS/niac.spec
-	@mv dist/rpm/RPMS/$(RPM_ARCH)/*.rpm dist/ 2>/dev/null || true
-	@printf "$(GREEN)RPM package: dist/niac-$(PKG_VERSION)-1.*.$(RPM_ARCH).rpm$(RESET)\n"
+	@export NIAC_VERSION="$(PKG_VERSION)" NIAC_ARCH="$(DEB_ARCH)" NIAC_BINARY="./$(BINARY_NAME)"; \
+		envsubst < .nfpm.yaml > dist/nfpm.rendered.yaml; \
+		nfpm pkg --config dist/nfpm.rendered.yaml --packager rpm \
+			--target dist/niac-$(PKG_VERSION)-1.$(RPM_ARCH).rpm
+	@printf "$(GREEN)RPM package: dist/niac-$(PKG_VERSION)-1.$(RPM_ARCH).rpm$(RESET)\n"
 
 # =============================================================================
 # macOS Package

@@ -19,6 +19,13 @@ on:
         type: boolean
         default: true
 
+concurrency:
+  # Don't cancel an in-progress real release run, even if a second tag pushes
+  # in quick succession — those are independent versions and both should ship.
+  # Dry-run dispatches use the run_id so they never queue/cancel each other.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 permissions:
   contents: write
 
@@ -206,13 +213,22 @@ jobs:
           export NIAC_BINARY="./dist/niac-linux-${ARCH}"
           envsubst < .nfpm.yaml > nfpm.rendered.yaml
 
+          # Canonical RPM arch alias: amd64→x86_64, arm64→aarch64. nfpm
+          # already translates the in-package Architecture: header; this
+          # just makes the filename match standard RPM conventions.
+          case "${ARCH}" in
+            amd64) RPM_ARCH=x86_64 ;;
+            arm64) RPM_ARCH=aarch64 ;;
+            *)     RPM_ARCH="${ARCH}" ;;
+          esac
+
           nfpm pkg --config nfpm.rendered.yaml --packager deb \
             --target "release/niac_${PKG_VERSION}_${ARCH}.deb"
           nfpm pkg --config nfpm.rendered.yaml --packager rpm \
-            --target "release/niac-${PKG_VERSION}-1.${ARCH}.rpm"
+            --target "release/niac-${PKG_VERSION}-1.${RPM_ARCH}.rpm"
 
       - name: Upload release artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: release-linux-${{ matrix.arch }}
           path: |
@@ -333,7 +349,7 @@ jobs:
           ./deploy/macos/build-pkg.sh ./dist/niac-darwin-${ARCH} ${PKG_VERSION}
 
       - name: Upload release artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: release-darwin-${{ matrix.arch }}
           path: |
@@ -344,10 +360,19 @@ jobs:
   # Build Windows Release
   # ===========================================================================
   release-windows:
-    name: Create Windows Release
+    name: Create Windows Release (${{ matrix.arch }})
     runs-on: ubuntu-latest
     permissions:
       contents: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            goarch: amd64
+          - arch: arm64
+            goarch: arm64
 
     steps:
       - uses: actions/checkout@v6
@@ -394,7 +419,12 @@ jobs:
       - name: Build NiAC for Windows
         env:
           GOOS: windows
-          GOARCH: amd64
+          GOARCH: ${{ matrix.goarch }}
+          # CGO is disabled on Windows because gopacket/pcap requires
+          # libpcap (no Windows package on Ubuntu cross-toolchains). The
+          # capture/replay features that need libpcap aren't available on
+          # the Windows binary; CLI/UI/non-pcap protocol features still
+          # work.
           CGO_ENABLED: 0
           VERSION: ${{ github.ref_name }}
           COMMIT: ${{ github.sha }}
@@ -402,18 +432,19 @@ jobs:
         run: |
           go build -trimpath -buildvcs=false \
             -ldflags="-s -w -X main.version=${VERSION} -X main.commit=${COMMIT} -X main.date=$(date -u +%Y-%m-%dT%H:%M:%SZ) -X main.uiBuildHash=${UI_HASH}" \
-            -o dist/niac-windows-amd64.exe ./cmd/niac
+            -o "dist/niac-windows-${{ matrix.arch }}.exe" ./cmd/niac
 
       - name: Verify binary
         run: |
-          file dist/niac-windows-amd64.exe
-          echo "Windows amd64 binary built"
+          file "dist/niac-windows-${{ matrix.arch }}.exe"
+          echo "Windows ${{ matrix.arch }} binary built"
 
       - name: Create Windows distribution
         env:
           REF_NAME: ${{ github.ref_name }}
           REF_TYPE: ${{ github.ref_type }}
           SHORT_SHA: ${{ github.sha }}
+          ARCH: ${{ matrix.arch }}
         run: |
           if [ "${REF_TYPE}" = "tag" ]; then
             VERSION="${REF_NAME}"
@@ -421,17 +452,17 @@ jobs:
           else
             PKG_VERSION="0.0.0-dryrun-${SHORT_SHA:0:7}"
           fi
-          PKG_NAME="niac-${PKG_VERSION}-windows-amd64"
+          PKG_NAME="niac-${PKG_VERSION}-windows-${ARCH}"
           mkdir -p "release/${PKG_NAME}"
-          cp dist/niac-windows-amd64.exe "release/${PKG_NAME}/niac.exe"
+          cp "dist/niac-windows-${ARCH}.exe" "release/${PKG_NAME}/niac.exe"
           cp deploy/windows/build.ps1 "release/${PKG_NAME}/install.ps1"
           cd release
           zip -r "${PKG_NAME}.zip" "${PKG_NAME}"
 
       - name: Upload release artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
-          name: release-windows-amd64
+          name: release-windows-${{ matrix.arch }}
           path: release/*.zip
 
   # ===========================================================================
@@ -451,7 +482,7 @@ jobs:
           fetch-depth: 0
 
       - name: Download all release artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: artifacts/
 
@@ -481,7 +512,7 @@ jobs:
           done
 
       - name: Install Cosign for signing
-        uses: sigstore/cosign-installer@v3
+        uses: sigstore/cosign-installer@v4
 
       - name: Sign release artifacts with cosign (keyless OIDC)
         run: |
@@ -507,7 +538,7 @@ jobs:
           echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Upload assembled artifacts (dry-run inspectable)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           # Slashes in branch names (e.g. chore/...) aren't valid in artifact
           # names, so fall back to the run_id when triggered off a non-tag.
@@ -522,7 +553,7 @@ jobs:
 
       - name: Create Release
         if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.dry_run == false)
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           body: |
             ## Changes
