@@ -172,10 +172,23 @@ jobs:
 
       - name: Create release packages (.tar.gz + .deb + .rpm via nfpm)
         env:
-          VERSION: ${{ github.ref_name }}
+          REF_NAME: ${{ github.ref_name }}
+          REF_TYPE: ${{ github.ref_type }}
+          SHORT_SHA: ${{ github.sha }}
           ARCH: ${{ matrix.arch }}
         run: |
-          PKG_VERSION=$(echo "${VERSION#v}" | sed 's/-dirty$//;s/-[0-9]*-g[0-9a-f]*$//')
+          # On tag: VERSION = "v0.66.34"; PKG_VERSION = "0.66.34".
+          # On dispatch from a branch (REF_TYPE=branch): VERSION = "0.0.0-dryrun-<sha7>",
+          # because branch names like "chore/release-pipeline-modernize" contain
+          # slashes that would otherwise leak into archive/.deb/.rpm filenames.
+          if [ "${REF_TYPE}" = "tag" ]; then
+            VERSION="${REF_NAME}"
+            PKG_VERSION=$(echo "${VERSION#v}" | sed 's/-dirty$//;s/-[0-9]*-g[0-9a-f]*$//')
+          else
+            VERSION="0.0.0-dryrun-${SHORT_SHA:0:7}"
+            PKG_VERSION="${VERSION}"
+          fi
+          echo "Using VERSION=${VERSION} PKG_VERSION=${PKG_VERSION}"
           mkdir -p release
 
           # .tar.gz: prebuilt binary in a versioned directory
@@ -294,10 +307,18 @@ jobs:
 
       - name: Create release packages
         env:
-          VERSION: ${{ github.ref_name }}
+          REF_NAME: ${{ github.ref_name }}
+          REF_TYPE: ${{ github.ref_type }}
+          SHORT_SHA: ${{ github.sha }}
           ARCH: ${{ matrix.arch }}
         run: |
-          PKG_VERSION=$(echo "${VERSION#v}" | sed 's/-dirty$//;s/-[0-9]*-g[0-9a-f]*$//')
+          if [ "${REF_TYPE}" = "tag" ]; then
+            VERSION="${REF_NAME}"
+            PKG_VERSION=$(echo "${VERSION#v}" | sed 's/-dirty$//;s/-[0-9]*-g[0-9a-f]*$//')
+          else
+            VERSION="0.0.0-dryrun-${SHORT_SHA:0:7}"
+            PKG_VERSION="${VERSION}"
+          fi
 
           # Create .tar.gz package
           mkdir -p release/niac-${VERSION}-darwin-${ARCH}
@@ -390,9 +411,16 @@ jobs:
 
       - name: Create Windows distribution
         env:
-          VERSION: ${{ github.ref_name }}
+          REF_NAME: ${{ github.ref_name }}
+          REF_TYPE: ${{ github.ref_type }}
+          SHORT_SHA: ${{ github.sha }}
         run: |
-          PKG_VERSION=$(echo "${VERSION#v}" | sed 's/-dirty$//;s/-[0-9]*-g[0-9a-f]*$//')
+          if [ "${REF_TYPE}" = "tag" ]; then
+            VERSION="${REF_NAME}"
+            PKG_VERSION=$(echo "${VERSION#v}" | sed 's/-dirty$//;s/-[0-9]*-g[0-9a-f]*$//')
+          else
+            PKG_VERSION="0.0.0-dryrun-${SHORT_SHA:0:7}"
+          fi
           PKG_NAME="niac-${PKG_VERSION}-windows-amd64"
           mkdir -p "release/${PKG_NAME}"
           cp dist/niac-windows-amd64.exe "release/${PKG_NAME}/niac.exe"
