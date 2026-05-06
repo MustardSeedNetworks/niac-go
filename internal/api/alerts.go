@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -152,6 +153,23 @@ func (s *Server) postAlertWebhook(webhookURL string, body []byte) {
 	if parsedURL.Scheme != "http" && parsedURL.Scheme != "https" {
 		s.logger.Error("Alert webhook URL must use http or https scheme")
 		return
+	}
+
+	// Inline SSRF barrier at the dispatch site. validateWebhookURLSSRF above
+	// performs the same checks, but CodeQL's go/request-forgery query needs
+	// to see the IP rejection pattern directly at the http.Client.Do call.
+	host := parsedURL.Hostname()
+	if host == "" {
+		s.logger.Error("Alert webhook URL has empty host")
+		return
+	}
+	if ip := net.ParseIP(host); ip != nil {
+		if ip.IsLoopback() || ip.IsPrivate() || ip.IsUnspecified() ||
+			ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() ||
+			ip.IsInterfaceLocalMulticast() || ip.IsMulticast() {
+			s.logger.Error("Alert webhook URL targets a non-routable address", "host", host)
+			return
+		}
 	}
 
 	// Reconstruct the dispatched URL from validated components so the value
