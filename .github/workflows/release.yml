@@ -509,7 +509,14 @@ jobs:
       - name: Upload assembled artifacts (dry-run inspectable)
         uses: actions/upload-artifact@v4
         with:
-          name: release-bundle-${{ github.ref_name }}
+          # Slashes in branch names (e.g. chore/...) aren't valid in artifact
+          # names, so fall back to the run_id when triggered off a non-tag.
+          name: >-
+            release-bundle-${{
+              github.ref_type == 'tag'
+                && github.ref_name
+                || format('dryrun-{0}', github.run_id)
+            }}
           path: dist/
           retention-days: 14
 
