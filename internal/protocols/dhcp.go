@@ -9,8 +9,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/gopacket"
-	"github.com/google/gopacket/layers"
+	"github.com/gopacket/gopacket"
+	"github.com/gopacket/gopacket/layers"
 
 	"github.com/krisarmstrong/niac-go/internal/config"
 	"github.com/krisarmstrong/niac-go/internal/logging"
@@ -807,7 +807,8 @@ func (h *DHCPHandler) sendDHCPResponse(
 		Operation:    layers.DHCPOpReply,
 		HardwareType: layers.LinkTypeEthernet,
 		HardwareLen:  dhcpHWAddrLen,
-		HardwareOpts: 0,
+		// gopacket v1.5 renamed HardwareOpts → RelayHops (RFC 951 §2 calls it "hops").
+		RelayHops:    0,
 		Xid:          xid,
 		Secs:         0,
 		Flags:        dhcpBroadcastFlag,

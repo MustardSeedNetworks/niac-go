@@ -5,7 +5,7 @@ import (
 	"net"
 	"os"
 
-	"github.com/google/gopacket/layers"
+	"github.com/gopacket/gopacket/layers"
 	"github.com/gosnmp/gosnmp"
 
 	"github.com/krisarmstrong/niac-go/internal/config"
