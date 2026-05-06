@@ -163,8 +163,14 @@ type ServerConfig struct {
 	UIBuildHash string
 	Topology    Topology
 	Alert       AlertConfig
-	ApplyConfig func(*config.Config) error
-	Replay      ReplayManager
+	// WebhookAllowedHosts is an admin-side allowlist of hostnames that the
+	// alert webhook is permitted to dispatch to. Empty = no allowlist (the
+	// existing private-IP / blocked-hostname filters in
+	// validateWebhookURLSSRF still apply). Non-empty = strict allowlist:
+	// the parsed URL's hostname must match one of these exactly.
+	WebhookAllowedHosts []string
+	ApplyConfig         func(*config.Config) error
+	Replay              ReplayManager
 }
 
 // SimulationRequest represents a request to start a simulation.

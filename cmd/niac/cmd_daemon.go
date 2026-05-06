@@ -15,9 +15,10 @@ import (
 )
 
 type daemonOptions struct {
-	listen      string
-	token       string
-	storagePath string
+	listen              string
+	token               string
+	storagePath         string
+	webhookAllowedHosts []string
 }
 
 func addDaemonCommand(root *cobra.Command, info versionInfo) {
@@ -51,6 +52,9 @@ The web UI will be available at http://localhost:8080`,
 		StringVar(&options.token, "token", "", "Bearer token for API authentication (RECOMMENDED for network-exposed instances)")
 	daemonCmd.Flags().
 		StringVar(&options.storagePath, "storage", "~/.niac/niac.db", "Path to run history database (use 'disabled' to disable)")
+	daemonCmd.Flags().
+		StringSliceVar(&options.webhookAllowedHosts, "webhook-allowed-host", nil,
+			"Hostname allowed as alert webhook destination (repeatable; if any are set, all webhook URLs must match exactly). When unset, the existing private-IP/blocked-hostname filter is used.")
 
 	root.AddCommand(daemonCmd)
 }
@@ -71,13 +75,14 @@ func runDaemon(options *daemonOptions, info versionInfo) error {
 
 	// Create daemon instance
 	d, err := daemon.NewDaemon(daemon.Config{
-		ListenAddr:  options.listen,
-		Token:       options.token,
-		StoragePath: options.storagePath,
-		Version:     info.version,
-		Commit:      info.commit,
-		BuildTime:   info.date,
-		UIBuildHash: info.uiBuildHash,
+		ListenAddr:          options.listen,
+		Token:               options.token,
+		StoragePath:         options.storagePath,
+		Version:             info.version,
+		Commit:              info.commit,
+		BuildTime:           info.date,
+		UIBuildHash:         info.uiBuildHash,
+		WebhookAllowedHosts: options.webhookAllowedHosts,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create daemon: %w", err)

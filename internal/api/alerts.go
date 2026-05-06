@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"time"
 )
@@ -157,13 +158,24 @@ func (s *Server) postAlertWebhook(webhookURL string, body []byte) {
 
 	// Inline SSRF barrier at the dispatch site. validateWebhookURLSSRF above
 	// performs the same checks, but CodeQL's go/request-forgery query needs
-	// to see the IP rejection pattern directly at the http.Client.Do call.
+	// to see the host check directly at the http.Client.Do call.
 	host := parsedURL.Hostname()
 	if host == "" {
 		s.logger.Error("Alert webhook URL has empty host")
 		return
 	}
-	if ip := net.ParseIP(host); ip != nil {
+	// Admin-side hostname allowlist. When configured, only exact hostname
+	// matches are accepted — this is the canonical CodeQL barrier for
+	// go/request-forgery and lets a deployment opt out of accepting
+	// arbitrary user-supplied webhook destinations entirely.
+	if allowed := s.cfg.WebhookAllowedHosts; len(allowed) > 0 {
+		if !slices.Contains(allowed, host) {
+			s.logger.Error("Alert webhook host not in allowlist", "host", host)
+			return
+		}
+	} else if ip := net.ParseIP(host); ip != nil {
+		// No allowlist configured — fall back to the IP-class filter so a
+		// raw-IP literal can't reach private/loopback/link-local space.
 		if ip.IsLoopback() || ip.IsPrivate() || ip.IsUnspecified() ||
 			ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() ||
 			ip.IsInterfaceLocalMulticast() || ip.IsMulticast() {
