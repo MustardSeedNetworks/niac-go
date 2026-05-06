@@ -13,6 +13,11 @@ on:
     tags:
       - "v*"
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Build artifacts and exit (skip publishing the GitHub release)"
+        type: boolean
+        default: true
 
 permissions:
   contents: write
@@ -162,66 +167,36 @@ jobs:
           fi
           echo "NiAC binary smoke test passed"
 
-      - name: Create release packages
+      - name: Install nfpm
+        run: go install github.com/goreleaser/nfpm/v2/cmd/nfpm@v2.46.3
+
+      - name: Create release packages (.tar.gz + .deb + .rpm via nfpm)
         env:
           VERSION: ${{ github.ref_name }}
           ARCH: ${{ matrix.arch }}
         run: |
           PKG_VERSION=$(echo "${VERSION#v}" | sed 's/-dirty$//;s/-[0-9]*-g[0-9a-f]*$//')
+          mkdir -p release
 
-          # Create .tar.gz package
-          mkdir -p release/niac-${VERSION}-linux-${ARCH}
-          cp dist/niac-linux-${ARCH} release/niac-${VERSION}-linux-${ARCH}/niac
-          chmod +x release/niac-${VERSION}-linux-${ARCH}/*
-          cd release
-          tar -czvf niac-${VERSION}-linux-${ARCH}.tar.gz niac-${VERSION}-linux-${ARCH}
-          cd ..
+          # .tar.gz: prebuilt binary in a versioned directory
+          mkdir -p "release/niac-${VERSION}-linux-${ARCH}"
+          cp "dist/niac-linux-${ARCH}" "release/niac-${VERSION}-linux-${ARCH}/niac"
+          chmod +x "release/niac-${VERSION}-linux-${ARCH}"/*
+          tar -C release -czvf "release/niac-${VERSION}-linux-${ARCH}.tar.gz" "niac-${VERSION}-linux-${ARCH}"
+          rm -rf "release/niac-${VERSION}-linux-${ARCH}"
 
-          # Create .deb package
-          DEB_DIR="dist/deb"
-          mkdir -p $DEB_DIR/DEBIAN
-          mkdir -p $DEB_DIR/usr/bin
-          mkdir -p $DEB_DIR/usr/lib/systemd/system
-          mkdir -p $DEB_DIR/var/lib/niac
-          mkdir -p $DEB_DIR/var/log/niac
+          # .deb + .rpm: render .nfpm.yaml with envsubst, hand to nfpm. nfpm is
+          # pure Go, so cross-arch RPMs work the same as cross-arch DEBs — no
+          # rpmbuild/rpmrc/platform-macros plumbing needed.
+          export NIAC_VERSION="${PKG_VERSION}"
+          export NIAC_ARCH="${ARCH}"
+          export NIAC_BINARY="./dist/niac-linux-${ARCH}"
+          envsubst < .nfpm.yaml > nfpm.rendered.yaml
 
-          cp dist/niac-linux-${ARCH} $DEB_DIR/usr/bin/niac
-          chmod 755 $DEB_DIR/usr/bin/niac
-          cp deploy/systemd/niac.service $DEB_DIR/usr/lib/systemd/system/
-
-          sed "s/__VERSION__/${PKG_VERSION}/;s/__ARCHITECTURE__/${ARCH}/" \
-            deploy/deb/control > $DEB_DIR/DEBIAN/control
-
-          cp deploy/deb/postinst $DEB_DIR/DEBIAN/
-          cp deploy/deb/prerm $DEB_DIR/DEBIAN/
-          cp deploy/deb/postrm $DEB_DIR/DEBIAN/
-          chmod 755 $DEB_DIR/DEBIAN/postinst $DEB_DIR/DEBIAN/prerm $DEB_DIR/DEBIAN/postrm
-
-          dpkg-deb --build $DEB_DIR release/niac_${PKG_VERSION}_${ARCH}.deb
-
-          # Create .rpm package (amd64 only — Ubuntu's `rpm` package can't
-          # cross-build for aarch64 without the missing rpmrc/platform
-          # entries, and patching them in is fragile. The .deb + .tar.gz
-          # cover arm64 deployments; revisit if/when an arm64 RPM target
-          # actually has consumers).
-          if [ "${ARCH}" = "amd64" ]; then
-            RPM_ARCH="x86_64"
-
-            # Copy binary to repo root for rpmbuild (spec expects %{_repo_root}/niac)
-            cp dist/niac-linux-${ARCH} niac
-
-            sed "s/__VERSION__/${PKG_VERSION}/;s/__ARCHITECTURE__/${RPM_ARCH}/" \
-              deploy/rpm/niac.spec > niac.spec
-
-            rpmbuild --target "${RPM_ARCH}" \
-              --define "_repo_root $(pwd)" \
-              --define "_topdir $(pwd)/rpmbuild" \
-              --define "_rpmdir $(pwd)/release" \
-              -bb niac.spec
-
-            # Move RPM from arch subdirectory to release/
-            mv release/${RPM_ARCH}/*.rpm release/ || true
-          fi
+          nfpm pkg --config nfpm.rendered.yaml --packager deb \
+            --target "release/niac_${PKG_VERSION}_${ARCH}.deb"
+          nfpm pkg --config nfpm.rendered.yaml --packager rpm \
+            --target "release/niac-${PKG_VERSION}-1.${ARCH}.rpm"
 
       - name: Upload release artifacts
         uses: actions/upload-artifact@v4
@@ -503,7 +478,15 @@ jobs:
           echo "$CHANGELOG" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
+      - name: Upload assembled artifacts (dry-run inspectable)
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-bundle-${{ github.ref_name }}
+          path: dist/
+          retention-days: 14
+
       - name: Create Release
+        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.dry_run == false)
         uses: softprops/action-gh-release@v2
         with:
           body: |
