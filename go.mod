@@ -8,7 +8,7 @@ require (
 	github.com/charmbracelet/bubbletea v1.3.10
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/fatih/color v1.19.0
-	github.com/google/gopacket v1.1.19
+	github.com/gopacket/gopacket v1.5.0
 	github.com/gosnmp/gosnmp v1.43.2
 	github.com/kardianos/service v1.2.4
 	github.com/spf13/cobra v1.10.2

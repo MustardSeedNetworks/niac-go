@@ -7,7 +7,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/google/gopacket/layers"
+	"github.com/gopacket/gopacket/layers"
 
 	"github.com/krisarmstrong/niac-go/internal/config"
 )

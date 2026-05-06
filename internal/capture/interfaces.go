@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/google/gopacket/pcap"
+	"github.com/gopacket/gopacket/pcap"
 )
 
 // PcapInterface is an alias for pcap.Interface for use in other packages.

@@ -54,16 +54,21 @@ jobs:
         run: go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
 
       - name: Check coverage threshold
+        env:
+          # Project target is 90% (CLAUDE.md). Current measured ~55%; ratchet
+          # the floor up gradually so PRs can't regress below it. Raise
+          # COVERAGE_FLOOR each time real coverage moves up by 5+ points.
+          COVERAGE_FLOOR: "50"
         run: |
           COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | sed 's/%//')
-          echo "Coverage: ${COVERAGE}%"
-          if (( $(echo "$COVERAGE < 40" | bc -l) )); then
-            echo "Coverage ${COVERAGE}% is below 40% threshold"
+          echo "Coverage: ${COVERAGE}% (floor: ${COVERAGE_FLOOR}%)"
+          if (( $(echo "$COVERAGE < $COVERAGE_FLOOR" | bc -l) )); then
+            echo "Coverage ${COVERAGE}% is below ${COVERAGE_FLOOR}% floor"
             exit 1
           fi
 
       - name: Upload coverage
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v6
         with:
           file: ./coverage.out
           flags: backend
@@ -101,7 +106,7 @@ jobs:
         run: npm run build
 
       - name: Upload frontend build
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: frontend-dist
           path: internal/api/ui/
@@ -131,7 +136,7 @@ jobs:
           govulncheck ./...
 
       - name: Run gosec
-        uses: securego/gosec@v2.22.11
+        uses: securego/gosec@v2.26.1
         with:
           args: "-no-fail -fmt sarif -out gosec-results.sarif ./..."
 
@@ -163,7 +168,7 @@ jobs:
         run: gitleaks detect --source . --no-banner --redact --exit-code 1
 
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@0.35.0
+        uses: aquasecurity/trivy-action@0.36.0
         with:
           scan-type: 'fs'
           scan-ref: '.'
@@ -371,7 +376,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y libpcap-dev
 
       - name: Download frontend build
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v8
         with:
           name: frontend-dist
           path: internal/api/ui/
@@ -391,7 +396,7 @@ jobs:
         run: ./niac-${{ matrix.os }}-${{ matrix.arch }} --help || ./niac-${{ matrix.os }}-${{ matrix.arch }} version || echo "Binary runs"
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: niac-${{ matrix.os }}-${{ matrix.arch }}
           path: niac-${{ matrix.os }}-${{ matrix.arch }}
@@ -426,7 +431,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y libpcap-dev
 
       - name: Download frontend build
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v8
         with:
           name: frontend-dist
           path: internal/api/ui/
@@ -465,7 +470,7 @@ jobs:
         run: npx playwright test --project=chromium --reporter=html
 
       - name: Upload Playwright report
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: playwright-report
@@ -473,7 +478,7 @@ jobs:
           retention-days: 7
 
       - name: Upload server logs on failure
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: e2e-server-logs
@@ -508,7 +513,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y libpcap-dev
 
       - name: Download frontend build
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v8
         with:
           name: frontend-dist
           path: internal/api/ui/
@@ -538,7 +543,7 @@ jobs:
           temporaryPublicStorage: true
 
       - name: Upload server logs on failure
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: lighthouse-server-logs

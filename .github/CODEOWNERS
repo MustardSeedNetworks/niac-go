@@ -26,5 +26,10 @@
 # Version pinning
 /ui/.node-version @krisarmstrong
 
-# Security scanning
-/.pre-commit-config.yaml @krisarmstrong
+# Husky git hooks (gitleaks scan, file-size check, conventional commits)
+/.husky/ @krisarmstrong
+/commitlint.config.js @krisarmstrong
+
+# Packaging contract (.nfpm.yaml + maintainer scripts feed both CI and `make`)
+/.nfpm.yaml @krisarmstrong
+/deploy/ @krisarmstrong

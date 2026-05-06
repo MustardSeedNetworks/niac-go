@@ -3,7 +3,7 @@ package capture
 import (
 	"testing"
 
-	"github.com/google/gopacket/pcap"
+	"github.com/gopacket/gopacket/pcap"
 )
 
 // TestInterfaceExists_Loopback tests loopback interface detection.
