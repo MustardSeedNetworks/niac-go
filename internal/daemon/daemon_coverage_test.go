@@ -544,7 +544,6 @@ func TestSentinelErrors(t *testing.T) {
 		{ErrConfigDataExceedsMaxSize, "config data exceeds maximum size"},
 		{ErrConfigPathOrDataRequired, "either config_path or config_data must be provided"},
 		{ErrNoSimulationRunning, "no simulation running"},
-		{ErrReplayNotImplemented, "replay not yet implemented in daemon mode"},
 	}
 
 	for _, tt := range tests {

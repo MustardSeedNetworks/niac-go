@@ -25,7 +25,6 @@ var (
 	ErrConfigDataExceedsMaxSize = errors.New("config data exceeds maximum size")
 	ErrConfigPathOrDataRequired = errors.New("either config_path or config_data must be provided")
 	ErrNoSimulationRunning      = errors.New("no simulation running")
-	ErrReplayNotImplemented     = errors.New("replay not yet implemented in daemon mode")
 )
 
 const (
@@ -240,7 +239,37 @@ func (d *Daemon) StartSimulation(req api.SimulationRequest) error {
 
 	logging.Successf("✓ Simulation started on %s with %d devices", req.Interface, len(cfg.Devices))
 
+	// Auto-start PCAP playback if configured. The playback is best-effort —
+	// a failed playback start logs but doesn't fail the simulation, since
+	// the protocol stack is already up and serving devices.
+	if cfg.CapturePlayback != nil && strings.TrimSpace(cfg.CapturePlayback.FileName) != "" {
+		fileName := resolvePlaybackPath(cfg.CapturePlayback.FileName, configPath)
+		_, replayErr := replay.Start(api.ReplayRequest{
+			File:   fileName,
+			LoopMs: cfg.CapturePlayback.LoopTime,
+			Scale:  cfg.CapturePlayback.ScaleTime,
+		})
+		if replayErr != nil {
+			logging.Warningf("PCAP playback auto-start failed: %v", replayErr)
+		} else {
+			logging.Successf("✓ PCAP playback auto-started: %s", fileName)
+		}
+	}
+
 	return nil
+}
+
+// resolvePlaybackPath turns a (possibly relative) capture_playbacks file_name
+// into an absolute path. Relative paths resolve against the directory holding
+// the config file — same convention as the legacy CLI's include_path handling.
+func resolvePlaybackPath(fileName, configPath string) string {
+	if filepath.IsAbs(fileName) {
+		return fileName
+	}
+	if configPath == "" {
+		return fileName
+	}
+	return filepath.Join(filepath.Dir(configPath), fileName)
 }
 
 // startSimulationStack creates the capture engine and starts the protocol stack.
@@ -371,7 +400,9 @@ type replayController struct {
 	engine     *capture.Engine
 	debugLevel int
 	mu         sync.Mutex
+	current    *capture.PlaybackEngine
 	state      api.ReplayState
+	cleanup    string
 }
 
 func newReplayController(engine *capture.Engine, debugLevel int) *replayController {
@@ -389,19 +420,81 @@ func (rc *replayController) Status() api.ReplayState {
 	return rc.state
 }
 
-// Start begins PCAP replay with the given request.
-func (rc *replayController) Start(_ api.ReplayRequest) (api.ReplayState, error) {
-	// Implementation same as in runtime_services.go
-	// Simplified for now
-	return rc.state, ErrReplayNotImplemented
+// Start begins PCAP replay with the given request. This is the daemon-mode
+// equivalent of cmd/niac/runtime_services.go's controller.
+func (rc *replayController) Start(req api.ReplayRequest) (api.ReplayState, error) {
+	rc.mu.Lock()
+	defer rc.mu.Unlock()
+
+	if rc.engine == nil {
+		return rc.state, errors.New("capture engine unavailable for replay")
+	}
+	if strings.TrimSpace(req.File) == "" {
+		return rc.state, errors.New("pcap file path is required")
+	}
+
+	if rc.current != nil {
+		rc.current.Stop()
+		rc.current = nil
+	}
+	rc.cleanupTempFile()
+
+	cfg := &config.CapturePlayback{
+		FileName:  req.File,
+		LoopTime:  req.LoopMs,
+		ScaleTime: req.Scale,
+	}
+	player := capture.NewPlaybackEngine(rc.engine, cfg, rc.debugLevel)
+	if err := player.Start(); err != nil {
+		if req.Uploaded {
+			// Reaffirm the upload path is bounded before deleting it; the
+			// upload handler placed req.File under a vetted directory, but
+			// keeping the inline barrier explicit appeases CodeQL.
+			cleanedFile := filepath.Clean(req.File)
+			if !strings.Contains(cleanedFile, "..") {
+				_ = os.Remove(cleanedFile)
+			}
+		}
+		return rc.state, fmt.Errorf("failed to start playback: %w", err)
+	}
+
+	rc.current = player
+	rc.state = api.ReplayState{
+		Running:   true,
+		File:      req.File,
+		LoopMs:    req.LoopMs,
+		Scale:     req.Scale,
+		StartedAt: time.Now().UTC(),
+	}
+	if req.Uploaded {
+		rc.cleanup = req.File
+	} else {
+		rc.cleanup = ""
+	}
+	return rc.state, nil
 }
 
-// Stop halts the current PCAP replay.
+// Stop halts the current PCAP replay and cleans up any uploaded temp file.
 func (rc *replayController) Stop() (api.ReplayState, error) {
 	rc.mu.Lock()
 	defer rc.mu.Unlock()
 
+	if rc.current != nil {
+		rc.current.Stop()
+		rc.current = nil
+	}
 	rc.state.Running = false
-
+	rc.cleanupTempFile()
 	return rc.state, nil
+}
+
+func (rc *replayController) cleanupTempFile() {
+	if rc.cleanup == "" {
+		return
+	}
+	cleanedPath := filepath.Clean(rc.cleanup)
+	if !strings.Contains(cleanedPath, "..") {
+		_ = os.Remove(cleanedPath)
+	}
+	rc.cleanup = ""
 }

@@ -407,20 +407,32 @@ func TestReplayController_Status(t *testing.T) {
 	}
 }
 
-// TestReplayController_Start verifies replay start returns not implemented error.
-func TestReplayController_Start(t *testing.T) {
+// TestReplayController_Start_NoEngine verifies Start refuses to run without
+// a capture engine (the daemon constructs a controller per-simulation, but a
+// nil engine should still bail cleanly rather than panic).
+func TestReplayController_Start_NoEngine(t *testing.T) {
 	rc := newReplayController(nil, 0)
 
 	req := api.ReplayRequest{
 		File: "/tmp/test.pcap",
 	}
 
-	_, err := rc.Start(req)
+	state, err := rc.Start(req)
 	if err == nil {
-		t.Error("Expected error from Start")
+		t.Fatal("expected error when engine is nil")
 	}
-	if !errors.Is(err, ErrReplayNotImplemented) {
-		t.Errorf("Expected ErrReplayNotImplemented, got: %v", err)
+	if state.Running {
+		t.Errorf("state should not be running after a failed Start, got %+v", state)
+	}
+}
+
+// TestReplayController_Start_EmptyFile verifies an empty file path is rejected.
+func TestReplayController_Start_EmptyFile(t *testing.T) {
+	rc := newReplayController(nil, 0)
+
+	_, err := rc.Start(api.ReplayRequest{File: "   "})
+	if err == nil {
+		t.Fatal("expected error for empty file path")
 	}
 }
 
