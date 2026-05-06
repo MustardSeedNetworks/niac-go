@@ -8,7 +8,9 @@ import {
   LineChart,
   Network,
   PlugZap,
+  Radar,
   Server,
+  ShieldCheck,
   Terminal,
   Workflow,
   Wrench,
@@ -64,6 +66,12 @@ const PcapAnalyzerPage = lazy(() =>
 );
 const TrafficInjectionPage = lazy(() =>
   import('./pages/TrafficInjectionPage').then((m) => ({ default: m.TrafficInjectionPage })),
+);
+const NeighborsPage = lazy(() =>
+  import('./pages/NeighborsPage').then((m) => ({ default: m.NeighborsPage })),
+);
+const WalkValidatorPage = lazy(() =>
+  import('./pages/WalkValidatorPage').then((m) => ({ default: m.WalkValidatorPage })),
 );
 
 // Loading fallback for lazy-loaded pages
@@ -195,6 +203,23 @@ const pages: PageConfig[] = [
     icon: FileBox,
     component: PcapAnalyzerPage,
   },
+  {
+    path: '/neighbors',
+    label: 'Neighbors',
+    title: 'Discovery Neighbors',
+    description: 'Live CDP / LLDP / EDP / FDP neighbor table for the running simulation.',
+    icon: Radar,
+    component: NeighborsPage,
+  },
+  {
+    path: '/walk-validator',
+    label: 'Walk Validator',
+    title: 'SNMP Walk Validator',
+    description:
+      'Validate and auto-fix SNMP walk files (the same engine niac analyze-walk uses).',
+    icon: ShieldCheck,
+    component: WalkValidatorPage,
+  },
 ];
 
 // Organize navigation into logical groups
@@ -224,6 +249,7 @@ const navGroups: SidebarNavGroup[] = [
     label: 'Network',
     items: [
       { path: '/topology', label: 'Topology', icon: Network },
+      { path: '/neighbors', label: 'Neighbors', icon: Radar },
       { path: '/traffic', label: 'Traffic Injection', icon: Zap },
     ],
   },
@@ -234,6 +260,7 @@ const navGroups: SidebarNavGroup[] = [
       { path: '/debug', label: 'Protocol Debug', icon: Terminal },
       { path: '/packets', label: 'Live Packets', icon: FileSearch },
       { path: '/pcap-analyzer', label: 'PCAP Analysis', icon: FileBox },
+      { path: '/walk-validator', label: 'Walk Validator', icon: ShieldCheck },
     ],
   },
   {

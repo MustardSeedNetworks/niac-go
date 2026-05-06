@@ -54,6 +54,40 @@ export interface NeighborRecord {
   ttl: number;
 }
 
+/**
+ * One issue found by the SNMP walk-file validator. Severity is one of
+ * "error" | "warning" | "info"; "autoFix" means the validator can rewrite
+ * the line via POST /api/v1/walk/fix.
+ */
+export interface WalkValidationIssue {
+  line: number;
+  severity: string;
+  message: string;
+  original: string;
+  suggestion?: string;
+  autoFix: boolean;
+}
+
+/**
+ * Result of validating (or auto-fixing) a walk file via
+ * POST /api/v1/walk/{validate,fix}.
+ */
+export interface WalkValidationResult {
+  filename: string;
+  valid: boolean;
+  totalLines: number;
+  validLines: number;
+  issues: WalkValidationIssue[];
+  fixedCount?: number;
+  fixedLines?: number[];
+}
+
+export interface WalkValidationResponse {
+  success: boolean;
+  message?: string;
+  result?: WalkValidationResult;
+}
+
 export interface ConfigDocument {
   path: string;
   filename: string;

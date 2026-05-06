@@ -35,6 +35,9 @@ export type {
   TopologyLink,
   TopologyNode,
   VersionInfo,
+  WalkValidationIssue,
+  WalkValidationResponse,
+  WalkValidationResult,
 } from './api-response-types';
 
 // Debug Types
