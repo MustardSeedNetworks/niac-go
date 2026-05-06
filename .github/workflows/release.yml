@@ -213,11 +213,16 @@ jobs:
           sed "s/__VERSION__/${PKG_VERSION}/;s/__ARCHITECTURE__/${RPM_ARCH}/" \
             deploy/rpm/niac.spec > niac.spec
 
-          # Ubuntu's rpmbuild needs the full ${arch}-${os} target triplet for
-          # cross-architecture builds; bare "aarch64" trips "No compatible
-          # architectures found for build".
-          rpmbuild --target "${RPM_ARCH}-linux" \
+          # Ubuntu's rpmbuild ships limited /usr/lib/rpm/platform configs and
+          # rejects `--target aarch64`/`--target aarch64-linux` with
+          # "No compatible architectures found for build". Override the
+          # platform machinery with explicit defines instead of --target.
+          rpmbuild \
+            --define "_arch ${RPM_ARCH}" \
+            --define "_build_arch ${RPM_ARCH}" \
+            --define "_target_cpu ${RPM_ARCH}" \
             --define "_target_os linux" \
+            --define "_target_vendor unknown" \
             --define "_repo_root $(pwd)" \
             --define "_topdir $(pwd)/rpmbuild" \
             --define "_rpmdir $(pwd)/release" \
