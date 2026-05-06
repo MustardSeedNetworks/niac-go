@@ -68,9 +68,21 @@ jobs:
         run: |
           if [ "${{ matrix.arch }}" = "arm64" ]; then
             sudo dpkg --add-architecture arm64
-            # Restrict existing sources to amd64 only
-            sudo sed -i 's/^deb /deb [arch=amd64] /' /etc/apt/sources.list.d/*.list 2>/dev/null || true
-            sudo sed -i 's/^deb /deb [arch=amd64] /' /etc/apt/sources.list 2>/dev/null || true
+            # Restrict existing amd64-only sources so apt update doesn't
+            # 404 trying to fetch arm64 indexes from them. Skip lines that
+            # already carry [arch=...] (e.g. microsoft-prod.list, which
+            # would otherwise become malformed) and skip the deb822 format
+            # files (.sources) that Ubuntu 24.04 noble uses.
+            for f in /etc/apt/sources.list.d/*.list /etc/apt/sources.list; do
+              [ -f "$f" ] || continue
+              sudo sed -i '/^deb \[/!s|^deb |deb [arch=amd64] |' "$f"
+            done
+            for f in /etc/apt/sources.list.d/*.sources; do
+              [ -f "$f" ] || continue
+              if ! grep -q '^Architectures:' "$f"; then
+                echo 'Architectures: amd64' | sudo tee -a "$f" >/dev/null
+              fi
+            done
             # Add arm64 sources from ports.ubuntu.com
             sudo tee /etc/apt/sources.list.d/ports-arm64.list >/dev/null <<'EOF'
           deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble main universe multiverse restricted
