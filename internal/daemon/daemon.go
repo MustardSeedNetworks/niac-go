@@ -42,6 +42,10 @@ type Config struct {
 	Commit      string
 	BuildTime   string
 	UIBuildHash string
+	// WebhookAllowedHosts restricts the alert webhook destination to an
+	// admin-managed set of hostnames. Empty = no allowlist (the existing
+	// private-IP / blocked-hostname filters still apply).
+	WebhookAllowedHosts []string
 }
 
 // Daemon manages the NIAC simulation lifecycle.
@@ -99,13 +103,14 @@ func NewDaemon(cfg Config) (*Daemon, error) {
 func (d *Daemon) Start() error {
 	// Create API server
 	serverCfg := api.ServerConfig{
-		Addr:        d.cfg.ListenAddr,
-		Token:       d.cfg.Token,
-		Version:     d.cfg.Version,
-		Commit:      d.cfg.Commit,
-		BuildTime:   d.cfg.BuildTime,
-		UIBuildHash: d.cfg.UIBuildHash,
-		Storage:     d.storage,
+		Addr:                d.cfg.ListenAddr,
+		Token:               d.cfg.Token,
+		Version:             d.cfg.Version,
+		Commit:              d.cfg.Commit,
+		BuildTime:           d.cfg.BuildTime,
+		UIBuildHash:         d.cfg.UIBuildHash,
+		Storage:             d.storage,
+		WebhookAllowedHosts: d.cfg.WebhookAllowedHosts,
 		// Stack, Config, etc. will be nil until simulation starts
 	}
 
