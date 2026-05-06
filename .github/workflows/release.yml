@@ -512,7 +512,8 @@ jobs:
           done
 
       - name: Install Cosign for signing
-        uses: sigstore/cosign-installer@v4
+        # cosign-installer doesn't publish a floating @v4 ref; pin the patch.
+        uses: sigstore/cosign-installer@v4.1.1
 
       - name: Sign release artifacts with cosign (keyless OIDC)
         run: |
