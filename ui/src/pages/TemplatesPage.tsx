@@ -1,5 +1,6 @@
 import type { FC } from 'react';
 import { TemplatePreviewModal } from '../components/TemplatePreviewModal';
+import { JavaDslImportCard } from '../components/templates/JavaDslImportCard';
 import { InputModal } from '../ui/InputModal';
 import {
   TemplateGrid,
@@ -121,6 +122,9 @@ export const TemplatesPage: FC = () => {
         submitLabel="Create"
         submitTone="violet"
       />
+
+      {/* Legacy Java-DSL importer (CLI parity for `niac config export`) */}
+      <JavaDslImportCard />
     </div>
   );
 };
