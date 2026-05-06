@@ -126,6 +126,14 @@ devices:
       community_includes:
         - community: "private"
           walk_file: "device_walks_sanitized/cisco/niac-cisco-c9300-48p.walk"
+      # Bridge MIB FDB table injection — exercised so an snmpwalk against the
+      # dot1dTpFdbTable / dot1qTpFdbTable returns synthesized entries.
+      dot1d_fdb_table:
+        port: 1
+        vlan: 1
+      dot1q_fdb_table:
+        port: 1
+        vlan: 10
 
     # HTTP Server Configuration
     http:
