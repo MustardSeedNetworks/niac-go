@@ -1,11 +1,40 @@
 version: 2
 updates:
-  - package-ecosystem: "gomod"
-    directory: "/"
+  # Go module updates (project root)
+  - package-ecosystem: gomod
+    directory: /
     schedule:
-      interval: "weekly"
+      interval: weekly
     open-pull-requests-limit: 5
-  - package-ecosystem: "github-actions"
-    directory: "/"
+    commit-message:
+      prefix: "chore(deps)"
+      include: scope
+    groups:
+      go-deps:
+        patterns: ["*"]
+
+  # GitHub Actions used by all workflows
+  - package-ecosystem: github-actions
+    directory: /
     schedule:
-      interval: "weekly"
+      interval: weekly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(ci)"
+      include: scope
+    groups:
+      gh-actions:
+        patterns: ["*"]
+
+  # npm packages for the embedded React/Vite UI
+  - package-ecosystem: npm
+    directory: /ui
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(ui-deps)"
+      include: scope
+    groups:
+      ui-deps:
+        patterns: ["*"]

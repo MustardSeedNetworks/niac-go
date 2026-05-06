@@ -54,11 +54,16 @@ jobs:
         run: go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
 
       - name: Check coverage threshold
+        env:
+          # Project target is 90% (CLAUDE.md). Current measured ~55%; ratchet
+          # the floor up gradually so PRs can't regress below it. Raise
+          # COVERAGE_FLOOR each time real coverage moves up by 5+ points.
+          COVERAGE_FLOOR: "50"
         run: |
           COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | sed 's/%//')
-          echo "Coverage: ${COVERAGE}%"
-          if (( $(echo "$COVERAGE < 40" | bc -l) )); then
-            echo "Coverage ${COVERAGE}% is below 40% threshold"
+          echo "Coverage: ${COVERAGE}% (floor: ${COVERAGE_FLOOR}%)"
+          if (( $(echo "$COVERAGE < $COVERAGE_FLOOR" | bc -l) )); then
+            echo "Coverage ${COVERAGE}% is below ${COVERAGE_FLOOR}% floor"
             exit 1
           fi
 
