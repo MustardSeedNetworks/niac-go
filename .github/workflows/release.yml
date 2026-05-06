@@ -68,20 +68,28 @@ jobs:
         run: |
           if [ "${{ matrix.arch }}" = "arm64" ]; then
             sudo dpkg --add-architecture arm64
-            # Restrict existing amd64-only sources so apt update doesn't
-            # 404 trying to fetch arm64 indexes from them. Skip lines that
-            # already carry [arch=...] (e.g. microsoft-prod.list, which
-            # would otherwise become malformed) and skip the deb822 format
-            # files (.sources) that Ubuntu 24.04 noble uses.
+            # Replace Ubuntu's default deb822 sources with explicit amd64
+            # .list entries. The deb822 format groups each repo into a
+            # multi-line stanza, and appending `Architectures: amd64` at
+            # end-of-file only attaches to the last stanza — which left
+            # apt fetching arm64 indexes from azure/security.ubuntu.com
+            # (404, since arm64 packages are at ports.ubuntu.com).
+            sudo rm -f /etc/apt/sources.list.d/ubuntu.sources
+            sudo tee /etc/apt/sources.list.d/ubuntu-amd64.list >/dev/null <<'EOF'
+          deb [arch=amd64] http://azure.archive.ubuntu.com/ubuntu noble main universe multiverse restricted
+          deb [arch=amd64] http://azure.archive.ubuntu.com/ubuntu noble-updates main universe multiverse restricted
+          deb [arch=amd64] http://azure.archive.ubuntu.com/ubuntu noble-backports main universe multiverse restricted
+          deb [arch=amd64] http://security.ubuntu.com/ubuntu noble-security main universe multiverse restricted
+          EOF
+            # Restrict third-party .list sources to amd64 too, but skip
+            # entries that already have [arch=...] (e.g. microsoft-prod.list
+            # would otherwise become malformed) and skip our own files.
             for f in /etc/apt/sources.list.d/*.list /etc/apt/sources.list; do
               [ -f "$f" ] || continue
+              case "$f" in
+                */ubuntu-amd64.list|*/ports-arm64.list) continue ;;
+              esac
               sudo sed -i '/^deb \[/!s|^deb |deb [arch=amd64] |' "$f"
-            done
-            for f in /etc/apt/sources.list.d/*.sources; do
-              [ -f "$f" ] || continue
-              if ! grep -q '^Architectures:' "$f"; then
-                echo 'Architectures: amd64' | sudo tee -a "$f" >/dev/null
-              fi
             done
             # Add arm64 sources from ports.ubuntu.com
             sudo tee /etc/apt/sources.list.d/ports-arm64.list >/dev/null <<'EOF'
@@ -91,7 +99,11 @@ jobs:
           EOF
           fi
 
-          sudo apt-get update
+          # apt-get update can return 100 on partial source failures (e.g.
+          # third-party repos that don't publish arm64 indexes). Tolerate it
+          # here — the install step below is the actual gate: if the arm64
+          # libpcap headers don't land we'll still fail loudly.
+          sudo apt-get update || true
           sudo apt-get install -y rpm
           if [ "${{ matrix.arch }}" = "arm64" ]; then
             sudo apt-get install -y gcc-aarch64-linux-gnu libpcap-dev:arm64 pkg-config qemu-user-static
