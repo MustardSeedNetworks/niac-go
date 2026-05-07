@@ -2,7 +2,6 @@ import type { LucideIcon } from 'lucide-react';
 import {
   Activity,
   FileBox,
-  FileCode,
   FileSearch,
   GitCompare,
   LineChart,
@@ -45,9 +44,6 @@ const DeviceEditorPage = lazy(() =>
 );
 const DeviceListPage = lazy(() =>
   import('./pages/DeviceListPage').then((m) => ({ default: m.DeviceListPage })),
-);
-const TemplatesPage = lazy(() =>
-  import('./pages/TemplatesPage').then((m) => ({ default: m.TemplatesPage })),
 );
 const AnalysisPage = lazy(() =>
   import('./pages/AnalysisPage').then((m) => ({ default: m.AnalysisPage })),
@@ -375,28 +371,6 @@ const pages: PageConfig[] = [
     ),
   },
   {
-    path: '/templates',
-    label: 'Templates',
-    title: 'Configuration Templates',
-    description: 'Browse and use pre-configured network templates to quickly start simulations.',
-    icon: FileCode,
-    component: TemplatesPage,
-    help: (
-      <>
-        <p>
-          Built-in templates are starter YAMLs for common scenarios (single router, layer-2 lab,
-          etc.). Pick one, give it a name, and it's saved to your Device Library.
-        </p>
-        <h4>Importing legacy configs</h4>
-        <p>
-          The <strong>Import legacy config</strong> card at the bottom converts a Java-DSL{' '}
-          <code>.cfg</code> file to YAML — the same operation as <code>niac config export</code> on
-          the CLI. Useful for moving off the v1 format.
-        </p>
-      </>
-    ),
-  },
-  {
     path: '/config-diff',
     label: 'Config Diff',
     title: 'Config Diff & Merge',
@@ -527,7 +501,6 @@ const navGroups: SidebarNavGroup[] = [
         label: 'Device Library',
         icon: Wrench,
       },
-      { path: '/templates', label: 'Templates', icon: FileCode },
       { path: '/config-diff', label: 'Config Diff', icon: GitCompare },
     ],
   },
@@ -627,6 +600,10 @@ function AppShell() {
               </PageWithErrorBoundary>
             }
           />
+          {/* Back-compat: the standalone Templates page was folded into the
+              Simulation page in feat/consolidate-simulation-templates.
+              Bookmarks and copied URLs continue to work. */}
+          <Route path="/templates" element={<Navigate to="/runtime" replace={true} />} />
           <Route path="*" element={<Navigate to="/" replace={true} />} />
         </Routes>
       </Suspense>
