@@ -60,9 +60,7 @@ describe('NeighborsPage', () => {
     render(<NeighborsPage />);
 
     await waitFor(() =>
-      expect(
-        screen.getByText(/No neighbors discovered yet/i),
-      ).toBeInTheDocument(),
+      expect(screen.getByText(/No neighbors discovered yet/i)).toBeInTheDocument(),
     );
   });
 
@@ -97,8 +95,6 @@ describe('NeighborsPage', () => {
     vi.mocked(fetchNeighbors).mockRejectedValueOnce(new Error('boom'));
     render(<NeighborsPage />);
 
-    await waitFor(() =>
-      expect(screen.getByText(/Failed to load neighbors/i)).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText(/Failed to load neighbors/i)).toBeInTheDocument());
   });
 });

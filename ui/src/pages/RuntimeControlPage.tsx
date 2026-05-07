@@ -10,6 +10,7 @@ import {
   stopSimulation,
   updateProtocolDebugLevels,
 } from '../api/client';
+import type { DebugLevel } from '../api/types';
 import { StatBlock } from '../components/StatBlock';
 import { POLL_INTERVALS } from '../constants/polling';
 import { useApiResource } from '../hooks/useApiResource';
@@ -401,24 +402,25 @@ export const RuntimeControlPage: FC = () => {
 };
 
 /**
- * GlobalDebugLevelCard — single 0–3 slider that applies the same debug level
- * to every protocol in the running stack via PUT /api/v1/debug/levels.
- *
- * CLI parity for `niac --debug N` / `--verbose` / `--quiet`. The Protocol
- * Debug page is still the canonical place for per-protocol fine-tuning;
- * this is the 90% case for users who just want "loud" or "quiet".
+ * GlobalDebugLevelCard — applies the same DebugLevel to every protocol in the
+ * running stack via PUT /api/v1/debug/levels. CLI parity for the
+ * --debug/--verbose/--quiet family of flags. The Protocol Debug page is
+ * still the canonical place for per-protocol fine-tuning; this is the 90%
+ * case for users who just want "loud" or "quiet" globally.
  */
+const DEBUG_LEVELS: DebugLevel[] = ['OFF', 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'];
+
 const GlobalDebugLevelCard: FC = () => {
   const { data, refetch } = useApiResource(fetchProtocolDebugLevels, [], {
     intervalMs: 0,
   });
-  const [pending, setPending] = useState<number | null>(null);
+  const [pending, setPending] = useState<DebugLevel | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const current = pending ?? data?.defaultLevel ?? 0;
+  const current: DebugLevel = pending ?? data?.defaultLevel ?? 'INFO';
 
-  const apply = async (level: number) => {
+  const apply = async (level: DebugLevel) => {
     if (!data) return;
     setBusy(true);
     setError(null);
@@ -435,8 +437,6 @@ const GlobalDebugLevelCard: FC = () => {
     }
   };
 
-  const labels = ['quiet', 'normal', 'verbose', 'debug'];
-
   return (
     <Card className="border-white/5 bg-gray-900/70">
       <CardContent className="space-y-3">
@@ -448,21 +448,20 @@ const GlobalDebugLevelCard: FC = () => {
           Sets every protocol to the same level. Use Protocol Debug for per-protocol tuning.
         </SmallText>
         <div className="flex flex-wrap items-center gap-3">
-          <input
-            type="range"
-            min={0}
-            max={3}
-            step={1}
+          <select
             value={current}
-            onChange={(e) => setPending(Number(e.target.value))}
+            onChange={(e) => setPending(e.target.value as DebugLevel)}
             disabled={busy || !data}
-            className="w-48 accent-violet-500"
-            aria-label="Global debug level (0=quiet, 3=debug)"
-            title="0 = quiet, 1 = normal, 2 = verbose, 3 = debug. Changes require Apply."
-          />
-          <span className="font-mono text-sm text-gray-200">
-            {current} <span className="text-gray-500">({labels[current]})</span>
-          </span>
+            className="rounded border border-white/10 bg-gray-950/60 px-3 py-1.5 text-sm text-gray-100 focus:border-violet-400 focus:outline-none disabled:opacity-50"
+            aria-label="Global debug level"
+            title="Applies to every protocol in the running stack. OFF silences everything; TRACE is the loudest."
+          >
+            {DEBUG_LEVELS.map((lvl) => (
+              <option key={lvl} value={lvl}>
+                {lvl}
+              </option>
+            ))}
+          </select>
           <Button
             tone="violet"
             disabled={busy || pending === null || !data}

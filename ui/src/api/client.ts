@@ -316,17 +316,9 @@ export const updateAlerts = (payload: AlertConfig) =>
 export const fetchFiles = (kind: 'pcaps' | 'walks') =>
   request<FileEntry[]>(`/api/v1/files?kind=${kind}`);
 export const validateWalk = (filename: string) =>
-  requestJson<WalkValidationResponse>(
-    '/api/v1/walk/validate',
-    { filename },
-    { method: 'POST' },
-  );
+  requestJson<WalkValidationResponse>('/api/v1/walk/validate', { filename }, { method: 'POST' });
 export const fixWalk = (filename: string) =>
-  requestJson<WalkValidationResponse>(
-    '/api/v1/walk/fix',
-    { filename },
-    { method: 'POST' },
-  );
+  requestJson<WalkValidationResponse>('/api/v1/walk/fix', { filename }, { method: 'POST' });
 
 /**
  * Merge two YAML configs (overlay devices with same name as base devices
@@ -347,11 +339,9 @@ export const mergeConfigs = (payload: { base: string; overlay: string }) =>
  * `niac config export`); format="yaml" passes through with validation only.
  */
 export const importConfig = (payload: { format: 'yaml' | 'java-dsl'; content: string }) =>
-  requestJson<{ yaml: string; devices: number }>(
-    '/api/v1/config/import',
-    payload,
-    { method: 'POST' },
-  );
+  requestJson<{ yaml: string; devices: number }>('/api/v1/config/import', payload, {
+    method: 'POST',
+  });
 export const fetchVersion = () => deduplicatedGet<VersionInfo>('/api/v1/version');
 export const fetchTopology = () => deduplicatedGet<TopologyGraph>('/api/v1/topology');
 export const fetchErrorTypes = () => deduplicatedGet<ErrorInjectionInfo>('/api/v1/errors');

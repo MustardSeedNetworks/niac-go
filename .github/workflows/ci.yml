@@ -180,7 +180,9 @@ jobs:
         run: gitleaks detect --source . --no-banner --redact --exit-code 1
 
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@0.36.0
+        # Trivy moved to v-prefixed tags between 0.35 and 0.36; the bare
+        # version no longer resolves.
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: 'fs'
           scan-ref: '.'
