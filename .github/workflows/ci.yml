@@ -182,6 +182,10 @@ jobs:
       - name: Run Trivy vulnerability scanner
         # Trivy moved to v-prefixed tags between 0.35 and 0.36; the bare
         # version no longer resolves.
+        # exit-code is 0 here so the SARIF always gets written; we still
+        # surface findings as a separate step that fails CI when the SARIF
+        # contains CRITICAL/HIGH entries.
+        id: trivy
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: 'fs'
@@ -189,13 +193,25 @@ jobs:
           format: 'sarif'
           output: 'trivy-results.sarif'
           severity: 'CRITICAL,HIGH'
-          exit-code: '1'
+          exit-code: '0'
 
       - name: Upload Trivy results
+        if: always() && hashFiles('trivy-results.sarif') != ''
         uses: github/codeql-action/upload-sarif@v3
-        if: always()
         with:
           sarif_file: trivy-results.sarif
+
+      - name: Fail on CRITICAL/HIGH findings
+        # Reads the SARIF Trivy just produced and fails CI if any CRITICAL or
+        # HIGH-severity result is present. We do this in a separate step so
+        # the SARIF is always uploaded for security tab visibility.
+        if: always() && hashFiles('trivy-results.sarif') != ''
+        run: |
+          if jq -e '.runs[].results[] | select(.level=="error" or .properties.security_severity == "high" or .properties.security_severity == "critical")' trivy-results.sarif >/dev/null; then
+            echo "::error::Trivy found CRITICAL or HIGH severity issues — see Security tab."
+            jq '.runs[].results[] | {ruleId, level, severity: .properties.security_severity, message: .message.text}' trivy-results.sarif
+            exit 1
+          fi
 
   # ===========================================================================
   # C Lint (C23 Standard - NOT C++)
