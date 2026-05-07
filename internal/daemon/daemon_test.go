@@ -438,19 +438,16 @@ func TestReplayController_Start_EmptyFile(t *testing.T) {
 
 // TestReplayController_Stop verifies replay stop method.
 func TestReplayController_Stop(t *testing.T) {
+	// Stop on a freshly-constructed controller (no engine, no Start) is a
+	// no-op and must never error — exercises the idempotence path that the
+	// daemon's shutdown sequence relies on.
 	rc := newReplayController(nil, 0)
-
-	// Set state to running manually for test
-	rc.mu.Lock()
-	rc.state.Running = true
-	rc.mu.Unlock()
-
 	state, err := rc.Stop()
 	if err != nil {
-		t.Errorf("Stop returned error: %v", err)
+		t.Errorf("Stop returned error on fresh controller: %v", err)
 	}
 	if state.Running {
-		t.Error("State should not be running after Stop")
+		t.Errorf("state.Running should be false after Stop on fresh controller, got %+v", state)
 	}
 }
 

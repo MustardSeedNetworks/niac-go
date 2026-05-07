@@ -92,7 +92,7 @@ export const JavaDslImportCard: FC = () => {
 
         <div className="flex flex-wrap items-center gap-3">
           <Button
-            tone="emerald"
+            tone="green"
             disabled={busy || !content.trim()}
             onClick={() => void onImport()}
             title="POST the content to /api/v1/config/import?format=java-dsl. Returns normalised YAML; nothing is saved server-side."

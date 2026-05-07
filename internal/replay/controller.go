@@ -1,0 +1,137 @@
+// Package replay provides a single implementation of the PCAP playback
+// controller used by both the daemon (internal/daemon) and the legacy CLI's
+// runtime services (cmd/niac). Before this package existed, both call sites
+// kept their own copy of the same logic — the daemon's was a stub returning
+// ErrReplayNotImplemented, which was the bug fixed in PR #491. Consolidating
+// here means future fixes (cleanup-on-error semantics, scale-time bounds,
+// etc.) can't drift between the two consumers.
+package replay
+
+import (
+	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/krisarmstrong/niac-go/internal/api"
+	"github.com/krisarmstrong/niac-go/internal/capture"
+	"github.com/krisarmstrong/niac-go/internal/config"
+)
+
+// Sentinel errors callers can match against with errors.Is.
+var (
+	// ErrEngineUnavailable means Start was called before a capture engine
+	// was attached to the controller.
+	ErrEngineUnavailable = errors.New("capture engine unavailable for replay")
+	// ErrFileRequired means the request was missing a non-empty file path.
+	ErrFileRequired = errors.New("pcap file path is required")
+)
+
+// Controller drives capture.PlaybackEngine for the API's ReplayManager
+// interface. Concurrent-safe; methods serialise on a single internal mutex.
+type Controller struct {
+	engine     *capture.Engine
+	debugLevel int
+
+	mu      sync.Mutex
+	current *capture.PlaybackEngine
+	state   api.ReplayState
+	cleanup string // path to delete when the next Start/Stop runs (uploaded files only)
+}
+
+// New returns a Controller bound to the given capture engine. debugLevel is
+// passed through to each new PlaybackEngine instance.
+func New(engine *capture.Engine, debugLevel int) *Controller {
+	return &Controller{engine: engine, debugLevel: debugLevel}
+}
+
+// Status returns the current replay state.
+func (c *Controller) Status() api.ReplayState {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.state
+}
+
+// Start begins PCAP replay with the given request. If a replay is already
+// running it is stopped first. On error from the underlying engine, an
+// uploaded temp file (req.Uploaded == true) is removed before returning.
+func (c *Controller) Start(req api.ReplayRequest) (api.ReplayState, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if c.engine == nil {
+		return c.state, ErrEngineUnavailable
+	}
+	if strings.TrimSpace(req.File) == "" {
+		return c.state, ErrFileRequired
+	}
+
+	if c.current != nil {
+		c.current.Stop()
+		c.current = nil
+	}
+	c.cleanupTempFile()
+
+	cfg := &config.CapturePlayback{
+		FileName:  req.File,
+		LoopTime:  req.LoopMs,
+		ScaleTime: req.Scale,
+	}
+	player := capture.NewPlaybackEngine(c.engine, cfg, c.debugLevel)
+	if err := player.Start(); err != nil {
+		if req.Uploaded {
+			// Inline traversal guard so the file deletion is bounded for
+			// static analysers; the upload handler placed req.File under a
+			// vetted temp dir but the inline check keeps the sink explicit.
+			cleaned := filepath.Clean(req.File)
+			if !strings.Contains(cleaned, "..") {
+				_ = os.Remove(cleaned)
+			}
+		}
+		return c.state, fmt.Errorf("failed to start playback: %w", err)
+	}
+
+	c.current = player
+	c.state = api.ReplayState{
+		Running:   true,
+		File:      req.File,
+		LoopMs:    req.LoopMs,
+		Scale:     req.Scale,
+		StartedAt: time.Now().UTC(),
+	}
+	if req.Uploaded {
+		c.cleanup = req.File
+	} else {
+		c.cleanup = ""
+	}
+	return c.state, nil
+}
+
+// Stop halts the current PCAP replay (if any) and cleans up any uploaded
+// temp file. Idempotent.
+func (c *Controller) Stop() (api.ReplayState, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if c.current != nil {
+		c.current.Stop()
+		c.current = nil
+	}
+	c.state.Running = false
+	c.cleanupTempFile()
+	return c.state, nil
+}
+
+func (c *Controller) cleanupTempFile() {
+	if c.cleanup == "" {
+		return
+	}
+	cleaned := filepath.Clean(c.cleanup)
+	if !strings.Contains(cleaned, "..") {
+		_ = os.Remove(cleaned)
+	}
+	c.cleanup = ""
+}

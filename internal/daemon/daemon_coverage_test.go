@@ -524,12 +524,19 @@ func TestReplayController_StopIdempotent(t *testing.T) {
 	}
 }
 
-// TestReplayController_NewWithDebugLevel tests construction with various debug levels.
+// TestReplayController_NewWithDebugLevel exercises the constructor at every
+// supported debug level. We can't observe the level directly any more (it's
+// internal/replay-private), so the assertion is the looser-but-still-useful
+// "constructor doesn't panic and Status() returns a non-running default".
 func TestReplayController_NewWithDebugLevel(t *testing.T) {
 	for _, level := range []int{0, 1, 2, 3} {
 		rc := newReplayController(nil, level)
-		if rc.debugLevel != level {
-			t.Errorf("Expected debugLevel %d, got %d", level, rc.debugLevel)
+		if rc == nil {
+			t.Errorf("newReplayController(nil, %d) returned nil", level)
+			continue
+		}
+		if rc.Status().Running {
+			t.Errorf("level %d: fresh controller should not report Running", level)
 		}
 	}
 }
