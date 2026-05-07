@@ -105,6 +105,7 @@ func runDaemon(options *daemonOptions, info versionInfo) error {
 	// Wait for interrupt signal
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+	defer signal.Stop(sigChan)
 	<-sigChan
 
 	logging.Infof("\nShutting down daemon...")

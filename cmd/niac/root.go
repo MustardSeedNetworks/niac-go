@@ -189,6 +189,11 @@ and network discovery without physical hardware.`,
 	// SECURITY FIX #101: Deprecate --api-token flag in favor of environment variable
 	rootCmd.PersistentFlags().
 		StringVar(&services.apiToken, "api-token", "", "Bearer token required for API/Web UI access (DEPRECATED: use NIAC_API_TOKEN env var)")
+	if err := rootCmd.PersistentFlags().MarkDeprecated("api-token",
+		"the value lands in /proc/<pid>/cmdline and `ps`. Set NIAC_API_TOKEN in the environment instead."); err != nil {
+		// MarkDeprecated only fails for an unknown flag name, which is a programming error.
+		panic(fmt.Errorf("mark --api-token deprecated: %w", err))
+	}
 	rootCmd.PersistentFlags().
 		StringVar(&services.metricsListen, "metrics-listen", "", "Expose Prometheus metrics on this address (defaults to --api-listen)")
 	rootCmd.PersistentFlags().
