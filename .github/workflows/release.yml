@@ -72,7 +72,7 @@ jobs:
 
       - name: Set up QEMU for cross-arch testing
         if: matrix.arch == 'arm64'
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@v4
         with:
           platforms: arm64
 
@@ -513,7 +513,7 @@ jobs:
 
       - name: Install Cosign for signing
         # cosign-installer doesn't publish a floating @v4 ref; pin the patch.
-        uses: sigstore/cosign-installer@v4.1.1
+        uses: sigstore/cosign-installer@v4.1.2
 
       - name: Sign release artifacts with cosign (keyless OIDC)
         run: |
