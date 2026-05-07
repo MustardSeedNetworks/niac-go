@@ -105,6 +105,7 @@ export const WalkValidatorPage: FC = () => {
                 value={selectedFile}
                 onChange={(e) => setSelectedFile(e.target.value)}
                 disabled={filesLoading || files.length === 0}
+                title="Hydrated from /api/v1/files?kind=walks (the sandboxed walks directory). Use the absolute-path field to validate a walk outside this directory."
                 className="mt-1 w-full rounded border border-white/5 bg-gray-950/60 px-3 py-2 text-sm text-gray-100 focus:border-cyan-400 focus:outline-none disabled:opacity-50"
               >
                 {filesLoading && <option>Loading…</option>}
@@ -125,6 +126,7 @@ export const WalkValidatorPage: FC = () => {
                 value={customPath}
                 onChange={(e) => setCustomPath(e.target.value)}
                 placeholder="/srv/niac/walks/cisco-c9300.walk"
+                title="Absolute path to a walk file. Takes precedence over the dropdown selection. The path is bounded server-side; ../ traversal is rejected."
                 className="mt-1 w-full rounded border border-white/5 bg-gray-950/60 px-3 py-2 font-mono text-xs text-gray-100 placeholder-gray-500 focus:border-cyan-400 focus:outline-none"
               />
             </label>
@@ -135,6 +137,7 @@ export const WalkValidatorPage: FC = () => {
               type="button"
               onClick={() => void run('validating')}
               disabled={busy !== 'idle' || !targetPath}
+              title="Read-only validation: parses the walk and returns per-line issues. Doesn't modify the file."
               className="rounded bg-cyan-500/20 px-3 py-1.5 text-sm font-medium text-cyan-100 ring-1 ring-cyan-400/40 hover:bg-cyan-500/30 disabled:opacity-50"
             >
               {busy === 'validating' ? 'Validating…' : 'Validate'}

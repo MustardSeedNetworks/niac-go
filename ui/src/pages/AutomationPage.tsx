@@ -116,6 +116,7 @@ const AlertConfigCard: FC<{ recentErrors: number }> = ({ recentErrors }) => {
                   min="0"
                   placeholder="100000"
                   value={threshold}
+                  title="Total packet count that triggers the alert. 0 or blank disables the alert."
                   onChange={(event) => {
                     setThreshold(event.target.value);
                     setDirty(true);
@@ -129,6 +130,7 @@ const AlertConfigCard: FC<{ recentErrors: number }> = ({ recentErrors }) => {
                   className="mt-1 w-full rounded-lg border border-white/10 bg-gray-950/60 p-2 text-sm text-white focus:border-violet-400 focus:outline-none"
                   placeholder="https://hooks.example.com/niac"
                   value={webhook}
+                  title="POST'd JSON when the threshold trips. Must be http(s) and not point at a private/loopback/link-local IP. The daemon's --webhook-allowed-host flag further locks this down."
                   onChange={(event) => {
                     setWebhook(event.target.value);
                     setDirty(true);
@@ -145,10 +147,20 @@ const AlertConfigCard: FC<{ recentErrors: number }> = ({ recentErrors }) => {
               </SmallText>
             )}
             <div className="flex flex-wrap gap-3">
-              <Button tone="violet" disabled={!dirty || saving} onClick={commit}>
+              <Button
+                tone="violet"
+                disabled={!dirty || saving}
+                onClick={commit}
+                title="Save alert config to the running daemon. Takes effect immediately — no restart required."
+              >
                 {saving ? 'Saving…' : 'Save alerts'}
               </Button>
-              <Button variant="outline" disabled={!dirty || saving} onClick={reset}>
+              <Button
+                variant="outline"
+                disabled={!dirty || saving}
+                onClick={reset}
+                title="Discard unsaved changes and reload the saved values."
+              >
                 Reset
               </Button>
             </div>

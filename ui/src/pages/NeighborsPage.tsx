@@ -86,6 +86,11 @@ export const NeighborsPage: FC = () => {
                     key={p}
                     type="button"
                     onClick={() => setProtocolFilter(p)}
+                    title={
+                      p === 'all'
+                        ? 'Show all discovery protocols'
+                        : `Filter to ${p} entries only (${protocolCounts[p] ?? 0} now)`
+                    }
                     className={`rounded px-3 py-1 text-xs font-medium ${
                       active
                         ? 'bg-cyan-500/20 text-cyan-200 ring-1 ring-cyan-400/40'
@@ -103,6 +108,7 @@ export const NeighborsPage: FC = () => {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Filter by device or chassis ID…"
+              title="Substring match on local device, remote device, chassis ID, or remote port (case-insensitive)."
               className="ml-auto w-64 rounded border border-white/5 bg-gray-950/60 px-3 py-1.5 text-sm text-gray-100 placeholder-gray-500 focus:border-cyan-400 focus:outline-none"
               aria-label="Filter neighbors"
             />

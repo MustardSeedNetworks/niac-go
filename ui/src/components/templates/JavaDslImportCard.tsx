@@ -91,7 +91,12 @@ export const JavaDslImportCard: FC = () => {
         />
 
         <div className="flex flex-wrap items-center gap-3">
-          <Button tone="emerald" disabled={busy || !content.trim()} onClick={() => void onImport()}>
+          <Button
+            tone="emerald"
+            disabled={busy || !content.trim()}
+            onClick={() => void onImport()}
+            title="POST the content to /api/v1/config/import?format=java-dsl. Returns normalised YAML; nothing is saved server-side."
+          >
             {busy ? 'Converting…' : 'Convert to YAML'}
           </Button>
           {error && (
@@ -107,7 +112,11 @@ export const JavaDslImportCard: FC = () => {
               <SmallText className="text-emerald-300">
                 ✓ Converted ({deviceCount} {deviceCount === 1 ? 'device' : 'devices'})
               </SmallText>
-              <Button variant="outline" onClick={downloadYaml}>
+              <Button
+                variant="outline"
+                onClick={downloadYaml}
+                title="Save the converted YAML to your machine. Use it as a starter template or commit it to your config repo."
+              >
                 Download YAML
               </Button>
             </div>
