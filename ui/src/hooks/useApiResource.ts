@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 interface Options<T> {
   intervalMs?: number;
@@ -67,5 +67,12 @@ export function useApiResource<T>(
 
   const refetch = useCallback(() => run(), [run]);
 
-  return { data, loading, error, refetch } as const;
+  // Stable identity across renders so callers that pass this object as a
+  // useMemo / useEffect dependency don't invalidate every render. Without
+  // the wrapper a fresh `{ data, loading, error, refetch }` literal would
+  // be allocated each render even when the underlying values were equal.
+  return useMemo(
+    () => ({ data, loading, error, refetch }) as const,
+    [data, loading, error, refetch],
+  );
 }
