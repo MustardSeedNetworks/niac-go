@@ -617,7 +617,7 @@ func (s *Server) handleDeviceUpdate(w http.ResponseWriter, r *http.Request, host
 		return
 	}
 
-	newCfg := *cfg
+	newCfg := *deepCopyConfig(cfg)
 
 	if req.RawYAML != "" {
 		updatedDevice, parseErr := updateDeviceFromYAML(req.RawYAML, hostname)
@@ -667,7 +667,7 @@ func (s *Server) handleDeviceDelete(w http.ResponseWriter, r *http.Request, host
 	}
 
 	// Find and remove device
-	newCfg := *cfg
+	newCfg := *deepCopyConfig(cfg)
 	found := false
 
 	newDevices := make([]config.Device, 0, len(cfg.Devices)-1)
@@ -777,7 +777,7 @@ func (s *Server) handleDeviceClone(w http.ResponseWriter, r *http.Request, hostn
 	clonedDevice := cloneDevice(sourceDevice, req.NewHostname, req.NewIP, req.NewMAC)
 
 	// Add to config and save
-	newCfg := *cfg
+	newCfg := *deepCopyConfig(cfg)
 	newCfg.Devices = append(newCfg.Devices, *clonedDevice)
 
 	err = s.saveConfig(&newCfg)
