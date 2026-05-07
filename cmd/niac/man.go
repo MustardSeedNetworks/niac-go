@@ -10,26 +10,34 @@ import (
 )
 
 func addManCommand(root *cobra.Command, info versionInfo) {
+	var outputDir string
+
 	manCmd := &cobra.Command{
 		Use:    "man",
 		Short:  "Generate man pages",
 		Long:   `Generate Unix man pages for NIAC commands.`,
 		Hidden: true, // Hidden from help, mainly for maintainers
-		Example: `  # Generate man pages to docs/man/
+		Example: `  # Generate man pages to ./docs/man/ (default)
   niac man
+
+  # Generate to a specific directory
+  niac man --output /tmp/niac-man
 
   # Install man pages (requires sudo)
   sudo cp docs/man/* /usr/local/share/man/man1/
   sudo mandb`,
-		Run: func(_ *cobra.Command, _ []string) {
-			runMan(root, info)
+		RunE: func(_ *cobra.Command, _ []string) error {
+			return runMan(root, info, outputDir)
 		},
 	}
+
+	manCmd.Flags().StringVarP(&outputDir, "output", "o", "docs/man",
+		"output directory (relative paths resolve against the current working directory)")
 
 	root.AddCommand(manCmd)
 }
 
-func runMan(root *cobra.Command, info versionInfo) {
+func runMan(root *cobra.Command, info versionInfo, outputDir string) error {
 	header := new(doc.GenManHeader)
 	header.Title = "NIAC"
 	header.Section = "1"
@@ -38,21 +46,17 @@ func runMan(root *cobra.Command, info versionInfo) {
 	now := time.Now()
 	header.Date = &now
 
-	manDir := "docs/man"
-	err := os.MkdirAll(manDir, 0o750)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error creating man directory: %v\n", err)
-		os.Exit(1)
+	if err := os.MkdirAll(outputDir, 0o750); err != nil {
+		return fmt.Errorf("create man directory: %w", err)
 	}
 
-	err = doc.GenManTree(root, header, manDir)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error generating man pages: %v\n", err)
-		os.Exit(1)
+	if err := doc.GenManTree(root, header, outputDir); err != nil {
+		return fmt.Errorf("generate man pages: %w", err)
 	}
 
-	fmt.Fprintf(os.Stdout, "Man pages generated in %s/\n", manDir)
+	fmt.Fprintf(os.Stdout, "Man pages generated in %s/\n", outputDir)
 	fmt.Fprintln(os.Stdout, "\nTo install:")
-	fmt.Fprintln(os.Stdout, "  sudo cp docs/man/* /usr/local/share/man/man1/")
+	fmt.Fprintf(os.Stdout, "  sudo cp %s/* /usr/local/share/man/man1/\n", outputDir)
 	fmt.Fprintln(os.Stdout, "  sudo mandb")
+	return nil
 }

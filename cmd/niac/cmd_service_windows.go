@@ -64,10 +64,23 @@ func (p *niacProgram) run() {
 
 	logging.InitColors(false)
 
+	listen := os.Getenv("NIAC_LISTEN")
+	if listen == "" {
+		listen = ":8080"
+	}
+
+	storagePath := os.Getenv("NIAC_STORAGE_PATH")
+	if storagePath == "" {
+		storagePath = "~/.niac/niac.db"
+	}
+	if expanded, err := expandUserHome(storagePath); err == nil {
+		storagePath = expanded
+	}
+
 	d, err := daemon.NewDaemon(daemon.Config{
-		ListenAddr:  ":8080",
-		Token:       "",
-		StoragePath: "~/.niac/niac.db",
+		ListenAddr:  listen,
+		Token:       resolveAPIToken(""),
+		StoragePath: storagePath,
 		Version:     p.info.version,
 		Commit:      p.info.commit,
 		BuildTime:   p.info.date,
@@ -172,32 +185,61 @@ func addServiceCommand(root *cobra.Command, _ *serviceOptions) {
 	root.AddCommand(serviceCmd)
 }
 
-func getServiceConfig() *service.Config {
-	execPath, _ := os.Executable()
+func getServiceConfig() (*service.Config, error) {
+	execPath, err := os.Executable()
+	if err != nil {
+		return nil, fmt.Errorf("resolve executable path: %w", err)
+	}
 	return &service.Config{
 		Name:        windowsServiceName,
 		DisplayName: windowsDisplayName,
 		Description: windowsDescription,
 		Arguments:   []string{"service", "run"},
 		Executable:  execPath,
+	}, nil
+}
+
+// expandUserHome replaces a leading "~" in path with the current user's home
+// directory. Used for the Windows service storage path config which historically
+// hardcoded "~/.niac/niac.db" and never expanded the tilde.
+func expandUserHome(path string) (string, error) {
+	if len(path) == 0 || path[0] != '~' {
+		return path, nil
 	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return path, err
+	}
+	return home + path[1:], nil
+}
+
+// newServiceFor creates a kardianos service.Service for the given program,
+// surfacing the os.Executable lookup failure rather than silently swallowing it.
+func newServiceFor(prg *niacProgram) (service.Service, error) {
+	cfg, err := getServiceConfig()
+	if err != nil {
+		return nil, err
+	}
+	svc, err := service.New(prg, cfg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create service: %w", err)
+	}
+	return svc, nil
 }
 
 func runWindowsService(info versionInfo) error {
-	prg := &niacProgram{info: info}
-	svc, err := service.New(prg, getServiceConfig())
+	svc, err := newServiceFor(&niacProgram{info: info})
 	if err != nil {
-		return fmt.Errorf("failed to create service: %w", err)
+		return err
 	}
 
 	return svc.Run()
 }
 
 func installWindowsService() error {
-	prg := &niacProgram{}
-	svc, err := service.New(prg, getServiceConfig())
+	svc, err := newServiceFor(&niacProgram{})
 	if err != nil {
-		return fmt.Errorf("failed to create service: %w", err)
+		return err
 	}
 
 	if err := svc.Install(); err != nil {
@@ -216,10 +258,9 @@ func installWindowsService() error {
 }
 
 func uninstallWindowsService() error {
-	prg := &niacProgram{}
-	svc, err := service.New(prg, getServiceConfig())
+	svc, err := newServiceFor(&niacProgram{})
 	if err != nil {
-		return fmt.Errorf("failed to create service: %w", err)
+		return err
 	}
 
 	// Stop service first if running
@@ -234,10 +275,9 @@ func uninstallWindowsService() error {
 }
 
 func controlWindowsService(action string) error {
-	prg := &niacProgram{}
-	svc, err := service.New(prg, getServiceConfig())
+	svc, err := newServiceFor(&niacProgram{})
 	if err != nil {
-		return fmt.Errorf("failed to create service: %w", err)
+		return err
 	}
 
 	switch action {
@@ -256,10 +296,9 @@ func controlWindowsService(action string) error {
 }
 
 func showWindowsServiceStatus() error {
-	prg := &niacProgram{}
-	svc, err := service.New(prg, getServiceConfig())
+	svc, err := newServiceFor(&niacProgram{})
 	if err != nil {
-		return fmt.Errorf("failed to create service: %w", err)
+		return err
 	}
 
 	status, err := svc.Status()

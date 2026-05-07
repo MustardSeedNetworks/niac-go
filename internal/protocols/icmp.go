@@ -32,6 +32,9 @@ const (
 	icmpRAEntrySize       = 8  // Router entry size (2 words * 4 bytes)
 	icmpOrigDatagramBytes = 8  // First 8 bytes of original datagram in error messages (RFC 792)
 	icmpTimestampReplyLen = 56 // Timestamp reply message size
+	// icmpUnreachableMaxOrig caps the original-datagram echo in ICMP error
+	// messages: max IPv4 header (60 bytes) + 8 bytes of payload (RFC 792).
+	icmpUnreachableMaxOrig = 68
 )
 
 // ICMPHandler handles ICMP packets (ping, etc.)
@@ -560,10 +563,10 @@ func (h *ICMPHandler) SendICMPUnreachable(
 		TypeCode: layers.CreateICMPv4TypeCode(layers.ICMPv4TypeDestinationUnreachable, code),
 	}
 
-	// Include original IP header + 8 bytes of data
+	// Include original IP header + 8 bytes of data per RFC 792 §3.2.
 	payload := originalPacket
-	if len(payload) > icmpTimestampReplyLen {
-		payload = payload[:icmpTimestampReplyLen]
+	if len(payload) > icmpUnreachableMaxOrig {
+		payload = payload[:icmpUnreachableMaxOrig]
 	}
 
 	// Serialize
