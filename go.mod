@@ -2,7 +2,7 @@ module github.com/krisarmstrong/niac-go
 
 go 1.25.6
 
-toolchain go1.25.9
+toolchain go1.25.10
 
 require (
 	github.com/charmbracelet/bubbletea v1.3.10
