@@ -1,4 +1,4 @@
-import { BellRing, Workflow } from 'lucide-react';
+import { BellRing } from 'lucide-react';
 import { type FC, useEffect, useState } from 'react';
 import { fetchAlerts, fetchStats, updateAlerts } from '../api/client';
 import type { AlertConfig } from '../api/types';
@@ -9,41 +9,17 @@ import { H2, P, SmallText } from '../ui/Typography';
 import { getErrorMessage } from '../utils/format';
 
 /**
- * Automation Page - Automation & Alerts
- *
- * Configure alert thresholds, webhook targets, and future workflow automations.
+ * Alerts page — configure packet-threshold + webhook alerting for the
+ * running daemon. Wires GET/PUT /api/v1/alerts. Updates take effect
+ * immediately; no daemon restart required.
  */
 export const AutomationPage: FC = () => {
   const { data: stats } = useApiResource(fetchStats, []);
+  const errorCount = stats?.stack.errors ?? 0;
 
   return (
     <div className="space-y-6">
-      <Card className="border-white/5 bg-gray-900/70">
-        <CardContent className="space-y-4">
-          <H2 className="mb-0 flex items-center gap-2">
-            <Workflow className="h-5 w-5 text-yellow-300" />
-            Automation roadmap
-          </H2>
-          <P>
-            Define alert thresholds, webhook routes, and (soon) runnable workflow automations. Use
-            the CLI flags today, then manage them graphically here as the 2.0 UI matures. Current
-            alert counter: {stats?.stack.errors ?? 0}.
-          </P>
-          <ul className="space-y-3 text-sm text-gray-300">
-            <li className="rounded-lg border border-white/5 bg-gray-950/50 p-3">
-              Webhooks inherit settings from the `--alert-webhook` flag and can be overridden per
-              run.
-            </li>
-            <li className="rounded-lg border border-white/5 bg-gray-950/50 p-3">
-              Packet thresholds mirror CLI/TUI options so headless and web control stay aligned.
-            </li>
-            <li className="rounded-lg border border-white/5 bg-gray-950/50 p-3">
-              Future: orchestrate multi-run scenarios and publish signed run reports.
-            </li>
-          </ul>
-        </CardContent>
-      </Card>
-      <AlertConfigCard />
+      <AlertConfigCard recentErrors={errorCount} />
     </div>
   );
 };
@@ -51,7 +27,7 @@ export const AutomationPage: FC = () => {
 /**
  * Alert Config Card - Configure alert thresholds and webhooks
  */
-const AlertConfigCard: FC = () => {
+const AlertConfigCard: FC<{ recentErrors: number }> = ({ recentErrors }) => {
   const { data, loading, error } = useApiResource(fetchAlerts, [], {
     intervalMs: 15000,
   });
@@ -110,9 +86,21 @@ const AlertConfigCard: FC = () => {
           Alert policy
         </H2>
         <P className="text-gray-300">
-          Updates take effect immediately—no CLI restart required. Leave the threshold blank or zero
-          to disable packet alerts entirely.
+          The daemon fires a webhook when total packet count crosses the threshold. Updates take
+          effect immediately — no CLI restart required. Leave the threshold blank or zero to disable
+          packet alerts entirely. The webhook destination is also gated by the daemon's{' '}
+          <code>--webhook-allowed-host</code> allowlist when set (see{' '}
+          <a
+            href="https://github.com/krisarmstrong/niac-go/blob/main/SECURITY.md"
+            className="text-violet-300 underline"
+          >
+            SECURITY.md
+          </a>
+          ).
         </P>
+        <SmallText className="text-gray-500">
+          Recent errors counter: <strong className="text-gray-300">{recentErrors}</strong>
+        </SmallText>
         {loading && <SmallText className="text-gray-400">Loading alert configuration…</SmallText>}
         {error && (
           <SmallText className="text-red-400">Unable to load alerts: {error.message}</SmallText>

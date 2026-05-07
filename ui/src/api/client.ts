@@ -40,6 +40,7 @@ import type {
   UseTemplateRequest,
   UseTemplateResponse,
   VersionInfo,
+  WalkValidationResponse,
 } from './types';
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? '';
@@ -314,6 +315,43 @@ export const updateAlerts = (payload: AlertConfig) =>
   requestJson<AlertConfig>('/api/v1/alerts', payload, { method: 'PUT' });
 export const fetchFiles = (kind: 'pcaps' | 'walks') =>
   request<FileEntry[]>(`/api/v1/files?kind=${kind}`);
+export const validateWalk = (filename: string) =>
+  requestJson<WalkValidationResponse>(
+    '/api/v1/walk/validate',
+    { filename },
+    { method: 'POST' },
+  );
+export const fixWalk = (filename: string) =>
+  requestJson<WalkValidationResponse>(
+    '/api/v1/walk/fix',
+    { filename },
+    { method: 'POST' },
+  );
+
+/**
+ * Merge two YAML configs (overlay devices with same name as base devices
+ * REPLACE the base entry; overlay-only devices are appended; base-only
+ * devices kept). Mirrors `niac config merge` on the CLI.
+ */
+export const mergeConfigs = (payload: { base: string; overlay: string }) =>
+  requestJson<{
+    merged: string;
+    baseDevices: number;
+    overlayDevices: number;
+    mergedDevices: number;
+  }>('/api/v1/config/merge', payload, { method: 'POST' });
+
+/**
+ * Import a config in one of the supported formats and get back normalised
+ * YAML. format="java-dsl" handles legacy `.cfg` files (equivalent to
+ * `niac config export`); format="yaml" passes through with validation only.
+ */
+export const importConfig = (payload: { format: 'yaml' | 'java-dsl'; content: string }) =>
+  requestJson<{ yaml: string; devices: number }>(
+    '/api/v1/config/import',
+    payload,
+    { method: 'POST' },
+  );
 export const fetchVersion = () => deduplicatedGet<VersionInfo>('/api/v1/version');
 export const fetchTopology = () => deduplicatedGet<TopologyGraph>('/api/v1/topology');
 export const fetchErrorTypes = () => deduplicatedGet<ErrorInjectionInfo>('/api/v1/errors');

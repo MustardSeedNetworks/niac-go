@@ -1,6 +1,7 @@
-import { Activity, BellRing, FileCog, FileUp, PlugZap, Settings } from 'lucide-react';
+import { Activity, BellRing, Download, FileCog, FileUp, PlugZap, Settings } from 'lucide-react';
 import { type FC, useCallback, useState } from 'react';
 import {
+  fetchConfig,
   fetchSimulationStatus,
   fetchTemplateContent,
   fetchUserConfigContent,
@@ -365,6 +366,27 @@ export const RuntimeControlPage: FC = () => {
                 }}
               >
                 View Devices
+              </Button>
+              <Button
+                variant="ghost"
+                leftIcon={<Download className="h-4 w-4" />}
+                onClick={async () => {
+                  try {
+                    const doc = await fetchConfig();
+                    const blob = new Blob([doc.content], { type: 'application/x-yaml' });
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = doc.filename || 'niac-config.yaml';
+                    link.click();
+                    URL.revokeObjectURL(url);
+                  } catch (err) {
+                    console.error('Failed to download config:', err);
+                  }
+                }}
+                title="Download the running config as YAML (the equivalent of niac config dump)."
+              >
+                Download YAML
               </Button>
             </div>
           </CardContent>

@@ -1,5 +1,6 @@
-import { AlertCircle, FileCheck, FileCode, GitCompare, Upload, X } from 'lucide-react';
+import { AlertCircle, FileCheck, FileCode, GitCompare, Layers, Upload, X } from 'lucide-react';
 import { type FC, useCallback, useMemo, useState } from 'react';
+import { mergeConfigs as apiMergeConfigs } from '../api/client';
 import {
   computeDiff,
   type DiffBlock,
@@ -8,6 +9,7 @@ import {
   type MergeDecision,
 } from '../components/config/DiffViewer';
 import { MergeControls, MergePreviewModal } from '../components/config/MergeControls';
+import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
 import { Tag } from '../ui/Tag';
 import { H2, P, SmallText } from '../ui/Typography';
@@ -421,6 +423,58 @@ export const ConfigDiffPage: FC = () => {
             leftLabel={leftFile.name}
             rightLabel={rightFile.name}
           />
+
+          {/* Server-side overlay merge (CLI parity) */}
+          <Card className="border-white/5 bg-gray-900/70">
+            <CardContent className="space-y-3">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <H2 className="mb-1 flex items-center gap-2 text-lg">
+                    <Layers className="h-5 w-5 text-violet-300" />
+                    Server-side overlay merge
+                  </H2>
+                  <P className="text-sm text-gray-400">
+                    Treats the right file as an overlay applied to the left base — same semantics as{' '}
+                    <code>niac config merge</code>. Devices in the overlay with the same name
+                    REPLACE base entries; overlay-only devices are appended; base-only devices are
+                    kept. Useful when you want CLI-equivalent output without resolving each diff
+                    block manually.
+                  </P>
+                </div>
+                <Button
+                  tone="violet"
+                  onClick={async () => {
+                    if (!(leftFile && rightFile)) return;
+                    try {
+                      const result = await apiMergeConfigs({
+                        base: leftFile.content,
+                        overlay: rightFile.content,
+                      });
+                      const blob = new Blob([result.merged], { type: 'application/x-yaml' });
+                      const url = URL.createObjectURL(blob);
+                      const link = document.createElement('a');
+                      link.href = url;
+                      const baseName = leftFile.name.replace(/\.(yaml|yml)$/i, '');
+                      link.download = `${baseName}-overlay-merged.yaml`;
+                      link.click();
+                      URL.revokeObjectURL(url);
+                      setMessage({
+                        type: 'success',
+                        text: `Server-side merge: ${result.baseDevices} base + ${result.overlayDevices} overlay → ${result.mergedDevices} devices`,
+                      });
+                    } catch (err) {
+                      setMessage({
+                        type: 'error',
+                        text: `Server-side merge failed: ${(err as Error).message}`,
+                      });
+                    }
+                  }}
+                >
+                  Run server merge
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </>
       )}
 

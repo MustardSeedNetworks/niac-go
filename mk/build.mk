@@ -150,6 +150,13 @@ build-darwin: build-frontend ## Build for macOS (native architecture)
 	@CGO_ENABLED=1 go build $(GOFLAGS) -ldflags="$(LDFLAGS)" -o $(BINARY_NAME)-darwin-$(shell uname -m) ./cmd/niac
 	@echo "Built: $(BINARY_NAME)-darwin-$(shell uname -m)"
 
+schema: ## Regenerate docs/schemas/niac.schema.json from converter.Config
+	@printf "$(BOLD)Generating JSON Schema for the YAML config...$(RESET)\n"
+	@go run ./cmd/niac-schema -o docs/schemas/niac.schema.json
+	@printf "$(GREEN)Wrote docs/schemas/niac.schema.json ($$(wc -l < docs/schemas/niac.schema.json) lines)$(RESET)\n"
+
+.PHONY: schema
+
 build-windows: build-frontend ## Build for Windows AMD64 (cross-compile)
 	@echo "Building for Windows AMD64..."
 	@GOOS=windows GOARCH=amd64 CGO_ENABLED=0 \

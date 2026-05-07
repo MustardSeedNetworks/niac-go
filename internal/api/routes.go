@@ -46,6 +46,14 @@ func (s *Server) registerWriteProtectedRoutes(mux *http.ServeMux) {
 		s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.handleDevicesV2)))),
 	)
 	mux.HandleFunc(
+		"/api/v1/config/merge",
+		s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.handleConfigMerge)))),
+	)
+	mux.HandleFunc(
+		"/api/v1/config/import",
+		s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.handleConfigImport)))),
+	)
+	mux.HandleFunc(
 		"/api/v1/replay",
 		s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.handleReplay)))),
 	)
