@@ -8,19 +8,18 @@
     <!-- Preconnect to Google Fonts for faster loading -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <!-- Load fonts asynchronously with display=swap to prevent render blocking -->
+    <!--
+      Load fonts with display=swap so the page renders the moment the bundle
+      is ready, even if Google Fonts is slow. We used to use the
+      media="print" / onload="this.media='all'" trick for non-blocking
+      delivery, but the inline onload required script-src 'unsafe-inline'
+      in our CSP. The font CSS itself is small and gzipped, so a normal
+      stylesheet link is the right tradeoff for a stricter CSP.
+    -->
     <link
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
-      media="print"
-      onload="this.media='all'"
     />
-    <noscript>
-      <link
-        rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
-      />
-    </noscript>
     <script type="module" crossorigin src="/assets/index-Dpefvjr8.js"></script>
     <link rel="modulepreload" crossorigin href="/assets/vendor-react-BoJ-pB7h.js">
     <link rel="modulepreload" crossorigin href="/assets/vendor-xyflow-DtDwoORA.js">

@@ -1596,9 +1596,25 @@ func (p *Parser) formatMAC(mac string) string {
 		mac[0:2], mac[2:4], mac[4:6], mac[6:8], mac[8:10], mac[10:12])
 }
 
+// MaxYAMLConfigSize caps in-memory YAML config size at 16 MiB. The check
+// guards against pathological alias-bomb / billion-laughs payloads that would
+// otherwise be expanded by yaml.Unmarshal. Real configs in our corpus top out
+// well under 1 MiB.
+const MaxYAMLConfigSize = 16 * 1024 * 1024
+
 // LoadYAMLConfig loads a YAML config file into Go config structure.
 func LoadYAMLConfig(filename string) (*Config, error) {
-	data, err := os.ReadFile(filepath.Clean(filename))
+	clean := filepath.Clean(filename)
+	info, err := os.Stat(clean)
+	if err != nil {
+		return nil, fmt.Errorf("error accessing YAML file: %w", err)
+	}
+	if info.Size() > MaxYAMLConfigSize {
+		return nil, fmt.Errorf(
+			"YAML config too large: %d bytes (max %d)", info.Size(), MaxYAMLConfigSize)
+	}
+
+	data, err := os.ReadFile(clean)
 	if err != nil {
 		return nil, fmt.Errorf("error reading YAML file: %w", err)
 	}
@@ -1608,6 +1624,11 @@ func LoadYAMLConfig(filename string) (*Config, error) {
 
 // LoadYAMLConfigFromBytes converts in-memory YAML data into a Go config structure.
 func LoadYAMLConfigFromBytes(data []byte) (*Config, error) {
+	if len(data) > MaxYAMLConfigSize {
+		return nil, fmt.Errorf(
+			"YAML config too large: %d bytes (max %d)", len(data), MaxYAMLConfigSize)
+	}
+
 	var config Config
 	err := yaml.Unmarshal(data, &config)
 	if err != nil {

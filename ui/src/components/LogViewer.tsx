@@ -1,6 +1,7 @@
 import { AlertCircle, Check, ChevronDown, ChevronRight, Copy, Terminal } from 'lucide-react';
 import { type FC, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { LogEntry, LogLevel } from '../api/types';
+import { copyToClipboard } from '../utils/file';
 
 /**
  * LogViewer Component
@@ -148,17 +149,8 @@ const LogEntryRow: FC<{ log: LogEntry; searchQuery: string }> = memo(({ log, sea
   const copyLog = useCallback(async () => {
     const fullLog = `[${log.timestamp}] [${log.level}] [${log.protocol}] ${log.message}${log.details ? `\n${formatDetails(log.details)}` : ''}`;
     try {
-      await navigator.clipboard.writeText(fullLog);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Fallback for older browsers
-      const textArea = document.createElement('textarea');
-      textArea.value = fullLog;
-      document.body.appendChild(textArea);
-      textArea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textArea);
+      await copyToClipboard(fullLog);
+    } finally {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }

@@ -14,6 +14,7 @@ import { Card, CardContent } from '../../ui/Card';
 import { ConfirmModal } from '../../ui/ConfirmModal';
 import { Tag } from '../../ui/Tag';
 import { H2, SmallText } from '../../ui/Typography';
+import { copyToClipboard } from '../../utils/file';
 import type { DiffBlock, MergeDecision } from './DiffViewer';
 import { YamlViewer } from './YamlEditor';
 
@@ -313,17 +314,7 @@ export const MergePreviewModal: FC<MergePreviewModalProps> = ({ content, onClose
   const lineCount = useMemo(() => content.split('\n').length, [content]);
 
   const handleCopy = useCallback(async () => {
-    try {
-      await navigator.clipboard.writeText(content);
-    } catch {
-      // Fallback for older browsers
-      const textarea = document.createElement('textarea');
-      textarea.value = content;
-      document.body.appendChild(textarea);
-      textarea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textarea);
-    }
+    await copyToClipboard(content);
   }, [content]);
 
   return (
