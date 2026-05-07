@@ -47,14 +47,14 @@ export const FilterBar: FC<FilterBarProps> = memo(({ value, onChange, placeholde
   const applySuggestion = useCallback(
     (suggestion: AutocompleteSuggestion) => {
       const cursorPos = inputRef.current?.selectionStart ?? value.length;
-      const textBefore = value.substring(0, cursorPos);
-      const textAfter = value.substring(cursorPos);
+      const textBefore = value.slice(0, cursorPos);
+      const textAfter = value.slice(cursorPos);
 
       // Find the current word being typed
       const wordMatch = textBefore.match(/([a-zA-Z0-9_.]+)$/);
       const wordStart = wordMatch ? cursorPos - wordMatch[1].length : cursorPos;
 
-      const newValue = value.substring(0, wordStart) + suggestion.insertText + textAfter;
+      const newValue = value.slice(0, wordStart) + suggestion.insertText + textAfter;
       onChange(newValue);
       setSuggestions([]);
 

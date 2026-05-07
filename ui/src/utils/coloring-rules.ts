@@ -92,5 +92,5 @@ export function getDefaultRules(): ColoringRule[] {
 
 /** Generate a unique rule ID. */
 export function generateRuleId(): string {
-  return `rule-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+  return `rule-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 }

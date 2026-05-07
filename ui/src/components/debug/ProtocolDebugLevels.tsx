@@ -142,7 +142,7 @@ const ProtocolSlider: FC<ProtocolSliderProps> = memo(({ config, onChange, disabl
             key={level}
             className={`${levelIndex === DEBUG_LEVELS.indexOf(level) ? 'text-white font-medium' : ''}`}
           >
-            {level.substring(0, 3)}
+            {level.slice(0, 3)}
           </span>
         ))}
       </div>

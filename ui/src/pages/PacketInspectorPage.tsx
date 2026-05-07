@@ -23,7 +23,7 @@ const MAX_PACKETS = 100;
  * Generate unique packet ID
  */
 function generatePacketId(): string {
-  return `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
 /**

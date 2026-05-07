@@ -19,7 +19,7 @@ function hexToBytes(hex: string): number[] {
   const cleanHex = hex.replace(/\s/g, '');
 
   for (let i = 0; i < cleanHex.length; i += 2) {
-    const byte = Number.parseInt(cleanHex.substring(i, i + 2), 16);
+    const byte = Number.parseInt(cleanHex.slice(i, i + 2), 16);
     if (!Number.isNaN(byte)) {
       bytes.push(byte);
     }

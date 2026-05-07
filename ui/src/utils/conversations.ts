@@ -66,7 +66,7 @@ function buildFilterExpression(protocol: string, endpointA: string, endpointB: s
 
 function splitEndpoint(endpoint: string): [string, string] {
   const lastColon = endpoint.lastIndexOf(':');
-  return [endpoint.substring(0, lastColon), endpoint.substring(lastColon + 1)];
+  return [endpoint.slice(0, lastColon), endpoint.slice(lastColon + 1)];
 }
 
 /**

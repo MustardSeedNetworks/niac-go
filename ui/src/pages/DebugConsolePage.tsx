@@ -14,7 +14,7 @@ const MAX_LOG_BUFFER = 1000;
 
 // Generate a unique ID for each log entry
 function generateLogId(): string {
-  return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
 }
 
 // Map incoming SSE data to LogEntry format

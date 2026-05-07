@@ -13,7 +13,7 @@ export function getAutocompleteSuggestions(
   input: string,
   cursorPosition: number,
 ): AutocompleteSuggestion[] {
-  const textBeforeCursor = input.substring(0, cursorPosition);
+  const textBeforeCursor = input.slice(0, cursorPosition);
   const currentWord = extractCurrentWord(textBeforeCursor);
 
   if (!currentWord) {
@@ -23,7 +23,7 @@ export function getAutocompleteSuggestions(
 
   // Check if we're after an operator - suggest values
   const beforeWord = textBeforeCursor
-    .substring(0, textBeforeCursor.length - currentWord.length)
+    .slice(0, textBeforeCursor.length - currentWord.length)
     .trimEnd();
   if (beforeWord.endsWith('==') || beforeWord.endsWith('!=') || beforeWord.endsWith('contains')) {
     return getValueSuggestions(currentWord, beforeWord);

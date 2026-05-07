@@ -106,7 +106,7 @@ function tokenizeIdentifier(input: string, startPos: number, tokens: Token[]): n
 function matchOperator(input: string, pos: number): string | null {
   for (const op of OPERATORS) {
     if (op === 'contains') continue; // handled as keyword
-    if (input.substring(pos, pos + op.length) === op) {
+    if (input.slice(pos, pos + op.length) === op) {
       return op;
     }
   }
@@ -115,7 +115,7 @@ function matchOperator(input: string, pos: number): string | null {
 
 function matchLogical(input: string, pos: number): string | null {
   for (const op of LOGICAL_OPS) {
-    if (input.substring(pos, pos + op.length) === op) {
+    if (input.slice(pos, pos + op.length) === op) {
       return op;
     }
   }

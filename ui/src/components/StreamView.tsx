@@ -31,7 +31,7 @@ function getRawData(packet: PacketLike): string {
 function hexToAscii(hex: string): string {
   let result = '';
   for (let i = 0; i < hex.length; i += 2) {
-    const byte = Number.parseInt(hex.substring(i, i + 2), 16);
+    const byte = Number.parseInt(hex.slice(i, i + 2), 16);
     if (byte >= 32 && byte <= 126) {
       result += String.fromCharCode(byte);
     } else {
@@ -47,7 +47,7 @@ function hexToAscii(hex: string): string {
 function formatHex(hex: string): string {
   const bytes: string[] = [];
   for (let i = 0; i < hex.length; i += 2) {
-    bytes.push(hex.substring(i, i + 2));
+    bytes.push(hex.slice(i, i + 2));
   }
   return bytes.join(' ');
 }
