@@ -1,5 +1,6 @@
 import { X } from 'lucide-react';
-import { type FC, type KeyboardEvent, type ReactNode, useCallback, useEffect } from 'react';
+import { type FC, type KeyboardEvent, type ReactNode, useEffect } from 'react';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 export type ModalSize = 'sm' | 'md' | 'lg' | 'xl' | 'full';
 
@@ -34,34 +35,28 @@ export const Modal: FC<ModalProps> = ({
   closeOnEscape = true,
   className = '',
 }) => {
-  // Handle escape key
-  const handleKeyDown = useCallback(
-    (e: globalThis.KeyboardEvent) => {
-      if (closeOnEscape && e.key === 'Escape') {
-        onClose();
-      }
-    },
-    [closeOnEscape, onClose],
-  );
+  // Trap Tab/Shift+Tab focus inside the dialog and route Escape through onClose.
+  const containerRef = useFocusTrap<HTMLDivElement>({
+    isActive: isOpen,
+    onEscape: closeOnEscape ? onClose : undefined,
+  });
 
   useEffect(() => {
     if (isOpen) {
-      document.addEventListener('keydown', handleKeyDown);
       // Prevent body scroll when modal is open
       document.body.style.overflow = 'hidden';
     }
     return () => {
-      document.removeEventListener('keydown', handleKeyDown);
       document.body.style.overflow = '';
     };
-  }, [isOpen, handleKeyDown]);
+  }, [isOpen]);
 
   if (!isOpen) {
     return null;
   }
 
   const handleContentKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
-    // Prevent escape from bubbling if handled
+    // Prevent escape from bubbling if handled by the focus-trap hook
     if (e.key === 'Escape') {
       e.stopPropagation();
     }
@@ -80,6 +75,7 @@ export const Modal: FC<ModalProps> = ({
         <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
       )}
       <div
+        ref={containerRef}
         className={`mx-4 w-full ${sizeClasses[size]} rounded-2xl border border-white/10 bg-gray-900/95 shadow-2xl ${className}`}
         role="dialog"
         aria-modal="true"
