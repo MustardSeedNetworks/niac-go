@@ -103,6 +103,29 @@ const pages: PageConfig[] = [
     description: 'Live counters, run snapshots, and automation status for the active NIAC stack.',
     icon: Activity,
     component: DashboardPage,
+    help: (
+      <>
+        <p>
+          Real-time view of the running daemon: packet counters per protocol, recent simulation
+          runs, device count, and recent alert state.
+        </p>
+        <h4>Where to go from here</h4>
+        <ul>
+          <li>
+            <strong>Simulation</strong> to start/stop a run.
+          </li>
+          <li>
+            <strong>Live Devices</strong> to see what the running config produced.
+          </li>
+          <li>
+            <strong>Live Packets</strong> to watch traffic in real time.
+          </li>
+          <li>
+            <strong>Alerts</strong> to set the threshold and webhook target.
+          </li>
+        </ul>
+      </>
+    ),
   },
   {
     path: '/runtime',
@@ -193,6 +216,25 @@ const pages: PageConfig[] = [
     description: 'LLDP/CDP/EDP/FDP visibility for verifying intent before exporting to Graphviz.',
     icon: Network,
     component: TopologyPage,
+    help: (
+      <>
+        <p>
+          Visual graph of the configured topology — devices and the links you declared in the YAML (
+          <code>trunk_ports:</code>, <code>port_channels:</code>, etc.). Use this to sanity-check
+          your design before starting the simulation.
+        </p>
+        <h4>Live discovery vs design</h4>
+        <p>
+          The graph shows the <em>design</em>. Use <strong>Neighbors</strong> to see which
+          adjacencies actually formed at runtime via CDP / LLDP / EDP / FDP — useful for catching
+          mistyped <code>remote_device</code> references.
+        </p>
+        <h4>Export</h4>
+        <p>
+          Topology can be exported as Graphviz <code>.dot</code> or JSON via the export button.
+        </p>
+      </>
+    ),
   },
   {
     path: '/analysis',
@@ -201,6 +243,27 @@ const pages: PageConfig[] = [
     description: 'Replay PCAPs, inspect SNMP walks, and publish bundles directly from the UI.',
     icon: LineChart,
     component: AnalysisPage,
+    help: (
+      <>
+        <p>
+          Drive the daemon's PCAP replay engine: pick a file, set a loop interval and time scale,
+          start. Equivalent of <code>POST /api/v1/replay</code>.
+        </p>
+        <h4>Auto-started replays</h4>
+        <p>
+          A <code>capture_playbacks:</code> block in your YAML auto-starts when the simulation
+          starts. This page reflects whatever is currently running and lets you swap files without
+          editing the config.
+        </p>
+        <h4>File sources</h4>
+        <ul>
+          <li>Files placed under the daemon's pcap directory show up in the dropdown.</li>
+          <li>
+            Use <strong>PCAP Analysis</strong> to inspect a file before replaying.
+          </li>
+        </ul>
+      </>
+    ),
   },
   {
     path: '/automation',
@@ -241,6 +304,30 @@ const pages: PageConfig[] = [
     description: 'Inject network errors and replay PCAP traffic for testing and simulation.',
     icon: Zap,
     component: TrafficInjectionPage,
+    help: (
+      <>
+        <p>
+          Inject controlled errors (drops, delays, corruption) into the running simulation to test
+          how upstream tooling reacts. Drives <code>POST /api/v1/errors</code>.
+        </p>
+        <h4>Common faults</h4>
+        <ul>
+          <li>
+            <strong>Drop rate</strong> — percentage of packets to drop on the device's egress.
+          </li>
+          <li>
+            <strong>Delay</strong> — extra latency in milliseconds.
+          </li>
+          <li>
+            <strong>Corruption</strong> — flip random bits in the payload.
+          </li>
+        </ul>
+        <p>
+          Errors clear when you stop the simulation, or via <code>niac inject clear</code> on the
+          CLI.
+        </p>
+      </>
+    ),
   },
   {
     path: '/debug',
@@ -249,6 +336,21 @@ const pages: PageConfig[] = [
     description: 'Real-time log streaming and debugging tools for monitoring NIAC operations.',
     icon: Terminal,
     component: DebugConsolePage,
+    help: (
+      <>
+        <p>
+          Live log tail from the daemon (Server-Sent Events from <code>/api/v1/stream/logs</code>).
+          Pause to freeze the buffer, filter by protocol or severity, set per-protocol debug levels
+          (0=quiet, 3=verbose).
+        </p>
+        <h4>Per-protocol debug levels</h4>
+        <p>
+          Equivalent of the CLI's <code>--debug-arp</code> / <code>--debug-icmp</code> /{' '}
+          <code>--debug-snmp</code> family of flags. Levels are applied to the running stack
+          immediately.
+        </p>
+      </>
+    ),
   },
   {
     path: '/packets',
@@ -258,6 +360,19 @@ const pages: PageConfig[] = [
       'Real-time packet hex dump viewing with protocol filtering and search capabilities.',
     icon: FileSearch,
     component: PacketInspectorPage,
+    help: (
+      <>
+        <p>
+          Live wire view of every packet the daemon sees — hex + decoded fields, BPF filter, freeze
+          frame, save to PCAP. Streams from <code>/api/v1/stream/packets</code>.
+        </p>
+        <h4>Performance</h4>
+        <p>
+          Frames flow as fast as the wire. If the page lags, narrow the BPF filter (e.g. limit to a
+          single protocol or device IP) instead of trying to render everything.
+        </p>
+      </>
+    ),
   },
   {
     path: '/templates',
@@ -313,6 +428,19 @@ const pages: PageConfig[] = [
     description: 'Upload and analyze PCAP files with packet inspection, filtering, and statistics.',
     icon: FileBox,
     component: PcapAnalyzerPage,
+    help: (
+      <>
+        <p>
+          Offline analysis of a PCAP: protocol breakdown, per-conversation stats, full per-packet
+          decode. Equivalent of <code>niac analyze-pcap</code> on the CLI.
+        </p>
+        <h4>Live vs offline</h4>
+        <p>
+          For traffic on the running simulator, use <strong>Live Packets</strong>. This page is for
+          static analysis of files you've captured elsewhere.
+        </p>
+      </>
+    ),
   },
   {
     path: '/neighbors',

@@ -50,6 +50,18 @@ jobs:
           version: v2.12.1
           args: --timeout=5m
 
+      - name: Verify niac.schema.json is up to date
+        run: |
+          # Regenerate from the current converter.Config and fail if the
+          # committed schema drifts. Forces struct changes to bring the
+          # schema along; refresh locally with `make schema`.
+          go run ./cmd/niac-schema -o /tmp/niac.schema.json
+          if ! diff -u docs/schemas/niac.schema.json /tmp/niac.schema.json; then
+            echo "::error::docs/schemas/niac.schema.json is stale. Run 'make schema' and commit the result."
+            exit 1
+          fi
+          echo "Schema is up to date."
+
       - name: Run tests
         run: go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
 
