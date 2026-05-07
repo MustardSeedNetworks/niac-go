@@ -615,6 +615,28 @@ func TestCDPLifecycle(t *testing.T) {
 	}
 }
 
+// TestCDPHandler_RestartAfterStop verifies Start can be called again after
+// Stop without panicking on a closed channel. Regression for #462.
+func TestCDPHandler_RestartAfterStop(t *testing.T) {
+	cfg := &config.Config{}
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	handler := protocols.NewCDPHandler(stack)
+
+	for i := range 3 {
+		handler.Start()
+		time.Sleep(20 * time.Millisecond)
+
+		if handler.CDPHandlerAdvertiseTicker() == nil {
+			t.Fatalf("iter %d: ticker nil after Start()", i)
+		}
+
+		handler.Stop()
+		time.Sleep(20 * time.Millisecond)
+	}
+
+	handler.Stop() // double-stop is a no-op
+}
+
 // TestSendAdvertisements verifies advertisement sending logic.
 func TestSendAdvertisements(_ *testing.T) {
 	cfg := &config.Config{}

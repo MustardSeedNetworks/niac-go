@@ -96,9 +96,10 @@ const (
 // LLDPHandler handles LLDP advertisements.
 type LLDPHandler struct {
 	stack           *Stack
+	mu              sync.Mutex
 	stopChan        chan struct{}
-	stopOnce        sync.Once
 	advertiseTicker *time.Ticker
+	running         bool
 }
 
 // NewLLDPHandler creates a new LLDP handler.
@@ -109,26 +110,35 @@ func NewLLDPHandler(stack *Stack) *LLDPHandler {
 	}
 }
 
-// Start begins periodic LLDP advertisements.
+// Start begins periodic LLDP advertisements. Safe to call again after Stop.
 func (h *LLDPHandler) Start() {
-	debugLevel := h.stack.GetDebugLevel()
+	h.mu.Lock()
+	defer h.mu.Unlock()
 
-	if debugLevel >= 1 {
+	if h.running {
+		return
+	}
+
+	h.stopChan = make(chan struct{})
+	h.advertiseTicker = time.NewTicker(LLDPAdvertiseInterval)
+	h.running = true
+
+	stopChan := h.stopChan
+	ticker := h.advertiseTicker
+
+	if h.stack.GetDebugLevel() >= 1 {
 		_, _ = fmt.Fprintf(os.Stdout, "LLDP: Starting periodic advertisements (interval: %v)\n", LLDPAdvertiseInterval)
 	}
 
-	h.advertiseTicker = time.NewTicker(LLDPAdvertiseInterval)
-
 	go func() {
-		// Send initial advertisement immediately
 		h.sendAdvertisements()
 
 		for {
 			select {
-			case <-h.advertiseTicker.C:
+			case <-ticker.C:
 				h.sendAdvertisements()
-			case <-h.stopChan:
-				h.advertiseTicker.Stop()
+			case <-stopChan:
+				ticker.Stop()
 
 				return
 			}
@@ -138,9 +148,15 @@ func (h *LLDPHandler) Start() {
 
 // Stop halts LLDP advertisements. Safe to call multiple times.
 func (h *LLDPHandler) Stop() {
-	h.stopOnce.Do(func() {
-		close(h.stopChan)
-	})
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	if !h.running {
+		return
+	}
+
+	close(h.stopChan)
+	h.running = false
 }
 
 // sendAdvertisements sends LLDP advertisements for all devices.

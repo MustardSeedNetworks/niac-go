@@ -148,6 +148,22 @@ func TestTrafficGenerator_StopWithoutStart(_ *testing.T) {
 	tg.Stop()
 }
 
+// TestTrafficGenerator_RestartAfterStop verifies that Start can be called
+// again after Stop without panicking on `close of closed channel`.
+// Regression for #463.
+func TestTrafficGenerator_RestartAfterStop(t *testing.T) {
+	cfg := createTrafficTestConfig(1, false)
+	sim, stack := newTestSimAndStack(cfg)
+	tg := NewTrafficGenerator(sim, stack, 0)
+
+	for i := range 3 {
+		if err := tg.Start(); err != nil {
+			t.Fatalf("iter %d: Start failed: %v", i, err)
+		}
+		tg.Stop()
+	}
+}
+
 // TestTrafficGenerator_AtomicBool tests that the [atomic.Bool] in TrafficGenerator
 // works correctly under concurrent access (regression test for [atomic.Bool] usage).
 func TestTrafficGenerator_AtomicBool(t *testing.T) {

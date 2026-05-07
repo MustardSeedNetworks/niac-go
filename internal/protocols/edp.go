@@ -55,9 +55,10 @@ const (
 // EDPHandler handles EDP advertisements.
 type EDPHandler struct {
 	stack           *Stack
+	mu              sync.Mutex
 	stopChan        chan struct{}
-	stopOnce        sync.Once
 	advertiseTicker *time.Ticker
+	running         bool
 }
 
 // NewEDPHandler creates a new EDP handler.
@@ -68,26 +69,35 @@ func NewEDPHandler(stack *Stack) *EDPHandler {
 	}
 }
 
-// Start begins periodic EDP advertisements.
+// Start begins periodic EDP advertisements. Safe to call again after Stop.
 func (h *EDPHandler) Start() {
-	debugLevel := h.stack.GetDebugLevel()
+	h.mu.Lock()
+	defer h.mu.Unlock()
 
-	if debugLevel >= 1 {
+	if h.running {
+		return
+	}
+
+	h.stopChan = make(chan struct{})
+	h.advertiseTicker = time.NewTicker(EDPAdvertiseInterval)
+	h.running = true
+
+	stopChan := h.stopChan
+	ticker := h.advertiseTicker
+
+	if h.stack.GetDebugLevel() >= 1 {
 		_, _ = fmt.Fprintf(os.Stdout, "EDP: Starting periodic advertisements (interval: %v)\n", EDPAdvertiseInterval)
 	}
 
-	h.advertiseTicker = time.NewTicker(EDPAdvertiseInterval)
-
 	go func() {
-		// Send initial advertisement immediately
 		h.sendAdvertisements()
 
 		for {
 			select {
-			case <-h.advertiseTicker.C:
+			case <-ticker.C:
 				h.sendAdvertisements()
-			case <-h.stopChan:
-				h.advertiseTicker.Stop()
+			case <-stopChan:
+				ticker.Stop()
 
 				return
 			}
@@ -95,11 +105,17 @@ func (h *EDPHandler) Start() {
 	}()
 }
 
-// Stop halts EDP advertisements.
+// Stop halts EDP advertisements. Safe to call multiple times.
 func (h *EDPHandler) Stop() {
-	h.stopOnce.Do(func() {
-		close(h.stopChan)
-	})
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	if !h.running {
+		return
+	}
+
+	close(h.stopChan)
+	h.running = false
 }
 
 // sendAdvertisements sends EDP advertisements for all devices.
