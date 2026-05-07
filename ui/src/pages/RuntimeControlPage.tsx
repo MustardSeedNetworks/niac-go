@@ -1,5 +1,6 @@
 import { Activity, BellRing, Download, FileCog, FileUp, PlugZap, Settings } from 'lucide-react';
 import { type FC, useCallback, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   fetchConfig,
   fetchProtocolDebugLevels,
@@ -35,6 +36,7 @@ import { formatBytes, formatTime, formatUptime, getErrorMessage } from '../utils
  * - Link to Settings for configuration management
  */
 export const RuntimeControlPage: FC = () => {
+  const navigate = useNavigate();
   const [refetchTrigger, setRefetchTrigger] = useState(0);
   const { data: simStatus } = useApiResource(fetchSimulationStatus, [refetchTrigger], {
     intervalMs: POLL_INTERVALS.fast,
@@ -364,9 +366,7 @@ export const RuntimeControlPage: FC = () => {
               <Button
                 variant="ghost"
                 leftIcon={<FileCog className="h-4 w-4" />}
-                onClick={() => {
-                  window.location.href = '/devices';
-                }}
+                onClick={() => navigate('/devices')}
               >
                 View Devices
               </Button>
