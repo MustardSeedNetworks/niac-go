@@ -146,9 +146,9 @@ export const NeighborsPage: FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
-                {filtered.map((n, idx) => (
+                {filtered.map((n) => (
                   <tr
-                    key={`${n.localDevice}-${n.remoteDevice}-${n.protocol}-${idx}`}
+                    key={`${n.protocol}|${n.localDevice}|${n.remoteDevice}|${n.remotePort}|${n.remoteChassisId}`}
                     className="text-gray-200 hover:bg-gray-950/40"
                   >
                     <td className="px-4 py-2 font-mono text-xs text-cyan-300">{n.protocol}</td>

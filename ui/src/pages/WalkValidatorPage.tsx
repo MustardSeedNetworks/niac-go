@@ -205,8 +205,11 @@ export const WalkValidatorPage: FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
-                  {issues.slice(0, 200).map((issue, idx) => (
-                    <tr key={`${issue.line}-${idx}`} className="text-gray-200 hover:bg-gray-950/40">
+                  {issues.slice(0, 200).map((issue) => (
+                    <tr
+                      key={`${issue.line}|${issue.severity}|${issue.message}`}
+                      className="text-gray-200 hover:bg-gray-950/40"
+                    >
                       <td className="px-3 py-2 font-mono text-xs text-gray-400">{issue.line}</td>
                       <td className="px-3 py-2">
                         <span

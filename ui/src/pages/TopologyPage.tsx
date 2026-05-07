@@ -766,9 +766,9 @@ export const TopologyPage: FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5 text-gray-300">
-                  {neighbors.map((neighbor, idx) => (
+                  {neighbors.map((neighbor) => (
                     <tr
-                      key={`${neighbor.localDevice}-${neighbor.remoteDevice}-${idx}`}
+                      key={`${neighbor.protocol}|${neighbor.localDevice}|${neighbor.remoteDevice}|${neighbor.remotePort}|${neighbor.remoteChassisId}`}
                       className="hover:bg-white/5"
                     >
                       <td className="px-4 py-3 font-semibold text-white">{neighbor.localDevice}</td>

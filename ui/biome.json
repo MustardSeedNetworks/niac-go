@@ -194,7 +194,7 @@
       },
       "suspicious": {
         "noApproximativeNumericConstant": "error",
-        "noArrayIndexKey": "warn",
+        "noArrayIndexKey": "error",
         "noAssignInExpressions": "error",
         "noAsyncPromiseExecutor": "error",
         "noCatchAssign": "error",

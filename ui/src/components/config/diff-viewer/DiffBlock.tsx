@@ -14,16 +14,25 @@ interface DiffBlockComponentProps {
 }
 
 /**
- * Create padded lines array for alignment
+ * Create padded lines array for alignment.
+ * Each entry gets a stable `key` so React can reconcile across renders;
+ * real lines key off their lineNumber, padding placeholders off their
+ * position in the padded run (their identity IS that position).
  */
-function padLines(lines: DiffLine[], targetLength: number): DiffLine[] {
-  const paddedLines = [...lines];
+function padLines(side: 'left' | 'right', lines: DiffLine[], targetLength: number): DiffLine[] {
+  const paddedLines = lines.map((line) => ({
+    ...line,
+    key: `${side}-line-${line.lineNumber}`,
+  }));
+  let padCounter = 0;
   while (paddedLines.length < targetLength) {
     paddedLines.push({
       lineNumber: -1,
       content: '',
       type: 'unchanged',
+      key: `${side}-pad-${padCounter}`,
     });
+    padCounter++;
   }
   return paddedLines;
 }
@@ -80,8 +89,8 @@ export const DiffBlockComponent: FC<DiffBlockComponentProps> = memo(
     const isChanged = block.type !== 'unchanged';
     const maxLines = Math.max(block.leftLines.length, block.rightLines.length);
 
-    const paddedLeftLines = padLines(block.leftLines, maxLines);
-    const paddedRightLines = padLines(block.rightLines, maxLines);
+    const paddedLeftLines = padLines('left', block.leftLines, maxLines);
+    const paddedRightLines = padLines('right', block.rightLines, maxLines);
 
     return (
       <div
@@ -96,15 +105,15 @@ export const DiffBlockComponent: FC<DiffBlockComponentProps> = memo(
         <div className="grid grid-cols-2 divide-x divide-white/10">
           {/* Left panel */}
           <div className="overflow-x-auto">
-            {paddedLeftLines.map((line, idx) => (
-              <DiffLineComponent key={`left-${block.id}-${idx}`} line={line} side="left" />
+            {paddedLeftLines.map((line) => (
+              <DiffLineComponent key={`${block.id}-${line.key}`} line={line} side="left" />
             ))}
           </div>
 
           {/* Right panel */}
           <div className="overflow-x-auto">
-            {paddedRightLines.map((line, idx) => (
-              <DiffLineComponent key={`right-${block.id}-${idx}`} line={line} side="right" />
+            {paddedRightLines.map((line) => (
+              <DiffLineComponent key={`${block.id}-${line.key}`} line={line} side="right" />
             ))}
           </div>
         </div>

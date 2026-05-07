@@ -53,6 +53,8 @@ function formatHex(hex: string): string {
 }
 
 interface StreamSegment {
+  /** Unique key derived from the source packet so React reconciles correctly. */
+  id: string;
   isClient: boolean;
   data: string; // raw hex
   timestamp: string;
@@ -73,6 +75,9 @@ export const StreamView: FC<StreamViewProps> = memo(({ packets, clientEndpoint, 
     return packets
       .filter((p) => getRawData(p).length > 0)
       .map((p) => ({
+        // Both Packet (from PacketList) and PcapPacket carry an id; fall back
+        // to timestamp+endpoint when one slipped through without one.
+        id: ('id' in p && p.id) || `${p.timestamp}-${getPacketEndpoint(p)}`,
         isClient: getPacketEndpoint(p) === clientEndpoint,
         data: getRawData(p),
         timestamp: p.timestamp,
@@ -143,9 +148,9 @@ export const StreamView: FC<StreamViewProps> = memo(({ packets, clientEndpoint, 
             </div>
           ) : (
             <div className="space-y-1 font-mono text-xs">
-              {segments.map((segment, idx) => (
+              {segments.map((segment) => (
                 <div
-                  key={`${segment.timestamp}-${idx}`}
+                  key={segment.id}
                   className={`px-3 py-1.5 rounded whitespace-pre-wrap break-all ${
                     segment.isClient
                       ? 'bg-blue-950/30 text-blue-300 border-l-2 border-blue-500'

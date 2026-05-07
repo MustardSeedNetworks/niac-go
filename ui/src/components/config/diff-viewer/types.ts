@@ -9,6 +9,10 @@ export interface DiffLine {
   type: DiffType;
   leftLineNumber?: number;
   rightLineNumber?: number;
+  /** Stable React key for the line. Set when the array is built; padding
+   * placeholders get a synthetic id keyed off their position in the
+   * padded run so React can reconcile them across renders. */
+  key?: string;
 }
 
 export interface DiffBlock {
