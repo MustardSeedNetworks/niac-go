@@ -16,6 +16,7 @@ import (
 	"github.com/krisarmstrong/niac-go/internal/config"
 	"github.com/krisarmstrong/niac-go/internal/logging"
 	"github.com/krisarmstrong/niac-go/internal/protocols"
+	"github.com/krisarmstrong/niac-go/internal/replay"
 	"github.com/krisarmstrong/niac-go/internal/storage"
 )
 
@@ -394,107 +395,10 @@ func expandPath(path string) string {
 	return filepath.Clean(path)
 }
 
-// newReplayController is copied from runtime_services.go for now
-// TODO: Refactor to share code.
-type replayController struct {
-	engine     *capture.Engine
-	debugLevel int
-	mu         sync.Mutex
-	current    *capture.PlaybackEngine
-	state      api.ReplayState
-	cleanup    string
-}
-
-func newReplayController(engine *capture.Engine, debugLevel int) *replayController {
-	return &replayController{
-		engine:     engine,
-		debugLevel: debugLevel,
-	}
-}
-
-// Status returns the current replay state.
-func (rc *replayController) Status() api.ReplayState {
-	rc.mu.Lock()
-	defer rc.mu.Unlock()
-
-	return rc.state
-}
-
-// Start begins PCAP replay with the given request. This is the daemon-mode
-// equivalent of cmd/niac/runtime_services.go's controller.
-func (rc *replayController) Start(req api.ReplayRequest) (api.ReplayState, error) {
-	rc.mu.Lock()
-	defer rc.mu.Unlock()
-
-	if rc.engine == nil {
-		return rc.state, errors.New("capture engine unavailable for replay")
-	}
-	if strings.TrimSpace(req.File) == "" {
-		return rc.state, errors.New("pcap file path is required")
-	}
-
-	if rc.current != nil {
-		rc.current.Stop()
-		rc.current = nil
-	}
-	rc.cleanupTempFile()
-
-	cfg := &config.CapturePlayback{
-		FileName:  req.File,
-		LoopTime:  req.LoopMs,
-		ScaleTime: req.Scale,
-	}
-	player := capture.NewPlaybackEngine(rc.engine, cfg, rc.debugLevel)
-	if err := player.Start(); err != nil {
-		if req.Uploaded {
-			// Reaffirm the upload path is bounded before deleting it; the
-			// upload handler placed req.File under a vetted directory, but
-			// keeping the inline barrier explicit appeases CodeQL.
-			cleanedFile := filepath.Clean(req.File)
-			if !strings.Contains(cleanedFile, "..") {
-				_ = os.Remove(cleanedFile)
-			}
-		}
-		return rc.state, fmt.Errorf("failed to start playback: %w", err)
-	}
-
-	rc.current = player
-	rc.state = api.ReplayState{
-		Running:   true,
-		File:      req.File,
-		LoopMs:    req.LoopMs,
-		Scale:     req.Scale,
-		StartedAt: time.Now().UTC(),
-	}
-	if req.Uploaded {
-		rc.cleanup = req.File
-	} else {
-		rc.cleanup = ""
-	}
-	return rc.state, nil
-}
-
-// Stop halts the current PCAP replay and cleans up any uploaded temp file.
-func (rc *replayController) Stop() (api.ReplayState, error) {
-	rc.mu.Lock()
-	defer rc.mu.Unlock()
-
-	if rc.current != nil {
-		rc.current.Stop()
-		rc.current = nil
-	}
-	rc.state.Running = false
-	rc.cleanupTempFile()
-	return rc.state, nil
-}
-
-func (rc *replayController) cleanupTempFile() {
-	if rc.cleanup == "" {
-		return
-	}
-	cleanedPath := filepath.Clean(rc.cleanup)
-	if !strings.Contains(cleanedPath, "..") {
-		_ = os.Remove(cleanedPath)
-	}
-	rc.cleanup = ""
+// newReplayController returns a replay controller. The implementation lives
+// in internal/replay so the daemon and the legacy CLI's runtime services
+// share one canonical copy — until #494 this was a duplicated stub here and
+// a working version in cmd/niac/runtime_services.go.
+func newReplayController(engine *capture.Engine, debugLevel int) *replay.Controller {
+	return replay.New(engine, debugLevel)
 }

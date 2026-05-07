@@ -1,7 +1,6 @@
 package main
 
 import (
-	"os"
 	"testing"
 
 	"github.com/krisarmstrong/niac-go/internal/api"
@@ -73,31 +72,11 @@ func TestReplayControllerStop(t *testing.T) {
 	}
 }
 
-func TestReplayControllerCleanupTempFile(t *testing.T) {
-	tmpDir := t.TempDir()
-	tmpFile := tmpDir + "/test.pcap"
-	if err := os.WriteFile(tmpFile, []byte("test"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	rc := newReplayController(nil, 1)
-	rc.cleanup = tmpFile
-	rc.cleanupTempFile()
-
-	if rc.cleanup != "" {
-		t.Error("Expected cleanup to be cleared")
-	}
-	if _, err := os.Stat(tmpFile); !os.IsNotExist(err) {
-		t.Error("Expected temp file to be removed")
-	}
-}
-
-func TestReplayControllerCleanupNoFile(_ *testing.T) {
-	rc := newReplayController(nil, 1)
-	rc.cleanup = ""
-	// Should not panic
-	rc.cleanupTempFile()
-}
+// Cleanup-temp-file behaviour now lives in internal/replay (see PR #494) and
+// is verified there at the package level. The legacy CLI's wrapper just calls
+// replay.New so there's nothing CLI-specific left to assert; we keep
+// TestReplayControllerStop above to confirm the wrapper still wires Stop()
+// through correctly.
 
 func TestRuntimeServicesApplyConfigNil(t *testing.T) {
 	// nil receiver
