@@ -1,0 +1,1084 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/krisarmstrong/niac-go/main/docs/schemas/niac.schema.json",
+  "$ref": "#/$defs/Config",
+  "$defs": {
+    "ARPAnnouncementConfig": {
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "interval": {
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "AddMib": {
+      "properties": {
+        "oid": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "oid",
+        "type",
+        "value"
+      ]
+    },
+    "CapturePlayback": {
+      "properties": {
+        "file_name": {
+          "type": "string"
+        },
+        "loop_time": {
+          "type": "integer"
+        },
+        "scale_time": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "file_name"
+      ]
+    },
+    "CdpConfig": {
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "advertise_interval": {
+          "type": "integer"
+        },
+        "holdtime": {
+          "type": "integer"
+        },
+        "version": {
+          "type": "integer"
+        },
+        "software_version": {
+          "type": "string"
+        },
+        "platform": {
+          "type": "string"
+        },
+        "port_id": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "CommunityInclude": {
+      "properties": {
+        "community": {
+          "type": "string"
+        },
+        "walk_file": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "community",
+        "walk_file"
+      ]
+    },
+    "Config": {
+      "properties": {
+        "include_path": {
+          "type": "string"
+        },
+        "capture_playbacks": {
+          "items": {
+            "$ref": "#/$defs/CapturePlayback"
+          },
+          "type": "array"
+        },
+        "discovery_protocols": {
+          "$ref": "#/$defs/DiscoveryProtocols"
+        },
+        "devices": {
+          "items": {
+            "$ref": "#/$defs/Device"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "devices"
+      ]
+    },
+    "DNSRecord": {
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "ip": {
+          "type": "string"
+        },
+        "ttl": {
+          "type": "integer"
+        },
+        "rcode": {
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "name",
+        "ip"
+      ]
+    },
+    "DNSServer": {
+      "properties": {
+        "forward_records": {
+          "items": {
+            "$ref": "#/$defs/DNSRecord"
+          },
+          "type": "array"
+        },
+        "reverse_records": {
+          "items": {
+            "$ref": "#/$defs/DNSRecord"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "Device": {
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "mac": {
+          "type": "string"
+        },
+        "ip": {
+          "type": "string"
+        },
+        "ips": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "vlan": {
+          "type": "integer"
+        },
+        "map_to_ip": {
+          "type": "string"
+        },
+        "babble": {
+          "type": "boolean"
+        },
+        "ttl": {
+          "$ref": "#/$defs/TTLConfig"
+        },
+        "snmp_agent": {
+          "$ref": "#/$defs/SnmpAgent"
+        },
+        "dhcp": {
+          "$ref": "#/$defs/DhcpServer"
+        },
+        "dns": {
+          "$ref": "#/$defs/DNSServer"
+        },
+        "lldp": {
+          "$ref": "#/$defs/LldpConfig"
+        },
+        "cdp": {
+          "$ref": "#/$defs/CdpConfig"
+        },
+        "edp": {
+          "$ref": "#/$defs/EdpConfig"
+        },
+        "fdp": {
+          "$ref": "#/$defs/FdpConfig"
+        },
+        "stp": {
+          "$ref": "#/$defs/StpConfig"
+        },
+        "http": {
+          "$ref": "#/$defs/HTTPConfig"
+        },
+        "ftp": {
+          "$ref": "#/$defs/FtpConfig"
+        },
+        "netbios": {
+          "$ref": "#/$defs/NetbiosConfig"
+        },
+        "icmp": {
+          "$ref": "#/$defs/IcmpConfig"
+        },
+        "icmpv6": {
+          "$ref": "#/$defs/Icmpv6Config"
+        },
+        "dhcpv6": {
+          "$ref": "#/$defs/Dhcpv6Config"
+        },
+        "traffic": {
+          "$ref": "#/$defs/TrafficConfig"
+        },
+        "os_fingerprint": {
+          "$ref": "#/$defs/OSFingerprintConfig"
+        },
+        "iperf3": {
+          "$ref": "#/$defs/IPerf3Config"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "mac"
+      ]
+    },
+    "DhcpLease": {
+      "properties": {
+        "client_ip": {
+          "type": "string"
+        },
+        "mac_addr_value": {
+          "type": "string"
+        },
+        "mac_addr_mask": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "client_ip"
+      ]
+    },
+    "DhcpServer": {
+      "properties": {
+        "client_leases": {
+          "items": {
+            "$ref": "#/$defs/DhcpLease"
+          },
+          "type": "array"
+        },
+        "subnet_mask": {
+          "type": "string"
+        },
+        "router": {
+          "type": "string"
+        },
+        "domain_name_server": {
+          "type": "string"
+        },
+        "next_server_ip": {
+          "type": "string"
+        },
+        "server_identifier": {
+          "type": "string"
+        },
+        "pool_start": {
+          "type": "string"
+        },
+        "pool_end": {
+          "type": "string"
+        },
+        "ntp_servers": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "domain_search": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "tftp_server_name": {
+          "type": "string"
+        },
+        "bootfile_name": {
+          "type": "string"
+        },
+        "vendor_specific": {
+          "type": "string"
+        },
+        "sntp_servers_v6": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "ntp_servers_v6": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "sip_servers_v6": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "sip_domains_v6": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "Dhcpv6Config": {
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "pools": {
+          "items": {
+            "$ref": "#/$defs/Dhcpv6Pool"
+          },
+          "type": "array"
+        },
+        "preferred_lifetime": {
+          "type": "integer"
+        },
+        "valid_lifetime": {
+          "type": "integer"
+        },
+        "preference": {
+          "type": "integer"
+        },
+        "dns_servers": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "domain_list": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "sntp_servers": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "ntp_servers": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "sip_servers": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "sip_domains": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "Dhcpv6Pool": {
+      "properties": {
+        "network": {
+          "type": "string"
+        },
+        "range_start": {
+          "type": "string"
+        },
+        "range_end": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "DiscoveryProtocols": {
+      "properties": {
+        "lldp": {
+          "$ref": "#/$defs/ProtocolConfig"
+        },
+        "cdp": {
+          "$ref": "#/$defs/ProtocolConfig"
+        },
+        "edp": {
+          "$ref": "#/$defs/ProtocolConfig"
+        },
+        "fdp": {
+          "$ref": "#/$defs/ProtocolConfig"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "EdpConfig": {
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "advertise_interval": {
+          "type": "integer"
+        },
+        "version_string": {
+          "type": "string"
+        },
+        "display_string": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "FdbTableConfig": {
+      "properties": {
+        "port": {
+          "type": "integer"
+        },
+        "vlan": {
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "FdpConfig": {
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "advertise_interval": {
+          "type": "integer"
+        },
+        "holdtime": {
+          "type": "integer"
+        },
+        "software_version": {
+          "type": "string"
+        },
+        "platform": {
+          "type": "string"
+        },
+        "port_id": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "FtpConfig": {
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "welcome_banner": {
+          "type": "string"
+        },
+        "system_type": {
+          "type": "string"
+        },
+        "allow_anonymous": {
+          "type": "boolean"
+        },
+        "users": {
+          "items": {
+            "$ref": "#/$defs/FtpUser"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "FtpUser": {
+      "properties": {
+        "username": {
+          "type": "string"
+        },
+        "password": {
+          "type": "string"
+        },
+        "home_dir": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "HTTPConfig": {
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "server_name": {
+          "type": "string"
+        },
+        "endpoints": {
+          "items": {
+            "$ref": "#/$defs/HTTPEndpoint"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "HTTPEndpoint": {
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "method": {
+          "type": "string"
+        },
+        "status_code": {
+          "type": "integer"
+        },
+        "content_type": {
+          "type": "string"
+        },
+        "body": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "IPerf3Config": {
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "port": {
+          "type": "integer"
+        },
+        "max_bandwidth_mbps": {
+          "type": "number"
+        },
+        "typical_latency_ms": {
+          "type": "number"
+        },
+        "jitter_ms": {
+          "type": "number"
+        },
+        "packet_loss_percent": {
+          "type": "number"
+        },
+        "upload_mbps": {
+          "type": "number"
+        },
+        "download_mbps": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "IcmpConfig": {
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "ttl": {
+          "type": "integer"
+        },
+        "rate_limit": {
+          "type": "integer"
+        },
+        "address_mask_reply": {
+          "type": "string"
+        },
+        "router_advertisement": {
+          "$ref": "#/$defs/IcmpRouterAdvertisement"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "IcmpRouter": {
+      "properties": {
+        "address": {
+          "type": "string"
+        },
+        "preference": {
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "IcmpRouterAdvertisement": {
+      "properties": {
+        "period": {
+          "type": "integer"
+        },
+        "lifetime": {
+          "type": "integer"
+        },
+        "routers": {
+          "items": {
+            "$ref": "#/$defs/IcmpRouter"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "Icmpv6Config": {
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "hop_limit": {
+          "type": "integer"
+        },
+        "rate_limit": {
+          "type": "integer"
+        },
+        "router_advertisement": {
+          "$ref": "#/$defs/Icmpv6RouterAdvertisement"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "Icmpv6PrefixInfo": {
+      "properties": {
+        "prefix_length": {
+          "type": "integer"
+        },
+        "onlink": {
+          "type": "integer"
+        },
+        "auto": {
+          "type": "integer"
+        },
+        "valid_lifetime": {
+          "type": "integer"
+        },
+        "preferred_lifetime": {
+          "type": "integer"
+        },
+        "prefix": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "Icmpv6RouterAdvertisement": {
+      "properties": {
+        "period": {
+          "type": "integer"
+        },
+        "cur_hop_limit": {
+          "type": "integer"
+        },
+        "managed": {
+          "type": "integer"
+        },
+        "other": {
+          "type": "integer"
+        },
+        "lifetime": {
+          "type": "integer"
+        },
+        "reachable_time": {
+          "type": "integer"
+        },
+        "retrans_timer": {
+          "type": "integer"
+        },
+        "mtu": {
+          "type": "integer"
+        },
+        "prefix_info": {
+          "items": {
+            "$ref": "#/$defs/Icmpv6PrefixInfo"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "LinkStateTrapConfig": {
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "link_down": {
+          "type": "boolean"
+        },
+        "link_up": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "LldpConfig": {
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "advertise_interval": {
+          "type": "integer"
+        },
+        "ttl": {
+          "type": "integer"
+        },
+        "system_description": {
+          "type": "string"
+        },
+        "port_description": {
+          "type": "string"
+        },
+        "chassis_id_type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "NetbiosConfig": {
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "name": {
+          "type": "string"
+        },
+        "workgroup": {
+          "type": "string"
+        },
+        "node_type": {
+          "type": "string"
+        },
+        "services": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "ttl": {
+          "type": "integer"
+        },
+        "names": {
+          "items": {
+            "$ref": "#/$defs/NetbiosName"
+          },
+          "type": "array"
+        },
+        "msbrowse": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "NetbiosName": {
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "suffix": {
+          "type": "string"
+        },
+        "group": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "OSFingerprintConfig": {
+      "properties": {
+        "os_type": {
+          "type": "string"
+        },
+        "ttl": {
+          "type": "integer"
+        },
+        "window_size": {
+          "type": "integer"
+        },
+        "window_scale": {
+          "type": "integer"
+        },
+        "mss": {
+          "type": "integer"
+        },
+        "ssh_banner": {
+          "type": "string"
+        },
+        "http_server": {
+          "type": "string"
+        },
+        "ftp_banner": {
+          "type": "string"
+        },
+        "smtp_banner": {
+          "type": "string"
+        },
+        "telnet_banner": {
+          "type": "string"
+        },
+        "dont_fragment": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "PeriodicPingConfig": {
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "interval": {
+          "type": "integer"
+        },
+        "payload_size": {
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "ProtocolConfig": {
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "interval": {
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "enabled"
+      ]
+    },
+    "RandomTrafficConfig": {
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "interval": {
+          "type": "integer"
+        },
+        "packet_count": {
+          "type": "integer"
+        },
+        "patterns": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "SnmpAgent": {
+      "properties": {
+        "walk_file": {
+          "type": "string"
+        },
+        "walk_files": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "add_mibs": {
+          "items": {
+            "$ref": "#/$defs/AddMib"
+          },
+          "type": "array"
+        },
+        "community_includes": {
+          "items": {
+            "$ref": "#/$defs/CommunityInclude"
+          },
+          "type": "array"
+        },
+        "access_list": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "snmp_addr": {
+          "type": "string"
+        },
+        "dot1d_fdb_table": {
+          "$ref": "#/$defs/FdbTableConfig"
+        },
+        "dot1q_fdb_table": {
+          "$ref": "#/$defs/FdbTableConfig"
+        },
+        "traps": {
+          "$ref": "#/$defs/TrapsConfig"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "StpConfig": {
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "bridge_priority": {
+          "type": "integer"
+        },
+        "hello_time": {
+          "type": "integer"
+        },
+        "max_age": {
+          "type": "integer"
+        },
+        "forward_delay": {
+          "type": "integer"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "TTLConfig": {
+      "properties": {
+        "ttl": {
+          "type": "integer"
+        },
+        "ip": {
+          "type": "string"
+        },
+        "mask": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "ThresholdTrapConfig": {
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "threshold": {
+          "type": "integer"
+        },
+        "interval": {
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "TrafficConfig": {
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "arp_announcements": {
+          "$ref": "#/$defs/ARPAnnouncementConfig"
+        },
+        "periodic_pings": {
+          "$ref": "#/$defs/PeriodicPingConfig"
+        },
+        "random_traffic": {
+          "$ref": "#/$defs/RandomTrafficConfig"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "TrapTriggerConfig": {
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "on_startup": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "TrapsConfig": {
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "receivers": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "community": {
+          "type": "string"
+        },
+        "cold_start": {
+          "$ref": "#/$defs/TrapTriggerConfig"
+        },
+        "link_state": {
+          "$ref": "#/$defs/LinkStateTrapConfig"
+        },
+        "authentication_failure": {
+          "$ref": "#/$defs/TrapTriggerConfig"
+        },
+        "high_cpu": {
+          "$ref": "#/$defs/ThresholdTrapConfig"
+        },
+        "high_memory": {
+          "$ref": "#/$defs/ThresholdTrapConfig"
+        },
+        "interface_errors": {
+          "$ref": "#/$defs/ThresholdTrapConfig"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    }
+  },
+  "title": "NIAC configuration",
+  "description": "Network In A Can simulation configuration. Generated from the Go struct internal/converter.Config; refresh with `make schema` after struct changes."
+}

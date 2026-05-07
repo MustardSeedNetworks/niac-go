@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, HelpCircle, X } from 'lucide-react';
 import {
   createElement,
   type FC,
@@ -237,6 +237,11 @@ interface PageHeaderProps {
   icon?: LucideIcon;
   actions?: ReactNode;
   breadcrumbs?: { label: string; href?: string }[];
+  /**
+   * Rich help content shown in a side-panel when the user clicks the (?) icon.
+   * Pass any ReactNode (paragraphs, lists, links). Omit to hide the button.
+   */
+  help?: ReactNode;
   className?: string;
 }
 
@@ -246,22 +251,96 @@ export const PageHeader: FC<PageHeaderProps> = ({
   icon,
   actions,
   breadcrumbs,
+  help,
   className = '',
-}) => (
-  <div className={`mb-6 animate-fade-in ${className}`}>
-    {breadcrumbs && breadcrumbs.length > 0 && <Breadcrumb items={breadcrumbs} className="mb-3" />}
-    <div className="flex flex-wrap items-start justify-between gap-4">
-      <div className="flex items-center gap-3">
-        {icon && createElement(icon, { className: 'h-8 w-8 text-violet-400' })}
-        <div>
-          <h1 className="text-2xl font-bold text-white font-display">{title}</h1>
-          {description && <p className="text-sm text-gray-400 mt-1 max-w-2xl">{description}</p>}
+}) => {
+  const [helpOpen, setHelpOpen] = useState(false);
+  return (
+    <div className={`mb-6 animate-fade-in ${className}`}>
+      {breadcrumbs && breadcrumbs.length > 0 && <Breadcrumb items={breadcrumbs} className="mb-3" />}
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="flex items-center gap-3">
+          {icon && createElement(icon, { className: 'h-8 w-8 text-violet-400' })}
+          <div>
+            <h1 className="text-2xl font-bold text-white font-display">{title}</h1>
+            {description && <p className="text-sm text-gray-400 mt-1 max-w-2xl">{description}</p>}
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          {actions}
+          {help && (
+            <button
+              type="button"
+              onClick={() => setHelpOpen(true)}
+              aria-label={`Open help for ${title}`}
+              title={`What is ${title}?`}
+              className="rounded-full p-1.5 text-gray-400 hover:bg-white/10 hover:text-white"
+            >
+              <HelpCircle className="h-5 w-5" />
+            </button>
+          )}
         </div>
       </div>
-      {actions && <div className="flex items-center gap-3">{actions}</div>}
+      {help && helpOpen && (
+        <HelpPanel title={title} onClose={() => setHelpOpen(false)}>
+          {help}
+        </HelpPanel>
+      )}
     </div>
-  </div>
-);
+  );
+};
+
+/**
+ * HelpPanel — fixed side panel rendered from PageHeader's (?) button.
+ * Closes on overlay click or X. Content is opaque ReactNode so each page
+ * can ship its own help with formatting / links / inline code.
+ */
+const HelpPanel: FC<{ title: string; children: ReactNode; onClose: () => void }> = ({
+  title,
+  children,
+  onClose,
+}) => {
+  // Close on Escape (covers keyboard users; the overlay button below covers
+  // pointer + screen-reader users).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex justify-end bg-black/40 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Help: ${title}`}
+    >
+      {/* Click-outside dismiss, keyboard-accessible. */}
+      <button
+        type="button"
+        aria-label="Close help (overlay)"
+        className="absolute inset-0 cursor-default"
+        onClick={onClose}
+      />
+      <aside className="relative h-full w-full max-w-md overflow-y-auto bg-gray-900 p-6 shadow-2xl">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-white">{title}</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close help"
+            className="rounded p-1 text-gray-400 hover:bg-white/10 hover:text-white"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        <div className="prose prose-invert prose-sm max-w-none text-gray-200">{children}</div>
+      </aside>
+    </div>
+  );
+};
 
 // Status indicator component
 interface StatusIndicatorProps {
