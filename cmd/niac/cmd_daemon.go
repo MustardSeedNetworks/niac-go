@@ -62,21 +62,27 @@ The web UI will be available at http://localhost:8080`,
 func runDaemon(options *daemonOptions, info versionInfo) error {
 	logging.InitColors(true)
 
+	// Resolve token through resolveAPIToken so NIAC_API_TOKEN env wins over
+	// the (deprecated) --token flag and the deprecation warning prints once
+	// at startup. Without this, the daemon binary kept accepting the flag
+	// while inject/replay paths quietly preferred env, splitting behavior.
+	token := resolveAPIToken(options.token)
+
 	logging.Infof("Starting NIAC Daemon v%s", info.version)
 	logging.Infof("Web UI will be available at http://localhost%s", options.listen)
-	if options.token != "" {
+	if token != "" {
 		logging.Infof("API authentication enabled")
 	} else {
 		logging.Warningf(
 			"SECURITY: No API token set. Anyone with network access can control simulations.",
 		)
-		logging.Warningf("         Use --token for production or network-exposed deployments.")
+		logging.Warningf("         Use NIAC_API_TOKEN env var for production or network-exposed deployments.")
 	}
 
 	// Create daemon instance
 	d, err := daemon.NewDaemon(daemon.Config{
 		ListenAddr:          options.listen,
-		Token:               options.token,
+		Token:               token,
 		StoragePath:         options.storagePath,
 		Version:             info.version,
 		Commit:              info.commit,

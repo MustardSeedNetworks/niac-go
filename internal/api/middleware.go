@@ -77,11 +77,16 @@ func addSecurityHeaders(w http.ResponseWriter, r *http.Request) {
 	// Enable XSS protection (legacy, but still useful for older browsers)
 	w.Header().Set("X-XSS-Protection", "1; mode=block")
 
-	// Content Security Policy - restrict resource loading
-	// Note: fonts.googleapis.com and fonts.gstatic.com allowed for Google Fonts
+	// Content Security Policy - restrict resource loading.
+	// Note: fonts.googleapis.com and fonts.gstatic.com are allowed for Google Fonts.
+	// script-src no longer permits 'unsafe-inline'; the only inline handler we
+	// had (a font loader onload) was removed from index.html. style-src still
+	// allows 'unsafe-inline' because Tailwind v4 emits inline <style> blocks
+	// during HMR and a few first-paint utility rules; revisiting requires a
+	// nonced build pipeline (tracked separately).
 	w.Header().Set("Content-Security-Policy",
 		"default-src 'self'; "+
-			"script-src 'self' 'unsafe-inline'; "+
+			"script-src 'self'; "+
 			"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "+
 			"img-src 'self' data:; "+
 			"font-src 'self' https://fonts.gstatic.com; "+

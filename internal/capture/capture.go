@@ -2,6 +2,7 @@
 package capture
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -128,19 +129,33 @@ func (e *Engine) ReadPacket(buffer []byte) ([]byte, error) {
 }
 
 // StartCapture starts capturing packets and calls handler for each packet.
+// Blocks until the underlying handle is closed (e.g. via Engine.Close).
 func (e *Engine) StartCapture(handler func(gopacket.Packet)) error {
+	return e.StartCaptureContext(context.Background(), handler)
+}
+
+// StartCaptureContext is the cancellable form of StartCapture. When ctx is
+// cancelled, the loop exits at the next packet boundary or after captureTimeoutMs
+// of idle time (because pcap.Handle was opened with that timeout).
+func (e *Engine) StartCaptureContext(ctx context.Context, handler func(gopacket.Packet)) error {
 	packetSource := gopacket.NewPacketSource(e.handle, e.handle.LinkType())
 
 	if e.debugLevel >= 1 {
-		logger := slog.Default()
-		logger.Info("Started packet capture", "interface", e.interfaceName)
+		slog.Default().Info("Started packet capture", "interface", e.interfaceName)
 	}
 
-	for packet := range packetSource.Packets() {
-		handler(packet)
+	packets := packetSource.Packets()
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case packet, ok := <-packets:
+			if !ok {
+				return nil
+			}
+			handler(packet)
+		}
 	}
-
-	return nil
 }
 
 // SetFilter sets a BPF filter on the capture.

@@ -147,6 +147,22 @@ func (tg *TrafficGenerator) trafficGenerationLoop(stopChan <-chan struct{}) {
 	}
 }
 
+// sleepInterruptible sleeps for d, returning false if Stop closes stopChan
+// before the timer fires. Callers should treat false as "exit your loop now".
+func (tg *TrafficGenerator) sleepInterruptible(d time.Duration) bool {
+	if d <= 0 {
+		return tg.running.Load()
+	}
+	timer := time.NewTimer(d)
+	defer timer.Stop()
+	select {
+	case <-tg.stopChan:
+		return false
+	case <-timer.C:
+		return true
+	}
+}
+
 // checkAndGenerateTraffic checks each device's config and generates traffic if intervals have elapsed.
 func (tg *TrafficGenerator) checkAndGenerateTraffic() {
 	devices := tg.simulator.GetAllDevices()
@@ -332,8 +348,12 @@ func (tg *TrafficGenerator) generateRandomTrafficForDevice(
 			}
 		}
 
-		// Small delay between packets
-		time.Sleep(time.Duration(simRand.IntN(maxRandomDelayMs)) * time.Millisecond)
+		// Inter-packet jitter is interruptible so Stop() doesn't block waiting for
+		// up to maxRandomDelayMs before this loop yields.
+		delay := time.Duration(simRand.IntN(maxRandomDelayMs)) * time.Millisecond
+		if !tg.sleepInterruptible(delay) {
+			return
+		}
 	}
 
 	if tg.debugLevel >= debugLevelVerbose {

@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { applyTemplate, fetchTemplateContent, fetchTemplates } from '../../api/client';
 import type { Template, TemplateContent } from '../../api/types';
 import { useApiResource } from '../../hooks/useApiResource';
+import { copyToClipboard } from '../../utils/file';
 import { getErrorMessage } from '../../utils/format';
 
 export interface StatusMessage {
@@ -160,28 +161,11 @@ export function useTemplates(): UseTemplatesReturn {
       return;
     }
 
-    try {
-      await navigator.clipboard.writeText(templateContent.content);
-      setMessage({
-        type: 'success',
-        text: 'Template content copied to clipboard',
-      });
-    } catch {
-      // Fallback for older browsers
-      const textarea = document.createElement('textarea');
-      textarea.value = templateContent.content;
-      document.body.appendChild(textarea);
-      textarea.select();
-      try {
-        document.execCommand('copy');
-      } finally {
-        document.body.removeChild(textarea);
-      }
-      setMessage({
-        type: 'success',
-        text: 'Template content copied to clipboard',
-      });
-    }
+    await copyToClipboard(templateContent.content);
+    setMessage({
+      type: 'success',
+      text: 'Template content copied to clipboard',
+    });
   }, [templateContent]);
 
   return {
