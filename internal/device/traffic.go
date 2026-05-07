@@ -91,16 +91,22 @@ func (tg *TrafficGenerator) getPattern(deviceName, patternName string) *TrafficP
 	return p
 }
 
-// Start starts the traffic generator.
+// Start starts the traffic generator. Safe to call again after Stop.
 func (tg *TrafficGenerator) Start() error {
 	logger := slog.Default()
 	if !tg.running.CompareAndSwap(false, true) {
 		return ErrTrafficGeneratorAlreadyRunning
 	}
 
+	// Replace the stop channel after CAS so a previous Stop() (which closed
+	// the old one) doesn't make this run exit immediately, and so the next
+	// Stop() doesn't double-close.
+	tg.stopChan = make(chan struct{})
+	stopChan := tg.stopChan
+
 	// Start unified traffic generation loop (v1.6.0)
 	// Uses 10-second ticker to check all devices and their configured intervals
-	go tg.trafficGenerationLoop()
+	go tg.trafficGenerationLoop(stopChan)
 
 	if tg.debugLevel >= 1 {
 		logger.Info("Traffic generator started (v1.6.0 configurable traffic)")
@@ -124,14 +130,16 @@ func (tg *TrafficGenerator) Stop() {
 }
 
 // trafficGenerationLoop unified traffic generation with per-device config support (v1.6.0).
-func (tg *TrafficGenerator) trafficGenerationLoop() {
+// stopChan is captured by Start at goroutine spawn time so a subsequent restart
+// can't redirect this run onto a fresh channel.
+func (tg *TrafficGenerator) trafficGenerationLoop(stopChan <-chan struct{}) {
 	// Use 10-second ticker to check all devices
 	ticker := time.NewTicker(trafficTickerInterval)
 	defer ticker.Stop()
 
 	for tg.running.Load() {
 		select {
-		case <-tg.stopChan:
+		case <-stopChan:
 			return
 		case <-ticker.C:
 			tg.checkAndGenerateTraffic()

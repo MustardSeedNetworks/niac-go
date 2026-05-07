@@ -67,9 +67,10 @@ const deviceTypeHost = "host"
 // FDPHandler handles FDP advertisements.
 type FDPHandler struct {
 	stack           *Stack
+	mu              sync.Mutex
 	stopChan        chan struct{}
-	stopOnce        sync.Once
 	advertiseTicker *time.Ticker
+	running         bool
 }
 
 // NewFDPHandler creates a new FDP handler.
@@ -80,26 +81,35 @@ func NewFDPHandler(stack *Stack) *FDPHandler {
 	}
 }
 
-// Start begins periodic FDP advertisements.
+// Start begins periodic FDP advertisements. Safe to call again after Stop.
 func (h *FDPHandler) Start() {
-	debugLevel := h.stack.GetDebugLevel()
+	h.mu.Lock()
+	defer h.mu.Unlock()
 
-	if debugLevel >= 1 {
+	if h.running {
+		return
+	}
+
+	h.stopChan = make(chan struct{})
+	h.advertiseTicker = time.NewTicker(FDPAdvertiseInterval)
+	h.running = true
+
+	stopChan := h.stopChan
+	ticker := h.advertiseTicker
+
+	if h.stack.GetDebugLevel() >= 1 {
 		_, _ = fmt.Fprintf(os.Stdout, "FDP: Starting periodic advertisements (interval: %v)\n", FDPAdvertiseInterval)
 	}
 
-	h.advertiseTicker = time.NewTicker(FDPAdvertiseInterval)
-
 	go func() {
-		// Send initial advertisement immediately
 		h.sendAdvertisements()
 
 		for {
 			select {
-			case <-h.advertiseTicker.C:
+			case <-ticker.C:
 				h.sendAdvertisements()
-			case <-h.stopChan:
-				h.advertiseTicker.Stop()
+			case <-stopChan:
+				ticker.Stop()
 
 				return
 			}
@@ -107,11 +117,17 @@ func (h *FDPHandler) Start() {
 	}()
 }
 
-// Stop halts FDP advertisements.
+// Stop halts FDP advertisements. Safe to call multiple times.
 func (h *FDPHandler) Stop() {
-	h.stopOnce.Do(func() {
-		close(h.stopChan)
-	})
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	if !h.running {
+		return
+	}
+
+	close(h.stopChan)
+	h.running = false
 }
 
 // sendAdvertisements sends FDP advertisements for all devices.

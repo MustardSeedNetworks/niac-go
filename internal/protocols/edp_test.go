@@ -352,6 +352,28 @@ func TestEDPLifecycle(t *testing.T) {
 	}
 }
 
+// TestEDPHandler_RestartAfterStop verifies Start can be called again after
+// Stop without panicking on a closed channel. Regression for #462.
+func TestEDPHandler_RestartAfterStop(t *testing.T) {
+	cfg := &config.Config{}
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	handler := protocols.NewEDPHandler(stack)
+
+	for i := range 3 {
+		handler.Start()
+		time.Sleep(20 * time.Millisecond)
+
+		if handler.EDPHandlerAdvertiseTicker() == nil {
+			t.Fatalf("iter %d: ticker nil after Start()", i)
+		}
+
+		handler.Stop()
+		time.Sleep(20 * time.Millisecond)
+	}
+
+	handler.Stop() // double-stop is a no-op
+}
+
 // TestSendAdvertisementsEDP verifies advertisement sending logic for EDP.
 func TestSendAdvertisementsEDP(_ *testing.T) {
 	cfg := &config.Config{}

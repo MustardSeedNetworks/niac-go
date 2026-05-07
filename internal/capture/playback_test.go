@@ -516,6 +516,49 @@ func TestPlaybackPacket_Structure(t *testing.T) {
 	}
 }
 
+// TestPlaybackEngine_RestartAfterStop verifies Start can be called again
+// after Stop with a real PCAP file. Regression for #464.
+func TestPlaybackEngine_RestartAfterStop(t *testing.T) {
+	if os.Getenv("CI") != "" {
+		t.Skip("Skipping playback test in CI environment")
+	}
+
+	loopbackNames := []string{"lo", "lo0"}
+
+	var testInterface string
+
+	for _, name := range loopbackNames {
+		if InterfaceExists(name) {
+			testInterface = name
+
+			break
+		}
+	}
+
+	if testInterface == "" {
+		t.Skip("No loopback interface found")
+	}
+
+	engine, err := New(testInterface, 0)
+	if err != nil {
+		t.Skipf("Cannot create engine: %v", err)
+	}
+	defer engine.Close()
+
+	pcapFile := createTestPCAP(t, 3)
+	playbackConfig := &config.CapturePlayback{FileName: pcapFile}
+	pb := NewPlaybackEngine(engine, playbackConfig, 0)
+
+	for i := range 3 {
+		if startErr := pb.Start(); startErr != nil {
+			t.Fatalf("iter %d: Start failed: %v", i, startErr)
+		}
+		// Tiny window for the goroutine to be alive then bail.
+		time.Sleep(20 * time.Millisecond)
+		pb.Stop()
+	}
+}
+
 // TestPlaybackEngine_ConcurrentStartStop tests concurrent start/stop calls.
 func TestPlaybackEngine_ConcurrentStartStop(t *testing.T) {
 	if os.Getenv("CI") != "" {

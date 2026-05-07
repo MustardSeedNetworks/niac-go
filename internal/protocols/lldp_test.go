@@ -53,6 +53,49 @@ func TestLLDPHandler_Lifecycle(t *testing.T) {
 	time.Sleep(50 * time.Millisecond)
 }
 
+// TestLLDPHandler_RestartAfterStop verifies Start can be called again after
+// Stop without panicking on a closed channel and that the second Stop still
+// terminates the goroutine. Regression for #462.
+func TestLLDPHandler_RestartAfterStop(t *testing.T) {
+	cfg := &config.Config{}
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	handler := protocols.NewLLDPHandler(stack)
+
+	for i := range 3 {
+		handler.Start()
+		time.Sleep(20 * time.Millisecond)
+
+		if handler.LLDPHandlerAdvertiseTicker() == nil {
+			t.Fatalf("iter %d: ticker nil after Start()", i)
+		}
+
+		handler.Stop()
+		time.Sleep(20 * time.Millisecond)
+	}
+
+	// Double-Stop must be a no-op.
+	handler.Stop()
+}
+
+// TestLLDPHandler_DoubleStartIgnored ensures a second Start without an
+// intervening Stop does not spawn a duplicate goroutine.
+func TestLLDPHandler_DoubleStartIgnored(t *testing.T) {
+	cfg := &config.Config{}
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	handler := protocols.NewLLDPHandler(stack)
+
+	handler.Start()
+	first := handler.LLDPHandlerAdvertiseTicker()
+	handler.Start() // ignored
+	second := handler.LLDPHandlerAdvertiseTicker()
+
+	if first != second {
+		t.Error("Second Start replaced ticker; expected idempotent no-op")
+	}
+
+	handler.Stop()
+}
+
 // TestBuildChassisIDTLV tests building Chassis ID TLV.
 func TestBuildChassisIDTLV(t *testing.T) {
 	cfg := &config.Config{}

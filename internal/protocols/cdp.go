@@ -91,9 +91,10 @@ const (
 // CDPHandler handles CDP advertisements.
 type CDPHandler struct {
 	stack           *Stack
+	mu              sync.Mutex
 	stopChan        chan struct{}
-	stopOnce        sync.Once
 	advertiseTicker *time.Ticker
+	running         bool
 }
 
 // NewCDPHandler creates a new CDP handler.
@@ -104,27 +105,35 @@ func NewCDPHandler(stack *Stack) *CDPHandler {
 	}
 }
 
-// Start begins periodic CDP advertisements.
+// Start begins periodic CDP advertisements. Safe to call again after Stop.
 func (h *CDPHandler) Start() {
-	logger := slog.Default()
-	debugLevel := h.stack.GetDebugLevel()
+	h.mu.Lock()
+	defer h.mu.Unlock()
 
-	if debugLevel >= 1 {
-		logger.Info("CDP: Starting periodic advertisements", "interval", CDPAdvertiseInterval)
+	if h.running {
+		return
 	}
 
+	h.stopChan = make(chan struct{})
 	h.advertiseTicker = time.NewTicker(CDPAdvertiseInterval)
+	h.running = true
+
+	stopChan := h.stopChan
+	ticker := h.advertiseTicker
+
+	if h.stack.GetDebugLevel() >= 1 {
+		slog.Default().Info("CDP: Starting periodic advertisements", "interval", CDPAdvertiseInterval)
+	}
 
 	go func() {
-		// Send initial advertisement immediately
 		h.sendAdvertisements()
 
 		for {
 			select {
-			case <-h.advertiseTicker.C:
+			case <-ticker.C:
 				h.sendAdvertisements()
-			case <-h.stopChan:
-				h.advertiseTicker.Stop()
+			case <-stopChan:
+				ticker.Stop()
 
 				return
 			}
@@ -132,11 +141,17 @@ func (h *CDPHandler) Start() {
 	}()
 }
 
-// Stop halts CDP advertisements.
+// Stop halts CDP advertisements. Safe to call multiple times.
 func (h *CDPHandler) Stop() {
-	h.stopOnce.Do(func() {
-		close(h.stopChan)
-	})
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	if !h.running {
+		return
+	}
+
+	close(h.stopChan)
+	h.running = false
 }
 
 // sendAdvertisements sends CDP advertisements for all devices.
