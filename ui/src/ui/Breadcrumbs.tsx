@@ -1,6 +1,7 @@
 import { ChevronRight, Home } from 'lucide-react';
 import type { FC } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { iconSizes } from '../constants/sizes';
 
 interface BreadcrumbItem {
   label: string;
@@ -47,11 +48,11 @@ export const Breadcrumbs: FC = () => {
         className="flex items-center gap-1 hover:text-white transition-colors"
         aria-label="Home"
       >
-        <Home className="h-3.5 w-3.5" />
+        <Home className={iconSizes.sm} />
       </Link>
       {items.map((item, index) => (
         <span key={item.path} className="flex items-center gap-1">
-          <ChevronRight className="h-3 w-3 text-gray-600" />
+          <ChevronRight className={`${iconSizes.xs} text-gray-600`} />
           {index === items.length - 1 ? (
             <span className="text-white font-medium capitalize" aria-current="page">
               {item.label}

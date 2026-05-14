@@ -1,5 +1,6 @@
 import { AlertCircle, AlertTriangle, CheckCircle, Info, X } from 'lucide-react';
 import { type FC, useEffect } from 'react';
+import { iconSizes } from '../constants/sizes';
 import { type Notification, useUIStore } from '../stores/ui-store';
 
 const DEFAULT_DURATION_MS = 5_000;
@@ -34,7 +35,7 @@ const Toast: FC<{ notification: Notification }> = ({ notification }) => {
       className={`flex items-start gap-3 rounded-lg border px-4 py-3 shadow-lg backdrop-blur-sm ${TOAST_STYLES[notification.type]}`}
       role="alert"
     >
-      <Icon className="h-5 w-5 flex-shrink-0 mt-0.5" />
+      <Icon className={`${iconSizes.lg} flex-shrink-0 mt-0.5`} />
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium">{notification.title}</p>
         {notification.message && (
@@ -47,7 +48,7 @@ const Toast: FC<{ notification: Notification }> = ({ notification }) => {
         className="flex-shrink-0 p-1 rounded hover:bg-white/10 transition-colors"
         aria-label="Dismiss notification"
       >
-        <X className="h-4 w-4" />
+        <X className={iconSizes.md} />
       </button>
     </div>
   );

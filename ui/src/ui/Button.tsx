@@ -1,4 +1,5 @@
 import type { ButtonHTMLAttributes, FC, ReactNode, Ref } from 'react';
+import { iconSizes } from '../constants/sizes';
 
 type ButtonVariant = 'solid' | 'outline' | 'ghost' | 'secondary';
 type ButtonTone = 'violet' | 'red' | 'green' | 'blue' | 'gray';
@@ -64,7 +65,7 @@ const variantStyles: Record<ButtonVariant, Record<ButtonTone, string>> = {
 
 // Loading spinner component
 const LoadingSpinner: FC<{ size: ButtonSize }> = ({ size }) => {
-  const spinnerSize = size === 'xs' || size === 'sm' ? 'h-3 w-3' : 'h-4 w-4';
+  const spinnerSize = size === 'xs' || size === 'sm' ? iconSizes.xs : iconSizes.md;
   return (
     <svg
       className={`animate-spin ${spinnerSize}`}

@@ -1,6 +1,7 @@
 import { Copy, Edit3, Trash2 } from 'lucide-react';
 import type { FC } from 'react';
 import { deviceTypeColors, deviceTypeIcons } from '../../constants/device-types';
+import { iconSizes } from '../../constants/sizes';
 import { useDeviceList } from '../../contexts/DeviceListContext';
 import { Card, CardContent } from '../../ui/Card';
 import { Tag } from '../../ui/Tag';
@@ -63,7 +64,7 @@ export const DeviceTableView: FC = () => {
                 <div className="flex-1 grid grid-cols-12 gap-4 items-center">
                   {/* Hostname */}
                   <div className="col-span-3 flex items-center gap-2">
-                    <DeviceIcon className="h-4 w-4 text-gray-400" />
+                    <DeviceIcon className={`${iconSizes.md} text-gray-400`} />
                     <button
                       type="button"
                       onClick={() => onEdit(device.hostname)}
@@ -116,7 +117,7 @@ export const DeviceTableView: FC = () => {
                       className="p-2 text-gray-400 hover:text-violet-300 hover:bg-white/5 rounded-lg transition-colors"
                       title="Edit device"
                     >
-                      <Edit3 className="h-4 w-4" />
+                      <Edit3 className={iconSizes.md} />
                     </button>
                     <button
                       type="button"
@@ -124,7 +125,7 @@ export const DeviceTableView: FC = () => {
                       className="p-2 text-gray-400 hover:text-blue-300 hover:bg-white/5 rounded-lg transition-colors"
                       title="Clone device"
                     >
-                      <Copy className="h-4 w-4" />
+                      <Copy className={iconSizes.md} />
                     </button>
                     <button
                       type="button"
@@ -132,7 +133,7 @@ export const DeviceTableView: FC = () => {
                       className="p-2 text-gray-400 hover:text-red-400 hover:bg-white/5 rounded-lg transition-colors"
                       title="Delete device"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className={iconSizes.md} />
                     </button>
                   </div>
                 </div>

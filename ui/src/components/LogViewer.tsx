@@ -1,6 +1,7 @@
 import { AlertCircle, Check, ChevronDown, ChevronRight, Copy, Terminal } from 'lucide-react';
 import { type FC, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { LogEntry, LogLevel } from '../api/types';
+import { iconSizes } from '../constants/sizes';
 import { copyToClipboard } from '../utils/file';
 
 /**
@@ -199,7 +200,11 @@ const LogEntryRow: FC<{ log: LogEntry; searchQuery: string }> = memo(({ log, sea
         >
           {/* Expand indicator */}
           <span className={`shrink-0 mt-0.5 ${hasDetails ? 'text-gray-500' : 'text-transparent'}`}>
-            {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+            {expanded ? (
+              <ChevronDown className={iconSizes.md} />
+            ) : (
+              <ChevronRight className={iconSizes.md} />
+            )}
           </span>
 
           {/* Level indicator bar */}
@@ -285,7 +290,7 @@ const LogEntryRow: FC<{ log: LogEntry; searchQuery: string }> = memo(({ log, sea
                   title="Copy details JSON"
                   aria-label="Copy details JSON"
                 >
-                  <Copy className="h-3 w-3" />
+                  <Copy className={iconSizes.xs} />
                 </button>
               </div>
               <pre className="p-3 text-xs font-mono text-gray-300 overflow-x-auto">
@@ -338,8 +343,10 @@ export const LogViewer: FC<LogViewerProps> = memo(({ logs, searchQuery, autoScro
         className="flex h-96 items-center justify-center rounded-lg border border-white/10 bg-gray-950/50"
       >
         <div className="text-center space-y-3">
-          <div className="mx-auto h-12 w-12 rounded-full bg-gray-800/50 flex items-center justify-center">
-            <Terminal className="h-6 w-6 text-gray-600" />
+          <div
+            className={`mx-auto ${iconSizes['3xl']} rounded-full bg-gray-800/50 flex items-center justify-center`}
+          >
+            <Terminal className={`${iconSizes.xl} text-gray-600`} />
           </div>
           <div>
             <p className="text-gray-400 font-medium">No logs to display</p>
@@ -364,7 +371,7 @@ export const LogViewer: FC<LogViewerProps> = memo(({ logs, searchQuery, autoScro
               key={level}
               className={`flex items-center gap-1.5 px-2 py-1 rounded ${colors?.bg || 'bg-gray-500/10'}`}
             >
-              {isError && count > 0 && <AlertCircle className="h-3 w-3 text-red-400" />}
+              {isError && count > 0 && <AlertCircle className={`${iconSizes.xs} text-red-400`} />}
               <span className={`${colors?.accent || 'bg-gray-500'} h-2 w-2 rounded-full`} />
               <span className={`font-medium ${colors?.text || 'text-gray-400'}`}>{level}</span>
               <span className="text-gray-500">{count}</span>

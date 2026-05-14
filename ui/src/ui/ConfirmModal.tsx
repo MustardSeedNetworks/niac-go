@@ -1,5 +1,6 @@
 import { AlertTriangle } from 'lucide-react';
 import type { FC, ReactNode } from 'react';
+import { iconSizes } from '../constants/sizes';
 import { Button } from './Button';
 import { Modal } from './Modal';
 
@@ -31,7 +32,7 @@ export const ConfirmModal: FC<ConfirmModalProps> = ({
       <div className="flex items-center gap-3">
         {icon || (
           <AlertTriangle
-            className={`h-6 w-6 ${
+            className={`${iconSizes.xl} ${
               confirmTone === 'red'
                 ? 'text-red-400'
                 : confirmTone === 'blue'

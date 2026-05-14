@@ -1,5 +1,6 @@
 import { AlertCircle, AlertTriangle, CheckCircle, Info, X } from 'lucide-react';
 import type { FC, ReactNode } from 'react';
+import { iconSizes } from '../constants/sizes';
 
 export type AlertStatus = 'success' | 'error' | 'warning' | 'info';
 
@@ -49,7 +50,7 @@ export const Alert: FC<AlertProps> = ({ status, children, onDismiss, className =
       className={`flex items-center gap-2 rounded-lg border p-3 ${config.containerClass} ${className}`}
       role="alert"
     >
-      <Icon className={`h-4 w-4 flex-shrink-0 ${config.iconClass}`} />
+      <Icon className={`${iconSizes.md} flex-shrink-0 ${config.iconClass}`} />
       <span className="flex-1">{children}</span>
       {onDismiss && (
         <button
@@ -58,7 +59,7 @@ export const Alert: FC<AlertProps> = ({ status, children, onDismiss, className =
           className="ml-auto text-current hover:opacity-70 transition-opacity"
           aria-label="Dismiss alert"
         >
-          <X className="h-4 w-4" />
+          <X className={iconSizes.md} />
         </button>
       )}
     </div>
