@@ -244,16 +244,22 @@ const ConfigEditorCard: FC = () => {
             </SmallText>
           )}
           <div className="flex flex-wrap gap-3 mt-3">
-            <Button tone="violet" disabled={!dirty || saving} onClick={handleSave}>
-              {saving ? 'Saving…' : 'Save changes'}
+            <Button
+              tone="violet"
+              disabled={!dirty || saving}
+              onClick={handleSave}
+              title="Validate, write to disk, and diff-reload the running simulation"
+            >
+              {saving ? 'Saving…' : 'Save & reload simulation'}
             </Button>
             <Button variant="outline" disabled={!dirty || saving} onClick={handleReset}>
-              Discard
+              Discard changes
             </Button>
           </div>
           <SmallText className="mt-2 text-gray-400">
-            Saving runs full validation (same as `niac validate`) before persisting so runtime
-            changes stay safe.
+            Save runs the same validation as <code>niac validate</code>, writes the YAML to disk,
+            then diff-reloads the running stack — added devices spin up, removed devices stop,
+            existing devices are updated in place.
           </SmallText>
           <WalkFileBrowser files={walkFiles ?? []} onCopy={handleWalkCopy} />
         </>
