@@ -22,8 +22,12 @@ export const DeviceCardView: FC = () => {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
       {devices.map((device) => {
-        const DeviceIcon = deviceTypeIcons[device.type ?? 'unknown'];
-        const typeColor = deviceTypeColors[device.type ?? 'unknown'];
+        // Devices in the wild use type values like "ap" or "access-point" that
+        // aren't in the DeviceType union. Fall back to 'unknown' so the lookup
+        // can never be undefined and crash the page.
+        const safeType = device.type && device.type in deviceTypeIcons ? device.type : 'unknown';
+        const DeviceIcon = deviceTypeIcons[safeType];
+        const typeColor = deviceTypeColors[safeType];
         const colorClasses = getDeviceColorClasses(typeColor);
         const deviceProtocols = getDeviceProtocols(device);
 

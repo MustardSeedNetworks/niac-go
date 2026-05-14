@@ -166,6 +166,12 @@ func (d *Daemon) Shutdown(ctx context.Context) error {
 const maxSimulationConfigSize = 10 * 1024 * 1024 // 10MB limit
 
 // loadSimulationConfig resolves either inline ConfigData or a cleaned ConfigPath into a Config.
+//
+// Inline data is written to a deterministic file under the user-configs
+// directory so the rest of the daemon — GET /api/v1/config, the running-
+// config YAML editor, "Download YAML" — has a real path to read from.
+// Without this, those surfaces returned config_read_failed because they
+// did a file Stat on the literal string "<inline>".
 func loadSimulationConfig(req api.SimulationRequest) (*config.Config, string, error) {
 	switch {
 	case req.ConfigData != "":
@@ -181,7 +187,15 @@ func loadSimulationConfig(req api.SimulationRequest) (*config.Config, string, er
 		if err != nil {
 			return nil, "", fmt.Errorf("load configuration: %w", err)
 		}
-		return cfg, "<inline>", nil
+		path, err := persistInlineConfig(req.ConfigData)
+		if err != nil {
+			// Persistence failure isn't fatal — the sim can still run on
+			// the parsed Config — but the downstream "view running YAML"
+			// flows will fail. Log via the returned error chain so the
+			// API surface sees it.
+			return cfg, "", fmt.Errorf("persist inline config: %w", err)
+		}
+		return cfg, path, nil
 	case req.ConfigPath != "":
 		cleanedPath := filepath.Clean(req.ConfigPath)
 		if strings.Contains(cleanedPath, "..") {
@@ -195,6 +209,47 @@ func loadSimulationConfig(req api.SimulationRequest) (*config.Config, string, er
 	default:
 		return nil, "", ErrConfigPathOrDataRequired
 	}
+}
+
+// inlineConfigName is the deterministic filename used to materialise inline
+// (uploaded / template-derived) config data on disk. Overwritten on every
+// start so the daemon doesn't accumulate stale files; the simulation-stop
+// path leaves it in place so the user can still download the YAML after.
+const inlineConfigName = "_running.inline.yaml"
+
+// persistInlineConfig writes the inline YAML to disk so the rest of the
+// daemon has a real configPath to operate on. Returns the absolute path
+// it was written to.
+func persistInlineConfig(content string) (string, error) {
+	rawDir := os.Getenv("NIAC_CONFIGS_DIR")
+	if rawDir == "" {
+		// Prefer $HOME/.niac/configs over CWD so daemon restarts find it.
+		if home, err := os.UserHomeDir(); err == nil {
+			rawDir = filepath.Join(home, ".niac", "configs")
+		} else {
+			rawDir = "configs"
+		}
+	}
+	// Clean dir + reject any traversal so a hostile NIAC_CONFIGS_DIR
+	// like "../../etc" can't escape its intended scope. The path is
+	// always operator-controlled (daemon env) but the explicit barrier
+	// lets static analysers see the check.
+	cleanDir := filepath.Clean(rawDir)
+	if strings.Contains(cleanDir, "..") {
+		return "", fmt.Errorf("configs dir must not contain '..' components: %s", rawDir)
+	}
+	if err := os.MkdirAll(cleanDir, 0o750); err != nil {
+		return "", fmt.Errorf("create configs dir: %w", err)
+	}
+	path := filepath.Join(cleanDir, inlineConfigName)
+	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+		return "", fmt.Errorf("write inline config: %w", err)
+	}
+	abs, err := filepath.Abs(path)
+	if err != nil {
+		return path, nil //nolint:nilerr // best-effort abs path; relative is fine too
+	}
+	return abs, nil
 }
 
 // StartSimulation starts a new simulation.
