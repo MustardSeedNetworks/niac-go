@@ -1,9 +1,12 @@
-import { Copy, Download, FileCode, X } from 'lucide-react';
-import { type FC, useCallback, useEffect } from 'react';
+import { Copy, Download, FileCode, Pencil, X } from 'lucide-react';
+import { type FC, useCallback, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { applyTemplate } from '../api/client';
 import type { Template, TemplateContent } from '../api/types';
 import { Button } from '../ui/Button';
 import { Tag } from '../ui/Tag';
 import { SmallText } from '../ui/Typography';
+import { getErrorMessage } from '../utils/format';
 import { YamlViewer } from './config/YamlEditor';
 
 interface TemplatePreviewModalProps {
@@ -25,6 +28,35 @@ export const TemplatePreviewModal: FC<TemplatePreviewModalProps> = ({
   onUse,
   onCopy,
 }) => {
+  const navigate = useNavigate();
+  const [editing, setEditing] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+
+  // Edit a copy: clone the template to a fresh user config and jump the
+  // user into the Device Library so they can tweak it before running. The
+  // first device in the cloned config is opened in the visual editor so
+  // there's something concrete to land on.
+  const handleEditCopy = async () => {
+    if (!template || editing) return;
+    setEditing(true);
+    setEditError(null);
+    try {
+      const newName = `${template.name}-edit`;
+      await applyTemplate({
+        templateName: template.name,
+        newConfigName: newName,
+      });
+      onClose();
+      // Land on the Device Library. The user picks a device to enter
+      // the editor; the new config is now in the saved-configs list.
+      navigate('/device-config');
+    } catch (err) {
+      setEditError(getErrorMessage(err) || 'Failed to create editable copy');
+    } finally {
+      setEditing(false);
+    }
+  };
+
   // Handle escape key to close modal
   const handleKeyDown = useCallback(
     (event: KeyboardEvent) => {
@@ -177,13 +209,29 @@ export const TemplatePreviewModal: FC<TemplatePreviewModalProps> = ({
               Download
             </Button>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={onClose}>
-              Close
-            </Button>
-            <Button tone="violet" onClick={() => onUse(template)}>
-              Use Template
-            </Button>
+          <div className="flex flex-col items-end gap-1">
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={onClose}>
+                Close
+              </Button>
+              <Button
+                variant="outline"
+                leftIcon={<Pencil className="h-4 w-4" />}
+                onClick={handleEditCopy}
+                disabled={editing || !content}
+                title="Clone this template to your saved configs and open the device editor"
+              >
+                {editing ? 'Cloning…' : 'Edit a copy'}
+              </Button>
+              <Button tone="violet" onClick={() => onUse(template)}>
+                Pick this template
+              </Button>
+            </div>
+            {editError && (
+              <SmallText className="text-red-300" role="alert">
+                {editError}
+              </SmallText>
+            )}
           </div>
         </div>
       </div>
