@@ -9,6 +9,7 @@ import {
 } from '../api/client';
 import type { ReplayRequest } from '../api/types';
 import { POLL_INTERVALS } from '../constants/polling';
+import { iconSizes } from '../constants/sizes';
 import { useApiResource } from '../hooks/useApiResource';
 import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
@@ -43,7 +44,7 @@ export const AnalysisPage: FC = () => {
       <Card className="border-white/5 bg-gray-900/70">
         <CardContent className="space-y-3">
           <H2 className="mb-0 flex items-center gap-2 text-lg">
-            <LineChart className="h-5 w-5 text-gray-400" />
+            <LineChart className={`${iconSizes.lg} text-gray-400`} />
             Recent runs
           </H2>
           <SmallText className="text-gray-400">Past simulation runs the daemon recorded.</SmallText>
@@ -154,7 +155,7 @@ const ReplayPanel: FC = () => {
     <Card className="border-white/5 bg-gray-900/70">
       <CardContent className="space-y-4">
         <H2 className="mb-0 flex items-center gap-2">
-          <PlugZap className="h-5 w-5 text-pink-300" />
+          <PlugZap className={`${iconSizes.lg} text-pink-300`} />
           Packet replay
         </H2>
         <P className="text-gray-300">

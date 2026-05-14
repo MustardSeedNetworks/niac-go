@@ -9,6 +9,7 @@ import {
   type MergeDecision,
 } from '../components/config/DiffViewer';
 import { MergeControls, MergePreviewModal } from '../components/config/MergeControls';
+import { iconSizes } from '../constants/sizes';
 import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
 import { Tag } from '../ui/Tag';
@@ -104,7 +105,7 @@ const FileUploadZone: FC<{
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
             <div className="rounded-lg bg-green-500/20 p-2">
-              <FileCode className="h-5 w-5 text-green-300" />
+              <FileCode className={`${iconSizes.lg} text-green-300`} />
             </div>
             <div>
               <p className="font-semibold text-white">{file.name}</p>
@@ -120,7 +121,7 @@ const FileUploadZone: FC<{
             className="rounded-lg p-1.5 text-gray-400 hover:bg-white/10 hover:text-white transition-colors disabled:opacity-50"
             aria-label={`Remove ${file.name}`}
           >
-            <X className="h-4 w-4" />
+            <X className={iconSizes.md} />
           </button>
         </div>
       </div>
@@ -146,13 +147,13 @@ const FileUploadZone: FC<{
           disabled={disabled}
           className="hidden"
         />
-        <Upload className="mx-auto h-8 w-8 text-gray-400 mb-2" />
+        <Upload className={`mx-auto ${iconSizes['2xl']} text-gray-400 mb-2`} />
         <p className="text-gray-300 font-medium">{label}</p>
         <SmallText className="text-gray-500">Drag & drop or click to select a YAML file</SmallText>
       </label>
       {error && (
         <div className="flex items-center gap-2 text-red-400 text-sm">
-          <AlertCircle className="h-4 w-4" />
+          <AlertCircle className={iconSizes.md} />
           {error}
         </div>
       )}
@@ -298,7 +299,7 @@ export const ConfigDiffPage: FC = () => {
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <H2 className="mb-0 flex items-center gap-2">
-                <GitCompare className="h-5 w-5 text-violet-300" />
+                <GitCompare className={`${iconSizes.lg} text-violet-300`} />
                 Config Diff & Merge
               </H2>
               <P className="text-gray-400 mt-1">
@@ -325,9 +326,9 @@ export const ConfigDiffPage: FC = () => {
               role="alert"
             >
               {message.type === 'success' ? (
-                <FileCheck className="h-4 w-4" />
+                <FileCheck className={iconSizes.md} />
               ) : (
-                <AlertCircle className="h-4 w-4" />
+                <AlertCircle className={iconSizes.md} />
               )}
               <span>{message.text}</span>
               <button
@@ -336,7 +337,7 @@ export const ConfigDiffPage: FC = () => {
                 className="ml-auto text-current hover:opacity-70"
                 aria-label="Dismiss message"
               >
-                <X className="h-4 w-4" />
+                <X className={iconSizes.md} />
               </button>
             </div>
           )}
@@ -396,7 +397,7 @@ export const ConfigDiffPage: FC = () => {
           <Card className="border-white/5 bg-gray-900/70">
             <CardContent className="space-y-4">
               <H2 className="mb-0 flex items-center gap-2">
-                <GitCompare className="h-5 w-5 text-cyan-300" />
+                <GitCompare className={`${iconSizes.lg} text-cyan-300`} />
                 Side-by-Side Comparison
               </H2>
               <DiffViewer
@@ -430,7 +431,7 @@ export const ConfigDiffPage: FC = () => {
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <H2 className="mb-1 flex items-center gap-2 text-lg">
-                    <Layers className="h-5 w-5 text-violet-300" />
+                    <Layers className={`${iconSizes.lg} text-violet-300`} />
                     Server-side overlay merge
                   </H2>
                   <P className="text-sm text-gray-400">
@@ -482,7 +483,7 @@ export const ConfigDiffPage: FC = () => {
       {!hasFiles && (
         <Card className="border-white/5 bg-gray-900/70">
           <CardContent className="py-12 text-center">
-            <GitCompare className="mx-auto h-12 w-12 text-gray-600" />
+            <GitCompare className={`mx-auto ${iconSizes['3xl']} text-gray-600`} />
             <H2 className="mt-4 mb-2">Ready to Compare</H2>
             <P className="text-gray-400 max-w-md mx-auto">
               Upload two YAML configuration files above to see a side-by-side comparison with

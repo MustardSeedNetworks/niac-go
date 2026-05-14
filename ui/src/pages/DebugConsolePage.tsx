@@ -4,6 +4,7 @@ import type { LogEntry, LogLevel, Protocol } from '../api/types';
 import { ProtocolDebugLevels } from '../components/debug/ProtocolDebugLevels';
 import { LogFilters } from '../components/LogFilters';
 import { LogViewer } from '../components/LogViewer';
+import { iconSizes } from '../constants/sizes';
 import { useLogStream } from '../hooks/useEventSource';
 import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
@@ -177,12 +178,12 @@ export const DebugConsolePage: FC = () => {
                 variant="outline"
                 size="sm"
                 onClick={() => setShowDebugSettings(!showDebugSettings)}
-                leftIcon={<Settings2 className="h-4 w-4" />}
+                leftIcon={<Settings2 className={iconSizes.md} />}
                 rightIcon={
                   showDebugSettings ? (
-                    <ChevronUp className="h-4 w-4" />
+                    <ChevronUp className={iconSizes.md} />
                   ) : (
-                    <ChevronDown className="h-4 w-4" />
+                    <ChevronDown className={iconSizes.md} />
                   )
                 }
                 aria-expanded={showDebugSettings}

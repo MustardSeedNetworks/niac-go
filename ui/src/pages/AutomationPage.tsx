@@ -2,6 +2,7 @@ import { BellRing } from 'lucide-react';
 import { type FC, useEffect, useState } from 'react';
 import { fetchAlerts, fetchStats, updateAlerts } from '../api/client';
 import type { AlertConfig } from '../api/types';
+import { iconSizes } from '../constants/sizes';
 import { useApiResource } from '../hooks/useApiResource';
 import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
@@ -82,7 +83,7 @@ const AlertConfigCard: FC<{ recentErrors: number }> = ({ recentErrors }) => {
     <Card className="border-white/5 bg-gray-900/70">
       <CardContent className="space-y-4">
         <H2 className="mb-0 flex items-center gap-2">
-          <BellRing className="h-5 w-5 text-orange-300" />
+          <BellRing className={`${iconSizes.lg} text-orange-300`} />
           Alert policy
         </H2>
         <P className="text-gray-300">

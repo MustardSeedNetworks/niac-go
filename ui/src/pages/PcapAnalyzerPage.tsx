@@ -12,6 +12,7 @@ import { PcapPacketList } from '../components/pcap/PcapPacketList';
 import { PcapStats } from '../components/pcap/PcapStats';
 import { PcapUploader } from '../components/pcap/PcapUploader';
 import { StreamView } from '../components/StreamView';
+import { iconSizes } from '../constants/sizes';
 import { useColoringRules } from '../hooks/useColoringRules';
 import { useDisplayFilter } from '../hooks/useDisplayFilter';
 import { Button } from '../ui/Button';
@@ -231,7 +232,7 @@ export const PcapAnalyzerPage: FC = () => {
                 {/* Title and file info */}
                 <div className="flex items-center gap-4">
                   <H2 className="mb-0 flex items-center gap-2">
-                    <FileSearch className="h-5 w-5 text-violet-400" />
+                    <FileSearch className={`${iconSizes.lg} text-violet-400`} />
                     PCAP Analysis
                   </H2>
                   <Tag colorScheme="green">{analysisResult.packets.length} packets</Tag>
@@ -280,7 +281,7 @@ export const PcapAnalyzerPage: FC = () => {
                     variant="ghost"
                     size="sm"
                     onClick={handleExport}
-                    leftIcon={<Download className="h-4 w-4" />}
+                    leftIcon={<Download className={iconSizes.md} />}
                   >
                     Export
                   </Button>
@@ -289,7 +290,7 @@ export const PcapAnalyzerPage: FC = () => {
                     variant="ghost"
                     size="sm"
                     onClick={() => setShowColoringRules(true)}
-                    leftIcon={<Palette className="h-4 w-4" />}
+                    leftIcon={<Palette className={iconSizes.md} />}
                   >
                     Colors
                   </Button>
@@ -298,7 +299,7 @@ export const PcapAnalyzerPage: FC = () => {
                     variant="ghost"
                     size="sm"
                     onClick={handleFollowStream}
-                    leftIcon={<Share2 className="h-4 w-4" />}
+                    leftIcon={<Share2 className={iconSizes.md} />}
                     disabled={!canFollowStream}
                   >
                     Follow Stream
@@ -308,7 +309,7 @@ export const PcapAnalyzerPage: FC = () => {
                     variant="ghost"
                     size="sm"
                     onClick={handleClear}
-                    leftIcon={<Trash2 className="h-4 w-4" />}
+                    leftIcon={<Trash2 className={iconSizes.md} />}
                   >
                     Clear
                   </Button>
@@ -400,7 +401,7 @@ export const PcapAnalyzerPage: FC = () => {
         <Card className="border-white/5 bg-gray-900/70">
           <CardContent>
             <div className="flex items-start gap-3">
-              <Info className="h-5 w-5 text-blue-400 flex-shrink-0 mt-0.5" />
+              <Info className={`${iconSizes.lg} text-blue-400 flex-shrink-0 mt-0.5`} />
               <div>
                 <p className="font-medium text-white">About PCAP Analyzer</p>
                 <SmallText className="text-gray-400">

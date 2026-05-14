@@ -2,6 +2,7 @@ import { Upload, X } from 'lucide-react';
 import { type FC, useState } from 'react';
 import { uploadTemplate } from '../../api/client';
 import type { Template } from '../../api/types';
+import { iconSizes } from '../../constants/sizes';
 import { Button } from '../../ui/Button';
 import { SmallText } from '../../ui/Typography';
 
@@ -100,7 +101,7 @@ export const UploadTemplateModal: FC<UploadTemplateModalProps> = ({
         <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
           <div className="flex items-center gap-3">
             <div className="rounded-lg bg-violet-500/20 p-2">
-              <Upload className="h-5 w-5 text-violet-300" />
+              <Upload className={`${iconSizes.lg} text-violet-300`} />
             </div>
             <div>
               <h2 id="upload-modal-title" className="text-lg font-semibold text-white">
@@ -115,7 +116,7 @@ export const UploadTemplateModal: FC<UploadTemplateModalProps> = ({
             className="rounded-lg p-2 text-gray-400 hover:bg-white/10 hover:text-white transition-colors"
             aria-label="Close modal"
           >
-            <X className="h-5 w-5" />
+            <X className={iconSizes.lg} />
           </button>
         </div>
 
