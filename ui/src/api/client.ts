@@ -163,6 +163,16 @@ async function fetchCSRFToken() {
   }
 }
 
+/**
+ * Force the next CSRF token use to refetch from the server. Called when a
+ * state-changing request fails with csrf_token_invalid — typically because
+ * the daemon was restarted and rotated its in-memory token, leaving the
+ * client with a stale cached promise.
+ */
+function resetCSRFToken() {
+  csrfTokenPromise = null;
+}
+
 async function buildRequestHeaders(path: string, init: RequestInit) {
   const headers = new Headers(init.headers);
   headers.set('Accept', 'application/json');
@@ -235,6 +245,21 @@ export async function request<T>(
           continue;
         }
         const text = await response.text();
+        // If the server rejected a stale CSRF token (typically because the
+        // daemon was restarted and rotated its in-memory secret), drop the
+        // cached token and retry once. Without this the SPA would keep
+        // sending the stale token on every state-changing request until a
+        // full reload.
+        if (
+          response.status === 403 &&
+          isStateChangingMethod(init.method) &&
+          /csrf_token_invalid/i.test(text) &&
+          attempt < retry.maxRetries
+        ) {
+          resetCSRFToken();
+          lastError = new ApiError(text, response.status);
+          continue;
+        }
         throw new ApiError(text || response.statusText, response.status);
       }
 

@@ -693,54 +693,67 @@ export const TopologyPage: FC = () => {
               </div>
             </div>
           ) : (
-            <ReactFlow
-              nodes={nodes}
-              edges={edges}
-              onNodesChange={onNodesChange}
-              onEdgesChange={onEdgesChange}
-              onConnect={onConnect}
-              nodeTypes={nodeTypes}
-              fitView={true}
-              fitViewOptions={{ padding: 0.2 }}
-              minZoom={0.2}
-              maxZoom={2}
-              defaultEdgeOptions={{
-                type: 'smoothstep',
-              }}
-              proOptions={{ hideAttribution: true }}
-            >
-              <Background
-                variant={BackgroundVariant.Dots}
-                gap={20}
-                size={1}
-                color="rgba(255, 255, 255, 0.05)"
-              />
-              <Controls showZoom={true} showFitView={true} showInteractive={false} />
-              {showMinimap && (
-                <MiniMap
-                  nodeColor={getMinimapNodeColor}
-                  maskColor="rgba(0, 0, 0, 0.8)"
-                  pannable={true}
-                  zoomable={true}
-                />
+            <>
+              {edges.length === 0 && (
+                <div className="absolute top-0 left-0 right-0 z-10 bg-yellow-900/40 border-b border-yellow-500/30 px-4 py-2 text-center">
+                  <SmallText className="text-yellow-200">
+                    Devices loaded, but the running config has no declared topology links. Add{' '}
+                    <code className="text-yellow-100">trunk_ports:</code> or{' '}
+                    <code className="text-yellow-100">port_channels:</code> entries to your YAML to
+                    visualise connections. Live LLDP/CDP/EDP/FDP neighbours are on the{' '}
+                    <strong>Neighbors</strong> page.
+                  </SmallText>
+                </div>
               )}
-
-              {/* Legend Panel */}
-              <Panel position="top-left">
-                <TopologyLegend show={showLegend} onToggle={() => setShowLegend(!showLegend)} />
-              </Panel>
-
-              {/* Selected Device Panel */}
-              {selectedDevice && (
-                <DeviceDetailsPanel
-                  device={selectedDevice}
-                  onClose={() => setSelectedDevice(null)}
-                  onEdit={(device) => {
-                    navigate(`/device-config/${device.name}`);
-                  }}
+              <ReactFlow
+                nodes={nodes}
+                edges={edges}
+                onNodesChange={onNodesChange}
+                onEdgesChange={onEdgesChange}
+                onConnect={onConnect}
+                nodeTypes={nodeTypes}
+                fitView={true}
+                fitViewOptions={{ padding: 0.2 }}
+                minZoom={0.2}
+                maxZoom={2}
+                defaultEdgeOptions={{
+                  type: 'smoothstep',
+                }}
+                proOptions={{ hideAttribution: true }}
+              >
+                <Background
+                  variant={BackgroundVariant.Dots}
+                  gap={20}
+                  size={1}
+                  color="rgba(255, 255, 255, 0.05)"
                 />
-              )}
-            </ReactFlow>
+                <Controls showZoom={true} showFitView={true} showInteractive={false} />
+                {showMinimap && (
+                  <MiniMap
+                    nodeColor={getMinimapNodeColor}
+                    maskColor="rgba(0, 0, 0, 0.8)"
+                    pannable={true}
+                    zoomable={true}
+                  />
+                )}
+
+                {/* Legend Panel */}
+                <Panel position="top-left">
+                  <TopologyLegend show={showLegend} onToggle={() => setShowLegend(!showLegend)} />
+                </Panel>
+
+                {/* Selected Device Panel */}
+                {selectedDevice && (
+                  <DeviceDetailsPanel
+                    device={selectedDevice}
+                    onClose={() => setSelectedDevice(null)}
+                    onEdit={(device) => {
+                      navigate(`/device-config/${device.name}`);
+                    }}
+                  />
+                )}
+              </ReactFlow>
+            </>
           )}
         </div>
       </Card>

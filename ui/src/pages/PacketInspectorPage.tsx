@@ -1,5 +1,17 @@
-import { Download, Palette, Pause, Play, Share2, Trash2, Wifi, WifiOff } from 'lucide-react';
+import {
+  Activity,
+  Download,
+  Palette,
+  Pause,
+  Play,
+  Share2,
+  Trash2,
+  Wifi,
+  WifiOff,
+} from 'lucide-react';
 import { type FC, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { fetchSimulationStatus } from '../api/client';
 import { BpfFilterBar } from '../components/BpfFilterBar';
 import { ColoringRulesPanel } from '../components/ColoringRulesPanel';
 import { FilterBar } from '../components/FilterBar';
@@ -7,6 +19,8 @@ import { HexDumpViewer } from '../components/HexDumpViewer';
 import { PacketDetails } from '../components/PacketDetails';
 import { type Packet, PacketList } from '../components/PacketList';
 import { StreamView } from '../components/StreamView';
+import { POLL_INTERVALS } from '../constants/polling';
+import { useApiResource } from '../hooks/useApiResource';
 import { useColoringRules } from '../hooks/useColoringRules';
 import { useDisplayFilter } from '../hooks/useDisplayFilter';
 import { usePacketStream } from '../hooks/useEventSource';
@@ -63,6 +77,16 @@ const ConnectionStatus: FC<{
  * - Protocol and search filtering
  */
 export const PacketInspectorPage: FC = () => {
+  const navigate = useNavigate();
+  // Today the packet stream is driven by the running simulation's capture
+  // engine, so when no sim is running the page would just sit empty and
+  // confused. Show an explicit empty state with a CTA to start a sim
+  // until we land a standalone-capture lifecycle (tracked separately).
+  const { data: simStatus } = useApiResource(fetchSimulationStatus, [], {
+    intervalMs: POLL_INTERVALS.fast,
+  });
+  const simRunning = simStatus?.running === true;
+
   // Packet buffer state
   const [packets, setPackets] = useState<Packet[]>([]);
   const [selectedPacket, setSelectedPacket] = useState<Packet | null>(null);
@@ -212,6 +236,30 @@ export const PacketInspectorPage: FC = () => {
     return `${selectedPacket.sourceIp}:${selectedPacket.sourcePort ?? 0}`;
   }, [selectedPacket]);
 
+  if (!simRunning) {
+    return (
+      <Card className="border-yellow-500/30 bg-yellow-900/20">
+        <CardContent className="space-y-3">
+          <div className="flex items-start gap-3">
+            <Activity className="mt-1 h-5 w-5 text-yellow-400" />
+            <div className="flex-1">
+              <p className="font-semibold text-yellow-200">No simulation running</p>
+              <SmallText className="text-yellow-300/90">
+                Packet capture follows the running simulation's interface. Start a simulation to
+                begin streaming. Standalone capture without a simulation is on the roadmap.
+              </SmallText>
+              <div className="mt-3">
+                <Button tone="violet" onClick={() => navigate('/runtime')}>
+                  Go to Simulation
+                </Button>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header with controls */}
@@ -220,7 +268,10 @@ export const PacketInspectorPage: FC = () => {
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             {/* Title and connection status */}
             <div className="flex items-center gap-4">
-              <H2 className="mb-0">Packet Inspector</H2>
+              <H2 className="mb-0">Packet Capture</H2>
+              <SmallText className="text-gray-400">
+                on <span className="font-mono text-gray-200">{simStatus?.interface ?? '—'}</span>
+              </SmallText>
               <ConnectionStatus connected={connected} />
             </div>
 

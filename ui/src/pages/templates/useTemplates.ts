@@ -1,7 +1,9 @@
 import { useCallback, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { applyTemplate, fetchTemplateContent, fetchTemplates } from '../../api/client';
 import type { Template, TemplateContent } from '../../api/types';
 import { useApiResource } from '../../hooks/useApiResource';
+import { useUIStore } from '../../stores/ui-store';
 import { copyToClipboard } from '../../utils/file';
 import { getErrorMessage } from '../../utils/format';
 
@@ -44,6 +46,8 @@ export interface UseTemplatesReturn {
 }
 
 export function useTemplates(): UseTemplatesReturn {
+  const navigate = useNavigate();
+  const { setSimulationSettings } = useUIStore();
   const {
     data: templates,
     loading: templatesLoading,
@@ -131,13 +135,25 @@ export function useTemplates(): UseTemplatesReturn {
           newConfigName: configName || undefined,
         });
 
-        setMessage({
-          type: 'success',
-          text: response.message || `Configuration created at ${response.configPath}`,
+        // Pre-select the new config in the simulation drawer so the user can
+        // jump straight from "I picked a template" to "start it" without
+        // re-discovering it under My Configs.
+        const savedName = configName || `${template.name}-config`;
+        setSimulationSettings({
+          configSource: 'userConfig',
+          configName: savedName,
+          configPath: response.configPath,
         });
 
-        // Close the preview modal if open
+        setMessage({
+          type: 'success',
+          text: `${response.message || `Configuration "${savedName}" created`} — go to Simulation to start it.`,
+        });
+
+        // Close the preview modal if open and route the user to the
+        // Simulation page where they can pick an interface and hit Start.
         setSelectedTemplate(null);
+        navigate('/runtime');
       } catch (err) {
         setMessage({
           type: 'error',
@@ -145,7 +161,7 @@ export function useTemplates(): UseTemplatesReturn {
         });
       }
     },
-    [showUseTemplateModal],
+    [showUseTemplateModal, navigate, setSimulationSettings],
   );
 
   // Handle closing the preview modal

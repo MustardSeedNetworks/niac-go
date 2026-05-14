@@ -43,8 +43,13 @@ export const DeviceTableView: FC = () => {
         {/* Device rows */}
         <div className="divide-y divide-white/5">
           {devices.map((device) => {
-            const DeviceIcon = deviceTypeIcons[device.type ?? 'unknown'];
-            const typeColor = deviceTypeColors[device.type ?? 'unknown'];
+            // Defensive: wild device types like "ap" / "access-point" aren't
+            // in the DeviceType union; fall back to 'unknown' so the lookup
+            // can't be undefined.
+            const safeType =
+              device.type && device.type in deviceTypeIcons ? device.type : 'unknown';
+            const DeviceIcon = deviceTypeIcons[safeType];
+            const typeColor = deviceTypeColors[safeType];
             const deviceProtocols = getDeviceProtocols(device);
 
             return (

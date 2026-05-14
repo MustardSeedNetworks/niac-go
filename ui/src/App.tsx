@@ -2,7 +2,6 @@ import type { LucideIcon } from 'lucide-react';
 import {
   Activity,
   FileBox,
-  FileCode,
   FileSearch,
   GitCompare,
   LineChart,
@@ -45,9 +44,6 @@ const DeviceEditorPage = lazy(() =>
 );
 const DeviceListPage = lazy(() =>
   import('./pages/DeviceListPage').then((m) => ({ default: m.DeviceListPage })),
-);
-const TemplatesPage = lazy(() =>
-  import('./pages/TemplatesPage').then((m) => ({ default: m.TemplatesPage })),
 );
 const AnalysisPage = lazy(() =>
   import('./pages/AnalysisPage').then((m) => ({ default: m.AnalysisPage })),
@@ -115,10 +111,10 @@ const pages: PageConfig[] = [
             <strong>Simulation</strong> to start/stop a run.
           </li>
           <li>
-            <strong>Live Devices</strong> to see what the running config produced.
+            <strong>Running Devices</strong> to see what the running config produced.
           </li>
           <li>
-            <strong>Live Packets</strong> to watch traffic in real time.
+            <strong>Packet Capture</strong> to watch traffic in real time.
           </li>
           <li>
             <strong>Alerts</strong> to set the threshold and webhook target.
@@ -160,10 +156,10 @@ const pages: PageConfig[] = [
   },
   {
     path: '/devices',
-    label: 'Live Devices',
-    title: 'Live Devices (running config)',
+    label: 'Running Devices',
+    title: 'Running Devices',
     description:
-      'Read-only view of devices in the current running configuration plus a YAML preview.',
+      'Read-only view of the devices the daemon is currently simulating, plus the running YAML.',
     icon: Server,
     component: DevicesPage,
     help: (
@@ -354,8 +350,8 @@ const pages: PageConfig[] = [
   },
   {
     path: '/packets',
-    label: 'Live Packets',
-    title: 'Live Packets',
+    label: 'Packet Capture',
+    title: 'Packet Capture',
     description:
       'Real-time packet hex dump viewing with protocol filtering and search capabilities.',
     icon: FileSearch,
@@ -370,28 +366,6 @@ const pages: PageConfig[] = [
         <p>
           Frames flow as fast as the wire. If the page lags, narrow the BPF filter (e.g. limit to a
           single protocol or device IP) instead of trying to render everything.
-        </p>
-      </>
-    ),
-  },
-  {
-    path: '/templates',
-    label: 'Templates',
-    title: 'Configuration Templates',
-    description: 'Browse and use pre-configured network templates to quickly start simulations.',
-    icon: FileCode,
-    component: TemplatesPage,
-    help: (
-      <>
-        <p>
-          Built-in templates are starter YAMLs for common scenarios (single router, layer-2 lab,
-          etc.). Pick one, give it a name, and it's saved to your Device Library.
-        </p>
-        <h4>Importing legacy configs</h4>
-        <p>
-          The <strong>Import legacy config</strong> card at the bottom converts a Java-DSL{' '}
-          <code>.cfg</code> file to YAML — the same operation as <code>niac config export</code> on
-          the CLI. Useful for moving off the v1 format.
         </p>
       </>
     ),
@@ -423,9 +397,10 @@ const pages: PageConfig[] = [
   },
   {
     path: '/pcap-analyzer',
-    label: 'PCAP Analysis',
-    title: 'PCAP Analysis',
-    description: 'Upload and analyze PCAP files with packet inspection, filtering, and statistics.',
+    label: 'PCAP Inspector',
+    title: 'PCAP Inspector',
+    description:
+      'Open and inspect a captured PCAP file offline — protocol breakdown, per-conversation stats, full per-packet decode.',
     icon: FileBox,
     component: PcapAnalyzerPage,
     help: (
@@ -436,8 +411,8 @@ const pages: PageConfig[] = [
         </p>
         <h4>Live vs offline</h4>
         <p>
-          For traffic on the running simulator, use <strong>Live Packets</strong>. This page is for
-          static analysis of files you've captured elsewhere.
+          For traffic on the running simulator, use <strong>Packet Capture</strong>. This page is
+          for static analysis of files you've captured elsewhere.
         </p>
       </>
     ),
@@ -521,13 +496,12 @@ const navGroups: SidebarNavGroup[] = [
   {
     label: 'Configuration',
     items: [
-      { path: '/devices', label: 'Live Devices', icon: Server },
+      { path: '/devices', label: 'Running Devices', icon: Server },
       {
         path: '/device-config',
         label: 'Device Library',
         icon: Wrench,
       },
-      { path: '/templates', label: 'Templates', icon: FileCode },
       { path: '/config-diff', label: 'Config Diff', icon: GitCompare },
     ],
   },
@@ -544,8 +518,8 @@ const navGroups: SidebarNavGroup[] = [
     items: [
       { path: '/analysis', label: 'Replay', icon: LineChart },
       { path: '/debug', label: 'Protocol Debug', icon: Terminal },
-      { path: '/packets', label: 'Live Packets', icon: FileSearch },
-      { path: '/pcap-analyzer', label: 'PCAP Analysis', icon: FileBox },
+      { path: '/packets', label: 'Packet Capture', icon: FileSearch },
+      { path: '/pcap-analyzer', label: 'PCAP Inspector', icon: FileBox },
       { path: '/walk-validator', label: 'Walk Validator', icon: ShieldCheck },
     ],
   },
@@ -627,6 +601,10 @@ function AppShell() {
               </PageWithErrorBoundary>
             }
           />
+          {/* Back-compat: the standalone Templates page was folded into the
+              Simulation page in feat/consolidate-simulation-templates.
+              Bookmarks and copied URLs continue to work. */}
+          <Route path="/templates" element={<Navigate to="/runtime" replace={true} />} />
           <Route path="*" element={<Navigate to="/" replace={true} />} />
         </Routes>
       </Suspense>
