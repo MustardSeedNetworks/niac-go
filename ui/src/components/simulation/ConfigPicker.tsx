@@ -1,5 +1,6 @@
 import {
   Building2,
+  Check,
   ChevronDown,
   ChevronRight,
   Eye,
@@ -583,13 +584,21 @@ const ConfigCard: FC<{
           ))}
       </div>
       <div className="flex gap-2">
-        <button
-          type="button"
-          onClick={() => onSelect(item)}
-          className="flex-1 rounded bg-violet-500/20 px-2 py-1.5 text-xs font-medium text-violet-100 ring-1 ring-violet-400/40 hover:bg-violet-500/30"
-        >
-          {selected ? 'Selected' : 'Use'}
-        </button>
+        {selected ? (
+          <div className="flex flex-1 items-center justify-center gap-1.5 rounded bg-violet-500/30 px-2 py-1.5 text-xs font-medium text-violet-50 ring-1 ring-violet-400/60">
+            <Check className="h-3.5 w-3.5" />
+            <span>Will use this</span>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => onSelect(item)}
+            className="flex-1 rounded bg-violet-500/20 px-2 py-1.5 text-xs font-medium text-violet-100 ring-1 ring-violet-400/40 hover:bg-violet-500/30"
+            title="Pick this config — you'll still need to click Start Simulation below to run it"
+          >
+            Pick
+          </button>
+        )}
         {item.kind === 'builtin' && (
           <button
             type="button"
