@@ -5,6 +5,7 @@ import {
   deviceTypeIcons,
   getDeviceColorClasses,
 } from '../../constants/device-types';
+import { iconSizes } from '../../constants/sizes';
 import { useDeviceList } from '../../contexts/DeviceListContext';
 import { Card, CardContent } from '../../ui/Card';
 import { Tag } from '../../ui/Tag';
@@ -47,7 +48,7 @@ export const DeviceCardView: FC = () => {
                       className="h-4 w-4 rounded border-gray-600 bg-gray-800 text-violet-500 focus:ring-violet-500 cursor-pointer"
                     />
                     <div className={`p-2 rounded-lg ${colorClasses.bg}`}>
-                      <DeviceIcon className={`h-5 w-5 ${colorClasses.text}`} />
+                      <DeviceIcon className={`${iconSizes.lg} ${colorClasses.text}`} />
                     </div>
                   </label>
                   <Tag colorScheme={typeColor} className="text-xs capitalize">
@@ -67,7 +68,7 @@ export const DeviceCardView: FC = () => {
                       {device.hostname}
                     </h3>
                     <div className="flex items-center gap-1 mt-1">
-                      <Network className="h-3.5 w-3.5 text-gray-500" />
+                      <Network className={`${iconSizes.sm} text-gray-500`} />
                       <span className="text-sm text-gray-400 font-mono">
                         {device.ip || device.ips?.[0] || 'No IP'}
                       </span>
@@ -107,7 +108,7 @@ export const DeviceCardView: FC = () => {
                     className="p-2 text-gray-400 hover:text-violet-300 hover:bg-white/10 rounded-lg transition-colors"
                     title="Edit device"
                   >
-                    <Edit3 className="h-4 w-4" />
+                    <Edit3 className={iconSizes.md} />
                   </button>
                   <button
                     type="button"
@@ -115,7 +116,7 @@ export const DeviceCardView: FC = () => {
                     className="p-2 text-gray-400 hover:text-blue-300 hover:bg-white/10 rounded-lg transition-colors"
                     title="Clone device"
                   >
-                    <Copy className="h-4 w-4" />
+                    <Copy className={iconSizes.md} />
                   </button>
                   <button
                     type="button"
@@ -123,7 +124,7 @@ export const DeviceCardView: FC = () => {
                     className="p-2 text-gray-400 hover:text-red-400 hover:bg-white/10 rounded-lg transition-colors"
                     title="Delete device"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className={iconSizes.md} />
                   </button>
                 </div>
               </CardContent>

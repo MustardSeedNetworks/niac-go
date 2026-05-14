@@ -4,6 +4,7 @@ import { createElement, type FC, type ReactNode, useEffect, useState } from 'rea
 import { useLocation, useNavigate } from 'react-router-dom';
 import { HelpDrawer } from '../components/HelpDrawer';
 import { SettingsDrawer } from '../components/SettingsDrawer';
+import { iconSizes } from '../constants/sizes';
 import { prefetchRoute } from '../utils/prefetch';
 import { safeGetItem, safeSetItem } from '../utils/storage';
 import { ConnectionStatus } from './ConnectionStatus';
@@ -72,7 +73,7 @@ export const SidebarLayout: FC<SidebarProps> = ({ groups, version, children }) =
         title={collapsed ? item.label : undefined}
       >
         {createElement(item.icon, {
-          className: `h-5 w-5 flex-shrink-0 ${active ? 'text-violet-400' : 'text-gray-500 group-hover:text-gray-300'}`,
+          className: `${iconSizes.lg} flex-shrink-0 ${active ? 'text-violet-400' : 'text-gray-500 group-hover:text-gray-300'}`,
         })}
         {!collapsed && (
           <>
@@ -110,7 +111,7 @@ export const SidebarLayout: FC<SidebarProps> = ({ groups, version, children }) =
         <div className={`flex items-center gap-2 ${collapsed ? 'justify-center' : ''}`}>
           <div className="relative flex-shrink-0">
             <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-violet-500 to-violet-700 flex items-center justify-center shadow-lg shadow-violet-500/30">
-              <Network className="h-5 w-5 text-white" />
+              <Network className={`${iconSizes.lg} text-white`} />
             </div>
             <div className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-500 border-2 border-gray-900" />
           </div>
@@ -125,7 +126,7 @@ export const SidebarLayout: FC<SidebarProps> = ({ groups, version, children }) =
             className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/10 transition-colors lg:flex hidden"
             aria-label="Collapse sidebar"
           >
-            <ChevronLeft className="h-4 w-4" />
+            <ChevronLeft className={iconSizes.md} />
           </button>
         )}
       </div>
@@ -161,7 +162,7 @@ export const SidebarLayout: FC<SidebarProps> = ({ groups, version, children }) =
             title={collapsed ? 'Help' : undefined}
             aria-label="Open help"
           >
-            <HelpCircle className="h-4 w-4 flex-shrink-0" />
+            <HelpCircle className={`${iconSizes.md} flex-shrink-0`} />
             {!collapsed && <span>Help</span>}
           </button>
           <button
@@ -176,7 +177,7 @@ export const SidebarLayout: FC<SidebarProps> = ({ groups, version, children }) =
             title={collapsed ? 'Settings' : undefined}
             aria-label="Open settings"
           >
-            <Settings className="h-4 w-4 flex-shrink-0" />
+            <Settings className={`${iconSizes.md} flex-shrink-0`} />
             {!collapsed && <span>Settings</span>}
           </button>
         </div>
@@ -200,7 +201,7 @@ export const SidebarLayout: FC<SidebarProps> = ({ groups, version, children }) =
             className="mt-2 p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/10 transition-colors"
             aria-label="Expand sidebar"
           >
-            <ChevronRight className="h-4 w-4" />
+            <ChevronRight className={iconSizes.md} />
           </button>
         )}
       </div>
@@ -221,7 +222,7 @@ export const SidebarLayout: FC<SidebarProps> = ({ groups, version, children }) =
       <header className="lg:hidden fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 py-3 bg-gray-900/95 backdrop-blur-xl border-b border-white/10">
         <div className="flex items-center gap-2">
           <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-violet-500 to-violet-700 flex items-center justify-center">
-            <Network className="h-4 w-4 text-white" />
+            <Network className={`${iconSizes.md} text-white`} />
           </div>
           <span className="font-display font-bold text-white">NIAC</span>
         </div>
@@ -231,7 +232,7 @@ export const SidebarLayout: FC<SidebarProps> = ({ groups, version, children }) =
           className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
           aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
         >
-          {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          {mobileOpen ? <X className={iconSizes.lg} /> : <Menu className={iconSizes.lg} />}
         </button>
       </header>
 

@@ -1,5 +1,6 @@
 import { X } from 'lucide-react';
 import { type FC, type KeyboardEvent, type ReactNode, useEffect } from 'react';
+import { iconSizes } from '../constants/sizes';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 
 export type ModalSize = 'sm' | 'md' | 'lg' | 'xl' | 'full';
@@ -96,7 +97,7 @@ export const Modal: FC<ModalProps> = ({
                 className="ml-auto p-1 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-white/10"
                 aria-label="Close modal"
               >
-                <X className="h-5 w-5" />
+                <X className={iconSizes.lg} />
               </button>
             )}
           </div>
