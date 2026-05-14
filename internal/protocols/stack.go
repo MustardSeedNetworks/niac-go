@@ -118,6 +118,24 @@ type Stack struct {
 	debugConfig  *logging.DebugConfig
 	snmpAgents   map[*config.Device]*snmpAgentGroup
 	errorManager *apperr.StateManager
+
+	// observers receive every packet the stack sees (rx) or sends (tx).
+	// The API server registers one to feed its SSE hub. Observers are
+	// expected to be cheap; the stack drops to the floor on observer
+	// panic via the recover in notifyObservers.
+	observerMu sync.RWMutex
+	observers  []PacketObserver
+}
+
+// PacketObserver receives every packet the stack handles. Direction is
+// "rx" for inbound (just decoded) or "tx" for outbound (about to send).
+//
+// Implementations MUST NOT block — the stack holds an RLock while
+// iterating observers, and a slow observer would back-pressure the
+// receive thread. Use a buffered channel or goroutine on the consumer
+// side if any heavier processing is needed.
+type PacketObserver interface {
+	OnPacket(direction string, pkt *Packet)
 }
 
 // Statistics holds protocol statistics.
@@ -191,6 +209,34 @@ func NewStack(
 	stack.initializeDevices(cfg)
 
 	return stack
+}
+
+// AddPacketObserver registers an observer for stack packet events.
+// Safe to call before or after Start.
+func (s *Stack) AddPacketObserver(obs PacketObserver) {
+	if obs == nil {
+		return
+	}
+	s.observerMu.Lock()
+	s.observers = append(s.observers, obs)
+	s.observerMu.Unlock()
+}
+
+// notifyObservers fans a packet event out to every registered observer.
+// A panicking observer is dropped — the stack's job is to forward
+// packets, not to keep buggy observers safe.
+func (s *Stack) notifyObservers(direction string, pkt *Packet) {
+	s.observerMu.RLock()
+	obs := s.observers
+	s.observerMu.RUnlock()
+	for _, o := range obs {
+		func() {
+			defer func() {
+				_ = recover()
+			}()
+			o.OnPacket(direction, pkt)
+		}()
+	}
 }
 
 // initializeDevices repopulates device-dependent state from the provided config.
@@ -429,6 +475,7 @@ func (s *Stack) receiveAndQueuePacket(buffer []byte) {
 		return
 	}
 
+	s.notifyObservers("rx", pkt)
 	s.queuePacket(pkt)
 }
 
@@ -665,6 +712,8 @@ func (s *Stack) sendPacket(pkt *Packet) {
 	s.stats.mu.Lock()
 	s.stats.PacketsSent++
 	s.stats.mu.Unlock()
+
+	s.notifyObservers("tx", pkt)
 
 	if s.debugConfig.GetGlobal() >= DebugLevelVerbose {
 		_, _ = fmt.Fprintf(os.Stdout, "Sent packet sn=%d length=%d\n", pkt.SerialNumber, pkt.Length)

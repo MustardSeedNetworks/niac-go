@@ -364,6 +364,15 @@ func (s *Server) UpdateSimulation(
 	s.cfg.Interface = iface
 	s.cfg.Replay = replay
 	s.cfg.Topology = BuildTopology(cfg)
+
+	// Wire the stack's packet stream into the SSE hub so the
+	// /api/v1/stream/packets subscribers actually see frames.
+	// Previously the hub had BroadcastPacket defined but it was never
+	// called, leaving the Packet Capture page perpetually empty even
+	// while a simulation was clearly handling traffic.
+	if stack != nil && s.sseHub != nil {
+		stack.AddPacketObserver(&sseHubPacketObserver{hub: s.sseHub})
+	}
 }
 
 // ClearSimulation clears simulation components (for daemon mode).
