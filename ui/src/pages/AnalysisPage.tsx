@@ -1,4 +1,4 @@
-import { FileCog, LineChart, PlugZap } from 'lucide-react';
+import { LineChart, PlugZap } from 'lucide-react';
 import { type FC, useState } from 'react';
 import {
   fetchFiles,
@@ -24,9 +24,13 @@ import {
 } from '../utils/format';
 
 /**
- * Analysis Page - Capture & Walk Analysis
+ * Replay page — PCAP replay controls live at the top (the actual action
+ * the page is for); a "Recent runs" history card is below as context.
  *
- * Replay PCAPs, inspect SNMP walks, and publish bundles directly from the UI.
+ * Previously the page led with an aspirational "Capture & walk analysis"
+ * header plus two non-functional buttons ("Open analyzer", "Export
+ * bundle") which made the page feel like the wrong thing. The replay
+ * controls are now front-and-centre.
  */
 export const AnalysisPage: FC = () => {
   const { data: history } = useApiResource(fetchHistory, [], {
@@ -35,17 +39,15 @@ export const AnalysisPage: FC = () => {
 
   return (
     <div className="space-y-6">
+      <ReplayPanel />
       <Card className="border-white/5 bg-gray-900/70">
-        <CardContent className="space-y-4">
-          <H2 className="mb-0 flex items-center gap-2">
-            <LineChart className="h-5 w-5 text-emerald-300" />
-            Capture & walk analysis
+        <CardContent className="space-y-3">
+          <H2 className="mb-0 flex items-center gap-2 text-lg">
+            <LineChart className="h-5 w-5 text-gray-400" />
+            Recent runs
           </H2>
-          <P>
-            Replay PCAP files, filter packets, and bundle the results with SNMP walk exports. Every
-            run can be published as downloadable evidence for troubleshooting or demo handoffs.
-          </P>
-          <div className="space-y-3 text-sm text-gray-300">
+          <SmallText className="text-gray-400">Past simulation runs the daemon recorded.</SmallText>
+          <div className="space-y-2 text-sm text-gray-300">
             {(history ?? []).slice(0, 5).map((item) => (
               <div key={item.id} className="rounded-lg border border-white/5 bg-gray-950/50 p-3">
                 <p className="text-white font-semibold">{item.configName}</p>
@@ -55,21 +57,12 @@ export const AnalysisPage: FC = () => {
                 </SmallText>
               </div>
             ))}
-            {history?.length === 0 && (
-              <SmallText className="text-gray-400">No captured runs yet.</SmallText>
+            {(!history || history.length === 0) && (
+              <SmallText className="text-gray-500 italic">No captured runs yet.</SmallText>
             )}
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <Button tone="violet" leftIcon={<LineChart className="h-4 w-4" />}>
-              Open analyzer
-            </Button>
-            <Button variant="outline" leftIcon={<FileCog className="h-4 w-4" />}>
-              Export bundle
-            </Button>
           </div>
         </CardContent>
       </Card>
-      <ReplayPanel />
     </div>
   );
 };
