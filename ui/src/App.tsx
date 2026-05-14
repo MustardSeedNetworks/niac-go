@@ -111,7 +111,7 @@ const pages: PageConfig[] = [
             <strong>Simulation</strong> to start/stop a run.
           </li>
           <li>
-            <strong>Live Devices</strong> to see what the running config produced.
+            <strong>Running Devices</strong> to see what the running config produced.
           </li>
           <li>
             <strong>Live Packets</strong> to watch traffic in real time.
@@ -156,10 +156,10 @@ const pages: PageConfig[] = [
   },
   {
     path: '/devices',
-    label: 'Live Devices',
-    title: 'Live Devices (running config)',
+    label: 'Running Devices',
+    title: 'Running Devices',
     description:
-      'Read-only view of devices in the current running configuration plus a YAML preview.',
+      'Read-only view of the devices the daemon is currently simulating, plus the running YAML.',
     icon: Server,
     component: DevicesPage,
     help: (
@@ -397,9 +397,10 @@ const pages: PageConfig[] = [
   },
   {
     path: '/pcap-analyzer',
-    label: 'PCAP Analysis',
-    title: 'PCAP Analysis',
-    description: 'Upload and analyze PCAP files with packet inspection, filtering, and statistics.',
+    label: 'PCAP Inspector',
+    title: 'PCAP Inspector',
+    description:
+      'Open and inspect a captured PCAP file offline — protocol breakdown, per-conversation stats, full per-packet decode.',
     icon: FileBox,
     component: PcapAnalyzerPage,
     help: (
@@ -495,7 +496,7 @@ const navGroups: SidebarNavGroup[] = [
   {
     label: 'Configuration',
     items: [
-      { path: '/devices', label: 'Live Devices', icon: Server },
+      { path: '/devices', label: 'Running Devices', icon: Server },
       {
         path: '/device-config',
         label: 'Device Library',
@@ -518,7 +519,7 @@ const navGroups: SidebarNavGroup[] = [
       { path: '/analysis', label: 'Replay', icon: LineChart },
       { path: '/debug', label: 'Protocol Debug', icon: Terminal },
       { path: '/packets', label: 'Live Packets', icon: FileSearch },
-      { path: '/pcap-analyzer', label: 'PCAP Analysis', icon: FileBox },
+      { path: '/pcap-analyzer', label: 'PCAP Inspector', icon: FileBox },
       { path: '/walk-validator', label: 'Walk Validator', icon: ShieldCheck },
     ],
   },
