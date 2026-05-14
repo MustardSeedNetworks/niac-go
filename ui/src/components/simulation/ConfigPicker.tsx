@@ -17,7 +17,12 @@ import {
   Wifi,
 } from 'lucide-react';
 import { type FC, useEffect, useMemo, useState } from 'react';
-import { fetchTemplateContent, fetchTemplates, fetchUserConfigs } from '../../api/client';
+import {
+  fetchTemplateContent,
+  fetchTemplates,
+  fetchUserConfigs,
+  importConfig,
+} from '../../api/client';
 import type { Template, TemplateContent, UserConfig } from '../../api/types';
 import { Tag } from '../../ui/Tag';
 import { SmallText } from '../../ui/Typography';
@@ -251,12 +256,45 @@ export const ConfigPicker: FC<ConfigPickerProps> = ({
     return selection.source === 'upload';
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const [convertingDsl, setConvertingDsl] = useState(false);
+  const [convertError, setConvertError] = useState<string | null>(null);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null;
-    onUpload(file);
-    // Force the source filter to "local" so the user immediately sees their
-    // file in the list.
-    if (file) updateSourceFilter('local');
+    setConvertError(null);
+    if (!file) {
+      onUpload(null);
+      return;
+    }
+    // Sniff the first 4 KB for the legacy Java-DSL signature:
+    //   device <name> {
+    // If we see it, transparently convert via /api/v1/config/import
+    // and hand the user a YAML File they can run directly. Removes the
+    // separate converter card from the user's mental model.
+    const head = await file.slice(0, 4096).text();
+    const isJavaDsl = /^\s*device\s+[\w.-]+\s*\{/m.test(head);
+    if (!isJavaDsl) {
+      onUpload(file);
+      updateSourceFilter('local');
+      return;
+    }
+    setConvertingDsl(true);
+    try {
+      const text = await file.text();
+      const result = await importConfig({ format: 'java-dsl', content: text });
+      const yamlName = `${file.name.replace(/\.(cfg|conf|txt)$/i, '')}.yaml`;
+      const yamlFile = new File([result.yaml], yamlName, { type: 'application/x-yaml' });
+      onUpload(yamlFile);
+      updateSourceFilter('local');
+    } catch (err) {
+      setConvertError(
+        err instanceof Error
+          ? `Couldn't auto-convert Java DSL: ${err.message}`
+          : "Couldn't auto-convert Java DSL",
+      );
+    } finally {
+      setConvertingDsl(false);
+    }
   };
 
   return (
@@ -292,17 +330,20 @@ export const ConfigPicker: FC<ConfigPickerProps> = ({
         <div className="flex-1" />
         <label
           htmlFor="config-upload"
-          className="flex cursor-pointer items-center gap-1.5 rounded border border-white/10 bg-gray-900/60 px-3 py-1 text-xs font-medium text-gray-200 hover:bg-white/5"
-          title="Pick a YAML from disk to use for this run (one-shot, not saved to your library)."
+          className={`flex items-center gap-1.5 rounded border border-white/10 bg-gray-900/60 px-3 py-1 text-xs font-medium text-gray-200 hover:bg-white/5 ${
+            convertingDsl ? 'cursor-wait opacity-60' : 'cursor-pointer'
+          }`}
+          title="Pick a config from disk. YAML is used as-is; legacy Java-DSL (.cfg) is auto-converted."
         >
           <FileUp className="h-3.5 w-3.5" />
-          {uploadFile ? 'Replace local file' : 'Upload local file…'}
+          {convertingDsl ? 'Converting…' : uploadFile ? 'Replace local file' : 'Upload local file…'}
         </label>
         <input
           id="config-upload"
           type="file"
-          accept=".yaml,.yml"
+          accept=".yaml,.yml,.cfg,.conf,.txt"
           onChange={handleFileChange}
+          disabled={convertingDsl}
           className="sr-only"
         />
         {uploadFile && (
@@ -315,6 +356,11 @@ export const ConfigPicker: FC<ConfigPickerProps> = ({
           </button>
         )}
       </div>
+      {convertError && (
+        <SmallText className="text-red-300" role="alert">
+          {convertError}
+        </SmallText>
+      )}
 
       {/* Search + view toggle */}
       <div className="flex items-center gap-2">

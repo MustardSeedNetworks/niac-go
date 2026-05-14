@@ -38,7 +38,6 @@ import { formatTime, formatUptime, getErrorMessage } from '../utils/format';
  * - Link to Settings for configuration management
  */
 export const RuntimeControlPage: FC = () => {
-  const navigate = useNavigate();
   const [refetchTrigger, setRefetchTrigger] = useState(0);
   const { data: simStatus } = useApiResource(fetchSimulationStatus, [refetchTrigger], {
     intervalMs: POLL_INTERVALS.fast,
@@ -237,72 +236,99 @@ export const RuntimeControlPage: FC = () => {
       {/* Start Simulation Card */}
       {isDaemonMode && !simStatus?.running && (
         <Card className="border-white/5 bg-gradient-to-br from-violet-900/30 to-gray-900/70">
-          <CardContent className="space-y-5">
-            <div className="flex items-center gap-3">
-              <PlugZap className="h-6 w-6 text-violet-400" />
-              <H2 className="mb-0">Start Simulation</H2>
-            </div>
-
-            {/* Step 1: interface */}
-            <div className="space-y-1">
-              <label htmlFor="rc-interface" className="text-sm font-medium text-gray-300">
-                1. Network Interface
-              </label>
-              <div className="relative">
-                <Network className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
-                <select
-                  id="rc-interface"
-                  value={simulationSettings.selectedInterface}
-                  onChange={handleInterfaceChange}
-                  disabled={interfacesLoading || interfaces.length === 0}
-                  title="Pick the host interface the daemon should bind to. Loopback (lo0/lo) is safest for local testing."
-                  className="w-full rounded border border-white/10 bg-gray-800 py-2 pl-10 pr-3 text-sm text-white focus:border-violet-400 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+          <CardContent className="space-y-4">
+            {/* Single-row action bar: interface + start. The interface
+                dropdown takes the natural width of its content; Start sits
+                immediately next to it so the action is obvious. */}
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="flex items-center gap-3">
+                <PlugZap className="h-6 w-6 text-violet-400" />
+                <H2 className="mb-0">Start Simulation</H2>
+              </div>
+              <div className="ml-auto flex flex-wrap items-end gap-3">
+                <div className="min-w-[14rem]">
+                  <label htmlFor="rc-interface" className="block text-xs text-gray-400">
+                    Network interface
+                  </label>
+                  <div className="relative">
+                    <Network className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+                    <select
+                      id="rc-interface"
+                      value={simulationSettings.selectedInterface}
+                      onChange={handleInterfaceChange}
+                      disabled={interfacesLoading || interfaces.length === 0}
+                      title="Pick the host interface the daemon should bind to. Loopback (lo0/lo) is safest for local testing."
+                      className="w-full rounded border border-white/10 bg-gray-800 py-2 pl-10 pr-3 text-sm text-white focus:border-violet-400 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {interfacesLoading && <option value="">Loading…</option>}
+                      {!interfacesLoading && interfaces.length === 0 && (
+                        <option value="">No usable interfaces</option>
+                      )}
+                      {!interfacesLoading && interfaces.length > 0 && (
+                        <option value="">Select interface…</option>
+                      )}
+                      {interfaces.map((iface) => (
+                        <option key={iface.name} value={iface.name}>
+                          {iface.name}
+                          {iface.addresses.length > 0 ? ` (${iface.addresses[0]})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <Button
+                  tone="violet"
+                  size="lg"
+                  disabled={!hasValidConfig || starting}
+                  onClick={handleStart}
+                  leftIcon={<Activity className="h-5 w-5" />}
+                  // Pulse the button when everything's picked so it's the obvious next click.
+                  className={
+                    hasValidConfig && !starting
+                      ? 'animate-pulse shadow-lg shadow-violet-500/30'
+                      : undefined
+                  }
+                  title={
+                    !simulationSettings.selectedInterface
+                      ? 'Pick a network interface first'
+                      : !simulationSettings.configName && !quickUploadFile
+                        ? 'Pick a config below first'
+                        : 'Start the simulation on the selected interface with the picked config'
+                  }
                 >
-                  {interfacesLoading && <option value="">Loading interfaces…</option>}
-                  {!interfacesLoading && interfaces.length === 0 && (
-                    <option value="">No usable interfaces detected</option>
-                  )}
-                  {!interfacesLoading && interfaces.length > 0 && (
-                    <option value="">Select interface…</option>
-                  )}
-                  {interfaces.map((iface) => (
-                    <option key={iface.name} value={iface.name}>
-                      {iface.name}
-                      {iface.addresses.length > 0 ? ` (${iface.addresses[0]})` : ''}
-                    </option>
-                  ))}
-                </select>
+                  {starting ? 'Starting…' : 'Start Simulation'}
+                </Button>
               </div>
             </div>
 
-            {/* Step 2: config */}
-            <div className="space-y-2">
-              <div className="flex items-baseline justify-between">
-                <span className="text-sm font-medium text-gray-300">2. Configuration</span>
-                {simulationSettings.configName || quickUploadFile ? (
-                  <SmallText className="text-emerald-300">
-                    {quickUploadFile
-                      ? `${quickUploadFile.name} (upload)`
-                      : `${simulationSettings.configName} (${simulationSettings.configSource === 'template' ? 'template' : 'config'})`}
-                  </SmallText>
-                ) : (
-                  <SmallText className="text-gray-500 italic">Nothing selected</SmallText>
-                )}
-              </div>
-              <ConfigPicker
-                selection={{
-                  source: quickUploadFile ? 'upload' : (simulationSettings.configSource ?? null),
-                  name: quickUploadFile ? quickUploadFile.name : simulationSettings.configName,
-                  path: simulationSettings.configPath,
-                }}
-                onSelectTemplate={handleSelectTemplate}
-                onSelectUserConfig={handleSelectUserConfig}
-                onUpload={handleUpload}
-                uploadFile={quickUploadFile}
-              />
+            {/* Picked-config status pill */}
+            <div className="flex items-center justify-between rounded border border-white/5 bg-gray-900/40 px-3 py-2 text-xs">
+              <span className="text-gray-400">Configuration:</span>
+              {simulationSettings.configName || quickUploadFile ? (
+                <SmallText className="text-emerald-300">
+                  {quickUploadFile
+                    ? `${quickUploadFile.name} (upload)`
+                    : `${simulationSettings.configName} (${simulationSettings.configSource === 'template' ? 'template' : 'config'})`}
+                </SmallText>
+              ) : (
+                <SmallText className="italic text-gray-500">
+                  Pick one below — Start unlocks once you do
+                </SmallText>
+              )}
             </div>
 
-            {/* Messages */}
+            <ConfigPicker
+              selection={{
+                source: quickUploadFile ? 'upload' : (simulationSettings.configSource ?? null),
+                name: quickUploadFile ? quickUploadFile.name : simulationSettings.configName,
+                path: simulationSettings.configPath,
+              }}
+              onSelectTemplate={handleSelectTemplate}
+              onSelectUserConfig={handleSelectUserConfig}
+              onUpload={handleUpload}
+              uploadFile={quickUploadFile}
+            />
+
             {message && (
               <SmallText
                 className={message.tone === 'success' ? 'text-emerald-300' : 'text-red-400'}
@@ -312,113 +338,163 @@ export const RuntimeControlPage: FC = () => {
                 {message.text}
               </SmallText>
             )}
-
-            {/* Start Button */}
-            <Button
-              tone="violet"
-              size="lg"
-              disabled={!hasValidConfig || starting}
-              onClick={handleStart}
-              leftIcon={<Activity className="h-5 w-5" />}
-            >
-              {starting ? 'Starting...' : 'Start Simulation'}
-            </Button>
           </CardContent>
         </Card>
       )}
 
-      {/* Running Simulation Card */}
       {isDaemonMode && simStatus?.running && (
-        <Card className="border-green-500/30 bg-gradient-to-br from-green-900/30 to-gray-900/70">
-          <CardContent className="space-y-5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="h-3 w-3 animate-pulse rounded-full bg-green-400" />
-                <H2 className="mb-0">Simulation Running</H2>
-              </div>
-              <Tag colorScheme="green">ACTIVE</Tag>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              <StatBlock
-                label="Interface"
-                value={simStatus.interface || '—'}
-                helper="Network interface"
-              />
-              <StatBlock
-                label="Config"
-                value={simStatus.configName || '—'}
-                helper={simStatus.configPath || 'Configuration file'}
-              />
-              <StatBlock
-                label="Devices"
-                value={simStatus.deviceCount.toString()}
-                helper="Simulated devices"
-              />
-              <StatBlock
-                label="Uptime"
-                value={formatUptime(simStatus.uptimeSeconds)}
-                helper="Time running"
-              />
-              <StatBlock
-                label="Started"
-                value={simStatus.startedAt ? formatTime(simStatus.startedAt) : '—'}
-                helper="Start time"
-              />
-            </div>
-
-            {message && (
-              <SmallText
-                className={message.tone === 'success' ? 'text-emerald-300' : 'text-red-400'}
-              >
-                {message.text}
-              </SmallText>
-            )}
-
-            <div className="flex flex-wrap gap-3">
-              <Button
-                variant="outline"
-                disabled={stopping}
-                onClick={handleStop}
-                leftIcon={<Activity className="h-4 w-4" />}
-              >
-                {stopping ? 'Stopping...' : 'Stop Simulation'}
-              </Button>
-              <Button
-                variant="ghost"
-                leftIcon={<FileCog className="h-4 w-4" />}
-                onClick={() => navigate('/devices')}
-              >
-                View Devices
-              </Button>
-              <Button
-                variant="ghost"
-                leftIcon={<Download className="h-4 w-4" />}
-                onClick={async () => {
-                  try {
-                    const doc = await fetchConfig();
-                    const blob = new Blob([doc.content], { type: 'application/x-yaml' });
-                    const url = URL.createObjectURL(blob);
-                    const link = document.createElement('a');
-                    link.href = url;
-                    link.download = doc.filename || 'niac-config.yaml';
-                    link.click();
-                    URL.revokeObjectURL(url);
-                  } catch (err) {
-                    console.error('Failed to download config:', err);
-                  }
-                }}
-                title="Download the running config as YAML (the equivalent of niac config dump)."
-              >
-                Download YAML
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        <RunningSimulationCard
+          simStatus={simStatus}
+          stopping={stopping}
+          onStop={handleStop}
+          message={message}
+        />
       )}
 
-      <GlobalDebugLevelCard />
+      <AdvancedSection />
     </div>
+  );
+};
+
+interface RunningSimulationCardProps {
+  simStatus: {
+    interface?: string;
+    configName?: string;
+    configPath?: string;
+    deviceCount: number;
+    uptimeSeconds: number;
+    startedAt?: string;
+  };
+  stopping: boolean;
+  onStop: () => void;
+  message: { tone: 'success' | 'error'; text: string } | null;
+}
+
+/**
+ * RunningSimulationCard — the green "simulation is live" card. Extracted
+ * from the main render to keep RuntimeControlPage's cognitive complexity
+ * under the project gate.
+ */
+const RunningSimulationCard: FC<RunningSimulationCardProps> = ({
+  simStatus,
+  stopping,
+  onStop,
+  message,
+}) => {
+  const navigate = useNavigate();
+
+  const handleDownload = async () => {
+    try {
+      const doc = await fetchConfig();
+      const blob = new Blob([doc.content], { type: 'application/x-yaml' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = doc.filename || 'niac-config.yaml';
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Failed to download config:', err);
+    }
+  };
+
+  return (
+    <Card className="border-green-500/30 bg-gradient-to-br from-green-900/30 to-gray-900/70">
+      <CardContent className="space-y-5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="h-3 w-3 animate-pulse rounded-full bg-green-400" />
+            <H2 className="mb-0">Simulation Running</H2>
+          </div>
+          <Tag colorScheme="green">ACTIVE</Tag>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <StatBlock
+            label="Interface"
+            value={simStatus.interface || '—'}
+            helper="Network interface"
+          />
+          <StatBlock
+            label="Config"
+            value={simStatus.configName || '—'}
+            helper={simStatus.configPath || 'Configuration file'}
+          />
+          <StatBlock
+            label="Devices"
+            value={simStatus.deviceCount.toString()}
+            helper="Simulated devices"
+          />
+          <StatBlock
+            label="Uptime"
+            value={formatUptime(simStatus.uptimeSeconds)}
+            helper="Time running"
+          />
+          <StatBlock
+            label="Started"
+            value={simStatus.startedAt ? formatTime(simStatus.startedAt) : '—'}
+            helper="Start time"
+          />
+        </div>
+
+        {message && (
+          <SmallText className={message.tone === 'success' ? 'text-emerald-300' : 'text-red-400'}>
+            {message.text}
+          </SmallText>
+        )}
+
+        <div className="flex flex-wrap gap-3">
+          <Button
+            variant="outline"
+            disabled={stopping}
+            onClick={onStop}
+            leftIcon={<Activity className="h-4 w-4" />}
+          >
+            {stopping ? 'Stopping…' : 'Stop Simulation'}
+          </Button>
+          <Button
+            variant="ghost"
+            leftIcon={<FileCog className="h-4 w-4" />}
+            onClick={() => navigate('/devices')}
+          >
+            View Devices
+          </Button>
+          <Button
+            variant="ghost"
+            leftIcon={<Download className="h-4 w-4" />}
+            onClick={handleDownload}
+            title="Download the running config as YAML (the equivalent of niac config dump)."
+          >
+            Download YAML
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+/**
+ * AdvancedSection — collapsible "Show advanced" container for power-user
+ * knobs (currently just the global debug-level selector). Hidden by
+ * default so the page reads as a clean Start/Stop flow for the 90% case.
+ */
+const AdvancedSection: FC = () => {
+  const [open, setOpen] = useState(false);
+  return (
+    <details
+      className="rounded border border-white/10 bg-gray-950/40"
+      open={open}
+      onToggle={(e) => setOpen(e.currentTarget.open)}
+    >
+      <summary className="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:text-white">
+        <span className="text-gray-500">{open ? '▾' : '▸'}</span>
+        <span>Advanced</span>
+        <SmallText className="text-gray-500">(global protocol debug level)</SmallText>
+      </summary>
+      <div className="border-t border-white/10 p-3">
+        <GlobalDebugLevelCard />
+      </div>
+    </details>
   );
 };
 
