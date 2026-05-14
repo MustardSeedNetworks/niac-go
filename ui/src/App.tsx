@@ -114,7 +114,7 @@ const pages: PageConfig[] = [
             <strong>Running Devices</strong> to see what the running config produced.
           </li>
           <li>
-            <strong>Live Packets</strong> to watch traffic in real time.
+            <strong>Packet Capture</strong> to watch traffic in real time.
           </li>
           <li>
             <strong>Alerts</strong> to set the threshold and webhook target.
@@ -350,8 +350,8 @@ const pages: PageConfig[] = [
   },
   {
     path: '/packets',
-    label: 'Live Packets',
-    title: 'Live Packets',
+    label: 'Packet Capture',
+    title: 'Packet Capture',
     description:
       'Real-time packet hex dump viewing with protocol filtering and search capabilities.',
     icon: FileSearch,
@@ -411,8 +411,8 @@ const pages: PageConfig[] = [
         </p>
         <h4>Live vs offline</h4>
         <p>
-          For traffic on the running simulator, use <strong>Live Packets</strong>. This page is for
-          static analysis of files you've captured elsewhere.
+          For traffic on the running simulator, use <strong>Packet Capture</strong>. This page is
+          for static analysis of files you've captured elsewhere.
         </p>
       </>
     ),
@@ -518,7 +518,7 @@ const navGroups: SidebarNavGroup[] = [
     items: [
       { path: '/analysis', label: 'Replay', icon: LineChart },
       { path: '/debug', label: 'Protocol Debug', icon: Terminal },
-      { path: '/packets', label: 'Live Packets', icon: FileSearch },
+      { path: '/packets', label: 'Packet Capture', icon: FileSearch },
       { path: '/pcap-analyzer', label: 'PCAP Inspector', icon: FileBox },
       { path: '/walk-validator', label: 'Walk Validator', icon: ShieldCheck },
     ],
