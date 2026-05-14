@@ -1,5 +1,7 @@
-# Complete Network Simulation
-# Multi-device network with router, switch, AP, server
+# Display: Small Office Network (4 devices)
+# Description: A complete small-office topology in one config — one router, one switch, one Wi-Fi AP, one application server. Discovery (LLDP/CDP) wires them together so tools see a realistic four-device LAN.
+# Type: complete
+# Tags: lan, snmp, lldp, server
 
 devices:
   - name: core-router

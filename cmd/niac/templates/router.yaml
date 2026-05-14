@@ -1,5 +1,7 @@
-# Router Template
-# Enterprise router with full protocol support
+# Display: Core Router (full stack)
+# Description: One router with the full protocol set — ARP, ICMP, LLDP, CDP, SNMP v2c, plus a couple of test IP addresses. A reasonable single-device baseline for tooling that expects to see a "real" L3 box on the wire.
+# Type: router
+# Tags: l3, snmp, lldp, cdp
 
 devices:
   - name: core-router-01

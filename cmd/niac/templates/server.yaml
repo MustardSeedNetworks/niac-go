@@ -1,5 +1,7 @@
-# Server Template
-# Multi-service server (DHCP, DNS, HTTP)
+# Display: Application Server (DHCP/DNS/HTTP)
+# Description: Three-server persona — DHCP server handing out leases, DNS server resolving a small zone, and an HTTP server with a couple of endpoints. The shape monitoring tools expect from a multi-service host.
+# Type: server
+# Tags: dhcp, dns, http
 
 devices:
   - name: server-01

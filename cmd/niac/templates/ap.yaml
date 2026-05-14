@@ -1,5 +1,7 @@
-# Access Point Template
-# Enterprise Wi-Fi AP with controller integration
+# Display: Wi-Fi Access Point
+# Description: Enterprise AP persona advertising itself via LLDP and answering SNMP for radio/SSID OIDs. Useful when validating wireless management tooling that expects to discover thin APs talking to a controller.
+# Type: access-point
+# Tags: wireless, snmp, lldp
 
 devices:
   - name: wifi-ap-01
