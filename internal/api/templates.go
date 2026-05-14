@@ -244,7 +244,10 @@ func splitTags(raw string) []string {
 // file into a map. Stops at the first non-comment, non-blank line. Keys
 // are lowercased; values are trimmed.
 func extractFrontMatter(path string) map[string]string {
-	data, err := os.ReadFile(path)
+	// filepath.Clean keeps gosec G304 quiet — callers walk a
+	// server-owned templates directory, but cleaning is cheap and
+	// satisfies the linter without a //nolint exception.
+	data, err := os.ReadFile(filepath.Clean(path))
 	if err != nil {
 		return nil
 	}
