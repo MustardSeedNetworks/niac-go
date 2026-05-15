@@ -164,7 +164,45 @@ const nodeTypes: NodeTypes = {
 // Layout Algorithm (Simple Force-Directed)
 // ============================================================================
 
+// Tuneables shared by both layout paths. Card-sized so neighbours
+// never overlap at default zoom regardless of how many devices land.
+const NODE_WIDTH = 220;
+const NODE_HEIGHT = 130;
+const NODE_GAP_X = 60;
+const NODE_GAP_Y = 60;
+
 function layoutNodes(devices: DeviceSummary[], links: TopologyLink[]): DeviceNode[] {
+  // Edges == 0 fallback: many of our built-in templates declare
+  // devices but no trunk_ports / port_channels, so the topology API
+  // returns nodes-only. The concentric-ring path below relied on
+  // node degree to push outer rings; with every degree at zero it
+  // packed everything at radius=0 and the cards stacked on top of
+  // one another. Use a fixed-pitch grid here so the user at least
+  // sees every device — the yellow "add trunk_ports" banner above
+  // explains what to do to populate edges.
+  if (links.length === 0) {
+    return devices.map((device, index) => {
+      const cols = Math.max(1, Math.ceil(Math.sqrt(devices.length)));
+      const row = Math.floor(index / cols);
+      const col = index % cols;
+      return {
+        id: device.name,
+        type: 'device',
+        position: {
+          x: col * (NODE_WIDTH + NODE_GAP_X),
+          y: row * (NODE_HEIGHT + NODE_GAP_Y),
+        },
+        data: {
+          label: device.name,
+          type: device.type || 'unknown',
+          ips: device.ips,
+          protocols: device.protocols,
+          status: 'online',
+        } as DeviceNodeData,
+      };
+    });
+  }
+
   const nodeMap = new Map<string, { x: number; y: number }>();
 
   // Create adjacency list
@@ -695,7 +733,10 @@ export const TopologyPage: FC = () => {
           ) : (
             <>
               {edges.length === 0 && (
-                <div className="absolute top-0 left-0 right-0 z-10 bg-yellow-900/40 border-b border-yellow-500/30 px-4 py-2 text-center">
+                // z-50 wins over ReactFlow's internal Panel chrome and
+                // pointer-events-none lets pan/zoom drag through the
+                // banner so it doesn't trap clicks on the canvas below.
+                <div className="pointer-events-none absolute top-0 left-0 right-0 z-50 bg-yellow-900/60 border-b border-yellow-500/40 px-4 py-2 text-center backdrop-blur-sm">
                   <SmallText className="text-yellow-200">
                     Devices loaded, but the running config has no declared topology links. Add{' '}
                     <code className="text-yellow-100">trunk_ports:</code> or{' '}
