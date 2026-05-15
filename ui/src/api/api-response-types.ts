@@ -203,4 +203,11 @@ export interface SimulationRequest {
   interface: string;
   configPath?: string;
   configData?: string;
+  /**
+   * Built-in template to load directly from disk. Mutually exclusive
+   * with configPath / configData. Lets the daemon resolve relative
+   * include_path / walk_file references against the template's own
+   * source directory rather than the inline-config cache.
+   */
+  templateName?: string;
 }

@@ -426,10 +426,10 @@ func validateSimulationStartRequest(req SimulationRequest) []ErrorDetail {
 	if req.Interface == "" {
 		errs = append(errs, ErrorDetail{Field: "interface", Issue: "interface is required"})
 	}
-	if req.ConfigPath == "" && req.ConfigData == "" {
+	if req.ConfigPath == "" && req.ConfigData == "" && req.TemplateName == "" {
 		errs = append(errs, ErrorDetail{
 			Field: "config",
-			Issue: "either config_path or config_data must be provided",
+			Issue: "either config_path, config_data, or template_name must be provided",
 		})
 	}
 	return errs

@@ -5,7 +5,6 @@ import {
   fetchConfig,
   fetchProtocolDebugLevels,
   fetchSimulationStatus,
-  fetchTemplateContent,
   fetchUsableInterfaces,
   fetchUserConfigContent,
   startSimulation,
@@ -150,16 +149,21 @@ export const RuntimeControlPage: FC = () => {
     try {
       let configData: string | undefined;
       let configPath: string | undefined;
+      let templateName: string | undefined;
 
       // Handle quick upload file
       if (quickUploadFile) {
         configData = await fileToText(quickUploadFile);
       }
-      // Handle template - need to apply it first to get a config path
+      // Handle template — pass the template name so the daemon loads
+      // the YAML directly from disk. This preserves the template's own
+      // directory as the include_path base, which matters for vendor
+      // templates that reference walk files via relative paths.
+      // Fetching the content and sending it inline used to trip the
+      // walk-file path-traversal guard for templates like
+      // vendors/paloalto-firewall.yaml.
       else if (simulationSettings.configSource === 'template') {
-        // Fetch template content and send as configData
-        const templateContent = await fetchTemplateContent(simulationSettings.configName);
-        configData = templateContent.content;
+        templateName = simulationSettings.configName;
       }
       // Handle user config - use the stored path
       else if (simulationSettings.configSource === 'userConfig') {
@@ -176,6 +180,7 @@ export const RuntimeControlPage: FC = () => {
         interface: simulationSettings.selectedInterface,
         configPath: configPath,
         configData: configData,
+        templateName: templateName,
       });
 
       setMessage({ tone: 'success', text: 'Simulation started successfully!' });
