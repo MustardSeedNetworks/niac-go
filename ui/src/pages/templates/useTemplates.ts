@@ -77,6 +77,7 @@ export function useTemplates(): UseTemplatesReturn {
     return templates.filter(
       (template) =>
         template.name.toLowerCase().includes(query) ||
+        template.displayName?.toLowerCase().includes(query) ||
         template.description?.toLowerCase().includes(query) ||
         template.type.toLowerCase().includes(query) ||
         template.tags?.some((tag) => tag.toLowerCase().includes(query)),

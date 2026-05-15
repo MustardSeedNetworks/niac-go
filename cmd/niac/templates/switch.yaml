@@ -1,5 +1,7 @@
-# Switch Template
-# Layer 2/3 switch with STP and VLAN support
+# Display: L2/L3 Switch
+# Description: Single switch persona with STP, VLAN tagging, LLDP and CDP. Good for sanity-checking spanning-tree and discovery tooling against a simulated bridge.
+# Type: switch
+# Tags: stp, vlan, lldp, cdp
 
 devices:
   - name: access-switch-01

@@ -1,5 +1,7 @@
-# Minimal NIAC Configuration
-# Single device with basic protocols
+# Display: Minimal Router
+# Description: Smallest useful starter — one router persona answering ARP and ICMP. Boot it on a loopback to confirm the daemon works end-to-end before trying anything more elaborate.
+# Type: router
+# Tags: starter, smoke-test
 
 devices:
   - name: device-01

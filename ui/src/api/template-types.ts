@@ -4,7 +4,10 @@
  */
 
 export interface Template {
+  /** Filename-derived identifier — pass this to /templates/{name} and /templates/use. */
   name: string;
+  /** Optional human-readable label from the template's "# Display: ..." front-matter. */
+  displayName?: string;
   description: string;
   deviceCount: number;
   type: 'basic' | 'router' | 'switch' | 'access-point' | 'server' | 'complete' | 'custom';

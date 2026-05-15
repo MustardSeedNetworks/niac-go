@@ -51,7 +51,12 @@ export const TemplateCard: FC<TemplateCardProps> = memo(({ template, onView, onU
 
         {/* Template info */}
         <div className="space-y-1">
-          <h3 className="font-semibold text-white text-lg">{template.name}</h3>
+          <h3 className="font-semibold text-white text-lg">
+            {template.displayName || template.name}
+          </h3>
+          {template.displayName && (
+            <SmallText className="text-gray-500 font-mono text-[10px]">{template.name}</SmallText>
+          )}
           <SmallText className="text-gray-400 line-clamp-2">
             {template.description || 'No description available'}
           </SmallText>

@@ -25,8 +25,15 @@ const (
 )
 
 // Template represents a configuration template.
+//
+// Name is the stable filename-derived identifier ("minimal", "router")
+// used by the /api/v1/templates/{name} and /api/v1/templates/use APIs.
+// DisplayName is the human-readable label optionally provided via the
+// front-matter "# Display: ..." line; clients should prefer it for UI
+// rendering and fall back to Name when absent.
 type Template struct {
 	Name        string   `json:"name"`
+	DisplayName string   `json:"displayName,omitempty"`
 	Description string   `json:"description"`
 	DeviceCount int      `json:"deviceCount"`
 	Type        string   `json:"type"`
@@ -158,32 +165,114 @@ func scanTemplateDir(baseDir string) ([]Template, error) {
 }
 
 // parseTemplateFile extracts template metadata from a file.
+//
+// Templates can opt-in to a small front-matter block at the very top of
+// the YAML for richer UI metadata. The parser walks consecutive comment
+// lines and recognises:
+//
+//	# Display: Enterprise Router
+//	# Description: A full enterprise router persona with LLDP, CDP, SNMP, ...
+//
+// When present these win over the legacy "first non-empty comment line"
+// heuristic. The keys are case-insensitive and the rest of the file is
+// untouched.
 func parseTemplateFile(path string, _ fs.FileInfo) Template {
 	// Extract name from filename without extension
 	name := strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
 
-	// Try to extract description from first comment line
-	description := extractDescription(path)
+	meta := extractFrontMatter(path)
+
+	displayName := meta["display"]
+
+	description := meta["description"]
 	if description == "" {
-		description = name + " configuration template"
+		// Fall back to the legacy first-comment heuristic for templates
+		// that haven't been migrated yet.
+		description = extractDescription(path)
+	}
+	if description == "" {
+		base := displayName
+		if base == "" {
+			base = name
+		}
+		description = base + " configuration template"
 	}
 
 	// Count devices in the YAML file
 	deviceCount := countDevicesInFile(path)
 
-	// Determine type from filename and content
-	templateType := determineTemplateType(path, name)
+	// Determine type: front-matter wins, otherwise infer from name+path.
+	templateType := strings.ToLower(strings.TrimSpace(meta["type"]))
+	if templateType == "" {
+		templateType = determineTemplateType(path, name)
+	}
 
-	// Generate tags from path components
-	tags := generateTags(path)
+	// Tags: front-matter "tags:" comma-separated wins, otherwise infer.
+	tags := splitTags(meta["tags"])
+	if len(tags) == 0 {
+		tags = generateTags(path)
+	}
 
 	return Template{
 		Name:        name,
+		DisplayName: displayName,
 		Description: description,
 		DeviceCount: deviceCount,
 		Type:        templateType,
 		Tags:        tags,
 	}
+}
+
+// splitTags parses a comma-separated tags string into a slice. Empty tags
+// are skipped and whitespace is trimmed.
+func splitTags(raw string) []string {
+	if raw == "" {
+		return nil
+	}
+	parts := strings.Split(raw, ",")
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		t := strings.TrimSpace(p)
+		if t != "" {
+			out = append(out, t)
+		}
+	}
+	return out
+}
+
+// extractFrontMatter pulls "# Key: Value" lines from the top of a YAML
+// file into a map. Stops at the first non-comment, non-blank line. Keys
+// are lowercased; values are trimmed.
+func extractFrontMatter(path string) map[string]string {
+	// filepath.Clean keeps gosec G304 quiet — callers walk a
+	// server-owned templates directory, but cleaning is cheap and
+	// satisfies the linter without a //nolint exception.
+	data, err := os.ReadFile(filepath.Clean(path))
+	if err != nil {
+		return nil
+	}
+	meta := make(map[string]string)
+	for line := range strings.SplitSeq(string(data), "\n") {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" {
+			continue
+		}
+		comment, isComment := strings.CutPrefix(trimmed, "#")
+		if !isComment {
+			break
+		}
+		comment = strings.TrimSpace(comment)
+		key, value, ok := strings.Cut(comment, ":")
+		if !ok {
+			continue
+		}
+		k := strings.ToLower(strings.TrimSpace(key))
+		v := strings.TrimSpace(value)
+		if k != "" && v != "" {
+			meta[k] = v
+		}
+	}
+	return meta
 }
 
 // countDevicesInFile counts the number of devices defined in a YAML config.

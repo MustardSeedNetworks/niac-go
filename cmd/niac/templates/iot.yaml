@@ -1,5 +1,7 @@
-# IoT Device Template
-# Lightweight IoT sensor with basic protocols
+# Display: IoT Sensor
+# Description: Lightweight IoT endpoint — answers ARP and ICMP, no SNMP, no fancy stack. Realistic shape for camera/sensor-class devices you'd find on a building network.
+# Type: basic
+# Tags: iot, minimal
 
 devices:
   - name: iot-sensor-01
