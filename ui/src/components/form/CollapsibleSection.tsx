@@ -1,5 +1,6 @@
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import type { FC, ReactNode } from 'react';
+import { iconSizes } from '../../constants/sizes';
 import { Card, CardContent } from '../../ui/Card';
 import { Tag } from '../../ui/Tag';
 
@@ -33,9 +34,9 @@ export const CollapsibleSection: FC<CollapsibleSectionProps> = ({
           className="flex items-center gap-3 text-left focus:outline-none focus:ring-2 focus:ring-inset focus:ring-violet-500 rounded-lg px-1 -ml-1"
         >
           {isExpanded ? (
-            <ChevronDown className="h-4 w-4 text-gray-400" />
+            <ChevronDown className={`${iconSizes.md} text-gray-400`} />
           ) : (
-            <ChevronRight className="h-4 w-4 text-gray-400" />
+            <ChevronRight className={`${iconSizes.md} text-gray-400`} />
           )}
           <h3 className="font-semibold text-white">{title}</h3>
           {required && (

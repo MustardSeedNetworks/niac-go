@@ -20,6 +20,7 @@ import { PacketDetails } from '../components/PacketDetails';
 import { type Packet, PacketList } from '../components/PacketList';
 import { StreamView } from '../components/StreamView';
 import { POLL_INTERVALS } from '../constants/polling';
+import { iconSizes } from '../constants/sizes';
 import { useApiResource } from '../hooks/useApiResource';
 import { useColoringRules } from '../hooks/useColoringRules';
 import { useDisplayFilter } from '../hooks/useDisplayFilter';
@@ -50,7 +51,7 @@ const ConnectionStatus: FC<{
   if (connected) {
     return (
       <div className="flex items-center gap-2">
-        <Wifi className="h-4 w-4 text-green-400" />
+        <Wifi className={`${iconSizes.md} text-green-400`} />
         <Tag colorScheme="green">Connected</Tag>
       </div>
     );
@@ -59,7 +60,7 @@ const ConnectionStatus: FC<{
   // SSE auto-reconnects, so disconnected state is brief
   return (
     <div className="flex items-center gap-2">
-      <WifiOff className="h-4 w-4 text-yellow-400 animate-pulse" />
+      <WifiOff className={`${iconSizes.md} text-yellow-400 animate-pulse`} />
       <Tag colorScheme="yellow">Connecting...</Tag>
     </div>
   );
@@ -241,7 +242,7 @@ export const PacketInspectorPage: FC = () => {
       <Card className="border-yellow-500/30 bg-yellow-900/20">
         <CardContent className="space-y-3">
           <div className="flex items-start gap-3">
-            <Activity className="mt-1 h-5 w-5 text-yellow-400" />
+            <Activity className={`mt-1 ${iconSizes.lg} text-yellow-400`} />
             <div className="flex-1">
               <p className="font-semibold text-yellow-200">No simulation running</p>
               <SmallText className="text-yellow-300/90">
@@ -281,7 +282,9 @@ export const PacketInspectorPage: FC = () => {
                 variant={isPaused ? 'outline' : 'ghost'}
                 size="sm"
                 onClick={handlePauseToggle}
-                leftIcon={isPaused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
+                leftIcon={
+                  isPaused ? <Play className={iconSizes.md} /> : <Pause className={iconSizes.md} />
+                }
               >
                 {isPaused ? 'Resume' : 'Pause'}
               </Button>
@@ -290,7 +293,7 @@ export const PacketInspectorPage: FC = () => {
                 variant="ghost"
                 size="sm"
                 onClick={handleClear}
-                leftIcon={<Trash2 className="h-4 w-4" />}
+                leftIcon={<Trash2 className={iconSizes.md} />}
                 disabled={packets.length === 0}
               >
                 Clear
@@ -300,7 +303,7 @@ export const PacketInspectorPage: FC = () => {
                 variant="ghost"
                 size="sm"
                 onClick={handleExport}
-                leftIcon={<Download className="h-4 w-4" />}
+                leftIcon={<Download className={iconSizes.md} />}
                 disabled={packets.length === 0}
               >
                 Export
@@ -310,7 +313,7 @@ export const PacketInspectorPage: FC = () => {
                 variant="ghost"
                 size="sm"
                 onClick={() => setShowColoringRules(true)}
-                leftIcon={<Palette className="h-4 w-4" />}
+                leftIcon={<Palette className={iconSizes.md} />}
               >
                 Colors
               </Button>
@@ -319,7 +322,7 @@ export const PacketInspectorPage: FC = () => {
                 variant="ghost"
                 size="sm"
                 onClick={handleFollowStream}
-                leftIcon={<Share2 className="h-4 w-4" />}
+                leftIcon={<Share2 className={iconSizes.md} />}
                 disabled={!canFollowStream}
               >
                 Follow Stream

@@ -6,6 +6,7 @@ import type {
   ProtocolCategory,
   ProtocolDebugConfig,
 } from '../../api/types';
+import { iconSizes } from '../../constants/sizes';
 import {
   CATEGORY_ORDER,
   DEBUG_LEVELS,
@@ -232,7 +233,7 @@ export const ProtocolDebugLevels: FC = () => {
     return (
       <Card className="border-white/5 bg-gray-900/70">
         <CardContent className="py-12 text-center">
-          <RefreshCw className="mx-auto h-8 w-8 animate-spin text-gray-400" />
+          <RefreshCw className={`mx-auto ${iconSizes['2xl']} animate-spin text-gray-400`} />
           <SmallText className="mt-3 text-gray-400">Loading protocol debug settings...</SmallText>
         </CardContent>
       </Card>
@@ -245,7 +246,7 @@ export const ProtocolDebugLevels: FC = () => {
         {/* Header */}
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <Settings2 className="h-6 w-6 text-violet-400" />
+            <Settings2 className={`${iconSizes.xl} text-violet-400`} />
             <H2 className="mb-0">Protocol Debug Levels</H2>
           </div>
 
@@ -267,7 +268,7 @@ export const ProtocolDebugLevels: FC = () => {
                   size="sm"
                   onClick={saveChanges}
                   disabled={saving}
-                  leftIcon={<Save className="h-4 w-4" />}
+                  leftIcon={<Save className={iconSizes.md} />}
                   aria-label="Save changes"
                 >
                   {saving ? 'Saving...' : 'Save Changes'}
@@ -279,7 +280,7 @@ export const ProtocolDebugLevels: FC = () => {
               size="sm"
               onClick={handleReset}
               disabled={saving}
-              leftIcon={<RotateCcw className="h-4 w-4" />}
+              leftIcon={<RotateCcw className={iconSizes.md} />}
               aria-label="Reset all protocols to defaults"
             >
               Reset All

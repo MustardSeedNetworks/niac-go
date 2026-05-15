@@ -1,5 +1,6 @@
 import { AlertCircle, FileCode, Search, Upload, X } from 'lucide-react';
 import type { FC } from 'react';
+import { iconSizes } from '../../constants/sizes';
 import { Button } from '../../ui/Button';
 import { Card, CardContent } from '../../ui/Card';
 import { H2, P } from '../../ui/Typography';
@@ -26,21 +27,27 @@ export const TemplatesHeader: FC<TemplatesHeaderProps> = ({
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <H2 className="mb-0 flex items-center gap-2">
-              <FileCode className="h-5 w-5 text-violet-300" />
+              <FileCode className={`${iconSizes.lg} text-violet-300`} />
               Configuration Templates
             </H2>
             <P className="text-gray-400 mt-1">
               Browse and use pre-configured network templates to quickly start simulations.
             </P>
           </div>
-          <Button tone="violet" leftIcon={<Upload className="h-4 w-4" />} onClick={onUploadClick}>
+          <Button
+            tone="violet"
+            leftIcon={<Upload className={iconSizes.md} />}
+            onClick={onUploadClick}
+          >
             Upload Template
           </Button>
         </div>
 
         {/* Search bar */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
+          <Search
+            className={`absolute left-3 top-1/2 ${iconSizes.lg} -translate-y-1/2 text-gray-400`}
+          />
           <input
             type="text"
             placeholder="Search templates by name, description, or type..."
@@ -55,7 +62,7 @@ export const TemplatesHeader: FC<TemplatesHeaderProps> = ({
               className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
               aria-label="Clear search"
             >
-              <X className="h-4 w-4" />
+              <X className={iconSizes.md} />
             </button>
           )}
         </div>
@@ -70,7 +77,7 @@ export const TemplatesHeader: FC<TemplatesHeaderProps> = ({
             }`}
             role="alert"
           >
-            {message.type === 'error' && <AlertCircle className="h-4 w-4" />}
+            {message.type === 'error' && <AlertCircle className={iconSizes.md} />}
             <span>{message.text}</span>
             <button
               type="button"
@@ -78,7 +85,7 @@ export const TemplatesHeader: FC<TemplatesHeaderProps> = ({
               className="ml-auto text-current hover:opacity-70"
               aria-label="Dismiss message"
             >
-              <X className="h-4 w-4" />
+              <X className={iconSizes.md} />
             </button>
           </div>
         )}

@@ -16,6 +16,7 @@ import type { DebugLevel, NetworkInterface, Template, UserConfig } from '../api/
 import { StatBlock } from '../components/StatBlock';
 import { ConfigPicker } from '../components/simulation/ConfigPicker';
 import { POLL_INTERVALS } from '../constants/polling';
+import { iconSizes } from '../constants/sizes';
 import { useApiResource } from '../hooks/useApiResource';
 import { useUIStore } from '../stores/ui-store';
 import { Button } from '../ui/Button';
@@ -218,7 +219,7 @@ export const RuntimeControlPage: FC = () => {
         <Card className="border-yellow-500/30 bg-yellow-900/20">
           <CardContent className="space-y-3">
             <div className="flex items-start gap-3">
-              <BellRing className="mt-1 h-5 w-5 text-yellow-400" />
+              <BellRing className={`mt-1 ${iconSizes.lg} text-yellow-400`} />
               <div>
                 <p className="font-semibold text-yellow-200">Daemon Mode Not Detected</p>
                 <SmallText className="text-yellow-300/90">
@@ -242,7 +243,7 @@ export const RuntimeControlPage: FC = () => {
                 immediately next to it so the action is obvious. */}
             <div className="flex flex-wrap items-end gap-3">
               <div className="flex items-center gap-3">
-                <PlugZap className="h-6 w-6 text-violet-400" />
+                <PlugZap className={`${iconSizes.xl} text-violet-400`} />
                 <H2 className="mb-0">Start Simulation</H2>
               </div>
               <div className="ml-auto flex flex-wrap items-end gap-3">
@@ -251,7 +252,9 @@ export const RuntimeControlPage: FC = () => {
                     Network interface
                   </label>
                   <div className="relative">
-                    <Network className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+                    <Network
+                      className={`absolute left-3 top-1/2 -translate-y-1/2 ${iconSizes.md} text-gray-500`}
+                    />
                     <select
                       id="rc-interface"
                       value={simulationSettings.selectedInterface}
@@ -281,7 +284,7 @@ export const RuntimeControlPage: FC = () => {
                   size="lg"
                   disabled={!hasValidConfig || starting}
                   onClick={handleStart}
-                  leftIcon={<Activity className="h-5 w-5" />}
+                  leftIcon={<Activity className={iconSizes.lg} />}
                   // Pulse the button when everything's picked so it's the obvious next click.
                   className={
                     hasValidConfig && !starting
@@ -448,20 +451,20 @@ const RunningSimulationCard: FC<RunningSimulationCardProps> = ({
             variant="outline"
             disabled={stopping}
             onClick={onStop}
-            leftIcon={<Activity className="h-4 w-4" />}
+            leftIcon={<Activity className={iconSizes.md} />}
           >
             {stopping ? 'Stopping…' : 'Stop Simulation'}
           </Button>
           <Button
             variant="ghost"
-            leftIcon={<FileCog className="h-4 w-4" />}
+            leftIcon={<FileCog className={iconSizes.md} />}
             onClick={() => navigate('/devices')}
           >
             View Devices
           </Button>
           <Button
             variant="ghost"
-            leftIcon={<Download className="h-4 w-4" />}
+            leftIcon={<Download className={iconSizes.md} />}
             onClick={handleDownload}
             title="Download the running config as YAML (the equivalent of niac config dump)."
           >
@@ -538,7 +541,7 @@ const GlobalDebugLevelCard: FC = () => {
     <Card className="border-white/5 bg-gray-900/70">
       <CardContent className="space-y-3">
         <H2 className="mb-0 flex items-center gap-2 text-lg">
-          <Activity className="h-5 w-5 text-violet-300" />
+          <Activity className={`${iconSizes.lg} text-violet-300`} />
           Debug level
         </H2>
         <SmallText className="text-gray-400">

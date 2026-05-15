@@ -12,6 +12,7 @@ import { type FC, memo, useState } from 'react';
 import { fetchSimulationStatus } from '../api/client';
 import type { ErrorType, HistoryRecord } from '../api/types';
 import { POLL_INTERVALS } from '../constants/polling';
+import { iconSizes } from '../constants/sizes';
 import { useAppState } from '../contexts/AppContext';
 import { useApiResource } from '../hooks/useApiResource';
 import { Button } from '../ui/Button';
@@ -76,7 +77,9 @@ export const DashboardPage: FC = () => {
           <CardContent className="space-y-1">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-gray-400">Devices Online</span>
-              <Server className="h-5 w-5 text-violet-400 group-hover:scale-110 transition-transform" />
+              <Server
+                className={`${iconSizes.lg} text-violet-400 group-hover:scale-110 transition-transform`}
+              />
             </div>
             <p className="text-3xl font-bold text-white">{stats?.deviceCount ?? '—'}</p>
             <p className="text-xs text-gray-500">Active network devices</p>
@@ -87,7 +90,9 @@ export const DashboardPage: FC = () => {
           <CardContent className="space-y-1">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-gray-400">Packets RX</span>
-              <Activity className="h-5 w-5 text-emerald-400 group-hover:scale-110 transition-transform" />
+              <Activity
+                className={`${iconSizes.lg} text-emerald-400 group-hover:scale-110 transition-transform`}
+              />
             </div>
             <p className="text-3xl font-bold text-white">
               {stats ? formatNumber(stats.stack.packetsReceived) : '—'}
@@ -102,7 +107,9 @@ export const DashboardPage: FC = () => {
           <CardContent className="space-y-1">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-gray-400">DNS Queries</span>
-              <SatelliteDish className="h-5 w-5 text-amber-400 group-hover:scale-110 transition-transform" />
+              <SatelliteDish
+                className={`${iconSizes.lg} text-amber-400 group-hover:scale-110 transition-transform`}
+              />
             </div>
             <p className="text-3xl font-bold text-white">
               {stats ? formatNumber(stats.stack.dnsQueries) : '—'}
@@ -120,7 +127,7 @@ export const DashboardPage: FC = () => {
         <Card className="lg:col-span-2">
           <CardContent className="space-y-4">
             <H2 className="mb-0 flex items-center gap-2">
-              <Zap className="h-5 w-5 text-violet-400" />
+              <Zap className={`${iconSizes.lg} text-violet-400`} />
               Quick Actions
             </H2>
             <div className="grid gap-3 sm:grid-cols-2">
@@ -130,7 +137,7 @@ export const DashboardPage: FC = () => {
                 className="flex items-center gap-3 rounded-lg border border-white/10 bg-white/5 p-4 text-left hover:bg-white/10 hover:border-violet-500/30 transition-all group"
               >
                 <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-yellow-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <PlugZap className="h-5 w-5 text-yellow-400" />
+                  <PlugZap className={`${iconSizes.lg} text-yellow-400`} />
                 </div>
                 <div>
                   <p className="font-medium text-white">Error Injection</p>
@@ -141,7 +148,7 @@ export const DashboardPage: FC = () => {
               <AccentLink to="/debug" className="no-underline">
                 <div className="flex items-center gap-3 rounded-lg border border-white/10 bg-white/5 p-4 text-left hover:bg-white/10 hover:border-violet-500/30 transition-all group">
                   <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-violet-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Terminal className="h-5 w-5 text-violet-400" />
+                    <Terminal className={`${iconSizes.lg} text-violet-400`} />
                   </div>
                   <div>
                     <p className="font-medium text-white">Debug Console</p>
@@ -153,7 +160,7 @@ export const DashboardPage: FC = () => {
               <AccentLink to="/traffic" className="no-underline">
                 <div className="flex items-center gap-3 rounded-lg border border-white/10 bg-white/5 p-4 text-left hover:bg-white/10 hover:border-violet-500/30 transition-all group">
                   <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-blue-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Activity className="h-5 w-5 text-blue-400" />
+                    <Activity className={`${iconSizes.lg} text-blue-400`} />
                   </div>
                   <div>
                     <p className="font-medium text-white">Traffic Injection</p>
@@ -165,7 +172,7 @@ export const DashboardPage: FC = () => {
               <AccentLink to="/topology" className="no-underline">
                 <div className="flex items-center gap-3 rounded-lg border border-white/10 bg-white/5 p-4 text-left hover:bg-white/10 hover:border-violet-500/30 transition-all group">
                   <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-emerald-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Network className="h-5 w-5 text-emerald-400" />
+                    <Network className={`${iconSizes.lg} text-emerald-400`} />
                   </div>
                   <div>
                     <p className="font-medium text-white">View Topology</p>
@@ -211,7 +218,7 @@ export const DashboardPage: FC = () => {
               ))}
               {history?.length === 0 && (
                 <div className="text-center py-6 text-gray-500">
-                  <Activity className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <Activity className={`${iconSizes['2xl']} mx-auto mb-2 opacity-50`} />
                   <p className="text-sm">No run history yet</p>
                 </div>
               )}
@@ -237,7 +244,7 @@ const ErrorInjectionPanel = memo(
   ({ errorTypes, info }: { errorTypes: ErrorType[]; info: string }) => (
     <div className="mt-4 rounded-xl border border-yellow-500/20 bg-yellow-900/10 p-4">
       <div className="mb-3 flex items-start gap-2">
-        <PlugZap className="mt-0.5 h-5 w-5 text-yellow-400" />
+        <PlugZap className={`mt-0.5 ${iconSizes.lg} text-yellow-400`} />
         <div>
           <p className="font-semibold text-yellow-200">Error Injection Types</p>
           <SmallText className="text-yellow-300/80">{info}</SmallText>
@@ -295,7 +302,7 @@ const AutomationTimeline = memo(({ history }: { history: HistoryRecord[] | null 
       <CardContent className="space-y-4">
         <div className="flex items-center justify-between">
           <H2 className="mb-0 flex items-center gap-2">
-            <SatelliteDish className="h-5 w-5 text-violet-300" />
+            <SatelliteDish className={`${iconSizes.lg} text-violet-300`} />
             Automation timeline
           </H2>
           <Tag colorScheme="gray">Latest events</Tag>
@@ -315,7 +322,7 @@ const AutomationTimeline = memo(({ history }: { history: HistoryRecord[] | null 
                 variant="ghost"
                 size="sm"
                 className="mt-2 sm:mt-0"
-                leftIcon={<Bot className="h-4 w-4" />}
+                leftIcon={<Bot className={iconSizes.md} />}
               >
                 View details
               </Button>

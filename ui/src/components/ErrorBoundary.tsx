@@ -5,6 +5,7 @@
 
 import { AlertCircle, RefreshCw } from 'lucide-react';
 import { Component, type ErrorInfo, type ReactNode } from 'react';
+import { iconSizes } from '../constants/sizes';
 import { reportError } from '../utils/error-reporter';
 
 interface Props {
@@ -74,7 +75,7 @@ export class ErrorBoundary extends Component<Props, State> {
           <div className="mx-auto max-w-md text-center">
             <div className="mb-4 flex justify-center">
               <div className="rounded-full bg-red-100 p-4 dark:bg-red-900/20">
-                <AlertCircle className="h-12 w-12 text-red-600 dark:text-red-400" />
+                <AlertCircle className={`${iconSizes['3xl']} text-red-600 dark:text-red-400`} />
               </div>
             </div>
 
@@ -114,7 +115,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 onClick={this.handleRetry}
                 className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
               >
-                <RefreshCw className="h-4 w-4" />
+                <RefreshCw className={iconSizes.md} />
                 Try Again
               </button>
               <button
@@ -144,7 +145,9 @@ export class PageErrorBoundary extends ErrorBoundary {
       return (
         <div className="rounded-lg border border-red-200 bg-red-50 p-6 dark:border-red-800 dark:bg-red-900/10">
           <div className="flex items-start gap-4">
-            <AlertCircle className="h-6 w-6 flex-shrink-0 text-red-600 dark:text-red-400" />
+            <AlertCircle
+              className={`${iconSizes.xl} flex-shrink-0 text-red-600 dark:text-red-400`}
+            />
             <div className="flex-1">
               <h3 className="text-sm font-medium text-red-800 dark:text-red-200">Page Error</h3>
               <p className="mt-1 text-sm text-red-700 dark:text-red-300">

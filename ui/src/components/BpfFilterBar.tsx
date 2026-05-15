@@ -1,6 +1,7 @@
 import { AlertCircle, CheckCircle2, Filter, X } from 'lucide-react';
 import { type FC, memo, useCallback, useEffect, useState } from 'react';
 import { clearCaptureFilter, getCaptureFilter, setCaptureFilter } from '../api/capture';
+import { iconSizes } from '../constants/sizes';
 import { Button } from '../ui/Button';
 import { SmallText } from '../ui/Typography';
 import { getErrorMessage } from '../utils/format';
@@ -112,7 +113,7 @@ export const BpfFilterBar: FC = memo(() => {
       <div className="flex items-center gap-2">
         {/* Filter icon and active indicator */}
         <div className="flex items-center gap-1.5 flex-shrink-0">
-          <Filter className="h-4 w-4 text-gray-400" />
+          <Filter className={`${iconSizes.md} text-gray-400`} />
           {isActive && <CheckCircle2 className="h-3.5 w-3.5 text-green-400" />}
         </div>
 
@@ -163,7 +164,7 @@ export const BpfFilterBar: FC = memo(() => {
       {/* Error message */}
       {error && (
         <div className="flex items-center gap-1.5 px-1">
-          <AlertCircle className="h-3.5 w-3.5 text-red-400 flex-shrink-0" />
+          <AlertCircle className={`${iconSizes.sm} text-red-400 flex-shrink-0`} />
           <SmallText className="text-red-400">{error}</SmallText>
         </div>
       )}

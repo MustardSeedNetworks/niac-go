@@ -9,6 +9,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { type FC, useCallback, useMemo, useState } from 'react';
+import { iconSizes } from '../../constants/sizes';
 import { Button } from '../../ui/Button';
 import { Card, CardContent } from '../../ui/Card';
 import { ConfirmModal } from '../../ui/ConfirmModal';
@@ -113,19 +114,19 @@ export const MergeControls: FC<MergeControlsProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between">
           <H2 className="mb-0 flex items-center gap-2">
-            <FileCheck className="h-5 w-5 text-violet-300" />
+            <FileCheck className={`${iconSizes.lg} text-violet-300`} />
             Merge Controls
           </H2>
           {stats.totalChanges > 0 && (
             <div className="flex items-center gap-2">
               {stats.isComplete ? (
                 <Tag colorScheme="green" className="flex items-center gap-1">
-                  <CheckCircle2 className="h-3 w-3" />
+                  <CheckCircle2 className={iconSizes.xs} />
                   All resolved
                 </Tag>
               ) : (
                 <Tag colorScheme="yellow" className="flex items-center gap-1">
-                  <AlertCircle className="h-3 w-3" />
+                  <AlertCircle className={iconSizes.xs} />
                   {stats.totalChanges - stats.decisionsCount} pending
                 </Tag>
               )}
@@ -158,13 +159,13 @@ export const MergeControls: FC<MergeControlsProps> = ({
             <SmallText className="text-gray-400">Decisions:</SmallText>
             {stats.leftCount > 0 && (
               <Tag colorScheme="blue" className="text-xs">
-                <ChevronLeft className="h-3 w-3 mr-1" />
+                <ChevronLeft className={`${iconSizes.xs} mr-1`} />
                 {stats.leftCount} left
               </Tag>
             )}
             {stats.rightCount > 0 && (
               <Tag colorScheme="green" className="text-xs">
-                <ChevronRight className="h-3 w-3 mr-1" />
+                <ChevronRight className={`${iconSizes.xs} mr-1`} />
                 {stats.rightCount} right
               </Tag>
             )}
@@ -187,7 +188,7 @@ export const MergeControls: FC<MergeControlsProps> = ({
               variant="outline"
               disabled={disabled || stats.totalChanges === 0}
               onClick={() => setShowAcceptLeftConfirm(true)}
-              leftIcon={<ChevronLeft className="h-4 w-4" />}
+              leftIcon={<ChevronLeft className={iconSizes.md} />}
               className="justify-start"
             >
               Accept all from {leftLabel}
@@ -197,7 +198,7 @@ export const MergeControls: FC<MergeControlsProps> = ({
               variant="outline"
               disabled={disabled || stats.totalChanges === 0}
               onClick={() => setShowAcceptRightConfirm(true)}
-              leftIcon={<ChevronRight className="h-4 w-4" />}
+              leftIcon={<ChevronRight className={iconSizes.md} />}
               className="justify-start"
             >
               Accept all from {rightLabel}
@@ -211,7 +212,7 @@ export const MergeControls: FC<MergeControlsProps> = ({
             tone="violet"
             disabled={disabled || stats.totalChanges === 0}
             onClick={onPreview}
-            leftIcon={<FileCheck className="h-4 w-4" />}
+            leftIcon={<FileCheck className={iconSizes.md} />}
           >
             Preview Merged
           </Button>
@@ -220,7 +221,7 @@ export const MergeControls: FC<MergeControlsProps> = ({
             tone="violet"
             disabled={disabled || !stats.isComplete}
             onClick={onExport}
-            leftIcon={<Download className="h-4 w-4" />}
+            leftIcon={<Download className={iconSizes.md} />}
           >
             Export Result
           </Button>
@@ -229,7 +230,7 @@ export const MergeControls: FC<MergeControlsProps> = ({
             variant="outline"
             disabled={disabled || stats.decisionsCount === 0}
             onClick={() => setShowResetConfirm(true)}
-            leftIcon={<RotateCcw className="h-4 w-4" />}
+            leftIcon={<RotateCcw className={iconSizes.md} />}
           >
             Reset Decisions
           </Button>
@@ -238,7 +239,7 @@ export const MergeControls: FC<MergeControlsProps> = ({
             variant="ghost"
             disabled={disabled}
             onClick={() => setShowClearAllConfirm(true)}
-            leftIcon={<Trash2 className="h-4 w-4" />}
+            leftIcon={<Trash2 className={iconSizes.md} />}
           >
             Clear All
           </Button>
@@ -335,7 +336,7 @@ export const MergePreviewModal: FC<MergePreviewModalProps> = ({ content, onClose
         <div className="flex items-center justify-between border-b border-white/10 px-6 py-4 flex-shrink-0">
           <div className="flex items-center gap-3">
             <div className="rounded-lg bg-violet-500/20 p-2">
-              <FileCheck className="h-5 w-5 text-violet-300" />
+              <FileCheck className={`${iconSizes.lg} text-violet-300`} />
             </div>
             <div>
               <h2 id="preview-modal-title" className="text-lg font-semibold text-white">
@@ -382,7 +383,7 @@ export const MergePreviewModal: FC<MergePreviewModalProps> = ({ content, onClose
           <Button variant="outline" onClick={handleCopy}>
             Copy to Clipboard
           </Button>
-          <Button tone="violet" onClick={onExport} leftIcon={<Download className="h-4 w-4" />}>
+          <Button tone="violet" onClick={onExport} leftIcon={<Download className={iconSizes.md} />}>
             Download YAML
           </Button>
         </div>

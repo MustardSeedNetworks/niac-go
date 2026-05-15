@@ -1,5 +1,6 @@
 import { AlertCircle, CheckCircle, FileUp, Upload, X } from 'lucide-react';
 import { type FC, useCallback, useRef, useState } from 'react';
+import { iconSizes } from '../../constants/sizes';
 import { Button } from '../../ui/Button';
 import { Card, CardContent } from '../../ui/Card';
 import { Tag } from '../../ui/Tag';
@@ -172,7 +173,9 @@ export const PcapUploader: FC<PcapUploaderProps> = ({
             <div
               className={`rounded-full p-4 ${isDragOver ? 'bg-violet-500/20' : 'bg-gray-800/50'}`}
             >
-              <Upload className={`h-8 w-8 ${isDragOver ? 'text-violet-400' : 'text-gray-400'}`} />
+              <Upload
+                className={`${iconSizes['2xl']} ${isDragOver ? 'text-violet-400' : 'text-gray-400'}`}
+              />
             </div>
 
             <div>
@@ -194,7 +197,7 @@ export const PcapUploader: FC<PcapUploaderProps> = ({
         {selectedFile && (
           <div className="flex items-center justify-between rounded-lg border border-white/10 bg-gray-950/50 p-4">
             <div className="flex items-center gap-3">
-              <FileUp className="h-5 w-5 text-violet-400" />
+              <FileUp className={`${iconSizes.lg} text-violet-400`} />
               <div>
                 <p className="font-medium text-white">{selectedFile.name}</p>
                 <SmallText className="text-gray-400">{formatBytes(selectedFile.size)}</SmallText>
@@ -210,7 +213,7 @@ export const PcapUploader: FC<PcapUploaderProps> = ({
                 size="sm"
                 onClick={handleClear}
                 disabled={isAnalyzing}
-                leftIcon={<X className="h-4 w-4" />}
+                leftIcon={<X className={iconSizes.md} />}
               >
                 Clear
               </Button>
@@ -221,14 +224,14 @@ export const PcapUploader: FC<PcapUploaderProps> = ({
         {/* Status Messages */}
         {error && (
           <div className="flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-900/20 p-3">
-            <AlertCircle className="h-5 w-5 flex-shrink-0 text-red-400" />
+            <AlertCircle className={`${iconSizes.lg} flex-shrink-0 text-red-400`} />
             <SmallText className="text-red-300">{error}</SmallText>
           </div>
         )}
 
         {success && (
           <div className="flex items-center gap-2 rounded-lg border border-green-500/30 bg-green-900/20 p-3">
-            <CheckCircle className="h-5 w-5 flex-shrink-0 text-green-400" />
+            <CheckCircle className={`${iconSizes.lg} flex-shrink-0 text-green-400`} />
             <SmallText className="text-green-300">{success}</SmallText>
           </div>
         )}
@@ -244,7 +247,7 @@ export const PcapUploader: FC<PcapUploaderProps> = ({
             isAnalyzing ? (
               <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
             ) : (
-              <FileUp className="h-5 w-5" />
+              <FileUp className={iconSizes.lg} />
             )
           }
         >

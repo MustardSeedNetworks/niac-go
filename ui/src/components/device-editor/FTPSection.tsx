@@ -1,6 +1,7 @@
 import { Folder, Plus, X } from 'lucide-react';
 import type { FC } from 'react';
 import type { FTPConfig, FTPUser } from '../../api/types';
+import { iconSizes } from '../../constants/sizes';
 import { Button } from '../../ui/Button';
 import { CollapsibleSection, FormField } from '../form';
 import type { ProtocolSectionProps } from './types';
@@ -89,7 +90,7 @@ export const FtpSection: FC<ProtocolSectionProps> = ({
           {/* FTP Users */}
           <div className="space-y-3">
             <h4 className="text-sm font-medium text-white flex items-center gap-2">
-              <Folder className="h-4 w-4 text-violet-400" />
+              <Folder className={`${iconSizes.md} text-violet-400`} />
               FTP Users
             </h4>
             {(device.ftp.users || []).map((user: FTPUser, index: number) => (
@@ -154,7 +155,7 @@ export const FtpSection: FC<ProtocolSectionProps> = ({
             <Button
               variant="outline"
               size="sm"
-              leftIcon={<Plus className="h-4 w-4" />}
+              leftIcon={<Plus className={iconSizes.md} />}
               onClick={() => {
                 const users = [
                   ...(device.ftp?.users || []),

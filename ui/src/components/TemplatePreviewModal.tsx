@@ -3,6 +3,7 @@ import { type FC, useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { applyTemplate } from '../api/client';
 import type { Template, TemplateContent } from '../api/types';
+import { iconSizes } from '../constants/sizes';
 import { Button } from '../ui/Button';
 import { Tag } from '../ui/Tag';
 import { SmallText } from '../ui/Typography';
@@ -116,7 +117,7 @@ export const TemplatePreviewModal: FC<TemplatePreviewModalProps> = ({
         <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
           <div className="flex items-center gap-3">
             <div className="rounded-lg bg-violet-500/20 p-2">
-              <FileCode className="h-5 w-5 text-violet-300" />
+              <FileCode className={`${iconSizes.lg} text-violet-300`} />
             </div>
             <div>
               <h2 id="modal-title" className="text-lg font-semibold text-white">
@@ -133,7 +134,7 @@ export const TemplatePreviewModal: FC<TemplatePreviewModalProps> = ({
             className="rounded-lg p-2 text-gray-400 hover:bg-white/10 hover:text-white transition-colors"
             aria-label="Close modal"
           >
-            <X className="h-5 w-5" />
+            <X className={iconSizes.lg} />
           </button>
         </div>
 
@@ -193,7 +194,7 @@ export const TemplatePreviewModal: FC<TemplatePreviewModalProps> = ({
             <Button
               variant="ghost"
               size="sm"
-              leftIcon={<Copy className="h-4 w-4" />}
+              leftIcon={<Copy className={iconSizes.md} />}
               onClick={onCopy}
               disabled={!content}
             >
@@ -202,7 +203,7 @@ export const TemplatePreviewModal: FC<TemplatePreviewModalProps> = ({
             <Button
               variant="ghost"
               size="sm"
-              leftIcon={<Download className="h-4 w-4" />}
+              leftIcon={<Download className={iconSizes.md} />}
               onClick={handleDownload}
               disabled={!content}
             >
@@ -216,7 +217,7 @@ export const TemplatePreviewModal: FC<TemplatePreviewModalProps> = ({
               </Button>
               <Button
                 variant="outline"
-                leftIcon={<Pencil className="h-4 w-4" />}
+                leftIcon={<Pencil className={iconSizes.md} />}
                 onClick={handleEditCopy}
                 disabled={editing || !content}
                 title="Clone this template to your saved configs and open the device editor"

@@ -1,6 +1,7 @@
 import { FileInput } from 'lucide-react';
 import { type FC, useState } from 'react';
 import { importConfig } from '../../api/client';
+import { iconSizes } from '../../constants/sizes';
 import { Button } from '../../ui/Button';
 import { Card, CardContent } from '../../ui/Card';
 import { H2, P, SmallText } from '../../ui/Typography';
@@ -58,7 +59,7 @@ export const JavaDslImportCard: FC = () => {
     <Card className="border-white/5 bg-gray-900/70">
       <CardContent className="space-y-4">
         <H2 className="mb-0 flex items-center gap-2">
-          <FileInput className="h-5 w-5 text-emerald-300" />
+          <FileInput className={`${iconSizes.lg} text-emerald-300`} />
           Import legacy config (Java DSL → YAML)
         </H2>
         <P className="text-sm text-gray-400">

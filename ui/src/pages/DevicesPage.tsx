@@ -3,6 +3,7 @@ import { type ChangeEvent, type FC, memo, useEffect, useState } from 'react';
 import { fetchConfig, fetchDevices, fetchFiles, updateConfig } from '../api/client';
 import type { DeviceSummary, FileEntry } from '../api/types';
 import { POLL_INTERVALS } from '../constants/polling';
+import { iconSizes } from '../constants/sizes';
 import { useApiResource } from '../hooks/useApiResource';
 import { useVirtualScroll } from '../hooks/useVirtualScroll';
 import { BaseCard } from '../ui/BaseCard';
@@ -39,7 +40,7 @@ const DeviceListCard: FC = () => {
     <BaseCard<DeviceSummary[]>
       title="Config workspace"
       subtitle="Devices rendered from active YAML config"
-      icon={<Server className="h-5 w-5 text-cyan-300" />}
+      icon={<Server className={`${iconSizes.lg} text-cyan-300`} />}
       data={devices}
       loading={loading && !devices}
       error={error?.message}
@@ -220,7 +221,7 @@ const ConfigEditorCard: FC = () => {
     <BaseCard<{ content: string; path: string; modifiedAt: string; sizeBytes: number }>
       title="YAML editor"
       subtitle="Edit active configuration"
-      icon={<FileCog className="h-5 w-5 text-emerald-300" />}
+      icon={<FileCog className={`${iconSizes.lg} text-emerald-300`} />}
       data={data}
       loading={loading && !data}
       error={error?.message}

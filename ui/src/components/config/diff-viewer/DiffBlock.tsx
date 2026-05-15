@@ -1,5 +1,6 @@
 import { ChevronLeft, ChevronRight, ChevronsLeftRight } from 'lucide-react';
 import { type FC, memo } from 'react';
+import { iconSizes } from '../../../constants/sizes';
 import { Button } from '../../../ui/Button';
 import { Tag } from '../../../ui/Tag';
 import { SmallText } from '../../../ui/Typography';
@@ -42,7 +43,7 @@ const MergeControls: FC<{
       variant={decision?.choice === 'left' ? undefined : 'outline'}
       tone={decision?.choice === 'left' ? 'violet' : undefined}
       onClick={() => onDecision('left')}
-      leftIcon={<ChevronLeft className="h-3 w-3" />}
+      leftIcon={<ChevronLeft className={iconSizes.xs} />}
     >
       Left
     </Button>
@@ -51,7 +52,7 @@ const MergeControls: FC<{
       variant={decision?.choice === 'both' ? undefined : 'outline'}
       tone={decision?.choice === 'both' ? 'violet' : undefined}
       onClick={() => onDecision('both')}
-      leftIcon={<ChevronsLeftRight className="h-3 w-3" />}
+      leftIcon={<ChevronsLeftRight className={iconSizes.xs} />}
     >
       Both
     </Button>
@@ -60,7 +61,7 @@ const MergeControls: FC<{
       variant={decision?.choice === 'right' ? undefined : 'outline'}
       tone={decision?.choice === 'right' ? 'violet' : undefined}
       onClick={() => onDecision('right')}
-      leftIcon={<ChevronRight className="h-3 w-3" />}
+      leftIcon={<ChevronRight className={iconSizes.xs} />}
     >
       Right
     </Button>

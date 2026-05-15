@@ -1,6 +1,7 @@
 import { AlertCircle, Plus, Search, Server } from 'lucide-react';
 import type { FC } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { iconSizes } from '../../constants/sizes';
 import { Button } from '../../ui/Button';
 import { Card, CardContent } from '../../ui/Card';
 import { DeviceCardGridSkeleton, DeviceTableSkeleton } from '../../ui/Skeleton';
@@ -73,7 +74,7 @@ export const DeviceListEmptyState: FC = () => {
         <Button
           tone="violet"
           className="mt-4"
-          leftIcon={<Plus className="h-4 w-4" />}
+          leftIcon={<Plus className={iconSizes.md} />}
           onClick={() => navigate('/device-config/new')}
         >
           Add Device

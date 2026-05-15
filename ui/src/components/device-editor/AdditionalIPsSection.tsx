@@ -1,6 +1,7 @@
 import { Plus, X } from 'lucide-react';
 import type { FC } from 'react';
 import type { Device } from '../../api/types';
+import { iconSizes } from '../../constants/sizes';
 import { Button } from '../../ui/Button';
 import { SmallText } from '../../ui/Typography';
 import { CollapsibleSection } from '../form/CollapsibleSection';
@@ -57,7 +58,7 @@ export const AdditionalIPsSection: FC<AdditionalIPsSectionProps> = ({
         <Button
           variant="outline"
           size="sm"
-          leftIcon={<Plus className="h-4 w-4" />}
+          leftIcon={<Plus className={iconSizes.md} />}
           onClick={handleAddIp}
         >
           Add IP Address

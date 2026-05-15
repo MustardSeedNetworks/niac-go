@@ -247,9 +247,9 @@ const LogEntryRow: FC<{ log: LogEntry; searchQuery: string }> = memo(({ log, sea
           aria-label="Copy log entry"
         >
           {copied ? (
-            <Check className="h-3.5 w-3.5 text-green-400" />
+            <Check className={`${iconSizes.sm} text-green-400`} />
           ) : (
-            <Copy className="h-3.5 w-3.5" />
+            <Copy className={iconSizes.sm} />
           )}
         </button>
       </div>

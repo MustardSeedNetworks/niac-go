@@ -1,6 +1,7 @@
 import { Radio } from 'lucide-react';
 import type { FC } from 'react';
 import type { TrafficConfig } from '../../api/types';
+import { iconSizes } from '../../constants/sizes';
 import { CollapsibleSection, FormField } from '../form';
 import type { ProtocolSectionProps } from './types';
 
@@ -50,7 +51,7 @@ export const TrafficSection: FC<ProtocolSectionProps> = ({
           <div className="rounded-lg border border-white/5 bg-gray-950/40 p-4 space-y-3">
             <div className="flex items-center justify-between">
               <h4 className="text-sm font-medium text-white flex items-center gap-2">
-                <Radio className="h-4 w-4 text-violet-400" />
+                <Radio className={`${iconSizes.md} text-violet-400`} />
                 ARP Announcements
               </h4>
               <label className="relative inline-flex items-center cursor-pointer">
@@ -102,7 +103,7 @@ export const TrafficSection: FC<ProtocolSectionProps> = ({
           <div className="rounded-lg border border-white/5 bg-gray-950/40 p-4 space-y-3">
             <div className="flex items-center justify-between">
               <h4 className="text-sm font-medium text-white flex items-center gap-2">
-                <Radio className="h-4 w-4 text-violet-400" />
+                <Radio className={`${iconSizes.md} text-violet-400`} />
                 Periodic Pings
               </h4>
               <label className="relative inline-flex items-center cursor-pointer">
@@ -177,7 +178,7 @@ export const TrafficSection: FC<ProtocolSectionProps> = ({
           <div className="rounded-lg border border-white/5 bg-gray-950/40 p-4 space-y-3">
             <div className="flex items-center justify-between">
               <h4 className="text-sm font-medium text-white flex items-center gap-2">
-                <Radio className="h-4 w-4 text-violet-400" />
+                <Radio className={`${iconSizes.md} text-violet-400`} />
                 Random Traffic
               </h4>
               <label className="relative inline-flex items-center cursor-pointer">
