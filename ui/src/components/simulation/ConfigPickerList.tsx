@@ -1,4 +1,4 @@
-import { Check, Eye, FileCode, FolderOpen, HardDrive } from 'lucide-react';
+import { Check, Eye, FileCode, FolderOpen, HardDrive, Star } from 'lucide-react';
 import type { FC } from 'react';
 import { iconSizes } from '../../constants/sizes';
 import { Tag } from '../../ui/Tag';
@@ -13,96 +13,151 @@ import {
 interface SharedItemProps {
   item: ConfigItem;
   selected: boolean;
+  favorited: boolean;
   onSelect: (item: ConfigItem) => void;
+  onToggleFavorite: (key: string) => void;
   onView: (item: ConfigItem) => void;
   onClearLocal: () => void;
 }
 
-/**
- * sourceTagFor stamps a one-word colour-coded badge onto a config row
- * so the user can tell at a glance whether they're looking at a
- * built-in template, a saved YAML, or the one-shot local upload.
- */
-function sourceTagFor(item: ConfigItem) {
-  if (item.kind === 'builtin')
-    return (
-      <Tag colorScheme="purple" className="text-[10px]">
-        Built-in
-      </Tag>
-    );
-  if (item.kind === 'saved')
-    return (
-      <Tag colorScheme="green" className="text-[10px]">
-        Saved
-      </Tag>
-    );
-  return (
-    <Tag colorScheme="blue" className="text-[10px]">
-      Local
-    </Tag>
-  );
+export interface ConfigSections {
+  local: ConfigItem[];
+  favorites: ConfigItem[];
+  all: ConfigItem[];
 }
 
 /**
- * ConfigsList chooses between the card-grid view and the compact-list
- * view based on viewMode, and surfaces the loading + empty states.
- * The card / row presenters live below.
+ * ConfigsList renders the network list as up to three zones:
+ *   1. Local upload (only when the user has picked a file on this page)
+ *   2. Favorites   (only when there are starred entries — hidden during search)
+ *   3. All         (everything else, or all matches when searching)
+ *
+ * Each zone gets a small heading with a count so the list stays scannable
+ * even when there are dozens of saved networks.
  */
 export const ConfigsList: FC<{
-  items: ConfigItem[];
+  sections: ConfigSections;
   loading: boolean;
   viewMode: ViewMode;
   isSelected: (item: ConfigItem) => boolean;
+  isFavorite: (key: string) => boolean;
   onSelect: (item: ConfigItem) => void;
+  onToggleFavorite: (key: string) => void;
   onView: (item: ConfigItem) => void;
   onClearLocal: () => void;
-}> = ({ items, loading, viewMode, isSelected, onSelect, onView, onClearLocal }) => {
+  searching: boolean;
+}> = ({
+  sections,
+  loading,
+  viewMode,
+  isSelected,
+  isFavorite,
+  onSelect,
+  onToggleFavorite,
+  onView,
+  onClearLocal,
+  searching,
+}) => {
   if (loading) {
-    return <SmallText className="text-gray-500">Loading configs…</SmallText>;
+    return <SmallText className="text-gray-500">Loading networks…</SmallText>;
   }
-  if (items.length === 0) {
+
+  const total = sections.local.length + sections.favorites.length + sections.all.length;
+  if (total === 0) {
     return (
       <SmallText className="text-gray-500">
-        Nothing matches. Try a different search, switch the source filter, or upload a local YAML
-        with the button above.
+        Nothing matches. Try a different search or upload a local YAML with the button above.
       </SmallText>
     );
   }
 
-  if (viewMode === 'grid') {
+  const renderSection = (label: string, items: ConfigItem[]) => {
+    if (items.length === 0) return null;
     return (
-      <div className="grid max-h-[420px] grid-cols-1 gap-3 overflow-y-auto pr-1 sm:grid-cols-2 xl:grid-cols-3">
-        {items.map((item) => (
-          <ConfigCard
-            key={item.key}
-            item={item}
-            selected={isSelected(item)}
-            onSelect={onSelect}
-            onView={onView}
-            onClearLocal={onClearLocal}
-          />
-        ))}
-      </div>
+      <section className="space-y-2" key={label}>
+        <header className="flex items-baseline gap-2">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-400">{label}</h3>
+          <span className="text-xs text-gray-500">· {items.length}</span>
+        </header>
+        {viewMode === 'grid' ? (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {items.map((item) => (
+              <ConfigCard
+                key={item.key}
+                item={item}
+                selected={isSelected(item)}
+                favorited={isFavorite(item.key)}
+                onSelect={onSelect}
+                onToggleFavorite={onToggleFavorite}
+                onView={onView}
+                onClearLocal={onClearLocal}
+              />
+            ))}
+          </div>
+        ) : (
+          <ul className="divide-y divide-white/5 overflow-hidden rounded-lg border border-white/10 bg-gray-950/40">
+            {items.map((item) => (
+              <ConfigRow
+                key={item.key}
+                item={item}
+                selected={isSelected(item)}
+                favorited={isFavorite(item.key)}
+                onSelect={onSelect}
+                onToggleFavorite={onToggleFavorite}
+                onView={onView}
+                onClearLocal={onClearLocal}
+              />
+            ))}
+          </ul>
+        )}
+      </section>
     );
-  }
+  };
 
   return (
-    <ul className="max-h-72 divide-y divide-white/5 overflow-y-auto rounded-lg border border-white/10 bg-gray-950/40">
-      {items.map((item) => (
-        <ConfigRow
-          key={item.key}
-          item={item}
-          selected={isSelected(item)}
-          onSelect={onSelect}
-          onView={onView}
-          onClearLocal={onClearLocal}
-        />
-      ))}
-    </ul>
+    <div className="max-h-[480px] space-y-4 overflow-y-auto pr-1">
+      {renderSection('Local upload', sections.local)}
+      {!searching && renderSection('Favorites', sections.favorites)}
+      {renderSection(searching ? 'Results' : 'All networks', sections.all)}
+    </div>
   );
 };
 
-const ConfigCard: FC<SharedItemProps> = ({ item, selected, onSelect, onView, onClearLocal }) => {
+const FavoriteStar: FC<{
+  itemKey: string;
+  favorited: boolean;
+  onToggle: (key: string) => void;
+  compact?: boolean;
+}> = ({ itemKey, favorited, onToggle, compact }) => (
+  <button
+    type="button"
+    onClick={(e) => {
+      e.stopPropagation();
+      onToggle(itemKey);
+    }}
+    aria-pressed={favorited}
+    aria-label={favorited ? 'Remove from favorites' : 'Add to favorites'}
+    title={favorited ? 'Remove from favorites' : 'Add to favorites'}
+    className={`rounded p-1 transition-colors ${
+      favorited ? 'text-amber-300 hover:text-amber-200' : 'text-gray-500 hover:text-amber-300'
+    } ${compact ? '' : 'hover:bg-white/5'}`}
+  >
+    <Star
+      className={compact ? iconSizes.sm : iconSizes.md}
+      fill={favorited ? 'currentColor' : 'none'}
+    />
+  </button>
+);
+
+const ConfigCard: FC<SharedItemProps> = ({
+  item,
+  selected,
+  favorited,
+  onSelect,
+  onToggleFavorite,
+  onView,
+  onClearLocal,
+}) => {
   const Icon =
     item.kind === 'builtin'
       ? (TEMPLATE_TYPE_ICON[item.template.type] ?? FileCode)
@@ -128,7 +183,9 @@ const ConfigCard: FC<SharedItemProps> = ({ item, selected, onSelect, onView, onC
         <div className={`rounded-md border p-2 ${tint}`}>
           <Icon className={iconSizes.lg} />
         </div>
-        {sourceTagFor(item)}
+        {item.kind !== 'local' && (
+          <FavoriteStar itemKey={item.key} favorited={favorited} onToggle={onToggleFavorite} />
+        )}
       </div>
       <div>
         <div className="font-semibold text-white">{item.name}</div>
@@ -160,7 +217,7 @@ const ConfigCard: FC<SharedItemProps> = ({ item, selected, onSelect, onView, onC
             type="button"
             onClick={() => onSelect(item)}
             className="flex-1 rounded bg-violet-500/20 px-2 py-1.5 text-xs font-medium text-violet-100 ring-1 ring-violet-400/40 hover:bg-violet-500/30"
-            title="Pick this config — you'll still need to click Start Simulation below to run it"
+            title="Pick this network — click Start Simulation below to run it"
           >
             Pick
           </button>
@@ -190,29 +247,39 @@ const ConfigCard: FC<SharedItemProps> = ({ item, selected, onSelect, onView, onC
   );
 };
 
-const ConfigRow: FC<SharedItemProps> = ({ item, selected, onSelect, onView, onClearLocal }) => (
+const ConfigRow: FC<SharedItemProps> = ({
+  item,
+  selected,
+  favorited,
+  onSelect,
+  onToggleFavorite,
+  onView,
+  onClearLocal,
+}) => (
   <li
     className={`flex items-center gap-3 px-3 py-2 transition-colors ${
       selected ? 'bg-violet-500/10' : 'hover:bg-white/5'
     }`}
   >
+    {item.kind !== 'local' && (
+      <FavoriteStar itemKey={item.key} favorited={favorited} onToggle={onToggleFavorite} compact />
+    )}
     <button
       type="button"
       onClick={() => onSelect(item)}
       className="flex-1 text-left"
-      title={`Use ${item.name}`}
+      title={`Pick ${item.name}`}
     >
       <div className="flex items-center gap-2">
         <span className="font-medium text-white">{item.name}</span>
-        {sourceTagFor(item)}
         {item.kind !== 'local' && (
           <Tag colorScheme="purple" className="text-[10px]">
             {item.deviceCount} {item.deviceCount === 1 ? 'device' : 'devices'}
           </Tag>
         )}
-        {item.kind === 'builtin' && (
-          <Tag colorScheme="gray" className="text-[10px] capitalize">
-            {item.template.type}
+        {item.kind === 'local' && (
+          <Tag colorScheme="blue" className="text-[10px]">
+            Local
           </Tag>
         )}
       </div>

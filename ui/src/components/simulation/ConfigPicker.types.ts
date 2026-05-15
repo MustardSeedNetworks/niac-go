@@ -12,10 +12,9 @@ import type { Template, UserConfig } from '../../api/types';
  */
 
 export type ViewMode = 'grid' | 'list';
-export type SourceFilter = 'all' | 'builtin' | 'saved' | 'local';
 
 export const VIEW_PREF_KEY = 'niac.configs.viewMode';
-export const SOURCE_FILTER_PREF_KEY = 'niac.configs.sourceFilter';
+export const FAVORITES_STORAGE_KEY = 'niac.configs.favorites';
 
 export const TEMPLATE_TYPE_ICON: Record<Template['type'], FC<{ className?: string }>> = {
   basic: Globe,
