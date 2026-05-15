@@ -167,14 +167,13 @@ func (s *Server) startBackgroundTasks() {
 	go s.sseHub.Run()
 	s.logger.Info("[SSE] Server-Sent Events hub started")
 
-	// Log tee into the SSE hub is intentionally deferred. Wiring
-	// slog.SetDefault(NewSSELogHandler(...)) here caused the hub's
-	// Run loop to deadlock on certain code paths because the hub's
-	// own slog calls (registerClient logs "Client connected") fed
-	// back into the tee → Broadcast → log → tee → … The fix needs a
-	// reentrancy guard or an explicit "internal" channel that bypasses
-	// the SSE pipeline. Tracked separately. For now the Protocol Debug
-	// Console page will only show the device-CRUD log line until that
-	// lands; the rest of the stack's slog calls don't reach the UI.
-	_ = NewSSELogHandler
+	// Tee slog into the SSE hub so the Protocol Debug Console gets
+	// real-time daemon logs. Idempotent: the first call installs a
+	// single global wrapper around the then-current slog.Default; later
+	// calls (e.g. a second daemon in tests, hot reload) just rotate the
+	// active hub via an atomic pointer. That avoids the handler-chain-
+	// growth deadlock from the old SetDefault-on-every-Start design.
+	// The wrapper filters out "[SSE]"-prefixed records so the hub's
+	// own log lines don't recurse.
+	InstallSSELogTee(s.sseHub)
 }

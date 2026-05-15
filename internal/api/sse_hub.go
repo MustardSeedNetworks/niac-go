@@ -76,43 +76,47 @@ func (h *SSEHub) Stop() {
 }
 
 func (h *SSEHub) registerClient(client *SSEClient) {
-	logger := slog.Default()
+	// Collect log intent under the lock; emit AFTER releasing it.
+	// Holding h.mu while calling into slog risks deadlocking the hub
+	// goroutine — slog's default-handler chain ends at the stdlib
+	// log.Logger.Output, which has its own global mutex. If anything
+	// else in the process is contending on that mutex, the hub
+	// goroutine pins h.mu until log's mutex clears, which in turn
+	// prevents broadcastMessage (RLock on h.mu) from making progress.
+	var logEvent func()
 	h.mu.Lock()
-	defer h.mu.Unlock()
-
 	streamClients := h.clients[client.stream]
-
-	if len(streamClients) >= h.config.MaxClients {
-		logger.Warn(
-			"[SSE] Rejecting client for stream: max clients reached",
-			"stream",
-			client.stream,
-			"maxClients",
-			h.config.MaxClients,
-		)
+	switch {
+	case len(streamClients) >= h.config.MaxClients:
 		client.closed.Store(true)
 		close(client.send)
-
-		return
+		maxClients := h.config.MaxClients
+		logEvent = func() {
+			slog.Default().Warn(
+				"[SSE] Rejecting client for stream: max clients reached",
+				"stream", client.stream,
+				"maxClients", maxClients,
+			)
+		}
+	default:
+		streamClients[client] = true
+		total := len(streamClients)
+		logEvent = func() {
+			slog.Default().Info(
+				"[SSE] Client connected to stream",
+				"stream", client.stream,
+				"clientIP", client.clientIP,
+				"total", total,
+			)
+		}
 	}
-
-	streamClients[client] = true
-	logger.Info(
-		"[SSE] Client connected to stream",
-		"stream",
-		client.stream,
-		"clientIP",
-		client.clientIP,
-		"total",
-		len(streamClients),
-	)
+	h.mu.Unlock()
+	logEvent()
 }
 
 func (h *SSEHub) unregisterClient(client *SSEClient) {
-	logger := slog.Default()
+	var logEvent func()
 	h.mu.Lock()
-	defer h.mu.Unlock()
-
 	streamClients := h.clients[client.stream]
 	if _, ok := streamClients[client]; ok {
 		delete(streamClients, client)
@@ -121,8 +125,18 @@ func (h *SSEHub) unregisterClient(client *SSEClient) {
 			client.closed.Store(true)
 			close(client.send)
 		}
-
-		logger.Info("[SSE] Client disconnected from stream", "stream", client.stream, "remaining", len(streamClients))
+		remaining := len(streamClients)
+		logEvent = func() {
+			slog.Default().Info(
+				"[SSE] Client disconnected from stream",
+				"stream", client.stream,
+				"remaining", remaining,
+			)
+		}
+	}
+	h.mu.Unlock()
+	if logEvent != nil {
+		logEvent()
 	}
 }
 
@@ -150,10 +164,7 @@ func (h *SSEHub) broadcastMessage(msg *streamMessage) {
 }
 
 func (h *SSEHub) closeAllClients() {
-	logger := slog.Default()
 	h.mu.Lock()
-	defer h.mu.Unlock()
-
 	for stream, clients := range h.clients {
 		for client := range clients {
 			if !client.closed.Load() {
@@ -164,8 +175,13 @@ func (h *SSEHub) closeAllClients() {
 
 		h.clients[stream] = make(map[*SSEClient]bool)
 	}
+	h.mu.Unlock()
 
-	logger.Info("[SSE] All clients disconnected")
+	// Log AFTER releasing the hub lock — see registerClient for the
+	// reasoning. Particularly important here because this fires on
+	// shutdown, where the stdlib log mutex is most contended (the
+	// test runner / panic handler also wants it).
+	slog.Default().Info("[SSE] All clients disconnected")
 }
 
 // Broadcast sends a message to all clients of a stream. Messages are
