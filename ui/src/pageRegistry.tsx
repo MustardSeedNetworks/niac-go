@@ -7,7 +7,6 @@ import {
   LineChart,
   Network,
   PlugZap,
-  Radar,
   Server,
   ShieldCheck,
   Terminal,
@@ -55,9 +54,6 @@ const PcapAnalyzerPage = lazy(() =>
 );
 const TrafficInjectionPage = lazy(() =>
   import('./pages/TrafficInjectionPage').then((m) => ({ default: m.TrafficInjectionPage })),
-);
-const NeighborsPage = lazy(() =>
-  import('./pages/NeighborsPage').then((m) => ({ default: m.NeighborsPage })),
 );
 const WalkValidatorPage = lazy(() =>
   import('./pages/WalkValidatorPage').then((m) => ({ default: m.WalkValidatorPage })),
@@ -418,37 +414,6 @@ export const pages: PageConfig[] = [
           For traffic on the running simulator, use <strong>Packets</strong>. This page is for
           static analysis of files you've captured elsewhere.
         </p>
-      </>
-    ),
-  },
-  {
-    path: '/neighbors',
-    label: 'Neighbors',
-    title: 'Discovery Neighbors',
-    description: 'Live CDP / LLDP / EDP / FDP neighbor table for the running simulation.',
-    icon: Radar,
-    component: NeighborsPage,
-    help: (
-      <>
-        <p>
-          Each row is one neighbor advertisement received by a simulated device's CDP / LLDP / EDP /
-          FDP listener. The table polls every 5 seconds.
-        </p>
-        <h4>How it differs from Topology</h4>
-        <p>
-          The <em>Topology</em> page renders the static, designed network from the YAML config
-          (links you specified). This page shows what the simulator's running protocol stack has
-          actually <em>discovered</em> over the wire — useful when validating that a device's
-          advertisements are seen by its neighbours.
-        </p>
-        <h4>Tips</h4>
-        <ul>
-          <li>Filter by protocol with the chips, or search by device / chassis ID.</li>
-          <li>
-            TTL counts down toward zero; when an advertisement isn't refreshed in time the entry
-            ages out of the table.
-          </li>
-        </ul>
       </>
     ),
   },

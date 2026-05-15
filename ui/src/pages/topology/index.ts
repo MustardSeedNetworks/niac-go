@@ -5,7 +5,7 @@
 export { DeviceDetailsPanel } from './DeviceDetailsPanel';
 export { DeviceNode } from './DeviceNode';
 export { createEdges, layoutNodes } from './layout';
-export { NeighborDiscoveryTable } from './NeighborDiscoveryTable';
+export { NeighborsView } from './NeighborsView';
 export { TopologyHeader } from './TopologyHeader';
 export { TopologyLegend } from './TopologyLegend';
 export type { DeviceNode as DeviceNodeType, DeviceNodeData, LinkEdge, LinkEdgeData } from './types';

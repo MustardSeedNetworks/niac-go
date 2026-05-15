@@ -14,14 +14,13 @@ import {
 import { type FC, useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '@xyflow/react/dist/style.css';
-import { Download, Layers, Network, RefreshCw, Wifi } from 'lucide-react';
+import { Download, Layers, Network, Radar, RefreshCw } from 'lucide-react';
 import { fetchDevices, fetchNeighbors, fetchTopology } from '../api/client';
 import type { DeviceSummary } from '../api/types';
 import { topologyDeviceColors as deviceColors } from '../constants/device-types';
 import { useApiResource } from '../hooks/useApiResource';
 import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
-import { Tag } from '../ui/Tag';
 import { H2, SmallText } from '../ui/Typography';
 import {
   createEdges,
@@ -31,6 +30,7 @@ import {
   type DeviceNodeType,
   type LinkEdge,
   layoutNodes,
+  NeighborsView,
   TopologyLegend,
 } from './topology';
 
@@ -74,6 +74,7 @@ export const TopologyPage: FC = () => {
   const [selectedDevice, setSelectedDevice] = useState<DeviceSummary | null>(null);
   const [showLegend, setShowLegend] = useState(true);
   const [showMinimap, setShowMinimap] = useState(true);
+  const [view, setView] = useState<'graph' | 'neighbors'>('graph');
 
   // Build graph from API data, merging trunk port links with neighbor-discovered links
   useEffect(() => {
@@ -203,6 +204,40 @@ export const TopologyPage: FC = () => {
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
+              <div
+                className="inline-flex rounded-lg border border-white/10 bg-gray-950/40 p-0.5"
+                role="tablist"
+                aria-label="Topology view"
+              >
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={view === 'graph'}
+                  onClick={() => setView('graph')}
+                  className={`flex items-center gap-1.5 rounded px-3 py-1 text-xs font-medium transition-colors ${
+                    view === 'graph'
+                      ? 'bg-cyan-500/20 text-cyan-100'
+                      : 'text-gray-400 hover:bg-white/5 hover:text-gray-200'
+                  }`}
+                >
+                  <Network className="w-3.5 h-3.5" />
+                  Graph
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={view === 'neighbors'}
+                  onClick={() => setView('neighbors')}
+                  className={`flex items-center gap-1.5 rounded px-3 py-1 text-xs font-medium transition-colors ${
+                    view === 'neighbors'
+                      ? 'bg-cyan-500/20 text-cyan-100'
+                      : 'text-gray-400 hover:bg-white/5 hover:text-gray-200'
+                  }`}
+                >
+                  <Radar className="w-3.5 h-3.5" />
+                  Neighbors
+                </button>
+              </div>
               <Button
                 variant="ghost"
                 size="sm"
@@ -212,173 +247,125 @@ export const TopologyPage: FC = () => {
               >
                 Refresh
               </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleExport}
-                leftIcon={<Download className="w-4 h-4" />}
-                disabled={nodes.length === 0}
-              >
-                Export
-              </Button>
-              <Button
-                variant={showMinimap ? 'outline' : 'ghost'}
-                size="sm"
-                onClick={() => setShowMinimap(!showMinimap)}
-                leftIcon={<Layers className="w-4 h-4" />}
-              >
-                Minimap
-              </Button>
+              {view === 'graph' && (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleExport}
+                    leftIcon={<Download className="w-4 h-4" />}
+                    disabled={nodes.length === 0}
+                  >
+                    Export
+                  </Button>
+                  <Button
+                    variant={showMinimap ? 'outline' : 'ghost'}
+                    size="sm"
+                    onClick={() => setShowMinimap(!showMinimap)}
+                    leftIcon={<Layers className="w-4 h-4" />}
+                  >
+                    Minimap
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </CardContent>
       </Card>
 
       {/* Topology Visualization */}
-      <Card className="border-white/5 bg-gray-900/70 overflow-hidden">
-        <div className="h-[600px] relative">
-          {loading ? (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="flex flex-col items-center gap-3">
-                <RefreshCw className="w-8 h-8 text-brand-400 animate-spin" />
-                <SmallText className="text-gray-400">Loading topology...</SmallText>
+      {view === 'graph' && (
+        <Card className="border-white/5 bg-gray-900/70 overflow-hidden">
+          <div className="h-[600px] relative">
+            {loading ? (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="flex flex-col items-center gap-3">
+                  <RefreshCw className="w-8 h-8 text-brand-400 animate-spin" />
+                  <SmallText className="text-gray-400">Loading topology...</SmallText>
+                </div>
               </div>
-            </div>
-          ) : nodes.length === 0 ? (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="text-center">
-                <Network className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-                <p className="text-gray-400 mb-2">No topology data available</p>
-                <SmallText className="text-gray-500">
-                  Configure devices with trunk ports or port-channels to visualize connections
-                </SmallText>
-              </div>
-            </div>
-          ) : (
-            <>
-              {edges.length === 0 && (
-                // z-50 wins over ReactFlow's internal Panel chrome and
-                // pointer-events-none lets pan/zoom drag through the
-                // banner so it doesn't trap clicks on the canvas below.
-                <div className="pointer-events-none absolute top-0 left-0 right-0 z-50 bg-yellow-900/60 border-b border-yellow-500/40 px-4 py-2 text-center backdrop-blur-sm">
-                  <SmallText className="text-yellow-200">
-                    Devices loaded, but the running config has no declared topology links. Add{' '}
-                    <code className="text-yellow-100">trunk_ports:</code> or{' '}
-                    <code className="text-yellow-100">port_channels:</code> entries to your YAML to
-                    visualise connections. Live LLDP/CDP/EDP/FDP neighbours are on the{' '}
-                    <strong>Neighbors</strong> page.
+            ) : nodes.length === 0 ? (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="text-center">
+                  <Network className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+                  <p className="text-gray-400 mb-2">No topology data available</p>
+                  <SmallText className="text-gray-500">
+                    Configure devices with trunk ports or port-channels to visualize connections
                   </SmallText>
                 </div>
-              )}
-              <ReactFlow
-                nodes={nodes}
-                edges={edges}
-                onNodesChange={onNodesChange}
-                onEdgesChange={onEdgesChange}
-                onConnect={onConnect}
-                nodeTypes={nodeTypes}
-                fitView={true}
-                fitViewOptions={{ padding: 0.2 }}
-                minZoom={0.2}
-                maxZoom={2}
-                defaultEdgeOptions={{
-                  type: 'smoothstep',
-                }}
-                proOptions={{ hideAttribution: true }}
-              >
-                <Background
-                  variant={BackgroundVariant.Dots}
-                  gap={20}
-                  size={1}
-                  color="rgba(255, 255, 255, 0.05)"
-                />
-                <Controls showZoom={true} showFitView={true} showInteractive={false} />
-                {showMinimap && (
-                  <MiniMap
-                    nodeColor={getMinimapNodeColor}
-                    maskColor="rgba(0, 0, 0, 0.8)"
-                    pannable={true}
-                    zoomable={true}
-                  />
+              </div>
+            ) : (
+              <>
+                {edges.length === 0 && (
+                  // z-50 wins over ReactFlow's internal Panel chrome and
+                  // pointer-events-none lets pan/zoom drag through the
+                  // banner so it doesn't trap clicks on the canvas below.
+                  <div className="pointer-events-none absolute top-0 left-0 right-0 z-50 bg-yellow-900/60 border-b border-yellow-500/40 px-4 py-2 text-center backdrop-blur-sm">
+                    <SmallText className="text-yellow-200">
+                      Devices loaded, but the running config has no declared topology links. Add{' '}
+                      <code className="text-yellow-100">trunk_ports:</code> or{' '}
+                      <code className="text-yellow-100">port_channels:</code> entries to your YAML
+                      to visualise connections. Live LLDP/CDP/EDP/FDP neighbours are on the{' '}
+                      <strong>Neighbors</strong> page.
+                    </SmallText>
+                  </div>
                 )}
-
-                {/* Legend Panel */}
-                <Panel position="top-left">
-                  <TopologyLegend show={showLegend} onToggle={() => setShowLegend(!showLegend)} />
-                </Panel>
-
-                {/* Selected Device Panel */}
-                {selectedDevice && (
-                  <DeviceDetailsPanel
-                    device={selectedDevice}
-                    onClose={() => setSelectedDevice(null)}
-                    onEdit={(device) => {
-                      navigate(`/device-config/${device.name}`);
-                    }}
+                <ReactFlow
+                  nodes={nodes}
+                  edges={edges}
+                  onNodesChange={onNodesChange}
+                  onEdgesChange={onEdgesChange}
+                  onConnect={onConnect}
+                  nodeTypes={nodeTypes}
+                  fitView={true}
+                  fitViewOptions={{ padding: 0.2 }}
+                  minZoom={0.2}
+                  maxZoom={2}
+                  defaultEdgeOptions={{
+                    type: 'smoothstep',
+                  }}
+                  proOptions={{ hideAttribution: true }}
+                >
+                  <Background
+                    variant={BackgroundVariant.Dots}
+                    gap={20}
+                    size={1}
+                    color="rgba(255, 255, 255, 0.05)"
                   />
-                )}
-              </ReactFlow>
-            </>
-          )}
-        </div>
-      </Card>
+                  <Controls showZoom={true} showFitView={true} showInteractive={false} />
+                  {showMinimap && (
+                    <MiniMap
+                      nodeColor={getMinimapNodeColor}
+                      maskColor="rgba(0, 0, 0, 0.8)"
+                      pannable={true}
+                      zoomable={true}
+                    />
+                  )}
 
-      {/* Neighbor Discovery Table */}
-      {neighbors && neighbors.length > 0 && (
-        <Card className="border-white/5 bg-gray-900/70">
-          <CardContent>
-            <H2 className="mb-4 flex items-center gap-2">
-              <Wifi className="w-5 h-5 text-pink-400" />
-              Discovered Neighbors
-            </H2>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-white/10 text-sm">
-                <thead className="bg-gray-950/60 text-xs uppercase tracking-wide text-gray-400">
-                  <tr>
-                    <th className="px-4 py-3 text-left">Local Device</th>
-                    <th className="px-4 py-3 text-left">Remote Device</th>
-                    <th className="px-4 py-3 text-left">Protocol</th>
-                    <th className="px-4 py-3 text-left">Remote Port</th>
-                    <th className="px-4 py-3 text-left">Management IP</th>
-                    <th className="px-4 py-3 text-left">TTL</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/5 text-gray-300">
-                  {neighbors.map((neighbor, idx) => (
-                    <tr
-                      key={`${neighbor.localDevice}-${neighbor.remoteDevice}-${idx}`}
-                      className="hover:bg-white/5"
-                    >
-                      <td className="px-4 py-3 font-semibold text-white">{neighbor.localDevice}</td>
-                      <td className="px-4 py-3 text-white">{neighbor.remoteDevice}</td>
-                      <td className="px-4 py-3">
-                        <Tag
-                          colorScheme={
-                            neighbor.protocol === 'LLDP'
-                              ? 'purple'
-                              : neighbor.protocol === 'CDP'
-                                ? 'blue'
-                                : neighbor.protocol === 'EDP'
-                                  ? 'green'
-                                  : 'gray'
-                          }
-                        >
-                          {neighbor.protocol}
-                        </Tag>
-                      </td>
-                      <td className="px-4 py-3 font-mono text-xs">{neighbor.remotePort || '—'}</td>
-                      <td className="px-4 py-3 font-mono text-xs text-blue-300">
-                        {neighbor.managementAddress || '—'}
-                      </td>
-                      <td className="px-4 py-3 text-gray-400">{neighbor.ttl}s</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
+                  {/* Legend Panel */}
+                  <Panel position="top-left">
+                    <TopologyLegend show={showLegend} onToggle={() => setShowLegend(!showLegend)} />
+                  </Panel>
+
+                  {/* Selected Device Panel */}
+                  {selectedDevice && (
+                    <DeviceDetailsPanel
+                      device={selectedDevice}
+                      onClose={() => setSelectedDevice(null)}
+                      onEdit={(device) => {
+                        navigate(`/device-config/${device.name}`);
+                      }}
+                    />
+                  )}
+                </ReactFlow>
+              </>
+            )}
+          </div>
         </Card>
       )}
+
+      {/* Neighbors view — replaces the standalone /neighbors page */}
+      {view === 'neighbors' && <NeighborsView />}
     </div>
   );
 };

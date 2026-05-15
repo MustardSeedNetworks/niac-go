@@ -1,7 +1,15 @@
 import { type FC, useMemo, useState } from 'react';
-import { fetchNeighbors } from '../api/client';
-import { useApiResource } from '../hooks/useApiResource';
-import { Card, CardContent } from '../ui/Card';
+import { fetchNeighbors } from '../../api/client';
+import { useApiResource } from '../../hooks/useApiResource';
+import { Card, CardContent } from '../../ui/Card';
+
+/**
+ * NeighborsView renders the live CDP / LLDP / EDP / FDP discovery table —
+ * the protocol-filter chip row, the search box, and the per-neighbor
+ * table. Used inside TopologyPage as the "Neighbors" tab. The page
+ * chrome supplies the title + description; this component renders the
+ * filterable list only.
+ */
 
 const PROTOCOL_FILTERS = ['all', 'CDP', 'LLDP', 'EDP', 'FDP'] as const;
 type ProtocolFilter = (typeof PROTOCOL_FILTERS)[number];
@@ -25,7 +33,7 @@ const formatRelative = (iso: string): string => {
   return `${minutes}m ago`;
 };
 
-export const NeighborsPage: FC = () => {
+export const NeighborsView: FC = () => {
   const {
     data: neighbors,
     loading,
@@ -61,21 +69,9 @@ export const NeighborsPage: FC = () => {
   }, [neighbors]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <Card className="border-white/5 bg-gray-900/70">
-        <CardContent className="space-y-4">
-          <header className="flex items-baseline justify-between">
-            <div>
-              <h1 className="text-2xl font-semibold text-white">Neighbors</h1>
-              <p className="text-sm text-gray-400">
-                Live discovery (CDP / LLDP / EDP / FDP) collected by the running simulation.
-              </p>
-            </div>
-            <div className="text-xs text-gray-500">
-              Polling every {NEIGHBOR_POLL_MS / 1000}s · {neighbors?.length ?? 0} entries
-            </div>
-          </header>
-
+        <CardContent className="space-y-3">
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-2">
               {PROTOCOL_FILTERS.map((p) => {
@@ -112,6 +108,9 @@ export const NeighborsPage: FC = () => {
               className="ml-auto w-64 rounded border border-white/5 bg-gray-950/60 px-3 py-1.5 text-sm text-gray-100 placeholder-gray-500 focus:border-cyan-400 focus:outline-none"
               aria-label="Filter neighbors"
             />
+            <span className="text-xs text-gray-500">
+              Polling every {NEIGHBOR_POLL_MS / 1000}s · {neighbors?.length ?? 0} entries
+            </span>
           </div>
         </CardContent>
       </Card>
