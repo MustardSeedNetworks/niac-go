@@ -29,6 +29,7 @@ import type { ReactElement, ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import { fetchInterfaces } from '../api/client';
 import type { NetworkInterface } from '../api/types';
+import { iconSizes } from '../constants/sizes';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import { badge, cn, drawer, layout, spacing } from '../styles/theme';
 import { SimulationSection } from './settings/SimulationSection';
@@ -415,7 +416,7 @@ function AboutSection({ version }: AboutSectionProps): ReactElement {
         <div className="bg-white/5 rounded-lg p-4 space-y-3">
           <div className="flex items-center gap-3">
             <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-violet-500 to-violet-700 flex items-center justify-center shadow-lg shadow-violet-500/30">
-              <Network className="h-6 w-6 text-white" />
+              <Network className={`${iconSizes.xl} text-white`} />
             </div>
             <div>
               <h4 className="text-lg font-bold text-white">NIAC</h4>

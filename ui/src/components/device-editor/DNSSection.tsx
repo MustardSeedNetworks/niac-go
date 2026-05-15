@@ -1,6 +1,7 @@
 import { Globe, Plus, X } from 'lucide-react';
 import type { FC } from 'react';
 import type { DNSConfig, DNSRecord } from '../../api/types';
+import { iconSizes } from '../../constants/sizes';
 import { Button } from '../../ui/Button';
 import { CollapsibleSection } from '../form';
 import type { ProtocolSectionProps } from './types';
@@ -41,7 +42,7 @@ export const DnsSection: FC<ProtocolSectionProps> = ({
           {/* Forward Records (A records) */}
           <div className="space-y-3">
             <h4 className="text-sm font-medium text-white flex items-center gap-2">
-              <Globe className="h-4 w-4 text-violet-400" />
+              <Globe className={`${iconSizes.md} text-violet-400`} />
               Forward Records (A Records)
             </h4>
             {(device.dns.forwardRecords || []).map((record: DNSRecord, index: number) => (
@@ -106,7 +107,7 @@ export const DnsSection: FC<ProtocolSectionProps> = ({
             <Button
               variant="outline"
               size="sm"
-              leftIcon={<Plus className="h-4 w-4" />}
+              leftIcon={<Plus className={iconSizes.md} />}
               onClick={() => {
                 const records = [
                   ...(device.dns?.forwardRecords || []),
@@ -122,7 +123,7 @@ export const DnsSection: FC<ProtocolSectionProps> = ({
           {/* Reverse Records (PTR records) */}
           <div className="space-y-3">
             <h4 className="text-sm font-medium text-white flex items-center gap-2">
-              <Globe className="h-4 w-4 text-violet-400" />
+              <Globe className={`${iconSizes.md} text-violet-400`} />
               Reverse Records (PTR Records)
             </h4>
             {(device.dns.reverseRecords || []).map((record: DNSRecord, index: number) => (
@@ -173,7 +174,7 @@ export const DnsSection: FC<ProtocolSectionProps> = ({
             <Button
               variant="outline"
               size="sm"
-              leftIcon={<Plus className="h-4 w-4" />}
+              leftIcon={<Plus className={iconSizes.md} />}
               onClick={() => {
                 const records = [
                   ...(device.dns?.reverseRecords || []),

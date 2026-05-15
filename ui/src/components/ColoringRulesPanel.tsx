@@ -1,5 +1,6 @@
 import { ArrowDown, ArrowUp, Plus, RotateCcw, Trash2, X } from 'lucide-react';
 import { type FC, memo, useCallback, useState } from 'react';
+import { iconSizes } from '../constants/sizes';
 import { Button } from '../ui/Button';
 import { SmallText } from '../ui/Typography';
 import type { ColoringRule } from '../utils/coloring-rules';
@@ -93,7 +94,7 @@ const RuleRow: FC<{
         className="p-1 text-gray-500 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
         title="Move up"
       >
-        <ArrowUp className="h-3.5 w-3.5" />
+        <ArrowUp className={iconSizes.sm} />
       </button>
       <button
         type="button"
@@ -102,7 +103,7 @@ const RuleRow: FC<{
         className="p-1 text-gray-500 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
         title="Move down"
       >
-        <ArrowDown className="h-3.5 w-3.5" />
+        <ArrowDown className={iconSizes.sm} />
       </button>
 
       {/* Delete */}
@@ -228,7 +229,7 @@ export const ColoringRulesPanel: FC<ColoringRulesPanelProps> = memo(
                 variant="ghost"
                 size="sm"
                 onClick={handleAdd}
-                leftIcon={<Plus className="h-4 w-4" />}
+                leftIcon={<Plus className={iconSizes.md} />}
               >
                 Add Rule
               </Button>
@@ -236,7 +237,7 @@ export const ColoringRulesPanel: FC<ColoringRulesPanelProps> = memo(
                 variant="ghost"
                 size="sm"
                 onClick={handleReset}
-                leftIcon={<RotateCcw className="h-4 w-4" />}
+                leftIcon={<RotateCcw className={iconSizes.md} />}
               >
                 Reset Defaults
               </Button>

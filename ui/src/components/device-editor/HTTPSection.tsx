@@ -1,6 +1,7 @@
 import { FileText, Plus, X } from 'lucide-react';
 import type { FC } from 'react';
 import type { HTTPConfig, HTTPEndpoint } from '../../api/types';
+import { iconSizes } from '../../constants/sizes';
 import { Button } from '../../ui/Button';
 import { CollapsibleSection, FormField } from '../form';
 import type { ProtocolSectionProps } from './types';
@@ -50,7 +51,7 @@ export const HttpSection: FC<ProtocolSectionProps> = ({
           {/* Endpoints */}
           <div className="space-y-3">
             <h4 className="text-sm font-medium text-white flex items-center gap-2">
-              <FileText className="h-4 w-4 text-violet-400" />
+              <FileText className={`${iconSizes.md} text-violet-400`} />
               Endpoints
             </h4>
             {(device.http.endpoints || []).map((endpoint: HTTPEndpoint, index: number) => (
@@ -153,7 +154,7 @@ export const HttpSection: FC<ProtocolSectionProps> = ({
             <Button
               variant="outline"
               size="sm"
-              leftIcon={<Plus className="h-4 w-4" />}
+              leftIcon={<Plus className={iconSizes.md} />}
               onClick={() => {
                 const endpoints = [
                   ...(device.http?.endpoints || []),

@@ -10,6 +10,7 @@ import {
   useState,
 } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { iconSizes } from '../constants/sizes';
 
 export interface NavItem {
   path: string;
@@ -160,7 +161,7 @@ export const PrimaryNav: FC<PrimaryNavProps> = ({
           className="flex-shrink-0 p-1.5 rounded-lg bg-gray-800/80 text-gray-400 hover:text-white hover:bg-gray-700 transition-colors"
           aria-label="Scroll left"
         >
-          <ChevronLeft className="h-4 w-4" />
+          <ChevronLeft className={iconSizes.md} />
         </button>
       )}
 
@@ -210,7 +211,7 @@ export const PrimaryNav: FC<PrimaryNavProps> = ({
           className="flex-shrink-0 p-1.5 rounded-lg bg-gray-800/80 text-gray-400 hover:text-white hover:bg-gray-700 transition-colors"
           aria-label="Scroll right"
         >
-          <ChevronRight className="h-4 w-4" />
+          <ChevronRight className={iconSizes.md} />
         </button>
       )}
 
@@ -276,7 +277,7 @@ export const PageHeader: FC<PageHeaderProps> = ({
               title={`What is ${title}?`}
               className="rounded-full p-1.5 text-gray-400 hover:bg-white/10 hover:text-white"
             >
-              <HelpCircle className="h-5 w-5" />
+              <HelpCircle className={iconSizes.lg} />
             </button>
           )}
         </div>
@@ -413,7 +414,7 @@ export const Breadcrumb: FC<BreadcrumbProps> = ({ items, className = '' }) => (
   <nav className={`flex items-center gap-1 text-sm ${className}`} aria-label="Breadcrumb">
     {items.map((item, index) => (
       <div key={item.label} className="flex items-center gap-1">
-        {index > 0 && <ChevronRight className="h-4 w-4 text-gray-600" />}
+        {index > 0 && <ChevronRight className={`${iconSizes.md} text-gray-600`} />}
         {item.href ? (
           <Link to={item.href} className="text-gray-400 hover:text-white transition-colors">
             {item.label}

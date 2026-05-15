@@ -1,6 +1,7 @@
 import { Database, Plus, X } from 'lucide-react';
 import type { FC } from 'react';
 import type { DHCPConfig, DHCPLease } from '../../api/types';
+import { iconSizes } from '../../constants/sizes';
 import { Button } from '../../ui/Button';
 import { CollapsibleSection, FormField } from '../form';
 import type { ProtocolSectionProps } from './types';
@@ -108,7 +109,7 @@ export const DhcpSection: FC<ProtocolSectionProps> = ({
           {/* Static Leases */}
           <div className="space-y-3">
             <h4 className="text-sm font-medium text-white flex items-center gap-2">
-              <Database className="h-4 w-4 text-violet-400" />
+              <Database className={`${iconSizes.md} text-violet-400`} />
               Static Leases
             </h4>
             {(device.dhcp.clientLeases || []).map((lease: DHCPLease, index: number) => (
@@ -162,7 +163,7 @@ export const DhcpSection: FC<ProtocolSectionProps> = ({
             <Button
               variant="outline"
               size="sm"
-              leftIcon={<Plus className="h-4 w-4" />}
+              leftIcon={<Plus className={iconSizes.md} />}
               onClick={() => {
                 const leases = [
                   ...(device.dhcp?.clientLeases || []),

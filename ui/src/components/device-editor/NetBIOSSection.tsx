@@ -1,6 +1,7 @@
 import { Network } from 'lucide-react';
 import type { FC } from 'react';
 import type { NetBIOSConfig, NetBIOSService } from '../../api/types';
+import { iconSizes } from '../../constants/sizes';
 import { CollapsibleSection, FormField } from '../form';
 import type { ProtocolSectionProps } from './types';
 import { inputClassName } from './types';
@@ -104,7 +105,7 @@ export const NetBiosSection: FC<ProtocolSectionProps> = ({
           {/* Services */}
           <div className="space-y-3">
             <h4 className="text-sm font-medium text-white flex items-center gap-2">
-              <Network className="h-4 w-4 text-violet-400" />
+              <Network className={`${iconSizes.md} text-violet-400`} />
               NetBIOS Services
             </h4>
             <div className="flex flex-wrap gap-4">

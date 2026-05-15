@@ -1,6 +1,7 @@
 import { Filter, LayoutGrid, LayoutList, Search, X } from 'lucide-react';
 import type { FC } from 'react';
 import type { DeviceType } from '../../api/types';
+import { iconSizes } from '../../constants/sizes';
 
 interface DeviceSearchFiltersProps {
   searchQuery: string;
@@ -53,7 +54,7 @@ export const DeviceSearchFilters: FC<DeviceSearchFiltersProps> = ({
 
       {/* Type filter */}
       <div className="flex items-center gap-2">
-        <Filter className="h-4 w-4 text-gray-400" />
+        <Filter className={`${iconSizes.md} text-gray-400`} />
         <select
           value={typeFilter}
           onChange={(e) => onTypeFilterChange(e.target.value as DeviceType | 'all')}
@@ -95,7 +96,7 @@ export const DeviceSearchFilters: FC<DeviceSearchFiltersProps> = ({
           title="Table view"
           aria-label="Table view"
         >
-          <LayoutList className="h-4 w-4" />
+          <LayoutList className={iconSizes.md} />
         </button>
         <button
           type="button"
@@ -108,7 +109,7 @@ export const DeviceSearchFilters: FC<DeviceSearchFiltersProps> = ({
           title="Card view"
           aria-label="Card view"
         >
-          <LayoutGrid className="h-4 w-4" />
+          <LayoutGrid className={iconSizes.md} />
         </button>
       </div>
     </div>

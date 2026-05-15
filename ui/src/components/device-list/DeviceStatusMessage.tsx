@@ -1,5 +1,6 @@
 import { AlertCircle, X } from 'lucide-react';
 import type { FC } from 'react';
+import { iconSizes } from '../../constants/sizes';
 
 export interface StatusMessage {
   type: 'success' | 'error';
@@ -25,7 +26,7 @@ export const DeviceStatusMessage: FC<DeviceStatusMessageProps> = ({ message, onD
       }`}
       role="alert"
     >
-      {message.type === 'error' && <AlertCircle className="h-4 w-4" />}
+      {message.type === 'error' && <AlertCircle className={iconSizes.md} />}
       <span>{message.text}</span>
       <button
         type="button"

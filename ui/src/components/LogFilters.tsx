@@ -1,6 +1,7 @@
 import { Download, Pause, Play, Search, Trash2 } from 'lucide-react';
 import { type ChangeEvent, type FC, memo } from 'react';
 import type { LogLevel, Protocol } from '../api/types';
+import { iconSizes } from '../constants/sizes';
 import { Button } from '../ui/Button';
 import { SmallText } from '../ui/Typography';
 
@@ -162,7 +163,9 @@ export const LogFilters: FC<LogFiltersProps> = memo(
                 variant={paused ? 'solid' : 'outline'}
                 size="sm"
                 onClick={onPauseToggle}
-                leftIcon={paused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
+                leftIcon={
+                  paused ? <Play className={iconSizes.md} /> : <Pause className={iconSizes.md} />
+                }
                 aria-label={paused ? 'Resume log stream' : 'Pause log stream'}
                 className={paused ? 'bg-green-600 hover:bg-green-700 border-green-500' : ''}
               >
@@ -173,7 +176,7 @@ export const LogFilters: FC<LogFiltersProps> = memo(
               variant="outline"
               size="sm"
               onClick={onExport}
-              leftIcon={<Download className="h-4 w-4" />}
+              leftIcon={<Download className={iconSizes.md} />}
               aria-label="Export logs to file"
             >
               Export

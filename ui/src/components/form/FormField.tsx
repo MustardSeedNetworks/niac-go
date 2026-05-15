@@ -1,5 +1,6 @@
 import { HelpCircle } from 'lucide-react';
 import type { FC, ReactNode } from 'react';
+import { iconSizes } from '../../constants/sizes';
 
 export interface FormFieldProps {
   label: string;
@@ -28,7 +29,7 @@ export const FormField: FC<FormFieldProps> = ({
         {required && <span className="text-red-400">*</span>}
         {helpText && (
           <span className="relative group">
-            <HelpCircle className="h-3.5 w-3.5 text-gray-500 cursor-help" />
+            <HelpCircle className={`${iconSizes.sm} text-gray-500 cursor-help`} />
             <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-1.5 bg-gray-800 text-gray-200 text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 pointer-events-none">
               {helpText}
             </span>
@@ -41,7 +42,7 @@ export const FormField: FC<FormFieldProps> = ({
         {required && <span className="text-red-400">*</span>}
         {helpText && (
           <span className="relative group">
-            <HelpCircle className="h-3.5 w-3.5 text-gray-500 cursor-help" />
+            <HelpCircle className={`${iconSizes.sm} text-gray-500 cursor-help`} />
             <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-1.5 bg-gray-800 text-gray-200 text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 pointer-events-none">
               {helpText}
             </span>

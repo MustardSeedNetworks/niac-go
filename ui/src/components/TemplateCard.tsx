@@ -1,6 +1,7 @@
 import { Building2, FileCode, Globe, Layers, Router, Server, Wifi } from 'lucide-react';
 import { type FC, memo } from 'react';
 import type { Template } from '../api/types';
+import { iconSizes } from '../constants/sizes';
 import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
 import { Tag } from '../ui/Tag';
@@ -42,7 +43,7 @@ export const TemplateCard: FC<TemplateCardProps> = memo(({ template, onView, onU
         {/* Header with icon and type */}
         <div className="flex items-start justify-between">
           <div className={`rounded-lg p-3 border ${colorClass}`}>
-            <IconComponent className="h-6 w-6" />
+            <IconComponent className={iconSizes.xl} />
           </div>
           <Tag colorScheme="gray" className="text-xs capitalize">
             {template.type}

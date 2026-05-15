@@ -2,6 +2,7 @@ import { Download, Plus, RefreshCw, Server } from 'lucide-react';
 import type { FC } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { Device } from '../../api/types';
+import { iconSizes } from '../../constants/sizes';
 import { Button } from '../../ui/Button';
 import { H2, P } from '../../ui/Typography';
 import { exportDevicesAsCSV, exportDevicesAsJSON } from '../../utils/export';
@@ -25,7 +26,7 @@ export const DeviceListHeader: FC<DeviceListHeaderProps> = ({
     <div className="flex flex-wrap items-center justify-between gap-4">
       <div>
         <H2 className="mb-0 flex items-center gap-2">
-          <Server className="h-5 w-5 text-violet-300" />
+          <Server className={`${iconSizes.lg} text-violet-300`} />
           Device Configuration
         </H2>
         <P className="text-gray-400 mt-1">
@@ -38,7 +39,7 @@ export const DeviceListHeader: FC<DeviceListHeaderProps> = ({
       <div className="flex gap-2">
         <Button
           variant="outline"
-          leftIcon={<RefreshCw className="h-4 w-4" />}
+          leftIcon={<RefreshCw className={iconSizes.md} />}
           onClick={onRefresh}
           disabled={loading}
         >
@@ -46,7 +47,7 @@ export const DeviceListHeader: FC<DeviceListHeaderProps> = ({
         </Button>
         <Button
           variant="outline"
-          leftIcon={<Download className="h-4 w-4" />}
+          leftIcon={<Download className={iconSizes.md} />}
           onClick={() => exportDevicesAsJSON(filteredDevices)}
           disabled={filteredDevices.length === 0}
         >
@@ -54,7 +55,7 @@ export const DeviceListHeader: FC<DeviceListHeaderProps> = ({
         </Button>
         <Button
           variant="outline"
-          leftIcon={<Download className="h-4 w-4" />}
+          leftIcon={<Download className={iconSizes.md} />}
           onClick={() => exportDevicesAsCSV(filteredDevices)}
           disabled={filteredDevices.length === 0}
         >
@@ -62,7 +63,7 @@ export const DeviceListHeader: FC<DeviceListHeaderProps> = ({
         </Button>
         <Button
           tone="violet"
-          leftIcon={<Plus className="h-4 w-4" />}
+          leftIcon={<Plus className={iconSizes.md} />}
           onClick={() => navigate('/device-config/new')}
         >
           Add Device

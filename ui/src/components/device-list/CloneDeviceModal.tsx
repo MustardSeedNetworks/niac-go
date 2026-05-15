@@ -1,5 +1,6 @@
 import { Copy } from 'lucide-react';
 import { type FC, useState } from 'react';
+import { iconSizes } from '../../constants/sizes';
 import { Button } from '../../ui/Button';
 
 interface CloneDeviceModalProps {
@@ -33,7 +34,7 @@ export const CloneDeviceModal: FC<CloneDeviceModalProps> = ({ hostname, onClone,
       >
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div className="flex items-center gap-3 text-blue-400">
-            <Copy className="h-6 w-6" />
+            <Copy className={iconSizes.xl} />
             <h2 className="text-lg font-semibold">Clone Device</h2>
           </div>
           <p className="text-gray-300">

@@ -1,5 +1,6 @@
 import { Trash2 } from 'lucide-react';
 import type { FC } from 'react';
+import { iconSizes } from '../../constants/sizes';
 import { Button } from '../../ui/Button';
 
 export interface DeleteConfirmModalProps {
@@ -30,7 +31,7 @@ export const DeleteConfirmModal: FC<DeleteConfirmModalProps> = ({
       >
         <div className="p-6 space-y-4">
           <div className="flex items-center gap-3 text-red-400">
-            <Trash2 className="h-6 w-6" />
+            <Trash2 className={iconSizes.xl} />
             <h2 className="text-lg font-semibold">Delete Device</h2>
           </div>
           <p className="text-gray-300">

@@ -24,6 +24,7 @@ import {
   importConfig,
 } from '../../api/client';
 import type { Template, TemplateContent, UserConfig } from '../../api/types';
+import { iconSizes } from '../../constants/sizes';
 import { Tag } from '../../ui/Tag';
 import { SmallText } from '../../ui/Typography';
 import { TemplatePreviewModal } from '../TemplatePreviewModal';
@@ -335,7 +336,7 @@ export const ConfigPicker: FC<ConfigPickerProps> = ({
           }`}
           title="Pick a config from disk. YAML is used as-is; legacy Java-DSL (.cfg) is auto-converted."
         >
-          <FileUp className="h-3.5 w-3.5" />
+          <FileUp className={iconSizes.sm} />
           {convertingDsl ? 'Converting…' : uploadFile ? 'Replace local file' : 'Upload local file…'}
         </label>
         <input
@@ -381,13 +382,13 @@ export const ConfigPicker: FC<ConfigPickerProps> = ({
           <ViewToggle
             active={viewMode === 'grid'}
             onClick={() => updateViewMode('grid')}
-            icon={<LayoutGrid className="h-4 w-4" />}
+            icon={<LayoutGrid className={iconSizes.md} />}
             label="Card view"
           />
           <ViewToggle
             active={viewMode === 'list'}
             onClick={() => updateViewMode('list')}
-            icon={<List className="h-4 w-4" />}
+            icon={<List className={iconSizes.md} />}
             label="Compact list"
           />
         </fieldset>
@@ -411,8 +412,12 @@ export const ConfigPicker: FC<ConfigPickerProps> = ({
         onToggle={(e) => setShowJavaDsl(e.currentTarget.open)}
       >
         <summary className="flex cursor-pointer items-center gap-2 text-sm text-gray-300 hover:text-white">
-          {showJavaDsl ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-          <FileCode className="h-4 w-4" />
+          {showJavaDsl ? (
+            <ChevronDown className={iconSizes.md} />
+          ) : (
+            <ChevronRight className={iconSizes.md} />
+          )}
+          <FileCode className={iconSizes.md} />
           <span>
             Convert a legacy Java-DSL <code className="text-xs">.cfg</code> to YAML
           </span>
@@ -606,7 +611,7 @@ const ConfigCard: FC<{
     >
       <div className="flex items-start justify-between gap-2">
         <div className={`rounded-md border p-2 ${tint}`}>
-          <Icon className="h-5 w-5" />
+          <Icon className={iconSizes.lg} />
         </div>
         {sourceTagFor(item)}
       </div>
@@ -632,7 +637,7 @@ const ConfigCard: FC<{
       <div className="flex gap-2">
         {selected ? (
           <div className="flex flex-1 items-center justify-center gap-1.5 rounded bg-violet-500/30 px-2 py-1.5 text-xs font-medium text-violet-50 ring-1 ring-violet-400/60">
-            <Check className="h-3.5 w-3.5" />
+            <Check className={iconSizes.sm} />
             <span>Will use this</span>
           </div>
         ) : (
@@ -652,7 +657,7 @@ const ConfigCard: FC<{
             className="rounded border border-white/10 bg-gray-900/60 px-2 py-1.5 text-xs font-medium text-gray-200 hover:bg-white/10"
             title="Preview YAML"
           >
-            <Eye className="h-3.5 w-3.5" />
+            <Eye className={iconSizes.sm} />
           </button>
         )}
         {item.kind === 'local' && (
@@ -719,7 +724,7 @@ const ConfigRow: FC<{
         className="rounded p-1.5 text-gray-400 hover:bg-white/10 hover:text-white"
         title="Preview the template YAML"
       >
-        <Eye className="h-4 w-4" />
+        <Eye className={iconSizes.md} />
       </button>
     )}
     {item.kind === 'local' && (

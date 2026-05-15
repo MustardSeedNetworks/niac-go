@@ -2,6 +2,7 @@ import { AlertCircle, ArrowLeft, Check, RefreshCw, Save, Trash2 } from 'lucide-r
 import type { FC } from 'react';
 import type { Device, DeviceType } from '../../api/types';
 import { deviceTypeIcons } from '../../constants/device-types';
+import { iconSizes } from '../../constants/sizes';
 import { Button } from '../../ui/Button';
 import { Card, CardContent } from '../../ui/Card';
 import { Tag } from '../../ui/Tag';
@@ -55,9 +56,9 @@ export const DeviceEditorHeader: FC<DeviceEditorHeaderProps> = ({
               className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
               title="Back to device list"
             >
-              <ArrowLeft className="h-5 w-5" />
+              <ArrowLeft className={iconSizes.lg} />
             </button>
-            <DeviceIcon className="h-6 w-6 text-violet-300" />
+            <DeviceIcon className={`${iconSizes.xl} text-violet-300`} />
             <div>
               <H2 className="mb-0">
                 {isNewDevice ? 'New Device' : device.hostname || 'Edit Device'}
@@ -79,7 +80,7 @@ export const DeviceEditorHeader: FC<DeviceEditorHeaderProps> = ({
             {!isNewDevice && (
               <Button
                 variant="outline"
-                leftIcon={<Trash2 className="h-4 w-4" />}
+                leftIcon={<Trash2 className={iconSizes.md} />}
                 onClick={onDelete}
                 className="text-red-400 hover:text-red-300 border-red-400/30 hover:border-red-400/50"
                 disabled={deleting}
@@ -94,9 +95,9 @@ export const DeviceEditorHeader: FC<DeviceEditorHeaderProps> = ({
               tone="violet"
               leftIcon={
                 saving ? (
-                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  <RefreshCw className={`${iconSizes.md} animate-spin`} />
                 ) : (
-                  <Save className="h-4 w-4" />
+                  <Save className={iconSizes.md} />
                 )
               }
               onClick={onSave}
@@ -118,9 +119,9 @@ export const DeviceEditorHeader: FC<DeviceEditorHeaderProps> = ({
             role="alert"
           >
             {message.type === 'success' ? (
-              <Check className="h-4 w-4" />
+              <Check className={iconSizes.md} />
             ) : (
-              <AlertCircle className="h-4 w-4" />
+              <AlertCircle className={iconSizes.md} />
             )}
             <span>{message.text}</span>
           </div>

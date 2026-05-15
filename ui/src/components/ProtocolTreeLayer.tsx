@@ -1,5 +1,6 @@
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { type FC, memo, useCallback, useState } from 'react';
+import { iconSizes } from '../constants/sizes';
 import type { ProtocolField, ProtocolLayer } from '../utils/protocol-layers';
 
 interface ProtocolTreeLayerProps {
@@ -35,9 +36,9 @@ export const ProtocolTreeLayer: FC<ProtocolTreeLayerProps> = memo(({ layer, onFi
         className="flex items-center gap-1 w-full text-left py-0.5 hover:bg-white/5 rounded px-1 -ml-1"
       >
         {isExpanded ? (
-          <ChevronDown className="h-3.5 w-3.5 text-gray-500 flex-shrink-0" />
+          <ChevronDown className={`${iconSizes.sm} text-gray-500 flex-shrink-0`} />
         ) : (
-          <ChevronRight className="h-3.5 w-3.5 text-gray-500 flex-shrink-0" />
+          <ChevronRight className={`${iconSizes.sm} text-gray-500 flex-shrink-0`} />
         )}
         <span className="text-violet-300 font-medium">{layer.name}</span>
       </button>
