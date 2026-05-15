@@ -16,32 +16,32 @@ import {
 } from '../../api/client';
 import type { Template, TemplateContent, UserConfig } from '../../api/types';
 import { iconSizes } from '../../constants/sizes';
+import { useFavorites } from '../../hooks/useFavorites';
 import { SmallText } from '../../ui/Typography';
 import { TemplatePreviewModal } from '../TemplatePreviewModal';
 import { JavaDslImportCard } from '../templates/JavaDslImportCard';
 import {
   type ConfigItem,
   type ConfigPickerProps,
+  FAVORITES_STORAGE_KEY,
   readPref,
-  SOURCE_FILTER_PREF_KEY,
-  type SourceFilter,
   VIEW_PREF_KEY,
   type ViewMode,
   writePref,
 } from './ConfigPicker.types';
-import { SourceChip, ViewToggle } from './ConfigPickerControls';
+import { ViewToggle } from './ConfigPickerControls';
 import { ConfigsList } from './ConfigPickerList';
 
 export type { ConfigPickerProps } from './ConfigPicker.types';
 
 /**
- * ConfigPicker is the single config-source picker for the Simulation
- * page. Built-in templates, user-saved configs, and a one-shot local
- * upload all live in the same list with a "source" filter chip; there
- * are no tabs. Subcomponents live alongside this file:
+ * ConfigPicker is the single network-picker for the Simulation page.
+ * Built-in and user-saved configs are presented as one flat list; the
+ * user only sees "favorites" vs "everything else", with a one-shot
+ * local upload pinned above both when present. Subcomponents:
  *
  *   ConfigPicker.types.ts     — ConfigItem, props, persisted-pref helpers
- *   ConfigPickerControls.tsx  — source-filter chip + grid/list toggle
+ *   ConfigPickerControls.tsx  — grid/list view toggle
  *   ConfigPickerList.tsx      — card grid + compact list presenters
  */
 export const ConfigPicker: FC<ConfigPickerProps> = ({
@@ -56,10 +56,8 @@ export const ConfigPicker: FC<ConfigPickerProps> = ({
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>(() => readPref(VIEW_PREF_KEY, 'grid'));
-  const [sourceFilter, setSourceFilter] = useState<SourceFilter>(() =>
-    readPref(SOURCE_FILTER_PREF_KEY, 'all'),
-  );
   const [showJavaDsl, setShowJavaDsl] = useState(false);
+  const { isFavorite, toggleFavorite } = useFavorites(FAVORITES_STORAGE_KEY);
 
   // Preview modal state (built-in templates only)
   const [previewTemplate, setPreviewTemplate] = useState<Template | null>(null);
@@ -123,34 +121,36 @@ export const ConfigPicker: FC<ConfigPickerProps> = ({
     return list;
   }, [templates, userConfigs, uploadFile]);
 
-  const filtered = useMemo(() => {
+  /**
+   * Searching narrows the list and keeps results alphabetical regardless
+   * of star status — otherwise filtering would hide what the user typed
+   * behind the favorites zone. Browsing (empty search) sorts favorites
+   * first, then non-favorites, both alphabetical. The transient "local"
+   * upload always pins to the very top, since it's the user's last
+   * action.
+   */
+  const sections = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return items.filter((item) => {
-      if (sourceFilter === 'builtin' && item.kind !== 'builtin') return false;
-      if (sourceFilter === 'saved' && item.kind !== 'saved') return false;
-      if (sourceFilter === 'local' && item.kind !== 'local') return false;
-      if (!q) return true;
-      return item.name.toLowerCase().includes(q) || item.description.toLowerCase().includes(q);
-    });
-  }, [items, sourceFilter, search]);
+    const matchesQuery = (item: ConfigItem) =>
+      !q || item.name.toLowerCase().includes(q) || item.description.toLowerCase().includes(q);
 
-  const counts = useMemo(
-    () => ({
-      all: items.length,
-      builtin: items.filter((i) => i.kind === 'builtin').length,
-      saved: items.filter((i) => i.kind === 'saved').length,
-      local: items.filter((i) => i.kind === 'local').length,
-    }),
-    [items],
-  );
+    const byName = (a: ConfigItem, b: ConfigItem) => a.name.localeCompare(b.name);
+
+    const local = items.filter((i) => i.kind === 'local' && matchesQuery(i));
+    const matched = items.filter((i) => i.kind !== 'local' && matchesQuery(i));
+
+    if (q) {
+      return { local, favorites: [], all: matched.sort(byName) };
+    }
+
+    const favorites = matched.filter((i) => isFavorite(i.key)).sort(byName);
+    const all = matched.filter((i) => !isFavorite(i.key)).sort(byName);
+    return { local, favorites, all };
+  }, [items, isFavorite, search]);
 
   const updateViewMode = (mode: ViewMode) => {
     setViewMode(mode);
     writePref(VIEW_PREF_KEY, mode);
-  };
-  const updateSourceFilter = (f: SourceFilter) => {
-    setSourceFilter(f);
-    writePref(SOURCE_FILTER_PREF_KEY, f);
   };
 
   const handleSelectItem = (item: ConfigItem) => {
@@ -213,7 +213,6 @@ export const ConfigPicker: FC<ConfigPickerProps> = ({
     const isJavaDsl = /^\s*device\s+[\w.-]+\s*\{/m.test(head);
     if (!isJavaDsl) {
       onUpload(file);
-      updateSourceFilter('local');
       return;
     }
     setConvertingDsl(true);
@@ -223,7 +222,6 @@ export const ConfigPicker: FC<ConfigPickerProps> = ({
       const yamlName = `${file.name.replace(/\.(cfg|conf|txt)$/i, '')}.yaml`;
       const yamlFile = new File([result.yaml], yamlName, { type: 'application/x-yaml' });
       onUpload(yamlFile);
-      updateSourceFilter('local');
     } catch (err) {
       setConvertError(
         err instanceof Error
@@ -237,34 +235,8 @@ export const ConfigPicker: FC<ConfigPickerProps> = ({
 
   return (
     <div className="space-y-3">
-      {/* Source filter chips + Upload button */}
+      {/* Upload + clear */}
       <div className="flex flex-wrap items-center gap-2">
-        <SourceChip
-          active={sourceFilter === 'all'}
-          onClick={() => updateSourceFilter('all')}
-          label="All"
-          count={counts.all}
-        />
-        <SourceChip
-          active={sourceFilter === 'builtin'}
-          onClick={() => updateSourceFilter('builtin')}
-          label="Built-in"
-          count={counts.builtin}
-        />
-        <SourceChip
-          active={sourceFilter === 'saved'}
-          onClick={() => updateSourceFilter('saved')}
-          label="Saved"
-          count={counts.saved}
-        />
-        {counts.local > 0 && (
-          <SourceChip
-            active={sourceFilter === 'local'}
-            onClick={() => updateSourceFilter('local')}
-            label="Local"
-            count={counts.local}
-          />
-        )}
         <div className="flex-1" />
         <label
           htmlFor="config-upload"
@@ -331,15 +303,18 @@ export const ConfigPicker: FC<ConfigPickerProps> = ({
         </fieldset>
       </div>
 
-      {/* List / grid */}
+      {/* Sectioned list — local upload pinned, then favorites, then everything else */}
       <ConfigsList
-        items={filtered}
+        sections={sections}
         loading={loading}
         viewMode={viewMode}
         isSelected={isItemSelected}
+        isFavorite={isFavorite}
         onSelect={handleSelectItem}
+        onToggleFavorite={toggleFavorite}
         onView={handleViewItem}
         onClearLocal={handleClearLocal}
+        searching={search.trim().length > 0}
       />
 
       {/* Java-DSL import — collapsed by default since most users won't need it */}

@@ -8,52 +8,54 @@ import type { Feature, GlossaryEntry, Shortcut } from './types';
 
 export const FEATURES: Feature[] = [
   {
-    title: 'Command Center',
-    description: 'Live counters, run snapshots, and automation status for the active NIAC stack.',
+    title: 'Dashboard',
+    description: 'Live counters, run snapshots, and alert state for the active NIAC stack.',
     path: '/',
   },
   {
-    title: 'Runtime Control',
-    description: 'Monitor runtime status, view network interfaces, and manage NIAC configuration.',
+    title: 'Simulation',
+    description: 'Pick a network, choose an interface, start or stop the daemon.',
     path: '/runtime',
   },
   {
-    title: 'Devices & Config',
-    description:
-      'Review YAML-derived devices, SNMP walks, DHCP/DNS personas, and packet playback targets.',
+    title: 'Running Devices',
+    description: 'Read-only view of the devices the daemon is currently simulating.',
     path: '/devices',
   },
   {
-    title: 'Config Builder',
-    description: 'Create, edit, and manage device configurations with a visual interface.',
+    title: 'Devices',
+    description: 'Reusable device definitions. Edit, clone, delete the library on disk.',
     path: '/device-config',
-    badge: 'New',
   },
   {
-    title: 'Topology View',
-    description: 'LLDP/CDP/EDP/FDP visibility for verifying intent before exporting to Graphviz.',
+    title: 'Topology',
+    description: 'Visual graph of the configured network plus the live neighbor table.',
     path: '/topology',
   },
   {
-    title: 'Analysis & Playback',
-    description: 'Replay PCAPs, inspect SNMP walks, and publish bundles directly from the UI.',
-    path: '/analysis',
+    title: 'Traffic',
+    description: 'Inject controlled errors into the simulation and replay captured PCAPs.',
+    path: '/traffic',
   },
   {
-    title: 'Traffic Injection',
-    description: 'Configure and execute traffic injection scenarios with real-time feedback.',
-    path: '/injection',
+    title: 'Logs',
+    description: 'Live log stream from the daemon, with per-protocol debug-level controls.',
+    path: '/debug',
   },
   {
-    title: 'Packet Inspector',
-    description: 'Deep packet inspection with protocol decoding and hex dump viewing.',
+    title: 'Packets',
+    description: 'Live packets crossing the simulation — hex view, BPF filter, save to PCAP.',
     path: '/packets',
   },
   {
-    title: 'PCAP Analyzer',
-    description: 'Upload and analyze PCAP files with detailed statistics and filtering.',
-    path: '/pcap',
-    badge: 'Beta',
+    title: 'SNMP Walks',
+    description: 'Validate and auto-fix SNMP walk files used by the simulated SNMP agents.',
+    path: '/walk-validator',
+  },
+  {
+    title: 'Compare & Merge',
+    description: 'Compare two YAML network configs side-by-side and merge changes between them.',
+    path: '/config-diff',
   },
 ];
 

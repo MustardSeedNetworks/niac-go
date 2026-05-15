@@ -116,7 +116,7 @@ export const pages: PageConfig[] = [
             <strong>Running Devices</strong> to see what the running config produced.
           </li>
           <li>
-            <strong>Packet Capture</strong> to watch traffic in real time.
+            <strong>Packets</strong> to watch traffic in real time.
           </li>
           <li>
             <strong>Alerts</strong> to set the threshold and webhook target.
@@ -128,7 +128,7 @@ export const pages: PageConfig[] = [
   {
     path: '/runtime',
     label: 'Simulation',
-    title: 'Simulation Control',
+    title: 'Simulation',
     description: 'Monitor runtime status, view network interfaces, and manage NIAC configuration.',
     icon: PlugZap,
     component: RuntimeControlPage,
@@ -147,7 +147,7 @@ export const pages: PageConfig[] = [
           </li>
           <li>
             <code>capture_playbacks:</code> in the YAML auto-starts a PCAP replay alongside the sim.
-            The Replay page (Analysis → Replay) lets you switch the playback file at runtime.
+            <strong>Traffic</strong> lets you switch the playback file at runtime.
           </li>
           <li>
             Use <code>lo0</code> (macOS) / <code>lo</code> (Linux) for safe local testing.
@@ -172,18 +172,19 @@ export const pages: PageConfig[] = [
         </p>
         <h4>For editing</h4>
         <p>
-          To modify your saved device library, go to <strong>Device Library</strong>. To swap the
-          running config wholesale, restart the simulation from <strong>Simulation</strong>.
+          To modify saved device definitions, go to <strong>Devices</strong> (under Library). To
+          swap the running network wholesale, restart the simulation from{' '}
+          <strong>Simulation</strong>.
         </p>
       </>
     ),
   },
   {
     path: '/device-config',
-    label: 'Device Library',
-    title: 'Device Library',
+    label: 'Devices',
+    title: 'Devices',
     description:
-      'Manage saved device configurations: search, filter, edit, clone, and delete. Click a device to open the visual editor.',
+      'Reusable device definitions: search, filter, edit, clone, and delete. Click a device to open the visual editor.',
     icon: Wrench,
     component: DeviceListPage,
     help: (
@@ -209,9 +210,10 @@ export const pages: PageConfig[] = [
   },
   {
     path: '/topology',
-    label: 'Topology & Neighbors',
-    title: 'Topology & Neighbor Insight',
-    description: 'LLDP/CDP/EDP/FDP visibility for verifying intent before exporting to Graphviz.',
+    label: 'Topology',
+    title: 'Topology',
+    description:
+      'Visual graph of the configured network plus the live CDP/LLDP/EDP/FDP neighbor table.',
     icon: Network,
     component: TopologyPage,
     help: (
@@ -223,7 +225,7 @@ export const pages: PageConfig[] = [
         </p>
         <h4>Live discovery vs design</h4>
         <p>
-          The graph shows the <em>design</em>. Use <strong>Neighbors</strong> to see which
+          The graph shows the <em>design</em> from your YAML; the neighbor table shows which
           adjacencies actually formed at runtime via CDP / LLDP / EDP / FDP — useful for catching
           mistyped <code>remote_device</code> references.
         </p>
@@ -237,8 +239,8 @@ export const pages: PageConfig[] = [
   {
     path: '/analysis',
     label: 'Replay',
-    title: 'Replay & Playback',
-    description: 'Replay PCAPs, inspect SNMP walks, and publish bundles directly from the UI.',
+    title: 'Replay',
+    description: 'Replay a captured PCAP through the running simulation.',
     icon: LineChart,
     component: AnalysisPage,
     help: (
@@ -297,9 +299,9 @@ export const pages: PageConfig[] = [
   },
   {
     path: '/traffic',
-    label: 'Traffic Injection',
-    title: 'Traffic & Error Injection',
-    description: 'Inject network errors and replay PCAP traffic for testing and simulation.',
+    label: 'Traffic',
+    title: 'Traffic',
+    description: 'Inject controlled errors into the running simulation and replay captured PCAPs.',
     icon: Zap,
     component: TrafficInjectionPage,
     help: (
@@ -329,9 +331,9 @@ export const pages: PageConfig[] = [
   },
   {
     path: '/debug',
-    label: 'Protocol Debug',
-    title: 'Protocol Debug',
-    description: 'Real-time log streaming and debugging tools for monitoring NIAC operations.',
+    label: 'Logs',
+    title: 'Logs',
+    description: 'Live log stream from the daemon, with per-protocol debug-level controls.',
     icon: Terminal,
     component: DebugConsolePage,
     help: (
@@ -352,10 +354,10 @@ export const pages: PageConfig[] = [
   },
   {
     path: '/packets',
-    label: 'Packet Capture',
-    title: 'Packet Capture',
+    label: 'Packets',
+    title: 'Packets',
     description:
-      'Real-time packet hex dump viewing with protocol filtering and search capabilities.',
+      'Live packets crossing the simulation — hex view, BPF filter, freeze frame, save to PCAP.',
     icon: FileSearch,
     component: PacketInspectorPage,
     help: (
@@ -374,9 +376,9 @@ export const pages: PageConfig[] = [
   },
   {
     path: '/config-diff',
-    label: 'Config Diff',
-    title: 'Config Diff & Merge',
-    description: 'Compare and merge YAML configuration files with visual diff and merge controls.',
+    label: 'Compare & Merge',
+    title: 'Compare & Merge',
+    description: 'Compare two YAML network configs side-by-side and merge changes between them.',
     icon: GitCompare,
     component: ConfigDiffPage,
     help: (
@@ -413,8 +415,8 @@ export const pages: PageConfig[] = [
         </p>
         <h4>Live vs offline</h4>
         <p>
-          For traffic on the running simulator, use <strong>Packet Capture</strong>. This page is
-          for static analysis of files you've captured elsewhere.
+          For traffic on the running simulator, use <strong>Packets</strong>. This page is for
+          static analysis of files you've captured elsewhere.
         </p>
       </>
     ),
@@ -452,9 +454,9 @@ export const pages: PageConfig[] = [
   },
   {
     path: '/walk-validator',
-    label: 'Walk Validator',
-    title: 'SNMP Walk Validator',
-    description: 'Validate and auto-fix SNMP walk files (the same engine niac analyze-walk uses).',
+    label: 'SNMP Walks',
+    title: 'SNMP Walks',
+    description: 'Validate and auto-fix SNMP walk files used by the simulated SNMP agents.',
     icon: ShieldCheck,
     component: WalkValidatorPage,
     help: (

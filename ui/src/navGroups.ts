@@ -1,12 +1,9 @@
 import {
   Activity,
   FileBox,
-  FileSearch,
   GitCompare,
-  LineChart,
   Network,
   PlugZap,
-  Radar,
   Server,
   ShieldCheck,
   Terminal,
@@ -23,53 +20,48 @@ import type { SidebarNavGroup } from './ui/Sidebar';
  * route handlers themselves. Keep the two in rough sync but they're
  * deliberately not the same source: sidebar wants short, page header
  * wants verbose.
+ *
+ * Groups are ordered to follow the natural session flow:
+ *
+ *   1. Overview   — am I running? start/stop the sim.
+ *   2. Library    — pick the network + manage device definitions.
+ *   3. Live View  — look at the currently running sim.
+ *   4. Inspect    — debug logs, packets, walk files.
+ *   5. Alerts     — notify me when things break.
  */
 export const navGroups: SidebarNavGroup[] = [
   {
-    label: 'Control',
+    label: 'Overview',
     items: [
       { path: '/', label: 'Dashboard', icon: Activity },
       { path: '/runtime', label: 'Simulation', icon: PlugZap },
     ],
   },
   {
-    label: 'Configuration',
+    label: 'Library',
+    items: [
+      { path: '/device-config', label: 'Devices', icon: Wrench },
+      { path: '/config-diff', label: 'Compare & Merge', icon: GitCompare },
+    ],
+  },
+  {
+    label: 'Live View',
     items: [
       { path: '/devices', label: 'Running Devices', icon: Server },
-      {
-        path: '/device-config',
-        label: 'Device Library',
-        icon: Wrench,
-      },
-      { path: '/config-diff', label: 'Config Diff', icon: GitCompare },
-    ],
-  },
-  {
-    label: 'Network',
-    items: [
       { path: '/topology', label: 'Topology', icon: Network },
-      { path: '/neighbors', label: 'Neighbors', icon: Radar },
-      { path: '/traffic', label: 'Traffic Injection', icon: Zap },
+      { path: '/traffic', label: 'Traffic', icon: Zap },
     ],
   },
   {
-    label: 'Analysis',
+    label: 'Inspect',
     items: [
-      { path: '/analysis', label: 'Replay', icon: LineChart },
-      { path: '/debug', label: 'Protocol Debug', icon: Terminal },
-      { path: '/packets', label: 'Packet Capture', icon: FileSearch },
-      { path: '/pcap-analyzer', label: 'PCAP Inspector', icon: FileBox },
-      { path: '/walk-validator', label: 'Walk Validator', icon: ShieldCheck },
+      { path: '/debug', label: 'Logs', icon: Terminal },
+      { path: '/packets', label: 'Packets', icon: FileBox },
+      { path: '/walk-validator', label: 'SNMP Walks', icon: ShieldCheck },
     ],
   },
   {
-    label: 'Automation',
-    items: [
-      {
-        path: '/automation',
-        label: 'Alerts',
-        icon: Workflow,
-      },
-    ],
+    label: 'Alerts',
+    items: [{ path: '/automation', label: 'Alerts', icon: Workflow }],
   },
 ];
