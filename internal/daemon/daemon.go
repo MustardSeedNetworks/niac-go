@@ -57,6 +57,11 @@ type Daemon struct {
 
 	mu         sync.RWMutex
 	simulation *Simulation
+	// capture is the optional standalone packet-capture session that
+	// runs without a simulation. Mutually exclusive with simulation
+	// because both want exclusive ownership of the same libpcap
+	// interface handle; see internal/daemon/capture.go.
+	capture *standaloneCapture
 }
 
 // Simulation represents a running NIAC simulation.
@@ -120,6 +125,7 @@ func (d *Daemon) Start() error {
 	// Set daemon controller on the API server
 	// This allows the API to call our Start/Stop/Status methods
 	d.apiServer.SetDaemonController(d)
+	d.apiServer.SetCaptureController(d)
 
 	err := d.apiServer.Start()
 	if err != nil {
@@ -142,6 +148,12 @@ func (d *Daemon) Shutdown(ctx context.Context) error {
 	stopErr := d.StopSimulation()
 	if stopErr != nil {
 		logging.Errorf("Error stopping simulation: %v", stopErr)
+	}
+
+	// Stop standalone capture if running. StopCapture is idempotent so
+	// the no-capture case is a fast nil return.
+	if captureErr := d.StopCapture(); captureErr != nil {
+		logging.Errorf("Error stopping standalone capture: %v", captureErr)
 	}
 
 	// Shutdown API server

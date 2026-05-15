@@ -3,8 +3,6 @@ import {
   BackgroundVariant,
   type Connection,
   Controls,
-  type Edge,
-  MarkerType,
   MiniMap,
   type Node,
   type NodeTypes,
@@ -13,520 +11,46 @@ import {
   useEdgesState,
   useNodesState,
 } from '@xyflow/react';
-import { type FC, memo, useCallback, useEffect, useState } from 'react';
+import { type FC, useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '@xyflow/react/dist/style.css';
-import { Download, Eye, EyeOff, Layers, Network, RefreshCw, Wifi } from 'lucide-react';
+import { Download, Layers, Network, RefreshCw, Wifi } from 'lucide-react';
 import { fetchDevices, fetchNeighbors, fetchTopology } from '../api/client';
-import type { DeviceSummary, TopologyLink } from '../api/types';
-import {
-  topologyDeviceColors as deviceColors,
-  topologyDeviceIcons as deviceIcons,
-} from '../constants/device-types';
+import type { DeviceSummary } from '../api/types';
+import { topologyDeviceColors as deviceColors } from '../constants/device-types';
 import { useApiResource } from '../hooks/useApiResource';
 import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
 import { Tag } from '../ui/Tag';
 import { H2, SmallText } from '../ui/Typography';
+import {
+  createEdges,
+  DeviceDetailsPanel,
+  DeviceNode,
+  type DeviceNodeData,
+  type DeviceNodeType,
+  type LinkEdge,
+  layoutNodes,
+  TopologyLegend,
+} from './topology';
 
-// ============================================================================
-// Types - Using proper React Flow generic patterns
-// ============================================================================
-
-interface DeviceNodeData extends Record<string, unknown> {
-  label: string;
-  type: string;
-  ips?: string[];
-  protocols?: string[];
-  status?: 'online' | 'offline' | 'warning';
-  selected?: boolean;
-  onClick?: (id: string) => void;
-}
-
-interface LinkEdgeData extends Record<string, unknown> {
-  label?: string;
-  speed?: string;
-  duplex?: string;
-  vlan?: number;
-  linkType?: 'trunk' | 'access' | 'lag' | 'standard';
-  status?: 'up' | 'down' | 'degraded';
-}
-
-// Full node and edge types for React Flow
-type DeviceNode = Node<DeviceNodeData, 'device'>;
-type LinkEdge = Edge<LinkEdgeData>;
-
-const linkSpeedColors: Record<string, string> = {
-  '10': 'var(--color-link-10m)',
-  '100': 'var(--color-link-100m)',
-  '1000': 'var(--color-link-1g)',
-  '10000': 'var(--color-link-10g)',
-  '25000': 'var(--color-link-25g)',
-  '40000': 'var(--color-link-40g)',
-  '100000': 'var(--color-link-100g)',
-  trunk: 'var(--color-link-trunk)',
-};
-
-// ============================================================================
-// Custom Device Node Component
-// ============================================================================
-
-const DeviceNode: FC<{ data: DeviceNodeData; selected?: boolean }> = memo(({ data, selected }) => {
-  const deviceType = (data.type as string)?.toLowerCase() || 'unknown';
-  const Icon = deviceIcons[deviceType] || deviceIcons.unknown;
-  const color = deviceColors[deviceType] || deviceColors.unknown;
-
-  const statusColor = {
-    online: 'bg-green-500',
-    offline: 'bg-gray-500',
-    warning: 'bg-yellow-500',
-  }[data.status || 'online'];
-
-  return (
-    <button
-      type="button"
-      className={`
-        relative px-4 py-3 rounded-xl border-2 transition-all duration-200 text-left
-        ${selected ? 'ring-2 ring-brand-500 ring-offset-2 ring-offset-gray-900' : ''}
-        hover:shadow-lg hover:shadow-black/30
-      `}
-      style={{
-        backgroundColor: 'var(--color-bg-elevated)',
-        borderColor: selected ? color : 'var(--color-border-muted)',
-        minWidth: '140px',
-      }}
-      onClick={() => data.onClick?.(data.label)}
-    >
-      {/* Status indicator */}
-      <div
-        className={`absolute -top-1 -right-1 w-3 h-3 rounded-full ${statusColor} border-2 border-gray-900`}
-      />
-
-      {/* Icon and name */}
-      <div className="flex items-center gap-3">
-        <div
-          className="p-2 rounded-lg"
-          style={{
-            backgroundColor: `color-mix(in srgb, ${color} 20%, transparent)`,
-          }}
-        >
-          <Icon className="w-5 h-5" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="font-semibold text-white text-sm truncate">{data.label}</div>
-          <div className="text-xs text-gray-400 capitalize">{data.type}</div>
-        </div>
-      </div>
-
-      {/* IPs */}
-      {data.ips && data.ips.length > 0 && (
-        <div className="mt-2 pt-2 border-t border-white/10">
-          <div className="text-xs font-mono text-gray-400 truncate">
-            {data.ips[0]}
-            {data.ips.length > 1 && <span className="text-gray-500"> +{data.ips.length - 1}</span>}
-          </div>
-        </div>
-      )}
-
-      {/* Protocols */}
-      {data.protocols && data.protocols.length > 0 && (
-        <div className="mt-2 flex flex-wrap gap-1">
-          {data.protocols.slice(0, 3).map((proto) => (
-            <span
-              key={proto}
-              className="px-1.5 py-0.5 text-[10px] rounded-md bg-white/10 text-gray-300"
-            >
-              {proto}
-            </span>
-          ))}
-          {data.protocols.length > 3 && (
-            <span className="px-1.5 py-0.5 text-[10px] rounded-md bg-white/5 text-gray-500">
-              +{data.protocols.length - 3}
-            </span>
-          )}
-        </div>
-      )}
-    </button>
-  );
-});
-
-DeviceNode.displayName = 'DeviceNode';
-
-// ============================================================================
-// Node Types
-// ============================================================================
-
+/**
+ * nodeTypes is the ReactFlow lookup that maps a node.type string onto
+ * a React component. We register exactly one — every node is a device.
+ * Kept here (not in topology/) because nodeTypes is consumed only by
+ * the page-level ReactFlow instance and including it in the barrel
+ * would force everyone who imports a single helper to pull DeviceNode.
+ */
 const nodeTypes: NodeTypes = {
   device: DeviceNode,
 };
 
-// ============================================================================
-// Layout Algorithm (Simple Force-Directed)
-// ============================================================================
-
-// Tuneables shared by both layout paths. Card-sized so neighbours
-// never overlap at default zoom regardless of how many devices land.
-const NODE_WIDTH = 220;
-const NODE_HEIGHT = 130;
-const NODE_GAP_X = 60;
-const NODE_GAP_Y = 60;
-
-function layoutNodes(devices: DeviceSummary[], links: TopologyLink[]): DeviceNode[] {
-  // Edges == 0 fallback: many of our built-in templates declare
-  // devices but no trunk_ports / port_channels, so the topology API
-  // returns nodes-only. The concentric-ring path below relied on
-  // node degree to push outer rings; with every degree at zero it
-  // packed everything at radius=0 and the cards stacked on top of
-  // one another. Use a fixed-pitch grid here so the user at least
-  // sees every device — the yellow "add trunk_ports" banner above
-  // explains what to do to populate edges.
-  if (links.length === 0) {
-    return devices.map((device, index) => {
-      const cols = Math.max(1, Math.ceil(Math.sqrt(devices.length)));
-      const row = Math.floor(index / cols);
-      const col = index % cols;
-      return {
-        id: device.name,
-        type: 'device',
-        position: {
-          x: col * (NODE_WIDTH + NODE_GAP_X),
-          y: row * (NODE_HEIGHT + NODE_GAP_Y),
-        },
-        data: {
-          label: device.name,
-          type: device.type || 'unknown',
-          ips: device.ips,
-          protocols: device.protocols,
-          status: 'online',
-        } as DeviceNodeData,
-      };
-    });
-  }
-
-  const nodeMap = new Map<string, { x: number; y: number }>();
-
-  // Create adjacency list
-  const adjacency = new Map<string, Set<string>>();
-  for (const device of devices) {
-    adjacency.set(device.name, new Set());
-  }
-  for (const link of links) {
-    adjacency.get(link.source)?.add(link.target);
-    adjacency.get(link.target)?.add(link.source);
-  }
-
-  // Calculate degree for each node
-  const degrees = new Map<string, number>();
-  for (const [name, neighbors] of adjacency) {
-    degrees.set(name, neighbors.size);
-  }
-
-  // Sort by degree (most connected first)
-  const sorted = [...devices].sort(
-    (a, b) => (degrees.get(b.name) || 0) - (degrees.get(a.name) || 0),
-  );
-
-  // Layout in concentric circles based on connectivity
-  const centerX = 400;
-  const centerY = 300;
-  let currentRadius = 0;
-  let angleOffset = 0;
-  let nodesInRing = 1;
-  let ringIndex = 0;
-
-  for (const device of sorted) {
-    if (ringIndex >= nodesInRing) {
-      ringIndex = 0;
-      currentRadius += 180;
-      angleOffset += Math.PI / 6; // Stagger rings
-      nodesInRing = Math.max(1, Math.floor((2 * Math.PI * currentRadius) / 200));
-    }
-
-    const angle = (2 * Math.PI * ringIndex) / nodesInRing + angleOffset;
-    const x = centerX + currentRadius * Math.cos(angle);
-    const y = centerY + currentRadius * Math.sin(angle);
-
-    nodeMap.set(device.name, { x, y });
-    ringIndex++;
-  }
-
-  // Create nodes with layout positions
-  return devices.map((device, index) => {
-    const pos = nodeMap.get(device.name) || {
-      x: 100 + (index % 5) * 200,
-      y: 100 + Math.floor(index / 5) * 150,
-    };
-    return {
-      id: device.name,
-      type: 'device',
-      position: pos,
-      data: {
-        label: device.name,
-        type: device.type || 'unknown',
-        ips: device.ips,
-        protocols: device.protocols,
-        status: 'online',
-      } as DeviceNodeData,
-    };
-  });
-}
-
-const getLinkSpeed = (label?: string): string | undefined => {
-  if (!label) {
-    return;
-  }
-  const speedMatch = /(\d+)([MGT])?/i.exec(label);
-  if (!speedMatch) {
-    return;
-  }
-  const num = Number.parseInt(speedMatch[1], 10);
-  const unit = speedMatch[2]?.toUpperCase() || 'M';
-  const multiplier = unit === 'G' ? 1000 : unit === 'T' ? 1000000 : 1;
-  return String(num * multiplier);
-};
-
-const getLinkType = (label?: string): LinkEdgeData['linkType'] | undefined => {
-  const normalized = label?.toLowerCase();
-  if (!normalized) {
-    return;
-  }
-  if (normalized.includes('trunk')) {
-    return 'trunk';
-  }
-  if (normalized.includes('lag') || normalized.includes('po')) {
-    return 'lag';
-  }
-  return;
-};
-
-const getVlan = (label?: string): number | undefined => {
-  if (!label) {
-    return;
-  }
-  const vlanMatch = /vlan\s*(\d+)/i.exec(label);
-  if (!vlanMatch) {
-    return;
-  }
-  return Number.parseInt(vlanMatch[1], 10);
-};
-
-const getEdgeColor = (data: LinkEdgeData): string => {
-  if (data.linkType === 'trunk' || data.linkType === 'lag') {
-    return linkSpeedColors.trunk;
-  }
-  if (data.speed && linkSpeedColors[data.speed]) {
-    return linkSpeedColors[data.speed];
-  }
-  return 'var(--color-border-muted)';
-};
-
-function createEdges(links: TopologyLink[]): LinkEdge[] {
-  return links.map((link, index) => {
-    // Parse link label for speed/type info
-    const data: LinkEdgeData = {
-      label: link.label,
-    };
-
-    data.speed = getLinkSpeed(link.label);
-    data.linkType = getLinkType(link.label);
-    data.vlan = getVlan(link.label);
-
-    const edgeColor = getEdgeColor(data);
-
-    return {
-      id: `e-${link.source}-${link.target}-${index}`,
-      source: link.source,
-      target: link.target,
-      type: 'smoothstep',
-      animated: data.linkType === 'trunk' || data.linkType === 'lag',
-      label: link.label,
-      labelBgPadding: [8, 4] as [number, number],
-      labelBgBorderRadius: 4,
-      labelBgStyle: {
-        fill: 'var(--color-bg-overlay)',
-        fillOpacity: 0.9,
-      },
-      labelStyle: {
-        fill: 'var(--color-text-secondary)',
-        fontSize: 10,
-        fontWeight: 500,
-      },
-      style: {
-        stroke: edgeColor,
-        strokeWidth: data.linkType === 'trunk' || data.linkType === 'lag' ? 3 : 2,
-      },
-      markerEnd: {
-        type: MarkerType.ArrowClosed,
-        color: edgeColor,
-        width: 15,
-        height: 15,
-      },
-      data,
-    };
-  });
-}
-
-// ============================================================================
-// Topology Legend Component
-// ============================================================================
-
-const TopologyLegend: FC<{ show: boolean; onToggle: () => void }> = ({ show, onToggle }) => {
-  if (!show) {
-    return (
-      <button
-        type="button"
-        onClick={onToggle}
-        className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-800/90 border border-white/10 text-sm text-gray-300 hover:bg-gray-700/90 transition-colors"
-      >
-        <Eye className="w-4 h-4" />
-        Show Legend
-      </button>
-    );
-  }
-
-  return (
-    <div className="bg-gray-800/95 backdrop-blur-sm border border-white/10 rounded-xl p-4 min-w-[200px]">
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-sm font-semibold text-white">Legend</span>
-        <button type="button" onClick={onToggle} className="text-gray-400 hover:text-white">
-          <EyeOff className="w-4 h-4" />
-        </button>
-      </div>
-
-      <div className="space-y-4">
-        {/* Device Types */}
-        <div>
-          <div className="text-xs text-gray-400 uppercase tracking-wide mb-2">Device Types</div>
-          <div className="space-y-1.5">
-            {[
-              { type: 'router', label: 'Router' },
-              { type: 'switch', label: 'Switch' },
-              { type: 'firewall', label: 'Firewall' },
-              { type: 'server', label: 'Server' },
-              { type: 'workstation', label: 'Workstation' },
-              { type: 'access-point', label: 'Access Point' },
-            ].map(({ type, label }) => {
-              const Icon = deviceIcons[type] || Network;
-              const color = deviceColors[type];
-              return (
-                <div key={type} className="flex items-center gap-2">
-                  <div className="w-4 h-4 flex items-center justify-center">
-                    <Icon className="w-4 h-4 text-current" />
-                  </div>
-                  <span className="text-xs text-gray-300">{label}</span>
-                  <div
-                    className="w-2 h-2 rounded-full ml-auto"
-                    style={{ backgroundColor: color }}
-                  />
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Link Speeds */}
-        <div>
-          <div className="text-xs text-gray-400 uppercase tracking-wide mb-2">Link Speeds</div>
-          <div className="space-y-1.5">
-            {[
-              { label: '100M', color: 'var(--color-link-100m)' },
-              { label: '1G', color: 'var(--color-link-1g)' },
-              { label: '10G', color: 'var(--color-link-10g)' },
-              { label: 'Trunk/LAG', color: 'var(--color-link-trunk)' },
-            ].map(({ label, color }) => (
-              <div key={label} className="flex items-center gap-2">
-                <div className="w-6 h-0.5 rounded" style={{ backgroundColor: color }} />
-                <span className="text-xs text-gray-300">{label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// ============================================================================
-// Device Details Panel
-// ============================================================================
-
-const DeviceDetailsPanel: FC<{
-  device: DeviceSummary | null;
-  onClose: () => void;
-  onEdit?: (device: DeviceSummary) => void;
-}> = ({ device, onClose, onEdit }) => {
-  if (!device) {
-    return null;
-  }
-
-  const deviceType = device.type?.toLowerCase() || 'unknown';
-  const Icon = deviceIcons[deviceType] || deviceIcons.unknown;
-  const color = deviceColors[deviceType] || deviceColors.unknown;
-
-  return (
-    <div className="absolute top-4 right-4 w-80 bg-gray-800/95 backdrop-blur-sm border border-white/10 rounded-xl p-4 shadow-2xl z-50">
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <div
-            className="p-2 rounded-lg"
-            style={{
-              backgroundColor: `color-mix(in srgb, ${color} 20%, transparent)`,
-            }}
-          >
-            <Icon className="w-6 h-6" />
-          </div>
-          <div>
-            <h3 className="font-semibold text-white">{device.name}</h3>
-            <p className="text-sm text-gray-400 capitalize">{device.type}</p>
-          </div>
-        </div>
-        <button type="button" onClick={onClose} className="text-gray-400 hover:text-white text-xl">
-          &times;
-        </button>
-      </div>
-
-      {device.ips && device.ips.length > 0 && (
-        <div className="mb-3">
-          <div className="text-xs text-gray-400 uppercase tracking-wide mb-1">IP Addresses</div>
-          <div className="space-y-1">
-            {device.ips.map((ip) => (
-              <code key={ip} className="block text-sm text-blue-300 font-mono">
-                {ip}
-              </code>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {device.protocols && device.protocols.length > 0 && (
-        <div className="mb-4">
-          <div className="text-xs text-gray-400 uppercase tracking-wide mb-1">Protocols</div>
-          <div className="flex flex-wrap gap-1">
-            {device.protocols.map((proto) => (
-              <Tag key={proto} colorScheme="purple" className="text-xs">
-                {proto}
-              </Tag>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div className="flex gap-2">
-        <Button size="sm" tone="violet" onClick={() => onEdit?.(device)} className="flex-1">
-          Edit Device
-        </Button>
-        <Button size="sm" variant="outline" onClick={onClose}>
-          Close
-        </Button>
-      </div>
-    </div>
-  );
-};
-
-// ============================================================================
-// Main Topology Page Component
-// ============================================================================
-
+/**
+ * TopologyPage renders the network graph with the device-node and
+ * link-edge presenters defined in ./topology. The page itself owns
+ * data fetching (topology + devices + neighbors), state for the
+ * legend / minimap / selected device, and the export action.
+ */
 export const TopologyPage: FC = () => {
   const navigate = useNavigate();
 
@@ -545,7 +69,7 @@ export const TopologyPage: FC = () => {
     intervalMs: 15000,
   });
 
-  const [nodes, setNodes, onNodesChange] = useNodesState<DeviceNode>([]);
+  const [nodes, setNodes, onNodesChange] = useNodesState<DeviceNodeType>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<LinkEdge>([]);
   const [selectedDevice, setSelectedDevice] = useState<DeviceSummary | null>(null);
   const [showLegend, setShowLegend] = useState(true);

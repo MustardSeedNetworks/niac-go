@@ -26,6 +26,8 @@ import type {
   SimulationRequest,
   SimulationStatus,
   StackStatsResponse,
+  StandaloneCaptureRequest,
+  StandaloneCaptureStatus,
   Template,
   TemplateContent,
   TopologyGraph,
@@ -172,6 +174,20 @@ export const startSimulation = (payload: SimulationRequest) =>
   requestJson<SimulationStatus>('/api/v1/simulation', payload, { method: 'POST' });
 export const stopSimulation = () =>
   request<{ status: string }>('/api/v1/simulation', { method: 'DELETE' });
+
+// =====================================================================
+// Standalone packet capture (PCAP Inspector "sniff without a sim" mode)
+// =====================================================================
+
+export const fetchCaptureStatus = () => deduplicatedGet<StandaloneCaptureStatus>('/api/v1/capture');
+export const startStandaloneCapture = (payload: StandaloneCaptureRequest) =>
+  requestJson<StandaloneCaptureStatus>('/api/v1/capture', payload, {
+    method: 'POST',
+  });
+export const stopStandaloneCapture = () =>
+  request<{ status: string }>('/api/v1/capture', {
+    method: 'DELETE',
+  });
 
 // =====================================================================
 // Templates
