@@ -1,11 +1,10 @@
-import { ApiError, NetworkError, TimeoutError } from './errors';
+import { deduplicatedGet, request, requestJson } from './requestCore';
 import type {
   AlertConfig,
   CloneDeviceRequest,
   ConfigDocument,
   ConfigSchema,
   ConfigUpdateRequest,
-  // Device Configuration Types
   Device,
   DeviceDetailResponse,
   DeviceListResponse,
@@ -45,283 +44,18 @@ import type {
   WalkValidationResponse,
 } from './types';
 
-const API_BASE = import.meta.env.VITE_API_BASE ?? '';
-// API_TOKEN is only used in development mode to avoid embedding secrets in production bundles.
-const API_TOKEN = import.meta.env.DEV ? (import.meta.env.VITE_API_TOKEN ?? '') : '';
-
-const isPlainObject = (value: unknown): value is Record<string, unknown> =>
-  value !== null &&
-  typeof value === 'object' &&
-  !Array.isArray(value) &&
-  !(value instanceof Date) &&
-  !(value instanceof File) &&
-  !(value instanceof Blob) &&
-  !(value instanceof FormData);
-
-const toCamelKey = (key: string) =>
-  key.replace(/_([a-z0-9])/g, (_, char: string) => char.toUpperCase());
-
-const toCamelCase = <T>(value: T): T => {
-  if (Array.isArray(value)) {
-    return value.map((item) => toCamelCase(item)) as T;
-  }
-  if (isPlainObject(value)) {
-    const result: Record<string, unknown> = {};
-    for (const [key, entry] of Object.entries(value)) {
-      const camelKey = key.includes('_') ? toCamelKey(key) : key;
-      result[camelKey] = toCamelCase(entry);
-    }
-    return result as T;
-  }
-  return value;
-};
-
-const toSnakeKey = (key: string) =>
-  key
-    .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
-    .replace(/([A-Z]+)([A-Z][a-z])/g, '$1_$2')
-    .toLowerCase();
-
-const toSnakeCase = <T>(value: T): T => {
-  if (Array.isArray(value)) {
-    return value.map((item) => toSnakeCase(item)) as T;
-  }
-  if (isPlainObject(value)) {
-    const result: Record<string, unknown> = {};
-    for (const [key, entry] of Object.entries(value)) {
-      result[toSnakeKey(key)] = toSnakeCase(entry);
-    }
-    return result as T;
-  }
-  return value;
-};
-
-function buildUrl(path: string) {
-  if (path.startsWith('http')) {
-    return path;
-  }
-  if (path.startsWith('/')) {
-    return `${API_BASE}${path}`;
-  }
-  return `${API_BASE}/${path}`;
-}
-
-const REQUEST_TIMEOUT_MS = 30_000;
-const MAX_RETRIES = 3;
-const BASE_DELAY_MS = 1_000;
-const CSRF_TOKEN_PATH = '/api/v1/csrf-token';
-
-let csrfTokenPromise: Promise<string> | null = null;
-
-interface RetryConfig {
-  readonly maxRetries: number;
-  readonly baseDelay: number;
-}
-
-const DEFAULT_RETRY: RetryConfig = { maxRetries: MAX_RETRIES, baseDelay: BASE_DELAY_MS };
-
-function isStateChangingMethod(method: string | undefined) {
-  const normalized = (method ?? 'GET').toUpperCase();
-  return (
-    normalized === 'POST' ||
-    normalized === 'PUT' ||
-    normalized === 'PATCH' ||
-    normalized === 'DELETE'
-  );
-}
-
-async function fetchCSRFToken() {
-  if (csrfTokenPromise) return csrfTokenPromise;
-
-  csrfTokenPromise = (async () => {
-    const headers = new Headers();
-    headers.set('Accept', 'application/json');
-    if (API_TOKEN) {
-      headers.set('Authorization', `Bearer ${API_TOKEN}`);
-    }
-
-    const response = await fetch(buildUrl(CSRF_TOKEN_PATH), {
-      headers,
-      credentials: 'same-origin',
-    });
-    if (!response.ok) {
-      const text = await response.text();
-      throw new ApiError(text || response.statusText, response.status);
-    }
-
-    const data = (await response.json()) as { token?: string };
-    if (!data.token) {
-      throw new ApiError('CSRF token response did not include a token', response.status);
-    }
-
-    return data.token;
-  })();
-
-  try {
-    return await csrfTokenPromise;
-  } catch (error) {
-    csrfTokenPromise = null;
-    throw error;
-  }
-}
-
 /**
- * Force the next CSRF token use to refetch from the server. Called when a
- * state-changing request fails with csrf_token_invalid — typically because
- * the daemon was restarted and rotated its in-memory token, leaving the
- * client with a stale cached promise.
+ * Thin API endpoint wrappers. Each function below is just a typed
+ * shorthand for one path + method, leaving auth, CSRF, retry, case
+ * conversion, and request deduplication to requestCore.ts.
+ *
+ * Functions are grouped by domain (stats / config / replay / alerts
+ * / files / templates / etc.); call sites import directly from this file.
  */
-function resetCSRFToken() {
-  csrfTokenPromise = null;
-}
 
-async function buildRequestHeaders(path: string, init: RequestInit) {
-  const headers = new Headers(init.headers);
-  headers.set('Accept', 'application/json');
-  if (API_TOKEN) {
-    headers.set('Authorization', `Bearer ${API_TOKEN}`);
-  }
-  if (isStateChangingMethod(init.method) && path !== CSRF_TOKEN_PATH) {
-    headers.set('X-Csrf-Token', await fetchCSRFToken());
-  }
-
-  return headers;
-}
-
-// FIX #175: Check if an error is retryable (network errors and 5xx responses).
-function isRetryableError(error: unknown): boolean {
-  if (error instanceof TypeError) return true; // Network error
-  if (error instanceof Response && error.status >= 500) return true;
-  return false;
-}
-
-// FIX #175: Check if a response status is retryable.
-function isRetryableStatus(status: number): boolean {
-  return status >= 500;
-}
-
-// FIX #179: Accept optional signal parameter to allow caller-provided AbortController.
-export async function request<T>(
-  path: string,
-  init: RequestInit = {},
-  retry: RetryConfig = DEFAULT_RETRY,
-) {
-  const externalSignal = init.signal;
-  let lastError: unknown;
-
-  for (let attempt = 0; attempt <= retry.maxRetries; attempt++) {
-    // FIX #175: Exponential backoff between retries
-    if (attempt > 0) {
-      const delay = retry.baseDelay * 2 ** (attempt - 1);
-      await new Promise((resolve) => setTimeout(resolve, delay));
-    }
-
-    // Don't retry if the caller's signal was already aborted
-    if (externalSignal?.aborted) {
-      throw new DOMException('Request aborted', 'AbortError');
-    }
-
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-
-    // If caller provides a signal, abort our controller when it fires
-    const onExternalAbort = () => controller.abort();
-    externalSignal?.addEventListener('abort', onExternalAbort);
-
-    try {
-      const headers = await buildRequestHeaders(path, init);
-
-      const response = await fetch(buildUrl(path), {
-        ...init,
-        headers,
-        credentials: 'same-origin',
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeout);
-
-      if (!response.ok) {
-        // FIX #175: Retry on 5xx, don't retry on 4xx
-        if (isRetryableStatus(response.status) && attempt < retry.maxRetries) {
-          lastError = new Error(response.statusText);
-          continue;
-        }
-        const text = await response.text();
-        // If the server rejected a stale CSRF token (typically because the
-        // daemon was restarted and rotated its in-memory secret), drop the
-        // cached token and retry once. Without this the SPA would keep
-        // sending the stale token on every state-changing request until a
-        // full reload.
-        if (
-          response.status === 403 &&
-          isStateChangingMethod(init.method) &&
-          /csrf_token_invalid/i.test(text) &&
-          attempt < retry.maxRetries
-        ) {
-          resetCSRFToken();
-          lastError = new ApiError(text, response.status);
-          continue;
-        }
-        throw new ApiError(text || response.statusText, response.status);
-      }
-
-      const data = (await response.json()) as T;
-      return toCamelCase(data);
-    } catch (err) {
-      clearTimeout(timeout);
-
-      // Never retry aborts from caller's signal
-      if (externalSignal?.aborted) {
-        throw new DOMException('Request aborted', 'AbortError');
-      }
-
-      if (err instanceof DOMException && err.name === 'AbortError') {
-        throw new TimeoutError();
-      }
-
-      // FIX #175: Retry network errors
-      if (isRetryableError(err) && attempt < retry.maxRetries) {
-        lastError = err;
-        continue;
-      }
-
-      if (err instanceof TypeError) {
-        throw new NetworkError();
-      }
-      throw err;
-    } finally {
-      clearTimeout(timeout);
-      externalSignal?.removeEventListener('abort', onExternalAbort);
-    }
-  }
-
-  // All retries exhausted
-  if (lastError instanceof TypeError) {
-    throw new NetworkError();
-  }
-  throw lastError ?? new ApiError('Request failed after retries', 0);
-}
-
-const requestJson = <T>(path: string, payload: unknown, init: RequestInit = {}) =>
-  request<T>(path, {
-    ...init,
-    headers: { 'Content-Type': 'application/json', ...(init.headers ?? {}) },
-    body: JSON.stringify(toSnakeCase(payload)),
-  });
-
-// Request deduplication for concurrent identical GET requests
-const inflightRequests = new Map<string, Promise<unknown>>();
-
-function deduplicatedGet<T>(path: string): Promise<T> {
-  const existing = inflightRequests.get(path);
-  if (existing) return existing as Promise<T>;
-
-  const promise = request<T>(path).finally(() => {
-    inflightRequests.delete(path);
-  });
-  inflightRequests.set(path, promise);
-  return promise;
-}
+// =====================================================================
+// Stats, devices, history, neighbors, config
+// =====================================================================
 
 export const fetchStats = () => deduplicatedGet<StackStatsResponse>('/api/v1/stats');
 export const fetchDevices = () => deduplicatedGet<DeviceSummary[]>('/api/v1/devices');
@@ -330,22 +64,38 @@ export const fetchNeighbors = () => deduplicatedGet<NeighborRecord[]>('/api/v1/n
 export const fetchConfig = () => deduplicatedGet<ConfigDocument>('/api/v1/config');
 export const updateConfig = (payload: ConfigUpdateRequest) =>
   requestJson<ConfigDocument>('/api/v1/config', payload, { method: 'PUT' });
+
+// =====================================================================
+// PCAP replay
+// =====================================================================
+
 export const fetchReplayStatus = () => deduplicatedGet<ReplayState>('/api/v1/replay');
 export const startReplay = (payload: ReplayRequest) =>
   requestJson<ReplayState>('/api/v1/replay', payload, { method: 'POST' });
-export const stopReplay = () =>
-  request<ReplayState>('/api/v1/replay', {
-    method: 'DELETE',
-  });
+export const stopReplay = () => request<ReplayState>('/api/v1/replay', { method: 'DELETE' });
+
+// =====================================================================
+// Alerts
+// =====================================================================
+
 export const fetchAlerts = () => deduplicatedGet<AlertConfig>('/api/v1/alerts');
 export const updateAlerts = (payload: AlertConfig) =>
   requestJson<AlertConfig>('/api/v1/alerts', payload, { method: 'PUT' });
+
+// =====================================================================
+// Files + SNMP walks
+// =====================================================================
+
 export const fetchFiles = (kind: 'pcaps' | 'walks') =>
   request<FileEntry[]>(`/api/v1/files?kind=${kind}`);
 export const validateWalk = (filename: string) =>
   requestJson<WalkValidationResponse>('/api/v1/walk/validate', { filename }, { method: 'POST' });
 export const fixWalk = (filename: string) =>
   requestJson<WalkValidationResponse>('/api/v1/walk/fix', { filename }, { method: 'POST' });
+
+// =====================================================================
+// Config merge + import
+// =====================================================================
 
 /**
  * Merge two YAML configs (overlay devices with same name as base devices
@@ -369,6 +119,11 @@ export const importConfig = (payload: { format: 'yaml' | 'java-dsl'; content: st
   requestJson<{ yaml: string; devices: number }>('/api/v1/config/import', payload, {
     method: 'POST',
   });
+
+// =====================================================================
+// Version, topology, error injection
+// =====================================================================
+
 export const fetchVersion = () => deduplicatedGet<VersionInfo>('/api/v1/version');
 export const fetchTopology = () => deduplicatedGet<TopologyGraph>('/api/v1/topology');
 export const fetchErrorTypes = () => deduplicatedGet<ErrorInjectionInfo>('/api/v1/errors');
@@ -404,6 +159,10 @@ export const clearAllErrors = () =>
     method: 'DELETE',
   });
 
+// =====================================================================
+// Interfaces, runtime + simulation lifecycle
+// =====================================================================
+
 export const fetchInterfaces = () => deduplicatedGet<InterfacesResponse>('/api/v1/interfaces');
 
 // Fetch only usable interfaces (ethernet, WiFi, loopback)
@@ -412,16 +171,14 @@ export const fetchUsableInterfaces = () =>
 export const fetchRuntimeStatus = () => deduplicatedGet<RuntimeStatus>('/api/v1/runtime');
 export const fetchSimulationStatus = () => deduplicatedGet<SimulationStatus>('/api/v1/simulation');
 export const startSimulation = (payload: SimulationRequest) =>
-  requestJson<SimulationStatus>('/api/v1/simulation', payload, {
-    method: 'POST',
-  });
+  requestJson<SimulationStatus>('/api/v1/simulation', payload, { method: 'POST' });
 export const stopSimulation = () =>
-  request<{ status: string }>('/api/v1/simulation', {
-    method: 'DELETE',
-  });
+  request<{ status: string }>('/api/v1/simulation', { method: 'DELETE' });
 
-// Standalone packet capture (PCAP Inspector "sniff without a sim" mode).
-// Backed by /api/v1/capture in the daemon.
+// =====================================================================
+// Standalone packet capture (PCAP Inspector "sniff without a sim" mode)
+// =====================================================================
+
 export const fetchCaptureStatus = () => deduplicatedGet<StandaloneCaptureStatus>('/api/v1/capture');
 export const startStandaloneCapture = (payload: StandaloneCaptureRequest) =>
   requestJson<StandaloneCaptureStatus>('/api/v1/capture', payload, {
@@ -432,47 +189,45 @@ export const stopStandaloneCapture = () =>
     method: 'DELETE',
   });
 
-// Template API functions
+// =====================================================================
+// Templates
+// =====================================================================
+
 export const fetchTemplates = () => deduplicatedGet<Template[]>('/api/v1/templates');
 
 export const fetchTemplateContent = (name: string) =>
   request<TemplateContent>(`/api/v1/templates/${encodeURIComponent(name)}`);
 
 export const applyTemplate = (payload: UseTemplateRequest) =>
-  requestJson<UseTemplateResponse>('/api/v1/templates/use', payload, {
-    method: 'POST',
-  });
+  requestJson<UseTemplateResponse>('/api/v1/templates/use', payload, { method: 'POST' });
 
 export const uploadTemplate = (payload: UploadTemplateRequest) =>
-  requestJson<UploadTemplateResponse>('/api/v1/templates', payload, {
-    method: 'POST',
-  });
+  requestJson<UploadTemplateResponse>('/api/v1/templates', payload, { method: 'POST' });
 
 export const deleteTemplate = (name: string) =>
   request<{ success: boolean; message: string }>(`/api/v1/templates/${encodeURIComponent(name)}`, {
     method: 'DELETE',
   });
 
-// Protocol Debug Levels API functions
+// =====================================================================
+// Protocol debug levels
+// =====================================================================
+
 export const fetchProtocolDebugLevels = () =>
   deduplicatedGet<ProtocolDebugLevelsResponse>('/api/v1/debug/levels');
 
 export const updateProtocolDebugLevels = (payload: UpdateProtocolDebugLevelsRequest) =>
-  requestJson<ProtocolDebugLevelsResponse>('/api/v1/debug/levels', payload, {
-    method: 'PUT',
-  });
+  requestJson<ProtocolDebugLevelsResponse>('/api/v1/debug/levels', payload, { method: 'PUT' });
 
 export const resetProtocolDebugLevels = () =>
-  request<ResetProtocolDebugLevelsResponse>('/api/v1/debug/levels/reset', {
-    method: 'POST',
-  });
+  request<ResetProtocolDebugLevelsResponse>('/api/v1/debug/levels/reset', { method: 'POST' });
 
-// PCAP Analyzer API functions
-// Note: These are stub implementations - backend endpoint needs to be implemented
+// =====================================================================
+// PCAP analyser
+// =====================================================================
+
 export const uploadPcap = (payload: PcapUploadRequest) =>
-  requestJson<PcapUploadResponse>('/api/v1/pcap/upload', payload, {
-    method: 'POST',
-  });
+  requestJson<PcapUploadResponse>('/api/v1/pcap/upload', payload, { method: 'POST' });
 
 export const analyzePcap = (analysisId: string) =>
   request<PcapAnalysisResult>(`/api/v1/pcap/analyze/${encodeURIComponent(analysisId)}`);
@@ -480,99 +235,54 @@ export const analyzePcap = (analysisId: string) =>
 export const fetchPcapAnalysis = (analysisId: string) =>
   request<PcapAnalysisResult>(`/api/v1/pcap/${encodeURIComponent(analysisId)}`);
 
-// ============================================================================
-// Device Configuration API functions
-// ============================================================================
+// =====================================================================
+// Device configuration (CRUD on saved devices)
+// =====================================================================
 
-/**
- * Fetch all devices from the configuration
- */
 export const fetchConfigDevices = () =>
   deduplicatedGet<DeviceListResponse>('/api/v1/config/devices');
 
-/**
- * Fetch a single device by hostname
- */
 export const fetchConfigDevice = (hostname: string) =>
   request<DeviceDetailResponse>(`/api/v1/config/devices/${encodeURIComponent(hostname)}`);
 
-/**
- * Create a new device
- */
 export const createDevice = (device: Device) =>
-  requestJson<DeviceMutationResponse>('/api/v1/config/devices', device, {
-    method: 'POST',
-  });
+  requestJson<DeviceMutationResponse>('/api/v1/config/devices', device, { method: 'POST' });
 
-/**
- * Update an existing device
- */
 export const updateDevice = (hostname: string, device: Partial<Device>) =>
   requestJson<DeviceMutationResponse>(
     `/api/v1/config/devices/${encodeURIComponent(hostname)}`,
     device,
-    {
-      method: 'PUT',
-    },
+    { method: 'PUT' },
   );
 
-/**
- * Delete a device
- */
 export const deleteDevice = (hostname: string) =>
   request<DeviceMutationResponse>(`/api/v1/config/devices/${encodeURIComponent(hostname)}`, {
     method: 'DELETE',
   });
 
-/**
- * Clone a device with a new hostname
- */
 export const cloneDevice = (hostname: string, payload: CloneDeviceRequest) =>
   requestJson<DeviceMutationResponse>(
     `/api/v1/config/devices/${encodeURIComponent(hostname)}/clone`,
     payload,
-    {
-      method: 'POST',
-    },
+    { method: 'POST' },
   );
 
-/**
- * Fetch the JSON Schema for device configuration
- * Used for dynamic form generation
- */
 export const fetchConfigSchema = () => deduplicatedGet<ConfigSchema>('/api/v1/config/schema');
 
-/**
- * Fetch available walk files for SNMP configuration
- */
 export const fetchWalkFiles = () => request<FileEntry[]>('/api/v1/files?kind=walks');
 
-// ============================================================================
-// User Config API functions
-// ============================================================================
+// =====================================================================
+// User configs (saved YAML files)
+// =====================================================================
 
-/**
- * Fetch all user-uploaded configs
- */
 export const fetchUserConfigs = () => deduplicatedGet<UserConfigsResponse>('/api/v1/configs');
 
-/**
- * Fetch content of a specific user config
- */
 export const fetchUserConfigContent = (name: string) =>
   request<UserConfigContent>(`/api/v1/configs/${encodeURIComponent(name)}`);
 
-/**
- * Upload a new user config
- */
 export const uploadUserConfig = (payload: UploadUserConfigRequest) =>
-  requestJson<UploadUserConfigResponse>('/api/v1/configs', payload, {
-    method: 'POST',
-  });
+  requestJson<UploadUserConfigResponse>('/api/v1/configs', payload, { method: 'POST' });
 
-/**
- * Delete a user config
- */
 export const deleteUserConfig = (name: string) =>
   request<{ success: boolean; message: string }>(`/api/v1/configs/${encodeURIComponent(name)}`, {
     method: 'DELETE',
