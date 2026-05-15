@@ -288,6 +288,20 @@ func decodePcapUpload(w http.ResponseWriter, r *http.Request) ([]byte, PcapUploa
 		return nil, req, false
 	}
 
+	// The shipped examples/captures/*.pcap files are mislabelled snoop
+	// (RFC 1761) captures. Transparently convert to classic pcap so the
+	// rest of the analyser — which is built around libpcap-style records
+	// via gopacket — stays unchanged.
+	if hasSnoopMagic(pcapData) {
+		converted, convErr := snoopToPCAP(pcapData)
+		if convErr != nil {
+			writeError(w, r, http.StatusBadRequest, "invalid_snoop",
+				fmt.Sprintf("snoop capture could not be converted: %v", convErr), nil)
+			return nil, req, false
+		}
+		pcapData = converted
+	}
+
 	if validateErr := validatePCAPStructure(pcapData); validateErr != nil {
 		writeError(w, r, http.StatusBadRequest, "invalid_pcap",
 			validateErr.Error(), nil)
