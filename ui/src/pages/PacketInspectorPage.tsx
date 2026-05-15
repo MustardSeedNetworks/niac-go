@@ -11,7 +11,14 @@ import {
 } from 'lucide-react';
 import { type FC, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchSimulationStatus } from '../api/client';
+import {
+  fetchCaptureStatus,
+  fetchSimulationStatus,
+  fetchUsableInterfaces,
+  startStandaloneCapture,
+  stopStandaloneCapture,
+} from '../api/client';
+import type { StandaloneCaptureStatus } from '../api/types';
 import { BpfFilterBar } from '../components/BpfFilterBar';
 import { ColoringRulesPanel } from '../components/ColoringRulesPanel';
 import { FilterBar } from '../components/FilterBar';
@@ -79,14 +86,24 @@ const ConnectionStatus: FC<{
  */
 export const PacketInspectorPage: FC = () => {
   const navigate = useNavigate();
-  // Today the packet stream is driven by the running simulation's capture
-  // engine, so when no sim is running the page would just sit empty and
-  // confused. Show an explicit empty state with a CTA to start a sim
-  // until we land a standalone-capture lifecycle (tracked separately).
+  // The page streams from /api/v1/stream/packets, which the daemon
+  // populates from either a running simulation OR a standalone capture
+  // session. Polling both lets us pick whichever is producing traffic
+  // and show its interface in the header.
   const { data: simStatus } = useApiResource(fetchSimulationStatus, [], {
     intervalMs: POLL_INTERVALS.fast,
   });
+  const { data: captureStatus, refetch: refetchCapture } = useApiResource(fetchCaptureStatus, [], {
+    intervalMs: POLL_INTERVALS.fast,
+  });
   const simRunning = simStatus?.running === true;
+  const captureRunning = captureStatus?.running === true;
+  const streamActive = simRunning || captureRunning;
+  const activeInterface = simRunning
+    ? simStatus?.interface
+    : captureRunning
+      ? captureStatus?.interface
+      : undefined;
 
   // Packet buffer state
   const [packets, setPackets] = useState<Packet[]>([]);
@@ -237,27 +254,16 @@ export const PacketInspectorPage: FC = () => {
     return `${selectedPacket.sourceIp}:${selectedPacket.sourcePort ?? 0}`;
   }, [selectedPacket]);
 
-  if (!simRunning) {
+  if (!streamActive) {
     return (
-      <Card className="border-yellow-500/30 bg-yellow-900/20">
-        <CardContent className="space-y-3">
-          <div className="flex items-start gap-3">
-            <Activity className={`mt-1 ${iconSizes.lg} text-yellow-400`} />
-            <div className="flex-1">
-              <p className="font-semibold text-yellow-200">No simulation running</p>
-              <SmallText className="text-yellow-300/90">
-                Packet capture follows the running simulation's interface. Start a simulation to
-                begin streaming. Standalone capture without a simulation is on the roadmap.
-              </SmallText>
-              <div className="mt-3">
-                <Button tone="violet" onClick={() => navigate('/runtime')}>
-                  Go to Simulation
-                </Button>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <StandaloneCaptureStarter
+        onStarted={() => {
+          // Force an immediate status refresh so the page transitions
+          // out of the empty state without waiting for the poll tick.
+          refetchCapture();
+        }}
+        navigateToSim={() => navigate('/runtime')}
+      />
     );
   }
 
@@ -271,8 +277,9 @@ export const PacketInspectorPage: FC = () => {
             <div className="flex items-center gap-4">
               <H2 className="mb-0">Packet Capture</H2>
               <SmallText className="text-gray-400">
-                on <span className="font-mono text-gray-200">{simStatus?.interface ?? '—'}</span>
+                on <span className="font-mono text-gray-200">{activeInterface ?? '—'}</span>
               </SmallText>
+              {captureRunning && !simRunning && <Tag colorScheme="violet">Standalone</Tag>}
               <ConnectionStatus connected={connected} />
             </div>
 
@@ -298,6 +305,24 @@ export const PacketInspectorPage: FC = () => {
               >
                 Clear
               </Button>
+
+              {captureRunning && !simRunning && (
+                <Button
+                  variant="outline"
+                  tone="red"
+                  size="sm"
+                  onClick={async () => {
+                    try {
+                      await stopStandaloneCapture();
+                      refetchCapture();
+                    } catch {
+                      // Surface via the empty-state error path on next render.
+                    }
+                  }}
+                >
+                  Stop capture
+                </Button>
+              )}
 
               <Button
                 variant="ghost"
@@ -454,3 +479,123 @@ export const PacketInspectorPage: FC = () => {
     </div>
   );
 };
+
+/**
+ * StandaloneCaptureStarter is the empty-state UI for PCAP Inspector
+ * when neither a simulation nor a standalone capture session is
+ * running. It lets the user start a sniff-only capture on an
+ * interface of their choice, with an optional BPF filter.
+ *
+ * Once StartStandaloneCapture succeeds, the parent's polling picks up
+ * captureStatus.running and re-renders into the regular packet stream
+ * UI on the next tick. Calling onStarted forces an immediate refetch
+ * so the transition doesn't wait on the poll interval.
+ */
+const StandaloneCaptureStarter: FC<{
+  onStarted: () => void;
+  navigateToSim: () => void;
+}> = ({ onStarted, navigateToSim }) => {
+  const { data: interfacesResp } = useApiResource(fetchUsableInterfaces, []);
+  const interfaces = interfacesResp?.interfaces ?? [];
+  const [selectedIface, setSelectedIface] = useState('');
+  const [bpfFilter, setBpfFilter] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Default to the first usable interface once the list arrives.
+  useEffect(() => {
+    if (!selectedIface && interfaces.length > 0) {
+      setSelectedIface(interfaces[0]?.name ?? '');
+    }
+  }, [interfaces, selectedIface]);
+
+  const handleStart = useCallback(async () => {
+    if (!selectedIface || busy) {
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      await startStandaloneCapture({
+        interface: selectedIface,
+        filter: bpfFilter.trim() || undefined,
+      });
+      onStarted();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to start capture');
+      setBusy(false);
+    }
+  }, [bpfFilter, busy, onStarted, selectedIface]);
+
+  return (
+    <Card className="border-white/5 bg-gray-900/70">
+      <CardContent className="space-y-4">
+        <div className="flex items-start gap-3">
+          <Activity className={`mt-1 ${iconSizes.lg} text-violet-300`} />
+          <div className="flex-1">
+            <p className="font-semibold text-white">Standalone packet capture</p>
+            <SmallText className="text-gray-400">
+              Sniff an interface without starting a simulation. Frames stream into the viewer below
+              as soon as they hit the wire. Or{' '}
+              <button
+                type="button"
+                onClick={navigateToSim}
+                className="text-violet-300 underline hover:text-violet-200"
+              >
+                start a simulation
+              </button>{' '}
+              if you want NIAC to also respond on the wire.
+            </SmallText>
+          </div>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-[1fr_2fr_auto] sm:items-end">
+          <label className="flex flex-col gap-1 text-sm text-gray-400">
+            Interface
+            <select
+              value={selectedIface}
+              onChange={(e) => setSelectedIface(e.target.value)}
+              disabled={busy || interfaces.length === 0}
+              className="rounded-lg border border-white/10 bg-gray-950/60 px-3 py-2 text-sm text-white focus:border-violet-400 focus:outline-none"
+            >
+              {interfaces.length === 0 ? (
+                <option value="">No interfaces detected</option>
+              ) : (
+                interfaces.map((iface) => (
+                  <option key={iface.name} value={iface.name}>
+                    {iface.name}
+                    {iface.addresses && iface.addresses.length > 0
+                      ? ` (${iface.addresses[0]})`
+                      : ''}
+                  </option>
+                ))
+              )}
+            </select>
+          </label>
+          <label className="flex flex-col gap-1 text-sm text-gray-400">
+            BPF filter (optional)
+            <input
+              type="text"
+              value={bpfFilter}
+              onChange={(e) => setBpfFilter(e.target.value)}
+              disabled={busy}
+              placeholder="e.g. tcp port 80"
+              className="rounded-lg border border-white/10 bg-gray-950/60 px-3 py-2 font-mono text-sm text-white focus:border-violet-400 focus:outline-none"
+            />
+          </label>
+          <Button tone="violet" onClick={handleStart} disabled={!selectedIface || busy}>
+            {busy ? 'Starting…' : 'Start capture'}
+          </Button>
+        </div>
+        {error && (
+          <SmallText className="text-red-400" role="alert">
+            {error}
+          </SmallText>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
+
+// Keep the import live even if the type is only used implicitly via
+// the API client return types.
+export type { StandaloneCaptureStatus };

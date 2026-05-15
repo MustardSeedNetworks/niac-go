@@ -208,25 +208,26 @@ type DaemonController interface {
 
 // Server exposes the REST API, metrics endpoint, and Web UI.
 type Server struct {
-	cfg           ServerConfig
-	logger        *slog.Logger
-	httpServer    *http.Server
-	metricsServer *http.Server
-	alertStop     chan struct{}
-	lastAlert     uint64
-	alertMu       sync.RWMutex
-	configMu      sync.RWMutex
-	daemon        DaemonController
-	startTime     time.Time
-	rateLimiter   *RateLimiter
-	csrfToken     string
-	sseHub        *SSEHub
-	uploadLimiter *RateLimiter
-	writeLimiter  *RateLimiter
-	walkLimiter   *RateLimiter
-	fileLimiter   *RateLimiter
-	bgStop        chan struct{}
-	bgStopOnce    sync.Once
+	cfg               ServerConfig
+	logger            *slog.Logger
+	httpServer        *http.Server
+	metricsServer     *http.Server
+	alertStop         chan struct{}
+	lastAlert         uint64
+	alertMu           sync.RWMutex
+	configMu          sync.RWMutex
+	daemon            DaemonController
+	captureController CaptureController
+	startTime         time.Time
+	rateLimiter       *RateLimiter
+	csrfToken         string
+	sseHub            *SSEHub
+	uploadLimiter     *RateLimiter
+	writeLimiter      *RateLimiter
+	walkLimiter       *RateLimiter
+	fileLimiter       *RateLimiter
+	bgStop            chan struct{}
+	bgStopOnce        sync.Once
 }
 
 // NewServer returns a configured API server.
