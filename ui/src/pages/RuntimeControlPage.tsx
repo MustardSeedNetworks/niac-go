@@ -245,7 +245,7 @@ export const RuntimeControlPage: FC = () => {
             <div className="flex flex-wrap items-end gap-3">
               <div className="flex items-center gap-3">
                 <PlugZap className={`${iconSizes.xl} text-violet-400`} />
-                <H2 className="mb-0">Start Simulation</H2>
+                <H2>Start Simulation</H2>
               </div>
               <div className="ml-auto flex flex-wrap items-end gap-3">
                 <div className="min-w-[14rem]">

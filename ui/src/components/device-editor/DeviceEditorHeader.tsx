@@ -60,9 +60,7 @@ export const DeviceEditorHeader: FC<DeviceEditorHeaderProps> = ({
             </button>
             <DeviceIcon className={`${iconSizes.xl} text-violet-300`} />
             <div>
-              <H2 className="mb-0">
-                {isNewDevice ? 'New Device' : device.hostname || 'Edit Device'}
-              </H2>
+              <H2>{isNewDevice ? 'New Device' : device.hostname || 'Edit Device'}</H2>
               <SmallText className="text-gray-400">
                 {isNewDevice ? 'Create a new network device' : 'Edit device configuration'}
               </SmallText>

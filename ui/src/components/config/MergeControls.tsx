@@ -113,7 +113,7 @@ export const MergeControls: FC<MergeControlsProps> = ({
       <CardContent className="space-y-4">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <H2 className="mb-0 flex items-center gap-2">
+          <H2 className="flex items-center gap-2">
             <FileCheck className={`${iconSizes.lg} text-violet-300`} />
             Merge Controls
           </H2>

@@ -196,7 +196,7 @@ export const TopologyPage: FC = () => {
                 <Network className="w-6 h-6 text-cyan-400" />
               </div>
               <div>
-                <H2 className="mb-0">Network Topology</H2>
+                <H2>Network Topology</H2>
                 <SmallText className="text-gray-400">
                   {devices?.length || 0} devices | {topology?.links.length || 0} connections
                 </SmallText>

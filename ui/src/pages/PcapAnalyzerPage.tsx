@@ -231,7 +231,7 @@ export const PcapAnalyzerPage: FC = () => {
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 {/* Title and file info */}
                 <div className="flex items-center gap-4">
-                  <H2 className="mb-0 flex items-center gap-2">
+                  <H2 className="flex items-center gap-2">
                     <FileSearch className={`${iconSizes.lg} text-violet-400`} />
                     PCAP Analysis
                   </H2>

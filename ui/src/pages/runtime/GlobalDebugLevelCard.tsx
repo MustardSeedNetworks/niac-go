@@ -48,7 +48,7 @@ export const GlobalDebugLevelCard: FC = () => {
   return (
     <Card className="border-white/5 bg-gray-900/70">
       <CardContent className="space-y-3">
-        <H2 className="mb-0 flex items-center gap-2 text-lg">
+        <H2 className="flex items-center gap-2 text-lg">
           <Activity className={`${iconSizes.lg} text-violet-300`} />
           Debug level
         </H2>
