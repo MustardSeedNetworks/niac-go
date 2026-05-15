@@ -58,7 +58,7 @@ test.describe('Visual Regression - Pages', () => {
   });
 
   test('pcap analyzer page', async ({ page }) => {
-    await page.goto('/pcap-analyzer');
+    await page.goto('/packets');
     await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(500);
     await expect(page).toHaveScreenshot('pcap-analyzer.png', {

@@ -16,7 +16,7 @@ import path from 'node:path';
 test.describe('PCAP Workflow', () => {
   test.describe('PCAP Analyzer Page', () => {
     test.beforeEach(async ({ page }) => {
-      await page.goto('/pcap-analyzer');
+      await page.goto('/packets');
       await page.waitForLoadState('domcontentloaded');
     });
 
@@ -51,7 +51,7 @@ test.describe('PCAP Workflow', () => {
 
   test.describe('File Upload', () => {
     test.beforeEach(async ({ page }) => {
-      await page.goto('/pcap-analyzer');
+      await page.goto('/packets');
       await page.waitForLoadState('domcontentloaded');
     });
 
@@ -88,7 +88,7 @@ test.describe('PCAP Workflow', () => {
 
   test.describe('Packet Display', () => {
     test.beforeEach(async ({ page }) => {
-      await page.goto('/pcap-analyzer');
+      await page.goto('/packets');
       await page.waitForLoadState('domcontentloaded');
     });
 
@@ -123,7 +123,7 @@ test.describe('PCAP Workflow', () => {
 
   test.describe('Packet Details', () => {
     test.beforeEach(async ({ page }) => {
-      await page.goto('/pcap-analyzer');
+      await page.goto('/packets');
       await page.waitForLoadState('domcontentloaded');
     });
 
@@ -153,7 +153,7 @@ test.describe('PCAP Workflow', () => {
 
   test.describe('Replay Functionality', () => {
     test.beforeEach(async ({ page }) => {
-      await page.goto('/pcap-analyzer');
+      await page.goto('/packets');
       await page.waitForLoadState('domcontentloaded');
     });
 
@@ -185,7 +185,7 @@ test.describe('PCAP Workflow', () => {
 
   test.describe('Export Features', () => {
     test.beforeEach(async ({ page }) => {
-      await page.goto('/pcap-analyzer');
+      await page.goto('/packets');
       await page.waitForLoadState('domcontentloaded');
     });
 

@@ -2,7 +2,6 @@ import type { LucideIcon } from 'lucide-react';
 import {
   Activity,
   FileBox,
-  FileSearch,
   GitCompare,
   Network,
   PlugZap,
@@ -44,9 +43,6 @@ const DebugConsolePage = lazy(() =>
 );
 const PacketInspectorPage = lazy(() =>
   import('./pages/PacketInspectorPage').then((m) => ({ default: m.PacketInspectorPage })),
-);
-const PcapAnalyzerPage = lazy(() =>
-  import('./pages/PcapAnalyzerPage').then((m) => ({ default: m.PcapAnalyzerPage })),
 );
 const TrafficInjectionPage = lazy(() =>
   import('./pages/TrafficInjectionPage').then((m) => ({ default: m.TrafficInjectionPage })),
@@ -320,19 +316,22 @@ export const pages: PageConfig[] = [
     label: 'Packets',
     title: 'Packets',
     description:
-      'Live packets crossing the simulation — hex view, BPF filter, freeze frame, save to PCAP.',
-    icon: FileSearch,
+      'Live wire view of packets on the running simulation, or offline inspection of a captured PCAP file.',
+    icon: FileBox,
     component: PacketInspectorPage,
     help: (
       <>
+        <h4>Live capture</h4>
         <p>
-          Live wire view of every packet the daemon sees — hex + decoded fields, BPF filter, freeze
-          frame, save to PCAP. Streams from <code>/api/v1/stream/packets</code>.
+          Streams every packet the daemon sees from <code>/api/v1/stream/packets</code> — hex +
+          decoded fields, BPF filter, freeze frame, save to PCAP. If the page lags, narrow the BPF
+          filter (e.g. limit to a single protocol or device IP).
         </p>
-        <h4>Performance</h4>
+        <h4>PCAP files</h4>
         <p>
-          Frames flow as fast as the wire. If the page lags, narrow the BPF filter (e.g. limit to a
-          single protocol or device IP) instead of trying to render everything.
+          Switch to the <strong>PCAP files</strong> tab to open and inspect a captured file —
+          protocol breakdown, per-conversation stats, full per-packet decode. Equivalent of{' '}
+          <code>niac analyze-pcap</code> on the CLI.
         </p>
       </>
     ),
@@ -359,28 +358,6 @@ export const pages: PageConfig[] = [
             base config.
           </li>
         </ul>
-      </>
-    ),
-  },
-  {
-    path: '/pcap-analyzer',
-    label: 'PCAP Inspector',
-    title: 'PCAP Inspector',
-    description:
-      'Open and inspect a captured PCAP file offline — protocol breakdown, per-conversation stats, full per-packet decode.',
-    icon: FileBox,
-    component: PcapAnalyzerPage,
-    help: (
-      <>
-        <p>
-          Offline analysis of a PCAP: protocol breakdown, per-conversation stats, full per-packet
-          decode. Equivalent of <code>niac analyze-pcap</code> on the CLI.
-        </p>
-        <h4>Live vs offline</h4>
-        <p>
-          For traffic on the running simulator, use <strong>Packets</strong>. This page is for
-          static analysis of files you've captured elsewhere.
-        </p>
       </>
     ),
   },
