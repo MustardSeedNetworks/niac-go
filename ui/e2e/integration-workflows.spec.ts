@@ -140,7 +140,7 @@ test.describe('Integration Workflows', () => {
   test.describe('PCAP Analysis Workflow', () => {
     test('should analyze PCAP file', async ({ page }) => {
       // Step 1: Navigate to PCAP analyzer
-      await page.goto('/pcap-analyzer');
+      await page.goto('/packets');
       await page.waitForLoadState('domcontentloaded');
 
       // Step 2: Upload PCAP file (simulated)

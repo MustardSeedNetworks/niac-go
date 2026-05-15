@@ -1,9 +1,11 @@
 import {
   Activity,
   Download,
+  FileBox,
   Palette,
   Pause,
   Play,
+  Radio,
   Share2,
   Trash2,
   Wifi,
@@ -37,6 +39,7 @@ import { Card, CardContent } from '../ui/Card';
 import { Tag } from '../ui/Tag';
 import { H2, SmallText } from '../ui/Typography';
 import { getStreamFilter } from '../utils/conversations';
+import { PcapAnalyzerPage } from './PcapAnalyzerPage';
 
 /** Maximum number of packets to buffer */
 const MAX_PACKETS = 100;
@@ -86,6 +89,7 @@ const ConnectionStatus: FC<{
  */
 export const PacketInspectorPage: FC = () => {
   const navigate = useNavigate();
+  const [view, setView] = useState<'live' | 'files'>('live');
   // The page streams from /api/v1/stream/packets, which the daemon
   // populates from either a running simulation OR a standalone capture
   // session. Polling both lets us pick whichever is producing traffic
@@ -269,212 +273,260 @@ export const PacketInspectorPage: FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header with controls */}
-      <Card className="border-white/5 bg-gray-900/70">
-        <CardContent>
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            {/* Title and connection status */}
-            <div className="flex items-center gap-4">
-              <H2 className="mb-0">Packets</H2>
-              <SmallText className="text-gray-400">
-                on <span className="font-mono text-gray-200">{activeInterface ?? '—'}</span>
-              </SmallText>
-              {captureRunning && !simRunning && <Tag colorScheme="violet">Standalone</Tag>}
-              <ConnectionStatus connected={connected} />
-            </div>
-
-            {/* Control buttons */}
-            <div className="flex flex-wrap items-center gap-2">
-              <Button
-                variant={isPaused ? 'outline' : 'ghost'}
-                size="sm"
-                onClick={handlePauseToggle}
-                leftIcon={
-                  isPaused ? <Play className={iconSizes.md} /> : <Pause className={iconSizes.md} />
-                }
-              >
-                {isPaused ? 'Resume' : 'Pause'}
-              </Button>
-
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleClear}
-                leftIcon={<Trash2 className={iconSizes.md} />}
-                disabled={packets.length === 0}
-              >
-                Clear
-              </Button>
-
-              {captureRunning && !simRunning && (
-                <Button
-                  variant="outline"
-                  tone="red"
-                  size="sm"
-                  onClick={async () => {
-                    try {
-                      await stopStandaloneCapture();
-                      refetchCapture();
-                    } catch {
-                      // Surface via the empty-state error path on next render.
-                    }
-                  }}
-                >
-                  Stop capture
-                </Button>
-              )}
-
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleExport}
-                leftIcon={<Download className={iconSizes.md} />}
-                disabled={packets.length === 0}
-              >
-                Export
-              </Button>
-
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowColoringRules(true)}
-                leftIcon={<Palette className={iconSizes.md} />}
-              >
-                Colors
-              </Button>
-
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleFollowStream}
-                leftIcon={<Share2 className={iconSizes.md} />}
-                disabled={!canFollowStream}
-              >
-                Follow Stream
-              </Button>
-
-              {/* SSE auto-reconnects, but manual reconnect is available */}
-              {!connected && (
-                <Button tone="violet" size="sm" onClick={reconnect}>
-                  Reconnect
-                </Button>
-              )}
-            </div>
-          </div>
-
-          {/* Filter row */}
-          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
-            <div className="flex-1">
-              <FilterBar value={filterExpression} onChange={setFilterExpression} />
-            </div>
-
-            {/* Auto-scroll toggle */}
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={autoScroll}
-                onChange={(e) => setAutoScroll(e.target.checked)}
-                className="rounded border-gray-600 bg-gray-800 text-violet-500 focus:ring-violet-400 focus:ring-offset-gray-900"
-              />
-              <SmallText className="text-gray-400">Auto-scroll</SmallText>
-            </label>
-
-            {/* Packet count */}
-            <SmallText className="text-gray-400">
-              {filteredPackets.length} / {packets.length} packets
-            </SmallText>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* BPF Capture Filter */}
-      <Card className="border-white/5 bg-gray-900/70">
-        <CardContent>
-          <BpfFilterBar />
-        </CardContent>
-      </Card>
-
-      {/* Main content grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Packet List - Left sidebar */}
-        <div className="lg:col-span-4 xl:col-span-3">
-          <Card className="border-white/5 bg-gray-900/70 h-[600px]">
-            <CardContent className="h-full flex flex-col">
-              <div className="flex items-center justify-between mb-3">
-                <SmallText className="text-gray-400 uppercase tracking-wide font-semibold">
-                  Packet List
-                </SmallText>
-                {isPaused && (
-                  <Tag colorScheme="yellow" className="text-xs">
-                    Paused
-                  </Tag>
-                )}
-              </div>
-              <div className="flex-1 min-h-0">
-                <PacketList
-                  packets={filteredPackets}
-                  selectedPacketId={selectedPacket?.id ?? null}
-                  onSelectPacket={handleSelectPacket}
-                  autoScroll={autoScroll}
-                  getRowStyle={getRowStyle}
-                />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Right panel - Hex dump and details */}
-        <div className="lg:col-span-8 xl:col-span-9 space-y-6">
-          {/* Hex Dump Viewer */}
-          <Card className="border-white/5 bg-gray-900/70 h-[350px]">
-            <CardContent className="h-full flex flex-col">
-              <SmallText className="text-gray-400 uppercase tracking-wide font-semibold mb-3">
-                Hex Dump
-              </SmallText>
-              <div className="flex-1 min-h-0">
-                <HexDumpViewer
-                  rawData={selectedPacket?.rawData ?? ''}
-                  headerLength={14}
-                  highlightRange={highlightRange}
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Packet Details */}
-          <Card className="border-white/5 bg-gray-900/70 h-[220px]">
-            <CardContent className="h-full flex flex-col">
-              <SmallText className="text-gray-400 uppercase tracking-wide font-semibold mb-3">
-                Packet Details
-              </SmallText>
-              <div className="flex-1 min-h-0 overflow-y-auto">
-                <PacketDetails
-                  packet={selectedPacket}
-                  onFieldSelect={(start, end) => setHighlightRange([start, end])}
-                />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+      {/* Live / PCAP Files tab control */}
+      <div
+        className="inline-flex rounded-lg border border-white/10 bg-gray-950/40 p-0.5"
+        role="tablist"
+        aria-label="Packets view"
+      >
+        <button
+          type="button"
+          role="tab"
+          aria-selected={view === 'live'}
+          onClick={() => setView('live')}
+          className={`flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-medium transition-colors ${
+            view === 'live'
+              ? 'bg-violet-500/20 text-violet-100'
+              : 'text-gray-400 hover:bg-white/5 hover:text-gray-200'
+          }`}
+        >
+          <Radio className="w-3.5 h-3.5" />
+          Live capture
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={view === 'files'}
+          onClick={() => setView('files')}
+          className={`flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-medium transition-colors ${
+            view === 'files'
+              ? 'bg-violet-500/20 text-violet-100'
+              : 'text-gray-400 hover:bg-white/5 hover:text-gray-200'
+          }`}
+        >
+          <FileBox className="w-3.5 h-3.5" />
+          PCAP files
+        </button>
       </div>
 
-      {/* Coloring Rules Panel */}
-      {showColoringRules && (
-        <ColoringRulesPanel
-          rules={coloringRules}
-          onRulesChange={setColoringRules}
-          onReset={resetColoringRules}
-          onClose={() => setShowColoringRules(false)}
-        />
-      )}
+      {/* PCAP Files tab — renders the standalone analyzer */}
+      {view === 'files' && <PcapAnalyzerPage />}
 
-      {/* Stream View */}
-      {showStreamView && selectedPacket && (
-        <StreamView
-          packets={streamPackets}
-          clientEndpoint={clientEndpoint}
-          onClose={() => setShowStreamView(false)}
-        />
+      {/* Live capture content (everything below is the original page) */}
+      {view === 'live' && (
+        <>
+          {/* Header with controls */}
+          <Card className="border-white/5 bg-gray-900/70">
+            <CardContent>
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                {/* Title and connection status */}
+                <div className="flex items-center gap-4">
+                  <H2 className="mb-0">Packets</H2>
+                  <SmallText className="text-gray-400">
+                    on <span className="font-mono text-gray-200">{activeInterface ?? '—'}</span>
+                  </SmallText>
+                  {captureRunning && !simRunning && <Tag colorScheme="violet">Standalone</Tag>}
+                  <ConnectionStatus connected={connected} />
+                </div>
+
+                {/* Control buttons */}
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    variant={isPaused ? 'outline' : 'ghost'}
+                    size="sm"
+                    onClick={handlePauseToggle}
+                    leftIcon={
+                      isPaused ? (
+                        <Play className={iconSizes.md} />
+                      ) : (
+                        <Pause className={iconSizes.md} />
+                      )
+                    }
+                  >
+                    {isPaused ? 'Resume' : 'Pause'}
+                  </Button>
+
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleClear}
+                    leftIcon={<Trash2 className={iconSizes.md} />}
+                    disabled={packets.length === 0}
+                  >
+                    Clear
+                  </Button>
+
+                  {captureRunning && !simRunning && (
+                    <Button
+                      variant="outline"
+                      tone="red"
+                      size="sm"
+                      onClick={async () => {
+                        try {
+                          await stopStandaloneCapture();
+                          refetchCapture();
+                        } catch {
+                          // Surface via the empty-state error path on next render.
+                        }
+                      }}
+                    >
+                      Stop capture
+                    </Button>
+                  )}
+
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleExport}
+                    leftIcon={<Download className={iconSizes.md} />}
+                    disabled={packets.length === 0}
+                  >
+                    Export
+                  </Button>
+
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowColoringRules(true)}
+                    leftIcon={<Palette className={iconSizes.md} />}
+                  >
+                    Colors
+                  </Button>
+
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleFollowStream}
+                    leftIcon={<Share2 className={iconSizes.md} />}
+                    disabled={!canFollowStream}
+                  >
+                    Follow Stream
+                  </Button>
+
+                  {/* SSE auto-reconnects, but manual reconnect is available */}
+                  {!connected && (
+                    <Button tone="violet" size="sm" onClick={reconnect}>
+                      Reconnect
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              {/* Filter row */}
+              <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+                <div className="flex-1">
+                  <FilterBar value={filterExpression} onChange={setFilterExpression} />
+                </div>
+
+                {/* Auto-scroll toggle */}
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={autoScroll}
+                    onChange={(e) => setAutoScroll(e.target.checked)}
+                    className="rounded border-gray-600 bg-gray-800 text-violet-500 focus:ring-violet-400 focus:ring-offset-gray-900"
+                  />
+                  <SmallText className="text-gray-400">Auto-scroll</SmallText>
+                </label>
+
+                {/* Packet count */}
+                <SmallText className="text-gray-400">
+                  {filteredPackets.length} / {packets.length} packets
+                </SmallText>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* BPF Capture Filter */}
+          <Card className="border-white/5 bg-gray-900/70">
+            <CardContent>
+              <BpfFilterBar />
+            </CardContent>
+          </Card>
+
+          {/* Main content grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* Packet List - Left sidebar */}
+            <div className="lg:col-span-4 xl:col-span-3">
+              <Card className="border-white/5 bg-gray-900/70 h-[600px]">
+                <CardContent className="h-full flex flex-col">
+                  <div className="flex items-center justify-between mb-3">
+                    <SmallText className="text-gray-400 uppercase tracking-wide font-semibold">
+                      Packet List
+                    </SmallText>
+                    {isPaused && (
+                      <Tag colorScheme="yellow" className="text-xs">
+                        Paused
+                      </Tag>
+                    )}
+                  </div>
+                  <div className="flex-1 min-h-0">
+                    <PacketList
+                      packets={filteredPackets}
+                      selectedPacketId={selectedPacket?.id ?? null}
+                      onSelectPacket={handleSelectPacket}
+                      autoScroll={autoScroll}
+                      getRowStyle={getRowStyle}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Right panel - Hex dump and details */}
+            <div className="lg:col-span-8 xl:col-span-9 space-y-6">
+              {/* Hex Dump Viewer */}
+              <Card className="border-white/5 bg-gray-900/70 h-[350px]">
+                <CardContent className="h-full flex flex-col">
+                  <SmallText className="text-gray-400 uppercase tracking-wide font-semibold mb-3">
+                    Hex Dump
+                  </SmallText>
+                  <div className="flex-1 min-h-0">
+                    <HexDumpViewer
+                      rawData={selectedPacket?.rawData ?? ''}
+                      headerLength={14}
+                      highlightRange={highlightRange}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Packet Details */}
+              <Card className="border-white/5 bg-gray-900/70 h-[220px]">
+                <CardContent className="h-full flex flex-col">
+                  <SmallText className="text-gray-400 uppercase tracking-wide font-semibold mb-3">
+                    Packet Details
+                  </SmallText>
+                  <div className="flex-1 min-h-0 overflow-y-auto">
+                    <PacketDetails
+                      packet={selectedPacket}
+                      onFieldSelect={(start, end) => setHighlightRange([start, end])}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+
+          {/* Coloring Rules Panel */}
+          {showColoringRules && (
+            <ColoringRulesPanel
+              rules={coloringRules}
+              onRulesChange={setColoringRules}
+              onReset={resetColoringRules}
+              onClose={() => setShowColoringRules(false)}
+            />
+          )}
+
+          {/* Stream View */}
+          {showStreamView && selectedPacket && (
+            <StreamView
+              packets={streamPackets}
+              clientEndpoint={clientEndpoint}
+              onClose={() => setShowStreamView(false)}
+            />
+          )}
+        </>
       )}
     </div>
   );
