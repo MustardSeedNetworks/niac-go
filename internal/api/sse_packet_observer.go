@@ -9,6 +9,7 @@ package api
 import (
 	"encoding/hex"
 	"strconv"
+	"time"
 
 	"github.com/gopacket/gopacket"
 	"github.com/gopacket/gopacket/layers"
@@ -43,6 +44,53 @@ func (o *sseHubPacketObserver) OnPacket(direction string, pkt *protocols.Packet)
 		return
 	}
 	o.hub.BroadcastPacket(packetToWire(direction, pkt))
+}
+
+// BroadcastCapturePacket ships a standalone-captured gopacket onto the
+// SSE packets stream. Used by the daemon's standalone capture loop,
+// which has no protocols.Stack and therefore no PacketObserver. The
+// shape produced here matches packetToWire() so the UI's stream
+// reader doesn't need a branch for the two sources.
+//
+// Direction is always "rx" — the standalone capture is read-only and
+// never injects frames.
+func (s *Server) BroadcastCapturePacket(pkt gopacket.Packet) {
+	if s == nil || s.sseHub == nil || pkt == nil {
+		return
+	}
+	s.sseHub.BroadcastPacket(gopacketToWire(pkt))
+}
+
+// gopacketToWire is the standalone-capture cousin of packetToWire. It
+// takes a gopacket.Packet directly rather than the protocols.Packet
+// wrapper. Same JSON shape; the only loss is the serial / VLAN
+// metadata that the protocols stack injects, which a sniff-only
+// session doesn't have anyway.
+func gopacketToWire(pkt gopacket.Packet) map[string]any {
+	md := pkt.Metadata()
+	raw := pkt.Data()
+	size := len(raw)
+	truncated := false
+	if size > sseMaxRawPacketBytes {
+		raw = raw[:sseMaxRawPacketBytes]
+		truncated = true
+	}
+
+	ts := md.Timestamp
+	if ts.IsZero() {
+		ts = time.Now()
+	}
+	out := map[string]any{
+		"timestamp": ts.UTC().Format("2006-01-02T15:04:05.000Z"),
+		"direction": "rx",
+		"size":      size,
+		"raw_data":  hex.EncodeToString(raw),
+		"truncated": truncated,
+		"protocol":  "Unknown",
+		"summary":   "",
+	}
+	enrichWithLayers(out, pkt.Data())
+	return out
 }
 
 // packetToWire flattens a Packet into a map suitable for SSE JSON.

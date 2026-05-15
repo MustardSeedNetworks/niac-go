@@ -65,6 +65,13 @@ func (s *Server) registerWriteProtectedRoutes(mux *http.ServeMux) {
 		"/api/v1/capture/filter",
 		s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.handleCaptureFilter)))),
 	)
+	// Standalone packet capture (no simulation required). POST=start,
+	// DELETE=stop, GET=status. Distinct from /capture/filter, which
+	// drives the BPF filter on the sim-managed capture engine.
+	mux.HandleFunc(
+		"/api/v1/capture",
+		s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.handleStandaloneCapture)))),
+	)
 }
 
 // registerReadOnlyRoutes registers routes that only require authentication.

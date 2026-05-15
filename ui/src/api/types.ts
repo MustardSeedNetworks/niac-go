@@ -31,6 +31,8 @@ export type {
   SimulationRequest,
   SimulationStatus,
   StackStatsResponse,
+  StandaloneCaptureRequest,
+  StandaloneCaptureStatus,
   TopologyGraph,
   TopologyLink,
   TopologyNode,

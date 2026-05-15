@@ -199,6 +199,25 @@ export interface SimulationStatus {
   uptimeSeconds: number;
 }
 
+/**
+ * StandaloneCaptureStatus mirrors the daemon's api.CaptureStatus. It
+ * powers the "sniff this interface" mode of the PCAP Inspector — i.e.
+ * packet capture without a simulation.
+ */
+export interface StandaloneCaptureStatus {
+  running: boolean;
+  interface?: string;
+  filter?: string;
+  startedAt?: string;
+  packets: number;
+}
+
+export interface StandaloneCaptureRequest {
+  interface: string;
+  /** Optional libpcap BPF expression. Empty captures everything. */
+  filter?: string;
+}
+
 export interface SimulationRequest {
   interface: string;
   configPath?: string;
