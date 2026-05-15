@@ -153,7 +153,7 @@ export const ConfigDiffPage: FC = () => {
         <CardContent className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <H2 className="mb-0 flex items-center gap-2">
+              <H2 className="flex items-center gap-2">
                 <GitCompare className={`${iconSizes.lg} text-violet-300`} />
                 Compare & Merge
               </H2>
@@ -204,7 +204,7 @@ export const ConfigDiffPage: FC = () => {
         <Card className="border-white/5 bg-gray-900/70">
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
-              <H2 className="mb-0 text-lg">Original File</H2>
+              <H2 className="text-lg">Original File</H2>
               {leftFile && (
                 <Tag colorScheme="blue" className="text-xs">
                   Source
@@ -226,7 +226,7 @@ export const ConfigDiffPage: FC = () => {
         <Card className="border-white/5 bg-gray-900/70">
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
-              <H2 className="mb-0 text-lg">Modified File</H2>
+              <H2 className="text-lg">Modified File</H2>
               {rightFile && (
                 <Tag colorScheme="green" className="text-xs">
                   Changes
@@ -251,7 +251,7 @@ export const ConfigDiffPage: FC = () => {
         <>
           <Card className="border-white/5 bg-gray-900/70">
             <CardContent className="space-y-4">
-              <H2 className="mb-0 flex items-center gap-2">
+              <H2 className="flex items-center gap-2">
                 <GitCompare className={`${iconSizes.lg} text-cyan-300`} />
                 Side-by-Side Comparison
               </H2>

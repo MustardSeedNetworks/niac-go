@@ -321,7 +321,7 @@ export const PacketInspectorPage: FC = () => {
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 {/* Title and connection status */}
                 <div className="flex items-center gap-4">
-                  <H2 className="mb-0">Packets</H2>
+                  <H2>Packets</H2>
                   <SmallText className="text-gray-400">
                     on <span className="font-mono text-gray-200">{activeInterface ?? '—'}</span>
                   </SmallText>

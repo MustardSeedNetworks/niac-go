@@ -44,7 +44,7 @@ export const TrafficInjectionPage: FC = () => {
       <Card className="border-white/5 bg-gray-900/70">
         <CardContent className="space-y-3">
           <div className="flex items-center justify-between">
-            <H2 className="mb-0 flex items-center gap-2 text-lg">
+            <H2 className="flex items-center gap-2 text-lg">
               <History className={`${iconSizes.lg} text-gray-400`} />
               Recent runs
             </H2>

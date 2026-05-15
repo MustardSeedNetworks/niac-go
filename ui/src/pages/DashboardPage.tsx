@@ -126,7 +126,7 @@ export const DashboardPage: FC = () => {
         {/* Quick Actions */}
         <Card className="lg:col-span-2">
           <CardContent className="space-y-4">
-            <H2 className="mb-0 flex items-center gap-2">
+            <H2 className="flex items-center gap-2">
               <Zap className={`${iconSizes.lg} text-violet-400`} />
               Quick Actions
             </H2>
@@ -192,7 +192,7 @@ export const DashboardPage: FC = () => {
         <Card>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
-              <H2 className="mb-0">Recent Runs</H2>
+              <H2>Recent Runs</H2>
               <Tag colorScheme="gray">History</Tag>
             </div>
             <div className="space-y-3">
@@ -301,7 +301,7 @@ const AutomationTimeline = memo(({ history }: { history: HistoryRecord[] | null 
     <Card className="border-white/5 bg-gray-900/70">
       <CardContent className="space-y-4">
         <div className="flex items-center justify-between">
-          <H2 className="mb-0 flex items-center gap-2">
+          <H2 className="flex items-center gap-2">
             <SatelliteDish className={`${iconSizes.lg} text-violet-300`} />
             Automation timeline
           </H2>

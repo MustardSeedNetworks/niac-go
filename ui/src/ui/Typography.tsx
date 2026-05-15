@@ -43,7 +43,7 @@ export const H1: FC<TypographyProps> = ({ children, className = '', ...props }) 
 );
 
 export const H2: FC<TypographyProps> = ({ children, className = '', ...props }) => (
-  <h2 className={`text-xl font-semibold text-white mb-2 ${className}`} {...props}>
+  <h2 className={`text-xl font-semibold text-white ${className}`} {...props}>
     {children}
   </h2>
 );

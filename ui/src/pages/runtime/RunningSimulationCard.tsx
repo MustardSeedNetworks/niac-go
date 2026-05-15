@@ -59,7 +59,7 @@ export const RunningSimulationCard: FC<RunningSimulationCardProps> = ({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="h-3 w-3 animate-pulse rounded-full bg-green-400" />
-            <H2 className="mb-0">Simulation Running</H2>
+            <H2>Simulation Running</H2>
           </div>
           <Tag colorScheme="green">ACTIVE</Tag>
         </div>

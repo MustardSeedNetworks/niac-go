@@ -58,7 +58,7 @@ export const JavaDslImportCard: FC = () => {
   return (
     <Card className="border-white/5 bg-gray-900/70">
       <CardContent className="space-y-4">
-        <H2 className="mb-0 flex items-center gap-2">
+        <H2 className="flex items-center gap-2">
           <FileInput className={`${iconSizes.lg} text-emerald-300`} />
           Import legacy config (Java DSL → YAML)
         </H2>

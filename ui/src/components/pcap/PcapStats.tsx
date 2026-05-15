@@ -259,7 +259,7 @@ export const PcapStats: FC<PcapStatsProps> = memo(({ stats, filename, fileSize }
         <CardContent className="space-y-4">
           <div className="flex items-center gap-2">
             <Clock className={`${iconSizes.lg} text-emerald-300`} />
-            <H2 className="mb-0">Time Range</H2>
+            <H2>Time Range</H2>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
@@ -284,7 +284,7 @@ export const PcapStats: FC<PcapStatsProps> = memo(({ stats, filename, fileSize }
         <CardContent className="space-y-4">
           <div className="flex items-center gap-2">
             <BarChart3 className={`${iconSizes.lg} text-violet-300`} />
-            <H2 className="mb-0">Protocol Breakdown</H2>
+            <H2>Protocol Breakdown</H2>
           </div>
 
           <ProtocolBreakdown protocols={stats.protocols} total={stats.totalPackets} />
@@ -296,7 +296,7 @@ export const PcapStats: FC<PcapStatsProps> = memo(({ stats, filename, fileSize }
         <CardContent className="space-y-4">
           <div className="flex items-center gap-2">
             <Network className={`${iconSizes.lg} text-blue-300`} />
-            <H2 className="mb-0">Top Endpoints</H2>
+            <H2>Top Endpoints</H2>
           </div>
 
           <TopEndpoints sources={stats.topSources} destinations={stats.topDestinations} />

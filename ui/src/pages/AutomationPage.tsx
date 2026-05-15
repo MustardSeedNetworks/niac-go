@@ -82,7 +82,7 @@ const AlertConfigCard: FC<{ recentErrors: number }> = ({ recentErrors }) => {
   return (
     <Card className="border-white/5 bg-gray-900/70">
       <CardContent className="space-y-4">
-        <H2 className="mb-0 flex items-center gap-2">
+        <H2 className="flex items-center gap-2">
           <BellRing className={`${iconSizes.lg} text-orange-300`} />
           Alert policy
         </H2>

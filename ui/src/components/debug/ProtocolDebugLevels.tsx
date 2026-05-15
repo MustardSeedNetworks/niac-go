@@ -247,7 +247,7 @@ export const ProtocolDebugLevels: FC = () => {
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <Settings2 className={`${iconSizes.xl} text-violet-400`} />
-            <H2 className="mb-0">Protocol Debug Levels</H2>
+            <H2>Protocol Debug Levels</H2>
           </div>
 
           {/* Action Buttons */}

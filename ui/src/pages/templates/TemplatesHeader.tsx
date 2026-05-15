@@ -26,7 +26,7 @@ export const TemplatesHeader: FC<TemplatesHeaderProps> = ({
       <CardContent className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <H2 className="mb-0 flex items-center gap-2">
+            <H2 className="flex items-center gap-2">
               <FileCode className={`${iconSizes.lg} text-violet-300`} />
               Configuration Templates
             </H2>
