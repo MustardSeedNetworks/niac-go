@@ -7,11 +7,49 @@ import type { DeviceSummary, TopologyLink } from '../../api/types';
 import type { DeviceNode, DeviceNodeData, LinkEdge, LinkEdgeData } from './types';
 import { linkSpeedColors } from './types';
 
+// Card-sized tuneables for the edges == 0 grid fallback below. Keep
+// neighbours far enough apart that they don't overlap at default zoom.
+const NODE_WIDTH = 220;
+const NODE_HEIGHT = 130;
+const NODE_GAP_X = 60;
+const NODE_GAP_Y = 60;
+
 /**
- * Layout nodes in concentric circles based on connectivity.
- * Most connected devices are placed in the center.
+ * Layout nodes in concentric circles based on connectivity. Most
+ * connected devices are placed in the center.
+ *
+ * When the topology API returns nodes with no links (most built-in
+ * templates declare devices without trunk_ports / port_channels), the
+ * concentric-ring path's degree-driven radius schedule collapses to
+ * radius=0 and the cards stack on top of one another. We fall back
+ * to a fixed-pitch grid so the user at least sees every device — the
+ * "no connections" banner above the canvas explains what to add to
+ * the YAML to populate edges.
  */
 export function layoutNodes(devices: DeviceSummary[], links: TopologyLink[]): DeviceNode[] {
+  if (links.length === 0) {
+    return devices.map((device, index) => {
+      const cols = Math.max(1, Math.ceil(Math.sqrt(devices.length)));
+      const row = Math.floor(index / cols);
+      const col = index % cols;
+      return {
+        id: device.name,
+        type: 'device',
+        position: {
+          x: col * (NODE_WIDTH + NODE_GAP_X),
+          y: row * (NODE_HEIGHT + NODE_GAP_Y),
+        },
+        data: {
+          label: device.name,
+          type: device.type || 'unknown',
+          ips: device.ips,
+          protocols: device.protocols,
+          status: 'online',
+        } as DeviceNodeData,
+      };
+    });
+  }
+
   const nodeMap = new Map<string, { x: number; y: number }>();
 
   // Create adjacency list
