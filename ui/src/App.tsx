@@ -91,11 +91,11 @@ function AppShell() {
               </PageWithErrorBoundary>
             }
           />
-          {/* Back-compat: the standalone Templates page was folded into the
-              Simulation page in feat/consolidate-simulation-templates.
-              Bookmarks and copied URLs continue to work. */}
+          {/* Back-compat for folded-in pages — bookmarks and copied URLs
+              continue to work after pages moved into their host sections. */}
           <Route path="/templates" element={<Navigate to="/runtime" replace={true} />} />
           <Route path="/neighbors" element={<Navigate to="/topology" replace={true} />} />
+          <Route path="/analysis" element={<Navigate to="/traffic" replace={true} />} />
           <Route path="*" element={<Navigate to="/" replace={true} />} />
         </Routes>
       </Suspense>
