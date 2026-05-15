@@ -95,6 +95,7 @@ function AppShell() {
               Simulation page in feat/consolidate-simulation-templates.
               Bookmarks and copied URLs continue to work. */}
           <Route path="/templates" element={<Navigate to="/runtime" replace={true} />} />
+          <Route path="/neighbors" element={<Navigate to="/topology" replace={true} />} />
           <Route path="*" element={<Navigate to="/" replace={true} />} />
         </Routes>
       </Suspense>
