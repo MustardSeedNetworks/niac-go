@@ -549,7 +549,7 @@ func TestSentinelErrors(t *testing.T) {
 	}{
 		{ErrInterfaceNotExist, "interface does not exist"},
 		{ErrConfigDataExceedsMaxSize, "config data exceeds maximum size"},
-		{ErrConfigPathOrDataRequired, "either config_path or config_data must be provided"},
+		{ErrConfigPathOrDataRequired, "either config_path, config_data, or template_name must be provided"},
 		{ErrNoSimulationRunning, "no simulation running"},
 	}
 
