@@ -91,7 +91,7 @@ export const WalkValidatorPage: FC = () => {
       <Card className="border-white/5 bg-gray-900/70">
         <CardContent className="space-y-4">
           <header>
-            <h1 className="text-2xl font-semibold text-white">SNMP Walk Validator</h1>
+            <h1 className="text-2xl font-semibold text-white">SNMP Walks</h1>
             <p className="text-sm text-gray-400">
               Same engine as <code>niac analyze-walk</code>. Validate detects malformed lines,
               missing OIDs, and unquoted strings; fix auto-rewrites the file in place.

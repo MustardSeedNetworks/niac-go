@@ -155,10 +155,10 @@ export const ConfigDiffPage: FC = () => {
             <div>
               <H2 className="mb-0 flex items-center gap-2">
                 <GitCompare className={`${iconSizes.lg} text-violet-300`} />
-                Config Diff & Merge
+                Compare & Merge
               </H2>
               <P className="text-gray-400 mt-1">
-                Compare and merge two YAML configuration files with visual diff and merge controls.
+                Compare two YAML network configs side-by-side and merge changes between them.
               </P>
             </div>
             {hasFiles && (

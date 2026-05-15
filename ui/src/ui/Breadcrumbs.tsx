@@ -9,19 +9,21 @@ interface BreadcrumbItem {
 }
 
 const ROUTE_LABELS: Record<string, string> = {
-  '/': 'Command Center',
-  '/runtime': 'Runtime Control',
-  '/devices': 'Devices & Config',
-  '/device-config': 'Config Builder',
+  '/': 'Dashboard',
+  '/runtime': 'Simulation',
+  '/devices': 'Running Devices',
+  '/device-config': 'Devices',
   '/topology': 'Topology',
-  '/analysis': 'Analysis',
-  '/automation': 'Automation',
-  '/traffic': 'Traffic Injection',
-  '/debug': 'Debug Console',
-  '/packets': 'Packet Inspector',
+  '/analysis': 'Replay',
+  '/automation': 'Alerts',
+  '/traffic': 'Traffic',
+  '/debug': 'Logs',
+  '/packets': 'Packets',
   '/templates': 'Templates',
-  '/config-diff': 'Config Diff',
-  '/pcap-analyzer': 'PCAP Analyzer',
+  '/config-diff': 'Compare & Merge',
+  '/pcap-analyzer': 'PCAP Inspector',
+  '/neighbors': 'Neighbors',
+  '/walk-validator': 'SNMP Walks',
 };
 
 export const Breadcrumbs: FC = () => {
