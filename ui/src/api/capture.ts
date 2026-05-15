@@ -1,4 +1,4 @@
-import { request } from './client';
+import { request } from './requestCore';
 import type { CaptureFilterResponse } from './types';
 
 /** Get the current capture filter state. */
