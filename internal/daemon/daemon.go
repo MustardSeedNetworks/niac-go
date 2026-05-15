@@ -24,8 +24,9 @@ import (
 var (
 	ErrInterfaceNotExist        = errors.New("interface does not exist")
 	ErrConfigDataExceedsMaxSize = errors.New("config data exceeds maximum size")
-	ErrConfigPathOrDataRequired = errors.New("either config_path or config_data must be provided")
+	ErrConfigPathOrDataRequired = errors.New("either config_path, config_data, or template_name must be provided")
 	ErrNoSimulationRunning      = errors.New("no simulation running")
+	ErrTemplateNotFound         = errors.New("template not found")
 )
 
 const (
@@ -174,6 +175,22 @@ const maxSimulationConfigSize = 10 * 1024 * 1024 // 10MB limit
 // did a file Stat on the literal string "<inline>".
 func loadSimulationConfig(req api.SimulationRequest) (*config.Config, string, error) {
 	switch {
+	case req.TemplateName != "":
+		// Loading templates by name preserves the template's own
+		// directory as the include_path base — needed for vendor
+		// templates with `include_path: ".."` plus relative walk_file
+		// refs that resolve to sibling directories (e.g. examples/
+		// device_walks_sanitized/...). Fetching the YAML text and
+		// POSTing it as ConfigData would lose that context.
+		templatePath := api.FindTemplateOnDisk(req.TemplateName)
+		if templatePath == "" {
+			return nil, "", fmt.Errorf("%w: %s", ErrTemplateNotFound, req.TemplateName)
+		}
+		cfg, err := config.Load(templatePath)
+		if err != nil {
+			return nil, "", fmt.Errorf("load template %q: %w", req.TemplateName, err)
+		}
+		return cfg, templatePath, nil
 	case req.ConfigData != "":
 		if len(req.ConfigData) > maxSimulationConfigSize {
 			return nil, "", fmt.Errorf(

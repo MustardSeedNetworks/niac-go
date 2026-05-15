@@ -178,6 +178,14 @@ type SimulationRequest struct {
 	Interface  string `json:"interface"`
 	ConfigPath string `json:"config_path,omitempty"`
 	ConfigData string `json:"config_data,omitempty"`
+	// TemplateName, when set, tells the daemon to load a built-in
+	// template directly from disk by name. This preserves the template's
+	// own directory as the include_path base, which matters for templates
+	// like vendors/paloalto-firewall.yaml that reference walk files via
+	// `include_path: ".."` plus a relative `walk_file:` path. Fetching the
+	// template content and POSTing it as ConfigData would lose that
+	// directory context and trip the walk-file path-traversal guard.
+	TemplateName string `json:"template_name,omitempty"`
 }
 
 // SimulationStatus represents the current simulation status.

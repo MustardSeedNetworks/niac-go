@@ -422,6 +422,16 @@ func (s *Server) handleTemplateContent(w http.ResponseWriter, r *http.Request, n
 	s.writeJSON(w, response)
 }
 
+// FindTemplateOnDisk searches for a template by name in all template
+// directories and returns the absolute path, or empty string if not
+// found. Exposed for callers like the daemon's StartSimulation that
+// need to load a template directly off disk (so include_path resolves
+// against the template's source directory rather than the wherever
+// inline data happens to be persisted).
+func FindTemplateOnDisk(name string) string {
+	return findTemplateRecursive(name)
+}
+
 // findTemplateRecursive searches for a template by name in all template directories.
 func findTemplateRecursive(name string) string {
 	for _, dir := range getTemplateDirs() {

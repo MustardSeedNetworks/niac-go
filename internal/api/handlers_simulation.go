@@ -57,6 +57,10 @@ func (s *Server) handleSimulationStart(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := s.daemon.StartSimulation(req); err != nil {
+		// SECURITY: Don't leak internal error details to the client, but
+		// log them server-side so the daemon log can be used to diagnose
+		// why a start failed (config parse, capture engine, walk file…).
+		s.logger.Error("[API] Failed to start simulation", "error", err)
 		writeError(w, r, http.StatusInternalServerError, "simulation_start_failed",
 			"Failed to start simulation", nil)
 		return
