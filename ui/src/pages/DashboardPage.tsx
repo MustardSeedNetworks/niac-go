@@ -224,7 +224,7 @@ export const DashboardPage: FC = () => {
               )}
             </div>
             {history && history.length > 0 && (
-              <AccentLink to="/analysis" className="text-sm">
+              <AccentLink to="/traffic" className="text-sm">
                 View all history →
               </AccentLink>
             )}

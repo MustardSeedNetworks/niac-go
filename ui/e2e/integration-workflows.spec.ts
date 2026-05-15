@@ -347,13 +347,11 @@ test.describe('Integration Workflows', () => {
         '/runtime',
         '/packets',
         '/topology',
-        '/analysis',
         '/automation',
         '/traffic',
         '/debug',
         '/templates',
         '/config-diff',
-        '/pcap-analyzer',
       ];
 
       for (const route of routes) {

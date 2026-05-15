@@ -4,7 +4,6 @@ import {
   FileBox,
   FileSearch,
   GitCompare,
-  LineChart,
   Network,
   PlugZap,
   Server,
@@ -36,9 +35,6 @@ const DeviceEditorPage = lazy(() =>
 );
 const DeviceListPage = lazy(() =>
   import('./pages/DeviceListPage').then((m) => ({ default: m.DeviceListPage })),
-);
-const AnalysisPage = lazy(() =>
-  import('./pages/AnalysisPage').then((m) => ({ default: m.AnalysisPage })),
 );
 const AutomationPage = lazy(() =>
   import('./pages/AutomationPage').then((m) => ({ default: m.AutomationPage })),
@@ -229,35 +225,6 @@ export const pages: PageConfig[] = [
         <p>
           Topology can be exported as Graphviz <code>.dot</code> or JSON via the export button.
         </p>
-      </>
-    ),
-  },
-  {
-    path: '/analysis',
-    label: 'Replay',
-    title: 'Replay',
-    description: 'Replay a captured PCAP through the running simulation.',
-    icon: LineChart,
-    component: AnalysisPage,
-    help: (
-      <>
-        <p>
-          Drive the daemon's PCAP replay engine: pick a file, set a loop interval and time scale,
-          start. Equivalent of <code>POST /api/v1/replay</code>.
-        </p>
-        <h4>Auto-started replays</h4>
-        <p>
-          A <code>capture_playbacks:</code> block in your YAML auto-starts when the simulation
-          starts. This page reflects whatever is currently running and lets you swap files without
-          editing the config.
-        </p>
-        <h4>File sources</h4>
-        <ul>
-          <li>Files placed under the daemon's pcap directory show up in the dropdown.</li>
-          <li>
-            Use <strong>PCAP Analysis</strong> to inspect a file before replaying.
-          </li>
-        </ul>
       </>
     ),
   },
