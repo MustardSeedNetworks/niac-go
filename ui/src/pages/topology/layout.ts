@@ -225,16 +225,23 @@ export function createEdges(links: TopologyLink[]): LinkEdge[] {
     data.targetInterface = link.targetInterface;
     data.vlans = link.vlans;
     data.discovered = link.discovered;
+    data.utilizationPercent = link.utilizationPercent;
 
-    const edgeColor = getEdgeColor(data);
+    const baseColor = getEdgeColor(data);
+    const { stroke, strokeWidth: utilWidth } = utilizationStyle(data.utilizationPercent, baseColor);
     // Trunk + LAG links are bidirectional by nature (both sides send
     // and receive on the same wire) — show arrows on both ends. A
     // plain access link still uses a single end-arrow to indicate the
     // "source declared this" direction.
     const bidirectional = data.linkType === 'trunk' || data.linkType === 'lag';
+    // Stroke width = max(base-by-direction, utilisation-driven). High
+    // utilisation should visibly thicken even an access link; trunks
+    // start at 3 px so they don't shrink when utilisation is unknown.
+    const baseWidth = bidirectional ? 3 : 2;
+    const strokeWidth = Math.max(baseWidth, utilWidth);
     const marker = {
       type: MarkerType.ArrowClosed,
-      color: edgeColor,
+      color: stroke,
       width: 14,
       height: 14,
     };
@@ -249,8 +256,8 @@ export function createEdges(links: TopologyLink[]): LinkEdge[] {
       type: 'trunk',
       animated: bidirectional,
       style: {
-        stroke: edgeColor,
-        strokeWidth: bidirectional ? 3 : 2,
+        stroke,
+        strokeWidth,
       },
       markerEnd: marker,
       ...(bidirectional ? { markerStart: marker } : {}),
@@ -262,4 +269,40 @@ export function createEdges(links: TopologyLink[]): LinkEdge[] {
       data,
     };
   });
+}
+
+/**
+ * utilizationStyle maps a 0–100 utilisation percent to a stroke
+ * width + colour tint. Buckets match the design table in #552:
+ *
+ *   0 – 24   : default colour, base width (no change)
+ *   25 – 59  : default colour, 3 px
+ *   60 – 84  : amber, 4 px
+ *   85+      : red, 5 px
+ *
+ * When utilisation is undefined or 0, we return the unmodified base
+ * colour + the smallest non-zero width sentinel (0) so the caller's
+ * Math.max picks the direction-based default. Callers MUST take
+ * Math.max(baseWidth, returned-width).
+ */
+function utilizationStyle(
+  utilisation: number | undefined,
+  baseColor: string,
+): { stroke: string; strokeWidth: number } {
+  if (utilisation === undefined || utilisation <= 0) {
+    return { stroke: baseColor, strokeWidth: 0 };
+  }
+  if (utilisation < 25) {
+    return { stroke: baseColor, strokeWidth: 0 };
+  }
+  if (utilisation < 60) {
+    return { stroke: baseColor, strokeWidth: 3 };
+  }
+  if (utilisation < 85) {
+    // amber-500 — keeps in-house palette consistent with existing
+    // status tints elsewhere in the UI.
+    return { stroke: '#f59e0b', strokeWidth: 4 };
+  }
+  // red-500 for >= 85 %.
+  return { stroke: '#ef4444', strokeWidth: 5 };
 }

@@ -176,6 +176,9 @@ const EdgeTooltip: FC<{ x: number; y: number; data: LinkEdgeData }> = ({ x, y, d
   if (data.linkType) {
     rows.push(['Type', data.linkType]);
   }
+  if (typeof data.utilizationPercent === 'number' && data.utilizationPercent > 0) {
+    rows.push(['Utilisation', `${data.utilizationPercent.toFixed(0)} %`]);
+  }
   rows.push([
     'Source',
     data.discovered ? 'Discovered (LLDP/CDP/EDP/FDP)' : 'Declared (trunk_ports)',
