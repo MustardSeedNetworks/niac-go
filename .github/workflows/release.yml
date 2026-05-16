@@ -1,9 +1,29 @@
 # =============================================================================
-# Release - NiAC (Network In A Can)
+# Release (goreleaser)
 # =============================================================================
-# Release workflow for creating versioned releases.
-# Builds multi-arch packages (.tar.gz, .deb, .rpm, .pkg, .zip).
-# Triggered on version tags (v*) or manual dispatch.
+# Canonical release pipeline as of this cutover. Validated by dry-run
+# 25974954130 — 6 archives + 2 deb + 2 rpm + cosign signatures + syft
+# SBOMs all produced with parity vs the prior hand-coded release.yml.
+#
+# Triggers:
+#   - push to a v* tag: real release, builds + signs + publishes
+#   - workflow_dispatch with dry_run=true: snapshot, no publish or sign
+#
+# Mirrors seed's .github/workflows/release.yml shape so the two projects
+# converge on the same release tooling.
+#
+# Toolchain notes:
+#   Build runs inside the goreleaser-cross Docker image which ships:
+#     - gcc + gcc-aarch64-linux-gnu (Linux cross)
+#     - mingw-w64 (Windows cross; we use CGO_ENABLED=0 there anyway)
+#     - osxcross + macOS SDK (Darwin cross)
+#   Node + UI build run in a separate job; goreleaser picks up the
+#   embedded dist via internal/api/ui/ (vite config writes there).
+#   libpcap-dev:arm64 is apt-installed at the start because the cross
+#   image doesn't ship libpcap headers per target arch.
+#
+# Inputs: only the typed `dry_run` boolean — no untrusted event fields
+# are interpolated into shell commands.
 # =============================================================================
 
 name: Release
@@ -15,615 +35,140 @@ on:
   workflow_dispatch:
     inputs:
       dry_run:
-        description: "Build artifacts and exit (skip publishing the GitHub release)"
+        description: "Snapshot build only - do not publish or sign"
         type: boolean
         default: true
 
 concurrency:
-  # Don't cancel an in-progress real release run, even if a second tag pushes
-  # in quick succession — those are independent versions and both should ship.
-  # Dry-run dispatches use the run_id so they never queue/cancel each other.
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 
 permissions:
   contents: write
+  id-token: write # cosign keyless OIDC
+  packages: write
 
 jobs:
-  # ===========================================================================
-  # Build Linux Release Packages
-  # ===========================================================================
-  release-linux:
-    name: Create Linux Release (${{ matrix.arch }})
+  # =========================================================================
+  # UI build - done outside the goreleaser-cross container because that
+  # image is Go-focused and doesn't ship Node. We build internal/api/ui/
+  # here so the next job can pick up the directory and let goreleaser's
+  # Go build embed it.
+  # =========================================================================
+  build-ui:
+    name: Build UI
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - arch: amd64
-            goarch: amd64
-            cc: gcc
-            pkg_config_path: /usr/lib/x86_64-linux-gnu/pkgconfig
-          - arch: arm64
-            goarch: arm64
-            cc: aarch64-linux-gnu-gcc
-            pkg_config_path: /usr/lib/aarch64-linux-gnu/pkgconfig
-
+    outputs:
+      ui_hash: ${{ steps.ui-hash.outputs.hash }}
     steps:
-      - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-
-      - name: Set up Go
-        uses: actions/setup-go@v6
-        with:
-          go-version-file: go.mod
-          cache: true
+      - uses: actions/checkout@v6.0.2
 
       - name: Set up Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v6.4.0
         with:
           node-version: "25.2.1"
           cache: npm
           cache-dependency-path: ui/package-lock.json
 
-      - name: Set up QEMU for cross-arch testing
-        if: matrix.arch == 'arm64'
-        uses: docker/setup-qemu-action@v4
-        with:
-          platforms: arm64
-
-      - name: Install build dependencies
-        run: |
-          if [ "${{ matrix.arch }}" = "arm64" ]; then
-            sudo dpkg --add-architecture arm64
-            # Replace Ubuntu's default deb822 sources with explicit amd64
-            # .list entries. The deb822 format groups each repo into a
-            # multi-line stanza, and appending `Architectures: amd64` at
-            # end-of-file only attaches to the last stanza — which left
-            # apt fetching arm64 indexes from azure/security.ubuntu.com
-            # (404, since arm64 packages are at ports.ubuntu.com).
-            sudo rm -f /etc/apt/sources.list.d/ubuntu.sources
-            sudo tee /etc/apt/sources.list.d/ubuntu-amd64.list >/dev/null <<'EOF'
-          deb [arch=amd64] http://azure.archive.ubuntu.com/ubuntu noble main universe multiverse restricted
-          deb [arch=amd64] http://azure.archive.ubuntu.com/ubuntu noble-updates main universe multiverse restricted
-          deb [arch=amd64] http://azure.archive.ubuntu.com/ubuntu noble-backports main universe multiverse restricted
-          deb [arch=amd64] http://security.ubuntu.com/ubuntu noble-security main universe multiverse restricted
-          EOF
-            # Restrict third-party .list sources to amd64 too, but skip
-            # entries that already have [arch=...] (e.g. microsoft-prod.list
-            # would otherwise become malformed) and skip our own files.
-            for f in /etc/apt/sources.list.d/*.list /etc/apt/sources.list; do
-              [ -f "$f" ] || continue
-              case "$f" in
-                */ubuntu-amd64.list|*/ports-arm64.list) continue ;;
-              esac
-              sudo sed -i '/^deb \[/!s|^deb |deb [arch=amd64] |' "$f"
-            done
-            # Add arm64 sources from ports.ubuntu.com
-            sudo tee /etc/apt/sources.list.d/ports-arm64.list >/dev/null <<'EOF'
-          deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble main universe multiverse restricted
-          deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble-updates main universe multiverse restricted
-          deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble-security main universe multiverse restricted
-          EOF
-          fi
-
-          # apt-get update can return 100 on partial source failures (e.g.
-          # third-party repos that don't publish arm64 indexes). Tolerate it
-          # here — the install step below is the actual gate: if the arm64
-          # libpcap headers don't land we'll still fail loudly.
-          sudo apt-get update || true
-          sudo apt-get install -y rpm
-          if [ "${{ matrix.arch }}" = "arm64" ]; then
-            sudo apt-get install -y gcc-aarch64-linux-gnu libpcap-dev:arm64 pkg-config qemu-user-static
-          else
-            sudo apt-get install -y libpcap-dev pkg-config
-          fi
-
-      - name: Build frontend
+      - name: Build UI
         run: |
           cd ui
           npm ci
           npm run build
 
-      - name: Verify embedded frontend
-        run: |
-          # Vite is configured to emit directly into ../internal/api/ui, so
-          # there is no separate ui/dist to copy from. Just confirm the
-          # output landed and is non-empty before the Go build embeds it.
-          if [ ! -d internal/api/ui ] || [ -z "$(ls -A internal/api/ui)" ]; then
-            echo "internal/api/ui is missing or empty after npm run build"
-            exit 1
-          fi
-          ls -la internal/api/ui/
-
-      - name: Generate UI build hash
+      - name: Compute UI build hash
         id: ui-hash
         run: |
-          UI_HASH=$(find internal/api/ui -type f -exec md5sum {} \; | sort | md5sum | cut -d' ' -f1)
-          echo "hash=$UI_HASH" >> $GITHUB_OUTPUT
-          echo "UI Build Hash: $UI_HASH"
+          UI_BUILD_HASH=$(find internal/api/ui -type f -exec md5sum {} \; | sort | md5sum | cut -d' ' -f1)
+          echo "hash=$UI_BUILD_HASH" >> "$GITHUB_OUTPUT"
 
-      - name: Build NiAC
-        env:
-          GOOS: linux
-          GOARCH: ${{ matrix.goarch }}
-          CGO_ENABLED: 1
-          CC: ${{ matrix.cc }}
-          PKG_CONFIG_PATH: ${{ matrix.pkg_config_path }}
-          VERSION: ${{ github.ref_name }}
-          COMMIT: ${{ github.sha }}
-          UI_HASH: ${{ steps.ui-hash.outputs.hash }}
-        run: |
-          go build -trimpath -buildvcs=false \
-            -ldflags="-s -w -X main.version=${VERSION} -X main.commit=${COMMIT} -X main.date=$(date -u +%Y-%m-%dT%H:%M:%SZ) -X main.uiBuildHash=${UI_HASH}" \
-            -o dist/niac-linux-${{ matrix.arch }} ./cmd/niac
-
-      - name: Verify binary (smoke test)
-        run: |
-          echo "=== NiAC binary file type ==="
-          file dist/niac-linux-${{ matrix.arch }}
-
-          if [ "${{ matrix.arch }}" = "arm64" ]; then
-            qemu-aarch64-static dist/niac-linux-${{ matrix.arch }} version || echo "Version check complete"
-          else
-            ./dist/niac-linux-${{ matrix.arch }} version || echo "Version check complete"
-          fi
-          echo "NiAC binary smoke test passed"
-
-      - name: Install nfpm
-        run: go install github.com/goreleaser/nfpm/v2/cmd/nfpm@v2.46.3
-
-      - name: Create release packages (.tar.gz + .deb + .rpm via nfpm)
-        env:
-          REF_NAME: ${{ github.ref_name }}
-          REF_TYPE: ${{ github.ref_type }}
-          SHORT_SHA: ${{ github.sha }}
-          ARCH: ${{ matrix.arch }}
-        run: |
-          # On tag: VERSION = "v0.66.34"; PKG_VERSION = "0.66.34".
-          # On dispatch from a branch (REF_TYPE=branch): VERSION = "0.0.0-dryrun-<sha7>",
-          # because branch names like "chore/release-pipeline-modernize" contain
-          # slashes that would otherwise leak into archive/.deb/.rpm filenames.
-          if [ "${REF_TYPE}" = "tag" ]; then
-            VERSION="${REF_NAME}"
-            PKG_VERSION=$(echo "${VERSION#v}" | sed 's/-dirty$//;s/-[0-9]*-g[0-9a-f]*$//')
-          else
-            VERSION="0.0.0-dryrun-${SHORT_SHA:0:7}"
-            PKG_VERSION="${VERSION}"
-          fi
-          echo "Using VERSION=${VERSION} PKG_VERSION=${PKG_VERSION}"
-          mkdir -p release
-
-          # .tar.gz: prebuilt binary in a versioned directory
-          mkdir -p "release/niac-${VERSION}-linux-${ARCH}"
-          cp "dist/niac-linux-${ARCH}" "release/niac-${VERSION}-linux-${ARCH}/niac"
-          chmod +x "release/niac-${VERSION}-linux-${ARCH}"/*
-          tar -C release -czvf "release/niac-${VERSION}-linux-${ARCH}.tar.gz" "niac-${VERSION}-linux-${ARCH}"
-          rm -rf "release/niac-${VERSION}-linux-${ARCH}"
-
-          # .deb + .rpm: render .nfpm.yaml with envsubst, hand to nfpm. nfpm is
-          # pure Go, so cross-arch RPMs work the same as cross-arch DEBs — no
-          # rpmbuild/rpmrc/platform-macros plumbing needed.
-          export NIAC_VERSION="${PKG_VERSION}"
-          export NIAC_ARCH="${ARCH}"
-          export NIAC_BINARY="./dist/niac-linux-${ARCH}"
-          envsubst < .nfpm.yaml > nfpm.rendered.yaml
-
-          # Canonical RPM arch alias: amd64→x86_64, arm64→aarch64. nfpm
-          # already translates the in-package Architecture: header; this
-          # just makes the filename match standard RPM conventions.
-          case "${ARCH}" in
-            amd64) RPM_ARCH=x86_64 ;;
-            arm64) RPM_ARCH=aarch64 ;;
-            *)     RPM_ARCH="${ARCH}" ;;
-          esac
-
-          nfpm pkg --config nfpm.rendered.yaml --packager deb \
-            --target "release/niac_${PKG_VERSION}_${ARCH}.deb"
-          nfpm pkg --config nfpm.rendered.yaml --packager rpm \
-            --target "release/niac-${PKG_VERSION}-1.${RPM_ARCH}.rpm"
-
-      - name: Upload release artifacts
-        uses: actions/upload-artifact@v7
+      - name: Upload UI dist
+        uses: actions/upload-artifact@v7.0.1
         with:
-          name: release-linux-${{ matrix.arch }}
-          path: |
-            release/*.tar.gz
-            release/*.deb
-            release/*.rpm
+          name: ui-dist
+          path: internal/api/ui/
+          retention-days: 1
+          include-hidden-files: true
 
-  # ===========================================================================
-  # Build macOS Release
-  # ===========================================================================
-  release-macos:
-    name: Create macOS Release (${{ matrix.arch }})
-    permissions:
-      contents: write
-
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: macos-14
-            arch: arm64
-            goarch: arm64
-          - os: macos-15-intel
-            arch: amd64
-            goarch: amd64
-
-    runs-on: ${{ matrix.os }}
-
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-
-      - name: Set up Go
-        uses: actions/setup-go@v6
-        with:
-          go-version-file: go.mod
-          cache: true
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: "25.2.1"
-          cache: npm
-          cache-dependency-path: ui/package-lock.json
-
-      - name: Install libpcap
-        run: brew list libpcap || brew install libpcap
-
-      - name: Build frontend
-        run: |
-          cd ui
-          npm ci
-          npm run build
-
-      - name: Verify embedded frontend
-        run: |
-          # Vite is configured to emit directly into ../internal/api/ui, so
-          # there is no separate ui/dist to copy from. Just confirm the
-          # output landed and is non-empty before the Go build embeds it.
-          if [ ! -d internal/api/ui ] || [ -z "$(ls -A internal/api/ui)" ]; then
-            echo "internal/api/ui is missing or empty after npm run build"
-            exit 1
-          fi
-          ls -la internal/api/ui/
-
-      - name: Generate UI build hash
-        id: ui-hash
-        run: |
-          UI_HASH=$(find internal/api/ui -type f -exec md5 -q {} 2>/dev/null || find internal/api/ui -type f -exec md5sum {} \; | sort | md5sum | cut -d' ' -f1)
-          echo "hash=$UI_HASH" >> $GITHUB_OUTPUT
-          echo "UI Build Hash: $UI_HASH"
-
-      - name: Build NiAC for macOS
-        env:
-          GOOS: darwin
-          GOARCH: ${{ matrix.goarch }}
-          CGO_ENABLED: 1
-          VERSION: ${{ github.ref_name }}
-          COMMIT: ${{ github.sha }}
-          UI_HASH: ${{ steps.ui-hash.outputs.hash }}
-        run: |
-          go build -trimpath -buildvcs=false \
-            -ldflags="-s -w -X main.version=${VERSION} -X main.commit=${COMMIT} -X main.date=$(date -u +%Y-%m-%dT%H:%M:%SZ) -X main.uiBuildHash=${UI_HASH}" \
-            -o dist/niac-darwin-${{ matrix.arch }} ./cmd/niac
-
-      - name: Verify binary (smoke test)
-        run: |
-          file dist/niac-darwin-${{ matrix.arch }}
-          ./dist/niac-darwin-${{ matrix.arch }} version || echo "Version check complete"
-          echo "macOS binary smoke test passed"
-
-      - name: Create release packages
-        env:
-          REF_NAME: ${{ github.ref_name }}
-          REF_TYPE: ${{ github.ref_type }}
-          SHORT_SHA: ${{ github.sha }}
-          ARCH: ${{ matrix.arch }}
-        run: |
-          if [ "${REF_TYPE}" = "tag" ]; then
-            VERSION="${REF_NAME}"
-            PKG_VERSION=$(echo "${VERSION#v}" | sed 's/-dirty$//;s/-[0-9]*-g[0-9a-f]*$//')
-          else
-            VERSION="0.0.0-dryrun-${SHORT_SHA:0:7}"
-            PKG_VERSION="${VERSION}"
-          fi
-
-          # Create .tar.gz package
-          mkdir -p release/niac-${VERSION}-darwin-${ARCH}
-          cp dist/niac-darwin-${ARCH} release/niac-${VERSION}-darwin-${ARCH}/niac
-          chmod +x release/niac-${VERSION}-darwin-${ARCH}/*
-          cd release
-          tar -czvf niac-${VERSION}-darwin-${ARCH}.tar.gz niac-${VERSION}-darwin-${ARCH}
-          cd ..
-
-          # Create .pkg installer
-          chmod +x deploy/macos/build-pkg.sh
-          ./deploy/macos/build-pkg.sh ./dist/niac-darwin-${ARCH} ${PKG_VERSION}
-
-      - name: Upload release artifacts
-        uses: actions/upload-artifact@v7
-        with:
-          name: release-darwin-${{ matrix.arch }}
-          path: |
-            release/*.tar.gz
-            dist/*.pkg
-
-  # ===========================================================================
-  # Build Windows Release
-  # ===========================================================================
-  release-windows:
-    name: Create Windows Release (${{ matrix.arch }})
+  # =========================================================================
+  # goreleaser build + (when not dry-run) publish.
+  # Runs inside goreleaser-cross container so all cross-compile toolchains
+  # are present.
+  # =========================================================================
+  goreleaser:
+    name: goreleaser
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - arch: amd64
-            goarch: amd64
-          - arch: arm64
-            goarch: arm64
-
+    needs: [build-ui]
+    container:
+      # Docker Hub tag scheme: <go-version>-<bundle-revision>. v1.26.2-3
+      # tracks Go 1.26.2 + goreleaser v2.15.4. Pin so behaviour stays
+      # reproducible; bump via dependabot when newer revs land.
+      image: goreleaser/goreleaser-cross:v1.26.2-3
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v6.0.2
         with:
           fetch-depth: 0
 
-      - name: Set up Go
-        uses: actions/setup-go@v6
-        with:
-          go-version-file: go.mod
-          cache: true
+      - name: Mark workspace as safe (container runs as root)
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: "25.2.1"
-          cache: npm
-          cache-dependency-path: ui/package-lock.json
-
-      - name: Build frontend
+      - name: Install libpcap headers for amd64 + arm64
+        # goreleaser-cross ships compilers but not libpcap headers.
+        # gopacket/pcap needs pcap.h for cgo. Add the arm64 architecture
+        # and pull libpcap-dev for both archs.
+        shell: bash
         run: |
-          cd ui
-          npm ci
-          npm run build
-
-      - name: Verify embedded frontend
-        run: |
-          # Vite is configured to emit directly into ../internal/api/ui, so
-          # there is no separate ui/dist to copy from. Just confirm the
-          # output landed and is non-empty before the Go build embeds it.
-          if [ ! -d internal/api/ui ] || [ -z "$(ls -A internal/api/ui)" ]; then
-            echo "internal/api/ui is missing or empty after npm run build"
-            exit 1
+          set -euo pipefail
+          dpkg --add-architecture arm64
+          if [ -f /etc/apt/sources.list ]; then
+            sed -i 's|^deb |deb [arch=amd64] |' /etc/apt/sources.list
           fi
-          ls -la internal/api/ui/
-
-      - name: Generate UI build hash
-        id: ui-hash
-        run: |
-          UI_HASH=$(find internal/api/ui -type f -exec md5sum {} \; | sort | md5sum | cut -d' ' -f1)
-          echo "hash=$UI_HASH" >> $GITHUB_OUTPUT
-          echo "UI Build Hash: $UI_HASH"
-
-      - name: Build NiAC for Windows
-        env:
-          GOOS: windows
-          GOARCH: ${{ matrix.goarch }}
-          # CGO is disabled on Windows because gopacket/pcap requires
-          # libpcap (no Windows package on Ubuntu cross-toolchains). The
-          # capture/replay features that need libpcap aren't available on
-          # the Windows binary; CLI/UI/non-pcap protocol features still
-          # work.
-          CGO_ENABLED: 0
-          VERSION: ${{ github.ref_name }}
-          COMMIT: ${{ github.sha }}
-          UI_HASH: ${{ steps.ui-hash.outputs.hash }}
-        run: |
-          go build -trimpath -buildvcs=false \
-            -ldflags="-s -w -X main.version=${VERSION} -X main.commit=${COMMIT} -X main.date=$(date -u +%Y-%m-%dT%H:%M:%SZ) -X main.uiBuildHash=${UI_HASH}" \
-            -o "dist/niac-windows-${{ matrix.arch }}.exe" ./cmd/niac
-
-      - name: Verify binary
-        run: |
-          file "dist/niac-windows-${{ matrix.arch }}.exe"
-          echo "Windows ${{ matrix.arch }} binary built"
-
-      - name: Create Windows distribution
-        env:
-          REF_NAME: ${{ github.ref_name }}
-          REF_TYPE: ${{ github.ref_type }}
-          SHORT_SHA: ${{ github.sha }}
-          ARCH: ${{ matrix.arch }}
-        run: |
-          if [ "${REF_TYPE}" = "tag" ]; then
-            VERSION="${REF_NAME}"
-            PKG_VERSION=$(echo "${VERSION#v}" | sed 's/-dirty$//;s/-[0-9]*-g[0-9a-f]*$//')
-          else
-            PKG_VERSION="0.0.0-dryrun-${SHORT_SHA:0:7}"
-          fi
-          PKG_NAME="niac-${PKG_VERSION}-windows-${ARCH}"
-          mkdir -p "release/${PKG_NAME}"
-          cp "dist/niac-windows-${ARCH}.exe" "release/${PKG_NAME}/niac.exe"
-          cp deploy/windows/build.ps1 "release/${PKG_NAME}/install.ps1"
-          cd release
-          zip -r "${PKG_NAME}.zip" "${PKG_NAME}"
-
-      - name: Upload release artifacts
-        uses: actions/upload-artifact@v7
-        with:
-          name: release-windows-${{ matrix.arch }}
-          path: release/*.zip
-
-  # ===========================================================================
-  # Publish Release
-  # ===========================================================================
-  publish:
-    name: Publish Release
-    runs-on: ubuntu-latest
-    needs: [release-linux, release-macos, release-windows]
-    permissions:
-      contents: write
-      id-token: write
-
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-
-      - name: Download all release artifacts
-        uses: actions/download-artifact@v8
-        with:
-          path: artifacts/
-
-      - name: Prepare release files
-        run: |
-          mkdir -p dist
-          find artifacts -name "*.tar.gz" -exec cp {} dist/ \;
-          find artifacts -name "*.deb" -exec cp {} dist/ \;
-          find artifacts -name "*.rpm" -exec cp {} dist/ \;
-          find artifacts -name "*.pkg" -exec cp {} dist/ \;
-          find artifacts -name "*.zip" -exec cp {} dist/ \;
-          cd dist
-          sha256sum * > checksums.txt 2>/dev/null || true
-          cat checksums.txt
-
-      - name: Install Syft for SBOM generation
-        uses: anchore/sbom-action/download-syft@v0
-
-      - name: Generate SBOMs for packages
-        run: |
-          cd dist
-          for pkg in *.tar.gz; do
-            if [ -f "${pkg}" ]; then
-              echo "Generating SBOM for ${pkg}..."
-              syft "${pkg}" -o cyclonedx-json > "${pkg%.tar.gz}.sbom.json"
-            fi
+          shopt -s nullglob
+          for f in /etc/apt/sources.list.d/*.list; do
+            sed -i 's|^deb |deb [arch=amd64] |' "$f"
           done
+          cat > /etc/apt/sources.list.d/arm64.list <<'EOF'
+          deb [arch=arm64] http://deb.debian.org/debian bookworm main
+          deb [arch=arm64] http://deb.debian.org/debian-security bookworm-security main
+          deb [arch=arm64] http://deb.debian.org/debian bookworm-updates main
+          EOF
+          apt-get update || true
+          apt-get install -y libpcap-dev libpcap-dev:arm64
 
-      - name: Install Cosign for signing
-        # cosign-installer doesn't publish a floating @v4 ref; pin the patch.
-        uses: sigstore/cosign-installer@v4.1.2
-
-      - name: Sign release artifacts with cosign (keyless OIDC)
-        run: |
-          cd dist
-          for file in *.tar.gz *.deb *.rpm *.pkg *.zip checksums.txt *.sbom.json; do
-            if [ -f "${file}" ]; then
-              echo "Signing ${file}..."
-              cosign sign-blob --yes --bundle "${file}.cosign.bundle" "${file}"
-            fi
-          done
-
-      - name: Generate changelog
-        id: changelog
-        run: |
-          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
-          if [ -n "$PREV_TAG" ]; then
-            CHANGELOG=$(git log --pretty=format:"- %s (%h)" $PREV_TAG..HEAD)
-          else
-            CHANGELOG=$(git log --pretty=format:"- %s (%h)" -20)
-          fi
-          echo "changelog<<EOF" >> $GITHUB_OUTPUT
-          echo "$CHANGELOG" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
-      - name: Upload assembled artifacts (dry-run inspectable)
-        uses: actions/upload-artifact@v7
+      - name: Download UI dist
+        uses: actions/download-artifact@v8.0.1
         with:
-          # Slashes in branch names (e.g. chore/...) aren't valid in artifact
-          # names, so fall back to the run_id when triggered off a non-tag.
-          name: >-
-            release-bundle-${{
-              github.ref_type == 'tag'
-                && github.ref_name
-                || format('dryrun-{0}', github.run_id)
-            }}
+          name: ui-dist
+          path: internal/api/ui/
+
+      - name: Install Syft (SBOM) inside container
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+
+      - name: Install Cosign inside container
+        run: |
+          COSIGN_VERSION=v2.4.1
+          curl -sSfL -o /usr/local/bin/cosign "https://github.com/sigstore/cosign/releases/download/${COSIGN_VERSION}/cosign-linux-amd64"
+          chmod +x /usr/local/bin/cosign
+
+      - name: Run goreleaser (snapshot/dry-run)
+        if: inputs.dry_run
+        env:
+          UI_BUILD_HASH: ${{ needs.build-ui.outputs.ui_hash }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: goreleaser release --snapshot --clean --skip=publish,announce
+
+      - name: Run goreleaser (publish)
+        if: ${{ !inputs.dry_run }}
+        env:
+          UI_BUILD_HASH: ${{ needs.build-ui.outputs.ui_hash }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: goreleaser release --clean
+
+      - name: Upload dry-run artifact bundle for inspection
+        if: inputs.dry_run
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: goreleaser-dryrun-${{ github.run_id }}
           path: dist/
           retention-days: 14
-
-      - name: Create Release
-        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.dry_run == false)
-        uses: softprops/action-gh-release@v3
-        with:
-          body: |
-            ## Changes
-
-            ${{ steps.changelog.outputs.changelog }}
-
-            ## Installation
-
-            ### Debian/Ubuntu (.deb)
-
-            ```bash
-            sudo dpkg -i niac_<version>_<arch>.deb
-            sudo systemctl enable --now niac
-            ```
-
-            ### Fedora/RHEL (.rpm)
-
-            ```bash
-            sudo rpm -i niac-<version>.<arch>.rpm
-            sudo systemctl enable --now niac
-            ```
-
-            ### macOS (.pkg)
-
-            ```bash
-            sudo installer -pkg niac-<version>-<arch>.pkg -target /
-            ```
-
-            ### Windows
-
-            ```powershell
-            Expand-Archive niac-<version>-windows-amd64.zip -DestinationPath .
-            cd niac-*-windows-amd64
-            .\install.ps1  # Run as Administrator
-            ```
-
-            ### Linux Manual (tar.gz)
-
-            ```bash
-            tar -xzf niac-${{ github.ref_name }}-linux-amd64.tar.gz
-            sudo mv niac-*/niac /usr/local/bin/
-            sudo setcap 'cap_net_raw,cap_net_admin=+ep' /usr/local/bin/niac
-            ```
-
-            ## Supply Chain Security
-
-            All artifacts include cosign signatures and SBOM (CycloneDX).
-
-            ```bash
-            cosign verify-blob \
-              --bundle <file>.cosign.bundle \
-              --certificate-identity-regexp='https://github.com/krisarmstrong/niac-go' \
-              --certificate-oidc-issuer='https://token.actions.githubusercontent.com' \
-              <file>
-            ```
-
-            ## Checksums
-
-            ```
-            $(cat dist/checksums.txt)
-            ```
-          files: |
-            dist/*.tar.gz
-            dist/*.deb
-            dist/*.rpm
-            dist/*.pkg
-            dist/*.zip
-            dist/checksums.txt
-            dist/*.sbom.json
-            dist/*.cosign.bundle
-          draft: false
-          prerelease: ${{ contains(github.ref_name, '-') }}

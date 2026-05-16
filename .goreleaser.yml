@@ -1,13 +1,9 @@
 # =============================================================================
 # goreleaser config for NIAC (Network In A Can)
 # =============================================================================
-# First-pass migration of release.yml's hand-coded pipeline.
-#
-# Status: PARALLEL ROLLOUT. The canonical release pipeline is still
-# .github/workflows/release.yml. This config is exercised only by
-# .github/workflows/release-goreleaser.yml on workflow_dispatch. Once a
-# dry-run produces artifacts equivalent to release.yml's output, a
-# follow-up PR will swap the tag trigger over and delete the old workflow.
+# Canonical packaging config. .github/workflows/release.yml drives this on
+# tag push (or workflow_dispatch dry-run). Replaces the prior hand-coded
+# matrix workflow + .nfpm.yaml sidecar.
 #
 # Shape mirrors seed's .goreleaser.yml so the two projects standardise on
 # the same release tooling.
@@ -190,8 +186,8 @@ archives:
       - src: deploy/windows/build.ps1
         dst: install.ps1
 
-# Linux .deb + .rpm via nfpm (built into goreleaser). Port of .nfpm.yaml —
-# this lets us delete that sidecar file once parallel runs are validated.
+# Linux .deb + .rpm via nfpm (built into goreleaser). This block replaced
+# the prior .nfpm.yaml sidecar at the goreleaser cutover.
 nfpms:
   - id: linux-packages
     ids: [niac-linux]
