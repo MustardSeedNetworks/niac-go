@@ -1,0 +1,133 @@
+# Data Center Template
+# Multiple routers, switches, and servers for data center environments
+#
+# Use Case: Data center or enterprise core network
+# Includes: Redundant routers, core/access switches, servers
+
+devices:
+  # Core Router 1
+  - name: dc-core-rtr-01
+    mac: "00:0C:29:DC:01:01"
+    ips:
+      - "10.1.0.1"
+      - "172.16.0.1"
+
+    lldp:
+      enabled: true
+      system_description: "Data Center Core Router Primary"
+      port_description: "TenGigabitEthernet0/0/0"
+
+    cdp:
+      enabled: true
+      platform: "Cisco ASR 9006"
+      software_version: "IOS XR 7.5.2"
+
+    snmp_agent:
+      walk_file: ""
+
+  # Core Router 2
+  - name: dc-core-rtr-02
+    mac: "00:0C:29:DC:01:02"
+    ips:
+      - "10.1.0.2"
+      - "172.16.0.2"
+
+    lldp:
+      enabled: true
+      system_description: "Data Center Core Router Secondary"
+
+    snmp_agent:
+      walk_file: ""
+
+  # Distribution Switch 1
+  - name: dc-dist-sw-01
+    mac: "00:0C:29:DC:02:01"
+    ip: "10.1.1.1"
+
+    lldp:
+      enabled: true
+      system_description: "Distribution Switch"
+
+    stp:
+      enabled: true
+      bridge_priority: 4096
+
+    snmp_agent:
+      walk_file: ""
+
+  # Distribution Switch 2
+  - name: dc-dist-sw-02
+    mac: "00:0C:29:DC:02:02"
+    ip: "10.1.1.2"
+
+    lldp:
+      enabled: true
+      system_description: "Distribution Switch"
+
+    stp:
+      enabled: true
+      bridge_priority: 8192
+
+    snmp_agent:
+      walk_file: ""
+
+  # Access Switch
+  - name: dc-access-sw-01
+    mac: "00:0C:29:DC:03:01"
+    ip: "10.1.2.1"
+
+    lldp:
+      enabled: true
+      system_description: "Access Switch"
+
+    stp:
+      enabled: true
+      bridge_priority: 32768
+
+    snmp_agent:
+      walk_file: ""
+
+  # Web Server
+  - name: dc-web-01
+    mac: "00:0C:29:DC:10:01"
+    ip: "10.1.10.10"
+
+    http:
+      enabled: true
+      server_name: "DC-Web-Server"
+
+    snmp_agent:
+      walk_file: ""
+
+  # Infrastructure Server (DNS/DHCP)
+  - name: dc-infra-01
+    mac: "00:0C:29:DC:10:03"
+    ip: "10.1.10.100"
+
+    dhcp:
+      enabled: true
+      pools:
+        - network: "10.1.0.0/16"
+          range_start: "10.1.50.1"
+          range_end: "10.1.50.254"
+          gateway: "10.1.0.1"
+          dns_servers:
+            - "10.1.10.100"
+          domain: "dc.local"
+          lease_time: 43200
+
+    dns:
+      enabled: true
+      records:
+        - name: "rtr01.dc.local"
+          type: "A"
+          value: "10.1.0.1"
+        - name: "rtr02.dc.local"
+          type: "A"
+          value: "10.1.0.2"
+        - name: "web01.dc.local"
+          type: "A"
+          value: "10.1.10.10"
+
+    snmp_agent:
+      walk_file: ""

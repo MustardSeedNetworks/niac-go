@@ -29,6 +29,7 @@ import (
 	"time"
 
 	"github.com/krisarmstrong/niac-go/internal/config"
+	"github.com/krisarmstrong/niac-go/internal/library"
 	"github.com/krisarmstrong/niac-go/internal/protocols"
 	"github.com/krisarmstrong/niac-go/internal/storage"
 )
@@ -171,6 +172,10 @@ type ServerConfig struct {
 	WebhookAllowedHosts []string
 	ApplyConfig         func(*config.Config) error
 	Replay              ReplayManager
+	// LibraryRoot is the on-disk root the unified library reads from
+	// (~/.niac/library by default, /var/lib/niac/library when packaged).
+	// If empty, the daemon picks a sensible default via library.DefaultRoot().
+	LibraryRoot string
 }
 
 // SimulationRequest represents a request to start a simulation.
@@ -228,6 +233,7 @@ type Server struct {
 	fileLimiter       *RateLimiter
 	bgStop            chan struct{}
 	bgStopOnce        sync.Once
+	library           *library.Library
 }
 
 // NewServer returns a configured API server.
@@ -237,6 +243,21 @@ func NewServer(cfg ServerConfig) *Server {
 		slog.Error("[API] Failed to generate CSRF token, server cannot start securely", "error", err)
 
 		return nil
+	}
+
+	libraryRoot := cfg.LibraryRoot
+	if libraryRoot == "" {
+		libraryRoot = library.DefaultRoot()
+	}
+	lib, err := library.Open(libraryRoot)
+	if err != nil {
+		// Library failure is non-fatal — log loudly, leave Server.library
+		// nil, and the library endpoints will return 503. The rest of
+		// the daemon (sim engine, /api/v1/devices, etc.) keeps working.
+		slog.Error("[API] Failed to open content library, /api/v1/library endpoints disabled",
+			"root", libraryRoot, "error", err)
+	} else {
+		slog.Info("[API] Content library opened", "root", lib.Root())
 	}
 
 	return &Server{
@@ -251,6 +272,7 @@ func NewServer(cfg ServerConfig) *Server {
 		writeLimiter:  NewRateLimiter(WriteRateLimit, WriteBurst),
 		walkLimiter:   NewRateLimiter(WalkRateLimit, WalkBurst),
 		fileLimiter:   NewRateLimiter(FileRateLimit, FileBurst),
+		library:       lib,
 	}
 }
 

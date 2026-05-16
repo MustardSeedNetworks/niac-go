@@ -1,0 +1,161 @@
+# Test Lab Template
+# Lab environment for protocol testing and development
+#
+# Use Case: Network testing and protocol development
+# Includes: Multi-protocol devices for comprehensive testing
+
+devices:
+  # Test Router - Full protocol stack
+  - name: test-router-01
+    mac: "00:DE:AD:BE:EF:01"
+    ips:
+      - "10.0.0.1"
+      - "192.168.99.1"
+      - "2001:db8::1"
+
+    lldp:
+      enabled: true
+      system_description: "Multi-Protocol Test Router"
+      port_description: "eth0"
+
+    cdp:
+      enabled: true
+      platform: "Test Platform"
+      software_version: "Test OS 1.0"
+      port_id: "Ethernet0"
+
+    edp:
+      enabled: true
+
+    fdp:
+      enabled: true
+
+    snmp_agent:
+      walk_file: ""
+      traps:
+        enabled: true
+        targets:
+          - "10.0.0.100:162"
+
+    traffic:
+      enabled: true
+      patterns: ["http", "dns"]
+      interval: 30
+
+  # Test Switch
+  - name: test-switch-01
+    mac: "00:DE:AD:BE:EF:02"
+    ips:
+      - "10.0.0.2"
+      - "2001:db8::2"
+
+    lldp:
+      enabled: true
+      system_description: "Test Layer 2 Switch"
+
+    cdp:
+      enabled: true
+      platform: "Test Switch"
+
+    edp:
+      enabled: true
+
+    fdp:
+      enabled: true
+
+    stp:
+      enabled: true
+      bridge_priority: 32768
+      hello_time: 2
+      max_age: 20
+      forward_delay: 15
+
+    snmp_agent:
+      walk_file: ""
+
+  # Test Server
+  - name: test-server-01
+    mac: "00:DE:AD:BE:EF:10"
+    ips:
+      - "10.0.0.100"
+      - "2001:db8::100"
+
+    dhcp:
+      enabled: true
+      pools:
+        - network: "10.0.0.0/24"
+          range_start: "10.0.0.201"
+          range_end: "10.0.0.254"
+          gateway: "10.0.0.1"
+          dns_servers:
+            - "10.0.0.100"
+            - "8.8.8.8"
+          domain: "test.local"
+          lease_time: 3600
+
+    dns:
+      enabled: true
+      records:
+        - name: "router.test.local"
+          type: "A"
+          value: "10.0.0.1"
+        - name: "switch.test.local"
+          type: "A"
+          value: "10.0.0.2"
+        - name: "server.test.local"
+          type: "A"
+          value: "10.0.0.100"
+        - name: "test1.test.local"
+          type: "A"
+          value: "10.0.0.201"
+
+    http:
+      enabled: true
+      server_name: "Test-Lab-Server"
+      endpoints:
+        - path: "/api/status"
+          content_type: "application/json"
+          body: '{"status":"ok","uptime":12345,"tests_passed":100}'
+        - path: "/api/devices"
+          content_type: "application/json"
+          body: '{"devices":["router","switch","server"]}'
+
+    ftp:
+      enabled: true
+      username: "testuser"
+      password: "testpass"
+
+    netbios:
+      enabled: true
+      workstation_name: "TESTSERVER"
+      workgroup: "TESTLAB"
+
+    snmp_agent:
+      walk_file: ""
+
+  # Test Client 1
+  - name: test-client-01
+    mac: "00:DE:AD:BE:EF:20"
+    ip: "10.0.0.201"
+
+    traffic:
+      enabled: true
+      patterns: ["http", "dns", "icmp"]
+      interval: 10
+
+    netbios:
+      enabled: true
+      workstation_name: "TESTCLIENT01"
+      workgroup: "TESTLAB"
+
+  # Test Client 2
+  - name: test-client-02
+    mac: "00:DE:AD:BE:EF:21"
+    ips:
+      - "10.0.0.202"
+      - "2001:db8::202"
+
+    netbios:
+      enabled: true
+      workstation_name: "TESTCLIENT02"
+      workgroup: "TESTLAB"
