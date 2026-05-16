@@ -79,6 +79,8 @@ func (l *Library) networkEntryFor(filename string) (NetworkEntry, error) {
 		return NetworkEntry{}, err
 	}
 
+	// #nosec G304 -- filename comes from os.ReadDir of the library
+	// subdir we own + isYAMLFilename() filter; not user-supplied path.
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return NetworkEntry{}, err
@@ -122,6 +124,8 @@ func (l *Library) ReadNetwork(name string) (*NetworkContent, error) {
 		return nil, err
 	}
 	path := filepath.Join(l.SubDir(KindNetworks), name+".yaml")
+	// #nosec G304 -- name was just validated by validateName above,
+	// which rejects path traversal and non-alphanumeric chars.
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {

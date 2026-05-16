@@ -58,6 +58,8 @@ func (l *Library) bootstrapStarterPack() error {
 }
 
 func dirIsEmpty(path string) (bool, error) {
+	// #nosec G304 -- caller passes Library.SubDir(kind) which is
+	// always rooted under the resolved Library.root we own.
 	f, err := os.Open(path)
 	if err != nil {
 		return false, err
