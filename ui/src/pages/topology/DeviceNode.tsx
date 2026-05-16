@@ -51,30 +51,20 @@ export const DeviceNode: FC<DeviceNodeProps> = memo(({ data, selected }) => {
     >
       {/* ReactFlow edge anchors. Without these handles the canvas
           renders nodes fine but every edge silently fails to draw —
-          there's no spot for the line to attach to. We put a source +
-          target on each side so edges route on whichever side reads
-          best from the layout. */}
+          there's no spot for the line to attach to.
+          Default handles only (left=target, right=source) so edges
+          always route left-to-right deterministically. Extra
+          top/bottom handles confused ReactFlow's auto-routing into
+          drawing edges out the side of the card. */}
       <Handle
         type="target"
         position={Position.Left}
-        className="!w-2 !h-2 !bg-violet-400/60 !border-0"
+        className="!w-2 !h-2 !bg-violet-400 !border-0"
       />
       <Handle
         type="source"
         position={Position.Right}
-        className="!w-2 !h-2 !bg-violet-400/60 !border-0"
-      />
-      <Handle
-        type="target"
-        position={Position.Top}
-        className="!w-2 !h-2 !bg-violet-400/60 !border-0"
-        id="top"
-      />
-      <Handle
-        type="source"
-        position={Position.Bottom}
-        className="!w-2 !h-2 !bg-violet-400/60 !border-0"
-        id="bottom"
+        className="!w-2 !h-2 !bg-violet-400 !border-0"
       />
 
       {/* Status indicator */}

@@ -145,6 +145,15 @@ func getInterfaceDetails(
 	return iface.Speed, iface.Duplex, status
 }
 
+// sortedPairKey returns a canonical "a|b" key where a < b so reverse
+// declarations of the same physical adjacency collapse to one entry.
+func sortedPairKey(a, b string) string {
+	if a <= b {
+		return a + "|" + b
+	}
+	return b + "|" + a
+}
+
 // processTrunkPort creates a TopologyLink from a trunk port configuration.
 func processTrunkPort(
 	trunk config.TrunkPort,
@@ -170,10 +179,17 @@ func processTrunkPort(
 }
 
 // BuildTopology derives a topology graph from the configuration.
+//
+// Trunk links are inherently bidirectional — both switches declare a
+// trunk_port pointing at each other, so we'd otherwise emit two
+// TopologyLink entries for one physical wire and ReactFlow would draw
+// a second edge looping back around the cards. We dedupe via a
+// sorted-pair key so each physical adjacency yields exactly one link.
 func BuildTopology(cfg *config.Config) Topology {
 	nodes := make(map[string]TopologyNode)
 	links := make([]TopologyLink, 0)
 	interfaceMap := buildInterfaceMap(cfg.Devices)
+	seenLinks := make(map[string]bool)
 
 	for _, dev := range cfg.Devices {
 		nodes[dev.Name] = TopologyNode{
@@ -185,6 +201,16 @@ func BuildTopology(cfg *config.Config) Topology {
 			if trunk.RemoteDevice == "" {
 				continue
 			}
+
+			// Sorted endpoint pair is the dedupe key so A↔B and B↔A
+			// collapse to one entry. First-seen direction wins so the
+			// Source/Target on the emitted link matches the device that
+			// declared the trunk_port we found first in the YAML.
+			pair := sortedPairKey(dev.Name, trunk.RemoteDevice)
+			if seenLinks[pair] {
+				continue
+			}
+			seenLinks[pair] = true
 
 			if _, exists := nodes[trunk.RemoteDevice]; !exists {
 				nodes[trunk.RemoteDevice] = TopologyNode{

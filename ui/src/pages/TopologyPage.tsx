@@ -45,6 +45,31 @@ const nodeTypes: NodeTypes = {
   device: DeviceNode,
 };
 
+// Where we stash user-dragged node positions so they survive page
+// reloads. Keyed by device name → {x, y}. SSR-safe — no-ops if window
+// is undefined.
+const TOPOLOGY_POSITIONS_KEY = 'niac.topology.positions';
+
+function readSavedPositions(): Record<string, { x: number; y: number }> {
+  if (typeof window === 'undefined') return {};
+  try {
+    const raw = window.localStorage.getItem(TOPOLOGY_POSITIONS_KEY);
+    if (!raw) return {};
+    return JSON.parse(raw) as Record<string, { x: number; y: number }>;
+  } catch {
+    return {};
+  }
+}
+
+function writeSavedPositions(positions: Record<string, { x: number; y: number }>) {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(TOPOLOGY_POSITIONS_KEY, JSON.stringify(positions));
+  } catch {
+    // Quota / privacy mode — silently skip; positions will reset on reload.
+  }
+}
+
 /**
  * TopologyPage renders the network graph with the device-node and
  * link-edge presenters defined in ./topology. The page itself owns
@@ -73,7 +98,10 @@ export const TopologyPage: FC = () => {
   const [edges, setEdges, onEdgesChange] = useEdgesState<LinkEdge>([]);
   const [selectedDevice, setSelectedDevice] = useState<DeviceSummary | null>(null);
   const [showLegend, setShowLegend] = useState(true);
-  const [showMinimap, setShowMinimap] = useState(true);
+  // Minimap defaults off — it's distracting for small graphs and most
+  // users will pan with the mouse anyway. Toggle on via the header
+  // button when working with larger topologies.
+  const [showMinimap, setShowMinimap] = useState(false);
   const [view, setView] = useState<'graph' | 'neighbors'>('graph');
 
   // Build graph from API data, merging trunk port links with neighbor-discovered links
@@ -111,9 +139,38 @@ export const TopologyPage: FC = () => {
     const layoutedNodes = layoutNodes(devices, allLinks);
     const layoutedEdges = createEdges(allLinks);
 
-    setNodes(layoutedNodes);
+    // Preserve user-dragged positions across the 15s data poll. For each
+    // device that's already on canvas, keep its current position rather
+    // than blowing it away with the freshly-computed layout. Brand-new
+    // devices that arrived since last render get the fresh layout slot.
+    // Also pulls any previously-saved positions out of localStorage so
+    // drags survive a page reload.
+    setNodes((current) => {
+      const positionByName = new Map<string, { x: number; y: number }>();
+      for (const node of current) {
+        positionByName.set(node.id, node.position);
+      }
+      const stored = readSavedPositions();
+      return layoutedNodes.map((node) => {
+        const existing = positionByName.get(node.id);
+        const saved = stored[node.id];
+        const position = existing ?? saved ?? node.position;
+        return { ...node, position };
+      });
+    });
     setEdges(layoutedEdges);
   }, [devices, topology, neighbors, setNodes, setEdges]);
+
+  // Persist node positions when the user stops dragging so layouts
+  // survive page reloads. Keyed by device name; stored as a flat
+  // {name: {x, y}} map in localStorage.
+  const handleNodeDragStop = useCallback(() => {
+    const positions: Record<string, { x: number; y: number }> = {};
+    for (const node of nodes) {
+      positions[node.id] = { x: node.position.x, y: node.position.y };
+    }
+    writeSavedPositions(positions);
+  }, [nodes]);
 
   // Handle node selection
   const handleNodeClick = useCallback(
@@ -277,10 +334,13 @@ export const TopologyPage: FC = () => {
         </CardContent>
       </Card>
 
-      {/* Topology Visualization */}
+      {/* Topology Visualization — sized to fill the available viewport
+          minus the page chrome (header card + breadcrumbs + page header
+          ≈ 240 px on this layout). Gives much more room for the graph
+          on standard 1080p+ displays. */}
       {view === 'graph' && (
         <Card className="border-white/5 bg-gray-900/70 overflow-hidden">
-          <div className="h-[600px] relative">
+          <div className="h-[calc(100vh-260px)] min-h-[520px] relative">
             {loading ? (
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="flex flex-col items-center gap-3">
@@ -320,6 +380,7 @@ export const TopologyPage: FC = () => {
                   onNodesChange={onNodesChange}
                   onEdgesChange={onEdgesChange}
                   onConnect={onConnect}
+                  onNodeDragStop={handleNodeDragStop}
                   nodeTypes={nodeTypes}
                   fitView={true}
                   fitViewOptions={{ padding: 0.2 }}
