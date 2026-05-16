@@ -157,6 +157,27 @@ async function buildRequestHeaders(path: string, init: RequestInit) {
   return headers;
 }
 
+/**
+ * Server error payloads are JSON like `{error: "config_read_failed",
+ * message: "Failed to read configuration", ...}`. Surface the message
+ * field as the throwable's .message so callers don't end up rendering
+ * the raw JSON blob; copy the error field into ApiError.code so feature
+ * pages can branch on the failure kind.
+ */
+function parseApiError(text: string, status: number, fallback = ''): ApiError {
+  if (text) {
+    try {
+      const parsed = JSON.parse(text) as { error?: string; message?: string };
+      const message = parsed.message || fallback || text;
+      const code = parsed.error || 'API_ERROR';
+      return new ApiError(message, status, code);
+    } catch {
+      // Body wasn't JSON — fall through to raw text.
+    }
+  }
+  return new ApiError(text || fallback || 'Request failed', status);
+}
+
 // FIX #175: Check if an error is retryable (network errors and 5xx responses).
 function isRetryableError(error: unknown): boolean {
   if (error instanceof TypeError) return true; // Network error
@@ -228,10 +249,10 @@ export async function request<T>(
           attempt < retry.maxRetries
         ) {
           resetCSRFToken();
-          lastError = new ApiError(text, response.status);
+          lastError = parseApiError(text, response.status);
           continue;
         }
-        throw new ApiError(text || response.statusText, response.status);
+        throw parseApiError(text, response.status, response.statusText);
       }
 
       const data = (await response.json()) as T;

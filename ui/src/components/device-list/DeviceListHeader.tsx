@@ -1,11 +1,11 @@
-import { Download, Plus, RefreshCw, Server } from 'lucide-react';
-import type { FC } from 'react';
+import { ChevronDown, Download, FileCode, Plus, RefreshCw, Server } from 'lucide-react';
+import { type FC, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { Device } from '../../api/types';
 import { iconSizes } from '../../constants/sizes';
 import { Button } from '../../ui/Button';
 import { H2, P } from '../../ui/Typography';
-import { exportDevicesAsCSV, exportDevicesAsJSON } from '../../utils/export';
+import { exportDevicesAsCSV, exportDevicesAsJSON, exportDevicesAsYAML } from '../../utils/export';
 
 interface DeviceListHeaderProps {
   deviceCount: number;
@@ -21,6 +21,21 @@ export const DeviceListHeader: FC<DeviceListHeaderProps> = ({
   onRefresh,
 }) => {
   const navigate = useNavigate();
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const noDevices = filteredDevices.length === 0;
+
+  // Close the data-export menu when clicking outside.
+  useEffect(() => {
+    if (!exportMenuOpen) return;
+    const onClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setExportMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', onClick);
+    return () => document.removeEventListener('mousedown', onClick);
+  }, [exportMenuOpen]);
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-4">
@@ -47,20 +62,52 @@ export const DeviceListHeader: FC<DeviceListHeaderProps> = ({
         </Button>
         <Button
           variant="outline"
-          leftIcon={<Download className={iconSizes.md} />}
-          onClick={() => exportDevicesAsJSON(filteredDevices)}
-          disabled={filteredDevices.length === 0}
+          leftIcon={<FileCode className={iconSizes.md} />}
+          onClick={() => exportDevicesAsYAML(filteredDevices)}
+          disabled={noDevices}
+          title="Download a NIAC-loadable YAML config of the filtered devices"
         >
-          JSON
+          Download YAML
         </Button>
-        <Button
-          variant="outline"
-          leftIcon={<Download className={iconSizes.md} />}
-          onClick={() => exportDevicesAsCSV(filteredDevices)}
-          disabled={filteredDevices.length === 0}
-        >
-          CSV
-        </Button>
+        {/* Data-only exports — kept under a disclosure since JSON/CSV
+            can't be re-imported into NIAC; useful for reporting / pipe
+            into other tooling only. */}
+        <div ref={menuRef} className="relative">
+          <Button
+            variant="ghost"
+            leftIcon={<Download className={iconSizes.md} />}
+            rightIcon={<ChevronDown className={iconSizes.sm} />}
+            onClick={() => setExportMenuOpen((v) => !v)}
+            disabled={noDevices}
+            title="Export device data for reporting (not re-importable)"
+          >
+            Data
+          </Button>
+          {exportMenuOpen && (
+            <div className="absolute right-0 z-10 mt-1 w-44 rounded-lg border border-white/10 bg-gray-900 shadow-lg">
+              <button
+                type="button"
+                onClick={() => {
+                  exportDevicesAsJSON(filteredDevices);
+                  setExportMenuOpen(false);
+                }}
+                className="block w-full px-3 py-2 text-left text-sm text-gray-200 hover:bg-white/5"
+              >
+                JSON (data only)
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  exportDevicesAsCSV(filteredDevices);
+                  setExportMenuOpen(false);
+                }}
+                className="block w-full px-3 py-2 text-left text-sm text-gray-200 hover:bg-white/5"
+              >
+                CSV (data only)
+              </button>
+            </div>
+          )}
+        </div>
         <Button
           tone="violet"
           leftIcon={<Plus className={iconSizes.md} />}

@@ -210,16 +210,16 @@ const ConfigCard: FC<SharedItemProps> = ({
         {selected ? (
           <div className="flex flex-1 items-center justify-center gap-1.5 rounded bg-violet-500/30 px-2 py-1.5 text-xs font-medium text-violet-50 ring-1 ring-violet-400/60">
             <Check className={iconSizes.sm} />
-            <span>Will use this</span>
+            <span>Selected</span>
           </div>
         ) : (
           <button
             type="button"
             onClick={() => onSelect(item)}
             className="flex-1 rounded bg-violet-500/20 px-2 py-1.5 text-xs font-medium text-violet-100 ring-1 ring-violet-400/40 hover:bg-violet-500/30"
-            title="Pick this network — click Start Simulation below to run it"
+            title="Select this network — click Start Simulation below to run it"
           >
-            Pick
+            Select
           </button>
         )}
         {item.kind === 'builtin' && (
@@ -268,7 +268,7 @@ const ConfigRow: FC<SharedItemProps> = ({
       type="button"
       onClick={() => onSelect(item)}
       className="flex-1 text-left"
-      title={`Pick ${item.name}`}
+      title={`Select ${item.name}`}
     >
       <div className="flex items-center gap-2">
         <span className="font-medium text-white">{item.name}</span>

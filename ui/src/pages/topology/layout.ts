@@ -9,10 +9,12 @@ import { linkSpeedColors } from './types';
 
 // Card-sized tuneables for the edges == 0 grid fallback below. Keep
 // neighbours far enough apart that they don't overlap at default zoom.
-const NODE_WIDTH = 220;
-const NODE_HEIGHT = 130;
-const NODE_GAP_X = 60;
-const NODE_GAP_Y = 60;
+// DeviceNode has maxWidth 220 + 2px border + room for the connector
+// handles ReactFlow draws, plus we give the user some breathing room.
+const NODE_WIDTH = 240;
+const NODE_HEIGHT = 160;
+const NODE_GAP_X = 80;
+const NODE_GAP_Y = 80;
 
 /**
  * Layout nodes in concentric circles based on connectivity. Most

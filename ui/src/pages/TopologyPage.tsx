@@ -82,13 +82,17 @@ export const TopologyPage: FC = () => {
       return;
     }
 
+    // The daemon returns null arrays when no simulation is loaded; coerce
+    // so spread / map / Set initialization don't crash with TypeError.
+    const topologyLinks = topology.links ?? [];
+
     // Start with trunk port links from config
-    const allLinks = [...topology.links];
+    const allLinks = [...topologyLinks];
 
     // Merge neighbor-discovered edges that aren't already represented by trunk ports
     if (neighbors && neighbors.length > 0) {
       const existingEdges = new Set(
-        topology.links.map((l) => [l.source, l.target].sort().join('|')),
+        topologyLinks.map((l) => [l.source, l.target].sort().join('|')),
       );
 
       for (const neighbor of neighbors) {
@@ -198,7 +202,7 @@ export const TopologyPage: FC = () => {
               <div>
                 <H2>Network Topology</H2>
                 <SmallText className="text-gray-400">
-                  {devices?.length || 0} devices | {topology?.links.length || 0} connections
+                  {devices?.length || 0} devices | {topology?.links?.length || 0} connections
                 </SmallText>
               </div>
             </div>
@@ -342,10 +346,17 @@ export const TopologyPage: FC = () => {
                     />
                   )}
 
-                  {/* Legend Panel */}
-                  <Panel position="top-left">
-                    <TopologyLegend show={showLegend} onToggle={() => setShowLegend(!showLegend)} />
-                  </Panel>
+                  {/* Legend Panel — only meaningful when there are edges
+                      to colour. With zero edges the link-speed key is
+                      just noise. */}
+                  {edges.length > 0 && (
+                    <Panel position="top-left">
+                      <TopologyLegend
+                        show={showLegend}
+                        onToggle={() => setShowLegend(!showLegend)}
+                      />
+                    </Panel>
+                  )}
 
                   {/* Selected Device Panel */}
                   {selectedDevice && (

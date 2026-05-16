@@ -20,6 +20,7 @@ import { fileToText } from '../utils/file';
 import { getErrorMessage } from '../utils/format';
 import { AdvancedSection } from './runtime/AdvancedSection';
 import { RunningSimulationCard } from './runtime/RunningSimulationCard';
+import { SelectedNetworkPreview } from './runtime/SelectedNetworkPreview';
 
 /**
  * Simulation Control Page (formerly RuntimeControlPage)
@@ -282,10 +283,10 @@ export const RuntimeControlPage: FC = () => {
                 </div>
                 <Button
                   tone="violet"
-                  size="lg"
+                  size="md"
                   disabled={!hasValidConfig || starting}
                   onClick={handleStart}
-                  leftIcon={<Activity className={iconSizes.lg} />}
+                  leftIcon={<Activity className={iconSizes.md} />}
                   // Pulse the button when everything's picked so it's the obvious next click.
                   className={
                     hasValidConfig && !starting
@@ -332,6 +333,14 @@ export const RuntimeControlPage: FC = () => {
               onUpload={handleUpload}
               uploadFile={quickUploadFile}
             />
+
+            {(simulationSettings.configSource || quickUploadFile) && (
+              <SelectedNetworkPreview
+                source={quickUploadFile ? 'upload' : (simulationSettings.configSource ?? null)}
+                name={quickUploadFile ? quickUploadFile.name : simulationSettings.configName}
+                uploadFile={quickUploadFile}
+              />
+            )}
 
             {message && (
               <SmallText

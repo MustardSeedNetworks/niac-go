@@ -41,6 +41,9 @@ export const DeviceNode: FC<DeviceNodeProps> = memo(({ data, selected }) => {
         backgroundColor: 'var(--color-bg-elevated)',
         borderColor: selected ? color : 'var(--color-border-muted)',
         minWidth: '140px',
+        // Cap so device names + IP lists don't blow the card past the
+        // grid-fallback step width and overlap neighbours.
+        maxWidth: '220px',
       }}
       onClick={() => data.onClick?.(data.label)}
     >
