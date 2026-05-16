@@ -154,9 +154,16 @@ archives:
         dst: templates/snmp
       - src: examples/vendors/*.yaml
         dst: templates/vendors
-      # launchd plist for macOS users who run niac as a service.
-      - src: deploy/launchd/com.mustardseednetworks.niac.plist
-        dst: launchd/com.mustardseednetworks.niac.plist
+      # launchd plist + helper scripts for macOS users who run niac
+      # as a service. (Actual filename is com.niac.plist, NOT the
+      # fully-qualified bundle id — there's no namespacing convention
+      # in the existing deploy/launchd tree to match seed's.)
+      - src: deploy/launchd/com.niac.plist
+        dst: launchd/com.niac.plist
+      - src: deploy/launchd/install.sh
+        dst: launchd/install.sh
+      - src: deploy/launchd/uninstall.sh
+        dst: launchd/uninstall.sh
 
   - id: windows-archive
     ids: [niac-windows]
@@ -177,7 +184,10 @@ archives:
         dst: templates/snmp
       - src: examples/vendors/*.yaml
         dst: templates/vendors
-      - src: deploy/windows/install.ps1
+      # Windows install/build script (actual name is build.ps1; we
+      # surface it as install.ps1 inside the zip so end users see a
+      # consistent installer name across platforms).
+      - src: deploy/windows/build.ps1
         dst: install.ps1
 
 # Linux .deb + .rpm via nfpm (built into goreleaser). Port of .nfpm.yaml —
