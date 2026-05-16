@@ -829,6 +829,7 @@ func runSimulationLoop(
 ) error {
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
+	defer signal.Stop(sigChan)
 
 	var statsTicker *time.Ticker
 	var statsC <-chan time.Time
