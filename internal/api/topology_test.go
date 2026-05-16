@@ -115,12 +115,12 @@ func TestBuildTrunkLabel(t *testing.T) {
 		{
 			name:  "with single VLAN",
 			trunk: config.TrunkPort{Interface: "eth0", VLANs: []int{100}},
-			want:  "eth0 (VLANs: 100)",
+			want:  "eth0 (VLANs 100)",
 		},
 		{
 			name:  "with multiple VLANs",
 			trunk: config.TrunkPort{Interface: "eth0", VLANs: []int{100, 200, 300}},
-			want:  "eth0 (VLANs: 100,200,300)",
+			want:  "eth0 (VLANs 100,200,300)",
 		},
 	}
 

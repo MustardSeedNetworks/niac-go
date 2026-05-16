@@ -21,18 +21,21 @@ const (
 )
 
 // NeighborRecord represents a discovered network neighbor from LLDP/CDP/EDP/FDP protocols.
+// json tags are explicit so /api/v1/neighbors emits snake_case fields
+// the UI's toCamelCase converter recognises (was emitting raw
+// PascalCase, which the frontend silently treated as undefined).
 type NeighborRecord struct {
-	Protocol          string
-	LocalDevice       string
-	RemoteDevice      string
-	RemotePort        string
-	RemoteChassisID   string
-	Description       string
-	Capabilities      []string
-	ManagementAddress string
-	LastSeen          time.Time
-	ExpireAt          time.Time
-	TTL               time.Duration
+	Protocol          string        `json:"protocol"`
+	LocalDevice       string        `json:"local_device"`
+	RemoteDevice      string        `json:"remote_device"`
+	RemotePort        string        `json:"remote_port"`
+	RemoteChassisID   string        `json:"remote_chassis_id"`
+	Description       string        `json:"description"`
+	Capabilities      []string      `json:"capabilities"`
+	ManagementAddress string        `json:"management_address"`
+	LastSeen          time.Time     `json:"last_seen"`
+	ExpireAt          time.Time     `json:"expire_at"`
+	TTL               time.Duration `json:"ttl"`
 }
 
 type neighborTable struct {
