@@ -146,6 +146,10 @@ export interface TopologyLink {
   source: string;
   target: string;
   label: string;
+  /** True when the link came from runtime LLDP/CDP/EDP/FDP discovery
+   *  rather than a config-declared trunk_port. Drives the
+   *  declared-vs-discovered visual distinction (solid vs dashed). */
+  discovered?: boolean;
   /** "trunk" | "lag" | "" — set by BuildTopology from the trunk_ports
    *  declaration. Drives the edge colour: trunks get the cyan link-type
    *  hue, LAGs the same with thicker stroke. Empty falls through to

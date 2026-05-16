@@ -224,6 +224,7 @@ export function createEdges(links: TopologyLink[]): LinkEdge[] {
     data.sourceInterface = link.sourceInterface;
     data.targetInterface = link.targetInterface;
     data.vlans = link.vlans;
+    data.discovered = link.discovered;
 
     const edgeColor = getEdgeColor(data);
     // Trunk + LAG links are bidirectional by nature (both sides send
@@ -253,6 +254,11 @@ export function createEdges(links: TopologyLink[]): LinkEdge[] {
       },
       markerEnd: marker,
       ...(bidirectional ? { markerStart: marker } : {}),
+      // ReactFlow renders an invisible wider stroke for hit-testing;
+      // 20 px gives the user a comfortable target for hover-tooltips
+      // even on thin 2 px access links. Pan/zoom still works because
+      // ReactFlow only consumes events on actual edge hover/click.
+      interactionWidth: 20,
       data,
     };
   });
