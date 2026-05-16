@@ -25,10 +25,13 @@ import { Card, CardContent } from '../ui/Card';
 import { H2, SmallText } from '../ui/Typography';
 import {
   createEdges,
+  DEFAULT_LAYOUT_MODE,
   DeviceDetailsPanel,
   DeviceNode,
   type DeviceNodeData,
   type DeviceNodeType,
+  LAYOUT_MODES,
+  type LayoutMode,
   type LinkEdge,
   layoutNodes,
   NeighborsView,
@@ -55,6 +58,10 @@ const edgeTypes: EdgeTypes = {
 // reloads. Keyed by device name → {x, y}. SSR-safe — no-ops if window
 // is undefined.
 const TOPOLOGY_POSITIONS_KEY = 'niac.topology.positions';
+// Layout mode persistence key — survives page reload like positions
+// do. Only valid values from LAYOUT_MODES are honoured; anything else
+// falls back to DEFAULT_LAYOUT_MODE.
+const TOPOLOGY_LAYOUT_MODE_KEY = 'niac.topology.layoutMode';
 
 function readSavedPositions(): Record<string, { x: number; y: number }> {
   if (typeof window === 'undefined') return {};
@@ -73,6 +80,28 @@ function writeSavedPositions(positions: Record<string, { x: number; y: number }>
     window.localStorage.setItem(TOPOLOGY_POSITIONS_KEY, JSON.stringify(positions));
   } catch {
     // Quota / privacy mode — silently skip; positions will reset on reload.
+  }
+}
+
+function readSavedLayoutMode(): LayoutMode {
+  if (typeof window === 'undefined') return DEFAULT_LAYOUT_MODE;
+  try {
+    const raw = window.localStorage.getItem(TOPOLOGY_LAYOUT_MODE_KEY);
+    if (LAYOUT_MODES.some((m) => m.mode === raw)) {
+      return raw as LayoutMode;
+    }
+  } catch {
+    // SSR / quota — fall through.
+  }
+  return DEFAULT_LAYOUT_MODE;
+}
+
+function writeSavedLayoutMode(mode: LayoutMode) {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(TOPOLOGY_LAYOUT_MODE_KEY, mode);
+  } catch {
+    // No-op on quota / privacy mode.
   }
 }
 
@@ -130,6 +159,26 @@ export const TopologyPage: FC = () => {
   // attach mouse handlers to raw SVG paths — that flags
   // lint/a11y/noStaticElementInteractions.
   const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
+  // Selected layout mode (hierarchical / concentric / grid). Persisted
+  // across reloads via localStorage. Hierarchical is the default
+  // because rings get hard to read past ~6 devices and the layered
+  // dagre layout matches how operators draw networks on a whiteboard.
+  const [layoutMode, setLayoutMode] = useState<LayoutMode>(() => readSavedLayoutMode());
+  const handleLayoutModeChange = useCallback(
+    (mode: LayoutMode) => {
+      setLayoutMode(mode);
+      writeSavedLayoutMode(mode);
+      // A new mode means a fresh position pass — wipe saved drags so
+      // the layout algorithm gets a clean canvas. Without this, the
+      // user's pre-mode-change positions stick and "Hierarchical" still
+      // looks like whatever they had.
+      if (typeof window !== 'undefined') {
+        window.localStorage.removeItem(TOPOLOGY_POSITIONS_KEY);
+      }
+      setNodes((current) => current.map((node) => ({ ...node, position: { x: 0, y: 0 } })));
+    },
+    [setNodes],
+  );
 
   // Build graph from API data, merging trunk port links with neighbor-discovered links
   useEffect(() => {
@@ -201,7 +250,7 @@ export const TopologyPage: FC = () => {
       (l) => visibleNames.has(l.source) && visibleNames.has(l.target),
     );
 
-    const layoutedNodes = layoutNodes(visibleDevices, visibleLinks);
+    const layoutedNodes = layoutNodes(visibleDevices, visibleLinks, layoutMode);
     const layoutedEdges = createEdges(visibleLinks).map((edge) => ({
       ...edge,
       data: {
@@ -245,6 +294,7 @@ export const TopologyPage: FC = () => {
     activeTypes,
     focusedNodeId,
     hoveredEdgeId,
+    layoutMode,
     setNodes,
     setEdges,
   ]);
@@ -470,6 +520,38 @@ export const TopologyPage: FC = () => {
                   >
                     Minimap
                   </Button>
+                  {/* Layout-mode picker — one pill per mode. The active
+                      pill is highlighted; clicking another re-runs the
+                      layout and persists the choice. Hierarchical is the
+                      default (rings get hard to read past ~6 devices). */}
+                  {/* role/aria-pressed pattern (not radiogroup) — biome's
+                      a11y rule says role="radio" wants a real <input
+                      type="radio">. The interaction here is the same as
+                      the existing Graph/Neighbors view picker above,
+                      which uses tablist; we use aria-pressed instead so
+                      either pattern (radio or toggle) reads cleanly. */}
+                  <div className="inline-flex rounded-lg border border-white/10 bg-gray-950/40 p-0.5">
+                    {LAYOUT_MODES.map((entry) => {
+                      const active = layoutMode === entry.mode;
+                      return (
+                        <button
+                          key={entry.mode}
+                          type="button"
+                          aria-pressed={active}
+                          aria-label={`Layout mode: ${entry.label}`}
+                          title={entry.description}
+                          onClick={() => handleLayoutModeChange(entry.mode)}
+                          className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
+                            active
+                              ? 'bg-cyan-500/20 text-cyan-100'
+                              : 'text-gray-400 hover:bg-white/5 hover:text-gray-200'
+                          }`}
+                        >
+                          {entry.label}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </>
               )}
             </div>
