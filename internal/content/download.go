@@ -142,7 +142,14 @@ func fetchTo(ctx context.Context, client *http.Client, url, dest string) (int64,
 	if mkErr := os.MkdirAll(filepath.Dir(dest), libraryDirMode); mkErr != nil {
 		return 0, "", fmt.Errorf("mkdir for %s: %w", dest, mkErr)
 	}
-	out, err := os.Create(dest)
+	// G304 waiver: dest is the destination path the caller chose for
+	// the download — either DownloadOptions.Dest (set programmatically
+	// in cmd/niac/content.go) or a freshly-created os.CreateTemp file
+	// from Download() above. In neither case is it ever taken from
+	// untrusted input. The fetched body, on the other hand, is
+	// untrusted — but it is bounded by the HTTP response and the
+	// caller is responsible for choosing a safe dest.
+	out, err := os.Create(dest) // #nosec G304
 	if err != nil {
 		return 0, "", fmt.Errorf("create %s: %w", dest, err)
 	}

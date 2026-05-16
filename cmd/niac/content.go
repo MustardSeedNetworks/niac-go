@@ -162,7 +162,13 @@ func resolveBundleSource(ctx context.Context, args contentInstallArgs) (io.ReadC
 }
 
 func openLocalBundle(path string) (io.ReadCloser, string, func(), error) {
-	f, err := os.Open(path)
+	// G304 waiver: path is the value of the operator-supplied --bundle
+	// flag. The whole point of the flag is to let the user point at a
+	// local tarball; the only file we're authorised to open is the one
+	// they pass. The user can already read whatever the process uid
+	// can read, so opening their chosen file gains them nothing they
+	// couldn't already do with `cat`.
+	f, err := os.Open(path) // #nosec G304
 	if err != nil {
 		return nil, "", noopCleanup, fmt.Errorf("open --bundle %s: %w", path, err)
 	}
@@ -174,7 +180,12 @@ func downloadBundle(ctx context.Context, version, explicitURL string) (io.ReadCl
 	if err != nil {
 		return nil, "", noopCleanup, fmt.Errorf("download bundle: %w", err)
 	}
-	f, openErr := os.Open(res.Path)
+	// G304 waiver: res.Path was created by content.Download() in the
+	// previous statement. It's either DownloadOptions.Dest (set by
+	// the install command above to our own tmp file) or an
+	// os.CreateTemp slot the download package just produced. In both
+	// cases the path is locally constructed, not user-controlled.
+	f, openErr := os.Open(res.Path) // #nosec G304
 	if openErr != nil {
 		_ = os.Remove(res.Path)
 		return nil, "", noopCleanup, fmt.Errorf("reopen downloaded bundle: %w", openErr)
