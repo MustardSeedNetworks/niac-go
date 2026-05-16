@@ -258,5 +258,47 @@ Tests in `internal/protocols/snmp/synth/build_test.go`:
    `clientRequestId` so a UI retry doesn't double-`.bak`? Today's
    POST-once semantics work; this is hardening for later.
 
+## Resolutions (2026-05-16)
+
+All four questions resolved before implementation. Notes captured
+inline so the implementation PR has the contract pinned.
+
+1. **One rollback step.** Each regeneration overwrites the previous
+   `.bak`. Matches autosave semantics from most editors; keeps the
+   library small. If operators ask for more recovery later, add a
+   "are you sure?" confirm modal before regeneration rather than
+   keep N copies.
+
+2. **Disable invalid vendor options in the UI dropdown (server-side
+   422 as safety net).** The vendor picker fetches the
+   vendor-x-type compatibility matrix and greys out combinations
+   that don't apply. If a stale UI somehow sends an invalid combo,
+   the daemon returns 422 rather than silently picking generic.
+   No silent fallback.
+
+   **Important domain note** — Juniper Mist APs (post-2019
+   acquisition) do exist but are API-first; their SNMP surface is
+   limited to the system group + a bare ifTable. The Juniper vendor
+   profile must include a Mist sub-profile for `access_point` that
+   emits only that minimal set with a `sysDescr` like
+   "Juniper Mist AP43, Mist OS x.y". Other Juniper-x-type combos
+   absent from the table stay disabled (e.g. firewall — Juniper SRX
+   already covered, but no native Juniper VoIP phone exists).
+
+3. **`synthesized/` subdir.** Walks land at
+   `~/.niac/library/walks/synthesized/{hostname}.walk`. The walk
+   validator already handles vendor-namespaced subdirs cleanly (per
+   the validator refactor in #558), so this needs no plumbing on
+   the read side. A future iteration can add a
+   `source: 'synthesized'` badge to the Walks library page (#555
+   follow-up).
+
+4. **No idempotency key.** Rely on the UI's button-loading state to
+   debounce double-clicks. Matches every other write endpoint in
+   niac (Save Device, Create Network, etc.). Synthesise-walk is a
+   rare, user-initiated action; the retry-storm scenario is
+   theoretical. Add idempotency in a follow-up only if a real
+   incident shows it's needed.
+
 Once these are resolved, the implementation is ~half a day of code
 plus tests. Tracking continues on #546.
