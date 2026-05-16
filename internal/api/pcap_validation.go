@@ -232,78 +232,129 @@ func (s *Server) prepareReplayRequest(req ReplayRequest) (ReplayRequest, error) 
 }
 
 // SECURITY FIX #162: validatePcapFilePath ensures the file path is safe.
+// Pcaps are resolved in two passes (mirroring validateWalkFilePath
+// in #558): first the legacy config-dir / cwd allow-list, then the
+// unified library pcaps dir (~/.niac/library/pcaps/) so the new
+// picker integrations from #556 can send library-relative names.
+//
+// Per-dir checks live in tryPcapInDir so this top-level function
+// stays under the cognitive-complexity cap. Soft failures (access
+// denied / not found) propagate via lastErr and fall through to the
+// next allowed dir; hard failures (extension, null byte, dir-not-file)
+// short-circuit out.
 func (s *Server) validatePcapFilePath(filename string) (string, error) {
 	if filename == "" {
 		return "", errors.New("filename cannot be empty")
 	}
 
 	cleanPath := filepath.Clean(filename)
-
 	if strings.ContainsRune(cleanPath, 0) {
 		return "", errors.New("filename contains invalid characters")
 	}
 
-	cfgPath := s.configPath()
-	var allowedDir string
-	if cfgPath != "" {
-		allowedDir = filepath.Dir(cfgPath)
-	} else {
-		var err error
-		allowedDir, err = os.Getwd()
-		if err != nil {
-			return "", fmt.Errorf("cannot determine allowed directory: %w", err)
-		}
+	allowedDirs, err := s.resolvePcapAllowedDirs()
+	if err != nil {
+		return "", err
 	}
 
-	var absPath string
+	var lastErr error
+	for _, allowedDir := range allowedDirs {
+		absPath, hardFail, attemptErr := tryPcapInDir(cleanPath, filename, allowedDir)
+		if hardFail {
+			return "", attemptErr
+		}
+		if attemptErr != nil {
+			lastErr = attemptErr
+			continue
+		}
+		return absPath, nil
+	}
+
+	if lastErr != nil {
+		return "", lastErr
+	}
+	return "", fmt.Errorf("pcap file not found: %s", filename)
+}
+
+// tryPcapInDir resolves cleanPath against allowedDir and returns the
+// validated absolute path on success. The second return is "hard
+// fail" — true when the error is dir-independent (extension, null
+// byte, dir-not-file) and the caller should stop trying other dirs.
+func tryPcapInDir(cleanPath, filename, allowedDir string) (string, bool, error) {
+	absPath := cleanPath
 	if !filepath.IsAbs(cleanPath) {
 		absPath = filepath.Join(allowedDir, cleanPath)
-	} else {
-		absPath = cleanPath
+	}
+	absPath = filepath.Clean(absPath)
+
+	// Inline barrier on the EvalSymlinks/Stat sinks below so static
+	// analysers see the absolute path is bounded before any filesystem
+	// access.
+	if !filepath.IsAbs(absPath) || strings.Contains(absPath, "..") {
+		return "", true, errors.New("pcap file path failed safety check")
 	}
 
-	absPath = filepath.Clean(absPath)
-	// Inline barrier on the EvalSymlinks/Stat sinks below so static analysers
-	// see the absolute path is bounded before any filesystem access.
-	if !filepath.IsAbs(absPath) || strings.Contains(absPath, "..") {
-		return "", errors.New("pcap file path failed safety check")
-	}
-	realPath, err := filepath.EvalSymlinks(absPath)
-	if err != nil {
+	realPath, evalErr := filepath.EvalSymlinks(absPath)
+	if evalErr != nil {
 		realPath = absPath
 	}
-
-	realAllowedDir, err := filepath.EvalSymlinks(allowedDir)
-	if err != nil {
+	realAllowedDir, evalDirErr := filepath.EvalSymlinks(allowedDir)
+	if evalDirErr != nil {
 		realAllowedDir = allowedDir
 	}
-
 	if !strings.HasPrefix(realPath, realAllowedDir+string(filepath.Separator)) &&
 		realPath != realAllowedDir {
-		return "", fmt.Errorf("access denied: file must be within %s", allowedDir)
+		return "", false, fmt.Errorf("access denied: file must be within %s", allowedDir)
 	}
 
-	info, err := os.Stat(absPath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return "", fmt.Errorf("pcap file not found: %s", filename)
+	info, statErr := os.Stat(absPath)
+	if statErr != nil {
+		if os.IsNotExist(statErr) {
+			return "", false, fmt.Errorf("pcap file not found: %s", filename)
 		}
-		return "", fmt.Errorf("cannot access pcap file: %w", err)
+		return "", true, fmt.Errorf("cannot access pcap file: %w", statErr)
 	}
 	if info.IsDir() {
-		return "", fmt.Errorf("%w: %s", ErrPathIsADirectory, absPath)
+		return "", true, fmt.Errorf("%w: %s", ErrPathIsADirectory, absPath)
 	}
 
 	ext := strings.ToLower(filepath.Ext(absPath))
 	validExts := map[string]bool{".pcap": true, ".pcapng": true, ".cap": true}
 	if !validExts[ext] {
-		return "", fmt.Errorf(
+		return "", true, fmt.Errorf(
 			"invalid pcap file extension: %s (allowed: .pcap, .pcapng, .cap)",
 			ext,
 		)
 	}
+	return absPath, false, nil
+}
 
-	return absPath, nil
+// resolvePcapAllowedDirs returns the ordered list of directories pcap
+// files may live under. Mirrors resolveWalkAllowedDirs in walk.go —
+// config-dir / cwd first, library pcaps dir second when the library
+// opened cleanly. Library failure stays non-fatal: clients that need
+// pcap content from the library will already hit a 503 on
+// /api/v1/library/pcaps, so silently omitting it here matches the
+// rest of the daemon's posture.
+func (s *Server) resolvePcapAllowedDirs() ([]string, error) {
+	var dirs []string
+
+	cfgPath := s.configPath()
+	if cfgPath != "" {
+		dirs = append(dirs, filepath.Dir(cfgPath))
+	} else {
+		cwd, err := os.Getwd()
+		if err != nil {
+			return nil, fmt.Errorf("cannot determine allowed directory: %w", err)
+		}
+		dirs = append(dirs, cwd)
+	}
+
+	if s.library != nil {
+		dirs = append(dirs, s.library.SubDir("pcaps"))
+	}
+
+	return dirs, nil
 }
 
 func (s *Server) writeUploadedFile(data []byte) (string, error) {

@@ -1,5 +1,5 @@
 import { type FC, useState } from 'react';
-import { fetchFiles, fetchReplayStatus, startReplay, stopReplay } from '../api/client';
+import { fetchLibraryPcaps, fetchReplayStatus, startReplay, stopReplay } from '../api/client';
 import { useApiResource } from '../hooks/useApiResource';
 import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
@@ -8,7 +8,12 @@ import { SmallText } from '../ui/Typography';
 import { getErrorMessage } from '../utils/format';
 
 export const ReplayControlPanel: FC = () => {
-  const { data: pcapFiles } = useApiResource(() => fetchFiles('pcaps'), []);
+  // Hydrates from /api/v1/library/pcaps. The daemon's
+  // validatePcapFilePath falls back to ~/.niac/library/pcaps/ when
+  // the file isn't in the legacy config-dir allow-list, so passing
+  // bare library names like "sample.pcap" to startReplay works
+  // without any further translation in the UI.
+  const { data: pcapFiles } = useApiResource(fetchLibraryPcaps, []);
   const { data: replayStatus, refetch: refetchStatus } = useApiResource(fetchReplayStatus, [], {
     intervalMs: 2000,
   });
@@ -112,7 +117,7 @@ export const ReplayControlPanel: FC = () => {
               >
                 <option value="">Select PCAP file...</option>
                 {pcapFiles?.map((file) => (
-                  <option key={file.path} value={file.path}>
+                  <option key={file.name} value={file.name}>
                     {file.name} ({(file.sizeBytes / 1024).toFixed(1)} KB)
                   </option>
                 ))}

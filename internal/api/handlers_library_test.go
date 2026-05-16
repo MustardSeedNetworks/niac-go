@@ -175,3 +175,50 @@ func TestValidateWalkFilePathPreservesConfigDirPriority(t *testing.T) {
 		t.Errorf("resolved path = %q, want config-dir copy %q", got, want)
 	}
 }
+
+// TestValidatePcapFilePathFallsBackToLibrary mirrors the walk test:
+// a pcap that lives only under <library>/pcaps/ must still resolve
+// via the legacy validator surface, so the new ReplayControlPanel
+// picker (#556 pcap half) doesn't need a parallel API.
+func TestValidatePcapFilePathFallsBackToLibrary(t *testing.T) {
+	server, root := newLibraryTestServer(t)
+
+	pcapPath := filepath.Join(root, "pcaps", "lib-only.pcap")
+	if err := os.WriteFile(pcapPath, []byte("fake-pcap-bytes"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := server.validatePcapFilePath("lib-only.pcap")
+	if err != nil {
+		t.Fatalf("validatePcapFilePath: %v", err)
+	}
+	if got != pcapPath {
+		t.Errorf("resolved path = %q, want %q", got, pcapPath)
+	}
+}
+
+// TestValidatePcapFilePathPreservesConfigDirPriority — same priority
+// guarantee for pcaps as for walks. A pcap present in both places
+// resolves to the config-dir copy.
+func TestValidatePcapFilePathPreservesConfigDirPriority(t *testing.T) {
+	server, root := newLibraryTestServer(t)
+	cfgDir := t.TempDir()
+	server.cfg.ConfigPath = filepath.Join(cfgDir, "config.yaml")
+
+	const filename = "shared.pcap"
+	if err := os.WriteFile(filepath.Join(cfgDir, filename), []byte("cfg-pcap"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "pcaps", filename), []byte("lib-pcap"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := server.validatePcapFilePath(filename)
+	if err != nil {
+		t.Fatalf("validatePcapFilePath: %v", err)
+	}
+	want := filepath.Join(cfgDir, filename)
+	if got != want {
+		t.Errorf("resolved path = %q, want config-dir copy %q", got, want)
+	}
+}
