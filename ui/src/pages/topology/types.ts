@@ -47,6 +47,10 @@ export interface LinkEdgeData extends Record<string, unknown> {
    *  ReactFlow's onEdgeMouseEnter / Leave at the page level; the
    *  TrunkEdge component renders the rich tooltip while true. */
   hovered?: boolean;
+  /** Link utilization, 0–100. When set, drives a stroke-width and
+   *  colour-tint adjustment in createEdges so saturating links pop
+   *  visually. Undefined or 0 → default styling. */
+  utilizationPercent?: number;
 }
 
 /**
