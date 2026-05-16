@@ -43,7 +43,47 @@ func convertYAMLDevice(yamlDevice converter.Device, includePath string) (Device,
 		return device, err
 	}
 
+	device.TrunkPorts = convertTrunkPorts(yamlDevice.TrunkPorts)
+	device.PortChannels = convertPortChannels(yamlDevice.PortChannels)
+
 	return device, nil
+}
+
+// convertTrunkPorts translates the YAML-shaped TrunkPort slice (from
+// converter.Device) into the runtime config.TrunkPort slice the topology
+// builder consults. The two types are field-identical; this is just a
+// type adapter.
+func convertTrunkPorts(in []converter.TrunkPort) []TrunkPort {
+	if len(in) == 0 {
+		return nil
+	}
+	out := make([]TrunkPort, len(in))
+	for i, t := range in {
+		out[i] = TrunkPort{
+			Interface:       t.Interface,
+			VLANs:           t.VLANs,
+			NativeVLAN:      t.NativeVLAN,
+			RemoteDevice:    t.RemoteDevice,
+			RemoteInterface: t.RemoteInterface,
+		}
+	}
+	return out
+}
+
+// convertPortChannels mirrors convertTrunkPorts for LAG bundles.
+func convertPortChannels(in []converter.PortChannel) []PortChannel {
+	if len(in) == 0 {
+		return nil
+	}
+	out := make([]PortChannel, len(in))
+	for i, pc := range in {
+		out[i] = PortChannel{
+			ID:      pc.ID,
+			Members: pc.Members,
+			Mode:    pc.Mode,
+		}
+	}
+	return out
 }
 
 // createBaseDevice creates a device with default values.

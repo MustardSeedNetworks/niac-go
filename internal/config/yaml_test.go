@@ -44,6 +44,75 @@ devices:
 	}
 }
 
+// TestLoadYAML_TrunkPorts verifies the YAML loader populates
+// device.TrunkPorts so the topology builder can emit edges.
+// Regression guard for #550 — converter.Device used to lack the
+// TrunkPorts field, silently dropping every trunk_ports: block.
+func TestLoadYAML_TrunkPorts(t *testing.T) {
+	yaml := `
+devices:
+  - name: sw-a
+    type: switch
+    mac: "00:11:22:33:44:01"
+    trunk_ports:
+      - interface: "Ethernet1/1"
+        vlans: [10, 20, 30]
+        native_vlan: 1
+        remote_device: "sw-b"
+        remote_interface: "Ethernet1/1"
+  - name: sw-b
+    type: switch
+    mac: "00:11:22:33:44:02"
+    trunk_ports:
+      - interface: "Ethernet1/1"
+        vlans: [10, 20, 30]
+        native_vlan: 1
+        remote_device: "sw-a"
+        remote_interface: "Ethernet1/1"
+    port_channels:
+      - id: 1
+        members: ["Ethernet1/2", "Ethernet1/3"]
+        mode: "active"
+`
+	tmpfile := createTempYAML(t, yaml)
+	defer func() { _ = os.Remove(tmpfile) }()
+
+	cfg, err := LoadYAML(tmpfile)
+	if err != nil {
+		t.Fatalf("LoadYAML failed: %v", err)
+	}
+	if len(cfg.Devices) != 2 {
+		t.Fatalf("expected 2 devices, got %d", len(cfg.Devices))
+	}
+
+	swA := cfg.Devices[0]
+	if len(swA.TrunkPorts) != 1 {
+		t.Fatalf("sw-a: expected 1 trunk port, got %d", len(swA.TrunkPorts))
+	}
+	trunk := swA.TrunkPorts[0]
+	if trunk.Interface != "Ethernet1/1" {
+		t.Errorf("sw-a trunk interface = %q, want Ethernet1/1", trunk.Interface)
+	}
+	if trunk.RemoteDevice != "sw-b" {
+		t.Errorf("sw-a trunk remote_device = %q, want sw-b", trunk.RemoteDevice)
+	}
+	if len(trunk.VLANs) != 3 || trunk.VLANs[0] != 10 {
+		t.Errorf("sw-a trunk vlans = %v, want [10 20 30]", trunk.VLANs)
+	}
+	if trunk.NativeVLAN != 1 {
+		t.Errorf("sw-a trunk native_vlan = %d, want 1", trunk.NativeVLAN)
+	}
+
+	swB := cfg.Devices[1]
+	if len(swB.PortChannels) != 1 {
+		t.Fatalf("sw-b: expected 1 port_channel, got %d", len(swB.PortChannels))
+	}
+	pc := swB.PortChannels[0]
+	if pc.ID != 1 || pc.Mode != "active" || len(pc.Members) != 2 {
+		t.Errorf("sw-b port_channel = %+v, want ID=1 mode=active 2 members", pc)
+	}
+}
+
 // TestLoadYAML_MultipleIPs tests multiple IP addresses per device (v1.5.0).
 func TestLoadYAML_MultipleIPs(t *testing.T) {
 	yaml := `
