@@ -101,6 +101,14 @@ func (s *Server) registerReadOnlyRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/v1/library/pcaps",
 		s.recoverMiddleware(s.auth(s.handleLibraryPcaps)))
 
+	// Per-device baseline SNMP walk synthesis (#546 part 2). POST-only.
+	// Distinct from /api/v1/config/devices/ (the editor's CRUD); this
+	// path lives under /api/v1/devices/{hostname}/... and dispatches
+	// to a per-action handler. CSRF + rate limiting applied since the
+	// handler mutates both the library and the running config YAML.
+	mux.HandleFunc("/api/v1/devices/",
+		s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.dispatchDeviceSubpath)))))
+
 	// Per-type device editor schema (#546 part 1). Read-only — the
 	// schema is a static table the daemon serves so the UI can hide
 	// sections that don't apply (e.g. switch should not see DNS).

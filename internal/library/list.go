@@ -181,6 +181,50 @@ func (l *Library) DeleteNetwork(name string) error {
 	return nil
 }
 
+// WriteFile writes content to {kind}/{relPath}, creating
+// intermediate directories as needed. Used by the synthesised-walk
+// path (#546 part 2) to drop "walks/synthesized/{host}.walk" into
+// the library without going through the YAML-specific WriteNetwork
+// validation.
+//
+// relPath may include one level of subdirectory ("synthesized/foo.walk",
+// "cisco/c3900.walk") — components are validated individually so a
+// crafted path can't escape the library kind directory. Existing
+// files are overwritten without warning; backupExisting=true moves
+// the prior copy to "{relPath}.bak" first (one-step rollback per the
+// design-doc resolution).
+func (l *Library) WriteFile(kind Kind, relPath string, content []byte, backupExisting bool) error {
+	if kind != KindWalks && kind != KindPcaps {
+		return fmt.Errorf("%w: %s", ErrUnsupportedKind, kind)
+	}
+	if len(content) == 0 {
+		return ErrEmptyContent
+	}
+	for _, segment := range strings.Split(filepath.ToSlash(relPath), "/") {
+		if err := validateName(segment); err != nil {
+			return err
+		}
+	}
+
+	dest := filepath.Join(l.SubDir(kind), filepath.FromSlash(relPath))
+	if mkErr := os.MkdirAll(filepath.Dir(dest), libraryDirMode); mkErr != nil {
+		return fmt.Errorf("create dir for %s: %w", dest, mkErr)
+	}
+
+	if backupExisting {
+		if _, statErr := os.Stat(dest); statErr == nil {
+			// Move the prior file to .bak. Overwrites any older .bak,
+			// matching the one-step rollback contract from the design
+			// doc resolution.
+			if renameErr := os.Rename(dest, dest+".bak"); renameErr != nil {
+				return fmt.Errorf("backup %s: %w", dest, renameErr)
+			}
+		}
+	}
+
+	return os.WriteFile(dest, content, libraryFileMode)
+}
+
 // ListFiles enumerates walks/ or pcaps/. Used by PR 3's browser tabs.
 // One level of subdir nesting is allowed; names returned include the
 // subdir for namespacing (e.g. "cisco/c3900.walk").
