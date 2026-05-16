@@ -2,6 +2,7 @@
  * Custom Device Node Component for React Flow topology visualization
  */
 
+import { Handle, Position } from '@xyflow/react';
 import { type FC, memo } from 'react';
 import {
   topologyDeviceColors as deviceColors,
@@ -47,6 +48,34 @@ export const DeviceNode: FC<DeviceNodeProps> = memo(({ data, selected }) => {
       }}
       onClick={() => data.onClick?.(data.label)}
     >
+      {/* ReactFlow edge anchors. Without these handles the canvas
+          renders nodes fine but every edge silently fails to draw —
+          there's no spot for the line to attach to. We put a source +
+          target on each side so edges route on whichever side reads
+          best from the layout. */}
+      <Handle
+        type="target"
+        position={Position.Left}
+        className="!w-2 !h-2 !bg-violet-400/60 !border-0"
+      />
+      <Handle
+        type="source"
+        position={Position.Right}
+        className="!w-2 !h-2 !bg-violet-400/60 !border-0"
+      />
+      <Handle
+        type="target"
+        position={Position.Top}
+        className="!w-2 !h-2 !bg-violet-400/60 !border-0"
+        id="top"
+      />
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        className="!w-2 !h-2 !bg-violet-400/60 !border-0"
+        id="bottom"
+      />
+
       {/* Status indicator */}
       <div
         className={`absolute -top-1 -right-1 w-3 h-3 rounded-full ${statusColor} border-2 border-gray-900`}
