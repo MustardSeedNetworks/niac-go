@@ -25,8 +25,16 @@ export interface LinkEdgeData extends Record<string, unknown> {
   speed?: string;
   duplex?: string;
   vlan?: number;
+  vlans?: number[];
+  /** Local interface name on the edge's source device (e.g. "Gi0/1"). */
+  sourceInterface?: string;
+  /** Local interface name on the edge's target device (e.g. "Gi0/1"). */
+  targetInterface?: string;
   linkType?: 'trunk' | 'access' | 'lag' | 'standard';
   status?: 'up' | 'down' | 'degraded';
+  /** When false, the custom edge component hides all its labels —
+   *  driven by the "Show labels" toggle in the topology header. */
+  showLabels?: boolean;
 }
 
 /**

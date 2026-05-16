@@ -83,6 +83,28 @@ type Device struct {
 	Traffic       *TrafficConfig       `yaml:"traffic,omitempty"`        // v1.6.0
 	OSFingerprint *OSFingerprintConfig `yaml:"os_fingerprint,omitempty"` // v1.24.0
 	IPerf3        *IPerf3Config        `yaml:"iperf3,omitempty"`         // v1.25.0
+	TrunkPorts    []TrunkPort          `yaml:"trunk_ports,omitempty"`    // v1.23.0 — topology link declarations
+	PortChannels  []PortChannel        `yaml:"port_channels,omitempty"`  // v1.23.0 — LAG bundling
+}
+
+// TrunkPort declares a VLAN-tagged trunk link to a neighbouring device.
+// The remote_device field is what BuildTopology uses to draw an edge
+// between two devices on the topology graph.
+type TrunkPort struct {
+	Interface       string `yaml:"interface"`
+	VLANs           []int  `yaml:"vlans,omitempty"`
+	NativeVLAN      int    `yaml:"native_vlan,omitempty"`
+	RemoteDevice    string `yaml:"remote_device,omitempty"`
+	RemoteInterface string `yaml:"remote_interface,omitempty"`
+}
+
+// PortChannel declares a Link Aggregation (LACP) bundle. Doesn't
+// produce topology edges on its own — trunk_ports referencing
+// "port-channel<id>" as their interface are what surface edges.
+type PortChannel struct {
+	ID      int      `yaml:"id"`
+	Members []string `yaml:"members,omitempty"`
+	Mode    string   `yaml:"mode,omitempty"`
 }
 
 // IPerf3Config represents iPerf3 server emulation configuration.

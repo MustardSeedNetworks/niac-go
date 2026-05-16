@@ -1,0 +1,46 @@
+# Basic Network Template
+# Simple router and switch setup for small networks
+#
+# Use Case: Basic routing and switching for small networks
+# Includes: 1 router, 1 switch with essential protocols
+
+devices:
+  # Core Router - Gateway and routing
+  - name: router-01
+    mac: "00:1A:2B:3C:01:01"
+    ips:
+      - "192.168.1.1"    # LAN interface
+      - "10.0.0.1"       # Management interface
+
+    # LLDP - Link Layer Discovery Protocol
+    lldp:
+      enabled: true
+      system_description: "Basic Network Router"
+      port_description: "GigabitEthernet0/1"
+
+    # SNMP - Simple Network Management Protocol
+    snmp_agent:
+      walk_file: ""
+
+  # Access Switch - Layer 2 switching
+  - name: switch-01
+    mac: "00:1A:2B:3C:02:01"
+    ip: "192.168.1.2"
+
+    # LLDP - Discovery
+    lldp:
+      enabled: true
+      system_description: "Basic Network Switch"
+      port_description: "GigabitEthernet1/0/1"
+
+    # STP - Spanning Tree Protocol
+    stp:
+      enabled: true
+      bridge_priority: 32768
+      hello_time: 2
+      max_age: 20
+      forward_delay: 15
+
+    # SNMP
+    snmp_agent:
+      walk_file: ""

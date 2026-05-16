@@ -146,6 +146,23 @@ export interface TopologyLink {
   source: string;
   target: string;
   label: string;
+  /** "trunk" | "lag" | "" — set by BuildTopology from the trunk_ports
+   *  declaration. Drives the edge colour: trunks get the cyan link-type
+   *  hue, LAGs the same with thicker stroke. Empty falls through to
+   *  speed-based colouring. */
+  linkType?: string;
+  sourceInterface?: string;
+  targetInterface?: string;
+  vlans?: number[];
+  nativeVlan?: number;
+  /** Speed in Mbps as a string ("100", "1000", "10000", "25000", ...).
+   *  When the device has an Interface declaration with a Speed field,
+   *  the daemon includes it; otherwise omitted and the edge falls
+   *  through to the default colour. */
+  speed?: string;
+  duplex?: string;
+  status?: string;
+  utilization?: number;
 }
 
 export interface ErrorType {

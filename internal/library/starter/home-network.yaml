@@ -1,0 +1,137 @@
+# Home Network Template
+# Residential gateway, WiFi, and consumer devices
+#
+# Use Case: Home network with consumer devices
+# Includes: Router/modem, WiFi, smart home devices, media devices
+
+devices:
+  # Home Gateway/Router
+  - name: home-gateway
+    mac: "00:AA:00:BB:00:01"
+    ips:
+      - "192.168.1.1"
+      - "10.0.0.1"
+
+    lldp:
+      enabled: true
+      system_description: "Home Broadband Router"
+
+    dhcp:
+      enabled: true
+      pools:
+        - network: "192.168.1.0/24"
+          range_start: "192.168.1.50"
+          range_end: "192.168.1.200"
+          gateway: "192.168.1.1"
+          dns_servers:
+            - "192.168.1.1"
+            - "8.8.8.8"
+            - "1.1.1.1"
+          domain: "home.local"
+          lease_time: 86400
+
+    dns:
+      enabled: true
+      records:
+        - name: "router.home.local"
+          type: "A"
+          value: "192.168.1.1"
+        - name: "nas.home.local"
+          type: "A"
+          value: "192.168.1.10"
+
+    http:
+      enabled: true
+      server_name: "Home-Router"
+
+    snmp_agent:
+      walk_file: ""
+
+  # Mesh WiFi Main
+  - name: wifi-main
+    mac: "00:AA:00:BB:01:01"
+    ip: "192.168.1.2"
+
+    lldp:
+      enabled: true
+      system_description: "Mesh WiFi Access Point"
+
+    http:
+      enabled: true
+      server_name: "WiFi-Main"
+
+  # NAS - Network Attached Storage
+  - name: home-nas
+    mac: "00:AA:00:BB:10:01"
+    ip: "192.168.1.10"
+
+    http:
+      enabled: true
+      server_name: "NAS"
+
+    snmp_agent:
+      walk_file: ""
+
+  # Network Printer
+  - name: home-printer
+    mac: "00:AA:00:BB:20:01"
+    ip: "192.168.1.20"
+
+    http:
+      enabled: true
+      server_name: "HP-Printer"
+      endpoints:
+        - path: "/status"
+          body: "Ready - Paper: OK - Ink: 75%"
+
+    snmp_agent:
+      walk_file: ""
+
+  # Smart TV
+  - name: smart-tv
+    mac: "00:AA:00:BB:30:01"
+    ip: "192.168.1.30"
+
+    http:
+      enabled: true
+      server_name: "Smart-TV"
+
+  # Security Camera
+  - name: security-cam-01
+    mac: "00:AA:00:BB:40:01"
+    ip: "192.168.1.40"
+
+    http:
+      enabled: true
+      server_name: "Security-Camera"
+
+  # Smart Speaker
+  - name: smart-speaker
+    mac: "00:AA:00:BB:50:01"
+    ip: "192.168.1.50"
+
+    http:
+      enabled: true
+      server_name: "Smart-Speaker"
+
+  # Gaming Console
+  - name: game-console
+    mac: "00:AA:00:BB:60:01"
+    ip: "192.168.1.60"
+
+    http:
+      enabled: true
+      server_name: "Gaming-Console"
+
+  # Home Automation Hub
+  - name: home-hub
+    mac: "00:AA:00:BB:80:01"
+    ip: "192.168.1.80"
+
+    http:
+      enabled: true
+      server_name: "Home-Assistant"
+      endpoints:
+        - path: "/api/status"
+          content_type: "application/json"
+          body: '{"devices":15,"online":15,"automation_count":8}'

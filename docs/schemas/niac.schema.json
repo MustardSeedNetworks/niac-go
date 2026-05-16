@@ -245,6 +245,18 @@
         },
         "iperf3": {
           "$ref": "#/$defs/IPerf3Config"
+        },
+        "trunk_ports": {
+          "items": {
+            "$ref": "#/$defs/TrunkPort"
+          },
+          "type": "array"
+        },
+        "port_channels": {
+          "items": {
+            "$ref": "#/$defs/PortChannel"
+          },
+          "type": "array"
         }
       },
       "additionalProperties": false,
@@ -877,6 +889,27 @@
       "additionalProperties": false,
       "type": "object"
     },
+    "PortChannel": {
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "members": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "mode": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "id"
+      ]
+    },
     "ProtocolConfig": {
       "properties": {
         "enabled": {
@@ -1077,6 +1110,33 @@
       },
       "additionalProperties": false,
       "type": "object"
+    },
+    "TrunkPort": {
+      "properties": {
+        "interface": {
+          "type": "string"
+        },
+        "vlans": {
+          "items": {
+            "type": "integer"
+          },
+          "type": "array"
+        },
+        "native_vlan": {
+          "type": "integer"
+        },
+        "remote_device": {
+          "type": "string"
+        },
+        "remote_interface": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "interface"
+      ]
     }
   },
   "title": "NIAC configuration",

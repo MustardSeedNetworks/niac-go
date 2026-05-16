@@ -87,6 +87,13 @@ func (s *Server) registerReadOnlyRoutes(mux *http.ServeMux) {
 	// User Configs API - GET is read-only, POST/DELETE handled separately
 	mux.HandleFunc("/api/v1/configs", s.recoverMiddleware(s.auth(s.handleUserConfigs)))
 	mux.HandleFunc("/api/v1/configs/", s.recoverMiddleware(s.auth(s.handleUserConfigByName)))
+
+	// Unified Library API (#548 PR 1) — networks subdir only in this PR;
+	// walks/pcaps endpoints land in PR 3.
+	mux.HandleFunc("/api/v1/library/networks",
+		s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.handleLibraryNetworks)))))
+	mux.HandleFunc("/api/v1/library/networks/",
+		s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.handleLibraryNetworkByName)))))
 	mux.HandleFunc("/api/v1/topology", s.recoverMiddleware(s.auth(s.handleTopology)))
 	mux.HandleFunc("/api/v1/topology/export", s.recoverMiddleware(s.auth(s.handleTopologyExport)))
 	mux.HandleFunc("/api/v1/errors", s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.handleErrors)))))

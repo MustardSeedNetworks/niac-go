@@ -53,6 +53,7 @@ paths = [
     '''pkg/.*''',
     '''examples/.*''',
     '''internal/templates/builtin/.*''',
+    '''internal/library/starter/.*''',
 ]
 
 # Example/placeholder values commonly used in documentation

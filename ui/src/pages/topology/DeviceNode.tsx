@@ -2,6 +2,7 @@
  * Custom Device Node Component for React Flow topology visualization
  */
 
+import { Handle, Position } from '@xyflow/react';
 import { type FC, memo } from 'react';
 import {
   topologyDeviceColors as deviceColors,
@@ -40,13 +41,32 @@ export const DeviceNode: FC<DeviceNodeProps> = memo(({ data, selected }) => {
       style={{
         backgroundColor: 'var(--color-bg-elevated)',
         borderColor: selected ? color : 'var(--color-border-muted)',
-        minWidth: '140px',
-        // Cap so device names + IP lists don't blow the card past the
-        // grid-fallback step width and overlap neighbours.
-        maxWidth: '220px',
+        // Wide enough that 16-char device names (niac-core-sw-01) fit
+        // without "..." truncation, capped so packed layouts still
+        // breathe. Layout step width below is tuned to this.
+        minWidth: '200px',
+        maxWidth: '260px',
       }}
       onClick={() => data.onClick?.(data.label)}
     >
+      {/* ReactFlow edge anchors. Without these handles the canvas
+          renders nodes fine but every edge silently fails to draw —
+          there's no spot for the line to attach to.
+          Default handles only (left=target, right=source) so edges
+          always route left-to-right deterministically. Extra
+          top/bottom handles confused ReactFlow's auto-routing into
+          drawing edges out the side of the card. */}
+      <Handle
+        type="target"
+        position={Position.Left}
+        className="!w-2 !h-2 !bg-violet-400 !border-0"
+      />
+      <Handle
+        type="source"
+        position={Position.Right}
+        className="!w-2 !h-2 !bg-violet-400 !border-0"
+      />
+
       {/* Status indicator */}
       <div
         className={`absolute -top-1 -right-1 w-3 h-3 rounded-full ${statusColor} border-2 border-gray-900`}

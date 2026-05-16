@@ -83,16 +83,42 @@ func determineLinkType(trunk config.TrunkPort) string {
 
 // buildTrunkLabel creates the label for a trunk link.
 func buildTrunkLabel(trunk config.TrunkPort) string {
-	label := trunk.Interface
+	label := abbreviateInterface(trunk.Interface)
 	if trunk.RemoteInterface != "" {
-		label += " ↔ " + trunk.RemoteInterface
+		label += " ↔ " + abbreviateInterface(trunk.RemoteInterface)
 	}
 
 	if len(trunk.VLANs) > 0 {
-		label += fmt.Sprintf(" (VLANs: %s)", formatVLANList(trunk.VLANs))
+		label += fmt.Sprintf(" (VLANs %s)", formatVLANList(trunk.VLANs))
 	}
 
 	return label
+}
+
+// abbreviateInterface shortens the long Cisco-style interface names
+// (GigabitEthernet0/1 → Gi0/1) that hog edge-label space in the
+// topology view. Covers the IOS-style prefixes most templates use;
+// anything unrecognised passes through unchanged.
+func abbreviateInterface(name string) string {
+	abbrevs := []struct{ long, short string }{
+		{"TenGigabitEthernet", "Te"},
+		{"TwentyFiveGigE", "Twe"},
+		{"FortyGigabitEthernet", "Fo"},
+		{"HundredGigE", "Hu"},
+		{"GigabitEthernet", "Gi"},
+		{"FastEthernet", "Fa"},
+		{"Ethernet", "Eth"},
+		{"Loopback", "Lo"},
+		{"Port-channel", "Po"},
+		{"Management", "Mgmt"},
+		{"Vlan", "Vl"},
+	}
+	for _, a := range abbrevs {
+		if strings.HasPrefix(name, a.long) {
+			return a.short + name[len(a.long):]
+		}
+	}
+	return name
 }
 
 // getInterfaceDetails retrieves speed, duplex, and status from interface map.
@@ -119,6 +145,15 @@ func getInterfaceDetails(
 	return iface.Speed, iface.Duplex, status
 }
 
+// sortedPairKey returns a canonical "a|b" key where a < b so reverse
+// declarations of the same physical adjacency collapse to one entry.
+func sortedPairKey(a, b string) string {
+	if a <= b {
+		return a + "|" + b
+	}
+	return b + "|" + a
+}
+
 // processTrunkPort creates a TopologyLink from a trunk port configuration.
 func processTrunkPort(
 	trunk config.TrunkPort,
@@ -128,11 +163,15 @@ func processTrunkPort(
 	speed, duplex, status := getInterfaceDetails(interfaceMap, deviceName, trunk.Interface)
 
 	return TopologyLink{
-		Source:          deviceName,
-		Target:          trunk.RemoteDevice,
-		Label:           buildTrunkLabel(trunk),
-		SourceInterface: trunk.Interface,
-		TargetInterface: trunk.RemoteInterface,
+		Source: deviceName,
+		Target: trunk.RemoteDevice,
+		Label:  buildTrunkLabel(trunk),
+		// Abbreviate interface names everywhere they're surfaced —
+		// the per-side labels on the topology edge use these fields
+		// directly, not the combined label, so they need the same
+		// shortening (GigabitEthernet0/1 → Gi0/1).
+		SourceInterface: abbreviateInterface(trunk.Interface),
+		TargetInterface: abbreviateInterface(trunk.RemoteInterface),
 		LinkType:        determineLinkType(trunk),
 		VLANs:           trunk.VLANs,
 		NativeVLAN:      trunk.NativeVLAN,
@@ -144,10 +183,17 @@ func processTrunkPort(
 }
 
 // BuildTopology derives a topology graph from the configuration.
+//
+// Trunk links are inherently bidirectional — both switches declare a
+// trunk_port pointing at each other, so we'd otherwise emit two
+// TopologyLink entries for one physical wire and ReactFlow would draw
+// a second edge looping back around the cards. We dedupe via a
+// sorted-pair key so each physical adjacency yields exactly one link.
 func BuildTopology(cfg *config.Config) Topology {
 	nodes := make(map[string]TopologyNode)
 	links := make([]TopologyLink, 0)
 	interfaceMap := buildInterfaceMap(cfg.Devices)
+	seenLinks := make(map[string]bool)
 
 	for _, dev := range cfg.Devices {
 		nodes[dev.Name] = TopologyNode{
@@ -159,6 +205,16 @@ func BuildTopology(cfg *config.Config) Topology {
 			if trunk.RemoteDevice == "" {
 				continue
 			}
+
+			// Sorted endpoint pair is the dedupe key so A↔B and B↔A
+			// collapse to one entry. First-seen direction wins so the
+			// Source/Target on the emitted link matches the device that
+			// declared the trunk_port we found first in the YAML.
+			pair := sortedPairKey(dev.Name, trunk.RemoteDevice)
+			if seenLinks[pair] {
+				continue
+			}
+			seenLinks[pair] = true
 
 			if _, exists := nodes[trunk.RemoteDevice]; !exists {
 				nodes[trunk.RemoteDevice] = TopologyNode{
