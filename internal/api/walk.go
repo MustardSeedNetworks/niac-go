@@ -15,6 +15,11 @@ import (
 
 // SECURITY FIX #154, #166: Secure path validation for walk files
 // validateWalkFilePath ensures the file path is safe and doesn't traverse outside allowed directories.
+// Walks are resolved in two passes: first the legacy config-dir / cwd
+// allow-list (kept for backward compatibility with bare filenames in
+// the running config), then the unified library walks dir
+// (~/.niac/library/walks/) so the new picker integrations (#556) can
+// send library-relative names like "cisco/c3900.walk".
 func (s *Server) validateWalkFilePath(filename string) (string, error) {
 	if filename == "" {
 		return "", errors.New("filename cannot be empty")
@@ -25,43 +30,76 @@ func (s *Server) validateWalkFilePath(filename string) (string, error) {
 		return "", errors.New("filename contains invalid characters")
 	}
 
-	allowedDir, err := s.resolveWalkAllowedDir()
+	allowedDirs, err := s.resolveWalkAllowedDirs()
 	if err != nil {
 		return "", err
 	}
 
-	absPath := cleanPath
-	if !filepath.IsAbs(cleanPath) {
-		absPath = filepath.Join(allowedDir, cleanPath)
-	}
-	absPath = filepath.Clean(absPath)
+	// Try each allowed dir in order. First one that produces a path
+	// passing all checks wins. If a dir produces a path that fails on
+	// "file not found", fall through to the next dir; any other error
+	// (extension, traversal) short-circuits.
+	var lastNotFound error
+	for _, allowedDir := range allowedDirs {
+		absPath := cleanPath
+		if !filepath.IsAbs(cleanPath) {
+			absPath = filepath.Join(allowedDir, cleanPath)
+		}
+		absPath = filepath.Clean(absPath)
 
-	if traversalErr := ensureWalkPathWithin(absPath, allowedDir, filename); traversalErr != nil {
-		return "", traversalErr
+		if traversalErr := ensureWalkPathWithin(absPath, allowedDir, filename); traversalErr != nil {
+			// "access denied" against THIS dir doesn't preclude finding
+			// the file under a different dir. Keep going.
+			lastNotFound = traversalErr
+			continue
+		}
+		if statErr := checkWalkFileExists(absPath, filename); statErr != nil {
+			lastNotFound = statErr
+			continue
+		}
+		if extErr := validateWalkExtension(absPath); extErr != nil {
+			// Extension errors aren't dir-specific — surface immediately.
+			return "", extErr
+		}
+		return absPath, nil
 	}
 
-	if statErr := checkWalkFileExists(absPath, filename); statErr != nil {
-		return "", statErr
+	if lastNotFound != nil {
+		return "", lastNotFound
 	}
-
-	if extErr := validateWalkExtension(absPath); extErr != nil {
-		return "", extErr
-	}
-
-	return absPath, nil
+	return "", fmt.Errorf("walk file not found: %s", filename)
 }
 
-// resolveWalkAllowedDir returns the directory walk files must reside under.
-func (s *Server) resolveWalkAllowedDir() (string, error) {
+// resolveWalkAllowedDirs returns the ordered list of directories walk
+// files may live under. The first entry is the legacy config-dir / cwd
+// surface; the second is the library walks/ subdir when the library
+// opened successfully. Order matters — config-dir wins so a walk
+// referenced relative to the running config behaves the same as
+// before this change.
+func (s *Server) resolveWalkAllowedDirs() ([]string, error) {
+	var dirs []string
+
 	cfgPath := s.configPath()
 	if cfgPath != "" {
-		return filepath.Dir(cfgPath), nil
+		dirs = append(dirs, filepath.Dir(cfgPath))
+	} else {
+		cwd, err := os.Getwd()
+		if err != nil {
+			return nil, fmt.Errorf("cannot determine allowed directory: %w", err)
+		}
+		dirs = append(dirs, cwd)
 	}
-	allowedDir, err := os.Getwd()
-	if err != nil {
-		return "", fmt.Errorf("cannot determine allowed directory: %w", err)
+
+	// Library walks dir — only added when the library opened cleanly.
+	// Library failure is non-fatal for the daemon as a whole, and
+	// silently omitting it here matches that posture: clients hitting
+	// /api/v1/library/walks already see 503, so this is just one more
+	// place that surface is unavailable.
+	if s.library != nil {
+		dirs = append(dirs, s.library.SubDir("walks"))
 	}
-	return allowedDir, nil
+
+	return dirs, nil
 }
 
 // ensureWalkPathWithin verifies that absPath resolves under allowedDir (following symlinks).

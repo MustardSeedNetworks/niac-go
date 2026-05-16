@@ -122,3 +122,56 @@ func TestHandleLibraryWalksUnavailable(t *testing.T) {
 		t.Errorf("status = %d, want 503", rec.Code)
 	}
 }
+
+// TestValidateWalkFilePathFallsBackToLibrary verifies that #556's
+// resolver tries the library walks dir as a fallback when the file
+// isn't in the legacy allow-list dir. Without this, the new picker
+// integrations would send library-relative names that the walk
+// validator would reject.
+func TestValidateWalkFilePathFallsBackToLibrary(t *testing.T) {
+	server, root := newLibraryTestServer(t)
+
+	// Plant a walk in the library/walks dir but NOT in the cfgPath
+	// allow-list dir (server.configPath returns "" → falls back to
+	// cwd; we don't drop the walk there).
+	walkPath := filepath.Join(root, "walks", "lib-only.walk")
+	if err := os.WriteFile(walkPath, []byte("oid = STRING: x\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := server.validateWalkFilePath("lib-only.walk")
+	if err != nil {
+		t.Fatalf("validateWalkFilePath: %v", err)
+	}
+	if got != walkPath {
+		t.Errorf("resolved path = %q, want %q", got, walkPath)
+	}
+}
+
+// TestValidateWalkFilePathPreservesConfigDirPriority verifies that a
+// walk available in BOTH the config dir and the library resolves to
+// the config-dir copy — the legacy bare-filename behaviour in YAML
+// configs must keep working unchanged.
+func TestValidateWalkFilePathPreservesConfigDirPriority(t *testing.T) {
+	server, root := newLibraryTestServer(t)
+	cfgDir := t.TempDir()
+	// configPath() reads from server.cfg.ConfigPath; set it.
+	server.cfg.ConfigPath = filepath.Join(cfgDir, "config.yaml")
+
+	const filename = "shared.walk"
+	if err := os.WriteFile(filepath.Join(cfgDir, filename), []byte("oid = STRING: cfg\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "walks", filename), []byte("oid = STRING: lib\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := server.validateWalkFilePath(filename)
+	if err != nil {
+		t.Fatalf("validateWalkFilePath: %v", err)
+	}
+	want := filepath.Join(cfgDir, filename)
+	if got != want {
+		t.Errorf("resolved path = %q, want config-dir copy %q", got, want)
+	}
+}
