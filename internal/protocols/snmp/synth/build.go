@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"fmt"
 	"strings"
+
+	"github.com/krisarmstrong/niac-go/internal/safeconv"
 )
 
 // DeviceInput is the subset of the niac device the synthesiser needs.
@@ -141,9 +143,10 @@ func emitInterfaces(buf *bytes.Buffer, p Profile, dev DeviceInput, opts BuildOpt
 		emitString(buf, fmt.Sprintf("%s.2.%d", base, i), name)                  // ifDescr
 		emitInteger(buf, fmt.Sprintf("%s.3.%d", base, i), ifTypeEthernetCsmacd) // ifType: ethernetCsmacd
 		emitInteger(buf, fmt.Sprintf("%s.4.%d", base, i), defaultMTU)           // ifMtu
-		// G115 waiver: p.IfSpeedMbps is a small literal in the profile
-		// table (max 10_000) — the uint32 cast can't overflow.
-		speedBps := uint32(p.IfSpeedMbps) * mbpsToBps //nolint:gosec // G115 — bounded by profile literals
+		// p.IfSpeedMbps is a small literal from the profile table
+		// (max speed100G = 100_000). safeconv.Uint32 clamps + does the
+		// conversion in one place that gosec's flow analysis follows.
+		speedBps := safeconv.Uint32(p.IfSpeedMbps) * mbpsToBps
 		emitGauge32(buf, fmt.Sprintf("%s.5.%d", base, i), speedBps)
 		emitPhysAddress(buf, fmt.Sprintf("%s.6.%d", base, i), syntheticMAC(dev.Hostname, i))
 		emitInteger(buf, fmt.Sprintf("%s.7.%d", base, i), ifStatusUp) // ifAdminStatus: up
@@ -222,7 +225,11 @@ func syntheticMAC(hostname string, ifIndex int) string {
 		h ^= uint32(b)
 		h *= fnvPrime
 	}
-	h += uint32(ifIndex) //nolint:gosec // G115 — ifIndex ≤ MaxInterfaces
+	// safeconv.Uint32 does the clamp + conversion in one spot — gosec's
+	// flow analysis tracks bounds through it. Caps at MaxUint32; our
+	// callers are bounded by MaxInterfaces=256 anyway.
+	idx := safeconv.Uint32(ifIndex)
+	h += idx
 	const (
 		shift24 = 24
 		shift16 = 16
@@ -232,6 +239,6 @@ func syntheticMAC(hostname string, ifIndex int) string {
 	b2 := byte((h >> shift16) & macByteMask)
 	b3 := byte((h >> shift8) & macByteMask)
 	b4 := byte(h & macByteMask)
-	last := byte(uint32(ifIndex) & macByteMask) //nolint:gosec // G115 — ifIndex ≤ 256
+	last := byte(idx & macByteMask)
 	return strings.ToUpper(fmt.Sprintf("02:%02x:%02x:%02x:%02x:%02x", b1, b2, b3, b4, last))
 }
