@@ -95,6 +95,7 @@ func main() {
 		addAnalyzeCommand,
 		addAnalyzePcapCommand,
 		addConfigCommand,
+		addContentCommand,
 		func(root *cobra.Command, _ *serviceOptions) { addDaemonCommand(root, info) },
 		addDumpCommand,
 		addInitCommand,
