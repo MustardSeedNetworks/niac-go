@@ -49,7 +49,15 @@ The web UI will be available at http://localhost:8080`,
 	daemonCmd.Flags().
 		StringVar(&options.listen, "listen", ":8080", "Address to listen on for API and web UI")
 	daemonCmd.Flags().
-		StringVar(&options.token, "token", "", "Bearer token for API authentication (RECOMMENDED for network-exposed instances)")
+		StringVar(&options.token, "token", "", "Bearer token for API authentication (DEPRECATED: use NIAC_API_TOKEN env var)")
+	// SECURITY FIX #409: the --token value lands in /proc/<pid>/cmdline and
+	// `ps` output. resolveAPIToken() already prefers NIAC_API_TOKEN; this
+	// flips the flag itself to a deprecation warning so future invocations
+	// migrate away. Mirrors the root command's --api-token treatment.
+	if err := daemonCmd.Flags().MarkDeprecated("token",
+		"the value lands in /proc/<pid>/cmdline and `ps`. Set NIAC_API_TOKEN in the environment instead."); err != nil {
+		panic(fmt.Errorf("mark --token deprecated: %w", err))
+	}
 	daemonCmd.Flags().
 		StringVar(&options.storagePath, "storage", "~/.niac/niac.db", "Path to run history database (use 'disabled' to disable)")
 	daemonCmd.Flags().
