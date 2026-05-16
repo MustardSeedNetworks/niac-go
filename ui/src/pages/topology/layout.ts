@@ -7,14 +7,19 @@ import type { DeviceSummary, TopologyLink } from '../../api/types';
 import type { DeviceNode, DeviceNodeData, LinkEdge, LinkEdgeData } from './types';
 import { linkSpeedColors } from './types';
 
-// Card-sized tuneables for the edges == 0 grid fallback below. Keep
-// neighbours far enough apart that they don't overlap at default zoom.
-// DeviceNode has maxWidth 220 + 2px border + room for the connector
-// handles ReactFlow draws, plus we give the user some breathing room.
+// Card-sized tuneables for the grid layout below. Keep neighbours far
+// enough apart that they don't overlap at default zoom. DeviceNode has
+// maxWidth 220 + 2px border + room for the connector handles ReactFlow
+// draws, plus we give the user some breathing room.
 const NODE_WIDTH = 240;
 const NODE_HEIGHT = 160;
 const NODE_GAP_X = 80;
 const NODE_GAP_Y = 80;
+
+// Minimum radius for the concentric-ring layout. Must be large enough
+// that a node on the inner ring doesn't overlap the centre node — i.e.
+// > one card-width plus padding. The previous 180 wasn't enough.
+const CONCENTRIC_MIN_RADIUS = 320;
 
 /**
  * Layout nodes in concentric circles based on connectivity. Most
@@ -29,7 +34,13 @@ const NODE_GAP_Y = 80;
  * the YAML to populate edges.
  */
 export function layoutNodes(devices: DeviceSummary[], links: TopologyLink[]): DeviceNode[] {
-  if (links.length === 0) {
+  // For small device counts the concentric-ring layout collapses (the
+  // centre node and the first ring overlap), so use the grid path even
+  // when there are edges. The cutoff is tuned to the device-card width:
+  // ≤4 devices fits in a 2×2 grid with the standard NODE_GAP padding.
+  const useGrid = links.length === 0 || devices.length <= 4;
+
+  if (useGrid) {
     return devices.map((device, index) => {
       const cols = Math.max(1, Math.ceil(Math.sqrt(devices.length)));
       const row = Math.floor(index / cols);
@@ -86,9 +97,9 @@ export function layoutNodes(devices: DeviceSummary[], links: TopologyLink[]): De
   for (const device of sorted) {
     if (ringIndex >= nodesInRing) {
       ringIndex = 0;
-      currentRadius += 180;
+      currentRadius += CONCENTRIC_MIN_RADIUS;
       angleOffset += Math.PI / 6; // Stagger rings
-      nodesInRing = Math.max(1, Math.floor((2 * Math.PI * currentRadius) / 200));
+      nodesInRing = Math.max(1, Math.floor((2 * Math.PI * currentRadius) / 280));
     }
 
     const angle = (2 * Math.PI * ringIndex) / nodesInRing + angleOffset;
@@ -182,18 +193,23 @@ export function getEdgeColor(data: LinkEdgeData): string {
 }
 
 /**
- * Create edges from topology links with styling based on type/speed
+ * Create edges from topology links with styling based on type/speed.
+ *
+ * Prefers the structured fields the daemon now returns
+ * (link.linkType / link.speed / link.vlans) over regex-parsing the
+ * display label — the label is human-friendly text and rarely
+ * contains the literal "trunk" / "1G" keywords the old parser needed.
  */
 export function createEdges(links: TopologyLink[]): LinkEdge[] {
   return links.map((link, index) => {
-    // Parse link label for speed/type info
     const data: LinkEdgeData = {
       label: link.label,
+      // Prefer server-supplied structure; fall back to label parsing for
+      // older API responses that didn't include the typed fields.
+      speed: link.speed ?? getLinkSpeed(link.label),
+      linkType: (link.linkType as LinkEdgeData['linkType']) ?? getLinkType(link.label),
+      vlan: link.vlans && link.vlans.length > 0 ? link.vlans[0] : getVlan(link.label),
     };
-
-    data.speed = getLinkSpeed(link.label);
-    data.linkType = getLinkType(link.label);
-    data.vlan = getVlan(link.label);
 
     const edgeColor = getEdgeColor(data);
 
