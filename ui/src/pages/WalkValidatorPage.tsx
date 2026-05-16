@@ -1,6 +1,6 @@
 import { type FC, useCallback, useEffect, useMemo, useState } from 'react';
-import { fetchFiles, fixWalk, validateWalk } from '../api/client';
-import type { FileEntry, WalkValidationIssue, WalkValidationResponse } from '../api/types';
+import { fetchLibraryWalks, fixWalk, type LibraryFileEntry, validateWalk } from '../api/client';
+import type { WalkValidationIssue, WalkValidationResponse } from '../api/types';
 import { Card, CardContent } from '../ui/Card';
 
 type Severity = 'error' | 'warning' | 'info';
@@ -24,7 +24,7 @@ const severityCounts = (issues: WalkValidationIssue[]): Record<Severity, number>
 };
 
 export const WalkValidatorPage: FC = () => {
-  const [files, setFiles] = useState<FileEntry[]>([]);
+  const [files, setFiles] = useState<LibraryFileEntry[]>([]);
   const [filesError, setFilesError] = useState<string | null>(null);
   const [filesLoading, setFilesLoading] = useState(true);
 
@@ -35,17 +35,21 @@ export const WalkValidatorPage: FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<'idle' | 'validating' | 'fixing'>('idle');
 
-  // Hydrate the file dropdown from /api/v1/files?kind=walks.
+  // Hydrate the file dropdown from /api/v1/library/walks. The daemon's
+  // walk validator (validateWalkFilePath) falls back to the library
+  // walks dir when the file isn't in the legacy config-dir allow-list,
+  // so we can send library-relative names like "cisco/c3900.walk"
+  // unchanged.
   useEffect(() => {
     let cancelled = false;
     setFilesLoading(true);
-    fetchFiles('walks')
+    fetchLibraryWalks()
       .then((entries) => {
         if (cancelled) return;
         setFiles(entries);
         setFilesError(null);
         if (entries.length > 0 && !selectedFile) {
-          setSelectedFile(entries[0].path);
+          setSelectedFile(entries[0].name);
         }
       })
       .catch((err: Error) => {
@@ -111,7 +115,7 @@ export const WalkValidatorPage: FC = () => {
                 {filesLoading && <option>Loading…</option>}
                 {!filesLoading && files.length === 0 && <option>No walks found</option>}
                 {files.map((f) => (
-                  <option key={f.path} value={f.path}>
+                  <option key={f.name} value={f.name}>
                     {f.name} ({Math.round(f.sizeBytes / 1024)} KB)
                   </option>
                 ))}

@@ -1,8 +1,14 @@
 import { FileCog, Server } from 'lucide-react';
 import { type ChangeEvent, type FC, memo, useEffect, useState } from 'react';
-import { fetchConfig, fetchDevices, fetchFiles, updateConfig } from '../api/client';
+import {
+  fetchConfig,
+  fetchDevices,
+  fetchLibraryWalks,
+  type LibraryFileEntry,
+  updateConfig,
+} from '../api/client';
 import { isApiError } from '../api/errors';
-import type { DeviceSummary, FileEntry } from '../api/types';
+import type { DeviceSummary } from '../api/types';
 import { POLL_INTERVALS } from '../constants/polling';
 import { iconSizes } from '../constants/sizes';
 import { useApiResource } from '../hooks/useApiResource';
@@ -157,7 +163,7 @@ const ConfigEditorCard: FC = () => {
   const { data, loading, error } = useApiResource(fetchConfig, [], {
     intervalMs: POLL_INTERVALS.verySlow,
   });
-  const { data: walkFiles } = useApiResource(() => fetchFiles('walks'), [], {
+  const { data: walkFiles } = useApiResource(fetchLibraryWalks, [], {
     intervalMs: POLL_INTERVALS.verySlow,
   });
   const [value, setValue] = useState('');
@@ -206,14 +212,14 @@ const ConfigEditorCard: FC = () => {
     }
   };
 
-  const handleWalkCopy = async (path: string) => {
+  const handleWalkCopy = async (name: string) => {
     try {
-      await copyToClipboard(path);
-      setStatus({ tone: 'success', message: `Copied ${path}` });
+      await copyToClipboard(name);
+      setStatus({ tone: 'success', message: `Copied ${name}` });
     } catch (err) {
       setStatus({
         tone: 'error',
-        message: getErrorMessage(err) || 'Unable to copy path',
+        message: getErrorMessage(err) || 'Unable to copy walk name',
       });
     }
   };
@@ -295,7 +301,7 @@ const ConfigEditorCard: FC = () => {
  * Walk File Browser - Browse available SNMP walks
  */
 const WalkFileBrowser: FC<{
-  files: FileEntry[];
+  files: LibraryFileEntry[];
   onCopy: (path: string) => void;
 }> = ({ files, onCopy }) => {
   if (files.length === 0) {
@@ -307,15 +313,15 @@ const WalkFileBrowser: FC<{
       <div className="max-h-48 space-y-1 overflow-y-auto rounded-xl border border-white/10 bg-gray-950/50 p-2 text-sm text-gray-300">
         {files.map((file) => (
           <div
-            key={file.path}
+            key={file.name}
             className="flex items-center justify-between gap-2 rounded-lg border border-white/5 bg-gray-900/50 px-3 py-2"
           >
             <div>
               <p className="text-white">{file.name}</p>
-              <SmallText className="text-gray-500">{file.path}</SmallText>
+              <SmallText className="text-gray-500 capitalize">{file.source}</SmallText>
             </div>
-            <Button size="sm" variant="outline" onClick={() => onCopy(file.path)}>
-              Copy path
+            <Button size="sm" variant="outline" onClick={() => onCopy(file.name)}>
+              Copy name
             </Button>
           </div>
         ))}
