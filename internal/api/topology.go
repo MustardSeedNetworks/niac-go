@@ -163,11 +163,15 @@ func processTrunkPort(
 	speed, duplex, status := getInterfaceDetails(interfaceMap, deviceName, trunk.Interface)
 
 	return TopologyLink{
-		Source:          deviceName,
-		Target:          trunk.RemoteDevice,
-		Label:           buildTrunkLabel(trunk),
-		SourceInterface: trunk.Interface,
-		TargetInterface: trunk.RemoteInterface,
+		Source: deviceName,
+		Target: trunk.RemoteDevice,
+		Label:  buildTrunkLabel(trunk),
+		// Abbreviate interface names everywhere they're surfaced —
+		// the per-side labels on the topology edge use these fields
+		// directly, not the combined label, so they need the same
+		// shortening (GigabitEthernet0/1 → Gi0/1).
+		SourceInterface: abbreviateInterface(trunk.Interface),
+		TargetInterface: abbreviateInterface(trunk.RemoteInterface),
 		LinkType:        determineLinkType(trunk),
 		VLANs:           trunk.VLANs,
 		NativeVLAN:      trunk.NativeVLAN,

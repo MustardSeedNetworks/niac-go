@@ -217,6 +217,14 @@ export function createEdges(links: TopologyLink[]): LinkEdge[] {
       vlan: link.vlans && link.vlans.length > 0 ? link.vlans[0] : getVlan(link.label),
     };
 
+    // Hydrate per-side interface names + vlan list so the custom
+    // TrunkEdge component can render them as end-labels near each
+    // arrow. The middle label (VLANs + speed) sits on the line; the
+    // per-side labels float between line and device card.
+    data.sourceInterface = link.sourceInterface;
+    data.targetInterface = link.targetInterface;
+    data.vlans = link.vlans;
+
     const edgeColor = getEdgeColor(data);
     // Trunk + LAG links are bidirectional by nature (both sides send
     // and receive on the same wire) — show arrows on both ends. A
@@ -234,20 +242,11 @@ export function createEdges(links: TopologyLink[]): LinkEdge[] {
       id: `e-${link.source}-${link.target}-${index}`,
       source: link.source,
       target: link.target,
-      type: 'smoothstep',
+      // 'trunk' is our custom edge type registered in TopologyPage's
+      // edgeTypes lookup. Labels are rendered by TrunkEdge, not via
+      // the standard label/labelStyle props.
+      type: 'trunk',
       animated: bidirectional,
-      label: link.label,
-      labelBgPadding: [8, 4] as [number, number],
-      labelBgBorderRadius: 4,
-      labelBgStyle: {
-        fill: 'var(--color-bg-overlay)',
-        fillOpacity: 0.9,
-      },
-      labelStyle: {
-        fill: 'var(--color-text-secondary)',
-        fontSize: 10,
-        fontWeight: 500,
-      },
       style: {
         stroke: edgeColor,
         strokeWidth: bidirectional ? 3 : 2,

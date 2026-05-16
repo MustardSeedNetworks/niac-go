@@ -3,6 +3,7 @@ import {
   BackgroundVariant,
   type Connection,
   Controls,
+  type EdgeTypes,
   MiniMap,
   type Node,
   type NodeTypes,
@@ -33,6 +34,7 @@ import {
   NeighborsView,
   TopologyLegend,
 } from './topology';
+import { TrunkEdge } from './topology/TrunkEdge';
 
 /**
  * nodeTypes is the ReactFlow lookup that maps a node.type string onto
@@ -43,6 +45,10 @@ import {
  */
 const nodeTypes: NodeTypes = {
   device: DeviceNode,
+};
+
+const edgeTypes: EdgeTypes = {
+  trunk: TrunkEdge,
 };
 
 // Where we stash user-dragged node positions so they survive page
@@ -102,6 +108,10 @@ export const TopologyPage: FC = () => {
   // users will pan with the mouse anyway. Toggle on via the header
   // button when working with larger topologies.
   const [showMinimap, setShowMinimap] = useState(false);
+  // showLabels controls whether TrunkEdge renders its per-side
+  // interface labels + the middle VLAN/speed label. On by default
+  // for clarity; toggle off via the header to see clean lines only.
+  const [showLabels, setShowLabels] = useState(true);
   const [view, setView] = useState<'graph' | 'neighbors'>('graph');
 
   // Build graph from API data, merging trunk port links with neighbor-discovered links
@@ -137,7 +147,10 @@ export const TopologyPage: FC = () => {
     }
 
     const layoutedNodes = layoutNodes(devices, allLinks);
-    const layoutedEdges = createEdges(allLinks);
+    const layoutedEdges = createEdges(allLinks).map((edge) => ({
+      ...edge,
+      data: { ...edge.data, showLabels },
+    }));
 
     // Preserve user-dragged positions across the 15s data poll. For each
     // device that's already on canvas, keep its current position rather
@@ -159,7 +172,7 @@ export const TopologyPage: FC = () => {
       });
     });
     setEdges(layoutedEdges);
-  }, [devices, topology, neighbors, setNodes, setEdges]);
+  }, [devices, topology, neighbors, showLabels, setNodes, setEdges]);
 
   // Persist node positions when the user stops dragging so layouts
   // survive page reloads. Keyed by device name; stored as a flat
@@ -259,7 +272,9 @@ export const TopologyPage: FC = () => {
               <div>
                 <H2>Network Topology</H2>
                 <SmallText className="text-gray-400">
-                  {devices?.length || 0} devices | {topology?.links?.length || 0} connections
+                  {devices?.length || 0} {devices?.length === 1 ? 'device' : 'devices'} |{' '}
+                  {topology?.links?.length || 0}{' '}
+                  {topology?.links?.length === 1 ? 'connection' : 'connections'}
                 </SmallText>
               </div>
             </div>
@@ -318,6 +333,14 @@ export const TopologyPage: FC = () => {
                     disabled={nodes.length === 0}
                   >
                     Export
+                  </Button>
+                  <Button
+                    variant={showLabels ? 'outline' : 'ghost'}
+                    size="sm"
+                    onClick={() => setShowLabels(!showLabels)}
+                    title="Toggle interface / VLAN / speed labels on edges"
+                  >
+                    Labels
                   </Button>
                   <Button
                     variant={showMinimap ? 'outline' : 'ghost'}
@@ -382,6 +405,7 @@ export const TopologyPage: FC = () => {
                   onConnect={onConnect}
                   onNodeDragStop={handleNodeDragStop}
                   nodeTypes={nodeTypes}
+                  edgeTypes={edgeTypes}
                   fitView={true}
                   fitViewOptions={{ padding: 0.2 }}
                   minZoom={0.2}
