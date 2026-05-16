@@ -218,13 +218,24 @@ export function createEdges(links: TopologyLink[]): LinkEdge[] {
     };
 
     const edgeColor = getEdgeColor(data);
+    // Trunk + LAG links are bidirectional by nature (both sides send
+    // and receive on the same wire) — show arrows on both ends. A
+    // plain access link still uses a single end-arrow to indicate the
+    // "source declared this" direction.
+    const bidirectional = data.linkType === 'trunk' || data.linkType === 'lag';
+    const marker = {
+      type: MarkerType.ArrowClosed,
+      color: edgeColor,
+      width: 14,
+      height: 14,
+    };
 
     return {
       id: `e-${link.source}-${link.target}-${index}`,
       source: link.source,
       target: link.target,
       type: 'smoothstep',
-      animated: data.linkType === 'trunk' || data.linkType === 'lag',
+      animated: bidirectional,
       label: link.label,
       labelBgPadding: [8, 4] as [number, number],
       labelBgBorderRadius: 4,
@@ -239,14 +250,10 @@ export function createEdges(links: TopologyLink[]): LinkEdge[] {
       },
       style: {
         stroke: edgeColor,
-        strokeWidth: data.linkType === 'trunk' || data.linkType === 'lag' ? 3 : 2,
+        strokeWidth: bidirectional ? 3 : 2,
       },
-      markerEnd: {
-        type: MarkerType.ArrowClosed,
-        color: edgeColor,
-        width: 15,
-        height: 15,
-      },
+      markerEnd: marker,
+      ...(bidirectional ? { markerStart: marker } : {}),
       data,
     };
   });
