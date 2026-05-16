@@ -1,6 +1,7 @@
 import { FileCog, Server } from 'lucide-react';
 import { type ChangeEvent, type FC, memo, useEffect, useState } from 'react';
 import { fetchConfig, fetchDevices, fetchFiles, updateConfig } from '../api/client';
+import { isApiError } from '../api/errors';
 import type { DeviceSummary, FileEntry } from '../api/types';
 import { POLL_INTERVALS } from '../constants/polling';
 import { iconSizes } from '../constants/sizes';
@@ -216,6 +217,27 @@ const ConfigEditorCard: FC = () => {
       });
     }
   };
+
+  // The daemon returns config_read_failed when no simulation has been
+  // started yet (no path is loaded). That's a normal empty state, not
+  // an error worth surfacing — render a clean prompt to go pick one.
+  const noConfigLoaded =
+    isApiError(error) && (error.code === 'config_read_failed' || error.status === 400);
+
+  if (noConfigLoaded) {
+    return (
+      <BaseCard
+        title="YAML editor"
+        subtitle="Edit active configuration"
+        icon={<FileCog className={`${iconSizes.lg} text-emerald-300`} />}
+        data={null}
+        emptyMessage="No simulation is running. Pick a network on Simulation and start it to see and edit the running YAML here."
+        getStatus={() => 'success'}
+      >
+        {() => null}
+      </BaseCard>
+    );
+  }
 
   return (
     <BaseCard<{ content: string; path: string; modifiedAt: string; sizeBytes: number }>
