@@ -128,6 +128,20 @@ export const fetchVersion = () => deduplicatedGet<VersionInfo>('/api/v1/version'
 export const fetchTopology = () => deduplicatedGet<TopologyGraph>('/api/v1/topology');
 export const fetchErrorTypes = () => deduplicatedGet<ErrorInjectionInfo>('/api/v1/errors');
 
+// Library file listings. Backed by GET /api/v1/library/{walks,pcaps},
+// which return [{name, sizeBytes, modifiedAt, source}]. The picker
+// integrations on the device editor (SNMP walks) and Packets / Traffic
+// pages (PCAPs) consume these to surface library content without
+// hitting the older /api/v1/files routes.
+export interface LibraryFileEntry {
+  name: string;
+  sizeBytes: number;
+  modifiedAt: string;
+  source: 'starter' | 'bundle' | 'user';
+}
+export const fetchLibraryWalks = () => deduplicatedGet<LibraryFileEntry[]>('/api/v1/library/walks');
+export const fetchLibraryPcaps = () => deduplicatedGet<LibraryFileEntry[]>('/api/v1/library/pcaps');
+
 export const injectError = (payload: {
   deviceIp: string;
   interface: string;

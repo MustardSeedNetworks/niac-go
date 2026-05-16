@@ -1,6 +1,7 @@
 import type { LucideIcon } from 'lucide-react';
 import {
   Activity,
+  Database,
   FileBox,
   GitCompare,
   Network,
@@ -49,6 +50,12 @@ const TrafficInjectionPage = lazy(() =>
 );
 const WalkValidatorPage = lazy(() =>
   import('./pages/WalkValidatorPage').then((m) => ({ default: m.WalkValidatorPage })),
+);
+const LibraryWalksPage = lazy(() =>
+  import('./pages/LibraryFilesPage').then((m) => ({ default: m.LibraryWalksPage })),
+);
+const LibraryPcapsPage = lazy(() =>
+  import('./pages/LibraryFilesPage').then((m) => ({ default: m.LibraryPcapsPage })),
 );
 
 /**
@@ -391,6 +398,51 @@ export const pages: PageConfig[] = [
         <p>
           Auto-fix rewrites the walk in place. A <code>.bak</code> next to the original is created
           before the rewrite so you can roll back. Re-run Validate after fixing to confirm.
+        </p>
+      </>
+    ),
+  },
+  {
+    path: '/library/walks',
+    label: 'Walks',
+    title: 'Walk Library',
+    description:
+      'Read-only browser for the on-disk SNMP walk files the daemon serves from the unified library.',
+    icon: Database,
+    component: LibraryWalksPage,
+    help: (
+      <>
+        <p>
+          Shows every <code>.walk</code> file under <code>~/.niac/library/walks/</code> (or{' '}
+          <code>/var/lib/niac/library/walks/</code> on packaged installs). Drop files in directly,
+          or run <code>niac content install</code> to fetch the published bundle for this binary's
+          version.
+        </p>
+        <p>
+          The SNMP section on the Device editor uses the same endpoint to populate its walk picker,
+          so anything that shows up here is immediately selectable when configuring a device.
+        </p>
+      </>
+    ),
+  },
+  {
+    path: '/library/pcaps',
+    label: 'PCAPs',
+    title: 'PCAP Library',
+    description:
+      'Read-only browser for the on-disk PCAP captures the daemon serves from the unified library.',
+    icon: FileBox,
+    component: LibraryPcapsPage,
+    help: (
+      <>
+        <p>
+          Shows every capture under <code>~/.niac/library/pcaps/</code>. Same ingress paths as the
+          walk library: drop files directly or use <code>niac content install</code>.
+        </p>
+        <p>
+          The Packets and Traffic pages will reuse this listing for their PCAP pickers — the unified
+          library means a PCAP added here is visible everywhere the daemon needs to pick one without
+          extra plumbing.
         </p>
       </>
     ),

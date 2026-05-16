@@ -1,5 +1,6 @@
 import {
   Activity,
+  Database,
   FileBox,
   GitCompare,
   Network,
@@ -41,6 +42,8 @@ export const navGroups: SidebarNavGroup[] = [
     label: 'Library',
     items: [
       { path: '/device-config', label: 'Devices', icon: Wrench },
+      { path: '/library/walks', label: 'Walks', icon: Database },
+      { path: '/library/pcaps', label: 'PCAPs', icon: FileBox },
       { path: '/config-diff', label: 'Compare & Merge', icon: GitCompare },
     ],
   },
