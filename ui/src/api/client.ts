@@ -142,6 +142,23 @@ export interface LibraryFileEntry {
 export const fetchLibraryWalks = () => deduplicatedGet<LibraryFileEntry[]>('/api/v1/library/walks');
 export const fetchLibraryPcaps = () => deduplicatedGet<LibraryFileEntry[]>('/api/v1/library/pcaps');
 
+/**
+ * Per-type device editor schema (#546 part 1). The daemon serves a
+ * small static table describing which sections of the device editor
+ * apply to each device type; the editor hides the rest. Falls back
+ * to the "unknown" schema (show everything) on the daemon side, so
+ * an unknown type never breaks the form.
+ */
+export interface DeviceEditorSchema {
+  type: string;
+  label: string;
+  visibleSections: string[];
+}
+export const fetchDeviceEditorSchema = (deviceType: string) =>
+  deduplicatedGet<DeviceEditorSchema>(`/api/v1/device-schemas/${encodeURIComponent(deviceType)}`);
+export const fetchDeviceEditorSchemas = () =>
+  deduplicatedGet<DeviceEditorSchema[]>('/api/v1/device-schemas');
+
 export const injectError = (payload: {
   deviceIp: string;
   interface: string;
