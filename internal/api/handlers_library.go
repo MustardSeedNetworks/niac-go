@@ -143,7 +143,41 @@ func (s *Server) handleLibraryNetworkDelete(w http.ResponseWriter, r *http.Reque
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// Drained body helper — not yet wired, but used by future walks /
-// pcaps upload endpoints in PR 3. Kept here so the file's single
-// import block is stable.
+// handleLibraryFiles serves GET on /api/v1/library/{walks,pcaps},
+// returning a flat list of file entries with name, size, and mtime.
+// PR 3 ships the browser pages on top of this; uploads + deletes for
+// walks/pcaps are deferred to a follow-up so this PR stays focused
+// on the read path (which is what the picker integrations also need).
+func (s *Server) handleLibraryFiles(w http.ResponseWriter, r *http.Request, kind library.Kind) {
+	if !s.libraryReady() {
+		s.writeLibraryUnavailable(w, r)
+		return
+	}
+	if r.Method != http.MethodGet {
+		w.Header().Set("Allow", "GET")
+		writeError(w, r, http.StatusMethodNotAllowed, "method_not_allowed", "Method not allowed", nil)
+		return
+	}
+	entries, err := s.library.ListFiles(kind)
+	if err != nil {
+		s.logger.Error("[API] library: list files", "kind", string(kind), "error", err)
+		writeError(w, r, http.StatusInternalServerError, "library_list_failed",
+			"Failed to list "+string(kind), nil)
+		return
+	}
+	s.writeJSON(w, entries)
+}
+
+// handleLibraryWalks is the registered route handler for /api/v1/library/walks.
+func (s *Server) handleLibraryWalks(w http.ResponseWriter, r *http.Request) {
+	s.handleLibraryFiles(w, r, library.KindWalks)
+}
+
+// handleLibraryPcaps is the registered route handler for /api/v1/library/pcaps.
+func (s *Server) handleLibraryPcaps(w http.ResponseWriter, r *http.Request) {
+	s.handleLibraryFiles(w, r, library.KindPcaps)
+}
+
+// Drained body helper — kept for symmetry with the imports the upload
+// endpoints (networks today, walks/pcaps in a follow-up) already use.
 var _ = io.Discard

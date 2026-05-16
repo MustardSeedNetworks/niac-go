@@ -88,12 +88,18 @@ func (s *Server) registerReadOnlyRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/v1/configs", s.recoverMiddleware(s.auth(s.handleUserConfigs)))
 	mux.HandleFunc("/api/v1/configs/", s.recoverMiddleware(s.auth(s.handleUserConfigByName)))
 
-	// Unified Library API (#548 PR 1) — networks subdir only in this PR;
-	// walks/pcaps endpoints land in PR 3.
+	// Unified Library API (#548). Networks landed in PR 1 with full
+	// CRUD; walks/pcaps land in PR 3 as read-only browser endpoints —
+	// uploads + deletes for binary content are a separate follow-up
+	// once the picker integrations have validated the read shape.
 	mux.HandleFunc("/api/v1/library/networks",
 		s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.handleLibraryNetworks)))))
 	mux.HandleFunc("/api/v1/library/networks/",
 		s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.handleLibraryNetworkByName)))))
+	mux.HandleFunc("/api/v1/library/walks",
+		s.recoverMiddleware(s.auth(s.handleLibraryWalks)))
+	mux.HandleFunc("/api/v1/library/pcaps",
+		s.recoverMiddleware(s.auth(s.handleLibraryPcaps)))
 	mux.HandleFunc("/api/v1/topology", s.recoverMiddleware(s.auth(s.handleTopology)))
 	mux.HandleFunc("/api/v1/topology/export", s.recoverMiddleware(s.auth(s.handleTopologyExport)))
 	mux.HandleFunc("/api/v1/errors", s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.handleErrors)))))
