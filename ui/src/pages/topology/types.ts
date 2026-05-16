@@ -35,6 +35,18 @@ export interface LinkEdgeData extends Record<string, unknown> {
   /** When false, the custom edge component hides all its labels —
    *  driven by the "Show labels" toggle in the topology header. */
   showLabels?: boolean;
+  /** True when the link was inferred from runtime LLDP/CDP/EDP/FDP
+   *  discovery (not declared in trunk_ports:). TrunkEdge renders
+   *  these dashed so the user can tell design from runtime. */
+  discovered?: boolean;
+  /** Opacity multiplier for the neighbourhood-highlight feature.
+   *  1 = fully opaque (default), 0.15 = faded background. Driven by
+   *  the selected-node state in TopologyPage. */
+  focusOpacity?: number;
+  /** True when this edge is currently being hovered. Driven by
+   *  ReactFlow's onEdgeMouseEnter / Leave at the page level; the
+   *  TrunkEdge component renders the rich tooltip while true. */
+  hovered?: boolean;
 }
 
 /**

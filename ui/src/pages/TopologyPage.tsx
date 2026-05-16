@@ -12,7 +12,7 @@ import {
   useEdgesState,
   useNodesState,
 } from '@xyflow/react';
-import { type FC, useCallback, useEffect, useState } from 'react';
+import { type FC, useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '@xyflow/react/dist/style.css';
 import { Download, Layers, Network, Radar, RefreshCw } from 'lucide-react';
@@ -113,6 +113,23 @@ export const TopologyPage: FC = () => {
   // for clarity; toggle off via the header to see clean lines only.
   const [showLabels, setShowLabels] = useState(true);
   const [view, setView] = useState<'graph' | 'neighbors'>('graph');
+  // Search query in the header — filters which devices show up + their
+  // edges. Matched on name (case-insensitive substring).
+  const [search, setSearch] = useState('');
+  // Type-filter chips — empty Set means "show everything". When the
+  // user toggles a type on, only that type renders.
+  const [activeTypes, setActiveTypes] = useState<Set<string>>(new Set());
+  // Node click selects its neighbourhood: the clicked node + every
+  // node connected to it by an edge get full opacity; everything else
+  // fades to 15%. Click empty canvas to clear.
+  const [focusedNodeId, setFocusedNodeId] = useState<string | null>(null);
+  // Tracks which edge the cursor is currently over (ReactFlow's
+  // onEdgeMouseEnter / Leave). Propagated down to the TrunkEdge via
+  // data.hovered so the custom edge can render the rich tooltip.
+  // Lifted up here (rather than useState inside TrunkEdge) so we don't
+  // attach mouse handlers to raw SVG paths — that flags
+  // lint/a11y/noStaticElementInteractions.
+  const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
 
   // Build graph from API data, merging trunk port links with neighbor-discovered links
   useEffect(() => {
@@ -141,15 +158,58 @@ export const TopologyPage: FC = () => {
             source: neighbor.localDevice,
             target: neighbor.remoteDevice,
             label: `${neighbor.protocol} discovery`,
+            discovered: true,
           });
         }
       }
     }
 
-    const layoutedNodes = layoutNodes(devices, allLinks);
-    const layoutedEdges = createEdges(allLinks).map((edge) => ({
+    // Build a set of node IDs adjacent to the focused node so we can
+    // dim everything else when neighbourhood highlight is active.
+    const focused = focusedNodeId;
+    const adjacent = new Set<string>();
+    if (focused) {
+      adjacent.add(focused);
+      for (const link of allLinks) {
+        if (link.source === focused) adjacent.add(link.target);
+        else if (link.target === focused) adjacent.add(link.source);
+      }
+    }
+    const nodeOpacity = (id: string): number => {
+      if (!focused) return 1;
+      return adjacent.has(id) ? 1 : 0.15;
+    };
+    const edgeOpacity = (source: string, target: string): number => {
+      if (!focused) return 1;
+      return adjacent.has(source) && adjacent.has(target) ? 1 : 0.1;
+    };
+
+    // Type-filter + search: hide devices that don't match.
+    const q = search.trim().toLowerCase();
+    const isVisible = (device: DeviceSummary): boolean => {
+      if (activeTypes.size > 0 && !activeTypes.has((device.type || 'unknown').toLowerCase())) {
+        return false;
+      }
+      if (q && !device.name.toLowerCase().includes(q)) {
+        return false;
+      }
+      return true;
+    };
+    const visibleDevices = devices.filter(isVisible);
+    const visibleNames = new Set(visibleDevices.map((d) => d.name));
+    const visibleLinks = allLinks.filter(
+      (l) => visibleNames.has(l.source) && visibleNames.has(l.target),
+    );
+
+    const layoutedNodes = layoutNodes(visibleDevices, visibleLinks);
+    const layoutedEdges = createEdges(visibleLinks).map((edge) => ({
       ...edge,
-      data: { ...edge.data, showLabels },
+      data: {
+        ...edge.data,
+        showLabels,
+        focusOpacity: edgeOpacity(edge.source, edge.target),
+        hovered: hoveredEdgeId === edge.id,
+      },
     }));
 
     // Preserve user-dragged positions across the 15s data poll. For each
@@ -168,11 +228,26 @@ export const TopologyPage: FC = () => {
         const existing = positionByName.get(node.id);
         const saved = stored[node.id];
         const position = existing ?? saved ?? node.position;
-        return { ...node, position };
+        return {
+          ...node,
+          position,
+          style: { ...node.style, opacity: nodeOpacity(node.id) },
+        };
       });
     });
     setEdges(layoutedEdges);
-  }, [devices, topology, neighbors, showLabels, setNodes, setEdges]);
+  }, [
+    devices,
+    topology,
+    neighbors,
+    showLabels,
+    search,
+    activeTypes,
+    focusedNodeId,
+    hoveredEdgeId,
+    setNodes,
+    setEdges,
+  ]);
 
   // Persist node positions when the user stops dragging so layouts
   // survive page reloads. Keyed by device name; stored as a flat
@@ -190,9 +265,46 @@ export const TopologyPage: FC = () => {
     (deviceName: string) => {
       const device = devices?.find((d) => d.name === deviceName);
       setSelectedDevice(device || null);
+      // Toggle neighbourhood highlight — clicking the same node twice
+      // clears the focus so all nodes/edges return to full opacity.
+      setFocusedNodeId((curr) => (curr === deviceName ? null : deviceName));
     },
     [devices],
   );
+
+  // Reset Layout — wipes the saved drag positions + clears focus and
+  // search/filter state. The next data-poll effect re-runs layoutNodes
+  // from scratch, putting every device on the fresh grid slot.
+  const handleResetLayout = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      window.localStorage.removeItem(TOPOLOGY_POSITIONS_KEY);
+    }
+    setFocusedNodeId(null);
+    setSearch('');
+    setActiveTypes(new Set());
+    // Forcing a re-layout: bump nodes through layoutNodes by clearing
+    // current positions. The useEffect will pick up the empty current
+    // and assign fresh positions on next data tick.
+    setNodes((current) => current.map((node) => ({ ...node, position: { x: 0, y: 0 } })));
+  }, [setNodes]);
+
+  // The set of unique device types currently in the graph — drives the
+  // filter chip row. Sorted for stable button order.
+  const availableTypes = useMemo(() => {
+    if (!devices) return [];
+    const set = new Set<string>();
+    for (const d of devices) set.add((d.type || 'unknown').toLowerCase());
+    return [...set].sort();
+  }, [devices]);
+
+  const toggleType = useCallback((type: string) => {
+    setActiveTypes((curr) => {
+      const next = new Set(curr);
+      if (next.has(type)) next.delete(type);
+      else next.add(type);
+      return next;
+    });
+  }, []);
 
   // Update node data with click handler
   useEffect(() => {
@@ -335,6 +447,14 @@ export const TopologyPage: FC = () => {
                     Export
                   </Button>
                   <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleResetLayout}
+                    title="Reset hand-dragged positions + filters back to defaults"
+                  >
+                    Reset
+                  </Button>
+                  <Button
                     variant={showLabels ? 'outline' : 'ghost'}
                     size="sm"
                     onClick={() => setShowLabels(!showLabels)}
@@ -354,6 +474,55 @@ export const TopologyPage: FC = () => {
               )}
             </div>
           </div>
+
+          {/* Second header row: search + type-filter chips. Only shown
+              for the graph view — the Neighbors table has its own
+              filtering UI. Stays inside the header card so the toolbar
+              groups visually with the title/buttons row above. */}
+          {view === 'graph' && (
+            <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+              <input
+                type="search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search devices by name…"
+                aria-label="Filter devices by name"
+                className="w-full sm:w-64 rounded-md border border-white/10 bg-gray-950/40 px-3 py-1.5 text-xs text-gray-200 placeholder:text-gray-500 focus:border-cyan-500/40 focus:outline-none focus:ring-1 focus:ring-cyan-500/30"
+              />
+              {availableTypes.length > 0 && (
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <SmallText className="text-gray-500">Types:</SmallText>
+                  {availableTypes.map((type) => {
+                    const active = activeTypes.has(type);
+                    return (
+                      <button
+                        key={type}
+                        type="button"
+                        onClick={() => toggleType(type)}
+                        aria-pressed={active}
+                        className={`rounded-full border px-2.5 py-0.5 text-[11px] font-medium capitalize transition-colors ${
+                          active
+                            ? 'border-cyan-500/40 bg-cyan-500/20 text-cyan-100'
+                            : 'border-white/10 bg-gray-950/40 text-gray-400 hover:bg-white/5 hover:text-gray-200'
+                        }`}
+                      >
+                        {type}
+                      </button>
+                    );
+                  })}
+                  {activeTypes.size > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setActiveTypes(new Set())}
+                      className="rounded-full px-2 py-0.5 text-[11px] font-medium text-gray-400 hover:text-gray-200 underline-offset-2 hover:underline"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -404,6 +573,8 @@ export const TopologyPage: FC = () => {
                   onEdgesChange={onEdgesChange}
                   onConnect={onConnect}
                   onNodeDragStop={handleNodeDragStop}
+                  onEdgeMouseEnter={(_, edge) => setHoveredEdgeId(edge.id)}
+                  onEdgeMouseLeave={() => setHoveredEdgeId(null)}
                   nodeTypes={nodeTypes}
                   edgeTypes={edgeTypes}
                   fitView={true}
