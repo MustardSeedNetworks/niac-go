@@ -3,9 +3,40 @@
  */
 
 import { MarkerType } from '@xyflow/react';
+import dagre from 'dagre';
 import type { DeviceSummary, TopologyLink } from '../../api/types';
 import type { DeviceNode, DeviceNodeData, LinkEdge, LinkEdgeData } from './types';
 import { linkSpeedColors } from './types';
+
+/**
+ * LayoutMode selects which positioning algorithm `layoutNodes` runs.
+ * Hierarchical is the default — concentric rings are visually noisy
+ * once you have more than a handful of devices, and the dagre-driven
+ * layered layout matches how operators draw network diagrams on a
+ * whiteboard.
+ */
+export type LayoutMode = 'hierarchical' | 'concentric' | 'grid';
+
+export const DEFAULT_LAYOUT_MODE: LayoutMode = 'hierarchical';
+
+/** All modes, in the display order the picker pill row uses. */
+export const LAYOUT_MODES: { mode: LayoutMode; label: string; description: string }[] = [
+  {
+    mode: 'hierarchical',
+    label: 'Hierarchical',
+    description: 'Layered top-down — core at top, access at bottom',
+  },
+  {
+    mode: 'concentric',
+    label: 'Concentric',
+    description: 'Rings around the most-connected device',
+  },
+  {
+    mode: 'grid',
+    label: 'Grid',
+    description: 'Fixed-pitch grid; ignores connectivity',
+  },
+];
 
 // Card-sized tuneables for the grid layout below. Tuned to the
 // DeviceNode max-width (260 px) plus the trunk-edge label band that
@@ -28,50 +59,130 @@ const LAYOUT_TOP_OFFSET = 40;
 const CONCENTRIC_MIN_RADIUS = 320;
 
 /**
- * Layout nodes in concentric circles based on connectivity. Most
- * connected devices are placed in the center.
+ * layoutNodes returns ReactFlow node positions according to the
+ * selected mode. Hierarchical is the default — it matches how
+ * operators draw networks (core/distribution/access top-down) and
+ * scales gracefully past 10+ devices where the concentric layout
+ * becomes hard to read.
  *
- * When the topology API returns nodes with no links (most built-in
- * templates declare devices without trunk_ports / port_channels), the
- * concentric-ring path's degree-driven radius schedule collapses to
- * radius=0 and the cards stack on top of one another. We fall back
- * to a fixed-pitch grid so the user at least sees every device — the
- * "no connections" banner above the canvas explains what to add to
- * the YAML to populate edges.
+ * Edge-less topologies (no trunk_ports / port_channels declared)
+ * always render as a grid regardless of mode — without links there
+ * is no hierarchy to derive, and the concentric path collapses to a
+ * radius of zero. The "no connections" banner above the canvas
+ * already nudges the user toward declaring some.
  */
-export function layoutNodes(devices: DeviceSummary[], links: TopologyLink[]): DeviceNode[] {
-  // For small device counts the concentric-ring layout collapses (the
-  // centre node and the first ring overlap), so use the grid path even
-  // when there are edges. The cutoff is tuned to the device-card width:
-  // ≤4 devices fits in a 2×2 grid with the standard NODE_GAP padding.
-  const useGrid = links.length === 0 || devices.length <= 4;
+export function layoutNodes(
+  devices: DeviceSummary[],
+  links: TopologyLink[],
+  mode: LayoutMode = DEFAULT_LAYOUT_MODE,
+): DeviceNode[] {
+  if (links.length === 0 || devices.length === 0) {
+    return gridLayout(devices);
+  }
+  switch (mode) {
+    case 'grid':
+      return gridLayout(devices);
+    case 'concentric':
+      return concentricLayout(devices, links);
+    default:
+      return hierarchicalLayout(devices, links);
+  }
+}
 
-  if (useGrid) {
-    return devices.map((device, index) => {
-      const cols = Math.max(1, Math.ceil(Math.sqrt(devices.length)));
-      const row = Math.floor(index / cols);
-      const col = index % cols;
-      return {
-        id: device.name,
-        type: 'device',
-        position: {
-          x: LAYOUT_LEFT_OFFSET + col * (NODE_WIDTH + NODE_GAP_X),
-          y: LAYOUT_TOP_OFFSET + row * (NODE_HEIGHT + NODE_GAP_Y),
-        },
-        data: {
-          label: device.name,
-          type: device.type || 'unknown',
-          ips: device.ips,
-          protocols: device.protocols,
-          status: 'online',
-        } as DeviceNodeData,
-      };
-    });
+/**
+ * gridLayout drops devices into a fixed-pitch sqrt(n)-wide grid. Used
+ * by the no-edges fallback, the "Grid" picker option, and as the
+ * concentric layout's small-set escape hatch (≤4 devices, where the
+ * inner ring would overlap the centre).
+ */
+function gridLayout(devices: DeviceSummary[]): DeviceNode[] {
+  const cols = Math.max(1, Math.ceil(Math.sqrt(devices.length)));
+  return devices.map((device, index) => {
+    const row = Math.floor(index / cols);
+    const col = index % cols;
+    return {
+      id: device.name,
+      type: 'device',
+      position: {
+        x: LAYOUT_LEFT_OFFSET + col * (NODE_WIDTH + NODE_GAP_X),
+        y: LAYOUT_TOP_OFFSET + row * (NODE_HEIGHT + NODE_GAP_Y),
+      },
+      data: makeData(device),
+    };
+  });
+}
+
+/**
+ * hierarchicalLayout runs dagre's network-simplex ranking algorithm
+ * top-to-bottom. Each device gets a row determined by its longest
+ * incoming-edge path from a root; siblings get spread horizontally.
+ *
+ * For operators this reads like a whiteboard diagram: core devices at
+ * the top, distribution in the middle, access at the bottom. The
+ * default direction is TB (top-to-bottom) which matches the way
+ * "uplinks" are drawn in physical network docs.
+ *
+ * dagre is a pure-JS DAG layouter (~30 KB gzipped). It treats the
+ * trunk/access edges as directed but topology links from the daemon
+ * are undirected — that's fine; dagre just picks an orientation,
+ * which is enough to drive the rank assignment.
+ */
+function hierarchicalLayout(devices: DeviceSummary[], links: TopologyLink[]): DeviceNode[] {
+  const g = new dagre.graphlib.Graph();
+  g.setGraph({
+    rankdir: 'TB',
+    nodesep: NODE_GAP_X,
+    ranksep: NODE_GAP_Y + 60,
+    marginx: LAYOUT_LEFT_OFFSET,
+    marginy: LAYOUT_TOP_OFFSET,
+  });
+  g.setDefaultEdgeLabel(() => ({}));
+
+  for (const device of devices) {
+    g.setNode(device.name, { width: NODE_WIDTH, height: NODE_HEIGHT });
+  }
+  // Dedup parallel edges between the same node pair — dagre's ranking
+  // doesn't benefit from seeing the same pair twice (we already merge
+  // bidirectional trunks in BuildTopology, but neighbour-discovered
+  // adjacencies can echo a trunk).
+  const seenEdgePairs = new Set<string>();
+  for (const link of links) {
+    const key = [link.source, link.target].sort().join('|');
+    if (seenEdgePairs.has(key)) continue;
+    seenEdgePairs.add(key);
+    g.setEdge(link.source, link.target);
   }
 
-  const nodeMap = new Map<string, { x: number; y: number }>();
+  dagre.layout(g);
 
-  // Create adjacency list
+  return devices.map((device) => {
+    const node = g.node(device.name);
+    // Dagre positions reference the centre of the box; ReactFlow
+    // positions reference the top-left. Offset accordingly.
+    const x = (node?.x ?? 0) - NODE_WIDTH / 2;
+    const y = (node?.y ?? 0) - NODE_HEIGHT / 2;
+    return {
+      id: device.name,
+      type: 'device',
+      position: { x, y },
+      data: makeData(device),
+    };
+  });
+}
+
+/**
+ * concentricLayout puts the most-connected device at the centre and
+ * arranges the rest in degree-ordered rings. Kept for users who
+ * prefer it; not the default because rings collapse on small graphs
+ * and become hard to read on bigger ones.
+ */
+function concentricLayout(devices: DeviceSummary[], links: TopologyLink[]): DeviceNode[] {
+  // ≤4 devices: rings would overlap. Fall through to grid.
+  if (devices.length <= 4) {
+    return gridLayout(devices);
+  }
+
+  // Build adjacency for degree calculation.
   const adjacency = new Map<string, Set<string>>();
   for (const device of devices) {
     adjacency.set(device.name, new Set());
@@ -80,43 +191,36 @@ export function layoutNodes(devices: DeviceSummary[], links: TopologyLink[]): De
     adjacency.get(link.source)?.add(link.target);
     adjacency.get(link.target)?.add(link.source);
   }
-
-  // Calculate degree for each node
   const degrees = new Map<string, number>();
   for (const [name, neighbors] of adjacency) {
     degrees.set(name, neighbors.size);
   }
-
-  // Sort by degree (most connected first)
   const sorted = [...devices].sort(
     (a, b) => (degrees.get(b.name) || 0) - (degrees.get(a.name) || 0),
   );
 
-  // Layout in concentric circles based on connectivity
+  const nodeMap = new Map<string, { x: number; y: number }>();
   const centerX = 400;
   const centerY = 300;
   let currentRadius = 0;
   let angleOffset = 0;
   let nodesInRing = 1;
   let ringIndex = 0;
-
   for (const device of sorted) {
     if (ringIndex >= nodesInRing) {
       ringIndex = 0;
       currentRadius += CONCENTRIC_MIN_RADIUS;
-      angleOffset += Math.PI / 6; // Stagger rings
+      angleOffset += Math.PI / 6;
       nodesInRing = Math.max(1, Math.floor((2 * Math.PI * currentRadius) / 280));
     }
-
     const angle = (2 * Math.PI * ringIndex) / nodesInRing + angleOffset;
-    const x = centerX + currentRadius * Math.cos(angle);
-    const y = centerY + currentRadius * Math.sin(angle);
-
-    nodeMap.set(device.name, { x, y });
+    nodeMap.set(device.name, {
+      x: centerX + currentRadius * Math.cos(angle),
+      y: centerY + currentRadius * Math.sin(angle),
+    });
     ringIndex++;
   }
 
-  // Create nodes with layout positions
   return devices.map((device, index) => {
     const pos = nodeMap.get(device.name) || {
       x: 100 + (index % 5) * 200,
@@ -126,15 +230,20 @@ export function layoutNodes(devices: DeviceSummary[], links: TopologyLink[]): De
       id: device.name,
       type: 'device',
       position: pos,
-      data: {
-        label: device.name,
-        type: device.type || 'unknown',
-        ips: device.ips,
-        protocols: device.protocols,
-        status: 'online',
-      } as DeviceNodeData,
+      data: makeData(device),
     };
   });
+}
+
+/** Common DeviceNodeData shape used by every layout fn. */
+function makeData(device: DeviceSummary): DeviceNodeData {
+  return {
+    label: device.name,
+    type: device.type || 'unknown',
+    ips: device.ips,
+    protocols: device.protocols,
+    status: 'online',
+  };
 }
 
 /**
