@@ -7,14 +7,20 @@ import type { DeviceSummary, TopologyLink } from '../../api/types';
 import type { DeviceNode, DeviceNodeData, LinkEdge, LinkEdgeData } from './types';
 import { linkSpeedColors } from './types';
 
-// Card-sized tuneables for the grid layout below. Keep neighbours far
-// enough apart that they don't overlap at default zoom. DeviceNode has
-// maxWidth 220 + 2px border + room for the connector handles ReactFlow
-// draws, plus we give the user some breathing room.
-const NODE_WIDTH = 240;
-const NODE_HEIGHT = 160;
-const NODE_GAP_X = 80;
-const NODE_GAP_Y = 80;
+// Card-sized tuneables for the grid layout below. Tuned to the
+// DeviceNode max-width (260 px) plus the trunk-edge label band that
+// floats between cards. NODE_GAP_X is generous so labels like
+// "Gi0/1 ↔ Gi0/1 (VLANs 1-30)" sit comfortably without overrunning
+// either card.
+const NODE_WIDTH = 280;
+const NODE_HEIGHT = 180;
+const NODE_GAP_X = 160;
+const NODE_GAP_Y = 100;
+
+// Left margin so the legend Panel (rendered as a top-left overlay,
+// ~260 px wide) doesn't obscure the first column of cards.
+const LAYOUT_LEFT_OFFSET = 280;
+const LAYOUT_TOP_OFFSET = 40;
 
 // Minimum radius for the concentric-ring layout. Must be large enough
 // that a node on the inner ring doesn't overlap the centre node — i.e.
@@ -49,8 +55,8 @@ export function layoutNodes(devices: DeviceSummary[], links: TopologyLink[]): De
         id: device.name,
         type: 'device',
         position: {
-          x: col * (NODE_WIDTH + NODE_GAP_X),
-          y: row * (NODE_HEIGHT + NODE_GAP_Y),
+          x: LAYOUT_LEFT_OFFSET + col * (NODE_WIDTH + NODE_GAP_X),
+          y: LAYOUT_TOP_OFFSET + row * (NODE_HEIGHT + NODE_GAP_Y),
         },
         data: {
           label: device.name,

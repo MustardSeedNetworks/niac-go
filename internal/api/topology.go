@@ -83,16 +83,42 @@ func determineLinkType(trunk config.TrunkPort) string {
 
 // buildTrunkLabel creates the label for a trunk link.
 func buildTrunkLabel(trunk config.TrunkPort) string {
-	label := trunk.Interface
+	label := abbreviateInterface(trunk.Interface)
 	if trunk.RemoteInterface != "" {
-		label += " ↔ " + trunk.RemoteInterface
+		label += " ↔ " + abbreviateInterface(trunk.RemoteInterface)
 	}
 
 	if len(trunk.VLANs) > 0 {
-		label += fmt.Sprintf(" (VLANs: %s)", formatVLANList(trunk.VLANs))
+		label += fmt.Sprintf(" (VLANs %s)", formatVLANList(trunk.VLANs))
 	}
 
 	return label
+}
+
+// abbreviateInterface shortens the long Cisco-style interface names
+// (GigabitEthernet0/1 → Gi0/1) that hog edge-label space in the
+// topology view. Covers the IOS-style prefixes most templates use;
+// anything unrecognised passes through unchanged.
+func abbreviateInterface(name string) string {
+	abbrevs := []struct{ long, short string }{
+		{"TenGigabitEthernet", "Te"},
+		{"TwentyFiveGigE", "Twe"},
+		{"FortyGigabitEthernet", "Fo"},
+		{"HundredGigE", "Hu"},
+		{"GigabitEthernet", "Gi"},
+		{"FastEthernet", "Fa"},
+		{"Ethernet", "Eth"},
+		{"Loopback", "Lo"},
+		{"Port-channel", "Po"},
+		{"Management", "Mgmt"},
+		{"Vlan", "Vl"},
+	}
+	for _, a := range abbrevs {
+		if strings.HasPrefix(name, a.long) {
+			return a.short + name[len(a.long):]
+		}
+	}
+	return name
 }
 
 // getInterfaceDetails retrieves speed, duplex, and status from interface map.

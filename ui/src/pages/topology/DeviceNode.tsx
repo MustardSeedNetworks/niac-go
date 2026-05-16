@@ -41,10 +41,11 @@ export const DeviceNode: FC<DeviceNodeProps> = memo(({ data, selected }) => {
       style={{
         backgroundColor: 'var(--color-bg-elevated)',
         borderColor: selected ? color : 'var(--color-border-muted)',
-        minWidth: '140px',
-        // Cap so device names + IP lists don't blow the card past the
-        // grid-fallback step width and overlap neighbours.
-        maxWidth: '220px',
+        // Wide enough that 16-char device names (niac-core-sw-01) fit
+        // without "..." truncation, capped so packed layouts still
+        // breathe. Layout step width below is tuned to this.
+        minWidth: '200px',
+        maxWidth: '260px',
       }}
       onClick={() => data.onClick?.(data.label)}
     >
