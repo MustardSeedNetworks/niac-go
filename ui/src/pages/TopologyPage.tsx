@@ -24,6 +24,8 @@ import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
 import { H2, SmallText } from '../ui/Typography';
 import {
+  ContextMenu,
+  type ContextMenuItem,
   createEdges,
   DEFAULT_LAYOUT_MODE,
   DeviceDetailsPanel,
@@ -179,6 +181,21 @@ export const TopologyPage: FC = () => {
     },
     [setNodes],
   );
+  // Session-only "hide this device" set. Cleared by Reset, lost on
+  // page reload — we don't persist it because hiding is meant to be a
+  // temporary "clean up this view to screenshot" gesture, not a
+  // permanent change. Edges referencing a hidden node disappear with
+  // it (they get filtered alongside in the build-graph effect).
+  const [hiddenDevices, setHiddenDevices] = useState<Set<string>>(new Set());
+  // Context-menu state. Discriminated union so render-time exhaustive
+  // checks catch missing handlers. Coordinates are in the canvas
+  // parent's local space (already adjusted from clientX/Y).
+  const [contextMenu, setContextMenu] = useState<
+    | null
+    | { kind: 'node'; x: number; y: number; nodeId: string }
+    | { kind: 'edge'; x: number; y: number; edgeId: string }
+    | { kind: 'pane'; x: number; y: number }
+  >(null);
 
   // Build graph from API data, merging trunk port links with neighbor-discovered links
   useEffect(() => {
@@ -236,6 +253,9 @@ export const TopologyPage: FC = () => {
     // Type-filter + search: hide devices that don't match.
     const q = search.trim().toLowerCase();
     const isVisible = (device: DeviceSummary): boolean => {
+      if (hiddenDevices.has(device.name)) {
+        return false;
+      }
       if (activeTypes.size > 0 && !activeTypes.has((device.type || 'unknown').toLowerCase())) {
         return false;
       }
@@ -295,6 +315,7 @@ export const TopologyPage: FC = () => {
     focusedNodeId,
     hoveredEdgeId,
     layoutMode,
+    hiddenDevices,
     setNodes,
     setEdges,
   ]);
@@ -332,6 +353,7 @@ export const TopologyPage: FC = () => {
     setFocusedNodeId(null);
     setSearch('');
     setActiveTypes(new Set());
+    setHiddenDevices(new Set());
     // Forcing a re-layout: bump nodes through layoutNodes by clearing
     // current positions. The useEffect will pick up the empty current
     // and assign fresh positions on next data tick.
@@ -355,6 +377,71 @@ export const TopologyPage: FC = () => {
       return next;
     });
   }, []);
+
+  // Hide a device by name. Session-only — Reset re-shows everything.
+  const hideDevice = useCallback((name: string) => {
+    setHiddenDevices((curr) => {
+      const next = new Set(curr);
+      next.add(name);
+      return next;
+    });
+  }, []);
+
+  // Copy helper — silently no-ops on clipboard-API errors (the most
+  // common failure is a non-secure context, which we can't fix from
+  // here). The action menu items intentionally don't surface a toast
+  // because right-click → copy is a fast, low-stakes gesture.
+  const copyToClipboard = useCallback((text: string) => {
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      void navigator.clipboard.writeText(text).catch(() => {
+        // Ignore — secure-context or permissions issue. The user can
+        // fall back to manual select.
+      });
+    }
+  }, []);
+
+  // Context-menu open helpers. ReactFlow calls these with the native
+  // mouse event + the node/edge object; we adjust coordinates into
+  // the canvas-parent's local space so the menu pops where the
+  // pointer is regardless of page scroll position.
+  const handleNodeContextMenu = useCallback((event: React.MouseEvent, node: Node) => {
+    event.preventDefault();
+    const rect = event.currentTarget?.getBoundingClientRect?.();
+    setContextMenu({
+      kind: 'node',
+      x: event.clientX - (rect?.left ?? 0),
+      y: event.clientY - (rect?.top ?? 0),
+      nodeId: node.id,
+    });
+  }, []);
+
+  const handleEdgeContextMenu = useCallback((event: React.MouseEvent, edge: { id: string }) => {
+    event.preventDefault();
+    const rect = event.currentTarget?.getBoundingClientRect?.();
+    setContextMenu({
+      kind: 'edge',
+      x: event.clientX - (rect?.left ?? 0),
+      y: event.clientY - (rect?.top ?? 0),
+      edgeId: edge.id,
+    });
+  }, []);
+
+  const handlePaneContextMenu = useCallback((event: React.MouseEvent | MouseEvent) => {
+    event.preventDefault();
+    // ReactFlow's pane handler receives either a synthetic React event
+    // (when right-clicking the canvas itself) or a native MouseEvent.
+    // Both expose currentTarget; the cast is needed to read it as a
+    // DOM element.
+    const target = (event as React.MouseEvent).currentTarget as HTMLElement | undefined;
+    const rect = target?.getBoundingClientRect?.();
+    setContextMenu({
+      kind: 'pane',
+      x: (event as MouseEvent).clientX - (rect?.left ?? 0),
+      y: (event as MouseEvent).clientY - (rect?.top ?? 0),
+    });
+  }, []);
+
+  const closeContextMenu = useCallback(() => setContextMenu(null), []);
 
   // Update node data with click handler
   useEffect(() => {
@@ -657,6 +744,17 @@ export const TopologyPage: FC = () => {
                   onNodeDragStop={handleNodeDragStop}
                   onEdgeMouseEnter={(_, edge) => setHoveredEdgeId(edge.id)}
                   onEdgeMouseLeave={() => setHoveredEdgeId(null)}
+                  onNodeContextMenu={handleNodeContextMenu}
+                  onEdgeContextMenu={handleEdgeContextMenu}
+                  onPaneContextMenu={handlePaneContextMenu}
+                  // Left-click anywhere closes any open context menu;
+                  // right-clicking again on a different target opens
+                  // its menu in place.
+                  onPaneClick={closeContextMenu}
+                  onNodeClick={(_, node) => {
+                    closeContextMenu();
+                    handleNodeClick(node.id);
+                  }}
                   nodeTypes={nodeTypes}
                   edgeTypes={edgeTypes}
                   fitView={true}
@@ -707,6 +805,27 @@ export const TopologyPage: FC = () => {
                     />
                   )}
                 </ReactFlow>
+                {/* Right-click context menu. Coordinates are in the
+                    canvas-parent's local space (already offset from
+                    the bounding rect in the open handlers). */}
+                {contextMenu && (
+                  <ContextMenu
+                    x={contextMenu.x}
+                    y={contextMenu.y}
+                    onClose={closeContextMenu}
+                    items={contextMenuItems(contextMenu, {
+                      edges,
+                      hideDevice,
+                      navigate,
+                      setFocusedNodeId,
+                      setSelectedDevice,
+                      devices,
+                      handleResetLayout,
+                      handleExport,
+                      copyToClipboard,
+                    })}
+                  />
+                )}
               </>
             )}
           </div>
@@ -718,5 +837,117 @@ export const TopologyPage: FC = () => {
     </div>
   );
 };
+
+/**
+ * contextMenuItems builds the action list for a given menu target.
+ * Factored out of the render path so the JSX stays tight and so each
+ * menu's items are produced in one place rather than scattered inline.
+ *
+ * Item presence is data-driven — e.g. "Edit YAML" only appears when
+ * the daemon knows the device (the menu was opened on a node whose
+ * name is in the devices list), and "Filter to this VLAN" only
+ * appears when the edge carries vlan data.
+ */
+function contextMenuItems(
+  menu: { kind: 'node'; nodeId: string } | { kind: 'edge'; edgeId: string } | { kind: 'pane' },
+  ctx: {
+    edges: LinkEdge[];
+    hideDevice: (name: string) => void;
+    navigate: ReturnType<typeof useNavigate>;
+    setFocusedNodeId: (next: ((curr: string | null) => string | null) | string | null) => void;
+    setSelectedDevice: (device: DeviceSummary | null) => void;
+    devices: DeviceSummary[] | null;
+    handleResetLayout: () => void;
+    handleExport: () => void;
+    copyToClipboard: (text: string) => void;
+  },
+): ContextMenuItem[] {
+  switch (menu.kind) {
+    case 'node': {
+      const device = ctx.devices?.find((d) => d.name === menu.nodeId);
+      const items: ContextMenuItem[] = [
+        {
+          key: 'view',
+          label: 'View details',
+          onSelect: () => {
+            if (device) ctx.setSelectedDevice(device);
+          },
+          disabled: !device,
+        },
+        {
+          key: 'edit',
+          label: 'Edit YAML',
+          hint: 'devices →',
+          onSelect: () => ctx.navigate(`/device-config/${menu.nodeId}`),
+        },
+        {
+          key: 'focus',
+          label: 'Focus neighbourhood',
+          onSelect: () =>
+            ctx.setFocusedNodeId((curr: string | null) =>
+              curr === menu.nodeId ? null : menu.nodeId,
+            ),
+        },
+        {
+          key: 'copy-name',
+          label: 'Copy name',
+          onSelect: () => ctx.copyToClipboard(menu.nodeId),
+          separatorBefore: true,
+        },
+        {
+          key: 'hide',
+          label: 'Hide from view',
+          hint: 'until Reset',
+          destructive: true,
+          onSelect: () => ctx.hideDevice(menu.nodeId),
+          separatorBefore: true,
+        },
+      ];
+      return items;
+    }
+    case 'edge': {
+      const edge = ctx.edges.find((e) => e.id === menu.edgeId);
+      const ifacePair =
+        edge?.data?.sourceInterface || edge?.data?.targetInterface
+          ? `${edge?.source}:${edge?.data?.sourceInterface ?? '?'} ↔ ${edge?.target}:${edge?.data?.targetInterface ?? '?'}`
+          : `${edge?.source} ↔ ${edge?.target}`;
+      const items: ContextMenuItem[] = [
+        {
+          key: 'copy-pair',
+          label: 'Copy device/interface pair',
+          onSelect: () => ctx.copyToClipboard(ifacePair),
+        },
+      ];
+      // Only show VLAN actions when the edge actually carries VLAN
+      // data — keeps the menu short for access links / discovered
+      // edges that have nothing VLAN-shaped to filter on.
+      if (edge?.data?.vlans && edge.data.vlans.length > 0) {
+        const vlanList = edge.data.vlans.join(',');
+        items.push({
+          key: 'copy-vlans',
+          label: `Copy VLAN list (${edge.data.vlans.length})`,
+          onSelect: () => ctx.copyToClipboard(vlanList),
+        });
+      }
+      return items;
+    }
+    default:
+      return [
+        {
+          key: 'export',
+          label: 'Export topology JSON',
+          onSelect: ctx.handleExport,
+        },
+        {
+          key: 'reset',
+          label: 'Reset layout',
+          hint: 'clears drags / filters',
+          destructive: true,
+          onSelect: ctx.handleResetLayout,
+          separatorBefore: true,
+        },
+      ];
+  }
+}
 
 export default TopologyPage;

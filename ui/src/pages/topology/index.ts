@@ -2,6 +2,7 @@
  * Topology components barrel export
  */
 
+export { ContextMenu, type ContextMenuItem } from './ContextMenu';
 export { DeviceDetailsPanel } from './DeviceDetailsPanel';
 export { DeviceNode } from './DeviceNode';
 export {
