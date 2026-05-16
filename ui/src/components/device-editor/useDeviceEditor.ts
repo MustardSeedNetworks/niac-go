@@ -4,6 +4,7 @@ import {
   createDevice,
   deleteDevice,
   fetchConfigDevice,
+  fetchDeviceEditorSchema,
   fetchWalkFiles,
   updateDevice,
 } from '../../api/client';
@@ -40,6 +41,13 @@ export interface UseDeviceEditorReturn {
 
   // Walk files for SNMP
   walkFiles: FileEntry[] | null;
+
+  // Per-type visibility schema (#546 part 1). The editor uses this to
+  // hide sections that don't apply to the currently picked
+  // device.type — a switch shouldn't see DNS, a host shouldn't see
+  // STP, etc. Always falls back to "show everything" on fetch error
+  // so a network blip never breaks the form.
+  visibleSections: Set<string>;
 
   // UI state
   saving: boolean;
@@ -91,6 +99,33 @@ export const useDeviceEditor = (): UseDeviceEditorReturn => {
 
   // Fetch available walk files
   const { data: walkFiles } = useApiResource(fetchWalkFiles, []);
+
+  // Per-type editor schema. Re-fetches when device.type changes; on
+  // error or while loading we fall through to the "show everything"
+  // set below so the form never disappears entirely.
+  const { data: schema } = useApiResource(
+    () => fetchDeviceEditorSchema(device.type || 'unknown'),
+    [device.type],
+  );
+  const visibleSections = useMemo(() => {
+    if (schema?.visibleSections && schema.visibleSections.length > 0) {
+      return new Set(schema.visibleSections);
+    }
+    return new Set([
+      'basic',
+      'snmp',
+      'lldp',
+      'cdp',
+      'stp',
+      'ips',
+      'dhcp',
+      'dns',
+      'http',
+      'ftp',
+      'netbios',
+      'traffic',
+    ]);
+  }, [schema]);
 
   // Update local state when fetched device changes
   useEffect(() => {
@@ -212,6 +247,7 @@ export const useDeviceEditor = (): UseDeviceEditorReturn => {
     error,
     refetch,
     walkFiles,
+    visibleSections,
     saving,
     deleting,
     message,

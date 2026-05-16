@@ -30,6 +30,7 @@ export const DeviceEditorPage: FC = () => {
     error,
     refetch,
     walkFiles,
+    visibleSections,
     saving,
     deleting,
     message,
@@ -85,92 +86,116 @@ export const DeviceEditorPage: FC = () => {
       {/* YAML Preview */}
       {showYamlPreview && <YamlPreviewSection yamlContent={yamlPreview} />}
 
-      {/* Basic Settings */}
-      <BasicSettingsSection
-        device={device}
-        isExpanded={expandedSections.has('basic')}
-        onToggle={() => toggleSection('basic')}
-        onUpdate={updateField}
-      />
+      {/* Basic Settings — always visible; type picker lives here so
+          the rest of the form can react when it changes. */}
+      {visibleSections.has('basic') && (
+        <BasicSettingsSection
+          device={device}
+          isExpanded={expandedSections.has('basic')}
+          onToggle={() => toggleSection('basic')}
+          onUpdate={updateField}
+        />
+      )}
 
-      <SnmpSection
-        device={device}
-        isExpanded={expandedSections.has('snmp')}
-        onToggle={() => toggleSection('snmp')}
-        onUpdate={updateField}
-        walkFiles={walkFiles}
-      />
+      {visibleSections.has('snmp') && (
+        <SnmpSection
+          device={device}
+          isExpanded={expandedSections.has('snmp')}
+          onToggle={() => toggleSection('snmp')}
+          onUpdate={updateField}
+          walkFiles={walkFiles}
+        />
+      )}
 
-      <LldpSection
-        device={device}
-        isExpanded={expandedSections.has('lldp')}
-        onToggle={() => toggleSection('lldp')}
-        onUpdate={updateField}
-      />
+      {visibleSections.has('lldp') && (
+        <LldpSection
+          device={device}
+          isExpanded={expandedSections.has('lldp')}
+          onToggle={() => toggleSection('lldp')}
+          onUpdate={updateField}
+        />
+      )}
 
-      <CdpSection
-        device={device}
-        isExpanded={expandedSections.has('cdp')}
-        onToggle={() => toggleSection('cdp')}
-        onUpdate={updateField}
-      />
+      {visibleSections.has('cdp') && (
+        <CdpSection
+          device={device}
+          isExpanded={expandedSections.has('cdp')}
+          onToggle={() => toggleSection('cdp')}
+          onUpdate={updateField}
+        />
+      )}
 
-      <StpSection
-        device={device}
-        isExpanded={expandedSections.has('stp')}
-        onToggle={() => toggleSection('stp')}
-        onUpdate={updateField}
-      />
+      {visibleSections.has('stp') && (
+        <StpSection
+          device={device}
+          isExpanded={expandedSections.has('stp')}
+          onToggle={() => toggleSection('stp')}
+          onUpdate={updateField}
+        />
+      )}
 
-      {/* Additional IP Addresses */}
-      <AdditionalIPsSection
-        device={device}
-        isExpanded={expandedSections.has('ips')}
-        onToggle={() => toggleSection('ips')}
-        onUpdate={updateField}
-      />
+      {visibleSections.has('ips') && (
+        <AdditionalIPsSection
+          device={device}
+          isExpanded={expandedSections.has('ips')}
+          onToggle={() => toggleSection('ips')}
+          onUpdate={updateField}
+        />
+      )}
 
-      <DhcpSection
-        device={device}
-        isExpanded={expandedSections.has('dhcp')}
-        onToggle={() => toggleSection('dhcp')}
-        onUpdate={updateField}
-      />
+      {visibleSections.has('dhcp') && (
+        <DhcpSection
+          device={device}
+          isExpanded={expandedSections.has('dhcp')}
+          onToggle={() => toggleSection('dhcp')}
+          onUpdate={updateField}
+        />
+      )}
 
-      <DnsSection
-        device={device}
-        isExpanded={expandedSections.has('dns')}
-        onToggle={() => toggleSection('dns')}
-        onUpdate={updateField}
-      />
+      {visibleSections.has('dns') && (
+        <DnsSection
+          device={device}
+          isExpanded={expandedSections.has('dns')}
+          onToggle={() => toggleSection('dns')}
+          onUpdate={updateField}
+        />
+      )}
 
-      <HttpSection
-        device={device}
-        isExpanded={expandedSections.has('http')}
-        onToggle={() => toggleSection('http')}
-        onUpdate={updateField}
-      />
+      {visibleSections.has('http') && (
+        <HttpSection
+          device={device}
+          isExpanded={expandedSections.has('http')}
+          onToggle={() => toggleSection('http')}
+          onUpdate={updateField}
+        />
+      )}
 
-      <FtpSection
-        device={device}
-        isExpanded={expandedSections.has('ftp')}
-        onToggle={() => toggleSection('ftp')}
-        onUpdate={updateField}
-      />
+      {visibleSections.has('ftp') && (
+        <FtpSection
+          device={device}
+          isExpanded={expandedSections.has('ftp')}
+          onToggle={() => toggleSection('ftp')}
+          onUpdate={updateField}
+        />
+      )}
 
-      <NetBiosSection
-        device={device}
-        isExpanded={expandedSections.has('netbios')}
-        onToggle={() => toggleSection('netbios')}
-        onUpdate={updateField}
-      />
+      {visibleSections.has('netbios') && (
+        <NetBiosSection
+          device={device}
+          isExpanded={expandedSections.has('netbios')}
+          onToggle={() => toggleSection('netbios')}
+          onUpdate={updateField}
+        />
+      )}
 
-      <TrafficSection
-        device={device}
-        isExpanded={expandedSections.has('traffic')}
-        onToggle={() => toggleSection('traffic')}
-        onUpdate={updateField}
-      />
+      {visibleSections.has('traffic') && (
+        <TrafficSection
+          device={device}
+          isExpanded={expandedSections.has('traffic')}
+          onToggle={() => toggleSection('traffic')}
+          onUpdate={updateField}
+        />
+      )}
 
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
