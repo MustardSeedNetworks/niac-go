@@ -1,0 +1,44 @@
+# Display: HP ProCurve 2530-48
+# Description: 48 × 1G + 4 × 1G SFP layer-2 managed switch (legacy ProCurve / Aruba pre-CX). LLDP enabled, no CDP/EDP. Common in SMB / education.
+# Type: switch
+# Vendor: hp
+# Tags: hp, switch, procurve, 2530, access
+
+devices:
+  - name: procurve-2530-48-01
+    type: switch
+    mac: "00:1F:28:01:01:01"
+    ips:
+      - "10.0.14.1"
+
+    arp:
+      enabled: true
+    icmp:
+      enabled: true
+      ttl: 64
+
+    lldp:
+      enabled: true
+      system_name: "procurve-2530-48-01"
+      system_description: "HP ProCurve J9853A 2530-48, revision YA.16.10.0019"
+      port_id: "1"
+      capabilities: ["bridge"]
+      ttl: 120
+
+    snmp:
+      enabled: true
+      community: "public"
+      sys_object_id: "1.3.6.1.4.1.11.2.3.7.11.150"  # hpProcurve2530-48
+      sys_descr: "HP ProCurve J9853A 2530-48 Switch, revision YA.16.10.0019"
+      sys_contact: "noc@example.com"
+      sys_location: "SMB Wiring Closet"
+
+    stp:
+      enabled: true
+      bridge_priority: 32768
+
+    properties:
+      vendor: "hp"
+      model: "J9853A 2530-48"
+      os: "ProCurve"
+      ports: "48 × 1G + 4 × 1G SFP"

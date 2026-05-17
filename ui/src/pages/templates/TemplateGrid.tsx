@@ -19,14 +19,14 @@ export const TemplateGrid: FC<TemplateGridProps> = ({ templatesByType, onView, o
 
   return (
     <div className="space-y-8">
-      {entries.map(([type, typeTemplates]) => (
-        <div key={type} className="space-y-4">
+      {entries.map(([groupKey, groupTemplates]) => (
+        <div key={groupKey} className="space-y-4">
           <div className="flex items-center gap-3">
-            <H2 className="capitalize">{type} Templates</H2>
-            <Tag colorScheme="gray">{typeTemplates.length}</Tag>
+            <H2 className="capitalize">{groupKey} Templates</H2>
+            <Tag colorScheme="gray">{groupTemplates.length}</Tag>
           </div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {typeTemplates.map((template) => (
+            {groupTemplates.map((template) => (
               <TemplateCard key={template.name} template={template} onView={onView} onUse={onUse} />
             ))}
           </div>

@@ -84,15 +84,21 @@ export function useTemplates(): UseTemplatesReturn {
     );
   }, [templates, searchQuery]);
 
-  // Group templates by type for display
+  // Group templates for display. Vendor-tagged templates (from the
+  // vendor template pack) bucket by "<vendor> · <type>" so operators
+  // can spot all Cisco switches together; untagged templates keep
+  // the generic type-based grouping for backward compatibility. The
+  // separator (·) is what the TemplateGrid heading splits on for
+  // its case-styling.
   const templatesByType = useMemo(() => {
     const grouped: Record<string, Template[]> = {};
     for (const template of filteredTemplates) {
       const type = template.type || 'custom';
-      if (!grouped[type]) {
-        grouped[type] = [];
+      const key = template.vendor ? `${template.vendor} · ${type}` : type;
+      if (!grouped[key]) {
+        grouped[key] = [];
       }
-      grouped[type].push(template);
+      grouped[key].push(template);
     }
     return grouped;
   }, [filteredTemplates]);

@@ -1,0 +1,51 @@
+# Display: Cisco ISR 4451-X
+# Description: Integrated Services Router for branch / WAN edge. 4× GigE WAN + service modules, IOS XE, routing + CDP + LLDP, no L2 STP.
+# Type: router
+# Vendor: cisco
+# Tags: cisco, router, isr, branch, wan
+
+devices:
+  - name: isr4451-edge-01
+    type: router
+    mac: "00:1B:2C:03:01:01"
+    ips:
+      - "10.0.30.1"
+      - "203.0.113.1"
+
+    arp:
+      enabled: true
+    icmp:
+      enabled: true
+      ttl: 255
+
+    lldp:
+      enabled: true
+      system_name: "isr4451-edge-01"
+      system_description: "Cisco IOS XE Software, ISR4451-X/K9, Version 17.9.4"
+      port_id: "GigabitEthernet0/0/0"
+      capabilities: ["router"]
+      ttl: 120
+
+    cdp:
+      enabled: true
+      device_id: "isr4451-edge-01.local"
+      platform: "cisco ISR4451-X/K9"
+      software_version: "Cisco IOS XE Software, Version 17.09.04"
+      capabilities: ["Router", "IGMP"]
+      port_id: "GigabitEthernet0/0/0"
+      duplex: "full"
+      ttl: 180
+
+    snmp:
+      enabled: true
+      community: "public"
+      sys_object_id: "1.3.6.1.4.1.9.1.1903"  # ISR4451
+      sys_descr: "Cisco IOS Software [Cupertino], ISR Software (X86_64_LINUX_IOSD-UNIVERSALK9-M), Version 17.9.4"
+      sys_contact: "noc@example.com"
+      sys_location: "Branch Office 12"
+
+    properties:
+      vendor: "cisco"
+      model: "ISR4451-X/K9"
+      os: "IOS-XE"
+      ports: "4 × 1G WAN + NIM/SM service slots"

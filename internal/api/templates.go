@@ -32,12 +32,18 @@ const (
 // front-matter "# Display: ..." line; clients should prefer it for UI
 // rendering and fall back to Name when absent.
 type Template struct {
-	Name        string   `json:"name"`
-	DisplayName string   `json:"displayName,omitempty"`
-	Description string   `json:"description"`
-	DeviceCount int      `json:"deviceCount"`
-	Type        string   `json:"type"`
-	Tags        []string `json:"tags,omitempty"`
+	Name        string `json:"name"`
+	DisplayName string `json:"displayName,omitempty"`
+	Description string `json:"description"`
+	DeviceCount int    `json:"deviceCount"`
+	Type        string `json:"type"`
+	// Vendor is populated from the template's "# Vendor: ..."
+	// front-matter, lowercased. When non-empty the UI groups the
+	// template under a vendor heading instead of (or alongside) the
+	// generic type-based grouping — useful for the vendor template
+	// pack shipped under cmd/niac/templates/vendor/.
+	Vendor string   `json:"vendor,omitempty"`
+	Tags   []string `json:"tags,omitempty"`
 }
 
 // TemplateContent represents the full content of a template.
@@ -213,12 +219,17 @@ func parseTemplateFile(path string, _ fs.FileInfo) Template {
 		tags = generateTags(path)
 	}
 
+	// Vendor is optional. We lowercase so the UI's group-by key is
+	// stable regardless of how the YAML author cased it.
+	vendor := strings.ToLower(strings.TrimSpace(meta["vendor"]))
+
 	return Template{
 		Name:        name,
 		DisplayName: displayName,
 		Description: description,
 		DeviceCount: deviceCount,
 		Type:        templateType,
+		Vendor:      vendor,
 		Tags:        tags,
 	}
 }

@@ -1,0 +1,42 @@
+# Display: Juniper SRX340
+# Description: Branch / SMB stateful firewall — 16 × 1G + 2 × 10G SFP+, Junos. UTM-capable. Good for perimeter sims at branch sites.
+# Type: firewall
+# Vendor: juniper
+# Tags: juniper, firewall, srx, srx340, branch
+
+devices:
+  - name: srx340-fw-01
+    # NIAC's validator currently accepts router/switch/ap/access-point/server/host.
+    # Firewalls model as routers with restrictive policy properties for now.
+    type: router
+    mac: "00:0C:29:03:01:01"
+    ips:
+      - "10.0.41.1"
+
+    arp:
+      enabled: true
+    icmp:
+      enabled: true
+      ttl: 64
+
+    lldp:
+      enabled: true
+      system_name: "srx340-fw-01"
+      system_description: "Juniper Networks, Inc. srx340, version 21.4R3, kernel JUNOS 21.4R3"
+      port_id: "ge-0/0/0"
+      capabilities: ["router"]
+      ttl: 120
+
+    snmp:
+      enabled: true
+      community: "public"
+      sys_object_id: "1.3.6.1.4.1.2636.1.1.1.2.92"  # jnxProductLineSRX340
+      sys_descr: "Juniper Networks, Inc. srx340, version 21.4R3"
+      sys_contact: "secops@example.com"
+      sys_location: "Branch Office 12 DMZ"
+
+    properties:
+      vendor: "juniper"
+      model: "SRX340"
+      os: "Junos"
+      ports: "16 × 1G + 2 × 10G SFP+"

@@ -1,0 +1,51 @@
+# Display: Cisco Catalyst IW-9165E (Wi-Fi 6E)
+# Description: Outdoor / industrial Wi-Fi 6E access point with mesh + URWB. Two 2.5GbE PoE ports, CAPWAP-managed. Speaks CDP+LLDP toward the wired switch.
+# Type: access-point
+# Vendor: cisco
+# Tags: cisco, access-point, wifi6e, industrial, iw9165, mesh
+
+devices:
+  - name: iw9165e-ap-01
+    type: access-point
+    mac: "00:1B:2C:05:01:01"
+    ips:
+      - "10.0.50.10"
+
+    arp:
+      enabled: true
+    icmp:
+      enabled: true
+      ttl: 64
+
+    lldp:
+      enabled: true
+      system_name: "iw9165e-ap-01"
+      system_description: "Cisco Catalyst IW-9165E Wi-Fi 6E Access Point, IOS XE 17.13.1"
+      port_id: "GigabitEthernet0"
+      capabilities: ["wlan_ap"]
+      ttl: 120
+
+    cdp:
+      enabled: true
+      device_id: "iw9165e-ap-01.local"
+      platform: "cisco IW-9165E-B-K9"
+      software_version: "Cisco IOS XE Software, Version 17.13.01"
+      capabilities: ["Trans-Bridge", "Source-Route-Bridge"]
+      port_id: "GigabitEthernet0"
+      duplex: "full"
+      ttl: 180
+
+    snmp:
+      enabled: true
+      community: "public"
+      sys_object_id: "1.3.6.1.4.1.9.1.3120"  # IW-9165E
+      sys_descr: "Cisco AP Software, ap1g8, Version 17.13.1"
+      sys_contact: "wifi@example.com"
+      sys_location: "Outdoor Yard A"
+
+    properties:
+      vendor: "cisco"
+      model: "IW-9165E-B-K9"
+      os: "IOS-XE-AP"
+      radios: "2.4 GHz, 5 GHz, 6 GHz"
+      uplink: "2 × 2.5G PoE+"

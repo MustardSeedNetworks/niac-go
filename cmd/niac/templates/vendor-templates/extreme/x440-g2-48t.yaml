@@ -1,0 +1,51 @@
+# Display: Extreme X440-G2-48t
+# Description: 48 × 1G + 4 × 1G SFP edge switch running EXOS. Speaks LLDP + EDP (Extreme Discovery Protocol). Common in education / SMB campuses.
+# Type: switch
+# Vendor: extreme
+# Tags: extreme, switch, summit, x440, edge, edp
+
+devices:
+  - name: x440-g2-48t-01
+    type: switch
+    mac: "00:04:96:01:01:01"
+    ips:
+      - "10.0.13.1"
+
+    arp:
+      enabled: true
+    icmp:
+      enabled: true
+      ttl: 64
+
+    lldp:
+      enabled: true
+      system_name: "x440-g2-48t-01"
+      system_description: "ExtremeXOS (X440G2-48t) version 31.7.1.4"
+      port_id: "1"
+      capabilities: ["bridge"]
+      ttl: 120
+
+    # Extreme's proprietary discovery protocol — disabled by default
+    # in NIAC; enable here because this is real Extreme gear.
+    edp:
+      enabled: true
+      display_string: "x440-g2-48t-01"
+      version_string: "ExtremeXOS 31.7.1.4"
+
+    snmp:
+      enabled: true
+      community: "public"
+      sys_object_id: "1.3.6.1.4.1.1916.2.140"  # extremeSummitX440G2-48t
+      sys_descr: "ExtremeXOS (X440G2-48t) version 31.7.1.4"
+      sys_contact: "noc@example.com"
+      sys_location: "Campus Edge"
+
+    stp:
+      enabled: true
+      bridge_priority: 32768
+
+    properties:
+      vendor: "extreme"
+      model: "X440-G2-48t"
+      os: "EXOS"
+      ports: "48 × 1G + 4 × 1G SFP"
