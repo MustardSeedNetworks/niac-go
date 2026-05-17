@@ -1,0 +1,50 @@
+# Display: Cisco Nexus 9336C-FX2
+# Description: 36-port 100G/40G data-center spine/leaf switch running NX-OS. CDP + LLDP capable, large MAC table, no PoE. Good for fabric / VXLAN simulations.
+# Type: switch
+# Vendor: cisco
+# Tags: cisco, switch, nexus, n9k, datacenter, 100g
+
+devices:
+  - name: n9k-9336c-01
+    type: switch
+    mac: "00:1B:2C:02:01:01"
+    ips:
+      - "10.0.20.1"
+
+    arp:
+      enabled: true
+    icmp:
+      enabled: true
+      ttl: 255
+
+    lldp:
+      enabled: true
+      system_name: "n9k-9336c-01"
+      system_description: "Cisco Nexus Operating System (NX-OS) Software, Version 10.2(5)"
+      port_id: "Ethernet1/1"
+      capabilities: ["bridge", "router"]
+      ttl: 120
+
+    cdp:
+      enabled: true
+      device_id: "n9k-9336c-01.local"
+      platform: "N9K-C9336C-FX2"
+      software_version: "Cisco Nexus OS, Version 10.2(5)"
+      capabilities: ["Switch", "Router", "IGMP"]
+      port_id: "Ethernet1/1"
+      duplex: "full"
+      ttl: 180
+
+    snmp:
+      enabled: true
+      community: "public"
+      sys_object_id: "1.3.6.1.4.1.9.12.3.1.3.1411"  # nexus9336C-FX2
+      sys_descr: "Cisco NX-OS(tm) n9000, Software (n9000-dk9), Version 10.2(5)"
+      sys_contact: "noc@example.com"
+      sys_location: "DC1 Spine"
+
+    properties:
+      vendor: "cisco"
+      model: "N9K-C9336C-FX2"
+      os: "NX-OS"
+      ports: "36 × 100G QSFP28"

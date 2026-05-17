@@ -11,6 +11,13 @@ export interface Template {
   description: string;
   deviceCount: number;
   type: 'basic' | 'router' | 'switch' | 'access-point' | 'server' | 'complete' | 'custom';
+  /**
+   * Optional vendor key from the template's "# Vendor: ..." front-matter
+   * (e.g. "cisco", "juniper"). When present, the Templates page groups
+   * by vendor heading instead of generic type. Used by the vendor
+   * template pack under cmd/niac/templates/vendor/.
+   */
+  vendor?: string;
   tags?: string[];
   createdAt?: string;
   modifiedAt?: string;

@@ -1,0 +1,44 @@
+# Display: Juniper EX4300-48T
+# Description: 48-port 1G access switch with 4×10G uplinks, Junos. LLDP only (no CDP). Good campus access switch baseline.
+# Type: switch
+# Vendor: juniper
+# Tags: juniper, switch, ex, ex4300, access
+
+devices:
+  - name: ex4300-48t-01
+    type: switch
+    mac: "00:0C:29:01:01:01"
+    ips:
+      - "10.0.11.1"
+
+    arp:
+      enabled: true
+    icmp:
+      enabled: true
+      ttl: 64
+
+    lldp:
+      enabled: true
+      system_name: "ex4300-48t-01"
+      system_description: "Juniper Networks, Inc. ex4300-48t, version 21.4R3, kernel JUNOS 21.4R3"
+      port_id: "ge-0/0/0"
+      capabilities: ["bridge"]
+      ttl: 120
+
+    snmp:
+      enabled: true
+      community: "public"
+      sys_object_id: "1.3.6.1.4.1.2636.1.1.1.2.71"  # jnxProductLineEx4300
+      sys_descr: "Juniper Networks, Inc. ex4300-48t, version 21.4R3"
+      sys_contact: "noc@example.com"
+      sys_location: "Campus Building B"
+
+    stp:
+      enabled: true
+      bridge_priority: 32768
+
+    properties:
+      vendor: "juniper"
+      model: "EX4300-48T"
+      os: "Junos"
+      ports: "48 × 1G + 4 × 10G SFP+"
