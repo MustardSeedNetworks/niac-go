@@ -17,8 +17,18 @@ import (
 // SynthesizeWalkRequest is the body for POST
 // /api/v1/devices/{hostname}/synthesize-walk. See
 // docs/design/2026-05-baseline-walk-synthesis.md for the contract.
+//
+// When Model is non-empty, the daemon resolves the per-model
+// profile (synth.PickModel) — the walk gets the model's real
+// sysObjectID + sysDescr. Vendor still required because Model
+// strings aren't globally unique across vendors.
+//
+// When Model is empty, falls back to synth.Pick(vendor, deviceType)
+// — the original v0.66.x behaviour with the per-vendor generic
+// profile.
 type SynthesizeWalkRequest struct {
 	Vendor         string `json:"vendor"`
+	Model          string `json:"model,omitempty"`
 	InterfaceCount int    `json:"interfaceCount,omitempty"`
 	Community      string `json:"community,omitempty"`
 }
@@ -30,6 +40,20 @@ type SynthesizeWalkResponse struct {
 	OIDCount           int    `json:"oidCount"`
 	SizeBytes          int    `json:"sizeBytes"`
 	PreviousWalkBacked string `json:"previousWalkBacked,omitempty"`
+}
+
+// handleSynthesizeWalkModels handles GET /api/v1/synthesize-walk/models
+// — returns every defined (vendor, model, type) triple so the UI can
+// build the cascading Generate-walk picker without a per-vendor
+// round-trip. Read-only; the response body is the same list returned
+// by synth.AllModels() so callers can group/sort client-side.
+func (s *Server) handleSynthesizeWalkModels(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.Header().Set("Allow", "GET")
+		writeError(w, r, http.StatusMethodNotAllowed, "method_not_allowed", "Method not allowed", nil)
+		return
+	}
+	s.writeJSON(w, synth.AllModels())
 }
 
 // dispatchDeviceSubpath routes /api/v1/devices/{hostname}/{action}
@@ -106,8 +130,20 @@ func (s *Server) handleSynthesizeWalk(w http.ResponseWriter, r *http.Request) {
 		vendor = synth.VendorGeneric
 	}
 	deviceType := synth.DeviceType(strings.ToLower(strings.TrimSpace(dev.Type)))
+	model := synth.Model(strings.TrimSpace(req.Model))
 
-	profile, profileErr := synth.Pick(vendor, deviceType)
+	// Prefer the per-model profile when the request specified one —
+	// the synthesised walk gets the real platform sysDescr + OID.
+	// Empty model falls back to the per-vendor generic.
+	var (
+		profile    synth.Profile
+		profileErr error
+	)
+	if model != "" {
+		profile, profileErr = synth.PickModel(vendor, model)
+	} else {
+		profile, profileErr = synth.Pick(vendor, deviceType)
+	}
 	if profileErr != nil {
 		// Per resolution #2 — no silent fallback. The daemon returns
 		// 422 so the UI can show "Vendor X has no profile for type Y".

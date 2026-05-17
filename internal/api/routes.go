@@ -109,6 +109,12 @@ func (s *Server) registerReadOnlyRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/v1/devices/",
 		s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.dispatchDeviceSubpath)))))
 
+	// Vendor + model catalog for the Generate-walk UI picker (#570).
+	// Read-only; the response is the same list returned by
+	// synth.AllModels() so the dropdown can group/sort client-side.
+	mux.HandleFunc("/api/v1/synthesize-walk/models",
+		s.recoverMiddleware(s.auth(s.handleSynthesizeWalkModels)))
+
 	// Per-type device editor schema (#546 part 1). Read-only — the
 	// schema is a static table the daemon serves so the UI can hide
 	// sections that don't apply (e.g. switch should not see DNS).
