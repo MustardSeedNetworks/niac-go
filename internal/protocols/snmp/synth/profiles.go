@@ -49,6 +49,10 @@ const (
 	// gear (40G/100G uplinks, 25G/50G server NICs) gets the right
 	// ifSpeed gauge — the simulator surfaces this raw on the wire and
 	// pollers compare it against their alarm thresholds.
+	// Link speeds in Mbps. Full range from 100M up to 100G so DC-class
+	// gear (40G/100G uplinks, 25G/50G server NICs) gets the right
+	// ifSpeed gauge — the simulator surfaces this raw on the wire and
+	// pollers compare it against their alarm thresholds.
 	speed100M = 100
 	speed1G   = 1000
 	speed10G  = 10_000
@@ -56,6 +60,16 @@ const (
 	speed40G  = 40_000
 	speed50G  = 50_000
 	speed100G = 100_000
+
+	// Common port-count counts referenced by the per-model entries in
+	// models.go. Named so the mnd linter doesn't fire on every entry.
+	ports4  = 4
+	ports8  = 8
+	ports12 = 12
+	ports16 = 16
+	ports32 = 32
+	ports36 = 36
+	ports48 = 48
 )
 
 // AllVendors lists every operator-selectable vendor in UI dropdown order.
