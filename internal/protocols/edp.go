@@ -4,12 +4,12 @@ import (
 	"encoding/binary"
 	"fmt"
 	"net"
-	"os"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/krisarmstrong/niac-go/internal/config"
+	"github.com/krisarmstrong/niac-go/internal/logging"
 	"github.com/krisarmstrong/niac-go/internal/safeconv"
 )
 
@@ -86,7 +86,7 @@ func (h *EDPHandler) Start() {
 	ticker := h.advertiseTicker
 
 	if h.stack.GetDebugLevel() >= 1 {
-		_, _ = fmt.Fprintf(os.Stdout, "EDP: Starting periodic advertisements (interval: %v)\n", EDPAdvertiseInterval)
+		logging.ProtocolLogf("EDP", "info", "Starting periodic advertisements (interval: %v)", EDPAdvertiseInterval)
 	}
 
 	go func() {
@@ -144,7 +144,7 @@ func (h *EDPHandler) sendAdvertisements() {
 		if frame != nil {
 			h.sendFrame(device, frame)
 			if debugLevel >= DebugLevelVerbose {
-				_, _ = fmt.Fprintf(os.Stdout, "EDP: Sent advertisement for %s (%d bytes)\n", device.Name, len(frame))
+				logging.ProtocolLogf("EDP", "info", "Sent advertisement for %s (%d bytes)", device.Name, len(frame))
 			}
 		}
 	}
@@ -441,7 +441,7 @@ func (h *EDPHandler) HandlePacket(pkt *Packet) {
 	entry := buildEDPNeighborRecord(device.Name, parsed, fields)
 
 	if h.stack.GetDebugLevel() >= DebugLevelInfo && entry.RemoteDevice != "" {
-		_, _ = fmt.Fprintf(os.Stdout, "EDP: Neighbor %s via %s (local %s)\n",
+		logging.ProtocolLogf("EDP", "info", "Neighbor %s via %s (local %s)",
 			entry.RemoteDevice, entry.RemotePort, entry.LocalDevice)
 	}
 

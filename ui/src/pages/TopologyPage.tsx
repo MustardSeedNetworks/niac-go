@@ -8,10 +8,11 @@ import {
   type NodeTypes,
   Panel,
   ReactFlow,
+  type ReactFlowInstance,
   useEdgesState,
   useNodesState,
 } from '@xyflow/react';
-import { type FC, useCallback, useEffect, useMemo, useState } from 'react';
+import { type FC, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '@xyflow/react/dist/style.css';
 import { Network, Radar, RefreshCw } from 'lucide-react';
@@ -151,8 +152,29 @@ export const TopologyPage: FC = () => {
     | { kind: 'pane'; x: number; y: number }
   >(null);
 
-  // Build graph from API data, merging trunk port links with neighbor-discovered links
+  // ReactFlow instance handle — captured on init so we can call
+  // fitView() programmatically when the simulation changes
+  // underneath us (different config loaded → new device set).
+  // Without this, switching templates left the canvas zoomed in
+  // on wherever the prior layout had pushed the viewport, and
+  // operators interpreted that as a stale render.
+  const rfInstance = useRef<ReactFlowInstance<DeviceNodeType, LinkEdge> | null>(null);
+  // Bumped by handleResetLayout (declared later) to force the
+  // build-graph useEffect to re-run immediately instead of waiting
+  // for the next 15-second data poll. Declared up here so the
+  // useEffect's dep array can reference it without TDZ trouble.
+  const [resetCounter, setResetCounter] = useState(0);
+  // Hash of the current device-name set. When this changes we
+  // force a fitView so the new map fills the canvas cleanly.
+  const lastDeviceSetSig = useRef<string>('');
+
+  // Build graph from API data, merging trunk port links with neighbor-discovered links.
+  // resetCounter is intentionally read but not branched on — Reset
+  // bumps it to force this effect to re-run with the same upstream
+  // data, restoring the fresh-layout positions after Reset clears
+  // the cached positions in localStorage.
   useEffect(() => {
+    void resetCounter;
     if (!(devices && topology)) {
       return;
     }
@@ -270,6 +292,7 @@ export const TopologyPage: FC = () => {
     hoveredEdgeId,
     layoutMode,
     hiddenDevices,
+    resetCounter,
     setNodes,
     setEdges,
   ]);
@@ -300,6 +323,13 @@ export const TopologyPage: FC = () => {
   // Reset Layout — wipes the saved drag positions + clears focus and
   // search/filter state. The next data-poll effect re-runs layoutNodes
   // from scratch, putting every device on the fresh grid slot.
+  // resetCounter declared up with the other refs/state. handleResetLayout
+  // bumps it to force the build-graph useEffect to re-run immediately
+  // instead of waiting for the next 15-second data poll. The previous
+  // Reset implementation set positions to {x:0, y:0} hoping the effect
+  // would notice — but (0,0) is a valid coordinate, so the effect's
+  // "existing ?? saved ?? fresh" fallback kept the (0,0) and visibly
+  // did nothing.
   const handleResetLayout = useCallback(() => {
     if (typeof window !== 'undefined') {
       window.localStorage.removeItem(TOPOLOGY_POSITIONS_KEY);
@@ -308,11 +338,14 @@ export const TopologyPage: FC = () => {
     setSearch('');
     setActiveTypes(new Set());
     setHiddenDevices(new Set());
-    // Forcing a re-layout: bump nodes through layoutNodes by clearing
-    // current positions. The useEffect will pick up the empty current
-    // and assign fresh positions on next data tick.
-    setNodes((current) => current.map((node) => ({ ...node, position: { x: 0, y: 0 } })));
-  }, [setNodes]);
+    setNodes([]);
+    setEdges([]);
+    setResetCounter((n) => n + 1);
+    // Re-frame the canvas after the fresh layout settles.
+    window.setTimeout(() => {
+      rfInstance.current?.fitView({ padding: 0.2, duration: 400 });
+    }, 150);
+  }, [setNodes, setEdges]);
 
   // The set of unique device types currently in the graph — drives the
   // filter chip row. Sorted for stable button order.
@@ -396,6 +429,27 @@ export const TopologyPage: FC = () => {
     );
   }, [handleNodeClick, setNodes]);
 
+  // When the underlying simulation changes (different config →
+  // different device set), force a fitView so the canvas re-frames
+  // around the new graph instead of staying zoomed in on whatever
+  // the previous layout had pushed the viewport to. Detected via a
+  // sorted-name signature hash; same names = same sim = no re-fit.
+  useEffect(() => {
+    if (!devices || devices.length === 0) return;
+    const sig = devices
+      .map((d) => d.name)
+      .sort()
+      .join('|');
+    if (sig === lastDeviceSetSig.current) return;
+    lastDeviceSetSig.current = sig;
+    // Defer one tick so layoutNodes has populated the new positions
+    // before fitView measures them.
+    const t = window.setTimeout(() => {
+      rfInstance.current?.fitView({ padding: 0.2, duration: 400 });
+    }, 50);
+    return () => window.clearTimeout(t);
+  }, [devices]);
+
   // onConnect is a no-op: edges come from the backend and are not user-editable
   const onConnect = useCallback((_params: Connection) => {
     // Intentionally empty - topology edges are derived from device configs
@@ -432,11 +486,20 @@ export const TopologyPage: FC = () => {
     URL.revokeObjectURL(url);
   }, [nodes, edges]);
 
-  // Refresh data by refetching from the API
+  // Refresh data by refetching from the API. We also bump the reset
+  // counter so the build-graph effect re-runs even when the data
+  // payload is identical — otherwise repeat clicks looked like no-ops
+  // because devices/topology references stayed the same and the
+  // effect's dep array didn't change. Force-fit at the end re-frames
+  // the canvas so the click visibly does something.
   const handleRefresh = useCallback(() => {
     refetchTopology();
     refetchDevices();
     refetchNeighbors();
+    setResetCounter((n) => n + 1);
+    window.setTimeout(() => {
+      rfInstance.current?.fitView({ padding: 0.2, duration: 300 });
+    }, 150);
   }, [refetchTopology, refetchDevices, refetchNeighbors]);
 
   const loading = topologyLoading || devicesLoading;
@@ -538,16 +601,19 @@ export const TopologyPage: FC = () => {
               </Button>
               {view === 'graph' && (
                 <>
-                  {/* Actions dropdown — replaces the standalone Export
-                      button so PNG / JSON / Reset all live in one
-                      place. Also gives keyboard-only users the same
-                      actions exposed via right-click on the canvas. */}
-                  <ActionsMenu
+                  {/* Reset is always-visible — it's a recovery action
+                      (snap drags / filters back to defaults) and
+                      operators reach for it often enough that hiding
+                      it inside a menu got friction reports. */}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleResetLayout}
                     disabled={nodes.length === 0}
-                    onExportPNG={handleExportPNG}
-                    onExportJSON={handleExport}
-                    onReset={handleResetLayout}
-                  />
+                    title="Clear hand-dragged positions, search, and type filters"
+                  >
+                    Reset
+                  </Button>
                   <Button
                     variant={showLabels ? 'outline' : 'ghost'}
                     size="sm"
@@ -556,6 +622,14 @@ export const TopologyPage: FC = () => {
                   >
                     Labels
                   </Button>
+                  {/* Export is the only menu — PNG vs JSON is a real
+                      two-option choice, but Reset + Labels + Layout
+                      are direct buttons / pills for fast iteration. */}
+                  <ActionsMenu
+                    disabled={nodes.length === 0}
+                    onExportPNG={handleExportPNG}
+                    onExportJSON={handleExport}
+                  />
                   {/* Layout-mode picker — one pill per mode. The active
                       pill is highlighted; clicking another re-runs the
                       layout and persists the choice. Hierarchical is the
@@ -703,6 +777,9 @@ export const TopologyPage: FC = () => {
                   onNodeClick={(_, node) => {
                     closeContextMenu();
                     handleNodeClick(node.id);
+                  }}
+                  onInit={(instance) => {
+                    rfInstance.current = instance;
                   }}
                   nodeTypes={nodeTypes}
                   edgeTypes={edgeTypes}

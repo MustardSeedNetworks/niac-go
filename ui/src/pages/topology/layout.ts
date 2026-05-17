@@ -10,12 +10,17 @@ import { linkSpeedColors } from './types';
 
 /**
  * LayoutMode selects which positioning algorithm `layoutNodes` runs.
- * Hierarchical is the default — concentric rings are visually noisy
- * once you have more than a handful of devices, and the dagre-driven
- * layered layout matches how operators draw network diagrams on a
- * whiteboard.
+ * Hierarchical is the default — it matches how operators draw network
+ * diagrams on a whiteboard (core top, access bottom). Grid is the
+ * fallback for small device sets or when the operator wants a flat
+ * connectivity-agnostic view.
+ *
+ * Concentric was tried in earlier versions but operators found it
+ * hard to read — rings around the most-connected device collapse on
+ * small graphs and become a tangle past ~6 nodes. Removed in favour
+ * of just the two modes that work.
  */
-export type LayoutMode = 'hierarchical' | 'concentric' | 'grid';
+export type LayoutMode = 'hierarchical' | 'grid';
 
 export const DEFAULT_LAYOUT_MODE: LayoutMode = 'hierarchical';
 
@@ -25,11 +30,6 @@ export const LAYOUT_MODES: { mode: LayoutMode; label: string; description: strin
     mode: 'hierarchical',
     label: 'Hierarchical',
     description: 'Layered top-down — core at top, access at bottom',
-  },
-  {
-    mode: 'concentric',
-    label: 'Concentric',
-    description: 'Rings around the most-connected device',
   },
   {
     mode: 'grid',
@@ -52,11 +52,6 @@ const NODE_GAP_Y = 100;
 // ~260 px wide) doesn't obscure the first column of cards.
 const LAYOUT_LEFT_OFFSET = 280;
 const LAYOUT_TOP_OFFSET = 40;
-
-// Minimum radius for the concentric-ring layout. Must be large enough
-// that a node on the inner ring doesn't overlap the centre node — i.e.
-// > one card-width plus padding. The previous 180 wasn't enough.
-const CONCENTRIC_MIN_RADIUS = 320;
 
 /**
  * layoutNodes returns ReactFlow node positions according to the
@@ -82,8 +77,6 @@ export function layoutNodes(
   switch (mode) {
     case 'grid':
       return gridLayout(devices);
-    case 'concentric':
-      return concentricLayout(devices, links);
     default:
       return hierarchicalLayout(devices, links);
   }
@@ -174,71 +167,6 @@ function hierarchicalLayout(devices: DeviceSummary[], links: TopologyLink[]): De
       id: device.name,
       type: 'device',
       position: { x, y },
-      data: makeData(device),
-    };
-  });
-}
-
-/**
- * concentricLayout puts the most-connected device at the centre and
- * arranges the rest in degree-ordered rings. Kept for users who
- * prefer it; not the default because rings collapse on small graphs
- * and become hard to read on bigger ones.
- */
-function concentricLayout(devices: DeviceSummary[], links: TopologyLink[]): DeviceNode[] {
-  // ≤4 devices: rings would overlap. Fall through to grid.
-  if (devices.length <= 4) {
-    return gridLayout(devices);
-  }
-
-  // Build adjacency for degree calculation.
-  const adjacency = new Map<string, Set<string>>();
-  for (const device of devices) {
-    adjacency.set(device.name, new Set());
-  }
-  for (const link of links) {
-    adjacency.get(link.source)?.add(link.target);
-    adjacency.get(link.target)?.add(link.source);
-  }
-  const degrees = new Map<string, number>();
-  for (const [name, neighbors] of adjacency) {
-    degrees.set(name, neighbors.size);
-  }
-  const sorted = [...devices].sort(
-    (a, b) => (degrees.get(b.name) || 0) - (degrees.get(a.name) || 0),
-  );
-
-  const nodeMap = new Map<string, { x: number; y: number }>();
-  const centerX = 400;
-  const centerY = 300;
-  let currentRadius = 0;
-  let angleOffset = 0;
-  let nodesInRing = 1;
-  let ringIndex = 0;
-  for (const device of sorted) {
-    if (ringIndex >= nodesInRing) {
-      ringIndex = 0;
-      currentRadius += CONCENTRIC_MIN_RADIUS;
-      angleOffset += Math.PI / 6;
-      nodesInRing = Math.max(1, Math.floor((2 * Math.PI * currentRadius) / 280));
-    }
-    const angle = (2 * Math.PI * ringIndex) / nodesInRing + angleOffset;
-    nodeMap.set(device.name, {
-      x: centerX + currentRadius * Math.cos(angle),
-      y: centerY + currentRadius * Math.sin(angle),
-    });
-    ringIndex++;
-  }
-
-  return devices.map((device, index) => {
-    const pos = nodeMap.get(device.name) || {
-      x: 100 + (index % 5) * 200,
-      y: 100 + Math.floor(index / 5) * 150,
-    };
-    return {
-      id: device.name,
-      type: 'device',
-      position: pos,
       data: makeData(device),
     };
   });

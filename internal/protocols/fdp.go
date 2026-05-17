@@ -2,14 +2,13 @@ package protocols
 
 import (
 	"encoding/binary"
-	"fmt"
 	"net"
-	"os"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/krisarmstrong/niac-go/internal/config"
+	"github.com/krisarmstrong/niac-go/internal/logging"
 	"github.com/krisarmstrong/niac-go/internal/safeconv"
 )
 
@@ -98,7 +97,7 @@ func (h *FDPHandler) Start() {
 	ticker := h.advertiseTicker
 
 	if h.stack.GetDebugLevel() >= 1 {
-		_, _ = fmt.Fprintf(os.Stdout, "FDP: Starting periodic advertisements (interval: %v)\n", FDPAdvertiseInterval)
+		logging.ProtocolLogf("FDP", "info", "Starting periodic advertisements (interval: %v)", FDPAdvertiseInterval)
 	}
 
 	go func() {
@@ -155,9 +154,9 @@ func (h *FDPHandler) sendAdvertisements() {
 		if frame != nil {
 			err := h.sendFrame(device, frame)
 			if err != nil && debugLevel >= DebugLevelInfo {
-				_, _ = fmt.Fprintf(os.Stdout, "FDP: Error sending advertisement for %s: %v\n", device.Name, err)
+				logging.ProtocolLogf("FDP", "error", "Error sending advertisement for %s: %v", device.Name, err)
 			} else if debugLevel >= DebugLevelVerbose {
-				_, _ = fmt.Fprintf(os.Stdout, "FDP: Sent advertisement for %s (%d bytes)\n", device.Name, len(frame))
+				logging.ProtocolLogf("FDP", "info", "Sent advertisement for %s (%d bytes)", device.Name, len(frame))
 			}
 		}
 	}
@@ -519,12 +518,10 @@ func (h *FDPHandler) buildFDPNeighborRecord(device *config.Device, data *fdpTLVD
 func (h *FDPHandler) logFDPNeighbor(entry NeighborRecord, _ *Packet) {
 	debugLevel := h.stack.GetDebugLevel()
 	if debugLevel >= DebugLevelInfo {
-		_, _ = fmt.Fprintf(
-			os.Stdout,
-			"FDP: Neighbor %s via %s (local %s)\n",
-			entry.RemoteDevice,
-			entry.RemotePort,
-			entry.LocalDevice,
+		logging.ProtocolLogf(
+			"FDP", "info",
+			"Neighbor %s via %s (local %s)",
+			entry.RemoteDevice, entry.RemotePort, entry.LocalDevice,
 		)
 	}
 }

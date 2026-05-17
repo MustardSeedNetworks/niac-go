@@ -4,7 +4,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"net"
-	"os"
 	"strings"
 	"sync"
 	"time"
@@ -13,6 +12,7 @@ import (
 	"github.com/gopacket/gopacket/layers"
 
 	"github.com/krisarmstrong/niac-go/internal/config"
+	"github.com/krisarmstrong/niac-go/internal/logging"
 	"github.com/krisarmstrong/niac-go/internal/safeconv"
 )
 
@@ -141,7 +141,7 @@ func (h *LLDPHandler) Start() {
 	ticker := h.advertiseTicker
 
 	if h.stack.GetDebugLevel() >= 1 {
-		_, _ = fmt.Fprintf(os.Stdout, "LLDP: Starting periodic advertisements (interval: %v)\n", LLDPAdvertiseInterval)
+		logging.ProtocolLogf("LLDP", "info", "Starting periodic advertisements (interval: %v)", LLDPAdvertiseInterval)
 	}
 
 	go func() {
@@ -206,9 +206,9 @@ func (h *LLDPHandler) sendAdvertisements() {
 		if frame != nil {
 			err := h.sendFrame(device, frame)
 			if err != nil && debugLevel >= DebugLevelInfo {
-				_, _ = fmt.Fprintf(os.Stdout, "LLDP: Error sending advertisement for %s: %v\n", device.Name, err)
+				logging.ProtocolLogf("LLDP", "error", "Error sending advertisement for %s: %v", device.Name, err)
 			} else if debugLevel >= DebugLevelVerbose {
-				_, _ = fmt.Fprintf(os.Stdout, "LLDP: Sent advertisement for %s (%d bytes)\n", device.Name, len(frame))
+				logging.ProtocolLogf("LLDP", "info", "Sent advertisement for %s (%d bytes)", device.Name, len(frame))
 			}
 		}
 	}
@@ -594,12 +594,10 @@ func (h *LLDPHandler) HandlePacket(pkt *Packet) {
 	}
 
 	if debugLevel >= DebugLevelInfo {
-		_, _ = fmt.Fprintf(
-			os.Stdout,
-			"LLDP: Neighbor %s via %s (local %s)\n",
-			entry.RemoteDevice,
-			entry.RemotePort,
-			entry.LocalDevice,
+		logging.ProtocolLogf(
+			"LLDP", "info",
+			"Neighbor %s via %s (local %s)",
+			entry.RemoteDevice, entry.RemotePort, entry.LocalDevice,
 		)
 	}
 

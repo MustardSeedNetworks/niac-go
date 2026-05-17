@@ -3,13 +3,14 @@ import { type FC, useEffect, useState } from 'react';
 import { Button } from '../../ui/Button';
 
 /**
- * ActionsMenu is the small "Actions ▾" dropdown in the topology
- * header — the keyboard-accessible mirror of the canvas right-click
- * menu. Opens on click, closes on outside-click or Escape.
+ * ActionsMenu is the small "Export ▾" dropdown in the topology
+ * header. Two options: PNG (image render of the canvas via
+ * html-to-image) and JSON (the structured topology graph).
  *
- * No new external dep needed; a focusable button + a click-outside
- * listener is enough for three menu items. If we ever grow more
- * complex menus, Headless UI is the next step up.
+ * Originally also carried "Reset layout" but that turned out to be
+ * a recovery action operators reach for too often — Reset is now a
+ * direct toolbar button. This menu stays small + scoped to "save
+ * this view somewhere".
  *
  * Lives in its own file so TopologyPage.tsx stays under the
  * file-size red-flag threshold (800 lines).
@@ -18,8 +19,7 @@ export const ActionsMenu: FC<{
   disabled?: boolean;
   onExportPNG: () => void;
   onExportJSON: () => void;
-  onReset: () => void;
-}> = ({ disabled, onExportPNG, onExportJSON, onReset }) => {
+}> = ({ disabled, onExportPNG, onExportJSON }) => {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -56,7 +56,7 @@ export const ActionsMenu: FC<{
         aria-haspopup="menu"
         aria-expanded={open}
       >
-        Actions
+        Export
       </Button>
       {open && (
         <div
@@ -80,16 +80,6 @@ export const ActionsMenu: FC<{
           >
             <span>Export topology JSON</span>
             <span className="text-[10px] text-gray-500">data</span>
-          </button>
-          <hr className="my-1 h-px border-0 bg-white/10" />
-          <button
-            type="button"
-            role="menuitem"
-            onClick={handle(onReset)}
-            className="flex w-full items-center justify-between gap-3 px-3 py-1.5 text-left text-red-300 transition-colors hover:bg-red-500/15 hover:text-red-200"
-          >
-            <span>Reset layout</span>
-            <span className="text-[10px] text-gray-500">drags + filters</span>
           </button>
         </div>
       )}
