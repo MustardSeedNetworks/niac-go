@@ -1,72 +1,65 @@
 # =============================================================================
-# Package Creation Targets
+# Package Creation Targets (goreleaser snapshot)
 # =============================================================================
+# Canonical local packaging. Invokes the locally-installed goreleaser binary
+# with --snapshot mode using the SAME .goreleaser.yml that CI uses, so local
+# artifacts are byte-for-byte the same shape as CI publishes (just unsigned).
 #
-# Package creation for distribution:
-#   - Debian packages (.deb) for Ubuntu/Debian
-#   - RPM packages (.rpm) for RHEL/CentOS/Fedora
-#   - macOS installer (.pkg)
-#   - Windows zip distribution
-#   - Container images via Pack (Cloud Native Buildpacks)
+# Platform coverage from local macOS depends on what cross-compile toolchains
+# are installed. For the full multi-arch matrix (linux + windows + darwin
+# with CGO and libpcap), use the dev servers or trigger release.yml via
+# workflow_dispatch (which runs inside goreleaser-cross).
 #
+# Outputs land in dist/ — archives, .deb, .rpm, checksums, sbom stubs.
 # =============================================================================
 
-.PHONY: deb rpm pkg windows-zip packages install-service container \
-        deploy-ubuntu deploy-fedora deploy-all deploy-validate ensure-nfpm
-
-# =============================================================================
-# Package Variables
-# =============================================================================
+.PHONY: deb rpm pkg windows-zip packages packages-all ensure-goreleaser \
+        container \
+        install-service \
+        deploy-validate deploy-ubuntu deploy-fedora deploy-all
 
 PKG_VERSION := $(shell echo $(VERSION) | sed 's/^v//;s/-dirty$$//;s/-[0-9]*-g[0-9a-f]*$$//')
-DEB_ARCH := $(shell uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
-RPM_ARCH := $(shell uname -m | sed 's/amd64/x86_64/;s/arm64/aarch64/')
 
 # =============================================================================
-# Linux packages (deb + rpm via nfpm)
-# =============================================================================
-#
-# Both formats are produced from the single .nfpm.yaml that release.yml uses,
-# so local `make packages` output matches CI exactly. nfpm is pure Go (no
-# rpmbuild platform plumbing), which is why it works for cross-arch RPMs in
-# CI; locally it just keeps the toolchain unified.
+# Tooling check
 # =============================================================================
 
-NFPM_VERSION := v2.46.3
-NFPM := $(shell command -v nfpm 2>/dev/null)
-
-ensure-nfpm:
-	@if [ -z "$(NFPM)" ]; then \
-		printf "$(BOLD)Installing nfpm $(NFPM_VERSION)...$(RESET)\n"; \
-		go install github.com/goreleaser/nfpm/v2/cmd/nfpm@$(NFPM_VERSION); \
-	fi
-
-# Render .nfpm.yaml with envsubst to dist/nfpm.rendered.yaml. Variables come
-# from the per-target rule via export.
-dist/nfpm.rendered.yaml: .nfpm.yaml | dist
-	@envsubst < .nfpm.yaml > dist/nfpm.rendered.yaml
-
-dist:
-	@mkdir -p dist
-
-deb: build ensure-nfpm dist ## Build Debian package (.deb) via nfpm
-	@printf "$(BOLD)Building Debian package...$(RESET)\n"
-	@export NIAC_VERSION="$(PKG_VERSION)" NIAC_ARCH="$(DEB_ARCH)" NIAC_BINARY="./$(BINARY_NAME)"; \
-		envsubst < .nfpm.yaml > dist/nfpm.rendered.yaml; \
-		nfpm pkg --config dist/nfpm.rendered.yaml --packager deb \
-			--target dist/niac_$(PKG_VERSION)_$(DEB_ARCH).deb
-	@printf "$(GREEN)Debian package: dist/niac_$(PKG_VERSION)_$(DEB_ARCH).deb$(RESET)\n"
-
-rpm: build ensure-nfpm dist ## Build RPM package (.rpm) via nfpm
-	@printf "$(BOLD)Building RPM package...$(RESET)\n"
-	@export NIAC_VERSION="$(PKG_VERSION)" NIAC_ARCH="$(DEB_ARCH)" NIAC_BINARY="./$(BINARY_NAME)"; \
-		envsubst < .nfpm.yaml > dist/nfpm.rendered.yaml; \
-		nfpm pkg --config dist/nfpm.rendered.yaml --packager rpm \
-			--target dist/niac-$(PKG_VERSION)-1.$(RPM_ARCH).rpm
-	@printf "$(GREEN)RPM package: dist/niac-$(PKG_VERSION)-1.$(RPM_ARCH).rpm$(RESET)\n"
+ensure-goreleaser:
+	@command -v goreleaser >/dev/null 2>&1 || { \
+		printf "$(RED)ERROR: goreleaser not installed.$(RESET)\n"; \
+		printf "Install with:\n"; \
+		printf "  macOS:  brew install goreleaser\n"; \
+		printf "  Linux:  go install github.com/goreleaser/goreleaser/v2@latest\n"; \
+		exit 1; \
+	}
 
 # =============================================================================
-# macOS Package
+# Canonical packaging — one command builds all release artifacts
+# =============================================================================
+# --snapshot:       version stamp uses dryrun pattern, no git tag required
+# --clean:          wipe dist/ first
+# --skip=publish:   no GitHub release upload
+# --skip=sign:      no cosign signing (cosign keyless requires GitHub OIDC)
+# --skip=validate:  tolerate dirty working tree (UI build writes into
+#                   internal/api/ui/ which is in-tree)
+# --skip=announce:  no notifications
+# =============================================================================
+
+packages: build ensure-goreleaser ## Build all release artifacts (goreleaser snapshot)
+	@printf "$(BOLD)Building release artifacts via goreleaser snapshot...$(RESET)\n"
+	@UI_BUILD_HASH=$(UI_BUILD_HASH) goreleaser release --snapshot --clean \
+		--skip=publish,sign,validate,announce
+	@printf "$(GREEN)Artifacts in dist/:$(RESET)\n"
+	@ls -1 dist/ 2>/dev/null | grep -E '\.(tar\.gz|zip|deb|rpm)$$' | sed 's/^/  /' || true
+
+# Aliases — one config produces everything from a single goreleaser run.
+deb: packages         ## Alias for 'packages' (goreleaser produces all formats)
+rpm: packages         ## Alias for 'packages'
+windows-zip: packages ## Alias for 'packages'
+packages-all: packages ## Alias for 'packages'
+
+# =============================================================================
+# macOS .pkg — custom script (goreleaser doesn't produce .pkg)
 # =============================================================================
 
 pkg: build-darwin ## Build macOS installer package (.pkg)
@@ -79,30 +72,7 @@ pkg: build-darwin ## Build macOS installer package (.pkg)
 	@printf "$(GREEN)macOS package: dist/niac-$(PKG_VERSION)-$$(uname -m | sed 's/x86_64/amd64/').pkg$(RESET)\n"
 
 # =============================================================================
-# Windows Distribution
-# =============================================================================
-
-windows-zip: build-windows ## Build Windows zip distribution
-	@printf "$(BOLD)Building Windows distribution...$(RESET)\n"
-	@mkdir -p dist
-	@PKG_NAME="niac-$(PKG_VERSION)-windows-amd64"; \
-	mkdir -p "dist/$$PKG_NAME"; \
-	cp niac-windows-amd64.exe "dist/$$PKG_NAME/niac.exe" 2>/dev/null || \
-	cp $(BINARY_NAME).exe "dist/$$PKG_NAME/niac.exe"; \
-	cp deploy/windows/build.ps1 "dist/$$PKG_NAME/install.ps1"; \
-	cd dist && zip -r "$$PKG_NAME.zip" "$$PKG_NAME" && rm -rf "$$PKG_NAME"
-	@printf "$(GREEN)Windows distribution: dist/niac-$(PKG_VERSION)-windows-amd64.zip$(RESET)\n"
-
-# =============================================================================
-# Combined Targets
-# =============================================================================
-
-packages: deb rpm ## Build all packages (deb + rpm)
-	@printf "$(GREEN)All packages built in dist/$(RESET)\n"
-	@ls -la dist/*.deb dist/*.rpm 2>/dev/null || true
-
-# =============================================================================
-# Systemd Service Installation
+# Systemd Service Installation (local Linux only)
 # =============================================================================
 
 install-service: build ## Install as systemd service (requires root)
@@ -124,6 +94,8 @@ install-service: build ## Install as systemd service (requires root)
 # =============================================================================
 # Container Images (Pack/Buildpacks) - LOCAL DEV ONLY
 # =============================================================================
+# NOTE: CI uses Dockerfile + buildx (see .github/workflows/container.yml).
+# This Pack target is a developer convenience and does not push to a registry.
 
 CONTAINER_IMAGE := niac
 
@@ -138,16 +110,14 @@ container: ## Build container image locally (Pack/Buildpacks)
 # =============================================================================
 # Deployment Targets
 # =============================================================================
-# These targets deploy packages to test servers and validate the installation.
+# Honors the Universal Build Contract in CLAUDE.md.
 #
 # Prerequisites:
 #   - SSH access to target servers (key-based auth recommended)
 #   - Packages built with 'make packages'
-#   - Target servers: niac-srv-ubuntu, niac-srv-fedora in ~/.ssh/config
-#
+#   - Target servers configured in ~/.ssh/config
 # =============================================================================
 
-# Deployment server hostnames (configure in ~/.ssh/config)
 DEPLOY_UBUNTU_HOST ?= niac-srv-ubuntu
 DEPLOY_FEDORA_HOST ?= niac-srv-fedora
 DEPLOY_PORT ?= 8080
@@ -199,6 +169,4 @@ deploy-fedora: packages ## Deploy .rpm to Fedora test server and validate
 	@printf "$(GREEN)✓ Fedora deployment complete and validated$(RESET)\n"
 
 deploy-all: deploy-ubuntu deploy-fedora ## Deploy to all test servers
-	@printf "\n$(GREEN)╔══════════════════════════════════════════════════════════════════════════════╗$(RESET)\n"
-	@printf "$(GREEN)║                    ✓ ALL DEPLOYMENTS VALIDATED                                ║$(RESET)\n"
-	@printf "$(GREEN)╚══════════════════════════════════════════════════════════════════════════════╝$(RESET)\n"
+	@printf "\n$(GREEN)✓ ALL DEPLOYMENTS VALIDATED$(RESET)\n"
