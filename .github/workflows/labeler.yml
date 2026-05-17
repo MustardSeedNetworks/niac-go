@@ -51,15 +51,16 @@ jobs:
             const title = issue.title || '';
             const labelsToAdd = [];
 
-            // Component mapping from form dropdown
+            // Component mapping from form dropdown — niac-specific.
             const componentMap = {
               'API/Backend': 'component: api',
               'UI/Frontend': 'component: ui',
-              'Network Discovery': 'component: discovery',
-              'WiFi Survey': 'component: wifi',
-              'Speed Test / iPerf': 'component: iperf',
-              'DHCP Detection': 'component: dhcp',
-              'Authentication': 'component: auth',
+              'SNMP': 'component: snmp',
+              'LLDP/CDP': 'component: protocols',
+              'Protocol Simulation': 'component: protocols',
+              'Device Simulation': 'component: device',
+              'Templates': 'component: templates',
+              'PCAP Capture/Replay': 'component: capture',
               'Configuration': 'component: config',
               'Installation/Deployment': 'area: build',
               'Documentation': 'area: docs',
