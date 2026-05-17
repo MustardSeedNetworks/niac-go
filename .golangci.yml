@@ -294,8 +294,8 @@ linters:
       lines: 100
       # Checks the number of statements in a function.
       # If lower than 0, disable the check.
-      # Default: 40, using 75 for complex handlers
-      statements: 75
+      # Default: 40. Canonical value across seed/stem/niac is 50.
+      statements: 50
 
     gochecksumtype:
       # Presence of `default` case in switch statements satisfies exhaustiveness, if all members are not listed.

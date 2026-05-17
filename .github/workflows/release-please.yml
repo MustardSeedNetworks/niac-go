@@ -1,0 +1,44 @@
+# =============================================================================
+# Release Please - Automated Version Management
+# =============================================================================
+# Creates release PRs with changelogs when commits land on main.
+# When a release PR is merged, creates a GitHub release which triggers
+# release.yml for building packages (via version tag).
+#
+# NOTE: This workflow only manages versions and changelogs.
+# Artifact building happens in release.yml (triggered by version tags).
+# =============================================================================
+
+name: Release Please
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    branches: [main]
+    types: [completed]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    # Only run if CI workflow succeeded
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: googleapis/release-please-action@5c625bfb5d1ff62eadeeb3772007f7f66fdcf071 # v4
+        id: release
+        with:
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+          release-type: go
+
+      - name: Release created
+        if: ${{ steps.release.outputs.release_created }}
+        env:
+          TAG_NAME: ${{ steps.release.outputs.tag_name }}
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          echo "Release ${TAG_NAME} created!"
+          echo "Version: ${VERSION}"
+          echo "The release.yml workflow will build packages when the tag is pushed."

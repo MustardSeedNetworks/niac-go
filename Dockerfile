@@ -23,7 +23,7 @@ RUN mkdir -p /out && cp -r ../internal/api/ui /out/ui
 # -----------------------------------------------------------------------------
 # Stage 2: build the Go binary with CGO + libpcap
 # -----------------------------------------------------------------------------
-FROM golang:1.25-bookworm AS go-build
+FROM golang:1.26-bookworm AS go-build
 RUN apt-get update \
     && apt-get install -y --no-install-recommends libpcap-dev \
     && rm -rf /var/lib/apt/lists/*
@@ -38,7 +38,7 @@ ARG COMMIT=unknown
 ARG BUILD_DATE=unknown
 RUN UI_HASH=$(find internal/api/ui -type f -exec md5sum {} \; | sort | md5sum | cut -d' ' -f1) \
     && CGO_ENABLED=1 go build -trimpath -buildvcs=false \
-        -ldflags="-s -w -X main.version=${VERSION} -X main.commit=${COMMIT} -X main.date=${BUILD_DATE} -X main.uiBuildHash=${UI_HASH}" \
+        -ldflags="-s -w -X github.com/krisarmstrong/niac-go/internal/version.Version=${VERSION} -X github.com/krisarmstrong/niac-go/internal/version.Commit=${COMMIT} -X github.com/krisarmstrong/niac-go/internal/version.BuildTime=${BUILD_DATE} -X github.com/krisarmstrong/niac-go/internal/version.UIBuildHash=${UI_HASH}" \
         -o /out/niac ./cmd/niac
 
 # -----------------------------------------------------------------------------

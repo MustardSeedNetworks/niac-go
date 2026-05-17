@@ -3,18 +3,11 @@ package main
 import (
 	"fmt"
 	"os"
-	"runtime/debug"
 	"strings"
 
 	"github.com/spf13/cobra"
-)
 
-// Populated by -ldflags at build time.
-var (
-	version     = ""
-	commit      = ""
-	date        = ""
-	uiBuildHash = ""
+	"github.com/krisarmstrong/niac-go/internal/version"
 )
 
 type versionInfo struct {
@@ -27,81 +20,26 @@ type versionInfo struct {
 // Version info constants.
 const (
 	defaultVersion    = "dev"
-	defaultCommit     = "dev"
-	defaultDate       = "unknown"
-	develVersion      = "(devel)"
-	vcsRevisionKey    = "vcs.revision"
-	vcsTimeKey        = "vcs.time"
 	versionFilePrefix = "v"
 	versionFileName   = "VERSION"
 )
 
+// readVersionInfo returns the running binary's version metadata. Source
+// of truth is the internal/version package, which prefers ldflags, then
+// falls back to debug.ReadBuildInfo, then to compile-time defaults. A
+// final VERSION-file fallback is layered on top for installs that ship
+// the file alongside the binary.
 func readVersionInfo() versionInfo {
 	info := versionInfo{
-		version:     defaultVersion,
-		commit:      defaultCommit,
-		date:        defaultDate,
-		uiBuildHash: "",
+		version:     version.GetVersion(),
+		commit:      version.GetCommit(),
+		date:        version.GetBuildTime(),
+		uiBuildHash: version.GetUIBuildHash(),
 	}
 
-	// Priority 1: ldflags-injected values (set during go build)
-	if version != "" {
-		info.version = version
-	}
-	if commit != "" {
-		info.commit = commit
-	}
-	if date != "" {
-		info.date = date
-	}
-	if uiBuildHash != "" {
-		info.uiBuildHash = uiBuildHash
-	}
-
-	// Priority 2: Go build metadata (if ldflags didn't set values)
-	if info.version == defaultVersion || info.commit == defaultCommit {
-		populateFromBuildInfo(&info)
-	}
-
-	// Priority 3: VERSION file fallback
 	populateVersionFromFile(&info)
 
 	return info
-}
-
-// populateFromBuildInfo extracts version info from Go build metadata.
-func populateFromBuildInfo(info *versionInfo) {
-	buildInfo, ok := debug.ReadBuildInfo()
-	if !ok {
-		return
-	}
-
-	if isValidVersion(buildInfo.Main.Version) {
-		info.version = buildInfo.Main.Version
-	}
-
-	extractVCSSettings(info, buildInfo.Settings)
-}
-
-// isValidVersion checks if a version string is usable.
-func isValidVersion(version string) bool {
-	return version != "" && version != develVersion
-}
-
-// extractVCSSettings extracts VCS revision and time from build settings.
-func extractVCSSettings(info *versionInfo, settings []debug.BuildSetting) {
-	for _, setting := range settings {
-		switch setting.Key {
-		case vcsRevisionKey:
-			if setting.Value != "" {
-				info.commit = setting.Value
-			}
-		case vcsTimeKey:
-			if setting.Value != "" {
-				info.date = setting.Value
-			}
-		}
-	}
 }
 
 // populateVersionFromFile reads version from VERSION file if not already set.
