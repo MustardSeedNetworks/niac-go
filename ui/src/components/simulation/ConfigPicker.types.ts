@@ -1,4 +1,4 @@
-import { Building2, FileCode, Globe, Router, Server, Wifi } from 'lucide-react';
+import { Building2, FileCode, Globe, Router, Server, Shield, Wifi } from 'lucide-react';
 import type { FC } from 'react';
 import type { Template, UserConfig } from '../../api/types';
 
@@ -22,6 +22,7 @@ export const TEMPLATE_TYPE_ICON: Record<Template['type'], FC<{ className?: strin
   switch: FileCode,
   'access-point': Wifi,
   server: Server,
+  firewall: Shield,
   complete: Building2,
   custom: FileCode,
 };
@@ -32,6 +33,7 @@ export const TEMPLATE_TYPE_TINT: Record<Template['type'], string> = {
   switch: 'bg-emerald-500/15 text-emerald-200 border-emerald-400/30',
   'access-point': 'bg-purple-500/15 text-purple-200 border-purple-400/30',
   server: 'bg-cyan-500/15 text-cyan-200 border-cyan-400/30',
+  firewall: 'bg-red-500/15 text-red-200 border-red-400/30',
   complete: 'bg-amber-500/15 text-amber-200 border-amber-400/30',
   custom: 'bg-pink-500/15 text-pink-200 border-pink-400/30',
 };

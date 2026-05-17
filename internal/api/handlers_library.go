@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"io/fs"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -186,7 +187,13 @@ func (s *Server) handleLibraryFiles(w http.ResponseWriter, r *http.Request, kind
 			return
 		}
 		for _, candidate := range fallbackDirsForKind(kind) {
-			if extras := scanDirForExtensions(candidate, extensionsForKind(kind)); len(extras) > 0 {
+			// Walks live in vendor-keyed subdirectories
+			// (examples/device_walks/{cisco,juniper,...}/walk.txt),
+			// so a flat scan finds nothing. Pcaps are flat —
+			// the per-kind switch in scanFnForKind picks the
+			// right walker.
+			scanner := scanFnForKind(kind)
+			if extras := scanner(candidate, extensionsForKind(kind)); len(extras) > 0 {
 				s.writeJSON(w, extras)
 				return
 			}
@@ -229,6 +236,54 @@ func extensionsForKind(kind library.Kind) []string {
 	default:
 		return nil
 	}
+}
+
+// scanFnForKind returns the directory scanner appropriate for `kind`.
+// Walks need a recursive walker because the bundled
+// examples/device_walks tree groups files by vendor subdirectory;
+// a flat scan would return zero. Pcaps live in flat directories so
+// the cheaper flat scan still applies.
+func scanFnForKind(kind library.Kind) func(string, []string) []library.FileEntry {
+	if kind == library.KindWalks {
+		return scanDirRecursiveForExtensions
+	}
+	return scanDirForExtensions
+}
+
+// scanDirRecursiveForExtensions walks `dir` (any depth), returning
+// entries whose extension matches one of `exts`. Vendor / model
+// subdirectories are flattened — the returned Name is the basename
+// only, matching the flat-scan contract callers already consume.
+// Errors are swallowed (best-effort fallback content).
+func scanDirRecursiveForExtensions(dir string, exts []string) []library.FileEntry {
+	if _, err := os.Stat(dir); err != nil {
+		return nil
+	}
+	allowed := make(map[string]bool, len(exts))
+	for _, e := range exts {
+		allowed[e] = true
+	}
+	var out []library.FileEntry
+	_ = filepath.WalkDir(dir, func(_ string, d fs.DirEntry, walkErr error) error {
+		if walkErr != nil || d.IsDir() {
+			return nil //nolint:nilerr // best-effort scan; skip unreadable subtrees
+		}
+		if !allowed[strings.ToLower(filepath.Ext(d.Name()))] {
+			return nil
+		}
+		info, statErr := d.Info()
+		if statErr != nil {
+			return nil //nolint:nilerr // skip files we can't stat, keep walking
+		}
+		out = append(out, library.FileEntry{
+			Name:       d.Name(),
+			SizeBytes:  info.Size(),
+			ModifiedAt: info.ModTime().UTC(),
+			Source:     library.SourceUser,
+		})
+		return nil
+	})
+	return out
 }
 
 // scanDirForExtensions walks dir non-recursively, returning entries
