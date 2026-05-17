@@ -20,6 +20,7 @@ const (
 	templateTypeSwitch      = "switch"
 	templateTypeAccessPoint = "access-point"
 	templateTypeServer      = "server"
+	templateTypeFirewall    = "firewall"
 	templateTypeComplete    = "complete"
 	templateTypeCustom      = "custom"
 )
@@ -41,7 +42,7 @@ type Template struct {
 	// front-matter, lowercased. When non-empty the UI groups the
 	// template under a vendor heading instead of (or alongside) the
 	// generic type-based grouping — useful for the vendor template
-	// pack shipped under cmd/niac/templates/vendor/.
+	// pack shipped under cmd/niac/templates/vendor-templates/.
 	Vendor string   `json:"vendor,omitempty"`
 	Tags   []string `json:"tags,omitempty"`
 }
@@ -322,6 +323,9 @@ func determineTemplateType(path, name string) string {
 	case strings.Contains(nameLower, "ap") || strings.Contains(nameLower, "wireless") ||
 		strings.Contains(nameLower, "access-point"):
 		return templateTypeAccessPoint
+	case strings.Contains(nameLower, "firewall") || strings.Contains(nameLower, "asa") ||
+		strings.Contains(nameLower, "srx") || strings.Contains(nameLower, "ftd"):
+		return templateTypeFirewall
 	case strings.Contains(nameLower, "server"):
 		return templateTypeServer
 	case strings.Contains(nameLower, "complete") || strings.Contains(nameLower, "full"):

@@ -1,4 +1,4 @@
-import { Building2, FileCode, Globe, Layers, Router, Server, Wifi } from 'lucide-react';
+import { Building2, FileCode, Globe, Layers, Router, Server, Shield, Wifi } from 'lucide-react';
 import { type FC, memo } from 'react';
 import type { Template } from '../api/types';
 import { iconSizes } from '../constants/sizes';
@@ -19,6 +19,7 @@ const typeIcons: Record<Template['type'], FC<{ className?: string }>> = {
   switch: Layers,
   'access-point': Wifi,
   server: Server,
+  firewall: Shield,
   complete: Building2,
   custom: FileCode,
 };
@@ -29,6 +30,7 @@ const typeColors: Record<Template['type'], string> = {
   switch: 'bg-green-500/20 text-green-300 border-green-500/30',
   'access-point': 'bg-purple-500/20 text-purple-300 border-purple-500/30',
   server: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30',
+  firewall: 'bg-red-500/20 text-red-300 border-red-500/30',
   complete: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
   custom: 'bg-pink-500/20 text-pink-300 border-pink-500/30',
 };

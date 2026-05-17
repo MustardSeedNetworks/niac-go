@@ -6,9 +6,7 @@
 
 devices:
   - name: asa5525-fw-01
-    # NIAC's validator currently accepts router/switch/ap/access-point/server/host.
-    # Firewalls model as routers with restrictive policy properties for now.
-    type: router
+    type: firewall
     mac: "00:1B:2C:04:01:01"
     ips:
       - "10.0.40.1"
