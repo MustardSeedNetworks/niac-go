@@ -44,6 +44,11 @@ interface Props {
   onClose: () => void;
 }
 
+// Approximate menu dimensions for the viewport-bounds clamp below.
+// Real width depends on item content but ~200px is conservative.
+const MENU_WIDTH = 200;
+const MENU_HEIGHT = 220;
+
 export const ContextMenu: FC<Props> = ({ x, y, items, onClose }) => {
   const handleItemClick = (e: ReactMouseEvent, item: ContextMenuItem) => {
     e.stopPropagation();
@@ -52,17 +57,26 @@ export const ContextMenu: FC<Props> = ({ x, y, items, onClose }) => {
     onClose();
   };
 
+  // Clamp the menu inside the viewport. Without this, right-clicking
+  // a node near the right edge of the canvas would push the menu
+  // off-screen — operators interpret that as "menu broken" when it's
+  // actually just rendered at x=clientX with no room. Flip the menu
+  // to open up/left when it would otherwise overflow.
+  const vw = typeof window !== 'undefined' ? window.innerWidth : 0;
+  const vh = typeof window !== 'undefined' ? window.innerHeight : 0;
+  const clampedX = vw > 0 && x + MENU_WIDTH > vw ? Math.max(0, vw - MENU_WIDTH - 8) : x;
+  const clampedY = vh > 0 && y + MENU_HEIGHT > vh ? Math.max(0, vh - MENU_HEIGHT - 8) : y;
+
   return (
     <div
       // Position-fixed in viewport space — coords come straight from
-      // the triggering event's clientX/clientY. Earlier attempts used
-      // absolute positioning relative to the canvas-parent, but
-      // ReactFlow's context-menu callbacks pass an event whose
-      // currentTarget is the node/edge element (not the canvas
-      // container), so subtracting that rect produced
-      // node-relative coords that pushed the menu off-screen.
-      className="fixed z-50 min-w-[180px] rounded-md border border-white/10 bg-gray-950/95 py-1 text-xs text-gray-200 shadow-xl backdrop-blur"
-      style={{ left: x, top: y }}
+      // the triggering event's clientX/clientY (then clamped above
+      // to keep the menu fully on-screen). z-index bumped to
+      // [9999] because the topology page sits inside a stacking
+      // context (the Card chrome creates one) and z-50 lost to
+      // ReactFlow's own overlay elements in earlier versions.
+      className="fixed z-[9999] min-w-[180px] rounded-md border border-white/10 bg-gray-950/95 py-1 text-xs text-gray-200 shadow-xl backdrop-blur"
+      style={{ left: clampedX, top: clampedY }}
       // Stop right-click on the menu itself from re-opening the pane
       // menu through ReactFlow's onPaneContextMenu.
       onContextMenu={(e) => e.preventDefault()}
