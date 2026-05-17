@@ -370,5 +370,61 @@ var modelTable = func() map[modelKey]modelEntry {
 		ifNameFormat: "Ethernet%d",
 	})
 
+	// ===== Aruba (AOS-CX + Instant) =====
+	add(modelEntry{
+		descriptor: ModelDescriptor{
+			Vendor: VendorAruba, Model: "cx-6300m-48g", Type: TypeSwitch,
+			Label:   "Aruba CX 6300M-48G (48× 1G PoE + 4× 25G)",
+			IfCount: ports48, SpeedMbps: speed1G,
+		},
+		sysDescr:     "Aruba JL663A 6300M 48G CL4 PoE 4SFP56 Swch, AOS-CX 10.13.1000",
+		sysObjectID:  "1.3.6.1.4.1.47196.4.1.1.3.123",
+		ifNameFormat: "1/1/%d",
+	})
+	add(modelEntry{
+		descriptor: ModelDescriptor{
+			Vendor: VendorAruba, Model: "iap-505", Type: TypeAccessPoint,
+			Label:   "Aruba Instant AP-505 (Wi-Fi 6)",
+			IfCount: ports4, SpeedMbps: speed1G,
+		},
+		sysDescr:     "Aruba AP-505 (RW), ArubaOS 8.11.1.0",
+		sysObjectID:  "1.3.6.1.4.1.14823.1.2.96",
+		ifNameFormat: "eth%d",
+	})
+
+	// ===== Extreme (EXOS) =====
+	add(modelEntry{
+		descriptor: ModelDescriptor{
+			Vendor: VendorExtreme, Model: "x440-g2-48t", Type: TypeSwitch,
+			Label:   "Extreme X440-G2-48t (48× 1G + 4× SFP, EDP+LLDP)",
+			IfCount: ports48, SpeedMbps: speed1G,
+		},
+		sysDescr:     "ExtremeXOS (X440G2-48t) version 31.7.1.4",
+		sysObjectID:  "1.3.6.1.4.1.1916.2.140",
+		ifNameFormat: "%d",
+	})
+	add(modelEntry{
+		descriptor: ModelDescriptor{
+			Vendor: VendorExtreme, Model: "x670-g2-48x", Type: TypeSwitch,
+			Label:   "Extreme X670-G2-48x (48× 10G SFP+ + 4× 40G)",
+			IfCount: ports48, SpeedMbps: speed10G,
+		},
+		sysDescr:     "ExtremeXOS (X670G2-48x) version 31.7.1.4",
+		sysObjectID:  "1.3.6.1.4.1.1916.2.139",
+		ifNameFormat: "%d",
+	})
+
+	// ===== HP / Aruba ProCurve =====
+	add(modelEntry{
+		descriptor: ModelDescriptor{
+			Vendor: VendorHP, Model: "procurve-2530-48", Type: TypeSwitch,
+			Label:   "HP ProCurve 2530-48 (48× 1G + 4× SFP)",
+			IfCount: ports48, SpeedMbps: speed1G,
+		},
+		sysDescr:     "HP ProCurve J9853A 2530-48 Switch, revision YA.16.10.0019",
+		sysObjectID:  "1.3.6.1.4.1.11.2.3.7.11.150",
+		ifNameFormat: "%d",
+	})
+
 	return out
 }()

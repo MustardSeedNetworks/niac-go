@@ -85,6 +85,12 @@ type Device struct {
 	IPerf3        *IPerf3Config        `yaml:"iperf3,omitempty"`         // v1.25.0
 	TrunkPorts    []TrunkPort          `yaml:"trunk_ports,omitempty"`    // v1.23.0 — topology link declarations
 	PortChannels  []PortChannel        `yaml:"port_channels,omitempty"`  // v1.23.0 — LAG bundling
+	// Properties is a free-form vendor-metadata block used by the
+	// vendor template pack (cmd/niac/templates/vendor-templates) to
+	// carry vendor / model / OS / port-config strings into the
+	// device list. Keys are author-defined; consumers treat unknown
+	// keys as informational.
+	Properties map[string]string `yaml:"properties,omitempty"`
 }
 
 // TrunkPort declares a VLAN-tagged trunk link to a neighbouring device.
