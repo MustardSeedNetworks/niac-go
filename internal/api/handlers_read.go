@@ -563,7 +563,18 @@ func (s *Server) handleRuntime(w http.ResponseWriter, r *http.Request) {
 	s.configMu.RUnlock()
 
 	if stack == nil {
-		http.Error(w, "no simulation running", http.StatusServiceUnavailable)
+		// Return a JSON envelope rather than the plain-text "no
+		// simulation running" message every other endpoint formerly
+		// used. Generic JSON clients (the UI, scripted curl, jq
+		// pipelines) couldn't parse the text response and were
+		// erroring on a valid not-running state. HTTP 200 + running:
+		// false matches the contract the simulation status endpoint
+		// already exposes.
+		s.writeJSON(w, map[string]any{
+			"running":        false,
+			"version":        s.cfg.Version,
+			"uptime_seconds": time.Since(s.startTime).Seconds(),
+		})
 
 		return
 	}

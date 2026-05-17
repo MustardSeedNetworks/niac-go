@@ -1,6 +1,7 @@
 package protocols
 
 import (
+	"context"
 	"encoding/binary"
 	"fmt"
 	"net"
@@ -141,7 +142,13 @@ func (h *LLDPHandler) Start() {
 	ticker := h.advertiseTicker
 
 	if h.stack.GetDebugLevel() >= 1 {
-		logging.ProtocolLogf("LLDP", "info", "Starting periodic advertisements (interval: %v)", LLDPAdvertiseInterval)
+		logging.ProtocolLogf(
+			context.Background(),
+			"LLDP",
+			logging.LevelInfo,
+			"Starting periodic advertisements (interval: %v)",
+			LLDPAdvertiseInterval,
+		)
 	}
 
 	go func() {
@@ -206,9 +213,23 @@ func (h *LLDPHandler) sendAdvertisements() {
 		if frame != nil {
 			err := h.sendFrame(device, frame)
 			if err != nil && debugLevel >= DebugLevelInfo {
-				logging.ProtocolLogf("LLDP", "error", "Error sending advertisement for %s: %v", device.Name, err)
+				logging.ProtocolLogf(
+					context.Background(),
+					"LLDP",
+					logging.LevelError,
+					"Error sending advertisement for %s: %v",
+					device.Name,
+					err,
+				)
 			} else if debugLevel >= DebugLevelVerbose {
-				logging.ProtocolLogf("LLDP", "info", "Sent advertisement for %s (%d bytes)", device.Name, len(frame))
+				logging.ProtocolLogf(
+					context.Background(),
+					"LLDP",
+					logging.LevelInfo,
+					"Sent advertisement for %s (%d bytes)",
+					device.Name,
+					len(frame),
+				)
 			}
 		}
 	}
@@ -595,7 +616,7 @@ func (h *LLDPHandler) HandlePacket(pkt *Packet) {
 
 	if debugLevel >= DebugLevelInfo {
 		logging.ProtocolLogf(
-			"LLDP", "info",
+			context.Background(), "LLDP", logging.LevelInfo,
 			"Neighbor %s via %s (local %s)",
 			entry.RemoteDevice, entry.RemotePort, entry.LocalDevice,
 		)

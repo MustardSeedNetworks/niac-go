@@ -1,4 +1,4 @@
-import type { FC, MouseEvent as ReactMouseEvent } from 'react';
+import { type FC, type MouseEvent as ReactMouseEvent, useCallback, useState } from 'react';
 
 /**
  * ContextMenu is the small popover shown on right-click of a node,
@@ -44,12 +44,38 @@ interface Props {
   onClose: () => void;
 }
 
-// Approximate menu dimensions for the viewport-bounds clamp below.
-// Real width depends on item content but ~200px is conservative.
-const MENU_WIDTH = 200;
-const MENU_HEIGHT = 220;
+// Conservative width estimate for first-paint clamping. The actual
+// width gets measured on mount and replaces this for subsequent
+// reflows, but the menu still needs SOME number on the very first
+// render before the layout effect has a chance to read offsetWidth.
+const INITIAL_MENU_WIDTH = 200;
+const INITIAL_MENU_HEIGHT = 32; // approx one item — favours opening downward on first render
 
 export const ContextMenu: FC<Props> = ({ x, y, items, onClose }) => {
+  // Measured dimensions seed from conservative defaults so the first
+  // render has values to clamp with; the ref callback below
+  // overwrites them once React commits the menu div. Replaces the
+  // old hard-coded MENU_HEIGHT=220 which over-clamped small (2-item)
+  // pane menus from the bottom edge while under-clamping potential
+  // future 10-item menus that would overflow.
+  const [size, setSize] = useState<{ w: number; h: number }>({
+    w: INITIAL_MENU_WIDTH,
+    h: INITIAL_MENU_HEIGHT,
+  });
+
+  // Ref callback measures the rendered div as soon as React commits
+  // it. Using a callback ref (instead of useLayoutEffect + useRef)
+  // sidesteps the exhaustive-deps lint complaint about passing the
+  // `items` prop as a dep — React fires the callback exactly when
+  // the element mounts. setSize's callback form bails out when the
+  // dimensions haven't changed, so re-renders with the same items
+  // are a no-op.
+  const menuRef = useCallback((el: HTMLDivElement | null) => {
+    if (!el) return;
+    const next = { w: el.offsetWidth, h: el.offsetHeight };
+    setSize((prev) => (prev.w === next.w && prev.h === next.h ? prev : next));
+  }, []);
+
   const handleItemClick = (e: ReactMouseEvent, item: ContextMenuItem) => {
     e.stopPropagation();
     if (item.disabled) return;
@@ -60,15 +86,15 @@ export const ContextMenu: FC<Props> = ({ x, y, items, onClose }) => {
   // Clamp the menu inside the viewport. Without this, right-clicking
   // a node near the right edge of the canvas would push the menu
   // off-screen — operators interpret that as "menu broken" when it's
-  // actually just rendered at x=clientX with no room. Flip the menu
-  // to open up/left when it would otherwise overflow.
+  // actually just rendered at x=clientX with no room.
   const vw = typeof window !== 'undefined' ? window.innerWidth : 0;
   const vh = typeof window !== 'undefined' ? window.innerHeight : 0;
-  const clampedX = vw > 0 && x + MENU_WIDTH > vw ? Math.max(0, vw - MENU_WIDTH - 8) : x;
-  const clampedY = vh > 0 && y + MENU_HEIGHT > vh ? Math.max(0, vh - MENU_HEIGHT - 8) : y;
+  const clampedX = vw > 0 && x + size.w > vw ? Math.max(0, vw - size.w - 8) : x;
+  const clampedY = vh > 0 && y + size.h > vh ? Math.max(0, vh - size.h - 8) : y;
 
   return (
     <div
+      ref={menuRef}
       // Position-fixed in viewport space — coords come straight from
       // the triggering event's clientX/clientY (then clamped above
       // to keep the menu fully on-screen). z-index bumped to

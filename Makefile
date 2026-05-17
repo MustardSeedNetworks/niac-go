@@ -147,6 +147,20 @@ VERSION_PKG=github.com/krisarmstrong/niac/internal/version
 GO_BUILD_FLAGS := -trimpath -buildvcs=false
 GOFLAGS=$(GO_BUILD_FLAGS)
 
+# Docker settings
+DOCKER_IMAGE?=niac
+DOCKER_TAG?=$(VERSION)
+
+# Directories — defined BEFORE UI_BUILD_HASH because that variable
+# uses `:=` (immediate evaluation) and references EMBED_DIR. Defining
+# EMBED_DIR after UI_BUILD_HASH meant the hash always evaluated
+# against an empty path and the embedded /__version endpoint reported
+# uiBuildHash="" in the make-build binary. The goreleaser pipeline
+# doesn't hit this because it sets uiBuildHash via its own ldflags.
+UI_DIR := ui
+UI_DIST := $(UI_DIR)/dist
+EMBED_DIR := internal/api/ui
+
 # UI build hash for deployment verification (generated from embedded assets)
 UI_BUILD_HASH := $(shell if [ -d "$(EMBED_DIR)" ] && [ -n "$$(ls -A $(EMBED_DIR) 2>/dev/null)" ]; then \
 	find $(EMBED_DIR) -type f -exec md5 -q {} \; 2>/dev/null | sort | md5 -q 2>/dev/null || \
@@ -160,15 +174,6 @@ GO_LDFLAGS = -s -w \
 	-X main.date=$(BUILD_TIME) \
 	-X main.uiBuildHash=$(UI_BUILD_HASH)
 LDFLAGS=$(GO_LDFLAGS)
-
-# Docker settings
-DOCKER_IMAGE?=niac
-DOCKER_TAG?=$(VERSION)
-
-# Directories
-UI_DIR := ui
-UI_DIST := $(UI_DIR)/dist
-EMBED_DIR := internal/api/ui
 
 # =============================================================================
 # Include Domain-Specific Makefiles
