@@ -129,10 +129,19 @@ function gridLayout(devices: DeviceSummary[]): DeviceNode[] {
  */
 function hierarchicalLayout(devices: DeviceSummary[], links: TopologyLink[]): DeviceNode[] {
   const g = new dagre.graphlib.Graph();
+  // Spacing tuned by trial against the kitchen-sink template:
+  //  - nodesep doubled (160 → 320) so siblings on the same rank
+  //    don't crowd each other; the trunk-edge floating labels
+  //    ("Gi0/1 ↔ Gi0/1 · VLANs 1-30") sit comfortably between cards.
+  //  - ranksep tripled (100+60 → 280) so the per-side interface
+  //    labels at each edge endpoint clear the cards above and below.
+  //  - edgesep added so dagre doesn't collapse parallel edges between
+  //    two ranks into a visual stack.
   g.setGraph({
     rankdir: 'TB',
-    nodesep: NODE_GAP_X,
-    ranksep: NODE_GAP_Y + 60,
+    nodesep: NODE_GAP_X * 2,
+    ranksep: NODE_GAP_Y + 180,
+    edgesep: 60,
     marginx: LAYOUT_LEFT_OFFSET,
     marginy: LAYOUT_TOP_OFFSET,
   });

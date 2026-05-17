@@ -43,18 +43,75 @@ export const NeighborsView: FC = () => {
   const [protocolFilter, setProtocolFilter] = useState<ProtocolFilter>('all');
   const [search, setSearch] = useState('');
 
+  // Deduped + filtered view. Real neighbour tables routinely show the
+  // same adjacency announced by multiple protocols (e.g. CDP + LLDP
+  // between two Cisco-or-mixed devices); the daemon emits one row per
+  // (protocol, chassis, port) so the underlying neighbour table can
+  // age each independently, but the human reading the table wants
+  // one row per adjacency with the protocol-set rolled up.
+  //
+  // We collapse on (localDevice, remoteDevice, remotePort) and merge
+  // the protocol strings into a comma-separated list. The "TTL" and
+  // "Last Seen" columns surface the most recent value across the
+  // collapsed group so the row reflects the freshest observation.
   const filtered = useMemo(() => {
     if (!neighbors) return [];
     const q = search.trim().toLowerCase();
-    return neighbors.filter((n) => {
-      if (protocolFilter !== 'all' && n.protocol !== protocolFilter) return false;
-      if (!q) return true;
-      return (
-        n.localDevice.toLowerCase().includes(q) ||
-        n.remoteDevice.toLowerCase().includes(q) ||
-        n.remoteChassisId.toLowerCase().includes(q) ||
-        n.remotePort.toLowerCase().includes(q)
-      );
+    const grouped = new Map<
+      string,
+      {
+        protocols: string[];
+        localDevice: string;
+        remoteDevice: string;
+        remotePort: string;
+        remoteChassisId: string;
+        managementAddress: string;
+        ttl: number;
+        lastSeen: string;
+        // Track the most recent lastSeen so updates win deterministically.
+        lastSeenMs: number;
+      }
+    >();
+    for (const n of neighbors) {
+      if (protocolFilter !== 'all' && n.protocol !== protocolFilter) continue;
+      if (q) {
+        const haystack =
+          `${n.localDevice} ${n.remoteDevice} ${n.remoteChassisId} ${n.remotePort}`.toLowerCase();
+        if (!haystack.includes(q)) continue;
+      }
+      const key = `${n.localDevice}|${n.remoteDevice}|${n.remotePort}`;
+      const tsMs = new Date(n.lastSeen).getTime();
+      const existing = grouped.get(key);
+      if (!existing) {
+        grouped.set(key, {
+          protocols: [n.protocol],
+          localDevice: n.localDevice,
+          remoteDevice: n.remoteDevice,
+          remotePort: n.remotePort,
+          remoteChassisId: n.remoteChassisId,
+          managementAddress: n.managementAddress,
+          ttl: n.ttl,
+          lastSeen: n.lastSeen,
+          lastSeenMs: Number.isFinite(tsMs) ? tsMs : 0,
+        });
+        continue;
+      }
+      if (!existing.protocols.includes(n.protocol)) {
+        existing.protocols.push(n.protocol);
+        existing.protocols.sort();
+      }
+      // Most recent wins for the variable fields.
+      if (Number.isFinite(tsMs) && tsMs > existing.lastSeenMs) {
+        existing.lastSeenMs = tsMs;
+        existing.lastSeen = n.lastSeen;
+        existing.ttl = n.ttl;
+        existing.managementAddress = n.managementAddress || existing.managementAddress;
+        existing.remoteChassisId = n.remoteChassisId || existing.remoteChassisId;
+      }
+    }
+    return [...grouped.values()].sort((a, b) => {
+      if (a.localDevice !== b.localDevice) return a.localDevice.localeCompare(b.localDevice);
+      return a.remoteDevice.localeCompare(b.remoteDevice);
     });
   }, [neighbors, protocolFilter, search]);
 
@@ -145,12 +202,14 @@ export const NeighborsView: FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
-                {filtered.map((n, idx) => (
+                {filtered.map((n) => (
                   <tr
-                    key={`${n.localDevice}-${n.remoteDevice}-${n.protocol}-${idx}`}
+                    key={`${n.localDevice}-${n.remoteDevice}-${n.remotePort}`}
                     className="text-gray-200 hover:bg-gray-950/40"
                   >
-                    <td className="px-4 py-2 font-mono text-xs text-cyan-300">{n.protocol}</td>
+                    <td className="px-4 py-2 font-mono text-xs text-cyan-300">
+                      {n.protocols.join(', ')}
+                    </td>
                     <td className="px-4 py-2">{n.localDevice}</td>
                     <td className="px-4 py-2">{n.remoteDevice}</td>
                     <td className="px-4 py-2 text-gray-400">{n.remotePort || '—'}</td>

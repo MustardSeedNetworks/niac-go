@@ -4,7 +4,6 @@ import {
   type Connection,
   Controls,
   type EdgeTypes,
-  MiniMap,
   type Node,
   type NodeTypes,
   Panel,
@@ -15,29 +14,32 @@ import {
 import { type FC, useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '@xyflow/react/dist/style.css';
-import { Download, Layers, Network, Radar, RefreshCw } from 'lucide-react';
+import { Network, Radar, RefreshCw } from 'lucide-react';
 import { fetchDevices, fetchNeighbors, fetchTopology } from '../api/client';
 import type { DeviceSummary } from '../api/types';
-import { topologyDeviceColors as deviceColors } from '../constants/device-types';
 import { useApiResource } from '../hooks/useApiResource';
 import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
 import { H2, SmallText } from '../ui/Typography';
 import {
+  ActionsMenu,
   ContextMenu,
-  type ContextMenuItem,
+  contextMenuItems,
   createEdges,
-  DEFAULT_LAYOUT_MODE,
   DeviceDetailsPanel,
   DeviceNode,
-  type DeviceNodeData,
   type DeviceNodeType,
   LAYOUT_MODES,
   type LayoutMode,
   type LinkEdge,
   layoutNodes,
   NeighborsView,
+  readSavedLayoutMode,
+  readSavedPositions,
+  TOPOLOGY_POSITIONS_KEY,
   TopologyLegend,
+  writeSavedLayoutMode,
+  writeSavedPositions,
 } from './topology';
 import { TrunkEdge } from './topology/TrunkEdge';
 
@@ -56,56 +58,9 @@ const edgeTypes: EdgeTypes = {
   trunk: TrunkEdge,
 };
 
-// Where we stash user-dragged node positions so they survive page
-// reloads. Keyed by device name → {x, y}. SSR-safe — no-ops if window
-// is undefined.
-const TOPOLOGY_POSITIONS_KEY = 'niac.topology.positions';
-// Layout mode persistence key — survives page reload like positions
-// do. Only valid values from LAYOUT_MODES are honoured; anything else
-// falls back to DEFAULT_LAYOUT_MODE.
-const TOPOLOGY_LAYOUT_MODE_KEY = 'niac.topology.layoutMode';
-
-function readSavedPositions(): Record<string, { x: number; y: number }> {
-  if (typeof window === 'undefined') return {};
-  try {
-    const raw = window.localStorage.getItem(TOPOLOGY_POSITIONS_KEY);
-    if (!raw) return {};
-    return JSON.parse(raw) as Record<string, { x: number; y: number }>;
-  } catch {
-    return {};
-  }
-}
-
-function writeSavedPositions(positions: Record<string, { x: number; y: number }>) {
-  if (typeof window === 'undefined') return;
-  try {
-    window.localStorage.setItem(TOPOLOGY_POSITIONS_KEY, JSON.stringify(positions));
-  } catch {
-    // Quota / privacy mode — silently skip; positions will reset on reload.
-  }
-}
-
-function readSavedLayoutMode(): LayoutMode {
-  if (typeof window === 'undefined') return DEFAULT_LAYOUT_MODE;
-  try {
-    const raw = window.localStorage.getItem(TOPOLOGY_LAYOUT_MODE_KEY);
-    if (LAYOUT_MODES.some((m) => m.mode === raw)) {
-      return raw as LayoutMode;
-    }
-  } catch {
-    // SSR / quota — fall through.
-  }
-  return DEFAULT_LAYOUT_MODE;
-}
-
-function writeSavedLayoutMode(mode: LayoutMode) {
-  if (typeof window === 'undefined') return;
-  try {
-    window.localStorage.setItem(TOPOLOGY_LAYOUT_MODE_KEY, mode);
-  } catch {
-    // No-op on quota / privacy mode.
-  }
-}
+// Persistence helpers (positions + layout mode) live in
+// ./topology/persistence.ts so this file stays under the 800-line
+// file-size red-flag threshold.
 
 /**
  * TopologyPage renders the network graph with the device-node and
@@ -135,10 +90,9 @@ export const TopologyPage: FC = () => {
   const [edges, setEdges, onEdgesChange] = useEdgesState<LinkEdge>([]);
   const [selectedDevice, setSelectedDevice] = useState<DeviceSummary | null>(null);
   const [showLegend, setShowLegend] = useState(true);
-  // Minimap defaults off — it's distracting for small graphs and most
-  // users will pan with the mouse anyway. Toggle on via the header
-  // button when working with larger topologies.
-  const [showMinimap, setShowMinimap] = useState(false);
+  // Minimap removed in this version — it was always toggle-off by
+  // default and operators didn't use it; the ReactFlow Controls
+  // (fit-view + zoom buttons) already cover navigation on big graphs.
   // showLabels controls whether TrunkEdge renders its per-side
   // interface labels + the middle VLAN/speed label. On by default
   // for clarity; toggle off via the header to see clean lines only.
@@ -404,41 +358,27 @@ export const TopologyPage: FC = () => {
   // mouse event + the node/edge object; we adjust coordinates into
   // the canvas-parent's local space so the menu pops where the
   // pointer is regardless of page scroll position.
+  // Context-menu handlers pass clientX/Y straight through to a
+  // position:fixed menu. Earlier attempts offset by the event's
+  // currentTarget rect — but ReactFlow's callbacks set currentTarget
+  // to the node/edge/pane element itself (not the canvas container),
+  // so the subtraction produced node-relative coords and the menu
+  // popped off-screen. Viewport-fixed is simpler and matches how
+  // every OS-native context menu behaves.
   const handleNodeContextMenu = useCallback((event: React.MouseEvent, node: Node) => {
     event.preventDefault();
-    const rect = event.currentTarget?.getBoundingClientRect?.();
-    setContextMenu({
-      kind: 'node',
-      x: event.clientX - (rect?.left ?? 0),
-      y: event.clientY - (rect?.top ?? 0),
-      nodeId: node.id,
-    });
+    setContextMenu({ kind: 'node', x: event.clientX, y: event.clientY, nodeId: node.id });
   }, []);
 
   const handleEdgeContextMenu = useCallback((event: React.MouseEvent, edge: { id: string }) => {
     event.preventDefault();
-    const rect = event.currentTarget?.getBoundingClientRect?.();
-    setContextMenu({
-      kind: 'edge',
-      x: event.clientX - (rect?.left ?? 0),
-      y: event.clientY - (rect?.top ?? 0),
-      edgeId: edge.id,
-    });
+    setContextMenu({ kind: 'edge', x: event.clientX, y: event.clientY, edgeId: edge.id });
   }, []);
 
   const handlePaneContextMenu = useCallback((event: React.MouseEvent | MouseEvent) => {
     event.preventDefault();
-    // ReactFlow's pane handler receives either a synthetic React event
-    // (when right-clicking the canvas itself) or a native MouseEvent.
-    // Both expose currentTarget; the cast is needed to read it as a
-    // DOM element.
-    const target = (event as React.MouseEvent).currentTarget as HTMLElement | undefined;
-    const rect = target?.getBoundingClientRect?.();
-    setContextMenu({
-      kind: 'pane',
-      x: (event as MouseEvent).clientX - (rect?.left ?? 0),
-      y: (event as MouseEvent).clientY - (rect?.top ?? 0),
-    });
+    const me = event as MouseEvent;
+    setContextMenu({ kind: 'pane', x: me.clientX, y: me.clientY });
   }, []);
 
   const closeContextMenu = useCallback(() => setContextMenu(null), []);
@@ -501,11 +441,35 @@ export const TopologyPage: FC = () => {
 
   const loading = topologyLoading || devicesLoading;
 
-  // Minimap node color function
-  const getMinimapNodeColor = useCallback((node: Node) => {
-    const nodeData = node.data as DeviceNodeData;
-    const nodeType = typeof nodeData?.type === 'string' ? nodeData.type.toLowerCase() : 'unknown';
-    return deviceColors[nodeType] || deviceColors.unknown;
+  // PNG export. Captures the ReactFlow viewport via the .react-flow
+  // root element; html-to-image walks the DOM, inlines computed
+  // styles, and rasterises to PNG. We snapshot at 2× pixel ratio so
+  // the image scales cleanly on Retina/4K screens.
+  const handleExportPNG = useCallback(async () => {
+    const root = document.querySelector<HTMLElement>('.react-flow');
+    if (!root) return;
+    try {
+      const { toPng } = await import('html-to-image');
+      const dataUrl = await toPng(root, {
+        pixelRatio: 2,
+        backgroundColor: '#0a0a0a',
+        cacheBust: true,
+        // Skip the ReactFlow controls + minimap chrome — viewers want
+        // the diagram, not the UI scaffolding.
+        filter: (node) =>
+          !(node instanceof HTMLElement) || !node.classList?.contains?.('react-flow__panel'),
+      });
+      const link = document.createElement('a');
+      link.href = dataUrl;
+      link.download = `niac-topology-${new Date().toISOString().slice(0, 10)}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      // Best-effort — surface in console rather than a modal since
+      // the PNG path is a convenience, not a primary flow.
+      console.error('Topology PNG export failed:', err); // eslint-disable-line no-console
+    }
   }, []);
 
   return (
@@ -574,23 +538,16 @@ export const TopologyPage: FC = () => {
               </Button>
               {view === 'graph' && (
                 <>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleExport}
-                    leftIcon={<Download className="w-4 h-4" />}
+                  {/* Actions dropdown — replaces the standalone Export
+                      button so PNG / JSON / Reset all live in one
+                      place. Also gives keyboard-only users the same
+                      actions exposed via right-click on the canvas. */}
+                  <ActionsMenu
                     disabled={nodes.length === 0}
-                  >
-                    Export
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleResetLayout}
-                    title="Reset hand-dragged positions + filters back to defaults"
-                  >
-                    Reset
-                  </Button>
+                    onExportPNG={handleExportPNG}
+                    onExportJSON={handleExport}
+                    onReset={handleResetLayout}
+                  />
                   <Button
                     variant={showLabels ? 'outline' : 'ghost'}
                     size="sm"
@@ -598,14 +555,6 @@ export const TopologyPage: FC = () => {
                     title="Toggle interface / VLAN / speed labels on edges"
                   >
                     Labels
-                  </Button>
-                  <Button
-                    variant={showMinimap ? 'outline' : 'ghost'}
-                    size="sm"
-                    onClick={() => setShowMinimap(!showMinimap)}
-                    leftIcon={<Layers className="w-4 h-4" />}
-                  >
-                    Minimap
                   </Button>
                   {/* Layout-mode picker — one pill per mode. The active
                       pill is highlighted; clicking another re-runs the
@@ -773,14 +722,6 @@ export const TopologyPage: FC = () => {
                     color="rgba(255, 255, 255, 0.05)"
                   />
                   <Controls showZoom={true} showFitView={true} showInteractive={false} />
-                  {showMinimap && (
-                    <MiniMap
-                      nodeColor={getMinimapNodeColor}
-                      maskColor="rgba(0, 0, 0, 0.8)"
-                      pannable={true}
-                      zoomable={true}
-                    />
-                  )}
 
                   {/* Legend Panel — only meaningful when there are edges
                       to colour. With zero edges the link-speed key is
@@ -837,117 +778,5 @@ export const TopologyPage: FC = () => {
     </div>
   );
 };
-
-/**
- * contextMenuItems builds the action list for a given menu target.
- * Factored out of the render path so the JSX stays tight and so each
- * menu's items are produced in one place rather than scattered inline.
- *
- * Item presence is data-driven — e.g. "Edit YAML" only appears when
- * the daemon knows the device (the menu was opened on a node whose
- * name is in the devices list), and "Filter to this VLAN" only
- * appears when the edge carries vlan data.
- */
-function contextMenuItems(
-  menu: { kind: 'node'; nodeId: string } | { kind: 'edge'; edgeId: string } | { kind: 'pane' },
-  ctx: {
-    edges: LinkEdge[];
-    hideDevice: (name: string) => void;
-    navigate: ReturnType<typeof useNavigate>;
-    setFocusedNodeId: (next: ((curr: string | null) => string | null) | string | null) => void;
-    setSelectedDevice: (device: DeviceSummary | null) => void;
-    devices: DeviceSummary[] | null;
-    handleResetLayout: () => void;
-    handleExport: () => void;
-    copyToClipboard: (text: string) => void;
-  },
-): ContextMenuItem[] {
-  switch (menu.kind) {
-    case 'node': {
-      const device = ctx.devices?.find((d) => d.name === menu.nodeId);
-      const items: ContextMenuItem[] = [
-        {
-          key: 'view',
-          label: 'View details',
-          onSelect: () => {
-            if (device) ctx.setSelectedDevice(device);
-          },
-          disabled: !device,
-        },
-        {
-          key: 'edit',
-          label: 'Edit YAML',
-          hint: 'devices →',
-          onSelect: () => ctx.navigate(`/device-config/${menu.nodeId}`),
-        },
-        {
-          key: 'focus',
-          label: 'Focus neighbourhood',
-          onSelect: () =>
-            ctx.setFocusedNodeId((curr: string | null) =>
-              curr === menu.nodeId ? null : menu.nodeId,
-            ),
-        },
-        {
-          key: 'copy-name',
-          label: 'Copy name',
-          onSelect: () => ctx.copyToClipboard(menu.nodeId),
-          separatorBefore: true,
-        },
-        {
-          key: 'hide',
-          label: 'Hide from view',
-          hint: 'until Reset',
-          destructive: true,
-          onSelect: () => ctx.hideDevice(menu.nodeId),
-          separatorBefore: true,
-        },
-      ];
-      return items;
-    }
-    case 'edge': {
-      const edge = ctx.edges.find((e) => e.id === menu.edgeId);
-      const ifacePair =
-        edge?.data?.sourceInterface || edge?.data?.targetInterface
-          ? `${edge?.source}:${edge?.data?.sourceInterface ?? '?'} ↔ ${edge?.target}:${edge?.data?.targetInterface ?? '?'}`
-          : `${edge?.source} ↔ ${edge?.target}`;
-      const items: ContextMenuItem[] = [
-        {
-          key: 'copy-pair',
-          label: 'Copy device/interface pair',
-          onSelect: () => ctx.copyToClipboard(ifacePair),
-        },
-      ];
-      // Only show VLAN actions when the edge actually carries VLAN
-      // data — keeps the menu short for access links / discovered
-      // edges that have nothing VLAN-shaped to filter on.
-      if (edge?.data?.vlans && edge.data.vlans.length > 0) {
-        const vlanList = edge.data.vlans.join(',');
-        items.push({
-          key: 'copy-vlans',
-          label: `Copy VLAN list (${edge.data.vlans.length})`,
-          onSelect: () => ctx.copyToClipboard(vlanList),
-        });
-      }
-      return items;
-    }
-    default:
-      return [
-        {
-          key: 'export',
-          label: 'Export topology JSON',
-          onSelect: ctx.handleExport,
-        },
-        {
-          key: 'reset',
-          label: 'Reset layout',
-          hint: 'clears drags / filters',
-          destructive: true,
-          onSelect: ctx.handleResetLayout,
-          separatorBefore: true,
-        },
-      ];
-  }
-}
 
 export default TopologyPage;

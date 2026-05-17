@@ -54,7 +54,14 @@ export const ContextMenu: FC<Props> = ({ x, y, items, onClose }) => {
 
   return (
     <div
-      className="absolute z-50 min-w-[180px] rounded-md border border-white/10 bg-gray-950/95 py-1 text-xs text-gray-200 shadow-xl backdrop-blur"
+      // Position-fixed in viewport space — coords come straight from
+      // the triggering event's clientX/clientY. Earlier attempts used
+      // absolute positioning relative to the canvas-parent, but
+      // ReactFlow's context-menu callbacks pass an event whose
+      // currentTarget is the node/edge element (not the canvas
+      // container), so subtracting that rect produced
+      // node-relative coords that pushed the menu off-screen.
+      className="fixed z-50 min-w-[180px] rounded-md border border-white/10 bg-gray-950/95 py-1 text-xs text-gray-200 shadow-xl backdrop-blur"
       style={{ left: x, top: y }}
       // Stop right-click on the menu itself from re-opening the pane
       // menu through ReactFlow's onPaneContextMenu.

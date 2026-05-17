@@ -35,6 +35,7 @@
     "@types/dagre": "0.7.53",
     "@xyflow/react": "12.10.2",
     "dagre": "0.8.5",
+    "html-to-image": "1.11.13",
     "immer": "11.1.6",
     "lucide-react": "0.562.0",
     "react": "19.2.5",

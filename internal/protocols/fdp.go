@@ -140,8 +140,13 @@ func (h *FDPHandler) sendAdvertisements() {
 			continue
 		}
 
-		// Skip if FDP is explicitly disabled for this device
-		if device.FDPConfig != nil && !device.FDPConfig.Enabled {
+		// FDP is Foundry/Brocade-proprietary. Like EDP, real-world
+		// gear from any other vendor doesn't speak it, so we require
+		// explicit opt-in (FDPConfig != nil && Enabled) to avoid
+		// every simulated device spamming FDP advertisements regardless
+		// of vendor. Closes the "every device emits FDP" bug observed
+		// via the Neighbors page in v0.67.x.
+		if device.FDPConfig == nil || !device.FDPConfig.Enabled {
 			continue
 		}
 
