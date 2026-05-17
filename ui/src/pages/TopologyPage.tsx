@@ -486,20 +486,29 @@ export const TopologyPage: FC = () => {
     URL.revokeObjectURL(url);
   }, [nodes, edges]);
 
-  // Refresh data by refetching from the API. We also bump the reset
+  // Refresh data by refetching from the API. We bump the reset
   // counter so the build-graph effect re-runs even when the data
-  // payload is identical — otherwise repeat clicks looked like no-ops
-  // because devices/topology references stayed the same and the
-  // effect's dep array didn't change. Force-fit at the end re-frames
-  // the canvas so the click visibly does something.
+  // payload is identical — otherwise repeat clicks looked like
+  // no-ops because devices/topology references stayed the same.
+  // Critical: await ALL refetches before scheduling fitView. Earlier
+  // versions used a fixed 150ms setTimeout and on slow networks
+  // the fitView fired against stale node positions, then the new
+  // data landed and the canvas snapped to a different frame —
+  // looked broken. requestAnimationFrame gives React one paint to
+  // commit the new layout before we re-frame.
   const handleRefresh = useCallback(() => {
-    refetchTopology();
-    refetchDevices();
-    refetchNeighbors();
     setResetCounter((n) => n + 1);
-    window.setTimeout(() => {
-      rfInstance.current?.fitView({ padding: 0.2, duration: 300 });
-    }, 150);
+    Promise.all([refetchTopology(), refetchDevices(), refetchNeighbors()])
+      .catch(() => {
+        // Refetch errors surface through the per-hook error states;
+        // nothing to do here besides making sure we still try the
+        // refit (better than freezing on a transient network blip).
+      })
+      .finally(() => {
+        window.requestAnimationFrame(() => {
+          rfInstance.current?.fitView({ padding: 0.2, duration: 300 });
+        });
+      });
   }, [refetchTopology, refetchDevices, refetchNeighbors]);
 
   const loading = topologyLoading || devicesLoading;

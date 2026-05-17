@@ -27,6 +27,14 @@ export interface DeviceSummary {
   type: string;
   ips: string[];
   protocols: string[];
+  /** Hardware MAC, lowercase-colon-separated; omitted when device has none. */
+  mac?: string;
+  /** Vendor key from the device's `properties.vendor` (e.g. "cisco"). */
+  vendor?: string;
+  /** Model from the device's `properties.model` (e.g. "C9300-48P"). */
+  model?: string;
+  /** Arbitrary device properties from the YAML config. */
+  properties?: Record<string, string>;
 }
 
 export interface HistoryRecord {

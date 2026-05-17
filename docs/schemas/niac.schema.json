@@ -257,6 +257,12 @@
             "$ref": "#/$defs/PortChannel"
           },
           "type": "array"
+        },
+        "properties": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
         }
       },
       "additionalProperties": false,

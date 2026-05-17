@@ -86,13 +86,20 @@ func convertPortChannels(in []converter.PortChannel) []PortChannel {
 	return out
 }
 
-// createBaseDevice creates a device with default values.
+// createBaseDevice creates a device with default values. The YAML
+// properties block (free-form vendor metadata: vendor/model/os/etc.)
+// is copied in first so subsequent special-case writes (vlan,
+// custom_mibs_count) extend it rather than dropping the originals.
 func createBaseDevice(yamlDevice converter.Device) Device {
+	props := make(map[string]string, len(yamlDevice.Properties))
+	for k, v := range yamlDevice.Properties {
+		props[k] = v
+	}
 	return Device{
 		Name:       yamlDevice.Name,
 		Type:       inferYAMLDeviceType(yamlDevice),
 		Interfaces: make([]Interface, 0),
-		Properties: make(map[string]string),
+		Properties: props,
 		SNMPConfig: SNMPConfig{
 			Community: DefaultSNMPCommunity,
 			SysName:   yamlDevice.Name,

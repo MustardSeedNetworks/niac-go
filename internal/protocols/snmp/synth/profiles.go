@@ -24,6 +24,9 @@ const (
 	VendorCiscoIOS  Vendor = "cisco-ios"
 	VendorJunos     Vendor = "junos"
 	VendorAristaEOS Vendor = "arista-eos"
+	VendorAruba     Vendor = "aruba"
+	VendorExtreme   Vendor = "extreme"
+	VendorHP        Vendor = "hp"
 	VendorGeneric   Vendor = "generic"
 	// VendorJuniperMist is the Mist-acquisition AP line. API-first, so
 	// the synthesised walk is minimal (system group + bare ifTable).
@@ -77,7 +80,7 @@ const (
 //
 //nolint:gochecknoglobals // static lookup
 var AllVendors = []Vendor{
-	VendorCiscoIOS, VendorJunos, VendorAristaEOS, VendorGeneric,
+	VendorCiscoIOS, VendorJunos, VendorAristaEOS, VendorAruba, VendorExtreme, VendorHP, VendorGeneric,
 }
 
 // DeviceType is the niac device.type string. Kept as a typed alias
@@ -283,6 +286,80 @@ var profileTable = func() map[profileKey]Profile {
 		withFlags(
 			arista("DCS-7280SR", "60", "Ethernet%d", defaultIfRouter, speed100G),
 			true, false, true, true,
+		),
+	)
+
+	// ---- Aruba (AOS-CX) ----
+	// CX 6300M = 48×1G campus access, AP-505 = Wi-Fi 6 indoor AP.
+	aruba := func(platform, oidSuffix, ifFmt string, n, speedMbps int) Profile {
+		return Profile{
+			SysDescr: fmt.Sprintf(
+				"Aruba JL663A %s, AOS-CX 10.13.1000", platform,
+			),
+			SysObjectID:    "1.3.6.1.4.1.47196.4.1.1.3." + oidSuffix,
+			IfNameFormat:   ifFmt,
+			DefaultIfCount: n,
+			IfSpeedMbps:    speedMbps,
+		}
+	}
+	add(
+		VendorAruba,
+		TypeSwitch,
+		withFlags(
+			aruba("6300M 48G PoE", "123", "1/1/%d", defaultIfSwitch, speed1G),
+			false, true, true, false,
+		),
+	)
+	add(
+		VendorAruba,
+		TypeAccessPoint,
+		withFlags(
+			aruba("AP-505", "96", "eth%d", defaultIfAP, speed1G),
+			false, false, true, false,
+		),
+	)
+
+	// ---- Extreme (EXOS) ----
+	// Extreme also runs EDP — flag stays set so the per-device emitter
+	// knows to populate the (minimal) extremeEdpNeighbor table.
+	extreme := func(platform, oidSuffix string, n, speedMbps int) Profile {
+		return Profile{
+			SysDescr: fmt.Sprintf(
+				"ExtremeXOS (%s) version 31.7.1.4", platform,
+			),
+			SysObjectID:    "1.3.6.1.4.1.1916.2." + oidSuffix,
+			IfNameFormat:   "%d", // EXOS uses bare port numbers
+			DefaultIfCount: n,
+			IfSpeedMbps:    speedMbps,
+		}
+	}
+	add(
+		VendorExtreme,
+		TypeSwitch,
+		withFlags(
+			extreme("X440G2-48t", "140", defaultIfSwitch, speed1G),
+			false, true, true, false,
+		),
+	)
+
+	// ---- HP / Aruba ProCurve (legacy ProCurve line) ----
+	hp := func(platform, oidSuffix string, n, speedMbps int) Profile {
+		return Profile{
+			SysDescr: fmt.Sprintf(
+				"HP ProCurve %s Switch, revision YA.16.10.0019", platform,
+			),
+			SysObjectID:    "1.3.6.1.4.1.11.2.3.7.11." + oidSuffix,
+			IfNameFormat:   "%d",
+			DefaultIfCount: n,
+			IfSpeedMbps:    speedMbps,
+		}
+	}
+	add(
+		VendorHP,
+		TypeSwitch,
+		withFlags(
+			hp("J9853A 2530-48", "150", defaultIfSwitch, speed1G),
+			false, true, true, false,
 		),
 	)
 

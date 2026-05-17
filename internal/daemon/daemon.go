@@ -30,8 +30,15 @@ var (
 )
 
 const (
-	// DefaultDebugLevel is the default debug level for capture engine.
-	DefaultDebugLevel = 0
+	// DefaultDebugLevel is the default debug level for the capture
+	// engine + protocol stack. Set to 1 (DebugLevelBasic) so the
+	// per-protocol "Starting periodic advertisements" lines and
+	// neighbor-discovery info messages reach the Debug Console out
+	// of the box. Without this the SSE log tee (PR #574) is wired
+	// correctly but operators see an empty Debug Console because
+	// every ProtocolLogf call gates on debugLevel >= 1. Per-packet
+	// verbose logging still requires raising the level explicitly.
+	DefaultDebugLevel = 1
 )
 
 // Config holds daemon configuration.
