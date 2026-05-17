@@ -163,7 +163,14 @@ jobs:
         env:
           UI_BUILD_HASH: ${{ needs.build-ui.outputs.ui_hash }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: goreleaser release --clean
+        # --skip=validate matches what `--snapshot` does on the dry-run
+        # path. Needed because the UI build downloaded into
+        # internal/api/ui/ overwrites tracked stubs (index.html with
+        # the prior bundle's hashed asset references), which goreleaser
+        # otherwise flags as "git is in a dirty state". PR-level CI
+        # already validates the same content via the dry-run snapshot
+        # in the parallel-rollout era, so trusting it here is safe.
+        run: goreleaser release --clean --skip=validate
 
       - name: Upload dry-run artifact bundle for inspection
         if: inputs.dry_run
