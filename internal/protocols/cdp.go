@@ -165,8 +165,14 @@ func (h *CDPHandler) sendAdvertisements() {
 			continue
 		}
 
-		// Skip if CDP is explicitly disabled for this device
-		if device.CDPConfig != nil && !device.CDPConfig.Enabled {
+		// CDP is Cisco-proprietary. We require explicit opt-in
+		// (CDPConfig != nil && Enabled) so non-Cisco devices in
+		// mixed-vendor configs don't announce themselves on a
+		// protocol they'd never actually run. Closes the
+		// "every device emits CDP" bug observed via the Neighbors
+		// page in v0.67.x. (LLDP — the IEEE standard — still
+		// defaults on for switch/router/AP via lldp.go.)
+		if device.CDPConfig == nil || !device.CDPConfig.Enabled {
 			continue
 		}
 

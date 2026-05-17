@@ -128,8 +128,14 @@ func (h *EDPHandler) sendAdvertisements() {
 			continue
 		}
 
-		// Skip if EDP is explicitly disabled for this device
-		if device.EDPConfig != nil && !device.EDPConfig.Enabled {
+		// EDP is Extreme-proprietary. Most real-world devices don't
+		// emit it — only ExtremeWare/EXOS hardware does. We require
+		// explicit opt-in (EDPConfig != nil && Enabled) so Cisco /
+		// Juniper / generic devices in mixed-vendor configs don't
+		// announce themselves on a protocol they'd never actually run.
+		// Closes the "every device emits EDP" bug observed via the
+		// Neighbors page in v0.67.x.
+		if device.EDPConfig == nil || !device.EDPConfig.Enabled {
 			continue
 		}
 

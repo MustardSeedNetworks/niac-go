@@ -103,6 +103,20 @@ type LLDPHandler struct {
 }
 
 // NewLLDPHandler creates a new LLDP handler.
+// lldpDefaultEnabledForType reports whether LLDP advertisements
+// should be emitted by default when LLDPConfig is nil. Switches,
+// routers, APs, firewalls, and VoIP phones all run LLDP out of the
+// box on real hardware; hosts and servers don't unless explicitly
+// configured.
+func lldpDefaultEnabledForType(deviceType string) bool {
+	switch strings.ToLower(deviceType) {
+	case "switch", "router", "access_point", "firewall", "voip_phone":
+		return true
+	default:
+		return false
+	}
+}
+
 func NewLLDPHandler(stack *Stack) *LLDPHandler {
 	return &LLDPHandler{
 		stack:    stack,
@@ -169,8 +183,21 @@ func (h *LLDPHandler) sendAdvertisements() {
 			continue
 		}
 
-		// Skip if LLDP is explicitly disabled for this device
-		if device.LLDPConfig != nil && !device.LLDPConfig.Enabled {
+		// LLDP is the IEEE 802.1AB standard — every modern
+		// network-infra device (switch / router / AP / firewall /
+		// VoIP phone) speaks it. Hosts and servers generally don't
+		// run it absent explicit opt-in, so default to the
+		// infra-device subset and let everything else require
+		// LLDPConfig.Enabled=true to participate.
+		//
+		// Companion to the CDP/EDP/FDP opt-in tightening: keeps the
+		// Neighbors page honest by not announcing LLDP from a generic
+		// Linux server that real-world wouldn't speak it.
+		if !lldpDefaultEnabledForType(device.Type) {
+			if device.LLDPConfig == nil || !device.LLDPConfig.Enabled {
+				continue
+			}
+		} else if device.LLDPConfig != nil && !device.LLDPConfig.Enabled {
 			continue
 		}
 

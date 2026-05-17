@@ -5,6 +5,8 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/krisarmstrong/niac-go/internal/library"
@@ -165,7 +167,121 @@ func (s *Server) handleLibraryFiles(w http.ResponseWriter, r *http.Request, kind
 			"Failed to list "+string(kind), nil)
 		return
 	}
+
+	// Fall through to candidate directories when the library subdir
+	// is empty. Without this, freshly-installed daemons return [] for
+	// /api/v1/library/pcaps even with example pcaps right there in
+	// the repo — and the Traffic page picker stays empty. Once an
+	// operator drops files into ~/.niac/library/{walks,pcaps}/ the
+	// fallback stops firing (library content wins).
+	//
+	// Candidates (in priority order):
+	//   1. Sim-config-relative dir (legacy collectFiles path, only
+	//      meaningful when a sim is running)
+	//   2. examples/captures/ relative to cwd (bundled in the repo)
+	//   3. examples/pcaps/ relative to cwd (older example layout)
+	if len(entries) == 0 {
+		if legacy, legacyErr := s.collectFiles(string(kind)); legacyErr == nil && len(legacy) > 0 {
+			s.writeJSON(w, libraryEntriesFromLegacy(legacy))
+			return
+		}
+		for _, candidate := range fallbackDirsForKind(kind) {
+			if extras := scanDirForExtensions(candidate, extensionsForKind(kind)); len(extras) > 0 {
+				s.writeJSON(w, extras)
+				return
+			}
+		}
+	}
 	s.writeJSON(w, entries)
+}
+
+// fallbackDirsForKind returns the ordered list of directories to scan
+// when the library subdir for `kind` is empty. Order matters — first
+// non-empty hit wins.
+func fallbackDirsForKind(kind library.Kind) []string {
+	switch kind {
+	case library.KindPcaps:
+		return []string{"examples/captures", "examples/pcaps"}
+	case library.KindWalks:
+		return []string{"examples/walks", "examples/device_walks_sanitized", "examples/device_walks"}
+	case library.KindNetworks:
+		// networks have their own bootstrap path (starter pack copies
+		// into the library on first run) and the live editor / picker
+		// flow doesn't need a cold-start fallback. Return nil so the
+		// caller treats it as "no candidates" rather than panicking.
+		return nil
+	default:
+		return nil
+	}
+}
+
+// extensionsForKind is the per-kind file extension allow-list used by
+// the candidate-dir scanner.
+func extensionsForKind(kind library.Kind) []string {
+	switch kind {
+	case library.KindPcaps:
+		return []string{".pcap", ".pcapng", ".cap"}
+	case library.KindWalks:
+		return []string{".walk", ".snmpwalk", ".txt"}
+	case library.KindNetworks:
+		// see fallbackDirsForKind — networks don't use this codepath.
+		return nil
+	default:
+		return nil
+	}
+}
+
+// scanDirForExtensions walks dir non-recursively, returning entries
+// whose extension matches one of `exts`. Errors (missing dir, perm
+// issues) are swallowed — the caller treats this as best-effort
+// fallback content.
+func scanDirForExtensions(dir string, exts []string) []library.FileEntry {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil
+	}
+	allowed := make(map[string]bool, len(exts))
+	for _, e := range exts {
+		allowed[e] = true
+	}
+	var out []library.FileEntry
+	for _, e := range entries {
+		if e.IsDir() {
+			continue
+		}
+		if !allowed[strings.ToLower(filepath.Ext(e.Name()))] {
+			continue
+		}
+		info, statErr := e.Info()
+		if statErr != nil {
+			continue
+		}
+		out = append(out, library.FileEntry{
+			Name:       e.Name(),
+			SizeBytes:  info.Size(),
+			ModifiedAt: info.ModTime().UTC(),
+			Source:     library.SourceUser,
+		})
+	}
+	return out
+}
+
+// libraryEntriesFromLegacy converts the legacy collectFiles result
+// shape (FileEntry with path / name / sizeBytes / modifiedAt) into
+// the library.FileEntry shape (name / sizeBytes / modifiedAt /
+// source). The legacy entries get source="user" since they originated
+// from the operator's filesystem layout, not the library bootstrap.
+func libraryEntriesFromLegacy(in []FileEntry) []library.FileEntry {
+	out := make([]library.FileEntry, len(in))
+	for i, e := range in {
+		out[i] = library.FileEntry{
+			Name:       e.Name,
+			SizeBytes:  e.SizeBytes,
+			ModifiedAt: e.Modified,
+			Source:     library.SourceUser,
+		}
+	}
+	return out
 }
 
 // handleLibraryWalks is the registered route handler for /api/v1/library/walks.
