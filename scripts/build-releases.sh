@@ -4,7 +4,7 @@ set -e
 VERSION="1.4.0"
 BUILD_DATE=$(date -u +"%Y-%m-%d")
 GIT_COMMIT=$(git rev-parse --short HEAD)
-LDFLAGS="-X main.version=${VERSION} -X main.date=${BUILD_DATE} -X main.commit=${GIT_COMMIT}"
+LDFLAGS="-X github.com/krisarmstrong/niac-go/internal/version.Version=${VERSION} -X github.com/krisarmstrong/niac-go/internal/version.BuildTime=${BUILD_DATE} -X github.com/krisarmstrong/niac-go/internal/version.Commit=${GIT_COMMIT}"
 
 echo "Building NIAC-Go v${VERSION} releases..."
 echo "Build date: ${BUILD_DATE}"

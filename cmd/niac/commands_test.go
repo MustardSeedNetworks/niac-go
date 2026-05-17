@@ -384,25 +384,6 @@ func TestShouldUseLegacyCommand(t *testing.T) {
 }
 
 func TestVersionInfoFunctions(t *testing.T) {
-	t.Run("isValidVersion", func(t *testing.T) {
-		tests := []struct {
-			version string
-			valid   bool
-		}{
-			{"v1.0.0", true},
-			{"1.0.0", true},
-			{"", false},
-			{"(devel)", false},
-		}
-
-		for _, tt := range tests {
-			result := isValidVersion(tt.version)
-			if result != tt.valid {
-				t.Errorf("isValidVersion(%q) = %v, want %v", tt.version, result, tt.valid)
-			}
-		}
-	})
-
 	t.Run("readVersionInfo", func(t *testing.T) {
 		info := readVersionInfo()
 		if info.version == "" {

@@ -12,8 +12,8 @@
 #   - Multi-arch builds (linux amd64/arm64, darwin amd64/arm64, windows
 #     amd64/arm64)
 #   - .tar.gz, .zip, .deb, .rpm
-#   - ldflags injection (version, commit, date, uiBuildHash) targeting
-#     niac's main.* package globals (not a separate version package)
+#   - ldflags injection (Version, Commit, BuildTime, UIBuildHash) into
+#     internal/version — canonical contract shared with seed and stem
 #   - cosign keyless signing of every artifact
 #   - syft SBOM per archive
 #   - SHA-256 checksums
@@ -53,10 +53,10 @@ builds:
       - -buildvcs=false
     ldflags: &ldflags
       - -s -w
-      - -X main.version={{.Version}}
-      - -X main.commit={{.Commit}}
-      - -X main.date={{.Date}}
-      - -X main.uiBuildHash={{.Env.UI_BUILD_HASH}}
+      - -X github.com/krisarmstrong/niac-go/internal/version.Version={{.Version}}
+      - -X github.com/krisarmstrong/niac-go/internal/version.Commit={{.Commit}}
+      - -X github.com/krisarmstrong/niac-go/internal/version.BuildTime={{.Date}}
+      - -X github.com/krisarmstrong/niac-go/internal/version.UIBuildHash={{.Env.UI_BUILD_HASH}}
     # Per-target cross-compile settings. goreleaser-cross has all of
     # these toolchains preinstalled; without them, building linux/arm64
     # from an amd64 host fails on cgo runtime ARM64 assembly.

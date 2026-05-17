@@ -132,7 +132,7 @@ container: ## Build container image locally (Pack/Buildpacks)
 	@pack build $(CONTAINER_IMAGE):$(VERSION) \
 		--builder paketobuildpacks/builder-jammy-base \
 		--env BP_GO_TARGETS="./cmd/niac" \
-		--env BP_GO_BUILD_LDFLAGS="-s -w -X $(VERSION_PKG).Version=$(VERSION) -X $(VERSION_PKG).Commit=$(COMMIT)"
+		--env BP_GO_BUILD_LDFLAGS="-s -w -X $(VERSION_PKG).Version=$(VERSION) -X $(VERSION_PKG).Commit=$(COMMIT) -X $(VERSION_PKG).BuildTime=$(BUILD_TIME) -X $(VERSION_PKG).UIBuildHash=$(UI_BUILD_HASH)"
 	@printf "$(GREEN)Container: $(CONTAINER_IMAGE):$(VERSION) (local)$(RESET)\n"
 
 # =============================================================================
