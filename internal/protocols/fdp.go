@@ -1,6 +1,7 @@
 package protocols
 
 import (
+	"context"
 	"encoding/binary"
 	"net"
 	"strings"
@@ -97,7 +98,13 @@ func (h *FDPHandler) Start() {
 	ticker := h.advertiseTicker
 
 	if h.stack.GetDebugLevel() >= 1 {
-		logging.ProtocolLogf("FDP", "info", "Starting periodic advertisements (interval: %v)", FDPAdvertiseInterval)
+		logging.ProtocolLogf(
+			context.Background(),
+			"FDP",
+			logging.LevelInfo,
+			"Starting periodic advertisements (interval: %v)",
+			FDPAdvertiseInterval,
+		)
 	}
 
 	go func() {
@@ -154,9 +161,23 @@ func (h *FDPHandler) sendAdvertisements() {
 		if frame != nil {
 			err := h.sendFrame(device, frame)
 			if err != nil && debugLevel >= DebugLevelInfo {
-				logging.ProtocolLogf("FDP", "error", "Error sending advertisement for %s: %v", device.Name, err)
+				logging.ProtocolLogf(
+					context.Background(),
+					"FDP",
+					logging.LevelError,
+					"Error sending advertisement for %s: %v",
+					device.Name,
+					err,
+				)
 			} else if debugLevel >= DebugLevelVerbose {
-				logging.ProtocolLogf("FDP", "info", "Sent advertisement for %s (%d bytes)", device.Name, len(frame))
+				logging.ProtocolLogf(
+					context.Background(),
+					"FDP",
+					logging.LevelInfo,
+					"Sent advertisement for %s (%d bytes)",
+					device.Name,
+					len(frame),
+				)
 			}
 		}
 	}
@@ -519,7 +540,7 @@ func (h *FDPHandler) logFDPNeighbor(entry NeighborRecord, _ *Packet) {
 	debugLevel := h.stack.GetDebugLevel()
 	if debugLevel >= DebugLevelInfo {
 		logging.ProtocolLogf(
-			"FDP", "info",
+			context.Background(), "FDP", logging.LevelInfo,
 			"Neighbor %s via %s (local %s)",
 			entry.RemoteDevice, entry.RemotePort, entry.LocalDevice,
 		)

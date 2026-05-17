@@ -1,6 +1,7 @@
 package protocols
 
 import (
+	"context"
 	"encoding/binary"
 	"fmt"
 	"net"
@@ -86,7 +87,13 @@ func (h *EDPHandler) Start() {
 	ticker := h.advertiseTicker
 
 	if h.stack.GetDebugLevel() >= 1 {
-		logging.ProtocolLogf("EDP", "info", "Starting periodic advertisements (interval: %v)", EDPAdvertiseInterval)
+		logging.ProtocolLogf(
+			context.Background(),
+			"EDP",
+			logging.LevelInfo,
+			"Starting periodic advertisements (interval: %v)",
+			EDPAdvertiseInterval,
+		)
 	}
 
 	go func() {
@@ -144,7 +151,14 @@ func (h *EDPHandler) sendAdvertisements() {
 		if frame != nil {
 			h.sendFrame(device, frame)
 			if debugLevel >= DebugLevelVerbose {
-				logging.ProtocolLogf("EDP", "info", "Sent advertisement for %s (%d bytes)", device.Name, len(frame))
+				logging.ProtocolLogf(
+					context.Background(),
+					"EDP",
+					logging.LevelInfo,
+					"Sent advertisement for %s (%d bytes)",
+					device.Name,
+					len(frame),
+				)
 			}
 		}
 	}
@@ -441,7 +455,7 @@ func (h *EDPHandler) HandlePacket(pkt *Packet) {
 	entry := buildEDPNeighborRecord(device.Name, parsed, fields)
 
 	if h.stack.GetDebugLevel() >= DebugLevelInfo && entry.RemoteDevice != "" {
-		logging.ProtocolLogf("EDP", "info", "Neighbor %s via %s (local %s)",
+		logging.ProtocolLogf(context.Background(), "EDP", logging.LevelInfo, "Neighbor %s via %s (local %s)",
 			entry.RemoteDevice, entry.RemotePort, entry.LocalDevice)
 	}
 
