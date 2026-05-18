@@ -97,6 +97,9 @@ tmp/
 logs/
 data/
 
+# UI source code lives under ui/src — never ignore it
+!ui/src/data/
+
 # Frontend
 node_modules/
 web/node_modules/

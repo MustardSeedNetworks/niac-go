@@ -1,34 +1,39 @@
-// Copyright (c) 2025 Mustard Seed Networks. All rights reserved.
+// Copyright (c) 2026 Mustard Seed Networks. All rights reserved.
 
 /**
  * Shared types for HelpDrawer components.
+ *
+ * Public types live in `/src/data/help-content.ts`. We re-export the ones
+ * the UI consumes to keep imports stable for the rest of the app.
  */
 
 import type { ReactNode } from 'react';
 
-export type HelpTab = 'features' | 'glossary' | 'shortcuts';
+export type {
+  Category,
+  ConfigField,
+  Example,
+  FAQEntry,
+  Feature,
+  GlossaryEntry,
+  HelpItem,
+  Metric,
+  Parameter,
+  Shortcut,
+  TestHelp,
+} from '../../data/help-content';
+
+export type HelpTab =
+  | 'overview'
+  | 'devices'
+  | 'protocols'
+  | 'commands'
+  | 'glossary'
+  | 'shortcuts'
+  | 'faq';
 
 export interface TabConfig {
   id: HelpTab;
   label: string;
   icon: ReactNode;
-}
-
-export interface Feature {
-  title: string;
-  description: string;
-  path: string;
-  badge?: string;
-}
-
-export interface GlossaryEntry {
-  term: string;
-  definition: string;
-  category: 'protocol' | 'concept' | 'device';
-}
-
-export interface Shortcut {
-  keys: string[];
-  description: string;
-  category: 'navigation' | 'actions' | 'general';
 }

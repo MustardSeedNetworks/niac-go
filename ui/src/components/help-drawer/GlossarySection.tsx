@@ -9,7 +9,7 @@
 import { Network } from 'lucide-react';
 import type { ReactElement } from 'react';
 import { useMemo } from 'react';
-import { GLOSSARY } from './data';
+import { GLOSSARY } from '../../data/help-content';
 import type { GlossaryEntry } from './types';
 
 interface GlossarySectionProps {
@@ -20,6 +20,8 @@ const CATEGORY_LABELS: Record<string, string> = {
   protocol: 'Protocols',
   concept: 'Concepts',
   device: 'Device Types',
+  niac: 'NIAC-Specific',
+  security: 'Security',
 };
 
 export function GlossarySection({ searchQuery }: GlossarySectionProps): ReactElement {
@@ -37,9 +39,14 @@ export function GlossarySection({ searchQuery }: GlossarySectionProps): ReactEle
       protocol: [],
       concept: [],
       device: [],
+      niac: [],
+      security: [],
     };
     for (const entry of filteredGlossary) {
-      groups[entry.category].push(entry);
+      const bucket = groups[entry.category];
+      if (bucket) {
+        bucket.push(entry);
+      }
     }
     return groups;
   }, [filteredGlossary]);
