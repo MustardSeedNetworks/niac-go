@@ -38,30 +38,12 @@
  * =============================================================================
  */
 
-// ============================================================================
-// COMPONENT VARIANTS
-// ============================================================================
 // biome-ignore lint/performance/noBarrelFile: Design system barrel file is intentional for API stability
-export { alert, badge, button, card, drawer, icon, input, modal, status } from './components';
-// ============================================================================
-// DEVICE COLORS
-// ============================================================================
-export { deviceColor, linkSpeedColor, protocolColor } from './device-colors';
-// ============================================================================
-// LAYOUT PATTERNS
-// ============================================================================
-export { border, layout, radius } from './layout';
-// ============================================================================
-// SPACING
-// ============================================================================
-export { spacing } from './spacing';
-// ============================================================================
-// TYPOGRAPHY
-// ============================================================================
-export { typography } from './typography';
-// ============================================================================
-// UTILITY FUNCTIONS
-// ============================================================================
+export { alert, badge, button, card, drawer, icon, input, modal, status } from './themeComponents';
+export { deviceColor, linkSpeedColor, protocolColor } from './themeDeviceColors';
+export { border, layout, radius } from './themeLayout';
+export { spacing } from './themeSpacing';
+export { typography } from './themeTypography';
 export {
   badgeClass,
   buttonClass,
@@ -71,4 +53,4 @@ export {
   getDeviceColor,
   inputClass,
   modalClass,
-} from './utils';
+} from './themeUtils';
