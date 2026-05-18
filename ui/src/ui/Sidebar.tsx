@@ -1,10 +1,21 @@
 import type { LucideIcon } from 'lucide-react';
-import { ChevronLeft, ChevronRight, HelpCircle, Menu, Network, Settings, X } from 'lucide-react';
+import {
+  ChevronLeft,
+  ChevronRight,
+  HelpCircle,
+  Menu,
+  Moon,
+  Network,
+  Settings,
+  Sun,
+  X,
+} from 'lucide-react';
 import { createElement, type FC, type ReactNode, useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { HelpDrawer } from '../components/HelpDrawer';
 import { SettingsDrawer } from '../components/SettingsDrawer';
 import { iconSizes } from '../constants/sizes';
+import { useTheme } from '../hooks/useTheme';
 import { prefetchRoute } from '../utils/prefetch';
 import { safeGetItem, safeSetItem } from '../utils/storage';
 import { ConnectionStatus } from './ConnectionStatus';
@@ -39,6 +50,7 @@ export const SidebarLayout: FC<SidebarProps> = ({ groups, version, children }) =
   const [mobileOpen, setMobileOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const { isDark, toggleTheme } = useTheme();
 
   // Save collapsed state
   useEffect(() => {
@@ -182,6 +194,24 @@ export const SidebarLayout: FC<SidebarProps> = ({ groups, version, children }) =
           >
             <Settings className={`${iconSizes.md} flex-shrink-0`} />
             {!collapsed && <span>Settings</span>}
+          </button>
+          <button
+            type="button"
+            onClick={toggleTheme}
+            className={`
+              ${collapsed ? 'w-full' : ''}
+              flex items-center ${collapsed ? 'justify-center' : 'gap-2'} px-3 py-2 rounded-lg
+              text-text-muted hover:text-text-primary hover:bg-surface-hover transition-colors
+              text-sm font-medium
+            `}
+            title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+            aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            {isDark ? (
+              <Sun className={`${iconSizes.md} flex-shrink-0`} aria-hidden="true" />
+            ) : (
+              <Moon className={`${iconSizes.md} flex-shrink-0`} aria-hidden="true" />
+            )}
           </button>
         </div>
 
