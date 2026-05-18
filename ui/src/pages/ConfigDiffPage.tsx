@@ -149,15 +149,15 @@ export const ConfigDiffPage: FC = () => {
   return (
     <div className="space-y-6">
       {/* Header section */}
-      <Card className="border-white/5 bg-gray-900/70">
+      <Card className="border-white/5 bg-bg-surface/70">
         <CardContent className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <H2 className="flex items-center gap-2">
-                <GitCompare className={`${iconSizes.lg} text-violet-300`} />
+                <GitCompare className={`${iconSizes.lg} text-brand-300`} />
                 Compare & Merge
               </H2>
-              <P className="text-gray-400 mt-1">
+              <P className="text-text-muted mt-1">
                 Compare two YAML network configs side-by-side and merge changes between them.
               </P>
             </div>
@@ -175,8 +175,8 @@ export const ConfigDiffPage: FC = () => {
             <div
               className={`flex items-center gap-2 rounded-lg p-3 ${
                 message.type === 'success'
-                  ? 'border border-green-500/30 bg-green-500/10 text-green-300'
-                  : 'border border-red-500/30 bg-red-500/10 text-red-300'
+                  ? 'border border-status-success/30 bg-status-success/10 text-status-success'
+                  : 'border border-status-error/30 bg-status-error/10 text-status-error'
               }`}
               role="alert"
             >
@@ -201,7 +201,7 @@ export const ConfigDiffPage: FC = () => {
 
       {/* File upload section */}
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card className="border-white/5 bg-gray-900/70">
+        <Card className="border-white/5 bg-bg-surface/70">
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <H2 className="text-lg">Original File</H2>
@@ -223,7 +223,7 @@ export const ConfigDiffPage: FC = () => {
           </CardContent>
         </Card>
 
-        <Card className="border-white/5 bg-gray-900/70">
+        <Card className="border-white/5 bg-bg-surface/70">
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <H2 className="text-lg">Modified File</H2>
@@ -249,10 +249,10 @@ export const ConfigDiffPage: FC = () => {
       {/* Diff viewer section */}
       {hasFiles && (
         <>
-          <Card className="border-white/5 bg-gray-900/70">
+          <Card className="border-white/5 bg-bg-surface/70">
             <CardContent className="space-y-4">
               <H2 className="flex items-center gap-2">
-                <GitCompare className={`${iconSizes.lg} text-cyan-300`} />
+                <GitCompare className={`${iconSizes.lg} text-status-info`} />
                 Side-by-Side Comparison
               </H2>
               <DiffViewer
@@ -281,15 +281,15 @@ export const ConfigDiffPage: FC = () => {
           />
 
           {/* Server-side overlay merge (CLI parity) */}
-          <Card className="border-white/5 bg-gray-900/70">
+          <Card className="border-white/5 bg-bg-surface/70">
             <CardContent className="space-y-3">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <H2 className="mb-1 flex items-center gap-2 text-lg">
-                    <Layers className={`${iconSizes.lg} text-violet-300`} />
+                    <Layers className={`${iconSizes.lg} text-brand-300`} />
                     Server-side overlay merge
                   </H2>
-                  <P className="text-sm text-gray-400">
+                  <P className="text-sm text-text-muted">
                     Treats the right file as an overlay applied to the left base — same semantics as{' '}
                     <code>niac config merge</code>. Devices in the overlay with the same name
                     REPLACE base entries; overlay-only devices are appended; base-only devices are
@@ -336,26 +336,26 @@ export const ConfigDiffPage: FC = () => {
 
       {/* Empty state when no files */}
       {!hasFiles && (
-        <Card className="border-white/5 bg-gray-900/70">
+        <Card className="border-white/5 bg-bg-surface/70">
           <CardContent className="py-12 text-center">
-            <GitCompare className={`mx-auto ${iconSizes['3xl']} text-gray-600`} />
+            <GitCompare className={`mx-auto ${iconSizes['3xl']} text-text-disabled`} />
             <H2 className="mt-4 mb-2">Ready to Compare</H2>
-            <P className="text-gray-400 max-w-md mx-auto">
+            <P className="text-text-muted max-w-md mx-auto">
               Upload two YAML configuration files above to see a side-by-side comparison with
               color-coded changes and interactive merge controls.
             </P>
             <div className="flex flex-wrap justify-center gap-4 mt-6">
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded bg-green-500" />
-                <SmallText className="text-gray-400">Additions</SmallText>
+                <div className="w-3 h-3 rounded bg-status-success" />
+                <SmallText className="text-text-muted">Additions</SmallText>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded bg-red-500" />
-                <SmallText className="text-gray-400">Deletions</SmallText>
+                <div className="w-3 h-3 rounded bg-status-error" />
+                <SmallText className="text-text-muted">Deletions</SmallText>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded bg-yellow-500" />
-                <SmallText className="text-gray-400">Modifications</SmallText>
+                <div className="w-3 h-3 rounded bg-status-warning" />
+                <SmallText className="text-text-muted">Modifications</SmallText>
               </div>
             </div>
           </CardContent>

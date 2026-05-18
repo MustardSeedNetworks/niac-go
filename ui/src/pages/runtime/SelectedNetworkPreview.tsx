@@ -146,26 +146,26 @@ export const SelectedNetworkPreview: FC<SelectedNetworkPreviewProps> = ({
   const displayName = uploadFile?.name ?? name;
 
   return (
-    <Card className="border-white/5 bg-gray-900/70">
+    <Card className="border-white/5 bg-bg-surface/70">
       <CardContent className="space-y-3">
         <div className="flex items-baseline justify-between gap-3">
           <H2 className="flex items-center gap-2 text-lg">
-            <Eye className={`${iconSizes.lg} text-violet-300`} />
+            <Eye className={`${iconSizes.lg} text-brand-300`} />
             Selected: {displayName}
           </H2>
-          <SmallText className="text-gray-500">Preview only — Start to launch</SmallText>
+          <SmallText className="text-text-muted">Preview only — Start to launch</SmallText>
         </div>
 
-        {loading && <SmallText className="text-gray-400">Loading preview…</SmallText>}
+        {loading && <SmallText className="text-text-muted">Loading preview…</SmallText>}
 
         {error && (
-          <SmallText className="text-red-300" role="alert">
+          <SmallText className="text-status-error" role="alert">
             Couldn't load preview: {error}
           </SmallText>
         )}
 
         {!loading && !error && devices.length === 0 && yamlText !== null && (
-          <SmallText className="text-gray-500 italic">
+          <SmallText className="text-text-muted italic">
             Picked config has no devices — nothing will run.
           </SmallText>
         )}
@@ -177,17 +177,17 @@ export const SelectedNetworkPreview: FC<SelectedNetworkPreviewProps> = ({
               return (
                 <li
                   key={d.name}
-                  className="rounded-lg border border-white/10 bg-gray-950/40 px-3 py-2"
+                  className="rounded-lg border border-white/10 bg-bg-base/40 px-3 py-2"
                 >
                   <div className="flex items-center gap-2">
-                    <Icon className={`${iconSizes.sm} text-gray-400`} />
-                    <span className="font-medium text-white">{d.name}</span>
+                    <Icon className={`${iconSizes.sm} text-text-muted`} />
+                    <span className="font-medium text-text-primary">{d.name}</span>
                     <Tag colorScheme="gray" className="text-[10px] capitalize">
                       {d.type}
                     </Tag>
                   </div>
                   {(d.mac || d.ips.length > 0) && (
-                    <div className="mt-1 font-mono text-[11px] text-gray-500">
+                    <div className="mt-1 font-mono text-[11px] text-text-muted">
                       {d.mac && <span>{d.mac}</span>}
                       {d.mac && d.ips.length > 0 && <span> · </span>}
                       {d.ips.length > 0 && <span>{d.ips.join(', ')}</span>}
@@ -209,7 +209,7 @@ export const SelectedNetworkPreview: FC<SelectedNetworkPreviewProps> = ({
         )}
 
         {devices.length > 0 && (
-          <SmallText className="text-gray-500">
+          <SmallText className="text-text-muted">
             {devices.length} {devices.length === 1 ? 'device' : 'devices'} will launch when Start is
             clicked.
           </SmallText>

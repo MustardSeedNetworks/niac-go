@@ -50,14 +50,14 @@ export const HttpSection: FC<ProtocolSectionProps> = ({
 
           {/* Endpoints */}
           <div className="space-y-3">
-            <h4 className="text-sm font-medium text-white flex items-center gap-2">
-              <FileText className={`${iconSizes.md} text-violet-400`} />
+            <h4 className="text-sm font-medium text-text-primary flex items-center gap-2">
+              <FileText className={`${iconSizes.md} text-brand-400`} />
               Endpoints
             </h4>
             {(device.http.endpoints || []).map((endpoint: HTTPEndpoint, index: number) => (
               <div
                 key={`${endpoint.method || 'GET'}-${endpoint.path || endpoint.statusCode || 'endpoint'}`}
-                className="rounded-lg border border-white/5 bg-gray-950/40 p-4 space-y-3"
+                className="rounded-lg border border-white/5 bg-bg-base/40 p-4 space-y-3"
               >
                 <div className="flex gap-2 items-center">
                   <select
@@ -70,7 +70,7 @@ export const HttpSection: FC<ProtocolSectionProps> = ({
                       };
                       updateHttp({ ...getHttpConfig(), endpoints });
                     }}
-                    className="w-24 rounded-lg border border-white/10 bg-gray-950/60 p-2 text-sm text-white focus:border-violet-400 focus:outline-none"
+                    className="w-24 rounded-lg border border-white/10 bg-bg-base/60 p-2 text-sm text-text-primary focus:border-brand-400 focus:outline-none"
                   >
                     <option value="GET">GET</option>
                     <option value="POST">POST</option>
@@ -89,7 +89,7 @@ export const HttpSection: FC<ProtocolSectionProps> = ({
                       updateHttp({ ...getHttpConfig(), endpoints });
                     }}
                     placeholder="/api/status"
-                    className="flex-1 rounded-lg border border-white/10 bg-gray-950/60 p-2 text-sm text-white placeholder-gray-500 focus:border-violet-400 focus:outline-none font-mono"
+                    className="flex-1 rounded-lg border border-white/10 bg-bg-base/60 p-2 text-sm text-text-primary placeholder-gray-500 focus:border-brand-400 focus:outline-none font-mono"
                   />
                   <input
                     type="number"
@@ -103,7 +103,7 @@ export const HttpSection: FC<ProtocolSectionProps> = ({
                       updateHttp({ ...getHttpConfig(), endpoints });
                     }}
                     placeholder="Status"
-                    className="w-20 rounded-lg border border-white/10 bg-gray-950/60 p-2 text-sm text-white placeholder-gray-500 focus:border-violet-400 focus:outline-none"
+                    className="w-20 rounded-lg border border-white/10 bg-bg-base/60 p-2 text-sm text-text-primary placeholder-gray-500 focus:border-brand-400 focus:outline-none"
                   />
                   <Button
                     variant="ghost"
@@ -132,7 +132,7 @@ export const HttpSection: FC<ProtocolSectionProps> = ({
                       updateHttp({ ...getHttpConfig(), endpoints });
                     }}
                     placeholder="Content-Type (e.g., application/json)"
-                    className="w-64 rounded-lg border border-white/10 bg-gray-950/60 p-2 text-sm text-white placeholder-gray-500 focus:border-violet-400 focus:outline-none"
+                    className="w-64 rounded-lg border border-white/10 bg-bg-base/60 p-2 text-sm text-text-primary placeholder-gray-500 focus:border-brand-400 focus:outline-none"
                   />
                   <input
                     type="text"
@@ -146,7 +146,7 @@ export const HttpSection: FC<ProtocolSectionProps> = ({
                       updateHttp({ ...getHttpConfig(), endpoints });
                     }}
                     placeholder="Response body"
-                    className="flex-1 rounded-lg border border-white/10 bg-gray-950/60 p-2 text-sm text-white placeholder-gray-500 focus:border-violet-400 focus:outline-none"
+                    className="flex-1 rounded-lg border border-white/10 bg-bg-base/60 p-2 text-sm text-text-primary placeholder-gray-500 focus:border-brand-400 focus:outline-none"
                   />
                 </div>
               </div>

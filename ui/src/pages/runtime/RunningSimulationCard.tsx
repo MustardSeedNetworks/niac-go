@@ -54,11 +54,11 @@ export const RunningSimulationCard: FC<RunningSimulationCardProps> = ({
   };
 
   return (
-    <Card className="border-green-500/30 bg-gradient-to-br from-green-900/30 to-gray-900/70">
+    <Card className="border-status-success/30 bg-gradient-to-br from-green-900/30 to-bg-surface/70">
       <CardContent className="space-y-5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="h-3 w-3 animate-pulse rounded-full bg-green-400" />
+            <div className="h-3 w-3 animate-pulse rounded-full bg-status-success" />
             <H2>Simulation Running</H2>
           </div>
           <Tag colorScheme="green">ACTIVE</Tag>
@@ -93,7 +93,9 @@ export const RunningSimulationCard: FC<RunningSimulationCardProps> = ({
         </div>
 
         {message && (
-          <SmallText className={message.tone === 'success' ? 'text-emerald-300' : 'text-red-400'}>
+          <SmallText
+            className={message.tone === 'success' ? 'text-status-success' : 'text-status-error'}
+          >
             {message.text}
           </SmallText>
         )}

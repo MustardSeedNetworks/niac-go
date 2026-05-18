@@ -41,9 +41,9 @@ type CardVariant = 'default' | 'elevated' | 'outlined' | 'ghost';
 
 const variantStyles: Record<CardVariant, string> = {
   default:
-    'backdrop-blur-xl bg-gradient-to-br from-gray-900/90 to-gray-900/70 border border-white/10 shadow-xl shadow-black/20',
+    'backdrop-blur-xl bg-gradient-to-br from-bg-surface/90 to-bg-surface/70 border border-white/10 shadow-xl shadow-black/20',
   elevated:
-    'backdrop-blur-xl bg-gradient-to-br from-gray-800/90 to-gray-900/80 border border-white/15 shadow-2xl shadow-black/30',
+    'backdrop-blur-xl bg-gradient-to-br from-bg-elevated/90 to-bg-surface/80 border border-white/15 shadow-2xl shadow-black/30',
   outlined: 'bg-transparent border border-white/20',
   ghost: 'bg-white/5 border border-transparent',
 };
@@ -179,15 +179,15 @@ export const StatusCard: FC<StatusCardProps> = ({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           {icon && (
-            <span className="text-gray-400 shrink-0 w-5 h-5" aria-hidden="true">
+            <span className="text-text-muted shrink-0 w-5 h-5" aria-hidden="true">
               {icon}
             </span>
           )}
           <div className="flex flex-col">
-            <h3 className="text-base font-semibold text-white" id={titleId}>
+            <h3 className="text-base font-semibold text-text-primary" id={titleId}>
               {title}
             </h3>
-            {subtitle && <p className="text-xs text-gray-400 leading-tight">{subtitle}</p>}
+            {subtitle && <p className="text-xs text-text-muted leading-tight">{subtitle}</p>}
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -281,24 +281,24 @@ export const CardValue: FC<CardValueProps> = ({
 }) => {
   const statusColor = status
     ? {
-        success: 'text-emerald-400',
-        warning: 'text-amber-400',
-        error: 'text-red-400',
-        info: 'text-cyan-400',
-        unknown: 'text-gray-400',
-        loading: 'text-cyan-400',
+        success: 'text-status-success',
+        warning: 'text-status-warning',
+        error: 'text-status-error',
+        info: 'text-status-info',
+        unknown: 'text-text-muted',
+        loading: 'text-status-info',
       }[status]
-    : 'text-white';
+    : 'text-text-primary';
 
   return (
     <div>
-      {label && <p className="text-xs text-gray-400 mb-1">{label}</p>}
+      {label && <p className="text-xs text-text-muted mb-1">{label}</p>}
       <p
         className={`${valueSizeClasses[size]} ${statusColor} ${mono ? 'font-mono tabular-nums' : ''}`}
         data-testid="card-value"
       >
         <span>{value}</span>
-        {unit && <span className="text-sm font-normal text-gray-500 ml-1">{unit}</span>}
+        {unit && <span className="text-sm font-normal text-text-muted ml-1">{unit}</span>}
       </p>
     </div>
   );
@@ -321,18 +321,18 @@ interface CardRowProps {
 export const CardRow: FC<CardRowProps> = ({ label, value, status, mono = false }) => {
   const statusColor = status
     ? {
-        success: 'text-emerald-400',
-        warning: 'text-amber-400',
-        error: 'text-red-400',
-        info: 'text-cyan-400',
-        unknown: 'text-gray-400',
-        loading: 'text-cyan-400',
+        success: 'text-status-success',
+        warning: 'text-status-warning',
+        error: 'text-status-error',
+        info: 'text-status-info',
+        unknown: 'text-text-muted',
+        loading: 'text-status-info',
       }[status]
-    : 'text-white';
+    : 'text-text-primary';
 
   return (
     <div className="flex justify-between items-center py-1">
-      <span className="text-sm text-gray-400 shrink-0">{label}</span>
+      <span className="text-sm text-text-muted shrink-0">{label}</span>
       <span
         className={`text-sm font-medium ${statusColor} ${mono ? 'font-mono tabular-nums' : ''} truncate text-right`}
         title={String(value)}
@@ -369,10 +369,10 @@ interface StatCardProps {
 export const StatCard: FC<StatCardProps> = ({ label, value, icon, trend, className = '' }) => {
   const trendColor = trend
     ? trend.value > 0
-      ? 'text-emerald-400'
+      ? 'text-status-success'
       : trend.value < 0
-        ? 'text-red-400'
-        : 'text-gray-400'
+        ? 'text-status-error'
+        : 'text-text-muted'
     : '';
 
   const trendIcon = trend ? (trend.value > 0 ? '↑' : trend.value < 0 ? '↓' : '→') : '';
@@ -381,15 +381,15 @@ export const StatCard: FC<StatCardProps> = ({ label, value, icon, trend, classNa
     <Card className={className} hover={true}>
       <CardContent className="space-y-2">
         <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-gray-400">{label}</span>
+          <span className="text-sm font-medium text-text-muted">{label}</span>
           {icon && <span className="text-brand-400">{icon}</span>}
         </div>
         <div className="flex items-end justify-between gap-2">
-          <span className="text-3xl font-bold text-white">{value}</span>
+          <span className="text-3xl font-bold text-text-primary">{value}</span>
           {trend && (
             <span className={`text-sm font-medium ${trendColor}`}>
               {trendIcon} {Math.abs(trend.value)}%
-              {trend.label && <span className="text-gray-500 ml-1">{trend.label}</span>}
+              {trend.label && <span className="text-text-muted ml-1">{trend.label}</span>}
             </span>
           )}
         </div>

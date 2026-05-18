@@ -27,9 +27,9 @@ export function FeaturesSection({ searchQuery }: FeaturesSectionProps): ReactEle
 
   return (
     <div className="space-y-3">
-      <h3 className="text-sm font-semibold text-white">Quick Reference</h3>
+      <h3 className="text-sm font-semibold text-text-primary">Quick Reference</h3>
       {filteredFeatures.length === 0 ? (
-        <p className="text-sm text-gray-500 py-4 text-center">No features match your search.</p>
+        <p className="text-sm text-text-muted py-4 text-center">No features match your search.</p>
       ) : (
         <div className="space-y-2">
           {filteredFeatures.map((feature) => (
@@ -50,7 +50,7 @@ function FeatureCard({ feature }: FeatureCardProps): ReactElement {
     <div className="bg-white/5 rounded-lg p-3 hover:bg-white/10 transition-colors">
       <div className={layout.flex.between}>
         <div className={layout.inline.default}>
-          <h4 className="text-sm font-medium text-white">{feature.title}</h4>
+          <h4 className="text-sm font-medium text-text-primary">{feature.title}</h4>
           {feature.badge && (
             <span
               className={cn(
@@ -63,9 +63,9 @@ function FeatureCard({ feature }: FeatureCardProps): ReactElement {
             </span>
           )}
         </div>
-        <code className="text-xs text-gray-500">{feature.path}</code>
+        <code className="text-xs text-text-muted">{feature.path}</code>
       </div>
-      <p className="text-xs text-gray-400 mt-1">{feature.description}</p>
+      <p className="text-xs text-text-muted mt-1">{feature.description}</p>
     </div>
   );
 }

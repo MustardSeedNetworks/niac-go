@@ -47,7 +47,7 @@ const DeviceListCard: FC = () => {
     <BaseCard<DeviceSummary[]>
       title="Config workspace"
       subtitle="Devices rendered from active YAML config"
-      icon={<Server className={`${iconSizes.lg} text-cyan-300`} />}
+      icon={<Server className={`${iconSizes.lg} text-status-info`} />}
       data={devices}
       loading={loading && !devices}
       error={error?.message}
@@ -72,7 +72,7 @@ const DeviceTable = memo(({ devices }: { devices: DeviceSummary[] }) => {
 
   if (devices.length === 0) {
     return (
-      <div className="rounded-xl border border-white/5 bg-gray-950/50 p-8 text-center text-gray-400">
+      <div className="rounded-xl border border-white/5 bg-bg-base/50 p-8 text-center text-text-muted">
         No devices defined in the loaded configuration.
       </div>
     );
@@ -82,7 +82,7 @@ const DeviceTable = memo(({ devices }: { devices: DeviceSummary[] }) => {
     return (
       <div className="overflow-x-auto rounded-xl border border-white/5">
         <table className="min-w-full divide-y divide-white/10 text-sm">
-          <thead className="bg-gray-900/60 text-xs uppercase tracking-wide text-gray-400">
+          <thead className="bg-bg-surface/60 text-xs uppercase tracking-wide text-text-muted">
             <tr>
               <th className="px-4 py-3 text-left">Device</th>
               <th className="px-4 py-3 text-left">Type</th>
@@ -90,7 +90,7 @@ const DeviceTable = memo(({ devices }: { devices: DeviceSummary[] }) => {
               <th className="px-4 py-3 text-left">Protocols</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-white/5 text-gray-300">
+          <tbody className="divide-y divide-white/5 text-text-secondary">
             {devices.map((device) => (
               <DeviceRow key={device.name} device={device} />
             ))}
@@ -102,7 +102,7 @@ const DeviceTable = memo(({ devices }: { devices: DeviceSummary[] }) => {
 
   return (
     <div className="rounded-xl border border-white/5">
-      <div className="bg-gray-900/60 px-4 py-2 text-xs text-gray-400">
+      <div className="bg-bg-surface/60 px-4 py-2 text-xs text-text-muted">
         Showing {virtualScroll.visibleItems.length} of {devices.length} devices (virtual scrolling
         enabled)
       </div>
@@ -110,7 +110,7 @@ const DeviceTable = memo(({ devices }: { devices: DeviceSummary[] }) => {
         <div {...virtualScroll.spacerProps}>
           <div {...virtualScroll.contentProps}>
             <table className="min-w-full divide-y divide-white/10 text-sm">
-              <thead className="bg-gray-900/60 text-xs uppercase tracking-wide text-gray-400">
+              <thead className="bg-bg-surface/60 text-xs uppercase tracking-wide text-text-muted">
                 <tr>
                   <th className="px-4 py-3 text-left">Device</th>
                   <th className="px-4 py-3 text-left">Type</th>
@@ -118,7 +118,7 @@ const DeviceTable = memo(({ devices }: { devices: DeviceSummary[] }) => {
                   <th className="px-4 py-3 text-left">Protocols</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/5 text-gray-300">
+              <tbody className="divide-y divide-white/5 text-text-secondary">
                 {virtualScroll.visibleItems.map(({ item: device }) => (
                   <DeviceRow key={device.name} device={device} />
                 ))}
@@ -138,7 +138,7 @@ DeviceTable.displayName = 'DeviceTable';
  */
 const DeviceRow = memo(({ device }: { device: DeviceSummary }) => (
   <tr>
-    <td className="px-4 py-3 font-semibold text-white">{device.name}</td>
+    <td className="px-4 py-3 font-semibold text-text-primary">{device.name}</td>
     <td className="px-4 py-3">{device.type}</td>
     <td className="px-4 py-3 font-mono text-xs">{device.ips.join(', ') || '—'}</td>
     <td className="px-4 py-3">
@@ -148,7 +148,7 @@ const DeviceRow = memo(({ device }: { device: DeviceSummary }) => (
             {proto}
           </Tag>
         ))}
-        {device.protocols.length === 0 && <SmallText className="text-gray-400">None</SmallText>}
+        {device.protocols.length === 0 && <SmallText className="text-text-muted">None</SmallText>}
       </div>
     </td>
   </tr>
@@ -235,7 +235,7 @@ const ConfigEditorCard: FC = () => {
       <BaseCard
         title="YAML editor"
         subtitle="Edit active configuration"
-        icon={<FileCog className={`${iconSizes.lg} text-emerald-300`} />}
+        icon={<FileCog className={`${iconSizes.lg} text-status-success`} />}
         data={null}
         emptyMessage="No simulation is running. Pick a network on Simulation and start it to see and edit the running YAML here."
         getStatus={() => 'success'}
@@ -249,7 +249,7 @@ const ConfigEditorCard: FC = () => {
     <BaseCard<{ content: string; path: string; modifiedAt: string; sizeBytes: number }>
       title="YAML editor"
       subtitle="Edit active configuration"
-      icon={<FileCog className={`${iconSizes.lg} text-emerald-300`} />}
+      icon={<FileCog className={`${iconSizes.lg} text-status-success`} />}
       data={data}
       loading={loading && !data}
       error={error?.message}
@@ -261,14 +261,16 @@ const ConfigEditorCard: FC = () => {
           <CardRow label="Updated" value={formatTime(cfg.modifiedAt)} />
           <CardRow label="Size" value={formatBytes(cfg.sizeBytes)} />
           <textarea
-            className="mt-3 h-72 w-full rounded-xl border border-white/10 bg-gray-950/70 p-3 font-mono text-sm text-white shadow-inner focus:border-violet-400 focus:outline-none"
+            className="mt-3 h-72 w-full rounded-xl border border-white/10 bg-bg-base/70 p-3 font-mono text-sm text-text-primary shadow-inner focus:border-brand-400 focus:outline-none"
             value={value}
             onChange={handleChange}
             spellCheck={false}
             disabled={loading || saving}
           />
           {status && (
-            <SmallText className={status.tone === 'success' ? 'text-emerald-300' : 'text-red-400'}>
+            <SmallText
+              className={status.tone === 'success' ? 'text-status-success' : 'text-status-error'}
+            >
               {status.message}
             </SmallText>
           )}
@@ -285,7 +287,7 @@ const ConfigEditorCard: FC = () => {
               Discard changes
             </Button>
           </div>
-          <SmallText className="mt-2 text-gray-400">
+          <SmallText className="mt-2 text-text-muted">
             Save runs the same validation as <code>niac validate</code>, writes the YAML to disk,
             then diff-reloads the running stack — added devices spin up, removed devices stop,
             existing devices are updated in place.
@@ -309,16 +311,16 @@ const WalkFileBrowser: FC<{
   }
   return (
     <div className="space-y-2">
-      <SmallText className="text-gray-400">Available SNMP walks</SmallText>
-      <div className="max-h-48 space-y-1 overflow-y-auto rounded-xl border border-white/10 bg-gray-950/50 p-2 text-sm text-gray-300">
+      <SmallText className="text-text-muted">Available SNMP walks</SmallText>
+      <div className="max-h-48 space-y-1 overflow-y-auto rounded-xl border border-white/10 bg-bg-base/50 p-2 text-sm text-text-secondary">
         {files.map((file) => (
           <div
             key={file.name}
-            className="flex items-center justify-between gap-2 rounded-lg border border-white/5 bg-gray-900/50 px-3 py-2"
+            className="flex items-center justify-between gap-2 rounded-lg border border-white/5 bg-bg-surface/50 px-3 py-2"
           >
             <div>
-              <p className="text-white">{file.name}</p>
-              <SmallText className="text-gray-500 capitalize">{file.source}</SmallText>
+              <p className="text-text-primary">{file.name}</p>
+              <SmallText className="text-text-muted capitalize">{file.source}</SmallText>
             </div>
             <Button size="sm" variant="outline" onClick={() => onCopy(file.name)}>
               Copy name

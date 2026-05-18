@@ -226,13 +226,13 @@ export const PcapAnalyzerPage: FC = () => {
       {analysisResult && (
         <>
           {/* Controls Header */}
-          <Card className="border-white/5 bg-gray-900/70">
+          <Card className="border-white/5 bg-bg-surface/70">
             <CardContent>
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 {/* Title and file info */}
                 <div className="flex items-center gap-4">
                   <H2 className="flex items-center gap-2">
-                    <FileSearch className={`${iconSizes.lg} text-violet-400`} />
+                    <FileSearch className={`${iconSizes.lg} text-brand-400`} />
                     PCAP Analysis
                   </H2>
                   <Tag colorScheme="green">{analysisResult.packets.length} packets</Tag>
@@ -241,14 +241,14 @@ export const PcapAnalyzerPage: FC = () => {
                 {/* Control buttons */}
                 <div className="flex flex-wrap items-center gap-2">
                   {/* View Mode Toggle */}
-                  <div className="flex rounded-lg border border-white/10 bg-gray-950/50 p-1">
+                  <div className="flex rounded-lg border border-white/10 bg-bg-base/50 p-1">
                     <button
                       type="button"
                       onClick={() => setViewMode('packets')}
                       className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
                         viewMode === 'packets'
-                          ? 'bg-violet-600 text-white'
-                          : 'text-gray-400 hover:text-white'
+                          ? 'bg-brand-600 text-text-primary'
+                          : 'text-text-muted hover:text-text-primary'
                       }`}
                     >
                       Packets
@@ -258,8 +258,8 @@ export const PcapAnalyzerPage: FC = () => {
                       onClick={() => setViewMode('stats')}
                       className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
                         viewMode === 'stats'
-                          ? 'bg-violet-600 text-white'
-                          : 'text-gray-400 hover:text-white'
+                          ? 'bg-brand-600 text-text-primary'
+                          : 'text-text-muted hover:text-text-primary'
                       }`}
                     >
                       Statistics
@@ -269,8 +269,8 @@ export const PcapAnalyzerPage: FC = () => {
                       onClick={() => setViewMode('conversations')}
                       className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
                         viewMode === 'conversations'
-                          ? 'bg-violet-600 text-white'
-                          : 'text-gray-400 hover:text-white'
+                          ? 'bg-brand-600 text-text-primary'
+                          : 'text-text-muted hover:text-text-primary'
                       }`}
                     >
                       Conversations
@@ -343,9 +343,9 @@ export const PcapAnalyzerPage: FC = () => {
                 {/* Right panel - Details */}
                 <div className="lg:col-span-5 xl:col-span-4 space-y-6">
                   {/* Hex Dump Viewer */}
-                  <Card className="border-white/5 bg-gray-900/70 h-[280px]">
+                  <Card className="border-white/5 bg-bg-surface/70 h-[280px]">
                     <CardContent className="h-full flex flex-col">
-                      <SmallText className="text-gray-400 uppercase tracking-wide font-semibold mb-3">
+                      <SmallText className="text-text-muted uppercase tracking-wide font-semibold mb-3">
                         Hex Dump
                       </SmallText>
                       <div className="flex-1 min-h-0">
@@ -359,9 +359,9 @@ export const PcapAnalyzerPage: FC = () => {
                   </Card>
 
                   {/* Packet Details */}
-                  <Card className="border-white/5 bg-gray-900/70 h-[280px]">
+                  <Card className="border-white/5 bg-bg-surface/70 h-[280px]">
                     <CardContent className="h-full flex flex-col">
-                      <SmallText className="text-gray-400 uppercase tracking-wide font-semibold mb-3">
+                      <SmallText className="text-text-muted uppercase tracking-wide font-semibold mb-3">
                         Packet Details
                       </SmallText>
                       <div className="flex-1 min-h-0 overflow-y-auto">
@@ -398,13 +398,13 @@ export const PcapAnalyzerPage: FC = () => {
 
       {/* Info Banner when no file is loaded */}
       {!(analysisResult || selectedFile) && (
-        <Card className="border-white/5 bg-gray-900/70">
+        <Card className="border-white/5 bg-bg-surface/70">
           <CardContent>
             <div className="flex items-start gap-3">
-              <Info className={`${iconSizes.lg} text-blue-400 flex-shrink-0 mt-0.5`} />
+              <Info className={`${iconSizes.lg} text-status-info flex-shrink-0 mt-0.5`} />
               <div>
-                <p className="font-medium text-white">About PCAP Analyzer</p>
-                <SmallText className="text-gray-400">
+                <p className="font-medium text-text-primary">About PCAP Analyzer</p>
+                <SmallText className="text-text-muted">
                   Upload a PCAP or PCAPNG file to analyze network traffic. The analyzer will parse
                   packets and provide detailed statistics, protocol breakdown, and packet-level
                   inspection including hex dump viewing.

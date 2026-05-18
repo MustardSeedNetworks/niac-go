@@ -55,7 +55,7 @@ export const Tooltip: FC<TooltipProps> = ({ text, side = 'top', children, classN
       <span
         id={id}
         role="tooltip"
-        className={`pointer-events-none absolute z-50 max-w-xs whitespace-normal rounded-md bg-gray-950/95 px-2 py-1 text-xs text-gray-100 ring-1 ring-white/10 transition-opacity duration-100 ${sideClass[side]} ${open ? 'opacity-100' : 'opacity-0'}`}
+        className={`pointer-events-none absolute z-50 max-w-xs whitespace-normal rounded-md bg-bg-base/95 px-2 py-1 text-xs text-text-primary ring-1 ring-white/10 transition-opacity duration-100 ${sideClass[side]} ${open ? 'opacity-100' : 'opacity-0'}`}
       >
         {text}
       </span>

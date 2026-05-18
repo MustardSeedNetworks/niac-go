@@ -34,18 +34,18 @@ export const ConfirmModal: FC<ConfirmModalProps> = ({
           <AlertTriangle
             className={`${iconSizes.xl} ${
               confirmTone === 'red'
-                ? 'text-red-400'
+                ? 'text-status-error'
                 : confirmTone === 'blue'
-                  ? 'text-blue-400'
+                  ? 'text-status-info'
                   : confirmTone === 'green'
-                    ? 'text-green-400'
-                    : 'text-violet-400'
+                    ? 'text-status-success'
+                    : 'text-brand-400'
             }`}
           />
         )}
-        <h2 className="text-lg font-semibold text-white">{title}</h2>
+        <h2 className="text-lg font-semibold text-text-primary">{title}</h2>
       </div>
-      <div className="text-gray-300">{message}</div>
+      <div className="text-text-secondary">{message}</div>
       <div className="flex justify-end gap-3 pt-2">
         <Button variant="outline" onClick={onCancel}>
           {cancelLabel}

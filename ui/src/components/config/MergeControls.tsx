@@ -109,12 +109,12 @@ export const MergeControls: FC<MergeControlsProps> = ({
   }, [onReset]);
 
   return (
-    <Card className="border-white/5 bg-gray-900/70">
+    <Card className="border-white/5 bg-bg-surface/70">
       <CardContent className="space-y-4">
         {/* Header */}
         <div className="flex items-center justify-between">
           <H2 className="flex items-center gap-2">
-            <FileCheck className={`${iconSizes.lg} text-violet-300`} />
+            <FileCheck className={`${iconSizes.lg} text-brand-300`} />
             Merge Controls
           </H2>
           {stats.totalChanges > 0 && (
@@ -138,15 +138,15 @@ export const MergeControls: FC<MergeControlsProps> = ({
         {stats.totalChanges > 0 && (
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm">
-              <SmallText className="text-gray-400">Resolution progress</SmallText>
-              <SmallText className="text-gray-300">
+              <SmallText className="text-text-muted">Resolution progress</SmallText>
+              <SmallText className="text-text-secondary">
                 {stats.decisionsCount} / {stats.totalChanges} ({stats.progress}
                 %)
               </SmallText>
             </div>
-            <div className="h-2 rounded-full bg-gray-800 overflow-hidden">
+            <div className="h-2 rounded-full bg-bg-elevated overflow-hidden">
               <div
-                className="h-full bg-gradient-to-r from-violet-500 to-violet-400 transition-all duration-300"
+                className="h-full bg-gradient-to-r from-brand-500 to-brand-400 transition-all duration-300"
                 style={{ width: `${stats.progress}%` }}
               />
             </div>
@@ -156,7 +156,7 @@ export const MergeControls: FC<MergeControlsProps> = ({
         {/* Decision breakdown */}
         {stats.decisionsCount > 0 && (
           <div className="flex items-center gap-4 flex-wrap">
-            <SmallText className="text-gray-400">Decisions:</SmallText>
+            <SmallText className="text-text-muted">Decisions:</SmallText>
             {stats.leftCount > 0 && (
               <Tag colorScheme="blue" className="text-xs">
                 <ChevronLeft className={`${iconSizes.xs} mr-1`} />
@@ -179,7 +179,7 @@ export const MergeControls: FC<MergeControlsProps> = ({
 
         {/* Quick actions */}
         <div className="space-y-3">
-          <SmallText className="text-gray-400 uppercase tracking-wide font-semibold">
+          <SmallText className="text-text-muted uppercase tracking-wide font-semibold">
             Quick Actions
           </SmallText>
 
@@ -246,7 +246,7 @@ export const MergeControls: FC<MergeControlsProps> = ({
         </div>
 
         {/* Help text */}
-        <SmallText className="text-gray-500">
+        <SmallText className="text-text-muted">
           {stats.totalChanges === 0
             ? 'Upload two YAML config files to start comparing and merging.'
             : stats.isComplete
@@ -327,7 +327,7 @@ export const MergePreviewModal: FC<MergePreviewModalProps> = ({ content, onClose
         aria-label="Close modal"
       />
       <div
-        className="relative mx-4 max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-2xl border border-white/10 bg-gray-900/95 shadow-2xl flex flex-col"
+        className="relative mx-4 max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-2xl border border-white/10 bg-bg-surface/95 shadow-2xl flex flex-col"
         role="dialog"
         aria-modal="true"
         aria-labelledby="preview-modal-title"
@@ -335,20 +335,20 @@ export const MergePreviewModal: FC<MergePreviewModalProps> = ({ content, onClose
         {/* Modal Header */}
         <div className="flex items-center justify-between border-b border-white/10 px-6 py-4 flex-shrink-0">
           <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-violet-500/20 p-2">
-              <FileCheck className={`${iconSizes.lg} text-violet-300`} />
+            <div className="rounded-lg bg-brand-500/20 p-2">
+              <FileCheck className={`${iconSizes.lg} text-brand-300`} />
             </div>
             <div>
-              <h2 id="preview-modal-title" className="text-lg font-semibold text-white">
+              <h2 id="preview-modal-title" className="text-lg font-semibold text-text-primary">
                 Merged Configuration Preview
               </h2>
-              <SmallText className="text-gray-400">{lineCount} lines</SmallText>
+              <SmallText className="text-text-muted">{lineCount} lines</SmallText>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-2 text-gray-400 hover:bg-white/10 hover:text-white transition-colors"
+            className="rounded-lg p-2 text-text-muted hover:bg-white/10 hover:text-text-primary transition-colors"
             aria-label="Close modal"
           >
             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -376,7 +376,7 @@ export const MergePreviewModal: FC<MergePreviewModalProps> = ({ content, onClose
         </div>
 
         {/* Modal Footer */}
-        <div className="flex justify-end gap-3 border-t border-white/10 px-6 py-4 bg-gray-950/50 flex-shrink-0">
+        <div className="flex justify-end gap-3 border-t border-white/10 px-6 py-4 bg-bg-base/50 flex-shrink-0">
           <Button variant="outline" onClick={onClose}>
             Close
           </Button>

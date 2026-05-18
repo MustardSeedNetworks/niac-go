@@ -104,8 +104,8 @@ export const NetBiosSection: FC<ProtocolSectionProps> = ({
 
           {/* Services */}
           <div className="space-y-3">
-            <h4 className="text-sm font-medium text-white flex items-center gap-2">
-              <Network className={`${iconSizes.md} text-violet-400`} />
+            <h4 className="text-sm font-medium text-text-primary flex items-center gap-2">
+              <Network className={`${iconSizes.md} text-brand-400`} />
               NetBIOS Services
             </h4>
             <div className="flex flex-wrap gap-4">
@@ -128,9 +128,9 @@ export const NetBiosSection: FC<ProtocolSectionProps> = ({
                         });
                       }
                     }}
-                    className="w-4 h-4 rounded border-gray-600 bg-gray-800 text-violet-600 focus:ring-violet-500"
+                    className="w-4 h-4 rounded border-border-muted bg-bg-elevated text-brand-600 focus:ring-brand-500"
                   />
-                  <span className="text-sm text-gray-300 capitalize">{service}</span>
+                  <span className="text-sm text-text-secondary capitalize">{service}</span>
                 </label>
               ))}
             </div>
@@ -145,9 +145,9 @@ export const NetBiosSection: FC<ProtocolSectionProps> = ({
                     msbrowse: e.target.checked,
                   })
                 }
-                className="w-4 h-4 rounded border-gray-600 bg-gray-800 text-violet-600 focus:ring-violet-500"
+                className="w-4 h-4 rounded border-border-muted bg-bg-elevated text-brand-600 focus:ring-brand-500"
               />
-              <span className="text-sm text-gray-300">Master Browser (MSBROWSE)</span>
+              <span className="text-sm text-text-secondary">Master Browser (MSBROWSE)</span>
             </label>
           </div>
         </div>

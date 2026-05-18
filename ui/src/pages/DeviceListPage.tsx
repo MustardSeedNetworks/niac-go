@@ -61,7 +61,7 @@ export const DeviceListPage: FC = () => {
   return (
     <div className="space-y-6">
       {/* Header section */}
-      <Card className="border-white/5 bg-gray-900/70">
+      <Card className="border-white/5 bg-bg-surface/70">
         <CardContent className="space-y-4">
           <DeviceListHeader
             deviceCount={devices.length}

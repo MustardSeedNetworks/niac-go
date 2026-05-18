@@ -92,17 +92,17 @@ export function SettingsDrawer({
           className={cn(drawer.content, drawer.size.lg, 'animate-slide-in-right')}
         >
           {/* Header */}
-          <div className="sticky top-0 bg-gray-900 border-b border-white/10 px-4 py-3 flex items-center justify-between z-10">
+          <div className="sticky top-0 bg-bg-surface border-b border-white/10 px-4 py-3 flex items-center justify-between z-10">
             <div className={layout.inline.default}>
-              <Settings className="w-5 h-5 text-violet-400" aria-hidden="true" />
-              <h2 className="text-lg font-semibold text-white">Settings</h2>
+              <Settings className="w-5 h-5 text-brand-400" aria-hidden="true" />
+              <h2 className="text-lg font-semibold text-text-primary">Settings</h2>
             </div>
             <button
               type="button"
               onClick={onClose}
               className={cn(
                 'p-2 hover:bg-white/10 rounded-lg transition-colors',
-                'text-gray-400 hover:text-white',
+                'text-text-muted hover:text-text-primary',
               )}
               aria-label="Close settings"
             >
@@ -124,8 +124,8 @@ export function SettingsDrawer({
                     'flex items-center gap-2 px-3 py-2.5 text-sm font-medium transition-colors',
                     'border-b-2 -mb-[2px]',
                     activeTab === tab.id
-                      ? 'border-violet-500 text-white'
-                      : 'border-transparent text-gray-400 hover:text-white hover:border-white/20',
+                      ? 'border-brand-500 text-text-primary'
+                      : 'border-transparent text-text-muted hover:text-text-primary hover:border-white/20',
                   )}
                 >
                   {tab.icon}
@@ -162,8 +162,8 @@ interface SectionProps {
 const Section = ({ title, description, children }: SectionProps): ReactElement => (
   <div className="space-y-3">
     <div>
-      <h3 className="text-sm font-semibold text-white">{title}</h3>
-      {description && <p className="text-xs text-gray-500 mt-0.5">{description}</p>}
+      <h3 className="text-sm font-semibold text-text-primary">{title}</h3>
+      {description && <p className="text-xs text-text-muted mt-0.5">{description}</p>}
     </div>
     <div className="space-y-2">{children}</div>
   </div>
@@ -178,8 +178,8 @@ interface SettingRowProps {
 const SettingRow = ({ label, description, children }: SettingRowProps): ReactElement => (
   <div className="flex items-center justify-between gap-4 py-2 px-3 bg-white/5 rounded-lg">
     <div className="flex-1 min-w-0">
-      <div className="text-sm text-gray-200">{label}</div>
-      {description && <div className="text-xs text-gray-500 truncate">{description}</div>}
+      <div className="text-sm text-text-primary">{label}</div>
+      {description && <div className="text-xs text-text-muted truncate">{description}</div>}
     </div>
     <div className="flex-shrink-0">{children}</div>
   </div>
@@ -204,26 +204,29 @@ function AppearanceSection(): ReactElement {
             className={cn(
               'flex flex-col items-center gap-2 p-3 rounded-lg border transition-all',
               theme === option
-                ? 'border-violet-500 bg-violet-500/10'
+                ? 'border-brand-500 bg-brand-500/10'
                 : 'border-white/10 hover:border-white/20 hover:bg-white/5',
             )}
           >
             <div
               className={cn(
                 'w-8 h-8 rounded-lg flex items-center justify-center',
-                option === 'dark' && 'bg-gray-800',
-                option === 'light' && 'bg-gray-200',
-                option === 'system' && 'bg-gradient-to-br from-gray-200 to-gray-800',
+                option === 'dark' && 'bg-bg-elevated',
+                option === 'light' && 'bg-bg-muted',
+                option === 'system' && 'bg-gradient-to-br from-gray-200 to-bg-elevated',
               )}
             >
               <Monitor
-                className={cn('w-4 h-4', option === 'light' ? 'text-gray-800' : 'text-white')}
+                className={cn(
+                  'w-4 h-4',
+                  option === 'light' ? 'text-text-disabled' : 'text-text-primary',
+                )}
               />
             </div>
             <span
               className={cn(
                 'text-xs font-medium capitalize',
-                theme === option ? 'text-white' : 'text-gray-400',
+                theme === option ? 'text-text-primary' : 'text-text-muted',
               )}
             >
               {option}
@@ -231,7 +234,7 @@ function AppearanceSection(): ReactElement {
           </button>
         ))}
       </div>
-      <p className="text-xs text-gray-500 mt-2">
+      <p className="text-xs text-text-muted mt-2">
         Light mode coming soon. Currently only dark mode is available.
       </p>
     </Section>
@@ -277,9 +280,9 @@ function NetworkSection(): ReactElement {
         description="Available network interfaces for traffic injection"
       >
         <div className="space-y-2">
-          {loading && <p className="text-xs text-gray-500">Loading interfaces...</p>}
+          {loading && <p className="text-xs text-text-muted">Loading interfaces...</p>}
           {!loading && interfaces.length === 0 && (
-            <p className="text-xs text-gray-500">No interfaces found</p>
+            <p className="text-xs text-text-muted">No interfaces found</p>
           )}
           {interfaces.map((iface) => (
             <InterfaceItem
@@ -291,14 +294,14 @@ function NetworkSection(): ReactElement {
             />
           ))}
         </div>
-        <p className="text-xs text-gray-500 mt-2">
+        <p className="text-xs text-text-muted mt-2">
           Interface selection is managed from the Runtime Control page.
         </p>
       </Section>
 
       <Section title="Connection Settings" description="Configure backend connection">
         <SettingRow label="Backend URL" description="NIAC backend server address">
-          <code className="text-xs text-violet-400 bg-violet-500/10 px-2 py-1 rounded">
+          <code className="text-xs text-brand-400 bg-brand-500/10 px-2 py-1 rounded">
             localhost:8080
           </code>
         </SettingRow>
@@ -322,16 +325,18 @@ function InterfaceItem({ name, type, status, ip }: InterfaceItemProps): ReactEle
     <div className="flex items-center justify-between py-2 px-3 bg-white/5 rounded-lg">
       <div className={layout.inline.default}>
         <Network
-          className={cn('w-4 h-4', status === 'active' ? 'text-emerald-500' : 'text-gray-500')}
+          className={cn('w-4 h-4', status === 'active' ? 'text-status-success' : 'text-text-muted')}
         />
         <div>
-          <div className="text-sm text-white font-mono">{name}</div>
-          <div className="text-xs text-gray-500">{type}</div>
+          <div className="text-sm text-text-primary font-mono">{name}</div>
+          <div className="text-xs text-text-muted">{type}</div>
         </div>
       </div>
       <div className="text-right">
-        <div className="text-sm text-gray-300 font-mono">{ip}</div>
-        <div className={cn('text-xs', status === 'active' ? 'text-emerald-400' : 'text-gray-500')}>
+        <div className="text-sm text-text-secondary font-mono">{ip}</div>
+        <div
+          className={cn('text-xs', status === 'active' ? 'text-status-success' : 'text-text-muted')}
+        >
           {status}
         </div>
       </div>
@@ -354,8 +359,8 @@ function DebugSection(): ReactElement {
             value={logLevel}
             onChange={(e) => setLogLevel(e.target.value as typeof logLevel)}
             className={cn(
-              'bg-gray-800 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white',
-              'focus:outline-none focus:ring-2 focus:ring-violet-500/50',
+              'bg-bg-elevated border border-white/10 rounded-lg px-3 py-1.5 text-sm text-text-primary',
+              'focus:outline-none focus:ring-2 focus:ring-brand-500/50',
             )}
           >
             <option value="error">Error</option>
@@ -376,10 +381,10 @@ function DebugSection(): ReactElement {
           )}
         >
           <div>
-            <div className="text-sm text-gray-200">Protocol Debug Levels</div>
-            <div className="text-xs text-gray-500">Configure per-protocol logging</div>
+            <div className="text-sm text-text-primary">Protocol Debug Levels</div>
+            <div className="text-xs text-text-muted">Configure per-protocol logging</div>
           </div>
-          <ChevronRight className="w-4 h-4 text-gray-500" />
+          <ChevronRight className="w-4 h-4 text-text-muted" />
         </button>
 
         <button
@@ -391,10 +396,10 @@ function DebugSection(): ReactElement {
           )}
         >
           <div>
-            <div className="text-sm text-gray-200">Export Diagnostics</div>
-            <div className="text-xs text-gray-500">Download debug information</div>
+            <div className="text-sm text-text-primary">Export Diagnostics</div>
+            <div className="text-xs text-text-muted">Download debug information</div>
           </div>
-          <ChevronRight className="w-4 h-4 text-gray-500" />
+          <ChevronRight className="w-4 h-4 text-text-muted" />
         </button>
       </Section>
     </>
@@ -415,12 +420,12 @@ function AboutSection({ version }: AboutSectionProps): ReactElement {
       <Section title="Application">
         <div className="bg-white/5 rounded-lg p-4 space-y-3">
           <div className="flex items-center gap-3">
-            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-violet-500 to-violet-700 flex items-center justify-center shadow-lg shadow-violet-500/30">
-              <Network className={`${iconSizes.xl} text-white`} />
+            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center shadow-lg shadow-brand-500/30">
+              <Network className={`${iconSizes.xl} text-text-primary`} />
             </div>
             <div>
-              <h4 className="text-lg font-bold text-white">NIAC</h4>
-              <p className="text-sm text-gray-400">Network Injection & Analysis Console</p>
+              <h4 className="text-lg font-bold text-text-primary">NIAC</h4>
+              <p className="text-sm text-text-muted">Network Injection & Analysis Console</p>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2 pt-2 border-t border-white/10">
@@ -433,7 +438,7 @@ function AboutSection({ version }: AboutSectionProps): ReactElement {
       </Section>
 
       <Section title="Legal">
-        <div className="space-y-2 text-xs text-gray-500">
+        <div className="space-y-2 text-xs text-text-muted">
           <p>Copyright (c) 2025 Mustard Seed Networks. All rights reserved.</p>
           <p>
             NIAC is proprietary software. Unauthorized copying, modification, or distribution is
@@ -454,8 +459,8 @@ function AboutSection({ version }: AboutSectionProps): ReactElement {
               'hover:bg-white/10 transition-colors',
             )}
           >
-            <span className="text-sm text-gray-200">GitHub</span>
-            <ChevronRight className="w-4 h-4 text-gray-500" />
+            <span className="text-sm text-text-primary">GitHub</span>
+            <ChevronRight className="w-4 h-4 text-text-muted" />
           </a>
           <a
             href="https://mustardseednetworks.com"
@@ -467,8 +472,8 @@ function AboutSection({ version }: AboutSectionProps): ReactElement {
               'hover:bg-white/10 transition-colors',
             )}
           >
-            <span className="text-sm text-gray-200">Website</span>
-            <ChevronRight className="w-4 h-4 text-gray-500" />
+            <span className="text-sm text-text-primary">Website</span>
+            <ChevronRight className="w-4 h-4 text-text-muted" />
           </a>
         </div>
       </Section>
@@ -484,8 +489,8 @@ interface InfoItemProps {
 function InfoItem({ label, value }: InfoItemProps): ReactElement {
   return (
     <div>
-      <div className="text-xs text-gray-500">{label}</div>
-      <div className="text-sm text-white font-mono">{value}</div>
+      <div className="text-xs text-text-muted">{label}</div>
+      <div className="text-sm text-text-primary font-mono">{value}</div>
     </div>
   );
 }

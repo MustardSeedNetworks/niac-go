@@ -21,16 +21,16 @@ export const ConfirmDeleteModal: FC<ConfirmDeleteModalProps> = ({
       aria-label="Close delete confirmation"
     />
     <div
-      className="mx-4 w-full max-w-md rounded-2xl border border-white/10 bg-gray-900/95 shadow-2xl"
+      className="mx-4 w-full max-w-md rounded-2xl border border-white/10 bg-bg-surface/95 shadow-2xl"
       role="dialog"
       aria-modal="true"
     >
       <div className="p-6 space-y-4">
-        <div className="flex items-center gap-3 text-red-400">
+        <div className="flex items-center gap-3 text-status-error">
           <Trash2 className="h-6 w-6" />
           <h2 className="text-lg font-semibold">Delete Device</h2>
         </div>
-        <p className="text-gray-300">
+        <p className="text-text-secondary">
           Are you sure you want to delete <strong>{hostname}</strong>? This action cannot be undone.
         </p>
         <div className="flex justify-end gap-3 pt-2">

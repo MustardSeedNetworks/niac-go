@@ -28,20 +28,23 @@ export const CloneDeviceModal: FC<CloneDeviceModalProps> = ({ hostname, onClone,
         aria-label="Close clone device modal"
       />
       <div
-        className="mx-4 w-full max-w-md rounded-2xl border border-white/10 bg-gray-900/95 shadow-2xl"
+        className="mx-4 w-full max-w-md rounded-2xl border border-white/10 bg-bg-surface/95 shadow-2xl"
         role="dialog"
         aria-modal="true"
       >
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div className="flex items-center gap-3 text-blue-400">
+          <div className="flex items-center gap-3 text-status-info">
             <Copy className={iconSizes.xl} />
             <h2 className="text-lg font-semibold">Clone Device</h2>
           </div>
-          <p className="text-gray-300">
+          <p className="text-text-secondary">
             Create a copy of <strong>{hostname}</strong> with a new name.
           </p>
           <div>
-            <label htmlFor="new-hostname" className="block text-sm font-medium text-gray-300 mb-2">
+            <label
+              htmlFor="new-hostname"
+              className="block text-sm font-medium text-text-secondary mb-2"
+            >
               New Hostname
             </label>
             <input
@@ -49,7 +52,7 @@ export const CloneDeviceModal: FC<CloneDeviceModalProps> = ({ hostname, onClone,
               type="text"
               value={newHostname}
               onChange={(e) => setNewHostname(e.target.value)}
-              className="w-full rounded-lg border border-white/10 bg-gray-950/60 p-3 text-sm text-white placeholder-gray-500 focus:border-violet-400 focus:outline-none"
+              className="w-full rounded-lg border border-white/10 bg-bg-base/60 p-3 text-sm text-text-primary placeholder-gray-500 focus:border-brand-400 focus:outline-none"
             />
           </div>
           <div className="flex justify-end gap-3 pt-2">

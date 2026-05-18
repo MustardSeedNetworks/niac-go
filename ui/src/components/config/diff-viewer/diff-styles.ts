@@ -13,27 +13,27 @@ export function getDiffStyles(type: DiffType): DiffStyleSet {
   switch (type) {
     case 'added':
       return {
-        bg: 'bg-green-500/10',
-        border: 'border-green-500/30',
-        text: 'text-green-300',
+        bg: 'bg-status-success/10',
+        border: 'border-status-success/30',
+        text: 'text-status-success',
       };
     case 'removed':
       return {
-        bg: 'bg-red-500/10',
-        border: 'border-red-500/30',
-        text: 'text-red-300',
+        bg: 'bg-status-error/10',
+        border: 'border-status-error/30',
+        text: 'text-status-error',
       };
     case 'modified':
       return {
-        bg: 'bg-yellow-500/10',
-        border: 'border-yellow-500/30',
-        text: 'text-yellow-300',
+        bg: 'bg-status-warning/10',
+        border: 'border-status-warning/30',
+        text: 'text-status-warning',
       };
     default:
       return {
         bg: '',
         border: 'border-transparent',
-        text: 'text-gray-300',
+        text: 'text-text-secondary',
       };
   }
 }

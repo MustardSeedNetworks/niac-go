@@ -34,7 +34,7 @@ export const DeviceDetailsPanel: FC<DeviceDetailsPanelProps> = ({ device, onClos
   const color = deviceColors[deviceType] || deviceColors.unknown;
 
   return (
-    <div className="absolute top-4 right-4 w-80 bg-gray-800/95 backdrop-blur-sm border border-white/10 rounded-xl p-4 shadow-2xl z-50">
+    <div className="absolute top-4 right-4 w-80 bg-bg-elevated/95 backdrop-blur-sm border border-white/10 rounded-xl p-4 shadow-2xl z-50">
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
           <div
@@ -46,21 +46,25 @@ export const DeviceDetailsPanel: FC<DeviceDetailsPanelProps> = ({ device, onClos
             <Icon className="w-6 h-6" />
           </div>
           <div>
-            <h3 className="font-semibold text-white">{device.name}</h3>
-            <p className="text-sm text-gray-400 capitalize">{device.type}</p>
+            <h3 className="font-semibold text-text-primary">{device.name}</h3>
+            <p className="text-sm text-text-muted capitalize">{device.type}</p>
           </div>
         </div>
-        <button type="button" onClick={onClose} className="text-gray-400 hover:text-white text-xl">
+        <button
+          type="button"
+          onClick={onClose}
+          className="text-text-muted hover:text-text-primary text-xl"
+        >
           &times;
         </button>
       </div>
 
       {device.ips && device.ips.length > 0 && (
         <div className="mb-3">
-          <div className="text-xs text-gray-400 uppercase tracking-wide mb-1">IP Addresses</div>
+          <div className="text-xs text-text-muted uppercase tracking-wide mb-1">IP Addresses</div>
           <div className="space-y-1">
             {device.ips.map((ip) => (
-              <code key={ip} className="block text-sm text-blue-300 font-mono">
+              <code key={ip} className="block text-sm text-status-info font-mono">
                 {ip}
               </code>
             ))}
@@ -70,7 +74,7 @@ export const DeviceDetailsPanel: FC<DeviceDetailsPanelProps> = ({ device, onClos
 
       {device.protocols && device.protocols.length > 0 && (
         <div className="mb-4">
-          <div className="text-xs text-gray-400 uppercase tracking-wide mb-1">Protocols</div>
+          <div className="text-xs text-text-muted uppercase tracking-wide mb-1">Protocols</div>
           <div className="flex flex-wrap gap-1">
             {device.protocols.map((proto) => (
               <Tag key={proto} colorScheme="purple" className="text-xs">

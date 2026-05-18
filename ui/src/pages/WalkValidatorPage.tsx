@@ -6,8 +6,8 @@ import { Card, CardContent } from '../ui/Card';
 type Severity = 'error' | 'warning' | 'info';
 
 const SEVERITY_BADGE: Record<Severity, string> = {
-  error: 'bg-red-500/20 text-red-200 ring-red-400/40',
-  warning: 'bg-amber-500/20 text-amber-200 ring-amber-400/40',
+  error: 'bg-status-error/20 text-status-error ring-status-error/40',
+  warning: 'bg-status-warning/20 text-status-warning ring-status-warning/40',
   info: 'bg-sky-500/20 text-sky-200 ring-sky-400/40',
 };
 
@@ -92,11 +92,11 @@ export const WalkValidatorPage: FC = () => {
 
   return (
     <div className="space-y-6">
-      <Card className="border-white/5 bg-gray-900/70">
+      <Card className="border-white/5 bg-bg-surface/70">
         <CardContent className="space-y-4">
           <header>
-            <h1 className="text-2xl font-semibold text-white">SNMP Walks</h1>
-            <p className="text-sm text-gray-400">
+            <h1 className="text-2xl font-semibold text-text-primary">SNMP Walks</h1>
+            <p className="text-sm text-text-muted">
               Same engine as <code>niac analyze-walk</code>. Validate detects malformed lines,
               missing OIDs, and unquoted strings; fix auto-rewrites the file in place.
             </p>
@@ -104,13 +104,13 @@ export const WalkValidatorPage: FC = () => {
 
           <div className="grid gap-4 md:grid-cols-2">
             <label className="block text-sm">
-              <span className="text-gray-300">From walks/ directory</span>
+              <span className="text-text-secondary">From walks/ directory</span>
               <select
                 value={selectedFile}
                 onChange={(e) => setSelectedFile(e.target.value)}
                 disabled={filesLoading || files.length === 0}
                 title="Hydrated from /api/v1/files?kind=walks (the sandboxed walks directory). Use the absolute-path field to validate a walk outside this directory."
-                className="mt-1 w-full rounded border border-white/5 bg-gray-950/60 px-3 py-2 text-sm text-gray-100 focus:border-cyan-400 focus:outline-none disabled:opacity-50"
+                className="mt-1 w-full rounded border border-white/5 bg-bg-base/60 px-3 py-2 text-sm text-text-primary focus:border-status-info focus:outline-none disabled:opacity-50"
               >
                 {filesLoading && <option>Loading…</option>}
                 {!filesLoading && files.length === 0 && <option>No walks found</option>}
@@ -120,18 +120,20 @@ export const WalkValidatorPage: FC = () => {
                   </option>
                 ))}
               </select>
-              {filesError && <span className="mt-1 block text-xs text-red-300">{filesError}</span>}
+              {filesError && (
+                <span className="mt-1 block text-xs text-status-error">{filesError}</span>
+              )}
             </label>
 
             <label className="block text-sm">
-              <span className="text-gray-300">Or paste an absolute path</span>
+              <span className="text-text-secondary">Or paste an absolute path</span>
               <input
                 type="text"
                 value={customPath}
                 onChange={(e) => setCustomPath(e.target.value)}
                 placeholder="/srv/niac/walks/cisco-c9300.walk"
                 title="Absolute path to a walk file. Takes precedence over the dropdown selection. The path is bounded server-side; ../ traversal is rejected."
-                className="mt-1 w-full rounded border border-white/5 bg-gray-950/60 px-3 py-2 font-mono text-xs text-gray-100 placeholder-gray-500 focus:border-cyan-400 focus:outline-none"
+                className="mt-1 w-full rounded border border-white/5 bg-bg-base/60 px-3 py-2 font-mono text-xs text-text-primary placeholder-gray-500 focus:border-status-info focus:outline-none"
               />
             </label>
           </div>
@@ -142,7 +144,7 @@ export const WalkValidatorPage: FC = () => {
               onClick={() => void run('validating')}
               disabled={busy !== 'idle' || !targetPath}
               title="Read-only validation: parses the walk and returns per-line issues. Doesn't modify the file."
-              className="rounded bg-cyan-500/20 px-3 py-1.5 text-sm font-medium text-cyan-100 ring-1 ring-cyan-400/40 hover:bg-cyan-500/30 disabled:opacity-50"
+              className="rounded bg-status-info/20 px-3 py-1.5 text-sm font-medium text-status-info ring-1 ring-cyan-400/40 hover:bg-status-info/30 disabled:opacity-50"
             >
               {busy === 'validating' ? 'Validating…' : 'Validate'}
             </button>
@@ -150,13 +152,13 @@ export const WalkValidatorPage: FC = () => {
               type="button"
               onClick={() => void run('fixing')}
               disabled={busy !== 'idle' || !targetPath}
-              className="rounded bg-amber-500/20 px-3 py-1.5 text-sm font-medium text-amber-100 ring-1 ring-amber-400/40 hover:bg-amber-500/30 disabled:opacity-50"
+              className="rounded bg-status-warning/20 px-3 py-1.5 text-sm font-medium text-status-warning ring-1 ring-status-warning/40 hover:bg-status-warning/30 disabled:opacity-50"
               title="Validate and rewrite the file in place. A .bak is created next to the original."
             >
               {busy === 'fixing' ? 'Fixing…' : 'Auto-fix'}
             </button>
             {error && (
-              <span className="text-sm text-red-300" role="alert">
+              <span className="text-sm text-status-error" role="alert">
                 {error}
               </span>
             )}
@@ -165,18 +167,20 @@ export const WalkValidatorPage: FC = () => {
       </Card>
 
       {response?.result && (
-        <Card className="border-white/5 bg-gray-900/70">
+        <Card className="border-white/5 bg-bg-surface/70">
           <CardContent className="space-y-4">
             <header className="flex flex-wrap items-baseline gap-4">
-              <h2 className="text-lg font-semibold text-white">{response.message ?? 'Result'}</h2>
-              <span className="text-sm text-gray-400">
+              <h2 className="text-lg font-semibold text-text-primary">
+                {response.message ?? 'Result'}
+              </h2>
+              <span className="text-sm text-text-muted">
                 {response.result.totalLines} lines, {response.result.validLines} valid
               </span>
               <span
                 className={`rounded px-2 py-0.5 text-xs font-medium ring-1 ${
                   response.result.valid
-                    ? 'bg-emerald-500/20 text-emerald-200 ring-emerald-400/40'
-                    : 'bg-red-500/20 text-red-200 ring-red-400/40'
+                    ? 'bg-status-success/20 text-status-success ring-status-success/40'
+                    : 'bg-status-error/20 text-status-error ring-status-error/40'
                 }`}
               >
                 {response.result.valid ? 'VALID' : 'INVALID'}
@@ -190,17 +194,17 @@ export const WalkValidatorPage: FC = () => {
                 </span>
               ))}
               {typeof response.result.fixedCount === 'number' && (
-                <span className="rounded bg-emerald-500/20 px-2 py-0.5 text-xs font-medium text-emerald-200 ring-1 ring-emerald-400/40">
+                <span className="rounded bg-status-success/20 px-2 py-0.5 text-xs font-medium text-status-success ring-1 ring-status-success/40">
                   fixed: {response.result.fixedCount}
                 </span>
               )}
             </header>
 
             {issues.length === 0 ? (
-              <p className="text-sm text-gray-400">No issues reported.</p>
+              <p className="text-sm text-text-muted">No issues reported.</p>
             ) : (
               <table className="w-full text-sm">
-                <thead className="bg-gray-950/40 text-left text-xs uppercase tracking-wider text-gray-400">
+                <thead className="bg-bg-base/40 text-left text-xs uppercase tracking-wider text-text-muted">
                   <tr>
                     <th className="px-3 py-2 w-16">Line</th>
                     <th className="px-3 py-2 w-24">Severity</th>
@@ -210,8 +214,11 @@ export const WalkValidatorPage: FC = () => {
                 </thead>
                 <tbody className="divide-y divide-white/5">
                   {issues.slice(0, 200).map((issue, idx) => (
-                    <tr key={`${issue.line}-${idx}`} className="text-gray-200 hover:bg-gray-950/40">
-                      <td className="px-3 py-2 font-mono text-xs text-gray-400">{issue.line}</td>
+                    <tr
+                      key={`${issue.line}-${idx}`}
+                      className="text-text-primary hover:bg-bg-base/40"
+                    >
+                      <td className="px-3 py-2 font-mono text-xs text-text-muted">{issue.line}</td>
                       <td className="px-3 py-2">
                         <span
                           className={`rounded px-2 py-0.5 text-[10px] font-medium ring-1 ${SEVERITY_BADGE[issue.severity as Severity] ?? ''}`}
@@ -220,7 +227,7 @@ export const WalkValidatorPage: FC = () => {
                         </span>
                       </td>
                       <td className="px-3 py-2">{issue.message}</td>
-                      <td className="px-3 py-2 truncate font-mono text-xs text-gray-500">
+                      <td className="px-3 py-2 truncate font-mono text-xs text-text-muted">
                         {issue.original}
                       </td>
                     </tr>
@@ -229,7 +236,7 @@ export const WalkValidatorPage: FC = () => {
               </table>
             )}
             {issues.length > 200 && (
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-text-muted">
                 Showing first 200 of {issues.length} issues — auto-fix to clear them all.
               </p>
             )}

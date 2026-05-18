@@ -33,8 +33,8 @@ export const statusConfig: Record<Status, StatusConfigItem> = {
         />
       </svg>
     ),
-    color: 'text-emerald-400',
-    bgColor: 'bg-emerald-500/15',
+    color: 'text-status-success',
+    bgColor: 'bg-status-success/15',
     label: 'Status: success',
   },
   warning: {
@@ -47,8 +47,8 @@ export const statusConfig: Record<Status, StatusConfigItem> = {
         />
       </svg>
     ),
-    color: 'text-amber-400',
-    bgColor: 'bg-amber-500/15',
+    color: 'text-status-warning',
+    bgColor: 'bg-status-warning/15',
     label: 'Status: warning',
   },
   error: {
@@ -61,8 +61,8 @@ export const statusConfig: Record<Status, StatusConfigItem> = {
         />
       </svg>
     ),
-    color: 'text-red-400',
-    bgColor: 'bg-red-500/15',
+    color: 'text-status-error',
+    bgColor: 'bg-status-error/15',
     label: 'Status: error',
   },
   info: {
@@ -75,8 +75,8 @@ export const statusConfig: Record<Status, StatusConfigItem> = {
         />
       </svg>
     ),
-    color: 'text-cyan-400',
-    bgColor: 'bg-cyan-500/15',
+    color: 'text-status-info',
+    bgColor: 'bg-status-info/15',
     label: 'Status: info',
   },
   unknown: {
@@ -89,8 +89,8 @@ export const statusConfig: Record<Status, StatusConfigItem> = {
         />
       </svg>
     ),
-    color: 'text-gray-400',
-    bgColor: 'bg-gray-500/15',
+    color: 'text-text-muted',
+    bgColor: 'bg-bg-muted/15',
     label: 'Status: unknown',
   },
   loading: {
@@ -112,8 +112,8 @@ export const statusConfig: Record<Status, StatusConfigItem> = {
         <path className="opacity-75" fill="currentColor" d="M18 10a8 8 0 00-8-8v4a4 4 0 014 4h4z" />
       </svg>
     ),
-    color: 'text-cyan-400',
-    bgColor: 'bg-cyan-500/15',
+    color: 'text-status-info',
+    bgColor: 'bg-status-info/15',
     label: 'Status: loading',
   },
 };

@@ -2,8 +2,8 @@ import type { FC, InputHTMLAttributes, ReactNode, Ref, TextareaHTMLAttributes } 
 
 // Base input styles
 const inputBaseStyles =
-  'w-full rounded-lg border bg-gray-950/60 text-white placeholder:text-gray-500 transition-all focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed';
-const inputFocusStyles = 'focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20';
+  'w-full rounded-lg border bg-bg-base/60 text-text-primary placeholder:text-text-muted transition-all focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed';
+const inputFocusStyles = 'focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20';
 const inputBorderStyles = 'border-white/10 hover:border-white/20';
 
 // React 19: ref as regular prop instead of forwardRef
@@ -35,20 +35,20 @@ export const Input: FC<InputProps> = ({
   return (
     <div className={containerClassName}>
       {label && (
-        <label htmlFor={inputId} className="block text-sm font-medium text-gray-300 mb-2">
+        <label htmlFor={inputId} className="block text-sm font-medium text-text-secondary mb-2">
           {label}
         </label>
       )}
       <div className="relative">
         {leftIcon && (
-          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">{leftIcon}</div>
+          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted">{leftIcon}</div>
         )}
         <input
           ref={ref}
           id={inputId}
           className={`
             ${inputBaseStyles}
-            ${hasError ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' : `${inputBorderStyles} ${inputFocusStyles}`}
+            ${hasError ? 'border-status-error focus:border-status-error focus:ring-status-error/20' : `${inputBorderStyles} ${inputFocusStyles}`}
             ${leftIcon ? 'pl-10' : 'px-4'}
             ${rightIcon ? 'pr-10' : 'px-4'}
             py-2.5
@@ -57,11 +57,13 @@ export const Input: FC<InputProps> = ({
           {...props}
         />
         {rightIcon && (
-          <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">{rightIcon}</div>
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted">
+            {rightIcon}
+          </div>
         )}
       </div>
       {(error || hint) && (
-        <p className={`mt-1.5 text-sm ${hasError ? 'text-red-400' : 'text-gray-500'}`}>
+        <p className={`mt-1.5 text-sm ${hasError ? 'text-status-error' : 'text-text-muted'}`}>
           {error || hint}
         </p>
       )}
@@ -94,7 +96,7 @@ export const Textarea: FC<TextareaProps> = ({
   return (
     <div className={containerClassName}>
       {label && (
-        <label htmlFor={textareaId} className="block text-sm font-medium text-gray-300 mb-2">
+        <label htmlFor={textareaId} className="block text-sm font-medium text-text-secondary mb-2">
           {label}
         </label>
       )}
@@ -103,14 +105,14 @@ export const Textarea: FC<TextareaProps> = ({
         id={textareaId}
         className={`
           ${inputBaseStyles}
-          ${hasError ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' : `${inputBorderStyles} ${inputFocusStyles}`}
+          ${hasError ? 'border-status-error focus:border-status-error focus:ring-status-error/20' : `${inputBorderStyles} ${inputFocusStyles}`}
           px-4 py-2.5 min-h-[100px] resize-y
           ${className}
         `}
         {...props}
       />
       {(error || hint) && (
-        <p className={`mt-1.5 text-sm ${hasError ? 'text-red-400' : 'text-gray-500'}`}>
+        <p className={`mt-1.5 text-sm ${hasError ? 'text-status-error' : 'text-text-muted'}`}>
           {error || hint}
         </p>
       )}
@@ -155,7 +157,7 @@ export const Select: FC<SelectProps> = ({
   return (
     <div className={containerClassName}>
       {label && (
-        <label htmlFor={selectId} className="block text-sm font-medium text-gray-300 mb-2">
+        <label htmlFor={selectId} className="block text-sm font-medium text-text-secondary mb-2">
           {label}
         </label>
       )}
@@ -164,7 +166,7 @@ export const Select: FC<SelectProps> = ({
         id={selectId}
         className={`
           ${inputBaseStyles}
-          ${hasError ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' : `${inputBorderStyles} ${inputFocusStyles}`}
+          ${hasError ? 'border-status-error focus:border-status-error focus:ring-status-error/20' : `${inputBorderStyles} ${inputFocusStyles}`}
           px-4 py-2.5 appearance-none cursor-pointer
           bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2024%2024%22%20stroke%3D%22%239ca3af%22%3E%3Cpath%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%222%22%20d%3D%22M19%209l-7%207-7-7%22%2F%3E%3C%2Fsvg%3E')]
           bg-[length:1.25rem] bg-[right_0.75rem_center] bg-no-repeat pr-10
@@ -185,7 +187,7 @@ export const Select: FC<SelectProps> = ({
         ))}
       </select>
       {(error || hint) && (
-        <p className={`mt-1.5 text-sm ${hasError ? 'text-red-400' : 'text-gray-500'}`}>
+        <p className={`mt-1.5 text-sm ${hasError ? 'text-status-error' : 'text-text-muted'}`}>
           {error || hint}
         </p>
       )}
@@ -219,18 +221,21 @@ export const Checkbox: FC<CheckboxProps> = ({
         type="checkbox"
         id={checkboxId}
         className={`
-          mt-0.5 h-4 w-4 rounded border-gray-600 bg-gray-800 text-violet-500
-          focus:ring-2 focus:ring-violet-500/50 focus:ring-offset-0
+          mt-0.5 h-4 w-4 rounded border-border-muted bg-bg-elevated text-brand-500
+          focus:ring-2 focus:ring-brand-500/50 focus:ring-offset-0
           transition-colors cursor-pointer
           ${className}
         `}
         {...props}
       />
       <div>
-        <label htmlFor={checkboxId} className="text-sm font-medium text-gray-200 cursor-pointer">
+        <label
+          htmlFor={checkboxId}
+          className="text-sm font-medium text-text-primary cursor-pointer"
+        >
           {label}
         </label>
-        {description && <p className="text-sm text-gray-500 mt-0.5">{description}</p>}
+        {description && <p className="text-sm text-text-muted mt-0.5">{description}</p>}
       </div>
     </div>
   );
@@ -259,10 +264,10 @@ export const Toggle: FC<ToggleProps> = ({
   return (
     <div className={`flex items-center justify-between gap-4 ${containerClassName}`}>
       <div>
-        <label htmlFor={toggleId} className="text-sm font-medium text-gray-200 cursor-pointer">
+        <label htmlFor={toggleId} className="text-sm font-medium text-text-primary cursor-pointer">
           {label}
         </label>
-        {description && <p className="text-sm text-gray-500 mt-0.5">{description}</p>}
+        {description && <p className="text-sm text-text-muted mt-0.5">{description}</p>}
       </div>
       <button
         type="button"
@@ -276,8 +281,8 @@ export const Toggle: FC<ToggleProps> = ({
         }}
         className={`
           relative inline-flex h-6 w-11 items-center rounded-full transition-colors
-          focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:ring-offset-2 focus:ring-offset-gray-900
-          ${checked ? 'bg-violet-600' : 'bg-gray-700'}
+          focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:ring-offset-2 focus:ring-offset-gray-900
+          ${checked ? 'bg-brand-600' : 'bg-bg-elevated'}
           ${className}
         `}
       >
@@ -338,13 +343,13 @@ export const SearchInput: FC<SearchInputProps> = ({
   return (
     <div className={containerClassName}>
       {label && (
-        <label htmlFor={inputId} className="block text-sm font-medium text-gray-300 mb-2">
+        <label htmlFor={inputId} className="block text-sm font-medium text-text-secondary mb-2">
           {label}
         </label>
       )}
       <div className="relative">
         {/* Search icon */}
-        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             className="h-4 w-4"
@@ -385,7 +390,7 @@ export const SearchInput: FC<SearchInputProps> = ({
             type="button"
             onClick={handleClear}
             aria-label="Clear search"
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-200 transition-colors focus:outline-none focus:ring-2 focus:ring-violet-500/50 rounded"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500/50 rounded"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -431,8 +436,8 @@ export const FormSection: FC<FormSectionProps> = ({
 }) => (
   <div className={`space-y-4 ${className}`}>
     <div>
-      <h3 className="text-lg font-semibold text-white">{title}</h3>
-      {description && <p className="text-sm text-gray-400 mt-1">{description}</p>}
+      <h3 className="text-lg font-semibold text-text-primary">{title}</h3>
+      {description && <p className="text-sm text-text-muted mt-1">{description}</p>}
     </div>
     <div className="space-y-4">{children}</div>
   </div>

@@ -251,7 +251,7 @@ export const pages: PageConfig[] = [
           <code>--webhook-allowed-host</code>, only those hostnames are allowed. Set the allowlist
           in production rather than relying on the implicit IP filter — see{' '}
           <a
-            className="text-violet-300 underline"
+            className="text-brand-300 underline"
             href="https://github.com/krisarmstrong/niac-go/blob/main/SECURITY.md"
           >
             SECURITY.md

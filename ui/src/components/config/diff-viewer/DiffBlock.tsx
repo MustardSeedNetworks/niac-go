@@ -36,8 +36,8 @@ const MergeControls: FC<{
   decision?: MergeDecision;
   onDecision: (choice: MergeDecision['choice']) => void;
 }> = ({ decision, onDecision }) => (
-  <div className="flex items-center justify-center gap-2 py-2 px-4 bg-gray-900/80 border-b border-white/10">
-    <SmallText className="text-gray-400 mr-2">Accept:</SmallText>
+  <div className="flex items-center justify-center gap-2 py-2 px-4 bg-bg-surface/80 border-b border-white/10">
+    <SmallText className="text-text-muted mr-2">Accept:</SmallText>
     <Button
       size="sm"
       variant={decision?.choice === 'left' ? undefined : 'outline'}

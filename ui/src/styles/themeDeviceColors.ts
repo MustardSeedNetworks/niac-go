@@ -1,95 +1,89 @@
 // Copyright (c) 2025 Mustard Seed Networks. All rights reserved.
 
 /**
- * =============================================================================
- * DEVICE COLORS - NIAC specific
- * =============================================================================
+ * themeDeviceColors.ts — niac-specific accent colors for topology.
+ * Re-exported through theme.ts.
  *
- * Device type colors - accent colors for network device visualization.
- * Protocol colors - for packet/protocol identification.
- * Link speed colors - for topology visualization.
+ * All classes reference niac's semantic device/proto/link tokens declared
+ * in src/index.css via @theme:
+ *   --color-device-* → utilities text-device-router, bg-device-router, ...
+ *   --color-proto-*  → utilities text-proto-arp, bg-proto-arp, ...
+ *   --color-link-*   → utilities text-link-1g, text-link-trunk, ...
+ *
+ * To re-theme: change values in index.css; do not hardcode here.
  */
 
-/**
- * Device type colors - accent colors for network device visualization
- */
 export const deviceColor = {
   router: {
-    icon: 'text-blue-500',
-    badge: 'bg-blue-500/20 text-blue-400 border border-blue-500/30',
-    border: 'border-blue-500/30',
-    bg: 'bg-blue-500',
+    icon: 'text-device-router',
+    badge: 'bg-device-router/20 text-device-router border border-device-router/30',
+    border: 'border-device-router/30',
+    bg: 'bg-device-router',
   },
   switch: {
-    icon: 'text-emerald-500',
-    badge: 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30',
-    border: 'border-emerald-500/30',
-    bg: 'bg-emerald-500',
+    icon: 'text-device-switch',
+    badge: 'bg-device-switch/20 text-device-switch border border-device-switch/30',
+    border: 'border-device-switch/30',
+    bg: 'bg-device-switch',
   },
   firewall: {
-    icon: 'text-red-500',
-    badge: 'bg-red-500/20 text-red-400 border border-red-500/30',
-    border: 'border-red-500/30',
-    bg: 'bg-red-500',
+    icon: 'text-device-firewall',
+    badge: 'bg-device-firewall/20 text-device-firewall border border-device-firewall/30',
+    border: 'border-device-firewall/30',
+    bg: 'bg-device-firewall',
   },
   server: {
-    icon: 'text-orange-500',
-    badge: 'bg-orange-500/20 text-orange-400 border border-orange-500/30',
-    border: 'border-orange-500/30',
-    bg: 'bg-orange-500',
+    icon: 'text-device-server',
+    badge: 'bg-device-server/20 text-device-server border border-device-server/30',
+    border: 'border-device-server/30',
+    bg: 'bg-device-server',
   },
   workstation: {
-    icon: 'text-gray-400',
-    badge: 'bg-gray-500/20 text-gray-400 border border-gray-500/30',
-    border: 'border-gray-500/30',
-    bg: 'bg-gray-500',
+    icon: 'text-device-workstation',
+    badge: 'bg-device-workstation/20 text-device-workstation border border-device-workstation/30',
+    border: 'border-device-workstation/30',
+    bg: 'bg-device-workstation',
   },
   ap: {
-    icon: 'text-purple-500',
-    badge: 'bg-purple-500/20 text-purple-400 border border-purple-500/30',
-    border: 'border-purple-500/30',
-    bg: 'bg-purple-500',
+    icon: 'text-device-ap',
+    badge: 'bg-device-ap/20 text-device-ap border border-device-ap/30',
+    border: 'border-device-ap/30',
+    bg: 'bg-device-ap',
   },
   iot: {
-    icon: 'text-teal-500',
-    badge: 'bg-teal-500/20 text-teal-400 border border-teal-500/30',
-    border: 'border-teal-500/30',
-    bg: 'bg-teal-500',
+    icon: 'text-device-iot',
+    badge: 'bg-device-iot/20 text-device-iot border border-device-iot/30',
+    border: 'border-device-iot/30',
+    bg: 'bg-device-iot',
   },
   unknown: {
-    icon: 'text-gray-500',
-    badge: 'bg-gray-500/20 text-gray-400 border border-gray-500/30',
-    border: 'border-gray-500/30',
-    bg: 'bg-gray-500',
+    icon: 'text-device-unknown',
+    badge: 'bg-device-unknown/20 text-device-unknown border border-device-unknown/30',
+    border: 'border-device-unknown/30',
+    bg: 'bg-device-unknown',
   },
 } as const;
 
-/**
- * Protocol colors - for packet/protocol identification
- */
 export const protocolColor = {
-  arp: { icon: 'text-emerald-500', badge: 'bg-emerald-500/20 text-emerald-400' },
-  icmp: { icon: 'text-blue-500', badge: 'bg-blue-500/20 text-blue-400' },
-  dns: { icon: 'text-purple-500', badge: 'bg-purple-500/20 text-purple-400' },
-  dhcp: { icon: 'text-orange-500', badge: 'bg-orange-500/20 text-orange-400' },
-  snmp: { icon: 'text-teal-500', badge: 'bg-teal-500/20 text-teal-400' },
-  lldp: { icon: 'text-pink-500', badge: 'bg-pink-500/20 text-pink-400' },
-  cdp: { icon: 'text-yellow-500', badge: 'bg-yellow-500/20 text-yellow-400' },
-  http: { icon: 'text-indigo-500', badge: 'bg-indigo-500/20 text-indigo-400' },
-  tcp: { icon: 'text-cyan-500', badge: 'bg-cyan-500/20 text-cyan-400' },
-  udp: { icon: 'text-violet-500', badge: 'bg-violet-500/20 text-violet-400' },
+  arp: { icon: 'text-proto-arp', badge: 'bg-proto-arp/20 text-proto-arp' },
+  icmp: { icon: 'text-proto-icmp', badge: 'bg-proto-icmp/20 text-proto-icmp' },
+  dns: { icon: 'text-proto-dns', badge: 'bg-proto-dns/20 text-proto-dns' },
+  dhcp: { icon: 'text-proto-dhcp', badge: 'bg-proto-dhcp/20 text-proto-dhcp' },
+  snmp: { icon: 'text-proto-snmp', badge: 'bg-proto-snmp/20 text-proto-snmp' },
+  lldp: { icon: 'text-proto-lldp', badge: 'bg-proto-lldp/20 text-proto-lldp' },
+  cdp: { icon: 'text-proto-cdp', badge: 'bg-proto-cdp/20 text-proto-cdp' },
+  http: { icon: 'text-proto-http', badge: 'bg-proto-http/20 text-proto-http' },
+  tcp: { icon: 'text-proto-tcp', badge: 'bg-proto-tcp/20 text-proto-tcp' },
+  udp: { icon: 'text-proto-udp', badge: 'bg-proto-udp/20 text-proto-udp' },
 } as const;
 
-/**
- * Link speed colors - for topology visualization
- */
 export const linkSpeedColor = {
-  '10m': 'text-gray-400',
-  '100m': 'text-emerald-500',
-  '1g': 'text-blue-500',
-  '10g': 'text-purple-500',
-  '25g': 'text-orange-500',
-  '40g': 'text-pink-500',
-  '100g': 'text-yellow-500',
-  trunk: 'text-cyan-500',
+  '10m': 'text-link-10m',
+  '100m': 'text-link-100m',
+  '1g': 'text-link-1g',
+  '10g': 'text-link-10g',
+  '25g': 'text-link-25g',
+  '40g': 'text-link-40g',
+  '100g': 'text-link-100g',
+  trunk: 'text-link-trunk',
 } as const;

@@ -134,17 +134,17 @@ export function SimulationSection(): ReactElement {
     <div className="space-y-4">
       {/* Section Header */}
       <div className="flex items-center gap-2">
-        <PlugZap className="w-5 h-5 text-violet-400" aria-hidden="true" />
-        <h3 className="text-sm font-semibold text-white">Simulation</h3>
+        <PlugZap className="w-5 h-5 text-brand-400" aria-hidden="true" />
+        <h3 className="text-sm font-semibold text-text-primary">Simulation</h3>
       </div>
 
       {/* Interface Selector */}
       <div className="space-y-2">
-        <label htmlFor="sim-interface" className="block text-sm text-gray-400">
+        <label htmlFor="sim-interface" className="block text-sm text-text-muted">
           Network Interface
         </label>
         <div className="relative">
-          <Network className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+          <Network className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
           <select
             id="sim-interface"
             value={simulationSettings.selectedInterface}
@@ -152,8 +152,8 @@ export function SimulationSection(): ReactElement {
             disabled={loading}
             className={cn(
               'w-full pl-10 pr-4 py-2 text-sm',
-              'bg-gray-800 border border-white/10 rounded-lg',
-              'text-white focus:outline-none focus:ring-2 focus:ring-violet-500/50',
+              'bg-bg-elevated border border-white/10 rounded-lg',
+              'text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-500/50',
               'disabled:opacity-50 disabled:cursor-not-allowed',
             )}
           >
@@ -166,14 +166,14 @@ export function SimulationSection(): ReactElement {
             ))}
           </select>
         </div>
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-text-muted">
           Only ethernet, WiFi, and loopback interfaces are shown.
         </p>
       </div>
 
       {/* Config Source Tabs */}
       <div className="space-y-3">
-        <span className="block text-sm text-gray-400">Configuration</span>
+        <span className="block text-sm text-text-muted">Configuration</span>
         <div className="flex border border-white/10 rounded-lg overflow-hidden" role="tablist">
           {CONFIG_TABS.map((tab) => (
             <button
@@ -184,8 +184,8 @@ export function SimulationSection(): ReactElement {
                 'flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium',
                 'transition-colors',
                 activeTab === tab.id
-                  ? 'bg-violet-600 text-white'
-                  : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white',
+                  ? 'bg-brand-600 text-text-primary'
+                  : 'bg-bg-elevated text-text-muted hover:bg-bg-elevated hover:text-text-primary',
               )}
             >
               {tab.icon}
@@ -198,7 +198,7 @@ export function SimulationSection(): ReactElement {
       {/* Tab Content */}
       <div className="min-h-[120px]">
         {loading && (
-          <div className="flex items-center justify-center py-8 text-gray-500 text-sm">
+          <div className="flex items-center justify-center py-8 text-text-muted text-sm">
             Loading...
           </div>
         )}
@@ -228,11 +228,11 @@ export function SimulationSection(): ReactElement {
 
       {/* Current Selection Display */}
       {simulationSettings.configName && (
-        <div className="p-3 bg-violet-900/20 border border-violet-500/30 rounded-lg">
-          <p className="text-xs text-gray-400">Selected configuration:</p>
-          <p className="text-sm text-white font-medium mt-1">
+        <div className="p-3 bg-brand-900/20 border border-brand-500/30 rounded-lg">
+          <p className="text-xs text-text-muted">Selected configuration:</p>
+          <p className="text-sm text-text-primary font-medium mt-1">
             {simulationSettings.configName}
-            <span className="text-gray-500 ml-2">
+            <span className="text-text-muted ml-2">
               ({simulationSettings.configSource === 'template' ? 'Template' : 'User Config'})
             </span>
           </p>
@@ -270,14 +270,14 @@ function TemplateList({ templates, selectedName, onSelect }: TemplateListProps):
         onChange={(e) => setSearch(e.target.value)}
         className={cn(
           'w-full px-3 py-2 text-sm',
-          'bg-gray-800 border border-white/10 rounded-lg',
-          'text-white placeholder:text-gray-500',
-          'focus:outline-none focus:ring-2 focus:ring-violet-500/50',
+          'bg-bg-elevated border border-white/10 rounded-lg',
+          'text-text-primary placeholder:text-text-muted',
+          'focus:outline-none focus:ring-2 focus:ring-brand-500/50',
         )}
       />
       <div className="max-h-[200px] overflow-y-auto space-y-1">
         {filteredTemplates.length === 0 && (
-          <p className="text-sm text-gray-500 py-4 text-center">
+          <p className="text-sm text-text-muted py-4 text-center">
             {search ? 'No templates match your search' : 'No templates available'}
           </p>
         )}
@@ -289,13 +289,13 @@ function TemplateList({ templates, selectedName, onSelect }: TemplateListProps):
             className={cn(
               'w-full text-left px-3 py-2 rounded-lg transition-colors',
               selectedName === template.name
-                ? 'bg-violet-600/30 border border-violet-500/50'
+                ? 'bg-brand-600/30 border border-brand-500/50'
                 : 'bg-white/5 hover:bg-white/10 border border-transparent',
             )}
           >
-            <div className="text-sm text-white font-medium">{template.name}</div>
-            <div className="text-xs text-gray-400 truncate">{template.description}</div>
-            <div className="text-xs text-gray-500 mt-1">
+            <div className="text-sm text-text-primary font-medium">{template.name}</div>
+            <div className="text-xs text-text-muted truncate">{template.description}</div>
+            <div className="text-xs text-text-muted mt-1">
               {template.deviceCount} device{template.deviceCount !== 1 ? 's' : ''}
             </div>
           </button>
@@ -315,9 +315,11 @@ function UserConfigList({ configs, selectedName, onSelect }: UserConfigListProps
   if (configs.length === 0) {
     return (
       <div className="text-center py-8">
-        <FolderOpen className="w-8 h-8 text-gray-600 mx-auto mb-2" />
-        <p className="text-sm text-gray-500">No user configs uploaded yet</p>
-        <p className="text-xs text-gray-600 mt-1">Use the Upload tab to add your own configs</p>
+        <FolderOpen className="w-8 h-8 text-text-disabled mx-auto mb-2" />
+        <p className="text-sm text-text-muted">No user configs uploaded yet</p>
+        <p className="text-xs text-text-disabled mt-1">
+          Use the Upload tab to add your own configs
+        </p>
       </div>
     );
   }
@@ -332,12 +334,12 @@ function UserConfigList({ configs, selectedName, onSelect }: UserConfigListProps
           className={cn(
             'w-full text-left px-3 py-2 rounded-lg transition-colors',
             selectedName === config.name
-              ? 'bg-violet-600/30 border border-violet-500/50'
+              ? 'bg-brand-600/30 border border-brand-500/50'
               : 'bg-white/5 hover:bg-white/10 border border-transparent',
           )}
         >
-          <div className="text-sm text-white font-medium">{config.name}</div>
-          <div className="text-xs text-gray-400">
+          <div className="text-sm text-text-primary font-medium">{config.name}</div>
+          <div className="text-xs text-text-muted">
             {config.deviceCount} device{config.deviceCount !== 1 ? 's' : ''}
           </div>
         </button>
@@ -388,7 +390,7 @@ function UploadSection(): ReactElement {
       <div
         className={cn(
           'border-2 border-dashed border-white/10 rounded-lg p-4',
-          'hover:border-violet-500/50 transition-colors',
+          'hover:border-brand-500/50 transition-colors',
         )}
       >
         <input
@@ -399,14 +401,14 @@ function UploadSection(): ReactElement {
           className="sr-only"
         />
         <label htmlFor="config-upload" className="flex flex-col items-center cursor-pointer">
-          <FileUp className="w-8 h-8 text-gray-500 mb-2" />
-          <span className="text-sm text-gray-400">
+          <FileUp className="w-8 h-8 text-text-muted mb-2" />
+          <span className="text-sm text-text-muted">
             {selectedFile ? selectedFile.name : 'Click to upload a YAML config'}
           </span>
-          <span className="text-xs text-gray-600 mt-1">.yaml or .yml files, max 10MB</span>
+          <span className="text-xs text-text-disabled mt-1">.yaml or .yml files, max 10MB</span>
         </label>
       </div>
-      <p className="text-xs text-gray-500">
+      <p className="text-xs text-text-muted">
         Upload a config file to use for this simulation session. The file will be sent when you
         start the simulation.
       </p>

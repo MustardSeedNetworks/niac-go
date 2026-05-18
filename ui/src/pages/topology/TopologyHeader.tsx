@@ -37,12 +37,12 @@ export const TopologyHeader: FC<TopologyHeaderProps> = ({
   onAutoLayout,
 }) => {
   return (
-    <div className="flex items-center justify-between p-4 border-b border-white/10 bg-gray-900/80 backdrop-blur-sm">
+    <div className="flex items-center justify-between p-4 border-b border-white/10 bg-bg-surface/80 backdrop-blur-sm">
       <div className="flex items-center gap-4">
-        <h1 className="text-xl font-semibold text-white">{title}</h1>
-        <div className="flex items-center gap-3 text-sm text-gray-400">
+        <h1 className="text-xl font-semibold text-text-primary">{title}</h1>
+        <div className="flex items-center gap-3 text-sm text-text-muted">
           <span>{deviceCount} devices</span>
-          <span className="text-gray-600">|</span>
+          <span className="text-text-disabled">|</span>
           <span>{linkCount} links</span>
         </div>
       </div>

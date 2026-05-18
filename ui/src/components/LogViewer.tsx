@@ -27,37 +27,37 @@ const LEVEL_COLORS: Record<
   { bg: string; text: string; border: string; accent: string }
 > = {
   error: {
-    bg: 'bg-red-500/10',
-    text: 'text-red-400',
-    border: 'border-red-500/30',
-    accent: 'bg-red-500',
+    bg: 'bg-status-error/10',
+    text: 'text-status-error',
+    border: 'border-status-error/30',
+    accent: 'bg-status-error',
   },
   warn: {
-    bg: 'bg-yellow-500/10',
-    text: 'text-yellow-400',
-    border: 'border-yellow-500/30',
-    accent: 'bg-yellow-500',
+    bg: 'bg-status-warning/10',
+    text: 'text-status-warning',
+    border: 'border-status-warning/30',
+    accent: 'bg-status-warning',
   },
   info: {
     bg: 'bg-white/5',
-    text: 'text-gray-200',
+    text: 'text-text-primary',
     border: 'border-white/10',
-    accent: 'bg-blue-500',
+    accent: 'bg-status-info',
   },
   debug: {
-    bg: 'bg-gray-500/10',
-    text: 'text-gray-500',
-    border: 'border-gray-500/20',
-    accent: 'bg-gray-500',
+    bg: 'bg-bg-muted/10',
+    text: 'text-text-muted',
+    border: 'border-border-muted/20',
+    accent: 'bg-bg-muted',
   },
 };
 
 // Level badge colors
 const LEVEL_BADGE_COLORS: Record<LogLevelKey, string> = {
-  error: 'bg-red-500/20 text-red-400 border-red-500/30',
-  warn: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
-  info: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-  debug: 'bg-gray-500/20 text-gray-500 border-gray-500/30',
+  error: 'bg-status-error/20 text-status-error border-status-error/30',
+  warn: 'bg-status-warning/20 text-status-warning border-status-warning/30',
+  info: 'bg-status-info/20 text-status-info border-status-info/30',
+  debug: 'bg-bg-muted/20 text-text-muted border-border-muted/30',
 };
 
 // Format timestamp for display
@@ -115,7 +115,7 @@ function highlightText(text: string, query: string): React.ReactNode {
       offset += part.length;
       if (part.toLowerCase() === query.toLowerCase()) {
         return (
-          <mark key={key} className="bg-yellow-400/40 text-yellow-200 rounded px-0.5">
+          <mark key={key} className="bg-status-warning/40 text-status-warning rounded px-0.5">
             {part}
           </mark>
         );
@@ -199,7 +199,9 @@ const LogEntryRow: FC<{ log: LogEntry; searchQuery: string }> = memo(({ log, sea
           className={`flex items-start gap-2 flex-1 text-left ${hasDetails ? 'cursor-pointer' : 'cursor-default'}`}
         >
           {/* Expand indicator */}
-          <span className={`shrink-0 mt-0.5 ${hasDetails ? 'text-gray-500' : 'text-transparent'}`}>
+          <span
+            className={`shrink-0 mt-0.5 ${hasDetails ? 'text-text-muted' : 'text-transparent'}`}
+          >
             {expanded ? (
               <ChevronDown className={iconSizes.md} />
             ) : (
@@ -211,7 +213,7 @@ const LogEntryRow: FC<{ log: LogEntry; searchQuery: string }> = memo(({ log, sea
           <span className={`shrink-0 w-1 h-5 rounded-full ${colors.accent}`} />
 
           {/* Timestamp */}
-          <span className="shrink-0 text-gray-500 tabular-nums">
+          <span className="shrink-0 text-text-muted tabular-nums">
             {formatTimestamp(log.timestamp)}
           </span>
 
@@ -223,7 +225,7 @@ const LogEntryRow: FC<{ log: LogEntry; searchQuery: string }> = memo(({ log, sea
           </span>
 
           {/* Protocol Badge */}
-          <span className="shrink-0 rounded border border-violet-500/30 bg-violet-500/20 px-1.5 py-0.5 text-xs font-semibold text-violet-400">
+          <span className="shrink-0 rounded border border-brand-500/30 bg-brand-500/20 px-1.5 py-0.5 text-xs font-semibold text-brand-400">
             {log.protocol}
           </span>
 
@@ -234,7 +236,7 @@ const LogEntryRow: FC<{ log: LogEntry; searchQuery: string }> = memo(({ log, sea
 
           {/* Source (if available) */}
           {log.source && (
-            <span className="shrink-0 text-gray-600 text-xs font-mono">{log.source}</span>
+            <span className="shrink-0 text-text-disabled text-xs font-mono">{log.source}</span>
           )}
         </button>
 
@@ -242,12 +244,12 @@ const LogEntryRow: FC<{ log: LogEntry; searchQuery: string }> = memo(({ log, sea
         <button
           type="button"
           onClick={handleCopy}
-          className="shrink-0 p-1 rounded hover:bg-white/10 text-gray-500 hover:text-gray-300 transition-colors"
+          className="shrink-0 p-1 rounded hover:bg-white/10 text-text-muted hover:text-text-secondary transition-colors"
           title="Copy log entry"
           aria-label="Copy log entry"
         >
           {copied ? (
-            <Check className={`${iconSizes.sm} text-green-400`} />
+            <Check className={`${iconSizes.sm} text-status-success`} />
           ) : (
             <Copy className={iconSizes.sm} />
           )}
@@ -259,25 +261,25 @@ const LogEntryRow: FC<{ log: LogEntry; searchQuery: string }> = memo(({ log, sea
         <div className={`px-3 py-3 ${colors.bg} border-t ${colors.border}`}>
           <div className="ml-6 space-y-2">
             {/* Metadata row */}
-            <div className="flex flex-wrap gap-4 text-xs text-gray-500">
+            <div className="flex flex-wrap gap-4 text-xs text-text-muted">
               <span>
-                <strong className="text-gray-400">Time:</strong>{' '}
+                <strong className="text-text-muted">Time:</strong>{' '}
                 {formatFullTimestamp(log.timestamp)}
               </span>
               {log.source && (
                 <span>
-                  <strong className="text-gray-400">Source:</strong> {log.source}
+                  <strong className="text-text-muted">Source:</strong> {log.source}
                 </span>
               )}
               <span>
-                <strong className="text-gray-400">ID:</strong> {log.id}
+                <strong className="text-text-muted">ID:</strong> {log.id}
               </span>
             </div>
 
             {/* Details JSON */}
-            <div className="rounded-lg border border-white/10 bg-gray-950/70 overflow-hidden">
-              <div className="flex items-center justify-between px-3 py-1.5 bg-gray-900/50 border-b border-white/10">
-                <span className="text-xs font-medium text-gray-400">Details</span>
+            <div className="rounded-lg border border-white/10 bg-bg-base/70 overflow-hidden">
+              <div className="flex items-center justify-between px-3 py-1.5 bg-bg-surface/50 border-b border-white/10">
+                <span className="text-xs font-medium text-text-muted">Details</span>
                 <button
                   type="button"
                   onClick={async (e) => {
@@ -286,14 +288,14 @@ const LogEntryRow: FC<{ log: LogEntry; searchQuery: string }> = memo(({ log, sea
                       await navigator.clipboard.writeText(formatDetails(log.details));
                     }
                   }}
-                  className="p-1 rounded hover:bg-white/10 text-gray-500 hover:text-gray-300 transition-colors"
+                  className="p-1 rounded hover:bg-white/10 text-text-muted hover:text-text-secondary transition-colors"
                   title="Copy details JSON"
                   aria-label="Copy details JSON"
                 >
                   <Copy className={iconSizes.xs} />
                 </button>
               </div>
-              <pre className="p-3 text-xs font-mono text-gray-300 overflow-x-auto">
+              <pre className="p-3 text-xs font-mono text-text-secondary overflow-x-auto">
                 {formatDetails(log.details ?? {})}
               </pre>
             </div>
@@ -340,17 +342,17 @@ export const LogViewer: FC<LogViewerProps> = memo(({ logs, searchQuery, autoScro
     return (
       <div
         ref={containerRef}
-        className="flex h-96 items-center justify-center rounded-lg border border-white/10 bg-gray-950/50"
+        className="flex h-96 items-center justify-center rounded-lg border border-white/10 bg-bg-base/50"
       >
         <div className="text-center space-y-3">
           <div
-            className={`mx-auto ${iconSizes['3xl']} rounded-full bg-gray-800/50 flex items-center justify-center`}
+            className={`mx-auto ${iconSizes['3xl']} rounded-full bg-bg-elevated/50 flex items-center justify-center`}
           >
-            <Terminal className={`${iconSizes.xl} text-gray-600`} />
+            <Terminal className={`${iconSizes.xl} text-text-disabled`} />
           </div>
           <div>
-            <p className="text-gray-400 font-medium">No logs to display</p>
-            <p className="mt-1 text-sm text-gray-600">
+            <p className="text-text-muted font-medium">No logs to display</p>
+            <p className="mt-1 text-sm text-text-disabled">
               Logs will appear here when the debug console receives data
             </p>
           </div>
@@ -369,12 +371,14 @@ export const LogViewer: FC<LogViewerProps> = memo(({ logs, searchQuery, autoScro
           return (
             <div
               key={level}
-              className={`flex items-center gap-1.5 px-2 py-1 rounded ${colors?.bg || 'bg-gray-500/10'}`}
+              className={`flex items-center gap-1.5 px-2 py-1 rounded ${colors?.bg || 'bg-bg-muted/10'}`}
             >
-              {isError && count > 0 && <AlertCircle className={`${iconSizes.xs} text-red-400`} />}
-              <span className={`${colors?.accent || 'bg-gray-500'} h-2 w-2 rounded-full`} />
-              <span className={`font-medium ${colors?.text || 'text-gray-400'}`}>{level}</span>
-              <span className="text-gray-500">{count}</span>
+              {isError && count > 0 && (
+                <AlertCircle className={`${iconSizes.xs} text-status-error`} />
+              )}
+              <span className={`${colors?.accent || 'bg-bg-muted'} h-2 w-2 rounded-full`} />
+              <span className={`font-medium ${colors?.text || 'text-text-muted'}`}>{level}</span>
+              <span className="text-text-muted">{count}</span>
             </div>
           );
         })}
@@ -383,7 +387,7 @@ export const LogViewer: FC<LogViewerProps> = memo(({ logs, searchQuery, autoScro
       {/* Log Container */}
       <div
         ref={containerRef}
-        className="h-[500px] overflow-y-auto rounded-lg border border-white/10 bg-gray-950/70 scrollbar-thin scrollbar-track-gray-900 scrollbar-thumb-gray-700"
+        className="h-[500px] overflow-y-auto rounded-lg border border-white/10 bg-bg-base/70 scrollbar-thin scrollbar-track-gray-900 scrollbar-thumb-gray-700"
         role="log"
         aria-label="Debug console log output"
         aria-live="polite"

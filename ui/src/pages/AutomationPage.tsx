@@ -80,39 +80,41 @@ const AlertConfigCard: FC<{ recentErrors: number }> = ({ recentErrors }) => {
   };
 
   return (
-    <Card className="border-white/5 bg-gray-900/70">
+    <Card className="border-white/5 bg-bg-surface/70">
       <CardContent className="space-y-4">
         <H2 className="flex items-center gap-2">
-          <BellRing className={`${iconSizes.lg} text-orange-300`} />
+          <BellRing className={`${iconSizes.lg} text-status-warning`} />
           Alert policy
         </H2>
-        <P className="text-gray-300">
+        <P className="text-text-secondary">
           The daemon fires a webhook when total packet count crosses the threshold. Updates take
           effect immediately — no CLI restart required. Leave the threshold blank or zero to disable
           packet alerts entirely. The webhook destination is also gated by the daemon's{' '}
           <code>--webhook-allowed-host</code> allowlist when set (see{' '}
           <a
             href="https://github.com/krisarmstrong/niac-go/blob/main/SECURITY.md"
-            className="text-violet-300 underline"
+            className="text-brand-300 underline"
           >
             SECURITY.md
           </a>
           ).
         </P>
-        <SmallText className="text-gray-500">
-          Recent errors counter: <strong className="text-gray-300">{recentErrors}</strong>
+        <SmallText className="text-text-muted">
+          Recent errors counter: <strong className="text-text-secondary">{recentErrors}</strong>
         </SmallText>
-        {loading && <SmallText className="text-gray-400">Loading alert configuration…</SmallText>}
+        {loading && <SmallText className="text-text-muted">Loading alert configuration…</SmallText>}
         {error && (
-          <SmallText className="text-red-400">Unable to load alerts: {error.message}</SmallText>
+          <SmallText className="text-status-error">
+            Unable to load alerts: {error.message}
+          </SmallText>
         )}
         {data && (
           <>
             <div className="grid gap-4 md:grid-cols-2">
               <div>
-                <SmallText className="text-gray-400">Packet threshold</SmallText>
+                <SmallText className="text-text-muted">Packet threshold</SmallText>
                 <input
-                  className="mt-1 w-full rounded-lg border border-white/10 bg-gray-950/60 p-2 text-sm text-white focus:border-violet-400 focus:outline-none"
+                  className="mt-1 w-full rounded-lg border border-white/10 bg-bg-base/60 p-2 text-sm text-text-primary focus:border-brand-400 focus:outline-none"
                   type="number"
                   min="0"
                   placeholder="100000"
@@ -126,9 +128,9 @@ const AlertConfigCard: FC<{ recentErrors: number }> = ({ recentErrors }) => {
                 />
               </div>
               <div>
-                <SmallText className="text-gray-400">Webhook URL</SmallText>
+                <SmallText className="text-text-muted">Webhook URL</SmallText>
                 <input
-                  className="mt-1 w-full rounded-lg border border-white/10 bg-gray-950/60 p-2 text-sm text-white focus:border-violet-400 focus:outline-none"
+                  className="mt-1 w-full rounded-lg border border-white/10 bg-bg-base/60 p-2 text-sm text-text-primary focus:border-brand-400 focus:outline-none"
                   placeholder="https://hooks.example.com/niac"
                   value={webhook}
                   title="POST'd JSON when the threshold trips. Must be http(s) and not point at a private/loopback/link-local IP. The daemon's --webhook-allowed-host flag further locks this down."
@@ -142,7 +144,7 @@ const AlertConfigCard: FC<{ recentErrors: number }> = ({ recentErrors }) => {
             </div>
             {status && (
               <SmallText
-                className={status.tone === 'success' ? 'text-emerald-300' : 'text-red-400'}
+                className={status.tone === 'success' ? 'text-status-success' : 'text-status-error'}
               >
                 {status.text}
               </SmallText>

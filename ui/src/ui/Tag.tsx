@@ -9,14 +9,14 @@ interface TagProps {
 }
 
 const colorStyles: Record<TagColorScheme, string> = {
-  gray: 'bg-gray-500/20 text-gray-300 border-gray-500/30',
-  red: 'bg-red-500/20 text-red-300 border-red-500/30',
-  green: 'bg-green-500/20 text-green-300 border-green-500/30',
-  blue: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
-  yellow: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
-  purple: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
-  violet: 'bg-violet-500/20 text-violet-300 border-violet-500/30',
-  cyan: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30',
+  gray: 'bg-bg-muted/20 text-text-secondary border-border-muted/30',
+  red: 'bg-status-error/20 text-status-error border-status-error/30',
+  green: 'bg-status-success/20 text-status-success border-status-success/30',
+  blue: 'bg-status-info/20 text-status-info border-status-info/30',
+  yellow: 'bg-status-warning/20 text-status-warning border-status-warning/30',
+  purple: 'bg-brand-500/20 text-brand-300 border-brand-500/30',
+  violet: 'bg-brand-500/20 text-brand-300 border-brand-500/30',
+  cyan: 'bg-status-info/20 text-status-info border-status-info/30',
 };
 
 export const Tag: FC<TagProps> = ({ children, colorScheme = 'gray', className = '' }) => (

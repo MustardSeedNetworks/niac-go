@@ -38,7 +38,7 @@ export const AdditionalIPsSection: FC<AdditionalIPsSectionProps> = ({
   return (
     <CollapsibleSection title="Additional IP Addresses" isExpanded={isExpanded} onToggle={onToggle}>
       <div className="space-y-4">
-        <SmallText className="text-gray-400">
+        <SmallText className="text-text-muted">
           Add secondary IP addresses for multi-homed or VLAN configurations.
         </SmallText>
         {(device.ips || []).map((ip, index) => (

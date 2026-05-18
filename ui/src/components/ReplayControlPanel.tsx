@@ -82,7 +82,7 @@ export const ReplayControlPanel: FC = () => {
                   <Tag colorScheme="green">Running</Tag>
                   <span className="font-medium">{replayStatus.file}</span>
                 </div>
-                <SmallText className="text-gray-400">
+                <SmallText className="text-text-muted">
                   Started:{' '}
                   {replayStatus.startedAt
                     ? new Date(replayStatus.startedAt).toLocaleString()
@@ -113,7 +113,7 @@ export const ReplayControlPanel: FC = () => {
                 value={selectedFile}
                 onChange={(e) => setSelectedFile(e.target.value)}
                 disabled={replayStatus?.running}
-                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                className="w-full px-3 py-2 bg-bg-elevated border border-border-default rounded-md focus:outline-none focus:ring-2 focus:ring-status-info disabled:opacity-50"
               >
                 <option value="">Select PCAP file...</option>
                 {pcapFiles?.map((file) => (
@@ -138,9 +138,9 @@ export const ReplayControlPanel: FC = () => {
                 onChange={(e) => setLoopMs(Number.parseInt(e.target.value, 10) || 0)}
                 placeholder="0 = no loop"
                 disabled={replayStatus?.running}
-                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                className="w-full px-3 py-2 bg-bg-elevated border border-border-default rounded-md focus:outline-none focus:ring-2 focus:ring-status-info disabled:opacity-50"
               />
-              <SmallText className="text-gray-400">
+              <SmallText className="text-text-muted">
                 0 = Play once, &gt;0 = Loop with delay
               </SmallText>
             </div>
@@ -159,9 +159,9 @@ export const ReplayControlPanel: FC = () => {
                 value={scale}
                 onChange={(e) => setScale(Number.parseFloat(e.target.value) || 1.0)}
                 disabled={replayStatus?.running}
-                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                className="w-full px-3 py-2 bg-bg-elevated border border-border-default rounded-md focus:outline-none focus:ring-2 focus:ring-status-info disabled:opacity-50"
               />
-              <SmallText className="text-gray-400">
+              <SmallText className="text-text-muted">
                 1.0 = Original timing, 2.0 = 2x faster, 0.5 = 2x slower
               </SmallText>
             </div>
@@ -174,8 +174,8 @@ export const ReplayControlPanel: FC = () => {
               aria-live="polite"
               className={`p-3 rounded ${
                 message.type === 'success'
-                  ? 'bg-green-500/10 text-green-400 border border-green-500/20'
-                  : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                  ? 'bg-status-success/10 text-status-success border border-status-success/20'
+                  : 'bg-status-error/10 text-status-error border border-status-error/20'
               }`}
             >
               {message.text}

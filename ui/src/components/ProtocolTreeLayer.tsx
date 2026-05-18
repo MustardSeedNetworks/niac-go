@@ -36,11 +36,11 @@ export const ProtocolTreeLayer: FC<ProtocolTreeLayerProps> = memo(({ layer, onFi
         className="flex items-center gap-1 w-full text-left py-0.5 hover:bg-white/5 rounded px-1 -ml-1"
       >
         {isExpanded ? (
-          <ChevronDown className={`${iconSizes.sm} text-gray-500 flex-shrink-0`} />
+          <ChevronDown className={`${iconSizes.sm} text-text-muted flex-shrink-0`} />
         ) : (
-          <ChevronRight className={`${iconSizes.sm} text-gray-500 flex-shrink-0`} />
+          <ChevronRight className={`${iconSizes.sm} text-text-muted flex-shrink-0`} />
         )}
-        <span className="text-violet-300 font-medium">{layer.name}</span>
+        <span className="text-brand-300 font-medium">{layer.name}</span>
       </button>
 
       {isExpanded && (
@@ -53,12 +53,12 @@ export const ProtocolTreeLayer: FC<ProtocolTreeLayerProps> = memo(({ layer, onFi
                 type="button"
                 onClick={() => handleFieldClick(field)}
                 className={`block w-full text-left py-0.5 px-1 -ml-1 rounded text-xs ${
-                  hasRange ? 'hover:bg-yellow-900/30 cursor-pointer' : 'cursor-default'
+                  hasRange ? 'hover:bg-status-warning/30 cursor-pointer' : 'cursor-default'
                 }`}
                 disabled={!hasRange}
               >
-                <span className="text-gray-400">{field.name}: </span>
-                <span className="text-white font-mono">{field.value}</span>
+                <span className="text-text-muted">{field.name}: </span>
+                <span className="text-text-primary font-mono">{field.value}</span>
               </button>
             );
           })}

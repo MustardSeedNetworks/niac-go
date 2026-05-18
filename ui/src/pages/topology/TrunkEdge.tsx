@@ -126,7 +126,7 @@ export const TrunkEdge: FC<EdgeProps> = ({
 
 const labelBoxStyle =
   'absolute pointer-events-none px-1.5 py-0.5 rounded text-[10px] font-medium ' +
-  'border border-white/10 bg-gray-950/90 text-gray-200 shadow-sm whitespace-nowrap';
+  'border border-white/10 bg-bg-base/90 text-text-primary shadow-sm whitespace-nowrap';
 
 const EndLabel: FC<{ x: number; y: number; text: string; opacity: number }> = ({
   x,
@@ -149,7 +149,7 @@ const MiddleLabel: FC<{ x: number; y: number; text: string; opacity: number }> =
   opacity,
 }) => (
   <div
-    className={`${labelBoxStyle} text-violet-200`}
+    className={`${labelBoxStyle} text-brand-200`}
     style={{ transform: `translate(-50%, -50%) translate(${x}px, ${y}px)`, opacity }}
   >
     {text}
@@ -186,14 +186,14 @@ const EdgeTooltip: FC<{ x: number; y: number; data: LinkEdgeData }> = ({ x, y, d
 
   return (
     <div
-      className="absolute pointer-events-none rounded-lg border border-white/10 bg-gray-950/95 px-3 py-2 text-xs text-gray-200 shadow-lg z-50"
+      className="absolute pointer-events-none rounded-lg border border-white/10 bg-bg-base/95 px-3 py-2 text-xs text-text-primary shadow-lg z-50"
       style={{ transform: `translate(-50%, calc(-100% - 12px)) translate(${x}px, ${y}px)` }}
     >
       <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5">
         {rows.map(([k, v]) => (
           <div key={k} className="contents">
-            <span className="text-gray-500">{k}</span>
-            <span className="font-medium text-white">{v}</span>
+            <span className="text-text-muted">{k}</span>
+            <span className="font-medium text-text-primary">{v}</span>
           </div>
         ))}
       </div>

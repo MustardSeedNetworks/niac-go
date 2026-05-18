@@ -22,15 +22,15 @@ export const TemplatesHeader: FC<TemplatesHeaderProps> = ({
   onDismissMessage,
 }) => {
   return (
-    <Card className="border-white/5 bg-gray-900/70">
+    <Card className="border-white/5 bg-bg-surface/70">
       <CardContent className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <H2 className="flex items-center gap-2">
-              <FileCode className={`${iconSizes.lg} text-violet-300`} />
+              <FileCode className={`${iconSizes.lg} text-brand-300`} />
               Configuration Templates
             </H2>
-            <P className="text-gray-400 mt-1">
+            <P className="text-text-muted mt-1">
               Browse and use pre-configured network templates to quickly start simulations.
             </P>
           </div>
@@ -46,20 +46,20 @@ export const TemplatesHeader: FC<TemplatesHeaderProps> = ({
         {/* Search bar */}
         <div className="relative">
           <Search
-            className={`absolute left-3 top-1/2 ${iconSizes.lg} -translate-y-1/2 text-gray-400`}
+            className={`absolute left-3 top-1/2 ${iconSizes.lg} -translate-y-1/2 text-text-muted`}
           />
           <input
             type="text"
             placeholder="Search templates by name, description, or type..."
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full rounded-lg border border-white/10 bg-gray-950/60 py-3 pl-10 pr-10 text-sm text-white placeholder-gray-500 focus:border-violet-400 focus:outline-none"
+            className="w-full rounded-lg border border-white/10 bg-bg-base/60 py-3 pl-10 pr-10 text-sm text-text-primary placeholder-gray-500 focus:border-brand-400 focus:outline-none"
           />
           {searchQuery && (
             <button
               type="button"
               onClick={() => onSearchChange('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary"
               aria-label="Clear search"
             >
               <X className={iconSizes.md} />
@@ -72,8 +72,8 @@ export const TemplatesHeader: FC<TemplatesHeaderProps> = ({
           <div
             className={`flex items-center gap-2 rounded-lg p-3 ${
               message.type === 'success'
-                ? 'border border-green-500/30 bg-green-500/10 text-green-300'
-                : 'border border-red-500/30 bg-red-500/10 text-red-300'
+                ? 'border border-status-success/30 bg-status-success/10 text-status-success'
+                : 'border border-status-error/30 bg-status-error/10 text-status-error'
             }`}
             role="alert"
           >

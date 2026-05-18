@@ -75,12 +75,12 @@ export const FtpSection: FC<ProtocolSectionProps> = ({
                   }
                   className="sr-only peer"
                 />
-                <div className="w-9 h-5 bg-gray-700 rounded-full peer peer-checked:bg-violet-600 peer-focus:ring-2 peer-focus:ring-violet-500 transition-colors">
+                <div className="w-9 h-5 bg-bg-elevated rounded-full peer peer-checked:bg-brand-600 peer-focus:ring-2 peer-focus:ring-brand-500 transition-colors">
                   <div
                     className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${device.ftp.allowAnonymous ? 'translate-x-4' : ''}`}
                   />
                 </div>
-                <span className="ml-3 text-sm text-gray-300">
+                <span className="ml-3 text-sm text-text-secondary">
                   {device.ftp.allowAnonymous ? 'Enabled' : 'Disabled'}
                 </span>
               </label>
@@ -89,8 +89,8 @@ export const FtpSection: FC<ProtocolSectionProps> = ({
 
           {/* FTP Users */}
           <div className="space-y-3">
-            <h4 className="text-sm font-medium text-white flex items-center gap-2">
-              <Folder className={`${iconSizes.md} text-violet-400`} />
+            <h4 className="text-sm font-medium text-text-primary flex items-center gap-2">
+              <Folder className={`${iconSizes.md} text-brand-400`} />
               FTP Users
             </h4>
             {(device.ftp.users || []).map((user: FTPUser, index: number) => (
@@ -110,7 +110,7 @@ export const FtpSection: FC<ProtocolSectionProps> = ({
                     updateFtp({ ...getFtpConfig(), users });
                   }}
                   placeholder="Username"
-                  className="flex-1 rounded-lg border border-white/10 bg-gray-950/60 p-2 text-sm text-white placeholder-gray-500 focus:border-violet-400 focus:outline-none"
+                  className="flex-1 rounded-lg border border-white/10 bg-bg-base/60 p-2 text-sm text-text-primary placeholder-gray-500 focus:border-brand-400 focus:outline-none"
                 />
                 <input
                   type="text"
@@ -124,7 +124,7 @@ export const FtpSection: FC<ProtocolSectionProps> = ({
                     updateFtp({ ...getFtpConfig(), users });
                   }}
                   placeholder="Password"
-                  className="flex-1 rounded-lg border border-white/10 bg-gray-950/60 p-2 text-sm text-white placeholder-gray-500 focus:border-violet-400 focus:outline-none"
+                  className="flex-1 rounded-lg border border-white/10 bg-bg-base/60 p-2 text-sm text-text-primary placeholder-gray-500 focus:border-brand-400 focus:outline-none"
                 />
                 <input
                   type="text"
@@ -135,7 +135,7 @@ export const FtpSection: FC<ProtocolSectionProps> = ({
                     updateFtp({ ...getFtpConfig(), users });
                   }}
                   placeholder="Home Directory"
-                  className="flex-1 rounded-lg border border-white/10 bg-gray-950/60 p-2 text-sm text-white placeholder-gray-500 focus:border-violet-400 focus:outline-none font-mono"
+                  className="flex-1 rounded-lg border border-white/10 bg-bg-base/60 p-2 text-sm text-text-primary placeholder-gray-500 focus:border-brand-400 focus:outline-none font-mono"
                 />
                 <Button
                   variant="ghost"

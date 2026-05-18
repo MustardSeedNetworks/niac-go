@@ -127,7 +127,7 @@ export const NeighborsView: FC = () => {
 
   return (
     <div className="space-y-4">
-      <Card className="border-white/5 bg-gray-900/70">
+      <Card className="border-white/5 bg-bg-surface/70">
         <CardContent className="space-y-3">
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-2">
@@ -146,12 +146,12 @@ export const NeighborsView: FC = () => {
                     }
                     className={`rounded px-3 py-1 text-xs font-medium ${
                       active
-                        ? 'bg-cyan-500/20 text-cyan-200 ring-1 ring-cyan-400/40'
-                        : 'bg-gray-800/60 text-gray-300 hover:bg-gray-800'
+                        ? 'bg-status-info/20 text-status-info ring-1 ring-cyan-400/40'
+                        : 'bg-bg-elevated/60 text-text-secondary hover:bg-bg-elevated'
                     }`}
                   >
                     {p === 'all' ? 'All' : p}
-                    <span className="ml-1.5 text-[10px] text-gray-500">{count}</span>
+                    <span className="ml-1.5 text-[10px] text-text-muted">{count}</span>
                   </button>
                 );
               })}
@@ -162,26 +162,26 @@ export const NeighborsView: FC = () => {
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Filter by device or chassis ID…"
               title="Substring match on local device, remote device, chassis ID, or remote port (case-insensitive)."
-              className="ml-auto w-64 rounded border border-white/5 bg-gray-950/60 px-3 py-1.5 text-sm text-gray-100 placeholder-gray-500 focus:border-cyan-400 focus:outline-none"
+              className="ml-auto w-64 rounded border border-white/5 bg-bg-base/60 px-3 py-1.5 text-sm text-text-primary placeholder-gray-500 focus:border-status-info focus:outline-none"
               aria-label="Filter neighbors"
             />
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-text-muted">
               Polling every {NEIGHBOR_POLL_MS / 1000}s · {neighbors?.length ?? 0} entries
             </span>
           </div>
         </CardContent>
       </Card>
 
-      <Card className="border-white/5 bg-gray-900/70">
+      <Card className="border-white/5 bg-bg-surface/70">
         <CardContent className="p-0">
-          {loading && !neighbors && <div className="p-6 text-sm text-gray-400">Loading…</div>}
+          {loading && !neighbors && <div className="p-6 text-sm text-text-muted">Loading…</div>}
           {error && (
-            <div className="p-6 text-sm text-red-300" role="alert">
+            <div className="p-6 text-sm text-status-error" role="alert">
               Failed to load neighbors: {error.message}
             </div>
           )}
           {neighbors && filtered.length === 0 && (
-            <div className="p-6 text-sm text-gray-500">
+            <div className="p-6 text-sm text-text-muted">
               {neighbors.length === 0
                 ? 'No neighbors discovered yet. Start a simulation that has CDP/LLDP/EDP/FDP enabled to populate this table.'
                 : 'No neighbors match the current filters.'}
@@ -189,7 +189,7 @@ export const NeighborsView: FC = () => {
           )}
           {filtered.length > 0 && (
             <table className="w-full text-sm">
-              <thead className="bg-gray-950/40 text-left text-xs uppercase tracking-wider text-gray-400">
+              <thead className="bg-bg-base/40 text-left text-xs uppercase tracking-wider text-text-muted">
                 <tr>
                   <th className="px-4 py-2">Protocol</th>
                   <th className="px-4 py-2">Local Device</th>
@@ -205,22 +205,22 @@ export const NeighborsView: FC = () => {
                 {filtered.map((n) => (
                   <tr
                     key={`${n.localDevice}-${n.remoteDevice}-${n.remotePort}`}
-                    className="text-gray-200 hover:bg-gray-950/40"
+                    className="text-text-primary hover:bg-bg-base/40"
                   >
-                    <td className="px-4 py-2 font-mono text-xs text-cyan-300">
+                    <td className="px-4 py-2 font-mono text-xs text-status-info">
                       {n.protocols.join(', ')}
                     </td>
                     <td className="px-4 py-2">{n.localDevice}</td>
                     <td className="px-4 py-2">{n.remoteDevice}</td>
-                    <td className="px-4 py-2 text-gray-400">{n.remotePort || '—'}</td>
-                    <td className="px-4 py-2 font-mono text-xs text-gray-400">
+                    <td className="px-4 py-2 text-text-muted">{n.remotePort || '—'}</td>
+                    <td className="px-4 py-2 font-mono text-xs text-text-muted">
                       {n.remoteChassisId || '—'}
                     </td>
-                    <td className="px-4 py-2 font-mono text-xs text-gray-400">
+                    <td className="px-4 py-2 font-mono text-xs text-text-muted">
                       {n.managementAddress || '—'}
                     </td>
-                    <td className="px-4 py-2 text-gray-400">{formatTtl(n.ttl)}</td>
-                    <td className="px-4 py-2 text-gray-400">{formatRelative(n.lastSeen)}</td>
+                    <td className="px-4 py-2 text-text-muted">{formatTtl(n.ttl)}</td>
+                    <td className="px-4 py-2 text-text-muted">{formatRelative(n.lastSeen)}</td>
                   </tr>
                 ))}
               </tbody>

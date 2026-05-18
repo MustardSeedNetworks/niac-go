@@ -29,8 +29,8 @@ export const FilterBar: FC<FilterBarProps> = memo(({ value, onChange, placeholde
   const borderColor = !value.trim()
     ? 'border-white/10'
     : isValid
-      ? 'border-green-500/60'
-      : 'border-red-500/60';
+      ? 'border-status-success/60'
+      : 'border-status-error/60';
 
   // Update suggestions on input change
   useEffect(() => {
@@ -112,31 +112,33 @@ export const FilterBar: FC<FilterBarProps> = memo(({ value, onChange, placeholde
             onBlur={() => setTimeout(() => setIsFocused(false), 200)}
             onKeyDown={handleKeyDown}
             placeholder={placeholder ?? 'Display filter (e.g., ip.src == 10.0.0.1 && tcp)'}
-            className={`w-full rounded-lg border ${borderColor} bg-gray-950/60 px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none font-mono transition-colors`}
+            className={`w-full rounded-lg border ${borderColor} bg-bg-base/60 px-3 py-2 text-sm text-text-primary placeholder-gray-500 focus:outline-none font-mono transition-colors`}
           />
           {validationError && isFocused && (
-            <div className="absolute top-full left-0 mt-1 px-2 py-1 bg-red-900/90 border border-red-500/50 rounded text-xs text-red-200 z-20 max-w-md">
+            <div className="absolute top-full left-0 mt-1 px-2 py-1 bg-status-error/90 border border-status-error/50 rounded text-xs text-status-error z-20 max-w-md">
               {validationError}
             </div>
           )}
 
           {/* Autocomplete dropdown */}
           {suggestions.length > 0 && isFocused && (
-            <div className="absolute top-full left-0 mt-1 w-full bg-gray-900 border border-white/10 rounded-lg shadow-lg z-30 max-h-48 overflow-y-auto">
+            <div className="absolute top-full left-0 mt-1 w-full bg-bg-surface border border-white/10 rounded-lg shadow-lg z-30 max-h-48 overflow-y-auto">
               {suggestions.map((suggestion, idx) => (
                 <button
                   key={suggestion.text}
                   type="button"
-                  className={`w-full text-left px-3 py-1.5 text-sm hover:bg-gray-800 ${
-                    idx === selectedSuggestion ? 'bg-gray-800 text-white' : 'text-gray-300'
+                  className={`w-full text-left px-3 py-1.5 text-sm hover:bg-bg-elevated ${
+                    idx === selectedSuggestion
+                      ? 'bg-bg-elevated text-text-primary'
+                      : 'text-text-secondary'
                   }`}
                   onMouseDown={(e) => {
                     e.preventDefault();
                     applySuggestion(suggestion);
                   }}
                 >
-                  <span className="font-mono text-violet-300">{suggestion.text}</span>
-                  <span className="ml-2 text-gray-500 text-xs">{suggestion.description}</span>
+                  <span className="font-mono text-brand-300">{suggestion.text}</span>
+                  <span className="ml-2 text-text-muted text-xs">{suggestion.description}</span>
                 </button>
               ))}
             </div>
@@ -150,7 +152,7 @@ export const FilterBar: FC<FilterBarProps> = memo(({ value, onChange, placeholde
               key={protocol}
               type="button"
               onClick={() => handleQuickInsert(protocol)}
-              className="px-2 py-1 text-xs rounded border border-white/10 text-gray-400 hover:text-white hover:border-white/20 bg-gray-900/50 transition-colors uppercase"
+              className="px-2 py-1 text-xs rounded border border-white/10 text-text-muted hover:text-text-primary hover:border-white/20 bg-bg-surface/50 transition-colors uppercase"
             >
               {protocol}
             </button>

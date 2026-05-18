@@ -48,13 +48,13 @@ const StatBlock = memo(
     value: string | number;
     helper?: string;
   }) => (
-    <div className="rounded-lg border border-white/5 bg-gray-950/50 p-4">
+    <div className="rounded-lg border border-white/5 bg-bg-base/50 p-4">
       <div className="flex items-center gap-2 mb-2">
         {icon}
-        <SmallText className="text-gray-400 uppercase tracking-wide">{label}</SmallText>
+        <SmallText className="text-text-muted uppercase tracking-wide">{label}</SmallText>
       </div>
-      <p className="text-2xl font-bold text-white">{value}</p>
-      {helper && <SmallText className="text-gray-500">{helper}</SmallText>}
+      <p className="text-2xl font-bold text-text-primary">{value}</p>
+      {helper && <SmallText className="text-text-muted">{helper}</SmallText>}
     </div>
   ),
 );
@@ -74,7 +74,7 @@ const ProtocolBreakdown: FC<{
     .slice(0, 10);
 
   if (sortedProtocols.length === 0) {
-    return <SmallText className="text-gray-400">No protocol data available</SmallText>;
+    return <SmallText className="text-text-muted">No protocol data available</SmallText>;
   }
 
   return (
@@ -89,13 +89,13 @@ const ProtocolBreakdown: FC<{
                 <Tag colorScheme={getProtocolColor(protocol)} className="text-xs">
                   {protocol}
                 </Tag>
-                <SmallText className="text-gray-400">{count.toLocaleString()}</SmallText>
+                <SmallText className="text-text-muted">{count.toLocaleString()}</SmallText>
               </div>
-              <SmallText className="text-gray-500">{percentage.toFixed(1)}%</SmallText>
+              <SmallText className="text-text-muted">{percentage.toFixed(1)}%</SmallText>
             </div>
-            <div className="h-1.5 w-full rounded-full bg-gray-800 overflow-hidden">
+            <div className="h-1.5 w-full rounded-full bg-bg-elevated overflow-hidden">
               <div
-                className="h-full rounded-full bg-violet-500 transition-all duration-500"
+                className="h-full rounded-full bg-brand-500 transition-all duration-500"
                 style={{ width: `${percentage}%` }}
               />
             </div>
@@ -120,21 +120,21 @@ const TopEndpoints: FC<{
       {/* Top Sources */}
       <div className="space-y-2">
         <div className="flex items-center gap-2 mb-3">
-          <Server className={`${iconSizes.md} text-blue-400`} />
-          <SmallText className="text-gray-400 uppercase tracking-wide font-semibold">
+          <Server className={`${iconSizes.md} text-status-info`} />
+          <SmallText className="text-text-muted uppercase tracking-wide font-semibold">
             Top Sources
           </SmallText>
         </div>
         {sources.length === 0 ? (
-          <SmallText className="text-gray-500">No source data</SmallText>
+          <SmallText className="text-text-muted">No source data</SmallText>
         ) : (
           <div className="space-y-1">
             {sources.slice(0, 5).map((item) => (
               <div
                 key={item.ip}
-                className="flex items-center justify-between rounded-lg border border-white/5 bg-gray-950/50 px-3 py-2"
+                className="flex items-center justify-between rounded-lg border border-white/5 bg-bg-base/50 px-3 py-2"
               >
-                <span className="font-mono text-sm text-white">{item.ip}</span>
+                <span className="font-mono text-sm text-text-primary">{item.ip}</span>
                 <Tag colorScheme="blue" className="text-xs">
                   {item.count.toLocaleString()}
                 </Tag>
@@ -147,21 +147,21 @@ const TopEndpoints: FC<{
       {/* Top Destinations */}
       <div className="space-y-2">
         <div className="flex items-center gap-2 mb-3">
-          <Network className={`${iconSizes.md} text-green-400`} />
-          <SmallText className="text-gray-400 uppercase tracking-wide font-semibold">
+          <Network className={`${iconSizes.md} text-status-success`} />
+          <SmallText className="text-text-muted uppercase tracking-wide font-semibold">
             Top Destinations
           </SmallText>
         </div>
         {destinations.length === 0 ? (
-          <SmallText className="text-gray-500">No destination data</SmallText>
+          <SmallText className="text-text-muted">No destination data</SmallText>
         ) : (
           <div className="space-y-1">
             {destinations.slice(0, 5).map((item) => (
               <div
                 key={item.ip}
-                className="flex items-center justify-between rounded-lg border border-white/5 bg-gray-950/50 px-3 py-2"
+                className="flex items-center justify-between rounded-lg border border-white/5 bg-bg-base/50 px-3 py-2"
               >
-                <span className="font-mono text-sm text-white">{item.ip}</span>
+                <span className="font-mono text-sm text-text-primary">{item.ip}</span>
                 <Tag colorScheme="green" className="text-xs">
                   {item.count.toLocaleString()}
                 </Tag>
@@ -188,11 +188,11 @@ TopEndpoints.displayName = 'TopEndpoints';
 export const PcapStats: FC<PcapStatsProps> = memo(({ stats, filename, fileSize }) => {
   if (!stats) {
     return (
-      <Card className="border-white/5 bg-gray-900/70">
+      <Card className="border-white/5 bg-bg-surface/70">
         <CardContent className="py-12 text-center">
-          <BarChart3 className={`${iconSizes['3xl']} text-gray-600 mx-auto mb-4`} />
-          <p className="text-gray-400">No statistics available</p>
-          <SmallText className="text-gray-500">
+          <BarChart3 className={`${iconSizes['3xl']} text-text-disabled mx-auto mb-4`} />
+          <p className="text-text-muted">No statistics available</p>
+          <SmallText className="text-text-muted">
             Upload and analyze a PCAP file to see statistics
           </SmallText>
         </CardContent>
@@ -204,14 +204,14 @@ export const PcapStats: FC<PcapStatsProps> = memo(({ stats, filename, fileSize }
     <div className="space-y-6">
       {/* File Info */}
       {filename && (
-        <Card className="border-white/5 bg-gray-900/70">
+        <Card className="border-white/5 bg-bg-surface/70">
           <CardContent>
             <div className="flex items-center gap-3">
-              <FileText className={`${iconSizes.lg} text-violet-400`} />
+              <FileText className={`${iconSizes.lg} text-brand-400`} />
               <div>
-                <p className="font-medium text-white">{filename}</p>
+                <p className="font-medium text-text-primary">{filename}</p>
                 {fileSize && (
-                  <SmallText className="text-gray-400">{formatBytes(fileSize)}</SmallText>
+                  <SmallText className="text-text-muted">{formatBytes(fileSize)}</SmallText>
                 )}
               </div>
             </div>
@@ -220,32 +220,32 @@ export const PcapStats: FC<PcapStatsProps> = memo(({ stats, filename, fileSize }
       )}
 
       {/* Summary Statistics */}
-      <Card className="border-white/5 bg-gray-900/70">
+      <Card className="border-white/5 bg-bg-surface/70">
         <CardContent className="space-y-4">
           <H2 className="flex items-center gap-2 mb-0">
-            <BarChart3 className={`${iconSizes.lg} text-cyan-300`} />
+            <BarChart3 className={`${iconSizes.lg} text-status-info`} />
             Summary Statistics
           </H2>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <StatBlock
-              icon={<ArrowRightLeft className={`${iconSizes.md} text-violet-400`} />}
+              icon={<ArrowRightLeft className={`${iconSizes.md} text-brand-400`} />}
               label="Total Packets"
               value={stats.totalPackets.toLocaleString()}
             />
             <StatBlock
-              icon={<FileText className={`${iconSizes.md} text-blue-400`} />}
+              icon={<FileText className={`${iconSizes.md} text-status-info`} />}
               label="Total Bytes"
               value={formatBytes(stats.totalBytes)}
               helper={`${stats.totalBytes.toLocaleString()} bytes`}
             />
             <StatBlock
-              icon={<Clock className={`${iconSizes.md} text-green-400`} />}
+              icon={<Clock className={`${iconSizes.md} text-status-success`} />}
               label="Duration"
               value={formatDurationMs(stats.timeRange.durationMs)}
             />
             <StatBlock
-              icon={<Network className={`${iconSizes.md} text-yellow-400`} />}
+              icon={<Network className={`${iconSizes.md} text-status-warning`} />}
               label="Protocols"
               value={Object.keys(stats.protocols).length}
               helper="Unique protocols"
@@ -255,23 +255,23 @@ export const PcapStats: FC<PcapStatsProps> = memo(({ stats, filename, fileSize }
       </Card>
 
       {/* Time Range */}
-      <Card className="border-white/5 bg-gray-900/70">
+      <Card className="border-white/5 bg-bg-surface/70">
         <CardContent className="space-y-4">
           <div className="flex items-center gap-2">
-            <Clock className={`${iconSizes.lg} text-emerald-300`} />
+            <Clock className={`${iconSizes.lg} text-status-success`} />
             <H2>Time Range</H2>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="rounded-lg border border-white/5 bg-gray-950/50 p-4">
-              <SmallText className="text-gray-400 uppercase tracking-wide">Start Time</SmallText>
-              <p className="text-lg font-mono text-white mt-1">
+            <div className="rounded-lg border border-white/5 bg-bg-base/50 p-4">
+              <SmallText className="text-text-muted uppercase tracking-wide">Start Time</SmallText>
+              <p className="text-lg font-mono text-text-primary mt-1">
                 {formatTimestamp(stats.timeRange.start)}
               </p>
             </div>
-            <div className="rounded-lg border border-white/5 bg-gray-950/50 p-4">
-              <SmallText className="text-gray-400 uppercase tracking-wide">End Time</SmallText>
-              <p className="text-lg font-mono text-white mt-1">
+            <div className="rounded-lg border border-white/5 bg-bg-base/50 p-4">
+              <SmallText className="text-text-muted uppercase tracking-wide">End Time</SmallText>
+              <p className="text-lg font-mono text-text-primary mt-1">
                 {formatTimestamp(stats.timeRange.end)}
               </p>
             </div>
@@ -280,10 +280,10 @@ export const PcapStats: FC<PcapStatsProps> = memo(({ stats, filename, fileSize }
       </Card>
 
       {/* Protocol Breakdown */}
-      <Card className="border-white/5 bg-gray-900/70">
+      <Card className="border-white/5 bg-bg-surface/70">
         <CardContent className="space-y-4">
           <div className="flex items-center gap-2">
-            <BarChart3 className={`${iconSizes.lg} text-violet-300`} />
+            <BarChart3 className={`${iconSizes.lg} text-brand-300`} />
             <H2>Protocol Breakdown</H2>
           </div>
 
@@ -292,10 +292,10 @@ export const PcapStats: FC<PcapStatsProps> = memo(({ stats, filename, fileSize }
       </Card>
 
       {/* Top Endpoints */}
-      <Card className="border-white/5 bg-gray-900/70">
+      <Card className="border-white/5 bg-bg-surface/70">
         <CardContent className="space-y-4">
           <div className="flex items-center gap-2">
-            <Network className={`${iconSizes.lg} text-blue-300`} />
+            <Network className={`${iconSizes.lg} text-status-info`} />
             <H2>Top Endpoints</H2>
           </div>
 

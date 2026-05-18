@@ -31,7 +31,7 @@ interface PageShellProps {
 
 export const PageShell: FC<PageShellProps> = ({ children, className = '' }) => (
   <div
-    className={`min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 ${className}`}
+    className={`min-h-screen bg-gradient-to-br from-bg-base via-bg-surface to-gray-950 ${className}`}
   >
     <div className="mx-auto max-w-7xl px-4 sm:px-6 py-6">{children}</div>
   </div>
@@ -122,8 +122,8 @@ export const PrimaryNav: FC<PrimaryNavProps> = ({
         }}
         className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 whitespace-nowrap ${
           isActive
-            ? 'bg-gradient-to-r from-violet-600/30 to-violet-500/20 text-white border-l-2 border-violet-500 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]'
-            : 'text-gray-400 hover:text-white hover:bg-white/5'
+            ? 'bg-gradient-to-r from-brand-600/30 to-brand-500/20 text-text-primary border-l-2 border-brand-500 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]'
+            : 'text-text-muted hover:text-text-primary hover:bg-white/5'
         } ${isGrouped ? 'w-full justify-start' : ''}`}
       >
         {iconElement}
@@ -132,10 +132,10 @@ export const PrimaryNav: FC<PrimaryNavProps> = ({
           <span
             className={`ml-1 px-1.5 py-0.5 text-xs rounded font-medium ${
               item.badge === 'New'
-                ? 'bg-emerald-500/20 text-emerald-300'
+                ? 'bg-status-success/20 text-status-success'
                 : item.badge === 'Beta'
-                  ? 'bg-amber-500/20 text-amber-300'
-                  : 'bg-violet-500/20 text-violet-300'
+                  ? 'bg-status-warning/20 text-status-warning'
+                  : 'bg-brand-500/20 text-brand-300'
             }`}
           >
             {item.badge}
@@ -158,7 +158,7 @@ export const PrimaryNav: FC<PrimaryNavProps> = ({
         <button
           type="button"
           onClick={() => scroll('left')}
-          className="flex-shrink-0 p-1.5 rounded-lg bg-gray-800/80 text-gray-400 hover:text-white hover:bg-gray-700 transition-colors"
+          className="flex-shrink-0 p-1.5 rounded-lg bg-bg-elevated/80 text-text-muted hover:text-text-primary hover:bg-bg-elevated transition-colors"
           aria-label="Scroll left"
         >
           <ChevronLeft className={iconSizes.md} />
@@ -180,7 +180,7 @@ export const PrimaryNav: FC<PrimaryNavProps> = ({
                   <button
                     type="button"
                     onClick={() => setOpenGroup(openGroup === group.label ? null : group.label)}
-                    className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-400 hover:text-white transition-colors"
+                    className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-text-muted hover:text-text-primary transition-colors"
                   >
                     <span>{group.label}</span>
                     <ChevronDown
@@ -188,7 +188,7 @@ export const PrimaryNav: FC<PrimaryNavProps> = ({
                     />
                   </button>
                   {openGroup === group.label && (
-                    <div className="absolute top-full left-0 mt-1 py-1 min-w-[180px] rounded-lg bg-gray-900/95 backdrop-blur-xl border border-white/10 shadow-xl z-50 animate-slide-down">
+                    <div className="absolute top-full left-0 mt-1 py-1 min-w-[180px] rounded-lg bg-bg-surface/95 backdrop-blur-xl border border-white/10 shadow-xl z-50 animate-slide-down">
                       {group.items.map((item) => (
                         <div key={item.path} className="px-1">
                           {renderNavItem(item, true)}
@@ -208,7 +208,7 @@ export const PrimaryNav: FC<PrimaryNavProps> = ({
         <button
           type="button"
           onClick={() => scroll('right')}
-          className="flex-shrink-0 p-1.5 rounded-lg bg-gray-800/80 text-gray-400 hover:text-white hover:bg-gray-700 transition-colors"
+          className="flex-shrink-0 p-1.5 rounded-lg bg-bg-elevated/80 text-text-muted hover:text-text-primary hover:bg-bg-elevated transition-colors"
           aria-label="Scroll right"
         >
           <ChevronRight className={iconSizes.md} />
@@ -217,7 +217,7 @@ export const PrimaryNav: FC<PrimaryNavProps> = ({
 
       {/* Version badge */}
       {version && (
-        <div className="flex-shrink-0 ml-2 px-2 py-1 text-xs font-mono text-gray-500 bg-gray-800/50 rounded">
+        <div className="flex-shrink-0 ml-2 px-2 py-1 text-xs font-mono text-text-muted bg-bg-elevated/50 rounded">
           {version}
         </div>
       )}
@@ -261,10 +261,10 @@ export const PageHeader: FC<PageHeaderProps> = ({
       {breadcrumbs && breadcrumbs.length > 0 && <Breadcrumb items={breadcrumbs} className="mb-3" />}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex items-center gap-3">
-          {icon && createElement(icon, { className: 'h-8 w-8 text-violet-400' })}
+          {icon && createElement(icon, { className: 'h-8 w-8 text-brand-400' })}
           <div>
-            <h1 className="text-2xl font-bold text-white font-display">{title}</h1>
-            {description && <p className="text-sm text-gray-400 mt-1 max-w-2xl">{description}</p>}
+            <h1 className="text-2xl font-bold text-text-primary font-display">{title}</h1>
+            {description && <p className="text-sm text-text-muted mt-1 max-w-2xl">{description}</p>}
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -275,7 +275,7 @@ export const PageHeader: FC<PageHeaderProps> = ({
               onClick={() => setHelpOpen(true)}
               aria-label={`Open help for ${title}`}
               title={`What is ${title}?`}
-              className="rounded-full p-1.5 text-gray-400 hover:bg-white/10 hover:text-white"
+              className="rounded-full p-1.5 text-text-muted hover:bg-white/10 hover:text-text-primary"
             >
               <HelpCircle className={iconSizes.lg} />
             </button>
@@ -325,19 +325,19 @@ const HelpPanel: FC<{ title: string; children: ReactNode; onClose: () => void }>
         className="absolute inset-0 cursor-default"
         onClick={onClose}
       />
-      <aside className="relative h-full w-full max-w-md overflow-y-auto bg-gray-900 p-6 shadow-2xl">
+      <aside className="relative h-full w-full max-w-md overflow-y-auto bg-bg-surface p-6 shadow-2xl">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-white">{title}</h2>
+          <h2 className="text-lg font-semibold text-text-primary">{title}</h2>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close help"
-            className="rounded p-1 text-gray-400 hover:bg-white/10 hover:text-white"
+            className="rounded p-1 text-text-muted hover:bg-white/10 hover:text-text-primary"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
-        <div className="prose prose-invert prose-sm max-w-none text-gray-200">{children}</div>
+        <div className="prose prose-invert prose-sm max-w-none text-text-primary">{children}</div>
       </aside>
     </div>
   );
@@ -353,11 +353,11 @@ interface StatusIndicatorProps {
 }
 
 const statusColors = {
-  online: 'bg-emerald-500',
-  offline: 'bg-gray-500',
-  warning: 'bg-amber-500',
-  error: 'bg-red-500',
-  pending: 'bg-blue-500',
+  online: 'bg-status-success',
+  offline: 'bg-bg-muted',
+  warning: 'bg-status-warning',
+  error: 'bg-status-error',
+  pending: 'bg-status-info',
 };
 
 const statusLabels = {
@@ -393,7 +393,7 @@ export const StatusIndicator: FC<StatusIndicatorProps> = ({
         )}
       </span>
       {(label || label === undefined) && (
-        <span className="text-sm text-gray-300">{label ?? statusLabels[status]}</span>
+        <span className="text-sm text-text-secondary">{label ?? statusLabels[status]}</span>
       )}
     </div>
   );
@@ -414,13 +414,16 @@ export const Breadcrumb: FC<BreadcrumbProps> = ({ items, className = '' }) => (
   <nav className={`flex items-center gap-1 text-sm ${className}`} aria-label="Breadcrumb">
     {items.map((item, index) => (
       <div key={item.label} className="flex items-center gap-1">
-        {index > 0 && <ChevronRight className={`${iconSizes.md} text-gray-600`} />}
+        {index > 0 && <ChevronRight className={`${iconSizes.md} text-text-disabled`} />}
         {item.href ? (
-          <Link to={item.href} className="text-gray-400 hover:text-white transition-colors">
+          <Link
+            to={item.href}
+            className="text-text-muted hover:text-text-primary transition-colors"
+          >
             {item.label}
           </Link>
         ) : (
-          <span className="text-gray-300 font-medium">{item.label}</span>
+          <span className="text-text-secondary font-medium">{item.label}</span>
         )}
       </div>
     ))}

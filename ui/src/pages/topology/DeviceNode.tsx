@@ -25,9 +25,9 @@ export const DeviceNode: FC<DeviceNodeProps> = memo(({ data, selected }) => {
   const color = deviceColors[deviceType] || deviceColors.unknown;
 
   const statusColor = {
-    online: 'bg-green-500',
-    offline: 'bg-gray-500',
-    warning: 'bg-yellow-500',
+    online: 'bg-status-success',
+    offline: 'bg-bg-muted',
+    warning: 'bg-status-warning',
   }[data.status || 'online'];
 
   return (
@@ -59,17 +59,17 @@ export const DeviceNode: FC<DeviceNodeProps> = memo(({ data, selected }) => {
       <Handle
         type="target"
         position={Position.Left}
-        className="!w-2 !h-2 !bg-violet-400 !border-0"
+        className="!w-2 !h-2 !bg-brand-400 !border-0"
       />
       <Handle
         type="source"
         position={Position.Right}
-        className="!w-2 !h-2 !bg-violet-400 !border-0"
+        className="!w-2 !h-2 !bg-brand-400 !border-0"
       />
 
       {/* Status indicator */}
       <div
-        className={`absolute -top-1 -right-1 w-3 h-3 rounded-full ${statusColor} border-2 border-gray-900`}
+        className={`absolute -top-1 -right-1 w-3 h-3 rounded-full ${statusColor} border-2 border-border-muted`}
       />
 
       {/* Icon and name */}
@@ -83,17 +83,19 @@ export const DeviceNode: FC<DeviceNodeProps> = memo(({ data, selected }) => {
           <Icon className="w-5 h-5" />
         </div>
         <div className="min-w-0 flex-1">
-          <div className="font-semibold text-white text-sm truncate">{data.label}</div>
-          <div className="text-xs text-gray-400 capitalize">{data.type}</div>
+          <div className="font-semibold text-text-primary text-sm truncate">{data.label}</div>
+          <div className="text-xs text-text-muted capitalize">{data.type}</div>
         </div>
       </div>
 
       {/* IPs */}
       {data.ips && data.ips.length > 0 && (
         <div className="mt-2 pt-2 border-t border-white/10">
-          <div className="text-xs font-mono text-gray-400 truncate">
+          <div className="text-xs font-mono text-text-muted truncate">
             {data.ips[0]}
-            {data.ips.length > 1 && <span className="text-gray-500"> +{data.ips.length - 1}</span>}
+            {data.ips.length > 1 && (
+              <span className="text-text-muted"> +{data.ips.length - 1}</span>
+            )}
           </div>
         </div>
       )}
@@ -104,13 +106,13 @@ export const DeviceNode: FC<DeviceNodeProps> = memo(({ data, selected }) => {
           {data.protocols.slice(0, 3).map((proto) => (
             <span
               key={proto}
-              className="px-1.5 py-0.5 text-[10px] rounded-md bg-white/10 text-gray-300"
+              className="px-1.5 py-0.5 text-[10px] rounded-md bg-white/10 text-text-secondary"
             >
               {proto}
             </span>
           ))}
           {data.protocols.length > 3 && (
-            <span className="px-1.5 py-0.5 text-[10px] rounded-md bg-white/5 text-gray-500">
+            <span className="px-1.5 py-0.5 text-[10px] rounded-md bg-white/5 text-text-muted">
               +{data.protocols.length - 3}
             </span>
           )}

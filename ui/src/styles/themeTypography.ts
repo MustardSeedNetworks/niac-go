@@ -10,21 +10,21 @@
 
 export const typography = {
   heading: {
-    h1: 'text-2xl font-bold text-white',
-    h2: 'text-xl font-semibold text-white',
-    h3: 'text-lg font-semibold text-white',
-    h4: 'text-base font-medium text-white',
+    h1: 'text-2xl font-bold text-text-primary',
+    h2: 'text-xl font-semibold text-text-primary',
+    h3: 'text-lg font-semibold text-text-primary',
+    h4: 'text-base font-medium text-text-primary',
   },
 
   body: {
-    large: 'text-base text-gray-200',
-    default: 'text-sm text-gray-300',
-    small: 'text-xs text-gray-400',
-    muted: 'text-sm text-gray-500',
+    large: 'text-base text-text-primary',
+    default: 'text-sm text-text-secondary',
+    small: 'text-xs text-text-muted',
+    muted: 'text-sm text-text-muted',
   },
 
-  label: 'text-sm font-medium text-gray-300',
-  caption: 'text-xs text-gray-500',
+  label: 'text-sm font-medium text-text-secondary',
+  caption: 'text-xs text-text-muted',
   code: 'font-mono text-sm',
 
   size: {

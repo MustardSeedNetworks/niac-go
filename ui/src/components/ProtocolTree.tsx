@@ -34,7 +34,7 @@ export const ProtocolTree: FC<ProtocolTreeProps> = memo(({ packet, onFieldSelect
 
   if (!packet) {
     return (
-      <div className="h-full flex items-center justify-center text-gray-400">
+      <div className="h-full flex items-center justify-center text-text-muted">
         <p className="text-sm">Select a packet to view protocol layers</p>
       </div>
     );
@@ -42,7 +42,7 @@ export const ProtocolTree: FC<ProtocolTreeProps> = memo(({ packet, onFieldSelect
 
   if (layers.length === 0) {
     return (
-      <div className="h-full flex items-center justify-center text-gray-400">
+      <div className="h-full flex items-center justify-center text-text-muted">
         <p className="text-sm">No protocol layers available</p>
       </div>
     );

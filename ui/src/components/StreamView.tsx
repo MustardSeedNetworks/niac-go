@@ -91,27 +91,27 @@ export const StreamView: FC<StreamViewProps> = memo(({ packets, clientEndpoint, 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-      <div className="w-full max-w-4xl mx-4 bg-gray-900 border border-white/10 rounded-xl shadow-2xl max-h-[85vh] flex flex-col">
+      <div className="w-full max-w-4xl mx-4 bg-bg-surface border border-white/10 rounded-xl shadow-2xl max-h-[85vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
           <div>
-            <h3 className="text-lg font-semibold text-white">Follow Stream</h3>
-            <SmallText className="text-gray-400">
+            <h3 className="text-lg font-semibold text-text-primary">Follow Stream</h3>
+            <SmallText className="text-text-muted">
               {packets.length} packets |{' '}
-              <span className="text-blue-400">{totalClientBytes} B client</span> /{' '}
-              <span className="text-red-400">{totalServerBytes} B server</span>
+              <span className="text-status-info">{totalClientBytes} B client</span> /{' '}
+              <span className="text-status-error">{totalServerBytes} B server</span>
             </SmallText>
           </div>
           <div className="flex items-center gap-3">
             {/* Display mode toggle */}
-            <div className="flex rounded-lg border border-white/10 bg-gray-950/50 p-1">
+            <div className="flex rounded-lg border border-white/10 bg-bg-base/50 p-1">
               <button
                 type="button"
                 onClick={() => setDisplayMode('ascii')}
                 className={`px-3 py-1 text-xs rounded-md transition-colors ${
                   displayMode === 'ascii'
-                    ? 'bg-violet-600 text-white'
-                    : 'text-gray-400 hover:text-white'
+                    ? 'bg-brand-600 text-text-primary'
+                    : 'text-text-muted hover:text-text-primary'
                 }`}
               >
                 ASCII
@@ -121,15 +121,19 @@ export const StreamView: FC<StreamViewProps> = memo(({ packets, clientEndpoint, 
                 onClick={() => setDisplayMode('hex')}
                 className={`px-3 py-1 text-xs rounded-md transition-colors ${
                   displayMode === 'hex'
-                    ? 'bg-violet-600 text-white'
-                    : 'text-gray-400 hover:text-white'
+                    ? 'bg-brand-600 text-text-primary'
+                    : 'text-text-muted hover:text-text-primary'
                 }`}
               >
                 Hex
               </button>
             </div>
 
-            <button type="button" onClick={onClose} className="p-1 text-gray-400 hover:text-white">
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-1 text-text-muted hover:text-text-primary"
+            >
               <X className="h-5 w-5" />
             </button>
           </div>
@@ -138,7 +142,7 @@ export const StreamView: FC<StreamViewProps> = memo(({ packets, clientEndpoint, 
         {/* Stream content */}
         <div className="flex-1 overflow-y-auto px-5 py-4">
           {segments.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-text-muted">
               <p>No payload data available for this stream</p>
             </div>
           ) : (
@@ -148,8 +152,8 @@ export const StreamView: FC<StreamViewProps> = memo(({ packets, clientEndpoint, 
                   key={`${segment.timestamp}-${idx}`}
                   className={`px-3 py-1.5 rounded whitespace-pre-wrap break-all ${
                     segment.isClient
-                      ? 'bg-blue-950/30 text-blue-300 border-l-2 border-blue-500'
-                      : 'bg-red-950/30 text-red-300 border-l-2 border-red-500'
+                      ? 'bg-status-info/30 text-status-info border-l-2 border-status-info'
+                      : 'bg-status-error/30 text-status-error border-l-2 border-status-error'
                   }`}
                 >
                   {displayMode === 'ascii' ? hexToAscii(segment.data) : formatHex(segment.data)}
