@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.3.11/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.4.15/schema.json",
   "vcs": {
     "enabled": true,
     "clientKind": "git",
@@ -354,7 +354,6 @@
         "useValidLang": "error"
       },
       "nursery": {
-        "noDeprecatedImports": "error",
         "noDuplicateDependencies": "error",
         "noDuplicatedSpreadProps": "error",
         "noEqualsToNull": "off",
