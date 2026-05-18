@@ -5,6 +5,15 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.75.0](https://github.com/krisarmstrong/niac-go/compare/v0.74.0...v0.75.0) (2026-05-18)
+
+
+### Features
+
+* dev-run target + product favicon + SPDX header migration ([#607](https://github.com/krisarmstrong/niac-go/issues/607)) ([557f3a9](https://github.com/krisarmstrong/niac-go/commit/557f3a97647a8e6883eab8b370e73f8cd99a5c26))
+* **i18n:** add Spanish (es) locale with full namespace parity ([#608](https://github.com/krisarmstrong/niac-go/issues/608)) ([d04c911](https://github.com/krisarmstrong/niac-go/commit/d04c911a308263d12c1933d90600b3c6cd037da9))
+* **ui:** add sun/moon toggle to sidebar footer + cmdk install ([#609](https://github.com/krisarmstrong/niac-go/issues/609)) ([08b2517](https://github.com/krisarmstrong/niac-go/commit/08b25171e2a29b8f7fb434c94e2a5f6563a028f8))
+
 ## [0.74.0](https://github.com/krisarmstrong/niac-go/compare/v0.73.0...v0.74.0) (2026-05-18)
 
 
