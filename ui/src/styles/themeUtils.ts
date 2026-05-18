@@ -2,8 +2,8 @@
 
 import { twMerge } from 'tailwind-merge';
 
-import { badge, button, card, drawer, input, modal } from './components';
-import { deviceColor } from './device-colors';
+import { badge, button, card, drawer, input, modal } from './themeComponents';
+import { deviceColor } from './themeDeviceColors';
 
 /**
  * =============================================================================
