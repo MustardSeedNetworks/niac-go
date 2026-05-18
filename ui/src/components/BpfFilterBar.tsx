@@ -113,8 +113,8 @@ export const BpfFilterBar: FC = memo(() => {
       <div className="flex items-center gap-2">
         {/* Filter icon and active indicator */}
         <div className="flex items-center gap-1.5 flex-shrink-0">
-          <Filter className={`${iconSizes.md} text-gray-400`} />
-          {isActive && <CheckCircle2 className="h-3.5 w-3.5 text-green-400" />}
+          <Filter className={`${iconSizes.md} text-text-muted`} />
+          {isActive && <CheckCircle2 className="h-3.5 w-3.5 text-status-success" />}
         </div>
 
         {/* Input */}
@@ -127,12 +127,12 @@ export const BpfFilterBar: FC = memo(() => {
           }}
           onKeyDown={handleKeyDown}
           placeholder="BPF filter (e.g. tcp port 80)"
-          className={`flex-1 bg-gray-950/70 border rounded-lg px-3 py-1.5 text-sm font-mono text-white placeholder-gray-500 focus:outline-none focus:ring-1 ${
+          className={`flex-1 bg-bg-base/70 border rounded-lg px-3 py-1.5 text-sm font-mono text-text-primary placeholder-gray-500 focus:outline-none focus:ring-1 ${
             error
-              ? 'border-red-500/60 focus:ring-red-500/40'
+              ? 'border-status-error/60 focus:ring-status-error/40'
               : isActive
-                ? 'border-green-500/40 focus:ring-green-500/40'
-                : 'border-white/10 focus:ring-violet-500/40'
+                ? 'border-status-success/40 focus:ring-green-500/40'
+                : 'border-white/10 focus:ring-brand-500/40'
           }`}
           disabled={isLoading}
         />
@@ -164,15 +164,15 @@ export const BpfFilterBar: FC = memo(() => {
       {/* Error message */}
       {error && (
         <div className="flex items-center gap-1.5 px-1">
-          <AlertCircle className={`${iconSizes.sm} text-red-400 flex-shrink-0`} />
-          <SmallText className="text-red-400">{error}</SmallText>
+          <AlertCircle className={`${iconSizes.sm} text-status-error flex-shrink-0`} />
+          <SmallText className="text-status-error">{error}</SmallText>
         </div>
       )}
 
       {/* Active filter indicator */}
       {isActive && activeFilter && (
         <div className="flex items-center gap-1.5 px-1">
-          <SmallText className="text-green-400">
+          <SmallText className="text-status-success">
             Active: <span className="font-mono">{activeFilter}</span>
           </SmallText>
         </div>
@@ -185,7 +185,7 @@ export const BpfFilterBar: FC = memo(() => {
             key={preset.filter}
             type="button"
             onClick={() => handlePreset(preset.filter)}
-            className="px-2 py-0.5 text-xs rounded bg-gray-800/60 text-gray-400 hover:text-white hover:bg-gray-700/60 border border-white/5 transition-colors"
+            className="px-2 py-0.5 text-xs rounded bg-bg-elevated/60 text-text-muted hover:text-text-primary hover:bg-bg-elevated/60 border border-white/5 transition-colors"
           >
             {preset.label}
           </button>

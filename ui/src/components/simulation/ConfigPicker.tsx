@@ -240,7 +240,7 @@ export const ConfigPicker: FC<ConfigPickerProps> = ({
         <div className="flex-1" />
         <label
           htmlFor="config-upload"
-          className={`flex items-center gap-1.5 rounded border border-white/10 bg-gray-900/60 px-3 py-1 text-xs font-medium text-gray-200 hover:bg-white/5 ${
+          className={`flex items-center gap-1.5 rounded border border-white/10 bg-bg-surface/60 px-3 py-1 text-xs font-medium text-text-primary hover:bg-white/5 ${
             convertingDsl ? 'cursor-wait opacity-60' : 'cursor-pointer'
           }`}
           title="Pick a config from disk. YAML is used as-is; legacy Java-DSL (.cfg) is auto-converted."
@@ -260,14 +260,14 @@ export const ConfigPicker: FC<ConfigPickerProps> = ({
           <button
             type="button"
             onClick={handleClearLocal}
-            className="text-xs font-medium text-red-300 hover:text-red-200"
+            className="text-xs font-medium text-status-error hover:text-status-error"
           >
             Clear
           </button>
         )}
       </div>
       {convertError && (
-        <SmallText className="text-red-300" role="alert">
+        <SmallText className="text-status-error" role="alert">
           {convertError}
         </SmallText>
       )}
@@ -275,17 +275,17 @@ export const ConfigPicker: FC<ConfigPickerProps> = ({
       {/* Search + view toggle */}
       <div className="flex items-center gap-2">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search configs…"
-            className="w-full rounded border border-white/10 bg-gray-900/60 py-2 pl-9 pr-3 text-sm text-white placeholder-gray-500 focus:border-violet-400 focus:outline-none"
+            className="w-full rounded border border-white/10 bg-bg-surface/60 py-2 pl-9 pr-3 text-sm text-text-primary placeholder-gray-500 focus:border-brand-400 focus:outline-none"
           />
         </div>
         <fieldset
-          className="flex rounded border border-white/10 bg-gray-900/60 p-0.5"
+          className="flex rounded border border-white/10 bg-bg-surface/60 p-0.5"
           aria-label="View density"
         >
           <ViewToggle
@@ -319,11 +319,11 @@ export const ConfigPicker: FC<ConfigPickerProps> = ({
 
       {/* Java-DSL import — collapsed by default since most users won't need it */}
       <details
-        className="rounded border border-white/10 bg-gray-950/40 p-3"
+        className="rounded border border-white/10 bg-bg-base/40 p-3"
         open={showJavaDsl}
         onToggle={(e) => setShowJavaDsl(e.currentTarget.open)}
       >
-        <summary className="flex cursor-pointer items-center gap-2 text-sm text-gray-300 hover:text-white">
+        <summary className="flex cursor-pointer items-center gap-2 text-sm text-text-secondary hover:text-text-primary">
           {showJavaDsl ? (
             <ChevronDown className={iconSizes.md} />
           ) : (

@@ -1,28 +1,29 @@
 // Copyright (c) 2025 Mustard Seed Networks. All rights reserved.
 
 /**
- * =============================================================================
- * COMPONENT VARIANTS
- * =============================================================================
+ * themeComponents.ts — reusable component styling tokens.
+ * Re-exported through theme.ts.
  *
- * Reusable component styling tokens for buttons, inputs, cards, modals, etc.
+ * All values reference semantic theme tokens declared in src/index.css via
+ * Tailwind v4 @theme directive (brand-*, status-*, text-*, bg-*, border-*).
+ * No raw Tailwind palette colors — change the @theme block to retheme;
+ * do not hardcode here.
  */
 
-/**
- * Button variants - consistent button styling
- */
 export const button = {
-  base: 'inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-violet-500/50 disabled:opacity-50 disabled:cursor-not-allowed',
+  base: 'inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-brand-500/50 disabled:opacity-50 disabled:cursor-not-allowed',
 
   variant: {
     primary:
-      'bg-gradient-to-r from-violet-600 to-violet-500 text-white shadow-lg shadow-violet-500/30 hover:from-violet-500 hover:to-violet-400 active:scale-[0.98]',
-    secondary: 'bg-white/10 text-white hover:bg-white/15 border border-white/10',
-    ghost: 'text-gray-400 hover:text-white hover:bg-white/10',
-    outline: 'border border-white/20 text-gray-300 hover:bg-white/5 hover:border-violet-500/50',
-    danger: 'bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30',
+      'bg-gradient-to-r from-brand-600 to-brand-500 text-text-primary shadow-lg shadow-brand-500/30 hover:from-brand-500 hover:to-brand-400 active:scale-[0.98]',
+    secondary: 'bg-bg-elevated text-text-primary hover:bg-bg-overlay border border-border-default',
+    ghost: 'text-text-muted hover:text-text-primary hover:bg-bg-elevated',
+    outline:
+      'border border-border-muted text-text-secondary hover:bg-bg-elevated hover:border-brand-500/50',
+    danger:
+      'bg-status-error/20 text-status-error border border-status-error/30 hover:bg-status-error/30',
     success:
-      'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30',
+      'bg-status-success/20 text-status-success border border-status-success/30 hover:bg-status-success/30',
   },
 
   size: {
@@ -33,16 +34,13 @@ export const button = {
   },
 } as const;
 
-/**
- * Input variants - consistent form input styling
- */
 export const input = {
-  base: 'w-full rounded-lg bg-gray-900/50 text-white transition-colors focus:outline-none focus:ring-2 focus:ring-violet-500/50 disabled:opacity-50 disabled:cursor-not-allowed placeholder:text-gray-500',
+  base: 'w-full rounded-lg bg-bg-surface text-text-primary transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500/50 disabled:opacity-50 disabled:cursor-not-allowed placeholder:text-text-disabled',
 
   state: {
-    default: 'border border-white/10',
-    error: 'border border-red-500/50',
-    success: 'border border-emerald-500/50',
+    default: 'border border-border-default',
+    error: 'border border-status-error/50',
+    success: 'border border-status-success/50',
   },
 
   size: {
@@ -52,19 +50,16 @@ export const input = {
   },
 } as const;
 
-/**
- * Card variants - glass morphism cards
- */
 export const card = {
   base: 'rounded-xl backdrop-blur-xl',
 
   variant: {
-    default: 'bg-gradient-to-br from-gray-800/50 to-gray-900/50 border border-white/10',
+    default: 'bg-gradient-to-br from-bg-elevated to-bg-surface border border-border-default',
     elevated:
-      'bg-gradient-to-br from-gray-800/70 to-gray-900/70 border border-white/10 shadow-xl shadow-black/20',
+      'bg-gradient-to-br from-bg-elevated to-bg-surface border border-border-default shadow-xl shadow-black/20',
     interactive:
-      'bg-gradient-to-br from-gray-800/50 to-gray-900/50 border border-white/10 hover:border-violet-500/30 cursor-pointer transition-colors',
-    glass: 'bg-white/5 backdrop-blur-2xl border border-white/10 shadow-2xl',
+      'bg-gradient-to-br from-bg-elevated to-bg-surface border border-border-default hover:border-brand-500/30 cursor-pointer transition-colors',
+    glass: 'bg-bg-elevated/40 backdrop-blur-2xl border border-border-default shadow-2xl',
   },
 
   padding: {
@@ -75,21 +70,18 @@ export const card = {
   },
 } as const;
 
-/**
- * Badge variants - status badges and tags
- */
 export const badge = {
   base: 'inline-flex items-center gap-1 rounded-full text-xs font-medium',
 
   variant: {
-    default: 'bg-white/10 text-gray-300',
-    success: 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30',
-    warning: 'bg-amber-500/20 text-amber-400 border border-amber-500/30',
-    error: 'bg-red-500/20 text-red-400 border border-red-500/30',
-    info: 'bg-blue-500/20 text-blue-400 border border-blue-500/30',
-    primary: 'bg-violet-500/20 text-violet-400 border border-violet-500/30',
-    new: 'bg-emerald-500/20 text-emerald-300',
-    beta: 'bg-amber-500/20 text-amber-300',
+    default: 'bg-bg-elevated text-text-secondary',
+    success: 'bg-status-success/20 text-status-success border border-status-success/30',
+    warning: 'bg-status-warning/20 text-status-warning border border-status-warning/30',
+    error: 'bg-status-error/20 text-status-error border border-status-error/30',
+    info: 'bg-status-info/20 text-status-info border border-status-info/30',
+    primary: 'bg-brand-500/20 text-brand-400 border border-brand-500/30',
+    new: 'bg-status-success/20 text-status-success',
+    beta: 'bg-status-warning/20 text-status-warning',
   },
 
   size: {
@@ -99,28 +91,22 @@ export const badge = {
   },
 } as const;
 
-/**
- * Alert/Banner variants
- */
 export const alert = {
   base: 'px-4 py-3 rounded-lg border',
 
   variant: {
-    error: 'bg-red-500/10 border-red-500/20 text-red-400',
-    warning: 'bg-amber-500/10 border-amber-500/20 text-amber-400',
-    success: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400',
-    info: 'bg-blue-500/10 border-blue-500/20 text-blue-400',
+    error: 'bg-status-error/10 border-status-error/20 text-status-error',
+    warning: 'bg-status-warning/10 border-status-warning/20 text-status-warning',
+    success: 'bg-status-success/10 border-status-success/20 text-status-success',
+    info: 'bg-status-info/10 border-status-info/20 text-status-info',
   },
 } as const;
 
-/**
- * Modal/Dialog variants
- */
 export const modal = {
   overlay: 'fixed inset-0 z-50 flex items-center justify-center p-4',
   backdrop: 'absolute inset-0 bg-black/60 backdrop-blur-sm',
   content:
-    'relative bg-gray-900 border border-white/10 rounded-xl shadow-2xl max-h-[85vh] overflow-y-auto',
+    'relative bg-bg-surface border border-border-default rounded-xl shadow-2xl max-h-[85vh] overflow-y-auto',
 
   size: {
     sm: 'max-w-md w-full',
@@ -131,14 +117,11 @@ export const modal = {
   },
 } as const;
 
-/**
- * Drawer variants - side panels
- */
 export const drawer = {
   overlay: 'fixed inset-0 z-50',
   backdrop: 'absolute inset-0 bg-black/50 backdrop-blur-sm',
   content:
-    'absolute right-0 top-0 h-full bg-gray-900 border-l border-white/10 shadow-2xl overflow-y-auto',
+    'absolute right-0 top-0 h-full bg-bg-surface border-l border-border-default shadow-2xl overflow-y-auto',
 
   size: {
     sm: 'w-80',
@@ -148,30 +131,24 @@ export const drawer = {
   },
 } as const;
 
-/**
- * Status indicator variants - for connection status, health, etc.
- */
 export const status = {
   dot: 'inline-block w-2 h-2 rounded-full',
 
   color: {
-    success: 'bg-emerald-500',
-    warning: 'bg-amber-500',
-    error: 'bg-red-500',
-    info: 'bg-blue-500',
-    inactive: 'bg-gray-500',
-    online: 'bg-emerald-500',
-    offline: 'bg-gray-500',
-    pending: 'bg-blue-500',
+    success: 'bg-status-success',
+    warning: 'bg-status-warning',
+    error: 'bg-status-error',
+    info: 'bg-status-info',
+    inactive: 'bg-text-disabled',
+    online: 'bg-status-success',
+    offline: 'bg-text-disabled',
+    pending: 'bg-status-info',
   },
 
   withLabel: 'inline-flex items-center gap-2',
   pulse: 'animate-pulse',
 } as const;
 
-/**
- * Icon sizing utilities
- */
 export const icon = {
   size: {
     xs: 'w-3 h-3',

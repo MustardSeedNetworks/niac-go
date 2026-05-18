@@ -18,8 +18,8 @@ export const ViewToggle: FC<{
     title={label}
     className={`rounded px-2 py-1 transition-colors ${
       active
-        ? 'bg-violet-500/20 text-violet-100'
-        : 'text-gray-400 hover:bg-white/5 hover:text-gray-200'
+        ? 'bg-brand-500/20 text-brand-100'
+        : 'text-text-muted hover:bg-white/5 hover:text-text-primary'
     }`}
   >
     {icon}

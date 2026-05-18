@@ -29,13 +29,13 @@ const RuleRow: FC<{
   const filterError = rule.filter ? validate(rule.filter) : null;
 
   return (
-    <div className="flex items-center gap-2 py-2 px-2 rounded-lg bg-gray-950/40 border border-white/5">
+    <div className="flex items-center gap-2 py-2 px-2 rounded-lg bg-bg-base/40 border border-white/5">
       {/* Enable toggle */}
       <input
         type="checkbox"
         checked={rule.enabled}
         onChange={(e) => onChange({ ...rule, enabled: e.target.checked })}
-        className="rounded border-gray-600 bg-gray-800 text-violet-500 focus:ring-violet-400 focus:ring-offset-gray-900 flex-shrink-0"
+        className="rounded border-border-muted bg-bg-elevated text-brand-500 focus:ring-brand-400 focus:ring-offset-gray-900 flex-shrink-0"
       />
 
       {/* Color preview */}
@@ -51,7 +51,7 @@ const RuleRow: FC<{
         type="text"
         value={rule.name}
         onChange={(e) => onChange({ ...rule, name: e.target.value })}
-        className="w-24 bg-transparent border-b border-white/10 text-sm text-white focus:outline-none focus:border-violet-400 px-1"
+        className="w-24 bg-transparent border-b border-white/10 text-sm text-text-primary focus:outline-none focus:border-brand-400 px-1"
         placeholder="Name"
       />
 
@@ -60,10 +60,10 @@ const RuleRow: FC<{
         type="text"
         value={rule.filter}
         onChange={(e) => onChange({ ...rule, filter: e.target.value })}
-        className={`flex-1 bg-transparent border-b text-sm font-mono text-white focus:outline-none px-1 ${
+        className={`flex-1 bg-transparent border-b text-sm font-mono text-text-primary focus:outline-none px-1 ${
           filterError
-            ? 'border-red-500/60 focus:border-red-400'
-            : 'border-white/10 focus:border-violet-400'
+            ? 'border-status-error/60 focus:border-status-error'
+            : 'border-white/10 focus:border-brand-400'
         }`}
         placeholder="Filter expression"
       />
@@ -91,7 +91,7 @@ const RuleRow: FC<{
         type="button"
         onClick={onMoveUp}
         disabled={isFirst}
-        className="p-1 text-gray-500 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
+        className="p-1 text-text-muted hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed"
         title="Move up"
       >
         <ArrowUp className={iconSizes.sm} />
@@ -100,7 +100,7 @@ const RuleRow: FC<{
         type="button"
         onClick={onMoveDown}
         disabled={isLast}
-        className="p-1 text-gray-500 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
+        className="p-1 text-text-muted hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed"
         title="Move down"
       >
         <ArrowDown className={iconSizes.sm} />
@@ -110,7 +110,7 @@ const RuleRow: FC<{
       <button
         type="button"
         onClick={onDelete}
-        className="p-1 text-gray-500 hover:text-red-400"
+        className="p-1 text-text-muted hover:text-status-error"
         title="Delete rule"
       >
         <Trash2 className="h-3.5 w-3.5" />
@@ -187,18 +187,22 @@ export const ColoringRulesPanel: FC<ColoringRulesPanelProps> = memo(
 
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-        <div className="w-full max-w-3xl mx-4 bg-gray-900 border border-white/10 rounded-xl shadow-2xl max-h-[80vh] flex flex-col">
+        <div className="w-full max-w-3xl mx-4 bg-bg-surface border border-white/10 rounded-xl shadow-2xl max-h-[80vh] flex flex-col">
           {/* Header */}
           <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
-            <h3 className="text-lg font-semibold text-white">Coloring Rules</h3>
-            <button type="button" onClick={onClose} className="p-1 text-gray-400 hover:text-white">
+            <h3 className="text-lg font-semibold text-text-primary">Coloring Rules</h3>
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-1 text-text-muted hover:text-text-primary"
+            >
               <X className="h-5 w-5" />
             </button>
           </div>
 
           {/* Rules list */}
           <div className="flex-1 overflow-y-auto px-5 py-4 space-y-2">
-            <SmallText className="text-gray-400 mb-3 block">
+            <SmallText className="text-text-muted mb-3 block">
               Rules are evaluated top-to-bottom. First matching rule determines the row color.
             </SmallText>
 
@@ -216,7 +220,7 @@ export const ColoringRulesPanel: FC<ColoringRulesPanelProps> = memo(
             ))}
 
             {localRules.length === 0 && (
-              <div className="text-center py-8 text-gray-500">
+              <div className="text-center py-8 text-text-muted">
                 <p>No coloring rules defined.</p>
               </div>
             )}

@@ -35,21 +35,21 @@ const PacketRow = memo(
     <tr
       onClick={onClick}
       className={`cursor-pointer transition-colors ${
-        isSelected ? 'bg-violet-900/30' : 'hover:bg-gray-900/50'
+        isSelected ? 'bg-brand-900/30' : 'hover:bg-bg-surface/50'
       }`}
       style={rowStyle}
     >
-      <td className="px-3 py-2 text-gray-400 text-xs font-mono">{packet.number}</td>
-      <td className="px-3 py-2 text-gray-300 text-xs font-mono">{formattedTime}</td>
-      <td className="px-3 py-2 text-white text-sm font-mono">{packet.sourceIp}</td>
-      <td className="px-3 py-2 text-white text-sm font-mono">{packet.destIp}</td>
+      <td className="px-3 py-2 text-text-muted text-xs font-mono">{packet.number}</td>
+      <td className="px-3 py-2 text-text-secondary text-xs font-mono">{formattedTime}</td>
+      <td className="px-3 py-2 text-text-primary text-sm font-mono">{packet.sourceIp}</td>
+      <td className="px-3 py-2 text-text-primary text-sm font-mono">{packet.destIp}</td>
       <td className="px-3 py-2">
         <Tag colorScheme={getProtocolColor(packet.protocol)} className="text-xs">
           {packet.protocol}
         </Tag>
       </td>
-      <td className="px-3 py-2 text-gray-400 text-xs text-right">{packet.length}</td>
-      <td className="px-3 py-2 text-gray-400 text-xs truncate max-w-xs">{packet.info}</td>
+      <td className="px-3 py-2 text-text-muted text-xs text-right">{packet.length}</td>
+      <td className="px-3 py-2 text-text-muted text-xs truncate max-w-xs">{packet.info}</td>
     </tr>
   ),
 );
@@ -75,8 +75,8 @@ export const PcapPacketList: FC<PcapPacketListProps> = memo(
 
     if (totalPackets === 0) {
       return (
-        <Card className="border-white/5 bg-gray-900/70 h-full">
-          <CardContent className="h-full flex items-center justify-center text-gray-400">
+        <Card className="border-white/5 bg-bg-surface/70 h-full">
+          <CardContent className="h-full flex items-center justify-center text-text-muted">
             <div className="text-center">
               <p className="text-sm">No packets to display</p>
               <SmallText>Upload a PCAP file to analyze</SmallText>
@@ -87,11 +87,11 @@ export const PcapPacketList: FC<PcapPacketListProps> = memo(
     }
 
     return (
-      <Card className="border-white/5 bg-gray-900/70 h-full flex flex-col">
+      <Card className="border-white/5 bg-bg-surface/70 h-full flex flex-col">
         <CardContent className="h-full flex flex-col">
           {/* Packet count */}
           <div className="mb-3 flex items-center justify-between">
-            <SmallText className="text-gray-400">
+            <SmallText className="text-text-muted">
               Showing {packets.length} of {totalPackets} packets
             </SmallText>
           </div>
@@ -99,7 +99,7 @@ export const PcapPacketList: FC<PcapPacketListProps> = memo(
           {/* Packet Table */}
           <div className="flex-1 min-h-0 overflow-auto rounded-lg border border-white/5">
             {packets.length === 0 ? (
-              <div className="h-full flex items-center justify-center text-gray-400">
+              <div className="h-full flex items-center justify-center text-text-muted">
                 <div className="text-center">
                   <p className="text-sm">No packets match filter</p>
                   <SmallText>Try adjusting the filter expression</SmallText>
@@ -107,31 +107,31 @@ export const PcapPacketList: FC<PcapPacketListProps> = memo(
               </div>
             ) : (
               <table className="min-w-full divide-y divide-white/5">
-                <thead className="bg-gray-900/80 sticky top-0 z-10">
+                <thead className="bg-bg-surface/80 sticky top-0 z-10">
                   <tr>
-                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-400">
+                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-text-muted">
                       #
                     </th>
                     <th
-                      className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-400 cursor-pointer hover:text-violet-300 select-none"
+                      className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-text-muted cursor-pointer hover:text-brand-300 select-none"
                       onClick={cycleTimeMode}
                       title="Click to cycle: Absolute / Relative / Delta"
                     >
                       {getTimeDisplayLabel(timeMode)}
                     </th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-400">
+                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-text-muted">
                       Source
                     </th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-400">
+                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-text-muted">
                       Destination
                     </th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-400">
+                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-text-muted">
                       Protocol
                     </th>
-                    <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-gray-400">
+                    <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-text-muted">
                       Length
                     </th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-400">
+                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-text-muted">
                       Info
                     </th>
                   </tr>

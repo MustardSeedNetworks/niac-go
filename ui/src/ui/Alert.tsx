@@ -21,23 +21,23 @@ const statusConfig: Record<
 > = {
   success: {
     icon: CheckCircle,
-    containerClass: 'border-green-500/30 bg-green-500/10 text-green-300',
-    iconClass: 'text-green-400',
+    containerClass: 'border-status-success/30 bg-status-success/10 text-status-success',
+    iconClass: 'text-status-success',
   },
   error: {
     icon: AlertCircle,
-    containerClass: 'border-red-500/30 bg-red-500/10 text-red-300',
-    iconClass: 'text-red-400',
+    containerClass: 'border-status-error/30 bg-status-error/10 text-status-error',
+    iconClass: 'text-status-error',
   },
   warning: {
     icon: AlertTriangle,
-    containerClass: 'border-yellow-500/30 bg-yellow-500/10 text-yellow-300',
-    iconClass: 'text-yellow-400',
+    containerClass: 'border-status-warning/30 bg-status-warning/10 text-status-warning',
+    iconClass: 'text-status-warning',
   },
   info: {
     icon: Info,
-    containerClass: 'border-blue-500/30 bg-blue-500/10 text-blue-300',
-    iconClass: 'text-blue-400',
+    containerClass: 'border-status-info/30 bg-status-info/10 text-status-info',
+    iconClass: 'text-status-info',
   },
 };
 

@@ -78,14 +78,14 @@ export const LogFilters: FC<LogFiltersProps> = memo(
         <div className="flex flex-wrap items-center gap-4">
           {/* Level Filter */}
           <div className="flex items-center gap-2">
-            <label htmlFor="level-filter" className="text-sm text-gray-400">
+            <label htmlFor="level-filter" className="text-sm text-text-muted">
               Level:
             </label>
             <select
               id="level-filter"
               value={levelFilter}
               onChange={handleLevelChange}
-              className="rounded-lg border border-white/10 bg-gray-950/60 px-3 py-1.5 text-sm text-white focus:border-violet-400 focus:outline-none"
+              className="rounded-lg border border-white/10 bg-bg-base/60 px-3 py-1.5 text-sm text-text-primary focus:border-brand-400 focus:outline-none"
               aria-label="Filter by log level"
             >
               {LOG_LEVELS.map((level) => (
@@ -98,14 +98,14 @@ export const LogFilters: FC<LogFiltersProps> = memo(
 
           {/* Protocol Filter */}
           <div className="flex items-center gap-2">
-            <label htmlFor="protocol-filter" className="text-sm text-gray-400">
+            <label htmlFor="protocol-filter" className="text-sm text-text-muted">
               Protocol:
             </label>
             <select
               id="protocol-filter"
               value={protocolFilter}
               onChange={handleProtocolChange}
-              className="rounded-lg border border-white/10 bg-gray-950/60 px-3 py-1.5 text-sm text-white focus:border-violet-400 focus:outline-none"
+              className="rounded-lg border border-white/10 bg-bg-base/60 px-3 py-1.5 text-sm text-text-primary focus:border-brand-400 focus:outline-none"
               aria-label="Filter by protocol"
             >
               {PROTOCOLS.map((protocol) => (
@@ -118,18 +118,18 @@ export const LogFilters: FC<LogFiltersProps> = memo(
 
           {/* Search Input */}
           <div className="flex flex-1 items-center gap-2">
-            <label htmlFor="log-search" className="text-sm text-gray-400">
+            <label htmlFor="log-search" className="text-sm text-text-muted">
               Search:
             </label>
             <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
               <input
                 id="log-search"
                 type="text"
                 value={searchQuery}
                 onChange={handleSearchChange}
                 placeholder="Filter logs..."
-                className="w-full rounded-lg border border-white/10 bg-gray-950/60 py-1.5 pl-9 pr-3 text-sm text-white placeholder-gray-500 focus:border-violet-400 focus:outline-none"
+                className="w-full rounded-lg border border-white/10 bg-bg-base/60 py-1.5 pl-9 pr-3 text-sm text-text-primary placeholder-gray-500 focus:border-brand-400 focus:outline-none"
                 aria-label="Search logs"
               />
             </div>
@@ -145,13 +145,13 @@ export const LogFilters: FC<LogFiltersProps> = memo(
                 type="checkbox"
                 checked={autoScroll}
                 onChange={handleAutoScrollChange}
-                className="h-4 w-4 rounded border-gray-600 bg-gray-800 text-violet-500 focus:ring-violet-500 focus:ring-offset-gray-900"
+                className="h-4 w-4 rounded border-border-muted bg-bg-elevated text-brand-500 focus:ring-brand-500 focus:ring-offset-gray-900"
               />
-              <span className="text-sm text-gray-300">Auto-scroll</span>
+              <span className="text-sm text-text-secondary">Auto-scroll</span>
             </label>
 
             {/* Log Count */}
-            <SmallText className="text-gray-500">
+            <SmallText className="text-text-muted">
               {logCount} log{logCount !== 1 ? 's' : ''} buffered
             </SmallText>
           </div>
@@ -167,7 +167,9 @@ export const LogFilters: FC<LogFiltersProps> = memo(
                   paused ? <Play className={iconSizes.md} /> : <Pause className={iconSizes.md} />
                 }
                 aria-label={paused ? 'Resume log stream' : 'Pause log stream'}
-                className={paused ? 'bg-green-600 hover:bg-green-700 border-green-500' : ''}
+                className={
+                  paused ? 'bg-status-success hover:bg-status-success border-status-success' : ''
+                }
               >
                 {paused ? 'Resume' : 'Pause'}
               </Button>

@@ -30,8 +30,8 @@ const DetailRow = memo(
 
     return (
       <div className="flex items-start gap-2 py-1.5 border-b border-white/5 last:border-0">
-        <SmallText className="text-gray-400 w-24 flex-shrink-0">{label}</SmallText>
-        <span className={`text-sm text-white ${mono ? 'font-mono' : ''}`}>{value}</span>
+        <SmallText className="text-text-muted w-24 flex-shrink-0">{label}</SmallText>
+        <span className={`text-sm text-text-primary ${mono ? 'font-mono' : ''}`}>{value}</span>
       </div>
     );
   },
@@ -49,8 +49,8 @@ const HeadersSection = memo(({ headers }: { headers: Record<string, unknown> | u
 
   return (
     <div className="mt-4">
-      <h4 className="text-sm font-semibold text-gray-300 mb-2">Protocol Headers</h4>
-      <div className="rounded-lg bg-gray-950/50 p-3 border border-white/5">
+      <h4 className="text-sm font-semibold text-text-secondary mb-2">Protocol Headers</h4>
+      <div className="rounded-lg bg-bg-base/50 p-3 border border-white/5">
         {Object.entries(headers).map(([key, value]) => (
           <DetailRow
             key={key}
@@ -77,7 +77,7 @@ HeadersSection.displayName = 'HeadersSection';
 export const PacketDetails: FC<PacketDetailsProps> = memo(({ packet, onFieldSelect }) => {
   if (!packet) {
     return (
-      <div className="h-full flex items-center justify-center text-gray-400">
+      <div className="h-full flex items-center justify-center text-text-muted">
         <p className="text-sm">Select a packet to view details</p>
       </div>
     );
@@ -90,7 +90,7 @@ export const PacketDetails: FC<PacketDetailsProps> = memo(({ packet, onFieldSele
         <Tag colorScheme={getProtocolColor(packet.protocol)} className="text-sm">
           {packet.protocol}
         </Tag>
-        <SmallText className="text-gray-400">{formatBytes(packet.size)}</SmallText>
+        <SmallText className="text-text-muted">{formatBytes(packet.size)}</SmallText>
       </div>
 
       {/* Protocol dissection tree */}
@@ -99,8 +99,8 @@ export const PacketDetails: FC<PacketDetailsProps> = memo(({ packet, onFieldSele
       {/* Summary */}
       {packet.summary && (
         <div className="mt-3 pt-2 border-t border-white/5">
-          <SmallText className="text-gray-500 uppercase text-xs tracking-wide">Summary</SmallText>
-          <p className="text-sm text-gray-300 py-1">{packet.summary}</p>
+          <SmallText className="text-text-muted uppercase text-xs tracking-wide">Summary</SmallText>
+          <p className="text-sm text-text-secondary py-1">{packet.summary}</p>
         </div>
       )}
     </div>

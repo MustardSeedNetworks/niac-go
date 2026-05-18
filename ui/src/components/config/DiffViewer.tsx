@@ -29,7 +29,7 @@ const DiffStatsBar: FC<{
   showMergeControls,
 }) => (
   <div className="flex items-center gap-4 flex-wrap">
-    <SmallText className="text-gray-400">Changes:</SmallText>
+    <SmallText className="text-text-muted">Changes:</SmallText>
     <Tag colorScheme="green" className="text-xs">
       +{additions} additions
     </Tag>
@@ -40,7 +40,7 @@ const DiffStatsBar: FC<{
       {modifications} modified blocks
     </Tag>
     {showMergeControls && (
-      <SmallText className="text-gray-400 ml-auto">
+      <SmallText className="text-text-muted ml-auto">
         {decisionsCount} / {changedBlocksCount} decisions made
       </SmallText>
     )}
@@ -54,12 +54,12 @@ const ColumnHeaders: FC<{
   leftLabel: string;
   rightLabel: string;
 }> = ({ leftLabel, rightLabel }) => (
-  <div className="grid grid-cols-2 gap-px bg-gray-800 rounded-t-lg overflow-hidden">
-    <div className="bg-gray-900/90 px-4 py-2">
-      <SmallText className="text-gray-300 font-semibold">{leftLabel}</SmallText>
+  <div className="grid grid-cols-2 gap-px bg-bg-elevated rounded-t-lg overflow-hidden">
+    <div className="bg-bg-surface/90 px-4 py-2">
+      <SmallText className="text-text-secondary font-semibold">{leftLabel}</SmallText>
     </div>
-    <div className="bg-gray-900/90 px-4 py-2">
-      <SmallText className="text-gray-300 font-semibold">{rightLabel}</SmallText>
+    <div className="bg-bg-surface/90 px-4 py-2">
+      <SmallText className="text-text-secondary font-semibold">{rightLabel}</SmallText>
     </div>
   </div>
 );
@@ -68,7 +68,7 @@ const ColumnHeaders: FC<{
  * Empty state when no content is provided
  */
 const EmptyState: FC = () => (
-  <div className="flex items-center justify-center h-64 text-gray-400">
+  <div className="flex items-center justify-center h-64 text-text-muted">
     <SmallText>Upload files to compare</SmallText>
   </div>
 );
@@ -142,7 +142,7 @@ export const DiffViewer: FC<DiffViewerProps> = ({
       <ColumnHeaders leftLabel={leftLabel} rightLabel={rightLabel} />
 
       {/* Diff content */}
-      <div className="rounded-lg border border-white/10 bg-gray-950/50 overflow-hidden max-h-[500px] overflow-y-auto">
+      <div className="rounded-lg border border-white/10 bg-bg-base/50 overflow-hidden max-h-[500px] overflow-y-auto">
         {diffBlocks.map((block) => (
           <DiffBlockComponent
             key={block.id}

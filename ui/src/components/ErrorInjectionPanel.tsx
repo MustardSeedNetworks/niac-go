@@ -119,7 +119,7 @@ export const ErrorInjectionPanel: FC = () => {
                 id="error-device"
                 value={selectedDevice}
                 onChange={(e) => setSelectedDevice(e.target.value)}
-                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 bg-bg-elevated border border-border-default rounded-md focus:outline-none focus:ring-2 focus:ring-status-info"
               >
                 <option value="">Select device...</option>
                 {devices?.map((dev) => (
@@ -141,7 +141,7 @@ export const ErrorInjectionPanel: FC = () => {
                 value={selectedInterface}
                 onChange={(e) => setSelectedInterface(e.target.value)}
                 placeholder="e.g., eth0, GigabitEthernet0/1"
-                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 bg-bg-elevated border border-border-default rounded-md focus:outline-none focus:ring-2 focus:ring-status-info"
               />
             </div>
 
@@ -154,7 +154,7 @@ export const ErrorInjectionPanel: FC = () => {
                 id="error-type"
                 value={selectedErrorType}
                 onChange={(e) => setSelectedErrorType(e.target.value)}
-                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 bg-bg-elevated border border-border-default rounded-md focus:outline-none focus:ring-2 focus:ring-status-info"
               >
                 <option value="">Select error type...</option>
                 {errorInfo?.availableTypes?.map((type: ErrorType) => (
@@ -164,7 +164,7 @@ export const ErrorInjectionPanel: FC = () => {
                 ))}
               </select>
               {selectedErrorType && errorInfo?.availableTypes && (
-                <SmallText className="text-gray-400 mt-1">
+                <SmallText className="text-text-muted mt-1">
                   {
                     errorInfo.availableTypes.find((t: ErrorType) => t.type === selectedErrorType)
                       ?.description
@@ -185,9 +185,9 @@ export const ErrorInjectionPanel: FC = () => {
                 max="100"
                 value={errorValue}
                 onChange={(e) => setErrorValue(Number.parseInt(e.target.value, 10))}
-                className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                className="w-full h-2 bg-bg-elevated rounded-lg appearance-none cursor-pointer"
               />
-              <SmallText className="text-gray-400">0 = No errors, 100 = Maximum errors</SmallText>
+              <SmallText className="text-text-muted">0 = No errors, 100 = Maximum errors</SmallText>
             </div>
           </div>
 
@@ -196,8 +196,8 @@ export const ErrorInjectionPanel: FC = () => {
             <div
               className={`p-3 rounded ${
                 message.type === 'success'
-                  ? 'bg-green-500/10 text-green-400 border border-green-500/20'
-                  : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                  ? 'bg-status-success/10 text-status-success border border-status-success/20'
+                  : 'bg-status-error/10 text-status-error border border-status-error/20'
               }`}
             >
               {message.text}
@@ -228,7 +228,7 @@ export const ErrorInjectionPanel: FC = () => {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-gray-700">
+                  <tr className="border-b border-border-default">
                     <th className="text-left py-2 px-2">Device IP</th>
                     <th className="text-left py-2 px-2">Interface</th>
                     <th className="text-left py-2 px-2">Error Type</th>
@@ -242,7 +242,7 @@ export const ErrorInjectionPanel: FC = () => {
                       Object.entries(errorTypes).map(([errorType, value]) => (
                         <tr
                           key={`${deviceIp}-${iface}-${errorType}`}
-                          className="border-b border-gray-800"
+                          className="border-b border-border-default"
                         >
                           <td className="py-2 px-2">{deviceIp}</td>
                           <td className="py-2 px-2">{iface}</td>
@@ -255,7 +255,7 @@ export const ErrorInjectionPanel: FC = () => {
                               type="button"
                               onClick={() => handleClearSpecific(deviceIp, iface)}
                               disabled={isSubmitting}
-                              className="text-blue-400 hover:text-blue-300 text-sm"
+                              className="text-status-info hover:text-status-info text-sm"
                               aria-label={`Clear error on ${deviceIp} ${iface}`}
                             >
                               Clear

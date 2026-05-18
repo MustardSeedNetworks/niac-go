@@ -146,32 +146,32 @@ export const DebugConsolePage: FC = () => {
       return {
         label: 'Paused',
         color: 'yellow' as const,
-        indicator: 'bg-yellow-400',
+        indicator: 'bg-status-warning',
       };
     }
     if (connected) {
       return {
         label: 'Live',
         color: 'green' as const,
-        indicator: 'bg-green-400 animate-pulse',
+        indicator: 'bg-status-success animate-pulse',
       };
     }
     // SSE auto-reconnects, so disconnected state is brief
     return {
       label: 'Connecting...',
       color: 'yellow' as const,
-      indicator: 'bg-yellow-400 animate-pulse',
+      indicator: 'bg-status-warning animate-pulse',
     };
   }, [connected, paused]);
 
   return (
     <div className="space-y-6">
       {/* Main Console Card */}
-      <Card className="border-white/5 bg-gray-900/70">
+      <Card className="border-white/5 bg-bg-surface/70">
         <CardContent className="space-y-4">
           {/* Header with Connection Status */}
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-white">Debug Console</h2>
+            <h2 className="text-xl font-semibold text-text-primary">Debug Console</h2>
             <div className="flex items-center gap-3">
               {/* Debug Settings Toggle */}
               <Button
@@ -195,7 +195,7 @@ export const DebugConsolePage: FC = () => {
               <button
                 type="button"
                 onClick={reconnect}
-                className="flex items-center gap-2 rounded-lg border border-white/10 bg-gray-950/50 px-3 py-1.5 text-sm transition-colors hover:bg-gray-800/50"
+                className="flex items-center gap-2 rounded-lg border border-white/10 bg-bg-base/50 px-3 py-1.5 text-sm transition-colors hover:bg-bg-elevated/50"
                 title={connected ? 'Connected to log stream' : 'Click to reconnect'}
               >
                 <span className={`h-2 w-2 rounded-full ${connectionStatus.indicator}`} />
@@ -223,7 +223,7 @@ export const DebugConsolePage: FC = () => {
 
           {/* Filter Status */}
           {(levelFilter !== 'All' || protocolFilter !== 'All' || searchQuery) && (
-            <div className="flex flex-wrap items-center gap-2 text-sm text-gray-400">
+            <div className="flex flex-wrap items-center gap-2 text-sm text-text-muted">
               <span>
                 Showing {filteredLogs.length} of {logs.length} logs
               </span>
@@ -237,7 +237,7 @@ export const DebugConsolePage: FC = () => {
                   setProtocolFilter('All');
                   setSearchQuery('');
                 }}
-                className="text-violet-400 hover:text-violet-300 underline"
+                className="text-brand-400 hover:text-brand-300 underline"
               >
                 Clear filters
               </button>
@@ -248,7 +248,7 @@ export const DebugConsolePage: FC = () => {
           <LogViewer logs={filteredLogs} searchQuery={searchQuery} autoScroll={autoScroll} />
 
           {/* Footer Info */}
-          <div className="flex items-center justify-between text-xs text-gray-500">
+          <div className="flex items-center justify-between text-xs text-text-muted">
             <span>
               Buffer: {logs.length}/{MAX_LOG_BUFFER} logs
               {logs.length >= MAX_LOG_BUFFER && ' (oldest logs will be removed)'}

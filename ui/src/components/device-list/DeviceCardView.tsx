@@ -35,9 +35,9 @@ export const DeviceCardView: FC = () => {
         return (
           <div key={device.hostname} className="rounded-2xl">
             <Card
-              className={`group border-white/5 bg-gray-900/70 hover:border-violet-500/30 transition-all h-full ${
+              className={`group border-white/5 bg-bg-surface/70 hover:border-brand-500/30 transition-all h-full ${
                 selectedDevices.has(device.hostname)
-                  ? 'ring-2 ring-violet-500/50 border-violet-500/30'
+                  ? 'ring-2 ring-brand-500/50 border-brand-500/30'
                   : ''
               }`}
             >
@@ -49,7 +49,7 @@ export const DeviceCardView: FC = () => {
                       type="checkbox"
                       checked={selectedDevices.has(device.hostname)}
                       onChange={() => onSelectDevice(device.hostname)}
-                      className="h-4 w-4 rounded border-gray-600 bg-gray-800 text-violet-500 focus:ring-violet-500 cursor-pointer"
+                      className="h-4 w-4 rounded border-border-muted bg-bg-elevated text-brand-500 focus:ring-brand-500 cursor-pointer"
                     />
                     <div className={`p-2 rounded-lg ${colorClasses.bg}`}>
                       <DeviceIcon className={`${iconSizes.lg} ${colorClasses.text}`} />
@@ -63,27 +63,27 @@ export const DeviceCardView: FC = () => {
                 <button
                   type="button"
                   onClick={() => onEdit(device.hostname)}
-                  className="w-full text-left rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2 focus:ring-offset-gray-900"
+                  className="w-full text-left rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 focus:ring-offset-gray-900"
                   aria-label={`Edit device ${device.hostname}`}
                 >
                   {/* Device name and IP */}
                   <div>
-                    <h3 className="font-semibold text-white group-hover:text-violet-300 transition-colors truncate">
+                    <h3 className="font-semibold text-text-primary group-hover:text-brand-300 transition-colors truncate">
                       {device.hostname}
                     </h3>
                     <div className="flex items-center gap-1 mt-1">
-                      <Network className={`${iconSizes.sm} text-gray-500`} />
-                      <span className="text-sm text-gray-400 font-mono">
+                      <Network className={`${iconSizes.sm} text-text-muted`} />
+                      <span className="text-sm text-text-muted font-mono">
                         {device.ip || device.ips?.[0] || 'No IP'}
                       </span>
                       {device.ips && device.ips.length > 1 && (
-                        <span className="text-xs text-gray-500">+{device.ips.length - 1}</span>
+                        <span className="text-xs text-text-muted">+{device.ips.length - 1}</span>
                       )}
                     </div>
                   </div>
 
                   {/* MAC Address */}
-                  <div className="text-xs text-gray-500 font-mono truncate">{device.mac}</div>
+                  <div className="text-xs text-text-muted font-mono truncate">{device.mac}</div>
 
                   {/* Protocols */}
                   <div className="flex flex-wrap gap-1">
@@ -94,7 +94,7 @@ export const DeviceCardView: FC = () => {
                         </Tag>
                       ))
                     ) : (
-                      <span className="text-gray-500 text-xs">No protocols</span>
+                      <span className="text-text-muted text-xs">No protocols</span>
                     )}
                     {deviceProtocols.length > 3 && (
                       <Tag colorScheme="gray" className="text-xs">
@@ -109,7 +109,7 @@ export const DeviceCardView: FC = () => {
                   <button
                     type="button"
                     onClick={() => onEdit(device.hostname)}
-                    className="p-2 text-gray-400 hover:text-violet-300 hover:bg-white/10 rounded-lg transition-colors"
+                    className="p-2 text-text-muted hover:text-brand-300 hover:bg-white/10 rounded-lg transition-colors"
                     title="Edit device"
                   >
                     <Edit3 className={iconSizes.md} />
@@ -117,7 +117,7 @@ export const DeviceCardView: FC = () => {
                   <button
                     type="button"
                     onClick={() => onClone(device.hostname)}
-                    className="p-2 text-gray-400 hover:text-blue-300 hover:bg-white/10 rounded-lg transition-colors"
+                    className="p-2 text-text-muted hover:text-status-info hover:bg-white/10 rounded-lg transition-colors"
                     title="Clone device"
                   >
                     <Copy className={iconSizes.md} />
@@ -125,7 +125,7 @@ export const DeviceCardView: FC = () => {
                   <button
                     type="button"
                     onClick={() => onDelete(device.hostname)}
-                    className="p-2 text-gray-400 hover:text-red-400 hover:bg-white/10 rounded-lg transition-colors"
+                    className="p-2 text-text-muted hover:text-status-error hover:bg-white/10 rounded-lg transition-colors"
                     title="Delete device"
                   >
                     <Trash2 className={iconSizes.md} />

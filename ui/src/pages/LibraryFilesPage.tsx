@@ -45,16 +45,16 @@ function LibraryFilesView({ kind }: Props) {
 
   return (
     <div className="space-y-6">
-      <Card className="border-white/5 bg-gray-900/70">
+      <Card className="border-white/5 bg-bg-surface/70">
         <CardContent>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-cyan-500/20">
-                <KindIcon className="w-6 h-6 text-cyan-400" />
+              <div className="p-2 rounded-lg bg-status-info/20">
+                <KindIcon className="w-6 h-6 text-status-info" />
               </div>
               <div>
                 <H2>{title}</H2>
-                <SmallText className="text-gray-400">
+                <SmallText className="text-text-muted">
                   {entries.length} {entries.length === 1 ? 'file' : 'files'} ·{' '}
                   {humanBytes(totalBytes)}
                 </SmallText>
@@ -63,14 +63,14 @@ function LibraryFilesView({ kind }: Props) {
 
             <div className="flex items-center gap-2">
               <div className="relative">
-                <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-muted" />
                 <input
                   type="search"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Search by name…"
                   aria-label="Filter library entries by name"
-                  className="w-64 rounded-md border border-white/10 bg-gray-950/40 pl-7 pr-3 py-1.5 text-xs text-gray-200 placeholder:text-gray-500 focus:border-cyan-500/40 focus:outline-none focus:ring-1 focus:ring-cyan-500/30"
+                  className="w-64 rounded-md border border-white/10 bg-bg-base/40 pl-7 pr-3 py-1.5 text-xs text-text-primary placeholder:text-text-muted focus:border-status-info/40 focus:outline-none focus:ring-1 focus:ring-cyan-500/30"
                 />
               </div>
               <Button
@@ -87,19 +87,21 @@ function LibraryFilesView({ kind }: Props) {
         </CardContent>
       </Card>
 
-      <Card className="border-white/5 bg-gray-900/70">
+      <Card className="border-white/5 bg-bg-surface/70">
         <CardContent>
           {error ? (
-            <SmallText className="text-red-400">Failed to load library: {error.message}</SmallText>
+            <SmallText className="text-status-error">
+              Failed to load library: {error.message}
+            </SmallText>
           ) : entries.length === 0 ? (
             <div className="py-10 text-center">
-              <SmallText className="text-gray-400">No {kind} installed yet.</SmallText>
-              <p className="mt-2 text-xs text-gray-500">{emptyHint}</p>
+              <SmallText className="text-text-muted">No {kind} installed yet.</SmallText>
+              <p className="mt-2 text-xs text-text-muted">{emptyHint}</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="text-xs text-gray-500 uppercase tracking-wide">
+                <thead className="text-xs text-text-muted uppercase tracking-wide">
                   <tr className="border-b border-white/10">
                     <th className="text-left py-2 pr-4">Name</th>
                     <th className="text-right py-2 pr-4">Size</th>
@@ -107,7 +109,7 @@ function LibraryFilesView({ kind }: Props) {
                     <th className="text-left py-2">Modified</th>
                   </tr>
                 </thead>
-                <tbody className="text-gray-200">
+                <tbody className="text-text-primary">
                   {filtered.map((entry) => (
                     <tr key={entry.name} className="border-b border-white/5 last:border-0">
                       <td className="py-2 pr-4 font-mono text-xs">{entry.name}</td>
@@ -117,14 +119,14 @@ function LibraryFilesView({ kind }: Props) {
                       <td className="py-2 pr-4">
                         <SourceBadge source={entry.source} />
                       </td>
-                      <td className="py-2 text-xs text-gray-400">
+                      <td className="py-2 text-xs text-text-muted">
                         {new Date(entry.modifiedAt).toLocaleString()}
                       </td>
                     </tr>
                   ))}
                   {search.trim() !== '' && filtered.length === 0 && (
                     <tr>
-                      <td colSpan={4} className="py-6 text-center text-xs text-gray-500">
+                      <td colSpan={4} className="py-6 text-center text-xs text-text-muted">
                         No entries match "{search}"
                       </td>
                     </tr>
@@ -141,9 +143,9 @@ function LibraryFilesView({ kind }: Props) {
 
 const SourceBadge: FC<{ source: LibraryFileEntry['source'] }> = ({ source }) => {
   const styles: Record<LibraryFileEntry['source'], string> = {
-    starter: 'border-violet-500/40 bg-violet-500/10 text-violet-200',
-    bundle: 'border-cyan-500/40 bg-cyan-500/10 text-cyan-200',
-    user: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200',
+    starter: 'border-brand-500/40 bg-brand-500/10 text-brand-200',
+    bundle: 'border-status-info/40 bg-status-info/10 text-status-info',
+    user: 'border-status-success/40 bg-status-success/10 text-status-success',
   };
   return (
     <span

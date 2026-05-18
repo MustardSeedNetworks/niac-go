@@ -10,7 +10,7 @@ export interface YamlPreviewSectionProps {
 
 export const YamlPreviewSection: FC<YamlPreviewSectionProps> = ({ yamlContent }) => {
   return (
-    <Card className="border-white/5 bg-gray-900/70">
+    <Card className="border-white/5 bg-bg-surface/70">
       <CardContent>
         <H2 className="mb-3 flex items-center gap-2 text-base">
           <span>YAML Preview</span>

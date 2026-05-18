@@ -22,7 +22,7 @@ export const TrafficInjectionPage: FC = () => {
       <div className="space-y-4">
         <div>
           <H2>Error Injection</H2>
-          <P className="text-gray-400">
+          <P className="text-text-muted">
             Inject network errors on device interfaces for testing and simulation scenarios.
           </P>
         </div>
@@ -33,7 +33,7 @@ export const TrafficInjectionPage: FC = () => {
       <div className="space-y-4">
         <div>
           <H2>PCAP Replay</H2>
-          <P className="text-gray-400">
+          <P className="text-text-muted">
             Replay captured packet traffic with loop and timing controls for testing.
           </P>
         </div>
@@ -41,28 +41,30 @@ export const TrafficInjectionPage: FC = () => {
       </div>
 
       {/* Recent runs — previously lived on the standalone /analysis page */}
-      <Card className="border-white/5 bg-gray-900/70">
+      <Card className="border-white/5 bg-bg-surface/70">
         <CardContent className="space-y-3">
           <div className="flex items-center justify-between">
             <H2 className="flex items-center gap-2 text-lg">
-              <History className={`${iconSizes.lg} text-gray-400`} />
+              <History className={`${iconSizes.lg} text-text-muted`} />
               Recent runs
             </H2>
             <Tag colorScheme="gray">History</Tag>
           </div>
-          <SmallText className="text-gray-400">Past simulation runs the daemon recorded.</SmallText>
-          <div className="space-y-2 text-sm text-gray-300">
+          <SmallText className="text-text-muted">
+            Past simulation runs the daemon recorded.
+          </SmallText>
+          <div className="space-y-2 text-sm text-text-secondary">
             {(history ?? []).slice(0, 5).map((item) => (
-              <div key={item.id} className="rounded-lg border border-white/5 bg-gray-950/50 p-3">
-                <p className="text-white font-semibold">{item.configName}</p>
-                <SmallText className="text-gray-400">
+              <div key={item.id} className="rounded-lg border border-white/5 bg-bg-base/50 p-3">
+                <p className="text-text-primary font-semibold">{item.configName}</p>
+                <SmallText className="text-text-muted">
                   {formatTime(item.startedAt)} · duration {formatDuration(item.duration)} · RX{' '}
                   {formatNumber(item.packetsReceived)} · TX {formatNumber(item.packetsSent)}
                 </SmallText>
               </div>
             ))}
             {(!history || history.length === 0) && (
-              <SmallText className="text-gray-500 italic">No captured runs yet.</SmallText>
+              <SmallText className="text-text-muted italic">No captured runs yet.</SmallText>
             )}
           </div>
         </CardContent>

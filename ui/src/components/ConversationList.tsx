@@ -78,9 +78,9 @@ export const ConversationList: FC<ConversationListProps> = memo(
 
     if (conversations.length === 0) {
       return (
-        <Card className="border-white/5 bg-gray-900/70">
+        <Card className="border-white/5 bg-bg-surface/70">
           <CardContent>
-            <div className="text-center py-8 text-gray-400">
+            <div className="text-center py-8 text-text-muted">
               <p className="text-sm">No TCP/UDP conversations found</p>
               <SmallText>Conversations require packets with port information</SmallText>
             </div>
@@ -90,45 +90,45 @@ export const ConversationList: FC<ConversationListProps> = memo(
     }
 
     return (
-      <Card className="border-white/5 bg-gray-900/70">
+      <Card className="border-white/5 bg-bg-surface/70">
         <CardContent>
           <div className="mb-3 flex items-center justify-between">
-            <SmallText className="text-gray-400">
+            <SmallText className="text-text-muted">
               {conversations.length} conversation{conversations.length !== 1 ? 's' : ''}
             </SmallText>
-            <SmallText className="text-gray-500">Click a row to filter packets</SmallText>
+            <SmallText className="text-text-muted">Click a row to filter packets</SmallText>
           </div>
 
           <div className="overflow-auto rounded-lg border border-white/5 max-h-[500px]">
             <table className="min-w-full divide-y divide-white/5">
-              <thead className="bg-gray-900/80 sticky top-0 z-10">
+              <thead className="bg-bg-surface/80 sticky top-0 z-10">
                 <tr>
-                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-400">
+                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-text-muted">
                     Endpoint A
                   </th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-400">
+                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-text-muted">
                     Endpoint B
                   </th>
                   <th
-                    className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-400 cursor-pointer hover:text-violet-300 select-none"
+                    className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-text-muted cursor-pointer hover:text-brand-300 select-none"
                     onClick={() => handleSort('protocol')}
                   >
                     Protocol{sortIndicator('protocol')}
                   </th>
                   <th
-                    className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-gray-400 cursor-pointer hover:text-violet-300 select-none"
+                    className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-text-muted cursor-pointer hover:text-brand-300 select-none"
                     onClick={() => handleSort('packets')}
                   >
                     Packets{sortIndicator('packets')}
                   </th>
                   <th
-                    className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-gray-400 cursor-pointer hover:text-violet-300 select-none"
+                    className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-text-muted cursor-pointer hover:text-brand-300 select-none"
                     onClick={() => handleSort('bytes')}
                   >
                     Bytes{sortIndicator('bytes')}
                   </th>
                   <th
-                    className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-gray-400 cursor-pointer hover:text-violet-300 select-none"
+                    className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-text-muted cursor-pointer hover:text-brand-300 select-none"
                     onClick={() => handleSort('duration')}
                   >
                     Duration{sortIndicator('duration')}
@@ -161,21 +161,21 @@ const ConversationRow: FC<{
   const duration = getConversationDuration(conversation);
 
   return (
-    <tr onClick={onClick} className="cursor-pointer hover:bg-gray-900/50 transition-colors">
-      <td className="px-3 py-2 text-white text-sm font-mono">{conversation.endpointA}</td>
-      <td className="px-3 py-2 text-white text-sm font-mono">{conversation.endpointB}</td>
+    <tr onClick={onClick} className="cursor-pointer hover:bg-bg-surface/50 transition-colors">
+      <td className="px-3 py-2 text-text-primary text-sm font-mono">{conversation.endpointA}</td>
+      <td className="px-3 py-2 text-text-primary text-sm font-mono">{conversation.endpointB}</td>
       <td className="px-3 py-2">
         <Tag colorScheme={getProtocolColor(conversation.protocol)} className="text-xs">
           {conversation.protocol}
         </Tag>
       </td>
-      <td className="px-3 py-2 text-gray-300 text-sm text-right font-mono">
+      <td className="px-3 py-2 text-text-secondary text-sm text-right font-mono">
         {conversation.packets}
       </td>
-      <td className="px-3 py-2 text-gray-300 text-sm text-right font-mono">
+      <td className="px-3 py-2 text-text-secondary text-sm text-right font-mono">
         {formatBytes(conversation.bytes)}
       </td>
-      <td className="px-3 py-2 text-gray-400 text-sm text-right font-mono">
+      <td className="px-3 py-2 text-text-muted text-sm text-right font-mono">
         {formatDurationSeconds(duration)}
       </td>
     </tr>

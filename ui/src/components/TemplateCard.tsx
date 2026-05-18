@@ -25,13 +25,13 @@ const typeIcons: Record<Template['type'], FC<{ className?: string }>> = {
 };
 
 const typeColors: Record<Template['type'], string> = {
-  basic: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
-  router: 'bg-orange-500/20 text-orange-300 border-orange-500/30',
-  switch: 'bg-green-500/20 text-green-300 border-green-500/30',
-  'access-point': 'bg-purple-500/20 text-purple-300 border-purple-500/30',
-  server: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30',
-  firewall: 'bg-red-500/20 text-red-300 border-red-500/30',
-  complete: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+  basic: 'bg-status-info/20 text-status-info border-status-info/30',
+  router: 'bg-status-warning/20 text-status-warning border-status-warning/30',
+  switch: 'bg-status-success/20 text-status-success border-status-success/30',
+  'access-point': 'bg-brand-500/20 text-brand-300 border-brand-500/30',
+  server: 'bg-status-info/20 text-status-info border-status-info/30',
+  firewall: 'bg-status-error/20 text-status-error border-status-error/30',
+  complete: 'bg-status-warning/20 text-status-warning border-status-warning/30',
   custom: 'bg-pink-500/20 text-pink-300 border-pink-500/30',
 };
 
@@ -40,7 +40,7 @@ export const TemplateCard: FC<TemplateCardProps> = memo(({ template, onView, onU
   const colorClass = typeColors[template.type] || typeColors.custom;
 
   return (
-    <Card className="border-white/5 bg-gray-900/70 hover:border-violet-500/30 transition-colors">
+    <Card className="border-white/5 bg-bg-surface/70 hover:border-brand-500/30 transition-colors">
       <CardContent className="space-y-4">
         {/* Header with icon and type */}
         <div className="flex items-start justify-between">
@@ -54,13 +54,13 @@ export const TemplateCard: FC<TemplateCardProps> = memo(({ template, onView, onU
 
         {/* Template info */}
         <div className="space-y-1">
-          <h3 className="font-semibold text-white text-lg">
+          <h3 className="font-semibold text-text-primary text-lg">
             {template.displayName || template.name}
           </h3>
           {template.displayName && (
-            <SmallText className="text-gray-500 font-mono text-[10px]">{template.name}</SmallText>
+            <SmallText className="text-text-muted font-mono text-[10px]">{template.name}</SmallText>
           )}
-          <SmallText className="text-gray-400 line-clamp-2">
+          <SmallText className="text-text-muted line-clamp-2">
             {template.description || 'No description available'}
           </SmallText>
         </div>

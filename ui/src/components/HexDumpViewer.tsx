@@ -83,9 +83,9 @@ const HexRow = memo(
       const isHighlighted =
         highlightStart >= 0 && globalIndex >= highlightStart && globalIndex < highlightEnd;
 
-      let className = isHeader ? 'text-cyan-400' : 'text-gray-300';
+      let className = isHeader ? 'text-status-info' : 'text-text-secondary';
       if (isHighlighted) {
-        className = 'text-yellow-200 bg-yellow-700/40 rounded-sm';
+        className = 'text-status-warning bg-status-warning/40 rounded-sm';
       }
 
       return (
@@ -99,7 +99,9 @@ const HexRow = memo(
     // Pad with spaces if row is not full
     const paddingCount = bytesPerRow - bytes.length;
     const padding =
-      paddingCount > 0 ? <span className="text-gray-700">{'   '.repeat(paddingCount)}</span> : null;
+      paddingCount > 0 ? (
+        <span className="text-text-disabled">{'   '.repeat(paddingCount)}</span>
+      ) : null;
 
     // Build ASCII column
     const asciiChars = bytes.map((byte, idx) => {
@@ -109,9 +111,9 @@ const HexRow = memo(
         highlightStart >= 0 && globalIndex >= highlightStart && globalIndex < highlightEnd;
       const char = byteToChar(byte);
 
-      let asciiClass = isHeader ? 'text-cyan-400' : 'text-gray-300';
+      let asciiClass = isHeader ? 'text-status-info' : 'text-text-secondary';
       if (isHighlighted) {
-        asciiClass = 'text-yellow-200 bg-yellow-700/40';
+        asciiClass = 'text-status-warning bg-status-warning/40';
       }
 
       return (
@@ -124,7 +126,7 @@ const HexRow = memo(
     return (
       <div className="flex font-mono text-xs leading-5">
         {/* Offset column */}
-        <span className="text-violet-400 w-20 flex-shrink-0">{formatOffset(offset)}:</span>
+        <span className="text-brand-400 w-20 flex-shrink-0">{formatOffset(offset)}:</span>
 
         {/* Hex column */}
         <span className="flex-1 min-w-0">
@@ -133,7 +135,7 @@ const HexRow = memo(
         </span>
 
         {/* Separator */}
-        <span className="text-gray-600 mx-2">|</span>
+        <span className="text-text-disabled mx-2">|</span>
 
         {/* ASCII column */}
         <span className="w-16 flex-shrink-0 text-right">{asciiChars}</span>
@@ -185,7 +187,7 @@ export const HexDumpViewer: FC<HexDumpViewerProps> = memo(
 
     if (!rawData) {
       return (
-        <div className="h-full flex items-center justify-center text-gray-400">
+        <div className="h-full flex items-center justify-center text-text-muted">
           <p className="text-sm">Select a packet to view hex dump</p>
         </div>
       );
@@ -198,26 +200,26 @@ export const HexDumpViewer: FC<HexDumpViewerProps> = memo(
         {/* Header with legend */}
         <div className="flex items-center justify-between mb-2 pb-2 border-b border-white/10">
           <div className="flex items-center gap-4 text-xs">
-            <span className="text-gray-400">{totalBytes} bytes</span>
+            <span className="text-text-muted">{totalBytes} bytes</span>
             <div className="flex items-center gap-2">
-              <span className="w-3 h-3 bg-cyan-400/30 rounded" />
-              <span className="text-gray-400">Header</span>
+              <span className="w-3 h-3 bg-status-info/30 rounded" />
+              <span className="text-text-muted">Header</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="w-3 h-3 bg-gray-300/30 rounded" />
-              <span className="text-gray-400">Payload</span>
+              <span className="w-3 h-3 bg-bg-muted/30 rounded" />
+              <span className="text-text-muted">Payload</span>
             </div>
             {highlightStart >= 0 && (
               <div className="flex items-center gap-2">
-                <span className="w-3 h-3 bg-yellow-700/40 rounded" />
-                <span className="text-gray-400">Selected</span>
+                <span className="w-3 h-3 bg-status-warning/40 rounded" />
+                <span className="text-text-muted">Selected</span>
               </div>
             )}
           </div>
         </div>
 
         {/* Hex dump content */}
-        <div className="flex-1 overflow-y-auto rounded-lg bg-gray-950/70 p-3 border border-white/5">
+        <div className="flex-1 overflow-y-auto rounded-lg bg-bg-base/70 p-3 border border-white/5">
           <div className="space-y-0.5">
             {rows.map((row) => (
               <HexRow

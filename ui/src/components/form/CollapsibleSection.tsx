@@ -23,7 +23,7 @@ export const CollapsibleSection: FC<CollapsibleSectionProps> = ({
   enabled,
   onEnableChange,
 }) => (
-  <Card className="border-white/5 bg-gray-900/70 overflow-hidden">
+  <Card className="border-white/5 bg-bg-surface/70 overflow-hidden">
     <div className="flex items-center justify-between px-6 py-4 hover:bg-white/5 transition-colors">
       <div className="flex items-center gap-3">
         <button
@@ -31,14 +31,14 @@ export const CollapsibleSection: FC<CollapsibleSectionProps> = ({
           onClick={onToggle}
           aria-expanded={isExpanded}
           aria-label={`${title} section, ${isExpanded ? 'expanded' : 'collapsed'}`}
-          className="flex items-center gap-3 text-left focus:outline-none focus:ring-2 focus:ring-inset focus:ring-violet-500 rounded-lg px-1 -ml-1"
+          className="flex items-center gap-3 text-left focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand-500 rounded-lg px-1 -ml-1"
         >
           {isExpanded ? (
-            <ChevronDown className={`${iconSizes.md} text-gray-400`} />
+            <ChevronDown className={`${iconSizes.md} text-text-muted`} />
           ) : (
-            <ChevronRight className={`${iconSizes.md} text-gray-400`} />
+            <ChevronRight className={`${iconSizes.md} text-text-muted`} />
           )}
-          <h3 className="font-semibold text-white">{title}</h3>
+          <h3 className="font-semibold text-text-primary">{title}</h3>
           {required && (
             <Tag colorScheme="red" className="text-xs">
               Required
@@ -54,7 +54,7 @@ export const CollapsibleSection: FC<CollapsibleSectionProps> = ({
                 onChange={(e) => onEnableChange(e.target.checked)}
                 className="sr-only peer"
               />
-              <div className="w-9 h-5 bg-gray-700 rounded-full peer peer-checked:bg-violet-600 peer-focus:ring-2 peer-focus:ring-violet-500 transition-colors">
+              <div className="w-9 h-5 bg-bg-elevated rounded-full peer peer-checked:bg-brand-600 peer-focus:ring-2 peer-focus:ring-brand-500 transition-colors">
                 <div
                   className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${enabled ? 'translate-x-4' : ''}`}
                 />

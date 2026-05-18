@@ -142,7 +142,7 @@ export const PcapUploader: FC<PcapUploaderProps> = ({
   }, [onFileSelect]);
 
   return (
-    <Card className="border-white/5 bg-gray-900/70">
+    <Card className="border-white/5 bg-bg-surface/70">
       <CardContent className="space-y-4">
         {/* Drag and Drop Zone */}
         <input
@@ -162,8 +162,8 @@ export const PcapUploader: FC<PcapUploaderProps> = ({
             relative cursor-pointer rounded-xl border-2 border-dashed p-8 text-center transition-all
             ${
               isDragOver
-                ? 'border-violet-400 bg-violet-900/20'
-                : 'border-white/10 bg-gray-950/40 hover:border-white/20 hover:bg-gray-950/60'
+                ? 'border-brand-400 bg-brand-900/20'
+                : 'border-white/10 bg-bg-base/40 hover:border-white/20 hover:bg-bg-base/60'
             }
             ${isAnalyzing ? 'pointer-events-none opacity-50' : ''}
           `}
@@ -171,23 +171,23 @@ export const PcapUploader: FC<PcapUploaderProps> = ({
         >
           <div className="flex flex-col items-center gap-3">
             <div
-              className={`rounded-full p-4 ${isDragOver ? 'bg-violet-500/20' : 'bg-gray-800/50'}`}
+              className={`rounded-full p-4 ${isDragOver ? 'bg-brand-500/20' : 'bg-bg-elevated/50'}`}
             >
               <Upload
-                className={`${iconSizes['2xl']} ${isDragOver ? 'text-violet-400' : 'text-gray-400'}`}
+                className={`${iconSizes['2xl']} ${isDragOver ? 'text-brand-400' : 'text-text-muted'}`}
               />
             </div>
 
             <div>
-              <p className="text-lg font-medium text-white">
+              <p className="text-lg font-medium text-text-primary">
                 {isDragOver ? 'Drop file to upload' : 'Drag & drop PCAP file'}
               </p>
-              <SmallText className="text-gray-400">
+              <SmallText className="text-text-muted">
                 or click to browse ({ACCEPTED_EXTENSIONS.join(', ')})
               </SmallText>
             </div>
 
-            <SmallText className="text-gray-500">
+            <SmallText className="text-text-muted">
               Maximum file size: {formatBytes(MAX_FILE_SIZE)}
             </SmallText>
           </div>
@@ -195,12 +195,12 @@ export const PcapUploader: FC<PcapUploaderProps> = ({
 
         {/* Selected File Display */}
         {selectedFile && (
-          <div className="flex items-center justify-between rounded-lg border border-white/10 bg-gray-950/50 p-4">
+          <div className="flex items-center justify-between rounded-lg border border-white/10 bg-bg-base/50 p-4">
             <div className="flex items-center gap-3">
-              <FileUp className={`${iconSizes.lg} text-violet-400`} />
+              <FileUp className={`${iconSizes.lg} text-brand-400`} />
               <div>
-                <p className="font-medium text-white">{selectedFile.name}</p>
-                <SmallText className="text-gray-400">{formatBytes(selectedFile.size)}</SmallText>
+                <p className="font-medium text-text-primary">{selectedFile.name}</p>
+                <SmallText className="text-text-muted">{formatBytes(selectedFile.size)}</SmallText>
               </div>
               <Tag colorScheme="purple" className="text-xs">
                 Ready
@@ -223,16 +223,16 @@ export const PcapUploader: FC<PcapUploaderProps> = ({
 
         {/* Status Messages */}
         {error && (
-          <div className="flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-900/20 p-3">
-            <AlertCircle className={`${iconSizes.lg} flex-shrink-0 text-red-400`} />
-            <SmallText className="text-red-300">{error}</SmallText>
+          <div className="flex items-center gap-2 rounded-lg border border-status-error/30 bg-status-error/20 p-3">
+            <AlertCircle className={`${iconSizes.lg} flex-shrink-0 text-status-error`} />
+            <SmallText className="text-status-error">{error}</SmallText>
           </div>
         )}
 
         {success && (
-          <div className="flex items-center gap-2 rounded-lg border border-green-500/30 bg-green-900/20 p-3">
-            <CheckCircle className={`${iconSizes.lg} flex-shrink-0 text-green-400`} />
-            <SmallText className="text-green-300">{success}</SmallText>
+          <div className="flex items-center gap-2 rounded-lg border border-status-success/30 bg-status-success/20 p-3">
+            <CheckCircle className={`${iconSizes.lg} flex-shrink-0 text-status-success`} />
+            <SmallText className="text-status-success">{success}</SmallText>
           </div>
         )}
 

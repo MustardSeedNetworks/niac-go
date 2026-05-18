@@ -59,13 +59,13 @@ export const ConfigsList: FC<{
   searching,
 }) => {
   if (loading) {
-    return <SmallText className="text-gray-500">Loading networks…</SmallText>;
+    return <SmallText className="text-text-muted">Loading networks…</SmallText>;
   }
 
   const total = sections.local.length + sections.favorites.length + sections.all.length;
   if (total === 0) {
     return (
-      <SmallText className="text-gray-500">
+      <SmallText className="text-text-muted">
         Nothing matches. Try a different search or upload a local YAML with the button above.
       </SmallText>
     );
@@ -76,8 +76,10 @@ export const ConfigsList: FC<{
     return (
       <section className="space-y-2" key={label}>
         <header className="flex items-baseline gap-2">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-400">{label}</h3>
-          <span className="text-xs text-gray-500">· {items.length}</span>
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-text-muted">
+            {label}
+          </h3>
+          <span className="text-xs text-text-muted">· {items.length}</span>
         </header>
         {viewMode === 'grid' ? (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -95,7 +97,7 @@ export const ConfigsList: FC<{
             ))}
           </div>
         ) : (
-          <ul className="divide-y divide-white/5 overflow-hidden rounded-lg border border-white/10 bg-gray-950/40">
+          <ul className="divide-y divide-white/5 overflow-hidden rounded-lg border border-white/10 bg-bg-base/40">
             {items.map((item) => (
               <ConfigRow
                 key={item.key}
@@ -139,7 +141,9 @@ const FavoriteStar: FC<{
     aria-label={favorited ? 'Remove from favorites' : 'Add to favorites'}
     title={favorited ? 'Remove from favorites' : 'Add to favorites'}
     className={`rounded p-1 transition-colors ${
-      favorited ? 'text-amber-300 hover:text-amber-200' : 'text-gray-500 hover:text-amber-300'
+      favorited
+        ? 'text-status-warning hover:text-status-warning'
+        : 'text-text-muted hover:text-status-warning'
     } ${compact ? '' : 'hover:bg-white/5'}`}
   >
     <Star
@@ -168,15 +172,15 @@ const ConfigCard: FC<SharedItemProps> = ({
     item.kind === 'builtin'
       ? (TEMPLATE_TYPE_TINT[item.template.type] ?? TEMPLATE_TYPE_TINT.custom)
       : item.kind === 'saved'
-        ? 'bg-emerald-500/15 text-emerald-200 border-emerald-400/30'
-        : 'bg-blue-500/15 text-blue-200 border-blue-400/30';
+        ? 'bg-status-success/15 text-status-success border-status-success/30'
+        : 'bg-status-info/15 text-status-info border-status-info/30';
 
   return (
     <div
       className={`flex flex-col gap-3 rounded-lg border p-3 transition-colors ${
         selected
-          ? 'border-violet-400/50 bg-violet-500/10'
-          : 'border-white/10 bg-gray-950/40 hover:border-violet-500/30'
+          ? 'border-brand-400/50 bg-brand-500/10'
+          : 'border-white/10 bg-bg-base/40 hover:border-brand-500/30'
       }`}
     >
       <div className="flex items-start justify-between gap-2">
@@ -188,8 +192,8 @@ const ConfigCard: FC<SharedItemProps> = ({
         )}
       </div>
       <div>
-        <div className="font-semibold text-white">{item.name}</div>
-        <SmallText className="mt-0.5 line-clamp-2 text-gray-400">
+        <div className="font-semibold text-text-primary">{item.name}</div>
+        <SmallText className="mt-0.5 line-clamp-2 text-text-muted">
           {item.description || 'No description'}
         </SmallText>
       </div>
@@ -208,7 +212,7 @@ const ConfigCard: FC<SharedItemProps> = ({
       </div>
       <div className="flex gap-2">
         {selected ? (
-          <div className="flex flex-1 items-center justify-center gap-1.5 rounded bg-violet-500/30 px-2 py-1.5 text-xs font-medium text-violet-50 ring-1 ring-violet-400/60">
+          <div className="flex flex-1 items-center justify-center gap-1.5 rounded bg-brand-500/30 px-2 py-1.5 text-xs font-medium text-brand-50 ring-1 ring-brand-400/60">
             <Check className={iconSizes.sm} />
             <span>Selected</span>
           </div>
@@ -216,7 +220,7 @@ const ConfigCard: FC<SharedItemProps> = ({
           <button
             type="button"
             onClick={() => onSelect(item)}
-            className="flex-1 rounded bg-violet-500/20 px-2 py-1.5 text-xs font-medium text-violet-100 ring-1 ring-violet-400/40 hover:bg-violet-500/30"
+            className="flex-1 rounded bg-brand-500/20 px-2 py-1.5 text-xs font-medium text-brand-100 ring-1 ring-brand-400/40 hover:bg-brand-500/30"
             title="Select this network — click Start Simulation below to run it"
           >
             Select
@@ -226,7 +230,7 @@ const ConfigCard: FC<SharedItemProps> = ({
           <button
             type="button"
             onClick={() => onView(item)}
-            className="rounded border border-white/10 bg-gray-900/60 px-2 py-1.5 text-xs font-medium text-gray-200 hover:bg-white/10"
+            className="rounded border border-white/10 bg-bg-surface/60 px-2 py-1.5 text-xs font-medium text-text-primary hover:bg-white/10"
             title="Preview YAML"
           >
             <Eye className={iconSizes.sm} />
@@ -236,7 +240,7 @@ const ConfigCard: FC<SharedItemProps> = ({
           <button
             type="button"
             onClick={onClearLocal}
-            className="rounded border border-red-400/30 bg-red-500/10 px-2 py-1.5 text-xs font-medium text-red-200 hover:bg-red-500/20"
+            className="rounded border border-status-error/30 bg-status-error/10 px-2 py-1.5 text-xs font-medium text-status-error hover:bg-status-error/20"
             title="Drop the local file"
           >
             Clear
@@ -258,7 +262,7 @@ const ConfigRow: FC<SharedItemProps> = ({
 }) => (
   <li
     className={`flex items-center gap-3 px-3 py-2 transition-colors ${
-      selected ? 'bg-violet-500/10' : 'hover:bg-white/5'
+      selected ? 'bg-brand-500/10' : 'hover:bg-white/5'
     }`}
   >
     {item.kind !== 'local' && (
@@ -271,7 +275,7 @@ const ConfigRow: FC<SharedItemProps> = ({
       title={`Select ${item.name}`}
     >
       <div className="flex items-center gap-2">
-        <span className="font-medium text-white">{item.name}</span>
+        <span className="font-medium text-text-primary">{item.name}</span>
         {item.kind !== 'local' && (
           <Tag colorScheme="purple" className="text-[10px]">
             {item.deviceCount} {item.deviceCount === 1 ? 'device' : 'devices'}
@@ -285,8 +289,8 @@ const ConfigRow: FC<SharedItemProps> = ({
       </div>
       {item.description && (
         <SmallText
-          className={`mt-0.5 line-clamp-1 text-gray-400 ${
-            item.kind === 'saved' ? 'font-mono text-[11px] text-gray-500' : ''
+          className={`mt-0.5 line-clamp-1 text-text-muted ${
+            item.kind === 'saved' ? 'font-mono text-[11px] text-text-muted' : ''
           }`}
         >
           {item.description}
@@ -297,7 +301,7 @@ const ConfigRow: FC<SharedItemProps> = ({
       <button
         type="button"
         onClick={() => onView(item)}
-        className="rounded p-1.5 text-gray-400 hover:bg-white/10 hover:text-white"
+        className="rounded p-1.5 text-text-muted hover:bg-white/10 hover:text-text-primary"
         title="Preview the template YAML"
       >
         <Eye className={iconSizes.md} />
@@ -307,7 +311,7 @@ const ConfigRow: FC<SharedItemProps> = ({
       <button
         type="button"
         onClick={onClearLocal}
-        className="text-xs font-medium text-red-300 hover:text-red-200"
+        className="text-xs font-medium text-status-error hover:text-status-error"
         title="Drop the local file"
       >
         Clear

@@ -23,27 +23,27 @@ export const FormField: FC<FormFieldProps> = ({
     {htmlFor ? (
       <label
         htmlFor={htmlFor}
-        className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2"
+        className="flex items-center gap-2 text-sm font-medium text-text-secondary mb-2"
       >
         {label}
-        {required && <span className="text-red-400">*</span>}
+        {required && <span className="text-status-error">*</span>}
         {helpText && (
           <span className="relative group">
-            <HelpCircle className={`${iconSizes.sm} text-gray-500 cursor-help`} />
-            <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-1.5 bg-gray-800 text-gray-200 text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 pointer-events-none">
+            <HelpCircle className={`${iconSizes.sm} text-text-muted cursor-help`} />
+            <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-1.5 bg-bg-elevated text-text-primary text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 pointer-events-none">
               {helpText}
             </span>
           </span>
         )}
       </label>
     ) : (
-      <div className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
+      <div className="flex items-center gap-2 text-sm font-medium text-text-secondary mb-2">
         {label}
-        {required && <span className="text-red-400">*</span>}
+        {required && <span className="text-status-error">*</span>}
         {helpText && (
           <span className="relative group">
-            <HelpCircle className={`${iconSizes.sm} text-gray-500 cursor-help`} />
-            <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-1.5 bg-gray-800 text-gray-200 text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 pointer-events-none">
+            <HelpCircle className={`${iconSizes.sm} text-text-muted cursor-help`} />
+            <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-1.5 bg-bg-elevated text-text-primary text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 pointer-events-none">
               {helpText}
             </span>
           </span>

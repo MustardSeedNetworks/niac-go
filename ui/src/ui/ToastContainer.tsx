@@ -13,10 +13,10 @@ const TOAST_ICONS: Record<Notification['type'], FC<{ className?: string }>> = {
 };
 
 const TOAST_STYLES: Record<Notification['type'], string> = {
-  success: 'border-green-500/30 bg-green-900/90 text-green-100',
-  error: 'border-red-500/30 bg-red-900/90 text-red-100',
-  warning: 'border-amber-500/30 bg-amber-900/90 text-amber-100',
-  info: 'border-blue-500/30 bg-blue-900/90 text-blue-100',
+  success: 'border-status-success/30 bg-status-success/90 text-status-success',
+  error: 'border-status-error/30 bg-status-error/90 text-status-error',
+  warning: 'border-status-warning/30 bg-status-warning/90 text-status-warning',
+  info: 'border-status-info/30 bg-status-info/90 text-status-info',
 };
 
 const Toast: FC<{ notification: Notification }> = ({ notification }) => {

@@ -52,8 +52,8 @@ const PacketRow = memo(
       onClick={onClick}
       className={`w-full text-left p-2 rounded-lg border transition-colors ${
         isSelected
-          ? 'border-violet-500/50 bg-violet-900/30'
-          : 'border-white/5 bg-gray-950/50 hover:bg-gray-900/50 hover:border-white/10'
+          ? 'border-brand-500/50 bg-brand-900/30'
+          : 'border-white/5 bg-bg-base/50 hover:bg-bg-surface/50 hover:border-white/10'
       }`}
       style={rowStyle}
     >
@@ -61,16 +61,16 @@ const PacketRow = memo(
         <Tag colorScheme={getProtocolColor(packet.protocol)} className="text-xs">
           {packet.protocol}
         </Tag>
-        <SmallText className="text-gray-400 font-mono text-xs">{formattedTime}</SmallText>
+        <SmallText className="text-text-muted font-mono text-xs">{formattedTime}</SmallText>
       </div>
-      <div className="mt-1 text-sm text-white truncate">
+      <div className="mt-1 text-sm text-text-primary truncate">
         {packet.sourceIp}
         {packet.sourcePort && `:${packet.sourcePort}`}
-        <span className="text-gray-500 mx-1">-&gt;</span>
+        <span className="text-text-muted mx-1">-&gt;</span>
         {packet.destIp}
         {packet.destPort && `:${packet.destPort}`}
       </div>
-      <SmallText className="text-gray-400 truncate block">{packet.summary}</SmallText>
+      <SmallText className="text-text-muted truncate block">{packet.summary}</SmallText>
     </button>
   ),
 );
@@ -89,7 +89,7 @@ export const PacketList: FC<PacketListProps> = memo(
 
     if (packets.length === 0) {
       return (
-        <div className="h-full flex items-center justify-center text-gray-400">
+        <div className="h-full flex items-center justify-center text-text-muted">
           <div className="text-center">
             <p className="text-sm">No packets to display</p>
             <SmallText>Waiting for packet stream...</SmallText>
@@ -103,7 +103,7 @@ export const PacketList: FC<PacketListProps> = memo(
         <button
           type="button"
           onClick={cycleTimeMode}
-          className="text-xs text-gray-500 hover:text-violet-300 mb-1 text-left select-none"
+          className="text-xs text-text-muted hover:text-brand-300 mb-1 text-left select-none"
           title="Click to cycle: Absolute / Relative / Delta"
         >
           Mode: {getTimeDisplayLabel(timeMode)}

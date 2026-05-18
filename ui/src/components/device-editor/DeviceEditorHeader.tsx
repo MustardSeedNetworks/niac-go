@@ -46,22 +46,22 @@ export const DeviceEditorHeader: FC<DeviceEditorHeaderProps> = ({
   const DeviceIcon = deviceTypeIcons[deviceType as DeviceType] ?? deviceTypeIcons.unknown;
 
   return (
-    <Card className="border-white/5 bg-gray-900/70">
+    <Card className="border-white/5 bg-bg-surface/70">
       <CardContent className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={onNavigateBack}
-              className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+              className="p-2 text-text-muted hover:text-text-primary hover:bg-white/10 rounded-lg transition-colors"
               title="Back to device list"
             >
               <ArrowLeft className={iconSizes.lg} />
             </button>
-            <DeviceIcon className={`${iconSizes.xl} text-violet-300`} />
+            <DeviceIcon className={`${iconSizes.xl} text-brand-300`} />
             <div>
               <H2>{isNewDevice ? 'New Device' : device.hostname || 'Edit Device'}</H2>
-              <SmallText className="text-gray-400">
+              <SmallText className="text-text-muted">
                 {isNewDevice ? 'Create a new network device' : 'Edit device configuration'}
               </SmallText>
             </div>
@@ -80,7 +80,7 @@ export const DeviceEditorHeader: FC<DeviceEditorHeaderProps> = ({
                 variant="outline"
                 leftIcon={<Trash2 className={iconSizes.md} />}
                 onClick={onDelete}
-                className="text-red-400 hover:text-red-300 border-red-400/30 hover:border-red-400/50"
+                className="text-status-error hover:text-status-error border-status-error/30 hover:border-status-error/50"
                 disabled={deleting}
               >
                 Delete
@@ -111,8 +111,8 @@ export const DeviceEditorHeader: FC<DeviceEditorHeaderProps> = ({
           <div
             className={`flex items-center gap-2 rounded-lg p-3 ${
               message.type === 'success'
-                ? 'border border-green-500/30 bg-green-500/10 text-green-300'
-                : 'border border-red-500/30 bg-red-500/10 text-red-300'
+                ? 'border border-status-success/30 bg-status-success/10 text-status-success'
+                : 'border border-status-error/30 bg-status-error/10 text-status-error'
             }`}
             role="alert"
           >

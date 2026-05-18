@@ -3,9 +3,9 @@ import { type FC, useCallback, useEffect, useRef, useState } from 'react';
 type Status = 'connected' | 'disconnected' | 'checking';
 
 const STATUS_STYLES: Record<Status, string> = {
-  connected: 'bg-green-400',
-  disconnected: 'bg-red-400',
-  checking: 'bg-yellow-400 animate-pulse',
+  connected: 'bg-status-success',
+  disconnected: 'bg-status-error',
+  checking: 'bg-status-warning animate-pulse',
 };
 
 const STATUS_LABELS: Record<Status, string> = {
@@ -46,7 +46,7 @@ export const ConnectionStatus: FC = () => {
   return (
     <div className="flex items-center gap-2" title={STATUS_LABELS[status]}>
       <span className={`h-2 w-2 rounded-full ${STATUS_STYLES[status]}`} />
-      <span className="text-xs text-gray-500">
+      <span className="text-xs text-text-muted">
         {status === 'connected' ? 'Online' : status === 'disconnected' ? 'Offline' : '...'}
       </span>
     </div>

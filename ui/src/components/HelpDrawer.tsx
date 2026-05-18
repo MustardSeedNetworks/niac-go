@@ -75,18 +75,18 @@ export function HelpDrawer({ isOpen, onClose }: HelpDrawerProps): ReactElement |
           className={cn(drawer.content, drawer.size.lg, 'animate-slide-in-right')}
         >
           {/* Header */}
-          <div className="sticky top-0 bg-gray-900 border-b border-white/10 z-10">
+          <div className="sticky top-0 bg-bg-surface border-b border-white/10 z-10">
             <div className="px-4 py-3 flex items-center justify-between">
               <div className={layout.inline.default}>
-                <HelpCircle className="w-5 h-5 text-violet-400" aria-hidden="true" />
-                <h2 className="text-lg font-semibold text-white">Help</h2>
+                <HelpCircle className="w-5 h-5 text-brand-400" aria-hidden="true" />
+                <h2 className="text-lg font-semibold text-text-primary">Help</h2>
               </div>
               <button
                 type="button"
                 onClick={onClose}
                 className={cn(
                   'p-2 hover:bg-white/10 rounded-lg transition-colors',
-                  'text-gray-400 hover:text-white',
+                  'text-text-muted hover:text-text-primary',
                 )}
                 aria-label="Close help"
               >
@@ -97,7 +97,7 @@ export function HelpDrawer({ isOpen, onClose }: HelpDrawerProps): ReactElement |
             {/* Search */}
             <div className="px-4 pb-3">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
                 <input
                   type="text"
                   placeholder="Search help..."
@@ -105,8 +105,8 @@ export function HelpDrawer({ isOpen, onClose }: HelpDrawerProps): ReactElement |
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className={cn(
                     'w-full pl-10 pr-4 py-2 bg-white/5 border border-white/10 rounded-lg',
-                    'text-sm text-white placeholder:text-gray-500',
-                    'focus:outline-none focus:ring-2 focus:ring-violet-500/50',
+                    'text-sm text-text-primary placeholder:text-text-muted',
+                    'focus:outline-none focus:ring-2 focus:ring-brand-500/50',
                   )}
                 />
               </div>
@@ -126,8 +126,8 @@ export function HelpDrawer({ isOpen, onClose }: HelpDrawerProps): ReactElement |
                       'flex items-center gap-2 px-3 py-2.5 text-sm font-medium transition-colors',
                       'border-b-2 -mb-[2px]',
                       activeTab === tab.id
-                        ? 'border-violet-500 text-white'
-                        : 'border-transparent text-gray-400 hover:text-white hover:border-white/20',
+                        ? 'border-brand-500 text-text-primary'
+                        : 'border-transparent text-text-muted hover:text-text-primary hover:border-white/20',
                     )}
                   >
                     {tab.icon}

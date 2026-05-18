@@ -106,15 +106,15 @@ export const FileUploadZone: FC<FileUploadZoneProps> = ({
 
   if (file) {
     return (
-      <div className="rounded-xl border border-green-500/30 bg-green-500/10 p-4">
+      <div className="rounded-xl border border-status-success/30 bg-status-success/10 p-4">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-green-500/20 p-2">
-              <FileCode className={`${iconSizes.lg} text-green-300`} />
+            <div className="rounded-lg bg-status-success/20 p-2">
+              <FileCode className={`${iconSizes.lg} text-status-success`} />
             </div>
             <div>
-              <p className="font-semibold text-white">{file.name}</p>
-              <SmallText className="text-green-300">
+              <p className="font-semibold text-text-primary">{file.name}</p>
+              <SmallText className="text-status-success">
                 {formatBytes(file.size)} | {file.content.split('\n').length} lines
               </SmallText>
             </div>
@@ -123,7 +123,7 @@ export const FileUploadZone: FC<FileUploadZoneProps> = ({
             type="button"
             onClick={onClear}
             disabled={disabled}
-            className="rounded-lg p-1.5 text-gray-400 hover:bg-white/10 hover:text-white transition-colors disabled:opacity-50"
+            className="rounded-lg p-1.5 text-text-muted hover:bg-white/10 hover:text-text-primary transition-colors disabled:opacity-50"
             aria-label={`Remove ${file.name}`}
           >
             <X className={iconSizes.md} />
@@ -138,8 +138,8 @@ export const FileUploadZone: FC<FileUploadZoneProps> = ({
       <label
         className={`block rounded-xl border-2 border-dashed p-6 text-center transition-colors cursor-pointer ${
           dragOver
-            ? 'border-violet-400 bg-violet-500/10'
-            : 'border-white/20 hover:border-violet-400/50 hover:bg-gray-950/50'
+            ? 'border-brand-400 bg-brand-500/10'
+            : 'border-white/20 hover:border-brand-400/50 hover:bg-bg-base/50'
         } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
@@ -152,12 +152,14 @@ export const FileUploadZone: FC<FileUploadZoneProps> = ({
           disabled={disabled}
           className="hidden"
         />
-        <Upload className={`mx-auto ${iconSizes['2xl']} text-gray-400 mb-2`} />
-        <p className="text-gray-300 font-medium">{label}</p>
-        <SmallText className="text-gray-500">Drag & drop or click to select a YAML file</SmallText>
+        <Upload className={`mx-auto ${iconSizes['2xl']} text-text-muted mb-2`} />
+        <p className="text-text-secondary font-medium">{label}</p>
+        <SmallText className="text-text-muted">
+          Drag & drop or click to select a YAML file
+        </SmallText>
       </label>
       {error && (
-        <div className="flex items-center gap-2 text-red-400 text-sm">
+        <div className="flex items-center gap-2 text-status-error text-sm">
           <AlertCircle className={iconSizes.md} />
           {error}
         </div>

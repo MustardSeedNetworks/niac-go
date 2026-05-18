@@ -31,35 +31,36 @@ const sizeStyles: Record<ButtonSize, string> = {
 const variantStyles: Record<ButtonVariant, Record<ButtonTone, string>> = {
   solid: {
     violet:
-      'bg-gradient-to-r from-violet-600 to-violet-500 hover:from-violet-500 hover:to-violet-400 text-white shadow-lg shadow-violet-500/25 focus:ring-violet-500',
-    red: 'bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white shadow-lg shadow-red-500/25 focus:ring-red-500',
+      'bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-500 hover:to-brand-400 text-text-primary shadow-lg shadow-brand-500/25 focus:ring-brand-500',
+    red: 'bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-text-primary shadow-lg shadow-red-500/25 focus:ring-status-error',
     green:
-      'bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white shadow-lg shadow-emerald-500/25 focus:ring-emerald-500',
-    blue: 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white shadow-lg shadow-blue-500/25 focus:ring-blue-500',
-    gray: 'bg-gradient-to-r from-gray-600 to-gray-500 hover:from-gray-500 hover:to-gray-400 text-white shadow-lg shadow-gray-500/25 focus:ring-gray-500',
+      'bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-text-primary shadow-lg shadow-emerald-500/25 focus:ring-status-success',
+    blue: 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-text-primary shadow-lg shadow-blue-500/25 focus:ring-status-info',
+    gray: 'bg-gradient-to-r from-gray-600 to-gray-500 hover:from-gray-500 hover:to-gray-400 text-text-primary shadow-lg shadow-gray-500/25 focus:ring-border-muted',
   },
   outline: {
     violet:
-      'border border-violet-400/30 text-violet-300 hover:bg-violet-400/10 hover:border-violet-400/50 focus:ring-violet-500',
-    red: 'border border-red-400/30 text-red-300 hover:bg-red-400/10 hover:border-red-400/50 focus:ring-red-500',
+      'border border-brand-400/30 text-brand-300 hover:bg-brand-400/10 hover:border-brand-400/50 focus:ring-brand-500',
+    red: 'border border-status-error/30 text-status-error hover:bg-status-error/10 hover:border-status-error/50 focus:ring-status-error',
     green:
-      'border border-emerald-400/30 text-emerald-300 hover:bg-emerald-400/10 hover:border-emerald-400/50 focus:ring-emerald-500',
-    blue: 'border border-blue-400/30 text-blue-300 hover:bg-blue-400/10 hover:border-blue-400/50 focus:ring-blue-500',
-    gray: 'border border-white/20 text-gray-300 hover:bg-white/10 hover:border-white/30 focus:ring-gray-500',
+      'border border-status-success/30 text-status-success hover:bg-status-success/10 hover:border-status-success/50 focus:ring-status-success',
+    blue: 'border border-status-info/30 text-status-info hover:bg-status-info/10 hover:border-status-info/50 focus:ring-status-info',
+    gray: 'border border-white/20 text-text-secondary hover:bg-white/10 hover:border-white/30 focus:ring-border-muted',
   },
   ghost: {
-    violet: 'text-violet-300 hover:bg-violet-400/10 hover:text-violet-200 focus:ring-violet-500',
-    red: 'text-red-300 hover:bg-red-400/10 hover:text-red-200 focus:ring-red-500',
-    green: 'text-emerald-300 hover:bg-emerald-400/10 hover:text-emerald-200 focus:ring-emerald-500',
-    blue: 'text-blue-300 hover:bg-blue-400/10 hover:text-blue-200 focus:ring-blue-500',
-    gray: 'text-gray-400 hover:bg-white/10 hover:text-white focus:ring-gray-500',
+    violet: 'text-brand-300 hover:bg-brand-400/10 hover:text-brand-200 focus:ring-brand-500',
+    red: 'text-status-error hover:bg-status-error/10 hover:text-status-error focus:ring-status-error',
+    green:
+      'text-status-success hover:bg-status-success/10 hover:text-status-success focus:ring-status-success',
+    blue: 'text-status-info hover:bg-status-info/10 hover:text-status-info focus:ring-status-info',
+    gray: 'text-text-muted hover:bg-white/10 hover:text-text-primary focus:ring-border-muted',
   },
   secondary: {
-    violet: 'bg-white/10 hover:bg-white/15 text-white focus:ring-violet-500',
-    red: 'bg-white/10 hover:bg-white/15 text-white focus:ring-red-500',
-    green: 'bg-white/10 hover:bg-white/15 text-white focus:ring-emerald-500',
-    blue: 'bg-white/10 hover:bg-white/15 text-white focus:ring-blue-500',
-    gray: 'bg-white/10 hover:bg-white/15 text-white focus:ring-gray-500',
+    violet: 'bg-white/10 hover:bg-white/15 text-text-primary focus:ring-brand-500',
+    red: 'bg-white/10 hover:bg-white/15 text-text-primary focus:ring-status-error',
+    green: 'bg-white/10 hover:bg-white/15 text-text-primary focus:ring-status-success',
+    blue: 'bg-white/10 hover:bg-white/15 text-text-primary focus:ring-status-info',
+    gray: 'bg-white/10 hover:bg-white/15 text-text-primary focus:ring-border-muted',
   },
 };
 
@@ -142,17 +143,17 @@ export const IconButton: FC<IconButtonProps> = ({
   };
 
   const toneStyles: Record<ButtonTone, string> = {
-    violet: 'text-violet-400 hover:text-violet-300',
-    red: 'text-red-400 hover:text-red-300',
-    green: 'text-emerald-400 hover:text-emerald-300',
-    blue: 'text-blue-400 hover:text-blue-300',
-    gray: 'text-gray-400 hover:text-white',
+    violet: 'text-brand-400 hover:text-brand-300',
+    red: 'text-status-error hover:text-status-error',
+    green: 'text-status-success hover:text-status-success',
+    blue: 'text-status-info hover:text-status-info',
+    gray: 'text-text-muted hover:text-text-primary',
   };
 
   return (
     <button
       type="button"
-      className={`inline-flex items-center justify-center transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-violet-500/50 disabled:opacity-50 disabled:cursor-not-allowed ${iconSizeStyles[size]} ${variantBase[variant]} ${toneStyles[tone]} ${className}`}
+      className={`inline-flex items-center justify-center transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-brand-500/50 disabled:opacity-50 disabled:cursor-not-allowed ${iconSizeStyles[size]} ${variantBase[variant]} ${toneStyles[tone]} ${className}`}
       {...props}
     >
       {icon}

@@ -93,6 +93,16 @@
   --color-info-900: #1e3a8a;
 
   /* ========================================
+   * Status semantic aliases (mirror seed/stem naming)
+   * Map to the canonical 500-shade of each palette above so all three
+   * projects share bg-status-success / text-status-error / etc.
+   * ======================================== */
+  --color-status-success: #22c55e;
+  --color-status-warning: #f59e0b;
+  --color-status-error: #ef4444;
+  --color-status-info: #3b82f6;
+
+  /* ========================================
    * Device Type Colors (Topology)
    * ======================================== */
   --color-device-router: #3b82f6;

@@ -56,13 +56,13 @@ export const JavaDslImportCard: FC = () => {
   };
 
   return (
-    <Card className="border-white/5 bg-gray-900/70">
+    <Card className="border-white/5 bg-bg-surface/70">
       <CardContent className="space-y-4">
         <H2 className="flex items-center gap-2">
-          <FileInput className={`${iconSizes.lg} text-emerald-300`} />
+          <FileInput className={`${iconSizes.lg} text-status-success`} />
           Import legacy config (Java DSL → YAML)
         </H2>
-        <P className="text-sm text-gray-400">
+        <P className="text-sm text-text-muted">
           Paste a legacy <code>.cfg</code> file (the Java-DSL <code>device foo {'{ ... }'}</code>{' '}
           format) or upload one — same as <code>niac config export</code> on the CLI. The result is
           a normalised YAML you can save as a template, drop into a Git repo, or feed straight into
@@ -70,11 +70,11 @@ export const JavaDslImportCard: FC = () => {
         </P>
 
         <div className="flex flex-wrap items-center gap-3">
-          <label className="cursor-pointer rounded bg-gray-800/60 px-3 py-1.5 text-xs font-medium text-gray-200 ring-1 ring-white/10 hover:bg-gray-800">
+          <label className="cursor-pointer rounded bg-bg-elevated/60 px-3 py-1.5 text-xs font-medium text-text-primary ring-1 ring-white/10 hover:bg-bg-elevated">
             Choose .cfg file…
             <input type="file" accept=".cfg,.conf,.txt" onChange={onPickFile} className="hidden" />
           </label>
-          <SmallText className="text-gray-500">
+          <SmallText className="text-text-muted">
             Or paste below ({content.length.toLocaleString()} chars)
           </SmallText>
         </div>
@@ -87,7 +87,7 @@ export const JavaDslImportCard: FC = () => {
           }}
           placeholder="device my-router {&#10;  type = router&#10;  ip = 192.168.1.1&#10;  ...&#10;}"
           rows={10}
-          className="w-full rounded border border-white/5 bg-gray-950/60 p-3 font-mono text-xs text-gray-100 placeholder-gray-500 focus:border-emerald-400 focus:outline-none"
+          className="w-full rounded border border-white/5 bg-bg-base/60 p-3 font-mono text-xs text-text-primary placeholder-gray-500 focus:border-status-success focus:outline-none"
           aria-label="Legacy Java DSL config content"
         />
 
@@ -101,7 +101,7 @@ export const JavaDslImportCard: FC = () => {
             {busy ? 'Converting…' : 'Convert to YAML'}
           </Button>
           {error && (
-            <SmallText className="text-red-300" role="alert">
+            <SmallText className="text-status-error" role="alert">
               {error}
             </SmallText>
           )}
@@ -110,7 +110,7 @@ export const JavaDslImportCard: FC = () => {
         {yaml && (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <SmallText className="text-emerald-300">
+              <SmallText className="text-status-success">
                 ✓ Converted ({deviceCount} {deviceCount === 1 ? 'device' : 'devices'})
               </SmallText>
               <Button
@@ -121,7 +121,7 @@ export const JavaDslImportCard: FC = () => {
                 Download YAML
               </Button>
             </div>
-            <pre className="max-h-64 overflow-auto rounded bg-gray-950/80 p-3 font-mono text-xs text-gray-200">
+            <pre className="max-h-64 overflow-auto rounded bg-bg-base/80 p-3 font-mono text-xs text-text-primary">
               {yaml}
             </pre>
           </div>

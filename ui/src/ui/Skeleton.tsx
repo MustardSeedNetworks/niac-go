@@ -89,7 +89,7 @@ export const StatCardSkeleton: FC<{ className?: string }> = ({ className = '' })
 
 // Skeleton for device cards (card view)
 export const DeviceCardSkeleton: FC<{ className?: string }> = ({ className = '' }) => (
-  <div className={`p-4 space-y-3 rounded-xl border border-white/5 bg-gray-900/70 ${className}`}>
+  <div className={`p-4 space-y-3 rounded-xl border border-white/5 bg-bg-surface/70 ${className}`}>
     {/* Header with checkbox and icon */}
     <div className="flex items-start justify-between">
       <div className="flex items-center gap-3">

@@ -140,7 +140,7 @@ export function BaseCard<T>({
         enableLiveRegion={true}
       >
         <CardValue value="Error" size="md" status="error" />
-        <p className="text-sm text-red-400/80 mt-1">{error}</p>
+        <p className="text-sm text-status-error/80 mt-1">{error}</p>
       </StatusCard>
     );
   }
@@ -252,7 +252,7 @@ export const SimpleBaseCard: FC<SimpleBaseCardProps> = ({
         enableLiveRegion={true}
       >
         <CardValue value="Error" size="md" status="error" />
-        <p className="text-sm text-red-400/80 mt-1">{error}</p>
+        <p className="text-sm text-status-error/80 mt-1">{error}</p>
       </StatusCard>
     );
   }

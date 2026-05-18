@@ -28,13 +28,13 @@ export const TEMPLATE_TYPE_ICON: Record<Template['type'], FC<{ className?: strin
 };
 
 export const TEMPLATE_TYPE_TINT: Record<Template['type'], string> = {
-  basic: 'bg-blue-500/15 text-blue-200 border-blue-400/30',
-  router: 'bg-orange-500/15 text-orange-200 border-orange-400/30',
-  switch: 'bg-emerald-500/15 text-emerald-200 border-emerald-400/30',
-  'access-point': 'bg-purple-500/15 text-purple-200 border-purple-400/30',
-  server: 'bg-cyan-500/15 text-cyan-200 border-cyan-400/30',
-  firewall: 'bg-red-500/15 text-red-200 border-red-400/30',
-  complete: 'bg-amber-500/15 text-amber-200 border-amber-400/30',
+  basic: 'bg-status-info/15 text-status-info border-status-info/30',
+  router: 'bg-status-warning/15 text-status-warning border-status-warning/30',
+  switch: 'bg-status-success/15 text-status-success border-status-success/30',
+  'access-point': 'bg-brand-500/15 text-brand-200 border-brand-400/30',
+  server: 'bg-status-info/15 text-status-info border-status-info/30',
+  firewall: 'bg-status-error/15 text-status-error border-status-error/30',
+  complete: 'bg-status-warning/15 text-status-warning border-status-warning/30',
   custom: 'bg-pink-500/15 text-pink-200 border-pink-400/30',
 };
 
