@@ -1,4 +1,4 @@
-// Copyright (c) 2025 Mustard Seed Networks. All rights reserved.
+// SPDX-License-Identifier: BUSL-1.1
 
 package main
 

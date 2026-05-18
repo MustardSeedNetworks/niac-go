@@ -1,5 +1,3 @@
-// Copyright (c) 2026 Mustard Seed Networks. All rights reserved.
-
 /**
  * ItemListSection
  *
