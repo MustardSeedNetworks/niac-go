@@ -267,17 +267,18 @@
   --color-brand-accent: #a5d6a7;
   --color-brand-gold: #fbbf24;
 
-  /* Surfaces — neutral grays (NOT blue-tinted slate) */
+  /* Surfaces — neutral grays (NOT blue-tinted slate).
+   * Values mirror stem's dark theme so cross-product UI stays harmonized. */
   --color-surface-base: #1a1a1a;
   --color-surface-raised: #333333;
   --color-surface-border: #666666;
-  --color-surface-hover: #404040;
-  --color-surface-sunken: #0a0a0a;
+  --color-surface-hover: #666666;
+  --color-surface-sunken: #000000;
 
-  /* Text */
+  /* Text — mirrors stem's dark theme values. */
   --color-text-primary: #f8fafc;
-  --color-text-secondary: #cbd5e1;
-  --color-text-muted: #94a3b8;
+  --color-text-secondary: #e5e5e5;
+  --color-text-muted: #999999;
   --color-text-disabled: #64748b;
   --color-text-inverse: #0f172a;
 
