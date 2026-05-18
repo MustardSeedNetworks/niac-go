@@ -14,10 +14,18 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
+
+permissions:
+  actions: read
+  contents: read
+  pull-requests: write
+  checks: write
+  security-events: write
 
 jobs:
   # ===========================================================================
@@ -93,6 +101,48 @@ jobs:
           file: ./coverage.out
           flags: backend
           fail_ci_if_error: false
+
+  # ===========================================================================
+  # Go Race Detector
+  # ===========================================================================
+  # Dedicated race-only job to match seed's CI matrix (#56). The main backend
+  # job already runs the full suite under -race; this job is a separate gate
+  # so a race-detector regression shows up as its own failing check rather
+  # than blocking the broader backend pipeline.
+  race:
+    name: Backend (race detector)
+    runs-on: ubuntu-latest
+    env:
+      GOMODCACHE: ${{ github.workspace }}/.cache/go/pkg/mod
+      GOCACHE: ${{ github.workspace }}/.cache/go/build
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up Go
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Install libpcap-dev
+        run: sudo apt-get update && sudo apt-get install -y libpcap-dev
+
+      - name: Set up Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: '25'
+          cache: 'npm'
+          cache-dependency-path: ui/package-lock.json
+
+      - name: Build embedded UI assets
+        working-directory: ui
+        run: |
+          npm ci
+          npm run build
+
+      - name: Run tests with race detector
+        run: go test -short -race ./...
 
   # ===========================================================================
   # Frontend (TypeScript)
@@ -389,6 +439,34 @@ jobs:
             exit 1
           fi
           echo "No unsafe logging patterns detected"
+
+  # ===========================================================================
+  # Documentation Checks
+  # ===========================================================================
+  # Markdown lint + link check. Mirrors seed's docs job (#56). Both substeps
+  # are advisory (continue-on-error) — they surface issues without blocking
+  # the build, matching seed's stance that doc quality is a ratcheting goal.
+  docs:
+    name: Documentation Quality
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Check markdown links
+        uses: gaurav-nelson/github-action-markdown-link-check@5c5dfc0ac2e225883c0e5f03a85311ec2830d368 # v1
+        continue-on-error: true
+        with:
+          use-quiet-mode: "yes"
+
+      - name: Lint markdown files
+        uses: DavidAnson/markdownlint-cli2-action@05f32210e84442804257b2a6f20b273450ec8265 # v19.1.0
+        continue-on-error: true
+        with:
+          globs: |
+            **/*.md
+            !**/node_modules/**
+            !**/dist/**
 
   # ===========================================================================
   # Build
