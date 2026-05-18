@@ -1,5 +1,3 @@
-// Copyright (c) 2025 Mustard Seed Networks. All rights reserved.
-
 /**
  * themeComponents.ts — reusable component styling tokens.
  * Re-exported through theme.ts.

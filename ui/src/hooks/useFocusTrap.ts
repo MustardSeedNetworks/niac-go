@@ -2,8 +2,6 @@
  * @fileoverview Focus Trap Hook for Accessibility
  * @description Custom hook that traps keyboard focus within a modal/drawer.
  *              Implements WCAG 2.1 AA compliance for modal dialogs.
- * @copyright 2025 Mustard Seed Networks. All rights reserved.
- * @license Proprietary
  */
 
 import { type RefObject, useEffect, useRef } from 'react';
