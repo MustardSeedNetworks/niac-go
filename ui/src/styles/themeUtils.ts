@@ -1,5 +1,3 @@
-// Copyright (c) 2025 Mustard Seed Networks. All rights reserved.
-
 import { twMerge } from 'tailwind-merge';
 
 import { badge, button, card, drawer, input, modal } from './themeComponents';

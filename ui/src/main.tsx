@@ -3,6 +3,10 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App.tsx';
 import { initThemeFromStorage } from './hooks/useTheme';
+// Initialise react-i18next before the first render so useTranslation()
+// returns the configured t() inside the tree rather than the inline
+// English fallback strings.
+import './i18n';
 import './index.css';
 
 // Apply persisted/default theme before first paint to avoid a flash of

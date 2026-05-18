@@ -14,13 +14,17 @@
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": false,
     "moduleDetection": "force",
+    "resolveJsonModule": true,
     "noEmit": true,
     "jsx": "react-jsx",
 
-    /* Path aliases */
+    /* Path aliases — `@locales` points at the backend's locale
+       directory so the UI shares one source of truth with the Go
+       `//go:embed`. */
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["src/*"],
+      "@locales/*": ["../internal/i18n/locales/*"]
     },
 
     /* Linting - TypeScript 5.9 strict mode */
@@ -31,5 +35,5 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["src"]
+  "include": ["src", "../internal/i18n/locales"]
 }

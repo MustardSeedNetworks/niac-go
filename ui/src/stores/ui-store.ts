@@ -1,5 +1,3 @@
-// Copyright (c) 2025 Mustard Seed Networks. All rights reserved.
-
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';

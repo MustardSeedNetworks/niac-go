@@ -1,5 +1,6 @@
 import { Wrench } from 'lucide-react';
 import { memo, type ReactNode, Suspense } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { ErrorBoundary, PageErrorBoundary } from './components/ErrorBoundary';
 import { AppProvider, useAppState } from './contexts/AppContext';
@@ -65,7 +66,9 @@ function AppShell() {
                   path: '/device-config/new',
                   label: 'New Device',
                   title: 'New Device',
+                  titleI18nKey: 'pages:deviceEditor.newTitle',
                   description: 'Create a new network device configuration.',
+                  descriptionI18nKey: 'pages:deviceEditor.newDescription',
                   icon: Wrench,
                   component: DeviceEditorPageRef,
                 }}
@@ -82,7 +85,9 @@ function AppShell() {
                   path: '/device-config/:hostname',
                   label: 'Edit Device',
                   title: 'Edit Device',
+                  titleI18nKey: 'pages:deviceEditor.editTitle',
                   description: 'Edit device configuration settings.',
+                  descriptionI18nKey: 'pages:deviceEditor.editDescription',
                   icon: Wrench,
                   component: DeviceEditorPageRef,
                 }}
@@ -113,16 +118,23 @@ function AppShell() {
 const PageWithErrorBoundary = memo(
   ({ page, children }: { page: PageConfig; children: ReactNode }) => {
     const location = useLocation();
+    const { t } = useTranslation();
+    // Resolve translated title/description with the English copy as
+    // the i18next fallback so an untranslated locale still renders
+    // sensibly. `descriptionI18nValues` carries verbatim industry
+    // terms (protocol names, units, RFCs) as `{{token}}` substitutes.
+    const title = page.titleI18nKey ? t(page.titleI18nKey, page.title) : page.title;
+    const description = page.descriptionI18nKey
+      ? t(page.descriptionI18nKey, {
+          defaultValue: page.description,
+          ...(page.descriptionI18nValues ?? {}),
+        })
+      : page.description;
     return (
       <PageErrorBoundary key={location.pathname}>
         <section className="space-y-6">
           <Breadcrumbs />
-          <PageHeader
-            icon={page.icon}
-            title={page.title}
-            description={page.description}
-            help={page.help}
-          />
+          <PageHeader icon={page.icon} title={title} description={description} help={page.help} />
           {children}
         </section>
       </PageErrorBoundary>

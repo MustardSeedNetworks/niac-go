@@ -1,4 +1,4 @@
-// Copyright (c) 2025 Mustard Seed Networks. All rights reserved.
+// SPDX-License-Identifier: BUSL-1.1
 
 // Package safeconv provides safe integer type conversions with bounds checking.
 package safeconv

@@ -1,23 +1,45 @@
 import type { LucideIcon } from 'lucide-react';
-import { ChevronLeft, ChevronRight, HelpCircle, Menu, Network, Settings, X } from 'lucide-react';
+import {
+  ChevronLeft,
+  ChevronRight,
+  HelpCircle,
+  Menu,
+  Moon,
+  Network,
+  Settings,
+  Sun,
+  X,
+} from 'lucide-react';
 import { createElement, type FC, type ReactNode, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { HelpDrawer } from '../components/HelpDrawer';
 import { SettingsDrawer } from '../components/SettingsDrawer';
 import { iconSizes } from '../constants/sizes';
+import { useTheme } from '../hooks/useTheme';
 import { prefetchRoute } from '../utils/prefetch';
 import { safeGetItem, safeSetItem } from '../utils/storage';
 import { ConnectionStatus } from './ConnectionStatus';
 
 export interface SidebarNavItem {
   path: string;
+  /** English fallback label — also used as the i18next defaultValue. */
   label: string;
+  /**
+   * Optional i18next key in `namespace:key.path` form. When provided
+   * the sidebar renders `t(i18nKey, label)`; otherwise it renders
+   * `label` verbatim. Items whose entire text is an industry term
+   * (e.g. "PCAPs", "SNMP Walks") deliberately omit the key.
+   */
+  i18nKey?: string;
   icon: LucideIcon;
   badge?: string;
 }
 
 export interface SidebarNavGroup {
   label: string;
+  /** Optional i18next key in `namespace:key.path` form. */
+  i18nKey?: string;
   items: SidebarNavItem[];
 }
 
@@ -31,6 +53,7 @@ interface SidebarProps {
 const STORAGE_KEY = 'niac-sidebar-collapsed';
 
 export const SidebarLayout: FC<SidebarProps> = ({ groups, version, children }) => {
+  const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(() => {
@@ -39,6 +62,7 @@ export const SidebarLayout: FC<SidebarProps> = ({ groups, version, children }) =
   const [mobileOpen, setMobileOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const { isDark, toggleTheme } = useTheme();
 
   // Save collapsed state
   useEffect(() => {
@@ -55,6 +79,7 @@ export const SidebarLayout: FC<SidebarProps> = ({ groups, version, children }) =
 
   const renderNavItem = (item: SidebarNavItem) => {
     const active = isActive(item.path);
+    const label = item.i18nKey ? t(item.i18nKey, item.label) : item.label;
     return (
       <button
         type="button"
@@ -70,14 +95,14 @@ export const SidebarLayout: FC<SidebarProps> = ({ groups, version, children }) =
               : 'text-text-muted hover:text-text-primary hover:bg-surface-hover'
           }
         `}
-        title={collapsed ? item.label : undefined}
+        title={collapsed ? label : undefined}
       >
         {createElement(item.icon, {
           className: `${iconSizes.lg} flex-shrink-0 ${active ? 'text-brand-accent' : 'text-text-muted group-hover:text-text-secondary'}`,
         })}
         {!collapsed && (
           <>
-            <span className="flex-1 text-left truncate">{item.label}</span>
+            <span className="flex-1 text-left truncate">{label}</span>
             {item.badge && (
               <span
                 className={`px-1.5 py-0.5 text-xs rounded font-medium ${
@@ -126,8 +151,11 @@ export const SidebarLayout: FC<SidebarProps> = ({ groups, version, children }) =
             type="button"
             onClick={() => setCollapsed(true)}
             className="p-1.5 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-hover transition-colors lg:flex hidden"
-            title="Collapse the sidebar to icons-only mode to give the main content more horizontal space"
-            aria-label="Collapse sidebar"
+            title={t(
+              'common:accessibility.collapseSidebar',
+              'Collapse the sidebar to icons-only mode to give the main content more horizontal space',
+            )}
+            aria-label={t('common:accessibility.collapseSidebar', 'Collapse sidebar')}
           >
             <ChevronLeft className={iconSizes.md} />
           </button>
@@ -140,7 +168,7 @@ export const SidebarLayout: FC<SidebarProps> = ({ groups, version, children }) =
           <div key={group.label}>
             {!collapsed && (
               <h3 className="px-3 mb-2 text-xs font-semibold text-text-muted uppercase tracking-wider">
-                {group.label}
+                {group.i18nKey ? t(group.i18nKey, group.label) : group.label}
               </h3>
             )}
             {collapsed && <div className="h-px bg-surface-hover mx-2 mb-2" />}
@@ -162,11 +190,14 @@ export const SidebarLayout: FC<SidebarProps> = ({ groups, version, children }) =
               text-text-muted hover:text-text-primary hover:bg-surface-hover transition-colors
               text-sm font-medium
             `}
-            title="Open the help dialog with keyboard shortcuts, documentation links, and supported features"
-            aria-label="Open help"
+            title={t(
+              'common:accessibility.openHelp',
+              'Open the help dialog with keyboard shortcuts, documentation links, and supported features',
+            )}
+            aria-label={t('common:accessibility.openHelp', 'Open help')}
           >
             <HelpCircle className={`${iconSizes.md} flex-shrink-0`} />
-            {!collapsed && <span>Help</span>}
+            {!collapsed && <span>{t('common:labels.help', 'Help')}</span>}
           </button>
           <button
             type="button"
@@ -177,11 +208,38 @@ export const SidebarLayout: FC<SidebarProps> = ({ groups, version, children }) =
               text-text-muted hover:text-text-primary hover:bg-surface-hover transition-colors
               text-sm font-medium
             `}
-            title="Open the settings modal to change theme, default capture interface, and other application preferences"
-            aria-label="Open settings"
+            title={t(
+              'common:accessibility.openSettings',
+              'Open the settings modal to change theme, default capture interface, and other application preferences',
+            )}
+            aria-label={t('common:accessibility.openSettings', 'Open settings')}
           >
             <Settings className={`${iconSizes.md} flex-shrink-0`} />
-            {!collapsed && <span>Settings</span>}
+            {!collapsed && <span>{t('common:labels.settings', 'Settings')}</span>}
+          </button>
+          <button
+            type="button"
+            onClick={toggleTheme}
+            className={`
+              ${collapsed ? 'w-full' : ''}
+              flex items-center ${collapsed ? 'justify-center' : 'gap-2'} px-3 py-2 rounded-lg
+              text-text-muted hover:text-text-primary hover:bg-surface-hover transition-colors
+              text-sm font-medium
+            `}
+            title={t(
+              isDark ? 'common:accessibility.switchToLight' : 'common:accessibility.switchToDark',
+              isDark ? 'Switch to light mode' : 'Switch to dark mode',
+            )}
+            aria-label={t(
+              isDark ? 'common:accessibility.switchToLight' : 'common:accessibility.switchToDark',
+              isDark ? 'Switch to light mode' : 'Switch to dark mode',
+            )}
+          >
+            {isDark ? (
+              <Sun className={`${iconSizes.md} flex-shrink-0`} aria-hidden="true" />
+            ) : (
+              <Moon className={`${iconSizes.md} flex-shrink-0`} aria-hidden="true" />
+            )}
           </button>
         </div>
 
@@ -193,7 +251,7 @@ export const SidebarLayout: FC<SidebarProps> = ({ groups, version, children }) =
           <div
             className={`text-xs font-mono text-text-muted ${collapsed ? '' : 'flex items-center justify-between'}`}
           >
-            {!collapsed && <span>Version</span>}
+            {!collapsed && <span>{t('common:footer.version', 'Version')}</span>}
             <span className={collapsed ? '' : 'text-text-muted'}>{version}</span>
           </div>
         )}
@@ -202,8 +260,11 @@ export const SidebarLayout: FC<SidebarProps> = ({ groups, version, children }) =
             type="button"
             onClick={() => setCollapsed(false)}
             className="mt-2 p-1.5 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-hover transition-colors"
-            title="Expand the sidebar to show navigation labels alongside icons"
-            aria-label="Expand sidebar"
+            title={t(
+              'common:accessibility.expandSidebar',
+              'Expand the sidebar to show navigation labels alongside icons',
+            )}
+            aria-label={t('common:accessibility.expandSidebar', 'Expand sidebar')}
           >
             <ChevronRight className={iconSizes.md} />
           </button>
@@ -219,7 +280,7 @@ export const SidebarLayout: FC<SidebarProps> = ({ groups, version, children }) =
         href="#main-content"
         className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:px-4 focus:py-2 focus:rounded-lg focus:bg-brand-primary focus:text-text-primary focus:outline-none"
       >
-        Skip to main content
+        {t('common:accessibility.skipToMainContent', 'Skip to main content')}
       </a>
 
       {/* Mobile header */}
@@ -236,10 +297,14 @@ export const SidebarLayout: FC<SidebarProps> = ({ groups, version, children }) =
           className="p-2 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-hover transition-colors"
           title={
             mobileOpen
-              ? 'Close the navigation drawer'
-              : 'Open the navigation drawer to switch pages'
+              ? t('common:accessibility.closeMenu', 'Close the navigation drawer')
+              : t('common:accessibility.openMenu', 'Open the navigation drawer to switch pages')
           }
-          aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
+          aria-label={
+            mobileOpen
+              ? t('common:accessibility.closeMenu', 'Close menu')
+              : t('common:accessibility.openMenu', 'Open menu')
+          }
         >
           {mobileOpen ? <X className={iconSizes.lg} /> : <Menu className={iconSizes.lg} />}
         </button>
@@ -251,8 +316,8 @@ export const SidebarLayout: FC<SidebarProps> = ({ groups, version, children }) =
           type="button"
           className="lg:hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
           onClick={() => setMobileOpen(false)}
-          title="Tap outside to close the navigation drawer"
-          aria-label="Close menu"
+          title={t('common:accessibility.closeMenu', 'Tap outside to close the navigation drawer')}
+          aria-label={t('common:accessibility.closeMenu', 'Close menu')}
         />
       )}
 

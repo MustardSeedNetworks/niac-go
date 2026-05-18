@@ -63,12 +63,28 @@ const LibraryPcapsPage = lazy(() =>
  * usual path/component pair it carries the page header metadata
  * (title, description, icon) and an optional contextual help body
  * rendered by the page chrome.
+ *
+ * `titleI18nKey` / `descriptionI18nKey` point at namespaced i18next
+ * keys (e.g. `pages:dashboard.title`); when provided the page chrome
+ * renders `t(key, fallback)` so locales drift cleanly into English
+ * if a translation is missing. Industry-standard terms (protocol
+ * names, RFCs, units, IP/MAC/MTU/VLAN) are passed as `{{token}}`
+ * interpolations so they stay verbatim in every locale.
  */
 export type PageConfig = {
   path: string;
   label: string;
   title: string;
   description: string;
+  /** i18next key, namespaced (e.g. `pages:dashboard.title`). */
+  titleI18nKey?: string;
+  /** i18next key, namespaced (e.g. `pages:dashboard.description`). */
+  descriptionI18nKey?: string;
+  /**
+   * Interpolation values for `descriptionI18nKey` — typically the
+   * verbatim industry terms (e.g. `{ protocols: 'CDP/LLDP/EDP/FDP' }`).
+   */
+  descriptionI18nValues?: Record<string, string>;
   icon: LucideIcon;
   component: FC;
   badge?: string;
@@ -93,7 +109,9 @@ export const pages: PageConfig[] = [
     path: '/',
     label: 'Dashboard',
     title: 'Dashboard',
+    titleI18nKey: 'pages:dashboard.title',
     description: 'Live counters, run snapshots, and automation status for the active NIAC stack.',
+    descriptionI18nKey: 'pages:dashboard.description',
     icon: Activity,
     component: DashboardPage,
     help: (
@@ -124,7 +142,9 @@ export const pages: PageConfig[] = [
     path: '/runtime',
     label: 'Simulation',
     title: 'Simulation',
+    titleI18nKey: 'pages:runtime.title',
     description: 'Monitor runtime status, view network interfaces, and manage NIAC configuration.',
+    descriptionI18nKey: 'pages:runtime.description',
     icon: PlugZap,
     component: RuntimeControlPage,
     help: (
@@ -155,8 +175,10 @@ export const pages: PageConfig[] = [
     path: '/devices',
     label: 'Running Devices',
     title: 'Running Devices',
+    titleI18nKey: 'pages:devices.title',
     description:
       'Read-only view of the devices the daemon is currently simulating, plus the running YAML.',
+    descriptionI18nKey: 'pages:devices.description',
     icon: Server,
     component: DevicesPage,
     help: (
@@ -178,8 +200,10 @@ export const pages: PageConfig[] = [
     path: '/device-config',
     label: 'Devices',
     title: 'Devices',
+    titleI18nKey: 'pages:deviceLibrary.title',
     description:
       'Reusable device definitions: search, filter, edit, clone, and delete. Click a device to open the visual editor.',
+    descriptionI18nKey: 'pages:deviceLibrary.description',
     icon: Wrench,
     component: DeviceListPage,
     help: (
@@ -207,8 +231,13 @@ export const pages: PageConfig[] = [
     path: '/topology',
     label: 'Topology',
     title: 'Topology',
+    titleI18nKey: 'pages:topology.title',
     description:
       'Visual graph of the configured network plus the live CDP/LLDP/EDP/FDP neighbor table.',
+    descriptionI18nKey: 'pages:topology.description',
+    // Industry-standard protocol names are passed verbatim as a token
+    // so they stay identical in every locale.
+    descriptionI18nValues: { protocols: 'CDP/LLDP/EDP/FDP' },
     icon: Network,
     component: TopologyPage,
     help: (
@@ -235,7 +264,9 @@ export const pages: PageConfig[] = [
     path: '/automation',
     label: 'Alerts',
     title: 'Alerts',
+    titleI18nKey: 'pages:automation.title',
     description: 'Configure alert thresholds and webhook targets for the running daemon.',
+    descriptionI18nKey: 'pages:automation.description',
     icon: Workflow,
     component: AutomationPage,
     help: (
@@ -267,7 +298,10 @@ export const pages: PageConfig[] = [
     path: '/traffic',
     label: 'Traffic',
     title: 'Traffic',
+    titleI18nKey: 'pages:traffic.title',
     description: 'Inject controlled errors into the running simulation and replay captured PCAPs.',
+    descriptionI18nKey: 'pages:traffic.description',
+    descriptionI18nValues: { format: 'PCAP' },
     icon: Zap,
     component: TrafficInjectionPage,
     help: (
@@ -299,7 +333,9 @@ export const pages: PageConfig[] = [
     path: '/debug',
     label: 'Logs',
     title: 'Logs',
+    titleI18nKey: 'pages:debug.title',
     description: 'Live log stream from the daemon, with per-protocol debug-level controls.',
+    descriptionI18nKey: 'pages:debug.description',
     icon: Terminal,
     component: DebugConsolePage,
     help: (
@@ -322,8 +358,11 @@ export const pages: PageConfig[] = [
     path: '/packets',
     label: 'Packets',
     title: 'Packets',
+    titleI18nKey: 'pages:packets.title',
     description:
       'Live wire view of packets on the running simulation, or offline inspection of a captured PCAP file.',
+    descriptionI18nKey: 'pages:packets.description',
+    descriptionI18nValues: { format: 'PCAP' },
     icon: FileBox,
     component: PacketInspectorPage,
     help: (
@@ -347,7 +386,10 @@ export const pages: PageConfig[] = [
     path: '/config-diff',
     label: 'Compare & Merge',
     title: 'Compare & Merge',
+    titleI18nKey: 'pages:configDiff.title',
     description: 'Compare two YAML network configs side-by-side and merge changes between them.',
+    descriptionI18nKey: 'pages:configDiff.description',
+    descriptionI18nValues: { format: 'YAML' },
     icon: GitCompare,
     component: ConfigDiffPage,
     help: (
@@ -372,7 +414,10 @@ export const pages: PageConfig[] = [
     path: '/walk-validator',
     label: 'SNMP Walks',
     title: 'SNMP Walks',
+    titleI18nKey: 'pages:walkValidator.title',
     description: 'Validate and auto-fix SNMP walk files used by the simulated SNMP agents.',
+    descriptionI18nKey: 'pages:walkValidator.description',
+    descriptionI18nValues: { protocol: 'SNMP' },
     icon: ShieldCheck,
     component: WalkValidatorPage,
     help: (
@@ -406,8 +451,11 @@ export const pages: PageConfig[] = [
     path: '/library/walks',
     label: 'Walks',
     title: 'Walk Library',
+    titleI18nKey: 'pages:libraryWalks.title',
     description:
       'Read-only browser for the on-disk SNMP walk files the daemon serves from the unified library.',
+    descriptionI18nKey: 'pages:libraryWalks.description',
+    descriptionI18nValues: { protocol: 'SNMP' },
     icon: Database,
     component: LibraryWalksPage,
     help: (
@@ -429,8 +477,12 @@ export const pages: PageConfig[] = [
     path: '/library/pcaps',
     label: 'PCAPs',
     title: 'PCAP Library',
+    // "PCAP" is an industry term and is kept verbatim — the title is
+    // therefore stored literally rather than via i18n.
     description:
       'Read-only browser for the on-disk PCAP captures the daemon serves from the unified library.',
+    descriptionI18nKey: 'pages:libraryPcaps.description',
+    descriptionI18nValues: { format: 'PCAP' },
     icon: FileBox,
     component: LibraryPcapsPage,
     help: (

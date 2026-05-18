@@ -1,5 +1,3 @@
-// Copyright (c) 2025 Mustard Seed Networks. All rights reserved.
-
 /**
  * HelpDrawer Component
  *
@@ -28,6 +26,7 @@ import {
 } from 'lucide-react';
 import type { ReactElement, ReactNode } from 'react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import { cn, drawer, layout, spacing } from '../styles/theme';
 import { FAQSection } from './help-drawer/FAQSection';
@@ -45,21 +44,65 @@ type HelpTab = 'overview' | 'devices' | 'protocols' | 'commands' | 'glossary' | 
 
 interface TabConfig {
   id: HelpTab;
+  /** English fallback label — also passed as the i18next defaultValue. */
   label: string;
+  /** i18next key (in `help` namespace). */
+  i18nKey: string;
   icon: ReactNode;
 }
 
+// "Protocols", "Commands", "Glossary", "Shortcuts", "FAQ" still describe
+// generic UI affordances — they get translated. The values inside each
+// list (industry protocol names, CLI command names) stay verbatim.
 const TABS: TabConfig[] = [
-  { id: 'overview', label: 'Overview', icon: <LayoutGrid className="w-4 h-4" /> },
-  { id: 'devices', label: 'Devices', icon: <Boxes className="w-4 h-4" /> },
-  { id: 'protocols', label: 'Protocols', icon: <Network className="w-4 h-4" /> },
-  { id: 'commands', label: 'Commands', icon: <Terminal className="w-4 h-4" /> },
-  { id: 'glossary', label: 'Glossary', icon: <Book className="w-4 h-4" /> },
-  { id: 'shortcuts', label: 'Shortcuts', icon: <Keyboard className="w-4 h-4" /> },
-  { id: 'faq', label: 'FAQ', icon: <MessageCircleQuestion className="w-4 h-4" /> },
+  {
+    id: 'overview',
+    label: 'Overview',
+    i18nKey: 'help:tabs.overview',
+    icon: <LayoutGrid className="w-4 h-4" />,
+  },
+  {
+    id: 'devices',
+    label: 'Devices',
+    i18nKey: 'help:tabs.devices',
+    icon: <Boxes className="w-4 h-4" />,
+  },
+  {
+    id: 'protocols',
+    label: 'Protocols',
+    i18nKey: 'help:tabs.protocols',
+    icon: <Network className="w-4 h-4" />,
+  },
+  {
+    id: 'commands',
+    label: 'Commands',
+    i18nKey: 'help:tabs.commands',
+    icon: <Terminal className="w-4 h-4" />,
+  },
+  {
+    id: 'glossary',
+    label: 'Glossary',
+    i18nKey: 'help:tabs.glossary',
+    icon: <Book className="w-4 h-4" />,
+  },
+  {
+    id: 'shortcuts',
+    label: 'Shortcuts',
+    i18nKey: 'help:tabs.shortcuts',
+    icon: <Keyboard className="w-4 h-4" />,
+  },
+  // "FAQ" is widely recognised as an English abbreviation but is still
+  // a user-facing label, so we translate it. Locale files can override.
+  {
+    id: 'faq',
+    label: 'FAQ',
+    i18nKey: 'help:tabs.faq',
+    icon: <MessageCircleQuestion className="w-4 h-4" />,
+  },
 ];
 
 export function HelpDrawer({ isOpen, onClose }: HelpDrawerProps): ReactElement | null {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<HelpTab>('overview');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -80,7 +123,7 @@ export function HelpDrawer({ isOpen, onClose }: HelpDrawerProps): ReactElement |
           type="button"
           className={cn(drawer.backdrop, 'cursor-default')}
           onClick={onClose}
-          aria-label="Close help drawer"
+          aria-label={t('help:drawer.backdropAriaLabel', 'Close help drawer')}
         />
 
         {/* Drawer */}
@@ -88,7 +131,7 @@ export function HelpDrawer({ isOpen, onClose }: HelpDrawerProps): ReactElement |
           ref={drawerRef}
           role="dialog"
           aria-modal="true"
-          aria-label="Help"
+          aria-label={t('help:drawer.drawerAriaLabel', 'Help')}
           className={cn(drawer.content, drawer.size.lg, 'animate-slide-in-right')}
         >
           {/* Header */}
@@ -96,7 +139,9 @@ export function HelpDrawer({ isOpen, onClose }: HelpDrawerProps): ReactElement |
             <div className="px-4 py-3 flex items-center justify-between">
               <div className={layout.inline.default}>
                 <HelpCircle className="w-5 h-5 text-brand-accent" aria-hidden="true" />
-                <h2 className="text-lg font-semibold text-text-primary">Help</h2>
+                <h2 className="text-lg font-semibold text-text-primary">
+                  {t('help:drawer.title', 'Help')}
+                </h2>
               </div>
               <button
                 type="button"
@@ -105,7 +150,7 @@ export function HelpDrawer({ isOpen, onClose }: HelpDrawerProps): ReactElement |
                   'p-2 hover:bg-surface-hover rounded-lg transition-colors',
                   'text-text-muted hover:text-text-primary',
                 )}
-                aria-label="Close help"
+                aria-label={t('help:drawer.closeAriaLabel', 'Close help')}
               >
                 <X className="w-5 h-5" aria-hidden="true" />
               </button>
@@ -117,7 +162,7 @@ export function HelpDrawer({ isOpen, onClose }: HelpDrawerProps): ReactElement |
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
                 <input
                   type="text"
-                  placeholder="Search help..."
+                  placeholder={t('help:drawer.searchPlaceholder', 'Search help...')}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className={cn(
@@ -148,7 +193,7 @@ export function HelpDrawer({ isOpen, onClose }: HelpDrawerProps): ReactElement |
                     )}
                   >
                     {tab.icon}
-                    <span>{tab.label}</span>
+                    <span>{t(tab.i18nKey, tab.label)}</span>
                   </button>
                 ))}
               </nav>

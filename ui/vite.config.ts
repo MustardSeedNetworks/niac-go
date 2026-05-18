@@ -31,6 +31,10 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         '@': path.resolve(__dirname, 'src'),
+        // `@locales` resolves to the backend's locale directory so the
+        // frontend and Go's `//go:embed` share a single source of
+        // truth for translation strings.
+        '@locales': path.resolve(__dirname, '../internal/i18n/locales'),
       },
       dedupe: ['react', 'react-dom', 'react-router-dom', 'lucide-react'],
     },
