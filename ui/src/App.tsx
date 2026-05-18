@@ -1,12 +1,14 @@
-import { Wrench } from 'lucide-react';
-import { memo, type ReactNode, Suspense } from 'react';
+import { Moon, Sun, Wrench } from 'lucide-react';
+import { memo, type ReactElement, type ReactNode, Suspense } from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { ErrorBoundary, PageErrorBoundary } from './components/ErrorBoundary';
 import { AppProvider, useAppState } from './contexts/AppContext';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
+import { useTheme } from './hooks/useTheme';
 import { navGroups } from './navGroups';
 import { DeviceEditorPageRef, type PageConfig, pages } from './pageRegistry';
 import { Breadcrumbs } from './ui/Breadcrumbs';
+import { ConnectionStatus } from './ui/ConnectionStatus';
 import { PageHeader } from './ui/Layout';
 import { PageLoader } from './ui/PageLoader';
 import { SidebarLayout } from './ui/Sidebar';
@@ -33,13 +35,44 @@ export default function App() {
   );
 }
 
+/**
+ * TopBar renders the sticky upper-right control cluster: connection
+ * indicator + theme toggle. Mirrors stem's UI shell so cross-product
+ * navigation has consistent affordances.
+ */
+function TopBar(): ReactElement {
+  const { isDark, toggleTheme } = useTheme();
+  return (
+    <>
+      {/* Left side reserved for future breadcrumbs / page-level chrome. */}
+      <div className="flex items-center" />
+      <div className="flex items-center gap-2">
+        <ConnectionStatus />
+        <button
+          type="button"
+          onClick={toggleTheme}
+          className="p-2 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-hover"
+          title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+          aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+        >
+          {isDark ? (
+            <Sun className="h-5 w-5" aria-hidden="true" />
+          ) : (
+            <Moon className="h-5 w-5" aria-hidden="true" />
+          )}
+        </button>
+      </div>
+    </>
+  );
+}
+
 function AppShell() {
   const { data: version } = useAppState('version');
 
   useKeyboardShortcuts();
 
   return (
-    <SidebarLayout groups={navGroups} version={version?.version}>
+    <SidebarLayout groups={navGroups} version={version?.version} topBar={<TopBar />}>
       <ToastContainer />
       <Suspense fallback={<PageLoader />}>
         <Routes>
