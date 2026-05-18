@@ -16,6 +16,7 @@ on:
     workflows: ["CI"]
     branches: [main]
     types: [completed]
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -23,14 +24,18 @@ permissions:
 
 jobs:
   release-please:
-    # Only run if CI workflow succeeded
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    # Only run if CI workflow succeeded (or this is a manual dispatch).
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         id: release
         with:
-          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+          # token defaults to GITHUB_TOKEN. The repo's Actions permission
+          # 'Allow GitHub Actions to create and approve pull requests' must
+          # be enabled (Settings -> Actions -> General). Without the
+          # RELEASE_PLEASE_TOKEN secret, the explicit token line caused
+          # 'Input required and not supplied: token' on every run.
           release-type: go
 
       - name: Release created
