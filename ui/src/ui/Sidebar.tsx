@@ -126,6 +126,7 @@ export const SidebarLayout: FC<SidebarProps> = ({ groups, version, children }) =
             type="button"
             onClick={() => setCollapsed(true)}
             className="p-1.5 rounded-lg text-text-muted hover:text-text-primary hover:bg-white/10 transition-colors lg:flex hidden"
+            title="Collapse the sidebar to icons-only mode to give the main content more horizontal space"
             aria-label="Collapse sidebar"
           >
             <ChevronLeft className={iconSizes.md} />
@@ -161,7 +162,7 @@ export const SidebarLayout: FC<SidebarProps> = ({ groups, version, children }) =
               text-text-muted hover:text-text-primary hover:bg-white/10 transition-colors
               text-sm font-medium
             `}
-            title={collapsed ? 'Help' : undefined}
+            title="Open the help dialog with keyboard shortcuts, documentation links, and supported features"
             aria-label="Open help"
           >
             <HelpCircle className={`${iconSizes.md} flex-shrink-0`} />
@@ -176,7 +177,7 @@ export const SidebarLayout: FC<SidebarProps> = ({ groups, version, children }) =
               text-text-muted hover:text-text-primary hover:bg-white/10 transition-colors
               text-sm font-medium
             `}
-            title={collapsed ? 'Settings' : undefined}
+            title="Open the settings modal to change theme, default capture interface, and other application preferences"
             aria-label="Open settings"
           >
             <Settings className={`${iconSizes.md} flex-shrink-0`} />
@@ -201,6 +202,7 @@ export const SidebarLayout: FC<SidebarProps> = ({ groups, version, children }) =
             type="button"
             onClick={() => setCollapsed(false)}
             className="mt-2 p-1.5 rounded-lg text-text-muted hover:text-text-primary hover:bg-white/10 transition-colors"
+            title="Expand the sidebar to show navigation labels alongside icons"
             aria-label="Expand sidebar"
           >
             <ChevronRight className={iconSizes.md} />
@@ -232,6 +234,11 @@ export const SidebarLayout: FC<SidebarProps> = ({ groups, version, children }) =
           type="button"
           onClick={() => setMobileOpen(!mobileOpen)}
           className="p-2 rounded-lg text-text-muted hover:text-text-primary hover:bg-white/10 transition-colors"
+          title={
+            mobileOpen
+              ? 'Close the navigation drawer'
+              : 'Open the navigation drawer to switch pages'
+          }
           aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
         >
           {mobileOpen ? <X className={iconSizes.lg} /> : <Menu className={iconSizes.lg} />}
@@ -244,6 +251,7 @@ export const SidebarLayout: FC<SidebarProps> = ({ groups, version, children }) =
           type="button"
           className="lg:hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
           onClick={() => setMobileOpen(false)}
+          title="Tap outside to close the navigation drawer"
           aria-label="Close menu"
         />
       )}

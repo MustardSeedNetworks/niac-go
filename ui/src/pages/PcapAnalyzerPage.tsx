@@ -245,6 +245,7 @@ export const PcapAnalyzerPage: FC = () => {
                     <button
                       type="button"
                       onClick={() => setViewMode('packets')}
+                      title="Show every decoded packet with timestamp, headers, and payload"
                       className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
                         viewMode === 'packets'
                           ? 'bg-brand-600 text-text-primary'
@@ -256,6 +257,7 @@ export const PcapAnalyzerPage: FC = () => {
                     <button
                       type="button"
                       onClick={() => setViewMode('stats')}
+                      title="Show aggregate statistics: byte/packet totals per protocol and per host"
                       className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
                         viewMode === 'stats'
                           ? 'bg-brand-600 text-text-primary'
@@ -267,6 +269,7 @@ export const PcapAnalyzerPage: FC = () => {
                     <button
                       type="button"
                       onClick={() => setViewMode('conversations')}
+                      title="Group packets by 5-tuple to see TCP/UDP flows and byte totals per conversation"
                       className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
                         viewMode === 'conversations'
                           ? 'bg-brand-600 text-text-primary'

@@ -74,6 +74,7 @@ export const DeviceTableView: FC = () => {
                       type="button"
                       onClick={() => onEdit(device.hostname)}
                       className="text-text-primary hover:text-brand-300 font-medium truncate"
+                      title={`Open ${device.hostname} in the device editor`}
                     >
                       {device.hostname}
                     </button>
@@ -120,7 +121,8 @@ export const DeviceTableView: FC = () => {
                       type="button"
                       onClick={() => onEdit(device.hostname)}
                       className="p-2 text-text-muted hover:text-brand-300 hover:bg-white/5 rounded-lg transition-colors"
-                      title="Edit device"
+                      title={`Open the device editor for ${device.hostname} to modify protocols, interfaces, and credentials`}
+                      aria-label={`Edit device ${device.hostname}`}
                     >
                       <Edit3 className={iconSizes.md} />
                     </button>
@@ -128,7 +130,8 @@ export const DeviceTableView: FC = () => {
                       type="button"
                       onClick={() => onClone(device.hostname)}
                       className="p-2 text-text-muted hover:text-status-info hover:bg-white/5 rounded-lg transition-colors"
-                      title="Clone device"
+                      title={`Create a copy of ${device.hostname} with a new hostname; all protocols and interfaces are duplicated`}
+                      aria-label={`Clone device ${device.hostname}`}
                     >
                       <Copy className={iconSizes.md} />
                     </button>
@@ -136,7 +139,8 @@ export const DeviceTableView: FC = () => {
                       type="button"
                       onClick={() => onDelete(device.hostname)}
                       className="p-2 text-text-muted hover:text-status-error hover:bg-white/5 rounded-lg transition-colors"
-                      title="Delete device"
+                      title={`Permanently remove ${device.hostname} from the library; cannot be undone`}
+                      aria-label={`Delete device ${device.hostname}`}
                     >
                       <Trash2 className={iconSizes.md} />
                     </button>

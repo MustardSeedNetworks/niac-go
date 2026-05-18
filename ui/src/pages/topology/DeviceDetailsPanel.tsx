@@ -54,6 +54,8 @@ export const DeviceDetailsPanel: FC<DeviceDetailsPanelProps> = ({ device, onClos
           type="button"
           onClick={onClose}
           className="text-text-muted hover:text-text-primary text-xl"
+          title="Close the device details panel and return to the topology view"
+          aria-label="Close device details"
         >
           &times;
         </button>

@@ -79,6 +79,7 @@ function LibraryFilesView({ kind }: Props) {
                 onClick={refetch}
                 leftIcon={<RefreshCw className="w-4 h-4" />}
                 disabled={loading}
+                title="Re-fetch the file listing from the daemon's library directory"
               >
                 Refresh
               </Button>

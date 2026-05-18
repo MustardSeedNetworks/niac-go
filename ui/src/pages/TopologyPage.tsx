@@ -575,6 +575,7 @@ export const TopologyPage: FC = () => {
                   role="tab"
                   aria-selected={view === 'graph'}
                   onClick={() => setView('graph')}
+                  title="Show devices and links as an interactive graph (drag to reposition, scroll to zoom)"
                   className={`flex items-center gap-1.5 rounded px-3 py-1 text-xs font-medium transition-colors ${
                     view === 'graph'
                       ? 'bg-status-info/20 text-status-info'
@@ -589,6 +590,7 @@ export const TopologyPage: FC = () => {
                   role="tab"
                   aria-selected={view === 'neighbors'}
                   onClick={() => setView('neighbors')}
+                  title="Show LLDP/CDP neighbor relationships as a sortable table grouped by device"
                   className={`flex items-center gap-1.5 rounded px-3 py-1 text-xs font-medium transition-colors ${
                     view === 'neighbors'
                       ? 'bg-status-info/20 text-status-info'
@@ -701,6 +703,11 @@ export const TopologyPage: FC = () => {
                         type="button"
                         onClick={() => toggleType(type)}
                         aria-pressed={active}
+                        title={
+                          active
+                            ? `Hide ${type} devices from the graph`
+                            : `Show only ${type} devices (toggles a filter chip)`
+                        }
                         className={`rounded-full border px-2.5 py-0.5 text-[11px] font-medium capitalize transition-colors ${
                           active
                             ? 'border-status-info/40 bg-status-info/20 text-status-info'
@@ -715,6 +722,7 @@ export const TopologyPage: FC = () => {
                     <button
                       type="button"
                       onClick={() => setActiveTypes(new Set())}
+                      title="Remove all device-type filters and show every device in the topology"
                       className="rounded-full px-2 py-0.5 text-[11px] font-medium text-text-muted hover:text-text-primary underline-offset-2 hover:underline"
                     >
                       Clear
