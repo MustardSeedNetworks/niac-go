@@ -31,11 +31,12 @@ jobs:
       - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         id: release
         with:
-          # token defaults to GITHUB_TOKEN. The repo's Actions permission
-          # 'Allow GitHub Actions to create and approve pull requests' must
-          # be enabled (Settings -> Actions -> General). Without the
-          # RELEASE_PLEASE_TOKEN secret, the explicit token line caused
-          # 'Input required and not supplied: token' on every run.
+          # PAT (not GITHUB_TOKEN) so the release PR's CI runs and the
+          # tag-push event triggers release.yml. With GITHUB_TOKEN those
+          # downstream workflows are silently skipped per GitHub's
+          # anti-recursion policy. Falls back to GITHUB_TOKEN if the
+          # secret isn't set (release PR will open but no cascade).
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN || secrets.GITHUB_TOKEN }}
           release-type: go
 
       - name: Release created
