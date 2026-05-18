@@ -14,13 +14,26 @@
  * Uses theme tokens and useFocusTrap for accessibility.
  */
 
-import { Book, HelpCircle, Keyboard, Search, X, Zap } from 'lucide-react';
+import {
+  Book,
+  Boxes,
+  HelpCircle,
+  Keyboard,
+  LayoutGrid,
+  MessageCircleQuestion,
+  Network,
+  Search,
+  Terminal,
+  X,
+} from 'lucide-react';
 import type { ReactElement, ReactNode } from 'react';
 import { useState } from 'react';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import { cn, drawer, layout, spacing } from '../styles/theme';
-import { FeaturesSection } from './help-drawer/FeaturesSection';
+import { FAQSection } from './help-drawer/FAQSection';
 import { GlossarySection } from './help-drawer/GlossarySection';
+import { ItemListSection } from './help-drawer/ItemListSection';
+import { OverviewSection } from './help-drawer/OverviewSection';
 import { ShortcutsSection } from './help-drawer/ShortcutsSection';
 
 interface HelpDrawerProps {
@@ -28,7 +41,7 @@ interface HelpDrawerProps {
   onClose: () => void;
 }
 
-type HelpTab = 'features' | 'glossary' | 'shortcuts';
+type HelpTab = 'overview' | 'devices' | 'protocols' | 'commands' | 'glossary' | 'shortcuts' | 'faq';
 
 interface TabConfig {
   id: HelpTab;
@@ -37,13 +50,17 @@ interface TabConfig {
 }
 
 const TABS: TabConfig[] = [
-  { id: 'features', label: 'Features', icon: <Zap className="w-4 h-4" /> },
+  { id: 'overview', label: 'Overview', icon: <LayoutGrid className="w-4 h-4" /> },
+  { id: 'devices', label: 'Devices', icon: <Boxes className="w-4 h-4" /> },
+  { id: 'protocols', label: 'Protocols', icon: <Network className="w-4 h-4" /> },
+  { id: 'commands', label: 'Commands', icon: <Terminal className="w-4 h-4" /> },
   { id: 'glossary', label: 'Glossary', icon: <Book className="w-4 h-4" /> },
   { id: 'shortcuts', label: 'Shortcuts', icon: <Keyboard className="w-4 h-4" /> },
+  { id: 'faq', label: 'FAQ', icon: <MessageCircleQuestion className="w-4 h-4" /> },
 ];
 
 export function HelpDrawer({ isOpen, onClose }: HelpDrawerProps): ReactElement | null {
-  const [activeTab, setActiveTab] = useState<HelpTab>('features');
+  const [activeTab, setActiveTab] = useState<HelpTab>('overview');
   const [searchQuery, setSearchQuery] = useState('');
 
   const drawerRef = useFocusTrap<HTMLDivElement>({
@@ -140,9 +157,19 @@ export function HelpDrawer({ isOpen, onClose }: HelpDrawerProps): ReactElement |
 
           {/* Content */}
           <div className={cn(spacing.drawer, 'space-y-6')}>
-            {activeTab === 'features' && <FeaturesSection searchQuery={searchQuery} />}
+            {activeTab === 'overview' && <OverviewSection searchQuery={searchQuery} />}
+            {activeTab === 'devices' && (
+              <ItemListSection categoryId="devices" searchQuery={searchQuery} />
+            )}
+            {activeTab === 'protocols' && (
+              <ItemListSection categoryId="protocols" searchQuery={searchQuery} />
+            )}
+            {activeTab === 'commands' && (
+              <ItemListSection categoryId="commands" searchQuery={searchQuery} />
+            )}
             {activeTab === 'glossary' && <GlossarySection searchQuery={searchQuery} />}
             {activeTab === 'shortcuts' && <ShortcutsSection searchQuery={searchQuery} />}
+            {activeTab === 'faq' && <FAQSection searchQuery={searchQuery} />}
           </div>
         </div>
       </div>

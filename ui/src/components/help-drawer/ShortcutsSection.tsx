@@ -9,8 +9,8 @@
 import { Command } from 'lucide-react';
 import type { ReactElement } from 'react';
 import { useMemo } from 'react';
+import { SHORTCUTS } from '../../data/help-content';
 import { cn, layout } from '../../styles/theme';
-import { SHORTCUTS } from './data';
 import type { Shortcut } from './types';
 
 interface ShortcutsSectionProps {
@@ -21,6 +21,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   general: 'General',
   navigation: 'Navigation',
   actions: 'Actions',
+  tui: 'Terminal UI',
 };
 
 export function ShortcutsSection({ searchQuery }: ShortcutsSectionProps): ReactElement {
@@ -39,9 +40,13 @@ export function ShortcutsSection({ searchQuery }: ShortcutsSectionProps): ReactE
       general: [],
       navigation: [],
       actions: [],
+      tui: [],
     };
     for (const shortcut of filteredShortcuts) {
-      groups[shortcut.category].push(shortcut);
+      const bucket = groups[shortcut.category];
+      if (bucket) {
+        bucket.push(shortcut);
+      }
     }
     return groups;
   }, [filteredShortcuts]);
