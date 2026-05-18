@@ -20,7 +20,7 @@ Use one of these private channels instead:
    <https://github.com/krisarmstrong/niac-go/security/advisories/new>.
    This creates a private advisory visible only to repository maintainers
    and you, with a built-in audit trail and CVE coordination workflow.
-2. **Email:** `kris.armstrong@netally.com` with subject `[NIAC SECURITY]`.
+2. **Email:** `kris.armstrong@icloud.com` with subject `[NIAC SECURITY]`.
 
 Include in your report:
 
