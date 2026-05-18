@@ -1,0 +1,42 @@
+{
+  "generic": {
+    "unknown": "Ocurrió un error desconocido",
+    "network": "Error de red — verifique su conexión",
+    "timeout": "Tiempo de espera agotado",
+    "notFound": "No encontrado",
+    "forbidden": "Permiso denegado",
+    "serverError": "Error del servidor — intente nuevamente",
+    "invalidRequest": "Solicitud inválida"
+  },
+  "validation": {
+    "required": "Este campo es obligatorio",
+    "tooShort": "Debe tener al menos {{min}} caracteres",
+    "tooLong": "Debe tener como máximo {{max}} caracteres",
+    "invalidFormat": "Formato inválido",
+    "invalidIp": "Dirección IP inválida",
+    "invalidPort": "Número de puerto inválido",
+    "invalidHostname": "Nombre de host inválido",
+    "invalidYaml": "YAML inválido"
+  },
+  "api": {
+    "fetchFailed": "Error al cargar los datos",
+    "saveFailed": "Error al guardar los cambios",
+    "deleteFailed": "Error al eliminar el elemento",
+    "uploadFailed": "Error al subir el archivo"
+  },
+  "simulation": {
+    "startFailed": "Error al iniciar la simulación",
+    "stopFailed": "Error al detener la simulación",
+    "configInvalid": "La configuración no es válida",
+    "interfaceUnavailable": "La interfaz de red seleccionada no está disponible"
+  },
+  "packet": {
+    "captureFailed": "Error al iniciar la captura de paquetes",
+    "decodeFailed": "Error al decodificar el paquete",
+    "filterInvalid": "El filtro de captura es inválido"
+  },
+  "walk": {
+    "validationFailed": "La validación falló",
+    "parseError": "No se pudo analizar el archivo de recorrido"
+  }
+}

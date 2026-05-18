@@ -1,0 +1,23 @@
+{
+  "drawer": {
+    "title": "Ayuda",
+    "closeAriaLabel": "Cerrar ayuda",
+    "drawerAriaLabel": "Ayuda",
+    "backdropAriaLabel": "Cerrar panel de ayuda",
+    "searchPlaceholder": "Buscar ayuda...",
+    "noResults": "No hay coincidencias para \"{{query}}\""
+  },
+  "tabs": {
+    "overview": "Resumen",
+    "devices": "Dispositivos",
+    "protocols": "Protocolos",
+    "commands": "Comandos",
+    "glossary": "Glosario",
+    "shortcuts": "Atajos",
+    "faq": "Preguntas frecuentes"
+  },
+  "footer": {
+    "documentationLink": "Documentación completa",
+    "reportIssue": "Reportar un problema"
+  }
+}

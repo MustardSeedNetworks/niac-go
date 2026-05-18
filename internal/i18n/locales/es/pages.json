@@ -1,0 +1,82 @@
+{
+  "groups": {
+    "overview": "Resumen",
+    "library": "Biblioteca",
+    "liveView": "Vista en vivo",
+    "inspect": "Inspeccionar",
+    "alerts": "Alertas"
+  },
+  "dashboard": {
+    "label": "Panel",
+    "title": "Panel",
+    "description": "Contadores en vivo, instantáneas de ejecución y estado de automatización para la pila NIAC activa."
+  },
+  "runtime": {
+    "label": "Simulación",
+    "title": "Simulación",
+    "description": "Supervise el estado de ejecución, vea las interfaces de red y gestione la configuración de NIAC."
+  },
+  "devices": {
+    "label": "Dispositivos en ejecución",
+    "title": "Dispositivos en ejecución",
+    "description": "Vista de solo lectura de los dispositivos que el daemon está simulando actualmente, junto con el YAML en ejecución."
+  },
+  "deviceLibrary": {
+    "label": "Dispositivos",
+    "title": "Dispositivos",
+    "description": "Definiciones de dispositivos reutilizables: buscar, filtrar, editar, clonar y eliminar. Haga clic en un dispositivo para abrir el editor visual."
+  },
+  "deviceEditor": {
+    "newLabel": "Nuevo dispositivo",
+    "newTitle": "Nuevo dispositivo",
+    "newDescription": "Cree una nueva configuración de dispositivo de red.",
+    "editLabel": "Editar dispositivo",
+    "editTitle": "Editar dispositivo",
+    "editDescription": "Edite los ajustes de configuración del dispositivo."
+  },
+  "topology": {
+    "label": "Topología",
+    "title": "Topología",
+    "description": "Gráfico visual de la red configurada y la tabla de vecinos {{protocols}} en vivo."
+  },
+  "automation": {
+    "label": "Alertas",
+    "title": "Alertas",
+    "description": "Configure los umbrales de alerta y los destinos de webhook para el daemon en ejecución."
+  },
+  "traffic": {
+    "label": "Tráfico",
+    "title": "Tráfico",
+    "description": "Inyecte errores controlados en la simulación en ejecución y reproduzca archivos {{format}} capturados."
+  },
+  "debug": {
+    "label": "Registros",
+    "title": "Registros",
+    "description": "Flujo de registros en vivo desde el daemon, con controles de nivel de depuración por protocolo."
+  },
+  "packets": {
+    "label": "Paquetes",
+    "title": "Paquetes",
+    "description": "Vista en vivo de los paquetes en la simulación en ejecución, o inspección sin conexión de un archivo {{format}} capturado."
+  },
+  "configDiff": {
+    "label": "Comparar y fusionar",
+    "title": "Comparar y fusionar",
+    "description": "Compare dos configuraciones de red {{format}} en paralelo y fusione los cambios entre ellas."
+  },
+  "walkValidator": {
+    "label": "Recorridos {{protocol}}",
+    "title": "Recorridos {{protocol}}",
+    "description": "Valide y corrija automáticamente los archivos de recorrido {{protocol}} utilizados por los agentes {{protocol}} simulados."
+  },
+  "libraryWalks": {
+    "label": "Recorridos",
+    "title": "Biblioteca de recorridos",
+    "description": "Navegador de solo lectura para los archivos de recorrido {{protocol}} en disco que el daemon sirve desde la biblioteca unificada."
+  },
+  "libraryPcaps": {
+    "label": "{{format}}",
+    "title": "Biblioteca de {{format}}",
+    "description": "Navegador de solo lectura para las capturas {{format}} en disco que el daemon sirve desde la biblioteca unificada."
+  }
+}
