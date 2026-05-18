@@ -1,0 +1,41 @@
+{
+  "types": {
+    "router": "Enrutador",
+    "switch": "Switch",
+    "firewall": "Firewall",
+    "server": "Servidor",
+    "workstation": "Estación de trabajo",
+    "printer": "Impresora",
+    "accessPoint": "Punto de acceso",
+    "phone": "Teléfono",
+    "camera": "Cámara",
+    "iot": "Dispositivo IoT",
+    "endpoint": "Punto final",
+    "generic": "Genérico"
+  },
+  "list": {
+    "title": "Biblioteca de dispositivos",
+    "searchPlaceholder": "Buscar dispositivos por nombre, tipo o nombre de host...",
+    "noDevices": "Aún no hay dispositivos en la biblioteca",
+    "createFirst": "Cree su primer dispositivo",
+    "bulkDelete": "Eliminar seleccionados",
+    "clone": "Clonar",
+    "edit": "Editar",
+    "deleteConfirmTitle": "¿Eliminar dispositivo?",
+    "deleteConfirmMessage": "Esto eliminará permanentemente la definición del dispositivo. Las simulaciones en ejecución no se verán afectadas hasta que se reinicien."
+  },
+  "editor": {
+    "newDevice": "Nuevo dispositivo",
+    "editDevice": "Editar dispositivo",
+    "general": "General",
+    "interfaces": "Interfaces",
+    "trunkPorts": "Puertos troncales",
+    "portChannels": "Canales de puertos",
+    "saveSuccess": "Dispositivo guardado",
+    "saveFailed": "Error al guardar el dispositivo"
+  },
+  "running": {
+    "noDevicesRunning": "No hay dispositivos en ejecución actualmente",
+    "startHint": "Inicie una simulación desde la página Simulación para llenar esta vista."
+  }
+}
