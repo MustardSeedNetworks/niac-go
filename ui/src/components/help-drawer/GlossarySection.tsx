@@ -62,7 +62,7 @@ export function GlossarySection({ searchQuery }: GlossarySectionProps): ReactEle
           entries.length > 0 ? (
             <div key={category} className="space-y-2">
               <h3 className="text-sm font-semibold text-text-primary flex items-center gap-2">
-                <Network className="w-4 h-4 text-brand-400" />
+                <Network className="w-4 h-4 text-brand-accent" />
                 {CATEGORY_LABELS[category]}
               </h3>
               <div className="space-y-1">
@@ -84,7 +84,7 @@ interface GlossaryItemProps {
 
 function GlossaryItem({ entry }: GlossaryItemProps): ReactElement {
   return (
-    <div className="bg-white/5 rounded-lg p-3">
+    <div className="bg-surface-hover rounded-lg p-3">
       <dt className="text-sm font-medium text-text-primary">{entry.term}</dt>
       <dd className="text-xs text-text-muted mt-0.5">{entry.definition}</dd>
     </div>

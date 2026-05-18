@@ -14,8 +14,8 @@ const colorStyles: Record<TagColorScheme, string> = {
   green: 'bg-status-success/20 text-status-success border-status-success/30',
   blue: 'bg-status-info/20 text-status-info border-status-info/30',
   yellow: 'bg-status-warning/20 text-status-warning border-status-warning/30',
-  purple: 'bg-brand-500/20 text-brand-300 border-brand-500/30',
-  violet: 'bg-brand-500/20 text-brand-300 border-brand-500/30',
+  purple: 'bg-brand-primary/20 text-brand-accent border-brand-primary/30',
+  violet: 'bg-brand-primary/20 text-brand-accent border-brand-primary/30',
   cyan: 'bg-status-info/20 text-status-info border-status-info/30',
 };
 

@@ -19,10 +19,12 @@ import {
   ChevronRight,
   Info,
   Monitor,
+  Moon,
   Network,
   Palette,
   PlugZap,
   Settings,
+  Sun,
   X,
 } from 'lucide-react';
 import type { ReactElement, ReactNode } from 'react';
@@ -31,6 +33,7 @@ import { fetchInterfaces } from '../api/client';
 import type { NetworkInterface } from '../api/types';
 import { iconSizes } from '../constants/sizes';
 import { useFocusTrap } from '../hooks/useFocusTrap';
+import { type Theme, useTheme } from '../hooks/useTheme';
 import { badge, cn, drawer, layout, spacing } from '../styles/theme';
 import { SimulationSection } from './settings/SimulationSection';
 
@@ -92,16 +95,16 @@ export function SettingsDrawer({
           className={cn(drawer.content, drawer.size.lg, 'animate-slide-in-right')}
         >
           {/* Header */}
-          <div className="sticky top-0 bg-bg-surface border-b border-white/10 px-4 py-3 flex items-center justify-between z-10">
+          <div className="sticky top-0 bg-bg-surface border-b border-surface-border px-4 py-3 flex items-center justify-between z-10">
             <div className={layout.inline.default}>
-              <Settings className="w-5 h-5 text-brand-400" aria-hidden="true" />
+              <Settings className="w-5 h-5 text-brand-accent" aria-hidden="true" />
               <h2 className="text-lg font-semibold text-text-primary">Settings</h2>
             </div>
             <button
               type="button"
               onClick={onClose}
               className={cn(
-                'p-2 hover:bg-white/10 rounded-lg transition-colors',
+                'p-2 hover:bg-surface-hover rounded-lg transition-colors',
                 'text-text-muted hover:text-text-primary',
               )}
               aria-label="Close settings"
@@ -111,7 +114,7 @@ export function SettingsDrawer({
           </div>
 
           {/* Tab Navigation */}
-          <div className="border-b border-white/10 px-2">
+          <div className="border-b border-surface-border px-2">
             <nav className="flex gap-1 -mb-px">
               {TABS.map((tab) => (
                 <button
@@ -124,8 +127,8 @@ export function SettingsDrawer({
                     'flex items-center gap-2 px-3 py-2.5 text-sm font-medium transition-colors',
                     'border-b-2 -mb-[2px]',
                     activeTab === tab.id
-                      ? 'border-brand-500 text-text-primary'
-                      : 'border-transparent text-text-muted hover:text-text-primary hover:border-white/20',
+                      ? 'border-brand-primary text-text-primary'
+                      : 'border-transparent text-text-muted hover:text-text-primary hover:border-surface-border',
                   )}
                 >
                   {tab.icon}
@@ -176,7 +179,7 @@ interface SettingRowProps {
 }
 
 const SettingRow = ({ label, description, children }: SettingRowProps): ReactElement => (
-  <div className="flex items-center justify-between gap-4 py-2 px-3 bg-white/5 rounded-lg">
+  <div className="flex items-center justify-between gap-4 py-2 px-3 bg-surface-hover rounded-lg">
     <div className="flex-1 min-w-0">
       <div className="text-sm text-text-primary">{label}</div>
       {description && <div className="text-xs text-text-muted truncate">{description}</div>}
@@ -190,52 +193,84 @@ const SettingRow = ({ label, description, children }: SettingRowProps): ReactEle
 // =============================================================================
 
 function AppearanceSection(): ReactElement {
-  // Theme state would be managed by a global context in the future
-  const [theme, setTheme] = useState<'dark' | 'light' | 'system'>('dark');
+  const { theme, setTheme, isDark, toggleTheme } = useTheme();
+
+  const options: Array<{ id: Theme; label: string; icon: ReactNode }> = [
+    { id: 'dark', label: 'Dark', icon: <Moon className="w-4 h-4" aria-hidden="true" /> },
+    { id: 'light', label: 'Light', icon: <Sun className="w-4 h-4" aria-hidden="true" /> },
+    {
+      id: 'system',
+      label: 'System',
+      icon: <Monitor className="w-4 h-4" aria-hidden="true" />,
+    },
+  ];
 
   return (
     <Section title="Theme" description="Customize the appearance of NIAC">
       <div className="grid grid-cols-3 gap-2">
-        {(['dark', 'light', 'system'] as const).map((option) => (
-          <button
-            key={option}
-            type="button"
-            onClick={() => setTheme(option)}
-            className={cn(
-              'flex flex-col items-center gap-2 p-3 rounded-lg border transition-all',
-              theme === option
-                ? 'border-brand-500 bg-brand-500/10'
-                : 'border-white/10 hover:border-white/20 hover:bg-white/5',
-            )}
-          >
-            <div
+        {options.map((option) => {
+          const selected = theme === option.id;
+          return (
+            <button
+              key={option.id}
+              type="button"
+              aria-pressed={selected}
+              onClick={() => setTheme(option.id)}
               className={cn(
-                'w-8 h-8 rounded-lg flex items-center justify-center',
-                option === 'dark' && 'bg-bg-elevated',
-                option === 'light' && 'bg-bg-muted',
-                option === 'system' && 'bg-gradient-to-br from-gray-200 to-bg-elevated',
+                'flex flex-col items-center gap-2 p-3 rounded-lg border transition-all',
+                selected
+                  ? 'border-brand-primary bg-brand-primary/10'
+                  : 'border-surface-border hover:border-brand-primary/40 hover:bg-surface-hover',
               )}
             >
-              <Monitor
+              <div
                 className={cn(
-                  'w-4 h-4',
-                  option === 'light' ? 'text-text-disabled' : 'text-text-primary',
+                  'w-8 h-8 rounded-lg flex items-center justify-center',
+                  selected
+                    ? 'bg-brand-primary/15 text-brand-primary'
+                    : 'bg-surface-hover text-text-secondary',
                 )}
-              />
-            </div>
-            <span
-              className={cn(
-                'text-xs font-medium capitalize',
-                theme === option ? 'text-text-primary' : 'text-text-muted',
-              )}
-            >
-              {option}
-            </span>
-          </button>
-        ))}
+              >
+                {option.icon}
+              </div>
+              <span
+                className={cn(
+                  'text-xs font-medium',
+                  selected ? 'text-text-primary' : 'text-text-muted',
+                )}
+              >
+                {option.label}
+              </span>
+            </button>
+          );
+        })}
       </div>
+      <button
+        type="button"
+        onClick={toggleTheme}
+        title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+        className={cn(
+          'mt-3 w-full flex items-center justify-between gap-2 p-2.5 rounded-lg border transition-colors',
+          'border-surface-border bg-surface-hover hover:bg-surface-base text-text-primary',
+        )}
+      >
+        <span className="text-sm">Quick toggle</span>
+        <span className="flex items-center gap-1.5 text-xs text-text-muted">
+          {isDark ? (
+            <>
+              <Sun className="w-4 h-4" aria-hidden="true" />
+              Light
+            </>
+          ) : (
+            <>
+              <Moon className="w-4 h-4" aria-hidden="true" />
+              Dark
+            </>
+          )}
+        </span>
+      </button>
       <p className="text-xs text-text-muted mt-2">
-        Light mode coming soon. Currently only dark mode is available.
+        Dark mode is the default. Your preference is saved across sessions.
       </p>
     </Section>
   );
@@ -301,7 +336,7 @@ function NetworkSection(): ReactElement {
 
       <Section title="Connection Settings" description="Configure backend connection">
         <SettingRow label="Backend URL" description="NIAC backend server address">
-          <code className="text-xs text-brand-400 bg-brand-500/10 px-2 py-1 rounded">
+          <code className="text-xs text-brand-accent bg-brand-primary/10 px-2 py-1 rounded">
             localhost:8080
           </code>
         </SettingRow>
@@ -322,7 +357,7 @@ interface InterfaceItemProps {
 
 function InterfaceItem({ name, type, status, ip }: InterfaceItemProps): ReactElement {
   return (
-    <div className="flex items-center justify-between py-2 px-3 bg-white/5 rounded-lg">
+    <div className="flex items-center justify-between py-2 px-3 bg-surface-hover rounded-lg">
       <div className={layout.inline.default}>
         <Network
           className={cn('w-4 h-4', status === 'active' ? 'text-status-success' : 'text-text-muted')}
@@ -359,8 +394,8 @@ function DebugSection(): ReactElement {
             value={logLevel}
             onChange={(e) => setLogLevel(e.target.value as typeof logLevel)}
             className={cn(
-              'bg-bg-elevated border border-white/10 rounded-lg px-3 py-1.5 text-sm text-text-primary',
-              'focus:outline-none focus:ring-2 focus:ring-brand-500/50',
+              'bg-bg-elevated border border-surface-border rounded-lg px-3 py-1.5 text-sm text-text-primary',
+              'focus:outline-none focus:ring-2 focus:ring-brand-primary/50',
             )}
           >
             <option value="error">Error</option>
@@ -376,8 +411,8 @@ function DebugSection(): ReactElement {
           type="button"
           className={cn(
             layout.flex.between,
-            'w-full py-2 px-3 bg-white/5 rounded-lg',
-            'hover:bg-white/10 transition-colors text-left',
+            'w-full py-2 px-3 bg-surface-hover rounded-lg',
+            'hover:bg-surface-hover transition-colors text-left',
           )}
         >
           <div>
@@ -391,8 +426,8 @@ function DebugSection(): ReactElement {
           type="button"
           className={cn(
             layout.flex.between,
-            'w-full py-2 px-3 bg-white/5 rounded-lg',
-            'hover:bg-white/10 transition-colors text-left',
+            'w-full py-2 px-3 bg-surface-hover rounded-lg',
+            'hover:bg-surface-hover transition-colors text-left',
           )}
         >
           <div>
@@ -418,9 +453,9 @@ function AboutSection({ version }: AboutSectionProps): ReactElement {
   return (
     <>
       <Section title="Application">
-        <div className="bg-white/5 rounded-lg p-4 space-y-3">
+        <div className="bg-surface-hover rounded-lg p-4 space-y-3">
           <div className="flex items-center gap-3">
-            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center shadow-lg shadow-brand-500/30">
+            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-brand-primary to-brand-primary flex items-center justify-center shadow-lg shadow-brand-primary/30">
               <Network className={`${iconSizes.xl} text-text-primary`} />
             </div>
             <div>
@@ -428,7 +463,7 @@ function AboutSection({ version }: AboutSectionProps): ReactElement {
               <p className="text-sm text-text-muted">Network Injection & Analysis Console</p>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-2 pt-2 border-t border-white/10">
+          <div className="grid grid-cols-2 gap-2 pt-2 border-t border-surface-border">
             <InfoItem label="Version" value={version} />
             <InfoItem label="Build" value="Production" />
             <InfoItem label="React" value="19.2" />
@@ -455,8 +490,8 @@ function AboutSection({ version }: AboutSectionProps): ReactElement {
             rel="noopener noreferrer"
             className={cn(
               layout.flex.between,
-              'w-full py-2 px-3 bg-white/5 rounded-lg',
-              'hover:bg-white/10 transition-colors',
+              'w-full py-2 px-3 bg-surface-hover rounded-lg',
+              'hover:bg-surface-hover transition-colors',
             )}
           >
             <span className="text-sm text-text-primary">GitHub</span>
@@ -468,8 +503,8 @@ function AboutSection({ version }: AboutSectionProps): ReactElement {
             rel="noopener noreferrer"
             className={cn(
               layout.flex.between,
-              'w-full py-2 px-3 bg-white/5 rounded-lg',
-              'hover:bg-white/10 transition-colors',
+              'w-full py-2 px-3 bg-surface-hover rounded-lg',
+              'hover:bg-surface-hover transition-colors',
             )}
           >
             <span className="text-sm text-text-primary">Website</span>

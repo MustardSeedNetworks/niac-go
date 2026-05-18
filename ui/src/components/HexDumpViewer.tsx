@@ -126,7 +126,7 @@ const HexRow = memo(
     return (
       <div className="flex font-mono text-xs leading-5">
         {/* Offset column */}
-        <span className="text-brand-400 w-20 flex-shrink-0">{formatOffset(offset)}:</span>
+        <span className="text-brand-accent w-20 flex-shrink-0">{formatOffset(offset)}:</span>
 
         {/* Hex column */}
         <span className="flex-1 min-w-0">
@@ -198,7 +198,7 @@ export const HexDumpViewer: FC<HexDumpViewerProps> = memo(
     return (
       <div className="h-full flex flex-col">
         {/* Header with legend */}
-        <div className="flex items-center justify-between mb-2 pb-2 border-b border-white/10">
+        <div className="flex items-center justify-between mb-2 pb-2 border-b border-surface-border">
           <div className="flex items-center gap-4 text-xs">
             <span className="text-text-muted">{totalBytes} bytes</span>
             <div className="flex items-center gap-2">
@@ -219,7 +219,7 @@ export const HexDumpViewer: FC<HexDumpViewerProps> = memo(
         </div>
 
         {/* Hex dump content */}
-        <div className="flex-1 overflow-y-auto rounded-lg bg-bg-base/70 p-3 border border-white/5">
+        <div className="flex-1 overflow-y-auto rounded-lg bg-bg-base/70 p-3 border border-surface-border">
           <div className="space-y-0.5">
             {rows.map((row) => (
               <HexRow

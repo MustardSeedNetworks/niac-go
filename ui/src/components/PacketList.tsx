@@ -52,8 +52,8 @@ const PacketRow = memo(
       onClick={onClick}
       className={`w-full text-left p-2 rounded-lg border transition-colors ${
         isSelected
-          ? 'border-brand-500/50 bg-brand-900/30'
-          : 'border-white/5 bg-bg-base/50 hover:bg-bg-surface/50 hover:border-white/10'
+          ? 'border-brand-primary/50 bg-brand-primary/30'
+          : 'border-surface-border bg-bg-base/50 hover:bg-bg-surface/50 hover:border-surface-border'
       }`}
       style={rowStyle}
     >
@@ -103,7 +103,7 @@ export const PacketList: FC<PacketListProps> = memo(
         <button
           type="button"
           onClick={cycleTimeMode}
-          className="text-xs text-text-muted hover:text-brand-300 mb-1 text-left select-none"
+          className="text-xs text-text-muted hover:text-brand-accent mb-1 text-left select-none"
           title="Click to cycle: Absolute / Relative / Delta"
         >
           Mode: {getTimeDisplayLabel(timeMode)}

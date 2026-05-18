@@ -27,7 +27,7 @@ const LEVEL_COLORS: Record<DebugLevelKey, string> = {
   warn: 'bg-status-warning',
   info: 'bg-status-info',
   debug: 'bg-status-success',
-  trace: 'bg-brand-600',
+  trace: 'bg-brand-primary',
 };
 
 // Category colors for visual grouping
@@ -36,7 +36,7 @@ const CATEGORY_COLORS: Record<ProtocolCategory, string> = {
   switching: 'border-status-success/30',
   routing: 'border-status-info/30',
   redundancy: 'border-status-warning/30',
-  multicast: 'border-brand-500/30',
+  multicast: 'border-brand-primary/30',
   monitoring: 'border-pink-500/30',
 };
 
@@ -45,7 +45,7 @@ const CATEGORY_HEADER_COLORS: Record<ProtocolCategory, string> = {
   switching: 'text-status-success',
   routing: 'text-status-info',
   redundancy: 'text-status-warning',
-  multicast: 'text-brand-400',
+  multicast: 'text-brand-accent',
   monitoring: 'text-pink-400',
 };
 
@@ -71,7 +71,7 @@ const ProtocolSlider: FC<ProtocolSliderProps> = memo(({ config, onChange, disabl
   );
 
   return (
-    <div className="rounded-lg border border-white/10 bg-bg-base/50 p-4">
+    <div className="rounded-lg border border-surface-border bg-bg-base/50 p-4">
       <div className="flex items-center justify-between mb-3">
         <span className="font-semibold text-text-primary">{config.protocol}</span>
         <Tag
@@ -121,7 +121,7 @@ const ProtocolSlider: FC<ProtocolSliderProps> = memo(({ config, onChange, disabl
             [&::-webkit-slider-thumb]:bg-white
             [&::-webkit-slider-thumb]:shadow-md
             [&::-webkit-slider-thumb]:border-2
-            [&::-webkit-slider-thumb]:border-brand-400
+            [&::-webkit-slider-thumb]:border-brand-accent
             [&::-webkit-slider-thumb]:transition-transform
             [&::-webkit-slider-thumb]:hover:scale-110
             [&::-moz-range-thumb]:h-5
@@ -130,7 +130,7 @@ const ProtocolSlider: FC<ProtocolSliderProps> = memo(({ config, onChange, disabl
             [&::-moz-range-thumb]:bg-white
             [&::-moz-range-thumb]:shadow-md
             [&::-moz-range-thumb]:border-2
-            [&::-moz-range-thumb]:border-brand-400"
+            [&::-moz-range-thumb]:border-brand-accent"
           aria-label={`${config.protocol} debug level`}
           aria-valuetext={config.level}
         />
@@ -231,7 +231,7 @@ export const ProtocolDebugLevels: FC = () => {
 
   if (loading) {
     return (
-      <Card className="border-white/5 bg-bg-surface/70">
+      <Card className="border-surface-border bg-bg-surface/70">
         <CardContent className="py-12 text-center">
           <RefreshCw className={`mx-auto ${iconSizes['2xl']} animate-spin text-text-muted`} />
           <SmallText className="mt-3 text-text-muted">Loading protocol debug settings...</SmallText>
@@ -241,12 +241,12 @@ export const ProtocolDebugLevels: FC = () => {
   }
 
   return (
-    <Card className="border-white/5 bg-bg-surface/70">
+    <Card className="border-surface-border bg-bg-surface/70">
       <CardContent className="space-y-6">
         {/* Header */}
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <Settings2 className={`${iconSizes.xl} text-brand-400`} />
+            <Settings2 className={`${iconSizes.xl} text-brand-accent`} />
             <H2>Protocol Debug Levels</H2>
           </div>
 
@@ -332,7 +332,7 @@ export const ProtocolDebugLevels: FC = () => {
         </div>
 
         {/* Legend */}
-        <div className="rounded-lg border border-white/10 bg-bg-base/50 p-4">
+        <div className="rounded-lg border border-surface-border bg-bg-base/50 p-4">
           <SmallText className="font-semibold uppercase tracking-wide text-text-muted mb-3">
             Level Guide
           </SmallText>

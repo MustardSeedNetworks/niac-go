@@ -33,18 +33,18 @@ export const ProtocolTreeLayer: FC<ProtocolTreeLayerProps> = memo(({ layer, onFi
       <button
         type="button"
         onClick={toggleExpanded}
-        className="flex items-center gap-1 w-full text-left py-0.5 hover:bg-white/5 rounded px-1 -ml-1"
+        className="flex items-center gap-1 w-full text-left py-0.5 hover:bg-surface-hover rounded px-1 -ml-1"
       >
         {isExpanded ? (
           <ChevronDown className={`${iconSizes.sm} text-text-muted flex-shrink-0`} />
         ) : (
           <ChevronRight className={`${iconSizes.sm} text-text-muted flex-shrink-0`} />
         )}
-        <span className="text-brand-300 font-medium">{layer.name}</span>
+        <span className="text-brand-accent font-medium">{layer.name}</span>
       </button>
 
       {isExpanded && (
-        <div className="ml-5 border-l border-white/5 pl-2">
+        <div className="ml-5 border-l border-surface-border pl-2">
           {layer.fields.map((field) => {
             const hasRange = field.byteStart !== undefined && field.byteEnd !== undefined;
             return (

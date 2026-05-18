@@ -29,7 +29,7 @@ const DetailRow = memo(
     }
 
     return (
-      <div className="flex items-start gap-2 py-1.5 border-b border-white/5 last:border-0">
+      <div className="flex items-start gap-2 py-1.5 border-b border-surface-border last:border-0">
         <SmallText className="text-text-muted w-24 flex-shrink-0">{label}</SmallText>
         <span className={`text-sm text-text-primary ${mono ? 'font-mono' : ''}`}>{value}</span>
       </div>
@@ -50,7 +50,7 @@ const HeadersSection = memo(({ headers }: { headers: Record<string, unknown> | u
   return (
     <div className="mt-4">
       <h4 className="text-sm font-semibold text-text-secondary mb-2">Protocol Headers</h4>
-      <div className="rounded-lg bg-bg-base/50 p-3 border border-white/5">
+      <div className="rounded-lg bg-bg-base/50 p-3 border border-surface-border">
         {Object.entries(headers).map(([key, value]) => (
           <DetailRow
             key={key}
@@ -98,7 +98,7 @@ export const PacketDetails: FC<PacketDetailsProps> = memo(({ packet, onFieldSele
 
       {/* Summary */}
       {packet.summary && (
-        <div className="mt-3 pt-2 border-t border-white/5">
+        <div className="mt-3 pt-2 border-t border-surface-border">
           <SmallText className="text-text-muted uppercase text-xs tracking-wide">Summary</SmallText>
           <p className="text-sm text-text-secondary py-1">{packet.summary}</p>
         </div>

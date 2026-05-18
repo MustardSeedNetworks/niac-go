@@ -39,9 +39,9 @@ const LEVEL_COLORS: Record<
     accent: 'bg-status-warning',
   },
   info: {
-    bg: 'bg-white/5',
+    bg: 'bg-surface-hover',
     text: 'text-text-primary',
-    border: 'border-white/10',
+    border: 'border-surface-border',
     accent: 'bg-status-info',
   },
   debug: {
@@ -188,7 +188,7 @@ const LogEntryRow: FC<{ log: LogEntry; searchQuery: string }> = memo(({ log, sea
     <div className={`border-b ${colors.border} transition-colors`}>
       {/* Main log row */}
       <div
-        className={`flex items-start gap-2 px-3 py-2 font-mono text-sm ${colors.bg} hover:bg-white/5 transition-colors`}
+        className={`flex items-start gap-2 px-3 py-2 font-mono text-sm ${colors.bg} hover:bg-surface-hover transition-colors`}
       >
         <button
           type="button"
@@ -225,7 +225,7 @@ const LogEntryRow: FC<{ log: LogEntry; searchQuery: string }> = memo(({ log, sea
           </span>
 
           {/* Protocol Badge */}
-          <span className="shrink-0 rounded border border-brand-500/30 bg-brand-500/20 px-1.5 py-0.5 text-xs font-semibold text-brand-400">
+          <span className="shrink-0 rounded border border-brand-primary/30 bg-brand-primary/20 px-1.5 py-0.5 text-xs font-semibold text-brand-accent">
             {log.protocol}
           </span>
 
@@ -244,7 +244,7 @@ const LogEntryRow: FC<{ log: LogEntry; searchQuery: string }> = memo(({ log, sea
         <button
           type="button"
           onClick={handleCopy}
-          className="shrink-0 p-1 rounded hover:bg-white/10 text-text-muted hover:text-text-secondary transition-colors"
+          className="shrink-0 p-1 rounded hover:bg-surface-hover text-text-muted hover:text-text-secondary transition-colors"
           title="Copy log entry"
           aria-label="Copy log entry"
         >
@@ -277,8 +277,8 @@ const LogEntryRow: FC<{ log: LogEntry; searchQuery: string }> = memo(({ log, sea
             </div>
 
             {/* Details JSON */}
-            <div className="rounded-lg border border-white/10 bg-bg-base/70 overflow-hidden">
-              <div className="flex items-center justify-between px-3 py-1.5 bg-bg-surface/50 border-b border-white/10">
+            <div className="rounded-lg border border-surface-border bg-bg-base/70 overflow-hidden">
+              <div className="flex items-center justify-between px-3 py-1.5 bg-bg-surface/50 border-b border-surface-border">
                 <span className="text-xs font-medium text-text-muted">Details</span>
                 <button
                   type="button"
@@ -288,7 +288,7 @@ const LogEntryRow: FC<{ log: LogEntry; searchQuery: string }> = memo(({ log, sea
                       await navigator.clipboard.writeText(formatDetails(log.details));
                     }
                   }}
-                  className="p-1 rounded hover:bg-white/10 text-text-muted hover:text-text-secondary transition-colors"
+                  className="p-1 rounded hover:bg-surface-hover text-text-muted hover:text-text-secondary transition-colors"
                   title="Copy details JSON"
                   aria-label="Copy details JSON"
                 >
@@ -342,7 +342,7 @@ export const LogViewer: FC<LogViewerProps> = memo(({ logs, searchQuery, autoScro
     return (
       <div
         ref={containerRef}
-        className="flex h-96 items-center justify-center rounded-lg border border-white/10 bg-bg-base/50"
+        className="flex h-96 items-center justify-center rounded-lg border border-surface-border bg-bg-base/50"
       >
         <div className="text-center space-y-3">
           <div
@@ -387,7 +387,7 @@ export const LogViewer: FC<LogViewerProps> = memo(({ logs, searchQuery, autoScro
       {/* Log Container */}
       <div
         ref={containerRef}
-        className="h-[500px] overflow-y-auto rounded-lg border border-white/10 bg-bg-base/70 scrollbar-thin scrollbar-track-gray-900 scrollbar-thumb-gray-700"
+        className="h-[500px] overflow-y-auto rounded-lg border border-surface-border bg-bg-base/70 scrollbar-thin scrollbar-track-gray-900 scrollbar-thumb-gray-700"
         role="log"
         aria-label="Debug console log output"
         aria-live="polite"

@@ -56,7 +56,7 @@ export const JavaDslImportCard: FC = () => {
   };
 
   return (
-    <Card className="border-white/5 bg-bg-surface/70">
+    <Card className="border-surface-border bg-bg-surface/70">
       <CardContent className="space-y-4">
         <H2 className="flex items-center gap-2">
           <FileInput className={`${iconSizes.lg} text-status-success`} />
@@ -87,7 +87,7 @@ export const JavaDslImportCard: FC = () => {
           }}
           placeholder="device my-router {&#10;  type = router&#10;  ip = 192.168.1.1&#10;  ...&#10;}"
           rows={10}
-          className="w-full rounded border border-white/5 bg-bg-base/60 p-3 font-mono text-xs text-text-primary placeholder-gray-500 focus:border-status-success focus:outline-none"
+          className="w-full rounded border border-surface-border bg-bg-base/60 p-3 font-mono text-xs text-text-primary placeholder-gray-500 focus:border-status-success focus:outline-none"
           aria-label="Legacy Java DSL config content"
         />
 

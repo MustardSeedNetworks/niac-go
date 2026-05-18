@@ -275,7 +275,7 @@ export const PacketInspectorPage: FC = () => {
     <div className="space-y-6">
       {/* Live / PCAP Files tab control */}
       <div
-        className="inline-flex rounded-lg border border-white/10 bg-bg-base/40 p-0.5"
+        className="inline-flex rounded-lg border border-surface-border bg-bg-base/40 p-0.5"
         role="tablist"
         aria-label="Packets view"
       >
@@ -286,8 +286,8 @@ export const PacketInspectorPage: FC = () => {
           onClick={() => setView('live')}
           className={`flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-medium transition-colors ${
             view === 'live'
-              ? 'bg-brand-500/20 text-brand-100'
-              : 'text-text-muted hover:bg-white/5 hover:text-text-primary'
+              ? 'bg-brand-primary/20 text-brand-accent'
+              : 'text-text-muted hover:bg-surface-hover hover:text-text-primary'
           }`}
         >
           <Radio className="w-3.5 h-3.5" />
@@ -300,8 +300,8 @@ export const PacketInspectorPage: FC = () => {
           onClick={() => setView('files')}
           className={`flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-medium transition-colors ${
             view === 'files'
-              ? 'bg-brand-500/20 text-brand-100'
-              : 'text-text-muted hover:bg-white/5 hover:text-text-primary'
+              ? 'bg-brand-primary/20 text-brand-accent'
+              : 'text-text-muted hover:bg-surface-hover hover:text-text-primary'
           }`}
         >
           <FileBox className="w-3.5 h-3.5" />
@@ -316,7 +316,7 @@ export const PacketInspectorPage: FC = () => {
       {view === 'live' && (
         <>
           {/* Header with controls */}
-          <Card className="border-white/5 bg-bg-surface/70">
+          <Card className="border-surface-border bg-bg-surface/70">
             <CardContent>
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 {/* Title and connection status */}
@@ -424,7 +424,7 @@ export const PacketInspectorPage: FC = () => {
                     type="checkbox"
                     checked={autoScroll}
                     onChange={(e) => setAutoScroll(e.target.checked)}
-                    className="rounded border-border-muted bg-bg-elevated text-brand-500 focus:ring-brand-400 focus:ring-offset-gray-900"
+                    className="rounded border-border-muted bg-bg-elevated text-brand-primary focus:ring-brand-accent focus:ring-offset-gray-900"
                   />
                   <SmallText className="text-text-muted">Auto-scroll</SmallText>
                 </label>
@@ -438,7 +438,7 @@ export const PacketInspectorPage: FC = () => {
           </Card>
 
           {/* BPF Capture Filter */}
-          <Card className="border-white/5 bg-bg-surface/70">
+          <Card className="border-surface-border bg-bg-surface/70">
             <CardContent>
               <BpfFilterBar />
             </CardContent>
@@ -448,7 +448,7 @@ export const PacketInspectorPage: FC = () => {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             {/* Packet List - Left sidebar */}
             <div className="lg:col-span-4 xl:col-span-3">
-              <Card className="border-white/5 bg-bg-surface/70 h-[600px]">
+              <Card className="border-surface-border bg-bg-surface/70 h-[600px]">
                 <CardContent className="h-full flex flex-col">
                   <div className="flex items-center justify-between mb-3">
                     <SmallText className="text-text-muted uppercase tracking-wide font-semibold">
@@ -476,7 +476,7 @@ export const PacketInspectorPage: FC = () => {
             {/* Right panel - Hex dump and details */}
             <div className="lg:col-span-8 xl:col-span-9 space-y-6">
               {/* Hex Dump Viewer */}
-              <Card className="border-white/5 bg-bg-surface/70 h-[350px]">
+              <Card className="border-surface-border bg-bg-surface/70 h-[350px]">
                 <CardContent className="h-full flex flex-col">
                   <SmallText className="text-text-muted uppercase tracking-wide font-semibold mb-3">
                     Hex Dump
@@ -492,7 +492,7 @@ export const PacketInspectorPage: FC = () => {
               </Card>
 
               {/* Packet Details */}
-              <Card className="border-white/5 bg-bg-surface/70 h-[220px]">
+              <Card className="border-surface-border bg-bg-surface/70 h-[220px]">
                 <CardContent className="h-full flex flex-col">
                   <SmallText className="text-text-muted uppercase tracking-wide font-semibold mb-3">
                     Packet Details
@@ -580,10 +580,10 @@ const StandaloneCaptureStarter: FC<{
   }, [bpfFilter, busy, onStarted, selectedIface]);
 
   return (
-    <Card className="border-white/5 bg-bg-surface/70">
+    <Card className="border-surface-border bg-bg-surface/70">
       <CardContent className="space-y-4">
         <div className="flex items-start gap-3">
-          <Activity className={`mt-1 ${iconSizes.lg} text-brand-300`} />
+          <Activity className={`mt-1 ${iconSizes.lg} text-brand-accent`} />
           <div className="flex-1">
             <p className="font-semibold text-text-primary">Standalone packet capture</p>
             <SmallText className="text-text-muted">
@@ -592,7 +592,7 @@ const StandaloneCaptureStarter: FC<{
               <button
                 type="button"
                 onClick={navigateToSim}
-                className="text-brand-300 underline hover:text-brand-200"
+                className="text-brand-accent underline hover:text-brand-accent"
               >
                 start a simulation
               </button>{' '}
@@ -607,7 +607,7 @@ const StandaloneCaptureStarter: FC<{
               value={selectedIface}
               onChange={(e) => setSelectedIface(e.target.value)}
               disabled={busy || interfaces.length === 0}
-              className="rounded-lg border border-white/10 bg-bg-base/60 px-3 py-2 text-sm text-text-primary focus:border-brand-400 focus:outline-none"
+              className="rounded-lg border border-surface-border bg-bg-base/60 px-3 py-2 text-sm text-text-primary focus:border-brand-accent focus:outline-none"
             >
               {interfaces.length === 0 ? (
                 <option value="">No interfaces detected</option>
@@ -631,7 +631,7 @@ const StandaloneCaptureStarter: FC<{
               onChange={(e) => setBpfFilter(e.target.value)}
               disabled={busy}
               placeholder="e.g. tcp port 80"
-              className="rounded-lg border border-white/10 bg-bg-base/60 px-3 py-2 font-mono text-sm text-text-primary focus:border-brand-400 focus:outline-none"
+              className="rounded-lg border border-surface-border bg-bg-base/60 px-3 py-2 font-mono text-sm text-text-primary focus:border-brand-accent focus:outline-none"
             />
           </label>
           <Button tone="violet" onClick={handleStart} disabled={!selectedIface || busy}>

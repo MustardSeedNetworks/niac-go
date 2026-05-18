@@ -91,9 +91,9 @@ export const StreamView: FC<StreamViewProps> = memo(({ packets, clientEndpoint, 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-      <div className="w-full max-w-4xl mx-4 bg-bg-surface border border-white/10 rounded-xl shadow-2xl max-h-[85vh] flex flex-col">
+      <div className="w-full max-w-4xl mx-4 bg-bg-surface border border-surface-border rounded-xl shadow-2xl max-h-[85vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-surface-border">
           <div>
             <h3 className="text-lg font-semibold text-text-primary">Follow Stream</h3>
             <SmallText className="text-text-muted">
@@ -104,13 +104,13 @@ export const StreamView: FC<StreamViewProps> = memo(({ packets, clientEndpoint, 
           </div>
           <div className="flex items-center gap-3">
             {/* Display mode toggle */}
-            <div className="flex rounded-lg border border-white/10 bg-bg-base/50 p-1">
+            <div className="flex rounded-lg border border-surface-border bg-bg-base/50 p-1">
               <button
                 type="button"
                 onClick={() => setDisplayMode('ascii')}
                 className={`px-3 py-1 text-xs rounded-md transition-colors ${
                   displayMode === 'ascii'
-                    ? 'bg-brand-600 text-text-primary'
+                    ? 'bg-brand-primary text-text-primary'
                     : 'text-text-muted hover:text-text-primary'
                 }`}
               >
@@ -121,7 +121,7 @@ export const StreamView: FC<StreamViewProps> = memo(({ packets, clientEndpoint, 
                 onClick={() => setDisplayMode('hex')}
                 className={`px-3 py-1 text-xs rounded-md transition-colors ${
                   displayMode === 'hex'
-                    ? 'bg-brand-600 text-text-primary'
+                    ? 'bg-brand-primary text-text-primary'
                     : 'text-text-muted hover:text-text-primary'
                 }`}
               >
@@ -164,7 +164,7 @@ export const StreamView: FC<StreamViewProps> = memo(({ packets, clientEndpoint, 
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end px-5 py-3 border-t border-white/10">
+        <div className="flex items-center justify-end px-5 py-3 border-t border-surface-border">
           <Button variant="ghost" size="sm" onClick={onClose}>
             Close
           </Button>

@@ -39,7 +39,7 @@ export const ConfirmModal: FC<ConfirmModalProps> = ({
                   ? 'text-status-info'
                   : confirmTone === 'green'
                     ? 'text-status-success'
-                    : 'text-brand-400'
+                    : 'text-brand-accent'
             }`}
           />
         )}

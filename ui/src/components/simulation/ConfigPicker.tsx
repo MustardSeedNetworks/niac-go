@@ -240,7 +240,7 @@ export const ConfigPicker: FC<ConfigPickerProps> = ({
         <div className="flex-1" />
         <label
           htmlFor="config-upload"
-          className={`flex items-center gap-1.5 rounded border border-white/10 bg-bg-surface/60 px-3 py-1 text-xs font-medium text-text-primary hover:bg-white/5 ${
+          className={`flex items-center gap-1.5 rounded border border-surface-border bg-bg-surface/60 px-3 py-1 text-xs font-medium text-text-primary hover:bg-surface-hover ${
             convertingDsl ? 'cursor-wait opacity-60' : 'cursor-pointer'
           }`}
           title="Pick a config from disk. YAML is used as-is; legacy Java-DSL (.cfg) is auto-converted."
@@ -281,11 +281,11 @@ export const ConfigPicker: FC<ConfigPickerProps> = ({
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search configs…"
-            className="w-full rounded border border-white/10 bg-bg-surface/60 py-2 pl-9 pr-3 text-sm text-text-primary placeholder-gray-500 focus:border-brand-400 focus:outline-none"
+            className="w-full rounded border border-surface-border bg-bg-surface/60 py-2 pl-9 pr-3 text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none"
           />
         </div>
         <fieldset
-          className="flex rounded border border-white/10 bg-bg-surface/60 p-0.5"
+          className="flex rounded border border-surface-border bg-bg-surface/60 p-0.5"
           aria-label="View density"
         >
           <ViewToggle
@@ -319,7 +319,7 @@ export const ConfigPicker: FC<ConfigPickerProps> = ({
 
       {/* Java-DSL import — collapsed by default since most users won't need it */}
       <details
-        className="rounded border border-white/10 bg-bg-base/40 p-3"
+        className="rounded border border-surface-border bg-bg-base/40 p-3"
         open={showJavaDsl}
         onToggle={(e) => setShowJavaDsl(e.currentTarget.open)}
       >

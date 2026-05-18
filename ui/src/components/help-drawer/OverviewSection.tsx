@@ -58,7 +58,7 @@ export function OverviewSection({ searchQuery }: OverviewSectionProps): ReactEle
         ) : (
           <div className="space-y-2">
             {filteredCategories.map((cat) => (
-              <div key={cat.id} className="bg-white/5 rounded-lg p-3">
+              <div key={cat.id} className="bg-surface-hover rounded-lg p-3">
                 <div className={layout.flex.between}>
                   <h4 className="text-sm font-medium text-text-primary">{cat.name}</h4>
                   <code className="text-xs text-text-muted">{cat.items.length} items</code>
@@ -92,7 +92,7 @@ interface FeatureCardProps {
 
 function FeatureCard({ feature }: FeatureCardProps): ReactElement {
   return (
-    <div className="bg-white/5 rounded-lg p-3 hover:bg-white/10 transition-colors">
+    <div className="bg-surface-hover rounded-lg p-3 hover:bg-surface-hover transition-colors">
       <div className={layout.flex.between}>
         <div className={layout.inline.default}>
           <h4 className="text-sm font-medium text-text-primary">{feature.title}</h4>

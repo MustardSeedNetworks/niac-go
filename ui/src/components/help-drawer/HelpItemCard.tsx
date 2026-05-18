@@ -23,13 +23,13 @@ export function HelpItemCard({ item, defaultOpen = false }: HelpItemCardProps): 
   const [open, setOpen] = useState(defaultOpen);
 
   return (
-    <div className="bg-white/5 rounded-lg overflow-hidden">
+    <div className="bg-surface-hover rounded-lg overflow-hidden">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         className={cn(
           'w-full text-left px-3 py-2.5 flex items-start gap-2',
-          'hover:bg-white/5 transition-colors',
+          'hover:bg-surface-hover transition-colors',
         )}
         aria-expanded={open}
       >
@@ -48,7 +48,7 @@ export function HelpItemCard({ item, defaultOpen = false }: HelpItemCardProps): 
       </button>
 
       {open && (
-        <div className="px-3 pb-3 pt-1 space-y-3 border-t border-white/5">
+        <div className="px-3 pb-3 pt-1 space-y-3 border-t border-surface-border">
           <section>
             <h5 className="text-xs font-semibold text-text-secondary mb-1">Technical</h5>
             <p className="text-xs text-text-muted leading-relaxed">{item.techDesc}</p>
@@ -78,14 +78,14 @@ export function HelpItemCard({ item, defaultOpen = false }: HelpItemCardProps): 
               <h5 className="text-xs font-semibold text-text-secondary mb-1">Parameters / flags</h5>
               <div className="space-y-1">
                 {item.parameters.map((p) => (
-                  <div key={p.name} className="bg-white/5 rounded p-2">
+                  <div key={p.name} className="bg-surface-hover rounded p-2">
                     <div className={layout.flex.between}>
                       <span className="text-xs font-medium text-text-primary">{p.name}</span>
                       <code className="text-xs text-text-muted">{p.flag}</code>
                     </div>
                     <p className="text-xs text-text-muted mt-0.5">{p.laymanDesc}</p>
                     {p.example && (
-                      <code className="block mt-1 text-xs text-brand-300 break-all">
+                      <code className="block mt-1 text-xs text-brand-accent break-all">
                         {p.example}
                       </code>
                     )}
@@ -100,14 +100,14 @@ export function HelpItemCard({ item, defaultOpen = false }: HelpItemCardProps): 
               <h5 className="text-xs font-semibold text-text-secondary mb-1">YAML fields</h5>
               <div className="space-y-1">
                 {item.configFields.map((f) => (
-                  <div key={f.path} className="bg-white/5 rounded p-2">
+                  <div key={f.path} className="bg-surface-hover rounded p-2">
                     <div className={layout.flex.between}>
                       <code className="text-xs text-text-primary">{f.path}</code>
                       <span className="text-xs text-text-muted">{f.type}</span>
                     </div>
                     <p className="text-xs text-text-muted mt-0.5">{f.description}</p>
                     {f.example && (
-                      <pre className="mt-1 text-xs text-brand-300 whitespace-pre-wrap break-all">
+                      <pre className="mt-1 text-xs text-brand-accent whitespace-pre-wrap break-all">
                         {f.example}
                       </pre>
                     )}
@@ -122,7 +122,7 @@ export function HelpItemCard({ item, defaultOpen = false }: HelpItemCardProps): 
               <h5 className="text-xs font-semibold text-text-secondary mb-1">Metrics</h5>
               <div className="space-y-1">
                 {item.metrics.map((m) => (
-                  <div key={m.name} className="bg-white/5 rounded p-2">
+                  <div key={m.name} className="bg-surface-hover rounded p-2">
                     <div className={layout.flex.between}>
                       <code className="text-xs text-text-primary">{m.name}</code>
                       <span className="text-xs text-text-muted">{m.unit}</span>
@@ -144,13 +144,13 @@ export function HelpItemCard({ item, defaultOpen = false }: HelpItemCardProps): 
               <h5 className="text-xs font-semibold text-text-secondary mb-1">Examples</h5>
               <div className="space-y-2">
                 {item.examples.map((ex) => (
-                  <div key={ex.command} className="bg-white/5 rounded p-2">
+                  <div key={ex.command} className="bg-surface-hover rounded p-2">
                     <p className="text-xs text-text-muted mb-1">{ex.desc}</p>
-                    <pre className="text-xs text-brand-300 whitespace-pre-wrap break-all">
+                    <pre className="text-xs text-brand-accent whitespace-pre-wrap break-all">
                       {ex.command}
                     </pre>
                     {ex.output && (
-                      <pre className="mt-1 text-xs text-text-muted whitespace-pre-wrap break-all border-l-2 border-white/10 pl-2">
+                      <pre className="mt-1 text-xs text-text-muted whitespace-pre-wrap break-all border-l-2 border-surface-border pl-2">
                         {ex.output}
                       </pre>
                     )}
@@ -178,7 +178,7 @@ export function HelpItemCard({ item, defaultOpen = false }: HelpItemCardProps): 
                 {item.seeAlso.map((ref) => (
                   <code
                     key={ref}
-                    className="text-xs text-text-muted bg-white/5 rounded px-1.5 py-0.5"
+                    className="text-xs text-text-muted bg-surface-hover rounded px-1.5 py-0.5"
                   >
                     {ref}
                   </code>

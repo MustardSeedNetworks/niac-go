@@ -151,7 +151,7 @@ export function getDeviceLabel(type: DeviceType): string {
 const deviceColorClasses: Record<TagColorScheme, { bg: string; text: string }> = {
   blue: { bg: 'bg-status-info/20', text: 'text-status-info' },
   green: { bg: 'bg-status-success/20', text: 'text-status-success' },
-  purple: { bg: 'bg-brand-500/20', text: 'text-brand-400' },
+  purple: { bg: 'bg-brand-primary/20', text: 'text-brand-accent' },
   yellow: { bg: 'bg-status-warning/20', text: 'text-status-warning' },
   red: { bg: 'bg-status-error/20', text: 'text-status-error' },
   gray: { bg: 'bg-bg-muted/20', text: 'text-text-muted' },

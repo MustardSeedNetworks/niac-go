@@ -35,7 +35,7 @@ export const DeviceNode: FC<DeviceNodeProps> = memo(({ data, selected }) => {
       type="button"
       className={`
         relative px-4 py-3 rounded-xl border-2 transition-all duration-200 text-left
-        ${selected ? 'ring-2 ring-brand-500 ring-offset-2 ring-offset-gray-900' : ''}
+        ${selected ? 'ring-2 ring-brand-primary ring-offset-2 ring-offset-gray-900' : ''}
         hover:shadow-lg hover:shadow-black/30
       `}
       style={{
@@ -59,12 +59,12 @@ export const DeviceNode: FC<DeviceNodeProps> = memo(({ data, selected }) => {
       <Handle
         type="target"
         position={Position.Left}
-        className="!w-2 !h-2 !bg-brand-400 !border-0"
+        className="!w-2 !h-2 !bg-brand-accent !border-0"
       />
       <Handle
         type="source"
         position={Position.Right}
-        className="!w-2 !h-2 !bg-brand-400 !border-0"
+        className="!w-2 !h-2 !bg-brand-accent !border-0"
       />
 
       {/* Status indicator */}
@@ -90,7 +90,7 @@ export const DeviceNode: FC<DeviceNodeProps> = memo(({ data, selected }) => {
 
       {/* IPs */}
       {data.ips && data.ips.length > 0 && (
-        <div className="mt-2 pt-2 border-t border-white/10">
+        <div className="mt-2 pt-2 border-t border-surface-border">
           <div className="text-xs font-mono text-text-muted truncate">
             {data.ips[0]}
             {data.ips.length > 1 && (
@@ -106,13 +106,13 @@ export const DeviceNode: FC<DeviceNodeProps> = memo(({ data, selected }) => {
           {data.protocols.slice(0, 3).map((proto) => (
             <span
               key={proto}
-              className="px-1.5 py-0.5 text-[10px] rounded-md bg-white/10 text-text-secondary"
+              className="px-1.5 py-0.5 text-[10px] rounded-md bg-surface-hover text-text-secondary"
             >
               {proto}
             </span>
           ))}
           {data.protocols.length > 3 && (
-            <span className="px-1.5 py-0.5 text-[10px] rounded-md bg-white/5 text-text-muted">
+            <span className="px-1.5 py-0.5 text-[10px] rounded-md bg-surface-hover text-text-muted">
               +{data.protocols.length - 3}
             </span>
           )}

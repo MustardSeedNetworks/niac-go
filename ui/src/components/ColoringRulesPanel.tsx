@@ -29,18 +29,18 @@ const RuleRow: FC<{
   const filterError = rule.filter ? validate(rule.filter) : null;
 
   return (
-    <div className="flex items-center gap-2 py-2 px-2 rounded-lg bg-bg-base/40 border border-white/5">
+    <div className="flex items-center gap-2 py-2 px-2 rounded-lg bg-bg-base/40 border border-surface-border">
       {/* Enable toggle */}
       <input
         type="checkbox"
         checked={rule.enabled}
         onChange={(e) => onChange({ ...rule, enabled: e.target.checked })}
-        className="rounded border-border-muted bg-bg-elevated text-brand-500 focus:ring-brand-400 focus:ring-offset-gray-900 flex-shrink-0"
+        className="rounded border-border-muted bg-bg-elevated text-brand-primary focus:ring-brand-accent focus:ring-offset-gray-900 flex-shrink-0"
       />
 
       {/* Color preview */}
       <div
-        className="w-6 h-6 rounded border border-white/10 flex-shrink-0"
+        className="w-6 h-6 rounded border border-surface-border flex-shrink-0"
         style={{ backgroundColor: rule.background, color: rule.foreground }}
       >
         <span className="text-xs font-bold flex items-center justify-center h-full">A</span>
@@ -51,7 +51,7 @@ const RuleRow: FC<{
         type="text"
         value={rule.name}
         onChange={(e) => onChange({ ...rule, name: e.target.value })}
-        className="w-24 bg-transparent border-b border-white/10 text-sm text-text-primary focus:outline-none focus:border-brand-400 px-1"
+        className="w-24 bg-transparent border-b border-surface-border text-sm text-text-primary focus:outline-none focus:border-brand-accent px-1"
         placeholder="Name"
       />
 
@@ -63,7 +63,7 @@ const RuleRow: FC<{
         className={`flex-1 bg-transparent border-b text-sm font-mono text-text-primary focus:outline-none px-1 ${
           filterError
             ? 'border-status-error/60 focus:border-status-error'
-            : 'border-white/10 focus:border-brand-400'
+            : 'border-surface-border focus:border-brand-accent'
         }`}
         placeholder="Filter expression"
       />
@@ -187,9 +187,9 @@ export const ColoringRulesPanel: FC<ColoringRulesPanelProps> = memo(
 
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-        <div className="w-full max-w-3xl mx-4 bg-bg-surface border border-white/10 rounded-xl shadow-2xl max-h-[80vh] flex flex-col">
+        <div className="w-full max-w-3xl mx-4 bg-bg-surface border border-surface-border rounded-xl shadow-2xl max-h-[80vh] flex flex-col">
           {/* Header */}
-          <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-surface-border">
             <h3 className="text-lg font-semibold text-text-primary">Coloring Rules</h3>
             <button
               type="button"
@@ -227,7 +227,7 @@ export const ColoringRulesPanel: FC<ColoringRulesPanelProps> = memo(
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-between px-5 py-4 border-t border-white/10">
+          <div className="flex items-center justify-between px-5 py-4 border-t border-surface-border">
             <div className="flex items-center gap-2">
               <Button
                 variant="ghost"

@@ -25,7 +25,7 @@ import { Link } from 'react-router-dom';
  * for sustained body copy; reserve it for placeholders, disabled
  * states, and timestamps where lower contrast is intentional.
  *
- * Accent colors: brand violet (text-brand-300/400) is the only
+ * Accent colors: brand violet (text-brand-accent/400) is the only
  * "highlight" colour; status colours (red/amber/emerald) come from the
  * Tailwind palette directly. If you find yourself reaching for
  * text-purple/pink/sky for chrome, route it through this file first.
@@ -92,7 +92,7 @@ export const AccentLink: FC<AccentLinkProps> = ({
   onClick,
   ...props
 }) => {
-  const linkClass = `text-brand-300 hover:text-brand-200 underline underline-offset-2 transition-colors ${className}`;
+  const linkClass = `text-brand-accent hover:text-brand-accent underline underline-offset-2 transition-colors ${className}`;
 
   if (to) {
     return (

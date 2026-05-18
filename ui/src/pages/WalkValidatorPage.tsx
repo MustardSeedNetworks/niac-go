@@ -92,7 +92,7 @@ export const WalkValidatorPage: FC = () => {
 
   return (
     <div className="space-y-6">
-      <Card className="border-white/5 bg-bg-surface/70">
+      <Card className="border-surface-border bg-bg-surface/70">
         <CardContent className="space-y-4">
           <header>
             <h1 className="text-2xl font-semibold text-text-primary">SNMP Walks</h1>
@@ -110,7 +110,7 @@ export const WalkValidatorPage: FC = () => {
                 onChange={(e) => setSelectedFile(e.target.value)}
                 disabled={filesLoading || files.length === 0}
                 title="Hydrated from /api/v1/files?kind=walks (the sandboxed walks directory). Use the absolute-path field to validate a walk outside this directory."
-                className="mt-1 w-full rounded border border-white/5 bg-bg-base/60 px-3 py-2 text-sm text-text-primary focus:border-status-info focus:outline-none disabled:opacity-50"
+                className="mt-1 w-full rounded border border-surface-border bg-bg-base/60 px-3 py-2 text-sm text-text-primary focus:border-status-info focus:outline-none disabled:opacity-50"
               >
                 {filesLoading && <option>Loading…</option>}
                 {!filesLoading && files.length === 0 && <option>No walks found</option>}
@@ -133,7 +133,7 @@ export const WalkValidatorPage: FC = () => {
                 onChange={(e) => setCustomPath(e.target.value)}
                 placeholder="/srv/niac/walks/cisco-c9300.walk"
                 title="Absolute path to a walk file. Takes precedence over the dropdown selection. The path is bounded server-side; ../ traversal is rejected."
-                className="mt-1 w-full rounded border border-white/5 bg-bg-base/60 px-3 py-2 font-mono text-xs text-text-primary placeholder-gray-500 focus:border-status-info focus:outline-none"
+                className="mt-1 w-full rounded border border-surface-border bg-bg-base/60 px-3 py-2 font-mono text-xs text-text-primary placeholder-gray-500 focus:border-status-info focus:outline-none"
               />
             </label>
           </div>
@@ -167,7 +167,7 @@ export const WalkValidatorPage: FC = () => {
       </Card>
 
       {response?.result && (
-        <Card className="border-white/5 bg-bg-surface/70">
+        <Card className="border-surface-border bg-bg-surface/70">
           <CardContent className="space-y-4">
             <header className="flex flex-wrap items-baseline gap-4">
               <h2 className="text-lg font-semibold text-text-primary">

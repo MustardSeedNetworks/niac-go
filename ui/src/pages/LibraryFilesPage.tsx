@@ -45,7 +45,7 @@ function LibraryFilesView({ kind }: Props) {
 
   return (
     <div className="space-y-6">
-      <Card className="border-white/5 bg-bg-surface/70">
+      <Card className="border-surface-border bg-bg-surface/70">
         <CardContent>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center gap-3">
@@ -70,7 +70,7 @@ function LibraryFilesView({ kind }: Props) {
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Search by name…"
                   aria-label="Filter library entries by name"
-                  className="w-64 rounded-md border border-white/10 bg-bg-base/40 pl-7 pr-3 py-1.5 text-xs text-text-primary placeholder:text-text-muted focus:border-status-info/40 focus:outline-none focus:ring-1 focus:ring-cyan-500/30"
+                  className="w-64 rounded-md border border-surface-border bg-bg-base/40 pl-7 pr-3 py-1.5 text-xs text-text-primary placeholder:text-text-muted focus:border-status-info/40 focus:outline-none focus:ring-1 focus:ring-cyan-500/30"
                 />
               </div>
               <Button
@@ -88,7 +88,7 @@ function LibraryFilesView({ kind }: Props) {
         </CardContent>
       </Card>
 
-      <Card className="border-white/5 bg-bg-surface/70">
+      <Card className="border-surface-border bg-bg-surface/70">
         <CardContent>
           {error ? (
             <SmallText className="text-status-error">
@@ -103,7 +103,7 @@ function LibraryFilesView({ kind }: Props) {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="text-xs text-text-muted uppercase tracking-wide">
-                  <tr className="border-b border-white/10">
+                  <tr className="border-b border-surface-border">
                     <th className="text-left py-2 pr-4">Name</th>
                     <th className="text-right py-2 pr-4">Size</th>
                     <th className="text-left py-2 pr-4">Source</th>
@@ -112,7 +112,7 @@ function LibraryFilesView({ kind }: Props) {
                 </thead>
                 <tbody className="text-text-primary">
                   {filtered.map((entry) => (
-                    <tr key={entry.name} className="border-b border-white/5 last:border-0">
+                    <tr key={entry.name} className="border-b border-surface-border last:border-0">
                       <td className="py-2 pr-4 font-mono text-xs">{entry.name}</td>
                       <td className="py-2 pr-4 text-right tabular-nums">
                         {humanBytes(entry.sizeBytes)}
@@ -144,7 +144,7 @@ function LibraryFilesView({ kind }: Props) {
 
 const SourceBadge: FC<{ source: LibraryFileEntry['source'] }> = ({ source }) => {
   const styles: Record<LibraryFileEntry['source'], string> = {
-    starter: 'border-brand-500/40 bg-brand-500/10 text-brand-200',
+    starter: 'border-brand-primary/40 bg-brand-primary/10 text-brand-accent',
     bundle: 'border-status-info/40 bg-status-info/10 text-status-info',
     user: 'border-status-success/40 bg-status-success/10 text-status-success',
   };

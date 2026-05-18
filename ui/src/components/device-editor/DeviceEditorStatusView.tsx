@@ -22,10 +22,10 @@ export const DeviceEditorStatusView: FC<DeviceEditorStatusViewProps> = ({
   if (!isNewDevice && loading) {
     return (
       <div className="space-y-6">
-        <Card className="border-white/5 bg-bg-surface/70">
+        <Card className="border-surface-border bg-bg-surface/70">
           <CardContent className="flex items-center justify-center py-12">
             <div className="flex items-center gap-3 text-text-muted">
-              <div className="h-5 w-5 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
+              <div className="h-5 w-5 animate-spin rounded-full border-2 border-brand-primary border-t-transparent" />
               <span>Loading device...</span>
             </div>
           </CardContent>

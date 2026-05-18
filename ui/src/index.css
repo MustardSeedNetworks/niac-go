@@ -3,10 +3,15 @@
 @source "../**/*.{js,ts,jsx,tsx}";
 
 /*
- * NIAC Theme System
+ * NIAC Theme System — harmonized with seed/stem
  * Tailwind v4 CSS-first configuration via @theme directive.
- * All design tokens declared here become available as utility classes
- * (e.g. --color-brand-500 → bg-brand-500, text-brand-500).
+ *
+ * Brand palette: Mustard Seed Networks - Seed Green primary.
+ * Light theme is the CSS default in :root; dark theme overrides apply
+ * when the .dark class is on <html> (managed by useTheme hook).
+ *
+ * Default app boot is dark — useTheme returns 'dark' unless a different
+ * value is stored in localStorage.
  */
 
 @theme {
@@ -19,91 +24,108 @@
   --font-mono: "JetBrains Mono", "Fira Code", monospace;
 
   /* ========================================
-   * Brand Colors
-   * Primary violet with high-contrast variants
+   * Brand Colors — Mustard Seed Networks
+   * Semantic tokens (no numeric ramp). Light/dark values live in
+   * :root and .dark blocks below.
    * ======================================== */
-  --color-brand-50: #f5f3ff;
-  --color-brand-100: #ede9fe;
-  --color-brand-200: #ddd6fe;
-  --color-brand-300: #c4b5fd;
-  --color-brand-400: #a78bfa;
-  --color-brand-500: #8b5cf6;
-  --color-brand-600: #7c3aed;
-  --color-brand-700: #6d28d9;
-  --color-brand-800: #5b21b6;
-  --color-brand-900: #4c1d95;
-  --color-brand-950: #2e1065;
+  --color-brand-primary: var(--color-brand-primary);
+  --color-brand-accent: var(--color-brand-accent);
+  --color-brand-gold: var(--color-brand-gold);
+
+  /* Legacy brand ramp aliases — all map to canonical semantic tokens.
+   * Components should migrate to brand-primary / brand-accent / brand-gold.
+   * Listed so existing `text-brand-400` / `bg-brand-500` / etc.
+   * utilities keep compiling until migration is complete. */
+  --color-brand-50: var(--color-brand-accent);
+  --color-brand-100: var(--color-brand-accent);
+  --color-brand-200: var(--color-brand-accent);
+  --color-brand-300: var(--color-brand-accent);
+  --color-brand-400: var(--color-brand-accent);
+  --color-brand-500: var(--color-brand-primary);
+  --color-brand-600: var(--color-brand-primary);
+  --color-brand-700: var(--color-brand-primary);
+  --color-brand-800: var(--color-brand-primary);
+  --color-brand-900: var(--color-brand-primary);
+  --color-brand-950: var(--color-brand-primary);
 
   /* ========================================
-   * Surface Colors (Dark Theme)
+   * Surface Colors — semantic elevation tokens
+   * (light/dark values in :root / .dark blocks)
    * ======================================== */
-  --color-bg-base: #030712;
-  --color-bg-surface: #0f1117;
-  --color-bg-elevated: #1a1d25;
-  --color-bg-overlay: #242731;
-  --color-bg-muted: #2d3139;
+  --color-surface-base: var(--color-surface-base);
+  --color-surface-raised: var(--color-surface-raised);
+  --color-surface-border: var(--color-surface-border);
+  --color-surface-hover: var(--color-surface-hover);
+  --color-surface-sunken: var(--color-surface-sunken);
+
+  /* Legacy bg-* aliases — kept so existing utilities still compile.
+   * Components should migrate to bg-surface-* over time. */
+  --color-bg-base: var(--color-surface-base);
+  --color-bg-surface: var(--color-surface-raised);
+  --color-bg-elevated: var(--color-surface-raised);
+  --color-bg-overlay: var(--color-surface-hover);
+  --color-bg-muted: var(--color-surface-hover);
 
   /* ========================================
    * Text Colors (WCAG AA contrast)
    * ======================================== */
-  --color-text-primary: #f8fafc;
-  --color-text-secondary: #cbd5e1;
-  --color-text-muted: #94a3b8;
-  --color-text-disabled: #64748b;
-  --color-text-inverse: #0f172a;
+  --color-text-primary: var(--color-text-primary);
+  --color-text-secondary: var(--color-text-secondary);
+  --color-text-muted: var(--color-text-muted);
+  --color-text-disabled: var(--color-text-disabled);
+  --color-text-inverse: var(--color-text-inverse);
 
   /* ========================================
    * Border Colors
+   * Legacy aliases kept; new code should use border-surface-border.
    * ======================================== */
-  --color-border-default: rgba(255, 255, 255, 0.08);
-  --color-border-subtle: rgba(255, 255, 255, 0.05);
-  --color-border-muted: rgba(255, 255, 255, 0.12);
-  --color-border-focus: rgba(139, 92, 246, 0.6);
-  --color-border-error: rgba(239, 68, 68, 0.5);
+  --color-border-default: var(--color-surface-border);
+  --color-border-subtle: var(--color-surface-border);
+  --color-border-muted: var(--color-surface-border);
+  --color-border-focus: var(--color-brand-primary);
+  --color-border-error: var(--color-status-error);
 
   /* ========================================
-   * Status Colors
+   * Status Colors — canonical hex values shared across seed/stem/niac.
+   * INDUSTRY STANDARD (do not change). Identical in light and dark.
    * ======================================== */
+  --color-status-success: var(--color-status-success);
+  --color-status-warning: var(--color-status-warning);
+  --color-status-error: var(--color-status-error);
+  --color-status-info: var(--color-status-info);
+
+  /* Legacy ramped status utilities — mapped to canonical hex so
+   * `text-success-400`, `bg-error-500`, etc. continue to render. */
   --color-success-50: #f0fdf4;
   --color-success-100: #dcfce7;
-  --color-success-400: #4ade80;
-  --color-success-500: #22c55e;
-  --color-success-600: #16a34a;
+  --color-success-400: var(--color-status-success);
+  --color-success-500: var(--color-status-success);
+  --color-success-600: var(--color-status-success);
   --color-success-900: #14532d;
 
   --color-warning-50: #fffbeb;
   --color-warning-100: #fef3c7;
-  --color-warning-400: #fbbf24;
-  --color-warning-500: #f59e0b;
-  --color-warning-600: #d97706;
+  --color-warning-400: var(--color-status-warning);
+  --color-warning-500: var(--color-status-warning);
+  --color-warning-600: var(--color-status-warning);
   --color-warning-900: #78350f;
 
   --color-error-50: #fef2f2;
   --color-error-100: #fee2e2;
-  --color-error-400: #f87171;
-  --color-error-500: #ef4444;
-  --color-error-600: #dc2626;
+  --color-error-400: var(--color-status-error);
+  --color-error-500: var(--color-status-error);
+  --color-error-600: var(--color-status-error);
   --color-error-900: #7f1d1d;
 
   --color-info-50: #eff6ff;
   --color-info-100: #dbeafe;
-  --color-info-400: #60a5fa;
-  --color-info-500: #3b82f6;
-  --color-info-600: #2563eb;
+  --color-info-400: var(--color-status-info);
+  --color-info-500: var(--color-status-info);
+  --color-info-600: var(--color-status-info);
   --color-info-900: #1e3a8a;
 
   /* ========================================
-   * Status semantic aliases (mirror seed/stem naming)
-   * Map to the canonical 500-shade of each palette above so all three
-   * projects share bg-status-success / text-status-error / etc.
-   * ======================================== */
-  --color-status-success: #22c55e;
-  --color-status-warning: #f59e0b;
-  --color-status-error: #ef4444;
-  --color-status-info: #3b82f6;
-
-  /* ========================================
-   * Device Type Colors (Topology)
+   * Device Type Colors (Topology) — NIAC-specific, theme-neutral
    * ======================================== */
   --color-device-router: #3b82f6;
   --color-device-switch: #22c55e;
@@ -179,7 +201,7 @@
   --color-chart-10: #6366f1;
 
   /* ========================================
-   * Neutral Scale (Gray)
+   * Neutral Scale (Gray) — unchanged
    * ======================================== */
   --color-neutral-50: #f8fafc;
   --color-neutral-100: #f1f5f9;
@@ -202,16 +224,75 @@
   --animate-slide-in-right: slideInRight 0.3s ease-out;
 }
 
+/* ==========================================================================
+   LIGHT THEME (CSS default) — Mustard Seed Networks
+   ========================================================================== */
 :root {
+  /* Brand */
+  --color-brand-primary: #2d7a3e; /* Seed Green */
+  --color-brand-accent: #4caf50;
+  --color-brand-gold: #d4a017;
+
+  /* Surfaces */
+  --color-surface-base: #f8fafc;
+  --color-surface-raised: #ffffff;
+  --color-surface-border: #e2e8f0;
+  --color-surface-hover: #f1f5f9;
+  --color-surface-sunken: #e2e8f0;
+
+  /* Text */
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #475569;
+  --color-text-muted: #64748b;
+  --color-text-disabled: #94a3b8;
+  --color-text-inverse: #ffffff;
+
+  /* Status — INDUSTRY STANDARD */
+  --color-status-success: #28a745;
+  --color-status-warning: #ffc107;
+  --color-status-error: #dc3545;
+  --color-status-info: #17a2b8;
+
   color: var(--color-text-primary);
-  background-color: var(--color-bg-base);
+  background-color: var(--color-surface-base);
+}
+
+/* ==========================================================================
+   DARK THEME — applied when html.dark by useTheme hook
+   Default boot is dark (see useTheme hook).
+   ========================================================================== */
+.dark {
+  /* Brand — lighter shades for contrast on dark surfaces */
+  --color-brand-primary: #81c784;
+  --color-brand-accent: #a5d6a7;
+  --color-brand-gold: #fbbf24;
+
+  /* Surfaces — neutral grays (NOT blue-tinted slate) */
+  --color-surface-base: #1a1a1a;
+  --color-surface-raised: #333333;
+  --color-surface-border: #666666;
+  --color-surface-hover: #404040;
+  --color-surface-sunken: #0a0a0a;
+
+  /* Text */
+  --color-text-primary: #f8fafc;
+  --color-text-secondary: #cbd5e1;
+  --color-text-muted: #94a3b8;
+  --color-text-disabled: #64748b;
+  --color-text-inverse: #0f172a;
+
+  /* Status — INDUSTRY STANDARD (identical to light) */
+  --color-status-success: #28a745;
+  --color-status-warning: #ffc107;
+  --color-status-error: #dc3545;
+  --color-status-info: #17a2b8;
 }
 
 body {
   margin: 0;
   min-height: 100vh;
   font-family: "Inter", system-ui, sans-serif;
-  background-color: var(--color-bg-base);
+  background-color: var(--color-surface-base);
   color: var(--color-text-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -230,23 +311,23 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--color-bg-elevated);
+  background: var(--color-surface-base);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--color-bg-muted);
+  background: var(--color-surface-border);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-border-muted);
+  background: var(--color-text-muted);
 }
 
 /* Selection color */
 ::selection {
-  background: rgba(139, 92, 246, 0.4);
-  color: white;
+  background: color-mix(in srgb, var(--color-brand-primary) 40%, transparent);
+  color: var(--color-text-inverse);
 }
 
 /* ========================================
@@ -255,13 +336,13 @@ body {
 .focus-ring:focus {
   outline: none;
   box-shadow:
-    0 0 0 2px #111827,
-    0 0 0 4px rgba(139, 92, 246, 0.5);
+    0 0 0 2px var(--color-surface-base),
+    0 0 0 4px color-mix(in srgb, var(--color-brand-primary) 50%, transparent);
 }
 
 .focus-ring-inset:focus {
   outline: none;
-  box-shadow: inset 0 0 0 2px rgba(139, 92, 246, 0.5);
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--color-brand-primary) 50%, transparent);
 }
 
 /* Text contrast utilities */
@@ -284,34 +365,42 @@ body {
 .glass-card {
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  border: 1px solid var(--color-border-default);
+  border: 1px solid var(--color-surface-border);
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
-  background: linear-gradient(135deg, var(--color-bg-elevated) 0%, rgba(26, 29, 37, 0.8) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--color-surface-raised) 0%,
+    color-mix(in srgb, var(--color-surface-raised) 80%, transparent) 100%
+  );
 }
 
 .glass-card-hover {
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  border: 1px solid var(--color-border-default);
+  border: 1px solid var(--color-surface-border);
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
-  background: linear-gradient(135deg, var(--color-bg-elevated) 0%, rgba(26, 29, 37, 0.8) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--color-surface-raised) 0%,
+    color-mix(in srgb, var(--color-surface-raised) 80%, transparent) 100%
+  );
   transition: all 300ms;
 }
 
 .glass-card-hover:hover {
   box-shadow:
     0 25px 50px -12px rgba(0, 0, 0, 0.25),
-    0 0 20px -5px rgba(139, 92, 246, 0.15);
-  border-color: var(--color-border-muted);
+    0 0 20px -5px color-mix(in srgb, var(--color-brand-primary) 15%, transparent);
+  border-color: var(--color-surface-border);
 }
 
 /* Skeleton loading animation */
 .skeleton {
   background: linear-gradient(
     to right,
-    rgba(255, 255, 255, 0.05),
-    rgba(255, 255, 255, 0.1),
-    rgba(255, 255, 255, 0.05)
+    color-mix(in srgb, var(--color-surface-border) 50%, transparent),
+    var(--color-surface-border),
+    color-mix(in srgb, var(--color-surface-border) 50%, transparent)
   );
   background-size: 200% 100%;
   animation: shimmer 2s linear infinite;
@@ -323,10 +412,10 @@ body {
   width: 100%;
   border-radius: 0.5rem;
   padding: 0.625rem 1rem;
-  color: white;
+  color: var(--color-text-primary);
   transition: all 150ms;
-  background-color: var(--color-bg-surface);
-  border: 1px solid var(--color-border-default);
+  background-color: var(--color-surface-raised);
+  border: 1px solid var(--color-surface-border);
 }
 
 .input-base::placeholder {
@@ -335,8 +424,8 @@ body {
 
 .input-base:focus {
   outline: none;
-  border-color: var(--color-brand-500);
-  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15);
+  border-color: var(--color-brand-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-brand-primary) 15%, transparent);
 }
 
 /* Button base - improved */
@@ -357,7 +446,7 @@ body {
 
 .btn-base:focus {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.3);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-brand-primary) 30%, transparent);
 }
 
 .btn-primary {
@@ -368,9 +457,13 @@ body {
   border-radius: 0.5rem;
   font-weight: 500;
   transition: all 200ms;
-  color: white;
-  background: linear-gradient(135deg, var(--color-brand-600) 0%, var(--color-brand-500) 100%);
-  box-shadow: 0 4px 14px -3px rgba(139, 92, 246, 0.4);
+  color: var(--color-text-inverse);
+  background: linear-gradient(
+    135deg,
+    var(--color-brand-primary) 0%,
+    var(--color-brand-accent) 100%
+  );
+  box-shadow: 0 4px 14px -3px color-mix(in srgb, var(--color-brand-primary) 40%, transparent);
 }
 
 .btn-primary:disabled {
@@ -379,7 +472,11 @@ body {
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: linear-gradient(135deg, var(--color-brand-500) 0%, var(--color-brand-400) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--color-brand-accent) 0%,
+    var(--color-brand-primary) 100%
+  );
   transform: translateY(-1px);
 }
 
@@ -395,8 +492,8 @@ body {
   border-radius: 0.5rem;
   font-weight: 500;
   transition: all 200ms;
-  color: white;
-  background-color: rgba(255, 255, 255, 0.1);
+  color: var(--color-text-primary);
+  background-color: var(--color-surface-hover);
 }
 
 .btn-secondary:disabled {
@@ -405,7 +502,8 @@ body {
 }
 
 .btn-secondary:hover:not(:disabled) {
-  background-color: rgba(255, 255, 255, 0.15);
+  background-color: var(--color-surface-hover);
+  filter: brightness(1.1);
 }
 
 .btn-ghost {
@@ -426,7 +524,7 @@ body {
 
 .btn-ghost:hover:not(:disabled) {
   color: var(--color-text-primary);
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: var(--color-surface-hover);
 }
 
 .btn-outline {
@@ -438,7 +536,7 @@ body {
   font-weight: 500;
   transition: all 200ms;
   color: var(--color-text-secondary);
-  border: 1px solid var(--color-border-muted);
+  border: 1px solid var(--color-surface-border);
 }
 
 .btn-outline:disabled {
@@ -447,8 +545,8 @@ body {
 }
 
 .btn-outline:hover:not(:disabled) {
-  background-color: rgba(255, 255, 255, 0.05);
-  border-color: var(--color-border-focus);
+  background-color: var(--color-surface-hover);
+  border-color: var(--color-brand-primary);
 }
 
 /* Status indicator */
@@ -476,17 +574,17 @@ body {
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  background-color: var(--color-bg-surface);
+  background-color: var(--color-surface-raised);
   color: var(--color-text-muted);
 }
 
 .table-row {
   transition: background-color 150ms;
-  border-bottom: 1px solid var(--color-border-subtle);
+  border-bottom: 1px solid var(--color-surface-border);
 }
 
 .table-row:hover {
-  background-color: rgba(255, 255, 255, 0.03);
+  background-color: var(--color-surface-hover);
 }
 
 /* Page animation */
@@ -496,41 +594,41 @@ body {
 
 /* Card variants for different contexts */
 .card-surface {
-  background-color: var(--color-bg-elevated);
-  border: 1px solid var(--color-border-default);
+  background-color: var(--color-surface-raised);
+  border: 1px solid var(--color-surface-border);
   border-radius: 0.75rem;
 }
 
 .card-elevated {
-  background-color: var(--color-bg-overlay);
-  border: 1px solid var(--color-border-muted);
+  background-color: var(--color-surface-raised);
+  border: 1px solid var(--color-surface-border);
   border-radius: 0.75rem;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
 }
 
-/* Status badges with proper contrast */
+/* Status badges with proper contrast — use canonical status hex */
 .badge-success {
-  background-color: rgba(34, 197, 94, 0.15);
-  color: var(--color-success-400);
-  border: 1px solid rgba(34, 197, 94, 0.3);
+  background-color: color-mix(in srgb, var(--color-status-success) 15%, transparent);
+  color: var(--color-status-success);
+  border: 1px solid color-mix(in srgb, var(--color-status-success) 30%, transparent);
 }
 
 .badge-warning {
-  background-color: rgba(245, 158, 11, 0.15);
-  color: var(--color-warning-400);
-  border: 1px solid rgba(245, 158, 11, 0.3);
+  background-color: color-mix(in srgb, var(--color-status-warning) 15%, transparent);
+  color: var(--color-status-warning);
+  border: 1px solid color-mix(in srgb, var(--color-status-warning) 30%, transparent);
 }
 
 .badge-error {
-  background-color: rgba(239, 68, 68, 0.15);
-  color: var(--color-error-400);
-  border: 1px solid rgba(239, 68, 68, 0.3);
+  background-color: color-mix(in srgb, var(--color-status-error) 15%, transparent);
+  color: var(--color-status-error);
+  border: 1px solid color-mix(in srgb, var(--color-status-error) 30%, transparent);
 }
 
 .badge-info {
-  background-color: rgba(59, 130, 246, 0.15);
-  color: var(--color-info-400);
-  border: 1px solid rgba(59, 130, 246, 0.3);
+  background-color: color-mix(in srgb, var(--color-status-info) 15%, transparent);
+  color: var(--color-status-info);
+  border: 1px solid color-mix(in srgb, var(--color-status-info) 30%, transparent);
 }
 
 @keyframes ping {
@@ -633,28 +731,28 @@ pre,
 
 .react-flow__controls {
   box-shadow: none;
-  border: 1px solid var(--color-border-default);
+  border: 1px solid var(--color-surface-border);
   border-radius: 0.5rem;
   overflow: hidden;
 }
 
 .react-flow__controls-button {
-  background-color: var(--color-bg-elevated);
-  border-color: var(--color-border-subtle);
+  background-color: var(--color-surface-raised);
+  border-color: var(--color-surface-border);
   color: var(--color-text-secondary);
 }
 
 .react-flow__controls-button:hover {
-  background-color: var(--color-bg-overlay);
+  background-color: var(--color-surface-hover);
   color: var(--color-text-primary);
 }
 
 .react-flow__minimap {
-  background-color: var(--color-bg-surface);
-  border: 1px solid var(--color-border-default);
+  background-color: var(--color-surface-raised);
+  border: 1px solid var(--color-surface-border);
   border-radius: 0.5rem;
 }
 
 .react-flow__background {
-  background-color: var(--color-bg-base);
+  background-color: var(--color-surface-base);
 }

@@ -41,13 +41,13 @@ export const DeviceListHeader: FC<DeviceListHeaderProps> = ({
     <div className="flex flex-wrap items-center justify-between gap-4">
       <div>
         <H2 className="flex items-center gap-2">
-          <Server className={`${iconSizes.lg} text-brand-300`} />
+          <Server className={`${iconSizes.lg} text-brand-accent`} />
           Device Configuration
         </H2>
         <P className="text-text-muted mt-1">
           Manage network device configurations for simulation.
           {deviceCount > 0 && (
-            <output className="ml-2 text-brand-300">{deviceCount} devices</output>
+            <output className="ml-2 text-brand-accent">{deviceCount} devices</output>
           )}
         </P>
       </div>
@@ -84,14 +84,14 @@ export const DeviceListHeader: FC<DeviceListHeaderProps> = ({
             Data
           </Button>
           {exportMenuOpen && (
-            <div className="absolute right-0 z-10 mt-1 w-44 rounded-lg border border-white/10 bg-bg-surface shadow-lg">
+            <div className="absolute right-0 z-10 mt-1 w-44 rounded-lg border border-surface-border bg-bg-surface shadow-lg">
               <button
                 type="button"
                 onClick={() => {
                   exportDevicesAsJSON(filteredDevices);
                   setExportMenuOpen(false);
                 }}
-                className="block w-full px-3 py-2 text-left text-sm text-text-primary hover:bg-white/5"
+                className="block w-full px-3 py-2 text-left text-sm text-text-primary hover:bg-surface-hover"
               >
                 JSON (data only)
               </button>
@@ -101,7 +101,7 @@ export const DeviceListHeader: FC<DeviceListHeaderProps> = ({
                   exportDevicesAsCSV(filteredDevices);
                   setExportMenuOpen(false);
                 }}
-                className="block w-full px-3 py-2 text-left text-sm text-text-primary hover:bg-white/5"
+                className="block w-full px-3 py-2 text-left text-sm text-text-primary hover:bg-surface-hover"
               >
                 CSV (data only)
               </button>

@@ -21,7 +21,7 @@ export const ConfirmDeleteModal: FC<ConfirmDeleteModalProps> = ({
       aria-label="Close delete confirmation"
     />
     <div
-      className="mx-4 w-full max-w-md rounded-2xl border border-white/10 bg-bg-surface/95 shadow-2xl"
+      className="mx-4 w-full max-w-md rounded-2xl border border-surface-border bg-bg-surface/95 shadow-2xl"
       role="dialog"
       aria-modal="true"
     >

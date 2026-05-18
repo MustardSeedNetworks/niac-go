@@ -46,19 +46,19 @@ export const DeviceEditorHeader: FC<DeviceEditorHeaderProps> = ({
   const DeviceIcon = deviceTypeIcons[deviceType as DeviceType] ?? deviceTypeIcons.unknown;
 
   return (
-    <Card className="border-white/5 bg-bg-surface/70">
+    <Card className="border-surface-border bg-bg-surface/70">
       <CardContent className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={onNavigateBack}
-              className="p-2 text-text-muted hover:text-text-primary hover:bg-white/10 rounded-lg transition-colors"
+              className="p-2 text-text-muted hover:text-text-primary hover:bg-surface-hover rounded-lg transition-colors"
               title="Back to device list"
             >
               <ArrowLeft className={iconSizes.lg} />
             </button>
-            <DeviceIcon className={`${iconSizes.xl} text-brand-300`} />
+            <DeviceIcon className={`${iconSizes.xl} text-brand-accent`} />
             <div>
               <H2>{isNewDevice ? 'New Device' : device.hostname || 'Edit Device'}</H2>
               <SmallText className="text-text-muted">

@@ -53,13 +53,13 @@ function FAQItem({ entry }: FAQItemProps): ReactElement {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="bg-white/5 rounded-lg overflow-hidden">
+    <div className="bg-surface-hover rounded-lg overflow-hidden">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         className={cn(
           'w-full text-left px-3 py-2.5 flex items-start gap-2',
-          'hover:bg-white/5 transition-colors',
+          'hover:bg-surface-hover transition-colors',
         )}
         aria-expanded={open}
       >
@@ -71,14 +71,14 @@ function FAQItem({ entry }: FAQItemProps): ReactElement {
         <h4 className="text-sm font-medium text-text-primary flex-1 min-w-0">{entry.question}</h4>
       </button>
       {open && (
-        <div className="px-3 pb-3 pl-9 space-y-2 border-t border-white/5">
+        <div className="px-3 pb-3 pl-9 space-y-2 border-t border-surface-border">
           <p className="text-xs text-text-muted leading-relaxed pt-2">{entry.answer}</p>
           {entry.tags.length > 0 && (
             <div className="flex flex-wrap gap-1">
               {entry.tags.map((tag) => (
                 <code
                   key={tag}
-                  className="text-xs text-text-muted bg-white/5 rounded px-1.5 py-0.5"
+                  className="text-xs text-text-muted bg-surface-hover rounded px-1.5 py-0.5"
                 >
                   {tag}
                 </code>

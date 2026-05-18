@@ -22,12 +22,12 @@ export const TemplatesHeader: FC<TemplatesHeaderProps> = ({
   onDismissMessage,
 }) => {
   return (
-    <Card className="border-white/5 bg-bg-surface/70">
+    <Card className="border-surface-border bg-bg-surface/70">
       <CardContent className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <H2 className="flex items-center gap-2">
-              <FileCode className={`${iconSizes.lg} text-brand-300`} />
+              <FileCode className={`${iconSizes.lg} text-brand-accent`} />
               Configuration Templates
             </H2>
             <P className="text-text-muted mt-1">
@@ -53,7 +53,7 @@ export const TemplatesHeader: FC<TemplatesHeaderProps> = ({
             placeholder="Search templates by name, description, or type..."
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full rounded-lg border border-white/10 bg-bg-base/60 py-3 pl-10 pr-10 text-sm text-text-primary placeholder-gray-500 focus:border-brand-400 focus:outline-none"
+            className="w-full rounded-lg border border-surface-border bg-bg-base/60 py-3 pl-10 pr-10 text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none"
           />
           {searchQuery && (
             <button

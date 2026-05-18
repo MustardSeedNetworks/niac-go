@@ -61,7 +61,7 @@ export const border = {
   default: 'border border-border-default',
   subtle: 'border border-border-subtle',
   muted: 'border border-border-muted',
-  focus: 'border border-brand-500/50',
+  focus: 'border border-brand-primary/50',
   error: 'border border-status-error/50',
   divider: 'border-t border-border-default',
 } as const;

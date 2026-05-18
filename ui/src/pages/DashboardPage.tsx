@@ -78,7 +78,7 @@ export const DashboardPage: FC = () => {
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-text-muted">Devices Online</span>
               <Server
-                className={`${iconSizes.lg} text-brand-400 group-hover:scale-110 transition-transform`}
+                className={`${iconSizes.lg} text-brand-accent group-hover:scale-110 transition-transform`}
               />
             </div>
             <p className="text-3xl font-bold text-text-primary">{stats?.deviceCount ?? '—'}</p>
@@ -127,14 +127,14 @@ export const DashboardPage: FC = () => {
         <Card className="lg:col-span-2">
           <CardContent className="space-y-4">
             <H2 className="flex items-center gap-2">
-              <Zap className={`${iconSizes.lg} text-brand-400`} />
+              <Zap className={`${iconSizes.lg} text-brand-accent`} />
               Quick Actions
             </H2>
             <div className="grid gap-3 sm:grid-cols-2">
               <button
                 type="button"
                 onClick={() => setShowErrors(!showErrors)}
-                className="flex items-center gap-3 rounded-lg border border-white/10 bg-white/5 p-4 text-left hover:bg-white/10 hover:border-brand-500/30 transition-all group"
+                className="flex items-center gap-3 rounded-lg border border-surface-border bg-surface-hover p-4 text-left hover:bg-surface-hover hover:border-brand-primary/30 transition-all group"
               >
                 <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-status-warning/20 flex items-center justify-center group-hover:scale-110 transition-transform">
                   <PlugZap className={`${iconSizes.lg} text-status-warning`} />
@@ -146,9 +146,9 @@ export const DashboardPage: FC = () => {
               </button>
 
               <AccentLink to="/debug" className="no-underline">
-                <div className="flex items-center gap-3 rounded-lg border border-white/10 bg-white/5 p-4 text-left hover:bg-white/10 hover:border-brand-500/30 transition-all group">
-                  <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-brand-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Terminal className={`${iconSizes.lg} text-brand-400`} />
+                <div className="flex items-center gap-3 rounded-lg border border-surface-border bg-surface-hover p-4 text-left hover:bg-surface-hover hover:border-brand-primary/30 transition-all group">
+                  <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-brand-primary/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Terminal className={`${iconSizes.lg} text-brand-accent`} />
                   </div>
                   <div>
                     <p className="font-medium text-text-primary">Debug Console</p>
@@ -158,7 +158,7 @@ export const DashboardPage: FC = () => {
               </AccentLink>
 
               <AccentLink to="/traffic" className="no-underline">
-                <div className="flex items-center gap-3 rounded-lg border border-white/10 bg-white/5 p-4 text-left hover:bg-white/10 hover:border-brand-500/30 transition-all group">
+                <div className="flex items-center gap-3 rounded-lg border border-surface-border bg-surface-hover p-4 text-left hover:bg-surface-hover hover:border-brand-primary/30 transition-all group">
                   <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-status-info/20 flex items-center justify-center group-hover:scale-110 transition-transform">
                     <Activity className={`${iconSizes.lg} text-status-info`} />
                   </div>
@@ -170,7 +170,7 @@ export const DashboardPage: FC = () => {
               </AccentLink>
 
               <AccentLink to="/topology" className="no-underline">
-                <div className="flex items-center gap-3 rounded-lg border border-white/10 bg-white/5 p-4 text-left hover:bg-white/10 hover:border-brand-500/30 transition-all group">
+                <div className="flex items-center gap-3 rounded-lg border border-surface-border bg-surface-hover p-4 text-left hover:bg-surface-hover hover:border-brand-primary/30 transition-all group">
                   <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-status-success/20 flex items-center justify-center group-hover:scale-110 transition-transform">
                     <Network className={`${iconSizes.lg} text-status-success`} />
                   </div>
@@ -199,10 +199,12 @@ export const DashboardPage: FC = () => {
               {(history ?? []).slice(0, 4).map((item) => (
                 <div
                   key={item.id}
-                  className="rounded-lg border border-white/5 bg-bg-base/50 p-3 hover:border-white/10 transition-colors"
+                  className="rounded-lg border border-surface-border bg-bg-base/50 p-3 hover:border-surface-border transition-colors"
                 >
                   <div className="flex items-center justify-between mb-1">
-                    <p className="font-mono text-xs text-brand-300">{formatTime(item.startedAt)}</p>
+                    <p className="font-mono text-xs text-brand-accent">
+                      {formatTime(item.startedAt)}
+                    </p>
                     <Tag colorScheme="gray" className="text-[10px]">
                       {item.deviceCount} dev
                     </Tag>
@@ -254,7 +256,7 @@ const ErrorInjectionPanel = memo(
         {errorTypes.map((errorType) => (
           <div
             key={errorType.type}
-            className="rounded-lg border border-white/10 bg-bg-surface/50 p-3"
+            className="rounded-lg border border-surface-border bg-bg-surface/50 p-3"
           >
             <p className="font-semibold text-text-primary">{errorType.type}</p>
             <SmallText className="text-text-muted">{errorType.description}</SmallText>
@@ -287,7 +289,7 @@ const AutomationTimeline = memo(({ history }: { history: HistoryRecord[] | null 
 
   if (timeline.length === 0) {
     return (
-      <Card className="border-white/5 bg-bg-surface/70">
+      <Card className="border-surface-border bg-bg-surface/70">
         <CardContent>
           <SmallText className="text-text-muted">
             Automation updates will appear after the first run completes.
@@ -298,11 +300,11 @@ const AutomationTimeline = memo(({ history }: { history: HistoryRecord[] | null 
   }
 
   return (
-    <Card className="border-white/5 bg-bg-surface/70">
+    <Card className="border-surface-border bg-bg-surface/70">
       <CardContent className="space-y-4">
         <div className="flex items-center justify-between">
           <H2 className="flex items-center gap-2">
-            <SatelliteDish className={`${iconSizes.lg} text-brand-300`} />
+            <SatelliteDish className={`${iconSizes.lg} text-brand-accent`} />
             Automation timeline
           </H2>
           <Tag colorScheme="gray">Latest events</Tag>
@@ -311,7 +313,7 @@ const AutomationTimeline = memo(({ history }: { history: HistoryRecord[] | null 
           {timeline.map((event) => (
             <div
               key={event.title}
-              className="flex flex-col gap-1 rounded-lg border border-white/5 bg-bg-base/50 p-4 sm:flex-row sm:items-center sm:justify-between"
+              className="flex flex-col gap-1 rounded-lg border border-surface-border bg-bg-base/50 p-4 sm:flex-row sm:items-center sm:justify-between"
             >
               <div>
                 <SmallText className="text-status-info">{event.time}</SmallText>

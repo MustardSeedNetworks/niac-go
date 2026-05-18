@@ -167,7 +167,7 @@ export const DebugConsolePage: FC = () => {
   return (
     <div className="space-y-6">
       {/* Main Console Card */}
-      <Card className="border-white/5 bg-bg-surface/70">
+      <Card className="border-surface-border bg-bg-surface/70">
         <CardContent className="space-y-4">
           {/* Header with Connection Status */}
           <div className="flex items-center justify-between">
@@ -195,7 +195,7 @@ export const DebugConsolePage: FC = () => {
               <button
                 type="button"
                 onClick={reconnect}
-                className="flex items-center gap-2 rounded-lg border border-white/10 bg-bg-base/50 px-3 py-1.5 text-sm transition-colors hover:bg-bg-elevated/50"
+                className="flex items-center gap-2 rounded-lg border border-surface-border bg-bg-base/50 px-3 py-1.5 text-sm transition-colors hover:bg-bg-elevated/50"
                 title={connected ? 'Connected to log stream' : 'Click to reconnect'}
               >
                 <span className={`h-2 w-2 rounded-full ${connectionStatus.indicator}`} />
@@ -237,7 +237,7 @@ export const DebugConsolePage: FC = () => {
                   setProtocolFilter('All');
                   setSearchQuery('');
                 }}
-                className="text-brand-400 hover:text-brand-300 underline"
+                className="text-brand-accent hover:text-brand-accent underline"
               >
                 Clear filters
               </button>

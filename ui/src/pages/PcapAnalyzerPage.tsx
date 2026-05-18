@@ -226,13 +226,13 @@ export const PcapAnalyzerPage: FC = () => {
       {analysisResult && (
         <>
           {/* Controls Header */}
-          <Card className="border-white/5 bg-bg-surface/70">
+          <Card className="border-surface-border bg-bg-surface/70">
             <CardContent>
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 {/* Title and file info */}
                 <div className="flex items-center gap-4">
                   <H2 className="flex items-center gap-2">
-                    <FileSearch className={`${iconSizes.lg} text-brand-400`} />
+                    <FileSearch className={`${iconSizes.lg} text-brand-accent`} />
                     PCAP Analysis
                   </H2>
                   <Tag colorScheme="green">{analysisResult.packets.length} packets</Tag>
@@ -241,14 +241,14 @@ export const PcapAnalyzerPage: FC = () => {
                 {/* Control buttons */}
                 <div className="flex flex-wrap items-center gap-2">
                   {/* View Mode Toggle */}
-                  <div className="flex rounded-lg border border-white/10 bg-bg-base/50 p-1">
+                  <div className="flex rounded-lg border border-surface-border bg-bg-base/50 p-1">
                     <button
                       type="button"
                       onClick={() => setViewMode('packets')}
                       title="Show every decoded packet with timestamp, headers, and payload"
                       className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
                         viewMode === 'packets'
-                          ? 'bg-brand-600 text-text-primary'
+                          ? 'bg-brand-primary text-text-primary'
                           : 'text-text-muted hover:text-text-primary'
                       }`}
                     >
@@ -260,7 +260,7 @@ export const PcapAnalyzerPage: FC = () => {
                       title="Show aggregate statistics: byte/packet totals per protocol and per host"
                       className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
                         viewMode === 'stats'
-                          ? 'bg-brand-600 text-text-primary'
+                          ? 'bg-brand-primary text-text-primary'
                           : 'text-text-muted hover:text-text-primary'
                       }`}
                     >
@@ -272,7 +272,7 @@ export const PcapAnalyzerPage: FC = () => {
                       title="Group packets by 5-tuple to see TCP/UDP flows and byte totals per conversation"
                       className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
                         viewMode === 'conversations'
-                          ? 'bg-brand-600 text-text-primary'
+                          ? 'bg-brand-primary text-text-primary'
                           : 'text-text-muted hover:text-text-primary'
                       }`}
                     >
@@ -346,7 +346,7 @@ export const PcapAnalyzerPage: FC = () => {
                 {/* Right panel - Details */}
                 <div className="lg:col-span-5 xl:col-span-4 space-y-6">
                   {/* Hex Dump Viewer */}
-                  <Card className="border-white/5 bg-bg-surface/70 h-[280px]">
+                  <Card className="border-surface-border bg-bg-surface/70 h-[280px]">
                     <CardContent className="h-full flex flex-col">
                       <SmallText className="text-text-muted uppercase tracking-wide font-semibold mb-3">
                         Hex Dump
@@ -362,7 +362,7 @@ export const PcapAnalyzerPage: FC = () => {
                   </Card>
 
                   {/* Packet Details */}
-                  <Card className="border-white/5 bg-bg-surface/70 h-[280px]">
+                  <Card className="border-surface-border bg-bg-surface/70 h-[280px]">
                     <CardContent className="h-full flex flex-col">
                       <SmallText className="text-text-muted uppercase tracking-wide font-semibold mb-3">
                         Packet Details
@@ -401,7 +401,7 @@ export const PcapAnalyzerPage: FC = () => {
 
       {/* Info Banner when no file is loaded */}
       {!(analysisResult || selectedFile) && (
-        <Card className="border-white/5 bg-bg-surface/70">
+        <Card className="border-surface-border bg-bg-surface/70">
           <CardContent>
             <div className="flex items-start gap-3">
               <Info className={`${iconSizes.lg} text-status-info flex-shrink-0 mt-0.5`} />

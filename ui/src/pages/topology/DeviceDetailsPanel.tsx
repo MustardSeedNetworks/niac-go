@@ -34,7 +34,7 @@ export const DeviceDetailsPanel: FC<DeviceDetailsPanelProps> = ({ device, onClos
   const color = deviceColors[deviceType] || deviceColors.unknown;
 
   return (
-    <div className="absolute top-4 right-4 w-80 bg-bg-elevated/95 backdrop-blur-sm border border-white/10 rounded-xl p-4 shadow-2xl z-50">
+    <div className="absolute top-4 right-4 w-80 bg-bg-elevated/95 backdrop-blur-sm border border-surface-border rounded-xl p-4 shadow-2xl z-50">
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
           <div

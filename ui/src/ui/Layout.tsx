@@ -122,8 +122,8 @@ export const PrimaryNav: FC<PrimaryNavProps> = ({
         }}
         className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 whitespace-nowrap ${
           isActive
-            ? 'bg-gradient-to-r from-brand-600/30 to-brand-500/20 text-text-primary border-l-2 border-brand-500 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]'
-            : 'text-text-muted hover:text-text-primary hover:bg-white/5'
+            ? 'bg-gradient-to-r from-brand-primary/30 to-brand-primary/20 text-text-primary border-l-2 border-brand-primary shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]'
+            : 'text-text-muted hover:text-text-primary hover:bg-surface-hover'
         } ${isGrouped ? 'w-full justify-start' : ''}`}
       >
         {iconElement}
@@ -135,7 +135,7 @@ export const PrimaryNav: FC<PrimaryNavProps> = ({
                 ? 'bg-status-success/20 text-status-success'
                 : item.badge === 'Beta'
                   ? 'bg-status-warning/20 text-status-warning'
-                  : 'bg-brand-500/20 text-brand-300'
+                  : 'bg-brand-primary/20 text-brand-accent'
             }`}
           >
             {item.badge}
@@ -175,7 +175,7 @@ export const PrimaryNav: FC<PrimaryNavProps> = ({
           ? // Grouped navigation
             groups.map((group, groupIndex) => (
               <div key={group.label} className="relative flex items-center">
-                {groupIndex > 0 && <div className="h-6 w-px bg-white/10 mx-2" />}
+                {groupIndex > 0 && <div className="h-6 w-px bg-surface-hover mx-2" />}
                 <div className="relative">
                   <button
                     type="button"
@@ -188,7 +188,7 @@ export const PrimaryNav: FC<PrimaryNavProps> = ({
                     />
                   </button>
                   {openGroup === group.label && (
-                    <div className="absolute top-full left-0 mt-1 py-1 min-w-[180px] rounded-lg bg-bg-surface/95 backdrop-blur-xl border border-white/10 shadow-xl z-50 animate-slide-down">
+                    <div className="absolute top-full left-0 mt-1 py-1 min-w-[180px] rounded-lg bg-bg-surface/95 backdrop-blur-xl border border-surface-border shadow-xl z-50 animate-slide-down">
                       {group.items.map((item) => (
                         <div key={item.path} className="px-1">
                           {renderNavItem(item, true)}
@@ -261,7 +261,7 @@ export const PageHeader: FC<PageHeaderProps> = ({
       {breadcrumbs && breadcrumbs.length > 0 && <Breadcrumb items={breadcrumbs} className="mb-3" />}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex items-center gap-3">
-          {icon && createElement(icon, { className: 'h-8 w-8 text-brand-400' })}
+          {icon && createElement(icon, { className: 'h-8 w-8 text-brand-accent' })}
           <div>
             <h1 className="text-2xl font-bold text-text-primary font-display">{title}</h1>
             {description && <p className="text-sm text-text-muted mt-1 max-w-2xl">{description}</p>}
@@ -275,7 +275,7 @@ export const PageHeader: FC<PageHeaderProps> = ({
               onClick={() => setHelpOpen(true)}
               aria-label={`Open help for ${title}`}
               title={`What is ${title}?`}
-              className="rounded-full p-1.5 text-text-muted hover:bg-white/10 hover:text-text-primary"
+              className="rounded-full p-1.5 text-text-muted hover:bg-surface-hover hover:text-text-primary"
             >
               <HelpCircle className={iconSizes.lg} />
             </button>
@@ -332,7 +332,7 @@ const HelpPanel: FC<{ title: string; children: ReactNode; onClose: () => void }>
             type="button"
             onClick={onClose}
             aria-label="Close help"
-            className="rounded p-1 text-text-muted hover:bg-white/10 hover:text-text-primary"
+            className="rounded p-1 text-text-muted hover:bg-surface-hover hover:text-text-primary"
           >
             <X className="h-5 w-5" />
           </button>

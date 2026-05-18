@@ -41,15 +41,15 @@ type CardVariant = 'default' | 'elevated' | 'outlined' | 'ghost';
 
 const variantStyles: Record<CardVariant, string> = {
   default:
-    'backdrop-blur-xl bg-gradient-to-br from-bg-surface/90 to-bg-surface/70 border border-white/10 shadow-xl shadow-black/20',
+    'backdrop-blur-xl bg-gradient-to-br from-bg-surface/90 to-bg-surface/70 border border-surface-border shadow-xl shadow-black/20',
   elevated:
-    'backdrop-blur-xl bg-gradient-to-br from-bg-elevated/90 to-bg-surface/80 border border-white/15 shadow-2xl shadow-black/30',
-  outlined: 'bg-transparent border border-white/20',
-  ghost: 'bg-white/5 border border-transparent',
+    'backdrop-blur-xl bg-gradient-to-br from-bg-elevated/90 to-bg-surface/80 border border-surface-border shadow-2xl shadow-black/30',
+  outlined: 'bg-transparent border border-surface-border',
+  ghost: 'bg-surface-hover border border-transparent',
 };
 
 const hoverStyles =
-  'transition-all duration-300 hover:shadow-2xl hover:shadow-brand-500/5 hover:border-white/20 hover:-translate-y-0.5';
+  'transition-all duration-300 hover:shadow-2xl hover:shadow-brand-primary/5 hover:border-surface-border hover:-translate-y-0.5';
 
 const paddingClasses: Record<string, string> = {
   none: '',
@@ -165,8 +165,8 @@ export const StatusCard: FC<StatusCardProps> = ({
     // biome-ignore lint/a11y/noStaticElementInteractions: Interactive role is conditionally applied based on onClick presence
     <div
       className={`rounded-xl ${variantStyles[variant]} p-4 sm:p-6
-        transition-all hover:border-white/20 touch-manipulation
-        focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 outline-none
+        transition-all hover:border-surface-border touch-manipulation
+        focus-visible:ring-2 focus-visible:ring-brand-primary focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 outline-none
         ${isInteractive ? 'cursor-pointer active:scale-[0.98]' : ''}
         ${className}`}
       onClick={onClick}
@@ -225,7 +225,7 @@ interface CardHeaderProps {
 
 export const CardHeader: FC<CardHeaderProps> = ({ children, className = '', actions }) => (
   <div
-    className={`flex items-center justify-between px-6 py-4 border-b border-white/10 ${className}`}
+    className={`flex items-center justify-between px-6 py-4 border-b border-surface-border ${className}`}
   >
     <div className="flex items-center gap-3">{children}</div>
     {actions && <div className="flex items-center gap-2">{actions}</div>}
@@ -238,7 +238,7 @@ interface CardFooterProps {
 }
 
 export const CardFooter: FC<CardFooterProps> = ({ children, className = '' }) => (
-  <div className={`px-6 py-4 border-t border-white/10 bg-black/20 rounded-b-xl ${className}`}>
+  <div className={`px-6 py-4 border-t border-surface-border bg-black/20 rounded-b-xl ${className}`}>
     {children}
   </div>
 );
@@ -348,7 +348,7 @@ export const CardRow: FC<CardRowProps> = ({ label, value, status, mono = false }
  * CardDivider - Horizontal divider for separating card sections.
  */
 export const CardDivider: FC<{ className?: string }> = ({ className = '' }) => (
-  <hr className={`border-white/10 my-3 ${className}`} />
+  <hr className={`border-surface-border my-3 ${className}`} />
 );
 
 // ============================================================================
@@ -382,7 +382,7 @@ export const StatCard: FC<StatCardProps> = ({ label, value, icon, trend, classNa
       <CardContent className="space-y-2">
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium text-text-muted">{label}</span>
-          {icon && <span className="text-brand-400">{icon}</span>}
+          {icon && <span className="text-brand-accent">{icon}</span>}
         </div>
         <div className="flex items-end justify-between gap-2">
           <span className="text-3xl font-bold text-text-primary">{value}</span>

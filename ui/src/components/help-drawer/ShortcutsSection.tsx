@@ -60,7 +60,7 @@ export function ShortcutsSection({ searchQuery }: ShortcutsSectionProps): ReactE
           shortcuts.length > 0 ? (
             <div key={category} className="space-y-2">
               <h3 className="text-sm font-semibold text-text-primary flex items-center gap-2">
-                <Command className="w-4 h-4 text-brand-400" />
+                <Command className="w-4 h-4 text-brand-accent" />
                 {CATEGORY_LABELS[category]}
               </h3>
               <div className="space-y-1">
@@ -85,7 +85,7 @@ interface ShortcutItemProps {
 
 function ShortcutItem({ shortcut }: ShortcutItemProps): ReactElement {
   return (
-    <div className={cn(layout.flex.between, 'py-2 px-3 bg-white/5 rounded-lg')}>
+    <div className={cn(layout.flex.between, 'py-2 px-3 bg-surface-hover rounded-lg')}>
       <span className="text-sm text-text-secondary">{shortcut.description}</span>
       <div className={layout.inline.tight}>
         {shortcut.keys.map((key, idx) => (
@@ -93,7 +93,7 @@ function ShortcutItem({ shortcut }: ShortcutItemProps): ReactElement {
             <kbd
               className={cn(
                 'px-2 py-0.5 text-xs font-mono rounded',
-                'bg-bg-elevated border border-white/20 text-text-secondary',
+                'bg-bg-elevated border border-surface-border text-text-secondary',
               )}
             >
               {key}

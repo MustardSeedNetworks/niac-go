@@ -28,7 +28,7 @@ const typeColors: Record<Template['type'], string> = {
   basic: 'bg-status-info/20 text-status-info border-status-info/30',
   router: 'bg-status-warning/20 text-status-warning border-status-warning/30',
   switch: 'bg-status-success/20 text-status-success border-status-success/30',
-  'access-point': 'bg-brand-500/20 text-brand-300 border-brand-500/30',
+  'access-point': 'bg-brand-primary/20 text-brand-accent border-brand-primary/30',
   server: 'bg-status-info/20 text-status-info border-status-info/30',
   firewall: 'bg-status-error/20 text-status-error border-status-error/30',
   complete: 'bg-status-warning/20 text-status-warning border-status-warning/30',
@@ -40,7 +40,7 @@ export const TemplateCard: FC<TemplateCardProps> = memo(({ template, onView, onU
   const colorClass = typeColors[template.type] || typeColors.custom;
 
   return (
-    <Card className="border-white/5 bg-bg-surface/70 hover:border-brand-500/30 transition-colors">
+    <Card className="border-surface-border bg-bg-surface/70 hover:border-brand-primary/30 transition-colors">
       <CardContent className="space-y-4">
         {/* Header with icon and type */}
         <div className="flex items-start justify-between">

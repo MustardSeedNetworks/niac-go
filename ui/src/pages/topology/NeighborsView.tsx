@@ -127,7 +127,7 @@ export const NeighborsView: FC = () => {
 
   return (
     <div className="space-y-4">
-      <Card className="border-white/5 bg-bg-surface/70">
+      <Card className="border-surface-border bg-bg-surface/70">
         <CardContent className="space-y-3">
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-2">
@@ -162,7 +162,7 @@ export const NeighborsView: FC = () => {
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Filter by device or chassis ID…"
               title="Substring match on local device, remote device, chassis ID, or remote port (case-insensitive)."
-              className="ml-auto w-64 rounded border border-white/5 bg-bg-base/60 px-3 py-1.5 text-sm text-text-primary placeholder-gray-500 focus:border-status-info focus:outline-none"
+              className="ml-auto w-64 rounded border border-surface-border bg-bg-base/60 px-3 py-1.5 text-sm text-text-primary placeholder-gray-500 focus:border-status-info focus:outline-none"
               aria-label="Filter neighbors"
             />
             <span className="text-xs text-text-muted">
@@ -172,7 +172,7 @@ export const NeighborsView: FC = () => {
         </CardContent>
       </Card>
 
-      <Card className="border-white/5 bg-bg-surface/70">
+      <Card className="border-surface-border bg-bg-surface/70">
         <CardContent className="p-0">
           {loading && !neighbors && <div className="p-6 text-sm text-text-muted">Loading…</div>}
           {error && (

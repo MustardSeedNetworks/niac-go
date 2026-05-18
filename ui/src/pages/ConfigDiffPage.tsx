@@ -149,12 +149,12 @@ export const ConfigDiffPage: FC = () => {
   return (
     <div className="space-y-6">
       {/* Header section */}
-      <Card className="border-white/5 bg-bg-surface/70">
+      <Card className="border-surface-border bg-bg-surface/70">
         <CardContent className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <H2 className="flex items-center gap-2">
-                <GitCompare className={`${iconSizes.lg} text-brand-300`} />
+                <GitCompare className={`${iconSizes.lg} text-brand-accent`} />
                 Compare & Merge
               </H2>
               <P className="text-text-muted mt-1">
@@ -201,7 +201,7 @@ export const ConfigDiffPage: FC = () => {
 
       {/* File upload section */}
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card className="border-white/5 bg-bg-surface/70">
+        <Card className="border-surface-border bg-bg-surface/70">
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <H2 className="text-lg">Original File</H2>
@@ -223,7 +223,7 @@ export const ConfigDiffPage: FC = () => {
           </CardContent>
         </Card>
 
-        <Card className="border-white/5 bg-bg-surface/70">
+        <Card className="border-surface-border bg-bg-surface/70">
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <H2 className="text-lg">Modified File</H2>
@@ -249,7 +249,7 @@ export const ConfigDiffPage: FC = () => {
       {/* Diff viewer section */}
       {hasFiles && (
         <>
-          <Card className="border-white/5 bg-bg-surface/70">
+          <Card className="border-surface-border bg-bg-surface/70">
             <CardContent className="space-y-4">
               <H2 className="flex items-center gap-2">
                 <GitCompare className={`${iconSizes.lg} text-status-info`} />
@@ -281,12 +281,12 @@ export const ConfigDiffPage: FC = () => {
           />
 
           {/* Server-side overlay merge (CLI parity) */}
-          <Card className="border-white/5 bg-bg-surface/70">
+          <Card className="border-surface-border bg-bg-surface/70">
             <CardContent className="space-y-3">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <H2 className="mb-1 flex items-center gap-2 text-lg">
-                    <Layers className={`${iconSizes.lg} text-brand-300`} />
+                    <Layers className={`${iconSizes.lg} text-brand-accent`} />
                     Server-side overlay merge
                   </H2>
                   <P className="text-sm text-text-muted">
@@ -336,7 +336,7 @@ export const ConfigDiffPage: FC = () => {
 
       {/* Empty state when no files */}
       {!hasFiles && (
-        <Card className="border-white/5 bg-bg-surface/70">
+        <Card className="border-surface-border bg-bg-surface/70">
           <CardContent className="py-12 text-center">
             <GitCompare className={`mx-auto ${iconSizes['3xl']} text-text-disabled`} />
             <H2 className="mt-4 mb-2">Ready to Compare</H2>
