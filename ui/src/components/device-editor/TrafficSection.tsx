@@ -48,10 +48,10 @@ export const TrafficSection: FC<ProtocolSectionProps> = ({
       {device.traffic?.enabled && (
         <div className="space-y-6">
           {/* ARP Announcements */}
-          <div className="rounded-lg border border-white/5 bg-bg-base/40 p-4 space-y-3">
+          <div className="rounded-lg border border-surface-border bg-bg-base/40 p-4 space-y-3">
             <div className="flex items-center justify-between">
               <h4 className="text-sm font-medium text-text-primary flex items-center gap-2">
-                <Radio className={`${iconSizes.md} text-brand-400`} />
+                <Radio className={`${iconSizes.md} text-brand-accent`} />
                 ARP Announcements
               </h4>
               <label className="relative inline-flex items-center cursor-pointer">
@@ -70,7 +70,7 @@ export const TrafficSection: FC<ProtocolSectionProps> = ({
                   }}
                   className="sr-only peer"
                 />
-                <div className="w-9 h-5 bg-bg-elevated rounded-full peer peer-checked:bg-brand-600 peer-focus:ring-2 peer-focus:ring-brand-500 transition-colors">
+                <div className="w-9 h-5 bg-bg-elevated rounded-full peer peer-checked:bg-brand-primary peer-focus:ring-2 peer-focus:ring-brand-primary transition-colors">
                   <div
                     className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${device.traffic.arpAnnouncements?.enabled ? 'translate-x-4' : ''}`}
                   />
@@ -93,17 +93,17 @@ export const TrafficSection: FC<ProtocolSectionProps> = ({
                     });
                   }}
                   min={1}
-                  className="w-32 rounded-lg border border-white/10 bg-bg-base/60 p-2 text-sm text-text-primary placeholder-gray-500 focus:border-brand-400 focus:outline-none"
+                  className="w-32 rounded-lg border border-surface-border bg-bg-base/60 p-2 text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none"
                 />
               </FormField>
             )}
           </div>
 
           {/* Periodic Pings */}
-          <div className="rounded-lg border border-white/5 bg-bg-base/40 p-4 space-y-3">
+          <div className="rounded-lg border border-surface-border bg-bg-base/40 p-4 space-y-3">
             <div className="flex items-center justify-between">
               <h4 className="text-sm font-medium text-text-primary flex items-center gap-2">
-                <Radio className={`${iconSizes.md} text-brand-400`} />
+                <Radio className={`${iconSizes.md} text-brand-accent`} />
                 Periodic Pings
               </h4>
               <label className="relative inline-flex items-center cursor-pointer">
@@ -122,7 +122,7 @@ export const TrafficSection: FC<ProtocolSectionProps> = ({
                   }}
                   className="sr-only peer"
                 />
-                <div className="w-9 h-5 bg-bg-elevated rounded-full peer peer-checked:bg-brand-600 peer-focus:ring-2 peer-focus:ring-brand-500 transition-colors">
+                <div className="w-9 h-5 bg-bg-elevated rounded-full peer peer-checked:bg-brand-primary peer-focus:ring-2 peer-focus:ring-brand-primary transition-colors">
                   <div
                     className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${device.traffic.periodicPings?.enabled ? 'translate-x-4' : ''}`}
                   />
@@ -147,7 +147,7 @@ export const TrafficSection: FC<ProtocolSectionProps> = ({
                       });
                     }}
                     min={1}
-                    className="w-full rounded-lg border border-white/10 bg-bg-base/60 p-2 text-sm text-text-primary placeholder-gray-500 focus:border-brand-400 focus:outline-none"
+                    className="w-full rounded-lg border border-surface-border bg-bg-base/60 p-2 text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none"
                   />
                 </FormField>
                 <FormField label="Payload Size (bytes)" helpText="Size of ICMP payload">
@@ -167,7 +167,7 @@ export const TrafficSection: FC<ProtocolSectionProps> = ({
                     }}
                     min={0}
                     max={65507}
-                    className="w-full rounded-lg border border-white/10 bg-bg-base/60 p-2 text-sm text-text-primary placeholder-gray-500 focus:border-brand-400 focus:outline-none"
+                    className="w-full rounded-lg border border-surface-border bg-bg-base/60 p-2 text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none"
                   />
                 </FormField>
               </div>
@@ -175,10 +175,10 @@ export const TrafficSection: FC<ProtocolSectionProps> = ({
           </div>
 
           {/* Random Traffic */}
-          <div className="rounded-lg border border-white/5 bg-bg-base/40 p-4 space-y-3">
+          <div className="rounded-lg border border-surface-border bg-bg-base/40 p-4 space-y-3">
             <div className="flex items-center justify-between">
               <h4 className="text-sm font-medium text-text-primary flex items-center gap-2">
-                <Radio className={`${iconSizes.md} text-brand-400`} />
+                <Radio className={`${iconSizes.md} text-brand-accent`} />
                 Random Traffic
               </h4>
               <label className="relative inline-flex items-center cursor-pointer">
@@ -197,7 +197,7 @@ export const TrafficSection: FC<ProtocolSectionProps> = ({
                   }}
                   className="sr-only peer"
                 />
-                <div className="w-9 h-5 bg-bg-elevated rounded-full peer peer-checked:bg-brand-600 peer-focus:ring-2 peer-focus:ring-brand-500 transition-colors">
+                <div className="w-9 h-5 bg-bg-elevated rounded-full peer peer-checked:bg-brand-primary peer-focus:ring-2 peer-focus:ring-brand-primary transition-colors">
                   <div
                     className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${device.traffic.randomTraffic?.enabled ? 'translate-x-4' : ''}`}
                   />
@@ -224,7 +224,7 @@ export const TrafficSection: FC<ProtocolSectionProps> = ({
                         });
                       }}
                       min={1}
-                      className="w-full rounded-lg border border-white/10 bg-bg-base/60 p-2 text-sm text-text-primary placeholder-gray-500 focus:border-brand-400 focus:outline-none"
+                      className="w-full rounded-lg border border-surface-border bg-bg-base/60 p-2 text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none"
                     />
                   </FormField>
                   <FormField label="Packet Count" helpText="Packets per burst">
@@ -245,7 +245,7 @@ export const TrafficSection: FC<ProtocolSectionProps> = ({
                       }}
                       min={1}
                       max={100}
-                      className="w-full rounded-lg border border-white/10 bg-bg-base/60 p-2 text-sm text-text-primary placeholder-gray-500 focus:border-brand-400 focus:outline-none"
+                      className="w-full rounded-lg border border-surface-border bg-bg-base/60 p-2 text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none"
                     />
                   </FormField>
                 </div>
@@ -284,7 +284,7 @@ export const TrafficSection: FC<ProtocolSectionProps> = ({
                               });
                             }
                           }}
-                          className="w-4 h-4 rounded border-border-muted bg-bg-elevated text-brand-600 focus:ring-brand-500"
+                          className="w-4 h-4 rounded border-border-muted bg-bg-elevated text-brand-primary focus:ring-brand-primary"
                         />
                         <span className="text-sm text-text-secondary">
                           {pattern === 'broadcast_arp'

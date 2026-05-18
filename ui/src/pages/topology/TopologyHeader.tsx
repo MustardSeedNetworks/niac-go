@@ -37,7 +37,7 @@ export const TopologyHeader: FC<TopologyHeaderProps> = ({
   onAutoLayout,
 }) => {
   return (
-    <div className="flex items-center justify-between p-4 border-b border-white/10 bg-bg-surface/80 backdrop-blur-sm">
+    <div className="flex items-center justify-between p-4 border-b border-surface-border bg-bg-surface/80 backdrop-blur-sm">
       <div className="flex items-center gap-4">
         <h1 className="text-xl font-semibold text-text-primary">{title}</h1>
         <div className="flex items-center gap-3 text-sm text-text-muted">
@@ -77,7 +77,7 @@ export const TopologyHeader: FC<TopologyHeaderProps> = ({
           </Button>
         )}
 
-        <div className="w-px h-6 bg-white/10" />
+        <div className="w-px h-6 bg-surface-hover" />
 
         {/* Layout control */}
         {onAutoLayout && (

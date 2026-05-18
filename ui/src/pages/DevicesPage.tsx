@@ -72,7 +72,7 @@ const DeviceTable = memo(({ devices }: { devices: DeviceSummary[] }) => {
 
   if (devices.length === 0) {
     return (
-      <div className="rounded-xl border border-white/5 bg-bg-base/50 p-8 text-center text-text-muted">
+      <div className="rounded-xl border border-surface-border bg-bg-base/50 p-8 text-center text-text-muted">
         No devices defined in the loaded configuration.
       </div>
     );
@@ -80,7 +80,7 @@ const DeviceTable = memo(({ devices }: { devices: DeviceSummary[] }) => {
 
   if (!useVirtualization) {
     return (
-      <div className="overflow-x-auto rounded-xl border border-white/5">
+      <div className="overflow-x-auto rounded-xl border border-surface-border">
         <table className="min-w-full divide-y divide-white/10 text-sm">
           <thead className="bg-bg-surface/60 text-xs uppercase tracking-wide text-text-muted">
             <tr>
@@ -101,7 +101,7 @@ const DeviceTable = memo(({ devices }: { devices: DeviceSummary[] }) => {
   }
 
   return (
-    <div className="rounded-xl border border-white/5">
+    <div className="rounded-xl border border-surface-border">
       <div className="bg-bg-surface/60 px-4 py-2 text-xs text-text-muted">
         Showing {virtualScroll.visibleItems.length} of {devices.length} devices (virtual scrolling
         enabled)
@@ -261,7 +261,7 @@ const ConfigEditorCard: FC = () => {
           <CardRow label="Updated" value={formatTime(cfg.modifiedAt)} />
           <CardRow label="Size" value={formatBytes(cfg.sizeBytes)} />
           <textarea
-            className="mt-3 h-72 w-full rounded-xl border border-white/10 bg-bg-base/70 p-3 font-mono text-sm text-text-primary shadow-inner focus:border-brand-400 focus:outline-none"
+            className="mt-3 h-72 w-full rounded-xl border border-surface-border bg-bg-base/70 p-3 font-mono text-sm text-text-primary shadow-inner focus:border-brand-accent focus:outline-none"
             value={value}
             onChange={handleChange}
             spellCheck={false}
@@ -312,11 +312,11 @@ const WalkFileBrowser: FC<{
   return (
     <div className="space-y-2">
       <SmallText className="text-text-muted">Available SNMP walks</SmallText>
-      <div className="max-h-48 space-y-1 overflow-y-auto rounded-xl border border-white/10 bg-bg-base/50 p-2 text-sm text-text-secondary">
+      <div className="max-h-48 space-y-1 overflow-y-auto rounded-xl border border-surface-border bg-bg-base/50 p-2 text-sm text-text-secondary">
         {files.map((file) => (
           <div
             key={file.name}
-            className="flex items-center justify-between gap-2 rounded-lg border border-white/5 bg-bg-surface/50 px-3 py-2"
+            className="flex items-center justify-between gap-2 rounded-lg border border-surface-border bg-bg-surface/50 px-3 py-2"
           >
             <div>
               <p className="text-text-primary">{file.name}</p>

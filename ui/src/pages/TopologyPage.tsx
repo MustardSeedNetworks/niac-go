@@ -547,7 +547,7 @@ export const TopologyPage: FC = () => {
   return (
     <div className="space-y-6">
       {/* Header Card */}
-      <Card className="border-white/5 bg-bg-surface/70">
+      <Card className="border-surface-border bg-bg-surface/70">
         <CardContent>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center gap-3">
@@ -566,7 +566,7 @@ export const TopologyPage: FC = () => {
 
             <div className="flex flex-wrap items-center gap-2">
               <div
-                className="inline-flex rounded-lg border border-white/10 bg-bg-base/40 p-0.5"
+                className="inline-flex rounded-lg border border-surface-border bg-bg-base/40 p-0.5"
                 role="tablist"
                 aria-label="Topology view"
               >
@@ -579,7 +579,7 @@ export const TopologyPage: FC = () => {
                   className={`flex items-center gap-1.5 rounded px-3 py-1 text-xs font-medium transition-colors ${
                     view === 'graph'
                       ? 'bg-status-info/20 text-status-info'
-                      : 'text-text-muted hover:bg-white/5 hover:text-text-primary'
+                      : 'text-text-muted hover:bg-surface-hover hover:text-text-primary'
                   }`}
                 >
                   <Network className="w-3.5 h-3.5" />
@@ -594,7 +594,7 @@ export const TopologyPage: FC = () => {
                   className={`flex items-center gap-1.5 rounded px-3 py-1 text-xs font-medium transition-colors ${
                     view === 'neighbors'
                       ? 'bg-status-info/20 text-status-info'
-                      : 'text-text-muted hover:bg-white/5 hover:text-text-primary'
+                      : 'text-text-muted hover:bg-surface-hover hover:text-text-primary'
                   }`}
                 >
                   <Radar className="w-3.5 h-3.5" />
@@ -651,7 +651,7 @@ export const TopologyPage: FC = () => {
                       the existing Graph/Neighbors view picker above,
                       which uses tablist; we use aria-pressed instead so
                       either pattern (radio or toggle) reads cleanly. */}
-                  <div className="inline-flex rounded-lg border border-white/10 bg-bg-base/40 p-0.5">
+                  <div className="inline-flex rounded-lg border border-surface-border bg-bg-base/40 p-0.5">
                     {LAYOUT_MODES.map((entry) => {
                       const active = layoutMode === entry.mode;
                       return (
@@ -665,7 +665,7 @@ export const TopologyPage: FC = () => {
                           className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
                             active
                               ? 'bg-status-info/20 text-status-info'
-                              : 'text-text-muted hover:bg-white/5 hover:text-text-primary'
+                              : 'text-text-muted hover:bg-surface-hover hover:text-text-primary'
                           }`}
                         >
                           {entry.label}
@@ -690,7 +690,7 @@ export const TopologyPage: FC = () => {
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search devices by name…"
                 aria-label="Filter devices by name"
-                className="w-full sm:w-64 rounded-md border border-white/10 bg-bg-base/40 px-3 py-1.5 text-xs text-text-primary placeholder:text-text-muted focus:border-status-info/40 focus:outline-none focus:ring-1 focus:ring-cyan-500/30"
+                className="w-full sm:w-64 rounded-md border border-surface-border bg-bg-base/40 px-3 py-1.5 text-xs text-text-primary placeholder:text-text-muted focus:border-status-info/40 focus:outline-none focus:ring-1 focus:ring-cyan-500/30"
               />
               {availableTypes.length > 0 && (
                 <div className="flex flex-wrap items-center gap-1.5">
@@ -711,7 +711,7 @@ export const TopologyPage: FC = () => {
                         className={`rounded-full border px-2.5 py-0.5 text-[11px] font-medium capitalize transition-colors ${
                           active
                             ? 'border-status-info/40 bg-status-info/20 text-status-info'
-                            : 'border-white/10 bg-bg-base/40 text-text-muted hover:bg-white/5 hover:text-text-primary'
+                            : 'border-surface-border bg-bg-base/40 text-text-muted hover:bg-surface-hover hover:text-text-primary'
                         }`}
                       >
                         {type}
@@ -740,12 +740,12 @@ export const TopologyPage: FC = () => {
           ≈ 240 px on this layout). Gives much more room for the graph
           on standard 1080p+ displays. */}
       {view === 'graph' && (
-        <Card className="border-white/5 bg-bg-surface/70 overflow-hidden">
+        <Card className="border-surface-border bg-bg-surface/70 overflow-hidden">
           <div className="h-[calc(100vh-260px)] min-h-[520px] relative">
             {loading ? (
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="flex flex-col items-center gap-3">
-                  <RefreshCw className="w-8 h-8 text-brand-400 animate-spin" />
+                  <RefreshCw className="w-8 h-8 text-brand-accent animate-spin" />
                   <SmallText className="text-text-muted">Loading topology...</SmallText>
                 </div>
               </div>

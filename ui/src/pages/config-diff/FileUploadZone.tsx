@@ -123,7 +123,7 @@ export const FileUploadZone: FC<FileUploadZoneProps> = ({
             type="button"
             onClick={onClear}
             disabled={disabled}
-            className="rounded-lg p-1.5 text-text-muted hover:bg-white/10 hover:text-text-primary transition-colors disabled:opacity-50"
+            className="rounded-lg p-1.5 text-text-muted hover:bg-surface-hover hover:text-text-primary transition-colors disabled:opacity-50"
             aria-label={`Remove ${file.name}`}
           >
             <X className={iconSizes.md} />
@@ -138,8 +138,8 @@ export const FileUploadZone: FC<FileUploadZoneProps> = ({
       <label
         className={`block rounded-xl border-2 border-dashed p-6 text-center transition-colors cursor-pointer ${
           dragOver
-            ? 'border-brand-400 bg-brand-500/10'
-            : 'border-white/20 hover:border-brand-400/50 hover:bg-bg-base/50'
+            ? 'border-brand-accent bg-brand-primary/10'
+            : 'border-surface-border hover:border-brand-accent/50 hover:bg-bg-base/50'
         } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}

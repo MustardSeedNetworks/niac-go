@@ -36,7 +36,7 @@ const MergeControls: FC<{
   decision?: MergeDecision;
   onDecision: (choice: MergeDecision['choice']) => void;
 }> = ({ decision, onDecision }) => (
-  <div className="flex items-center justify-center gap-2 py-2 px-4 bg-bg-surface/80 border-b border-white/10">
+  <div className="flex items-center justify-center gap-2 py-2 px-4 bg-bg-surface/80 border-b border-surface-border">
     <SmallText className="text-text-muted mr-2">Accept:</SmallText>
     <Button
       size="sm"
@@ -86,7 +86,7 @@ export const DiffBlockComponent: FC<DiffBlockComponentProps> = memo(
 
     return (
       <div
-        className={`${isChanged ? 'border border-white/10 rounded-lg overflow-hidden mb-2' : ''}`}
+        className={`${isChanged ? 'border border-surface-border rounded-lg overflow-hidden mb-2' : ''}`}
       >
         {/* Merge controls for changed blocks */}
         {isChanged && showMergeControls && (

@@ -142,7 +142,7 @@ export const DiffViewer: FC<DiffViewerProps> = ({
       <ColumnHeaders leftLabel={leftLabel} rightLabel={rightLabel} />
 
       {/* Diff content */}
-      <div className="rounded-lg border border-white/10 bg-bg-base/50 overflow-hidden max-h-[500px] overflow-y-auto">
+      <div className="rounded-lg border border-surface-border bg-bg-base/50 overflow-hidden max-h-[500px] overflow-y-auto">
         {diffBlocks.map((block) => (
           <DiffBlockComponent
             key={block.id}

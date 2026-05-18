@@ -3,8 +3,8 @@ import type { FC, InputHTMLAttributes, ReactNode, Ref, TextareaHTMLAttributes } 
 // Base input styles
 const inputBaseStyles =
   'w-full rounded-lg border bg-bg-base/60 text-text-primary placeholder:text-text-muted transition-all focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed';
-const inputFocusStyles = 'focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20';
-const inputBorderStyles = 'border-white/10 hover:border-white/20';
+const inputFocusStyles = 'focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20';
+const inputBorderStyles = 'border-surface-border hover:border-surface-border';
 
 // React 19: ref as regular prop instead of forwardRef
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
@@ -221,8 +221,8 @@ export const Checkbox: FC<CheckboxProps> = ({
         type="checkbox"
         id={checkboxId}
         className={`
-          mt-0.5 h-4 w-4 rounded border-border-muted bg-bg-elevated text-brand-500
-          focus:ring-2 focus:ring-brand-500/50 focus:ring-offset-0
+          mt-0.5 h-4 w-4 rounded border-border-muted bg-bg-elevated text-brand-primary
+          focus:ring-2 focus:ring-brand-primary/50 focus:ring-offset-0
           transition-colors cursor-pointer
           ${className}
         `}
@@ -281,8 +281,8 @@ export const Toggle: FC<ToggleProps> = ({
         }}
         className={`
           relative inline-flex h-6 w-11 items-center rounded-full transition-colors
-          focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:ring-offset-2 focus:ring-offset-gray-900
-          ${checked ? 'bg-brand-600' : 'bg-bg-elevated'}
+          focus:outline-none focus:ring-2 focus:ring-brand-primary/50 focus:ring-offset-2 focus:ring-offset-gray-900
+          ${checked ? 'bg-brand-primary' : 'bg-bg-elevated'}
           ${className}
         `}
       >
@@ -390,7 +390,7 @@ export const SearchInput: FC<SearchInputProps> = ({
             type="button"
             onClick={handleClear}
             aria-label="Clear search"
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500/50 rounded"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary transition-colors focus:outline-none focus:ring-2 focus:ring-brand-primary/50 rounded"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"

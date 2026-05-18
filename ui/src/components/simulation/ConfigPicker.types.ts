@@ -31,7 +31,7 @@ export const TEMPLATE_TYPE_TINT: Record<Template['type'], string> = {
   basic: 'bg-status-info/15 text-status-info border-status-info/30',
   router: 'bg-status-warning/15 text-status-warning border-status-warning/30',
   switch: 'bg-status-success/15 text-status-success border-status-success/30',
-  'access-point': 'bg-brand-500/15 text-brand-200 border-brand-400/30',
+  'access-point': 'bg-brand-primary/15 text-brand-accent border-brand-accent/30',
   server: 'bg-status-info/15 text-status-info border-status-info/30',
   firewall: 'bg-status-error/15 text-status-error border-status-error/30',
   complete: 'bg-status-warning/15 text-status-warning border-status-warning/30',

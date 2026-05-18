@@ -42,7 +42,7 @@ export const DnsSection: FC<ProtocolSectionProps> = ({
           {/* Forward Records (A records) */}
           <div className="space-y-3">
             <h4 className="text-sm font-medium text-text-primary flex items-center gap-2">
-              <Globe className={`${iconSizes.md} text-brand-400`} />
+              <Globe className={`${iconSizes.md} text-brand-accent`} />
               Forward Records (A Records)
             </h4>
             {(device.dns.forwardRecords || []).map((record: DNSRecord, index: number) => (
@@ -73,7 +73,7 @@ export const DnsSection: FC<ProtocolSectionProps> = ({
                     updateDns({ ...getDnsConfig(), forwardRecords: records });
                   }}
                   placeholder="IP Address"
-                  className="w-40 rounded-lg border border-white/10 bg-bg-base/60 p-2 text-sm text-text-primary placeholder-gray-500 focus:border-brand-400 focus:outline-none font-mono"
+                  className="w-40 rounded-lg border border-surface-border bg-bg-base/60 p-2 text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none font-mono"
                 />
                 <input
                   type="number"
@@ -87,7 +87,7 @@ export const DnsSection: FC<ProtocolSectionProps> = ({
                     updateDns({ ...getDnsConfig(), forwardRecords: records });
                   }}
                   placeholder="TTL"
-                  className="w-24 rounded-lg border border-white/10 bg-bg-base/60 p-2 text-sm text-text-primary placeholder-gray-500 focus:border-brand-400 focus:outline-none"
+                  className="w-24 rounded-lg border border-surface-border bg-bg-base/60 p-2 text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none"
                 />
                 <Button
                   variant="ghost"
@@ -123,7 +123,7 @@ export const DnsSection: FC<ProtocolSectionProps> = ({
           {/* Reverse Records (PTR records) */}
           <div className="space-y-3">
             <h4 className="text-sm font-medium text-text-primary flex items-center gap-2">
-              <Globe className={`${iconSizes.md} text-brand-400`} />
+              <Globe className={`${iconSizes.md} text-brand-accent`} />
               Reverse Records (PTR Records)
             </h4>
             {(device.dns.reverseRecords || []).map((record: DNSRecord, index: number) => (
@@ -140,7 +140,7 @@ export const DnsSection: FC<ProtocolSectionProps> = ({
                     updateDns({ ...getDnsConfig(), reverseRecords: records });
                   }}
                   placeholder="IP Address"
-                  className="w-40 rounded-lg border border-white/10 bg-bg-base/60 p-2 text-sm text-text-primary placeholder-gray-500 focus:border-brand-400 focus:outline-none font-mono"
+                  className="w-40 rounded-lg border border-surface-border bg-bg-base/60 p-2 text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none font-mono"
                 />
                 <input
                   type="text"

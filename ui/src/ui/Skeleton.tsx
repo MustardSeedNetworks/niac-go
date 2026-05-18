@@ -89,7 +89,9 @@ export const StatCardSkeleton: FC<{ className?: string }> = ({ className = '' })
 
 // Skeleton for device cards (card view)
 export const DeviceCardSkeleton: FC<{ className?: string }> = ({ className = '' }) => (
-  <div className={`p-4 space-y-3 rounded-xl border border-white/5 bg-bg-surface/70 ${className}`}>
+  <div
+    className={`p-4 space-y-3 rounded-xl border border-surface-border bg-bg-surface/70 ${className}`}
+  >
     {/* Header with checkbox and icon */}
     <div className="flex items-start justify-between">
       <div className="flex items-center gap-3">
@@ -112,7 +114,7 @@ export const DeviceCardSkeleton: FC<{ className?: string }> = ({ className = '' 
       <Skeleton width={40} height={20} className="rounded" />
     </div>
     {/* Actions */}
-    <div className="flex justify-end gap-1 pt-2 border-t border-white/5">
+    <div className="flex justify-end gap-1 pt-2 border-t border-surface-border">
       <Skeleton variant="rectangular" width={32} height={32} className="rounded-lg" />
       <Skeleton variant="rectangular" width={32} height={32} className="rounded-lg" />
       <Skeleton variant="rectangular" width={32} height={32} className="rounded-lg" />
@@ -122,7 +124,7 @@ export const DeviceCardSkeleton: FC<{ className?: string }> = ({ className = '' 
 
 // Skeleton for device table rows
 export const DeviceTableRowSkeleton: FC<{ className?: string }> = ({ className = '' }) => (
-  <div className={`flex items-center gap-4 px-4 py-3 border-b border-white/5 ${className}`}>
+  <div className={`flex items-center gap-4 px-4 py-3 border-b border-surface-border ${className}`}>
     <Skeleton variant="rectangular" width={16} height={16} />
     <div className="flex-1 grid grid-cols-12 gap-4 items-center">
       {/* Hostname */}

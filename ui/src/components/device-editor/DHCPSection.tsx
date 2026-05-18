@@ -109,7 +109,7 @@ export const DhcpSection: FC<ProtocolSectionProps> = ({
           {/* Static Leases */}
           <div className="space-y-3">
             <h4 className="text-sm font-medium text-text-primary flex items-center gap-2">
-              <Database className={`${iconSizes.md} text-brand-400`} />
+              <Database className={`${iconSizes.md} text-brand-accent`} />
               Static Leases
             </h4>
             {(device.dhcp.clientLeases || []).map((lease: DHCPLease, index: number) => (

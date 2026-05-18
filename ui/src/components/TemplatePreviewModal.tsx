@@ -108,16 +108,16 @@ export const TemplatePreviewModal: FC<TemplatePreviewModalProps> = ({
         aria-label="Close modal"
       />
       <div
-        className="relative mx-4 max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-2xl border border-white/10 bg-bg-surface/95 shadow-2xl"
+        className="relative mx-4 max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-2xl border border-surface-border bg-bg-surface/95 shadow-2xl"
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-title"
       >
         {/* Modal Header */}
-        <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
+        <div className="flex items-center justify-between border-b border-surface-border px-6 py-4">
           <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-brand-500/20 p-2">
-              <FileCode className={`${iconSizes.lg} text-brand-300`} />
+            <div className="rounded-lg bg-brand-primary/20 p-2">
+              <FileCode className={`${iconSizes.lg} text-brand-accent`} />
             </div>
             <div>
               <h2 id="modal-title" className="text-lg font-semibold text-text-primary">
@@ -131,7 +131,7 @@ export const TemplatePreviewModal: FC<TemplatePreviewModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-2 text-text-muted hover:bg-white/10 hover:text-text-primary transition-colors"
+            className="rounded-lg p-2 text-text-muted hover:bg-surface-hover hover:text-text-primary transition-colors"
             aria-label="Close modal"
           >
             <X className={iconSizes.lg} />
@@ -139,7 +139,7 @@ export const TemplatePreviewModal: FC<TemplatePreviewModalProps> = ({
         </div>
 
         {/* Template metadata */}
-        <div className="flex flex-wrap items-center gap-3 border-b border-white/10 px-6 py-3 bg-bg-base/50">
+        <div className="flex flex-wrap items-center gap-3 border-b border-surface-border px-6 py-3 bg-bg-base/50">
           <Tag colorScheme="purple">
             {template.deviceCount} {template.deviceCount === 1 ? 'device' : 'devices'}
           </Tag>
@@ -163,7 +163,7 @@ export const TemplatePreviewModal: FC<TemplatePreviewModalProps> = ({
           {loading && (
             <div className="flex items-center justify-center py-12">
               <div className="flex items-center gap-3 text-text-muted">
-                <div className="h-5 w-5 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-brand-primary border-t-transparent" />
                 <span>Loading template content...</span>
               </div>
             </div>
@@ -189,7 +189,7 @@ export const TemplatePreviewModal: FC<TemplatePreviewModalProps> = ({
         </div>
 
         {/* Modal Footer */}
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 px-6 py-4 bg-bg-base/50">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-surface-border px-6 py-4 bg-bg-base/50">
           <div className="flex gap-2">
             <Button
               variant="ghost"

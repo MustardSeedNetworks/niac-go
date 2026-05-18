@@ -45,7 +45,7 @@ const Toast: FC<{ notification: Notification }> = ({ notification }) => {
       <button
         type="button"
         onClick={() => removeNotification(notification.id)}
-        className="flex-shrink-0 p-1 rounded hover:bg-white/10 transition-colors"
+        className="flex-shrink-0 p-1 rounded hover:bg-surface-hover transition-colors"
         aria-label="Dismiss notification"
       >
         <X className={iconSizes.md} />

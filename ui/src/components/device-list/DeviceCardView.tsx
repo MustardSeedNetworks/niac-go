@@ -35,9 +35,9 @@ export const DeviceCardView: FC = () => {
         return (
           <div key={device.hostname} className="rounded-2xl">
             <Card
-              className={`group border-white/5 bg-bg-surface/70 hover:border-brand-500/30 transition-all h-full ${
+              className={`group border-surface-border bg-bg-surface/70 hover:border-brand-primary/30 transition-all h-full ${
                 selectedDevices.has(device.hostname)
-                  ? 'ring-2 ring-brand-500/50 border-brand-500/30'
+                  ? 'ring-2 ring-brand-primary/50 border-brand-primary/30'
                   : ''
               }`}
             >
@@ -49,7 +49,7 @@ export const DeviceCardView: FC = () => {
                       type="checkbox"
                       checked={selectedDevices.has(device.hostname)}
                       onChange={() => onSelectDevice(device.hostname)}
-                      className="h-4 w-4 rounded border-border-muted bg-bg-elevated text-brand-500 focus:ring-brand-500 cursor-pointer"
+                      className="h-4 w-4 rounded border-border-muted bg-bg-elevated text-brand-primary focus:ring-brand-primary cursor-pointer"
                     />
                     <div className={`p-2 rounded-lg ${colorClasses.bg}`}>
                       <DeviceIcon className={`${iconSizes.lg} ${colorClasses.text}`} />
@@ -63,12 +63,12 @@ export const DeviceCardView: FC = () => {
                 <button
                   type="button"
                   onClick={() => onEdit(device.hostname)}
-                  className="w-full text-left rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 focus:ring-offset-gray-900"
+                  className="w-full text-left rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary focus:ring-offset-2 focus:ring-offset-gray-900"
                   aria-label={`Edit device ${device.hostname}`}
                 >
                   {/* Device name and IP */}
                   <div>
-                    <h3 className="font-semibold text-text-primary group-hover:text-brand-300 transition-colors truncate">
+                    <h3 className="font-semibold text-text-primary group-hover:text-brand-accent transition-colors truncate">
                       {device.hostname}
                     </h3>
                     <div className="flex items-center gap-1 mt-1">
@@ -105,11 +105,11 @@ export const DeviceCardView: FC = () => {
                 </button>
 
                 {/* Actions */}
-                <div className="flex justify-end gap-1 pt-2 border-t border-white/5">
+                <div className="flex justify-end gap-1 pt-2 border-t border-surface-border">
                   <button
                     type="button"
                     onClick={() => onEdit(device.hostname)}
-                    className="p-2 text-text-muted hover:text-brand-300 hover:bg-white/10 rounded-lg transition-colors"
+                    className="p-2 text-text-muted hover:text-brand-accent hover:bg-surface-hover rounded-lg transition-colors"
                     title={`Open the device editor for ${device.hostname} to modify protocols, interfaces, and credentials`}
                     aria-label={`Edit device ${device.hostname}`}
                   >
@@ -118,7 +118,7 @@ export const DeviceCardView: FC = () => {
                   <button
                     type="button"
                     onClick={() => onClone(device.hostname)}
-                    className="p-2 text-text-muted hover:text-status-info hover:bg-white/10 rounded-lg transition-colors"
+                    className="p-2 text-text-muted hover:text-status-info hover:bg-surface-hover rounded-lg transition-colors"
                     title={`Create a copy of ${device.hostname} with a new hostname; all protocols and interfaces are duplicated`}
                     aria-label={`Clone device ${device.hostname}`}
                   >
@@ -127,7 +127,7 @@ export const DeviceCardView: FC = () => {
                   <button
                     type="button"
                     onClick={() => onDelete(device.hostname)}
-                    className="p-2 text-text-muted hover:text-status-error hover:bg-white/10 rounded-lg transition-colors"
+                    className="p-2 text-text-muted hover:text-status-error hover:bg-surface-hover rounded-lg transition-colors"
                     title={`Permanently remove ${device.hostname} from the library; cannot be undone`}
                     aria-label={`Delete device ${device.hostname}`}
                   >

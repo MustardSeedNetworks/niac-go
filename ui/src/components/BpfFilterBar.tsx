@@ -132,7 +132,7 @@ export const BpfFilterBar: FC = memo(() => {
               ? 'border-status-error/60 focus:ring-status-error/40'
               : isActive
                 ? 'border-status-success/40 focus:ring-green-500/40'
-                : 'border-white/10 focus:ring-brand-500/40'
+                : 'border-surface-border focus:ring-brand-primary/40'
           }`}
           disabled={isLoading}
         />
@@ -185,7 +185,7 @@ export const BpfFilterBar: FC = memo(() => {
             key={preset.filter}
             type="button"
             onClick={() => handlePreset(preset.filter)}
-            className="px-2 py-0.5 text-xs rounded bg-bg-elevated/60 text-text-muted hover:text-text-primary hover:bg-bg-elevated/60 border border-white/5 transition-colors"
+            className="px-2 py-0.5 text-xs rounded bg-bg-elevated/60 text-text-muted hover:text-text-primary hover:bg-bg-elevated/60 border border-surface-border transition-colors"
           >
             {preset.label}
           </button>

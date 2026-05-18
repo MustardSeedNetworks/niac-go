@@ -28,7 +28,7 @@ export const CloneDeviceModal: FC<CloneDeviceModalProps> = ({ hostname, onClone,
         aria-label="Close clone device modal"
       />
       <div
-        className="mx-4 w-full max-w-md rounded-2xl border border-white/10 bg-bg-surface/95 shadow-2xl"
+        className="mx-4 w-full max-w-md rounded-2xl border border-surface-border bg-bg-surface/95 shadow-2xl"
         role="dialog"
         aria-modal="true"
       >
@@ -52,7 +52,7 @@ export const CloneDeviceModal: FC<CloneDeviceModalProps> = ({ hostname, onClone,
               type="text"
               value={newHostname}
               onChange={(e) => setNewHostname(e.target.value)}
-              className="w-full rounded-lg border border-white/10 bg-bg-base/60 p-3 text-sm text-text-primary placeholder-gray-500 focus:border-brand-400 focus:outline-none"
+              className="w-full rounded-lg border border-surface-border bg-bg-base/60 p-3 text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none"
             />
           </div>
           <div className="flex justify-end gap-3 pt-2">

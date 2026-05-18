@@ -142,7 +142,7 @@ export const PcapUploader: FC<PcapUploaderProps> = ({
   }, [onFileSelect]);
 
   return (
-    <Card className="border-white/5 bg-bg-surface/70">
+    <Card className="border-surface-border bg-bg-surface/70">
       <CardContent className="space-y-4">
         {/* Drag and Drop Zone */}
         <input
@@ -162,8 +162,8 @@ export const PcapUploader: FC<PcapUploaderProps> = ({
             relative cursor-pointer rounded-xl border-2 border-dashed p-8 text-center transition-all
             ${
               isDragOver
-                ? 'border-brand-400 bg-brand-900/20'
-                : 'border-white/10 bg-bg-base/40 hover:border-white/20 hover:bg-bg-base/60'
+                ? 'border-brand-accent bg-brand-primary/20'
+                : 'border-surface-border bg-bg-base/40 hover:border-surface-border hover:bg-bg-base/60'
             }
             ${isAnalyzing ? 'pointer-events-none opacity-50' : ''}
           `}
@@ -171,10 +171,10 @@ export const PcapUploader: FC<PcapUploaderProps> = ({
         >
           <div className="flex flex-col items-center gap-3">
             <div
-              className={`rounded-full p-4 ${isDragOver ? 'bg-brand-500/20' : 'bg-bg-elevated/50'}`}
+              className={`rounded-full p-4 ${isDragOver ? 'bg-brand-primary/20' : 'bg-bg-elevated/50'}`}
             >
               <Upload
-                className={`${iconSizes['2xl']} ${isDragOver ? 'text-brand-400' : 'text-text-muted'}`}
+                className={`${iconSizes['2xl']} ${isDragOver ? 'text-brand-accent' : 'text-text-muted'}`}
               />
             </div>
 
@@ -195,9 +195,9 @@ export const PcapUploader: FC<PcapUploaderProps> = ({
 
         {/* Selected File Display */}
         {selectedFile && (
-          <div className="flex items-center justify-between rounded-lg border border-white/10 bg-bg-base/50 p-4">
+          <div className="flex items-center justify-between rounded-lg border border-surface-border bg-bg-base/50 p-4">
             <div className="flex items-center gap-3">
-              <FileUp className={`${iconSizes.lg} text-brand-400`} />
+              <FileUp className={`${iconSizes.lg} text-brand-accent`} />
               <div>
                 <p className="font-medium text-text-primary">{selectedFile.name}</p>
                 <SmallText className="text-text-muted">{formatBytes(selectedFile.size)}</SmallText>
@@ -245,7 +245,7 @@ export const PcapUploader: FC<PcapUploaderProps> = ({
           disabled={!selectedFile || isAnalyzing}
           leftIcon={
             isAnalyzing ? (
-              <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+              <div className="h-5 w-5 animate-spin rounded-full border-2 border-surface-border border-t-white" />
             ) : (
               <FileUp className={iconSizes.lg} />
             )

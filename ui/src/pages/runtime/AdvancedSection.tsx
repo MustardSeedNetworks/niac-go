@@ -11,7 +11,7 @@ export const AdvancedSection: FC = () => {
   const [open, setOpen] = useState(false);
   return (
     <details
-      className="rounded border border-white/10 bg-bg-base/40"
+      className="rounded border border-surface-border bg-bg-base/40"
       open={open}
       onToggle={(e) => setOpen(e.currentTarget.open)}
     >
@@ -20,7 +20,7 @@ export const AdvancedSection: FC = () => {
         <span>Advanced</span>
         <SmallText className="text-text-muted">(global protocol debug level)</SmallText>
       </summary>
-      <div className="border-t border-white/10 p-3">
+      <div className="border-t border-surface-border p-3">
         <GlobalDebugLevelCard />
       </div>
     </details>

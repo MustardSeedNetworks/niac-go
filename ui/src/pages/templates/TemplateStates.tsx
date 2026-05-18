@@ -15,11 +15,11 @@ export const TemplatesLoadingState: FC<LoadingStateProps> = ({ show }) => {
   }
 
   return (
-    <Card className="border-white/5 bg-bg-surface/70">
+    <Card className="border-surface-border bg-bg-surface/70">
       <CardContent className="flex items-center justify-center py-12">
         <div className="flex items-center gap-3 text-text-muted">
           <div
-            className={`${iconSizes.lg} animate-spin rounded-full border-2 border-brand-500 border-t-transparent`}
+            className={`${iconSizes.lg} animate-spin rounded-full border-2 border-brand-primary border-t-transparent`}
           />
           <span>Loading templates...</span>
         </div>
@@ -67,7 +67,7 @@ export const TemplatesEmptyState: FC<EmptyStateProps> = ({ show, onUploadClick }
   }
 
   return (
-    <Card className="border-white/5 bg-bg-surface/70">
+    <Card className="border-surface-border bg-bg-surface/70">
       <CardContent className="py-12 text-center">
         <FileCode className={`mx-auto ${iconSizes['3xl']} text-text-disabled`} />
         <H2 className="mt-4 mb-2">No Templates Available</H2>
@@ -101,7 +101,7 @@ export const TemplatesNoResultsState: FC<NoResultsStateProps> = ({
   }
 
   return (
-    <Card className="border-white/5 bg-bg-surface/70">
+    <Card className="border-surface-border bg-bg-surface/70">
       <CardContent className="py-12 text-center">
         <Search className={`mx-auto ${iconSizes['3xl']} text-text-disabled`} />
         <H2 className="mt-4 mb-2">No Matching Templates</H2>

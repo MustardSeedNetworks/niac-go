@@ -16,7 +16,7 @@ export const DiffLineComponent: FC<DiffLineComponentProps> = memo(({ line, side 
 
   return (
     <div className={`flex ${styles.bg} border-l-2 ${styles.border}`}>
-      <span className="w-12 flex-shrink-0 px-2 py-0.5 text-right text-xs text-text-muted select-none border-r border-white/5">
+      <span className="w-12 flex-shrink-0 px-2 py-0.5 text-right text-xs text-text-muted select-none border-r border-surface-border">
         {lineNum ?? ''}
       </span>
       <span className="px-1 py-0.5 text-xs text-text-muted select-none w-4">

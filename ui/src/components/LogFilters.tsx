@@ -85,7 +85,7 @@ export const LogFilters: FC<LogFiltersProps> = memo(
               id="level-filter"
               value={levelFilter}
               onChange={handleLevelChange}
-              className="rounded-lg border border-white/10 bg-bg-base/60 px-3 py-1.5 text-sm text-text-primary focus:border-brand-400 focus:outline-none"
+              className="rounded-lg border border-surface-border bg-bg-base/60 px-3 py-1.5 text-sm text-text-primary focus:border-brand-accent focus:outline-none"
               aria-label="Filter by log level"
             >
               {LOG_LEVELS.map((level) => (
@@ -105,7 +105,7 @@ export const LogFilters: FC<LogFiltersProps> = memo(
               id="protocol-filter"
               value={protocolFilter}
               onChange={handleProtocolChange}
-              className="rounded-lg border border-white/10 bg-bg-base/60 px-3 py-1.5 text-sm text-text-primary focus:border-brand-400 focus:outline-none"
+              className="rounded-lg border border-surface-border bg-bg-base/60 px-3 py-1.5 text-sm text-text-primary focus:border-brand-accent focus:outline-none"
               aria-label="Filter by protocol"
             >
               {PROTOCOLS.map((protocol) => (
@@ -129,7 +129,7 @@ export const LogFilters: FC<LogFiltersProps> = memo(
                 value={searchQuery}
                 onChange={handleSearchChange}
                 placeholder="Filter logs..."
-                className="w-full rounded-lg border border-white/10 bg-bg-base/60 py-1.5 pl-9 pr-3 text-sm text-text-primary placeholder-gray-500 focus:border-brand-400 focus:outline-none"
+                className="w-full rounded-lg border border-surface-border bg-bg-base/60 py-1.5 pl-9 pr-3 text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none"
                 aria-label="Search logs"
               />
             </div>
@@ -145,7 +145,7 @@ export const LogFilters: FC<LogFiltersProps> = memo(
                 type="checkbox"
                 checked={autoScroll}
                 onChange={handleAutoScrollChange}
-                className="h-4 w-4 rounded border-border-muted bg-bg-elevated text-brand-500 focus:ring-brand-500 focus:ring-offset-gray-900"
+                className="h-4 w-4 rounded border-border-muted bg-bg-elevated text-brand-primary focus:ring-brand-primary focus:ring-offset-gray-900"
               />
               <span className="text-sm text-text-secondary">Auto-scroll</span>
             </label>

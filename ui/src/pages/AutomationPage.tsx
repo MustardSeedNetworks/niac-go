@@ -80,7 +80,7 @@ const AlertConfigCard: FC<{ recentErrors: number }> = ({ recentErrors }) => {
   };
 
   return (
-    <Card className="border-white/5 bg-bg-surface/70">
+    <Card className="border-surface-border bg-bg-surface/70">
       <CardContent className="space-y-4">
         <H2 className="flex items-center gap-2">
           <BellRing className={`${iconSizes.lg} text-status-warning`} />
@@ -93,7 +93,7 @@ const AlertConfigCard: FC<{ recentErrors: number }> = ({ recentErrors }) => {
           <code>--webhook-allowed-host</code> allowlist when set (see{' '}
           <a
             href="https://github.com/krisarmstrong/niac-go/blob/main/SECURITY.md"
-            className="text-brand-300 underline"
+            className="text-brand-accent underline"
           >
             SECURITY.md
           </a>
@@ -114,7 +114,7 @@ const AlertConfigCard: FC<{ recentErrors: number }> = ({ recentErrors }) => {
               <div>
                 <SmallText className="text-text-muted">Packet threshold</SmallText>
                 <input
-                  className="mt-1 w-full rounded-lg border border-white/10 bg-bg-base/60 p-2 text-sm text-text-primary focus:border-brand-400 focus:outline-none"
+                  className="mt-1 w-full rounded-lg border border-surface-border bg-bg-base/60 p-2 text-sm text-text-primary focus:border-brand-accent focus:outline-none"
                   type="number"
                   min="0"
                   placeholder="100000"
@@ -130,7 +130,7 @@ const AlertConfigCard: FC<{ recentErrors: number }> = ({ recentErrors }) => {
               <div>
                 <SmallText className="text-text-muted">Webhook URL</SmallText>
                 <input
-                  className="mt-1 w-full rounded-lg border border-white/10 bg-bg-base/60 p-2 text-sm text-text-primary focus:border-brand-400 focus:outline-none"
+                  className="mt-1 w-full rounded-lg border border-surface-border bg-bg-base/60 p-2 text-sm text-text-primary focus:border-brand-accent focus:outline-none"
                   placeholder="https://hooks.example.com/niac"
                   value={webhook}
                   title="POST'd JSON when the threshold trips. Must be http(s) and not point at a private/loopback/link-local IP. The daemon's --webhook-allowed-host flag further locks this down."

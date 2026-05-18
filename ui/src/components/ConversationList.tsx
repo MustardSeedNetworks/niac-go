@@ -78,7 +78,7 @@ export const ConversationList: FC<ConversationListProps> = memo(
 
     if (conversations.length === 0) {
       return (
-        <Card className="border-white/5 bg-bg-surface/70">
+        <Card className="border-surface-border bg-bg-surface/70">
           <CardContent>
             <div className="text-center py-8 text-text-muted">
               <p className="text-sm">No TCP/UDP conversations found</p>
@@ -90,7 +90,7 @@ export const ConversationList: FC<ConversationListProps> = memo(
     }
 
     return (
-      <Card className="border-white/5 bg-bg-surface/70">
+      <Card className="border-surface-border bg-bg-surface/70">
         <CardContent>
           <div className="mb-3 flex items-center justify-between">
             <SmallText className="text-text-muted">
@@ -99,7 +99,7 @@ export const ConversationList: FC<ConversationListProps> = memo(
             <SmallText className="text-text-muted">Click a row to filter packets</SmallText>
           </div>
 
-          <div className="overflow-auto rounded-lg border border-white/5 max-h-[500px]">
+          <div className="overflow-auto rounded-lg border border-surface-border max-h-[500px]">
             <table className="min-w-full divide-y divide-white/5">
               <thead className="bg-bg-surface/80 sticky top-0 z-10">
                 <tr>
@@ -110,25 +110,25 @@ export const ConversationList: FC<ConversationListProps> = memo(
                     Endpoint B
                   </th>
                   <th
-                    className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-text-muted cursor-pointer hover:text-brand-300 select-none"
+                    className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-text-muted cursor-pointer hover:text-brand-accent select-none"
                     onClick={() => handleSort('protocol')}
                   >
                     Protocol{sortIndicator('protocol')}
                   </th>
                   <th
-                    className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-text-muted cursor-pointer hover:text-brand-300 select-none"
+                    className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-text-muted cursor-pointer hover:text-brand-accent select-none"
                     onClick={() => handleSort('packets')}
                   >
                     Packets{sortIndicator('packets')}
                   </th>
                   <th
-                    className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-text-muted cursor-pointer hover:text-brand-300 select-none"
+                    className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-text-muted cursor-pointer hover:text-brand-accent select-none"
                     onClick={() => handleSort('bytes')}
                   >
                     Bytes{sortIndicator('bytes')}
                   </th>
                   <th
-                    className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-text-muted cursor-pointer hover:text-brand-300 select-none"
+                    className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-text-muted cursor-pointer hover:text-brand-accent select-none"
                     onClick={() => handleSort('duration')}
                   >
                     Duration{sortIndicator('duration')}

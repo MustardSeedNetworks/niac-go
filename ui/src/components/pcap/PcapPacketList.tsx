@@ -35,7 +35,7 @@ const PacketRow = memo(
     <tr
       onClick={onClick}
       className={`cursor-pointer transition-colors ${
-        isSelected ? 'bg-brand-900/30' : 'hover:bg-bg-surface/50'
+        isSelected ? 'bg-brand-primary/30' : 'hover:bg-bg-surface/50'
       }`}
       style={rowStyle}
     >
@@ -75,7 +75,7 @@ export const PcapPacketList: FC<PcapPacketListProps> = memo(
 
     if (totalPackets === 0) {
       return (
-        <Card className="border-white/5 bg-bg-surface/70 h-full">
+        <Card className="border-surface-border bg-bg-surface/70 h-full">
           <CardContent className="h-full flex items-center justify-center text-text-muted">
             <div className="text-center">
               <p className="text-sm">No packets to display</p>
@@ -87,7 +87,7 @@ export const PcapPacketList: FC<PcapPacketListProps> = memo(
     }
 
     return (
-      <Card className="border-white/5 bg-bg-surface/70 h-full flex flex-col">
+      <Card className="border-surface-border bg-bg-surface/70 h-full flex flex-col">
         <CardContent className="h-full flex flex-col">
           {/* Packet count */}
           <div className="mb-3 flex items-center justify-between">
@@ -97,7 +97,7 @@ export const PcapPacketList: FC<PcapPacketListProps> = memo(
           </div>
 
           {/* Packet Table */}
-          <div className="flex-1 min-h-0 overflow-auto rounded-lg border border-white/5">
+          <div className="flex-1 min-h-0 overflow-auto rounded-lg border border-surface-border">
             {packets.length === 0 ? (
               <div className="h-full flex items-center justify-center text-text-muted">
                 <div className="text-center">
@@ -113,7 +113,7 @@ export const PcapPacketList: FC<PcapPacketListProps> = memo(
                       #
                     </th>
                     <th
-                      className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-text-muted cursor-pointer hover:text-brand-300 select-none"
+                      className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-text-muted cursor-pointer hover:text-brand-accent select-none"
                       onClick={cycleTimeMode}
                       title="Click to cycle: Absolute / Relative / Delta"
                     >

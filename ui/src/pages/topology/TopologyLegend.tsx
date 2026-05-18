@@ -27,7 +27,7 @@ export const TopologyLegend: FC<TopologyLegendProps> = ({ show, onToggle }) => {
       <button
         type="button"
         onClick={onToggle}
-        className="flex items-center gap-2 px-3 py-2 rounded-lg bg-bg-elevated/90 border border-white/10 text-sm text-text-secondary hover:bg-bg-elevated/90 transition-colors"
+        className="flex items-center gap-2 px-3 py-2 rounded-lg bg-bg-elevated/90 border border-surface-border text-sm text-text-secondary hover:bg-bg-elevated/90 transition-colors"
       >
         <Eye className="w-4 h-4" />
         Show Legend
@@ -36,7 +36,7 @@ export const TopologyLegend: FC<TopologyLegendProps> = ({ show, onToggle }) => {
   }
 
   return (
-    <div className="bg-bg-elevated/95 backdrop-blur-sm border border-white/10 rounded-xl p-4 min-w-[200px]">
+    <div className="bg-bg-elevated/95 backdrop-blur-sm border border-surface-border rounded-xl p-4 min-w-[200px]">
       <div className="flex items-center justify-between mb-3">
         <span className="text-sm font-semibold text-text-primary">Legend</span>
         <button

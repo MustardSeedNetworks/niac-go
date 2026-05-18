@@ -27,7 +27,7 @@ export const FilterBar: FC<FilterBarProps> = memo(({ value, onChange, placeholde
   const isValid = !validationError;
 
   const borderColor = !value.trim()
-    ? 'border-white/10'
+    ? 'border-surface-border'
     : isValid
       ? 'border-status-success/60'
       : 'border-status-error/60';
@@ -122,7 +122,7 @@ export const FilterBar: FC<FilterBarProps> = memo(({ value, onChange, placeholde
 
           {/* Autocomplete dropdown */}
           {suggestions.length > 0 && isFocused && (
-            <div className="absolute top-full left-0 mt-1 w-full bg-bg-surface border border-white/10 rounded-lg shadow-lg z-30 max-h-48 overflow-y-auto">
+            <div className="absolute top-full left-0 mt-1 w-full bg-bg-surface border border-surface-border rounded-lg shadow-lg z-30 max-h-48 overflow-y-auto">
               {suggestions.map((suggestion, idx) => (
                 <button
                   key={suggestion.text}
@@ -137,7 +137,7 @@ export const FilterBar: FC<FilterBarProps> = memo(({ value, onChange, placeholde
                     applySuggestion(suggestion);
                   }}
                 >
-                  <span className="font-mono text-brand-300">{suggestion.text}</span>
+                  <span className="font-mono text-brand-accent">{suggestion.text}</span>
                   <span className="ml-2 text-text-muted text-xs">{suggestion.description}</span>
                 </button>
               ))}
@@ -152,7 +152,7 @@ export const FilterBar: FC<FilterBarProps> = memo(({ value, onChange, placeholde
               key={protocol}
               type="button"
               onClick={() => handleQuickInsert(protocol)}
-              className="px-2 py-1 text-xs rounded border border-white/10 text-text-muted hover:text-text-primary hover:border-white/20 bg-bg-surface/50 transition-colors uppercase"
+              className="px-2 py-1 text-xs rounded border border-surface-border text-text-muted hover:text-text-primary hover:border-surface-border bg-bg-surface/50 transition-colors uppercase"
             >
               {protocol}
             </button>

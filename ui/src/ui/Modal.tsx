@@ -77,14 +77,14 @@ export const Modal: FC<ModalProps> = ({
       )}
       <div
         ref={containerRef}
-        className={`mx-4 w-full ${sizeClasses[size]} rounded-2xl border border-white/10 bg-bg-surface/95 shadow-2xl ${className}`}
+        className={`mx-4 w-full ${sizeClasses[size]} rounded-2xl border border-surface-border bg-bg-surface/95 shadow-2xl ${className}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby={title ? 'modal-title' : undefined}
         onKeyDown={handleContentKeyDown}
       >
         {(title || showCloseButton) && (
-          <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-surface-border">
             {title && (
               <h2 id="modal-title" className="text-lg font-semibold text-text-primary">
                 {title}
@@ -94,7 +94,7 @@ export const Modal: FC<ModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="ml-auto p-1 text-text-muted hover:text-text-primary transition-colors rounded-lg hover:bg-white/10"
+                className="ml-auto p-1 text-text-muted hover:text-text-primary transition-colors rounded-lg hover:bg-surface-hover"
                 aria-label="Close modal"
               >
                 <X className={iconSizes.lg} />
@@ -123,7 +123,7 @@ export const ModalFooter: FC<{ children: ReactNode; className?: string }> = ({
   children,
   className = '',
 }) => (
-  <div className={`flex justify-end gap-3 pt-4 mt-4 border-t border-white/10 ${className}`}>
+  <div className={`flex justify-end gap-3 pt-4 mt-4 border-t border-surface-border ${className}`}>
     {children}
   </div>
 );

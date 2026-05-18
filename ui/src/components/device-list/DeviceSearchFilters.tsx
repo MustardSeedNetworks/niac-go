@@ -38,7 +38,7 @@ export const DeviceSearchFilters: FC<DeviceSearchFiltersProps> = ({
           placeholder="Search by hostname, MAC, or IP..."
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
-          className="w-full rounded-lg border border-white/10 bg-bg-base/60 py-2.5 pl-10 pr-10 text-sm text-text-primary placeholder-gray-500 focus:border-brand-400 focus:outline-none"
+          className="w-full rounded-lg border border-surface-border bg-bg-base/60 py-2.5 pl-10 pr-10 text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none"
         />
         {searchQuery && (
           <button
@@ -58,7 +58,7 @@ export const DeviceSearchFilters: FC<DeviceSearchFiltersProps> = ({
         <select
           value={typeFilter}
           onChange={(e) => onTypeFilterChange(e.target.value as DeviceType | 'all')}
-          className="rounded-lg border border-white/10 bg-bg-base/60 py-2 px-3 text-sm text-text-primary focus:border-brand-400 focus:outline-none"
+          className="rounded-lg border border-surface-border bg-bg-base/60 py-2 px-3 text-sm text-text-primary focus:border-brand-accent focus:outline-none"
         >
           <option value="all">All Types</option>
           {deviceTypes.map((type) => (
@@ -73,7 +73,7 @@ export const DeviceSearchFilters: FC<DeviceSearchFiltersProps> = ({
       <select
         value={protocolFilter}
         onChange={(e) => onProtocolFilterChange(e.target.value)}
-        className="rounded-lg border border-white/10 bg-bg-base/60 py-2 px-3 text-sm text-text-primary focus:border-brand-400 focus:outline-none"
+        className="rounded-lg border border-surface-border bg-bg-base/60 py-2 px-3 text-sm text-text-primary focus:border-brand-accent focus:outline-none"
       >
         <option value="all">All Protocols</option>
         {protocols.map((proto) => (
@@ -84,14 +84,14 @@ export const DeviceSearchFilters: FC<DeviceSearchFiltersProps> = ({
       </select>
 
       {/* View toggle */}
-      <div className="flex items-center gap-1 p-1 rounded-lg bg-bg-base/60 border border-white/10">
+      <div className="flex items-center gap-1 p-1 rounded-lg bg-bg-base/60 border border-surface-border">
         <button
           type="button"
           onClick={() => onViewModeChange('table')}
           className={`p-2 rounded-md transition-colors ${
             viewMode === 'table'
-              ? 'bg-brand-600 text-text-primary'
-              : 'text-text-muted hover:text-text-primary hover:bg-white/10'
+              ? 'bg-brand-primary text-text-primary'
+              : 'text-text-muted hover:text-text-primary hover:bg-surface-hover'
           }`}
           title="Table view"
           aria-label="Table view"
@@ -103,8 +103,8 @@ export const DeviceSearchFilters: FC<DeviceSearchFiltersProps> = ({
           onClick={() => onViewModeChange('cards')}
           className={`p-2 rounded-md transition-colors ${
             viewMode === 'cards'
-              ? 'bg-brand-600 text-text-primary'
-              : 'text-text-muted hover:text-text-primary hover:bg-white/10'
+              ? 'bg-brand-primary text-text-primary'
+              : 'text-text-muted hover:text-text-primary hover:bg-surface-hover'
           }`}
           title="Card view"
           aria-label="Card view"

@@ -258,7 +258,7 @@ export const YamlEditor: FC<YamlEditorProps> = ({
   return (
     <section
       ref={containerRef}
-      className={`rounded-xl border border-white/10 bg-bg-base/70 overflow-hidden ${className}`}
+      className={`rounded-xl border border-surface-border bg-bg-base/70 overflow-hidden ${className}`}
       style={containerStyle}
       aria-label="YAML editor"
     />

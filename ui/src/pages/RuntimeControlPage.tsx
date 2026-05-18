@@ -238,14 +238,14 @@ export const RuntimeControlPage: FC = () => {
 
       {/* Start Simulation Card */}
       {isDaemonMode && !simStatus?.running && (
-        <Card className="border-white/5 bg-gradient-to-br from-brand-900/30 to-bg-surface/70">
+        <Card className="border-surface-border bg-gradient-to-br from-brand-primary/30 to-bg-surface/70">
           <CardContent className="space-y-4">
             {/* Single-row action bar: interface + start. The interface
                 dropdown takes the natural width of its content; Start sits
                 immediately next to it so the action is obvious. */}
             <div className="flex flex-wrap items-end gap-3">
               <div className="flex items-center gap-3">
-                <PlugZap className={`${iconSizes.xl} text-brand-400`} />
+                <PlugZap className={`${iconSizes.xl} text-brand-accent`} />
                 <H2>Start Simulation</H2>
               </div>
               <div className="ml-auto flex flex-wrap items-end gap-3">
@@ -263,7 +263,7 @@ export const RuntimeControlPage: FC = () => {
                       onChange={handleInterfaceChange}
                       disabled={interfacesLoading || interfaces.length === 0}
                       title="Pick the host interface the daemon should bind to. Loopback (lo0/lo) is safest for local testing."
-                      className="w-full rounded border border-white/10 bg-bg-elevated py-2 pl-10 pr-3 text-sm text-text-primary focus:border-brand-400 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                      className="w-full rounded border border-surface-border bg-bg-elevated py-2 pl-10 pr-3 text-sm text-text-primary focus:border-brand-accent focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {interfacesLoading && <option value="">Loading…</option>}
                       {!interfacesLoading && interfaces.length === 0 && (
@@ -290,7 +290,7 @@ export const RuntimeControlPage: FC = () => {
                   // Pulse the button when everything's picked so it's the obvious next click.
                   className={
                     hasValidConfig && !starting
-                      ? 'animate-pulse shadow-lg shadow-brand-500/30'
+                      ? 'animate-pulse shadow-lg shadow-brand-primary/30'
                       : undefined
                   }
                   title={
@@ -307,7 +307,7 @@ export const RuntimeControlPage: FC = () => {
             </div>
 
             {/* Picked-config status pill */}
-            <div className="flex items-center justify-between rounded border border-white/5 bg-bg-surface/40 px-3 py-2 text-xs">
+            <div className="flex items-center justify-between rounded border border-surface-border bg-bg-surface/40 px-3 py-2 text-xs">
               <span className="text-text-muted">Configuration:</span>
               {simulationSettings.configName || quickUploadFile ? (
                 <SmallText className="text-status-success">

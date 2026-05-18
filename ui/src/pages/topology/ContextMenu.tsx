@@ -101,7 +101,7 @@ export const ContextMenu: FC<Props> = ({ x, y, items, onClose }) => {
       // [9999] because the topology page sits inside a stacking
       // context (the Card chrome creates one) and z-50 lost to
       // ReactFlow's own overlay elements in earlier versions.
-      className="fixed z-[9999] min-w-[180px] rounded-md border border-white/10 bg-bg-base/95 py-1 text-xs text-text-primary shadow-xl backdrop-blur"
+      className="fixed z-[9999] min-w-[180px] rounded-md border border-surface-border bg-bg-base/95 py-1 text-xs text-text-primary shadow-xl backdrop-blur"
       style={{ left: clampedX, top: clampedY }}
       // Stop right-click on the menu itself from re-opening the pane
       // menu through ReactFlow's onPaneContextMenu.
@@ -110,7 +110,9 @@ export const ContextMenu: FC<Props> = ({ x, y, items, onClose }) => {
     >
       {items.map((item, idx) => (
         <div key={item.key}>
-          {item.separatorBefore && idx > 0 && <hr className="my-1 h-px border-0 bg-white/10" />}
+          {item.separatorBefore && idx > 0 && (
+            <hr className="my-1 h-px border-0 bg-surface-hover" />
+          )}
           <button
             type="button"
             role="menuitem"
@@ -121,7 +123,7 @@ export const ContextMenu: FC<Props> = ({ x, y, items, onClose }) => {
                 ? 'text-text-disabled cursor-not-allowed'
                 : item.destructive
                   ? 'text-status-error hover:bg-status-error/15 hover:text-status-error'
-                  : 'hover:bg-white/5 hover:text-text-primary'
+                  : 'hover:bg-surface-hover hover:text-text-primary'
             }`}
           >
             <span>{item.label}</span>

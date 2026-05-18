@@ -97,7 +97,7 @@ export const ConfigsList: FC<{
             ))}
           </div>
         ) : (
-          <ul className="divide-y divide-white/5 overflow-hidden rounded-lg border border-white/10 bg-bg-base/40">
+          <ul className="divide-y divide-white/5 overflow-hidden rounded-lg border border-surface-border bg-bg-base/40">
             {items.map((item) => (
               <ConfigRow
                 key={item.key}
@@ -144,7 +144,7 @@ const FavoriteStar: FC<{
       favorited
         ? 'text-status-warning hover:text-status-warning'
         : 'text-text-muted hover:text-status-warning'
-    } ${compact ? '' : 'hover:bg-white/5'}`}
+    } ${compact ? '' : 'hover:bg-surface-hover'}`}
   >
     <Star
       className={compact ? iconSizes.sm : iconSizes.md}
@@ -179,8 +179,8 @@ const ConfigCard: FC<SharedItemProps> = ({
     <div
       className={`flex flex-col gap-3 rounded-lg border p-3 transition-colors ${
         selected
-          ? 'border-brand-400/50 bg-brand-500/10'
-          : 'border-white/10 bg-bg-base/40 hover:border-brand-500/30'
+          ? 'border-brand-accent/50 bg-brand-primary/10'
+          : 'border-surface-border bg-bg-base/40 hover:border-brand-primary/30'
       }`}
     >
       <div className="flex items-start justify-between gap-2">
@@ -212,7 +212,7 @@ const ConfigCard: FC<SharedItemProps> = ({
       </div>
       <div className="flex gap-2">
         {selected ? (
-          <div className="flex flex-1 items-center justify-center gap-1.5 rounded bg-brand-500/30 px-2 py-1.5 text-xs font-medium text-brand-50 ring-1 ring-brand-400/60">
+          <div className="flex flex-1 items-center justify-center gap-1.5 rounded bg-brand-primary/30 px-2 py-1.5 text-xs font-medium text-brand-accent ring-1 ring-brand-accent/60">
             <Check className={iconSizes.sm} />
             <span>Selected</span>
           </div>
@@ -220,7 +220,7 @@ const ConfigCard: FC<SharedItemProps> = ({
           <button
             type="button"
             onClick={() => onSelect(item)}
-            className="flex-1 rounded bg-brand-500/20 px-2 py-1.5 text-xs font-medium text-brand-100 ring-1 ring-brand-400/40 hover:bg-brand-500/30"
+            className="flex-1 rounded bg-brand-primary/20 px-2 py-1.5 text-xs font-medium text-brand-accent ring-1 ring-brand-accent/40 hover:bg-brand-primary/30"
             title="Select this network — click Start Simulation below to run it"
           >
             Select
@@ -230,7 +230,7 @@ const ConfigCard: FC<SharedItemProps> = ({
           <button
             type="button"
             onClick={() => onView(item)}
-            className="rounded border border-white/10 bg-bg-surface/60 px-2 py-1.5 text-xs font-medium text-text-primary hover:bg-white/10"
+            className="rounded border border-surface-border bg-bg-surface/60 px-2 py-1.5 text-xs font-medium text-text-primary hover:bg-surface-hover"
             title="Preview YAML"
           >
             <Eye className={iconSizes.sm} />
@@ -262,7 +262,7 @@ const ConfigRow: FC<SharedItemProps> = ({
 }) => (
   <li
     className={`flex items-center gap-3 px-3 py-2 transition-colors ${
-      selected ? 'bg-brand-500/10' : 'hover:bg-white/5'
+      selected ? 'bg-brand-primary/10' : 'hover:bg-surface-hover'
     }`}
   >
     {item.kind !== 'local' && (
@@ -301,7 +301,7 @@ const ConfigRow: FC<SharedItemProps> = ({
       <button
         type="button"
         onClick={() => onView(item)}
-        className="rounded p-1.5 text-text-muted hover:bg-white/10 hover:text-text-primary"
+        className="rounded p-1.5 text-text-muted hover:bg-surface-hover hover:text-text-primary"
         title="Preview the template YAML"
       >
         <Eye className={iconSizes.md} />

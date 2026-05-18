@@ -146,11 +146,11 @@ export const SelectedNetworkPreview: FC<SelectedNetworkPreviewProps> = ({
   const displayName = uploadFile?.name ?? name;
 
   return (
-    <Card className="border-white/5 bg-bg-surface/70">
+    <Card className="border-surface-border bg-bg-surface/70">
       <CardContent className="space-y-3">
         <div className="flex items-baseline justify-between gap-3">
           <H2 className="flex items-center gap-2 text-lg">
-            <Eye className={`${iconSizes.lg} text-brand-300`} />
+            <Eye className={`${iconSizes.lg} text-brand-accent`} />
             Selected: {displayName}
           </H2>
           <SmallText className="text-text-muted">Preview only — Start to launch</SmallText>
@@ -177,7 +177,7 @@ export const SelectedNetworkPreview: FC<SelectedNetworkPreviewProps> = ({
               return (
                 <li
                   key={d.name}
-                  className="rounded-lg border border-white/10 bg-bg-base/40 px-3 py-2"
+                  className="rounded-lg border border-surface-border bg-bg-base/40 px-3 py-2"
                 >
                   <div className="flex items-center gap-2">
                     <Icon className={`${iconSizes.sm} text-text-muted`} />

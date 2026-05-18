@@ -61,13 +61,13 @@ export const ActionsMenu: FC<{
       {open && (
         <div
           role="menu"
-          className="absolute right-0 mt-1 min-w-[180px] rounded-md border border-white/10 bg-bg-base/95 py-1 text-xs text-text-primary shadow-xl backdrop-blur z-50"
+          className="absolute right-0 mt-1 min-w-[180px] rounded-md border border-surface-border bg-bg-base/95 py-1 text-xs text-text-primary shadow-xl backdrop-blur z-50"
         >
           <button
             type="button"
             role="menuitem"
             onClick={handle(onExportPNG)}
-            className="flex w-full items-center justify-between gap-3 px-3 py-1.5 text-left transition-colors hover:bg-white/5 hover:text-text-primary"
+            className="flex w-full items-center justify-between gap-3 px-3 py-1.5 text-left transition-colors hover:bg-surface-hover hover:text-text-primary"
           >
             <span>Export as PNG</span>
             <span className="text-[10px] text-text-muted">image</span>
@@ -76,7 +76,7 @@ export const ActionsMenu: FC<{
             type="button"
             role="menuitem"
             onClick={handle(onExportJSON)}
-            className="flex w-full items-center justify-between gap-3 px-3 py-1.5 text-left transition-colors hover:bg-white/5 hover:text-text-primary"
+            className="flex w-full items-center justify-between gap-3 px-3 py-1.5 text-left transition-colors hover:bg-surface-hover hover:text-text-primary"
           >
             <span>Export topology JSON</span>
             <span className="text-[10px] text-text-muted">data</span>

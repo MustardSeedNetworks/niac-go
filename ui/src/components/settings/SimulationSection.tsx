@@ -134,7 +134,7 @@ export function SimulationSection(): ReactElement {
     <div className="space-y-4">
       {/* Section Header */}
       <div className="flex items-center gap-2">
-        <PlugZap className="w-5 h-5 text-brand-400" aria-hidden="true" />
+        <PlugZap className="w-5 h-5 text-brand-accent" aria-hidden="true" />
         <h3 className="text-sm font-semibold text-text-primary">Simulation</h3>
       </div>
 
@@ -152,8 +152,8 @@ export function SimulationSection(): ReactElement {
             disabled={loading}
             className={cn(
               'w-full pl-10 pr-4 py-2 text-sm',
-              'bg-bg-elevated border border-white/10 rounded-lg',
-              'text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-500/50',
+              'bg-bg-elevated border border-surface-border rounded-lg',
+              'text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/50',
               'disabled:opacity-50 disabled:cursor-not-allowed',
             )}
           >
@@ -174,7 +174,10 @@ export function SimulationSection(): ReactElement {
       {/* Config Source Tabs */}
       <div className="space-y-3">
         <span className="block text-sm text-text-muted">Configuration</span>
-        <div className="flex border border-white/10 rounded-lg overflow-hidden" role="tablist">
+        <div
+          className="flex border border-surface-border rounded-lg overflow-hidden"
+          role="tablist"
+        >
           {CONFIG_TABS.map((tab) => (
             <button
               key={tab.id}
@@ -184,7 +187,7 @@ export function SimulationSection(): ReactElement {
                 'flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium',
                 'transition-colors',
                 activeTab === tab.id
-                  ? 'bg-brand-600 text-text-primary'
+                  ? 'bg-brand-primary text-text-primary'
                   : 'bg-bg-elevated text-text-muted hover:bg-bg-elevated hover:text-text-primary',
               )}
             >
@@ -228,7 +231,7 @@ export function SimulationSection(): ReactElement {
 
       {/* Current Selection Display */}
       {simulationSettings.configName && (
-        <div className="p-3 bg-brand-900/20 border border-brand-500/30 rounded-lg">
+        <div className="p-3 bg-brand-primary/20 border border-brand-primary/30 rounded-lg">
           <p className="text-xs text-text-muted">Selected configuration:</p>
           <p className="text-sm text-text-primary font-medium mt-1">
             {simulationSettings.configName}
@@ -270,9 +273,9 @@ function TemplateList({ templates, selectedName, onSelect }: TemplateListProps):
         onChange={(e) => setSearch(e.target.value)}
         className={cn(
           'w-full px-3 py-2 text-sm',
-          'bg-bg-elevated border border-white/10 rounded-lg',
+          'bg-bg-elevated border border-surface-border rounded-lg',
           'text-text-primary placeholder:text-text-muted',
-          'focus:outline-none focus:ring-2 focus:ring-brand-500/50',
+          'focus:outline-none focus:ring-2 focus:ring-brand-primary/50',
         )}
       />
       <div className="max-h-[200px] overflow-y-auto space-y-1">
@@ -289,8 +292,8 @@ function TemplateList({ templates, selectedName, onSelect }: TemplateListProps):
             className={cn(
               'w-full text-left px-3 py-2 rounded-lg transition-colors',
               selectedName === template.name
-                ? 'bg-brand-600/30 border border-brand-500/50'
-                : 'bg-white/5 hover:bg-white/10 border border-transparent',
+                ? 'bg-brand-primary/30 border border-brand-primary/50'
+                : 'bg-surface-hover hover:bg-surface-hover border border-transparent',
             )}
           >
             <div className="text-sm text-text-primary font-medium">{template.name}</div>
@@ -334,8 +337,8 @@ function UserConfigList({ configs, selectedName, onSelect }: UserConfigListProps
           className={cn(
             'w-full text-left px-3 py-2 rounded-lg transition-colors',
             selectedName === config.name
-              ? 'bg-brand-600/30 border border-brand-500/50'
-              : 'bg-white/5 hover:bg-white/10 border border-transparent',
+              ? 'bg-brand-primary/30 border border-brand-primary/50'
+              : 'bg-surface-hover hover:bg-surface-hover border border-transparent',
           )}
         >
           <div className="text-sm text-text-primary font-medium">{config.name}</div>
@@ -389,8 +392,8 @@ function UploadSection(): ReactElement {
     <div className="space-y-3">
       <div
         className={cn(
-          'border-2 border-dashed border-white/10 rounded-lg p-4',
-          'hover:border-brand-500/50 transition-colors',
+          'border-2 border-dashed border-surface-border rounded-lg p-4',
+          'hover:border-brand-primary/50 transition-colors',
         )}
       >
         <input

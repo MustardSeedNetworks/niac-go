@@ -109,12 +109,12 @@ export const MergeControls: FC<MergeControlsProps> = ({
   }, [onReset]);
 
   return (
-    <Card className="border-white/5 bg-bg-surface/70">
+    <Card className="border-surface-border bg-bg-surface/70">
       <CardContent className="space-y-4">
         {/* Header */}
         <div className="flex items-center justify-between">
           <H2 className="flex items-center gap-2">
-            <FileCheck className={`${iconSizes.lg} text-brand-300`} />
+            <FileCheck className={`${iconSizes.lg} text-brand-accent`} />
             Merge Controls
           </H2>
           {stats.totalChanges > 0 && (
@@ -146,7 +146,7 @@ export const MergeControls: FC<MergeControlsProps> = ({
             </div>
             <div className="h-2 rounded-full bg-bg-elevated overflow-hidden">
               <div
-                className="h-full bg-gradient-to-r from-brand-500 to-brand-400 transition-all duration-300"
+                className="h-full bg-gradient-to-r from-brand-primary to-brand-accent transition-all duration-300"
                 style={{ width: `${stats.progress}%` }}
               />
             </div>
@@ -207,7 +207,7 @@ export const MergeControls: FC<MergeControlsProps> = ({
         </div>
 
         {/* Main actions */}
-        <div className="flex flex-wrap gap-3 pt-2 border-t border-white/10">
+        <div className="flex flex-wrap gap-3 pt-2 border-t border-surface-border">
           <Button
             tone="violet"
             disabled={disabled || stats.totalChanges === 0}
@@ -327,16 +327,16 @@ export const MergePreviewModal: FC<MergePreviewModalProps> = ({ content, onClose
         aria-label="Close modal"
       />
       <div
-        className="relative mx-4 max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-2xl border border-white/10 bg-bg-surface/95 shadow-2xl flex flex-col"
+        className="relative mx-4 max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-2xl border border-surface-border bg-bg-surface/95 shadow-2xl flex flex-col"
         role="dialog"
         aria-modal="true"
         aria-labelledby="preview-modal-title"
       >
         {/* Modal Header */}
-        <div className="flex items-center justify-between border-b border-white/10 px-6 py-4 flex-shrink-0">
+        <div className="flex items-center justify-between border-b border-surface-border px-6 py-4 flex-shrink-0">
           <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-brand-500/20 p-2">
-              <FileCheck className={`${iconSizes.lg} text-brand-300`} />
+            <div className="rounded-lg bg-brand-primary/20 p-2">
+              <FileCheck className={`${iconSizes.lg} text-brand-accent`} />
             </div>
             <div>
               <h2 id="preview-modal-title" className="text-lg font-semibold text-text-primary">
@@ -348,7 +348,7 @@ export const MergePreviewModal: FC<MergePreviewModalProps> = ({ content, onClose
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-2 text-text-muted hover:bg-white/10 hover:text-text-primary transition-colors"
+            className="rounded-lg p-2 text-text-muted hover:bg-surface-hover hover:text-text-primary transition-colors"
             aria-label="Close modal"
           >
             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -376,7 +376,7 @@ export const MergePreviewModal: FC<MergePreviewModalProps> = ({ content, onClose
         </div>
 
         {/* Modal Footer */}
-        <div className="flex justify-end gap-3 border-t border-white/10 px-6 py-4 bg-bg-base/50 flex-shrink-0">
+        <div className="flex justify-end gap-3 border-t border-surface-border px-6 py-4 bg-bg-base/50 flex-shrink-0">
           <Button variant="outline" onClick={onClose}>
             Close
           </Button>

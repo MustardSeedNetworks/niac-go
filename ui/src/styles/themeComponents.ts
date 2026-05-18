@@ -11,15 +11,15 @@
  */
 
 export const button = {
-  base: 'inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-brand-500/50 disabled:opacity-50 disabled:cursor-not-allowed',
+  base: 'inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-brand-primary/50 disabled:opacity-50 disabled:cursor-not-allowed',
 
   variant: {
     primary:
-      'bg-gradient-to-r from-brand-600 to-brand-500 text-text-primary shadow-lg shadow-brand-500/30 hover:from-brand-500 hover:to-brand-400 active:scale-[0.98]',
+      'bg-gradient-to-r from-brand-primary to-brand-primary text-text-primary shadow-lg shadow-brand-primary/30 hover:from-brand-primary hover:to-brand-accent active:scale-[0.98]',
     secondary: 'bg-bg-elevated text-text-primary hover:bg-bg-overlay border border-border-default',
     ghost: 'text-text-muted hover:text-text-primary hover:bg-bg-elevated',
     outline:
-      'border border-border-muted text-text-secondary hover:bg-bg-elevated hover:border-brand-500/50',
+      'border border-border-muted text-text-secondary hover:bg-bg-elevated hover:border-brand-primary/50',
     danger:
       'bg-status-error/20 text-status-error border border-status-error/30 hover:bg-status-error/30',
     success:
@@ -35,7 +35,7 @@ export const button = {
 } as const;
 
 export const input = {
-  base: 'w-full rounded-lg bg-bg-surface text-text-primary transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500/50 disabled:opacity-50 disabled:cursor-not-allowed placeholder:text-text-disabled',
+  base: 'w-full rounded-lg bg-bg-surface text-text-primary transition-colors focus:outline-none focus:ring-2 focus:ring-brand-primary/50 disabled:opacity-50 disabled:cursor-not-allowed placeholder:text-text-disabled',
 
   state: {
     default: 'border border-border-default',
@@ -58,7 +58,7 @@ export const card = {
     elevated:
       'bg-gradient-to-br from-bg-elevated to-bg-surface border border-border-default shadow-xl shadow-black/20',
     interactive:
-      'bg-gradient-to-br from-bg-elevated to-bg-surface border border-border-default hover:border-brand-500/30 cursor-pointer transition-colors',
+      'bg-gradient-to-br from-bg-elevated to-bg-surface border border-border-default hover:border-brand-primary/30 cursor-pointer transition-colors',
     glass: 'bg-bg-elevated/40 backdrop-blur-2xl border border-border-default shadow-2xl',
   },
 
@@ -79,7 +79,7 @@ export const badge = {
     warning: 'bg-status-warning/20 text-status-warning border border-status-warning/30',
     error: 'bg-status-error/20 text-status-error border border-status-error/30',
     info: 'bg-status-info/20 text-status-info border border-status-info/30',
-    primary: 'bg-brand-500/20 text-brand-400 border border-brand-500/30',
+    primary: 'bg-brand-primary/20 text-brand-accent border border-brand-primary/30',
     new: 'bg-status-success/20 text-status-success',
     beta: 'bg-status-warning/20 text-status-warning',
   },

@@ -18,8 +18,8 @@ export const DeviceBulkActions: FC<DeviceBulkActionsProps> = ({
   }
 
   return (
-    <div className="flex items-center gap-4 p-3 rounded-lg bg-brand-500/10 border border-brand-500/30">
-      <span className="text-sm text-brand-200">
+    <div className="flex items-center gap-4 p-3 rounded-lg bg-brand-primary/10 border border-brand-primary/30">
+      <span className="text-sm text-brand-accent">
         {selectedCount} device
         {selectedCount !== 1 ? 's' : ''} selected
       </span>
