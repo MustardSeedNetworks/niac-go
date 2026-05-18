@@ -1,0 +1,74 @@
+{
+  "drawer": {
+    "title": "Configuración",
+    "closeAriaLabel": "Cerrar configuración",
+    "drawerAriaLabel": "Configuración",
+    "backdropAriaLabel": "Cerrar panel de configuración"
+  },
+  "tabs": {
+    "simulation": "Simulación",
+    "appearance": "Apariencia",
+    "network": "Red",
+    "debug": "Depuración",
+    "about": "Acerca de"
+  },
+  "appearance": {
+    "sectionTitle": "Tema",
+    "sectionDescription": "Personalice la apariencia de NIAC",
+    "dark": "Oscuro",
+    "light": "Claro",
+    "system": "Sistema",
+    "quickToggle": "Cambio rápido",
+    "persistenceNote": "El modo oscuro es el predeterminado. Su preferencia se guarda entre sesiones."
+  },
+  "network": {
+    "interfacesTitle": "Interfaces de red",
+    "interfacesDescription": "Interfaces de red disponibles para la inyección de tráfico",
+    "loadingInterfaces": "Cargando interfaces...",
+    "noInterfacesFound": "No se encontraron interfaces",
+    "interfaceManagedFrom": "La selección de interfaz se gestiona desde la página de Control de ejecución.",
+    "connectionTitle": "Configuración de conexión",
+    "connectionDescription": "Configure la conexión del backend",
+    "backendUrl": "URL del backend",
+    "backendUrlDescription": "Dirección del servidor backend de NIAC",
+    "websocket": "WebSocket",
+    "websocketDescription": "Transmisión de eventos en tiempo real",
+    "interfaceTypes": {
+      "ethernet": "Ethernet",
+      "wifi": "WiFi",
+      "loopback": "Loopback",
+      "bridge": "Puente",
+      "virtual": "Virtual",
+      "tunnel": "Túnel",
+      "other": "Otro"
+    }
+  },
+  "debug": {
+    "loggingTitle": "Registro",
+    "loggingDescription": "Configure el nivel de detalle de la salida de depuración",
+    "logLevel": "Nivel de registro",
+    "logLevelDescription": "Nivel de detalle de la salida en consola",
+    "levels": {
+      "error": "Error",
+      "warn": "Advertencia",
+      "info": "Información",
+      "debug": "Depuración"
+    },
+    "devToolsTitle": "Herramientas de desarrollador",
+    "devToolsDescription": "Funciones avanzadas de depuración",
+    "protocolDebugLevels": "Niveles de depuración por protocolo",
+    "protocolDebugLevelsDescription": "Configure el registro por protocolo",
+    "exportDiagnostics": "Exportar diagnósticos",
+    "exportDiagnosticsDescription": "Descargar información de depuración"
+  },
+  "about": {
+    "applicationTitle": "Aplicación",
+    "subtitle": "Consola de inyección y análisis de red",
+    "legalTitle": "Legal",
+    "copyright": "© {{year}} Mustard Seed Networks. Todos los derechos reservados.",
+    "proprietaryNotice": "NIAC es software propietario. Se prohíbe la copia, modificación o distribución no autorizadas.",
+    "linksTitle": "Enlaces",
+    "github": "GitHub",
+    "website": "Sitio web"
+  }
+}

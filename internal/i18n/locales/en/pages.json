@@ -1,0 +1,82 @@
+{
+  "groups": {
+    "overview": "Overview",
+    "library": "Library",
+    "liveView": "Live View",
+    "inspect": "Inspect",
+    "alerts": "Alerts"
+  },
+  "dashboard": {
+    "label": "Dashboard",
+    "title": "Dashboard",
+    "description": "Live counters, run snapshots, and automation status for the active NIAC stack."
+  },
+  "runtime": {
+    "label": "Simulation",
+    "title": "Simulation",
+    "description": "Monitor runtime status, view network interfaces, and manage NIAC configuration."
+  },
+  "devices": {
+    "label": "Running Devices",
+    "title": "Running Devices",
+    "description": "Read-only view of the devices the daemon is currently simulating, plus the running YAML."
+  },
+  "deviceLibrary": {
+    "label": "Devices",
+    "title": "Devices",
+    "description": "Reusable device definitions: search, filter, edit, clone, and delete. Click a device to open the visual editor."
+  },
+  "deviceEditor": {
+    "newLabel": "New Device",
+    "newTitle": "New Device",
+    "newDescription": "Create a new network device configuration.",
+    "editLabel": "Edit Device",
+    "editTitle": "Edit Device",
+    "editDescription": "Edit device configuration settings."
+  },
+  "topology": {
+    "label": "Topology",
+    "title": "Topology",
+    "description": "Visual graph of the configured network plus the live {{protocols}} neighbor table."
+  },
+  "automation": {
+    "label": "Alerts",
+    "title": "Alerts",
+    "description": "Configure alert thresholds and webhook targets for the running daemon."
+  },
+  "traffic": {
+    "label": "Traffic",
+    "title": "Traffic",
+    "description": "Inject controlled errors into the running simulation and replay captured {{format}} files."
+  },
+  "debug": {
+    "label": "Logs",
+    "title": "Logs",
+    "description": "Live log stream from the daemon, with per-protocol debug-level controls."
+  },
+  "packets": {
+    "label": "Packets",
+    "title": "Packets",
+    "description": "Live wire view of packets on the running simulation, or offline inspection of a captured {{format}} file."
+  },
+  "configDiff": {
+    "label": "Compare & Merge",
+    "title": "Compare & Merge",
+    "description": "Compare two {{format}} network configs side-by-side and merge changes between them."
+  },
+  "walkValidator": {
+    "label": "{{protocol}} Walks",
+    "title": "{{protocol}} Walks",
+    "description": "Validate and auto-fix {{protocol}} walk files used by the simulated {{protocol}} agents."
+  },
+  "libraryWalks": {
+    "label": "Walks",
+    "title": "Walk Library",
+    "description": "Read-only browser for the on-disk {{protocol}} walk files the daemon serves from the unified library."
+  },
+  "libraryPcaps": {
+    "label": "{{format}}s",
+    "title": "{{format}} Library",
+    "description": "Read-only browser for the on-disk {{format}} captures the daemon serves from the unified library."
+  }
+}

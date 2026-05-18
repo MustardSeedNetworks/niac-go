@@ -1,0 +1,40 @@
+{
+  "labels": {
+    "discoveryProtocols": "Protocolos de descubrimiento",
+    "neighborTable": "Tabla de vecinos",
+    "neighbor": "Vecino",
+    "neighbors": "Vecinos",
+    "noNeighbors": "Aún no se han descubierto vecinos",
+    "discoveryHint": "Las adyacencias aparecen aquí una vez que los dispositivos simulados intercambian tramas {{protocols}}."
+  },
+  "categories": {
+    "discovery": "Descubrimiento",
+    "routing": "Enrutamiento",
+    "addressing": "Direccionamiento",
+    "monitoring": "Monitoreo",
+    "transport": "Transporte",
+    "application": "Aplicación",
+    "management": "Gestión",
+    "timing": "Temporización",
+    "switching": "Conmutación"
+  },
+  "common": {
+    "request": "Solicitud",
+    "response": "Respuesta",
+    "broadcast": "Difusión",
+    "multicast": "Multidifusión",
+    "unicast": "Unidifusión",
+    "frame": "Trama",
+    "frames": "Tramas",
+    "packetCount": "{{count}} paquete",
+    "packetCount_plural": "{{count}} paquetes",
+    "src": "Origen",
+    "dst": "Destino",
+    "protocolColumn": "Protocolo"
+  },
+  "filters": {
+    "byProtocol": "Filtrar por protocolo",
+    "byDevice": "Filtrar por dispositivo",
+    "allProtocols": "Todos los protocolos"
+  }
+}
