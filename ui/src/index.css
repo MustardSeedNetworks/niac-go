@@ -4,11 +4,20 @@
 
 /*
  * NIAC Theme System
- * Based on seed/stem color patterns with improved contrast
- * Semantic color naming for consistent look and feel
+ * Tailwind v4 CSS-first configuration via @theme directive.
+ * All design tokens declared here become available as utility classes
+ * (e.g. --color-brand-500 → bg-brand-500, text-brand-500).
  */
 
-:root {
+@theme {
+  /* ========================================
+   * Font Families
+   * (v4 uses --font-* prefix to generate font-* utilities)
+   * ======================================== */
+  --font-display: "Space Grotesk", "Inter", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", monospace;
+
   /* ========================================
    * Brand Colors
    * Primary violet with high-contrast variants
@@ -23,30 +32,28 @@
   --color-brand-700: #6d28d9;
   --color-brand-800: #5b21b6;
   --color-brand-900: #4c1d95;
+  --color-brand-950: #2e1065;
 
   /* ========================================
    * Surface Colors (Dark Theme)
-   * Elevated surfaces for visual hierarchy
    * ======================================== */
-  --color-bg-base: #030712; /* Deepest background */
-  --color-bg-surface: #0f1117; /* Main surface */
-  --color-bg-elevated: #1a1d25; /* Cards, modals */
-  --color-bg-overlay: #242731; /* Dropdowns, tooltips */
-  --color-bg-muted: #2d3139; /* Inactive states */
+  --color-bg-base: #030712;
+  --color-bg-surface: #0f1117;
+  --color-bg-elevated: #1a1d25;
+  --color-bg-overlay: #242731;
+  --color-bg-muted: #2d3139;
 
   /* ========================================
-   * Text Colors
-   * High contrast for accessibility (WCAG AA)
+   * Text Colors (WCAG AA contrast)
    * ======================================== */
-  --color-text-primary: #f8fafc; /* Primary text - high contrast */
-  --color-text-secondary: #cbd5e1; /* Secondary text */
-  --color-text-muted: #94a3b8; /* Muted/placeholder text */
-  --color-text-disabled: #64748b; /* Disabled states */
-  --color-text-inverse: #0f172a; /* Text on light backgrounds */
+  --color-text-primary: #f8fafc;
+  --color-text-secondary: #cbd5e1;
+  --color-text-muted: #94a3b8;
+  --color-text-disabled: #64748b;
+  --color-text-inverse: #0f172a;
 
   /* ========================================
    * Border Colors
-   * Subtle borders with focus states
    * ======================================== */
   --color-border-default: rgba(255, 255, 255, 0.08);
   --color-border-subtle: rgba(255, 255, 255, 0.05);
@@ -56,9 +63,7 @@
 
   /* ========================================
    * Status Colors
-   * Semantic colors for feedback states
    * ======================================== */
-  /* Success - Green */
   --color-success-50: #f0fdf4;
   --color-success-100: #dcfce7;
   --color-success-400: #4ade80;
@@ -66,7 +71,6 @@
   --color-success-600: #16a34a;
   --color-success-900: #14532d;
 
-  /* Warning - Amber */
   --color-warning-50: #fffbeb;
   --color-warning-100: #fef3c7;
   --color-warning-400: #fbbf24;
@@ -74,7 +78,6 @@
   --color-warning-600: #d97706;
   --color-warning-900: #78350f;
 
-  /* Error - Red */
   --color-error-50: #fef2f2;
   --color-error-100: #fee2e2;
   --color-error-400: #f87171;
@@ -82,7 +85,6 @@
   --color-error-600: #dc2626;
   --color-error-900: #7f1d1d;
 
-  /* Info - Blue */
   --color-info-50: #eff6ff;
   --color-info-100: #dbeafe;
   --color-info-400: #60a5fa;
@@ -92,33 +94,30 @@
 
   /* ========================================
    * Device Type Colors (Topology)
-   * Distinct colors for network device types
    * ======================================== */
-  --color-device-router: #3b82f6; /* Blue */
-  --color-device-switch: #22c55e; /* Green */
-  --color-device-firewall: #ef4444; /* Red */
-  --color-device-server: #f97316; /* Orange */
-  --color-device-workstation: #6b7280; /* Gray */
-  --color-device-ap: #a855f7; /* Purple */
-  --color-device-iot: #14b8a6; /* Teal */
-  --color-device-unknown: #94a3b8; /* Slate */
+  --color-device-router: #3b82f6;
+  --color-device-switch: #22c55e;
+  --color-device-firewall: #ef4444;
+  --color-device-server: #f97316;
+  --color-device-workstation: #6b7280;
+  --color-device-ap: #a855f7;
+  --color-device-iot: #14b8a6;
+  --color-device-unknown: #94a3b8;
 
   /* ========================================
    * Link Speed Colors (Topology)
-   * Color-coded network speeds
    * ======================================== */
-  --color-link-10m: #94a3b8; /* 10 Mbps - Gray */
-  --color-link-100m: #22c55e; /* 100 Mbps - Green */
-  --color-link-1g: #3b82f6; /* 1 Gbps - Blue */
-  --color-link-10g: #a855f7; /* 10 Gbps - Purple */
-  --color-link-25g: #f97316; /* 25 Gbps - Orange */
-  --color-link-40g: #ec4899; /* 40 Gbps - Pink */
-  --color-link-100g: #eab308; /* 100 Gbps - Yellow */
-  --color-link-trunk: #06b6d4; /* Trunk/LAG - Cyan */
+  --color-link-10m: #94a3b8;
+  --color-link-100m: #22c55e;
+  --color-link-1g: #3b82f6;
+  --color-link-10g: #a855f7;
+  --color-link-25g: #f97316;
+  --color-link-40g: #ec4899;
+  --color-link-100g: #eab308;
+  --color-link-trunk: #06b6d4;
 
   /* ========================================
    * Protocol Colors
-   * Distinct colors for protocol identification
    * ======================================== */
   --color-proto-arp: #22c55e;
   --color-proto-icmp: #3b82f6;
@@ -132,50 +131,45 @@
   --color-proto-udp: #8b5cf6;
 
   /* ========================================
-   * Log Level Colors (Industry Standard)
-   * Syslog/RFC 5424 severity levels
+   * Log Level Colors (Syslog/RFC 5424)
    * ======================================== */
-  --color-log-trace: #64748b; /* Gray - lowest priority */
-  --color-log-debug: #06b6d4; /* Cyan - debug info */
-  --color-log-info: #3b82f6; /* Blue - informational */
-  --color-log-warn: #f59e0b; /* Amber - warning */
-  --color-log-error: #ef4444; /* Red - error */
-  --color-log-fatal: #dc2626; /* Dark red - critical/fatal */
+  --color-log-trace: #64748b;
+  --color-log-debug: #06b6d4;
+  --color-log-info: #3b82f6;
+  --color-log-warn: #f59e0b;
+  --color-log-error: #ef4444;
+  --color-log-fatal: #dc2626;
 
   /* ========================================
    * Syntax Highlighting (One Dark Standard)
-   * Industry-standard code editor colors
    * ======================================== */
-  --color-syntax-keyword: #c678dd; /* Purple - keywords */
-  --color-syntax-string: #98c379; /* Green - strings */
-  --color-syntax-number: #d19a66; /* Orange - numbers */
-  --color-syntax-boolean: #56b6c2; /* Cyan - booleans */
-  --color-syntax-property: #e06c75; /* Red - property names */
-  --color-syntax-comment: #5c6370; /* Gray - comments */
-  --color-syntax-punctuation: #abb2bf; /* Light gray - punctuation */
-  --color-syntax-function: #61afef; /* Blue - functions */
-  --color-syntax-variable: #e5c07b; /* Yellow - variables */
-  --color-syntax-type: #e06c75; /* Red - types */
+  --color-syntax-keyword: #c678dd;
+  --color-syntax-string: #98c379;
+  --color-syntax-number: #d19a66;
+  --color-syntax-boolean: #56b6c2;
+  --color-syntax-property: #e06c75;
+  --color-syntax-comment: #5c6370;
+  --color-syntax-punctuation: #abb2bf;
+  --color-syntax-function: #61afef;
+  --color-syntax-variable: #e5c07b;
+  --color-syntax-type: #e06c75;
 
   /* ========================================
-   * Data Visualization (Categorical Palette)
-   * Colorblind-friendly chart colors
-   * Based on Tableau/D3 categorical schemes
+   * Data Visualization (Tableau/D3 categorical)
    * ======================================== */
-  --color-chart-1: #3b82f6; /* Blue */
-  --color-chart-2: #22c55e; /* Green */
-  --color-chart-3: #f59e0b; /* Amber */
-  --color-chart-4: #ef4444; /* Red */
-  --color-chart-5: #8b5cf6; /* Purple */
-  --color-chart-6: #06b6d4; /* Cyan */
-  --color-chart-7: #ec4899; /* Pink */
-  --color-chart-8: #f97316; /* Orange */
-  --color-chart-9: #14b8a6; /* Teal */
-  --color-chart-10: #6366f1; /* Indigo */
+  --color-chart-1: #3b82f6;
+  --color-chart-2: #22c55e;
+  --color-chart-3: #f59e0b;
+  --color-chart-4: #ef4444;
+  --color-chart-5: #8b5cf6;
+  --color-chart-6: #06b6d4;
+  --color-chart-7: #ec4899;
+  --color-chart-8: #f97316;
+  --color-chart-9: #14b8a6;
+  --color-chart-10: #6366f1;
 
   /* ========================================
    * Neutral Scale (Gray)
-   * Complete grayscale for UI elements
    * ======================================== */
   --color-neutral-50: #f8fafc;
   --color-neutral-100: #f1f5f9;
@@ -189,7 +183,16 @@
   --color-neutral-900: #0f172a;
   --color-neutral-950: #020617;
 
-  /* Apply base colors */
+  /* ========================================
+   * Animations
+   * ======================================== */
+  --animate-shimmer: shimmer 2s linear infinite;
+  --animate-fade-in: fadeIn 0.3s ease-out;
+  --animate-slide-down: slideDown 0.2s ease-out;
+  --animate-slide-in-right: slideInRight 0.3s ease-out;
+}
+
+:root {
   color: var(--color-text-primary);
   background-color: var(--color-bg-base);
 }
@@ -545,6 +548,28 @@ body {
   100% {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes slideDown {
+  0% {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInRight {
+  0% {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
   }
 }
 
