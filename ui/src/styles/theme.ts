@@ -1,5 +1,3 @@
-// Copyright (c) 2025 Mustard Seed Networks. All rights reserved.
-
 /**
  * =============================================================================
  * NIAC DESIGN SYSTEM - Mustard Seed Networks
