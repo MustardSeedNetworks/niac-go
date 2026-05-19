@@ -166,7 +166,15 @@ func (s *Server) auth(next http.HandlerFunc) http.HandlerFunc {
 			// FEATURE #105: Use standardized error response
 			writeError(w, r, http.StatusTooManyRequests, "rate_limit_exceeded",
 				"Rate limit exceeded. Please try again later.", nil)
-			s.logger.Warn("[API] Rate limit exceeded", "requestID", requestID, "clientIP", clientIP)
+			// Structured audit fields (task #77): tagged event + UA so SIEM
+			// pipelines can filter and so abusive clients are identifiable
+			// beyond just IP.
+			s.logger.Warn("[API] Rate limit exceeded",
+				"event", "api.rate_limited",
+				"requestID", requestID,
+				"clientIP", clientIP,
+				"userAgent", r.UserAgent(),
+				"path", r.URL.Path)
 
 			return
 		}
@@ -191,12 +199,18 @@ func (s *Server) auth(next http.HandlerFunc) http.HandlerFunc {
 			// FEATURE #105: Use standardized error response
 			writeError(w, r, http.StatusUnauthorized, "unauthorized",
 				"Invalid or missing authentication token", nil)
+			// Structured audit fields (task #77): tagged event + UA so this
+			// shows up as a security event in log pipelines, not just a
+			// generic API warning. tokenPresent records the outcome shape
+			// without ever logging the token value itself.
 			s.logger.Warn(
 				"[API] Unauthorized request",
-				"requestID",
-				requestID,
-				"clientIP",
-				clientIP,
+				"event", "auth.unauthorized",
+				"requestID", requestID,
+				"clientIP", clientIP,
+				"userAgent", r.UserAgent(),
+				"path", r.URL.Path,
+				"tokenPresent", token != "",
 			)
 
 			return
