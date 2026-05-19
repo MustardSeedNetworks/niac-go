@@ -5,6 +5,13 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.77.0](https://github.com/krisarmstrong/niac-go/compare/v0.76.2...v0.77.0) (2026-05-19)
+
+
+### Features
+
+* Graceful port fallback when canonical port is in use ([#69](https://github.com/krisarmstrong/niac-go/issues/69)) ([#621](https://github.com/krisarmstrong/niac-go/issues/621)) ([ed835bd](https://github.com/krisarmstrong/niac-go/commit/ed835bdeb6c5f37029d5dd993dd6bd4d2f9863f6))
+
 ## [0.76.2](https://github.com/krisarmstrong/niac-go/compare/v0.76.1...v0.76.2) (2026-05-19)
 
 
