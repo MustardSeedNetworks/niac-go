@@ -1,11 +1,10 @@
 {
   "ci": {
     "collect": {
-      "url": ["https://localhost:8443", "https://localhost:8443/login"],
+      "url": ["http://localhost:8080/", "http://localhost:8080/devices"],
       "numberOfRuns": 3,
       "settings": {
-        "preset": "desktop",
-        "chromeFlags": "--ignore-certificate-errors"
+        "preset": "desktop"
       }
     },
     "assert": {
