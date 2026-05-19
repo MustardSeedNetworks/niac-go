@@ -5,6 +5,13 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.76.2](https://github.com/krisarmstrong/niac-go/compare/v0.76.1...v0.76.2) (2026-05-19)
+
+
+### Bug Fixes
+
+* **ci:** point Lighthouse at the real served URLs ([#65](https://github.com/krisarmstrong/niac-go/issues/65)) ([#619](https://github.com/krisarmstrong/niac-go/issues/619)) ([d8c04b3](https://github.com/krisarmstrong/niac-go/commit/d8c04b3c74b8e8b7485f3c6f7c6ac9378654c824))
+
 ## [0.76.1](https://github.com/krisarmstrong/niac-go/compare/v0.76.0...v0.76.1) (2026-05-19)
 
 
