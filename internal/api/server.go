@@ -23,6 +23,7 @@ package api
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"sync"
@@ -300,8 +301,18 @@ func (s *Server) Start() error {
 		s.registerAPIRoutes(mux)
 		s.httpServer = newSecureHTTPServer(s.cfg.Addr, mux)
 
+		// Bind before launching the serve goroutine so a fatal bind error
+		// (e.g. permission denied, or all fallback ports taken) surfaces
+		// synchronously instead of disappearing into a background log.
+		// See #69 — busy 8080 falls back to +1..+9 with a WARN.
+		apiLn, apiAddr, bindErr := bindWithFallback(context.Background(), s.logger, s.cfg.Addr)
+		if bindErr != nil {
+			return fmt.Errorf("API server bind: %w", bindErr)
+		}
+		s.httpServer.Addr = apiAddr
+
 		go func() {
-			if err := s.httpServer.ListenAndServe(); err != nil &&
+			if err := s.httpServer.Serve(apiLn); err != nil &&
 				!errors.Is(err, http.ErrServerClosed) {
 				s.logger.Error("API server stopped", "error", err)
 			}
@@ -313,8 +324,14 @@ func (s *Server) Start() error {
 		mux.HandleFunc("/metrics", s.recoverMiddleware(s.auth(s.handleMetrics)))
 		s.metricsServer = newSecureHTTPServer(s.cfg.MetricsAddr, mux)
 
+		metricsLn, metricsAddr, bindErr := bindWithFallback(context.Background(), s.logger, s.cfg.MetricsAddr)
+		if bindErr != nil {
+			return fmt.Errorf("metrics server bind: %w", bindErr)
+		}
+		s.metricsServer.Addr = metricsAddr
+
 		go func() {
-			if err := s.metricsServer.ListenAndServe(); err != nil &&
+			if err := s.metricsServer.Serve(metricsLn); err != nil &&
 				!errors.Is(err, http.ErrServerClosed) {
 				s.logger.Error("Metrics server stopped", "error", err)
 			}
