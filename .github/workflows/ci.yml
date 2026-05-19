@@ -29,11 +29,64 @@ permissions:
 
 jobs:
   # ===========================================================================
+  # Path filter — classifies which areas changed so downstream jobs can skip
+  # ===========================================================================
+  # Adds ~5s to every run; saves several minutes when a PR only touches one
+  # area (docs-only / c-only / frontend-only). The CI Complete aggregator at
+  # the bottom of this file enforces that all required jobs either passed or
+  # were intentionally skipped, so branch protection can require just CI
+  # Complete (plus CodeQL/license-check from other workflows) instead of
+  # every individual job.
+  changes:
+    name: Changed paths
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      c: ${{ steps.filter.outputs.c }}
+      docker: ${{ steps.filter.outputs.docker }}
+      docs: ${{ steps.filter.outputs.docs }}
+      workflows: ${{ steps.filter.outputs.workflows }}
+      schema: ${{ steps.filter.outputs.schema }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4.0.1
+        id: filter
+        with:
+          filters: |
+            backend:
+              - '**/*.go'
+              - 'go.mod'
+              - 'go.sum'
+              - 'Makefile'
+              - 'mk/**'
+            frontend:
+              - 'ui/**'
+            c:
+              - 'src/**'
+              - 'include/**'
+              - 'tests/c/**'
+              - '.clang-tidy'
+              - '.clang-format'
+            docker:
+              - 'Dockerfile*'
+              - '.dockerignore'
+            docs:
+              - '**/*.md'
+            workflows:
+              - '.github/workflows/**'
+            schema:
+              - 'docs/schemas/**'
+              - 'cmd/niac-schema/**'
+
+  # ===========================================================================
   # Backend (Go)
   # ===========================================================================
   backend:
     name: Backend (Go)
     runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.schema == 'true' || needs.changes.outputs.workflows == 'true'
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
@@ -112,6 +165,8 @@ jobs:
   race:
     name: Backend (race detector)
     runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.frontend == 'true' || needs.changes.outputs.workflows == 'true'
     env:
       GOMODCACHE: ${{ github.workspace }}/.cache/go/pkg/mod
       GOCACHE: ${{ github.workspace }}/.cache/go/build
@@ -150,6 +205,8 @@ jobs:
   frontend:
     name: Frontend (TypeScript)
     runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true' || needs.changes.outputs.workflows == 'true'
     defaults:
       run:
         working-directory: ui
@@ -188,6 +245,7 @@ jobs:
   security:
     name: Security Scanning
     runs-on: ubuntu-latest
+    # Always runs — security checks are non-negotiable on every PR.
     permissions:
       contents: read
       # github/codeql-action/upload-sarif@v4 requires security-events: write
@@ -284,6 +342,8 @@ jobs:
   c-lint:
     name: C Lint (C23)
     runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.c == 'true' || needs.changes.outputs.workflows == 'true'
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
@@ -383,6 +443,8 @@ jobs:
   quality:
     name: Quality Checks
     runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.frontend == 'true' || needs.changes.outputs.c == 'true' || needs.changes.outputs.workflows == 'true'
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
@@ -449,6 +511,7 @@ jobs:
   docs:
     name: Documentation Quality
     runs-on: ubuntu-latest
+    # Always runs — cheap (runs in seconds) and applies to every PR.
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -473,11 +536,16 @@ jobs:
   # ===========================================================================
   build:
     name: Build (${{ matrix.os }}-${{ matrix.arch }})
-    needs: [backend, frontend]
+    needs: [changes, backend, frontend]
     runs-on: ubuntu-latest
     # gopacket/pcap requires CGO + libpcap. CI verifies a native amd64 build
     # only — release.yml handles the arm64 cross-compile (gcc-aarch64-linux-gnu
     # + libpcap-dev:arm64) when actually publishing artifacts.
+    # always() lets the if: evaluate when backend was skipped upstream.
+    if: |
+      always() &&
+      needs.frontend.result == 'success' &&
+      (needs.backend.result == 'success' || needs.backend.result == 'skipped')
     strategy:
       fail-fast: false
       matrix:
@@ -531,8 +599,15 @@ jobs:
   e2e:
     name: E2E Browser Tests
     runs-on: ubuntu-latest
-    needs: [backend, frontend]
+    needs: [changes, backend, frontend]
     timeout-minutes: 30
+    # Skipped on draft PRs (slow); also skipped if no frontend/backend changed.
+    # always() lets the if: evaluate when backend was skipped upstream.
+    if: |
+      always() &&
+      (github.event_name != 'pull_request' || github.event.pull_request.draft == false) &&
+      needs.frontend.result == 'success' &&
+      (needs.backend.result == 'success' || needs.backend.result == 'skipped')
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -613,8 +688,15 @@ jobs:
   lighthouse:
     name: Lighthouse Audit
     runs-on: ubuntu-latest
-    needs: [backend, frontend]
+    needs: [changes, backend, frontend]
     timeout-minutes: 15
+    # Skipped on draft PRs (slow); only runs when frontend changed.
+    # always() lets the if: evaluate when backend was skipped upstream.
+    if: |
+      always() &&
+      (github.event_name != 'pull_request' || github.event.pull_request.draft == false) &&
+      needs.frontend.result == 'success' &&
+      (needs.changes.outputs.frontend == 'true' || needs.changes.outputs.workflows == 'true')
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -671,3 +753,43 @@ jobs:
         with:
           name: lighthouse-server-logs
           path: server.log
+
+  # ===========================================================================
+  # CI Complete — dispatcher / branch-protection aggregator
+  # ===========================================================================
+  # Every required-status-check on `main` is consolidated into this single
+  # job. It fails if any upstream job actually failed; it passes if every
+  # upstream either succeeded or was intentionally skipped via the path
+  # filter. Branch protection should require ONLY "CI Complete" plus the
+  # security-critical checks from other workflows (CodeQL: Analyze (go),
+  # Analyze (javascript-typescript); License Compliance Check) — not every
+  # individual job — so docs-only PRs merge cleanly when backend/frontend/c
+  # are all skipped.
+  ci-complete:
+    name: CI Complete
+    runs-on: ubuntu-latest
+    needs:
+      - changes
+      - backend
+      - race
+      - frontend
+      - security
+      - c-lint
+      - quality
+      - docs
+      - build
+      - e2e
+      - lighthouse
+    if: always()
+    steps:
+      - name: Verify upstream results
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          echo "Upstream job results:"
+          echo "$RESULTS" | jq '.'
+          if ! echo "$RESULTS" | jq -e 'to_entries | map(.value.result) | all(. == "success" or . == "skipped")' >/dev/null; then
+            echo "::error::One or more required CI jobs failed or were cancelled."
+            exit 1
+          fi
+          echo "All required CI jobs passed (or were intentionally skipped)."
