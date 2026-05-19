@@ -5,6 +5,13 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.78.0](https://github.com/krisarmstrong/niac-go/compare/v0.77.0...v0.78.0) (2026-05-19)
+
+
+### Features
+
+* **ci:** Add provenance_only mode for SLSA backfill ([#75](https://github.com/krisarmstrong/niac-go/issues/75)) ([#623](https://github.com/krisarmstrong/niac-go/issues/623)) ([d771b28](https://github.com/krisarmstrong/niac-go/commit/d771b28e3082990896dc3546db2c935714fa7b61))
+
 ## [0.77.0](https://github.com/krisarmstrong/niac-go/compare/v0.76.2...v0.77.0) (2026-05-19)
 
 
