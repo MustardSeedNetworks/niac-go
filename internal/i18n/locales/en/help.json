@@ -1,0 +1,23 @@
+{
+  "drawer": {
+    "title": "Help",
+    "closeAriaLabel": "Close help",
+    "drawerAriaLabel": "Help",
+    "backdropAriaLabel": "Close help drawer",
+    "searchPlaceholder": "Search help...",
+    "noResults": "No matches for \"{{query}}\""
+  },
+  "tabs": {
+    "overview": "Overview",
+    "devices": "Devices",
+    "protocols": "Protocols",
+    "commands": "Commands",
+    "glossary": "Glossary",
+    "shortcuts": "Shortcuts",
+    "faq": "FAQ"
+  },
+  "footer": {
+    "documentationLink": "Full documentation",
+    "reportIssue": "Report an issue"
+  }
+}

@@ -66,7 +66,11 @@ func (p *niacProgram) run() {
 
 	listen := os.Getenv("NIAC_LISTEN")
 	if listen == "" {
-		listen = ":8080"
+		// Wave 1 default-secure: loopback bind so the gate does not trip
+		// when running without an API token. Operators who need external
+		// exposure should set NIAC_LISTEN explicitly and pair it with
+		// NIAC_API_TOKEN.
+		listen = "127.0.0.1:8080"
 	}
 
 	storagePath := os.Getenv("NIAC_STORAGE_PATH")

@@ -22,9 +22,11 @@ package api
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
 	"sync"
 	"time"
@@ -118,6 +120,15 @@ var (
 	ErrPathOutsideRoot             = errors.New("path is outside allowed directory")
 )
 
+// errNonLoopbackRequiresToken refuses startup when --listen targets a
+// non-loopback address without an API token. The message must be helpful
+// because operators will hit this the first time they expose the API
+// beyond 127.0.0.1 — see task #88 part 1.
+var errNonLoopbackRequiresToken = errors.New(
+	"niac refuses to bind a non-loopback address without an API token.\n" +
+		"Set NIAC_API_TOKEN=<value> or pass --api-token=<value>.\n" +
+		"If you want loopback-only (no auth), set --listen=127.0.0.1")
+
 // AlertConfig controls basic threshold-based alerting.
 type AlertConfig struct {
 	PacketsThreshold uint64 `json:"packets_threshold"`
@@ -165,6 +176,28 @@ type ServerConfig struct {
 	UIBuildHash string
 	Topology    Topology
 	Alert       AlertConfig
+	// EnableTLS controls whether the API listener uses HTTPS. When true,
+	// CertFile/KeyFile (or, when both are empty, the auto-generated
+	// self-signed pair under CertDir) are loaded and the listener serves
+	// TLS 1.3. See internal/api/tls.go.
+	EnableTLS bool
+	// CertDir is the directory the self-signed cert+key default to when
+	// CertFile and KeyFile are not explicitly set. Empty falls back to
+	// `certs/` relative to the working directory.
+	CertDir string
+	// CertFile is the path to a PEM-encoded server certificate. Empty
+	// triggers auto-generation under CertDir.
+	CertFile string
+	// KeyFile is the path to the PEM-encoded private key for CertFile.
+	// Empty triggers auto-generation under CertDir.
+	KeyFile string
+	// HTTPRedirectAddr, when non-empty and EnableTLS is true, starts a
+	// tiny HTTP listener on that address that 308-redirects to the
+	// HTTPS service. Wave 1 default is `:8044`.
+	HTTPRedirectAddr string
+	// TLSPort is the destination HTTPS port the redirect handler advertises.
+	// Defaults to defaultTLSPort (8445) when zero.
+	TLSPort int
 	// WebhookAllowedHosts is an admin-side allowlist of hostnames that the
 	// alert webhook is permitted to dispatch to. Empty = no allowlist (the
 	// existing private-IP / blocked-hostname filters in
@@ -218,6 +251,7 @@ type Server struct {
 	logger            *slog.Logger
 	httpServer        *http.Server
 	metricsServer     *http.Server
+	redirectServer    *http.Server
 	alertStop         chan struct{}
 	lastAlert         uint64
 	alertMu           sync.RWMutex
@@ -235,6 +269,7 @@ type Server struct {
 	bgStop            chan struct{}
 	bgStopOnce        sync.Once
 	library           *library.Library
+	tlsFingerprint    tlsFingerprintCache
 }
 
 // NewServer returns a configured API server.
@@ -288,6 +323,19 @@ func (s *Server) Start() error {
 		return ErrAPIServerRequiresStackAndConfig
 	}
 
+	// Default-secure gate (task #88 part 1): when binding to a
+	// non-loopback address we refuse to start without an API token.
+	// Loopback binds are still allowed without one but log a warning.
+	if s.cfg.Addr != "" {
+		nonLoopback, parseErr := addrIsNonLoopback(s.cfg.Addr)
+		if parseErr != nil {
+			return fmt.Errorf("parse listen address: %w", parseErr)
+		}
+		if nonLoopback && s.cfg.Token == "" {
+			return errNonLoopbackRequiresToken
+		}
+	}
+
 	if s.cfg.Token == "" && s.cfg.Addr != "" {
 		s.logger.Warn(
 			"API server running WITHOUT authentication - all endpoints are publicly accessible",
@@ -304,19 +352,38 @@ func (s *Server) Start() error {
 		// Bind before launching the serve goroutine so a fatal bind error
 		// (e.g. permission denied, or all fallback ports taken) surfaces
 		// synchronously instead of disappearing into a background log.
-		// See #69 — busy 8080 falls back to +1..+9 with a WARN.
+		// See #69 — busy 8080 / 8445 falls back to +1..+9 with a WARN.
 		apiLn, apiAddr, bindErr := bindWithFallback(context.Background(), s.logger, s.cfg.Addr)
 		if bindErr != nil {
 			return fmt.Errorf("API server bind: %w", bindErr)
 		}
 		s.httpServer.Addr = apiAddr
 
-		go func() {
-			if err := s.httpServer.Serve(apiLn); err != nil &&
-				!errors.Is(err, http.ErrServerClosed) {
-				s.logger.Error("API server stopped", "error", err)
+		if s.cfg.EnableTLS {
+			certFile, keyFile, certErr := s.resolveTLSCertPaths()
+			if certErr != nil {
+				_ = apiLn.Close()
+				return fmt.Errorf("resolve TLS cert: %w", certErr)
 			}
-		}()
+			s.httpServer.TLSConfig = &tls.Config{MinVersion: tls.VersionTLS13}
+			go func() {
+				if err := s.httpServer.ServeTLS(apiLn, certFile, keyFile); err != nil &&
+					!errors.Is(err, http.ErrServerClosed) {
+					s.logger.Error("API server (TLS) stopped", "error", err)
+				}
+			}()
+		} else {
+			go func() {
+				if err := s.httpServer.Serve(apiLn); err != nil &&
+					!errors.Is(err, http.ErrServerClosed) {
+					s.logger.Error("API server stopped", "error", err)
+				}
+			}()
+		}
+
+		if s.cfg.EnableTLS && s.cfg.HTTPRedirectAddr != "" {
+			s.startHTTPRedirect()
+		}
 	}
 
 	if s.cfg.MetricsAddr != "" && s.cfg.MetricsAddr != s.cfg.Addr {
@@ -383,12 +450,123 @@ func (s *Server) Shutdown(ctx context.Context) error {
 		}
 	}
 
+	if s.redirectServer != nil {
+		if err := s.redirectServer.Shutdown(ctx); err != nil {
+			s.logger.ErrorContext(ctx, "Error shutting down HTTP redirect server", "error", err)
+			errs = append(errs, err)
+		}
+	}
+
 	if len(errs) > 0 {
 		return errs[0]
 	}
 
 	return nil
 }
+
+// resolveTLSCertPaths returns the cert+key paths the listener should
+// load. When the explicit ServerConfig.CertFile/KeyFile are set we use
+// them as-is; otherwise we fall back to the auto-generated pair under
+// CertDir (creating it on first start).
+func (s *Server) resolveTLSCertPaths() (string, string, error) {
+	if s.cfg.CertFile != "" && s.cfg.KeyFile != "" {
+		return s.cfg.CertFile, s.cfg.KeyFile, nil
+	}
+	certPath, keyPath := DefaultCertPaths(s.cfg.CertDir)
+	c, k, err := ensureSelfSignedCert(certPath, keyPath)
+	if err != nil {
+		return "", "", err
+	}
+	// Populate ServerConfig.CertFile/KeyFile so /__version's fingerprint
+	// lookup hits the same path the listener loaded.
+	s.cfg.CertFile = c
+	s.cfg.KeyFile = k
+	return c, k, nil
+}
+
+// startHTTPRedirect spawns the tiny HTTP listener that 308-redirects to
+// the HTTPS service. The redirect target port defaults to defaultTLSPort
+// when ServerConfig.TLSPort is zero. Errors during bind are logged and
+// non-fatal: the API itself is still up via the TLS listener.
+func (s *Server) startHTTPRedirect() {
+	port := s.cfg.TLSPort
+	if port == 0 {
+		port = defaultTLSPort
+	}
+	handler := httpToHTTPSRedirectHandler(port)
+
+	const redirectReadWriteTimeoutSec = 5
+	srv := &http.Server{
+		Addr:              s.cfg.HTTPRedirectAddr,
+		Handler:           handler,
+		ReadTimeout:       redirectReadWriteTimeoutSec * time.Second,
+		WriteTimeout:      redirectReadWriteTimeoutSec * time.Second,
+		ReadHeaderTimeout: redirectReadWriteTimeoutSec * time.Second,
+	}
+
+	ln, boundAddr, bindErr := bindWithFallback(context.Background(), s.logger, s.cfg.HTTPRedirectAddr)
+	if bindErr != nil {
+		s.logger.Error("HTTP→HTTPS redirect listener bind failed",
+			"addr", s.cfg.HTTPRedirectAddr, "error", bindErr)
+		return
+	}
+	srv.Addr = boundAddr
+	s.redirectServer = srv
+	s.logger.Info("Starting HTTP→HTTPS redirect server", "addr", boundAddr, "https_port", port)
+
+	go func() {
+		if err := srv.Serve(ln); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			s.logger.Error("HTTP redirect server stopped", "error", err)
+		}
+	}()
+}
+
+// addrIsNonLoopback reports whether the host portion of a "host:port"
+// listen address resolves to a non-loopback IP. An empty host, "0.0.0.0",
+// "::", or any host that resolves to a non-loopback IP returns true so the
+// caller can enforce the API-token requirement (task #88 part 1).
+func addrIsNonLoopback(addr string) (bool, error) {
+	host, _, err := net.SplitHostPort(addr)
+	if err != nil {
+		return false, fmt.Errorf("split host/port %q: %w", addr, err)
+	}
+	switch host {
+	case "", "0.0.0.0", "::", "[::]":
+		// Empty host means "bind all interfaces" — definitely non-loopback.
+		return true, nil
+	case "localhost":
+		return false, nil
+	}
+	// Literal IP fast path.
+	if ip := net.ParseIP(host); ip != nil {
+		return !ip.IsLoopback(), nil
+	}
+	// Hostname — resolve and treat as non-loopback if any returned IP
+	// is non-loopback. Unresolvable hosts surface the lookup error to the
+	// caller so the operator sees the DNS failure and fixes it; we no
+	// longer silently treat them as non-loopback.
+	//
+	// The lookup is bounded by a short context so a slow/broken resolver
+	// doesn't hang server startup. noctx rule requires the resolver form
+	// (net.LookupIP wraps the same call but elides the context.)
+	ctx, cancel := context.WithTimeout(context.Background(), addrLookupTimeout)
+	defer cancel()
+	ips, lookupErr := net.DefaultResolver.LookupIPAddr(ctx, host)
+	if lookupErr != nil {
+		return false, fmt.Errorf("lookup %q: %w", host, lookupErr)
+	}
+	for _, ipAddr := range ips {
+		if !ipAddr.IP.IsLoopback() {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+// addrLookupTimeout bounds the DNS lookup inside addrIsNonLoopback so
+// startup cannot hang on a slow resolver. Two seconds is plenty for the
+// localhost-vs-real-hostname decision the gate makes.
+const addrLookupTimeout = 2 * time.Second
 
 // SetDaemonController sets the daemon controller (for daemon mode).
 func (s *Server) SetDaemonController(daemon DaemonController) {
