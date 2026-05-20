@@ -314,75 +314,16 @@ func NewServer(cfg ServerConfig) *Server {
 
 // Start boots the HTTP listeners.
 func (s *Server) Start() error {
-	s.configMu.RLock()
-	hasStack := s.cfg.Stack != nil
-	hasConfig := s.cfg.Config != nil
-	s.configMu.RUnlock()
-
-	if s.daemon == nil && (!hasStack || !hasConfig) {
-		return ErrAPIServerRequiresStackAndConfig
+	if err := s.checkStartupPreconditions(); err != nil {
+		return err
 	}
-
-	// Default-secure gate (task #88 part 1): when binding to a
-	// non-loopback address we refuse to start without an API token.
-	// Loopback binds are still allowed without one but log a warning.
+	if err := s.enforceNonLoopbackAuthGate(); err != nil {
+		return err
+	}
+	s.warnIfUnauthenticated()
 	if s.cfg.Addr != "" {
-		nonLoopback, parseErr := addrIsNonLoopback(s.cfg.Addr)
-		if parseErr != nil {
-			return fmt.Errorf("parse listen address: %w", parseErr)
-		}
-		if nonLoopback && s.cfg.Token == "" {
-			return errNonLoopbackRequiresToken
-		}
-	}
-
-	if s.cfg.Token == "" && s.cfg.Addr != "" {
-		s.logger.Warn(
-			"API server running WITHOUT authentication - all endpoints are publicly accessible",
-		)
-		s.logger.Warn("Set NIAC_API_TOKEN environment variable to enable authentication")
-		s.logger.Info("Example: export NIAC_API_TOKEN=$(openssl rand -base64 32)")
-	}
-
-	if s.cfg.Addr != "" {
-		mux := http.NewServeMux()
-		s.registerAPIRoutes(mux)
-		s.httpServer = newSecureHTTPServer(s.cfg.Addr, mux)
-
-		// Bind before launching the serve goroutine so a fatal bind error
-		// (e.g. permission denied, or all fallback ports taken) surfaces
-		// synchronously instead of disappearing into a background log.
-		// See #69 — busy 8080 / 8445 falls back to +1..+9 with a WARN.
-		apiLn, apiAddr, bindErr := bindWithFallback(context.Background(), s.logger, s.cfg.Addr)
-		if bindErr != nil {
-			return fmt.Errorf("API server bind: %w", bindErr)
-		}
-		s.httpServer.Addr = apiAddr
-
-		if s.cfg.EnableTLS {
-			certFile, keyFile, certErr := s.resolveTLSCertPaths()
-			if certErr != nil {
-				_ = apiLn.Close()
-				return fmt.Errorf("resolve TLS cert: %w", certErr)
-			}
-			s.httpServer.TLSConfig = &tls.Config{MinVersion: tls.VersionTLS13}
-			go func() {
-				if err := s.httpServer.ServeTLS(apiLn, certFile, keyFile); err != nil &&
-					!errors.Is(err, http.ErrServerClosed) {
-					s.logger.Error("API server (TLS) stopped", "error", err)
-				}
-			}()
-		} else {
-			go func() {
-				if err := s.httpServer.Serve(apiLn); err != nil &&
-					!errors.Is(err, http.ErrServerClosed) {
-					s.logger.Error("API server stopped", "error", err)
-				}
-			}()
-		}
-
-		if s.cfg.EnableTLS && s.cfg.HTTPRedirectAddr != "" {
-			s.startHTTPRedirect()
+		if err := s.startAPIListener(); err != nil {
+			return err
 		}
 	}
 
@@ -482,6 +423,113 @@ func (s *Server) resolveTLSCertPaths() (string, string, error) {
 	s.cfg.CertFile = c
 	s.cfg.KeyFile = k
 	return c, k, nil
+}
+
+// checkStartupPreconditions enforces that the API server can only run
+// when either a daemon controller is attached or the stack+config pair
+// is wired up. Extracted from Start to keep its cognitive complexity
+// below the project lint threshold.
+func (s *Server) checkStartupPreconditions() error {
+	s.configMu.RLock()
+	hasStack := s.cfg.Stack != nil
+	hasConfig := s.cfg.Config != nil
+	s.configMu.RUnlock()
+
+	if s.daemon == nil && (!hasStack || !hasConfig) {
+		return ErrAPIServerRequiresStackAndConfig
+	}
+	return nil
+}
+
+// enforceNonLoopbackAuthGate is the task #88 part-1 gate: when the
+// API server is told to bind a non-loopback address it must have an
+// API token configured, otherwise it refuses to start. Loopback binds
+// fall through and Start continues unchanged.
+func (s *Server) enforceNonLoopbackAuthGate() error {
+	if s.cfg.Addr == "" {
+		return nil
+	}
+	nonLoopback, parseErr := addrIsNonLoopback(s.cfg.Addr)
+	if parseErr != nil {
+		return fmt.Errorf("parse listen address: %w", parseErr)
+	}
+	if nonLoopback && s.cfg.Token == "" {
+		return errNonLoopbackRequiresToken
+	}
+	return nil
+}
+
+// warnIfUnauthenticated logs a prominent WARN+INFO chain when the API
+// is bound (Addr != "") without a token. Loopback-only binds are the
+// only path that reaches this branch (the gate above already refuses
+// non-loopback without a token), but we still surface the unauth state
+// so the operator sees it in the startup log.
+func (s *Server) warnIfUnauthenticated() {
+	if s.cfg.Token != "" || s.cfg.Addr == "" {
+		return
+	}
+	s.logger.Warn(
+		"API server running WITHOUT authentication - all endpoints are publicly accessible",
+	)
+	s.logger.Warn("Set NIAC_API_TOKEN environment variable to enable authentication")
+	s.logger.Info("Example: export NIAC_API_TOKEN=$(openssl rand -base64 32)")
+}
+
+// startAPIListener binds the API listener (with port-fallback per #69)
+// and serves either TLS or HTTP per configuration. The redirector is
+// started after the TLS listener so a redirect target exists before
+// the first client can hit :8044.
+func (s *Server) startAPIListener() error {
+	mux := http.NewServeMux()
+	s.registerAPIRoutes(mux)
+	s.httpServer = newSecureHTTPServer(s.cfg.Addr, mux)
+
+	// Bind before launching the serve goroutine so a fatal bind error
+	// (e.g. permission denied, or all fallback ports taken) surfaces
+	// synchronously instead of disappearing into a background log.
+	apiLn, apiAddr, bindErr := bindWithFallback(context.Background(), s.logger, s.cfg.Addr)
+	if bindErr != nil {
+		return fmt.Errorf("API server bind: %w", bindErr)
+	}
+	s.httpServer.Addr = apiAddr
+
+	if err := s.serveAPI(apiLn); err != nil {
+		return err
+	}
+
+	if s.cfg.EnableTLS && s.cfg.HTTPRedirectAddr != "" {
+		s.startHTTPRedirect()
+	}
+	return nil
+}
+
+// serveAPI starts the API listener in TLS or HTTP mode. The TLS
+// branch resolves cert paths up front and closes the listener on
+// resolution failure so we don't leak a half-bound socket back to
+// Start's error path.
+func (s *Server) serveAPI(ln net.Listener) error {
+	if s.cfg.EnableTLS {
+		certFile, keyFile, certErr := s.resolveTLSCertPaths()
+		if certErr != nil {
+			_ = ln.Close()
+			return fmt.Errorf("resolve TLS cert: %w", certErr)
+		}
+		s.httpServer.TLSConfig = &tls.Config{MinVersion: tls.VersionTLS13}
+		go func() {
+			if err := s.httpServer.ServeTLS(ln, certFile, keyFile); err != nil &&
+				!errors.Is(err, http.ErrServerClosed) {
+				s.logger.Error("API server (TLS) stopped", "error", err)
+			}
+		}()
+		return nil
+	}
+	go func() {
+		if err := s.httpServer.Serve(ln); err != nil &&
+			!errors.Is(err, http.ErrServerClosed) {
+			s.logger.Error("API server stopped", "error", err)
+		}
+	}()
+	return nil
 }
 
 // startHTTPRedirect spawns the tiny HTTP listener that 308-redirects to
