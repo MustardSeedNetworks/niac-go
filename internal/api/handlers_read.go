@@ -449,13 +449,14 @@ func (s *Server) handleBuildVersion(w http.ResponseWriter, _ *http.Request) {
 	}
 
 	s.writeJSON(w, map[string]any{
-		"version":     s.cfg.Version,
-		"commit":      commitShort,
-		"commitFull":  commit,
-		"buildTime":   s.cfg.BuildTime,
-		"uiBuildHash": s.cfg.UIBuildHash,
-		"goVersion":   runtime.Version(),
-		"platform":    runtime.GOOS + "/" + runtime.GOARCH,
+		"version":        s.cfg.Version,
+		"commit":         commitShort,
+		"commitFull":     commit,
+		"buildTime":      s.cfg.BuildTime,
+		"uiBuildHash":    s.cfg.UIBuildHash,
+		"goVersion":      runtime.Version(),
+		"platform":       runtime.GOOS + "/" + runtime.GOARCH,
+		"tlsFingerprint": s.tlsFingerprintForResponse(),
 	})
 }
 

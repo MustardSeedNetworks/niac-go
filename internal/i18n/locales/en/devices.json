@@ -1,0 +1,41 @@
+{
+  "types": {
+    "router": "Router",
+    "switch": "Switch",
+    "firewall": "Firewall",
+    "server": "Server",
+    "workstation": "Workstation",
+    "printer": "Printer",
+    "accessPoint": "Access Point",
+    "phone": "Phone",
+    "camera": "Camera",
+    "iot": "IoT Device",
+    "endpoint": "Endpoint",
+    "generic": "Generic"
+  },
+  "list": {
+    "title": "Device Library",
+    "searchPlaceholder": "Search devices by name, type, or hostname...",
+    "noDevices": "No devices in the library yet",
+    "createFirst": "Create your first device",
+    "bulkDelete": "Delete selected",
+    "clone": "Clone",
+    "edit": "Edit",
+    "deleteConfirmTitle": "Delete device?",
+    "deleteConfirmMessage": "This will permanently remove the device definition. Running simulations are unaffected until restarted."
+  },
+  "editor": {
+    "newDevice": "New Device",
+    "editDevice": "Edit Device",
+    "general": "General",
+    "interfaces": "Interfaces",
+    "trunkPorts": "Trunk Ports",
+    "portChannels": "Port Channels",
+    "saveSuccess": "Device saved",
+    "saveFailed": "Failed to save device"
+  },
+  "running": {
+    "noDevicesRunning": "No devices are currently running",
+    "startHint": "Start a simulation from the Simulation page to populate this view."
+  }
+}

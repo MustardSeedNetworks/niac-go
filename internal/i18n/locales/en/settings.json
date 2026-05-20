@@ -1,0 +1,74 @@
+{
+  "drawer": {
+    "title": "Settings",
+    "closeAriaLabel": "Close settings",
+    "drawerAriaLabel": "Settings",
+    "backdropAriaLabel": "Close settings drawer"
+  },
+  "tabs": {
+    "simulation": "Simulation",
+    "appearance": "Appearance",
+    "network": "Network",
+    "debug": "Debug",
+    "about": "About"
+  },
+  "appearance": {
+    "sectionTitle": "Theme",
+    "sectionDescription": "Customize the appearance of NIAC",
+    "dark": "Dark",
+    "light": "Light",
+    "system": "System",
+    "quickToggle": "Quick toggle",
+    "persistenceNote": "Dark mode is the default. Your preference is saved across sessions."
+  },
+  "network": {
+    "interfacesTitle": "Network Interfaces",
+    "interfacesDescription": "Available network interfaces for traffic injection",
+    "loadingInterfaces": "Loading interfaces...",
+    "noInterfacesFound": "No interfaces found",
+    "interfaceManagedFrom": "Interface selection is managed from the Runtime Control page.",
+    "connectionTitle": "Connection Settings",
+    "connectionDescription": "Configure backend connection",
+    "backendUrl": "Backend URL",
+    "backendUrlDescription": "NIAC backend server address",
+    "websocket": "WebSocket",
+    "websocketDescription": "Real-time event streaming",
+    "interfaceTypes": {
+      "ethernet": "Ethernet",
+      "wifi": "WiFi",
+      "loopback": "Loopback",
+      "bridge": "Bridge",
+      "virtual": "Virtual",
+      "tunnel": "Tunnel",
+      "other": "Other"
+    }
+  },
+  "debug": {
+    "loggingTitle": "Logging",
+    "loggingDescription": "Configure debug output verbosity",
+    "logLevel": "Log Level",
+    "logLevelDescription": "Console output verbosity",
+    "levels": {
+      "error": "Error",
+      "warn": "Warning",
+      "info": "Info",
+      "debug": "Debug"
+    },
+    "devToolsTitle": "Developer Tools",
+    "devToolsDescription": "Advanced debugging features",
+    "protocolDebugLevels": "Protocol Debug Levels",
+    "protocolDebugLevelsDescription": "Configure per-protocol logging",
+    "exportDiagnostics": "Export Diagnostics",
+    "exportDiagnosticsDescription": "Download debug information"
+  },
+  "about": {
+    "applicationTitle": "Application",
+    "subtitle": "Network Injection & Analysis Console",
+    "legalTitle": "Legal",
+    "copyright": "© {{year}} Mustard Seed Networks. All rights reserved.",
+    "proprietaryNotice": "NIAC is proprietary software. Unauthorized copying, modification, or distribution is prohibited.",
+    "linksTitle": "Links",
+    "github": "GitHub",
+    "website": "Website"
+  }
+}

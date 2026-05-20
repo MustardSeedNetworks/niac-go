@@ -1,0 +1,42 @@
+{
+  "generic": {
+    "unknown": "An unknown error occurred",
+    "network": "Network error — check your connection",
+    "timeout": "Request timed out",
+    "notFound": "Not found",
+    "forbidden": "Permission denied",
+    "serverError": "Server error — please try again",
+    "invalidRequest": "Invalid request"
+  },
+  "validation": {
+    "required": "This field is required",
+    "tooShort": "Must be at least {{min}} characters",
+    "tooLong": "Must be at most {{max}} characters",
+    "invalidFormat": "Invalid format",
+    "invalidIp": "Invalid IP address",
+    "invalidPort": "Invalid port number",
+    "invalidHostname": "Invalid hostname",
+    "invalidYaml": "Invalid YAML"
+  },
+  "api": {
+    "fetchFailed": "Failed to load data",
+    "saveFailed": "Failed to save changes",
+    "deleteFailed": "Failed to delete item",
+    "uploadFailed": "Failed to upload file"
+  },
+  "simulation": {
+    "startFailed": "Failed to start simulation",
+    "stopFailed": "Failed to stop simulation",
+    "configInvalid": "Configuration is not valid",
+    "interfaceUnavailable": "Selected network interface is unavailable"
+  },
+  "packet": {
+    "captureFailed": "Failed to start packet capture",
+    "decodeFailed": "Failed to decode packet",
+    "filterInvalid": "Capture filter is invalid"
+  },
+  "walk": {
+    "validationFailed": "Validation failed",
+    "parseError": "Could not parse walk file"
+  }
+}

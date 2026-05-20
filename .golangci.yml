@@ -475,6 +475,31 @@ linters:
       - text: 'avoid meaningless package names'
         path: 'internal/api/'
         linters: [ revive ]
+      # internal/truststore writes trust-anchor PEMs into the four OS-specific
+      # CA directories (Debian/Ubuntu, RHEL/Fedora, Arch, openSUSE). The
+      # destination is computed by detectLinuxStore from a hardcoded
+      # candidate list, then filepath.Clean'd and bounded under its root
+      # via filepath.Rel before writing. gosec G703 cannot follow that
+      # provenance and reports the os.WriteFile call as taint-derived. The
+      # write is preceded by an explicit containment check — see
+      # writeAnchorFile in truststore_linux.go.
+      - text: 'G703: Path traversal via taint analysis'
+        path: 'internal/truststore/truststore_linux\.go'
+        linters: [ gosec ]
+      # internal/api/tls.go's httpToHTTPSRedirectHandler reads r.Host
+      # (client-controlled), strips the port, and reuses it as the host
+      # portion of the HTTPS Location. The only user-controlled portion
+      # that becomes path/query is r.URL.RequestURI(), which is also the
+      # exact value http.Redirect echoes. This is the standard
+      # HTTP→HTTPS upgrade pattern — same as seed and stem — and the
+      # browser sees a same-origin redirect modulo scheme+port. gosec
+      # G710's taint analysis cannot distinguish this from an arbitrary
+      # open-redirect sink. Mitigation lives in the deployment (don't
+      # expose 8044 to untrusted hosts) and the server config (operators
+      # set --listen= explicitly).
+      - text: 'G710: Open redirect via taint analysis'
+        path: 'internal/api/tls\.go'
+        linters: [ gosec ]
       - path: '_test\.go'
         linters:
           - bodyclose
