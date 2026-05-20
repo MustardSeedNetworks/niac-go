@@ -2,7 +2,6 @@ package api
 
 import (
 	"crypto/rand"
-	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/hex"
 	"fmt"
@@ -179,7 +178,14 @@ func (s *Server) auth(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		if s.cfg.Token == "" {
+		// Wave 2: auth is keyed off the TokenStore, not the legacy
+		// single-token field on ServerConfig. An empty / unset store
+		// preserves Wave 1's "loopback-only, no auth configured"
+		// behaviour: the non-loopback gate in server.go has already
+		// refused to start in that case if the listener wasn't bound
+		// to loopback, so reaching this branch with an empty store
+		// implies the operator deliberately opted out.
+		if s.tokens == nil || s.tokens.Len() == 0 {
 			next(w, r)
 
 			return
@@ -189,13 +195,8 @@ func (s *Server) auth(next http.HandlerFunc) http.HandlerFunc {
 		token := r.Header.Get("Authorization")
 		token = strings.TrimPrefix(token, "Bearer ")
 
-		// Hash both sides to a constant-length digest before comparing so
-		// ConstantTimeCompare does not short-circuit on unequal-length inputs
-		// (which would leak token length via timing).
-		clientHash := sha256.Sum256([]byte(token))
-		serverHash := sha256.Sum256([]byte(s.cfg.Token))
-
-		if subtle.ConstantTimeCompare(clientHash[:], serverHash[:]) != 1 {
+		scope, ok := s.tokens.Lookup(token)
+		if !ok {
 			// FEATURE #105: Use standardized error response
 			writeError(w, r, http.StatusUnauthorized, "unauthorized",
 				"Invalid or missing authentication token", nil)
@@ -213,6 +214,29 @@ func (s *Server) auth(next http.HandlerFunc) http.HandlerFunc {
 				"tokenPresent", token != "",
 			)
 
+			return
+		}
+
+		// Wave 2: scope enforcement. Safe methods (GET/HEAD/OPTIONS/
+		// TRACE) accept ScopeReadOnly; state-changing methods require
+		// ScopeReadWrite. A read-only token attempting a write returns
+		// 403 (the token is valid, just under-privileged) rather than
+		// 401 (which means "we don't know who you are").
+		required := RequiredScopeForMethod(r.Method)
+		if scope < required {
+			writeError(w, r, http.StatusForbidden, "forbidden",
+				"token lacks required scope", nil)
+			s.logger.Warn(
+				"[API] Forbidden request: token scope insufficient",
+				"event", "auth.forbidden_scope",
+				"requestID", requestID,
+				"clientIP", clientIP,
+				"userAgent", r.UserAgent(),
+				"path", r.URL.Path,
+				"method", r.Method,
+				"tokenScope", scope.String(),
+				"requiredScope", required.String(),
+			)
 			return
 		}
 

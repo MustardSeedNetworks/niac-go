@@ -43,8 +43,14 @@ const (
 
 // Config holds daemon configuration.
 type Config struct {
-	ListenAddr  string
-	Token       string
+	ListenAddr string
+	// Token is the legacy Wave 1 single bearer token (NIAC_API_TOKEN).
+	// Forwarded to api.ServerConfig.Token for back-compat.
+	Token string
+	// TokenFile is the Wave 2 multi-token JSON file path. Forwarded to
+	// api.ServerConfig.TokenFile. When non-empty, the daemon's SIGHUP
+	// handler re-reads this path on each signal.
+	TokenFile   string
 	StoragePath string
 	Version     string
 	Commit      string
@@ -134,6 +140,7 @@ func (d *Daemon) Start() error {
 	serverCfg := api.ServerConfig{
 		Addr:                d.cfg.ListenAddr,
 		Token:               d.cfg.Token,
+		TokenFile:           d.cfg.TokenFile,
 		Version:             d.cfg.Version,
 		Commit:              d.cfg.Commit,
 		BuildTime:           d.cfg.BuildTime,
@@ -169,6 +176,58 @@ func (d *Daemon) Start() error {
 	}
 
 	return nil
+}
+
+// ReloadTokens re-reads the configured token source (file or env) and
+// publishes the new token set to the API server. Returns the rotated
+// token count and any error encountered while loading. On error the
+// previously-active tokens stay in effect — the caller (typically the
+// SIGHUP handler in cmd/niac) should log and keep serving.
+//
+// Sources, in precedence order — same as initialTokenStore:
+//  1. TokenFile non-empty: re-read the JSON file.
+//  2. TokenFile empty, Token non-empty: republish the single token as
+//     ScopeReadWrite. This is the back-compat path: an operator can
+//     `export NIAC_API_TOKEN=<new>; kill -HUP <pid>` and the daemon
+//     picks up the new value without restarting. cfg.Token is
+//     re-read from the daemon's env on every call so the rotation
+//     actually picks up the new value.
+//  3. Neither set: clear the store. The non-loopback gate is a
+//     startup-time check, not a per-request check, so this does not
+//     change the listen address; new requests simply fall through to
+//     the unauthed branch (matching Wave 1's loopback default).
+func (d *Daemon) ReloadTokens() (int, error) {
+	if d.apiServer == nil {
+		return 0, errors.New("api server not started")
+	}
+	if d.cfg.TokenFile != "" {
+		return d.apiServer.ReloadTokensFromFile()
+	}
+	envToken := os.Getenv("NIAC_API_TOKEN")
+	switch {
+	case envToken != "":
+		d.apiServer.SetTokens([]api.ScopedToken{{Value: envToken, Scope: api.ScopeReadWrite}})
+		return 1, nil
+	case d.cfg.Token != "":
+		// Fall back to the daemon's startup-captured token when the
+		// env var has been unset between starts (rare but possible).
+		d.apiServer.SetTokens([]api.ScopedToken{{Value: d.cfg.Token, Scope: api.ScopeReadWrite}})
+		return 1, nil
+	default:
+		d.apiServer.SetTokens(nil)
+		return 0, nil
+	}
+}
+
+// TokenScopeCounts returns the number of active (read-only,
+// read-write) tokens in the API server's token store. Used by the
+// SIGHUP handler to surface a useful audit line without leaking token
+// values.
+func (d *Daemon) TokenScopeCounts() (int, int) {
+	if d.apiServer == nil {
+		return 0, 0
+	}
+	return d.apiServer.TokenScopeCounts()
 }
 
 // Shutdown gracefully shuts down the daemon.

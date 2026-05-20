@@ -164,7 +164,16 @@ type ReplayManager interface {
 type ServerConfig struct {
 	Addr        string
 	MetricsAddr string
-	Token       string
+	// Token is the legacy Wave 1 single bearer token. When non-empty and
+	// TokenFile is empty, the server seeds its TokenStore with this value
+	// at ScopeReadWrite (back-compat with the pre-Wave-2 contract).
+	Token string
+	// TokenFile, when non-empty, points at a 0o600 JSON file with the
+	// shape `{"tokens":[{"value":"...","scope":"read-only|read-write"}]}`.
+	// If both Token and TokenFile are set, TokenFile wins and a one-shot
+	// INFO is logged so the operator knows the env var was ignored. The
+	// file is re-read on SIGHUP via Server.ReloadTokensFromFile.
+	TokenFile   string
 	Stack       *protocols.Stack
 	Config      *config.Config
 	ConfigPath  string
@@ -270,6 +279,12 @@ type Server struct {
 	bgStopOnce        sync.Once
 	library           *library.Library
 	tlsFingerprint    tlsFingerprintCache
+	// tokens is the active bearer-token store. Seeded from
+	// ServerConfig.TokenFile (preferred) or ServerConfig.Token at
+	// construction time, then rotated by Server.ReloadTokensFromFile or
+	// Server.SetTokens (called from the SIGHUP handler in
+	// cmd/niac/cmd_daemon.go).
+	tokens *TokenStore
 }
 
 // NewServer returns a configured API server.
@@ -309,7 +324,106 @@ func NewServer(cfg ServerConfig) *Server {
 		walkLimiter:   NewRateLimiter(WalkRateLimit, WalkBurst),
 		fileLimiter:   NewRateLimiter(FileRateLimit, FileBurst),
 		library:       lib,
+		tokens:        initialTokenStore(cfg),
 	}
+}
+
+// initialTokenStore seeds the bearer-token store at construction time.
+// Precedence (matches the Wave 2 task brief and the daemon flag help):
+//  1. cfg.TokenFile non-empty: load the JSON file. On any load error we
+//     log loudly and fall through to a single-token / unauth store —
+//     we never start the server with a partially-applied token set.
+//  2. cfg.Token non-empty: treat as a single read-write token
+//     (Wave 1 back-compat).
+//  3. Neither: empty store. The auth middleware short-circuits to
+//     "no auth configured" and the non-loopback gate refuses to start
+//     unless the listen address is loopback-only.
+//
+// If both are set we honour the file and log INFO so the operator
+// knows NIAC_API_TOKEN was ignored.
+func initialTokenStore(cfg ServerConfig) *TokenStore {
+	if cfg.TokenFile != "" {
+		tokens, err := LoadTokenFile(cfg.TokenFile)
+		if err != nil {
+			slog.Error("[API] Failed to load token file at startup, falling back to NIAC_API_TOKEN (if set)",
+				"path", cfg.TokenFile, "error", err)
+		} else {
+			if cfg.Token != "" {
+				slog.Info("[API] Token file overrides NIAC_API_TOKEN; the env var value will be ignored",
+					"path", cfg.TokenFile, "tokenCount", len(tokens))
+			}
+			return NewTokenStore(tokens)
+		}
+	}
+	if cfg.Token != "" {
+		return NewTokenStore([]ScopedToken{{Value: cfg.Token, Scope: ScopeReadWrite}})
+	}
+	return NewTokenStore(nil)
+}
+
+// SetTokens atomically rotates the active bearer-token set. Used by
+// the SIGHUP handler when an operator updates the underlying token
+// source (file or env var). In-flight requests under the old token
+// complete normally — they already passed the auth middleware and the
+// handler does not re-check. Only NEW requests after the swap see
+// the new tokens.
+func (s *Server) SetTokens(tokens []ScopedToken) {
+	if s.tokens == nil {
+		s.tokens = NewTokenStore(tokens)
+		return
+	}
+	s.tokens.Replace(tokens)
+}
+
+// ReloadTokensFromFile re-reads the configured token file and applies
+// the result. Returns (count, error). On error the previous tokens
+// remain active (the caller should log and continue serving).
+//
+// If ServerConfig.TokenFile is empty this is a no-op that returns 0
+// with no error — the daemon's SIGHUP handler distinguishes the
+// file-mode and env-mode paths.
+func (s *Server) ReloadTokensFromFile() (int, error) {
+	if s.cfg.TokenFile == "" {
+		return 0, nil
+	}
+	tokens, err := LoadTokenFile(s.cfg.TokenFile)
+	if err != nil {
+		return 0, err
+	}
+	s.SetTokens(tokens)
+	return len(tokens), nil
+}
+
+// AuthConfigured reports whether the server has any bearer tokens
+// active. Used by the non-loopback gate (server.go) and the unauthed-
+// startup warning. Replaces the bare `s.cfg.Token == ""` check.
+func (s *Server) AuthConfigured() bool {
+	if s.tokens == nil {
+		return false
+	}
+	return s.tokens.Len() > 0
+}
+
+// TokenScopeCounts exposes the active token-store breakdown for the
+// SIGHUP audit log line. Returns zeros when no store is attached.
+func (s *Server) TokenScopeCounts() (int, int) {
+	if s.tokens == nil {
+		return 0, 0
+	}
+	return s.tokens.ScopeCounts()
+}
+
+// BoundAddr returns the address the API listener actually bound to.
+// This is the post-bindWithFallback address (which may differ from
+// ServerConfig.Addr when a port-fallback kicks in or "127.0.0.1:0"
+// was used). Returns "" when the listener is not running. Used by
+// tests that need to issue HTTP requests against a randomly-bound
+// daemon.
+func (s *Server) BoundAddr() string {
+	if s.httpServer == nil {
+		return ""
+	}
+	return s.httpServer.Addr
 }
 
 // Start boots the HTTP listeners.
@@ -453,7 +567,7 @@ func (s *Server) enforceNonLoopbackAuthGate() error {
 	if parseErr != nil {
 		return fmt.Errorf("parse listen address: %w", parseErr)
 	}
-	if nonLoopback && s.cfg.Token == "" {
+	if nonLoopback && !s.AuthConfigured() {
 		return errNonLoopbackRequiresToken
 	}
 	return nil
@@ -465,7 +579,7 @@ func (s *Server) enforceNonLoopbackAuthGate() error {
 // non-loopback without a token), but we still surface the unauth state
 // so the operator sees it in the startup log.
 func (s *Server) warnIfUnauthenticated() {
-	if s.cfg.Token != "" || s.cfg.Addr == "" {
+	if s.AuthConfigured() || s.cfg.Addr == "" {
 		return
 	}
 	s.logger.Warn(

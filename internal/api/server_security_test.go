@@ -33,9 +33,13 @@ func newTestServerWithAuth(t *testing.T) (*Server, string, string) {
 
 	server.csrfToken = csrfToken
 
-	// Generate auth token
+	// Generate auth token. Wave 2: seed the TokenStore directly. The
+	// cfg.Token field is left set so the legacy Wave 1 gate code path
+	// (server.go:enforceNonLoopbackAuthGate) sees a configured-auth
+	// state even though the middleware reads from s.tokens.
 	token := generateTestToken()
 	server.cfg.Token = token
+	server.SetTokens([]ScopedToken{{Value: token, Scope: ScopeReadWrite}})
 
 	return server, tmpDir, token
 }
