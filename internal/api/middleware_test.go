@@ -172,7 +172,10 @@ func TestCSRFProtectionRejectsWhenNoToken(t *testing.T) {
 
 func TestAuthMiddlewareWithoutToken(t *testing.T) {
 	server := createTestServerForMiddleware(t)
-	server.cfg.Token = "secret-api-token"
+	// Wave 2: tokens live in TokenStore. The Wave 1 single-token model
+	// is preserved by seeding the store with one ScopeReadWrite entry —
+	// behaviourally identical to setting cfg.Token previously.
+	server.SetTokens([]ScopedToken{{Value: "secret-api-token", Scope: ScopeReadWrite}})
 	server.rateLimiter = NewRateLimiter(100, 200)
 
 	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -194,7 +197,7 @@ func TestAuthMiddlewareWithoutToken(t *testing.T) {
 
 func TestAuthMiddlewareWithValidToken(t *testing.T) {
 	server := createTestServerForMiddleware(t)
-	server.cfg.Token = "secret-api-token"
+	server.SetTokens([]ScopedToken{{Value: "secret-api-token", Scope: ScopeReadWrite}})
 	server.rateLimiter = NewRateLimiter(100, 200)
 
 	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -217,7 +220,7 @@ func TestAuthMiddlewareWithValidToken(t *testing.T) {
 
 func TestAuthMiddlewareWithInvalidToken(t *testing.T) {
 	server := createTestServerForMiddleware(t)
-	server.cfg.Token = "secret-api-token"
+	server.SetTokens([]ScopedToken{{Value: "secret-api-token", Scope: ScopeReadWrite}})
 	server.rateLimiter = NewRateLimiter(100, 200)
 
 	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -240,7 +243,8 @@ func TestAuthMiddlewareWithInvalidToken(t *testing.T) {
 
 func TestAuthMiddlewareNoTokenConfigured(t *testing.T) {
 	server := createTestServerForMiddleware(t)
-	server.cfg.Token = "" // No API token configured
+	// Wave 2: empty TokenStore is the canonical "auth disabled" shape.
+	server.SetTokens(nil)
 	server.rateLimiter = NewRateLimiter(100, 200)
 
 	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -258,5 +262,128 @@ func TestAuthMiddlewareNoTokenConfigured(t *testing.T) {
 	// When no API token is configured, auth should be skipped
 	if rec.Code != http.StatusOK {
 		t.Errorf("request with no token configured: status = %d, want %d", rec.Code, http.StatusOK)
+	}
+}
+
+// TestAuthMiddleware_ReadOnlyTokenOnGet_200 asserts a read-only token
+// is sufficient for GET requests (Wave 2 scope enforcement).
+func TestAuthMiddleware_ReadOnlyTokenOnGet_200(t *testing.T) {
+	server := createTestServerForMiddleware(t)
+	server.SetTokens([]ScopedToken{{Value: "ro-token", Scope: ScopeReadOnly}})
+	server.rateLimiter = NewRateLimiter(100, 200)
+
+	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	wrapped := server.auth(handler)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/stats", nil)
+	req.RemoteAddr = "192.168.1.1:1234"
+	req.Header.Set("Authorization", "Bearer ro-token")
+	rec := httptest.NewRecorder()
+
+	wrapped(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("read-only token on GET: status = %d, want 200", rec.Code)
+	}
+}
+
+// TestAuthMiddleware_ReadOnlyTokenOnPost_403 asserts a read-only token
+// is rejected on state-changing methods with 403 (not 401) — the token
+// is valid, just under-privileged.
+func TestAuthMiddleware_ReadOnlyTokenOnPost_403(t *testing.T) {
+	server := createTestServerForMiddleware(t)
+	server.SetTokens([]ScopedToken{{Value: "ro-token", Scope: ScopeReadOnly}})
+	server.rateLimiter = NewRateLimiter(100, 200)
+
+	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	wrapped := server.auth(handler)
+
+	for _, method := range []string{http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete} {
+		t.Run(method, func(t *testing.T) {
+			req := httptest.NewRequest(method, "/api/v1/config", nil)
+			req.RemoteAddr = "192.168.1.1:1234"
+			req.Header.Set("Authorization", "Bearer ro-token")
+			rec := httptest.NewRecorder()
+
+			wrapped(rec, req)
+
+			if rec.Code != http.StatusForbidden {
+				t.Errorf("read-only token on %s: status = %d, want 403", method, rec.Code)
+			}
+		})
+	}
+}
+
+// TestAuthMiddleware_ReadWriteTokenOnPost_200 asserts a read-write
+// token is accepted on state-changing methods.
+func TestAuthMiddleware_ReadWriteTokenOnPost_200(t *testing.T) {
+	server := createTestServerForMiddleware(t)
+	server.SetTokens([]ScopedToken{{Value: "rw-token", Scope: ScopeReadWrite}})
+	server.rateLimiter = NewRateLimiter(100, 200)
+
+	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	wrapped := server.auth(handler)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/config", nil)
+	req.RemoteAddr = "192.168.1.1:1234"
+	req.Header.Set("Authorization", "Bearer rw-token")
+	rec := httptest.NewRecorder()
+
+	wrapped(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("read-write token on POST: status = %d, want 200", rec.Code)
+	}
+}
+
+// TestAuthMiddleware_UnknownToken_401 asserts a token not in the store
+// is rejected with 401 regardless of HTTP method.
+func TestAuthMiddleware_UnknownToken_401(t *testing.T) {
+	server := createTestServerForMiddleware(t)
+	server.SetTokens([]ScopedToken{{Value: "known-token", Scope: ScopeReadWrite}})
+	server.rateLimiter = NewRateLimiter(100, 200)
+
+	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	wrapped := server.auth(handler)
+
+	for _, method := range []string{http.MethodGet, http.MethodPost} {
+		t.Run(method, func(t *testing.T) {
+			req := httptest.NewRequest(method, "/api/v1/stats", nil)
+			req.RemoteAddr = "192.168.1.1:1234"
+			req.Header.Set("Authorization", "Bearer not-the-token")
+			rec := httptest.NewRecorder()
+
+			wrapped(rec, req)
+
+			if rec.Code != http.StatusUnauthorized {
+				t.Errorf("unknown token on %s: status = %d, want 401", method, rec.Code)
+			}
+		})
+	}
+}
+
+// TestAuthMiddleware_BackCompat_SingleNIACAPIToken asserts the Wave 1
+// contract: setting only ServerConfig.Token (the env-var-backed single
+// token) yields a read-write token via initialTokenStore. Operators
+// who set just NIAC_API_TOKEN must see no behaviour change.
+func TestAuthMiddleware_BackCompat_SingleNIACAPIToken(t *testing.T) {
+	store := initialTokenStore(ServerConfig{Token: "legacy-token"})
+	if store.Len() != 1 {
+		t.Fatalf("Wave 1 single-token seed: store size = %d, want 1", store.Len())
+	}
+	scope, ok := store.Lookup("legacy-token")
+	if !ok {
+		t.Fatal("Wave 1 single-token seed: token not found in store")
+	}
+	if scope != ScopeReadWrite {
+		t.Errorf("Wave 1 single-token seed: scope = %v, want ScopeReadWrite", scope)
 	}
 }

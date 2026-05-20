@@ -39,6 +39,11 @@ type daemonOptions struct {
 	httpOnly   bool
 	certDir    string
 	apiToken   string
+	// Wave 2 (SIGHUP rotation + scoped tokens) options. tokenFile is the
+	// path to a 0o600 JSON file containing one or more {value, scope}
+	// pairs; preferred over apiToken / NIAC_API_TOKEN. SIGHUP re-reads
+	// whichever source is active.
+	tokenFile string
 }
 
 func addDaemonCommand(root *cobra.Command, info versionInfo) {
@@ -94,8 +99,22 @@ Example:
 		StringVar(&options.certDir, "cert-dir", "", "Directory holding the self-signed cert and key (default: certs/ relative to CWD; override with NIAC_CERT_DIR)")
 	daemonCmd.Flags().
 		StringVar(&options.apiToken, "api-token", "", "Bearer token (preferred: NIAC_API_TOKEN). Required when --listen is non-loopback.")
+	daemonCmd.Flags().
+		StringVar(&options.tokenFile, "token-file", "",
+			"Path to a 0600 JSON file with scoped tokens (overrides --api-token / NIAC_API_TOKEN). "+
+				"Schema: {\"tokens\":[{\"value\":\"...\",\"scope\":\"read-only|read-write\"}]}. "+
+				"Re-read on SIGHUP.")
 
 	root.AddCommand(daemonCmd)
+}
+
+// resolveDaemonTokenFile layers --token-file / NIAC_API_TOKEN_FILE in
+// the documented precedence order. Returns the resolved path (or "").
+func resolveDaemonTokenFile(o *daemonOptions) string {
+	if o.tokenFile != "" {
+		return o.tokenFile
+	}
+	return os.Getenv("NIAC_API_TOKEN_FILE")
 }
 
 // resolveDaemonAddrs returns the listen address and (when TLS is on) the
@@ -169,6 +188,7 @@ func runDaemon(options *daemonOptions, info versionInfo) error {
 
 	listenAddr, redirectAddr, tlsOn := resolveDaemonAddrs(options)
 	token := resolveDaemonAPIToken(options)
+	tokenFile := resolveDaemonTokenFile(options)
 	certDir := resolveDaemonCertDir(options)
 
 	scheme := "http"
@@ -181,9 +201,13 @@ func runDaemon(options *daemonOptions, info versionInfo) error {
 	if tlsOn && redirectAddr != "" {
 		logging.Infof("HTTP→HTTPS redirector listening on %s", redirectAddr)
 	}
-	if token != "" {
-		logging.Infof("API authentication enabled")
-	} else {
+	authEnabled := token != "" || tokenFile != ""
+	switch {
+	case tokenFile != "":
+		logging.Infof("API authentication enabled (token file: %s; SIGHUP rotates)", tokenFile)
+	case token != "":
+		logging.Infof("API authentication enabled (single token via env/flag; SIGHUP rotates)")
+	default:
 		logging.Warningf(
 			"SECURITY: No API token set. Anyone with network access can control simulations.",
 		)
@@ -193,6 +217,7 @@ func runDaemon(options *daemonOptions, info versionInfo) error {
 	cfg := daemon.Config{
 		ListenAddr:          listenAddr,
 		Token:               token,
+		TokenFile:           tokenFile,
 		StoragePath:         options.storagePath,
 		Version:             info.version,
 		Commit:              info.commit,
@@ -210,10 +235,10 @@ func runDaemon(options *daemonOptions, info versionInfo) error {
 	// returns the same gate (the duplicate check is intentional defense in
 	// depth — the server will refuse too, but printing the friendly hint
 	// here surfaces it earlier in the log timeline).
-	if nonLoopback, parseErr := isNonLoopbackListen(listenAddr); parseErr == nil && nonLoopback && token == "" {
+	if nonLoopback, parseErr := isNonLoopbackListen(listenAddr); parseErr == nil && nonLoopback && !authEnabled {
 		return errors.New(
 			"niac refuses to bind a non-loopback address without an API token.\n" +
-				"Set NIAC_API_TOKEN=<value> or pass --api-token=<value>.\n" +
+				"Set NIAC_API_TOKEN=<value>, --api-token=<value>, or --token-file=<path>.\n" +
 				"If you want loopback-only (no auth), set --listen=127.0.0.1")
 	}
 
@@ -227,7 +252,18 @@ func runDaemon(options *daemonOptions, info versionInfo) error {
 	}
 
 	logging.Successf("✓ Daemon started successfully")
-	logging.Infof("Press Ctrl+C to stop")
+	logging.Infof("Press Ctrl+C to stop (SIGHUP rotates tokens without restart)")
+
+	// Wave 2 (#91): SIGHUP rotates the bearer-token set without
+	// restart. Operators can edit the token file or update
+	// NIAC_API_TOKEN and `kill -HUP <pid>` to apply the new value;
+	// in-flight requests under the old token are unaffected.
+	hupChan := make(chan os.Signal, 1)
+	signal.Notify(hupChan, syscall.SIGHUP)
+	defer signal.Stop(hupChan)
+	hupDone := make(chan struct{})
+	go handleSIGHUP(hupChan, hupDone, d)
+	defer close(hupDone)
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
@@ -246,6 +282,38 @@ func runDaemon(options *daemonOptions, info versionInfo) error {
 
 	logging.Successf("✓ Daemon stopped gracefully")
 	return nil
+}
+
+// handleSIGHUP services the SIGHUP rotation channel. It runs as a goroutine
+// for the daemon's lifetime and exits when `done` is closed (the main
+// loop closes it on shutdown so this handler never outlives the daemon).
+//
+// On each SIGHUP we ask the daemon to re-read its configured token
+// source. The daemon returns (count, error); we log either outcome
+// with the scope breakdown but never log the token values themselves.
+// On error the previous tokens stay active — a broken token file must
+// not lock the operator out of their running daemon.
+func handleSIGHUP(hupChan <-chan os.Signal, done <-chan struct{}, d *daemon.Daemon) {
+	for {
+		select {
+		case <-done:
+			return
+		case <-hupChan:
+			count, err := d.ReloadTokens()
+			if err != nil {
+				logging.Errorf(
+					"SIGHUP: token reload failed (%v); previous tokens remain active",
+					err,
+				)
+				continue
+			}
+			ro, rw := d.TokenScopeCounts()
+			logging.Infof(
+				"SIGHUP: token set rotated (%d total: read-only=%d, read-write=%d)",
+				count, ro, rw,
+			)
+		}
+	}
 }
 
 // isNonLoopbackListen mirrors api.addrIsNonLoopback so cmd/niac can pre-
