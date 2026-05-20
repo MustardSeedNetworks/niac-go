@@ -5,6 +5,14 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.79.0](https://github.com/krisarmstrong/niac-go/compare/v0.78.1...v0.79.0) (2026-05-20)
+
+
+### Features
+
+* **auth:** sighup token rotation + scoped tokens ([#632](https://github.com/krisarmstrong/niac-go/issues/632)) ([48567a9](https://github.com/krisarmstrong/niac-go/commit/48567a94e0444d7ca06148e1b7a3d1a86ea20a1e))
+* TLS by default + canonical port 8445 + HTTP redirector + default-secure non-loopback (Wave 1) ([#630](https://github.com/krisarmstrong/niac-go/issues/630)) ([ea81fff](https://github.com/krisarmstrong/niac-go/commit/ea81fff4b3a42d8837ee569f62507a9c9237e998))
+
 ## [0.78.1](https://github.com/krisarmstrong/niac-go/compare/v0.78.0...v0.78.1) (2026-05-19)
 
 
