@@ -230,10 +230,15 @@
    LIGHT THEME (CSS default) — Mustard Seed Networks
    ========================================================================== */
 :root {
-  /* Brand */
-  --color-brand-primary: #2d7a3e; /* Seed Green */
-  --color-brand-accent: #4caf50;
-  --color-brand-gold: #d4a017;
+  /* Brand — constant across light/dark (canonical 2026-05-22).
+   * NIAC product anchor is niac-500 = Tailwind indigo-600 — replaces both
+   * the pre-audit violet #8b5cf6 (per old marketing site) AND the wrong
+   * Seed-green that was patched in during a partial harmonization pass.
+   * NIAC simulates network infrastructure; indigo reads "infrastructure /
+   * engineering" and gives portfolio separation from Seed (green) + Stem (blue). */
+  --color-brand-primary: #4f46e5; /* NIAC anchor (niac-500 / indigo-600) */
+  --color-brand-accent: #a5b4fc; /* Lighter sibling (niac-300 / indigo-300) — hover */
+  --color-brand-gold: #d4a017; /* Mustard cross-brand accent (mustard-500) */
 
   /* Surfaces — Botanical-earth: warm cream palette (canonical 2026-05-22) */
   --color-surface-base: #fbfaf5;
@@ -264,10 +269,9 @@
    Default boot is dark (see useTheme hook).
    ========================================================================== */
 .dark {
-  /* Brand — lighter shades for contrast on dark surfaces */
-  --color-brand-primary: #81c784;
-  --color-brand-accent: #a5d6a7;
-  --color-brand-gold: #fbbf24;
+  /* Brand — constant across modes (no .dark override).
+   * Lightening previously applied here violated the brand-constant rule
+   * (canonical 2026-05-22). See :root block above. */
 
   /* Surfaces — Botanical-earth: deep green-black palette (canonical 2026-05-22) */
   --color-surface-base: #0e1612;
