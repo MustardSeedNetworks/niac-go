@@ -239,6 +239,16 @@ jobs:
           path: internal/api/ui/
           retention-days: 1
 
+      - name: Build Storybook
+        run: npm run build-storybook -- --output-dir storybook-static --quiet
+
+      - name: Upload Storybook static
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: storybook-static
+          path: ui/storybook-static/
+          retention-days: 7
+
   # ===========================================================================
   # Security Scanning
   # ===========================================================================
