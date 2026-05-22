@@ -44,6 +44,7 @@
 export { alert, badge, button, card, drawer, icon, input, modal, status } from './themeComponents';
 export { deviceColor, linkSpeedColor, protocolColor } from './themeDeviceColors';
 export { border, layout, radius } from './themeLayout';
+export { moduleColor } from './themeModuleColors';
 export { spacing } from './themeSpacing';
 export { typography } from './themeTypography';
 export {

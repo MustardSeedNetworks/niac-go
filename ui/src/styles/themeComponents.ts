@@ -12,8 +12,12 @@ export const button = {
   base: 'inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-brand-primary/50 disabled:opacity-50 disabled:cursor-not-allowed',
 
   variant: {
+    // text-white (not text-text-inverse) — text-inverse flips to dark in dark
+    // mode and would fail WCAG AA against the constant indigo brand bg.
+    // hover:bg-brand-primary/90 avoids the color-shift trap of using the
+    // lighter brand-accent (which fails contrast against white text).
     primary:
-      'bg-gradient-to-r from-brand-primary to-brand-primary text-text-primary shadow-lg shadow-brand-primary/30 hover:from-brand-primary hover:to-brand-accent active:scale-[0.98]',
+      'bg-brand-primary text-white shadow-lg shadow-brand-primary/30 hover:bg-brand-primary/90 active:scale-[0.98]',
     secondary: 'bg-bg-elevated text-text-primary hover:bg-bg-overlay border border-border-default',
     ghost: 'text-text-muted hover:text-text-primary hover:bg-bg-elevated',
     outline:
@@ -49,15 +53,18 @@ export const input = {
 } as const;
 
 export const card = {
-  base: 'rounded-xl backdrop-blur-xl',
+  // base: flat by default (canonical 2026-05-22). The pre-audit base had
+  // `backdrop-blur-xl` baked in, which made every card a glass card. Glass
+  // is now an opt-in variant — use it for overlays over the topology canvas
+  // or other content surfaces, not for default UI cards.
+  base: 'rounded-xl border',
 
   variant: {
-    default: 'bg-gradient-to-br from-bg-elevated to-bg-surface border border-border-default',
-    elevated:
-      'bg-gradient-to-br from-bg-elevated to-bg-surface border border-border-default shadow-xl shadow-black/20',
+    default: 'bg-bg-elevated border-border-default',
+    elevated: 'bg-bg-elevated border-border-default shadow-xl shadow-black/20',
     interactive:
-      'bg-gradient-to-br from-bg-elevated to-bg-surface border border-border-default hover:border-brand-primary/30 cursor-pointer transition-colors',
-    glass: 'bg-bg-elevated/40 backdrop-blur-2xl border border-border-default shadow-2xl',
+      'bg-bg-elevated border-border-default hover:border-brand-primary/50 cursor-pointer transition-colors',
+    glass: 'bg-bg-elevated/40 backdrop-blur-2xl border-border-default shadow-2xl',
   },
 
   padding: {

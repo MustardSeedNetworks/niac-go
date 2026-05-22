@@ -127,6 +127,18 @@
   --color-info-900: #1e3a8a;
 
   /* ========================================
+   * Module Accents — NIAC feature modules (canonical 2026-05-22).
+   * Constant across light/dark. For icons, badges, and legend swatches
+   * only — never for card backgrounds. Mirrors Seed's roots/canopy/etc.
+   * pattern (5 distinct hues, not a mono-anchor ramp).
+   * ======================================== */
+  --color-module-topology: #4f46e5; /* Indigo-600 — network map (= brand anchor) */
+  --color-module-protocols: #0d9488; /* Teal-600 — protocol stack, packet types */
+  --color-module-analyze: #c026d3; /* Fuchsia-600 — capture inspection, synthesis */
+  --color-module-inject: #e11d48; /* Rose-600 — traffic generation, replay */
+  --color-module-templates: #d97706; /* Amber-600 — saved configs, library */
+
+  /* ========================================
    * Device Type Colors (Topology) — NIAC-specific, theme-neutral
    * ======================================== */
   --color-device-router: #3b82f6;
