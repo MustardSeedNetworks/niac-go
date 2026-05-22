@@ -117,3 +117,4 @@ _project_specs
 
 # Go workspace
 go.work.sum
+ui/storybook-static/
