@@ -17,8 +17,12 @@ export default defineConfig({
   testDir: './e2e',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  // retries 1 (not 2) — one retry is enough to dodge transient flakes; the
+  //   second retry was costing ~30s × N flaky tests with no incremental signal.
+  // workers 2 in CI (was 1) — GH Actions runners are 4-vCPU; 1 worker wastes
+  //   75% of the box. Mirrors seed #1080 and the cross-repo perf push.
+  retries: process.env.CI ? 1 : 0,
+  workers: process.env.CI ? 2 : undefined,
   timeout: 30000,
   expect: {
     timeout: 10000,
