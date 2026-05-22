@@ -5,6 +5,21 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.80.0](https://github.com/krisarmstrong/niac-go/compare/v0.79.0...v0.80.0) (2026-05-22)
+
+
+### Features
+
+* **stories:** cover 5 context-heavy src/ui/ primitives (Wave 5 / niac-W5-2c) ([#645](https://github.com/krisarmstrong/niac-go/issues/645)) ([d427a05](https://github.com/krisarmstrong/niac-go/commit/d427a05f23b4fa6d007965a21386783a98b2b25b))
+* **stories:** cover 8 more src/ui/ primitives (Wave 5 / niac-W5-2b) ([#641](https://github.com/krisarmstrong/niac-go/issues/641)) ([191b195](https://github.com/krisarmstrong/niac-go/commit/191b195f0dc60b97c7df018159760fee6f099036))
+* **stories:** primitive storybook coverage for src/ui/ (Wave 5 / niac-W5-2) ([#639](https://github.com/krisarmstrong/niac-go/issues/639)) ([6fac3bb](https://github.com/krisarmstrong/niac-go/commit/6fac3bb238e9ed55b9660e0a3883242d9e5346f0))
+* **ui:** scaffold storybook 10 (Wave 5 / niac-W5-1, closes [#636](https://github.com/krisarmstrong/niac-go/issues/636)) ([#638](https://github.com/krisarmstrong/niac-go/issues/638)) ([4919cf1](https://github.com/krisarmstrong/niac-go/commit/4919cf14dc5085f0f4947dd3c5d381f1784c04f2))
+
+
+### Bug Fixes
+
+* **tsconfig:** drop deprecated baseUrl from tsconfig.app.json (TS 6 compat) ([#648](https://github.com/krisarmstrong/niac-go/issues/648)) ([a55317c](https://github.com/krisarmstrong/niac-go/commit/a55317cc65a6fa53c5daa0520894c7b02ffbd2d5))
+
 ## [0.79.0](https://github.com/krisarmstrong/niac-go/compare/v0.78.1...v0.79.0) (2026-05-20)
 
 
