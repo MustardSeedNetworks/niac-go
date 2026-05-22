@@ -305,6 +305,52 @@ body {
   min-height: 100vh;
 }
 
+/* ============================================================================
+ * TYPOGRAPHY SCALE — canonical responsive scale (Seed/Stem/NIAC harmonized)
+ * Added 2026-05-22 Phase 3. Use semantic classes instead of raw Tailwind sizes.
+ *
+ * Usage:
+ *   <h1 className="heading-1">Page Title</h1>
+ *   <h2 className="section-title">CATEGORY LABEL</h2>
+ *   <p className="body">Default paragraph.</p>
+ *   <span className="caption">Metadata</span>
+ * ============================================================================ */
+@layer components {
+  .heading-1 {
+    @apply text-2xl sm:text-3xl font-bold text-text-primary leading-tight tracking-tight;
+  }
+  .heading-2 {
+    @apply text-xl sm:text-2xl font-semibold text-text-primary leading-snug;
+  }
+  .heading-3 {
+    @apply text-lg sm:text-xl font-semibold text-text-primary leading-snug;
+  }
+  .heading-4 {
+    @apply text-base sm:text-lg font-medium text-text-primary leading-snug;
+  }
+  .section-title {
+    @apply text-xs font-medium uppercase tracking-wider text-text-muted;
+  }
+  .body-large {
+    @apply text-lg text-text-primary leading-relaxed;
+  }
+  .body {
+    @apply text-base text-text-primary leading-relaxed;
+  }
+  .body-small {
+    @apply text-sm text-text-secondary leading-relaxed;
+  }
+  .caption {
+    @apply text-xs text-text-muted leading-normal;
+  }
+  .label {
+    @apply text-sm font-medium text-text-primary;
+  }
+  .code {
+    @apply font-mono text-sm bg-surface-hover px-1.5 py-0.5 rounded;
+  }
+}
+
 /* ========================================
  * Scrollbar Styling
  * ======================================== */
