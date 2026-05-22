@@ -8,25 +8,15 @@
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
-    <meta name="theme-color" content="#2d7a3e" />
+    <meta name="theme-color" content="#3730a3" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="NIAC - Network In A Can by Mustard Seed Networks" />
     <title>NIAC | Mustard Seed Networks</title>
-    <!-- Preconnect to Google Fonts for faster loading -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <!--
-      Load fonts with display=swap so the page renders the moment the bundle
-      is ready, even if Google Fonts is slow. We used to use the
-      media="print" / onload="this.media='all'" trick for non-blocking
-      delivery, but the inline onload required script-src 'unsafe-inline'
-      in our CSP. The font CSS itself is small and gzipped, so a normal
-      stylesheet link is the right tradeoff for a stricter CSP.
+      Fonts (Inter Variable + JetBrains Mono) self-hosted via
+      @fontsource-variable, imported from src/main.tsx. No external
+      requests, CSP-clean, no FOUT. Space Grotesk dropped 2026-05-22.
     -->
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
-    />
   </head>
   <body>
     <div id="root"></div>
