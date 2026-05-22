@@ -1,4 +1,6 @@
-/* Fonts loaded asynchronously from index.html for non-blocking render */
+/* Fonts (Inter Variable + JetBrains Mono) self-hosted via
+ * @fontsource-variable — imported from src/main.tsx. Space Grotesk dropped
+ * per 2026-05-22 brand audit; Inter now covers both display and body. */
 @import "tailwindcss";
 @source "../**/*.{js,ts,jsx,tsx}";
 
@@ -19,9 +21,9 @@
    * Font Families
    * (v4 uses --font-* prefix to generate font-* utilities)
    * ======================================== */
-  --font-display: "Space Grotesk", "Inter", system-ui, sans-serif;
-  --font-body: "Inter", system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", "Fira Code", monospace;
+  --font-display: "Inter Variable", "Inter", system-ui, sans-serif;
+  --font-body: "Inter Variable", "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", monospace;
 
   /* ========================================
    * Brand Colors — Mustard Seed Networks
