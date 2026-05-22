@@ -6,33 +6,37 @@
  * Centralized design tokens and utilities for consistent UI across the app.
  *
  * ARCHITECTURE:
- * 1. CSS Variables (index.css) - Core color tokens (dark theme)
+ * 1. CSS Variables (index.css) - Core color tokens for light/dark modes
  * 2. This file (theme.ts) - TypeScript tokens and utility functions
- * 3. Tailwind Classes - Composable styling patterns
+ * 3. Tailwind v4 @theme directive - CSS-first utility class generation
  *
- * BRAND COLORS:
- * - Primary: Violet (#8b5cf6) - Actions, links, focus states
- * - Accent: Lighter Violet (#a78bfa) - Hover states
+ * BRAND COLORS (anchors constant across light + dark per 2026-05-22 audit):
+ * - Primary:        Indigo #4f46e5 (Tailwind indigo-600) - filled buttons, glows
+ * - Primary-strong: Indigo #3730a3 (indigo-700) - text/links on light surfaces (AA)
+ * - Primary-soft:   Indigo #a5b4fc (indigo-300) - text/links on dark surfaces (AA)
+ * - Brand-gold:     Mustard #d4a017 - cross-brand accent, warning, focus, premium
  *
- * STATUS COLORS (Industry Standard):
- * - Success: Green (#22c55e) - Positive states
- * - Warning: Amber (#f59e0b) - Caution states
- * - Error: Red (#ef4444) - Error/danger states
- * - Info: Blue (#3b82f6) - Informational states
+ * STATUS COLORS (tied to brand; constant across modes):
+ * - Success: #4caf50 (= seed-500)
+ * - Warning: #d4a017 (= mustard-500, brand cross-accent)
+ * - Danger:  #ef4444 (coral red)
+ * - Info:    #1976d2 (= stem-500)
  *
- * DEVICE COLORS (NIAC specific):
- * - Router: Blue - Network routing
- * - Switch: Green - Layer 2 switching
- * - Firewall: Red - Security devices
- * - Server: Orange - Compute nodes
- * - Workstation: Gray - End devices
- * - Access Point: Purple - Wireless
- * - IoT: Teal - Internet of Things
+ * MODULE ACCENTS (5 differentiated hues, constant across modes):
+ * - Topology:  #4f46e5 indigo  - network map / graph view
+ * - Protocols: #0d9488 teal    - protocol stack, packet types
+ * - Analyze:   #c026d3 fuchsia - capture inspection
+ * - Inject:    #e11d48 rose    - traffic generation
+ * - Templates: #d97706 amber   - saved configs / library
+ *
+ * DEVICE COLORS (NIAC-specific, orthogonal to brand — see themeDeviceColors.ts):
+ * Router, Switch, Firewall, Server, Workstation, AP, IoT, Unknown.
  *
  * USAGE:
  * import { spacing, button, cn, deviceColor } from '../styles/theme';
  * <button className={cn(button.base, button.variant.primary)}>Action</button>
  *
+ * See THEMING.md for the full canonical token map and migration phase notes.
  * =============================================================================
  */
 
