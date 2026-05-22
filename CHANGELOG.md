@@ -5,6 +5,25 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.81.0](https://github.com/krisarmstrong/niac-go/compare/v0.80.0...v0.81.0) (2026-05-22)
+
+
+### Features
+
+* **theme:** adopt botanical-earth surface palette (Phase 4) ([8133adb](https://github.com/krisarmstrong/niac-go/commit/8133adbe2e7fd01d8a4125d761fc1945a9b1256f))
+* **theme:** adopt canonical responsive type scale (Phase 3) ([4f411f2](https://github.com/krisarmstrong/niac-go/commit/4f411f212b6d9269dc5a2c375735d740eb0d5d28))
+* **theme:** Apply 2026-05-22 brand audit — NIAC becomes indigo + 5 modules ([26bc0f0](https://github.com/krisarmstrong/niac-go/commit/26bc0f0daaeaf8682ecf1b3d9d7cadd463863116))
+* **theme:** differentiate NIAC modules + flatten component primitives (Phase 6) ([06764c0](https://github.com/krisarmstrong/niac-go/commit/06764c0d2f6ef0763dc0bcaf29c1e6e0ce77eb40))
+* **theme:** identity shift — NIAC becomes indigo (Phase 5) ([5a2f110](https://github.com/krisarmstrong/niac-go/commit/5a2f110c1c08d7fb47cc81322cbaede9131a8d11))
+* **theme:** self-host fonts via [@fontsource-variable](https://github.com/fontsource-variable), drop Space Grotesk (Phase 2) ([0010faf](https://github.com/krisarmstrong/niac-go/commit/0010faf6c4478efc29ecf55bd49e643a2239678f))
+* **theme:** swap status palette to canonical brand-tied anchors (Phase 1) ([e806bb7](https://github.com/krisarmstrong/niac-go/commit/e806bb70b37e685a8a11ce6b3b5ac30783448dad))
+
+
+### Bug Fixes
+
+* **vite:** stop inlining font assets as data: URLs (CSP fix) ([4efa048](https://github.com/krisarmstrong/niac-go/commit/4efa0488194bd380e1b09c917fc4aea41b0a2d5f))
+* **vite:** Stop inlining font assets as data: URLs (CSP fix) ([35e87ca](https://github.com/krisarmstrong/niac-go/commit/35e87ca52c333f517706d6c41aec8f09c0642ddc))
+
 ## [0.80.0](https://github.com/krisarmstrong/niac-go/compare/v0.79.0...v0.80.0) (2026-05-22)
 
 
