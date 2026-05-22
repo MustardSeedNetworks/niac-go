@@ -657,7 +657,7 @@ jobs:
 
       - name: Start backend server
         run: |
-          nohup ./niac daemon --listen 127.0.0.1:8080 > server.log 2>&1 &
+          nohup ./niac daemon --http --listen 127.0.0.1:8080 > server.log 2>&1 &
           echo "Waiting for server to start..."
           for i in {1..30}; do
             if curl -sf http://localhost:8080/__version 2>/dev/null; then
@@ -738,7 +738,7 @@ jobs:
 
       - name: Start server
         run: |
-          nohup ./niac daemon --listen 127.0.0.1:8080 > server.log 2>&1 &
+          nohup ./niac daemon --http --listen 127.0.0.1:8080 > server.log 2>&1 &
           for i in {1..30}; do
             if curl -sf http://localhost:8080/__version 2>/dev/null; then
               echo "Server ready"
