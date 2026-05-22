@@ -45,6 +45,12 @@ export default defineConfig(({ mode }) => {
       cssCodeSplit: true,
       // Smaller chunk size warning threshold
       chunkSizeWarningLimit: 300,
+      // Never inline assets as data: URLs (Vite default is 4096 bytes). Required
+      // because @fontsource-variable ships small metric-override shim fonts that
+      // would otherwise be inlined and violate the production `font-src 'self'`
+      // CSP. With this set to 0, every asset bundles as a file under /assets/,
+      // served from same-origin and properly HTTP-cacheable.
+      assetsInlineLimit: 0,
       // Module preload optimization
       modulePreload: {
         polyfill: false, // Modern browsers don't need polyfill
