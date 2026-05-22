@@ -7,8 +7,8 @@
 > Pre-audit, this document described a violet brand identity that no longer applies. NIAC's anchor
 > is now Tailwind **indigo-600** (`#4f46e5`) — engineering / infrastructure tone, distinct from
 > Seed's green and Stem's blue. The actual `src/index.css` may still hold older values; the brand
-> migration is phased (1–7) and lands in order: status palette → fonts → typography → surfaces →
-> per-product brand → modules → cleanup.
+> migration is phased (1-7) and lands in order: status palette -> fonts -> typography -> surfaces ->
+> per-product brand -> modules -> cleanup.
 >
 > - **Source-of-truth Tailwind v4 `@theme` block:** `_web/mustardseednetworks-com/src/index.css`
 > - **Cross-product canonical map:** `msn-docs-internal/04-Brand-Marketing/CANONICAL_TOKENS.md`

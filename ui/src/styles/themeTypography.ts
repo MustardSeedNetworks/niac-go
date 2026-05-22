@@ -11,10 +11,10 @@ export const typography = {
   // Semantic heading classes (match CSS utilities in index.css).
   // Preferred way to style headings.
   heading: {
-    h1: 'heading-1', // Page titles: 24px → sm:30px bold, leading-tight, tracking-tight
-    h2: 'heading-2', // Section/modal titles: 20px → sm:24px semibold, leading-snug
-    h3: 'heading-3', // Card titles: 18px → sm:20px semibold, leading-snug
-    h4: 'heading-4', // Subsections: 16px → sm:18px medium, leading-snug
+    h1: 'heading-1', // Page titles: 24px -> sm:30px bold, leading-tight, tracking-tight
+    h2: 'heading-2', // Section/modal titles: 20px -> sm:24px semibold, leading-snug
+    h3: 'heading-3', // Card titles: 18px -> sm:20px semibold, leading-snug
+    h4: 'heading-4', // Subsections: 16px -> sm:18px medium, leading-snug
     section: 'section-title', // Category labels: 12px uppercase tracking-wider, fg-muted
   },
 
