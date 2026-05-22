@@ -149,7 +149,7 @@ jobs:
           fi
 
       - name: Upload coverage
-        uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v6.0.0
+        uses: codecov/codecov-action@e79a6962e0d4c0c17b229090214935d2e33f8354 # v6.0.1
         with:
           file: ./coverage.out
           flags: backend
@@ -533,7 +533,7 @@ jobs:
           use-quiet-mode: "yes"
 
       - name: Lint markdown files
-        uses: DavidAnson/markdownlint-cli2-action@05f32210e84442804257b2a6f20b273450ec8265 # v19.1.0
+        uses: DavidAnson/markdownlint-cli2-action@ded1f9488f68a970bc66ea5619e13e9b52e601cd # v23.2.0
         continue-on-error: true
         with:
           globs: |
