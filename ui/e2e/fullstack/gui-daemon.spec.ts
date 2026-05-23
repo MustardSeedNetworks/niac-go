@@ -71,7 +71,7 @@ test.describe('daemon-served GUI', () => {
     page,
     request,
   }) => {
-    test(
+    test.skip(
       !simulationInterface,
       'Set E2E_SIM_INTERFACE to run the privileged real-simulation GUI smoke.',
     );
