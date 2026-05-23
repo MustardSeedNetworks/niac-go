@@ -5,6 +5,13 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.81.1](https://github.com/krisarmstrong/niac-go/compare/v0.81.0...v0.81.1) (2026-05-22)
+
+
+### Performance Improvements
+
+* **e2e:** bump CI workers 1-&gt;2 and retries 2-&gt;1 ([#658](https://github.com/krisarmstrong/niac-go/issues/658)) ([65afe89](https://github.com/krisarmstrong/niac-go/commit/65afe899a529814f34dca11892374e8310230e79))
+
 ## [0.81.0](https://github.com/krisarmstrong/niac-go/compare/v0.80.0...v0.81.0) (2026-05-22)
 
 
