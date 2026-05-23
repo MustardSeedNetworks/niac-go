@@ -35,10 +35,8 @@ type daemonOptions struct {
 	storagePath         string
 	webhookAllowedHosts []string
 	// Wave 1 (TLS-by-default) options.
-	tlsEnabled bool
-	httpOnly   bool
-	certDir    string
-	apiToken   string
+	certDir  string
+	apiToken string
 	// Wave 2 (SIGHUP rotation + scoped tokens) options. tokenFile is the
 	// path to a 0o600 JSON file containing one or more {value, scope}
 	// pairs; preferred over apiToken / NIAC_API_TOKEN. SIGHUP re-reads
@@ -90,11 +88,8 @@ Example:
 		StringSliceVar(&options.webhookAllowedHosts, "webhook-allowed-host", nil,
 			"Hostname allowed as alert webhook destination (repeatable; if any are set, all webhook URLs must match exactly). When unset, the existing private-IP/blocked-hostname filter is used.")
 
-	// Wave 1: TLS-by-default flags.
-	daemonCmd.Flags().
-		BoolVar(&options.tlsEnabled, "tls", true, "Enable TLS (HTTPS) for the API and web UI. Default true.")
-	daemonCmd.Flags().
-		BoolVar(&options.httpOnly, "http", false, "Run HTTP-only on :8080 (equivalent to --tls=false)")
+	// HTTPS is required, no opt-out. The HTTP listener exists only as a
+	// 308 redirector. No --tls or --http flags.
 	daemonCmd.Flags().
 		StringVar(&options.certDir, "cert-dir", "", "Directory holding the self-signed cert and key (default: certs/ relative to CWD; override with NIAC_CERT_DIR)")
 	daemonCmd.Flags().
@@ -117,46 +112,22 @@ func resolveDaemonTokenFile(o *daemonOptions) string {
 	return os.Getenv("NIAC_API_TOKEN_FILE")
 }
 
-// resolveDaemonAddrs returns the listen address and (when TLS is on) the
-// HTTP→HTTPS redirector address, taking into account the env-var and flag
-// precedence rules. It also normalises the boolean flags into a single
-// `tlsOn` result so the caller doesn't have to repeat the same logic.
+// resolveDaemonAddrs returns the TLS listen address and the HTTP→HTTPS
+// redirector address. HTTPS is always on; no opt-out is supported.
 func resolveDaemonAddrs(o *daemonOptions) (string, string, bool) {
-	tlsOn := o.tlsEnabled && !o.httpOnly
-	if os.Getenv("NIAC_HTTP_ONLY") == "1" {
-		tlsOn = false
-	}
-	if v := os.Getenv("NIAC_TLS_ENABLED"); v != "" {
-		switch strings.ToLower(v) {
-		case "0", "false", "no":
-			tlsOn = false
-		case "1", "true", "yes":
-			tlsOn = true
-		}
-	}
-
-	port := daemonHTTPPort
-	if tlsOn {
-		port = daemonTLSPort
-	}
-
 	listen := o.listen
 	if listen == "" {
 		listen = os.Getenv("NIAC_LISTEN_ADDR")
 	}
 	switch {
 	case listen == "":
-		listen = net.JoinHostPort(daemonDefaultListenIP, strconv.Itoa(port))
+		listen = net.JoinHostPort(daemonDefaultListenIP, strconv.Itoa(daemonTLSPort))
 	case !strings.Contains(listen, ":"):
-		// Bare IP given — append the default port.
-		listen = net.JoinHostPort(listen, strconv.Itoa(port))
+		listen = net.JoinHostPort(listen, strconv.Itoa(daemonTLSPort))
 	}
 
-	var redirect string
-	if tlsOn {
-		redirect = net.JoinHostPort(daemonDefaultListenIP, strconv.Itoa(daemonHTTPRedirectPort))
-	}
-	return listen, redirect, tlsOn
+	redirect := net.JoinHostPort(daemonDefaultListenIP, strconv.Itoa(daemonHTTPRedirectPort))
+	return listen, redirect, true
 }
 
 // resolveDaemonCertDir returns the cert-dir to use. Explicit --cert-dir
