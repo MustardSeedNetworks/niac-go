@@ -24,7 +24,9 @@ test.describe('Device Form Validation', () => {
         await hostnameField.blur();
 
         // Check for required indicator or error
-        const hasRequired = await page.locator('[class*="required"], [aria-required="true"]').count();
+        const hasRequired = await page
+          .locator('[class*="required"], [aria-required="true"]')
+          .count();
         const hasError = await page.locator('[class*="error"], [aria-invalid="true"]').count();
         expect(hasRequired + hasError).toBeGreaterThanOrEqual(0);
       }
@@ -37,7 +39,9 @@ test.describe('Device Form Validation', () => {
         await hostnameField.blur();
 
         // Should not show error for valid hostname
-        const hasError = await hostnameField.evaluate((el) => el.getAttribute('aria-invalid') === 'true');
+        const hasError = await hostnameField.evaluate(
+          (el) => el.getAttribute('aria-invalid') === 'true',
+        );
         expect(hasError).toBeFalsy();
       }
     });
@@ -47,7 +51,7 @@ test.describe('Device Form Validation', () => {
       if (await hostnameField.isVisible()) {
         await hostnameField.fill('invalid hostname');
         await hostnameField.blur();
-        await page.waitForTimeout(300);
+        await page.waitForTimeout(100);
 
         // Form should indicate error or sanitize input
         await expect(page.locator('body')).toBeVisible();
@@ -59,7 +63,7 @@ test.describe('Device Form Validation', () => {
       if (await hostnameField.isVisible()) {
         await hostnameField.fill('invalid@hostname!');
         await hostnameField.blur();
-        await page.waitForTimeout(300);
+        await page.waitForTimeout(100);
 
         await expect(page.locator('body')).toBeVisible();
       }
@@ -83,7 +87,7 @@ test.describe('Device Form Validation', () => {
       if (await ipField.isVisible()) {
         await ipField.fill('192.168.1.999');
         await ipField.blur();
-        await page.waitForTimeout(300);
+        await page.waitForTimeout(100);
 
         // Should indicate invalid
         await expect(page.locator('body')).toBeVisible();
@@ -95,7 +99,7 @@ test.describe('Device Form Validation', () => {
       if (await ipField.isVisible()) {
         await ipField.fill('192.168.abc.1');
         await ipField.blur();
-        await page.waitForTimeout(300);
+        await page.waitForTimeout(100);
 
         await expect(page.locator('body')).toBeVisible();
       }
@@ -116,7 +120,7 @@ test.describe('Device Form Validation', () => {
       if (await ipField.isVisible()) {
         await ipField.fill('192.168.1');
         await ipField.blur();
-        await page.waitForTimeout(300);
+        await page.waitForTimeout(100);
 
         await expect(page.locator('body')).toBeVisible();
       }
@@ -130,7 +134,9 @@ test.describe('Device Form Validation', () => {
         await macField.fill('00:11:22:33:44:55');
         await macField.blur();
 
-        const hasError = await macField.evaluate((el) => el.getAttribute('aria-invalid') === 'true');
+        const hasError = await macField.evaluate(
+          (el) => el.getAttribute('aria-invalid') === 'true',
+        );
         expect(hasError).toBeFalsy();
       }
     });
@@ -150,7 +156,7 @@ test.describe('Device Form Validation', () => {
       if (await macField.isVisible()) {
         await macField.fill('00:11:22:33:GG:55');
         await macField.blur();
-        await page.waitForTimeout(300);
+        await page.waitForTimeout(100);
 
         await expect(page.locator('body')).toBeVisible();
       }
@@ -161,7 +167,7 @@ test.describe('Device Form Validation', () => {
       if (await macField.isVisible()) {
         await macField.fill('00:11:22:33');
         await macField.blur();
-        await page.waitForTimeout(300);
+        await page.waitForTimeout(100);
 
         await expect(page.locator('body')).toBeVisible();
       }
@@ -184,7 +190,7 @@ test.describe('Device Form Validation', () => {
       if (await portField.isVisible()) {
         await portField.fill('70000');
         await portField.blur();
-        await page.waitForTimeout(300);
+        await page.waitForTimeout(100);
 
         await expect(page.locator('body')).toBeVisible();
       }
@@ -195,7 +201,7 @@ test.describe('Device Form Validation', () => {
       if (await portField.isVisible()) {
         await portField.fill('-1');
         await portField.blur();
-        await page.waitForTimeout(300);
+        await page.waitForTimeout(100);
 
         await expect(page.locator('body')).toBeVisible();
       }
@@ -206,7 +212,7 @@ test.describe('Device Form Validation', () => {
       if (await portField.isVisible()) {
         await portField.fill('0');
         await portField.blur();
-        await page.waitForTimeout(300);
+        await page.waitForTimeout(100);
 
         await expect(page.locator('body')).toBeVisible();
       }
@@ -229,7 +235,7 @@ test.describe('Device Form Validation', () => {
       if (await vlanField.isVisible()) {
         await vlanField.fill('5000');
         await vlanField.blur();
-        await page.waitForTimeout(300);
+        await page.waitForTimeout(100);
 
         await expect(page.locator('body')).toBeVisible();
       }
@@ -240,7 +246,7 @@ test.describe('Device Form Validation', () => {
       if (await vlanField.isVisible()) {
         await vlanField.fill('0');
         await vlanField.blur();
-        await page.waitForTimeout(300);
+        await page.waitForTimeout(100);
 
         await expect(page.locator('body')).toBeVisible();
       }
@@ -263,7 +269,7 @@ test.describe('Device Form Validation', () => {
       if (await communityField.isVisible()) {
         await communityField.fill('public');
         await communityField.blur();
-        await page.waitForTimeout(300);
+        await page.waitForTimeout(100);
 
         // May show warning about insecure default
         await expect(page.locator('body')).toBeVisible();
@@ -277,10 +283,10 @@ test.describe('Device Form Validation', () => {
       if (await ipField.isVisible()) {
         await ipField.fill('invalid');
         await ipField.blur();
-        await page.waitForTimeout(300);
+        await page.waitForTimeout(100);
 
         // Check for nearby error message
-        const errorMessage = page.locator('[class*="error"], [role="alert"]');
+        const _errorMessage = page.locator('[class*="error"], [role="alert"]');
         await expect(page.locator('body')).toBeVisible();
       }
     });
@@ -291,12 +297,12 @@ test.describe('Device Form Validation', () => {
         // First enter invalid
         await ipField.fill('invalid');
         await ipField.blur();
-        await page.waitForTimeout(300);
+        await page.waitForTimeout(100);
 
         // Then correct it
         await ipField.fill('192.168.1.1');
         await ipField.blur();
-        await page.waitForTimeout(300);
+        await page.waitForTimeout(100);
 
         await expect(page.locator('body')).toBeVisible();
       }
@@ -304,9 +310,9 @@ test.describe('Device Form Validation', () => {
 
     test('should show all errors on form submit', async ({ page }) => {
       const submitButton = page.getByRole('button', { name: /save|submit|create/i }).first();
-      if (await submitButton.isVisible() && (await submitButton.isEnabled())) {
+      if ((await submitButton.isVisible()) && (await submitButton.isEnabled())) {
         await submitButton.click();
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(150);
 
         // Should show validation errors or stay on form
         await expect(page.locator('body')).toBeVisible();
@@ -328,9 +334,9 @@ test.describe('Device Form Validation', () => {
       if ((await hostnameField.isVisible()) && (await resetButton.isVisible())) {
         await hostnameField.fill('test-hostname');
         await resetButton.click();
-        await page.waitForTimeout(300);
+        await page.waitForTimeout(100);
 
-        const value = await hostnameField.inputValue();
+        const _value = await hostnameField.inputValue();
         // Should be empty or reset to default
         await expect(page.locator('body')).toBeVisible();
       }
@@ -344,7 +350,7 @@ test.describe('Device Form Validation', () => {
         // Try to navigate away
         page.on('dialog', (dialog) => dialog.dismiss());
         await page.goto('/devices');
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(150);
 
         // Should either show dialog or navigate
         await expect(page.locator('body')).toBeVisible();

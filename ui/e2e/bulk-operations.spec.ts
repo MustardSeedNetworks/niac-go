@@ -25,7 +25,7 @@ test.describe('Bulk Operations', () => {
 
     test('should have select all checkbox', async ({ page }) => {
       const selectAllCheckbox = page.locator(
-        'input[type="checkbox"][aria-label*="select all" i], th input[type="checkbox"]'
+        'input[type="checkbox"][aria-label*="select all" i], th input[type="checkbox"]',
       );
       const count = await selectAllCheckbox.count();
       expect(count).toBeGreaterThanOrEqual(0);
@@ -38,13 +38,15 @@ test.describe('Bulk Operations', () => {
 
       if (await selectAllCheckbox.isVisible()) {
         await selectAllCheckbox.check();
-        await page.waitForTimeout(300);
+        await page.waitForTimeout(100);
 
         // All row checkboxes should be checked
-        const rowCheckboxes = page.locator('tbody input[type="checkbox"], tr input[type="checkbox"]');
+        const rowCheckboxes = page.locator(
+          'tbody input[type="checkbox"], tr input[type="checkbox"]',
+        );
         const count = await rowCheckboxes.count();
         if (count > 0) {
-          const checkedCount = await page.locator('tbody input[type="checkbox"]:checked').count();
+          const _checkedCount = await page.locator('tbody input[type="checkbox"]:checked').count();
           await expect(page.locator('body')).toBeVisible();
         }
       }
@@ -58,11 +60,11 @@ test.describe('Bulk Operations', () => {
       if (await selectAllCheckbox.isVisible()) {
         // Select all
         await selectAllCheckbox.check();
-        await page.waitForTimeout(300);
+        await page.waitForTimeout(100);
 
         // Deselect all
         await selectAllCheckbox.uncheck();
-        await page.waitForTimeout(300);
+        await page.waitForTimeout(100);
 
         // All should be unchecked
         await expect(page.locator('body')).toBeVisible();
@@ -76,10 +78,10 @@ test.describe('Bulk Operations', () => {
       if (count >= 2) {
         // Select only first row
         await rowCheckboxes.first().check();
-        await page.waitForTimeout(300);
+        await page.waitForTimeout(100);
 
         // Select all checkbox should show indeterminate or partial state
-        const selectAllCheckbox = page.locator('th input[type="checkbox"]').first();
+        const _selectAllCheckbox = page.locator('th input[type="checkbox"]').first();
         await expect(page.locator('body')).toBeVisible();
       }
     });
@@ -89,7 +91,7 @@ test.describe('Bulk Operations', () => {
 
       if (await firstRowCheckbox.isVisible()) {
         await firstRowCheckbox.check();
-        await page.waitForTimeout(300);
+        await page.waitForTimeout(100);
 
         await expect(firstRowCheckbox).toBeChecked();
       }
@@ -101,10 +103,10 @@ test.describe('Bulk Operations', () => {
 
       if (count > 0) {
         await rowCheckboxes.first().check();
-        await page.waitForTimeout(300);
+        await page.waitForTimeout(100);
 
         // Should show "1 selected" or similar
-        const selectionCount = page.getByText(/\d+\s*selected/i);
+        const _selectionCount = page.getByText(/\d+\s*selected/i);
         await expect(page.locator('body')).toBeVisible();
       }
     });
@@ -116,16 +118,18 @@ test.describe('Bulk Operations', () => {
 
       if (await rowCheckbox.isVisible()) {
         await rowCheckbox.check();
-        await page.waitForTimeout(300);
+        await page.waitForTimeout(100);
 
         // Bulk delete button should appear
-        const bulkDeleteButton = page.getByRole('button', { name: /delete selected|bulk delete/i });
+        const _bulkDeleteButton = page.getByRole('button', {
+          name: /delete selected|bulk delete/i,
+        });
         await expect(page.locator('body')).toBeVisible();
       }
     });
 
     test('should hide bulk delete button when nothing selected', async ({ page }) => {
-      const bulkDeleteButton = page.getByRole('button', { name: /delete selected|bulk delete/i });
+      const _bulkDeleteButton = page.getByRole('button', { name: /delete selected|bulk delete/i });
 
       // Should be hidden or disabled when nothing selected
       await expect(page.locator('body')).toBeVisible();
@@ -136,15 +140,17 @@ test.describe('Bulk Operations', () => {
 
       if (await rowCheckbox.isVisible()) {
         await rowCheckbox.check();
-        await page.waitForTimeout(300);
+        await page.waitForTimeout(100);
 
-        const bulkDeleteButton = page.getByRole('button', { name: /delete selected|bulk delete/i }).first();
+        const bulkDeleteButton = page
+          .getByRole('button', { name: /delete selected|bulk delete/i })
+          .first();
         if (await bulkDeleteButton.isVisible()) {
           await bulkDeleteButton.click();
-          await page.waitForTimeout(500);
+          await page.waitForTimeout(150);
 
           // Confirmation dialog
-          const confirmDialog = page.locator('[role="dialog"], [role="alertdialog"]');
+          const _confirmDialog = page.locator('[role="dialog"], [role="alertdialog"]');
           await expect(page.locator('body')).toBeVisible();
         }
       }
@@ -157,15 +163,17 @@ test.describe('Bulk Operations', () => {
       if (count >= 2) {
         await rowCheckboxes.nth(0).check();
         await rowCheckboxes.nth(1).check();
-        await page.waitForTimeout(300);
+        await page.waitForTimeout(100);
 
-        const bulkDeleteButton = page.getByRole('button', { name: /delete selected|bulk delete/i }).first();
+        const bulkDeleteButton = page
+          .getByRole('button', { name: /delete selected|bulk delete/i })
+          .first();
         if (await bulkDeleteButton.isVisible()) {
           await bulkDeleteButton.click();
-          await page.waitForTimeout(500);
+          await page.waitForTimeout(150);
 
           // Should mention count of items to delete
-          const countText = page.getByText(/2|two/i);
+          const _countText = page.getByText(/2|two/i);
           await expect(page.locator('body')).toBeVisible();
         }
       }
@@ -176,16 +184,18 @@ test.describe('Bulk Operations', () => {
 
       if (await rowCheckbox.isVisible()) {
         await rowCheckbox.check();
-        const bulkDeleteButton = page.getByRole('button', { name: /delete selected|bulk delete/i }).first();
+        const bulkDeleteButton = page
+          .getByRole('button', { name: /delete selected|bulk delete/i })
+          .first();
 
         if (await bulkDeleteButton.isVisible()) {
           await bulkDeleteButton.click();
-          await page.waitForTimeout(500);
+          await page.waitForTimeout(150);
 
           const cancelButton = page.getByRole('button', { name: /cancel|no/i }).first();
           if (await cancelButton.isVisible()) {
             await cancelButton.click();
-            await page.waitForTimeout(300);
+            await page.waitForTimeout(100);
 
             // Items should still be selected
             await expect(rowCheckbox).toBeChecked();
@@ -207,16 +217,18 @@ test.describe('Bulk Operations', () => {
 
       if (await rowCheckbox.isVisible()) {
         await rowCheckbox.check();
-        const bulkDeleteButton = page.getByRole('button', { name: /delete selected|bulk delete/i }).first();
+        const bulkDeleteButton = page
+          .getByRole('button', { name: /delete selected|bulk delete/i })
+          .first();
 
         if (await bulkDeleteButton.isVisible()) {
           await bulkDeleteButton.click();
-          await page.waitForTimeout(500);
+          await page.waitForTimeout(150);
 
           const confirmButton = page.getByRole('button', { name: /confirm|yes|delete/i }).first();
           if (await confirmButton.isVisible()) {
             await confirmButton.click();
-            await page.waitForTimeout(1000);
+            await page.waitForTimeout(250);
 
             // Selection should be cleared
             await expect(page.locator('body')).toBeVisible();
@@ -232,10 +244,10 @@ test.describe('Bulk Operations', () => {
 
       if (await rowCheckbox.isVisible()) {
         await rowCheckbox.check();
-        await page.waitForTimeout(300);
+        await page.waitForTimeout(100);
 
         // Export button should appear
-        const exportButton = page.getByRole('button', { name: /export selected|bulk export/i });
+        const _exportButton = page.getByRole('button', { name: /export selected|bulk export/i });
         await expect(page.locator('body')).toBeVisible();
       }
     });
@@ -251,15 +263,15 @@ test.describe('Bulk Operations', () => {
 
       if (await rowCheckbox.isVisible()) {
         await rowCheckbox.check();
-        await page.waitForTimeout(300);
+        await page.waitForTimeout(100);
 
         const exportButton = page.getByRole('button', { name: /export/i }).first();
         if (await exportButton.isVisible()) {
           await exportButton.click();
-          await page.waitForTimeout(500);
+          await page.waitForTimeout(150);
 
           // Should show format options (YAML, JSON, CSV)
-          const formatOptions = page.getByText(/yaml|json|csv/i);
+          const _formatOptions = page.getByText(/yaml|json|csv/i);
           await expect(page.locator('body')).toBeVisible();
         }
       }
@@ -270,13 +282,15 @@ test.describe('Bulk Operations', () => {
 
       if (await rowCheckbox.isVisible()) {
         await rowCheckbox.check();
-        await page.waitForTimeout(300);
+        await page.waitForTimeout(100);
 
         const exportButton = page.getByRole('button', { name: /export/i }).first();
         if (await exportButton.isVisible()) {
-          const downloadPromise = page.waitForEvent('download', { timeout: 5000 }).catch(() => null);
+          const downloadPromise = page
+            .waitForEvent('download', { timeout: 5000 })
+            .catch(() => null);
           await exportButton.click();
-          const download = await downloadPromise;
+          const _download = await downloadPromise;
 
           // May or may not trigger download depending on implementation
           await expect(page.locator('body')).toBeVisible();
@@ -291,10 +305,10 @@ test.describe('Bulk Operations', () => {
 
       if (await rowCheckbox.isVisible()) {
         await rowCheckbox.check();
-        await page.waitForTimeout(300);
+        await page.waitForTimeout(100);
 
         // Edit button may appear for bulk edit
-        const editButton = page.getByRole('button', { name: /edit selected|bulk edit/i });
+        const _editButton = page.getByRole('button', { name: /edit selected|bulk edit/i });
         await expect(page.locator('body')).toBeVisible();
       }
     });
@@ -307,7 +321,7 @@ test.describe('Bulk Operations', () => {
       if (await firstRow.isVisible()) {
         await firstRow.focus();
         await page.keyboard.press('Space');
-        await page.waitForTimeout(300);
+        await page.waitForTimeout(100);
 
         // Row should be selected
         await expect(page.locator('body')).toBeVisible();
@@ -316,7 +330,7 @@ test.describe('Bulk Operations', () => {
 
     test('should select all with Ctrl+A', async ({ page }) => {
       await page.keyboard.press('Control+a');
-      await page.waitForTimeout(300);
+      await page.waitForTimeout(100);
 
       // All should be selected (if implemented)
       await expect(page.locator('body')).toBeVisible();
@@ -327,10 +341,10 @@ test.describe('Bulk Operations', () => {
 
       if (await rowCheckbox.isVisible()) {
         await rowCheckbox.check();
-        await page.waitForTimeout(300);
+        await page.waitForTimeout(100);
 
         await page.keyboard.press('Escape');
-        await page.waitForTimeout(300);
+        await page.waitForTimeout(100);
 
         // Selection should be cleared (if implemented)
         await expect(page.locator('body')).toBeVisible();

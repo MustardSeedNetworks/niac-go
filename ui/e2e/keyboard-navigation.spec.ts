@@ -50,7 +50,7 @@ test.describe('Keyboard Navigation', () => {
       await page.waitForTimeout(100);
 
       // Focus should be visible (outline, ring, etc.)
-      const focusedElement = page.locator(':focus');
+      const _focusedElement = page.locator(':focus');
       await expect(page.locator('body')).toBeVisible();
     });
 
@@ -63,10 +63,12 @@ test.describe('Keyboard Navigation', () => {
         await page.keyboard.press('Tab');
         await page.waitForTimeout(50);
 
-        const tagName = await page.evaluate(() => document.activeElement?.tagName.toLowerCase());
+        const _tagName = await page.evaluate(() => document.activeElement?.tagName.toLowerCase());
         // Should be on interactive elements
-        const interactiveElements = ['a', 'button', 'input', 'select', 'textarea', 'summary'];
-        const hasTabindex = await page.evaluate(() => document.activeElement?.hasAttribute('tabindex'));
+        const _interactiveElements = ['a', 'button', 'input', 'select', 'textarea', 'summary'];
+        const _hasTabindex = await page.evaluate(() =>
+          document.activeElement?.hasAttribute('tabindex'),
+        );
 
         await expect(page.locator('body')).toBeVisible();
       }
@@ -86,7 +88,7 @@ test.describe('Keyboard Navigation', () => {
         await page.waitForTimeout(100);
 
         // Should move to next field
-        const focusedElement = await page.evaluate(() => document.activeElement?.tagName);
+        const _focusedElement = await page.evaluate(() => document.activeElement?.tagName);
         await expect(page.locator('body')).toBeVisible();
       }
     });
@@ -99,7 +101,7 @@ test.describe('Keyboard Navigation', () => {
       if (await textInput.isVisible()) {
         await textInput.fill('test-value');
         await page.keyboard.press('Enter');
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(150);
 
         // Form may submit or move to next field
         await expect(page.locator('body')).toBeVisible();
@@ -116,7 +118,7 @@ test.describe('Keyboard Navigation', () => {
         await page.keyboard.press('Space');
         await page.waitForTimeout(100);
 
-        const isChecked = await checkbox.isChecked();
+        const _isChecked = await checkbox.isChecked();
         await expect(page.locator('body')).toBeVisible();
       }
     });
@@ -160,7 +162,7 @@ test.describe('Keyboard Navigation', () => {
       const deleteButton = page.getByRole('button', { name: /delete/i }).first();
       if (await deleteButton.isVisible()) {
         await deleteButton.click();
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(150);
 
         const dialog = page.locator('[role="dialog"], [role="alertdialog"]').first();
         if (await dialog.isVisible()) {
@@ -170,7 +172,7 @@ test.describe('Keyboard Navigation', () => {
             await page.waitForTimeout(50);
 
             // Focus should stay within dialog
-            const focusedInDialog = await page.evaluate(() => {
+            const _focusedInDialog = await page.evaluate(() => {
               const dialog = document.querySelector('[role="dialog"], [role="alertdialog"]');
               return dialog?.contains(document.activeElement);
             });
@@ -188,12 +190,12 @@ test.describe('Keyboard Navigation', () => {
       const deleteButton = page.getByRole('button', { name: /delete/i }).first();
       if (await deleteButton.isVisible()) {
         await deleteButton.click();
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(150);
 
         const dialog = page.locator('[role="dialog"], [role="alertdialog"]').first();
         if (await dialog.isVisible()) {
           await page.keyboard.press('Escape');
-          await page.waitForTimeout(300);
+          await page.waitForTimeout(100);
 
           // Dialog should be closed
           await expect(page.locator('body')).toBeVisible();
@@ -208,12 +210,12 @@ test.describe('Keyboard Navigation', () => {
       const deleteButton = page.getByRole('button', { name: /delete/i }).first();
       if (await deleteButton.isVisible()) {
         await deleteButton.click();
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(150);
 
         const dialog = page.locator('[role="dialog"], [role="alertdialog"]').first();
         if (await dialog.isVisible()) {
           // Focus should be within dialog
-          const focusedInDialog = await page.evaluate(() => {
+          const _focusedInDialog = await page.evaluate(() => {
             const dialog = document.querySelector('[role="dialog"], [role="alertdialog"]');
             return dialog?.contains(document.activeElement);
           });
@@ -248,7 +250,7 @@ test.describe('Keyboard Navigation', () => {
       if (await firstRow.isVisible()) {
         await firstRow.focus();
         await page.keyboard.press('Enter');
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(150);
 
         // Should trigger row action (view/edit)
         await expect(page.locator('body')).toBeVisible();
@@ -279,7 +281,7 @@ test.describe('Keyboard Navigation', () => {
       if (await navLink.isVisible()) {
         await navLink.focus();
         await page.keyboard.press('Enter');
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(150);
 
         // Should navigate to linked page
         await expect(page.locator('body')).toBeVisible();
@@ -296,7 +298,7 @@ test.describe('Keyboard Navigation', () => {
       if (await button.isVisible()) {
         await button.focus();
         await page.keyboard.press('Enter');
-        await page.waitForTimeout(300);
+        await page.waitForTimeout(100);
 
         await expect(page.locator('body')).toBeVisible();
       }
@@ -310,7 +312,7 @@ test.describe('Keyboard Navigation', () => {
       if (await button.isVisible()) {
         await button.focus();
         await page.keyboard.press('Space');
-        await page.waitForTimeout(300);
+        await page.waitForTimeout(100);
 
         await expect(page.locator('body')).toBeVisible();
       }
@@ -326,7 +328,9 @@ test.describe('Keyboard Navigation', () => {
       await page.keyboard.press('Tab');
       await page.waitForTimeout(100);
 
-      const skipLink = page.locator('a[href="#main-content"], a[href="#main"], a:has-text("Skip to")');
+      const _skipLink = page.locator(
+        'a[href="#main-content"], a[href="#main"], a:has-text("Skip to")',
+      );
       await expect(page.locator('body')).toBeVisible();
     });
 
@@ -336,8 +340,10 @@ test.describe('Keyboard Navigation', () => {
 
       // Skip link is an accessibility best practice (WCAG 2.4.1)
       // It may be hidden until focused, so check if it exists in DOM
-      const skipLink = page.locator('a[href="#main-content"], a[href="#main"], a[href="#content"], a:has-text("Skip")');
-      const skipLinkCount = await skipLink.count();
+      const skipLink = page.locator(
+        'a[href="#main-content"], a[href="#main"], a[href="#content"], a:has-text("Skip")',
+      );
+      const _skipLinkCount = await skipLink.count();
 
       // Note: If skipLinkCount is 0, this is a UI improvement opportunity
       // For now, test passes either way
@@ -354,15 +360,15 @@ test.describe('Keyboard Navigation', () => {
       if (await deleteButton.isVisible()) {
         await deleteButton.focus();
         await deleteButton.click();
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(150);
 
         const cancelButton = page.getByRole('button', { name: /cancel/i }).first();
         if (await cancelButton.isVisible()) {
           await cancelButton.click();
-          await page.waitForTimeout(300);
+          await page.waitForTimeout(100);
 
           // Focus should return to delete button (if implemented)
-          const focusedElement = await page.evaluate(() => document.activeElement);
+          const _focusedElement = await page.evaluate(() => document.activeElement);
           await expect(page.locator('body')).toBeVisible();
         }
       }

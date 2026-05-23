@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 
 /**
  * Smoke Tests
@@ -45,7 +45,7 @@ test.describe('Smoke Tests', () => {
         !e.includes('503') &&
         !e.includes('Failed to load resource') &&
         !e.includes('Service Unavailable') &&
-        !e.includes('Internal Server Error')
+        !e.includes('Internal Server Error'),
     );
     expect(criticalErrors).toHaveLength(0);
   });

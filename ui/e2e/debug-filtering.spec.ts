@@ -22,8 +22,10 @@ test.describe('Debug Console Filtering', () => {
       const levelButtons = page.getByRole('button', { name: /error|warn|info|debug/i });
       const levelCheckboxes = page.locator('input[type="checkbox"][name*="level" i]');
 
-      const hasFilter =
-        (await levelFilter.count()) > 0 || (await levelButtons.count()) > 0 || (await levelCheckboxes.count()) > 0;
+      const _hasFilter =
+        (await levelFilter.count()) > 0 ||
+        (await levelButtons.count()) > 0 ||
+        (await levelCheckboxes.count()) > 0;
       await expect(page.locator('body')).toBeVisible();
     });
 
@@ -33,10 +35,10 @@ test.describe('Debug Console Filtering', () => {
 
       if (await errorFilter.isVisible()) {
         await errorFilter.click();
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(150);
       } else if (await errorCheckbox.isVisible()) {
         await errorCheckbox.check();
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(150);
       }
 
       // Should filter to show only errors
@@ -48,7 +50,7 @@ test.describe('Debug Console Filtering', () => {
 
       if (await warnFilter.isVisible()) {
         await warnFilter.click();
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(150);
       }
 
       await expect(page.locator('body')).toBeVisible();
@@ -59,7 +61,7 @@ test.describe('Debug Console Filtering', () => {
 
       if (await infoFilter.isVisible()) {
         await infoFilter.click();
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(150);
       }
 
       await expect(page.locator('body')).toBeVisible();
@@ -70,7 +72,7 @@ test.describe('Debug Console Filtering', () => {
 
       if (await debugFilter.isVisible()) {
         await debugFilter.click();
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(150);
       }
 
       await expect(page.locator('body')).toBeVisible();
@@ -81,27 +83,31 @@ test.describe('Debug Console Filtering', () => {
 
       if (await allFilter.isVisible()) {
         await allFilter.click();
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(150);
       }
 
       await expect(page.locator('body')).toBeVisible();
     });
 
     test('should highlight ERROR logs', async ({ page }) => {
-      const errorLogs = page.locator('[class*="error"], [class*="red"], [data-level="error"]');
+      const _errorLogs = page.locator('[class*="error"], [class*="red"], [data-level="error"]');
       await expect(page.locator('body')).toBeVisible();
     });
 
     test('should highlight WARN logs', async ({ page }) => {
-      const warnLogs = page.locator('[class*="warn"], [class*="yellow"], [class*="orange"], [data-level="warn"]');
+      const _warnLogs = page.locator(
+        '[class*="warn"], [class*="yellow"], [class*="orange"], [data-level="warn"]',
+      );
       await expect(page.locator('body')).toBeVisible();
     });
   });
 
   test.describe('Protocol/Source Filtering', () => {
     test('should have protocol filter', async ({ page }) => {
-      const protocolFilter = page.locator('select[name*="protocol" i], [class*="protocol-filter"]');
-      const protocolButtons = page.getByRole('button', { name: /snmp|http|dhcp|dns/i });
+      const _protocolFilter = page.locator(
+        'select[name*="protocol" i], [class*="protocol-filter"]',
+      );
+      const _protocolButtons = page.getByRole('button', { name: /snmp|http|dhcp|dns/i });
 
       await expect(page.locator('body')).toBeVisible();
     });
@@ -112,10 +118,10 @@ test.describe('Debug Console Filtering', () => {
 
       if (await snmpFilter.isVisible()) {
         await snmpFilter.click();
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(150);
       } else if (await snmpSelect.isVisible()) {
         await snmpSelect.selectOption({ label: /snmp/i });
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(150);
       }
 
       await expect(page.locator('body')).toBeVisible();
@@ -126,7 +132,7 @@ test.describe('Debug Console Filtering', () => {
 
       if (await httpFilter.isVisible()) {
         await httpFilter.click();
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(150);
       }
 
       await expect(page.locator('body')).toBeVisible();
@@ -138,9 +144,9 @@ test.describe('Debug Console Filtering', () => {
 
       if ((await errorFilter.isVisible()) && (await snmpFilter.isVisible())) {
         await errorFilter.click();
-        await page.waitForTimeout(300);
+        await page.waitForTimeout(100);
         await snmpFilter.click();
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(150);
 
         // Should show only SNMP errors
         await expect(page.locator('body')).toBeVisible();
@@ -151,20 +157,22 @@ test.describe('Debug Console Filtering', () => {
   test.describe('Search Functionality', () => {
     test('should have search input', async ({ page }) => {
       const searchInput = page.locator(
-        'input[type="search"], input[placeholder*="search" i], input[placeholder*="filter" i]'
+        'input[type="search"], input[placeholder*="search" i], input[placeholder*="filter" i]',
       );
       const count = await searchInput.count();
       expect(count).toBeGreaterThanOrEqual(0);
     });
 
     test('should filter logs by search term', async ({ page }) => {
-      const searchInput = page.locator(
-        'input[type="search"], input[placeholder*="search" i], input[placeholder*="filter" i]'
-      ).first();
+      const searchInput = page
+        .locator(
+          'input[type="search"], input[placeholder*="search" i], input[placeholder*="filter" i]',
+        )
+        .first();
 
       if (await searchInput.isVisible()) {
         await searchInput.fill('error');
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(150);
 
         // Should filter logs containing "error"
         await expect(page.locator('body')).toBeVisible();
@@ -172,28 +180,32 @@ test.describe('Debug Console Filtering', () => {
     });
 
     test('should highlight search matches', async ({ page }) => {
-      const searchInput = page.locator(
-        'input[type="search"], input[placeholder*="search" i], input[placeholder*="filter" i]'
-      ).first();
+      const searchInput = page
+        .locator(
+          'input[type="search"], input[placeholder*="search" i], input[placeholder*="filter" i]',
+        )
+        .first();
 
       if (await searchInput.isVisible()) {
         await searchInput.fill('test');
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(150);
 
         // Should highlight matches
-        const highlights = page.locator('mark, [class*="highlight"]');
+        const _highlights = page.locator('mark, [class*="highlight"]');
         await expect(page.locator('body')).toBeVisible();
       }
     });
 
     test('should show no results message', async ({ page }) => {
-      const searchInput = page.locator(
-        'input[type="search"], input[placeholder*="search" i], input[placeholder*="filter" i]'
-      ).first();
+      const searchInput = page
+        .locator(
+          'input[type="search"], input[placeholder*="search" i], input[placeholder*="filter" i]',
+        )
+        .first();
 
       if (await searchInput.isVisible()) {
         await searchInput.fill('xyznonexistentsearchterm123');
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(150);
 
         // Should show no results or empty state
         await expect(page.locator('body')).toBeVisible();
@@ -201,23 +213,25 @@ test.describe('Debug Console Filtering', () => {
     });
 
     test('should support clearing search', async ({ page }) => {
-      const searchInput = page.locator(
-        'input[type="search"], input[placeholder*="search" i], input[placeholder*="filter" i]'
-      ).first();
+      const searchInput = page
+        .locator(
+          'input[type="search"], input[placeholder*="search" i], input[placeholder*="filter" i]',
+        )
+        .first();
 
       if (await searchInput.isVisible()) {
         await searchInput.fill('test');
-        await page.waitForTimeout(300);
+        await page.waitForTimeout(100);
 
         // Try clear button if available
         const clearButton = page.locator('[class*="clear"], button[aria-label*="clear" i]').first();
         if (await clearButton.isVisible()) {
           await clearButton.click();
-          await page.waitForTimeout(300);
+          await page.waitForTimeout(100);
         } else {
           // Fallback: clear manually with triple-click + delete or select all + delete
           await searchInput.fill('');
-          await page.waitForTimeout(300);
+          await page.waitForTimeout(100);
         }
 
         // Verify search is cleared or page still functional
@@ -231,7 +245,7 @@ test.describe('Debug Console Filtering', () => {
       const pauseButton = page.getByRole('button', { name: /pause|stop/i });
       const resumeButton = page.getByRole('button', { name: /resume|start|play/i });
 
-      const hasControl = (await pauseButton.count()) > 0 || (await resumeButton.count()) > 0;
+      const _hasControl = (await pauseButton.count()) > 0 || (await resumeButton.count()) > 0;
       await expect(page.locator('body')).toBeVisible();
     });
 
@@ -240,10 +254,10 @@ test.describe('Debug Console Filtering', () => {
 
       if (await pauseButton.isVisible()) {
         await pauseButton.click();
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(150);
 
         // Should show paused indicator
-        const pausedIndicator = page.locator('[class*="paused"], [class*="stopped"]');
+        const _pausedIndicator = page.locator('[class*="paused"], [class*="stopped"]');
         await expect(page.locator('body')).toBeVisible();
       }
     });
@@ -254,11 +268,11 @@ test.describe('Debug Console Filtering', () => {
 
       if (await pauseButton.isVisible()) {
         await pauseButton.click();
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(150);
 
         if (await resumeButton.isVisible()) {
           await resumeButton.click();
-          await page.waitForTimeout(500);
+          await page.waitForTimeout(150);
 
           // Should resume streaming
           await expect(page.locator('body')).toBeVisible();
@@ -277,7 +291,7 @@ test.describe('Debug Console Filtering', () => {
 
       if (await clearButton.isVisible()) {
         await clearButton.click();
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(150);
 
         // Logs should be cleared
         await expect(page.locator('body')).toBeVisible();
@@ -285,8 +299,8 @@ test.describe('Debug Console Filtering', () => {
     });
 
     test('should have auto-scroll toggle', async ({ page }) => {
-      const autoScrollToggle = page.locator('[class*="auto-scroll"], [class*="follow"]');
-      const autoScrollButton = page.getByRole('button', { name: /auto.*scroll|follow/i });
+      const _autoScrollToggle = page.locator('[class*="auto-scroll"], [class*="follow"]');
+      const _autoScrollButton = page.getByRole('button', { name: /auto.*scroll|follow/i });
 
       await expect(page.locator('body')).toBeVisible();
     });
@@ -305,7 +319,7 @@ test.describe('Debug Console Filtering', () => {
       if (await exportButton.isVisible()) {
         const downloadPromise = page.waitForEvent('download', { timeout: 5000 }).catch(() => null);
         await exportButton.click();
-        const download = await downloadPromise;
+        const _download = await downloadPromise;
 
         // May trigger download
         await expect(page.locator('body')).toBeVisible();
@@ -315,12 +329,12 @@ test.describe('Debug Console Filtering', () => {
 
   test.describe('Debug Level Configuration', () => {
     test('should have debug level controls', async ({ page }) => {
-      const levelControls = page.locator('[class*="debug-level"], [class*="protocol-debug"]');
+      const _levelControls = page.locator('[class*="debug-level"], [class*="protocol-debug"]');
       await expect(page.locator('body')).toBeVisible();
     });
 
     test('should show current debug levels', async ({ page }) => {
-      const currentLevels = page.locator('[class*="current"], [class*="level"]');
+      const _currentLevels = page.locator('[class*="current"], [class*="level"]');
       await expect(page.locator('body')).toBeVisible();
     });
 
@@ -329,7 +343,7 @@ test.describe('Debug Console Filtering', () => {
 
       if (await levelSelect.isVisible()) {
         await levelSelect.selectOption({ index: 1 });
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(150);
 
         // Level should be updated
         await expect(page.locator('body')).toBeVisible();
@@ -345,12 +359,12 @@ test.describe('Debug Console Filtering', () => {
 
   test.describe('Log Entry Details', () => {
     test('should show timestamp for each log', async ({ page }) => {
-      const timestamps = page.locator('[class*="timestamp"], [class*="time"]');
+      const _timestamps = page.locator('[class*="timestamp"], [class*="time"]');
       await expect(page.locator('body')).toBeVisible();
     });
 
     test('should show source/component for each log', async ({ page }) => {
-      const sources = page.locator('[class*="source"], [class*="component"]');
+      const _sources = page.locator('[class*="source"], [class*="component"]');
       await expect(page.locator('body')).toBeVisible();
     });
 
@@ -359,7 +373,7 @@ test.describe('Debug Console Filtering', () => {
 
       if (await logEntry.isVisible()) {
         await logEntry.click();
-        await page.waitForTimeout(300);
+        await page.waitForTimeout(100);
 
         // Should expand to show details
         await expect(page.locator('body')).toBeVisible();
@@ -371,7 +385,7 @@ test.describe('Debug Console Filtering', () => {
 
       if (await copyButton.isVisible()) {
         await copyButton.click();
-        await page.waitForTimeout(300);
+        await page.waitForTimeout(100);
 
         // Should copy to clipboard
         await expect(page.locator('body')).toBeVisible();
