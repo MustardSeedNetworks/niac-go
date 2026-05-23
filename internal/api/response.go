@@ -47,7 +47,7 @@ func writeError(
 	requestID := r.Header.Get("X-Request-ID")
 	if requestID != "" {
 		logger := slog.Default()
-		logger.Error(
+		logger.ErrorContext(r.Context(),
 			"[API] Error response",
 			"requestID",
 			requestID,

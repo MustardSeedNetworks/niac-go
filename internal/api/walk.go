@@ -179,23 +179,30 @@ func (s *Server) runWalkValidation(
 	if autoFix {
 		result, err := snmp.AutoFixWalkFile(validatedPath, "")
 		if err != nil {
-			s.logger.Error("[API] Walk file auto-fix error", "error", err)
+			s.logger.ErrorContext(r.Context(), "[API] Walk file auto-fix error", "error", err)
 			writeError(w, r, http.StatusInternalServerError, "fix_failed",
 				fmt.Sprintf("Failed to fix walk file: %v", err), nil)
 			return nil, false
 		}
-		s.logger.Info("[API] Walk file auto-fixed", "fixedCount", result.FixedCount, "filename", validatedPath)
+		s.logger.InfoContext(
+			r.Context(),
+			"[API] Walk file auto-fixed",
+			"fixedCount",
+			result.FixedCount,
+			"filename",
+			validatedPath,
+		)
 		return result, true
 	}
 
 	result, err := snmp.ValidateWalkFile(validatedPath)
 	if err != nil {
-		s.logger.Error("[API] Walk file validation error", "error", err)
+		s.logger.ErrorContext(r.Context(), "[API] Walk file validation error", "error", err)
 		writeError(w, r, http.StatusInternalServerError, "validation_failed",
 			fmt.Sprintf("Failed to validate walk file: %v", err), nil)
 		return nil, false
 	}
-	s.logger.Info(
+	s.logger.InfoContext(r.Context(),
 		"[API] Walk file validated",
 		"filename", validatedPath,
 		"valid", result.Valid,
@@ -239,7 +246,14 @@ func (s *Server) handleWalkValidation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s.logger.Info("[API] Walk file validation request", "filename", validatedPath, "autoFix", isAutoFix || req.AutoFix)
+	s.logger.InfoContext(
+		r.Context(),
+		"[API] Walk file validation request",
+		"filename",
+		validatedPath,
+		"autoFix",
+		isAutoFix || req.AutoFix,
+	)
 
 	result, ok := s.runWalkValidation(w, r, validatedPath, isAutoFix || req.AutoFix)
 	if !ok {
@@ -423,7 +437,7 @@ func (s *Server) handleWalkBatchValidate(w http.ResponseWriter, r *http.Request)
 
 	response := buildBatchWalkResponse(walkFiles, results, totalIssues, invalidCount)
 
-	s.logger.Info(
+	s.logger.InfoContext(r.Context(),
 		"[API] Batch walk file validation",
 		"totalFiles",
 		len(walkFiles),

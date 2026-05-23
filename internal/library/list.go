@@ -200,7 +200,7 @@ func (l *Library) WriteFile(kind Kind, relPath string, content []byte, backupExi
 	if len(content) == 0 {
 		return ErrEmptyContent
 	}
-	for _, segment := range strings.Split(filepath.ToSlash(relPath), "/") {
+	for segment := range strings.SplitSeq(filepath.ToSlash(relPath), "/") {
 		if err := validateName(segment); err != nil {
 			return err
 		}
@@ -291,8 +291,8 @@ func countDevices(data []byte) (int, error) {
 
 func trimYAMLExt(name string) string {
 	for _, ext := range []string{".yaml", ".yml"} {
-		if strings.HasSuffix(name, ext) {
-			return strings.TrimSuffix(name, ext)
+		if before, ok := strings.CutSuffix(name, ext); ok {
+			return before
 		}
 	}
 	return name

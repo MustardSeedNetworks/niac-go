@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -393,12 +394,12 @@ func parseIPv6PTRName(name string) (net.IP, bool) {
 
 	builder.Grow(dnsIPv6NibbleLen)
 
-	for i := len(nibbles) - 1; i >= 0; i-- {
-		if len(nibbles[i]) != 1 {
+	for _, v := range slices.Backward(nibbles) {
+		if len(v) != 1 {
 			return nil, false
 		}
 
-		builder.WriteString(nibbles[i])
+		builder.WriteString(v)
 	}
 
 	data, err := hex.DecodeString(builder.String())

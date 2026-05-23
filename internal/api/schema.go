@@ -100,7 +100,7 @@ func (s *Server) handleConfigSchema(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	err := json.NewEncoder(w).Encode(schema)
 	if err != nil {
-		s.logger.Error("[API] Failed to encode schema response", "error", err)
+		s.logger.ErrorContext(r.Context(), "[API] Failed to encode schema response", "error", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 	}
 }

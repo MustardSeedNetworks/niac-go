@@ -67,14 +67,14 @@ func (s *Server) handleCaptureFilterSet(w http.ResponseWriter, r *http.Request) 
 	}
 
 	if err := stack.SetCaptureFilter(req.Filter); err != nil {
-		s.logger.Error("[API] Failed to set capture filter", "filter", req.Filter, "error", err)
+		s.logger.ErrorContext(r.Context(), "[API] Failed to set capture filter", "filter", req.Filter, "error", err)
 		writeError(w, r, http.StatusBadRequest, "invalid_filter",
 			"Invalid BPF filter expression", nil)
 
 		return
 	}
 
-	s.logger.Info("[API] Capture filter set", "filter", req.Filter)
+	s.logger.InfoContext(r.Context(), "[API] Capture filter set", "filter", req.Filter)
 	s.writeJSON(w, CaptureFilterResponse{
 		Active: req.Filter != "",
 		Filter: req.Filter,
@@ -91,13 +91,13 @@ func (s *Server) handleCaptureFilterClear(w http.ResponseWriter, r *http.Request
 	}
 
 	if err := stack.SetCaptureFilter(""); err != nil {
-		s.logger.Error("[API] Failed to clear capture filter", "error", err)
+		s.logger.ErrorContext(r.Context(), "[API] Failed to clear capture filter", "error", err)
 		writeError(w, r, http.StatusInternalServerError, "filter_clear_failed",
 			"Failed to clear capture filter", nil)
 
 		return
 	}
 
-	s.logger.Info("[API] Capture filter cleared")
+	s.logger.InfoContext(r.Context(), "[API] Capture filter cleared")
 	s.writeJSON(w, CaptureFilterResponse{Active: false, Filter: ""})
 }

@@ -92,7 +92,7 @@ func (s *Server) handleStandaloneCaptureStart(w http.ResponseWriter, r *http.Req
 		// natural status codes; everything else is a 500. The detail
 		// string is the daemon's error message, which is operator-
 		// readable (it's already used in the sim flow's daemon log).
-		s.logger.Error("[API] Failed to start standalone capture", "error", err)
+		s.logger.ErrorContext(r.Context(), "[API] Failed to start standalone capture", "error", err)
 		switch {
 		case errors.Is(err, ErrCaptureAlreadyRunning):
 			writeError(w, r, http.StatusConflict, "capture_already_running",
@@ -116,7 +116,7 @@ func (s *Server) handleStandaloneCaptureStart(w http.ResponseWriter, r *http.Req
 
 func (s *Server) handleStandaloneCaptureStop(w http.ResponseWriter, r *http.Request) {
 	if err := s.captureController.StopCapture(); err != nil {
-		s.logger.Error("[API] Failed to stop standalone capture", "error", err)
+		s.logger.ErrorContext(r.Context(), "[API] Failed to stop standalone capture", "error", err)
 		writeError(w, r, http.StatusInternalServerError, "capture_stop_failed",
 			"Failed to stop capture", nil)
 		return

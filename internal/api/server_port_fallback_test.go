@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	"errors"
-	"io"
 	"log/slog"
 	"net"
 	"strconv"
@@ -15,7 +14,7 @@ import (
 // silentLogger returns a slog.Logger that discards output so tests don't
 // spam the buffer with the expected fallback WARN.
 func silentLogger() *slog.Logger {
-	return slog.New(slog.NewTextHandler(io.Discard, nil))
+	return slog.New(slog.DiscardHandler)
 }
 
 // TestBindWithFallback_FreePort confirms a free port is bound at offset 0.

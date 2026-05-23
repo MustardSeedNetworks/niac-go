@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"maps"
 	"net"
 	"net/http"
 	"strings"
@@ -73,9 +74,7 @@ func deepCopyDevice(dev *config.Device) *config.Device {
 	copied.TrunkPorts = append([]config.TrunkPort(nil), dev.TrunkPorts...)
 	if dev.Properties != nil {
 		copied.Properties = make(map[string]string, len(dev.Properties))
-		for key, value := range dev.Properties {
-			copied.Properties[key] = value
-		}
+		maps.Copy(copied.Properties, dev.Properties)
 	}
 
 	return &copied
@@ -116,7 +115,7 @@ func (s *Server) createAndSaveDevice(
 ) (*config.Device, error) {
 	newDevice, err := createDeviceFromRequest(req)
 	if err != nil {
-		s.logger.Error("[API] Device creation failed", "error", err, "hostname", req.Hostname)
+		s.logger.ErrorContext(r.Context(), "[API] Device creation failed", "error", err, "hostname", req.Hostname)
 		writeError(w, r, http.StatusBadRequest, "device_creation_failed",
 			"Failed to create device from request", nil)
 		return nil, err

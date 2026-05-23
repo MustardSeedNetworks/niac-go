@@ -147,7 +147,7 @@ func TestSyntheticMACIsDeterministicAndLocallyAdministered(t *testing.T) {
 
 	// MACs we emit live on the ifPhysAddress lines (.1.3.6.1.2.1.2.2.1.6.<idx>).
 	// Locally-administered bit means the first octet is 02.
-	for _, line := range strings.Split(w1, "\n") {
+	for line := range strings.SplitSeq(w1, "\n") {
 		if !strings.Contains(line, ".1.3.6.1.2.1.2.2.1.6.") {
 			continue
 		}

@@ -132,8 +132,8 @@ func (s *Server) recoverMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			if err := recover(); err != nil {
 				requestID := r.Header.Get("X-Request-ID")
 				// Log panic with stack trace
-				s.logger.Error("[API] PANIC recovered", "requestID", requestID, "error", err)
-				s.logger.Error("[API] Stack trace", "stack", string(debug.Stack()))
+				s.logger.ErrorContext(r.Context(), "[API] PANIC recovered", "requestID", requestID, "error", err)
+				s.logger.ErrorContext(r.Context(), "[API] Stack trace", "stack", string(debug.Stack()))
 
 				// Return 500 error to client
 				writeError(w, r, http.StatusInternalServerError,
@@ -168,7 +168,7 @@ func (s *Server) auth(next http.HandlerFunc) http.HandlerFunc {
 			// Structured audit fields (task #77): tagged event + UA so SIEM
 			// pipelines can filter and so abusive clients are identifiable
 			// beyond just IP.
-			s.logger.Warn("[API] Rate limit exceeded",
+			s.logger.WarnContext(r.Context(), "[API] Rate limit exceeded",
 				"event", "api.rate_limited",
 				"requestID", requestID,
 				"clientIP", clientIP,
@@ -204,7 +204,7 @@ func (s *Server) auth(next http.HandlerFunc) http.HandlerFunc {
 			// shows up as a security event in log pipelines, not just a
 			// generic API warning. tokenPresent records the outcome shape
 			// without ever logging the token value itself.
-			s.logger.Warn(
+			s.logger.WarnContext(r.Context(),
 				"[API] Unauthorized request",
 				"event", "auth.unauthorized",
 				"requestID", requestID,
@@ -226,7 +226,7 @@ func (s *Server) auth(next http.HandlerFunc) http.HandlerFunc {
 		if scope < required {
 			writeError(w, r, http.StatusForbidden, "forbidden",
 				"token lacks required scope", nil)
-			s.logger.Warn(
+			s.logger.WarnContext(r.Context(),
 				"[API] Forbidden request: token scope insufficient",
 				"event", "auth.forbidden_scope",
 				"requestID", requestID,

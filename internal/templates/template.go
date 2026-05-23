@@ -117,10 +117,7 @@ func parseHeaderMetadata(content string) (string, string) {
 	head := string(buf[:n])
 
 	lines := strings.Split(head, "\n")
-	limit := len(lines)
-	if limit > metadataMaxScanLines {
-		limit = metadataMaxScanLines
-	}
+	limit := min(len(lines), metadataMaxScanLines)
 
 	var description, useCase, firstComment string
 	for i := range limit {
