@@ -35,8 +35,8 @@ type daemonOptions struct {
 	storagePath         string
 	webhookAllowedHosts []string
 	// Wave 1 (TLS-by-default) options.
-	certDir    string
-	apiToken   string
+	certDir  string
+	apiToken string
 	// Wave 2 (SIGHUP rotation + scoped tokens) options. tokenFile is the
 	// path to a 0o600 JSON file containing one or more {value, scope}
 	// pairs; preferred over apiToken / NIAC_API_TOKEN. SIGHUP re-reads
