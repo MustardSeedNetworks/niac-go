@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"maps"
 	"net"
 	"strconv"
 	"strings"
@@ -92,9 +93,7 @@ func convertPortChannels(in []converter.PortChannel) []PortChannel {
 // custom_mibs_count) extend it rather than dropping the originals.
 func createBaseDevice(yamlDevice converter.Device) Device {
 	props := make(map[string]string, len(yamlDevice.Properties))
-	for k, v := range yamlDevice.Properties {
-		props[k] = v
-	}
+	maps.Copy(props, yamlDevice.Properties)
 	return Device{
 		Name:       yamlDevice.Name,
 		Type:       inferYAMLDeviceType(yamlDevice),

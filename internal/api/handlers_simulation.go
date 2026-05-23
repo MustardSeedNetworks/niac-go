@@ -60,7 +60,7 @@ func (s *Server) handleSimulationStart(w http.ResponseWriter, r *http.Request) {
 		// SECURITY: Don't leak internal error details to the client, but
 		// log them server-side so the daemon log can be used to diagnose
 		// why a start failed (config parse, capture engine, walk file…).
-		s.logger.Error("[API] Failed to start simulation", "error", err)
+		s.logger.ErrorContext(r.Context(), "[API] Failed to start simulation", "error", err)
 		writeError(w, r, http.StatusInternalServerError, "simulation_start_failed",
 			"Failed to start simulation", nil)
 		return
@@ -74,7 +74,7 @@ func (s *Server) handleSimulationStart(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleSimulationStop(w http.ResponseWriter, r *http.Request) {
 	if err := s.daemon.StopSimulation(); err != nil {
 		// SECURITY FIX MEDIUM-6: Don't expose internal error details
-		s.logger.Error("[API] Failed to stop simulation", "error", err)
+		s.logger.ErrorContext(r.Context(), "[API] Failed to stop simulation", "error", err)
 		writeError(w, r, http.StatusInternalServerError, "simulation_stop_failed",
 			"Failed to stop simulation", nil)
 		return

@@ -104,13 +104,13 @@ func (s *Server) handleUserConfigByName(w http.ResponseWriter, r *http.Request) 
 }
 
 // handleUserConfigsList returns a list of user-uploaded configs.
-func (s *Server) handleUserConfigsList(w http.ResponseWriter, _ *http.Request) {
+func (s *Server) handleUserConfigsList(w http.ResponseWriter, r *http.Request) {
 	configs := []UserConfig{}
 
 	for _, dir := range getUserConfigDirs() {
 		dirConfigs, err := scanUserConfigDir(dir)
 		if err != nil {
-			s.logger.Warn(fmt.Sprintf("Failed to scan config dir %s: %v", dir, err))
+			s.logger.WarnContext(r.Context(), fmt.Sprintf("Failed to scan config dir %s: %v", dir, err))
 			continue
 		}
 		configs = append(configs, dirConfigs...)
@@ -264,7 +264,7 @@ func (s *Server) handleUserConfigUpload(w http.ResponseWriter, r *http.Request) 
 	// Save the config file
 	configPath, err := saveUserConfig(safeName, []byte(req.Content))
 	if err != nil {
-		s.logger.Error("[API] Failed to save user config", "error", err)
+		s.logger.ErrorContext(r.Context(), "[API] Failed to save user config", "error", err)
 		writeError(w, r, http.StatusInternalServerError, "write_error", "Failed to save config", nil)
 		return
 	}
@@ -333,7 +333,7 @@ func (s *Server) handleUserConfigDelete(w http.ResponseWriter, r *http.Request, 
 
 	// Delete the file
 	if err := os.Remove(configPath); err != nil {
-		s.logger.Error("[API] Failed to delete user config", "error", err, "path", configPath)
+		s.logger.ErrorContext(r.Context(), "[API] Failed to delete user config", "error", err, "path", configPath)
 		writeError(w, r, http.StatusInternalServerError, "delete_error", "Failed to delete config", nil)
 		return
 	}

@@ -157,7 +157,7 @@ func (s *Server) handleHistory(w http.ResponseWriter, r *http.Request) {
 	history, err := s.cfg.Storage.ListRuns(historyListLimit)
 	if err != nil {
 		// SECURITY FIX MEDIUM-6: Don't expose internal error details
-		s.logger.Error("[API] Failed to list run history", "error", err)
+		s.logger.ErrorContext(r.Context(), "[API] Failed to list run history", "error", err)
 		writeError(w, r, http.StatusInternalServerError, "storage_error",
 			"Failed to retrieve run history", nil)
 
@@ -183,7 +183,7 @@ func (s *Server) handleConfigGet(w http.ResponseWriter, r *http.Request) {
 	doc, status, err := s.readConfigDocument()
 	if err != nil {
 		// SECURITY FIX MEDIUM-6: Don't expose internal error details
-		s.logger.Error("[API] Failed to read config", "error", err)
+		s.logger.ErrorContext(r.Context(), "[API] Failed to read config", "error", err)
 		writeError(w, r, status, "config_read_failed",
 			"Failed to read configuration", nil)
 
@@ -217,7 +217,7 @@ func (s *Server) handleConfigUpdate(w http.ResponseWriter, r *http.Request) {
 
 	doc, status, err := s.readConfigDocument()
 	if err != nil {
-		s.logger.Error("[API] Failed to read updated config", "error", err)
+		s.logger.ErrorContext(r.Context(), "[API] Failed to read updated config", "error", err)
 		writeError(w, r, status, "config_read_failed",
 			"Configuration updated but failed to retrieve", nil)
 		return
@@ -250,7 +250,7 @@ func (s *Server) validateConfigContent(
 ) (*config.Config, bool) {
 	newCfg, err := config.LoadYAMLBytes([]byte(content))
 	if err != nil {
-		s.logger.Error("[API] Config validation failed", "error", err)
+		s.logger.ErrorContext(r.Context(), "[API] Config validation failed", "error", err)
 		writeError(w, r, http.StatusBadRequest, "config_invalid", "Configuration validation failed", nil)
 		return nil, false
 	}
@@ -263,7 +263,7 @@ func (s *Server) applyAndSaveConfig(
 	prevCfg := s.currentConfig()
 	if s.cfg.ApplyConfig != nil {
 		if err := s.cfg.ApplyConfig(newCfg); err != nil {
-			s.logger.Error("[API] Failed to apply config", "error", err)
+			s.logger.ErrorContext(r.Context(), "[API] Failed to apply config", "error", err)
 			writeError(w, r, http.StatusInternalServerError, "config_apply_failed",
 				"Failed to apply configuration", nil)
 			return false
@@ -274,7 +274,7 @@ func (s *Server) applyAndSaveConfig(
 		if s.cfg.ApplyConfig != nil && prevCfg != nil {
 			_ = s.cfg.ApplyConfig(prevCfg)
 		}
-		s.logger.Error("[API] Failed to write config file", "error", err)
+		s.logger.ErrorContext(r.Context(), "[API] Failed to write config file", "error", err)
 		writeError(w, r, http.StatusInternalServerError, "config_write_failed",
 			"Failed to save configuration", nil)
 		return false
@@ -349,7 +349,7 @@ func (s *Server) handleReplay(w http.ResponseWriter, r *http.Request) {
 		state, err := s.cfg.Replay.Stop()
 		if err != nil {
 			// SECURITY FIX MEDIUM-6: Don't expose internal error details
-			s.logger.Error("[API] Failed to stop replay", "error", err)
+			s.logger.ErrorContext(r.Context(), "[API] Failed to stop replay", "error", err)
 			writeError(w, r, http.StatusInternalServerError, "replay_stop_failed",
 				"Failed to stop replay", nil)
 
@@ -509,7 +509,7 @@ func (s *Server) handleInterfaces(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		// SECURITY FIX MEDIUM-6: Don't expose internal error details
-		s.logger.Error("[API] Failed to list interfaces", "error", err)
+		s.logger.ErrorContext(r.Context(), "[API] Failed to list interfaces", "error", err)
 		writeError(w, r, http.StatusInternalServerError, "interface_list_failed",
 			"Failed to retrieve network interfaces", nil)
 

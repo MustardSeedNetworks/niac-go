@@ -133,7 +133,7 @@ func (s *Server) uploadRateLimit(next http.HandlerFunc) http.HandlerFunc {
 		if !s.uploadLimiter.GetLimiter(clientIP).Allow() {
 			writeError(w, r, http.StatusTooManyRequests, "upload_rate_limit_exceeded",
 				"Upload rate limit exceeded. Please wait before uploading again.", nil)
-			s.logger.Warn(
+			s.logger.WarnContext(r.Context(),
 				"[API] Upload rate limit exceeded",
 				"clientIP",
 				clientIP,
@@ -156,7 +156,7 @@ func (s *Server) writeRateLimit(next http.HandlerFunc) http.HandlerFunc {
 			if !s.writeLimiter.GetLimiter(clientIP).Allow() {
 				writeError(w, r, http.StatusTooManyRequests, "write_rate_limit_exceeded",
 					"Write rate limit exceeded. Please wait before making more changes.", nil)
-				s.logger.Warn(
+				s.logger.WarnContext(r.Context(),
 					"[API] Write rate limit exceeded",
 					"clientIP",
 					clientIP,
@@ -177,7 +177,7 @@ func (s *Server) walkRateLimit(next http.HandlerFunc) http.HandlerFunc {
 		if !s.walkLimiter.GetLimiter(clientIP).Allow() {
 			writeError(w, r, http.StatusTooManyRequests, "walk_rate_limit_exceeded",
 				"Walk file operation rate limit exceeded. Please wait before trying again.", nil)
-			s.logger.Warn(
+			s.logger.WarnContext(r.Context(),
 				"[API] Walk rate limit exceeded",
 				"clientIP",
 				clientIP,
@@ -198,7 +198,7 @@ func (s *Server) fileRateLimit(next http.HandlerFunc) http.HandlerFunc {
 		if !s.fileLimiter.GetLimiter(clientIP).Allow() {
 			writeError(w, r, http.StatusTooManyRequests, "file_rate_limit_exceeded",
 				"File listing rate limit exceeded. Please wait before trying again.", nil)
-			s.logger.Warn(
+			s.logger.WarnContext(r.Context(),
 				"[API] File rate limit exceeded",
 				"clientIP",
 				clientIP,

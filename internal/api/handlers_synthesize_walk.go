@@ -170,7 +170,7 @@ func (s *Server) handleSynthesizeWalk(w http.ResponseWriter, r *http.Request) {
 	hadPrior := s.libraryFileExists(library.KindWalks, relPath)
 
 	if writeErr := s.library.WriteFile(library.KindWalks, relPath, walkBytes, true); writeErr != nil {
-		s.logger.Error("[API] synthesize-walk: write failed", "device", hostname, "error", writeErr)
+		s.logger.ErrorContext(r.Context(), "[API] synthesize-walk: write failed", "device", hostname, "error", writeErr)
 		writeError(w, r, http.StatusInternalServerError, "write_failed",
 			"Failed to write synthesised walk", nil)
 		return
@@ -182,7 +182,14 @@ func (s *Server) handleSynthesizeWalk(w http.ResponseWriter, r *http.Request) {
 	// device.snmp_config.walk_file.
 	updateErr := s.attachWalkToDevice(dev.Name, relPath)
 	if updateErr != nil {
-		s.logger.Error("[API] synthesize-walk: attach failed", "device", hostname, "error", updateErr)
+		s.logger.ErrorContext(
+			r.Context(),
+			"[API] synthesize-walk: attach failed",
+			"device",
+			hostname,
+			"error",
+			updateErr,
+		)
 		writeError(w, r, http.StatusInternalServerError, "attach_failed",
 			"Walk synthesised but could not attach to device", nil)
 		return
@@ -291,7 +298,7 @@ func (s *Server) attachWalkToDevice(hostname, relPath string) error {
 // 201 response so the UI can show "Generated walk with N OIDs".
 func countOIDLines(walk []byte) int {
 	count := 0
-	for _, line := range strings.Split(string(walk), "\n") {
+	for line := range strings.SplitSeq(string(walk), "\n") {
 		trimmed := strings.TrimSpace(line)
 		if trimmed == "" || strings.HasPrefix(trimmed, "#") {
 			continue

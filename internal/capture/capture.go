@@ -141,7 +141,7 @@ func (e *Engine) StartCaptureContext(ctx context.Context, handler func(gopacket.
 	packetSource := gopacket.NewPacketSource(e.handle, e.handle.LinkType())
 
 	if e.debugLevel >= 1 {
-		slog.Default().Info("Started packet capture", "interface", e.interfaceName)
+		slog.Default().InfoContext(ctx, "Started packet capture", "interface", e.interfaceName)
 	}
 
 	packets := packetSource.Packets()

@@ -77,7 +77,7 @@ linters:
     - gochecknoinits # checks that no init functions are present in Go code
     - gochecksumtype # checks exhaustiveness on Go "sum types"
     - gocognit # computes and checks the cognitive complexity of functions
-    # - goconst # too noisy for protocol/OID-heavy simulator tables
+    - goconst # finds repeated strings that could be replaced by a constant
     - gocritic # provides diagnostics that check for bugs, performance and style issues
     - gocyclo # computes and checks the cyclomatic complexity of functions
     - godoclint # checks Golang's documentation practice
@@ -94,7 +94,7 @@ linters:
     - makezero # finds slice declarations with non-zero initial length
     - mirror # reports wrong mirror patterns of bytes/strings usage
     - mnd # detects magic numbers
-    # - modernize # opportunistic style suggestions; keep compatibility churn out of the gate
+    - modernize # suggests simplifications to Go code, using modern language and library features
     # - musttag # enforces field tags in (un)marshaled structs (disabled: health check endpoints stored as JSON in DB, not YAML)
     - nakedret # finds naked returns in functions greater than a specified function length
     - nestif # reports deeply nested if statements
@@ -113,7 +113,7 @@ linters:
     - recvcheck # checks for receiver type consistency
     - revive # fast, configurable, extensible, flexible, and beautiful linter for Go, drop-in replacement of golint
     - rowserrcheck # checks whether Err of rows is checked successfully
-    # - sloglint # API handlers intentionally use request-free logger calls in many paths
+    - sloglint # ensure consistent code style when using log/slog
     - spancheck # checks for mistakes with OpenTelemetry/Census spans
     - sqlclosecheck # checks that sql.Rows and sql.Stmt are closed
     - staticcheck # is a go vet on steroids, applying a ton of static analysis checks
@@ -179,6 +179,13 @@ linters:
       # If it's higher than 0.0 (float) the check is enabled.
       # Default: 0.0
       package-average: 10.0
+
+    goconst:
+      # Minimum occurrences of a string to flag. Default 3. Bumped to 10
+      # for parity with seed/stem so protocol/OID-heavy simulator tables
+      # with 3-9 short-string occurrences aren't forced into PascalCase.
+      min-occurrences: 10
+      min-len: 3
 
     depguard:
       # Rules to apply.
@@ -500,6 +507,32 @@ linters:
       - text: 'G710: Open redirect via taint analysis'
         path: 'internal/api/tls\.go'
         linters: [ gosec ]
+      # schema.go uses intPtr/floatPtr helpers for nullable JSON Schema
+      # fields. modernize suggests inlining to Go 1.24 `new(x)` but that
+      # syntax can't infer *float64 from int literals (`new(1)` is *int);
+      # the helpers also preserve callsite intent at struct construction.
+      - text: 'newexpr: '
+        path: 'internal/api/schema.*\.go'
+        linters: [ modernize ]
+      # sse_log_handler_test.go uses NewTextHandler(io.Discard) so the tee
+      # wrapper's Handle() runs unconditionally. slog.DiscardHandler's
+      # Enabled() short-circuits propagation, breaking the test setup.
+      - path: 'internal/api/sse_log_handler_test\.go'
+        linters: [ modernize, sloglint ]
+      # JSON Schema + config-vocabulary literals repeated across api/*.go
+      # (hostname/interface/name/enabled/disabled/ips/router/ipv4/etc).
+      # These are wire-format field names + Schema "type" enums — the
+      # strings ARE the contract; consolidating to consts would force
+      # every handler to import a constants package without behavioural
+      # change.
+      - path: 'internal/api/'
+        linters: [ goconst ]
+      # Device-type domain vocabulary (router/switch/ethernet/etc) and
+      # CLI/IPC JSON field names (config/error/device/message/count/niac)
+      # repeated across cmd/niac and internal packages by design. Each
+      # is a wire/CLI vocabulary token, not a refactorable constant.
+      - linters: [ goconst ]
+        text: 'string `(router|switch|ethernet|niac|config|error|device|message|count|disabled|GET|FCS Errors)` has'
       - path: '_test\.go'
         linters:
           - bodyclose

@@ -50,7 +50,7 @@ func (s *Server) setupSSEConnection(
 
 	rc := http.NewResponseController(w)
 	if err := rc.SetWriteDeadline(time.Time{}); err != nil {
-		s.logger.Warn("[SSE] Could not disable write deadline", "error", err)
+		s.logger.WarnContext(r.Context(), "[SSE] Could not disable write deadline", "error", err)
 	}
 
 	client := &SSEClient{
@@ -120,7 +120,7 @@ func (s *Server) serveSSE(stream SSEStream) http.HandlerFunc {
 		sc, err := s.setupSSEConnection(w, r, stream)
 		if err != nil {
 			// SECURITY FIX #183: Don't expose internal error details
-			s.logger.Error("[API] SSE connection setup failed", "error", err)
+			s.logger.ErrorContext(r.Context(), "[API] SSE connection setup failed", "error", err)
 			writeError(w, r, http.StatusInternalServerError, "sse_not_supported",
 				"Failed to establish SSE connection", nil)
 			return

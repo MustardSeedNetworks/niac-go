@@ -128,13 +128,13 @@ func (s *Server) handleTemplateByName(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleTemplatesList returns a list of available templates.
-func (s *Server) handleTemplatesList(w http.ResponseWriter, _ *http.Request) {
+func (s *Server) handleTemplatesList(w http.ResponseWriter, r *http.Request) {
 	templates := []Template{}
 
 	for _, dir := range getTemplateDirs() {
 		dirTemplates, err := scanTemplateDir(dir)
 		if err != nil {
-			s.logger.Warn(fmt.Sprintf("Failed to scan template dir %s: %v", dir, err))
+			s.logger.WarnContext(r.Context(), fmt.Sprintf("Failed to scan template dir %s: %v", dir, err))
 			continue
 		}
 		templates = append(templates, dirTemplates...)

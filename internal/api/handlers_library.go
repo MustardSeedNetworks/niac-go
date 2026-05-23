@@ -67,7 +67,7 @@ func (s *Server) handleLibraryNetworkByName(w http.ResponseWriter, r *http.Reque
 func (s *Server) handleLibraryNetworksList(w http.ResponseWriter, r *http.Request) {
 	entries, err := s.library.ListNetworks()
 	if err != nil {
-		s.logger.Error("[API] library: list networks", "error", err)
+		s.logger.ErrorContext(r.Context(), "[API] library: list networks", "error", err)
 		writeError(w, r, http.StatusInternalServerError, "library_list_failed",
 			"Failed to list networks", nil)
 		return
@@ -86,7 +86,7 @@ func (s *Server) handleLibraryNetworkRead(w http.ResponseWriter, r *http.Request
 			writeError(w, r, http.StatusBadRequest, "invalid_name", err.Error(), nil)
 			return
 		}
-		s.logger.Error("[API] library: read network", "name", name, "error", err)
+		s.logger.ErrorContext(r.Context(), "[API] library: read network", "name", name, "error", err)
 		writeError(w, r, http.StatusInternalServerError, "library_read_failed",
 			"Failed to read network", nil)
 		return
@@ -115,7 +115,7 @@ func (s *Server) handleLibraryNetworkUpload(w http.ResponseWriter, r *http.Reque
 			writeError(w, r, http.StatusBadRequest, "invalid_content", err.Error(), nil)
 			return
 		}
-		s.logger.Error("[API] library: write network", "name", req.Name, "error", err)
+		s.logger.ErrorContext(r.Context(), "[API] library: write network", "name", req.Name, "error", err)
 		writeError(w, r, http.StatusInternalServerError, "library_write_failed",
 			"Failed to save network", nil)
 		return
@@ -163,7 +163,7 @@ func (s *Server) handleLibraryFiles(w http.ResponseWriter, r *http.Request, kind
 	}
 	entries, err := s.library.ListFiles(kind)
 	if err != nil {
-		s.logger.Error("[API] library: list files", "kind", string(kind), "error", err)
+		s.logger.ErrorContext(r.Context(), "[API] library: list files", "kind", string(kind), "error", err)
 		writeError(w, r, http.StatusInternalServerError, "library_list_failed",
 			"Failed to list "+string(kind), nil)
 		return

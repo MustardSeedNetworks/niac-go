@@ -343,7 +343,7 @@ func (s *Server) handlePcapUpload(w http.ResponseWriter, r *http.Request) {
 
 	result, err := analyzePcapData(pcapData, req.Filename)
 	if err != nil {
-		s.logger.Error("[API] PCAP analysis failed", "error", err, "filename", req.Filename)
+		s.logger.ErrorContext(r.Context(), "[API] PCAP analysis failed", "error", err, "filename", req.Filename)
 		writeError(w, r, http.StatusInternalServerError, "analysis_failed",
 			"Failed to analyze PCAP file", nil)
 		return
