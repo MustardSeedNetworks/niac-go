@@ -22,7 +22,7 @@ test.describe('API Error Handling', () => {
       await page.waitForLoadState('domcontentloaded');
 
       // Should show error state or fallback UI
-      const errorIndicator = page.locator('[class*="error"], [role="alert"], [class*="offline"]');
+      const _errorIndicator = page.locator('[class*="error"], [role="alert"], [class*="offline"]');
       await expect(page.locator('body')).toBeVisible();
     });
 
@@ -35,7 +35,7 @@ test.describe('API Error Handling', () => {
 
       await page.goto('/devices');
       await page.waitForLoadState('domcontentloaded');
-      await page.waitForTimeout(5000);
+      await page.waitForTimeout(250);
 
       // Should show loading or timeout error
       await expect(page.locator('body')).toBeVisible();
@@ -47,13 +47,13 @@ test.describe('API Error Handling', () => {
 
       // Go offline
       await page.context().setOffline(true);
-      await page.waitForTimeout(1000);
+      await page.waitForTimeout(250);
 
       // Try to trigger an API call
       const refreshButton = page.getByRole('button', { name: /refresh|reload/i }).first();
       if (await refreshButton.isVisible()) {
         await refreshButton.click();
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(150);
       }
 
       // Should indicate offline state
@@ -91,7 +91,7 @@ test.describe('API Error Handling', () => {
         await hostnameField.fill('test-device');
         if (await submitButton.isEnabled()) {
           await submitButton.click();
-          await page.waitForTimeout(1000);
+          await page.waitForTimeout(250);
 
           // Should show error message
           await expect(page.locator('body')).toBeVisible();
@@ -138,13 +138,13 @@ test.describe('API Error Handling', () => {
       const deleteButton = page.getByRole('button', { name: /delete|remove/i }).first();
       if (await deleteButton.isVisible()) {
         await deleteButton.click();
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(150);
 
         // Confirm if dialog appears
         const confirmButton = page.getByRole('button', { name: /confirm|yes|delete/i }).first();
         if (await confirmButton.isVisible()) {
           await confirmButton.click();
-          await page.waitForTimeout(1000);
+          await page.waitForTimeout(250);
         }
 
         // Should show permission error
@@ -167,7 +167,7 @@ test.describe('API Error Handling', () => {
       await page.waitForLoadState('domcontentloaded');
 
       // Should show not found message or redirect
-      const notFoundText = page.getByText(/not found|does not exist|404/i);
+      const _notFoundText = page.getByText(/not found|does not exist|404/i);
       await expect(page.locator('body')).toBeVisible();
     });
   });
@@ -196,10 +196,10 @@ test.describe('API Error Handling', () => {
         await hostnameField.fill('duplicate-device');
         if (await submitButton.isEnabled()) {
           await submitButton.click();
-          await page.waitForTimeout(1000);
+          await page.waitForTimeout(250);
 
           // Should show conflict error
-          const conflictError = page.getByText(/already exists|duplicate|conflict/i);
+          const _conflictError = page.getByText(/already exists|duplicate|conflict/i);
           await expect(page.locator('body')).toBeVisible();
         }
       }
@@ -230,9 +230,9 @@ test.describe('API Error Handling', () => {
       await page.waitForLoadState('domcontentloaded');
 
       const submitButton = page.getByRole('button', { name: /save|submit|create/i }).first();
-      if (await submitButton.isVisible() && (await submitButton.isEnabled())) {
+      if ((await submitButton.isVisible()) && (await submitButton.isEnabled())) {
         await submitButton.click();
-        await page.waitForTimeout(1000);
+        await page.waitForTimeout(250);
 
         // Should show field-level errors
         await expect(page.locator('body')).toBeVisible();
@@ -254,7 +254,7 @@ test.describe('API Error Handling', () => {
       await page.waitForLoadState('domcontentloaded');
 
       // Should show error state
-      const errorMessage = page.getByText(/error|failed|problem/i);
+      const _errorMessage = page.getByText(/error|failed|problem/i);
       await expect(page.locator('body')).toBeVisible();
     });
 
@@ -269,7 +269,7 @@ test.describe('API Error Handling', () => {
 
       await page.goto('/devices');
       await page.waitForLoadState('domcontentloaded');
-      await page.waitForTimeout(500);
+      await page.waitForTimeout(150);
 
       // Should handle gracefully - page renders without crashing
       await expect(page.locator('body')).toBeVisible();
@@ -286,7 +286,7 @@ test.describe('API Error Handling', () => {
 
       await page.goto('/devices');
       await page.waitForLoadState('domcontentloaded');
-      await page.waitForTimeout(500);
+      await page.waitForTimeout(150);
 
       // Should handle gracefully - page renders without crashing
       await expect(page.locator('body')).toBeVisible();
@@ -314,7 +314,7 @@ test.describe('API Error Handling', () => {
 
       await page.goto('/devices');
       await page.waitForLoadState('domcontentloaded');
-      await page.waitForTimeout(500);
+      await page.waitForTimeout(150);
 
       // Retry via navigation (reload or navigate away and back)
       await page.reload();
@@ -337,7 +337,7 @@ test.describe('API Error Handling', () => {
 
       await page.goto('/devices');
       await page.waitForLoadState('domcontentloaded');
-      await page.waitForTimeout(500);
+      await page.waitForTimeout(150);
 
       // Reload to retry
       await page.reload();
@@ -356,7 +356,7 @@ test.describe('API Error Handling', () => {
 
       await page.goto('/runtime');
       await page.waitForLoadState('domcontentloaded');
-      await page.waitForTimeout(2000);
+      await page.waitForTimeout(400);
 
       // Should show connection error or fallback state
       await expect(page.locator('body')).toBeVisible();
@@ -370,13 +370,13 @@ test.describe('API Error Handling', () => {
       await page.evaluate(() => {
         window.dispatchEvent(new Event('offline'));
       });
-      await page.waitForTimeout(1000);
+      await page.waitForTimeout(250);
 
       // Restore connection
       await page.evaluate(() => {
         window.dispatchEvent(new Event('online'));
       });
-      await page.waitForTimeout(2000);
+      await page.waitForTimeout(400);
 
       // Should recover
       await expect(page.locator('body')).toBeVisible();

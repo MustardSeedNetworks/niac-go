@@ -68,8 +68,10 @@ test.describe('Device CRUD Operations', () => {
         await ipField.blur();
 
         // Check for validation error or invalid state
-        const hasError =
-          (await page.locator('[class*="error"], [class*="invalid"], [aria-invalid="true"]').count()) > 0;
+        const _hasError =
+          (await page
+            .locator('[class*="error"], [class*="invalid"], [aria-invalid="true"]')
+            .count()) > 0;
         // Form should indicate invalid input somehow
         await expect(page.locator('body')).toBeVisible();
       }
@@ -106,7 +108,7 @@ test.describe('Device CRUD Operations', () => {
         if (isEnabled) {
           await submitButton.click();
           // Should navigate away or show success
-          await page.waitForTimeout(1000);
+          await page.waitForTimeout(250);
         }
       }
     });
@@ -122,7 +124,7 @@ test.describe('Device CRUD Operations', () => {
       const deviceItem = page.locator('[class*="device"], [data-testid*="device"], tr, li').first();
       if (await deviceItem.isVisible()) {
         await deviceItem.click();
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(150);
         // Should show details panel or navigate to details
         await expect(page.locator('body')).toBeVisible();
       }
@@ -130,11 +132,11 @@ test.describe('Device CRUD Operations', () => {
 
     test('should filter devices by search', async ({ page }) => {
       const searchInput = page.locator(
-        'input[type="search"], input[placeholder*="search" i], input[placeholder*="filter" i]'
+        'input[type="search"], input[placeholder*="search" i], input[placeholder*="filter" i]',
       );
       if (await searchInput.isVisible()) {
         await searchInput.fill('test');
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(150);
         // Should filter the list
         await expect(page.locator('body')).toBeVisible();
       }
@@ -165,17 +167,19 @@ test.describe('Device CRUD Operations', () => {
 
         // Make a change
         const hostnameField = page
-          .locator('input[name*="hostname" i], input[placeholder*="hostname" i], input[name="name"]')
+          .locator(
+            'input[name*="hostname" i], input[placeholder*="hostname" i], input[name="name"]',
+          )
           .first();
         if (await hostnameField.isVisible()) {
           const currentValue = await hostnameField.inputValue();
-          await hostnameField.fill(currentValue + '-modified');
+          await hostnameField.fill(`${currentValue}-modified`);
 
           // Try to save
           const submitButton = page.getByRole('button', { name: /save|update|submit/i }).first();
-          if (await submitButton.isVisible() && (await submitButton.isEnabled())) {
+          if ((await submitButton.isVisible()) && (await submitButton.isEnabled())) {
             await submitButton.click();
-            await page.waitForTimeout(1000);
+            await page.waitForTimeout(250);
           }
         }
       }
@@ -188,8 +192,10 @@ test.describe('Device CRUD Operations', () => {
       if (await deleteButton.isVisible()) {
         await deleteButton.click();
         // Should show confirmation dialog
-        const confirmDialog = page.locator('[role="dialog"], [role="alertdialog"], [class*="modal"]');
-        const confirmCount = await confirmDialog.count();
+        const confirmDialog = page.locator(
+          '[role="dialog"], [role="alertdialog"], [class*="modal"]',
+        );
+        const _confirmCount = await confirmDialog.count();
         // Either shows dialog or performs action
         await expect(page.locator('body')).toBeVisible();
       }
@@ -205,7 +211,7 @@ test.describe('Device CRUD Operations', () => {
         if (await cancelButton.isVisible()) {
           await cancelButton.click();
           // Dialog should close
-          await page.waitForTimeout(500);
+          await page.waitForTimeout(150);
           await expect(page.locator('body')).toBeVisible();
         }
       }
@@ -218,7 +224,7 @@ test.describe('Device CRUD Operations', () => {
       if (await cloneButton.isVisible()) {
         await cloneButton.click();
         // Should navigate to new device form or show clone dialog
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(150);
         await expect(page.locator('body')).toBeVisible();
       }
     });
@@ -241,7 +247,7 @@ test.describe('Device CRUD Operations', () => {
 
       const protocols = ['dhcp', 'dns', 'http', 'ftp', 'netbios'];
       for (const protocol of protocols) {
-        const section = page.getByText(new RegExp(protocol, 'i')).first();
+        const _section = page.getByText(new RegExp(protocol, 'i')).first();
         // Just verify page renders, sections may be collapsed
         await expect(page.locator('body')).toBeVisible();
       }

@@ -28,7 +28,7 @@ test.describe('Configuration Management', () => {
       const loadButton = page.getByRole('button', { name: /load|import|open/i });
       const fileInput = page.locator('input[type="file"]');
 
-      const hasLoad = (await loadButton.count()) > 0 || (await fileInput.count()) > 0;
+      const _hasLoad = (await loadButton.count()) > 0 || (await fileInput.count()) > 0;
       await expect(page.locator('body')).toBeVisible();
     });
 
@@ -47,8 +47,8 @@ test.describe('Configuration Management', () => {
 
     test('should accept YAML config files', async ({ page }) => {
       const fileInput = page.locator('input[type="file"]');
-      if (await fileInput.count() > 0) {
-        const acceptAttr = await fileInput.first().getAttribute('accept');
+      if ((await fileInput.count()) > 0) {
+        const _acceptAttr = await fileInput.first().getAttribute('accept');
         // Should accept yaml files
         await expect(page.locator('body')).toBeVisible();
       }
@@ -56,19 +56,19 @@ test.describe('Configuration Management', () => {
 
     test('should populate devices after loading config', async ({ page }) => {
       // After loading config, device list should update
-      const deviceList = page.locator('[class*="device"], [class*="list"], table tbody tr');
+      const _deviceList = page.locator('[class*="device"], [class*="list"], table tbody tr');
       await expect(page.locator('body')).toBeVisible();
     });
 
     test('should show error for invalid config', async ({ page }) => {
-      const errorAlert = page.locator('[class*="error"], [role="alert"], [class*="toast"]');
+      const _errorAlert = page.locator('[class*="error"], [role="alert"], [class*="toast"]');
       // Not visible until error occurs
       await expect(page.locator('body')).toBeVisible();
     });
 
     test('should validate config schema', async ({ page }) => {
       // Schema validation should occur on load
-      const validationMessage = page.getByText(/valid|invalid|error|schema/i);
+      const _validationMessage = page.getByText(/valid|invalid|error|schema/i);
       await expect(page.locator('body')).toBeVisible();
     });
   });
@@ -96,8 +96,10 @@ test.describe('Configuration Management', () => {
         await hostnameField.fill('test-change');
 
         // Should indicate unsaved changes
-        const unsavedIndicator = page.locator('[class*="unsaved"], [class*="dirty"], [class*="modified"]');
-        const saveButton = page.getByRole('button', { name: /save/i });
+        const _unsavedIndicator = page.locator(
+          '[class*="unsaved"], [class*="dirty"], [class*="modified"]',
+        );
+        const _saveButton = page.getByRole('button', { name: /save/i });
 
         await expect(page.locator('body')).toBeVisible();
       }
@@ -114,8 +116,8 @@ test.describe('Configuration Management', () => {
           await cancelButton.click();
 
           // Should show confirmation dialog
-          const confirmDialog = page.locator('[role="dialog"], [role="alertdialog"]');
-          await page.waitForTimeout(500);
+          const _confirmDialog = page.locator('[role="dialog"], [role="alertdialog"]');
+          await page.waitForTimeout(150);
           await expect(page.locator('body')).toBeVisible();
         }
       }
@@ -138,17 +140,17 @@ test.describe('Configuration Management', () => {
       const saveButton = page.getByRole('button', { name: /save|export/i }).first();
       if (await saveButton.isVisible()) {
         await saveButton.click();
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(150);
 
         // Format options should appear
-        const formatOptions = page.getByText(/yaml|json|config/i);
+        const _formatOptions = page.getByText(/yaml|json|config/i);
         await expect(page.locator('body')).toBeVisible();
       }
     });
 
     test('should show success message after save', async ({ page }) => {
       // Success notification area
-      const successMessage = page.locator('[class*="success"], [class*="toast"], [role="status"]');
+      const _successMessage = page.locator('[class*="success"], [class*="toast"], [role="status"]');
       await expect(page.locator('body')).toBeVisible();
     });
   });
@@ -189,13 +191,13 @@ test.describe('Configuration Management', () => {
     });
 
     test('should highlight additions in diff', async ({ page }) => {
-      const additions = page.locator('[class*="add"], [class*="insert"], [class*="green"]');
+      const _additions = page.locator('[class*="add"], [class*="insert"], [class*="green"]');
       // Only visible when diff is shown
       await expect(page.locator('body')).toBeVisible();
     });
 
     test('should highlight deletions in diff', async ({ page }) => {
-      const deletions = page.locator('[class*="delete"], [class*="remove"], [class*="red"]');
+      const _deletions = page.locator('[class*="delete"], [class*="remove"], [class*="red"]');
       // Only visible when diff is shown
       await expect(page.locator('body')).toBeVisible();
     });
@@ -219,20 +221,22 @@ test.describe('Configuration Management', () => {
     });
 
     test('should have template categories', async ({ page }) => {
-      const categories = page.locator('[class*="category"], [class*="group"], [class*="section"]');
-      const categoryText = page.getByText(/router|switch|server|default/i);
+      const _categories = page.locator('[class*="category"], [class*="group"], [class*="section"]');
+      const _categoryText = page.getByText(/router|switch|server|default/i);
 
       await expect(page.locator('body')).toBeVisible();
     });
 
     test('should show template preview', async ({ page }) => {
-      const templateItem = page.locator('[class*="template"], [class*="card"], [class*="item"]').first();
+      const templateItem = page
+        .locator('[class*="template"], [class*="card"], [class*="item"]')
+        .first();
       if (await templateItem.isVisible()) {
         await templateItem.click();
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(150);
 
         // Preview should appear
-        const preview = page.locator('[class*="preview"], [class*="detail"], pre, code');
+        const _preview = page.locator('[class*="preview"], [class*="detail"], pre, code');
         await expect(page.locator('body')).toBeVisible();
       }
     });
@@ -263,8 +267,8 @@ test.describe('Configuration Management', () => {
         await ipField.blur();
 
         // Should show validation error
-        const error = page.locator('[class*="error"], [aria-invalid="true"]');
-        await page.waitForTimeout(500);
+        const _error = page.locator('[class*="error"], [aria-invalid="true"]');
+        await page.waitForTimeout(150);
         await expect(page.locator('body')).toBeVisible();
       }
     });
@@ -276,8 +280,8 @@ test.describe('Configuration Management', () => {
         await macField.blur();
 
         // Should show validation error
-        const error = page.locator('[class*="error"], [aria-invalid="true"]');
-        await page.waitForTimeout(500);
+        const _error = page.locator('[class*="error"], [aria-invalid="true"]');
+        await page.waitForTimeout(150);
         await expect(page.locator('body')).toBeVisible();
       }
     });
@@ -289,7 +293,7 @@ test.describe('Configuration Management', () => {
         await portField.blur();
 
         // Should show validation error for invalid port
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(150);
         await expect(page.locator('body')).toBeVisible();
       }
     });

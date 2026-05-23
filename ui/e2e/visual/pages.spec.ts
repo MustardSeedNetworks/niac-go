@@ -42,7 +42,9 @@ test.describe('Visual Regression - Pages', () => {
     // Mask dynamic SSE content
     await expect(page).toHaveScreenshot('runtime.png', {
       fullPage: true,
-      mask: [page.locator('[class*="live"], [class*="counter"], [class*="timestamp"], [class*="stat"]')],
+      mask: [
+        page.locator('[class*="live"], [class*="counter"], [class*="timestamp"], [class*="stat"]'),
+      ],
     });
   });
 
@@ -53,7 +55,11 @@ test.describe('Visual Regression - Pages', () => {
     // Mask dynamic packet stream content
     await expect(page).toHaveScreenshot('packets.png', {
       fullPage: true,
-      mask: [page.locator('[class*="packet"], [class*="stream"], [class*="counter"], [class*="timestamp"]')],
+      mask: [
+        page.locator(
+          '[class*="packet"], [class*="stream"], [class*="counter"], [class*="timestamp"]',
+        ),
+      ],
     });
   });
 

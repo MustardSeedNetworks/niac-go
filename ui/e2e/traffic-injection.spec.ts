@@ -27,12 +27,12 @@ test.describe('Traffic Injection', () => {
     });
 
     test('should have error injection controls', async ({ page }) => {
-      const controls = page.locator('[class*="control"], [class*="injection"], form');
+      const _controls = page.locator('[class*="control"], [class*="injection"], form');
       await expect(page.locator('body')).toBeVisible();
     });
 
     test('should display active injections list', async ({ page }) => {
-      const injectionsList = page.locator('[class*="active"], [class*="list"], table');
+      const _injectionsList = page.locator('[class*="active"], [class*="list"], table');
       await expect(page.locator('body')).toBeVisible();
     });
   });
@@ -48,17 +48,20 @@ test.describe('Traffic Injection', () => {
       const errorTypeSelect = page.locator('select[name*="error" i], select[name*="type" i]');
       const errorTypeButtons = page.locator('[class*="error-type"], [class*="injection-type"]');
 
-      const hasSelector = (await errorTypeSelect.count()) > 0 || (await errorTypeButtons.count()) > 0;
+      const _hasSelector =
+        (await errorTypeSelect.count()) > 0 || (await errorTypeButtons.count()) > 0;
       await expect(page.locator('body')).toBeVisible();
     });
 
     test('should list available error types', async ({ page }) => {
-      const errorTypes = page.getByText(/drop|delay|corrupt|duplicate|reorder/i);
+      const _errorTypes = page.getByText(/drop|delay|corrupt|duplicate|reorder/i);
       await expect(page.locator('body')).toBeVisible();
     });
 
     test('should show error type description', async ({ page }) => {
-      const errorTypeSelect = page.locator('select[name*="error" i], select[name*="type" i]').first();
+      const errorTypeSelect = page
+        .locator('select[name*="error" i], select[name*="type" i]')
+        .first();
       if (await errorTypeSelect.isVisible()) {
         await errorTypeSelect.focus();
         await expect(page.locator('body')).toBeVisible();
@@ -74,7 +77,9 @@ test.describe('Traffic Injection', () => {
     });
 
     test('should have interface selector', async ({ page }) => {
-      const interfaceSelect = page.locator('select[name*="interface" i], [class*="interface-select"]');
+      const interfaceSelect = page.locator(
+        'select[name*="interface" i], [class*="interface-select"]',
+      );
       const count = await interfaceSelect.count();
       expect(count).toBeGreaterThanOrEqual(0);
     });
@@ -85,7 +90,7 @@ test.describe('Traffic Injection', () => {
 
       if ((await deviceSelect.isVisible()) && (await interfaceSelect.isVisible())) {
         await deviceSelect.selectOption({ index: 1 });
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(150);
         await expect(page.locator('body')).toBeVisible();
       }
     });
@@ -103,19 +108,19 @@ test.describe('Traffic Injection', () => {
       if (await rateInput.isVisible()) {
         await rateInput.fill('150');
         await rateInput.blur();
-        await page.waitForTimeout(300);
+        await page.waitForTimeout(100);
         await expect(page.locator('body')).toBeVisible();
       }
     });
 
     test('should have delay input for delay injection', async ({ page }) => {
-      const delayInput = page.locator('input[name*="delay" i], input[name*="latency" i]');
+      const _delayInput = page.locator('input[name*="delay" i], input[name*="latency" i]');
       await expect(page.locator('body')).toBeVisible();
     });
 
     test('should have direction selector (inbound/outbound)', async ({ page }) => {
-      const directionSelect = page.locator('select[name*="direction" i], [class*="direction"]');
-      const directionButtons = page.getByRole('button', { name: /inbound|outbound|both/i });
+      const _directionSelect = page.locator('select[name*="direction" i], [class*="direction"]');
+      const _directionButtons = page.getByRole('button', { name: /inbound|outbound|both/i });
       await expect(page.locator('body')).toBeVisible();
     });
   });
@@ -130,16 +135,16 @@ test.describe('Traffic Injection', () => {
     test('should disable start button when no target selected', async ({ page }) => {
       const startButton = page.getByRole('button', { name: /start|inject|apply/i }).first();
       if (await startButton.isVisible()) {
-        const isDisabled = await startButton.isDisabled();
+        const _isDisabled = await startButton.isDisabled();
         await expect(page.locator('body')).toBeVisible();
       }
     });
 
     test('should show confirmation before starting', async ({ page }) => {
       const startButton = page.getByRole('button', { name: /start|inject|apply/i }).first();
-      if (await startButton.isVisible() && (await startButton.isEnabled())) {
+      if ((await startButton.isVisible()) && (await startButton.isEnabled())) {
         await startButton.click();
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(150);
         await expect(page.locator('body')).toBeVisible();
       }
     });
@@ -168,22 +173,22 @@ test.describe('Traffic Injection', () => {
     });
 
     test('should display list of active injections', async ({ page }) => {
-      const activeList = page.locator('[class*="active"], table tbody');
+      const _activeList = page.locator('[class*="active"], table tbody');
       await expect(page.locator('body')).toBeVisible();
     });
 
     test('should show injection details', async ({ page }) => {
-      const injectionDetails = page.locator('[class*="injection"], tr');
+      const _injectionDetails = page.locator('[class*="injection"], tr');
       await expect(page.locator('body')).toBeVisible();
     });
 
     test('should have stop button for each injection', async ({ page }) => {
-      const stopButtons = page.getByRole('button', { name: /stop|remove|clear/i });
+      const _stopButtons = page.getByRole('button', { name: /stop|remove|clear/i });
       await expect(page.locator('body')).toBeVisible();
     });
 
     test('should show injection statistics', async ({ page }) => {
-      const stats = page.getByText(/packet|dropped|delayed|corrupted/i);
+      const _stats = page.getByText(/packet|dropped|delayed|corrupted/i);
       await expect(page.locator('body')).toBeVisible();
     });
   });
@@ -193,7 +198,7 @@ test.describe('Traffic Injection', () => {
       const stopButton = page.getByRole('button', { name: /stop|remove/i }).first();
       if (await stopButton.isVisible()) {
         await stopButton.click();
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(150);
         await expect(page.locator('body')).toBeVisible();
       }
     });
@@ -210,7 +215,7 @@ test.describe('Traffic Injection', () => {
       const stopButton = page.getByRole('button', { name: /stop|remove/i }).first();
       if (await stopButton.isVisible()) {
         await stopButton.click();
-        await page.waitForTimeout(1000);
+        await page.waitForTimeout(250);
         await expect(page.locator('body')).toBeVisible();
       }
     });
@@ -227,8 +232,8 @@ test.describe('Traffic Injection', () => {
       const clearAllButton = page.getByRole('button', { name: /clear all|stop all/i }).first();
       if (await clearAllButton.isVisible()) {
         await clearAllButton.click();
-        await page.waitForTimeout(500);
-        const confirmDialog = page.locator('[role="dialog"], [role="alertdialog"]');
+        await page.waitForTimeout(150);
+        const _confirmDialog = page.locator('[role="dialog"], [role="alertdialog"]');
         await expect(page.locator('body')).toBeVisible();
       }
     });
@@ -236,12 +241,12 @@ test.describe('Traffic Injection', () => {
 
   test.describe('Real-time Updates', () => {
     test('should update statistics in real-time', async ({ page }) => {
-      await page.waitForTimeout(3000);
+      await page.waitForTimeout(150);
       await expect(page.locator('body')).toBeVisible();
     });
 
     test('should show injection status changes', async ({ page }) => {
-      const statusIndicator = page.locator('[class*="status"], [class*="indicator"]');
+      const _statusIndicator = page.locator('[class*="status"], [class*="indicator"]');
       await expect(page.locator('body')).toBeVisible();
     });
   });
