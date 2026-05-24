@@ -101,6 +101,7 @@ func main() {
 		addInitCommand,
 		addInjectCommand,
 		func(root *cobra.Command, _ *serviceOptions) { addInstallCACommand(root) },
+		addLicenseCommand,
 		addInteractiveCommand,
 		addLogsCommand,
 		func(root *cobra.Command, _ *serviceOptions) { addManCommand(root, info) },
