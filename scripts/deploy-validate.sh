@@ -10,7 +10,7 @@
 #
 # Examples:
 #   ./scripts/deploy-validate.sh v0.66.25 abc1234
-#   ./scripts/deploy-validate.sh v0.66.25 abc1234 niac-srv-ubuntu 8080
+#   ./scripts/deploy-validate.sh v0.66.25 abc1234 niac-srv-ubuntu 8445
 #
 # =============================================================================
 
@@ -27,10 +27,18 @@ NC='\033[0m' # No Color
 EXPECTED_VERSION="${1:-}"
 EXPECTED_COMMIT="${2:-}"
 HOST="${3:-localhost}"
-PORT="${4:-8080}"
-ENDPOINT="http://${HOST}:${PORT}/__version"
+PORT="${4:-8445}"
+SCHEME="${NIAC_VALIDATE_SCHEME:-https}"
+ENDPOINT="${SCHEME}://${HOST}:${PORT}/__version"
 MAX_RETRIES=5
 RETRY_DELAY=3
+CURL_FLAGS=()
+if [ "$SCHEME" = "https" ]; then
+    # NIAC ships with a self-signed cert by default; skip TLS verify for
+    # validation. Override NIAC_VALIDATE_SCHEME=http for plaintext setups
+    # (legacy HTTP listener via `daemon --http` on port 8080).
+    CURL_FLAGS+=("-k")
+fi
 
 # Functions
 success() { echo -e "${GREEN}✓ $1${NC}"; }
@@ -45,11 +53,14 @@ usage() {
     echo "  expected-version  The version string to expect (e.g., v0.66.25)"
     echo "  expected-commit   The short commit hash to expect (e.g., abc1234)"
     echo "  host              Target hostname (default: localhost)"
-    echo "  port              Target port (default: 8080)"
+    echo "  port              Target port (default: 8445)"
+    echo ""
+    echo "Environment:"
+    echo "  NIAC_VALIDATE_SCHEME  http | https (default: https)"
     echo ""
     echo "Examples:"
     echo "  $0 v0.66.25 abc1234"
-    echo "  $0 v0.66.25 abc1234 niac-srv-ubuntu 8080"
+    echo "  $0 v0.66.25 abc1234 niac-srv-ubuntu 8445"
     exit 1
 }
 
@@ -68,7 +79,7 @@ echo ""
 echo "Waiting for service to be available..."
 RETRY_COUNT=0
 while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-    if curl -sf -o /dev/null "$ENDPOINT" 2>/dev/null; then
+    if curl -sf "${CURL_FLAGS[@]}" -o /dev/null "$ENDPOINT" 2>/dev/null; then
         success "Service is responding"
         break
     fi
@@ -92,7 +103,7 @@ fi
 # Fetch version info
 echo ""
 echo "Fetching version information..."
-RESPONSE=$(curl -sf "$ENDPOINT" 2>&1) || {
+RESPONSE=$(curl -sf "${CURL_FLAGS[@]}" "$ENDPOINT" 2>&1) || {
     fail "Failed to fetch /__version endpoint"
     exit 1
 }
