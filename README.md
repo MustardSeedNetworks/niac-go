@@ -100,6 +100,11 @@ The frontend builds **directly into `internal/api/ui/`** and is embedded at
 compile time — no copy step, no file syncing. One binary, no runtime
 dependencies.
 
+Architecture decisions live in [`docs/adr/`](docs/adr/). The
+schema-generation pattern used to keep YAML schemas, Go structs, and
+(soon) TypeScript types in sync is documented in
+[ADR 0001](docs/adr/0001-schema-generation-from-go-structs.md).
+
 ## Configuration
 
 YAML topology + per-device behaviour. Generate a starter with `niac init`
