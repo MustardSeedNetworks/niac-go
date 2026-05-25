@@ -4,6 +4,7 @@
 # Provides a menu-driven interface for running demos and network walks
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC2034  # consumed by sourced helper scripts
 BASE_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 SCENARIO_DIR="$SCRIPT_DIR/../scenario_configs"
 WALKS_DIR="$SCRIPT_DIR/../device_walks"
@@ -12,6 +13,7 @@ WALKS_DIR="$SCRIPT_DIR/../device_walks"
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+# shellcheck disable=SC2034  # reserved for future palette use
 BLUE='\033[0;34m'
 CYAN='\033[0;36m'
 BOLD='\033[1m'
