@@ -5,6 +5,19 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.82.0](https://github.com/krisarmstrong/niac-go/compare/v0.81.1...v0.82.0) (2026-05-25)
+
+
+### Features
+
+* **license:** add offline license framework with trial and keygen contract ([#671](https://github.com/krisarmstrong/niac-go/issues/671)) ([18d7b29](https://github.com/krisarmstrong/niac-go/commit/18d7b29c5ee774889198cc0d7816ee7ddb5aa043))
+* **security:** Require HTTPS unconditionally ([#1070](https://github.com/krisarmstrong/niac-go/issues/1070)) ([#663](https://github.com/krisarmstrong/niac-go/issues/663)) ([1e33b59](https://github.com/krisarmstrong/niac-go/commit/1e33b59c64981a5555211dc62c9da844027cd38f))
+
+
+### Bug Fixes
+
+* **e2e:** repair niac config-diff strict-mode + gui-daemon test.skip typo ([#661](https://github.com/krisarmstrong/niac-go/issues/661)) ([2434259](https://github.com/krisarmstrong/niac-go/commit/2434259a04a85eeb23b6b61f11d178c003d3dbe5))
+
 ## [0.81.1](https://github.com/krisarmstrong/niac-go/compare/v0.81.0...v0.81.1) (2026-05-22)
 
 
