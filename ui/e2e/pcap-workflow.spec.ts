@@ -37,14 +37,12 @@ test.describe('PCAP Workflow', () => {
       if ((await fileInput.count()) > 0) {
         const _acceptAttr = await fileInput.getAttribute('accept');
         // Should accept pcap files or have no restriction
-        await expect(page.locator('body')).toBeVisible();
       }
     });
 
     test('should have analyze button', async ({ page }) => {
       const analyzeButton = page.getByRole('button', { name: /analyze|parse|load|process/i });
       const count = await analyzeButton.count();
-      expect(count).toBeGreaterThanOrEqual(0);
     });
   });
 
@@ -60,7 +58,6 @@ test.describe('PCAP Workflow', () => {
       const _spinner = page.locator('[class*="spinner"], [class*="loading"]');
 
       // Elements may not be visible until upload starts
-      await expect(page.locator('body')).toBeVisible();
     });
 
     test('should validate file type on upload', async ({ page }) => {
@@ -75,13 +72,11 @@ test.describe('PCAP Workflow', () => {
       // If we could upload an invalid file, error should appear
       const _errorMessage = page.locator('[class*="error"], [role="alert"]');
       // Not visible until error occurs
-      await expect(page.locator('body')).toBeVisible();
     });
 
     test('should show file size limit information', async ({ page }) => {
       // Look for size limit info
       const _sizeInfo = page.getByText(/mb|size|limit|maximum/i);
-      await expect(page.locator('body')).toBeVisible();
     });
   });
 
@@ -94,14 +89,11 @@ test.describe('PCAP Workflow', () => {
     test('should have packet list area', async ({ page }) => {
       const packetList = page.locator('table, [class*="packet"], [class*="list"], [class*="grid"]');
       const count = await packetList.count();
-      expect(count).toBeGreaterThanOrEqual(0);
     });
 
     test('should display column headers for packets', async ({ page }) => {
       const _headers = page.locator('th, [class*="header"], [role="columnheader"]');
       const _headerText = page.getByText(/source|destination|protocol|time|length|no\./i);
-
-      await expect(page.locator('body')).toBeVisible();
     });
 
     test('should have packet filtering capability', async ({ page }) => {
@@ -109,14 +101,11 @@ test.describe('PCAP Workflow', () => {
         'input[placeholder*="filter" i], input[type="search"], [class*="filter"]',
       );
       const count = await filterInput.count();
-      expect(count).toBeGreaterThanOrEqual(0);
     });
 
     test('should have protocol filter options', async ({ page }) => {
       const _protocolFilter = page.locator('select, [class*="protocol"], [role="combobox"]');
       const _filterButtons = page.getByRole('button', { name: /tcp|udp|icmp|http|dns/i });
-
-      await expect(page.locator('body')).toBeVisible();
     });
   });
 
@@ -130,25 +119,21 @@ test.describe('PCAP Workflow', () => {
       const packetRow = page.locator('tr, [class*="packet-row"], [class*="item"]').first();
       if (await packetRow.isVisible()) {
         await packetRow.click();
-        await page.waitForTimeout(150);
 
         // Details panel should appear
         const _detailsPanel = page.locator(
           '[class*="detail"], [class*="panel"], [class*="sidebar"]',
         );
-        await expect(page.locator('body')).toBeVisible();
       }
     });
 
     test('should display hex dump view', async ({ page }) => {
       const _hexView = page.locator('[class*="hex"], pre, code');
       // May not be visible until packet selected
-      await expect(page.locator('body')).toBeVisible();
     });
 
     test('should display protocol layers', async ({ page }) => {
       const _layers = page.getByText(/ethernet|ip|tcp|udp|application|layer/i);
-      await expect(page.locator('body')).toBeVisible();
     });
   });
 
@@ -161,28 +146,23 @@ test.describe('PCAP Workflow', () => {
     test('should have replay button', async ({ page }) => {
       const replayButton = page.getByRole('button', { name: /replay|inject|send|play/i });
       const count = await replayButton.count();
-      expect(count).toBeGreaterThanOrEqual(0);
     });
 
     test('should show replay configuration options', async ({ page }) => {
       const replayButton = page.getByRole('button', { name: /replay|inject/i }).first();
       if (await replayButton.isVisible()) {
         await replayButton.click();
-        await page.waitForTimeout(150);
 
         // Config dialog or options should appear
         const _configOptions = page.locator(
           '[class*="dialog"], [class*="modal"], [class*="config"]',
         );
-        await expect(page.locator('body')).toBeVisible();
       }
     });
 
     test('should have interface selection for replay', async ({ page }) => {
       const _interfaceSelect = page.locator('select[name*="interface" i], [class*="interface"]');
       const _interfaceText = page.getByText(/interface|eth|en0|lo/i);
-
-      await expect(page.locator('body')).toBeVisible();
     });
   });
 
@@ -195,18 +175,15 @@ test.describe('PCAP Workflow', () => {
     test('should have export button', async ({ page }) => {
       const exportButton = page.getByRole('button', { name: /export|download|save/i });
       const count = await exportButton.count();
-      expect(count).toBeGreaterThanOrEqual(0);
     });
 
     test('should offer export format options', async ({ page }) => {
       const exportButton = page.getByRole('button', { name: /export|download/i }).first();
       if (await exportButton.isVisible()) {
         await exportButton.click();
-        await page.waitForTimeout(150);
 
         // Format options should appear
         const _formatOptions = page.getByText(/csv|json|pcap|txt/i);
-        await expect(page.locator('body')).toBeVisible();
       }
     });
   });
@@ -225,12 +202,10 @@ test.describe('PCAP Workflow', () => {
     test('should have capture controls', async ({ page }) => {
       const captureButton = page.getByRole('button', { name: /capture|start|record/i });
       const count = await captureButton.count();
-      expect(count).toBeGreaterThanOrEqual(0);
     });
 
     test('should have live packet display area', async ({ page }) => {
       const _packetArea = page.locator('[class*="packet"], table, [class*="stream"]');
-      await expect(page.locator('body')).toBeVisible();
     });
   });
 });

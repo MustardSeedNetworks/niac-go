@@ -51,7 +51,6 @@ test.describe('Device CRUD Operations', () => {
         if (!isDisabled) {
           await submitButton.click();
           // Should show validation error or stay on page
-          await expect(page.locator('body')).toBeVisible();
         } else {
           await expect(submitButton).toBeDisabled();
         }
@@ -73,7 +72,6 @@ test.describe('Device CRUD Operations', () => {
             .locator('[class*="error"], [class*="invalid"], [aria-invalid="true"]')
             .count()) > 0;
         // Form should indicate invalid input somehow
-        await expect(page.locator('body')).toBeVisible();
       }
     });
 
@@ -108,7 +106,6 @@ test.describe('Device CRUD Operations', () => {
         if (isEnabled) {
           await submitButton.click();
           // Should navigate away or show success
-          await page.waitForTimeout(250);
         }
       }
     });
@@ -124,9 +121,7 @@ test.describe('Device CRUD Operations', () => {
       const deviceItem = page.locator('[class*="device"], [data-testid*="device"], tr, li').first();
       if (await deviceItem.isVisible()) {
         await deviceItem.click();
-        await page.waitForTimeout(150);
         // Should show details panel or navigate to details
-        await expect(page.locator('body')).toBeVisible();
       }
     });
 
@@ -136,9 +131,7 @@ test.describe('Device CRUD Operations', () => {
       );
       if (await searchInput.isVisible()) {
         await searchInput.fill('test');
-        await page.waitForTimeout(150);
         // Should filter the list
-        await expect(page.locator('body')).toBeVisible();
       }
     });
   });
@@ -179,7 +172,6 @@ test.describe('Device CRUD Operations', () => {
           const submitButton = page.getByRole('button', { name: /save|update|submit/i }).first();
           if ((await submitButton.isVisible()) && (await submitButton.isEnabled())) {
             await submitButton.click();
-            await page.waitForTimeout(250);
           }
         }
       }
@@ -197,7 +189,6 @@ test.describe('Device CRUD Operations', () => {
         );
         const _confirmCount = await confirmDialog.count();
         // Either shows dialog or performs action
-        await expect(page.locator('body')).toBeVisible();
       }
     });
 
@@ -211,8 +202,6 @@ test.describe('Device CRUD Operations', () => {
         if (await cancelButton.isVisible()) {
           await cancelButton.click();
           // Dialog should close
-          await page.waitForTimeout(150);
-          await expect(page.locator('body')).toBeVisible();
         }
       }
     });
@@ -224,8 +213,6 @@ test.describe('Device CRUD Operations', () => {
       if (await cloneButton.isVisible()) {
         await cloneButton.click();
         // Should navigate to new device form or show clone dialog
-        await page.waitForTimeout(150);
-        await expect(page.locator('body')).toBeVisible();
       }
     });
   });
@@ -249,7 +236,6 @@ test.describe('Device CRUD Operations', () => {
       for (const protocol of protocols) {
         const _section = page.getByText(new RegExp(protocol, 'i')).first();
         // Just verify page renders, sections may be collapsed
-        await expect(page.locator('body')).toBeVisible();
       }
     });
   });

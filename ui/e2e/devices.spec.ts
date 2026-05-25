@@ -29,14 +29,12 @@ test.describe('Devices', () => {
     // Look for add/create button
     const addButton = page.getByRole('button', { name: /add|create|new/i });
     const count = await addButton.count();
-    expect(count).toBeGreaterThanOrEqual(0);
   });
 
   test('should have search or filter capability', async ({ page }) => {
     // Look for search input
     const searchInput = page.locator('input[type="search"], input[placeholder*="search" i]');
     const count = await searchInput.count();
-    expect(count).toBeGreaterThanOrEqual(0);
   });
 
   test('should display device types', async ({ page }) => {

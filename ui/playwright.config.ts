@@ -10,8 +10,9 @@ import { defineConfig, devices } from '@playwright/test';
  * - Replay functionality
  * - Network simulation
  *
- * Browsers: Chromium, Firefox, WebKit (Safari)
- * Viewports: Desktop, Tablet, Mobile
+ * Browsers: Chromium (covers Chrome + Edge) and WebKit (covers Safari).
+ * Per msn-docs-internal/05-Engineering/E2E_CONVENTIONS.md, no other browsers
+ * or viewports are supported.
  */
 export default defineConfig({
   testDir: './e2e',
@@ -37,58 +38,22 @@ export default defineConfig({
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'on-first-retry',
-    ignoreHTTPSErrors: true,
+    // Gated to local dev only. CI MUST hit real TLS per E2E_CONVENTIONS.
+    ignoreHTTPSErrors: !process.env.CI,
   },
   projects: [
-    // Desktop browsers
+    // Per msn-docs-internal/05-Engineering/E2E_CONVENTIONS.md, only chromium
+    // (covers Chrome and Edge) and webkit (covers Safari) are supported.
+    // Firefox/mobile/tablet/visual projects were deleted in 2026q2 — they
+    // were configured but never run in CI, and the visual tier's macOS-only
+    // *-darwin.png snapshots couldn't work on Linux CI.
     {
       name: 'chromium',
-      testIgnore: /visual\//,
       use: { ...devices['Desktop Chrome'] },
     },
     {
-      name: 'firefox',
-      testIgnore: /visual\//,
-      use: { ...devices['Desktop Firefox'] },
-    },
-    {
       name: 'webkit',
-      testIgnore: /visual\//,
       use: { ...devices['Desktop Safari'] },
-    },
-    // Mobile viewports
-    {
-      name: 'mobile-chrome',
-      testIgnore: /visual\//,
-      use: { ...devices['Pixel 5'] },
-    },
-    {
-      name: 'mobile-safari',
-      testIgnore: /visual\//,
-      use: { ...devices['iPhone 12'] },
-    },
-    // Tablet viewport
-    {
-      name: 'tablet',
-      testIgnore: /visual\//,
-      use: { ...devices['iPad (gen 7)'] },
-    },
-    // Visual regression testing
-    {
-      name: 'visual',
-      testDir: './e2e/visual',
-      use: {
-        ...devices['Desktop Chrome'],
-        // Consistent viewport for visual comparison
-        viewport: { width: 1280, height: 720 },
-      },
-      // Stricter comparison for visual tests
-      expect: {
-        toHaveScreenshot: {
-          maxDiffPixels: 100,
-          threshold: 0.1,
-        },
-      },
     },
   ],
   // Run local dev server before tests if not in CI

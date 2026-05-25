@@ -69,6 +69,5 @@ test.describe('Navigation', () => {
     await page.goto('/devices');
 
     // Page should load
-    await expect(page.locator('body')).toBeVisible();
   });
 });

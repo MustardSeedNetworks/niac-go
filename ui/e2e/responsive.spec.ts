@@ -39,7 +39,6 @@ test.describe('Responsive Design', () => {
     await page.waitForLoadState('domcontentloaded');
 
     // Page should render
-    await expect(page.locator('body')).toBeVisible();
 
     // No horizontal overflow
     const body = page.locator('body');
@@ -55,7 +54,6 @@ test.describe('Responsive Design', () => {
     await page.goto('/');
     await page.waitForLoadState('domcontentloaded');
 
-    await expect(page.locator('body')).toBeVisible();
     await checkTouchTargets(page);
   });
 
@@ -63,8 +61,6 @@ test.describe('Responsive Design', () => {
     await page.setViewportSize(viewports.desktop);
     await page.goto('/');
     await page.waitForLoadState('domcontentloaded');
-
-    await expect(page.locator('body')).toBeVisible();
   });
 
   test('should show mobile navigation on small screens', async ({ page }) => {
