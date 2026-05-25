@@ -22,7 +22,7 @@
 #   - macOS .pkg installer via deploy/macos/build-pkg.sh — kept as a
 #     local-only convenience; the .tar.gz is the published artifact
 #   - UI frontend build — runs in the build-ui job inside
-#     release-goreleaser.yml; goreleaser's `before:` hook just verifies
+#     release.yml; goreleaser's `before:` hook just verifies
 #     the dist directory is populated before the Go build embeds it
 #
 # Tested against goreleaser v2.x inside goreleaser-cross:v1.26.2-3.
@@ -36,7 +36,7 @@ before:
   hooks:
     - go mod download
     # UI dist is built BEFORE goreleaser runs (in the build-ui job inside
-    # release-goreleaser.yml) and written to internal/api/ui/. internal/api/static.go
+    # release.yml) and written to internal/api/ui/. internal/api/static.go
     # then `go:embed`s it into the binary. Just verify it landed.
     - bash -c 'test -f internal/api/ui/index.html || (echo "internal/api/ui/index.html missing — UI build step failed or artifact missing"; exit 1)'
 
