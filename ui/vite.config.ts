@@ -3,11 +3,6 @@ import react from '@vitejs/plugin-react';
 import { visualizer } from 'rollup-plugin-visualizer';
 import { defineConfig, loadEnv, type PluginOption } from 'vite';
 
-// React 19 Compiler configuration
-const reactCompilerConfig = {
-  target: '19', // React 19 target
-};
-
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   const proxyTarget = env.VITE_DEV_API_PROXY || 'http://localhost:8080';
@@ -15,11 +10,7 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [
-      react({
-        babel: {
-          plugins: [['babel-plugin-react-compiler', reactCompilerConfig]],
-        },
-      }),
+      react(),
       // FIX #181: Bundle analysis when ANALYZE=true
       analyze &&
         (visualizer({
@@ -57,19 +48,27 @@ export default defineConfig(({ mode }) => {
       },
       rollupOptions: {
         output: {
-          manualChunks: {
-            'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-            'vendor-query': ['@tanstack/react-query'],
-            'vendor-codemirror': [
-              '@codemirror/commands',
-              '@codemirror/lang-yaml',
-              '@codemirror/language',
-              '@codemirror/state',
-              '@codemirror/view',
-              '@lezer/highlight',
-            ],
-            'vendor-xyflow': ['@xyflow/react'],
-            'vendor-ui': ['lucide-react', 'tailwind-merge'],
+          manualChunks: (id: string) => {
+            if (
+              id.includes('/node_modules/react/') ||
+              id.includes('/node_modules/react-dom/') ||
+              id.includes('/node_modules/react-router-dom/') ||
+              id.includes('/node_modules/scheduler/')
+            )
+              return 'vendor-react';
+            if (id.includes('/node_modules/@tanstack/react-query/')) return 'vendor-query';
+            if (
+              id.includes('/node_modules/@codemirror/') ||
+              id.includes('/node_modules/@lezer/highlight/')
+            )
+              return 'vendor-codemirror';
+            if (id.includes('/node_modules/@xyflow/react/')) return 'vendor-xyflow';
+            if (
+              id.includes('/node_modules/lucide-react/') ||
+              id.includes('/node_modules/tailwind-merge/')
+            )
+              return 'vendor-ui';
+            return undefined;
           },
         },
       },
