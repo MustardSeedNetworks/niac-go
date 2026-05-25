@@ -32,19 +32,16 @@ test.describe('Simulation Lifecycle', () => {
       const statusText = page.getByText(/running|stopped|idle|ready|active|inactive/i);
 
       const _hasStatus = (await statusIndicator.count()) > 0 || (await statusText.count()) > 0;
-      await expect(page.locator('body')).toBeVisible();
     });
 
     test('should have start simulation button', async ({ page }) => {
       const startButton = page.getByRole('button', { name: /start|run|begin|play/i }).first();
       const count = await startButton.count();
-      expect(count).toBeGreaterThanOrEqual(0);
     });
 
     test('should have stop simulation button', async ({ page }) => {
       const stopButton = page.getByRole('button', { name: /stop|halt|end|pause/i }).first();
       const count = await stopButton.count();
-      expect(count).toBeGreaterThanOrEqual(0);
     });
   });
 
@@ -61,10 +58,8 @@ test.describe('Simulation Lifecycle', () => {
         const wasEnabled = await startButton.isEnabled();
         if (wasEnabled) {
           await startButton.click();
-          await page.waitForTimeout(250);
 
           // Status should change or button should change
-          await expect(page.locator('body')).toBeVisible();
         }
       }
     });
@@ -74,7 +69,6 @@ test.describe('Simulation Lifecycle', () => {
 
       if ((await startButton.isVisible()) && (await startButton.isEnabled())) {
         await startButton.click();
-        await page.waitForTimeout(400);
 
         // Look for running indicator
         const runningIndicator = page.getByText(/running|active|started/i);
@@ -83,7 +77,6 @@ test.describe('Simulation Lifecycle', () => {
         // Either status text or stop button should appear
         const _hasRunningState =
           (await runningIndicator.count()) > 0 || (await stopButton.count()) > 0;
-        await expect(page.locator('body')).toBeVisible();
       }
     });
 
@@ -91,8 +84,6 @@ test.describe('Simulation Lifecycle', () => {
       // Check for device count display
       const _deviceCount = page.locator('[class*="count"], [class*="device"]');
       const _countText = page.getByText(/\d+\s*(device|node)/i);
-
-      await expect(page.locator('body')).toBeVisible();
     });
   });
 
@@ -107,10 +98,8 @@ test.describe('Simulation Lifecycle', () => {
 
       if ((await stopButton.isVisible()) && (await stopButton.isEnabled())) {
         await stopButton.click();
-        await page.waitForTimeout(250);
 
         // Status should change
-        await expect(page.locator('body')).toBeVisible();
       }
     });
 
@@ -119,7 +108,6 @@ test.describe('Simulation Lifecycle', () => {
 
       if ((await stopButton.isVisible()) && (await stopButton.isEnabled())) {
         await stopButton.click();
-        await page.waitForTimeout(400);
 
         // Look for stopped indicator
         const stoppedIndicator = page.getByText(/stopped|idle|ready|inactive/i);
@@ -127,7 +115,6 @@ test.describe('Simulation Lifecycle', () => {
 
         // Either status text or start button should be visible
         const _hasStopped = (await stoppedIndicator.count()) > 0 || (await startButton.count()) > 0;
-        await expect(page.locator('body')).toBeVisible();
       }
     });
   });
@@ -144,15 +131,12 @@ test.describe('Simulation Lifecycle', () => {
         '[class*="status"], [class*="simulation"], [class*="state"]',
       );
       const _statusText = page.getByText(/simulation|running|stopped|device/i);
-
-      await expect(page.locator('body')).toBeVisible();
     });
 
     test('should show quick start controls on dashboard', async ({ page }) => {
       const quickStart = page.getByRole('button', { name: /start|run|launch/i });
       const _count = await quickStart.count();
       // May or may not have quick start on dashboard
-      await expect(page.locator('body')).toBeVisible();
     });
   });
 
@@ -174,7 +158,6 @@ test.describe('Simulation Lifecycle', () => {
       await page.waitForLoadState('domcontentloaded');
 
       // Status should persist
-      await expect(page.locator('body')).toBeVisible();
     });
 
     test('should update status in real-time', async ({ page }) => {
@@ -182,10 +165,8 @@ test.describe('Simulation Lifecycle', () => {
       await page.waitForLoadState('domcontentloaded');
 
       // Wait for potential SSE updates
-      await page.waitForTimeout(400);
 
       // Page should still be responsive
-      await expect(page.locator('body')).toBeVisible();
     });
   });
 
@@ -198,14 +179,12 @@ test.describe('Simulation Lifecycle', () => {
 
       if ((await startButton.isVisible()) && (await startButton.isEnabled())) {
         await startButton.click();
-        await page.waitForTimeout(250);
 
         // Should show error or appropriate message
         const _errorMessage = page.locator('[class*="error"], [class*="alert"], [role="alert"]');
         const _infoMessage = page.getByText(/no device|configure|empty/i);
 
         // Either error shown or simulation starts anyway
-        await expect(page.locator('body')).toBeVisible();
       }
     });
 
@@ -230,7 +209,6 @@ test.describe('Simulation Lifecycle', () => {
       const _cpuText = page.getByText(/cpu|memory|packet|byte/i);
 
       // May or may not show metrics depending on state
-      await expect(page.locator('body')).toBeVisible();
     });
   });
 });

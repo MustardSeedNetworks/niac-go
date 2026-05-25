@@ -22,19 +22,15 @@ test.describe('SNMP Walk Workflow', () => {
     test('should display walk files section', async ({ page }) => {
       const _walkSection = page.locator('[class*="walk"], [class*="snmp"]');
       const _walkText = page.getByText(/walk|snmp/i);
-
-      await expect(page.locator('body')).toBeVisible();
     });
 
     test('should list available walk files', async ({ page }) => {
       const _fileList = page.locator('[class*="file"], [class*="walk"], table tbody tr, li');
       // May be empty if no files
-      await expect(page.locator('body')).toBeVisible();
     });
 
     test('should show file metadata', async ({ page }) => {
       const _metadata = page.getByText(/\.walk|size|date|modified/i);
-      await expect(page.locator('body')).toBeVisible();
     });
 
     test('should have file search/filter', async ({ page }) => {
@@ -42,7 +38,6 @@ test.describe('SNMP Walk Workflow', () => {
         'input[type="search"], input[placeholder*="search" i], input[placeholder*="filter" i]',
       );
       const count = await searchInput.count();
-      expect(count).toBeGreaterThanOrEqual(0);
     });
   });
 
@@ -55,40 +50,34 @@ test.describe('SNMP Walk Workflow', () => {
     test('should have validate button for each file', async ({ page }) => {
       const validateButton = page.getByRole('button', { name: /validate|check|verify/i });
       const count = await validateButton.count();
-      expect(count).toBeGreaterThanOrEqual(0);
     });
 
     test('should show validation status indicator', async ({ page }) => {
       const _statusIndicator = page.locator(
         '[class*="status"], [class*="valid"], [class*="invalid"], [class*="check"]',
       );
-      await expect(page.locator('body')).toBeVisible();
     });
 
     test('should display validation results', async ({ page }) => {
       const validateButton = page.getByRole('button', { name: /validate/i }).first();
       if (await validateButton.isVisible()) {
         await validateButton.click();
-        await page.waitForTimeout(250);
 
         // Results should appear
         const _results = page.locator(
           '[class*="result"], [class*="validation"], [class*="message"]',
         );
-        await expect(page.locator('body')).toBeVisible();
       }
     });
 
     test('should show error count if validation fails', async ({ page }) => {
       const _errorCount = page.getByText(/\d+\s*(error|issue|warning)/i);
       // Only visible if there are errors
-      await expect(page.locator('body')).toBeVisible();
     });
 
     test('should show error details', async ({ page }) => {
       const _errorDetails = page.locator('[class*="error"], [class*="detail"], [class*="issue"]');
       // Click to expand if collapsed
-      await expect(page.locator('body')).toBeVisible();
     });
   });
 
@@ -101,7 +90,6 @@ test.describe('SNMP Walk Workflow', () => {
     test('should have validate all button', async ({ page }) => {
       const validateAllButton = page.getByRole('button', { name: /validate all|batch|check all/i });
       const count = await validateAllButton.count();
-      expect(count).toBeGreaterThanOrEqual(0);
     });
 
     test('should show progress during batch validation', async ({ page }) => {
@@ -113,16 +101,12 @@ test.describe('SNMP Walk Workflow', () => {
         const _progress = page.locator(
           '[class*="progress"], [role="progressbar"], [class*="loading"]',
         );
-        await page.waitForTimeout(150);
-        await expect(page.locator('body')).toBeVisible();
       }
     });
 
     test('should show batch validation summary', async ({ page }) => {
       const _summary = page.locator('[class*="summary"], [class*="result"], [class*="total"]');
       const _summaryText = page.getByText(/\d+\s*(passed|failed|total|files)/i);
-
-      await expect(page.locator('body')).toBeVisible();
     });
 
     test('should allow selecting files for batch validation', async ({ page }) => {
@@ -130,7 +114,6 @@ test.describe('SNMP Walk Workflow', () => {
       const _selectAll = page.getByRole('checkbox', { name: /select all/i });
 
       const count = await checkboxes.count();
-      expect(count).toBeGreaterThanOrEqual(0);
     });
   });
 
@@ -143,38 +126,31 @@ test.describe('SNMP Walk Workflow', () => {
     test('should have auto-fix button', async ({ page }) => {
       const fixButton = page.getByRole('button', { name: /fix|repair|auto.*fix|correct/i });
       const count = await fixButton.count();
-      expect(count).toBeGreaterThanOrEqual(0);
     });
 
     test('should show fixable issues', async ({ page }) => {
       const _fixableIssues = page.locator('[class*="fixable"], [class*="auto-fix"]');
       const _fixableText = page.getByText(/can be fixed|auto.*fix|fixable/i);
-
-      await expect(page.locator('body')).toBeVisible();
     });
 
     test('should preview fixes before applying', async ({ page }) => {
       const fixButton = page.getByRole('button', { name: /fix|repair/i }).first();
       if (await fixButton.isVisible()) {
         await fixButton.click();
-        await page.waitForTimeout(150);
 
         // Preview dialog should appear
         const _preview = page.locator('[role="dialog"], [class*="preview"], [class*="confirm"]');
-        await expect(page.locator('body')).toBeVisible();
       }
     });
 
     test('should show fix confirmation', async ({ page }) => {
       const confirmButton = page.getByRole('button', { name: /confirm|apply|yes/i });
       const count = await confirmButton.count();
-      expect(count).toBeGreaterThanOrEqual(0);
     });
 
     test('should show success after fix applied', async ({ page }) => {
       const _successMessage = page.locator('[class*="success"], [class*="toast"], [role="status"]');
       // Only visible after fix
-      await expect(page.locator('body')).toBeVisible();
     });
   });
 
@@ -189,7 +165,6 @@ test.describe('SNMP Walk Workflow', () => {
       const fileInput = page.locator('input[type="file"]');
 
       const _hasUpload = (await uploadButton.count()) > 0 || (await fileInput.count()) > 0;
-      await expect(page.locator('body')).toBeVisible();
     });
 
     test('should accept .walk file type', async ({ page }) => {
@@ -197,20 +172,17 @@ test.describe('SNMP Walk Workflow', () => {
       if ((await fileInput.count()) > 0) {
         const _acceptAttr = await fileInput.getAttribute('accept');
         // Should accept walk files
-        await expect(page.locator('body')).toBeVisible();
       }
     });
 
     test('should show upload progress', async ({ page }) => {
       const _progress = page.locator('[class*="progress"], [role="progressbar"]');
       // Only visible during upload
-      await expect(page.locator('body')).toBeVisible();
     });
 
     test('should validate walk file on upload', async ({ page }) => {
       // Validation should run automatically after upload
       const _validationMessage = page.locator('[class*="validation"], [class*="result"]');
-      await expect(page.locator('body')).toBeVisible();
     });
   });
 
@@ -223,18 +195,15 @@ test.describe('SNMP Walk Workflow', () => {
     test('should have delete walk file option', async ({ page }) => {
       const deleteButton = page.getByRole('button', { name: /delete|remove/i });
       const count = await deleteButton.count();
-      expect(count).toBeGreaterThanOrEqual(0);
     });
 
     test('should confirm before deleting', async ({ page }) => {
       const deleteButton = page.getByRole('button', { name: /delete|remove/i }).first();
       if (await deleteButton.isVisible()) {
         await deleteButton.click();
-        await page.waitForTimeout(150);
 
         // Confirmation dialog should appear
         const _confirmDialog = page.locator('[role="dialog"], [role="alertdialog"]');
-        await expect(page.locator('body')).toBeVisible();
       }
     });
 
@@ -243,18 +212,15 @@ test.describe('SNMP Walk Workflow', () => {
       const downloadLink = page.locator('a[download]');
 
       const _hasDownload = (await downloadButton.count()) > 0 || (await downloadLink.count()) > 0;
-      await expect(page.locator('body')).toBeVisible();
     });
 
     test('should show walk file details', async ({ page }) => {
       const fileItem = page.locator('[class*="file"], [class*="walk"]').first();
       if (await fileItem.isVisible()) {
         await fileItem.click();
-        await page.waitForTimeout(150);
 
         // Details should appear
         const _details = page.locator('[class*="detail"], [class*="panel"], [class*="info"]');
-        await expect(page.locator('body')).toBeVisible();
       }
     });
   });
@@ -268,22 +234,18 @@ test.describe('SNMP Walk Workflow', () => {
     test('should check OID format', async ({ page }) => {
       const _oidError = page.getByText(/oid|object identifier|invalid.*oid/i);
       // Only visible if validation shows OID errors
-      await expect(page.locator('body')).toBeVisible();
     });
 
     test('should check value types', async ({ page }) => {
       const _typeError = page.getByText(/type|integer|string|octet/i);
-      await expect(page.locator('body')).toBeVisible();
     });
 
     test('should check for duplicate OIDs', async ({ page }) => {
       const _duplicateError = page.getByText(/duplicate|already exists|repeated/i);
-      await expect(page.locator('body')).toBeVisible();
     });
 
     test('should validate MIB references', async ({ page }) => {
       const _mibError = page.getByText(/mib|unknown.*oid|not found/i);
-      await expect(page.locator('body')).toBeVisible();
     });
   });
 });

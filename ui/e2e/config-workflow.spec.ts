@@ -29,13 +29,11 @@ test.describe('Configuration Management', () => {
       const fileInput = page.locator('input[type="file"]');
 
       const _hasLoad = (await loadButton.count()) > 0 || (await fileInput.count()) > 0;
-      await expect(page.locator('body')).toBeVisible();
     });
 
     test('should show save config option', async ({ page }) => {
       const saveButton = page.getByRole('button', { name: /save|export|download/i });
       const count = await saveButton.count();
-      expect(count).toBeGreaterThanOrEqual(0);
     });
   });
 
@@ -50,26 +48,22 @@ test.describe('Configuration Management', () => {
       if ((await fileInput.count()) > 0) {
         const _acceptAttr = await fileInput.first().getAttribute('accept');
         // Should accept yaml files
-        await expect(page.locator('body')).toBeVisible();
       }
     });
 
     test('should populate devices after loading config', async ({ page }) => {
       // After loading config, device list should update
       const _deviceList = page.locator('[class*="device"], [class*="list"], table tbody tr');
-      await expect(page.locator('body')).toBeVisible();
     });
 
     test('should show error for invalid config', async ({ page }) => {
       const _errorAlert = page.locator('[class*="error"], [role="alert"], [class*="toast"]');
       // Not visible until error occurs
-      await expect(page.locator('body')).toBeVisible();
     });
 
     test('should validate config schema', async ({ page }) => {
       // Schema validation should occur on load
       const _validationMessage = page.getByText(/valid|invalid|error|schema/i);
-      await expect(page.locator('body')).toBeVisible();
     });
   });
 
@@ -100,8 +94,6 @@ test.describe('Configuration Management', () => {
           '[class*="unsaved"], [class*="dirty"], [class*="modified"]',
         );
         const _saveButton = page.getByRole('button', { name: /save/i });
-
-        await expect(page.locator('body')).toBeVisible();
       }
     });
 
@@ -117,8 +109,6 @@ test.describe('Configuration Management', () => {
 
           // Should show confirmation dialog
           const _confirmDialog = page.locator('[role="dialog"], [role="alertdialog"]');
-          await page.waitForTimeout(150);
-          await expect(page.locator('body')).toBeVisible();
         }
       }
     });
@@ -133,25 +123,21 @@ test.describe('Configuration Management', () => {
     test('should have save/export button', async ({ page }) => {
       const saveButton = page.getByRole('button', { name: /save|export/i });
       const count = await saveButton.count();
-      expect(count).toBeGreaterThanOrEqual(0);
     });
 
     test('should offer save format options', async ({ page }) => {
       const saveButton = page.getByRole('button', { name: /save|export/i }).first();
       if (await saveButton.isVisible()) {
         await saveButton.click();
-        await page.waitForTimeout(150);
 
         // Format options should appear
         const _formatOptions = page.getByText(/yaml|json|config/i);
-        await expect(page.locator('body')).toBeVisible();
       }
     });
 
     test('should show success message after save', async ({ page }) => {
       // Success notification area
       const _successMessage = page.locator('[class*="success"], [class*="toast"], [role="status"]');
-      await expect(page.locator('body')).toBeVisible();
     });
   });
 
@@ -169,43 +155,36 @@ test.describe('Configuration Management', () => {
     test('should have source config selector', async ({ page }) => {
       const sourceSelect = page.locator('select, [class*="source"], [class*="left"]');
       const count = await sourceSelect.count();
-      expect(count).toBeGreaterThanOrEqual(0);
     });
 
     test('should have target config selector', async ({ page }) => {
       const targetSelect = page.locator('select, [class*="target"], [class*="right"]');
       const count = await targetSelect.count();
-      expect(count).toBeGreaterThanOrEqual(0);
     });
 
     test('should have compare button', async ({ page }) => {
       const compareButton = page.getByRole('button', { name: /compare|diff|show/i });
       const count = await compareButton.count();
-      expect(count).toBeGreaterThanOrEqual(0);
     });
 
     test('should display diff results', async ({ page }) => {
       const diffView = page.locator('[class*="diff"], [class*="compare"], pre, code');
       const count = await diffView.count();
-      expect(count).toBeGreaterThanOrEqual(0);
     });
 
     test('should highlight additions in diff', async ({ page }) => {
       const _additions = page.locator('[class*="add"], [class*="insert"], [class*="green"]');
       // Only visible when diff is shown
-      await expect(page.locator('body')).toBeVisible();
     });
 
     test('should highlight deletions in diff', async ({ page }) => {
       const _deletions = page.locator('[class*="delete"], [class*="remove"], [class*="red"]');
       // Only visible when diff is shown
-      await expect(page.locator('body')).toBeVisible();
     });
 
     test('should have diff view mode toggle', async ({ page }) => {
       const viewToggle = page.getByRole('button', { name: /side|unified|split|inline/i });
       const count = await viewToggle.count();
-      expect(count).toBeGreaterThanOrEqual(0);
     });
   });
 
@@ -223,8 +202,6 @@ test.describe('Configuration Management', () => {
     test('should have template categories', async ({ page }) => {
       const _categories = page.locator('[class*="category"], [class*="group"], [class*="section"]');
       const _categoryText = page.getByText(/router|switch|server|default/i);
-
-      await expect(page.locator('body')).toBeVisible();
     });
 
     test('should show template preview', async ({ page }) => {
@@ -233,24 +210,20 @@ test.describe('Configuration Management', () => {
         .first();
       if (await templateItem.isVisible()) {
         await templateItem.click();
-        await page.waitForTimeout(150);
 
         // Preview should appear
         const _preview = page.locator('[class*="preview"], [class*="detail"], pre, code');
-        await expect(page.locator('body')).toBeVisible();
       }
     });
 
     test('should have apply template button', async ({ page }) => {
       const applyButton = page.getByRole('button', { name: /apply|use|select/i });
       const count = await applyButton.count();
-      expect(count).toBeGreaterThanOrEqual(0);
     });
 
     test('should have create template button', async ({ page }) => {
       const createButton = page.getByRole('button', { name: /create|new|add/i });
       const count = await createButton.count();
-      expect(count).toBeGreaterThanOrEqual(0);
     });
   });
 
@@ -268,8 +241,6 @@ test.describe('Configuration Management', () => {
 
         // Should show validation error
         const _error = page.locator('[class*="error"], [aria-invalid="true"]');
-        await page.waitForTimeout(150);
-        await expect(page.locator('body')).toBeVisible();
       }
     });
 
@@ -281,8 +252,6 @@ test.describe('Configuration Management', () => {
 
         // Should show validation error
         const _error = page.locator('[class*="error"], [aria-invalid="true"]');
-        await page.waitForTimeout(150);
-        await expect(page.locator('body')).toBeVisible();
       }
     });
 
@@ -293,8 +262,6 @@ test.describe('Configuration Management', () => {
         await portField.blur();
 
         // Should show validation error for invalid port
-        await page.waitForTimeout(150);
-        await expect(page.locator('body')).toBeVisible();
       }
     });
   });

@@ -17,7 +17,6 @@ test.describe('Error Scenarios', () => {
     });
 
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
 
     // React app should render despite API errors
     const root = page.locator('#root');
@@ -54,8 +53,6 @@ test.describe('Error Scenarios', () => {
     });
 
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
-
     // Page should render with error state or fallback UI
     const root = page.locator('#root');
     await expect(root).toBeAttached({ timeout: 10000 });
@@ -71,8 +68,6 @@ test.describe('Error Scenarios', () => {
     });
 
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
-
     // Page should handle JSON parse errors gracefully
     const root = page.locator('#root');
     await expect(root).toBeAttached({ timeout: 10000 });
@@ -105,8 +100,6 @@ test.describe('Error Scenarios', () => {
     });
 
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
-
     // Page should render with error indication
     const root = page.locator('#root');
     await expect(root).toBeAttached({ timeout: 10000 });

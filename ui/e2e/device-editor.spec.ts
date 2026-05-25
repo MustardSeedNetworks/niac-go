@@ -27,19 +27,16 @@ test.describe('Device Editor', () => {
   test('should have device name field', async ({ page }) => {
     const nameField = page.locator('input[name*="name" i], input[placeholder*="name" i]');
     const count = await nameField.count();
-    expect(count).toBeGreaterThanOrEqual(0);
   });
 
   test('should have device type selector', async ({ page }) => {
     const typeSelector = page.locator('select, [role="combobox"]');
     const count = await typeSelector.count();
-    expect(count).toBeGreaterThanOrEqual(0);
   });
 
   test('should have IP address field', async ({ page }) => {
     const ipField = page.locator('input[name*="ip" i], input[placeholder*="ip" i]');
     const count = await ipField.count();
-    expect(count).toBeGreaterThanOrEqual(0);
   });
 
   test('should have protocol configuration sections', async ({ page }) => {
@@ -58,7 +55,6 @@ test.describe('Device Editor', () => {
     const cancelButton = page.getByRole('button', { name: /cancel|back|discard/i });
     const saveCount = await saveButton.count();
     const cancelCount = await cancelButton.count();
-    expect(saveCount + cancelCount).toBeGreaterThanOrEqual(0);
   });
 
   test('should validate required fields', async ({ page }) => {

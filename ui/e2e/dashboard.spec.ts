@@ -16,8 +16,10 @@ test.describe('Dashboard', () => {
   });
 
   test('should display dashboard overview', async ({ page }) => {
-    // Dashboard should show system stats
-    await expect(page.locator('body')).not.toBeEmpty();
+    // Substantive assertion: the page renders at least one heading.
+    // The previous `expect(body).not.toBeEmpty()` was tautological — body
+    // is never empty for a rendered SPA shell.
+    await expect(page.getByRole('heading').first()).toBeVisible();
   });
 
   test('should display navigation menu', async ({ page }) => {
@@ -33,10 +35,17 @@ test.describe('Dashboard', () => {
     expect(count).toBeGreaterThan(0);
   });
 
-  test('should display device count or status', async ({ page }) => {
-    // Dashboard should show some device-related info
-    const deviceInfo = page.getByText(/device|simulation|running/i);
-    const count = await deviceInfo.count();
-    expect(count).toBeGreaterThanOrEqual(0); // May not be visible on empty state
+  test('should display device count or empty-state hint', async ({ page }) => {
+    // Either devices are listed OR the empty-state copy is shown. The old
+    // `expect(count) >= 0` form was tautological — counts can never be
+    // negative, so the assertion always passed even on a completely blank
+    // dashboard.
+    const populated = page.getByText(/device|simulation|running/i);
+    const empty = page.getByText(/no devices|empty|nothing to show|get started/i);
+    const [populatedCount, emptyCount] = await Promise.all([populated.count(), empty.count()]);
+    expect(
+      populatedCount + emptyCount,
+      'dashboard must show either device info or an empty-state hint',
+    ).toBeGreaterThan(0);
   });
 });
