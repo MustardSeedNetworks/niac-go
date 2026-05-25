@@ -1,7 +1,11 @@
 import { defineConfig, devices } from '@playwright/test';
 
+// Fullstack tier runs against a real niac daemon. Since #663 (Require HTTPS
+// unconditionally), the daemon is HTTPS-only with an auto-generated self-signed
+// cert. We keep port 18080 dedicated to the fullstack tier so it can coexist
+// with a dev daemon on canonical 8445.
 const port = process.env.E2E_FULLSTACK_PORT ?? '18080';
-const baseURL = process.env.E2E_BASE_URL ?? `http://localhost:${port}`;
+const baseURL = process.env.E2E_BASE_URL ?? `https://localhost:${port}`;
 
 export default defineConfig({
   testDir: './e2e/fullstack',
@@ -23,6 +27,7 @@ export default defineConfig({
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'on-first-retry',
+    // Self-signed cert from auto-generation; required even in CI for this tier.
     ignoreHTTPSErrors: true,
   },
   projects: [
@@ -38,5 +43,6 @@ export default defineConfig({
         url: `${baseURL}/__version`,
         reuseExistingServer: !process.env.CI,
         timeout: 120000,
+        ignoreHTTPSErrors: true,
       },
 });
