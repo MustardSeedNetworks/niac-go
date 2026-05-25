@@ -5,6 +5,20 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.83.0](https://github.com/krisarmstrong/niac-go/compare/v0.82.0...v0.83.0) (2026-05-25)
+
+
+### Features
+
+* **converter:** add struct-tag validation for Config ([#685](https://github.com/krisarmstrong/niac-go/issues/685)) ([269a924](https://github.com/krisarmstrong/niac-go/commit/269a924d6d353b5ab183c5c57928ad14709d492d)), closes [#669](https://github.com/krisarmstrong/niac-go/issues/669)
+
+
+### Bug Fixes
+
+* **ci:** inject UIBuildHash ldflag (Universal Build Contract) ([#682](https://github.com/krisarmstrong/niac-go/issues/682)) ([d37b4f9](https://github.com/krisarmstrong/niac-go/commit/d37b4f961106dba2d37053e604995ee5a7e5f98d))
+* **docs:** correct PR template 'cd web' -&gt; 'cd ui' ([#683](https://github.com/krisarmstrong/niac-go/issues/683)) ([3e5dc18](https://github.com/krisarmstrong/niac-go/commit/3e5dc187f64edd9083d13374676123f34d56a26b))
+* **scripts:** deploy-validate add HTTPS support + canonical port 8445 ([#692](https://github.com/krisarmstrong/niac-go/issues/692)) ([740a746](https://github.com/krisarmstrong/niac-go/commit/740a746021241fde2fbcc1bfbf6037cfe9f8ed51))
+
 ## [0.82.0](https://github.com/krisarmstrong/niac-go/compare/v0.81.1...v0.82.0) (2026-05-25)
 
 
