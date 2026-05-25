@@ -27,9 +27,11 @@ export default defineConfig(({ mode }) => {
     },
     // FIX #180: Code splitting for optimal bundle sizes
     build: {
-      // Output directly to embed directory - no syncing needed
+      // Output directly to embed directory - no syncing needed.
+      // emptyOutDir intentionally omitted: outDir is outside Vite's
+      // project root, so Vite defaults to false and preserves the
+      // tracked `.gitkeep` placeholder. CLAUDE.md mandate.
       outDir: '../internal/api/ui',
-      emptyOutDir: true,
       // Vite 7: Target modern browsers for smaller bundles
       target: 'es2022',
       // Enable CSS code splitting
