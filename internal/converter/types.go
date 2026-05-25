@@ -29,9 +29,9 @@ const (
 // Config represents the YAML configuration structure.
 type Config struct {
 	IncludePath        string              `yaml:"include_path,omitempty"`
-	CapturePlaybacks   []CapturePlayback   `yaml:"capture_playbacks,omitempty"` // Changed to array
+	CapturePlaybacks   []CapturePlayback   `yaml:"capture_playbacks,omitempty"   validate:"omitempty,dive"`
 	DiscoveryProtocols *DiscoveryProtocols `yaml:"discovery_protocols,omitempty"`
-	Devices            []Device            `yaml:"devices"`
+	Devices            []Device            `yaml:"devices"                       validate:"omitempty,dive"`
 }
 
 // DiscoveryProtocols configures discovery protocol behavior.
@@ -50,20 +50,20 @@ type ProtocolConfig struct {
 
 // CapturePlayback represents PCAP playback configuration.
 type CapturePlayback struct {
-	FileName  string  `yaml:"file_name"`
-	LoopTime  int     `yaml:"loop_time,omitempty"`
-	ScaleTime float64 `yaml:"scale_time,omitempty"`
+	FileName  string  `yaml:"file_name"            validate:"required"`
+	LoopTime  int     `yaml:"loop_time,omitempty"  validate:"omitempty,gte=0"`
+	ScaleTime float64 `yaml:"scale_time,omitempty" validate:"omitempty,gte=0"`
 }
 
 // Device represents a network device.
 type Device struct {
 	Name          string               `yaml:"name,omitempty"`
-	Type          string               `yaml:"type,omitempty"` // Device type: router, switch, ap, firewall, server, workstation, iot
-	MAC           string               `yaml:"mac"`
-	IP            string               `yaml:"ip,omitempty"`  // Single IP (backward compatible)
-	IPs           []string             `yaml:"ips,omitempty"` // Multiple IPs (new feature)
-	VLAN          int                  `yaml:"vlan,omitempty"`
-	MapToIP       string               `yaml:"map_to_ip,omitempty"`
+	Type          string               `yaml:"type,omitempty"           validate:"omitempty,oneof=router switch ap access-point firewall server host workstation iot"`
+	MAC           string               `yaml:"mac"                      validate:"required,mac"`
+	IP            string               `yaml:"ip,omitempty"             validate:"omitempty,ip"`
+	IPs           []string             `yaml:"ips,omitempty"            validate:"omitempty,dive,ip"`
+	VLAN          int                  `yaml:"vlan,omitempty"           validate:"omitempty,gte=1,lte=4094"`
+	MapToIP       string               `yaml:"map_to_ip,omitempty"      validate:"omitempty,ip"`
 	Babble        bool                 `yaml:"babble,omitempty"`
 	TTL           *TTLConfig           `yaml:"ttl,omitempty"`
 	SnmpAgent     *SnmpAgent           `yaml:"snmp_agent,omitempty"`
@@ -116,7 +116,7 @@ type PortChannel struct {
 // IPerf3Config represents iPerf3 server emulation configuration.
 type IPerf3Config struct {
 	Enabled           bool    `yaml:"enabled,omitempty"`
-	Port              uint16  `yaml:"port,omitempty"`
+	Port              uint16  `yaml:"port,omitempty"                validate:"omitempty,gte=1"`
 	MaxBandwidthMbps  float64 `yaml:"max_bandwidth_mbps,omitempty"`
 	TypicalLatencyMs  float64 `yaml:"typical_latency_ms,omitempty"`
 	JitterMs          float64 `yaml:"jitter_ms,omitempty"`
@@ -144,8 +144,8 @@ type OSFingerprintConfig struct {
 type SnmpAgent struct {
 	WalkFile          string             `yaml:"walk_file,omitempty"`
 	WalkFiles         []string           `yaml:"walk_files,omitempty"`
-	AddMibs           []AddMib           `yaml:"add_mibs,omitempty"`
-	CommunityIncludes []CommunityInclude `yaml:"community_includes,omitempty"`
+	AddMibs           []AddMib           `yaml:"add_mibs,omitempty"           validate:"omitempty,dive"`
+	CommunityIncludes []CommunityInclude `yaml:"community_includes,omitempty" validate:"omitempty,dive"`
 	AccessList        []string           `yaml:"access_list,omitempty"`
 	SnmpAddr          string             `yaml:"snmp_addr,omitempty"`
 	Dot1DFdbTable     *FdbTableConfig    `yaml:"dot1d_fdb_table,omitempty"`
@@ -155,15 +155,15 @@ type SnmpAgent struct {
 
 // AddMib represents a MIB override or addition.
 type AddMib struct {
-	OID   string `yaml:"oid"`
-	Type  string `yaml:"type"`
-	Value string `yaml:"value"`
+	OID   string `yaml:"oid"   validate:"required"`
+	Type  string `yaml:"type"  validate:"required"`
+	Value string `yaml:"value" validate:"required"`
 }
 
 // CommunityInclude represents a community-specific walk include.
 type CommunityInclude struct {
-	Community string `yaml:"community"`
-	WalkFile  string `yaml:"walk_file"`
+	Community string `yaml:"community" validate:"required"`
+	WalkFile  string `yaml:"walk_file" validate:"required"`
 }
 
 // FdbTableConfig configures SNMP forwarding database table injection.
@@ -181,7 +181,7 @@ type TTLConfig struct {
 
 // DhcpServer represents DHCP server configuration.
 type DhcpServer struct {
-	ClientLeases     []DhcpLease `yaml:"client_leases,omitempty"`
+	ClientLeases     []DhcpLease `yaml:"client_leases,omitempty"      validate:"omitempty,dive"`
 	SubnetMask       string      `yaml:"subnet_mask,omitempty"`
 	Router           string      `yaml:"router,omitempty"`
 	DomainNameServer string      `yaml:"domain_name_server,omitempty"`
@@ -205,23 +205,23 @@ type DhcpServer struct {
 
 // DhcpLease represents a DHCP client lease.
 type DhcpLease struct {
-	ClientIP     string `yaml:"client_ip"`
+	ClientIP     string `yaml:"client_ip"                validate:"required,ip"`
 	MacAddrValue string `yaml:"mac_addr_value,omitempty"`
 	MacAddrMask  string `yaml:"mac_addr_mask,omitempty"`
 }
 
 // DNSServer represents DNS server configuration.
 type DNSServer struct {
-	ForwardRecords []DNSRecord `yaml:"forward_records,omitempty"`
-	ReverseRecords []DNSRecord `yaml:"reverse_records,omitempty"`
+	ForwardRecords []DNSRecord `yaml:"forward_records,omitempty" validate:"omitempty,dive"`
+	ReverseRecords []DNSRecord `yaml:"reverse_records,omitempty" validate:"omitempty,dive"`
 }
 
 // DNSRecord represents a DNS A or PTR record.
 type DNSRecord struct {
-	Name  string `yaml:"name"`
-	IP    string `yaml:"ip"`
-	TTL   int    `yaml:"ttl,omitempty"`
-	RCode int    `yaml:"rcode,omitempty"`
+	Name  string `yaml:"name"            validate:"required"`
+	IP    string `yaml:"ip"              validate:"required,ip"`
+	TTL   int    `yaml:"ttl,omitempty"   validate:"omitempty,gte=0"`
+	RCode int    `yaml:"rcode,omitempty" validate:"omitempty,gte=0,lte=15"`
 }
 
 // LldpConfig represents LLDP discovery protocol configuration.

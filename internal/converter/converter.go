@@ -143,7 +143,10 @@ func LoadYAMLConfig(filename string) (*Config, error) {
 	return LoadYAMLConfigFromBytes(data)
 }
 
-// LoadYAMLConfigFromBytes converts in-memory YAML data into a Go config structure.
+// LoadYAMLConfigFromBytes converts in-memory YAML data into a Go config
+// structure. Returns the parsed Config and any validation error so callers
+// that need the partially-loaded Config (e.g., for diagnostics) can still
+// access it.
 func LoadYAMLConfigFromBytes(data []byte) (*Config, error) {
 	if len(data) > MaxYAMLConfigSize {
 		return nil, fmt.Errorf(
@@ -156,10 +159,18 @@ func LoadYAMLConfigFromBytes(data []byte) (*Config, error) {
 		return nil, fmt.Errorf("error parsing YAML: %w", err)
 	}
 
+	if validateErr := ValidateConfig(&config); validateErr != nil {
+		return &config, validateErr
+	}
+
 	return &config, nil
 }
 
-// ValidateConfig validates that no functionality was lost in conversion.
+// ValidateConfig validates a Config. The legacy sentinel-error checks
+// (ErrDeviceMissingMAC etc.) run first so existing callers that use
+// errors.Is(err, ErrDeviceMissingMAC) keep working; the struct-tag validator
+// then catches everything else (IP formats, VLAN range, enum membership,
+// mutual exclusion of ip and ips).
 func ValidateConfig(config *Config) error {
 	// Validate devices have required fields
 	for i, device := range config.Devices {
@@ -189,7 +200,7 @@ func ValidateConfig(config *Config) error {
 		}
 	}
 
-	return nil
+	return validateConfigStruct(config)
 }
 
 // PrintSummary prints a summary of the config.
