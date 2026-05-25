@@ -64,7 +64,14 @@ RUN setcap 'cap_net_raw,cap_net_admin=+ep' /usr/bin/niac
 
 USER niac
 WORKDIR /var/lib/niac
-EXPOSE 8080
+# Per CLAUDE.md Default Ports table:
+#   8445 = TLS canonical (post-Wave-1 / niac#663 HTTPS-required)
+#   8044 = HTTP->HTTPS 308 redirector
+# Note: CMD below uses --listen :8080 for back-compat with existing
+# deployment scripts (per cmd_daemon.go comment). EXPOSE here reflects
+# the canonical ports for net-new deployments; override CMD to use
+# them.
+EXPOSE 8445 8044 8080
 
 # OCI labels for traceability.
 ARG VERSION=dev
