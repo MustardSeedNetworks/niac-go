@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://github.com/krisarmstrong/niac-go/wiki
+    about: Check the wiki for guides and FAQ before opening an issue
+  - name: Discussions
+    url: https://github.com/krisarmstrong/niac-go/discussions
+    about: Ask questions or discuss ideas in GitHub Discussions
+  - name: Security Vulnerability
+    url: https://github.com/krisarmstrong/niac-go/security/advisories/new
+    about: Report security issues privately via GitHub Security Advisories

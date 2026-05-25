@@ -1,0 +1,69 @@
+name: Task
+description: Track a development task or chore
+title: "[CHORE] "
+labels: ["type: chore", "status: needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template for internal development tasks, refactoring, technical debt, or maintenance work.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: A clear description of the task to be completed.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: type
+    attributes:
+      label: Task Type
+      options:
+        - Refactoring
+        - Technical Debt
+        - CI/CD
+        - Testing
+        - Documentation
+        - Dependencies
+        - Performance
+        - Security
+        - Build/Packaging
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      description: Which part of NIAC does this affect?
+      options:
+        - API/Backend
+        - UI/Frontend
+        - SNMP
+        - LLDP/CDP
+        - Protocol Simulation
+        - Device Simulation
+        - Templates
+        - PCAP Capture/Replay
+        - Configuration
+        - Installation/Deployment
+        - Documentation
+        - CI/CD Pipeline
+        - Multiple Areas
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance Criteria
+      description: What does "done" look like?
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional Context
