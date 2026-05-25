@@ -645,3 +645,7 @@ linters:
       - path: 'internal/templates/template\.go'
         linters:
           - gochecknoglobals
+      # Config validator is a package-level singleton (go-playground/validator).
+      - path: 'internal/converter/validate\.go'
+        linters:
+          - gochecknoglobals
