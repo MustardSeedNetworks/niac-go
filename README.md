@@ -170,6 +170,14 @@ date stated in the LICENSE file. Matches the licensing on seed and stem.
 
 For commercial licensing inquiries: `kris.armstrong@gmail.com`.
 
+## Security
+
+See [SECURITY.md](SECURITY.md) for the vulnerability-disclosure policy.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## Related projects
 
 NIAC is the simulator. Two sibling tools complete the Mustard Seed Networks
