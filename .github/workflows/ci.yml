@@ -567,8 +567,19 @@ jobs:
           CGO_ENABLED: '1'
         run: |
           VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo "dev")
+          COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+          BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          # UI build hash matches Makefile recipe; mandatory per CLAUDE.md
+          # Universal Build Contract.
+          UI_BUILD_HASH=$(find internal/api/ui -type f -exec md5sum {} \; 2>/dev/null | sort | md5sum 2>/dev/null | cut -d' ' -f1)
+          echo "UI_BUILD_HASH=${UI_BUILD_HASH}"
+
           go build -trimpath -buildvcs=false \
-            -ldflags="-s -w -X github.com/krisarmstrong/niac-go/internal/version.Version=${VERSION}" \
+            -ldflags="-s -w \
+              -X github.com/krisarmstrong/niac-go/internal/version.Version=${VERSION} \
+              -X github.com/krisarmstrong/niac-go/internal/version.Commit=${COMMIT} \
+              -X github.com/krisarmstrong/niac-go/internal/version.BuildTime=${BUILD_TIME} \
+              -X github.com/krisarmstrong/niac-go/internal/version.UIBuildHash=${UI_BUILD_HASH}" \
             -o niac-${{ matrix.os }}-${{ matrix.arch }} ./cmd/niac
 
       - name: Verify binary
@@ -620,7 +631,18 @@ jobs:
         run: npm ci
 
       - name: Build backend
-        run: go build -o niac ./cmd/niac
+        run: |
+          VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo "dev")
+          COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+          BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          UI_BUILD_HASH=$(find internal/api/ui -type f -exec md5sum {} \; 2>/dev/null | sort | md5sum 2>/dev/null | cut -d' ' -f1)
+          go build -trimpath -buildvcs=false \
+            -ldflags="-s -w \
+              -X github.com/krisarmstrong/niac-go/internal/version.Version=${VERSION} \
+              -X github.com/krisarmstrong/niac-go/internal/version.Commit=${COMMIT} \
+              -X github.com/krisarmstrong/niac-go/internal/version.BuildTime=${BUILD_TIME} \
+              -X github.com/krisarmstrong/niac-go/internal/version.UIBuildHash=${UI_BUILD_HASH}" \
+            -o niac ./cmd/niac
 
       - name: Install Playwright browsers
         working-directory: ui
@@ -698,7 +720,18 @@ jobs:
           path: internal/api/ui/
 
       - name: Build backend
-        run: go build -o niac ./cmd/niac
+        run: |
+          VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo "dev")
+          COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+          BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          UI_BUILD_HASH=$(find internal/api/ui -type f -exec md5sum {} \; 2>/dev/null | sort | md5sum 2>/dev/null | cut -d' ' -f1)
+          go build -trimpath -buildvcs=false \
+            -ldflags="-s -w \
+              -X github.com/krisarmstrong/niac-go/internal/version.Version=${VERSION} \
+              -X github.com/krisarmstrong/niac-go/internal/version.Commit=${COMMIT} \
+              -X github.com/krisarmstrong/niac-go/internal/version.BuildTime=${BUILD_TIME} \
+              -X github.com/krisarmstrong/niac-go/internal/version.UIBuildHash=${UI_BUILD_HASH}" \
+            -o niac ./cmd/niac
 
       - name: Start server
         run: |
