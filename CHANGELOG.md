@@ -5,6 +5,16 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.83.1](https://github.com/krisarmstrong/niac-go/compare/v0.83.0...v0.83.1) (2026-05-26)
+
+
+### Bug Fixes
+
+* **ci:** switch e2e + lighthouse to HTTPS for TLS-only daemon ([#701](https://github.com/krisarmstrong/niac-go/issues/701)) ([b8aa9a5](https://github.com/krisarmstrong/niac-go/commit/b8aa9a536d45c24f9eee89f82a0286c37a87fe6b))
+* **e2e:** switch fullstack config to HTTPS for TLS-only daemon ([#698](https://github.com/krisarmstrong/niac-go/issues/698)) ([7338525](https://github.com/krisarmstrong/niac-go/commit/7338525955e53a4195e2f5ac4bb679788ef82eb1))
+* **license:** add RWMutex to Manager for safe concurrent access ([#703](https://github.com/krisarmstrong/niac-go/issues/703)) ([ed0d427](https://github.com/krisarmstrong/niac-go/commit/ed0d427440f9b9dd1ea3e7725b73b781450198dc))
+* **scripts:** clean up all shellcheck warnings + pin severity=warning ([#696](https://github.com/krisarmstrong/niac-go/issues/696)) ([71ac82d](https://github.com/krisarmstrong/niac-go/commit/71ac82d544bfcbf148fc34ed28e6cbb90e230adc))
+
 ## [0.83.0](https://github.com/krisarmstrong/niac-go/compare/v0.82.0...v0.83.0) (2026-05-25)
 
 
