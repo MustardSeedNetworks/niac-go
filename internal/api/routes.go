@@ -17,6 +17,7 @@ func (s *Server) registerAPIRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/v1/stats", s.recoverMiddleware(s.auth(s.handleStats)))
 	mux.HandleFunc("/api/v1/devices", s.recoverMiddleware(s.auth(s.handleDevices)))
 	mux.HandleFunc("/api/v1/history", s.recoverMiddleware(s.auth(s.handleHistory)))
+	mux.HandleFunc("/api/v1/license", s.recoverMiddleware(s.auth(s.handleLicenseStatus)))
 
 	// SECURITY FIX LOW-1: Protect state-changing endpoints with CSRF
 	// SECURITY FIX #156: Apply write rate limiting to state-changing endpoints
