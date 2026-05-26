@@ -8,6 +8,14 @@
     "serverError": "Error del servidor — intente nuevamente",
     "invalidRequest": "Solicitud inválida"
   },
+  "license": {
+    "tierTooLow": "Esta función requiere el nivel {{tier}}",
+    "upgradeHint": "Inicia una prueba gratuita de {{tier}} de 14 días con `niac license trial`, o activa una clave {{tier}} con `niac license activate -k <CLAVE>`.",
+    "tierGateTooltip": "Requiere el nivel {{tier}}",
+    "featureUnavailable": "{{feature}} no está disponible en tu nivel actual",
+    "currentTier": "Nivel actual: {{tier}}",
+    "loading": "Verificando licencia…"
+  },
   "validation": {
     "required": "Este campo es obligatorio",
     "tooShort": "Debe tener al menos {{min}} caracteres",
