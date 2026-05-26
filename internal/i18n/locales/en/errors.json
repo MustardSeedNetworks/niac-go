@@ -8,6 +8,14 @@
     "serverError": "Server error — please try again",
     "invalidRequest": "Invalid request"
   },
+  "license": {
+    "tierTooLow": "This feature requires the {{tier}} tier",
+    "upgradeHint": "Start a 14-day {{tier}} trial with `niac license trial`, or activate a {{tier}} key with `niac license activate -k <KEY>`.",
+    "tierGateTooltip": "Requires the {{tier}} tier",
+    "featureUnavailable": "{{feature}} is not available on your current tier",
+    "currentTier": "Current tier: {{tier}}",
+    "loading": "Checking license…"
+  },
   "validation": {
     "required": "This field is required",
     "tooShort": "Must be at least {{min}} characters",
