@@ -5,6 +5,13 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.85.0](https://github.com/krisarmstrong/niac-go/compare/v0.84.0...v0.85.0) (2026-05-26)
+
+
+### Features
+
+* **api:** add GET /api/v1/license read endpoint ([#710](https://github.com/krisarmstrong/niac-go/issues/710)) ([50e16c7](https://github.com/krisarmstrong/niac-go/commit/50e16c7ad8022f3594cd9cd93f63bd60237b41fc))
+
 ## [0.84.0](https://github.com/krisarmstrong/niac-go/compare/v0.83.1...v0.84.0) (2026-05-26)
 
 
