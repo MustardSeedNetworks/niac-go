@@ -175,6 +175,10 @@ func (s *Server) handleDeviceUpdate(w http.ResponseWriter, r *http.Request, host
 			return
 		}
 
+		if !s.requireDeviceProtocolFeatures(w, r, updatedDevice) {
+			return
+		}
+
 		newCfg.Devices[deviceIdx] = *updatedDevice
 	} else {
 		if err := applyPartialDeviceUpdate(&newCfg.Devices[deviceIdx], req); err != nil {
