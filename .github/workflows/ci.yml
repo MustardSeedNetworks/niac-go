@@ -646,14 +646,19 @@ jobs:
 
       - name: Install Playwright browsers
         working-directory: ui
-        run: npx playwright install --with-deps chromium
+        # Per msn-docs-internal/05-Engineering/E2E_CONVENTIONS.md, every PR
+        # runs Chromium (covers Chrome + Edge) and WebKit (covers Safari).
+        run: npx playwright install --with-deps chromium webkit
 
       - name: Start backend server
         run: |
-          nohup ./niac daemon --http --listen 127.0.0.1:8080 > server.log 2>&1 &
+          # Backend is HTTPS-only since #663 (the --http flag was removed and
+          # the legacy HTTP listener deleted). Self-signed cert auto-generated
+          # on first start. Use canonical TLS port 8445 per CLAUDE.md.
+          nohup ./niac daemon --listen 127.0.0.1:8445 > server.log 2>&1 &
           echo "Waiting for server to start..."
           for i in {1..30}; do
-            if curl -sf http://localhost:8080/__version 2>/dev/null; then
+            if curl -skf https://localhost:8445/__version 2>/dev/null; then
               echo "Server ready after $i attempts"
               exit 0
             fi
@@ -667,8 +672,11 @@ jobs:
       - name: Run Playwright E2E tests
         working-directory: ui
         env:
-          E2E_BASE_URL: http://localhost:8080
-        run: npx playwright test --project=chromium --reporter=html
+          E2E_BASE_URL: https://localhost:8445
+          PLAYWRIGHT_IGNORE_HTTPS_ERRORS: "true"
+        # Both chromium and webkit run per E2E_CONVENTIONS — Firefox/mobile/
+        # tablet/visual projects were deleted from playwright.config.ts.
+        run: npx playwright test --reporter=html
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -735,9 +743,11 @@ jobs:
 
       - name: Start server
         run: |
-          nohup ./niac daemon --http --listen 127.0.0.1:8080 > server.log 2>&1 &
+          # Backend is HTTPS-only since #663. Self-signed cert auto-generated.
+          # Use canonical TLS port 8445.
+          nohup ./niac daemon --listen 127.0.0.1:8445 > server.log 2>&1 &
           for i in {1..30}; do
-            if curl -sf http://localhost:8080/__version 2>/dev/null; then
+            if curl -skf https://localhost:8445/__version 2>/dev/null; then
               echo "Server ready"
               exit 0
             fi
@@ -750,7 +760,7 @@ jobs:
         uses: treosh/lighthouse-ci-action@3e7e23fb74242897f95c0ba9cabad3d0227b9b18 # v12.6.2
         with:
           urls: |
-            http://localhost:8080
+            https://localhost:8445
           uploadArtifacts: true
           temporaryPublicStorage: true
 
