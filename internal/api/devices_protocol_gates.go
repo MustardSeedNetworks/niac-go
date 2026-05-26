@@ -23,10 +23,10 @@ type protocolFeatureCheck struct {
 	present func(*config.Device) bool
 }
 
-// gatedDeviceProtocolChecks enumerates the protocols that exist in the
-// current Device struct and have a matching license feature. BGP,
-// OSPF, and SNMPv3 are in the licensed feature catalog but not yet
-// modeled on Device — tracked separately for follow-up.
+// gatedDeviceProtocolChecks enumerates the device-config fields that
+// map to a licensed Pro feature. BGP, OSPF, SNMPv3, and
+// error_injection are in the keygen catalog but not yet modeled on
+// Device — tracked separately for follow-up.
 //
 // Returned by a function rather than held in a package-level slice so
 // gochecknoglobals stays clean; the closures aren't worth caching.
@@ -43,6 +43,25 @@ func gatedDeviceProtocolChecks() []protocolFeatureCheck {
 		{
 			feature: "netbios",
 			present: func(d *config.Device) bool { return d != nil && d.NetBIOSConfig != nil },
+		},
+		{
+			// traffic_shaping: any device-level traffic pattern config
+			// (ARP announcements, periodic pings, random background
+			// traffic) requires Pro.
+			feature: "traffic_shaping",
+			present: func(d *config.Device) bool { return d != nil && d.TrafficConfig != nil },
+		},
+		{
+			// multi_ip: a device with more than one IP address, or
+			// with MapToIP set (UDP-mapping to an external IP), is a
+			// Pro feature. Single-IP devices stay Free.
+			feature: "multi_ip",
+			present: func(d *config.Device) bool {
+				if d == nil {
+					return false
+				}
+				return len(d.IPAddresses) > 1 || d.MapToIP != nil
+			},
 		},
 	}
 }

@@ -161,9 +161,12 @@ func (s *Server) registerPcapRoutes(mux *http.ServeMux) {
 	// SECURITY FIX #156: Apply upload-specific rate limiting for uploads
 	mux.HandleFunc(
 		"/api/v1/pcap/upload",
-		s.recoverMiddleware(s.auth(s.uploadRateLimit(s.csrfProtect(s.handlePcapUpload)))),
+		s.recoverMiddleware(s.auth(s.uploadRateLimit(s.csrfProtect(
+			s.requireFeature("pcap_ingest", s.handlePcapUpload))))),
 	)
-	mux.HandleFunc("/api/v1/pcap/", s.recoverMiddleware(s.auth(s.handlePcapAnalysis)))
+	mux.HandleFunc("/api/v1/pcap/",
+		s.recoverMiddleware(s.auth(
+			s.requireFeature("pcap_ingest", s.handlePcapAnalysis))))
 }
 
 // registerSSERoutes registers Server-Sent Events endpoints for real-time streaming.

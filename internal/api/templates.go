@@ -106,8 +106,16 @@ func (s *Server) handleTemplateByName(w http.ResponseWriter, r *http.Request) {
 	// Extract template name from path: /api/v1/templates/{name}
 	name := strings.TrimPrefix(r.URL.Path, "/api/v1/templates/")
 
-	// Handle /api/v1/templates/use separately
+	// Handle /api/v1/templates/use separately. Applying a template is
+	// gated behind the config_templates feature; listing / reading /
+	// deleting templates stays open.
 	if name == "use" {
+		if s.license != nil && !s.license.HasFeature("config_templates") {
+			s.writeFeatureGate(w, r, "config_templates",
+				"Applying a config template requires the Pro tier. "+
+					"Start a 14-day Pro trial with `niac license trial`.")
+			return
+		}
 		s.handleTemplateUse(w, r)
 		return
 	}
