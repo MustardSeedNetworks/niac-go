@@ -646,7 +646,9 @@ jobs:
 
       - name: Install Playwright browsers
         working-directory: ui
-        run: npx playwright install --with-deps chromium
+        # Per msn-docs-internal/05-Engineering/E2E_CONVENTIONS.md, every PR
+        # runs Chromium (covers Chrome + Edge) and WebKit (covers Safari).
+        run: npx playwright install --with-deps chromium webkit
 
       - name: Start backend server
         run: |
@@ -672,7 +674,9 @@ jobs:
         env:
           E2E_BASE_URL: https://localhost:8445
           PLAYWRIGHT_IGNORE_HTTPS_ERRORS: "true"
-        run: npx playwright test --project=chromium --reporter=html
+        # Both chromium and webkit run per E2E_CONVENTIONS — Firefox/mobile/
+        # tablet/visual projects were deleted from playwright.config.ts.
+        run: npx playwright test --reporter=html
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
