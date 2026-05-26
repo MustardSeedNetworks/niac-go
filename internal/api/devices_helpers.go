@@ -133,6 +133,10 @@ func (s *Server) createAndSaveDevice(
 		return nil, err
 	}
 
+	if !s.requireDeviceProtocolFeatures(w, r, newDevice) {
+		return nil, errValidationFailed
+	}
+
 	newCfg := *deepCopyConfig(cfg)
 	newCfg.Devices = append(newCfg.Devices, *newDevice)
 
