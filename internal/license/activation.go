@@ -17,6 +17,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 )
 
@@ -65,7 +66,15 @@ type ActivationResult struct {
 }
 
 // Manager handles license activation and validation.
+//
+// Manager is safe for concurrent use. State mutations (Activate,
+// Deactivate, StartTrial, CheckIn) take a write lock; reads
+// (GetState, IsActivated, HasFeature, etc.) take a read lock.
+// Per-feature gates in the HTTP layer call read methods on every
+// request, so contention on the write path must stay rare — in
+// practice activation happens once at deploy time.
 type Manager struct {
+	mu          sync.RWMutex
 	state       *ActivationState
 	fingerprint *DeviceFingerprint
 	configDir   string
@@ -100,23 +109,33 @@ func NewManagerWithDir(configDir string) (*Manager, error) {
 	return m, nil
 }
 
-// GetState returns the current activation state.
+// GetState returns the current activation state. The returned pointer
+// must not be mutated by callers; treat it as read-only.
 func (m *Manager) GetState() *ActivationState {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	return m.state
 }
 
-// GetFingerprint returns the device fingerprint.
+// GetFingerprint returns the device fingerprint. Immutable after
+// construction; no lock needed.
 func (m *Manager) GetFingerprint() *DeviceFingerprint {
 	return m.fingerprint
 }
 
 // IsActivated returns true if a valid license is active.
 func (m *Manager) IsActivated() bool {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.isActivatedLocked()
+}
+
+func (m *Manager) isActivatedLocked() bool {
 	if m.state == nil {
 		return false
 	}
 	if m.state.IsTrialMode {
-		return m.IsTrialValid()
+		return m.isTrialValidLocked()
 	}
 	if !m.state.ExpiresAt.IsZero() && time.Now().After(m.state.ExpiresAt) {
 		return false
@@ -129,6 +148,12 @@ func (m *Manager) IsActivated() bool {
 
 // IsTrialValid returns true if trial period is still active.
 func (m *Manager) IsTrialValid() bool {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.isTrialValidLocked()
+}
+
+func (m *Manager) isTrialValidLocked() bool {
 	if m.state == nil || !m.state.IsTrialMode {
 		return false
 	}
@@ -141,6 +166,12 @@ func (m *Manager) IsTrialValid() bool {
 
 // TrialDaysRemaining returns days left in trial.
 func (m *Manager) TrialDaysRemaining() int {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.trialDaysRemainingLocked()
+}
+
+func (m *Manager) trialDaysRemainingLocked() int {
 	if m.state == nil || !m.state.IsTrialMode {
 		return 0
 	}
@@ -157,7 +188,10 @@ func (m *Manager) TrialDaysRemaining() int {
 
 // StartTrial begins the trial period.
 func (m *Manager) StartTrial() *ActivationResult {
-	if m.IsActivated() && !m.state.IsTrialMode {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.isActivatedLocked() && !m.state.IsTrialMode {
 		return &ActivationResult{
 			Success: true,
 			Message: "Already activated with full license",
@@ -166,7 +200,7 @@ func (m *Manager) StartTrial() *ActivationResult {
 	}
 
 	if m.state != nil && !m.state.TrialStartedAt.IsZero() {
-		remaining := m.TrialDaysRemaining()
+		remaining := m.trialDaysRemainingLocked()
 		if remaining <= 0 {
 			return &ActivationResult{
 				Success:     false,
@@ -221,6 +255,9 @@ func (m *Manager) Activate(licenseKey string) *ActivationResult {
 		}
 	}
 
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
 	m.state = &ActivationState{
 		LicenseKey:      info.Key,
 		DeviceHash:      m.fingerprint.Hash(),
@@ -250,6 +287,8 @@ func (m *Manager) Activate(licenseKey string) *ActivationResult {
 
 // Deactivate removes the current license.
 func (m *Manager) Deactivate() error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	licensePath := filepath.Join(m.configDir, licenseFileName)
 	if removeErr := os.Remove(licensePath); removeErr != nil && !os.IsNotExist(removeErr) {
 		return fmt.Errorf("failed to remove license file: %w", removeErr)
@@ -260,6 +299,8 @@ func (m *Manager) Deactivate() error {
 
 // CheckIn updates the last-validated timestamp on a non-trial license.
 func (m *Manager) CheckIn() *ActivationResult {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	if m.state == nil {
 		return &ActivationResult{
 			Success: false,
@@ -278,6 +319,8 @@ func (m *Manager) CheckIn() *ActivationResult {
 
 // NeedsCheckIn returns true if optional check-in is recommended.
 func (m *Manager) NeedsCheckIn() bool {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	if m.state == nil || m.state.IsTrialMode {
 		return false
 	}
