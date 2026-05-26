@@ -17,9 +17,19 @@ var (
 )
 
 const (
-	// MaxDeviceCount is the maximum number of devices allowed.
-	// SECURITY FIX #173: Prevents resource exhaustion via unbounded device creation.
+	// MaxDeviceCount is the absolute device ceiling enforced for every
+	// tier as a resource-exhaustion guard (security fix #173). Pro
+	// licenses raise the soft cap to this value via the
+	// "unlimited_devices" feature.
 	MaxDeviceCount = 1000
+
+	// FreeTierDeviceCount is the soft cap applied when the active
+	// license does NOT include the "unlimited_devices" feature
+	// (Free tier). Crossing it returns 402 + FeatureGateResponse
+	// rather than the generic 429 "device_limit_reached" the hard
+	// ceiling produces — UIs can render the upgrade hint instead of
+	// a server-error toast.
+	FreeTierDeviceCount = 10
 
 	// maxLabelLen is the max length of a hostname label (RFC 1123).
 	maxLabelLen = 63
