@@ -5,6 +5,17 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.84.0](https://github.com/krisarmstrong/niac-go/compare/v0.83.1...v0.84.0) (2026-05-26)
+
+
+### Features
+
+* **i18n:** add errors.license.* keys for tier-gating UI ([#709](https://github.com/krisarmstrong/niac-go/issues/709)) ([76b2a93](https://github.com/krisarmstrong/niac-go/commit/76b2a934265c8cc7f5da120cab5ee4700ff4da4f))
+* **license:** add per-route feature gating framework ([#704](https://github.com/krisarmstrong/niac-go/issues/704)) ([710b566](https://github.com/krisarmstrong/niac-go/commit/710b5668dd4a65dfb57d8df3ecf269aded4ee406))
+* **license:** enforce Free-tier 10-device soft cap on device create ([#706](https://github.com/krisarmstrong/niac-go/issues/706)) ([44e254f](https://github.com/krisarmstrong/niac-go/commit/44e254fbfb34817ea8628a3a51072fb5ee10e714))
+* **license:** gate pcap, templates, traffic_shaping, multi_ip ([#708](https://github.com/krisarmstrong/niac-go/issues/708)) ([0c87ce2](https://github.com/krisarmstrong/niac-go/commit/0c87ce2b2b72ba3ad04529cdfce6e831272bcaa6))
+* **license:** gate STP/FTP/NetBIOS protocols on device create+update ([#707](https://github.com/krisarmstrong/niac-go/issues/707)) ([fe16dab](https://github.com/krisarmstrong/niac-go/commit/fe16dab121ce82fcc91c6a4eb699ae00bdb7ebf2))
+
 ## [0.83.1](https://github.com/krisarmstrong/niac-go/compare/v0.83.0...v0.83.1) (2026-05-26)
 
 
