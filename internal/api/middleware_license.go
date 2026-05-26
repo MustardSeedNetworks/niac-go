@@ -29,6 +29,44 @@ type FeatureGateResponse struct {
 	UpgradeMessage  string `json:"upgradeMessage"`
 }
 
+// defaultUpgradeMessage is the standard upgrade hint surfaced when a
+// caller doesn't supply a feature-specific message.
+const defaultUpgradeMessage = "Start a 14-day Pro trial with `niac license trial` " +
+	"or activate a Pro key with `niac license activate -k <KEY>`."
+
+// writeFeatureGate writes the canonical 402 Payment Required response
+// for a feature-gated request. Shared between requireFeature (route-
+// level) and handler-level soft caps (e.g. device count). Pass an
+// empty upgradeMessage to use defaultUpgradeMessage.
+func (s *Server) writeFeatureGate(
+	w http.ResponseWriter, r *http.Request,
+	feature, upgradeMessage string,
+) {
+	tierName := license.TierFree.String()
+	if s.license != nil {
+		if st := s.license.GetState(); st != nil {
+			tierName = st.Tier.String()
+		}
+	}
+	if upgradeMessage == "" {
+		upgradeMessage = defaultUpgradeMessage
+	}
+
+	resp := FeatureGateResponse{
+		Error:           "Feature requires the Pro tier",
+		Code:            errCodeTierTooLow,
+		RequiredFeature: feature,
+		CurrentTier:     tierName,
+		UpgradeMessage:  upgradeMessage,
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusPaymentRequired)
+	if encErr := json.NewEncoder(w).Encode(resp); encErr != nil {
+		slog.ErrorContext(r.Context(),
+			"failed to encode feature-gate response", "error", encErr)
+	}
+}
+
 // requireFeature wraps `next` so it only runs when the active license
 // includes `feature`. Returns 402 Payment Required with a structured
 // upgrade hint otherwise.
@@ -38,30 +76,10 @@ type FeatureGateResponse struct {
 // local workflows.
 func (s *Server) requireFeature(feature string, next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		mgr := s.license
-		if mgr == nil || mgr.HasFeature(feature) {
+		if s.license == nil || s.license.HasFeature(feature) {
 			next(w, r)
 			return
 		}
-
-		tierName := license.TierFree.String()
-		if st := mgr.GetState(); st != nil {
-			tierName = st.Tier.String()
-		}
-
-		resp := FeatureGateResponse{
-			Error:           "Feature requires the Pro tier",
-			Code:            errCodeTierTooLow,
-			RequiredFeature: feature,
-			CurrentTier:     tierName,
-			UpgradeMessage: "Start a 14-day Pro trial with `niac license trial` " +
-				"or activate a Pro key with `niac license activate -k <KEY>`.",
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusPaymentRequired)
-		if encErr := json.NewEncoder(w).Encode(resp); encErr != nil {
-			slog.ErrorContext(r.Context(),
-				"failed to encode feature-gate response", "error", encErr)
-		}
+		s.writeFeatureGate(w, r, feature, "")
 	}
 }
