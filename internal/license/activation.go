@@ -17,6 +17,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"sync"
 	"time"
 )
@@ -128,6 +129,23 @@ func (m *Manager) IsActivated() bool {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	return m.isActivatedLocked()
+}
+
+// HasFeature reports whether the active license includes the named
+// feature. Returns false unless the license is activated AND the
+// feature is in the active feature set. Active trials grant Pro-
+// equivalent features. Canonical feature names come from keygen's
+// productCatalog (e.g. "bgp", "ospf", "snmpv3", "pcap_ingest").
+//
+// Per-feature gates in HTTP handlers call this on every request, so
+// the lookup must stay cheap: single slice scan under RLock.
+func (m *Manager) HasFeature(feature string) bool {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	if !m.isActivatedLocked() || m.state == nil {
+		return false
+	}
+	return slices.Contains(m.state.Features, feature)
 }
 
 func (m *Manager) isActivatedLocked() bool {

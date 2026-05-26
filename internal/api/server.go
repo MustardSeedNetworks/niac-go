@@ -33,6 +33,7 @@ import (
 
 	"github.com/krisarmstrong/niac-go/internal/config"
 	"github.com/krisarmstrong/niac-go/internal/library"
+	"github.com/krisarmstrong/niac-go/internal/license"
 	"github.com/krisarmstrong/niac-go/internal/protocols"
 	"github.com/krisarmstrong/niac-go/internal/storage"
 )
@@ -279,6 +280,10 @@ type Server struct {
 	bgStopOnce        sync.Once
 	library           *library.Library
 	tlsFingerprint    tlsFingerprintCache
+	// license is the offline license manager. Populated lazily in
+	// NewServer; may be nil in tests / dev builds that don't exercise
+	// license-gated endpoints.
+	license *license.Manager
 	// tokens is the active bearer-token store. Seeded from
 	// ServerConfig.TokenFile (preferred) or ServerConfig.Token at
 	// construction time, then rotated by Server.ReloadTokensFromFile or
@@ -311,7 +316,7 @@ func NewServer(cfg ServerConfig) *Server {
 		slog.Info("[API] Content library opened", "root", lib.Root())
 	}
 
-	return &Server{
+	srv := &Server{
 		cfg:           cfg,
 		logger:        slog.Default(),
 		startTime:     time.Now(),
@@ -326,6 +331,17 @@ func NewServer(cfg ServerConfig) *Server {
 		library:       lib,
 		tokens:        initialTokenStore(cfg),
 	}
+	// License manager is best-effort: failure to initialise leaves
+	// srv.license == nil, which the requireFeature middleware treats as
+	// "license disabled" so dev / test builds keep working without
+	// forcing a license setup.
+	if lm, lmErr := license.NewManager(); lmErr == nil {
+		srv.license = lm
+	} else {
+		slog.Warn("[API] license manager init failed; feature gates will allow all",
+			"error", lmErr)
+	}
+	return srv
 }
 
 // initialTokenStore seeds the bearer-token store at construction time.
