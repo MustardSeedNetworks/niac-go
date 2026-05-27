@@ -44,7 +44,7 @@ export const ConnectionStatus: FC = () => {
   }, [checkConnection]);
 
   return (
-    <div className="flex items-center gap-2" title={STATUS_LABELS[status]}>
+    <div className="flex items-center gap-compact" title={STATUS_LABELS[status]}>
       <span className={`h-2 w-2 rounded-full ${STATUS_STYLES[status]}`} />
       <span className="text-xs text-text-muted">
         {status === 'connected' ? 'Online' : status === 'disconnected' ? 'Offline' : '...'}

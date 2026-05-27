@@ -212,6 +212,9 @@ jobs:
       - name: Run Biome lint
         run: npx @biomejs/biome check src/
 
+      - name: Design token discipline (Phase 0 gate)
+        run: ../scripts/check-token-discipline.sh
+
       - name: Type check
         run: npx tsc --noEmit
 

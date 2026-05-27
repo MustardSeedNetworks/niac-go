@@ -23,14 +23,14 @@ export const TemplatesHeader: FC<TemplatesHeaderProps> = ({
 }) => {
   return (
     <Card className="border-surface-border bg-bg-surface/70">
-      <CardContent className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-4">
+      <CardContent className="stack-lg">
+        <div className="flex flex-wrap items-center justify-between gap-comfortable">
           <div>
-            <H2 className="flex items-center gap-2">
+            <H2 className="flex items-center gap-compact">
               <FileCode className={`${iconSizes.lg} text-brand-accent`} />
               Configuration Templates
             </H2>
-            <P className="text-text-muted mt-1">
+            <P className="text-text-muted mt-tight">
               Browse and use pre-configured network templates to quickly start simulations.
             </P>
           </div>
@@ -53,7 +53,7 @@ export const TemplatesHeader: FC<TemplatesHeaderProps> = ({
             placeholder="Search templates by name, description, or type..."
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full rounded-lg border border-surface-border bg-bg-base/60 py-3 pl-10 pr-10 text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none"
+            className="w-full rounded-lg border border-surface-border bg-bg-base/60 py-row-lg pl-10 pr-icon text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none"
           />
           {searchQuery && (
             <button
@@ -70,7 +70,7 @@ export const TemplatesHeader: FC<TemplatesHeaderProps> = ({
         {/* Status message */}
         {message && (
           <div
-            className={`flex items-center gap-2 rounded-lg p-3 ${
+            className={`flex items-center gap-compact rounded-lg pad-sm ${
               message.type === 'success'
                 ? 'border border-status-success/30 bg-status-success/10 text-status-success'
                 : 'border border-status-error/30 bg-status-error/10 text-status-error'

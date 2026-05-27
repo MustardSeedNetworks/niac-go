@@ -217,13 +217,13 @@ export const RuntimeControlPage: FC = () => {
   }, []);
 
   return (
-    <div className="space-y-6">
+    <div className="stack-xl">
       {/* Daemon Mode Warning */}
       {!isDaemonMode && (
         <Card className="border-status-warning/30 bg-status-warning/20">
-          <CardContent className="space-y-3">
-            <div className="flex items-start gap-3">
-              <BellRing className={`mt-1 ${iconSizes.lg} text-status-warning`} />
+          <CardContent className="stack">
+            <div className="flex items-start gap-default">
+              <BellRing className={`mt-tight ${iconSizes.lg} text-status-warning`} />
               <div>
                 <p className="font-semibold text-status-warning">
                   {t('runtime.daemonModeWarning')}
@@ -231,7 +231,7 @@ export const RuntimeControlPage: FC = () => {
                 <SmallText className="text-status-warning/90">
                   To use simulation controls, start NIAC in daemon mode:
                 </SmallText>
-                <code className="mt-2 block rounded bg-black/40 p-3 font-mono text-sm text-status-warning">
+                <code className="mt-inline block rounded bg-black/40 pad-sm font-mono text-sm text-status-warning">
                   niac daemon --listen :8080 --token yourtoken
                 </code>
               </div>
@@ -243,16 +243,16 @@ export const RuntimeControlPage: FC = () => {
       {/* Start Simulation Card */}
       {isDaemonMode && !simStatus?.running && (
         <Card className="border-surface-border bg-gradient-to-br from-brand-primary/30 to-bg-surface/70">
-          <CardContent className="space-y-4">
+          <CardContent className="stack-lg">
             {/* Single-row action bar: interface + start. The interface
                 dropdown takes the natural width of its content; Start sits
                 immediately next to it so the action is obvious. */}
-            <div className="flex flex-wrap items-end gap-3">
-              <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-end gap-default">
+              <div className="flex items-center gap-default">
                 <PlugZap className={`${iconSizes.xl} text-brand-accent`} />
                 <H2>{t('runtime.startSimulationTitle')}</H2>
               </div>
-              <div className="ml-auto flex flex-wrap items-end gap-3">
+              <div className="ml-auto flex flex-wrap items-end gap-default">
                 <div className="min-w-[14rem]">
                   <label htmlFor="rc-interface" className="block text-xs text-text-muted">
                     Network interface
@@ -267,7 +267,7 @@ export const RuntimeControlPage: FC = () => {
                       onChange={handleInterfaceChange}
                       disabled={interfacesLoading || interfaces.length === 0}
                       title="Pick the host interface the daemon should bind to. Loopback (lo0/lo) is safest for local testing."
-                      className="w-full rounded border border-surface-border bg-bg-elevated py-2 pl-10 pr-3 text-sm text-text-primary focus:border-brand-accent focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                      className="w-full rounded border border-surface-border bg-bg-elevated py-row pl-10 pr-3 text-sm text-text-primary focus:border-brand-accent focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {interfacesLoading && <option value="">Loading…</option>}
                       {!interfacesLoading && interfaces.length === 0 && (
@@ -311,7 +311,7 @@ export const RuntimeControlPage: FC = () => {
             </div>
 
             {/* Picked-config status pill */}
-            <div className="flex items-center justify-between rounded border border-surface-border bg-bg-surface/40 px-3 py-2 text-xs">
+            <div className="flex-between rounded border border-surface-border bg-bg-surface/40 px-3 py-row text-xs">
               <span className="text-text-muted">Configuration:</span>
               {simulationSettings.configName || quickUploadFile ? (
                 <SmallText className="text-status-success">

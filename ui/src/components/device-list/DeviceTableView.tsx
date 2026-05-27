@@ -22,7 +22,7 @@ export const DeviceTableView: FC = () => {
       <CardContent className="p-0">
         {/* Table header */}
         <div>
-          <div className="flex items-center gap-4 border-b border-surface-border px-4 py-3 bg-bg-base/40">
+          <div className="flex items-center gap-comfortable border-b border-surface-border px-4 py-row-lg bg-bg-base/40">
             <input
               type="checkbox"
               checked={selectedDevices.size === devices.length && devices.length > 0}
@@ -30,7 +30,7 @@ export const DeviceTableView: FC = () => {
               className="h-4 w-4 rounded border-border-muted bg-bg-elevated text-brand-primary focus:ring-brand-primary"
               aria-label="Select all devices"
             />
-            <div className="flex-1 grid grid-cols-12 gap-4 text-sm font-medium text-text-muted">
+            <div className="flex-1 grid grid-cols-12 gap-comfortable text-sm font-medium text-text-muted">
               <div className="col-span-3">Hostname</div>
               <div className="col-span-2">Type</div>
               <div className="col-span-2">IP Address</div>
@@ -55,7 +55,7 @@ export const DeviceTableView: FC = () => {
             return (
               <div
                 key={device.hostname}
-                className={`flex items-center gap-4 px-4 py-3 hover:bg-surface-hover transition-colors ${
+                className={`flex items-center gap-comfortable px-4 py-row-lg hover:bg-surface-hover transition-colors ${
                   selectedDevices.has(device.hostname) ? 'bg-brand-primary/10' : ''
                 }`}
               >
@@ -66,9 +66,9 @@ export const DeviceTableView: FC = () => {
                   className="h-4 w-4 rounded border-border-muted bg-bg-elevated text-brand-primary focus:ring-brand-primary"
                   aria-label={`Select ${device.hostname}`}
                 />
-                <div className="flex-1 grid grid-cols-12 gap-4 items-center">
+                <div className="flex-1 grid grid-cols-12 gap-comfortable items-center">
                   {/* Hostname */}
-                  <div className="col-span-3 flex items-center gap-2">
+                  <div className="col-span-3 flex items-center gap-compact">
                     <DeviceIcon className={`${iconSizes.md} text-text-muted`} />
                     <button
                       type="button"
@@ -93,12 +93,14 @@ export const DeviceTableView: FC = () => {
                       {device.ip || device.ips?.[0] || '—'}
                     </span>
                     {device.ips && device.ips.length > 1 && (
-                      <span className="ml-1 text-text-muted text-xs">+{device.ips.length - 1}</span>
+                      <span className="ml-tight text-text-muted text-xs">
+                        +{device.ips.length - 1}
+                      </span>
                     )}
                   </div>
 
                   {/* Protocols */}
-                  <div className="col-span-3 flex flex-wrap gap-1">
+                  <div className="col-span-3 flex flex-wrap gap-tight">
                     {deviceProtocols.length > 0 ? (
                       deviceProtocols.slice(0, 4).map((proto) => (
                         <Tag key={proto} colorScheme="gray" className="text-xs">
@@ -116,11 +118,11 @@ export const DeviceTableView: FC = () => {
                   </div>
 
                   {/* Actions */}
-                  <div className="col-span-2 flex justify-end gap-1">
+                  <div className="col-span-2 flex justify-end gap-tight">
                     <button
                       type="button"
                       onClick={() => onEdit(device.hostname)}
-                      className="p-2 text-text-muted hover:text-brand-accent hover:bg-surface-hover rounded-lg transition-colors"
+                      className="pad-xs text-text-muted hover:text-brand-accent hover:bg-surface-hover rounded-lg transition-colors"
                       title={`Open the device editor for ${device.hostname} to modify protocols, interfaces, and credentials`}
                       aria-label={`Edit device ${device.hostname}`}
                     >
@@ -129,7 +131,7 @@ export const DeviceTableView: FC = () => {
                     <button
                       type="button"
                       onClick={() => onClone(device.hostname)}
-                      className="p-2 text-text-muted hover:text-status-info hover:bg-surface-hover rounded-lg transition-colors"
+                      className="pad-xs text-text-muted hover:text-status-info hover:bg-surface-hover rounded-lg transition-colors"
                       title={`Create a copy of ${device.hostname} with a new hostname; all protocols and interfaces are duplicated`}
                       aria-label={`Clone device ${device.hostname}`}
                     >
@@ -138,7 +140,7 @@ export const DeviceTableView: FC = () => {
                     <button
                       type="button"
                       onClick={() => onDelete(device.hostname)}
-                      className="p-2 text-text-muted hover:text-status-error hover:bg-surface-hover rounded-lg transition-colors"
+                      className="pad-xs text-text-muted hover:text-status-error hover:bg-surface-hover rounded-lg transition-colors"
                       title={`Permanently remove ${device.hostname} from the library; cannot be undone`}
                       aria-label={`Delete device ${device.hostname}`}
                     >

@@ -19,7 +19,7 @@ export const DeviceStatusMessage: FC<DeviceStatusMessageProps> = ({ message, onD
 
   return (
     <div
-      className={`flex items-center gap-2 rounded-lg p-3 ${
+      className={`flex items-center gap-compact rounded-lg pad-sm ${
         message.type === 'success'
           ? 'border border-status-success/30 bg-status-success/10 text-status-success'
           : 'border border-status-error/30 bg-status-error/10 text-status-error'

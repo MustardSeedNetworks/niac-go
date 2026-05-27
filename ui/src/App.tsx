@@ -51,12 +51,12 @@ function TopBar(): ReactElement {
     <>
       {/* Left side reserved for future breadcrumbs / page-level chrome. */}
       <div className="flex items-center" />
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-compact">
         <ConnectionStatus />
         <button
           type="button"
           onClick={toggleTheme}
-          className="p-2 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-hover"
+          className="pad-xs rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-hover"
           title={themeToggleLabel}
           aria-label={themeToggleLabel}
         >
@@ -156,7 +156,7 @@ const PageWithErrorBoundary = memo(
     const location = useLocation();
     return (
       <PageErrorBoundary key={location.pathname}>
-        <section className="space-y-6">
+        <section className="stack-xl">
           <Breadcrumbs />
           <PageHeader
             icon={page.icon}

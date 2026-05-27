@@ -187,7 +187,7 @@ export const HexDumpViewer: FC<HexDumpViewerProps> = memo(
 
     if (!rawData) {
       return (
-        <div className="h-full flex items-center justify-center text-text-muted">
+        <div className="h-full flex-center text-text-muted">
           <p className="text-sm">Select a packet to view hex dump</p>
         </div>
       );
@@ -198,19 +198,19 @@ export const HexDumpViewer: FC<HexDumpViewerProps> = memo(
     return (
       <div className="h-full flex flex-col">
         {/* Header with legend */}
-        <div className="flex items-center justify-between mb-2 pb-2 border-b border-surface-border">
-          <div className="flex items-center gap-4 text-xs">
+        <div className="flex-between mb-2 pb-inline border-b border-surface-border">
+          <div className="flex items-center gap-comfortable text-xs">
             <span className="text-text-muted">{totalBytes} bytes</span>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-compact">
               <span className="w-3 h-3 bg-status-info/30 rounded" />
               <span className="text-text-muted">Header</span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-compact">
               <span className="w-3 h-3 bg-bg-muted/30 rounded" />
               <span className="text-text-muted">Payload</span>
             </div>
             {highlightStart >= 0 && (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-compact">
                 <span className="w-3 h-3 bg-status-warning/40 rounded" />
                 <span className="text-text-muted">Selected</span>
               </div>
@@ -219,7 +219,7 @@ export const HexDumpViewer: FC<HexDumpViewerProps> = memo(
         </div>
 
         {/* Hex dump content */}
-        <div className="flex-1 overflow-y-auto rounded-lg bg-bg-base/70 p-3 border border-surface-border">
+        <div className="flex-1 overflow-y-auto rounded-lg bg-bg-base/70 pad-sm border border-surface-border">
           <div className="space-y-0.5">
             {rows.map((row) => (
               <HexRow

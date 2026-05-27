@@ -18,8 +18,8 @@ export const TemplatesLoadingState: FC<LoadingStateProps> = ({ show }) => {
 
   return (
     <Card className="border-surface-border bg-bg-surface/70">
-      <CardContent className="flex items-center justify-center py-12">
-        <div className="flex items-center gap-3 text-text-muted">
+      <CardContent className="flex-center py-centered">
+        <div className="flex items-center gap-default text-text-muted">
           <div
             className={`${iconSizes.lg} animate-spin rounded-full border-2 border-brand-primary border-t-transparent`}
           />
@@ -43,15 +43,15 @@ export const TemplatesErrorState: FC<ErrorStateProps> = ({ error, onRetry }) => 
 
   return (
     <Card className="border-status-error/30 bg-status-error/20">
-      <CardContent className="space-y-3">
-        <div className="flex items-start gap-3">
-          <AlertCircle className={`mt-1 ${iconSizes.lg} text-status-error`} />
+      <CardContent className="stack">
+        <div className="flex items-start gap-default">
+          <AlertCircle className={`mt-tight ${iconSizes.lg} text-status-error`} />
           <div>
             <p className="font-semibold text-status-error">
               {t('templates.states.loadErrorTitle')}
             </p>
             <SmallText className="text-status-error/90">{error.message}</SmallText>
-            <Button variant="outline" size="sm" className="mt-3" onClick={onRetry}>
+            <Button variant="outline" size="sm" className="mt-heading" onClick={onRetry}>
               {t('templates.states.retry')}
             </Button>
           </div>
@@ -74,13 +74,13 @@ export const TemplatesEmptyState: FC<EmptyStateProps> = ({ show, onUploadClick }
 
   return (
     <Card className="border-surface-border bg-bg-surface/70">
-      <CardContent className="py-12 text-center">
+      <CardContent className="py-centered text-center">
         <FileCode className={`mx-auto ${iconSizes['3xl']} text-text-disabled`} />
-        <H2 className="mt-4 mb-2">{t('templates.states.emptyTitle')}</H2>
+        <H2 className="mt-content mb-2">{t('templates.states.emptyTitle')}</H2>
         <P className="text-text-muted">{t('templates.states.emptyDescription')}</P>
         <Button
           tone="violet"
-          className="mt-4"
+          className="mt-content"
           leftIcon={<Upload className={iconSizes.md} />}
           onClick={onUploadClick}
         >
@@ -109,13 +109,13 @@ export const TemplatesNoResultsState: FC<NoResultsStateProps> = ({
 
   return (
     <Card className="border-surface-border bg-bg-surface/70">
-      <CardContent className="py-12 text-center">
+      <CardContent className="py-centered text-center">
         <Search className={`mx-auto ${iconSizes['3xl']} text-text-disabled`} />
-        <H2 className="mt-4 mb-2">{t('templates.states.noMatchTitle')}</H2>
+        <H2 className="mt-content mb-2">{t('templates.states.noMatchTitle')}</H2>
         <P className="text-text-muted">
           {t('templates.states.noMatchDescription', { query: searchQuery })}
         </P>
-        <Button variant="outline" className="mt-4" onClick={onClearSearch}>
+        <Button variant="outline" className="mt-content" onClick={onClearSearch}>
           {t('templates.states.clearSearch')}
         </Button>
       </CardContent>

@@ -30,7 +30,7 @@ export const CdpSection: FC<ProtocolSectionProps> = ({
       }}
     >
       {device.cdp?.enabled && (
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-comfortable md:grid-cols-2">
           <FormField label="Platform" helpText="Hardware platform">
             <input
               type="text"

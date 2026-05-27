@@ -39,7 +39,7 @@ export function OverviewSection({ searchQuery }: OverviewSectionProps): ReactEle
   }, [searchQuery]);
 
   return (
-    <div className="space-y-6">
+    <div className="stack-xl">
       <section>
         <h3 className="text-sm font-semibold text-text-primary mb-2">
           {t('overview.whatNiacDoesTitle')}
@@ -52,18 +52,18 @@ export function OverviewSection({ searchQuery }: OverviewSectionProps): ReactEle
           {t('overview.categoriesTitle')}
         </h3>
         {filteredCategories.length === 0 ? (
-          <p className="text-sm text-text-muted py-2">{t('overview.categoriesEmpty')}</p>
+          <p className="text-sm text-text-muted py-row">{t('overview.categoriesEmpty')}</p>
         ) : (
-          <div className="space-y-2">
+          <div className="stack-sm">
             {filteredCategories.map((cat) => (
-              <div key={cat.id} className="bg-surface-hover rounded-lg p-3">
+              <div key={cat.id} className="bg-surface-hover rounded-lg pad-sm">
                 <div className={layout.flex.between}>
-                  <h4 className="text-sm font-medium text-text-primary">{cat.name}</h4>
+                  <h4 className="label">{cat.name}</h4>
                   <code className="text-xs text-text-muted">
                     {t('overview.categoryItems', { count: cat.items.length })}
                   </code>
                 </div>
-                <p className="text-xs text-text-muted mt-1">{cat.summary}</p>
+                <p className="text-xs text-text-muted mt-tight">{cat.summary}</p>
               </div>
             ))}
           </div>
@@ -75,9 +75,9 @@ export function OverviewSection({ searchQuery }: OverviewSectionProps): ReactEle
           {t('overview.webUiQuickRefTitle')}
         </h3>
         {filteredFeatures.length === 0 ? (
-          <p className="text-sm text-text-muted py-2">{t('overview.featuresEmpty')}</p>
+          <p className="text-sm text-text-muted py-row">{t('overview.featuresEmpty')}</p>
         ) : (
-          <div className="space-y-2">
+          <div className="stack-sm">
             {filteredFeatures.map((feature) => (
               <FeatureCard key={feature.path} feature={feature} />
             ))}
@@ -94,10 +94,10 @@ interface FeatureCardProps {
 
 function FeatureCard({ feature }: FeatureCardProps): ReactElement {
   return (
-    <div className="bg-surface-hover rounded-lg p-3 hover:bg-surface-hover transition-colors">
+    <div className="bg-surface-hover rounded-lg pad-sm hover:bg-surface-hover transition-colors">
       <div className={layout.flex.between}>
         <div className={layout.inline.default}>
-          <h4 className="text-sm font-medium text-text-primary">{feature.title}</h4>
+          <h4 className="label">{feature.title}</h4>
           {feature.badge && (
             <span
               className={cn(
@@ -112,7 +112,7 @@ function FeatureCard({ feature }: FeatureCardProps): ReactElement {
         </div>
         <code className="text-xs text-text-muted">{feature.path}</code>
       </div>
-      <p className="text-xs text-text-muted mt-1">{feature.description}</p>
+      <p className="text-xs text-text-muted mt-tight">{feature.description}</p>
     </div>
   );
 }

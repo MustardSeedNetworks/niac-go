@@ -34,7 +34,7 @@ export const DeviceNode: FC<DeviceNodeProps> = memo(({ data, selected }) => {
     <button
       type="button"
       className={`
-        relative px-4 py-3 rounded-xl border-2 transition-all duration-200 text-left
+        relative px-4 py-row-lg rounded-xl border-2 transition-all duration-200 text-left
         ${selected ? 'ring-2 ring-brand-primary ring-offset-2 ring-offset-gray-900' : ''}
         hover:shadow-lg hover:shadow-black/30
       `}
@@ -73,9 +73,9 @@ export const DeviceNode: FC<DeviceNodeProps> = memo(({ data, selected }) => {
       />
 
       {/* Icon and name */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-default">
         <div
-          className="p-2 rounded-lg"
+          className="pad-xs rounded-lg"
           style={{
             backgroundColor: `color-mix(in srgb, ${color} 20%, transparent)`,
           }}
@@ -90,7 +90,7 @@ export const DeviceNode: FC<DeviceNodeProps> = memo(({ data, selected }) => {
 
       {/* IPs */}
       {data.ips && data.ips.length > 0 && (
-        <div className="mt-2 pt-2 border-t border-surface-border">
+        <div className="mt-inline pt-2 border-t border-surface-border">
           <div className="text-xs font-mono text-text-muted truncate">
             {data.ips[0]}
             {data.ips.length > 1 && (
@@ -102,7 +102,7 @@ export const DeviceNode: FC<DeviceNodeProps> = memo(({ data, selected }) => {
 
       {/* Protocols */}
       {data.protocols && data.protocols.length > 0 && (
-        <div className="mt-2 flex flex-wrap gap-1">
+        <div className="mt-inline flex flex-wrap gap-tight">
           {data.protocols.slice(0, 3).map((proto) => (
             <span
               key={proto}

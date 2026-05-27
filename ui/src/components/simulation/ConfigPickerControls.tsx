@@ -16,7 +16,7 @@ export const ViewToggle: FC<{
     onClick={onClick}
     aria-pressed={active}
     title={label}
-    className={`rounded px-2 py-1 transition-colors ${
+    className={`rounded px-cell py-compact transition-colors ${
       active
         ? 'bg-brand-primary/20 text-brand-accent'
         : 'text-text-muted hover:bg-surface-hover hover:text-text-primary'

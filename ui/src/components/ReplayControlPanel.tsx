@@ -71,14 +71,14 @@ export const ReplayControlPanel: FC = () => {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="stack-lg">
       {/* Status Card */}
       {replayStatus?.running && (
         <Card>
           <CardContent>
-            <div className="flex items-center justify-between">
+            <div className="flex-between">
               <div>
-                <div className="flex items-center gap-2 mb-1">
+                <div className="flex items-center gap-compact mb-tight">
                   <Tag colorScheme="green">Running</Tag>
                   <span className="font-medium">{replayStatus.file}</span>
                 </div>
@@ -101,8 +101,8 @@ export const ReplayControlPanel: FC = () => {
 
       {/* Control Card */}
       <Card>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <CardContent className="stack-lg">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-comfortable">
             {/* File Selector */}
             <div className="col-span-full">
               <label htmlFor="replay-file" className="block text-sm font-medium mb-2">
@@ -113,7 +113,7 @@ export const ReplayControlPanel: FC = () => {
                 value={selectedFile}
                 onChange={(e) => setSelectedFile(e.target.value)}
                 disabled={replayStatus?.running}
-                className="w-full px-3 py-2 bg-bg-elevated border border-border-default rounded-md focus:outline-none focus:ring-2 focus:ring-status-info disabled:opacity-50"
+                className="w-full px-3 py-row bg-bg-elevated border border-border-default rounded-md focus:outline-none focus:ring-2 focus:ring-status-info disabled:opacity-50"
               >
                 <option value="">Select PCAP file...</option>
                 {pcapFiles?.map((file) => (
@@ -138,7 +138,7 @@ export const ReplayControlPanel: FC = () => {
                 onChange={(e) => setLoopMs(Number.parseInt(e.target.value, 10) || 0)}
                 placeholder="0 = no loop"
                 disabled={replayStatus?.running}
-                className="w-full px-3 py-2 bg-bg-elevated border border-border-default rounded-md focus:outline-none focus:ring-2 focus:ring-status-info disabled:opacity-50"
+                className="w-full px-3 py-row bg-bg-elevated border border-border-default rounded-md focus:outline-none focus:ring-2 focus:ring-status-info disabled:opacity-50"
               />
               <SmallText className="text-text-muted">
                 0 = Play once, &gt;0 = Loop with delay
@@ -159,7 +159,7 @@ export const ReplayControlPanel: FC = () => {
                 value={scale}
                 onChange={(e) => setScale(Number.parseFloat(e.target.value) || 1.0)}
                 disabled={replayStatus?.running}
-                className="w-full px-3 py-2 bg-bg-elevated border border-border-default rounded-md focus:outline-none focus:ring-2 focus:ring-status-info disabled:opacity-50"
+                className="w-full px-3 py-row bg-bg-elevated border border-border-default rounded-md focus:outline-none focus:ring-2 focus:ring-status-info disabled:opacity-50"
               />
               <SmallText className="text-text-muted">
                 1.0 = Original timing, 2.0 = 2x faster, 0.5 = 2x slower
@@ -172,7 +172,7 @@ export const ReplayControlPanel: FC = () => {
             <div
               role="alert"
               aria-live="polite"
-              className={`p-3 rounded ${
+              className={`pad-sm rounded ${
                 message.type === 'success'
                   ? 'bg-status-success/10 text-status-success border border-status-success/20'
                   : 'bg-status-error/10 text-status-error border border-status-error/20'

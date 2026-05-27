@@ -75,11 +75,11 @@ export const LogFilters: FC<LogFiltersProps> = memo(
     };
 
     return (
-      <div className="space-y-3">
+      <div className="stack">
         {/* Filter Controls Row */}
-        <div className="flex flex-wrap items-center gap-4">
+        <div className="flex flex-wrap items-center gap-comfortable">
           {/* Level Filter */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-compact">
             <label htmlFor="level-filter" className="text-sm text-text-muted">
               Level:
             </label>
@@ -87,7 +87,7 @@ export const LogFilters: FC<LogFiltersProps> = memo(
               id="level-filter"
               value={levelFilter}
               onChange={handleLevelChange}
-              className="rounded-lg border border-surface-border bg-bg-base/60 px-3 py-1.5 text-sm text-text-primary focus:border-brand-accent focus:outline-none"
+              className="rounded-lg border border-surface-border bg-bg-base/60 px-3 py-compact-md text-sm text-text-primary focus:border-brand-accent focus:outline-none"
               aria-label="Filter by log level"
             >
               {LOG_LEVELS.map((level) => (
@@ -99,7 +99,7 @@ export const LogFilters: FC<LogFiltersProps> = memo(
           </div>
 
           {/* Protocol Filter */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-compact">
             <label htmlFor="protocol-filter" className="text-sm text-text-muted">
               Protocol:
             </label>
@@ -107,7 +107,7 @@ export const LogFilters: FC<LogFiltersProps> = memo(
               id="protocol-filter"
               value={protocolFilter}
               onChange={handleProtocolChange}
-              className="rounded-lg border border-surface-border bg-bg-base/60 px-3 py-1.5 text-sm text-text-primary focus:border-brand-accent focus:outline-none"
+              className="rounded-lg border border-surface-border bg-bg-base/60 px-3 py-compact-md text-sm text-text-primary focus:border-brand-accent focus:outline-none"
               aria-label="Filter by protocol"
             >
               {PROTOCOLS.map((protocol) => (
@@ -119,7 +119,7 @@ export const LogFilters: FC<LogFiltersProps> = memo(
           </div>
 
           {/* Search Input */}
-          <div className="flex flex-1 items-center gap-2">
+          <div className="flex flex-1 items-center gap-compact">
             <label htmlFor="log-search" className="text-sm text-text-muted">
               Search:
             </label>
@@ -131,7 +131,7 @@ export const LogFilters: FC<LogFiltersProps> = memo(
                 value={searchQuery}
                 onChange={handleSearchChange}
                 placeholder="Filter logs..."
-                className="w-full rounded-lg border border-surface-border bg-bg-base/60 py-1.5 pl-9 pr-3 text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none"
+                className="w-full rounded-lg border border-surface-border bg-bg-base/60 py-compact-md pl-9 pr-3 text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none"
                 aria-label="Search logs"
               />
             </div>
@@ -139,10 +139,10 @@ export const LogFilters: FC<LogFiltersProps> = memo(
         </div>
 
         {/* Action Controls Row */}
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-comfortable">
+          <div className="flex items-center gap-comfortable">
             {/* Auto-scroll Toggle */}
-            <label className="flex cursor-pointer items-center gap-2">
+            <label className="flex cursor-pointer items-center gap-compact">
               <input
                 type="checkbox"
                 checked={autoScroll}
@@ -159,7 +159,7 @@ export const LogFilters: FC<LogFiltersProps> = memo(
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-compact">
             {onPauseToggle && (
               <Button
                 variant={paused ? 'solid' : 'outline'}

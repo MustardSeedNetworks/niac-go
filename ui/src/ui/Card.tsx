@@ -51,9 +51,9 @@ const hoverStyles =
 
 const paddingClasses: Record<string, string> = {
   none: '',
-  sm: 'p-4',
-  md: 'p-6',
-  lg: 'p-8',
+  sm: 'pad',
+  md: 'pad-lg',
+  lg: 'pad-xl',
 };
 
 // ============================================================================
@@ -162,7 +162,7 @@ export const StatusCard: FC<StatusCardProps> = ({
   return (
     // biome-ignore lint/a11y/noStaticElementInteractions: Interactive role is conditionally applied based on onClick presence
     <div
-      className={`rounded-xl ${variantStyles[variant]} p-4 sm:p-6
+      className={`rounded-xl ${variantStyles[variant]} pad sm:pad-lg
         transition-all hover:border-surface-border touch-manipulation
         focus-visible:ring-2 focus-visible:ring-brand-primary focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 outline-none
         ${isInteractive ? 'cursor-pointer active:scale-[0.98]' : ''}
@@ -174,8 +174,8 @@ export const StatusCard: FC<StatusCardProps> = ({
       {...ariaProps}
     >
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
+      <div className="flex-between">
+        <div className="flex items-center gap-default">
           {icon && (
             <span className="text-text-muted shrink-0 w-5 h-5" aria-hidden="true">
               {icon}
@@ -188,14 +188,14 @@ export const StatusCard: FC<StatusCardProps> = ({
             {subtitle && <p className="text-xs text-text-muted leading-tight">{subtitle}</p>}
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-compact">
           {headerAction}
           <StatusBadge status={status} size="md" />
         </div>
       </div>
 
       {/* Content */}
-      <div className="mt-4" aria-describedby={titleId}>
+      <div className="mt-content" aria-describedby={titleId}>
         {children}
       </div>
     </div>
@@ -212,7 +212,7 @@ interface CardContentProps {
 }
 
 export const CardContent: FC<CardContentProps> = ({ children, className = '' }) => (
-  <div className={`p-6 ${className}`}>{children}</div>
+  <div className={`pad-lg ${className}`}>{children}</div>
 );
 
 interface CardHeaderProps {
@@ -222,11 +222,9 @@ interface CardHeaderProps {
 }
 
 export const CardHeader: FC<CardHeaderProps> = ({ children, className = '', actions }) => (
-  <div
-    className={`flex items-center justify-between px-6 py-4 border-b border-surface-border ${className}`}
-  >
-    <div className="flex items-center gap-3">{children}</div>
-    {actions && <div className="flex items-center gap-2">{actions}</div>}
+  <div className={`flex-between px-6 py-4 border-b border-surface-border ${className}`}>
+    <div className="flex items-center gap-default">{children}</div>
+    {actions && <div className="flex items-center gap-compact">{actions}</div>}
   </div>
 );
 
@@ -262,8 +260,8 @@ interface CardValueProps {
 
 const valueSizeClasses = {
   sm: 'text-sm',
-  md: 'text-base font-medium',
-  lg: 'text-lg font-semibold',
+  md: 'heading-4',
+  lg: 'heading-3',
 };
 
 /**
@@ -290,13 +288,13 @@ export const CardValue: FC<CardValueProps> = ({
 
   return (
     <div>
-      {label && <p className="text-xs text-text-muted mb-1">{label}</p>}
+      {label && <p className="text-xs text-text-muted mb-tight">{label}</p>}
       <p
         className={`${valueSizeClasses[size]} ${statusColor} ${mono ? 'font-mono tabular-nums' : ''}`}
         data-testid="card-value"
       >
         <span>{value}</span>
-        {unit && <span className="text-sm font-normal text-text-muted ml-1">{unit}</span>}
+        {unit && <span className="text-sm font-normal text-text-muted ml-tight">{unit}</span>}
       </p>
     </div>
   );
@@ -329,7 +327,7 @@ export const CardRow: FC<CardRowProps> = ({ label, value, status, mono = false }
     : 'text-text-primary';
 
   return (
-    <div className="flex justify-between items-center py-1">
+    <div className="flex justify-between items-center py-compact">
       <span className="text-sm text-text-muted shrink-0">{label}</span>
       <span
         className={`text-sm font-medium ${statusColor} ${mono ? 'font-mono tabular-nums' : ''} truncate text-right`}
@@ -377,17 +375,17 @@ export const StatCard: FC<StatCardProps> = ({ label, value, icon, trend, classNa
 
   return (
     <Card className={className} hover={true}>
-      <CardContent className="space-y-2">
-        <div className="flex items-center justify-between">
+      <CardContent className="stack-sm">
+        <div className="flex-between">
           <span className="text-sm font-medium text-text-muted">{label}</span>
           {icon && <span className="text-brand-accent">{icon}</span>}
         </div>
-        <div className="flex items-end justify-between gap-2">
+        <div className="flex items-end justify-between gap-compact">
           <span className="text-3xl font-bold text-text-primary">{value}</span>
           {trend && (
             <span className={`text-sm font-medium ${trendColor}`}>
               {trendIcon} {Math.abs(trend.value)}%
-              {trend.label && <span className="text-text-muted ml-1">{trend.label}</span>}
+              {trend.label && <span className="text-text-muted ml-tight">{trend.label}</span>}
             </span>
           )}
         </div>

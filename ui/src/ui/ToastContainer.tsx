@@ -32,7 +32,7 @@ const Toast: FC<{ notification: Notification }> = ({ notification }) => {
 
   return (
     <div
-      className={`flex items-start gap-3 rounded-lg border px-4 py-3 shadow-lg backdrop-blur-sm ${TOAST_STYLES[notification.type]}`}
+      className={`flex items-start gap-default rounded-lg border px-4 py-row-lg shadow-lg backdrop-blur-sm ${TOAST_STYLES[notification.type]}`}
       role="alert"
     >
       <Icon className={`${iconSizes.lg} flex-shrink-0 mt-0.5`} />
@@ -63,7 +63,7 @@ export const ToastContainer: FC = () => {
     <div
       aria-live="polite"
       aria-atomic="false"
-      className="fixed bottom-4 right-4 z-[200] flex flex-col gap-2 max-w-sm w-full"
+      className="fixed bottom-4 right-4 z-[200] flex flex-col gap-compact max-w-sm w-full"
     >
       {notifications.map((notification) => (
         <Toast key={notification.id} notification={notification} />

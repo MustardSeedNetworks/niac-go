@@ -34,18 +34,18 @@ export function ItemListSection({ categoryId, searchQuery }: ItemListSectionProp
   }, [categoryId, searchQuery]);
 
   return (
-    <div className="space-y-3">
+    <div className="stack">
       {category && (
         <section>
           <h3 className="text-sm font-semibold text-text-primary">{category.fullName}</h3>
-          <p className="text-xs text-text-muted mt-1 leading-relaxed">{category.description}</p>
+          <p className="text-xs text-text-muted mt-tight leading-relaxed">{category.description}</p>
         </section>
       )}
 
       {filtered.length === 0 ? (
         <p className="text-sm text-text-muted py-4 text-center">No entries match your search.</p>
       ) : (
-        <div className="space-y-2">
+        <div className="stack-sm">
           {filtered.map((item) => (
             <HelpItemCard key={item.id} item={item} />
           ))}

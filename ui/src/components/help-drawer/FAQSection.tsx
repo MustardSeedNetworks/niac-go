@@ -28,12 +28,12 @@ export function FAQSection({ searchQuery }: FAQSectionProps): ReactElement {
   }, [searchQuery]);
 
   return (
-    <div className="space-y-3">
+    <div className="stack">
       <h3 className="text-sm font-semibold text-text-primary">Frequently Asked Questions</h3>
       {filtered.length === 0 ? (
         <p className="text-sm text-text-muted py-4 text-center">No entries match your search.</p>
       ) : (
-        <div className="space-y-2">
+        <div className="stack-sm">
           {filtered.map((entry) => (
             <FAQItem key={entry.id} entry={entry} />
           ))}
@@ -56,7 +56,7 @@ function FAQItem({ entry }: FAQItemProps): ReactElement {
         type="button"
         onClick={() => setOpen((v) => !v)}
         className={cn(
-          'w-full text-left px-3 py-2.5 flex items-start gap-2',
+          'w-full text-left px-3 py-2.5 flex items-start gap-compact',
           'hover:bg-surface-hover transition-colors',
         )}
         aria-expanded={open}
@@ -66,13 +66,13 @@ function FAQItem({ entry }: FAQItemProps): ReactElement {
         ) : (
           <ChevronRight className="w-4 h-4 mt-0.5 text-text-muted shrink-0" aria-hidden="true" />
         )}
-        <h4 className="text-sm font-medium text-text-primary flex-1 min-w-0">{entry.question}</h4>
+        <h4 className="label flex-1 min-w-0">{entry.question}</h4>
       </button>
       {open && (
-        <div className="px-3 pb-3 pl-9 space-y-2 border-t border-surface-border">
+        <div className="px-3 pb-3 pl-9 stack-sm border-t border-surface-border">
           <p className="text-xs text-text-muted leading-relaxed pt-2">{entry.answer}</p>
           {entry.tags.length > 0 && (
-            <div className="flex flex-wrap gap-1">
+            <div className="flex flex-wrap gap-tight">
               {entry.tags.map((tag) => (
                 <code
                   key={tag}

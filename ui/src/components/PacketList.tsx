@@ -50,20 +50,20 @@ const PacketRow = memo(
     <button
       type="button"
       onClick={onClick}
-      className={`w-full text-left p-2 rounded-lg border transition-colors ${
+      className={`w-full text-left pad-xs rounded-lg border transition-colors ${
         isSelected
           ? 'border-brand-primary/50 bg-brand-primary/30'
           : 'border-surface-border bg-bg-base/50 hover:bg-bg-surface/50 hover:border-surface-border'
       }`}
       style={rowStyle}
     >
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-compact">
         <Tag colorScheme={getProtocolColor(packet.protocol)} className="text-xs">
           {packet.protocol}
         </Tag>
         <SmallText className="text-text-muted font-mono text-xs">{formattedTime}</SmallText>
       </div>
-      <div className="mt-1 text-sm text-text-primary truncate">
+      <div className="mt-tight text-sm text-text-primary truncate">
         {packet.sourceIp}
         {packet.sourcePort && `:${packet.sourcePort}`}
         <span className="text-text-muted mx-1">-&gt;</span>
@@ -89,7 +89,7 @@ export const PacketList: FC<PacketListProps> = memo(
 
     if (packets.length === 0) {
       return (
-        <div className="h-full flex items-center justify-center text-text-muted">
+        <div className="h-full flex-center text-text-muted">
           <div className="text-center">
             <p className="text-sm">No packets to display</p>
             <SmallText>Waiting for packet stream...</SmallText>
@@ -103,13 +103,13 @@ export const PacketList: FC<PacketListProps> = memo(
         <button
           type="button"
           onClick={cycleTimeMode}
-          className="text-xs text-text-muted hover:text-brand-accent mb-1 text-left select-none"
+          className="text-xs text-text-muted hover:text-brand-accent mb-tight text-left select-none"
           title="Click to cycle: Absolute / Relative / Delta"
         >
           Mode: {getTimeDisplayLabel(timeMode)}
         </button>
         <div
-          className={`flex-1 overflow-y-auto space-y-1 pr-2 ${autoScroll ? 'scroll-smooth' : ''}`}
+          className={`flex-1 overflow-y-auto stack-xs pr-2 ${autoScroll ? 'scroll-smooth' : ''}`}
           style={{ scrollBehavior: autoScroll ? 'smooth' : 'auto' }}
         >
           {packets.map((packet, idx) => (

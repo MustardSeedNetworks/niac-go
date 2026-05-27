@@ -33,7 +33,7 @@ export const ProtocolTreeLayer: FC<ProtocolTreeLayerProps> = memo(({ layer, onFi
       <button
         type="button"
         onClick={toggleExpanded}
-        className="flex items-center gap-1 w-full text-left py-0.5 hover:bg-surface-hover rounded px-1 -ml-1"
+        className="flex items-center gap-tight w-full text-left py-0.5 hover:bg-surface-hover rounded px-1 -ml-1"
       >
         {isExpanded ? (
           <ChevronDown className={`${iconSizes.sm} text-text-muted flex-shrink-0`} />

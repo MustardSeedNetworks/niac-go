@@ -87,7 +87,7 @@ export const UploadTemplateModal: FC<UploadTemplateModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex-center">
       <button
         type="button"
         className="absolute inset-0 bg-black/70 backdrop-blur-sm"
@@ -101,13 +101,13 @@ export const UploadTemplateModal: FC<UploadTemplateModalProps> = ({
         aria-labelledby="upload-modal-title"
       >
         {/* Modal Header */}
-        <div className="flex items-center justify-between border-b border-surface-border px-6 py-4">
-          <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-brand-primary/20 p-2">
+        <div className="flex-between border-b border-surface-border px-6 py-4">
+          <div className="flex items-center gap-default">
+            <div className="rounded-lg bg-brand-primary/20 pad-xs">
               <Upload className={`${iconSizes.lg} text-brand-accent`} />
             </div>
             <div>
-              <h2 id="upload-modal-title" className="text-lg font-semibold text-text-primary">
+              <h2 id="upload-modal-title" className="heading-3 text-text-primary">
                 {t('templates.uploadModal.title')}
               </h2>
               <SmallText className="text-text-muted">
@@ -118,7 +118,7 @@ export const UploadTemplateModal: FC<UploadTemplateModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-2 text-text-muted hover:bg-surface-hover hover:text-text-primary transition-colors"
+            className="rounded-lg pad-xs text-text-muted hover:bg-surface-hover hover:text-text-primary transition-colors"
             aria-label={t('templates.uploadModal.closeAriaLabel')}
           >
             <X className={iconSizes.lg} />
@@ -127,7 +127,7 @@ export const UploadTemplateModal: FC<UploadTemplateModalProps> = ({
 
         <form onSubmit={handleSubmit(onSubmit)}>
           {/* Modal Content */}
-          <div className="space-y-4 p-6">
+          <div className="stack-lg pad-lg">
             {/* File upload */}
             <div>
               <label
@@ -141,10 +141,10 @@ export const UploadTemplateModal: FC<UploadTemplateModalProps> = ({
                 type="file"
                 accept=".yaml,.yml"
                 onChange={(e) => handleFileChange(e.target.files?.[0] || null)}
-                className="w-full cursor-pointer rounded-lg border border-dashed border-surface-border bg-bg-base/40 p-3 text-sm text-text-primary file:mr-3 file:rounded-md file:border-0 file:bg-brand-primary file:px-3 file:py-1 file:text-sm file:font-medium"
+                className="w-full cursor-pointer rounded-lg border border-dashed border-surface-border bg-bg-base/40 pad-sm text-sm text-text-primary file:mr-3 file:rounded-md file:border-0 file:bg-brand-primary file:px-3 file:py-compact file:text-sm file:font-medium"
               />
               {uploadFile && (
-                <SmallText className="mt-1 text-status-success">
+                <SmallText className="mt-tight text-status-success">
                   {t('templates.uploadModal.fileSelected', { filename: uploadFile.name })}
                 </SmallText>
               )}
@@ -163,10 +163,10 @@ export const UploadTemplateModal: FC<UploadTemplateModalProps> = ({
                 type="text"
                 {...register('name')}
                 placeholder={t('templates.uploadModal.namePlaceholder')}
-                className="w-full rounded-lg border border-surface-border bg-bg-base/60 p-3 text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none"
+                className="w-full rounded-lg border border-surface-border bg-bg-base/60 pad-sm text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none"
               />
               {errors.name ? (
-                <p className="mt-1 text-xs text-status-error">{errors.name.message}</p>
+                <p className="mt-tight text-xs text-status-error">{errors.name.message}</p>
               ) : null}
             </div>
 
@@ -183,10 +183,10 @@ export const UploadTemplateModal: FC<UploadTemplateModalProps> = ({
                 {...register('description')}
                 placeholder={t('templates.uploadModal.descriptionPlaceholder')}
                 rows={2}
-                className="w-full rounded-lg border border-surface-border bg-bg-base/60 p-3 text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none resize-none"
+                className="w-full rounded-lg border border-surface-border bg-bg-base/60 pad-sm text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none resize-none"
               />
               {errors.description ? (
-                <p className="mt-1 text-xs text-status-error">{errors.description.message}</p>
+                <p className="mt-tight text-xs text-status-error">{errors.description.message}</p>
               ) : null}
             </div>
 
@@ -201,7 +201,7 @@ export const UploadTemplateModal: FC<UploadTemplateModalProps> = ({
               <select
                 id="template-type"
                 {...register('type')}
-                className="w-full rounded-lg border border-surface-border bg-bg-base/60 p-3 text-sm text-text-primary focus:border-brand-accent focus:outline-none"
+                className="w-full rounded-lg border border-surface-border bg-bg-base/60 pad-sm text-sm text-text-primary focus:border-brand-accent focus:outline-none"
               >
                 <option value="basic">{t('templates.uploadModal.categoryBasic')}</option>
                 <option value="router">{t('templates.uploadModal.categoryRouter')}</option>
@@ -228,17 +228,17 @@ export const UploadTemplateModal: FC<UploadTemplateModalProps> = ({
                 {...register('content')}
                 placeholder={t('templates.uploadModal.contentPlaceholder')}
                 rows={10}
-                className="w-full rounded-lg border border-surface-border bg-bg-base/60 p-3 font-mono text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none resize-none"
+                className="w-full rounded-lg border border-surface-border bg-bg-base/60 pad-sm font-mono text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none resize-none"
                 spellCheck={false}
               />
               {errors.content ? (
-                <p className="mt-1 text-xs text-status-error">{errors.content.message}</p>
+                <p className="mt-tight text-xs text-status-error">{errors.content.message}</p>
               ) : null}
             </div>
           </div>
 
           {/* Modal Footer */}
-          <div className="flex justify-end gap-3 border-t border-surface-border px-6 py-4 bg-bg-base/50">
+          <div className="flex justify-end gap-default border-t border-surface-border px-6 py-4 bg-bg-base/50">
             <Button variant="outline" type="button" onClick={onClose} disabled={isSubmitting}>
               {t('templates.uploadModal.cancel')}
             </Button>

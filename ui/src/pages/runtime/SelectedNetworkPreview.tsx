@@ -147,9 +147,9 @@ export const SelectedNetworkPreview: FC<SelectedNetworkPreviewProps> = ({
 
   return (
     <Card className="border-surface-border bg-bg-surface/70">
-      <CardContent className="space-y-3">
-        <div className="flex items-baseline justify-between gap-3">
-          <H2 className="flex items-center gap-2 text-lg">
+      <CardContent className="stack">
+        <div className="flex items-baseline justify-between gap-default">
+          <H2 className="flex items-center gap-compact text-lg">
             <Eye className={`${iconSizes.lg} text-brand-accent`} />
             Selected: {displayName}
           </H2>
@@ -171,15 +171,15 @@ export const SelectedNetworkPreview: FC<SelectedNetworkPreviewProps> = ({
         )}
 
         {devices.length > 0 && (
-          <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          <ul className="grid grid-cols-1 gap-compact sm:grid-cols-2 lg:grid-cols-3">
             {devices.map((d) => {
               const Icon = typeIconFor(d.type);
               return (
                 <li
                   key={d.name}
-                  className="rounded-lg border border-surface-border bg-bg-base/40 px-3 py-2"
+                  className="rounded-lg border border-surface-border bg-bg-base/40 px-3 py-row"
                 >
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-compact">
                     <Icon className={`${iconSizes.sm} text-text-muted`} />
                     <span className="font-medium text-text-primary">{d.name}</span>
                     <Tag colorScheme="gray" className="text-[10px] capitalize">
@@ -187,14 +187,14 @@ export const SelectedNetworkPreview: FC<SelectedNetworkPreviewProps> = ({
                     </Tag>
                   </div>
                   {(d.mac || d.ips.length > 0) && (
-                    <div className="mt-1 font-mono text-[11px] text-text-muted">
+                    <div className="mt-tight font-mono text-[11px] text-text-muted">
                       {d.mac && <span>{d.mac}</span>}
                       {d.mac && d.ips.length > 0 && <span> · </span>}
                       {d.ips.length > 0 && <span>{d.ips.join(', ')}</span>}
                     </div>
                   )}
                   {d.services.length > 0 && (
-                    <div className="mt-1 flex flex-wrap gap-1">
+                    <div className="mt-tight flex flex-wrap gap-tight">
                       {d.services.map((svc) => (
                         <Tag key={svc} colorScheme="purple" className="text-[10px]">
                           {svc}

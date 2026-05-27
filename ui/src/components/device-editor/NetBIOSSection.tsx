@@ -34,8 +34,8 @@ export const NetBiosSection: FC<ProtocolSectionProps> = ({
       }}
     >
       {device.netbios?.enabled && (
-        <div className="space-y-6">
-          <div className="grid gap-4 md:grid-cols-2">
+        <div className="stack-xl">
+          <div className="grid gap-comfortable md:grid-cols-2">
             <FormField label="NetBIOS Name" helpText="NetBIOS computer name (max 15 chars)">
               <input
                 type="text"
@@ -103,14 +103,14 @@ export const NetBiosSection: FC<ProtocolSectionProps> = ({
           </div>
 
           {/* Services */}
-          <div className="space-y-3">
-            <h4 className="text-sm font-medium text-text-primary flex items-center gap-2">
+          <div className="stack">
+            <h4 className="label flex items-center gap-compact">
               <Network className={`${iconSizes.md} text-brand-accent`} />
               NetBIOS Services
             </h4>
-            <div className="flex flex-wrap gap-4">
+            <div className="flex flex-wrap gap-comfortable">
               {(['workstation', 'fileserver', 'messenger'] as NetBIOSService[]).map((service) => (
-                <label key={service} className="flex items-center gap-2 cursor-pointer">
+                <label key={service} className="flex items-center gap-compact cursor-pointer">
                   <input
                     type="checkbox"
                     checked={(device.netbios?.services || []).includes(service)}
@@ -135,7 +135,7 @@ export const NetBiosSection: FC<ProtocolSectionProps> = ({
               ))}
             </div>
 
-            <label className="flex items-center gap-2 cursor-pointer mt-2">
+            <label className="flex items-center gap-compact cursor-pointer mt-inline">
               <input
                 type="checkbox"
                 checked={device.netbios.msbrowse ?? false}

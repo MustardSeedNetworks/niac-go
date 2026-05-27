@@ -28,7 +28,7 @@ export function HelpItemCard({ item, defaultOpen = false }: HelpItemCardProps): 
         type="button"
         onClick={() => setOpen((v) => !v)}
         className={cn(
-          'w-full text-left px-3 py-2.5 flex items-start gap-2',
+          'w-full text-left px-3 py-2.5 flex items-start gap-compact',
           'hover:bg-surface-hover transition-colors',
         )}
         aria-expanded={open}
@@ -40,24 +40,24 @@ export function HelpItemCard({ item, defaultOpen = false }: HelpItemCardProps): 
         )}
         <div className="flex-1 min-w-0">
           <div className={layout.flex.between}>
-            <h4 className="text-sm font-medium text-text-primary">{item.name}</h4>
-            <code className="text-xs text-text-muted ml-2 shrink-0">{item.standard}</code>
+            <h4 className="label">{item.name}</h4>
+            <code className="text-xs text-text-muted ml-inline shrink-0">{item.standard}</code>
           </div>
           <p className="text-xs text-text-muted mt-0.5">{item.summary}</p>
         </div>
       </button>
 
       {open && (
-        <div className="px-3 pb-3 pt-1 space-y-3 border-t border-surface-border">
+        <div className="px-3 pb-3 pt-tight stack border-t border-surface-border">
           <section>
-            <h5 className="text-xs font-semibold text-text-secondary mb-1">
+            <h5 className="text-xs font-semibold text-text-secondary mb-tight">
               {t('itemCard.technical')}
             </h5>
             <p className="text-xs text-text-muted leading-relaxed">{item.techDesc}</p>
           </section>
 
           <section>
-            <h5 className="text-xs font-semibold text-text-secondary mb-1">
+            <h5 className="text-xs font-semibold text-text-secondary mb-tight">
               {t('itemCard.plainEnglish')}
             </h5>
             <p className="text-xs text-text-muted leading-relaxed">{item.laymanDesc}</p>
@@ -65,7 +65,7 @@ export function HelpItemCard({ item, defaultOpen = false }: HelpItemCardProps): 
 
           {item.whenToUse && (
             <section>
-              <h5 className="text-xs font-semibold text-text-secondary mb-1">
+              <h5 className="text-xs font-semibold text-text-secondary mb-tight">
                 {t('itemCard.whenToUse')}
               </h5>
               <p className="text-xs text-text-muted leading-relaxed">{item.whenToUse}</p>
@@ -74,7 +74,7 @@ export function HelpItemCard({ item, defaultOpen = false }: HelpItemCardProps): 
 
           {item.whenNotToUse && (
             <section>
-              <h5 className="text-xs font-semibold text-text-secondary mb-1">
+              <h5 className="text-xs font-semibold text-text-secondary mb-tight">
                 {t('itemCard.whenNotToUse')}
               </h5>
               <p className="text-xs text-text-muted leading-relaxed">{item.whenNotToUse}</p>
@@ -83,19 +83,19 @@ export function HelpItemCard({ item, defaultOpen = false }: HelpItemCardProps): 
 
           {item.parameters.length > 0 && (
             <section>
-              <h5 className="text-xs font-semibold text-text-secondary mb-1">
+              <h5 className="text-xs font-semibold text-text-secondary mb-tight">
                 {t('itemCard.parameters')}
               </h5>
-              <div className="space-y-1">
+              <div className="stack-xs">
                 {item.parameters.map((p) => (
-                  <div key={p.name} className="bg-surface-hover rounded p-2">
+                  <div key={p.name} className="bg-surface-hover rounded pad-xs">
                     <div className={layout.flex.between}>
                       <span className="text-xs font-medium text-text-primary">{p.name}</span>
                       <code className="text-xs text-text-muted">{p.flag}</code>
                     </div>
                     <p className="text-xs text-text-muted mt-0.5">{p.laymanDesc}</p>
                     {p.example && (
-                      <code className="block mt-1 text-xs text-brand-accent break-all">
+                      <code className="block mt-tight text-xs text-brand-accent break-all">
                         {p.example}
                       </code>
                     )}
@@ -107,19 +107,19 @@ export function HelpItemCard({ item, defaultOpen = false }: HelpItemCardProps): 
 
           {item.configFields.length > 0 && (
             <section>
-              <h5 className="text-xs font-semibold text-text-secondary mb-1">
+              <h5 className="text-xs font-semibold text-text-secondary mb-tight">
                 {t('itemCard.yamlFields')}
               </h5>
-              <div className="space-y-1">
+              <div className="stack-xs">
                 {item.configFields.map((f) => (
-                  <div key={f.path} className="bg-surface-hover rounded p-2">
+                  <div key={f.path} className="bg-surface-hover rounded pad-xs">
                     <div className={layout.flex.between}>
                       <code className="text-xs text-text-primary">{f.path}</code>
                       <span className="text-xs text-text-muted">{f.type}</span>
                     </div>
                     <p className="text-xs text-text-muted mt-0.5">{f.description}</p>
                     {f.example && (
-                      <pre className="mt-1 text-xs text-brand-accent whitespace-pre-wrap break-all">
+                      <pre className="mt-tight text-xs text-brand-accent whitespace-pre-wrap break-all">
                         {f.example}
                       </pre>
                     )}
@@ -131,12 +131,12 @@ export function HelpItemCard({ item, defaultOpen = false }: HelpItemCardProps): 
 
           {item.metrics.length > 0 && (
             <section>
-              <h5 className="text-xs font-semibold text-text-secondary mb-1">
+              <h5 className="text-xs font-semibold text-text-secondary mb-tight">
                 {t('itemCard.metrics')}
               </h5>
-              <div className="space-y-1">
+              <div className="stack-xs">
                 {item.metrics.map((m) => (
-                  <div key={m.name} className="bg-surface-hover rounded p-2">
+                  <div key={m.name} className="bg-surface-hover rounded pad-xs">
                     <div className={layout.flex.between}>
                       <code className="text-xs text-text-primary">{m.name}</code>
                       <span className="text-xs text-text-muted">{m.unit}</span>
@@ -157,18 +157,18 @@ export function HelpItemCard({ item, defaultOpen = false }: HelpItemCardProps): 
 
           {item.examples.length > 0 && (
             <section>
-              <h5 className="text-xs font-semibold text-text-secondary mb-1">
+              <h5 className="text-xs font-semibold text-text-secondary mb-tight">
                 {t('itemCard.examples')}
               </h5>
-              <div className="space-y-2">
+              <div className="stack-sm">
                 {item.examples.map((ex) => (
-                  <div key={ex.command} className="bg-surface-hover rounded p-2">
-                    <p className="text-xs text-text-muted mb-1">{ex.desc}</p>
+                  <div key={ex.command} className="bg-surface-hover rounded pad-xs">
+                    <p className="text-xs text-text-muted mb-tight">{ex.desc}</p>
                     <pre className="text-xs text-brand-accent whitespace-pre-wrap break-all">
                       {ex.command}
                     </pre>
                     {ex.output && (
-                      <pre className="mt-1 text-xs text-text-muted whitespace-pre-wrap break-all border-l-2 border-surface-border pl-2">
+                      <pre className="mt-tight text-xs text-text-muted whitespace-pre-wrap break-all border-l-2 border-surface-border pl-2">
                         {ex.output}
                       </pre>
                     )}
@@ -180,10 +180,10 @@ export function HelpItemCard({ item, defaultOpen = false }: HelpItemCardProps): 
 
           {item.tips.length > 0 && (
             <section>
-              <h5 className="text-xs font-semibold text-text-secondary mb-1">
+              <h5 className="text-xs font-semibold text-text-secondary mb-tight">
                 {t('itemCard.tips')}
               </h5>
-              <ul className="space-y-1 pl-4 list-disc text-xs text-text-muted">
+              <ul className="stack-xs pl-4 list-disc text-xs text-text-muted">
                 {item.tips.map((tip) => (
                   <li key={tip}>{tip}</li>
                 ))}
@@ -193,10 +193,10 @@ export function HelpItemCard({ item, defaultOpen = false }: HelpItemCardProps): 
 
           {item.seeAlso.length > 0 && (
             <section>
-              <h5 className="text-xs font-semibold text-text-secondary mb-1">
+              <h5 className="text-xs font-semibold text-text-secondary mb-tight">
                 {t('itemCard.seeAlso')}
               </h5>
-              <div className="flex flex-wrap gap-1">
+              <div className="flex flex-wrap gap-tight">
                 {item.seeAlso.map((ref) => (
                   <code
                     key={ref}

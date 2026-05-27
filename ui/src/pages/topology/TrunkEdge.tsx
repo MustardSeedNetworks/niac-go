@@ -186,7 +186,7 @@ const EdgeTooltip: FC<{ x: number; y: number; data: LinkEdgeData }> = ({ x, y, d
 
   return (
     <div
-      className="absolute pointer-events-none rounded-lg border border-surface-border bg-bg-base/95 px-3 py-2 text-xs text-text-primary shadow-lg z-50"
+      className="absolute pointer-events-none rounded-lg border border-surface-border bg-bg-base/95 px-3 py-row text-xs text-text-primary shadow-lg z-50"
       style={{ transform: `translate(-50%, calc(-100% - 12px)) translate(${x}px, ${y}px)` }}
     >
       <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5">

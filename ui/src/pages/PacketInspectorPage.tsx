@@ -61,7 +61,7 @@ const ConnectionStatus: FC<{
 }> = ({ connected }) => {
   if (connected) {
     return (
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-compact">
         <Wifi className={`${iconSizes.md} text-status-success`} />
         <Tag colorScheme="green">Connected</Tag>
       </div>
@@ -70,7 +70,7 @@ const ConnectionStatus: FC<{
 
   // SSE auto-reconnects, so disconnected state is brief
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-compact">
       <WifiOff className={`${iconSizes.md} text-status-warning animate-pulse`} />
       <Tag colorScheme="yellow">Connecting...</Tag>
     </div>
@@ -273,7 +273,7 @@ export const PacketInspectorPage: FC = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="stack-xl">
       {/* Live / PCAP Files tab control */}
       <div
         className="inline-flex rounded-lg border border-surface-border bg-bg-base/40 p-0.5"
@@ -285,7 +285,7 @@ export const PacketInspectorPage: FC = () => {
           role="tab"
           aria-selected={view === 'live'}
           onClick={() => setView('live')}
-          className={`flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-medium transition-colors ${
+          className={`flex items-center gap-1.5 rounded px-3 py-compact-md text-xs font-medium transition-colors ${
             view === 'live'
               ? 'bg-brand-primary/20 text-brand-accent'
               : 'text-text-muted hover:bg-surface-hover hover:text-text-primary'
@@ -299,7 +299,7 @@ export const PacketInspectorPage: FC = () => {
           role="tab"
           aria-selected={view === 'files'}
           onClick={() => setView('files')}
-          className={`flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-medium transition-colors ${
+          className={`flex items-center gap-1.5 rounded px-3 py-compact-md text-xs font-medium transition-colors ${
             view === 'files'
               ? 'bg-brand-primary/20 text-brand-accent'
               : 'text-text-muted hover:bg-surface-hover hover:text-text-primary'
@@ -319,9 +319,9 @@ export const PacketInspectorPage: FC = () => {
           {/* Header with controls */}
           <Card className="border-surface-border bg-bg-surface/70">
             <CardContent>
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-col gap-comfortable sm:flex-row sm:items-center sm:justify-between">
                 {/* Title and connection status */}
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-comfortable">
                   <H2>Packets</H2>
                   <SmallText className="text-text-muted">
                     on <span className="font-mono text-text-primary">{activeInterface ?? '—'}</span>
@@ -331,7 +331,7 @@ export const PacketInspectorPage: FC = () => {
                 </div>
 
                 {/* Control buttons */}
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap items-center gap-compact">
                   <Button
                     variant={isPaused ? 'outline' : 'ghost'}
                     size="sm"
@@ -414,13 +414,13 @@ export const PacketInspectorPage: FC = () => {
               </div>
 
               {/* Filter row */}
-              <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+              <div className="mt-content flex flex-col gap-default sm:flex-row sm:items-center">
                 <div className="flex-1">
                   <FilterBar value={filterExpression} onChange={setFilterExpression} />
                 </div>
 
                 {/* Auto-scroll toggle */}
-                <label className="flex items-center gap-2 cursor-pointer">
+                <label className="flex items-center gap-compact cursor-pointer">
                   <input
                     type="checkbox"
                     checked={autoScroll}
@@ -446,12 +446,12 @@ export const PacketInspectorPage: FC = () => {
           </Card>
 
           {/* Main content grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-spacious">
             {/* Packet List - Left sidebar */}
             <div className="lg:col-span-4 xl:col-span-3">
               <Card className="border-surface-border bg-bg-surface/70 h-[600px]">
                 <CardContent className="h-full flex flex-col">
-                  <div className="flex items-center justify-between mb-3">
+                  <div className="flex-between mb-heading">
                     <SmallText className="text-text-muted uppercase tracking-wide font-semibold">
                       Packet List
                     </SmallText>
@@ -475,11 +475,11 @@ export const PacketInspectorPage: FC = () => {
             </div>
 
             {/* Right panel - Hex dump and details */}
-            <div className="lg:col-span-8 xl:col-span-9 space-y-6">
+            <div className="lg:col-span-8 xl:col-span-9 stack-xl">
               {/* Hex Dump Viewer */}
               <Card className="border-surface-border bg-bg-surface/70 h-[350px]">
                 <CardContent className="h-full flex flex-col">
-                  <SmallText className="text-text-muted uppercase tracking-wide font-semibold mb-3">
+                  <SmallText className="text-text-muted uppercase tracking-wide font-semibold mb-heading">
                     Hex Dump
                   </SmallText>
                   <div className="flex-1 min-h-0">
@@ -495,7 +495,7 @@ export const PacketInspectorPage: FC = () => {
               {/* Packet Details */}
               <Card className="border-surface-border bg-bg-surface/70 h-[220px]">
                 <CardContent className="h-full flex flex-col">
-                  <SmallText className="text-text-muted uppercase tracking-wide font-semibold mb-3">
+                  <SmallText className="text-text-muted uppercase tracking-wide font-semibold mb-heading">
                     Packet Details
                   </SmallText>
                   <div className="flex-1 min-h-0 overflow-y-auto">
@@ -583,9 +583,9 @@ const StandaloneCaptureStarter: FC<{
 
   return (
     <Card className="border-surface-border bg-bg-surface/70">
-      <CardContent className="space-y-4">
-        <div className="flex items-start gap-3">
-          <Activity className={`mt-1 ${iconSizes.lg} text-brand-accent`} />
+      <CardContent className="stack-lg">
+        <div className="flex items-start gap-default">
+          <Activity className={`mt-tight ${iconSizes.lg} text-brand-accent`} />
           <div className="flex-1">
             <p className="font-semibold text-text-primary">
               {t('packets.inspector.standaloneCapture')}
@@ -604,14 +604,14 @@ const StandaloneCaptureStarter: FC<{
             </SmallText>
           </div>
         </div>
-        <div className="grid gap-3 sm:grid-cols-[1fr_2fr_auto] sm:items-end">
-          <label className="flex flex-col gap-1 text-sm text-text-muted">
+        <div className="grid gap-default sm:grid-cols-[1fr_2fr_auto] sm:items-end">
+          <label className="flex flex-col gap-tight text-sm text-text-muted">
             Interface
             <select
               value={selectedIface}
               onChange={(e) => setSelectedIface(e.target.value)}
               disabled={busy || interfaces.length === 0}
-              className="rounded-lg border border-surface-border bg-bg-base/60 px-3 py-2 text-sm text-text-primary focus:border-brand-accent focus:outline-none"
+              className="rounded-lg border border-surface-border bg-bg-base/60 px-3 py-row text-sm text-text-primary focus:border-brand-accent focus:outline-none"
             >
               {interfaces.length === 0 ? (
                 <option value="">{t('packets.inspector.noInterfaces')}</option>
@@ -627,7 +627,7 @@ const StandaloneCaptureStarter: FC<{
               )}
             </select>
           </label>
-          <label className="flex flex-col gap-1 text-sm text-text-muted">
+          <label className="flex flex-col gap-tight text-sm text-text-muted">
             BPF filter (optional)
             <input
               type="text"
@@ -635,7 +635,7 @@ const StandaloneCaptureStarter: FC<{
               onChange={(e) => setBpfFilter(e.target.value)}
               disabled={busy}
               placeholder="e.g. tcp port 80"
-              className="rounded-lg border border-surface-border bg-bg-base/60 px-3 py-2 font-mono text-sm text-text-primary focus:border-brand-accent focus:outline-none"
+              className="rounded-lg border border-surface-border bg-bg-base/60 px-3 py-row font-mono text-sm text-text-primary focus:border-brand-accent focus:outline-none"
             />
           </label>
           <Button tone="violet" onClick={handleStart} disabled={!selectedIface || busy}>

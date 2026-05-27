@@ -35,8 +35,8 @@ export const FtpSection: FC<ProtocolSectionProps> = ({
       }}
     >
       {device.ftp?.enabled && (
-        <div className="space-y-6">
-          <div className="grid gap-4 md:grid-cols-2">
+        <div className="stack-xl">
+          <div className="grid gap-comfortable md:grid-cols-2">
             <FormField label="Welcome Banner" helpText="FTP welcome message">
               <input
                 type="text"
@@ -63,7 +63,7 @@ export const FtpSection: FC<ProtocolSectionProps> = ({
             </FormField>
 
             <FormField label="Allow Anonymous" helpText="Allow anonymous FTP access">
-              <label className="relative inline-flex items-center cursor-pointer mt-2">
+              <label className="relative inline-flex items-center cursor-pointer mt-inline">
                 <input
                   type="checkbox"
                   checked={device.ftp.allowAnonymous ?? false}
@@ -88,15 +88,15 @@ export const FtpSection: FC<ProtocolSectionProps> = ({
           </div>
 
           {/* FTP Users */}
-          <div className="space-y-3">
-            <h4 className="text-sm font-medium text-text-primary flex items-center gap-2">
+          <div className="stack">
+            <h4 className="label flex items-center gap-compact">
               <Folder className={`${iconSizes.md} text-brand-accent`} />
               FTP Users
             </h4>
             {(device.ftp.users || []).map((user: FTPUser, index: number) => (
               <div
                 key={`${user.username || user.homeDir || 'user'}`}
-                className="flex gap-2 items-center"
+                className="flex gap-compact items-center"
               >
                 <input
                   type="text"
@@ -110,7 +110,7 @@ export const FtpSection: FC<ProtocolSectionProps> = ({
                     updateFtp({ ...getFtpConfig(), users });
                   }}
                   placeholder="Username"
-                  className="flex-1 rounded-lg border border-surface-border bg-bg-base/60 p-2 text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none"
+                  className="flex-1 rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none"
                 />
                 <input
                   type="text"
@@ -124,7 +124,7 @@ export const FtpSection: FC<ProtocolSectionProps> = ({
                     updateFtp({ ...getFtpConfig(), users });
                   }}
                   placeholder="Password"
-                  className="flex-1 rounded-lg border border-surface-border bg-bg-base/60 p-2 text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none"
+                  className="flex-1 rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none"
                 />
                 <input
                   type="text"
@@ -135,7 +135,7 @@ export const FtpSection: FC<ProtocolSectionProps> = ({
                     updateFtp({ ...getFtpConfig(), users });
                   }}
                   placeholder="Home Directory"
-                  className="flex-1 rounded-lg border border-surface-border bg-bg-base/60 p-2 text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none font-mono"
+                  className="flex-1 rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none font-mono"
                 />
                 <Button
                   variant="ghost"

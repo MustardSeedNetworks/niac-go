@@ -41,10 +41,10 @@ export const TemplateCard: FC<TemplateCardProps> = memo(({ template, onView, onU
 
   return (
     <Card className="border-surface-border bg-bg-surface/70 hover:border-brand-primary/30 transition-colors">
-      <CardContent className="space-y-4">
+      <CardContent className="stack-lg">
         {/* Header with icon and type */}
         <div className="flex items-start justify-between">
-          <div className={`rounded-lg p-3 border ${colorClass}`}>
+          <div className={`rounded-lg pad-sm border ${colorClass}`}>
             <IconComponent className={iconSizes.xl} />
           </div>
           <Tag colorScheme="gray" className="text-xs capitalize">
@@ -53,7 +53,7 @@ export const TemplateCard: FC<TemplateCardProps> = memo(({ template, onView, onU
         </div>
 
         {/* Template info */}
-        <div className="space-y-1">
+        <div className="stack-xs">
           <h3 className="font-semibold text-text-primary text-lg">
             {template.displayName || template.name}
           </h3>
@@ -66,7 +66,7 @@ export const TemplateCard: FC<TemplateCardProps> = memo(({ template, onView, onU
         </div>
 
         {/* Device count and tags */}
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-compact flex-wrap">
           <Tag colorScheme="purple">
             {template.deviceCount} {template.deviceCount === 1 ? 'device' : 'devices'}
           </Tag>
@@ -78,7 +78,7 @@ export const TemplateCard: FC<TemplateCardProps> = memo(({ template, onView, onU
         </div>
 
         {/* Action buttons */}
-        <div className="flex gap-2 pt-2">
+        <div className="flex gap-compact pt-2">
           <Button tone="violet" size="sm" className="flex-1" onClick={() => onUse(template)}>
             Use
           </Button>

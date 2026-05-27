@@ -83,7 +83,7 @@ export const CommandPalette: FC<CommandPaletteProps> = ({
         aria-label={t('commandPalette.closeAriaLabel')}
       />
       <div className="relative mx-4 w-full max-w-xl rounded-2xl border border-surface-border bg-bg-surface/95 shadow-2xl">
-        <div className="flex items-center gap-2 border-b border-surface-border px-4 py-3">
+        <div className="flex items-center gap-compact border-b border-surface-border px-4 py-row-lg">
           <Search className="h-4 w-4 text-text-muted" aria-hidden="true" />
           <Command.Input
             autoFocus={true}
@@ -96,7 +96,7 @@ export const CommandPalette: FC<CommandPaletteProps> = ({
             {t('commandPalette.escKey')}
           </kbd>
         </div>
-        <Command.List className="max-h-[60vh] overflow-y-auto px-2 py-2 text-sm">
+        <Command.List className="max-h-[60vh] overflow-y-auto px-cell py-row text-sm">
           <Command.Empty className="px-3 py-6 text-center text-text-muted">
             {t('commandPalette.noMatches')}
           </Command.Empty>
@@ -105,7 +105,7 @@ export const CommandPalette: FC<CommandPaletteProps> = ({
             <Command.Group
               key={group.label}
               heading={group.label}
-              className="px-1 py-1 text-xs uppercase tracking-wider text-text-muted"
+              className="px-1 py-compact text-xs uppercase tracking-wider text-text-muted"
             >
               {group.items.map((item) => {
                 const Icon = item.icon;
@@ -114,7 +114,7 @@ export const CommandPalette: FC<CommandPaletteProps> = ({
                     key={item.path}
                     value={`${group.label} ${item.label} ${item.path}`}
                     onSelect={() => handleSelect(() => navigate(item.path))}
-                    className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2 text-text-primary aria-selected:bg-surface-hover"
+                    className="flex cursor-pointer items-center gap-default rounded-md px-3 py-row text-text-primary aria-selected:bg-surface-hover"
                   >
                     <Icon className="h-4 w-4 text-text-muted" aria-hidden="true" />
                     <span className="flex-1">{item.label}</span>
@@ -127,13 +127,13 @@ export const CommandPalette: FC<CommandPaletteProps> = ({
 
           <Command.Group
             heading={t('commandPalette.actionsHeading')}
-            className="px-1 py-1 text-xs uppercase tracking-wider text-text-muted"
+            className="px-1 py-compact text-xs uppercase tracking-wider text-text-muted"
           >
             {onOpenSettings && (
               <Command.Item
                 value="open settings"
                 onSelect={() => handleSelect(onOpenSettings)}
-                className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2 text-text-primary aria-selected:bg-surface-hover"
+                className="flex cursor-pointer items-center gap-default rounded-md px-3 py-row text-text-primary aria-selected:bg-surface-hover"
               >
                 <SettingsIcon className="h-4 w-4 text-text-muted" aria-hidden="true" />
                 <span>{t('commandPalette.openSettings')}</span>
@@ -143,7 +143,7 @@ export const CommandPalette: FC<CommandPaletteProps> = ({
               <Command.Item
                 value="open help"
                 onSelect={() => handleSelect(onOpenHelp)}
-                className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2 text-text-primary aria-selected:bg-surface-hover"
+                className="flex cursor-pointer items-center gap-default rounded-md px-3 py-row text-text-primary aria-selected:bg-surface-hover"
               >
                 <HelpCircle className="h-4 w-4 text-text-muted" aria-hidden="true" />
                 <span>{t('commandPalette.openHelp')}</span>
@@ -153,7 +153,7 @@ export const CommandPalette: FC<CommandPaletteProps> = ({
               <Command.Item
                 value="toggle theme dark light mode"
                 onSelect={() => handleSelect(onToggleTheme)}
-                className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2 text-text-primary aria-selected:bg-surface-hover"
+                className="flex cursor-pointer items-center gap-default rounded-md px-3 py-row text-text-primary aria-selected:bg-surface-hover"
               >
                 {isDark ? (
                   <Sun className="h-4 w-4 text-text-muted" aria-hidden="true" />
@@ -174,7 +174,7 @@ export const CommandPalette: FC<CommandPaletteProps> = ({
                   key={action.id}
                   value={`${action.label} ${action.hint ?? ''}`}
                   onSelect={() => handleSelect(action.perform)}
-                  className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2 text-text-primary aria-selected:bg-surface-hover"
+                  className="flex cursor-pointer items-center gap-default rounded-md px-3 py-row text-text-primary aria-selected:bg-surface-hover"
                 >
                   {Icon ? (
                     <Icon className="h-4 w-4 text-text-muted" aria-hidden="true" />

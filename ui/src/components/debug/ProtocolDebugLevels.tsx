@@ -71,8 +71,8 @@ const ProtocolSlider: FC<ProtocolSliderProps> = memo(({ config, onChange, disabl
   );
 
   return (
-    <div className="rounded-lg border border-surface-border bg-bg-base/50 p-4">
-      <div className="flex items-center justify-between mb-3">
+    <div className="rounded-lg border border-surface-border bg-bg-base/50 pad">
+      <div className="flex-between mb-heading">
         <span className="font-semibold text-text-primary">{config.protocol}</span>
         <Tag
           colorScheme={
@@ -137,7 +137,7 @@ const ProtocolSlider: FC<ProtocolSliderProps> = memo(({ config, onChange, disabl
       </div>
 
       {/* Level labels */}
-      <div className="flex justify-between mt-1 text-xs text-text-muted">
+      <div className="flex justify-between mt-tight text-xs text-text-muted">
         {DEBUG_LEVELS.map((level) => (
           <span
             key={level}
@@ -170,13 +170,13 @@ const CategoryGroup: FC<CategoryGroupProps> = memo(
     }
 
     return (
-      <div className={`rounded-xl border ${CATEGORY_COLORS[category]} bg-bg-surface/50 p-4`}>
+      <div className={`rounded-xl border ${CATEGORY_COLORS[category]} bg-bg-surface/50 pad`}>
         <h3
-          className={`text-sm font-semibold uppercase tracking-wide mb-4 ${CATEGORY_HEADER_COLORS[category]}`}
+          className={`text-sm font-semibold uppercase tracking-wide mb-content ${CATEGORY_HEADER_COLORS[category]}`}
         >
           {PROTOCOL_CATEGORIES[category]}
         </h3>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-default sm:grid-cols-2 lg:grid-cols-3">
           {protocols.map((config) => (
             <ProtocolSlider
               key={config.protocol}
@@ -232,9 +232,11 @@ export const ProtocolDebugLevels: FC = () => {
   if (loading) {
     return (
       <Card className="border-surface-border bg-bg-surface/70">
-        <CardContent className="py-12 text-center">
+        <CardContent className="py-centered text-center">
           <RefreshCw className={`mx-auto ${iconSizes['2xl']} animate-spin text-text-muted`} />
-          <SmallText className="mt-3 text-text-muted">Loading protocol debug settings...</SmallText>
+          <SmallText className="mt-heading text-text-muted">
+            Loading protocol debug settings...
+          </SmallText>
         </CardContent>
       </Card>
     );
@@ -242,16 +244,16 @@ export const ProtocolDebugLevels: FC = () => {
 
   return (
     <Card className="border-surface-border bg-bg-surface/70">
-      <CardContent className="space-y-6">
+      <CardContent className="stack-xl">
         {/* Header */}
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-comfortable">
+          <div className="flex items-center gap-default">
             <Settings2 className={`${iconSizes.xl} text-brand-accent`} />
             <H2>Protocol Debug Levels</H2>
           </div>
 
           {/* Action Buttons */}
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-compact">
             {hasChanges && (
               <>
                 <Button
@@ -291,19 +293,19 @@ export const ProtocolDebugLevels: FC = () => {
         {/* Status Messages */}
         {error && (
           <div
-            className="rounded-lg border border-status-error/30 bg-status-error/20 px-4 py-3 text-sm text-status-error"
+            className="rounded-lg border border-status-error/30 bg-status-error/20 px-4 py-row-lg text-sm text-status-error"
             role="alert"
           >
             {error}
           </div>
         )}
         {successMessage && (
-          <output className="rounded-lg border border-status-success/30 bg-status-success/20 px-4 py-3 text-sm text-status-success">
+          <output className="rounded-lg border border-status-success/30 bg-status-success/20 px-4 py-row-lg text-sm text-status-success">
             {successMessage}
           </output>
         )}
         {hasChanges && !error && !successMessage && (
-          <output className="rounded-lg border border-status-warning/30 bg-status-warning/20 px-4 py-3 text-sm text-status-warning">
+          <output className="rounded-lg border border-status-warning/30 bg-status-warning/20 px-4 py-row-lg text-sm text-status-warning">
             You have unsaved changes
           </output>
         )}
@@ -316,7 +318,7 @@ export const ProtocolDebugLevels: FC = () => {
         </SmallText>
 
         {/* Protocol Groups */}
-        <div className="space-y-4">
+        <div className="stack-lg">
           {CATEGORY_ORDER.map((category) => {
             const protocols = protocolsByCategory.get(category) || [];
             return (
@@ -332,42 +334,42 @@ export const ProtocolDebugLevels: FC = () => {
         </div>
 
         {/* Legend */}
-        <div className="rounded-lg border border-surface-border bg-bg-base/50 p-4">
-          <SmallText className="font-semibold uppercase tracking-wide text-text-muted mb-3">
+        <div className="rounded-lg border border-surface-border bg-bg-base/50 pad">
+          <SmallText className="font-semibold uppercase tracking-wide text-text-muted mb-heading">
             Level Guide
           </SmallText>
-          <div className="flex flex-wrap gap-4 text-sm">
-            <div className="flex items-center gap-2">
+          <div className="flex flex-wrap gap-comfortable text-sm">
+            <div className="flex items-center gap-compact">
               <span className={`h-3 w-3 rounded-full ${LEVEL_COLORS.off}`} />
               <span className="text-text-secondary">
                 <strong>OFF</strong> - No output
               </span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-compact">
               <span className={`h-3 w-3 rounded-full ${LEVEL_COLORS.error}`} />
               <span className="text-text-secondary">
                 <strong>ERROR</strong> - Critical issues only
               </span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-compact">
               <span className={`h-3 w-3 rounded-full ${LEVEL_COLORS.warn}`} />
               <span className="text-text-secondary">
                 <strong>WARN</strong> - Warnings and errors
               </span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-compact">
               <span className={`h-3 w-3 rounded-full ${LEVEL_COLORS.info}`} />
               <span className="text-text-secondary">
                 <strong>INFO</strong> - General information
               </span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-compact">
               <span className={`h-3 w-3 rounded-full ${LEVEL_COLORS.debug}`} />
               <span className="text-text-secondary">
                 <strong>DEBUG</strong> - Detailed debugging
               </span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-compact">
               <span className={`h-3 w-3 rounded-full ${LEVEL_COLORS.trace}`} />
               <span className="text-text-secondary">
                 <strong>TRACE</strong> - Full packet traces

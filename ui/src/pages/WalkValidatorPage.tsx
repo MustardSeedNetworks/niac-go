@@ -93,9 +93,9 @@ export const WalkValidatorPage: FC = () => {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="stack-xl">
       <Card className="border-surface-border bg-bg-surface/70">
-        <CardContent className="space-y-4">
+        <CardContent className="stack-lg">
           <header>
             <h1 className="text-2xl font-semibold text-text-primary">
               {t('walkValidator.pageTitle')}
@@ -106,7 +106,7 @@ export const WalkValidatorPage: FC = () => {
             </p>
           </header>
 
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-comfortable md:grid-cols-2">
             <label className="block text-sm">
               <span className="text-text-secondary">From walks/ directory</span>
               <select
@@ -114,7 +114,7 @@ export const WalkValidatorPage: FC = () => {
                 onChange={(e) => setSelectedFile(e.target.value)}
                 disabled={filesLoading || files.length === 0}
                 title="Hydrated from /api/v1/files?kind=walks (the sandboxed walks directory). Use the absolute-path field to validate a walk outside this directory."
-                className="mt-1 w-full rounded border border-surface-border bg-bg-base/60 px-3 py-2 text-sm text-text-primary focus:border-status-info focus:outline-none disabled:opacity-50"
+                className="mt-tight w-full rounded border border-surface-border bg-bg-base/60 px-3 py-row text-sm text-text-primary focus:border-status-info focus:outline-none disabled:opacity-50"
               >
                 {filesLoading && <option>Loading…</option>}
                 {!filesLoading && files.length === 0 && (
@@ -127,7 +127,7 @@ export const WalkValidatorPage: FC = () => {
                 ))}
               </select>
               {filesError && (
-                <span className="mt-1 block text-xs text-status-error">{filesError}</span>
+                <span className="mt-tight block text-xs text-status-error">{filesError}</span>
               )}
             </label>
 
@@ -139,18 +139,18 @@ export const WalkValidatorPage: FC = () => {
                 onChange={(e) => setCustomPath(e.target.value)}
                 placeholder="/srv/niac/walks/cisco-c9300.walk"
                 title="Absolute path to a walk file. Takes precedence over the dropdown selection. The path is bounded server-side; ../ traversal is rejected."
-                className="mt-1 w-full rounded border border-surface-border bg-bg-base/60 px-3 py-2 font-mono text-xs text-text-primary placeholder-gray-500 focus:border-status-info focus:outline-none"
+                className="mt-tight w-full rounded border border-surface-border bg-bg-base/60 px-3 py-row font-mono text-xs text-text-primary placeholder-gray-500 focus:border-status-info focus:outline-none"
               />
             </label>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-default">
             <button
               type="button"
               onClick={() => void run('validating')}
               disabled={busy !== 'idle' || !targetPath}
               title="Read-only validation: parses the walk and returns per-line issues. Doesn't modify the file."
-              className="rounded bg-status-info/20 px-3 py-1.5 text-sm font-medium text-status-info ring-1 ring-cyan-400/40 hover:bg-status-info/30 disabled:opacity-50"
+              className="rounded bg-status-info/20 px-3 py-compact-md text-sm font-medium text-status-info ring-1 ring-cyan-400/40 hover:bg-status-info/30 disabled:opacity-50"
             >
               {busy === 'validating' ? 'Validating…' : 'Validate'}
             </button>
@@ -158,7 +158,7 @@ export const WalkValidatorPage: FC = () => {
               type="button"
               onClick={() => void run('fixing')}
               disabled={busy !== 'idle' || !targetPath}
-              className="rounded bg-status-warning/20 px-3 py-1.5 text-sm font-medium text-status-warning ring-1 ring-status-warning/40 hover:bg-status-warning/30 disabled:opacity-50"
+              className="rounded bg-status-warning/20 px-3 py-compact-md text-sm font-medium text-status-warning ring-1 ring-status-warning/40 hover:bg-status-warning/30 disabled:opacity-50"
               title="Validate and rewrite the file in place. A .bak is created next to the original."
             >
               {busy === 'fixing' ? 'Fixing…' : 'Auto-fix'}
@@ -174,16 +174,14 @@ export const WalkValidatorPage: FC = () => {
 
       {response?.result && (
         <Card className="border-surface-border bg-bg-surface/70">
-          <CardContent className="space-y-4">
-            <header className="flex flex-wrap items-baseline gap-4">
-              <h2 className="text-lg font-semibold text-text-primary">
-                {response.message ?? 'Result'}
-              </h2>
+          <CardContent className="stack-lg">
+            <header className="flex flex-wrap items-baseline gap-comfortable">
+              <h2 className="heading-3 text-text-primary">{response.message ?? 'Result'}</h2>
               <span className="text-sm text-text-muted">
                 {response.result.totalLines} lines, {response.result.validLines} valid
               </span>
               <span
-                className={`rounded px-2 py-0.5 text-xs font-medium ring-1 ${
+                className={`rounded px-cell py-0.5 text-xs font-medium ring-1 ${
                   response.result.valid
                     ? 'bg-status-success/20 text-status-success ring-status-success/40'
                     : 'bg-status-error/20 text-status-error ring-status-error/40'
@@ -194,13 +192,13 @@ export const WalkValidatorPage: FC = () => {
               {SEVERITY_ORDER.map((sev) => (
                 <span
                   key={sev}
-                  className={`rounded px-2 py-0.5 text-xs font-medium ring-1 ${SEVERITY_BADGE[sev]}`}
+                  className={`rounded px-cell py-0.5 text-xs font-medium ring-1 ${SEVERITY_BADGE[sev]}`}
                 >
                   {sev}: {counts[sev]}
                 </span>
               ))}
               {typeof response.result.fixedCount === 'number' && (
-                <span className="rounded bg-status-success/20 px-2 py-0.5 text-xs font-medium text-status-success ring-1 ring-status-success/40">
+                <span className="rounded bg-status-success/20 px-cell py-0.5 text-xs font-medium text-status-success ring-1 ring-status-success/40">
                   fixed: {response.result.fixedCount}
                 </span>
               )}
@@ -212,10 +210,10 @@ export const WalkValidatorPage: FC = () => {
               <table className="w-full text-sm">
                 <thead className="bg-bg-base/40 text-left text-xs uppercase tracking-wider text-text-muted">
                   <tr>
-                    <th className="px-3 py-2 w-16">Line</th>
-                    <th className="px-3 py-2 w-24">Severity</th>
-                    <th className="px-3 py-2">Message</th>
-                    <th className="px-3 py-2">Original</th>
+                    <th className="px-3 py-row w-16">Line</th>
+                    <th className="px-3 py-row w-24">Severity</th>
+                    <th className="px-3 py-row">Message</th>
+                    <th className="px-3 py-row">Original</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
@@ -224,16 +222,18 @@ export const WalkValidatorPage: FC = () => {
                       key={`${issue.line}-${idx}`}
                       className="text-text-primary hover:bg-bg-base/40"
                     >
-                      <td className="px-3 py-2 font-mono text-xs text-text-muted">{issue.line}</td>
-                      <td className="px-3 py-2">
+                      <td className="px-3 py-row font-mono text-xs text-text-muted">
+                        {issue.line}
+                      </td>
+                      <td className="px-3 py-row">
                         <span
-                          className={`rounded px-2 py-0.5 text-[10px] font-medium ring-1 ${SEVERITY_BADGE[issue.severity as Severity] ?? ''}`}
+                          className={`rounded px-cell py-0.5 text-[10px] font-medium ring-1 ${SEVERITY_BADGE[issue.severity as Severity] ?? ''}`}
                         >
                           {issue.severity}
                         </span>
                       </td>
-                      <td className="px-3 py-2">{issue.message}</td>
-                      <td className="px-3 py-2 truncate font-mono text-xs text-text-muted">
+                      <td className="px-3 py-row">{issue.message}</td>
+                      <td className="px-3 py-row truncate font-mono text-xs text-text-muted">
                         {issue.original}
                       </td>
                     </tr>

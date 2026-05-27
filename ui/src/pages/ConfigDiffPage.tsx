@@ -149,22 +149,22 @@ export const ConfigDiffPage: FC = () => {
   const hasFiles = leftFile !== null && rightFile !== null;
 
   return (
-    <div className="space-y-6">
+    <div className="stack-xl">
       {/* Header section */}
       <Card className="border-surface-border bg-bg-surface/70">
-        <CardContent className="space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-4">
+        <CardContent className="stack-lg">
+          <div className="flex flex-wrap items-center justify-between gap-comfortable">
             <div>
-              <H2 className="flex items-center gap-2">
+              <H2 className="flex items-center gap-compact">
                 <GitCompare className={`${iconSizes.lg} text-brand-accent`} />
                 Compare & Merge
               </H2>
-              <P className="text-text-muted mt-1">
+              <P className="text-text-muted mt-tight">
                 Compare two YAML network configs side-by-side and merge changes between them.
               </P>
             </div>
             {hasFiles && (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-compact">
                 <Tag colorScheme="purple">
                   {diffBlocks.filter((b) => b.type !== 'unchanged').length} changes
                 </Tag>
@@ -175,7 +175,7 @@ export const ConfigDiffPage: FC = () => {
           {/* Status message */}
           {message && (
             <div
-              className={`flex items-center gap-2 rounded-lg p-3 ${
+              className={`flex items-center gap-compact rounded-lg pad-sm ${
                 message.type === 'success'
                   ? 'border border-status-success/30 bg-status-success/10 text-status-success'
                   : 'border border-status-error/30 bg-status-error/10 text-status-error'
@@ -202,10 +202,10 @@ export const ConfigDiffPage: FC = () => {
       </Card>
 
       {/* File upload section */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-spacious lg:grid-cols-2">
         <Card className="border-surface-border bg-bg-surface/70">
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
+          <CardContent className="stack-lg">
+            <div className="flex-between">
               <H2 className="text-lg">{t('configDiff.originalFileTitle')}</H2>
               {leftFile && (
                 <Tag colorScheme="blue" className="text-xs">
@@ -226,8 +226,8 @@ export const ConfigDiffPage: FC = () => {
         </Card>
 
         <Card className="border-surface-border bg-bg-surface/70">
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
+          <CardContent className="stack-lg">
+            <div className="flex-between">
               <H2 className="text-lg">{t('configDiff.modifiedFileTitle')}</H2>
               {rightFile && (
                 <Tag colorScheme="green" className="text-xs">
@@ -252,8 +252,8 @@ export const ConfigDiffPage: FC = () => {
       {hasFiles && (
         <>
           <Card className="border-surface-border bg-bg-surface/70">
-            <CardContent className="space-y-4">
-              <H2 className="flex items-center gap-2">
+            <CardContent className="stack-lg">
+              <H2 className="flex items-center gap-compact">
                 <GitCompare className={`${iconSizes.lg} text-status-info`} />
                 Side-by-Side Comparison
               </H2>
@@ -284,10 +284,10 @@ export const ConfigDiffPage: FC = () => {
 
           {/* Server-side overlay merge (CLI parity) */}
           <Card className="border-surface-border bg-bg-surface/70">
-            <CardContent className="space-y-3">
-              <div className="flex items-start justify-between gap-4">
+            <CardContent className="stack">
+              <div className="flex items-start justify-between gap-comfortable">
                 <div>
-                  <H2 className="mb-1 flex items-center gap-2 text-lg">
+                  <H2 className="mb-tight flex items-center gap-compact text-lg">
                     <Layers className={`${iconSizes.lg} text-brand-accent`} />
                     Server-side overlay merge
                   </H2>
@@ -339,23 +339,23 @@ export const ConfigDiffPage: FC = () => {
       {/* Empty state when no files */}
       {!hasFiles && (
         <Card className="border-surface-border bg-bg-surface/70">
-          <CardContent className="py-12 text-center">
+          <CardContent className="py-centered text-center">
             <GitCompare className={`mx-auto ${iconSizes['3xl']} text-text-disabled`} />
-            <H2 className="mt-4 mb-2">{t('configDiff.readyToCompareTitle')}</H2>
+            <H2 className="mt-content mb-2">{t('configDiff.readyToCompareTitle')}</H2>
             <P className="text-text-muted max-w-md mx-auto">
               Upload two YAML configuration files above to see a side-by-side comparison with
               color-coded changes and interactive merge controls.
             </P>
-            <div className="flex flex-wrap justify-center gap-4 mt-6">
-              <div className="flex items-center gap-2">
+            <div className="flex flex-wrap justify-center gap-comfortable mt-6">
+              <div className="flex items-center gap-compact">
                 <div className="w-3 h-3 rounded bg-status-success" />
                 <SmallText className="text-text-muted">Additions</SmallText>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-compact">
                 <div className="w-3 h-3 rounded bg-status-error" />
                 <SmallText className="text-text-muted">Deletions</SmallText>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-compact">
                 <div className="w-3 h-3 rounded bg-status-warning" />
                 <SmallText className="text-text-muted">Modifications</SmallText>
               </div>

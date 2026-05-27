@@ -209,7 +209,7 @@ export const PcapAnalyzerPage: FC = () => {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="stack-xl">
       {/* Upload Section */}
       {!analysisResult && (
         <PcapUploader
@@ -228,10 +228,10 @@ export const PcapAnalyzerPage: FC = () => {
           {/* Controls Header */}
           <Card className="border-surface-border bg-bg-surface/70">
             <CardContent>
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-col gap-comfortable sm:flex-row sm:items-center sm:justify-between">
                 {/* Title and file info */}
-                <div className="flex items-center gap-4">
-                  <H2 className="flex items-center gap-2">
+                <div className="flex items-center gap-comfortable">
+                  <H2 className="flex items-center gap-compact">
                     <FileSearch className={`${iconSizes.lg} text-brand-accent`} />
                     PCAP Analysis
                   </H2>
@@ -239,14 +239,14 @@ export const PcapAnalyzerPage: FC = () => {
                 </div>
 
                 {/* Control buttons */}
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap items-center gap-compact">
                   {/* View Mode Toggle */}
                   <div className="flex rounded-lg border border-surface-border bg-bg-base/50 p-1">
                     <button
                       type="button"
                       onClick={() => setViewMode('packets')}
                       title="Show every decoded packet with timestamp, headers, and payload"
-                      className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                      className={`px-3 py-compact-md text-sm rounded-md transition-colors ${
                         viewMode === 'packets'
                           ? 'bg-brand-primary text-text-primary'
                           : 'text-text-muted hover:text-text-primary'
@@ -258,7 +258,7 @@ export const PcapAnalyzerPage: FC = () => {
                       type="button"
                       onClick={() => setViewMode('stats')}
                       title="Show aggregate statistics: byte/packet totals per protocol and per host"
-                      className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                      className={`px-3 py-compact-md text-sm rounded-md transition-colors ${
                         viewMode === 'stats'
                           ? 'bg-brand-primary text-text-primary'
                           : 'text-text-muted hover:text-text-primary'
@@ -270,7 +270,7 @@ export const PcapAnalyzerPage: FC = () => {
                       type="button"
                       onClick={() => setViewMode('conversations')}
                       title="Group packets by 5-tuple to see TCP/UDP flows and byte totals per conversation"
-                      className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                      className={`px-3 py-compact-md text-sm rounded-md transition-colors ${
                         viewMode === 'conversations'
                           ? 'bg-brand-primary text-text-primary'
                           : 'text-text-muted hover:text-text-primary'
@@ -325,11 +325,11 @@ export const PcapAnalyzerPage: FC = () => {
           {viewMode === 'packets' && (
             <>
               {/* Filter Bar */}
-              <div className="mb-4">
+              <div className="mb-content">
                 <FilterBar value={filterExpression} onChange={setFilterExpression} />
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-spacious">
                 {/* Packet List */}
                 <div className="lg:col-span-7 xl:col-span-8">
                   <div className="h-[600px]">
@@ -344,11 +344,11 @@ export const PcapAnalyzerPage: FC = () => {
                 </div>
 
                 {/* Right panel - Details */}
-                <div className="lg:col-span-5 xl:col-span-4 space-y-6">
+                <div className="lg:col-span-5 xl:col-span-4 stack-xl">
                   {/* Hex Dump Viewer */}
                   <Card className="border-surface-border bg-bg-surface/70 h-[280px]">
                     <CardContent className="h-full flex flex-col">
-                      <SmallText className="text-text-muted uppercase tracking-wide font-semibold mb-3">
+                      <SmallText className="text-text-muted uppercase tracking-wide font-semibold mb-heading">
                         Hex Dump
                       </SmallText>
                       <div className="flex-1 min-h-0">
@@ -364,7 +364,7 @@ export const PcapAnalyzerPage: FC = () => {
                   {/* Packet Details */}
                   <Card className="border-surface-border bg-bg-surface/70 h-[280px]">
                     <CardContent className="h-full flex flex-col">
-                      <SmallText className="text-text-muted uppercase tracking-wide font-semibold mb-3">
+                      <SmallText className="text-text-muted uppercase tracking-wide font-semibold mb-heading">
                         Packet Details
                       </SmallText>
                       <div className="flex-1 min-h-0 overflow-y-auto">
@@ -403,7 +403,7 @@ export const PcapAnalyzerPage: FC = () => {
       {!(analysisResult || selectedFile) && (
         <Card className="border-surface-border bg-bg-surface/70">
           <CardContent>
-            <div className="flex items-start gap-3">
+            <div className="flex items-start gap-default">
               <Info className={`${iconSizes.lg} text-status-info flex-shrink-0 mt-0.5`} />
               <div>
                 <p className="font-medium text-text-primary">About PCAP Analyzer</p>
@@ -412,7 +412,7 @@ export const PcapAnalyzerPage: FC = () => {
                   packets and provide detailed statistics, protocol breakdown, and packet-level
                   inspection including hex dump viewing.
                 </SmallText>
-                <div className="mt-3 flex flex-wrap gap-2">
+                <div className="mt-heading flex flex-wrap gap-compact">
                   <Tag colorScheme="gray">Supports .pcap</Tag>
                   <Tag colorScheme="gray">Supports .pcapng</Tag>
                   <Tag colorScheme="gray">Max 100MB</Tag>

@@ -57,8 +57,8 @@ export const JavaDslImportCard: FC = () => {
 
   return (
     <Card className="border-surface-border bg-bg-surface/70">
-      <CardContent className="space-y-4">
-        <H2 className="flex items-center gap-2">
+      <CardContent className="stack-lg">
+        <H2 className="flex items-center gap-compact">
           <FileInput className={`${iconSizes.lg} text-status-success`} />
           Import legacy config (Java DSL → YAML)
         </H2>
@@ -69,8 +69,8 @@ export const JavaDslImportCard: FC = () => {
           a simulation.
         </P>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <label className="cursor-pointer rounded bg-bg-elevated/60 px-3 py-1.5 text-xs font-medium text-text-primary ring-1 ring-white/10 hover:bg-bg-elevated">
+        <div className="flex flex-wrap items-center gap-default">
+          <label className="cursor-pointer rounded bg-bg-elevated/60 px-3 py-compact-md text-xs font-medium text-text-primary ring-1 ring-white/10 hover:bg-bg-elevated">
             Choose .cfg file…
             <input type="file" accept=".cfg,.conf,.txt" onChange={onPickFile} className="hidden" />
           </label>
@@ -87,11 +87,11 @@ export const JavaDslImportCard: FC = () => {
           }}
           placeholder="device my-router {&#10;  type = router&#10;  ip = 192.168.1.1&#10;  ...&#10;}"
           rows={10}
-          className="w-full rounded border border-surface-border bg-bg-base/60 p-3 font-mono text-xs text-text-primary placeholder-gray-500 focus:border-status-success focus:outline-none"
+          className="w-full rounded border border-surface-border bg-bg-base/60 pad-sm font-mono text-xs text-text-primary placeholder-gray-500 focus:border-status-success focus:outline-none"
           aria-label="Legacy Java DSL config content"
         />
 
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-default">
           <Button
             tone="green"
             disabled={busy || !content.trim()}
@@ -108,8 +108,8 @@ export const JavaDslImportCard: FC = () => {
         </div>
 
         {yaml && (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
+          <div className="stack-sm">
+            <div className="flex-between">
               <SmallText className="text-status-success">
                 ✓ Converted ({deviceCount} {deviceCount === 1 ? 'device' : 'devices'})
               </SmallText>
@@ -121,7 +121,7 @@ export const JavaDslImportCard: FC = () => {
                 Download YAML
               </Button>
             </div>
-            <pre className="max-h-64 overflow-auto rounded bg-bg-base/80 p-3 font-mono text-xs text-text-primary">
+            <pre className="max-h-64 overflow-auto rounded bg-bg-base/80 pad-sm font-mono text-xs text-text-primary">
               {yaml}
             </pre>
           </div>

@@ -12,7 +12,7 @@ export const YamlPreviewSection: FC<YamlPreviewSectionProps> = ({ yamlContent })
   return (
     <Card className="border-surface-border bg-bg-surface/70">
       <CardContent>
-        <H2 className="mb-3 flex items-center gap-2 text-base">
+        <H2 className="mb-heading flex items-center gap-compact text-base">
           <span>YAML Preview</span>
           <Tag colorScheme="gray">Read-only</Tag>
         </H2>

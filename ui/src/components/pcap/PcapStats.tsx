@@ -30,12 +30,12 @@ const StatBlock = memo(
     value: string | number;
     helper?: string;
   }) => (
-    <div className="rounded-lg border border-surface-border bg-bg-base/50 p-4">
-      <div className="flex items-center gap-2 mb-2">
+    <div className="rounded-lg border border-surface-border bg-bg-base/50 pad">
+      <div className="flex items-center gap-compact mb-2">
         {icon}
         <SmallText className="text-text-muted uppercase tracking-wide">{label}</SmallText>
       </div>
-      <p className="text-2xl font-bold text-text-primary">{value}</p>
+      <p className="heading-1 text-text-primary">{value}</p>
       {helper && <SmallText className="text-text-muted">{helper}</SmallText>}
     </div>
   ),
@@ -61,14 +61,14 @@ const ProtocolBreakdown: FC<{
   }
 
   return (
-    <div className="space-y-2">
+    <div className="stack-sm">
       {sortedProtocols.map(([protocol, count]) => {
         const percentage = total > 0 ? (count / total) * 100 : 0;
 
         return (
-          <div key={protocol} className="space-y-1">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
+          <div key={protocol} className="stack-xs">
+            <div className="flex-between">
+              <div className="flex items-center gap-compact">
                 <Tag colorScheme={getProtocolColor(protocol)} className="text-xs">
                   {protocol}
                 </Tag>
@@ -100,10 +100,10 @@ const TopEndpoints: FC<{
 }> = memo(({ sources, destinations }) => {
   const { t } = useTranslation('pages');
   return (
-    <div className="grid gap-4 md:grid-cols-2">
+    <div className="grid gap-comfortable md:grid-cols-2">
       {/* Top Sources */}
-      <div className="space-y-2">
-        <div className="flex items-center gap-2 mb-3">
+      <div className="stack-sm">
+        <div className="flex items-center gap-compact mb-heading">
           <Server className={`${iconSizes.md} text-status-info`} />
           <SmallText className="text-text-muted uppercase tracking-wide font-semibold">
             {t('packets.stats.topSources')}
@@ -112,11 +112,11 @@ const TopEndpoints: FC<{
         {sources.length === 0 ? (
           <SmallText className="text-text-muted">{t('packets.stats.noSourceData')}</SmallText>
         ) : (
-          <div className="space-y-1">
+          <div className="stack-xs">
             {sources.slice(0, 5).map((item) => (
               <div
                 key={item.ip}
-                className="flex items-center justify-between rounded-lg border border-surface-border bg-bg-base/50 px-3 py-2"
+                className="flex-between rounded-lg border border-surface-border bg-bg-base/50 px-3 py-row"
               >
                 <span className="font-mono text-sm text-text-primary">{item.ip}</span>
                 <Tag colorScheme="blue" className="text-xs">
@@ -129,8 +129,8 @@ const TopEndpoints: FC<{
       </div>
 
       {/* Top Destinations */}
-      <div className="space-y-2">
-        <div className="flex items-center gap-2 mb-3">
+      <div className="stack-sm">
+        <div className="flex items-center gap-compact mb-heading">
           <Network className={`${iconSizes.md} text-status-success`} />
           <SmallText className="text-text-muted uppercase tracking-wide font-semibold">
             {t('packets.stats.topDestinations')}
@@ -139,11 +139,11 @@ const TopEndpoints: FC<{
         {destinations.length === 0 ? (
           <SmallText className="text-text-muted">{t('packets.stats.noDestinationData')}</SmallText>
         ) : (
-          <div className="space-y-1">
+          <div className="stack-xs">
             {destinations.slice(0, 5).map((item) => (
               <div
                 key={item.ip}
-                className="flex items-center justify-between rounded-lg border border-surface-border bg-bg-base/50 px-3 py-2"
+                className="flex-between rounded-lg border border-surface-border bg-bg-base/50 px-3 py-row"
               >
                 <span className="font-mono text-sm text-text-primary">{item.ip}</span>
                 <Tag colorScheme="green" className="text-xs">
@@ -176,8 +176,8 @@ export const PcapStats: FC<PcapStatsProps> = memo(({ stats, filename, fileSize }
   if (!stats) {
     return (
       <Card className="border-surface-border bg-bg-surface/70">
-        <CardContent className="py-12 text-center">
-          <BarChart3 className={`${iconSizes['3xl']} text-text-disabled mx-auto mb-4`} />
+        <CardContent className="py-centered text-center">
+          <BarChart3 className={`${iconSizes['3xl']} text-text-disabled mx-auto mb-content`} />
           <p className="text-text-muted">{t('packets.stats.emptyTitle')}</p>
           <SmallText className="text-text-muted">{t('packets.stats.emptyDescription')}</SmallText>
         </CardContent>
@@ -186,12 +186,12 @@ export const PcapStats: FC<PcapStatsProps> = memo(({ stats, filename, fileSize }
   }
 
   return (
-    <div className="space-y-6">
+    <div className="stack-xl">
       {/* File Info */}
       {filename && (
         <Card className="border-surface-border bg-bg-surface/70">
           <CardContent>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-default">
               <FileText className={`${iconSizes.lg} text-brand-accent`} />
               <div>
                 <p className="font-medium text-text-primary">{filename}</p>
@@ -206,13 +206,13 @@ export const PcapStats: FC<PcapStatsProps> = memo(({ stats, filename, fileSize }
 
       {/* Summary Statistics */}
       <Card className="border-surface-border bg-bg-surface/70">
-        <CardContent className="space-y-4">
-          <H2 className="flex items-center gap-2 mb-0">
+        <CardContent className="stack-lg">
+          <H2 className="flex items-center gap-compact mb-0">
             <BarChart3 className={`${iconSizes.lg} text-status-info`} />
             {t('packets.stats.summaryTitle')}
           </H2>
 
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-comfortable sm:grid-cols-2 lg:grid-cols-4">
             <StatBlock
               icon={<ArrowRightLeft className={`${iconSizes.md} text-brand-accent`} />}
               label={t('packets.stats.totalPackets')}
@@ -243,26 +243,26 @@ export const PcapStats: FC<PcapStatsProps> = memo(({ stats, filename, fileSize }
 
       {/* Time Range */}
       <Card className="border-surface-border bg-bg-surface/70">
-        <CardContent className="space-y-4">
-          <div className="flex items-center gap-2">
+        <CardContent className="stack-lg">
+          <div className="flex items-center gap-compact">
             <Clock className={`${iconSizes.lg} text-status-success`} />
             <H2>{t('packets.stats.timeRangeTitle')}</H2>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="rounded-lg border border-surface-border bg-bg-base/50 p-4">
+          <div className="grid gap-comfortable sm:grid-cols-2">
+            <div className="rounded-lg border border-surface-border bg-bg-base/50 pad">
               <SmallText className="text-text-muted uppercase tracking-wide">
                 {t('packets.stats.startTime')}
               </SmallText>
-              <p className="text-lg font-mono text-text-primary mt-1">
+              <p className="text-lg font-mono text-text-primary mt-tight">
                 {formatTimestamp(stats.timeRange.start)}
               </p>
             </div>
-            <div className="rounded-lg border border-surface-border bg-bg-base/50 p-4">
+            <div className="rounded-lg border border-surface-border bg-bg-base/50 pad">
               <SmallText className="text-text-muted uppercase tracking-wide">
                 {t('packets.stats.endTime')}
               </SmallText>
-              <p className="text-lg font-mono text-text-primary mt-1">
+              <p className="text-lg font-mono text-text-primary mt-tight">
                 {formatTimestamp(stats.timeRange.end)}
               </p>
             </div>
@@ -272,8 +272,8 @@ export const PcapStats: FC<PcapStatsProps> = memo(({ stats, filename, fileSize }
 
       {/* Protocol Breakdown */}
       <Card className="border-surface-border bg-bg-surface/70">
-        <CardContent className="space-y-4">
-          <div className="flex items-center gap-2">
+        <CardContent className="stack-lg">
+          <div className="flex items-center gap-compact">
             <BarChart3 className={`${iconSizes.lg} text-brand-accent`} />
             <H2>{t('packets.stats.protocolBreakdownTitle')}</H2>
           </div>
@@ -284,8 +284,8 @@ export const PcapStats: FC<PcapStatsProps> = memo(({ stats, filename, fileSize }
 
       {/* Top Endpoints */}
       <Card className="border-surface-border bg-bg-surface/70">
-        <CardContent className="space-y-4">
-          <div className="flex items-center gap-2">
+        <CardContent className="stack-lg">
+          <div className="flex items-center gap-compact">
             <Network className={`${iconSizes.lg} text-status-info`} />
             <H2>{t('packets.stats.topEndpointsTitle')}</H2>
           </div>

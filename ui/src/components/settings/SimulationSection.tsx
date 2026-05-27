@@ -138,15 +138,15 @@ export function SimulationSection(): ReactElement {
   );
 
   return (
-    <div className="space-y-4">
+    <div className="stack-lg">
       {/* Section Header */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-compact">
         <PlugZap className="w-5 h-5 text-brand-accent" aria-hidden="true" />
         <h3 className="text-sm font-semibold text-text-primary">{t('simulation.sectionTitle')}</h3>
       </div>
 
       {/* Interface Selector */}
-      <div className="space-y-2">
+      <div className="stack-sm">
         <label htmlFor="sim-interface" className="block text-sm text-text-muted">
           {t('simulation.interfaceLabel')}
         </label>
@@ -158,7 +158,7 @@ export function SimulationSection(): ReactElement {
             onChange={handleInterfaceChange}
             disabled={loading}
             className={cn(
-              'w-full pl-10 pr-4 py-2 text-sm',
+              'w-full pl-10 pr-4 py-row text-sm',
               'bg-bg-elevated border border-surface-border rounded-lg',
               'text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/50',
               'disabled:opacity-50 disabled:cursor-not-allowed',
@@ -177,7 +177,7 @@ export function SimulationSection(): ReactElement {
       </div>
 
       {/* Config Source Tabs */}
-      <div className="space-y-3">
+      <div className="stack">
         <span className="block text-sm text-text-muted">{t('simulation.configurationLabel')}</span>
         <div
           className="flex border border-surface-border rounded-lg overflow-hidden"
@@ -189,7 +189,7 @@ export function SimulationSection(): ReactElement {
               type="button"
               onClick={() => handleTabChange(tab.id)}
               className={cn(
-                'flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium',
+                'flex-1 flex-center gap-1.5 px-3 py-row text-xs font-medium',
                 'transition-colors',
                 activeTab === tab.id
                   ? 'bg-brand-primary text-text-primary'
@@ -206,9 +206,7 @@ export function SimulationSection(): ReactElement {
       {/* Tab Content */}
       <div className="min-h-[120px]">
         {loading && (
-          <div className="flex items-center justify-center py-8 text-text-muted text-sm">
-            {t('simulation.loading')}
-          </div>
+          <div className="flex-center py-8 text-text-muted text-sm">{t('simulation.loading')}</div>
         )}
 
         {!loading && activeTab === 'templates' && (
@@ -236,11 +234,11 @@ export function SimulationSection(): ReactElement {
 
       {/* Current Selection Display */}
       {simulationSettings.configName && (
-        <div className="p-3 bg-brand-primary/20 border border-brand-primary/30 rounded-lg">
+        <div className="pad-sm bg-brand-primary/20 border border-brand-primary/30 rounded-lg">
           <p className="text-xs text-text-muted">{t('simulation.selectedConfigLabel')}</p>
-          <p className="text-sm text-text-primary font-medium mt-1">
+          <p className="text-sm text-text-primary font-medium mt-tight">
             {simulationSettings.configName}
-            <span className="text-text-muted ml-2">
+            <span className="text-text-muted ml-inline">
               (
               {simulationSettings.configSource === 'template'
                 ? t('simulation.selectedConfigSourceTemplate')
@@ -275,20 +273,20 @@ function TemplateList({ templates, selectedName, onSelect }: TemplateListProps):
   );
 
   return (
-    <div className="space-y-2">
+    <div className="stack-sm">
       <input
         type="text"
         placeholder={t('simulation.searchTemplatesPlaceholder')}
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         className={cn(
-          'w-full px-3 py-2 text-sm',
+          'w-full px-3 py-row text-sm',
           'bg-bg-elevated border border-surface-border rounded-lg',
           'text-text-primary placeholder:text-text-muted',
           'focus:outline-none focus:ring-2 focus:ring-brand-primary/50',
         )}
       />
-      <div className="max-h-[200px] overflow-y-auto space-y-1">
+      <div className="max-h-[200px] overflow-y-auto stack-xs">
         {filteredTemplates.length === 0 && (
           <p className="text-sm text-text-muted py-4 text-center">
             {search ? t('simulation.noTemplatesMatchSearch') : t('simulation.noTemplatesAvailable')}
@@ -300,7 +298,7 @@ function TemplateList({ templates, selectedName, onSelect }: TemplateListProps):
             type="button"
             onClick={() => onSelect(template)}
             className={cn(
-              'w-full text-left px-3 py-2 rounded-lg transition-colors',
+              'w-full text-left px-3 py-row rounded-lg transition-colors',
               selectedName === template.name
                 ? 'bg-brand-primary/30 border border-brand-primary/50'
                 : 'bg-surface-hover hover:bg-surface-hover border border-transparent',
@@ -308,7 +306,7 @@ function TemplateList({ templates, selectedName, onSelect }: TemplateListProps):
           >
             <div className="text-sm text-text-primary font-medium">{template.name}</div>
             <div className="text-xs text-text-muted truncate">{template.description}</div>
-            <div className="text-xs text-text-muted mt-1">
+            <div className="text-xs text-text-muted mt-tight">
               {t('simulation.deviceCount', { count: template.deviceCount })}
             </div>
           </button>
@@ -331,20 +329,20 @@ function UserConfigList({ configs, selectedName, onSelect }: UserConfigListProps
       <div className="text-center py-8">
         <FolderOpen className="w-8 h-8 text-text-disabled mx-auto mb-2" />
         <p className="text-sm text-text-muted">{t('simulation.noUserConfigs')}</p>
-        <p className="text-xs text-text-disabled mt-1">{t('simulation.noUserConfigsHint')}</p>
+        <p className="text-xs text-text-disabled mt-tight">{t('simulation.noUserConfigsHint')}</p>
       </div>
     );
   }
 
   return (
-    <div className="max-h-[200px] overflow-y-auto space-y-1">
+    <div className="max-h-[200px] overflow-y-auto stack-xs">
       {configs.map((config) => (
         <button
           key={config.name}
           type="button"
           onClick={() => onSelect(config)}
           className={cn(
-            'w-full text-left px-3 py-2 rounded-lg transition-colors',
+            'w-full text-left px-3 py-row rounded-lg transition-colors',
             selectedName === config.name
               ? 'bg-brand-primary/30 border border-brand-primary/50'
               : 'bg-surface-hover hover:bg-surface-hover border border-transparent',
@@ -399,10 +397,10 @@ function UploadSection(): ReactElement {
   );
 
   return (
-    <div className="space-y-3">
+    <div className="stack">
       <div
         className={cn(
-          'border-2 border-dashed border-surface-border rounded-lg p-4',
+          'border-2 border-dashed border-surface-border rounded-lg pad',
           'hover:border-brand-primary/50 transition-colors',
         )}
       >
@@ -418,7 +416,9 @@ function UploadSection(): ReactElement {
           <span className="text-sm text-text-muted">
             {selectedFile ? selectedFile.name : t('simulation.uploadPrompt')}
           </span>
-          <span className="text-xs text-text-disabled mt-1">{t('simulation.uploadFileTypes')}</span>
+          <span className="text-xs text-text-disabled mt-tight">
+            {t('simulation.uploadFileTypes')}
+          </span>
         </label>
       </div>
       <p className="text-xs text-text-muted">{t('simulation.uploadHelper')}</p>

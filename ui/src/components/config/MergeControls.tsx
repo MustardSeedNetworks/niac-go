@@ -110,22 +110,22 @@ export const MergeControls: FC<MergeControlsProps> = ({
 
   return (
     <Card className="border-surface-border bg-bg-surface/70">
-      <CardContent className="space-y-4">
+      <CardContent className="stack-lg">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <H2 className="flex items-center gap-2">
+        <div className="flex-between">
+          <H2 className="flex items-center gap-compact">
             <FileCheck className={`${iconSizes.lg} text-brand-accent`} />
             Merge Controls
           </H2>
           {stats.totalChanges > 0 && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-compact">
               {stats.isComplete ? (
-                <Tag colorScheme="green" className="flex items-center gap-1">
+                <Tag colorScheme="green" className="flex items-center gap-tight">
                   <CheckCircle2 className={iconSizes.xs} />
                   All resolved
                 </Tag>
               ) : (
-                <Tag colorScheme="yellow" className="flex items-center gap-1">
+                <Tag colorScheme="yellow" className="flex items-center gap-tight">
                   <AlertCircle className={iconSizes.xs} />
                   {stats.totalChanges - stats.decisionsCount} pending
                 </Tag>
@@ -136,8 +136,8 @@ export const MergeControls: FC<MergeControlsProps> = ({
 
         {/* Progress bar */}
         {stats.totalChanges > 0 && (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-sm">
+          <div className="stack-sm">
+            <div className="flex-between text-sm">
               <SmallText className="text-text-muted">Resolution progress</SmallText>
               <SmallText className="text-text-secondary">
                 {stats.decisionsCount} / {stats.totalChanges} ({stats.progress}
@@ -155,7 +155,7 @@ export const MergeControls: FC<MergeControlsProps> = ({
 
         {/* Decision breakdown */}
         {stats.decisionsCount > 0 && (
-          <div className="flex items-center gap-4 flex-wrap">
+          <div className="flex items-center gap-comfortable flex-wrap">
             <SmallText className="text-text-muted">Decisions:</SmallText>
             {stats.leftCount > 0 && (
               <Tag colorScheme="blue" className="text-xs">
@@ -178,12 +178,12 @@ export const MergeControls: FC<MergeControlsProps> = ({
         )}
 
         {/* Quick actions */}
-        <div className="space-y-3">
+        <div className="stack">
           <SmallText className="text-text-muted uppercase tracking-wide font-semibold">
             Quick Actions
           </SmallText>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-default">
             <Button
               variant="outline"
               disabled={disabled || stats.totalChanges === 0}
@@ -207,7 +207,7 @@ export const MergeControls: FC<MergeControlsProps> = ({
         </div>
 
         {/* Main actions */}
-        <div className="flex flex-wrap gap-3 pt-2 border-t border-surface-border">
+        <div className="flex flex-wrap gap-default pt-2 border-t border-surface-border">
           <Button
             tone="violet"
             disabled={disabled || stats.totalChanges === 0}
@@ -319,7 +319,7 @@ export const MergePreviewModal: FC<MergePreviewModalProps> = ({ content, onClose
   }, [content]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex-center">
       <button
         type="button"
         className="absolute inset-0 bg-black/70 backdrop-blur-sm"
@@ -333,13 +333,13 @@ export const MergePreviewModal: FC<MergePreviewModalProps> = ({ content, onClose
         aria-labelledby="preview-modal-title"
       >
         {/* Modal Header */}
-        <div className="flex items-center justify-between border-b border-surface-border px-6 py-4 flex-shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-brand-primary/20 p-2">
+        <div className="flex-between border-b border-surface-border px-6 py-4 flex-shrink-0">
+          <div className="flex items-center gap-default">
+            <div className="rounded-lg bg-brand-primary/20 pad-xs">
               <FileCheck className={`${iconSizes.lg} text-brand-accent`} />
             </div>
             <div>
-              <h2 id="preview-modal-title" className="text-lg font-semibold text-text-primary">
+              <h2 id="preview-modal-title" className="heading-3 text-text-primary">
                 Merged Configuration Preview
               </h2>
               <SmallText className="text-text-muted">{lineCount} lines</SmallText>
@@ -348,7 +348,7 @@ export const MergePreviewModal: FC<MergePreviewModalProps> = ({ content, onClose
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-2 text-text-muted hover:bg-surface-hover hover:text-text-primary transition-colors"
+            className="rounded-lg pad-xs text-text-muted hover:bg-surface-hover hover:text-text-primary transition-colors"
             aria-label="Close modal"
           >
             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -364,7 +364,7 @@ export const MergePreviewModal: FC<MergePreviewModalProps> = ({ content, onClose
         </div>
 
         {/* Modal Content */}
-        <div className="flex-1 overflow-auto p-6">
+        <div className="flex-1 overflow-auto pad-lg">
           <YamlViewer
             value={content}
             height="100%"
@@ -376,7 +376,7 @@ export const MergePreviewModal: FC<MergePreviewModalProps> = ({ content, onClose
         </div>
 
         {/* Modal Footer */}
-        <div className="flex justify-end gap-3 border-t border-surface-border px-6 py-4 bg-bg-base/50 flex-shrink-0">
+        <div className="flex justify-end gap-default border-t border-surface-border px-6 py-4 bg-bg-base/50 flex-shrink-0">
           <Button variant="outline" onClick={onClose}>
             Close
           </Button>

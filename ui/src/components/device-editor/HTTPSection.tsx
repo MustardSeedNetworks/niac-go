@@ -35,8 +35,8 @@ export const HttpSection: FC<ProtocolSectionProps> = ({
       }}
     >
       {device.http?.enabled && (
-        <div className="space-y-6">
-          <div className="grid gap-4 md:grid-cols-2">
+        <div className="stack-xl">
+          <div className="grid gap-comfortable md:grid-cols-2">
             <FormField label="Server Name" helpText="HTTP Server header value">
               <input
                 type="text"
@@ -49,17 +49,17 @@ export const HttpSection: FC<ProtocolSectionProps> = ({
           </div>
 
           {/* Endpoints */}
-          <div className="space-y-3">
-            <h4 className="text-sm font-medium text-text-primary flex items-center gap-2">
+          <div className="stack">
+            <h4 className="label flex items-center gap-compact">
               <FileText className={`${iconSizes.md} text-brand-accent`} />
               Endpoints
             </h4>
             {(device.http.endpoints || []).map((endpoint: HTTPEndpoint, index: number) => (
               <div
                 key={`${endpoint.method || 'GET'}-${endpoint.path || endpoint.statusCode || 'endpoint'}`}
-                className="rounded-lg border border-surface-border bg-bg-base/40 p-4 space-y-3"
+                className="rounded-lg border border-surface-border bg-bg-base/40 pad stack"
               >
-                <div className="flex gap-2 items-center">
+                <div className="flex gap-compact items-center">
                   <select
                     value={endpoint.method || 'GET'}
                     onChange={(e) => {
@@ -70,7 +70,7 @@ export const HttpSection: FC<ProtocolSectionProps> = ({
                       };
                       updateHttp({ ...getHttpConfig(), endpoints });
                     }}
-                    className="w-24 rounded-lg border border-surface-border bg-bg-base/60 p-2 text-sm text-text-primary focus:border-brand-accent focus:outline-none"
+                    className="w-24 rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary focus:border-brand-accent focus:outline-none"
                   >
                     <option value="GET">GET</option>
                     <option value="POST">POST</option>
@@ -89,7 +89,7 @@ export const HttpSection: FC<ProtocolSectionProps> = ({
                       updateHttp({ ...getHttpConfig(), endpoints });
                     }}
                     placeholder="/api/status"
-                    className="flex-1 rounded-lg border border-surface-border bg-bg-base/60 p-2 text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none font-mono"
+                    className="flex-1 rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none font-mono"
                   />
                   <input
                     type="number"
@@ -103,7 +103,7 @@ export const HttpSection: FC<ProtocolSectionProps> = ({
                       updateHttp({ ...getHttpConfig(), endpoints });
                     }}
                     placeholder="Status"
-                    className="w-20 rounded-lg border border-surface-border bg-bg-base/60 p-2 text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none"
+                    className="w-20 rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none"
                   />
                   <Button
                     variant="ghost"
@@ -119,7 +119,7 @@ export const HttpSection: FC<ProtocolSectionProps> = ({
                     <X className="h-4 w-4" />
                   </Button>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-compact">
                   <input
                     type="text"
                     value={endpoint.contentType || ''}
@@ -132,7 +132,7 @@ export const HttpSection: FC<ProtocolSectionProps> = ({
                       updateHttp({ ...getHttpConfig(), endpoints });
                     }}
                     placeholder="Content-Type (e.g., application/json)"
-                    className="w-64 rounded-lg border border-surface-border bg-bg-base/60 p-2 text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none"
+                    className="w-64 rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none"
                   />
                   <input
                     type="text"
@@ -146,7 +146,7 @@ export const HttpSection: FC<ProtocolSectionProps> = ({
                       updateHttp({ ...getHttpConfig(), endpoints });
                     }}
                     placeholder="Response body"
-                    className="flex-1 rounded-lg border border-surface-border bg-bg-base/60 p-2 text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none"
+                    className="flex-1 rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none"
                   />
                 </div>
               </div>

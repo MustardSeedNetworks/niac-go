@@ -20,7 +20,7 @@ export const AutomationPage: FC = () => {
   const errorCount = stats?.stack.errors ?? 0;
 
   return (
-    <div className="space-y-6">
+    <div className="stack-xl">
       <AlertConfigCard recentErrors={errorCount} />
     </div>
   );
@@ -83,8 +83,8 @@ const AlertConfigCard: FC<{ recentErrors: number }> = ({ recentErrors }) => {
 
   return (
     <Card className="border-surface-border bg-bg-surface/70">
-      <CardContent className="space-y-4">
-        <H2 className="flex items-center gap-2">
+      <CardContent className="stack-lg">
+        <H2 className="flex items-center gap-compact">
           <BellRing className={`${iconSizes.lg} text-status-warning`} />
           Alert policy
         </H2>
@@ -112,13 +112,13 @@ const AlertConfigCard: FC<{ recentErrors: number }> = ({ recentErrors }) => {
         )}
         {data && (
           <>
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-comfortable md:grid-cols-2">
               <div>
                 <SmallText className="text-text-muted">
                   {t('automation.page.packetThresholdLabel')}
                 </SmallText>
                 <input
-                  className="mt-1 w-full rounded-lg border border-surface-border bg-bg-base/60 p-2 text-sm text-text-primary focus:border-brand-accent focus:outline-none"
+                  className="mt-tight w-full rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary focus:border-brand-accent focus:outline-none"
                   type="number"
                   min="0"
                   placeholder="100000"
@@ -136,7 +136,7 @@ const AlertConfigCard: FC<{ recentErrors: number }> = ({ recentErrors }) => {
                   {t('automation.page.webhookUrlLabel')}
                 </SmallText>
                 <input
-                  className="mt-1 w-full rounded-lg border border-surface-border bg-bg-base/60 p-2 text-sm text-text-primary focus:border-brand-accent focus:outline-none"
+                  className="mt-tight w-full rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary focus:border-brand-accent focus:outline-none"
                   placeholder="https://hooks.example.com/niac"
                   value={webhook}
                   title="POST'd JSON when the threshold trips. Must be http(s) and not point at a private/loopback/link-local IP. The daemon's --webhook-allowed-host flag further locks this down."
@@ -155,7 +155,7 @@ const AlertConfigCard: FC<{ recentErrors: number }> = ({ recentErrors }) => {
                 {status.text}
               </SmallText>
             )}
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-default">
               <Button
                 tone="violet"
                 disabled={!dirty || saving}

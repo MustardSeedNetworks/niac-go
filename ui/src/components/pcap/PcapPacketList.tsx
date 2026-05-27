@@ -40,17 +40,17 @@ const PacketRow = memo(
       }`}
       style={rowStyle}
     >
-      <td className="px-3 py-2 text-text-muted text-xs font-mono">{packet.number}</td>
-      <td className="px-3 py-2 text-text-secondary text-xs font-mono">{formattedTime}</td>
-      <td className="px-3 py-2 text-text-primary text-sm font-mono">{packet.sourceIp}</td>
-      <td className="px-3 py-2 text-text-primary text-sm font-mono">{packet.destIp}</td>
-      <td className="px-3 py-2">
+      <td className="px-3 py-row text-text-muted text-xs font-mono">{packet.number}</td>
+      <td className="px-3 py-row text-text-secondary text-xs font-mono">{formattedTime}</td>
+      <td className="px-3 py-row text-text-primary text-sm font-mono">{packet.sourceIp}</td>
+      <td className="px-3 py-row text-text-primary text-sm font-mono">{packet.destIp}</td>
+      <td className="px-3 py-row">
         <Tag colorScheme={getProtocolColor(packet.protocol)} className="text-xs">
           {packet.protocol}
         </Tag>
       </td>
-      <td className="px-3 py-2 text-text-muted text-xs text-right">{packet.length}</td>
-      <td className="px-3 py-2 text-text-muted text-xs truncate max-w-xs">{packet.info}</td>
+      <td className="px-3 py-row text-text-muted text-xs text-right">{packet.length}</td>
+      <td className="px-3 py-row text-text-muted text-xs truncate max-w-xs">{packet.info}</td>
     </tr>
   ),
 );
@@ -78,7 +78,7 @@ export const PcapPacketList: FC<PcapPacketListProps> = memo(
     if (totalPackets === 0) {
       return (
         <Card className="border-surface-border bg-bg-surface/70 h-full">
-          <CardContent className="h-full flex items-center justify-center text-text-muted">
+          <CardContent className="h-full flex-center text-text-muted">
             <div className="text-center">
               <p className="text-sm">{t('packets.list.noPacketsTitle')}</p>
               <SmallText>{t('packets.list.noPacketsDescription')}</SmallText>
@@ -92,7 +92,7 @@ export const PcapPacketList: FC<PcapPacketListProps> = memo(
       <Card className="border-surface-border bg-bg-surface/70 h-full flex flex-col">
         <CardContent className="h-full flex flex-col">
           {/* Packet count */}
-          <div className="mb-3 flex items-center justify-between">
+          <div className="mb-heading flex-between">
             <SmallText className="text-text-muted">
               {t('packets.list.showingCount', { shown: packets.length, total: totalPackets })}
             </SmallText>
@@ -101,7 +101,7 @@ export const PcapPacketList: FC<PcapPacketListProps> = memo(
           {/* Packet Table */}
           <div className="flex-1 min-h-0 overflow-auto rounded-lg border border-surface-border">
             {packets.length === 0 ? (
-              <div className="h-full flex items-center justify-center text-text-muted">
+              <div className="h-full flex-center text-text-muted">
                 <div className="text-center">
                   <p className="text-sm">{t('packets.list.noMatchTitle')}</p>
                   <SmallText>{t('packets.list.noMatchDescription')}</SmallText>
@@ -111,29 +111,29 @@ export const PcapPacketList: FC<PcapPacketListProps> = memo(
               <table className="min-w-full divide-y divide-white/5">
                 <thead className="bg-bg-surface/80 sticky top-0 z-10">
                   <tr>
-                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-text-muted">
+                    <th className="px-3 py-row text-left text-xs font-semibold uppercase tracking-wide text-text-muted">
                       #
                     </th>
                     <th
-                      className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-text-muted cursor-pointer hover:text-brand-accent select-none"
+                      className="px-3 py-row text-left text-xs font-semibold uppercase tracking-wide text-text-muted cursor-pointer hover:text-brand-accent select-none"
                       onClick={cycleTimeMode}
                       title={t('packets.list.cycleTimeModeTitle')}
                     >
                       {getTimeDisplayLabel(timeMode)}
                     </th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-text-muted">
+                    <th className="px-3 py-row text-left text-xs font-semibold uppercase tracking-wide text-text-muted">
                       {t('packets.list.headerSource')}
                     </th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-text-muted">
+                    <th className="px-3 py-row text-left text-xs font-semibold uppercase tracking-wide text-text-muted">
                       {t('packets.list.headerDestination')}
                     </th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-text-muted">
+                    <th className="px-3 py-row text-left text-xs font-semibold uppercase tracking-wide text-text-muted">
                       {t('packets.list.headerProtocol')}
                     </th>
-                    <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-text-muted">
+                    <th className="px-3 py-row text-right text-xs font-semibold uppercase tracking-wide text-text-muted">
                       {t('packets.list.headerLength')}
                     </th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-text-muted">
+                    <th className="px-3 py-row text-left text-xs font-semibold uppercase tracking-wide text-text-muted">
                       {t('packets.list.headerInfo')}
                     </th>
                   </tr>

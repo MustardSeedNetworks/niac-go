@@ -50,7 +50,7 @@ export function GlossarySection({ searchQuery }: GlossarySectionProps): ReactEle
   }, [filteredGlossary]);
 
   return (
-    <div className="space-y-6">
+    <div className="stack-xl">
       {filteredGlossary.length === 0 ? (
         <p className="text-sm text-text-muted py-4 text-center">
           No glossary entries match your search.
@@ -58,12 +58,12 @@ export function GlossarySection({ searchQuery }: GlossarySectionProps): ReactEle
       ) : (
         Object.entries(groupedEntries).map(([category, entries]) =>
           entries.length > 0 ? (
-            <div key={category} className="space-y-2">
-              <h3 className="text-sm font-semibold text-text-primary flex items-center gap-2">
+            <div key={category} className="stack-sm">
+              <h3 className="text-sm font-semibold text-text-primary flex items-center gap-compact">
                 <Network className="w-4 h-4 text-brand-accent" />
                 {CATEGORY_LABELS[category]}
               </h3>
-              <div className="space-y-1">
+              <div className="stack-xs">
                 {entries.map((entry) => (
                   <GlossaryItem key={entry.term} entry={entry} />
                 ))}
@@ -82,8 +82,8 @@ interface GlossaryItemProps {
 
 function GlossaryItem({ entry }: GlossaryItemProps): ReactElement {
   return (
-    <div className="bg-surface-hover rounded-lg p-3">
-      <dt className="text-sm font-medium text-text-primary">{entry.term}</dt>
+    <div className="bg-surface-hover rounded-lg pad-sm">
+      <dt className="label">{entry.term}</dt>
       <dd className="text-xs text-text-muted mt-0.5">{entry.definition}</dd>
     </div>
   );

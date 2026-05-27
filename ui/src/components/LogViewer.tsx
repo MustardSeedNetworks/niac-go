@@ -188,7 +188,7 @@ const LogEntryRow: FC<{ log: LogEntry; searchQuery: string }> = memo(({ log, sea
     <div className={`border-b ${colors.border} transition-colors`}>
       {/* Main log row */}
       <div
-        className={`flex items-start gap-2 px-3 py-2 font-mono text-sm ${colors.bg} hover:bg-surface-hover transition-colors`}
+        className={`flex items-start gap-compact px-3 py-row font-mono text-sm ${colors.bg} hover:bg-surface-hover transition-colors`}
       >
         <button
           type="button"
@@ -196,7 +196,7 @@ const LogEntryRow: FC<{ log: LogEntry; searchQuery: string }> = memo(({ log, sea
           onKeyDown={handleRowKeyDown}
           disabled={!hasDetails}
           aria-expanded={hasDetails ? expanded : undefined}
-          className={`flex items-start gap-2 flex-1 text-left ${hasDetails ? 'cursor-pointer' : 'cursor-default'}`}
+          className={`flex items-start gap-compact flex-1 text-left ${hasDetails ? 'cursor-pointer' : 'cursor-default'}`}
         >
           {/* Expand indicator */}
           <span
@@ -258,10 +258,10 @@ const LogEntryRow: FC<{ log: LogEntry; searchQuery: string }> = memo(({ log, sea
 
       {/* Expanded details */}
       {expanded && hasDetails && (
-        <div className={`px-3 py-3 ${colors.bg} border-t ${colors.border}`}>
-          <div className="ml-6 space-y-2">
+        <div className={`px-3 py-row-lg ${colors.bg} border-t ${colors.border}`}>
+          <div className="ml-spacious stack-sm">
             {/* Metadata row */}
-            <div className="flex flex-wrap gap-4 text-xs text-text-muted">
+            <div className="flex flex-wrap gap-comfortable text-xs text-text-muted">
               <span>
                 <strong className="text-text-muted">Time:</strong>{' '}
                 {formatFullTimestamp(log.timestamp)}
@@ -278,7 +278,7 @@ const LogEntryRow: FC<{ log: LogEntry; searchQuery: string }> = memo(({ log, sea
 
             {/* Details JSON */}
             <div className="rounded-lg border border-surface-border bg-bg-base/70 overflow-hidden">
-              <div className="flex items-center justify-between px-3 py-1.5 bg-bg-surface/50 border-b border-surface-border">
+              <div className="flex-between px-3 py-compact-md bg-bg-surface/50 border-b border-surface-border">
                 <span className="text-xs font-medium text-text-muted">Details</span>
                 <button
                   type="button"
@@ -295,7 +295,7 @@ const LogEntryRow: FC<{ log: LogEntry; searchQuery: string }> = memo(({ log, sea
                   <Copy className={iconSizes.xs} />
                 </button>
               </div>
-              <pre className="p-3 text-xs font-mono text-text-secondary overflow-x-auto">
+              <pre className="pad-sm text-xs font-mono text-text-secondary overflow-x-auto">
                 {formatDetails(log.details ?? {})}
               </pre>
             </div>
@@ -344,15 +344,13 @@ export const LogViewer: FC<LogViewerProps> = memo(({ logs, searchQuery, autoScro
         ref={containerRef}
         className="flex h-96 items-center justify-center rounded-lg border border-surface-border bg-bg-base/50"
       >
-        <div className="text-center space-y-3">
-          <div
-            className={`mx-auto ${iconSizes['3xl']} rounded-full bg-bg-elevated/50 flex items-center justify-center`}
-          >
+        <div className="text-center stack">
+          <div className={`mx-auto ${iconSizes['3xl']} rounded-full bg-bg-elevated/50 flex-center`}>
             <Terminal className={`${iconSizes.xl} text-text-disabled`} />
           </div>
           <div>
             <p className="text-text-muted font-medium">No logs to display</p>
-            <p className="mt-1 text-sm text-text-disabled">
+            <p className="mt-tight text-sm text-text-disabled">
               Logs will appear here when the debug console receives data
             </p>
           </div>
@@ -362,16 +360,16 @@ export const LogViewer: FC<LogViewerProps> = memo(({ logs, searchQuery, autoScro
   }
 
   return (
-    <div className="space-y-2">
+    <div className="stack-sm">
       {/* Log Level Stats Bar */}
-      <div className="flex items-center gap-4 text-xs">
+      <div className="flex items-center gap-comfortable text-xs">
         {Object.entries(stats).map(([level, count]) => {
           const colors = LEVEL_COLORS[toLogLevelKey(level as LogLevel)];
           const isError = level === 'ERROR';
           return (
             <div
               key={level}
-              className={`flex items-center gap-1.5 px-2 py-1 rounded ${colors?.bg || 'bg-bg-muted/10'}`}
+              className={`flex items-center gap-1.5 px-cell py-compact rounded ${colors?.bg || 'bg-bg-muted/10'}`}
             >
               {isError && count > 0 && (
                 <AlertCircle className={`${iconSizes.xs} text-status-error`} />

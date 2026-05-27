@@ -38,8 +38,8 @@ export const DhcpSection: FC<ProtocolSectionProps> = ({
       }}
     >
       {device.dhcp && (
-        <div className="space-y-6">
-          <div className="grid gap-4 md:grid-cols-2">
+        <div className="stack-xl">
+          <div className="grid gap-comfortable md:grid-cols-2">
             <FormField label="Subnet Mask" helpText="DHCP subnet mask">
               <input
                 type="text"
@@ -107,15 +107,15 @@ export const DhcpSection: FC<ProtocolSectionProps> = ({
           </div>
 
           {/* Static Leases */}
-          <div className="space-y-3">
-            <h4 className="text-sm font-medium text-text-primary flex items-center gap-2">
+          <div className="stack">
+            <h4 className="label flex items-center gap-compact">
               <Database className={`${iconSizes.md} text-brand-accent`} />
               Static Leases
             </h4>
             {(device.dhcp.clientLeases || []).map((lease: DHCPLease, index: number) => (
               <div
                 key={`${lease.macAddress || lease.clientIp || 'lease'}`}
-                className="flex gap-2 items-center"
+                className="flex gap-compact items-center"
               >
                 <input
                   type="text"

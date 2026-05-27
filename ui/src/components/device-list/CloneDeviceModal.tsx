@@ -28,7 +28,7 @@ export const CloneDeviceModal: FC<CloneDeviceModalProps> = ({ hostname, onClone,
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex-center">
       <button
         type="button"
         className="absolute inset-0 bg-black/70 backdrop-blur-sm"
@@ -40,10 +40,10 @@ export const CloneDeviceModal: FC<CloneDeviceModalProps> = ({ hostname, onClone,
         role="dialog"
         aria-modal="true"
       >
-        <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-4">
-          <div className="flex items-center gap-3 text-status-info">
+        <form onSubmit={handleSubmit(onSubmit)} className="pad-lg stack-lg">
+          <div className="flex items-center gap-default text-status-info">
             <Copy className={iconSizes.xl} />
-            <h2 className="text-lg font-semibold">Clone Device</h2>
+            <h2 className="heading-3">Clone Device</h2>
           </div>
           <p className="text-text-secondary">
             Create a copy of <strong>{hostname}</strong> with a new name.
@@ -59,13 +59,13 @@ export const CloneDeviceModal: FC<CloneDeviceModalProps> = ({ hostname, onClone,
               id="new-hostname"
               type="text"
               {...register('newHostname')}
-              className="w-full rounded-lg border border-surface-border bg-bg-base/60 p-3 text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none"
+              className="w-full rounded-lg border border-surface-border bg-bg-base/60 pad-sm text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none"
             />
             {errors.newHostname ? (
-              <p className="mt-2 text-xs text-status-error">{errors.newHostname.message}</p>
+              <p className="mt-inline text-xs text-status-error">{errors.newHostname.message}</p>
             ) : null}
           </div>
-          <div className="flex justify-end gap-3 pt-2">
+          <div className="flex justify-end gap-default pt-2">
             <Button variant="outline" type="button" onClick={onCancel}>
               Cancel
             </Button>

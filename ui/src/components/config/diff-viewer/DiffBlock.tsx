@@ -36,7 +36,7 @@ const MergeControls: FC<{
   decision?: MergeDecision;
   onDecision: (choice: MergeDecision['choice']) => void;
 }> = ({ decision, onDecision }) => (
-  <div className="flex items-center justify-center gap-2 py-2 px-4 bg-bg-surface/80 border-b border-surface-border">
+  <div className="flex-center gap-compact py-row px-4 bg-bg-surface/80 border-b border-surface-border">
     <SmallText className="text-text-muted mr-2">Accept:</SmallText>
     <Button
       size="sm"
@@ -66,7 +66,7 @@ const MergeControls: FC<{
       Right
     </Button>
     {decision && (
-      <Tag colorScheme="purple" className="ml-2 text-xs">
+      <Tag colorScheme="purple" className="ml-inline text-xs">
         {decision.choice.toUpperCase()}
       </Tag>
     )}

@@ -37,12 +37,12 @@ export const AdditionalIPsSection: FC<AdditionalIPsSectionProps> = ({
 
   return (
     <CollapsibleSection title="Additional IP Addresses" isExpanded={isExpanded} onToggle={onToggle}>
-      <div className="space-y-4">
+      <div className="stack-lg">
         <SmallText className="text-text-muted">
           Add secondary IP addresses for multi-homed or VLAN configurations.
         </SmallText>
         {(device.ips || []).map((ip, index) => (
-          <div key={`${ip || 'ip'}-${index}`} className="flex gap-2">
+          <div key={`${ip || 'ip'}-${index}`} className="flex gap-compact">
             <input
               type="text"
               value={ip}

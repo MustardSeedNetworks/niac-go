@@ -21,7 +21,7 @@ export const TrafficInjectionPage: FC = () => {
   return (
     <div className="space-y-8">
       {/* Error Injection */}
-      <div className="space-y-4">
+      <div className="stack-lg">
         <div>
           <H2>{t('traffic.page.errorInjectionTitle')}</H2>
           <P className="text-text-muted">{t('traffic.page.errorInjectionDescription')}</P>
@@ -30,7 +30,7 @@ export const TrafficInjectionPage: FC = () => {
       </div>
 
       {/* PCAP Replay */}
-      <div className="space-y-4">
+      <div className="stack-lg">
         <div>
           <H2>{t('traffic.page.pcapReplayTitle')}</H2>
           <P className="text-text-muted">{t('traffic.page.pcapReplayDescription')}</P>
@@ -40,9 +40,9 @@ export const TrafficInjectionPage: FC = () => {
 
       {/* Recent runs — previously lived on the standalone /analysis page */}
       <Card className="border-surface-border bg-bg-surface/70">
-        <CardContent className="space-y-3">
-          <div className="flex items-center justify-between">
-            <H2 className="flex items-center gap-2 text-lg">
+        <CardContent className="stack">
+          <div className="flex-between">
+            <H2 className="flex items-center gap-compact text-lg">
               <History className={`${iconSizes.lg} text-text-muted`} />
               {t('traffic.page.recentRunsTitle')}
             </H2>
@@ -51,11 +51,11 @@ export const TrafficInjectionPage: FC = () => {
           <SmallText className="text-text-muted">
             {t('traffic.page.recentRunsDescription')}
           </SmallText>
-          <div className="space-y-2 text-sm text-text-secondary">
+          <div className="stack-sm text-sm text-text-secondary">
             {(history ?? []).slice(0, 5).map((item) => (
               <div
                 key={item.id}
-                className="rounded-lg border border-surface-border bg-bg-base/50 p-3"
+                className="rounded-lg border border-surface-border bg-bg-base/50 pad-sm"
               >
                 <p className="text-text-primary font-semibold">{item.configName}</p>
                 <SmallText className="text-text-muted">

@@ -41,12 +41,12 @@ export const DashboardPage: FC = () => {
   const uptimeSeconds = simStatus?.uptimeSeconds ?? 0;
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="stack-xl animate-fade-in">
       {/* Status banner */}
       <Card className={`border-l-4 ${isRunning ? 'border-l-emerald-500' : 'border-l-gray-500'}`}>
         <CardContent className="py-4">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-comfortable">
+            <div className="flex items-center gap-comfortable">
               <div className="relative">
                 <div
                   className={`h-3 w-3 rounded-full ${isRunning ? 'bg-status-success' : 'bg-bg-muted'}`}
@@ -65,7 +65,7 @@ export const DashboardPage: FC = () => {
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-compact">
               {uptimeSeconds > 0 && (
                 <Tag colorScheme="violet">
                   {t('dashboard.status.uptimeLabel', { uptime: formatUptime(uptimeSeconds) })}
@@ -77,10 +77,10 @@ export const DashboardPage: FC = () => {
       </Card>
 
       {/* Stat cards row */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-comfortable sm:grid-cols-2 lg:grid-cols-4">
         <Card hover={true} className="group">
-          <CardContent className="space-y-1">
-            <div className="flex items-center justify-between">
+          <CardContent className="stack-xs">
+            <div className="flex-between">
               <span className="text-sm font-medium text-text-muted">
                 {t('dashboard.stats.devicesOnline')}
               </span>
@@ -94,8 +94,8 @@ export const DashboardPage: FC = () => {
         </Card>
 
         <Card hover={true} className="group">
-          <CardContent className="space-y-1">
-            <div className="flex items-center justify-between">
+          <CardContent className="stack-xs">
+            <div className="flex-between">
               <span className="text-sm font-medium text-text-muted">
                 {t('dashboard.stats.packetsRx')}
               </span>
@@ -117,8 +117,8 @@ export const DashboardPage: FC = () => {
         </Card>
 
         <Card hover={true} className="group">
-          <CardContent className="space-y-1">
-            <div className="flex items-center justify-between">
+          <CardContent className="stack-xs">
+            <div className="flex-between">
               <span className="text-sm font-medium text-text-muted">
                 {t('dashboard.stats.dnsQueries')}
               </span>
@@ -139,21 +139,21 @@ export const DashboardPage: FC = () => {
       </div>
 
       {/* Main content grid */}
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-spacious lg:grid-cols-3">
         {/* Quick Actions */}
         <Card className="lg:col-span-2">
-          <CardContent className="space-y-4">
-            <H2 className="flex items-center gap-2">
+          <CardContent className="stack-lg">
+            <H2 className="flex items-center gap-compact">
               <Zap className={`${iconSizes.lg} text-brand-accent`} />
               {t('dashboard.quickActions.title')}
             </H2>
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-default sm:grid-cols-2">
               <button
                 type="button"
                 onClick={() => setShowErrors(!showErrors)}
-                className="flex items-center gap-3 rounded-lg border border-surface-border bg-surface-hover p-4 text-left hover:bg-surface-hover hover:border-brand-primary/30 transition-all group"
+                className="flex items-center gap-default rounded-lg border border-surface-border bg-surface-hover pad text-left hover:bg-surface-hover hover:border-brand-primary/30 transition-all group"
               >
-                <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-status-warning/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-status-warning/20 flex-center group-hover:scale-110 transition-transform">
                   <PlugZap className={`${iconSizes.lg} text-status-warning`} />
                 </div>
                 <div>
@@ -167,8 +167,8 @@ export const DashboardPage: FC = () => {
               </button>
 
               <AccentLink to="/debug" className="no-underline">
-                <div className="flex items-center gap-3 rounded-lg border border-surface-border bg-surface-hover p-4 text-left hover:bg-surface-hover hover:border-brand-primary/30 transition-all group">
-                  <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-brand-primary/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <div className="flex items-center gap-default rounded-lg border border-surface-border bg-surface-hover pad text-left hover:bg-surface-hover hover:border-brand-primary/30 transition-all group">
+                  <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-brand-primary/20 flex-center group-hover:scale-110 transition-transform">
                     <Terminal className={`${iconSizes.lg} text-brand-accent`} />
                   </div>
                   <div>
@@ -183,8 +183,8 @@ export const DashboardPage: FC = () => {
               </AccentLink>
 
               <AccentLink to="/traffic" className="no-underline">
-                <div className="flex items-center gap-3 rounded-lg border border-surface-border bg-surface-hover p-4 text-left hover:bg-surface-hover hover:border-brand-primary/30 transition-all group">
-                  <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-status-info/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <div className="flex items-center gap-default rounded-lg border border-surface-border bg-surface-hover pad text-left hover:bg-surface-hover hover:border-brand-primary/30 transition-all group">
+                  <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-status-info/20 flex-center group-hover:scale-110 transition-transform">
                     <Activity className={`${iconSizes.lg} text-status-info`} />
                   </div>
                   <div>
@@ -199,8 +199,8 @@ export const DashboardPage: FC = () => {
               </AccentLink>
 
               <AccentLink to="/topology" className="no-underline">
-                <div className="flex items-center gap-3 rounded-lg border border-surface-border bg-surface-hover p-4 text-left hover:bg-surface-hover hover:border-brand-primary/30 transition-all group">
-                  <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-status-success/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <div className="flex items-center gap-default rounded-lg border border-surface-border bg-surface-hover pad text-left hover:bg-surface-hover hover:border-brand-primary/30 transition-all group">
+                  <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-status-success/20 flex-center group-hover:scale-110 transition-transform">
                     <Network className={`${iconSizes.lg} text-status-success`} />
                   </div>
                   <div>
@@ -223,18 +223,18 @@ export const DashboardPage: FC = () => {
 
         {/* Recent Runs */}
         <Card>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
+          <CardContent className="stack-lg">
+            <div className="flex-between">
               <H2>{t('dashboard.recentRuns.title')}</H2>
               <Tag colorScheme="gray">{t('dashboard.recentRuns.tag')}</Tag>
             </div>
-            <div className="space-y-3">
+            <div className="stack">
               {(history ?? []).slice(0, 4).map((item) => (
                 <div
                   key={item.id}
-                  className="rounded-lg border border-surface-border bg-bg-base/50 p-3 hover:border-surface-border transition-colors"
+                  className="rounded-lg border border-surface-border bg-bg-base/50 pad-sm hover:border-surface-border transition-colors"
                 >
-                  <div className="flex items-center justify-between mb-1">
+                  <div className="flex-between mb-tight">
                     <p className="font-mono text-xs text-brand-accent">
                       {formatTime(item.startedAt)}
                     </p>
@@ -245,7 +245,7 @@ export const DashboardPage: FC = () => {
                   <p className="text-text-primary font-medium text-sm truncate">
                     {item.configName}
                   </p>
-                  <div className="flex gap-3 mt-1 text-xs text-text-muted">
+                  <div className="flex gap-default mt-tight text-xs text-text-muted">
                     <span>
                       {t('dashboard.recentRuns.rxShort', {
                         count: formatNumber(item.packetsReceived),
@@ -287,26 +287,26 @@ const ErrorInjectionPanel = memo(
   ({ errorTypes, info }: { errorTypes: ErrorType[]; info: string }) => {
     const { t } = useTranslation('pages');
     return (
-      <div className="mt-4 rounded-xl border border-status-warning/20 bg-status-warning/10 p-4">
-        <div className="mb-3 flex items-start gap-2">
+      <div className="mt-content rounded-xl border border-status-warning/20 bg-status-warning/10 pad">
+        <div className="mb-heading flex items-start gap-compact">
           <PlugZap className={`mt-0.5 ${iconSizes.lg} text-status-warning`} />
           <div>
             <p className="font-semibold text-status-warning">{t('dashboard.errorPanel.title')}</p>
             <SmallText className="text-status-warning/80">{info}</SmallText>
           </div>
         </div>
-        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-compact sm:grid-cols-2 lg:grid-cols-3">
           {errorTypes.map((errorType) => (
             <div
               key={errorType.type}
-              className="rounded-lg border border-surface-border bg-bg-surface/50 p-3"
+              className="rounded-lg border border-surface-border bg-bg-surface/50 pad-sm"
             >
               <p className="font-semibold text-text-primary">{errorType.type}</p>
               <SmallText className="text-text-muted">{errorType.description}</SmallText>
             </div>
           ))}
         </div>
-        <div className="mt-3 rounded-lg bg-status-info/20 p-3 text-sm text-status-info">
+        <div className="mt-heading rounded-lg bg-status-info/20 pad-sm text-sm text-status-info">
           <strong>{t('dashboard.errorPanel.tuiModeLabel')}</strong>{' '}
           {t('dashboard.errorPanel.tuiModeDescription', {
             command: 'niac interactive [interface] [config]',
@@ -345,19 +345,19 @@ const AutomationTimeline = memo(({ history }: { history: HistoryRecord[] | null 
 
   return (
     <Card className="border-surface-border bg-bg-surface/70">
-      <CardContent className="space-y-4">
-        <div className="flex items-center justify-between">
-          <H2 className="flex items-center gap-2">
+      <CardContent className="stack-lg">
+        <div className="flex-between">
+          <H2 className="flex items-center gap-compact">
             <SatelliteDish className={`${iconSizes.lg} text-brand-accent`} />
             {t('dashboard.automation.title')}
           </H2>
           <Tag colorScheme="gray">{t('dashboard.automation.latestEventsTag')}</Tag>
         </div>
-        <div className="space-y-4">
+        <div className="stack-lg">
           {timeline.map((event) => (
             <div
               key={event.title}
-              className="flex flex-col gap-1 rounded-lg border border-surface-border bg-bg-base/50 p-4 sm:flex-row sm:items-center sm:justify-between"
+              className="flex flex-col gap-tight rounded-lg border border-surface-border bg-bg-base/50 pad sm:flex-row sm:items-center sm:justify-between"
             >
               <div>
                 <SmallText className="text-status-info">{event.time}</SmallText>
@@ -367,7 +367,7 @@ const AutomationTimeline = memo(({ history }: { history: HistoryRecord[] | null 
               <Button
                 variant="ghost"
                 size="sm"
-                className="mt-2 sm:mt-0"
+                className="mt-inline sm:mt-0"
                 leftIcon={<Bot className={iconSizes.md} />}
               >
                 {t('dashboard.automation.viewDetails')}

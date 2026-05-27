@@ -36,7 +36,7 @@ export const ProtocolTree: FC<ProtocolTreeProps> = memo(({ packet, onFieldSelect
 
   if (!packet) {
     return (
-      <div className="h-full flex items-center justify-center text-text-muted">
+      <div className="h-full flex-center text-text-muted">
         <p className="text-sm">{t('packets.inspector.selectPacketForProtocol')}</p>
       </div>
     );
@@ -44,14 +44,14 @@ export const ProtocolTree: FC<ProtocolTreeProps> = memo(({ packet, onFieldSelect
 
   if (layers.length === 0) {
     return (
-      <div className="h-full flex items-center justify-center text-text-muted">
+      <div className="h-full flex-center text-text-muted">
         <p className="text-sm">{t('packets.inspector.noProtocolLayers')}</p>
       </div>
     );
   }
 
   return (
-    <div className="h-full overflow-y-auto space-y-1">
+    <div className="h-full overflow-y-auto stack-xs">
       {layers.map((layer) => (
         <ProtocolTreeLayer key={layer.name} layer={layer} onFieldSelect={onFieldSelect} />
       ))}

@@ -109,8 +109,8 @@ export const BpfFilterBar: FC = memo(() => {
   );
 
   return (
-    <div className="space-y-2">
-      <div className="flex items-center gap-2">
+    <div className="stack-sm">
+      <div className="flex items-center gap-compact">
         {/* Filter icon and active indicator */}
         <div className="flex items-center gap-1.5 flex-shrink-0">
           <Filter className={`${iconSizes.md} text-text-muted`} />
@@ -127,7 +127,7 @@ export const BpfFilterBar: FC = memo(() => {
           }}
           onKeyDown={handleKeyDown}
           placeholder="BPF filter (e.g. tcp port 80)"
-          className={`flex-1 bg-bg-base/70 border rounded-lg px-3 py-1.5 text-sm font-mono text-text-primary placeholder-gray-500 focus:outline-none focus:ring-1 ${
+          className={`flex-1 bg-bg-base/70 border rounded-lg px-3 py-compact-md text-sm font-mono text-text-primary placeholder-gray-500 focus:outline-none focus:ring-1 ${
             error
               ? 'border-status-error/60 focus:ring-status-error/40'
               : isActive
@@ -185,7 +185,7 @@ export const BpfFilterBar: FC = memo(() => {
             key={preset.filter}
             type="button"
             onClick={() => handlePreset(preset.filter)}
-            className="px-2 py-0.5 text-xs rounded bg-bg-elevated/60 text-text-muted hover:text-text-primary hover:bg-bg-elevated/60 border border-surface-border transition-colors"
+            className="px-cell py-0.5 text-xs rounded bg-bg-elevated/60 text-text-muted hover:text-text-primary hover:bg-bg-elevated/60 border border-surface-border transition-colors"
           >
             {preset.label}
           </button>

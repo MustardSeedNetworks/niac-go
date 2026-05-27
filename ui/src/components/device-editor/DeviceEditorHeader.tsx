@@ -47,13 +47,13 @@ export const DeviceEditorHeader: FC<DeviceEditorHeaderProps> = ({
 
   return (
     <Card className="border-surface-border bg-bg-surface/70">
-      <CardContent className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
+      <CardContent className="stack-lg">
+        <div className="flex flex-wrap items-center justify-between gap-comfortable">
+          <div className="flex items-center gap-default">
             <button
               type="button"
               onClick={onNavigateBack}
-              className="p-2 text-text-muted hover:text-text-primary hover:bg-surface-hover rounded-lg transition-colors"
+              className="pad-xs text-text-muted hover:text-text-primary hover:bg-surface-hover rounded-lg transition-colors"
               title="Back to device list"
             >
               <ArrowLeft className={iconSizes.lg} />
@@ -66,12 +66,12 @@ export const DeviceEditorHeader: FC<DeviceEditorHeaderProps> = ({
               </SmallText>
             </div>
             {isDirty && (
-              <Tag colorScheme="yellow" className="ml-2">
+              <Tag colorScheme="yellow" className="ml-inline">
                 Unsaved Changes
               </Tag>
             )}
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-compact">
             <Button variant="outline" onClick={onToggleYamlPreview}>
               {showYamlPreview ? 'Hide YAML' : 'Show YAML'}
             </Button>
@@ -109,7 +109,7 @@ export const DeviceEditorHeader: FC<DeviceEditorHeaderProps> = ({
         {/* Status message */}
         {message && (
           <div
-            className={`flex items-center gap-2 rounded-lg p-3 ${
+            className={`flex items-center gap-compact rounded-lg pad-sm ${
               message.type === 'success'
                 ? 'border border-status-success/30 bg-status-success/10 text-status-success'
                 : 'border border-status-error/30 bg-status-error/10 text-status-error'

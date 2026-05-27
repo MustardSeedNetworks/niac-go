@@ -547,13 +547,13 @@ export const TopologyPage: FC = () => {
   }, []);
 
   return (
-    <div className="space-y-6">
+    <div className="stack-xl">
       {/* Header Card */}
       <Card className="border-surface-border bg-bg-surface/70">
         <CardContent>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-status-info/20">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-comfortable">
+            <div className="flex items-center gap-default">
+              <div className="pad-xs rounded-lg bg-status-info/20">
                 <Network className="w-6 h-6 text-status-info" />
               </div>
               <div>
@@ -566,7 +566,7 @@ export const TopologyPage: FC = () => {
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-compact">
               <div
                 className="inline-flex rounded-lg border border-surface-border bg-bg-base/40 p-0.5"
                 role="tablist"
@@ -578,7 +578,7 @@ export const TopologyPage: FC = () => {
                   aria-selected={view === 'graph'}
                   onClick={() => setView('graph')}
                   title="Show devices and links as an interactive graph (drag to reposition, scroll to zoom)"
-                  className={`flex items-center gap-1.5 rounded px-3 py-1 text-xs font-medium transition-colors ${
+                  className={`flex items-center gap-1.5 rounded px-3 py-compact text-xs font-medium transition-colors ${
                     view === 'graph'
                       ? 'bg-status-info/20 text-status-info'
                       : 'text-text-muted hover:bg-surface-hover hover:text-text-primary'
@@ -593,7 +593,7 @@ export const TopologyPage: FC = () => {
                   aria-selected={view === 'neighbors'}
                   onClick={() => setView('neighbors')}
                   title="Show LLDP/CDP neighbor relationships as a sortable table grouped by device"
-                  className={`flex items-center gap-1.5 rounded px-3 py-1 text-xs font-medium transition-colors ${
+                  className={`flex items-center gap-1.5 rounded px-3 py-compact text-xs font-medium transition-colors ${
                     view === 'neighbors'
                       ? 'bg-status-info/20 text-status-info'
                       : 'text-text-muted hover:bg-surface-hover hover:text-text-primary'
@@ -664,7 +664,7 @@ export const TopologyPage: FC = () => {
                           aria-label={`Layout mode: ${entry.label}`}
                           title={entry.description}
                           onClick={() => handleLayoutModeChange(entry.mode)}
-                          className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
+                          className={`rounded px-2.5 py-compact text-xs font-medium transition-colors ${
                             active
                               ? 'bg-status-info/20 text-status-info'
                               : 'text-text-muted hover:bg-surface-hover hover:text-text-primary'
@@ -685,14 +685,14 @@ export const TopologyPage: FC = () => {
               filtering UI. Stays inside the header card so the toolbar
               groups visually with the title/buttons row above. */}
           {view === 'graph' && (
-            <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+            <div className="mt-heading flex flex-col gap-compact sm:flex-row sm:items-center sm:gap-comfortable">
               <input
                 type="search"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search devices by name…"
                 aria-label="Filter devices by name"
-                className="w-full sm:w-64 rounded-md border border-surface-border bg-bg-base/40 px-3 py-1.5 text-xs text-text-primary placeholder:text-text-muted focus:border-status-info/40 focus:outline-none focus:ring-1 focus:ring-cyan-500/30"
+                className="w-full sm:w-64 rounded-md border border-surface-border bg-bg-base/40 px-3 py-compact-md text-xs text-text-primary placeholder:text-text-muted focus:border-status-info/40 focus:outline-none focus:ring-1 focus:ring-cyan-500/30"
               />
               {availableTypes.length > 0 && (
                 <div className="flex flex-wrap items-center gap-1.5">
@@ -725,7 +725,7 @@ export const TopologyPage: FC = () => {
                       type="button"
                       onClick={() => setActiveTypes(new Set())}
                       title="Remove all device-type filters and show every device in the topology"
-                      className="rounded-full px-2 py-0.5 text-[11px] font-medium text-text-muted hover:text-text-primary underline-offset-2 hover:underline"
+                      className="rounded-full px-cell py-0.5 text-[11px] font-medium text-text-muted hover:text-text-primary underline-offset-2 hover:underline"
                     >
                       Clear
                     </button>
@@ -745,16 +745,16 @@ export const TopologyPage: FC = () => {
         <Card className="border-surface-border bg-bg-surface/70 overflow-hidden">
           <div className="h-[calc(100vh-260px)] min-h-[520px] relative">
             {loading ? (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="flex flex-col items-center gap-3">
+              <div className="absolute inset-0 flex-center">
+                <div className="flex flex-col items-center gap-default">
                   <RefreshCw className="w-8 h-8 text-brand-accent animate-spin" />
                   <SmallText className="text-text-muted">Loading topology...</SmallText>
                 </div>
               </div>
             ) : nodes.length === 0 ? (
-              <div className="absolute inset-0 flex items-center justify-center">
+              <div className="absolute inset-0 flex-center">
                 <div className="text-center">
-                  <Network className="w-16 h-16 text-text-disabled mx-auto mb-4" />
+                  <Network className="w-16 h-16 text-text-disabled mx-auto mb-content" />
                   <p className="text-text-muted mb-2">{t('topology.page.noTopologyData')}</p>
                   <SmallText className="text-text-muted">
                     Configure devices with trunk ports or port-channels to visualize connections
@@ -767,7 +767,7 @@ export const TopologyPage: FC = () => {
                   // z-50 wins over ReactFlow's internal Panel chrome and
                   // pointer-events-none lets pan/zoom drag through the
                   // banner so it doesn't trap clicks on the canvas below.
-                  <div className="pointer-events-none absolute top-0 left-0 right-0 z-50 bg-status-warning/60 border-b border-status-warning/40 px-4 py-2 text-center backdrop-blur-sm">
+                  <div className="pointer-events-none absolute top-0 left-0 right-0 z-50 bg-status-warning/60 border-b border-status-warning/40 px-4 py-row text-center backdrop-blur-sm">
                     <SmallText className="text-status-warning">
                       Devices loaded, but the running config has no declared topology links. Add{' '}
                       <code className="text-status-warning">trunk_ports:</code> or{' '}

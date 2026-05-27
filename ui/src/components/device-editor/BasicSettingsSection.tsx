@@ -25,7 +25,7 @@ export const BasicSettingsSection: FC<BasicSettingsSectionProps> = ({
       onToggle={onToggle}
       required={true}
     >
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-comfortable md:grid-cols-2">
         <FormField label="Hostname" required={true} helpText="Unique identifier for the device">
           <input
             type="text"
