@@ -24,9 +24,11 @@ type protocolFeatureCheck struct {
 }
 
 // gatedDeviceProtocolChecks enumerates the device-config fields that
-// map to a licensed Pro feature. BGP, OSPF, SNMPv3, and
-// error_injection are in the keygen catalog but not yet modeled on
-// Device — tracked separately for follow-up.
+// map to a licensed Pro feature. SNMPv3 is deliberately NOT gated:
+// it's the only safe SNMP version (v1/v2c send credentials in
+// cleartext) so gating it would push users toward the insecure
+// variants. error_injection is in the keygen catalog but routed
+// through a separate flag, not a device-config field.
 //
 // Returned by a function rather than held in a package-level slice so
 // gochecknoglobals stays clean; the closures aren't worth caching.
@@ -43,6 +45,14 @@ func gatedDeviceProtocolChecks() []protocolFeatureCheck {
 		{
 			feature: "netbios",
 			present: func(d *config.Device) bool { return d != nil && d.NetBIOSConfig != nil },
+		},
+		{
+			feature: "bgp",
+			present: func(d *config.Device) bool { return d != nil && d.BGPConfig != nil },
+		},
+		{
+			feature: "ospf",
+			present: func(d *config.Device) bool { return d != nil && d.OSPFConfig != nil },
 		},
 		{
 			// traffic_shaping: any device-level traffic pattern config

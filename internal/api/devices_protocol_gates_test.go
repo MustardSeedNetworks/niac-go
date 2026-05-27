@@ -132,12 +132,78 @@ func TestRequireDeviceProtocolFeatures_AllowsProTrial(t *testing.T) {
 		FTPConfig:     &config.FTPConfig{},
 		STPConfig:     &config.STPConfig{},
 		NetBIOSConfig: &config.NetBIOSConfig{},
+		BGPConfig:     &config.BGPConfig{},
+		OSPFConfig:    &config.OSPFConfig{},
+		SNMPv3Config:  &config.SNMPv3Config{},
 	}
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/", http.NoBody)
 
 	if !s.requireDeviceProtocolFeatures(w, req, dev) {
 		t.Fatalf("Pro trial should allow gated protocols; status=%d body=%s",
+			w.Code, w.Body.String())
+	}
+}
+
+func TestRequireDeviceProtocolFeatures_BlocksFreeOnBGP(t *testing.T) {
+	t.Parallel()
+	mgr := freshManager(t)
+	s := newProtoGateServer(t, mgr)
+
+	dev := &config.Device{Name: "withbgp", BGPConfig: &config.BGPConfig{}}
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/", http.NoBody)
+
+	if s.requireDeviceProtocolFeatures(w, req, dev) {
+		t.Fatal("expected Free tier to be blocked on BGP")
+	}
+	if w.Code != http.StatusPaymentRequired {
+		t.Fatalf("status = %d, want 402", w.Code)
+	}
+	var body FeatureGateResponse
+	_ = json.NewDecoder(w.Body).Decode(&body)
+	if body.RequiredFeature != "bgp" {
+		t.Errorf("RequiredFeature = %q, want bgp", body.RequiredFeature)
+	}
+}
+
+func TestRequireDeviceProtocolFeatures_BlocksFreeOnOSPF(t *testing.T) {
+	t.Parallel()
+	mgr := freshManager(t)
+	s := newProtoGateServer(t, mgr)
+
+	dev := &config.Device{Name: "withospf", OSPFConfig: &config.OSPFConfig{}}
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/", http.NoBody)
+
+	if s.requireDeviceProtocolFeatures(w, req, dev) {
+		t.Fatal("expected Free tier to be blocked on OSPF")
+	}
+	var body FeatureGateResponse
+	_ = json.NewDecoder(w.Body).Decode(&body)
+	if body.RequiredFeature != "ospf" {
+		t.Errorf("RequiredFeature = %q, want ospf", body.RequiredFeature)
+	}
+}
+
+// SNMPv3 is deliberately free for all tiers — gating it would push
+// users toward the cleartext v1/v2c variants. Locking that behavior
+// in with a test so a future "add snmpv3 to Pro" change has to also
+// delete this test (paper trail).
+func TestRequireDeviceProtocolFeatures_AllowsSNMPv3OnFree(t *testing.T) {
+	t.Parallel()
+	mgr := freshManager(t)
+	s := newProtoGateServer(t, mgr)
+
+	dev := &config.Device{
+		Name:         "withv3",
+		SNMPv3Config: &config.SNMPv3Config{Enabled: true},
+	}
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/", http.NoBody)
+
+	if !s.requireDeviceProtocolFeatures(w, req, dev) {
+		t.Fatalf("SNMPv3 must be free for all tiers; got status=%d body=%s",
 			w.Code, w.Body.String())
 	}
 }
