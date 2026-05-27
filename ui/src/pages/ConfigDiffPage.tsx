@@ -153,24 +153,20 @@ export const ConfigDiffPage: FC = () => {
       {/* Header section */}
       <Card className="border-surface-border bg-bg-surface/70">
         <CardContent className="stack-lg">
-          <div className="flex flex-wrap items-center justify-between gap-comfortable">
-            <div>
-              <H2 className="flex items-center gap-compact">
-                <GitCompare className={`${iconSizes.lg} text-brand-accent`} />
-                Compare & Merge
-              </H2>
-              <P className="text-text-muted mt-tight">
-                Compare two YAML network configs side-by-side and merge changes between them.
-              </P>
+          {/* Page-level "Compare & Merge" title + description live in
+           * PageHeader (rendered by App.tsx via pageRegistry.title /
+           * .description). Duplicating them inside the Card creates a
+           * strict-mode heading conflict (PageHeader h1 + Card h2 both
+           * matched getByRole('heading', { name: /compare & merge/i })).
+           * The Card now opens straight into its actions; the changes
+           * counter remains on the right when files are present. */}
+          {hasFiles && (
+            <div className="flex items-center justify-end gap-compact">
+              <Tag colorScheme="purple">
+                {diffBlocks.filter((b) => b.type !== 'unchanged').length} changes
+              </Tag>
             </div>
-            {hasFiles && (
-              <div className="flex items-center gap-compact">
-                <Tag colorScheme="purple">
-                  {diffBlocks.filter((b) => b.type !== 'unchanged').length} changes
-                </Tag>
-              </div>
-            )}
-          </div>
+          )}
 
           {/* Status message */}
           {message && (
