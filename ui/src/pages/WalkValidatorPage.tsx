@@ -1,4 +1,5 @@
 import { type FC, useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { fetchLibraryWalks, fixWalk, type LibraryFileEntry, validateWalk } from '../api/client';
 import type { WalkValidationIssue, WalkValidationResponse } from '../api/types';
 import { Card, CardContent } from '../ui/Card';
@@ -24,6 +25,7 @@ const severityCounts = (issues: WalkValidationIssue[]): Record<Severity, number>
 };
 
 export const WalkValidatorPage: FC = () => {
+  const { t } = useTranslation('pages');
   const [files, setFiles] = useState<LibraryFileEntry[]>([]);
   const [filesError, setFilesError] = useState<string | null>(null);
   const [filesLoading, setFilesLoading] = useState(true);
@@ -95,7 +97,9 @@ export const WalkValidatorPage: FC = () => {
       <Card className="border-surface-border bg-bg-surface/70">
         <CardContent className="space-y-4">
           <header>
-            <h1 className="text-2xl font-semibold text-text-primary">SNMP Walks</h1>
+            <h1 className="text-2xl font-semibold text-text-primary">
+              {t('walkValidator.pageTitle')}
+            </h1>
             <p className="text-sm text-text-muted">
               Same engine as <code>niac analyze-walk</code>. Validate detects malformed lines,
               missing OIDs, and unquoted strings; fix auto-rewrites the file in place.
@@ -113,7 +117,9 @@ export const WalkValidatorPage: FC = () => {
                 className="mt-1 w-full rounded border border-surface-border bg-bg-base/60 px-3 py-2 text-sm text-text-primary focus:border-status-info focus:outline-none disabled:opacity-50"
               >
                 {filesLoading && <option>Loading…</option>}
-                {!filesLoading && files.length === 0 && <option>No walks found</option>}
+                {!filesLoading && files.length === 0 && (
+                  <option>{t('walkValidator.noWalksFound')}</option>
+                )}
                 {files.map((f) => (
                   <option key={f.name} value={f.name}>
                     {f.name} ({Math.round(f.sizeBytes / 1024)} KB)
@@ -126,7 +132,7 @@ export const WalkValidatorPage: FC = () => {
             </label>
 
             <label className="block text-sm">
-              <span className="text-text-secondary">Or paste an absolute path</span>
+              <span className="text-text-secondary">{t('walkValidator.pastePathLabel')}</span>
               <input
                 type="text"
                 value={customPath}

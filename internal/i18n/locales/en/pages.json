@@ -63,12 +63,17 @@
   "runtime": {
     "label": "Simulation",
     "title": "Simulation",
-    "description": "Monitor runtime status, view network interfaces, and manage NIAC configuration."
+    "description": "Monitor runtime status, view network interfaces, and manage NIAC configuration.",
+    "daemonModeWarning": "Daemon Mode Not Detected",
+    "startSimulationTitle": "Start Simulation",
+    "noUsableInterfaces": "No usable interfaces"
   },
   "devices": {
     "label": "Running Devices",
     "title": "Running Devices",
-    "description": "Read-only view of the devices the daemon is currently simulating, plus the running YAML."
+    "description": "Read-only view of the devices the daemon is currently simulating, plus the running YAML.",
+    "ipAddressesHeader": "IP addresses",
+    "availableSnmpWalks": "Available SNMP walks"
   },
   "deviceLibrary": {
     "label": "Devices",
@@ -166,12 +171,18 @@
   "configDiff": {
     "label": "Compare & Merge",
     "title": "Compare & Merge",
-    "description": "Compare two {{format}} network configs side-by-side and merge changes between them."
+    "description": "Compare two {{format}} network configs side-by-side and merge changes between them.",
+    "originalFileTitle": "Original File",
+    "modifiedFileTitle": "Modified File",
+    "readyToCompareTitle": "Ready to Compare"
   },
   "walkValidator": {
     "label": "{{protocol}} Walks",
     "title": "{{protocol}} Walks",
-    "description": "Validate and auto-fix {{protocol}} walk files used by the simulated {{protocol}} agents."
+    "description": "Validate and auto-fix {{protocol}} walk files used by the simulated {{protocol}} agents.",
+    "pageTitle": "SNMP Walks",
+    "noWalksFound": "No walks found",
+    "pastePathLabel": "Or paste an absolute path"
   },
   "libraryWalks": {
     "label": "Walks",
