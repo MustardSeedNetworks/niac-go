@@ -86,7 +86,28 @@
   "topology": {
     "label": "Topology",
     "title": "Topology",
-    "description": "Visual graph of the configured network plus the live {{protocols}} neighbor table."
+    "description": "Visual graph of the configured network plus the live {{protocols}} neighbor table.",
+    "neighbors": {
+      "filterShowAllTitle": "Show all discovery protocols",
+      "filterByProtocolTitle": "Filter to {{protocol}} entries only ({{count}} now)",
+      "filterAllLabel": "All",
+      "searchPlaceholder": "Filter by device or chassis ID…",
+      "searchTitle": "Substring match on local device, remote device, chassis ID, or remote port (case-insensitive).",
+      "searchAriaLabel": "Filter neighbors",
+      "pollingStatus": "Polling every {{seconds}}s · {{count}} entries",
+      "loading": "Loading…",
+      "loadError": "Failed to load neighbors: {{error}}",
+      "emptyNoData": "No neighbors discovered yet. Start a simulation that has CDP/LLDP/EDP/FDP enabled to populate this table.",
+      "emptyFiltered": "No neighbors match the current filters.",
+      "headerProtocol": "Protocol",
+      "headerLocalDevice": "Local Device",
+      "headerRemoteDevice": "Remote Device",
+      "headerRemotePort": "Remote Port",
+      "headerChassisId": "Chassis ID",
+      "headerMgmtAddr": "Mgmt Addr",
+      "headerTtl": "TTL",
+      "headerLastSeen": "Last Seen"
+    }
   },
   "automation": {
     "label": "Alerts",

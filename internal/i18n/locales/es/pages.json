@@ -86,7 +86,28 @@
   "topology": {
     "label": "Topología",
     "title": "Topología",
-    "description": "Gráfico visual de la red configurada y la tabla de vecinos {{protocols}} en vivo."
+    "description": "Gráfico visual de la red configurada y la tabla de vecinos {{protocols}} en vivo.",
+    "neighbors": {
+      "filterShowAllTitle": "Mostrar todos los protocolos de descubrimiento",
+      "filterByProtocolTitle": "Filtrar solo entradas {{protocol}} ({{count}} ahora)",
+      "filterAllLabel": "Todos",
+      "searchPlaceholder": "Filtrar por dispositivo o ID de chasis…",
+      "searchTitle": "Coincidencia de subcadena en el dispositivo local, el dispositivo remoto, el ID de chasis o el puerto remoto (no distingue mayúsculas).",
+      "searchAriaLabel": "Filtrar vecinos",
+      "pollingStatus": "Sondeo cada {{seconds}}s · {{count}} entradas",
+      "loading": "Cargando…",
+      "loadError": "Error al cargar los vecinos: {{error}}",
+      "emptyNoData": "Aún no se han descubierto vecinos. Inicie una simulación con CDP/LLDP/EDP/FDP habilitado para rellenar esta tabla.",
+      "emptyFiltered": "Ningún vecino coincide con los filtros actuales.",
+      "headerProtocol": "Protocolo",
+      "headerLocalDevice": "Dispositivo local",
+      "headerRemoteDevice": "Dispositivo remoto",
+      "headerRemotePort": "Puerto remoto",
+      "headerChassisId": "ID de chasis",
+      "headerMgmtAddr": "Dir. gestión",
+      "headerTtl": "TTL",
+      "headerLastSeen": "Visto por última vez"
+    }
   },
   "automation": {
     "label": "Alertas",
