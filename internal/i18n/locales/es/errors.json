@@ -46,5 +46,36 @@
   "walk": {
     "validationFailed": "La validación falló",
     "parseError": "No se pudo analizar el archivo de recorrido"
+  },
+  "injection": {
+    "deviceLabel": "Dispositivo",
+    "deviceSelectPlaceholder": "Seleccione un dispositivo...",
+    "interfaceLabel": "Interfaz",
+    "interfacePlaceholder": "p. ej., eth0, GigabitEthernet0/1",
+    "errorTypeLabel": "Tipo de error",
+    "errorTypeSelectPlaceholder": "Seleccione un tipo de error...",
+    "valueLabel": "Valor: {{value}}%",
+    "valueHelper": "0 = Sin errores, 100 = Errores máximos",
+    "selectMissing": "Seleccione el dispositivo, la interfaz y el tipo de error",
+    "injectingButton": "Inyectando...",
+    "injectButton": "Inyectar error",
+    "injectSuccess": "Error inyectado correctamente",
+    "injectFailed": "Error al inyectar el error",
+    "clearAllButton": "Borrar todos los errores",
+    "clearAllSuccess": "Todos los errores borrados",
+    "clearAllFailed": "Error al borrar los errores",
+    "clearSpecificSuccess": "Error borrado en {{deviceIp}} {{iface}}",
+    "clearSpecificFailed": "Error al borrar el error",
+    "activeErrorsTitle": "Errores activos",
+    "tableHeaderDeviceIp": "IP del dispositivo",
+    "tableHeaderInterface": "Interfaz",
+    "tableHeaderErrorType": "Tipo de error",
+    "tableHeaderValue": "Valor",
+    "tableHeaderActions": "Acciones",
+    "clearOneAriaLabel": "Borrar el error en {{deviceIp}} {{iface}}",
+    "clearOneButton": "Borrar",
+    "clearAllConfirmTitle": "Borrar todos los errores",
+    "clearAllConfirmMessage": "¿Está seguro de que desea borrar todos los errores inyectados? Esta acción no se puede deshacer.",
+    "clearAllConfirmLabel": "Borrar todo"
   }
 }

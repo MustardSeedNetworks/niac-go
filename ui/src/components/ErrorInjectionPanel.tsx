@@ -1,4 +1,5 @@
 import { type FC, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   clearAllErrors,
   clearError,
@@ -16,6 +17,7 @@ import { SmallText } from '../ui/Typography';
 import { getErrorMessage } from '../utils/format';
 
 export const ErrorInjectionPanel: FC = () => {
+  const { t } = useTranslation('errors');
   const { data: devices } = useApiResource(fetchDevices, []);
   const { data: errorInfo, refetch: refetchErrors } = useApiResource(fetchErrorTypes, [], {
     intervalMs: 5000,
@@ -41,7 +43,7 @@ export const ErrorInjectionPanel: FC = () => {
     if (!(selectedDevice && selectedInterface && selectedErrorType)) {
       setMessage({
         type: 'error',
-        text: 'Please select device, interface, and error type',
+        text: t('injection.selectMissing'),
       });
       return;
     }
@@ -56,12 +58,12 @@ export const ErrorInjectionPanel: FC = () => {
         errorType: selectedErrorType,
         value: errorValue,
       });
-      setMessage({ type: 'success', text: 'Error injected successfully' });
+      setMessage({ type: 'success', text: t('injection.injectSuccess') });
       refetchErrors();
     } catch (err: unknown) {
       setMessage({
         type: 'error',
-        text: getErrorMessage(err) || 'Failed to inject error',
+        text: getErrorMessage(err) || t('injection.injectFailed'),
       });
     } finally {
       setIsSubmitting(false);
@@ -73,12 +75,12 @@ export const ErrorInjectionPanel: FC = () => {
     setIsSubmitting(true);
     try {
       await clearAllErrors();
-      setMessage({ type: 'success', text: 'All errors cleared' });
+      setMessage({ type: 'success', text: t('injection.clearAllSuccess') });
       refetchErrors();
     } catch (err: unknown) {
       setMessage({
         type: 'error',
-        text: getErrorMessage(err) || 'Failed to clear errors',
+        text: getErrorMessage(err) || t('injection.clearAllFailed'),
       });
     } finally {
       setIsSubmitting(false);
@@ -91,13 +93,13 @@ export const ErrorInjectionPanel: FC = () => {
       await clearError(deviceIp, iface);
       setMessage({
         type: 'success',
-        text: `Cleared error on ${deviceIp} ${iface}`,
+        text: t('injection.clearSpecificSuccess', { deviceIp, iface }),
       });
       refetchErrors();
     } catch (err: unknown) {
       setMessage({
         type: 'error',
-        text: getErrorMessage(err) || 'Failed to clear error',
+        text: getErrorMessage(err) || t('injection.clearSpecificFailed'),
       });
     } finally {
       setIsSubmitting(false);
@@ -113,7 +115,7 @@ export const ErrorInjectionPanel: FC = () => {
             {/* Device Selector */}
             <div>
               <label htmlFor="error-device" className="block text-sm font-medium mb-2">
-                Device
+                {t('injection.deviceLabel')}
               </label>
               <select
                 id="error-device"
@@ -121,7 +123,7 @@ export const ErrorInjectionPanel: FC = () => {
                 onChange={(e) => setSelectedDevice(e.target.value)}
                 className="w-full px-3 py-2 bg-bg-elevated border border-border-default rounded-md focus:outline-none focus:ring-2 focus:ring-status-info"
               >
-                <option value="">Select device...</option>
+                <option value="">{t('injection.deviceSelectPlaceholder')}</option>
                 {devices?.map((dev) => (
                   <option key={dev.name} value={dev.ips?.[0]}>
                     {dev.name} ({dev.ips?.[0]})
@@ -133,14 +135,14 @@ export const ErrorInjectionPanel: FC = () => {
             {/* Interface Input */}
             <div>
               <label htmlFor="error-interface" className="block text-sm font-medium mb-2">
-                Interface
+                {t('injection.interfaceLabel')}
               </label>
               <input
                 id="error-interface"
                 type="text"
                 value={selectedInterface}
                 onChange={(e) => setSelectedInterface(e.target.value)}
-                placeholder="e.g., eth0, GigabitEthernet0/1"
+                placeholder={t('injection.interfacePlaceholder')}
                 className="w-full px-3 py-2 bg-bg-elevated border border-border-default rounded-md focus:outline-none focus:ring-2 focus:ring-status-info"
               />
             </div>
@@ -148,7 +150,7 @@ export const ErrorInjectionPanel: FC = () => {
             {/* Error Type Selector */}
             <div>
               <label htmlFor="error-type" className="block text-sm font-medium mb-2">
-                Error Type
+                {t('injection.errorTypeLabel')}
               </label>
               <select
                 id="error-type"
@@ -156,7 +158,7 @@ export const ErrorInjectionPanel: FC = () => {
                 onChange={(e) => setSelectedErrorType(e.target.value)}
                 className="w-full px-3 py-2 bg-bg-elevated border border-border-default rounded-md focus:outline-none focus:ring-2 focus:ring-status-info"
               >
-                <option value="">Select error type...</option>
+                <option value="">{t('injection.errorTypeSelectPlaceholder')}</option>
                 {errorInfo?.availableTypes?.map((type: ErrorType) => (
                   <option key={type.type} value={type.type}>
                     {type.type}
@@ -166,7 +168,7 @@ export const ErrorInjectionPanel: FC = () => {
               {selectedErrorType && errorInfo?.availableTypes && (
                 <SmallText className="text-text-muted mt-1">
                   {
-                    errorInfo.availableTypes.find((t: ErrorType) => t.type === selectedErrorType)
+                    errorInfo.availableTypes.find((et: ErrorType) => et.type === selectedErrorType)
                       ?.description
                   }
                 </SmallText>
@@ -176,7 +178,7 @@ export const ErrorInjectionPanel: FC = () => {
             {/* Value Slider */}
             <div>
               <label htmlFor="error-value" className="block text-sm font-medium mb-2">
-                Value: {errorValue}%
+                {t('injection.valueLabel', { value: errorValue })}
               </label>
               <input
                 id="error-value"
@@ -187,7 +189,7 @@ export const ErrorInjectionPanel: FC = () => {
                 onChange={(e) => setErrorValue(Number.parseInt(e.target.value, 10))}
                 className="w-full h-2 bg-bg-elevated rounded-lg appearance-none cursor-pointer"
               />
-              <SmallText className="text-text-muted">0 = No errors, 100 = Maximum errors</SmallText>
+              <SmallText className="text-text-muted">{t('injection.valueHelper')}</SmallText>
             </div>
           </div>
 
@@ -207,14 +209,14 @@ export const ErrorInjectionPanel: FC = () => {
           {/* Action Buttons */}
           <div className="flex gap-3">
             <Button onClick={handleInject} disabled={isSubmitting}>
-              {isSubmitting ? 'Injecting...' : 'Inject Error'}
+              {isSubmitting ? t('injection.injectingButton') : t('injection.injectButton')}
             </Button>
             <Button
               onClick={() => setShowClearAllConfirm(true)}
               disabled={isSubmitting}
               variant="secondary"
             >
-              Clear All Errors
+              {t('injection.clearAllButton')}
             </Button>
           </div>
         </CardContent>
@@ -224,16 +226,16 @@ export const ErrorInjectionPanel: FC = () => {
       {Object.keys(activeErrors).length > 0 && (
         <Card>
           <CardContent>
-            <h3 className="text-lg font-semibold mb-4">Active Errors</h3>
+            <h3 className="text-lg font-semibold mb-4">{t('injection.activeErrorsTitle')}</h3>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border-default">
-                    <th className="text-left py-2 px-2">Device IP</th>
-                    <th className="text-left py-2 px-2">Interface</th>
-                    <th className="text-left py-2 px-2">Error Type</th>
-                    <th className="text-left py-2 px-2">Value</th>
-                    <th className="text-left py-2 px-2">Actions</th>
+                    <th className="text-left py-2 px-2">{t('injection.tableHeaderDeviceIp')}</th>
+                    <th className="text-left py-2 px-2">{t('injection.tableHeaderInterface')}</th>
+                    <th className="text-left py-2 px-2">{t('injection.tableHeaderErrorType')}</th>
+                    <th className="text-left py-2 px-2">{t('injection.tableHeaderValue')}</th>
+                    <th className="text-left py-2 px-2">{t('injection.tableHeaderActions')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -256,9 +258,9 @@ export const ErrorInjectionPanel: FC = () => {
                               onClick={() => handleClearSpecific(deviceIp, iface)}
                               disabled={isSubmitting}
                               className="text-status-info hover:text-status-info text-sm"
-                              aria-label={`Clear error on ${deviceIp} ${iface}`}
+                              aria-label={t('injection.clearOneAriaLabel', { deviceIp, iface })}
                             >
-                              Clear
+                              {t('injection.clearOneButton')}
                             </button>
                           </td>
                         </tr>
@@ -277,9 +279,9 @@ export const ErrorInjectionPanel: FC = () => {
         isOpen={showClearAllConfirm}
         onConfirm={handleClearAllConfirm}
         onCancel={() => setShowClearAllConfirm(false)}
-        title="Clear All Errors"
-        message="Are you sure you want to clear all injected errors? This action cannot be undone."
-        confirmLabel="Clear All"
+        title={t('injection.clearAllConfirmTitle')}
+        message={t('injection.clearAllConfirmMessage')}
+        confirmLabel={t('injection.clearAllConfirmLabel')}
         confirmTone="red"
       />
     </div>
