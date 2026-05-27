@@ -76,7 +76,9 @@ func TestValidateRejectsBadInputs(t *testing.T) {
 // seed locked theirs in seed PR #1095 — this is NIAC's contribution
 // to the same shared spec.
 //
-// Anchored to keygen v2.0.0 (2026-05-21).
+// Anchored to keygen v2.2.0 (2026-05-27) — snmpv3 dropped from Pro
+// (free for all tiers; SNMPv3 is the only safe SNMP version, so
+// gating it would push users toward the cleartext v1/v2c variants).
 func TestKeygenContract(t *testing.T) {
 	t.Parallel()
 	vector := keygenVector{
@@ -87,7 +89,7 @@ func TestKeygenContract(t *testing.T) {
 		serial:  "NIACPRO",
 		features: []string{
 			"unlimited_devices",
-			"bgp", "ospf", "snmpv3", "netbios", "ftp", "stp",
+			"bgp", "ospf", "netbios", "ftp", "stp",
 			"ipv6_advanced", "error_injection", "traffic_shaping",
 			"config_templates", "multi_ip", "pcap_ingest", "rest_api",
 		},

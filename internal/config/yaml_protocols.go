@@ -882,4 +882,103 @@ func parseFTPConfig(yamlFtp *converter.FtpConfig, deviceName string) *FTPConfig 
 	return ftpCfg
 }
 
+// parseBGPConfig parses BGP configuration from YAML. Returns nil for
+// absent input - gating logic treats nil as "BGP not configured".
+func parseBGPConfig(yamlBgp *converter.BgpConfig) *BGPConfig {
+	if yamlBgp == nil {
+		return nil
+	}
+
+	cfg := &BGPConfig{
+		Enabled:   yamlBgp.Enabled,
+		ASN:       yamlBgp.ASN,
+		HoldTime:  yamlBgp.HoldTime,
+		KeepAlive: yamlBgp.KeepAlive,
+		Neighbors: make([]BGPNeighbor, 0, len(yamlBgp.Neighbors)),
+	}
+	if yamlBgp.RouterID != "" {
+		cfg.RouterID = net.ParseIP(yamlBgp.RouterID)
+	}
+
+	if cfg.HoldTime == 0 {
+		cfg.HoldTime = 180
+	}
+
+	if cfg.KeepAlive == 0 {
+		cfg.KeepAlive = 60
+	}
+
+	for _, n := range yamlBgp.Neighbors {
+		cfg.Neighbors = append(cfg.Neighbors, BGPNeighbor{
+			IP:       net.ParseIP(n.IP),
+			RemoteAS: n.RemoteAS,
+			Password: n.Password,
+		})
+	}
+
+	return cfg
+}
+
+// parseOSPFConfig parses OSPF configuration from YAML. Returns nil
+// for absent input.
+func parseOSPFConfig(yamlOspf *converter.OspfConfig) *OSPFConfig {
+	if yamlOspf == nil {
+		return nil
+	}
+
+	cfg := &OSPFConfig{
+		Enabled:   yamlOspf.Enabled,
+		HelloTime: yamlOspf.HelloTime,
+		DeadTime:  yamlOspf.DeadTime,
+		Areas:     make([]OSPFArea, 0, len(yamlOspf.Areas)),
+	}
+	if yamlOspf.RouterID != "" {
+		cfg.RouterID = net.ParseIP(yamlOspf.RouterID)
+	}
+
+	if cfg.HelloTime == 0 {
+		cfg.HelloTime = 10
+	}
+
+	if cfg.DeadTime == 0 {
+		cfg.DeadTime = 40
+	}
+
+	for _, a := range yamlOspf.Areas {
+		cfg.Areas = append(cfg.Areas, OSPFArea{
+			AreaID:   a.AreaID,
+			Networks: append([]string(nil), a.Networks...),
+			Stub:     a.Stub,
+		})
+	}
+
+	return cfg
+}
+
+// parseSNMPv3Config parses SNMPv3 USM user configuration from YAML.
+// Returns nil for absent input. NOT license-gated — SNMPv3 is free
+// for all tiers (the only safe SNMP version).
+func parseSNMPv3Config(yamlV3 *converter.Snmpv3Config) *SNMPv3Config {
+	if yamlV3 == nil {
+		return nil
+	}
+
+	cfg := &SNMPv3Config{
+		Enabled:  yamlV3.Enabled,
+		EngineID: yamlV3.EngineID,
+		Users:    make([]SNMPv3User, 0, len(yamlV3.Users)),
+	}
+	for _, u := range yamlV3.Users {
+		cfg.Users = append(cfg.Users, SNMPv3User{
+			Username:     u.Username,
+			AuthProtocol: u.AuthProtocol,
+			AuthPassword: u.AuthPassword,
+			PrivProtocol: u.PrivProtocol,
+			PrivPassword: u.PrivPassword,
+		})
+	}
+
+	return cfg
+}
+
 // ParseSimpleConfig parses a simple device configuration format

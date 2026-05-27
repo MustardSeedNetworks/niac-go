@@ -216,10 +216,16 @@ func (li *Info) CanRunPro() bool {
 
 // proFeatures returns the feature list granted to NIAC Pro (product
 // code 5001). Mirrors keygen's productCatalog.
+//
+// snmpv3 was removed from Pro on 2026-05-27: SNMPv3 is the only safe
+// SNMP version (v1/v2c send credentials in cleartext), so gating it
+// would push customers toward the insecure variants. BGP + OSPF stay
+// on Pro because they're large protocol implementations, not a
+// safety floor.
 func proFeatures() []string {
 	return []string{
 		"unlimited_devices",
-		"bgp", "ospf", "snmpv3", "netbios", "ftp", "stp",
+		"bgp", "ospf", "netbios", "ftp", "stp",
 		"ipv6_advanced", "error_injection", "traffic_shaping",
 		"config_templates", "multi_ip", "pcap_ingest", "rest_api",
 	}

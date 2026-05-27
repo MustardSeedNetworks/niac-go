@@ -163,6 +163,9 @@ type Device struct {
 	HTTPConfig          *HTTPConfig          // HTTP server configuration
 	FTPConfig           *FTPConfig           // FTP server configuration
 	NetBIOSConfig       *NetBIOSConfig       // NetBIOS service configuration
+	BGPConfig           *BGPConfig           // BGP speaker configuration (v0.86.0 — Pro)
+	OSPFConfig          *OSPFConfig          // OSPF speaker configuration (v0.86.0 — Pro)
+	SNMPv3Config        *SNMPv3Config        // SNMPv3 USM users (v0.86.0 — free, safe SNMP variant)
 	ICMPConfig          *ICMPConfig          // ICMP/ICMPv4 configuration
 	ICMPv6Config        *ICMPv6Config        // ICMPv6 configuration
 	DHCPv6Config        *DHCPv6Config        // DHCPv6 server configuration
@@ -406,6 +409,71 @@ type NetBIOSName struct {
 	Name   string
 	Suffix uint8
 	Group  bool
+}
+
+// BGPConfig holds BGP (Border Gateway Protocol) speaker configuration.
+//
+// Added 2026-05-27 — Pro tier feature. Presence on a Device trips the
+// `bgp` gate at create/update time. The protocol speaker itself is a
+// separate, larger workstream (RFC 4271); this struct exists today
+// purely so the license-gate has something concrete to test against
+// instead of "TODO: not yet modeled."
+type BGPConfig struct {
+	Enabled   bool
+	ASN       uint32
+	RouterID  net.IP
+	HoldTime  uint16 // seconds (default 180)
+	KeepAlive uint16 // seconds (default 60)
+	Neighbors []BGPNeighbor
+}
+
+// BGPNeighbor represents a single BGP peer entry.
+type BGPNeighbor struct {
+	IP       net.IP
+	RemoteAS uint32
+	Password string // MD5/TCP-AO shared secret (optional)
+}
+
+// OSPFConfig holds OSPF (Open Shortest Path First) speaker configuration.
+//
+// Added 2026-05-27 — Pro tier feature. Same shape and reasoning as
+// BGPConfig: schema-only stub so the gate has a concrete handle.
+// Speaker implementation tracked separately (RFC 2328).
+type OSPFConfig struct {
+	Enabled   bool
+	RouterID  net.IP
+	HelloTime uint16 // seconds (default 10)
+	DeadTime  uint16 // seconds (default 40)
+	Areas     []OSPFArea
+}
+
+// OSPFArea represents an OSPF area declaration.
+type OSPFArea struct {
+	AreaID   string
+	Networks []string
+	Stub     bool
+}
+
+// SNMPv3Config holds SNMPv3 USM (User-based Security Model)
+// configuration: engine ID + users with auth/priv credentials.
+//
+// Added 2026-05-27 — NOT license-gated. SNMPv3 is the only safe SNMP
+// version (v1/v2c send credentials in cleartext) and so stays free
+// for every NIAC tier. The actual SNMP packet handling lives in
+// internal/protocols/snmp/.
+type SNMPv3Config struct {
+	Enabled  bool
+	EngineID string
+	Users    []SNMPv3User
+}
+
+// SNMPv3User represents one SNMPv3 USM user record.
+type SNMPv3User struct {
+	Username     string
+	AuthProtocol string // "none" | "md5" | "sha" | "sha256" | "sha512"
+	AuthPassword string
+	PrivProtocol string // "none" | "des" | "aes" | "aes192" | "aes256"
+	PrivPassword string
 }
 
 // ICMPConfig holds ICMP/ICMPv4 configuration.

@@ -35,6 +35,52 @@
         "value"
       ]
     },
+    "BgpConfig": {
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "asn": {
+          "type": "integer"
+        },
+        "router_id": {
+          "type": "string"
+        },
+        "hold_time": {
+          "type": "integer"
+        },
+        "keep_alive": {
+          "type": "integer"
+        },
+        "neighbors": {
+          "items": {
+            "$ref": "#/$defs/BgpNeighbor"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "BgpNeighbor": {
+      "properties": {
+        "ip": {
+          "type": "string"
+        },
+        "remote_as": {
+          "type": "integer"
+        },
+        "password": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "ip",
+        "remote_as"
+      ]
+    },
     "CapturePlayback": {
       "properties": {
         "file_name": {
@@ -227,6 +273,15 @@
         },
         "netbios": {
           "$ref": "#/$defs/NetbiosConfig"
+        },
+        "bgp": {
+          "$ref": "#/$defs/BgpConfig"
+        },
+        "ospf": {
+          "$ref": "#/$defs/OspfConfig"
+        },
+        "snmpv3": {
+          "$ref": "#/$defs/Snmpv3Config"
         },
         "icmp": {
           "$ref": "#/$defs/IcmpConfig"
@@ -880,6 +935,51 @@
       "additionalProperties": false,
       "type": "object"
     },
+    "OspfArea": {
+      "properties": {
+        "area_id": {
+          "type": "string"
+        },
+        "networks": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "stub": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "area_id"
+      ]
+    },
+    "OspfConfig": {
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "router_id": {
+          "type": "string"
+        },
+        "hello_time": {
+          "type": "integer"
+        },
+        "dead_time": {
+          "type": "integer"
+        },
+        "areas": {
+          "items": {
+            "$ref": "#/$defs/OspfArea"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
     "PeriodicPingConfig": {
       "properties": {
         "enabled": {
@@ -996,6 +1096,48 @@
       },
       "additionalProperties": false,
       "type": "object"
+    },
+    "Snmpv3Config": {
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "engine_id": {
+          "type": "string"
+        },
+        "users": {
+          "items": {
+            "$ref": "#/$defs/Snmpv3User"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "Snmpv3User": {
+      "properties": {
+        "username": {
+          "type": "string"
+        },
+        "auth_protocol": {
+          "type": "string"
+        },
+        "auth_password": {
+          "type": "string"
+        },
+        "priv_protocol": {
+          "type": "string"
+        },
+        "priv_password": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "username"
+      ]
     },
     "StpConfig": {
       "properties": {
