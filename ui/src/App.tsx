@@ -1,8 +1,10 @@
 import { Moon, Sun, Wrench } from 'lucide-react';
-import { memo, type ReactElement, type ReactNode, Suspense } from 'react';
+import { memo, type ReactElement, type ReactNode, Suspense, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { ErrorBoundary, PageErrorBoundary } from './components/ErrorBoundary';
+import { HelpDrawer } from './components/HelpDrawer';
+import { SettingsDrawer } from './components/SettingsDrawer';
 import { AppProvider, useAppState } from './contexts/AppContext';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useTheme } from './hooks/useTheme';
@@ -10,7 +12,7 @@ import { useNavGroups } from './navGroups';
 import { DeviceEditorPageRef, type PageConfig, usePages } from './pageRegistry';
 import { Breadcrumbs } from './ui/Breadcrumbs';
 import { ConnectionStatus } from './ui/ConnectionStatus';
-import { PageHeader } from './ui/Layout';
+import { PageHeader } from './ui/PageHeader';
 import { PageLoader } from './ui/PageLoader';
 import { SidebarLayout } from './ui/Sidebar';
 import { ToastContainer } from './ui/ToastContainer';
@@ -76,11 +78,21 @@ function AppShell() {
   const { data: version } = useAppState('version');
   const navGroups = useNavGroups();
   const pages = usePages();
+  // Drawers used to live inside Sidebar.tsx; moved here as part of Phase 1
+  // so the canonical Sidebar (synced from stem) stays drawer-agnostic.
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   useKeyboardShortcuts();
 
   return (
-    <SidebarLayout groups={navGroups} version={version?.version} topBar={<TopBar />}>
+    <SidebarLayout
+      groups={navGroups}
+      version={version?.version}
+      topBar={<TopBar />}
+      onOpenHelp={() => setHelpOpen(true)}
+      onOpenSettings={() => setSettingsOpen(true)}
+    >
       <ToastContainer />
       <Suspense fallback={<PageLoader />}>
         <Routes>
@@ -141,6 +153,12 @@ function AppShell() {
           <Route path="*" element={<Navigate to="/" replace={true} />} />
         </Routes>
       </Suspense>
+      <SettingsDrawer
+        isOpen={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        version={version?.version}
+      />
+      <HelpDrawer isOpen={helpOpen} onClose={() => setHelpOpen(false)} />
     </SidebarLayout>
   );
 }
