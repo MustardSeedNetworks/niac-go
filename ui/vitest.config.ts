@@ -26,6 +26,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
+      '@locales': fileURLToPath(new URL('../internal/i18n/locales', import.meta.url)),
     },
   },
   test: {
