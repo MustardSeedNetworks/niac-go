@@ -1,4 +1,5 @@
 import { type FC, memo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Tag } from '../ui/Tag';
 import { SmallText } from '../ui/Typography';
 import { formatBytes } from '../utils/format';
@@ -43,13 +44,16 @@ DetailRow.displayName = 'DetailRow';
  * Headers section for parsed protocol headers
  */
 const HeadersSection = memo(({ headers }: { headers: Record<string, unknown> | undefined }) => {
+  const { t } = useTranslation('pages');
   if (!headers || Object.keys(headers).length === 0) {
     return null;
   }
 
   return (
     <div className="mt-4">
-      <h4 className="text-sm font-semibold text-text-secondary mb-2">Protocol Headers</h4>
+      <h4 className="text-sm font-semibold text-text-secondary mb-2">
+        {t('packets.inspector.protocolHeaders')}
+      </h4>
       <div className="rounded-lg bg-bg-base/50 p-3 border border-surface-border">
         {Object.entries(headers).map(([key, value]) => (
           <DetailRow
@@ -75,10 +79,11 @@ HeadersSection.displayName = 'HeadersSection';
  * - Protocol-specific headers when available
  */
 export const PacketDetails: FC<PacketDetailsProps> = memo(({ packet, onFieldSelect }) => {
+  const { t } = useTranslation('pages');
   if (!packet) {
     return (
       <div className="h-full flex items-center justify-center text-text-muted">
-        <p className="text-sm">Select a packet to view details</p>
+        <p className="text-sm">{t('packets.inspector.selectPacketForDetails')}</p>
       </div>
     );
   }

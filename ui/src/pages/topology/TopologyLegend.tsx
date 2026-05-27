@@ -7,6 +7,7 @@
 
 import { Eye, EyeOff, Network } from 'lucide-react';
 import type { FC } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   topologyDeviceColors as deviceColors,
   topologyDeviceIcons as deviceIcons,
@@ -22,6 +23,7 @@ interface TopologyLegendProps {
  * Can be collapsed to save space on the canvas.
  */
 export const TopologyLegend: FC<TopologyLegendProps> = ({ show, onToggle }) => {
+  const { t } = useTranslation('pages');
   if (!show) {
     return (
       <button
@@ -51,7 +53,9 @@ export const TopologyLegend: FC<TopologyLegendProps> = ({ show, onToggle }) => {
       <div className="space-y-4">
         {/* Device Types */}
         <div>
-          <div className="text-xs text-text-muted uppercase tracking-wide mb-2">Device Types</div>
+          <div className="text-xs text-text-muted uppercase tracking-wide mb-2">
+            {t('topology.legend.deviceTypesHeading')}
+          </div>
           <div className="space-y-1.5">
             {[
               { type: 'router', label: 'Router' },
@@ -81,7 +85,9 @@ export const TopologyLegend: FC<TopologyLegendProps> = ({ show, onToggle }) => {
 
         {/* Link Speeds */}
         <div>
-          <div className="text-xs text-text-muted uppercase tracking-wide mb-2">Link Speeds</div>
+          <div className="text-xs text-text-muted uppercase tracking-wide mb-2">
+            {t('topology.legend.linkSpeedsHeading')}
+          </div>
           <div className="space-y-1.5">
             {[
               { label: '100M', color: 'var(--color-link-100m)' },

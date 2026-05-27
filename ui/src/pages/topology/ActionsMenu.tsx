@@ -1,5 +1,6 @@
 import { ChevronDown, Download } from 'lucide-react';
 import { type FC, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '../../ui/Button';
 
 /**
@@ -20,6 +21,7 @@ export const ActionsMenu: FC<{
   onExportPNG: () => void;
   onExportJSON: () => void;
 }> = ({ disabled, onExportPNG, onExportJSON }) => {
+  const { t } = useTranslation('pages');
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -69,7 +71,7 @@ export const ActionsMenu: FC<{
             onClick={handle(onExportPNG)}
             className="flex w-full items-center justify-between gap-3 px-3 py-1.5 text-left transition-colors hover:bg-surface-hover hover:text-text-primary"
           >
-            <span>Export as PNG</span>
+            <span>{t('topology.actionsMenu.exportPng')}</span>
             <span className="text-[10px] text-text-muted">image</span>
           </button>
           <button
@@ -78,7 +80,7 @@ export const ActionsMenu: FC<{
             onClick={handle(onExportJSON)}
             className="flex w-full items-center justify-between gap-3 px-3 py-1.5 text-left transition-colors hover:bg-surface-hover hover:text-text-primary"
           >
-            <span>Export topology JSON</span>
+            <span>{t('topology.actionsMenu.exportJson')}</span>
             <span className="text-[10px] text-text-muted">data</span>
           </button>
         </div>

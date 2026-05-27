@@ -13,6 +13,7 @@ import {
   useNodesState,
 } from '@xyflow/react';
 import { type FC, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import '@xyflow/react/dist/style.css';
 import { Network, Radar, RefreshCw } from 'lucide-react';
@@ -70,6 +71,7 @@ const edgeTypes: EdgeTypes = {
  * legend / minimap / selected device, and the export action.
  */
 export const TopologyPage: FC = () => {
+  const { t } = useTranslation('pages');
   const navigate = useNavigate();
 
   // Fetch topology data from the API with periodic polling
@@ -555,7 +557,7 @@ export const TopologyPage: FC = () => {
                 <Network className="w-6 h-6 text-status-info" />
               </div>
               <div>
-                <H2>Network Topology</H2>
+                <H2>{t('topology.page.networkTopologyTitle')}</H2>
                 <SmallText className="text-text-muted">
                   {devices?.length || 0} {devices?.length === 1 ? 'device' : 'devices'} |{' '}
                   {topology?.links?.length || 0}{' '}
@@ -753,7 +755,7 @@ export const TopologyPage: FC = () => {
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="text-center">
                   <Network className="w-16 h-16 text-text-disabled mx-auto mb-4" />
-                  <p className="text-text-muted mb-2">No topology data available</p>
+                  <p className="text-text-muted mb-2">{t('topology.page.noTopologyData')}</p>
                   <SmallText className="text-text-muted">
                     Configure devices with trunk ports or port-channels to visualize connections
                   </SmallText>

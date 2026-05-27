@@ -12,6 +12,7 @@ import {
   WifiOff,
 } from 'lucide-react';
 import { type FC, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import {
   fetchCaptureStatus,
@@ -547,6 +548,7 @@ const StandaloneCaptureStarter: FC<{
   onStarted: () => void;
   navigateToSim: () => void;
 }> = ({ onStarted, navigateToSim }) => {
+  const { t } = useTranslation('pages');
   const { data: interfacesResp } = useApiResource(fetchUsableInterfaces, []);
   const interfaces = interfacesResp?.interfaces ?? [];
   const [selectedIface, setSelectedIface] = useState('');
@@ -585,7 +587,9 @@ const StandaloneCaptureStarter: FC<{
         <div className="flex items-start gap-3">
           <Activity className={`mt-1 ${iconSizes.lg} text-brand-accent`} />
           <div className="flex-1">
-            <p className="font-semibold text-text-primary">Standalone packet capture</p>
+            <p className="font-semibold text-text-primary">
+              {t('packets.inspector.standaloneCapture')}
+            </p>
             <SmallText className="text-text-muted">
               Sniff an interface without starting a simulation. Frames stream into the viewer below
               as soon as they hit the wire. Or{' '}
@@ -610,7 +614,7 @@ const StandaloneCaptureStarter: FC<{
               className="rounded-lg border border-surface-border bg-bg-base/60 px-3 py-2 text-sm text-text-primary focus:border-brand-accent focus:outline-none"
             >
               {interfaces.length === 0 ? (
-                <option value="">No interfaces detected</option>
+                <option value="">{t('packets.inspector.noInterfaces')}</option>
               ) : (
                 interfaces.map((iface) => (
                   <option key={iface.name} value={iface.name}>

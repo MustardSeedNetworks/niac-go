@@ -1,4 +1,5 @@
 import { type FC, memo, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { PcapPacket } from '../api/types';
 import { buildProtocolLayers } from '../utils/protocol-layers';
 import type { Packet } from './PacketList';
@@ -14,6 +15,7 @@ interface ProtocolTreeProps {
  * layered protocol inspection. Clicking fields with byte offsets highlights the hex dump.
  */
 export const ProtocolTree: FC<ProtocolTreeProps> = memo(({ packet, onFieldSelect }) => {
+  const { t } = useTranslation('pages');
   const layers = useMemo(() => {
     if (!packet) return [];
 
@@ -35,7 +37,7 @@ export const ProtocolTree: FC<ProtocolTreeProps> = memo(({ packet, onFieldSelect
   if (!packet) {
     return (
       <div className="h-full flex items-center justify-center text-text-muted">
-        <p className="text-sm">Select a packet to view protocol layers</p>
+        <p className="text-sm">{t('packets.inspector.selectPacketForProtocol')}</p>
       </div>
     );
   }
@@ -43,7 +45,7 @@ export const ProtocolTree: FC<ProtocolTreeProps> = memo(({ packet, onFieldSelect
   if (layers.length === 0) {
     return (
       <div className="h-full flex items-center justify-center text-text-muted">
-        <p className="text-sm">No protocol layers available</p>
+        <p className="text-sm">{t('packets.inspector.noProtocolLayers')}</p>
       </div>
     );
   }
