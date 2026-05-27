@@ -9,7 +9,56 @@
   "dashboard": {
     "label": "Dashboard",
     "title": "Dashboard",
-    "description": "Live counters, run snapshots, and automation status for the active NIAC stack."
+    "description": "Live counters, run snapshots, and automation status for the active NIAC stack.",
+    "status": {
+      "running": "Simulation Running",
+      "stopped": "Simulation Stopped",
+      "noInterface": "No interface",
+      "deviceCount_one": "{{count}} device",
+      "deviceCount_other": "{{count}} devices",
+      "uptimeLabel": "Uptime: {{uptime}}"
+    },
+    "stats": {
+      "devicesOnline": "Devices Online",
+      "devicesOnlineHelper": "Active network devices",
+      "packetsRx": "Packets RX",
+      "packetsRxHelper": "{{sent}} sent",
+      "packetsRxAwaiting": "Awaiting data",
+      "dnsQueries": "DNS Queries",
+      "dnsQueriesHelper": "DHCP: {{count}}"
+    },
+    "quickActions": {
+      "title": "Quick Actions",
+      "errorInjectionLabel": "Error Injection",
+      "errorInjectionDescription": "Inject network errors",
+      "debugConsoleLabel": "Debug Console",
+      "debugConsoleDescription": "View live logs",
+      "trafficInjectionLabel": "Traffic Injection",
+      "trafficInjectionDescription": "Replay PCAP files",
+      "viewTopologyLabel": "View Topology",
+      "viewTopologyDescription": "Network graph"
+    },
+    "recentRuns": {
+      "title": "Recent Runs",
+      "tag": "History",
+      "deviceCountShort": "{{count}} dev",
+      "rxShort": "RX {{count}}",
+      "txShort": "TX {{count}}",
+      "empty": "No run history yet",
+      "viewAll": "View all history →"
+    },
+    "errorPanel": {
+      "title": "Error Injection Types",
+      "tuiModeLabel": "TUI Mode:",
+      "tuiModeDescription": "Run {{command}} to access interactive error injection with keyboard controls (press 'i' for menu, keys 1-7 for quick injection)."
+    },
+    "automation": {
+      "empty": "Automation updates will appear after the first run completes.",
+      "title": "Automation timeline",
+      "latestEventsTag": "Latest events",
+      "eventDetail": "{{count}} devices • duration {{duration}}",
+      "viewDetails": "View details"
+    }
   },
   "runtime": {
     "label": "Simulation",

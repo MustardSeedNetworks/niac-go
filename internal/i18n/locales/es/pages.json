@@ -9,7 +9,56 @@
   "dashboard": {
     "label": "Panel",
     "title": "Panel",
-    "description": "Contadores en vivo, instantáneas de ejecución y estado de automatización para la pila NIAC activa."
+    "description": "Contadores en vivo, instantáneas de ejecución y estado de automatización para la pila NIAC activa.",
+    "status": {
+      "running": "Simulación en ejecución",
+      "stopped": "Simulación detenida",
+      "noInterface": "Sin interfaz",
+      "deviceCount_one": "{{count}} dispositivo",
+      "deviceCount_other": "{{count}} dispositivos",
+      "uptimeLabel": "Tiempo activo: {{uptime}}"
+    },
+    "stats": {
+      "devicesOnline": "Dispositivos en línea",
+      "devicesOnlineHelper": "Dispositivos de red activos",
+      "packetsRx": "Paquetes RX",
+      "packetsRxHelper": "{{sent}} enviados",
+      "packetsRxAwaiting": "A la espera de datos",
+      "dnsQueries": "Consultas DNS",
+      "dnsQueriesHelper": "DHCP: {{count}}"
+    },
+    "quickActions": {
+      "title": "Acciones rápidas",
+      "errorInjectionLabel": "Inyección de errores",
+      "errorInjectionDescription": "Inyecte errores de red",
+      "debugConsoleLabel": "Consola de depuración",
+      "debugConsoleDescription": "Vea los registros en vivo",
+      "trafficInjectionLabel": "Inyección de tráfico",
+      "trafficInjectionDescription": "Reproduzca archivos PCAP",
+      "viewTopologyLabel": "Ver topología",
+      "viewTopologyDescription": "Gráfico de red"
+    },
+    "recentRuns": {
+      "title": "Ejecuciones recientes",
+      "tag": "Historial",
+      "deviceCountShort": "{{count}} disp.",
+      "rxShort": "RX {{count}}",
+      "txShort": "TX {{count}}",
+      "empty": "Aún no hay historial de ejecuciones",
+      "viewAll": "Ver todo el historial →"
+    },
+    "errorPanel": {
+      "title": "Tipos de inyección de errores",
+      "tuiModeLabel": "Modo TUI:",
+      "tuiModeDescription": "Ejecute {{command}} para acceder a la inyección interactiva de errores con controles de teclado (pulse 'i' para el menú, teclas 1-7 para inyección rápida)."
+    },
+    "automation": {
+      "empty": "Las actualizaciones de automatización aparecerán después de que se complete la primera ejecución.",
+      "title": "Cronología de automatización",
+      "latestEventsTag": "Últimos eventos",
+      "eventDetail": "{{count}} dispositivos • duración {{duration}}",
+      "viewDetails": "Ver detalles"
+    }
   },
   "runtime": {
     "label": "Simulación",
