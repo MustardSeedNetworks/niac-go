@@ -389,15 +389,21 @@ check_key_usage() {
   section "t() call ↔ EN locale key cross-reference"
   local script="scripts/i18n/check-keys.py"
   if [ ! -f "$script" ]; then
-    warn "$script not found; skipping (only NIAC ships check-keys.py today)"
+    warn "$script not found; skipping (run on repos that ship check-keys.py)"
     return
   fi
   if ! command -v python3 >/dev/null 2>&1; then
     warn "python3 not found; skipping check-keys.py"
     return
   fi
+  # Propagate --ratchet so newly-added repos can absorb check-keys.py
+  # without an immediate cleanup burden. Use a plain string instead of
+  # an array because bash 3.2 (macOS default) errors on `${empty[@]}`
+  # under `set -u`.
+  local extra=""
+  [ "$RATCHET" -eq 1 ] && extra="--ratchet"
   local out
-  if ! out=$(python3 "$script" 2>&1); then
+  if ! out=$(python3 "$script" $extra 2>&1); then
     fail "check-keys.py found t() calls referencing missing keys:"
     echo "$out" | head -40 | sed 's/^/      /'
     return
@@ -409,7 +415,7 @@ check_key_usage() {
     wcount=$(echo "$out" | grep -c "^  [^✓]" || echo 0)
     warn "$wcount unused EN locale key(s) (informational; not failing — too noisy until catch-up)"
   fi
-  ok "every t() call resolves to an EN locale key"
+  ok "every t() call resolves to an EN locale key (or all errors demoted under --ratchet)"
 }
 
 # -----------------------------------------------------------------------------
