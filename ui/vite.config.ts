@@ -22,6 +22,12 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         '@': path.resolve(__dirname, 'src'),
+        // Cross-product canonical alias for shared Go-embedded locale files.
+        // Mirrors seed + stem so the same import path resolves identically:
+        //   import enCommon from '@locales/en/common.json';
+        // The Go binary is the single source of truth for translation
+        // content (embedded via //go:embed in internal/i18n/).
+        '@locales': path.resolve(__dirname, '../internal/i18n/locales'),
       },
       dedupe: ['react', 'react-dom', 'react-router-dom', 'lucide-react'],
     },

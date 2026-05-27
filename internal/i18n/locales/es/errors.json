@@ -9,11 +9,11 @@
     "invalidRequest": "Solicitud inválida"
   },
   "license": {
-    "tierTooLow": "Esta función requiere el nivel {{tier}}",
-    "upgradeHint": "Inicia una prueba gratuita de {{tier}} de 14 días con `niac license trial`, o activa una clave {{tier}} con `niac license activate -k <CLAVE>`.",
-    "tierGateTooltip": "Requiere el nivel {{tier}}",
-    "featureUnavailable": "{{feature}} no está disponible en tu nivel actual",
-    "currentTier": "Nivel actual: {{tier}}",
+    "tierTooLow": "Esta función requiere el tier {{tier}}",
+    "upgradeHint": "Inicie una prueba gratuita de {{tier}} de 14 días con `niac license trial`, o active una clave {{tier}} con `niac license activate -k <CLAVE>`.",
+    "tierGateTooltip": "Requiere el tier {{tier}}",
+    "featureUnavailable": "{{feature}} no está disponible en su tier actual",
+    "currentTier": "Tier actual: {{tier}}",
     "loading": "Verificando licencia…"
   },
   "validation": {

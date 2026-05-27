@@ -6,6 +6,12 @@ import { BrowserRouter } from 'react-router-dom';
 import App from './App.tsx';
 import { LicenseProvider } from './contexts/LicenseContext';
 import { initThemeFromStorage } from './hooks/useTheme';
+// Initialize i18next before any component renders. Side-effect import:
+// the i18n module runs init() at load time and registers itself with
+// react-i18next so useTranslation() works in every component. The
+// type-augmentation file adds compile-time key autocomplete.
+import './i18n';
+import './i18n/types';
 import './index.css';
 
 // Apply persisted/default theme before first paint to avoid a flash of
