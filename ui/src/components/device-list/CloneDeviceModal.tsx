@@ -1,6 +1,9 @@
+import { zodResolver } from '@hookform/resolvers/zod';
 import { Copy } from 'lucide-react';
-import { type FC, useState } from 'react';
+import type { FC } from 'react';
+import { type SubmitHandler, useForm } from 'react-hook-form';
 import { iconSizes } from '../../constants/sizes';
+import { type CloneDeviceFormFields, CloneDeviceSchema } from '../../schemas/forms';
 import { Button } from '../../ui/Button';
 
 interface CloneDeviceModalProps {
@@ -10,13 +13,18 @@ interface CloneDeviceModalProps {
 }
 
 export const CloneDeviceModal: FC<CloneDeviceModalProps> = ({ hostname, onClone, onCancel }) => {
-  const [newHostname, setNewHostname] = useState(`${hostname}-copy`);
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isValid },
+  } = useForm<CloneDeviceFormFields>({
+    resolver: zodResolver(CloneDeviceSchema),
+    defaultValues: { newHostname: `${hostname}-copy` },
+    mode: 'onBlur',
+  });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newHostname.trim()) {
-      onClone(newHostname.trim());
-    }
+  const onSubmit: SubmitHandler<CloneDeviceFormFields> = ({ newHostname }) => {
+    onClone(newHostname);
   };
 
   return (
@@ -32,7 +40,7 @@ export const CloneDeviceModal: FC<CloneDeviceModalProps> = ({ hostname, onClone,
         role="dialog"
         aria-modal="true"
       >
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-4">
           <div className="flex items-center gap-3 text-status-info">
             <Copy className={iconSizes.xl} />
             <h2 className="text-lg font-semibold">Clone Device</h2>
@@ -50,16 +58,18 @@ export const CloneDeviceModal: FC<CloneDeviceModalProps> = ({ hostname, onClone,
             <input
               id="new-hostname"
               type="text"
-              value={newHostname}
-              onChange={(e) => setNewHostname(e.target.value)}
+              {...register('newHostname')}
               className="w-full rounded-lg border border-surface-border bg-bg-base/60 p-3 text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none"
             />
+            {errors.newHostname ? (
+              <p className="mt-2 text-xs text-status-error">{errors.newHostname.message}</p>
+            ) : null}
           </div>
           <div className="flex justify-end gap-3 pt-2">
             <Button variant="outline" type="button" onClick={onCancel}>
               Cancel
             </Button>
-            <Button tone="violet" type="submit" disabled={!newHostname.trim()}>
+            <Button tone="violet" type="submit" disabled={!isValid}>
               Clone
             </Button>
           </div>
