@@ -38,8 +38,15 @@ export default defineConfig({
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'on-first-retry',
-    // Gated to local dev only. CI MUST hit real TLS per E2E_CONVENTIONS.
-    ignoreHTTPSErrors: !process.env.CI,
+    // Default: gated to local dev only. CI MUST hit real TLS per
+    // E2E_CONVENTIONS. The PLAYWRIGHT_IGNORE_HTTPS_ERRORS env var is
+    // the documented escape hatch — used in CI when the backend's
+    // self-signed cert can't be added to the runner's trust store
+    // (most cases today, since the daemon auto-generates a self-signed
+    // cert on first start with no CA-signing step). The CI workflow
+    // sets this env var explicitly; locally it's unset and dev
+    // ignores HTTPS errors implicitly.
+    ignoreHTTPSErrors: process.env.PLAYWRIGHT_IGNORE_HTTPS_ERRORS === 'true' || !process.env.CI,
   },
   projects: [
     // Per msn-docs-internal/05-Engineering/E2E_CONVENTIONS.md, only chromium

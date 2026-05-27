@@ -1,11 +1,12 @@
 {
   "ci": {
     "collect": {
-      "url": ["http://localhost:8080/", "http://localhost:8080/devices"],
+      "url": ["https://localhost:8445/"],
       "numberOfRuns": 3,
       "settings": {
         "preset": "desktop"
-      }
+      },
+      "chromeFlags": "--ignore-certificate-errors --no-sandbox"
     },
     "assert": {
       "preset": "lighthouse:recommended",
