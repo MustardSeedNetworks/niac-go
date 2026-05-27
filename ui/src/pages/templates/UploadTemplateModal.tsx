@@ -1,5 +1,6 @@
 import { Upload, X } from 'lucide-react';
 import { type FC, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { uploadTemplate } from '../../api/client';
 import type { Template } from '../../api/types';
 import { iconSizes } from '../../constants/sizes';
@@ -17,6 +18,7 @@ export const UploadTemplateModal: FC<UploadTemplateModalProps> = ({
   onSuccess,
   onError,
 }) => {
+  const { t } = useTranslation('pages');
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [content, setContent] = useState('');
@@ -33,13 +35,13 @@ export const UploadTemplateModal: FC<UploadTemplateModalProps> = ({
     // Validate file size (1MB limit for templates)
     const MaxSize = 1024 * 1024;
     if (file.size > MaxSize) {
-      onError(new Error('File too large. Maximum size is 1MB'));
+      onError(new Error(t('templates.uploadModal.errorFileTooLarge')));
       return;
     }
 
     // Validate file type
     if (!file.name.match(/\.(yaml|yml)$/i)) {
-      onError(new Error('Please select a YAML file (.yaml or .yml)'));
+      onError(new Error(t('templates.uploadModal.errorInvalidFile')));
       return;
     }
 
@@ -55,13 +57,13 @@ export const UploadTemplateModal: FC<UploadTemplateModalProps> = ({
         setName(file.name.replace(/\.(yaml|yml)$/i, ''));
       }
     } catch {
-      onError(new Error('Failed to read file'));
+      onError(new Error(t('templates.uploadModal.errorReadFailed')));
     }
   };
 
   const handleSubmit = async () => {
     if (!(name.trim() && content.trim())) {
-      onError(new Error('Name and content are required'));
+      onError(new Error(t('templates.uploadModal.errorRequired')));
       return;
     }
 
@@ -89,7 +91,7 @@ export const UploadTemplateModal: FC<UploadTemplateModalProps> = ({
         type="button"
         className="absolute inset-0 bg-black/70 backdrop-blur-sm"
         onClick={onClose}
-        aria-label="Close upload modal"
+        aria-label={t('templates.uploadModal.backdropAriaLabel')}
       />
       <div
         className="relative mx-4 max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-surface-border bg-bg-surface/95 shadow-2xl"
@@ -105,16 +107,18 @@ export const UploadTemplateModal: FC<UploadTemplateModalProps> = ({
             </div>
             <div>
               <h2 id="upload-modal-title" className="text-lg font-semibold text-text-primary">
-                Upload Template
+                {t('templates.uploadModal.title')}
               </h2>
-              <SmallText className="text-text-muted">Add a new configuration template</SmallText>
+              <SmallText className="text-text-muted">
+                {t('templates.uploadModal.subtitle')}
+              </SmallText>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
             className="rounded-lg p-2 text-text-muted hover:bg-surface-hover hover:text-text-primary transition-colors"
-            aria-label="Close modal"
+            aria-label={t('templates.uploadModal.closeAriaLabel')}
           >
             <X className={iconSizes.lg} />
           </button>
@@ -128,7 +132,7 @@ export const UploadTemplateModal: FC<UploadTemplateModalProps> = ({
               htmlFor="template-upload"
               className="mb-2 block text-sm font-medium text-text-secondary"
             >
-              Upload YAML File
+              {t('templates.uploadModal.fileLabel')}
             </label>
             <input
               id="template-upload"
@@ -139,7 +143,7 @@ export const UploadTemplateModal: FC<UploadTemplateModalProps> = ({
             />
             {uploadFile && (
               <SmallText className="mt-1 text-status-success">
-                Selected: {uploadFile.name}
+                {t('templates.uploadModal.fileSelected', { filename: uploadFile.name })}
               </SmallText>
             )}
           </div>
@@ -150,14 +154,14 @@ export const UploadTemplateModal: FC<UploadTemplateModalProps> = ({
               htmlFor="template-name"
               className="mb-2 block text-sm font-medium text-text-secondary"
             >
-              Template Name *
+              {t('templates.uploadModal.nameLabel')}
             </label>
             <input
               id="template-name"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g., Basic Network"
+              placeholder={t('templates.uploadModal.namePlaceholder')}
               className="w-full rounded-lg border border-surface-border bg-bg-base/60 p-3 text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none"
             />
           </div>
@@ -168,13 +172,13 @@ export const UploadTemplateModal: FC<UploadTemplateModalProps> = ({
               htmlFor="template-description"
               className="mb-2 block text-sm font-medium text-text-secondary"
             >
-              Description
+              {t('templates.uploadModal.descriptionLabel')}
             </label>
             <textarea
               id="template-description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Brief description of this template..."
+              placeholder={t('templates.uploadModal.descriptionPlaceholder')}
               rows={2}
               className="w-full rounded-lg border border-surface-border bg-bg-base/60 p-3 text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none resize-none"
             />
@@ -186,7 +190,7 @@ export const UploadTemplateModal: FC<UploadTemplateModalProps> = ({
               htmlFor="template-type"
               className="mb-2 block text-sm font-medium text-text-secondary"
             >
-              Template Type
+              {t('templates.uploadModal.typeLabel')}
             </label>
             <select
               id="template-type"
@@ -194,13 +198,13 @@ export const UploadTemplateModal: FC<UploadTemplateModalProps> = ({
               onChange={(e) => setType(e.target.value as Template['type'])}
               className="w-full rounded-lg border border-surface-border bg-bg-base/60 p-3 text-sm text-text-primary focus:border-brand-accent focus:outline-none"
             >
-              <option value="basic">Basic Network</option>
-              <option value="router">Router</option>
-              <option value="switch">Switch</option>
-              <option value="access-point">Access Point</option>
-              <option value="server">Server</option>
-              <option value="complete">Complete Network</option>
-              <option value="custom">Custom</option>
+              <option value="basic">{t('templates.uploadModal.categoryBasic')}</option>
+              <option value="router">{t('templates.uploadModal.categoryRouter')}</option>
+              <option value="switch">{t('templates.uploadModal.categorySwitch')}</option>
+              <option value="access-point">{t('templates.uploadModal.categoryAccessPoint')}</option>
+              <option value="server">{t('templates.uploadModal.categoryServer')}</option>
+              <option value="complete">{t('templates.uploadModal.categoryComplete')}</option>
+              <option value="custom">{t('templates.uploadModal.categoryCustom')}</option>
             </select>
           </div>
 
@@ -210,13 +214,13 @@ export const UploadTemplateModal: FC<UploadTemplateModalProps> = ({
               htmlFor="template-content"
               className="mb-2 block text-sm font-medium text-text-secondary"
             >
-              YAML Content *
+              {t('templates.uploadModal.contentLabel')}
             </label>
             <textarea
               id="template-content"
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              placeholder="Paste your YAML configuration here..."
+              placeholder={t('templates.uploadModal.contentPlaceholder')}
               rows={10}
               className="w-full rounded-lg border border-surface-border bg-bg-base/60 p-3 font-mono text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none resize-none"
               spellCheck={false}
@@ -227,14 +231,16 @@ export const UploadTemplateModal: FC<UploadTemplateModalProps> = ({
         {/* Modal Footer */}
         <div className="flex justify-end gap-3 border-t border-surface-border px-6 py-4 bg-bg-base/50">
           <Button variant="outline" onClick={onClose} disabled={uploading}>
-            Cancel
+            {t('templates.uploadModal.cancel')}
           </Button>
           <Button
             tone="violet"
             onClick={handleSubmit}
             disabled={uploading || !name.trim() || !content.trim()}
           >
-            {uploading ? 'Uploading...' : 'Upload Template'}
+            {uploading
+              ? t('templates.uploadModal.uploading')
+              : t('templates.uploadModal.uploadButton')}
           </Button>
         </div>
       </div>

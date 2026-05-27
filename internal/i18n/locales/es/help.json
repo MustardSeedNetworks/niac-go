@@ -19,5 +19,29 @@
   "footer": {
     "documentationLink": "Documentación completa",
     "reportIssue": "Reportar un problema"
+  },
+  "itemCard": {
+    "technical": "Técnico",
+    "plainEnglish": "Lenguaje sencillo",
+    "whenToUse": "Cuándo usarlo",
+    "whenNotToUse": "Cuándo no usarlo",
+    "parameters": "Parámetros / opciones",
+    "yamlFields": "Campos YAML",
+    "metrics": "Métricas",
+    "metricGoodLabel": "bueno:",
+    "metricBadLabel": "malo:",
+    "examples": "Ejemplos",
+    "tips": "Consejos",
+    "seeAlso": "Véase también"
+  },
+  "overview": {
+    "whatNiacDoesTitle": "Qué hace NIAC",
+    "whatNiacDoesBody": "NIAC (Network In A Can) simula uno o más dispositivos de red en una interfaz de host real. Responde ARP, ICMP, LLDP, CDP, SNMP, DHCP, DNS, HTTP, FTP y otros protocolos de modo que una herramienta de descubrimiento, NMS o plataforma de monitorización vea los dispositivos simulados como si fueran hardware físico. Úselo para validación de herramientas, laboratorios de formación y entornos de reproducción sin desplegar equipos reales.",
+    "categoriesTitle": "Categorías de ayuda",
+    "categoriesEmpty": "Ninguna categoría coincide con la búsqueda.",
+    "categoryItems_one": "{{count}} elemento",
+    "categoryItems_other": "{{count}} elementos",
+    "webUiQuickRefTitle": "Referencia rápida de la interfaz web",
+    "featuresEmpty": "Ninguna función coincide con la búsqueda."
   }
 }

@@ -9,17 +9,71 @@
   "dashboard": {
     "label": "Dashboard",
     "title": "Dashboard",
-    "description": "Live counters, run snapshots, and automation status for the active NIAC stack."
+    "description": "Live counters, run snapshots, and automation status for the active NIAC stack.",
+    "status": {
+      "running": "Simulation Running",
+      "stopped": "Simulation Stopped",
+      "noInterface": "No interface",
+      "deviceCount_one": "{{count}} device",
+      "deviceCount_other": "{{count}} devices",
+      "uptimeLabel": "Uptime: {{uptime}}"
+    },
+    "stats": {
+      "devicesOnline": "Devices Online",
+      "devicesOnlineHelper": "Active network devices",
+      "packetsRx": "Packets RX",
+      "packetsRxHelper": "{{sent}} sent",
+      "packetsRxAwaiting": "Awaiting data",
+      "dnsQueries": "DNS Queries",
+      "dnsQueriesHelper": "DHCP: {{count}}"
+    },
+    "quickActions": {
+      "title": "Quick Actions",
+      "errorInjectionLabel": "Error Injection",
+      "errorInjectionDescription": "Inject network errors",
+      "debugConsoleLabel": "Debug Console",
+      "debugConsoleDescription": "View live logs",
+      "trafficInjectionLabel": "Traffic Injection",
+      "trafficInjectionDescription": "Replay PCAP files",
+      "viewTopologyLabel": "View Topology",
+      "viewTopologyDescription": "Network graph"
+    },
+    "recentRuns": {
+      "title": "Recent Runs",
+      "tag": "History",
+      "deviceCountShort": "{{count}} dev",
+      "rxShort": "RX {{count}}",
+      "txShort": "TX {{count}}",
+      "empty": "No run history yet",
+      "viewAll": "View all history →"
+    },
+    "errorPanel": {
+      "title": "Error Injection Types",
+      "tuiModeLabel": "TUI Mode:",
+      "tuiModeDescription": "Run {{command}} to access interactive error injection with keyboard controls (press 'i' for menu, keys 1-7 for quick injection)."
+    },
+    "automation": {
+      "empty": "Automation updates will appear after the first run completes.",
+      "title": "Automation timeline",
+      "latestEventsTag": "Latest events",
+      "eventDetail": "{{count}} devices • duration {{duration}}",
+      "viewDetails": "View details"
+    }
   },
   "runtime": {
     "label": "Simulation",
     "title": "Simulation",
-    "description": "Monitor runtime status, view network interfaces, and manage NIAC configuration."
+    "description": "Monitor runtime status, view network interfaces, and manage NIAC configuration.",
+    "daemonModeWarning": "Daemon Mode Not Detected",
+    "startSimulationTitle": "Start Simulation",
+    "noUsableInterfaces": "No usable interfaces"
   },
   "devices": {
     "label": "Running Devices",
     "title": "Running Devices",
-    "description": "Read-only view of the devices the daemon is currently simulating, plus the running YAML."
+    "description": "Read-only view of the devices the daemon is currently simulating, plus the running YAML.",
+    "ipAddressesHeader": "IP addresses",
+    "availableSnmpWalks": "Available SNMP walks"
   },
   "deviceLibrary": {
     "label": "Devices",
@@ -37,7 +91,28 @@
   "topology": {
     "label": "Topology",
     "title": "Topology",
-    "description": "Visual graph of the configured network plus the live {{protocols}} neighbor table."
+    "description": "Visual graph of the configured network plus the live {{protocols}} neighbor table.",
+    "neighbors": {
+      "filterShowAllTitle": "Show all discovery protocols",
+      "filterByProtocolTitle": "Filter to {{protocol}} entries only ({{count}} now)",
+      "filterAllLabel": "All",
+      "searchPlaceholder": "Filter by device or chassis ID…",
+      "searchTitle": "Substring match on local device, remote device, chassis ID, or remote port (case-insensitive).",
+      "searchAriaLabel": "Filter neighbors",
+      "pollingStatus": "Polling every {{seconds}}s · {{count}} entries",
+      "loading": "Loading…",
+      "loadError": "Failed to load neighbors: {{error}}",
+      "emptyNoData": "No neighbors discovered yet. Start a simulation that has CDP/LLDP/EDP/FDP enabled to populate this table.",
+      "emptyFiltered": "No neighbors match the current filters.",
+      "headerProtocol": "Protocol",
+      "headerLocalDevice": "Local Device",
+      "headerRemoteDevice": "Remote Device",
+      "headerRemotePort": "Remote Port",
+      "headerChassisId": "Chassis ID",
+      "headerMgmtAddr": "Mgmt Addr",
+      "headerTtl": "TTL",
+      "headerLastSeen": "Last Seen"
+    }
   },
   "automation": {
     "label": "Alerts",
@@ -47,7 +122,18 @@
   "traffic": {
     "label": "Traffic",
     "title": "Traffic",
-    "description": "Inject controlled errors into the running simulation and replay captured {{format}} files."
+    "description": "Inject controlled errors into the running simulation and replay captured {{format}} files.",
+    "page": {
+      "errorInjectionTitle": "Error Injection",
+      "errorInjectionDescription": "Inject network errors on device interfaces for testing and simulation scenarios.",
+      "pcapReplayTitle": "PCAP Replay",
+      "pcapReplayDescription": "Replay captured packet traffic with loop and timing controls for testing.",
+      "recentRunsTitle": "Recent runs",
+      "recentRunsTag": "History",
+      "recentRunsDescription": "Past simulation runs the daemon recorded.",
+      "recentRunStats": "{{time}} · duration {{duration}} · RX {{rx}} · TX {{tx}}",
+      "noCapturedRuns": "No captured runs yet."
+    }
   },
   "debug": {
     "label": "Logs",
@@ -57,17 +143,57 @@
   "packets": {
     "label": "Packets",
     "title": "Packets",
-    "description": "Live wire view of packets on the running simulation, or offline inspection of a captured {{format}} file."
+    "description": "Live wire view of packets on the running simulation, or offline inspection of a captured {{format}} file.",
+    "stats": {
+      "emptyTitle": "No statistics available",
+      "emptyDescription": "Upload and analyze a PCAP file to see statistics",
+      "summaryTitle": "Summary Statistics",
+      "totalPackets": "Total Packets",
+      "totalBytes": "Total Bytes",
+      "totalBytesHelper": "{{count}} bytes",
+      "duration": "Duration",
+      "protocols": "Protocols",
+      "protocolsHelper": "Unique protocols",
+      "timeRangeTitle": "Time Range",
+      "startTime": "Start Time",
+      "endTime": "End Time",
+      "protocolBreakdownTitle": "Protocol Breakdown",
+      "noProtocolData": "No protocol data available",
+      "topEndpointsTitle": "Top Endpoints",
+      "topSources": "Top Sources",
+      "topDestinations": "Top Destinations",
+      "noSourceData": "No source data",
+      "noDestinationData": "No destination data"
+    },
+    "list": {
+      "noPacketsTitle": "No packets to display",
+      "noPacketsDescription": "Upload a PCAP file to analyze",
+      "showingCount": "Showing {{shown}} of {{total}} packets",
+      "noMatchTitle": "No packets match filter",
+      "noMatchDescription": "Try adjusting the filter expression",
+      "cycleTimeModeTitle": "Click to cycle: Absolute / Relative / Delta",
+      "headerSource": "Source",
+      "headerDestination": "Destination",
+      "headerProtocol": "Protocol",
+      "headerLength": "Length",
+      "headerInfo": "Info"
+    }
   },
   "configDiff": {
     "label": "Compare & Merge",
     "title": "Compare & Merge",
-    "description": "Compare two {{format}} network configs side-by-side and merge changes between them."
+    "description": "Compare two {{format}} network configs side-by-side and merge changes between them.",
+    "originalFileTitle": "Original File",
+    "modifiedFileTitle": "Modified File",
+    "readyToCompareTitle": "Ready to Compare"
   },
   "walkValidator": {
     "label": "{{protocol}} Walks",
     "title": "{{protocol}} Walks",
-    "description": "Validate and auto-fix {{protocol}} walk files used by the simulated {{protocol}} agents."
+    "description": "Validate and auto-fix {{protocol}} walk files used by the simulated {{protocol}} agents.",
+    "pageTitle": "SNMP Walks",
+    "noWalksFound": "No walks found",
+    "pastePathLabel": "Or paste an absolute path"
   },
   "libraryWalks": {
     "label": "Walks",
@@ -78,5 +204,47 @@
     "label": "{{format}}s",
     "title": "{{format}} Library",
     "description": "Read-only browser for the on-disk {{format}} captures the daemon serves from the unified library."
+  },
+  "templates": {
+    "states": {
+      "loading": "Loading templates...",
+      "loadErrorTitle": "Failed to Load Templates",
+      "retry": "Retry",
+      "emptyTitle": "No Templates Available",
+      "emptyDescription": "Upload your first configuration template to get started.",
+      "uploadTemplate": "Upload Template",
+      "noMatchTitle": "No Matching Templates",
+      "noMatchDescription": "No templates match your search \"{{query}}\". Try a different search term.",
+      "clearSearch": "Clear Search"
+    },
+    "uploadModal": {
+      "title": "Upload Template",
+      "subtitle": "Add a new configuration template",
+      "closeAriaLabel": "Close upload modal",
+      "backdropAriaLabel": "Close upload modal",
+      "fileLabel": "Upload YAML File",
+      "fileSelected": "Selected: {{filename}}",
+      "nameLabel": "Template Name *",
+      "namePlaceholder": "e.g., Basic Network",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Brief description of this template...",
+      "typeLabel": "Template Type",
+      "contentLabel": "YAML Content *",
+      "contentPlaceholder": "Paste your YAML configuration here...",
+      "categoryBasic": "Basic Network",
+      "categoryRouter": "Router",
+      "categorySwitch": "Switch",
+      "categoryAccessPoint": "Access Point",
+      "categoryServer": "Server",
+      "categoryComplete": "Complete Network",
+      "categoryCustom": "Custom",
+      "cancel": "Cancel",
+      "uploading": "Uploading...",
+      "uploadButton": "Upload Template",
+      "errorFileTooLarge": "File too large. Maximum size is 1MB",
+      "errorInvalidFile": "Please select a YAML file (.yaml or .yml)",
+      "errorReadFailed": "Failed to read file",
+      "errorRequired": "Name and content are required"
+    }
   }
 }

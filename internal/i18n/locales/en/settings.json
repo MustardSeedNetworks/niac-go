@@ -12,6 +12,32 @@
     "debug": "Debug",
     "about": "About"
   },
+  "simulation": {
+    "sectionTitle": "Simulation",
+    "interfaceLabel": "Network Interface",
+    "interfacePlaceholder": "Select interface...",
+    "interfaceHelper": "Only ethernet, WiFi, and loopback interfaces are shown.",
+    "configurationLabel": "Configuration",
+    "loading": "Loading...",
+    "tabTemplates": "Templates",
+    "tabMyConfigs": "My Configs",
+    "tabUpload": "Upload",
+    "selectedConfigLabel": "Selected configuration:",
+    "selectedConfigSourceTemplate": "Template",
+    "selectedConfigSourceUserConfig": "User Config",
+    "searchTemplatesPlaceholder": "Search templates...",
+    "noTemplatesMatchSearch": "No templates match your search",
+    "noTemplatesAvailable": "No templates available",
+    "deviceCount_one": "{{count}} device",
+    "deviceCount_other": "{{count}} devices",
+    "noUserConfigs": "No user configs uploaded yet",
+    "noUserConfigsHint": "Use the Upload tab to add your own configs",
+    "uploadPrompt": "Click to upload a YAML config",
+    "uploadFileTypes": ".yaml or .yml files, max 10MB",
+    "uploadHelper": "Upload a config file to use for this simulation session. The file will be sent when you start the simulation.",
+    "alertInvalidFile": "Please select a YAML file (.yaml or .yml)",
+    "alertFileTooLarge": "File too large. Maximum size is 10MB"
+  },
   "appearance": {
     "sectionTitle": "Theme",
     "sectionDescription": "Customize the appearance of NIAC",
@@ -19,6 +45,8 @@
     "light": "Light",
     "system": "System",
     "quickToggle": "Quick toggle",
+    "switchToLight": "Switch to light mode",
+    "switchToDark": "Switch to dark mode",
     "persistenceNote": "Dark mode is the default. Your preference is saved across sessions."
   },
   "network": {
@@ -33,6 +61,8 @@
     "backendUrlDescription": "NIAC backend server address",
     "websocket": "WebSocket",
     "websocketDescription": "Real-time event streaming",
+    "connected": "Connected",
+    "disconnected": "Disconnected",
     "interfaceTypes": {
       "ethernet": "Ethernet",
       "wifi": "WiFi",
@@ -69,6 +99,8 @@
     "proprietaryNotice": "NIAC is proprietary software. Unauthorized copying, modification, or distribution is prohibited.",
     "linksTitle": "Links",
     "github": "GitHub",
-    "website": "Website"
+    "website": "Website",
+    "version": "Version",
+    "build": "Build"
   }
 }

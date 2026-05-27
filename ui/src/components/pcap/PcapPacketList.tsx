@@ -1,4 +1,5 @@
 import { type FC, memo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { PcapPacket } from '../../api/types';
 import { useTimeDisplay } from '../../hooks/useTimeDisplay';
 import { Card, CardContent } from '../../ui/Card';
@@ -64,6 +65,7 @@ PacketRow.displayName = 'PacketRow';
  */
 export const PcapPacketList: FC<PcapPacketListProps> = memo(
   ({ packets, totalPackets, selectedPacketId, onSelectPacket, getRowStyle }) => {
+    const { t } = useTranslation('pages');
     const { mode: timeMode, cycleMode: cycleTimeMode } = useTimeDisplay();
 
     const handleSelectPacket = useCallback(
@@ -78,8 +80,8 @@ export const PcapPacketList: FC<PcapPacketListProps> = memo(
         <Card className="border-surface-border bg-bg-surface/70 h-full">
           <CardContent className="h-full flex items-center justify-center text-text-muted">
             <div className="text-center">
-              <p className="text-sm">No packets to display</p>
-              <SmallText>Upload a PCAP file to analyze</SmallText>
+              <p className="text-sm">{t('packets.list.noPacketsTitle')}</p>
+              <SmallText>{t('packets.list.noPacketsDescription')}</SmallText>
             </div>
           </CardContent>
         </Card>
@@ -92,7 +94,7 @@ export const PcapPacketList: FC<PcapPacketListProps> = memo(
           {/* Packet count */}
           <div className="mb-3 flex items-center justify-between">
             <SmallText className="text-text-muted">
-              Showing {packets.length} of {totalPackets} packets
+              {t('packets.list.showingCount', { shown: packets.length, total: totalPackets })}
             </SmallText>
           </div>
 
@@ -101,8 +103,8 @@ export const PcapPacketList: FC<PcapPacketListProps> = memo(
             {packets.length === 0 ? (
               <div className="h-full flex items-center justify-center text-text-muted">
                 <div className="text-center">
-                  <p className="text-sm">No packets match filter</p>
-                  <SmallText>Try adjusting the filter expression</SmallText>
+                  <p className="text-sm">{t('packets.list.noMatchTitle')}</p>
+                  <SmallText>{t('packets.list.noMatchDescription')}</SmallText>
                 </div>
               </div>
             ) : (
@@ -115,24 +117,24 @@ export const PcapPacketList: FC<PcapPacketListProps> = memo(
                     <th
                       className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-text-muted cursor-pointer hover:text-brand-accent select-none"
                       onClick={cycleTimeMode}
-                      title="Click to cycle: Absolute / Relative / Delta"
+                      title={t('packets.list.cycleTimeModeTitle')}
                     >
                       {getTimeDisplayLabel(timeMode)}
                     </th>
                     <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-text-muted">
-                      Source
+                      {t('packets.list.headerSource')}
                     </th>
                     <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-text-muted">
-                      Destination
+                      {t('packets.list.headerDestination')}
                     </th>
                     <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-text-muted">
-                      Protocol
+                      {t('packets.list.headerProtocol')}
                     </th>
                     <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-text-muted">
-                      Length
+                      {t('packets.list.headerLength')}
                     </th>
                     <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-text-muted">
-                      Info
+                      {t('packets.list.headerInfo')}
                     </th>
                   </tr>
                 </thead>

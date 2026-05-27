@@ -1,5 +1,6 @@
 import { Activity, BellRing, Network, PlugZap } from 'lucide-react';
 import { type FC, useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   fetchSimulationStatus,
   fetchUsableInterfaces,
@@ -35,6 +36,7 @@ import { SelectedNetworkPreview } from './runtime/SelectedNetworkPreview';
  * - Link to Settings for configuration management
  */
 export const RuntimeControlPage: FC = () => {
+  const { t } = useTranslation('pages');
   const [refetchTrigger, setRefetchTrigger] = useState(0);
   const { data: simStatus } = useApiResource(fetchSimulationStatus, [refetchTrigger], {
     intervalMs: POLL_INTERVALS.fast,
@@ -223,7 +225,9 @@ export const RuntimeControlPage: FC = () => {
             <div className="flex items-start gap-3">
               <BellRing className={`mt-1 ${iconSizes.lg} text-status-warning`} />
               <div>
-                <p className="font-semibold text-status-warning">Daemon Mode Not Detected</p>
+                <p className="font-semibold text-status-warning">
+                  {t('runtime.daemonModeWarning')}
+                </p>
                 <SmallText className="text-status-warning/90">
                   To use simulation controls, start NIAC in daemon mode:
                 </SmallText>
@@ -246,7 +250,7 @@ export const RuntimeControlPage: FC = () => {
             <div className="flex flex-wrap items-end gap-3">
               <div className="flex items-center gap-3">
                 <PlugZap className={`${iconSizes.xl} text-brand-accent`} />
-                <H2>Start Simulation</H2>
+                <H2>{t('runtime.startSimulationTitle')}</H2>
               </div>
               <div className="ml-auto flex flex-wrap items-end gap-3">
                 <div className="min-w-[14rem]">
@@ -267,7 +271,7 @@ export const RuntimeControlPage: FC = () => {
                     >
                       {interfacesLoading && <option value="">Loading…</option>}
                       {!interfacesLoading && interfaces.length === 0 && (
-                        <option value="">No usable interfaces</option>
+                        <option value="">{t('runtime.noUsableInterfaces')}</option>
                       )}
                       {!interfacesLoading && interfaces.length > 0 && (
                         <option value="">Select interface…</option>

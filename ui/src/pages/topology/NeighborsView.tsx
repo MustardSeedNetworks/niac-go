@@ -1,4 +1,5 @@
 import { type FC, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { fetchNeighbors } from '../../api/client';
 import { useApiResource } from '../../hooks/useApiResource';
 import { Card, CardContent } from '../../ui/Card';
@@ -34,6 +35,7 @@ const formatRelative = (iso: string): string => {
 };
 
 export const NeighborsView: FC = () => {
+  const { t } = useTranslation('pages');
   const {
     data: neighbors,
     loading,
@@ -141,8 +143,11 @@ export const NeighborsView: FC = () => {
                     onClick={() => setProtocolFilter(p)}
                     title={
                       p === 'all'
-                        ? 'Show all discovery protocols'
-                        : `Filter to ${p} entries only (${protocolCounts[p] ?? 0} now)`
+                        ? t('topology.neighbors.filterShowAllTitle')
+                        : t('topology.neighbors.filterByProtocolTitle', {
+                            protocol: p,
+                            count: protocolCounts[p] ?? 0,
+                          })
                     }
                     className={`rounded px-3 py-1 text-xs font-medium ${
                       active
@@ -150,7 +155,7 @@ export const NeighborsView: FC = () => {
                         : 'bg-bg-elevated/60 text-text-secondary hover:bg-bg-elevated'
                     }`}
                   >
-                    {p === 'all' ? 'All' : p}
+                    {p === 'all' ? t('topology.neighbors.filterAllLabel') : p}
                     <span className="ml-1.5 text-[10px] text-text-muted">{count}</span>
                   </button>
                 );
@@ -160,13 +165,16 @@ export const NeighborsView: FC = () => {
               type="search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Filter by device or chassis ID…"
-              title="Substring match on local device, remote device, chassis ID, or remote port (case-insensitive)."
+              placeholder={t('topology.neighbors.searchPlaceholder')}
+              title={t('topology.neighbors.searchTitle')}
               className="ml-auto w-64 rounded border border-surface-border bg-bg-base/60 px-3 py-1.5 text-sm text-text-primary placeholder-gray-500 focus:border-status-info focus:outline-none"
-              aria-label="Filter neighbors"
+              aria-label={t('topology.neighbors.searchAriaLabel')}
             />
             <span className="text-xs text-text-muted">
-              Polling every {NEIGHBOR_POLL_MS / 1000}s · {neighbors?.length ?? 0} entries
+              {t('topology.neighbors.pollingStatus', {
+                seconds: NEIGHBOR_POLL_MS / 1000,
+                count: neighbors?.length ?? 0,
+              })}
             </span>
           </div>
         </CardContent>
@@ -174,31 +182,33 @@ export const NeighborsView: FC = () => {
 
       <Card className="border-surface-border bg-bg-surface/70">
         <CardContent className="p-0">
-          {loading && !neighbors && <div className="p-6 text-sm text-text-muted">Loading…</div>}
+          {loading && !neighbors && (
+            <div className="p-6 text-sm text-text-muted">{t('topology.neighbors.loading')}</div>
+          )}
           {error && (
             <div className="p-6 text-sm text-status-error" role="alert">
-              Failed to load neighbors: {error.message}
+              {t('topology.neighbors.loadError', { error: error.message })}
             </div>
           )}
           {neighbors && filtered.length === 0 && (
             <div className="p-6 text-sm text-text-muted">
               {neighbors.length === 0
-                ? 'No neighbors discovered yet. Start a simulation that has CDP/LLDP/EDP/FDP enabled to populate this table.'
-                : 'No neighbors match the current filters.'}
+                ? t('topology.neighbors.emptyNoData')
+                : t('topology.neighbors.emptyFiltered')}
             </div>
           )}
           {filtered.length > 0 && (
             <table className="w-full text-sm">
               <thead className="bg-bg-base/40 text-left text-xs uppercase tracking-wider text-text-muted">
                 <tr>
-                  <th className="px-4 py-2">Protocol</th>
-                  <th className="px-4 py-2">Local Device</th>
-                  <th className="px-4 py-2">Remote Device</th>
-                  <th className="px-4 py-2">Remote Port</th>
-                  <th className="px-4 py-2">Chassis ID</th>
-                  <th className="px-4 py-2">Mgmt Addr</th>
-                  <th className="px-4 py-2">TTL</th>
-                  <th className="px-4 py-2">Last Seen</th>
+                  <th className="px-4 py-2">{t('topology.neighbors.headerProtocol')}</th>
+                  <th className="px-4 py-2">{t('topology.neighbors.headerLocalDevice')}</th>
+                  <th className="px-4 py-2">{t('topology.neighbors.headerRemoteDevice')}</th>
+                  <th className="px-4 py-2">{t('topology.neighbors.headerRemotePort')}</th>
+                  <th className="px-4 py-2">{t('topology.neighbors.headerChassisId')}</th>
+                  <th className="px-4 py-2">{t('topology.neighbors.headerMgmtAddr')}</th>
+                  <th className="px-4 py-2">{t('topology.neighbors.headerTtl')}</th>
+                  <th className="px-4 py-2">{t('topology.neighbors.headerLastSeen')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">

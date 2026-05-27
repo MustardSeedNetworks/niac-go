@@ -1,5 +1,6 @@
 import { FileCog, Server } from 'lucide-react';
 import { type ChangeEvent, type FC, memo, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   fetchConfig,
   fetchDevices,
@@ -63,6 +64,7 @@ const DeviceListCard: FC = () => {
  * Device Table with virtual scrolling for large device lists
  */
 const DeviceTable = memo(({ devices }: { devices: DeviceSummary[] }) => {
+  const { t } = useTranslation('pages');
   const useVirtualization = devices.length >= 100;
   const virtualScroll = useVirtualScroll(devices, {
     itemHeight: 60,
@@ -86,7 +88,7 @@ const DeviceTable = memo(({ devices }: { devices: DeviceSummary[] }) => {
             <tr>
               <th className="px-4 py-3 text-left">Device</th>
               <th className="px-4 py-3 text-left">Type</th>
-              <th className="px-4 py-3 text-left">IP addresses</th>
+              <th className="px-4 py-3 text-left">{t('devices.ipAddressesHeader')}</th>
               <th className="px-4 py-3 text-left">Protocols</th>
             </tr>
           </thead>
@@ -114,7 +116,7 @@ const DeviceTable = memo(({ devices }: { devices: DeviceSummary[] }) => {
                 <tr>
                   <th className="px-4 py-3 text-left">Device</th>
                   <th className="px-4 py-3 text-left">Type</th>
-                  <th className="px-4 py-3 text-left">IP addresses</th>
+                  <th className="px-4 py-3 text-left">{t('devices.ipAddressesHeader')}</th>
                   <th className="px-4 py-3 text-left">Protocols</th>
                 </tr>
               </thead>
@@ -306,12 +308,13 @@ const WalkFileBrowser: FC<{
   files: LibraryFileEntry[];
   onCopy: (path: string) => void;
 }> = ({ files, onCopy }) => {
+  const { t } = useTranslation('pages');
   if (files.length === 0) {
     return null;
   }
   return (
     <div className="space-y-2">
-      <SmallText className="text-text-muted">Available SNMP walks</SmallText>
+      <SmallText className="text-text-muted">{t('devices.availableSnmpWalks')}</SmallText>
       <div className="max-h-48 space-y-1 overflow-y-auto rounded-xl border border-surface-border bg-bg-base/50 p-2 text-sm text-text-secondary">
         {files.map((file) => (
           <div

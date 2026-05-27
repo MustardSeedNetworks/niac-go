@@ -46,5 +46,36 @@
   "walk": {
     "validationFailed": "Validation failed",
     "parseError": "Could not parse walk file"
+  },
+  "injection": {
+    "deviceLabel": "Device",
+    "deviceSelectPlaceholder": "Select device...",
+    "interfaceLabel": "Interface",
+    "interfacePlaceholder": "e.g., eth0, GigabitEthernet0/1",
+    "errorTypeLabel": "Error Type",
+    "errorTypeSelectPlaceholder": "Select error type...",
+    "valueLabel": "Value: {{value}}%",
+    "valueHelper": "0 = No errors, 100 = Maximum errors",
+    "selectMissing": "Please select device, interface, and error type",
+    "injectingButton": "Injecting...",
+    "injectButton": "Inject Error",
+    "injectSuccess": "Error injected successfully",
+    "injectFailed": "Failed to inject error",
+    "clearAllButton": "Clear All Errors",
+    "clearAllSuccess": "All errors cleared",
+    "clearAllFailed": "Failed to clear errors",
+    "clearSpecificSuccess": "Cleared error on {{deviceIp}} {{iface}}",
+    "clearSpecificFailed": "Failed to clear error",
+    "activeErrorsTitle": "Active Errors",
+    "tableHeaderDeviceIp": "Device IP",
+    "tableHeaderInterface": "Interface",
+    "tableHeaderErrorType": "Error Type",
+    "tableHeaderValue": "Value",
+    "tableHeaderActions": "Actions",
+    "clearOneAriaLabel": "Clear error on {{deviceIp}} {{iface}}",
+    "clearOneButton": "Clear",
+    "clearAllConfirmTitle": "Clear All Errors",
+    "clearAllConfirmMessage": "Are you sure you want to clear all injected errors? This action cannot be undone.",
+    "clearAllConfirmLabel": "Clear All"
   }
 }

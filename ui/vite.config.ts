@@ -22,8 +22,16 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         '@': path.resolve(__dirname, 'src'),
+        '@locales': path.resolve(__dirname, '../internal/i18n/locales'),
       },
-      dedupe: ['react', 'react-dom', 'react-router-dom', 'lucide-react'],
+      dedupe: [
+        'react',
+        'react-dom',
+        'react-router-dom',
+        'lucide-react',
+        'i18next',
+        'react-i18next',
+      ],
     },
     // FIX #180: Code splitting for optimal bundle sizes
     build: {

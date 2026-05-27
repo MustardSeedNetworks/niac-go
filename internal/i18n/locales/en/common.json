@@ -160,5 +160,15 @@
     "defaultMessage": "An unexpected error occurred",
     "tryAgain": "Try again",
     "reload": "Reload the page"
+  },
+  "commandPalette": {
+    "dialogLabel": "Command palette",
+    "closeAriaLabel": "Close command palette",
+    "inputPlaceholder": "Search pages and actions…",
+    "escKey": "esc",
+    "noMatches": "No matches.",
+    "actionsHeading": "Actions",
+    "openSettings": "Open Settings",
+    "openHelp": "Open Help"
   }
 }

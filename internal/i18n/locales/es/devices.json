@@ -22,7 +22,22 @@
     "clone": "Clonar",
     "edit": "Editar",
     "deleteConfirmTitle": "¿Eliminar dispositivo?",
-    "deleteConfirmMessage": "Esto eliminará permanentemente la definición del dispositivo. Las simulaciones en ejecución no se verán afectadas hasta que se reinicien."
+    "deleteConfirmMessage": "Esto eliminará permanentemente la definición del dispositivo. Las simulaciones en ejecución no se verán afectadas hasta que se reinicien.",
+    "tableHeaderHostname": "Nombre de host",
+    "tableHeaderType": "Tipo",
+    "tableHeaderIpAddress": "Dirección IP",
+    "tableHeaderProtocols": "Protocolos",
+    "tableHeaderActions": "Acciones",
+    "states": {
+      "loadErrorTitle": "Error al cargar los dispositivos",
+      "retry": "Reintentar",
+      "emptyTitle": "Sin dispositivos configurados",
+      "emptyDescription": "Añada su primer dispositivo para empezar a configurar su simulación de red.",
+      "addDevice": "Añadir dispositivo",
+      "noMatchTitle": "Sin dispositivos coincidentes",
+      "noMatchDescription": "Ningún dispositivo coincide con sus filtros actuales. Pruebe a ajustar la búsqueda.",
+      "clearFilters": "Borrar filtros"
+    }
   },
   "editor": {
     "newDevice": "Nuevo dispositivo",

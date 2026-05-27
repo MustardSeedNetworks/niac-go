@@ -9,6 +9,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { type FC, memo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { fetchSimulationStatus } from '../api/client';
 import type { ErrorType, HistoryRecord } from '../api/types';
 import { POLL_INTERVALS } from '../constants/polling';
@@ -27,6 +28,7 @@ import { formatDuration, formatNumber, formatTime, formatUptime } from '../utils
  * Live counters, run snapshots, and automation status for the active NIAC stack.
  */
 export const DashboardPage: FC = () => {
+  const { t } = useTranslation('pages');
   const { data: stats } = useAppState('stats');
   const { data: history } = useAppState('history');
   const { data: errorInfo } = useAppState('errorTypes');
@@ -55,16 +57,19 @@ export const DashboardPage: FC = () => {
               </div>
               <div>
                 <p className="font-semibold text-text-primary">
-                  {isRunning ? 'Simulation Running' : 'Simulation Stopped'}
+                  {isRunning ? t('dashboard.status.running') : t('dashboard.status.stopped')}
                 </p>
                 <p className="text-sm text-text-muted">
-                  {stats?.interface ?? 'No interface'} • {stats?.deviceCount ?? 0} devices
+                  {stats?.interface ?? t('dashboard.status.noInterface')} •{' '}
+                  {t('dashboard.status.deviceCount', { count: stats?.deviceCount ?? 0 })}
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
               {uptimeSeconds > 0 && (
-                <Tag colorScheme="violet">Uptime: {formatUptime(uptimeSeconds)}</Tag>
+                <Tag colorScheme="violet">
+                  {t('dashboard.status.uptimeLabel', { uptime: formatUptime(uptimeSeconds) })}
+                </Tag>
               )}
             </div>
           </div>
@@ -76,20 +81,24 @@ export const DashboardPage: FC = () => {
         <Card hover={true} className="group">
           <CardContent className="space-y-1">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-text-muted">Devices Online</span>
+              <span className="text-sm font-medium text-text-muted">
+                {t('dashboard.stats.devicesOnline')}
+              </span>
               <Server
                 className={`${iconSizes.lg} text-brand-accent group-hover:scale-110 transition-transform`}
               />
             </div>
             <p className="text-3xl font-bold text-text-primary">{stats?.deviceCount ?? '—'}</p>
-            <p className="text-xs text-text-muted">Active network devices</p>
+            <p className="text-xs text-text-muted">{t('dashboard.stats.devicesOnlineHelper')}</p>
           </CardContent>
         </Card>
 
         <Card hover={true} className="group">
           <CardContent className="space-y-1">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-text-muted">Packets RX</span>
+              <span className="text-sm font-medium text-text-muted">
+                {t('dashboard.stats.packetsRx')}
+              </span>
               <Activity
                 className={`${iconSizes.lg} text-status-success group-hover:scale-110 transition-transform`}
               />
@@ -98,7 +107,11 @@ export const DashboardPage: FC = () => {
               {stats ? formatNumber(stats.stack.packetsReceived) : '—'}
             </p>
             <p className="text-xs text-text-muted">
-              {stats ? `${formatNumber(stats.stack.packetsSent)} sent` : 'Awaiting data'}
+              {stats
+                ? t('dashboard.stats.packetsRxHelper', {
+                    sent: formatNumber(stats.stack.packetsSent),
+                  })
+                : t('dashboard.stats.packetsRxAwaiting')}
             </p>
           </CardContent>
         </Card>
@@ -106,7 +119,9 @@ export const DashboardPage: FC = () => {
         <Card hover={true} className="group">
           <CardContent className="space-y-1">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-text-muted">DNS Queries</span>
+              <span className="text-sm font-medium text-text-muted">
+                {t('dashboard.stats.dnsQueries')}
+              </span>
               <SatelliteDish
                 className={`${iconSizes.lg} text-status-warning group-hover:scale-110 transition-transform`}
               />
@@ -115,7 +130,9 @@ export const DashboardPage: FC = () => {
               {stats ? formatNumber(stats.stack.dnsQueries) : '—'}
             </p>
             <p className="text-xs text-text-muted">
-              DHCP: {stats ? formatNumber(stats.stack.dhcpRequests) : '—'}
+              {t('dashboard.stats.dnsQueriesHelper', {
+                count: stats ? formatNumber(stats.stack.dhcpRequests) : '—',
+              })}
             </p>
           </CardContent>
         </Card>
@@ -128,7 +145,7 @@ export const DashboardPage: FC = () => {
           <CardContent className="space-y-4">
             <H2 className="flex items-center gap-2">
               <Zap className={`${iconSizes.lg} text-brand-accent`} />
-              Quick Actions
+              {t('dashboard.quickActions.title')}
             </H2>
             <div className="grid gap-3 sm:grid-cols-2">
               <button
@@ -140,8 +157,12 @@ export const DashboardPage: FC = () => {
                   <PlugZap className={`${iconSizes.lg} text-status-warning`} />
                 </div>
                 <div>
-                  <p className="font-medium text-text-primary">Error Injection</p>
-                  <p className="text-sm text-text-muted">Inject network errors</p>
+                  <p className="font-medium text-text-primary">
+                    {t('dashboard.quickActions.errorInjectionLabel')}
+                  </p>
+                  <p className="text-sm text-text-muted">
+                    {t('dashboard.quickActions.errorInjectionDescription')}
+                  </p>
                 </div>
               </button>
 
@@ -151,8 +172,12 @@ export const DashboardPage: FC = () => {
                     <Terminal className={`${iconSizes.lg} text-brand-accent`} />
                   </div>
                   <div>
-                    <p className="font-medium text-text-primary">Debug Console</p>
-                    <p className="text-sm text-text-muted">View live logs</p>
+                    <p className="font-medium text-text-primary">
+                      {t('dashboard.quickActions.debugConsoleLabel')}
+                    </p>
+                    <p className="text-sm text-text-muted">
+                      {t('dashboard.quickActions.debugConsoleDescription')}
+                    </p>
                   </div>
                 </div>
               </AccentLink>
@@ -163,8 +188,12 @@ export const DashboardPage: FC = () => {
                     <Activity className={`${iconSizes.lg} text-status-info`} />
                   </div>
                   <div>
-                    <p className="font-medium text-text-primary">Traffic Injection</p>
-                    <p className="text-sm text-text-muted">Replay PCAP files</p>
+                    <p className="font-medium text-text-primary">
+                      {t('dashboard.quickActions.trafficInjectionLabel')}
+                    </p>
+                    <p className="text-sm text-text-muted">
+                      {t('dashboard.quickActions.trafficInjectionDescription')}
+                    </p>
                   </div>
                 </div>
               </AccentLink>
@@ -175,8 +204,12 @@ export const DashboardPage: FC = () => {
                     <Network className={`${iconSizes.lg} text-status-success`} />
                   </div>
                   <div>
-                    <p className="font-medium text-text-primary">View Topology</p>
-                    <p className="text-sm text-text-muted">Network graph</p>
+                    <p className="font-medium text-text-primary">
+                      {t('dashboard.quickActions.viewTopologyLabel')}
+                    </p>
+                    <p className="text-sm text-text-muted">
+                      {t('dashboard.quickActions.viewTopologyDescription')}
+                    </p>
                   </div>
                 </div>
               </AccentLink>
@@ -192,8 +225,8 @@ export const DashboardPage: FC = () => {
         <Card>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
-              <H2>Recent Runs</H2>
-              <Tag colorScheme="gray">History</Tag>
+              <H2>{t('dashboard.recentRuns.title')}</H2>
+              <Tag colorScheme="gray">{t('dashboard.recentRuns.tag')}</Tag>
             </div>
             <div className="space-y-3">
               {(history ?? []).slice(0, 4).map((item) => (
@@ -206,28 +239,36 @@ export const DashboardPage: FC = () => {
                       {formatTime(item.startedAt)}
                     </p>
                     <Tag colorScheme="gray" className="text-[10px]">
-                      {item.deviceCount} dev
+                      {t('dashboard.recentRuns.deviceCountShort', { count: item.deviceCount })}
                     </Tag>
                   </div>
                   <p className="text-text-primary font-medium text-sm truncate">
                     {item.configName}
                   </p>
                   <div className="flex gap-3 mt-1 text-xs text-text-muted">
-                    <span>RX {formatNumber(item.packetsReceived)}</span>
-                    <span>TX {formatNumber(item.packetsSent)}</span>
+                    <span>
+                      {t('dashboard.recentRuns.rxShort', {
+                        count: formatNumber(item.packetsReceived),
+                      })}
+                    </span>
+                    <span>
+                      {t('dashboard.recentRuns.txShort', {
+                        count: formatNumber(item.packetsSent),
+                      })}
+                    </span>
                   </div>
                 </div>
               ))}
               {history?.length === 0 && (
                 <div className="text-center py-6 text-text-muted">
                   <Activity className={`${iconSizes['2xl']} mx-auto mb-2 opacity-50`} />
-                  <p className="text-sm">No run history yet</p>
+                  <p className="text-sm">{t('dashboard.recentRuns.empty')}</p>
                 </div>
               )}
             </div>
             {history && history.length > 0 && (
               <AccentLink to="/traffic" className="text-sm">
-                View all history →
+                {t('dashboard.recentRuns.viewAll')}
               </AccentLink>
             )}
           </CardContent>
@@ -243,36 +284,37 @@ export const DashboardPage: FC = () => {
  * Error Injection Panel - Shows available error types
  */
 const ErrorInjectionPanel = memo(
-  ({ errorTypes, info }: { errorTypes: ErrorType[]; info: string }) => (
-    <div className="mt-4 rounded-xl border border-status-warning/20 bg-status-warning/10 p-4">
-      <div className="mb-3 flex items-start gap-2">
-        <PlugZap className={`mt-0.5 ${iconSizes.lg} text-status-warning`} />
-        <div>
-          <p className="font-semibold text-status-warning">Error Injection Types</p>
-          <SmallText className="text-status-warning/80">{info}</SmallText>
+  ({ errorTypes, info }: { errorTypes: ErrorType[]; info: string }) => {
+    const { t } = useTranslation('pages');
+    return (
+      <div className="mt-4 rounded-xl border border-status-warning/20 bg-status-warning/10 p-4">
+        <div className="mb-3 flex items-start gap-2">
+          <PlugZap className={`mt-0.5 ${iconSizes.lg} text-status-warning`} />
+          <div>
+            <p className="font-semibold text-status-warning">{t('dashboard.errorPanel.title')}</p>
+            <SmallText className="text-status-warning/80">{info}</SmallText>
+          </div>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {errorTypes.map((errorType) => (
+            <div
+              key={errorType.type}
+              className="rounded-lg border border-surface-border bg-bg-surface/50 p-3"
+            >
+              <p className="font-semibold text-text-primary">{errorType.type}</p>
+              <SmallText className="text-text-muted">{errorType.description}</SmallText>
+            </div>
+          ))}
+        </div>
+        <div className="mt-3 rounded-lg bg-status-info/20 p-3 text-sm text-status-info">
+          <strong>{t('dashboard.errorPanel.tuiModeLabel')}</strong>{' '}
+          {t('dashboard.errorPanel.tuiModeDescription', {
+            command: 'niac interactive [interface] [config]',
+          })}
         </div>
       </div>
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-        {errorTypes.map((errorType) => (
-          <div
-            key={errorType.type}
-            className="rounded-lg border border-surface-border bg-bg-surface/50 p-3"
-          >
-            <p className="font-semibold text-text-primary">{errorType.type}</p>
-            <SmallText className="text-text-muted">{errorType.description}</SmallText>
-          </div>
-        ))}
-      </div>
-      <div className="mt-3 rounded-lg bg-status-info/20 p-3 text-sm text-status-info">
-        <strong>TUI Mode:</strong> Run{' '}
-        <code className="rounded bg-black/30 px-1.5 py-0.5 font-mono text-xs">
-          niac interactive [interface] [config]
-        </code>{' '}
-        to access interactive error injection with keyboard controls (press 'i' for menu, keys 1-7
-        for quick injection).
-      </div>
-    </div>
-  ),
+    );
+  },
 );
 
 ErrorInjectionPanel.displayName = 'ErrorInjectionPanel';
@@ -281,9 +323,13 @@ ErrorInjectionPanel.displayName = 'ErrorInjectionPanel';
  * Automation Timeline - Shows recent run history
  */
 const AutomationTimeline = memo(({ history }: { history: HistoryRecord[] | null }) => {
+  const { t } = useTranslation('pages');
   const timeline = (history ?? []).slice(0, 4).map((run) => ({
     title: run.configName,
-    detail: `${run.deviceCount} devices • duration ${formatDuration(run.duration)}`,
+    detail: t('dashboard.automation.eventDetail', {
+      count: run.deviceCount,
+      duration: formatDuration(run.duration),
+    }),
     time: formatTime(run.startedAt),
   }));
 
@@ -291,9 +337,7 @@ const AutomationTimeline = memo(({ history }: { history: HistoryRecord[] | null 
     return (
       <Card className="border-surface-border bg-bg-surface/70">
         <CardContent>
-          <SmallText className="text-text-muted">
-            Automation updates will appear after the first run completes.
-          </SmallText>
+          <SmallText className="text-text-muted">{t('dashboard.automation.empty')}</SmallText>
         </CardContent>
       </Card>
     );
@@ -305,9 +349,9 @@ const AutomationTimeline = memo(({ history }: { history: HistoryRecord[] | null 
         <div className="flex items-center justify-between">
           <H2 className="flex items-center gap-2">
             <SatelliteDish className={`${iconSizes.lg} text-brand-accent`} />
-            Automation timeline
+            {t('dashboard.automation.title')}
           </H2>
-          <Tag colorScheme="gray">Latest events</Tag>
+          <Tag colorScheme="gray">{t('dashboard.automation.latestEventsTag')}</Tag>
         </div>
         <div className="space-y-4">
           {timeline.map((event) => (
@@ -326,7 +370,7 @@ const AutomationTimeline = memo(({ history }: { history: HistoryRecord[] | null 
                 className="mt-2 sm:mt-0"
                 leftIcon={<Bot className={iconSizes.md} />}
               >
-                View details
+                {t('dashboard.automation.viewDetails')}
               </Button>
             </div>
           ))}

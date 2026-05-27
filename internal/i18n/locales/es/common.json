@@ -160,5 +160,15 @@
     "defaultMessage": "Ocurrió un error inesperado",
     "tryAgain": "Reintentar",
     "reload": "Recargar la página"
+  },
+  "commandPalette": {
+    "dialogLabel": "Paleta de comandos",
+    "closeAriaLabel": "Cerrar la paleta de comandos",
+    "inputPlaceholder": "Buscar páginas y acciones…",
+    "escKey": "esc",
+    "noMatches": "Sin coincidencias.",
+    "actionsHeading": "Acciones",
+    "openSettings": "Abrir configuración",
+    "openHelp": "Abrir ayuda"
   }
 }

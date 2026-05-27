@@ -1,5 +1,6 @@
 import { AlertCircle, FileCheck, GitCompare, Layers, X } from 'lucide-react';
 import { type FC, useCallback, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { mergeConfigs as apiMergeConfigs } from '../api/client';
 import {
   computeDiff,
@@ -26,6 +27,7 @@ import { FileUploadZone, type UploadedFile } from './config-diff/FileUploadZone'
  * - Export the merged result
  */
 export const ConfigDiffPage: FC = () => {
+  const { t } = useTranslation('pages');
   // File state
   const [leftFile, setLeftFile] = useState<UploadedFile | null>(null);
   const [rightFile, setRightFile] = useState<UploadedFile | null>(null);
@@ -204,7 +206,7 @@ export const ConfigDiffPage: FC = () => {
         <Card className="border-surface-border bg-bg-surface/70">
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
-              <H2 className="text-lg">Original File</H2>
+              <H2 className="text-lg">{t('configDiff.originalFileTitle')}</H2>
               {leftFile && (
                 <Tag colorScheme="blue" className="text-xs">
                   Source
@@ -226,7 +228,7 @@ export const ConfigDiffPage: FC = () => {
         <Card className="border-surface-border bg-bg-surface/70">
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
-              <H2 className="text-lg">Modified File</H2>
+              <H2 className="text-lg">{t('configDiff.modifiedFileTitle')}</H2>
               {rightFile && (
                 <Tag colorScheme="green" className="text-xs">
                   Changes
@@ -339,7 +341,7 @@ export const ConfigDiffPage: FC = () => {
         <Card className="border-surface-border bg-bg-surface/70">
           <CardContent className="py-12 text-center">
             <GitCompare className={`mx-auto ${iconSizes['3xl']} text-text-disabled`} />
-            <H2 className="mt-4 mb-2">Ready to Compare</H2>
+            <H2 className="mt-4 mb-2">{t('configDiff.readyToCompareTitle')}</H2>
             <P className="text-text-muted max-w-md mx-auto">
               Upload two YAML configuration files above to see a side-by-side comparison with
               color-coded changes and interactive merge controls.

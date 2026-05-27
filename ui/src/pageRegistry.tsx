@@ -13,7 +13,8 @@ import {
   Wrench,
   Zap,
 } from 'lucide-react';
-import { type FC, lazy, type ReactNode } from 'react';
+import { type FC, lazy, type ReactNode, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 
 // Eagerly loaded pages (small, frequently used)
 import { DashboardPage } from './pages/DashboardPage';
@@ -59,16 +60,49 @@ const LibraryPcapsPage = lazy(() =>
 );
 
 /**
- * PageConfig is one entry in the application's route table. Beyond the
- * usual path/component pair it carries the page header metadata
- * (title, description, icon) and an optional contextual help body
- * rendered by the page chrome.
+ * PageConfig is one entry in the application's route table, resolved
+ * at render time via usePages() — `label/title/description` are
+ * translations of the corresponding pages.{i18nKey}.* keys.
  */
 export type PageConfig = {
   path: string;
   label: string;
   title: string;
   description: string;
+  icon: LucideIcon;
+  component: FC;
+  badge?: string;
+  help?: ReactNode;
+};
+
+/**
+ * PageI18nKey is the closed set of pages.* namespaces that carry a
+ * matching {label,title,description} triple. Kept strict so adding a
+ * new route forces a corresponding locale entry.
+ */
+type PageI18nKey =
+  | 'dashboard'
+  | 'runtime'
+  | 'devices'
+  | 'deviceLibrary'
+  | 'topology'
+  | 'automation'
+  | 'traffic'
+  | 'debug'
+  | 'packets'
+  | 'configDiff'
+  | 'walkValidator'
+  | 'libraryWalks'
+  | 'libraryPcaps';
+
+/**
+ * PageDef is the static, language-agnostic definition stored in
+ * pageRegistry. The matching translation lives at pages.{i18nKey}.{label,
+ * title,description} in internal/i18n/locales/{en,es}/pages.json.
+ */
+type PageDef = {
+  path: string;
+  i18nKey: PageI18nKey;
   icon: LucideIcon;
   component: FC;
   badge?: string;
@@ -83,17 +117,15 @@ export type PageConfig = {
 export const DeviceEditorPageRef = DeviceEditorPage;
 
 /**
- * pages is the route table consumed by App.tsx. Each entry has a
- * stable path, a memoised component, and per-page chrome content.
- * Ordering here doesn't affect routing but DOES affect any code
- * that iterates pages in display order (none does today).
+ * staticPages holds the route table — paths, components, icons, and
+ * the verbose help: JSX prose (still English-only; queued for Phase 7
+ * help-content i18n). Labels/titles/descriptions are resolved at
+ * render time by usePages() via the pages.{i18nKey}.* locale keys.
  */
-export const pages: PageConfig[] = [
+const staticPages: PageDef[] = [
   {
     path: '/',
-    label: 'Dashboard',
-    title: 'Dashboard',
-    description: 'Live counters, run snapshots, and automation status for the active NIAC stack.',
+    i18nKey: 'dashboard',
     icon: Activity,
     component: DashboardPage,
     help: (
@@ -122,9 +154,7 @@ export const pages: PageConfig[] = [
   },
   {
     path: '/runtime',
-    label: 'Simulation',
-    title: 'Simulation',
-    description: 'Monitor runtime status, view network interfaces, and manage NIAC configuration.',
+    i18nKey: 'runtime',
     icon: PlugZap,
     component: RuntimeControlPage,
     help: (
@@ -153,10 +183,7 @@ export const pages: PageConfig[] = [
   },
   {
     path: '/devices',
-    label: 'Running Devices',
-    title: 'Running Devices',
-    description:
-      'Read-only view of the devices the daemon is currently simulating, plus the running YAML.',
+    i18nKey: 'devices',
     icon: Server,
     component: DevicesPage,
     help: (
@@ -176,10 +203,7 @@ export const pages: PageConfig[] = [
   },
   {
     path: '/device-config',
-    label: 'Devices',
-    title: 'Devices',
-    description:
-      'Reusable device definitions: search, filter, edit, clone, and delete. Click a device to open the visual editor.',
+    i18nKey: 'deviceLibrary',
     icon: Wrench,
     component: DeviceListPage,
     help: (
@@ -205,10 +229,7 @@ export const pages: PageConfig[] = [
   },
   {
     path: '/topology',
-    label: 'Topology',
-    title: 'Topology',
-    description:
-      'Visual graph of the configured network plus the live CDP/LLDP/EDP/FDP neighbor table.',
+    i18nKey: 'topology',
     icon: Network,
     component: TopologyPage,
     help: (
@@ -233,9 +254,7 @@ export const pages: PageConfig[] = [
   },
   {
     path: '/automation',
-    label: 'Alerts',
-    title: 'Alerts',
-    description: 'Configure alert thresholds and webhook targets for the running daemon.',
+    i18nKey: 'automation',
     icon: Workflow,
     component: AutomationPage,
     help: (
@@ -265,9 +284,7 @@ export const pages: PageConfig[] = [
   },
   {
     path: '/traffic',
-    label: 'Traffic',
-    title: 'Traffic',
-    description: 'Inject controlled errors into the running simulation and replay captured PCAPs.',
+    i18nKey: 'traffic',
     icon: Zap,
     component: TrafficInjectionPage,
     help: (
@@ -297,9 +314,7 @@ export const pages: PageConfig[] = [
   },
   {
     path: '/debug',
-    label: 'Logs',
-    title: 'Logs',
-    description: 'Live log stream from the daemon, with per-protocol debug-level controls.',
+    i18nKey: 'debug',
     icon: Terminal,
     component: DebugConsolePage,
     help: (
@@ -320,10 +335,7 @@ export const pages: PageConfig[] = [
   },
   {
     path: '/packets',
-    label: 'Packets',
-    title: 'Packets',
-    description:
-      'Live wire view of packets on the running simulation, or offline inspection of a captured PCAP file.',
+    i18nKey: 'packets',
     icon: FileBox,
     component: PacketInspectorPage,
     help: (
@@ -345,9 +357,7 @@ export const pages: PageConfig[] = [
   },
   {
     path: '/config-diff',
-    label: 'Compare & Merge',
-    title: 'Compare & Merge',
-    description: 'Compare two YAML network configs side-by-side and merge changes between them.',
+    i18nKey: 'configDiff',
     icon: GitCompare,
     component: ConfigDiffPage,
     help: (
@@ -370,9 +380,7 @@ export const pages: PageConfig[] = [
   },
   {
     path: '/walk-validator',
-    label: 'SNMP Walks',
-    title: 'SNMP Walks',
-    description: 'Validate and auto-fix SNMP walk files used by the simulated SNMP agents.',
+    i18nKey: 'walkValidator',
     icon: ShieldCheck,
     component: WalkValidatorPage,
     help: (
@@ -404,10 +412,7 @@ export const pages: PageConfig[] = [
   },
   {
     path: '/library/walks',
-    label: 'Walks',
-    title: 'Walk Library',
-    description:
-      'Read-only browser for the on-disk SNMP walk files the daemon serves from the unified library.',
+    i18nKey: 'libraryWalks',
     icon: Database,
     component: LibraryWalksPage,
     help: (
@@ -427,10 +432,7 @@ export const pages: PageConfig[] = [
   },
   {
     path: '/library/pcaps',
-    label: 'PCAPs',
-    title: 'PCAP Library',
-    description:
-      'Read-only browser for the on-disk PCAP captures the daemon serves from the unified library.',
+    i18nKey: 'libraryPcaps',
     icon: FileBox,
     component: LibraryPcapsPage,
     help: (
@@ -448,3 +450,30 @@ export const pages: PageConfig[] = [
     ),
   },
 ];
+
+/**
+ * usePages returns the full route table with label/title/description
+ * resolved against the active locale. Replaces the prior `pages` export
+ * so consumers no longer ship hardcoded English in their JSX.
+ *
+ * The translation keys live at pages.{i18nKey}.{label,title,description}.
+ * usePages does not depend on any runtime state, but is a hook so
+ * react-i18next's languageChanged event re-renders consumers.
+ */
+export function usePages(): PageConfig[] {
+  const { t } = useTranslation('pages');
+  return useMemo(
+    () =>
+      staticPages.map((p) => ({
+        path: p.path,
+        label: t(`${p.i18nKey}.label`),
+        title: t(`${p.i18nKey}.title`),
+        description: t(`${p.i18nKey}.description`),
+        icon: p.icon,
+        component: p.component,
+        badge: p.badge,
+        help: p.help,
+      })),
+    [t],
+  );
+}

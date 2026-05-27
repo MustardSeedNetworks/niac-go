@@ -9,17 +9,71 @@
   "dashboard": {
     "label": "Panel",
     "title": "Panel",
-    "description": "Contadores en vivo, instantáneas de ejecución y estado de automatización para la pila NIAC activa."
+    "description": "Contadores en vivo, instantáneas de ejecución y estado de automatización para la pila NIAC activa.",
+    "status": {
+      "running": "Simulación en ejecución",
+      "stopped": "Simulación detenida",
+      "noInterface": "Sin interfaz",
+      "deviceCount_one": "{{count}} dispositivo",
+      "deviceCount_other": "{{count}} dispositivos",
+      "uptimeLabel": "Tiempo activo: {{uptime}}"
+    },
+    "stats": {
+      "devicesOnline": "Dispositivos en línea",
+      "devicesOnlineHelper": "Dispositivos de red activos",
+      "packetsRx": "Paquetes RX",
+      "packetsRxHelper": "{{sent}} enviados",
+      "packetsRxAwaiting": "A la espera de datos",
+      "dnsQueries": "Consultas DNS",
+      "dnsQueriesHelper": "DHCP: {{count}}"
+    },
+    "quickActions": {
+      "title": "Acciones rápidas",
+      "errorInjectionLabel": "Inyección de errores",
+      "errorInjectionDescription": "Inyecte errores de red",
+      "debugConsoleLabel": "Consola de depuración",
+      "debugConsoleDescription": "Vea los registros en vivo",
+      "trafficInjectionLabel": "Inyección de tráfico",
+      "trafficInjectionDescription": "Reproduzca archivos PCAP",
+      "viewTopologyLabel": "Ver topología",
+      "viewTopologyDescription": "Gráfico de red"
+    },
+    "recentRuns": {
+      "title": "Ejecuciones recientes",
+      "tag": "Historial",
+      "deviceCountShort": "{{count}} disp.",
+      "rxShort": "RX {{count}}",
+      "txShort": "TX {{count}}",
+      "empty": "Aún no hay historial de ejecuciones",
+      "viewAll": "Ver todo el historial →"
+    },
+    "errorPanel": {
+      "title": "Tipos de inyección de errores",
+      "tuiModeLabel": "Modo TUI:",
+      "tuiModeDescription": "Ejecute {{command}} para acceder a la inyección interactiva de errores con controles de teclado (pulse 'i' para el menú, teclas 1-7 para inyección rápida)."
+    },
+    "automation": {
+      "empty": "Las actualizaciones de automatización aparecerán después de que se complete la primera ejecución.",
+      "title": "Cronología de automatización",
+      "latestEventsTag": "Últimos eventos",
+      "eventDetail": "{{count}} dispositivos • duración {{duration}}",
+      "viewDetails": "Ver detalles"
+    }
   },
   "runtime": {
     "label": "Simulación",
     "title": "Simulación",
-    "description": "Supervise el estado de ejecución, vea las interfaces de red y gestione la configuración de NIAC."
+    "description": "Supervise el estado de ejecución, vea las interfaces de red y gestione la configuración de NIAC.",
+    "daemonModeWarning": "Modo daemon no detectado",
+    "startSimulationTitle": "Iniciar simulación",
+    "noUsableInterfaces": "Sin interfaces utilizables"
   },
   "devices": {
     "label": "Dispositivos en ejecución",
     "title": "Dispositivos en ejecución",
-    "description": "Vista de solo lectura de los dispositivos que el daemon está simulando actualmente, junto con el YAML en ejecución."
+    "description": "Vista de solo lectura de los dispositivos que el daemon está simulando actualmente, junto con el YAML en ejecución.",
+    "ipAddressesHeader": "Direcciones IP",
+    "availableSnmpWalks": "Recorridos SNMP disponibles"
   },
   "deviceLibrary": {
     "label": "Dispositivos",
@@ -37,7 +91,28 @@
   "topology": {
     "label": "Topología",
     "title": "Topología",
-    "description": "Gráfico visual de la red configurada y la tabla de vecinos {{protocols}} en vivo."
+    "description": "Gráfico visual de la red configurada y la tabla de vecinos {{protocols}} en vivo.",
+    "neighbors": {
+      "filterShowAllTitle": "Mostrar todos los protocolos de descubrimiento",
+      "filterByProtocolTitle": "Filtrar solo entradas {{protocol}} ({{count}} ahora)",
+      "filterAllLabel": "Todos",
+      "searchPlaceholder": "Filtrar por dispositivo o ID de chasis…",
+      "searchTitle": "Coincidencia de subcadena en el dispositivo local, el dispositivo remoto, el ID de chasis o el puerto remoto (no distingue mayúsculas).",
+      "searchAriaLabel": "Filtrar vecinos",
+      "pollingStatus": "Sondeo cada {{seconds}}s · {{count}} entradas",
+      "loading": "Cargando…",
+      "loadError": "Error al cargar los vecinos: {{error}}",
+      "emptyNoData": "Aún no se han descubierto vecinos. Inicie una simulación con CDP/LLDP/EDP/FDP habilitado para rellenar esta tabla.",
+      "emptyFiltered": "Ningún vecino coincide con los filtros actuales.",
+      "headerProtocol": "Protocolo",
+      "headerLocalDevice": "Dispositivo local",
+      "headerRemoteDevice": "Dispositivo remoto",
+      "headerRemotePort": "Puerto remoto",
+      "headerChassisId": "ID de chasis",
+      "headerMgmtAddr": "Dir. gestión",
+      "headerTtl": "TTL",
+      "headerLastSeen": "Visto por última vez"
+    }
   },
   "automation": {
     "label": "Alertas",
@@ -47,7 +122,18 @@
   "traffic": {
     "label": "Tráfico",
     "title": "Tráfico",
-    "description": "Inyecte errores controlados en la simulación en ejecución y reproduzca archivos {{format}} capturados."
+    "description": "Inyecte errores controlados en la simulación en ejecución y reproduzca archivos {{format}} capturados.",
+    "page": {
+      "errorInjectionTitle": "Inyección de errores",
+      "errorInjectionDescription": "Inyecte errores de red en las interfaces de los dispositivos para pruebas y escenarios de simulación.",
+      "pcapReplayTitle": "Reproducción de PCAP",
+      "pcapReplayDescription": "Reproduzca tráfico de paquetes capturado con controles de bucle y temporización para pruebas.",
+      "recentRunsTitle": "Ejecuciones recientes",
+      "recentRunsTag": "Historial",
+      "recentRunsDescription": "Ejecuciones de simulación pasadas registradas por el daemon.",
+      "recentRunStats": "{{time}} · duración {{duration}} · RX {{rx}} · TX {{tx}}",
+      "noCapturedRuns": "Aún no hay ejecuciones capturadas."
+    }
   },
   "debug": {
     "label": "Registros",
@@ -57,17 +143,57 @@
   "packets": {
     "label": "Paquetes",
     "title": "Paquetes",
-    "description": "Vista en vivo de los paquetes en la simulación en ejecución, o inspección sin conexión de un archivo {{format}} capturado."
+    "description": "Vista en vivo de los paquetes en la simulación en ejecución, o inspección sin conexión de un archivo {{format}} capturado.",
+    "stats": {
+      "emptyTitle": "Sin estadísticas disponibles",
+      "emptyDescription": "Cargue y analice un archivo PCAP para ver estadísticas",
+      "summaryTitle": "Resumen estadístico",
+      "totalPackets": "Total de paquetes",
+      "totalBytes": "Total de bytes",
+      "totalBytesHelper": "{{count}} bytes",
+      "duration": "Duración",
+      "protocols": "Protocolos",
+      "protocolsHelper": "Protocolos únicos",
+      "timeRangeTitle": "Intervalo de tiempo",
+      "startTime": "Hora de inicio",
+      "endTime": "Hora de finalización",
+      "protocolBreakdownTitle": "Desglose por protocolo",
+      "noProtocolData": "Sin datos de protocolo disponibles",
+      "topEndpointsTitle": "Principales extremos",
+      "topSources": "Principales orígenes",
+      "topDestinations": "Principales destinos",
+      "noSourceData": "Sin datos de origen",
+      "noDestinationData": "Sin datos de destino"
+    },
+    "list": {
+      "noPacketsTitle": "No hay paquetes para mostrar",
+      "noPacketsDescription": "Cargue un archivo PCAP para analizar",
+      "showingCount": "Mostrando {{shown}} de {{total}} paquetes",
+      "noMatchTitle": "Ningún paquete coincide con el filtro",
+      "noMatchDescription": "Pruebe a ajustar la expresión del filtro",
+      "cycleTimeModeTitle": "Haga clic para alternar: Absoluto / Relativo / Delta",
+      "headerSource": "Origen",
+      "headerDestination": "Destino",
+      "headerProtocol": "Protocolo",
+      "headerLength": "Longitud",
+      "headerInfo": "Información"
+    }
   },
   "configDiff": {
     "label": "Comparar y fusionar",
     "title": "Comparar y fusionar",
-    "description": "Compare dos configuraciones de red {{format}} en paralelo y fusione los cambios entre ellas."
+    "description": "Compare dos configuraciones de red {{format}} en paralelo y fusione los cambios entre ellas.",
+    "originalFileTitle": "Archivo original",
+    "modifiedFileTitle": "Archivo modificado",
+    "readyToCompareTitle": "Listo para comparar"
   },
   "walkValidator": {
     "label": "Recorridos {{protocol}}",
     "title": "Recorridos {{protocol}}",
-    "description": "Valide y corrija automáticamente los archivos de recorrido {{protocol}} utilizados por los agentes {{protocol}} simulados."
+    "description": "Valide y corrija automáticamente los archivos de recorrido {{protocol}} utilizados por los agentes {{protocol}} simulados.",
+    "pageTitle": "Recorridos SNMP",
+    "noWalksFound": "No se encontraron recorridos",
+    "pastePathLabel": "O pegue una ruta absoluta"
   },
   "libraryWalks": {
     "label": "Recorridos",
@@ -78,5 +204,47 @@
     "label": "{{format}}",
     "title": "Biblioteca de {{format}}",
     "description": "Navegador de solo lectura para las capturas {{format}} en disco que el daemon sirve desde la biblioteca unificada."
+  },
+  "templates": {
+    "states": {
+      "loading": "Cargando plantillas...",
+      "loadErrorTitle": "Error al cargar las plantillas",
+      "retry": "Reintentar",
+      "emptyTitle": "Sin plantillas disponibles",
+      "emptyDescription": "Suba su primera plantilla de configuración para empezar.",
+      "uploadTemplate": "Subir plantilla",
+      "noMatchTitle": "Sin plantillas coincidentes",
+      "noMatchDescription": "Ninguna plantilla coincide con la búsqueda \"{{query}}\". Pruebe con otro término.",
+      "clearSearch": "Borrar búsqueda"
+    },
+    "uploadModal": {
+      "title": "Subir plantilla",
+      "subtitle": "Añadir una nueva plantilla de configuración",
+      "closeAriaLabel": "Cerrar modal de subida",
+      "backdropAriaLabel": "Cerrar modal de subida",
+      "fileLabel": "Subir archivo YAML",
+      "fileSelected": "Seleccionado: {{filename}}",
+      "nameLabel": "Nombre de la plantilla *",
+      "namePlaceholder": "p. ej., Red básica",
+      "descriptionLabel": "Descripción",
+      "descriptionPlaceholder": "Breve descripción de esta plantilla...",
+      "typeLabel": "Tipo de plantilla",
+      "contentLabel": "Contenido YAML *",
+      "contentPlaceholder": "Pegue aquí su configuración YAML...",
+      "categoryBasic": "Red básica",
+      "categoryRouter": "Enrutador",
+      "categorySwitch": "Switch",
+      "categoryAccessPoint": "Punto de acceso",
+      "categoryServer": "Servidor",
+      "categoryComplete": "Red completa",
+      "categoryCustom": "Personalizado",
+      "cancel": "Cancelar",
+      "uploading": "Subiendo...",
+      "uploadButton": "Subir plantilla",
+      "errorFileTooLarge": "Archivo demasiado grande. Tamaño máximo: 1 MB",
+      "errorInvalidFile": "Seleccione un archivo YAML (.yaml o .yml)",
+      "errorReadFailed": "Error al leer el archivo",
+      "errorRequired": "El nombre y el contenido son obligatorios"
+    }
   }
 }

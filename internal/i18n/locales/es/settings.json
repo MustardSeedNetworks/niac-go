@@ -12,6 +12,32 @@
     "debug": "Depuración",
     "about": "Acerca de"
   },
+  "simulation": {
+    "sectionTitle": "Simulación",
+    "interfaceLabel": "Interfaz de red",
+    "interfacePlaceholder": "Seleccione una interfaz...",
+    "interfaceHelper": "Solo se muestran las interfaces ethernet, WiFi y loopback.",
+    "configurationLabel": "Configuración",
+    "loading": "Cargando...",
+    "tabTemplates": "Plantillas",
+    "tabMyConfigs": "Mis configuraciones",
+    "tabUpload": "Subir",
+    "selectedConfigLabel": "Configuración seleccionada:",
+    "selectedConfigSourceTemplate": "Plantilla",
+    "selectedConfigSourceUserConfig": "Configuración de usuario",
+    "searchTemplatesPlaceholder": "Buscar plantillas...",
+    "noTemplatesMatchSearch": "Ninguna plantilla coincide con la búsqueda",
+    "noTemplatesAvailable": "No hay plantillas disponibles",
+    "deviceCount_one": "{{count}} dispositivo",
+    "deviceCount_other": "{{count}} dispositivos",
+    "noUserConfigs": "Aún no se han subido configuraciones de usuario",
+    "noUserConfigsHint": "Use la pestaña Subir para añadir sus propias configuraciones",
+    "uploadPrompt": "Haga clic para subir una configuración YAML",
+    "uploadFileTypes": "archivos .yaml o .yml, máx. 10 MB",
+    "uploadHelper": "Suba un archivo de configuración para esta sesión de simulación. El archivo se enviará al iniciar la simulación.",
+    "alertInvalidFile": "Seleccione un archivo YAML (.yaml o .yml)",
+    "alertFileTooLarge": "Archivo demasiado grande. Tamaño máximo: 10 MB"
+  },
   "appearance": {
     "sectionTitle": "Tema",
     "sectionDescription": "Personalice la apariencia de NIAC",
@@ -19,6 +45,8 @@
     "light": "Claro",
     "system": "Sistema",
     "quickToggle": "Cambio rápido",
+    "switchToLight": "Cambiar al modo claro",
+    "switchToDark": "Cambiar al modo oscuro",
     "persistenceNote": "El modo oscuro es el predeterminado. Su preferencia se guarda entre sesiones."
   },
   "network": {
@@ -33,6 +61,8 @@
     "backendUrlDescription": "Dirección del servidor backend de NIAC",
     "websocket": "WebSocket",
     "websocketDescription": "Transmisión de eventos en tiempo real",
+    "connected": "Conectado",
+    "disconnected": "Desconectado",
     "interfaceTypes": {
       "ethernet": "Ethernet",
       "wifi": "WiFi",
@@ -69,6 +99,8 @@
     "proprietaryNotice": "NIAC es software propietario. Se prohíbe la copia, modificación o distribución no autorizadas.",
     "linksTitle": "Enlaces",
     "github": "GitHub",
-    "website": "Sitio web"
+    "website": "Sitio web",
+    "version": "Versión",
+    "build": "Compilación"
   }
 }

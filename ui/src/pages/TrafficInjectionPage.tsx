@@ -1,5 +1,6 @@
 import { History } from 'lucide-react';
 import type { FC } from 'react';
+import { useTranslation } from 'react-i18next';
 import { fetchHistory } from '../api/client';
 import { ErrorInjectionPanel } from '../components/ErrorInjectionPanel';
 import { ReplayControlPanel } from '../components/ReplayControlPanel';
@@ -12,6 +13,7 @@ import { H2, P, SmallText } from '../ui/Typography';
 import { formatDuration, formatNumber, formatTime } from '../utils/format';
 
 export const TrafficInjectionPage: FC = () => {
+  const { t } = useTranslation('pages');
   const { data: history } = useApiResource(fetchHistory, [], {
     intervalMs: POLL_INTERVALS.slow,
   });
@@ -21,10 +23,8 @@ export const TrafficInjectionPage: FC = () => {
       {/* Error Injection */}
       <div className="space-y-4">
         <div>
-          <H2>Error Injection</H2>
-          <P className="text-text-muted">
-            Inject network errors on device interfaces for testing and simulation scenarios.
-          </P>
+          <H2>{t('traffic.page.errorInjectionTitle')}</H2>
+          <P className="text-text-muted">{t('traffic.page.errorInjectionDescription')}</P>
         </div>
         <ErrorInjectionPanel />
       </div>
@@ -32,10 +32,8 @@ export const TrafficInjectionPage: FC = () => {
       {/* PCAP Replay */}
       <div className="space-y-4">
         <div>
-          <H2>PCAP Replay</H2>
-          <P className="text-text-muted">
-            Replay captured packet traffic with loop and timing controls for testing.
-          </P>
+          <H2>{t('traffic.page.pcapReplayTitle')}</H2>
+          <P className="text-text-muted">{t('traffic.page.pcapReplayDescription')}</P>
         </div>
         <ReplayControlPanel />
       </div>
@@ -46,12 +44,12 @@ export const TrafficInjectionPage: FC = () => {
           <div className="flex items-center justify-between">
             <H2 className="flex items-center gap-2 text-lg">
               <History className={`${iconSizes.lg} text-text-muted`} />
-              Recent runs
+              {t('traffic.page.recentRunsTitle')}
             </H2>
-            <Tag colorScheme="gray">History</Tag>
+            <Tag colorScheme="gray">{t('traffic.page.recentRunsTag')}</Tag>
           </div>
           <SmallText className="text-text-muted">
-            Past simulation runs the daemon recorded.
+            {t('traffic.page.recentRunsDescription')}
           </SmallText>
           <div className="space-y-2 text-sm text-text-secondary">
             {(history ?? []).slice(0, 5).map((item) => (
@@ -61,13 +59,19 @@ export const TrafficInjectionPage: FC = () => {
               >
                 <p className="text-text-primary font-semibold">{item.configName}</p>
                 <SmallText className="text-text-muted">
-                  {formatTime(item.startedAt)} · duration {formatDuration(item.duration)} · RX{' '}
-                  {formatNumber(item.packetsReceived)} · TX {formatNumber(item.packetsSent)}
+                  {t('traffic.page.recentRunStats', {
+                    time: formatTime(item.startedAt),
+                    duration: formatDuration(item.duration),
+                    rx: formatNumber(item.packetsReceived),
+                    tx: formatNumber(item.packetsSent),
+                  })}
                 </SmallText>
               </div>
             ))}
             {(!history || history.length === 0) && (
-              <SmallText className="text-text-muted italic">No captured runs yet.</SmallText>
+              <SmallText className="text-text-muted italic">
+                {t('traffic.page.noCapturedRuns')}
+              </SmallText>
             )}
           </div>
         </CardContent>

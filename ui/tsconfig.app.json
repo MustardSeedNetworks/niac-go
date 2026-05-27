@@ -8,6 +8,7 @@
     "module": "ESNext",
     "types": ["vite/client"],
     "skipLibCheck": true,
+    "resolveJsonModule": true,
 
     /* Bundler mode */
     "moduleResolution": "bundler",
@@ -20,7 +21,8 @@
     /* Path aliases. In TS 6+ `paths` works without `baseUrl` —
        patterns are resolved relative to the tsconfig file's location. */
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@locales/*": ["../internal/i18n/locales/*"]
     },
 
     /* Linting - TypeScript 5.9 strict mode */
@@ -31,5 +33,5 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["src"]
+  "include": ["src", "../internal/i18n/locales"]
 }
