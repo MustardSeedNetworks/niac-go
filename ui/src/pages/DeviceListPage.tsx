@@ -1,4 +1,5 @@
 import type { FC } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { CloneDeviceModal } from '../components/device-list/CloneDeviceModal';
 import { ConfirmDeleteModal } from '../components/device-list/ConfirmDeleteModal';
@@ -20,6 +21,7 @@ import { Card, CardContent } from '../ui/Card';
 import { ConfirmModal } from '../ui/ConfirmModal';
 
 export const DeviceListPage: FC = () => {
+  const { t } = useTranslation('devices');
   const navigate = useNavigate();
 
   const {
@@ -147,18 +149,9 @@ export const DeviceListPage: FC = () => {
         isOpen={showBulkDeleteConfirm}
         onConfirm={handleBulkDeleteConfirm}
         onCancel={() => setShowBulkDeleteConfirm(false)}
-        title="Delete Selected Devices"
-        message={
-          <>
-            Are you sure you want to delete{' '}
-            <strong>
-              {selectedDevices.size} device
-              {selectedDevices.size !== 1 ? 's' : ''}
-            </strong>
-            ? This action cannot be undone.
-          </>
-        }
-        confirmLabel="Delete All"
+        title={t('list.bulkActions.confirmDeleteTitle')}
+        message={t('list.bulkActions.confirmDeleteMessage', { count: selectedDevices.size })}
+        confirmLabel={t('list.bulkActions.confirmDeleteLabel')}
         confirmTone="red"
       />
     </div>

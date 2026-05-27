@@ -6,32 +6,13 @@ import { iconSizes } from '../../constants/sizes';
 import { Card, CardContent } from '../../ui/Card';
 import { Tag } from '../../ui/Tag';
 import { H2, SmallText } from '../../ui/Typography';
-import { formatBytes, formatDurationMs } from '../../utils/format';
+import { formatBytes, formatDurationMs, useFormatTime } from '../../utils/format';
 import { getProtocolColor } from '../../utils/protocol-colors';
 
 interface PcapStatsProps {
   stats: PcapStatsType | null;
   filename: string | null;
   fileSize: number | null;
-}
-
-/**
- * Format timestamp to readable string
- */
-function formatTimestamp(timestamp: string): string {
-  try {
-    const date = new Date(timestamp);
-    return date.toLocaleString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: false,
-    });
-  } catch {
-    return timestamp;
-  }
 }
 
 /**
@@ -190,6 +171,7 @@ TopEndpoints.displayName = 'TopEndpoints';
  */
 export const PcapStats: FC<PcapStatsProps> = memo(({ stats, filename, fileSize }) => {
   const { t } = useTranslation('pages');
+  const formatTimestamp = useFormatTime();
 
   if (!stats) {
     return (

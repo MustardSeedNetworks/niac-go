@@ -170,5 +170,42 @@
     "actionsHeading": "Actions",
     "openSettings": "Open Settings",
     "openHelp": "Open Help"
+  },
+  "plurals": {
+    "deviceCount_one": "{{count}} device",
+    "deviceCount_other": "{{count}} devices",
+    "deviceCountSelected_one": "{{count}} device selected",
+    "deviceCountSelected_other": "{{count}} devices selected",
+    "logCount_one": "{{count}} log buffered",
+    "logCount_other": "{{count}} logs buffered",
+    "conversationCount_one": "{{count}} conversation",
+    "conversationCount_other": "{{count}} conversations",
+    "packetCount_one": "{{count}} packet",
+    "packetCount_other": "{{count}} packets",
+    "itemCount_one": "{{count}} item",
+    "itemCount_other": "{{count}} items"
+  },
+  "format": {
+    "bytesB": "{{value}} B",
+    "bytesKB": "{{value}} KB",
+    "bytesMB": "{{value}} MB",
+    "bytesGB": "{{value}} GB",
+    "durationLessThanMs": "<1ms",
+    "durationMs": "{{value}} ms",
+    "durationS": "{{value}} s",
+    "durationMin": "{{value}} min",
+    "durationHr": "{{value}} hr",
+    "durationMinSec": "{{min}}m {{sec}}s",
+    "uptimeS": "{{value}}s",
+    "uptimeMS": "{{min}}m {{sec}}s",
+    "uptimeHM": "{{hr}}h {{min}}m",
+    "uptimeDH": "{{day}}d {{hr}}h",
+    "relativeJustNow": "just now",
+    "relativeSecAgo": "{{value}}s ago",
+    "relativeMinAgo": "{{value}}m ago",
+    "relativeHourAgo": "{{value}}h ago",
+    "relativeDayAgo": "{{value}}d ago",
+    "dash": "—",
+    "unexpectedError": "An unexpected error occurred"
   }
 }
