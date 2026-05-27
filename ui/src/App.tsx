@@ -1,17 +1,16 @@
-import { Moon, Sun, Wrench } from 'lucide-react';
-import { memo, type ReactElement, type ReactNode, Suspense, useState } from 'react';
+import { Wrench } from 'lucide-react';
+import { memo, type ReactNode, Suspense, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { ErrorBoundary, PageErrorBoundary } from './components/ErrorBoundary';
+import { HeaderBar } from './components/HeaderBar';
 import { HelpDrawer } from './components/HelpDrawer';
 import { SettingsDrawer } from './components/SettingsDrawer';
 import { AppProvider, useAppState } from './contexts/AppContext';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
-import { useTheme } from './hooks/useTheme';
 import { useNavGroups } from './navGroups';
 import { DeviceEditorPageRef, type PageConfig, usePages } from './pageRegistry';
 import { Breadcrumbs } from './ui/Breadcrumbs';
-import { ConnectionStatus } from './ui/ConnectionStatus';
 import { PageHeader } from './ui/PageHeader';
 import { PageLoader } from './ui/PageLoader';
 import { SidebarLayout } from './ui/Sidebar';
@@ -38,41 +37,6 @@ export default function App() {
   );
 }
 
-/**
- * TopBar renders the sticky upper-right control cluster: connection
- * indicator + theme toggle. Mirrors stem's UI shell so cross-product
- * navigation has consistent affordances.
- */
-function TopBar(): ReactElement {
-  const { t } = useTranslation('common');
-  const { isDark, toggleTheme } = useTheme();
-  const themeToggleLabel = isDark
-    ? t('accessibility.switchToLightMode')
-    : t('accessibility.switchToDarkMode');
-  return (
-    <>
-      {/* Left side reserved for future breadcrumbs / page-level chrome. */}
-      <div className="flex items-center" />
-      <div className="flex items-center gap-compact">
-        <ConnectionStatus />
-        <button
-          type="button"
-          onClick={toggleTheme}
-          className="pad-xs rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-hover"
-          title={themeToggleLabel}
-          aria-label={themeToggleLabel}
-        >
-          {isDark ? (
-            <Sun className="h-5 w-5" aria-hidden="true" />
-          ) : (
-            <Moon className="h-5 w-5" aria-hidden="true" />
-          )}
-        </button>
-      </div>
-    </>
-  );
-}
-
 function AppShell() {
   const { t } = useTranslation('pages');
   const { data: version } = useAppState('version');
@@ -89,7 +53,7 @@ function AppShell() {
     <SidebarLayout
       groups={navGroups}
       version={version?.version}
-      topBar={<TopBar />}
+      topBar={<HeaderBar />}
       onOpenHelp={() => setHelpOpen(true)}
       onOpenSettings={() => setSettingsOpen(true)}
     >
