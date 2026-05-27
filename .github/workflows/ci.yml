@@ -786,8 +786,13 @@ jobs:
       - name: Run Lighthouse
         uses: treosh/lighthouse-ci-action@3e7e23fb74242897f95c0ba9cabad3d0227b9b18 # v12.6.2
         with:
-          urls: |
-            https://localhost:8445
+          # configPath drives all collect/assert/upload settings via
+          # .lighthouserc.json. That file includes
+          # `chromeFlags: --ignore-certificate-errors` so Chrome
+          # doesn't reject the daemon's auto-generated self-signed cert
+          # — the same mitigation Playwright uses via
+          # PLAYWRIGHT_IGNORE_HTTPS_ERRORS in the E2E job above.
+          configPath: ./.lighthouserc.json
           uploadArtifacts: true
           temporaryPublicStorage: true
 
