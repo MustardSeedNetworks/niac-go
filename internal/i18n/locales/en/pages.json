@@ -269,8 +269,7 @@
       "uploadButton": "Upload Template",
       "errorFileTooLarge": "File too large. Maximum size is 1MB",
       "errorInvalidFile": "Please select a YAML file (.yaml or .yml)",
-      "errorReadFailed": "Failed to read file",
-      "errorRequired": "Name and content are required"
+      "errorReadFailed": "Failed to read file"
     }
   }
 }

@@ -56,7 +56,6 @@
     "errorTypeSelectPlaceholder": "Seleccione un tipo de error...",
     "valueLabel": "Valor: {{value}}%",
     "valueHelper": "0 = Sin errores, 100 = Errores máximos",
-    "selectMissing": "Seleccione el dispositivo, la interfaz y el tipo de error",
     "injectingButton": "Inyectando...",
     "injectButton": "Inyectar error",
     "injectSuccess": "Error inyectado correctamente",
