@@ -21,6 +21,10 @@
     "quickToggle": "Cambio rápido",
     "persistenceNote": "El modo oscuro es el predeterminado. Su preferencia se guarda entre sesiones."
   },
+  "language": {
+    "title": "Idioma",
+    "description": "Elija el idioma de la interfaz"
+  },
   "network": {
     "interfacesTitle": "Interfaces de red",
     "interfacesDescription": "Interfaces de red disponibles para la inyección de tráfico",

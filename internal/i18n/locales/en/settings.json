@@ -21,6 +21,10 @@
     "quickToggle": "Quick toggle",
     "persistenceNote": "Dark mode is the default. Your preference is saved across sessions."
   },
+  "language": {
+    "title": "Language",
+    "description": "Choose the interface language"
+  },
   "network": {
     "interfacesTitle": "Network Interfaces",
     "interfacesDescription": "Available network interfaces for traffic injection",

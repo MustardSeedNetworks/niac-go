@@ -18,6 +18,7 @@ import {
   Bug,
   ChevronRight,
   Info,
+  Languages,
   Monitor,
   Moon,
   Network,
@@ -29,11 +30,13 @@ import {
 } from 'lucide-react';
 import type { ReactElement, ReactNode } from 'react';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { fetchInterfaces } from '../api/client';
 import type { NetworkInterface } from '../api/types';
 import { iconSizes } from '../constants/sizes';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import { type Theme, useTheme } from '../hooks/useTheme';
+import i18n, { type LanguageCode, languages } from '../i18n';
 import { badge, cn, drawer, layout, spacing } from '../styles/theme';
 import { SimulationSection } from './settings/SimulationSection';
 
@@ -141,7 +144,12 @@ export function SettingsDrawer({
           {/* Content */}
           <div className={cn(spacing.drawer, 'space-y-6')}>
             {activeTab === 'simulation' && <SimulationSection />}
-            {activeTab === 'appearance' && <AppearanceSection />}
+            {activeTab === 'appearance' && (
+              <>
+                <AppearanceSection />
+                <LanguageSection />
+              </>
+            )}
             {activeTab === 'network' && <NetworkSection />}
             {activeTab === 'debug' && <DebugSection />}
             {activeTab === 'about' && <AboutSection version={version} />}
@@ -272,6 +280,65 @@ function AppearanceSection(): ReactElement {
       <p className="text-xs text-text-muted mt-2">
         Dark mode is the default. Your preference is saved across sessions.
       </p>
+    </Section>
+  );
+}
+
+// =============================================================================
+// Language Section
+// =============================================================================
+
+function LanguageSection(): ReactElement {
+  const { t, i18n: i18nInstance } = useTranslation('settings');
+  const currentLang = i18nInstance.language as LanguageCode;
+
+  const handleChange = (code: LanguageCode) => {
+    // changeLanguage is a Promise but the LanguageDetector cache write
+    // happens synchronously inside, so we don't need to await for the
+    // localStorage persistence. UI re-renders via react-i18next subscription.
+    void i18n.changeLanguage(code);
+  };
+
+  return (
+    <Section title={t('language.title')} description={t('language.description')}>
+      <div className="grid grid-cols-2 gap-2">
+        {languages.map((option) => {
+          const selected = currentLang.startsWith(option.code);
+          return (
+            <button
+              key={option.code}
+              type="button"
+              aria-pressed={selected}
+              onClick={() => handleChange(option.code)}
+              className={cn(
+                'flex flex-col items-center gap-2 p-3 rounded-lg border transition-all',
+                selected
+                  ? 'border-brand-primary bg-brand-primary/10'
+                  : 'border-surface-border hover:border-brand-primary/40 hover:bg-surface-hover',
+              )}
+            >
+              <div
+                className={cn(
+                  'w-8 h-8 rounded-lg flex items-center justify-center',
+                  selected
+                    ? 'bg-brand-primary/15 text-brand-primary'
+                    : 'bg-surface-hover text-text-secondary',
+                )}
+              >
+                <Languages className="w-4 h-4" aria-hidden="true" />
+              </div>
+              <span
+                className={cn(
+                  'text-xs font-medium',
+                  selected ? 'text-text-primary' : 'text-text-muted',
+                )}
+              >
+                {option.nativeLabel}
+              </span>
+            </button>
+          );
+        })}
+      </div>
     </Section>
   );
 }
