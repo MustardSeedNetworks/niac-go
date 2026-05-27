@@ -122,7 +122,18 @@
   "traffic": {
     "label": "Tráfico",
     "title": "Tráfico",
-    "description": "Inyecte errores controlados en la simulación en ejecución y reproduzca archivos {{format}} capturados."
+    "description": "Inyecte errores controlados en la simulación en ejecución y reproduzca archivos {{format}} capturados.",
+    "page": {
+      "errorInjectionTitle": "Inyección de errores",
+      "errorInjectionDescription": "Inyecte errores de red en las interfaces de los dispositivos para pruebas y escenarios de simulación.",
+      "pcapReplayTitle": "Reproducción de PCAP",
+      "pcapReplayDescription": "Reproduzca tráfico de paquetes capturado con controles de bucle y temporización para pruebas.",
+      "recentRunsTitle": "Ejecuciones recientes",
+      "recentRunsTag": "Historial",
+      "recentRunsDescription": "Ejecuciones de simulación pasadas registradas por el daemon.",
+      "recentRunStats": "{{time}} · duración {{duration}} · RX {{rx}} · TX {{tx}}",
+      "noCapturedRuns": "Aún no hay ejecuciones capturadas."
+    }
   },
   "debug": {
     "label": "Registros",
@@ -193,5 +204,47 @@
     "label": "{{format}}",
     "title": "Biblioteca de {{format}}",
     "description": "Navegador de solo lectura para las capturas {{format}} en disco que el daemon sirve desde la biblioteca unificada."
+  },
+  "templates": {
+    "states": {
+      "loading": "Cargando plantillas...",
+      "loadErrorTitle": "Error al cargar las plantillas",
+      "retry": "Reintentar",
+      "emptyTitle": "Sin plantillas disponibles",
+      "emptyDescription": "Suba su primera plantilla de configuración para empezar.",
+      "uploadTemplate": "Subir plantilla",
+      "noMatchTitle": "Sin plantillas coincidentes",
+      "noMatchDescription": "Ninguna plantilla coincide con la búsqueda \"{{query}}\". Pruebe con otro término.",
+      "clearSearch": "Borrar búsqueda"
+    },
+    "uploadModal": {
+      "title": "Subir plantilla",
+      "subtitle": "Añadir una nueva plantilla de configuración",
+      "closeAriaLabel": "Cerrar modal de subida",
+      "backdropAriaLabel": "Cerrar modal de subida",
+      "fileLabel": "Subir archivo YAML",
+      "fileSelected": "Seleccionado: {{filename}}",
+      "nameLabel": "Nombre de la plantilla *",
+      "namePlaceholder": "p. ej., Red básica",
+      "descriptionLabel": "Descripción",
+      "descriptionPlaceholder": "Breve descripción de esta plantilla...",
+      "typeLabel": "Tipo de plantilla",
+      "contentLabel": "Contenido YAML *",
+      "contentPlaceholder": "Pegue aquí su configuración YAML...",
+      "categoryBasic": "Red básica",
+      "categoryRouter": "Enrutador",
+      "categorySwitch": "Switch",
+      "categoryAccessPoint": "Punto de acceso",
+      "categoryServer": "Servidor",
+      "categoryComplete": "Red completa",
+      "categoryCustom": "Personalizado",
+      "cancel": "Cancelar",
+      "uploading": "Subiendo...",
+      "uploadButton": "Subir plantilla",
+      "errorFileTooLarge": "Archivo demasiado grande. Tamaño máximo: 1 MB",
+      "errorInvalidFile": "Seleccione un archivo YAML (.yaml o .yml)",
+      "errorReadFailed": "Error al leer el archivo",
+      "errorRequired": "El nombre y el contenido son obligatorios"
+    }
   }
 }

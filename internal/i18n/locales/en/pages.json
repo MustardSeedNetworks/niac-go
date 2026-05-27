@@ -122,7 +122,18 @@
   "traffic": {
     "label": "Traffic",
     "title": "Traffic",
-    "description": "Inject controlled errors into the running simulation and replay captured {{format}} files."
+    "description": "Inject controlled errors into the running simulation and replay captured {{format}} files.",
+    "page": {
+      "errorInjectionTitle": "Error Injection",
+      "errorInjectionDescription": "Inject network errors on device interfaces for testing and simulation scenarios.",
+      "pcapReplayTitle": "PCAP Replay",
+      "pcapReplayDescription": "Replay captured packet traffic with loop and timing controls for testing.",
+      "recentRunsTitle": "Recent runs",
+      "recentRunsTag": "History",
+      "recentRunsDescription": "Past simulation runs the daemon recorded.",
+      "recentRunStats": "{{time}} · duration {{duration}} · RX {{rx}} · TX {{tx}}",
+      "noCapturedRuns": "No captured runs yet."
+    }
   },
   "debug": {
     "label": "Logs",
@@ -193,5 +204,47 @@
     "label": "{{format}}s",
     "title": "{{format}} Library",
     "description": "Read-only browser for the on-disk {{format}} captures the daemon serves from the unified library."
+  },
+  "templates": {
+    "states": {
+      "loading": "Loading templates...",
+      "loadErrorTitle": "Failed to Load Templates",
+      "retry": "Retry",
+      "emptyTitle": "No Templates Available",
+      "emptyDescription": "Upload your first configuration template to get started.",
+      "uploadTemplate": "Upload Template",
+      "noMatchTitle": "No Matching Templates",
+      "noMatchDescription": "No templates match your search \"{{query}}\". Try a different search term.",
+      "clearSearch": "Clear Search"
+    },
+    "uploadModal": {
+      "title": "Upload Template",
+      "subtitle": "Add a new configuration template",
+      "closeAriaLabel": "Close upload modal",
+      "backdropAriaLabel": "Close upload modal",
+      "fileLabel": "Upload YAML File",
+      "fileSelected": "Selected: {{filename}}",
+      "nameLabel": "Template Name *",
+      "namePlaceholder": "e.g., Basic Network",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Brief description of this template...",
+      "typeLabel": "Template Type",
+      "contentLabel": "YAML Content *",
+      "contentPlaceholder": "Paste your YAML configuration here...",
+      "categoryBasic": "Basic Network",
+      "categoryRouter": "Router",
+      "categorySwitch": "Switch",
+      "categoryAccessPoint": "Access Point",
+      "categoryServer": "Server",
+      "categoryComplete": "Complete Network",
+      "categoryCustom": "Custom",
+      "cancel": "Cancel",
+      "uploading": "Uploading...",
+      "uploadButton": "Upload Template",
+      "errorFileTooLarge": "File too large. Maximum size is 1MB",
+      "errorInvalidFile": "Please select a YAML file (.yaml or .yml)",
+      "errorReadFailed": "Failed to read file",
+      "errorRequired": "Name and content are required"
+    }
   }
 }

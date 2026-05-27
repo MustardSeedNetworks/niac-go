@@ -7,6 +7,7 @@
 
 import type { ReactElement } from 'react';
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { categories, features } from '../../data/help-content';
 import { badge, cn, layout } from '../../styles/theme';
 import type { Feature } from './types';
@@ -16,6 +17,7 @@ interface OverviewSectionProps {
 }
 
 export function OverviewSection({ searchQuery }: OverviewSectionProps): ReactElement {
+  const { t } = useTranslation('help');
   const filteredFeatures = useMemo(() => {
     if (!searchQuery.trim()) return features;
     const query = searchQuery.toLowerCase();
@@ -39,27 +41,27 @@ export function OverviewSection({ searchQuery }: OverviewSectionProps): ReactEle
   return (
     <div className="space-y-6">
       <section>
-        <h3 className="text-sm font-semibold text-text-primary mb-2">What NIAC does</h3>
-        <p className="text-xs text-text-muted leading-relaxed">
-          NIAC (Network In A Can) simulates one or more network devices on a real host interface. It
-          answers ARP, ICMP, LLDP, CDP, SNMP, DHCP, DNS, HTTP, FTP and other protocols so a
-          discovery tool, NMS, or monitoring platform sees the simulated devices as if they were
-          physical hardware. Use it for tooling validation, training labs, and reproducer
-          environments without standing up real gear.
-        </p>
+        <h3 className="text-sm font-semibold text-text-primary mb-2">
+          {t('overview.whatNiacDoesTitle')}
+        </h3>
+        <p className="text-xs text-text-muted leading-relaxed">{t('overview.whatNiacDoesBody')}</p>
       </section>
 
       <section>
-        <h3 className="text-sm font-semibold text-text-primary mb-2">Help categories</h3>
+        <h3 className="text-sm font-semibold text-text-primary mb-2">
+          {t('overview.categoriesTitle')}
+        </h3>
         {filteredCategories.length === 0 ? (
-          <p className="text-sm text-text-muted py-2">No categories match your search.</p>
+          <p className="text-sm text-text-muted py-2">{t('overview.categoriesEmpty')}</p>
         ) : (
           <div className="space-y-2">
             {filteredCategories.map((cat) => (
               <div key={cat.id} className="bg-surface-hover rounded-lg p-3">
                 <div className={layout.flex.between}>
                   <h4 className="text-sm font-medium text-text-primary">{cat.name}</h4>
-                  <code className="text-xs text-text-muted">{cat.items.length} items</code>
+                  <code className="text-xs text-text-muted">
+                    {t('overview.categoryItems', { count: cat.items.length })}
+                  </code>
                 </div>
                 <p className="text-xs text-text-muted mt-1">{cat.summary}</p>
               </div>
@@ -69,9 +71,11 @@ export function OverviewSection({ searchQuery }: OverviewSectionProps): ReactEle
       </section>
 
       <section>
-        <h3 className="text-sm font-semibold text-text-primary mb-2">Web UI quick reference</h3>
+        <h3 className="text-sm font-semibold text-text-primary mb-2">
+          {t('overview.webUiQuickRefTitle')}
+        </h3>
         {filteredFeatures.length === 0 ? (
-          <p className="text-sm text-text-muted py-2">No features match your search.</p>
+          <p className="text-sm text-text-muted py-2">{t('overview.featuresEmpty')}</p>
         ) : (
           <div className="space-y-2">
             {filteredFeatures.map((feature) => (

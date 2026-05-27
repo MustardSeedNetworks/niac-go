@@ -1,5 +1,6 @@
 import { AlertCircle, FileCode, Search, Upload } from 'lucide-react';
 import type { FC } from 'react';
+import { useTranslation } from 'react-i18next';
 import { iconSizes } from '../../constants/sizes';
 import { Button } from '../../ui/Button';
 import { Card, CardContent } from '../../ui/Card';
@@ -10,6 +11,7 @@ interface LoadingStateProps {
 }
 
 export const TemplatesLoadingState: FC<LoadingStateProps> = ({ show }) => {
+  const { t } = useTranslation('pages');
   if (!show) {
     return null;
   }
@@ -21,7 +23,7 @@ export const TemplatesLoadingState: FC<LoadingStateProps> = ({ show }) => {
           <div
             className={`${iconSizes.lg} animate-spin rounded-full border-2 border-brand-primary border-t-transparent`}
           />
-          <span>Loading templates...</span>
+          <span>{t('templates.states.loading')}</span>
         </div>
       </CardContent>
     </Card>
@@ -34,6 +36,7 @@ interface ErrorStateProps {
 }
 
 export const TemplatesErrorState: FC<ErrorStateProps> = ({ error, onRetry }) => {
+  const { t } = useTranslation('pages');
   if (!error) {
     return null;
   }
@@ -44,10 +47,12 @@ export const TemplatesErrorState: FC<ErrorStateProps> = ({ error, onRetry }) => 
         <div className="flex items-start gap-3">
           <AlertCircle className={`mt-1 ${iconSizes.lg} text-status-error`} />
           <div>
-            <p className="font-semibold text-status-error">Failed to Load Templates</p>
+            <p className="font-semibold text-status-error">
+              {t('templates.states.loadErrorTitle')}
+            </p>
             <SmallText className="text-status-error/90">{error.message}</SmallText>
             <Button variant="outline" size="sm" className="mt-3" onClick={onRetry}>
-              Retry
+              {t('templates.states.retry')}
             </Button>
           </div>
         </div>
@@ -62,6 +67,7 @@ interface EmptyStateProps {
 }
 
 export const TemplatesEmptyState: FC<EmptyStateProps> = ({ show, onUploadClick }) => {
+  const { t } = useTranslation('pages');
   if (!show) {
     return null;
   }
@@ -70,15 +76,15 @@ export const TemplatesEmptyState: FC<EmptyStateProps> = ({ show, onUploadClick }
     <Card className="border-surface-border bg-bg-surface/70">
       <CardContent className="py-12 text-center">
         <FileCode className={`mx-auto ${iconSizes['3xl']} text-text-disabled`} />
-        <H2 className="mt-4 mb-2">No Templates Available</H2>
-        <P className="text-text-muted">Upload your first configuration template to get started.</P>
+        <H2 className="mt-4 mb-2">{t('templates.states.emptyTitle')}</H2>
+        <P className="text-text-muted">{t('templates.states.emptyDescription')}</P>
         <Button
           tone="violet"
           className="mt-4"
           leftIcon={<Upload className={iconSizes.md} />}
           onClick={onUploadClick}
         >
-          Upload Template
+          {t('templates.states.uploadTemplate')}
         </Button>
       </CardContent>
     </Card>
@@ -96,6 +102,7 @@ export const TemplatesNoResultsState: FC<NoResultsStateProps> = ({
   searchQuery,
   onClearSearch,
 }) => {
+  const { t } = useTranslation('pages');
   if (!show) {
     return null;
   }
@@ -104,12 +111,12 @@ export const TemplatesNoResultsState: FC<NoResultsStateProps> = ({
     <Card className="border-surface-border bg-bg-surface/70">
       <CardContent className="py-12 text-center">
         <Search className={`mx-auto ${iconSizes['3xl']} text-text-disabled`} />
-        <H2 className="mt-4 mb-2">No Matching Templates</H2>
+        <H2 className="mt-4 mb-2">{t('templates.states.noMatchTitle')}</H2>
         <P className="text-text-muted">
-          No templates match your search &quot;{searchQuery}&quot;. Try a different search term.
+          {t('templates.states.noMatchDescription', { query: searchQuery })}
         </P>
         <Button variant="outline" className="mt-4" onClick={onClearSearch}>
-          Clear Search
+          {t('templates.states.clearSearch')}
         </Button>
       </CardContent>
     </Card>
