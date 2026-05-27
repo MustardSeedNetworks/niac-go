@@ -496,6 +496,33 @@ jobs:
   # ===========================================================================
   # Documentation Checks
   # ===========================================================================
+  # Internationalization (i18n) Checks
+  # ===========================================================================
+  # Validates the translation locale files in internal/i18n/locales/ against
+  # the cross-repo conventions in msn-docs-internal/05-Engineering/. Uses the
+  # shared script in scripts/i18n/, byte-identical to seed and stem.
+  i18n:
+    name: i18n Validation
+    runs-on: ubuntu-latest
+    needs: changes
+    if: |
+      needs.changes.outputs.frontend == 'true'
+      || needs.changes.outputs.workflows == 'true'
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Validate i18n (parity, glossary, banned vocab, etc.)
+        # --ratchet demotes the pre-existing-debt checks (no-fallback-patterns
+        # and locked-versions) from fail to warn. Drop --ratchet once Phase 3
+        # cleanup brings both counts to zero across seed/stem/niac.
+        # See scripts/i18n/README.md and
+        # msn-docs-internal/05-Engineering/I18N_CONVENTIONS.md.
+        run: ./scripts/i18n/validate.sh --ratchet
+
+  # ===========================================================================
+  # Documentation Checks
+  # ===========================================================================
   # Markdown lint + link check. Mirrors seed's docs job (#56). Both substeps
   # are advisory (continue-on-error) — they surface issues without blocking
   # the build, matching seed's stance that doc quality is a ratcheting goal.
