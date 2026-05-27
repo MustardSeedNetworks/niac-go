@@ -1,4 +1,6 @@
+import { zodResolver } from '@hookform/resolvers/zod';
 import { type FC, useState } from 'react';
+import { type SubmitHandler, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import {
   clearAllErrors,
@@ -9,6 +11,7 @@ import {
 } from '../api/client';
 import type { ErrorType } from '../api/types';
 import { useApiResource } from '../hooks/useApiResource';
+import { type ErrorInjectionFormFields, ErrorInjectionSchema } from '../schemas/forms';
 import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
 import { ConfirmModal } from '../ui/ConfirmModal';
@@ -23,11 +26,25 @@ export const ErrorInjectionPanel: FC = () => {
     intervalMs: 5000,
   });
 
-  const [selectedDevice, setSelectedDevice] = useState('');
-  const [selectedInterface, setSelectedInterface] = useState('');
-  const [selectedErrorType, setSelectedErrorType] = useState('');
-  const [errorValue, setErrorValue] = useState(50);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const {
+    register,
+    handleSubmit,
+    watch,
+    formState: { errors, isSubmitting },
+  } = useForm<ErrorInjectionFormFields>({
+    resolver: zodResolver(ErrorInjectionSchema),
+    defaultValues: {
+      selectedDevice: '',
+      selectedInterface: '',
+      selectedErrorType: '',
+      errorValue: 50,
+    },
+    mode: 'onBlur',
+  });
+  const selectedErrorType = watch('selectedErrorType');
+  const errorValue = watch('errorValue');
+
+  const [clearingBusy, setClearingBusy] = useState(false);
   const [message, setMessage] = useState<{
     type: 'success' | 'error';
     text: string;
@@ -39,24 +56,14 @@ export const ErrorInjectionPanel: FC = () => {
     Record<string, Record<string, number>>,
   ][];
 
-  const handleInject = async () => {
-    if (!(selectedDevice && selectedInterface && selectedErrorType)) {
-      setMessage({
-        type: 'error',
-        text: t('injection.selectMissing'),
-      });
-      return;
-    }
-
-    setIsSubmitting(true);
+  const onInject: SubmitHandler<ErrorInjectionFormFields> = async (values) => {
     setMessage(null);
-
     try {
       await injectError({
-        deviceIp: selectedDevice,
-        interface: selectedInterface,
-        errorType: selectedErrorType,
-        value: errorValue,
+        deviceIp: values.selectedDevice,
+        interface: values.selectedInterface,
+        errorType: values.selectedErrorType,
+        value: values.errorValue,
       });
       setMessage({ type: 'success', text: t('injection.injectSuccess') });
       refetchErrors();
@@ -65,14 +72,12 @@ export const ErrorInjectionPanel: FC = () => {
         type: 'error',
         text: getErrorMessage(err) || t('injection.injectFailed'),
       });
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
   const handleClearAllConfirm = async () => {
     setShowClearAllConfirm(false);
-    setIsSubmitting(true);
+    setClearingBusy(true);
     try {
       await clearAllErrors();
       setMessage({ type: 'success', text: t('injection.clearAllSuccess') });
@@ -83,12 +88,12 @@ export const ErrorInjectionPanel: FC = () => {
         text: getErrorMessage(err) || t('injection.clearAllFailed'),
       });
     } finally {
-      setIsSubmitting(false);
+      setClearingBusy(false);
     }
   };
 
   const handleClearSpecific = async (deviceIp: string, iface: string) => {
-    setIsSubmitting(true);
+    setClearingBusy(true);
     try {
       await clearError(deviceIp, iface);
       setMessage({
@@ -102,123 +107,141 @@ export const ErrorInjectionPanel: FC = () => {
         text: getErrorMessage(err) || t('injection.clearSpecificFailed'),
       });
     } finally {
-      setIsSubmitting(false);
+      setClearingBusy(false);
     }
   };
+
+  const busy = isSubmitting || clearingBusy;
 
   return (
     <div className="space-y-4">
       {/* Injection Form */}
       <Card>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Device Selector */}
-            <div>
-              <label htmlFor="error-device" className="block text-sm font-medium mb-2">
-                {t('injection.deviceLabel')}
-              </label>
-              <select
-                id="error-device"
-                value={selectedDevice}
-                onChange={(e) => setSelectedDevice(e.target.value)}
-                className="w-full px-3 py-2 bg-bg-elevated border border-border-default rounded-md focus:outline-none focus:ring-2 focus:ring-status-info"
+        <CardContent>
+          <form onSubmit={handleSubmit(onInject)} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Device Selector */}
+              <div>
+                <label htmlFor="error-device" className="block text-sm font-medium mb-2">
+                  {t('injection.deviceLabel')}
+                </label>
+                <select
+                  id="error-device"
+                  {...register('selectedDevice')}
+                  className="w-full px-3 py-2 bg-bg-elevated border border-border-default rounded-md focus:outline-none focus:ring-2 focus:ring-status-info"
+                >
+                  <option value="">{t('injection.deviceSelectPlaceholder')}</option>
+                  {devices?.map((dev) => (
+                    <option key={dev.name} value={dev.ips?.[0]}>
+                      {dev.name} ({dev.ips?.[0]})
+                    </option>
+                  ))}
+                </select>
+                {errors.selectedDevice ? (
+                  <p className="text-xs text-status-error mt-1">{errors.selectedDevice.message}</p>
+                ) : null}
+              </div>
+
+              {/* Interface Input */}
+              <div>
+                <label htmlFor="error-interface" className="block text-sm font-medium mb-2">
+                  {t('injection.interfaceLabel')}
+                </label>
+                <input
+                  id="error-interface"
+                  type="text"
+                  {...register('selectedInterface')}
+                  placeholder={t('injection.interfacePlaceholder')}
+                  className="w-full px-3 py-2 bg-bg-elevated border border-border-default rounded-md focus:outline-none focus:ring-2 focus:ring-status-info"
+                />
+                {errors.selectedInterface ? (
+                  <p className="text-xs text-status-error mt-1">
+                    {errors.selectedInterface.message}
+                  </p>
+                ) : null}
+              </div>
+
+              {/* Error Type Selector */}
+              <div>
+                <label htmlFor="error-type" className="block text-sm font-medium mb-2">
+                  {t('injection.errorTypeLabel')}
+                </label>
+                <select
+                  id="error-type"
+                  {...register('selectedErrorType')}
+                  className="w-full px-3 py-2 bg-bg-elevated border border-border-default rounded-md focus:outline-none focus:ring-2 focus:ring-status-info"
+                >
+                  <option value="">{t('injection.errorTypeSelectPlaceholder')}</option>
+                  {errorInfo?.availableTypes?.map((type: ErrorType) => (
+                    <option key={type.type} value={type.type}>
+                      {type.type}
+                    </option>
+                  ))}
+                </select>
+                {selectedErrorType && errorInfo?.availableTypes && (
+                  <SmallText className="text-text-muted mt-1">
+                    {
+                      errorInfo.availableTypes.find(
+                        (et: ErrorType) => et.type === selectedErrorType,
+                      )?.description
+                    }
+                  </SmallText>
+                )}
+                {errors.selectedErrorType ? (
+                  <p className="text-xs text-status-error mt-1">
+                    {errors.selectedErrorType.message}
+                  </p>
+                ) : null}
+              </div>
+
+              {/* Value Slider */}
+              <div>
+                <label htmlFor="error-value" className="block text-sm font-medium mb-2">
+                  {t('injection.valueLabel', { value: errorValue })}
+                </label>
+                <input
+                  id="error-value"
+                  type="range"
+                  min="0"
+                  max="100"
+                  {...register('errorValue', { valueAsNumber: true })}
+                  className="w-full h-2 bg-bg-elevated rounded-lg appearance-none cursor-pointer"
+                />
+                <SmallText className="text-text-muted">{t('injection.valueHelper')}</SmallText>
+                {errors.errorValue ? (
+                  <p className="text-xs text-status-error mt-1">{errors.errorValue.message}</p>
+                ) : null}
+              </div>
+            </div>
+
+            {/* Message Display */}
+            {message && (
+              <div
+                className={`p-3 rounded ${
+                  message.type === 'success'
+                    ? 'bg-status-success/10 text-status-success border border-status-success/20'
+                    : 'bg-status-error/10 text-status-error border border-status-error/20'
+                }`}
               >
-                <option value="">{t('injection.deviceSelectPlaceholder')}</option>
-                {devices?.map((dev) => (
-                  <option key={dev.name} value={dev.ips?.[0]}>
-                    {dev.name} ({dev.ips?.[0]})
-                  </option>
-                ))}
-              </select>
-            </div>
+                {message.text}
+              </div>
+            )}
 
-            {/* Interface Input */}
-            <div>
-              <label htmlFor="error-interface" className="block text-sm font-medium mb-2">
-                {t('injection.interfaceLabel')}
-              </label>
-              <input
-                id="error-interface"
-                type="text"
-                value={selectedInterface}
-                onChange={(e) => setSelectedInterface(e.target.value)}
-                placeholder={t('injection.interfacePlaceholder')}
-                className="w-full px-3 py-2 bg-bg-elevated border border-border-default rounded-md focus:outline-none focus:ring-2 focus:ring-status-info"
-              />
-            </div>
-
-            {/* Error Type Selector */}
-            <div>
-              <label htmlFor="error-type" className="block text-sm font-medium mb-2">
-                {t('injection.errorTypeLabel')}
-              </label>
-              <select
-                id="error-type"
-                value={selectedErrorType}
-                onChange={(e) => setSelectedErrorType(e.target.value)}
-                className="w-full px-3 py-2 bg-bg-elevated border border-border-default rounded-md focus:outline-none focus:ring-2 focus:ring-status-info"
+            {/* Action Buttons */}
+            <div className="flex gap-3">
+              <Button type="submit" disabled={busy}>
+                {isSubmitting ? t('injection.injectingButton') : t('injection.injectButton')}
+              </Button>
+              <Button
+                type="button"
+                onClick={() => setShowClearAllConfirm(true)}
+                disabled={busy}
+                variant="secondary"
               >
-                <option value="">{t('injection.errorTypeSelectPlaceholder')}</option>
-                {errorInfo?.availableTypes?.map((type: ErrorType) => (
-                  <option key={type.type} value={type.type}>
-                    {type.type}
-                  </option>
-                ))}
-              </select>
-              {selectedErrorType && errorInfo?.availableTypes && (
-                <SmallText className="text-text-muted mt-1">
-                  {
-                    errorInfo.availableTypes.find((et: ErrorType) => et.type === selectedErrorType)
-                      ?.description
-                  }
-                </SmallText>
-              )}
+                {t('injection.clearAllButton')}
+              </Button>
             </div>
-
-            {/* Value Slider */}
-            <div>
-              <label htmlFor="error-value" className="block text-sm font-medium mb-2">
-                {t('injection.valueLabel', { value: errorValue })}
-              </label>
-              <input
-                id="error-value"
-                type="range"
-                min="0"
-                max="100"
-                value={errorValue}
-                onChange={(e) => setErrorValue(Number.parseInt(e.target.value, 10))}
-                className="w-full h-2 bg-bg-elevated rounded-lg appearance-none cursor-pointer"
-              />
-              <SmallText className="text-text-muted">{t('injection.valueHelper')}</SmallText>
-            </div>
-          </div>
-
-          {/* Message Display */}
-          {message && (
-            <div
-              className={`p-3 rounded ${
-                message.type === 'success'
-                  ? 'bg-status-success/10 text-status-success border border-status-success/20'
-                  : 'bg-status-error/10 text-status-error border border-status-error/20'
-              }`}
-            >
-              {message.text}
-            </div>
-          )}
-
-          {/* Action Buttons */}
-          <div className="flex gap-3">
-            <Button onClick={handleInject} disabled={isSubmitting}>
-              {isSubmitting ? t('injection.injectingButton') : t('injection.injectButton')}
-            </Button>
-            <Button
-              onClick={() => setShowClearAllConfirm(true)}
-              disabled={isSubmitting}
-              variant="secondary"
-            >
-              {t('injection.clearAllButton')}
-            </Button>
-          </div>
+          </form>
         </CardContent>
       </Card>
 
@@ -256,7 +279,7 @@ export const ErrorInjectionPanel: FC = () => {
                             <button
                               type="button"
                               onClick={() => handleClearSpecific(deviceIp, iface)}
-                              disabled={isSubmitting}
+                              disabled={busy}
                               className="text-status-info hover:text-status-info text-sm"
                               aria-label={t('injection.clearOneAriaLabel', { deviceIp, iface })}
                             >
