@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import type { ReactElement, ReactNode } from 'react';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { fetchInterfaces } from '../api/client';
 import type { NetworkInterface } from '../api/types';
 import { iconSizes } from '../constants/sizes';
@@ -47,16 +48,18 @@ type SettingsTab = 'simulation' | 'appearance' | 'network' | 'debug' | 'about';
 
 interface TabConfig {
   id: SettingsTab;
-  label: string;
   icon: ReactNode;
 }
 
+// Tab labels resolved per-render via the t() function below; declaring
+// the static config without `label` keeps the array immutable and lets
+// the i18n hook supply the locale-aware label.
 const TABS: TabConfig[] = [
-  { id: 'simulation', label: 'Simulation', icon: <PlugZap className="w-4 h-4" /> },
-  { id: 'appearance', label: 'Appearance', icon: <Palette className="w-4 h-4" /> },
-  { id: 'network', label: 'Network', icon: <Network className="w-4 h-4" /> },
-  { id: 'debug', label: 'Debug', icon: <Bug className="w-4 h-4" /> },
-  { id: 'about', label: 'About', icon: <Info className="w-4 h-4" /> },
+  { id: 'simulation', icon: <PlugZap className="w-4 h-4" /> },
+  { id: 'appearance', icon: <Palette className="w-4 h-4" /> },
+  { id: 'network', icon: <Network className="w-4 h-4" /> },
+  { id: 'debug', icon: <Bug className="w-4 h-4" /> },
+  { id: 'about', icon: <Info className="w-4 h-4" /> },
 ];
 
 export function SettingsDrawer({
@@ -64,6 +67,7 @@ export function SettingsDrawer({
   onClose,
   version = '0.0.0',
 }: SettingsDrawerProps): ReactElement | null {
+  const { t } = useTranslation('settings');
   const [activeTab, setActiveTab] = useState<SettingsTab>('simulation');
 
   const drawerRef = useFocusTrap<HTMLDivElement>({
@@ -83,7 +87,7 @@ export function SettingsDrawer({
           type="button"
           className={cn(drawer.backdrop, 'cursor-default')}
           onClick={onClose}
-          aria-label="Close settings drawer"
+          aria-label={t('drawer.backdropAriaLabel')}
         />
 
         {/* Drawer */}
@@ -91,14 +95,14 @@ export function SettingsDrawer({
           ref={drawerRef}
           role="dialog"
           aria-modal="true"
-          aria-label="Settings"
+          aria-label={t('drawer.drawerAriaLabel')}
           className={cn(drawer.content, drawer.size.lg, 'animate-slide-in-right')}
         >
           {/* Header */}
           <div className="sticky top-0 bg-bg-surface border-b border-surface-border px-4 py-3 flex items-center justify-between z-10">
             <div className={layout.inline.default}>
               <Settings className="w-5 h-5 text-brand-accent" aria-hidden="true" />
-              <h2 className="text-lg font-semibold text-text-primary">Settings</h2>
+              <h2 className="text-lg font-semibold text-text-primary">{t('drawer.title')}</h2>
             </div>
             <button
               type="button"
@@ -107,7 +111,7 @@ export function SettingsDrawer({
                 'p-2 hover:bg-surface-hover rounded-lg transition-colors',
                 'text-text-muted hover:text-text-primary',
               )}
-              aria-label="Close settings"
+              aria-label={t('drawer.closeAriaLabel')}
             >
               <X className="w-5 h-5" aria-hidden="true" />
             </button>
@@ -132,7 +136,7 @@ export function SettingsDrawer({
                   )}
                 >
                   {tab.icon}
-                  <span>{tab.label}</span>
+                  <span>{t(`tabs.${tab.id}`)}</span>
                 </button>
               ))}
             </nav>
@@ -193,20 +197,19 @@ const SettingRow = ({ label, description, children }: SettingRowProps): ReactEle
 // =============================================================================
 
 function AppearanceSection(): ReactElement {
+  const { t } = useTranslation('settings');
   const { theme, setTheme, isDark, toggleTheme } = useTheme();
 
-  const options: Array<{ id: Theme; label: string; icon: ReactNode }> = [
-    { id: 'dark', label: 'Dark', icon: <Moon className="w-4 h-4" aria-hidden="true" /> },
-    { id: 'light', label: 'Light', icon: <Sun className="w-4 h-4" aria-hidden="true" /> },
-    {
-      id: 'system',
-      label: 'System',
-      icon: <Monitor className="w-4 h-4" aria-hidden="true" />,
-    },
+  // The theme options' ids match the i18n keys under settings.appearance.*
+  // so the label is resolved per-render via t(`appearance.${id}`).
+  const options: Array<{ id: Theme; icon: ReactNode }> = [
+    { id: 'dark', icon: <Moon className="w-4 h-4" aria-hidden="true" /> },
+    { id: 'light', icon: <Sun className="w-4 h-4" aria-hidden="true" /> },
+    { id: 'system', icon: <Monitor className="w-4 h-4" aria-hidden="true" /> },
   ];
 
   return (
-    <Section title="Theme" description="Customize the appearance of NIAC">
+    <Section title={t('appearance.sectionTitle')} description={t('appearance.sectionDescription')}>
       <div className="grid grid-cols-3 gap-2">
         {options.map((option) => {
           const selected = theme === option.id;
@@ -239,7 +242,7 @@ function AppearanceSection(): ReactElement {
                   selected ? 'text-text-primary' : 'text-text-muted',
                 )}
               >
-                {option.label}
+                {t(`appearance.${option.id}`)}
               </span>
             </button>
           );
@@ -248,30 +251,28 @@ function AppearanceSection(): ReactElement {
       <button
         type="button"
         onClick={toggleTheme}
-        title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+        title={isDark ? t('appearance.switchToLight') : t('appearance.switchToDark')}
         className={cn(
           'mt-3 w-full flex items-center justify-between gap-2 p-2.5 rounded-lg border transition-colors',
           'border-surface-border bg-surface-hover hover:bg-surface-base text-text-primary',
         )}
       >
-        <span className="text-sm">Quick toggle</span>
+        <span className="text-sm">{t('appearance.quickToggle')}</span>
         <span className="flex items-center gap-1.5 text-xs text-text-muted">
           {isDark ? (
             <>
               <Sun className="w-4 h-4" aria-hidden="true" />
-              Light
+              {t('appearance.light')}
             </>
           ) : (
             <>
               <Moon className="w-4 h-4" aria-hidden="true" />
-              Dark
+              {t('appearance.dark')}
             </>
           )}
         </span>
       </button>
-      <p className="text-xs text-text-muted mt-2">
-        Dark mode is the default. Your preference is saved across sessions.
-      </p>
+      <p className="text-xs text-text-muted mt-2">{t('appearance.persistenceNote')}</p>
     </Section>
   );
 }
@@ -293,6 +294,7 @@ function deriveInterfaceType(name: string): string {
 }
 
 function NetworkSection(): ReactElement {
+  const { t } = useTranslation('settings');
   const [interfaces, setInterfaces] = useState<NetworkInterface[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -311,13 +313,13 @@ function NetworkSection(): ReactElement {
   return (
     <>
       <Section
-        title="Network Interfaces"
-        description="Available network interfaces for traffic injection"
+        title={t('network.interfacesTitle')}
+        description={t('network.interfacesDescription')}
       >
         <div className="space-y-2">
-          {loading && <p className="text-xs text-text-muted">Loading interfaces...</p>}
+          {loading && <p className="text-xs text-text-muted">{t('network.loadingInterfaces')}</p>}
           {!loading && interfaces.length === 0 && (
-            <p className="text-xs text-text-muted">No interfaces found</p>
+            <p className="text-xs text-text-muted">{t('network.noInterfacesFound')}</p>
           )}
           {interfaces.map((iface) => (
             <InterfaceItem
@@ -329,19 +331,25 @@ function NetworkSection(): ReactElement {
             />
           ))}
         </div>
-        <p className="text-xs text-text-muted mt-2">
-          Interface selection is managed from the Runtime Control page.
-        </p>
+        <p className="text-xs text-text-muted mt-2">{t('network.interfaceManagedFrom')}</p>
       </Section>
 
-      <Section title="Connection Settings" description="Configure backend connection">
-        <SettingRow label="Backend URL" description="NIAC backend server address">
+      <Section
+        title={t('network.connectionTitle')}
+        description={t('network.connectionDescription')}
+      >
+        <SettingRow
+          label={t('network.backendUrl')}
+          description={t('network.backendUrlDescription')}
+        >
           <code className="text-xs text-brand-accent bg-brand-primary/10 px-2 py-1 rounded">
             localhost:8080
           </code>
         </SettingRow>
-        <SettingRow label="WebSocket" description="Real-time event streaming">
-          <span className={cn(badge.base, badge.variant.success, badge.size.sm)}>Connected</span>
+        <SettingRow label={t('network.websocket')} description={t('network.websocketDescription')}>
+          <span className={cn(badge.base, badge.variant.success, badge.size.sm)}>
+            {t('network.connected')}
+          </span>
         </SettingRow>
       </Section>
     </>
@@ -384,12 +392,13 @@ function InterfaceItem({ name, type, status, ip }: InterfaceItemProps): ReactEle
 // =============================================================================
 
 function DebugSection(): ReactElement {
+  const { t } = useTranslation('settings');
   const [logLevel, setLogLevel] = useState<'error' | 'warn' | 'info' | 'debug'>('info');
 
   return (
     <>
-      <Section title="Logging" description="Configure debug output verbosity">
-        <SettingRow label="Log Level" description="Console output verbosity">
+      <Section title={t('debug.loggingTitle')} description={t('debug.loggingDescription')}>
+        <SettingRow label={t('debug.logLevel')} description={t('debug.logLevelDescription')}>
           <select
             value={logLevel}
             onChange={(e) => setLogLevel(e.target.value as typeof logLevel)}
@@ -398,15 +407,15 @@ function DebugSection(): ReactElement {
               'focus:outline-none focus:ring-2 focus:ring-brand-primary/50',
             )}
           >
-            <option value="error">Error</option>
-            <option value="warn">Warning</option>
-            <option value="info">Info</option>
-            <option value="debug">Debug</option>
+            <option value="error">{t('debug.levels.error')}</option>
+            <option value="warn">{t('debug.levels.warn')}</option>
+            <option value="info">{t('debug.levels.info')}</option>
+            <option value="debug">{t('debug.levels.debug')}</option>
           </select>
         </SettingRow>
       </Section>
 
-      <Section title="Developer Tools" description="Advanced debugging features">
+      <Section title={t('debug.devToolsTitle')} description={t('debug.devToolsDescription')}>
         <button
           type="button"
           className={cn(
@@ -416,8 +425,10 @@ function DebugSection(): ReactElement {
           )}
         >
           <div>
-            <div className="text-sm text-text-primary">Protocol Debug Levels</div>
-            <div className="text-xs text-text-muted">Configure per-protocol logging</div>
+            <div className="text-sm text-text-primary">{t('debug.protocolDebugLevels')}</div>
+            <div className="text-xs text-text-muted">
+              {t('debug.protocolDebugLevelsDescription')}
+            </div>
           </div>
           <ChevronRight className="w-4 h-4 text-text-muted" />
         </button>
@@ -431,8 +442,8 @@ function DebugSection(): ReactElement {
           )}
         >
           <div>
-            <div className="text-sm text-text-primary">Export Diagnostics</div>
-            <div className="text-xs text-text-muted">Download debug information</div>
+            <div className="text-sm text-text-primary">{t('debug.exportDiagnostics')}</div>
+            <div className="text-xs text-text-muted">{t('debug.exportDiagnosticsDescription')}</div>
           </div>
           <ChevronRight className="w-4 h-4 text-text-muted" />
         </button>
@@ -450,9 +461,10 @@ interface AboutSectionProps {
 }
 
 function AboutSection({ version }: AboutSectionProps): ReactElement {
+  const { t } = useTranslation('settings');
   return (
     <>
-      <Section title="Application">
+      <Section title={t('about.applicationTitle')}>
         <div className="bg-surface-hover rounded-lg p-4 space-y-3">
           <div className="flex items-center gap-3">
             <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-brand-primary to-brand-primary flex items-center justify-center shadow-lg shadow-brand-primary/30">
@@ -460,29 +472,26 @@ function AboutSection({ version }: AboutSectionProps): ReactElement {
             </div>
             <div>
               <h4 className="text-lg font-bold text-text-primary">NIAC</h4>
-              <p className="text-sm text-text-muted">Network Injection & Analysis Console</p>
+              <p className="text-sm text-text-muted">{t('about.subtitle')}</p>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2 pt-2 border-t border-surface-border">
-            <InfoItem label="Version" value={version} />
-            <InfoItem label="Build" value="Production" />
+            <InfoItem label={t('about.version')} value={version} />
+            <InfoItem label={t('about.build')} value="Production" />
             <InfoItem label="React" value="19.2" />
             <InfoItem label="TypeScript" value="5.9" />
           </div>
         </div>
       </Section>
 
-      <Section title="Legal">
+      <Section title={t('about.legalTitle')}>
         <div className="space-y-2 text-xs text-text-muted">
-          <p>Copyright (c) 2025 Mustard Seed Networks. All rights reserved.</p>
-          <p>
-            NIAC is proprietary software. Unauthorized copying, modification, or distribution is
-            prohibited.
-          </p>
+          <p>{t('about.copyright', { year: new Date().getFullYear() })}</p>
+          <p>{t('about.proprietaryNotice')}</p>
         </div>
       </Section>
 
-      <Section title="Links">
+      <Section title={t('about.linksTitle')}>
         <div className="space-y-2">
           <a
             href="https://github.com/mustardseednetworks"
@@ -494,7 +503,7 @@ function AboutSection({ version }: AboutSectionProps): ReactElement {
               'hover:bg-surface-hover transition-colors',
             )}
           >
-            <span className="text-sm text-text-primary">GitHub</span>
+            <span className="text-sm text-text-primary">{t('about.github')}</span>
             <ChevronRight className="w-4 h-4 text-text-muted" />
           </a>
           <a
@@ -507,7 +516,7 @@ function AboutSection({ version }: AboutSectionProps): ReactElement {
               'hover:bg-surface-hover transition-colors',
             )}
           >
-            <span className="text-sm text-text-primary">Website</span>
+            <span className="text-sm text-text-primary">{t('about.website')}</span>
             <ChevronRight className="w-4 h-4 text-text-muted" />
           </a>
         </div>

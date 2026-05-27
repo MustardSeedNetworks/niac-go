@@ -157,8 +157,10 @@ check_no_fallback_patterns() {
   # Match t('key', '...something...') with single OR double quotes for both
   # arguments. Ignore: t(key) [single arg], t('key', { interpolation }) [object].
   # The interpolation form starts with { not a quote.
+  # Word-boundary `\bt\(` so identifiers ending in `t` (e.g.
+  # headers.set('Accept', 'application/json')) don't false-match.
   local hits
-  hits=$(grep -rnE "t\(\s*['\"][^'\"]+['\"]\s*,\s*['\"]" "$UI_SRC_DIR" \
+  hits=$(grep -rnE "\\bt\\(\\s*['\"][^'\"]+['\"]\\s*,\\s*['\"]" "$UI_SRC_DIR" \
     --include='*.ts' --include='*.tsx' 2>/dev/null \
     | grep -v "// allow-fallback") || true
 

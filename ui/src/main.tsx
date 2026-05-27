@@ -6,6 +6,8 @@ import { BrowserRouter } from 'react-router-dom';
 import App from './App.tsx';
 import { LicenseProvider } from './contexts/LicenseContext';
 import { initThemeFromStorage } from './hooks/useTheme';
+import './i18n';
+import './i18n/types';
 import './index.css';
 
 // Apply persisted/default theme before first paint to avoid a flash of

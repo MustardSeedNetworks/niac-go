@@ -19,6 +19,8 @@
     "light": "Claro",
     "system": "Sistema",
     "quickToggle": "Cambio rápido",
+    "switchToLight": "Cambiar al modo claro",
+    "switchToDark": "Cambiar al modo oscuro",
     "persistenceNote": "El modo oscuro es el predeterminado. Su preferencia se guarda entre sesiones."
   },
   "network": {
@@ -33,6 +35,8 @@
     "backendUrlDescription": "Dirección del servidor backend de NIAC",
     "websocket": "WebSocket",
     "websocketDescription": "Transmisión de eventos en tiempo real",
+    "connected": "Conectado",
+    "disconnected": "Desconectado",
     "interfaceTypes": {
       "ethernet": "Ethernet",
       "wifi": "WiFi",
@@ -69,6 +73,8 @@
     "proprietaryNotice": "NIAC es software propietario. Se prohíbe la copia, modificación o distribución no autorizadas.",
     "linksTitle": "Enlaces",
     "github": "GitHub",
-    "website": "Sitio web"
+    "website": "Sitio web",
+    "version": "Versión",
+    "build": "Compilación"
   }
 }
