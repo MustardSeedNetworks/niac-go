@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"net/http"
 )
 
@@ -56,13 +55,8 @@ func (s *Server) handleCaptureFilterSet(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	r.Body = http.MaxBytesReader(w, r.Body, MaxRequestBodySize)
-
 	var req CaptureFilterRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, r, http.StatusBadRequest, "invalid_request",
-			"Failed to parse request body", nil)
-
+	if !decodeJSONStrict(w, r, &req, MaxRequestBodySize) {
 		return
 	}
 

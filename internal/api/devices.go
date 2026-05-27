@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -111,11 +110,8 @@ func (s *Server) handleDeviceGet(w http.ResponseWriter, r *http.Request, hostnam
 
 // handleDeviceCreate creates a new device.
 func (s *Server) handleDeviceCreate(w http.ResponseWriter, r *http.Request) {
-	r.Body = http.MaxBytesReader(w, r.Body, MaxRequestBodySize)
-
 	var req DeviceCreateRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, r, http.StatusBadRequest, "invalid_request", "Failed to parse request", nil)
+	if !decodeJSONStrict(w, r, &req, MaxRequestBodySize) {
 		return
 	}
 
@@ -145,11 +141,8 @@ func (s *Server) handleDeviceCreate(w http.ResponseWriter, r *http.Request) {
 // validateDeviceCreatePreconditions checks config and device limits.
 
 func (s *Server) handleDeviceUpdate(w http.ResponseWriter, r *http.Request, hostname string) {
-	r.Body = http.MaxBytesReader(w, r.Body, MaxRequestBodySize)
-
 	var req DeviceUpdateRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, r, http.StatusBadRequest, "invalid_request", "Failed to parse request", nil)
+	if !decodeJSONStrict(w, r, &req, MaxRequestBodySize) {
 		return
 	}
 
@@ -264,13 +257,8 @@ func (s *Server) handleDeviceDelete(w http.ResponseWriter, r *http.Request, host
 
 // handleDeviceClone clones an existing device.
 func (s *Server) handleDeviceClone(w http.ResponseWriter, r *http.Request, hostname string) {
-	r.Body = http.MaxBytesReader(w, r.Body, MaxRequestBodySize)
-
 	var req DeviceCloneRequest
-	err := json.NewDecoder(r.Body).Decode(&req)
-	if err != nil {
-		writeError(w, r, http.StatusBadRequest, "invalid_request", "Failed to parse request", nil)
-
+	if !decodeJSONStrict(w, r, &req, MaxRequestBodySize) {
 		return
 	}
 
@@ -333,8 +321,7 @@ func (s *Server) handleDeviceClone(w http.ResponseWriter, r *http.Request, hostn
 	newCfg := *deepCopyConfig(cfg)
 	newCfg.Devices = append(newCfg.Devices, *clonedDevice)
 
-	err = s.saveConfig(&newCfg)
-	if err != nil {
+	if err := s.saveConfig(&newCfg); err != nil {
 		writeError(w, r, http.StatusInternalServerError, "save_failed", "Failed to save configuration", nil)
 
 		return

@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 )
@@ -71,12 +70,8 @@ func (s *Server) handleStandaloneCapture(w http.ResponseWriter, r *http.Request)
 }
 
 func (s *Server) handleStandaloneCaptureStart(w http.ResponseWriter, r *http.Request) {
-	r.Body = http.MaxBytesReader(w, r.Body, MaxRequestBodySize)
-
 	var req CaptureRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, r, http.StatusBadRequest, "invalid_request",
-			"Failed to parse capture request body", nil)
+	if !decodeJSONStrict(w, r, &req, MaxRequestBodySize) {
 		return
 	}
 

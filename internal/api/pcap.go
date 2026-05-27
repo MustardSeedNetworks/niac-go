@@ -4,7 +4,6 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"io/fs"
 	"net/http"
@@ -264,14 +263,7 @@ func (c *pcapCache) EntryCount() int {
 // Returns the raw PCAP bytes, the parsed request, and true on success.
 func decodePcapUpload(w http.ResponseWriter, r *http.Request) ([]byte, PcapUploadRequest, bool) {
 	var req PcapUploadRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		if err.Error() == ErrMsgRequestBodyTooLarge {
-			writeError(w, r, http.StatusRequestEntityTooLarge, "request_too_large",
-				"PCAP file too large (max 100MB)", nil)
-			return nil, req, false
-		}
-		writeError(w, r, http.StatusBadRequest, "invalid_request",
-			"Invalid JSON request body", nil)
+	if !decodeJSONStrict(w, r, &req, MaxPCAPUploadSize) {
 		return nil, req, false
 	}
 
@@ -318,9 +310,6 @@ func (s *Server) handlePcapUpload(w http.ResponseWriter, r *http.Request) {
 			"Only POST method is allowed", nil)
 		return
 	}
-
-	// Limit request size
-	r.Body = http.MaxBytesReader(w, r.Body, MaxPCAPUploadSize)
 
 	pcapData, req, ok := decodePcapUpload(w, r)
 	if !ok {
