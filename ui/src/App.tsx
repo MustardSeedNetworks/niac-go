@@ -1,12 +1,13 @@
 import { Moon, Sun, Wrench } from 'lucide-react';
 import { memo, type ReactElement, type ReactNode, Suspense } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { ErrorBoundary, PageErrorBoundary } from './components/ErrorBoundary';
 import { AppProvider, useAppState } from './contexts/AppContext';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useTheme } from './hooks/useTheme';
-import { navGroups } from './navGroups';
-import { DeviceEditorPageRef, type PageConfig, pages } from './pageRegistry';
+import { useNavGroups } from './navGroups';
+import { DeviceEditorPageRef, type PageConfig, usePages } from './pageRegistry';
 import { Breadcrumbs } from './ui/Breadcrumbs';
 import { ConnectionStatus } from './ui/ConnectionStatus';
 import { PageHeader } from './ui/Layout';
@@ -41,7 +42,11 @@ export default function App() {
  * navigation has consistent affordances.
  */
 function TopBar(): ReactElement {
+  const { t } = useTranslation('common');
   const { isDark, toggleTheme } = useTheme();
+  const themeToggleLabel = isDark
+    ? t('accessibility.switchToLightMode')
+    : t('accessibility.switchToDarkMode');
   return (
     <>
       {/* Left side reserved for future breadcrumbs / page-level chrome. */}
@@ -52,8 +57,8 @@ function TopBar(): ReactElement {
           type="button"
           onClick={toggleTheme}
           className="p-2 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-hover"
-          title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-          aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+          title={themeToggleLabel}
+          aria-label={themeToggleLabel}
         >
           {isDark ? (
             <Sun className="h-5 w-5" aria-hidden="true" />
@@ -67,7 +72,10 @@ function TopBar(): ReactElement {
 }
 
 function AppShell() {
+  const { t } = useTranslation('pages');
   const { data: version } = useAppState('version');
+  const navGroups = useNavGroups();
+  const pages = usePages();
 
   useKeyboardShortcuts();
 
@@ -96,9 +104,9 @@ function AppShell() {
               <PageWithErrorBoundary
                 page={{
                   path: '/device-config/new',
-                  label: 'New Device',
-                  title: 'New Device',
-                  description: 'Create a new network device configuration.',
+                  label: t('deviceEditor.newLabel'),
+                  title: t('deviceEditor.newTitle'),
+                  description: t('deviceEditor.newDescription'),
                   icon: Wrench,
                   component: DeviceEditorPageRef,
                 }}
@@ -113,9 +121,9 @@ function AppShell() {
               <PageWithErrorBoundary
                 page={{
                   path: '/device-config/:hostname',
-                  label: 'Edit Device',
-                  title: 'Edit Device',
-                  description: 'Edit device configuration settings.',
+                  label: t('deviceEditor.editLabel'),
+                  title: t('deviceEditor.editTitle'),
+                  description: t('deviceEditor.editDescription'),
                   icon: Wrench,
                   component: DeviceEditorPageRef,
                 }}

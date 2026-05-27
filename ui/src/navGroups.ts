@@ -12,15 +12,13 @@ import {
   Wrench,
   Zap,
 } from 'lucide-react';
+import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { SidebarNavGroup } from './ui/Sidebar';
 
 /**
- * navGroups drives the left sidebar — the grouped list of routes the
- * user can click to. The labels here are what appear in the sidebar;
- * the page titles / descriptions live in pageRegistry alongside the
- * route handlers themselves. Keep the two in rough sync but they're
- * deliberately not the same source: sidebar wants short, page header
- * wants verbose.
+ * useNavGroups returns the left sidebar's grouped route list, with
+ * group labels and item labels resolved from the active locale.
  *
  * Groups are ordered to follow the natural session flow:
  *
@@ -29,42 +27,60 @@ import type { SidebarNavGroup } from './ui/Sidebar';
  *   3. Live View  — look at the currently running sim.
  *   4. Inspect    — debug logs, packets, walk files.
  *   5. Alerts     — notify me when things break.
+ *
+ * Sidebar labels are deliberately shorter than the corresponding page
+ * header titles in pageRegistry; both source from the same pages.*
+ * namespace so translators only see one canonical label per route.
  */
-export const navGroups: SidebarNavGroup[] = [
-  {
-    label: 'Overview',
-    items: [
-      { path: '/', label: 'Dashboard', icon: Activity },
-      { path: '/runtime', label: 'Simulation', icon: PlugZap },
+export function useNavGroups(): SidebarNavGroup[] {
+  const { t } = useTranslation('pages');
+  return useMemo(
+    () => [
+      {
+        label: t('groups.overview'),
+        items: [
+          { path: '/', label: t('dashboard.label'), icon: Activity },
+          { path: '/runtime', label: t('runtime.label'), icon: PlugZap },
+        ],
+      },
+      {
+        label: t('groups.library'),
+        items: [
+          { path: '/device-config', label: t('deviceLibrary.label'), icon: Wrench },
+          { path: '/library/walks', label: t('libraryWalks.label'), icon: Database },
+          {
+            path: '/library/pcaps',
+            label: t('libraryPcaps.label', { format: 'PCAP' }),
+            icon: FileBox,
+          },
+          { path: '/config-diff', label: t('configDiff.label'), icon: GitCompare },
+        ],
+      },
+      {
+        label: t('groups.liveView'),
+        items: [
+          { path: '/devices', label: t('devices.label'), icon: Server },
+          { path: '/topology', label: t('topology.label'), icon: Network },
+          { path: '/traffic', label: t('traffic.label'), icon: Zap },
+        ],
+      },
+      {
+        label: t('groups.inspect'),
+        items: [
+          { path: '/debug', label: t('debug.label'), icon: Terminal },
+          { path: '/packets', label: t('packets.label'), icon: FileBox },
+          {
+            path: '/walk-validator',
+            label: t('walkValidator.label', { protocol: 'SNMP' }),
+            icon: ShieldCheck,
+          },
+        ],
+      },
+      {
+        label: t('groups.alerts'),
+        items: [{ path: '/automation', label: t('automation.label'), icon: Workflow }],
+      },
     ],
-  },
-  {
-    label: 'Library',
-    items: [
-      { path: '/device-config', label: 'Devices', icon: Wrench },
-      { path: '/library/walks', label: 'Walks', icon: Database },
-      { path: '/library/pcaps', label: 'PCAPs', icon: FileBox },
-      { path: '/config-diff', label: 'Compare & Merge', icon: GitCompare },
-    ],
-  },
-  {
-    label: 'Live View',
-    items: [
-      { path: '/devices', label: 'Running Devices', icon: Server },
-      { path: '/topology', label: 'Topology', icon: Network },
-      { path: '/traffic', label: 'Traffic', icon: Zap },
-    ],
-  },
-  {
-    label: 'Inspect',
-    items: [
-      { path: '/debug', label: 'Logs', icon: Terminal },
-      { path: '/packets', label: 'Packets', icon: FileBox },
-      { path: '/walk-validator', label: 'SNMP Walks', icon: ShieldCheck },
-    ],
-  },
-  {
-    label: 'Alerts',
-    items: [{ path: '/automation', label: 'Alerts', icon: Workflow }],
-  },
-];
+    [t],
+  );
+}
