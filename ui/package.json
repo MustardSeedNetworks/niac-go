@@ -21,6 +21,8 @@
     "test:coverage": "vitest run --coverage --reporter=verbose",
     "test:e2e": "playwright test --reporter=list",
     "test:e2e:fullstack": "playwright test --config=playwright.fullstack.config.ts --reporter=list",
+    "i18n:extract": "i18next-parser --config i18next-parser.config.js",
+    "i18n:check": "i18next-parser --config i18next-parser.config.js --fail-on-warnings --fail-on-update",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build"
   },
@@ -72,6 +74,7 @@
     "@vitejs/plugin-react": "6.0.2",
     "@vitest/coverage-v8": "4.1.7",
     "babel-plugin-react-compiler": "1.0.0",
+    "i18next-parser": "9.4.0",
     "jsdom": "27.4.0",
     "playwright": "1.60.0",
     "postcss": "8.5.15",
