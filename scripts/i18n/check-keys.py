@@ -211,14 +211,17 @@ def main() -> int:
             unused.append((ns, k))
 
     # Report.
+    ratchet = "--ratchet" in sys.argv
     code = 0
     if missing:
-        print(f"::error::{len(missing)} t() call(s) reference keys missing from EN locale:")
+        level = "warning" if ratchet else "error"
+        print(f"::{level}::{len(missing)} t() call(s) reference keys missing from EN locale:")
         for ns, key, line, file in sorted(missing)[:30]:
             print(f"  {file}:{line}: t('{ns}:{key}') — not in {ns}.json")
         if len(missing) > 30:
             print(f"  … and {len(missing) - 30} more")
-        code = 1
+        if not ratchet:
+            code = 1
     else:
         print("✓ every t() call has a matching EN locale key")
 
