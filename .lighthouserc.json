@@ -4,9 +4,9 @@
       "url": ["https://localhost:8445/"],
       "numberOfRuns": 3,
       "settings": {
-        "preset": "desktop"
-      },
-      "chromeFlags": "--ignore-certificate-errors --no-sandbox"
+        "preset": "desktop",
+        "chromeFlags": "--ignore-certificate-errors --allow-insecure-localhost --no-sandbox"
+      }
     },
     "assert": {
       "preset": "lighthouse:recommended",
