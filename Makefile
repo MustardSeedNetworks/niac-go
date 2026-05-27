@@ -381,3 +381,12 @@ release-check: verify ## Full release validation (verify + install script check)
 	fi
 	@echo ""
 	@echo "Release checks complete. Ready for 'git tag $(VERSION) && git push --tags'"
+
+.PHONY: sync-shell verify-shell
+## sync-shell: Pull canonical UI shell files from stem (../stem). Run this in a dev branch.
+sync-shell:
+	./scripts/sync-shell.sh
+
+## verify-shell: Check that synced shell files match the lockfile. Run by CI.
+verify-shell:
+	./scripts/sync-shell.sh --verify
