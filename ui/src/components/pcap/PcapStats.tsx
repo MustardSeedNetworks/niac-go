@@ -1,5 +1,6 @@
 import { ArrowRightLeft, BarChart3, Clock, FileText, Network, Server } from 'lucide-react';
 import { type FC, memo } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { PcapStats as PcapStatsType } from '../../api/types';
 import { iconSizes } from '../../constants/sizes';
 import { Card, CardContent } from '../../ui/Card';
@@ -68,13 +69,14 @@ const ProtocolBreakdown: FC<{
   protocols: Record<string, number>;
   total: number;
 }> = memo(({ protocols, total }) => {
+  const { t } = useTranslation('pages');
   // Sort protocols by count (descending)
   const sortedProtocols = Object.entries(protocols)
     .sort(([, a], [, b]) => b - a)
     .slice(0, 10);
 
   if (sortedProtocols.length === 0) {
-    return <SmallText className="text-text-muted">No protocol data available</SmallText>;
+    return <SmallText className="text-text-muted">{t('packets.stats.noProtocolData')}</SmallText>;
   }
 
   return (
@@ -115,6 +117,7 @@ const TopEndpoints: FC<{
   sources: Array<{ ip: string; count: number }>;
   destinations: Array<{ ip: string; count: number }>;
 }> = memo(({ sources, destinations }) => {
+  const { t } = useTranslation('pages');
   return (
     <div className="grid gap-4 md:grid-cols-2">
       {/* Top Sources */}
@@ -122,11 +125,11 @@ const TopEndpoints: FC<{
         <div className="flex items-center gap-2 mb-3">
           <Server className={`${iconSizes.md} text-status-info`} />
           <SmallText className="text-text-muted uppercase tracking-wide font-semibold">
-            Top Sources
+            {t('packets.stats.topSources')}
           </SmallText>
         </div>
         {sources.length === 0 ? (
-          <SmallText className="text-text-muted">No source data</SmallText>
+          <SmallText className="text-text-muted">{t('packets.stats.noSourceData')}</SmallText>
         ) : (
           <div className="space-y-1">
             {sources.slice(0, 5).map((item) => (
@@ -149,11 +152,11 @@ const TopEndpoints: FC<{
         <div className="flex items-center gap-2 mb-3">
           <Network className={`${iconSizes.md} text-status-success`} />
           <SmallText className="text-text-muted uppercase tracking-wide font-semibold">
-            Top Destinations
+            {t('packets.stats.topDestinations')}
           </SmallText>
         </div>
         {destinations.length === 0 ? (
-          <SmallText className="text-text-muted">No destination data</SmallText>
+          <SmallText className="text-text-muted">{t('packets.stats.noDestinationData')}</SmallText>
         ) : (
           <div className="space-y-1">
             {destinations.slice(0, 5).map((item) => (
@@ -186,15 +189,15 @@ TopEndpoints.displayName = 'TopEndpoints';
  * - Top source and destination endpoints
  */
 export const PcapStats: FC<PcapStatsProps> = memo(({ stats, filename, fileSize }) => {
+  const { t } = useTranslation('pages');
+
   if (!stats) {
     return (
       <Card className="border-surface-border bg-bg-surface/70">
         <CardContent className="py-12 text-center">
           <BarChart3 className={`${iconSizes['3xl']} text-text-disabled mx-auto mb-4`} />
-          <p className="text-text-muted">No statistics available</p>
-          <SmallText className="text-text-muted">
-            Upload and analyze a PCAP file to see statistics
-          </SmallText>
+          <p className="text-text-muted">{t('packets.stats.emptyTitle')}</p>
+          <SmallText className="text-text-muted">{t('packets.stats.emptyDescription')}</SmallText>
         </CardContent>
       </Card>
     );
@@ -224,31 +227,33 @@ export const PcapStats: FC<PcapStatsProps> = memo(({ stats, filename, fileSize }
         <CardContent className="space-y-4">
           <H2 className="flex items-center gap-2 mb-0">
             <BarChart3 className={`${iconSizes.lg} text-status-info`} />
-            Summary Statistics
+            {t('packets.stats.summaryTitle')}
           </H2>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <StatBlock
               icon={<ArrowRightLeft className={`${iconSizes.md} text-brand-accent`} />}
-              label="Total Packets"
+              label={t('packets.stats.totalPackets')}
               value={stats.totalPackets.toLocaleString()}
             />
             <StatBlock
               icon={<FileText className={`${iconSizes.md} text-status-info`} />}
-              label="Total Bytes"
+              label={t('packets.stats.totalBytes')}
               value={formatBytes(stats.totalBytes)}
-              helper={`${stats.totalBytes.toLocaleString()} bytes`}
+              helper={t('packets.stats.totalBytesHelper', {
+                count: stats.totalBytes.toLocaleString(),
+              })}
             />
             <StatBlock
               icon={<Clock className={`${iconSizes.md} text-status-success`} />}
-              label="Duration"
+              label={t('packets.stats.duration')}
               value={formatDurationMs(stats.timeRange.durationMs)}
             />
             <StatBlock
               icon={<Network className={`${iconSizes.md} text-status-warning`} />}
-              label="Protocols"
+              label={t('packets.stats.protocols')}
               value={Object.keys(stats.protocols).length}
-              helper="Unique protocols"
+              helper={t('packets.stats.protocolsHelper')}
             />
           </div>
         </CardContent>
@@ -259,18 +264,22 @@ export const PcapStats: FC<PcapStatsProps> = memo(({ stats, filename, fileSize }
         <CardContent className="space-y-4">
           <div className="flex items-center gap-2">
             <Clock className={`${iconSizes.lg} text-status-success`} />
-            <H2>Time Range</H2>
+            <H2>{t('packets.stats.timeRangeTitle')}</H2>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="rounded-lg border border-surface-border bg-bg-base/50 p-4">
-              <SmallText className="text-text-muted uppercase tracking-wide">Start Time</SmallText>
+              <SmallText className="text-text-muted uppercase tracking-wide">
+                {t('packets.stats.startTime')}
+              </SmallText>
               <p className="text-lg font-mono text-text-primary mt-1">
                 {formatTimestamp(stats.timeRange.start)}
               </p>
             </div>
             <div className="rounded-lg border border-surface-border bg-bg-base/50 p-4">
-              <SmallText className="text-text-muted uppercase tracking-wide">End Time</SmallText>
+              <SmallText className="text-text-muted uppercase tracking-wide">
+                {t('packets.stats.endTime')}
+              </SmallText>
               <p className="text-lg font-mono text-text-primary mt-1">
                 {formatTimestamp(stats.timeRange.end)}
               </p>
@@ -284,7 +293,7 @@ export const PcapStats: FC<PcapStatsProps> = memo(({ stats, filename, fileSize }
         <CardContent className="space-y-4">
           <div className="flex items-center gap-2">
             <BarChart3 className={`${iconSizes.lg} text-brand-accent`} />
-            <H2>Protocol Breakdown</H2>
+            <H2>{t('packets.stats.protocolBreakdownTitle')}</H2>
           </div>
 
           <ProtocolBreakdown protocols={stats.protocols} total={stats.totalPackets} />
@@ -296,7 +305,7 @@ export const PcapStats: FC<PcapStatsProps> = memo(({ stats, filename, fileSize }
         <CardContent className="space-y-4">
           <div className="flex items-center gap-2">
             <Network className={`${iconSizes.lg} text-status-info`} />
-            <H2>Top Endpoints</H2>
+            <H2>{t('packets.stats.topEndpointsTitle')}</H2>
           </div>
 
           <TopEndpoints sources={stats.topSources} destinations={stats.topDestinations} />

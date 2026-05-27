@@ -57,7 +57,41 @@
   "packets": {
     "label": "Packets",
     "title": "Packets",
-    "description": "Live wire view of packets on the running simulation, or offline inspection of a captured {{format}} file."
+    "description": "Live wire view of packets on the running simulation, or offline inspection of a captured {{format}} file.",
+    "stats": {
+      "emptyTitle": "No statistics available",
+      "emptyDescription": "Upload and analyze a PCAP file to see statistics",
+      "summaryTitle": "Summary Statistics",
+      "totalPackets": "Total Packets",
+      "totalBytes": "Total Bytes",
+      "totalBytesHelper": "{{count}} bytes",
+      "duration": "Duration",
+      "protocols": "Protocols",
+      "protocolsHelper": "Unique protocols",
+      "timeRangeTitle": "Time Range",
+      "startTime": "Start Time",
+      "endTime": "End Time",
+      "protocolBreakdownTitle": "Protocol Breakdown",
+      "noProtocolData": "No protocol data available",
+      "topEndpointsTitle": "Top Endpoints",
+      "topSources": "Top Sources",
+      "topDestinations": "Top Destinations",
+      "noSourceData": "No source data",
+      "noDestinationData": "No destination data"
+    },
+    "list": {
+      "noPacketsTitle": "No packets to display",
+      "noPacketsDescription": "Upload a PCAP file to analyze",
+      "showingCount": "Showing {{shown}} of {{total}} packets",
+      "noMatchTitle": "No packets match filter",
+      "noMatchDescription": "Try adjusting the filter expression",
+      "cycleTimeModeTitle": "Click to cycle: Absolute / Relative / Delta",
+      "headerSource": "Source",
+      "headerDestination": "Destination",
+      "headerProtocol": "Protocol",
+      "headerLength": "Length",
+      "headerInfo": "Info"
+    }
   },
   "configDiff": {
     "label": "Compare & Merge",

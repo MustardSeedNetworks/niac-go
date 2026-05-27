@@ -57,7 +57,41 @@
   "packets": {
     "label": "Paquetes",
     "title": "Paquetes",
-    "description": "Vista en vivo de los paquetes en la simulación en ejecución, o inspección sin conexión de un archivo {{format}} capturado."
+    "description": "Vista en vivo de los paquetes en la simulación en ejecución, o inspección sin conexión de un archivo {{format}} capturado.",
+    "stats": {
+      "emptyTitle": "Sin estadísticas disponibles",
+      "emptyDescription": "Cargue y analice un archivo PCAP para ver estadísticas",
+      "summaryTitle": "Resumen estadístico",
+      "totalPackets": "Total de paquetes",
+      "totalBytes": "Total de bytes",
+      "totalBytesHelper": "{{count}} bytes",
+      "duration": "Duración",
+      "protocols": "Protocolos",
+      "protocolsHelper": "Protocolos únicos",
+      "timeRangeTitle": "Intervalo de tiempo",
+      "startTime": "Hora de inicio",
+      "endTime": "Hora de finalización",
+      "protocolBreakdownTitle": "Desglose por protocolo",
+      "noProtocolData": "Sin datos de protocolo disponibles",
+      "topEndpointsTitle": "Principales extremos",
+      "topSources": "Principales orígenes",
+      "topDestinations": "Principales destinos",
+      "noSourceData": "Sin datos de origen",
+      "noDestinationData": "Sin datos de destino"
+    },
+    "list": {
+      "noPacketsTitle": "No hay paquetes para mostrar",
+      "noPacketsDescription": "Cargue un archivo PCAP para analizar",
+      "showingCount": "Mostrando {{shown}} de {{total}} paquetes",
+      "noMatchTitle": "Ningún paquete coincide con el filtro",
+      "noMatchDescription": "Pruebe a ajustar la expresión del filtro",
+      "cycleTimeModeTitle": "Haga clic para alternar: Absoluto / Relativo / Delta",
+      "headerSource": "Origen",
+      "headerDestination": "Destino",
+      "headerProtocol": "Protocolo",
+      "headerLength": "Longitud",
+      "headerInfo": "Información"
+    }
   },
   "configDiff": {
     "label": "Comparar y fusionar",
