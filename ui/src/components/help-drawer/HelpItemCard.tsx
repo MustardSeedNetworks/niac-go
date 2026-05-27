@@ -8,6 +8,7 @@
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import type { ReactElement } from 'react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cn, layout } from '../../styles/theme';
 import type { HelpItem } from './types';
 
@@ -18,6 +19,7 @@ interface HelpItemCardProps {
 }
 
 export function HelpItemCard({ item, defaultOpen = false }: HelpItemCardProps): ReactElement {
+  const { t } = useTranslation('help');
   const [open, setOpen] = useState(defaultOpen);
 
   return (
@@ -48,32 +50,42 @@ export function HelpItemCard({ item, defaultOpen = false }: HelpItemCardProps): 
       {open && (
         <div className="px-3 pb-3 pt-1 space-y-3 border-t border-surface-border">
           <section>
-            <h5 className="text-xs font-semibold text-text-secondary mb-1">Technical</h5>
+            <h5 className="text-xs font-semibold text-text-secondary mb-1">
+              {t('itemCard.technical')}
+            </h5>
             <p className="text-xs text-text-muted leading-relaxed">{item.techDesc}</p>
           </section>
 
           <section>
-            <h5 className="text-xs font-semibold text-text-secondary mb-1">Plain English</h5>
+            <h5 className="text-xs font-semibold text-text-secondary mb-1">
+              {t('itemCard.plainEnglish')}
+            </h5>
             <p className="text-xs text-text-muted leading-relaxed">{item.laymanDesc}</p>
           </section>
 
           {item.whenToUse && (
             <section>
-              <h5 className="text-xs font-semibold text-text-secondary mb-1">When to use</h5>
+              <h5 className="text-xs font-semibold text-text-secondary mb-1">
+                {t('itemCard.whenToUse')}
+              </h5>
               <p className="text-xs text-text-muted leading-relaxed">{item.whenToUse}</p>
             </section>
           )}
 
           {item.whenNotToUse && (
             <section>
-              <h5 className="text-xs font-semibold text-text-secondary mb-1">When not to use</h5>
+              <h5 className="text-xs font-semibold text-text-secondary mb-1">
+                {t('itemCard.whenNotToUse')}
+              </h5>
               <p className="text-xs text-text-muted leading-relaxed">{item.whenNotToUse}</p>
             </section>
           )}
 
           {item.parameters.length > 0 && (
             <section>
-              <h5 className="text-xs font-semibold text-text-secondary mb-1">Parameters / flags</h5>
+              <h5 className="text-xs font-semibold text-text-secondary mb-1">
+                {t('itemCard.parameters')}
+              </h5>
               <div className="space-y-1">
                 {item.parameters.map((p) => (
                   <div key={p.name} className="bg-surface-hover rounded p-2">
@@ -95,7 +107,9 @@ export function HelpItemCard({ item, defaultOpen = false }: HelpItemCardProps): 
 
           {item.configFields.length > 0 && (
             <section>
-              <h5 className="text-xs font-semibold text-text-secondary mb-1">YAML fields</h5>
+              <h5 className="text-xs font-semibold text-text-secondary mb-1">
+                {t('itemCard.yamlFields')}
+              </h5>
               <div className="space-y-1">
                 {item.configFields.map((f) => (
                   <div key={f.path} className="bg-surface-hover rounded p-2">
@@ -117,7 +131,9 @@ export function HelpItemCard({ item, defaultOpen = false }: HelpItemCardProps): 
 
           {item.metrics.length > 0 && (
             <section>
-              <h5 className="text-xs font-semibold text-text-secondary mb-1">Metrics</h5>
+              <h5 className="text-xs font-semibold text-text-secondary mb-1">
+                {t('itemCard.metrics')}
+              </h5>
               <div className="space-y-1">
                 {item.metrics.map((m) => (
                   <div key={m.name} className="bg-surface-hover rounded p-2">
@@ -126,10 +142,12 @@ export function HelpItemCard({ item, defaultOpen = false }: HelpItemCardProps): 
                       <span className="text-xs text-text-muted">{m.unit}</span>
                     </div>
                     <p className="text-xs text-text-muted mt-0.5">
-                      <span className="text-emerald-400">good:</span> {m.goodRange}
+                      <span className="text-emerald-400">{t('itemCard.metricGoodLabel')}</span>{' '}
+                      {m.goodRange}
                     </p>
                     <p className="text-xs text-text-muted">
-                      <span className="text-amber-400">bad:</span> {m.badMeaning}
+                      <span className="text-amber-400">{t('itemCard.metricBadLabel')}</span>{' '}
+                      {m.badMeaning}
                     </p>
                   </div>
                 ))}
@@ -139,7 +157,9 @@ export function HelpItemCard({ item, defaultOpen = false }: HelpItemCardProps): 
 
           {item.examples.length > 0 && (
             <section>
-              <h5 className="text-xs font-semibold text-text-secondary mb-1">Examples</h5>
+              <h5 className="text-xs font-semibold text-text-secondary mb-1">
+                {t('itemCard.examples')}
+              </h5>
               <div className="space-y-2">
                 {item.examples.map((ex) => (
                   <div key={ex.command} className="bg-surface-hover rounded p-2">
@@ -160,7 +180,9 @@ export function HelpItemCard({ item, defaultOpen = false }: HelpItemCardProps): 
 
           {item.tips.length > 0 && (
             <section>
-              <h5 className="text-xs font-semibold text-text-secondary mb-1">Tips</h5>
+              <h5 className="text-xs font-semibold text-text-secondary mb-1">
+                {t('itemCard.tips')}
+              </h5>
               <ul className="space-y-1 pl-4 list-disc text-xs text-text-muted">
                 {item.tips.map((tip) => (
                   <li key={tip}>{tip}</li>
@@ -171,7 +193,9 @@ export function HelpItemCard({ item, defaultOpen = false }: HelpItemCardProps): 
 
           {item.seeAlso.length > 0 && (
             <section>
-              <h5 className="text-xs font-semibold text-text-secondary mb-1">See also</h5>
+              <h5 className="text-xs font-semibold text-text-secondary mb-1">
+                {t('itemCard.seeAlso')}
+              </h5>
               <div className="flex flex-wrap gap-1">
                 {item.seeAlso.map((ref) => (
                   <code

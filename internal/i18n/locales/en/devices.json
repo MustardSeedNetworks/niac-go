@@ -22,7 +22,22 @@
     "clone": "Clone",
     "edit": "Edit",
     "deleteConfirmTitle": "Delete device?",
-    "deleteConfirmMessage": "This will permanently remove the device definition. Running simulations are unaffected until restarted."
+    "deleteConfirmMessage": "This will permanently remove the device definition. Running simulations are unaffected until restarted.",
+    "tableHeaderHostname": "Hostname",
+    "tableHeaderType": "Type",
+    "tableHeaderIpAddress": "IP Address",
+    "tableHeaderProtocols": "Protocols",
+    "tableHeaderActions": "Actions",
+    "states": {
+      "loadErrorTitle": "Failed to Load Devices",
+      "retry": "Retry",
+      "emptyTitle": "No Devices Configured",
+      "emptyDescription": "Add your first device to start configuring your network simulation.",
+      "addDevice": "Add Device",
+      "noMatchTitle": "No Matching Devices",
+      "noMatchDescription": "No devices match your current filters. Try adjusting your search.",
+      "clearFilters": "Clear Filters"
+    }
   },
   "editor": {
     "newDevice": "New Device",

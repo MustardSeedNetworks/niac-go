@@ -19,5 +19,19 @@
   "footer": {
     "documentationLink": "Full documentation",
     "reportIssue": "Report an issue"
+  },
+  "itemCard": {
+    "technical": "Technical",
+    "plainEnglish": "Plain English",
+    "whenToUse": "When to use",
+    "whenNotToUse": "When not to use",
+    "parameters": "Parameters / flags",
+    "yamlFields": "YAML fields",
+    "metrics": "Metrics",
+    "metricGoodLabel": "good:",
+    "metricBadLabel": "bad:",
+    "examples": "Examples",
+    "tips": "Tips",
+    "seeAlso": "See also"
   }
 }

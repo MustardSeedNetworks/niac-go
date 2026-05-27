@@ -19,5 +19,19 @@
   "footer": {
     "documentationLink": "Documentación completa",
     "reportIssue": "Reportar un problema"
+  },
+  "itemCard": {
+    "technical": "Técnico",
+    "plainEnglish": "Lenguaje sencillo",
+    "whenToUse": "Cuándo usarlo",
+    "whenNotToUse": "Cuándo no usarlo",
+    "parameters": "Parámetros / opciones",
+    "yamlFields": "Campos YAML",
+    "metrics": "Métricas",
+    "metricGoodLabel": "bueno:",
+    "metricBadLabel": "malo:",
+    "examples": "Ejemplos",
+    "tips": "Consejos",
+    "seeAlso": "Véase también"
   }
 }
