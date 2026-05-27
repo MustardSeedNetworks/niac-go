@@ -5,6 +5,13 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.87.0](https://github.com/krisarmstrong/niac-go/compare/v0.86.0...v0.87.0) (2026-05-27)
+
+
+### Features
+
+* **license:** model bgp/ospf/snmpv3 on device, gate bgp+ospf ([#735](https://github.com/krisarmstrong/niac-go/issues/735)) ([5738d90](https://github.com/krisarmstrong/niac-go/commit/5738d905ad21efe9207e7c32c4381bb6a96c1e4b)), closes [#129](https://github.com/krisarmstrong/niac-go/issues/129)
+
 ## [0.86.0](https://github.com/krisarmstrong/niac-go/compare/v0.85.0...v0.86.0) (2026-05-27)
 
 
