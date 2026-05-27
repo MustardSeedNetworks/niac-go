@@ -21,7 +21,7 @@ export const DeviceCardView: FC = () => {
     getDeviceProtocols,
   } = useDeviceList();
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-comfortable">
       {devices.map((device) => {
         // Devices in the wild use type values like "ap" or "access-point" that
         // aren't in the DeviceType union. Fall back to 'unknown' so the lookup
@@ -41,17 +41,17 @@ export const DeviceCardView: FC = () => {
                   : ''
               }`}
             >
-              <CardContent className="p-4 space-y-3">
+              <CardContent className="pad stack">
                 {/* Header with checkbox and type icon */}
                 <div className="flex items-start justify-between">
-                  <label className="flex items-center gap-3">
+                  <label className="flex items-center gap-default">
                     <input
                       type="checkbox"
                       checked={selectedDevices.has(device.hostname)}
                       onChange={() => onSelectDevice(device.hostname)}
                       className="h-4 w-4 rounded border-border-muted bg-bg-elevated text-brand-primary focus:ring-brand-primary cursor-pointer"
                     />
-                    <div className={`p-2 rounded-lg ${colorClasses.bg}`}>
+                    <div className={`pad-xs rounded-lg ${colorClasses.bg}`}>
                       <DeviceIcon className={`${iconSizes.lg} ${colorClasses.text}`} />
                     </div>
                   </label>
@@ -71,7 +71,7 @@ export const DeviceCardView: FC = () => {
                     <h3 className="font-semibold text-text-primary group-hover:text-brand-accent transition-colors truncate">
                       {device.hostname}
                     </h3>
-                    <div className="flex items-center gap-1 mt-1">
+                    <div className="flex items-center gap-tight mt-tight">
                       <Network className={`${iconSizes.sm} text-text-muted`} />
                       <span className="text-sm text-text-muted font-mono">
                         {device.ip || device.ips?.[0] || 'No IP'}
@@ -86,7 +86,7 @@ export const DeviceCardView: FC = () => {
                   <div className="text-xs text-text-muted font-mono truncate">{device.mac}</div>
 
                   {/* Protocols */}
-                  <div className="flex flex-wrap gap-1">
+                  <div className="flex flex-wrap gap-tight">
                     {deviceProtocols.length > 0 ? (
                       deviceProtocols.slice(0, 3).map((proto) => (
                         <Tag key={proto} colorScheme="gray" className="text-xs">
@@ -105,11 +105,11 @@ export const DeviceCardView: FC = () => {
                 </button>
 
                 {/* Actions */}
-                <div className="flex justify-end gap-1 pt-2 border-t border-surface-border">
+                <div className="flex justify-end gap-tight pt-2 border-t border-surface-border">
                   <button
                     type="button"
                     onClick={() => onEdit(device.hostname)}
-                    className="p-2 text-text-muted hover:text-brand-accent hover:bg-surface-hover rounded-lg transition-colors"
+                    className="pad-xs text-text-muted hover:text-brand-accent hover:bg-surface-hover rounded-lg transition-colors"
                     title={`Open the device editor for ${device.hostname} to modify protocols, interfaces, and credentials`}
                     aria-label={`Edit device ${device.hostname}`}
                   >
@@ -118,7 +118,7 @@ export const DeviceCardView: FC = () => {
                   <button
                     type="button"
                     onClick={() => onClone(device.hostname)}
-                    className="p-2 text-text-muted hover:text-status-info hover:bg-surface-hover rounded-lg transition-colors"
+                    className="pad-xs text-text-muted hover:text-status-info hover:bg-surface-hover rounded-lg transition-colors"
                     title={`Create a copy of ${device.hostname} with a new hostname; all protocols and interfaces are duplicated`}
                     aria-label={`Clone device ${device.hostname}`}
                   >
@@ -127,7 +127,7 @@ export const DeviceCardView: FC = () => {
                   <button
                     type="button"
                     onClick={() => onDelete(device.hostname)}
-                    className="p-2 text-text-muted hover:text-status-error hover:bg-surface-hover rounded-lg transition-colors"
+                    className="pad-xs text-text-muted hover:text-status-error hover:bg-surface-hover rounded-lg transition-colors"
                     title={`Permanently remove ${device.hostname} from the library; cannot be undone`}
                     aria-label={`Delete device ${device.hostname}`}
                   >

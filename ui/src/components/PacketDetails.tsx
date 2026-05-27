@@ -30,7 +30,7 @@ const DetailRow = memo(
     }
 
     return (
-      <div className="flex items-start gap-2 py-1.5 border-b border-surface-border last:border-0">
+      <div className="flex items-start gap-compact py-compact-md border-b border-surface-border last:border-0">
         <SmallText className="text-text-muted w-24 flex-shrink-0">{label}</SmallText>
         <span className={`text-sm text-text-primary ${mono ? 'font-mono' : ''}`}>{value}</span>
       </div>
@@ -50,11 +50,11 @@ const HeadersSection = memo(({ headers }: { headers: Record<string, unknown> | u
   }
 
   return (
-    <div className="mt-4">
+    <div className="mt-content">
       <h4 className="text-sm font-semibold text-text-secondary mb-2">
         {t('packets.inspector.protocolHeaders')}
       </h4>
-      <div className="rounded-lg bg-bg-base/50 p-3 border border-surface-border">
+      <div className="rounded-lg bg-bg-base/50 pad-sm border border-surface-border">
         {Object.entries(headers).map(([key, value]) => (
           <DetailRow
             key={key}
@@ -82,7 +82,7 @@ export const PacketDetails: FC<PacketDetailsProps> = memo(({ packet, onFieldSele
   const { t } = useTranslation('pages');
   if (!packet) {
     return (
-      <div className="h-full flex items-center justify-center text-text-muted">
+      <div className="h-full flex-center text-text-muted">
         <p className="text-sm">{t('packets.inspector.selectPacketForDetails')}</p>
       </div>
     );
@@ -91,7 +91,7 @@ export const PacketDetails: FC<PacketDetailsProps> = memo(({ packet, onFieldSele
   return (
     <div className="h-full overflow-y-auto">
       {/* Header with protocol tag */}
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex-between mb-heading">
         <Tag colorScheme={getProtocolColor(packet.protocol)} className="text-sm">
           {packet.protocol}
         </Tag>
@@ -103,9 +103,9 @@ export const PacketDetails: FC<PacketDetailsProps> = memo(({ packet, onFieldSele
 
       {/* Summary */}
       {packet.summary && (
-        <div className="mt-3 pt-2 border-t border-surface-border">
+        <div className="mt-heading pt-2 border-t border-surface-border">
           <SmallText className="text-text-muted uppercase text-xs tracking-wide">Summary</SmallText>
-          <p className="text-sm text-text-secondary py-1">{packet.summary}</p>
+          <p className="text-sm text-text-secondary py-compact">{packet.summary}</p>
         </div>
       )}
     </div>

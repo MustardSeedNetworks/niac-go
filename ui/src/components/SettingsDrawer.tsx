@@ -99,16 +99,16 @@ export function SettingsDrawer({
           className={cn(drawer.content, drawer.size.lg, 'animate-slide-in-right')}
         >
           {/* Header */}
-          <div className="sticky top-0 bg-bg-surface border-b border-surface-border px-4 py-3 flex items-center justify-between z-10">
+          <div className="sticky top-0 bg-bg-surface border-b border-surface-border px-4 py-row-lg flex-between z-10">
             <div className={layout.inline.default}>
               <Settings className="w-5 h-5 text-brand-accent" aria-hidden="true" />
-              <h2 className="text-lg font-semibold text-text-primary">{t('drawer.title')}</h2>
+              <h2 className="heading-3 text-text-primary">{t('drawer.title')}</h2>
             </div>
             <button
               type="button"
               onClick={onClose}
               className={cn(
-                'p-2 hover:bg-surface-hover rounded-lg transition-colors',
+                'pad-xs hover:bg-surface-hover rounded-lg transition-colors',
                 'text-text-muted hover:text-text-primary',
               )}
               aria-label={t('drawer.closeAriaLabel')}
@@ -118,8 +118,8 @@ export function SettingsDrawer({
           </div>
 
           {/* Tab Navigation */}
-          <div className="border-b border-surface-border px-2">
-            <nav className="flex gap-1 -mb-px">
+          <div className="border-b border-surface-border px-cell">
+            <nav className="flex gap-tight -mb-px">
               {TABS.map((tab) => (
                 <button
                   key={tab.id}
@@ -128,7 +128,7 @@ export function SettingsDrawer({
                   aria-selected={activeTab === tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={cn(
-                    'flex items-center gap-2 px-3 py-2.5 text-sm font-medium transition-colors',
+                    'flex items-center gap-compact px-3 py-2.5 text-sm font-medium transition-colors',
                     'border-b-2 -mb-[2px]',
                     activeTab === tab.id
                       ? 'border-brand-primary text-text-primary'
@@ -143,7 +143,7 @@ export function SettingsDrawer({
           </div>
 
           {/* Content */}
-          <div className={cn(spacing.drawer, 'space-y-6')}>
+          <div className={cn(spacing.drawer, 'stack-xl')}>
             {activeTab === 'simulation' && <SimulationSection />}
             {activeTab === 'appearance' && <AppearanceSection />}
             {activeTab === 'network' && <NetworkSection />}
@@ -167,12 +167,12 @@ interface SectionProps {
 }
 
 const Section = ({ title, description, children }: SectionProps): ReactElement => (
-  <div className="space-y-3">
+  <div className="stack">
     <div>
       <h3 className="text-sm font-semibold text-text-primary">{title}</h3>
       {description && <p className="text-xs text-text-muted mt-0.5">{description}</p>}
     </div>
-    <div className="space-y-2">{children}</div>
+    <div className="stack-sm">{children}</div>
   </div>
 );
 
@@ -183,7 +183,7 @@ interface SettingRowProps {
 }
 
 const SettingRow = ({ label, description, children }: SettingRowProps): ReactElement => (
-  <div className="flex items-center justify-between gap-4 py-2 px-3 bg-surface-hover rounded-lg">
+  <div className="flex-between gap-comfortable py-row px-3 bg-surface-hover rounded-lg">
     <div className="flex-1 min-w-0">
       <div className="text-sm text-text-primary">{label}</div>
       {description && <div className="text-xs text-text-muted truncate">{description}</div>}
@@ -210,7 +210,7 @@ function AppearanceSection(): ReactElement {
 
   return (
     <Section title={t('appearance.sectionTitle')} description={t('appearance.sectionDescription')}>
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-3 gap-compact">
         {options.map((option) => {
           const selected = theme === option.id;
           return (
@@ -220,7 +220,7 @@ function AppearanceSection(): ReactElement {
               aria-pressed={selected}
               onClick={() => setTheme(option.id)}
               className={cn(
-                'flex flex-col items-center gap-2 p-3 rounded-lg border transition-all',
+                'flex flex-col items-center gap-compact pad-sm rounded-lg border transition-all',
                 selected
                   ? 'border-brand-primary bg-brand-primary/10'
                   : 'border-surface-border hover:border-brand-primary/40 hover:bg-surface-hover',
@@ -228,7 +228,7 @@ function AppearanceSection(): ReactElement {
             >
               <div
                 className={cn(
-                  'w-8 h-8 rounded-lg flex items-center justify-center',
+                  'w-8 h-8 rounded-lg flex-center',
                   selected
                     ? 'bg-brand-primary/15 text-brand-primary'
                     : 'bg-surface-hover text-text-secondary',
@@ -253,7 +253,7 @@ function AppearanceSection(): ReactElement {
         onClick={toggleTheme}
         title={isDark ? t('appearance.switchToLight') : t('appearance.switchToDark')}
         className={cn(
-          'mt-3 w-full flex items-center justify-between gap-2 p-2.5 rounded-lg border transition-colors',
+          'mt-heading w-full flex-between gap-compact p-2.5 rounded-lg border transition-colors',
           'border-surface-border bg-surface-hover hover:bg-surface-base text-text-primary',
         )}
       >
@@ -272,7 +272,7 @@ function AppearanceSection(): ReactElement {
           )}
         </span>
       </button>
-      <p className="text-xs text-text-muted mt-2">{t('appearance.persistenceNote')}</p>
+      <p className="text-xs text-text-muted mt-inline">{t('appearance.persistenceNote')}</p>
     </Section>
   );
 }
@@ -316,7 +316,7 @@ function NetworkSection(): ReactElement {
         title={t('network.interfacesTitle')}
         description={t('network.interfacesDescription')}
       >
-        <div className="space-y-2">
+        <div className="stack-sm">
           {loading && <p className="text-xs text-text-muted">{t('network.loadingInterfaces')}</p>}
           {!loading && interfaces.length === 0 && (
             <p className="text-xs text-text-muted">{t('network.noInterfacesFound')}</p>
@@ -331,7 +331,7 @@ function NetworkSection(): ReactElement {
             />
           ))}
         </div>
-        <p className="text-xs text-text-muted mt-2">{t('network.interfaceManagedFrom')}</p>
+        <p className="text-xs text-text-muted mt-inline">{t('network.interfaceManagedFrom')}</p>
       </Section>
 
       <Section
@@ -342,7 +342,7 @@ function NetworkSection(): ReactElement {
           label={t('network.backendUrl')}
           description={t('network.backendUrlDescription')}
         >
-          <code className="text-xs text-brand-accent bg-brand-primary/10 px-2 py-1 rounded">
+          <code className="text-xs text-brand-accent bg-brand-primary/10 px-cell py-compact rounded">
             localhost:8080
           </code>
         </SettingRow>
@@ -365,7 +365,7 @@ interface InterfaceItemProps {
 
 function InterfaceItem({ name, type, status, ip }: InterfaceItemProps): ReactElement {
   return (
-    <div className="flex items-center justify-between py-2 px-3 bg-surface-hover rounded-lg">
+    <div className="flex-between py-row px-3 bg-surface-hover rounded-lg">
       <div className={layout.inline.default}>
         <Network
           className={cn('w-4 h-4', status === 'active' ? 'text-status-success' : 'text-text-muted')}
@@ -403,7 +403,7 @@ function DebugSection(): ReactElement {
             value={logLevel}
             onChange={(e) => setLogLevel(e.target.value as typeof logLevel)}
             className={cn(
-              'bg-bg-elevated border border-surface-border rounded-lg px-3 py-1.5 text-sm text-text-primary',
+              'bg-bg-elevated border border-surface-border rounded-lg px-3 py-compact-md text-sm text-text-primary',
               'focus:outline-none focus:ring-2 focus:ring-brand-primary/50',
             )}
           >
@@ -420,7 +420,7 @@ function DebugSection(): ReactElement {
           type="button"
           className={cn(
             layout.flex.between,
-            'w-full py-2 px-3 bg-surface-hover rounded-lg',
+            'w-full py-row px-3 bg-surface-hover rounded-lg',
             'hover:bg-surface-hover transition-colors text-left',
           )}
         >
@@ -437,7 +437,7 @@ function DebugSection(): ReactElement {
           type="button"
           className={cn(
             layout.flex.between,
-            'w-full py-2 px-3 bg-surface-hover rounded-lg',
+            'w-full py-row px-3 bg-surface-hover rounded-lg',
             'hover:bg-surface-hover transition-colors text-left',
           )}
         >
@@ -465,9 +465,9 @@ function AboutSection({ version }: AboutSectionProps): ReactElement {
   return (
     <>
       <Section title={t('about.applicationTitle')}>
-        <div className="bg-surface-hover rounded-lg p-4 space-y-3">
-          <div className="flex items-center gap-3">
-            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-brand-primary to-brand-primary flex items-center justify-center shadow-lg shadow-brand-primary/30">
+        <div className="bg-surface-hover rounded-lg pad stack">
+          <div className="flex items-center gap-default">
+            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-brand-primary to-brand-primary flex-center shadow-lg shadow-brand-primary/30">
               <Network className={`${iconSizes.xl} text-text-primary`} />
             </div>
             <div>
@@ -475,7 +475,7 @@ function AboutSection({ version }: AboutSectionProps): ReactElement {
               <p className="text-sm text-text-muted">{t('about.subtitle')}</p>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-2 pt-2 border-t border-surface-border">
+          <div className="grid grid-cols-2 gap-compact pt-2 border-t border-surface-border">
             <InfoItem label={t('about.version')} value={version} />
             <InfoItem label={t('about.build')} value="Production" />
             <InfoItem label="React" value="19.2" />
@@ -485,21 +485,21 @@ function AboutSection({ version }: AboutSectionProps): ReactElement {
       </Section>
 
       <Section title={t('about.legalTitle')}>
-        <div className="space-y-2 text-xs text-text-muted">
+        <div className="stack-sm text-xs text-text-muted">
           <p>{t('about.copyright', { year: new Date().getFullYear() })}</p>
           <p>{t('about.proprietaryNotice')}</p>
         </div>
       </Section>
 
       <Section title={t('about.linksTitle')}>
-        <div className="space-y-2">
+        <div className="stack-sm">
           <a
             href="https://github.com/mustardseednetworks"
             target="_blank"
             rel="noopener noreferrer"
             className={cn(
               layout.flex.between,
-              'w-full py-2 px-3 bg-surface-hover rounded-lg',
+              'w-full py-row px-3 bg-surface-hover rounded-lg',
               'hover:bg-surface-hover transition-colors',
             )}
           >
@@ -512,7 +512,7 @@ function AboutSection({ version }: AboutSectionProps): ReactElement {
             rel="noopener noreferrer"
             className={cn(
               layout.flex.between,
-              'w-full py-2 px-3 bg-surface-hover rounded-lg',
+              'w-full py-row px-3 bg-surface-hover rounded-lg',
               'hover:bg-surface-hover transition-colors',
             )}
           >

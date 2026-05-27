@@ -32,7 +32,7 @@ export const Skeleton: FC<SkeletonProps> = ({
   if (lines > 1) {
     const lineKeys = Array.from({ length: lines }, (_, idx) => `line-${idx}`);
     return (
-      <div className={`space-y-2 ${className}`}>
+      <div className={`stack-sm ${className}`}>
         {lineKeys.map((lineKey, i) => (
           <div
             key={lineKey}
@@ -52,10 +52,10 @@ export const Skeleton: FC<SkeletonProps> = ({
 
 // Skeleton for card content
 export const CardSkeleton: FC<{ className?: string }> = ({ className = '' }) => (
-  <div className={`p-6 space-y-4 ${className}`}>
-    <div className="flex items-center gap-3">
+  <div className={`pad-lg stack-lg ${className}`}>
+    <div className="flex items-center gap-default">
       <Skeleton variant="circular" width={40} height={40} />
-      <div className="flex-1 space-y-2">
+      <div className="flex-1 stack-sm">
         <Skeleton width="40%" />
         <Skeleton width="60%" />
       </div>
@@ -69,7 +69,7 @@ export const TableRowSkeleton: FC<{ columns?: number; className?: string }> = ({
   columns = 4,
   className = '',
 }) => (
-  <div className={`flex items-center gap-4 p-4 ${className}`}>
+  <div className={`flex items-center gap-comfortable pad ${className}`}>
     {Array.from({ length: columns }, (_, idx) => `col-${idx}`).map((colKey, i) => (
       <Skeleton key={colKey} className="flex-1" width={i === 0 ? '30%' : undefined} />
     ))}
@@ -78,8 +78,8 @@ export const TableRowSkeleton: FC<{ columns?: number; className?: string }> = ({
 
 // Skeleton for stat cards
 export const StatCardSkeleton: FC<{ className?: string }> = ({ className = '' }) => (
-  <div className={`p-6 space-y-3 ${className}`}>
-    <div className="flex items-center justify-between">
+  <div className={`pad-lg stack ${className}`}>
+    <div className="flex-between">
       <Skeleton width="40%" />
       <Skeleton variant="circular" width={24} height={24} />
     </div>
@@ -90,31 +90,31 @@ export const StatCardSkeleton: FC<{ className?: string }> = ({ className = '' })
 // Skeleton for device cards (card view)
 export const DeviceCardSkeleton: FC<{ className?: string }> = ({ className = '' }) => (
   <div
-    className={`p-4 space-y-3 rounded-xl border border-surface-border bg-bg-surface/70 ${className}`}
+    className={`pad stack rounded-xl border border-surface-border bg-bg-surface/70 ${className}`}
   >
     {/* Header with checkbox and icon */}
     <div className="flex items-start justify-between">
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-default">
         <Skeleton variant="rectangular" width={16} height={16} />
         <Skeleton variant="rectangular" width={36} height={36} className="rounded-lg" />
       </div>
       <Skeleton width={60} height={20} className="rounded" />
     </div>
     {/* Name and IP */}
-    <div className="space-y-2">
+    <div className="stack-sm">
       <Skeleton width="70%" height={20} />
       <Skeleton width="50%" height={16} />
     </div>
     {/* MAC */}
     <Skeleton width="80%" height={12} />
     {/* Protocols */}
-    <div className="flex gap-1">
+    <div className="flex gap-tight">
       <Skeleton width={40} height={20} className="rounded" />
       <Skeleton width={40} height={20} className="rounded" />
       <Skeleton width={40} height={20} className="rounded" />
     </div>
     {/* Actions */}
-    <div className="flex justify-end gap-1 pt-2 border-t border-surface-border">
+    <div className="flex justify-end gap-tight pt-2 border-t border-surface-border">
       <Skeleton variant="rectangular" width={32} height={32} className="rounded-lg" />
       <Skeleton variant="rectangular" width={32} height={32} className="rounded-lg" />
       <Skeleton variant="rectangular" width={32} height={32} className="rounded-lg" />
@@ -124,11 +124,13 @@ export const DeviceCardSkeleton: FC<{ className?: string }> = ({ className = '' 
 
 // Skeleton for device table rows
 export const DeviceTableRowSkeleton: FC<{ className?: string }> = ({ className = '' }) => (
-  <div className={`flex items-center gap-4 px-4 py-3 border-b border-surface-border ${className}`}>
+  <div
+    className={`flex items-center gap-comfortable px-4 py-row-lg border-b border-surface-border ${className}`}
+  >
     <Skeleton variant="rectangular" width={16} height={16} />
-    <div className="flex-1 grid grid-cols-12 gap-4 items-center">
+    <div className="flex-1 grid grid-cols-12 gap-comfortable items-center">
       {/* Hostname */}
-      <div className="col-span-3 flex items-center gap-2">
+      <div className="col-span-3 flex items-center gap-compact">
         <Skeleton variant="rectangular" width={16} height={16} />
         <Skeleton width="70%" />
       </div>
@@ -141,12 +143,12 @@ export const DeviceTableRowSkeleton: FC<{ className?: string }> = ({ className =
         <Skeleton width="80%" />
       </div>
       {/* Protocols */}
-      <div className="col-span-3 flex gap-1">
+      <div className="col-span-3 flex gap-tight">
         <Skeleton width={40} height={20} className="rounded" />
         <Skeleton width={40} height={20} className="rounded" />
       </div>
       {/* Actions */}
-      <div className="col-span-2 flex justify-end gap-1">
+      <div className="col-span-2 flex justify-end gap-tight">
         <Skeleton variant="rectangular" width={32} height={32} className="rounded-lg" />
         <Skeleton variant="rectangular" width={32} height={32} className="rounded-lg" />
         <Skeleton variant="rectangular" width={32} height={32} className="rounded-lg" />
@@ -173,7 +175,7 @@ export const DeviceCardGridSkeleton: FC<{
   className?: string;
 }> = ({ count = 8, className = '' }) => (
   <div
-    className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 ${className}`}
+    className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-comfortable ${className}`}
   >
     {Array.from({ length: count }, (_, idx) => `card-${idx}`).map((cardKey) => (
       <DeviceCardSkeleton key={cardKey} />

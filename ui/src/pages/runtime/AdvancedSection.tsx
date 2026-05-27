@@ -15,12 +15,12 @@ export const AdvancedSection: FC = () => {
       open={open}
       onToggle={(e) => setOpen(e.currentTarget.open)}
     >
-      <summary className="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm text-text-secondary hover:text-text-primary">
+      <summary className="flex cursor-pointer items-center gap-compact px-3 py-row text-sm text-text-secondary hover:text-text-primary">
         <span className="text-text-muted">{open ? '▾' : '▸'}</span>
         <span>Advanced</span>
         <SmallText className="text-text-muted">(global protocol debug level)</SmallText>
       </summary>
-      <div className="border-t border-surface-border p-3">
+      <div className="border-t border-surface-border pad-sm">
         <GlobalDebugLevelCard />
       </div>
     </details>

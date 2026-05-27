@@ -21,10 +21,10 @@ export const DeviceEditorStatusView: FC<DeviceEditorStatusViewProps> = ({
 }) => {
   if (!isNewDevice && loading) {
     return (
-      <div className="space-y-6">
+      <div className="stack-xl">
         <Card className="border-surface-border bg-bg-surface/70">
-          <CardContent className="flex items-center justify-center py-12">
-            <div className="flex items-center gap-3 text-text-muted">
+          <CardContent className="flex-center py-centered">
+            <div className="flex items-center gap-default text-text-muted">
               <div className="h-5 w-5 animate-spin rounded-full border-2 border-brand-primary border-t-transparent" />
               <span>Loading device...</span>
             </div>
@@ -36,15 +36,15 @@ export const DeviceEditorStatusView: FC<DeviceEditorStatusViewProps> = ({
 
   if (!isNewDevice && error) {
     return (
-      <div className="space-y-6">
+      <div className="stack-xl">
         <Card className="border-status-error/30 bg-status-error/20">
-          <CardContent className="space-y-3">
-            <div className="flex items-start gap-3">
-              <AlertCircle className="mt-1 h-5 w-5 text-status-error" />
+          <CardContent className="stack">
+            <div className="flex items-start gap-default">
+              <AlertCircle className="mt-tight h-5 w-5 text-status-error" />
               <div>
                 <p className="font-semibold text-status-error">Failed to Load Device</p>
                 <SmallText className="text-status-error/90">{error.message}</SmallText>
-                <div className="flex gap-2 mt-3">
+                <div className="flex gap-compact mt-heading">
                   <Button variant="outline" size="sm" onClick={onRetry}>
                     Retry
                   </Button>

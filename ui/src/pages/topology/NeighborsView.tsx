@@ -128,11 +128,11 @@ export const NeighborsView: FC = () => {
   }, [neighbors]);
 
   return (
-    <div className="space-y-4">
+    <div className="stack-lg">
       <Card className="border-surface-border bg-bg-surface/70">
-        <CardContent className="space-y-3">
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-2">
+        <CardContent className="stack">
+          <div className="flex flex-wrap items-center gap-default">
+            <div className="flex items-center gap-compact">
               {PROTOCOL_FILTERS.map((p) => {
                 const count = p === 'all' ? (neighbors?.length ?? 0) : (protocolCounts[p] ?? 0);
                 const active = protocolFilter === p;
@@ -149,7 +149,7 @@ export const NeighborsView: FC = () => {
                             count: protocolCounts[p] ?? 0,
                           })
                     }
-                    className={`rounded px-3 py-1 text-xs font-medium ${
+                    className={`rounded px-3 py-compact text-xs font-medium ${
                       active
                         ? 'bg-status-info/20 text-status-info ring-1 ring-cyan-400/40'
                         : 'bg-bg-elevated/60 text-text-secondary hover:bg-bg-elevated'
@@ -167,7 +167,7 @@ export const NeighborsView: FC = () => {
               onChange={(e) => setSearch(e.target.value)}
               placeholder={t('topology.neighbors.searchPlaceholder')}
               title={t('topology.neighbors.searchTitle')}
-              className="ml-auto w-64 rounded border border-surface-border bg-bg-base/60 px-3 py-1.5 text-sm text-text-primary placeholder-gray-500 focus:border-status-info focus:outline-none"
+              className="ml-auto w-64 rounded border border-surface-border bg-bg-base/60 px-3 py-compact-md text-sm text-text-primary placeholder-gray-500 focus:border-status-info focus:outline-none"
               aria-label={t('topology.neighbors.searchAriaLabel')}
             />
             <span className="text-xs text-text-muted">
@@ -183,15 +183,15 @@ export const NeighborsView: FC = () => {
       <Card className="border-surface-border bg-bg-surface/70">
         <CardContent className="p-0">
           {loading && !neighbors && (
-            <div className="p-6 text-sm text-text-muted">{t('topology.neighbors.loading')}</div>
+            <div className="pad-lg text-sm text-text-muted">{t('topology.neighbors.loading')}</div>
           )}
           {error && (
-            <div className="p-6 text-sm text-status-error" role="alert">
+            <div className="pad-lg text-sm text-status-error" role="alert">
               {t('topology.neighbors.loadError', { error: error.message })}
             </div>
           )}
           {neighbors && filtered.length === 0 && (
-            <div className="p-6 text-sm text-text-muted">
+            <div className="pad-lg text-sm text-text-muted">
               {neighbors.length === 0
                 ? t('topology.neighbors.emptyNoData')
                 : t('topology.neighbors.emptyFiltered')}
@@ -201,14 +201,14 @@ export const NeighborsView: FC = () => {
             <table className="w-full text-sm">
               <thead className="bg-bg-base/40 text-left text-xs uppercase tracking-wider text-text-muted">
                 <tr>
-                  <th className="px-4 py-2">{t('topology.neighbors.headerProtocol')}</th>
-                  <th className="px-4 py-2">{t('topology.neighbors.headerLocalDevice')}</th>
-                  <th className="px-4 py-2">{t('topology.neighbors.headerRemoteDevice')}</th>
-                  <th className="px-4 py-2">{t('topology.neighbors.headerRemotePort')}</th>
-                  <th className="px-4 py-2">{t('topology.neighbors.headerChassisId')}</th>
-                  <th className="px-4 py-2">{t('topology.neighbors.headerMgmtAddr')}</th>
-                  <th className="px-4 py-2">{t('topology.neighbors.headerTtl')}</th>
-                  <th className="px-4 py-2">{t('topology.neighbors.headerLastSeen')}</th>
+                  <th className="px-4 py-row">{t('topology.neighbors.headerProtocol')}</th>
+                  <th className="px-4 py-row">{t('topology.neighbors.headerLocalDevice')}</th>
+                  <th className="px-4 py-row">{t('topology.neighbors.headerRemoteDevice')}</th>
+                  <th className="px-4 py-row">{t('topology.neighbors.headerRemotePort')}</th>
+                  <th className="px-4 py-row">{t('topology.neighbors.headerChassisId')}</th>
+                  <th className="px-4 py-row">{t('topology.neighbors.headerMgmtAddr')}</th>
+                  <th className="px-4 py-row">{t('topology.neighbors.headerTtl')}</th>
+                  <th className="px-4 py-row">{t('topology.neighbors.headerLastSeen')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
@@ -217,20 +217,20 @@ export const NeighborsView: FC = () => {
                     key={`${n.localDevice}-${n.remoteDevice}-${n.remotePort}`}
                     className="text-text-primary hover:bg-bg-base/40"
                   >
-                    <td className="px-4 py-2 font-mono text-xs text-status-info">
+                    <td className="px-4 py-row font-mono text-xs text-status-info">
                       {n.protocols.join(', ')}
                     </td>
-                    <td className="px-4 py-2">{n.localDevice}</td>
-                    <td className="px-4 py-2">{n.remoteDevice}</td>
-                    <td className="px-4 py-2 text-text-muted">{n.remotePort || '—'}</td>
-                    <td className="px-4 py-2 font-mono text-xs text-text-muted">
+                    <td className="px-4 py-row">{n.localDevice}</td>
+                    <td className="px-4 py-row">{n.remoteDevice}</td>
+                    <td className="px-4 py-row text-text-muted">{n.remotePort || '—'}</td>
+                    <td className="px-4 py-row font-mono text-xs text-text-muted">
                       {n.remoteChassisId || '—'}
                     </td>
-                    <td className="px-4 py-2 font-mono text-xs text-text-muted">
+                    <td className="px-4 py-row font-mono text-xs text-text-muted">
                       {n.managementAddress || '—'}
                     </td>
-                    <td className="px-4 py-2 text-text-muted">{formatTtl(n.ttl)}</td>
-                    <td className="px-4 py-2 text-text-muted">{formatRelative(n.lastSeen)}</td>
+                    <td className="px-4 py-row text-text-muted">{formatTtl(n.ttl)}</td>
+                    <td className="px-4 py-row text-text-muted">{formatRelative(n.lastSeen)}</td>
                   </tr>
                 ))}
               </tbody>

@@ -165,14 +165,14 @@ export const DebugConsolePage: FC = () => {
   }, [connected, paused]);
 
   return (
-    <div className="space-y-6">
+    <div className="stack-xl">
       {/* Main Console Card */}
       <Card className="border-surface-border bg-bg-surface/70">
-        <CardContent className="space-y-4">
+        <CardContent className="stack-lg">
           {/* Header with Connection Status */}
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-text-primary">Debug Console</h2>
-            <div className="flex items-center gap-3">
+          <div className="flex-between">
+            <h2 className="heading-2 text-text-primary">Debug Console</h2>
+            <div className="flex items-center gap-default">
               {/* Debug Settings Toggle */}
               <Button
                 variant="outline"
@@ -195,7 +195,7 @@ export const DebugConsolePage: FC = () => {
               <button
                 type="button"
                 onClick={reconnect}
-                className="flex items-center gap-2 rounded-lg border border-surface-border bg-bg-base/50 px-3 py-1.5 text-sm transition-colors hover:bg-bg-elevated/50"
+                className="flex items-center gap-compact rounded-lg border border-surface-border bg-bg-base/50 px-3 py-compact-md text-sm transition-colors hover:bg-bg-elevated/50"
                 title={connected ? 'Connected to log stream' : 'Click to reconnect'}
               >
                 <span className={`h-2 w-2 rounded-full ${connectionStatus.indicator}`} />
@@ -223,7 +223,7 @@ export const DebugConsolePage: FC = () => {
 
           {/* Filter Status */}
           {(levelFilter !== 'All' || protocolFilter !== 'All' || searchQuery) && (
-            <div className="flex flex-wrap items-center gap-2 text-sm text-text-muted">
+            <div className="flex flex-wrap items-center gap-compact text-sm text-text-muted">
               <span>
                 Showing {filteredLogs.length} of {logs.length} logs
               </span>
@@ -248,7 +248,7 @@ export const DebugConsolePage: FC = () => {
           <LogViewer logs={filteredLogs} searchQuery={searchQuery} autoScroll={autoScroll} />
 
           {/* Footer Info */}
-          <div className="flex items-center justify-between text-xs text-text-muted">
+          <div className="flex-between text-xs text-text-muted">
             <span>
               Buffer: {logs.length}/{MAX_LOG_BUFFER} logs
               {logs.length >= MAX_LOG_BUFFER && ' (oldest logs will be removed)'}

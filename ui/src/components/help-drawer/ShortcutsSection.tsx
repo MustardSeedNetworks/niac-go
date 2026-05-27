@@ -50,18 +50,18 @@ export function ShortcutsSection({ searchQuery }: ShortcutsSectionProps): ReactE
   }, [filteredShortcuts]);
 
   return (
-    <div className="space-y-6">
+    <div className="stack-xl">
       {filteredShortcuts.length === 0 ? (
         <p className="text-sm text-text-muted py-4 text-center">No shortcuts match your search.</p>
       ) : (
         Object.entries(groupedShortcuts).map(([category, shortcuts]) =>
           shortcuts.length > 0 ? (
-            <div key={category} className="space-y-2">
-              <h3 className="text-sm font-semibold text-text-primary flex items-center gap-2">
+            <div key={category} className="stack-sm">
+              <h3 className="text-sm font-semibold text-text-primary flex items-center gap-compact">
                 <Command className="w-4 h-4 text-brand-accent" />
                 {CATEGORY_LABELS[category]}
               </h3>
-              <div className="space-y-1">
+              <div className="stack-xs">
                 {shortcuts.map((shortcut) => (
                   <ShortcutItem key={shortcut.description} shortcut={shortcut} />
                 ))}
@@ -83,14 +83,14 @@ interface ShortcutItemProps {
 
 function ShortcutItem({ shortcut }: ShortcutItemProps): ReactElement {
   return (
-    <div className={cn(layout.flex.between, 'py-2 px-3 bg-surface-hover rounded-lg')}>
+    <div className={cn(layout.flex.between, 'py-row px-3 bg-surface-hover rounded-lg')}>
       <span className="text-sm text-text-secondary">{shortcut.description}</span>
       <div className={layout.inline.tight}>
         {shortcut.keys.map((key, idx) => (
           <span key={`${shortcut.description}-${key}`}>
             <kbd
               className={cn(
-                'px-2 py-0.5 text-xs font-mono rounded',
+                'px-cell py-0.5 text-xs font-mono rounded',
                 'bg-bg-elevated border border-surface-border text-text-secondary',
               )}
             >

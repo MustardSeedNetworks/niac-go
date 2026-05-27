@@ -28,7 +28,7 @@ const DiffStatsBar: FC<{
   changedBlocksCount,
   showMergeControls,
 }) => (
-  <div className="flex items-center gap-4 flex-wrap">
+  <div className="flex items-center gap-comfortable flex-wrap">
     <SmallText className="text-text-muted">Changes:</SmallText>
     <Tag colorScheme="green" className="text-xs">
       +{additions} additions
@@ -55,10 +55,10 @@ const ColumnHeaders: FC<{
   rightLabel: string;
 }> = ({ leftLabel, rightLabel }) => (
   <div className="grid grid-cols-2 gap-px bg-bg-elevated rounded-t-lg overflow-hidden">
-    <div className="bg-bg-surface/90 px-4 py-2">
+    <div className="bg-bg-surface/90 px-4 py-row">
       <SmallText className="text-text-secondary font-semibold">{leftLabel}</SmallText>
     </div>
-    <div className="bg-bg-surface/90 px-4 py-2">
+    <div className="bg-bg-surface/90 px-4 py-row">
       <SmallText className="text-text-secondary font-semibold">{rightLabel}</SmallText>
     </div>
   </div>
@@ -68,7 +68,7 @@ const ColumnHeaders: FC<{
  * Empty state when no content is provided
  */
 const EmptyState: FC = () => (
-  <div className="flex items-center justify-center h-64 text-text-muted">
+  <div className="flex-center h-64 text-text-muted">
     <SmallText>Upload files to compare</SmallText>
   </div>
 );
@@ -127,7 +127,7 @@ export const DiffViewer: FC<DiffViewerProps> = ({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="stack-lg">
       {/* Stats bar */}
       <DiffStatsBar
         additions={stats.additions}

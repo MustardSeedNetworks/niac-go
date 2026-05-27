@@ -30,7 +30,7 @@ export const LldpSection: FC<ProtocolSectionProps> = ({
       }}
     >
       {device.lldp?.enabled && (
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-comfortable md:grid-cols-2">
           <FormField label="System Description" helpText="LLDP system description">
             <input
               type="text"

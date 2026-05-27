@@ -114,12 +114,12 @@ export const ErrorInjectionPanel: FC = () => {
   const busy = isSubmitting || clearingBusy;
 
   return (
-    <div className="space-y-4">
+    <div className="stack-lg">
       {/* Injection Form */}
       <Card>
         <CardContent>
-          <form onSubmit={handleSubmit(onInject)} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <form onSubmit={handleSubmit(onInject)} className="stack-lg">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-comfortable">
               {/* Device Selector */}
               <div>
                 <label htmlFor="error-device" className="block text-sm font-medium mb-2">
@@ -128,7 +128,7 @@ export const ErrorInjectionPanel: FC = () => {
                 <select
                   id="error-device"
                   {...register('selectedDevice')}
-                  className="w-full px-3 py-2 bg-bg-elevated border border-border-default rounded-md focus:outline-none focus:ring-2 focus:ring-status-info"
+                  className="w-full px-3 py-row bg-bg-elevated border border-border-default rounded-md focus:outline-none focus:ring-2 focus:ring-status-info"
                 >
                   <option value="">{t('injection.deviceSelectPlaceholder')}</option>
                   {devices?.map((dev) => (
@@ -138,7 +138,9 @@ export const ErrorInjectionPanel: FC = () => {
                   ))}
                 </select>
                 {errors.selectedDevice ? (
-                  <p className="text-xs text-status-error mt-1">{errors.selectedDevice.message}</p>
+                  <p className="text-xs text-status-error mt-tight">
+                    {errors.selectedDevice.message}
+                  </p>
                 ) : null}
               </div>
 
@@ -152,10 +154,10 @@ export const ErrorInjectionPanel: FC = () => {
                   type="text"
                   {...register('selectedInterface')}
                   placeholder={t('injection.interfacePlaceholder')}
-                  className="w-full px-3 py-2 bg-bg-elevated border border-border-default rounded-md focus:outline-none focus:ring-2 focus:ring-status-info"
+                  className="w-full px-3 py-row bg-bg-elevated border border-border-default rounded-md focus:outline-none focus:ring-2 focus:ring-status-info"
                 />
                 {errors.selectedInterface ? (
-                  <p className="text-xs text-status-error mt-1">
+                  <p className="text-xs text-status-error mt-tight">
                     {errors.selectedInterface.message}
                   </p>
                 ) : null}
@@ -169,7 +171,7 @@ export const ErrorInjectionPanel: FC = () => {
                 <select
                   id="error-type"
                   {...register('selectedErrorType')}
-                  className="w-full px-3 py-2 bg-bg-elevated border border-border-default rounded-md focus:outline-none focus:ring-2 focus:ring-status-info"
+                  className="w-full px-3 py-row bg-bg-elevated border border-border-default rounded-md focus:outline-none focus:ring-2 focus:ring-status-info"
                 >
                   <option value="">{t('injection.errorTypeSelectPlaceholder')}</option>
                   {errorInfo?.availableTypes?.map((type: ErrorType) => (
@@ -179,7 +181,7 @@ export const ErrorInjectionPanel: FC = () => {
                   ))}
                 </select>
                 {selectedErrorType && errorInfo?.availableTypes && (
-                  <SmallText className="text-text-muted mt-1">
+                  <SmallText className="text-text-muted mt-tight">
                     {
                       errorInfo.availableTypes.find(
                         (et: ErrorType) => et.type === selectedErrorType,
@@ -188,7 +190,7 @@ export const ErrorInjectionPanel: FC = () => {
                   </SmallText>
                 )}
                 {errors.selectedErrorType ? (
-                  <p className="text-xs text-status-error mt-1">
+                  <p className="text-xs text-status-error mt-tight">
                     {errors.selectedErrorType.message}
                   </p>
                 ) : null}
@@ -209,7 +211,7 @@ export const ErrorInjectionPanel: FC = () => {
                 />
                 <SmallText className="text-text-muted">{t('injection.valueHelper')}</SmallText>
                 {errors.errorValue ? (
-                  <p className="text-xs text-status-error mt-1">{errors.errorValue.message}</p>
+                  <p className="text-xs text-status-error mt-tight">{errors.errorValue.message}</p>
                 ) : null}
               </div>
             </div>
@@ -217,7 +219,7 @@ export const ErrorInjectionPanel: FC = () => {
             {/* Message Display */}
             {message && (
               <div
-                className={`p-3 rounded ${
+                className={`pad-sm rounded ${
                   message.type === 'success'
                     ? 'bg-status-success/10 text-status-success border border-status-success/20'
                     : 'bg-status-error/10 text-status-error border border-status-error/20'
@@ -228,7 +230,7 @@ export const ErrorInjectionPanel: FC = () => {
             )}
 
             {/* Action Buttons */}
-            <div className="flex gap-3">
+            <div className="flex gap-default">
               <Button type="submit" disabled={busy}>
                 {isSubmitting ? t('injection.injectingButton') : t('injection.injectButton')}
               </Button>
@@ -249,16 +251,24 @@ export const ErrorInjectionPanel: FC = () => {
       {Object.keys(activeErrors).length > 0 && (
         <Card>
           <CardContent>
-            <h3 className="text-lg font-semibold mb-4">{t('injection.activeErrorsTitle')}</h3>
+            <h3 className="heading-3 mb-content">{t('injection.activeErrorsTitle')}</h3>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border-default">
-                    <th className="text-left py-2 px-2">{t('injection.tableHeaderDeviceIp')}</th>
-                    <th className="text-left py-2 px-2">{t('injection.tableHeaderInterface')}</th>
-                    <th className="text-left py-2 px-2">{t('injection.tableHeaderErrorType')}</th>
-                    <th className="text-left py-2 px-2">{t('injection.tableHeaderValue')}</th>
-                    <th className="text-left py-2 px-2">{t('injection.tableHeaderActions')}</th>
+                    <th className="text-left py-row px-cell">
+                      {t('injection.tableHeaderDeviceIp')}
+                    </th>
+                    <th className="text-left py-row px-cell">
+                      {t('injection.tableHeaderInterface')}
+                    </th>
+                    <th className="text-left py-row px-cell">
+                      {t('injection.tableHeaderErrorType')}
+                    </th>
+                    <th className="text-left py-row px-cell">{t('injection.tableHeaderValue')}</th>
+                    <th className="text-left py-row px-cell">
+                      {t('injection.tableHeaderActions')}
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -269,13 +279,13 @@ export const ErrorInjectionPanel: FC = () => {
                           key={`${deviceIp}-${iface}-${errorType}`}
                           className="border-b border-border-default"
                         >
-                          <td className="py-2 px-2">{deviceIp}</td>
-                          <td className="py-2 px-2">{iface}</td>
-                          <td className="py-2 px-2">{errorType}</td>
-                          <td className="py-2 px-2">
+                          <td className="py-row px-cell">{deviceIp}</td>
+                          <td className="py-row px-cell">{iface}</td>
+                          <td className="py-row px-cell">{errorType}</td>
+                          <td className="py-row px-cell">
                             <Tag colorScheme="yellow">{value}%</Tag>
                           </td>
-                          <td className="py-2 px-2">
+                          <td className="py-row px-cell">
                             <button
                               type="button"
                               onClick={() => handleClearSpecific(deviceIp, iface)}

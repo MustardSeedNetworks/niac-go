@@ -36,7 +36,7 @@ export const SnmpSection: FC<SNMPSectionProps> = ({
       }}
     >
       {device.snmpAgent && (
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-comfortable md:grid-cols-2">
           <FormField label="Community String" helpText="SNMP v1/v2c community string">
             <input
               type="text"

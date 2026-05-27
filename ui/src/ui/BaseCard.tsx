@@ -70,9 +70,9 @@ interface BaseCardProps<T> {
  * Can be overridden with loadingContent prop.
  */
 const DefaultLoadingSkeleton: FC = () => (
-  <div className="space-y-3">
+  <div className="stack">
     <Skeleton width="50%" height={24} />
-    <div className="space-y-2">
+    <div className="stack-sm">
       <div className="flex justify-between">
         <Skeleton width="30%" />
         <Skeleton width="40%" />
@@ -138,7 +138,7 @@ export function BaseCard<T>({
         enableLiveRegion={true}
       >
         <CardValue value="Error" size="md" status="error" />
-        <p className="text-sm text-status-error/80 mt-1">{error}</p>
+        <p className="text-sm text-status-error/80 mt-tight">{error}</p>
       </StatusCard>
     );
   }
@@ -250,7 +250,7 @@ export const SimpleBaseCard: FC<SimpleBaseCardProps> = ({
         enableLiveRegion={true}
       >
         <CardValue value="Error" size="md" status="error" />
-        <p className="text-sm text-status-error/80 mt-1">{error}</p>
+        <p className="text-sm text-status-error/80 mt-tight">{error}</p>
       </StatusCard>
     );
   }

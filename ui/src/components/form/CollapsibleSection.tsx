@@ -24,14 +24,14 @@ export const CollapsibleSection: FC<CollapsibleSectionProps> = ({
   onEnableChange,
 }) => (
   <Card className="border-surface-border bg-bg-surface/70 overflow-hidden">
-    <div className="flex items-center justify-between px-6 py-4 hover:bg-surface-hover transition-colors">
-      <div className="flex items-center gap-3">
+    <div className="flex-between px-6 py-4 hover:bg-surface-hover transition-colors">
+      <div className="flex items-center gap-default">
         <button
           type="button"
           onClick={onToggle}
           aria-expanded={isExpanded}
           aria-label={`${title} section, ${isExpanded ? 'expanded' : 'collapsed'}`}
-          className="flex items-center gap-3 text-left focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand-primary rounded-lg px-1 -ml-1"
+          className="flex items-center gap-default text-left focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand-primary rounded-lg px-1 -ml-1"
         >
           {isExpanded ? (
             <ChevronDown className={`${iconSizes.md} text-text-muted`} />
@@ -46,7 +46,7 @@ export const CollapsibleSection: FC<CollapsibleSectionProps> = ({
           )}
         </button>
         {onEnableChange && (
-          <div className="ml-2">
+          <div className="ml-inline">
             <label className="relative inline-flex items-center cursor-pointer">
               <input
                 type="checkbox"

@@ -143,7 +143,7 @@ export const PcapUploader: FC<PcapUploaderProps> = ({
 
   return (
     <Card className="border-surface-border bg-bg-surface/70">
-      <CardContent className="space-y-4">
+      <CardContent className="stack-lg">
         {/* Drag and Drop Zone */}
         <input
           ref={fileInputRef}
@@ -159,7 +159,7 @@ export const PcapUploader: FC<PcapUploaderProps> = ({
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
           className={`
-            relative cursor-pointer rounded-xl border-2 border-dashed p-8 text-center transition-all
+            relative cursor-pointer rounded-xl border-2 border-dashed pad-xl text-center transition-all
             ${
               isDragOver
                 ? 'border-brand-accent bg-brand-primary/20'
@@ -169,9 +169,9 @@ export const PcapUploader: FC<PcapUploaderProps> = ({
           `}
           aria-label="Drop PCAP file here or click to select"
         >
-          <div className="flex flex-col items-center gap-3">
+          <div className="flex flex-col items-center gap-default">
             <div
-              className={`rounded-full p-4 ${isDragOver ? 'bg-brand-primary/20' : 'bg-bg-elevated/50'}`}
+              className={`rounded-full pad ${isDragOver ? 'bg-brand-primary/20' : 'bg-bg-elevated/50'}`}
             >
               <Upload
                 className={`${iconSizes['2xl']} ${isDragOver ? 'text-brand-accent' : 'text-text-muted'}`}
@@ -195,8 +195,8 @@ export const PcapUploader: FC<PcapUploaderProps> = ({
 
         {/* Selected File Display */}
         {selectedFile && (
-          <div className="flex items-center justify-between rounded-lg border border-surface-border bg-bg-base/50 p-4">
-            <div className="flex items-center gap-3">
+          <div className="flex-between rounded-lg border border-surface-border bg-bg-base/50 pad">
+            <div className="flex items-center gap-default">
               <FileUp className={`${iconSizes.lg} text-brand-accent`} />
               <div>
                 <p className="font-medium text-text-primary">{selectedFile.name}</p>
@@ -207,7 +207,7 @@ export const PcapUploader: FC<PcapUploaderProps> = ({
               </Tag>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-compact">
               <Button
                 variant="ghost"
                 size="sm"
@@ -223,14 +223,14 @@ export const PcapUploader: FC<PcapUploaderProps> = ({
 
         {/* Status Messages */}
         {error && (
-          <div className="flex items-center gap-2 rounded-lg border border-status-error/30 bg-status-error/20 p-3">
+          <div className="flex items-center gap-compact rounded-lg border border-status-error/30 bg-status-error/20 pad-sm">
             <AlertCircle className={`${iconSizes.lg} flex-shrink-0 text-status-error`} />
             <SmallText className="text-status-error">{error}</SmallText>
           </div>
         )}
 
         {success && (
-          <div className="flex items-center gap-2 rounded-lg border border-status-success/30 bg-status-success/20 p-3">
+          <div className="flex items-center gap-compact rounded-lg border border-status-success/30 bg-status-success/20 pad-sm">
             <CheckCircle className={`${iconSizes.lg} flex-shrink-0 text-status-success`} />
             <SmallText className="text-status-success">{success}</SmallText>
           </div>

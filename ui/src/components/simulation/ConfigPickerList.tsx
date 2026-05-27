@@ -74,15 +74,15 @@ export const ConfigsList: FC<{
   const renderSection = (label: string, items: ConfigItem[]) => {
     if (items.length === 0) return null;
     return (
-      <section className="space-y-2" key={label}>
-        <header className="flex items-baseline gap-2">
+      <section className="stack-sm" key={label}>
+        <header className="flex items-baseline gap-compact">
           <h3 className="text-xs font-semibold uppercase tracking-wider text-text-muted">
             {label}
           </h3>
           <span className="text-xs text-text-muted">· {items.length}</span>
         </header>
         {viewMode === 'grid' ? (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="grid grid-cols-1 gap-default sm:grid-cols-2 xl:grid-cols-3">
             {items.map((item) => (
               <ConfigCard
                 key={item.key}
@@ -117,7 +117,7 @@ export const ConfigsList: FC<{
   };
 
   return (
-    <div className="max-h-[480px] space-y-4 overflow-y-auto pr-1">
+    <div className="max-h-[480px] stack-lg overflow-y-auto pr-1">
       {renderSection('Local upload', sections.local)}
       {!searching && renderSection('Favorites', sections.favorites)}
       {renderSection(searching ? 'Results' : 'All networks', sections.all)}
@@ -177,14 +177,14 @@ const ConfigCard: FC<SharedItemProps> = ({
 
   return (
     <div
-      className={`flex flex-col gap-3 rounded-lg border p-3 transition-colors ${
+      className={`flex flex-col gap-default rounded-lg border pad-sm transition-colors ${
         selected
           ? 'border-brand-accent/50 bg-brand-primary/10'
           : 'border-surface-border bg-bg-base/40 hover:border-brand-primary/30'
       }`}
     >
-      <div className="flex items-start justify-between gap-2">
-        <div className={`rounded-md border p-2 ${tint}`}>
+      <div className="flex items-start justify-between gap-compact">
+        <div className={`rounded-md border pad-xs ${tint}`}>
           <Icon className={iconSizes.lg} />
         </div>
         {item.kind !== 'local' && (
@@ -210,9 +210,9 @@ const ConfigCard: FC<SharedItemProps> = ({
             </Tag>
           ))}
       </div>
-      <div className="flex gap-2">
+      <div className="flex gap-compact">
         {selected ? (
-          <div className="flex flex-1 items-center justify-center gap-1.5 rounded bg-brand-primary/30 px-2 py-1.5 text-xs font-medium text-brand-accent ring-1 ring-brand-accent/60">
+          <div className="flex flex-1 items-center justify-center gap-1.5 rounded bg-brand-primary/30 px-cell py-compact-md text-xs font-medium text-brand-accent ring-1 ring-brand-accent/60">
             <Check className={iconSizes.sm} />
             <span>Selected</span>
           </div>
@@ -220,7 +220,7 @@ const ConfigCard: FC<SharedItemProps> = ({
           <button
             type="button"
             onClick={() => onSelect(item)}
-            className="flex-1 rounded bg-brand-primary/20 px-2 py-1.5 text-xs font-medium text-brand-accent ring-1 ring-brand-accent/40 hover:bg-brand-primary/30"
+            className="flex-1 rounded bg-brand-primary/20 px-cell py-compact-md text-xs font-medium text-brand-accent ring-1 ring-brand-accent/40 hover:bg-brand-primary/30"
             title="Select this network — click Start Simulation below to run it"
           >
             Select
@@ -230,7 +230,7 @@ const ConfigCard: FC<SharedItemProps> = ({
           <button
             type="button"
             onClick={() => onView(item)}
-            className="rounded border border-surface-border bg-bg-surface/60 px-2 py-1.5 text-xs font-medium text-text-primary hover:bg-surface-hover"
+            className="rounded border border-surface-border bg-bg-surface/60 px-cell py-compact-md text-xs font-medium text-text-primary hover:bg-surface-hover"
             title="Preview YAML"
           >
             <Eye className={iconSizes.sm} />
@@ -240,7 +240,7 @@ const ConfigCard: FC<SharedItemProps> = ({
           <button
             type="button"
             onClick={onClearLocal}
-            className="rounded border border-status-error/30 bg-status-error/10 px-2 py-1.5 text-xs font-medium text-status-error hover:bg-status-error/20"
+            className="rounded border border-status-error/30 bg-status-error/10 px-cell py-compact-md text-xs font-medium text-status-error hover:bg-status-error/20"
             title="Drop the local file"
           >
             Clear
@@ -261,7 +261,7 @@ const ConfigRow: FC<SharedItemProps> = ({
   onClearLocal,
 }) => (
   <li
-    className={`flex items-center gap-3 px-3 py-2 transition-colors ${
+    className={`flex items-center gap-default px-3 py-row transition-colors ${
       selected ? 'bg-brand-primary/10' : 'hover:bg-surface-hover'
     }`}
   >
@@ -274,7 +274,7 @@ const ConfigRow: FC<SharedItemProps> = ({
       className="flex-1 text-left"
       title={`Select ${item.name}`}
     >
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-compact">
         <span className="font-medium text-text-primary">{item.name}</span>
         {item.kind !== 'local' && (
           <Tag colorScheme="purple" className="text-[10px]">

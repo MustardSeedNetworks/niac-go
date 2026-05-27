@@ -37,17 +37,17 @@ export const TopologyHeader: FC<TopologyHeaderProps> = ({
   onAutoLayout,
 }) => {
   return (
-    <div className="flex items-center justify-between p-4 border-b border-surface-border bg-bg-surface/80 backdrop-blur-sm">
-      <div className="flex items-center gap-4">
-        <h1 className="text-xl font-semibold text-text-primary">{title}</h1>
-        <div className="flex items-center gap-3 text-sm text-text-muted">
+    <div className="flex-between pad border-b border-surface-border bg-bg-surface/80 backdrop-blur-sm">
+      <div className="flex items-center gap-comfortable">
+        <h1 className="heading-2 text-text-primary">{title}</h1>
+        <div className="flex items-center gap-default text-sm text-text-muted">
           <span>{deviceCount} devices</span>
           <span className="text-text-disabled">|</span>
           <span>{linkCount} links</span>
         </div>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-compact">
         {/* Zoom controls */}
         {onZoomOut && (
           <Button
@@ -98,7 +98,7 @@ export const TopologyHeader: FC<TopologyHeaderProps> = ({
           size="sm"
           onClick={onRefresh}
           disabled={isRefreshing}
-          className="gap-2"
+          className="gap-compact"
         >
           <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
           Refresh

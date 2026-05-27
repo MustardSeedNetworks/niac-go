@@ -234,13 +234,13 @@ export const ConfigPicker: FC<ConfigPickerProps> = ({
   };
 
   return (
-    <div className="space-y-3">
+    <div className="stack">
       {/* Upload + clear */}
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-compact">
         <div className="flex-1" />
         <label
           htmlFor="config-upload"
-          className={`flex items-center gap-1.5 rounded border border-surface-border bg-bg-surface/60 px-3 py-1 text-xs font-medium text-text-primary hover:bg-surface-hover ${
+          className={`flex items-center gap-1.5 rounded border border-surface-border bg-bg-surface/60 px-3 py-compact text-xs font-medium text-text-primary hover:bg-surface-hover ${
             convertingDsl ? 'cursor-wait opacity-60' : 'cursor-pointer'
           }`}
           title="Pick a config from disk. YAML is used as-is; legacy Java-DSL (.cfg) is auto-converted."
@@ -273,7 +273,7 @@ export const ConfigPicker: FC<ConfigPickerProps> = ({
       )}
 
       {/* Search + view toggle */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-compact">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted" />
           <input
@@ -281,7 +281,7 @@ export const ConfigPicker: FC<ConfigPickerProps> = ({
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search configs…"
-            className="w-full rounded border border-surface-border bg-bg-surface/60 py-2 pl-9 pr-3 text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none"
+            className="w-full rounded border border-surface-border bg-bg-surface/60 py-row pl-9 pr-3 text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none"
           />
         </div>
         <fieldset
@@ -319,11 +319,11 @@ export const ConfigPicker: FC<ConfigPickerProps> = ({
 
       {/* Java-DSL import — collapsed by default since most users won't need it */}
       <details
-        className="rounded border border-surface-border bg-bg-base/40 p-3"
+        className="rounded border border-surface-border bg-bg-base/40 pad-sm"
         open={showJavaDsl}
         onToggle={(e) => setShowJavaDsl(e.currentTarget.open)}
       >
-        <summary className="flex cursor-pointer items-center gap-2 text-sm text-text-secondary hover:text-text-primary">
+        <summary className="flex cursor-pointer items-center gap-compact text-sm text-text-secondary hover:text-text-primary">
           {showJavaDsl ? (
             <ChevronDown className={iconSizes.md} />
           ) : (
@@ -334,7 +334,7 @@ export const ConfigPicker: FC<ConfigPickerProps> = ({
             Convert a legacy Java-DSL <code className="text-xs">.cfg</code> to YAML
           </span>
         </summary>
-        <div className="mt-3">
+        <div className="mt-heading">
           <JavaDslImportCard />
         </div>
       </details>

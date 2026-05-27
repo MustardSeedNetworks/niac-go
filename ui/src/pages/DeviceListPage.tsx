@@ -61,10 +61,10 @@ export const DeviceListPage: FC = () => {
   } = useDeviceListState();
 
   return (
-    <div className="space-y-6">
+    <div className="stack-xl">
       {/* Header section */}
       <Card className="border-surface-border bg-bg-surface/70">
-        <CardContent className="space-y-4">
+        <CardContent className="stack-lg">
           <DeviceListHeader
             deviceCount={devices.length}
             filteredDevices={filteredDevices}

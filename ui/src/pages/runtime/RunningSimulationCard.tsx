@@ -56,15 +56,15 @@ export const RunningSimulationCard: FC<RunningSimulationCardProps> = ({
   return (
     <Card className="border-status-success/30 bg-gradient-to-br from-green-900/30 to-bg-surface/70">
       <CardContent className="space-y-5">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        <div className="flex-between">
+          <div className="flex items-center gap-default">
             <div className="h-3 w-3 animate-pulse rounded-full bg-status-success" />
             <H2>Simulation Running</H2>
           </div>
           <Tag colorScheme="green">ACTIVE</Tag>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-comfortable md:grid-cols-2 lg:grid-cols-3">
           <StatBlock
             label="Interface"
             value={simStatus.interface || '—'}
@@ -100,7 +100,7 @@ export const RunningSimulationCard: FC<RunningSimulationCardProps> = ({
           </SmallText>
         )}
 
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap gap-default">
           <Button
             variant="outline"
             disabled={stopping}

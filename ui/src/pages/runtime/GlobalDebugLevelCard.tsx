@@ -47,20 +47,20 @@ export const GlobalDebugLevelCard: FC = () => {
 
   return (
     <Card className="border-surface-border bg-bg-surface/70">
-      <CardContent className="space-y-3">
-        <H2 className="flex items-center gap-2 text-lg">
+      <CardContent className="stack">
+        <H2 className="flex items-center gap-compact text-lg">
           <Activity className={`${iconSizes.lg} text-brand-accent`} />
           Debug level
         </H2>
         <SmallText className="text-text-muted">
           Sets every protocol to the same level. Use Protocol Debug for per-protocol tuning.
         </SmallText>
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-default">
           <select
             value={current}
             onChange={(e) => setPending(e.target.value as DebugLevel)}
             disabled={busy || !data}
-            className="rounded border border-surface-border bg-bg-base/60 px-3 py-1.5 text-sm text-text-primary focus:border-brand-accent focus:outline-none disabled:opacity-50"
+            className="rounded border border-surface-border bg-bg-base/60 px-3 py-compact-md text-sm text-text-primary focus:border-brand-accent focus:outline-none disabled:opacity-50"
             aria-label="Global debug level"
             title="Applies to every protocol in the running stack. OFF silences everything; TRACE is the loudest."
           >

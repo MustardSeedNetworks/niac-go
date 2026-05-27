@@ -28,7 +28,7 @@ import { formatBytes, formatTime, getErrorMessage } from '../utils/format';
  * Review YAML-derived devices, SNMP walks, DHCP/DNS personas, and packet playback targets.
  */
 export const DevicesPage: FC = () => (
-  <div className="grid gap-6 xl:grid-cols-2">
+  <div className="grid gap-spacious xl:grid-cols-2">
     <DeviceListCard />
     <ConfigEditorCard />
   </div>
@@ -74,7 +74,7 @@ const DeviceTable = memo(({ devices }: { devices: DeviceSummary[] }) => {
 
   if (devices.length === 0) {
     return (
-      <div className="rounded-xl border border-surface-border bg-bg-base/50 p-8 text-center text-text-muted">
+      <div className="rounded-xl border border-surface-border bg-bg-base/50 pad-xl text-center text-text-muted">
         No devices defined in the loaded configuration.
       </div>
     );
@@ -86,10 +86,10 @@ const DeviceTable = memo(({ devices }: { devices: DeviceSummary[] }) => {
         <table className="min-w-full divide-y divide-white/10 text-sm">
           <thead className="bg-bg-surface/60 text-xs uppercase tracking-wide text-text-muted">
             <tr>
-              <th className="px-4 py-3 text-left">Device</th>
-              <th className="px-4 py-3 text-left">Type</th>
-              <th className="px-4 py-3 text-left">{t('devices.ipAddressesHeader')}</th>
-              <th className="px-4 py-3 text-left">Protocols</th>
+              <th className="px-4 py-row-lg text-left">Device</th>
+              <th className="px-4 py-row-lg text-left">Type</th>
+              <th className="px-4 py-row-lg text-left">{t('devices.ipAddressesHeader')}</th>
+              <th className="px-4 py-row-lg text-left">Protocols</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-white/5 text-text-secondary">
@@ -104,7 +104,7 @@ const DeviceTable = memo(({ devices }: { devices: DeviceSummary[] }) => {
 
   return (
     <div className="rounded-xl border border-surface-border">
-      <div className="bg-bg-surface/60 px-4 py-2 text-xs text-text-muted">
+      <div className="bg-bg-surface/60 px-4 py-row text-xs text-text-muted">
         Showing {virtualScroll.visibleItems.length} of {devices.length} devices (virtual scrolling
         enabled)
       </div>
@@ -114,10 +114,10 @@ const DeviceTable = memo(({ devices }: { devices: DeviceSummary[] }) => {
             <table className="min-w-full divide-y divide-white/10 text-sm">
               <thead className="bg-bg-surface/60 text-xs uppercase tracking-wide text-text-muted">
                 <tr>
-                  <th className="px-4 py-3 text-left">Device</th>
-                  <th className="px-4 py-3 text-left">Type</th>
-                  <th className="px-4 py-3 text-left">{t('devices.ipAddressesHeader')}</th>
-                  <th className="px-4 py-3 text-left">Protocols</th>
+                  <th className="px-4 py-row-lg text-left">Device</th>
+                  <th className="px-4 py-row-lg text-left">Type</th>
+                  <th className="px-4 py-row-lg text-left">{t('devices.ipAddressesHeader')}</th>
+                  <th className="px-4 py-row-lg text-left">Protocols</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5 text-text-secondary">
@@ -140,11 +140,11 @@ DeviceTable.displayName = 'DeviceTable';
  */
 const DeviceRow = memo(({ device }: { device: DeviceSummary }) => (
   <tr>
-    <td className="px-4 py-3 font-semibold text-text-primary">{device.name}</td>
-    <td className="px-4 py-3">{device.type}</td>
-    <td className="px-4 py-3 font-mono text-xs">{device.ips.join(', ') || '—'}</td>
-    <td className="px-4 py-3">
-      <div className="flex flex-wrap gap-2">
+    <td className="px-4 py-row-lg font-semibold text-text-primary">{device.name}</td>
+    <td className="px-4 py-row-lg">{device.type}</td>
+    <td className="px-4 py-row-lg font-mono text-xs">{device.ips.join(', ') || '—'}</td>
+    <td className="px-4 py-row-lg">
+      <div className="flex flex-wrap gap-compact">
         {device.protocols.map((proto) => (
           <Tag key={`${device.name}-${proto}`} colorScheme="purple">
             {proto}
@@ -263,7 +263,7 @@ const ConfigEditorCard: FC = () => {
           <CardRow label="Updated" value={formatTime(cfg.modifiedAt)} />
           <CardRow label="Size" value={formatBytes(cfg.sizeBytes)} />
           <textarea
-            className="mt-3 h-72 w-full rounded-xl border border-surface-border bg-bg-base/70 p-3 font-mono text-sm text-text-primary shadow-inner focus:border-brand-accent focus:outline-none"
+            className="mt-heading h-72 w-full rounded-xl border border-surface-border bg-bg-base/70 pad-sm font-mono text-sm text-text-primary shadow-inner focus:border-brand-accent focus:outline-none"
             value={value}
             onChange={handleChange}
             spellCheck={false}
@@ -276,7 +276,7 @@ const ConfigEditorCard: FC = () => {
               {status.message}
             </SmallText>
           )}
-          <div className="flex flex-wrap gap-3 mt-3">
+          <div className="flex flex-wrap gap-default mt-heading">
             <Button
               tone="violet"
               disabled={!dirty || saving}
@@ -289,7 +289,7 @@ const ConfigEditorCard: FC = () => {
               Discard changes
             </Button>
           </div>
-          <SmallText className="mt-2 text-text-muted">
+          <SmallText className="mt-inline text-text-muted">
             Save runs the same validation as <code>niac validate</code>, writes the YAML to disk,
             then diff-reloads the running stack — added devices spin up, removed devices stop,
             existing devices are updated in place.
@@ -313,13 +313,13 @@ const WalkFileBrowser: FC<{
     return null;
   }
   return (
-    <div className="space-y-2">
+    <div className="stack-sm">
       <SmallText className="text-text-muted">{t('devices.availableSnmpWalks')}</SmallText>
-      <div className="max-h-48 space-y-1 overflow-y-auto rounded-xl border border-surface-border bg-bg-base/50 p-2 text-sm text-text-secondary">
+      <div className="max-h-48 stack-xs overflow-y-auto rounded-xl border border-surface-border bg-bg-base/50 pad-xs text-sm text-text-secondary">
         {files.map((file) => (
           <div
             key={file.name}
-            className="flex items-center justify-between gap-2 rounded-lg border border-surface-border bg-bg-surface/50 px-3 py-2"
+            className="flex-between gap-compact rounded-lg border border-surface-border bg-bg-surface/50 px-3 py-row"
           >
             <div>
               <p className="text-text-primary">{file.name}</p>

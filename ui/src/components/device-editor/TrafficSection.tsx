@@ -46,11 +46,11 @@ export const TrafficSection: FC<ProtocolSectionProps> = ({
       }}
     >
       {device.traffic?.enabled && (
-        <div className="space-y-6">
+        <div className="stack-xl">
           {/* ARP Announcements */}
-          <div className="rounded-lg border border-surface-border bg-bg-base/40 p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <h4 className="text-sm font-medium text-text-primary flex items-center gap-2">
+          <div className="rounded-lg border border-surface-border bg-bg-base/40 pad stack">
+            <div className="flex-between">
+              <h4 className="label flex items-center gap-compact">
                 <Radio className={`${iconSizes.md} text-brand-accent`} />
                 ARP Announcements
               </h4>
@@ -93,16 +93,16 @@ export const TrafficSection: FC<ProtocolSectionProps> = ({
                     });
                   }}
                   min={1}
-                  className="w-32 rounded-lg border border-surface-border bg-bg-base/60 p-2 text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none"
+                  className="w-32 rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none"
                 />
               </FormField>
             )}
           </div>
 
           {/* Periodic Pings */}
-          <div className="rounded-lg border border-surface-border bg-bg-base/40 p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <h4 className="text-sm font-medium text-text-primary flex items-center gap-2">
+          <div className="rounded-lg border border-surface-border bg-bg-base/40 pad stack">
+            <div className="flex-between">
+              <h4 className="label flex items-center gap-compact">
                 <Radio className={`${iconSizes.md} text-brand-accent`} />
                 Periodic Pings
               </h4>
@@ -130,7 +130,7 @@ export const TrafficSection: FC<ProtocolSectionProps> = ({
               </label>
             </div>
             {device.traffic.periodicPings?.enabled && (
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-comfortable md:grid-cols-2">
                 <FormField label="Interval (seconds)" helpText="Time between pings">
                   <input
                     type="number"
@@ -147,7 +147,7 @@ export const TrafficSection: FC<ProtocolSectionProps> = ({
                       });
                     }}
                     min={1}
-                    className="w-full rounded-lg border border-surface-border bg-bg-base/60 p-2 text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none"
+                    className="w-full rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none"
                   />
                 </FormField>
                 <FormField label="Payload Size (bytes)" helpText="Size of ICMP payload">
@@ -167,7 +167,7 @@ export const TrafficSection: FC<ProtocolSectionProps> = ({
                     }}
                     min={0}
                     max={65507}
-                    className="w-full rounded-lg border border-surface-border bg-bg-base/60 p-2 text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none"
+                    className="w-full rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none"
                   />
                 </FormField>
               </div>
@@ -175,9 +175,9 @@ export const TrafficSection: FC<ProtocolSectionProps> = ({
           </div>
 
           {/* Random Traffic */}
-          <div className="rounded-lg border border-surface-border bg-bg-base/40 p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <h4 className="text-sm font-medium text-text-primary flex items-center gap-2">
+          <div className="rounded-lg border border-surface-border bg-bg-base/40 pad stack">
+            <div className="flex-between">
+              <h4 className="label flex items-center gap-compact">
                 <Radio className={`${iconSizes.md} text-brand-accent`} />
                 Random Traffic
               </h4>
@@ -205,8 +205,8 @@ export const TrafficSection: FC<ProtocolSectionProps> = ({
               </label>
             </div>
             {device.traffic.randomTraffic?.enabled && (
-              <div className="space-y-4">
-                <div className="grid gap-4 md:grid-cols-2">
+              <div className="stack-lg">
+                <div className="grid gap-comfortable md:grid-cols-2">
                   <FormField label="Interval (seconds)" helpText="Time between traffic bursts">
                     <input
                       type="number"
@@ -224,7 +224,7 @@ export const TrafficSection: FC<ProtocolSectionProps> = ({
                         });
                       }}
                       min={1}
-                      className="w-full rounded-lg border border-surface-border bg-bg-base/60 p-2 text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none"
+                      className="w-full rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none"
                     />
                   </FormField>
                   <FormField label="Packet Count" helpText="Packets per burst">
@@ -245,15 +245,15 @@ export const TrafficSection: FC<ProtocolSectionProps> = ({
                       }}
                       min={1}
                       max={100}
-                      className="w-full rounded-lg border border-surface-border bg-bg-base/60 p-2 text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none"
+                      className="w-full rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none"
                     />
                   </FormField>
                 </div>
-                <div className="space-y-2">
+                <div className="stack-sm">
                   <h5 className="text-xs font-medium text-text-muted">Traffic Patterns</h5>
-                  <div className="flex flex-wrap gap-4">
+                  <div className="flex flex-wrap gap-comfortable">
                     {(['broadcast_arp', 'multicast', 'udp'] as const).map((pattern) => (
-                      <label key={pattern} className="flex items-center gap-2 cursor-pointer">
+                      <label key={pattern} className="flex items-center gap-compact cursor-pointer">
                         <input
                           type="checkbox"
                           checked={(device.traffic?.randomTraffic?.patterns || []).includes(

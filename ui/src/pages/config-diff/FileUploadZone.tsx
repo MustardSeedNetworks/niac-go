@@ -106,10 +106,10 @@ export const FileUploadZone: FC<FileUploadZoneProps> = ({
 
   if (file) {
     return (
-      <div className="rounded-xl border border-status-success/30 bg-status-success/10 p-4">
+      <div className="rounded-xl border border-status-success/30 bg-status-success/10 pad">
         <div className="flex items-start justify-between">
-          <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-status-success/20 p-2">
+          <div className="flex items-center gap-default">
+            <div className="rounded-lg bg-status-success/20 pad-xs">
               <FileCode className={`${iconSizes.lg} text-status-success`} />
             </div>
             <div>
@@ -134,9 +134,9 @@ export const FileUploadZone: FC<FileUploadZoneProps> = ({
   }
 
   return (
-    <div className="space-y-2">
+    <div className="stack-sm">
       <label
-        className={`block rounded-xl border-2 border-dashed p-6 text-center transition-colors cursor-pointer ${
+        className={`block rounded-xl border-2 border-dashed pad-lg text-center transition-colors cursor-pointer ${
           dragOver
             ? 'border-brand-accent bg-brand-primary/10'
             : 'border-surface-border hover:border-brand-accent/50 hover:bg-bg-base/50'
@@ -159,7 +159,7 @@ export const FileUploadZone: FC<FileUploadZoneProps> = ({
         </SmallText>
       </label>
       {error && (
-        <div className="flex items-center gap-2 text-status-error text-sm">
+        <div className="flex items-center gap-compact text-status-error text-sm">
           <AlertCircle className={iconSizes.md} />
           {error}
         </div>

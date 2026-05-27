@@ -67,7 +67,7 @@ export const SidebarLayout: FC<SidebarProps> = ({ groups, version, children, top
         onClick={() => navigate(item.path)}
         onMouseEnter={() => prefetchRoute(item.path)}
         className={`
-          group flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium
+          group flex items-center gap-default w-full px-3 py-2.5 rounded-lg text-sm font-medium
           transition-all duration-200
           ${
             active
@@ -113,9 +113,9 @@ export const SidebarLayout: FC<SidebarProps> = ({ groups, version, children, top
       <div
         className={`flex items-center ${collapsed ? 'justify-center' : 'justify-between'} px-3 py-4 border-b border-surface-border`}
       >
-        <div className={`flex items-center gap-2 ${collapsed ? 'justify-center' : ''}`}>
+        <div className={`flex items-center gap-compact ${collapsed ? 'justify-center' : ''}`}>
           <div className="relative flex-shrink-0">
-            <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-brand-primary to-brand-primary flex items-center justify-center shadow-lg shadow-brand-primary/30">
+            <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-brand-primary to-brand-primary flex-center shadow-lg shadow-brand-primary/30">
               <Network className={`${iconSizes.lg} text-text-primary`} />
             </div>
             <div className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-status-success border-2 border-border-muted" />
@@ -140,7 +140,7 @@ export const SidebarLayout: FC<SidebarProps> = ({ groups, version, children, top
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-6">
+      <nav className="flex-1 overflow-y-auto py-4 px-cell stack-xl">
         {groups.map((group) => (
           <div key={group.label}>
             {!collapsed && (
@@ -149,7 +149,7 @@ export const SidebarLayout: FC<SidebarProps> = ({ groups, version, children, top
               </h3>
             )}
             {collapsed && <div className="h-px bg-surface-hover mx-2 mb-2" />}
-            <div className="space-y-1">{group.items.map(renderNavItem)}</div>
+            <div className="stack-xs">{group.items.map(renderNavItem)}</div>
           </div>
         ))}
       </nav>
@@ -157,13 +157,13 @@ export const SidebarLayout: FC<SidebarProps> = ({ groups, version, children, top
       {/* Footer */}
       <div className={`px-3 py-4 border-t border-surface-border ${collapsed ? 'text-center' : ''}`}>
         {/* Action Buttons */}
-        <div className={`${collapsed ? 'space-y-2' : 'flex items-center gap-2'} mb-3`}>
+        <div className={`${collapsed ? 'stack-sm' : 'flex items-center gap-compact'} mb-heading`}>
           <button
             type="button"
             onClick={() => setHelpOpen(true)}
             className={`
               ${collapsed ? 'w-full' : 'flex-1'}
-              flex items-center ${collapsed ? 'justify-center' : 'gap-2'} px-3 py-2 rounded-lg
+              flex items-center ${collapsed ? 'justify-center' : 'gap-compact'} px-3 py-row rounded-lg
               text-text-muted hover:text-text-primary hover:bg-surface-hover transition-colors
               text-sm font-medium
             `}
@@ -178,7 +178,7 @@ export const SidebarLayout: FC<SidebarProps> = ({ groups, version, children, top
             onClick={() => setSettingsOpen(true)}
             className={`
               ${collapsed ? 'w-full' : 'flex-1'}
-              flex items-center ${collapsed ? 'justify-center' : 'gap-2'} px-3 py-2 rounded-lg
+              flex items-center ${collapsed ? 'justify-center' : 'gap-compact'} px-3 py-row rounded-lg
               text-text-muted hover:text-text-primary hover:bg-surface-hover transition-colors
               text-sm font-medium
             `}
@@ -195,9 +195,7 @@ export const SidebarLayout: FC<SidebarProps> = ({ groups, version, children, top
 
         {/* Version Info */}
         {version && (
-          <div
-            className={`text-xs font-mono text-text-muted ${collapsed ? '' : 'flex items-center justify-between'}`}
-          >
+          <div className={`text-xs font-mono text-text-muted ${collapsed ? '' : 'flex-between'}`}>
             {!collapsed && <span>Version</span>}
             <span className={collapsed ? '' : 'text-text-muted'}>{version}</span>
           </div>
@@ -206,7 +204,7 @@ export const SidebarLayout: FC<SidebarProps> = ({ groups, version, children, top
           <button
             type="button"
             onClick={() => setCollapsed(false)}
-            className="mt-2 p-1.5 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-hover transition-colors"
+            className="mt-inline p-1.5 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-hover transition-colors"
             title="Expand the sidebar to show navigation labels alongside icons"
             aria-label="Expand sidebar"
           >
@@ -222,15 +220,15 @@ export const SidebarLayout: FC<SidebarProps> = ({ groups, version, children, top
       {/* Skip to main content link for accessibility */}
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:px-4 focus:py-2 focus:rounded-lg focus:bg-brand-primary focus:text-text-primary focus:outline-none"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:px-4 focus:py-row focus:rounded-lg focus:bg-brand-primary focus:text-text-primary focus:outline-none"
       >
         Skip to main content
       </a>
 
       {/* Mobile header */}
-      <header className="lg:hidden fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 py-3 bg-bg-surface/95 backdrop-blur-xl border-b border-surface-border">
-        <div className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-brand-primary to-brand-primary flex items-center justify-center">
+      <header className="lg:hidden fixed top-0 left-0 right-0 z-50 flex-between px-4 py-row-lg bg-bg-surface/95 backdrop-blur-xl border-b border-surface-border">
+        <div className="flex items-center gap-compact">
+          <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-brand-primary to-brand-primary flex-center">
             <Network className={`${iconSizes.md} text-text-primary`} />
           </div>
           <span className="font-display font-bold text-text-primary">NIAC</span>
@@ -238,7 +236,7 @@ export const SidebarLayout: FC<SidebarProps> = ({ groups, version, children, top
         <button
           type="button"
           onClick={() => setMobileOpen(!mobileOpen)}
-          className="p-2 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-hover transition-colors"
+          className="pad-xs rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-hover transition-colors"
           title={
             mobileOpen
               ? 'Close the navigation drawer'
@@ -294,11 +292,11 @@ export const SidebarLayout: FC<SidebarProps> = ({ groups, version, children, top
         `}
       >
         {topBar && (
-          <div className="sticky top-0 z-30 border-b border-surface-border bg-surface-base px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-3">
+          <div className="sticky top-0 z-30 border-b border-surface-border bg-surface-base px-4 sm:px-6 lg:px-8 py-row-lg flex-between gap-default">
             {topBar}
           </div>
         )}
-        <div className="p-4 sm:p-6 lg:p-8">{children}</div>
+        <div className="pad sm:pad-lg lg:pad-xl">{children}</div>
       </main>
 
       {/* Drawers */}

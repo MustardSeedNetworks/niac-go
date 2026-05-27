@@ -41,7 +41,7 @@ export const TemplatesPage: FC = () => {
   } = useTemplates();
 
   return (
-    <div className="space-y-6">
+    <div className="stack-xl">
       {/* Header section with search and upload */}
       <TemplatesHeader
         searchQuery={searchQuery}

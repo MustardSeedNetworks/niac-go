@@ -13,7 +13,7 @@ export const ConfirmDeleteModal: FC<ConfirmDeleteModalProps> = ({
   onConfirm,
   onCancel,
 }) => (
-  <div className="fixed inset-0 z-50 flex items-center justify-center">
+  <div className="fixed inset-0 z-50 flex-center">
     <button
       type="button"
       className="absolute inset-0 bg-black/70 backdrop-blur-sm"
@@ -25,15 +25,15 @@ export const ConfirmDeleteModal: FC<ConfirmDeleteModalProps> = ({
       role="dialog"
       aria-modal="true"
     >
-      <div className="p-6 space-y-4">
-        <div className="flex items-center gap-3 text-status-error">
+      <div className="pad-lg stack-lg">
+        <div className="flex items-center gap-default text-status-error">
           <Trash2 className="h-6 w-6" />
-          <h2 className="text-lg font-semibold">Delete Device</h2>
+          <h2 className="heading-3">Delete Device</h2>
         </div>
         <p className="text-text-secondary">
           Are you sure you want to delete <strong>{hostname}</strong>? This action cannot be undone.
         </p>
-        <div className="flex justify-end gap-3 pt-2">
+        <div className="flex justify-end gap-default pt-2">
           <Button variant="outline" onClick={onCancel}>
             Cancel
           </Button>

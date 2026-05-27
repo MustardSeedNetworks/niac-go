@@ -92,12 +92,12 @@ export const StreamView: FC<StreamViewProps> = memo(({ packets, clientEndpoint, 
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+    <div className="fixed inset-0 z-50 flex-center bg-black/60">
       <div className="w-full max-w-4xl mx-4 bg-bg-surface border border-surface-border rounded-xl shadow-2xl max-h-[85vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-surface-border">
+        <div className="flex-between px-5 py-4 border-b border-surface-border">
           <div>
-            <h3 className="text-lg font-semibold text-text-primary">
+            <h3 className="heading-3 text-text-primary">
               {t('packets.inspector.followStreamTitle')}
             </h3>
             <SmallText className="text-text-muted">
@@ -106,13 +106,13 @@ export const StreamView: FC<StreamViewProps> = memo(({ packets, clientEndpoint, 
               <span className="text-status-error">{totalServerBytes} B server</span>
             </SmallText>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-default">
             {/* Display mode toggle */}
             <div className="flex rounded-lg border border-surface-border bg-bg-base/50 p-1">
               <button
                 type="button"
                 onClick={() => setDisplayMode('ascii')}
-                className={`px-3 py-1 text-xs rounded-md transition-colors ${
+                className={`px-3 py-compact text-xs rounded-md transition-colors ${
                   displayMode === 'ascii'
                     ? 'bg-brand-primary text-text-primary'
                     : 'text-text-muted hover:text-text-primary'
@@ -123,7 +123,7 @@ export const StreamView: FC<StreamViewProps> = memo(({ packets, clientEndpoint, 
               <button
                 type="button"
                 onClick={() => setDisplayMode('hex')}
-                className={`px-3 py-1 text-xs rounded-md transition-colors ${
+                className={`px-3 py-compact text-xs rounded-md transition-colors ${
                   displayMode === 'hex'
                     ? 'bg-brand-primary text-text-primary'
                     : 'text-text-muted hover:text-text-primary'
@@ -150,11 +150,11 @@ export const StreamView: FC<StreamViewProps> = memo(({ packets, clientEndpoint, 
               <p>{t('packets.inspector.noPayload')}</p>
             </div>
           ) : (
-            <div className="space-y-1 font-mono text-xs">
+            <div className="stack-xs font-mono text-xs">
               {segments.map((segment, idx) => (
                 <div
                   key={`${segment.timestamp}-${idx}`}
-                  className={`px-3 py-1.5 rounded whitespace-pre-wrap break-all ${
+                  className={`px-3 py-compact-md rounded whitespace-pre-wrap break-all ${
                     segment.isClient
                       ? 'bg-status-info/30 text-status-info border-l-2 border-status-info'
                       : 'bg-status-error/30 text-status-error border-l-2 border-status-error'
@@ -168,7 +168,7 @@ export const StreamView: FC<StreamViewProps> = memo(({ packets, clientEndpoint, 
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end px-5 py-3 border-t border-surface-border">
+        <div className="flex items-center justify-end px-5 py-row-lg border-t border-surface-border">
           <Button variant="ghost" size="sm" onClick={onClose}>
             Close
           </Button>

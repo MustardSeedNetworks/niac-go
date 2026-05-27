@@ -29,7 +29,7 @@ export const TopologyLegend: FC<TopologyLegendProps> = ({ show, onToggle }) => {
       <button
         type="button"
         onClick={onToggle}
-        className="flex items-center gap-2 px-3 py-2 rounded-lg bg-bg-elevated/90 border border-surface-border text-sm text-text-secondary hover:bg-bg-elevated/90 transition-colors"
+        className="flex items-center gap-compact px-3 py-row rounded-lg bg-bg-elevated/90 border border-surface-border text-sm text-text-secondary hover:bg-bg-elevated/90 transition-colors"
       >
         <Eye className="w-4 h-4" />
         Show Legend
@@ -38,8 +38,8 @@ export const TopologyLegend: FC<TopologyLegendProps> = ({ show, onToggle }) => {
   }
 
   return (
-    <div className="bg-bg-elevated/95 backdrop-blur-sm border border-surface-border rounded-xl p-4 min-w-[200px]">
-      <div className="flex items-center justify-between mb-3">
+    <div className="bg-bg-elevated/95 backdrop-blur-sm border border-surface-border rounded-xl pad min-w-[200px]">
+      <div className="flex-between mb-heading">
         <span className="text-sm font-semibold text-text-primary">Legend</span>
         <button
           type="button"
@@ -50,7 +50,7 @@ export const TopologyLegend: FC<TopologyLegendProps> = ({ show, onToggle }) => {
         </button>
       </div>
 
-      <div className="space-y-4">
+      <div className="stack-lg">
         {/* Device Types */}
         <div>
           <div className="text-xs text-text-muted uppercase tracking-wide mb-2">
@@ -68,8 +68,8 @@ export const TopologyLegend: FC<TopologyLegendProps> = ({ show, onToggle }) => {
               const Icon = deviceIcons[type] || Network;
               const color = deviceColors[type];
               return (
-                <div key={type} className="flex items-center gap-2">
-                  <div className="w-4 h-4 flex items-center justify-center">
+                <div key={type} className="flex items-center gap-compact">
+                  <div className="w-4 h-4 flex-center">
                     <Icon className="w-4 h-4 text-current" />
                   </div>
                   <span className="text-xs text-text-secondary">{label}</span>
@@ -95,7 +95,7 @@ export const TopologyLegend: FC<TopologyLegendProps> = ({ show, onToggle }) => {
               { label: '10G', color: 'var(--color-link-10g)' },
               { label: 'Trunk/LAG', color: 'var(--color-link-trunk)' },
             ].map(({ label, color }) => (
-              <div key={label} className="flex items-center gap-2">
+              <div key={label} className="flex items-center gap-compact">
                 <div className="w-6 h-0.5 rounded" style={{ backgroundColor: color }} />
                 <span className="text-xs text-text-secondary">{label}</span>
               </div>

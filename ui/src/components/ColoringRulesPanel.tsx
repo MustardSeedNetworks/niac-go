@@ -29,7 +29,7 @@ const RuleRow: FC<{
   const filterError = rule.filter ? validate(rule.filter) : null;
 
   return (
-    <div className="flex items-center gap-2 py-2 px-2 rounded-lg bg-bg-base/40 border border-surface-border">
+    <div className="flex items-center gap-compact py-row px-cell rounded-lg bg-bg-base/40 border border-surface-border">
       {/* Enable toggle */}
       <input
         type="checkbox"
@@ -43,7 +43,7 @@ const RuleRow: FC<{
         className="w-6 h-6 rounded border border-surface-border flex-shrink-0"
         style={{ backgroundColor: rule.background, color: rule.foreground }}
       >
-        <span className="text-xs font-bold flex items-center justify-center h-full">A</span>
+        <span className="text-xs font-bold flex-center h-full">A</span>
       </div>
 
       {/* Name */}
@@ -186,11 +186,11 @@ export const ColoringRulesPanel: FC<ColoringRulesPanelProps> = memo(
     }, [onReset, onClose]);
 
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+      <div className="fixed inset-0 z-50 flex-center bg-black/60">
         <div className="w-full max-w-3xl mx-4 bg-bg-surface border border-surface-border rounded-xl shadow-2xl max-h-[80vh] flex flex-col">
           {/* Header */}
-          <div className="flex items-center justify-between px-5 py-4 border-b border-surface-border">
-            <h3 className="text-lg font-semibold text-text-primary">Coloring Rules</h3>
+          <div className="flex-between px-5 py-4 border-b border-surface-border">
+            <h3 className="heading-3 text-text-primary">Coloring Rules</h3>
             <button
               type="button"
               onClick={onClose}
@@ -201,8 +201,8 @@ export const ColoringRulesPanel: FC<ColoringRulesPanelProps> = memo(
           </div>
 
           {/* Rules list */}
-          <div className="flex-1 overflow-y-auto px-5 py-4 space-y-2">
-            <SmallText className="text-text-muted mb-3 block">
+          <div className="flex-1 overflow-y-auto px-5 py-4 stack-sm">
+            <SmallText className="text-text-muted mb-heading block">
               Rules are evaluated top-to-bottom. First matching rule determines the row color.
             </SmallText>
 
@@ -227,8 +227,8 @@ export const ColoringRulesPanel: FC<ColoringRulesPanelProps> = memo(
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-between px-5 py-4 border-t border-surface-border">
-            <div className="flex items-center gap-2">
+          <div className="flex-between px-5 py-4 border-t border-surface-border">
+            <div className="flex items-center gap-compact">
               <Button
                 variant="ghost"
                 size="sm"
@@ -247,7 +247,7 @@ export const ColoringRulesPanel: FC<ColoringRulesPanelProps> = memo(
               </Button>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-compact">
               <Button variant="ghost" size="sm" onClick={onClose}>
                 Cancel
               </Button>

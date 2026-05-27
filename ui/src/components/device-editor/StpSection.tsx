@@ -31,7 +31,7 @@ export const StpSection: FC<ProtocolSectionProps> = ({
       }}
     >
       {device.stp?.enabled && (
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-comfortable md:grid-cols-2">
           <FormField
             label="Bridge Priority"
             helpText="STP bridge priority (0-61440, in steps of 4096)"

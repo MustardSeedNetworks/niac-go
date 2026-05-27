@@ -50,7 +50,7 @@ export const Input: FC<InputProps> = ({
             ${inputBaseStyles}
             ${hasError ? 'border-status-error focus:border-status-error focus:ring-status-error/20' : `${inputBorderStyles} ${inputFocusStyles}`}
             ${leftIcon ? 'pl-10' : 'px-4'}
-            ${rightIcon ? 'pr-10' : 'px-4'}
+            ${rightIcon ? 'pr-icon' : 'px-4'}
             py-2.5
             ${className}
           `}
@@ -169,7 +169,7 @@ export const Select: FC<SelectProps> = ({
           ${hasError ? 'border-status-error focus:border-status-error focus:ring-status-error/20' : `${inputBorderStyles} ${inputFocusStyles}`}
           px-4 py-2.5 appearance-none cursor-pointer
           bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2024%2024%22%20stroke%3D%22%239ca3af%22%3E%3Cpath%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%222%22%20d%3D%22M19%209l-7%207-7-7%22%2F%3E%3C%2Fsvg%3E')]
-          bg-[length:1.25rem] bg-[right_0.75rem_center] bg-no-repeat pr-10
+          bg-[length:1.25rem] bg-[right_0.75rem_center] bg-no-repeat pr-icon
           ${className}
         `}
         onChange={(e) => onChange?.(e.target.value)}
@@ -215,7 +215,7 @@ export const Checkbox: FC<CheckboxProps> = ({
   const checkboxId = id || label.toLowerCase().replace(/\s+/g, '-');
 
   return (
-    <div className={`flex items-start gap-3 ${containerClassName}`}>
+    <div className={`flex items-start gap-default ${containerClassName}`}>
       <input
         ref={ref}
         type="checkbox"
@@ -229,10 +229,7 @@ export const Checkbox: FC<CheckboxProps> = ({
         {...props}
       />
       <div>
-        <label
-          htmlFor={checkboxId}
-          className="text-sm font-medium text-text-primary cursor-pointer"
-        >
+        <label htmlFor={checkboxId} className="label cursor-pointer">
           {label}
         </label>
         {description && <p className="text-sm text-text-muted mt-0.5">{description}</p>}
@@ -262,9 +259,9 @@ export const Toggle: FC<ToggleProps> = ({
   const toggleId = id || label.toLowerCase().replace(/\s+/g, '-');
 
   return (
-    <div className={`flex items-center justify-between gap-4 ${containerClassName}`}>
+    <div className={`flex-between gap-comfortable ${containerClassName}`}>
       <div>
-        <label htmlFor={toggleId} className="text-sm font-medium text-text-primary cursor-pointer">
+        <label htmlFor={toggleId} className="label cursor-pointer">
           {label}
         </label>
         {description && <p className="text-sm text-text-muted mt-0.5">{description}</p>}
@@ -378,7 +375,7 @@ export const SearchInput: FC<SearchInputProps> = ({
             ${inputBorderStyles}
             ${inputFocusStyles}
             pl-10
-            ${hasValue ? 'pr-10' : 'pr-4'}
+            ${hasValue ? 'pr-icon' : 'pr-4'}
             py-2.5
             ${className}
           `}
@@ -417,7 +414,7 @@ interface FormGroupProps {
 }
 
 export const FormGroup: FC<FormGroupProps> = ({ children, className = '' }) => (
-  <div className={`space-y-4 ${className}`}>{children}</div>
+  <div className={`stack-lg ${className}`}>{children}</div>
 );
 
 // Form section with title
@@ -434,11 +431,11 @@ export const FormSection: FC<FormSectionProps> = ({
   children,
   className = '',
 }) => (
-  <div className={`space-y-4 ${className}`}>
+  <div className={`stack-lg ${className}`}>
     <div>
-      <h3 className="text-lg font-semibold text-text-primary">{title}</h3>
-      {description && <p className="text-sm text-text-muted mt-1">{description}</p>}
+      <h3 className="heading-3 text-text-primary">{title}</h3>
+      {description && <p className="text-sm text-text-muted mt-tight">{description}</p>}
     </div>
-    <div className="space-y-4">{children}</div>
+    <div className="stack-lg">{children}</div>
   </div>
 );

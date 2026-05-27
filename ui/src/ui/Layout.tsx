@@ -120,7 +120,7 @@ export const PrimaryNav: FC<PrimaryNavProps> = ({
           handleNavigate(item.path);
           setOpenGroup(null);
         }}
-        className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 whitespace-nowrap ${
+        className={`flex items-center gap-compact px-3 py-row rounded-lg text-sm font-medium transition-all duration-200 whitespace-nowrap ${
           isActive
             ? 'bg-gradient-to-r from-brand-primary/30 to-brand-primary/20 text-text-primary border-l-2 border-brand-primary shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]'
             : 'text-text-muted hover:text-text-primary hover:bg-surface-hover'
@@ -130,7 +130,7 @@ export const PrimaryNav: FC<PrimaryNavProps> = ({
         <span>{item.label}</span>
         {item.badge && (
           <span
-            className={`ml-1 px-1.5 py-0.5 text-xs rounded font-medium ${
+            className={`ml-tight px-1.5 py-0.5 text-xs rounded font-medium ${
               item.badge === 'New'
                 ? 'bg-status-success/20 text-status-success'
                 : item.badge === 'Beta'
@@ -149,7 +149,7 @@ export const PrimaryNav: FC<PrimaryNavProps> = ({
   const navItems = groups ? groups.flatMap((g) => g.items) : items;
 
   return (
-    <nav className={`relative flex items-center gap-2 mb-6 ${className}`}>
+    <nav className={`relative flex items-center gap-compact mb-section ${className}`}>
       {/* Logo */}
       {logo && <div className="flex-shrink-0 mr-4">{logo}</div>}
 
@@ -168,7 +168,7 @@ export const PrimaryNav: FC<PrimaryNavProps> = ({
       {/* Navigation items */}
       <div
         ref={scrollContainerRef}
-        className="flex items-center gap-1 overflow-x-auto scrollbar-hide scroll-smooth flex-1"
+        className="flex items-center gap-tight overflow-x-auto scrollbar-hide scroll-smooth flex-1"
         onScroll={checkScroll}
       >
         {groups
@@ -180,7 +180,7 @@ export const PrimaryNav: FC<PrimaryNavProps> = ({
                   <button
                     type="button"
                     onClick={() => setOpenGroup(openGroup === group.label ? null : group.label)}
-                    className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-text-muted hover:text-text-primary transition-colors"
+                    className="flex items-center gap-tight px-3 py-row text-sm font-medium text-text-muted hover:text-text-primary transition-colors"
                   >
                     <span>{group.label}</span>
                     <ChevronDown
@@ -188,7 +188,7 @@ export const PrimaryNav: FC<PrimaryNavProps> = ({
                     />
                   </button>
                   {openGroup === group.label && (
-                    <div className="absolute top-full left-0 mt-1 py-1 min-w-[180px] rounded-lg bg-bg-surface/95 backdrop-blur-xl border border-surface-border shadow-xl z-50 animate-slide-down">
+                    <div className="absolute top-full left-0 mt-tight py-compact min-w-[180px] rounded-lg bg-bg-surface/95 backdrop-blur-xl border border-surface-border shadow-xl z-50 animate-slide-down">
                       {group.items.map((item) => (
                         <div key={item.path} className="px-1">
                           {renderNavItem(item, true)}
@@ -217,7 +217,7 @@ export const PrimaryNav: FC<PrimaryNavProps> = ({
 
       {/* Version badge */}
       {version && (
-        <div className="flex-shrink-0 ml-2 px-2 py-1 text-xs font-mono text-text-muted bg-bg-elevated/50 rounded">
+        <div className="flex-shrink-0 ml-inline px-cell py-compact text-xs font-mono text-text-muted bg-bg-elevated/50 rounded">
           {version}
         </div>
       )}
@@ -257,17 +257,21 @@ export const PageHeader: FC<PageHeaderProps> = ({
 }) => {
   const [helpOpen, setHelpOpen] = useState(false);
   return (
-    <div className={`mb-6 animate-fade-in ${className}`}>
-      {breadcrumbs && breadcrumbs.length > 0 && <Breadcrumb items={breadcrumbs} className="mb-3" />}
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="flex items-center gap-3">
+    <div className={`mb-section animate-fade-in ${className}`}>
+      {breadcrumbs && breadcrumbs.length > 0 && (
+        <Breadcrumb items={breadcrumbs} className="mb-heading" />
+      )}
+      <div className="flex flex-wrap items-start justify-between gap-comfortable">
+        <div className="flex items-center gap-default">
           {icon && createElement(icon, { className: 'h-8 w-8 text-brand-accent' })}
           <div>
-            <h1 className="text-2xl font-bold text-text-primary font-display">{title}</h1>
-            {description && <p className="text-sm text-text-muted mt-1 max-w-2xl">{description}</p>}
+            <h1 className="heading-1 text-text-primary font-display">{title}</h1>
+            {description && (
+              <p className="text-sm text-text-muted mt-tight max-w-2xl">{description}</p>
+            )}
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-default">
           {actions}
           {help && (
             <button
@@ -325,9 +329,9 @@ const HelpPanel: FC<{ title: string; children: ReactNode; onClose: () => void }>
         className="absolute inset-0 cursor-default"
         onClick={onClose}
       />
-      <aside className="relative h-full w-full max-w-md overflow-y-auto bg-bg-surface p-6 shadow-2xl">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-text-primary">{title}</h2>
+      <aside className="relative h-full w-full max-w-md overflow-y-auto bg-bg-surface pad-lg shadow-2xl">
+        <div className="mb-content flex-between">
+          <h2 className="heading-3 text-text-primary">{title}</h2>
           <button
             type="button"
             onClick={onClose}
@@ -382,7 +386,7 @@ export const StatusIndicator: FC<StatusIndicatorProps> = ({
   };
 
   return (
-    <div className={`flex items-center gap-2 ${className}`}>
+    <div className={`flex items-center gap-compact ${className}`}>
       <span
         className={`relative inline-flex ${sizeClasses[size]} rounded-full ${statusColors[status]}`}
       >
@@ -411,9 +415,9 @@ interface BreadcrumbProps {
 }
 
 export const Breadcrumb: FC<BreadcrumbProps> = ({ items, className = '' }) => (
-  <nav className={`flex items-center gap-1 text-sm ${className}`} aria-label="Breadcrumb">
+  <nav className={`flex items-center gap-tight text-sm ${className}`} aria-label="Breadcrumb">
     {items.map((item, index) => (
-      <div key={item.label} className="flex items-center gap-1">
+      <div key={item.label} className="flex items-center gap-tight">
         {index > 0 && <ChevronRight className={`${iconSizes.md} text-text-disabled`} />}
         {item.href ? (
           <Link

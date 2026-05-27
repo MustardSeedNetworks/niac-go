@@ -93,16 +93,16 @@ export function HelpDrawer({ isOpen, onClose }: HelpDrawerProps): ReactElement |
         >
           {/* Header */}
           <div className="sticky top-0 bg-bg-surface border-b border-surface-border z-10">
-            <div className="px-4 py-3 flex items-center justify-between">
+            <div className="px-4 py-row-lg flex-between">
               <div className={layout.inline.default}>
                 <HelpCircle className="w-5 h-5 text-brand-accent" aria-hidden="true" />
-                <h2 className="text-lg font-semibold text-text-primary">Help</h2>
+                <h2 className="heading-3 text-text-primary">Help</h2>
               </div>
               <button
                 type="button"
                 onClick={onClose}
                 className={cn(
-                  'p-2 hover:bg-surface-hover rounded-lg transition-colors',
+                  'pad-xs hover:bg-surface-hover rounded-lg transition-colors',
                   'text-text-muted hover:text-text-primary',
                 )}
                 aria-label="Close help"
@@ -121,7 +121,7 @@ export function HelpDrawer({ isOpen, onClose }: HelpDrawerProps): ReactElement |
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className={cn(
-                    'w-full pl-10 pr-4 py-2 bg-surface-hover border border-surface-border rounded-lg',
+                    'w-full pl-10 pr-4 py-row bg-surface-hover border border-surface-border rounded-lg',
                     'text-sm text-text-primary placeholder:text-text-muted',
                     'focus:outline-none focus:ring-2 focus:ring-brand-primary/50',
                   )}
@@ -130,8 +130,8 @@ export function HelpDrawer({ isOpen, onClose }: HelpDrawerProps): ReactElement |
             </div>
 
             {/* Tab Navigation */}
-            <div className="border-b border-surface-border px-2">
-              <nav className="flex gap-1 -mb-px">
+            <div className="border-b border-surface-border px-cell">
+              <nav className="flex gap-tight -mb-px">
                 {TABS.map((tab) => (
                   <button
                     key={tab.id}
@@ -140,7 +140,7 @@ export function HelpDrawer({ isOpen, onClose }: HelpDrawerProps): ReactElement |
                     aria-selected={activeTab === tab.id}
                     onClick={() => setActiveTab(tab.id)}
                     className={cn(
-                      'flex items-center gap-2 px-3 py-2.5 text-sm font-medium transition-colors',
+                      'flex items-center gap-compact px-3 py-2.5 text-sm font-medium transition-colors',
                       'border-b-2 -mb-[2px]',
                       activeTab === tab.id
                         ? 'border-brand-primary text-text-primary'
@@ -156,7 +156,7 @@ export function HelpDrawer({ isOpen, onClose }: HelpDrawerProps): ReactElement |
           </div>
 
           {/* Content */}
-          <div className={cn(spacing.drawer, 'space-y-6')}>
+          <div className={cn(spacing.drawer, 'stack-xl')}>
             {activeTab === 'overview' && <OverviewSection searchQuery={searchQuery} />}
             {activeTab === 'devices' && (
               <ItemListSection categoryId="devices" searchQuery={searchQuery} />
