@@ -1,5 +1,6 @@
 import { X } from 'lucide-react';
 import { type FC, memo, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { PcapPacket } from '../api/types';
 import { Button } from '../ui/Button';
 import { SmallText } from '../ui/Typography';
@@ -67,6 +68,7 @@ interface StreamSegment {
  * - Packet-by-packet segmentation
  */
 export const StreamView: FC<StreamViewProps> = memo(({ packets, clientEndpoint, onClose }) => {
+  const { t } = useTranslation('pages');
   const [displayMode, setDisplayMode] = useState<DisplayMode>('ascii');
 
   const segments = useMemo<StreamSegment[]>(() => {
@@ -95,7 +97,9 @@ export const StreamView: FC<StreamViewProps> = memo(({ packets, clientEndpoint, 
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-surface-border">
           <div>
-            <h3 className="text-lg font-semibold text-text-primary">Follow Stream</h3>
+            <h3 className="text-lg font-semibold text-text-primary">
+              {t('packets.inspector.followStreamTitle')}
+            </h3>
             <SmallText className="text-text-muted">
               {packets.length} packets |{' '}
               <span className="text-status-info">{totalClientBytes} B client</span> /{' '}
@@ -143,7 +147,7 @@ export const StreamView: FC<StreamViewProps> = memo(({ packets, clientEndpoint, 
         <div className="flex-1 overflow-y-auto px-5 py-4">
           {segments.length === 0 ? (
             <div className="text-center py-8 text-text-muted">
-              <p>No payload data available for this stream</p>
+              <p>{t('packets.inspector.noPayload')}</p>
             </div>
           ) : (
             <div className="space-y-1 font-mono text-xs">

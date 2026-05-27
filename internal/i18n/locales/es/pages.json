@@ -112,12 +112,28 @@
       "headerMgmtAddr": "Dir. gestión",
       "headerTtl": "TTL",
       "headerLastSeen": "Visto por última vez"
+    },
+    "page": {
+      "networkTopologyTitle": "Topología de red",
+      "noTopologyData": "Sin datos de topología disponibles"
+    },
+    "legend": {
+      "deviceTypesHeading": "Tipos de dispositivo",
+      "linkSpeedsHeading": "Velocidades de enlace"
+    },
+    "actionsMenu": {
+      "exportPng": "Exportar como PNG",
+      "exportJson": "Exportar topología JSON"
     }
   },
   "automation": {
     "label": "Alertas",
     "title": "Alertas",
-    "description": "Configure los umbrales de alerta y los destinos de webhook para el daemon en ejecución."
+    "description": "Configure los umbrales de alerta y los destinos de webhook para el daemon en ejecución.",
+    "page": {
+      "packetThresholdLabel": "Umbral de paquetes",
+      "webhookUrlLabel": "URL del webhook"
+    }
   },
   "traffic": {
     "label": "Tráfico",
@@ -177,6 +193,16 @@
       "headerProtocol": "Protocolo",
       "headerLength": "Longitud",
       "headerInfo": "Información"
+    },
+    "inspector": {
+      "standaloneCapture": "Captura de paquetes independiente",
+      "noInterfaces": "No se detectaron interfaces",
+      "followStreamTitle": "Seguir flujo",
+      "noPayload": "No hay datos de carga útil disponibles para este flujo",
+      "selectPacketForProtocol": "Seleccione un paquete para ver las capas de protocolo",
+      "noProtocolLayers": "No hay capas de protocolo disponibles",
+      "protocolHeaders": "Encabezados de protocolo",
+      "selectPacketForDetails": "Seleccione un paquete para ver los detalles"
     }
   },
   "configDiff": {

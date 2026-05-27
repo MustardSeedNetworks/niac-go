@@ -1,5 +1,6 @@
 import { BellRing } from 'lucide-react';
 import { type FC, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { fetchAlerts, fetchStats, updateAlerts } from '../api/client';
 import type { AlertConfig } from '../api/types';
 import { iconSizes } from '../constants/sizes';
@@ -29,6 +30,7 @@ export const AutomationPage: FC = () => {
  * Alert Config Card - Configure alert thresholds and webhooks
  */
 const AlertConfigCard: FC<{ recentErrors: number }> = ({ recentErrors }) => {
+  const { t } = useTranslation('pages');
   const { data, loading, error } = useApiResource(fetchAlerts, [], {
     intervalMs: 15000,
   });
@@ -112,7 +114,9 @@ const AlertConfigCard: FC<{ recentErrors: number }> = ({ recentErrors }) => {
           <>
             <div className="grid gap-4 md:grid-cols-2">
               <div>
-                <SmallText className="text-text-muted">Packet threshold</SmallText>
+                <SmallText className="text-text-muted">
+                  {t('automation.page.packetThresholdLabel')}
+                </SmallText>
                 <input
                   className="mt-1 w-full rounded-lg border border-surface-border bg-bg-base/60 p-2 text-sm text-text-primary focus:border-brand-accent focus:outline-none"
                   type="number"
@@ -128,7 +132,9 @@ const AlertConfigCard: FC<{ recentErrors: number }> = ({ recentErrors }) => {
                 />
               </div>
               <div>
-                <SmallText className="text-text-muted">Webhook URL</SmallText>
+                <SmallText className="text-text-muted">
+                  {t('automation.page.webhookUrlLabel')}
+                </SmallText>
                 <input
                   className="mt-1 w-full rounded-lg border border-surface-border bg-bg-base/60 p-2 text-sm text-text-primary focus:border-brand-accent focus:outline-none"
                   placeholder="https://hooks.example.com/niac"

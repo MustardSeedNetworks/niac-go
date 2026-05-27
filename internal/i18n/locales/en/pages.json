@@ -112,12 +112,28 @@
       "headerMgmtAddr": "Mgmt Addr",
       "headerTtl": "TTL",
       "headerLastSeen": "Last Seen"
+    },
+    "page": {
+      "networkTopologyTitle": "Network Topology",
+      "noTopologyData": "No topology data available"
+    },
+    "legend": {
+      "deviceTypesHeading": "Device Types",
+      "linkSpeedsHeading": "Link Speeds"
+    },
+    "actionsMenu": {
+      "exportPng": "Export as PNG",
+      "exportJson": "Export topology JSON"
     }
   },
   "automation": {
     "label": "Alerts",
     "title": "Alerts",
-    "description": "Configure alert thresholds and webhook targets for the running daemon."
+    "description": "Configure alert thresholds and webhook targets for the running daemon.",
+    "page": {
+      "packetThresholdLabel": "Packet threshold",
+      "webhookUrlLabel": "Webhook URL"
+    }
   },
   "traffic": {
     "label": "Traffic",
@@ -177,6 +193,16 @@
       "headerProtocol": "Protocol",
       "headerLength": "Length",
       "headerInfo": "Info"
+    },
+    "inspector": {
+      "standaloneCapture": "Standalone packet capture",
+      "noInterfaces": "No interfaces detected",
+      "followStreamTitle": "Follow Stream",
+      "noPayload": "No payload data available for this stream",
+      "selectPacketForProtocol": "Select a packet to view protocol layers",
+      "noProtocolLayers": "No protocol layers available",
+      "protocolHeaders": "Protocol Headers",
+      "selectPacketForDetails": "Select a packet to view details"
     }
   },
   "configDiff": {
