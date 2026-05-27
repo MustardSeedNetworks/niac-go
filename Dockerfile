@@ -15,6 +15,10 @@ WORKDIR /src/ui
 COPY ui/package.json ui/package-lock.json ./
 RUN npm ci
 COPY ui/ ./
+# Locale JSON sits outside ui/ and is consumed via the @locales Vite/TS
+# alias (../internal/i18n/locales). Copy it into the expected sibling path
+# so tsc and Vite can resolve the imports during npm run build.
+COPY internal/i18n/locales /src/internal/i18n/locales
 RUN npm run build
 # Vite outputs to ../internal/api/ui (via outDir in vite.config.ts); copy that
 # tree out so the next stage can mount it via COPY --from.
