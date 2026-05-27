@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"net/http"
 
 	apperr "github.com/krisarmstrong/niac-go/internal/apperr"
@@ -101,20 +100,8 @@ func (s *Server) handleErrorInjection(
 	r *http.Request,
 	errorMgr *apperr.StateManager,
 ) {
-	// SECURITY FIX #111: Enforce request body size limit
-	r.Body = http.MaxBytesReader(w, r.Body, MaxRequestBodySize)
-
 	var req errorInjectionRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		// SECURITY FIX MEDIUM-6: Don't expose internal error details
-		writeError(
-			w,
-			r,
-			http.StatusBadRequest,
-			"invalid_request",
-			"Failed to parse request body",
-			nil,
-		)
+	if !decodeJSONStrict(w, r, &req, MaxRequestBodySize) {
 		return
 	}
 

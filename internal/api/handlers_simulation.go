@@ -1,8 +1,6 @@
 package api
 
 import (
-	"encoding/json"
-	"fmt"
 	"net/http"
 )
 
@@ -31,17 +29,8 @@ func (s *Server) handleSimulation(w http.ResponseWriter, r *http.Request) {
 
 // handleSimulationStart processes POST requests to start a simulation.
 func (s *Server) handleSimulationStart(w http.ResponseWriter, r *http.Request) {
-	// SECURITY FIX MEDIUM-3: Request body size limit
-	r.Body = http.MaxBytesReader(w, r.Body, MaxRequestBodySize)
-
 	var req SimulationRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		if err.Error() == ErrMsgRequestBodyTooLarge {
-			writeError(w, r, http.StatusRequestEntityTooLarge, "request_too_large",
-				fmt.Sprintf("Request body exceeds maximum size of %d bytes", MaxRequestBodySize), nil)
-			return
-		}
-		writeError(w, r, http.StatusBadRequest, "invalid_request", "Failed to parse request body", nil)
+	if !decodeJSONStrict(w, r, &req, MaxRequestBodySize) {
 		return
 	}
 

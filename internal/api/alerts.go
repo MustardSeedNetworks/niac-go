@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net"
 	"net/http"
 	"net/url"
@@ -17,31 +16,8 @@ func (s *Server) handleAlerts(w http.ResponseWriter, r *http.Request) {
 	case http.MethodGet:
 		s.writeJSON(w, s.getAlertConfig())
 	case http.MethodPut, http.MethodPost:
-		// SECURITY FIX MEDIUM-3: Add request body size limit
-		r.Body = http.MaxBytesReader(w, r.Body, MaxRequestBodySize)
-
 		var req AlertConfig
-		err := json.NewDecoder(r.Body).Decode(&req)
-		if err != nil {
-			if err.Error() == ErrMsgRequestBodyTooLarge {
-				writeError(
-					w,
-					r,
-					http.StatusRequestEntityTooLarge,
-					"request_too_large",
-					fmt.Sprintf(
-						"Request body exceeds maximum size of %d bytes",
-						MaxRequestBodySize,
-					),
-					nil,
-				)
-
-				return
-			}
-
-			writeError(w, r, http.StatusBadRequest, "invalid_request",
-				"Failed to parse request body", nil)
-
+		if !decodeJSONStrict(w, r, &req, MaxRequestBodySize) {
 			return
 		}
 

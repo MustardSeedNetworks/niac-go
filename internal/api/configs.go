@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -222,17 +221,8 @@ func findUserConfig(name string) string {
 
 // handleUserConfigUpload handles POST /api/v1/configs (upload new config).
 func (s *Server) handleUserConfigUpload(w http.ResponseWriter, r *http.Request) {
-	// Enforce request body size limit
-	r.Body = http.MaxBytesReader(w, r.Body, MaxRequestBodySize)
-
 	var req UploadConfigRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		if err.Error() == ErrMsgRequestBodyTooLarge {
-			writeError(w, r, http.StatusRequestEntityTooLarge, "request_too_large",
-				"Config file too large", nil)
-			return
-		}
-		writeError(w, r, http.StatusBadRequest, "invalid_request", "Invalid JSON body", nil)
+	if !decodeJSONStrict(w, r, &req, MaxRequestBodySize) {
 		return
 	}
 

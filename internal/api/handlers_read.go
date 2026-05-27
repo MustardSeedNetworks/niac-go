@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
@@ -229,13 +228,7 @@ func (s *Server) parseConfigUpdateRequest(w http.ResponseWriter, r *http.Request
 	var req struct {
 		Content string `json:"content"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		if err.Error() == ErrMsgRequestBodyTooLarge {
-			writeError(w, r, http.StatusRequestEntityTooLarge, "request_too_large",
-				fmt.Sprintf("Request body exceeds maximum size of %d bytes", MaxRequestBodySize), nil)
-		} else {
-			writeError(w, r, http.StatusBadRequest, "invalid_request", "Failed to parse request body", nil)
-		}
+	if !decodeJSONStrict(w, r, &req, MaxRequestBodySize) {
 		return "", false
 	}
 	if strings.TrimSpace(req.Content) == "" {
@@ -303,20 +296,8 @@ func (s *Server) handleReplay(w http.ResponseWriter, r *http.Request) {
 		s.writeJSON(w, s.cfg.Replay.Status())
 	case http.MethodPost:
 		// SECURITY FIX #97: Enforce request body size limit for PCAP uploads
-		r.Body = http.MaxBytesReader(w, r.Body, MaxPCAPUploadSize)
-
 		var req ReplayRequest
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			if err.Error() == ErrMsgRequestBodyTooLarge {
-				writeError(w, r, http.StatusRequestEntityTooLarge, "request_too_large",
-					"PCAP file too large (max 100MB)", nil)
-
-				return
-			}
-
-			writeError(w, r, http.StatusBadRequest, "invalid_request",
-				"Failed to parse request body", nil)
-
+		if !decodeJSONStrict(w, r, &req, MaxPCAPUploadSize) {
 			return
 		}
 

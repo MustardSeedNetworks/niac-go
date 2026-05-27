@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"errors"
 	"io"
 	"io/fs"
@@ -100,10 +99,8 @@ type libraryNetworkUploadRequest struct {
 }
 
 func (s *Server) handleLibraryNetworkUpload(w http.ResponseWriter, r *http.Request) {
-	r.Body = http.MaxBytesReader(w, r.Body, MaxRequestBodySize)
 	var req libraryNetworkUploadRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, r, http.StatusBadRequest, "invalid_request", "Invalid JSON body", nil)
+	if !decodeJSONStrict(w, r, &req, MaxRequestBodySize) {
 		return
 	}
 	if err := s.library.WriteNetwork(req.Name, req.Content); err != nil {

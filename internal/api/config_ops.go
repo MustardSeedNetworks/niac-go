@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -60,11 +59,8 @@ func (s *Server) handleConfigMerge(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	r.Body = http.MaxBytesReader(w, r.Body, MaxRequestBodySize)
 	var req MergeConfigsRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, r, http.StatusBadRequest, "invalid_request",
-			fmt.Sprintf("Invalid request body: %v", err), nil)
+	if !decodeJSONStrict(w, r, &req, MaxRequestBodySize) {
 		return
 	}
 	if strings.TrimSpace(req.Base) == "" {
@@ -140,11 +136,8 @@ func (s *Server) handleConfigImport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	r.Body = http.MaxBytesReader(w, r.Body, MaxRequestBodySize)
 	var req ConfigImportRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, r, http.StatusBadRequest, "invalid_request",
-			fmt.Sprintf("Invalid request body: %v", err), nil)
+	if !decodeJSONStrict(w, r, &req, MaxRequestBodySize) {
 		return
 	}
 	if strings.TrimSpace(req.Content) == "" {

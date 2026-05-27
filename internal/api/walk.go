@@ -232,11 +232,9 @@ func (s *Server) handleWalkValidation(w http.ResponseWriter, r *http.Request) {
 	}
 
 	isAutoFix := strings.HasSuffix(r.URL.Path, "/fix")
-	r.Body = http.MaxBytesReader(w, r.Body, MaxRequestBodySize)
 
 	var req WalkValidationRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, r, http.StatusBadRequest, "invalid_request", fmt.Sprintf("Invalid request body: %v", err), nil)
+	if !decodeJSONStrict(w, r, &req, MaxRequestBodySize) {
 		return
 	}
 
