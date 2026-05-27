@@ -1,5 +1,6 @@
 import { Download, Pause, Play, Search, Trash2 } from 'lucide-react';
 import { type ChangeEvent, type FC, memo } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { LogLevel, Protocol } from '../api/types';
 import { iconSizes } from '../constants/sizes';
 import { Button } from '../ui/Button';
@@ -56,6 +57,7 @@ export const LogFilters: FC<LogFiltersProps> = memo(
     onExport,
     onClear,
   }) => {
+    const { t } = useTranslation('common');
     const handleLevelChange = (e: ChangeEvent<HTMLSelectElement>) => {
       onLevelChange(e.target.value as LogLevel | 'All');
     };
@@ -152,7 +154,7 @@ export const LogFilters: FC<LogFiltersProps> = memo(
 
             {/* Log Count */}
             <SmallText className="text-text-muted">
-              {logCount} log{logCount !== 1 ? 's' : ''} buffered
+              {t('plurals.logCount', { count: logCount })}
             </SmallText>
           </div>
 

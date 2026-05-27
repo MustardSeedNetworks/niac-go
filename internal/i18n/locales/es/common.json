@@ -170,5 +170,42 @@
     "actionsHeading": "Acciones",
     "openSettings": "Abrir configuración",
     "openHelp": "Abrir ayuda"
+  },
+  "plurals": {
+    "deviceCount_one": "{{count}} dispositivo",
+    "deviceCount_other": "{{count}} dispositivos",
+    "deviceCountSelected_one": "{{count}} dispositivo seleccionado",
+    "deviceCountSelected_other": "{{count}} dispositivos seleccionados",
+    "logCount_one": "{{count}} registro almacenado",
+    "logCount_other": "{{count}} registros almacenados",
+    "conversationCount_one": "{{count}} conversación",
+    "conversationCount_other": "{{count}} conversaciones",
+    "packetCount_one": "{{count}} paquete",
+    "packetCount_other": "{{count}} paquetes",
+    "itemCount_one": "{{count}} elemento",
+    "itemCount_other": "{{count}} elementos"
+  },
+  "format": {
+    "bytesB": "{{value}} B",
+    "bytesKB": "{{value}} KB",
+    "bytesMB": "{{value}} MB",
+    "bytesGB": "{{value}} GB",
+    "durationLessThanMs": "<1ms",
+    "durationMs": "{{value}} ms",
+    "durationS": "{{value}} s",
+    "durationMin": "{{value}} min",
+    "durationHr": "{{value}} h",
+    "durationMinSec": "{{min}}m {{sec}}s",
+    "uptimeS": "{{value}}s",
+    "uptimeMS": "{{min}}m {{sec}}s",
+    "uptimeHM": "{{hr}}h {{min}}m",
+    "uptimeDH": "{{day}}d {{hr}}h",
+    "relativeJustNow": "ahora mismo",
+    "relativeSecAgo": "hace {{value}}s",
+    "relativeMinAgo": "hace {{value}}m",
+    "relativeHourAgo": "hace {{value}}h",
+    "relativeDayAgo": "hace {{value}}d",
+    "dash": "—",
+    "unexpectedError": "Ocurrió un error inesperado"
   }
 }

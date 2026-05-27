@@ -37,6 +37,14 @@
       "noMatchTitle": "Sin dispositivos coincidentes",
       "noMatchDescription": "Ningún dispositivo coincide con sus filtros actuales. Pruebe a ajustar la búsqueda.",
       "clearFilters": "Borrar filtros"
+    },
+    "bulkActions": {
+      "deleteSelectedButton": "Eliminar seleccionados",
+      "clearSelectionButton": "Borrar selección",
+      "confirmDeleteTitle": "Eliminar dispositivos seleccionados",
+      "confirmDeleteMessage_one": "¿Está seguro de que desea eliminar {{count}} dispositivo? Esta acción no se puede deshacer.",
+      "confirmDeleteMessage_other": "¿Está seguro de que desea eliminar {{count}} dispositivos? Esta acción no se puede deshacer.",
+      "confirmDeleteLabel": "Eliminar todos"
     }
   },
   "editor": {

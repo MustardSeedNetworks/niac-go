@@ -37,6 +37,14 @@
       "noMatchTitle": "No Matching Devices",
       "noMatchDescription": "No devices match your current filters. Try adjusting your search.",
       "clearFilters": "Clear Filters"
+    },
+    "bulkActions": {
+      "deleteSelectedButton": "Delete Selected",
+      "clearSelectionButton": "Clear Selection",
+      "confirmDeleteTitle": "Delete Selected Devices",
+      "confirmDeleteMessage_one": "Are you sure you want to delete {{count}} device? This action cannot be undone.",
+      "confirmDeleteMessage_other": "Are you sure you want to delete {{count}} devices? This action cannot be undone.",
+      "confirmDeleteLabel": "Delete All"
     }
   },
   "editor": {

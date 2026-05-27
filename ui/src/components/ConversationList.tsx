@@ -1,4 +1,5 @@
 import { type FC, memo, useCallback, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { PcapPacket } from '../api/types';
 import { Card, CardContent } from '../ui/Card';
 import { Tag } from '../ui/Tag';
@@ -28,6 +29,7 @@ interface ConversationListProps {
  */
 export const ConversationList: FC<ConversationListProps> = memo(
   ({ packets, onSelectConversation }) => {
+    const { t } = useTranslation('common');
     const [sortField, setSortField] = useState<SortField>('packets');
     const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
 
@@ -94,7 +96,7 @@ export const ConversationList: FC<ConversationListProps> = memo(
         <CardContent>
           <div className="mb-3 flex items-center justify-between">
             <SmallText className="text-text-muted">
-              {conversations.length} conversation{conversations.length !== 1 ? 's' : ''}
+              {t('plurals.conversationCount', { count: conversations.length })}
             </SmallText>
             <SmallText className="text-text-muted">Click a row to filter packets</SmallText>
           </div>
