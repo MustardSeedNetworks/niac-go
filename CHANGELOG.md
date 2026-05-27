@@ -5,6 +5,25 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.86.0](https://github.com/krisarmstrong/niac-go/compare/v0.85.0...v0.86.0) (2026-05-27)
+
+
+### Features
+
+* **api:** add strict JSON decode helpers + sweep handlers ([#718](https://github.com/krisarmstrong/niac-go/issues/718)) ([#721](https://github.com/krisarmstrong/niac-go/issues/721)) ([b22344f](https://github.com/krisarmstrong/niac-go/commit/b22344f7a2bb845fe4bff3fa4f55e52de881e4d0))
+* **forms:** adopt react-hook-form + zod resolver ([#725](https://github.com/krisarmstrong/niac-go/issues/725)) ([#729](https://github.com/krisarmstrong/niac-go/issues/729)) ([82bcdf4](https://github.com/krisarmstrong/niac-go/commit/82bcdf46e0664feb9684fdd45071a0dba826cec2))
+* **forms:** migrate UploadTemplateModal + ErrorInjectionPanel ([#730](https://github.com/krisarmstrong/niac-go/issues/730)) ([#731](https://github.com/krisarmstrong/niac-go/issues/731)) ([c50d3a7](https://github.com/krisarmstrong/niac-go/commit/c50d3a729874b64c5f2f47ca3bd1966dd510f801))
+* **i18n:** add check-keys.py — t() call ↔ EN locale cross-reference ([#723](https://github.com/krisarmstrong/niac-go/issues/723)) ([e71ca2b](https://github.com/krisarmstrong/niac-go/commit/e71ca2bdde321e852c48a3abb88e994beee91a10))
+* **i18n:** add per-repo dynamic-prefixes allowlist for check-keys.py ([#732](https://github.com/krisarmstrong/niac-go/issues/732)) ([4ecab2c](https://github.com/krisarmstrong/niac-go/commit/4ecab2c2336dc25373c509b40c63d70a40184fbd))
+* **i18n:** migrate 8 long-tail components to t() (16 strings) ([#720](https://github.com/krisarmstrong/niac-go/issues/720)) ([2caed9b](https://github.com/krisarmstrong/niac-go/commit/2caed9b2b4ce7d9dea9c2be115c5eeac969c950d))
+* **i18n:** Phase 3 NIAC — bootstrap runtime + migrate ~110 hardcoded JSX strings ([#717](https://github.com/krisarmstrong/niac-go/issues/717)) ([ffeb7b1](https://github.com/krisarmstrong/niac-go/commit/ffeb7b1ff06cd913153b2af7f616d480ff372305))
+* **i18n:** pluralization + Intl APIs + locale-aware formatters ([#719](https://github.com/krisarmstrong/niac-go/issues/719)) ([b8bf03d](https://github.com/krisarmstrong/niac-go/commit/b8bf03d9c7f11f6ff52b3288365f1d02a777eb1b))
+
+
+### Bug Fixes
+
+* **ci:** honor PLAYWRIGHT_IGNORE_HTTPS_ERRORS + Lighthouse cert flag ([#722](https://github.com/krisarmstrong/niac-go/issues/722)) ([eae281f](https://github.com/krisarmstrong/niac-go/commit/eae281f896529763055cffd11c2c6d0bde67842a))
+
 ## [0.85.0](https://github.com/krisarmstrong/niac-go/compare/v0.84.0...v0.85.0) (2026-05-26)
 
 
