@@ -1,0 +1,137 @@
+# Per-repo allowlist for check-keys.py. One prefix per line; comments
+# with #. Matches either a flat key (`section.field`) or namespace-
+# qualified form (`namespace:section.field`).
+#
+# Use when a JSON key is consumed via a dynamic lookup that the static
+# analyzer can't see — typically t(`prefix.${variable}.suffix`) or a
+# data-driven render path that reads from <ns>.json[<section>].
+#
+# Keys matching one of these prefixes won't be reported as "unused".
+# Keep this list narrow and document WHY each entry is here so a
+# future cleanup pass can confirm whether the dynamic path still
+# exists.
+
+# --- niac-go ---
+
+# devices.types.* — t(`devices:types.${device.type}`) used wherever a
+# device is rendered (DeviceList, DeviceCard, RunningDevices,
+# Topology nodes, packet headers). Type IDs come from the daemon.
+devices:types.
+
+# devices.list.* — DeviceListContext maps t(`devices:list.${field}`)
+# for table headers; the field names are columns in the data table.
+devices:list.
+
+# devices.editor.* — DeviceEditor reads field labels via
+# t(`devices:editor.${formField}`) from the schema definition.
+devices:editor.
+
+# devices.running.* — RunningDevicesPage uses t() over runtime fields
+# (noDevicesRunning, startHint) that route through a single helper.
+devices:running.
+
+# protocols.common.* — ProtocolTree shared fields rendered via
+# t(`protocols:common.${field}`).
+protocols:common.
+
+# protocols.categories.* — ProtocolList groups by category, reading
+# t(`protocols:categories.${id}`).
+protocols:categories.
+
+# errors.generic.* / errors.validation.* — error mapper takes an
+# error code and looks up t(`errors:generic.${code}`) or
+# t(`errors:validation.${code}`).
+errors:generic.
+errors:validation.
+
+# common.buttons.* / common.labels.* / common.status.* — intentional
+# UI primitive reserve. Stable EN+ES baseline of vocabulary that
+# components may reach for as the codebase grows. Not pruning so
+# new code doesn't have to round-trip a locale PR for "Save".
+common:buttons.
+common:labels.
+common:status.
+
+# common.format.* — formatBytes/formatDurationMs/formatUptime/
+# formatRelativeTime use t() with computed keys (bytesB/bytesKB/
+# durationMs/durationS etc.) keyed off the magnitude.
+common:format.
+
+# common.accessibility.* — aria-label values referenced by component
+# props rather than literal t() strings; static analysis can't see
+# them. Keep all 12.
+common:accessibility.
+
+# common.plurals.* — i18next plural keys; consumer side calls
+# t('common:plurals.deviceCount', {count}) which the analyzer DOES
+# see as the bare 'deviceCount' form. The _one/_other suffixes are
+# pluralization variants the analyzer flags as "extras". Cover both.
+common:plurals.
+
+# common.app.* — branding strings used in <title>, footer, manifest.
+# Referenced via DOM-side property updates, not literal t() calls.
+common:app.
+
+# common.emptyState.* — empty-state copy used by table/list shells
+# via t(`common:emptyState.${kind}`).
+common:emptyState.
+
+# common.errorBoundary.* — rendered by the top-level ErrorBoundary
+# in a render-prop pattern that doesn't show as a literal t() call.
+common:errorBoundary.
+
+# common.table.* — table shell (selectAll/selected/showingResults)
+# rendered by a generic DataTable component that takes labels as
+# props from the t() helper.
+common:table.
+
+# common.footer.* — footer chrome reads version/copyright from t()
+# but the call site is an HOC the static analyzer can't trace.
+common:footer.
+
+# errors.api.* / errors.license.* / errors.packet.* /
+# errors.simulation.* / errors.walk.* — error mapper indexes
+# t(`errors:<category>.${code}`) based on the daemon's error
+# classification. The category-prefix structure is intentional.
+errors:api.
+errors:license.
+errors:packet.
+errors:simulation.
+errors:walk.
+
+# help.drawer.* / help.footer.* — HelpDrawer reads aria-labels and
+# search/footer chrome via t(`help:drawer.${field}`), composed by
+# the drawer's render-prop callbacks.
+help:drawer.
+help:footer.
+
+# pages.<key>.{label,title,description} — usePages() hook (in
+# pageRegistry.tsx) generates the route table via t(`${i18nKey}.label`)
+# / t(`${i18nKey}.title`) / t(`${i18nKey}.description`) for 13 pages.
+# Same pattern for the `deviceEditor.{new,edit}{Label,Title,
+# Description}` six keys consumed by App.tsx's inline PageConfig.
+pages:dashboard.
+pages:runtime.
+pages:devices.
+pages:deviceLibrary.
+pages:deviceEditor.
+pages:topology.
+pages:automation.
+pages:traffic.
+pages:debug.
+pages:packets.
+pages:configDiff.
+pages:walkValidator.
+pages:libraryWalks.
+pages:libraryPcaps.
+
+# protocols.filters.* / protocols.labels.* — discovery-protocol UI
+# (CDP/LLDP/EDP/FDP filtering chip + neighbor table) reads filter
+# names and labels dynamically.
+protocols:filters.
+protocols:labels.
+
+# settings.network.disconnected — used as a status fallback when
+# the daemon's WebSocket reports disconnect, computed via state
+# transition rather than a literal t() call.
+settings:network.disconnected
