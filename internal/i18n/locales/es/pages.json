@@ -269,8 +269,7 @@
       "uploadButton": "Subir plantilla",
       "errorFileTooLarge": "Archivo demasiado grande. Tamaño máximo: 1 MB",
       "errorInvalidFile": "Seleccione un archivo YAML (.yaml o .yml)",
-      "errorReadFailed": "Error al leer el archivo",
-      "errorRequired": "El nombre y el contenido son obligatorios"
+      "errorReadFailed": "Error al leer el archivo"
     }
   }
 }
