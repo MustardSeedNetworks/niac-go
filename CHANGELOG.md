@@ -5,6 +5,20 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.88.0](https://github.com/krisarmstrong/niac-go/compare/v0.87.0...v0.88.0) (2026-05-28)
+
+
+### Features
+
+* **ui:** add slim HeaderBar (Phase 2) ([#744](https://github.com/krisarmstrong/niac-go/issues/744)) ([3e36a05](https://github.com/krisarmstrong/niac-go/commit/3e36a0570d1dec229cf6ccf1c839352655b164dc))
+* **ui:** sync canonical shell from stem + decouple drawers (Phase 1) ([#738](https://github.com/krisarmstrong/niac-go/issues/738)) ([5cf30fc](https://github.com/krisarmstrong/niac-go/commit/5cf30fc3bde7364a3b21b716d755fd32b4e4f12a))
+
+
+### Bug Fixes
+
+* **ci:** unblock NIAC main — duplicate heading + Lighthouse cert ([#745](https://github.com/krisarmstrong/niac-go/issues/745)) ([3d4a5ad](https://github.com/krisarmstrong/niac-go/commit/3d4a5ad8aea7c72e71d6d52c25f53455124e8d30))
+* **ui:** restore missing spacing utility classes + dual-aside e2e selector ([#747](https://github.com/krisarmstrong/niac-go/issues/747)) ([f56ad75](https://github.com/krisarmstrong/niac-go/commit/f56ad75dbe724bdaf4f226ef218acd9a17a29483))
+
 ## [0.87.0](https://github.com/krisarmstrong/niac-go/compare/v0.86.0...v0.87.0) (2026-05-27)
 
 
