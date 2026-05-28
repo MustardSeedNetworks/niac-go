@@ -1,5 +1,6 @@
 {
   "app": {
+    "title": "NIAC",
     "name": "NIAC",
     "fullName": "Network In A Can",
     "tagline": "Simulador de protocolos de red e inspector de paquetes"
