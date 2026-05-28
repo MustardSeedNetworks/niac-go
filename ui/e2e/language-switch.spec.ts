@@ -42,7 +42,12 @@ test.describe('Language switching', () => {
     // Two stable EN markers: the Dashboard nav label (sidebar) and the
     // page-header h1. Both come from pages.dashboard.{label,title} —
     // changing them should require updating this test AND the TM.
-    await expect(page.getByText(/^Dashboard$/).first()).toBeVisible();
+    //
+    // The canonical Sidebar renders its body in both a mobile aside
+    // (`lg:hidden`) and a desktop aside (`hidden lg:flex`). At the default
+    // 1280px viewport the mobile aside is display:none, so `.first()`
+    // matches a hidden node. Use `.last()` for the visible desktop aside.
+    await expect(page.getByText(/^Dashboard$/).last()).toBeVisible();
   });
 
   test('flips to Spanish when localStorage is set to es', async ({ page }) => {
@@ -64,7 +69,8 @@ test.describe('Language switching', () => {
     // ES marker: Dashboard's translated label is "Panel" per
     // pages.dashboard.label in es/pages.json + the TM. The sidebar
     // shows this label, and so does the page header title.
-    await expect(page.getByText(/Panel/).first()).toBeVisible();
+    // See above for why `.last()` rather than `.first()`.
+    await expect(page.getByText(/Panel/).last()).toBeVisible();
   });
 
   test('honors pluralization for device count', async ({ page }) => {
