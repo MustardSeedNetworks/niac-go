@@ -95,18 +95,22 @@ export function SettingsDrawer({
           ref={drawerRef}
           role="dialog"
           aria-modal="true"
-          aria-label={t('drawer.drawerAriaLabel')}
+          aria-labelledby="settings-drawer-title"
+          data-testid="settings-drawer"
           className={cn(drawer.content, drawer.size.lg, 'animate-slide-in-right')}
         >
           {/* Header */}
           <div className="sticky top-0 bg-bg-surface border-b border-surface-border px-4 py-row-lg flex-between z-10">
             <div className={layout.inline.default}>
               <Settings className="w-5 h-5 text-brand-accent" aria-hidden="true" />
-              <h2 className="heading-3 text-text-primary">{t('drawer.title')}</h2>
+              <h2 id="settings-drawer-title" className="heading-3 text-text-primary">
+                {t('drawer.title')}
+              </h2>
             </div>
             <button
               type="button"
               onClick={onClose}
+              data-testid="settings-drawer-close"
               className={cn(
                 'pad-xs hover:bg-surface-hover rounded-lg transition-colors',
                 'text-text-muted hover:text-text-primary',
