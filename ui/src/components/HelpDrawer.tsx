@@ -86,6 +86,7 @@ export function HelpDrawer({ isOpen, onClose }: HelpDrawerProps): ReactElement |
         {/* Drawer */}
         <div
           ref={drawerRef}
+          data-testid="help-drawer"
           role="dialog"
           aria-modal="true"
           aria-label="Help"
@@ -100,6 +101,7 @@ export function HelpDrawer({ isOpen, onClose }: HelpDrawerProps): ReactElement |
               </div>
               <button
                 type="button"
+                data-testid="help-drawer-close"
                 onClick={onClose}
                 className={cn(
                   'pad-xs hover:bg-surface-hover rounded-lg transition-colors',
