@@ -1,0 +1,4 @@
+# NIAC is an authenticated network device simulator — there is no public
+# content to index. Block all crawlers from the entire app.
+User-agent: *
+Disallow: /

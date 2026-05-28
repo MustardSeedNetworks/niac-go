@@ -376,6 +376,303 @@ body {
   .code {
     @apply font-mono text-sm bg-surface-hover px-1.5 py-0.5 rounded;
   }
+
+  /* ========================================================================
+     SPACING SCALE — harmonized with seed/stem (Phase 0 follow-up).
+     ========================================================================
+     NIAC previously used raw Tailwind spacing utilities directly. The Phase 0
+     tokenization migrated components to these semantic classes, but NIAC's
+     index.css never defined them (seed/stem did), so the migrated classes
+     were no-ops — all padding/gap/margin silently dropped. These definitions
+     restore them. Values match seed/stem exactly.
+     ======================================================================== */
+
+  /* Vertical stacking (space-y equivalents with semantic names) */
+  .stack-xs {
+    @apply space-y-1;
+  }
+  .stack-sm {
+    @apply space-y-2;
+  }
+  .stack {
+    @apply space-y-3;
+  }
+  .stack-lg {
+    @apply space-y-4;
+  }
+  .stack-xl {
+    @apply space-y-6;
+  }
+
+  /* Section separators */
+  .section-gap {
+    @apply space-y-6;
+  }
+  .section-gap-lg {
+    @apply space-y-8;
+  }
+
+  /* Component gaps (for flex/grid) */
+  .gap-tight {
+    @apply gap-1;
+  }
+  .gap-compact {
+    @apply gap-2;
+  }
+  .gap-default {
+    @apply gap-3;
+  }
+  .gap-comfortable {
+    @apply gap-4;
+  }
+  .gap-spacious {
+    @apply gap-6;
+  }
+
+  /* Card/container padding */
+  .pad-xs {
+    @apply p-2;
+  }
+  .pad-sm {
+    @apply p-3;
+  }
+  .pad {
+    @apply p-4;
+  }
+  .pad-lg {
+    @apply p-6;
+  }
+  .pad-xl {
+    @apply p-8;
+  }
+
+  /* Chip/pill padding */
+  .chip-pad {
+    @apply px-3 py-1;
+  }
+  .chip-pad-md {
+    @apply px-3 py-1.5;
+  }
+  .chip-pad-lg {
+    @apply px-3 py-2;
+  }
+
+  /* Tab button padding */
+  .tab-pad {
+    @apply py-2.5 px-3;
+  }
+
+  /* Inline spacing */
+  .inline-gap-xs {
+    @apply gap-1;
+  }
+  .inline-gap-sm {
+    @apply gap-1.5;
+  }
+  .inline-gap {
+    @apply gap-2;
+  }
+  .inline-gap-lg {
+    @apply gap-3;
+  }
+
+  /* Layout utilities */
+  .content-max {
+    @apply max-w-7xl mx-auto px-4;
+  }
+  .content-grid {
+    @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4;
+  }
+  .flex-center {
+    @apply flex items-center justify-center;
+  }
+  .flex-between {
+    @apply flex items-center justify-between;
+  }
+
+  /* ========================================================================
+     MARGIN UTILITIES — harmonized with seed/stem.
+     ======================================================================== */
+
+  /* Bottom margins */
+  .mb-section {
+    @apply mb-6;
+  }
+  .mb-section-lg {
+    @apply mb-8;
+  }
+  .mb-heading {
+    @apply mb-3;
+  }
+  .mb-content {
+    @apply mb-4;
+  }
+  .mb-tight {
+    @apply mb-1;
+  }
+
+  /* Top margins */
+  .mt-section {
+    @apply mt-8;
+  }
+  .mt-content {
+    @apply mt-4;
+  }
+  .mt-heading {
+    @apply mt-3;
+  }
+  .mt-inline {
+    @apply mt-2;
+  }
+  .mt-tight {
+    @apply mt-1;
+  }
+
+  /* Top/bottom padding for dividers/sections */
+  .pt-heading {
+    @apply pt-3;
+  }
+  .pt-section {
+    @apply pt-4;
+  }
+  .pt-tight {
+    @apply pt-1;
+  }
+  .pb-inline {
+    @apply pb-2;
+  }
+  .pb-tight {
+    @apply pb-1;
+  }
+
+  /* Centered content padding */
+  .py-centered {
+    @apply py-12;
+  }
+
+  /* Left margins */
+  .ml-tight {
+    @apply ml-1;
+  }
+  .ml-inline {
+    @apply ml-2;
+  }
+  .ml-content {
+    @apply ml-4;
+  }
+  .ml-spacious {
+    @apply ml-6;
+  }
+
+  /* Right padding (inputs with icons) */
+  .pr-icon {
+    @apply pr-10;
+  }
+  .pr-tight {
+    @apply pr-8;
+  }
+
+  /* Compact action button padding */
+  .action-btn-pad {
+    @apply px-1;
+  }
+
+  /* Micro spacing */
+  .gap-micro {
+    @apply gap-0.5;
+  }
+  .mt-micro {
+    @apply mt-0.5;
+  }
+  .pb-micro {
+    @apply pb-0.5;
+  }
+  .pb-compact {
+    @apply pb-1;
+  }
+  .pb-compact-md {
+    @apply pb-1.5;
+  }
+  .mt-compact-md {
+    @apply mt-1.5;
+  }
+  .-mt-tight {
+    @apply -mt-1;
+  }
+
+  /* Badge/status indicator padding */
+  .p-badge-xs {
+    @apply p-0.5;
+  }
+  .p-badge-sm {
+    @apply p-1;
+  }
+  .badge-pad-xs {
+    @apply px-2 py-0.5;
+  }
+  .kbd-pad {
+    @apply px-1 py-0.5;
+  }
+
+  /* Left padding for indentation */
+  .pl-indent {
+    @apply pl-5;
+  }
+
+  /* Compact vertical padding */
+  .py-compact {
+    @apply py-1;
+  }
+  .py-compact-md {
+    @apply py-1.5;
+  }
+  .py-row {
+    @apply py-2;
+  }
+  .py-row-lg {
+    @apply py-3;
+  }
+
+  /* Compact horizontal padding */
+  .px-cell {
+    @apply px-2;
+  }
+
+  /* Icon button padding */
+  .p-icon-btn {
+    @apply p-1;
+  }
+  .p-icon-btn-md {
+    @apply p-1.5;
+  }
+
+  /* Main content padding (responsive) */
+  .main-padding-y {
+    @apply py-4 sm:py-6;
+  }
+  .content-padding-x {
+    @apply px-4 sm:px-6 lg:px-8;
+  }
+
+  /* Header padding (responsive) */
+  .header-padding-y {
+    @apply py-2 sm:py-3;
+  }
+
+  /* Drawer/Panel content padding */
+  .drawer-content-pad {
+    @apply px-4 sm:px-5 pb-10 pt-4;
+  }
+
+  /* Table cell padding */
+  .table-cell-empty {
+    @apply px-2 py-4;
+  }
+
+  /* Custom max-width for main container */
+  .max-w-8xl {
+    max-width: 88rem;
+  }
 }
 
 /* ========================================
