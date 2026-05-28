@@ -5,6 +5,13 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.88.1](https://github.com/krisarmstrong/niac-go/compare/v0.88.0...v0.88.1) (2026-05-28)
+
+
+### Bug Fixes
+
+* **ui:** re-sync shell from stem + add app.title — sidebar shows "NIAC" ([#750](https://github.com/krisarmstrong/niac-go/issues/750)) ([f63e297](https://github.com/krisarmstrong/niac-go/commit/f63e29720f525cc05e43a869f2a87174ff8a4318))
+
 ## [0.88.0](https://github.com/krisarmstrong/niac-go/compare/v0.87.0...v0.88.0) (2026-05-28)
 
 
