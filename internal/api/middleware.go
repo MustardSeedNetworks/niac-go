@@ -254,9 +254,16 @@ func (s *Server) auth(next http.HandlerFunc) http.HandlerFunc {
 		if scope < required {
 			writeError(w, r, http.StatusForbidden, "forbidden",
 				"token lacks required scope", nil)
+			// #1257 (Wave 5): unified `event=auth.forbidden` across
+			// seed/niac/stem so SIEM rules can filter authz denials
+			// with one expression regardless of which repo emitted
+			// the record. The `reason` field distinguishes niac's
+			// scope-based denial from seed's role-based denial so
+			// detections can still split on mechanism when needed.
 			s.logger.WarnContext(r.Context(),
 				"[API] Forbidden request: token scope insufficient",
-				"event", "auth.forbidden_scope",
+				"event", "auth.forbidden",
+				"reason", "scope",
 				"requestID", requestID,
 				"clientIP", clientIP,
 				"userAgent", r.UserAgent(),
