@@ -1,9 +1,9 @@
 package api
 
-// tls.go provides the self-signed certificate generation and HTTP→HTTPS
-// redirect helpers used when niac binds with TLS enabled (the new default,
-// Wave 1). The cert template mirrors seed's: single-tier self-signed CA so
-// `niac install-ca` can install the same file into the OS trust store.
+// tls.go provides the self-signed certificate generation used when niac
+// binds with TLS enabled (HTTPS-only since Wave 1). The cert template
+// mirrors seed's: single-tier self-signed CA so `niac install-ca` can
+// install the same file into the OS trust store.
 
 import (
 	"crypto/rand"
@@ -14,12 +14,8 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"net"
-	"net/http"
 	"os"
 	"path/filepath"
-	"strconv"
-	"strings"
 	"time"
 )
 
@@ -39,17 +35,6 @@ const (
 	defaultCertFileName = "server.crt"
 	defaultKeyFileName  = "server.key"
 )
-
-// defaultTLSPort is the canonical port niac binds when TLS is enabled
-// (mirrors seed:8443 and stem:8444 — niac gets 8445). cmd/niac mirrors
-// this via daemonTLSPort; the duplication is intentional so the api
-// package doesn't have to import cmd-level state.
-const defaultTLSPort = 8445
-
-// httpsStandardPort is RFC 1700's well-known https port. Used by the
-// HTTP→HTTPS redirect handler to decide whether to emit an explicit
-// :port suffix in the Location header.
-const httpsStandardPort = 443
 
 // EnsureSelfSignedCert generates a self-signed certificate at the configured
 // paths if one does not already exist. Reuses existing files when both are
@@ -154,39 +139,4 @@ func DefaultCertPaths(certDir string) (string, string) {
 	}
 	return filepath.Join(certDir, defaultCertFileName),
 		filepath.Join(certDir, defaultKeyFileName)
-}
-
-// httpToHTTPSRedirectHandler returns an [http.Handler] that permanently
-// redirects every request to the equivalent HTTPS URL on the given target
-// port. Extracted so unit tests can exercise it without bringing up a
-// real listener.
-func httpToHTTPSRedirectHandler(httpsPort int) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Strip the source port from r.Host so localhost:8044 → localhost
-		// before re-joining with the HTTPS port. Without this we'd emit
-		// https://localhost:8044:8445 which most clients reject.
-		host := r.Host
-		if colonPos := strings.LastIndex(host, ":"); colonPos != -1 {
-			host = host[:colonPos]
-		}
-
-		// r.URL.RequestURI() returns just /path?query regardless of how
-		// the client encoded the request line (origin-form vs absolute-
-		// form). r.RequestURI carries the raw client value and may be a
-		// full URL — which would double-up scheme+host when concatenated
-		// and produces a broken Location header.
-		requestURI := r.URL.RequestURI()
-
-		var httpsURL string
-		if httpsPort == httpsStandardPort {
-			httpsURL = "https://" + host + requestURI
-		} else {
-			httpsURL = "https://" + net.JoinHostPort(host, strconv.Itoa(httpsPort)) + requestURI
-		}
-
-		// 308 Permanent Redirect (RFC 7538) preserves method and body so
-		// POST/PUT/DELETE survive the redirect. 301 silently downgrades
-		// state-changing requests to GET.
-		http.Redirect(w, r, httpsURL, http.StatusPermanentRedirect)
-	})
 }
