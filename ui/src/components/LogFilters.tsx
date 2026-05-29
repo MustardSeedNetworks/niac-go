@@ -147,7 +147,7 @@ export const LogFilters: FC<LogFiltersProps> = memo(
                 type="checkbox"
                 checked={autoScroll}
                 onChange={handleAutoScrollChange}
-                className="h-4 w-4 rounded border-border-muted bg-bg-elevated text-brand-primary focus:ring-brand-primary focus:ring-offset-gray-900"
+                className="h-4 w-4 rounded border-border-muted bg-bg-elevated text-brand-primary focus:ring-brand-primary focus:ring-offset-surface-base"
               />
               <span className="text-sm text-text-secondary">Auto-scroll</span>
             </label>

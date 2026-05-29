@@ -425,7 +425,7 @@ export const PacketInspectorPage: FC = () => {
                     type="checkbox"
                     checked={autoScroll}
                     onChange={(e) => setAutoScroll(e.target.checked)}
-                    className="rounded border-border-muted bg-bg-elevated text-brand-primary focus:ring-brand-accent focus:ring-offset-gray-900"
+                    className="rounded border-border-muted bg-bg-elevated text-brand-primary focus:ring-brand-accent focus:ring-offset-surface-base"
                   />
                   <SmallText className="text-text-muted">Auto-scroll</SmallText>
                 </label>

@@ -43,7 +43,9 @@ export const DashboardPage: FC = () => {
   return (
     <div className="stack-xl animate-fade-in">
       {/* Status banner */}
-      <Card className={`border-l-4 ${isRunning ? 'border-l-emerald-500' : 'border-l-gray-500'}`}>
+      <Card
+        className={`border-l-4 ${isRunning ? 'border-l-status-success' : 'border-l-surface-border'}`}
+      >
         <CardContent className="py-4">
           <div className="flex flex-wrap items-center justify-between gap-comfortable">
             <div className="flex items-center gap-comfortable">

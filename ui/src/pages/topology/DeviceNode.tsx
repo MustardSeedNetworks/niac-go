@@ -35,8 +35,8 @@ export const DeviceNode: FC<DeviceNodeProps> = memo(({ data, selected }) => {
       type="button"
       className={`
         relative px-4 py-row-lg rounded-xl border-2 transition-all duration-200 text-left
-        ${selected ? 'ring-2 ring-brand-primary ring-offset-2 ring-offset-gray-900' : ''}
-        hover:shadow-lg hover:shadow-black/30
+        ${selected ? 'ring-2 ring-brand-primary ring-offset-2 ring-offset-surface-base' : ''}
+        hover:shadow-lg hover:shadow-scrim/30
       `}
       style={{
         backgroundColor: 'var(--color-bg-elevated)',

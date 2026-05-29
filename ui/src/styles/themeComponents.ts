@@ -61,7 +61,7 @@ export const card = {
 
   variant: {
     default: 'bg-bg-elevated border-border-default',
-    elevated: 'bg-bg-elevated border-border-default shadow-xl shadow-black/20',
+    elevated: 'bg-bg-elevated border-border-default shadow-xl shadow-scrim/20',
     interactive:
       'bg-bg-elevated border-border-default hover:border-brand-primary/50 cursor-pointer transition-colors',
     glass: 'bg-bg-elevated/40 backdrop-blur-2xl border-border-default shadow-2xl',
