@@ -59,7 +59,7 @@ export const CloneDeviceModal: FC<CloneDeviceModalProps> = ({ hostname, onClone,
               id="new-hostname"
               type="text"
               {...register('newHostname')}
-              className="w-full rounded-lg border border-surface-border bg-bg-base/60 pad-sm text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none"
+              className="w-full rounded-lg border border-surface-border bg-bg-base/60 pad-sm text-sm text-text-primary placeholder:text-text-muted focus:border-brand-accent focus:outline-none"
             />
             {errors.newHostname ? (
               <p className="mt-inline text-xs text-status-error">{errors.newHostname.message}</p>

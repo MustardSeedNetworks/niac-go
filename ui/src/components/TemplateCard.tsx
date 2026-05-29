@@ -32,7 +32,7 @@ const typeColors: Record<Template['type'], string> = {
   server: 'bg-status-info/20 text-status-info border-status-info/30',
   firewall: 'bg-status-error/20 text-status-error border-status-error/30',
   complete: 'bg-status-warning/20 text-status-warning border-status-warning/30',
-  custom: 'bg-pink-500/20 text-pink-300 border-pink-500/30',
+  custom: 'bg-chart-7/20 text-chart-7 border-chart-7/30',
 };
 
 export const TemplateCard: FC<TemplateCardProps> = memo(({ template, onView, onUse }) => {

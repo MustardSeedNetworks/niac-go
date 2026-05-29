@@ -70,7 +70,7 @@ function LibraryFilesView({ kind }: Props) {
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Search by name…"
                   aria-label="Filter library entries by name"
-                  className="w-64 rounded-md border border-surface-border bg-bg-base/40 pl-7 pr-3 py-compact-md text-xs text-text-primary placeholder:text-text-muted focus:border-status-info/40 focus:outline-none focus:ring-1 focus:ring-cyan-500/30"
+                  className="w-64 rounded-md border border-surface-border bg-bg-base/40 pl-7 pr-3 py-compact-md text-xs text-text-primary placeholder:text-text-muted focus:border-status-info/40 focus:outline-none focus:ring-1 focus:ring-status-info/30"
                 />
               </div>
               <Button

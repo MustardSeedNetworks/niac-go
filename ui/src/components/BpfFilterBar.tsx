@@ -127,11 +127,11 @@ export const BpfFilterBar: FC = memo(() => {
           }}
           onKeyDown={handleKeyDown}
           placeholder="BPF filter (e.g. tcp port 80)"
-          className={`flex-1 bg-bg-base/70 border rounded-lg px-3 py-compact-md text-sm font-mono text-text-primary placeholder-gray-500 focus:outline-none focus:ring-1 ${
+          className={`flex-1 bg-bg-base/70 border rounded-lg px-3 py-compact-md text-sm font-mono text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 ${
             error
               ? 'border-status-error/60 focus:ring-status-error/40'
               : isActive
-                ? 'border-status-success/40 focus:ring-green-500/40'
+                ? 'border-status-success/40 focus:ring-status-success/40'
                 : 'border-surface-border focus:ring-brand-primary/40'
           }`}
           disabled={isLoading}

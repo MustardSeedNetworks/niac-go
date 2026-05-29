@@ -89,7 +89,7 @@ export const HttpSection: FC<ProtocolSectionProps> = ({
                       updateHttp({ ...getHttpConfig(), endpoints });
                     }}
                     placeholder="/api/status"
-                    className="flex-1 rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none font-mono"
+                    className="flex-1 rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary placeholder:text-text-muted focus:border-brand-accent focus:outline-none font-mono"
                   />
                   <input
                     type="number"
@@ -103,7 +103,7 @@ export const HttpSection: FC<ProtocolSectionProps> = ({
                       updateHttp({ ...getHttpConfig(), endpoints });
                     }}
                     placeholder="Status"
-                    className="w-20 rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none"
+                    className="w-20 rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary placeholder:text-text-muted focus:border-brand-accent focus:outline-none"
                   />
                   <Button
                     variant="ghost"
@@ -132,7 +132,7 @@ export const HttpSection: FC<ProtocolSectionProps> = ({
                       updateHttp({ ...getHttpConfig(), endpoints });
                     }}
                     placeholder="Content-Type (e.g., application/json)"
-                    className="w-64 rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none"
+                    className="w-64 rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary placeholder:text-text-muted focus:border-brand-accent focus:outline-none"
                   />
                   <input
                     type="text"
@@ -146,7 +146,7 @@ export const HttpSection: FC<ProtocolSectionProps> = ({
                       updateHttp({ ...getHttpConfig(), endpoints });
                     }}
                     placeholder="Response body"
-                    className="flex-1 rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none"
+                    className="flex-1 rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary placeholder:text-text-muted focus:border-brand-accent focus:outline-none"
                   />
                 </div>
               </div>

@@ -93,7 +93,7 @@ export const TrafficSection: FC<ProtocolSectionProps> = ({
                     });
                   }}
                   min={1}
-                  className="w-32 rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none"
+                  className="w-32 rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary placeholder:text-text-muted focus:border-brand-accent focus:outline-none"
                 />
               </FormField>
             )}
@@ -147,7 +147,7 @@ export const TrafficSection: FC<ProtocolSectionProps> = ({
                       });
                     }}
                     min={1}
-                    className="w-full rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none"
+                    className="w-full rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary placeholder:text-text-muted focus:border-brand-accent focus:outline-none"
                   />
                 </FormField>
                 <FormField label="Payload Size (bytes)" helpText="Size of ICMP payload">
@@ -167,7 +167,7 @@ export const TrafficSection: FC<ProtocolSectionProps> = ({
                     }}
                     min={0}
                     max={65507}
-                    className="w-full rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none"
+                    className="w-full rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary placeholder:text-text-muted focus:border-brand-accent focus:outline-none"
                   />
                 </FormField>
               </div>
@@ -224,7 +224,7 @@ export const TrafficSection: FC<ProtocolSectionProps> = ({
                         });
                       }}
                       min={1}
-                      className="w-full rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none"
+                      className="w-full rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary placeholder:text-text-muted focus:border-brand-accent focus:outline-none"
                     />
                   </FormField>
                   <FormField label="Packet Count" helpText="Packets per burst">
@@ -245,7 +245,7 @@ export const TrafficSection: FC<ProtocolSectionProps> = ({
                       }}
                       min={1}
                       max={100}
-                      className="w-full rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none"
+                      className="w-full rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary placeholder:text-text-muted focus:border-brand-accent focus:outline-none"
                     />
                   </FormField>
                 </div>

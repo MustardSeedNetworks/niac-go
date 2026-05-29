@@ -151,7 +151,7 @@ export const NeighborsView: FC = () => {
                     }
                     className={`rounded px-3 py-compact text-xs font-medium ${
                       active
-                        ? 'bg-status-info/20 text-status-info ring-1 ring-cyan-400/40'
+                        ? 'bg-status-info/20 text-status-info ring-1 ring-status-info/40'
                         : 'bg-bg-elevated/60 text-text-secondary hover:bg-bg-elevated'
                     }`}
                   >
@@ -167,7 +167,7 @@ export const NeighborsView: FC = () => {
               onChange={(e) => setSearch(e.target.value)}
               placeholder={t('topology.neighbors.searchPlaceholder')}
               title={t('topology.neighbors.searchTitle')}
-              className="ml-auto w-64 rounded border border-surface-border bg-bg-base/60 px-3 py-compact-md text-sm text-text-primary placeholder-gray-500 focus:border-status-info focus:outline-none"
+              className="ml-auto w-64 rounded border border-surface-border bg-bg-base/60 px-3 py-compact-md text-sm text-text-primary placeholder:text-text-muted focus:border-status-info focus:outline-none"
               aria-label={t('topology.neighbors.searchAriaLabel')}
             />
             <span className="text-xs text-text-muted">

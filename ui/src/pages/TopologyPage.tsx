@@ -692,7 +692,7 @@ export const TopologyPage: FC = () => {
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search devices by name…"
                 aria-label="Filter devices by name"
-                className="w-full sm:w-64 rounded-md border border-surface-border bg-bg-base/40 px-3 py-compact-md text-xs text-text-primary placeholder:text-text-muted focus:border-status-info/40 focus:outline-none focus:ring-1 focus:ring-cyan-500/30"
+                className="w-full sm:w-64 rounded-md border border-surface-border bg-bg-base/40 px-3 py-compact-md text-xs text-text-primary placeholder:text-text-muted focus:border-status-info/40 focus:outline-none focus:ring-1 focus:ring-status-info/30"
               />
               {availableTypes.length > 0 && (
                 <div className="flex flex-wrap items-center gap-1.5">

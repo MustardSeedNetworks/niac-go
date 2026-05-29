@@ -37,7 +37,7 @@ const CATEGORY_COLORS: Record<ProtocolCategory, string> = {
   routing: 'border-status-info/30',
   redundancy: 'border-status-warning/30',
   multicast: 'border-brand-primary/30',
-  monitoring: 'border-pink-500/30',
+  monitoring: 'border-chart-7/30',
 };
 
 const CATEGORY_HEADER_COLORS: Record<ProtocolCategory, string> = {
@@ -46,7 +46,7 @@ const CATEGORY_HEADER_COLORS: Record<ProtocolCategory, string> = {
   routing: 'text-status-info',
   redundancy: 'text-status-warning',
   multicast: 'text-brand-accent',
-  monitoring: 'text-pink-400',
+  monitoring: 'text-chart-7',
 };
 
 /**
@@ -93,7 +93,7 @@ const ProtocolSlider: FC<ProtocolSliderProps> = memo(({ config, onChange, disabl
 
       <div className="relative">
         {/* Slider track background with gradient */}
-        <div className="absolute top-1/2 left-0 right-0 h-2 -translate-y-1/2 rounded-full bg-gradient-to-r from-gray-700 via-yellow-600 to-purple-600 opacity-30" />
+        <div className="absolute top-1/2 left-0 right-0 h-2 -translate-y-1/2 rounded-full bg-gradient-to-r from-surface-border via-status-warning to-chart-5 opacity-30" />
 
         {/* Active track */}
         <div

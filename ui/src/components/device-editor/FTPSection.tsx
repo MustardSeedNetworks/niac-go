@@ -110,7 +110,7 @@ export const FtpSection: FC<ProtocolSectionProps> = ({
                     updateFtp({ ...getFtpConfig(), users });
                   }}
                   placeholder="Username"
-                  className="flex-1 rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none"
+                  className="flex-1 rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary placeholder:text-text-muted focus:border-brand-accent focus:outline-none"
                 />
                 <input
                   type="text"
@@ -124,7 +124,7 @@ export const FtpSection: FC<ProtocolSectionProps> = ({
                     updateFtp({ ...getFtpConfig(), users });
                   }}
                   placeholder="Password"
-                  className="flex-1 rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none"
+                  className="flex-1 rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary placeholder:text-text-muted focus:border-brand-accent focus:outline-none"
                 />
                 <input
                   type="text"
@@ -135,7 +135,7 @@ export const FtpSection: FC<ProtocolSectionProps> = ({
                     updateFtp({ ...getFtpConfig(), users });
                   }}
                   placeholder="Home Directory"
-                  className="flex-1 rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none font-mono"
+                  className="flex-1 rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary placeholder:text-text-muted focus:border-brand-accent focus:outline-none font-mono"
                 />
                 <Button
                   variant="ghost"

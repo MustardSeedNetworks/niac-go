@@ -53,7 +53,7 @@ export const TemplatesHeader: FC<TemplatesHeaderProps> = ({
             placeholder="Search templates by name, description, or type..."
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full rounded-lg border border-surface-border bg-bg-base/60 py-row-lg pl-10 pr-icon text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none"
+            className="w-full rounded-lg border border-surface-border bg-bg-base/60 py-row-lg pl-10 pr-icon text-sm text-text-primary placeholder:text-text-muted focus:border-brand-accent focus:outline-none"
           />
           {searchQuery && (
             <button

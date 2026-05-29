@@ -87,7 +87,7 @@ export const JavaDslImportCard: FC = () => {
           }}
           placeholder="device my-router {&#10;  type = router&#10;  ip = 192.168.1.1&#10;  ...&#10;}"
           rows={10}
-          className="w-full rounded border border-surface-border bg-bg-base/60 pad-sm font-mono text-xs text-text-primary placeholder-gray-500 focus:border-status-success focus:outline-none"
+          className="w-full rounded border border-surface-border bg-bg-base/60 pad-sm font-mono text-xs text-text-primary placeholder:text-text-muted focus:border-status-success focus:outline-none"
           aria-label="Legacy Java DSL config content"
         />
 
