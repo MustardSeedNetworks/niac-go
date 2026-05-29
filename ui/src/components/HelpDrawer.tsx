@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import type { ReactElement, ReactNode } from 'react';
 import { useState } from 'react';
+import { useBuildVersion } from '../hooks/useBuildVersion';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import { cn, drawer, layout, spacing } from '../styles/theme';
 import { FAQSection } from './help-drawer/FAQSection';
@@ -62,6 +63,7 @@ const TABS: TabConfig[] = [
 export function HelpDrawer({ isOpen, onClose }: HelpDrawerProps): ReactElement | null {
   const [activeTab, setActiveTab] = useState<HelpTab>('overview');
   const [searchQuery, setSearchQuery] = useState('');
+  const buildVersion = useBuildVersion();
 
   const drawerRef = useFocusTrap<HTMLDivElement>({
     isActive: isOpen,
@@ -97,7 +99,16 @@ export function HelpDrawer({ isOpen, onClose }: HelpDrawerProps): ReactElement |
             <div className="px-4 py-row-lg flex-between">
               <div className={layout.inline.default}>
                 <HelpCircle className="w-5 h-5 text-brand-accent" aria-hidden="true" />
-                <h2 className="heading-3 text-text-primary">Help</h2>
+                <div>
+                  <h2 className="heading-3 text-text-primary">Help</h2>
+                  <p
+                    className="caption text-text-muted"
+                    data-testid="help-drawer-version"
+                    title={`commit ${buildVersion.commit} · built ${buildVersion.buildTime}`}
+                  >
+                    NIAC v{buildVersion.version}
+                  </p>
+                </div>
               </div>
               <button
                 type="button"
