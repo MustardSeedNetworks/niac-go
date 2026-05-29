@@ -33,6 +33,9 @@ func addTemplateCommand(root *cobra.Command, _ *serviceOptions) {
 	templateListCmd := &cobra.Command{
 		Use:   "list",
 		Short: "List available templates",
+		Long: `Print every bundled template name with a one-line description.
+Templates cover common scenarios (basic-network, small-office, data-center,
+iot-network, etc.) and are the fastest path to a runnable YAML config.`,
 		Example: `  # List all templates with descriptions
   niac template list`,
 		Run: func(_ *cobra.Command, _ []string) {
@@ -43,6 +46,9 @@ func addTemplateCommand(root *cobra.Command, _ *serviceOptions) {
 	templateShowCmd := &cobra.Command{
 		Use:   "show <template-name>",
 		Short: "Show template contents",
+		Long: `Print the YAML body of a named template to stdout. Useful for
+inspecting what a template will produce or piping it into another tool
+without writing to disk.`,
 		Example: `  # Show basic network template
   niac template show basic-network
 
@@ -60,6 +66,9 @@ func addTemplateCommand(root *cobra.Command, _ *serviceOptions) {
 	templateUseCmd := &cobra.Command{
 		Use:   "use <template-name> <output-file>",
 		Short: "Copy template to a new file",
+		Long: `Copy a named template's body into a new YAML file at the given
+output path. The output file becomes the starting point you edit and run
+with 'niac run'; the template itself is unchanged.`,
 		Example: `  # Create small office config
   niac template use small-office office.yaml
 

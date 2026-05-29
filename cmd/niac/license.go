@@ -28,18 +28,42 @@ simulated devices, common protocols). NIAC Pro ($599/yr) unlocks:
   • REST API access (programmatic control)
 
 A 14-day trial of the full Pro tier is available without a key.`,
+		Example: `  # Check the current tier / activation
+  niac license status
+
+  # Start a 14-day Pro trial (no key required)
+  niac license trial
+
+  # Activate a paid Pro key
+  niac license activate -k XXXX-XXXX-XXXX-XXXX
+
+  # Remove the license from this device
+  niac license deactivate`,
 	}
 
 	licenseCmd.AddCommand(&cobra.Command{
 		Use:   "status",
 		Short: "Show current license status",
-		Run:   func(_ *cobra.Command, _ []string) { runLicenseStatus() },
+		Long: `Print the current license tier, key, activation date, expiry,
+device hash, and unlocked feature count. With no license active, prints the
+Free-tier banner.`,
+		Example: `  # Show the active license / trial status
+  niac license status`,
+		Run: func(_ *cobra.Command, _ []string) { runLicenseStatus() },
 	})
 
 	activateCmd := &cobra.Command{
 		Use:   "activate",
 		Short: "Activate a license key",
-		Run:   func(cmd *cobra.Command, _ []string) { runLicenseActivate(cmd) },
+		Long: `Activate a NIAC license key on this device. Validation is fully
+offline (rotor cipher + device fingerprint); no phone-home. The key is bound
+to this device's hash and unlocks the tier features encoded in the key.`,
+		Example: `  # Activate a Pro key
+  niac license activate -k XXXX-XXXX-XXXX-XXXX
+
+  # The flag is required — this prints the usage
+  niac license activate`,
+		Run: func(cmd *cobra.Command, _ []string) { runLicenseActivate(cmd) },
 	}
 	activateCmd.Flags().StringP("key", "k", "", "License key to activate (XXXX-XXXX-XXXX-XXXX)")
 	_ = activateCmd.MarkFlagRequired("key")
@@ -48,13 +72,24 @@ A 14-day trial of the full Pro tier is available without a key.`,
 	licenseCmd.AddCommand(&cobra.Command{
 		Use:   "deactivate",
 		Short: "Remove the current license from this device",
-		Run:   func(_ *cobra.Command, _ []string) { runLicenseDeactivate() },
+		Long: `Remove the activated license from this device. After deactivation
+NIAC reverts to the Free tier. The license key itself remains valid and can
+be activated on another device.`,
+		Example: `  # Deactivate the current license (revert to Free tier)
+  niac license deactivate`,
+		Run: func(_ *cobra.Command, _ []string) { runLicenseDeactivate() },
 	})
 
 	licenseCmd.AddCommand(&cobra.Command{
 		Use:   "trial",
 		Short: "Start the 14-day Pro trial",
-		Run:   func(_ *cobra.Command, _ []string) { runLicenseTrial() },
+		Long: `Begin a one-time 14-day trial of the full Pro tier. The trial is
+tied to this device's hash and cannot be reset after expiry — activate a
+real key with ` + "`niac license activate -k ...`" + ` to continue using Pro
+features.`,
+		Example: `  # Start the 14-day Pro trial
+  niac license trial`,
+		Run: func(_ *cobra.Command, _ []string) { runLicenseTrial() },
 	})
 
 	root.AddCommand(licenseCmd)

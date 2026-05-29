@@ -36,6 +36,17 @@ Bundled content is published per release at:
 Use 'niac content install' to fetch and unpack the bundle matching the
 running daemon, or 'niac content install --bundle path.tar.gz' to install
 from a local mirror.`,
+		Example: `  # Show what's in the library right now
+  niac content list
+
+  # Refresh the bundle to match the running binary's version
+  niac content update
+
+  # Install a specific release bundle
+  niac content install --version v0.88.3
+
+  # Install from a local mirror
+  niac content install --bundle /tmp/niac-content.tar.gz`,
 	}
 
 	contentCmd.AddCommand(newContentInstallCmd())
@@ -205,6 +216,13 @@ func newContentListCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List what's installed in the library",
+		Long: `Print every kind (networks / walks / pcaps) currently in the library
+along with the file count and on-disk size for each, plus a TOTAL row.`,
+		Example: `  # List the default library
+  niac content list
+
+  # Inspect a non-default library
+  niac content list --root /var/lib/niac/library`,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			libRoot := root
 			if libRoot == "" {
@@ -245,6 +263,14 @@ after upgrading via the system package manager:
 
   sudo dnf upgrade niac
   niac content update`,
+		Example: `  # Refresh the library after upgrading the niac binary
+  niac content update
+
+  # Preview the changes without writing
+  niac content update --dry-run
+
+  # Don't overwrite files that already exist
+  niac content update --skip-existing`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return runContentInstall(cmd.Context(), contentInstallArgs{
 				root:         root,
