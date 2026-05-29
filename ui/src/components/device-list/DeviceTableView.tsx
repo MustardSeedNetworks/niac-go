@@ -41,7 +41,7 @@ export const DeviceTableView: FC = () => {
         </div>
 
         {/* Device rows */}
-        <div className="divide-y divide-white/5">
+        <div className="divide-y divide-knob/5">
           {devices.map((device) => {
             // Defensive: wild device types like "ap" / "access-point" aren't
             // in the DeviceType union; fall back to 'unknown' so the lookup

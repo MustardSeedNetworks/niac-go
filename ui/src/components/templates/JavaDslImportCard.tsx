@@ -70,7 +70,7 @@ export const JavaDslImportCard: FC = () => {
         </P>
 
         <div className="flex flex-wrap items-center gap-default">
-          <label className="cursor-pointer rounded bg-bg-elevated/60 px-3 py-compact-md text-xs font-medium text-text-primary ring-1 ring-white/10 hover:bg-bg-elevated">
+          <label className="cursor-pointer rounded bg-bg-elevated/60 px-3 py-compact-md text-xs font-medium text-text-primary ring-1 ring-knob/10 hover:bg-bg-elevated">
             Choose .cfg file…
             <input type="file" accept=".cfg,.conf,.txt" onChange={onPickFile} className="hidden" />
           </label>

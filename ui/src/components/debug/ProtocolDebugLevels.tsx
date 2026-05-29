@@ -118,7 +118,7 @@ const ProtocolSlider: FC<ProtocolSliderProps> = memo(({ config, onChange, disabl
             [&::-webkit-slider-thumb]:h-5
             [&::-webkit-slider-thumb]:w-5
             [&::-webkit-slider-thumb]:rounded-full
-            [&::-webkit-slider-thumb]:bg-white
+            [&::-webkit-slider-thumb]:bg-knob
             [&::-webkit-slider-thumb]:shadow-md
             [&::-webkit-slider-thumb]:border-2
             [&::-webkit-slider-thumb]:border-brand-accent
@@ -127,7 +127,7 @@ const ProtocolSlider: FC<ProtocolSliderProps> = memo(({ config, onChange, disabl
             [&::-moz-range-thumb]:h-5
             [&::-moz-range-thumb]:w-5
             [&::-moz-range-thumb]:rounded-full
-            [&::-moz-range-thumb]:bg-white
+            [&::-moz-range-thumb]:bg-knob
             [&::-moz-range-thumb]:shadow-md
             [&::-moz-range-thumb]:border-2
             [&::-moz-range-thumb]:border-brand-accent"

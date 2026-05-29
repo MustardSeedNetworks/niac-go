@@ -234,6 +234,13 @@
   --color-surface-deep: #020617;
   --color-scrim: #000000;
   --color-knob: #ffffff;
+
+  /* On-color foregrounds — AA text/icon on a filled brand/status surface.
+   * NIAC's brand (indigo) and status-error/info fills are saturated, so these
+   * are white. Constant across modes. Replaces bare text-white on buttons. */
+  --color-on-brand: #ffffff;
+  --color-on-danger: #ffffff;
+  --color-on-info: #ffffff;
 }
 
 /* ==========================================================================

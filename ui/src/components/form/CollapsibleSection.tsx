@@ -56,7 +56,7 @@ export const CollapsibleSection: FC<CollapsibleSectionProps> = ({
               />
               <div className="w-9 h-5 bg-bg-elevated rounded-full peer peer-checked:bg-brand-primary peer-focus:ring-2 peer-focus:ring-brand-primary transition-colors">
                 <div
-                  className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${enabled ? 'translate-x-4' : ''}`}
+                  className={`absolute top-0.5 left-0.5 w-4 h-4 bg-knob rounded-full transition-transform ${enabled ? 'translate-x-4' : ''}`}
                 />
               </div>
             </label>

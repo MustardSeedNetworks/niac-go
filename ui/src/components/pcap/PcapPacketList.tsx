@@ -108,7 +108,7 @@ export const PcapPacketList: FC<PcapPacketListProps> = memo(
                 </div>
               </div>
             ) : (
-              <table className="min-w-full divide-y divide-white/5">
+              <table className="min-w-full divide-y divide-knob/5">
                 <thead className="bg-bg-surface/80 sticky top-0 z-10">
                   <tr>
                     <th className="px-3 py-row text-left text-xs font-semibold uppercase tracking-wide text-text-muted">
@@ -138,7 +138,7 @@ export const PcapPacketList: FC<PcapPacketListProps> = memo(
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/5">
+                <tbody className="divide-y divide-knob/5">
                   {packets.map((packet, idx) => (
                     <PacketRow
                       key={packet.id}

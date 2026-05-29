@@ -102,7 +102,7 @@ export const ConversationList: FC<ConversationListProps> = memo(
           </div>
 
           <div className="overflow-auto rounded-lg border border-surface-border max-h-[500px]">
-            <table className="min-w-full divide-y divide-white/5">
+            <table className="min-w-full divide-y divide-knob/5">
               <thead className="bg-bg-surface/80 sticky top-0 z-10">
                 <tr>
                   <th className="px-3 py-row text-left text-xs font-semibold uppercase tracking-wide text-text-muted">
@@ -137,7 +137,7 @@ export const ConversationList: FC<ConversationListProps> = memo(
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/5">
+              <tbody className="divide-y divide-knob/5">
                 {sorted.map((conv) => (
                   <ConversationRow
                     key={conv.id}

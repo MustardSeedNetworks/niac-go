@@ -83,7 +83,7 @@ const DeviceTable = memo(({ devices }: { devices: DeviceSummary[] }) => {
   if (!useVirtualization) {
     return (
       <div className="overflow-x-auto rounded-xl border border-surface-border">
-        <table className="min-w-full divide-y divide-white/10 text-sm">
+        <table className="min-w-full divide-y divide-knob/10 text-sm">
           <thead className="bg-bg-surface/60 text-xs uppercase tracking-wide text-text-muted">
             <tr>
               <th className="px-4 py-row-lg text-left">Device</th>
@@ -92,7 +92,7 @@ const DeviceTable = memo(({ devices }: { devices: DeviceSummary[] }) => {
               <th className="px-4 py-row-lg text-left">Protocols</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-white/5 text-text-secondary">
+          <tbody className="divide-y divide-knob/5 text-text-secondary">
             {devices.map((device) => (
               <DeviceRow key={device.name} device={device} />
             ))}
@@ -111,7 +111,7 @@ const DeviceTable = memo(({ devices }: { devices: DeviceSummary[] }) => {
       <div {...virtualScroll.containerProps} className="overflow-auto">
         <div {...virtualScroll.spacerProps}>
           <div {...virtualScroll.contentProps}>
-            <table className="min-w-full divide-y divide-white/10 text-sm">
+            <table className="min-w-full divide-y divide-knob/10 text-sm">
               <thead className="bg-bg-surface/60 text-xs uppercase tracking-wide text-text-muted">
                 <tr>
                   <th className="px-4 py-row-lg text-left">Device</th>
@@ -120,7 +120,7 @@ const DeviceTable = memo(({ devices }: { devices: DeviceSummary[] }) => {
                   <th className="px-4 py-row-lg text-left">Protocols</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/5 text-text-secondary">
+              <tbody className="divide-y divide-knob/5 text-text-secondary">
                 {virtualScroll.visibleItems.map(({ item: device }) => (
                   <DeviceRow key={device.name} device={device} />
                 ))}

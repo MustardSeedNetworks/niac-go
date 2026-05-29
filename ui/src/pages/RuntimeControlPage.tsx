@@ -231,7 +231,7 @@ export const RuntimeControlPage: FC = () => {
                 <SmallText className="text-status-warning/90">
                   To use simulation controls, start NIAC in daemon mode:
                 </SmallText>
-                <code className="mt-inline block rounded bg-black/40 pad-sm font-mono text-sm text-status-warning">
+                <code className="mt-inline block rounded bg-scrim/40 pad-sm font-mono text-sm text-status-warning">
                   niac daemon --listen :8080 --token yourtoken
                 </code>
               </div>

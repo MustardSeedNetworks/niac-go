@@ -97,7 +97,7 @@ export const ConfigsList: FC<{
             ))}
           </div>
         ) : (
-          <ul className="divide-y divide-white/5 overflow-hidden rounded-lg border border-surface-border bg-bg-base/40">
+          <ul className="divide-y divide-knob/5 overflow-hidden rounded-lg border border-surface-border bg-bg-base/40">
             {items.map((item) => (
               <ConfigRow
                 key={item.key}

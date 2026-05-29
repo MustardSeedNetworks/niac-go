@@ -216,7 +216,7 @@ export const WalkValidatorPage: FC = () => {
                     <th className="px-3 py-row">Original</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/5">
+                <tbody className="divide-y divide-knob/5">
                   {issues.slice(0, 200).map((issue, idx) => (
                     <tr
                       key={`${issue.line}-${idx}`}
