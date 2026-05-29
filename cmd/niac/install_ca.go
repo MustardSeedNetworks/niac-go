@@ -81,6 +81,17 @@ Verification:
   niac install-ca --print-fingerprint
   curl -k https://localhost:8445/__version | jq -r .tlsFingerprint
 The two values must match.`,
+		Example: `  # Install NIAC's self-signed root into the OS trust store
+  sudo niac install-ca
+
+  # Print the cert's SHA-256 fingerprint (no trust-store change)
+  niac install-ca --print-fingerprint
+
+  # Remove the previously installed root from the OS trust store
+  sudo niac install-ca --uninstall
+
+  # Install a non-default certificate file
+  sudo niac install-ca --cert /etc/niac/certs/server.crt`,
 		RunE: runInstallCA,
 	}
 	installCACmd.Flags().String("cert", defaultInstallCAPath(),

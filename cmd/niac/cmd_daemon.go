@@ -61,14 +61,21 @@ engine, allowing you to:
   - Manage multiple simulation sessions
 
 TLS is enabled by default and the daemon listens on 127.0.0.1:8445.
-Pass --http to run the legacy HTTP listener on :8080 instead. Binding
-to a non-loopback address (e.g. --listen 0.0.0.0) requires an API
-token via NIAC_API_TOKEN or --api-token.
+The HTTP listener exists only as a 308 redirector. Binding to a
+non-loopback address (e.g. --listen 0.0.0.0) requires an API token via
+NIAC_API_TOKEN or --api-token.`,
+		Example: `  # Default: HTTPS on 127.0.0.1:8445 (loopback only, no token needed)
+  niac daemon
 
-Example:
-  niac daemon                            # https://127.0.0.1:8445
-  niac daemon --listen 0.0.0.0 --api-token $(openssl rand -base64 32)
-  niac daemon --http --listen 127.0.0.1  # http://127.0.0.1:8080`,
+  # Listen on all interfaces — requires an API token
+  export NIAC_API_TOKEN=$(openssl rand -base64 32)
+  niac daemon --listen 0.0.0.0
+
+  # Use a token file with scoped tokens (read-only / read-write)
+  niac daemon --token-file /etc/niac/tokens.json
+
+  # Disable run-history persistence
+  niac daemon --storage disabled`,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			return runDaemon(options, info)
 		},

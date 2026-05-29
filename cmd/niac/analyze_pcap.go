@@ -34,6 +34,14 @@ func addAnalyzePcapCommand(root *cobra.Command, _ *serviceOptions) {
 		Long: `Parse a PCAP file and emit protocol counters for rapid troubleshooting.
 The tool classifies packets into ARP, LLDP, CDP, STP, IPv4, IPv6, TCP, UDP,
 and generic application protocols.`,
+		Example: `  # Summarise a capture (text output)
+  niac analyze-pcap capture.pcap
+
+  # Machine-readable JSON output
+  niac analyze-pcap --output json capture.pcap
+
+  # YAML output (handy for diffing two captures)
+  niac analyze-pcap --output yaml capture.pcap`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			return runAnalyzePcap(args, options)
