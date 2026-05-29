@@ -5,6 +5,13 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.88.3](https://github.com/krisarmstrong/niac-go/compare/v0.88.2...v0.88.3) (2026-05-29)
+
+
+### Bug Fixes
+
+* **ui:** repair token-discipline guard; close leaks it now catches ([#760](https://github.com/krisarmstrong/niac-go/issues/760)) ([e0145ab](https://github.com/krisarmstrong/niac-go/commit/e0145ab3315f38611f96ac785cc8daf79430ca5b))
+
 ## [0.88.2](https://github.com/krisarmstrong/niac-go/compare/v0.88.1...v0.88.2) (2026-05-29)
 
 
