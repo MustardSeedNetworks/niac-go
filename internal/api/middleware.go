@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/subtle"
 	"encoding/hex"
@@ -10,6 +11,29 @@ import (
 	"runtime/debug"
 	"strings"
 )
+
+// scopeContextKey is the request-context key under which the auth()
+// middleware stashes the resolved TokenScope for the request. The
+// downstream adminProtect middleware reads it via scopeFromContext so
+// the gate stays a single concern rather than re-doing token lookup.
+// Bypass paths (loopback no-token, NIAC_AUTH_DISABLED=true) stash
+// ScopeAdmin so dev workflows aren't suddenly locked out of admin
+// operations they could perform pre-#743.
+type scopeContextKey struct{}
+
+func withScope(ctx context.Context, scope TokenScope) context.Context {
+	return context.WithValue(ctx, scopeContextKey{}, scope)
+}
+
+// scopeFromContext returns the scope stashed by auth(). The second
+// return reports whether a value was actually stashed — false means
+// either the request never went through auth() (which would itself be
+// a configuration bug) or it pre-dates #743. In the false case the
+// caller should fail closed.
+func scopeFromContext(ctx context.Context) (TokenScope, bool) {
+	v, ok := ctx.Value(scopeContextKey{}).(TokenScope)
+	return v, ok
+}
 
 // generateCSRFToken generates a cryptographically secure random token
 // SECURITY FIX LOW-1: CSRF protection.
@@ -191,14 +215,17 @@ func (s *Server) auth(next http.HandlerFunc) http.HandlerFunc {
 		// NIAC_AUTH_DISABLED=true.
 		if s.tokens == nil || s.tokens.Len() == 0 {
 			if os.Getenv("NIAC_AUTH_DISABLED") == "true" {
-				next(w, r)
+				// #743: dev-only bypass — treat as admin so dev
+				// workflows can still exercise admin-gated routes.
+				next(w, r.WithContext(withScope(r.Context(), ScopeAdmin)))
 
 				return
 			}
 			nonLoopback, _ := addrIsNonLoopback(s.cfg.Addr)
 			if !nonLoopback {
 				// Loopback-only, no token: the documented local-dev path.
-				next(w, r)
+				// #743: stash admin so local-dev keeps full access.
+				next(w, r.WithContext(withScope(r.Context(), ScopeAdmin)))
 
 				return
 			}
@@ -272,6 +299,42 @@ func (s *Server) auth(next http.HandlerFunc) http.HandlerFunc {
 				"tokenScope", scope.String(),
 				"requiredScope", required.String(),
 			)
+			return
+		}
+
+		// #743: stash the resolved scope on the context so adminProtect
+		// (and any future scope-aware middleware) can read it without
+		// re-doing token lookup.
+		next(w, r.WithContext(withScope(r.Context(), scope)))
+	}
+}
+
+// adminProtect wraps handlers that require ScopeAdmin (typically
+// destructive whole-config operations like /api/v1/config/import).
+// The auth() middleware must run upstream — adminProtect reads the
+// scope stashed there; an unstashed context is treated as a 403 so
+// missing wiring fails closed rather than silently bypassing the gate.
+//
+// #743 (Wave 4). New admin-only routes go through this wrapper rather
+// than re-implementing the gate inline.
+func (s *Server) adminProtect(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		scope, ok := scopeFromContext(r.Context())
+		if !ok || scope < ScopeAdmin {
+			writeError(w, r, http.StatusForbidden, "forbidden",
+				"this operation requires an admin-scoped token", nil)
+			s.logger.WarnContext(r.Context(),
+				"[API] Forbidden request: admin scope required",
+				"event", "auth.forbidden",
+				"reason", "scope",
+				"requestID", r.Header.Get("X-Request-ID"),
+				"clientIP", getClientIP(r),
+				"userAgent", r.UserAgent(),
+				"path", r.URL.Path,
+				"method", r.Method,
+				"requiredScope", ScopeAdmin.String(),
+			)
+
 			return
 		}
 

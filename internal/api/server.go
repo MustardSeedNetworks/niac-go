@@ -422,9 +422,10 @@ func (s *Server) AuthConfigured() bool {
 
 // TokenScopeCounts exposes the active token-store breakdown for the
 // SIGHUP audit log line. Returns zeros when no store is attached.
-func (s *Server) TokenScopeCounts() (int, int) {
+// Third return is the admin-token count (#743).
+func (s *Server) TokenScopeCounts() (int, int, int) {
 	if s.tokens == nil {
-		return 0, 0
+		return 0, 0, 0
 	}
 	return s.tokens.ScopeCounts()
 }

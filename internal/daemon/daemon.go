@@ -220,12 +220,12 @@ func (d *Daemon) ReloadTokens() (int, error) {
 }
 
 // TokenScopeCounts returns the number of active (read-only,
-// read-write) tokens in the API server's token store. Used by the
-// SIGHUP handler to surface a useful audit line without leaking token
-// values.
-func (d *Daemon) TokenScopeCounts() (int, int) {
+// read-write, admin) tokens in the API server's token store. Used by
+// the SIGHUP handler to surface a useful audit line without leaking
+// token values. Third return is the admin-token count (#743).
+func (d *Daemon) TokenScopeCounts() (int, int, int) {
 	if d.apiServer == nil {
-		return 0, 0
+		return 0, 0, 0
 	}
 	return d.apiServer.TokenScopeCounts()
 }

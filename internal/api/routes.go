@@ -51,8 +51,13 @@ func (s *Server) registerWriteProtectedRoutes(mux *http.ServeMux) {
 		s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.handleConfigMerge)))),
 	)
 	mux.HandleFunc(
+		// #743: full topology replacement is admin-class (an
+		// admin-scoped token in addition to read-write). Routine
+		// per-device edits / configs CRUD stay at ScopeReadWrite
+		// because they're normal operator actions, not whole-topology
+		// events.
 		"/api/v1/config/import",
-		s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.handleConfigImport)))),
+		s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.adminProtect(s.handleConfigImport))))),
 	)
 	mux.HandleFunc(
 		"/api/v1/replay",
