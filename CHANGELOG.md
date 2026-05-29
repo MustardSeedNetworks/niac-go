@@ -5,6 +5,16 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.89.0](https://github.com/krisarmstrong/niac-go/compare/v0.88.3...v0.89.0) (2026-05-29)
+
+
+### Features
+
+* **api,ui:** scope-discovery endpoint + UI gating primitives ([#762](https://github.com/krisarmstrong/niac-go/issues/762)) ([#770](https://github.com/krisarmstrong/niac-go/issues/770)) ([e7f21a4](https://github.com/krisarmstrong/niac-go/commit/e7f21a4b78f5906299368b155d8d83b8ca537a3f))
+* **api:** per-session CSRF tokens via CSRFManager ([#1257](https://github.com/krisarmstrong/niac-go/issues/1257) sub-4) ([#771](https://github.com/krisarmstrong/niac-go/issues/771)) ([2a84be9](https://github.com/krisarmstrong/niac-go/commit/2a84be9ea614a38447ad7e2cbf5ace614d27041b))
+* **api:** ScopeAdmin tier gates whole-config replacement ([#743](https://github.com/krisarmstrong/niac-go/issues/743)) ([#769](https://github.com/krisarmstrong/niac-go/issues/769)) ([cb81b5c](https://github.com/krisarmstrong/niac-go/commit/cb81b5c2b0e63d3cfae089752ca2284f654081f0))
+* **api:** unify authz-denial event name with seed/stem ([#1257](https://github.com/krisarmstrong/niac-go/issues/1257)) ([#767](https://github.com/krisarmstrong/niac-go/issues/767)) ([b107e47](https://github.com/krisarmstrong/niac-go/commit/b107e47f432c2139c0076366d87eeceab6a870eb))
+
 ## [0.88.3](https://github.com/krisarmstrong/niac-go/compare/v0.88.2...v0.88.3) (2026-05-29)
 
 
