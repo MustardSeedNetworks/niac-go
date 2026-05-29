@@ -75,6 +75,7 @@
     "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react": "6.0.2",
     "@vitest/coverage-v8": "4.1.7",
+    "axe-core": "4.11.4",
     "babel-plugin-react-compiler": "1.0.0",
     "i18next-parser": "9.4.0",
     "jsdom": "29.1.1",
