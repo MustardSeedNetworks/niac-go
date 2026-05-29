@@ -590,7 +590,18 @@ func (s *Server) handleCSRFToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// #1257: mint or retrieve a per-session CSRF token keyed by the
+	// caller's bearer (or the loopback bypass key on no-token paths).
+	// Same caller fetching twice within the 24h expiry gets the same
+	// value, so the UI can cache it.
+	token, err := s.csrf.GetOrCreate(sessionKeyFromRequest(r))
+	if err != nil {
+		s.logger.ErrorContext(r.Context(), "[API] CSRF token mint failed", "error", err)
+		http.Error(w, "csrf token unavailable", http.StatusInternalServerError)
+
+		return
+	}
 	s.writeJSON(w, map[string]string{
-		"token": s.csrfToken,
+		"token": token,
 	})
 }

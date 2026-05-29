@@ -80,7 +80,8 @@ func TestRecoverMiddlewareNoPanic(t *testing.T) {
 
 func TestCSRFProtectionGETAllowed(t *testing.T) {
 	server := createTestServerForMiddleware(t)
-	server.csrfToken = "test-token"
+	server.csrf = NewCSRFManager()
+	t.Cleanup(server.csrf.Stop)
 
 	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -105,7 +106,15 @@ func TestCSRFProtectionGETAllowed(t *testing.T) {
 
 func TestCSRFProtectionStateMethods(t *testing.T) {
 	server := createTestServerForMiddleware(t)
-	server.csrfToken = "valid-csrf-token"
+	server.csrf = NewCSRFManager()
+	t.Cleanup(server.csrf.Stop)
+
+	// Mint the per-session token for the loopback bypass key (no
+	// Authorization header => csrfLoopbackSessionKey).
+	validToken, err := server.csrf.Generate(SessionKey(""))
+	if err != nil {
+		t.Fatalf("mint CSRF: %v", err)
+	}
 
 	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -128,7 +137,7 @@ func TestCSRFProtectionStateMethods(t *testing.T) {
 
 		t.Run(method+"_with_valid_token", func(t *testing.T) {
 			req := httptest.NewRequest(method, "/test", nil)
-			req.Header.Set("X-Csrf-Token", "valid-csrf-token")
+			req.Header.Set("X-Csrf-Token", validToken)
 			rec := httptest.NewRecorder()
 
 			wrapped(rec, req)
@@ -154,7 +163,8 @@ func TestCSRFProtectionStateMethods(t *testing.T) {
 
 func TestCSRFProtectionRejectsWhenNoToken(t *testing.T) {
 	server := createTestServerForMiddleware(t)
-	server.csrfToken = "" // No CSRF token set
+	// #1257: nil csrf manager => server misconfigured.
+	server.csrf = nil
 
 	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)

@@ -18,21 +18,19 @@ import (
 	"golang.org/x/time/rate"
 )
 
-// newTestServerWithAuth creates a test server with auth and rate limiting initialized.
+// newTestServerWithAuth creates a test server with auth and rate
+// limiting initialized. Returns (server, tmpDir, bearerToken). The
+// CSRF token for the bearer is minted via the manager and exposed via
+// testCSRFToken(server, bearerToken) so each test case can request a
+// token for the session it's exercising (#1257 per-session CSRF).
 func newTestServerWithAuth(t *testing.T) (*Server, string, string) {
 	t.Helper()
 	server, tmpDir := newTestServer(t)
 
 	// Initialize server components
 	server.rateLimiter = NewRateLimiter(DefaultRateLimit, DefaultBurst)
-
-	// Generate CSRF token
-	csrfToken, err := generateCSRFToken()
-	if err != nil {
-		t.Fatalf("Failed to generate CSRF token: %v", err)
-	}
-
-	server.csrfToken = csrfToken
+	server.csrf = NewCSRFManager()
+	t.Cleanup(server.csrf.Stop)
 
 	// Generate auth token. Wave 2: seed the TokenStore directly. The
 	// cfg.Token field is left set so the legacy Wave 1 gate code path
@@ -43,6 +41,19 @@ func newTestServerWithAuth(t *testing.T) (*Server, string, string) {
 	server.SetTokens([]ScopedToken{{Value: token, Scope: ScopeReadWrite}})
 
 	return server, tmpDir, token
+}
+
+// testCSRFToken mints (or fetches) the per-session CSRF token for the
+// given bearer so test cases can pass it as X-Csrf-Token. Replaces
+// the pre-#1257 testCSRFToken(t, server, token) global the old tests reached for.
+func testCSRFToken(t *testing.T, server *Server, bearer string) string {
+	t.Helper()
+	tok, err := server.csrf.GetOrCreate(SessionKey(bearer))
+	if err != nil {
+		t.Fatalf("mint test CSRF token: %v", err)
+	}
+
+	return tok
 }
 
 // TestRateLimiter_ExcessiveRequests verifies rate limiting blocks excessive requests.
@@ -221,7 +232,7 @@ func TestCSRF_TokenValidation(t *testing.T) {
 	reqBody := strings.NewReader(`{"packets_threshold":1000}`)
 	req := httptest.NewRequest(http.MethodPut, "/api/v1/alerts", reqBody)
 	req.Header.Set("Authorization", "Bearer "+token)
-	req.Header.Set("X-Csrf-Token", server.csrfToken)
+	req.Header.Set("X-Csrf-Token", testCSRFToken(t, server, token))
 	req.Header.Set("Content-Type", "application/json")
 
 	w := httptest.NewRecorder()
@@ -550,7 +561,7 @@ func TestAlertConfig_ConcurrentUpdates(t *testing.T) {
 			reqBody := fmt.Sprintf(`{"packets_threshold":%d}`, threshold*1000)
 			req := httptest.NewRequest(http.MethodPut, "/api/v1/alerts", strings.NewReader(reqBody))
 			req.Header.Set("Authorization", "Bearer "+token)
-			req.Header.Set("X-Csrf-Token", server.csrfToken)
+			req.Header.Set("X-Csrf-Token", testCSRFToken(t, server, token))
 			req.Header.Set("Content-Type", "application/json")
 
 			w := httptest.NewRecorder()
@@ -590,7 +601,7 @@ func TestAlertConfig_NoDoubleClose(t *testing.T) {
 	reqBody := `{"packets_threshold":1000}`
 	req := httptest.NewRequest(http.MethodPut, "/api/v1/alerts", strings.NewReader(reqBody))
 	req.Header.Set("Authorization", "Bearer "+token)
-	req.Header.Set("X-Csrf-Token", server.csrfToken)
+	req.Header.Set("X-Csrf-Token", testCSRFToken(t, server, token))
 	req.Header.Set("Content-Type", "application/json")
 
 	w := httptest.NewRecorder()
@@ -607,7 +618,7 @@ func TestAlertConfig_NoDoubleClose(t *testing.T) {
 		reqBody = fmt.Sprintf(`{"packets_threshold":%d}`, (i+1)*1000)
 		req = httptest.NewRequest(http.MethodPut, "/api/v1/alerts", strings.NewReader(reqBody))
 		req.Header.Set("Authorization", "Bearer "+token)
-		req.Header.Set("X-Csrf-Token", server.csrfToken)
+		req.Header.Set("X-Csrf-Token", testCSRFToken(t, server, token))
 		req.Header.Set("Content-Type", "application/json")
 
 		w = httptest.NewRecorder()
@@ -623,7 +634,7 @@ func TestAlertConfig_NoDoubleClose(t *testing.T) {
 	reqBody = `{"packets_threshold":0}`
 	req = httptest.NewRequest(http.MethodPut, "/api/v1/alerts", strings.NewReader(reqBody))
 	req.Header.Set("Authorization", "Bearer "+token)
-	req.Header.Set("X-Csrf-Token", server.csrfToken)
+	req.Header.Set("X-Csrf-Token", testCSRFToken(t, server, token))
 	req.Header.Set("Content-Type", "application/json")
 
 	w = httptest.NewRecorder()
@@ -650,7 +661,7 @@ func TestAlertConfig_GoroutineCleanup(t *testing.T) {
 		reqBody := `{"packets_threshold":1000}`
 		req := httptest.NewRequest(http.MethodPut, "/api/v1/alerts", strings.NewReader(reqBody))
 		req.Header.Set("Authorization", "Bearer "+token)
-		req.Header.Set("X-Csrf-Token", server.csrfToken)
+		req.Header.Set("X-Csrf-Token", testCSRFToken(t, server, token))
 		req.Header.Set("Content-Type", "application/json")
 
 		w := httptest.NewRecorder()
@@ -666,7 +677,7 @@ func TestAlertConfig_GoroutineCleanup(t *testing.T) {
 		reqBody = `{"packets_threshold":0}`
 		req = httptest.NewRequest(http.MethodPut, "/api/v1/alerts", strings.NewReader(reqBody))
 		req.Header.Set("Authorization", "Bearer "+token)
-		req.Header.Set("X-Csrf-Token", server.csrfToken)
+		req.Header.Set("X-Csrf-Token", testCSRFToken(t, server, token))
 		req.Header.Set("Content-Type", "application/json")
 
 		w = httptest.NewRecorder()
@@ -734,7 +745,7 @@ func TestCSRFWiring_TemplatesAndConfigs(t *testing.T) {
 				bytes.NewReader([]byte(`{"name":"x","content":"y"}`)))
 			req.Header.Set("Authorization", "Bearer "+token)
 			req.Header.Set("Content-Type", "application/json")
-			req.Header.Set("X-Csrf-Token", server.csrfToken)
+			req.Header.Set("X-Csrf-Token", testCSRFToken(t, server, token))
 			rec := httptest.NewRecorder()
 			mux.ServeHTTP(rec, req)
 
