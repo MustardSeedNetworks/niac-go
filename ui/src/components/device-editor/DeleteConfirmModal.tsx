@@ -20,7 +20,7 @@ export const DeleteConfirmModal: FC<DeleteConfirmModalProps> = ({
     <div className="fixed inset-0 z-50 flex-center">
       <button
         type="button"
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+        className="absolute inset-0 bg-scrim/70 backdrop-blur-sm"
         onClick={onCancel}
         aria-label="Close delete confirmation"
       />

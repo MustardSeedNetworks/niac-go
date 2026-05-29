@@ -12,12 +12,12 @@ export const button = {
   base: 'inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-brand-primary/50 disabled:opacity-50 disabled:cursor-not-allowed',
 
   variant: {
-    // text-white (not text-text-inverse) — text-inverse flips to dark in dark
+    // text-on-brand (not text-text-inverse) — text-inverse flips to dark in dark
     // mode and would fail WCAG AA against the constant indigo brand bg.
     // hover:bg-brand-primary/90 avoids the color-shift trap of using the
     // lighter brand-accent (which fails contrast against white text).
     primary:
-      'bg-brand-primary text-white shadow-lg shadow-brand-primary/30 hover:bg-brand-primary/90 active:scale-[0.98]',
+      'bg-brand-primary text-on-brand shadow-lg shadow-brand-primary/30 hover:bg-brand-primary/90 active:scale-[0.98]',
     secondary: 'bg-bg-elevated text-text-primary hover:bg-bg-overlay border border-border-default',
     ghost: 'text-text-muted hover:text-text-primary hover:bg-bg-elevated',
     outline:
@@ -109,7 +109,7 @@ export const alert = {
 
 export const modal = {
   overlay: 'fixed inset-0 z-50 flex items-center justify-center p-4',
-  backdrop: 'absolute inset-0 bg-black/60 backdrop-blur-sm',
+  backdrop: 'absolute inset-0 bg-scrim/60 backdrop-blur-sm',
   content:
     'relative bg-bg-surface border border-border-default rounded-xl shadow-2xl max-h-[85vh] overflow-y-auto',
 
@@ -124,7 +124,7 @@ export const modal = {
 
 export const drawer = {
   overlay: 'fixed inset-0 z-50',
-  backdrop: 'absolute inset-0 bg-black/50 backdrop-blur-sm',
+  backdrop: 'absolute inset-0 bg-scrim/50 backdrop-blur-sm',
   content:
     'absolute right-0 top-0 h-full bg-bg-surface border-l border-border-default shadow-2xl overflow-y-auto',
 

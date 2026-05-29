@@ -211,7 +211,7 @@ export const NeighborsView: FC = () => {
                   <th className="px-4 py-row">{t('topology.neighbors.headerLastSeen')}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/5">
+              <tbody className="divide-y divide-knob/5">
                 {filtered.map((n) => (
                   <tr
                     key={`${n.localDevice}-${n.remoteDevice}-${n.remotePort}`}

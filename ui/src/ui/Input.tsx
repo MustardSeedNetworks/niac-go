@@ -285,7 +285,7 @@ export const Toggle: FC<ToggleProps> = ({
       >
         <span
           className={`
-            inline-block h-4 w-4 transform rounded-full bg-white shadow-lg transition-transform
+            inline-block h-4 w-4 transform rounded-full bg-knob shadow-lg transition-transform
             ${checked ? 'translate-x-6' : 'translate-x-1'}
           `}
         />

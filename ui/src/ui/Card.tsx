@@ -234,7 +234,7 @@ interface CardFooterProps {
 }
 
 export const CardFooter: FC<CardFooterProps> = ({ children, className = '' }) => (
-  <div className={`px-6 py-4 border-t border-surface-border bg-black/20 rounded-b-xl ${className}`}>
+  <div className={`px-6 py-4 border-t border-surface-border bg-scrim/20 rounded-b-xl ${className}`}>
     {children}
   </div>
 );

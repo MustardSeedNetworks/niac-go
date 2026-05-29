@@ -94,7 +94,7 @@ export const DiffBlockComponent: FC<DiffBlockComponentProps> = memo(
         )}
 
         {/* Side-by-side diff display */}
-        <div className="grid grid-cols-2 divide-x divide-white/10">
+        <div className="grid grid-cols-2 divide-x divide-knob/10">
           {/* Left panel */}
           <div className="overflow-x-auto">
             {paddedLeftLines.map((line, idx) => (

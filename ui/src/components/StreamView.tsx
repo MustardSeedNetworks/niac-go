@@ -92,7 +92,7 @@ export const StreamView: FC<StreamViewProps> = memo(({ packets, clientEndpoint, 
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex-center bg-black/60">
+    <div className="fixed inset-0 z-50 flex-center bg-scrim/60">
       <div className="w-full max-w-4xl mx-4 bg-bg-surface border border-surface-border rounded-xl shadow-2xl max-h-[85vh] flex flex-col">
         {/* Header */}
         <div className="flex-between px-5 py-4 border-b border-surface-border">

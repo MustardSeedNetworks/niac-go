@@ -16,7 +16,7 @@ export const Skeleton: FC<SkeletonProps> = ({
   lines = 1,
 }) => {
   const baseClass =
-    'skeleton bg-gradient-to-r from-white/5 via-white/10 to-white/5 bg-[length:200%_100%] animate-shimmer';
+    'skeleton bg-gradient-to-r from-knob/5 via-knob/10 to-knob/5 bg-[length:200%_100%] animate-shimmer';
 
   const variantClasses = {
     text: 'h-4 rounded',

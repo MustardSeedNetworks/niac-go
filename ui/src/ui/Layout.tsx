@@ -317,7 +317,7 @@ const HelpPanel: FC<{ title: string; children: ReactNode; onClose: () => void }>
 
   return (
     <div
-      className="fixed inset-0 z-50 flex justify-end bg-black/40 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex justify-end bg-scrim/40 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
       aria-label={`Help: ${title}`}

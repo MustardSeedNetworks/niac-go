@@ -78,7 +78,7 @@ export const CommandPalette: FC<CommandPaletteProps> = ({
     >
       <button
         type="button"
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+        className="absolute inset-0 bg-scrim/70 backdrop-blur-sm"
         onClick={() => onOpenChange(false)}
         aria-label={t('commandPalette.closeAriaLabel')}
       />

@@ -123,7 +123,7 @@ export class ErrorBoundary extends Component<Props, State> {
               <button
                 type="button"
                 onClick={this.handleReload}
-                className="inline-flex items-center gap-compact rounded-lg border border-border-muted bg-white px-4 py-row text-sm font-medium text-text-disabled transition-colors hover:bg-bg-muted focus:outline-none focus:ring-2 focus:ring-status-info focus:ring-offset-2 dark:border-border-muted dark:bg-bg-elevated dark:text-text-secondary dark:hover:bg-bg-elevated"
+                className="inline-flex items-center gap-compact rounded-lg border border-border-muted bg-knob px-4 py-row text-sm font-medium text-text-disabled transition-colors hover:bg-bg-muted focus:outline-none focus:ring-2 focus:ring-status-info focus:ring-offset-2 dark:border-border-muted dark:bg-bg-elevated dark:text-text-secondary dark:hover:bg-bg-elevated"
               >
                 Reload Page
               </button>
