@@ -5,6 +5,13 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.88.2](https://github.com/krisarmstrong/niac-go/compare/v0.88.1...v0.88.2) (2026-05-29)
+
+
+### Bug Fixes
+
+* **security:** harden empty-store auth bypass + close CSRF gaps ([#739](https://github.com/krisarmstrong/niac-go/issues/739), [#740](https://github.com/krisarmstrong/niac-go/issues/740)) ([#755](https://github.com/krisarmstrong/niac-go/issues/755)) ([f698b04](https://github.com/krisarmstrong/niac-go/commit/f698b040fe35e0a5a4883b9af977599a706bc098))
+
 ## [0.88.1](https://github.com/krisarmstrong/niac-go/compare/v0.88.0...v0.88.1) (2026-05-28)
 
 
