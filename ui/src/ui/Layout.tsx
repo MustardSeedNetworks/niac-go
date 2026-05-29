@@ -122,7 +122,7 @@ export const PrimaryNav: FC<PrimaryNavProps> = ({
         }}
         className={`flex items-center gap-compact px-3 py-row rounded-lg text-sm font-medium transition-all duration-200 whitespace-nowrap ${
           isActive
-            ? 'bg-gradient-to-r from-brand-primary/30 to-brand-primary/20 text-text-primary border-l-2 border-brand-primary shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]'
+            ? 'bg-gradient-to-r from-brand-primary/30 to-brand-primary/20 text-text-primary border-l-2 border-brand-primary shadow-edge-highlight'
             : 'text-text-muted hover:text-text-primary hover:bg-surface-hover'
         } ${isGrouped ? 'w-full justify-start' : ''}`}
       >
