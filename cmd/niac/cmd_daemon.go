@@ -278,10 +278,10 @@ func handleSIGHUP(hupChan <-chan os.Signal, done <-chan struct{}, d *daemon.Daem
 				)
 				continue
 			}
-			ro, rw := d.TokenScopeCounts()
+			ro, rw, admin := d.TokenScopeCounts()
 			logging.Infof(
-				"SIGHUP: token set rotated (%d total: read-only=%d, read-write=%d)",
-				count, ro, rw,
+				"SIGHUP: token set rotated (%d total: read-only=%d, read-write=%d, admin=%d)",
+				count, ro, rw, admin,
 			)
 		}
 	}

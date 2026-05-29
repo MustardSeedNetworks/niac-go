@@ -107,9 +107,9 @@ func TestTokenStore_LookupAndReplace(t *testing.T) {
 	if got := store.Len(); got != 1 {
 		t.Errorf("store size after Replace = %d, want 1", got)
 	}
-	ro, rw := store.ScopeCounts()
-	if ro != 0 || rw != 1 {
-		t.Errorf("ScopeCounts after Replace = (ro=%d, rw=%d), want (0, 1)", ro, rw)
+	ro, rw, admin := store.ScopeCounts()
+	if ro != 0 || rw != 1 || admin != 0 {
+		t.Errorf("ScopeCounts after Replace = (ro=%d, rw=%d, admin=%d), want (0, 1, 0)", ro, rw, admin)
 	}
 }
 
@@ -220,7 +220,9 @@ func TestTokenStore_LoadTokenFile_RejectsInvalidScope(t *testing.T) {
 	tmpDir := t.TempDir()
 	path := filepath.Join(tmpDir, "tokens.json")
 
-	body := `{"tokens":[{"value":"x","scope":"admin"}]}`
+	// "admin" became a valid scope in #743; "superuser" remains
+	// unknown and exercises the reject path.
+	body := `{"tokens":[{"value":"x","scope":"superuser"}]}`
 	if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
 		t.Fatalf("write token file: %v", err)
 	}

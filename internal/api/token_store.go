@@ -30,6 +30,13 @@ const (
 	// ScopeReadWrite grants full read + write privileges. Wave 1's single
 	// NIAC_API_TOKEN env var maps to this scope for back-compat.
 	ScopeReadWrite
+	// ScopeAdmin grants ScopeReadWrite plus the right to perform
+	// destructive whole-config operations like /api/v1/config/import
+	// which replaces the entire device topology in one shot (#743).
+	// Existing /api/v1/devices/{host} edits, configs/templates CRUD,
+	// etc. stay at ScopeReadWrite because they're routine operator
+	// actions, not topology-replacement events.
+	ScopeAdmin
 )
 
 // String renders the scope in the canonical hyphenated form used in the
@@ -40,6 +47,8 @@ func (s TokenScope) String() string {
 		return "read-only"
 	case ScopeReadWrite:
 		return "read-write"
+	case ScopeAdmin:
+		return "admin"
 	default:
 		return "unknown"
 	}
@@ -165,23 +174,32 @@ func (s *TokenStore) Len() int {
 }
 
 // ScopeCounts returns a breakdown of the active tokens by scope, used
+//
+// Returns (readOnly, readWrite, admin) counts. Admin tier (#743) is
+// returned separately so dashboards can surface high-privilege token
+// counts at a glance.
+//
+// Deprecated naming kept on the function returning three ints; callers
+// should treat the third return as admin-token count.
 // by the SIGHUP reload log line so operators see "rotated to N tokens
 // (RO=X RW=Y)" without ever logging the values themselves.
-func (s *TokenStore) ScopeCounts() (int, int) {
+func (s *TokenStore) ScopeCounts() (int, int, int) {
 	snap := s.cur.Load()
 	if snap == nil {
-		return 0, 0
+		return 0, 0, 0
 	}
-	var readOnly, readWrite int
+	var readOnly, readWrite, admin int
 	for _, scope := range snap.byHash {
 		switch scope {
 		case ScopeReadOnly:
 			readOnly++
 		case ScopeReadWrite:
 			readWrite++
+		case ScopeAdmin:
+			admin++
 		}
 	}
-	return readOnly, readWrite
+	return readOnly, readWrite, admin
 }
 
 // Replace atomically swaps the active token set. In-flight requests
@@ -274,6 +292,8 @@ func parseScope(s string) (TokenScope, error) {
 		// forgets the scope key should get the safer, Wave-1-equivalent
 		// behaviour rather than a load failure.
 		return ScopeReadWrite, nil
+	case "admin":
+		return ScopeAdmin, nil
 	default:
 		return 0, fmt.Errorf("%w: %q", ErrInvalidTokenScope, s)
 	}
