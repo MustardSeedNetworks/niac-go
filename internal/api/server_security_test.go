@@ -1,6 +1,7 @@
 package api
 
 import (
+	"bytes"
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
@@ -695,4 +696,53 @@ func generateTestToken() string {
 	_, _ = rand.Read(b)
 
 	return base64.URLEncoding.EncodeToString(b)
+}
+
+// TestCSRFWiring_TemplatesAndConfigs is the #740 regression test: it
+// drives requests through the real mux (registerAPIRoutes) to prove the
+// templates + configs mutating endpoints actually have csrfProtect in
+// their middleware chain. A POST without the X-Csrf-Token header must be
+// rejected with 403 — if someone removes csrfProtect from routes.go,
+// this fails.
+func TestCSRFWiring_TemplatesAndConfigs(t *testing.T) {
+	server, _, token := newTestServerWithAuth(t)
+	// The templates/configs routes chain through writeRateLimit, whose
+	// limiter newTestServerWithAuth doesn't initialize — set it so the
+	// full mux chain doesn't nil-panic before reaching csrfProtect.
+	server.writeLimiter = NewRateLimiter(WriteRateLimit, WriteBurst)
+	mux := http.NewServeMux()
+	server.registerAPIRoutes(mux)
+
+	for _, path := range []string{"/api/v1/templates", "/api/v1/configs"} {
+		t.Run("POST "+path+" without CSRF -> 403", func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodPost, path,
+				bytes.NewReader([]byte(`{"name":"x","content":"y"}`)))
+			req.Header.Set("Authorization", "Bearer "+token)
+			req.Header.Set("Content-Type", "application/json")
+			// Deliberately NO X-Csrf-Token.
+			rec := httptest.NewRecorder()
+			mux.ServeHTTP(rec, req)
+
+			if rec.Code != http.StatusForbidden {
+				t.Errorf("%s without CSRF: status = %d, want 403 (csrfProtect missing from route?)",
+					path, rec.Code)
+			}
+		})
+
+		t.Run("POST "+path+" with CSRF -> not 403", func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodPost, path,
+				bytes.NewReader([]byte(`{"name":"x","content":"y"}`)))
+			req.Header.Set("Authorization", "Bearer "+token)
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("X-Csrf-Token", server.csrfToken)
+			rec := httptest.NewRecorder()
+			mux.ServeHTTP(rec, req)
+
+			// We don't assert 200 (the body may be rejected by handler
+			// validation) — only that CSRF did not block it.
+			if rec.Code == http.StatusForbidden {
+				t.Errorf("%s with valid CSRF still 403: %s", path, rec.Body.String())
+			}
+		})
+	}
 }
