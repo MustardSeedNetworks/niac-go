@@ -5,6 +5,7 @@ package api
 import (
 	"errors"
 	"strings"
+	"sync"
 	"testing"
 )
 
@@ -100,6 +101,74 @@ func TestCSRFManager_GetOrCreateIsIdempotent(t *testing.T) {
 	}
 	if first != second {
 		t.Errorf("repeat GetOrCreate must return same token: %q vs %q", first, second)
+	}
+}
+
+// TestCSRFManager_GetOrCreate_ConcurrentSameSession reproduces the TOCTOU
+// race fixed by the double-checked write lock in GetOrCreate. Before the
+// fix, two concurrent callers for the same session could each miss the
+// read-locked cache check, each Generate a new token, and the later write
+// would overwrite the earlier — leaving N-1 of N callers holding a token
+// that no longer matched the stored entry. That mismatch is what caused
+// TestAlertConfig_ConcurrentUpdates to fail intermittently with HTTP 403
+// (csrf_token_invalid) under -race.
+//
+// The fix makes the mint atomic: every concurrent caller for the same
+// session must observe the same token, and a subsequent Validate must
+// accept every one of those returned tokens.
+func TestCSRFManager_GetOrCreate_ConcurrentSameSession(t *testing.T) {
+	t.Parallel()
+	m := NewCSRFManager()
+	t.Cleanup(m.Stop)
+
+	const (
+		session = "shared-session-key"
+		callers = 32
+	)
+
+	var (
+		wg     sync.WaitGroup
+		mu     sync.Mutex
+		tokens = make([]string, 0, callers)
+	)
+
+	start := make(chan struct{})
+	for range callers {
+		wg.Go(func() {
+			<-start // align goroutines to maximize contention
+			tok, err := m.GetOrCreate(session)
+			if err != nil {
+				t.Errorf("GetOrCreate: %v", err)
+				return
+			}
+			mu.Lock()
+			tokens = append(tokens, tok)
+			mu.Unlock()
+		})
+	}
+	close(start)
+	wg.Wait()
+
+	if len(tokens) != callers {
+		t.Fatalf("expected %d tokens, got %d", callers, len(tokens))
+	}
+
+	// Invariant 1: every caller observed the same token (idempotence
+	// under concurrency).
+	for i, tok := range tokens {
+		if tok != tokens[0] {
+			t.Fatalf("token mismatch at index %d: %q vs %q", i, tok, tokens[0])
+		}
+	}
+
+	// Invariant 2: every token any caller saw is still acceptable to
+	// Validate. Before the fix, the overwrite would have produced a
+	// final stored token different from at least one returned value
+	// and Validate would have rejected it as invalid.
+	for i, tok := range tokens {
+		if err := m.Validate(session, tok); err != nil {
+			t.Fatalf("token from caller %d rejected by Validate: %v", i, err)
+		}
 	}
 }
 
