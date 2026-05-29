@@ -39,9 +39,9 @@ type CardVariant = 'default' | 'elevated' | 'outlined' | 'ghost';
 
 const variantStyles: Record<CardVariant, string> = {
   default:
-    'backdrop-blur-xl bg-gradient-to-br from-bg-surface/90 to-bg-surface/70 border border-surface-border shadow-xl shadow-black/20',
+    'backdrop-blur-xl bg-gradient-to-br from-bg-surface/90 to-bg-surface/70 border border-surface-border shadow-xl shadow-scrim/20',
   elevated:
-    'backdrop-blur-xl bg-gradient-to-br from-bg-elevated/90 to-bg-surface/80 border border-surface-border shadow-2xl shadow-black/30',
+    'backdrop-blur-xl bg-gradient-to-br from-bg-elevated/90 to-bg-surface/80 border border-surface-border shadow-2xl shadow-scrim/30',
   outlined: 'bg-transparent border border-surface-border',
   ghost: 'bg-surface-hover border border-transparent',
 };
@@ -164,7 +164,7 @@ export const StatusCard: FC<StatusCardProps> = ({
     <div
       className={`rounded-xl ${variantStyles[variant]} pad sm:pad-lg
         transition-all hover:border-surface-border touch-manipulation
-        focus-visible:ring-2 focus-visible:ring-brand-primary focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 outline-none
+        focus-visible:ring-2 focus-visible:ring-brand-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-base outline-none
         ${isInteractive ? 'cursor-pointer active:scale-[0.98]' : ''}
         ${className}`}
       onClick={onClick}

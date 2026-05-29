@@ -385,7 +385,7 @@ export const LogViewer: FC<LogViewerProps> = memo(({ logs, searchQuery, autoScro
       {/* Log Container */}
       <div
         ref={containerRef}
-        className="h-[500px] overflow-y-auto rounded-lg border border-surface-border bg-bg-base/70 scrollbar-thin scrollbar-track-gray-900 scrollbar-thumb-gray-700"
+        className="h-[500px] overflow-y-auto rounded-lg border border-surface-border bg-bg-base/70 scrollbar-thin scrollbar-track-surface-base scrollbar-thumb-surface-border"
         role="log"
         aria-label="Debug console log output"
         aria-live="polite"

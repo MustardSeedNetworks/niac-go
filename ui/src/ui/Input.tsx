@@ -278,7 +278,7 @@ export const Toggle: FC<ToggleProps> = ({
         }}
         className={`
           relative inline-flex h-6 w-11 items-center rounded-full transition-colors
-          focus:outline-none focus:ring-2 focus:ring-brand-primary/50 focus:ring-offset-2 focus:ring-offset-gray-900
+          focus:outline-none focus:ring-2 focus:ring-brand-primary/50 focus:ring-offset-2 focus:ring-offset-surface-base
           ${checked ? 'bg-brand-primary' : 'bg-bg-elevated'}
           ${className}
         `}

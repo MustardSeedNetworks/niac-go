@@ -63,7 +63,7 @@ export const DeviceCardView: FC = () => {
                 <button
                   type="button"
                   onClick={() => onEdit(device.hostname)}
-                  className="w-full text-left rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary focus:ring-offset-2 focus:ring-offset-gray-900"
+                  className="w-full text-left rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary focus:ring-offset-2 focus:ring-offset-surface-base"
                   aria-label={`Edit device ${device.hostname}`}
                 >
                   {/* Device name and IP */}

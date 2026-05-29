@@ -35,7 +35,7 @@ const RuleRow: FC<{
         type="checkbox"
         checked={rule.enabled}
         onChange={(e) => onChange({ ...rule, enabled: e.target.checked })}
-        className="rounded border-border-muted bg-bg-elevated text-brand-primary focus:ring-brand-accent focus:ring-offset-gray-900 flex-shrink-0"
+        className="rounded border-border-muted bg-bg-elevated text-brand-primary focus:ring-brand-accent focus:ring-offset-surface-base flex-shrink-0"
       />
 
       {/* Color preview */}
