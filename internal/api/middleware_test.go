@@ -33,6 +33,9 @@ devices:
 			Config: cfg,
 		},
 		logger: slog.Default(),
+		// auth() applies per-IP rate limiting before the token check, so
+		// any test that exercises auth() needs a non-nil limiter.
+		rateLimiter: NewRateLimiter(DefaultRateLimit, DefaultBurst),
 	}
 }
 
@@ -385,5 +388,79 @@ func TestAuthMiddleware_BackCompat_SingleNIACAPIToken(t *testing.T) {
 	}
 	if scope != ScopeReadWrite {
 		t.Errorf("Wave 1 single-token seed: scope = %v, want ScopeReadWrite", scope)
+	}
+}
+
+// TestAuth_EmptyStore_LoopbackBypasses confirms the documented local-dev
+// path: an empty token store on a loopback (or unbound) listener lets
+// requests through without auth (#739).
+func TestAuth_EmptyStore_LoopbackBypasses(t *testing.T) {
+	server := createTestServerForMiddleware(t)
+	server.tokens = NewTokenStore(nil) // empty store
+	server.cfg.Addr = "127.0.0.1:8445"
+
+	called := false
+	wrapped := server.auth(func(w http.ResponseWriter, _ *http.Request) {
+		called = true
+		w.WriteHeader(http.StatusOK)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/devices", nil)
+	rec := httptest.NewRecorder()
+	wrapped(rec, req)
+
+	if !called || rec.Code != http.StatusOK {
+		t.Errorf("loopback + empty store should bypass auth: called=%v code=%d", called, rec.Code)
+	}
+}
+
+// TestAuth_EmptyStore_NonLoopbackFailsClosed is the #739 regression test:
+// an empty token store on a NON-loopback listener, without an explicit
+// opt-out, must fail closed (401) instead of silently bypassing auth —
+// even though the startup gate should have prevented this bind.
+func TestAuth_EmptyStore_NonLoopbackFailsClosed(t *testing.T) {
+	server := createTestServerForMiddleware(t)
+	server.tokens = NewTokenStore(nil) // empty store
+	server.cfg.Addr = "0.0.0.0:8445"   // non-loopback
+
+	called := false
+	wrapped := server.auth(func(w http.ResponseWriter, _ *http.Request) {
+		called = true
+		w.WriteHeader(http.StatusOK)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/devices", nil)
+	rec := httptest.NewRecorder()
+	wrapped(rec, req)
+
+	if called {
+		t.Error("non-loopback + empty store must NOT reach the handler (silent auth bypass)")
+	}
+	if rec.Code != http.StatusUnauthorized {
+		t.Errorf("expected 401 for non-loopback unauth bind, got %d", rec.Code)
+	}
+}
+
+// TestAuth_EmptyStore_NonLoopbackExplicitOptOut verifies the operator can
+// still run unauthenticated on a non-loopback bind, but only by setting
+// NIAC_AUTH_DISABLED=true explicitly (#739).
+func TestAuth_EmptyStore_NonLoopbackExplicitOptOut(t *testing.T) {
+	t.Setenv("NIAC_AUTH_DISABLED", "true")
+	server := createTestServerForMiddleware(t)
+	server.tokens = NewTokenStore(nil)
+	server.cfg.Addr = "0.0.0.0:8445"
+
+	called := false
+	wrapped := server.auth(func(w http.ResponseWriter, _ *http.Request) {
+		called = true
+		w.WriteHeader(http.StatusOK)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/devices", nil)
+	rec := httptest.NewRecorder()
+	wrapped(rec, req)
+
+	if !called || rec.Code != http.StatusOK {
+		t.Errorf("explicit NIAC_AUTH_DISABLED=true should bypass: called=%v code=%d", called, rec.Code)
 	}
 }

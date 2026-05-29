@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"net/http"
+	"os"
 	"runtime/debug"
 	"strings"
 )
@@ -180,13 +181,40 @@ func (s *Server) auth(next http.HandlerFunc) http.HandlerFunc {
 
 		// Wave 2: auth is keyed off the TokenStore, not the legacy
 		// single-token field on ServerConfig. An empty / unset store
-		// preserves Wave 1's "loopback-only, no auth configured"
-		// behaviour: the non-loopback gate in server.go has already
-		// refused to start in that case if the listener wasn't bound
-		// to loopback, so reaching this branch with an empty store
-		// implies the operator deliberately opted out.
+		// means "no auth configured". The startup gate
+		// (enforceNonLoopbackAuthGate) already refuses to bind a
+		// non-loopback address without a token — but #739 hardens this
+		// at request time too, so a refactor that weakens or relocates
+		// the startup gate can never silently expose a non-loopback
+		// listener. The bypass is allowed only when the bind is
+		// loopback-only OR the operator explicitly opted out via
+		// NIAC_AUTH_DISABLED=true.
 		if s.tokens == nil || s.tokens.Len() == 0 {
-			next(w, r)
+			if os.Getenv("NIAC_AUTH_DISABLED") == "true" {
+				next(w, r)
+
+				return
+			}
+			nonLoopback, _ := addrIsNonLoopback(s.cfg.Addr)
+			if !nonLoopback {
+				// Loopback-only, no token: the documented local-dev path.
+				next(w, r)
+
+				return
+			}
+			// Non-loopback + no token + no explicit opt-out. The startup
+			// gate should have prevented this; failing closed here is the
+			// defense-in-depth backstop.
+			s.logger.ErrorContext(r.Context(),
+				"[API] Refusing request: non-loopback bind has no tokens and NIAC_AUTH_DISABLED is not set",
+				"event", "auth.misconfigured",
+				"requestID", requestID,
+				"addr", s.cfg.Addr,
+				"path", r.URL.Path)
+			writeError(w, r, http.StatusUnauthorized, "auth_not_configured",
+				"Server is bound to a non-loopback address without authentication tokens. "+
+					"Set NIAC_API_TOKEN, or NIAC_AUTH_DISABLED=true to explicitly disable auth (development only).",
+				nil)
 
 			return
 		}

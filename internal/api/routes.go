@@ -81,13 +81,21 @@ func (s *Server) registerReadOnlyRoutes(mux *http.ServeMux) {
 	// SECURITY FIX #171: Apply file-specific rate limiting
 	mux.HandleFunc("/api/v1/files", s.recoverMiddleware(s.auth(s.fileRateLimit(s.handleFiles))))
 
-	// Templates API
-	mux.HandleFunc("/api/v1/templates", s.recoverMiddleware(s.auth(s.handleTemplates)))
-	mux.HandleFunc("/api/v1/templates/", s.recoverMiddleware(s.auth(s.handleTemplateByName)))
+	// Templates API. POST (upload), DELETE, and the "use" subpath all
+	// mutate state, so these go through csrfProtect like the other
+	// mutating routes (#740). csrfProtect internally skips GET, so reads
+	// still pass through untouched.
+	mux.HandleFunc("/api/v1/templates",
+		s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.handleTemplates)))))
+	mux.HandleFunc("/api/v1/templates/",
+		s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.handleTemplateByName)))))
 
-	// User Configs API - GET is read-only, POST/DELETE handled separately
-	mux.HandleFunc("/api/v1/configs", s.recoverMiddleware(s.auth(s.handleUserConfigs)))
-	mux.HandleFunc("/api/v1/configs/", s.recoverMiddleware(s.auth(s.handleUserConfigByName)))
+	// User Configs API. POST (upload) on /configs and DELETE on
+	// /configs/ mutate state — gate with csrfProtect (#740).
+	mux.HandleFunc("/api/v1/configs",
+		s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.handleUserConfigs)))))
+	mux.HandleFunc("/api/v1/configs/",
+		s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.handleUserConfigByName)))))
 
 	// Unified Library API (#548). Networks landed in PR 1 with full
 	// CRUD; walks/pcaps land in PR 3 as read-only browser endpoints —
