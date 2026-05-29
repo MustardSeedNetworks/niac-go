@@ -163,7 +163,7 @@ export const UploadTemplateModal: FC<UploadTemplateModalProps> = ({
                 type="text"
                 {...register('name')}
                 placeholder={t('templates.uploadModal.namePlaceholder')}
-                className="w-full rounded-lg border border-surface-border bg-bg-base/60 pad-sm text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none"
+                className="w-full rounded-lg border border-surface-border bg-bg-base/60 pad-sm text-sm text-text-primary placeholder:text-text-muted focus:border-brand-accent focus:outline-none"
               />
               {errors.name ? (
                 <p className="mt-tight text-xs text-status-error">{errors.name.message}</p>
@@ -183,7 +183,7 @@ export const UploadTemplateModal: FC<UploadTemplateModalProps> = ({
                 {...register('description')}
                 placeholder={t('templates.uploadModal.descriptionPlaceholder')}
                 rows={2}
-                className="w-full rounded-lg border border-surface-border bg-bg-base/60 pad-sm text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none resize-none"
+                className="w-full rounded-lg border border-surface-border bg-bg-base/60 pad-sm text-sm text-text-primary placeholder:text-text-muted focus:border-brand-accent focus:outline-none resize-none"
               />
               {errors.description ? (
                 <p className="mt-tight text-xs text-status-error">{errors.description.message}</p>
@@ -228,7 +228,7 @@ export const UploadTemplateModal: FC<UploadTemplateModalProps> = ({
                 {...register('content')}
                 placeholder={t('templates.uploadModal.contentPlaceholder')}
                 rows={10}
-                className="w-full rounded-lg border border-surface-border bg-bg-base/60 pad-sm font-mono text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none resize-none"
+                className="w-full rounded-lg border border-surface-border bg-bg-base/60 pad-sm font-mono text-sm text-text-primary placeholder:text-text-muted focus:border-brand-accent focus:outline-none resize-none"
                 spellCheck={false}
               />
               {errors.content ? (

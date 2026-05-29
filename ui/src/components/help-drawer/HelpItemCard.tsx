@@ -142,11 +142,11 @@ export function HelpItemCard({ item, defaultOpen = false }: HelpItemCardProps): 
                       <span className="text-xs text-text-muted">{m.unit}</span>
                     </div>
                     <p className="text-xs text-text-muted mt-0.5">
-                      <span className="text-emerald-400">{t('itemCard.metricGoodLabel')}</span>{' '}
+                      <span className="text-status-success">{t('itemCard.metricGoodLabel')}</span>{' '}
                       {m.goodRange}
                     </p>
                     <p className="text-xs text-text-muted">
-                      <span className="text-amber-400">{t('itemCard.metricBadLabel')}</span>{' '}
+                      <span className="text-status-warning">{t('itemCard.metricBadLabel')}</span>{' '}
                       {m.badMeaning}
                     </p>
                   </div>

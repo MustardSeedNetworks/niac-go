@@ -38,7 +38,7 @@ export const DeviceSearchFilters: FC<DeviceSearchFiltersProps> = ({
           placeholder="Search by hostname, MAC, or IP..."
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
-          className="w-full rounded-lg border border-surface-border bg-bg-base/60 py-2.5 pl-10 pr-icon text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none"
+          className="w-full rounded-lg border border-surface-border bg-bg-base/60 py-2.5 pl-10 pr-icon text-sm text-text-primary placeholder:text-text-muted focus:border-brand-accent focus:outline-none"
         />
         {searchQuery && (
           <button

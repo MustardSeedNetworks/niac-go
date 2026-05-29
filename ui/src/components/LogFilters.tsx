@@ -131,7 +131,7 @@ export const LogFilters: FC<LogFiltersProps> = memo(
                 value={searchQuery}
                 onChange={handleSearchChange}
                 placeholder="Filter logs..."
-                className="w-full rounded-lg border border-surface-border bg-bg-base/60 py-compact-md pl-9 pr-3 text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none"
+                className="w-full rounded-lg border border-surface-border bg-bg-base/60 py-compact-md pl-9 pr-3 text-sm text-text-primary placeholder:text-text-muted focus:border-brand-accent focus:outline-none"
                 aria-label="Search logs"
               />
             </div>

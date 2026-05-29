@@ -27,10 +27,10 @@ export interface SNMPSectionProps extends ProtocolSectionProps {
  * Common input class names for device editor forms
  */
 export const inputClassName =
-  'w-full rounded-lg border border-surface-border bg-bg-base/60 pad-sm text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none';
+  'w-full rounded-lg border border-surface-border bg-bg-base/60 pad-sm text-sm text-text-primary placeholder:text-text-muted focus:border-brand-accent focus:outline-none';
 
 export const monoInputClassName =
-  'w-full rounded-lg border border-surface-border bg-bg-base/60 pad-sm text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none font-mono';
+  'w-full rounded-lg border border-surface-border bg-bg-base/60 pad-sm text-sm text-text-primary placeholder:text-text-muted focus:border-brand-accent focus:outline-none font-mono';
 
 export const selectClassName =
   'w-full rounded-lg border border-surface-border bg-bg-base/60 pad-sm text-sm text-text-primary focus:border-brand-accent focus:outline-none';
@@ -39,4 +39,4 @@ export const checkboxClassName =
   'w-4 h-4 rounded border-border-muted bg-bg-elevated text-brand-primary focus:ring-brand-primary';
 
 export const smallInputClassName =
-  'flex-1 rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none font-mono';
+  'flex-1 rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary placeholder:text-text-muted focus:border-brand-accent focus:outline-none font-mono';

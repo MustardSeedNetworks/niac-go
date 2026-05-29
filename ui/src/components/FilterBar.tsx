@@ -112,7 +112,7 @@ export const FilterBar: FC<FilterBarProps> = memo(({ value, onChange, placeholde
             onBlur={() => setTimeout(() => setIsFocused(false), 200)}
             onKeyDown={handleKeyDown}
             placeholder={placeholder ?? 'Display filter (e.g., ip.src == 10.0.0.1 && tcp)'}
-            className={`w-full rounded-lg border ${borderColor} bg-bg-base/60 px-3 py-row text-sm text-text-primary placeholder-gray-500 focus:outline-none font-mono transition-colors`}
+            className={`w-full rounded-lg border ${borderColor} bg-bg-base/60 px-3 py-row text-sm text-text-primary placeholder:text-text-muted focus:outline-none font-mono transition-colors`}
           />
           {validationError && isFocused && (
             <div className="absolute top-full left-0 mt-tight px-cell py-compact bg-status-error/90 border border-status-error/50 rounded text-xs text-status-error z-20 max-w-md">

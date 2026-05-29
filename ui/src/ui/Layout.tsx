@@ -31,7 +31,7 @@ interface PageShellProps {
 
 export const PageShell: FC<PageShellProps> = ({ children, className = '' }) => (
   <div
-    className={`min-h-screen bg-gradient-to-br from-bg-base via-bg-surface to-gray-950 ${className}`}
+    className={`min-h-screen bg-gradient-to-br from-bg-base via-bg-surface to-surface-deep ${className}`}
   >
     <div className="mx-auto max-w-7xl px-4 sm:px-6 py-6">{children}</div>
   </div>

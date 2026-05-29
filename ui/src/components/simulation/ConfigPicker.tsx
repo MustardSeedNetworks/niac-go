@@ -281,7 +281,7 @@ export const ConfigPicker: FC<ConfigPickerProps> = ({
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search configs…"
-            className="w-full rounded border border-surface-border bg-bg-surface/60 py-row pl-9 pr-3 text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none"
+            className="w-full rounded border border-surface-border bg-bg-surface/60 py-row pl-9 pr-3 text-sm text-text-primary placeholder:text-text-muted focus:border-brand-accent focus:outline-none"
           />
         </div>
         <fieldset

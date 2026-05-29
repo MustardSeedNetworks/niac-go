@@ -73,7 +73,7 @@ export const DnsSection: FC<ProtocolSectionProps> = ({
                     updateDns({ ...getDnsConfig(), forwardRecords: records });
                   }}
                   placeholder="IP Address"
-                  className="w-40 rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none font-mono"
+                  className="w-40 rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary placeholder:text-text-muted focus:border-brand-accent focus:outline-none font-mono"
                 />
                 <input
                   type="number"
@@ -87,7 +87,7 @@ export const DnsSection: FC<ProtocolSectionProps> = ({
                     updateDns({ ...getDnsConfig(), forwardRecords: records });
                   }}
                   placeholder="TTL"
-                  className="w-24 rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none"
+                  className="w-24 rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary placeholder:text-text-muted focus:border-brand-accent focus:outline-none"
                 />
                 <Button
                   variant="ghost"
@@ -140,7 +140,7 @@ export const DnsSection: FC<ProtocolSectionProps> = ({
                     updateDns({ ...getDnsConfig(), reverseRecords: records });
                   }}
                   placeholder="IP Address"
-                  className="w-40 rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary placeholder-gray-500 focus:border-brand-accent focus:outline-none font-mono"
+                  className="w-40 rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary placeholder:text-text-muted focus:border-brand-accent focus:outline-none font-mono"
                 />
                 <input
                   type="text"

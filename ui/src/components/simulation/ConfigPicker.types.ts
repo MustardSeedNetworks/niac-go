@@ -35,7 +35,7 @@ export const TEMPLATE_TYPE_TINT: Record<Template['type'], string> = {
   server: 'bg-status-info/15 text-status-info border-status-info/30',
   firewall: 'bg-status-error/15 text-status-error border-status-error/30',
   complete: 'bg-status-warning/15 text-status-warning border-status-warning/30',
-  custom: 'bg-pink-500/15 text-pink-200 border-pink-400/30',
+  custom: 'bg-chart-7/15 text-chart-7 border-chart-7/30',
 };
 
 /**

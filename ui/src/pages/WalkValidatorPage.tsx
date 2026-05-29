@@ -9,7 +9,7 @@ type Severity = 'error' | 'warning' | 'info';
 const SEVERITY_BADGE: Record<Severity, string> = {
   error: 'bg-status-error/20 text-status-error ring-status-error/40',
   warning: 'bg-status-warning/20 text-status-warning ring-status-warning/40',
-  info: 'bg-sky-500/20 text-sky-200 ring-sky-400/40',
+  info: 'bg-status-info/20 text-status-info ring-status-info/40',
 };
 
 const SEVERITY_ORDER: Severity[] = ['error', 'warning', 'info'];
@@ -139,7 +139,7 @@ export const WalkValidatorPage: FC = () => {
                 onChange={(e) => setCustomPath(e.target.value)}
                 placeholder="/srv/niac/walks/cisco-c9300.walk"
                 title="Absolute path to a walk file. Takes precedence over the dropdown selection. The path is bounded server-side; ../ traversal is rejected."
-                className="mt-tight w-full rounded border border-surface-border bg-bg-base/60 px-3 py-row font-mono text-xs text-text-primary placeholder-gray-500 focus:border-status-info focus:outline-none"
+                className="mt-tight w-full rounded border border-surface-border bg-bg-base/60 px-3 py-row font-mono text-xs text-text-primary placeholder:text-text-muted focus:border-status-info focus:outline-none"
               />
             </label>
           </div>
@@ -150,7 +150,7 @@ export const WalkValidatorPage: FC = () => {
               onClick={() => void run('validating')}
               disabled={busy !== 'idle' || !targetPath}
               title="Read-only validation: parses the walk and returns per-line issues. Doesn't modify the file."
-              className="rounded bg-status-info/20 px-3 py-compact-md text-sm font-medium text-status-info ring-1 ring-cyan-400/40 hover:bg-status-info/30 disabled:opacity-50"
+              className="rounded bg-status-info/20 px-3 py-compact-md text-sm font-medium text-status-info ring-1 ring-status-info/40 hover:bg-status-info/30 disabled:opacity-50"
             >
               {busy === 'validating' ? 'Validating…' : 'Validate'}
             </button>

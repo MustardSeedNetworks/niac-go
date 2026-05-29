@@ -54,7 +54,7 @@ export const RunningSimulationCard: FC<RunningSimulationCardProps> = ({
   };
 
   return (
-    <Card className="border-status-success/30 bg-gradient-to-br from-green-900/30 to-bg-surface/70">
+    <Card className="border-status-success/30 bg-gradient-to-br from-status-success/20 to-bg-surface/70">
       <CardContent className="space-y-5">
         <div className="flex-between">
           <div className="flex items-center gap-default">
