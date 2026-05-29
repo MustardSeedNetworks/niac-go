@@ -200,13 +200,6 @@ type ServerConfig struct {
 	// KeyFile is the path to the PEM-encoded private key for CertFile.
 	// Empty triggers auto-generation under CertDir.
 	KeyFile string
-	// HTTPRedirectAddr, when non-empty and EnableTLS is true, starts a
-	// tiny HTTP listener on that address that 308-redirects to the
-	// HTTPS service. Wave 1 default is `:8044`.
-	HTTPRedirectAddr string
-	// TLSPort is the destination HTTPS port the redirect handler advertises.
-	// Defaults to defaultTLSPort (8445) when zero.
-	TLSPort int
 	// WebhookAllowedHosts is an admin-side allowlist of hostnames that the
 	// alert webhook is permitted to dispatch to. Empty = no allowlist (the
 	// existing private-IP / blocked-hostname filters in
@@ -260,7 +253,6 @@ type Server struct {
 	logger            *slog.Logger
 	httpServer        *http.Server
 	metricsServer     *http.Server
-	redirectServer    *http.Server
 	alertStop         chan struct{}
 	lastAlert         uint64
 	alertMu           sync.RWMutex
@@ -522,13 +514,6 @@ func (s *Server) Shutdown(ctx context.Context) error {
 		}
 	}
 
-	if s.redirectServer != nil {
-		if err := s.redirectServer.Shutdown(ctx); err != nil {
-			s.logger.ErrorContext(ctx, "Error shutting down HTTP redirect server", "error", err)
-			errs = append(errs, err)
-		}
-	}
-
 	if len(errs) > 0 {
 		return errs[0]
 	}
@@ -628,9 +613,6 @@ func (s *Server) startAPIListener() error {
 		return err
 	}
 
-	if s.cfg.EnableTLS && s.cfg.HTTPRedirectAddr != "" {
-		s.startHTTPRedirect()
-	}
 	return nil
 }
 
@@ -661,43 +643,6 @@ func (s *Server) serveAPI(ln net.Listener) error {
 		}
 	}()
 	return nil
-}
-
-// startHTTPRedirect spawns the tiny HTTP listener that 308-redirects to
-// the HTTPS service. The redirect target port defaults to defaultTLSPort
-// when ServerConfig.TLSPort is zero. Errors during bind are logged and
-// non-fatal: the API itself is still up via the TLS listener.
-func (s *Server) startHTTPRedirect() {
-	port := s.cfg.TLSPort
-	if port == 0 {
-		port = defaultTLSPort
-	}
-	handler := httpToHTTPSRedirectHandler(port)
-
-	const redirectReadWriteTimeoutSec = 5
-	srv := &http.Server{
-		Addr:              s.cfg.HTTPRedirectAddr,
-		Handler:           handler,
-		ReadTimeout:       redirectReadWriteTimeoutSec * time.Second,
-		WriteTimeout:      redirectReadWriteTimeoutSec * time.Second,
-		ReadHeaderTimeout: redirectReadWriteTimeoutSec * time.Second,
-	}
-
-	ln, boundAddr, bindErr := bindWithFallback(context.Background(), s.logger, s.cfg.HTTPRedirectAddr)
-	if bindErr != nil {
-		s.logger.Error("HTTP→HTTPS redirect listener bind failed",
-			"addr", s.cfg.HTTPRedirectAddr, "error", bindErr)
-		return
-	}
-	srv.Addr = boundAddr
-	s.redirectServer = srv
-	s.logger.Info("Starting HTTP→HTTPS redirect server", "addr", boundAddr, "https_port", port)
-
-	go func() {
-		if err := srv.Serve(ln); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			s.logger.Error("HTTP redirect server stopped", "error", err)
-		}
-	}()
 }
 
 // addrIsNonLoopback reports whether the host portion of a "host:port"

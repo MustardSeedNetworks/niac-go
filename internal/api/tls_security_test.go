@@ -8,8 +8,6 @@ package api
 import (
 	"errors"
 	"log/slog"
-	"net/http"
-	"net/http/httptest"
 	"strings"
 	"testing"
 )
@@ -105,63 +103,6 @@ func TestStart_NonLoopbackWithoutTokenRefused(t *testing.T) {
 	const wantSubst = "NIAC_API_TOKEN"
 	if !strings.Contains(err.Error(), wantSubst) {
 		t.Errorf("error must mention %q, got %q", wantSubst, err.Error())
-	}
-}
-
-func TestHTTPToHTTPSRedirectHandler_Issues308(t *testing.T) {
-	t.Parallel()
-
-	handler := httpToHTTPSRedirectHandler(8445)
-
-	req := httptest.NewRequest(http.MethodGet, "http://example.test:8044/api/foo?x=1", nil)
-	req.Host = "example.test:8044"
-	rec := httptest.NewRecorder()
-	handler.ServeHTTP(rec, req)
-
-	if rec.Code != http.StatusPermanentRedirect {
-		t.Errorf("expected 308, got %d", rec.Code)
-	}
-
-	loc := rec.Header().Get("Location")
-	const wantLoc = "https://example.test:8445/api/foo?x=1"
-	if loc != wantLoc {
-		t.Errorf("Location = %q, want %q", loc, wantLoc)
-	}
-}
-
-func TestHTTPToHTTPSRedirectHandler_StripsSourcePort(t *testing.T) {
-	t.Parallel()
-
-	handler := httpToHTTPSRedirectHandler(8445)
-
-	req := httptest.NewRequest(http.MethodPost, "/", nil)
-	req.Host = "10.0.0.5:8044"
-	rec := httptest.NewRecorder()
-	handler.ServeHTTP(rec, req)
-
-	if rec.Code != http.StatusPermanentRedirect {
-		t.Errorf("expected 308 for POST, got %d", rec.Code)
-	}
-	loc := rec.Header().Get("Location")
-	if !strings.HasPrefix(loc, "https://10.0.0.5:8445/") {
-		t.Errorf("Location should rewrite to https://10.0.0.5:8445/..., got %q", loc)
-	}
-}
-
-func TestHTTPToHTTPSRedirectHandler_DefaultPortOmitsColon(t *testing.T) {
-	t.Parallel()
-
-	handler := httpToHTTPSRedirectHandler(443)
-
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	req.Host = "niac.example"
-	rec := httptest.NewRecorder()
-	handler.ServeHTTP(rec, req)
-
-	loc := rec.Header().Get("Location")
-	const wantLoc = "https://niac.example/"
-	if loc != wantLoc {
-		t.Errorf("Location = %q, want %q", loc, wantLoc)
 	}
 }
 

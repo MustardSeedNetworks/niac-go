@@ -70,12 +70,6 @@ type Config struct {
 	// auto-generation under CertDir.
 	CertFile string
 	KeyFile  string
-	// HTTPRedirectAddr is the address of the small HTTP listener that
-	// 308-redirects to the HTTPS service when TLS is on. Empty disables.
-	HTTPRedirectAddr string
-	// TLSPort is the destination HTTPS port the redirect handler
-	// advertises. Zero falls back to api.defaultTLSPort.
-	TLSPort int
 }
 
 // Daemon manages the NIAC simulation lifecycle.
@@ -151,8 +145,6 @@ func (d *Daemon) Start() error {
 		CertDir:             d.cfg.CertDir,
 		CertFile:            d.cfg.CertFile,
 		KeyFile:             d.cfg.KeyFile,
-		HTTPRedirectAddr:    d.cfg.HTTPRedirectAddr,
-		TLSPort:             d.cfg.TLSPort,
 		// Stack, Config, etc. will be nil until simulation starts
 	}
 

@@ -19,14 +19,13 @@ import (
 )
 
 // Daemon listen port defaults. The TLS port is the Wave 1 canonical for
-// niac (mirrors seed:8443 and stem:8444). The legacy HTTP port stays at
-// 8080 for `niac daemon --http` so existing deployment scripts keep
-// working until they cut over.
+// niac (mirrors seed:8443 and stem:8444). HTTPS-only — the HTTP port
+// constant remains for the legacy `niac daemon --http` opt-out path so
+// existing deployment scripts keep working until they cut over to TLS.
 const (
-	daemonTLSPort          = 8445
-	daemonHTTPPort         = 8080
-	daemonHTTPRedirectPort = 8044
-	daemonDefaultListenIP  = "127.0.0.1"
+	daemonTLSPort         = 8445
+	daemonHTTPPort        = 8080
+	daemonDefaultListenIP = "127.0.0.1"
 )
 
 type daemonOptions struct {
@@ -119,9 +118,9 @@ func resolveDaemonTokenFile(o *daemonOptions) string {
 	return os.Getenv("NIAC_API_TOKEN_FILE")
 }
 
-// resolveDaemonAddrs returns the TLS listen address and the HTTP→HTTPS
-// redirector address. HTTPS is always on; no opt-out is supported.
-func resolveDaemonAddrs(o *daemonOptions) (string, string, bool) {
+// resolveDaemonListen returns the TLS listen address (HTTPS-only; no
+// opt-out is supported) and a true for the legacy tlsOn flag.
+func resolveDaemonListen(o *daemonOptions) (string, bool) {
 	listen := o.listen
 	if listen == "" {
 		listen = os.Getenv("NIAC_LISTEN_ADDR")
@@ -132,9 +131,7 @@ func resolveDaemonAddrs(o *daemonOptions) (string, string, bool) {
 	case !strings.Contains(listen, ":"):
 		listen = net.JoinHostPort(listen, strconv.Itoa(daemonTLSPort))
 	}
-
-	redirect := net.JoinHostPort(daemonDefaultListenIP, strconv.Itoa(daemonHTTPRedirectPort))
-	return listen, redirect, true
+	return listen, true
 }
 
 // resolveDaemonCertDir returns the cert-dir to use. Explicit --cert-dir
@@ -164,7 +161,7 @@ func resolveDaemonAPIToken(o *daemonOptions) string {
 func runDaemon(options *daemonOptions, info versionInfo) error {
 	logging.InitColors(true)
 
-	listenAddr, redirectAddr, tlsOn := resolveDaemonAddrs(options)
+	listenAddr, tlsOn := resolveDaemonListen(options)
 	token := resolveDaemonAPIToken(options)
 	tokenFile := resolveDaemonTokenFile(options)
 	certDir := resolveDaemonCertDir(options)
@@ -176,9 +173,6 @@ func runDaemon(options *daemonOptions, info versionInfo) error {
 
 	logging.Infof("Starting NIAC Daemon v%s", info.version)
 	logging.Infof("Web UI will be available at %s://%s", scheme, listenAddr)
-	if tlsOn && redirectAddr != "" {
-		logging.Infof("HTTP→HTTPS redirector listening on %s", redirectAddr)
-	}
 	authEnabled := token != "" || tokenFile != ""
 	switch {
 	case tokenFile != "":
@@ -204,8 +198,6 @@ func runDaemon(options *daemonOptions, info versionInfo) error {
 		WebhookAllowedHosts: options.webhookAllowedHosts,
 		EnableTLS:           tlsOn,
 		CertDir:             certDir,
-		HTTPRedirectAddr:    redirectAddr,
-		TLSPort:             daemonTLSPort,
 	}
 
 	// Sanity-check the listen address up front so we fail with the helpful
