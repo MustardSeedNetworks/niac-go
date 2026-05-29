@@ -369,8 +369,14 @@ func TestRecoverMiddleware(t *testing.T) {
 
 func TestCSRFProtection(t *testing.T) {
 	server, _ := createTestServer(t)
-	// Set a CSRF token to enable CSRF protection
-	server.csrfToken = "test-csrf-token"
+	// #1257: per-session CSRF manager; mint the loopback-bypass
+	// token so the "valid" subtest can present it.
+	server.csrf = NewCSRFManager()
+	t.Cleanup(server.csrf.Stop)
+	validToken, err := server.csrf.Generate(SessionKey(""))
+	if err != nil {
+		t.Fatalf("mint CSRF: %v", err)
+	}
 
 	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -404,7 +410,7 @@ func TestCSRFProtection(t *testing.T) {
 	t.Run("POST with valid CSRF token allowed", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/test", bytes.NewReader([]byte(`{}`)))
 		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("X-Csrf-Token", "test-csrf-token")
+		req.Header.Set("X-Csrf-Token", validToken)
 		rec := httptest.NewRecorder()
 
 		protected(rec, req)

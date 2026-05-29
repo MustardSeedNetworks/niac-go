@@ -70,7 +70,6 @@ const (
 
 	// Validation and limit constants.
 	requestIDBytes      = 16       // bytes for unique request ID
-	csrfTokenBytes      = 32       // bytes for CSRF token
 	maxURLLength        = 2048     // max webhook URL length
 	maxInterfaceNameLen = 15       // Linux IFNAMSIZ limit
 	maxPathLength       = 4096     // max file path length
@@ -270,16 +269,19 @@ type Server struct {
 	captureController CaptureController
 	startTime         time.Time
 	rateLimiter       *RateLimiter
-	csrfToken         string
-	sseHub            *SSEHub
-	uploadLimiter     *RateLimiter
-	writeLimiter      *RateLimiter
-	walkLimiter       *RateLimiter
-	fileLimiter       *RateLimiter
-	bgStop            chan struct{}
-	bgStopOnce        sync.Once
-	library           *library.Library
-	tlsFingerprint    tlsFingerprintCache
+	// csrf manages per-session CSRF tokens (#1257). Pre-port niac
+	// shared one global token across all clients; the manager keys
+	// tokens by sha256(bearer) so each session has its own.
+	csrf           *CSRFManager
+	sseHub         *SSEHub
+	uploadLimiter  *RateLimiter
+	writeLimiter   *RateLimiter
+	walkLimiter    *RateLimiter
+	fileLimiter    *RateLimiter
+	bgStop         chan struct{}
+	bgStopOnce     sync.Once
+	library        *library.Library
+	tlsFingerprint tlsFingerprintCache
 	// license is the offline license manager. Populated lazily in
 	// NewServer; may be nil in tests / dev builds that don't exercise
 	// license-gated endpoints.
@@ -294,13 +296,6 @@ type Server struct {
 
 // NewServer returns a configured API server.
 func NewServer(cfg ServerConfig) *Server {
-	csrfToken, err := generateCSRFToken()
-	if err != nil {
-		slog.Error("[API] Failed to generate CSRF token, server cannot start securely", "error", err)
-
-		return nil
-	}
-
 	libraryRoot := cfg.LibraryRoot
 	if libraryRoot == "" {
 		libraryRoot = library.DefaultRoot()
@@ -321,7 +316,7 @@ func NewServer(cfg ServerConfig) *Server {
 		logger:        slog.Default(),
 		startTime:     time.Now(),
 		rateLimiter:   NewRateLimiter(DefaultRateLimit, DefaultBurst),
-		csrfToken:     csrfToken,
+		csrf:          NewCSRFManager(),
 		sseHub:        NewSSEHub(SSEConfig{}),
 		bgStop:        make(chan struct{}),
 		uploadLimiter: NewRateLimiter(UploadRateLimit, UploadBurst),
@@ -504,6 +499,11 @@ func (s *Server) Shutdown(ctx context.Context) error {
 	// Stop SSE hub to release its goroutine and clients.
 	if s.sseHub != nil {
 		s.sseHub.Stop()
+	}
+
+	// #1257: stop the CSRF manager's cleanup goroutine.
+	if s.csrf != nil {
+		s.csrf.Stop()
 	}
 
 	var errs []error

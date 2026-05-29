@@ -2,10 +2,7 @@ package api
 
 import (
 	"context"
-	"crypto/rand"
-	"crypto/subtle"
-	"encoding/hex"
-	"fmt"
+	"errors"
 	"net/http"
 	"os"
 	"runtime/debug"
@@ -35,49 +32,41 @@ func scopeFromContext(ctx context.Context) (TokenScope, bool) {
 	return v, ok
 }
 
-// generateCSRFToken generates a cryptographically secure random token
-// SECURITY FIX LOW-1: CSRF protection.
-func generateCSRFToken() (string, error) {
-	b := make([]byte, csrfTokenBytes)
-	if _, err := rand.Read(b); err != nil {
-		return "", fmt.Errorf("failed to generate random bytes: %w", err)
-	}
-
-	return hex.EncodeToString(b), nil
-}
-
-// csrfProtect wraps handlers that modify state and require CSRF token validation
-// SECURITY FIX LOW-1: Prevents Cross-Site Request Forgery attacks.
+// csrfProtect wraps handlers that modify state and require CSRF token
+// validation. #1257 sub-4 moved validation from a single global token
+// to per-session tokens keyed by sha256(bearer): each authenticated
+// session has its own CSRF token, so a leaked / harvested token from
+// one client doesn't unlock another's mutations.
 func (s *Server) csrfProtect(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Only check CSRF for state-changing methods
+		// Only check CSRF for state-changing methods.
 		if r.Method == http.MethodPost || r.Method == http.MethodPut ||
 			r.Method == http.MethodPatch || r.Method == http.MethodDelete {
-			// Reject all state-changing requests if CSRF token was not generated
-			if s.csrfToken == "" {
+			if s.csrf == nil {
 				writeError(w, r, http.StatusInternalServerError, "csrf_unavailable",
 					"CSRF protection is unavailable, server misconfigured", nil)
 
 				return
 			}
-
-			// Get CSRF token from header
 			clientToken := r.Header.Get("X-Csrf-Token")
-			if clientToken == "" {
+			sessionKey := sessionKeyFromRequest(r)
+			switch err := s.csrf.Validate(sessionKey, clientToken); {
+			case err == nil:
+				// passes
+			case errors.Is(err, errCSRFTokenMissing):
 				writeError(
-					w,
-					r,
-					http.StatusForbidden,
-					"csrf_token_missing",
+					w, r, http.StatusForbidden, "csrf_token_missing",
 					"CSRF token required for state-changing requests. Include X-CSRF-Token header.",
 					nil,
 				)
 
 				return
-			}
+			case errors.Is(err, errCSRFTokenExpired):
+				writeError(w, r, http.StatusForbidden, "csrf_token_expired",
+					"CSRF token expired; refetch /api/v1/csrf-token", nil)
 
-			// Constant-time comparison to prevent timing attacks
-			if subtle.ConstantTimeCompare([]byte(clientToken), []byte(s.csrfToken)) != 1 {
+				return
+			default:
 				writeError(w, r, http.StatusForbidden, "csrf_token_invalid",
 					"Invalid CSRF token", nil)
 
