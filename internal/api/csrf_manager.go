@@ -112,6 +112,14 @@ func (m *CSRFManager) Generate(sessionKey string) (string, error) {
 // GetOrCreate returns an existing unexpired token or mints a new
 // one. Used by the /csrf-token endpoint so a UI that polls for the
 // token receives the same value within a session lifetime.
+//
+// The slow path takes the write lock and re-checks before minting.
+// Without the re-check, two concurrent callers for the same session
+// could both miss the cache, both call Generate, and the later write
+// would overwrite the earlier — leaving the earlier caller holding a
+// token that no longer matches the stored entry, which makes its next
+// X-Csrf-Token request fail validation with 403. Surfaced as an
+// intermittent TestAlertConfig_ConcurrentUpdates failure under -race.
 func (m *CSRFManager) GetOrCreate(sessionKey string) (string, error) {
 	m.mu.RLock()
 	entry, ok := m.tokens[sessionKey]
@@ -120,7 +128,26 @@ func (m *CSRFManager) GetOrCreate(sessionKey string) (string, error) {
 		return entry.token, nil
 	}
 
-	return m.Generate(sessionKey)
+	buf := make([]byte, csrfPerSessionTokenLength)
+	if _, err := rand.Read(buf); err != nil {
+		return "", fmt.Errorf("generate CSRF token: %w", err)
+	}
+	tok := base64.URLEncoding.EncodeToString(buf)
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	// Re-check under the write lock: another goroutine may have minted
+	// (and stored) a token for this session between our read-lock
+	// release above and the write-lock acquisition here.
+	if existing, exists := m.tokens[sessionKey]; exists && time.Now().Before(existing.expiresAt) {
+		return existing.token, nil
+	}
+	m.tokens[sessionKey] = &csrfTokenEntry{
+		token:     tok,
+		expiresAt: time.Now().Add(csrfPerSessionTokenExpiry),
+	}
+
+	return tok, nil
 }
 
 // Validate constant-time-compares the supplied token against the one
