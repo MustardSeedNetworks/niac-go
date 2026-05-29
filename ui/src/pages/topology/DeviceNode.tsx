@@ -30,9 +30,25 @@ export const DeviceNode: FC<DeviceNodeProps> = memo(({ data, selected }) => {
     warning: 'bg-status-warning',
   }[data.status || 'online'];
 
+  // The card truncates the device name and shows `+N` overflow for IPs and
+  // protocols, so the full data is invisible without a tooltip. Build a
+  // multi-line description and surface it through both title (native hover
+  // tooltip) and aria-label (screen readers).
+  const status = data.status || 'online';
+  const tooltipLines: string[] = [`${data.label} (${data.type}, ${status})`];
+  if (data.ips && data.ips.length > 0) {
+    tooltipLines.push(`IPs: ${data.ips.join(', ')}`);
+  }
+  if (data.protocols && data.protocols.length > 0) {
+    tooltipLines.push(`Protocols: ${data.protocols.join(', ')}`);
+  }
+  const tooltip = tooltipLines.join('\n');
+
   return (
     <button
       type="button"
+      title={tooltip}
+      aria-label={tooltip}
       className={`
         relative px-4 py-row-lg rounded-xl border-2 transition-all duration-200 text-left
         ${selected ? 'ring-2 ring-brand-primary ring-offset-2 ring-offset-surface-base' : ''}
