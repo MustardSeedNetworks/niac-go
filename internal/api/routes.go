@@ -147,6 +147,11 @@ func (s *Server) registerReadOnlyRoutes(mux *http.ServeMux) {
 	)
 	mux.HandleFunc("/api/v1/version", s.recoverMiddleware(s.auth(s.handleVersion)))
 	mux.HandleFunc("/api/v1/neighbors", s.recoverMiddleware(s.auth(s.handleNeighbors)))
+	// #762: scope discovery endpoint for the UI. auth() upstream
+	// stashes the resolved scope on the context; handleAuthScope
+	// echoes it as JSON. Safe GET method so no csrfProtect /
+	// writeRateLimit wrappers needed.
+	mux.HandleFunc("/api/v1/auth/scope", s.recoverMiddleware(s.auth(s.handleAuthScope)))
 }
 
 // registerWalkRoutes registers SNMP walk file validation endpoints.

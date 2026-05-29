@@ -6,6 +6,7 @@ import { ErrorBoundary, PageErrorBoundary } from './components/ErrorBoundary';
 import { HeaderBar } from './components/HeaderBar';
 import { HelpDrawer } from './components/HelpDrawer';
 import { SettingsDrawer } from './components/SettingsDrawer';
+import { ReadOnlyView } from './components/ui/ReadOnlyView';
 import { AppProvider, useAppState } from './contexts/AppContext';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useNavGroups } from './navGroups';
@@ -58,65 +59,72 @@ function AppShell() {
       onOpenSettings={() => setSettingsOpen(true)}
     >
       <ToastContainer />
-      <Suspense fallback={<PageLoader />}>
-        <Routes>
-          {pages.map((page) => (
+      {/* #762: a read-only-scoped token sees every page read-only via
+          one wrap. ReadOnlyView's HTML <fieldset disabled> propagates
+          `disabled` to every descendant button/input/select/textarea
+          so individual pages don't need to gate their own controls.
+          Read-write and admin tokens see no chrome change. */}
+      <ReadOnlyView>
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            {pages.map((page) => (
+              <Route
+                key={page.path}
+                path={page.path}
+                element={
+                  <PageWithErrorBoundary page={page}>
+                    <page.component />
+                  </PageWithErrorBoundary>
+                }
+              />
+            ))}
+            {/* Dynamic routes for the device editor — both reuse the
+              same lazy-loaded component as the Device Library, but
+              wear different page-header metadata. */}
             <Route
-              key={page.path}
-              path={page.path}
+              path="/device-config/new"
               element={
-                <PageWithErrorBoundary page={page}>
-                  <page.component />
+                <PageWithErrorBoundary
+                  page={{
+                    path: '/device-config/new',
+                    label: t('deviceEditor.newLabel'),
+                    title: t('deviceEditor.newTitle'),
+                    description: t('deviceEditor.newDescription'),
+                    icon: Wrench,
+                    component: DeviceEditorPageRef,
+                  }}
+                >
+                  <DeviceEditorPageRef />
                 </PageWithErrorBoundary>
               }
             />
-          ))}
-          {/* Dynamic routes for the device editor — both reuse the
-              same lazy-loaded component as the Device Library, but
-              wear different page-header metadata. */}
-          <Route
-            path="/device-config/new"
-            element={
-              <PageWithErrorBoundary
-                page={{
-                  path: '/device-config/new',
-                  label: t('deviceEditor.newLabel'),
-                  title: t('deviceEditor.newTitle'),
-                  description: t('deviceEditor.newDescription'),
-                  icon: Wrench,
-                  component: DeviceEditorPageRef,
-                }}
-              >
-                <DeviceEditorPageRef />
-              </PageWithErrorBoundary>
-            }
-          />
-          <Route
-            path="/device-config/:hostname"
-            element={
-              <PageWithErrorBoundary
-                page={{
-                  path: '/device-config/:hostname',
-                  label: t('deviceEditor.editLabel'),
-                  title: t('deviceEditor.editTitle'),
-                  description: t('deviceEditor.editDescription'),
-                  icon: Wrench,
-                  component: DeviceEditorPageRef,
-                }}
-              >
-                <DeviceEditorPageRef />
-              </PageWithErrorBoundary>
-            }
-          />
-          {/* Back-compat for folded-in pages — bookmarks and copied URLs
+            <Route
+              path="/device-config/:hostname"
+              element={
+                <PageWithErrorBoundary
+                  page={{
+                    path: '/device-config/:hostname',
+                    label: t('deviceEditor.editLabel'),
+                    title: t('deviceEditor.editTitle'),
+                    description: t('deviceEditor.editDescription'),
+                    icon: Wrench,
+                    component: DeviceEditorPageRef,
+                  }}
+                >
+                  <DeviceEditorPageRef />
+                </PageWithErrorBoundary>
+              }
+            />
+            {/* Back-compat for folded-in pages — bookmarks and copied URLs
               continue to work after pages moved into their host sections. */}
-          <Route path="/templates" element={<Navigate to="/runtime" replace={true} />} />
-          <Route path="/neighbors" element={<Navigate to="/topology" replace={true} />} />
-          <Route path="/analysis" element={<Navigate to="/traffic" replace={true} />} />
-          <Route path="/pcap-analyzer" element={<Navigate to="/packets" replace={true} />} />
-          <Route path="*" element={<Navigate to="/" replace={true} />} />
-        </Routes>
-      </Suspense>
+            <Route path="/templates" element={<Navigate to="/runtime" replace={true} />} />
+            <Route path="/neighbors" element={<Navigate to="/topology" replace={true} />} />
+            <Route path="/analysis" element={<Navigate to="/traffic" replace={true} />} />
+            <Route path="/pcap-analyzer" element={<Navigate to="/packets" replace={true} />} />
+            <Route path="*" element={<Navigate to="/" replace={true} />} />
+          </Routes>
+        </Suspense>
+      </ReadOnlyView>
       <SettingsDrawer
         isOpen={settingsOpen}
         onClose={() => setSettingsOpen(false)}
