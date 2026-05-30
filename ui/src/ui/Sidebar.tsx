@@ -109,6 +109,7 @@ interface FooterIconButtonProps {
   icon: LucideIcon;
   label: string;
   title: string;
+  'data-testid'?: string;
 }
 
 const FooterIconButton: FC<FooterIconButtonProps> = ({
@@ -117,10 +118,12 @@ const FooterIconButton: FC<FooterIconButtonProps> = ({
   icon,
   label,
   title,
+  'data-testid': dataTestId,
 }) => (
   <button
     type="button"
     onClick={onClick}
+    data-testid={dataTestId}
     className={`${collapsed ? 'w-full' : 'flex-1'} flex items-center ${
       collapsed ? 'justify-center' : 'gap-compact'
     } px-3 py-row rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-hover transition-colors text-sm font-medium`}
@@ -221,6 +224,7 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
           icon={HelpCircle}
           label="Help"
           title="Open help"
+          data-testid="sidebar-help-button"
         />
       ) : null}
       {onOpenSettings ? (
@@ -230,6 +234,7 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
           icon={Settings}
           label="Settings"
           title="Open settings"
+          data-testid="sidebar-settings-button"
         />
       ) : null}
     </div>
