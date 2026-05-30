@@ -5,6 +5,21 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.90.0](https://github.com/krisarmstrong/niac-go/compare/v0.89.0...v0.90.0) (2026-05-29)
+
+
+### Features
+
+* **a11y:** axe harness + topology node hover tooltips ([#772](https://github.com/krisarmstrong/niac-go/issues/772)) ([3e70bf9](https://github.com/krisarmstrong/niac-go/commit/3e70bf9503b5f3ac1d4d2cd45dd305fa2cc70de5))
+* **cli:** fill help gaps on license/template/content/etc + completeness test ([#773](https://github.com/krisarmstrong/niac-go/issues/773)) ([ffe1487](https://github.com/krisarmstrong/niac-go/commit/ffe14878a302fe409904cbb8992c6250a3c45db7))
+* **help:** version badge in HelpDrawer header (in-app About) ([#774](https://github.com/krisarmstrong/niac-go/issues/774)) ([e9f6922](https://github.com/krisarmstrong/niac-go/commit/e9f69225e3f9dc28359bf436091752a2c427b2d9))
+* **i18n:** en/es key parity + DNT compliance test (niac) ([#775](https://github.com/krisarmstrong/niac-go/issues/775)) ([68ea922](https://github.com/krisarmstrong/niac-go/commit/68ea92230ef6877153ff6494ee905833c180c9cb))
+
+
+### Bug Fixes
+
+* **api:** atomic mint in CSRFManager.GetOrCreate ([#776](https://github.com/krisarmstrong/niac-go/issues/776)) ([64bb407](https://github.com/krisarmstrong/niac-go/commit/64bb40713992f12c3cfbae5681a57c1a1d1bf016))
+
 ## [0.89.0](https://github.com/krisarmstrong/niac-go/compare/v0.88.3...v0.89.0) (2026-05-29)
 
 
