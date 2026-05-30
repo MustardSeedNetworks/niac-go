@@ -22,11 +22,13 @@ test.describe('Device CRUD Operations', () => {
 
   test.describe('Create Device', () => {
     test('should navigate to create device form', async ({ page }) => {
-      const addButton = page.getByRole('button', { name: /add|create|new/i }).first();
-      if (await addButton.isVisible()) {
-        await addButton.click();
-        await expect(page).toHaveURL(/device-config/);
-      }
+      // DeviceListHeader's Add Device button carries `data-testid="device-add"`
+      // (PR-N4 of niac E2E plan). Previously the regex /add|create|new/i was
+      // i18n-fragile and could match unrelated buttons under strict mode.
+      const addButton = page.getByTestId('device-add');
+      await expect(addButton).toBeVisible();
+      await addButton.click();
+      await expect(page).toHaveURL(/device-config/);
     });
 
     test('should display all required form fields', async ({ page }) => {

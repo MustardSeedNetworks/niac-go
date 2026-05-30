@@ -112,6 +112,7 @@ export const DeviceListHeader: FC<DeviceListHeaderProps> = ({
           tone="violet"
           leftIcon={<Plus className={iconSizes.md} />}
           onClick={() => navigate('/device-config/new')}
+          data-testid="device-add"
         >
           Add Device
         </Button>
