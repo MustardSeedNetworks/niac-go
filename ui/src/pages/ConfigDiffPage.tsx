@@ -202,7 +202,9 @@ export const ConfigDiffPage: FC = () => {
         <Card className="border-surface-border bg-bg-surface/70">
           <CardContent className="stack-lg">
             <div className="flex-between">
-              <H2 className="text-lg">{t('configDiff.originalFileTitle')}</H2>
+              <H2 className="text-lg" data-testid="diff-panel-original-title">
+                {t('configDiff.originalFileTitle')}
+              </H2>
               {leftFile && (
                 <Tag colorScheme="blue" className="text-xs">
                   Source
@@ -224,7 +226,9 @@ export const ConfigDiffPage: FC = () => {
         <Card className="border-surface-border bg-bg-surface/70">
           <CardContent className="stack-lg">
             <div className="flex-between">
-              <H2 className="text-lg">{t('configDiff.modifiedFileTitle')}</H2>
+              <H2 className="text-lg" data-testid="diff-panel-modified-title">
+                {t('configDiff.modifiedFileTitle')}
+              </H2>
               {rightFile && (
                 <Tag colorScheme="green" className="text-xs">
                   Changes

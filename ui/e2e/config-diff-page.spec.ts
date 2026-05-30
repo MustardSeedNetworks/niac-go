@@ -25,10 +25,13 @@ test.describe('Config Diff Page', () => {
   });
 
   test('should render both Original File and Modified File panels', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: /original file/i })).toBeVisible({
+    // diff-panel-original-title and diff-panel-modified-title are on
+    // ConfigDiffPage.tsx. Previously matched by /original file/i and
+    // /modified file/i regex — both translated under es.
+    await expect(page.getByTestId('diff-panel-original-title')).toBeVisible({
       timeout: 5000,
     });
-    await expect(page.getByRole('heading', { name: /modified file/i })).toBeVisible({
+    await expect(page.getByTestId('diff-panel-modified-title')).toBeVisible({
       timeout: 5000,
     });
   });
