@@ -20,14 +20,16 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   // retries 1 (not 2) — one retry is enough to dodge transient flakes; the
   //   second retry was costing ~30s × N flaky tests with no incremental signal.
-  // workers 2 in CI (was 1) — GH Actions runners are 4-vCPU; 1 worker wastes
-  //   75% of the box. Mirrors seed #1080 and the cross-repo perf push.
+  // workers 4 in CI (bumped from 2 in PR-N1) — GH Actions ubuntu-latest is
+  //   4-vCPU. fullyParallel + workers=4 fills the box and roughly halves
+  //   per-shard wall-clock under the seed cross-repo perf pattern.
   retries: process.env.CI ? 1 : 0,
-  workers: process.env.CI ? 2 : undefined,
+  workers: process.env.CI ? 4 : undefined,
   timeout: 30000,
   expect: {
     timeout: 10000,
   },
+  globalSetup: './e2e/global-setup.ts',
   reporter: [
     ['html', { outputFolder: 'playwright-report' }],
     ['list'],
@@ -35,6 +37,7 @@ export default defineConfig({
   ],
   use: {
     baseURL: process.env.E2E_BASE_URL || 'http://localhost:5173',
+    storageState: 'playwright/.auth/user.json',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'on-first-retry',
