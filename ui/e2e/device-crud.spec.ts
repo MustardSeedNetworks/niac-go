@@ -24,7 +24,12 @@ import { expect, test } from '@playwright/test';
 
 test.describe('Device CRUD', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/devices');
+    // `/devices` is the read-only Running Devices live view; the
+    // Device Library (the page hosting <DeviceListHeader> + the Add
+    // Device button) lives at `/device-config`. The original 14-test
+    // file went to `/devices` and never tripped this because every
+    // assertion was gated by `if-visible` (see PR-NAC2 description).
+    await page.goto('/device-config');
     await page.waitForLoadState('domcontentloaded');
   });
 
