@@ -184,6 +184,14 @@ interface SidebarFooterProps {
   onOpenHistory?: () => void;
   onOpenProfiles?: () => void;
   onExpand: () => void;
+  // SidebarLayout mounts SidebarBody twice (mobile + desktop asides) and
+  // both stay in the DOM regardless of viewport — the responsive classes
+  // only toggle display, not mount. Emitting the testids on both copies
+  // makes every getByTestId('sidebar-*-button') resolve to 2 elements
+  // and trip strict-mode. Layout passes `surfaceTestIds=true` only for
+  // the desktop aside (the default Playwright viewport is 1280x720, lg+).
+  // Same fix shape as stem PR #381.
+  surfaceTestIds: boolean;
 }
 
 interface FullWidthDrawerButtonProps {
@@ -214,6 +222,7 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
   onOpenHistory,
   onOpenProfiles,
   onExpand,
+  surfaceTestIds,
 }) => (
   <div className={`px-3 py-4 border-t border-surface-border ${collapsed ? 'text-center' : ''}`}>
     <div className={`${collapsed ? 'stack-sm' : 'flex items-center gap-compact'} mb-heading`}>
@@ -224,7 +233,7 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
           icon={HelpCircle}
           label="Help"
           title="Open help"
-          data-testid="sidebar-help-button"
+          data-testid={surfaceTestIds ? 'sidebar-help-button' : undefined}
         />
       ) : null}
       {onOpenSettings ? (
@@ -234,7 +243,7 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
           icon={Settings}
           label="Settings"
           title="Open settings"
-          data-testid="sidebar-settings-button"
+          data-testid={surfaceTestIds ? 'sidebar-settings-button' : undefined}
         />
       ) : null}
     </div>
@@ -289,6 +298,8 @@ interface SidebarBodyProps {
   onOpenSettings?: () => void;
   onOpenHistory?: () => void;
   onOpenProfiles?: () => void;
+  // Forwarded to SidebarFooter — see comment there.
+  surfaceTestIds: boolean;
 }
 
 const SidebarBody: FC<SidebarBodyProps> = ({
@@ -303,6 +314,7 @@ const SidebarBody: FC<SidebarBodyProps> = ({
   onOpenSettings,
   onOpenHistory,
   onOpenProfiles,
+  surfaceTestIds,
 }) => {
   const { t } = useTranslation();
   // group.label is either a plain display string ("Account") or an
@@ -344,6 +356,7 @@ const SidebarBody: FC<SidebarBodyProps> = ({
         onOpenHistory={onOpenHistory}
         onOpenProfiles={onOpenProfiles}
         onExpand={onExpand}
+        surfaceTestIds={surfaceTestIds}
       />
     </>
   );
@@ -403,7 +416,12 @@ export const SidebarLayout: FC<SidebarLayoutProps> = ({
   const isActive = (path: string) =>
     location.pathname === path || (path !== '/' && location.pathname.startsWith(path));
 
-  const body = (
+  // Both asides below stay in the DOM regardless of viewport (responsive
+  // classes only toggle display, not mount). Only the desktop aside emits
+  // sidebar-*-button testids — the mobile copy keeps them undefined so
+  // getByTestId in tests resolves to exactly one element under strict
+  // mode. Same fix shape as stem PR #381.
+  const body = (surfaceTestIds: boolean) => (
     <SidebarBody
       groups={groups}
       collapsed={collapsed}
@@ -416,6 +434,7 @@ export const SidebarLayout: FC<SidebarLayoutProps> = ({
       onOpenSettings={onOpenSettings}
       onOpenHistory={onOpenHistory}
       onOpenProfiles={onOpenProfiles}
+      surfaceTestIds={surfaceTestIds}
     />
   );
 
@@ -444,7 +463,7 @@ export const SidebarLayout: FC<SidebarLayoutProps> = ({
           mobileOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        <div className="flex flex-col h-full">{body}</div>
+        <div className="flex flex-col h-full">{body(false)}</div>
       </aside>
 
       <aside
@@ -452,7 +471,7 @@ export const SidebarLayout: FC<SidebarLayoutProps> = ({
           collapsed ? 'w-16' : 'w-64'
         }`}
       >
-        {body}
+        {body(true)}
       </aside>
 
       <main
