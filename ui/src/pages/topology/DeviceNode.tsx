@@ -47,6 +47,7 @@ export const DeviceNode: FC<DeviceNodeProps> = memo(({ data, selected }) => {
   return (
     <button
       type="button"
+      data-testid="topology-device-node"
       title={tooltip}
       aria-label={tooltip}
       className={`
@@ -99,7 +100,12 @@ export const DeviceNode: FC<DeviceNodeProps> = memo(({ data, selected }) => {
           <Icon className="w-5 h-5" />
         </div>
         <div className="min-w-0 flex-1">
-          <div className="font-semibold text-text-primary text-sm truncate">{data.label}</div>
+          <div
+            data-testid="topology-device-label"
+            className="font-semibold text-text-primary text-sm truncate"
+          >
+            {data.label}
+          </div>
           <div className="text-xs text-text-muted capitalize">{data.type}</div>
         </div>
       </div>
