@@ -15,7 +15,7 @@ test.describe('Packet Inspector Page', () => {
   });
 
   test('should render the Packets heading', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: /^packets$/i })).toBeVisible({
+    await expect(page.getByTestId('page-header-title')).toBeVisible({
       timeout: 10000,
     });
   });

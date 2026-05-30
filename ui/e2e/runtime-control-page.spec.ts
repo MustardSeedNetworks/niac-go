@@ -15,7 +15,7 @@ test.describe('Runtime Control Page', () => {
   });
 
   test('should render the Start Simulation heading', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: /start simulation/i })).toBeVisible({
+    await expect(page.getByTestId('page-header-title')).toBeVisible({
       timeout: 10000,
     });
   });

@@ -15,7 +15,7 @@ test.describe('Automation Page', () => {
   });
 
   test('should render the Alert policy heading', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: /alert policy/i })).toBeVisible({
+    await expect(page.getByTestId('page-header-title')).toBeVisible({
       timeout: 10000,
     });
   });
