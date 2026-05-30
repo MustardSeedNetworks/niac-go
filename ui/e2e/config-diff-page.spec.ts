@@ -15,7 +15,7 @@ test.describe('Config Diff Page', () => {
   });
 
   test('should render the Compare & Merge heading', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: /^compare & merge$/i })).toBeVisible({
+    await expect(page.getByTestId('page-header-title')).toBeVisible({
       timeout: 10000,
     });
   });

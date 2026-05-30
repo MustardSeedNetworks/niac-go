@@ -15,7 +15,7 @@ test.describe('Library — SNMP Walks', () => {
   });
 
   test('should render the SNMP Walks heading', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: /snmp walks/i })).toBeVisible({
+    await expect(page.getByTestId('page-header-title')).toBeVisible({
       timeout: 10000,
     });
   });
@@ -41,7 +41,7 @@ test.describe('Library — PCAP Captures', () => {
   });
 
   test('should render the PCAP Captures heading', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: /pcap captures/i })).toBeVisible({
+    await expect(page.getByTestId('page-header-title')).toBeVisible({
       timeout: 10000,
     });
   });

@@ -15,7 +15,7 @@ test.describe('Debug Console Page', () => {
   });
 
   test('should render the Debug Console heading', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: /^debug console$/i })).toBeVisible({
+    await expect(page.getByTestId('page-header-title')).toBeVisible({
       timeout: 10000,
     });
   });

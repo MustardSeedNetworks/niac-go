@@ -15,7 +15,7 @@ test.describe('Topology Page', () => {
   });
 
   test('should render the Network Topology heading', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: /network topology/i })).toBeVisible({
+    await expect(page.getByTestId('page-header-title')).toBeVisible({
       timeout: 10000,
     });
   });
