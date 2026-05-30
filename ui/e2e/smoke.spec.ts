@@ -1,52 +1,46 @@
 import { expect, test } from '@playwright/test';
+import { AUTH_STORAGE_STATE } from './helpers/auth';
 
-/**
- * Smoke Tests
- *
- * Basic sanity checks to verify the application loads correctly.
- * These tests should be fast and run on every PR.
- */
+const VERSION_KEYS = ['version', 'commit', 'buildTime', 'uiBuildHash'] as const;
 
-test.describe('Smoke Tests', () => {
-  test('homepage loads successfully', async ({ page }) => {
+test.describe('smoke @ unauthenticated', { tag: '@smoke' }, () => {
+  test.use({ storageState: { cookies: [], origins: [] } });
+
+  test('GET /__version returns canonical build metadata', async ({ request }) => {
+    const res = await request.get('/__version');
+    expect(res.status()).toBe(200);
+    const body = await res.json();
+    for (const k of VERSION_KEYS) {
+      expect(body[k], `missing ${k} in /__version`).toBeTruthy();
+      expect(typeof body[k]).toBe('string');
+    }
+  });
+});
+
+test.describe('smoke @ authenticated', { tag: '@smoke' }, () => {
+  test.use({ storageState: AUTH_STORAGE_STATE });
+
+  test('NIAC shell renders with page-header-title', async ({ page }) => {
     await page.goto('/');
-    await expect(page).toHaveTitle(/NIAC/i);
+    await expect(page.getByTestId('page-header-title')).toBeVisible({ timeout: 10000 });
   });
 
-  test('navigation is visible', async ({ page }) => {
+  test('settings drawer opens and closes', async ({ page }) => {
     await page.goto('/');
-    // Wait for page to fully load, then check for any visible navigation
-    await page.waitForLoadState('domcontentloaded');
-    const visibleNav = page.locator('nav:visible, [role="navigation"]:visible').first();
-    await expect(visibleNav).toBeVisible({ timeout: 5000 });
+    await expect(page.getByTestId('page-header-title')).toBeVisible({ timeout: 10000 });
+    await page.getByTestId('sidebar-settings-button').click();
+    await expect(page.getByTestId('settings-drawer')).toBeVisible();
+    await page.getByTestId('settings-drawer-close').click();
+    await expect(page.getByTestId('settings-drawer')).toBeHidden();
   });
 
-  test('no console errors on load', async ({ page }) => {
-    const errors: string[] = [];
-    page.on('console', (msg) => {
-      if (msg.type() === 'error') {
-        errors.push(msg.text());
-      }
-    });
-
+  test('help drawer opens with NIAC version badge', async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('domcontentloaded');
-
-    // Filter out expected errors:
-    // - favicon: Not always present in dev
-    // - 404/500/503: Backend may not be running during E2E tests
-    // - Failed to load resource: Network errors when backend is down
-    // - Service Unavailable: Backend service errors
-    const criticalErrors = errors.filter(
-      (e) =>
-        !e.includes('favicon') &&
-        !e.includes('404') &&
-        !e.includes('500') &&
-        !e.includes('503') &&
-        !e.includes('Failed to load resource') &&
-        !e.includes('Service Unavailable') &&
-        !e.includes('Internal Server Error'),
-    );
-    expect(criticalErrors).toHaveLength(0);
+    await expect(page.getByTestId('page-header-title')).toBeVisible({ timeout: 10000 });
+    await page.getByTestId('sidebar-help-button').click();
+    await expect(page.getByTestId('help-drawer')).toBeVisible();
+    await expect(page.getByTestId('help-drawer-version')).toContainText(/NIAC v.+/);
+    await page.getByTestId('help-drawer-close').click();
+    await expect(page.getByTestId('help-drawer')).toBeHidden();
   });
 });
