@@ -49,7 +49,7 @@ jobs:
       workflows: ${{ steps.filter.outputs.workflows }}
       schema: ${{ steps.filter.outputs.schema }}
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
       - uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4.0.1
         id: filter
         with:
@@ -88,7 +88,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.schema == 'true' || needs.changes.outputs.workflows == 'true'
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
 
       - name: Set up Go
         uses: ./.github/actions/setup-go
@@ -172,7 +172,7 @@ jobs:
       GOCACHE: ${{ github.workspace }}/.cache/go/build
 
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
 
       - name: Set up Go
         uses: ./.github/actions/setup-go
@@ -204,7 +204,7 @@ jobs:
       run:
         working-directory: ui
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
 
       - name: Set up Node.js
         uses: ./.github/actions/setup-node
@@ -259,7 +259,7 @@ jobs:
       # fetch-depth: 0 required for gitleaks-action's commit-range scan
       # (default shallow clone fails with "unknown revision" when base^
       # isn't reachable, especially after rebases/force-pushes).
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           fetch-depth: 0
 
@@ -275,12 +275,12 @@ jobs:
           govulncheck ./...
 
       - name: Run gosec
-        uses: securego/gosec@4a3bd8af174872c778439083ded7adbf3747e770 # v2.26.1
+        uses: securego/gosec@9e6a9843d7a4a6e3e9a8539b02612c8a4aa3f889 # v2.27.1
         with:
           args: "-no-fail -fmt sarif -out gosec-results.sarif ./..."
 
       - name: Upload gosec results
-        uses: github/codeql-action/upload-sarif@7211b7c8077ea37d8641b6271f6a365a22a5fbfa # v4.36.0
+        uses: github/codeql-action/upload-sarif@87557b9c84dde89fdd9b10e88954ac2f4248e463 # v4.36.1
         if: always()
         with:
           sarif_file: gosec-results.sarif
@@ -295,7 +295,7 @@ jobs:
           npm audit --audit-level=high || true
 
       - name: Run gitleaks
-        uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2.3.9
+        uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -317,7 +317,7 @@ jobs:
 
       - name: Upload Trivy results
         if: always() && hashFiles('trivy-results.sarif') != ''
-        uses: github/codeql-action/upload-sarif@7211b7c8077ea37d8641b6271f6a365a22a5fbfa # v4.36.0
+        uses: github/codeql-action/upload-sarif@87557b9c84dde89fdd9b10e88954ac2f4248e463 # v4.36.1
         with:
           sarif_file: trivy-results.sarif
 
@@ -342,7 +342,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.c == 'true' || needs.changes.outputs.workflows == 'true'
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
 
       - name: Install C23 tools (clang-tidy, cppcheck, bear)
         run: |
@@ -443,7 +443,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.frontend == 'true' || needs.changes.outputs.c == 'true' || needs.changes.outputs.workflows == 'true'
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
 
       - name: Check file sizes
         run: |
@@ -516,7 +516,7 @@ jobs:
       || needs.changes.outputs.workflows == 'true'
 
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
 
       - name: Validate i18n (parity, glossary, banned vocab, etc.)
         # --ratchet demotes the pre-existing-debt checks (no-fallback-patterns
@@ -538,7 +538,7 @@ jobs:
     # Always runs — cheap (runs in seconds) and applies to every PR.
 
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
 
       - name: Check markdown links
         uses: gaurav-nelson/github-action-markdown-link-check@5c5dfc0ac2e225883c0e5f03a85311ec2830d368 # v1
@@ -579,7 +579,7 @@ jobs:
             goos: linux
             goarch: amd64
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
 
       - name: Set up Go
         uses: ./.github/actions/setup-go
@@ -642,7 +642,7 @@ jobs:
       (needs.backend.result == 'success' || needs.backend.result == 'skipped')
 
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
 
       - name: Set up Go
         uses: ./.github/actions/setup-go
@@ -743,7 +743,7 @@ jobs:
       (needs.changes.outputs.frontend == 'true' || needs.changes.outputs.workflows == 'true')
 
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
 
       - name: Set up Go
         uses: ./.github/actions/setup-go
