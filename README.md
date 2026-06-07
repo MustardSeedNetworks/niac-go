@@ -123,6 +123,23 @@ devices:
         protocols: [arp, icmp, lldp, snmp]
 ```
 
+## Demo Assets
+
+Large example scenarios, walks, and captures are generated from the shared
+NIAC demo catalog instead of being committed to this repo:
+
+```bash
+./scripts/sync-demo-catalog.sh --sync
+```
+
+Windows:
+
+```powershell
+.\scripts\sync-demo-catalog.ps1 -Mode Sync
+```
+
+See [`docs/SHARED_DEMO_CATALOG.md`](docs/SHARED_DEMO_CATALOG.md).
+
 ## Build
 
 | Command | Purpose |

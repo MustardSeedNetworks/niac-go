@@ -16,6 +16,9 @@ import { defineConfig, devices } from '@playwright/test';
  */
 export default defineConfig({
   testDir: './e2e',
+  // Playwright 1.60 captures git diffs by default in CI. On PRs this runs a
+  // shallow fetch for the base SHA, which can fail before tests execute.
+  captureGitInfo: { commit: true, diff: false },
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   // retries 1 (not 2) — one retry is enough to dodge transient flakes; the
