@@ -42,6 +42,9 @@ bin/
 dist/
 build/
 
+# Generated shared demo catalog assets
+examples/
+
 # Frontend build outputs (Vite builds directly to internal/api/ui)
 ui/dist/
 internal/api/ui/*
