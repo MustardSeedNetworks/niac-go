@@ -37,7 +37,9 @@ paths = [
     '''\.github/workflows/.*\.yml$''',
     '''internal/testutil/.*''',
     '''docs/NetAllyAirMapper/.*''',
-    '''docs/.*\.md$''',
+    # Markdown is documentation — example tokens/curl commands (placeholder
+    # JWTs, "secret123") are expected, not real credentials.
+    '''.*\.md$''',
     '''configs/.*\.yaml$''',
     # Build artifacts and caches (gitignored)
     '''build/.*''',
