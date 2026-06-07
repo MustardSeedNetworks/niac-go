@@ -9,6 +9,8 @@ const baseURL = process.env.E2E_BASE_URL ?? `https://localhost:${port}`;
 
 export default defineConfig({
   testDir: './e2e/fullstack',
+  // Keep commit metadata in reports, but avoid CI-only base-SHA fetches.
+  captureGitInfo: { commit: true, diff: false },
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
