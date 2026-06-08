@@ -3,6 +3,8 @@ package api
 import (
 	"net/http"
 	"time"
+
+	"github.com/MustardSeedNetworks/niac-go/internal/api/sse"
 )
 
 // registerAPIRoutes registers all API endpoints on the provided mux.
@@ -170,5 +172,5 @@ func (s *Server) startBackgroundTasks() {
 	// growth deadlock from the old SetDefault-on-every-Start design.
 	// The wrapper filters out "[SSE]"-prefixed records so the hub's
 	// own log lines don't recurse.
-	InstallSSELogTee(s.sseHub)
+	sse.InstallLogTee(s.sseHub)
 }

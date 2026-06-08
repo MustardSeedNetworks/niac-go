@@ -1,4 +1,4 @@
-package api
+package sse
 
 import (
 	"net/http"
@@ -9,7 +9,7 @@ import (
 func TestSSEConfigWithDefaults(t *testing.T) {
 	tests := []struct {
 		name     string
-		input    SSEConfig
+		input    Config
 		wantBuf  int
 		wantMax  int
 		wantRate int
@@ -18,7 +18,7 @@ func TestSSEConfigWithDefaults(t *testing.T) {
 	}{
 		{
 			name:     "all zeros get defaults",
-			input:    SSEConfig{},
+			input:    Config{},
 			wantBuf:  defaultSSEBufferSize,
 			wantMax:  defaultSSEMaxClients,
 			wantRate: defaultSSEMaxMsgPerSec,
@@ -27,7 +27,7 @@ func TestSSEConfigWithDefaults(t *testing.T) {
 		},
 		{
 			name:     "negative values get defaults",
-			input:    SSEConfig{BufferSize: -1, MaxClients: -5, MaxMsgPerSec: -10, HeartbeatSec: -1, MaxConnSec: -1},
+			input:    Config{BufferSize: -1, MaxClients: -5, MaxMsgPerSec: -10, HeartbeatSec: -1, MaxConnSec: -1},
 			wantBuf:  defaultSSEBufferSize,
 			wantMax:  defaultSSEMaxClients,
 			wantRate: defaultSSEMaxMsgPerSec,
@@ -36,7 +36,7 @@ func TestSSEConfigWithDefaults(t *testing.T) {
 		},
 		{
 			name:     "custom values preserved",
-			input:    SSEConfig{BufferSize: 512, MaxClients: 50, MaxMsgPerSec: 200, HeartbeatSec: 15, MaxConnSec: 3600},
+			input:    Config{BufferSize: 512, MaxClients: 50, MaxMsgPerSec: 200, HeartbeatSec: 15, MaxConnSec: 3600},
 			wantBuf:  512,
 			wantMax:  50,
 			wantRate: 200,
@@ -68,14 +68,14 @@ func TestSSEConfigWithDefaults(t *testing.T) {
 }
 
 func TestNewSSEHub(t *testing.T) {
-	hub := NewSSEHub(SSEConfig{})
+	hub := NewHub(Config{})
 
 	if hub == nil {
-		t.Fatal("NewSSEHub returned nil")
+		t.Fatal("NewHub returned nil")
 	}
 
 	// Check that all streams are initialized
-	for _, stream := range []SSEStream{SSEStreamPackets, SSEStreamLogs, SSEStreamStats} {
+	for _, stream := range []Stream{StreamPackets, StreamLogs, StreamStats} {
 		if _, ok := hub.clients[stream]; !ok {
 			t.Errorf("stream %q not initialized in clients map", stream)
 		}
@@ -90,10 +90,10 @@ func TestNewSSEHub(t *testing.T) {
 }
 
 func TestSSEHubClientCount(t *testing.T) {
-	hub := NewSSEHub(SSEConfig{})
+	hub := NewHub(Config{})
 
-	if hub.ClientCount(SSEStreamPackets) != 0 {
-		t.Errorf("ClientCount(packets) = %d, want 0", hub.ClientCount(SSEStreamPackets))
+	if hub.ClientCount(StreamPackets) != 0 {
+		t.Errorf("ClientCount(packets) = %d, want 0", hub.ClientCount(StreamPackets))
 	}
 
 	if hub.TotalClientCount() != 0 {
@@ -102,7 +102,7 @@ func TestSSEHubClientCount(t *testing.T) {
 }
 
 func TestSSEHubRunAndStop(t *testing.T) {
-	hub := NewSSEHub(SSEConfig{})
+	hub := NewHub(Config{})
 
 	done := make(chan struct{})
 	go func() {
@@ -132,16 +132,16 @@ func TestSSEHubRunAndStop(t *testing.T) {
 }
 
 func TestSSEHubBroadcastWhenNotRunning(_ *testing.T) {
-	hub := NewSSEHub(SSEConfig{})
+	hub := NewHub(Config{})
 	// Should not panic when not running
-	hub.Broadcast(SSEStreamPackets, map[string]string{"test": "data"})
+	hub.Broadcast(StreamPackets, map[string]string{"test": "data"})
 	hub.BroadcastPacket(map[string]string{"test": "data"})
 	hub.BroadcastLog("info", "test message")
 	hub.BroadcastStats(map[string]int{"count": 42})
 }
 
 func TestSSEHubRegisterAndUnregister(t *testing.T) {
-	hub := NewSSEHub(SSEConfig{MaxClients: 2})
+	hub := NewHub(Config{MaxClients: 2})
 
 	done := make(chan struct{})
 	go func() {
@@ -153,18 +153,18 @@ func TestSSEHubRegisterAndUnregister(t *testing.T) {
 	time.Sleep(10 * time.Millisecond)
 
 	// Register a client
-	client := &SSEClient{
+	client := &Client{
 		hub:      hub,
 		send:     make(chan []byte, hub.config.BufferSize),
-		stream:   SSEStreamPackets,
+		stream:   StreamPackets,
 		clientIP: "127.0.0.1",
 	}
 	hub.register <- client
 
 	time.Sleep(10 * time.Millisecond)
 
-	if hub.ClientCount(SSEStreamPackets) != 1 {
-		t.Errorf("ClientCount(packets) = %d, want 1", hub.ClientCount(SSEStreamPackets))
+	if hub.ClientCount(StreamPackets) != 1 {
+		t.Errorf("ClientCount(packets) = %d, want 1", hub.ClientCount(StreamPackets))
 	}
 
 	// Unregister the client
@@ -172,13 +172,13 @@ func TestSSEHubRegisterAndUnregister(t *testing.T) {
 
 	time.Sleep(10 * time.Millisecond)
 
-	if hub.ClientCount(SSEStreamPackets) != 0 {
-		t.Errorf("ClientCount(packets) after unregister = %d, want 0", hub.ClientCount(SSEStreamPackets))
+	if hub.ClientCount(StreamPackets) != 0 {
+		t.Errorf("ClientCount(packets) after unregister = %d, want 0", hub.ClientCount(StreamPackets))
 	}
 }
 
 func TestSSEHubMaxClients(t *testing.T) {
-	hub := NewSSEHub(SSEConfig{MaxClients: 1})
+	hub := NewHub(Config{MaxClients: 1})
 
 	done := make(chan struct{})
 	go func() {
@@ -190,28 +190,28 @@ func TestSSEHubMaxClients(t *testing.T) {
 	time.Sleep(10 * time.Millisecond)
 
 	// Register first client (should succeed)
-	client1 := &SSEClient{
+	client1 := &Client{
 		hub:      hub,
 		send:     make(chan []byte, hub.config.BufferSize),
-		stream:   SSEStreamPackets,
+		stream:   StreamPackets,
 		clientIP: "127.0.0.1",
 	}
 	hub.register <- client1
 	time.Sleep(10 * time.Millisecond)
 
 	// Register second client (should be rejected - max reached)
-	client2 := &SSEClient{
+	client2 := &Client{
 		hub:      hub,
 		send:     make(chan []byte, hub.config.BufferSize),
-		stream:   SSEStreamPackets,
+		stream:   StreamPackets,
 		clientIP: "127.0.0.2",
 	}
 	hub.register <- client2
 	time.Sleep(10 * time.Millisecond)
 
-	if hub.ClientCount(SSEStreamPackets) != 1 {
+	if hub.ClientCount(StreamPackets) != 1 {
 		t.Errorf("ClientCount(packets) = %d, want 1 (second client should be rejected)",
-			hub.ClientCount(SSEStreamPackets))
+			hub.ClientCount(StreamPackets))
 	}
 
 	if !client2.closed.Load() {
@@ -220,7 +220,7 @@ func TestSSEHubMaxClients(t *testing.T) {
 }
 
 func TestSSEHubBroadcastToClients(t *testing.T) {
-	hub := NewSSEHub(SSEConfig{})
+	hub := NewHub(Config{})
 
 	done := make(chan struct{})
 	go func() {
@@ -231,16 +231,16 @@ func TestSSEHubBroadcastToClients(t *testing.T) {
 
 	time.Sleep(10 * time.Millisecond)
 
-	client := &SSEClient{
+	client := &Client{
 		hub:      hub,
 		send:     make(chan []byte, hub.config.BufferSize),
-		stream:   SSEStreamPackets,
+		stream:   StreamPackets,
 		clientIP: "127.0.0.1",
 	}
 	hub.register <- client
 	time.Sleep(10 * time.Millisecond)
 
-	hub.Broadcast(SSEStreamPackets, map[string]string{"test": "data"})
+	hub.Broadcast(StreamPackets, map[string]string{"test": "data"})
 	time.Sleep(10 * time.Millisecond)
 
 	select {
@@ -265,7 +265,7 @@ func TestSSERateLimiterAllow(t *testing.T) {
 
 func TestSetSSEHeaders(t *testing.T) {
 	rec := newTestResponseRecorder()
-	setSSEHeaders(rec)
+	setHeaders(rec)
 
 	if ct := rec.Header().Get("Content-Type"); ct != "text/event-stream" {
 		t.Errorf("Content-Type = %q, want %q", ct, "text/event-stream")
@@ -282,7 +282,7 @@ func TestSetSSEHeaders(t *testing.T) {
 }
 
 func TestSSEHubStopIdempotent(_ *testing.T) {
-	hub := NewSSEHub(SSEConfig{})
+	hub := NewHub(Config{})
 
 	done := make(chan struct{})
 	go func() {
@@ -299,7 +299,7 @@ func TestSSEHubStopIdempotent(_ *testing.T) {
 }
 
 func TestSSEHubMemoryUsage(t *testing.T) {
-	hub := NewSSEHub(SSEConfig{})
+	hub := NewHub(Config{})
 	if hub.eventID.Load() != 0 {
 		t.Errorf("initial eventID = %d, want 0", hub.eventID.Load())
 	}

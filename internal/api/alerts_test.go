@@ -7,12 +7,14 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/MustardSeedNetworks/niac-go/internal/api/sse"
 )
 
 func newAlertTestServer(t *testing.T) *Server {
 	t.Helper()
 	server, _ := newTestServer(t)
-	server.sseHub = NewSSEHub(SSEConfig{})
+	server.sseHub = sse.NewHub(sse.Config{})
 	return server
 }
 

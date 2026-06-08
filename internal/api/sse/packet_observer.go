@@ -1,4 +1,4 @@
-package api
+package sse
 
 // SSE packet observer: bridges the protocol stack's PacketObserver
 // hook into the SSE hub so /api/v1/stream/packets subscribers see live
@@ -17,62 +17,54 @@ import (
 	"github.com/MustardSeedNetworks/niac-go/internal/protocols"
 )
 
-// sseHubPacketObserver implements protocols.PacketObserver and forwards
+// hubPacketObserver implements protocols.PacketObserver and forwards
 // each packet event onto the SSE hub's packets stream.
 //
 // The hub's Broadcast is non-blocking (drops on full channel) so a slow
 // SSE consumer can never back-pressure the protocol stack. Observers
 // must be cheap; this one does a thin gopacket pass and a hex encode
 // of the truncated raw bytes.
-type sseHubPacketObserver struct {
-	hub *SSEHub
+type hubPacketObserver struct {
+	hub *Hub
 }
 
-// sseMaxRawPacketBytes caps how many bytes of the raw frame we ship in
+// maxRawPacketBytes caps how many bytes of the raw frame we ship in
 // each event. The UI hex-viewer can render the full Ethernet MTU but
 // at high packet rates we'd flood the SSE buffer. 256 bytes covers
 // most useful headers (Ethernet + IPv4 + TCP options + a small
 // payload) and keeps each event well under the SSE per-message budget.
-const sseMaxRawPacketBytes = 256
+const maxRawPacketBytes = 256
 
 // ipv4Len is the byte length of an IPv4 protocol address.
 const ipv4Len = 4
 
+// NewPacketObserver returns a protocols.PacketObserver that forwards each
+// observed packet onto the hub's packets stream. Used to wire the SSE bridge
+// into a protocol stack from the api layer without exposing hub internals.
+func NewPacketObserver(hub *Hub) protocols.PacketObserver {
+	return &hubPacketObserver{hub: hub}
+}
+
 // OnPacket is called by the stack for every rx/tx packet.
-func (o *sseHubPacketObserver) OnPacket(direction string, pkt *protocols.Packet) {
+func (o *hubPacketObserver) OnPacket(direction string, pkt *protocols.Packet) {
 	if o == nil || o.hub == nil || pkt == nil {
 		return
 	}
 	o.hub.BroadcastPacket(packetToWire(direction, pkt))
 }
 
-// BroadcastCapturePacket ships a standalone-captured gopacket onto the
-// SSE packets stream. Used by the daemon's standalone capture loop,
-// which has no protocols.Stack and therefore no PacketObserver. The
-// shape produced here matches packetToWire() so the UI's stream
-// reader doesn't need a branch for the two sources.
-//
-// Direction is always "rx" — the standalone capture is read-only and
-// never injects frames.
-func (s *Server) BroadcastCapturePacket(pkt gopacket.Packet) {
-	if s == nil || s.sseHub == nil || pkt == nil {
-		return
-	}
-	s.sseHub.BroadcastPacket(gopacketToWire(pkt))
-}
-
-// gopacketToWire is the standalone-capture cousin of packetToWire. It
+// GopacketToWire is the standalone-capture cousin of packetToWire. It
 // takes a gopacket.Packet directly rather than the protocols.Packet
 // wrapper. Same JSON shape; the only loss is the serial / VLAN
 // metadata that the protocols stack injects, which a sniff-only
 // session doesn't have anyway.
-func gopacketToWire(pkt gopacket.Packet) map[string]any {
+func GopacketToWire(pkt gopacket.Packet) map[string]any {
 	md := pkt.Metadata()
 	raw := pkt.Data()
 	size := len(raw)
 	truncated := false
-	if size > sseMaxRawPacketBytes {
-		raw = raw[:sseMaxRawPacketBytes]
+	if size > maxRawPacketBytes {
+		raw = raw[:maxRawPacketBytes]
 		truncated = true
 	}
 
@@ -102,8 +94,8 @@ func packetToWire(direction string, pkt *protocols.Packet) map[string]any {
 		raw = raw[:pkt.Length]
 	}
 	truncated := false
-	if len(raw) > sseMaxRawPacketBytes {
-		raw = raw[:sseMaxRawPacketBytes]
+	if len(raw) > maxRawPacketBytes {
+		raw = raw[:maxRawPacketBytes]
 		truncated = true
 	}
 

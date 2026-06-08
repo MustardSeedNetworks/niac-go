@@ -268,6 +268,12 @@ linters:
           deny:
             - pkg: github.com/MustardSeedNetworks/niac-go/internal/api
               desc: "csrf is a leaf — per-session token manager + Protect factory (injected ErrorFunc), so it never imports the api transport layer"
+        "api-sse-isolated":
+          files:
+            - "**/internal/api/sse/**"
+          deny:
+            - pkg: github.com/MustardSeedNetworks/niac-go/internal/api
+              desc: "sse is a leaf — hub/engine + Serve factory; it may import internal/protocols (inward) for the packet observer, but never the api transport layer"
 
     embeddedstructfieldcheck:
       # Checks that sync.Mutex and sync.RWMutex are not used as embedded fields.

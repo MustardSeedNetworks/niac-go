@@ -1,10 +1,10 @@
-package api
+package sse
 
 // SSE subsystem layout (split across files in this package so each
 // piece stays well under the project's file-size budget):
 //
-//	sse.go                  — types, constants, SSEConfig (this file)
-//	sse_hub.go              — SSEHub: lifecycle + broadcast API
+//	sse.go                  — types, constants, Config (this file)
+//	sse_hub.go              — Hub: lifecycle + broadcast API
 //	sse_serve.go            — HTTP serving + per-connection event pump
 //	sse_rate_limiter.go     — per-stream token bucket
 //	sse_packet_observer.go  — protocols.PacketObserver → hub bridge
@@ -38,8 +38,8 @@ const (
 	millisecsPerSecond     = 1000  // Milliseconds per second for rate limiter
 )
 
-// SSEConfig holds configurable parameters for the SSE hub.
-type SSEConfig struct {
+// Config holds configurable parameters for the SSE hub.
+type Config struct {
 	BufferSize   int // Client send buffer size (default: 256)
 	MaxClients   int // Max clients per stream (default: 100)
 	MaxMsgPerSec int // Rate limit: max messages per second (default: 100)
@@ -48,7 +48,7 @@ type SSEConfig struct {
 }
 
 // withDefaults returns a config with zero values replaced by defaults.
-func (c SSEConfig) withDefaults() SSEConfig {
+func (c Config) withDefaults() Config {
 	if c.BufferSize <= 0 {
 		c.BufferSize = defaultSSEBufferSize
 	}
@@ -67,55 +67,55 @@ func (c SSEConfig) withDefaults() SSEConfig {
 	return c
 }
 
-// SSEStream identifies a logical SSE stream. Clients connect to one
+// Stream identifies a logical SSE stream. Clients connect to one
 // stream at a time; producers Broadcast() to one stream at a time.
-type SSEStream string
+type Stream string
 
 const (
-	SSEStreamPackets SSEStream = "packets"
-	SSEStreamLogs    SSEStream = "logs"
-	SSEStreamStats   SSEStream = "stats"
+	StreamPackets Stream = "packets"
+	StreamLogs    Stream = "logs"
+	StreamStats   Stream = "stats"
 )
 
-// SSEMessage is the envelope shape used by the hub broadcast API.
+// Message is the envelope shape used by the hub broadcast API.
 // Only Data is required; Event and ID round out the standard SSE
 // fields when callers want explicit named events or replay IDs.
-type SSEMessage struct {
+type Message struct {
 	Event string `json:"event,omitempty"` // Optional event type
 	Data  any    `json:"data"`
 	ID    string `json:"id,omitempty"` // Optional event ID for Last-Event-ID
 }
 
-// SSEClient is a single connected client's hub-side handle. The hub
+// Client is a single connected client's hub-side handle. The hub
 // owns the send channel; HTTP handlers write to it and read from it
-// via the per-connection sseStreamContext (see sse_serve.go).
-type SSEClient struct {
-	hub      *SSEHub
+// via the per-connection streamContext (see sse_serve.go).
+type Client struct {
+	hub      *Hub
 	send     chan []byte
-	stream   SSEStream
+	stream   Stream
 	closed   atomic.Bool
 	clientIP string
 }
 
-// SSEHub manages SSE clients and message broadcasting. Methods live
+// Hub manages SSE clients and message broadcasting. Methods live
 // in sse_hub.go; see the package overview at the top of this file.
-type SSEHub struct {
-	clients      map[SSEStream]map[*SSEClient]bool
+type Hub struct {
+	clients      map[Stream]map[*Client]bool
 	broadcast    chan *streamMessage
-	register     chan *SSEClient
-	unregister   chan *SSEClient
+	register     chan *Client
+	unregister   chan *Client
 	mu           sync.RWMutex
-	rateLimiters map[SSEStream]*sseRateLimiter
+	rateLimiters map[Stream]*rateLimiter
 	stopChan     chan struct{}
 	stopOnce     sync.Once
 	running      atomic.Bool
 	eventID      atomic.Uint64 // Global event ID counter
-	config       SSEConfig
+	config       Config
 }
 
 // streamMessage wraps a serialised SSE payload with its target stream
 // so the hub's broadcast loop can dispatch to the right client set.
 type streamMessage struct {
-	stream SSEStream
+	stream Stream
 	data   []byte
 }
