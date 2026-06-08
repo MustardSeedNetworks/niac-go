@@ -262,6 +262,12 @@ linters:
           deny:
             - pkg: github.com/MustardSeedNetworks/niac-go/internal/api
               desc: "ratelimit is a leaf — per-IP limiter + middleware factories take injected ClientIPFunc/ErrorFunc, so it never imports the api transport layer"
+        "api-csrf-isolated":
+          files:
+            - "**/internal/api/csrf/**"
+          deny:
+            - pkg: github.com/MustardSeedNetworks/niac-go/internal/api
+              desc: "csrf is a leaf — per-session token manager + Protect factory (injected ErrorFunc), so it never imports the api transport layer"
 
     embeddedstructfieldcheck:
       # Checks that sync.Mutex and sync.RWMutex are not used as embedded fields.

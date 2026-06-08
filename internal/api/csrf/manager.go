@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 
-package api
+package csrf
 
 import (
 	"context"
@@ -17,7 +17,7 @@ import (
 	"time"
 )
 
-// CSRF manager configuration constants. Mirrors stem's CSRFManager
+// CSRF manager configuration constants. Mirrors stem's Manager
 // (#1257 sub-4 port) so the per-session model and the 24h expiry are
 // uniform across the two repos.
 const (
@@ -46,28 +46,28 @@ type csrfTokenEntry struct {
 	expiresAt time.Time
 }
 
-// CSRFManager mints, stores, and validates per-session CSRF tokens.
+// Manager mints, stores, and validates per-session CSRF tokens.
 // Keyed by sha256(bearer-token) so the bearer plaintext is never
 // retained in memory.
 //
-// #1257 (Wave 5) sub-4: port of stem's CSRFManager pattern. Pre-port
+// #1257 (Wave 5) sub-4: port of stem's Manager pattern. Pre-port
 // niac shared a single global CSRF token across all clients which,
 // while functionally protective against cross-site requests, meant
 // any client could replay another's value. The per-session model
 // pins each token to its issuer.
-type CSRFManager struct {
+type Manager struct {
 	mu     sync.RWMutex
 	tokens map[string]*csrfTokenEntry
 	ctx    context.Context
 	cancel context.CancelFunc
 }
 
-// NewCSRFManager constructs a manager and starts its cleanup loop.
+// NewManager constructs a manager and starts its cleanup loop.
 // Stop the returned manager via Stop() during server shutdown to
 // terminate the background goroutine.
-func NewCSRFManager() *CSRFManager {
+func NewManager() *Manager {
 	ctx, cancel := context.WithCancel(context.Background())
-	m := &CSRFManager{
+	m := &Manager{
 		tokens: make(map[string]*csrfTokenEntry),
 		ctx:    ctx,
 		cancel: cancel,
@@ -77,7 +77,7 @@ func NewCSRFManager() *CSRFManager {
 	return m
 }
 
-// SessionKey derives the CSRFManager's session key from a bearer
+// SessionKey derives the Manager's session key from a bearer
 // token. Hashing the bearer prevents storing the plaintext in the
 // manager's internal map (already-hashed values keep the manager's
 // memory profile uniform regardless of bearer length / format).
@@ -92,7 +92,7 @@ func SessionKey(bearer string) string {
 
 // Generate mints a fresh CSRF token for the given session key,
 // replacing any existing one.
-func (m *CSRFManager) Generate(sessionKey string) (string, error) {
+func (m *Manager) Generate(sessionKey string) (string, error) {
 	buf := make([]byte, csrfPerSessionTokenLength)
 	if _, err := rand.Read(buf); err != nil {
 		return "", fmt.Errorf("generate CSRF token: %w", err)
@@ -120,7 +120,7 @@ func (m *CSRFManager) Generate(sessionKey string) (string, error) {
 // token that no longer matches the stored entry, which makes its next
 // X-Csrf-Token request fail validation with 403. Surfaced as an
 // intermittent TestAlertConfig_ConcurrentUpdates failure under -race.
-func (m *CSRFManager) GetOrCreate(sessionKey string) (string, error) {
+func (m *Manager) GetOrCreate(sessionKey string) (string, error) {
 	m.mu.RLock()
 	entry, ok := m.tokens[sessionKey]
 	m.mu.RUnlock()
@@ -154,7 +154,7 @@ func (m *CSRFManager) GetOrCreate(sessionKey string) (string, error) {
 // stored for sessionKey. Returns one of errCSRFTokenMissing /
 // errCSRFTokenInvalid / errCSRFTokenExpired so callers can render
 // different messages or audit-log differently per failure mode.
-func (m *CSRFManager) Validate(sessionKey, token string) error {
+func (m *Manager) Validate(sessionKey, token string) error {
 	if token == "" {
 		return errCSRFTokenMissing
 	}
@@ -184,13 +184,13 @@ func (m *CSRFManager) Validate(sessionKey, token string) error {
 }
 
 // Stop terminates the background cleanup goroutine. Idempotent.
-func (m *CSRFManager) Stop() {
+func (m *Manager) Stop() {
 	m.cancel()
 }
 
 // cleanupLoop sweeps expired tokens from the map at a fixed cadence
 // so memory doesn't grow unbounded across long-running sessions.
-func (m *CSRFManager) cleanupLoop() {
+func (m *Manager) cleanupLoop() {
 	ticker := time.NewTicker(time.Duration(csrfPerSessionCleanupSeconds) * time.Second)
 	defer ticker.Stop()
 	for {
@@ -210,10 +210,10 @@ func (m *CSRFManager) cleanupLoop() {
 	}
 }
 
-// sessionKeyFromRequest derives the CSRF session key for the request
-// from its Authorization header. Mirrors the bearer extraction in
-// auth() so the same token always hashes to the same key.
-func sessionKeyFromRequest(r *http.Request) string {
+// SessionKeyFromRequest derives the CSRF session key for a request from its
+// Authorization header. Mirrors the bearer extraction in the api auth
+// middleware so the same token always hashes to the same key.
+func SessionKeyFromRequest(r *http.Request) string {
 	authz := r.Header.Get("Authorization")
 	if authz == "" {
 		return csrfLoopbackSessionKey

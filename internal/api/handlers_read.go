@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/MustardSeedNetworks/niac-go/internal/api/csrf"
+
 	"github.com/MustardSeedNetworks/niac-go/internal/capture"
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 	"github.com/MustardSeedNetworks/niac-go/internal/protocols"
@@ -594,7 +596,7 @@ func (s *Server) handleCSRFToken(w http.ResponseWriter, r *http.Request) {
 	// caller's bearer (or the loopback bypass key on no-token paths).
 	// Same caller fetching twice within the 24h expiry gets the same
 	// value, so the UI can cache it.
-	token, err := s.csrf.GetOrCreate(sessionKeyFromRequest(r))
+	token, err := s.csrf.GetOrCreate(csrf.SessionKeyFromRequest(r))
 	if err != nil {
 		s.logger.ErrorContext(r.Context(), "[API] CSRF token mint failed", "error", err)
 		http.Error(w, "csrf token unavailable", http.StatusInternalServerError)

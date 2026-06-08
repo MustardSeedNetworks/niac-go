@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/MustardSeedNetworks/niac-go/internal/api/csrf"
+
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 	"github.com/MustardSeedNetworks/niac-go/internal/protocols"
@@ -371,9 +373,9 @@ func TestCSRFProtection(t *testing.T) {
 	server, _ := createTestServer(t)
 	// #1257: per-session CSRF manager; mint the loopback-bypass
 	// token so the "valid" subtest can present it.
-	server.csrf = NewCSRFManager()
+	server.csrf = csrf.NewManager()
 	t.Cleanup(server.csrf.Stop)
-	validToken, err := server.csrf.Generate(SessionKey(""))
+	validToken, err := server.csrf.Generate(csrf.SessionKey(""))
 	if err != nil {
 		t.Fatalf("mint CSRF: %v", err)
 	}
@@ -382,7 +384,7 @@ func TestCSRFProtection(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	protected := server.csrfProtect(handler)
+	protected := csrf.Protect(server.csrf, simpleErr, handler)
 
 	t.Run("GET request allowed", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/test", nil)

@@ -11,13 +11,16 @@ package api
 import (
 	"net/http"
 
+	"github.com/MustardSeedNetworks/niac-go/internal/api/csrf"
+
 	"github.com/MustardSeedNetworks/niac-go/internal/api/ratelimit"
 )
 
-// rateLimitErr adapts the api package's writeError to ratelimit.ErrorFunc.
-// Rate-limit rejections carry no structured details, so the adapter always
-// passes nil — this keeps the ratelimit leaf free of any api type (ErrorDetail).
-func rateLimitErr(w http.ResponseWriter, r *http.Request, status int, code, message string) {
+// simpleErr adapts the api package's writeError to the narrow ErrorFunc that the
+// ratelimit and csrf leaf packages accept. Those middleware rejections carry no
+// structured details, so the adapter always passes nil — keeping the leaves free
+// of any api type (ErrorDetail).
+func simpleErr(w http.ResponseWriter, r *http.Request, status int, code, message string) {
 	writeError(w, r, status, code, message, nil)
 }
 
@@ -42,7 +45,7 @@ type apiRoute struct {
 	handler http.HandlerFunc
 	// rl selects the rate limiter (rlNone for unmetered reads/streams).
 	rl rateLimitKind
-	// csrf wraps the route in csrfProtect (csrfProtect itself skips safe GETs).
+	// csrf wraps the route in csrf.Protect (which itself skips safe GETs).
 	csrf bool
 	// admin requires an admin-scoped token (adminProtect) — whole-topology ops.
 	admin bool
@@ -66,19 +69,19 @@ func (s *Server) register(mux *http.ServeMux, rt apiRoute) {
 		h = s.adminProtect(h)
 	}
 	if rt.csrf {
-		h = s.csrfProtect(h)
+		h = csrf.Protect(s.csrf, simpleErr, h)
 	}
 	switch rt.rl {
 	case rlNone:
 		// no rate limiter
 	case rlWrite:
-		h = ratelimit.Write(s.writeLimiter, s.logger, getClientIP, rateLimitErr, h)
+		h = ratelimit.Write(s.writeLimiter, s.logger, getClientIP, simpleErr, h)
 	case rlWalk:
-		h = ratelimit.Walk(s.walkLimiter, s.logger, getClientIP, rateLimitErr, h)
+		h = ratelimit.Walk(s.walkLimiter, s.logger, getClientIP, simpleErr, h)
 	case rlUpload:
-		h = ratelimit.Upload(s.uploadLimiter, s.logger, getClientIP, rateLimitErr, h)
+		h = ratelimit.Upload(s.uploadLimiter, s.logger, getClientIP, simpleErr, h)
 	case rlFile:
-		h = ratelimit.File(s.fileLimiter, s.logger, getClientIP, rateLimitErr, h)
+		h = ratelimit.File(s.fileLimiter, s.logger, getClientIP, simpleErr, h)
 	}
 	h = s.auth(h)
 	h = s.recoverMiddleware(h)

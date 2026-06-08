@@ -6,6 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/MustardSeedNetworks/niac-go/internal/api/csrf"
+
 	"github.com/MustardSeedNetworks/niac-go/internal/api/ratelimit"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/api/tokenstore"
@@ -84,14 +86,14 @@ func TestRecoverMiddlewareNoPanic(t *testing.T) {
 
 func TestCSRFProtectionGETAllowed(t *testing.T) {
 	server := createTestServerForMiddleware(t)
-	server.csrf = NewCSRFManager()
+	server.csrf = csrf.NewManager()
 	t.Cleanup(server.csrf.Stop)
 
 	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	wrapped := server.csrfProtect(handler)
+	wrapped := csrf.Protect(server.csrf, simpleErr, handler)
 
 	// GET should always be allowed
 	for _, method := range []string{"GET", "HEAD", "OPTIONS"} {
@@ -110,12 +112,12 @@ func TestCSRFProtectionGETAllowed(t *testing.T) {
 
 func TestCSRFProtectionStateMethods(t *testing.T) {
 	server := createTestServerForMiddleware(t)
-	server.csrf = NewCSRFManager()
+	server.csrf = csrf.NewManager()
 	t.Cleanup(server.csrf.Stop)
 
 	// Mint the per-session token for the loopback bypass key (no
 	// Authorization header => csrfLoopbackSessionKey).
-	validToken, err := server.csrf.Generate(SessionKey(""))
+	validToken, err := server.csrf.Generate(csrf.SessionKey(""))
 	if err != nil {
 		t.Fatalf("mint CSRF: %v", err)
 	}
@@ -124,7 +126,7 @@ func TestCSRFProtectionStateMethods(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	wrapped := server.csrfProtect(handler)
+	wrapped := csrf.Protect(server.csrf, simpleErr, handler)
 
 	// State-changing methods require CSRF token
 	for _, method := range []string{"POST", "PUT", "PATCH", "DELETE"} {
@@ -174,7 +176,7 @@ func TestCSRFProtectionRejectsWhenNoToken(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	wrapped := server.csrfProtect(handler)
+	wrapped := csrf.Protect(server.csrf, simpleErr, handler)
 
 	// POST must be rejected when csrfToken is empty (fail-closed security)
 	req := httptest.NewRequest(http.MethodPost, "/test", nil)
