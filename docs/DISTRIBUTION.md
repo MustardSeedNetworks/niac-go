@@ -1,155 +1,44 @@
-# Distribution & Licensing Roadmap
+# Distribution
 
-**Product:** NIAC
-**Model:** TBD (Open Source or Commercial)
-**Status:** Development - NOT FOR PUBLIC DISTRIBUTION
+NIAC distribution is handled by GitHub Releases.
 
----
+Release Please owns version selection, changelog PRs, release tags, and GitHub
+release creation. When a `v*` tag is created, `.github/workflows/release.yml`
+builds native artifacts on GitHub-hosted runners:
 
-## Current State (Development)
+| Platform | Runner | Artifact |
+| --- | --- | --- |
+| Linux amd64 | `ubuntu-latest` | `.tar.gz` |
+| Linux arm64 | `ubuntu-24.04-arm` | `.tar.gz` |
+| macOS amd64 | `macos-13` | `.tar.gz` |
+| macOS arm64 | `macos-14` | `.tar.gz` |
+| Windows amd64 | `windows-latest` | `.zip` |
+| Windows arm64 | `windows-11-arm` | `.zip` |
 
-All distribution channels are **locked down**:
+Each release also publishes `checksums.txt` and a GitHub build-provenance
+attestation.
 
-| Channel | Status | Notes |
-|---------|--------|-------|
-| Container registry | DISABLED | No `container-push` target |
-| Public downloads | DISABLED | No public artifacts |
-| Package repos | DISABLED | .deb/.rpm stay local |
+## Local Development
 
-### Local Development Only
-
-```bash
-make container   # Builds locally only
-make deb         # Creates dist/niac_*.deb (local)
-make rpm         # Creates dist/niac_*.rpm (local)
-```
-
----
-
-## Distribution Decision Pending
-
-### Option A: Open Source
-
-**License:** Apache 2.0 or MIT
-
-**Pros:**
-- Community contributions
-- Wider adoption
-- Ecosystem building
-- Complements commercial Seed/Stem
-
-**Cons:**
-- No direct revenue
-- Support burden
-- Competitors can use
-
-**If Open Source:**
-- [ ] Choose license (Apache 2.0 recommended)
-- [ ] Clean up any proprietary code
-- [ ] Add CONTRIBUTING.md
-- [ ] Set up public GitHub repo
-- [ ] Enable GitHub Container Registry (public)
-
-### Option B: Commercial
-
-**License:** Proprietary
-
-**Pros:**
-- Revenue stream
-- Control over distribution
-- Premium support model
-
-**Cons:**
-- Smaller user base
-- More support overhead
-- Licensing complexity
-
-**If Commercial:**
-- [ ] Implement license validation
-- [ ] Set up private registry
-- [ ] Customer portal integration
-
----
-
-## Relationship to Seed/Stem
-
-NIAC could be strategically open-sourced to:
-1. Build community around network simulation
-2. Drive adoption of commercial Seed/Stem
-3. Create ecosystem lock-in
-4. Attract contributors
-
-```
-┌─────────────────────────────────────────────────┐
-│  NIAC (Open Source)                             │
-│  └── Simulates network devices                  │
-│                                                 │
-│  Seed (Commercial)                              │
-│  └── Diagnoses real networks                    │
-│  └── Can test against NIAC simulations          │
-│                                                 │
-│  Stem (Commercial)                              │
-│  └── Performance tests real networks            │
-│  └── Can benchmark against NIAC simulations     │
-└─────────────────────────────────────────────────┘
-```
-
----
-
-## Deployment Channels (Future)
-
-### If Open Source:
-```bash
-# Public registry
-docker pull ghcr.io/krisarmstrong/niac:latest
-
-# Or package managers
-apt install niac
-dnf install niac
-```
-
-### If Commercial:
-```bash
-# Private registry with auth
-docker pull registry.mustardseednetworks.com/niac:latest
-```
-
----
-
-## Pre-Release Checklist
-
-**Decision Required:**
-- [ ] **Decide: Open Source or Commercial?**
-
-**If Open Source:**
-- [ ] License file added (Apache 2.0 / MIT)
-- [ ] CONTRIBUTING.md
-- [ ] Code audit for proprietary content
-- [ ] Public repo enabled
-- [ ] CI/CD for public releases
-
-**If Commercial:**
-- [ ] License validation implemented
-- [ ] Private registry configured
-- [ ] Customer portal integration
-
----
-
-## Version Strategy
-
-**Single source of truth:** Git tags
+Local builds are for development and validation:
 
 ```bash
-git tag v1.0.0          # Creates version
-make build              # Embeds version via ldflags
-./bin/niac --version    # Shows v1.0.0
+make build
+make test
+make verify
 ```
 
-- `package.json` version is `0.0.0` (ignored, real version from API)
-- Container tags match git tags
-- All artifacts include version in filename
+Local commands do not build release artifacts for other operating systems. The
+full release matrix belongs in GitHub Actions so Linux, macOS, and Windows
+artifacts are built on their native operating systems.
 
----
+## Release Flow
 
-*Last updated: 2025-01-19*
-*Status: Development lockdown - awaiting distribution decision*
+1. Merge normal feature/fix commits into `main`.
+2. Release Please opens or updates the release PR.
+3. Review and merge the release PR.
+4. Release Please creates the GitHub release and `v*` tag.
+5. The release workflow attaches native artifacts to that release.
+
+Do not create local release tags or local GitHub releases by hand except for an
+explicit emergency recovery.

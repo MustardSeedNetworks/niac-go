@@ -114,27 +114,14 @@
 - [ ] Packet statistics graphs (simple charts, maybe Chart.js or pure SVG)
 - [ ] Export stats as CSV/JSON
 
-### v2.2.0 - Docker & Containers
-**Target**: 4-6 months (lower priority)
+### v2.2.0 - Native Distribution
+**Target**: 4-6 months
 
-- [ ] **Dockerfile** with multi-stage build
-- [ ] Docker image published to Docker Hub
-- [ ] Docker Compose example
-- [ ] Health check endpoint
-- [ ] Graceful shutdown handling
-- [ ] Volume mounts for configs and walks
-- [ ] Environment variable configuration
-- [ ] Multi-architecture builds (amd64, arm64)
-
-### v2.3.0+ - Kubernetes & Orchestration
-**Target**: TBD (maybe never)
-
-- [ ] Kubernetes manifests (if there's demand)
-- [ ] Helm chart (if there's demand)
-- [ ] Horizontal scaling support
-- [ ] Service mesh compatibility
-
-**Note**: Kubernetes support depends on actual user demand. Most users will run NIAC on a single host or simple Docker setup.
+- [ ] Native GitHub release artifacts for Linux, macOS, and Windows
+- [ ] Checksums and SLSA provenance on every release
+- [ ] Clear install docs for libpcap/Npcap prerequisites
+- [ ] Optional service helpers for systemd, launchd, and Windows service use
+- [ ] FreeBSD experimental build validation when a FreeBSD runner strategy is selected
 
 ---
 
@@ -152,8 +139,8 @@ niac web en0 config.yaml
   └── REST API on http://localhost:8080/api/v1/
   └── SSE updates on http://localhost:8080/events
 
-# Docker mode (v2.1.0+)
-docker run -p 8080:8080 niac-go web eth0 config.yaml
+# Release mode
+# GitHub release artifacts are built natively for Linux, macOS, and Windows.
 ```
 
 **Technology Stack (v2.0.0)**:
@@ -178,8 +165,7 @@ docker run -p 8080:8080 niac-go web eth0 config.yaml
 | **v1.13.0** | CLI/Tools | Shell completion, Man pages, Config tools | ✅ DONE |
 | **v2.0.0** | Web API | REST API, HTMX UI, Simple Dashboard | 2-3 months |
 | **v2.1.0** | Web Enhanced | Charts, Topology, Editor | 3-4 months |
-| **v2.2.0** | Containers | Docker images (lower priority) | 4-6 months |
-| **v2.3.0+** | Kubernetes | K8s, Helm (if ever needed) | TBD |
+| **v2.2.0** | Native Distribution | GitHub release artifacts, checksums, provenance | 4-6 months |
 
 ---
 
@@ -236,7 +222,7 @@ docker run -p 8080:8080 niac-go web eth0 config.yaml
 - **Backend**: Go with Gin/Echo web framework
 - **Frontend**: React/Vue/Svelte (TBD)
 - **API**: REST + SSE (Server-Sent Events)
-- **Container**: Docker, Kubernetes
+- **Distribution**: Native GitHub release artifacts
 - **Database**: SQLite (embedded) or PostgreSQL (optional)
 - **Auth**: JWT tokens
 - **Monitoring**: Prometheus metrics, Grafana dashboards

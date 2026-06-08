@@ -11,7 +11,7 @@
 # =============================================================================
 
 .PHONY: test test-all test-backend test-backend-quiet test-frontend test-frontend-quiet \
-        test-e2e test-e2e-ui test-e2e-install test-coverage test-integration
+        test-e2e test-e2e-ui test-e2e-install test-coverage
 
 # =============================================================================
 # Main Test Targets
@@ -113,7 +113,7 @@ test-e2e-install: ## Install Playwright browsers
 	cd $(UI_DIR) && npx playwright install --with-deps chromium
 
 # =============================================================================
-# Coverage & Integration
+# Coverage
 # =============================================================================
 
 test-coverage: ## Generate coverage report
@@ -121,33 +121,3 @@ test-coverage: ## Generate coverage report
 	go test -race -coverprofile=coverage.out $$PKGS
 	go tool cover -html=coverage.out -o coverage.html
 	@echo "Coverage report: coverage.html"
-
-test-integration: build ## Full integration test on Ubuntu server via systemd
-	@if [ -z "$(TEST_HOST)" ]; then \
-		echo "ERROR: TEST_HOST not set. Usage: TEST_HOST=user@host make test-integration"; \
-		exit 1; \
-	fi
-	@echo "Running integration tests on $(TEST_HOST)..."
-	rsync -avz $(BINARY_NAME)-linux-amd64 $(TEST_HOST):/tmp/niac-test
-	ssh $(TEST_HOST) "\
-		sudo systemctl stop niac-test 2>/dev/null || true && \
-		sudo cp /tmp/niac-test /usr/local/bin/niac-test && \
-		sudo chmod +x /usr/local/bin/niac-test && \
-		sudo setcap cap_net_raw=+ep /usr/local/bin/niac-test && \
-		echo '[Unit]' | sudo tee /etc/systemd/system/niac-test.service > /dev/null && \
-		echo 'Description=NIAC Integration Test' | sudo tee -a /etc/systemd/system/niac-test.service > /dev/null && \
-		echo '[Service]' | sudo tee -a /etc/systemd/system/niac-test.service > /dev/null && \
-		echo 'Type=simple' | sudo tee -a /etc/systemd/system/niac-test.service > /dev/null && \
-		echo 'ExecStart=/usr/local/bin/niac-test serve' | sudo tee -a /etc/systemd/system/niac-test.service > /dev/null && \
-		echo 'WorkingDirectory=/tmp' | sudo tee -a /etc/systemd/system/niac-test.service > /dev/null && \
-		echo '[Install]' | sudo tee -a /etc/systemd/system/niac-test.service > /dev/null && \
-		echo 'WantedBy=multi-user.target' | sudo tee -a /etc/systemd/system/niac-test.service > /dev/null && \
-		sudo systemctl daemon-reload && \
-		sudo systemctl start niac-test && \
-		sleep 5 && \
-		sudo systemctl is-active niac-test && \
-		curl -sf http://localhost:8080/api/health && \
-		echo 'PASS: Integration test passed' && \
-		sudo systemctl stop niac-test && \
-		sudo rm -f /etc/systemd/system/niac-test.service /usr/local/bin/niac-test"
-	@echo "Integration tests completed successfully"

@@ -152,32 +152,19 @@ See [`docs/SHARED_DEMO_CATALOG.md`](docs/SHARED_DEMO_CATALOG.md).
 | `make fmt-check` | Format check (Go + TS) |
 | `make fmt-all` | Auto-format everything |
 | `make schema` | Regenerate JSON schema from `Config` struct |
-| `make packages` | Local `.deb` + `.rpm` via GoReleaser |
-| `make pkg` | macOS `.pkg` |
-| `make deploy-all` | Deploy + validate on all target servers |
 
 Verified versions: **Go 1.26.4**, Node.js 26.2.0+, golangci-lint v2.12.1.
-Cross-platform releases (linux/macOS/windows × amd64/arm64) are built by
-the `release.yml` workflow on tag push.
-
-## Container
-
-Multi-arch images on GHCR built via native runners (no QEMU):
-
-```bash
-docker run --rm --network host \
-  ghcr.io/krisarmstrong/niac-go:latest daemon
-```
-
-Images carry SLSA-3 provenance and a Syft-generated SBOM.
+Cross-platform releases (Linux/macOS/Windows × amd64/arm64) are built by
+the `release.yml` workflow on native GitHub runners after release-please
+creates a `v*` tag.
 
 ## Versioning & Releases
 
 Conventional commits drive [release-please](https://github.com/googleapis/release-please).
 `feat:` → minor bump, `fix:` → patch, `refactor:`/`chore:`/`ci:` →
 no bump (use `Release-As:` footer to force). Tags trigger `release.yml`
-which builds binaries, `.deb`, `.rpm`, `.pkg`, Windows `.zip`, and the
-container image, all signed with cosign keyless OIDC.
+which builds Linux, macOS, and Windows archives and attaches checksums plus
+SLSA provenance to the GitHub release.
 
 ## License
 

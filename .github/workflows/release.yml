@@ -1,35 +1,10 @@
 # =============================================================================
-# Release (goreleaser)
+# Release
 # =============================================================================
-# Canonical release pipeline as of this cutover. Validated by dry-run
-# 25974954130 — 6 archives + 2 deb + 2 rpm + cosign signatures + syft
-# SBOMs all produced with parity vs the prior hand-coded release.yml.
-#
-# Triggers:
-#   - push to a v* tag: real release, builds + signs + publishes
-#   - workflow_dispatch with dry_run=true: snapshot, no publish or sign
-#   - workflow_dispatch with provenance_only=true (ref=<existing tag>):
-#     skips goreleaser entirely, recomputes artifact subjects from the
-#     already-published checksums.txt on that tag's GitHub release, then
-#     runs attest-build-provenance + uploads the .intoto.jsonl. Used to
-#     retroactively attest tags that shipped before the provenance job
-#     existed. provenance_only takes precedence over dry_run.
-#
-# Mirrors seed's .github/workflows/release.yml shape so the two projects
-# converge on the same release tooling.
-#
-# Toolchain notes:
-#   Build runs inside the goreleaser-cross Docker image which ships:
-#     - gcc + gcc-aarch64-linux-gnu (Linux cross)
-#     - mingw-w64 (Windows cross; we use CGO_ENABLED=0 there anyway)
-#     - osxcross + macOS SDK (Darwin cross)
-#   Node + UI build run in a separate job; goreleaser picks up the
-#   embedded dist via internal/api/ui/ (vite config writes there).
-#   libpcap-dev:arm64 is apt-installed at the start because the cross
-#   image doesn't ship libpcap headers per target arch.
-#
-# Inputs: only the typed `dry_run` boolean — no untrusted event fields
-# are interpolated into shell commands.
+# Release Please owns versioning, changelog PRs, tags, and GitHub releases.
+# This workflow runs when a v* tag exists and attaches native NIAC artifacts to
+# that release. No Docker, no container image, no cross-build container:
+# GitHub builds on native Linux, macOS, and Windows runners.
 # =============================================================================
 
 name: Release
@@ -41,15 +16,15 @@ on:
   workflow_dispatch:
     inputs:
       dry_run:
-        description: "Snapshot build only - do not publish or sign"
+        description: "Snapshot build only - do not publish release assets"
         type: boolean
         default: true
       provenance_only:
-        description: "Backfill: skip build, recompute subjects from the existing release's checksums.txt, attest + upload bundle"
+        description: "Backfill: attest an existing release from its checksums.txt"
         type: boolean
         default: false
       target_tag:
-        description: "Backfill target tag (e.g. v0.74.0). Required when provenance_only=true — workflow_dispatch must be issued against main since older tags don't have these inputs."
+        description: "Backfill target tag, for example v0.91.0"
         type: string
         default: ""
 
@@ -59,16 +34,10 @@ concurrency:
 
 permissions:
   contents: write
-  id-token: write # cosign keyless OIDC
-  packages: write
+  id-token: write
+  attestations: write
 
 jobs:
-  # =========================================================================
-  # UI build - done outside the goreleaser-cross container because that
-  # image is Go-focused and doesn't ship Node. We build internal/api/ui/
-  # here so the next job can pick up the directory and let goreleaser's
-  # Go build embed it.
-  # =========================================================================
   build-ui:
     name: Build UI
     if: ${{ !inputs.provenance_only }}
@@ -105,53 +74,67 @@ jobs:
           retention-days: 1
           include-hidden-files: true
 
-  # =========================================================================
-  # goreleaser build + (when not dry-run) publish.
-  # Runs inside goreleaser-cross container so all cross-compile toolchains
-  # are present.
-  # =========================================================================
-  goreleaser:
-    name: goreleaser
+  build-native:
+    name: Build ${{ matrix.artifact }}
     if: ${{ !inputs.provenance_only }}
-    runs-on: ubuntu-latest
     needs: [build-ui]
-    container:
-      # Docker Hub tag scheme: <go-version>-<bundle-revision>. v1.26.2-3
-      # tracks Go 1.26.2 + goreleaser v2.15.4. Pin so behaviour stays
-      # reproducible; bump via dependabot when newer revs land.
-      image: goreleaser/goreleaser-cross:v1.26.2-3
-    outputs:
-      hashes: ${{ steps.hashes.outputs.hashes }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - artifact: niac-linux-amd64
+            runner: ubuntu-latest
+            goos: linux
+            goarch: amd64
+            cgo: "1"
+            archive: tar
+          - artifact: niac-linux-arm64
+            runner: ubuntu-24.04-arm
+            goos: linux
+            goarch: arm64
+            cgo: "1"
+            archive: tar
+          - artifact: niac-darwin-amd64
+            runner: macos-13
+            goos: darwin
+            goarch: amd64
+            cgo: "1"
+            archive: tar
+          - artifact: niac-darwin-arm64
+            runner: macos-14
+            goos: darwin
+            goarch: arm64
+            cgo: "1"
+            archive: tar
+          - artifact: niac-windows-amd64
+            runner: windows-latest
+            goos: windows
+            goarch: amd64
+            cgo: "0"
+            archive: zip
+            ext: .exe
+          - artifact: niac-windows-arm64
+            runner: windows-11-arm
+            goos: windows
+            goarch: arm64
+            cgo: "0"
+            archive: zip
+            ext: .exe
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
 
-      - name: Mark workspace as safe (container runs as root)
-        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - name: Set up Go
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v6.1.0
+        with:
+          go-version-file: go.mod
+          cache: true
 
-      - name: Install libpcap headers for amd64 + arm64
-        # goreleaser-cross ships compilers but not libpcap headers.
-        # gopacket/pcap needs pcap.h for cgo. Add the arm64 architecture
-        # and pull libpcap-dev for both archs.
-        shell: bash
-        run: |
-          set -euo pipefail
-          dpkg --add-architecture arm64
-          if [ -f /etc/apt/sources.list ]; then
-            sed -i 's|^deb |deb [arch=amd64] |' /etc/apt/sources.list
-          fi
-          shopt -s nullglob
-          for f in /etc/apt/sources.list.d/*.list; do
-            sed -i 's|^deb |deb [arch=amd64] |' "$f"
-          done
-          cat > /etc/apt/sources.list.d/arm64.list <<'EOF'
-          deb [arch=arm64] http://deb.debian.org/debian bookworm main
-          deb [arch=arm64] http://deb.debian.org/debian-security bookworm-security main
-          deb [arch=arm64] http://deb.debian.org/debian bookworm-updates main
-          EOF
-          apt-get update || true
-          apt-get install -y libpcap-dev libpcap-dev:arm64
+      - name: Install Linux packet capture headers
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libpcap-dev
 
       - name: Download UI dist
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -159,73 +142,107 @@ jobs:
           name: ui-dist
           path: internal/api/ui/
 
-      - name: Install Syft (SBOM) inside container
-        run: |
-          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
-
-      - name: Install Cosign inside container
-        run: |
-          COSIGN_VERSION=v2.4.1
-          curl -sSfL -o /usr/local/bin/cosign "https://github.com/sigstore/cosign/releases/download/${COSIGN_VERSION}/cosign-linux-amd64"
-          chmod +x /usr/local/bin/cosign
-
-      - name: Run goreleaser (snapshot/dry-run)
-        if: inputs.dry_run
+      - name: Build binary
+        shell: bash
         env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: ${{ matrix.cgo }}
           UI_BUILD_HASH: ${{ needs.build-ui.outputs.ui_hash }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: goreleaser release --snapshot --clean --skip=publish,announce
+          EXT: ${{ matrix.ext }}
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME:-snapshot}"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="snapshot"
+          fi
+          COMMIT="$(git rev-parse --short HEAD)"
+          BUILD_TIME="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          mkdir -p dist "${{ matrix.artifact }}"
+          go build -trimpath -buildvcs=false \
+            -ldflags="-s -w \
+              -X github.com/krisarmstrong/niac-go/internal/version.Version=${VERSION} \
+              -X github.com/krisarmstrong/niac-go/internal/version.Commit=${COMMIT} \
+              -X github.com/krisarmstrong/niac-go/internal/version.BuildTime=${BUILD_TIME} \
+              -X github.com/krisarmstrong/niac-go/internal/version.UIBuildHash=${UI_BUILD_HASH}" \
+            -o "${{ matrix.artifact }}/niac${EXT:-}" ./cmd/niac
+          cp README.md LICENSE "${{ matrix.artifact }}/"
+          mkdir -p "${{ matrix.artifact }}/templates"
+          cp -R cmd/niac/templates/. "${{ matrix.artifact }}/templates/"
+          if [ "${{ matrix.goos }}" = "linux" ]; then
+            mkdir -p "${{ matrix.artifact }}/systemd"
+            cp deploy/systemd/niac.service "${{ matrix.artifact }}/systemd/"
+          fi
+          if [ "${{ matrix.goos }}" = "darwin" ]; then
+            mkdir -p "${{ matrix.artifact }}/launchd"
+            cp deploy/launchd/com.niac.plist deploy/launchd/install.sh deploy/launchd/uninstall.sh "${{ matrix.artifact }}/launchd/"
+          fi
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            cp deploy/windows/build.ps1 "${{ matrix.artifact }}/install.ps1"
+          fi
 
-      - name: Run goreleaser (publish)
-        if: ${{ !inputs.dry_run }}
-        env:
-          UI_BUILD_HASH: ${{ needs.build-ui.outputs.ui_hash }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        # --skip=validate matches what `--snapshot` does on the dry-run
-        # path. Needed because the UI build downloaded into
-        # internal/api/ui/ overwrites tracked stubs (index.html with
-        # the prior bundle's hashed asset references), which goreleaser
-        # otherwise flags as "git is in a dirty state". PR-level CI
-        # already validates the same content via the dry-run snapshot
-        # in the parallel-rollout era, so trusting it here is safe.
-        run: goreleaser release --clean --skip=validate
+      - name: Package tarball
+        if: matrix.archive == 'tar'
+        shell: bash
+        run: tar -czf "dist/${{ matrix.artifact }}.tar.gz" "${{ matrix.artifact }}"
 
-      - name: Capture artifact hashes for SLSA provenance
-        if: ${{ !inputs.dry_run }}
+      - name: Package zip
+        if: matrix.archive == 'zip'
+        shell: pwsh
+        run: Compress-Archive -Path "${{ matrix.artifact }}" -DestinationPath "dist/${{ matrix.artifact }}.zip" -Force
+
+      - name: Upload native artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ matrix.artifact }}
+          path: dist/*
+          retention-days: 14
+
+  publish:
+    name: Publish release assets
+    if: ${{ !inputs.provenance_only }}
+    needs: [build-native]
+    runs-on: ubuntu-latest
+    outputs:
+      hashes: ${{ steps.hashes.outputs.hashes }}
+    steps:
+      - name: Download native artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Generate checksums
         id: hashes
         shell: bash
         run: |
           set -euo pipefail
-          hashes=$(jq -r '
-            map(select(.type == "Archive" or .type == "Linux Package")) |
-            map("\(.extra.Checksum | sub("^sha256:"; ""))  \(.name)") |
-            join("\n")
-          ' dist/artifacts.json | base64 -w0)
+          cd dist
+          sha256sum * > checksums.txt
+          cat checksums.txt
+          hashes=$(base64 -w0 < checksums.txt)
           echo "hashes=${hashes}" >> "$GITHUB_OUTPUT"
 
-      - name: Upload dry-run artifact bundle for inspection
+      - name: Upload dry-run artifact bundle
         if: inputs.dry_run
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: goreleaser-dryrun-${{ github.run_id }}
+          name: native-release-dryrun-${{ github.run_id }}
           path: dist/
           retention-days: 14
 
-  # =========================================================================
-  # SLSA provenance backfill — recomputes the subject list from a tag's
-  # already-published checksums.txt instead of running goreleaser. Used
-  # to retroactively attest tags that shipped before the provenance job
-  # existed (issue #75). Only fires under workflow_dispatch with
-  # provenance_only=true; on a push or normal dispatch this job is
-  # skipped and the regular `goreleaser` job feeds the provenance job.
-  # =========================================================================
-  goreleaser-backfill-hashes:
-    name: goreleaser (backfill subjects from existing release)
+      - name: Attach artifacts to GitHub release
+        if: ${{ !inputs.dry_run }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: gh release upload "${GITHUB_REF_NAME}" dist/* --clobber --repo "${GITHUB_REPOSITORY}"
+
+  backfill-hashes:
+    name: Backfill subjects from existing release
     if: ${{ inputs.provenance_only }}
     runs-on: ubuntu-latest
     outputs:
-      # Same base64-subjects contract as the goreleaser job's `hashes`
-      # output. Provenance job picks whichever upstream produced one.
       hashes: ${{ steps.hashes.outputs.hashes }}
     steps:
       - name: Download checksums.txt from existing release
@@ -236,68 +253,37 @@ jobs:
         run: |
           set -euo pipefail
           if [ -z "$TARGET_TAG" ]; then
-            echo "::error::provenance_only=true requires target_tag to identify which existing release to attest"
+            echo "::error::provenance_only=true requires target_tag"
             exit 1
           fi
           gh release download "$TARGET_TAG" \
             --repo "${GITHUB_REPOSITORY}" \
             --pattern 'checksums.txt' \
             --dir .
-          echo "checksums.txt contents:"
-          cat checksums.txt
 
       - name: Convert checksums.txt to base64 subjects
         id: hashes
         shell: bash
         run: |
-          # checksums.txt is the standard goreleaser format:
-          #   <sha256>  <filename>
-          # The attest-build-provenance `subject-checksums` input takes
-          # exactly that format. We base64-encode here so the output
-          # contract matches the goreleaser job's `hashes` output.
           set -euo pipefail
           hashes=$(base64 -w0 < checksums.txt)
           echo "hashes=${hashes}" >> "$GITHUB_OUTPUT"
 
-  # =========================================================================
-  # SLSA L3 provenance — runs on real releases (not dry-run).
-  #
-  # Uses GitHub's first-party `actions/attest-build-provenance` rather than
-  # the slsa-github-generator reusable workflow. The latter (v2.1.0, the
-  # current latest as of 2026-05) has a known bug in its upload-assets
-  # step where UNTRUSTED_PATH is passed empty, causing the secure-download
-  # action to exit 1 and the `final` job to exit 27. attest-build-provenance
-  # produces the same SLSA L3 in-toto attestation (signed via Sigstore
-  # keyless OIDC), surfaces it on the release's GitHub Attestations panel,
-  # AND attaches the bundle file to the release as a downloadable asset.
-  #
-  # Two upstream paths feed this job (only one runs per invocation):
-  #   - normal release:  needs.goreleaser produces subjects from artifacts.json
-  #   - provenance_only: needs.goreleaser-backfill-hashes produces subjects
-  #                      from the existing release's checksums.txt
-  # =========================================================================
   provenance:
     name: SLSA provenance
-    # Skip on dry-run snapshots; require one of the two upstreams to have
-    # succeeded. `!cancelled()` lets this job run even though one of the
-    # two `needs` is intentionally skipped per dispatch path.
-    if: ${{ !inputs.dry_run && !cancelled() && (needs.goreleaser.result == 'success' || needs.goreleaser-backfill-hashes.result == 'success') }}
-    needs: [goreleaser, goreleaser-backfill-hashes]
+    if: ${{ !inputs.dry_run && !cancelled() && (needs.publish.result == 'success' || needs.backfill-hashes.result == 'success') }}
+    needs: [publish, backfill-hashes]
     runs-on: ubuntu-latest
     permissions:
-      id-token: write       # Sigstore OIDC signing
-      contents: write       # uploading the bundle to the release
-      attestations: write   # GitHub Attestations API
+      id-token: write
+      contents: write
+      attestations: write
     steps:
       - name: Decode artifact subjects
-        id: subjects
         shell: bash
         run: |
           set -euo pipefail
-          # Pick whichever upstream ran. The unused one is empty.
-          echo "${{ needs.goreleaser.outputs.hashes || needs.goreleaser-backfill-hashes.outputs.hashes }}" \
-            | base64 -d > subjects.txt
-          echo "Subjects:"
+          echo "${{ needs.publish.outputs.hashes || needs.backfill-hashes.outputs.hashes }}" | base64 -d > subjects.txt
           cat subjects.txt
 
       - name: Generate SLSA build-provenance attestation
@@ -313,7 +299,5 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cp "${{ steps.attest.outputs.bundle-path }}" \
-             niac-slsa-provenance.intoto.jsonl
-          gh release upload "$TARGET_TAG" \
-             niac-slsa-provenance.intoto.jsonl --clobber --repo "${GITHUB_REPOSITORY}"
+          cp "${{ steps.attest.outputs.bundle-path }}" niac-slsa-provenance.intoto.jsonl
+          gh release upload "$TARGET_TAG" niac-slsa-provenance.intoto.jsonl --clobber --repo "${GITHUB_REPOSITORY}"

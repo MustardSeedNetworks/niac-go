@@ -50,7 +50,7 @@ if (-not (Test-Path $SourceBinary)) {
     $SourceBinary = Join-Path $RepoRoot $BinaryName
 }
 if (-not (Test-Path $SourceBinary)) {
-    Write-Error "Cannot find niac binary. Build first with: make build-windows"
+    Write-Error "Cannot find niac binary. Download the Windows artifact from GitHub Releases or build on Windows first."
     exit 1
 }
 Copy-Item $SourceBinary (Join-Path $BuildDir $BinaryName)

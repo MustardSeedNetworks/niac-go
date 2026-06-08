@@ -90,16 +90,8 @@ pipeline {
 }
 ```
 
-## Docker-based CI
+## Release Builds
 
-```yaml
-test:
-  image: docker:latest
-  services:
-    - docker:dind
-  script:
-    - docker build -t niac-test .
-    - docker run --rm --privileged --network host niac-test niac run /config/test.yaml --api :8080 &
-    - sleep 5
-    - docker run --rm --network host test-runner pytest
-```
+Release builds run in GitHub Actions after release-please creates a `v*` tag.
+The release workflow builds native Linux, macOS, and Windows artifacts on their
+respective hosted runners and uploads the artifacts to the GitHub release.

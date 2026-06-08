@@ -94,7 +94,6 @@
 "area: build":
   - changed-files:
       - any-glob-to-any-file:
-          - "Dockerfile"
           - "Makefile"
           - "scripts/**"
           - "packaging/**"

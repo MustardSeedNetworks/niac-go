@@ -30,6 +30,5 @@
 /.husky/ @krisarmstrong
 /commitlint.config.js @krisarmstrong
 
-# Packaging contract (.nfpm.yaml + maintainer scripts feed both CI and `make`)
-/.nfpm.yaml @krisarmstrong
+# Native packaging and service helpers
 /deploy/ @krisarmstrong

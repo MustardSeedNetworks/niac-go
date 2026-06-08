@@ -15,7 +15,7 @@ Comprehensive documentation for Network In A Can - Go Edition.
 - **[FAQ](FAQ.md)** - Frequently asked questions and troubleshooting
 - **[API Examples](API_EXAMPLES.md)** - curl, Python, JavaScript, Go, PowerShell examples
 - **[Performance Tuning](PERFORMANCE.md)** - Optimization guide for different workloads
-- **[Deployment Guide](DEPLOYMENT.md)** - Docker, Kubernetes, systemd, cloud deployments
+- **[Deployment Guide](DEPLOYMENT.md)** - Native Linux, macOS, and Windows deployment
 - **[CI/CD Integration](CI_CD.md)** - GitHub Actions, GitLab CI, Jenkins examples
 
 ### Protocol Guides

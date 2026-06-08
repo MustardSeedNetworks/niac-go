@@ -9,7 +9,6 @@ Thanks for your interest in contributing.
 | Go         | 1.25.5+  | All backend code (CGO + libpcap)                   |
 | Node.js    | 25.2.1+  | UI build (vite, biome)                             |
 | libpcap-dev| latest   | `gopacket/pcap` requires it. `apt install libpcap-dev` (Linux), `brew install libpcap` (macOS) |
-| nfpm       | v2.46+   | Builds `.deb` + `.rpm` cross-arch (`make deb` / `make rpm`) |
 | golangci-lint | v2.12.1 | Pinned in CI; `make tools` installs it locally   |
 
 ## First-time setup
@@ -17,7 +16,7 @@ Thanks for your interest in contributing.
 ```sh
 git clone git@github.com:krisarmstrong/niac-go.git
 cd niac-go
-make tools           # installs husky hooks, golangci-lint, nfpm, etc.
+make tools           # installs husky hooks, golangci-lint, etc.
 make build           # frontend + backend
 ```
 
@@ -40,7 +39,7 @@ underlying issue rather than `--no-verify`-ing past it.
   feat(snmp): add bulk walk support
   fix(capture): handle packet overflow on arm64
   chore(deps): bump gopacket to v1.5.0
-  ci(release): switch nfpm pin to v2.46.3
+  ci(release): update native artifact workflow
   ```
 
 - PR titles follow the same Conventional Commits format. The
@@ -72,21 +71,9 @@ minutes.
 
 ## Local packaging
 
-Both formats use the same `.nfpm.yaml` that CI uses, so output matches
-byte-for-byte:
-
-```sh
-make deb             # → dist/niac_<ver>_amd64.deb
-make rpm             # → dist/niac-<ver>-1.x86_64.rpm
-make packages        # both
-```
-
-Linux deployments to test servers:
-
-```sh
-make deploy-ubuntu HOST=niac-srv-ubuntu
-make deploy-fedora HOST=niac-srv-fedora
-```
+Release artifacts are built by GitHub Actions after release-please creates a
+`v*` tag. Local packaging targets are developer conveniences only; do not use
+local scripts to create release tags, GitHub releases, or server deployments.
 
 ## Pull requests
 
@@ -99,8 +86,8 @@ make deploy-fedora HOST=niac-srv-fedora
 
 ## Releasing
 
-Releases are tagged manually from `main`. The release pipeline supports
-a dry-run mode so you can validate end-to-end without burning a tag:
+Release Please tags releases from `main`. The release pipeline supports a
+dry-run mode so you can validate end-to-end without publishing assets:
 
 ```sh
 # Dry-run on the current branch (default dry_run=true).
@@ -113,21 +100,10 @@ gh run watch
 gh run download <run-id> -n release-bundle-dryrun-<run-id>
 ```
 
-When a real release is ready:
-
-```sh
-git tag -a v0.66.NN -m "vX.Y.Z — short subject
-
-Multi-line release notes describing the changes; this becomes the
-annotated-tag message and shows up in 'git show'."
-
-git push origin v0.66.NN
-```
-
-The push triggers `release.yml` on the tag, which builds all six
-platforms (linux-amd64/arm64, darwin-amd64/arm64, windows-amd64/arm64),
-signs every artifact with cosign keyless OIDC, generates CycloneDX
-SBOMs, and publishes a GitHub release.
+When a real release is ready, review and merge the release-please PR. That
+creates the GitHub release and `v*` tag. The tag triggers `release.yml`, which
+builds Linux, macOS, and Windows artifacts on native GitHub runners, publishes
+checksums, and attaches SLSA provenance.
 
 ## Reporting issues and vulnerabilities
 

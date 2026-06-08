@@ -425,9 +425,10 @@ new_config = {"content": open("new-config.yaml").read()}
 requests.put("http://localhost:8080/api/v1/config", json=new_config, headers=headers)
 ```
 
-### How do I run in Docker?
+### How do I deploy NIAC?
 
-See `docs/DEPLOYMENT.md` for Docker and Kubernetes deployment guides.
+Use the native Linux, macOS, or Windows artifacts from GitHub Releases. See
+`docs/DEPLOYMENT.md` for platform-specific setup.
 
 ### Can I use NIAC-Go in CI/CD?
 

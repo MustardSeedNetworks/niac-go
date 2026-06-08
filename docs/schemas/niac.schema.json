@@ -301,6 +301,12 @@
         "iperf3": {
           "$ref": "#/$defs/IPerf3Config"
         },
+        "interfaces": {
+          "items": {
+            "$ref": "#/$defs/Interface"
+          },
+          "type": "array"
+        },
         "trunk_ports": {
           "items": {
             "$ref": "#/$defs/TrunkPort"
@@ -805,6 +811,39 @@
       },
       "additionalProperties": false,
       "type": "object"
+    },
+    "Interface": {
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "speed": {
+          "type": "integer"
+        },
+        "duplex": {
+          "type": "string"
+        },
+        "admin_status": {
+          "type": "string"
+        },
+        "oper_status": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "vlans": {
+          "items": {
+            "type": "integer"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "name"
+      ]
     },
     "LinkStateTrapConfig": {
       "properties": {

@@ -230,30 +230,11 @@ All debug flags work across platforms:
 
 ---
 
-## Container Support
+## Release Artifacts
 
-### Docker (Linux)
-
-```dockerfile
-FROM golang:1.25.5-alpine
-RUN apk add --no-cache libpcap-dev gcc musl-dev
-COPY . /app
-WORKDIR /app
-RUN go build -o niac ./cmd/niac
-CMD ["./niac"]
-```
-
-Run with network access:
-```bash
-docker run --net=host --cap-add=NET_RAW --cap-add=NET_ADMIN niac
-```
-
-### Podman (Linux)
-
-Same as Docker, but rootless mode requires additional capabilities:
-```bash
-podman run --net=host --cap-add=NET_RAW --cap-add=NET_ADMIN niac
-```
+GitHub builds release artifacts on native hosted runners for Linux, macOS, and
+Windows. Local machines should build the host binary for development; the
+release workflow owns the full cross-platform matrix.
 
 ---
 
