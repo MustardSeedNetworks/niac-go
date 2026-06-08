@@ -241,8 +241,8 @@ help: ## Show this help
 	@grep -hE '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) 2>/dev/null | sort -u | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
 	@echo ""
 	@echo "Examples:"
-	@echo "  make build                    Build production binary"
-	@echo "  make verify                   Full CI pipeline locally"
+	@echo "  make build                    Build current-host binary"
+	@echo "  make verify                   Full local verification"
 	@echo "  make schema                   Regenerate committed config schema"
 
 # =============================================================================
