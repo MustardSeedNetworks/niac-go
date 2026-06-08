@@ -68,6 +68,7 @@ export type {
   CreateDeviceRequest,
   Device,
   DeviceDetailResponse,
+  DeviceInterface,
   DeviceListResponse,
   DeviceMutationResponse,
   DeviceType,

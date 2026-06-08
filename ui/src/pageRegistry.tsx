@@ -13,18 +13,22 @@ import {
   Wrench,
   Zap,
 } from 'lucide-react';
-import { type FC, lazy, type ReactNode, useMemo } from 'react';
+import { type ComponentType, lazy, type ReactNode, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-// Eagerly loaded pages (small, frequently used)
-import { DashboardPage } from './pages/DashboardPage';
-import { DevicesPage } from './pages/DevicesPage';
-import { RuntimeControlPage } from './pages/RuntimeControlPage';
-
-// Lazy loaded pages (large dependencies or infrequently used).
+// Lazy loaded pages.
 // Kept here next to the registry so the route list, the lazy-import,
 // and the per-page metadata stay in one place — adding a new page
 // means editing exactly one file.
+const DashboardPage = lazy(() =>
+  import('./pages/DashboardPage').then((m) => ({ default: m.DashboardPage })),
+);
+const RuntimeControlPage = lazy(() =>
+  import('./pages/RuntimeControlPage').then((m) => ({ default: m.RuntimeControlPage })),
+);
+const DevicesPage = lazy(() =>
+  import('./pages/DevicesPage').then((m) => ({ default: m.DevicesPage })),
+);
 const TopologyPage = lazy(() =>
   import('./pages/TopologyPage').then((m) => ({ default: m.TopologyPage })),
 );
@@ -70,7 +74,7 @@ export type PageConfig = {
   title: string;
   description: string;
   icon: LucideIcon;
-  component: FC;
+  component: ComponentType;
   badge?: string;
   help?: ReactNode;
 };
@@ -104,7 +108,7 @@ type PageDef = {
   path: string;
   i18nKey: PageI18nKey;
   icon: LucideIcon;
-  component: FC;
+  component: ComponentType;
   badge?: string;
   help?: ReactNode;
 };

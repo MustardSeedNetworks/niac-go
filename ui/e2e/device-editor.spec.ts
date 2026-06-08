@@ -32,11 +32,146 @@ import { expect, test } from '@playwright/test';
 
 test.describe('Device Editor', () => {
   test.beforeEach(async ({ page }) => {
+    await page.route('**/api/v1/**', async (route) => {
+      const url = new URL(route.request().url());
+
+      if (url.pathname === '/api/v1/auth/scope') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ scope: 'admin' }),
+        });
+        return;
+      }
+
+      if (url.pathname.startsWith('/api/v1/device-schemas/')) {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            type: 'switch',
+            label: 'Switch',
+            visible_sections: ['basic', 'interfaces'],
+          }),
+        });
+        return;
+      }
+
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({}),
+      });
+    });
     await page.goto('/device-config/new');
     await page.waitForLoadState('domcontentloaded');
   });
 
   test('/device-config/new stays on /device-config (no silent redirect)', async ({ page }) => {
     await expect(page).toHaveURL(/device-config/);
+  });
+});
+
+test.describe('Device Editor API wiring', () => {
+  test('creates a device with interface speed, duplex, and status metadata', async ({ page }) => {
+    let createPayload: Record<string, unknown> | undefined;
+
+    await page.route('**/api/v1/**', async (route) => {
+      const request = route.request();
+      const url = new URL(request.url());
+
+      if (url.pathname === '/api/v1/csrf-token') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ token: 'test-csrf-token' }),
+        });
+        return;
+      }
+
+      if (url.pathname === '/api/v1/auth/scope') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ scope: 'admin' }),
+        });
+        return;
+      }
+
+      if (url.pathname === '/api/v1/files' && url.searchParams.get('kind') === 'walks') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify([]),
+        });
+        return;
+      }
+
+      if (url.pathname.startsWith('/api/v1/device-schemas/')) {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            type: 'switch',
+            label: 'Switch',
+            visible_sections: ['basic', 'interfaces'],
+          }),
+        });
+        return;
+      }
+
+      if (url.pathname === '/api/v1/config/devices' && request.method() === 'POST') {
+        createPayload = request.postDataJSON() as Record<string, unknown>;
+        await route.fulfill({
+          status: 201,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            success: true,
+            device: createPayload,
+          }),
+        });
+        return;
+      }
+
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({}),
+      });
+    });
+
+    await page.goto('/device-config/new');
+    await expect(page.getByLabel('Hostname')).toBeEnabled();
+    await page.getByLabel('Hostname').fill('edge-switch-01');
+    await page.getByLabel('MAC Address').fill('02:00:00:00:10:01');
+    await page.getByLabel('Primary IP Address').fill('192.0.2.11');
+
+    await page.getByRole('button', { name: /interfaces section, collapsed/i }).click();
+    await page.getByRole('button', { name: 'Add Interface' }).click();
+    await page.getByLabel('Interface 1 name').fill('Ethernet1/1');
+    await page.getByLabel('Interface 1 speed Mbps').fill('10000');
+    await page.getByLabel('Interface 1 duplex').selectOption('full');
+    await page.getByLabel('Interface 1 admin status').selectOption('up');
+    await page.getByLabel('Interface 1 oper status').selectOption('down');
+    await page.getByLabel('Interface 1 description').fill('uplink to core');
+
+    await page.getByRole('button', { name: 'Create' }).click();
+
+    await expect(page.getByRole('alert')).toContainText('Device created successfully');
+    expect(createPayload).toMatchObject({
+      hostname: 'edge-switch-01',
+      mac: '02:00:00:00:10:01',
+      ip: '192.0.2.11',
+      interface_details: [
+        {
+          name: 'Ethernet1/1',
+          speed: 10000,
+          duplex: 'full',
+          admin_status: 'up',
+          oper_status: 'down',
+          description: 'uplink to core',
+        },
+      ],
+    });
   });
 });

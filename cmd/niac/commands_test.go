@@ -1,6 +1,10 @@
 package main
 
 import (
+	"bytes"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/spf13/cobra"
@@ -113,6 +117,118 @@ func TestAddTemplateCommand(t *testing.T) {
 			t.Errorf("Expected template subcommand %q", name)
 		}
 	}
+}
+
+func TestAddListCommand(t *testing.T) {
+	root, services := newTestRoot()
+	addListCommand(root, services)
+
+	cmd := findSubcommand(root, "list")
+	if cmd == nil {
+		t.Fatal("Expected list command to be registered")
+	}
+	if cmd.PersistentFlags().Lookup("root") == nil {
+		t.Error("Expected --root flag")
+	}
+
+	subcommands := []string{"interfaces", "scenarios", "walks", "captures"}
+	for _, name := range subcommands {
+		sub := findSubcommand(cmd, name)
+		if sub == nil {
+			t.Errorf("Expected list subcommand %q", name)
+		}
+	}
+}
+
+func TestRunListScenariosIncludesLibraryNetworks(t *testing.T) {
+	root := t.TempDir()
+	writeTestFile(t, filepath.Join(root, "networks", "lab.yaml"), []byte(`# Description: Lab scenario
+devices:
+  - name: router-1
+`))
+
+	output := captureStdout(t, func() {
+		if err := runListScenarios(&listOptions{root: root}); err != nil {
+			t.Fatalf("runListScenarios: %v", err)
+		}
+	})
+
+	if !strings.Contains(output, "Built-in templates:") {
+		t.Fatalf("output missing built-in templates section:\n%s", output)
+	}
+	if !strings.Contains(output, "lab") {
+		t.Fatalf("output missing library scenario:\n%s", output)
+	}
+}
+
+func TestRunListFilesFiltersWalkPrefix(t *testing.T) {
+	root := t.TempDir()
+	writeTestFile(t, filepath.Join(root, "walks", "cisco", "switch.walk"), []byte("oid = STRING: x\n"))
+	writeTestFile(t, filepath.Join(root, "walks", "juniper", "router.walk"), []byte("oid = STRING: y\n"))
+
+	output := captureStdout(t, func() {
+		err := runListFiles(&listOptions{root: root}, "walks", "cisco")
+		if err != nil {
+			t.Fatalf("runListFiles: %v", err)
+		}
+	})
+
+	if !strings.Contains(output, "cisco/switch.walk") {
+		t.Fatalf("output missing cisco walk:\n%s", output)
+	}
+	if strings.Contains(output, "juniper/router.walk") {
+		t.Fatalf("output should not include filtered walk:\n%s", output)
+	}
+}
+
+func TestRunListFilesCaptures(t *testing.T) {
+	root := t.TempDir()
+	writeTestFile(t, filepath.Join(root, "pcaps", "sample.pcap"), []byte{0x01, 0x02})
+
+	output := captureStdout(t, func() {
+		err := runListFiles(&listOptions{root: root}, "pcaps", "")
+		if err != nil {
+			t.Fatalf("runListFiles: %v", err)
+		}
+	})
+
+	if !strings.Contains(output, "sample.pcap") {
+		t.Fatalf("output missing capture:\n%s", output)
+	}
+}
+
+func writeTestFile(t *testing.T, path string, body []byte) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatalf("mkdir %s: %v", filepath.Dir(path), err)
+	}
+	if err := os.WriteFile(path, body, 0o644); err != nil {
+		t.Fatalf("write %s: %v", path, err)
+	}
+}
+
+func captureStdout(t *testing.T, fn func()) string {
+	t.Helper()
+	original := os.Stdout
+	readEnd, writeEnd, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("pipe: %v", err)
+	}
+	os.Stdout = writeEnd //nolint:reassign // CLI helpers write directly to os.Stdout.
+	defer func() {
+		os.Stdout = original //nolint:reassign // Restore process stdout after capture.
+	}()
+
+	fn()
+
+	if closeErr := writeEnd.Close(); closeErr != nil {
+		t.Fatalf("close stdout pipe: %v", closeErr)
+	}
+	var buf bytes.Buffer
+	if _, readErr := buf.ReadFrom(readEnd); readErr != nil {
+		t.Fatalf("read stdout pipe: %v", readErr)
+	}
+	return buf.String()
 }
 
 func TestAddTopologyCommand(t *testing.T) {

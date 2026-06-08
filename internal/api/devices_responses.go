@@ -245,8 +245,18 @@ func deviceToResponse(dev *config.Device, includeDetails, includeYAML bool) Devi
 	}
 
 	resp.Interfaces = make([]string, 0, len(dev.Interfaces))
+	resp.InterfaceDetails = make([]DeviceInterfaceResponse, 0, len(dev.Interfaces))
 	for _, iface := range dev.Interfaces {
 		resp.Interfaces = append(resp.Interfaces, iface.Name)
+		resp.InterfaceDetails = append(resp.InterfaceDetails, DeviceInterfaceResponse{
+			Name:        iface.Name,
+			Speed:       iface.Speed,
+			Duplex:      iface.Duplex,
+			AdminStatus: iface.AdminStatus,
+			OperStatus:  iface.OperStatus,
+			Description: iface.Description,
+			VLANs:       iface.VLANs,
+		})
 	}
 
 	if includeDetails {

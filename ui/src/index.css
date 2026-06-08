@@ -680,6 +680,19 @@ body {
   .max-w-8xl {
     max-width: 88rem;
   }
+
+  /* Device editor form surfaces */
+  .device-editor-row-panel {
+    @apply rounded-lg border border-surface-border bg-bg-base/40 p-4 space-y-3;
+  }
+
+  .device-editor-field-grid {
+    @apply grid gap-4 md:grid-cols-2;
+  }
+
+  .device-editor-row-actions {
+    @apply flex justify-end;
+  }
 }
 
 /* ========================================

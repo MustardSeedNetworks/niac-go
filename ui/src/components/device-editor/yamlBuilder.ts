@@ -33,6 +33,32 @@ const appendSnmpLines = (lines: string[], device: Device) => {
   }
 };
 
+const appendInterfaceLines = (lines: string[], device: Device) => {
+  if (!device.interfaceDetails || device.interfaceDetails.length === 0) {
+    return;
+  }
+
+  lines.push('    interfaces:');
+  for (const iface of device.interfaceDetails) {
+    lines.push(`      - name: "${iface.name}"`);
+    if (iface.speed !== undefined && iface.speed > 0) {
+      lines.push(`        speed: ${iface.speed}`);
+    }
+    if (iface.duplex) {
+      lines.push(`        duplex: "${iface.duplex}"`);
+    }
+    if (iface.adminStatus) {
+      lines.push(`        adminStatus: "${iface.adminStatus}"`);
+    }
+    if (iface.operStatus) {
+      lines.push(`        operStatus: "${iface.operStatus}"`);
+    }
+    if (iface.description) {
+      lines.push(`        description: "${iface.description}"`);
+    }
+  }
+};
+
 const appendLldpLines = (lines: string[], device: Device) => {
   if (!device.lldp?.enabled) {
     return;
@@ -151,6 +177,7 @@ export const buildYamlPreview = (device: Device): string => {
   try {
     const lines: string[] = ['devices:'];
     appendBaseDeviceLines(lines, device);
+    appendInterfaceLines(lines, device);
     appendSnmpLines(lines, device);
     appendLldpLines(lines, device);
     appendCdpLines(lines, device);

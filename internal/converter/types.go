@@ -86,6 +86,7 @@ type Device struct {
 	Traffic       *TrafficConfig       `yaml:"traffic,omitempty"`        // v1.6.0
 	OSFingerprint *OSFingerprintConfig `yaml:"os_fingerprint,omitempty"` // v1.24.0
 	IPerf3        *IPerf3Config        `yaml:"iperf3,omitempty"`         // v1.25.0
+	Interfaces    []Interface          `yaml:"interfaces,omitempty"`     // Device interface metadata
 	TrunkPorts    []TrunkPort          `yaml:"trunk_ports,omitempty"`    // v1.23.0 — topology link declarations
 	PortChannels  []PortChannel        `yaml:"port_channels,omitempty"`  // v1.23.0 — LAG bundling
 	// Properties is a free-form vendor-metadata block used by the
@@ -94,6 +95,17 @@ type Device struct {
 	// device list. Keys are author-defined; consumers treat unknown
 	// keys as informational.
 	Properties map[string]string `yaml:"properties,omitempty"`
+}
+
+// Interface represents configured metadata for a device interface.
+type Interface struct {
+	Name        string `yaml:"name"`
+	Speed       int    `yaml:"speed,omitempty"` // Mbps
+	Duplex      string `yaml:"duplex,omitempty"`
+	AdminStatus string `yaml:"admin_status,omitempty"`
+	OperStatus  string `yaml:"oper_status,omitempty"`
+	Description string `yaml:"description,omitempty"`
+	VLANs       []int  `yaml:"vlans,omitempty"`
 }
 
 // TrunkPort declares a VLAN-tagged trunk link to a neighbouring device.

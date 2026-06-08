@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   createDevice,
   deleteDevice,
@@ -22,6 +22,7 @@ export const createEmptyDevice = (): Device => ({
   type: 'switch',
   ip: '',
   ips: [],
+  interfaceDetails: [],
 });
 
 export interface UseDeviceEditorReturn {
@@ -72,7 +73,8 @@ export interface UseDeviceEditorReturn {
 export const useDeviceEditor = (): UseDeviceEditorReturn => {
   const { hostname } = useParams<{ hostname: string }>();
   const navigate = useNavigate();
-  const isNewDevice = hostname === 'new';
+  const location = useLocation();
+  const isNewDevice = hostname === 'new' || location.pathname === '/device-config/new';
 
   // State
   const [device, setDevice] = useState<Device>(createEmptyDevice());
@@ -113,6 +115,7 @@ export const useDeviceEditor = (): UseDeviceEditorReturn => {
     }
     return new Set([
       'basic',
+      'interfaces',
       'snmp',
       'lldp',
       'cdp',

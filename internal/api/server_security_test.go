@@ -716,6 +716,7 @@ func generateTestToken() string {
 // rejected with 403 — if someone removes csrfProtect from routes.go,
 // this fails.
 func TestCSRFWiring_TemplatesAndConfigs(t *testing.T) {
+	t.Setenv("NIAC_CONFIGS_DIR", t.TempDir())
 	server, _, token := newTestServerWithAuth(t)
 	// The templates/configs routes chain through writeRateLimit, whose
 	// limiter newTestServerWithAuth doesn't initialize — set it so the

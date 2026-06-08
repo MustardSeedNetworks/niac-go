@@ -156,7 +156,7 @@ See [`docs/SHARED_DEMO_CATALOG.md`](docs/SHARED_DEMO_CATALOG.md).
 | `make pkg` | macOS `.pkg` |
 | `make deploy-all` | Deploy + validate on all target servers |
 
-Verified versions: **Go 1.26.3**, Node.js 26, golangci-lint v2.12.1.
+Verified versions: **Go 1.26.4**, Node.js 26.2.0+, golangci-lint v2.12.1.
 Cross-platform releases (linux/macOS/windows × amd64/arm64) are built by
 the `release.yml` workflow on tag push.
 

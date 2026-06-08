@@ -35,6 +35,7 @@ func buildDeviceMap(dev *Device) map[string]any {
 	}
 
 	buildDeviceBasicFields(data, dev)
+	buildDeviceInterfaces(data, dev)
 	buildDeviceSNMPAgent(data, dev)
 	buildDeviceCDP(data, dev)
 	buildDeviceLLDP(data, dev)
@@ -73,6 +74,28 @@ func buildDeviceIPAddresses(data map[string]any, dev *Device) {
 	}
 
 	data["ips"] = ips
+}
+
+func buildDeviceInterfaces(data map[string]any, dev *Device) {
+	if len(dev.Interfaces) == 0 {
+		return
+	}
+
+	interfaces := make([]map[string]any, 0, len(dev.Interfaces))
+	for _, iface := range dev.Interfaces {
+		ifaceMap := map[string]any{"name": iface.Name}
+		addPositiveInt(ifaceMap, "speed", iface.Speed)
+		addNonEmptyString(ifaceMap, "duplex", iface.Duplex)
+		addNonEmptyString(ifaceMap, "admin_status", iface.AdminStatus)
+		addNonEmptyString(ifaceMap, "oper_status", iface.OperStatus)
+		addNonEmptyString(ifaceMap, "description", iface.Description)
+		if len(iface.VLANs) > 0 {
+			ifaceMap["vlans"] = iface.VLANs
+		}
+		interfaces = append(interfaces, ifaceMap)
+	}
+
+	data["interfaces"] = interfaces
 }
 
 // buildDeviceSNMPAgent adds SNMP agent configuration to the device map.

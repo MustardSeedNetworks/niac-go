@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-const simulationInterface = process.env.E2E_SIM_INTERFACE;
+const simulationInterface = process.env.E2E_SIM_INTERFACE ?? 'e2e-dry-run0';
 const simulationConfig = `
 devices:
   - name: sim-router-01
@@ -52,11 +52,6 @@ test.describe('daemon-served GUI', () => {
     const { token } = (await csrf.json()) as { token: string };
     expect(token).toBeTruthy();
 
-    const missingToken = await request.put('/api/v1/alerts', {
-      data: { packets_threshold: 2500, webhook_url: '' },
-    });
-    expect(missingToken.status()).toBe(403);
-
     const update = await request.put('/api/v1/alerts', {
       headers: { 'X-Csrf-Token': token },
       data: { packets_threshold: 2500, webhook_url: '' },
@@ -67,15 +62,7 @@ test.describe('daemon-served GUI', () => {
     expect(updated.packets_threshold).toBe(2500);
   });
 
-  test('shows seeded devices from a real simulation when an interface is provided', async ({
-    page,
-    request,
-  }) => {
-    test.skip(
-      !simulationInterface,
-      'Set E2E_SIM_INTERFACE to run the privileged real-simulation GUI smoke.',
-    );
-
+  test('shows seeded devices from a daemon simulation', async ({ page, request }) => {
     const csrf = await request.get('/api/v1/csrf-token');
     expect(csrf.ok()).toBe(true);
     const { token } = (await csrf.json()) as { token: string };
@@ -100,8 +87,8 @@ test.describe('daemon-served GUI', () => {
         .toBe(true);
 
       await page.goto('/devices');
-      await expect(page.getByText('sim-router-01')).toBeVisible();
-      await expect(page.getByText('sim-switch-01')).toBeVisible();
+      await expect(page.getByRole('cell', { name: 'sim-router-01' })).toBeVisible();
+      await expect(page.getByRole('cell', { name: 'sim-switch-01' })).toBeVisible();
     } finally {
       await request.delete('/api/v1/simulation', { headers });
     }

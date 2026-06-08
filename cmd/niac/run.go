@@ -6,7 +6,6 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/krisarmstrong/niac-go/internal/config"
 	"github.com/krisarmstrong/niac-go/internal/logging"
 )
 
@@ -87,7 +86,7 @@ func runSimulation(
 	logging.InitColors(!options.noColor)
 
 	// Load configuration
-	cfg, err := config.Load(configFile)
+	cfg, resolvedConfig, err := loadConfigOrScenario(configFile)
 	if err != nil {
 		return fmt.Errorf("failed to load configuration: %w", err)
 	}
@@ -111,7 +110,7 @@ func runSimulation(
 	if debugLevel > 0 {
 		printBanner(info.version)
 		logging.Infof("Interface: %s", interfaceName)
-		logging.Infof("Config: %s (%d devices)", configFile, len(cfg.Devices))
+		logging.Infof("Config: %s (%d devices)", resolvedConfig, len(cfg.Devices))
 		if options.web {
 			logging.Infof("Web UI: http://localhost:%s", options.webPort)
 		}
@@ -128,7 +127,7 @@ func runSimulation(
 
 	// Run in appropriate mode
 	if options.tui {
-		return runInteractiveMode(interfaceName, cfg, debugConfig, configFile, services)
+		return runInteractiveMode(interfaceName, cfg, debugConfig, resolvedConfig, services)
 	}
-	return runNormalMode(interfaceName, cfg, debugConfig, configFile, services)
+	return runNormalMode(interfaceName, cfg, debugConfig, resolvedConfig, services)
 }

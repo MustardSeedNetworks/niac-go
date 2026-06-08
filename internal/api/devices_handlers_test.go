@@ -293,6 +293,57 @@ func TestHandleDeviceUpdateInvalidIP(t *testing.T) {
 	}
 }
 
+func TestHandleDeviceUpdateInterfaces(t *testing.T) {
+	server := newDeviceTestServer(t)
+	applied := false
+	server.cfg.ApplyConfig = func(_ *config.Config) error {
+		applied = true
+		return nil
+	}
+
+	body := `{"interfaces":[{"name":"Ethernet1/1","speed":1000,"duplex":"full","admin_status":"up"}]}`
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/config/devices/router1", strings.NewReader(body))
+	server.handleDevicesV2(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d: %s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+	if !applied {
+		t.Fatal("ApplyConfig was not called")
+	}
+
+	cfg := server.currentConfig()
+	ifaces := cfg.Devices[0].Interfaces
+	if len(ifaces) != 1 {
+		t.Fatalf("interfaces count = %d, want 1", len(ifaces))
+	}
+	if ifaces[0].Speed != 1000 || ifaces[0].Duplex != "full" || ifaces[0].AdminStatus != "up" {
+		t.Fatalf("interface not updated: %+v", ifaces[0])
+	}
+
+	saved, err := os.ReadFile(server.cfg.ConfigPath)
+	if err != nil {
+		t.Fatalf("read saved config: %v", err)
+	}
+	if !strings.Contains(string(saved), "interfaces:") || !strings.Contains(string(saved), "duplex: full") {
+		t.Fatalf("saved config missing interface details:\n%s", saved)
+	}
+}
+
+func TestHandleDeviceUpdateInvalidInterface(t *testing.T) {
+	server := newDeviceTestServer(t)
+
+	body := `{"interfaces":[{"name":"Ethernet1/1","speed":1000,"duplex":"invalid"}]}`
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/config/devices/router1", strings.NewReader(body))
+	server.handleDevicesV2(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d: %s", rec.Code, http.StatusBadRequest, rec.Body.String())
+	}
+}
+
 func TestHandleDeviceCloneSuccess(t *testing.T) {
 	server := newDeviceTestServer(t)
 
@@ -616,8 +667,8 @@ func TestDeviceToResponse(t *testing.T) {
 		MACAddress:  net.HardwareAddr{0x00, 0x11, 0x22, 0x33, 0x44, 0x55},
 		IPAddresses: []net.IP{net.ParseIP("10.0.0.1")},
 		Interfaces: []config.Interface{
-			{Name: "eth0"},
-			{Name: "eth1"},
+			{Name: "eth0", Speed: 1000, Duplex: "full"},
+			{Name: "eth1", Speed: 100, Duplex: "half"},
 		},
 	}
 
@@ -640,6 +691,12 @@ func TestDeviceToResponse(t *testing.T) {
 	}
 	if len(resp.Interfaces) != 2 {
 		t.Errorf("Interfaces count = %d, want 2", len(resp.Interfaces))
+	}
+	if len(resp.InterfaceDetails) != 2 {
+		t.Fatalf("InterfaceDetails count = %d, want 2", len(resp.InterfaceDetails))
+	}
+	if resp.InterfaceDetails[0].Speed != 1000 || resp.InterfaceDetails[0].Duplex != "full" {
+		t.Errorf("InterfaceDetails[0] = %+v, want speed/duplex", resp.InterfaceDetails[0])
 	}
 }
 

@@ -39,6 +39,7 @@ const (
 	// every ProtocolLogf call gates on debugLevel >= 1. Per-packet
 	// verbose logging still requires raising the level explicitly.
 	DefaultDebugLevel = 1
+	e2eDryRunEnv      = "NIAC_E2E_DRY_RUN_SIMULATION"
 )
 
 // Config holds daemon configuration.
@@ -132,19 +133,20 @@ func NewDaemon(cfg Config) (*Daemon, error) {
 func (d *Daemon) Start() error {
 	// Create API server
 	serverCfg := api.ServerConfig{
-		Addr:                d.cfg.ListenAddr,
-		Token:               d.cfg.Token,
-		TokenFile:           d.cfg.TokenFile,
-		Version:             d.cfg.Version,
-		Commit:              d.cfg.Commit,
-		BuildTime:           d.cfg.BuildTime,
-		UIBuildHash:         d.cfg.UIBuildHash,
-		Storage:             d.storage,
-		WebhookAllowedHosts: d.cfg.WebhookAllowedHosts,
-		EnableTLS:           d.cfg.EnableTLS,
-		CertDir:             d.cfg.CertDir,
-		CertFile:            d.cfg.CertFile,
-		KeyFile:             d.cfg.KeyFile,
+		Addr:                           d.cfg.ListenAddr,
+		Token:                          d.cfg.Token,
+		TokenFile:                      d.cfg.TokenFile,
+		Version:                        d.cfg.Version,
+		Commit:                         d.cfg.Commit,
+		BuildTime:                      d.cfg.BuildTime,
+		UIBuildHash:                    d.cfg.UIBuildHash,
+		Storage:                        d.storage,
+		WebhookAllowedHosts:            d.cfg.WebhookAllowedHosts,
+		EnableTLS:                      d.cfg.EnableTLS,
+		CertDir:                        d.cfg.CertDir,
+		CertFile:                       d.cfg.CertFile,
+		KeyFile:                        d.cfg.KeyFile,
+		SuppressUnauthenticatedWarning: e2eDryRunSimulation(),
 		// Stack, Config, etc. will be nil until simulation starts
 	}
 
@@ -361,6 +363,11 @@ func persistInlineConfig(content string) (string, error) {
 	return abs, nil
 }
 
+func e2eDryRunSimulation() bool {
+	return strings.EqualFold(os.Getenv(e2eDryRunEnv), "1") ||
+		strings.EqualFold(os.Getenv(e2eDryRunEnv), "true")
+}
+
 // StartSimulation starts a new simulation.
 func (d *Daemon) StartSimulation(req api.SimulationRequest) error {
 	d.mu.Lock()
@@ -372,7 +379,8 @@ func (d *Daemon) StartSimulation(req api.SimulationRequest) error {
 		}
 	}
 
-	if !capture.InterfaceExists(req.Interface) {
+	dryRun := e2eDryRunSimulation()
+	if !dryRun && !capture.InterfaceExists(req.Interface) {
 		return fmt.Errorf("%w: %s", ErrInterfaceNotExist, req.Interface)
 	}
 
@@ -381,12 +389,20 @@ func (d *Daemon) StartSimulation(req api.SimulationRequest) error {
 		return err
 	}
 
-	engine, stack, cancel, err := startSimulationStack(req.Interface, cfg)
-	if err != nil {
-		return err
-	}
+	var engine *capture.Engine
+	var cancel context.CancelFunc
+	var replay api.ReplayManager
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(DefaultDebugLevel))
 
-	replay := newReplayController(engine, stack.GetDebugLevel())
+	if !dryRun {
+		engine, stack, cancel, err = startSimulationStack(req.Interface, cfg)
+		if err != nil {
+			return err
+		}
+		replay = newReplayController(engine, stack.GetDebugLevel())
+	} else {
+		_, cancel = context.WithCancel(context.Background())
+	}
 
 	d.simulation = &Simulation{
 		Interface:  req.Interface,
@@ -407,7 +423,9 @@ func (d *Daemon) StartSimulation(req api.SimulationRequest) error {
 	// Auto-start PCAP playback if configured. The playback is best-effort —
 	// a failed playback start logs but doesn't fail the simulation, since
 	// the protocol stack is already up and serving devices.
-	if cfg.CapturePlayback != nil && strings.TrimSpace(cfg.CapturePlayback.FileName) != "" {
+	if !dryRun && replay != nil &&
+		cfg.CapturePlayback != nil &&
+		strings.TrimSpace(cfg.CapturePlayback.FileName) != "" {
 		fileName := resolvePlaybackPath(cfg.CapturePlayback.FileName, configPath)
 		_, replayErr := replay.Start(api.ReplayRequest{
 			File:   fileName,

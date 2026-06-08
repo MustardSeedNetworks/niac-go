@@ -1,3 +1,4 @@
+import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import react from '@vitejs/plugin-react';
 import { visualizer } from 'rollup-plugin-visualizer';
@@ -11,6 +12,14 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [
       react(),
+      {
+        name: 'niac-preserve-embedded-ui-placeholder',
+        async closeBundle() {
+          const placeholder = path.resolve(__dirname, '../internal/api/ui/.gitkeep');
+          await mkdir(path.dirname(placeholder), { recursive: true });
+          await writeFile(placeholder, '');
+        },
+      },
       // FIX #181: Bundle analysis when ANALYZE=true
       analyze &&
         (visualizer({
@@ -36,16 +45,18 @@ export default defineConfig(({ mode }) => {
     // FIX #180: Code splitting for optimal bundle sizes
     build: {
       // Output directly to embed directory - no syncing needed.
-      // emptyOutDir intentionally omitted: outDir is outside Vite's
-      // project root, so Vite defaults to false and preserves the
-      // tracked `.gitkeep` placeholder. CLAUDE.md mandate.
+      // outDir is outside Vite's project root. Set this explicitly so
+      // Vite does not warn during production builds.
       outDir: '../internal/api/ui',
+      emptyOutDir: true,
       // Vite 7: Target modern browsers for smaller bundles
       target: 'es2022',
       // Enable CSS code splitting
       cssCodeSplit: true,
-      // Smaller chunk size warning threshold
-      chunkSizeWarningLimit: 300,
+      // CodeMirror is the largest intentional lazy vendor chunk. Keep
+      // this below the app shell so an accidental monolithic bundle
+      // still trips CI/build output warnings.
+      chunkSizeWarningLimit: 350,
       // Never inline assets as data: URLs (Vite default is 4096 bytes). Required
       // because @fontsource-variable ships small metric-override shim fonts that
       // would otherwise be inlined and violate the production `font-src 'self'`
@@ -67,6 +78,14 @@ export default defineConfig(({ mode }) => {
             )
               return 'vendor-react';
             if (id.includes('/node_modules/@tanstack/react-query/')) return 'vendor-query';
+            if (
+              id.includes('/node_modules/i18next/') ||
+              id.includes('/node_modules/react-i18next/') ||
+              id.includes('/node_modules/i18next-browser-languagedetector/')
+            )
+              return 'vendor-i18n';
+            if (id.includes('/node_modules/zustand/') || id.includes('/node_modules/immer/'))
+              return 'vendor-state';
             if (
               id.includes('/node_modules/@codemirror/') ||
               id.includes('/node_modules/@lezer/highlight/')

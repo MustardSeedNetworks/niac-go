@@ -26,8 +26,14 @@ export const BasicSettingsSection: FC<BasicSettingsSectionProps> = ({
       required={true}
     >
       <div className="grid gap-comfortable md:grid-cols-2">
-        <FormField label="Hostname" required={true} helpText="Unique identifier for the device">
+        <FormField
+          label="Hostname"
+          required={true}
+          helpText="Unique identifier for the device"
+          htmlFor="device-hostname"
+        >
           <input
+            id="device-hostname"
             type="text"
             value={device.hostname}
             onChange={(e) => onUpdate('hostname', e.target.value)}
@@ -40,8 +46,10 @@ export const BasicSettingsSection: FC<BasicSettingsSectionProps> = ({
           label="MAC Address"
           required={true}
           helpText="Hardware address in format XX:XX:XX:XX:XX:XX"
+          htmlFor="device-mac"
         >
           <input
+            id="device-mac"
             type="text"
             value={device.mac}
             onChange={(e) => onUpdate('mac', e.target.value.toUpperCase())}
@@ -50,8 +58,9 @@ export const BasicSettingsSection: FC<BasicSettingsSectionProps> = ({
           />
         </FormField>
 
-        <FormField label="Device Type" helpText="Category of network device">
+        <FormField label="Device Type" helpText="Category of network device" htmlFor="device-type">
           <select
+            id="device-type"
             value={device.type || 'unknown'}
             onChange={(e) => onUpdate('type', e.target.value as DeviceType)}
             className={selectClassName}
@@ -64,8 +73,13 @@ export const BasicSettingsSection: FC<BasicSettingsSectionProps> = ({
           </select>
         </FormField>
 
-        <FormField label="Primary IP Address" helpText="Main management IP address">
+        <FormField
+          label="Primary IP Address"
+          helpText="Main management IP address"
+          htmlFor="device-primary-ip"
+        >
           <input
+            id="device-primary-ip"
             type="text"
             value={device.ip || ''}
             onChange={(e) => onUpdate('ip', e.target.value)}

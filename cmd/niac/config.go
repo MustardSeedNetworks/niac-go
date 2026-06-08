@@ -26,6 +26,7 @@ func addConfigCommand(root *cobra.Command, _ *serviceOptions) {
 
 	configCmd.AddCommand(newConfigExportCmd())
 	configCmd.AddCommand(newConfigDiffCmd())
+	configCmd.AddCommand(newConfigInterfaceCmd())
 	configCmd.AddCommand(newConfigMergeCmd())
 	addGenerateCommand(configCmd)
 	root.AddCommand(configCmd)

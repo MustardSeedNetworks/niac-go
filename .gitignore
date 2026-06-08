@@ -43,7 +43,9 @@ dist/
 build/
 
 # Generated shared demo catalog assets
-examples/
+.catalog/
+examples/*
+!examples/README.md
 
 # Frontend build outputs (Vite builds directly to internal/api/ui)
 ui/dist/
@@ -109,6 +111,7 @@ web/node_modules/
 web/dist/
 web/.vite/
 web/coverage/
+ui/playwright/.auth/
 storybook-static/
 *storybook.log
 npm-debug.log*

@@ -79,7 +79,9 @@ else
     git -C "$CATALOG_DIR" checkout --detach FETCH_HEAD
   else
     mkdir -p "$(dirname "$CATALOG_DIR")"
-    git clone --depth 1 --branch "$CATALOG_REF" "$CATALOG_URL" "$CATALOG_DIR"
+    git clone --filter=blob:none --no-checkout "$CATALOG_URL" "$CATALOG_DIR"
+    git -C "$CATALOG_DIR" fetch --depth 1 origin "$CATALOG_REF"
+    git -C "$CATALOG_DIR" checkout --detach FETCH_HEAD
   fi
 fi
 

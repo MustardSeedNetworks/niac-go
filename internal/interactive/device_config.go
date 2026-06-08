@@ -43,7 +43,7 @@ func renderDeviceGeneralTab(panel *strings.Builder, device *config.Device) {
 }
 
 // renderDeviceInterfacesTab renders the interfaces tab content.
-func renderDeviceInterfacesTab(panel *strings.Builder, device *config.Device) {
+func (m *model) renderDeviceInterfacesTab(panel *strings.Builder, device *config.Device) {
 	if len(device.Interfaces) == 0 {
 		panel.WriteString(padPanelLine("No interfaces configured"))
 		return
@@ -57,12 +57,17 @@ func renderDeviceInterfacesTab(panel *strings.Builder, device *config.Device) {
 	panel.WriteString(padPanelLine(strings.Repeat("-", deviceConfigTableWidth)))
 
 	for _, iface := range device.Interfaces {
+		prefix := "  "
+		if m.deviceConfigTab == deviceConfigTabInterface && m.deviceConfigScrollY < len(device.Interfaces) &&
+			device.Interfaces[m.deviceConfigScrollY].Name == iface.Name {
+			prefix = "> "
+		}
 		status := iface.AdminStatus
 		if status == "" {
 			status = "up"
 		}
-		panel.WriteString(padPanelLine(fmt.Sprintf("%-15s %-10d %-10s %-8s",
-			iface.Name, iface.Speed, iface.Duplex, status)))
+		panel.WriteString(padPanelLine(fmt.Sprintf("%s%-13s %-10d %-10s %-8s",
+			prefix, iface.Name, iface.Speed, iface.Duplex, status)))
 	}
 }
 
@@ -99,7 +104,7 @@ func (m *model) renderDeviceConfigContent(panel *strings.Builder, device *config
 	case deviceConfigTabGeneral:
 		renderDeviceGeneralTab(panel, device)
 	case deviceConfigTabInterface:
-		renderDeviceInterfacesTab(panel, device)
+		m.renderDeviceInterfacesTab(panel, device)
 	case deviceConfigTabProtocols:
 		renderDeviceProtocolsTab(panel, device)
 	case deviceConfigTabSNMP:
@@ -128,7 +133,11 @@ func (m *model) renderDeviceConfig() string {
 	m.renderDeviceConfigContent(&panel, device)
 
 	panel.WriteString("╠══════════════════════════════════════════════════════════════════╣\n")
-	panel.WriteString(padPanelLine("[Tab] Switch Tab  [↑↓] Scroll  [ESC] Close"))
+	if m.deviceConfigTab == deviceConfigTabInterface {
+		panel.WriteString(padPanelLine("[↑↓] Select  [s] Speed  [u] Duplex  [a] Admin  [ESC] Close"))
+	} else {
+		panel.WriteString(padPanelLine("[Tab] Switch Tab  [↑↓] Scroll  [ESC] Close"))
+	}
 	panel.WriteString("╚══════════════════════════════════════════════════════════════════╝")
 
 	return panel.String()
@@ -154,10 +163,124 @@ func (m *model) handleDeviceConfigInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case keyDown:
 		m.deviceConfigScrollY++
+		m.clampDeviceConfigSelection()
 
 		return m, nil
+	case "s":
+		return m.handleInterfaceSpeedCycle()
+	case "u":
+		return m.handleInterfaceDuplexCycle()
+	case "a":
+		return m.handleInterfaceAdminToggle()
 	}
 
+	return m, nil
+}
+
+func (m *model) clampDeviceConfigSelection() {
+	if m.deviceConfigTab != deviceConfigTabInterface {
+		return
+	}
+	device := m.selectedDevice()
+	if device == nil || len(device.Interfaces) == 0 {
+		m.deviceConfigScrollY = 0
+		return
+	}
+	if m.deviceConfigScrollY >= len(device.Interfaces) {
+		m.deviceConfigScrollY = len(device.Interfaces) - 1
+	}
+}
+
+func (m *model) selectedDevice() *config.Device {
+	if m.cfg == nil {
+		return nil
+	}
+	if m.selectedDeviceIdx < 0 || m.selectedDeviceIdx >= len(m.cfg.Devices) {
+		return nil
+	}
+	return &m.cfg.Devices[m.selectedDeviceIdx]
+}
+
+func (m *model) selectedInterface() (*config.Device, *config.Interface) {
+	device := m.selectedDevice()
+	if device == nil || len(device.Interfaces) == 0 {
+		return nil, nil
+	}
+	m.clampDeviceConfigSelection()
+	return device, &device.Interfaces[m.deviceConfigScrollY]
+}
+
+func (m *model) handleInterfaceSpeedCycle() (tea.Model, tea.Cmd) {
+	if m.deviceConfigTab != deviceConfigTabInterface {
+		return m, nil
+	}
+	device, iface := m.selectedInterface()
+	if iface == nil {
+		m.statusMessage = errorStyle.Render("No interface selected")
+		m.statusIsError = true
+		return m, nil
+	}
+	speeds := []int{10, 100, 1000, 2500, 10000}
+	next := speeds[0]
+	for i, speed := range speeds {
+		if iface.Speed == speed {
+			next = speeds[(i+1)%len(speeds)]
+			break
+		}
+	}
+	iface.Speed = next
+	m.statusMessage = successStyle.Render(
+		fmt.Sprintf("%s %s speed set to %d Mbps", device.Name, iface.Name, iface.Speed),
+	)
+	m.statusIsError = false
+	return m, nil
+}
+
+func (m *model) handleInterfaceDuplexCycle() (tea.Model, tea.Cmd) {
+	if m.deviceConfigTab != deviceConfigTabInterface {
+		return m, nil
+	}
+	device, iface := m.selectedInterface()
+	if iface == nil {
+		m.statusMessage = errorStyle.Render("No interface selected")
+		m.statusIsError = true
+		return m, nil
+	}
+	duplexes := []string{"full", "half", "auto"}
+	next := duplexes[0]
+	for i, duplex := range duplexes {
+		if iface.Duplex == duplex {
+			next = duplexes[(i+1)%len(duplexes)]
+			break
+		}
+	}
+	iface.Duplex = next
+	m.statusMessage = successStyle.Render(
+		fmt.Sprintf("%s %s duplex set to %s", device.Name, iface.Name, iface.Duplex),
+	)
+	m.statusIsError = false
+	return m, nil
+}
+
+func (m *model) handleInterfaceAdminToggle() (tea.Model, tea.Cmd) {
+	if m.deviceConfigTab != deviceConfigTabInterface {
+		return m, nil
+	}
+	device, iface := m.selectedInterface()
+	if iface == nil {
+		m.statusMessage = errorStyle.Render("No interface selected")
+		m.statusIsError = true
+		return m, nil
+	}
+	if iface.AdminStatus == "down" {
+		iface.AdminStatus = "up"
+	} else {
+		iface.AdminStatus = "down"
+	}
+	m.statusMessage = successStyle.Render(
+		fmt.Sprintf("%s %s admin status set to %s", device.Name, iface.Name, iface.AdminStatus),
+	)
+	m.statusIsError = false
 	return m, nil
 }
 
@@ -173,7 +296,7 @@ func (m *model) handleDeviceConfigToggle() (tea.Model, tea.Cmd) {
 	m.deviceConfigTab = 0
 	m.deviceConfigScrollY = 0
 	m.closeAllOverlays()
-	m.statusMessage = "Device Config - [Tab] switch tab, [↑↓] scroll"
+	m.statusMessage = "Device Config - [Tab] switch tab, [↑↓] select, [s] speed, [u] duplex, [a] admin"
 	m.statusIsError = false
 
 	return m, nil

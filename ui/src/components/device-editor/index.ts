@@ -10,6 +10,7 @@ export { DhcpSection } from './DHCPSection';
 export { DnsSection } from './DNSSection';
 export { FtpSection } from './FTPSection';
 export { HttpSection } from './HTTPSection';
+export { InterfacesSection } from './InterfacesSection';
 export { LldpSection } from './LldpSection';
 export { NetBiosSection } from './NetBIOSSection';
 export { SnmpSection } from './SnmpSection';

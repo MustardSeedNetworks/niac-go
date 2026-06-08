@@ -6,7 +6,6 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/krisarmstrong/niac-go/internal/config"
 	"github.com/krisarmstrong/niac-go/internal/logging"
 )
 
@@ -61,7 +60,7 @@ func runInteractive(args []string, options *interactiveOptions, services *servic
 	configFile := args[1]
 
 	// Load configuration
-	cfg, err := config.Load(configFile)
+	cfg, resolvedConfig, err := loadConfigOrScenario(configFile)
 	if err != nil {
 		logging.Errorf("Failed to load configuration: %v", err)
 		os.Exit(1)
@@ -79,7 +78,7 @@ func runInteractive(args []string, options *interactiveOptions, services *servic
 	debugConfig := logging.NewDebugConfig(debugLevel)
 
 	// Start interactive mode
-	if runErr := runInteractiveMode(interfaceName, cfg, debugConfig, configFile, services); runErr != nil {
+	if runErr := runInteractiveMode(interfaceName, cfg, debugConfig, resolvedConfig, services); runErr != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", runErr)
 		os.Exit(1)
 	}

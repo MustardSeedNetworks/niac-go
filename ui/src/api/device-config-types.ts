@@ -94,6 +94,8 @@ export interface Device {
   vlan?: number;
   babble?: boolean;
   mapToIp?: string;
+  interfaces?: string[];
+  interfaceDetails?: DeviceInterface[];
   snmpAgent?: SNMPAgent;
   lldp?: LLDPConfig;
   cdp?: CDPConfig;
@@ -112,6 +114,16 @@ export interface Device {
   ttl?: TTLConfig;
   osFingerprint?: OSFingerprintConfig;
   iperf3?: IPerf3Config;
+}
+
+export interface DeviceInterface {
+  name: string;
+  speed?: number;
+  duplex?: 'full' | 'half' | 'auto' | '';
+  adminStatus?: 'up' | 'down' | '';
+  operStatus?: 'up' | 'down' | 'testing' | '';
+  description?: string;
+  vlans?: number[];
 }
 
 export type DeviceType =

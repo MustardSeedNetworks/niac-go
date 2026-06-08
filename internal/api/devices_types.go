@@ -3,13 +3,14 @@ package api
 // DeviceResponse represents a device in API responses with full details.
 type DeviceResponse struct {
 	// Basic info
-	Hostname   string   `json:"hostname"`
-	Type       string   `json:"type"`
-	MAC        string   `json:"mac,omitempty"`
-	IPs        []string `json:"ips,omitempty"`
-	VLAN       int      `json:"vlan,omitempty"`
-	Interfaces []string `json:"interfaces,omitempty"`
-	Protocols  []string `json:"protocols"`
+	Hostname         string                    `json:"hostname"`
+	Type             string                    `json:"type"`
+	MAC              string                    `json:"mac,omitempty"`
+	IPs              []string                  `json:"ips,omitempty"`
+	VLAN             int                       `json:"vlan,omitempty"`
+	Interfaces       []string                  `json:"interfaces,omitempty"`
+	InterfaceDetails []DeviceInterfaceResponse `json:"interface_details,omitempty"`
+	Protocols        []string                  `json:"protocols"`
 
 	// Protocol configurations (optional, included when requested)
 	SNMPAgent     *SNMPAgentResponse     `json:"snmp_agent,omitempty"`
@@ -118,22 +119,48 @@ type TrafficConfigResponse struct {
 	PingPayloadSize int  `json:"ping_payload_size,omitempty"`
 }
 
+// DeviceInterfaceResponse represents configured metadata for a device interface.
+type DeviceInterfaceResponse struct {
+	Name        string `json:"name"`
+	Speed       int    `json:"speed,omitempty"`
+	Duplex      string `json:"duplex,omitempty"`
+	AdminStatus string `json:"admin_status,omitempty"`
+	OperStatus  string `json:"oper_status,omitempty"`
+	Description string `json:"description,omitempty"`
+	VLANs       []int  `json:"vlans,omitempty"`
+}
+
+// DeviceInterfaceUpdate represents partial update data for a device interface.
+type DeviceInterfaceUpdate struct {
+	Name        string `json:"name"`
+	Speed       int    `json:"speed,omitempty"`
+	Duplex      string `json:"duplex,omitempty"`
+	AdminStatus string `json:"admin_status,omitempty"`
+	OperStatus  string `json:"oper_status,omitempty"`
+	Description string `json:"description,omitempty"`
+	VLANs       []int  `json:"vlans,omitempty"`
+}
+
 // DeviceCreateRequest represents a request to create a device.
 type DeviceCreateRequest struct {
-	Hostname string `json:"hostname"`
-	Type     string `json:"type"`
-	MAC      string `json:"mac,omitempty"`
-	IP       string `json:"ip,omitempty"`
-	Template string `json:"template,omitempty"` // Use template as base
-	RawYAML  string `json:"raw_yaml,omitempty"` // Advanced: full YAML
+	Hostname         string                  `json:"hostname"`
+	Type             string                  `json:"type"`
+	MAC              string                  `json:"mac,omitempty"`
+	IP               string                  `json:"ip,omitempty"`
+	Interfaces       []DeviceInterfaceUpdate `json:"interfaces,omitempty"`
+	InterfaceDetails []DeviceInterfaceUpdate `json:"interface_details,omitempty"`
+	Template         string                  `json:"template,omitempty"` // Use template as base
+	RawYAML          string                  `json:"raw_yaml,omitempty"` // Advanced: full YAML
 }
 
 // DeviceUpdateRequest represents a request to update a device.
 type DeviceUpdateRequest struct {
-	Type    string `json:"type,omitempty"`
-	MAC     string `json:"mac,omitempty"`
-	IP      string `json:"ip,omitempty"`
-	RawYAML string `json:"raw_yaml,omitempty"` // Full YAML for the device
+	Type             string                  `json:"type,omitempty"`
+	MAC              string                  `json:"mac,omitempty"`
+	IP               string                  `json:"ip,omitempty"`
+	Interfaces       []DeviceInterfaceUpdate `json:"interfaces,omitempty"`
+	InterfaceDetails []DeviceInterfaceUpdate `json:"interface_details,omitempty"`
+	RawYAML          string                  `json:"raw_yaml,omitempty"` // Full YAML for the device
 }
 
 // DeviceCloneRequest represents a request to clone a device.

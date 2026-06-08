@@ -1,10 +1,12 @@
 package api
 
 import (
+	"errors"
 	"fmt"
 	"maps"
 	"net"
 	"net/http"
+	"slices"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -192,7 +194,71 @@ func applyPartialDeviceUpdate(dev *config.Device, req DeviceUpdateRequest) error
 		dev.IPAddresses = []net.IP{ip}
 	}
 
+	interfaceUpdates := coalesceInterfaceUpdates(req.Interfaces, req.InterfaceDetails)
+	if interfaceUpdates != nil {
+		interfaces, err := interfaceUpdatesToConfig(interfaceUpdates)
+		if err != nil {
+			return err
+		}
+		dev.Interfaces = interfaces
+	}
+
 	return nil
+}
+
+func interfaceUpdatesToConfig(updates []DeviceInterfaceUpdate) ([]config.Interface, error) {
+	interfaces := make([]config.Interface, 0, len(updates))
+	seen := make(map[string]bool, len(updates))
+
+	for _, update := range updates {
+		name := strings.TrimSpace(update.Name)
+		if name == "" {
+			return nil, errors.New("invalid_interface: interface name is required")
+		}
+		if seen[name] {
+			return nil, fmt.Errorf("invalid_interface: duplicate interface %s", name)
+		}
+		seen[name] = true
+
+		if update.Speed < 0 {
+			return nil, fmt.Errorf("invalid_interface: speed must be zero or greater for %s", name)
+		}
+		if update.Duplex != "" && !isAllowedInterfaceValue(update.Duplex, "full", "half", "auto") {
+			return nil, fmt.Errorf("invalid_interface: duplex must be full, half, or auto for %s", name)
+		}
+		if update.AdminStatus != "" && !isAllowedInterfaceValue(update.AdminStatus, "up", "down") {
+			return nil, fmt.Errorf("invalid_interface: admin_status must be up or down for %s", name)
+		}
+		if update.OperStatus != "" && !isAllowedInterfaceValue(update.OperStatus, "up", "down", "testing") {
+			return nil, fmt.Errorf("invalid_interface: oper_status must be up, down, or testing for %s", name)
+		}
+
+		interfaces = append(interfaces, config.Interface{
+			Name:        name,
+			Speed:       update.Speed,
+			Duplex:      strings.ToLower(strings.TrimSpace(update.Duplex)),
+			AdminStatus: strings.ToLower(strings.TrimSpace(update.AdminStatus)),
+			OperStatus:  strings.ToLower(strings.TrimSpace(update.OperStatus)),
+			Description: strings.TrimSpace(update.Description),
+			VLANs:       update.VLANs,
+		})
+	}
+
+	return interfaces, nil
+}
+
+func coalesceInterfaceUpdates(
+	interfaces, interfaceDetails []DeviceInterfaceUpdate,
+) []DeviceInterfaceUpdate {
+	if interfaceDetails != nil {
+		return interfaceDetails
+	}
+	return interfaces
+}
+
+func isAllowedInterfaceValue(value string, allowed ...string) bool {
+	value = strings.ToLower(strings.TrimSpace(value))
+	return slices.Contains(allowed, value)
 }
 
 func (s *Server) saveConfig(cfg *config.Config) error {
@@ -248,6 +314,15 @@ func createDeviceFromRequest(req DeviceCreateRequest) (*config.Device, error) {
 		}
 
 		dev.IPAddresses = []net.IP{ip}
+	}
+
+	interfaceUpdates := coalesceInterfaceUpdates(req.Interfaces, req.InterfaceDetails)
+	if interfaceUpdates != nil {
+		interfaces, err := interfaceUpdatesToConfig(interfaceUpdates)
+		if err != nil {
+			return nil, err
+		}
+		dev.Interfaces = interfaces
 	}
 
 	if req.RawYAML != "" {

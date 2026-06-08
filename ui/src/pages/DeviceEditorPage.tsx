@@ -12,6 +12,7 @@ import {
   DnsSection,
   FtpSection,
   HttpSection,
+  InterfacesSection,
   LldpSection,
   NetBiosSection,
   SnmpSection,
@@ -96,6 +97,13 @@ export const DeviceEditorPage: FC = () => {
           onUpdate={updateField}
         />
       )}
+
+      <InterfacesSection
+        device={device}
+        isExpanded={expandedSections.has('interfaces')}
+        onToggle={() => toggleSection('interfaces')}
+        onUpdate={updateField}
+      />
 
       {visibleSections.has('snmp') && (
         <SnmpSection

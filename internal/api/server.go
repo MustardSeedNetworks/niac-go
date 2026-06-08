@@ -208,6 +208,9 @@ type ServerConfig struct {
 	WebhookAllowedHosts []string
 	ApplyConfig         func(*config.Config) error
 	Replay              ReplayManager
+	// SuppressUnauthenticatedWarning is reserved for controlled test
+	// harnesses that intentionally bind loopback with auth disabled.
+	SuppressUnauthenticatedWarning bool
 	// LibraryRoot is the on-disk root the unified library reads from
 	// (~/.niac/library by default, /var/lib/niac/library when packaged).
 	// If empty, the daemon picks a sensible default via library.DefaultRoot().
@@ -582,7 +585,7 @@ func (s *Server) enforceNonLoopbackAuthGate() error {
 // non-loopback without a token), but we still surface the unauth state
 // so the operator sees it in the startup log.
 func (s *Server) warnIfUnauthenticated() {
-	if s.AuthConfigured() || s.cfg.Addr == "" {
+	if s.AuthConfigured() || s.cfg.Addr == "" || s.cfg.SuppressUnauthenticatedWarning {
 		return
 	}
 	s.logger.Warn(

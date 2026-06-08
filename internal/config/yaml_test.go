@@ -113,6 +113,80 @@ devices:
 	}
 }
 
+func TestLoadYAML_Interfaces(t *testing.T) {
+	yaml := `
+devices:
+  - name: switch-a
+    type: switch
+    mac: "00:11:22:33:44:55"
+    interfaces:
+      - name: "Ethernet1/1"
+        speed: 1000
+        duplex: "full"
+        admin_status: "up"
+        oper_status: "down"
+        description: "uplink"
+        vlans: [10, 20]
+`
+	tmpfile := createTempYAML(t, yaml)
+	defer func() { _ = os.Remove(tmpfile) }()
+
+	cfg, err := LoadYAML(tmpfile)
+	if err != nil {
+		t.Fatalf("LoadYAML failed: %v", err)
+	}
+	if len(cfg.Devices) != 1 {
+		t.Fatalf("expected 1 device, got %d", len(cfg.Devices))
+	}
+	ifaces := cfg.Devices[0].Interfaces
+	if len(ifaces) != 1 {
+		t.Fatalf("expected 1 interface, got %d", len(ifaces))
+	}
+	iface := ifaces[0]
+	if iface.Name != "Ethernet1/1" || iface.Speed != 1000 || iface.Duplex != "full" {
+		t.Fatalf("interface not loaded correctly: %+v", iface)
+	}
+	if iface.AdminStatus != "up" || iface.OperStatus != "down" || iface.Description != "uplink" {
+		t.Fatalf("interface status/description not loaded correctly: %+v", iface)
+	}
+	if len(iface.VLANs) != 2 || iface.VLANs[0] != 10 {
+		t.Fatalf("interface VLANs = %v, want [10 20]", iface.VLANs)
+	}
+}
+
+func TestMarshalConfigYAML_Interfaces(t *testing.T) {
+	cfg := &Config{
+		Devices: []Device{
+			{
+				Name:       "switch-a",
+				Type:       "switch",
+				MACAddress: net.HardwareAddr{0x00, 0x11, 0x22, 0x33, 0x44, 0x55},
+				Interfaces: []Interface{
+					{
+						Name:        "Ethernet1/1",
+						Speed:       1000,
+						Duplex:      "full",
+						AdminStatus: "up",
+					},
+				},
+			},
+		},
+	}
+
+	data, err := MarshalConfigYAML(cfg)
+	if err != nil {
+		t.Fatalf("MarshalConfigYAML failed: %v", err)
+	}
+	roundTrip, err := LoadYAMLBytes(data)
+	if err != nil {
+		t.Fatalf("LoadYAMLBytes round trip failed: %v\n%s", err, data)
+	}
+	iface := roundTrip.Devices[0].Interfaces[0]
+	if iface.Name != "Ethernet1/1" || iface.Speed != 1000 || iface.Duplex != "full" {
+		t.Fatalf("round-trip interface = %+v", iface)
+	}
+}
+
 // TestLoadYAML_MultipleIPs tests multiple IP addresses per device (v1.5.0).
 func TestLoadYAML_MultipleIPs(t *testing.T) {
 	yaml := `

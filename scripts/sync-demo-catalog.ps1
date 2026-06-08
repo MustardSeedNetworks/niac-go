@@ -56,7 +56,9 @@ if ($Offline) {
     git -C $CatalogDir checkout --detach FETCH_HEAD
 } else {
     New-Item -ItemType Directory -Force -Path (Split-Path -Parent $CatalogDir) | Out-Null
-    git clone --depth 1 --branch $CatalogRef $CatalogUrl $CatalogDir
+    git clone --filter=blob:none --no-checkout $CatalogUrl $CatalogDir
+    git -C $CatalogDir fetch --depth 1 origin $CatalogRef
+    git -C $CatalogDir checkout --detach FETCH_HEAD
 }
 
 $Stage = Join-Path ([System.IO.Path]::GetTempPath()) ("niac-go-demo-catalog-" + [System.Guid]::NewGuid())

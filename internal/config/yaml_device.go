@@ -46,8 +46,28 @@ func convertYAMLDevice(yamlDevice converter.Device, includePath string) (Device,
 
 	device.TrunkPorts = convertTrunkPorts(yamlDevice.TrunkPorts)
 	device.PortChannels = convertPortChannels(yamlDevice.PortChannels)
+	device.Interfaces = convertInterfaces(yamlDevice.Interfaces)
 
 	return device, nil
+}
+
+func convertInterfaces(in []converter.Interface) []Interface {
+	if len(in) == 0 {
+		return nil
+	}
+	out := make([]Interface, len(in))
+	for i, iface := range in {
+		out[i] = Interface{
+			Name:        iface.Name,
+			Speed:       iface.Speed,
+			Duplex:      iface.Duplex,
+			AdminStatus: iface.AdminStatus,
+			OperStatus:  iface.OperStatus,
+			Description: iface.Description,
+			VLANs:       iface.VLANs,
+		}
+	}
+	return out
 }
 
 // convertTrunkPorts translates the YAML-shaped TrunkPort slice (from
