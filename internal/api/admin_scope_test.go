@@ -7,6 +7,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/MustardSeedNetworks/niac-go/internal/api/auth"
+
 	"github.com/MustardSeedNetworks/niac-go/internal/api/tokenstore"
 )
 
@@ -43,7 +45,7 @@ func TestAdminProtect_Matrix(t *testing.T) {
 		{
 			name: "read-only token => forbidden",
 			setup: func(r *http.Request) *http.Request {
-				return r.WithContext(withScope(r.Context(), tokenstore.ScopeReadOnly))
+				return r.WithContext(auth.WithScope(r.Context(), tokenstore.ScopeReadOnly))
 			},
 			wantStatus: http.StatusForbidden,
 			wantCalled: false,
@@ -51,7 +53,7 @@ func TestAdminProtect_Matrix(t *testing.T) {
 		{
 			name: "read-write token => forbidden (write != admin)",
 			setup: func(r *http.Request) *http.Request {
-				return r.WithContext(withScope(r.Context(), tokenstore.ScopeReadWrite))
+				return r.WithContext(auth.WithScope(r.Context(), tokenstore.ScopeReadWrite))
 			},
 			wantStatus: http.StatusForbidden,
 			wantCalled: false,
@@ -59,7 +61,7 @@ func TestAdminProtect_Matrix(t *testing.T) {
 		{
 			name: "admin token => passes through",
 			setup: func(r *http.Request) *http.Request {
-				return r.WithContext(withScope(r.Context(), tokenstore.ScopeAdmin))
+				return r.WithContext(auth.WithScope(r.Context(), tokenstore.ScopeAdmin))
 			},
 			wantStatus: http.StatusOK,
 			wantCalled: true,
@@ -77,7 +79,7 @@ func TestAdminProtect_Matrix(t *testing.T) {
 				called = true
 				w.WriteHeader(http.StatusOK)
 			})
-			gated := server.adminProtect(probe)
+			gated := auth.AdminProtect(server.logger, getClientIP, simpleErr, probe)
 
 			req := c.setup(httptest.NewRequest(http.MethodPost, "/api/v1/config/import", nil))
 			w := httptest.NewRecorder()
@@ -108,13 +110,13 @@ func TestAuth_StashesScopeOnContext(t *testing.T) {
 	var captured tokenstore.TokenScope
 	var capturedOK bool
 	tail := http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
-		captured, capturedOK = scopeFromContext(r.Context())
+		captured, capturedOK = auth.ScopeFromContext(r.Context())
 	})
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/something", nil)
 	req.Header.Set("Authorization", "Bearer admin-token")
 	w := httptest.NewRecorder()
-	server.auth(tail)(w, req)
+	auth.Middleware(server.authDeps(), tail)(w, req)
 
 	if !capturedOK {
 		t.Fatal("auth() did not stash scope on context")

@@ -8,6 +8,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/MustardSeedNetworks/niac-go/internal/api/auth"
+
 	"github.com/MustardSeedNetworks/niac-go/internal/api/tokenstore"
 )
 
@@ -36,7 +38,7 @@ func TestHandleAuthScope_EchoesContextScope(t *testing.T) {
 			t.Parallel()
 			req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/scope", nil)
 			if c.stashed {
-				req = req.WithContext(withScope(req.Context(), c.stash))
+				req = req.WithContext(auth.WithScope(req.Context(), c.stash))
 			}
 			w := httptest.NewRecorder()
 			server.handleAuthScope(w, req)

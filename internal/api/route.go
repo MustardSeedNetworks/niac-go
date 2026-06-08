@@ -11,6 +11,8 @@ package api
 import (
 	"net/http"
 
+	"github.com/MustardSeedNetworks/niac-go/internal/api/auth"
+
 	"github.com/MustardSeedNetworks/niac-go/internal/api/csrf"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/api/ratelimit"
@@ -66,7 +68,7 @@ func (s *Server) register(mux *http.ServeMux, rt apiRoute) {
 		h = s.requireFeature(rt.feature, h)
 	}
 	if rt.admin {
-		h = s.adminProtect(h)
+		h = auth.AdminProtect(s.logger, getClientIP, simpleErr, h)
 	}
 	if rt.csrf {
 		h = csrf.Protect(s.csrf, simpleErr, h)
@@ -83,7 +85,7 @@ func (s *Server) register(mux *http.ServeMux, rt apiRoute) {
 	case rlFile:
 		h = ratelimit.File(s.fileLimiter, s.logger, getClientIP, simpleErr, h)
 	}
-	h = s.auth(h)
+	h = auth.Middleware(s.authDeps(), h)
 	h = s.recoverMiddleware(h)
 	mux.HandleFunc(rt.path, h)
 }

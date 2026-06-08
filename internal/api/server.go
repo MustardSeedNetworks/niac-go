@@ -31,6 +31,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/MustardSeedNetworks/niac-go/internal/api/auth"
+
 	"github.com/MustardSeedNetworks/niac-go/internal/api/sse"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/api/csrf"
@@ -456,7 +458,7 @@ func (s *Server) Start() error {
 
 	if s.cfg.MetricsAddr != "" && s.cfg.MetricsAddr != s.cfg.Addr {
 		mux := http.NewServeMux()
-		mux.HandleFunc("/metrics", s.recoverMiddleware(s.auth(s.handleMetrics)))
+		mux.HandleFunc("/metrics", s.recoverMiddleware(auth.Middleware(s.authDeps(), s.handleMetrics)))
 		s.metricsServer = newSecureHTTPServer(s.cfg.MetricsAddr, mux)
 
 		metricsLn, metricsAddr, bindErr := bindWithFallback(context.Background(), s.logger, s.cfg.MetricsAddr)

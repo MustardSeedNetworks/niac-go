@@ -5,6 +5,8 @@ package api
 import (
 	"net/http"
 
+	"github.com/MustardSeedNetworks/niac-go/internal/api/auth"
+
 	"github.com/MustardSeedNetworks/niac-go/internal/api/tokenstore"
 )
 
@@ -29,7 +31,7 @@ type AuthScopeResponse struct {
 // run; if it isn't (an unwrapped call would be a route-registration
 // bug), we report the safest tier ("read-only") rather than guessing.
 func (s *Server) handleAuthScope(w http.ResponseWriter, r *http.Request) {
-	scope, ok := scopeFromContext(r.Context())
+	scope, ok := auth.ScopeFromContext(r.Context())
 	if !ok {
 		s.writeJSON(w, AuthScopeResponse{Scope: tokenstore.ScopeReadOnly.String()})
 
