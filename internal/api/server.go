@@ -261,6 +261,7 @@ type Server struct {
 	captureController CaptureController
 	startTime         time.Time
 	rateLimiter       *RateLimiter
+	routeManifest     []apiRoute // capability registry: routes registered via register() (route.go)
 	// csrf manages per-session CSRF tokens (#1257). Pre-port niac
 	// shared one global token across all clients; the manager keys
 	// tokens by sha256(bearer) so each session has its own.

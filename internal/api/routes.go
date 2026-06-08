@@ -6,194 +6,125 @@ import (
 )
 
 // registerAPIRoutes registers all API endpoints on the provided mux.
+//
+// Every /api route is installed through the capability registry (register /
+// registerAll in route.go), which composes its policy — auth, rate limiting,
+// CSRF, admin scope, license feature — in one canonical order so a route cannot
+// ship without it. scripts/check-route-policy.sh enforces this. Only the
+// unauthenticated introspection endpoints (/__version, /__capabilities) are
+// registered directly.
 func (s *Server) registerAPIRoutes(mux *http.ServeMux) {
-	// Public version endpoint for deployment validation (no auth required)
-	// Intentionally placed before authenticated routes for clarity
+	// Unauthenticated introspection (no auth wrapper).
 	mux.HandleFunc("/__version", s.recoverMiddleware(s.handleBuildVersion))
+	mux.HandleFunc("/__capabilities", s.recoverMiddleware(s.handleRoutePolicyManifest))
 
-	// SECURITY FIX #2.8.1: Wrap all handlers with panic recovery middleware
-	// SECURITY FIX LOW-1: CSRF token endpoint for clients to retrieve token
-	mux.HandleFunc("/api/v1/csrf-token", s.recoverMiddleware(s.auth(s.handleCSRFToken)))
-	mux.HandleFunc("/api/v1/stats", s.recoverMiddleware(s.auth(s.handleStats)))
-	mux.HandleFunc("/api/v1/devices", s.recoverMiddleware(s.auth(s.handleDevices)))
-	mux.HandleFunc("/api/v1/history", s.recoverMiddleware(s.auth(s.handleHistory)))
-	mux.HandleFunc("/api/v1/license", s.recoverMiddleware(s.auth(s.handleLicenseStatus)))
+	// Top-level authenticated reads + the CSRF-token endpoint.
+	s.registerAll(mux, []apiRoute{
+		{path: "/api/v1/csrf-token", handler: s.handleCSRFToken},
+		{path: "/api/v1/stats", handler: s.handleStats},
+		{path: "/api/v1/devices", handler: s.handleDevices},
+		{path: "/api/v1/history", handler: s.handleHistory},
+		{path: "/api/v1/license", handler: s.handleLicenseStatus},
+	})
 
-	// SECURITY FIX LOW-1: Protect state-changing endpoints with CSRF
-	// SECURITY FIX #156: Apply write rate limiting to state-changing endpoints
 	s.registerWriteProtectedRoutes(mux)
 	s.registerReadOnlyRoutes(mux)
 	s.registerWalkRoutes(mux)
 	s.registerPcapRoutes(mux)
 	s.registerSSERoutes(mux)
 
-	// SECURITY FIX #172: Metrics endpoint requires authentication
-	mux.HandleFunc("/metrics", s.recoverMiddleware(s.auth(s.handleMetrics)))
-	mux.HandleFunc("/", s.recoverMiddleware(s.auth(s.serveSPA())))
+	// Metrics require auth (#172); the SPA is the authenticated catch-all.
+	s.registerAll(mux, []apiRoute{
+		{path: "/metrics", handler: s.handleMetrics},
+		{path: "/", handler: s.serveSPA()},
+	})
 }
 
-// registerWriteProtectedRoutes registers routes that require write protection (CSRF + rate limiting).
+// registerWriteProtectedRoutes registers state-changing routes (write rate
+// limit + CSRF; /config/import additionally requires an admin-scoped token).
 func (s *Server) registerWriteProtectedRoutes(mux *http.ServeMux) {
-	mux.HandleFunc(
-		"/api/v1/config",
-		s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.handleConfig)))),
-	)
-	mux.HandleFunc(
-		"/api/v1/config/devices",
-		s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.handleDevicesV2)))),
-	)
-	mux.HandleFunc(
-		"/api/v1/config/devices/",
-		s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.handleDevicesV2)))),
-	)
-	mux.HandleFunc(
-		"/api/v1/config/merge",
-		s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.handleConfigMerge)))),
-	)
-	mux.HandleFunc(
-		// #743: full topology replacement is admin-class (an
-		// admin-scoped token in addition to read-write). Routine
-		// per-device edits / configs CRUD stay at ScopeReadWrite
-		// because they're normal operator actions, not whole-topology
-		// events.
-		"/api/v1/config/import",
-		s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.adminProtect(s.handleConfigImport))))),
-	)
-	mux.HandleFunc(
-		"/api/v1/replay",
-		s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.handleReplay)))),
-	)
-	mux.HandleFunc(
-		"/api/v1/alerts",
-		s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.handleAlerts)))),
-	)
-	mux.HandleFunc(
-		"/api/v1/capture/filter",
-		s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.handleCaptureFilter)))),
-	)
-	// Standalone packet capture (no simulation required). POST=start,
-	// DELETE=stop, GET=status. Distinct from /capture/filter, which
-	// drives the BPF filter on the sim-managed capture engine.
-	mux.HandleFunc(
-		"/api/v1/capture",
-		s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.handleStandaloneCapture)))),
-	)
+	s.registerAll(mux, []apiRoute{
+		{path: "/api/v1/config", handler: s.handleConfig, rl: rlWrite, csrf: true},
+		{path: "/api/v1/config/devices", handler: s.handleDevicesV2, rl: rlWrite, csrf: true},
+		{path: "/api/v1/config/devices/", handler: s.handleDevicesV2, rl: rlWrite, csrf: true},
+		{path: "/api/v1/config/merge", handler: s.handleConfigMerge, rl: rlWrite, csrf: true},
+		// #743: whole-topology replacement is admin-class (an admin-scoped token
+		// in addition to read-write); routine per-device edits / configs CRUD
+		// stay at ScopeReadWrite because they are normal operator actions.
+		{path: "/api/v1/config/import", handler: s.handleConfigImport, rl: rlWrite, csrf: true, admin: true},
+		{path: "/api/v1/replay", handler: s.handleReplay, rl: rlWrite, csrf: true},
+		{path: "/api/v1/alerts", handler: s.handleAlerts, rl: rlWrite, csrf: true},
+		{path: "/api/v1/capture/filter", handler: s.handleCaptureFilter, rl: rlWrite, csrf: true},
+		// Standalone packet capture (POST=start, DELETE=stop, GET=status).
+		{path: "/api/v1/capture", handler: s.handleStandaloneCapture, rl: rlWrite, csrf: true},
+	})
 }
 
-// registerReadOnlyRoutes registers routes that only require authentication.
+// registerReadOnlyRoutes registers reads plus the mutating CRUD endpoints that
+// historically shared this group; the mutating ones carry write rate limit +
+// CSRF (#740). csrfProtect internally skips GET, so reads pass through.
 func (s *Server) registerReadOnlyRoutes(mux *http.ServeMux) {
-	mux.HandleFunc("/api/v1/config/schema", s.recoverMiddleware(s.auth(s.handleConfigSchema)))
-	// SECURITY FIX #171: Apply file-specific rate limiting
-	mux.HandleFunc("/api/v1/files", s.recoverMiddleware(s.auth(s.fileRateLimit(s.handleFiles))))
-
-	// Templates API. POST (upload), DELETE, and the "use" subpath all
-	// mutate state, so these go through csrfProtect like the other
-	// mutating routes (#740). csrfProtect internally skips GET, so reads
-	// still pass through untouched.
-	mux.HandleFunc("/api/v1/templates",
-		s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.handleTemplates)))))
-	mux.HandleFunc("/api/v1/templates/",
-		s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.handleTemplateByName)))))
-
-	// User Configs API. POST (upload) on /configs and DELETE on
-	// /configs/ mutate state — gate with csrfProtect (#740).
-	mux.HandleFunc("/api/v1/configs",
-		s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.handleUserConfigs)))))
-	mux.HandleFunc("/api/v1/configs/",
-		s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.handleUserConfigByName)))))
-
-	// Unified Library API (#548). Networks landed in PR 1 with full
-	// CRUD; walks/pcaps land in PR 3 as read-only browser endpoints —
-	// uploads + deletes for binary content are a separate follow-up
-	// once the picker integrations have validated the read shape.
-	mux.HandleFunc("/api/v1/library/networks",
-		s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.handleLibraryNetworks)))))
-	mux.HandleFunc("/api/v1/library/networks/",
-		s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.handleLibraryNetworkByName)))))
-	mux.HandleFunc("/api/v1/library/walks",
-		s.recoverMiddleware(s.auth(s.handleLibraryWalks)))
-	mux.HandleFunc("/api/v1/library/pcaps",
-		s.recoverMiddleware(s.auth(s.handleLibraryPcaps)))
-
-	// Per-device baseline SNMP walk synthesis (#546 part 2). POST-only.
-	// Distinct from /api/v1/config/devices/ (the editor's CRUD); this
-	// path lives under /api/v1/devices/{hostname}/... and dispatches
-	// to a per-action handler. CSRF + rate limiting applied since the
-	// handler mutates both the library and the running config YAML.
-	mux.HandleFunc("/api/v1/devices/",
-		s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.dispatchDeviceSubpath)))))
-
-	// Vendor + model catalog for the Generate-walk UI picker (#570).
-	// Read-only; the response is the same list returned by
-	// synth.AllModels() so the dropdown can group/sort client-side.
-	mux.HandleFunc("/api/v1/synthesize-walk/models",
-		s.recoverMiddleware(s.auth(s.handleSynthesizeWalkModels)))
-
-	// Per-type device editor schema (#546 part 1). Read-only — the
-	// schema is a static table the daemon serves so the UI can hide
-	// sections that don't apply (e.g. switch should not see DNS).
-	mux.HandleFunc("/api/v1/device-schemas",
-		s.recoverMiddleware(s.auth(s.handleDeviceEditorSchema)))
-	mux.HandleFunc("/api/v1/device-schemas/",
-		s.recoverMiddleware(s.auth(s.handleDeviceEditorSchema)))
-	mux.HandleFunc("/api/v1/topology", s.recoverMiddleware(s.auth(s.handleTopology)))
-	mux.HandleFunc("/api/v1/topology/export", s.recoverMiddleware(s.auth(s.handleTopologyExport)))
-	mux.HandleFunc("/api/v1/errors", s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.handleErrors)))))
-	mux.HandleFunc("/api/v1/interfaces", s.recoverMiddleware(s.auth(s.handleInterfaces)))
-	mux.HandleFunc("/api/v1/runtime", s.recoverMiddleware(s.auth(s.handleRuntime)))
-	mux.HandleFunc(
-		"/api/v1/simulation",
-		s.recoverMiddleware(s.auth(s.writeRateLimit(s.csrfProtect(s.handleSimulation)))),
-	)
-	mux.HandleFunc("/api/v1/version", s.recoverMiddleware(s.auth(s.handleVersion)))
-	mux.HandleFunc("/api/v1/neighbors", s.recoverMiddleware(s.auth(s.handleNeighbors)))
-	// #762: scope discovery endpoint for the UI. auth() upstream
-	// stashes the resolved scope on the context; handleAuthScope
-	// echoes it as JSON. Safe GET method so no csrfProtect /
-	// writeRateLimit wrappers needed.
-	mux.HandleFunc("/api/v1/auth/scope", s.recoverMiddleware(s.auth(s.handleAuthScope)))
+	s.registerAll(mux, []apiRoute{
+		{path: "/api/v1/config/schema", handler: s.handleConfigSchema},
+		{path: "/api/v1/files", handler: s.handleFiles, rl: rlFile},
+		// Templates: POST (upload), DELETE, and "use" mutate — write + CSRF.
+		{path: "/api/v1/templates", handler: s.handleTemplates, rl: rlWrite, csrf: true},
+		{path: "/api/v1/templates/", handler: s.handleTemplateByName, rl: rlWrite, csrf: true},
+		// User configs: POST/DELETE mutate — write + CSRF (#740).
+		{path: "/api/v1/configs", handler: s.handleUserConfigs, rl: rlWrite, csrf: true},
+		{path: "/api/v1/configs/", handler: s.handleUserConfigByName, rl: rlWrite, csrf: true},
+		// Library (#548): networks full CRUD (write + CSRF); walks/pcaps read-only.
+		{path: "/api/v1/library/networks", handler: s.handleLibraryNetworks, rl: rlWrite, csrf: true},
+		{path: "/api/v1/library/networks/", handler: s.handleLibraryNetworkByName, rl: rlWrite, csrf: true},
+		{path: "/api/v1/library/walks", handler: s.handleLibraryWalks},
+		{path: "/api/v1/library/pcaps", handler: s.handleLibraryPcaps},
+		// Per-device baseline walk synthesis (#546 p2). POST-only; mutates the
+		// library + running config YAML, so write + CSRF.
+		{path: "/api/v1/devices/", handler: s.dispatchDeviceSubpath, rl: rlWrite, csrf: true},
+		// Read-only catalogs / schemas.
+		{path: "/api/v1/synthesize-walk/models", handler: s.handleSynthesizeWalkModels},
+		{path: "/api/v1/device-schemas", handler: s.handleDeviceEditorSchema},
+		{path: "/api/v1/device-schemas/", handler: s.handleDeviceEditorSchema},
+		{path: "/api/v1/topology", handler: s.handleTopology},
+		{path: "/api/v1/topology/export", handler: s.handleTopologyExport},
+		{path: "/api/v1/errors", handler: s.handleErrors, rl: rlWrite, csrf: true},
+		{path: "/api/v1/interfaces", handler: s.handleInterfaces},
+		{path: "/api/v1/runtime", handler: s.handleRuntime},
+		{path: "/api/v1/simulation", handler: s.handleSimulation, rl: rlWrite, csrf: true},
+		{path: "/api/v1/version", handler: s.handleVersion},
+		{path: "/api/v1/neighbors", handler: s.handleNeighbors},
+		// #762: scope discovery — safe GET, no CSRF / write wrappers needed.
+		{path: "/api/v1/auth/scope", handler: s.handleAuthScope},
+	})
 }
 
-// registerWalkRoutes registers SNMP walk file validation endpoints.
+// registerWalkRoutes registers SNMP walk validation endpoints (walk rate limit).
 func (s *Server) registerWalkRoutes(mux *http.ServeMux) {
-	// SECURITY FIX #156: Apply walk-specific rate limiting
-	mux.HandleFunc(
-		"/api/v1/walk/validate",
-		s.recoverMiddleware(s.auth(s.walkRateLimit(s.csrfProtect(s.handleWalkValidation)))),
-	)
-	mux.HandleFunc(
-		"/api/v1/walk/fix",
-		s.recoverMiddleware(s.auth(s.walkRateLimit(s.csrfProtect(s.handleWalkValidation)))),
-	)
-	mux.HandleFunc(
-		"/api/v1/walk/list",
-		s.recoverMiddleware(s.auth(s.walkRateLimit(s.handleWalkList))),
-	)
-	mux.HandleFunc(
-		"/api/v1/walk/validate-all",
-		s.recoverMiddleware(s.auth(s.walkRateLimit(s.csrfProtect(s.handleWalkBatchValidate)))),
-	)
+	s.registerAll(mux, []apiRoute{
+		{path: "/api/v1/walk/validate", handler: s.handleWalkValidation, rl: rlWalk, csrf: true},
+		{path: "/api/v1/walk/fix", handler: s.handleWalkValidation, rl: rlWalk, csrf: true},
+		{path: "/api/v1/walk/list", handler: s.handleWalkList, rl: rlWalk},
+		{path: "/api/v1/walk/validate-all", handler: s.handleWalkBatchValidate, rl: rlWalk, csrf: true},
+	})
 }
 
-// registerPcapRoutes registers PCAP analysis endpoints.
+// registerPcapRoutes registers PCAP analysis endpoints (gated by the
+// pcap_ingest license feature; upload additionally rate-limited + CSRF).
 func (s *Server) registerPcapRoutes(mux *http.ServeMux) {
-	// SECURITY FIX #156: Apply upload-specific rate limiting for uploads
-	mux.HandleFunc(
-		"/api/v1/pcap/upload",
-		s.recoverMiddleware(s.auth(s.uploadRateLimit(s.csrfProtect(
-			s.requireFeature("pcap_ingest", s.handlePcapUpload))))),
-	)
-	mux.HandleFunc("/api/v1/pcap/",
-		s.recoverMiddleware(s.auth(
-			s.requireFeature("pcap_ingest", s.handlePcapAnalysis))))
+	s.registerAll(mux, []apiRoute{
+		{path: "/api/v1/pcap/upload", handler: s.handlePcapUpload, rl: rlUpload, csrf: true, feature: "pcap_ingest"},
+		{path: "/api/v1/pcap/", handler: s.handlePcapAnalysis, feature: "pcap_ingest"},
+	})
 }
 
-// registerSSERoutes registers Server-Sent Events endpoints for real-time streaming.
+// registerSSERoutes registers Server-Sent Events streams (auth only).
 func (s *Server) registerSSERoutes(mux *http.ServeMux) {
-	mux.HandleFunc("/api/v1/stream/packets", s.recoverMiddleware(s.auth(s.handleSSEPackets)))
-	mux.HandleFunc("/api/v1/stream/logs", s.recoverMiddleware(s.auth(s.handleSSELogs)))
-	mux.HandleFunc("/api/v1/stream/stats", s.recoverMiddleware(s.auth(s.handleSSEStats)))
-	mux.HandleFunc("/api/v1/stream/status", s.recoverMiddleware(s.auth(s.handleSSEStatus)))
+	s.registerAll(mux, []apiRoute{
+		{path: "/api/v1/stream/packets", handler: s.handleSSEPackets},
+		{path: "/api/v1/stream/logs", handler: s.handleSSELogs},
+		{path: "/api/v1/stream/stats", handler: s.handleSSEStats},
+		{path: "/api/v1/stream/status", handler: s.handleSSEStatus},
+	})
 }
 
 // newSecureHTTPServer creates an HTTP server with security timeouts configured.
