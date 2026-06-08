@@ -1,0 +1,115 @@
+package api
+
+// route.go is the capability registry: API routes are declared as data and a
+// single register() composes their per-route policy — rate limiting, CSRF,
+// admin scope, license feature — in ONE canonical order around the shared
+// recover+auth wrappers. This replaces hand-nesting the middleware at each
+// mux.HandleFunc call site, where the nesting could be applied inconsistently
+// or forgotten. scripts/check-route-policy.sh enforces that every /api route
+// goes through register().
+
+import "net/http"
+
+// rateLimitKind selects which rate limiter wraps a route (or none).
+type rateLimitKind int
+
+const (
+	rlNone   rateLimitKind = iota // no rate limiter
+	rlWrite                       // writeRateLimit (state-changing endpoints)
+	rlWalk                        // walkRateLimit (SNMP walk validation)
+	rlUpload                      // uploadRateLimit (binary uploads)
+	rlFile                        // fileRateLimit (file listing)
+)
+
+// apiRoute declares an API route and its per-route policy. Authentication is
+// applied to every registered route (auth), so it is not a field; /__version
+// and /__capabilities are registered directly because they are unauthenticated.
+type apiRoute struct {
+	// path is the full request path (e.g. "/api/v1/config").
+	path string
+	// handler is the terminal handler.
+	handler http.HandlerFunc
+	// rl selects the rate limiter (rlNone for unmetered reads/streams).
+	rl rateLimitKind
+	// csrf wraps the route in csrfProtect (csrfProtect itself skips safe GETs).
+	csrf bool
+	// admin requires an admin-scoped token (adminProtect) — whole-topology ops.
+	admin bool
+	// feature requires a license feature via requireFeature. "" = none.
+	feature string
+}
+
+// register installs rt on mux, composing middleware in ONE canonical order
+// (outermost → innermost): recover → auth → rateLimit → csrf → admin → feature
+// → handler. Composing here rather than at each call site makes the policy
+// declarative and uniform, records it for /__capabilities, and is the single
+// choke point the route-policy CI gate enforces.
+func (s *Server) register(mux *http.ServeMux, rt apiRoute) {
+	s.routeManifest = append(s.routeManifest, rt)
+
+	h := rt.handler
+	if rt.feature != "" {
+		h = s.requireFeature(rt.feature, h)
+	}
+	if rt.admin {
+		h = s.adminProtect(h)
+	}
+	if rt.csrf {
+		h = s.csrfProtect(h)
+	}
+	switch rt.rl {
+	case rlNone:
+		// no rate limiter
+	case rlWrite:
+		h = s.writeRateLimit(h)
+	case rlWalk:
+		h = s.walkRateLimit(h)
+	case rlUpload:
+		h = s.uploadRateLimit(h)
+	case rlFile:
+		h = s.fileRateLimit(h)
+	}
+	h = s.auth(h)
+	h = s.recoverMiddleware(h)
+	mux.HandleFunc(rt.path, h)
+}
+
+// registerAll installs a slice of routes through register().
+func (s *Server) registerAll(mux *http.ServeMux, routes []apiRoute) {
+	for _, rt := range routes {
+		s.register(mux, rt)
+	}
+}
+
+// routePolicyView is the JSON projection of a route's policy for the
+// /__capabilities manifest (the handler func itself is not exposed).
+type routePolicyView struct {
+	Path        string `json:"path"`
+	RateLimited bool   `json:"rateLimited"`
+	CSRF        bool   `json:"csrf"`
+	Admin       bool   `json:"admin"`
+	Feature     string `json:"feature,omitempty"`
+}
+
+// handleRoutePolicyManifest serves the route-policy manifest: every route
+// registered through register() with its rate-limit / CSRF / admin / feature
+// policy. No auth — like /__version it is a deployment/audit introspection
+// surface (auth itself is applied to every registered route and is implicit).
+func (s *Server) handleRoutePolicyManifest(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.Header().Set("Allow", http.MethodGet)
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	views := make([]routePolicyView, 0, len(s.routeManifest))
+	for _, rt := range s.routeManifest {
+		views = append(views, routePolicyView{
+			Path:        rt.path,
+			RateLimited: rt.rl != rlNone,
+			CSRF:        rt.csrf,
+			Admin:       rt.admin,
+			Feature:     rt.feature,
+		})
+	}
+	s.writeJSON(w, views)
+}
