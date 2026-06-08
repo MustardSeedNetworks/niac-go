@@ -191,47 +191,133 @@ jobs:
         shell: pwsh
         run: Compress-Archive -Path "${{ matrix.artifact }}" -DestinationPath "dist/${{ matrix.artifact }}.zip" -Force
 
-      - name: Upload native artifact
+      - name: Upload archive
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ${{ matrix.artifact }}
           path: dist/*
           retention-days: 14
 
-  publish:
-    name: Publish release assets
+      # Linux raw binaries feed nfpm (deb/rpm) in the package job. Native build,
+      # no cross-compile (Path C); packaging is done with standalone OSS tools.
+      - name: Upload raw linux binary for packaging
+        if: matrix.goos == 'linux'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: niacbin-linux-${{ matrix.goarch }}
+          path: ${{ matrix.artifact }}/niac
+          retention-days: 1
+
+  # Central packaging with standalone OSS tools (no goreleaser — its prebuilt
+  # builder is Pro-only). nfpm builds .deb/.rpm from the natively-built linux
+  # binaries (nfpm is goreleaser's own deb/rpm engine), syft produces SBOMs,
+  # cosign keyless-signs every artifact. release-please owns the GitHub release;
+  # this job only attaches assets to it.
+  package:
+    name: Package + sign
     if: ${{ !inputs.provenance_only }}
     needs: [build-native]
     runs-on: ubuntu-latest
     outputs:
       hashes: ${{ steps.hashes.outputs.hashes }}
     steps:
-      - name: Download native artifacts
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Download archives
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
+          pattern: niac-*
           path: dist
           merge-multiple: true
 
-      - name: Generate checksums
+      - name: Download raw linux binaries
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: niacbin-linux-*
+          path: prebuilt
+
+      - name: Install nfpm
+        run: |
+          set -euo pipefail
+          NFPM_VERSION=2.43.0
+          curl -sSfL "https://github.com/goreleaser/nfpm/releases/download/v${NFPM_VERSION}/nfpm_${NFPM_VERSION}_Linux_x86_64.tar.gz" \
+            | tar -xz -C /usr/local/bin nfpm
+          nfpm --version
+
+      - name: Install Syft (SBOM)
+        run: curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+
+      - name: Install Cosign
+        run: |
+          set -euo pipefail
+          COSIGN_VERSION=v2.4.1
+          curl -sSfL -o /usr/local/bin/cosign "https://github.com/sigstore/cosign/releases/download/${COSIGN_VERSION}/cosign-linux-amd64"
+          chmod +x /usr/local/bin/cosign
+
+      - name: Build .deb / .rpm (nfpm), SBOMs (syft), checksums
         id: hashes
+        shell: bash
+        env:
+          REF_NAME: ${{ github.ref_name }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            VERSION="0.0.0-dryrun"
+          else
+            VERSION="${REF_NAME#v}"
+          fi
+          export VERSION
+
+          # .deb + .rpm for each linux arch from the native binary. nfpm does not
+          # expand env vars in contents.src, so render the config placeholders
+          # (ARCH/VERSION/BINARY) with sed per arch.
+          for arch in amd64 arm64; do
+            bin="prebuilt/niacbin-linux-${arch}/niac"
+            test -f "$bin"
+            chmod +x "$bin"
+            sed -e "s|\${ARCH}|${arch}|g" \
+                -e "s|\${VERSION}|${VERSION}|g" \
+                -e "s|\${BINARY}|${bin}|g" \
+                deploy/nfpm/nfpm.yaml > "nfpm.${arch}.yaml"
+            nfpm package -f "nfpm.${arch}.yaml" -p deb -t dist/
+            nfpm package -f "nfpm.${arch}.yaml" -p rpm -t dist/
+          done
+
+          # SBOM per archive.
+          for f in dist/*.tar.gz dist/*.zip; do
+            [ -e "$f" ] || continue
+            syft scan "file:${f}" -o spdx-json="${f}.sbom.json"
+          done
+
+          # SHA-256 checksums over the user-facing artifacts (archives + packages).
+          ( cd dist && sha256sum *.tar.gz *.zip *.deb *.rpm > checksums.txt )
+          cat dist/checksums.txt
+
+          # base64 subjects for SLSA provenance (standard "<sha256>  <name>" format).
+          hashes=$(base64 -w0 < dist/checksums.txt)
+          echo "hashes=${hashes}" >> "$GITHUB_OUTPUT"
+
+      - name: Sign all artifacts (cosign keyless)
         shell: bash
         run: |
           set -euo pipefail
-          cd dist
-          sha256sum * > checksums.txt
-          cat checksums.txt
-          hashes=$(base64 -w0 < checksums.txt)
-          echo "hashes=${hashes}" >> "$GITHUB_OUTPUT"
+          for f in dist/*; do
+            case "$f" in
+              *.cosign.bundle) continue ;;
+            esac
+            cosign sign-blob --yes --bundle "${f}.cosign.bundle" "$f"
+          done
 
-      - name: Upload dry-run artifact bundle
+      - name: Upload dry-run artifact bundle for inspection
         if: inputs.dry_run
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: native-release-dryrun-${{ github.run_id }}
+          name: release-dryrun-${{ github.run_id }}
           path: dist/
           retention-days: 14
 
-      - name: Attach artifacts to GitHub release
+      - name: Attach assets to the release-please release
         if: ${{ !inputs.dry_run }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -271,8 +357,8 @@ jobs:
 
   provenance:
     name: SLSA provenance
-    if: ${{ !inputs.dry_run && !cancelled() && (needs.publish.result == 'success' || needs.backfill-hashes.result == 'success') }}
-    needs: [publish, backfill-hashes]
+    if: ${{ !inputs.dry_run && !cancelled() && (needs.package.result == 'success' || needs.backfill-hashes.result == 'success') }}
+    needs: [package, backfill-hashes]
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -283,7 +369,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          echo "${{ needs.publish.outputs.hashes || needs.backfill-hashes.outputs.hashes }}" | base64 -d > subjects.txt
+          echo "${{ needs.package.outputs.hashes || needs.backfill-hashes.outputs.hashes }}" | base64 -d > subjects.txt
           cat subjects.txt
 
       - name: Generate SLSA build-provenance attestation
