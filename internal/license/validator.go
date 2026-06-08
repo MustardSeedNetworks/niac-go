@@ -3,67 +3,62 @@
 package license
 
 import (
-	"errors"
-	"fmt"
-	"regexp"
 	"slices"
 	"strings"
 	"time"
 )
 
 /*
-NIAC License Key Format (16 characters, identical to the format used
-by Seed and Stem — keys are produced by the canonical keygen tool
-and the rotor cipher is byte-compatible across products).
+NIAC licenses are Ed25519-signed tokens (see signing.go). The previous 16-char
+rotor-cipher key format was removed: its generator shipped inside the binary, so
+any copy of NIAC could mint a valid key. Tokens are now signed by the keygen
+tool's private key and verified here with an embedded public key — offline and
+un-forgeable.
 
-+------+--------+-------+------+----------+
-| CC   | PPPP   |SSSSSSS| T    | XX       |
-|Check |Product |Serial |Tier  | Checksum |
-+------+--------+-------+------+----------+
-
-Positions:
-  0-1:  Checksum prefix (encoded validation).
-  2-5:  Product code (5001 = NIAC Pro).
-  6-12: Serial number (unique per license).
-  13:   Tier (1 = Pro; NIAC has one paid tier).
-  14-15: Checksum suffix.
-
-Free is the unlicensed tier — no key required. Pro requires a valid
-5001 key.
+Product code 5001 = NIAC Pro (tier 1). Free is the unlicensed tier and needs no
+token.
 */
 
 const (
-	keyLength         = 16
-	productCodeLength = 4
-	serialLength      = 7
-	checksumLength    = 2
-	cipherStartPos    = 7
-	defaultMaxDevices = 3
+	defaultMaxDevices = 3 // default activations per license
+
+	// productName identifies this binary in a signed payload. A token issued
+	// for another product (stem/seed) is rejected even if correctly signed.
+	productName = "niac"
+
+	// niacProCode is the only product code NIAC accepts.
+	niacProCode = "5001"
 )
+
+// licensePublicKeyB64 is the standard-base64 Ed25519 public key that verifies
+// production license tokens. The matching private key lives only in the keygen
+// tool (msn-internal-tools/keygen) and never ships. See ADR-0005.
+//
+// Pre-launch signing key — rotate via keygen before GA.
+const licensePublicKeyB64 = "O+o8n4qHHp/X//JrRXSdgGSWa2Fqz79OtgUkcylNxZg="
 
 // Tier represents the license tier.
 type Tier int
 
-// License tier constants. Numeric values match the tier digit embedded
-// in the license key (position 13 of the encoded key). NIAC has a
-// single paid tier; the wire digit '1' is consistent with keygen's
-// productCatalog entry for 5001.
+// License tier constants. Numeric values match the tier field embedded in the
+// signed payload. NIAC has a single paid tier.
 const (
 	// TierInvalid represents an invalid or unrecognized license tier.
 	TierInvalid Tier = -1
-	// TierFree is the unlicensed tier. No key needed; only the basic
-	// feature set (up to 10 simulated devices, common protocols) is
-	// available.
+	// TierFree is the unlicensed tier. No token needed; only the basic
+	// feature set (up to 10 simulated devices, common protocols) is available.
 	TierFree Tier = 0
-	// TierPro unlocks the full NIAC feature set (unlimited devices,
-	// advanced protocols, error injection, etc.). Wire tier digit 1.
+	// TierPro unlocks the full NIAC feature set (unlimited devices, advanced
+	// protocols, error injection, etc.). Wire tier value 1.
 	TierPro Tier = 1
 )
 
 const (
 	errProductCodeMismatch = "Product code mismatch for tier"
-	// ErrLicenseKeyLength is the key-length validation error string.
-	ErrLicenseKeyLength = "License key must be 16 characters"
+	// ErrLicenseInvalid is the generic rejection message. Validation failures
+	// deliberately do not distinguish "bad signature" from "tampered payload"
+	// to a caller — both mean the same thing: not a genuine license.
+	ErrLicenseInvalid = "License key is not valid"
 )
 
 // String returns the tier name.
@@ -95,42 +90,45 @@ type Info struct {
 	ErrorMsg    string    `json:"error,omitempty"`
 }
 
-// ValidateLicenseKey performs offline validation of a license key.
+// ValidateLicenseKey performs offline validation of a license token against the
+// embedded production key. The verifier wraps a 32-byte key, so it is rebuilt
+// per call rather than held as a package global; validation is not on a hot
+// path (HasFeature reads cached Info, it does not re-validate).
 func ValidateLicenseKey(key string) *Info {
+	return mustVerifierFromB64(licensePublicKeyB64).Validate(key)
+}
+
+// Validate verifies a signed token and maps it to product feature data. The
+// signature is checked first (in parseAndVerify); only a genuinely signed,
+// current-version payload reaches the product-specific interpretation below.
+func (v *Verifier) Validate(key string) *Info {
 	info := &Info{
-		Key:         key,
-		Valid:       false,
-		Tier:        TierInvalid,
-		ProductCode: "",
-		Serial:      "",
-		MaxDevices:  defaultMaxDevices,
+		Key:        strings.TrimSpace(key),
+		Valid:      false,
+		Tier:       TierInvalid,
+		MaxDevices: defaultMaxDevices,
 	}
 
-	normalized := normalizeKey(key)
-	if len(normalized) != keyLength {
-		info.ErrorMsg = ErrLicenseKeyLength
+	payload, err := v.parseAndVerify(key)
+	if err != nil {
+		info.ErrorMsg = ErrLicenseInvalid
 		return info
 	}
 
-	if !validKeyChars(normalized) {
-		info.ErrorMsg = "License key contains invalid characters"
+	// A correctly signed token for a different product must not validate here.
+	if payload.Product != productName {
+		info.ErrorMsg = ErrLicenseInvalid
 		return info
 	}
 
-	cipher := NewRotorCipher(cipherStartPos)
-	decoded := cipher.DecodeString(normalized)
+	info.ProductCode = payload.Code
+	info.Serial = payload.Serial
 
-	if !validateKeyChecksum(decoded) {
-		info.ErrorMsg = "License key failed checksum validation"
-		return info
-	}
-
-	info.ProductCode = decoded[2:6]
-	info.Serial = decoded[6:13]
-	tierChar := decoded[13]
-
-	switch tierChar {
-	case '1':
+	// Tier and feature set are authoritative in-binary: the payload's tier is
+	// mapped to the feature list defined here, so a signed token can only grant
+	// what this build knows about.
+	switch payload.Tier {
+	case int(TierPro):
 		info.Tier = TierPro
 		info.Features = proFeatures()
 	default:
@@ -138,70 +136,32 @@ func ValidateLicenseKey(key string) *Info {
 		return info
 	}
 
-	switch info.ProductCode {
-	case "5001":
-		if info.Tier != TierPro {
-			info.ErrorMsg = errProductCodeMismatch
+	if payload.Code != niacProCode || info.Tier != TierPro {
+		info.ErrorMsg = errProductCodeMismatch
+		return info
+	}
+
+	if payload.MaxDevices > 0 {
+		info.MaxDevices = payload.MaxDevices
+	}
+	if payload.ExpiresAt > 0 {
+		info.ExpiresAt = time.Unix(payload.ExpiresAt, 0).UTC()
+		if time.Now().After(info.ExpiresAt) {
+			info.ErrorMsg = "License has expired"
 			return info
 		}
-	default:
-		info.ErrorMsg = "Unknown product code"
-		return info
 	}
 
 	info.Valid = true
 	return info
 }
 
-var keyCharRE = regexp.MustCompile(`^[0-9A-Z]+$`)
-
-func validKeyChars(s string) bool {
-	return keyCharRE.MatchString(s)
-}
-
-func validateKeyChecksum(key string) bool {
-	payload := key[2:14]
-	expected := CalculateChecksum(payload)
-	prefixMatch := key[0:2] == expected
-	suffixMatch := key[14:16] == expected
-	return prefixMatch && suffixMatch
-}
-
-// GenerateLicenseKey creates a new license key (for testing — production
-// keys are issued by the keygen tool).
-func GenerateLicenseKey(productCode string, serial string, tier Tier) (string, error) {
-	if len(productCode) != productCodeLength {
-		return "", errors.New("product code must be 4 characters")
-	}
-	if len(serial) != serialLength {
-		return "", errors.New("serial must be 7 characters")
-	}
-	if tier != TierPro {
-		return "", errors.New("invalid tier (NIAC has only TierPro)")
-	}
-
-	payload := productCode + serial + fmt.Sprintf("%d", tier)
-	checksum := CalculateChecksum(payload)
-	fullKey := checksum[0:checksumLength] + payload + checksum
-	cipher := NewRotorCipher(cipherStartPos)
-	encoded := cipher.EncodeString(fullKey)
-	return strings.ToUpper(encoded), nil
-}
-
-func normalizeKey(key string) string {
-	key = strings.ReplaceAll(key, "-", "")
-	key = strings.ReplaceAll(key, " ", "")
-	key = strings.ReplaceAll(key, ".", "")
-	return strings.ToUpper(key)
-}
-
-// FormatKey formats a license key for display (adds dashes).
+// FormatKey returns a signed token for display. Tokens are already
+// display-ready (single line, copy/paste); only surrounding whitespace is
+// trimmed. Unlike the old 16-char format, tokens must NOT have characters
+// stripped — base64url uses '-' and '_'.
 func FormatKey(key string) string {
-	key = normalizeKey(key)
-	if len(key) != keyLength {
-		return key
-	}
-	return key[0:4] + "-" + key[4:8] + "-" + key[8:12] + "-" + key[12:16]
+	return strings.TrimSpace(key)
 }
 
 // HasFeature checks if the license includes a specific feature.
@@ -214,14 +174,13 @@ func (li *Info) CanRunPro() bool {
 	return li.Valid && li.Tier >= TierPro
 }
 
-// proFeatures returns the feature list granted to NIAC Pro (product
-// code 5001). Mirrors keygen's productCatalog.
+// proFeatures returns the feature list granted to NIAC Pro (product code 5001).
+// Mirrors keygen's productCatalog.
 //
-// snmpv3 was removed from Pro on 2026-05-27: SNMPv3 is the only safe
-// SNMP version (v1/v2c send credentials in cleartext), so gating it
-// would push customers toward the insecure variants. BGP + OSPF stay
-// on Pro because they're large protocol implementations, not a
-// safety floor.
+// snmpv3 was removed from Pro on 2026-05-27: SNMPv3 is the only safe SNMP
+// version (v1/v2c send credentials in cleartext), so gating it would push
+// customers toward the insecure variants. BGP + OSPF stay on Pro because
+// they're large protocol implementations, not a safety floor.
 func proFeatures() []string {
 	return []string{
 		"unlimited_devices",
