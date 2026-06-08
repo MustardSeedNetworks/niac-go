@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/api"
+	"github.com/MustardSeedNetworks/niac-go/internal/api/tokenstore"
 	"github.com/MustardSeedNetworks/niac-go/internal/capture"
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 	"github.com/MustardSeedNetworks/niac-go/internal/logging"
@@ -200,12 +201,12 @@ func (d *Daemon) ReloadTokens() (int, error) {
 	envToken := os.Getenv("NIAC_API_TOKEN")
 	switch {
 	case envToken != "":
-		d.apiServer.SetTokens([]api.ScopedToken{{Value: envToken, Scope: api.ScopeReadWrite}})
+		d.apiServer.SetTokens([]tokenstore.ScopedToken{{Value: envToken, Scope: tokenstore.ScopeReadWrite}})
 		return 1, nil
 	case d.cfg.Token != "":
 		// Fall back to the daemon's startup-captured token when the
 		// env var has been unset between starts (rare but possible).
-		d.apiServer.SetTokens([]api.ScopedToken{{Value: d.cfg.Token, Scope: api.ScopeReadWrite}})
+		d.apiServer.SetTokens([]tokenstore.ScopedToken{{Value: d.cfg.Token, Scope: tokenstore.ScopeReadWrite}})
 		return 1, nil
 	default:
 		d.apiServer.SetTokens(nil)

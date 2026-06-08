@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/MustardSeedNetworks/niac-go/internal/api"
+	"github.com/MustardSeedNetworks/niac-go/internal/api/tokenstore"
 )
 
 // writeTokenFile drops a single-token JSON document on disk with the
@@ -176,7 +176,7 @@ func TestDaemon_ReloadTokens_PreservesPreviousTokensOnBadFile(t *testing.T) {
 	if err == nil {
 		t.Fatal("ReloadTokens accepted a world-readable file; expected refusal")
 	}
-	if !errors.Is(err, api.ErrTokenFileWorldReadable) {
+	if !errors.Is(err, tokenstore.ErrTokenFileWorldReadable) {
 		t.Errorf("ReloadTokens returned %v, want ErrTokenFileWorldReadable", err)
 	}
 

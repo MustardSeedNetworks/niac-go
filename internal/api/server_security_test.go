@@ -15,6 +15,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/MustardSeedNetworks/niac-go/internal/api/tokenstore"
+
 	"golang.org/x/time/rate"
 )
 
@@ -32,13 +34,13 @@ func newTestServerWithAuth(t *testing.T) (*Server, string, string) {
 	server.csrf = NewCSRFManager()
 	t.Cleanup(server.csrf.Stop)
 
-	// Generate auth token. Wave 2: seed the TokenStore directly. The
+	// Generate auth token. Wave 2: seed the tokenstore.TokenStore directly. The
 	// cfg.Token field is left set so the legacy Wave 1 gate code path
 	// (server.go:enforceNonLoopbackAuthGate) sees a configured-auth
 	// state even though the middleware reads from s.tokens.
 	token := generateTestToken()
 	server.cfg.Token = token
-	server.SetTokens([]ScopedToken{{Value: token, Scope: ScopeReadWrite}})
+	server.SetTokens([]tokenstore.ScopedToken{{Value: token, Scope: tokenstore.ScopeReadWrite}})
 
 	return server, tmpDir, token
 }
