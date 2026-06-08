@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 
-package api
+package csrf
 
 import (
 	"errors"
@@ -15,7 +15,7 @@ import (
 // invalid for session B even with identical content.
 func TestCSRFManager_PerSessionIsolation(t *testing.T) {
 	t.Parallel()
-	m := NewCSRFManager()
+	m := NewManager()
 	t.Cleanup(m.Stop)
 
 	tokenA, genErrA := m.Generate(SessionKey("bearer-A"))
@@ -61,7 +61,7 @@ func TestCSRFManager_LoopbackBypassSharesKey(t *testing.T) {
 // error codes / messages per cause.
 func TestCSRFManager_ValidateErrorClassification(t *testing.T) {
 	t.Parallel()
-	m := NewCSRFManager()
+	m := NewManager()
 	t.Cleanup(m.Stop)
 
 	// Missing.
@@ -88,7 +88,7 @@ func TestCSRFManager_ValidateErrorClassification(t *testing.T) {
 // every in-flight request when it polls.
 func TestCSRFManager_GetOrCreateIsIdempotent(t *testing.T) {
 	t.Parallel()
-	m := NewCSRFManager()
+	m := NewManager()
 	t.Cleanup(m.Stop)
 
 	first, err := m.GetOrCreate("session")
@@ -118,7 +118,7 @@ func TestCSRFManager_GetOrCreateIsIdempotent(t *testing.T) {
 // accept every one of those returned tokens.
 func TestCSRFManager_GetOrCreate_ConcurrentSameSession(t *testing.T) {
 	t.Parallel()
-	m := NewCSRFManager()
+	m := NewManager()
 	t.Cleanup(m.Stop)
 
 	const (

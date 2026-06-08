@@ -15,6 +15,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/MustardSeedNetworks/niac-go/internal/api/csrf"
+
 	"github.com/MustardSeedNetworks/niac-go/internal/api/ratelimit"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/api/tokenstore"
@@ -33,7 +35,7 @@ func newTestServerWithAuth(t *testing.T) (*Server, string, string) {
 
 	// Initialize server components
 	server.rateLimiter = ratelimit.NewRateLimiter(DefaultRateLimit, DefaultBurst)
-	server.csrf = NewCSRFManager()
+	server.csrf = csrf.NewManager()
 	t.Cleanup(server.csrf.Stop)
 
 	// Generate auth token. Wave 2: seed the tokenstore.TokenStore directly. The
@@ -52,7 +54,7 @@ func newTestServerWithAuth(t *testing.T) (*Server, string, string) {
 // the pre-#1257 testCSRFToken(t, server, token) global the old tests reached for.
 func testCSRFToken(t *testing.T, server *Server, bearer string) string {
 	t.Helper()
-	tok, err := server.csrf.GetOrCreate(SessionKey(bearer))
+	tok, err := server.csrf.GetOrCreate(csrf.SessionKey(bearer))
 	if err != nil {
 		t.Fatalf("mint test CSRF token: %v", err)
 	}
@@ -133,7 +135,7 @@ func TestCSRF_TokenValidation(t *testing.T) {
 
 	w := httptest.NewRecorder()
 
-	handler := server.auth(server.csrfProtect(server.handleAlerts))
+	handler := server.auth(csrf.Protect(server.csrf, simpleErr, server.handleAlerts))
 	handler(w, req)
 
 	if w.Code != http.StatusOK {
@@ -156,7 +158,7 @@ func TestCSRF_InvalidTokenRejection(t *testing.T) {
 
 	w := httptest.NewRecorder()
 
-	handler := server.auth(server.csrfProtect(server.handleAlerts))
+	handler := server.auth(csrf.Protect(server.csrf, simpleErr, server.handleAlerts))
 	handler(w, req)
 
 	if w.Code != http.StatusForbidden {
@@ -179,7 +181,7 @@ func TestCSRF_MissingTokenRejection(t *testing.T) {
 
 	w := httptest.NewRecorder()
 
-	handler := server.auth(server.csrfProtect(server.handleAlerts))
+	handler := server.auth(csrf.Protect(server.csrf, simpleErr, server.handleAlerts))
 	handler(w, req)
 
 	if w.Code != http.StatusForbidden {
@@ -462,7 +464,7 @@ func TestAlertConfig_ConcurrentUpdates(t *testing.T) {
 
 			w := httptest.NewRecorder()
 
-			handler := server.auth(server.csrfProtect(server.handleAlerts))
+			handler := server.auth(csrf.Protect(server.csrf, simpleErr, server.handleAlerts))
 			handler(w, req)
 
 			if w.Code != http.StatusOK {
@@ -502,7 +504,7 @@ func TestAlertConfig_NoDoubleClose(t *testing.T) {
 
 	w := httptest.NewRecorder()
 
-	handler := server.auth(server.csrfProtect(server.handleAlerts))
+	handler := server.auth(csrf.Protect(server.csrf, simpleErr, server.handleAlerts))
 	handler(w, req)
 
 	if w.Code != http.StatusOK {
@@ -562,7 +564,7 @@ func TestAlertConfig_GoroutineCleanup(t *testing.T) {
 
 		w := httptest.NewRecorder()
 
-		handler := server.auth(server.csrfProtect(server.handleAlerts))
+		handler := server.auth(csrf.Protect(server.csrf, simpleErr, server.handleAlerts))
 		handler(w, req)
 
 		if w.Code != http.StatusOK {

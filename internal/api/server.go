@@ -31,6 +31,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/MustardSeedNetworks/niac-go/internal/api/csrf"
+
 	"github.com/MustardSeedNetworks/niac-go/internal/api/ratelimit"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/api/tokenstore"
@@ -269,7 +271,7 @@ type Server struct {
 	// csrf manages per-session CSRF tokens (#1257). Pre-port niac
 	// shared one global token across all clients; the manager keys
 	// tokens by sha256(bearer) so each session has its own.
-	csrf           *CSRFManager
+	csrf           *csrf.Manager
 	sseHub         *SSEHub
 	uploadLimiter  *ratelimit.RateLimiter
 	writeLimiter   *ratelimit.RateLimiter
@@ -313,7 +315,7 @@ func NewServer(cfg ServerConfig) *Server {
 		logger:        slog.Default(),
 		startTime:     time.Now(),
 		rateLimiter:   ratelimit.NewRateLimiter(DefaultRateLimit, DefaultBurst),
-		csrf:          NewCSRFManager(),
+		csrf:          csrf.NewManager(),
 		sseHub:        NewSSEHub(SSEConfig{}),
 		bgStop:        make(chan struct{}),
 		uploadLimiter: ratelimit.NewRateLimiter(UploadRateLimit, UploadBurst),

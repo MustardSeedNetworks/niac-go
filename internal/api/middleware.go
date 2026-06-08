@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"errors"
 	"net/http"
 	"os"
 	"runtime/debug"
@@ -32,52 +31,6 @@ func withScope(ctx context.Context, scope tokenstore.TokenScope) context.Context
 func scopeFromContext(ctx context.Context) (tokenstore.TokenScope, bool) {
 	v, ok := ctx.Value(scopeContextKey{}).(tokenstore.TokenScope)
 	return v, ok
-}
-
-// csrfProtect wraps handlers that modify state and require CSRF token
-// validation. #1257 sub-4 moved validation from a single global token
-// to per-session tokens keyed by sha256(bearer): each authenticated
-// session has its own CSRF token, so a leaked / harvested token from
-// one client doesn't unlock another's mutations.
-func (s *Server) csrfProtect(next http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		// Only check CSRF for state-changing methods.
-		if r.Method == http.MethodPost || r.Method == http.MethodPut ||
-			r.Method == http.MethodPatch || r.Method == http.MethodDelete {
-			if s.csrf == nil {
-				writeError(w, r, http.StatusInternalServerError, "csrf_unavailable",
-					"CSRF protection is unavailable, server misconfigured", nil)
-
-				return
-			}
-			clientToken := r.Header.Get("X-Csrf-Token")
-			sessionKey := sessionKeyFromRequest(r)
-			switch err := s.csrf.Validate(sessionKey, clientToken); {
-			case err == nil:
-				// passes
-			case errors.Is(err, errCSRFTokenMissing):
-				writeError(
-					w, r, http.StatusForbidden, "csrf_token_missing",
-					"CSRF token required for state-changing requests. Include X-CSRF-Token header.",
-					nil,
-				)
-
-				return
-			case errors.Is(err, errCSRFTokenExpired):
-				writeError(w, r, http.StatusForbidden, "csrf_token_expired",
-					"CSRF token expired; refetch /api/v1/csrf-token", nil)
-
-				return
-			default:
-				writeError(w, r, http.StatusForbidden, "csrf_token_invalid",
-					"Invalid CSRF token", nil)
-
-				return
-			}
-		}
-
-		next(w, r)
-	}
 }
 
 // addSecurityHeaders adds security headers to all HTTP responses
