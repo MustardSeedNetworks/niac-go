@@ -3,10 +3,64 @@
 package license_test
 
 import (
+	"crypto/ed25519"
+	"crypto/rand"
+	"encoding/base64"
+	"encoding/json"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/krisarmstrong/niac-go/internal/license"
 )
+
+// prodNiacProVector is a production-signed NIAC Pro token (serial NIACPRO),
+// produced by the canonical keygen tool against the embedded production public
+// key. It MUST validate via the default verifier — this pins the cross-tool
+// signing contract the way stem/seed pin theirs. If the production key rotates,
+// regenerate this vector and the embedded key together.
+const prodNiacProVector = "MSN1.eyJ2IjoxLCJwcm9kdWN0IjoibmlhYyIsImNvZGUiOiI1MDAxIiwic2VyaWFsIjoiTklBQ1BSTyIsInRpZXIiOjEsIm1heERldmljZXMiOjMsImlhdCI6MTc4MDg3NjgwMH0.jfadRV5JJGq951LSF881Ue0IE3nRLDAjiPvSy7V9hR4dR84FWxM7ttP5On1fZWohKEVH8UZz3z64PbfjLL2wDQ"
+
+// signToken builds an MSN1 token signing the given fields with priv. It mirrors
+// the keygen/verifier wire format so tests can mint tokens against an ephemeral
+// key without the production private key (which never ships).
+func signToken(
+	t *testing.T,
+	priv ed25519.PrivateKey,
+	product, code, serial string,
+	tier int,
+	exp int64,
+) string {
+	t.Helper()
+	payload := map[string]any{
+		"v":          1,
+		"product":    product,
+		"code":       code,
+		"serial":     serial,
+		"tier":       tier,
+		"maxDevices": 3,
+		"iat":        time.Date(2026, 6, 8, 0, 0, 0, 0, time.UTC).Unix(),
+	}
+	if exp > 0 {
+		payload["exp"] = exp
+	}
+	b, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("marshal payload: %v", err)
+	}
+	sig := ed25519.Sign(priv, b)
+	return "MSN1." + base64.RawURLEncoding.EncodeToString(b) +
+		"." + base64.RawURLEncoding.EncodeToString(sig)
+}
+
+func testKeyPair(t *testing.T) (ed25519.PublicKey, ed25519.PrivateKey) {
+	t.Helper()
+	pub, priv, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatalf("generate test key: %v", err)
+	}
+	return pub, priv
+}
 
 func TestTierString(t *testing.T) {
 	t.Parallel()
@@ -25,21 +79,101 @@ func TestTierString(t *testing.T) {
 	}
 }
 
-func TestGenerateAndValidateRoundTrip(t *testing.T) {
+// TestSignedTokenRoundTrip mints a token with an ephemeral key and verifies it
+// through a Verifier built on the matching public key.
+func TestSignedTokenRoundTrip(t *testing.T) {
 	t.Parallel()
-	key, err := license.GenerateLicenseKey("5001", "ABCDEFG", license.TierPro)
-	if err != nil {
-		t.Fatalf("GenerateLicenseKey: %v", err)
-	}
-	info := license.ValidateLicenseKey(key)
+	pub, priv := testKeyPair(t)
+	v := license.NewVerifier(pub)
+
+	token := signToken(t, priv, "niac", "5001", "ABCDEFG", int(license.TierPro), 0)
+	info := v.Validate(token)
 	if !info.Valid {
-		t.Fatalf("ValidateLicenseKey(%q): not valid (err=%q)", key, info.ErrorMsg)
+		t.Fatalf("Validate: not valid (err=%q)", info.ErrorMsg)
 	}
 	if info.ProductCode != "5001" {
 		t.Errorf("ProductCode = %q, want 5001", info.ProductCode)
 	}
 	if info.Tier != license.TierPro {
 		t.Errorf("Tier = %v, want Pro", info.Tier)
+	}
+	if info.Serial != "ABCDEFG" {
+		t.Errorf("Serial = %q, want ABCDEFG", info.Serial)
+	}
+	if !info.HasFeature("bgp") || info.HasFeature("snmpv3") {
+		t.Errorf("unexpected feature set: %v", info.Features)
+	}
+}
+
+// TestForgeryRejected is the core security property: a token signed by an
+// attacker's own key is rejected by the production verifier. Under the old
+// scheme the generator shipped in-binary, so this attack succeeded.
+func TestForgeryRejected(t *testing.T) {
+	t.Parallel()
+	_, attacker := testKeyPair(t)
+	forged := signToken(t, attacker, "niac", "5001", "FORGEDXX", int(license.TierPro), 0)
+
+	info := license.ValidateLicenseKey(forged)
+	if info.Valid {
+		t.Fatal("forged token (attacker key) validated against production key")
+	}
+}
+
+// TestTamperRejected mutates a single payload byte of an otherwise valid token
+// and confirms the signature check rejects it.
+func TestTamperRejected(t *testing.T) {
+	t.Parallel()
+	pub, priv := testKeyPair(t)
+	v := license.NewVerifier(pub)
+	token := signToken(t, priv, "niac", "5001", "ABCDEFG", int(license.TierPro), 0)
+
+	parts := strings.Split(token, ".")
+	raw, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		t.Fatalf("decode payload: %v", err)
+	}
+	raw[len(raw)-2] ^= 0x01 // flip a bit in the payload, keep the old signature
+	tampered := parts[0] + "." + base64.RawURLEncoding.EncodeToString(raw) + "." + parts[2]
+
+	if v.Validate(tampered).Valid {
+		t.Fatal("tampered payload validated")
+	}
+}
+
+// TestWrongProductRejected confirms a correctly signed token issued for another
+// product does not validate as NIAC.
+func TestWrongProductRejected(t *testing.T) {
+	t.Parallel()
+	pub, priv := testKeyPair(t)
+	v := license.NewVerifier(pub)
+	token := signToken(t, priv, "stem", "2001", "ABCDEFG", int(license.TierPro), 0)
+	if v.Validate(token).Valid {
+		t.Fatal("stem-product token validated as NIAC")
+	}
+}
+
+// TestExpiredRejected confirms expiry is enforced even on a validly signed token.
+func TestExpiredRejected(t *testing.T) {
+	t.Parallel()
+	pub, priv := testKeyPair(t)
+	v := license.NewVerifier(pub)
+	past := time.Now().Add(-time.Hour).Unix()
+	token := signToken(t, priv, "niac", "5001", "ABCDEFG", int(license.TierPro), past)
+	info := v.Validate(token)
+	if info.Valid {
+		t.Fatal("expired token validated")
+	}
+}
+
+// TestInvalidTierRejected confirms a validly signed token carrying an
+// unrecognized tier (here Free/0, which needs no token) is rejected.
+func TestInvalidTierRejected(t *testing.T) {
+	t.Parallel()
+	pub, priv := testKeyPair(t)
+	v := license.NewVerifier(pub)
+	token := signToken(t, priv, "niac", "5001", "ABCDEFG", int(license.TierFree), 0)
+	if v.Validate(token).Valid {
+		t.Fatal("token with Free tier validated")
 	}
 }
 
@@ -50,10 +184,10 @@ func TestValidateRejectsBadInputs(t *testing.T) {
 		key  string
 	}{
 		{"empty", ""},
-		{"too short", "AAAA-BBBB"},
-		{"too long", "AAAA-BBBB-CCCC-DDDD-EEEE"},
-		{"non-alphanumeric", "AAAA-BBBB-CCCC-D!DD"},
-		{"bad checksum", "AAAA-BBBB-CCCC-DDDD"},
+		{"garbage", "not-a-token"},
+		{"wrong scheme", "MSN9.AAAA.BBBB"},
+		{"two parts", "MSN1.AAAA"},
+		{"bad base64", "MSN1.!!!.???"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -69,63 +203,39 @@ func TestValidateRejectsBadInputs(t *testing.T) {
 	}
 }
 
-// TestKeygenContract pins the cross-tool cipher contract. The key
-// below was produced by the canonical keygen tool
-// (msn-internal-tools/keygen) and MUST validate identically in every
-// product's license package. Stem locked vectors in stem PR #266 and
-// seed locked theirs in seed PR #1095 — this is NIAC's contribution
-// to the same shared spec.
-//
-// Anchored to keygen v2.2.0 (2026-05-27) — snmpv3 dropped from Pro
-// (free for all tiers; SNMPv3 is the only safe SNMP version, so
-// gating it would push users toward the cleartext v1/v2c variants).
+// TestKeygenContract pins the cross-tool signing contract: the production-signed
+// vector validates against the embedded production key and decodes to the
+// expected NIAC Pro metadata and feature set.
 func TestKeygenContract(t *testing.T) {
 	t.Parallel()
-	vector := keygenVector{
-		name:    "niac-pro / serial NIACPRO",
-		key:     "WQ57-20TQ-NGVZ-P2YC",
-		tier:    license.TierPro,
-		product: "5001",
-		serial:  "NIACPRO",
-		features: []string{
-			"unlimited_devices",
-			"bgp", "ospf", "netbios", "ftp", "stp",
-			"ipv6_advanced", "error_injection", "traffic_shaping",
-			"config_templates", "multi_ip", "pcap_ingest", "rest_api",
-		},
-	}
-	assertKeygenVector(t, vector)
-}
-
-type keygenVector struct {
-	name     string
-	key      string
-	tier     license.Tier
-	product  string
-	serial   string
-	features []string
-}
-
-func assertKeygenVector(t *testing.T, v keygenVector) {
-	t.Helper()
-	info := license.ValidateLicenseKey(v.key)
+	info := license.ValidateLicenseKey(prodNiacProVector)
 	if !info.Valid {
-		t.Fatalf("Valid = false, want true (err=%q)", info.ErrorMsg)
+		t.Fatalf("production vector did not validate (err=%q)", info.ErrorMsg)
 	}
-	if info.Tier != v.tier {
-		t.Errorf("Tier = %v, want %v", info.Tier, v.tier)
+	if info.Tier != license.TierPro {
+		t.Errorf("Tier = %v, want Pro", info.Tier)
 	}
-	if info.ProductCode != v.product {
-		t.Errorf("ProductCode = %q, want %q", info.ProductCode, v.product)
+	if info.ProductCode != "5001" {
+		t.Errorf("ProductCode = %q, want 5001", info.ProductCode)
 	}
-	if info.Serial != v.serial {
-		t.Errorf("Serial = %q, want %q", info.Serial, v.serial)
+	if info.Serial != "NIACPRO" {
+		t.Errorf("Serial = %q, want NIACPRO", info.Serial)
 	}
-	if len(info.Features) != len(v.features) {
-		t.Errorf("Features count = %d, want %d (got %v)",
-			len(info.Features), len(v.features), info.Features)
+	want := []string{
+		"unlimited_devices",
+		"bgp", "ospf", "netbios", "ftp", "stp",
+		"ipv6_advanced", "error_injection", "traffic_shaping",
+		"config_templates", "multi_ip", "pcap_ingest", "rest_api",
 	}
-	for _, f := range v.features {
+	if len(info.Features) != len(want) {
+		t.Errorf(
+			"Features count = %d, want %d (got %v)",
+			len(info.Features),
+			len(want),
+			info.Features,
+		)
+	}
+	for _, f := range want {
 		if !info.HasFeature(f) {
 			t.Errorf("missing feature %q (got %v)", f, info.Features)
 		}
@@ -152,8 +262,7 @@ func TestActivationLifecycle(t *testing.T) {
 		t.Error("expected trial to be active")
 	}
 
-	key, _ := license.GenerateLicenseKey("5001", "ABCDEFG", license.TierPro)
-	res := mgr.Activate(key)
+	res := mgr.Activate(prodNiacProVector)
 	if !res.Success || res.Tier != license.TierPro {
 		t.Errorf("Activate unexpected: %+v", res)
 	}
@@ -180,8 +289,8 @@ func TestActivationLifecycle(t *testing.T) {
 	}
 }
 
-// TestManagerConcurrentReadsAndWrites exercises the RWMutex so `go test
-// -race` fails loudly if the locking ever regresses.
+// TestManagerConcurrentReadsAndWrites exercises the RWMutex so `go test -race`
+// fails loudly if the locking ever regresses.
 func TestManagerConcurrentReadsAndWrites(t *testing.T) {
 	t.Parallel()
 	tmp := t.TempDir()
@@ -190,12 +299,10 @@ func TestManagerConcurrentReadsAndWrites(t *testing.T) {
 		t.Fatalf("NewManagerWithDir: %v", err)
 	}
 
-	key, _ := license.GenerateLicenseKey("5001", "ABCDEFG", license.TierPro)
-
 	done := make(chan struct{})
 	go func() {
 		for range 50 {
-			mgr.Activate(key)
+			mgr.Activate(prodNiacProVector)
 			_ = mgr.Deactivate()
 		}
 		close(done)
