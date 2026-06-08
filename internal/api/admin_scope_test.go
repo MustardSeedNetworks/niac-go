@@ -6,33 +6,18 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-)
 
-// TestParseScope_Admin proves the admin scope round-trips through the
-// JSON parser. The hyphen / underscore / case variants exercised by the
-// read-only and read-write cases don't apply here — there's only one
-// canonical spelling for the admin tier.
-func TestParseScope_Admin(t *testing.T) {
-	t.Parallel()
-	scope, err := parseScope("admin")
-	if err != nil {
-		t.Fatalf("parseScope(admin): %v", err)
-	}
-	if scope != ScopeAdmin {
-		t.Errorf("parseScope(admin) = %v, want ScopeAdmin", scope)
-	}
-	if got := ScopeAdmin.String(); got != "admin" {
-		t.Errorf("ScopeAdmin.String() = %q, want %q", got, "admin")
-	}
-}
+	"github.com/MustardSeedNetworks/niac-go/internal/api/tokenstore"
+)
 
 // TestScopeOrdering pins viewer<readwrite<admin so a future refactor
 // can't silently reorder the comparisons that adminProtect relies on.
 func TestScopeOrdering(t *testing.T) {
 	t.Parallel()
-	if ScopeReadOnly >= ScopeReadWrite || ScopeReadWrite >= ScopeAdmin {
+	if tokenstore.ScopeReadOnly >= tokenstore.ScopeReadWrite ||
+		tokenstore.ScopeReadWrite >= tokenstore.ScopeAdmin {
 		t.Errorf("scope ordering broken: %d %d %d, want strictly ascending",
-			ScopeReadOnly, ScopeReadWrite, ScopeAdmin)
+			tokenstore.ScopeReadOnly, tokenstore.ScopeReadWrite, tokenstore.ScopeAdmin)
 	}
 }
 
@@ -58,7 +43,7 @@ func TestAdminProtect_Matrix(t *testing.T) {
 		{
 			name: "read-only token => forbidden",
 			setup: func(r *http.Request) *http.Request {
-				return r.WithContext(withScope(r.Context(), ScopeReadOnly))
+				return r.WithContext(withScope(r.Context(), tokenstore.ScopeReadOnly))
 			},
 			wantStatus: http.StatusForbidden,
 			wantCalled: false,
@@ -66,7 +51,7 @@ func TestAdminProtect_Matrix(t *testing.T) {
 		{
 			name: "read-write token => forbidden (write != admin)",
 			setup: func(r *http.Request) *http.Request {
-				return r.WithContext(withScope(r.Context(), ScopeReadWrite))
+				return r.WithContext(withScope(r.Context(), tokenstore.ScopeReadWrite))
 			},
 			wantStatus: http.StatusForbidden,
 			wantCalled: false,
@@ -74,7 +59,7 @@ func TestAdminProtect_Matrix(t *testing.T) {
 		{
 			name: "admin token => passes through",
 			setup: func(r *http.Request) *http.Request {
-				return r.WithContext(withScope(r.Context(), ScopeAdmin))
+				return r.WithContext(withScope(r.Context(), tokenstore.ScopeAdmin))
 			},
 			wantStatus: http.StatusOK,
 			wantCalled: true,
@@ -116,9 +101,11 @@ func TestAuth_StashesScopeOnContext(t *testing.T) {
 	server := createTestServerForMiddleware(t)
 
 	// Configure a single admin-scoped token so the success path runs.
-	server.tokens = NewTokenStore([]ScopedToken{{Value: "admin-token", Scope: ScopeAdmin}})
+	server.tokens = tokenstore.NewTokenStore(
+		[]tokenstore.ScopedToken{{Value: "admin-token", Scope: tokenstore.ScopeAdmin}},
+	)
 
-	var captured TokenScope
+	var captured tokenstore.TokenScope
 	var capturedOK bool
 	tail := http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
 		captured, capturedOK = scopeFromContext(r.Context())
@@ -132,7 +119,7 @@ func TestAuth_StashesScopeOnContext(t *testing.T) {
 	if !capturedOK {
 		t.Fatal("auth() did not stash scope on context")
 	}
-	if captured != ScopeAdmin {
-		t.Errorf("stashed scope = %v, want ScopeAdmin", captured)
+	if captured != tokenstore.ScopeAdmin {
+		t.Errorf("stashed scope = %v, want tokenstore.ScopeAdmin", captured)
 	}
 }

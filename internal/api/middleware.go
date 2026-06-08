@@ -7,18 +7,20 @@ import (
 	"os"
 	"runtime/debug"
 	"strings"
+
+	"github.com/MustardSeedNetworks/niac-go/internal/api/tokenstore"
 )
 
 // scopeContextKey is the request-context key under which the auth()
-// middleware stashes the resolved TokenScope for the request. The
+// middleware stashes the resolved tokenstore.TokenScope for the request. The
 // downstream adminProtect middleware reads it via scopeFromContext so
 // the gate stays a single concern rather than re-doing token lookup.
 // Bypass paths (loopback no-token, NIAC_AUTH_DISABLED=true) stash
-// ScopeAdmin so dev workflows aren't suddenly locked out of admin
+// tokenstore.ScopeAdmin so dev workflows aren't suddenly locked out of admin
 // operations they could perform pre-#743.
 type scopeContextKey struct{}
 
-func withScope(ctx context.Context, scope TokenScope) context.Context {
+func withScope(ctx context.Context, scope tokenstore.TokenScope) context.Context {
 	return context.WithValue(ctx, scopeContextKey{}, scope)
 }
 
@@ -27,8 +29,8 @@ func withScope(ctx context.Context, scope TokenScope) context.Context {
 // either the request never went through auth() (which would itself be
 // a configuration bug) or it pre-dates #743. In the false case the
 // caller should fail closed.
-func scopeFromContext(ctx context.Context) (TokenScope, bool) {
-	v, ok := ctx.Value(scopeContextKey{}).(TokenScope)
+func scopeFromContext(ctx context.Context) (tokenstore.TokenScope, bool) {
+	v, ok := ctx.Value(scopeContextKey{}).(tokenstore.TokenScope)
 	return v, ok
 }
 
@@ -192,7 +194,7 @@ func (s *Server) auth(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		// Wave 2: auth is keyed off the TokenStore, not the legacy
+		// Wave 2: auth is keyed off the tokenstore.TokenStore, not the legacy
 		// single-token field on ServerConfig. An empty / unset store
 		// means "no auth configured". The startup gate
 		// (enforceNonLoopbackAuthGate) already refuses to bind a
@@ -206,7 +208,7 @@ func (s *Server) auth(next http.HandlerFunc) http.HandlerFunc {
 			if os.Getenv("NIAC_AUTH_DISABLED") == "true" {
 				// #743: dev-only bypass — treat as admin so dev
 				// workflows can still exercise admin-gated routes.
-				next(w, r.WithContext(withScope(r.Context(), ScopeAdmin)))
+				next(w, r.WithContext(withScope(r.Context(), tokenstore.ScopeAdmin)))
 
 				return
 			}
@@ -214,7 +216,7 @@ func (s *Server) auth(next http.HandlerFunc) http.HandlerFunc {
 			if !nonLoopback {
 				// Loopback-only, no token: the documented local-dev path.
 				// #743: stash admin so local-dev keeps full access.
-				next(w, r.WithContext(withScope(r.Context(), ScopeAdmin)))
+				next(w, r.WithContext(withScope(r.Context(), tokenstore.ScopeAdmin)))
 
 				return
 			}
@@ -262,11 +264,11 @@ func (s *Server) auth(next http.HandlerFunc) http.HandlerFunc {
 		}
 
 		// Wave 2: scope enforcement. Safe methods (GET/HEAD/OPTIONS/
-		// TRACE) accept ScopeReadOnly; state-changing methods require
-		// ScopeReadWrite. A read-only token attempting a write returns
+		// TRACE) accept tokenstore.ScopeReadOnly; state-changing methods require
+		// tokenstore.ScopeReadWrite. A read-only token attempting a write returns
 		// 403 (the token is valid, just under-privileged) rather than
 		// 401 (which means "we don't know who you are").
-		required := RequiredScopeForMethod(r.Method)
+		required := tokenstore.RequiredScopeForMethod(r.Method)
 		if scope < required {
 			writeError(w, r, http.StatusForbidden, "forbidden",
 				"token lacks required scope", nil)
@@ -298,7 +300,7 @@ func (s *Server) auth(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-// adminProtect wraps handlers that require ScopeAdmin (typically
+// adminProtect wraps handlers that require tokenstore.ScopeAdmin (typically
 // destructive whole-config operations like /api/v1/config/import).
 // The auth() middleware must run upstream — adminProtect reads the
 // scope stashed there; an unstashed context is treated as a 403 so
@@ -309,7 +311,7 @@ func (s *Server) auth(next http.HandlerFunc) http.HandlerFunc {
 func (s *Server) adminProtect(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		scope, ok := scopeFromContext(r.Context())
-		if !ok || scope < ScopeAdmin {
+		if !ok || scope < tokenstore.ScopeAdmin {
 			writeError(w, r, http.StatusForbidden, "forbidden",
 				"this operation requires an admin-scoped token", nil)
 			s.logger.WarnContext(r.Context(),
@@ -321,7 +323,7 @@ func (s *Server) adminProtect(next http.HandlerFunc) http.HandlerFunc {
 				"userAgent", r.UserAgent(),
 				"path", r.URL.Path,
 				"method", r.Method,
-				"requiredScope", ScopeAdmin.String(),
+				"requiredScope", tokenstore.ScopeAdmin.String(),
 			)
 
 			return

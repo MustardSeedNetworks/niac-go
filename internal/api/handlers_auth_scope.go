@@ -2,7 +2,11 @@
 
 package api
 
-import "net/http"
+import (
+	"net/http"
+
+	"github.com/MustardSeedNetworks/niac-go/internal/api/tokenstore"
+)
 
 // AuthScopeResponse is the body of GET /api/v1/auth/scope. It tells
 // the UI which scope the caller's bearer token resolves to so the
@@ -10,7 +14,7 @@ import "net/http"
 // to #743).
 //
 // The scope string matches the canonical form returned by
-// TokenScope.String(): "read-only" / "read-write" / "admin". A
+// tokenstore.TokenScope.String(): "read-only" / "read-write" / "admin". A
 // missing or unauthenticated path returns the bypass scope ("admin")
 // because the auth() middleware stashes admin on those paths so they
 // continue to function — the UI gates would otherwise lock loopback
@@ -27,7 +31,7 @@ type AuthScopeResponse struct {
 func (s *Server) handleAuthScope(w http.ResponseWriter, r *http.Request) {
 	scope, ok := scopeFromContext(r.Context())
 	if !ok {
-		s.writeJSON(w, AuthScopeResponse{Scope: ScopeReadOnly.String()})
+		s.writeJSON(w, AuthScopeResponse{Scope: tokenstore.ScopeReadOnly.String()})
 
 		return
 	}

@@ -6,6 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/MustardSeedNetworks/niac-go/internal/api/tokenstore"
+
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 	"github.com/MustardSeedNetworks/niac-go/internal/protocols"
@@ -185,10 +187,10 @@ func TestCSRFProtectionRejectsWhenNoToken(t *testing.T) {
 
 func TestAuthMiddlewareWithoutToken(t *testing.T) {
 	server := createTestServerForMiddleware(t)
-	// Wave 2: tokens live in TokenStore. The Wave 1 single-token model
-	// is preserved by seeding the store with one ScopeReadWrite entry —
+	// Wave 2: tokens live in tokenstore.TokenStore. The Wave 1 single-token model
+	// is preserved by seeding the store with one tokenstore.ScopeReadWrite entry —
 	// behaviourally identical to setting cfg.Token previously.
-	server.SetTokens([]ScopedToken{{Value: "secret-api-token", Scope: ScopeReadWrite}})
+	server.SetTokens([]tokenstore.ScopedToken{{Value: "secret-api-token", Scope: tokenstore.ScopeReadWrite}})
 	server.rateLimiter = NewRateLimiter(100, 200)
 
 	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -210,7 +212,7 @@ func TestAuthMiddlewareWithoutToken(t *testing.T) {
 
 func TestAuthMiddlewareWithValidToken(t *testing.T) {
 	server := createTestServerForMiddleware(t)
-	server.SetTokens([]ScopedToken{{Value: "secret-api-token", Scope: ScopeReadWrite}})
+	server.SetTokens([]tokenstore.ScopedToken{{Value: "secret-api-token", Scope: tokenstore.ScopeReadWrite}})
 	server.rateLimiter = NewRateLimiter(100, 200)
 
 	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -233,7 +235,7 @@ func TestAuthMiddlewareWithValidToken(t *testing.T) {
 
 func TestAuthMiddlewareWithInvalidToken(t *testing.T) {
 	server := createTestServerForMiddleware(t)
-	server.SetTokens([]ScopedToken{{Value: "secret-api-token", Scope: ScopeReadWrite}})
+	server.SetTokens([]tokenstore.ScopedToken{{Value: "secret-api-token", Scope: tokenstore.ScopeReadWrite}})
 	server.rateLimiter = NewRateLimiter(100, 200)
 
 	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -256,7 +258,7 @@ func TestAuthMiddlewareWithInvalidToken(t *testing.T) {
 
 func TestAuthMiddlewareNoTokenConfigured(t *testing.T) {
 	server := createTestServerForMiddleware(t)
-	// Wave 2: empty TokenStore is the canonical "auth disabled" shape.
+	// Wave 2: empty tokenstore.TokenStore is the canonical "auth disabled" shape.
 	server.SetTokens(nil)
 	server.rateLimiter = NewRateLimiter(100, 200)
 
@@ -282,7 +284,7 @@ func TestAuthMiddlewareNoTokenConfigured(t *testing.T) {
 // is sufficient for GET requests (Wave 2 scope enforcement).
 func TestAuthMiddleware_ReadOnlyTokenOnGet_200(t *testing.T) {
 	server := createTestServerForMiddleware(t)
-	server.SetTokens([]ScopedToken{{Value: "ro-token", Scope: ScopeReadOnly}})
+	server.SetTokens([]tokenstore.ScopedToken{{Value: "ro-token", Scope: tokenstore.ScopeReadOnly}})
 	server.rateLimiter = NewRateLimiter(100, 200)
 
 	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -307,7 +309,7 @@ func TestAuthMiddleware_ReadOnlyTokenOnGet_200(t *testing.T) {
 // is valid, just under-privileged.
 func TestAuthMiddleware_ReadOnlyTokenOnPost_403(t *testing.T) {
 	server := createTestServerForMiddleware(t)
-	server.SetTokens([]ScopedToken{{Value: "ro-token", Scope: ScopeReadOnly}})
+	server.SetTokens([]tokenstore.ScopedToken{{Value: "ro-token", Scope: tokenstore.ScopeReadOnly}})
 	server.rateLimiter = NewRateLimiter(100, 200)
 
 	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -335,7 +337,7 @@ func TestAuthMiddleware_ReadOnlyTokenOnPost_403(t *testing.T) {
 // token is accepted on state-changing methods.
 func TestAuthMiddleware_ReadWriteTokenOnPost_200(t *testing.T) {
 	server := createTestServerForMiddleware(t)
-	server.SetTokens([]ScopedToken{{Value: "rw-token", Scope: ScopeReadWrite}})
+	server.SetTokens([]tokenstore.ScopedToken{{Value: "rw-token", Scope: tokenstore.ScopeReadWrite}})
 	server.rateLimiter = NewRateLimiter(100, 200)
 
 	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -359,7 +361,7 @@ func TestAuthMiddleware_ReadWriteTokenOnPost_200(t *testing.T) {
 // is rejected with 401 regardless of HTTP method.
 func TestAuthMiddleware_UnknownToken_401(t *testing.T) {
 	server := createTestServerForMiddleware(t)
-	server.SetTokens([]ScopedToken{{Value: "known-token", Scope: ScopeReadWrite}})
+	server.SetTokens([]tokenstore.ScopedToken{{Value: "known-token", Scope: tokenstore.ScopeReadWrite}})
 	server.rateLimiter = NewRateLimiter(100, 200)
 
 	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -396,8 +398,8 @@ func TestAuthMiddleware_BackCompat_SingleNIACAPIToken(t *testing.T) {
 	if !ok {
 		t.Fatal("Wave 1 single-token seed: token not found in store")
 	}
-	if scope != ScopeReadWrite {
-		t.Errorf("Wave 1 single-token seed: scope = %v, want ScopeReadWrite", scope)
+	if scope != tokenstore.ScopeReadWrite {
+		t.Errorf("Wave 1 single-token seed: scope = %v, want tokenstore.ScopeReadWrite", scope)
 	}
 }
 
@@ -406,7 +408,7 @@ func TestAuthMiddleware_BackCompat_SingleNIACAPIToken(t *testing.T) {
 // requests through without auth (#739).
 func TestAuth_EmptyStore_LoopbackBypasses(t *testing.T) {
 	server := createTestServerForMiddleware(t)
-	server.tokens = NewTokenStore(nil) // empty store
+	server.tokens = tokenstore.NewTokenStore(nil) // empty store
 	server.cfg.Addr = "127.0.0.1:8445"
 
 	called := false
@@ -430,8 +432,8 @@ func TestAuth_EmptyStore_LoopbackBypasses(t *testing.T) {
 // even though the startup gate should have prevented this bind.
 func TestAuth_EmptyStore_NonLoopbackFailsClosed(t *testing.T) {
 	server := createTestServerForMiddleware(t)
-	server.tokens = NewTokenStore(nil) // empty store
-	server.cfg.Addr = "0.0.0.0:8445"   // non-loopback
+	server.tokens = tokenstore.NewTokenStore(nil) // empty store
+	server.cfg.Addr = "0.0.0.0:8445"              // non-loopback
 
 	called := false
 	wrapped := server.auth(func(w http.ResponseWriter, _ *http.Request) {
@@ -457,7 +459,7 @@ func TestAuth_EmptyStore_NonLoopbackFailsClosed(t *testing.T) {
 func TestAuth_EmptyStore_NonLoopbackExplicitOptOut(t *testing.T) {
 	t.Setenv("NIAC_AUTH_DISABLED", "true")
 	server := createTestServerForMiddleware(t)
-	server.tokens = NewTokenStore(nil)
+	server.tokens = tokenstore.NewTokenStore(nil)
 	server.cfg.Addr = "0.0.0.0:8445"
 
 	called := false

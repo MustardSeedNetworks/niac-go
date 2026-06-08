@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/MustardSeedNetworks/niac-go/internal/api/tokenstore"
 )
 
 // TestHandleAuthScope_EchoesContextScope proves the UI scope-discovery
@@ -17,13 +19,13 @@ func TestHandleAuthScope_EchoesContextScope(t *testing.T) {
 
 	cases := []struct {
 		name      string
-		stash     TokenScope
+		stash     tokenstore.TokenScope
 		stashed   bool
 		wantScope string
 	}{
-		{"read-only stashed", ScopeReadOnly, true, "read-only"},
-		{"read-write stashed", ScopeReadWrite, true, "read-write"},
-		{"admin stashed", ScopeAdmin, true, "admin"},
+		{"read-only stashed", tokenstore.ScopeReadOnly, true, "read-only"},
+		{"read-write stashed", tokenstore.ScopeReadWrite, true, "read-write"},
+		{"admin stashed", tokenstore.ScopeAdmin, true, "admin"},
 		// Unstashed context is the wiring-bug fallback: report the
 		// safest tier so a misregistered route never accidentally
 		// surfaces admin controls to the UI.

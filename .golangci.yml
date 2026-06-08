@@ -247,6 +247,15 @@ linters:
           deny:
             - pkg: github.com/MustardSeedNetworks/niac-go/internal/api
               desc: "the simulation/domain core must not import the web/API layer — dependencies point inward; wire transport at internal/api or internal/daemon"
+        # Sub-API leaf packages extracted from the internal/api monolith must
+        # not import back into the api transport layer — they are self-contained
+        # building blocks that the Server (and daemon) compose inward. See ADR-0006.
+        "api-tokenstore-isolated":
+          files:
+            - "**/internal/api/tokenstore/**"
+          deny:
+            - pkg: github.com/MustardSeedNetworks/niac-go/internal/api
+              desc: "tokenstore is a leaf — it holds the bearer-token store and scope model with no transport dependency; the api package imports it, never the reverse"
 
     embeddedstructfieldcheck:
       # Checks that sync.Mutex and sync.RWMutex are not used as embedded fields.

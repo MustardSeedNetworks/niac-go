@@ -31,6 +31,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/MustardSeedNetworks/niac-go/internal/api/tokenstore"
+
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 	"github.com/MustardSeedNetworks/niac-go/internal/library"
 	"github.com/MustardSeedNetworks/niac-go/internal/license"
@@ -165,8 +167,8 @@ type ServerConfig struct {
 	Addr        string
 	MetricsAddr string
 	// Token is the legacy Wave 1 single bearer token. When non-empty and
-	// TokenFile is empty, the server seeds its TokenStore with this value
-	// at ScopeReadWrite (back-compat with the pre-Wave-2 contract).
+	// TokenFile is empty, the server seeds its tokenstore.TokenStore with this value
+	// at tokenstore.ScopeReadWrite (back-compat with the pre-Wave-2 contract).
 	Token string
 	// TokenFile, when non-empty, points at a 0o600 JSON file with the
 	// shape `{"tokens":[{"value":"...","scope":"read-only|read-write"}]}`.
@@ -287,7 +289,7 @@ type Server struct {
 	// construction time, then rotated by Server.ReloadTokensFromFile or
 	// Server.SetTokens (called from the SIGHUP handler in
 	// cmd/niac/cmd_daemon.go).
-	tokens *TokenStore
+	tokens *tokenstore.TokenStore
 }
 
 // NewServer returns a configured API server.
@@ -348,9 +350,9 @@ func NewServer(cfg ServerConfig) *Server {
 //
 // If both are set we honour the file and log INFO so the operator
 // knows NIAC_API_TOKEN was ignored.
-func initialTokenStore(cfg ServerConfig) *TokenStore {
+func initialTokenStore(cfg ServerConfig) *tokenstore.TokenStore {
 	if cfg.TokenFile != "" {
-		tokens, err := LoadTokenFile(cfg.TokenFile)
+		tokens, err := tokenstore.LoadTokenFile(cfg.TokenFile)
 		if err != nil {
 			slog.Error("[API] Failed to load token file at startup, falling back to NIAC_API_TOKEN (if set)",
 				"path", cfg.TokenFile, "error", err)
@@ -359,13 +361,13 @@ func initialTokenStore(cfg ServerConfig) *TokenStore {
 				slog.Info("[API] Token file overrides NIAC_API_TOKEN; the env var value will be ignored",
 					"path", cfg.TokenFile, "tokenCount", len(tokens))
 			}
-			return NewTokenStore(tokens)
+			return tokenstore.NewTokenStore(tokens)
 		}
 	}
 	if cfg.Token != "" {
-		return NewTokenStore([]ScopedToken{{Value: cfg.Token, Scope: ScopeReadWrite}})
+		return tokenstore.NewTokenStore([]tokenstore.ScopedToken{{Value: cfg.Token, Scope: tokenstore.ScopeReadWrite}})
 	}
-	return NewTokenStore(nil)
+	return tokenstore.NewTokenStore(nil)
 }
 
 // SetTokens atomically rotates the active bearer-token set. Used by
@@ -374,9 +376,9 @@ func initialTokenStore(cfg ServerConfig) *TokenStore {
 // complete normally — they already passed the auth middleware and the
 // handler does not re-check. Only NEW requests after the swap see
 // the new tokens.
-func (s *Server) SetTokens(tokens []ScopedToken) {
+func (s *Server) SetTokens(tokens []tokenstore.ScopedToken) {
 	if s.tokens == nil {
-		s.tokens = NewTokenStore(tokens)
+		s.tokens = tokenstore.NewTokenStore(tokens)
 		return
 	}
 	s.tokens.Replace(tokens)
@@ -393,7 +395,7 @@ func (s *Server) ReloadTokensFromFile() (int, error) {
 	if s.cfg.TokenFile == "" {
 		return 0, nil
 	}
-	tokens, err := LoadTokenFile(s.cfg.TokenFile)
+	tokens, err := tokenstore.LoadTokenFile(s.cfg.TokenFile)
 	if err != nil {
 		return 0, err
 	}
