@@ -27,7 +27,7 @@ func TestSSELogHandlerTeesNonSSE(t *testing.T) {
 
 	// Install the tee using a discard next-handler so the test output
 	// stays clean.
-	logger := slog.New(NewLogHandler(hub, slog.DiscardHandler))
+	logger := slog.New(NewLogHandler(hub, slog.NewTextHandler(&strings.Builder{}, nil)))
 	logger.Info("device created", "host", "router-1")
 
 	select {
@@ -60,7 +60,7 @@ func TestSSELogHandlerFiltersInternal(t *testing.T) {
 	defer func() { hub.unregister <- client }()
 	waitForClient(t, hub, StreamLogs, 1)
 
-	logger := slog.New(NewLogHandler(hub, slog.DiscardHandler))
+	logger := slog.New(NewLogHandler(hub, slog.NewTextHandler(&strings.Builder{}, nil)))
 	logger.Info("[SSE] Client connected to stream", "stream", "logs")
 
 	// The tee should NOT have fed this back to the hub.
