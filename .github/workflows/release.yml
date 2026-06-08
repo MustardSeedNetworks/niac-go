@@ -95,12 +95,6 @@ jobs:
             goarch: arm64
             cgo: "1"
             archive: tar
-          - artifact: niac-darwin-amd64
-            runner: macos-13
-            goos: darwin
-            goarch: amd64
-            cgo: "1"
-            archive: tar
           - artifact: niac-darwin-arm64
             runner: macos-14
             goos: darwin
