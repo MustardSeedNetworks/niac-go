@@ -8,7 +8,18 @@ package api
 // or forgotten. scripts/check-route-policy.sh enforces that every /api route
 // goes through register().
 
-import "net/http"
+import (
+	"net/http"
+
+	"github.com/MustardSeedNetworks/niac-go/internal/api/ratelimit"
+)
+
+// rateLimitErr adapts the api package's writeError to ratelimit.ErrorFunc.
+// Rate-limit rejections carry no structured details, so the adapter always
+// passes nil — this keeps the ratelimit leaf free of any api type (ErrorDetail).
+func rateLimitErr(w http.ResponseWriter, r *http.Request, status int, code, message string) {
+	writeError(w, r, status, code, message, nil)
+}
 
 // rateLimitKind selects which rate limiter wraps a route (or none).
 type rateLimitKind int
@@ -61,13 +72,13 @@ func (s *Server) register(mux *http.ServeMux, rt apiRoute) {
 	case rlNone:
 		// no rate limiter
 	case rlWrite:
-		h = s.writeRateLimit(h)
+		h = ratelimit.Write(s.writeLimiter, s.logger, getClientIP, rateLimitErr, h)
 	case rlWalk:
-		h = s.walkRateLimit(h)
+		h = ratelimit.Walk(s.walkLimiter, s.logger, getClientIP, rateLimitErr, h)
 	case rlUpload:
-		h = s.uploadRateLimit(h)
+		h = ratelimit.Upload(s.uploadLimiter, s.logger, getClientIP, rateLimitErr, h)
 	case rlFile:
-		h = s.fileRateLimit(h)
+		h = ratelimit.File(s.fileLimiter, s.logger, getClientIP, rateLimitErr, h)
 	}
 	h = s.auth(h)
 	h = s.recoverMiddleware(h)

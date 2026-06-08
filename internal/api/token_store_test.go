@@ -5,6 +5,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/MustardSeedNetworks/niac-go/internal/api/ratelimit"
+
 	"github.com/MustardSeedNetworks/niac-go/internal/api/tokenstore"
 )
 
@@ -15,7 +17,7 @@ import (
 func TestAuthMiddleware_PublicPaths_NoAuthRequired(t *testing.T) {
 	server := createTestServerForMiddleware(t)
 	server.SetTokens([]tokenstore.ScopedToken{{Value: "rw-secret", Scope: tokenstore.ScopeReadWrite}})
-	server.rateLimiter = NewRateLimiter(100, 200)
+	server.rateLimiter = ratelimit.NewRateLimiter(100, 200)
 
 	// /__version is wired without s.auth() in registerAPIRoutes, so it
 	// reaches the handler directly. The test mirrors that wiring by
