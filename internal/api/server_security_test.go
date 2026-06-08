@@ -15,6 +15,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/MustardSeedNetworks/niac-go/internal/api/ratelimit"
+
 	"github.com/MustardSeedNetworks/niac-go/internal/api/tokenstore"
 
 	"golang.org/x/time/rate"
@@ -30,7 +32,7 @@ func newTestServerWithAuth(t *testing.T) (*Server, string, string) {
 	server, tmpDir := newTestServer(t)
 
 	// Initialize server components
-	server.rateLimiter = NewRateLimiter(DefaultRateLimit, DefaultBurst)
+	server.rateLimiter = ratelimit.NewRateLimiter(DefaultRateLimit, DefaultBurst)
 	server.csrf = NewCSRFManager()
 	t.Cleanup(server.csrf.Stop)
 
@@ -60,7 +62,7 @@ func testCSRFToken(t *testing.T, server *Server, bearer string) string {
 
 // TestRateLimiter_ExcessiveRequests verifies rate limiting blocks excessive requests.
 func TestRateLimiter_ExcessiveRequests(t *testing.T) {
-	limiter := NewRateLimiter(rate.Limit(2), 5) // 2 req/sec, burst of 5
+	limiter := ratelimit.NewRateLimiter(rate.Limit(2), 5) // 2 req/sec, burst of 5
 
 	ip := "192.168.1.1"
 	rl := limiter.GetLimiter(ip)
@@ -88,7 +90,7 @@ func TestRateLimiter_ExcessiveRequests(t *testing.T) {
 
 // TestRateLimiter_PerIPIsolation verifies different IPs have independent rate limits.
 func TestRateLimiter_PerIPIsolation(t *testing.T) {
-	limiter := NewRateLimiter(rate.Limit(2), 3)
+	limiter := ratelimit.NewRateLimiter(rate.Limit(2), 3)
 
 	ip1 := "192.168.1.1"
 	ip2 := "192.168.1.2"
@@ -114,114 +116,6 @@ func TestRateLimiter_PerIPIsolation(t *testing.T) {
 			t.Errorf("IP2 request %d should be allowed (independent limit)", i+1)
 		}
 	}
-}
-
-// TestRateLimiter_CleanupPreventsMemoryLeak verifies stale limiters are cleaned up.
-func TestRateLimiter_CleanupPreventsMemoryLeak(t *testing.T) {
-	limiter := NewRateLimiter(rate.Limit(10), 20)
-
-	// Create limiters for 100 different IPs
-	for i := range 100 {
-		ip := fmt.Sprintf("192.168.1.%d", i)
-		limiter.GetLimiter(ip)
-	}
-
-	// Verify all 100 limiters exist
-	limiter.mu.RLock()
-	initialCount := len(limiter.limiters)
-	limiter.mu.RUnlock()
-
-	if initialCount != 100 {
-		t.Errorf("Expected 100 limiters, got %d", initialCount)
-	}
-
-	// Access only the first 10 IPs to keep them "fresh"
-	for i := range 10 {
-		ip := fmt.Sprintf("192.168.1.%d", i)
-		limiter.GetLimiter(ip)
-	}
-
-	// Manually set lastSeen to simulate stale entries (over 1 hour ago)
-	limiter.mu.Lock()
-
-	staleTime := time.Now().Add(-2 * time.Hour)
-
-	freshIPs := map[string]bool{
-		"192.168.1.0": true, "192.168.1.1": true, "192.168.1.2": true,
-		"192.168.1.3": true, "192.168.1.4": true, "192.168.1.5": true,
-		"192.168.1.6": true, "192.168.1.7": true, "192.168.1.8": true,
-		"192.168.1.9": true,
-	}
-	for ip, entry := range limiter.limiters {
-		// Make all but first 10 IPs stale
-		if !freshIPs[ip] {
-			entry.lastSeen = staleTime
-		}
-	}
-
-	limiter.mu.Unlock()
-
-	// Run cleanup
-	limiter.CleanupStale()
-
-	// Verify stale limiters were removed
-	limiter.mu.RLock()
-	finalCount := len(limiter.limiters)
-	limiter.mu.RUnlock()
-
-	if finalCount != 10 {
-		t.Errorf("Expected 10 limiters after cleanup (kept fresh ones), got %d", finalCount)
-	}
-}
-
-// TestRateLimiter_MaxCapacityEnforcement verifies FIFO eviction at max capacity.
-func TestRateLimiter_MaxCapacityEnforcement(t *testing.T) {
-	// Temporarily reduce max for testing
-	originalMax := MaxRateLimiterCount
-
-	defer func() {
-		// Can't restore const, but document that this test modifies behavior
-	}()
-
-	limiter := NewRateLimiter(rate.Limit(10), 20)
-
-	// Fill up to a reasonable test limit (100 IPs)
-	testLimit := 100
-	for i := range testLimit {
-		ip := fmt.Sprintf("192.168.%d.%d", i/256, i%256)
-		limiter.GetLimiter(ip)
-	}
-
-	// Verify we have exactly testLimit limiters
-	limiter.mu.RLock()
-	count := len(limiter.limiters)
-	limiter.mu.RUnlock()
-
-	if count != testLimit {
-		t.Errorf("Expected %d limiters, got %d", testLimit, count)
-	}
-
-	// Note: At normal MaxRateLimiterCount (10000), we can't easily test eviction
-	// This test verifies the mechanism works at smaller scale
-	limiter.mu.Lock()
-	// Check current size before adding new IP
-	_ = len(limiter.limiters) // currentSize for future use
-	limiter.mu.Unlock()
-
-	// Add one more IP - if at capacity, oldest should be evicted
-	newIP := "10.0.0.1"
-	limiter.GetLimiter(newIP)
-
-	// Verify the new IP was added
-	limiter.mu.RLock()
-	_, exists := limiter.limiters[newIP]
-	limiter.mu.RUnlock()
-
-	if !exists {
-		t.Error("New IP should have been added")
-	}
-
-	t.Logf("Test note: MaxRateLimiterCount=%d prevents exhaustive eviction testing", originalMax)
 }
 
 // TestCSRF_TokenValidation verifies CSRF token validation works correctly.
@@ -357,7 +251,7 @@ func TestAuth_NoAuthRequired(t *testing.T) {
 	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	// Initialize rate limiter but NOT auth token
-	server.rateLimiter = NewRateLimiter(DefaultRateLimit, DefaultBurst)
+	server.rateLimiter = ratelimit.NewRateLimiter(DefaultRateLimit, DefaultBurst)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/stats", nil)
 	// No Authorization header
@@ -497,7 +391,7 @@ func TestGetClientIP_XRealIP(t *testing.T) {
 
 // TestRateLimiting_ConcurrentRequests verifies rate limiting under concurrent load.
 func TestRateLimiting_ConcurrentRequests(t *testing.T) {
-	limiter := NewRateLimiter(rate.Limit(100), 200)
+	limiter := ratelimit.NewRateLimiter(rate.Limit(100), 200)
 
 	ip := "192.168.1.1"
 	concurrency := 50
@@ -723,7 +617,7 @@ func TestCSRFWiring_TemplatesAndConfigs(t *testing.T) {
 	// The templates/configs routes chain through writeRateLimit, whose
 	// limiter newTestServerWithAuth doesn't initialize — set it so the
 	// full mux chain doesn't nil-panic before reaching csrfProtect.
-	server.writeLimiter = NewRateLimiter(WriteRateLimit, WriteBurst)
+	server.writeLimiter = ratelimit.NewRateLimiter(WriteRateLimit, WriteBurst)
 	mux := http.NewServeMux()
 	server.registerAPIRoutes(mux)
 

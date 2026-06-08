@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/MustardSeedNetworks/niac-go/internal/api/ratelimit"
 )
 
 // TestRoutePolicyManifest verifies the capability registry exposes every route
@@ -12,7 +14,7 @@ import (
 // is the single source of truth that scripts/check-route-policy.sh enforces.
 func TestRoutePolicyManifest(t *testing.T) {
 	server, _, _ := newTestServerWithAuth(t)
-	server.writeLimiter = NewRateLimiter(WriteRateLimit, WriteBurst)
+	server.writeLimiter = ratelimit.NewRateLimiter(WriteRateLimit, WriteBurst)
 	mux := http.NewServeMux()
 	server.registerAPIRoutes(mux)
 

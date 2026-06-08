@@ -6,6 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/MustardSeedNetworks/niac-go/internal/api/ratelimit"
+
 	"github.com/MustardSeedNetworks/niac-go/internal/api/tokenstore"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
@@ -37,7 +39,7 @@ devices:
 		logger: slog.Default(),
 		// auth() applies per-IP rate limiting before the token check, so
 		// any test that exercises auth() needs a non-nil limiter.
-		rateLimiter: NewRateLimiter(DefaultRateLimit, DefaultBurst),
+		rateLimiter: ratelimit.NewRateLimiter(DefaultRateLimit, DefaultBurst),
 	}
 }
 
@@ -191,7 +193,7 @@ func TestAuthMiddlewareWithoutToken(t *testing.T) {
 	// is preserved by seeding the store with one tokenstore.ScopeReadWrite entry —
 	// behaviourally identical to setting cfg.Token previously.
 	server.SetTokens([]tokenstore.ScopedToken{{Value: "secret-api-token", Scope: tokenstore.ScopeReadWrite}})
-	server.rateLimiter = NewRateLimiter(100, 200)
+	server.rateLimiter = ratelimit.NewRateLimiter(100, 200)
 
 	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -213,7 +215,7 @@ func TestAuthMiddlewareWithoutToken(t *testing.T) {
 func TestAuthMiddlewareWithValidToken(t *testing.T) {
 	server := createTestServerForMiddleware(t)
 	server.SetTokens([]tokenstore.ScopedToken{{Value: "secret-api-token", Scope: tokenstore.ScopeReadWrite}})
-	server.rateLimiter = NewRateLimiter(100, 200)
+	server.rateLimiter = ratelimit.NewRateLimiter(100, 200)
 
 	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -236,7 +238,7 @@ func TestAuthMiddlewareWithValidToken(t *testing.T) {
 func TestAuthMiddlewareWithInvalidToken(t *testing.T) {
 	server := createTestServerForMiddleware(t)
 	server.SetTokens([]tokenstore.ScopedToken{{Value: "secret-api-token", Scope: tokenstore.ScopeReadWrite}})
-	server.rateLimiter = NewRateLimiter(100, 200)
+	server.rateLimiter = ratelimit.NewRateLimiter(100, 200)
 
 	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -260,7 +262,7 @@ func TestAuthMiddlewareNoTokenConfigured(t *testing.T) {
 	server := createTestServerForMiddleware(t)
 	// Wave 2: empty tokenstore.TokenStore is the canonical "auth disabled" shape.
 	server.SetTokens(nil)
-	server.rateLimiter = NewRateLimiter(100, 200)
+	server.rateLimiter = ratelimit.NewRateLimiter(100, 200)
 
 	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -285,7 +287,7 @@ func TestAuthMiddlewareNoTokenConfigured(t *testing.T) {
 func TestAuthMiddleware_ReadOnlyTokenOnGet_200(t *testing.T) {
 	server := createTestServerForMiddleware(t)
 	server.SetTokens([]tokenstore.ScopedToken{{Value: "ro-token", Scope: tokenstore.ScopeReadOnly}})
-	server.rateLimiter = NewRateLimiter(100, 200)
+	server.rateLimiter = ratelimit.NewRateLimiter(100, 200)
 
 	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -310,7 +312,7 @@ func TestAuthMiddleware_ReadOnlyTokenOnGet_200(t *testing.T) {
 func TestAuthMiddleware_ReadOnlyTokenOnPost_403(t *testing.T) {
 	server := createTestServerForMiddleware(t)
 	server.SetTokens([]tokenstore.ScopedToken{{Value: "ro-token", Scope: tokenstore.ScopeReadOnly}})
-	server.rateLimiter = NewRateLimiter(100, 200)
+	server.rateLimiter = ratelimit.NewRateLimiter(100, 200)
 
 	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -338,7 +340,7 @@ func TestAuthMiddleware_ReadOnlyTokenOnPost_403(t *testing.T) {
 func TestAuthMiddleware_ReadWriteTokenOnPost_200(t *testing.T) {
 	server := createTestServerForMiddleware(t)
 	server.SetTokens([]tokenstore.ScopedToken{{Value: "rw-token", Scope: tokenstore.ScopeReadWrite}})
-	server.rateLimiter = NewRateLimiter(100, 200)
+	server.rateLimiter = ratelimit.NewRateLimiter(100, 200)
 
 	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -362,7 +364,7 @@ func TestAuthMiddleware_ReadWriteTokenOnPost_200(t *testing.T) {
 func TestAuthMiddleware_UnknownToken_401(t *testing.T) {
 	server := createTestServerForMiddleware(t)
 	server.SetTokens([]tokenstore.ScopedToken{{Value: "known-token", Scope: tokenstore.ScopeReadWrite}})
-	server.rateLimiter = NewRateLimiter(100, 200)
+	server.rateLimiter = ratelimit.NewRateLimiter(100, 200)
 
 	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)

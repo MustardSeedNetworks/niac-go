@@ -31,6 +31,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/MustardSeedNetworks/niac-go/internal/api/ratelimit"
+
 	"github.com/MustardSeedNetworks/niac-go/internal/api/tokenstore"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
@@ -45,9 +47,6 @@ const (
 	MaxRequestBodySize = 1 << 20 // 1MB
 	// MaxPCAPUploadSize is the maximum size for PCAP file uploads (100MB).
 	MaxPCAPUploadSize = 100 << 20 // 100MB
-
-	// MaxRateLimiterCount is the maximum number of IP addresses tracked by rate limiter.
-	MaxRateLimiterCount = 10000
 
 	// DefaultRateLimit is the default requests per second allowed per IP.
 	DefaultRateLimit = 100
@@ -265,17 +264,17 @@ type Server struct {
 	daemon            DaemonController
 	captureController CaptureController
 	startTime         time.Time
-	rateLimiter       *RateLimiter
+	rateLimiter       *ratelimit.RateLimiter
 	routeManifest     []apiRoute // capability registry: routes registered via register() (route.go)
 	// csrf manages per-session CSRF tokens (#1257). Pre-port niac
 	// shared one global token across all clients; the manager keys
 	// tokens by sha256(bearer) so each session has its own.
 	csrf           *CSRFManager
 	sseHub         *SSEHub
-	uploadLimiter  *RateLimiter
-	writeLimiter   *RateLimiter
-	walkLimiter    *RateLimiter
-	fileLimiter    *RateLimiter
+	uploadLimiter  *ratelimit.RateLimiter
+	writeLimiter   *ratelimit.RateLimiter
+	walkLimiter    *ratelimit.RateLimiter
+	fileLimiter    *ratelimit.RateLimiter
 	bgStop         chan struct{}
 	bgStopOnce     sync.Once
 	library        *library.Library
@@ -313,14 +312,14 @@ func NewServer(cfg ServerConfig) *Server {
 		cfg:           cfg,
 		logger:        slog.Default(),
 		startTime:     time.Now(),
-		rateLimiter:   NewRateLimiter(DefaultRateLimit, DefaultBurst),
+		rateLimiter:   ratelimit.NewRateLimiter(DefaultRateLimit, DefaultBurst),
 		csrf:          NewCSRFManager(),
 		sseHub:        NewSSEHub(SSEConfig{}),
 		bgStop:        make(chan struct{}),
-		uploadLimiter: NewRateLimiter(UploadRateLimit, UploadBurst),
-		writeLimiter:  NewRateLimiter(WriteRateLimit, WriteBurst),
-		walkLimiter:   NewRateLimiter(WalkRateLimit, WalkBurst),
-		fileLimiter:   NewRateLimiter(FileRateLimit, FileBurst),
+		uploadLimiter: ratelimit.NewRateLimiter(UploadRateLimit, UploadBurst),
+		writeLimiter:  ratelimit.NewRateLimiter(WriteRateLimit, WriteBurst),
+		walkLimiter:   ratelimit.NewRateLimiter(WalkRateLimit, WalkBurst),
+		fileLimiter:   ratelimit.NewRateLimiter(FileRateLimit, FileBurst),
 		library:       lib,
 		tokens:        initialTokenStore(cfg),
 	}
