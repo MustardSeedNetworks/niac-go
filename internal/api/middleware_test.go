@@ -6,6 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/MustardSeedNetworks/niac-go/internal/api/auth"
+
 	"github.com/MustardSeedNetworks/niac-go/internal/api/csrf"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/api/ratelimit"
@@ -201,7 +203,7 @@ func TestAuthMiddlewareWithoutToken(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	wrapped := server.auth(handler)
+	wrapped := auth.Middleware(server.authDeps(), handler)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/test", nil)
 	req.RemoteAddr = "192.168.1.1:1234"
@@ -223,7 +225,7 @@ func TestAuthMiddlewareWithValidToken(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	wrapped := server.auth(handler)
+	wrapped := auth.Middleware(server.authDeps(), handler)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/test", nil)
 	req.RemoteAddr = "192.168.1.1:1234"
@@ -246,7 +248,7 @@ func TestAuthMiddlewareWithInvalidToken(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	wrapped := server.auth(handler)
+	wrapped := auth.Middleware(server.authDeps(), handler)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/test", nil)
 	req.RemoteAddr = "192.168.1.1:1234"
@@ -270,7 +272,7 @@ func TestAuthMiddlewareNoTokenConfigured(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	wrapped := server.auth(handler)
+	wrapped := auth.Middleware(server.authDeps(), handler)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/test", nil)
 	req.RemoteAddr = "192.168.1.1:1234"
@@ -294,7 +296,7 @@ func TestAuthMiddleware_ReadOnlyTokenOnGet_200(t *testing.T) {
 	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
-	wrapped := server.auth(handler)
+	wrapped := auth.Middleware(server.authDeps(), handler)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/stats", nil)
 	req.RemoteAddr = "192.168.1.1:1234"
@@ -319,7 +321,7 @@ func TestAuthMiddleware_ReadOnlyTokenOnPost_403(t *testing.T) {
 	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
-	wrapped := server.auth(handler)
+	wrapped := auth.Middleware(server.authDeps(), handler)
 
 	for _, method := range []string{http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete} {
 		t.Run(method, func(t *testing.T) {
@@ -347,7 +349,7 @@ func TestAuthMiddleware_ReadWriteTokenOnPost_200(t *testing.T) {
 	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
-	wrapped := server.auth(handler)
+	wrapped := auth.Middleware(server.authDeps(), handler)
 
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/config", nil)
 	req.RemoteAddr = "192.168.1.1:1234"
@@ -371,7 +373,7 @@ func TestAuthMiddleware_UnknownToken_401(t *testing.T) {
 	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
-	wrapped := server.auth(handler)
+	wrapped := auth.Middleware(server.authDeps(), handler)
 
 	for _, method := range []string{http.MethodGet, http.MethodPost} {
 		t.Run(method, func(t *testing.T) {
@@ -416,7 +418,7 @@ func TestAuth_EmptyStore_LoopbackBypasses(t *testing.T) {
 	server.cfg.Addr = "127.0.0.1:8445"
 
 	called := false
-	wrapped := server.auth(func(w http.ResponseWriter, _ *http.Request) {
+	wrapped := auth.Middleware(server.authDeps(), func(w http.ResponseWriter, _ *http.Request) {
 		called = true
 		w.WriteHeader(http.StatusOK)
 	})
@@ -440,7 +442,7 @@ func TestAuth_EmptyStore_NonLoopbackFailsClosed(t *testing.T) {
 	server.cfg.Addr = "0.0.0.0:8445"              // non-loopback
 
 	called := false
-	wrapped := server.auth(func(w http.ResponseWriter, _ *http.Request) {
+	wrapped := auth.Middleware(server.authDeps(), func(w http.ResponseWriter, _ *http.Request) {
 		called = true
 		w.WriteHeader(http.StatusOK)
 	})
@@ -467,7 +469,7 @@ func TestAuth_EmptyStore_NonLoopbackExplicitOptOut(t *testing.T) {
 	server.cfg.Addr = "0.0.0.0:8445"
 
 	called := false
-	wrapped := server.auth(func(w http.ResponseWriter, _ *http.Request) {
+	wrapped := auth.Middleware(server.authDeps(), func(w http.ResponseWriter, _ *http.Request) {
 		called = true
 		w.WriteHeader(http.StatusOK)
 	})

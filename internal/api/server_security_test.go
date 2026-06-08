@@ -15,6 +15,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/MustardSeedNetworks/niac-go/internal/api/auth"
+
 	"github.com/MustardSeedNetworks/niac-go/internal/api/csrf"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/api/ratelimit"
@@ -135,7 +137,7 @@ func TestCSRF_TokenValidation(t *testing.T) {
 
 	w := httptest.NewRecorder()
 
-	handler := server.auth(csrf.Protect(server.csrf, simpleErr, server.handleAlerts))
+	handler := auth.Middleware(server.authDeps(), csrf.Protect(server.csrf, simpleErr, server.handleAlerts))
 	handler(w, req)
 
 	if w.Code != http.StatusOK {
@@ -158,7 +160,7 @@ func TestCSRF_InvalidTokenRejection(t *testing.T) {
 
 	w := httptest.NewRecorder()
 
-	handler := server.auth(csrf.Protect(server.csrf, simpleErr, server.handleAlerts))
+	handler := auth.Middleware(server.authDeps(), csrf.Protect(server.csrf, simpleErr, server.handleAlerts))
 	handler(w, req)
 
 	if w.Code != http.StatusForbidden {
@@ -181,7 +183,7 @@ func TestCSRF_MissingTokenRejection(t *testing.T) {
 
 	w := httptest.NewRecorder()
 
-	handler := server.auth(csrf.Protect(server.csrf, simpleErr, server.handleAlerts))
+	handler := auth.Middleware(server.authDeps(), csrf.Protect(server.csrf, simpleErr, server.handleAlerts))
 	handler(w, req)
 
 	if w.Code != http.StatusForbidden {
@@ -200,7 +202,7 @@ func TestAuth_ValidToken(t *testing.T) {
 
 	w := httptest.NewRecorder()
 
-	handler := server.auth(server.handleStats)
+	handler := auth.Middleware(server.authDeps(), server.handleStats)
 	handler(w, req)
 
 	if w.Code != http.StatusOK {
@@ -220,7 +222,7 @@ func TestAuth_InvalidToken(t *testing.T) {
 
 	w := httptest.NewRecorder()
 
-	handler := server.auth(server.handleStats)
+	handler := auth.Middleware(server.authDeps(), server.handleStats)
 	handler(w, req)
 
 	if w.Code != http.StatusUnauthorized {
@@ -238,7 +240,7 @@ func TestAuth_MissingToken(t *testing.T) {
 	// Deliberately omit Authorization header
 	w := httptest.NewRecorder()
 
-	handler := server.auth(server.handleStats)
+	handler := auth.Middleware(server.authDeps(), server.handleStats)
 	handler(w, req)
 
 	if w.Code != http.StatusUnauthorized {
@@ -259,7 +261,7 @@ func TestAuth_NoAuthRequired(t *testing.T) {
 	// No Authorization header
 	w := httptest.NewRecorder()
 
-	handler := server.auth(server.handleStats)
+	handler := auth.Middleware(server.authDeps(), server.handleStats)
 	handler(w, req)
 
 	if w.Code != http.StatusOK {
@@ -464,7 +466,7 @@ func TestAlertConfig_ConcurrentUpdates(t *testing.T) {
 
 			w := httptest.NewRecorder()
 
-			handler := server.auth(csrf.Protect(server.csrf, simpleErr, server.handleAlerts))
+			handler := auth.Middleware(server.authDeps(), csrf.Protect(server.csrf, simpleErr, server.handleAlerts))
 			handler(w, req)
 
 			if w.Code != http.StatusOK {
@@ -481,7 +483,7 @@ func TestAlertConfig_ConcurrentUpdates(t *testing.T) {
 
 	w := httptest.NewRecorder()
 
-	handler := server.auth(server.handleAlerts)
+	handler := auth.Middleware(server.authDeps(), server.handleAlerts)
 	handler(w, req)
 
 	if w.Code != http.StatusOK {
@@ -504,7 +506,7 @@ func TestAlertConfig_NoDoubleClose(t *testing.T) {
 
 	w := httptest.NewRecorder()
 
-	handler := server.auth(csrf.Protect(server.csrf, simpleErr, server.handleAlerts))
+	handler := auth.Middleware(server.authDeps(), csrf.Protect(server.csrf, simpleErr, server.handleAlerts))
 	handler(w, req)
 
 	if w.Code != http.StatusOK {
@@ -564,7 +566,7 @@ func TestAlertConfig_GoroutineCleanup(t *testing.T) {
 
 		w := httptest.NewRecorder()
 
-		handler := server.auth(csrf.Protect(server.csrf, simpleErr, server.handleAlerts))
+		handler := auth.Middleware(server.authDeps(), csrf.Protect(server.csrf, simpleErr, server.handleAlerts))
 		handler(w, req)
 
 		if w.Code != http.StatusOK {

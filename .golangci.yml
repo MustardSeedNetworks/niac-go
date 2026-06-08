@@ -274,6 +274,13 @@ linters:
           deny:
             - pkg: github.com/MustardSeedNetworks/niac-go/internal/api
               desc: "sse is a leaf — hub/engine + Serve factory; it may import internal/protocols (inward) for the packet observer, but never the api transport layer"
+        # internal/api/auth has NO isolation rule by design. Unlike the four
+        # leaves above, auth COMPOSES siblings (internal/api/tokenstore +
+        # ratelimit), and a deny on "internal/api" prefix-matches those sibling
+        # packages too. It's also redundant: internal/api imports auth
+        # (route.go wires auth.Middleware), so auth importing internal/api back
+        # is already a compile-time import cycle. The boundary is enforced by
+        # Go itself; auth takes the remaining api concerns as injected deps.
 
     embeddedstructfieldcheck:
       # Checks that sync.Mutex and sync.RWMutex are not used as embedded fields.
