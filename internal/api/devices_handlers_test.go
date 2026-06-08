@@ -11,6 +11,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/MustardSeedNetworks/niac-go/internal/api/sse"
+
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 	"github.com/MustardSeedNetworks/niac-go/internal/protocols"
@@ -50,7 +52,7 @@ devices:
 			Version:    "test",
 		},
 		logger: slog.Default(),
-		sseHub: NewSSEHub(SSEConfig{}),
+		sseHub: sse.NewHub(sse.Config{}),
 	}
 }
 

@@ -1,7 +1,6 @@
-package api
+package sse
 
 import (
-	"io"
 	"log/slog"
 	"strings"
 	"testing"
@@ -11,24 +10,24 @@ import (
 // TestSSELogHandlerTeesNonSSE verifies that a normal log line (not
 // prefixed with "[SSE]") flows through to the hub's logs stream.
 func TestSSELogHandlerTeesNonSSE(t *testing.T) {
-	hub := NewSSEHub(SSEConfig{MaxMsgPerSec: 1000})
+	hub := NewHub(Config{MaxMsgPerSec: 1000})
 	go hub.Run()
 	defer hub.Stop()
 	waitForHubRunning(t, hub)
 
 	// Register a client subscribed to the logs stream
-	client := &SSEClient{
+	client := &Client{
 		hub:    hub,
 		send:   make(chan []byte, 16),
-		stream: SSEStreamLogs,
+		stream: StreamLogs,
 	}
 	hub.register <- client
 	defer func() { hub.unregister <- client }()
-	waitForClient(t, hub, SSEStreamLogs, 1)
+	waitForClient(t, hub, StreamLogs, 1)
 
 	// Install the tee using a discard next-handler so the test output
 	// stays clean.
-	logger := slog.New(NewSSELogHandler(hub, slog.NewTextHandler(io.Discard, nil)))
+	logger := slog.New(NewLogHandler(hub, slog.NewTextHandler(&strings.Builder{}, nil)))
 	logger.Info("device created", "host", "router-1")
 
 	select {
@@ -47,21 +46,21 @@ func TestSSELogHandlerTeesNonSSE(t *testing.T) {
 // log lines (register/unregister/broadcast) would recurse through the
 // tee until the broadcast channel saturated.
 func TestSSELogHandlerFiltersInternal(t *testing.T) {
-	hub := NewSSEHub(SSEConfig{MaxMsgPerSec: 1000})
+	hub := NewHub(Config{MaxMsgPerSec: 1000})
 	go hub.Run()
 	defer hub.Stop()
 	waitForHubRunning(t, hub)
 
-	client := &SSEClient{
+	client := &Client{
 		hub:    hub,
 		send:   make(chan []byte, 16),
-		stream: SSEStreamLogs,
+		stream: StreamLogs,
 	}
 	hub.register <- client
 	defer func() { hub.unregister <- client }()
-	waitForClient(t, hub, SSEStreamLogs, 1)
+	waitForClient(t, hub, StreamLogs, 1)
 
-	logger := slog.New(NewSSELogHandler(hub, slog.NewTextHandler(io.Discard, nil)))
+	logger := slog.New(NewLogHandler(hub, slog.NewTextHandler(&strings.Builder{}, nil)))
 	logger.Info("[SSE] Client connected to stream", "stream", "logs")
 
 	// The tee should NOT have fed this back to the hub.
@@ -77,13 +76,13 @@ func TestSSELogHandlerFiltersInternal(t *testing.T) {
 // handler still receives every record, including the [SSE]-prefixed
 // ones we skip teeing.
 func TestSSELogHandlerForwardsToNext(t *testing.T) {
-	hub := NewSSEHub(SSEConfig{MaxMsgPerSec: 1000})
+	hub := NewHub(Config{MaxMsgPerSec: 1000})
 	go hub.Run()
 	defer hub.Stop()
 
 	var captured strings.Builder
 	next := slog.NewTextHandler(&captured, nil)
-	logger := slog.New(NewSSELogHandler(hub, next))
+	logger := slog.New(NewLogHandler(hub, next))
 
 	logger.Info("normal record")
 	logger.Info("[SSE] internal record")
@@ -103,7 +102,7 @@ func TestSSELogHandlerForwardsToNext(t *testing.T) {
 func TestSSELogHandlerNilHubFallsThrough(t *testing.T) {
 	var captured strings.Builder
 	next := slog.NewTextHandler(&captured, nil)
-	logger := slog.New(NewSSELogHandler(nil, next))
+	logger := slog.New(NewLogHandler(nil, next))
 
 	logger.Info("hello")
 
@@ -114,7 +113,7 @@ func TestSSELogHandlerNilHubFallsThrough(t *testing.T) {
 
 // waitForHubRunning blocks until the hub's Run loop has started — we
 // signal that via the running atomic flag inside the hub.
-func waitForHubRunning(t *testing.T, hub *SSEHub) {
+func waitForHubRunning(t *testing.T, hub *Hub) {
 	t.Helper()
 	deadline := time.Now().Add(200 * time.Millisecond)
 	for time.Now().Before(deadline) {
@@ -129,7 +128,7 @@ func waitForHubRunning(t *testing.T, hub *SSEHub) {
 // waitForClient blocks until the hub has registered `want` clients on
 // the given stream. The register channel is unbuffered, so we have to
 // wait for the hub goroutine to actually drain it.
-func waitForClient(t *testing.T, hub *SSEHub, stream SSEStream, want int) {
+func waitForClient(t *testing.T, hub *Hub, stream Stream, want int) {
 	t.Helper()
 	deadline := time.Now().Add(200 * time.Millisecond)
 	for time.Now().Before(deadline) {

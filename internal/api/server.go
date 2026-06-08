@@ -31,6 +31,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/MustardSeedNetworks/niac-go/internal/api/sse"
+
 	"github.com/MustardSeedNetworks/niac-go/internal/api/csrf"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/api/ratelimit"
@@ -272,7 +274,7 @@ type Server struct {
 	// shared one global token across all clients; the manager keys
 	// tokens by sha256(bearer) so each session has its own.
 	csrf           *csrf.Manager
-	sseHub         *SSEHub
+	sseHub         *sse.Hub
 	uploadLimiter  *ratelimit.RateLimiter
 	writeLimiter   *ratelimit.RateLimiter
 	walkLimiter    *ratelimit.RateLimiter
@@ -316,7 +318,7 @@ func NewServer(cfg ServerConfig) *Server {
 		startTime:     time.Now(),
 		rateLimiter:   ratelimit.NewRateLimiter(DefaultRateLimit, DefaultBurst),
 		csrf:          csrf.NewManager(),
-		sseHub:        NewSSEHub(SSEConfig{}),
+		sseHub:        sse.NewHub(sse.Config{}),
 		bgStop:        make(chan struct{}),
 		uploadLimiter: ratelimit.NewRateLimiter(UploadRateLimit, UploadBurst),
 		writeLimiter:  ratelimit.NewRateLimiter(WriteRateLimit, WriteBurst),
@@ -728,7 +730,7 @@ func (s *Server) UpdateSimulation(
 	// called, leaving the Packet Capture page perpetually empty even
 	// while a simulation was clearly handling traffic.
 	if stack != nil && s.sseHub != nil {
-		stack.AddPacketObserver(&sseHubPacketObserver{hub: s.sseHub})
+		stack.AddPacketObserver(sse.NewPacketObserver(s.sseHub))
 	}
 }
 

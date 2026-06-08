@@ -7,7 +7,7 @@
 #     generation, CLI/file output.
 #   - internal/api/handlers_metrics.go: Prometheus exposition format,
 #     Content-Type text/plain, metric names are server constants.
-#   - internal/api/sse_serve.go: SSE frame interpolating a fixed
+#   - internal/api/sse/serve.go: SSE frame interpolating a fixed
 #     SSEStream enum ("packets"/"logs"/"stats"), never user input.
 # No site renders user-supplied data as HTML. This gate prevents
 # regressions.
@@ -27,8 +27,8 @@ INNER_HTML_RE='dangerously[S]etInnerHTML'
 
 # Files in internal/api whose Fprintf(w,...) sites were audited safe.
 # handlers_metrics.go: Prometheus text/plain, server-constant names.
-# sse_serve.go: SSE frame with a fixed server-side enum, not user input.
-ALLOWLIST_RE='internal/api/(handlers_metrics|sse_serve)\.go'
+# sse/serve.go: SSE frame with a fixed server-side enum, not user input.
+ALLOWLIST_RE='internal/api/(handlers_metrics\.go|sse/serve\.go)'
 
 UI_DIR=""
 if [ -d "ui/src" ]; then

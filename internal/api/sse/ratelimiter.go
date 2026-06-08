@@ -1,4 +1,4 @@
-package api
+package sse
 
 import (
 	"sync"
@@ -6,12 +6,12 @@ import (
 	"time"
 )
 
-// sseRateLimiter is a simple token-bucket rate limiter used per stream
+// rateLimiter is a simple token-bucket rate limiter used per stream
 // inside the SSE hub to cap the broadcast rate even when a producer
 // fires faster than clients can drink. Tokens refill at refillMs cadence
 // up to maxTokens. Concurrency-safe: callers may call allow() from any
 // goroutine.
-type sseRateLimiter struct {
+type rateLimiter struct {
 	tokens     atomic.Int64
 	maxTokens  int64
 	refillMs   int64
@@ -21,8 +21,8 @@ type sseRateLimiter struct {
 
 // newSSERateLimiter builds a limiter that allows up to maxPerSecond
 // successful allow() calls per second on average.
-func newSSERateLimiter(maxPerSecond int64) *sseRateLimiter {
-	rl := &sseRateLimiter{
+func newSSERateLimiter(maxPerSecond int64) *rateLimiter {
+	rl := &rateLimiter{
 		maxTokens: maxPerSecond,
 		refillMs:  millisecsPerSecond / maxPerSecond,
 	}
@@ -34,7 +34,7 @@ func newSSERateLimiter(maxPerSecond int64) *sseRateLimiter {
 
 // allow consumes one token. Returns false when the bucket is empty,
 // which signals callers to drop the message rather than block.
-func (rl *sseRateLimiter) allow() bool {
+func (rl *rateLimiter) allow() bool {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
 
