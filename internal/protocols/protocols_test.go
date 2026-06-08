@@ -4,8 +4,8 @@ import (
 	"net"
 	"testing"
 
-	"github.com/krisarmstrong/niac-go/internal/config"
-	"github.com/krisarmstrong/niac-go/internal/protocols"
+	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/protocols"
 )
 
 func TestNewPacket(t *testing.T) {

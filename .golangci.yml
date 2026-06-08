@@ -43,7 +43,7 @@ formatters:
       # with the given prefixes are grouped after 3rd-party packages.
       # Default: []
       local-prefixes:
-        - github.com/krisarmstrong/niac-go
+        - github.com/MustardSeedNetworks/niac-go
 
     golines:
       # Target maximum line length.
@@ -245,7 +245,7 @@ linters:
             - "**/internal/device/**"
             - "**/internal/mibdb/**"
           deny:
-            - pkg: github.com/krisarmstrong/niac-go/internal/api
+            - pkg: github.com/MustardSeedNetworks/niac-go/internal/api
               desc: "the simulation/domain core must not import the web/API layer — dependencies point inward; wire transport at internal/api or internal/daemon"
 
     embeddedstructfieldcheck:

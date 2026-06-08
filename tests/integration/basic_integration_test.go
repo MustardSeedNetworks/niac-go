@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/krisarmstrong/niac-go/internal/config"
-	"github.com/krisarmstrong/niac-go/internal/protocols/snmp"
+	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/protocols/snmp"
 )
 
 // TestIntegration_ConfigToDevice tests the full config → device flow.

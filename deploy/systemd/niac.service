@@ -1,6 +1,6 @@
 [Unit]
 Description=NIAC Network Device Simulator
-Documentation=https://github.com/krisarmstrong/niac
+Documentation=https://github.com/MustardSeedNetworks/niac-go
 After=network-online.target
 Wants=network-online.target
 

@@ -23,10 +23,10 @@ info:
   version: 2.8.1
   contact:
     name: Kris Armstrong
-    url: https://github.com/krisarmstrong/niac-go
+    url: https://github.com/MustardSeedNetworks/niac-go
   license:
     name: MIT
-    url: https://github.com/krisarmstrong/niac-go/blob/main/LICENSE
+    url: https://github.com/MustardSeedNetworks/niac-go/blob/main/LICENSE
 
 servers:
   - url: http://localhost:8080/api/v1

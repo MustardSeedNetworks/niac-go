@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/krisarmstrong/niac-go/internal/config"
-	"github.com/krisarmstrong/niac-go/internal/library"
-	"github.com/krisarmstrong/niac-go/internal/protocols/snmp/synth"
+	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/library"
+	"github.com/MustardSeedNetworks/niac-go/internal/protocols/snmp/synth"
 )
 
 // SynthesizeWalkRequest is the body for POST

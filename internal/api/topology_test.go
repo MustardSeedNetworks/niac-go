@@ -3,7 +3,7 @@ package api
 import (
 	"testing"
 
-	"github.com/krisarmstrong/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/config"
 )
 
 func TestBuildInterfaceMap(t *testing.T) {

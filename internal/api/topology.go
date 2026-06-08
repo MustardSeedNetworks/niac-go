@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/krisarmstrong/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/config"
 )
 
 // VLAN display formatting constants.

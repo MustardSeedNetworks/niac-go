@@ -6,7 +6,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/krisarmstrong/niac-go/internal/templates"
+	"github.com/MustardSeedNetworks/niac-go/internal/templates"
 )
 
 func (m *model) renderTemplateBrowser() string {

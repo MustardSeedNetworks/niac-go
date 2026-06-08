@@ -17,7 +17,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/krisarmstrong/niac-go/internal/safeconv"
+	"github.com/MustardSeedNetworks/niac-go/internal/safeconv"
 )
 
 // defaultDeviceType is the device type abbreviation for generic/unrecognized devices.

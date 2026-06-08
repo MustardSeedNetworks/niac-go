@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/krisarmstrong/niac-go/internal/ipc"
+	"github.com/MustardSeedNetworks/niac-go/internal/ipc"
 )
 
 func TestFormatDurationFromSeconds(t *testing.T) {

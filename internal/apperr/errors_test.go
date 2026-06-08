@@ -3,7 +3,7 @@ package apperr_test
 import (
 	"testing"
 
-	"github.com/krisarmstrong/niac-go/internal/apperr"
+	"github.com/MustardSeedNetworks/niac-go/internal/apperr"
 )
 
 func TestStateManager(t *testing.T) {

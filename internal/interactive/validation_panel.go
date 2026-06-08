@@ -6,7 +6,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/krisarmstrong/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/config"
 )
 
 // renderValidationErrors renders the validation errors section.

@@ -3,8 +3,8 @@ package protocols
 import (
 	"strings"
 
-	"github.com/krisarmstrong/niac-go/internal/config"
-	"github.com/krisarmstrong/niac-go/internal/protocols/snmp"
+	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/protocols/snmp"
 )
 
 type snmpAgentGroup struct {

@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/krisarmstrong/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/config"
 )
 
 // TestRateLimiter_ZeroRate tests that zero rate defaults to 1.

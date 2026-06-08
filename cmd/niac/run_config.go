@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/krisarmstrong/niac-go/internal/config"
-	"github.com/krisarmstrong/niac-go/internal/library"
-	"github.com/krisarmstrong/niac-go/internal/templates"
+	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/library"
+	"github.com/MustardSeedNetworks/niac-go/internal/templates"
 )
 
 // loadConfigOrScenario loads a literal config file first. If the path

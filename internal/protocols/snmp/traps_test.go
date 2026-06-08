@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/krisarmstrong/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/config"
 )
 
 // TestNewTrapSender_ValidConfig tests creating a trap sender with valid configuration.

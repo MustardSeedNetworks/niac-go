@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/krisarmstrong/niac-go/internal/config"
-	"github.com/krisarmstrong/niac-go/internal/logging"
+	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 )
 
 func (s *Stack) initSNMPAgent(device *config.Device) {

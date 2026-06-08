@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/krisarmstrong/niac-go/internal/library"
+	"github.com/MustardSeedNetworks/niac-go/internal/library"
 )
 
 // newLibraryTestServer spins up a real library rooted in a fresh

@@ -3,7 +3,7 @@ package integration
 import (
 	"testing"
 
-	"github.com/krisarmstrong/niac-go/internal/apperr"
+	"github.com/MustardSeedNetworks/niac-go/internal/apperr"
 )
 
 // TestErrorInjection_FCSErrors tests FCS error injection.

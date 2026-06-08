@@ -31,11 +31,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/krisarmstrong/niac-go/internal/config"
-	"github.com/krisarmstrong/niac-go/internal/library"
-	"github.com/krisarmstrong/niac-go/internal/license"
-	"github.com/krisarmstrong/niac-go/internal/protocols"
-	"github.com/krisarmstrong/niac-go/internal/storage"
+	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/library"
+	"github.com/MustardSeedNetworks/niac-go/internal/license"
+	"github.com/MustardSeedNetworks/niac-go/internal/protocols"
+	"github.com/MustardSeedNetworks/niac-go/internal/storage"
 )
 
 const (

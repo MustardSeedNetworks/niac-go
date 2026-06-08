@@ -8,7 +8,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/krisarmstrong/niac-go/internal/ipc"
+	"github.com/MustardSeedNetworks/niac-go/internal/ipc"
 )
 
 func buildLogsCommand() (*cobra.Command, *cobra.Command) {

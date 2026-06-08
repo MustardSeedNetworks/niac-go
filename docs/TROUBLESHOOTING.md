@@ -1057,7 +1057,7 @@ sudo niac en0 config.yaml 2>&1 | grep -i error
 
 If you're still experiencing issues:
 
-1. **Check GitHub Issues:** https://github.com/krisarmstrong/niac-go/issues
+1. **Check GitHub Issues:** https://github.com/MustardSeedNetworks/niac-go/issues
 2. **Review Examples:** `examples/` directory
 3. **Read Documentation:**
    - [Protocol Guide](PROTOCOL_GUIDE.md)

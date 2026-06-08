@@ -12,7 +12,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/krisarmstrong/niac-go/internal/content"
+	"github.com/MustardSeedNetworks/niac-go/internal/content"
 )
 
 func TestDownloadHonoursChecksum(t *testing.T) {

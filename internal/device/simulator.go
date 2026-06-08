@@ -9,10 +9,10 @@ import (
 	"sync"
 	"time"
 
-	apperr "github.com/krisarmstrong/niac-go/internal/apperr"
-	"github.com/krisarmstrong/niac-go/internal/config"
-	"github.com/krisarmstrong/niac-go/internal/protocols"
-	"github.com/krisarmstrong/niac-go/internal/protocols/snmp"
+	apperr "github.com/MustardSeedNetworks/niac-go/internal/apperr"
+	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/protocols"
+	"github.com/MustardSeedNetworks/niac-go/internal/protocols/snmp"
 )
 
 // Sentinel errors for device package.

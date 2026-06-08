@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/krisarmstrong/niac-go/internal/api"
-	"github.com/krisarmstrong/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/api"
+	"github.com/MustardSeedNetworks/niac-go/internal/config"
 )
 
 // createMinimalConfig creates a minimal config with one device for testing.

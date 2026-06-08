@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/krisarmstrong/niac-go/internal/logging"
+	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 )
 
 // TestInitColors_Enabled tests that colors are enabled when requested.

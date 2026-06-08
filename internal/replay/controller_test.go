@@ -4,8 +4,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/krisarmstrong/niac-go/internal/api"
-	"github.com/krisarmstrong/niac-go/internal/replay"
+	"github.com/MustardSeedNetworks/niac-go/internal/api"
+	"github.com/MustardSeedNetworks/niac-go/internal/replay"
 )
 
 // TestStart_NoEngine verifies a controller without a capture engine refuses

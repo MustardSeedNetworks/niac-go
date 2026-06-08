@@ -13,7 +13,7 @@ import (
 	"github.com/gopacket/gopacket"
 	"github.com/gopacket/gopacket/pcap"
 
-	"github.com/krisarmstrong/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/config"
 )
 
 // Playback constants.

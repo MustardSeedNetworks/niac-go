@@ -138,7 +138,7 @@ BINARY_NAME=niac
 CONVERTER_NAME=niac-convert
 
 # Version package path for ldflags injection
-VERSION_PKG=github.com/krisarmstrong/niac-go/internal/version
+VERSION_PKG=github.com/MustardSeedNetworks/niac-go/internal/version
 
 # Go build flags for reproducible builds
 GO_BUILD_FLAGS := -trimpath -buildvcs=false

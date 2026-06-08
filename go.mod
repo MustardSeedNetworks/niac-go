@@ -1,4 +1,4 @@
-module github.com/krisarmstrong/niac-go
+module github.com/MustardSeedNetworks/niac-go
 
 go 1.26.4
 

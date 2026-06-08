@@ -9,7 +9,7 @@ package api
 import (
 	"net/http"
 
-	"github.com/krisarmstrong/niac-go/internal/license"
+	"github.com/MustardSeedNetworks/niac-go/internal/license"
 )
 
 // LicenseStatusResponse is the JSON shape returned by

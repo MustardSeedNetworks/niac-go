@@ -4,7 +4,7 @@ import (
 	"net"
 	"testing"
 
-	"github.com/krisarmstrong/niac-go/internal/protocols"
+	"github.com/MustardSeedNetworks/niac-go/internal/protocols"
 )
 
 func TestIPv6MulticastToMAC(t *testing.T) {

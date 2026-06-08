@@ -6,7 +6,7 @@ import (
 	"net"
 	"strings"
 
-	"github.com/krisarmstrong/niac-go/internal/safeconv"
+	"github.com/MustardSeedNetworks/niac-go/internal/safeconv"
 )
 
 // Sentinel errors for API devices.

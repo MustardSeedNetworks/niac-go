@@ -285,7 +285,7 @@ The WebUI is embedded in the Go binary. To customize:
 
 ```bash
 # Clone repository
-git clone https://github.com/krisarmstrong/niac-go.git
+git clone https://github.com/MustardSeedNetworks/niac-go.git
 cd niac-go
 
 # Install Node.js dependencies (if modifying WebUI)

@@ -7,10 +7,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/krisarmstrong/niac-go/internal/apperr"
-	"github.com/krisarmstrong/niac-go/internal/config"
-	"github.com/krisarmstrong/niac-go/internal/logging"
-	"github.com/krisarmstrong/niac-go/internal/protocols"
+	"github.com/MustardSeedNetworks/niac-go/internal/apperr"
+	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/logging"
+	"github.com/MustardSeedNetworks/niac-go/internal/protocols"
 )
 
 // createTrafficTestConfig builds a config with devices that have TrafficConfig set.

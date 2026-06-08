@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/krisarmstrong/niac-go/internal/api"
+	"github.com/MustardSeedNetworks/niac-go/internal/api"
 )
 
 // TestStartCapture_RejectsWhenSimulationRunning makes sure the daemon

@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/krisarmstrong/niac-go/internal/storage"
+	"github.com/MustardSeedNetworks/niac-go/internal/storage"
 )
 
 func TestStorageAddAndListRuns(t *testing.T) {

@@ -25,8 +25,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/krisarmstrong/niac-go/internal/api"
-	"github.com/krisarmstrong/niac-go/internal/truststore"
+	"github.com/MustardSeedNetworks/niac-go/internal/api"
+	"github.com/MustardSeedNetworks/niac-go/internal/truststore"
 )
 
 const (

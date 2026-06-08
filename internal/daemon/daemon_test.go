@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/krisarmstrong/niac-go/internal/api"
+	"github.com/MustardSeedNetworks/niac-go/internal/api"
 )
 
 // loopbackInterface returns the loopback interface name for the current OS.

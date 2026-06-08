@@ -9,8 +9,8 @@ import (
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 
-	"github.com/krisarmstrong/niac-go/internal/api"
-	"github.com/krisarmstrong/niac-go/internal/ipc"
+	"github.com/MustardSeedNetworks/niac-go/internal/api"
+	"github.com/MustardSeedNetworks/niac-go/internal/ipc"
 )
 
 const (

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/krisarmstrong/niac-go/internal/converter"
+	"github.com/MustardSeedNetworks/niac-go/internal/converter"
 )
 
 func LoadYAML(filename string) (*Config, error) {

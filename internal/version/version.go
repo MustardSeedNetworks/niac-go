@@ -7,7 +7,7 @@
 //
 // ldflags example:
 //
-//	go build -ldflags "-X github.com/krisarmstrong/niac-go/internal/version.Version=v1.2.3"
+//	go build -ldflags "-X github.com/MustardSeedNetworks/niac-go/internal/version.Version=v1.2.3"
 package version
 
 import (

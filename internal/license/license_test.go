@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/krisarmstrong/niac-go/internal/license"
+	"github.com/MustardSeedNetworks/niac-go/internal/license"
 )
 
 // prodNiacProVector is a production-signed NIAC Pro token (serial NIACPRO),

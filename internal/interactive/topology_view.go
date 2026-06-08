@@ -6,7 +6,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/krisarmstrong/niac-go/internal/api"
+	"github.com/MustardSeedNetworks/niac-go/internal/api"
 )
 
 // generateTopologyView generates an ASCII network topology diagram.

@@ -38,13 +38,13 @@ The original NIAC was written in Java. The Go rewrite provides:
 **Option 1: Download binary from GitHub releases**
 ```bash
 # Download latest release for your platform
-curl -L https://github.com/krisarmstrong/niac-go/releases/latest/download/niac-$(uname -s)-$(uname -m).tar.gz | tar xz
+curl -L https://github.com/MustardSeedNetworks/niac-go/releases/latest/download/niac-$(uname -s)-$(uname -m).tar.gz | tar xz
 sudo mv niac /usr/local/bin/
 ```
 
 **Option 2: Build from source**
 ```bash
-git clone https://github.com/krisarmstrong/niac-go.git
+git clone https://github.com/MustardSeedNetworks/niac-go.git
 cd niac-go
 go build -o niac ./cmd/niac
 sudo mv niac /usr/local/bin/
@@ -351,7 +351,7 @@ go tool pprof http://localhost:6060/debug/pprof/goroutine
 
 ### How do I report a bug?
 
-1. Check existing issues: https://github.com/krisarmstrong/niac-go/issues
+1. Check existing issues: https://github.com/MustardSeedNetworks/niac-go/issues
 2. Gather information:
    - NIAC-Go version: `niac version`
    - OS and version: `uname -a`
@@ -448,9 +448,9 @@ See `CONTRIBUTING.md` for detailed guidelines.
 
 ### Where can I get help?
 
-- **Documentation**: https://github.com/krisarmstrong/niac-go/tree/main/docs
-- **Issues**: https://github.com/krisarmstrong/niac-go/issues
-- **Discussions**: https://github.com/krisarmstrong/niac-go/discussions
+- **Documentation**: https://github.com/MustardSeedNetworks/niac-go/tree/main/docs
+- **Issues**: https://github.com/MustardSeedNetworks/niac-go/issues
+- **Discussions**: https://github.com/MustardSeedNetworks/niac-go/discussions
 
 ### Is there commercial support?
 

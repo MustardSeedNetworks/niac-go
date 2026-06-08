@@ -15,7 +15,7 @@ jobs:
 
       - name: Install NIAC-Go
         run: |
-          curl -L https://github.com/krisarmstrong/niac-go/releases/latest/download/niac-linux-x86_64.tar.gz | tar xz
+          curl -L https://github.com/MustardSeedNetworks/niac-go/releases/latest/download/niac-linux-x86_64.tar.gz | tar xz
           sudo mv niac /usr/local/bin/
           sudo setcap cap_net_raw,cap_net_admin=eip /usr/local/bin/niac
 
@@ -43,7 +43,7 @@ network_tests:
   image: ubuntu:22.04
   before_script:
     - apt-get update && apt-get install -y curl libpcap-dev
-    - curl -L https://github.com/krisarmstrong/niac-go/releases/latest/download/niac-linux-x86_64.tar.gz | tar xz
+    - curl -L https://github.com/MustardSeedNetworks/niac-go/releases/latest/download/niac-linux-x86_64.tar.gz | tar xz
     - mv niac /usr/local/bin/
     - setcap cap_net_raw,cap_net_admin=eip /usr/local/bin/niac
   script:
@@ -62,7 +62,7 @@ pipeline {
         stage('Setup NIAC') {
             steps {
                 sh '''
-                    curl -L https://github.com/krisarmstrong/niac-go/releases/latest/download/niac-linux-x86_64.tar.gz | tar xz
+                    curl -L https://github.com/MustardSeedNetworks/niac-go/releases/latest/download/niac-linux-x86_64.tar.gz | tar xz
                     sudo mv niac /usr/local/bin/
                 '''
             }

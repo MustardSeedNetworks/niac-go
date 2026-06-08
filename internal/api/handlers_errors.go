@@ -3,7 +3,7 @@ package api
 import (
 	"net/http"
 
-	apperr "github.com/krisarmstrong/niac-go/internal/apperr"
+	apperr "github.com/MustardSeedNetworks/niac-go/internal/apperr"
 )
 
 // errorInjectionRequest represents a request to inject an error.

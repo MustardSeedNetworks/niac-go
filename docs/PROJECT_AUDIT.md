@@ -13,7 +13,7 @@ nothing slips.
 
 ### A. Branch protection on `main` is **off**
 
-`gh api repos/krisarmstrong/niac-go/branches/main/protection` returns an
+`gh api repos/MustardSeedNetworks/niac-go/branches/main/protection` returns an
 empty object. Anyone with push access can:
 
 - push directly to `main` without a PR

@@ -9,7 +9,7 @@ import (
 	"github.com/gosnmp/gosnmp"
 	"github.com/spf13/cobra"
 
-	"github.com/krisarmstrong/niac-go/internal/protocols/snmp"
+	"github.com/MustardSeedNetworks/niac-go/internal/protocols/snmp"
 )
 
 func addMibZipCommand(root *cobra.Command, _ *serviceOptions) {

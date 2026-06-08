@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/krisarmstrong/niac-go/internal/converter"
+	"github.com/MustardSeedNetworks/niac-go/internal/converter"
 )
 
 func parseOSFingerprintConfig(yamlOSFP *converter.OSFingerprintConfig) *OSFingerprintConfig {

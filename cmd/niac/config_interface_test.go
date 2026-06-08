@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/krisarmstrong/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/config"
 )
 
 func TestRunConfigInterfaceSet(t *testing.T) {

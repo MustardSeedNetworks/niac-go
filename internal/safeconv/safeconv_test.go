@@ -4,7 +4,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/krisarmstrong/niac-go/internal/safeconv"
+	"github.com/MustardSeedNetworks/niac-go/internal/safeconv"
 )
 
 func TestUint8(t *testing.T) {

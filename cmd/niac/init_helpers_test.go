@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/krisarmstrong/niac-go/internal/templates"
+	"github.com/MustardSeedNetworks/niac-go/internal/templates"
 )
 
 func TestPrintInitHeader(t *testing.T) {

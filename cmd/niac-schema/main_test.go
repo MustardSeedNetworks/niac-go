@@ -6,7 +6,7 @@ import (
 
 	"github.com/invopop/jsonschema"
 
-	"github.com/krisarmstrong/niac-go/internal/converter"
+	"github.com/MustardSeedNetworks/niac-go/internal/converter"
 )
 
 // TestSchemaContainsConfig is a regression check: the generator must produce

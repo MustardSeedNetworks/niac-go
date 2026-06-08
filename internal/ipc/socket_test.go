@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	apperr "github.com/krisarmstrong/niac-go/internal/apperr"
-	"github.com/krisarmstrong/niac-go/internal/config"
+	apperr "github.com/MustardSeedNetworks/niac-go/internal/apperr"
+	"github.com/MustardSeedNetworks/niac-go/internal/config"
 )
 
 // systemTempDir returns the system temporary directory.

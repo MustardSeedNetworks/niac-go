@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/krisarmstrong/niac-go/internal/library"
+	"github.com/MustardSeedNetworks/niac-go/internal/library"
 )
 
 // Inventory is the per-kind summary `niac content list` prints. One

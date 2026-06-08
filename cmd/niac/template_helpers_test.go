@@ -4,7 +4,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/krisarmstrong/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/config"
 )
 
 // TestJoinStrings tests string joining helper.

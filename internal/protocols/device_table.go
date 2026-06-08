@@ -4,7 +4,7 @@ import (
 	"net"
 	"sync"
 
-	"github.com/krisarmstrong/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/config"
 )
 
 // DeviceTable manages device lookups by MAC and IP.

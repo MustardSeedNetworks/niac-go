@@ -11,7 +11,7 @@ package api
 import (
 	"net/http"
 
-	"github.com/krisarmstrong/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/config"
 )
 
 // protocolFeatureCheck pairs a per-device protocol detector with its

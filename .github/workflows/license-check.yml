@@ -53,7 +53,7 @@ jobs:
           # Restricted: LGPL, CC-BY-SA (requires review)
 
           go-licenses check ./... \
-            --ignore=github.com/krisarmstrong/niac-go \
+            --ignore=github.com/MustardSeedNetworks/niac-go \
             --disallowed_types=forbidden,restricted || {
             echo "❌ FAILED: Incompatible licenses found in Go dependencies"
             echo ""

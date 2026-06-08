@@ -15,7 +15,7 @@ import (
 
 	"github.com/gosnmp/gosnmp"
 
-	"github.com/krisarmstrong/niac-go/internal/safeconv"
+	"github.com/MustardSeedNetworks/niac-go/internal/safeconv"
 )
 
 // MibZip command bytes.

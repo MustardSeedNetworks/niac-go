@@ -12,7 +12,7 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/krisarmstrong/niac-go/internal/license"
+	"github.com/MustardSeedNetworks/niac-go/internal/license"
 )
 
 // errCodeTierTooLow is the standard error code for routes blocked by

@@ -7,7 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/krisarmstrong/niac-go/internal/version"
+	"github.com/MustardSeedNetworks/niac-go/internal/version"
 )
 
 type versionInfo struct {

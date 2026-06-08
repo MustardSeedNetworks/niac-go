@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/krisarmstrong/niac-go/internal/config"
-	tmpl "github.com/krisarmstrong/niac-go/internal/templates"
+	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	tmpl "github.com/MustardSeedNetworks/niac-go/internal/templates"
 )
 
 // TestList verifies that all expected templates are listed.

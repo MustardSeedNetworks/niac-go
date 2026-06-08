@@ -8,10 +8,10 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/krisarmstrong/niac-go/internal/capture"
-	"github.com/krisarmstrong/niac-go/internal/content"
-	"github.com/krisarmstrong/niac-go/internal/library"
-	"github.com/krisarmstrong/niac-go/internal/templates"
+	"github.com/MustardSeedNetworks/niac-go/internal/capture"
+	"github.com/MustardSeedNetworks/niac-go/internal/content"
+	"github.com/MustardSeedNetworks/niac-go/internal/library"
+	"github.com/MustardSeedNetworks/niac-go/internal/templates"
 )
 
 type listOptions struct {

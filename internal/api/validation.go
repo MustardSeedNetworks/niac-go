@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/krisarmstrong/niac-go/internal/safeconv"
+	"github.com/MustardSeedNetworks/niac-go/internal/safeconv"
 )
 
 // validateAlertConfig validates alert configuration fields

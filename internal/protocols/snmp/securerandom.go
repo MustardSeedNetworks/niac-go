@@ -4,7 +4,7 @@ import (
 	crand "crypto/rand"
 	"encoding/binary"
 
-	"github.com/krisarmstrong/niac-go/internal/safeconv"
+	"github.com/MustardSeedNetworks/niac-go/internal/safeconv"
 )
 
 // simRand provides random numbers using crypto/rand.

@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/krisarmstrong/niac-go/internal/protocols/snmp/synth"
+	"github.com/MustardSeedNetworks/niac-go/internal/protocols/snmp/synth"
 )
 
 func TestModelsReturnsOnlyRequestedVendor(t *testing.T) {

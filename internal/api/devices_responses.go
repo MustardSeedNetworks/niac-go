@@ -3,7 +3,7 @@ package api
 import (
 	"net"
 
-	"github.com/krisarmstrong/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/config"
 )
 
 func collectDeviceProtocols(dev *config.Device) []string {

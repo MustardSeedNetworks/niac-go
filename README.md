@@ -2,12 +2,12 @@
 
 > Single-binary network device simulator for protocol testing, packet capture analysis, and topology modelling.
 
-[![CI](https://github.com/krisarmstrong/niac-go/actions/workflows/ci.yml/badge.svg)](https://github.com/krisarmstrong/niac-go/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/krisarmstrong/niac-go?logo=github)](https://github.com/krisarmstrong/niac-go/releases/latest)
-[![CodeQL](https://github.com/krisarmstrong/niac-go/actions/workflows/codeql.yml/badge.svg)](https://github.com/krisarmstrong/niac-go/actions/workflows/codeql.yml)
-[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/krisarmstrong/niac-go/badge)](https://scorecard.dev/viewer/?uri=github.com/krisarmstrong/niac-go)
-[![Go Reference](https://pkg.go.dev/badge/github.com/krisarmstrong/niac-go.svg)](https://pkg.go.dev/github.com/krisarmstrong/niac-go)
-[![Go Report Card](https://goreportcard.com/badge/github.com/krisarmstrong/niac-go)](https://goreportcard.com/report/github.com/krisarmstrong/niac-go)
+[![CI](https://github.com/MustardSeedNetworks/niac-go/actions/workflows/ci.yml/badge.svg)](https://github.com/MustardSeedNetworks/niac-go/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/MustardSeedNetworks/niac-go?logo=github)](https://github.com/MustardSeedNetworks/niac-go/releases/latest)
+[![CodeQL](https://github.com/MustardSeedNetworks/niac-go/actions/workflows/codeql.yml/badge.svg)](https://github.com/MustardSeedNetworks/niac-go/actions/workflows/codeql.yml)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/MustardSeedNetworks/niac-go/badge)](https://scorecard.dev/viewer/?uri=github.com/MustardSeedNetworks/niac-go)
+[![Go Reference](https://pkg.go.dev/badge/github.com/MustardSeedNetworks/niac-go.svg)](https://pkg.go.dev/github.com/MustardSeedNetworks/niac-go)
+[![Go Report Card](https://goreportcard.com/badge/github.com/MustardSeedNetworks/niac-go)](https://goreportcard.com/report/github.com/MustardSeedNetworks/niac-go)
 [![License: BSL 1.1](https://img.shields.io/badge/License-BSL%201.1-blue.svg)](LICENSE)
 
 NIAC is a network device simulator from **Mustard Seed Networks**. It stands up
@@ -33,7 +33,7 @@ the lab.
 
 ```bash
 # Install (Linux/macOS, requires Go 1.26+)
-git clone https://github.com/krisarmstrong/niac-go ~/Developer/niac/go
+git clone https://github.com/MustardSeedNetworks/niac-go ~/Developer/niac/go
 cd ~/Developer/niac/go
 make build
 
@@ -187,5 +187,5 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
 NIAC is the simulator. Two sibling tools complete the Mustard Seed Networks
 testing toolkit:
 
-- **[seed](https://github.com/krisarmstrong/seed)** — portable network diagnostic appliance
-- **[stem](https://github.com/krisarmstrong/stem)** — RFC-compliant network performance testing
+- **[seed](https://github.com/MustardSeedNetworks/seed)** — portable network diagnostic appliance
+- **[stem](https://github.com/MustardSeedNetworks/stem)** — RFC-compliant network performance testing

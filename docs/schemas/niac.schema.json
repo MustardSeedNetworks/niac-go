@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://raw.githubusercontent.com/krisarmstrong/niac-go/main/docs/schemas/niac.schema.json",
+  "$id": "https://raw.githubusercontent.com/MustardSeedNetworks/niac-go/main/docs/schemas/niac.schema.json",
   "$ref": "#/$defs/Config",
   "$defs": {
     "ARPAnnouncementConfig": {

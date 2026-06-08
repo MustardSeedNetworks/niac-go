@@ -16,9 +16,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/krisarmstrong/niac-go/internal/api"
-	"github.com/krisarmstrong/niac-go/internal/capture"
-	"github.com/krisarmstrong/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/api"
+	"github.com/MustardSeedNetworks/niac-go/internal/capture"
+	"github.com/MustardSeedNetworks/niac-go/internal/config"
 )
 
 // Sentinel errors callers can match against with errors.Is.

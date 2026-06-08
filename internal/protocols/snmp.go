@@ -8,9 +8,9 @@ import (
 	"github.com/gopacket/gopacket/layers"
 	"github.com/gosnmp/gosnmp"
 
-	"github.com/krisarmstrong/niac-go/internal/config"
-	"github.com/krisarmstrong/niac-go/internal/logging"
-	"github.com/krisarmstrong/niac-go/internal/protocols/snmp"
+	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/logging"
+	"github.com/MustardSeedNetworks/niac-go/internal/protocols/snmp"
 )
 
 // SNMP protocol constants.

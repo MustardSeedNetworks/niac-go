@@ -24,13 +24,13 @@ var (
 // command uses when --url is not given. Both %s slots take the version
 // tag (with leading 'v', e.g. "v0.66.41"). Callers wanting to redirect
 // to a private mirror should pass DownloadOptions.URL explicitly.
-const DefaultBundleURLTemplate = "https://github.com/krisarmstrong/niac-go/releases/download/%s/niac-content-%s.tar.gz"
+const DefaultBundleURLTemplate = "https://github.com/MustardSeedNetworks/niac-go/releases/download/%s/niac-content-%s.tar.gz"
 
 // DefaultChecksumURLTemplate sits next to the bundle and contains the
 // hex sha256 on its first whitespace-separated token (the format
 // `sha256sum` produces). Optional — if the file 404s, the install
 // proceeds without verification but warns the caller.
-const DefaultChecksumURLTemplate = "https://github.com/krisarmstrong/niac-go/releases/download/%s/niac-content-%s.tar.gz.sha256"
+const DefaultChecksumURLTemplate = "https://github.com/MustardSeedNetworks/niac-go/releases/download/%s/niac-content-%s.tar.gz.sha256"
 
 // httpTimeout caps any single HTTP request the install path makes.
 // Walks bundles can hit a couple of hundred MB so we leave plenty of

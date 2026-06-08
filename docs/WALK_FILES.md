@@ -565,5 +565,5 @@ du -sh examples/device_walks_sanitized/*
 
 - [SNMP Configuration](PROTOCOL_GUIDE.md#snmp) - SNMP protocol configuration
 - [Sanitization Tool](../cmd/niac/README.md) - Walk file sanitization
-- [GitHub Issue #54](https://github.com/krisarmstrong/niac-go/issues/54) - Modern walk files request
+- [GitHub Issue #54](https://github.com/MustardSeedNetworks/niac-go/issues/54) - Modern walk files request
 - [Contributing Guide](../CONTRIBUTING.md) - How to contribute

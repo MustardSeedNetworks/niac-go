@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	"github.com/krisarmstrong/niac-go/internal/api"
+	"github.com/MustardSeedNetworks/niac-go/internal/api"
 )
 
 func TestResolveAPIToken(t *testing.T) {

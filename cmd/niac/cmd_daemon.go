@@ -14,8 +14,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/krisarmstrong/niac-go/internal/daemon"
-	"github.com/krisarmstrong/niac-go/internal/logging"
+	"github.com/MustardSeedNetworks/niac-go/internal/daemon"
+	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 )
 
 // Daemon listen port defaults. The TLS port is the Wave 1 canonical for

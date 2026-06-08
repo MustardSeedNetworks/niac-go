@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	"github.com/krisarmstrong/niac-go/internal/stats"
+	"github.com/MustardSeedNetworks/niac-go/internal/stats"
 )
 
 // TestExportStatisticsNilTracker tests that nil tracker is handled gracefully.

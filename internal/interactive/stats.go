@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/krisarmstrong/niac-go/internal/protocols"
+	"github.com/MustardSeedNetworks/niac-go/internal/protocols"
 )
 
 func (m *model) toggleNeighborView() {

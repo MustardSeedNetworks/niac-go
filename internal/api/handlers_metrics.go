@@ -7,7 +7,7 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/krisarmstrong/niac-go/internal/protocols"
+	"github.com/MustardSeedNetworks/niac-go/internal/protocols"
 )
 
 // writePrometheusMetric writes a single Prometheus metric with help text, type, and value.

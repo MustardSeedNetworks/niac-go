@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/krisarmstrong/niac-go/internal/converter"
+	"github.com/MustardSeedNetworks/niac-go/internal/converter"
 )
 
 func convertYAMLDevice(yamlDevice converter.Device, includePath string) (Device, error) {

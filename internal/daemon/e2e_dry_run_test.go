@@ -3,7 +3,7 @@ package daemon
 import (
 	"testing"
 
-	"github.com/krisarmstrong/niac-go/internal/api"
+	"github.com/MustardSeedNetworks/niac-go/internal/api"
 )
 
 func TestStartSimulationE2EDryRunDoesNotOpenInterface(t *testing.T) {

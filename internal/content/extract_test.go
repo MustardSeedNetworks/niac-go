@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/krisarmstrong/niac-go/internal/content"
+	"github.com/MustardSeedNetworks/niac-go/internal/content"
 )
 
 // maxEntrySize mirrors the package-internal cap. Duplicated rather

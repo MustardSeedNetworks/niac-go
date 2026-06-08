@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/krisarmstrong/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/config"
 )
 
 func (s *Stack) AddPacketObserver(obs PacketObserver) {

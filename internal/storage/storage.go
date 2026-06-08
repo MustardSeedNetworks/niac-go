@@ -44,7 +44,7 @@ import (
 
 	"go.etcd.io/bbolt"
 
-	"github.com/krisarmstrong/niac-go/internal/safeconv"
+	"github.com/MustardSeedNetworks/niac-go/internal/safeconv"
 )
 
 // Sentinel errors for storage operations.

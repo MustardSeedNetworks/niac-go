@@ -9,8 +9,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/krisarmstrong/niac-go/internal/content"
-	"github.com/krisarmstrong/niac-go/internal/library"
+	"github.com/MustardSeedNetworks/niac-go/internal/content"
+	"github.com/MustardSeedNetworks/niac-go/internal/library"
 )
 
 // addContentCommand wires `niac content {install,list,update}` onto
@@ -31,7 +31,7 @@ on packaged installs) and contains three sibling directories:
   pcaps/      packet captures
 
 Bundled content is published per release at:
-  https://github.com/krisarmstrong/niac-go/releases
+  https://github.com/MustardSeedNetworks/niac-go/releases
 
 Use 'niac content install' to fetch and unpack the bundle matching the
 running daemon, or 'niac content install --bundle path.tar.gz' to install

@@ -35,7 +35,7 @@ endif
 # Project Info
 # =============================================================================
 PROJECT_NAME := niac
-MODULE_PATH := github.com/krisarmstrong/niac
+MODULE_PATH := github.com/MustardSeedNetworks/niac-go
 VERSION_PKG := $(MODULE_PATH)/internal/version
 
 # =============================================================================

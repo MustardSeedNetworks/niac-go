@@ -14,7 +14,7 @@ Thanks for your interest in contributing.
 ## First-time setup
 
 ```sh
-git clone git@github.com:krisarmstrong/niac-go.git
+git clone git@github.com:MustardSeedNetworks/niac-go.git
 cd niac-go
 make tools           # installs husky hooks, golangci-lint, etc.
 make build           # frontend + backend

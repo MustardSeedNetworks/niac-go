@@ -11,8 +11,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/krisarmstrong/niac-go/internal/api"
-	apperr "github.com/krisarmstrong/niac-go/internal/apperr"
+	"github.com/MustardSeedNetworks/niac-go/internal/api"
+	apperr "github.com/MustardSeedNetworks/niac-go/internal/apperr"
 )
 
 // Sentinel errors for IPC commands.

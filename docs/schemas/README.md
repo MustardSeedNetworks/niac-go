@@ -15,7 +15,7 @@ Install the **YAML** extension (Red Hat). Then add a modeline to the top of
 any NIAC config file:
 
 ```yaml
-# yaml-language-server: $schema=https://raw.githubusercontent.com/krisarmstrong/niac-go/main/docs/schemas/niac.schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/MustardSeedNetworks/niac-go/main/docs/schemas/niac.schema.json
 include_path: "."
 devices:
   - name: my-router
@@ -27,7 +27,7 @@ devices:
 ```jsonc
 {
   "yaml.schemas": {
-    "https://raw.githubusercontent.com/krisarmstrong/niac-go/main/docs/schemas/niac.schema.json":
+    "https://raw.githubusercontent.com/MustardSeedNetworks/niac-go/main/docs/schemas/niac.schema.json":
       ["niac-*.yaml", "examples/**/*.yaml"]
   }
 }

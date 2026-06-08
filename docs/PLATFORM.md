@@ -244,7 +244,7 @@ For platform-specific issues:
 1. Check this document first
 2. Review `docs/TROUBLESHOOTING.md`
 3. Run with `--debug` flags to gather diagnostic info
-4. Report issues at: https://github.com/krisarmstrong/niac/issues
+4. Report issues at: https://github.com/MustardSeedNetworks/niac-go/issues
 
 Include in bug reports:
 - Platform and OS version

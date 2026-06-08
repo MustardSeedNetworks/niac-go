@@ -19,7 +19,7 @@ are not patched — upgrade to the current minor.
 Use one of these private channels:
 
 1. **GitHub Security Advisories (preferred):**
-   <https://github.com/krisarmstrong/niac-go/security/advisories/new>.
+   <https://github.com/MustardSeedNetworks/niac-go/security/advisories/new>.
    Creates a private advisory visible only to maintainers and you, with
    a built-in audit trail and CVE coordination workflow.
 2. **Email:** `kris.armstrong@icloud.com` with subject

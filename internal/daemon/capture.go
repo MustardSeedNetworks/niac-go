@@ -8,9 +8,9 @@ import (
 
 	"github.com/gopacket/gopacket"
 
-	"github.com/krisarmstrong/niac-go/internal/api"
-	"github.com/krisarmstrong/niac-go/internal/capture"
-	"github.com/krisarmstrong/niac-go/internal/logging"
+	"github.com/MustardSeedNetworks/niac-go/internal/api"
+	"github.com/MustardSeedNetworks/niac-go/internal/capture"
+	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 )
 
 // standaloneCapture is the runtime state for a /api/v1/capture session.

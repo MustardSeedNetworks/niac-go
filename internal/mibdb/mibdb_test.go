@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/krisarmstrong/niac-go/internal/mibdb"
+	"github.com/MustardSeedNetworks/niac-go/internal/mibdb"
 )
 
 func TestNewInMemory(t *testing.T) {

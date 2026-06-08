@@ -4,7 +4,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/krisarmstrong/niac-go/internal/version"
+	"github.com/MustardSeedNetworks/niac-go/internal/version"
 )
 
 func TestGetVersionNonEmpty(t *testing.T) {

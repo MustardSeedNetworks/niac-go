@@ -5,8 +5,8 @@ import (
 	"net"
 	"strings"
 
-	"github.com/krisarmstrong/niac-go/internal/config"
-	"github.com/krisarmstrong/niac-go/internal/safeconv"
+	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/safeconv"
 )
 
 // Discovery helper constants.

@@ -9,7 +9,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/krisarmstrong/niac-go/internal/converter"
+	"github.com/MustardSeedNetworks/niac-go/internal/converter"
 )
 
 // ErrNoCfgFilesFound is returned when no .cfg files are found in the directory.

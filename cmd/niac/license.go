@@ -6,7 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/krisarmstrong/niac-go/internal/license"
+	"github.com/MustardSeedNetworks/niac-go/internal/license"
 )
 
 func addLicenseCommand(root *cobra.Command, _ *serviceOptions) {

@@ -3,8 +3,8 @@ package main
 import (
 	"testing"
 
-	"github.com/krisarmstrong/niac-go/internal/config"
-	"github.com/krisarmstrong/niac-go/internal/templates"
+	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/templates"
 )
 
 func TestDescribeTemplate(t *testing.T) {

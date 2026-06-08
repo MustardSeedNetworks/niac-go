@@ -6,7 +6,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/krisarmstrong/niac-go/internal/apperr"
+	"github.com/MustardSeedNetworks/niac-go/internal/apperr"
 )
 
 func (m *model) handleMenuSelection() {

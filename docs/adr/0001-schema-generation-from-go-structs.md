@@ -218,5 +218,5 @@ bang.
 - niac-go#669 — `validate:` tags + `go-playground/validator` (implemented;
   Phase 2 of the boundary-validation epic)
 - niac-go#682 — CI schema drift gate (already shipped)
-- krisarmstrong/seed#1099 — boundary validation epic; will adopt this pattern
-- krisarmstrong/stem#267 — boundary validation epic; will adopt this pattern
+- MustardSeedNetworks/seed#1099 — boundary validation epic; will adopt this pattern
+- MustardSeedNetworks/stem#267 — boundary validation epic; will adopt this pattern

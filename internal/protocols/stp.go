@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/krisarmstrong/niac-go/internal/config"
-	"github.com/krisarmstrong/niac-go/internal/safeconv"
+	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/safeconv"
 )
 
 // STP constants.

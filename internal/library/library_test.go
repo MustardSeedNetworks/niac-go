@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/krisarmstrong/niac-go/internal/library"
+	"github.com/MustardSeedNetworks/niac-go/internal/library"
 )
 
 // sampleYAML is the minimum YAML the WriteNetwork validator accepts:

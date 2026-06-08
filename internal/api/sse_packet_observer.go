@@ -14,7 +14,7 @@ import (
 	"github.com/gopacket/gopacket"
 	"github.com/gopacket/gopacket/layers"
 
-	"github.com/krisarmstrong/niac-go/internal/protocols"
+	"github.com/MustardSeedNetworks/niac-go/internal/protocols"
 )
 
 // sseHubPacketObserver implements protocols.PacketObserver and forwards

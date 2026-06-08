@@ -17,12 +17,12 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/krisarmstrong/niac-go/internal/capture"
-	"github.com/krisarmstrong/niac-go/internal/config"
-	"github.com/krisarmstrong/niac-go/internal/interactive"
-	"github.com/krisarmstrong/niac-go/internal/logging"
-	"github.com/krisarmstrong/niac-go/internal/protocols"
-	"github.com/krisarmstrong/niac-go/internal/stats"
+	"github.com/MustardSeedNetworks/niac-go/internal/capture"
+	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/interactive"
+	"github.com/MustardSeedNetworks/niac-go/internal/logging"
+	"github.com/MustardSeedNetworks/niac-go/internal/protocols"
+	"github.com/MustardSeedNetworks/niac-go/internal/stats"
 )
 
 // CLI constants for cobra commands and common values.
@@ -313,7 +313,7 @@ func printUsage() {
 	printUsageDebugLevels()
 	printUsageExamples()
 	printUsageProfiling()
-	fmt.Fprintln(os.Stdout, "For more information, see: https://github.com/krisarmstrong/niac-go")
+	fmt.Fprintln(os.Stdout, "For more information, see: https://github.com/MustardSeedNetworks/niac-go")
 }
 
 func printUsageHeader() {

@@ -9,7 +9,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/krisarmstrong/niac-go/internal/license"
+	"github.com/MustardSeedNetworks/niac-go/internal/license"
 )
 
 func newLicenseHandlerServer(t *testing.T, mgr *license.Manager) *Server {

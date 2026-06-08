@@ -193,8 +193,8 @@ All API responses include:
 
 ## Support & Community
 
-- **Issues**: [GitHub Issues](https://github.com/krisarmstrong/niac-go/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/krisarmstrong/niac-go/discussions)
+- **Issues**: [GitHub Issues](https://github.com/MustardSeedNetworks/niac-go/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/MustardSeedNetworks/niac-go/discussions)
 - **Changelog**: [CHANGELOG.md](../CHANGELOG.md)
 - **License**: MIT License
 

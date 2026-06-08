@@ -15,7 +15,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/krisarmstrong/niac-go/internal/truststore"
+	"github.com/MustardSeedNetworks/niac-go/internal/truststore"
 )
 
 // makeFixtureCert writes a self-signed certificate PEM to a temp file and
