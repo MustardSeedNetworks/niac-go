@@ -192,14 +192,14 @@ jobs:
           path: dist/*
           retention-days: 14
 
-      # Linux raw binaries feed nfpm (deb/rpm) in the package job. Native build,
-      # no cross-compile (Path C); packaging is done with standalone OSS tools.
-      - name: Upload raw linux binary for packaging
-        if: matrix.goos == 'linux'
+      # Raw binaries feed the package job: linux ones drive nfpm (deb/rpm), and
+      # every platform's binary is scanned by syft for an SBOM (richer than an
+      # archive scan and avoids unarchiving). Native build, no cross-compile.
+      - name: Upload raw binary for packaging
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: niacbin-linux-${{ matrix.goarch }}
-          path: ${{ matrix.artifact }}/niac
+          name: niacbin-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: ${{ matrix.artifact }}/niac${{ matrix.ext }}
           retention-days: 1
 
   # Central packaging with standalone OSS tools (no goreleaser — its prebuilt
@@ -224,10 +224,10 @@ jobs:
           path: dist
           merge-multiple: true
 
-      - name: Download raw linux binaries
+      - name: Download raw binaries
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          pattern: niacbin-linux-*
+          pattern: niacbin-*
           path: prebuilt
 
       - name: Install nfpm
@@ -278,10 +278,13 @@ jobs:
             nfpm package -f "nfpm.${arch}.yaml" -p rpm -t dist/
           done
 
-          # SBOM per archive.
-          for f in dist/*.tar.gz dist/*.zip; do
-            [ -e "$f" ] || continue
-            syft scan "file:${f}" -o spdx-json="${f}.sbom.json"
+          # SBOM per platform, scanned from the Go binary (richer module data
+          # than an archive scan, and avoids unarchiving the windows .zip).
+          for d in prebuilt/niacbin-*; do
+            [ -d "$d" ] || continue
+            plat="${d#prebuilt/niacbin-}"   # e.g. linux-amd64
+            binpath=$(ls "$d"/niac*)
+            syft scan "file:${binpath}" -o spdx-json="dist/niac-${plat}.sbom.json"
           done
 
           # SHA-256 checksums over the user-facing artifacts (archives + packages).
