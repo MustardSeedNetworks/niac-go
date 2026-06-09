@@ -263,12 +263,20 @@ func TestPcapPacketCollector(t *testing.T) {
 func TestHandlePcapUploadMethodNotAllowed(t *testing.T) {
 	server, _ := newTestServer(t)
 
+	// Method gating moved from the handler to the route registry (ADR-0002).
+	// Exercise the same methodGate wrapper register() composes for the
+	// POST-only /api/v1/pcap/upload route.
+	gated := server.methodGate([]string{http.MethodPost}, server.handlePcapUpload)
+
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/pcap/upload", nil)
-	server.handlePcapUpload(rec, req)
+	gated(rec, req)
 
 	if rec.Code != http.StatusMethodNotAllowed {
 		t.Errorf("GET /pcap/upload: status = %d, want %d", rec.Code, http.StatusMethodNotAllowed)
+	}
+	if allow := rec.Header().Get("Allow"); allow != http.MethodPost {
+		t.Errorf("Allow header = %q, want %q", allow, http.MethodPost)
 	}
 }
 
@@ -314,12 +322,20 @@ func TestHandlePcapUploadBadJSON(t *testing.T) {
 func TestHandlePcapAnalysisMethodNotAllowed(t *testing.T) {
 	server, _ := newTestServer(t)
 
+	// Method gating moved from the handler to the route registry (ADR-0002).
+	// Exercise the methodGate wrapper register() composes for the GET-only
+	// /api/v1/pcap/ route.
+	gated := server.methodGate([]string{http.MethodGet}, server.handlePcapAnalysis)
+
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/pcap/test-id", nil)
-	server.handlePcapAnalysis(rec, req)
+	gated(rec, req)
 
 	if rec.Code != http.StatusMethodNotAllowed {
 		t.Errorf("POST /pcap/{id}: status = %d, want %d", rec.Code, http.StatusMethodNotAllowed)
+	}
+	if allow := rec.Header().Get("Allow"); allow != http.MethodGet {
+		t.Errorf("Allow header = %q, want %q", allow, http.MethodGet)
 	}
 }
 

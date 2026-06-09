@@ -305,12 +305,7 @@ func decodePcapUpload(w http.ResponseWriter, r *http.Request) ([]byte, PcapUploa
 
 // handlePcapUpload handles POST /api/v1/pcap/upload.
 func (s *Server) handlePcapUpload(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		writeError(w, r, http.StatusMethodNotAllowed, "method_not_allowed",
-			"Only POST method is allowed", nil)
-		return
-	}
-
+	// Method gating (POST-only) is enforced declaratively by the route registry.
 	pcapData, req, ok := decodePcapUpload(w, r)
 	if !ok {
 		return
@@ -352,13 +347,7 @@ func (s *Server) handlePcapUpload(w http.ResponseWriter, r *http.Request) {
 
 // handlePcapAnalysis handles GET /api/v1/pcap/{id}.
 func (s *Server) handlePcapAnalysis(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		writeError(w, r, http.StatusMethodNotAllowed, "method_not_allowed",
-			"Only GET method is allowed", nil)
-
-		return
-	}
-
+	// Method gating (GET-only) is enforced declaratively by the route registry.
 	// Extract analysis ID from path
 	path := strings.TrimPrefix(r.URL.Path, "/api/v1/pcap/")
 	analysisID := strings.TrimSuffix(path, "/")

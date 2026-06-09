@@ -53,12 +53,7 @@ var ErrConfigImportFormat = errors.New("unsupported import format (use yaml or j
 
 // handleConfigMerge merges two configs and returns the merged YAML. POST only.
 func (s *Server) handleConfigMerge(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		w.Header().Set("Allow", "POST")
-		writeError(w, r, http.StatusMethodNotAllowed, "method_not_allowed", "Method not allowed", nil)
-		return
-	}
-
+	// Method gating (POST-only) is enforced declaratively by the route registry.
 	var req MergeConfigsRequest
 	if !decodeJSONStrict(w, r, &req, MaxRequestBodySize) {
 		return
@@ -130,12 +125,7 @@ func mergeConfigsByName(base, overlay *config.Config) *config.Config {
 // handleConfigImport converts a non-YAML config (currently: legacy Java DSL)
 // to YAML, or normalises an already-YAML config. POST only.
 func (s *Server) handleConfigImport(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		w.Header().Set("Allow", "POST")
-		writeError(w, r, http.StatusMethodNotAllowed, "method_not_allowed", "Method not allowed", nil)
-		return
-	}
-
+	// Method gating (POST-only) is enforced declaratively by the route registry.
 	var req ConfigImportRequest
 	if !decodeJSONStrict(w, r, &req, MaxRequestBodySize) {
 		return

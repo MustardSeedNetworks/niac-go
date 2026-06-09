@@ -10,6 +10,8 @@ package api
 
 import (
 	"net/http"
+	"slices"
+	"strings"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/api/auth"
 
@@ -45,6 +47,16 @@ type apiRoute struct {
 	path string
 	// handler is the terminal handler.
 	handler http.HandlerFunc
+	// methods is the set of HTTP methods the route accepts. register() gates
+	// to these with a 405 + Allow header (before csrf/admin/feature checks).
+	// Empty preserves the handler's own method dispatch (e.g. devices.go's
+	// multi-method switch keeps dispatching when methods covers its full set).
+	methods []string
+	// maxBodyBytes caps the request body (DoS guard) via bodyLimited, applied
+	// innermost so r.Body is capped before the handler reads it. 0 means the
+	// default MaxRequestBodySize; set explicitly for larger uploads (pcap,
+	// replay) so the registry cap never undercuts a handler's own decode limit.
+	maxBodyBytes int64
 	// rl selects the rate limiter (rlNone for unmetered reads/streams).
 	rl rateLimitKind
 	// csrf wraps the route in csrf.Protect (which itself skips safe GETs).
@@ -55,15 +67,54 @@ type apiRoute struct {
 	feature string
 }
 
+// methodGate rejects any method outside allowed with a 405 + Allow header,
+// preserving niac's JSON error envelope (matching handleRoutePolicyManifest's
+// 405 shape via the standard writeError path).
+func (s *Server) methodGate(allowed []string, next http.HandlerFunc) http.HandlerFunc {
+	allowHeader := strings.Join(allowed, ", ")
+	return func(w http.ResponseWriter, r *http.Request) {
+		if slices.Contains(allowed, r.Method) {
+			next(w, r)
+			return
+		}
+		w.Header().Set("Allow", allowHeader)
+		writeError(w, r, http.StatusMethodNotAllowed, "method_not_allowed",
+			"Method not allowed", nil)
+	}
+}
+
+// bodyLimited caps the request body before the handler reads it. Handlers that
+// decode via decodeJSONStrict still apply their own (per-call) MaxBytesReader;
+// this is the registry-level backstop, set per route so it never undercuts a
+// handler's own decode limit.
+func bodyLimited(limit int64, next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		r.Body = http.MaxBytesReader(w, r.Body, limit)
+		next(w, r)
+	}
+}
+
 // register installs rt on mux, composing middleware in ONE canonical order
 // (outermost → innermost): recover → auth → rateLimit → csrf → admin → feature
-// → handler. Composing here rather than at each call site makes the policy
-// declarative and uniform, records it for /__capabilities, and is the single
-// choke point the route-policy CI gate enforces.
+// → methodGate → bodyLimit → handler. Composing here rather than at each call
+// site makes the policy declarative and uniform, records it for
+// /__capabilities, and is the single choke point the route-policy CI gate
+// enforces.
 func (s *Server) register(mux *http.ServeMux, rt apiRoute) {
+	// Resolve the effective body cap before recording it for the manifest.
+	if rt.maxBodyBytes == 0 {
+		rt.maxBodyBytes = MaxRequestBodySize
+	}
 	s.routeManifest = append(s.routeManifest, rt)
 
 	h := rt.handler
+	// bodyLimit innermost so r.Body is capped before any handler read.
+	h = bodyLimited(rt.maxBodyBytes, h)
+	// methodGate just outside bodyLimit: a wrong method 405s before the body
+	// is touched. Empty methods leaves the handler's own dispatch in charge.
+	if len(rt.methods) > 0 {
+		h = s.methodGate(rt.methods, h)
+	}
 	if rt.feature != "" {
 		h = s.requireFeature(rt.feature, h)
 	}
@@ -100,11 +151,13 @@ func (s *Server) registerAll(mux *http.ServeMux, routes []apiRoute) {
 // routePolicyView is the JSON projection of a route's policy for the
 // /__capabilities manifest (the handler func itself is not exposed).
 type routePolicyView struct {
-	Path        string `json:"path"`
-	RateLimited bool   `json:"rateLimited"`
-	CSRF        bool   `json:"csrf"`
-	Admin       bool   `json:"admin"`
-	Feature     string `json:"feature,omitempty"`
+	Path         string   `json:"path"`
+	Methods      []string `json:"methods,omitempty"`
+	MaxBodyBytes int64    `json:"maxBodyBytes,omitempty"`
+	RateLimited  bool     `json:"rateLimited"`
+	CSRF         bool     `json:"csrf"`
+	Admin        bool     `json:"admin"`
+	Feature      string   `json:"feature,omitempty"`
 }
 
 // handleRoutePolicyManifest serves the route-policy manifest: every route
@@ -120,11 +173,13 @@ func (s *Server) handleRoutePolicyManifest(w http.ResponseWriter, r *http.Reques
 	views := make([]routePolicyView, 0, len(s.routeManifest))
 	for _, rt := range s.routeManifest {
 		views = append(views, routePolicyView{
-			Path:        rt.path,
-			RateLimited: rt.rl != rlNone,
-			CSRF:        rt.csrf,
-			Admin:       rt.admin,
-			Feature:     rt.feature,
+			Path:         rt.path,
+			Methods:      rt.methods,
+			MaxBodyBytes: rt.maxBodyBytes,
+			RateLimited:  rt.rl != rlNone,
+			CSRF:         rt.csrf,
+			Admin:        rt.admin,
+			Feature:      rt.feature,
 		})
 	}
 	s.writeJSON(w, views)

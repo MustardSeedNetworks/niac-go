@@ -27,12 +27,8 @@ func (s *Server) handleSSEStats(w http.ResponseWriter, r *http.Request) {
 // handleSSEStatus returns SSE hub status: running state, per-stream client
 // counts, and the configured caps. Used by the SSE Status page in the UI to
 // confirm the hub is healthy and to surface client churn.
-func (s *Server) handleSSEStatus(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		writeError(w, r, http.StatusMethodNotAllowed, "method_not_allowed", "Method not allowed", nil)
-		return
-	}
-
+func (s *Server) handleSSEStatus(w http.ResponseWriter, _ *http.Request) {
+	// Method gating (GET-only) is enforced declaratively by the route registry.
 	var status map[string]any
 	if s.sseHub != nil {
 		st := s.sseHub.Status()

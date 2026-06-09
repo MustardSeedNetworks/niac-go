@@ -46,12 +46,8 @@ type SynthesizeWalkResponse struct {
 // build the cascading Generate-walk picker without a per-vendor
 // round-trip. Read-only; the response body is the same list returned
 // by synth.AllModels() so callers can group/sort client-side.
-func (s *Server) handleSynthesizeWalkModels(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		w.Header().Set("Allow", "GET")
-		writeError(w, r, http.StatusMethodNotAllowed, "method_not_allowed", "Method not allowed", nil)
-		return
-	}
+func (s *Server) handleSynthesizeWalkModels(w http.ResponseWriter, _ *http.Request) {
+	// Method gating (GET-only) is enforced declaratively by the route registry.
 	s.writeJSON(w, synth.AllModels())
 }
 
@@ -84,26 +80,22 @@ func (s *Server) dispatchDeviceSubpath(w http.ResponseWriter, r *http.Request) {
 // it to <library>/walks/synthesized/{hostname}.walk, and updates the
 // device's walk_file field to point at it.
 //
-// Validation order (matches design-doc resolutions):
+// Method gating (POST-only) is enforced by the route registry before this
+// runs. Validation order (matches design-doc resolutions):
 //  1. library must be open (else 503)
-//  2. method must be POST (else 405)
-//  3. hostname valid name (else 400)
-//  4. JSON body decodes (else 400)
-//  5. device exists in current config (else 404)
-//  6. (vendor, device.type) is synthesizable (else 422 — no silent
+//  2. hostname valid name (else 400)
+//  3. JSON body decodes (else 400)
+//  4. device exists in current config (else 404)
+//  5. (vendor, device.type) is synthesizable (else 422 — no silent
 //     fallback per resolution #2)
-//  7. write + attach (any failure → 500)
+//  6. write + attach (any failure → 500)
 func (s *Server) handleSynthesizeWalk(w http.ResponseWriter, r *http.Request) {
 	if !s.libraryReady() {
 		s.writeLibraryUnavailable(w, r)
 		return
 	}
-	if r.Method != http.MethodPost {
-		w.Header().Set("Allow", "POST")
-		writeError(w, r, http.StatusMethodNotAllowed, "method_not_allowed", "Method not allowed", nil)
-		return
-	}
-
+	// Method gating (POST-only) is enforced declaratively by the route registry
+	// on /api/v1/devices/ before dispatchDeviceSubpath routes here.
 	hostname := extractHostnameFromSynthesizePath(r.URL.Path)
 	if hostname == "" {
 		writeError(w, r, http.StatusBadRequest, "invalid_request", "Hostname required", nil)
