@@ -115,9 +115,13 @@ func TestMergeConfigs_BadInput(t *testing.T) {
 
 func TestMergeConfigs_MethodNotAllowed(t *testing.T) {
 	server, _ := newTestServer(t)
+	// Method gating moved from the handler to the route registry (ADR-0002);
+	// exercise the methodGate wrapper register() composes for the POST-only
+	// /api/v1/config/merge route.
+	gated := server.methodGate([]string{http.MethodPost}, server.handleConfigMerge)
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/config/merge", nil)
 	rec := httptest.NewRecorder()
-	server.handleConfigMerge(rec, req)
+	gated(rec, req)
 	if rec.Code != http.StatusMethodNotAllowed {
 		t.Errorf("got %d, want 405", rec.Code)
 	}

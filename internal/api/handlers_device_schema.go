@@ -106,12 +106,7 @@ var deviceEditorSchemas = map[string]DeviceEditorSchema{ //nolint:gochecknogloba
 // schema rather than 404'ing, so a type new to the daemon that the UI
 // hasn't been updated for still gives a usable form.
 func (s *Server) handleDeviceEditorSchema(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		w.Header().Set("Allow", "GET")
-		writeError(w, r, http.StatusMethodNotAllowed, "method_not_allowed", "Method not allowed", nil)
-		return
-	}
-
+	// Method gating (GET-only) is enforced declaratively by the route registry.
 	rest := strings.TrimPrefix(r.URL.Path, "/api/v1/device-schemas")
 	rest = strings.TrimPrefix(rest, "/")
 

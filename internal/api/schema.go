@@ -89,12 +89,7 @@ type ConfigSchema struct {
 // handleConfigSchema returns the JSON Schema for device configuration
 // GET /api/v1/config/schema.
 func (s *Server) handleConfigSchema(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-
-		return
-	}
-
+	// Method gating (GET-only) is enforced declaratively by the route registry.
 	schema := buildDeviceSchema()
 
 	w.Header().Set("Content-Type", "application/json")

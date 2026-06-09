@@ -121,9 +121,13 @@ func TestDeviceEditorSchemaCaseInsensitiveLookup(t *testing.T) {
 
 func TestDeviceEditorSchemaRejectsNonGet(t *testing.T) {
 	server := newSchemaTestServer()
+	// Method gating moved from the handler to the route registry (ADR-0002);
+	// exercise the methodGate wrapper register() composes for the GET-only
+	// /api/v1/device-schemas route.
+	gated := server.methodGate([]string{http.MethodGet}, server.handleDeviceEditorSchema)
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/device-schemas/switch", nil)
 	rec := httptest.NewRecorder()
-	server.handleDeviceEditorSchema(rec, req)
+	gated(rec, req)
 
 	if rec.Code != http.StatusMethodNotAllowed {
 		t.Errorf("status = %d, want 405", rec.Code)

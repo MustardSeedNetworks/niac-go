@@ -153,11 +153,8 @@ func (s *Server) handleLibraryFiles(w http.ResponseWriter, r *http.Request, kind
 		s.writeLibraryUnavailable(w, r)
 		return
 	}
-	if r.Method != http.MethodGet {
-		w.Header().Set("Allow", "GET")
-		writeError(w, r, http.StatusMethodNotAllowed, "method_not_allowed", "Method not allowed", nil)
-		return
-	}
+	// Method gating (GET-only) is enforced declaratively by the route registry
+	// on /api/v1/library/{walks,pcaps}.
 	entries, err := s.library.ListFiles(kind)
 	if err != nil {
 		s.logger.ErrorContext(r.Context(), "[API] library: list files", "kind", string(kind), "error", err)

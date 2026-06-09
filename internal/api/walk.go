@@ -226,11 +226,8 @@ func buildWalkValidationResponse(result *snmp.ValidationResult, autoFix bool) Wa
 }
 
 func (s *Server) handleWalkValidation(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		writeError(w, r, http.StatusMethodNotAllowed, "method_not_allowed", "Method not allowed", nil)
-		return
-	}
-
+	// Method gating (POST-only) is enforced declaratively by the route registry
+	// on /api/v1/walk/{validate,fix}.
 	isAutoFix := strings.HasSuffix(r.URL.Path, "/fix")
 
 	var req WalkValidationRequest
@@ -267,12 +264,7 @@ func (s *Server) handleWalkValidation(w http.ResponseWriter, r *http.Request) {
 // handleWalkList lists available walk files
 // GET /api/v1/walk/list - List walk files in the config directory.
 func (s *Server) handleWalkList(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		writeError(w, r, http.StatusMethodNotAllowed, "method_not_allowed", "Method not allowed", nil)
-
-		return
-	}
-
+	// Method gating (GET-only) is enforced declaratively by the route registry.
 	// SECURITY FIX: Thread-safe access to config via currentConfig()
 	cfg := s.currentConfig()
 	if cfg == nil {
@@ -418,11 +410,7 @@ func buildBatchWalkResponse(
 }
 
 func (s *Server) handleWalkBatchValidate(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		writeError(w, r, http.StatusMethodNotAllowed, "method_not_allowed", "Method not allowed", nil)
-		return
-	}
-
+	// Method gating (POST-only) is enforced declaratively by the route registry.
 	cfg := s.currentConfig()
 	if cfg == nil {
 		writeError(w, r, http.StatusInternalServerError, "config_unavailable",

@@ -182,9 +182,14 @@ func TestHandleConfigSchema(t *testing.T) {
 	})
 
 	t.Run("POST not allowed", func(t *testing.T) {
+		// Method gating moved from the handler to the route registry (ADR-0002).
+		// Exercise the methodGate wrapper register() composes for the GET-only
+		// /api/v1/config/schema route.
+		gated := server.methodGate([]string{http.MethodGet}, server.handleConfigSchema)
+
 		rec := httptest.NewRecorder()
 		req := httptest.NewRequest(http.MethodPost, "/api/v1/config/schema", nil)
-		server.handleConfigSchema(rec, req)
+		gated(rec, req)
 
 		if rec.Code != http.StatusMethodNotAllowed {
 			t.Errorf("status = %d, want %d", rec.Code, http.StatusMethodNotAllowed)

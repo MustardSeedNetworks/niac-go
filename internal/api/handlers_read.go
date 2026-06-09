@@ -374,13 +374,7 @@ func (s *Server) handleTopology(w http.ResponseWriter, _ *http.Request) {
 }
 
 func (s *Server) handleTopologyExport(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		w.Header().Set("Allow", "GET")
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-
-		return
-	}
-
+	// Method gating (GET-only) is enforced declaratively by the route registry.
 	format := r.URL.Query().Get("format")
 	if format == "" {
 		format = "json"
@@ -461,13 +455,7 @@ func (s *Server) handleNeighbors(w http.ResponseWriter, _ *http.Request) {
 }
 
 func (s *Server) handleInterfaces(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		w.Header().Set("Allow", "GET")
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-
-		return
-	}
-
+	// Method gating (GET-only) is enforced declaratively by the route registry.
 	// Check for filter parameter
 	filter := r.URL.Query().Get("filter")
 
@@ -530,14 +518,8 @@ func (s *Server) handleInterfaces(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (s *Server) handleRuntime(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		w.Header().Set("Allow", "GET")
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-
-		return
-	}
-
+func (s *Server) handleRuntime(w http.ResponseWriter, _ *http.Request) {
+	// Method gating (GET-only) is enforced declaratively by the route registry.
 	// SECURITY FIX #161: Thread-safe access to all config fields
 	s.configMu.RLock()
 	stack := s.cfg.Stack
@@ -585,13 +567,7 @@ func (s *Server) handleRuntime(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleCSRFToken(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		w.Header().Set("Allow", "GET")
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-
-		return
-	}
-
+	// Method gating (GET-only) is enforced declaratively by the route registry.
 	// #1257: mint or retrieve a per-session CSRF token keyed by the
 	// caller's bearer (or the loopback bypass key on no-token paths).
 	// Same caller fetching twice within the 24h expiry gets the same
