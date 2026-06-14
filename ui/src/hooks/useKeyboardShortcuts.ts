@@ -7,19 +7,24 @@ interface Shortcut {
   description: string;
 }
 
-function showShortcutHelp(): void {
-  window.dispatchEvent(new CustomEvent('niac:show-shortcuts'));
-}
-
 /**
  * Keyboard shortcuts for power users.
  * Supports chord sequences (e.g., 'g' then 'd' for go-to-devices).
  * Shortcuts are disabled when focus is in an input/textarea.
+ *
+ * @param onShowHelp opens the help drawer (the `?` shortcut). Wired through
+ *   React state from AppShell — previously this fired a `niac:show-shortcuts`
+ *   CustomEvent that nothing listened for, so `?` silently did nothing.
  */
-export function useKeyboardShortcuts(): Shortcut[] {
+export function useKeyboardShortcuts(onShowHelp: () => void): Shortcut[] {
   const navigate = useNavigate();
   const navigateRef = useRef(navigate);
   navigateRef.current = navigate;
+
+  // Keep the latest callback in a ref so the memoised `shortcuts` array stays
+  // stable while still calling the current handler.
+  const onShowHelpRef = useRef(onShowHelp);
+  onShowHelpRef.current = onShowHelp;
 
   const pendingRef = useRef<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout>>(null);
@@ -54,10 +59,10 @@ export function useKeyboardShortcuts(): Shortcut[] {
       { keys: ['g', 'h'], action: () => navigateRef.current('/'), description: 'Go to Home' },
       {
         keys: ['g', 'a'],
-        action: () => navigateRef.current('/analysis'),
-        description: 'Go to Analysis',
+        action: () => navigateRef.current('/traffic'),
+        description: 'Go to Traffic',
       },
-      { keys: ['?'], action: showShortcutHelp, description: 'Show shortcuts' },
+      { keys: ['?'], action: () => onShowHelpRef.current(), description: 'Show shortcuts' },
     ],
     [],
   );

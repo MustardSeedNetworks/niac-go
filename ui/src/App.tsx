@@ -48,7 +48,7 @@ function AppShell() {
   const [helpOpen, setHelpOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
-  useKeyboardShortcuts();
+  useKeyboardShortcuts(() => setHelpOpen(true));
 
   return (
     <SidebarLayout
