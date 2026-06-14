@@ -1,4 +1,3 @@
-import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import react from '@vitejs/plugin-react';
 import { visualizer } from 'rollup-plugin-visualizer';
@@ -12,14 +11,6 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [
       react(),
-      {
-        name: 'niac-preserve-embedded-ui-placeholder',
-        async closeBundle() {
-          const placeholder = path.resolve(__dirname, '../internal/api/ui/.gitkeep');
-          await mkdir(path.dirname(placeholder), { recursive: true });
-          await writeFile(placeholder, '');
-        },
-      },
       // FIX #181: Bundle analysis when ANALYZE=true
       analyze &&
         (visualizer({
@@ -45,10 +36,11 @@ export default defineConfig(({ mode }) => {
     // FIX #180: Code splitting for optimal bundle sizes
     build: {
       // Output directly to embed directory - no syncing needed.
-      // outDir is outside Vite's project root. Set this explicitly so
-      // Vite does not warn during production builds.
+      // outDir is outside Vite's project root; Vite defaults emptyOutDir to
+      // false there, which preserves the tracked .gitkeep between builds (the
+      // canonical seed/stem pattern). Do NOT set emptyOutDir: true — it wipes
+      // .gitkeep and previously needed a workaround plugin to recreate it.
       outDir: '../internal/api/ui',
-      emptyOutDir: true,
       // Vite 7: Target modern browsers for smaller bundles
       target: 'es2022',
       // Enable CSS code splitting
