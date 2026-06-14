@@ -23,8 +23,7 @@ export interface UIStoreState {
   debugConsoleOpen: boolean;
   debugConsoleHeight: number;
 
-  // Preferences
-  theme: 'dark' | 'light' | 'system';
+  // Preferences (theme lives in useTheme — see note on the persist config below)
   compactMode: boolean;
 
   // Simulation settings
@@ -47,7 +46,6 @@ export interface UIStoreState {
   toggleDebugConsole: () => void;
   setDebugConsoleHeight: (height: number) => void;
 
-  setTheme: (theme: 'dark' | 'light' | 'system') => void;
   setCompactMode: (compact: boolean) => void;
 
   // Simulation settings actions
@@ -113,7 +111,6 @@ export const useUIStore = create<UIStoreState>()(
         notifications: [],
         debugConsoleOpen: false,
         debugConsoleHeight: DEFAULT_DEBUG_CONSOLE_HEIGHT,
-        theme: 'dark',
         compactMode: false,
         simulationSettings: DEFAULT_SIMULATION_SETTINGS,
 
@@ -189,11 +186,6 @@ export const useUIStore = create<UIStoreState>()(
           }),
 
         // Preference actions
-        setTheme: (theme) =>
-          set((state) => {
-            state.theme = theme;
-          }),
-
         setCompactMode: (compact) =>
           set((state) => {
             state.compactMode = compact;
@@ -221,10 +213,11 @@ export const useUIStore = create<UIStoreState>()(
       })),
       {
         name: 'niac-ui-store',
+        // Theme is intentionally NOT persisted here — useTheme owns it under
+        // the 'niac-theme' key. Two owners silently diverged (was a bug).
         partialize: (state) => ({
           sidebarCollapsed: state.sidebarCollapsed,
           debugConsoleHeight: state.debugConsoleHeight,
-          theme: state.theme,
           compactMode: state.compactMode,
           simulationSettings: state.simulationSettings,
         }),
