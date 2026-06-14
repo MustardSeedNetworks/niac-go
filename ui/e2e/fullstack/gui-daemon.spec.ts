@@ -81,8 +81,8 @@ test.describe('daemon-served GUI', () => {
       await expect
         .poll(async () => {
           const status = await request.get('/api/v1/simulation');
-          const body = (await status.json()) as { running?: boolean; device_count?: number };
-          return body.running === true && body.device_count === 2;
+          const body = (await status.json()) as { running?: boolean; deviceCount?: number };
+          return body.running === true && body.deviceCount === 2;
         })
         .toBe(true);
 
