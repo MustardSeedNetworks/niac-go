@@ -54,12 +54,12 @@ test.describe('daemon-served GUI', () => {
 
     const update = await request.put('/api/v1/alerts', {
       headers: { 'X-Csrf-Token': token },
-      data: { packets_threshold: 2500, webhook_url: '' },
+      data: { packetsThreshold: 2500, webhookUrl: '' },
     });
     expect(update.ok()).toBe(true);
 
-    const updated = (await update.json()) as { packets_threshold: number };
-    expect(updated.packets_threshold).toBe(2500);
+    const updated = (await update.json()) as { packetsThreshold: number };
+    expect(updated.packetsThreshold).toBe(2500);
   });
 
   test('shows seeded devices from a daemon simulation', async ({ page, request }) => {
@@ -72,7 +72,7 @@ test.describe('daemon-served GUI', () => {
       headers,
       data: {
         interface: simulationInterface,
-        config_data: simulationConfig,
+        configData: simulationConfig,
       },
     });
     expect(start.ok()).toBe(true);
