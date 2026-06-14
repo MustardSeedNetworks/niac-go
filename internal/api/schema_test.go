@@ -49,7 +49,7 @@ func TestBuildDeviceSchema(t *testing.T) {
 	}
 
 	// Check protocol properties exist
-	protoProps := []string{"snmp_agent", "lldp", "cdp", "stp", "dhcp", "dns", "http", "ftp", "netbios"}
+	protoProps := []string{"snmpAgent", "lldp", "cdp", "stp", "dhcp", "dns", "http", "ftp", "netbios"}
 	for _, prop := range protoProps {
 		if _, ok := schema.Properties[prop]; !ok {
 			t.Errorf("missing protocol property: %s", prop)
@@ -127,7 +127,7 @@ func TestBuildProtocolSchemaProperties(t *testing.T) {
 	props := buildProtocolSchemaProperties()
 
 	expectedProtocols := []string{
-		"snmp_agent", "lldp", "cdp", "edp", "fdp", "stp",
+		"snmpAgent", "lldp", "cdp", "edp", "fdp", "stp",
 		"dhcp", "dns", "http", "ftp", "netbios",
 		"icmp", "icmpv6", "dhcpv6", "traffic", "ttl",
 		"os_fingerprint", "iperf3",
@@ -250,7 +250,7 @@ func TestBuildSNMPAgentSchema(t *testing.T) {
 	if schema.Type != "object" {
 		t.Errorf("type = %q, want %q", schema.Type, "object")
 	}
-	requiredProps := []string{"community", "sys_name", "walk_file", "add_mibs"}
+	requiredProps := []string{"community", "sys_name", "walkFile", "addMibs"}
 	for _, prop := range requiredProps {
 		if _, ok := schema.Properties[prop]; !ok {
 			t.Errorf("missing property: %s", prop)
@@ -301,7 +301,7 @@ func TestBuildDHCPSchema(t *testing.T) {
 	if schema.Type != "object" {
 		t.Errorf("type = %q, want %q", schema.Type, "object")
 	}
-	props := []string{"subnet_mask", "router", "pool_start", "pool_end"}
+	props := []string{"subnetMask", "router", "poolStart", "poolEnd"}
 	for _, p := range props {
 		if _, ok := schema.Properties[p]; !ok {
 			t.Errorf("missing property: %s", p)
@@ -414,7 +414,7 @@ func TestBuildFTPSchema(t *testing.T) {
 	if schema.Type != "object" {
 		t.Errorf("type = %q, want %q", schema.Type, "object")
 	}
-	if _, ok := schema.Properties["allow_anonymous"]; !ok {
+	if _, ok := schema.Properties["allowAnonymous"]; !ok {
 		t.Error("missing allow_anonymous property")
 	}
 }

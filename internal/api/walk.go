@@ -159,7 +159,7 @@ func validateWalkExtension(absPath string) error {
 // WalkValidationRequest is the request body for walk file validation.
 type WalkValidationRequest struct {
 	Filename string `json:"filename"`
-	AutoFix  bool   `json:"auto_fix,omitempty"`
+	AutoFix  bool   `json:"autoFix,omitempty"`
 }
 
 // WalkValidationResponse wraps the validation result.
@@ -381,17 +381,17 @@ func buildBatchWalkResponse(
 ) struct {
 	Success      bool                              `json:"success"`
 	Message      string                            `json:"message"`
-	TotalFiles   int                               `json:"total_files"`
-	InvalidFiles int                               `json:"invalid_files"`
-	TotalIssues  int                               `json:"total_issues"`
+	TotalFiles   int                               `json:"totalFiles"`
+	InvalidFiles int                               `json:"invalidFiles"`
+	TotalIssues  int                               `json:"totalIssues"`
 	Results      map[string]*snmp.ValidationResult `json:"results"`
 } {
 	response := struct {
 		Success      bool                              `json:"success"`
 		Message      string                            `json:"message"`
-		TotalFiles   int                               `json:"total_files"`
-		InvalidFiles int                               `json:"invalid_files"`
-		TotalIssues  int                               `json:"total_issues"`
+		TotalFiles   int                               `json:"totalFiles"`
+		InvalidFiles int                               `json:"invalidFiles"`
+		TotalIssues  int                               `json:"totalIssues"`
 		Results      map[string]*snmp.ValidationResult `json:"results"`
 	}{
 		Success:      invalidCount == 0,

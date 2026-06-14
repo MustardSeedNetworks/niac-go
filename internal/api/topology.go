@@ -43,15 +43,15 @@ type TopologyLink struct {
 	Source          string  `json:"source"`
 	Target          string  `json:"target"`
 	Label           string  `json:"label"`
-	SourceInterface string  `json:"source_interface"`
-	TargetInterface string  `json:"target_interface"`
-	LinkType        string  `json:"link_type"` // trunk, access, lag, p2p
+	SourceInterface string  `json:"sourceInterface"`
+	TargetInterface string  `json:"targetInterface"`
+	LinkType        string  `json:"linkType"` // trunk, access, lag, p2p
 	VLANs           []int   `json:"vlans"`
-	NativeVLAN      int     `json:"native_vlan,omitempty"`
-	Speed           int     `json:"speed_mbps,omitempty"`
+	NativeVLAN      int     `json:"nativeVlan,omitempty"`
+	Speed           int     `json:"speedMbps,omitempty"`
 	Duplex          string  `json:"duplex,omitempty"`
 	Status          string  `json:"status"` // up, down, degraded
-	Utilization     float64 `json:"utilization_percent,omitempty"`
+	Utilization     float64 `json:"utilizationPercent,omitempty"`
 }
 
 // buildInterfaceMap creates a lookup map of device interfaces.

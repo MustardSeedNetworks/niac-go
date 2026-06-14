@@ -9,11 +9,11 @@ type DeviceResponse struct {
 	IPs              []string                  `json:"ips,omitempty"`
 	VLAN             int                       `json:"vlan,omitempty"`
 	Interfaces       []string                  `json:"interfaces,omitempty"`
-	InterfaceDetails []DeviceInterfaceResponse `json:"interface_details,omitempty"`
+	InterfaceDetails []DeviceInterfaceResponse `json:"interfaceDetails,omitempty"`
 	Protocols        []string                  `json:"protocols"`
 
 	// Protocol configurations (optional, included when requested)
-	SNMPAgent     *SNMPAgentResponse     `json:"snmp_agent,omitempty"`
+	SNMPAgent     *SNMPAgentResponse     `json:"snmpAgent,omitempty"`
 	CDP           *CDPResponse           `json:"cdp,omitempty"`
 	LLDP          *LLDPResponse          `json:"lldp,omitempty"`
 	DHCP          *DHCPResponse          `json:"dhcp,omitempty"`
@@ -22,10 +22,10 @@ type DeviceResponse struct {
 	FTP           *FTPResponse           `json:"ftp,omitempty"`
 	NetBIOS       *NetBIOSResponse       `json:"netbios,omitempty"`
 	STP           *STPResponse           `json:"stp,omitempty"`
-	TrafficConfig *TrafficConfigResponse `json:"traffic_config,omitempty"`
+	TrafficConfig *TrafficConfigResponse `json:"trafficConfig,omitempty"`
 
 	// Raw YAML for advanced editing
-	RawYAML string `json:"raw_yaml,omitempty"`
+	RawYAML string `json:"rawYaml,omitempty"`
 }
 
 // SNMPAgentResponse represents SNMP agent configuration.
@@ -36,8 +36,8 @@ type SNMPAgentResponse struct {
 	SysLocation string           `json:"syslocation,omitempty"`
 	SysDescr    string           `json:"sysdescr,omitempty"`
 	SysContact  string           `json:"syscontact,omitempty"`
-	WalkFile    string           `json:"walk_file,omitempty"`
-	AddMibs     []AddMibResponse `json:"add_mibs,omitempty"`
+	WalkFile    string           `json:"walkFile,omitempty"`
+	AddMibs     []AddMibResponse `json:"addMibs,omitempty"`
 }
 
 // AddMibResponse represents an additional MIB entry.
@@ -51,8 +51,8 @@ type AddMibResponse struct {
 type CDPResponse struct {
 	Enabled         bool   `json:"enabled"`
 	Platform        string `json:"platform,omitempty"`
-	SoftwareVersion string `json:"software_version,omitempty"`
-	PortID          string `json:"port_id,omitempty"`
+	SoftwareVersion string `json:"softwareVersion,omitempty"`
+	PortID          string `json:"portId,omitempty"`
 	Version         int    `json:"version,omitempty"`
 	Holdtime        int    `json:"holdtime,omitempty"`
 }
@@ -60,18 +60,18 @@ type CDPResponse struct {
 // LLDPResponse represents LLDP configuration.
 type LLDPResponse struct {
 	Enabled           bool   `json:"enabled"`
-	ChassisIDType     string `json:"chassis_id_type,omitempty"`
-	PortDescription   string `json:"port_description,omitempty"`
-	SystemDescription string `json:"system_description,omitempty"`
+	ChassisIDType     string `json:"chassisIdType,omitempty"`
+	PortDescription   string `json:"portDescription,omitempty"`
+	SystemDescription string `json:"systemDescription,omitempty"`
 	TTL               int    `json:"ttl,omitempty"`
 }
 
 // DHCPResponse represents DHCP server configuration.
 type DHCPResponse struct {
 	Enabled    bool     `json:"enabled"`
-	PoolStart  string   `json:"pool_start,omitempty"`
-	PoolEnd    string   `json:"pool_end,omitempty"`
-	SubnetMask string   `json:"subnet_mask,omitempty"`
+	PoolStart  string   `json:"poolStart,omitempty"`
+	PoolEnd    string   `json:"poolEnd,omitempty"`
+	SubnetMask string   `json:"subnetMask,omitempty"`
 	Router     string   `json:"router,omitempty"`
 	DNS        []string `json:"dns,omitempty"`
 }
@@ -79,21 +79,21 @@ type DHCPResponse struct {
 // DNSResponse represents DNS server configuration.
 type DNSResponse struct {
 	Enabled bool `json:"enabled"`
-	Records int  `json:"record_count,omitempty"`
+	Records int  `json:"recordCount,omitempty"`
 }
 
 // HTTPResponse represents HTTP server configuration.
 type HTTPResponse struct {
 	Enabled       bool   `json:"enabled"`
-	ServerName    string `json:"server_name,omitempty"`
-	EndpointCount int    `json:"endpoint_count,omitempty"`
+	ServerName    string `json:"serverName,omitempty"`
+	EndpointCount int    `json:"endpointCount,omitempty"`
 }
 
 // FTPResponse represents FTP server configuration.
 type FTPResponse struct {
 	Enabled        bool   `json:"enabled"`
-	WelcomeBanner  string `json:"welcome_banner,omitempty"`
-	AllowAnonymous bool   `json:"allow_anonymous,omitempty"`
+	WelcomeBanner  string `json:"welcomeBanner,omitempty"`
+	AllowAnonymous bool   `json:"allowAnonymous,omitempty"`
 }
 
 // NetBIOSResponse represents NetBIOS configuration.
@@ -112,11 +112,11 @@ type STPResponse struct {
 // TrafficConfigResponse represents traffic pattern configuration.
 type TrafficConfigResponse struct {
 	Enabled         bool `json:"enabled"`
-	ARPEnabled      bool `json:"arp_enabled,omitempty"`
-	ARPInterval     int  `json:"arp_interval,omitempty"`
-	PingEnabled     bool `json:"ping_enabled,omitempty"`
-	PingInterval    int  `json:"ping_interval,omitempty"`
-	PingPayloadSize int  `json:"ping_payload_size,omitempty"`
+	ARPEnabled      bool `json:"arpEnabled,omitempty"`
+	ARPInterval     int  `json:"arpInterval,omitempty"`
+	PingEnabled     bool `json:"pingEnabled,omitempty"`
+	PingInterval    int  `json:"pingInterval,omitempty"`
+	PingPayloadSize int  `json:"pingPayloadSize,omitempty"`
 }
 
 // DeviceInterfaceResponse represents configured metadata for a device interface.
@@ -124,8 +124,8 @@ type DeviceInterfaceResponse struct {
 	Name        string `json:"name"`
 	Speed       int    `json:"speed,omitempty"`
 	Duplex      string `json:"duplex,omitempty"`
-	AdminStatus string `json:"admin_status,omitempty"`
-	OperStatus  string `json:"oper_status,omitempty"`
+	AdminStatus string `json:"adminStatus,omitempty"`
+	OperStatus  string `json:"operStatus,omitempty"`
 	Description string `json:"description,omitempty"`
 	VLANs       []int  `json:"vlans,omitempty"`
 }
@@ -135,8 +135,8 @@ type DeviceInterfaceUpdate struct {
 	Name        string `json:"name"`
 	Speed       int    `json:"speed,omitempty"`
 	Duplex      string `json:"duplex,omitempty"`
-	AdminStatus string `json:"admin_status,omitempty"`
-	OperStatus  string `json:"oper_status,omitempty"`
+	AdminStatus string `json:"adminStatus,omitempty"`
+	OperStatus  string `json:"operStatus,omitempty"`
 	Description string `json:"description,omitempty"`
 	VLANs       []int  `json:"vlans,omitempty"`
 }
@@ -148,9 +148,9 @@ type DeviceCreateRequest struct {
 	MAC              string                  `json:"mac,omitempty"`
 	IP               string                  `json:"ip,omitempty"`
 	Interfaces       []DeviceInterfaceUpdate `json:"interfaces,omitempty"`
-	InterfaceDetails []DeviceInterfaceUpdate `json:"interface_details,omitempty"`
+	InterfaceDetails []DeviceInterfaceUpdate `json:"interfaceDetails,omitempty"`
 	Template         string                  `json:"template,omitempty"` // Use template as base
-	RawYAML          string                  `json:"raw_yaml,omitempty"` // Advanced: full YAML
+	RawYAML          string                  `json:"rawYaml,omitempty"`  // Advanced: full YAML
 }
 
 // DeviceUpdateRequest represents a request to update a device.
@@ -159,19 +159,19 @@ type DeviceUpdateRequest struct {
 	MAC              string                  `json:"mac,omitempty"`
 	IP               string                  `json:"ip,omitempty"`
 	Interfaces       []DeviceInterfaceUpdate `json:"interfaces,omitempty"`
-	InterfaceDetails []DeviceInterfaceUpdate `json:"interface_details,omitempty"`
-	RawYAML          string                  `json:"raw_yaml,omitempty"` // Full YAML for the device
+	InterfaceDetails []DeviceInterfaceUpdate `json:"interfaceDetails,omitempty"`
+	RawYAML          string                  `json:"rawYaml,omitempty"` // Full YAML for the device
 }
 
 // DeviceCloneRequest represents a request to clone a device.
 type DeviceCloneRequest struct {
-	NewHostname string `json:"new_hostname"`
-	NewIP       string `json:"new_ip,omitempty"`
-	NewMAC      string `json:"new_mac,omitempty"`
+	NewHostname string `json:"newHostname"`
+	NewIP       string `json:"newIp,omitempty"`
+	NewMAC      string `json:"newMac,omitempty"`
 }
 
 // DeviceListResponse represents the response for listing devices.
 type DeviceListResponse struct {
 	Devices    []DeviceResponse `json:"devices"`
-	TotalCount int              `json:"total_count"`
+	TotalCount int              `json:"totalCount"`
 }

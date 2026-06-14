@@ -148,7 +148,7 @@ func TestErrorResponseStructure(t *testing.T) {
 		t.Fatalf("unmarshal error: %v", err)
 	}
 
-	expectedFields := []string{"error", "message", "request_id", "path", "method", "timestamp"}
+	expectedFields := []string{"error", "message", "requestId", "path", "method", "timestamp"}
 	for _, field := range expectedFields {
 		if _, ok := m[field]; !ok {
 			t.Errorf("missing expected JSON field: %s", field)

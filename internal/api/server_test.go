@@ -139,7 +139,7 @@ func TestServerHandleAlertsLifecycle(t *testing.T) {
 
 	// Update
 	rec = httptest.NewRecorder()
-	body := `{"packets_threshold":12345,"webhook_url":"https://hooks.example.com"}`
+	body := `{"packetsThreshold":12345,"webhookUrl":"https://hooks.example.com"}`
 	req = httptest.NewRequest(http.MethodPut, "/api/v1/alerts", strings.NewReader(body))
 	server.handleAlerts(rec, req)
 
@@ -225,7 +225,7 @@ func TestServerHandleReplayRoutes(t *testing.T) {
 	req = httptest.NewRequest(
 		http.MethodPost,
 		"/api/v1/replay",
-		strings.NewReader(fmt.Sprintf(`{"file":%s,"loop_ms":500}`, strconvJSON(pcapPath))),
+		strings.NewReader(fmt.Sprintf(`{"file":%s,"loopMs":500}`, strconvJSON(pcapPath))),
 	)
 	server.handleReplay(rec, req)
 

@@ -14,9 +14,9 @@ import (
 type configDocument struct {
 	Path        string    `json:"path"`
 	Filename    string    `json:"filename"`
-	ModifiedAt  time.Time `json:"modified_at"`
-	SizeBytes   int64     `json:"size_bytes"`
-	DeviceCount int       `json:"device_count"`
+	ModifiedAt  time.Time `json:"modifiedAt"`
+	SizeBytes   int64     `json:"sizeBytes"`
+	DeviceCount int       `json:"deviceCount"`
 	Content     string    `json:"content"`
 }
 

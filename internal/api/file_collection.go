@@ -15,8 +15,8 @@ import (
 type FileEntry struct {
 	Path      string    `json:"path"`
 	Name      string    `json:"name"`
-	SizeBytes int64     `json:"size_bytes"`
-	Modified  time.Time `json:"modified_at"`
+	SizeBytes int64     `json:"sizeBytes"`
+	Modified  time.Time `json:"modifiedAt"`
 }
 
 // getFileKindConfig returns root path and extensions for a file kind.

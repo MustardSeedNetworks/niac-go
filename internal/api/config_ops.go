@@ -28,9 +28,9 @@ type MergeConfigsRequest struct {
 // MergeConfigsResponse is the body for POST /api/v1/config/merge.
 type MergeConfigsResponse struct {
 	Merged      string `json:"merged"`
-	BaseDevices int    `json:"base_devices"`
-	OverlayDevs int    `json:"overlay_devices"`
-	MergedDevs  int    `json:"merged_devices"`
+	BaseDevices int    `json:"baseDevices"`
+	OverlayDevs int    `json:"overlayDevices"`
+	MergedDevs  int    `json:"mergedDevices"`
 }
 
 // ConfigImportRequest is the body for POST /api/v1/config/import.

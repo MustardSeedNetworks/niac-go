@@ -22,7 +22,7 @@ type CaptureStatus struct {
 	Running   bool   `json:"running"`
 	Interface string `json:"interface,omitempty"`
 	Filter    string `json:"filter,omitempty"`
-	StartedAt string `json:"started_at,omitempty"`
+	StartedAt string `json:"startedAt,omitempty"`
 	// Packets is the running count of packets the capture has observed
 	// since it started. Updated by the capture loop.
 	Packets uint64 `json:"packets"`

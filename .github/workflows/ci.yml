@@ -122,6 +122,9 @@ jobs:
       - name: Route-policy gate (capability registry)
         run: ./scripts/check-route-policy.sh
 
+      - name: JSON wire-casing gate — camelCase ratchet (ADR-0007)
+        run: ./scripts/check-json-casing.sh
+
       - name: Run tests
         run: go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
 

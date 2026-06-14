@@ -44,7 +44,7 @@ func TestHandleAlertsGetDefault(t *testing.T) {
 func TestHandleAlertsPutValid(t *testing.T) {
 	server := newAlertTestServer(t)
 
-	body := `{"packets_threshold":5000,"webhook_url":"https://hooks.example.com/alert"}`
+	body := `{"packetsThreshold":5000,"webhookUrl":"https://hooks.example.com/alert"}`
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPut, "/api/v1/alerts", strings.NewReader(body))
 	server.handleAlerts(rec, req)
@@ -68,7 +68,7 @@ func TestHandleAlertsPutValid(t *testing.T) {
 func TestHandleAlertsPostValid(t *testing.T) {
 	server := newAlertTestServer(t)
 
-	body := `{"packets_threshold":1000,"webhook_url":"https://example.com/hook"}`
+	body := `{"packetsThreshold":1000,"webhookUrl":"https://example.com/hook"}`
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/alerts", strings.NewReader(body))
 	server.handleAlerts(rec, req)
@@ -106,7 +106,7 @@ func TestHandleAlertsValidationFailed(t *testing.T) {
 	server := newAlertTestServer(t)
 
 	// Use invalid webhook URL (private IP)
-	body := `{"packets_threshold":100,"webhook_url":"http://192.168.1.1/hook"}`
+	body := `{"packetsThreshold":100,"webhookUrl":"http://192.168.1.1/hook"}`
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPut, "/api/v1/alerts", strings.NewReader(body))
 	server.handleAlerts(rec, req)

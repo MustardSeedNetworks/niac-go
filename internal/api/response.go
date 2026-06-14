@@ -10,13 +10,13 @@ import (
 // ErrorResponse represents a standardized API error response
 // FEATURE #105: Consistent error format for all API endpoints.
 type ErrorResponse struct {
-	Error     string        `json:"error"`                // Machine-readable error code
-	Message   string        `json:"message"`              // Human-readable error message
-	Details   []ErrorDetail `json:"details,omitempty"`    // Optional detailed error information
-	RequestID string        `json:"request_id,omitempty"` // Optional request ID for tracing
-	Timestamp time.Time     `json:"timestamp"`            // When the error occurred
-	Path      string        `json:"path"`                 // Request path that caused the error
-	Method    string        `json:"method"`               // HTTP method
+	Error     string        `json:"error"`               // Machine-readable error code
+	Message   string        `json:"message"`             // Human-readable error message
+	Details   []ErrorDetail `json:"details,omitempty"`   // Optional detailed error information
+	RequestID string        `json:"requestId,omitempty"` // Optional request ID for tracing
+	Timestamp time.Time     `json:"timestamp"`           // When the error occurred
+	Path      string        `json:"path"`                // Request path that caused the error
+	Method    string        `json:"method"`              // HTTP method
 }
 
 // ErrorDetail provides detailed information about a specific error.
