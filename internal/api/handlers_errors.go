@@ -8,9 +8,9 @@ import (
 
 // errorInjectionRequest represents a request to inject an error.
 type errorInjectionRequest struct {
-	DeviceIP  string `json:"device_ip"`
+	DeviceIP  string `json:"deviceIp"`
 	Interface string `json:"interface"`
-	ErrorType string `json:"error_type"`
+	ErrorType string `json:"errorType"`
 	Value     int    `json:"value"`
 }
 
@@ -112,12 +112,12 @@ func (s *Server) handleErrorInjection(
 	errorMgr.SetError(req.DeviceIP, req.Interface, apperr.ErrorType(req.ErrorType), req.Value)
 
 	s.writeJSON(w, map[string]any{
-		"success":    true,
-		"message":    "error injected successfully",
-		"device_ip":  req.DeviceIP,
-		"interface":  req.Interface,
-		"error_type": req.ErrorType,
-		"value":      req.Value,
+		"success":   true,
+		"message":   "error injected successfully",
+		"deviceIp":  req.DeviceIP,
+		"interface": req.Interface,
+		"errorType": req.ErrorType,
+		"value":     req.Value,
 	})
 }
 
@@ -128,7 +128,7 @@ func (s *Server) handleErrorClear(
 	errorMgr *apperr.StateManager,
 ) {
 	query := r.URL.Query()
-	deviceIP := query.Get("device_ip")
+	deviceIP := query.Get("deviceIp")
 	iface := query.Get("interface")
 
 	switch {
@@ -142,14 +142,14 @@ func (s *Server) handleErrorClear(
 			map[string]any{
 				"success":   true,
 				"message":   "error cleared",
-				"device_ip": deviceIP,
+				"deviceIp":  deviceIP,
 				"interface": iface,
 			},
 		)
 	default:
 		http.Error(
 			w,
-			"both device_ip and interface are required, or omit both to clear all",
+			"both deviceIp and interface are required, or omit both to clear all",
 			http.StatusBadRequest,
 		)
 	}

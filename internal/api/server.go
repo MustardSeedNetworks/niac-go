@@ -138,14 +138,14 @@ var errNonLoopbackRequiresToken = errors.New(
 
 // AlertConfig controls basic threshold-based alerting.
 type AlertConfig struct {
-	PacketsThreshold uint64 `json:"packets_threshold"`
-	WebhookURL       string `json:"webhook_url"`
+	PacketsThreshold uint64 `json:"packetsThreshold"`
+	WebhookURL       string `json:"webhookUrl"`
 }
 
 // ReplayRequest represents a packet replay request.
 type ReplayRequest struct {
 	File       string  `json:"file"`
-	LoopMs     int     `json:"loop_ms"`
+	LoopMs     int     `json:"loopMs"`
 	Scale      float64 `json:"scale"`
 	InlineData string  `json:"data,omitempty"`
 	Uploaded   bool    `json:"-"`
@@ -155,9 +155,9 @@ type ReplayRequest struct {
 type ReplayState struct {
 	Running   bool      `json:"running"`
 	File      string    `json:"file"`
-	LoopMs    int       `json:"loop_ms"`
+	LoopMs    int       `json:"loopMs"`
 	Scale     float64   `json:"scale"`
-	StartedAt time.Time `json:"started_at,omitzero"`
+	StartedAt time.Time `json:"startedAt,omitzero"`
 }
 
 // ReplayManager controls PCAP playback from the API server.
@@ -227,8 +227,8 @@ type ServerConfig struct {
 // SimulationRequest represents a request to start a simulation.
 type SimulationRequest struct {
 	Interface  string `json:"interface"`
-	ConfigPath string `json:"config_path,omitempty"`
-	ConfigData string `json:"config_data,omitempty"`
+	ConfigPath string `json:"configPath,omitempty"`
+	ConfigData string `json:"configData,omitempty"`
 	// TemplateName, when set, tells the daemon to load a built-in
 	// template directly from disk by name. This preserves the template's
 	// own directory as the include_path base, which matters for templates
@@ -236,18 +236,18 @@ type SimulationRequest struct {
 	// `include_path: ".."` plus a relative `walk_file:` path. Fetching the
 	// template content and POSTing it as ConfigData would lose that
 	// directory context and trip the walk-file path-traversal guard.
-	TemplateName string `json:"template_name,omitempty"`
+	TemplateName string `json:"templateName,omitempty"`
 }
 
 // SimulationStatus represents the current simulation status.
 type SimulationStatus struct {
 	Running       bool      `json:"running"`
 	Interface     string    `json:"interface,omitempty"`
-	ConfigPath    string    `json:"config_path,omitempty"`
-	ConfigName    string    `json:"config_name,omitempty"`
-	DeviceCount   int       `json:"device_count"`
-	StartedAt     time.Time `json:"started_at,omitzero"`
-	UptimeSeconds float64   `json:"uptime_seconds"`
+	ConfigPath    string    `json:"configPath,omitempty"`
+	ConfigName    string    `json:"configName,omitempty"`
+	DeviceCount   int       `json:"deviceCount"`
+	StartedAt     time.Time `json:"startedAt,omitzero"`
+	UptimeSeconds float64   `json:"uptimeSeconds"`
 }
 
 // DaemonController interface for daemon mode operations.

@@ -129,7 +129,7 @@ func TestCSRF_TokenValidation(t *testing.T) {
 	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	// Test valid CSRF token on protected endpoint
-	reqBody := strings.NewReader(`{"packets_threshold":1000}`)
+	reqBody := strings.NewReader(`{"packetsThreshold":1000}`)
 	req := httptest.NewRequest(http.MethodPut, "/api/v1/alerts", reqBody)
 	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("X-Csrf-Token", testCSRFToken(t, server, token))
@@ -152,7 +152,7 @@ func TestCSRF_InvalidTokenRejection(t *testing.T) {
 	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	// Try to use an invalid CSRF token
-	reqBody := strings.NewReader(`{"packets_threshold":1000}`)
+	reqBody := strings.NewReader(`{"packetsThreshold":1000}`)
 	req := httptest.NewRequest(http.MethodPut, "/api/v1/alerts", reqBody)
 	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("X-Csrf-Token", "invalid-token-12345")
@@ -175,7 +175,7 @@ func TestCSRF_MissingTokenRejection(t *testing.T) {
 	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	// Try to make a state-changing request without CSRF token
-	reqBody := strings.NewReader(`{"packets_threshold":1000}`)
+	reqBody := strings.NewReader(`{"packetsThreshold":1000}`)
 	req := httptest.NewRequest(http.MethodPut, "/api/v1/alerts", reqBody)
 	req.Header.Set("Authorization", "Bearer "+token)
 	// Deliberately omit X-CSRF-Token header
@@ -458,7 +458,7 @@ func TestAlertConfig_ConcurrentUpdates(t *testing.T) {
 		go func(threshold int) {
 			defer wg.Done()
 
-			reqBody := fmt.Sprintf(`{"packets_threshold":%d}`, threshold*1000)
+			reqBody := fmt.Sprintf(`{"packetsThreshold":%d}`, threshold*1000)
 			req := httptest.NewRequest(http.MethodPut, "/api/v1/alerts", strings.NewReader(reqBody))
 			req.Header.Set("Authorization", "Bearer "+token)
 			req.Header.Set("X-Csrf-Token", testCSRFToken(t, server, token))
@@ -498,7 +498,7 @@ func TestAlertConfig_NoDoubleClose(t *testing.T) {
 	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	// Enable alerts
-	reqBody := `{"packets_threshold":1000}`
+	reqBody := `{"packetsThreshold":1000}`
 	req := httptest.NewRequest(http.MethodPut, "/api/v1/alerts", strings.NewReader(reqBody))
 	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("X-Csrf-Token", testCSRFToken(t, server, token))
@@ -515,7 +515,7 @@ func TestAlertConfig_NoDoubleClose(t *testing.T) {
 
 	// Update alerts multiple times rapidly (triggers stop/start of goroutine)
 	for i := range 5 {
-		reqBody = fmt.Sprintf(`{"packets_threshold":%d}`, (i+1)*1000)
+		reqBody = fmt.Sprintf(`{"packetsThreshold":%d}`, (i+1)*1000)
 		req = httptest.NewRequest(http.MethodPut, "/api/v1/alerts", strings.NewReader(reqBody))
 		req.Header.Set("Authorization", "Bearer "+token)
 		req.Header.Set("X-Csrf-Token", testCSRFToken(t, server, token))
@@ -531,7 +531,7 @@ func TestAlertConfig_NoDoubleClose(t *testing.T) {
 	}
 
 	// Disable alerts (should cleanly close channel)
-	reqBody = `{"packets_threshold":0}`
+	reqBody = `{"packetsThreshold":0}`
 	req = httptest.NewRequest(http.MethodPut, "/api/v1/alerts", strings.NewReader(reqBody))
 	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("X-Csrf-Token", testCSRFToken(t, server, token))
@@ -558,7 +558,7 @@ func TestAlertConfig_GoroutineCleanup(t *testing.T) {
 	// Enable and disable alerts multiple times
 	for range 10 {
 		// Enable
-		reqBody := `{"packets_threshold":1000}`
+		reqBody := `{"packetsThreshold":1000}`
 		req := httptest.NewRequest(http.MethodPut, "/api/v1/alerts", strings.NewReader(reqBody))
 		req.Header.Set("Authorization", "Bearer "+token)
 		req.Header.Set("X-Csrf-Token", testCSRFToken(t, server, token))
@@ -574,7 +574,7 @@ func TestAlertConfig_GoroutineCleanup(t *testing.T) {
 		}
 
 		// Disable
-		reqBody = `{"packets_threshold":0}`
+		reqBody = `{"packetsThreshold":0}`
 		req = httptest.NewRequest(http.MethodPut, "/api/v1/alerts", strings.NewReader(reqBody))
 		req.Header.Set("Authorization", "Bearer "+token)
 		req.Header.Set("X-Csrf-Token", testCSRFToken(t, server, token))

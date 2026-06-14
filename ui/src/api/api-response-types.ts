@@ -174,7 +174,7 @@ export interface TopologyLink {
   speed?: string;
   duplex?: string;
   status?: string;
-  /** Link utilization, 0–100. Source = the daemon's json:"utilization_percent"
+  /** Link utilization, 0–100. Source = the daemon's json:"utilizationPercent"
    *  on api.TopologyLink; the request layer's snake→camel converter rewrites
    *  the wire field to utilizationPercent. Today the daemon emits 0 for
    *  every link (counter wiring is a separate work item); when live counters

@@ -34,7 +34,7 @@ func buildSNMPAgentSchema() *SchemaProperty {
 				Title:       "System Location",
 				Description: "SNMP sysLocation (1.3.6.1.2.1.1.6)",
 			},
-			"walk_file": {
+			"walkFile": {
 				Type:        "string",
 				Title:       "Walk File",
 				Description: "Path to SNMP walk file",
@@ -48,7 +48,7 @@ func buildSNMPAgentSchema() *SchemaProperty {
 					Type: "string",
 				},
 			},
-			"add_mibs": {
+			"addMibs": {
 				Type:        "array",
 				Title:       "Custom MIB Entries",
 				Description: "Custom MIB overrides/additions",
@@ -126,19 +126,19 @@ func buildLLDPSchema() *SchemaProperty {
 				Minimum:     floatPtr(1),
 				Maximum:     floatPtr(maxTTLValue),
 			},
-			"chassis_id_type": {
+			"chassisIdType": {
 				Type:      "string",
 				Title:     "Chassis ID Type",
 				Enum:      []any{"mac", "local", "network_address"},
 				EnumNames: []string{"MAC Address", "Local", "Network Address"},
 				Default:   "mac",
 			},
-			"system_description": {
+			"systemDescription": {
 				Type:        "string",
 				Title:       "System Description",
 				Description: "LLDP system description TLV",
 			},
-			"port_description": {
+			"portDescription": {
 				Type:        "string",
 				Title:       "Port Description",
 				Description: "LLDP port description TLV",
@@ -187,12 +187,12 @@ func buildCDPSchema() *SchemaProperty {
 				Description:   "Device platform string (e.g., 'cisco WS-C3750X-48P')",
 				UIPlaceholder: "cisco WS-C3750X-48P",
 			},
-			"software_version": {
+			"softwareVersion": {
 				Type:        "string",
 				Title:       "Software Version",
 				Description: "Software version string",
 			},
-			"port_id": {
+			"portId": {
 				Type:          "string",
 				Title:         "Port ID",
 				Description:   "Local port identifier",
@@ -253,7 +253,7 @@ func buildFDPSchema() *SchemaProperty {
 				Title:   "Holdtime",
 				Default: fdpDefaultHoldtime,
 			},
-			"software_version": {
+			"softwareVersion": {
 				Type:  "string",
 				Title: "Software Version",
 			},
@@ -261,7 +261,7 @@ func buildFDPSchema() *SchemaProperty {
 				Type:  "string",
 				Title: "Platform",
 			},
-			"port_id": {
+			"portId": {
 				Type:  "string",
 				Title: "Port ID",
 			},

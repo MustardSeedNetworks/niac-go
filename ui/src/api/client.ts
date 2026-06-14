@@ -181,7 +181,7 @@ export const clearError = (deviceIp: string, iface: string) =>
     deviceIp: string;
     interface: string;
   }>(
-    `/api/v1/errors?device_ip=${encodeURIComponent(deviceIp)}&interface=${encodeURIComponent(iface)}`,
+    `/api/v1/errors?deviceIp=${encodeURIComponent(deviceIp)}&interface=${encodeURIComponent(iface)}`,
     { method: 'DELETE' },
   );
 

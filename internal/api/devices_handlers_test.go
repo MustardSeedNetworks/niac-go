@@ -303,7 +303,7 @@ func TestHandleDeviceUpdateInterfaces(t *testing.T) {
 		return nil
 	}
 
-	body := `{"interfaces":[{"name":"Ethernet1/1","speed":1000,"duplex":"full","admin_status":"up"}]}`
+	body := `{"interfaces":[{"name":"Ethernet1/1","speed":1000,"duplex":"full","adminStatus":"up"}]}`
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPut, "/api/v1/config/devices/router1", strings.NewReader(body))
 	server.handleDevicesV2(rec, req)
@@ -349,7 +349,7 @@ func TestHandleDeviceUpdateInvalidInterface(t *testing.T) {
 func TestHandleDeviceCloneSuccess(t *testing.T) {
 	server := newDeviceTestServer(t)
 
-	body := `{"new_hostname":"router1-clone","new_ip":"10.0.0.5","new_mac":"AA:BB:CC:DD:EE:01"}`
+	body := `{"newHostname":"router1-clone","newIp":"10.0.0.5","newMac":"AA:BB:CC:DD:EE:01"}`
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/config/devices/router1/clone", strings.NewReader(body))
 	server.handleDevicesV2(rec, req)
@@ -370,7 +370,7 @@ func TestHandleDeviceCloneSuccess(t *testing.T) {
 func TestHandleDeviceCloneSourceNotFound(t *testing.T) {
 	server := newDeviceTestServer(t)
 
-	body := `{"new_hostname":"clone1"}`
+	body := `{"newHostname":"clone1"}`
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/config/devices/nonexistent/clone", strings.NewReader(body))
 	server.handleDevicesV2(rec, req)
@@ -383,7 +383,7 @@ func TestHandleDeviceCloneSourceNotFound(t *testing.T) {
 func TestHandleDeviceCloneDuplicateHostname(t *testing.T) {
 	server := newDeviceTestServer(t)
 
-	body := `{"new_hostname":"switch1"}`
+	body := `{"newHostname":"switch1"}`
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/config/devices/router1/clone", strings.NewReader(body))
 	server.handleDevicesV2(rec, req)
@@ -396,7 +396,7 @@ func TestHandleDeviceCloneDuplicateHostname(t *testing.T) {
 func TestHandleDeviceCloneInvalidHostname(t *testing.T) {
 	server := newDeviceTestServer(t)
 
-	body := `{"new_hostname":""}`
+	body := `{"newHostname":""}`
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/config/devices/router1/clone", strings.NewReader(body))
 	server.handleDevicesV2(rec, req)

@@ -8,7 +8,7 @@ func buildDHCPSchema() *SchemaProperty {
 		Title:       "DHCP Server",
 		Description: "DHCP server configuration",
 		Properties: map[string]*SchemaProperty{
-			"subnet_mask": {
+			"subnetMask": {
 				Type:          "string",
 				Title:         "Subnet Mask",
 				Format:        "ipv4",
@@ -29,13 +29,13 @@ func buildDHCPSchema() *SchemaProperty {
 				Title:  "Server Identifier",
 				Format: "ipv4",
 			},
-			"pool_start": {
+			"poolStart": {
 				Type:        "string",
 				Title:       "Pool Start",
 				Description: "Start of DHCP address pool",
 				Format:      "ipv4",
 			},
-			"pool_end": {
+			"poolEnd": {
 				Type:        "string",
 				Title:       "Pool End",
 				Description: "End of DHCP address pool",
@@ -135,7 +135,7 @@ func buildHTTPSchema(_ *float64) *SchemaProperty {
 				Title:   "Enable HTTP",
 				Default: false,
 			},
-			"server_name": {
+			"serverName": {
 				Type:        "string",
 				Title:       "Server Name",
 				Description: "HTTP Server header value",
@@ -195,7 +195,7 @@ func buildFTPSchema() *SchemaProperty {
 				Title:   "Enable FTP",
 				Default: false,
 			},
-			"welcome_banner": {
+			"welcomeBanner": {
 				Type:        "string",
 				Title:       "Welcome Banner",
 				Description: "FTP welcome message",
@@ -205,7 +205,7 @@ func buildFTPSchema() *SchemaProperty {
 				Title:   "System Type",
 				Default: "UNIX Type: L8",
 			},
-			"allow_anonymous": {
+			"allowAnonymous": {
 				Type:    "boolean",
 				Title:   "Allow Anonymous",
 				Default: true,

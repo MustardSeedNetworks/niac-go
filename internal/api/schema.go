@@ -199,7 +199,7 @@ func buildProtocolSchemaProperties() map[string]*SchemaProperty {
 	maxTTL := 255.0
 
 	return map[string]*SchemaProperty{
-		"snmp_agent":     buildSNMPAgentSchema(),
+		"snmpAgent":      buildSNMPAgentSchema(),
 		"lldp":           buildLLDPSchema(),
 		"cdp":            buildCDPSchema(),
 		"edp":            buildEDPSchema(),

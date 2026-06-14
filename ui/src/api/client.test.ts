@@ -135,7 +135,7 @@ describe('API Client', () => {
         })
         .mockResolvedValueOnce({
           ok: true,
-          json: () => Promise.resolve({ packets_threshold: 100, webhook_url: '' }),
+          json: () => Promise.resolve({ packetsThreshold: 100, webhookUrl: '' }),
         });
 
       const { updateAlerts } = await import('./client');
