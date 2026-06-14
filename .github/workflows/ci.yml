@@ -698,6 +698,15 @@ jobs:
         run: npx playwright install --with-deps chromium webkit
 
       - name: Start backend server
+        env:
+          # The gui-daemon.spec.ts simulation test targets a synthetic
+          # interface (e2e-dry-run0) that does not exist on the runner. The
+          # daemon honours this env var to run simulations in dry-run mode,
+          # skipping the real capture-engine bind. Without it the daemon
+          # returns "interface does not exist" (500), which is exactly the
+          # regression that slipped onto main when 4ebb685 added the test and
+          # daemon support but never wired the env var into CI.
+          NIAC_E2E_DRY_RUN_SIMULATION: "1"
         run: |
           # Backend is HTTPS-only since #663 (the --http flag was removed and
           # the legacy HTTP listener deleted). Self-signed cert auto-generated
