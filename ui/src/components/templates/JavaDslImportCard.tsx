@@ -10,8 +10,8 @@ import { H2, P, SmallText } from '../../ui/Typography';
  * JavaDslImportCard converts a legacy Java-DSL `.cfg` payload to YAML via
  * POST /api/v1/config/import?format=java-dsl. Mirrors `niac config export`.
  *
- * Lives on TemplatesPage so users importing legacy configs land somewhere
- * obvious when they're starting from a non-YAML source.
+ * Rendered in the simulation ConfigPicker so users importing legacy configs
+ * land somewhere obvious when they're starting from a non-YAML source.
  */
 export const JavaDslImportCard: FC = () => {
   const [content, setContent] = useState('');
