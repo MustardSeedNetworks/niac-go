@@ -1,0 +1,66 @@
+name: Epic
+description: Track a larger body of related work for NIAC
+title: "Epic: "
+labels: ["type: epic", "status: needs-triage"]
+body:
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Outcome
+      description: What strategic or user-visible outcome does this epic deliver?
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Primary Area
+      options:
+        - area: api
+        - area: build
+        - area: ci
+        - area: config
+        - area: device-simulation
+        - area: docs
+        - area: frontend
+        - area: license
+        - area: packet-capture
+        - area: protocol-simulation
+        - area: security
+        - area: templates
+        - area: tests
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: What is in scope and out of scope?
+      placeholder: |
+        In scope:
+        - ...
+
+        Out of scope:
+        - ...
+    validations:
+      required: true
+  - type: textarea
+    id: child_issues
+    attributes:
+      label: Child Issues
+      description: Link issues as they are created.
+      placeholder: |
+        - [ ] #...
+        - [ ] #...
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Epic Completion Criteria
+      placeholder: |
+        - [ ] ...
+        - [ ] ...
+    validations:
+      required: true
+  - type: textarea
+    id: risks
+    attributes:
+      label: Risks and Dependencies
