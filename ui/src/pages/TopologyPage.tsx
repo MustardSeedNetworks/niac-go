@@ -542,7 +542,7 @@ export const TopologyPage: FC = () => {
     } catch (err) {
       // Best-effort — surface in console rather than a modal since
       // the PNG path is a convenience, not a primary flow.
-      console.error('Topology PNG export failed:', err); // eslint-disable-line no-console
+      console.error('Topology PNG export failed:', err);
     }
   }, []);
 
