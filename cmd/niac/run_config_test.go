@@ -12,7 +12,8 @@ func TestLoadConfigOrScenarioFileWins(t *testing.T) {
 	writeTestFile(t, configPath, []byte(`devices:
   - name: file-router
     mac: "00:11:22:33:44:55"
-    ip: "192.0.2.10"
+    ips:
+      - "192.0.2.10"
 `))
 
 	cfg, resolved, err := loadConfigOrScenario(configPath)
@@ -46,7 +47,8 @@ func TestLoadConfigOrScenarioLibraryNetwork(t *testing.T) {
 	writeTestFile(t, filepath.Join(root, "networks", "demo.yaml"), []byte(`devices:
   - name: library-router
     mac: "00:11:22:33:44:66"
-    ip: "192.0.2.11"
+    ips:
+      - "192.0.2.11"
 `))
 
 	cfg, resolved, err := loadConfigOrScenario("demo")

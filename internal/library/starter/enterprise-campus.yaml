@@ -46,8 +46,8 @@ devices:
   # Building A Distribution
   - name: bldg-a-dist-01
     mac: "00:1C:2E:3A:10:01"
-    ip: "10.10.0.1"
-
+    ips:
+      - "10.10.0.1"
     lldp:
       enabled: true
       system_description: "Building A Distribution"
@@ -62,8 +62,8 @@ devices:
   # Building A Access Floor 1
   - name: bldg-a-fl1-sw-01
     mac: "00:1C:2E:3A:11:01"
-    ip: "10.10.1.1"
-
+    ips:
+      - "10.10.1.1"
     lldp:
       enabled: true
       system_description: "Building A Floor 1"
@@ -78,8 +78,8 @@ devices:
   # Building B Distribution
   - name: bldg-b-dist-01
     mac: "00:1C:2E:3A:20:01"
-    ip: "10.20.0.1"
-
+    ips:
+      - "10.20.0.1"
     lldp:
       enabled: true
       system_description: "Building B Distribution"
@@ -94,8 +94,8 @@ devices:
   # Campus DNS/DHCP Server
   - name: campus-dns-01
     mac: "00:1C:2E:3A:60:01"
-    ip: "10.0.10.100"
-
+    ips:
+      - "10.0.10.100"
     dhcp:
       enabled: true
       pools:

@@ -173,15 +173,11 @@ func (s *TokenStore) Len() int {
 	return len(snap.byHash)
 }
 
-// ScopeCounts returns a breakdown of the active tokens by scope, used
-//
-// Returns (readOnly, readWrite, admin) counts. Admin tier (#743) is
+// ScopeCounts returns a breakdown of active tokens by scope.
+// Returns (readOnly, readWrite, admin) counts. The admin count is
 // returned separately so dashboards can surface high-privilege token
 // counts at a glance.
-//
-// Deprecated naming kept on the function returning three ints; callers
-// should treat the third return as admin-token count.
-// by the SIGHUP reload log line so operators see "rotated to N tokens
+// Used by the SIGHUP reload log line so operators see "rotated to N tokens
 // (RO=X RW=Y)" without ever logging the values themselves.
 func (s *TokenStore) ScopeCounts() (int, int, int) {
 	snap := s.cur.Load()

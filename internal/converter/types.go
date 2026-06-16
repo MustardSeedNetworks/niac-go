@@ -60,7 +60,6 @@ type Device struct {
 	Name          string               `yaml:"name,omitempty"`
 	Type          string               `yaml:"type,omitempty"           validate:"omitempty,oneof=router switch ap access-point firewall server host workstation iot"`
 	MAC           string               `yaml:"mac"                      validate:"required,mac"`
-	IP            string               `yaml:"ip,omitempty"             validate:"omitempty,ip"`
 	IPs           []string             `yaml:"ips,omitempty"            validate:"omitempty,dive,ip"`
 	VLAN          int                  `yaml:"vlan,omitempty"           validate:"omitempty,gte=1,lte=4094"`
 	MapToIP       string               `yaml:"map_to_ip,omitempty"      validate:"omitempty,ip"`

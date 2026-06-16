@@ -204,8 +204,8 @@ func TestParse_SimpleDevice(t *testing.T) {
 	if d.MAC != "00:11:22:33:44:55" {
 		t.Errorf("MAC = %q, want %q", d.MAC, "00:11:22:33:44:55")
 	}
-	if d.IP != "192.168.1.1" {
-		t.Errorf("IP = %q, want %q", d.IP, "192.168.1.1")
+	if len(d.IPs) != 1 || d.IPs[0] != "192.168.1.1" {
+		t.Errorf("IPs[0] = %q, want %q", d.IPs, "192.168.1.1")
 	}
 	if d.Name != "device1" {
 		t.Errorf("Name = %q, want %q", d.Name, "device1")
@@ -335,17 +335,17 @@ func TestParse_DeviceWithMultipleIPs(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	d := cfg.Devices[0]
-	if d.IP != "192.168.1.1" {
-		t.Errorf("IP = %q, want %q", d.IP, "192.168.1.1")
+	if len(d.IPs) != 3 {
+		t.Fatalf("expected 3 IPs, got %d: %v", len(d.IPs), d.IPs)
 	}
-	if len(d.IPs) != 2 {
-		t.Fatalf("expected 2 additional IPs, got %d", len(d.IPs))
+	if d.IPs[0] != "192.168.1.1" {
+		t.Errorf("IPs[0] = %q, want %q", d.IPs[0], "192.168.1.1")
 	}
-	if d.IPs[0] != "10.0.0.1" {
-		t.Errorf("IPs[0] = %q, want %q", d.IPs[0], "10.0.0.1")
+	if d.IPs[1] != "10.0.0.1" {
+		t.Errorf("IPs[1] = %q, want %q", d.IPs[1], "10.0.0.1")
 	}
-	if d.IPs[1] != "fe80::1" {
-		t.Errorf("IPs[1] = %q, want %q", d.IPs[1], "fe80::1")
+	if d.IPs[2] != "fe80::1" {
+		t.Errorf("IPs[2] = %q, want %q", d.IPs[2], "fe80::1")
 	}
 }
 
@@ -649,7 +649,7 @@ func TestValidateConfig(t *testing.T) {
 			name: "valid config",
 			config: &Config{
 				Devices: []Device{
-					{MAC: "00:11:22:33:44:55", IP: "192.168.1.1"},
+					{MAC: "00:11:22:33:44:55", IPs: []string{"192.168.1.1"}},
 				},
 			},
 			wantError: false,
@@ -658,7 +658,7 @@ func TestValidateConfig(t *testing.T) {
 			name: "missing MAC",
 			config: &Config{
 				Devices: []Device{
-					{IP: "192.168.1.1"},
+					{IPs: []string{"192.168.1.1"}},
 				},
 			},
 			wantError: true,
@@ -770,7 +770,8 @@ func TestLoadYAMLConfigFromBytes(t *testing.T) {
 			name: "valid YAML",
 			input: `devices:
   - mac: "00:11:22:33:44:55"
-    ip: "192.168.1.1"
+    ips:
+      - "192.168.1.1"
     name: "router1"`,
 			wantError: false,
 			validate: func(t *testing.T, cfg *Config) {

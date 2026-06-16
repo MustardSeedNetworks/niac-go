@@ -320,7 +320,7 @@ func writeYAMLDevices(sb *strings.Builder, devices []generatedDevice) {
 	for _, dev := range devices {
 		_, _ = fmt.Fprintf(sb, "  - name: \"%s\"\n", dev.name)
 		_, _ = fmt.Fprintf(sb, "    mac: \"%s\"\n", dev.mac)
-		_, _ = fmt.Fprintf(sb, "    ip: \"%s\"\n", dev.ip)
+		_, _ = fmt.Fprintf(sb, "    ips:\n      - \"%s\"\n", dev.ip)
 
 		writeYAMLSNMP(sb, dev.protocols)
 		writeYAMLLLDP(sb, dev)

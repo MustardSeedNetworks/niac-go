@@ -25,7 +25,8 @@ devices:
   # Access Switch - Layer 2 switching
   - name: switch-01
     mac: "00:1A:2B:3C:02:01"
-    ip: "192.168.1.2"
+    ips:
+      - "192.168.1.2"
 
     # LLDP - Discovery
     lldp:

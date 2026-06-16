@@ -74,10 +74,7 @@ func (p *Parser) parseDeviceSimpleField(line string, device *Device) bool {
 
 // parseDeviceIPAddr handles IpAddr field parsing.
 func (p *Parser) parseDeviceIPAddr(line string, device *Device) {
-	ip := p.extractValue(line)
-	if device.IP == "" {
-		device.IP = ip
-	} else if ip != "" {
+	if ip := p.extractValue(line); ip != "" {
 		device.IPs = append(device.IPs, ip)
 	}
 }

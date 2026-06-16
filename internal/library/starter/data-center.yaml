@@ -42,8 +42,8 @@ devices:
   # Distribution Switch 1
   - name: dc-dist-sw-01
     mac: "00:0C:29:DC:02:01"
-    ip: "10.1.1.1"
-
+    ips:
+      - "10.1.1.1"
     lldp:
       enabled: true
       system_description: "Distribution Switch"
@@ -58,8 +58,8 @@ devices:
   # Distribution Switch 2
   - name: dc-dist-sw-02
     mac: "00:0C:29:DC:02:02"
-    ip: "10.1.1.2"
-
+    ips:
+      - "10.1.1.2"
     lldp:
       enabled: true
       system_description: "Distribution Switch"
@@ -74,8 +74,8 @@ devices:
   # Access Switch
   - name: dc-access-sw-01
     mac: "00:0C:29:DC:03:01"
-    ip: "10.1.2.1"
-
+    ips:
+      - "10.1.2.1"
     lldp:
       enabled: true
       system_description: "Access Switch"
@@ -90,8 +90,8 @@ devices:
   # Web Server
   - name: dc-web-01
     mac: "00:0C:29:DC:10:01"
-    ip: "10.1.10.10"
-
+    ips:
+      - "10.1.10.10"
     http:
       enabled: true
       server_name: "DC-Web-Server"
@@ -102,8 +102,8 @@ devices:
   # Infrastructure Server (DNS/DHCP)
   - name: dc-infra-01
     mac: "00:0C:29:DC:10:03"
-    ip: "10.1.10.100"
-
+    ips:
+      - "10.1.10.100"
     dhcp:
       enabled: true
       pools:

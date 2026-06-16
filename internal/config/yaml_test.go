@@ -13,7 +13,8 @@ func TestLoadYAML_Basic(t *testing.T) {
 devices:
   - name: test-router
     mac: "00:11:22:33:44:55"
-    ip: "192.168.1.1"
+    ips:
+      - "192.168.1.1"
 `
 	tmpfile := createTempYAML(t, yaml)
 
@@ -233,7 +234,8 @@ devices:
   - name: snmp-device
     type: switch
     mac: "00:11:22:33:44:55"
-    ip: "192.168.1.1"
+    ips:
+      - "192.168.1.1"
     snmp_agent:
       community: "public"
       walk_file: "device.walk"
@@ -271,7 +273,8 @@ devices:
   - name: snmp-device
     type: switch
     mac: "00:11:22:33:44:55"
-    ip: "192.168.1.1"
+    ips:
+      - "192.168.1.1"
     snmp_agent:
       community: "public"
       walk_file: "device.walk"
@@ -310,7 +313,8 @@ func TestLoadYAML_InferMissingDeviceType(t *testing.T) {
 devices:
   - name: ` + tt.name + `
     mac: "00:11:22:33:44:55"
-    ip: "192.168.1.1"
+    ips:
+      - "192.168.1.1"
 `
 			tmpfile := createTempYAML(t, yaml)
 			defer func() { _ = os.Remove(tmpfile) }()
@@ -334,7 +338,8 @@ func TestLoadYAML_LLDP(t *testing.T) {
 devices:
   - name: lldp-device
     mac: "00:11:22:33:44:55"
-    ip: "192.168.1.1"
+    ips:
+      - "192.168.1.1"
     lldp:
       enabled: true
       system_description: "Test LLDP Device"
@@ -389,7 +394,8 @@ func TestLoadYAML_CDP(t *testing.T) {
 devices:
   - name: cisco-router
     mac: "00:11:22:33:44:55"
-    ip: "192.168.1.1"
+    ips:
+      - "192.168.1.1"
     cdp:
       enabled: true
       version: 2
@@ -431,7 +437,8 @@ func TestLoadYAML_TrafficConfig(t *testing.T) {
 devices:
   - name: traffic-router
     mac: "00:11:22:33:44:55"
-    ip: "192.168.1.1"
+    ips:
+      - "192.168.1.1"
     traffic:
       enabled: true
       arp_announcements:
@@ -515,7 +522,8 @@ func TestLoadYAML_SNMPTraps(t *testing.T) {
 devices:
   - name: snmp-router
     mac: "00:11:22:33:44:55"
-    ip: "192.168.1.1"
+    ips:
+      - "192.168.1.1"
     snmp_agent:
       community: "public"
       traps:
@@ -609,7 +617,8 @@ func TestLoadYAML_TrafficDefaults(t *testing.T) {
 devices:
   - name: traffic-defaults
     mac: "00:11:22:33:44:55"
-    ip: "192.168.1.1"
+    ips:
+      - "192.168.1.1"
     traffic:
       enabled: true
       arp_announcements:
@@ -659,7 +668,8 @@ func TestLoadYAML_TrapDefaults(t *testing.T) {
 devices:
   - name: trap-defaults
     mac: "00:11:22:33:44:55"
-    ip: "192.168.1.1"
+    ips:
+      - "192.168.1.1"
     snmp_agent:
       traps:
         enabled: true
@@ -738,7 +748,8 @@ func TestLoadYAML_InvalidMAC(t *testing.T) {
 devices:
   - name: bad-mac
     mac: "not-a-mac"
-    ip: "192.168.1.1"
+    ips:
+      - "192.168.1.1"
 `
 	tmpfile := createTempYAML(t, yaml)
 
@@ -756,7 +767,8 @@ func TestLoadYAML_InvalidIP(t *testing.T) {
 devices:
   - name: bad-ip
     mac: "00:11:22:33:44:55"
-    ip: "999.999.999.999"
+    ips:
+      - "999.999.999.999"
 `
 	tmpfile := createTempYAML(t, yaml)
 
@@ -788,7 +800,8 @@ func TestLoad_AutoDetection(t *testing.T) {
 devices:
   - name: yaml-device
     mac: "00:11:22:33:44:55"
-    ip: "192.168.1.1"
+    ips:
+      - "192.168.1.1"
 `
 	tmpfile := createTempYAML(t, yaml)
 
@@ -830,7 +843,8 @@ func BenchmarkLoadYAML(b *testing.B) {
 devices:
   - name: bench-device
     mac: "00:11:22:33:44:55"
-    ip: "192.168.1.1"
+    ips:
+      - "192.168.1.1"
     lldp:
       enabled: true
       system_description: "Benchmark Device"

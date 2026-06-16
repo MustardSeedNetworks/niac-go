@@ -35,8 +35,8 @@ devices:
   # Temperature Sensor 1
   - name: temp-sensor-01
     mac: "00:AA:BB:CC:10:01"
-    ip: "192.168.100.10"
-
+    ips:
+      - "192.168.100.10"
     http:
       enabled: true
       server_name: "TempSensor-01"
@@ -49,8 +49,8 @@ devices:
   # Motion Sensor
   - name: motion-sensor-01
     mac: "00:AA:BB:CC:20:01"
-    ip: "192.168.100.20"
-
+    ips:
+      - "192.168.100.20"
     http:
       enabled: true
       server_name: "MotionSensor-01"
@@ -62,8 +62,8 @@ devices:
   # Smart Light
   - name: smart-light-01
     mac: "00:AA:BB:CC:30:01"
-    ip: "192.168.100.30"
-
+    ips:
+      - "192.168.100.30"
     http:
       enabled: true
       server_name: "SmartLight-01"
@@ -75,8 +75,8 @@ devices:
   # Smart Thermostat
   - name: thermostat-01
     mac: "00:AA:BB:CC:40:01"
-    ip: "192.168.100.40"
-
+    ips:
+      - "192.168.100.40"
     http:
       enabled: true
       server_name: "Thermostat-01"
@@ -87,8 +87,8 @@ devices:
   # IP Camera
   - name: camera-01
     mac: "00:AA:BB:CC:50:01"
-    ip: "192.168.100.50"
-
+    ips:
+      - "192.168.100.50"
     http:
       enabled: true
       server_name: "IPCamera-01"
@@ -99,8 +99,8 @@ devices:
   # IoT Hub
   - name: iot-hub
     mac: "00:AA:BB:CC:99:01"
-    ip: "192.168.100.100"
-
+    ips:
+      - "192.168.100.100"
     http:
       enabled: true
       server_name: "IoT-Hub"
