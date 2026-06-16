@@ -125,6 +125,9 @@ jobs:
       - name: JSON wire-casing gate — camelCase ratchet (ADR-0007)
         run: ./scripts/check-json-casing.sh
 
+      - name: Filename-policy gate — no monolith naming outside internal/api
+        run: ./scripts/check-filename-policy.sh
+
       - name: Run tests
         run: go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
 
