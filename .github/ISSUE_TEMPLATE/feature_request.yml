@@ -1,88 +1,78 @@
-name: Feature Request
-description: Suggest a new feature or enhancement for NIAC
-title: "[FEATURE] "
+name: Feature
+description: Propose a new capability or meaningful improvement for NIAC
+title: "Feature: "
 labels: ["type: feature", "status: needs-triage"]
 body:
-  - type: markdown
-    attributes:
-      value: |
-        Thanks for suggesting a feature! Please fill out this form to help us understand your idea.
-
-  - type: textarea
-    id: summary
-    attributes:
-      label: Summary
-      description: A clear and concise description of the feature you'd like.
-      placeholder: Describe the feature in a sentence or two...
-    validations:
-      required: true
-
   - type: textarea
     id: problem
     attributes:
-      label: Problem Statement
-      description: What problem does this feature solve?
-      placeholder: |
-        I'm always frustrated when...
-        Currently there's no way to...
+      label: Problem
+      description: What user or maintainer problem should this solve?
+      placeholder: Describe the problem without assuming a specific implementation.
     validations:
       required: true
-
   - type: textarea
-    id: solution
+    id: outcome
     attributes:
-      label: Proposed Solution
-      description: Describe how you envision this feature working.
-      placeholder: |
-        I would like to...
-        The feature should...
+      label: Desired Outcome
+      description: What should be true when this is done?
     validations:
       required: true
-
   - type: dropdown
-    id: component
+    id: area
     attributes:
-      label: Component
-      description: Which part of NIAC would this affect?
+      label: Area
       options:
-        - API/Backend
-        - UI/Frontend
-        - SNMP
-        - LLDP/CDP
-        - Protocol Simulation
-        - Device Simulation
-        - Templates
-        - PCAP Capture/Replay
-        - Configuration
-        - Installation/Deployment
-        - Documentation
-        - CI/CD Pipeline
-        - New Area
-        - Multiple Areas
+        - area: api
+        - area: build
+        - area: ci
+        - area: config
+        - area: device-simulation
+        - area: docs
+        - area: frontend
+        - area: license
+        - area: packet-capture
+        - area: protocol-simulation
+        - area: security
+        - area: templates
+        - area: tests
     validations:
       required: true
-
   - type: dropdown
     id: priority
     attributes:
       label: Priority
-      description: How important is this feature to you?
       options:
-        - Nice to have
-        - Would improve my workflow
-        - Important for my use case
-        - Critical - blocking my use of NIAC
+        - priority: critical
+        - priority: high
+        - priority: medium
+        - priority: low
     validations:
       required: true
-
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance Criteria
+      description: Use checkboxes for observable behavior.
+      placeholder: |
+        - [ ] ...
+        - [ ] ...
+    validations:
+      required: true
   - type: textarea
     id: alternatives
     attributes:
       label: Alternatives Considered
-      description: Any alternative solutions or features you've considered?
-
   - type: textarea
     id: context
     attributes:
       label: Additional Context
-      description: Mockups, links to similar features in other projects, etc.
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-submission Checklist
+      options:
+        - label: I searched existing issues and did not find a duplicate.
+          required: true
+        - label: I described the user or maintainer problem, not only a proposed implementation.
+          required: true
