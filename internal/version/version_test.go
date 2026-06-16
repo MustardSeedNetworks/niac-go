@@ -34,7 +34,7 @@ func TestGetUIBuildHashNonEmpty(t *testing.T) {
 func TestInfoShape(t *testing.T) {
 	info := version.Info()
 
-	expectedKeys := []string{"version", "commit", "buildTime", "uiBuildHash"}
+	expectedKeys := []string{"version", "commit", "buildTime", "releaseTrain", "uiBuildHash"}
 	if len(info) != len(expectedKeys) {
 		t.Errorf("Info() returned %d keys, want %d", len(info), len(expectedKeys))
 	}
@@ -75,6 +75,9 @@ func TestInfoMatchesGetters(t *testing.T) {
 	}
 	if info["buildTime"] != version.GetBuildTime() {
 		t.Errorf("Info()[buildTime]=%q, GetBuildTime()=%q", info["buildTime"], version.GetBuildTime())
+	}
+	if info["releaseTrain"] != version.GetReleaseTrain() {
+		t.Errorf("Info()[releaseTrain]=%q, GetReleaseTrain()=%q", info["releaseTrain"], version.GetReleaseTrain())
 	}
 	if info["uiBuildHash"] != version.GetUIBuildHash() {
 		t.Errorf("Info()[uiBuildHash]=%q, GetUIBuildHash()=%q", info["uiBuildHash"], version.GetUIBuildHash())

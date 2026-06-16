@@ -11,10 +11,11 @@ import (
 )
 
 type versionInfo struct {
-	version     string
-	commit      string
-	date        string
-	uiBuildHash string
+	version      string
+	commit       string
+	date         string
+	releaseTrain string
+	uiBuildHash  string
 }
 
 // Version info constants.
@@ -31,10 +32,11 @@ const (
 // the file alongside the binary.
 func readVersionInfo() versionInfo {
 	info := versionInfo{
-		version:     version.GetVersion(),
-		commit:      version.GetCommit(),
-		date:        version.GetBuildTime(),
-		uiBuildHash: version.GetUIBuildHash(),
+		version:      version.GetVersion(),
+		commit:       version.GetCommit(),
+		date:         version.GetBuildTime(),
+		releaseTrain: version.GetReleaseTrain(),
+		uiBuildHash:  version.GetUIBuildHash(),
 	}
 
 	populateVersionFromFile(&info)

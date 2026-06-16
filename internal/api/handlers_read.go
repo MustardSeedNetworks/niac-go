@@ -430,6 +430,7 @@ func (s *Server) handleBuildVersion(w http.ResponseWriter, _ *http.Request) {
 		"commit":         commitShort,
 		"commitFull":     commit,
 		"buildTime":      s.cfg.BuildTime,
+		"releaseTrain":   s.cfg.ReleaseTrain,
 		"uiBuildHash":    s.cfg.UIBuildHash,
 		"goVersion":      runtime.Version(),
 		"platform":       runtime.GOOS + "/" + runtime.GOARCH,
