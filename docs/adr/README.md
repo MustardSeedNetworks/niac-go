@@ -12,5 +12,6 @@ people and the diffs. Format matches the sibling repos (seed/stem).
 | [0004](0004-scope-based-auth-posture.md) | Scope-based bearer-token auth + CSRF posture | Accepted |
 | [0005](0005-ed25519-signed-licenses.md) | Ed25519-signed license tokens | Accepted |
 | [0006](0006-internal-api-sub-package-decomposition.md) | Decompose `internal/api` into isolated sub-packages | Accepted |
+| [0007](0007-json-wire-casing-convention.md) | JSON wire-casing convention (camelCase API, no exceptions) | Accepted |
 
 Status values: Proposed · Accepted · Amended · Superseded.
