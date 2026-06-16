@@ -180,18 +180,19 @@ type ServerConfig struct {
 	// If both Token and TokenFile are set, TokenFile wins and a one-shot
 	// INFO is logged so the operator knows the env var was ignored. The
 	// file is re-read on SIGHUP via Server.ReloadTokensFromFile.
-	TokenFile   string
-	Stack       *protocols.Stack
-	Config      *config.Config
-	ConfigPath  string
-	Storage     *storage.Storage
-	Interface   string
-	Version     string
-	Commit      string
-	BuildTime   string
-	UIBuildHash string
-	Topology    Topology
-	Alert       AlertConfig
+	TokenFile    string
+	Stack        *protocols.Stack
+	Config       *config.Config
+	ConfigPath   string
+	Storage      *storage.Storage
+	Interface    string
+	Version      string
+	Commit       string
+	BuildTime    string
+	ReleaseTrain string
+	UIBuildHash  string
+	Topology     Topology
+	Alert        AlertConfig
 	// EnableTLS controls whether the API listener uses HTTPS. When true,
 	// CertFile/KeyFile (or, when both are empty, the auto-generated
 	// self-signed pair under CertDir) are loaded and the listener serves

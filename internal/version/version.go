@@ -12,6 +12,7 @@ package version
 
 import (
 	"runtime/debug"
+	"strings"
 )
 
 // These variables are set via ldflags at build time. Names match the
@@ -105,6 +106,11 @@ func GetBuildTime() string {
 	return buildTime
 }
 
+// GetReleaseTrain returns the calendar release train in YYYY.MM format.
+func GetReleaseTrain() string {
+	return releaseTrainFromBuildTime(GetBuildTime())
+}
+
 // GetUIBuildHash returns the md5 hash of the embedded UI assets.
 func GetUIBuildHash() string {
 	if UIBuildHash == "" {
@@ -113,13 +119,21 @@ func GetUIBuildHash() string {
 	return UIBuildHash
 }
 
+func releaseTrainFromBuildTime(buildTime string) string {
+	if len(buildTime) < len("2006-01") || buildTime == unknownValue {
+		return unknownValue
+	}
+	return strings.ReplaceAll(buildTime[:len("2006-01")], "-", ".")
+}
+
 // Info returns all version information as a JSON-ready map.
 func Info() map[string]string {
 	ver, commit, buildTime := getVersionInfo()
 	return map[string]string{
-		"version":     ver,
-		"commit":      commit,
-		"buildTime":   buildTime,
-		"uiBuildHash": GetUIBuildHash(),
+		"version":      ver,
+		"commit":       commit,
+		"buildTime":    buildTime,
+		"releaseTrain": releaseTrainFromBuildTime(buildTime),
+		"uiBuildHash":  GetUIBuildHash(),
 	}
 }
