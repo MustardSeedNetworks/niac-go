@@ -5,6 +5,24 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.91.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.90.0...v0.91.0) (2026-06-16)
+
+
+### Features
+
+* **api:** capability registry for declarative route policy (register) ([#800](https://github.com/MustardSeedNetworks/niac-go/issues/800)) ([1edc18e](https://github.com/MustardSeedNetworks/niac-go/commit/1edc18e6af95416ff9f214c25e5febc4f3340d5c))
+* **api:** make HTTP method and body-size authoritative in route registry ([#810](https://github.com/MustardSeedNetworks/niac-go/issues/810)) ([04e8f53](https://github.com/MustardSeedNetworks/niac-go/commit/04e8f539d513477b176097a4ca40acb8ee1813da))
+* **license:** replace forgeable rotor cipher with Ed25519-signed tokens ([#802](https://github.com/MustardSeedNetworks/niac-go/issues/802)) ([d111685](https://github.com/MustardSeedNetworks/niac-go/commit/d111685688c4c1b8b13404e96c0329bec0b5fec5))
+* modernize niac operator surfaces ([4ebb685](https://github.com/MustardSeedNetworks/niac-go/commit/4ebb6857729b4d4dd08769ae6aa55121e7abd2ae))
+
+
+### Bug Fixes
+
+* **ci:** run E2E daemon with NIAC_E2E_DRY_RUN_SIMULATION=1 ([#817](https://github.com/MustardSeedNetworks/niac-go/issues/817)) ([43d2272](https://github.com/MustardSeedNetworks/niac-go/commit/43d2272b6d898a6f544d3da2a8e358c7125d93d6))
+* **e2e:** route device-crud to /device-config (was /devices = Running Devices) ([#787](https://github.com/MustardSeedNetworks/niac-go/issues/787)) ([3709b38](https://github.com/MustardSeedNetworks/niac-go/commit/3709b38f9885c48a58a8faca4a6c09c39d8912e6))
+* **ui:** drop sidebar-*-button testids on the mobile aside copy ([#786](https://github.com/MustardSeedNetworks/niac-go/issues/786)) ([995865f](https://github.com/MustardSeedNetworks/niac-go/commit/995865fce59df32a8dd9ba437bb2050a6681d193))
+* **ui:** make the '?' help shortcut actually open the drawer (N1, N5) ([#812](https://github.com/MustardSeedNetworks/niac-go/issues/812)) ([202ba67](https://github.com/MustardSeedNetworks/niac-go/commit/202ba6722a88c3e5c340b50e017db87707801c6d))
+
 ## [0.90.0](https://github.com/krisarmstrong/niac-go/compare/v0.89.0...v0.90.0) (2026-05-29)
 
 
