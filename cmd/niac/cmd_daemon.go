@@ -194,6 +194,7 @@ func runDaemon(options *daemonOptions, info versionInfo) error {
 		Version:             info.version,
 		Commit:              info.commit,
 		BuildTime:           info.date,
+		ReleaseTrain:        info.releaseTrain,
 		UIBuildHash:         info.uiBuildHash,
 		WebhookAllowedHosts: options.webhookAllowedHosts,
 		EnableTLS:           tlsOn,
