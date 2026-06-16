@@ -1,5 +1,6 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.4.10/schema.json",
+  "root": false,
+  "$schema": "https://biomejs.dev/schemas/2.5.0/schema.json",
   "vcs": {
     "enabled": true,
     "clientKind": "git",
@@ -55,7 +56,7 @@
   "linter": {
     "enabled": true,
     "rules": {
-      "recommended": true,
+      "preset": "recommended",
       "correctness": {
         "useExhaustiveDependencies": "off",
         "useHookAtTopLevel": "off"
@@ -64,7 +65,8 @@
         "noDefaultExport": "off",
         "noNegationElse": "off",
         "noSubstr": "off",
-        "useFilenamingConvention": "off"
+        "useFilenamingConvention": "off",
+        "useSpreadOverApply": "error"
       },
       "suspicious": {
         "noArrayIndexKey": "off",
@@ -76,7 +78,10 @@
         "noReactSpecificProps": "off",
         "noShadowRestrictedNames": "off",
         "useAwait": "off",
-        "noImportCycles": "warn"
+        "noImportCycles": "warn",
+        "noDuplicatedSpreadProps": "error",
+        "noParametersOnlyUsedInRecursion": "error",
+        "useArraySortCompare": "error"
       },
       "performance": {
         "noBarrelFile": "error",
@@ -86,16 +91,12 @@
         "noExcessiveCognitiveComplexity": {
           "level": "error",
           "options": { "maxAllowedComplexity": 40 }
-        }
+        },
+        "useArrayFind": "error"
       },
       "nursery": {
-        "noDuplicatedSpreadProps": "error",
-        "noParametersOnlyUsedInRecursion": "error",
-        "useArraySortCompare": "error",
         "useAwaitThenable": "error",
-        "useExhaustiveSwitchCases": "error",
-        "useFind": "error",
-        "useSpread": "error"
+        "useExhaustiveSwitchCases": "error"
       }
     }
   },
@@ -139,7 +140,8 @@
       "includes": ["**/*.stories.ts", "**/*.stories.tsx"],
       "linter": {
         "rules": {
-          "nursery": { "noShadow": "off" }
+          "nursery": {},
+          "suspicious": { "noShadow": "off" }
         }
       }
     },
