@@ -1,6 +1,6 @@
 # ADR 0007: JSON wire-casing convention (camelCase API, no exceptions)
 
-**Status:** Proposed (2026-06-14)
+**Status:** Accepted (2026-06-16)
 
 ## Context
 
@@ -72,8 +72,12 @@ may retain snake\_case *internally* and must map to camelCase before emission.
 
 ## Consequences
 
-A tracked migration — the **W7 workstream** — is required before this ADR can
-be marked Accepted:
+The tracked migration — the **W7 workstream** — has **landed** (PR #816: all 74
+`internal/api` wire tags + the device-editor schema descriptors + the affected
+frontend files + Go fixtures migrated to camelCase), and the
+`scripts/check-json-casing.sh` gate is wired into CI with a **verified-empty
+baseline** (0 non-comment entries). With both conditions met this ADR is now
+Accepted. The scope that was migrated:
 
 | Area | Scope |
 |---|---|
