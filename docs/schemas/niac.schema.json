@@ -220,9 +220,6 @@
         "mac": {
           "type": "string"
         },
-        "ip": {
-          "type": "string"
-        },
         "ips": {
           "items": {
             "type": "string"
