@@ -4,7 +4,7 @@
 #
 # Code quality and formatting:
 #   - Linting (golangci-lint, Biome, markdownlint)
-#   - Formatting (gofumpt, Biome, Prettier)
+#   - Formatting (gofumpt, Biome)
 #   - Auto-fix capabilities
 #
 # =============================================================================
@@ -135,7 +135,7 @@ fmt-frontend: ## Format frontend code with Biome
 	@cd $(UI_DIR) && npx @biomejs/biome format --write src/
 	@echo "✅ Frontend code formatted"
 
-fmt-md: ## Format markdown files with Prettier
+fmt-md: ## Format markdown files when a project script is available
 	@if [ -f package.json ] && grep -q "format:md" package.json; then \
 		npm run format:md; \
 	else \
