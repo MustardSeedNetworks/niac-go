@@ -82,13 +82,14 @@ func (p *niacProgram) run() {
 	}
 
 	d, err := daemon.NewDaemon(daemon.Config{
-		ListenAddr:  listen,
-		Token:       resolveAPIToken(""),
-		StoragePath: storagePath,
-		Version:     p.info.version,
-		Commit:      p.info.commit,
-		BuildTime:   p.info.date,
-		UIBuildHash: p.info.uiBuildHash,
+		ListenAddr:   listen,
+		Token:        resolveAPIToken(""),
+		StoragePath:  storagePath,
+		Version:      p.info.version,
+		Commit:       p.info.commit,
+		BuildTime:    p.info.date,
+		ReleaseTrain: p.info.releaseTrain,
+		UIBuildHash:  p.info.uiBuildHash,
 	})
 	if err != nil {
 		logging.Errorf("Failed to create daemon: %v", err)

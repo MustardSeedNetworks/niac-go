@@ -52,12 +52,13 @@ type Config struct {
 	// TokenFile is the Wave 2 multi-token JSON file path. Forwarded to
 	// api.ServerConfig.TokenFile. When non-empty, the daemon's SIGHUP
 	// handler re-reads this path on each signal.
-	TokenFile   string
-	StoragePath string
-	Version     string
-	Commit      string
-	BuildTime   string
-	UIBuildHash string
+	TokenFile    string
+	StoragePath  string
+	Version      string
+	Commit       string
+	BuildTime    string
+	ReleaseTrain string
+	UIBuildHash  string
 	// WebhookAllowedHosts restricts the alert webhook destination to an
 	// admin-managed set of hostnames. Empty = no allowlist (the existing
 	// private-IP / blocked-hostname filters still apply).
@@ -140,6 +141,7 @@ func (d *Daemon) Start() error {
 		Version:                        d.cfg.Version,
 		Commit:                         d.cfg.Commit,
 		BuildTime:                      d.cfg.BuildTime,
+		ReleaseTrain:                   d.cfg.ReleaseTrain,
 		UIBuildHash:                    d.cfg.UIBuildHash,
 		Storage:                        d.storage,
 		WebhookAllowedHosts:            d.cfg.WebhookAllowedHosts,
