@@ -104,8 +104,8 @@ devices:
   # NOC Server
   - name: noc-server-01
     mac: "00:1B:2C:3D:50:01"
-    ip: "10.255.0.100"
-
+    ips:
+      - "10.255.0.100"
     http:
       enabled: true
       server_name: "NOC-Portal"

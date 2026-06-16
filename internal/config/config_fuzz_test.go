@@ -15,7 +15,8 @@ func FuzzLoadYAML(f *testing.F) {
 devices:
   - name: test-device
     mac: "00:11:22:33:44:55"
-    ip: "192.168.1.1"
+    ips:
+      - "192.168.1.1"
 `))
 	f.Add([]byte(`
 devices:

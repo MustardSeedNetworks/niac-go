@@ -29,8 +29,8 @@ devices:
   # Core Switch
   - name: office-switch
     mac: "00:50:56:A1:02:01"
-    ip: "192.168.10.2"
-
+    ips:
+      - "192.168.10.2"
     lldp:
       enabled: true
       system_description: "Office Switch"
@@ -46,8 +46,8 @@ devices:
   # Wireless Access Point
   - name: office-ap-01
     mac: "00:50:56:A1:03:01"
-    ip: "192.168.10.10"
-
+    ips:
+      - "192.168.10.10"
     lldp:
       enabled: true
       system_description: "Office Wireless AP"
@@ -59,8 +59,8 @@ devices:
   # DHCP and DNS Server
   - name: office-server
     mac: "00:50:56:A1:10:01"
-    ip: "192.168.10.100"
-
+    ips:
+      - "192.168.10.100"
     dhcp:
       enabled: true
       pools:

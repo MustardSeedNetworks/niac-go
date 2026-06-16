@@ -11,7 +11,7 @@ func validDevice() Device {
 		Name: "core-sw-01",
 		Type: "switch",
 		MAC:  "AA:BB:CC:DD:EE:FF",
-		IP:   "10.0.0.1",
+		IPs:  []string{"10.0.0.1"},
 	}
 }
 
@@ -63,11 +63,11 @@ func TestValidateConfig_InvalidMAC(t *testing.T) {
 
 func TestValidateConfig_InvalidIP(t *testing.T) {
 	d := validDevice()
-	d.IP = "not.an.ip.address"
+	d.IPs = []string{"not.an.ip.address"}
 	cfg := &Config{Devices: []Device{d}}
 	err := ValidateConfig(cfg)
 	if err == nil {
-		t.Fatal("expected error for invalid IP")
+		t.Fatal("expected error for invalid IP in ips list")
 	}
 	if !errors.Is(err, ErrConfigInvalid) {
 		t.Errorf("expected ErrConfigInvalid, got %v", err)
@@ -106,16 +106,12 @@ func TestValidateConfig_InvalidDeviceType(t *testing.T) {
 	}
 }
 
-func TestValidateConfig_IPandIPsMutuallyExclusive(t *testing.T) {
+func TestValidateConfig_MultipleIPsAccepted(t *testing.T) {
 	d := validDevice()
-	d.IPs = []string{"10.0.0.2", "10.0.0.3"} // already has IP from validDevice()
+	d.IPs = []string{"10.0.0.1", "10.0.0.2", "10.0.0.3"}
 	cfg := &Config{Devices: []Device{d}}
-	err := ValidateConfig(cfg)
-	if err == nil {
-		t.Fatal("expected error when both ip and ips are set")
-	}
-	if !errors.Is(err, ErrConfigInvalid) {
-		t.Errorf("expected ErrConfigInvalid, got %v", err)
+	if err := ValidateConfig(cfg); err != nil {
+		t.Errorf("expected no error for multiple ips list, got %v", err)
 	}
 }
 

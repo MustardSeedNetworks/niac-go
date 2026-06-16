@@ -46,8 +46,8 @@ const (
 // Config holds daemon configuration.
 type Config struct {
 	ListenAddr string
-	// Token is the legacy Wave 1 single bearer token (NIAC_API_TOKEN).
-	// Forwarded to api.ServerConfig.Token for back-compat.
+	// Token is the primary single bearer token read from NIAC_API_TOKEN.
+	// Forwarded to api.ServerConfig.Token.
 	Token string
 	// TokenFile is the Wave 2 multi-token JSON file path. Forwarded to
 	// api.ServerConfig.TokenFile. When non-empty, the daemon's SIGHUP

@@ -219,19 +219,8 @@ func parseDeviceTTLConfig(device *Device, yamlDevice *converter.Device) error {
 	return nil
 }
 
-// parseDeviceIPAddresses parses IP addresses for a device.
+// parseDeviceIPAddresses parses IP addresses for a device from the ips list.
 func parseDeviceIPAddresses(device *Device, yamlDevice *converter.Device) error {
-	// Support both singular 'ip' (backward compatible) and plural 'ips' (new feature)
-	if yamlDevice.IP != "" {
-		ip := net.ParseIP(yamlDevice.IP)
-		if ip == nil {
-			return fmt.Errorf("device %s: %w: %s", yamlDevice.Name, ErrInvalidIPAddress, yamlDevice.IP)
-		}
-
-		device.IPAddresses = append(device.IPAddresses, ip)
-	}
-
-	// Parse multiple IPs if specified
 	for i, ipStr := range yamlDevice.IPs {
 		ip := net.ParseIP(ipStr)
 		if ip == nil {

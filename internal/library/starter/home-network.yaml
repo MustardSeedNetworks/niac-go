@@ -50,8 +50,8 @@ devices:
   # Mesh WiFi Main
   - name: wifi-main
     mac: "00:AA:00:BB:01:01"
-    ip: "192.168.1.2"
-
+    ips:
+      - "192.168.1.2"
     lldp:
       enabled: true
       system_description: "Mesh WiFi Access Point"
@@ -63,8 +63,8 @@ devices:
   # NAS - Network Attached Storage
   - name: home-nas
     mac: "00:AA:00:BB:10:01"
-    ip: "192.168.1.10"
-
+    ips:
+      - "192.168.1.10"
     http:
       enabled: true
       server_name: "NAS"
@@ -75,8 +75,8 @@ devices:
   # Network Printer
   - name: home-printer
     mac: "00:AA:00:BB:20:01"
-    ip: "192.168.1.20"
-
+    ips:
+      - "192.168.1.20"
     http:
       enabled: true
       server_name: "HP-Printer"
@@ -90,8 +90,8 @@ devices:
   # Smart TV
   - name: smart-tv
     mac: "00:AA:00:BB:30:01"
-    ip: "192.168.1.30"
-
+    ips:
+      - "192.168.1.30"
     http:
       enabled: true
       server_name: "Smart-TV"
@@ -99,8 +99,8 @@ devices:
   # Security Camera
   - name: security-cam-01
     mac: "00:AA:00:BB:40:01"
-    ip: "192.168.1.40"
-
+    ips:
+      - "192.168.1.40"
     http:
       enabled: true
       server_name: "Security-Camera"
@@ -108,8 +108,8 @@ devices:
   # Smart Speaker
   - name: smart-speaker
     mac: "00:AA:00:BB:50:01"
-    ip: "192.168.1.50"
-
+    ips:
+      - "192.168.1.50"
     http:
       enabled: true
       server_name: "Smart-Speaker"
@@ -117,8 +117,8 @@ devices:
   # Gaming Console
   - name: game-console
     mac: "00:AA:00:BB:60:01"
-    ip: "192.168.1.60"
-
+    ips:
+      - "192.168.1.60"
     http:
       enabled: true
       server_name: "Gaming-Console"
@@ -126,8 +126,8 @@ devices:
   # Home Automation Hub
   - name: home-hub
     mac: "00:AA:00:BB:80:01"
-    ip: "192.168.1.80"
-
+    ips:
+      - "192.168.1.80"
     http:
       enabled: true
       server_name: "Home-Assistant"

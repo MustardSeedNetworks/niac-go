@@ -136,8 +136,8 @@ devices:
   # Test Client 1
   - name: test-client-01
     mac: "00:DE:AD:BE:EF:20"
-    ip: "10.0.0.201"
-
+    ips:
+      - "10.0.0.201"
     traffic:
       enabled: true
       patterns: ["http", "dns", "icmp"]

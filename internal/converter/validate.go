@@ -28,8 +28,6 @@ func newConfigValidator() *validator.Validate {
 	// `devices[0].mac` instead of `Devices[0].MAC`.
 	v.RegisterTagNameFunc(yamlFieldName)
 
-	v.RegisterStructValidation(deviceStructValidation, Device{})
-
 	return v
 }
 
@@ -40,18 +38,6 @@ func yamlFieldName(field reflect.StructField) string {
 	}
 	name, _, _ := strings.Cut(tag, ",")
 	return name
-}
-
-// deviceStructValidation enforces cross-field rules that single-field tags
-// can't express. Today: Device.IP and Device.IPs are mutually exclusive.
-func deviceStructValidation(sl validator.StructLevel) {
-	d, ok := sl.Current().Interface().(Device)
-	if !ok {
-		return
-	}
-	if d.IP != "" && len(d.IPs) > 0 {
-		sl.ReportError(d.IPs, "ips", "IPs", "excluded_with_ip", "")
-	}
 }
 
 func validateConfigStruct(cfg *Config) error {
@@ -82,8 +68,6 @@ func formatFieldError(fe validator.FieldError) string {
 		return fmt.Sprintf("%s: %q is not one of [%s]", fe.Namespace(), fe.Value(), fe.Param())
 	case "gte", "lte", "gt", "lt":
 		return fmt.Sprintf("%s: %v fails rule %s=%s", fe.Namespace(), fe.Value(), fe.Tag(), fe.Param())
-	case "excluded_with_ip":
-		return fmt.Sprintf("%s: cannot be set together with `ip` (use one or the other)", fe.Namespace())
 	default:
 		return fmt.Sprintf("%s: failed rule %q", fe.Namespace(), fe.Tag())
 	}
