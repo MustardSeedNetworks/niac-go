@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/MustardSeedNetworks/niac-go/internal/api/templates"
 )
 
 // UserConfig represents a user-uploaded configuration file.
@@ -154,7 +156,7 @@ func parseUserConfigFile(path string, info fs.FileInfo) UserConfig {
 	name := strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
 
 	// Count devices in the YAML file
-	deviceCount := countDevicesInFile(path)
+	deviceCount := templates.CountDevicesInFile(path)
 
 	return UserConfig{
 		Name:        name,
@@ -237,7 +239,7 @@ func (s *Server) handleUserConfigUpload(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// Sanitize and validate name
-	safeName := sanitizeConfigName(req.Name)
+	safeName := templates.SanitizeConfigName(req.Name)
 	if safeName == "" {
 		writeError(w, r, http.StatusBadRequest, "invalid_name", "Invalid config name", nil)
 		return
@@ -279,7 +281,7 @@ func saveUserConfig(name string, content []byte) (string, error) {
 
 	configPath := filepath.Clean(filepath.Join(configDir, name+".yaml"))
 
-	// Defense-in-depth: name has been sanitized upstream (sanitizeConfigName),
+	// Defense-in-depth: name has been sanitized upstream (templates.SanitizeConfigName),
 	// but make the bounded path explicit so static analysers see the barrier.
 	absConfigPath, absErr := filepath.Abs(configPath)
 	if absErr != nil || strings.Contains(configPath, "..") {

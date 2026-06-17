@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/api"
+	"github.com/MustardSeedNetworks/niac-go/internal/api/templates"
 	"github.com/MustardSeedNetworks/niac-go/internal/api/tokenstore"
 	"github.com/MustardSeedNetworks/niac-go/internal/capture"
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
@@ -279,7 +280,7 @@ func loadSimulationConfig(req api.SimulationRequest) (*config.Config, string, er
 		// refs that resolve to sibling directories (e.g. examples/
 		// device_walks_sanitized/...). Fetching the YAML text and
 		// POSTing it as ConfigData would lose that context.
-		templatePath := api.FindTemplateOnDisk(req.TemplateName)
+		templatePath := templates.Find(req.TemplateName)
 		if templatePath == "" {
 			return nil, "", fmt.Errorf("%w: %s", ErrTemplateNotFound, req.TemplateName)
 		}
