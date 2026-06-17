@@ -1,4 +1,4 @@
-package api
+package topology
 
 import (
 	"fmt"
@@ -26,20 +26,20 @@ const (
 	deviceTypeAP     = "ap"
 )
 
-// Topology describes a simple graph for visualization.
-type Topology struct {
-	Nodes []TopologyNode `json:"nodes"`
-	Links []TopologyLink `json:"links"`
+// Graph describes a simple graph for visualization.
+type Graph struct {
+	Nodes []Node `json:"nodes"`
+	Links []Link `json:"links"`
 }
 
-// TopologyNode represents a device.
-type TopologyNode struct {
+// Node represents a device.
+type Node struct {
 	Name string `json:"name"`
 	Type string `json:"type"`
 }
 
-// TopologyLink represents a connection between devices with detailed information.
-type TopologyLink struct {
+// Link represents a connection between devices with detailed information.
+type Link struct {
 	Source          string  `json:"source"`
 	Target          string  `json:"target"`
 	Label           string  `json:"label"`
@@ -154,15 +154,15 @@ func sortedPairKey(a, b string) string {
 	return b + "|" + a
 }
 
-// processTrunkPort creates a TopologyLink from a trunk port configuration.
+// processTrunkPort creates a Link from a trunk port configuration.
 func processTrunkPort(
 	trunk config.TrunkPort,
 	deviceName string,
 	interfaceMap map[string]map[string]config.Interface,
-) TopologyLink {
+) Link {
 	speed, duplex, status := getInterfaceDetails(interfaceMap, deviceName, trunk.Interface)
 
-	return TopologyLink{
+	return Link{
 		Source: deviceName,
 		Target: trunk.RemoteDevice,
 		Label:  buildTrunkLabel(trunk),
@@ -182,21 +182,21 @@ func processTrunkPort(
 	}
 }
 
-// BuildTopology derives a topology graph from the configuration.
+// Build derives a topology graph from the configuration.
 //
 // Trunk links are inherently bidirectional — both switches declare a
 // trunk_port pointing at each other, so we'd otherwise emit two
-// TopologyLink entries for one physical wire and ReactFlow would draw
+// Link entries for one physical wire and ReactFlow would draw
 // a second edge looping back around the cards. We dedupe via a
 // sorted-pair key so each physical adjacency yields exactly one link.
-func BuildTopology(cfg *config.Config) Topology {
-	nodes := make(map[string]TopologyNode)
-	links := make([]TopologyLink, 0)
+func Build(cfg *config.Config) Graph {
+	nodes := make(map[string]Node)
+	links := make([]Link, 0)
 	interfaceMap := buildInterfaceMap(cfg.Devices)
 	seenLinks := make(map[string]bool)
 
 	for _, dev := range cfg.Devices {
-		nodes[dev.Name] = TopologyNode{
+		nodes[dev.Name] = Node{
 			Name: dev.Name,
 			Type: dev.Type,
 		}
@@ -217,7 +217,7 @@ func BuildTopology(cfg *config.Config) Topology {
 			seenLinks[pair] = true
 
 			if _, exists := nodes[trunk.RemoteDevice]; !exists {
-				nodes[trunk.RemoteDevice] = TopologyNode{
+				nodes[trunk.RemoteDevice] = Node{
 					Name: trunk.RemoteDevice,
 					Type: "external",
 				}
@@ -227,8 +227,8 @@ func BuildTopology(cfg *config.Config) Topology {
 		}
 	}
 
-	topology := Topology{
-		Nodes: make([]TopologyNode, 0, len(nodes)),
+	topology := Graph{
+		Nodes: make([]Node, 0, len(nodes)),
 		Links: links,
 	}
 	for _, node := range nodes {
@@ -262,7 +262,7 @@ func formatVLANList(vlans []int) string {
 }
 
 // ExportGraphML exports the topology in GraphML format (for yEd, Gephi).
-func (t *Topology) ExportGraphML() string {
+func (t *Graph) ExportGraphML() string {
 	var sb strings.Builder
 	sb.WriteString(`<?xml version="1.0" encoding="UTF-8"?>` + "\n")
 	sb.WriteString(`<graphml xmlns="http://graphml.graphdrawing.org/xmlns"` + "\n")
@@ -320,7 +320,7 @@ func (t *Topology) ExportGraphML() string {
 }
 
 // ExportDOT exports the topology in DOT format (for Graphviz).
-func (t *Topology) ExportDOT() string {
+func (t *Graph) ExportDOT() string {
 	var sb strings.Builder
 	sb.WriteString("graph niac_topology {\n")
 	sb.WriteString("  // Nodes\n")

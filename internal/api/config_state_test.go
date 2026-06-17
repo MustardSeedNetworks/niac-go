@@ -9,6 +9,7 @@ import (
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 	"github.com/MustardSeedNetworks/niac-go/internal/protocols"
+	"github.com/MustardSeedNetworks/niac-go/internal/topology"
 )
 
 func TestCurrentConfig(t *testing.T) {
@@ -112,7 +113,7 @@ func TestCurrentStackNil(t *testing.T) {
 
 func TestCurrentTopology(t *testing.T) {
 	cfg := mustLoadConfig(t, baseConfigYAML)
-	topo := BuildTopology(cfg)
+	topo := topology.Build(cfg)
 
 	server := &Server{
 		cfg: ServerConfig{

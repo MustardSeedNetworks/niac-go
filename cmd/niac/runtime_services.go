@@ -16,6 +16,7 @@ import (
 	"github.com/MustardSeedNetworks/niac-go/internal/protocols"
 	"github.com/MustardSeedNetworks/niac-go/internal/replay"
 	"github.com/MustardSeedNetworks/niac-go/internal/storage"
+	"github.com/MustardSeedNetworks/niac-go/internal/topology"
 )
 
 type runtimeServices struct {
@@ -55,7 +56,7 @@ func (rs *runtimeServices) initAPIServer(
 	interfaceName string,
 	services *serviceOptions,
 ) error {
-	topology := api.BuildTopology(cfg)
+	graph := topology.Build(cfg)
 	info := readVersionInfo()
 	cfgCopy := &api.ServerConfig{
 		Addr:         apiAddr,
@@ -71,7 +72,7 @@ func (rs *runtimeServices) initAPIServer(
 		BuildTime:    info.date,
 		ReleaseTrain: info.releaseTrain,
 		UIBuildHash:  info.uiBuildHash,
-		Topology:     topology,
+		Topology:     graph,
 		Alert: api.AlertConfig{
 			PacketsThreshold: services.alertPacketsThreshold,
 			WebhookURL:       services.alertWebhook,

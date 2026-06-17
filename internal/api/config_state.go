@@ -9,6 +9,7 @@ import (
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 	"github.com/MustardSeedNetworks/niac-go/internal/protocols"
+	"github.com/MustardSeedNetworks/niac-go/internal/topology"
 )
 
 type configDocument struct {
@@ -116,7 +117,7 @@ func (s *Server) currentConfig() *config.Config {
 	return s.cfg.Config
 }
 
-func (s *Server) currentTopology() Topology {
+func (s *Server) currentTopology() topology.Graph {
 	s.configMu.RLock()
 	defer s.configMu.RUnlock()
 
@@ -126,7 +127,7 @@ func (s *Server) currentTopology() Topology {
 func (s *Server) replaceConfig(cfg *config.Config) {
 	s.configMu.Lock()
 	s.cfg.Config = cfg
-	s.cfg.Topology = BuildTopology(cfg)
+	s.cfg.Topology = topology.Build(cfg)
 	s.configMu.Unlock()
 }
 

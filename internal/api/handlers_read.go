@@ -389,24 +389,24 @@ func (s *Server) handleTopologyExport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	topology := s.currentTopology()
+	graph := s.currentTopology()
 
 	// Note: format is validated above, so only json/graphml/dot can reach here
 	switch format {
 	case "json":
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Content-Disposition", "attachment; filename=\"topology.json\"")
-		s.writeJSON(w, topology)
+		s.writeJSON(w, graph)
 
 	case "graphml":
 		w.Header().Set("Content-Type", "application/xml")
 		w.Header().Set("Content-Disposition", "attachment; filename=\"topology.graphml\"")
-		_, _ = fmt.Fprint(w, topology.ExportGraphML())
+		_, _ = fmt.Fprint(w, graph.ExportGraphML())
 
 	case "dot":
 		w.Header().Set("Content-Type", "text/vnd.graphviz")
 		w.Header().Set("Content-Disposition", "attachment; filename=\"topology.dot\"")
-		_, _ = fmt.Fprint(w, topology.ExportDOT())
+		_, _ = fmt.Fprint(w, graph.ExportDOT())
 	}
 }
 

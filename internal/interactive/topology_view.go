@@ -6,7 +6,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/MustardSeedNetworks/niac-go/internal/api"
+	"github.com/MustardSeedNetworks/niac-go/internal/topology"
 )
 
 // generateTopologyView generates an ASCII network topology diagram.
@@ -14,7 +14,7 @@ func (m *model) generateTopologyView() {
 	var sb strings.Builder
 
 	// Build topology using the api package
-	topology := api.BuildTopology(m.cfg)
+	graph := topology.Build(m.cfg)
 
 	sb.WriteString(diffHeaderStyle.Render("=== Network Topology ==="))
 	sb.WriteString("\n\n")
@@ -24,8 +24,8 @@ func (m *model) generateTopologyView() {
 	sb.WriteString("\n")
 
 	// Group nodes by type
-	nodesByType := make(map[string][]api.TopologyNode)
-	for _, node := range topology.Nodes {
+	nodesByType := make(map[string][]topology.Node)
+	for _, node := range graph.Nodes {
 		nodesByType[node.Type] = append(nodesByType[node.Type], node)
 	}
 
@@ -41,10 +41,10 @@ func (m *model) generateTopologyView() {
 	sb.WriteString(topologyLinkStyle.Render("Links:"))
 	sb.WriteString("\n")
 
-	if len(topology.Links) == 0 {
+	if len(graph.Links) == 0 {
 		sb.WriteString("  (no trunk connections defined)\n")
 	} else {
-		for _, link := range topology.Links {
+		for _, link := range graph.Links {
 			linkInfo := fmt.Sprintf("  %s [%s] <---> [%s] %s",
 				link.Source,
 				link.SourceInterface,
@@ -68,16 +68,16 @@ func (m *model) generateTopologyView() {
 	sb.WriteString("\n\n")
 
 	// Generate simple ASCII diagram
-	sb.WriteString(m.generateASCIIDiagram(topology))
+	sb.WriteString(m.generateASCIIDiagram(graph))
 
 	m.topologyContent = sb.String()
 }
 
 // categorizeTopologyNodes splits nodes into routers, switches, and others.
 func categorizeTopologyNodes(
-	nodes []api.TopologyNode,
-) ([]api.TopologyNode, []api.TopologyNode, []api.TopologyNode) {
-	var routers, switches, others []api.TopologyNode
+	nodes []topology.Node,
+) ([]topology.Node, []topology.Node, []topology.Node) {
+	var routers, switches, others []topology.Node
 	for _, node := range nodes {
 		switch node.Type {
 		case "router":
@@ -92,7 +92,7 @@ func categorizeTopologyNodes(
 }
 
 // writeNodeRow writes a row of device boxes to the builder.
-func writeNodeRow(sb *strings.Builder, nodes []api.TopologyNode) {
+func writeNodeRow(sb *strings.Builder, nodes []topology.Node) {
 	sb.WriteString("  ")
 	for i, n := range nodes {
 		if i > 0 {
@@ -116,7 +116,7 @@ func writeConnectors(sb *strings.Builder, count int) {
 func writeDeviceLayer(
 	sb *strings.Builder,
 	label string,
-	nodes []api.TopologyNode,
+	nodes []topology.Node,
 	hasMoreBelow bool,
 ) {
 	if len(nodes) == 0 {
@@ -131,13 +131,13 @@ func writeDeviceLayer(
 	}
 }
 
-func (m *model) generateASCIIDiagram(topology api.Topology) string {
-	if len(topology.Nodes) == 0 {
+func (m *model) generateASCIIDiagram(graph topology.Graph) string {
+	if len(graph.Nodes) == 0 {
 		return "  (no devices configured)\n"
 	}
 
 	var sb strings.Builder
-	routers, switches, others := categorizeTopologyNodes(topology.Nodes)
+	routers, switches, others := categorizeTopologyNodes(graph.Nodes)
 
 	hasDevicesBelow := len(switches) > 0 || len(others) > 0
 	writeDeviceLayer(&sb, "ROUTERS", routers, hasDevicesBelow)

@@ -244,9 +244,10 @@ linters:
             - "**/internal/converter/**"
             - "**/internal/device/**"
             - "**/internal/mibdb/**"
+            - "**/internal/topology/**"
           deny:
             - pkg: github.com/MustardSeedNetworks/niac-go/internal/api
-              desc: "the simulation/domain core must not import the web/API layer — dependencies point inward; wire transport at internal/api or internal/daemon"
+              desc: "the simulation/domain core must not import the web/API layer — dependencies point inward; wire transport at internal/api or internal/daemon. topology is derived domain (config→graph) consumed by api/ipc/interactive, so it stays inward too"
         # Sub-API leaf packages extracted from the internal/api monolith must
         # not import back into the api transport layer — they are self-contained
         # building blocks that the Server (and daemon) compose inward. See ADR-0006.
@@ -632,6 +633,10 @@ linters:
           - testpackage
       # API tests require access to handler internals.
       - path: 'internal/api/.*_test\.go'
+        linters:
+          - testpackage
+      # Topology tests require access to the graph-builder/export internals.
+      - path: 'internal/topology/.*_test\.go'
         linters:
           - testpackage
       # SNMP tests require access to agent internals.
