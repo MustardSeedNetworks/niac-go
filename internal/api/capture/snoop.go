@@ -1,4 +1,4 @@
-package api
+package capture
 
 import (
 	"encoding/binary"
@@ -34,7 +34,7 @@ const (
 	snoopHeaderLen    = 16
 	snoopRecordHeader = 24
 	// pcapGlobalHeaderLen and pcapRecordHeaderLen mirror the libpcap
-	// on-disk layout that snoopToPCAP emits. Named so the make()
+	// on-disk layout that SnoopToPCAP emits. Named so the make()
 	// allocations below read as intent rather than magic numbers.
 	pcapGlobalHeaderLen = 24
 	pcapRecordHeaderLen = 16
@@ -77,10 +77,10 @@ var (
 	errSnoopRecord  = errors.New("snoop record header truncated or invalid")
 )
 
-// hasSnoopMagic reports whether the first 8 bytes of data match the
+// HasSnoopMagic reports whether the first 8 bytes of data match the
 // snoop identification pattern. Cheap probe; callers pre-screen here
-// before falling into validatePCAPStructure.
-func hasSnoopMagic(data []byte) bool {
+// before falling into ValidateStructure.
+func HasSnoopMagic(data []byte) bool {
 	if len(data) < len(snoopMagic) {
 		return false
 	}
@@ -113,8 +113,8 @@ func snoopDLTToPCAP(snoopType uint32) uint32 {
 	}
 }
 
-// snoopToPCAP converts a snoop-format byte buffer into a classic libpcap
-// byte buffer suitable for handing to validatePCAPStructure / gopacket /
+// SnoopToPCAP converts a snoop-format byte buffer into a classic libpcap
+// byte buffer suitable for handing to ValidateStructure / gopacket /
 // the rest of the analyser. The converter walks every record sequentially
 // and re-emits the header + payload in pcap layout; padding bytes are
 // dropped, drop counters are dropped, and timestamps are preserved.
@@ -122,11 +122,11 @@ func snoopDLTToPCAP(snoopType uint32) uint32 {
 // Returns the converted bytes plus any error encountered partway through.
 // On error we return whatever we've successfully converted so far — the
 // caller can decide whether to surface the partial capture or bail.
-func snoopToPCAP(data []byte) ([]byte, error) {
+func SnoopToPCAP(data []byte) ([]byte, error) {
 	if len(data) < snoopHeaderLen {
 		return nil, errSnoopShort
 	}
-	if !hasSnoopMagic(data) {
+	if !HasSnoopMagic(data) {
 		return nil, fmt.Errorf("%w: missing snoop magic", errSnoopShort)
 	}
 

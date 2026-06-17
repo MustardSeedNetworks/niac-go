@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/MustardSeedNetworks/niac-go/internal/api/capture"
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 	"github.com/MustardSeedNetworks/niac-go/internal/protocols"
@@ -63,7 +64,8 @@ func newTestServer(t *testing.T) (*Server, string) {
 			Interface:  "lo0",
 			Version:    "test",
 		},
-		logger: slog.Default(),
+		logger:    slog.Default(),
+		pcapCache: capture.NewCache(),
 	}
 
 	return server, configPath

@@ -274,6 +274,12 @@ linters:
           deny:
             - pkg: github.com/MustardSeedNetworks/niac-go/internal/api
               desc: "sse is a leaf — hub/engine + Serve factory; it may import internal/protocols (inward) for the packet observer, but never the api transport layer"
+        "api-capture-isolated":
+          files:
+            - "**/internal/api/capture/**"
+          deny:
+            - pkg: github.com/MustardSeedNetworks/niac-go/internal/api
+              desc: "capture is a leaf — the PCAP analysis engine + structure validation over stdlib+gopacket only; the Server composes it inward (s.pcapCache, capture.Analyze/ValidateStructure), never the reverse"
         # internal/api/auth has NO isolation rule by design. Unlike the four
         # leaves above, auth COMPOSES siblings (internal/api/tokenstore +
         # ratelimit), and a deny on "internal/api" prefix-matches those sibling
@@ -670,10 +676,6 @@ linters:
           - gochecknoglobals
       # Logging color codes are package-level constants (immutable after init).
       - path: 'internal/logging/colors\.go'
-        linters:
-          - gochecknoglobals
-      # PCAP cache is a package-level singleton (common pattern).
-      - path: 'internal/api/pcap\.go'
         linters:
           - gochecknoglobals
       # Device random source is a package-level singleton.
