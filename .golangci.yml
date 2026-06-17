@@ -281,6 +281,12 @@ linters:
           deny:
             - pkg: github.com/MustardSeedNetworks/niac-go/internal/api
               desc: "capture is a leaf — the PCAP analysis engine + structure validation over stdlib+gopacket only; the Server composes it inward (s.pcapCache, capture.Analyze/ValidateStructure), never the reverse"
+        "api-templates-isolated":
+          files:
+            - "**/internal/api/templates/**"
+          deny:
+            - pkg: github.com/MustardSeedNetworks/niac-go/internal/api
+              desc: "templates is a leaf — the on-disk template discovery/parse/load engine over stdlib only; the Server composes it inward (templates.Dirs/Scan/Find/Load/SaveConfig), never the reverse"
         # internal/api/auth has NO isolation rule by design. Unlike the four
         # leaves above, auth COMPOSES siblings (internal/api/tokenstore +
         # ratelimit), and a deny on "internal/api" prefix-matches those sibling
