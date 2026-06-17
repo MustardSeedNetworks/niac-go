@@ -1,4 +1,4 @@
-package api
+package topology
 
 import (
 	"testing"
@@ -204,7 +204,7 @@ func TestBuildTopology(t *testing.T) {
 		},
 	}
 
-	topology := BuildTopology(cfg)
+	topology := Build(cfg)
 
 	// Check nodes
 	if len(topology.Nodes) != 2 {
@@ -242,7 +242,7 @@ func TestBuildTopologyEmptyConfig(t *testing.T) {
 		Devices: []config.Device{},
 	}
 
-	topology := BuildTopology(cfg)
+	topology := Build(cfg)
 
 	if len(topology.Nodes) != 0 {
 		t.Errorf("nodes count = %d, want 0", len(topology.Nodes))
@@ -253,7 +253,7 @@ func TestBuildTopologyEmptyConfig(t *testing.T) {
 }
 
 func TestTopologyNodeJSON(t *testing.T) {
-	node := TopologyNode{
+	node := Node{
 		Name: "router1",
 		Type: "router",
 	}
@@ -267,7 +267,7 @@ func TestTopologyNodeJSON(t *testing.T) {
 }
 
 func TestTopologyLinkFields(t *testing.T) {
-	link := TopologyLink{
+	link := Link{
 		Source:          "switch1",
 		Target:          "router1",
 		Label:           "trunk",
@@ -370,12 +370,12 @@ func TestEscapeDOT(t *testing.T) {
 }
 
 func TestExportGraphML(t *testing.T) {
-	topology := &Topology{
-		Nodes: []TopologyNode{
+	topology := &Graph{
+		Nodes: []Node{
 			{Name: "router1", Type: "router"},
 			{Name: "switch1", Type: "switch"},
 		},
-		Links: []TopologyLink{
+		Links: []Link{
 			{
 				Source:          "switch1",
 				Target:          "router1",
@@ -422,14 +422,14 @@ func TestExportGraphML(t *testing.T) {
 }
 
 func TestExportDOT(t *testing.T) {
-	topology := &Topology{
-		Nodes: []TopologyNode{
+	topology := &Graph{
+		Nodes: []Node{
 			{Name: "router1", Type: "router"},
 			{Name: "switch1", Type: "switch"},
 			{Name: "ap1", Type: "ap"},
 			{Name: "device1", Type: "unknown"},
 		},
-		Links: []TopologyLink{
+		Links: []Link{
 			{
 				Source:          "switch1",
 				Target:          "router1",
@@ -495,9 +495,9 @@ func TestExportDOT(t *testing.T) {
 }
 
 func TestExportGraphMLEmpty(t *testing.T) {
-	topology := &Topology{
-		Nodes: []TopologyNode{},
-		Links: []TopologyLink{},
+	topology := &Graph{
+		Nodes: []Node{},
+		Links: []Link{},
 	}
 
 	result := topology.ExportGraphML()
@@ -512,9 +512,9 @@ func TestExportGraphMLEmpty(t *testing.T) {
 }
 
 func TestExportDOTEmpty(t *testing.T) {
-	topology := &Topology{
-		Nodes: []TopologyNode{},
-		Links: []TopologyLink{},
+	topology := &Graph{
+		Nodes: []Node{},
+		Links: []Link{},
 	}
 
 	result := topology.ExportDOT()

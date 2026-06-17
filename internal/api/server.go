@@ -32,6 +32,7 @@ import (
 	"time"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/api/auth"
+	"github.com/MustardSeedNetworks/niac-go/internal/topology"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/api/sse"
 
@@ -190,7 +191,7 @@ type ServerConfig struct {
 	BuildTime    string
 	ReleaseTrain string
 	UIBuildHash  string
-	Topology     Topology
+	Topology     topology.Graph
 	Alert        AlertConfig
 	// EnableTLS controls whether the API listener uses HTTPS. When true,
 	// CertFile/KeyFile (or, when both are empty, the auto-generated
@@ -729,7 +730,7 @@ func (s *Server) UpdateSimulation(
 	s.cfg.ConfigPath = configPath
 	s.cfg.Interface = iface
 	s.cfg.Replay = replay
-	s.cfg.Topology = BuildTopology(cfg)
+	s.cfg.Topology = topology.Build(cfg)
 
 	// Wire the stack's packet stream into the SSE hub so the
 	// /api/v1/stream/packets subscribers actually see frames.

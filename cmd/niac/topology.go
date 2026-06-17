@@ -9,8 +9,8 @@ import (
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 
-	"github.com/MustardSeedNetworks/niac-go/internal/api"
 	"github.com/MustardSeedNetworks/niac-go/internal/ipc"
+	"github.com/MustardSeedNetworks/niac-go/internal/topology"
 )
 
 const (
@@ -177,7 +177,7 @@ func runTopologyExport(options *topologyOptions) error {
 }
 
 // exportTopologyJSON exports topology as formatted JSON.
-func exportTopologyJSON(topology *api.Topology) (string, error) {
+func exportTopologyJSON(topology *topology.Graph) (string, error) {
 	// Create an extended structure with more details
 	var export TopologyExport
 	export.Nodes = make([]TopologyNodeExport, len(topology.Nodes))
@@ -227,7 +227,7 @@ func exportTopologyJSON(topology *api.Topology) (string, error) {
 }
 
 // exportTopologyYAML exports topology as YAML.
-func exportTopologyYAML(topology *api.Topology) (string, error) {
+func exportTopologyYAML(topology *topology.Graph) (string, error) {
 	// Create an extended structure with more details
 	var export TopologyExport
 	export.Nodes = make([]TopologyNodeExport, len(topology.Nodes))
@@ -277,7 +277,7 @@ func exportTopologyYAML(topology *api.Topology) (string, error) {
 }
 
 // countDevicesByType counts devices by their type.
-func countDevicesByType(nodes []api.TopologyNode) map[string]int {
+func countDevicesByType(nodes []topology.Node) map[string]int {
 	counts := make(map[string]int)
 	for _, node := range nodes {
 		deviceType := node.Type

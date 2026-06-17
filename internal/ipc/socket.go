@@ -13,11 +13,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/MustardSeedNetworks/niac-go/internal/api"
 	apperr "github.com/MustardSeedNetworks/niac-go/internal/apperr"
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 	"github.com/MustardSeedNetworks/niac-go/internal/protocols"
+	"github.com/MustardSeedNetworks/niac-go/internal/topology"
 )
 
 // ErrIPCServerAlreadyRunning is returned when the IPC server is already running.
@@ -760,12 +760,12 @@ func (s *Server) handleTopology(_ *Request) *Response {
 	defer s.mu.RUnlock()
 
 	// Build topology from current configuration
-	topology := api.BuildTopology(s.cfg)
+	graph := topology.Build(s.cfg)
 
 	return &Response{
 		Success: true,
 		Data: map[string]any{
-			"topology": topology,
+			"topology": graph,
 		},
 	}
 }

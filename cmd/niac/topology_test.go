@@ -5,23 +5,23 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/MustardSeedNetworks/niac-go/internal/api"
+	"github.com/MustardSeedNetworks/niac-go/internal/topology"
 )
 
 func TestCountDevicesByType(t *testing.T) {
 	tests := []struct {
 		name     string
-		nodes    []api.TopologyNode
+		nodes    []topology.Node
 		expected map[string]int
 	}{
 		{
 			name:     "empty nodes",
-			nodes:    []api.TopologyNode{},
+			nodes:    []topology.Node{},
 			expected: map[string]int{},
 		},
 		{
 			name: "single type",
-			nodes: []api.TopologyNode{
+			nodes: []topology.Node{
 				{Name: "sw1", Type: "switch"},
 				{Name: "sw2", Type: "switch"},
 			},
@@ -29,7 +29,7 @@ func TestCountDevicesByType(t *testing.T) {
 		},
 		{
 			name: "multiple types",
-			nodes: []api.TopologyNode{
+			nodes: []topology.Node{
 				{Name: "rtr1", Type: "router"},
 				{Name: "sw1", Type: "switch"},
 				{Name: "sw2", Type: "switch"},
@@ -39,7 +39,7 @@ func TestCountDevicesByType(t *testing.T) {
 		},
 		{
 			name: "empty type defaults to unknown",
-			nodes: []api.TopologyNode{
+			nodes: []topology.Node{
 				{Name: "dev1", Type: ""},
 				{Name: "dev2", Type: ""},
 			},
@@ -47,7 +47,7 @@ func TestCountDevicesByType(t *testing.T) {
 		},
 		{
 			name: "mixed with empty type",
-			nodes: []api.TopologyNode{
+			nodes: []topology.Node{
 				{Name: "rtr1", Type: "router"},
 				{Name: "dev1", Type: ""},
 			},
@@ -73,12 +73,12 @@ func TestCountDevicesByType(t *testing.T) {
 }
 
 func TestExportTopologyJSON(t *testing.T) {
-	topology := &api.Topology{
-		Nodes: []api.TopologyNode{
+	graph := &topology.Graph{
+		Nodes: []topology.Node{
 			{Name: "router-1", Type: "router"},
 			{Name: "switch-1", Type: "switch"},
 		},
-		Links: []api.TopologyLink{
+		Links: []topology.Link{
 			{
 				Source:          "router-1",
 				Target:          "switch-1",
@@ -92,7 +92,7 @@ func TestExportTopologyJSON(t *testing.T) {
 		},
 	}
 
-	output, err := exportTopologyJSON(topology)
+	output, err := exportTopologyJSON(graph)
 	if err != nil {
 		t.Fatalf("exportTopologyJSON() error = %v", err)
 	}
@@ -133,12 +133,12 @@ func TestExportTopologyJSON(t *testing.T) {
 }
 
 func TestExportTopologyJSONEmpty(t *testing.T) {
-	topology := &api.Topology{
-		Nodes: []api.TopologyNode{},
-		Links: []api.TopologyLink{},
+	graph := &topology.Graph{
+		Nodes: []topology.Node{},
+		Links: []topology.Link{},
 	}
 
-	output, err := exportTopologyJSON(topology)
+	output, err := exportTopologyJSON(graph)
 	if err != nil {
 		t.Fatalf("exportTopologyJSON() error = %v", err)
 	}
@@ -149,12 +149,12 @@ func TestExportTopologyJSONEmpty(t *testing.T) {
 }
 
 func TestExportTopologyYAML(t *testing.T) {
-	topology := &api.Topology{
-		Nodes: []api.TopologyNode{
+	graph := &topology.Graph{
+		Nodes: []topology.Node{
 			{Name: "router-1", Type: "router"},
 			{Name: "switch-1", Type: "switch"},
 		},
-		Links: []api.TopologyLink{
+		Links: []topology.Link{
 			{
 				Source:          "router-1",
 				Target:          "switch-1",
@@ -167,7 +167,7 @@ func TestExportTopologyYAML(t *testing.T) {
 		},
 	}
 
-	output, err := exportTopologyYAML(topology)
+	output, err := exportTopologyYAML(graph)
 	if err != nil {
 		t.Fatalf("exportTopologyYAML() error = %v", err)
 	}
@@ -190,12 +190,12 @@ func TestExportTopologyYAML(t *testing.T) {
 }
 
 func TestExportTopologyYAMLEmpty(t *testing.T) {
-	topology := &api.Topology{
-		Nodes: []api.TopologyNode{},
-		Links: []api.TopologyLink{},
+	graph := &topology.Graph{
+		Nodes: []topology.Node{},
+		Links: []topology.Link{},
 	}
 
-	output, err := exportTopologyYAML(topology)
+	output, err := exportTopologyYAML(graph)
 	if err != nil {
 		t.Fatalf("exportTopologyYAML() error = %v", err)
 	}
@@ -253,12 +253,12 @@ func TestTopologyExportStructs(t *testing.T) {
 }
 
 func TestTopologyWithVLANs(t *testing.T) {
-	topology := &api.Topology{
-		Nodes: []api.TopologyNode{
+	graph := &topology.Graph{
+		Nodes: []topology.Node{
 			{Name: "sw1", Type: "switch"},
 			{Name: "sw2", Type: "switch"},
 		},
-		Links: []api.TopologyLink{
+		Links: []topology.Link{
 			{
 				Source:     "sw1",
 				Target:     "sw2",
@@ -270,7 +270,7 @@ func TestTopologyWithVLANs(t *testing.T) {
 		},
 	}
 
-	output, err := exportTopologyJSON(topology)
+	output, err := exportTopologyJSON(graph)
 	if err != nil {
 		t.Fatalf("exportTopologyJSON() error = %v", err)
 	}

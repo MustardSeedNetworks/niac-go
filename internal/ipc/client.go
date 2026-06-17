@@ -11,8 +11,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/MustardSeedNetworks/niac-go/internal/api"
 	apperr "github.com/MustardSeedNetworks/niac-go/internal/apperr"
+	"github.com/MustardSeedNetworks/niac-go/internal/topology"
 )
 
 // Sentinel errors for IPC commands.
@@ -356,7 +356,7 @@ func (c *Client) DumpPackets(device, iface string, count int) ([]PacketData, err
 
 // GetTopology retrieves the current network topology from the server.
 // Returns the topology graph with nodes (devices) and links (connections).
-func (c *Client) GetTopology() (*api.Topology, error) {
+func (c *Client) GetTopology() (*topology.Graph, error) {
 	resp, err := c.SendCommand(CommandTopology, nil)
 	if err != nil {
 		return nil, err
@@ -378,7 +378,7 @@ func (c *Client) GetTopology() (*api.Topology, error) {
 		return nil, fmt.Errorf("failed to marshal topology data: %w", err)
 	}
 
-	var topology api.Topology
+	var topology topology.Graph
 
 	err = json.Unmarshal(topologyBytes, &topology)
 	if err != nil {
