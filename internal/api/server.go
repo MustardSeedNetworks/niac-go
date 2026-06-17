@@ -35,6 +35,8 @@ import (
 
 	"github.com/MustardSeedNetworks/niac-go/internal/api/sse"
 
+	"github.com/MustardSeedNetworks/niac-go/internal/api/capture"
+
 	"github.com/MustardSeedNetworks/niac-go/internal/api/csrf"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/api/ratelimit"
@@ -87,7 +89,6 @@ const (
 	protocolCapacity    = 8        // initial protocol slice capacity
 	historyListLimit    = 20       // limit for history listing
 	maxFileEntries      = 200      // max file entries to return
-	minPCAPSize         = 4        // minimum PCAP file size
 
 	// HTTP server timeout constants.
 	httpReadTimeout       = 10 // seconds
@@ -114,8 +115,6 @@ var (
 	ErrAPIServerRequiresStackAndConfig = errors.New(
 		"api server requires stack and config references",
 	)
-	ErrFileTooSmallForPCAP         = errors.New("file too small to be a valid PCAP (< 4 bytes)")
-	ErrInvalidPCAPMagicNumber      = errors.New("invalid PCAP magic number")
 	ErrPcapFilePathOrDataRequired  = errors.New("pcap file path or data is required")
 	ErrPCAPDataExceedsSizeLimit    = errors.New("PCAP data exceeds size limit (max 100MB)")
 	ErrDecodedPCAPExceedsSizeLimit = errors.New("decoded PCAP exceeds size limit (max 100MB)")
@@ -296,6 +295,10 @@ type Server struct {
 	// Server.SetTokens (called from the SIGHUP handler in
 	// cmd/niac/cmd_daemon.go).
 	tokens *tokenstore.TokenStore
+	// pcapCache holds recent PCAP analyses (capture leaf, ADR-0006). It
+	// replaces the former package-global cache so the store is owned by the
+	// Server and isolated per instance in tests.
+	pcapCache *capture.Cache
 }
 
 // NewServer returns a configured API server.
@@ -329,6 +332,7 @@ func NewServer(cfg ServerConfig) *Server {
 		fileLimiter:   ratelimit.NewRateLimiter(FileRateLimit, FileBurst),
 		library:       lib,
 		tokens:        initialTokenStore(cfg),
+		pcapCache:     capture.NewCache(),
 	}
 	// License manager is best-effort: failure to initialise leaves
 	// srv.license == nil, which the requireFeature middleware treats as

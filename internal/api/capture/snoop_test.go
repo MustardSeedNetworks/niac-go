@@ -1,4 +1,4 @@
-package api
+package capture
 
 import (
 	"encoding/binary"
@@ -22,8 +22,8 @@ func TestSnoopMagicDetection(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			if got := hasSnoopMagic(tc.in); got != tc.want {
-				t.Errorf("hasSnoopMagic(%v) = %v, want %v", tc.in, got, tc.want)
+			if got := HasSnoopMagic(tc.in); got != tc.want {
+				t.Errorf("HasSnoopMagic(%v) = %v, want %v", tc.in, got, tc.want)
 			}
 		})
 	}
@@ -34,7 +34,7 @@ func TestSnoopMagicDetection(t *testing.T) {
 func TestSnoopToPCAPHeader(t *testing.T) {
 	snoop := makeMinimalSnoop(t, snoopDLTEthernet)
 
-	out, err := snoopToPCAP(snoop)
+	out, err := SnoopToPCAP(snoop)
 	if err != nil {
 		t.Fatalf("conversion failed: %v", err)
 	}
@@ -57,8 +57,8 @@ func TestSnoopToPCAPHeader(t *testing.T) {
 	}
 
 	// And it should pass the same validator the upload path uses.
-	if vErr := validatePCAPStructure(out); vErr != nil {
-		t.Errorf("converted output failed validatePCAPStructure: %v", vErr)
+	if vErr := ValidateStructure(out); vErr != nil {
+		t.Errorf("converted output failed ValidateStructure: %v", vErr)
 	}
 }
 
@@ -70,7 +70,7 @@ func TestSnoopToPCAPRoundTripPacket(t *testing.T) {
 	snoop := makeMinimalSnoop(t, snoopDLTEthernet)
 	snoop = append(snoop, makeSnoopRecord(t, payload, 12345, 678901)...)
 
-	out, err := snoopToPCAP(snoop)
+	out, err := SnoopToPCAP(snoop)
 	if err != nil {
 		t.Fatalf("conversion failed: %v", err)
 	}
@@ -105,14 +105,14 @@ func TestSnoopToPCAPRoundTripPacket(t *testing.T) {
 // TestSnoopToPCAPRejects covers the bail-out paths.
 func TestSnoopToPCAPRejects(t *testing.T) {
 	t.Run("too short", func(t *testing.T) {
-		if _, err := snoopToPCAP([]byte("snoo")); err == nil {
+		if _, err := SnoopToPCAP([]byte("snoo")); err == nil {
 			t.Error("expected error for short input, got nil")
 		}
 	})
 
 	t.Run("missing magic", func(t *testing.T) {
 		junk := make([]byte, snoopHeaderLen)
-		if _, err := snoopToPCAP(junk); err == nil {
+		if _, err := SnoopToPCAP(junk); err == nil {
 			t.Error("expected error for missing magic, got nil")
 		}
 	})
@@ -120,7 +120,7 @@ func TestSnoopToPCAPRejects(t *testing.T) {
 	t.Run("unsupported version", func(t *testing.T) {
 		bad := makeMinimalSnoop(t, snoopDLTEthernet)
 		binary.BigEndian.PutUint32(bad[8:12], 99) // way above supported range
-		if _, err := snoopToPCAP(bad); err == nil {
+		if _, err := SnoopToPCAP(bad); err == nil {
 			t.Error("expected error for unsupported version, got nil")
 		}
 	})
@@ -130,7 +130,7 @@ func TestSnoopToPCAPRejects(t *testing.T) {
 	// import cleanly. The trade-off is documented in snoopDLTToPCAP.
 	t.Run("unknown datalink falls back to ethernet", func(t *testing.T) {
 		base := makeMinimalSnoop(t, 10)
-		out, err := snoopToPCAP(base)
+		out, err := SnoopToPCAP(base)
 		if err != nil {
 			t.Fatalf("unexpected error for fallback datalink: %v", err)
 		}
@@ -144,10 +144,10 @@ func TestSnoopToPCAPRejects(t *testing.T) {
 // TestSnoopExampleCapture exercises the converter against the actual
 // mislabelled-snoop files shipped under examples/captures. If those
 // files ever get re-saved as real pcap, this test will start failing
-// the hasSnoopMagic precondition — which is the right place to learn
+// the HasSnoopMagic precondition — which is the right place to learn
 // the layout has changed.
 func TestSnoopExampleCapture(t *testing.T) {
-	candidates, _ := filepath.Glob("../../examples/captures/*.pcap")
+	candidates, _ := filepath.Glob("../../../examples/captures/*.pcap")
 	if len(candidates) == 0 {
 		t.Skip("no example captures present")
 	}
@@ -157,17 +157,17 @@ func TestSnoopExampleCapture(t *testing.T) {
 		if err != nil {
 			t.Fatalf("read %s: %v", path, err)
 		}
-		if !hasSnoopMagic(data) {
+		if !HasSnoopMagic(data) {
 			continue // genuinely a pcap; nothing for us to do
 		}
 
-		converted, convErr := snoopToPCAP(data)
+		converted, convErr := SnoopToPCAP(data)
 		if convErr != nil {
-			t.Errorf("%s: snoopToPCAP failed: %v", path, convErr)
+			t.Errorf("%s: SnoopToPCAP failed: %v", path, convErr)
 			continue
 		}
-		if vErr := validatePCAPStructure(converted); vErr != nil {
-			t.Errorf("%s: converted output fails validatePCAPStructure: %v", path, vErr)
+		if vErr := ValidateStructure(converted); vErr != nil {
+			t.Errorf("%s: converted output fails ValidateStructure: %v", path, vErr)
 		}
 	}
 }
