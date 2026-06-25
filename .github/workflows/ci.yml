@@ -48,7 +48,7 @@ jobs:
       workflows: ${{ steps.filter.outputs.workflows }}
       schema: ${{ steps.filter.outputs.schema }}
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4.0.1
         id: filter
         with:
@@ -84,7 +84,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.schema == 'true' || needs.changes.outputs.workflows == 'true'
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Set up Go
         uses: ./.github/actions/setup-go
@@ -177,7 +177,7 @@ jobs:
       GOCACHE: ${{ github.workspace }}/.cache/go/build
 
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Set up Go
         uses: ./.github/actions/setup-go
@@ -209,7 +209,7 @@ jobs:
       run:
         working-directory: ui
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Set up Node.js
         uses: ./.github/actions/setup-node
@@ -264,7 +264,7 @@ jobs:
       # fetch-depth: 0 required for gitleaks-action's commit-range scan
       # (default shallow clone fails with "unknown revision" when base^
       # isn't reachable, especially after rebases/force-pushes).
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0
 
@@ -359,7 +359,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.c == 'true' || needs.changes.outputs.workflows == 'true'
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Install C23 tools (clang-tidy, cppcheck, bear)
         run: |
@@ -460,7 +460,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.frontend == 'true' || needs.changes.outputs.c == 'true' || needs.changes.outputs.workflows == 'true'
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Check file sizes
         run: |
@@ -533,7 +533,7 @@ jobs:
       || needs.changes.outputs.workflows == 'true'
 
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Validate i18n (parity, glossary, banned vocab, etc.)
         # --ratchet demotes the pre-existing-debt checks (no-fallback-patterns
@@ -555,7 +555,7 @@ jobs:
     # Always runs — cheap (runs in seconds) and applies to every PR.
 
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Check markdown links
         uses: gaurav-nelson/github-action-markdown-link-check@5c5dfc0ac2e225883c0e5f03a85311ec2830d368 # v1
@@ -596,7 +596,7 @@ jobs:
             goos: linux
             goarch: amd64
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Set up Go
         uses: ./.github/actions/setup-go
@@ -659,7 +659,7 @@ jobs:
       (needs.backend.result == 'success' || needs.backend.result == 'skipped')
 
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Set up Go
         uses: ./.github/actions/setup-go
@@ -769,7 +769,7 @@ jobs:
       (needs.changes.outputs.frontend == 'true' || needs.changes.outputs.workflows == 'true')
 
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Set up Go
         uses: ./.github/actions/setup-go
