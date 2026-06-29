@@ -1,69 +1,60 @@
 name: Task
-description: Track a development task or chore
-title: "[CHORE] "
+description: Track maintenance, refactoring, dependency, CI, or documentation work for NIAC
+title: "Chore: "
 labels: ["type: chore", "status: needs-triage"]
 body:
-  - type: markdown
-    attributes:
-      value: |
-        Use this template for internal development tasks, refactoring, technical debt, or maintenance work.
-
   - type: textarea
-    id: description
+    id: summary
     attributes:
-      label: Description
-      description: A clear description of the task to be completed.
+      label: Summary
+      description: What work needs to be done?
     validations:
       required: true
-
   - type: dropdown
-    id: type
+    id: area
     attributes:
-      label: Task Type
+      label: Area
       options:
-        - Refactoring
-        - Technical Debt
-        - CI/CD
-        - Testing
-        - Documentation
-        - Dependencies
-        - Performance
-        - Security
-        - Build/Packaging
-        - Other
+        - area: api
+        - area: build
+        - area: ci
+        - area: config
+        - area: device-simulation
+        - area: docs
+        - area: frontend
+        - area: license
+        - area: packet-capture
+        - area: protocol-simulation
+        - area: security
+        - area: templates
+        - area: tests
     validations:
       required: true
-
   - type: dropdown
-    id: component
+    id: priority
     attributes:
-      label: Component
-      description: Which part of NIAC does this affect?
+      label: Priority
       options:
-        - API/Backend
-        - UI/Frontend
-        - SNMP
-        - LLDP/CDP
-        - Protocol Simulation
-        - Device Simulation
-        - Templates
-        - PCAP Capture/Replay
-        - Configuration
-        - Installation/Deployment
-        - Documentation
-        - CI/CD Pipeline
-        - Multiple Areas
-        - Other
+        - priority: critical
+        - priority: high
+        - priority: medium
+        - priority: low
     validations:
       required: true
-
   - type: textarea
     id: acceptance
     attributes:
       label: Acceptance Criteria
-      description: What does "done" look like?
-
+      placeholder: |
+        - [ ] ...
+        - [ ] ...
+    validations:
+      required: true
   - type: textarea
-    id: context
+    id: notes
     attributes:
-      label: Additional Context
+      label: Technical Notes
+  - type: textarea
+    id: related
+    attributes:
+      label: Related Issues or Pull Requests

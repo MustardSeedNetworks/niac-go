@@ -14,6 +14,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"time"
 )
@@ -98,6 +99,9 @@ func getPrimaryMAC() string {
 	if err != nil {
 		return defaultMAC
 	}
+	slices.SortFunc(interfaces, func(a, b net.Interface) int {
+		return strings.Compare(a.Name, b.Name)
+	})
 
 	for _, iface := range interfaces {
 		// Skip loopback and interfaces without MAC.
