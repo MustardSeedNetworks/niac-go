@@ -3,6 +3,7 @@ package protocols
 import (
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 
 	"github.com/gosnmp/gosnmp"
@@ -99,4 +100,99 @@ func TestWireGetBulkSnmpwalk(t *testing.T) {
 	if len(reached) == 0 {
 		t.Fatal("GETBULK snmpwalk reached 0 OIDs")
 	}
+}
+
+// TestWireGetBulkBoundedBySize reproduces the live walk stall: a run of large
+// values (Cisco AGENT-CAPABILITIES strings are ~250 bytes) in one GET-BULK
+// response overflows the MTU and the datagram is dropped, timing out the walk.
+// The response must stay within one Ethernet frame, and a full bulk walk must
+// still reach every OID (the manager continues from the last returned OID).
+func TestWireGetBulkBoundedBySize(t *testing.T) {
+	dev := &config.Device{Name: "sw", Type: "switch", Properties: map[string]string{}}
+	agent := snmp.NewAgentWithCommunity(dev, "public", 0)
+
+	// 40 OIDs each carrying a ~250-byte string under a private subtree.
+	big := ""
+	for len(big) < 250 {
+		big += "AGENT-CAPABILITIES description padding. "
+	}
+
+	base := ".1.3.6.1.4.1.9.9.999.1.1"
+	want := map[string]bool{}
+
+	for i := 1; i <= 40; i++ {
+		oid := base + "." + strconv.Itoa(i)
+		_ = agent.SetOID(oid, &snmp.OIDValue{Type: gosnmp.OctetString, Value: big})
+		want[oid[1:]] = true // stored without leading dot
+	}
+
+	// Every GET-BULK response with a generous maxRep must fit one frame, and a
+	// full walk must still reach every OID (the manager continues from the last).
+	current := base
+	reached := map[string]bool{}
+
+	for range 100 {
+		respVars := agent.ProcessPDU(gosnmp.GetBulkRequest, []gosnmp.SnmpPDU{{Name: current}}, 20)
+		assertFitsFrame(t, respVars)
+
+		next, done := advanceWalk(respVars, want, reached)
+		if next != "" {
+			current = next
+		}
+
+		if done || len(reached) == len(want) {
+			break
+		}
+	}
+
+	if len(reached) != len(want) {
+		t.Errorf("full bulk walk reached %d/%d big-value OIDs", len(reached), len(want))
+	}
+}
+
+// assertFitsFrame marshals a response and fails if it exceeds the MTU payload.
+func assertFitsFrame(t *testing.T, respVars []gosnmp.SnmpPDU) {
+	t.Helper()
+
+	resp := &gosnmp.SnmpPacket{
+		Version:   gosnmp.Version2c,
+		Community: "public",
+		PDUType:   gosnmp.GetResponse,
+		RequestID: 1,
+		Variables: respVars,
+	}
+
+	raw, err := resp.MarshalMsg()
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+
+	if len(raw) > 1472 { // 1500 MTU - 20 IP - 8 UDP
+		t.Fatalf("GET-BULK datagram %d bytes exceeds MTU payload budget", len(raw))
+	}
+}
+
+// advanceWalk records which wanted OIDs a response covered and returns the OID
+// to continue from plus whether end-of-MIB was reached.
+func advanceWalk(respVars []gosnmp.SnmpPDU, want, reached map[string]bool) (string, bool) {
+	next := ""
+
+	for _, v := range respVars {
+		if v.Type == gosnmp.EndOfMibView || v.Type == gosnmp.NoSuchObject {
+			return next, true
+		}
+
+		name := v.Name
+		if len(name) > 0 && name[0] == '.' {
+			name = name[1:]
+		}
+
+		if want[name] {
+			reached[name] = true
+		}
+
+		next = v.Name
+	}
+
+	return next, false
 }

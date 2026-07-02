@@ -243,6 +243,16 @@ func (a *Agent) HandleGetNext(oid string) (string, *OIDValue, error) {
 	return nextOID, value, nil
 }
 
+// MaxBulkResponseBytes bounds the estimated size of a GET-BULK response's
+// variable bindings so the marshaled datagram stays inside a single standard
+// Ethernet frame (1500-byte MTU, less L2/L3/L4 and SNMP message headers). A
+// conforming agent returns fewer than maxRepetitions bindings when the message
+// would overflow and lets the manager continue the walk from the last OID.
+// Without this cap, a run of large values (e.g. Cisco AGENT-CAPABILITIES
+// description strings, ~250 bytes each) produces an oversized datagram that is
+// silently dropped on the wire, stalling every bulk walk at that point.
+const MaxBulkResponseBytes = 1400
+
 // HandleGetBulk processes an SNMP GET-BULK request.
 func (a *Agent) HandleGetBulk(oid string, maxRepetitions int) ([]OIDResult, error) {
 	a.mu.RLock()
@@ -250,12 +260,23 @@ func (a *Agent) HandleGetBulk(oid string, maxRepetitions int) ([]OIDResult, erro
 
 	results := make([]OIDResult, 0, maxRepetitions)
 	currentOID := oid
+	budget := MaxBulkResponseBytes
 
 	for range maxRepetitions {
 		nextOID, value := a.mib.GetNext(currentOID)
 		if nextOID == "" || value == nil {
 			break
 		}
+
+		// Always include at least one binding so the walk makes progress even
+		// when a single value is larger than the whole budget; stop before
+		// exceeding the frame budget thereafter.
+		size := estimateVarbindSize(nextOID, value)
+		if len(results) > 0 && size > budget {
+			break
+		}
+
+		budget -= size
 
 		results = append(results, OIDResult{
 			OID:   nextOID,
@@ -280,6 +301,29 @@ func (a *Agent) HandleGetBulk(oid string, maxRepetitions int) ([]OIDResult, erro
 	}
 
 	return results, nil
+}
+
+// estimateVarbindSize returns a deliberately conservative (over-)estimate of a
+// variable binding's marshaled byte size: the OID string length is a safe proxy
+// for its BER-encoded sub-identifiers, plus the value payload, plus TLV
+// overhead. Over-estimating keeps GET-BULK datagrams comfortably under the MTU.
+func estimateVarbindSize(oid string, value *OIDValue) int {
+	const tlvOverhead = 8
+
+	size := len(oid) + tlvOverhead
+
+	switch v := value.Value.(type) {
+	case string:
+		size += len(v)
+	case []byte:
+		size += len(v)
+	default:
+		// Integers, counters, gauges, timeticks, IP addresses and OIDs all
+		// encode to a small, bounded number of bytes.
+		size += 16
+	}
+
+	return size
 }
 
 // SetOID sets an OID value (for SNMP SET operations).
