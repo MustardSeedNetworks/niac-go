@@ -314,3 +314,76 @@ IF-MIB::ifAdminStatus.1 = INTEGER: 1
 		}
 	}
 }
+
+// TestParseWalkFile_EmptyOctetString verifies net-snmp's zero-length octet
+// string form (`OID = ""`, no TYPE: prefix) is parsed as an empty OctetString
+// rather than dropped. A large device walk carries hundreds of these.
+func TestParseWalkFile_EmptyOctetString(t *testing.T) {
+	tmpDir := t.TempDir()
+	walkFile := filepath.Join(tmpDir, "empty.walk")
+
+	walkData := `.1.3.6.1.2.1.1.5.0 = STRING: "sw1"
+.1.3.6.1.2.1.31.1.1.1.18.1 = ""
+.1.3.6.1.2.1.31.1.1.1.18.2 =
+.1.3.6.1.2.1.1.6.0 = STRING: "lab"
+`
+	if err := os.WriteFile(walkFile, []byte(walkData), 0o600); err != nil {
+		t.Fatalf("write walk: %v", err)
+	}
+
+	entries, err := ParseWalkFile(walkFile)
+	if err != nil {
+		t.Fatalf("ParseWalkFile: %v", err)
+	}
+	if len(entries) != 4 {
+		t.Fatalf("expected 4 entries (2 empty strings kept), got %d", len(entries))
+	}
+
+	for _, oid := range []string{".1.3.6.1.2.1.31.1.1.1.18.1", ".1.3.6.1.2.1.31.1.1.1.18.2"} {
+		found := false
+		for _, e := range entries {
+			if e.OID == oid {
+				found = true
+				if e.Type != gosnmp.OctetString {
+					t.Errorf("%s: type = %v, want OctetString", oid, e.Type)
+				}
+				if s, _ := e.Value.(string); s != "" {
+					t.Errorf("%s: value = %q, want empty string", oid, s)
+				}
+			}
+		}
+		if !found {
+			t.Errorf("empty-value OID %s was dropped", oid)
+		}
+	}
+}
+
+// TestParseWalkFile_HexContinuation verifies that a Hex-STRING value wrapped by
+// net-snmp across multiple bare-hex lines is folded back into a single entry
+// (parent not truncated, continuation lines not dropped), while a bare-hex line
+// following a non-hex entry is not mistaken for a continuation.
+func TestParseWalkFile_HexContinuation(t *testing.T) {
+	tmpDir := t.TempDir()
+	walkFile := filepath.Join(tmpDir, "hex.walk")
+
+	walkData := `.1.3.6.1.2.1.4.35.1.4.1 = Hex-STRING: 00 11 22 33 44 55
+66 77 88 99 AA BB
+.1.3.6.1.2.1.1.5.0 = STRING: "sw1"
+`
+	if err := os.WriteFile(walkFile, []byte(walkData), 0o600); err != nil {
+		t.Fatalf("write walk: %v", err)
+	}
+
+	entries, err := ParseWalkFile(walkFile)
+	if err != nil {
+		t.Fatalf("ParseWalkFile: %v", err)
+	}
+	if len(entries) != 2 {
+		t.Fatalf("expected 2 entries (continuation folded, not a new OID), got %d", len(entries))
+	}
+
+	const wantHex = "00112233445566778899AABB" // 12 octets: line 1 + folded line 2
+	if hex, _ := entries[0].Value.(string); hex != wantHex {
+		t.Errorf("hex value = %q, want %q (continuation not folded)", hex, wantHex)
+	}
+}

@@ -20,6 +20,78 @@ const (
 	snmpTypeUnknown = "Unknown"
 )
 
+// Walk-file scanner buffer sizes. Long Hex-STRING and multi-line values in a
+// large device walk can exceed bufio.Scanner's 64KiB default token size.
+const (
+	walkScanBufInitial = 64 * 1024
+	walkScanBufMax     = 4 * 1024 * 1024
+)
+
+// isHexStringLine reports whether a parsed walk line declared a Hex-STRING
+// value, and therefore may be continued on following bare-hex lines.
+func isHexStringLine(line string) bool {
+	_, rest, ok := strings.Cut(line, "=")
+	if !ok {
+		return false
+	}
+
+	typeTok, _, ok := strings.Cut(rest, ":")
+	if !ok {
+		return false
+	}
+
+	switch strings.ToUpper(strings.TrimSpace(typeTok)) {
+	case "HEX-STRING", "HEX":
+		return true
+	default:
+		return false
+	}
+}
+
+// isHexContinuation reports whether a line is a bare Hex-STRING continuation:
+// one or more whitespace-separated pairs of hex digits and nothing else. These
+// lines are emitted by net-snmp when a Hex-STRING value wraps across lines.
+func isHexContinuation(line string) bool {
+	fields := strings.Fields(line)
+	if len(fields) == 0 {
+		return false
+	}
+
+	for _, f := range fields {
+		if len(f) != 2 || !isHexByte(f) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func isHexByte(s string) bool {
+	for _, c := range s {
+		if (c < '0' || c > '9') && (c < 'a' || c > 'f') && (c < 'A' || c > 'F') {
+			return false
+		}
+	}
+
+	return true
+}
+
+// appendHexContinuation folds a Hex-STRING continuation line's octets into the
+// preceding entry. Hex values are stored as a space-free upper-of-lower hex
+// string (see parseHexStringValue), so append the same normalized form.
+func appendHexContinuation(entry *WalkEntry, line string) {
+	if entry.Type != gosnmp.OctetString {
+		return
+	}
+
+	prev, ok := entry.Value.(string)
+	if !ok {
+		return
+	}
+
+	entry.Value = prev + strings.ReplaceAll(line, " ", "")
+}
+
 // WalkEntry represents a single entry from an SNMP walk file.
 type WalkEntry struct {
 	OID   string
@@ -77,7 +149,13 @@ func ParseWalkFile(filename string) ([]WalkEntry, error) {
 	var entries []WalkEntry
 
 	scanner := bufio.NewScanner(file)
+	// net-snmp wraps long Hex-STRING and multi-line octet-string values across
+	// several lines; a 30k-OID switch walk can carry lines well over the 64KiB
+	// default token size, so grow the buffer to avoid a mid-walk scan error.
+	scanner.Buffer(make([]byte, 0, walkScanBufInitial), walkScanBufMax)
+
 	lineNum := 0
+	lastWasHex := false // previous entry came from a Hex-STRING (may continue)
 
 	for scanner.Scan() {
 		lineNum++
@@ -85,6 +163,16 @@ func ParseWalkFile(filename string) ([]WalkEntry, error) {
 
 		// Skip empty lines and comments
 		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+
+		// net-snmp continues long Hex-STRING values on subsequent lines that
+		// carry only whitespace-separated hex octets (no "OID = TYPE:" prefix).
+		// Fold such a line into the previous entry instead of dropping it —
+		// otherwise the parent value is silently truncated and the line lost.
+		if lastWasHex && len(entries) > 0 && isHexContinuation(line) {
+			appendHexContinuation(&entries[len(entries)-1], line)
+
 			continue
 		}
 
@@ -96,6 +184,7 @@ func ParseWalkFile(filename string) ([]WalkEntry, error) {
 			continue
 		}
 
+		lastWasHex = isHexStringLine(line)
 		entries = append(entries, *entry)
 	}
 
@@ -118,6 +207,14 @@ func parseWalkLine(line string) (*WalkEntry, error) {
 
 	oid := strings.TrimSpace(parts[0])
 	rest := strings.TrimSpace(parts[1])
+
+	// net-snmp emits zero-length octet strings with no type prefix, as
+	// `OID = ""` (or a bare `OID = `). Treat these as an empty OctetString
+	// rather than dropping the OID — a c3750 walk carries ~1,275 of them
+	// (empty ifAlias, LLDP remote fields, etc.).
+	if rest == "" || rest == `""` {
+		return &WalkEntry{OID: oid, Type: gosnmp.OctetString, Value: ""}, nil
+	}
 
 	// Parse TYPE: VALUE
 	typeParts := strings.SplitN(rest, ":", OIDPartsMinPDU)
