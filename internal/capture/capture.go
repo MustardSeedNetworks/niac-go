@@ -39,16 +39,9 @@ type Engine struct {
 
 // New creates a new capture engine.
 func New(interfaceName string, debugLevel int) (*Engine, error) {
-	// Open interface in promiscuous mode with timeout
-	// Use 100ms timeout to allow responsive shutdown on Ctrl+C
-	handle, err := pcap.OpenLive(
-		interfaceName,
-		snapshotLength,                    // snapshot length
-		true,                              // promiscuous mode
-		captureTimeoutMs*time.Millisecond, // timeout for responsive shutdown
-	)
+	handle, err := openImmediate(interfaceName)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open interface %s: %w", interfaceName, err)
+		return nil, err
 	}
 
 	return &Engine{
@@ -56,6 +49,62 @@ func New(interfaceName string, debugLevel int) (*Engine, error) {
 		handle:        handle,
 		debugLevel:    debugLevel,
 	}, nil
+}
+
+// openImmediate opens the interface in promiscuous, immediate mode.
+//
+// Immediate mode is essential for a simulator: without it, libpcap holds
+// captured frames in the kernel buffer until it fills or the read timeout
+// expires, adding up to captureTimeoutMs of latency to every request on a
+// quiet link. That turns a 30k-OID SNMP walk into a slow, timing-out crawl.
+// Immediate mode delivers each frame as it arrives while the read timeout
+// still bounds shutdown responsiveness.
+//
+// Falls back to OpenLive if the platform's libpcap cannot honor the inactive
+// handle builder, so behavior degrades to correct-but-slower rather than
+// failing to start.
+func openImmediate(interfaceName string) (*pcap.Handle, error) {
+	inactive, err := pcap.NewInactiveHandle(interfaceName)
+	if err != nil {
+		return openLiveFallback(interfaceName)
+	}
+	defer inactive.CleanUp()
+
+	// Any failure to configure the inactive handle degrades to the legacy
+	// buffered open so the simulator still starts (correct but slower).
+	configure := []func() error{
+		func() error { return inactive.SetSnapLen(snapshotLength) },
+		func() error { return inactive.SetPromisc(true) },
+		func() error { return inactive.SetTimeout(captureTimeoutMs * time.Millisecond) },
+		func() error { return inactive.SetImmediateMode(true) },
+	}
+	for _, apply := range configure {
+		if applyErr := apply(); applyErr != nil {
+			return openLiveFallback(interfaceName)
+		}
+	}
+
+	handle, err := inactive.Activate()
+	if err != nil {
+		return openLiveFallback(interfaceName)
+	}
+
+	return handle, nil
+}
+
+// openLiveFallback opens the interface with the legacy buffered API.
+func openLiveFallback(interfaceName string) (*pcap.Handle, error) {
+	handle, err := pcap.OpenLive(
+		interfaceName,
+		snapshotLength,
+		true,
+		captureTimeoutMs*time.Millisecond,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open interface %s: %w", interfaceName, err)
+	}
+
+	return handle, nil
 }
 
 // Close closes the capture engine.
