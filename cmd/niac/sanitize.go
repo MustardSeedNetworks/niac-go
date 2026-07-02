@@ -365,80 +365,116 @@ func updateMappingStatistics(mapping *SanitizationMapping, initialIPs, initialHo
 	mapping.Statistics.HostnamesTransformed += len(mapping.Hostnames) - initialHostnames
 }
 
+// Precompiled patterns for sanitizeLine. Compiling once (rather than per line)
+// matters: walks run to hundreds of thousands of lines each.
+var (
+	stringValueRe   = regexp.MustCompile(`= STRING:.*`)
+	stringCaptureRe = regexp.MustCompile(`= STRING: (.+)`)
+	ipValueRe       = regexp.MustCompile(`IpAddress: (\d+\.\d+\.\d+\.\d+)`)
+	dnsLocalRe      = regexp.MustCompile(`\.local\b`)
+	dnsTLDRe        = regexp.MustCompile(`\.(com|net|org)\b`)
+
+	// ipIndexedOIDRe matches the standard IPv4 table columns whose row index ends
+	// in a dotted-quad IP address. Only OIDs matching this have their trailing
+	// four arcs rewritten as an IP; applying that to an arbitrary OID whose last
+	// arcs merely look like octets corrupts the MIB structure.
+	//   .4.20.1 ipAddrTable      · .4.21.1 ipRouteTable
+	//   .4.22.1 ipNetToMediaTable · .3.1.1 atTable (legacy)
+	ipIndexedOIDRe = regexp.MustCompile(`^\.1\.3\.6\.1\.2\.1\.(?:4\.2[012]\.1|3\.1\.1)\.`)
+)
+
+// sysGroupPrefix is the numeric OID root of the SNMPv2-MIB system group.
+const sysGroupPrefix = ".1.3.6.1.2.1.1."
+
+// ipv4OctetCount is the number of trailing OID arcs that form a dotted-quad index.
+const ipv4OctetCount = 4
+
 func sanitizeLine(line string, mapping *SanitizationMapping, domain, location, contact, community string) string {
-	// 1. System contact
-	if strings.Contains(line, "sysContact") {
-		line = regexp.MustCompile(`= STRING:.*`).ReplaceAllString(line, fmt.Sprintf("= STRING: %s", contact))
-	}
-
-	// 2. System location
-	if strings.Contains(line, "sysLocation") {
-		line = regexp.MustCompile(`= STRING:.*`).
-			ReplaceAllString(line, fmt.Sprintf("= STRING: NiAC-Go - %s - Network Operations", location))
-	}
-
-	// 3. System name (hostname)
-	if strings.Contains(line, "sysName") {
-		// Extract original hostname
-		re := regexp.MustCompile(`= STRING: (.+)`)
-		if matches := re.FindStringSubmatch(line); len(matches) > 1 {
-			original := strings.TrimSpace(matches[1])
-			sanitized := sanitizeHostname(original, mapping)
-			line = re.ReplaceAllString(line, fmt.Sprintf("= STRING: %s", sanitized))
+	// 1-3. System-group identity scalars. Match both numeric walks
+	// (.1.3.6.1.2.1.1.<n>.0, i.e. snmpwalk -On) and symbolic walks (MIB name).
+	isContact := isSystemScalar(line, "4", "sysContact")
+	switch {
+	case isContact:
+		line = stringValueRe.ReplaceAllString(line, "= STRING: "+contact)
+	case isSystemScalar(line, "6", "sysLocation"):
+		line = stringValueRe.ReplaceAllString(line, "= STRING: NiAC-Go - "+location+" - Network Operations")
+	case isSystemScalar(line, "5", "sysName"):
+		if matches := stringCaptureRe.FindStringSubmatch(line); len(matches) > 1 {
+			hostname := sanitizeHostname(strings.TrimSpace(matches[1]), mapping)
+			line = stringValueRe.ReplaceAllString(line, "= STRING: "+hostname)
 		}
 	}
 
-	// 4. SNMP community strings
+	// 4. SNMP community strings (symbolic MIB objects only; numeric community
+	// columns are enterprise-specific and not represented by a fixed OID).
 	if strings.Contains(line, "snmpCommunity") || strings.Contains(line, "community") {
-		line = regexp.MustCompile(`= STRING:.*`).ReplaceAllString(line, fmt.Sprintf("= STRING: %s", community))
+		line = stringValueRe.ReplaceAllString(line, "= STRING: "+community)
 	}
 
-	// 5. IP addresses in IpAddress values
-	ipValueRe := regexp.MustCompile(`IpAddress: (\d+\.\d+\.\d+\.\d+)`)
+	// 5. IP addresses in IpAddress values.
 	line = ipValueRe.ReplaceAllStringFunc(line, func(match string) string {
 		ip := ipValueRe.FindStringSubmatch(match)[1]
-		// Skip special IPs
 		if isSpecialIP(ip) {
 			return match
 		}
-		sanitized := sanitizeIP(ip, mapping)
-		return fmt.Sprintf("IpAddress: %s", sanitized)
+		return "IpAddress: " + sanitizeIP(ip, mapping)
 	})
 
-	// 6. IP addresses in OIDs (e.g., .1.3.6.1.2.1.3.1.1.3.2.1.10.250.0.45)
-	// This is trickier - need to identify IP octets in OID
-	oidIPRe := regexp.MustCompile(`\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})(?:\s|=|$)`)
-	line = oidIPRe.ReplaceAllStringFunc(line, func(match string) string {
-		parts := oidIPRe.FindStringSubmatch(match)
-		if len(parts) < ipRegexParts {
-			return match
-		}
+	// 6. IP addresses embedded as the row index of a standard IPv4 table column.
+	line = rewriteOIDIndexIP(line, mapping)
 
-		// Check if these look like IP octets
-		o1, o2, o3, o4 := parts[1], parts[2], parts[3], parts[4]
-		if !looksLikeIPOctet(o1) || !looksLikeIPOctet(o2) || !looksLikeIPOctet(o3) || !looksLikeIPOctet(o4) {
-			return match
-		}
-
-		ip := fmt.Sprintf("%s.%s.%s.%s", o1, o2, o3, o4)
-		if isSpecialIP(ip) {
-			return match
-		}
-
-		sanitized := sanitizeIP(ip, mapping)
-		octets := strings.Split(sanitized, ".")
-		suffix := match[len(match)-1:] // Preserve trailing character
-		return fmt.Sprintf(".%s.%s.%s.%s%s", octets[0], octets[1], octets[2], octets[3], suffix)
-	})
-
-	// 7. DNS domains (but skip email addresses in contact strings)
-	if domain != "" && !strings.Contains(line, "sysContact") {
-		// Replace common domain patterns
-		line = regexp.MustCompile(`\.local\b`).ReplaceAllString(line, ".niac-go.local")
-		line = regexp.MustCompile(`\.(com|net|org)\b`).ReplaceAllString(line, "."+domain)
+	// 7. DNS domains (but skip email addresses in contact strings).
+	if domain != "" && !isContact {
+		line = dnsLocalRe.ReplaceAllString(line, ".niac-go.local")
+		line = dnsTLDRe.ReplaceAllString(line, "."+domain)
 	}
 
 	return line
+}
+
+// isSystemScalar reports whether line is the given system-group scalar, in either
+// numeric (.1.3.6.1.2.1.1.<arc>.0) or symbolic (MIB object name) walk format.
+func isSystemScalar(line, arc, symbolic string) bool {
+	return strings.HasPrefix(line, sysGroupPrefix+arc+".0 ") || strings.Contains(line, symbolic)
+}
+
+// rewriteOIDIndexIP rewrites the trailing dotted-quad IP index of a standard
+// IPv4-indexed table column and leaves every other OID untouched, so structural
+// arcs that merely look like octets are never disturbed. Only the OID field is
+// considered; the value field is handled by the IpAddress pass.
+func rewriteOIDIndexIP(line string, mapping *SanitizationMapping) string {
+	sep := strings.Index(line, " = ")
+	if sep < 0 {
+		return line
+	}
+	oid := line[:sep]
+	if !hasIPIndexedPrefix(oid) {
+		return line
+	}
+
+	arcs := strings.Split(oid, ".")
+	if len(arcs) < ipv4OctetCount {
+		return line
+	}
+	index := arcs[len(arcs)-ipv4OctetCount:]
+	for _, arc := range index {
+		if !looksLikeIPOctet(arc) {
+			return line
+		}
+	}
+
+	ip := strings.Join(index, ".")
+	if isSpecialIP(ip) {
+		return line
+	}
+
+	copy(arcs[len(arcs)-ipv4OctetCount:], strings.Split(sanitizeIP(ip, mapping), "."))
+	return strings.Join(arcs, ".") + line[sep:]
+}
+
+// hasIPIndexedPrefix reports whether oid sits under a known IPv4-indexed table column.
+func hasIPIndexedPrefix(oid string) bool {
+	return ipIndexedOIDRe.MatchString(oid)
 }
 
 func sanitizeIP(ip string, mapping *SanitizationMapping) string {
