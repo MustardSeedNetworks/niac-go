@@ -20,6 +20,7 @@ var (
 	ErrMessageTooShort      = errors.New("message too short")
 	ErrOptionDataExceedsLen = errors.New("option data exceeds message length")
 	ErrNoAvailableAddresses = errors.New("no available addresses")
+	ErrDUIDTooLong          = errors.New("DUID exceeds RFC 8415 maximum length")
 )
 
 // ErrInvalidRequestLine is a sentinel error for HTTP indicating an invalid request line.

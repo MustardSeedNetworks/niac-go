@@ -111,6 +111,7 @@ const (
 	t2MultiplicandV6    = 4     // T2 = preferred lifetime * 4 / 5 (80%)
 	t2DivisorV6         = 5     // T2 divisor for 80% calculation
 	dhcpv6MinMsgSize    = 4     // Minimum DHCPv6 message size (type + transaction ID)
+	maxDUIDSize         = 130   // RFC 8415 §11.1: DUID is 2-octet type + at most 128 octets
 	macUnicastMask      = 0xfe  // Mask to clear multicast bit in MAC address
 	macLocalBitSet      = 0x02  // Bit to set for locally administered MAC address
 	ipv6VersionVal      = 6     // IPv6 version field
@@ -390,6 +391,16 @@ func (h *DHCPv6Handler) parseDHCPv6Message(data []byte) (*DHCPv6Message, error) 
 
 		if offset+int(opt.Length) > len(data) {
 			return nil, ErrOptionDataExceedsLen
+		}
+
+		// The Client-ID/Server-ID option carries a DUID, which RFC 8415 caps at
+		// 130 octets. A larger one is malformed — and because the server echoes
+		// the client's DUID verbatim into every reply, accepting an oversized
+		// one would build a response that overflows the MTU and gets dropped.
+		// Discard the message instead of emitting an unusable reply.
+		if (opt.Code == DHCPv6OptClientID || opt.Code == DHCPv6OptServerID) &&
+			opt.Length > maxDUIDSize {
+			return nil, ErrDUIDTooLong
 		}
 
 		opt.Data = make([]byte, opt.Length)
