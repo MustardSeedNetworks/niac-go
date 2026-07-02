@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"runtime/debug"
 	"strconv"
 	"time"
 
@@ -105,6 +106,24 @@ func (s *Stack) decodeThread() {
 
 // decodePacket decodes a packet and routes to appropriate handler.
 func (s *Stack) decodePacket(pkt *Packet) {
+	// Defense in depth: a simulator is exposed to arbitrary, adversarial, and
+	// malformed traffic (discovery tools, scanners, fuzzers). A panic while
+	// handling one packet must never take down the whole sim — recover, log,
+	// and drop the offending packet so every other device keeps responding.
+	defer func() {
+		if r := recover(); r != nil {
+			s.stats.mu.Lock()
+			s.stats.Errors++
+			s.stats.mu.Unlock()
+
+			if s.debugConfig.GetGlobal() >= DebugLevelBasic {
+				_, _ = fmt.Fprintf(os.Stderr,
+					"recovered from panic decoding packet sn=%d: %v\n%s\n",
+					pkt.SerialNumber, r, debug.Stack())
+			}
+		}
+	}()
+
 	// Try MAC-based routing first (multicast protocols)
 	if s.routeByMAC(pkt) {
 		return
