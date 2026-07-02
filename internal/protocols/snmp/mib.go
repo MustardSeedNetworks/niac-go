@@ -105,22 +105,28 @@ func (m *MIB) GetNext(oid string) (string, *OIDValue) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	// Find next OID in sorted list
-	for _, nextOID := range m.sorted {
-		if compareOIDs(nextOID, oid) > 0 {
-			value := m.entries[nextOID]
+	// Binary search the sorted list for the first OID strictly greater than
+	// the requested one. The list is kept in ascending compareOIDs order, so a
+	// full snmpwalk costs O(walk_len · log n) instead of O(walk_len · n) — the
+	// difference between responding and timing out on a 30k-OID device walk.
+	idx := sort.Search(len(m.sorted), func(i int) bool {
+		return compareOIDs(m.sorted[i], oid) > 0
+	})
 
-			// If dynamic, call function
-			if value.Dynamic != nil {
-				return nextOID, value.Dynamic()
-			}
-
-			return nextOID, value
-		}
+	if idx >= len(m.sorted) {
+		// End of MIB
+		return "", nil
 	}
 
-	// End of MIB
-	return "", nil
+	nextOID := m.sorted[idx]
+	value := m.entries[nextOID]
+
+	// If dynamic, call function
+	if value.Dynamic != nil {
+		return nextOID, value.Dynamic()
+	}
+
+	return nextOID, value
 }
 
 // updateSortedList updates the sorted OID list (caller must hold write lock).
