@@ -104,6 +104,15 @@ func (h *SNMPHandler) findAgent(device *config.Device, srcIP net.IP, community s
 
 // buildResponse creates and marshals an SNMP response.
 func (h *SNMPHandler) buildResponse(agent *snmp.Agent, request *gosnmp.SnmpPacket) ([]byte, error) {
+	// The simulator speaks SNMP v1/v2c only. gosnmp's MarshalMsg dispatches a
+	// Version3 packet to marshalV3, which dereferences SecurityParameters we
+	// never populate → nil-pointer SIGSEGV. Discovery tools such as NetAlly
+	// CyberScope/AirCheck send SNMPv3 probes, so decline unsupported versions
+	// here rather than letting one probe crash the whole simulator.
+	if request.Version != gosnmp.Version1 && request.Version != gosnmp.Version2c {
+		return nil, fmt.Errorf("%w: %v", ErrUnsupportedSNMPVersion, request.Version)
+	}
+
 	responseVars := agent.ProcessPDU(request.PDUType, request.Variables, request.MaxRepetitions)
 
 	response := &gosnmp.SnmpPacket{
