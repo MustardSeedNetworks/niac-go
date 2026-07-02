@@ -1,6 +1,7 @@
 package protocols
 
 import (
+	"bytes"
 	"fmt"
 	"net"
 	"os"
@@ -55,7 +56,15 @@ func (s *Stack) receiveAndQueuePacket(buffer []byte) {
 }
 
 // parseReceivedPacket parses received data into a Packet, updating stats.
+//
+// The incoming slice aliases a capture buffer that ReadPacket reuses on the
+// next read. The returned Packet is queued onto a channel and decoded by a
+// separate goroutine, so it must own its bytes; otherwise the next read
+// corrupts still-in-flight packets — a data race that torn-reads every
+// handler's header parsing. Clone at this ownership boundary.
 func (s *Stack) parseReceivedPacket(data []byte) *Packet {
+	data = bytes.Clone(data)
+
 	s.mu.Lock()
 	s.serialNumber++
 	serialNum := s.serialNumber
