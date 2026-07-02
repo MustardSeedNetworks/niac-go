@@ -194,8 +194,9 @@ type iperf3Sum struct {
 
 // IPerf3Handler handles iPerf3 protocol emulation.
 type IPerf3Handler struct {
-	stack    *Stack
-	sessions map[string]*IPerf3Session // keyed by "ip:port"
+	stack       *Stack
+	sessions    map[string]*IPerf3Session // keyed by "ip:port"
+	lastCleanup time.Time                 // throttles the stale-session sweep
 }
 
 // NewIPerf3Handler creates a new iPerf3 handler.
@@ -287,8 +288,13 @@ func (h *IPerf3Handler) HandleIPerf3Request(
 		h.handleIPerf3Data(pkt, ipLayer, tcpLayer, devices, session)
 	}
 
-	// Periodic cleanup
-	h.cleanupStaleSessions(iperf3SessionCleanupMin * time.Minute)
+	// Periodic cleanup — throttled so an iperf3 test (thousands of data-phase
+	// packets) doesn't rescan the whole session map on every packet.
+	maxAge := iperf3SessionCleanupMin * time.Minute
+	if now := time.Now(); now.Sub(h.lastCleanup) >= maxAge {
+		h.lastCleanup = now
+		h.cleanupStaleSessions(maxAge)
+	}
 }
 
 // handleIPerf3Data processes iPerf3 protocol messages.
