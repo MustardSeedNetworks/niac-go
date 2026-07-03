@@ -9,6 +9,11 @@ import (
 
 type snmpAgentGroup struct {
 	agents map[string]*snmp.Agent
+	// v3 is the device's SNMPv3 authoritative engine (nil when v3 is disabled).
+	v3 *snmp.V3Engine
+	// v3Agent is the MIB-backing agent used to answer v3 scoped PDUs (the base
+	// community agent); v3 has no community, so one agent serves all users.
+	v3Agent *snmp.Agent
 }
 
 func newSnmpAgentGroup() *snmpAgentGroup {

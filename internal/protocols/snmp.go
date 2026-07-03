@@ -16,6 +16,11 @@ import (
 // SNMP protocol constants.
 const (
 	snmpMACAddrLen = 6 // MAC address length in bytes
+
+	// ASN.1 BER length encoding: high bit of the first length octet flags the
+	// long form; the low 7 bits then hold the count of subsequent length octets.
+	asn1LongFormFlag     = 0x80
+	asn1LengthOctetsMask = 0x7f
 )
 
 // SNMPHandler routes SNMP queries to per-device agents.
@@ -35,6 +40,13 @@ func (h *SNMPHandler) HandlePacket(pkt *Packet, ip *layers.IPv4, udp *layers.UDP
 	}
 
 	if len(udp.Payload) == 0 {
+		return
+	}
+
+	// SNMPv3 is handled from the raw datagram (USM engine discovery + auth +
+	// privacy); v1/v2c continue through the community-keyed agent path below.
+	if ver, ok := snmpPeekVersion(udp.Payload); ok && ver == gosnmp.Version3 {
+		h.handleV3(pkt, ip, udp, devices)
 		return
 	}
 
@@ -191,6 +203,64 @@ func (h *SNMPHandler) decodeRequest(payload []byte) (*gosnmp.SnmpPacket, error) 
 		return nil, fmt.Errorf("failed to decode SNMP packet: %w", err)
 	}
 	return pkt, nil
+}
+
+// handleV3 routes an SNMPv3 datagram to each matching device's USM engine,
+// emitting the engine's discovery Report or authenticated response.
+func (h *SNMPHandler) handleV3(pkt *Packet, ip *layers.IPv4, udp *layers.UDP, devices []*config.Device) {
+	for _, device := range devices {
+		group := h.stack.getSNMPAgents(device)
+		if group == nil || group.v3 == nil || group.v3Agent == nil {
+			continue
+		}
+
+		if !snmpAccessAllowed(device, ip.SrcIP) {
+			continue
+		}
+
+		resp, err := group.v3.Respond(udp.Payload, group.v3Agent.ProcessPDU)
+		if err != nil || resp == nil {
+			if err != nil && h.stack.GetProtocolDebugLevel(logging.ProtocolSNMP) >= DebugLevelInfo {
+				_, _ = fmt.Fprintf(os.Stdout,
+					"SNMP: v3 respond declined for %s sn=%d err=%v\n", device.Name, pkt.SerialNumber, err)
+			}
+
+			continue
+		}
+
+		h.stack.stats.mu.Lock()
+		h.stack.stats.SNMPQueries++
+		h.stack.stats.mu.Unlock()
+
+		h.sendResponse(pkt, ip, udp, device, resp)
+	}
+}
+
+// snmpPeekVersion extracts the SNMP version from a raw datagram without a full
+// decode: the outer SEQUENCE's first element is INTEGER version.
+func snmpPeekVersion(payload []byte) (gosnmp.SnmpVersion, bool) {
+	if len(payload) < 2 || payload[0] != byte(gosnmp.Sequence) {
+		return 0, false
+	}
+
+	// Skip the SEQUENCE length octets (short or long form).
+	cursor := 1
+	if payload[cursor]&asn1LongFormFlag != 0 {
+		cursor += 1 + int(payload[cursor]&asn1LengthOctetsMask)
+	} else {
+		cursor++
+	}
+
+	// Expect INTEGER (0x02), single-octet length, then the version value.
+	if cursor+2 >= len(payload) || payload[cursor] != byte(gosnmp.Integer) {
+		return 0, false
+	}
+	length := int(payload[cursor+1])
+	if length != 1 || cursor+2 >= len(payload) {
+		return 0, false
+	}
+
+	return gosnmp.SnmpVersion(payload[cursor+2]), true
 }
 
 func (h *SNMPHandler) sourceMAC(device *config.Device, pkt *Packet) net.HardwareAddr {

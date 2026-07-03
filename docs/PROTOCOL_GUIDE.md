@@ -849,6 +849,30 @@ devices:
 | `syslocation` | string | No | "" | Physical location |
 | `traps` | object | No | - | Trap configuration |
 
+#### SNMPv3 (USM)
+
+SNMPv3 is configured with a device-level `snmpv3:` block (a sibling of
+`snmp_agent:`). The simulator acts as an authoritative engine: it performs
+engine discovery and answers `noAuthNoPriv`, `authNoPriv`, and `authPriv`
+requests. Engine IDs are derived from the device MAC unless `engine_id` (hex)
+is set. SNMPv3 is free on all tiers — it is the only SNMP version that does not
+send credentials in cleartext.
+
+```yaml
+snmpv3:
+  enabled: true
+  engine_id: ""        # optional hex; auto-derived from MAC when empty
+  users:
+    - username: "niacadmin"
+      auth_protocol: "sha"   # none | md5 | sha | sha224 | sha256 | sha384 | sha512
+      auth_password: "authpass123"
+      priv_protocol: "aes"   # none | des | aes | aes192 | aes256
+      priv_password: "privpass123"
+```
+
+The same walk data served over v1/v2c is served over v3 — the security model
+only governs authentication and encryption, not the MIB.
+
 #### Testing
 
 ```bash
@@ -860,6 +884,10 @@ snmpwalk -v2c -c public 10.0.0.1 system
 
 # SNMP BULK WALK
 snmpbulkwalk -v2c -c public 10.0.0.1 ifDescr
+
+# SNMPv3 authPriv walk (matches the users block above)
+snmpwalk -v3 -l authPriv -u niacadmin \
+  -a SHA -A authpass123 -x AES -X privpass123 10.0.0.1 system
 
 # Listen for traps
 snmptrapd -f -Lo

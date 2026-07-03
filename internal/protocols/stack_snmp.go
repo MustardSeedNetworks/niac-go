@@ -9,10 +9,11 @@ import (
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 	"github.com/MustardSeedNetworks/niac-go/internal/logging"
+	"github.com/MustardSeedNetworks/niac-go/internal/protocols/snmp"
 )
 
 func (s *Stack) initSNMPAgent(device *config.Device) {
-	if !snmpEnabled(device.SNMPConfig) {
+	if !snmpEnabled(device.SNMPConfig) && !snmpv3Enabled(device.SNMPv3Config) {
 		return
 	}
 
@@ -25,6 +26,8 @@ func (s *Stack) initSNMPAgent(device *config.Device) {
 	}
 
 	baseAgent := group.Ensure(baseCommunity, device, debugLevel)
+
+	s.initSNMPv3Engine(device, group, baseAgent, debugLevel)
 
 	// Load walk files into base community agent
 	for _, walkFile := range device.SNMPConfig.WalkFiles {
@@ -82,6 +85,39 @@ func (s *Stack) initSNMPAgent(device *config.Device) {
 	}
 
 	s.snmpAgents[device] = group
+}
+
+// initSNMPv3Engine builds and attaches the device's SNMPv3 authoritative
+// engine to the agent group. The base community agent backs the MIB for all
+// USM users (v3 has no community dimension).
+func (s *Stack) initSNMPv3Engine(
+	device *config.Device,
+	group *snmpAgentGroup,
+	baseAgent *snmp.Agent,
+	debugLevel int,
+) {
+	if !snmpv3Enabled(device.SNMPv3Config) {
+		return
+	}
+
+	engine, err := snmp.NewV3Engine(device.SNMPv3Config, device.MACAddress)
+	if err != nil {
+		if debugLevel >= 1 {
+			_, _ = fmt.Fprintf(os.Stdout, "SNMP: v3 engine init failed for %s: %v\n", device.Name, err)
+		}
+		return
+	}
+	if engine == nil {
+		return
+	}
+
+	group.v3 = engine
+	group.v3Agent = baseAgent
+}
+
+// snmpv3Enabled reports whether a device has usable SNMPv3 USM configuration.
+func snmpv3Enabled(cfg *config.SNMPv3Config) bool {
+	return cfg != nil && cfg.Enabled && len(cfg.Users) > 0
 }
 
 func snmpEnabled(cfg config.SNMPConfig) bool {

@@ -11,6 +11,17 @@ devices:
     snmp_agent:
       community: "public"
       sysname: "api-router"
+    snmpv3:
+      enabled: true
+      users:
+        # authPriv (SHA + AES) — walk with:
+        #   snmpwalk -v3 -l authPriv -u niacadmin -a SHA -A authpass123 \
+        #            -x AES -X privpass123 <device-ip> system
+        - username: "niacadmin"
+          auth_protocol: "sha"
+          auth_password: "authpass123"
+          priv_protocol: "aes"
+          priv_password: "privpass123"
     http:
       enabled: true
       server_name: "NIAC Demo"
