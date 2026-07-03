@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -320,7 +321,14 @@ func processSanitizeFile(
 	return nil
 }
 
-// writeAndFinalize processes all lines and finalizes the output file.
+// maxWalkLineBytes bounds a single scanned walk line. Hex-string values can be
+// large, so this is well above bufio's 64KiB default while still capping memory.
+const maxWalkLineBytes = 8 << 20 // 8 MiB
+
+// writeAndFinalize processes all lines and finalizes the output file. It is a
+// two-pass operation: pass one collects identity strings (hostname, contact)
+// that vendor/entity OIDs echo outside the system group; pass two applies the
+// per-line rules and scrubs those echoes globally.
 func writeAndFinalize(
 	input *os.File,
 	output *os.File,
@@ -328,18 +336,33 @@ func writeAndFinalize(
 	domain, location, contact, community string,
 ) error {
 	scanner := bufio.NewScanner(input)
-	writer := bufio.NewWriter(output)
+	scanner.Buffer(make([]byte, 0, bufio.MaxScanTokenSize), maxWalkLineBytes)
 
+	var lines []string
 	for scanner.Scan() {
-		line := scanner.Text()
-		sanitized := sanitizeLine(line, mapping, domain, location, contact, community)
-		if _, err := fmt.Fprintln(writer, sanitized); err != nil {
-			return fmt.Errorf("failed to write line: %w", err)
-		}
+		lines = append(lines, scanner.Text())
 	}
-
 	if err := scanner.Err(); err != nil {
 		return fmt.Errorf("scanner error: %w", err)
+	}
+
+	subs := collectIdentitySubs(lines, mapping, contact)
+
+	writer := bufio.NewWriter(output)
+	for _, line := range lines {
+		var out string
+		if isIdentityScalar(line) {
+			// The scalar rules already replace this line's value; scrubbing it
+			// again would double-sanitize the just-written hostname.
+			out = sanitizeLine(line, mapping, domain, location, contact, community)
+		} else {
+			// Scrub echoed identity before the per-line DNS rewrite so a full
+			// FQDN still matches, then apply IP/DNS rules.
+			out = sanitizeLine(applyIdentitySubs(line, subs), mapping, domain, location, contact, community)
+		}
+		if _, err := fmt.Fprintln(writer, out); err != nil {
+			return fmt.Errorf("failed to write line: %w", err)
+		}
 	}
 
 	if err := writer.Flush(); err != nil {
@@ -399,9 +422,10 @@ func sanitizeLine(line string, mapping *SanitizationMapping, domain, location, c
 	case isSystemScalar(line, "6", "sysLocation"):
 		line = stringValueRe.ReplaceAllString(line, "= STRING: NiAC-Go - "+location+" - Network Operations")
 	case isSystemScalar(line, "5", "sysName"):
-		if matches := stringCaptureRe.FindStringSubmatch(line); len(matches) > 1 {
-			hostname := sanitizeHostname(strings.TrimSpace(matches[1]), mapping)
-			line = stringValueRe.ReplaceAllString(line, "= STRING: "+hostname)
+		// Use the unquoted value so the scalar and the global echo scrub
+		// (collectIdentitySubs) sanitize the identical hostname string.
+		if v, ok := scalarStringValue(line); ok {
+			line = stringValueRe.ReplaceAllString(line, "= STRING: "+sanitizeHostname(v, mapping))
 		}
 	}
 
@@ -475,6 +499,92 @@ func rewriteOIDIndexIP(line string, mapping *SanitizationMapping) string {
 // hasIPIndexedPrefix reports whether oid sits under a known IPv4-indexed table column.
 func hasIPIndexedPrefix(oid string) bool {
 	return ipIndexedOIDRe.MatchString(oid)
+}
+
+// minIdentityScrubLen is the shortest identity value eligible for global scrubbing.
+// Shorter values risk matching legitimate substrings elsewhere in the walk.
+const minIdentityScrubLen = 5
+
+// identitySub is a literal find/replace for an echoed identity string.
+type identitySub struct {
+	from string
+	to   string
+}
+
+// isIdentityScalar reports whether line is one of the system-group identity
+// scalars whose value the per-line rules already replace.
+func isIdentityScalar(line string) bool {
+	return isSystemScalar(line, "4", "sysContact") ||
+		isSystemScalar(line, "5", "sysName") ||
+		isSystemScalar(line, "6", "sysLocation")
+}
+
+// collectIdentitySubs scans a walk for the sysName and sysContact scalar values
+// and returns literal substitutions (original -> sanitized) for the distinctive
+// ones. Real devices echo these strings in vendor OIDs, entPhysicalName, and
+// CDP/LLDP neighbor tables, which the per-line scalar rules never reach. The
+// substitutions are ordered longest-first so overlapping values replace fully.
+func collectIdentitySubs(lines []string, mapping *SanitizationMapping, contact string) []identitySub {
+	seen := make(map[string]struct{})
+	var subs []identitySub
+
+	add := func(orig, repl string) {
+		if !isDistinctiveIdentifier(orig) || orig == repl {
+			return
+		}
+		if _, dup := seen[orig]; dup {
+			return
+		}
+		seen[orig] = struct{}{}
+		subs = append(subs, identitySub{from: orig, to: repl})
+	}
+
+	for _, line := range lines {
+		switch {
+		case isSystemScalar(line, "5", "sysName"):
+			if v, ok := scalarStringValue(line); ok {
+				add(v, sanitizeHostname(v, mapping))
+			}
+		case isSystemScalar(line, "4", "sysContact"):
+			if v, ok := scalarStringValue(line); ok {
+				add(v, contact)
+			}
+		}
+	}
+
+	sort.SliceStable(subs, func(i, j int) bool { return len(subs[i].from) > len(subs[j].from) })
+	return subs
+}
+
+// applyIdentitySubs replaces every occurrence of each collected identity string.
+func applyIdentitySubs(line string, subs []identitySub) string {
+	for _, sub := range subs {
+		if strings.Contains(line, sub.from) {
+			line = strings.ReplaceAll(line, sub.from, sub.to)
+		}
+	}
+	return line
+}
+
+// scalarStringValue extracts and unquotes the STRING value of a walk line.
+func scalarStringValue(line string) (string, bool) {
+	matches := stringCaptureRe.FindStringSubmatch(line)
+	if len(matches) <= 1 {
+		return "", false
+	}
+	value := strings.TrimSpace(matches[1])
+	value = strings.TrimSuffix(strings.TrimPrefix(value, `"`), `"`)
+	return value, value != ""
+}
+
+// isDistinctiveIdentifier reports whether s is specific enough to blanket-replace:
+// long enough and containing a character typical of a hostname or contact
+// (digit, dot, hyphen, underscore, or @), which excludes plain dictionary words.
+func isDistinctiveIdentifier(s string) bool {
+	if len(s) < minIdentityScrubLen {
+		return false
+	}
+	return strings.ContainsAny(s, "0123456789.-_@")
 }
 
 func sanitizeIP(ip string, mapping *SanitizationMapping) string {

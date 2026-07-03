@@ -112,3 +112,60 @@ func TestSanitizeLineIPIndexPreservesIfIndex(t *testing.T) {
 		t.Errorf("ifIndex arc (.5) not preserved before rewritten IP: %q", got)
 	}
 }
+
+// Real device hostnames/contacts are echoed outside the system group (vendor
+// OIDs, entPhysicalName, CDP/LLDP neighbor tables), where the per-line scalar
+// rules never reach. collectIdentitySubs + applyIdentitySubs form a second pass
+// that scrubs those echoes globally.
+
+func TestCollectAndApplyIdentitySubsScrubsEchoedHostname(t *testing.T) {
+	lines := []string{
+		`.1.3.6.1.2.1.1.5.0 = STRING: "COS_Lab_R00.fnet.eng"`,              // sysName
+		`.1.3.6.1.4.1.9.9.23.1.2.1.1.6.1 = STRING: "COS_Lab_R00.fnet.eng"`, // CDP neighbor echo
+	}
+	subs := collectIdentitySubs(lines, newSanitizationMapping(), "netadmin@niac-go.com")
+	got := applyIdentitySubs(lines[1], subs)
+	if strings.Contains(got, "COS_Lab_R00.fnet.eng") {
+		t.Errorf("echoed hostname not scrubbed: %q", got)
+	}
+	if !strings.Contains(got, "niac-") {
+		t.Errorf("echo not replaced with sanitized hostname: %q", got)
+	}
+}
+
+func TestCollectAndApplyIdentitySubsScrubsEchoedContact(t *testing.T) {
+	lines := []string{
+		`.1.3.6.1.2.1.1.4.0 = STRING: "netops@ucdenver.pvt"`,
+		`.1.3.6.1.4.1.9.2.1.61.0 = STRING: "escalate: netops@ucdenver.pvt"`,
+	}
+	subs := collectIdentitySubs(lines, newSanitizationMapping(), "netadmin@niac-go.com")
+	got := applyIdentitySubs(lines[1], subs)
+	if strings.Contains(got, "netops@ucdenver.pvt") {
+		t.Errorf("echoed contact not scrubbed: %q", got)
+	}
+}
+
+// TestCollectIdentitySubsSkipsGenericNames guards against over-scrubbing: a plain
+// dictionary sysName with no digit/./-/_ is not distinctive enough to blanket-
+// replace across the file (it could be a substring of legitimate model strings).
+func TestCollectIdentitySubsSkipsGenericNames(t *testing.T) {
+	lines := []string{`.1.3.6.1.2.1.1.5.0 = STRING: "Switch"`}
+	subs := collectIdentitySubs(lines, newSanitizationMapping(), "c@example.test")
+	for _, s := range subs {
+		if s.from == "Switch" {
+			t.Errorf("generic name %q should not become a global substitution", s.from)
+		}
+	}
+}
+
+// TestApplyIdentitySubsLongestFirst ensures overlapping identifiers replace fully
+// (an FQDN before its bare-host prefix).
+func TestApplyIdentitySubsLongestFirst(t *testing.T) {
+	subs := collectIdentitySubs([]string{
+		`.1.3.6.1.2.1.1.5.0 = STRING: "sw1.corp.example"`,
+	}, newSanitizationMapping(), "c@example.test")
+	got := applyIdentitySubs(`x = STRING: "sw1.corp.example neighbor"`, subs)
+	if strings.Contains(got, "sw1.corp.example") {
+		t.Errorf("FQDN not fully scrubbed: %q", got)
+	}
+}
