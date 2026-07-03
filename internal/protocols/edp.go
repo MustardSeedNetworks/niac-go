@@ -329,6 +329,7 @@ func (h *EDPHandler) sendFrame(device *config.Device, edpPayload []byte) {
 		Length:       len(frame),
 		SerialNumber: serialNum,
 		Device:       device,
+		VLAN:         device.VLAN, // advertise on the device's access VLAN
 	}
 
 	h.stack.Send(pkt)
