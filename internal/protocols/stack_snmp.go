@@ -84,6 +84,12 @@ func (s *Stack) initSNMPAgent(device *config.Device) {
 		}
 	}
 
+	// Every MIB is now fully loaded (walk files, AddMib, topology). Build the
+	// sorted OID indexes eagerly so the first GetNext of a discovery does not
+	// trigger a large sort on the stack's single decode goroutine — which would
+	// stall SNMP responses fleet-wide when a scanner walks every device at once.
+	group.ReindexAll()
+
 	s.snmpAgents[device] = group
 }
 
