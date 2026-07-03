@@ -40,6 +40,7 @@ func (a *Agent) SynthesizePeerTopology(resolve PeerMACResolver) {
 	}
 
 	changed := false
+	maxPort := 0
 
 	for _, trunk := range a.device.TrunkPorts {
 		if trunk.RemoteDevice == "" || trunk.Interface == "" {
@@ -57,17 +58,29 @@ func (a *Agent) SynthesizePeerTopology(resolve PeerMACResolver) {
 		}
 
 		a.addLearnedFDBEntry(mac, bridgePort)
+
+		if bridgePort > maxPort {
+			maxPort = bridgePort
+		}
+
 		changed = true
 	}
 
 	if changed {
+		// A learned FDB port must be a valid bridge port: managers reject entries
+		// whose port exceeds dot1dBaseNumPorts. Captures model only a few ports,
+		// so raise the count to cover the ports we just wired.
+		a.raiseBaseNumPorts(maxPort)
 		a.mib.Reindex()
 	}
 }
 
 // bridgePortForInterface resolves an interface name (e.g. "FastEthernet0/5") to
-// its bridge port number via the walk's ifTable and dot1dBasePortTable, so the
-// FDB port lines up with the real ifIndex/ifName a manager will render.
+// its bridge port number, preferring the walk's own dot1dBasePortTable so the
+// port lines up with the real ifIndex/ifName a manager renders. When the capture
+// doesn't model that port, it derives the physical port number from the name and
+// adds the dot1dBasePort row — a small, in-range port, not the ifIndex (which a
+// manager would reject as out of range).
 func (a *Agent) bridgePortForInterface(name string) (int, bool) {
 	ifIndex, ok := a.mib.IndexSuffixForValue(ifDescr, name)
 	if !ok {
@@ -78,28 +91,60 @@ func (a *Agent) bridgePortForInterface(name string) (int, bool) {
 		return 0, false
 	}
 
-	ifIndexNum, err := strconv.Atoi(ifIndex)
-	if err != nil {
-		return 0, false
-	}
-
-	// dot1dBasePortIfIndex maps bridge port -> ifIndex; invert it. Honour the
-	// capture's numbering where present so the port resolves to the real
-	// physical interface.
+	// Honour the capture's numbering where the port is modelled.
 	if port, found := a.mib.IndexSuffixForValue(dot1dBasePortIfIndex, ifIndex); found {
 		if n, convErr := strconv.Atoi(port); convErr == nil {
 			return n, true
 		}
 	}
 
-	// Captures often model only a few active bridge ports, so the interface may
-	// have no dot1dBasePort row. Add one keyed by the ifIndex (unique) mapping
-	// straight back to it, so FDB port -> dot1dBasePortIfIndex -> ifIndex ->
-	// ifName still resolves to the right interface.
-	a.mib.Set(dot1dBasePort+"."+ifIndex, &OIDValue{Type: gosnmp.Integer, Value: ifIndexNum})
-	a.mib.Set(dot1dBasePortIfIndex+"."+ifIndex, &OIDValue{Type: gosnmp.Integer, Value: ifIndexNum})
+	// Otherwise use the interface's physical port number as the bridge port
+	// (matches the capture's convention, e.g. Fa0/5 -> port 5) and add the row.
+	port := physicalPortNumber(name)
+	if port <= 0 {
+		return 0, false
+	}
 
-	return ifIndexNum, true
+	ifIndexNum, err := strconv.Atoi(ifIndex)
+	if err != nil {
+		return 0, false
+	}
+
+	portStr := strconv.Itoa(port)
+	a.mib.Set(dot1dBasePort+"."+portStr, &OIDValue{Type: gosnmp.Integer, Value: port})
+	a.mib.Set(dot1dBasePortIfIndex+"."+portStr, &OIDValue{Type: gosnmp.Integer, Value: ifIndexNum})
+
+	return port, true
+}
+
+// physicalPortNumber extracts the trailing port number of a Cisco-style
+// interface name ("FastEthernet0/5" -> 5, "GigabitEthernet1/0/24" -> 24).
+func physicalPortNumber(name string) int {
+	slash := strings.LastIndex(name, "/")
+	if slash < 0 || slash == len(name)-1 {
+		return 0
+	}
+
+	n, err := strconv.Atoi(name[slash+1:])
+	if err != nil {
+		return 0
+	}
+
+	return n
+}
+
+// raiseBaseNumPorts ensures dot1dBaseNumPorts is at least n.
+func (a *Agent) raiseBaseNumPorts(n int) {
+	cur := 0
+	if v := a.mib.Get(dot1dBaseNumPorts); v != nil {
+		if iv, ok := v.Value.(int); ok {
+			cur = iv
+		}
+	}
+
+	if n > cur {
+		a.mib.Set(dot1dBaseNumPorts, &OIDValue{Type: gosnmp.Integer, Value: n})
+	}
 }
 
 // addLearnedFDBEntry registers a dot1dTpFdbTable learned entry: MAC seen on the

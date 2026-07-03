@@ -65,6 +65,43 @@ func TestSynthesizePeerTopologyLearnsHostOnPort(t *testing.T) {
 	}
 }
 
+// TestSynthesizePeerTopologyDerivesPortWhenWalkSparse covers the case a real
+// capture models few bridge ports: the port is derived from the interface name
+// (Fa0/7 -> 7), a dot1dBasePort row is added, and dot1dBaseNumPorts is raised so
+// the learned FDB port stays in range (managers reject out-of-range ports).
+func TestSynthesizePeerTopologyDerivesPortWhenWalkSparse(t *testing.T) {
+	dev := createTestDevice()
+	dev.Type = "switch"
+	dev.SNMPConfig.WalkFile = "x.walk" // walk-backed: no synthesized ifTable
+	dev.TrunkPorts = []config.TrunkPort{{Interface: "FastEthernet0/7", RemoteDevice: "PC07"}}
+
+	agent := NewAgent(dev, 0)
+
+	// Walk provides ifDescr and a small NumPorts, but no dot1dBasePort for Fa0/7.
+	fa7 := &OIDValue{Type: gosnmp.OctetString, Value: "FastEthernet0/7"}
+	if err := agent.SetOID(ifDescr+".10007", fa7); err != nil {
+		t.Fatalf("SetOID: %v", err)
+	}
+	if err := agent.SetOID(dot1dBaseNumPorts, &OIDValue{Type: gosnmp.Integer, Value: 5}); err != nil {
+		t.Fatalf("SetOID: %v", err)
+	}
+
+	mac, _ := net.ParseMAC("aa:bb:cc:00:00:77")
+	agent.SynthesizePeerTopology(func(string) ([]byte, bool) { return mac, true })
+
+	port := agent.mib.Get(dot1dTpFdbPort + "." + macBytesToOIDIndex(mac))
+	if port == nil || port.Value.(int) != 7 {
+		t.Fatalf("FDB port = %v, want physical port 7", port)
+	}
+	// dot1dBasePort row added and NumPorts raised to cover it.
+	if e := agent.mib.Get(dot1dBasePortIfIndex + ".7"); e == nil || e.Value.(int) != 10007 {
+		t.Errorf("dot1dBasePortIfIndex.7 = %v, want 10007", e)
+	}
+	if e := agent.mib.Get(dot1dBaseNumPorts); e == nil || e.Value.(int) < 7 {
+		t.Errorf("dot1dBaseNumPorts = %v, want >= 7", e)
+	}
+}
+
 // learnedFDBCount counts dot1dTpFdbStatus entries marked learned(3).
 func learnedFDBCount(a *Agent) int {
 	n := 0
