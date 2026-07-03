@@ -134,7 +134,13 @@ func (h *TCPHandler) routeToHandler(
 
 	switch tcp.DstPort {
 	case TCPPortHTTP:
-		h.handleHTTP(pkt, ipLayer, tcp, devices, hasPayload)
+		// A bare SYN (TCP path analysis / port probe) gets a SYN-ACK so the hop
+		// completes; a SYN with payload is a real HTTP request.
+		if isSYNOnly {
+			h.stack.healthCheckHandler.HandleTCPConnect(pkt, ipLayer, tcp, devices, TCPPortHTTP)
+		} else {
+			h.handleHTTP(pkt, ipLayer, tcp, devices, hasPayload)
+		}
 	case TCPPortHTTPS:
 		h.handleHealthCheckPort(pkt, ipLayer, tcp, devices, TCPPortHTTPS, isSYNOnly, nil)
 	case TCPPortFTP:
@@ -172,7 +178,7 @@ func (h *TCPHandler) routeToHandler(
 		h.stack.iperf3Handler.HandleIPerf3Request(pkt, ipLayer, tcp, devices)
 	default:
 		if isSYNOnly {
-			h.sendRST(ipLayer, tcp, devices)
+			h.sendRST(ipLayer, tcp, devices, pkt.VLAN)
 		}
 	}
 }
@@ -236,7 +242,7 @@ func (h *TCPHandler) handleHealthCheckPort(
 }
 
 // sendRST sends a TCP RST packet.
-func (h *TCPHandler) sendRST(ipLayer *layers.IPv4, tcp *layers.TCP, devices []*config.Device) {
+func (h *TCPHandler) sendRST(ipLayer *layers.IPv4, tcp *layers.TCP, devices []*config.Device, vlan int) {
 	debugLevel := h.stack.GetDebugLevel()
 
 	device := h.findDeviceWithIP(devices, ipLayer.DstIP)
@@ -249,7 +255,7 @@ func (h *TCPHandler) sendRST(ipLayer *layers.IPv4, tcp *layers.TCP, devices []*c
 		return
 	}
 
-	h.sendRSTPacket(device, dstMAC, ipLayer, tcp, debugLevel)
+	h.sendRSTPacket(device, dstMAC, ipLayer, tcp, debugLevel, vlan)
 }
 
 // findDeviceWithIP finds a device that has the specified IP address and MAC.
@@ -309,6 +315,7 @@ func (h *TCPHandler) sendRSTPacket(
 	ipLayer *layers.IPv4,
 	tcp *layers.TCP,
 	debugLevel int,
+	vlan int,
 ) {
 	eth := &layers.Ethernet{
 		SrcMAC:       device.MACAddress,
@@ -347,7 +354,7 @@ func (h *TCPHandler) sendRSTPacket(
 		return
 	}
 
-	h.sendSerializedPacket(buffer.Bytes(), device, ipReply, tcpReply, debugLevel)
+	h.sendSerializedPacket(buffer.Bytes(), device, ipReply, tcpReply, debugLevel, vlan)
 }
 
 // sendSerializedPacket sends a serialized packet and logs the result.
@@ -357,6 +364,7 @@ func (h *TCPHandler) sendSerializedPacket(
 	ipReply *layers.IPv4,
 	tcpReply *layers.TCP,
 	debugLevel int,
+	vlan int,
 ) {
 	h.stack.mu.Lock()
 	h.stack.serialNumber++
@@ -368,6 +376,7 @@ func (h *TCPHandler) sendSerializedPacket(
 		Length:       len(data),
 		SerialNumber: serialNum,
 		Device:       device,
+		VLAN:         vlan, // reply on the VLAN the request arrived on (tagged or untagged)
 	}
 
 	h.stack.Send(pkt)
