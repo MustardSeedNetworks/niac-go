@@ -10,7 +10,8 @@ import (
 
 // topoWalk mixes device-content OIDs with the topology tables a capture carries
 // from its *original* neighbours (LLDP remote, CDP cache, bridge FDB).
-const topoWalk = `.1.3.6.1.2.1.2.2.1.2.1 = STRING: "GigabitEthernet1/0/1"
+const topoWalk = `.1.3.6.1.2.1.1.5.0 = STRING: "captured-device-name"
+.1.3.6.1.2.1.2.2.1.2.1 = STRING: "GigabitEthernet1/0/1"
 .1.0.8802.1.1.2.1.3.7.1.3.1 = STRING: "Gi1/0/1"
 .1.0.8802.1.1.2.1.4.1.1.9.1.1 = STRING: "foreign-lldp-neighbor"
 .1.3.6.1.4.1.9.9.23.1.2.1.1.6.1.1 = STRING: "foreign-cdp-device"
@@ -87,5 +88,30 @@ func TestLoadWalkFileStripsTopologyWhenTrunkPortsDeclared(t *testing.T) {
 	// Device content survives the strip.
 	if v, _ := trunks.HandleGet(ifDescr); v == nil {
 		t.Error("ifDescr (device content) must survive the topology strip")
+	}
+}
+
+// TestLoadWalkFileSkipsWalkSysName: the device keeps its configured identity;
+// the capture's sysName never wins (else same-walk devices collide as one node).
+func TestLoadWalkFileSkipsWalkSysName(t *testing.T) {
+	p := filepath.Join(t.TempDir(), "t.walk")
+	if err := os.WriteFile(p, []byte(topoWalk), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	dev := createTestDevice() // has a configured Name
+	agent := NewAgent(dev, 0)
+	if err := agent.LoadWalkFile(p); err != nil {
+		t.Fatalf("LoadWalkFile: %v", err)
+	}
+
+	got, _ := agent.HandleGet(".1.3.6.1.2.1.1.5.0")
+	if got == nil {
+		t.Fatal("sysName missing")
+	}
+	if s, _ := got.Value.(string); s == "captured-device-name" {
+		t.Error("walk sysName leaked; device identity must win")
+	}
+	if s, _ := got.Value.(string); s != dev.Name {
+		t.Errorf("sysName = %q, want configured name %q", s, dev.Name)
 	}
 }
