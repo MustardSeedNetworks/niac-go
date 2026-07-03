@@ -274,8 +274,15 @@ func (s *Stack) Send(pkt *Packet) {
 	}
 }
 
-// SendRawPacket queues raw bytes as a packet for sending.
+// SendRawPacket queues raw bytes as a packet for sending (untagged).
 func (s *Stack) SendRawPacket(data []byte) error {
+	return s.SendRawPacketVLAN(data, 0)
+}
+
+// SendRawPacketVLAN queues raw bytes as a packet, tagging it onto vlan (1..4094)
+// so the reply lands on the same VLAN the request arrived on. vlan <= 0 sends
+// untagged.
+func (s *Stack) SendRawPacketVLAN(data []byte, vlan int) error {
 	s.mu.Lock()
 	s.serialNumber++
 	serialNum := s.serialNumber
@@ -285,6 +292,7 @@ func (s *Stack) SendRawPacket(data []byte) error {
 		Buffer:       data,
 		Length:       len(data),
 		SerialNumber: serialNum,
+		VLAN:         vlan,
 	}
 
 	s.Send(pkt)

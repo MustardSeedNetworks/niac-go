@@ -289,7 +289,15 @@ func (s *Stack) sendPacket(pkt *Packet) {
 		pkt.Length = len(pkt.Buffer)
 	}
 
-	err := s.capture.SendPacket(pkt.Buffer[:pkt.Length])
+	// Tag replies onto the VLAN their request arrived on, so a trunk-attached
+	// tester (e.g. a CyberScope tagging into VLAN 210) accepts them. Untagged
+	// requests carry VLAN <= 0 and insertDot1Q leaves the frame unchanged.
+	frame := pkt.Buffer[:pkt.Length]
+	if pkt.VLAN > 0 {
+		frame = insertDot1Q(frame, pkt.VLAN)
+	}
+
+	err := s.capture.SendPacket(frame)
 	if err != nil {
 		if s.debugConfig.GetGlobal() >= DebugLevelInfo {
 			_, _ = fmt.Fprintf(os.Stdout, "Error sending packet sn=%d: %v\n", pkt.SerialNumber, err)

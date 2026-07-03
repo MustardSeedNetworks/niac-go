@@ -444,6 +444,7 @@ func (h *ICMPHandler) handleEchoRequest(
 			icmp.Seq,
 			icmp.Payload,
 			device,
+			pkt.VLAN,
 		)
 		if err != nil {
 			if debugLevel >= DebugLevelInfo {
@@ -467,6 +468,7 @@ func (h *ICMPHandler) sendEchoReply(
 	id, seq uint16,
 	payload []byte,
 	device *config.Device,
+	vlan int,
 ) error {
 	// Get TTL from config, or use default
 	ttl := defaultTTLIPv4
@@ -527,6 +529,7 @@ func (h *ICMPHandler) sendEchoReply(
 		Length:       len(buffer.Bytes()),
 		SerialNumber: serialNum,
 		Device:       device,
+		VLAN:         vlan, // reply on the VLAN the echo request arrived on
 	}
 
 	h.stack.Send(pkt)

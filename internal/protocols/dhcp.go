@@ -377,6 +377,7 @@ type dhcpPacketInfo struct {
 	dhcp        *layers.DHCPv4
 	messageType uint8
 	hostname    string
+	vlan        int // VLAN the request arrived on; replies echo it
 }
 
 // parseDHCPPacket parses a DHCP packet and extracts relevant information.
@@ -393,7 +394,7 @@ func (h *DHCPHandler) parseDHCPPacket(pkt *Packet) *dhcpPacketInfo {
 		return nil
 	}
 
-	info := &dhcpPacketInfo{dhcp: dhcp}
+	info := &dhcpPacketInfo{dhcp: dhcp, vlan: pkt.VLAN}
 
 	// Extract message type and hostname from options
 	for _, opt := range dhcp.Options {
@@ -465,6 +466,7 @@ func (h *DHCPHandler) handleDHCPDiscover(
 		lease.IP,
 		serverDevice.IPAddresses[0],
 		serverDevice.MACAddress,
+		info.vlan,
 	)
 	if offerErr != nil {
 		if debugLevel >= 1 {
@@ -512,6 +514,7 @@ func (h *DHCPHandler) handleDHCPRequest(
 		lease.IP,
 		serverDevice.IPAddresses[0],
 		serverDevice.MACAddress,
+		info.vlan,
 	)
 	if ackErr != nil {
 		if debugLevel >= 1 {
@@ -638,8 +641,9 @@ func (h *DHCPHandler) SendDHCPOffer(
 	clientMAC net.HardwareAddr,
 	offeredIP, serverIP net.IP,
 	serverMAC net.HardwareAddr,
+	vlan int,
 ) error {
-	return h.sendDHCPResponse(xid, clientMAC, offeredIP, serverIP, serverMAC, DHCPOffer)
+	return h.sendDHCPResponse(xid, clientMAC, offeredIP, serverIP, serverMAC, DHCPOffer, vlan)
 }
 
 // SendDHCPAck sends a DHCP Ack message.
@@ -648,8 +652,9 @@ func (h *DHCPHandler) SendDHCPAck(
 	clientMAC net.HardwareAddr,
 	assignedIP, serverIP net.IP,
 	serverMAC net.HardwareAddr,
+	vlan int,
 ) error {
-	return h.sendDHCPResponse(xid, clientMAC, assignedIP, serverIP, serverMAC, DHCPAck)
+	return h.sendDHCPResponse(xid, clientMAC, assignedIP, serverIP, serverMAC, DHCPAck, vlan)
 }
 
 // buildDHCPOptions constructs the DHCP options for a response.
@@ -799,6 +804,7 @@ func (h *DHCPHandler) sendDHCPResponse(
 	assignedIP, serverIP net.IP,
 	serverMAC net.HardwareAddr,
 	msgType uint8,
+	vlan int,
 ) error {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
@@ -820,7 +826,7 @@ func (h *DHCPHandler) sendDHCPResponse(
 	}
 	dhcp.Options = h.buildDHCPOptions(msgType, serverIP, clientMAC)
 
-	return h.serializeAndSendDHCP(dhcp, serverIP, serverMAC)
+	return h.serializeAndSendDHCP(dhcp, serverIP, serverMAC, vlan)
 }
 
 // serializeAndSendDHCP serializes and sends a DHCP packet.
@@ -828,6 +834,7 @@ func (h *DHCPHandler) serializeAndSendDHCP(
 	dhcp *layers.DHCPv4,
 	serverIP net.IP,
 	serverMAC net.HardwareAddr,
+	vlan int,
 ) error {
 	udp := &layers.UDP{SrcPort: dhcpServerPort, DstPort: dhcpClientPort}
 	ip := &layers.IPv4{
@@ -848,7 +855,7 @@ func (h *DHCPHandler) serializeAndSendDHCP(
 		return fmt.Errorf("failed to serialize DHCP response: %w", err)
 	}
 
-	return h.stack.SendRawPacket(buf.Bytes())
+	return h.stack.SendRawPacketVLAN(buf.Bytes(), vlan)
 }
 
 // encodeUint32 encodes a uint32 as big-endian bytes.

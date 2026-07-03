@@ -170,6 +170,7 @@ func (h *UDPHandler) proxyToMap(device *config.Device, ipLayer *layers.IPv4, udp
 			buf[:n],
 			[]byte(srcMAC),
 			[]byte(dstMAC),
+			pkt.VLAN,
 		)
 	}()
 }
@@ -180,6 +181,7 @@ func (h *UDPHandler) SendUDP(
 	srcPort, dstPort uint16,
 	payload []byte,
 	srcMAC, dstMAC []byte,
+	vlan int,
 ) error {
 	// Build Ethernet header
 	eth := &layers.Ethernet{
@@ -233,6 +235,7 @@ func (h *UDPHandler) SendUDP(
 		Buffer:       buffer.Bytes(),
 		Length:       len(buffer.Bytes()),
 		SerialNumber: serialNum,
+		VLAN:         vlan, // reply on the VLAN the request arrived on
 	}
 
 	h.stack.Send(pkt)

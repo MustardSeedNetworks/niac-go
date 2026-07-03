@@ -261,7 +261,7 @@ func getFirstIPv4(ips []net.IP) net.IP {
 
 // sendNameQueryResponse sends a NetBIOS name query response.
 func (h *NetBIOSHandler) sendNameQueryResponse(
-	_ *Packet,
+	reqPkt *Packet,
 	transactionID uint16,
 	name string,
 	nameType byte,
@@ -339,6 +339,7 @@ func (h *NetBIOSHandler) sendNameQueryResponse(
 		buf.Bytes(),
 		srcMAC,
 		dstMAC,
+		reqPkt.VLAN,
 	)
 }
 

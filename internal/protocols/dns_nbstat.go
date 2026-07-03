@@ -14,7 +14,7 @@ import (
 )
 
 func (h *DNSHandler) handleNBSTATQuery(
-	_ *Packet,
+	reqPkt *Packet,
 	ipLayer *layers.IPv4,
 	udpLayer *layers.UDP,
 	serverDevice *config.Device,
@@ -43,6 +43,7 @@ func (h *DNSHandler) handleNBSTATQuery(
 		payload,
 		[]byte(serverDevice.MACAddress),
 		[]byte(dstMAC),
+		reqPkt.VLAN,
 	)
 }
 

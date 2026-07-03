@@ -167,6 +167,7 @@ func (h *SNMPHandler) sendResponse(
 		uint16(udp.DstPort), uint16(udp.SrcPort),
 		payload,
 		[]byte(srcMAC), []byte(dstMAC),
+		pkt.VLAN,
 	)
 	if err != nil && h.stack.GetProtocolDebugLevel(logging.ProtocolSNMP) >= 1 {
 		_, _ = fmt.Fprintf(os.Stdout,
