@@ -543,6 +543,7 @@ func (h *ICMPHandler) SendICMPUnreachable(
 	srcMAC, dstMAC []byte,
 	code uint8,
 	originalPacket []byte,
+	vlan int,
 ) error {
 	// Build Ethernet header
 	eth := &layers.Ethernet{
@@ -600,6 +601,7 @@ func (h *ICMPHandler) SendICMPUnreachable(
 		Buffer:       buffer.Bytes(),
 		Length:       len(buffer.Bytes()),
 		SerialNumber: serialNum,
+		VLAN:         vlan, // reply on the VLAN the request arrived on (tagged or untagged)
 	}
 
 	h.stack.Send(pkt)
