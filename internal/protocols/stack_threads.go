@@ -124,6 +124,16 @@ func (s *Stack) decodePacket(pkt *Packet) {
 		}
 	}()
 
+	// VLAN confinement: when the sim serves tagged VLANs, ignore untagged frames
+	// entirely. This guarantees it only ever replays on its tagged VLAN(s) and can
+	// never respond on the native/default VLAN — so a misconfigured trunk can't
+	// turn it into a rogue DHCP/ARP responder on a management network. Tagged
+	// traffic (incl. a tester's cross-subnet queries, which arrive on its own
+	// VLAN) is unaffected.
+	if s.vlanMode && pkt.VLAN <= 0 {
+		return
+	}
+
 	// Try MAC-based routing first (multicast protocols)
 	if s.routeByMAC(pkt) {
 		return
