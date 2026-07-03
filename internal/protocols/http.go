@@ -70,7 +70,12 @@ func NewHTTPHandler(stack *Stack) *HTTPHandler {
 }
 
 // HandleRequest processes an HTTP request.
-func (h *HTTPHandler) HandleRequest(_ *Packet, ipLayer *layers.IPv4, tcpLayer *layers.TCP, devices []*config.Device) {
+func (h *HTTPHandler) HandleRequest(
+	reqPkt *Packet,
+	ipLayer *layers.IPv4,
+	tcpLayer *layers.TCP,
+	devices []*config.Device,
+) {
 	debugLevel := h.stack.GetDebugLevel()
 
 	// Parse HTTP request
@@ -95,8 +100,8 @@ func (h *HTTPHandler) HandleRequest(_ *Packet, ipLayer *layers.IPv4, tcpLayer *l
 	// Generate response
 	response := h.generateResponse(request, devices)
 
-	// Send response
-	h.sendResponse(ipLayer, tcpLayer, response, devices)
+	// Send response on the VLAN + to the MAC the request arrived on.
+	h.sendResponse(ipLayer, tcpLayer, response, devices, reqPkt)
 }
 
 // HTTPRequest represents a parsed HTTP request.
@@ -370,6 +375,7 @@ func (h *HTTPHandler) sendResponse(
 	tcpLayer *layers.TCP,
 	response []byte,
 	devices []*config.Device,
+	reqPkt *Packet,
 ) {
 	debugLevel := h.stack.GetDebugLevel()
 
@@ -382,17 +388,14 @@ func (h *HTTPHandler) sendResponse(
 		return
 	}
 
-	// Get source MAC (lookup by source IP)
-	srcDevices := h.stack.GetDevices().GetByIP(ipLayer.SrcIP)
+	// Reply to the requester's own frame source MAC and VLAN — a real tester is
+	// not a modelled device, so a device-table lookup by IP would fail.
+	vlan := reqPktVLAN(reqPkt)
 
-	var srcMAC []byte
-
-	if len(srcDevices) > 0 && len(srcDevices[0].MACAddress) > 0 {
-		srcMAC = srcDevices[0].MACAddress
-	} else {
-		// Cannot find source MAC - skip sending
+	srcMAC := requestSourceMAC(reqPkt)
+	if srcMAC == nil {
 		if debugLevel >= DebugLevelInfo {
-			_, _ = fmt.Fprintf(os.Stdout, "Cannot send HTTP response: no MAC for %s\n", ipLayer.SrcIP)
+			_, _ = fmt.Fprintf(os.Stdout, "Cannot send HTTP response: no source MAC for %s\n", ipLayer.SrcIP)
 		}
 
 		return
@@ -463,6 +466,7 @@ func (h *HTTPHandler) sendResponse(
 		Length:       len(buffer.Bytes()),
 		SerialNumber: serialNum,
 		Device:       device,
+		VLAN:         vlan, // reply on the VLAN the request arrived on (tagged or untagged)
 	}
 
 	h.stack.Send(responsePkt)
