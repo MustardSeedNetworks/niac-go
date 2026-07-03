@@ -647,13 +647,13 @@ func TestDHCPSendDHCPResponse(t *testing.T) {
 	serverMAC := net.HardwareAddr{0x00, 0x11, 0x22, 0x33, 0x44, 0x55}
 
 	// SendDHCPOffer goes through sendDHCPResponse -> serializeAndSendDHCP
-	err := h.SendDHCPOffer(1234, mac, net.ParseIP("10.0.0.10"), serverIP, serverMAC)
+	err := h.SendDHCPOffer(1234, mac, net.ParseIP("10.0.0.10"), serverIP, serverMAC, 0)
 	if err == nil {
 		t.Log("SendDHCPOffer succeeded (queued)")
 	}
 
 	// SendDHCPAck
-	err = h.SendDHCPAck(1234, mac, net.ParseIP("10.0.0.10"), serverIP, serverMAC)
+	err = h.SendDHCPAck(1234, mac, net.ParseIP("10.0.0.10"), serverIP, serverMAC, 0)
 	if err == nil {
 		t.Log("SendDHCPAck succeeded (queued)")
 	}

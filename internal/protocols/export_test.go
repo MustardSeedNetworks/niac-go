@@ -392,7 +392,7 @@ func (h *ICMPHandler) SendEchoReply(
 	payload []byte,
 	device *config.Device,
 ) error {
-	return h.sendEchoReply(srcMAC, dstMAC, srcIP, dstIP, id, seq, payload, device)
+	return h.sendEchoReply(srcMAC, dstMAC, srcIP, dstIP, id, seq, payload, device, 0)
 }
 
 // ---- ICMPv6Handler exports ----

@@ -107,7 +107,7 @@ func (h *ARPHandler) handleARPRequest(pkt *Packet, arp *layers.ARP) {
 		return
 	}
 
-	h.sendARPReplies(devices, targetIP, sourceMAC, sourceIP)
+	h.sendARPReplies(devices, targetIP, sourceMAC, sourceIP, pkt.VLAN)
 }
 
 // logARPRequest logs an ARP request at verbose debug level.
@@ -131,7 +131,7 @@ func (h *ARPHandler) logDebug(msg string, args ...any) {
 
 // sendARPReplies sends ARP replies for all matching devices.
 func (h *ARPHandler) sendARPReplies(
-	devices []*config.Device, targetIP net.IP, sourceMAC net.HardwareAddr, sourceIP net.IP,
+	devices []*config.Device, targetIP net.IP, sourceMAC net.HardwareAddr, sourceIP net.IP, vlan int,
 ) {
 	for _, device := range devices {
 		if len(device.MACAddress) == 0 {
@@ -139,6 +139,7 @@ func (h *ARPHandler) sendARPReplies(
 		}
 		reply := h.buildARPReply(device.MACAddress, targetIP, sourceMAC, sourceIP)
 		if reply != nil {
+			reply.VLAN = vlan // answer on the VLAN the request arrived on
 			h.stack.Send(reply)
 			h.stack.IncrementStat("arp_replies")
 			h.logDebug(
