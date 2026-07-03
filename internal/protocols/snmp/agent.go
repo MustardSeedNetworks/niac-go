@@ -176,27 +176,65 @@ func (a *Agent) LoadWalkFile(filename string) error {
 		return fmt.Errorf("%w: %w", ErrFailedToParseWalkFile, err)
 	}
 
-	// Add all entries to MIB
+	// When a device declares topology links (trunk_ports), NIAC synthesizes the
+	// neighbour/forwarding tables from them (see initializeNeighborMIBs, run at
+	// construction). A capture walk carries the *original* device's neighbours,
+	// which are foreign to this lab — so skip those tables on load and let the
+	// authored topology win. Without trunk_ports the walk's data stands.
+	skipTopology := a.ownsSynthesizedTopology()
+
+	loaded, skipped := 0, 0
 	for _, entry := range entries {
+		if skipTopology && isSynthesizedTopologyOID(entry.OID) {
+			skipped++
+
+			continue
+		}
 		a.mib.Set(entry.OID, &OIDValue{
 			Type:  entry.Type,
 			Value: entry.Value,
 		})
+		loaded++
 	}
 
 	if a.debugLevel >= 1 {
 		a.logger.Debug(
 			"Loaded OIDs from walk file",
-			"count",
-			len(entries),
-			"filename",
-			filename,
-			"device",
-			a.device.Name,
+			"count", loaded,
+			"skipped_topology", skipped,
+			"filename", filename,
+			"device", a.device.Name,
 		)
 	}
 
 	return nil
+}
+
+// ownsSynthesizedTopology reports whether this device's topology is authored
+// via trunk_ports (in which case walk topology tables are skipped).
+func (a *Agent) ownsSynthesizedTopology() bool {
+	return a.device != nil && len(a.device.TrunkPorts) > 0
+}
+
+// isSynthesizedTopologyOID reports whether oid falls under a MIB subtree that
+// trunk_ports synthesis owns — LLDP remote systems, CDP cache, and the bridge
+// forwarding DB — and so must not be loaded from a capture walk. Handles the
+// optional leading dot in walk OIDs.
+func isSynthesizedTopologyOID(oid string) bool {
+	prefixes := []string{
+		lldpRemoteSystemsData, // 1.0.8802.1.1.2.1.4 — LLDP-MIB neighbours
+		cdpCache,              // 1.3.6.1.4.1.9.9.23.1.2 — CDP cache neighbours
+		dot1dTpFdbTable,       // 1.3.6.1.2.1.17.4.3 — bridge MAC→port
+	}
+
+	trimmed := strings.TrimPrefix(oid, ".")
+	for _, prefix := range prefixes {
+		if trimmed == prefix || strings.HasPrefix(trimmed, prefix+".") {
+			return true
+		}
+	}
+
+	return false
 }
 
 // HandleGet processes an SNMP GET request.
