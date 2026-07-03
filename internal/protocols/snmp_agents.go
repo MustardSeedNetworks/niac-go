@@ -62,6 +62,19 @@ func (g *snmpAgentGroup) ReindexAll() {
 	}
 }
 
+// SynthesizePeerTopologyAll fills each agent's downstream bridge FDB from the
+// resolved fleet MACs (see Agent.SynthesizePeerTopology). Every community agent
+// shares the device's topology, so all get the entries.
+func (g *snmpAgentGroup) SynthesizePeerTopologyAll(resolve snmp.PeerMACResolver) {
+	if g == nil {
+		return
+	}
+
+	for _, agent := range g.agents {
+		agent.SynthesizePeerTopology(resolve)
+	}
+}
+
 func (g *snmpAgentGroup) Communities() []string {
 	if g == nil {
 		return nil
