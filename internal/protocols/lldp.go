@@ -22,8 +22,13 @@ const (
 	// LLDPMulticastMAC is the LLDP multicast destination MAC address (01:80:c2:00:00:0e).
 	LLDPMulticastMAC = "01:80:c2:00:00:0e"
 
-	// LLDPAdvertiseInterval is the default LLDP advertisement interval per IEEE 802.1AB.
-	LLDPAdvertiseInterval = 30 * time.Second
+	// LLDPAdvertiseInterval is the LLDP advertisement interval.
+	//
+	// IEEE 802.1AB defaults to 30s, but — like CDP (see CDPAdvertiseInterval) — a
+	// discovery tool's short passive-listen window often falls between beacons at
+	// that cadence and never learns the connected switch. We beacon every 15s
+	// (matching the niac-java reference) so the simulator is reliably discovered.
+	LLDPAdvertiseInterval = 15 * time.Second
 
 	// LLDPTTL is the LLDP time-to-live in seconds.
 	LLDPTTL = 120

@@ -40,7 +40,7 @@ func buildAgent(t *testing.T) *snmp.Agent {
 // net-snmp client would, returning the decoded variables.
 func roundTrip(t *testing.T, agent *snmp.Agent, pduType gosnmp.PDUType, name string, maxRep uint32) []gosnmp.SnmpPDU {
 	t.Helper()
-	respVars := agent.ProcessPDU(pduType, []gosnmp.SnmpPDU{{Name: name}}, maxRep)
+	respVars := agent.ProcessPDU(pduType, []gosnmp.SnmpPDU{{Name: name}}, 0, maxRep)
 	resp := &gosnmp.SnmpPacket{
 		Version:   gosnmp.Version2c,
 		Community: "public",
@@ -132,7 +132,7 @@ func TestWireGetBulkBoundedBySize(t *testing.T) {
 	reached := map[string]bool{}
 
 	for range 100 {
-		respVars := agent.ProcessPDU(gosnmp.GetBulkRequest, []gosnmp.SnmpPDU{{Name: current}}, 20)
+		respVars := agent.ProcessPDU(gosnmp.GetBulkRequest, []gosnmp.SnmpPDU{{Name: current}}, 0, 20)
 		assertFitsFrame(t, respVars)
 
 		next, done := advanceWalk(respVars, want, reached)

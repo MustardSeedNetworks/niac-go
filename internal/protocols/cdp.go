@@ -26,8 +26,15 @@ const (
 	// CDPProtocol is the CDP protocol ID.
 	CDPProtocol = 0x2000
 
-	// CDPAdvertiseInterval is the default CDP advertisement interval.
-	CDPAdvertiseInterval = 60 * time.Second
+	// CDPAdvertiseInterval is the CDP advertisement interval.
+	//
+	// Real switches beacon every 60s, but a discovery tool (e.g. a NetAlly
+	// CyberScope) determines "the switch I'm connected to" from CDP frames it
+	// hears during a short passive listen — often well under 60s. At the real
+	// cadence the tool's window frequently falls between beacons and shows no
+	// connected switch. The niac-java reference "babbles" every 15s so the frame
+	// is always caught; we match that so the simulator is reliably discovered.
+	CDPAdvertiseInterval = 15 * time.Second
 
 	// CDPHoldtime is the CDP holdtime in seconds.
 	CDPHoldtime = 180

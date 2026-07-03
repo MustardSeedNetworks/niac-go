@@ -1,8 +1,8 @@
 package snmp
 
 import (
-	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -129,17 +129,50 @@ func (m *MIB) GetNext(oid string) (string, *OIDValue) {
 	return nextOID, value
 }
 
+// Reindex eagerly rebuilds the sorted OID list if it is stale.
+//
+// GetNext needs a sorted view of the OID space. Building it lazily on the first
+// GetNext means that sort runs on the stack's single decode goroutine, so a
+// fresh multi-device discovery (every device's MIB dirty at once) serializes one
+// large sort per device on the hot path and stalls SNMP responses fleet-wide —
+// big devices time out with "no details" while tiny APs slip through. Call this
+// once after loading a device's OIDs so the cost is paid at startup, not during
+// a walk.
+func (m *MIB) Reindex() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.dirty {
+		m.updateSortedList()
+	}
+}
+
 // updateSortedList updates the sorted OID list (caller must hold write lock).
+//
+// Each OID is parsed into its integer arcs exactly once (decorate-sort-
+// undecorate) rather than re-parsing both operands on every comparison. On a
+// 15k-OID device that is the difference between O(n) and O(n log n) parses — and
+// with many devices reindexing at once, the naive version pegged a core for
+// minutes.
 func (m *MIB) updateSortedList() {
-	m.sorted = make([]string, 0, len(m.entries))
-	for oid := range m.entries {
-		m.sorted = append(m.sorted, oid)
+	type keyed struct {
+		oid   string
+		parts []int
 	}
 
-	// Sort using OID comparison
-	sort.Slice(m.sorted, func(i, j int) bool {
-		return compareOIDs(m.sorted[i], m.sorted[j]) < 0
+	decorated := make([]keyed, 0, len(m.entries))
+	for oid := range m.entries {
+		decorated = append(decorated, keyed{oid: oid, parts: parseOIDParts(oid)})
+	}
+
+	sort.Slice(decorated, func(i, j int) bool {
+		return compareOIDParts(decorated[i].parts, decorated[j].parts) < 0
 	})
+
+	m.sorted = make([]string, len(decorated))
+	for i, d := range decorated {
+		m.sorted[i] = d.oid
+	}
 
 	m.dirty = false
 }
@@ -191,11 +224,12 @@ func (m *MIB) AllOIDs() []string {
 // Returns -1 if oid1 < oid2, 0 if equal, 1 if oid1 > oid2.
 // FEATURE #116: Added godoc for utility functions.
 func compareOIDs(oid1, oid2 string) int {
-	// Parse both OIDs
-	parts1 := parseOIDParts(oid1)
-	parts2 := parseOIDParts(oid2)
+	return compareOIDParts(parseOIDParts(oid1), parseOIDParts(oid2))
+}
 
-	// Compare component by component
+// compareOIDParts compares two OIDs already parsed into integer arcs.
+// Returns -1 if parts1 < parts2, 0 if equal, 1 if parts1 > parts2.
+func compareOIDParts(parts1, parts2 []int) int {
 	minLen := min(len(parts1), len(parts2))
 
 	for i := range minLen {
@@ -232,9 +266,11 @@ func parseOIDParts(oid string) []int {
 			continue
 		}
 
-		var num int
-
-		_, err := fmt.Sscanf(part, "%d", &num)
+		// strconv.Atoi rather than fmt.Sscanf: this runs for every arc of every
+		// OID compared during a sort, so on a 15k-OID device it is called
+		// millions of times. Sscanf's reflection made each MIB sort take seconds
+		// on the single decode goroutine and stalled multi-device discovery.
+		num, err := strconv.Atoi(part)
 		if err == nil {
 			result = append(result, num)
 		}
@@ -266,9 +302,7 @@ func IsValidOID(oid string) bool {
 			return false
 		}
 
-		var num int
-
-		_, err := fmt.Sscanf(part, "%d", &num)
+		num, err := strconv.Atoi(part)
 		if err != nil {
 			return false
 		}

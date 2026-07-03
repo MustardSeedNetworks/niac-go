@@ -58,7 +58,7 @@ func TestReproSnmpwalk(t *testing.T) {
 	seen := map[string]bool{}
 	var walked []string
 	for range 100 {
-		resp := agent.ProcessPDU(gosnmp.GetNextRequest, []gosnmp.SnmpPDU{{Name: current}}, 0)
+		resp := agent.ProcessPDU(gosnmp.GetNextRequest, []gosnmp.SnmpPDU{{Name: current}}, 0, 0)
 		if len(resp) != 1 {
 			t.Fatalf("GET-NEXT returned %d vars", len(resp))
 		}
