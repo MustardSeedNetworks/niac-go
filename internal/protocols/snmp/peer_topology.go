@@ -42,6 +42,10 @@ func (a *Agent) SynthesizePeerTopology(resolve PeerMACResolver) {
 	changed := false
 	maxPort := 0
 
+	// Infer the capture's bridgePort→ifIndex offset once, up front, from its own
+	// table. Sampling per-port would drift as we add rows below.
+	offset, hasOffset := a.basePortOffset()
+
 	for _, trunk := range a.device.TrunkPorts {
 		if trunk.RemoteDevice == "" || trunk.Interface == "" {
 			continue
@@ -52,7 +56,7 @@ func (a *Agent) SynthesizePeerTopology(resolve PeerMACResolver) {
 			continue
 		}
 
-		bridgePort, ok := a.bridgePortForInterface(trunk.Interface)
+		bridgePort, ok := a.bridgePortForInterface(trunk.Interface, offset, hasOffset)
 		if !ok {
 			continue
 		}
@@ -81,7 +85,7 @@ func (a *Agent) SynthesizePeerTopology(resolve PeerMACResolver) {
 // doesn't model that port, it derives the physical port number from the name and
 // adds the dot1dBasePort row — a small, in-range port, not the ifIndex (which a
 // manager would reject as out of range).
-func (a *Agent) bridgePortForInterface(name string) (int, bool) {
+func (a *Agent) bridgePortForInterface(name string, offset int, hasOffset bool) (int, bool) {
 	ifIndex, ok := a.mib.IndexSuffixForValue(ifDescr, name)
 	if !ok {
 		ifIndex, ok = a.mib.IndexSuffixForValue(ifName, name)
@@ -98,16 +102,20 @@ func (a *Agent) bridgePortForInterface(name string) (int, bool) {
 		}
 	}
 
-	// Otherwise use the interface's physical port number as the bridge port
-	// (matches the capture's convention, e.g. Fa0/5 -> port 5) and add the row.
-	port := physicalPortNumber(name)
-	if port <= 0 {
-		return 0, false
-	}
-
 	ifIndexNum, err := strconv.Atoi(ifIndex)
 	if err != nil {
 		return 0, false
+	}
+
+	// The capture models only a few bridge ports, so derive one. dot1dBasePortIfIndex
+	// is linear (ifIndex = bridgePort + offset), so apply the offset inferred from
+	// the capture. This keeps distinct interface types distinct — Fa0/1 and Gi0/1
+	// have different ifIndex, so different bridge ports — unlike naming the port by
+	// the trailing number, which would collide them. Add the row so
+	// FDB port -> dot1dBasePortIfIndex -> ifIndex -> ifName resolves.
+	port := ifIndexNum
+	if hasOffset && ifIndexNum-offset > 0 {
+		port = ifIndexNum - offset
 	}
 
 	portStr := strconv.Itoa(port)
@@ -117,20 +125,15 @@ func (a *Agent) bridgePortForInterface(name string) (int, bool) {
 	return port, true
 }
 
-// physicalPortNumber extracts the trailing port number of a Cisco-style
-// interface name ("FastEthernet0/5" -> 5, "GigabitEthernet1/0/24" -> 24).
-func physicalPortNumber(name string) int {
-	slash := strings.LastIndex(name, "/")
-	if slash < 0 || slash == len(name)-1 {
-		return 0
+// basePortOffset infers the capture's linear bridgePort→ifIndex offset (ifIndex =
+// bridgePort + offset) from a sampled dot1dBasePortIfIndex row.
+func (a *Agent) basePortOffset() (int, bool) {
+	p, i, ok := a.mib.SampleIntEntry(dot1dBasePortIfIndex)
+	if !ok {
+		return 0, false
 	}
 
-	n, err := strconv.Atoi(name[slash+1:])
-	if err != nil {
-		return 0
-	}
-
-	return n
+	return i - p, true
 }
 
 // raiseBaseNumPorts ensures dot1dBaseNumPorts is at least n.

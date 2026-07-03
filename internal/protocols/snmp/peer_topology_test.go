@@ -77,12 +77,16 @@ func TestSynthesizePeerTopologyDerivesPortWhenWalkSparse(t *testing.T) {
 
 	agent := NewAgent(dev, 0)
 
-	// Walk provides ifDescr and a small NumPorts, but no dot1dBasePort for Fa0/7.
+	// Walk provides ifDescr, a small NumPorts, and a sample bridge-port row
+	// (port 2 -> ifIndex 10002, i.e. offset 10000), but no row for Fa0/7.
 	fa7 := &OIDValue{Type: gosnmp.OctetString, Value: "FastEthernet0/7"}
 	if err := agent.SetOID(ifDescr+".10007", fa7); err != nil {
 		t.Fatalf("SetOID: %v", err)
 	}
 	if err := agent.SetOID(dot1dBaseNumPorts, &OIDValue{Type: gosnmp.Integer, Value: 5}); err != nil {
+		t.Fatalf("SetOID: %v", err)
+	}
+	if err := agent.SetOID(dot1dBasePortIfIndex+".2", &OIDValue{Type: gosnmp.Integer, Value: 10002}); err != nil {
 		t.Fatalf("SetOID: %v", err)
 	}
 
