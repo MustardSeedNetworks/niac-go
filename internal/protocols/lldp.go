@@ -559,6 +559,7 @@ func (h *LLDPHandler) sendFrame(device *config.Device, lldpPayload []byte) error
 		Length:       len(buffer.Bytes()),
 		SerialNumber: serialNum,
 		Device:       device,
+		VLAN:         device.VLAN, // advertise on the device's access VLAN
 	}
 
 	h.stack.Send(pkt)

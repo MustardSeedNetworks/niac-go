@@ -128,6 +128,7 @@ func sendDiscoveryFrame(dstMACString string, device *config.Device, payload []by
 		Length:       len(frame),
 		SerialNumber: serialNum,
 		Device:       device,
+		VLAN:         device.VLAN, // advertise on the device's access VLAN
 	}
 
 	stack.Send(pkt)
