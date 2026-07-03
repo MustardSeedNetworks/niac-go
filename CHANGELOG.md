@@ -5,6 +5,24 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.92.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.91.0...v0.92.0) (2026-07-03)
+
+
+### Features
+
+* **api:** make HTTP method and body-size authoritative in route registry ([#810](https://github.com/MustardSeedNetworks/niac-go/issues/810)) ([04e8f53](https://github.com/MustardSeedNetworks/niac-go/commit/04e8f539d513477b176097a4ca40acb8ee1813da))
+* **snmp:** implement SNMPv3 USM authoritative engine (authPriv) ([#853](https://github.com/MustardSeedNetworks/niac-go/issues/853)) ([a3c5976](https://github.com/MustardSeedNetworks/niac-go/commit/a3c59763ef3bdc171bee6102462c6054d694c5e1))
+
+
+### Bug Fixes
+
+* **ci:** run E2E daemon with NIAC_E2E_DRY_RUN_SIMULATION=1 ([#817](https://github.com/MustardSeedNetworks/niac-go/issues/817)) ([43d2272](https://github.com/MustardSeedNetworks/niac-go/commit/43d2272b6d898a6f544d3da2a8e358c7125d93d6))
+* **protocols:** bound DHCPv6 DUID and throttle iperf3 session sweep ([#852](https://github.com/MustardSeedNetworks/niac-go/issues/852)) ([eebebf6](https://github.com/MustardSeedNetworks/niac-go/commit/eebebf6a371a8c0a802a3beae4a63f8569bb5522))
+* **sanitize:** correct numeric-walk identity scrub and stop OID corruption ([#854](https://github.com/MustardSeedNetworks/niac-go/issues/854)) ([68fe16e](https://github.com/MustardSeedNetworks/niac-go/commit/68fe16e4453315ce76b8378f2dc2f5e8ffea4a6e))
+* **snmp:** make walk replay scale and stop dropping valid OIDs ([#844](https://github.com/MustardSeedNetworks/niac-go/issues/844)) ([38a6e73](https://github.com/MustardSeedNetworks/niac-go/commit/38a6e733977eb1f233dfde8c6ba356ba04442c3a))
+* **snmp:** stop the simulator returning 0 OIDs — crash-safety, capture latency, bulk sizing ([#848](https://github.com/MustardSeedNetworks/niac-go/issues/848)) ([2b9bc0f](https://github.com/MustardSeedNetworks/niac-go/commit/2b9bc0fdce4c84cf52dd7735fd39ae3a2117ff98))
+* **ui:** make the '?' help shortcut actually open the drawer (N1, N5) ([#812](https://github.com/MustardSeedNetworks/niac-go/issues/812)) ([202ba67](https://github.com/MustardSeedNetworks/niac-go/commit/202ba6722a88c3e5c340b50e017db87707801c6d))
+
 ## [0.91.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.90.0...v0.91.0) (2026-06-16)
 
 
