@@ -185,6 +185,15 @@ func (a *Agent) LoadWalkFile(filename string) error {
 
 	loaded, skipped := 0, 0
 	for _, entry := range entries {
+		// A device's identity (sysName) is authored from its config name, not the
+		// captured device's name — otherwise every device sharing a walk collides
+		// under one name and a discovery tool merges them. sysDescr/location stay
+		// as the walk's authentic values.
+		if isAuthoredSysNameOID(entry.OID) {
+			skipped++
+
+			continue
+		}
 		if skipTopology && isSynthesizedTopologyOID(entry.OID) {
 			skipped++
 
@@ -208,6 +217,16 @@ func (a *Agent) LoadWalkFile(filename string) error {
 	}
 
 	return nil
+}
+
+// sysNameOID is SNMPv2-MIB::sysName.0 — a device's administrative identity,
+// always authored from the config rather than the capture walk.
+const sysNameOID = "1.3.6.1.2.1.1.5.0"
+
+// isAuthoredSysNameOID reports whether oid is sysName.0 (with or without the
+// leading dot walks use).
+func isAuthoredSysNameOID(oid string) bool {
+	return strings.TrimPrefix(oid, ".") == sysNameOID
 }
 
 // ownsSynthesizedTopology reports whether this device's topology is authored
