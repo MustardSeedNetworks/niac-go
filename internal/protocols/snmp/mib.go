@@ -130,6 +130,44 @@ func (m *MIB) IndexSuffixForValue(table, want string) (string, bool) {
 	return best, found
 }
 
+// SampleIntEntry returns one entry under table (a table-column prefix) whose
+// suffix and value are both integers: its numeric suffix and integer value. Used
+// to infer a table's index convention — e.g. dot1dBasePortIfIndex is linear
+// (ifIndex = bridgePort + constant), so one sample gives the offset for ports the
+// capture didn't model. Returns ok=false if the table has no such entry.
+func (m *MIB) SampleIntEntry(table string) (int, int, bool) {
+	table = strings.TrimPrefix(table, ".")
+	prefix := table + "."
+
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	for oid, val := range m.entries {
+		if !strings.HasPrefix(oid, prefix) {
+			continue
+		}
+
+		s, err := strconv.Atoi(strings.TrimPrefix(oid, prefix))
+		if err != nil {
+			continue
+		}
+
+		v := val
+		if v.Dynamic != nil {
+			v = v.Dynamic()
+		}
+
+		iv, err2 := strconv.Atoi(oidValueString(v))
+		if err2 != nil {
+			continue
+		}
+
+		return s, iv, true
+	}
+
+	return 0, 0, false
+}
+
 // oidValueString renders an OIDValue's payload as a string for comparison,
 // covering the string and []byte encodings a walk may load.
 func oidValueString(v *OIDValue) string {
