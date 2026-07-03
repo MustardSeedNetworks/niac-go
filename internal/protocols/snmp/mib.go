@@ -1,6 +1,7 @@
 package snmp
 
 import (
+	"fmt"
 	"sort"
 	"strconv"
 	"strings"
@@ -78,6 +79,68 @@ func (m *MIB) Get(oid string) *OIDValue {
 	}
 
 	return value
+}
+
+// IndexSuffixForValue returns the trailing index of the OID under table (a
+// table-column prefix, e.g. ifDescr) whose value stringifies to want. When more
+// than one entry matches it returns the numerically largest index: a device with
+// both a real walk and trunk_ports carries the interface twice — the walk's real
+// ifIndex (Cisco convention, 10000+) and a small sequential synthesis index —
+// and the walk's is the one whose bridge port / ifName a manager renders.
+// Returns the suffix after "<table>." and true on a hit.
+func (m *MIB) IndexSuffixForValue(table, want string) (string, bool) {
+	table = strings.TrimPrefix(table, ".")
+	prefix := table + "."
+
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	best := ""
+	bestNum := -1
+	found := false
+
+	for oid, val := range m.entries {
+		if !strings.HasPrefix(oid, prefix) {
+			continue
+		}
+
+		v := val
+		if v.Dynamic != nil {
+			v = v.Dynamic()
+		}
+
+		if oidValueString(v) != want {
+			continue
+		}
+
+		suffix := strings.TrimPrefix(oid, prefix)
+		// Prefer the largest single-integer index; fall back to first match for
+		// non-numeric suffixes.
+		if n, err := strconv.Atoi(suffix); err == nil {
+			if n > bestNum {
+				bestNum, best = n, suffix
+			}
+		} else if !found {
+			best = suffix
+		}
+
+		found = true
+	}
+
+	return best, found
+}
+
+// oidValueString renders an OIDValue's payload as a string for comparison,
+// covering the string and []byte encodings a walk may load.
+func oidValueString(v *OIDValue) string {
+	switch t := v.Value.(type) {
+	case string:
+		return t
+	case []byte:
+		return string(t)
+	default:
+		return fmt.Sprintf("%v", v.Value)
+	}
 }
 
 // GetNext retrieves the next OID in lexicographical order.

@@ -151,6 +151,10 @@ const (
 	// FrameRateOutMultiplier is the multiplier for outgoing frame rate simulation.
 	FrameRateOutMultiplier = 80
 
+	// FDBStatusLearned is the FDB status for a dynamically learned entry
+	// (dot1dTpFdbStatus learned(3)) — a downstream host MAC seen on a port.
+	FDBStatusLearned = 3
+
 	// FDBStatusSelf is the FDB status for self entry.
 	FDBStatusSelf = 4
 
