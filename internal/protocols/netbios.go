@@ -297,7 +297,7 @@ func (h *NetBIOSHandler) sendNameQueryResponse(
 	ttl := uint32(nbnsDefaultTTL)
 	nodeFlags := uint16(nbnsDefaultNodeFlags) // Default: B-node, unique name
 
-	if matched := h.stack.GetDevices().GetByMAC(srcMAC); matched != nil && matched.NetBIOSConfig != nil {
+	if matched := h.stack.devicesFor(reqPkt.VLAN).GetByMAC(srcMAC); matched != nil && matched.NetBIOSConfig != nil {
 		if matched.NetBIOSConfig.TTL > 0 {
 			ttl = matched.NetBIOSConfig.TTL
 		}

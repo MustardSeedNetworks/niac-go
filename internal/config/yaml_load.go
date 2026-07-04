@@ -3,6 +3,8 @@ package config
 import (
 	"fmt"
 	"path/filepath"
+	"strconv"
+	"strings"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/converter"
 )
@@ -67,11 +69,130 @@ func buildConfigFromYAML(yamlConfig *converter.Config, configDir string) (*Confi
 		cfg.Devices = append(cfg.Devices, device)
 	}
 
-	if len(cfg.Devices) == 0 {
+	segments, err := buildSegments(yamlConfig, cfg.IncludePath, configDir)
+	if err != nil {
+		return nil, err
+	}
+
+	cfg.Segments = segments
+
+	// A config must describe at least one device somewhere — either flat, or
+	// inline in a segment. (Segments that only reference a `config:` file are
+	// resolved later by the loader, so they legitimately have no inline devices.)
+	if len(cfg.Devices) == 0 && !configHasDevices(cfg.Segments) {
 		return nil, ErrNoDevicesDefined
 	}
 
 	return cfg, nil
+}
+
+// buildSegments converts and validates the multi-VLAN segment bindings (ADR
+// 0008). Segments and a top-level device list are mutually exclusive.
+func buildSegments(yamlConfig *converter.Config, includePath, configDir string) ([]Segment, error) {
+	if len(yamlConfig.Segments) == 0 {
+		return nil, nil
+	}
+
+	if len(yamlConfig.Devices) > 0 {
+		return nil, ErrSegmentsAndTopLevelDevices
+	}
+
+	segments := make([]Segment, 0, len(yamlConfig.Segments))
+
+	for _, ySeg := range yamlConfig.Segments {
+		seg, err := buildSegment(ySeg, includePath, configDir)
+		if err != nil {
+			return nil, err
+		}
+
+		segments = append(segments, seg)
+	}
+
+	return segments, nil
+}
+
+func buildSegment(ySeg converter.Segment, includePath, configDir string) (Segment, error) {
+	tag, err := parseSegmentTag(string(ySeg.Tag))
+	if err != nil {
+		return Segment{}, err
+	}
+
+	hasInline := len(ySeg.Devices) > 0
+	hasConfig := ySeg.Config != ""
+
+	if hasInline == hasConfig {
+		return Segment{}, fmt.Errorf("%w: tag %q", ErrSegmentDevicesXORConfig, ySeg.Tag)
+	}
+
+	seg := Segment{Tag: tag, ConfigPath: ySeg.Config}
+
+	if hasConfig {
+		return resolveSegmentConfig(seg, ySeg.Config, configDir)
+	}
+
+	for _, yamlDevice := range ySeg.Devices {
+		device, convErr := convertYAMLDevice(yamlDevice, includePath)
+		if convErr != nil {
+			return Segment{}, convErr
+		}
+
+		seg.Devices = append(seg.Devices, device)
+	}
+
+	return seg, nil
+}
+
+// resolveSegmentConfig loads a segment's `config:` file (a whole demo) and uses
+// its devices as the segment's device set. The path is relative to the parent
+// config's directory. A segment config that itself declares segments is
+// rejected — nesting demos is out of scope.
+func resolveSegmentConfig(seg Segment, path, configDir string) (Segment, error) {
+	if !filepath.IsAbs(path) && configDir != "" {
+		path = filepath.Join(configDir, path)
+	}
+
+	loaded, err := LoadYAML(path)
+	if err != nil {
+		return Segment{}, fmt.Errorf("segment tag %d config %q: %w", seg.Tag, path, err)
+	}
+
+	if len(loaded.Segments) > 0 {
+		return Segment{}, fmt.Errorf(
+			"%w: segment tag %d config %q declares its own segments",
+			ErrInvalidSegmentTag,
+			seg.Tag,
+			path,
+		)
+	}
+
+	seg.Devices = loaded.Devices
+
+	return seg, nil
+}
+
+// parseSegmentTag maps a segment tag string to a VLAN id: "untagged" -> 0, else
+// a decimal VLAN id in 1..4094.
+func parseSegmentTag(tag string) (int, error) {
+	if strings.EqualFold(tag, "untagged") {
+		return UntaggedTag, nil
+	}
+
+	vlan, err := strconv.Atoi(tag)
+	if err != nil || vlan < minVLANID || vlan > maxVLANID {
+		return 0, fmt.Errorf("%w: %q (want \"untagged\" or 1..4094)", ErrInvalidSegmentTag, tag)
+	}
+
+	return vlan, nil
+}
+
+func configHasDevices(segments []Segment) bool {
+	for _, seg := range segments {
+		if len(seg.Devices) > 0 || seg.ConfigPath != "" {
+			return true
+		}
+	}
+
+	return false
 }
 
 func resolveIncludePath(configDir, includePath string) string {

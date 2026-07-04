@@ -112,7 +112,7 @@ func runValidate(args []string, options *validateOptions) {
 	if options.json {
 		outputJSONResult(result)
 	} else {
-		outputTextResult(result, configFile, options.verbose, len(cfg.Devices))
+		outputTextResult(result, configFile, options.verbose, cfg.DeviceCount())
 	}
 
 	// Exit with appropriate code
