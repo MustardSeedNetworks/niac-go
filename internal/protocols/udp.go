@@ -36,6 +36,27 @@ const (
 	udpIPv4TTL     = 64 // IPv4 default TTL
 )
 
+// NetAlly UDP reflector constants. The reflector echoes probes whose payload
+// carries one of the signatures below, starting at reflectorSigOffset bytes
+// into the UDP payload (matching niac-java Udp.reflect: signatureIdx =
+// udpDataIdx + 5).
+const (
+	reflectorSigOffset = 5 // Signature starts 5 bytes into the UDP payload
+
+	// reflectorWiggleIPPrec toggles the IP-precedence bit; reflectorWiggleDSCP
+	// toggles the bottom two DSCP bits. The reflected packet's ToS is XORed
+	// with one of these so the tester can confirm the round trip preserved (or
+	// deliberately altered) DiffServ marking.
+	reflectorWiggleIPPrec = 0x01
+	reflectorWiggleDSCP   = 0x03
+
+	// reflectorSigData and reflectorSigProbe are the 8-byte magic strings that
+	// mark a reflector probe. A payload matching either at reflectorSigOffset is
+	// echoed back.
+	reflectorSigData  = "DATA:OT\x00"
+	reflectorSigProbe = "PROBEOT\x00"
+)
+
 // UDPHandler handles UDP packets.
 type UDPHandler struct {
 	stack *Stack
@@ -102,6 +123,13 @@ func (h *UDPHandler) HandlePacket(pkt *Packet, ipLayer *layers.IPv4, devices []*
 		// NetBIOS Datagram Service
 		h.stack.netbiosHandler.HandleDatagramService(pkt, packet, udp, devices)
 	default:
+		// A NetAlly reflector probe arrives on an arbitrary UDP port and is
+		// identified by its payload signature, not the port — so reflection
+		// is attempted here rather than via a fixed case.
+		if h.tryReflect(pkt, ipLayer, udp, devices) {
+			return
+		}
+
 		if debugLevel >= DebugLevelVerbose {
 			_, _ = fmt.Fprintf(os.Stdout, "UDP packet to unhandled port %d sn=%d\n", udp.DstPort, pkt.SerialNumber)
 		}
@@ -175,13 +203,26 @@ func (h *UDPHandler) proxyToMap(device *config.Device, ipLayer *layers.IPv4, udp
 	}()
 }
 
-// SendUDP sends a UDP packet.
+// SendUDP sends a UDP packet with a default (zero) ToS byte.
 func (h *UDPHandler) SendUDP(
 	srcIP, dstIP []byte,
 	srcPort, dstPort uint16,
 	payload []byte,
 	srcMAC, dstMAC []byte,
 	vlan int,
+) error {
+	return h.sendUDPWithTOS(srcIP, dstIP, srcPort, dstPort, payload, srcMAC, dstMAC, vlan, 0)
+}
+
+// sendUDPWithTOS sends a UDP packet, stamping the IPv4 ToS byte. tos lets the
+// reflector path preserve/alter DiffServ marking; other callers pass 0.
+func (h *UDPHandler) sendUDPWithTOS(
+	srcIP, dstIP []byte,
+	srcPort, dstPort uint16,
+	payload []byte,
+	srcMAC, dstMAC []byte,
+	vlan int,
+	tos uint8,
 ) error {
 	// Build Ethernet header
 	eth := &layers.Ethernet{
@@ -194,6 +235,7 @@ func (h *UDPHandler) SendUDP(
 	ipLayer := &layers.IPv4{
 		Version:  udpIPv4Version,
 		IHL:      udpIPv4IHL,
+		TOS:      tos,
 		TTL:      udpIPv4TTL,
 		Protocol: layers.IPProtocolUDP,
 		SrcIP:    srcIP,
@@ -246,6 +288,128 @@ func (h *UDPHandler) SendUDP(
 	}
 
 	return nil
+}
+
+// tryReflect echoes a NetAlly reflector probe back to its sender. It returns
+// true when the packet was a reflector probe destined for a reflector-enabled
+// device (and was reflected), false otherwise so the caller can fall through to
+// normal unhandled-port logging.
+//
+// A reflected packet swaps source/destination MAC and IP but — matching
+// niac-java Udp.reflect — leaves the UDP ports untouched; the tester matches
+// the reply by its payload signature, not the 4-tuple. The IPv4 ToS byte is
+// wiggled so the round trip's DiffServ handling is observable, and the reply is
+// delayed by the device's configured latency +/- jitter.
+func (h *UDPHandler) tryReflect(pkt *Packet, ipLayer *layers.IPv4, udp *layers.UDP, devices []*config.Device) bool {
+	device := reflectorForIP(devices, ipLayer.DstIP)
+	if device == nil {
+		return false
+	}
+
+	if !reflectorSignatureMatch(udp.Payload) {
+		return false
+	}
+
+	srcMAC := []byte(device.MACAddress)
+	dstMAC := pkt.GetSourceMAC()
+
+	if len(srcMAC) == 0 || len(dstMAC) == 0 {
+		return false
+	}
+
+	srcIP := ipLayer.DstIP.To4() // reflector answers as itself
+	dstIP := ipLayer.SrcIP.To4() // back to the tester
+
+	if srcIP == nil || dstIP == nil {
+		return false
+	}
+
+	tos := wiggleTOS(ipLayer.TOS, device.ReflectorConfig.DSCP)
+
+	// Own the payload bytes: the capture buffer is reused, and reflection may
+	// be deferred onto a timer goroutine.
+	payload := append([]byte(nil), udp.Payload...)
+	srcPort := uint16(udp.SrcPort)
+	dstPort := uint16(udp.DstPort)
+	vlan := pkt.VLAN
+
+	send := func() {
+		_ = h.sendUDPWithTOS(srcIP, dstIP, srcPort, dstPort, payload, srcMAC, dstMAC, vlan, tos)
+	}
+
+	if delay := reflectorDelay(device.ReflectorConfig); delay > 0 {
+		time.AfterFunc(delay, send)
+	} else {
+		send()
+	}
+
+	if h.stack.GetDebugLevel() >= DebugLevelVerbose {
+		_, _ = fmt.Fprintf(os.Stdout, "Reflected UDP probe %s:%d -> %s (sn=%d)\n",
+			ipLayer.SrcIP, udp.SrcPort, ipLayer.DstIP, pkt.SerialNumber)
+	}
+
+	return true
+}
+
+// reflectorForIP returns the first reflector-enabled device that owns ip, or
+// nil if none does.
+func reflectorForIP(devices []*config.Device, ip net.IP) *config.Device {
+	for _, device := range devices {
+		if device.ReflectorConfig == nil {
+			continue
+		}
+
+		for _, deviceIP := range device.IPAddresses {
+			if deviceIP.Equal(ip) {
+				return device
+			}
+		}
+	}
+
+	return nil
+}
+
+// reflectorSignatureMatch reports whether payload carries a reflector signature
+// at reflectorSigOffset.
+func reflectorSignatureMatch(payload []byte) bool {
+	for _, sig := range []string{reflectorSigData, reflectorSigProbe} {
+		if len(payload) >= reflectorSigOffset+len(sig) &&
+			string(payload[reflectorSigOffset:reflectorSigOffset+len(sig)]) == sig {
+			return true
+		}
+	}
+
+	return false
+}
+
+// wiggleTOS toggles the IP-precedence bit (or the bottom two DSCP bits when
+// dscp is set) of a ToS byte, matching niac-java's reflector wiggle.
+func wiggleTOS(tos uint8, dscp bool) uint8 {
+	wiggle := uint8(reflectorWiggleIPPrec)
+	if dscp {
+		wiggle = reflectorWiggleDSCP
+	}
+
+	return tos ^ wiggle
+}
+
+// reflectorDelay returns the send delay for a reflected packet: the configured
+// latency, randomised by +/- jitter, floored at zero.
+func reflectorDelay(cfg *config.ReflectorConfig) time.Duration {
+	if cfg.LatencyMs <= 0 && cfg.JitterMs <= 0 {
+		return 0
+	}
+
+	ms := cfg.LatencyMs
+	if cfg.JitterMs > 0 {
+		ms += getSimRand().IntN(2*cfg.JitterMs+1) - cfg.JitterMs
+	}
+
+	if ms < 0 {
+		ms = 0
+	}
+
+	return time.Duration(ms) * time.Millisecond
 }
 
 // HandlePacketV6 processes a UDP packet over IPv6.

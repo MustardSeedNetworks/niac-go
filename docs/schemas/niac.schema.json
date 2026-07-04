@@ -298,6 +298,9 @@
         "iperf3": {
           "$ref": "#/$defs/IPerf3Config"
         },
+        "reflector": {
+          "$ref": "#/$defs/ReflectorConfig"
+        },
         "interfaces": {
           "items": {
             "$ref": "#/$defs/Interface"
@@ -1083,6 +1086,21 @@
             "type": "string"
           },
           "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "ReflectorConfig": {
+      "properties": {
+        "latency_ms": {
+          "type": "integer"
+        },
+        "jitter_ms": {
+          "type": "integer"
+        },
+        "dscp": {
+          "type": "boolean"
         }
       },
       "additionalProperties": false,
