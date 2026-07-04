@@ -436,6 +436,41 @@ TCP is automatically used by application protocols (HTTP, FTP) that require it. 
 
 UDP is automatically used by application protocols (DNS, DHCP, SNMP) that require it. No explicit configuration needed.
 
+#### UDP Reflector
+
+A device can act as a **NetAlly-style UDP reflector** — the endpoint a
+performance/TrueSpeed tester bounces probes off to measure round-trip latency,
+jitter, and DiffServ handling. When a UDP packet arrives whose payload carries a
+reflector signature (`DATA:OT` or `PROBEOT`, 5 bytes into the payload), the
+device echoes it back to the sender with source/destination MAC and IP swapped,
+the ToS byte wiggled, and the reply optionally delayed. UDP ports are left
+unswapped to match the niac-java reflector; the tester matches replies by
+signature, not the 4-tuple. Replies inherit the request's VLAN tag.
+
+##### Configuration
+
+```yaml
+devices:
+  - name: reflector
+    mac: "bb:bb:bb:00:00:02"
+    ips: ["10.20.200.100"]
+    reflector:
+      latency_ms: 10   # delay before reflecting (0 = immediate)
+      jitter_ms: 2     # random +/- delay around latency
+      dscp: false      # false: wiggle IP-precedence bit (0x01); true: wiggle DSCP bottom-2 bits (0x03)
+```
+
+##### Fields
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `latency_ms` | integer | One-way delay before the reflected packet is sent, in milliseconds. `0` reflects immediately. |
+| `jitter_ms` | integer | Randomises the delay by +/- this many milliseconds, floored at zero. |
+| `dscp` | boolean | Selects which ToS bits are toggled: `false` (default) flips the IP-precedence bit, `true` flips the bottom two DSCP bits. |
+
+The presence of the `reflector:` block enables the reflector — there is no
+separate enable flag.
+
 ## Application Protocols
 
 ### DHCP (DHCPv4)
