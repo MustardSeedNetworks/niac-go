@@ -21,7 +21,7 @@ the lab.
 
 - **Configurable topology** — declare devices, interfaces, VLANs, and neighbours in YAML; load templates or generate interactively
 - **Multi-IP per device** — each simulated endpoint can carry multiple v4/v6 addresses
-- **Protocol coverage** — ARP, ICMPv4/v6, DHCPv4/v6, DNS, LLDP, CDP, SNMP (v1/v2c/v3, walks + traps), TCP, UDP, HTTP, iperf3
+- **Protocol coverage** — ARP, ICMPv4/v6, DHCPv4/v6, DNS, LLDP, CDP, SNMP (v1/v2c/v3, walks + traps), TCP, UDP (incl. NetAlly reflector), HTTP, iperf3
 - **Per-protocol debug levels** — turn verbose logging on/off at the protocol layer without restarting
 - **PCAP analysis** — `niac analyze-pcap` summarises captures by protocol; `niac analyze-walk` extracts topology from SNMP walks
 - **Error injection** — inject latency, loss, jitter, or protocol-specific faults on a running simulation

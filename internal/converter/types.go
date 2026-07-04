@@ -85,6 +85,7 @@ type Device struct {
 	Traffic       *TrafficConfig       `yaml:"traffic,omitempty"`        // v1.6.0
 	OSFingerprint *OSFingerprintConfig `yaml:"os_fingerprint,omitempty"` // v1.24.0
 	IPerf3        *IPerf3Config        `yaml:"iperf3,omitempty"`         // v1.25.0
+	Reflector     *ReflectorConfig     `yaml:"reflector,omitempty"`      // v0.94.0 — NetAlly UDP reflector endpoint
 	Interfaces    []Interface          `yaml:"interfaces,omitempty"`     // Device interface metadata
 	TrunkPorts    []TrunkPort          `yaml:"trunk_ports,omitempty"`    // v1.23.0 — topology link declarations
 	PortChannels  []PortChannel        `yaml:"port_channels,omitempty"`  // v1.23.0 — LAG bundling
@@ -137,6 +138,26 @@ type IPerf3Config struct {
 	PacketLossPercent float64 `yaml:"packet_loss_percent,omitempty"`
 	UploadMbps        float64 `yaml:"upload_mbps,omitempty"`
 	DownloadMbps      float64 `yaml:"download_mbps,omitempty"`
+}
+
+// ReflectorConfig represents a NetAlly-style UDP reflector endpoint. When
+// present, the device echoes signed reflector probes (TrueSpeed / performance
+// tests) back to the sender with source/destination swapped, matching the
+// niac-java Reflector() section. The presence of this block enables the
+// reflector; there is no separate enable flag (Java sets isReflector on the
+// section being parsed).
+type ReflectorConfig struct {
+	// LatencyMs delays the reflected packet by this many milliseconds,
+	// simulating one-way path latency (Java Latency()). 0 = reflect
+	// immediately.
+	LatencyMs int `yaml:"latency_ms,omitempty" validate:"omitempty,gte=0,lte=60000"`
+	// JitterMs randomises the delay by +/- this many milliseconds around
+	// LatencyMs (Java Jitter()). 0 = no jitter.
+	JitterMs int `yaml:"jitter_ms,omitempty" validate:"omitempty,gte=0,lte=60000"`
+	// DSCP selects which ToS bits are toggled on the reflected packet:
+	// true wiggles the bottom two DSCP bits (0x03, Java Dscp), false
+	// wiggles the IP-precedence bit (0x01, Java IpPrecedence — the default).
+	DSCP bool `yaml:"dscp,omitempty"`
 }
 
 // OSFingerprintConfig represents OS fingerprinting configuration for device simulation.

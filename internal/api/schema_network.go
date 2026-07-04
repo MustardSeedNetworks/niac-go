@@ -400,3 +400,36 @@ func buildIPerf3Schema(maxPort *float64) *SchemaProperty {
 		},
 	}
 }
+
+// buildReflectorSchema creates the JSON Schema for the NetAlly UDP reflector.
+func buildReflectorSchema() *SchemaProperty {
+	return &SchemaProperty{
+		Type:        "object",
+		Title:       "UDP Reflector",
+		Description: "NetAlly-style UDP reflector endpoint for performance/TrueSpeed tests",
+		Properties: map[string]*SchemaProperty{
+			"latency_ms": {
+				Type:        "integer",
+				Title:       "Latency (ms)",
+				Description: "Delay before reflecting a probe",
+				Default:     0,
+				Minimum:     floatPtr(0),
+				Maximum:     floatPtr(maxReflectorDelayMs),
+			},
+			"jitter_ms": {
+				Type:        "integer",
+				Title:       "Jitter (ms)",
+				Description: "Random +/- delay around latency",
+				Default:     0,
+				Minimum:     floatPtr(0),
+				Maximum:     floatPtr(maxReflectorDelayMs),
+			},
+			"dscp": {
+				Type:        "boolean",
+				Title:       "DSCP wiggle",
+				Description: "Toggle the DSCP bottom-2 bits instead of the IP-precedence bit",
+				Default:     false,
+			},
+		},
+	}
+}
