@@ -125,6 +125,35 @@ segments:
 	}
 }
 
+func TestDeviceCountIncludesSegments(t *testing.T) {
+	flat, _ := LoadYAMLBytes([]byte(`
+devices:
+  - name: a
+    mac: "02:00:00:00:00:01"
+    ips: ["10.0.0.1"]
+`))
+	if flat.DeviceCount() != 1 {
+		t.Errorf("flat DeviceCount = %d, want 1", flat.DeviceCount())
+	}
+
+	seg, _ := LoadYAMLBytes([]byte(`
+segments:
+  - tag: 200
+    devices:
+      - name: a
+        mac: "02:00:00:00:00:01"
+        ips: ["10.0.0.1"]
+  - tag: 300
+    devices:
+      - name: b
+        mac: "02:00:00:00:00:02"
+        ips: ["10.0.0.2"]
+`))
+	if seg.DeviceCount() != 2 {
+		t.Errorf("segmented DeviceCount = %d, want 2 (must count devices inside segments)", seg.DeviceCount())
+	}
+}
+
 func TestSegmentsRejectMixedWithTopLevelDevices(t *testing.T) {
 	_, err := LoadYAMLBytes([]byte(`
 devices:

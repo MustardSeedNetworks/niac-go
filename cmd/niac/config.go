@@ -153,7 +153,7 @@ func runConfigExport(args []string) {
 	}
 
 	fmt.Fprintf(os.Stdout, "Configuration exported to %s\n", outputFile)
-	fmt.Fprintf(os.Stdout, "Devices: %d\n", len(cfg.Devices))
+	fmt.Fprintf(os.Stdout, "Devices: %d\n", cfg.DeviceCount())
 }
 
 func runConfigDiff(args []string) {

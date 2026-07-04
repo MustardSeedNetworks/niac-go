@@ -137,6 +137,22 @@ type Segment struct {
 	ConfigPath string   // Path to a config file for this segment (resolved by the loader)
 }
 
+// DeviceCount returns the total number of devices this config describes,
+// counting devices inside segments (a `segments:` config has no top-level
+// Devices, so len(c.Devices) alone would report zero).
+func (c *Config) DeviceCount() int {
+	if len(c.Segments) == 0 {
+		return len(c.Devices)
+	}
+
+	total := 0
+	for _, seg := range c.Segments {
+		total += len(seg.Devices)
+	}
+
+	return total
+}
+
 // NormalizedSegments returns the list of engine bindings this config describes:
 // its explicit Segments if any, otherwise a single untagged segment wrapping the
 // flat Devices list. This is the one place the "bare devices = one untagged

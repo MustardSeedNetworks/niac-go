@@ -67,7 +67,7 @@ func (s *Stack) initializeDevices(cfg *config.Config) {
 		_, _ = fmt.Fprintf(
 			os.Stdout,
 			"Initialized %d devices from configuration\n",
-			len(cfg.Devices),
+			cfg.DeviceCount(),
 		)
 	}
 }
