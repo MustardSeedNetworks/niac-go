@@ -1,4 +1,5 @@
 import type { FC } from 'react';
+import type { FieldErrors } from 'react-hook-form';
 import type { Device, DeviceType } from '../../api/types';
 import { deviceTypeOptions as deviceTypes } from '../../constants/device-types';
 import { CollapsibleSection } from '../form/CollapsibleSection';
@@ -10,6 +11,8 @@ export interface BasicSettingsSectionProps {
   isExpanded: boolean;
   onToggle: () => void;
   onUpdate: <K extends keyof Device>(field: K, value: Device[K]) => void;
+  /** Inline validation errors from the editor's failed-save valibot check. */
+  errors?: FieldErrors<Device>;
 }
 
 export const BasicSettingsSection: FC<BasicSettingsSectionProps> = ({
@@ -17,6 +20,7 @@ export const BasicSettingsSection: FC<BasicSettingsSectionProps> = ({
   isExpanded,
   onToggle,
   onUpdate,
+  errors,
 }) => {
   return (
     <CollapsibleSection
@@ -31,6 +35,7 @@ export const BasicSettingsSection: FC<BasicSettingsSectionProps> = ({
           required={true}
           helpText="Unique identifier for the device"
           htmlFor="device-hostname"
+          error={errors?.hostname?.message}
         >
           <input
             id="device-hostname"
@@ -47,6 +52,7 @@ export const BasicSettingsSection: FC<BasicSettingsSectionProps> = ({
           required={true}
           helpText="Hardware address in format XX:XX:XX:XX:XX:XX"
           htmlFor="device-mac"
+          error={errors?.mac?.message}
         >
           <input
             id="device-mac"
@@ -77,6 +83,7 @@ export const BasicSettingsSection: FC<BasicSettingsSectionProps> = ({
           label="Primary IP Address"
           helpText="Main management IP address"
           htmlFor="device-primary-ip"
+          error={errors?.ip?.message}
         >
           <input
             id="device-primary-ip"
