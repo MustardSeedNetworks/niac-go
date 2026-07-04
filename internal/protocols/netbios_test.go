@@ -216,6 +216,22 @@ func TestNetBIOSNamePadding(t *testing.T) {
 	}
 }
 
+// TestNetBIOSNameRejectsInvalidEncoding verifies that a level-2 encoded name
+// containing a byte outside 'A'..'P' is rejected rather than underflowing the
+// nibble subtraction into a garbage name (#850).
+func TestNetBIOSNameRejectsInvalidEncoding(t *testing.T) {
+	handler := &protocols.NetBIOSHandler{}
+
+	encoded := handler.EncodeNetBIOSName("PC", protocols.NBNameWorkstation)
+	// Corrupt an encoded nibble byte to one below 'A' (would underflow).
+	encoded[1] = 0x40
+
+	decoded, _, offset := handler.DecodeNetBIOSName(encoded)
+	if decoded != "" || offset != 0 {
+		t.Errorf("invalid encoding should be rejected, got name=%q offset=%d", decoded, offset)
+	}
+}
+
 func TestNetBIOSNameTruncation(t *testing.T) {
 	handler := &protocols.NetBIOSHandler{}
 
