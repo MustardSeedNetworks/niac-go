@@ -133,7 +133,46 @@ func (h *UDPHandler) HandlePacket(pkt *Packet, ipLayer *layers.IPv4, devices []*
 		if debugLevel >= DebugLevelVerbose {
 			_, _ = fmt.Fprintf(os.Stdout, "UDP packet to unhandled port %d sn=%d\n", udp.DstPort, pkt.SerialNumber)
 		}
+
+		h.sendPortUnreachable(pkt, ipLayer, udp, devices)
 	}
+}
+
+// sendPortUnreachable replies ICMP Destination Unreachable / port unreachable
+// from the addressed device — the RFC 792 behaviour of a closed UDP port. This
+// is what lets a UDP path analysis / traceroute confirm it reached the target
+// (its intermediate hops already answer via the TTL Time Exceeded path).
+func (h *UDPHandler) sendPortUnreachable(
+	pkt *Packet,
+	ipLayer *layers.IPv4,
+	udp *layers.UDP,
+	devices []*config.Device,
+) {
+	if h.stack.icmpHandler == nil || len(devices) == 0 {
+		return
+	}
+
+	device := devices[0]
+	// A device that forwards this port (MapToIP) isn't a closed port.
+	if device.MapToIP != nil || len(device.MACAddress) == 0 {
+		return
+	}
+
+	dstMAC := pkt.GetSourceMAC()
+	if dstMAC == nil {
+		return
+	}
+
+	// RFC 792 §3.2: quote the offending IP header + 8 bytes of its datagram.
+	original := append(ipLayer.LayerContents(), udp.LayerContents()...)
+
+	_ = h.stack.icmpHandler.SendICMPUnreachable(
+		ipLayer.DstIP, ipLayer.SrcIP,
+		device.MACAddress, dstMAC,
+		layers.ICMPv4CodePort,
+		original,
+		pkt.VLAN,
+	)
 }
 
 func (h *UDPHandler) handleSNMP(pkt *Packet, ipLayer *layers.IPv4, udp *layers.UDP, devices []*config.Device) {
