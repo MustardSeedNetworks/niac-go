@@ -7,16 +7,16 @@ require (
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/fatih/color v1.19.0
 	github.com/go-playground/validator/v10 v10.30.3
-	github.com/gopacket/gopacket v1.6.1
+	github.com/gopacket/gopacket v1.7.0
 	github.com/gosnmp/gosnmp v1.43.2
 	github.com/invopop/jsonschema v0.14.0
 	github.com/kardianos/service v1.2.4
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
-	go.etcd.io/bbolt v1.4.3
+	go.etcd.io/bbolt v1.5.0
 	golang.org/x/time v0.15.0
 	gopkg.in/yaml.v3 v3.0.1
-	modernc.org/sqlite v1.52.0
+	modernc.org/sqlite v1.53.0
 )
 
 require (
