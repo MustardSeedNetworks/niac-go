@@ -618,7 +618,6 @@ func (h *DHCPHandler) HandlePacket(pkt *Packet, ipLayer *layers.IPv4, _ *layers.
 	h.dispatchDHCPMessage(info, serverDevice, pkt.SerialNumber, debugLevel)
 }
 
-// dispatchDHCPMessage routes the DHCP message to the appropriate handler.
 // handleDHCPInform answers a DHCPINFORM — a client that already has an address
 // and only wants configuration options. Reply with a DHCPACK carrying options
 // but no lease (RFC 2131 §4.3.5).
@@ -654,13 +653,20 @@ func (h *DHCPHandler) handleDHCPDecline(info *dhcpPacketInfo, serialNum, debugLe
 		return
 	}
 
-	h.mu.Lock()
-	h.declined[declinedIP.String()] = struct{}{}
+	mac := info.dhcp.ClientHWAddr.String()
 
-	for mac, lease := range h.leases {
-		if lease.IP.Equal(declinedIP) {
-			delete(h.leases, mac)
-		}
+	h.mu.Lock()
+	// Only a pool address is quarantined: this bounds the declined set to the
+	// pool size (a client cannot grow it with arbitrary addresses) and ignores
+	// DECLINEs for addresses this server does not manage.
+	if h.isIPInPool(declinedIP) {
+		h.declined[declinedIP.String()] = struct{}{}
+	}
+
+	// Only the declining client's own lease is dropped — a client must not be
+	// able to release (hijack) another client's lease by declining its address.
+	if lease, ok := h.leases[mac]; ok && lease.IP.Equal(declinedIP) {
+		delete(h.leases, mac)
 	}
 	h.mu.Unlock()
 

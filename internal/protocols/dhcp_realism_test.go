@@ -3,9 +3,55 @@ package protocols
 import (
 	"net"
 	"testing"
+	"time"
 
 	"github.com/gopacket/gopacket/layers"
 )
+
+func declineBy(h *DHCPHandler, mac net.HardwareAddr, ip net.IP) {
+	h.handleDHCPDecline(&dhcpPacketInfo{
+		dhcp: &layers.DHCPv4{
+			ClientHWAddr: mac,
+			Options: []layers.DHCPOption{
+				{Type: layers.DHCPOptMessageType, Length: 1, Data: []byte{DHCPDecline}},
+				{Type: layers.DHCPOptRequestIP, Length: 4, Data: ip.To4()},
+			},
+		},
+		messageType: DHCPDecline,
+	}, 1, 0)
+}
+
+// TestHandleDHCPDeclineIsScoped verifies a DECLINE cannot be weaponised: a
+// non-pool address is never quarantined (bounds the declined set) and a client
+// cannot delete another client's lease by declining its address (no hijack).
+func TestHandleDHCPDeclineIsScoped(t *testing.T) {
+	_, h, _ := newDHCPTestHandler(t)
+
+	poolIP := net.ParseIP("10.20.200.150")
+	nonPool := net.ParseIP("8.8.8.8")
+	attacker := net.HardwareAddr{0xde, 0xad, 0x00, 0x00, 0x00, 0x01}
+	victim := net.HardwareAddr{0xbe, 0xef, 0x00, 0x00, 0x00, 0x02}
+
+	h.leases[victim.String()] = &DHCPLease{IP: poolIP, MAC: victim, Expiry: time.Now().Add(time.Hour)}
+
+	// A non-pool DECLINE is ignored — the quarantine set can't be grown with
+	// arbitrary addresses.
+	declineBy(h, attacker, nonPool)
+	if _, quarantined := h.declined[nonPool.String()]; quarantined {
+		t.Error("a non-pool DECLINE must not be quarantined (unbounded-state guard)")
+	}
+
+	// Declining the victim's pool address quarantines the address but must NOT
+	// delete the victim's lease.
+	declineBy(h, attacker, poolIP)
+	if _, quarantined := h.declined[poolIP.String()]; !quarantined {
+		t.Error("a pool DECLINE should quarantine the address")
+	}
+
+	if _, stillLeased := h.leases[victim.String()]; !stillLeased {
+		t.Error("a client must not delete another client's lease via DECLINE (lease-hijack)")
+	}
+}
 
 // TestHandleDHCPInformAckHasNoLease verifies a DHCPINFORM gets a DHCPACK with
 // configuration options but no address or lease (RFC 2131 §4.3.5).
