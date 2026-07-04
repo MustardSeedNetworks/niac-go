@@ -1,6 +1,23 @@
 package converter
 
-import "errors"
+import (
+	"errors"
+
+	"gopkg.in/yaml.v3"
+)
+
+// VLANTag is a segment VLAN tag. It accepts both YAML strings ("untagged",
+// "200") and bare integers (200), so a config author can write `tag: 200`
+// unquoted or `tag: untagged`. The raw scalar text is preserved for the loader
+// to interpret.
+type VLANTag string
+
+// UnmarshalYAML reads the raw scalar so an int or a string tag both work.
+func (t *VLANTag) UnmarshalYAML(node *yaml.Node) error {
+	*t = VLANTag(node.Value)
+
+	return nil
+}
 
 // Sentinel errors for converter.
 var (
@@ -32,6 +49,24 @@ type Config struct {
 	CapturePlaybacks   []CapturePlayback   `yaml:"capture_playbacks,omitempty"   validate:"omitempty,dive"`
 	DiscoveryProtocols *DiscoveryProtocols `yaml:"discovery_protocols,omitempty"`
 	Devices            []Device            `yaml:"devices"                       validate:"omitempty,dive"`
+	// Segments binds independent device sets to VLAN tags for multi-VLAN
+	// playback (ADR 0008). When present, each segment is served as its own
+	// isolated network (own IP space) on its tag, and top-level `devices` must
+	// be empty. When absent, `devices` is served as a single untagged segment —
+	// today's flat behavior.
+	Segments []Segment `yaml:"segments,omitempty" validate:"omitempty,dive"`
+}
+
+// Segment binds a device set to a VLAN tag for multi-VLAN playback. Exactly one
+// of Devices (inline) or Config (a path to a config file) is set.
+type Segment struct {
+	// Tag is "untagged" (the native VLAN) or a VLAN id in 1..4094.
+	Tag VLANTag `yaml:"tag" validate:"required"`
+	// Devices is an inline device set for this segment.
+	Devices []Device `yaml:"devices,omitempty" validate:"omitempty,dive"`
+	// Config is a path to a config file whose devices form this segment
+	// (resolved by the loader). Mutually exclusive with Devices.
+	Config string `yaml:"config,omitempty"`
 }
 
 // DiscoveryProtocols configures discovery protocol behavior.

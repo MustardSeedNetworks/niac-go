@@ -63,14 +63,15 @@ const (
 
 // Stack manages the network protocol stack.
 type Stack struct {
-	capture      *capture.Engine
-	config       *config.Config
-	configMu     sync.RWMutex
-	reloadMu     sync.Mutex
-	devices      *DeviceTable
-	vlanMode     bool // any device is VLAN-tagged: ignore untagged frames (no native/default replay)
-	serialNumber int
-	mu           sync.Mutex
+	capture       *capture.Engine
+	config        *config.Config
+	configMu      sync.RWMutex
+	reloadMu      sync.Mutex
+	devices       *DeviceTable
+	segmentTables map[int]*DeviceTable // multi-VLAN mode (ADR 0008): tag -> that segment's isolated device set; nil when running flat
+	vlanMode      bool                 // any device is VLAN-tagged: ignore untagged frames (no native/default replay)
+	serialNumber  int
+	mu            sync.Mutex
 
 	// Packet queues
 	sendQueue chan *Packet
@@ -322,6 +323,45 @@ func (s *Stack) SendRawPacketVLAN(data []byte, vlan int) error {
 // GetDevices returns the device table.
 func (s *Stack) GetDevices() *DeviceTable {
 	return s.devices
+}
+
+// devicesFor returns the device table that should answer traffic tagged with
+// vlan. In flat/untagged mode (segmentTables nil) every VLAN shares the one
+// global table, exactly as before multi-VLAN segments existed. In segment
+// mode each VLAN tag is its own isolated "demo": an untagged frame (vlan <= 0)
+// normalizes to config.UntaggedTag so it can still match an explicit untagged
+// segment, and a tag with no bound segment returns nil — callers (via the
+// nil-safe DeviceTable methods) and decodePacket's confinement check both
+// treat a nil table as "no devices for this VLAN".
+func (s *Stack) devicesFor(vlan int) *DeviceTable {
+	if s.segmentTables == nil {
+		return s.devices
+	}
+
+	key := vlan
+	if key < 0 {
+		key = config.UntaggedTag
+	}
+
+	return s.segmentTables[key]
+}
+
+// AllDevices returns every device the stack knows about across all VLAN
+// segments (or the single flat set when not running in segment mode). Used
+// by discovery-protocol emitters, which advertise every device regardless of
+// which segment it belongs to — each advertisement is already scoped to its
+// own device's VLAN by the sender.
+func (s *Stack) AllDevices() []*config.Device {
+	if s.segmentTables == nil {
+		return s.devices.GetAll()
+	}
+
+	all := make([]*config.Device, 0, len(s.segmentTables))
+	for _, table := range s.segmentTables {
+		all = append(all, table.GetAll()...)
+	}
+
+	return all
 }
 
 // ReloadConfig applies a new configuration to the running stack.

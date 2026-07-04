@@ -46,8 +46,8 @@ func (v *Validator) Validate(cfg *Config) *ListError {
 		return v.errors
 	}
 
-	// Validate devices
-	if len(cfg.Devices) == 0 {
+	// Validate devices (counting devices inside segments)
+	if cfg.DeviceCount() == 0 {
 		v.addWarning("devices", "no devices defined in configuration")
 	}
 

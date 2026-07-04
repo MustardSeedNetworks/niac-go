@@ -276,7 +276,7 @@ func (h *IPerf3Handler) HandleIPerf3Request(
 			_, _ = fmt.Fprintf(os.Stdout, "iPerf3: New connection from %s:%d\n", ipLayer.SrcIP, tcpLayer.SrcPort)
 		}
 
-		h.sendSYNACK(ipLayer, tcpLayer, devices)
+		h.sendSYNACK(ipLayer, tcpLayer, devices, pkt.VLAN)
 		h.getOrCreateSession(ipLayer.SrcIP.String(), uint16(tcpLayer.SrcPort), cfg)
 
 		return
@@ -299,7 +299,7 @@ func (h *IPerf3Handler) HandleIPerf3Request(
 
 // handleIPerf3Data processes iPerf3 protocol messages.
 func (h *IPerf3Handler) handleIPerf3Data(
-	_ *Packet,
+	pkt *Packet,
 	ipLayer *layers.IPv4,
 	tcpLayer *layers.TCP,
 	devices []*config.Device,
@@ -324,24 +324,24 @@ func (h *IPerf3Handler) handleIPerf3Data(
 		if len(payload) >= iperf3MinJSONCheckSize {
 			// Check if this looks like JSON parameters
 			if payload[0] == '{' || (len(payload) > iperf3MinJSONCheckSize && payload[iperf3MinJSONCheckSize] == '{') {
-				h.handleParamExchange(ipLayer, tcpLayer, devices, session, payload)
+				h.handleParamExchange(ipLayer, tcpLayer, devices, session, payload, pkt.VLAN)
 			} else if len(payload) >= iperf3CookieSize {
 				// Cookie received, acknowledge and move to param exchange
 				session.State = iperf3StateParamExch
 
-				h.sendStateCode(ipLayer, tcpLayer, devices, iperf3MsgTestStart)
+				h.sendStateCode(ipLayer, tcpLayer, devices, iperf3MsgTestStart, pkt.VLAN)
 			}
 		}
 
 	case iperf3StateParamExch:
 		// Parse test parameters JSON
-		h.handleParamExchange(ipLayer, tcpLayer, devices, session, payload)
+		h.handleParamExchange(ipLayer, tcpLayer, devices, session, payload, pkt.VLAN)
 
 	case iperf3StateCreateFlow:
 		// Data streams being created
 		session.State = iperf3StateTestStart
 
-		h.sendStateCode(ipLayer, tcpLayer, devices, iperf3MsgTestRunning)
+		h.sendStateCode(ipLayer, tcpLayer, devices, iperf3MsgTestRunning, pkt.VLAN)
 
 	case iperf3StateTestStart, iperf3StateTestRun:
 		// Test is running - count bytes received
@@ -353,7 +353,7 @@ func (h *IPerf3Handler) handleIPerf3Data(
 			elapsed := time.Since(session.StartTime).Seconds()
 			if elapsed >= float64(session.TestParams.Time) {
 				session.State = iperf3StateExchResult
-				h.sendResults(ipLayer, tcpLayer, devices, session)
+				h.sendResults(ipLayer, tcpLayer, devices, session, pkt.VLAN)
 			}
 		}
 
@@ -363,7 +363,7 @@ func (h *IPerf3Handler) handleIPerf3Data(
 			_, _ = fmt.Fprintf(os.Stdout, "iPerf3: Test complete, sending results\n")
 		}
 
-		h.sendResults(ipLayer, tcpLayer, devices, session)
+		h.sendResults(ipLayer, tcpLayer, devices, session, pkt.VLAN)
 		session.State = iperf3StateIPerf3Done
 
 	case iperf3StateIPerf3Done:
@@ -380,6 +380,7 @@ func (h *IPerf3Handler) handleParamExchange(
 	devices []*config.Device,
 	session *IPerf3Session,
 	payload []byte,
+	vlan int,
 ) {
 	debugLevel := h.stack.GetDebugLevel()
 
@@ -412,7 +413,7 @@ func (h *IPerf3Handler) handleParamExchange(
 			_, _ = fmt.Fprintf(os.Stdout, "iPerf3: Failed to parse params: %v (data: %s)\n", err, string(jsonData))
 		}
 		// Send acknowledgment anyway
-		h.sendStateCode(ipLayer, tcpLayer, devices, iperf3MsgTestStart)
+		h.sendStateCode(ipLayer, tcpLayer, devices, iperf3MsgTestStart, vlan)
 
 		session.State = iperf3StateCreateFlow
 
@@ -434,7 +435,7 @@ func (h *IPerf3Handler) handleParamExchange(
 	session.StartTime = time.Now()
 
 	// Send test start acknowledgment
-	h.sendStateCode(ipLayer, tcpLayer, devices, iperf3MsgTestStart)
+	h.sendStateCode(ipLayer, tcpLayer, devices, iperf3MsgTestStart, vlan)
 }
 
 // sendStateCode sends a single-byte state code to the client.
@@ -443,9 +444,10 @@ func (h *IPerf3Handler) sendStateCode(
 	tcpLayer *layers.TCP,
 	devices []*config.Device,
 	stateCode int8,
+	vlan int,
 ) {
 	response := []byte{safeconv.ByteFromInt8(stateCode)}
-	h.sendTCPResponse(ipLayer, tcpLayer, response, devices)
+	h.sendTCPResponse(ipLayer, tcpLayer, response, devices, vlan)
 }
 
 // sendResults sends simulated test results to the client.
@@ -454,6 +456,7 @@ func (h *IPerf3Handler) sendResults(
 	tcpLayer *layers.TCP,
 	devices []*config.Device,
 	session *IPerf3Session,
+	vlan int,
 ) {
 	cfg := session.Config
 
@@ -543,14 +546,14 @@ func (h *IPerf3Handler) sendResults(
 	)
 	copy(response[4:], jsonData)
 
-	h.sendTCPResponse(ipLayer, tcpLayer, response, devices)
+	h.sendTCPResponse(ipLayer, tcpLayer, response, devices, vlan)
 
 	// Send result OK state
-	h.sendStateCode(ipLayer, tcpLayer, devices, iperf3MsgResultOK)
+	h.sendStateCode(ipLayer, tcpLayer, devices, iperf3MsgResultOK, vlan)
 }
 
 // sendSYNACK sends a TCP SYN-ACK response.
-func (h *IPerf3Handler) sendSYNACK(ipLayer *layers.IPv4, tcpLayer *layers.TCP, devices []*config.Device) {
+func (h *IPerf3Handler) sendSYNACK(ipLayer *layers.IPv4, tcpLayer *layers.TCP, devices []*config.Device, vlan int) {
 	debugLevel := h.stack.GetDebugLevel()
 
 	if len(devices) == 0 {
@@ -562,8 +565,8 @@ func (h *IPerf3Handler) sendSYNACK(ipLayer *layers.IPv4, tcpLayer *layers.TCP, d
 		return
 	}
 
-	// Get source MAC
-	srcDevices := h.stack.GetDevices().GetByIP(ipLayer.SrcIP)
+	// Get source MAC (scoped to the request's VLAN segment)
+	srcDevices := h.stack.devicesFor(vlan).GetByIP(ipLayer.SrcIP)
 
 	var srcMAC []byte
 
@@ -648,6 +651,7 @@ func (h *IPerf3Handler) sendTCPResponse(
 	tcpLayer *layers.TCP,
 	payload []byte,
 	devices []*config.Device,
+	vlan int,
 ) {
 	debugLevel := h.stack.GetDebugLevel()
 
@@ -660,7 +664,7 @@ func (h *IPerf3Handler) sendTCPResponse(
 		return
 	}
 
-	srcDevices := h.stack.GetDevices().GetByIP(ipLayer.SrcIP)
+	srcDevices := h.stack.devicesFor(vlan).GetByIP(ipLayer.SrcIP)
 
 	var srcMAC []byte
 

@@ -9,19 +9,23 @@ import (
 var (
 	ErrInvalidDeviceDeclaration = errors.New("invalid device declaration")
 	ErrNoDevicesDefined         = errors.New("no devices defined in configuration")
-	ErrInvalidMapToIP           = errors.New("invalid map_to_ip")
-	ErrInvalidTTLIP             = errors.New("invalid ttl ip")
-	ErrInvalidTTLMask           = errors.New("invalid ttl mask")
-	ErrInvalidIPAddress         = errors.New("invalid IP address")
-	ErrInvalidSNMPAddr          = errors.New("invalid snmp_addr")
-	ErrDNSTTLNegative           = errors.New("DNS record TTL cannot be negative")
-	ErrDNSTTLExceedsMax         = errors.New("DNS record TTL exceeds maximum (2147483647)")
-	ErrInsufficientFields       = errors.New("insufficient fields")
-	ErrPathTraversalDetected    = errors.New("path traversal detected")
-	ErrPathOutsideBaseDir       = errors.New("path outside base directory")
-	ErrWalkFileNotFound         = errors.New("walk file not found")
-	ErrWalkFileIsSymlink        = errors.New("walk file is a symlink (not allowed)")
-	ErrWalkFileNotRegular       = errors.New("walk file is not a regular file")
+
+	ErrSegmentsAndTopLevelDevices = errors.New("use either top-level devices or segments, not both")
+	ErrSegmentDevicesXORConfig    = errors.New("segment must set exactly one of devices or config")
+	ErrInvalidSegmentTag          = errors.New("invalid segment tag")
+	ErrInvalidMapToIP             = errors.New("invalid map_to_ip")
+	ErrInvalidTTLIP               = errors.New("invalid ttl ip")
+	ErrInvalidTTLMask             = errors.New("invalid ttl mask")
+	ErrInvalidIPAddress           = errors.New("invalid IP address")
+	ErrInvalidSNMPAddr            = errors.New("invalid snmp_addr")
+	ErrDNSTTLNegative             = errors.New("DNS record TTL cannot be negative")
+	ErrDNSTTLExceedsMax           = errors.New("DNS record TTL exceeds maximum (2147483647)")
+	ErrInsufficientFields         = errors.New("insufficient fields")
+	ErrPathTraversalDetected      = errors.New("path traversal detected")
+	ErrPathOutsideBaseDir         = errors.New("path outside base directory")
+	ErrWalkFileNotFound           = errors.New("walk file not found")
+	ErrWalkFileIsSymlink          = errors.New("walk file is a symlink (not allowed)")
+	ErrWalkFileNotRegular         = errors.New("walk file is not a regular file")
 )
 
 // LLDP Chassis ID Type constants.
@@ -118,6 +122,48 @@ type Config struct {
 	IncludePath        string              // Base path for walk files
 	CapturePlayback    *CapturePlayback    // Optional PCAP playback config
 	DiscoveryProtocols *DiscoveryProtocols // Discovery protocol configuration
+	Segments           []Segment           // Multi-VLAN playback bindings (ADR 0008); empty = flat/untagged
+}
+
+// UntaggedTag is the Segment.Tag value for the native/untagged VLAN.
+const UntaggedTag = 0
+
+// Segment binds a device set to a VLAN tag for multi-VLAN playback (ADR 0008).
+// Each segment is served as an isolated network on its tag. Exactly one of
+// Devices (inline) or ConfigPath (a file resolved by the loader) is populated.
+type Segment struct {
+	Tag        int      // UntaggedTag (0) for the native VLAN, else a VLAN id 1..4094
+	Devices    []Device // Inline device set for this segment
+	ConfigPath string   // Path to a config file for this segment (resolved by the loader)
+}
+
+// DeviceCount returns the total number of devices this config describes,
+// counting devices inside segments (a `segments:` config has no top-level
+// Devices, so len(c.Devices) alone would report zero).
+func (c *Config) DeviceCount() int {
+	if len(c.Segments) == 0 {
+		return len(c.Devices)
+	}
+
+	total := 0
+	for _, seg := range c.Segments {
+		total += len(seg.Devices)
+	}
+
+	return total
+}
+
+// NormalizedSegments returns the list of engine bindings this config describes:
+// its explicit Segments if any, otherwise a single untagged segment wrapping the
+// flat Devices list. This is the one place the "bare devices = one untagged
+// segment" backward-compatibility rule lives, so every consumer sees a uniform
+// list of (tag, device-set) engines.
+func (c *Config) NormalizedSegments() []Segment {
+	if len(c.Segments) > 0 {
+		return c.Segments
+	}
+
+	return []Segment{{Tag: UntaggedTag, Devices: c.Devices}}
 }
 
 // CapturePlayback represents PCAP file playback configuration.
