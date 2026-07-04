@@ -41,7 +41,7 @@ func (h *DNSHandler) HandleQuery(
 	response := h.buildDNSResponse(dns, serverDevice, debugLevel, pkt.SerialNumber)
 	srcMAC := h.extractSourceMAC(packet)
 	h.sendAndLogResponse(response, serverIP, ipLayer.SrcIP, serverDevice.MACAddress, srcMAC,
-		udpLayer.SrcPort, debugLevel, pkt.SerialNumber)
+		udpLayer.SrcPort, pkt.VLAN, debugLevel, pkt.SerialNumber)
 }
 
 // parseDNSLayer extracts and validates the DNS layer from a packet.
@@ -185,10 +185,11 @@ func (h *DNSHandler) sendAndLogResponse(
 	srcIP, dstIP net.IP,
 	srcMAC, dstMAC net.HardwareAddr,
 	dstPort layers.UDPPort,
+	vlan int,
 	debugLevel int,
 	serial int,
 ) {
-	err := h.SendDNSResponse(response, srcIP, dstIP, srcMAC, dstMAC, dstPort)
+	err := h.SendDNSResponse(response, srcIP, dstIP, srcMAC, dstMAC, dstPort, vlan)
 	if err != nil {
 		if debugLevel >= DebugLevelInfo {
 			_, _ = fmt.Fprintf(os.Stdout, "DNS: Failed to send response: %v sn=%d\n", err, serial)
@@ -203,12 +204,15 @@ func (h *DNSHandler) sendAndLogResponse(
 	}
 }
 
-// SendDNSResponse sends a DNS response.
+// SendDNSResponse sends a DNS response on the request's VLAN. A tagged request
+// (a tester on an 802.1Q trunk) must get a tagged reply, or the frame is dropped
+// before it reaches the sender — the same reply-VLAN rule the other handlers use.
 func (h *DNSHandler) SendDNSResponse(
 	response *layers.DNS,
 	srcIP, dstIP net.IP,
 	srcMAC, dstMAC net.HardwareAddr,
 	dstPort layers.UDPPort,
+	vlan int,
 ) error {
 	// Build UDP layer
 	udp := &layers.UDP{
@@ -246,16 +250,17 @@ func (h *DNSHandler) SendDNSResponse(
 		return fmt.Errorf("failed to serialize DNS response: %w", err)
 	}
 
-	// Send packet
-	return h.stack.SendRawPacket(buf.Bytes())
+	// Reply on the VLAN the query arrived on (0 = untagged).
+	return h.stack.SendRawPacketVLAN(buf.Bytes(), vlan)
 }
 
-// SendDNSResponseV6 sends a DNS response over IPv6.
+// SendDNSResponseV6 sends a DNS response over IPv6 on the request's VLAN.
 func (h *DNSHandler) SendDNSResponseV6(
 	response *layers.DNS,
 	srcIP, dstIP net.IP,
 	srcMAC, dstMAC net.HardwareAddr,
 	dstPort layers.UDPPort,
+	vlan int,
 ) error {
 	udp := &layers.UDP{
 		SrcPort: dnsPort,
@@ -291,7 +296,8 @@ func (h *DNSHandler) SendDNSResponseV6(
 		return fmt.Errorf("failed to serialize DNS/IPv6 response: %w", err)
 	}
 
-	return h.stack.SendRawPacket(buf.Bytes())
+	// Reply on the VLAN the query arrived on (0 = untagged).
+	return h.stack.SendRawPacketVLAN(buf.Bytes(), vlan)
 }
 
 // HandleQueryV6 processes a DNS query over IPv6.
@@ -328,7 +334,7 @@ func (h *DNSHandler) HandleQueryV6(
 	}
 
 	h.sendAndLogResponseV6(response, serverIP, ipv6.SrcIP, serverDevice.MACAddress, dstMAC,
-		udpLayer.SrcPort, debugLevel, pkt.SerialNumber)
+		udpLayer.SrcPort, pkt.VLAN, debugLevel, pkt.SerialNumber)
 }
 
 // handleNBSTATIfPresentV6 checks for and handles NBSTAT queries over IPv6.
@@ -419,10 +425,11 @@ func (h *DNSHandler) sendAndLogResponseV6(
 	srcIP, dstIP net.IP,
 	srcMAC, dstMAC net.HardwareAddr,
 	dstPort layers.UDPPort,
+	vlan int,
 	debugLevel int,
 	serial int,
 ) {
-	err := h.SendDNSResponseV6(response, srcIP, dstIP, srcMAC, dstMAC, dstPort)
+	err := h.SendDNSResponseV6(response, srcIP, dstIP, srcMAC, dstMAC, dstPort, vlan)
 	if err != nil && debugLevel >= DebugLevelInfo {
 		_, _ = fmt.Fprintf(os.Stdout, "DNS/IPv6: Failed to send response: %v sn=%d\n", err, serial)
 	}
