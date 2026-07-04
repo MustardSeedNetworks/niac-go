@@ -5,6 +5,32 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.93.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.92.0...v0.93.0) (2026-07-04)
+
+
+### Features
+
+* **dns:** wildcard catch-all forward record ([#864](https://github.com/MustardSeedNetworks/niac-go/issues/864)) ([d60ac9a](https://github.com/MustardSeedNetworks/niac-go/commit/d60ac9a01e3523287afe25ce20be9c9d396ed273))
+* **protocols:** tag CDP/LLDP/FDP/EDP advertisements onto the device VLAN ([#860](https://github.com/MustardSeedNetworks/niac-go/issues/860)) ([b059989](https://github.com/MustardSeedNetworks/niac-go/commit/b059989a6f83bd17d033f462105fe7cd93c5cde4))
+* **protocols:** tag reactive replies onto the request's VLAN ([#859](https://github.com/MustardSeedNetworks/niac-go/issues/859)) ([78a5a98](https://github.com/MustardSeedNetworks/niac-go/commit/78a5a98e1b96157bc7e5367d576114a45a9eca37))
+* **snmp:** device identity (sysName) is authored, never from the walk ([#862](https://github.com/MustardSeedNetworks/niac-go/issues/862)) ([f5a76f1](https://github.com/MustardSeedNetworks/niac-go/commit/f5a76f179f8d9334042382c1c4c7c18def8fc27a))
+* **snmp:** learn downstream host MACs into the bridge FDB (Nearest Switch) ([#869](https://github.com/MustardSeedNetworks/niac-go/issues/869)) ([1b7a8d1](https://github.com/MustardSeedNetworks/niac-go/commit/1b7a8d19fcfc07c03e3afc67a1f3cc1e9ee4d0b1))
+* **snmp:** let authored trunk_ports topology win over walk neighbour tables ([#861](https://github.com/MustardSeedNetworks/niac-go/issues/861)) ([a98b310](https://github.com/MustardSeedNetworks/niac-go/commit/a98b310ba81bc3641d665337a15d1b3250440caa))
+* **udp:** reflect NetAlly UDP performance probes back to the tester ([#879](https://github.com/MustardSeedNetworks/niac-go/issues/879)) ([d121b62](https://github.com/MustardSeedNetworks/niac-go/commit/d121b623bcaebbe08eddb74300a5d9c66cb7dc54))
+* **udp:** reply ICMP port-unreachable from a closed UDP port ([#878](https://github.com/MustardSeedNetworks/niac-go/issues/878)) ([e8c4c4b](https://github.com/MustardSeedNetworks/niac-go/commit/e8c4c4b79cc5e7fb925b7042a2b42a4a92394faf))
+
+
+### Bug Fixes
+
+* **icmp:** VLAN-tag Time Exceeded so path analysis reaches a tagged tester ([#872](https://github.com/MustardSeedNetworks/niac-go/issues/872)) ([a903bd5](https://github.com/MustardSeedNetworks/niac-go/commit/a903bd514ac8526aa7dffc0149a81e49339742ed))
+* **sanitize:** scrub device identity echoed outside the system group ([#857](https://github.com/MustardSeedNetworks/niac-go/issues/857)) ([df4771f](https://github.com/MustardSeedNetworks/niac-go/commit/df4771f070eaafbedf5f9792191d743d1da2d065))
+* **snmp:** derive FDB bridge ports by inferred offset, not trailing number ([#874](https://github.com/MustardSeedNetworks/niac-go/issues/874)) ([7573d7b](https://github.com/MustardSeedNetworks/niac-go/commit/7573d7b3a2cc9d9abcf206eac3c7a3218fced504))
+* **snmp:** learned FDB port must be an in-range bridge port ([#870](https://github.com/MustardSeedNetworks/niac-go/issues/870)) ([2633f73](https://github.com/MustardSeedNetworks/niac-go/commit/2633f7304d3b005e0940b61449eba3f66196941d))
+* **snmp:** make NIAC fully discoverable by an SNMP scanner (GET-BULK, sort, cadence) ([#866](https://github.com/MustardSeedNetworks/niac-go/issues/866)) ([9a2ef82](https://github.com/MustardSeedNetworks/niac-go/commit/9a2ef820fb5ad6ee2ccc303081fe048e119e4d44))
+* **stack:** in VLAN mode, ignore untagged frames (no native/default replay) ([#865](https://github.com/MustardSeedNetworks/niac-go/issues/865)) ([64ccc32](https://github.com/MustardSeedNetworks/niac-go/commit/64ccc32305b91b4c4c0cc4da1c0ffcd2ee85db7f))
+* **stack:** received packets must not alias the reused capture buffer ([#863](https://github.com/MustardSeedNetworks/niac-go/issues/863)) ([f4bc403](https://github.com/MustardSeedNetworks/niac-go/commit/f4bc40324ef1dd1bd4e963b4248c49253c22a87c))
+* **tcp:** reply to the request's VLAN and source MAC, add SYN-ACK for path probes ([#876](https://github.com/MustardSeedNetworks/niac-go/issues/876)) ([c6cf3a7](https://github.com/MustardSeedNetworks/niac-go/commit/c6cf3a756af235cd96de48616fc7d7cf33971789))
+
 ## [0.92.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.91.0...v0.92.0) (2026-07-03)
 
 
