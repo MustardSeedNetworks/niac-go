@@ -68,6 +68,7 @@ type Stack struct {
 	configMu     sync.RWMutex
 	reloadMu     sync.Mutex
 	devices      *DeviceTable
+	vlanMode     bool // any device is VLAN-tagged: ignore untagged frames (no native/default replay)
 	serialNumber int
 	mu           sync.Mutex
 
@@ -146,6 +147,23 @@ type Statistics struct {
 }
 
 // NewStack creates a new protocol stack.
+// configUsesVLANs reports whether any device is assigned a VLAN. When true the
+// stack runs "VLAN mode" and ignores untagged frames, so it can never respond on
+// the native/default VLAN — preventing a leak (e.g. a rogue DHCP offer) onto an
+// untagged management network no matter how the upstream trunk is configured.
+func configUsesVLANs(cfg *config.Config) bool {
+	if cfg == nil {
+		return false
+	}
+	for i := range cfg.Devices {
+		if cfg.Devices[i].VLAN > 0 {
+			return true
+		}
+	}
+
+	return false
+}
+
 func NewStack(
 	captureEngine *capture.Engine,
 	cfg *config.Config,
@@ -166,6 +184,7 @@ func NewStack(
 		snmpAgents:   make(map[*config.Device]*snmpAgentGroup),
 		neighbors:    newNeighborTable(),
 		errorManager: apperr.NewStateManager(),
+		vlanMode:     configUsesVLANs(cfg),
 	}
 
 	// Create protocol handlers
