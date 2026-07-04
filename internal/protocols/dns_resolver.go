@@ -105,7 +105,7 @@ func (h *DNSHandler) lookupHost(hostname string, set *dnsRecordSet) []dnsRecord 
 			}
 		}
 
-		return nil
+		return wildcardRecords(set.forward)
 	}
 
 	if recs, ok := h.records[hostname]; ok {
@@ -117,6 +117,20 @@ func (h *DNSHandler) lookupHost(hostname string, set *dnsRecordSet) []dnsRecord 
 		if recs, ok := h.records[fullname]; ok {
 			return recs
 		}
+	}
+
+	return wildcardRecords(h.records)
+}
+
+// dnsWildcardName is the catch-all forward record: a config record named "*"
+// resolves any otherwise-unmatched name. This lets a simulated resolver stand in
+// for "the whole internet" so a discovery tool's Internet-tier lookups succeed.
+const dnsWildcardName = "*"
+
+// wildcardRecords returns the catch-all record set, or nil if none is configured.
+func wildcardRecords(forward map[string][]dnsRecord) []dnsRecord {
+	if recs, ok := forward[dnsWildcardName]; ok {
+		return recs
 	}
 
 	return nil
