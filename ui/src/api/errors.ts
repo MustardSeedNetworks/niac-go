@@ -36,29 +36,3 @@ export class TimeoutError extends ApiError {
 export function isApiError(error: unknown): error is ApiError {
   return error instanceof ApiError;
 }
-
-export function isNetworkError(error: unknown): error is NetworkError {
-  return error instanceof NetworkError;
-}
-
-export function isTimeoutError(error: unknown): error is TimeoutError {
-  return error instanceof TimeoutError;
-}
-
-export function isAuthError(error: unknown): error is ApiError {
-  return error instanceof ApiError && (error.status === 401 || error.status === 403);
-}
-
-export function isNotFoundError(error: unknown): error is ApiError {
-  return error instanceof ApiError && error.status === 404;
-}
-
-/**
- * FIX #176: Assert a value is defined, throwing if null/undefined.
- */
-export function assertDefined<T>(value: T | null | undefined, name = 'value'): T {
-  if (value === null || value === undefined) {
-    throw new Error(`Expected ${name} to be defined`);
-  }
-  return value;
-}

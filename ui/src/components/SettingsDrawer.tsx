@@ -30,12 +30,14 @@ import {
 import type { ReactElement, ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { fetchInterfaces } from '../api/client';
 import type { NetworkInterface } from '../api/types';
 import { iconSizes } from '../constants/sizes';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import { type Theme, useTheme } from '../hooks/useTheme';
-import { badge, cn, drawer, layout, spacing } from '../styles/theme';
+import { cn, drawer, layout, spacing } from '../styles/theme';
+import { ConnectionStatus } from '../ui/ConnectionStatus';
 import { SimulationSection } from './settings/SimulationSection';
 
 interface SettingsDrawerProps {
@@ -151,7 +153,7 @@ export function SettingsDrawer({
             {activeTab === 'simulation' && <SimulationSection />}
             {activeTab === 'appearance' && <AppearanceSection />}
             {activeTab === 'network' && <NetworkSection />}
-            {activeTab === 'debug' && <DebugSection />}
+            {activeTab === 'debug' && <DebugSection onClose={onClose} />}
             {activeTab === 'about' && <AboutSection version={version} />}
           </div>
         </div>
@@ -347,13 +349,11 @@ function NetworkSection(): ReactElement {
           description={t('network.backendUrlDescription')}
         >
           <code className="text-xs text-brand-accent bg-brand-primary/10 px-cell py-compact rounded">
-            localhost:8080
+            {window.location.origin}
           </code>
         </SettingRow>
-        <SettingRow label={t('network.websocket')} description={t('network.websocketDescription')}>
-          <span className={cn(badge.base, badge.variant.success, badge.size.sm)}>
-            {t('network.connected')}
-          </span>
+        <SettingRow label="Connection" description={t('network.websocketDescription')}>
+          <ConnectionStatus />
         </SettingRow>
       </Section>
     </>
@@ -395,64 +395,35 @@ function InterfaceItem({ name, type, status, ip }: InterfaceItemProps): ReactEle
 // Debug Section
 // =============================================================================
 
-function DebugSection(): ReactElement {
+interface DebugSectionProps {
+  onClose: () => void;
+}
+
+function DebugSection({ onClose }: DebugSectionProps): ReactElement {
   const { t } = useTranslation('settings');
-  const [logLevel, setLogLevel] = useState<'error' | 'warn' | 'info' | 'debug'>('info');
+  const navigate = useNavigate();
 
   return (
-    <>
-      <Section title={t('debug.loggingTitle')} description={t('debug.loggingDescription')}>
-        <SettingRow label={t('debug.logLevel')} description={t('debug.logLevelDescription')}>
-          <select
-            value={logLevel}
-            onChange={(e) => setLogLevel(e.target.value as typeof logLevel)}
-            className={cn(
-              'bg-bg-elevated border border-surface-border rounded-lg px-3 py-compact-md text-sm text-text-primary',
-              'focus:outline-none focus:ring-2 focus:ring-brand-primary/50',
-            )}
-          >
-            <option value="error">{t('debug.levels.error')}</option>
-            <option value="warn">{t('debug.levels.warn')}</option>
-            <option value="info">{t('debug.levels.info')}</option>
-            <option value="debug">{t('debug.levels.debug')}</option>
-          </select>
-        </SettingRow>
-      </Section>
-
-      <Section title={t('debug.devToolsTitle')} description={t('debug.devToolsDescription')}>
-        <button
-          type="button"
-          className={cn(
-            layout.flex.between,
-            'w-full py-row px-3 bg-surface-hover rounded-lg',
-            'hover:bg-surface-hover transition-colors text-left',
-          )}
-        >
-          <div>
-            <div className="text-sm text-text-primary">{t('debug.protocolDebugLevels')}</div>
-            <div className="text-xs text-text-muted">
-              {t('debug.protocolDebugLevelsDescription')}
-            </div>
-          </div>
-          <ChevronRight className="w-4 h-4 text-text-muted" />
-        </button>
-
-        <button
-          type="button"
-          className={cn(
-            layout.flex.between,
-            'w-full py-row px-3 bg-surface-hover rounded-lg',
-            'hover:bg-surface-hover transition-colors text-left',
-          )}
-        >
-          <div>
-            <div className="text-sm text-text-primary">{t('debug.exportDiagnostics')}</div>
-            <div className="text-xs text-text-muted">{t('debug.exportDiagnosticsDescription')}</div>
-          </div>
-          <ChevronRight className="w-4 h-4 text-text-muted" />
-        </button>
-      </Section>
-    </>
+    <Section title={t('debug.devToolsTitle')} description={t('debug.devToolsDescription')}>
+      <button
+        type="button"
+        onClick={() => {
+          onClose();
+          navigate('/debug');
+        }}
+        className={cn(
+          layout.flex.between,
+          'w-full py-row px-3 bg-surface-hover rounded-lg',
+          'hover:bg-surface-hover transition-colors text-left',
+        )}
+      >
+        <div>
+          <div className="text-sm text-text-primary">{t('debug.protocolDebugLevels')}</div>
+          <div className="text-xs text-text-muted">{t('debug.protocolDebugLevelsDescription')}</div>
+        </div>
+        <ChevronRight className="w-4 h-4 text-text-muted" />
+      </button>
+    </Section>
   );
 }
 

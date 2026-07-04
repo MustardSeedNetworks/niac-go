@@ -1,13 +1,4 @@
-import {
-  Activity,
-  Bot,
-  Network,
-  PlugZap,
-  SatelliteDish,
-  Server,
-  Terminal,
-  Zap,
-} from 'lucide-react';
+import { Activity, Network, PlugZap, SatelliteDish, Server, Terminal, Zap } from 'lucide-react';
 import { type FC, memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchSimulationStatus } from '../api/client';
@@ -16,7 +7,6 @@ import { POLL_INTERVALS } from '../constants/polling';
 import { iconSizes } from '../constants/sizes';
 import { useAppState } from '../contexts/AppContext';
 import { useApiResource } from '../hooks/useApiResource';
-import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
 import { Tag } from '../ui/Tag';
 import { AccentLink, H2, SmallText } from '../ui/Typography';
@@ -359,21 +349,11 @@ const AutomationTimeline = memo(({ history }: { history: HistoryRecord[] | null 
           {timeline.map((event) => (
             <div
               key={event.title}
-              className="flex flex-col gap-tight rounded-lg border border-surface-border bg-bg-base/50 pad sm:flex-row sm:items-center sm:justify-between"
+              className="flex flex-col gap-tight rounded-lg border border-surface-border bg-bg-base/50 pad"
             >
-              <div>
-                <SmallText className="text-status-info">{event.time}</SmallText>
-                <p className="font-semibold text-text-primary">{event.title}</p>
-                <SmallText className="text-text-muted">{event.detail}</SmallText>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="mt-inline sm:mt-0"
-                leftIcon={<Bot className={iconSizes.md} />}
-              >
-                {t('dashboard.automation.viewDetails')}
-              </Button>
+              <SmallText className="text-status-info">{event.time}</SmallText>
+              <p className="font-semibold text-text-primary">{event.title}</p>
+              <SmallText className="text-text-muted">{event.detail}</SmallText>
             </div>
           ))}
         </div>
