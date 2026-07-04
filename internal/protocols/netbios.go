@@ -438,9 +438,17 @@ func (h *NetBIOSHandler) decodeNetBIOSName(data []byte) (string, byte, int) {
 	decoded := make([]byte, nbnsDecodedNameLen)
 
 	for i := range 16 {
-		high := data[1+i*2] - 'A'
-		low := data[2+i*2] - 'A'
-		decoded[i] = (high << nbnsNibbleShift) | low
+		hi := data[1+i*2]
+		lo := data[2+i*2]
+
+		// Valid NetBIOS level-2 encoding uses only 'A'..'P' (nibbles 0..15). A
+		// byte below 'A' underflows the `- 'A'` subtraction and decodes to a
+		// garbage name; reject invalid encoding instead.
+		if hi < 'A' || hi > 'A'+nbnsNibbleMask || lo < 'A' || lo > 'A'+nbnsNibbleMask {
+			return "", 0, 0
+		}
+
+		decoded[i] = ((hi - 'A') << nbnsNibbleShift) | (lo - 'A')
 	}
 
 	// Extract name (first 15 bytes, trimmed) and type (16th byte)
