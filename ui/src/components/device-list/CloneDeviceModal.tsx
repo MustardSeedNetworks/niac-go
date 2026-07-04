@@ -1,4 +1,4 @@
-import { zodResolver } from '@hookform/resolvers/zod';
+import { valibotResolver } from '@hookform/resolvers/valibot';
 import { Copy } from 'lucide-react';
 import type { FC } from 'react';
 import { type SubmitHandler, useForm } from 'react-hook-form';
@@ -18,7 +18,7 @@ export const CloneDeviceModal: FC<CloneDeviceModalProps> = ({ hostname, onClone,
     handleSubmit,
     formState: { errors, isValid },
   } = useForm<CloneDeviceFormFields>({
-    resolver: zodResolver(CloneDeviceSchema),
+    resolver: valibotResolver(CloneDeviceSchema),
     defaultValues: { newHostname: `${hostname}-copy` },
     mode: 'onBlur',
   });
