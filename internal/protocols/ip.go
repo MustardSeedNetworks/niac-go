@@ -203,6 +203,7 @@ func (h *IPHandler) handleTTLTimeout(pkt *Packet, ipLayer *layers.IPv4) bool {
 		dstMAC,
 		ipLayer,
 		device,
+		pkt.VLAN,
 	)
 	if err != nil {
 		return false
