@@ -420,7 +420,7 @@ func TestDNSSendDNSResponse(t *testing.T) {
 		net.ParseIP("10.0.0.1"), net.ParseIP("10.0.0.2"),
 		net.HardwareAddr{0x00, 0x11, 0x22, 0x33, 0x44, 0x55},
 		net.HardwareAddr{0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff},
-		12345)
+		12345, 0)
 	// Expect error because stack has no capture engine
 	if err == nil {
 		t.Log("SendDNSResponse succeeded (stack queued packet)")
@@ -440,7 +440,7 @@ func TestDNSSendDNSResponseV6(t *testing.T) {
 		net.ParseIP("fd00::1"), net.ParseIP("fd00::2"),
 		net.HardwareAddr{0x00, 0x11, 0x22, 0x33, 0x44, 0x55},
 		net.HardwareAddr{0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff},
-		12345)
+		12345, 0)
 	if err == nil {
 		t.Log("SendDNSResponseV6 succeeded")
 	}
