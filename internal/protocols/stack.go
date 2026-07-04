@@ -17,7 +17,7 @@ const (
 	// DefaultQueueBufferSize is the default buffer size for send/receive queues.
 	// Increase this for high-traffic scenarios to prevent packet drops.
 	// Decrease for memory-constrained environments.
-	DefaultQueueBufferSize = 1000
+	DefaultQueueBufferSize = 16384
 
 	// Recommended sizes for different scenarios:
 	// - Low traffic (< 100 pps): 500

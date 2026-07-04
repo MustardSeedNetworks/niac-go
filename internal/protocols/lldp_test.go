@@ -439,8 +439,9 @@ func TestLLDPConstants(t *testing.T) {
 		t.Errorf("LLDPTTL should be 120 seconds, got %d", protocols.LLDPTTL)
 	}
 
-	// Check advertisement interval
-	expectedInterval := 30 * time.Second
+	// Check advertisement interval (demo-tuned to 15s so a short discovery
+	// listen reliably catches a beacon; see LLDPAdvertiseInterval).
+	expectedInterval := 15 * time.Second
 	if protocols.LLDPAdvertiseInterval != expectedInterval {
 		t.Errorf("LLDPAdvertiseInterval should be %v, got %v", expectedInterval, protocols.LLDPAdvertiseInterval)
 	}

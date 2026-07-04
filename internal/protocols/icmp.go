@@ -315,6 +315,7 @@ func (h *ICMPHandler) SendICMPTimeExceeded(
 	srcMAC, dstMAC net.HardwareAddr,
 	originalIP *layers.IPv4,
 	device *config.Device,
+	vlan int,
 ) error {
 	if originalIP == nil {
 		return ErrOriginalIPLayerMissing
@@ -333,7 +334,12 @@ func (h *ICMPHandler) SendICMPTimeExceeded(
 		TypeCode: layers.CreateICMPv4TypeCode(layers.ICMPv4TypeTimeExceeded, 0),
 	}
 
-	ttl := defaultTTLIPv6
+	// A router hop replies with its own IP TTL, not the IPv6 default.
+	ttl := defaultTTLIPv4
+	if device != nil && device.ICMPConfig != nil && device.ICMPConfig.TTL > 0 {
+		ttl = device.ICMPConfig.TTL
+	}
+
 	eth := &layers.Ethernet{
 		SrcMAC:       srcMAC,
 		DstMAC:       dstMAC,
@@ -376,6 +382,7 @@ func (h *ICMPHandler) SendICMPTimeExceeded(
 		Length:       len(buf.Bytes()),
 		SerialNumber: serialNum,
 		Device:       device,
+		VLAN:         vlan, // echo the probe's VLAN or the reply never reaches a tagged tester
 	}
 	h.stack.Send(pkt)
 
@@ -543,6 +550,7 @@ func (h *ICMPHandler) SendICMPUnreachable(
 	srcMAC, dstMAC []byte,
 	code uint8,
 	originalPacket []byte,
+	vlan int,
 ) error {
 	// Build Ethernet header
 	eth := &layers.Ethernet{
@@ -600,6 +608,7 @@ func (h *ICMPHandler) SendICMPUnreachable(
 		Buffer:       buffer.Bytes(),
 		Length:       len(buffer.Bytes()),
 		SerialNumber: serialNum,
+		VLAN:         vlan, // reply on the VLAN the request arrived on (tagged or untagged)
 	}
 
 	h.stack.Send(pkt)
