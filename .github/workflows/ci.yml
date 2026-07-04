@@ -224,7 +224,7 @@ jobs:
         run: ../scripts/check-token-discipline.sh
 
       - name: Type check
-        run: npx tsc --noEmit
+        run: npm run typecheck
 
       - name: Build
         run: npm run build
