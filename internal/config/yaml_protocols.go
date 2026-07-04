@@ -59,6 +59,20 @@ func parseOSFingerprintConfig(yamlOSFP *converter.OSFingerprintConfig) *OSFinger
 	return osFP
 }
 
+// parseReflectorConfig parses NetAlly UDP reflector configuration from YAML.
+// A non-nil result enables the reflector on the device.
+func parseReflectorConfig(yamlReflector *converter.ReflectorConfig) *ReflectorConfig {
+	if yamlReflector == nil {
+		return nil
+	}
+
+	return &ReflectorConfig{
+		LatencyMs: yamlReflector.LatencyMs,
+		JitterMs:  yamlReflector.JitterMs,
+		DSCP:      yamlReflector.DSCP,
+	}
+}
+
 // parseIPerf3Config parses iPerf3 server emulation configuration from YAML.
 func parseIPerf3Config(yamlIPerf3 *converter.IPerf3Config) *IPerf3Config {
 	if yamlIPerf3 == nil {
