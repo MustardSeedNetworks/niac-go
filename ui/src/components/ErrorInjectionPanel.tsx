@@ -1,4 +1,4 @@
-import { zodResolver } from '@hookform/resolvers/zod';
+import { valibotResolver } from '@hookform/resolvers/valibot';
 import { type FC, useState } from 'react';
 import { type SubmitHandler, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
@@ -32,7 +32,7 @@ export const ErrorInjectionPanel: FC = () => {
     watch,
     formState: { errors, isSubmitting },
   } = useForm<ErrorInjectionFormFields>({
-    resolver: zodResolver(ErrorInjectionSchema),
+    resolver: valibotResolver(ErrorInjectionSchema),
     defaultValues: {
       selectedDevice: '',
       selectedInterface: '',
