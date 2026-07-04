@@ -69,7 +69,7 @@ func buildConfigFromYAML(yamlConfig *converter.Config, configDir string) (*Confi
 		cfg.Devices = append(cfg.Devices, device)
 	}
 
-	segments, err := buildSegments(yamlConfig, cfg.IncludePath)
+	segments, err := buildSegments(yamlConfig, cfg.IncludePath, configDir)
 	if err != nil {
 		return nil, err
 	}
@@ -88,7 +88,7 @@ func buildConfigFromYAML(yamlConfig *converter.Config, configDir string) (*Confi
 
 // buildSegments converts and validates the multi-VLAN segment bindings (ADR
 // 0008). Segments and a top-level device list are mutually exclusive.
-func buildSegments(yamlConfig *converter.Config, includePath string) ([]Segment, error) {
+func buildSegments(yamlConfig *converter.Config, includePath, configDir string) ([]Segment, error) {
 	if len(yamlConfig.Segments) == 0 {
 		return nil, nil
 	}
@@ -100,7 +100,7 @@ func buildSegments(yamlConfig *converter.Config, includePath string) ([]Segment,
 	segments := make([]Segment, 0, len(yamlConfig.Segments))
 
 	for _, ySeg := range yamlConfig.Segments {
-		seg, err := buildSegment(ySeg, includePath)
+		seg, err := buildSegment(ySeg, includePath, configDir)
 		if err != nil {
 			return nil, err
 		}
@@ -111,7 +111,7 @@ func buildSegments(yamlConfig *converter.Config, includePath string) ([]Segment,
 	return segments, nil
 }
 
-func buildSegment(ySeg converter.Segment, includePath string) (Segment, error) {
+func buildSegment(ySeg converter.Segment, includePath, configDir string) (Segment, error) {
 	tag, err := parseSegmentTag(string(ySeg.Tag))
 	if err != nil {
 		return Segment{}, err
@@ -126,6 +126,10 @@ func buildSegment(ySeg converter.Segment, includePath string) (Segment, error) {
 
 	seg := Segment{Tag: tag, ConfigPath: ySeg.Config}
 
+	if hasConfig {
+		return resolveSegmentConfig(seg, ySeg.Config, configDir)
+	}
+
 	for _, yamlDevice := range ySeg.Devices {
 		device, convErr := convertYAMLDevice(yamlDevice, includePath)
 		if convErr != nil {
@@ -134,6 +138,34 @@ func buildSegment(ySeg converter.Segment, includePath string) (Segment, error) {
 
 		seg.Devices = append(seg.Devices, device)
 	}
+
+	return seg, nil
+}
+
+// resolveSegmentConfig loads a segment's `config:` file (a whole demo) and uses
+// its devices as the segment's device set. The path is relative to the parent
+// config's directory. A segment config that itself declares segments is
+// rejected — nesting demos is out of scope.
+func resolveSegmentConfig(seg Segment, path, configDir string) (Segment, error) {
+	if !filepath.IsAbs(path) && configDir != "" {
+		path = filepath.Join(configDir, path)
+	}
+
+	loaded, err := LoadYAML(path)
+	if err != nil {
+		return Segment{}, fmt.Errorf("segment tag %d config %q: %w", seg.Tag, path, err)
+	}
+
+	if len(loaded.Segments) > 0 {
+		return Segment{}, fmt.Errorf(
+			"%w: segment tag %d config %q declares its own segments",
+			ErrInvalidSegmentTag,
+			seg.Tag,
+			path,
+		)
+	}
+
+	seg.Devices = loaded.Devices
 
 	return seg, nil
 }

@@ -2,8 +2,59 @@ package config
 
 import (
 	"errors"
+	"os"
+	"path/filepath"
 	"testing"
 )
+
+// TestSegmentConfigPathResolution: a segment's `config:` file (a whole demo) is
+// loaded and its devices become the segment's device set — how two real demo
+// configs are run side-by-side.
+func TestSegmentConfigPathResolution(t *testing.T) {
+	dir := t.TempDir()
+
+	demo1 := filepath.Join(dir, "demo1.yaml")
+	if err := os.WriteFile(demo1, []byte(`
+devices:
+  - name: demo1-r1
+    mac: "02:00:00:00:02:01"
+    ips: ["10.0.0.1"]
+`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	parent := filepath.Join(dir, "multi.yaml")
+	if err := os.WriteFile(parent, []byte(`
+segments:
+  - tag: 200
+    config: demo1.yaml
+  - tag: 300
+    devices:
+      - name: demo2-r1
+        mac: "02:00:00:00:03:01"
+        ips: ["10.0.0.1"]
+`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg, err := LoadYAML(parent)
+	if err != nil {
+		t.Fatalf("LoadYAML: %v", err)
+	}
+
+	segs := cfg.NormalizedSegments()
+	if len(segs) != 2 {
+		t.Fatalf("segments = %d, want 2", len(segs))
+	}
+
+	if segs[0].Tag != 200 || len(segs[0].Devices) != 1 || segs[0].Devices[0].Name != "demo1-r1" {
+		t.Errorf("tag-200 segment should resolve demo1.yaml to demo1-r1, got %+v", segs[0])
+	}
+
+	if segs[1].Tag != 300 || segs[1].Devices[0].Name != "demo2-r1" {
+		t.Errorf("tag-300 inline segment wrong: %+v", segs[1])
+	}
+}
 
 // TestNormalizedSegmentsBackwardCompat: a bare `devices:` config presents as a
 // single untagged segment — today's flat behavior, unchanged.

@@ -116,12 +116,12 @@ func (h *ICMPHandler) getAddressMaskTargets(pkt *Packet, ipLayer *layers.IPv4) [
 	isBroadcast := dstMAC != nil && dstMAC.String() == "ff:ff:ff:ff:ff:ff"
 
 	if !isBroadcast {
-		return h.stack.GetDevices().GetByIP(ipLayer.DstIP)
+		return h.stack.devicesFor(pkt.VLAN).GetByIP(ipLayer.DstIP)
 	}
 
 	var targets []*config.Device
 
-	for _, dev := range h.stack.GetDevices().GetAll() {
+	for _, dev := range h.stack.devicesFor(pkt.VLAN).GetAll() {
 		if dev.ICMPConfig != nil && dev.ICMPConfig.AddressMaskReply != nil {
 			targets = append(targets, dev)
 		}
@@ -184,7 +184,7 @@ func (h *ICMPHandler) handleRouterSolicitation(
 	debugLevel := h.stack.GetDebugLevel()
 	dstMAC := pkt.GetSourceMAC()
 
-	for _, device := range h.stack.GetDevices().GetAll() {
+	for _, device := range h.stack.devicesFor(pkt.VLAN).GetAll() {
 		if device.ICMPConfig == nil || device.ICMPConfig.RouterAdvertisement == nil {
 			continue
 		}

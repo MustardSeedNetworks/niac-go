@@ -101,7 +101,7 @@ func (h *ARPHandler) handleARPRequest(pkt *Packet, arp *layers.ARP) {
 	h.stack.IncrementStat("arp_requests")
 	h.logARPRequest(pkt, targetIP, sourceIP, sourceMAC)
 
-	devices := h.stack.GetDevices().GetByIP(targetIP)
+	devices := h.stack.devicesFor(pkt.VLAN).GetByIP(targetIP)
 	if len(devices) == 0 {
 		h.logDebug("ARP Request: No device found for IP", "ip", targetIP)
 		return

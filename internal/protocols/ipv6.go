@@ -106,7 +106,7 @@ func (h *IPv6Handler) HandlePacket(pkt *Packet) {
 			ipv6.SrcIP, ipv6.DstIP, ipv6.NextHeader, ipv6.HopLimit, pkt.SerialNumber)
 	}
 
-	devices := h.getIPv6TargetDevices(ipv6, pkt.SerialNumber)
+	devices := h.getIPv6TargetDevices(ipv6, pkt.SerialNumber, pkt.VLAN)
 	if devices == nil && !IsIPv6Multicast(ipv6.DstIP) {
 		return
 	}
@@ -141,8 +141,8 @@ func (h *IPv6Handler) parseIPv6Layer(packet gopacket.Packet, serialNum int) *lay
 }
 
 // getIPv6TargetDevices returns devices that should receive this packet, or nil if not for us.
-func (h *IPv6Handler) getIPv6TargetDevices(ipv6 *layers.IPv6, serialNum int) []*config.Device {
-	devices := h.stack.GetDevices().GetByIP(ipv6.DstIP)
+func (h *IPv6Handler) getIPv6TargetDevices(ipv6 *layers.IPv6, serialNum int, vlan int) []*config.Device {
+	devices := h.stack.devicesFor(vlan).GetByIP(ipv6.DstIP)
 	if len(devices) > 0 {
 		return devices
 	}
