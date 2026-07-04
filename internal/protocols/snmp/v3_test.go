@@ -15,7 +15,7 @@ const sysDescrOID = ".1.3.6.1.2.1.1.1.0"
 
 // echoProcess is a minimal ProcessFunc: it answers a Get for sysDescr with a
 // fixed OctetString and NoSuchObject for anything else.
-func echoProcess(_ gosnmp.PDUType, vars []gosnmp.SnmpPDU, _ uint32) []gosnmp.SnmpPDU {
+func echoProcess(_ gosnmp.PDUType, vars []gosnmp.SnmpPDU, _ int, _ uint32) []gosnmp.SnmpPDU {
 	out := make([]gosnmp.SnmpPDU, 0, len(vars))
 	for _, v := range vars {
 		if v.Name == sysDescrOID {

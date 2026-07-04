@@ -48,6 +48,33 @@ func (g *snmpAgentGroup) Ensure(community string, device *config.Device, debugLe
 	return agent
 }
 
+// ReindexAll eagerly builds every agent's sorted OID index. Called once after a
+// device's MIBs are fully loaded (walk files, AddMib, topology) so the sort is
+// paid at startup instead of lazily on the first GetNext — where it would run on
+// the stack's single decode goroutine and stall a fresh multi-device discovery.
+func (g *snmpAgentGroup) ReindexAll() {
+	if g == nil {
+		return
+	}
+
+	for _, agent := range g.agents {
+		agent.Reindex()
+	}
+}
+
+// SynthesizePeerTopologyAll fills each agent's downstream bridge FDB from the
+// resolved fleet MACs (see Agent.SynthesizePeerTopology). Every community agent
+// shares the device's topology, so all get the entries.
+func (g *snmpAgentGroup) SynthesizePeerTopologyAll(resolve snmp.PeerMACResolver) {
+	if g == nil {
+		return
+	}
+
+	for _, agent := range g.agents {
+		agent.SynthesizePeerTopology(resolve)
+	}
+}
+
 func (g *snmpAgentGroup) Communities() []string {
 	if g == nil {
 		return nil

@@ -84,7 +84,39 @@ func (s *Stack) initSNMPAgent(device *config.Device) {
 		}
 	}
 
+	// Now that the MIB is loaded, fill downstream bridge FDB entries from the
+	// fleet roster (a host MAC on the access port it hangs off) so a scanner can
+	// answer "nearest switch/port" for discovered hosts.
+	group.SynthesizePeerTopologyAll(s.peerMACResolver())
+
+	// Every MIB is now fully loaded (walk files, AddMib, topology, peer FDB).
+	// Build the sorted OID indexes eagerly so the first GetNext of a discovery
+	// does not trigger a large sort on the stack's single decode goroutine —
+	// which would stall SNMP responses fleet-wide when a scanner walks every
+	// device at once.
+	group.ReindexAll()
+
 	s.snmpAgents[device] = group
+}
+
+// peerMACResolver returns a lookup from device name to MAC over the whole config
+// roster. An SNMP agent knows only its own device, so cross-device MAC
+// resolution (for FDB / neighbour synthesis) has to come from the stack.
+func (s *Stack) peerMACResolver() snmp.PeerMACResolver {
+	byName := make(map[string][]byte, len(s.config.Devices))
+
+	for i := range s.config.Devices {
+		dev := &s.config.Devices[i]
+		if len(dev.MACAddress) > 0 {
+			byName[dev.Name] = dev.MACAddress
+		}
+	}
+
+	return func(name string) ([]byte, bool) {
+		mac, ok := byName[name]
+
+		return mac, ok
+	}
 }
 
 // initSNMPv3Engine builds and attaches the device's SNMPv3 authoritative
