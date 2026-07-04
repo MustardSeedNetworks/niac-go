@@ -90,6 +90,7 @@ func TestBuildDHCPOptionsNak(t *testing.T) {
 		DHCPNak,
 		net.ParseIP("10.20.200.2"),
 		net.HardwareAddr{0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff},
+		false,
 	)
 
 	present := map[layers.DHCPOpt]bool{}

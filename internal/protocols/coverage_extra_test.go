@@ -520,7 +520,7 @@ func TestDHCPBuildOptions(t *testing.T) {
 	mac := net.HardwareAddr{0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff}
 	serverIP := net.ParseIP("10.0.0.1")
 
-	opts := h.buildDHCPOptions(DHCPOffer, serverIP, mac)
+	opts := h.buildDHCPOptions(DHCPOffer, serverIP, mac, true)
 	if len(opts) == 0 {
 		t.Fatal("expected non-empty options")
 	}
