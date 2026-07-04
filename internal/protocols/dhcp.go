@@ -82,6 +82,7 @@ type DHCPLease struct {
 type DHCPHandler struct {
 	stack              *Stack
 	leases             map[string]*DHCPLease // Key: MAC address string
+	declined           map[string]struct{}   // pool IPs a client DHCPDECLINEd (in use); never re-offered
 	ipPool             []net.IP
 	poolStart          net.IP
 	poolEnd            net.IP
@@ -104,6 +105,7 @@ func NewDHCPHandler(stack *Stack) *DHCPHandler {
 	return &DHCPHandler{
 		stack:      stack,
 		leases:     make(map[string]*DHCPLease),
+		declined:   make(map[string]struct{}),
 		ipPool:     make([]net.IP, 0),
 		subnetMask: getDefaultSubnetMask(),
 	}
@@ -162,6 +164,7 @@ func (h *DHCPHandler) Reset() {
 	defer h.mu.Unlock()
 
 	h.leases = make(map[string]*DHCPLease)
+	h.declined = make(map[string]struct{})
 	h.ipPool = nil
 	h.poolStart = nil
 	h.poolEnd = nil
@@ -227,6 +230,10 @@ func (h *DHCPHandler) generateIPPool(start, end net.IP) ([]net.IP, error) {
 func (h *DHCPHandler) findAvailableIP() net.IP {
 	// Check each IP in pool
 	for _, ip := range h.ipPool {
+		if _, declined := h.declined[ip.String()]; declined {
+			continue // client reported this address in use (DHCPDECLINE)
+		}
+
 		inUse := false
 
 		for _, lease := range h.leases {
@@ -501,6 +508,11 @@ func (h *DHCPHandler) canGrantRequestedIP(mac net.HardwareAddr, ip net.IP) bool 
 		return staticIP.Equal(ip)
 	}
 
+	// A quarantined (DHCPDECLINEd) address is never grantable.
+	if _, declined := h.declined[ip.String()]; declined {
+		return false
+	}
+
 	// The client renewing its own current lease.
 	if existing, ok := h.leases[mac.String()]; ok && existing.IP.Equal(ip) {
 		return true
@@ -606,7 +618,64 @@ func (h *DHCPHandler) HandlePacket(pkt *Packet, ipLayer *layers.IPv4, _ *layers.
 	h.dispatchDHCPMessage(info, serverDevice, pkt.SerialNumber, debugLevel)
 }
 
-// dispatchDHCPMessage routes the DHCP message to the appropriate handler.
+// handleDHCPInform answers a DHCPINFORM — a client that already has an address
+// and only wants configuration options. Reply with a DHCPACK carrying options
+// but no lease (RFC 2131 §4.3.5).
+func (h *DHCPHandler) handleDHCPInform(
+	info *dhcpPacketInfo,
+	serverDevice *config.Device,
+	serialNum, debugLevel int,
+) {
+	err := h.SendDHCPInformAck(info.dhcp.Xid, info.dhcp.ClientHWAddr,
+		serverDevice.IPAddresses[0], serverDevice.MACAddress, info.vlan)
+	if err != nil {
+		if debugLevel >= 1 {
+			logging.ProtocolDebugf("DHCP", debugLevel, 1, "Failed to send Inform Ack: %v sn=%d", err, serialNum)
+		}
+
+		return
+	}
+
+	h.stack.IncrementStat("dhcp_acks")
+
+	if debugLevel >= debugLevelInfo {
+		logging.ProtocolDebugf("DHCP", debugLevel, debugLevelInfo,
+			"Sent Inform Ack to %s sn=%d", info.dhcp.ClientHWAddr, serialNum)
+	}
+}
+
+// handleDHCPDecline processes a DHCPDECLINE — the client found the address it
+// was offered already in use (via ARP). Quarantine that IP so it is never
+// offered again, and drop any lease we hold for it (RFC 2131 §4.3.3).
+func (h *DHCPHandler) handleDHCPDecline(info *dhcpPacketInfo, serialNum, debugLevel int) {
+	declinedIP := getRequestedIP(info.dhcp)
+	if declinedIP == nil {
+		return
+	}
+
+	mac := info.dhcp.ClientHWAddr.String()
+
+	h.mu.Lock()
+	// Only a pool address is quarantined: this bounds the declined set to the
+	// pool size (a client cannot grow it with arbitrary addresses) and ignores
+	// DECLINEs for addresses this server does not manage.
+	if h.isIPInPool(declinedIP) {
+		h.declined[declinedIP.String()] = struct{}{}
+	}
+
+	// Only the declining client's own lease is dropped — a client must not be
+	// able to release (hijack) another client's lease by declining its address.
+	if lease, ok := h.leases[mac]; ok && lease.IP.Equal(declinedIP) {
+		delete(h.leases, mac)
+	}
+	h.mu.Unlock()
+
+	if debugLevel >= debugLevelInfo {
+		logging.ProtocolDebugf("DHCP", debugLevel, debugLevelInfo,
+			"Declined address %s quarantined sn=%d", declinedIP, serialNum)
+	}
+}
+
 func (h *DHCPHandler) dispatchDHCPMessage(
 	info *dhcpPacketInfo,
 	serverDevice *config.Device,
@@ -629,9 +698,9 @@ func (h *DHCPHandler) dispatchDHCPMessage(
 		delete(h.leases, info.dhcp.ClientHWAddr.String())
 		h.mu.Unlock()
 	case DHCPInform:
-		if debugLevel >= DebugLevelVerbose {
-			logger.Debug("DHCP: Inform", "mac", info.dhcp.ClientHWAddr, "sn", serialNum)
-		}
+		h.handleDHCPInform(info, serverDevice, serialNum, debugLevel)
+	case DHCPDecline:
+		h.handleDHCPDecline(info, serialNum, debugLevel)
 	default:
 		if debugLevel >= DebugLevelInfo {
 			logger.Debug("DHCP: Unhandled message type", "type", info.messageType, "sn", serialNum)
@@ -679,7 +748,7 @@ func (h *DHCPHandler) SendDHCPOffer(
 	serverMAC net.HardwareAddr,
 	vlan int,
 ) error {
-	return h.sendDHCPResponse(xid, clientMAC, offeredIP, serverIP, serverMAC, DHCPOffer, vlan)
+	return h.sendDHCPResponse(xid, clientMAC, offeredIP, serverIP, serverMAC, DHCPOffer, vlan, true)
 }
 
 // SendDHCPAck sends a DHCP Ack message.
@@ -690,7 +759,20 @@ func (h *DHCPHandler) SendDHCPAck(
 	serverMAC net.HardwareAddr,
 	vlan int,
 ) error {
-	return h.sendDHCPResponse(xid, clientMAC, assignedIP, serverIP, serverMAC, DHCPAck, vlan)
+	return h.sendDHCPResponse(xid, clientMAC, assignedIP, serverIP, serverMAC, DHCPAck, vlan, true)
+}
+
+// SendDHCPInformAck answers a DHCPINFORM: a DHCPACK carrying configuration
+// parameters (mask, router, DNS, domain, …) but no address or lease — the
+// client already holds its own IP and only wants options (RFC 2131 §4.3.5).
+func (h *DHCPHandler) SendDHCPInformAck(
+	xid uint32,
+	clientMAC net.HardwareAddr,
+	serverIP net.IP,
+	serverMAC net.HardwareAddr,
+	vlan int,
+) error {
+	return h.sendDHCPResponse(xid, clientMAC, net.IPv4zero, serverIP, serverMAC, DHCPAck, vlan, false)
 }
 
 // SendDHCPNak sends a DHCPNAK rejecting a REQUEST the server cannot satisfy
@@ -705,7 +787,7 @@ func (h *DHCPHandler) SendDHCPNak(
 	serverMAC net.HardwareAddr,
 	vlan int,
 ) error {
-	return h.sendDHCPResponse(xid, clientMAC, net.IPv4zero, serverIP, serverMAC, DHCPNak, vlan)
+	return h.sendDHCPResponse(xid, clientMAC, net.IPv4zero, serverIP, serverMAC, DHCPNak, vlan, false)
 }
 
 // sendDHCPNakForRequest emits a DHCPNAK for a REQUEST the server cannot satisfy,
@@ -740,6 +822,7 @@ func (h *DHCPHandler) buildDHCPOptions(
 	msgType uint8,
 	serverIP net.IP,
 	clientMAC net.HardwareAddr,
+	withLease bool,
 ) []layers.DHCPOption {
 	// A DHCPNAK carries only the message type, the server identifier, and an
 	// optional human-readable reason — never lease parameters or an address
@@ -757,12 +840,25 @@ func (h *DHCPHandler) buildDHCPOptions(
 	options := []layers.DHCPOption{
 		{Type: layers.DHCPOptMessageType, Length: 1, Data: []byte{msgType}},
 		{Type: layers.DHCPOptServerID, Length: dhcpIPv4Len, Data: []byte(serverIP.To4())},
-		{Type: layers.DHCPOptLeaseTime, Length: dhcpIPv4Len, Data: h.encodeUint32(uint32(DefaultLeaseTime.Seconds()))},
 		{Type: layers.DHCPOptSubnetMask, Length: dhcpIPv4Len, Data: []byte(h.subnetMask.To4())},
 	}
 
+	// A DHCPACK answering a DHCPINFORM carries configuration parameters but no
+	// lease (the client already has its address); the lease-time and T1/T2
+	// timers are omitted (RFC 2131 §4.3.5).
+	if withLease {
+		options = append(options, layers.DHCPOption{
+			Type: layers.DHCPOptLeaseTime, Length: dhcpIPv4Len,
+			Data: h.encodeUint32(uint32(DefaultLeaseTime.Seconds())),
+		})
+	}
+
 	options = h.appendNetworkOptions(options)
-	options = h.appendTimingOptions(options)
+
+	if withLease {
+		options = h.appendTimingOptions(options)
+	}
+
 	options = h.appendBootOptions(options)
 	options = h.appendMiscOptions(options, clientMAC)
 
@@ -895,6 +991,7 @@ func (h *DHCPHandler) sendDHCPResponse(
 	serverMAC net.HardwareAddr,
 	msgType uint8,
 	vlan int,
+	withLease bool,
 ) error {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
@@ -920,7 +1017,7 @@ func (h *DHCPHandler) sendDHCPResponse(
 		RelayAgentIP: net.IPv4zero,
 		ClientHWAddr: clientMAC,
 	}
-	dhcp.Options = h.buildDHCPOptions(msgType, serverIP, clientMAC)
+	dhcp.Options = h.buildDHCPOptions(msgType, serverIP, clientMAC, withLease)
 
 	return h.serializeAndSendDHCP(dhcp, serverIP, serverMAC, vlan)
 }
