@@ -161,6 +161,12 @@
             "$ref": "#/$defs/Device"
           },
           "type": "array"
+        },
+        "segments": {
+          "items": {
+            "$ref": "#/$defs/Segment"
+          },
+          "type": "array"
         }
       },
       "additionalProperties": false,
@@ -1105,6 +1111,27 @@
       },
       "additionalProperties": false,
       "type": "object"
+    },
+    "Segment": {
+      "properties": {
+        "tag": {
+          "type": "string"
+        },
+        "devices": {
+          "items": {
+            "$ref": "#/$defs/Device"
+          },
+          "type": "array"
+        },
+        "config": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "tag"
+      ]
     },
     "SnmpAgent": {
       "properties": {
