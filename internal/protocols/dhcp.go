@@ -40,6 +40,9 @@ const (
 // DefaultLeaseTime is the DHCP lease duration (24 hours).
 const DefaultLeaseTime = 24 * time.Hour
 
+// dhcpNakReason is the human-readable message (option 56) carried in a DHCPNAK.
+const dhcpNakReason = "requested address not available"
+
 // DHCP encoding constants.
 const (
 	dhcpMaxByte          = 255    // max byte value for subnet mask octets / max DHCP option length
@@ -484,6 +487,29 @@ func (h *DHCPHandler) handleDHCPDiscover(
 	}
 }
 
+// canGrantRequestedIP reports whether the server can lease exactly ip to mac.
+// It decides ACK vs NAK for a DHCPREQUEST: a request for any other address (a
+// wrong subnet, or one already held by a different client) must be NAKed, not
+// silently ACKed for a substitute. Takes the read lock; the pool/lease helpers
+// it calls assume the caller holds it.
+func (h *DHCPHandler) canGrantRequestedIP(mac net.HardwareAddr, ip net.IP) bool {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
+	// A statically-bound client may only have its static address.
+	if staticIP := h.matchStaticLease(mac); staticIP != nil {
+		return staticIP.Equal(ip)
+	}
+
+	// The client renewing its own current lease.
+	if existing, ok := h.leases[mac.String()]; ok && existing.IP.Equal(ip) {
+		return true
+	}
+
+	// A pool address the client may claim (in range and not held by another).
+	return h.isIPInPool(ip) && !h.isIPLeased(ip)
+}
+
 // handleDHCPRequest handles a DHCP Request message.
 func (h *DHCPHandler) handleDHCPRequest(
 	info *dhcpPacketInfo,
@@ -499,11 +525,21 @@ func (h *DHCPHandler) handleDHCPRequest(
 
 	requestedIP := getRequestedIP(info.dhcp)
 
+	// A REQUEST names the address the client intends to use. If we cannot lease
+	// exactly that address, reject with a NAK — a real server never substitutes
+	// a different address in the REQUEST phase, and silence just makes the
+	// client wait out a timeout.
+	if requestedIP != nil && !h.canGrantRequestedIP(info.dhcp.ClientHWAddr, requestedIP) {
+		h.sendDHCPNakForRequest(info, serverDevice, requestedIP, serialNum, debugLevel)
+
+		return
+	}
+
 	lease, err := h.allocateLease(info.dhcp.ClientHWAddr, requestedIP, info.hostname)
 	if err != nil {
-		if debugLevel >= 1 {
-			logging.ProtocolDebugf("DHCP", debugLevel, 1, "Failed to confirm lease: %v sn=%d", err, serialNum)
-		}
+		// Cannot fulfil an otherwise-valid request (e.g. pool exhausted); NAK
+		// rather than go silent so the client restarts instead of timing out.
+		h.sendDHCPNakForRequest(info, serverDevice, requestedIP, serialNum, debugLevel)
 
 		return
 	}
@@ -657,6 +693,47 @@ func (h *DHCPHandler) SendDHCPAck(
 	return h.sendDHCPResponse(xid, clientMAC, assignedIP, serverIP, serverMAC, DHCPAck, vlan)
 }
 
+// SendDHCPNak sends a DHCPNAK rejecting a REQUEST the server cannot satisfy
+// (a wrong-subnet or unavailable requested address). Without it, such a request
+// gets silence and the client waits out a timeout — a real server tells the
+// client to restart. Broadcast on the request VLAN with no address or lease
+// options (RFC 2131 §4.3.2).
+func (h *DHCPHandler) SendDHCPNak(
+	xid uint32,
+	clientMAC net.HardwareAddr,
+	serverIP net.IP,
+	serverMAC net.HardwareAddr,
+	vlan int,
+) error {
+	return h.sendDHCPResponse(xid, clientMAC, net.IPv4zero, serverIP, serverMAC, DHCPNak, vlan)
+}
+
+// sendDHCPNakForRequest emits a DHCPNAK for a REQUEST the server cannot satisfy,
+// on the request's VLAN, and records the stat.
+func (h *DHCPHandler) sendDHCPNakForRequest(
+	info *dhcpPacketInfo,
+	serverDevice *config.Device,
+	requestedIP net.IP,
+	serialNum, debugLevel int,
+) {
+	nakErr := h.SendDHCPNak(info.dhcp.Xid, info.dhcp.ClientHWAddr,
+		serverDevice.IPAddresses[0], serverDevice.MACAddress, info.vlan)
+	if nakErr != nil {
+		if debugLevel >= 1 {
+			logging.ProtocolDebugf("DHCP", debugLevel, 1, "Failed to send Nak: %v sn=%d", nakErr, serialNum)
+		}
+
+		return
+	}
+
+	h.stack.IncrementStat("dhcp_naks")
+
+	if debugLevel >= debugLevelInfo {
+		logging.ProtocolDebugf("DHCP", debugLevel, debugLevelInfo,
+			"Sent Nak (requested %s) to %s sn=%d", requestedIP, info.dhcp.ClientHWAddr, serialNum)
+	}
+}
+
 // buildDHCPOptions constructs the DHCP options for a response.
 // Caller must hold h.mu (at least RLock).
 func (h *DHCPHandler) buildDHCPOptions(
@@ -664,6 +741,19 @@ func (h *DHCPHandler) buildDHCPOptions(
 	serverIP net.IP,
 	clientMAC net.HardwareAddr,
 ) []layers.DHCPOption {
+	// A DHCPNAK carries only the message type, the server identifier, and an
+	// optional human-readable reason — never lease parameters or an address
+	// (RFC 2131 §4.3.2). Returning the full option set would let a client
+	// mistake the rejection for a usable lease.
+	if msgType == DHCPNak {
+		return []layers.DHCPOption{
+			{Type: layers.DHCPOptMessageType, Length: 1, Data: []byte{msgType}},
+			{Type: layers.DHCPOptServerID, Length: dhcpIPv4Len, Data: []byte(serverIP.To4())},
+			{Type: layers.DHCPOptMessage, Length: safeconv.Uint8(len(dhcpNakReason)), Data: []byte(dhcpNakReason)},
+			{Type: layers.DHCPOptEnd},
+		}
+	}
+
 	options := []layers.DHCPOption{
 		{Type: layers.DHCPOptMessageType, Length: 1, Data: []byte{msgType}},
 		{Type: layers.DHCPOptServerID, Length: dhcpIPv4Len, Data: []byte(serverIP.To4())},
@@ -809,6 +899,12 @@ func (h *DHCPHandler) sendDHCPResponse(
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 
+	// A NAK never conveys an address; yiaddr must be zero (RFC 2131 §4.3.2).
+	yourIP := assignedIP
+	if msgType == DHCPNak {
+		yourIP = net.IPv4zero
+	}
+
 	dhcp := &layers.DHCPv4{
 		Operation:    layers.DHCPOpReply,
 		HardwareType: layers.LinkTypeEthernet,
@@ -819,7 +915,7 @@ func (h *DHCPHandler) sendDHCPResponse(
 		Secs:         0,
 		Flags:        dhcpBroadcastFlag,
 		ClientIP:     net.IPv4zero,
-		YourClientIP: assignedIP,
+		YourClientIP: yourIP,
 		NextServerIP: net.IPv4zero,
 		RelayAgentIP: net.IPv4zero,
 		ClientHWAddr: clientMAC,
