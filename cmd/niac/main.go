@@ -200,7 +200,7 @@ func runLegacyMode(osArgs []string, info versionInfo, services *serviceOptions) 
 
 	// Initialize global statistics (v1.19.0)
 	statsTracker := stats.NewStatistics(interfaceName, configFile, info.version)
-	statsTracker.SetDeviceCount(len(cfg.Devices))
+	statsTracker.SetDeviceCount(cfg.DeviceCount())
 
 	// Count SNMP-enabled devices
 	snmpCount := 0

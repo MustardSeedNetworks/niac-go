@@ -57,8 +57,13 @@ func (dt *DeviceTable) AddByIP(ip net.IP, device *config.Device) {
 	dt.byIP[key] = append(dt.byIP[key], device)
 }
 
-// GetByMAC looks up device by MAC address.
+// GetByMAC looks up device by MAC address. A nil receiver (an unclaimed VLAN
+// segment looked up via Stack.devicesFor) behaves as an empty table.
 func (dt *DeviceTable) GetByMAC(mac net.HardwareAddr) *config.Device {
+	if dt == nil {
+		return nil
+	}
+
 	dt.mu.RLock()
 	defer dt.mu.RUnlock()
 
@@ -66,8 +71,13 @@ func (dt *DeviceTable) GetByMAC(mac net.HardwareAddr) *config.Device {
 }
 
 // GetByIP looks up devices by IP address (may return multiple)
-// Works for both IPv4 and IPv6 addresses.
+// Works for both IPv4 and IPv6 addresses. A nil receiver behaves as an empty
+// table (see GetByMAC).
 func (dt *DeviceTable) GetByIP(ip net.IP) []*config.Device {
+	if dt == nil {
+		return nil
+	}
+
 	dt.mu.RLock()
 	defer dt.mu.RUnlock()
 
@@ -122,8 +132,13 @@ func (dt *DeviceTable) Count() int {
 	return len(dt.byMAC)
 }
 
-// AllDevices returns all devices.
+// AllDevices returns all devices. A nil receiver behaves as an empty table
+// (see GetByMAC).
 func (dt *DeviceTable) AllDevices() []*config.Device {
+	if dt == nil {
+		return nil
+	}
+
 	dt.mu.RLock()
 	defer dt.mu.RUnlock()
 
@@ -155,8 +170,13 @@ func (dt *DeviceTable) RegisterTTL(device *config.Device) {
 	}
 }
 
-// GetDeviceByTTL returns a device that should respond to a TTL timeout.
+// GetDeviceByTTL returns a device that should respond to a TTL timeout. A nil
+// receiver behaves as an empty table (see GetByMAC).
 func (dt *DeviceTable) GetDeviceByTTL(ttl int) *config.Device {
+	if dt == nil {
+		return nil
+	}
+
 	dt.mu.RLock()
 	devices := dt.ttlDevices[ttl]
 	dt.mu.RUnlock()
@@ -184,9 +204,10 @@ func (dt *DeviceTable) GetDeviceByTTL(ttl int) *config.Device {
 	return selected
 }
 
-// IncrementTTLCount increments the response count for a TTL device.
+// IncrementTTLCount increments the response count for a TTL device. A nil
+// receiver behaves as an empty table (see GetByMAC).
 func (dt *DeviceTable) IncrementTTLCount(device *config.Device) {
-	if device == nil {
+	if dt == nil || device == nil {
 		return
 	}
 

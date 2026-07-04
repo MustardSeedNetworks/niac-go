@@ -51,7 +51,7 @@ func (h *IPHandler) HandlePacket(pkt *Packet) {
 			ip.SrcIP, ip.DstIP, ip.Protocol, pkt.SerialNumber)
 	}
 
-	devices := h.getTargetDevices(ip, pkt.SerialNumber, debugLevel)
+	devices := h.getTargetDevices(ip, pkt.SerialNumber, debugLevel, pkt.VLAN)
 	if devices == nil {
 		return
 	}
@@ -84,10 +84,16 @@ func (h *IPHandler) parseIPv4Layer(pkt *Packet, debugLevel int) *layers.IPv4 {
 	return ip
 }
 
-// getTargetDevices returns devices that should receive this packet.
-func (h *IPHandler) getTargetDevices(ip *layers.IPv4, serialNum int, debugLevel int) []*config.Device {
+// getTargetDevices returns devices that should receive this packet, scoped to
+// the VLAN segment (if any) the packet arrived on.
+func (h *IPHandler) getTargetDevices(
+	ip *layers.IPv4,
+	serialNum int,
+	debugLevel int,
+	vlan int,
+) []*config.Device {
 	isBroadcast := ip.DstIP.Equal([]byte{255, 255, 255, 255})
-	devices := h.stack.GetDevices().GetByIP(ip.DstIP)
+	devices := h.stack.devicesFor(vlan).GetByIP(ip.DstIP)
 
 	if len(devices) == 0 && !isBroadcast {
 		if debugLevel >= DebugLevelVerbose {
@@ -98,7 +104,7 @@ func (h *IPHandler) getTargetDevices(ip *layers.IPv4, serialNum int, debugLevel 
 	}
 
 	if isBroadcast && len(devices) == 0 {
-		devices = h.stack.GetDevices().GetAll()
+		devices = h.stack.devicesFor(vlan).GetAll()
 	}
 
 	return devices
@@ -169,7 +175,7 @@ func (h *IPHandler) handleTTLTimeout(pkt *Packet, ipLayer *layers.IPv4) bool {
 
 	ttl := int(ipLayer.TTL)
 
-	device := h.stack.GetDevices().GetDeviceByTTL(ttl)
+	device := h.stack.devicesFor(pkt.VLAN).GetDeviceByTTL(ttl)
 	if device == nil {
 		return false
 	}
@@ -209,7 +215,7 @@ func (h *IPHandler) handleTTLTimeout(pkt *Packet, ipLayer *layers.IPv4) bool {
 		return false
 	}
 
-	h.stack.GetDevices().IncrementTTLCount(device)
+	h.stack.devicesFor(pkt.VLAN).IncrementTTLCount(device)
 
 	return true
 }

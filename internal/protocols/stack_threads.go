@@ -143,6 +143,16 @@ func (s *Stack) decodePacket(pkt *Packet) {
 		return
 	}
 
+	// Segment confinement (ADR 0008 multi-VLAN): in segment mode every VLAN
+	// tag must be bound to a segment/"demo" to get a reply. This is the
+	// segment-mode analogue of the vlanMode check above — keyed by
+	// devicesFor's per-tag lookup instead of a single global flag — so a tag
+	// with no bound segment is dropped here rather than falling through to
+	// per-handler device lookups that would just come up empty anyway.
+	if s.segmentTables != nil && s.devicesFor(pkt.VLAN) == nil {
+		return
+	}
+
 	// Try MAC-based routing first (multicast protocols)
 	if s.routeByMAC(pkt) {
 		return

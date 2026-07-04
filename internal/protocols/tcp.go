@@ -250,7 +250,7 @@ func (h *TCPHandler) sendRST(ipLayer *layers.IPv4, tcp *layers.TCP, devices []*c
 		return
 	}
 
-	dstMAC := h.lookupDestinationMAC(ipLayer.SrcIP, debugLevel)
+	dstMAC := h.lookupDestinationMAC(ipLayer.SrcIP, debugLevel, vlan)
 	if dstMAC == nil {
 		return
 	}
@@ -289,14 +289,15 @@ func (h *TCPHandler) deviceHasIP(device *config.Device, targetIP any) bool {
 	return false
 }
 
-// lookupDestinationMAC looks up the MAC address for a destination IP.
-func (h *TCPHandler) lookupDestinationMAC(srcIP any, debugLevel int) []byte {
+// lookupDestinationMAC looks up the MAC address for a destination IP, scoped
+// to the VLAN segment the original request arrived on.
+func (h *TCPHandler) lookupDestinationMAC(srcIP any, debugLevel int, vlan int) []byte {
 	ip, ok := srcIP.(net.IP)
 	if !ok {
 		return nil
 	}
 
-	srcDevice := h.stack.GetDevices().GetByIP(ip)
+	srcDevice := h.stack.devicesFor(vlan).GetByIP(ip)
 	if len(srcDevice) > 0 && len(srcDevice[0].MACAddress) > 0 {
 		return srcDevice[0].MACAddress
 	}
@@ -549,13 +550,13 @@ func (h *TCPHandler) routeToHandlerV6(
 		}
 	default:
 		if isSYNOnly {
-			h.sendRSTV6(ipv6, tcp, devices)
+			h.sendRSTV6(ipv6, tcp, devices, pkt.VLAN)
 		}
 	}
 }
 
 // sendRSTV6 sends a TCP RST packet over IPv6.
-func (h *TCPHandler) sendRSTV6(ipv6 *layers.IPv6, tcp *layers.TCP, devices []*config.Device) {
+func (h *TCPHandler) sendRSTV6(ipv6 *layers.IPv6, tcp *layers.TCP, devices []*config.Device, vlan int) {
 	debugLevel := h.stack.GetDebugLevel()
 
 	device := h.findDeviceWithIP(devices, ipv6.DstIP)
@@ -563,7 +564,7 @@ func (h *TCPHandler) sendRSTV6(ipv6 *layers.IPv6, tcp *layers.TCP, devices []*co
 		return
 	}
 
-	dstMAC := h.lookupDestinationMACV6(ipv6.SrcIP, debugLevel)
+	dstMAC := h.lookupDestinationMACV6(ipv6.SrcIP, debugLevel, vlan)
 	if dstMAC == nil {
 		return
 	}
@@ -571,9 +572,10 @@ func (h *TCPHandler) sendRSTV6(ipv6 *layers.IPv6, tcp *layers.TCP, devices []*co
 	h.sendRSTPacketV6(device, dstMAC, ipv6, tcp, debugLevel)
 }
 
-// lookupDestinationMACV6 looks up the MAC address for an IPv6 destination.
-func (h *TCPHandler) lookupDestinationMACV6(srcIP net.IP, debugLevel int) []byte {
-	srcDevice := h.stack.GetDevices().GetByIP(srcIP)
+// lookupDestinationMACV6 looks up the MAC address for an IPv6 destination,
+// scoped to the VLAN segment the original request arrived on.
+func (h *TCPHandler) lookupDestinationMACV6(srcIP net.IP, debugLevel int, vlan int) []byte {
+	srcDevice := h.stack.devicesFor(vlan).GetByIP(srcIP)
 	if len(srcDevice) > 0 && len(srcDevice[0].MACAddress) > 0 {
 		return srcDevice[0].MACAddress
 	}

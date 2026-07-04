@@ -2582,12 +2582,12 @@ func TestTCPLookupDestinationMAC(t *testing.T) {
 	h := NewTCPHandler(stack)
 
 	// Non-IP type
-	if h.lookupDestinationMAC("not-an-ip", 0) != nil {
+	if h.lookupDestinationMAC("not-an-ip", 0, 0) != nil {
 		t.Error("expected nil for non-IP type")
 	}
 
 	// Unknown IP
-	mac := h.lookupDestinationMAC(net.ParseIP("10.0.0.1"), 0)
+	mac := h.lookupDestinationMAC(net.ParseIP("10.0.0.1"), 0, 0)
 	if mac != nil {
 		t.Error("expected nil for unknown IP")
 	}
@@ -3459,7 +3459,7 @@ func TestTCPLookupDestinationMACV6(t *testing.T) {
 	h := NewTCPHandler(stack)
 
 	// Unknown IP
-	mac := h.lookupDestinationMACV6(net.ParseIP("fd00::1"), 0)
+	mac := h.lookupDestinationMACV6(net.ParseIP("fd00::1"), 0, 0)
 	if mac != nil {
 		t.Error("expected nil for unknown IP")
 	}
