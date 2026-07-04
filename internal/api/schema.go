@@ -50,6 +50,7 @@ const (
 	defaultIperfPort        = 5201    // default iperf port
 	defaultIperfDuration    = 1000    // default iperf duration ms
 	defaultBandwidthMbps    = 100     // default bandwidth in Mbps
+	maxReflectorDelayMs     = 60000   // max reflector latency/jitter (60s)
 )
 
 // SchemaProperty represents a JSON Schema property definition.
@@ -217,6 +218,7 @@ func buildProtocolSchemaProperties() map[string]*SchemaProperty {
 		"ttl":            buildTTLConfigSchema(&maxTTL),
 		"os_fingerprint": buildOSFingerprintSchema(),
 		"iperf3":         buildIPerf3Schema(&maxPort),
+		"reflector":      buildReflectorSchema(),
 	}
 }
 

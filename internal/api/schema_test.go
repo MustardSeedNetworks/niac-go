@@ -130,7 +130,7 @@ func TestBuildProtocolSchemaProperties(t *testing.T) {
 		"snmpAgent", "lldp", "cdp", "edp", "fdp", "stp",
 		"dhcp", "dns", "http", "ftp", "netbios",
 		"icmp", "icmpv6", "dhcpv6", "traffic", "ttl",
-		"os_fingerprint", "iperf3",
+		"os_fingerprint", "iperf3", "reflector",
 	}
 
 	for _, proto := range expectedProtocols {

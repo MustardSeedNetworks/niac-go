@@ -410,5 +410,8 @@ func parseDeviceProtocolConfigs(device *Device, yamlDevice *converter.Device) er
 	// Handle iPerf3 configuration
 	device.IPerf3 = parseIPerf3Config(yamlDevice.IPerf3)
 
+	// Handle UDP reflector configuration
+	device.ReflectorConfig = parseReflectorConfig(yamlDevice.Reflector)
+
 	return nil
 }
