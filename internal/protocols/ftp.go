@@ -49,7 +49,12 @@ func NewFTPHandler(stack *Stack) *FTPHandler {
 }
 
 // HandleRequest processes an FTP request.
-func (h *FTPHandler) HandleRequest(_ *Packet, ipLayer *layers.IPv4, tcpLayer *layers.TCP, devices []*config.Device) {
+func (h *FTPHandler) HandleRequest(
+	reqPkt *Packet,
+	ipLayer *layers.IPv4,
+	tcpLayer *layers.TCP,
+	devices []*config.Device,
+) {
 	debugLevel := h.stack.GetDebugLevel()
 
 	// Parse FTP command
@@ -75,7 +80,7 @@ func (h *FTPHandler) HandleRequest(_ *Packet, ipLayer *layers.IPv4, tcpLayer *la
 	}
 
 	// Send response
-	h.sendResponse(ipLayer, tcpLayer, []byte(response), devices)
+	h.sendResponse(ipLayer, tcpLayer, []byte(response), devices, reqPkt)
 }
 
 // sendResponse sends an FTP response.
@@ -84,6 +89,7 @@ func (h *FTPHandler) sendResponse(
 	tcpLayer *layers.TCP,
 	response []byte,
 	devices []*config.Device,
+	reqPkt *Packet,
 ) {
 	debugLevel := h.stack.GetDebugLevel()
 
@@ -96,17 +102,13 @@ func (h *FTPHandler) sendResponse(
 		return
 	}
 
-	// Get source MAC
-	srcDevices := h.stack.GetDevices().GetByIP(ipLayer.SrcIP)
+	// Reply to the requester's own frame source MAC and VLAN.
+	vlan := reqPktVLAN(reqPkt)
 
-	var srcMAC []byte
-
-	if len(srcDevices) > 0 && len(srcDevices[0].MACAddress) > 0 {
-		srcMAC = srcDevices[0].MACAddress
-	} else {
-		// Fallback - would need to get from original packet
+	srcMAC := requestSourceMAC(reqPkt)
+	if srcMAC == nil {
 		if debugLevel >= DebugLevelInfo {
-			_, _ = fmt.Fprintf(os.Stdout, "Cannot send FTP response: no MAC for %s\n", ipLayer.SrcIP)
+			_, _ = fmt.Fprintf(os.Stdout, "Cannot send FTP response: no source MAC for %s\n", ipLayer.SrcIP)
 		}
 
 		return
@@ -177,6 +179,7 @@ func (h *FTPHandler) sendResponse(
 		Length:       len(buffer.Bytes()),
 		SerialNumber: serialNum,
 		Device:       device,
+		VLAN:         vlan, // reply on the VLAN the request arrived on (tagged or untagged)
 	}
 
 	h.stack.Send(responsePkt)
@@ -454,7 +457,7 @@ func selectIPv4Address(devices []*config.Device) net.IP {
 }
 
 // SendWelcome sends FTP welcome banner when connection is established.
-func (h *FTPHandler) SendWelcome(ipLayer *layers.IPv4, tcpLayer *layers.TCP, devices []*config.Device) {
+func (h *FTPHandler) SendWelcome(reqPkt *Packet, ipLayer *layers.IPv4, tcpLayer *layers.TCP, devices []*config.Device) {
 	debugLevel := h.stack.GetDebugLevel()
 
 	// Only send welcome on new connections (SYN+ACK)
@@ -484,7 +487,7 @@ func (h *FTPHandler) SendWelcome(ipLayer *layers.IPv4, tcpLayer *layers.TCP, dev
 	// Small delay to let connection establish
 	go func() {
 		time.Sleep(ftpConnectionDelayMs * time.Millisecond)
-		h.sendResponse(ipLayer, tcpLayer, []byte(welcome), devices)
+		h.sendResponse(ipLayer, tcpLayer, []byte(welcome), devices, reqPkt)
 	}()
 
 	if debugLevel >= DebugLevelInfo {

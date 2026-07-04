@@ -42,7 +42,7 @@ var ErrV3NotDiscovery = errors.New("snmpv3: undecodable non-discovery datagram")
 // ProcessFunc processes a decoded PDU and returns the response variables. It is
 // the same contract as (*Agent).ProcessPDU, letting the v3 engine reuse the
 // existing v1/v2c MIB machinery without depending on *Agent directly.
-type ProcessFunc func(pduType gosnmp.PDUType, vars []gosnmp.SnmpPDU, maxRepetitions uint32) []gosnmp.SnmpPDU
+type ProcessFunc func(pduType gosnmp.PDUType, vars []gosnmp.SnmpPDU, nonRepeaters int, maxRepetitions uint32) []gosnmp.SnmpPDU
 
 // v3User is a resolved USM account with gosnmp protocol enums.
 type v3User struct {
@@ -158,7 +158,7 @@ func (e *V3Engine) respondToRequest(req *gosnmp.SnmpPacket, process ProcessFunc)
 		return e.buildReport(req, oidUsmStatsNotInTimeWindows, e.notInTimeWindows.Load(), user.msgFlags, &user)
 	}
 
-	respVars := process(req.PDUType, req.Variables, req.MaxRepetitions)
+	respVars := process(req.PDUType, req.Variables, int(req.NonRepeaters), req.MaxRepetitions)
 
 	return e.marshalResponse(req, &user, gosnmp.GetResponse, respVars)
 }

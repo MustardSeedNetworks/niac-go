@@ -18,11 +18,12 @@ import (
 
 // Capture engine constants.
 const (
-	snapshotLength    = 1600 // pcap snapshot length in bytes
-	captureTimeoutMs  = 100  // capture timeout for responsive shutdown
-	debugLevelVerbose = 3    // debug level for verbose packet logging
-	macAddressSize    = 6    // MAC/hardware address size in bytes
-	ipv4AddressSize   = 4    // IPv4 protocol address size in bytes
+	snapshotLength    = 1600     // pcap snapshot length in bytes
+	captureBufferSize = 16 << 20 // 16 MiB kernel ring buffer
+	captureTimeoutMs  = 100      // capture timeout for responsive shutdown
+	debugLevelVerbose = 3        // debug level for verbose packet logging
+	macAddressSize    = 6        // MAC/hardware address size in bytes
+	ipv4AddressSize   = 4        // IPv4 protocol address size in bytes
 )
 
 // ErrNoMACAddressFound is returned when an interface has no MAC address.
@@ -77,6 +78,13 @@ func openImmediate(interfaceName string) (*pcap.Handle, error) {
 		func() error { return inactive.SetPromisc(true) },
 		func() error { return inactive.SetTimeout(captureTimeoutMs * time.Millisecond) },
 		func() error { return inactive.SetImmediateMode(true) },
+		// A CyberScope discovery walks every device concurrently — hundreds of
+		// GETNEXT round-trips per big switch/router arriving in bursts. The
+		// default kernel ring is small enough that a burst overflows it and
+		// drops frames the reader never sees, which stalls a big-device walk
+		// mid-stream (it times out with "no SNMP details") while a tiny AP's
+		// short walk survives. A generous ring absorbs the burst.
+		func() error { return inactive.SetBufferSize(captureBufferSize) },
 	}
 	for _, apply := range configure {
 		if applyErr := apply(); applyErr != nil {

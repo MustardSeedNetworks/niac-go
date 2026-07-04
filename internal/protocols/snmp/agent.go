@@ -165,6 +165,14 @@ func (a *Agent) initializeSystemMIB() {
 	}
 }
 
+// Reindex eagerly builds the agent's sorted OID index. Call after all MIB
+// content is loaded so the sort is paid at startup rather than lazily on the
+// first GetNext (which runs on the stack's single decode goroutine). See
+// MIB.Reindex.
+func (a *Agent) Reindex() {
+	a.mib.Reindex()
+}
+
 // LoadWalkFile loads SNMP walk file data into the MIB.
 func (a *Agent) LoadWalkFile(filename string) error {
 	if filename == "" {
@@ -443,7 +451,12 @@ func RedactCommunityString(community string) string {
 
 // ProcessPDU processes SNMP PDU variables and returns response variables
 // This is typically called by an SNMP server implementation.
-func (a *Agent) ProcessPDU(pduType gosnmp.PDUType, vars []gosnmp.SnmpPDU, maxRepetitions uint32) []gosnmp.SnmpPDU {
+func (a *Agent) ProcessPDU(
+	pduType gosnmp.PDUType,
+	vars []gosnmp.SnmpPDU,
+	nonRepeaters int,
+	maxRepetitions uint32,
+) []gosnmp.SnmpPDU {
 	switch pduType {
 	case gosnmp.GetRequest:
 		return a.processGetRequest(vars)
@@ -459,7 +472,7 @@ func (a *Agent) ProcessPDU(pduType gosnmp.PDUType, vars []gosnmp.SnmpPDU, maxRep
 			reps = MaxOIDResultSize
 		}
 
-		return a.processGetBulkRequestVars(vars, reps)
+		return a.processGetBulk(vars, nonRepeaters, reps)
 	case gosnmp.Sequence,
 		gosnmp.GetResponse,
 		gosnmp.SetRequest,
@@ -541,32 +554,96 @@ func (a *Agent) processGetNextRequest(vars []gosnmp.SnmpPDU) []gosnmp.SnmpPDU {
 	return response
 }
 
-// processGetBulkRequestVars processes GET-BULK request variables.
-func (a *Agent) processGetBulkRequestVars(vars []gosnmp.SnmpPDU, maxRepetitions int) []gosnmp.SnmpPDU {
-	var response []gosnmp.SnmpPDU
+// processGetBulk implements SNMP GET-BULK per RFC 3416 §4.2.3.
+//
+// The first nonRepeaters varbinds are advanced once (like GET-NEXT); the rest
+// are "repeaters" walked up to maxRepetitions times. Crucially, the repeated
+// bindings are emitted row-major — for each repetition, the next binding of
+// every repeater in request order — not column-major (each repeater walked to
+// completion before the next). A manager reconstructs a conceptual table by
+// position, so the earlier column-major layout made a multi-column ifTable walk
+// (what a NetAlly CyberScope issues) unparseable: it reported a single interface
+// even though the agent served the whole table. All bindings share one datagram
+// byte budget so the response stays under the MTU.
+func (a *Agent) processGetBulk(vars []gosnmp.SnmpPDU, nonRepeaters, maxRepetitions int) []gosnmp.SnmpPDU {
+	a.mu.RLock()
+	defer a.mu.RUnlock()
 
-	for _, snmpVar := range vars {
-		results, err := a.HandleGetBulk(snmpVar.Name, maxRepetitions)
-		if err != nil {
-			response = append(response, gosnmp.SnmpPDU{
-				Name:  snmpVar.Name,
-				Type:  gosnmp.EndOfMibView,
-				Value: nil,
-			})
+	nonRepeaters = max(0, min(nonRepeaters, len(vars)))
 
-			continue
+	response := make([]gosnmp.SnmpPDU, 0, len(vars))
+	budget := MaxBulkResponseBytes
+
+	// Non-repeaters: advance each once, in order.
+	for _, v := range vars[:nonRepeaters] {
+		nextOID, value := a.mib.GetNext(v.Name)
+		response = append(response, bulkBinding(v.Name, nextOID, value))
+
+		if value != nil {
+			budget -= estimateVarbindSize(nextOID, value)
+		}
+	}
+
+	repeaters := vars[nonRepeaters:]
+	cursors := make([]string, len(repeaters))
+	exhausted := make([]bool, len(repeaters))
+
+	for i, v := range repeaters {
+		cursors[i] = v.Name
+	}
+
+	// Repeaters: interleave repetitions (row-major).
+	for range maxRepetitions {
+		progressed := false
+
+		for i := range repeaters {
+			if exhausted[i] {
+				continue
+			}
+
+			nextOID, value := a.mib.GetNext(cursors[i])
+			if nextOID == "" || value == nil {
+				exhausted[i] = true
+
+				response = append(response, gosnmp.SnmpPDU{
+					Name:  cursors[i],
+					Type:  gosnmp.EndOfMibView,
+					Value: nil,
+				})
+
+				continue
+			}
+
+			// Keep the datagram under the MTU; the manager resumes the walk from
+			// the last returned OIDs. Always allow the very first binding so a
+			// single oversized value never deadlocks the walk.
+			size := estimateVarbindSize(nextOID, value)
+			if len(response) > 0 && size > budget {
+				return response
+			}
+
+			budget -= size
+			response = append(response, bulkBinding(cursors[i], nextOID, value))
+			cursors[i] = nextOID
+			progressed = true
 		}
 
-		for _, result := range results {
-			response = append(response, gosnmp.SnmpPDU{
-				Name:  result.OID,
-				Type:  result.Value.Type,
-				Value: result.Value.Value,
-			})
+		if !progressed {
+			break
 		}
 	}
 
 	return response
+}
+
+// bulkBinding builds a response binding for a GET-BULK step, mapping an
+// exhausted subtree (no next OID) to the endOfMibView exception.
+func bulkBinding(requestedOID, nextOID string, value *OIDValue) gosnmp.SnmpPDU {
+	if nextOID == "" || value == nil {
+		return gosnmp.SnmpPDU{Name: requestedOID, Type: gosnmp.EndOfMibView, Value: nil}
+	}
+
+	return gosnmp.SnmpPDU{Name: nextOID, Type: value.Type, Value: value.Value}
 }
 
 // OIDResult represents an OID and its value.

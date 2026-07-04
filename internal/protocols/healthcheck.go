@@ -3,6 +3,7 @@ package protocols
 import (
 	"encoding/binary"
 	"fmt"
+	"net"
 	"os"
 	"strings"
 	"time"
@@ -135,7 +136,7 @@ func NewHealthCheckHandler(stack *Stack) *HealthCheckHandler {
 
 // HandleTCPConnect handles TCP SYN for health check ports (returns SYN-ACK to indicate service is up).
 func (h *HealthCheckHandler) HandleTCPConnect(
-	_ *Packet,
+	reqPkt *Packet,
 	ipLayer *layers.IPv4,
 	tcpLayer *layers.TCP,
 	devices []*config.Device,
@@ -154,12 +155,12 @@ func (h *HealthCheckHandler) HandleTCPConnect(
 	}
 
 	// Send SYN-ACK to indicate service is available
-	h.sendSYNACK(ipLayer, tcpLayer, devices)
+	h.sendSYNACK(ipLayer, tcpLayer, devices, reqPkt)
 }
 
 // HandleLDAPRequest handles LDAP bind/search requests.
 func (h *HealthCheckHandler) HandleLDAPRequest(
-	_ *Packet,
+	reqPkt *Packet,
 	ipLayer *layers.IPv4,
 	tcpLayer *layers.TCP,
 	devices []*config.Device,
@@ -178,13 +179,13 @@ func (h *HealthCheckHandler) HandleLDAPRequest(
 	// Parse LDAP message and send appropriate response
 	response := h.generateLDAPResponse(tcpLayer.Payload, devices)
 	if response != nil {
-		h.sendTCPResponse(ipLayer, tcpLayer, response, devices)
+		h.sendTCPResponse(ipLayer, tcpLayer, response, devices, reqPkt)
 	}
 }
 
 // HandleRTSPRequest handles RTSP OPTIONS/DESCRIBE requests.
 func (h *HealthCheckHandler) HandleRTSPRequest(
-	_ *Packet,
+	reqPkt *Packet,
 	ipLayer *layers.IPv4,
 	tcpLayer *layers.TCP,
 	devices []*config.Device,
@@ -202,13 +203,13 @@ func (h *HealthCheckHandler) HandleRTSPRequest(
 
 	response := h.generateRTSPResponse(tcpLayer.Payload, devices)
 	if response != nil {
-		h.sendTCPResponse(ipLayer, tcpLayer, response, devices)
+		h.sendTCPResponse(ipLayer, tcpLayer, response, devices, reqPkt)
 	}
 }
 
 // HandleMySQLRequest handles MySQL connection handshake.
 func (h *HealthCheckHandler) HandleMySQLRequest(
-	_ *Packet,
+	reqPkt *Packet,
 	ipLayer *layers.IPv4,
 	tcpLayer *layers.TCP,
 	devices []*config.Device,
@@ -228,13 +229,13 @@ func (h *HealthCheckHandler) HandleMySQLRequest(
 	// If we have payload (after handshake), send greeting
 	if len(tcpLayer.Payload) > 0 {
 		response := h.generateMySQLGreeting(devices)
-		h.sendTCPResponse(ipLayer, tcpLayer, response, devices)
+		h.sendTCPResponse(ipLayer, tcpLayer, response, devices, reqPkt)
 	}
 }
 
 // HandlePostgresRequest handles PostgreSQL connection handshake.
 func (h *HealthCheckHandler) HandlePostgresRequest(
-	_ *Packet,
+	reqPkt *Packet,
 	ipLayer *layers.IPv4,
 	tcpLayer *layers.TCP,
 	devices []*config.Device,
@@ -253,13 +254,13 @@ func (h *HealthCheckHandler) HandlePostgresRequest(
 	// Check if this is SSL request or startup message
 	response := h.generatePostgresResponse(tcpLayer.Payload, devices)
 	if response != nil {
-		h.sendTCPResponse(ipLayer, tcpLayer, response, devices)
+		h.sendTCPResponse(ipLayer, tcpLayer, response, devices, reqPkt)
 	}
 }
 
 // HandleMSSQLRequest handles MS SQL Server connection.
 func (h *HealthCheckHandler) HandleMSSQLRequest(
-	_ *Packet,
+	reqPkt *Packet,
 	ipLayer *layers.IPv4,
 	tcpLayer *layers.TCP,
 	devices []*config.Device,
@@ -277,13 +278,13 @@ func (h *HealthCheckHandler) HandleMSSQLRequest(
 
 	response := h.generateMSSQLResponse(tcpLayer.Payload, devices)
 	if response != nil {
-		h.sendTCPResponse(ipLayer, tcpLayer, response, devices)
+		h.sendTCPResponse(ipLayer, tcpLayer, response, devices, reqPkt)
 	}
 }
 
 // HandleModbusRequest handles Modbus TCP requests.
 func (h *HealthCheckHandler) HandleModbusRequest(
-	_ *Packet,
+	reqPkt *Packet,
 	ipLayer *layers.IPv4,
 	tcpLayer *layers.TCP,
 	devices []*config.Device,
@@ -301,13 +302,13 @@ func (h *HealthCheckHandler) HandleModbusRequest(
 
 	response := h.generateModbusResponse(tcpLayer.Payload, devices)
 	if response != nil {
-		h.sendTCPResponse(ipLayer, tcpLayer, response, devices)
+		h.sendTCPResponse(ipLayer, tcpLayer, response, devices, reqPkt)
 	}
 }
 
 // HandleDICOMRequest handles DICOM association requests.
 func (h *HealthCheckHandler) HandleDICOMRequest(
-	_ *Packet,
+	reqPkt *Packet,
 	ipLayer *layers.IPv4,
 	tcpLayer *layers.TCP,
 	devices []*config.Device,
@@ -325,13 +326,13 @@ func (h *HealthCheckHandler) HandleDICOMRequest(
 
 	response := h.generateDICOMResponse(tcpLayer.Payload, devices)
 	if response != nil {
-		h.sendTCPResponse(ipLayer, tcpLayer, response, devices)
+		h.sendTCPResponse(ipLayer, tcpLayer, response, devices, reqPkt)
 	}
 }
 
 // HandleHL7Request handles HL7 MLLP messages.
 func (h *HealthCheckHandler) HandleHL7Request(
-	_ *Packet,
+	reqPkt *Packet,
 	ipLayer *layers.IPv4,
 	tcpLayer *layers.TCP,
 	devices []*config.Device,
@@ -349,13 +350,13 @@ func (h *HealthCheckHandler) HandleHL7Request(
 
 	response := h.generateHL7Response(tcpLayer.Payload, devices)
 	if response != nil {
-		h.sendTCPResponse(ipLayer, tcpLayer, response, devices)
+		h.sendTCPResponse(ipLayer, tcpLayer, response, devices, reqPkt)
 	}
 }
 
 // HandleOPCUARequest handles OPC UA connection requests.
 func (h *HealthCheckHandler) HandleOPCUARequest(
-	_ *Packet,
+	reqPkt *Packet,
 	ipLayer *layers.IPv4,
 	tcpLayer *layers.TCP,
 	devices []*config.Device,
@@ -373,13 +374,13 @@ func (h *HealthCheckHandler) HandleOPCUARequest(
 
 	response := h.generateOPCUAResponse(tcpLayer.Payload, devices)
 	if response != nil {
-		h.sendTCPResponse(ipLayer, tcpLayer, response, devices)
+		h.sendTCPResponse(ipLayer, tcpLayer, response, devices, reqPkt)
 	}
 }
 
 // HandleSMBRequest handles SMB/CIFS connection requests.
 func (h *HealthCheckHandler) HandleSMBRequest(
-	_ *Packet,
+	reqPkt *Packet,
 	ipLayer *layers.IPv4,
 	tcpLayer *layers.TCP,
 	devices []*config.Device,
@@ -397,12 +398,17 @@ func (h *HealthCheckHandler) HandleSMBRequest(
 
 	response := h.generateSMBResponse(tcpLayer.Payload, devices)
 	if response != nil {
-		h.sendTCPResponse(ipLayer, tcpLayer, response, devices)
+		h.sendTCPResponse(ipLayer, tcpLayer, response, devices, reqPkt)
 	}
 }
 
 // sendSYNACK sends a TCP SYN-ACK response.
-func (h *HealthCheckHandler) sendSYNACK(ipLayer *layers.IPv4, tcpLayer *layers.TCP, devices []*config.Device) {
+func (h *HealthCheckHandler) sendSYNACK(
+	ipLayer *layers.IPv4,
+	tcpLayer *layers.TCP,
+	devices []*config.Device,
+	reqPkt *Packet,
+) {
 	debugLevel := h.stack.GetDebugLevel()
 
 	if len(devices) == 0 {
@@ -414,16 +420,14 @@ func (h *HealthCheckHandler) sendSYNACK(ipLayer *layers.IPv4, tcpLayer *layers.T
 		return
 	}
 
-	// Get source MAC
-	srcDevices := h.stack.GetDevices().GetByIP(ipLayer.SrcIP)
+	// Reply to the requester's own MAC (from the request frame), not a modelled
+	// device — a real tester is not in our device table. Reply on its VLAN.
+	vlan := reqPktVLAN(reqPkt)
 
-	var srcMAC []byte
-
-	if len(srcDevices) > 0 && len(srcDevices[0].MACAddress) > 0 {
-		srcMAC = srcDevices[0].MACAddress
-	} else {
+	srcMAC := requestSourceMAC(reqPkt)
+	if srcMAC == nil {
 		if debugLevel >= DebugLevelInfo {
-			_, _ = fmt.Fprintf(os.Stdout, "Cannot send SYN-ACK: no MAC for %s\n", ipLayer.SrcIP)
+			_, _ = fmt.Fprintf(os.Stdout, "Cannot send SYN-ACK: no source MAC for %s\n", ipLayer.SrcIP)
 		}
 
 		return
@@ -484,6 +488,7 @@ func (h *HealthCheckHandler) sendSYNACK(ipLayer *layers.IPv4, tcpLayer *layers.T
 		Length:       len(buffer.Bytes()),
 		SerialNumber: serialNum,
 		Device:       device,
+		VLAN:         vlan, // reply on the VLAN the request arrived on (tagged or untagged)
 	}
 
 	h.stack.Send(pkt)
@@ -494,12 +499,34 @@ func (h *HealthCheckHandler) sendSYNACK(ipLayer *layers.IPv4, tcpLayer *layers.T
 	}
 }
 
+// reqPktVLAN returns the request packet's VLAN, or 0 (untagged) if absent, so a
+// reply is sent on the VLAN the request arrived on.
+func reqPktVLAN(pkt *Packet) int {
+	if pkt == nil {
+		return 0
+	}
+
+	return pkt.VLAN
+}
+
+// requestSourceMAC returns the request frame's source MAC — the correct reply
+// destination even when the requester (a real tester) is not a modelled device,
+// unlike a device-table lookup by IP.
+func requestSourceMAC(pkt *Packet) net.HardwareAddr {
+	if pkt == nil {
+		return nil
+	}
+
+	return pkt.GetSourceMAC()
+}
+
 // sendTCPResponse sends a TCP response with payload.
 func (h *HealthCheckHandler) sendTCPResponse(
 	ipLayer *layers.IPv4,
 	tcpLayer *layers.TCP,
 	payload []byte,
 	devices []*config.Device,
+	reqPkt *Packet,
 ) {
 	debugLevel := h.stack.GetDebugLevel()
 
@@ -512,13 +539,10 @@ func (h *HealthCheckHandler) sendTCPResponse(
 		return
 	}
 
-	srcDevices := h.stack.GetDevices().GetByIP(ipLayer.SrcIP)
+	vlan := reqPktVLAN(reqPkt)
 
-	var srcMAC []byte
-
-	if len(srcDevices) > 0 && len(srcDevices[0].MACAddress) > 0 {
-		srcMAC = srcDevices[0].MACAddress
-	} else {
+	srcMAC := requestSourceMAC(reqPkt)
+	if srcMAC == nil {
 		return
 	}
 
@@ -576,6 +600,7 @@ func (h *HealthCheckHandler) sendTCPResponse(
 		Length:       len(buffer.Bytes()),
 		SerialNumber: serialNum,
 		Device:       device,
+		VLAN:         vlan, // reply on the VLAN the request arrived on (tagged or untagged)
 	}
 
 	h.stack.Send(pkt)

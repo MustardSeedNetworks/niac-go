@@ -23,6 +23,16 @@ func (a *Agent) initializeIFMIB() {
 		return
 	}
 
+	// A capture walk carries the device's real interface table (ifIndex, names,
+	// counters). Synthesizing a second, sequential ifTable from trunk_ports on
+	// top of it duplicates interfaces under different indices — harmless when a
+	// device has one uplink, but it pollutes the interface list once downstream
+	// access ports are modelled. The walk owns IF-MIB; trunk_ports only drive the
+	// neighbour/forwarding topology (see initializeLLDPRemoteMIB, SynthesizePeerTopology).
+	if a.hasWalkContent() {
+		return
+	}
+
 	// Count interfaces from trunk_ports
 	numInterfaces := len(device.TrunkPorts)
 	if numInterfaces == 0 {

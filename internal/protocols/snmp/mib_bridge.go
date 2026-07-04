@@ -19,6 +19,15 @@ func (a *Agent) initializeBridgeMIB() {
 		return
 	}
 
+	// A capture walk carries the real BRIDGE-MIB (dot1dBaseNumPorts, the
+	// dot1dBasePort→ifIndex map, STP). Synthesizing a sequential one from
+	// trunk_ports on top would give ports a bogus offset-0 ifIndex mapping and
+	// mislead the downstream FDB port derivation. The walk owns BRIDGE-MIB;
+	// trunk_ports only drive neighbour/forwarding topology (see #862).
+	if a.hasWalkContent() {
+		return
+	}
+
 	numPorts := len(device.TrunkPorts)
 	if numPorts == 0 {
 		numPorts = 1

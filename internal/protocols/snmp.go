@@ -125,7 +125,12 @@ func (h *SNMPHandler) buildResponse(agent *snmp.Agent, request *gosnmp.SnmpPacke
 		return nil, fmt.Errorf("%w: %v", ErrUnsupportedSNMPVersion, request.Version)
 	}
 
-	responseVars := agent.ProcessPDU(request.PDUType, request.Variables, request.MaxRepetitions)
+	responseVars := agent.ProcessPDU(
+		request.PDUType,
+		request.Variables,
+		int(request.NonRepeaters),
+		request.MaxRepetitions,
+	)
 
 	response := &gosnmp.SnmpPacket{
 		Version:    request.Version,
