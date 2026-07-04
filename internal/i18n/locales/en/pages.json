@@ -271,5 +271,31 @@
       "errorInvalidFile": "Please select a YAML file (.yaml or .yml)",
       "errorReadFailed": "Failed to read file"
     }
+  },
+  "license": {
+    "label": "License",
+    "title": "License & Features",
+    "description": "See your active license tier, the features it unlocks, and how to activate or upgrade.",
+    "loading": "Checking license…",
+    "loadError": "Could not load license status.",
+    "retry": "Retry",
+    "devMode": "Development build — license enforcement is off, so every feature is available and no upgrade prompts are shown.",
+    "currentTier": "Current tier",
+    "tier": "Tier",
+    "activation": "Activation",
+    "activated": "Activated",
+    "notActivated": "Not activated",
+    "trial": "Trial",
+    "trialDaysRemaining": "{{days}} days remaining",
+    "features": "Included features",
+    "noFeatures": "No feature flags are reported for this tier.",
+    "manage": "Manage your license",
+    "manageHint": "NIAC validates licenses offline — there is no phone-home. Activate, start a trial, or deactivate with the niac license CLI on the host running the daemon.",
+    "cmd": {
+      "status": "Status",
+      "activate": "Activate",
+      "trial": "Trial",
+      "deactivate": "Deactivate"
+    }
   }
 }

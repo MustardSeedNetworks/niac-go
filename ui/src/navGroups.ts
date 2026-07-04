@@ -3,6 +3,7 @@ import {
   Database,
   FileBox,
   GitCompare,
+  KeyRound,
   Network,
   PlugZap,
   Server,
@@ -41,6 +42,7 @@ export function useNavGroups(): SidebarNavGroup[] {
         items: [
           { path: '/', label: t('dashboard.label'), icon: Activity },
           { path: '/runtime', label: t('runtime.label'), icon: PlugZap },
+          { path: '/license', label: t('license.label'), icon: KeyRound },
         ],
       },
       {

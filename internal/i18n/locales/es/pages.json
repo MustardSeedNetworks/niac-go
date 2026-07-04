@@ -271,5 +271,31 @@
       "errorInvalidFile": "Seleccione un archivo YAML (.yaml o .yml)",
       "errorReadFailed": "Error al leer el archivo"
     }
+  },
+  "license": {
+    "label": "Licencia",
+    "title": "Licencia y funciones",
+    "description": "Consulte su nivel de licencia activo, las funciones que desbloquea y cómo activar o actualizar.",
+    "loading": "Verificando licencia…",
+    "loadError": "No se pudo cargar el estado de la licencia.",
+    "retry": "Reintentar",
+    "devMode": "Compilación de desarrollo: la aplicación de licencia está desactivada, por lo que todas las funciones están disponibles y no se muestran avisos de actualización.",
+    "currentTier": "Nivel actual",
+    "tier": "Nivel",
+    "activation": "Activación",
+    "activated": "Activada",
+    "notActivated": "Sin activar",
+    "trial": "Prueba",
+    "trialDaysRemaining": "{{days}} días restantes",
+    "features": "Funciones incluidas",
+    "noFeatures": "No se reportan indicadores de funciones para este nivel.",
+    "manage": "Administrar su licencia",
+    "manageHint": "NIAC valida las licencias sin conexión, sin comunicación externa. Active, inicie una prueba o desactive con la CLI niac license en el host que ejecuta el daemon.",
+    "cmd": {
+      "status": "Estado",
+      "activate": "Activar",
+      "trial": "Prueba",
+      "deactivate": "Desactivar"
+    }
   }
 }
