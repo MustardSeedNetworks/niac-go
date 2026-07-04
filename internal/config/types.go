@@ -172,6 +172,7 @@ type Device struct {
 	TrafficConfig       *TrafficConfig       // Traffic pattern configuration (v1.6.0)
 	OSFingerprintConfig *OSFingerprintConfig // OS fingerprinting configuration (v1.24.0)
 	IPerf3              *IPerf3Config        // iPerf3 server emulation configuration (v1.25.0)
+	ReflectorConfig     *ReflectorConfig     // NetAlly UDP reflector endpoint (v0.94.0)
 	PortChannels        []PortChannel        // Port-channel/LAG configuration (v1.23.0)
 	TrunkPorts          []TrunkPort          // Trunk port configuration (v1.23.0)
 	Properties          map[string]string
@@ -202,6 +203,15 @@ type IPerf3Config struct {
 	PacketLossPercent float64 // Simulated packet loss percentage
 	UploadMbps        float64 // Simulated upload bandwidth
 	DownloadMbps      float64 // Simulated download bandwidth
+}
+
+// ReflectorConfig holds NetAlly UDP reflector settings for a device. A device
+// with this set echoes signed reflector probes back to the sender (see
+// UDPHandler reflect path). Presence enables the reflector.
+type ReflectorConfig struct {
+	LatencyMs int  // Delay before reflecting, in milliseconds (0 = immediate)
+	JitterMs  int  // Random +/- delay around LatencyMs, in milliseconds
+	DSCP      bool // true: toggle DSCP bottom-2 bits (0x03); false: IP-precedence bit (0x01)
 }
 
 // DHCPConfig holds DHCP server configuration for a device.
