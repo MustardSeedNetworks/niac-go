@@ -239,7 +239,7 @@ func TestSendICMPUnreachable(t *testing.T) {
 	code := uint8(1) // Host unreachable
 	originalPacket := make([]byte, 100)
 
-	err := handler.SendICMPUnreachable(srcIP, dstIP, srcMAC, dstMAC, code, originalPacket)
+	err := handler.SendICMPUnreachable(srcIP, dstIP, srcMAC, dstMAC, code, originalPacket, 0)
 	if err != nil {
 		t.Errorf("SendICMPUnreachable failed: %v", err)
 	}
@@ -260,7 +260,7 @@ func TestSendICMPUnreachable_LargeOriginalPacket(t *testing.T) {
 	code := uint8(3)                    // Port unreachable
 	originalPacket := make([]byte, 200) // Large packet
 
-	err := handler.SendICMPUnreachable(srcIP, dstIP, srcMAC, dstMAC, code, originalPacket)
+	err := handler.SendICMPUnreachable(srcIP, dstIP, srcMAC, dstMAC, code, originalPacket, 0)
 	if err != nil {
 		t.Errorf("SendICMPUnreachable with large packet failed: %v", err)
 	}
