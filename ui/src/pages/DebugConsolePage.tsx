@@ -8,6 +8,7 @@ import { iconSizes } from '../constants/sizes';
 import { useLogStream } from '../hooks/useEventSource';
 import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
+import { ConfirmModal } from '../ui/ConfirmModal';
 import { Tag } from '../ui/Tag';
 
 // Maximum number of logs to buffer
@@ -50,6 +51,7 @@ export const DebugConsolePage: FC = () => {
   const [autoScroll, setAutoScroll] = useState(true);
   const [paused, setPaused] = useState(false);
   const [showDebugSettings, setShowDebugSettings] = useState(false);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   // Handle incoming log messages
   const handleMessage = useCallback(
@@ -132,12 +134,15 @@ export const DebugConsolePage: FC = () => {
     URL.revokeObjectURL(url);
   }, [filteredLogs]);
 
-  // Clear all logs
+  // Request confirmation before clearing all buffered logs
   const handleClear = useCallback(() => {
-    // TODO: Replace with custom Modal component
-    if (window.confirm('Clear all logs? This action cannot be undone.')) {
-      setLogs([]);
-    }
+    setShowClearConfirm(true);
+  }, []);
+
+  // Clear all logs once the user confirms
+  const confirmClear = useCallback(() => {
+    setShowClearConfirm(false);
+    setLogs([]);
   }, []);
 
   // Connection status display
@@ -264,6 +269,16 @@ export const DebugConsolePage: FC = () => {
           <ProtocolDebugLevels />
         </div>
       )}
+
+      {/* Clear logs confirmation modal */}
+      <ConfirmModal
+        isOpen={showClearConfirm}
+        onConfirm={confirmClear}
+        onCancel={() => setShowClearConfirm(false)}
+        title="Clear All Logs"
+        message="Clear all logs? This action cannot be undone."
+        confirmLabel="Clear"
+      />
     </div>
   );
 };

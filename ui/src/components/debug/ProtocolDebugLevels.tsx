@@ -1,5 +1,5 @@
 import { RefreshCw, RotateCcw, Save, Settings2 } from 'lucide-react';
-import { type ChangeEvent, type FC, memo, useCallback } from 'react';
+import { type ChangeEvent, type FC, memo, useCallback, useState } from 'react';
 import type {
   DebugLevel,
   DebugProtocol,
@@ -15,6 +15,7 @@ import {
 } from '../../hooks/useProtocolDebugLevels';
 import { Button } from '../../ui/Button';
 import { Card, CardContent } from '../../ui/Card';
+import { ConfirmModal } from '../../ui/ConfirmModal';
 import { Tag } from '../../ui/Tag';
 import { H2, SmallText } from '../../ui/Typography';
 
@@ -215,18 +216,17 @@ export const ProtocolDebugLevels: FC = () => {
 
   const protocolsByCategory = getProtocolsByCategory();
 
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
+
   const handleReset = useCallback(async () => {
-    // TODO: Replace with custom Modal component
-    if (window.confirm('Reset all protocols to default debug levels? This cannot be undone.')) {
-      await resetToDefaults();
-    }
+    setShowResetConfirm(false);
+    await resetToDefaults();
   }, [resetToDefaults]);
 
   const handleDiscard = useCallback(() => {
-    // TODO: Replace with custom Modal component
-    if (window.confirm('Discard unsaved changes?')) {
-      discardChanges();
-    }
+    setShowDiscardConfirm(false);
+    discardChanges();
   }, [discardChanges]);
 
   if (loading) {
@@ -259,7 +259,7 @@ export const ProtocolDebugLevels: FC = () => {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={handleDiscard}
+                  onClick={() => setShowDiscardConfirm(true)}
                   disabled={saving}
                   aria-label="Discard changes"
                 >
@@ -280,7 +280,7 @@ export const ProtocolDebugLevels: FC = () => {
             <Button
               variant="outline"
               size="sm"
-              onClick={handleReset}
+              onClick={() => setShowResetConfirm(true)}
               disabled={saving}
               leftIcon={<RotateCcw className={iconSizes.md} />}
               aria-label="Reset all protocols to defaults"
@@ -378,6 +378,24 @@ export const ProtocolDebugLevels: FC = () => {
           </div>
         </div>
       </CardContent>
+
+      <ConfirmModal
+        isOpen={showResetConfirm}
+        onConfirm={handleReset}
+        onCancel={() => setShowResetConfirm(false)}
+        title="Reset All Protocols"
+        message="Reset all protocols to default debug levels? This cannot be undone."
+        confirmLabel="Reset"
+      />
+
+      <ConfirmModal
+        isOpen={showDiscardConfirm}
+        onConfirm={handleDiscard}
+        onCancel={() => setShowDiscardConfirm(false)}
+        title="Discard Changes"
+        message="Discard unsaved changes?"
+        confirmLabel="Discard"
+      />
     </Card>
   );
 };

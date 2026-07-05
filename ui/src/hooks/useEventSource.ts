@@ -269,33 +269,3 @@ export function useLogStream(options: StreamHookOptions = {}): UseEventSourceRes
     ...restOptions,
   });
 }
-
-/**
- * Stats data structure from /api/v1/stream/stats
- */
-export interface StatsData {
-  type: 'stats';
-  timestamp: string;
-  data: {
-    packetsPerSecond: number;
-    bytesPerSecond: number;
-    activeConnections: number;
-    cpuUsage?: number;
-    memoryUsage?: number;
-    [key: string]: unknown;
-  };
-}
-
-/**
- * Hook for connecting to the stats stream
- */
-export function useStatsStream(options: StreamHookOptions = {}): UseEventSourceResult {
-  const { enabled = true, ...restOptions } = options;
-  const url = enabled ? `${getStreamBaseUrl()}/stats` : '';
-
-  return useEventSource({
-    url,
-    enabled,
-    ...restOptions,
-  });
-}

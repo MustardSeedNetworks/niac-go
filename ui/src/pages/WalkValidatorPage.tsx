@@ -113,7 +113,7 @@ export const WalkValidatorPage: FC = () => {
                 value={selectedFile}
                 onChange={(e) => setSelectedFile(e.target.value)}
                 disabled={filesLoading || files.length === 0}
-                title="Hydrated from /api/v1/files?kind=walks (the sandboxed walks directory). Use the absolute-path field to validate a walk outside this directory."
+                title="Hydrated from /api/v1/library/walks (the sandboxed walks directory). Use the absolute-path field to validate a walk outside this directory."
                 className="mt-tight w-full rounded border border-surface-border bg-bg-base/60 px-3 py-row text-sm text-text-primary focus:border-status-info focus:outline-none disabled:opacity-50"
               >
                 {filesLoading && <option>Loading…</option>}

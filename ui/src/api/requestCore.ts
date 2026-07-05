@@ -178,11 +178,12 @@ function parseApiError(text: string, status: number, fallback = ''): ApiError {
   return new ApiError(text || fallback || 'Request failed', status);
 }
 
-// FIX #175: Check if an error is retryable (network errors and 5xx responses).
+// FIX #175: Check if an error is retryable (network errors thrown by fetch()).
+// fetch() only ever rejects with a TypeError (network failure) or an
+// AbortError; it never rejects with a Response — 5xx responses resolve
+// normally and are handled via isRetryableStatus() on response.status below.
 function isRetryableError(error: unknown): boolean {
-  if (error instanceof TypeError) return true; // Network error
-  if (error instanceof Response && error.status >= 500) return true;
-  return false;
+  return error instanceof TypeError;
 }
 
 // FIX #175: Check if a response status is retryable.

@@ -32,8 +32,6 @@ import type {
   TemplateContent,
   TopologyGraph,
   UpdateProtocolDebugLevelsRequest,
-  UploadTemplateRequest,
-  UploadTemplateResponse,
   UploadUserConfigRequest,
   UploadUserConfigResponse,
   UserConfigContent,
@@ -86,8 +84,6 @@ export const updateAlerts = (payload: AlertConfig) =>
 // Files + SNMP walks
 // =====================================================================
 
-export const fetchFiles = (kind: 'pcaps' | 'walks') =>
-  request<FileEntry[]>(`/api/v1/files?kind=${kind}`);
 export const validateWalk = (filename: string) =>
   requestJson<WalkValidationResponse>('/api/v1/walk/validate', { filename }, { method: 'POST' });
 export const fixWalk = (filename: string) =>
@@ -232,14 +228,6 @@ export const fetchTemplateContent = (name: string) =>
 export const applyTemplate = (payload: UseTemplateRequest) =>
   requestJson<UseTemplateResponse>('/api/v1/templates/use', payload, { method: 'POST' });
 
-export const uploadTemplate = (payload: UploadTemplateRequest) =>
-  requestJson<UploadTemplateResponse>('/api/v1/templates', payload, { method: 'POST' });
-
-export const deleteTemplate = (name: string) =>
-  request<{ success: boolean; message: string }>(`/api/v1/templates/${encodeURIComponent(name)}`, {
-    method: 'DELETE',
-  });
-
 // =====================================================================
 // Protocol debug levels
 // =====================================================================
@@ -259,9 +247,6 @@ export const resetProtocolDebugLevels = () =>
 
 export const uploadPcap = (payload: PcapUploadRequest) =>
   requestJson<PcapUploadResponse>('/api/v1/pcap/upload', payload, { method: 'POST' });
-
-export const analyzePcap = (analysisId: string) =>
-  request<PcapAnalysisResult>(`/api/v1/pcap/analyze/${encodeURIComponent(analysisId)}`);
 
 export const fetchPcapAnalysis = (analysisId: string) =>
   request<PcapAnalysisResult>(`/api/v1/pcap/${encodeURIComponent(analysisId)}`);
