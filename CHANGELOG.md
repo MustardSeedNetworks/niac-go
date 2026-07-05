@@ -5,6 +5,25 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.94.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.93.0...v0.94.0) (2026-07-05)
+
+
+### Features
+
+* **dhcp:** answer DHCPINFORM + quarantine DHCPDECLINE (completes [#881](https://github.com/MustardSeedNetworks/niac-go/issues/881)) ([#894](https://github.com/MustardSeedNetworks/niac-go/issues/894)) ([7c574ad](https://github.com/MustardSeedNetworks/niac-go/commit/7c574adb869cda2519d56a49812e50e3849a269d))
+* multi-VLAN segment playback — run N demos at once (ADR 0008) ([#888](https://github.com/MustardSeedNetworks/niac-go/issues/888)) ([727281f](https://github.com/MustardSeedNetworks/niac-go/commit/727281f4cb78fc709a2125baa0341111d2d139f1))
+* **ui:** add License page surfacing tier + features ([#901](https://github.com/MustardSeedNetworks/niac-go/issues/901)) ([80a2f54](https://github.com/MustardSeedNetworks/niac-go/commit/80a2f5458ce4e53967c50ed221fc1db4bedb8782))
+* **ui:** localize TierGate upgrade tooltip via react-i18next ([#896](https://github.com/MustardSeedNetworks/niac-go/issues/896)) ([1727f83](https://github.com/MustardSeedNetworks/niac-go/commit/1727f833f025ad641665cbe76fbdc800a8c3573b)), closes [#713](https://github.com/MustardSeedNetworks/niac-go/issues/713)
+* **ui:** migrate device editor to react-hook-form + valibot ([#899](https://github.com/MustardSeedNetworks/niac-go/issues/899)) ([0a3b5c4](https://github.com/MustardSeedNetworks/niac-go/commit/0a3b5c4d3fe54305cb71d36c585efd6d46cbadbc)), closes [#730](https://github.com/MustardSeedNetworks/niac-go/issues/730)
+
+
+### Bug Fixes
+
+* **dhcp:** NAK a REQUEST the server cannot satisfy instead of silence ([#886](https://github.com/MustardSeedNetworks/niac-go/issues/886)) ([e390184](https://github.com/MustardSeedNetworks/niac-go/commit/e39018458865ff5dcc9fab8764ca54041fef741c))
+* **dns:** reply on the request VLAN so tagged testers resolve names ([#883](https://github.com/MustardSeedNetworks/niac-go/issues/883)) ([dcb88c2](https://github.com/MustardSeedNetworks/niac-go/commit/dcb88c206989708767515af95c8ec2172ebe05c8))
+* **netbios:** reject invalid level-2 name encoding ([#850](https://github.com/MustardSeedNetworks/niac-go/issues/850)) ([#895](https://github.com/MustardSeedNetworks/niac-go/issues/895)) ([923a125](https://github.com/MustardSeedNetworks/niac-go/commit/923a125c96984dce6165715ef3090c3379ae6640))
+* **ui:** remove dead exports and wire up non-functional settings/debug controls ([#900](https://github.com/MustardSeedNetworks/niac-go/issues/900)) ([f930c5f](https://github.com/MustardSeedNetworks/niac-go/commit/f930c5fafa1e4769edf8f0f47263a7b058b652fd))
+
 ## [0.93.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.92.0...v0.93.0) (2026-07-04)
 
 
