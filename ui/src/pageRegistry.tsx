@@ -4,6 +4,7 @@ import {
   Database,
   FileBox,
   GitCompare,
+  KeyRound,
   Network,
   PlugZap,
   Server,
@@ -62,6 +63,9 @@ const LibraryWalksPage = lazy(() =>
 const LibraryPcapsPage = lazy(() =>
   import('./pages/LibraryFilesPage').then((m) => ({ default: m.LibraryPcapsPage })),
 );
+const LicensePage = lazy(() =>
+  import('./pages/LicensePage').then((m) => ({ default: m.LicensePage })),
+);
 
 /**
  * PageConfig is one entry in the application's route table, resolved
@@ -97,7 +101,8 @@ type PageI18nKey =
   | 'configDiff'
   | 'walkValidator'
   | 'libraryWalks'
-  | 'libraryPcaps';
+  | 'libraryPcaps'
+  | 'license';
 
 /**
  * PageDef is the static, language-agnostic definition stored in
@@ -449,6 +454,26 @@ const staticPages: PageDef[] = [
           The Packets and Traffic pages will reuse this listing for their PCAP pickers — the unified
           library means a PCAP added here is visible everywhere the daemon needs to pick one without
           extra plumbing.
+        </p>
+      </>
+    ),
+  },
+  {
+    path: '/license',
+    i18nKey: 'license',
+    icon: KeyRound,
+    component: LicensePage,
+    help: (
+      <>
+        <p>
+          Shows the active license tier and the features it unlocks, mirroring{' '}
+          <code>niac license status</code>.
+        </p>
+        <p>
+          NIAC validates licenses <strong>offline</strong> — there is no phone-home. Activation,
+          trials, and deactivation are local operations, so this page is read-only and lists the{' '}
+          <code>niac license</code> commands to run on the host instead of doing it over the
+          network.
         </p>
       </>
     ),
