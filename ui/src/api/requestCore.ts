@@ -305,6 +305,44 @@ export const requestJson = <T>(path: string, payload: unknown, init: RequestInit
     body: JSON.stringify(toSnakeCase(payload)),
   });
 
+/**
+ * requestText fetches a non-JSON body (e.g. the topology DOT/GraphML export)
+ * through the same auth + URL machinery as request(), returning the raw text.
+ * It shares buildRequestHeaders/buildUrl so auth stays identical, skips the
+ * camel-case pass (the body isn't JSON), and keeps error handling aligned with
+ * request(). Idempotent GET exports don't need the retry loop.
+ */
+export async function requestText(path: string, init: RequestInit = {}): Promise<string> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  try {
+    const headers = await buildRequestHeaders(path, init);
+    const response = await fetch(buildUrl(path), {
+      ...init,
+      headers,
+      credentials: 'same-origin',
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      throw parseApiError(await response.text(), response.status, response.statusText);
+    }
+
+    return await response.text();
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      throw new TimeoutError();
+    }
+    if (err instanceof TypeError) {
+      throw new NetworkError();
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 // Request deduplication for concurrent identical GET requests.
 const inflightRequests = new Map<string, Promise<unknown>>();
 

@@ -1,4 +1,4 @@
-import { deduplicatedGet, request, requestJson } from './requestCore';
+import { deduplicatedGet, request, requestJson, requestText } from './requestCore';
 import type {
   AlertConfig,
   CloneDeviceRequest,
@@ -121,6 +121,12 @@ export const importConfig = (payload: { format: 'yaml' | 'java-dsl'; content: st
 
 export const fetchVersion = () => deduplicatedGet<VersionInfo>('/api/v1/version');
 export const fetchTopology = () => deduplicatedGet<TopologyGraph>('/api/v1/topology');
+
+// Server-side topology export. The daemon renders the running topology as
+// Graphviz DOT or GraphML (for Graphviz / yEd / gephi interop) — richer than
+// the client-side JSON snapshot. Returns the raw document text.
+export const exportTopology = (format: 'dot' | 'graphml') =>
+  requestText(`/api/v1/topology/export?format=${format}`);
 export const fetchErrorTypes = () => deduplicatedGet<ErrorInjectionInfo>('/api/v1/errors');
 
 // Library file listings. Backed by GET /api/v1/library/{walks,pcaps},

@@ -123,7 +123,9 @@
     },
     "actionsMenu": {
       "exportPng": "Exportar como PNG",
-      "exportJson": "Exportar topología JSON"
+      "exportJson": "Exportar topología JSON",
+      "exportDot": "Exportar como DOT (Graphviz)",
+      "exportGraphml": "Exportar como GraphML"
     }
   },
   "automation": {

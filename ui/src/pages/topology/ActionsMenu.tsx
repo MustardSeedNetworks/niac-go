@@ -5,8 +5,10 @@ import { Button } from '../../ui/Button';
 
 /**
  * ActionsMenu is the small "Export ▾" dropdown in the topology
- * header. Two options: PNG (image render of the canvas via
- * html-to-image) and JSON (the structured topology graph).
+ * header. PNG (image render of the canvas via html-to-image) and
+ * JSON (the client-side graph snapshot) export the current view;
+ * DOT and GraphML fetch the daemon's rendered topology from the
+ * server for Graphviz / yEd / gephi interop.
  *
  * Originally also carried "Reset layout" but that turned out to be
  * a recovery action operators reach for too often — Reset is now a
@@ -20,7 +22,9 @@ export const ActionsMenu: FC<{
   disabled?: boolean;
   onExportPNG: () => void;
   onExportJSON: () => void;
-}> = ({ disabled, onExportPNG, onExportJSON }) => {
+  onExportDOT: () => void;
+  onExportGraphML: () => void;
+}> = ({ disabled, onExportPNG, onExportJSON, onExportDOT, onExportGraphML }) => {
   const { t } = useTranslation('pages');
   const [open, setOpen] = useState(false);
 
@@ -82,6 +86,24 @@ export const ActionsMenu: FC<{
           >
             <span>{t('topology.actionsMenu.exportJson')}</span>
             <span className="text-[10px] text-text-muted">data</span>
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={handle(onExportDOT)}
+            className="flex w-full items-center justify-between gap-default px-3 py-compact-md text-left transition-colors hover:bg-surface-hover hover:text-text-primary"
+          >
+            <span>{t('topology.actionsMenu.exportDot')}</span>
+            <span className="text-[10px] text-text-muted">graphviz</span>
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={handle(onExportGraphML)}
+            className="flex w-full items-center justify-between gap-default px-3 py-compact-md text-left transition-colors hover:bg-surface-hover hover:text-text-primary"
+          >
+            <span>{t('topology.actionsMenu.exportGraphml')}</span>
+            <span className="text-[10px] text-text-muted">graphml</span>
           </button>
         </div>
       )}

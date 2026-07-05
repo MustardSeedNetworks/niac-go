@@ -256,7 +256,9 @@ const staticPages: PageDef[] = [
         </p>
         <h4>Export</h4>
         <p>
-          Topology can be exported as Graphviz <code>.dot</code> or JSON via the export button.
+          Topology can be exported from the export button as a PNG image, a JSON snapshot, or —
+          rendered server-side from the running daemon — Graphviz <code>.dot</code> or GraphML for
+          use in Graphviz, yEd, or gephi.
         </p>
       </>
     ),
