@@ -35,6 +35,7 @@ export const DeviceEditorPage: FC = () => {
     saving,
     deleting,
     message,
+    fieldErrors,
     expandedSections,
     showYamlPreview,
     showDeleteConfirm,
@@ -95,6 +96,7 @@ export const DeviceEditorPage: FC = () => {
           isExpanded={expandedSections.has('basic')}
           onToggle={() => toggleSection('basic')}
           onUpdate={updateField}
+          errors={fieldErrors}
         />
       )}
 

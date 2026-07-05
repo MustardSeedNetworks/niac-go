@@ -10,6 +10,12 @@ import * as v from 'valibot';
 // Hostname source-of-truth regex (mirrors the Go-side validation).
 const HOSTNAME_REGEX = /^[a-zA-Z][a-zA-Z0-9._-]{0,252}$/;
 
+// MAC + IPv4 regexes mirror the Go `validate:"mac"` / `validate:"ip"` tags on
+// converter.Device (internal/converter/types.go). Kept here so the device
+// editor can surface format errors inline before the round-trip to the server.
+const MAC_REGEX = /^([0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}$/;
+const IPV4_REGEX = /^(25[0-5]|2[0-4]\d|1?\d?\d)(\.(25[0-5]|2[0-4]\d|1?\d?\d)){3}$/;
+
 /**
  * Clone-device form: a single field for the new hostname. The Go side
  * also validates; this layer is for inline UI errors before submit.
@@ -71,3 +77,41 @@ export const ErrorInjectionSchema = v.object({
 });
 
 export type ErrorInjectionFormFields = v.InferOutput<typeof ErrorInjectionSchema>;
+
+/**
+ * Device editor: the two always-required identity fields plus the optional
+ * primary IP. The device object carries many more (per-protocol) sections, but
+ * only these need format-level validation before save — the Go side validates
+ * the full structure. `safeParse` against this schema replaces the editor's old
+ * presence-only checks (`if (!device.hostname.trim())`) and drives inline field
+ * errors. Extra keys on the parsed object are ignored by `v.object`, so it can
+ * be run against a whole `Device` without stripping the other sections (the
+ * caller keeps using the untouched device for the actual save).
+ */
+export const DeviceFormSchema = v.object({
+  hostname: v.pipe(
+    v.string(),
+    v.trim(),
+    v.minLength(1, 'Hostname is required'),
+    v.maxLength(253, 'Hostname is too long (max 253 chars)'),
+    v.regex(
+      HOSTNAME_REGEX,
+      'Hostname must start with a letter and contain only alphanumeric, dots, hyphens, or underscores',
+    ),
+  ),
+  mac: v.pipe(
+    v.string(),
+    v.trim(),
+    v.minLength(1, 'MAC address is required'),
+    v.regex(MAC_REGEX, 'MAC must be six hex octets, e.g. 00:1A:2B:3C:4D:5E'),
+  ),
+  ip: v.optional(
+    v.pipe(
+      v.string(),
+      // Primary IP is optional; an empty string means "no management IP".
+      v.check((s) => s === '' || IPV4_REGEX.test(s), 'Primary IP must be a valid IPv4 address'),
+    ),
+  ),
+});
+
+export type DeviceFormFields = v.InferOutput<typeof DeviceFormSchema>;

@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { type FieldErrors, type Path, type PathValue, useForm } from 'react-hook-form';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import * as v from 'valibot';
 import {
   createDevice,
   deleteDevice,
@@ -10,6 +12,7 @@ import {
 } from '../../api/client';
 import type { Device, FileEntry } from '../../api/types';
 import { useApiResource } from '../../hooks/useApiResource';
+import { DeviceFormSchema } from '../../schemas/forms';
 import { getErrorMessage } from '../../utils/format';
 import type { StatusMessage } from './DeviceEditorHeader';
 
@@ -54,6 +57,10 @@ export interface UseDeviceEditorReturn {
   saving: boolean;
   deleting: boolean;
   message: StatusMessage | null;
+  // Inline, per-field validation errors surfaced next to the offending
+  // input (hostname / mac / ip). Populated on a failed save from the
+  // valibot DeviceFormSchema; cleared as the user edits the field.
+  fieldErrors: FieldErrors<Device>;
   expandedSections: Set<string>;
   showYamlPreview: boolean;
   showDeleteConfirm: boolean;
@@ -76,8 +83,16 @@ export const useDeviceEditor = (): UseDeviceEditorReturn => {
   const location = useLocation();
   const isNewDevice = hostname === 'new' || location.pathname === '/device-config/new';
 
+  // react-hook-form owns the device values. Inputs use the custom
+  // `updateField` setter (not `register`), so the form runs headless:
+  // `watch()` exposes current values, `safeParse` validates on save, and
+  // `setError` drives the inline field errors. Keeping this contract means
+  // the ~14 section components stay unchanged.
+  const form = useForm<Device>({ defaultValues: createEmptyDevice() });
+  const { setValue, getValues, watch, reset, setError, clearErrors, formState } = form;
+  const device = watch();
+
   // State
-  const [device, setDevice] = useState<Device>(createEmptyDevice());
   const [originalDevice, setOriginalDevice] = useState<Device | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -133,12 +148,14 @@ export const useDeviceEditor = (): UseDeviceEditorReturn => {
   // Update local state when fetched device changes
   useEffect(() => {
     if (fetchedDevice?.device) {
-      setDevice(fetchedDevice.device);
+      reset(fetchedDevice.device);
       setOriginalDevice(fetchedDevice.device);
     }
-  }, [fetchedDevice]);
+  }, [fetchedDevice, reset]);
 
-  // Check if device has been modified
+  // Check if device has been modified. Deliberately kept as a structural
+  // JSON compare (not rhf's formState.isDirty) so the unsaved-changes
+  // navigation guard behaves exactly as before the rhf migration.
   const isDirty = useMemo(() => {
     if (isNewDevice) {
       return device.hostname.trim() !== '';
@@ -163,20 +180,46 @@ export const useDeviceEditor = (): UseDeviceEditorReturn => {
   }, []);
 
   // Handle form field changes
-  const updateField = useCallback(<K extends keyof Device>(field: K, value: Device[K]) => {
-    setDevice((prev) => ({ ...prev, [field]: value }));
-    setMessage(null);
-  }, []);
+  const updateField = useCallback(
+    <K extends keyof Device>(field: K, value: Device[K]) => {
+      // Bridge the ergonomic `keyof Device` public signature to rhf's
+      // `Path`/`PathValue` types — a top-level key is always a valid path,
+      // but the compiler can't prove it through the generic.
+      setValue(field as Path<Device>, value as PathValue<Device, Path<Device>>, {
+        shouldDirty: true,
+      });
+      clearErrors(field as Path<Device>);
+      setMessage(null);
+    },
+    [setValue, clearErrors],
+  );
 
   // Handle save
   const handleSave = useCallback(async () => {
-    if (!device.hostname.trim()) {
-      setMessage({ type: 'error', text: 'Hostname is required' });
-      return;
-    }
+    const current = getValues();
 
-    if (!device.mac.trim()) {
-      setMessage({ type: 'error', text: 'MAC address is required' });
+    // Format-level validation (hostname / mac / ip) before the round-trip.
+    // The Go side validates the full structure; this catches the common
+    // mistakes inline. Uses safeParse so unrelated device sections pass
+    // through untouched.
+    clearErrors();
+    const result = v.safeParse(DeviceFormSchema, current);
+    if (!result.success) {
+      // Surface the first issue per field. valibot reports pipe issues in
+      // order, so an empty hostname shows "Hostname is required" (minLength)
+      // rather than the later format message.
+      const flagged = new Set<string>();
+      for (const issue of result.issues) {
+        const key = issue.path?.[0]?.key;
+        if (typeof key === 'string' && !flagged.has(key)) {
+          flagged.add(key);
+          setError(key as Path<Device>, { message: issue.message });
+        }
+      }
+      setMessage({
+        type: 'error',
+        text: result.issues[0]?.message ?? 'Please fix the highlighted fields',
+      });
       return;
     }
 
@@ -185,11 +228,11 @@ export const useDeviceEditor = (): UseDeviceEditorReturn => {
 
     try {
       if (isNewDevice) {
-        await createDevice(device);
+        await createDevice(current);
         setMessage({ type: 'success', text: 'Device created successfully' });
         // Navigate to the new device's edit page
         setTimeout(() => {
-          navigate(`/device-config/${encodeURIComponent(device.hostname)}`);
+          navigate(`/device-config/${encodeURIComponent(current.hostname)}`);
         }, 500);
       } else {
         if (!hostname) {
@@ -197,13 +240,13 @@ export const useDeviceEditor = (): UseDeviceEditorReturn => {
           setSaving(false);
           return;
         }
-        await updateDevice(hostname, device);
+        await updateDevice(hostname, current);
         setMessage({ type: 'success', text: 'Device updated successfully' });
-        setOriginalDevice(device);
+        setOriginalDevice(current);
         // If hostname changed, navigate to new URL
-        if (device.hostname !== hostname) {
+        if (current.hostname !== hostname) {
           setTimeout(() => {
-            navigate(`/device-config/${encodeURIComponent(device.hostname)}`);
+            navigate(`/device-config/${encodeURIComponent(current.hostname)}`);
           }, 500);
         }
       }
@@ -212,7 +255,7 @@ export const useDeviceEditor = (): UseDeviceEditorReturn => {
     } finally {
       setSaving(false);
     }
-  }, [device, hostname, isNewDevice, navigate]);
+  }, [getValues, clearErrors, setError, hostname, isNewDevice, navigate]);
 
   // Handle delete
   const handleDelete = useCallback(async () => {
@@ -235,10 +278,10 @@ export const useDeviceEditor = (): UseDeviceEditorReturn => {
     if (isNewDevice) {
       navigate('/device-config');
     } else if (originalDevice) {
-      setDevice(originalDevice);
+      reset(originalDevice);
       setMessage(null);
     }
-  }, [isNewDevice, originalDevice, navigate]);
+  }, [isNewDevice, originalDevice, navigate, reset]);
 
   return {
     hostname,
@@ -254,6 +297,7 @@ export const useDeviceEditor = (): UseDeviceEditorReturn => {
     saving,
     deleting,
     message,
+    fieldErrors: formState.errors,
     expandedSections,
     showYamlPreview,
     showDeleteConfirm,

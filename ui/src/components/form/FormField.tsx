@@ -9,6 +9,8 @@ export interface FormFieldProps {
   required?: boolean;
   className?: string;
   htmlFor?: string;
+  /** Inline validation error rendered below the field, in the error color. */
+  error?: string;
 }
 
 export const FormField: FC<FormFieldProps> = ({
@@ -18,6 +20,7 @@ export const FormField: FC<FormFieldProps> = ({
   required,
   className = '',
   htmlFor,
+  error,
 }) => (
   <div className={className}>
     {htmlFor ? (
@@ -51,5 +54,10 @@ export const FormField: FC<FormFieldProps> = ({
       </div>
     )}
     {children}
+    {error && (
+      <p className="mt-1 text-xs text-status-error" role="alert">
+        {error}
+      </p>
+    )}
   </div>
 );
