@@ -17,6 +17,7 @@
  */
 
 import type { ReactElement, ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useLicense } from '../../contexts/LicenseContext';
 
 interface TierGateProps {
@@ -25,10 +26,8 @@ interface TierGateProps {
   /** Tier name shown in the tooltip (e.g. "Pro"). */
   requiredTier?: string;
   /**
-   * Custom tooltip. Defaults to a hard-coded English string today;
-   * once NIAC's UI wires up react-i18next, switch the default to
-   * `t('errors:license.tierGateTooltip', { tier })` (the locale
-   * keys are already in `internal/i18n/locales/{en,es}/errors.json`).
+   * Custom tooltip. Defaults to the localized
+   * `t('errors:license.tierGateTooltip', { tier })`.
    */
   message?: string;
 }
@@ -40,6 +39,7 @@ export function TierGate({
   message,
 }: TierGateProps): ReactElement {
   const { hasFeature, loading } = useLicense();
+  const { t } = useTranslation('errors');
 
   // Always render children while loading so layouts don't shift;
   // gate visually only after we know they lack the feature.
@@ -47,7 +47,7 @@ export function TierGate({
     return <>{children}</>;
   }
 
-  const hint = message ?? `Requires the ${requiredTier} tier`;
+  const hint = message ?? t('license.tierGateTooltip', { tier: requiredTier });
 
   // CSS-only hover (`group` + `group-hover:`) keeps the tooltip tied
   // to the wrapper without JS event handlers — that lets the outer
