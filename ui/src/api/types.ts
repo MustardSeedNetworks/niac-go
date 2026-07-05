@@ -45,16 +45,11 @@ export type {
 // Debug Types
 export type {
   DebugLevel,
-  DebugProtocol,
+  DebugLevelResponse,
   LogEntry,
   LogLevel,
   Protocol,
-  ProtocolCategory,
-  ProtocolDebugConfig,
-  ProtocolDebugLevelsResponse,
-  ResetProtocolDebugLevelsResponse,
-  UpdateProtocolDebugLevelRequest,
-  UpdateProtocolDebugLevelsRequest,
+  UpdateDebugLevelRequest,
 } from './debug-types';
 
 // Device Configuration Types

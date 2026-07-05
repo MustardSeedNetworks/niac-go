@@ -1,7 +1,7 @@
 import { ChevronDown, ChevronUp, Settings2 } from 'lucide-react';
 import { type FC, useCallback, useMemo, useState } from 'react';
 import type { LogEntry, LogLevel, Protocol } from '../api/types';
-import { ProtocolDebugLevels } from '../components/debug/ProtocolDebugLevels';
+import { DebugLevelControl } from '../components/debug/DebugLevelControl';
 import { LogFilters } from '../components/LogFilters';
 import { LogViewer } from '../components/LogViewer';
 import { iconSizes } from '../constants/sizes';
@@ -194,7 +194,7 @@ export const DebugConsolePage: FC = () => {
                 aria-expanded={showDebugSettings}
                 aria-controls="debug-settings-panel"
               >
-                Protocol Settings
+                Debug Level
               </Button>
               {/* Connection Status */}
               <button
@@ -263,10 +263,14 @@ export const DebugConsolePage: FC = () => {
         </CardContent>
       </Card>
 
-      {/* Protocol Debug Settings Panel */}
+      {/* Global debug-level control */}
       {showDebugSettings && (
         <div id="debug-settings-panel">
-          <ProtocolDebugLevels />
+          <Card className="border-surface-border bg-bg-surface/70">
+            <CardContent className="stack-lg">
+              <DebugLevelControl />
+            </CardContent>
+          </Card>
         </div>
       )}
 

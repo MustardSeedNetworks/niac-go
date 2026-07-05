@@ -86,8 +86,8 @@
     },
     "devToolsTitle": "Herramientas de desarrollador",
     "devToolsDescription": "Funciones avanzadas de depuración",
-    "protocolDebugLevels": "Niveles de depuración por protocolo",
-    "protocolDebugLevelsDescription": "Configure el registro por protocolo",
+    "debugConsole": "Consola de depuración",
+    "debugConsoleDescription": "Ver registros en vivo y ajustar el nivel de depuración",
     "exportDiagnostics": "Exportar diagnósticos",
     "exportDiagnosticsDescription": "Descargar información de depuración"
   },

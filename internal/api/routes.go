@@ -103,6 +103,15 @@ func (s *Server) registerWriteProtectedRoutes(mux *http.ServeMux) {
 			rl:      rlWrite,
 			csrf:    true,
 		},
+		// Global debug verbosity (GET current + default, PUT to set). The stack
+		// reads the global level live, so PUT takes effect with no restart.
+		{
+			path:    "/api/v1/debug/level",
+			handler: s.handleDebugLevel,
+			methods: []string{http.MethodGet, http.MethodPut},
+			rl:      rlWrite,
+			csrf:    true,
+		},
 		{
 			path:    "/api/v1/capture/filter",
 			handler: s.handleCaptureFilter,

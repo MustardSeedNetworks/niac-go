@@ -5,6 +5,7 @@ import type {
   ConfigDocument,
   ConfigSchema,
   ConfigUpdateRequest,
+  DebugLevelResponse,
   Device,
   DeviceDetailResponse,
   DeviceListResponse,
@@ -18,10 +19,8 @@ import type {
   PcapAnalysisResult,
   PcapUploadRequest,
   PcapUploadResponse,
-  ProtocolDebugLevelsResponse,
   ReplayRequest,
   ReplayState,
-  ResetProtocolDebugLevelsResponse,
   RuntimeStatus,
   SimulationRequest,
   SimulationStatus,
@@ -31,7 +30,7 @@ import type {
   Template,
   TemplateContent,
   TopologyGraph,
-  UpdateProtocolDebugLevelsRequest,
+  UpdateDebugLevelRequest,
   UploadUserConfigRequest,
   UploadUserConfigResponse,
   UserConfigContent,
@@ -229,17 +228,13 @@ export const applyTemplate = (payload: UseTemplateRequest) =>
   requestJson<UseTemplateResponse>('/api/v1/templates/use', payload, { method: 'POST' });
 
 // =====================================================================
-// Protocol debug levels
+// Global debug level
 // =====================================================================
 
-export const fetchProtocolDebugLevels = () =>
-  deduplicatedGet<ProtocolDebugLevelsResponse>('/api/v1/debug/levels');
+export const fetchDebugLevel = () => deduplicatedGet<DebugLevelResponse>('/api/v1/debug/level');
 
-export const updateProtocolDebugLevels = (payload: UpdateProtocolDebugLevelsRequest) =>
-  requestJson<ProtocolDebugLevelsResponse>('/api/v1/debug/levels', payload, { method: 'PUT' });
-
-export const resetProtocolDebugLevels = () =>
-  request<ResetProtocolDebugLevelsResponse>('/api/v1/debug/levels/reset', { method: 'POST' });
+export const updateDebugLevel = (payload: UpdateDebugLevelRequest) =>
+  requestJson<DebugLevelResponse>('/api/v1/debug/level', payload, { method: 'PUT' });
 
 // =====================================================================
 // PCAP analyser
