@@ -1,4 +1,5 @@
-import type { Device, FileEntry } from '../../api/types';
+import type { LibraryFileEntry } from '../../api/client';
+import type { Device } from '../../api/types';
 
 /**
  * Common props for all protocol section components
@@ -20,7 +21,7 @@ export interface ProtocolSectionProps extends ProtocolSectionBaseProps {
  * Props for SNMP section (needs walk files)
  */
 export interface SNMPSectionProps extends ProtocolSectionProps {
-  walkFiles: FileEntry[] | null;
+  walkFiles: LibraryFileEntry[] | null;
 }
 
 /**

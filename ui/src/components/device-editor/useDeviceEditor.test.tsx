@@ -30,7 +30,7 @@ vi.mock('../../api/client', () => ({
   updateDevice: vi.fn(),
   deleteDevice: vi.fn(),
   fetchConfigDevice: () => Promise.resolve({ device: null }),
-  fetchWalkFiles: () => Promise.resolve([]),
+  fetchLibraryWalks: () => Promise.resolve([]),
   fetchDeviceEditorSchema: () => Promise.resolve({ visibleSections: [] }),
 }));
 

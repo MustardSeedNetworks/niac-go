@@ -12,7 +12,6 @@ import type {
   DeviceMutationResponse,
   DeviceSummary,
   ErrorInjectionInfo,
-  FileEntry,
   HistoryRecord,
   InterfacesResponse,
   NeighborRecord,
@@ -285,8 +284,6 @@ export const cloneDevice = (hostname: string, payload: CloneDeviceRequest) =>
   );
 
 export const fetchConfigSchema = () => deduplicatedGet<ConfigSchema>('/api/v1/config/schema');
-
-export const fetchWalkFiles = () => request<FileEntry[]>('/api/v1/files?kind=walks');
 
 // =====================================================================
 // User configs (saved YAML files)
