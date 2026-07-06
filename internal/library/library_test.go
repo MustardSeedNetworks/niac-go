@@ -172,6 +172,96 @@ func TestReadNetworkInvalidName(t *testing.T) {
 	}
 }
 
+// networkPathTraversalNames is the shared set of malicious names used by
+// TestReadNetworkPathContainment, TestWriteNetworkPathContainment, and
+// TestDeleteNetworkPathContainment — all three entry points route
+// through the shared resolveNetworkPath containment helper (CodeQL
+// go/path-injection #42/#43/#44). Every one must be rejected with
+// ErrInvalidName before any filesystem call happens.
+func networkPathTraversalNames() []string {
+	return []string{
+		"../escape",
+		"../../etc/passwd",
+		"..",
+		"a/../../b",
+		"with/slash",
+		`with\backslash`,
+		"/etc/passwd",
+		"/absolute/path",
+		".hidden",
+		"",
+	}
+}
+
+func TestReadNetworkPathContainment(t *testing.T) {
+	lib := openTempLibrary(t)
+	for _, name := range networkPathTraversalNames() {
+		t.Run(name, func(t *testing.T) {
+			_, err := lib.ReadNetwork(name)
+			if !errors.Is(err, library.ErrInvalidName) {
+				t.Errorf("ReadNetwork(%q): want ErrInvalidName, got %v", name, err)
+			}
+		})
+	}
+}
+
+func TestWriteNetworkPathContainment(t *testing.T) {
+	lib := openTempLibrary(t)
+	for _, name := range networkPathTraversalNames() {
+		t.Run(name, func(t *testing.T) {
+			err := lib.WriteNetwork(name, sampleYAML)
+			if !errors.Is(err, library.ErrInvalidName) {
+				t.Errorf("WriteNetwork(%q): want ErrInvalidName, got %v", name, err)
+			}
+		})
+	}
+}
+
+func TestDeleteNetworkPathContainment(t *testing.T) {
+	lib := openTempLibrary(t)
+	for _, name := range networkPathTraversalNames() {
+		t.Run(name, func(t *testing.T) {
+			err := lib.DeleteNetwork(name)
+			if !errors.Is(err, library.ErrInvalidName) {
+				t.Errorf("DeleteNetwork(%q): want ErrInvalidName, got %v", name, err)
+			}
+		})
+	}
+}
+
+func TestNetworkPathLegitimateNameStillResolves(t *testing.T) {
+	lib := openTempLibrary(t)
+	if err := lib.WriteNetwork("safe-name_1.0", sampleYAML); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+	doc, readErr := lib.ReadNetwork("safe-name_1.0")
+	if readErr != nil {
+		t.Fatalf("read: %v", readErr)
+	}
+	if doc.Name != "safe-name_1.0" {
+		t.Errorf("name: got %q want safe-name_1.0", doc.Name)
+	}
+	if deleteErr := lib.DeleteNetwork("safe-name_1.0"); deleteErr != nil {
+		t.Fatalf("delete: %v", deleteErr)
+	}
+}
+
+// TestNetworkPathNoEscapeOntoDisk is belt-and-suspenders: even if a
+// future change to validateName regressed the character allowlist,
+// resolveNetworkPath's absolute-prefix containment check must still
+// refuse to resolve outside the networks/ base directory. This proves
+// the escaped file was never created on disk.
+func TestNetworkPathNoEscapeOntoDisk(t *testing.T) {
+	lib := openTempLibrary(t)
+	outsideMarker := filepath.Join(t.TempDir(), "outside.yaml")
+	if err := lib.WriteNetwork("../"+filepath.Base(outsideMarker), sampleYAML); err == nil {
+		t.Fatalf("expected traversal write to be rejected")
+	}
+	if _, statErr := os.Stat(outsideMarker); !os.IsNotExist(statErr) {
+		t.Errorf("traversal write leaked a file outside the library root: %v", statErr)
+	}
+}
+
 func TestDeleteNetworkRefusesStarter(t *testing.T) {
 	lib := openTempLibrary(t)
 	entries, err := lib.ListNetworks()

@@ -3,7 +3,6 @@ package converter
 
 import (
 	"bufio"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -12,11 +11,28 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// validateNoTraversal cleans path and rejects any residual ".." element,
+// which would indicate an attempt to escape the caller's intended
+// directory via a relative traversal sequence (e.g. "../../etc/passwd").
+// It is the single sanitizer shared by every file-path entry point in
+// this package — ConvertFile's input/output paths and LoadYAMLConfig's
+// filename all route through it before touching the filesystem.
+func validateNoTraversal(label, path string) (string, error) {
+	if path == "" {
+		return "", fmt.Errorf("%s path cannot be empty", label)
+	}
+	clean := filepath.Clean(path)
+	if strings.Contains(clean, "..") {
+		return "", fmt.Errorf("%s path must not contain path traversal", label)
+	}
+	return clean, nil
+}
+
 // ConvertFile converts a Java DSL config file to YAML.
 func ConvertFile(inputPath, outputPath string, verbose bool) error {
-	cleanInput := filepath.Clean(inputPath)
-	if strings.Contains(cleanInput, "..") {
-		return errors.New("input path must not contain path traversal")
+	cleanInput, err := validateNoTraversal("input", inputPath)
+	if err != nil {
+		return err
 	}
 
 	// Check file size before reading to prevent memory exhaustion
@@ -28,13 +44,9 @@ func ConvertFile(inputPath, outputPath string, verbose bool) error {
 		return fmt.Errorf("input file too large: %d bytes (max %d)", info.Size(), maxInputFileSize)
 	}
 
-	// Validate output path is not empty and is clean
-	if outputPath == "" {
-		return errors.New("output path cannot be empty")
-	}
-	cleanOutput := filepath.Clean(outputPath)
-	if strings.Contains(cleanOutput, "..") {
-		return errors.New("output path must not contain path traversal")
+	cleanOutput, err := validateNoTraversal("output", outputPath)
+	if err != nil {
+		return err
 	}
 
 	// Read input file
@@ -125,7 +137,10 @@ const MaxYAMLConfigSize = 16 * 1024 * 1024
 
 // LoadYAMLConfig loads a YAML config file into Go config structure.
 func LoadYAMLConfig(filename string) (*Config, error) {
-	clean := filepath.Clean(filename)
+	clean, err := validateNoTraversal("YAML config", filename)
+	if err != nil {
+		return nil, err
+	}
 	info, err := os.Stat(clean)
 	if err != nil {
 		return nil, fmt.Errorf("error accessing YAML file: %w", err)
