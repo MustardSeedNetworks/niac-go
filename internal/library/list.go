@@ -3,6 +3,7 @@ package library
 import (
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -116,55 +117,66 @@ func (l *Library) networkEntryFor(filename string) (NetworkEntry, error) {
 	}, nil
 }
 
-// resolveNetworkPath validates name (bare filename, no separators, no
-// "..", ASCII alnum/./_/- only via validateName) and resolves it to an
-// absolute path under the networks/ subdirectory. It then re-verifies,
-// via an absolute-path prefix check against the resolved networks/ base
-// directory, that the result cannot have escaped that directory —
-// defense in depth on top of the character allowlist, and the single
-// containment helper shared by ReadNetwork/WriteNetwork/DeleteNetwork so
-// the base-dir check lives in exactly one place.
-func (l *Library) resolveNetworkPath(name string) (string, string, error) {
+// networkFilename validates name (bare filename, no separators, no
+// "..", ASCII alnum/./_/- only via validateName) and returns the
+// trimmed base name plus the "<name>.yaml" leaf that ReadNetwork /
+// WriteNetwork / DeleteNetwork open relative to the networks/ os.Root.
+// validateName is defense in depth on top of the OS-enforced
+// containment the os.Root itself provides.
+func networkFilename(name string) (string, string, error) {
 	trimmed := trimYAMLExt(name)
 	if err := validateName(trimmed); err != nil {
 		return "", "", err
 	}
-
-	baseDir, err := filepath.Abs(l.SubDir(KindNetworks))
-	if err != nil {
-		return "", "", fmt.Errorf("resolve networks dir: %w", err)
-	}
-
-	candidate := filepath.Join(baseDir, trimmed+".yaml")
-	if candidate != baseDir && !strings.HasPrefix(candidate, baseDir+string(os.PathSeparator)) {
-		return "", "", ErrInvalidName
-	}
-
-	return trimmed, candidate, nil
+	return trimmed, trimmed + ".yaml", nil
 }
 
-// ReadNetwork returns the full content of a single network. Validates
-// the requested name so a malicious caller can't escape networks/.
+// openNetworksRoot opens the networks/ subdirectory as an os.Root. All
+// file operations on the returned root are confined to that directory
+// by the OS (openat2 RESOLVE_BENEATH semantics on Linux, equivalent
+// checks elsewhere): any leaf that would escape via "..", an absolute
+// path, or a symlink is rejected by the kernel/runtime, so path
+// traversal is impossible by construction. Callers MUST Close the root.
+func (l *Library) openNetworksRoot() (*os.Root, error) {
+	root, err := os.OpenRoot(l.SubDir(KindNetworks))
+	if err != nil {
+		return nil, fmt.Errorf("open networks dir: %w", err)
+	}
+	return root, nil
+}
+
+// ReadNetwork returns the full content of a single network. The name is
+// validated and then opened relative to the networks/ os.Root, which
+// makes escaping the directory impossible.
 func (l *Library) ReadNetwork(name string) (*NetworkContent, error) {
-	name, path, err := l.resolveNetworkPath(name)
+	trimmed, leaf, err := networkFilename(name)
 	if err != nil {
 		return nil, err
 	}
-	// #nosec G304 -- path was resolved by resolveNetworkPath above,
-	// which rejects path traversal/non-alphanumeric names and verifies
-	// the result stays within the networks/ base directory.
-	data, err := os.ReadFile(path)
+	root, err := l.openNetworksRoot()
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = root.Close() }()
+
+	f, err := root.Open(leaf)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
-			return nil, fmt.Errorf("%w: %s", ErrNotFound, name)
+			return nil, fmt.Errorf("%w: %s", ErrNotFound, trimmed)
 		}
 		return nil, err
 	}
+	defer func() { _ = f.Close() }()
+
+	data, err := io.ReadAll(f)
+	if err != nil {
+		return nil, err
+	}
 	return &NetworkContent{
-		Name:    name,
+		Name:    trimmed,
 		Content: string(data),
 		Format:  "yaml",
-		Source:  l.detectSource(name + ".yaml"),
+		Source:  l.detectSource(leaf),
 	}, nil
 }
 
@@ -172,7 +184,7 @@ func (l *Library) ReadNetwork(name string) (*NetworkContent, error) {
 // endpoints. Marks user-created entries by NOT being part of the
 // starter pack — detectSource picks that up on next list.
 func (l *Library) WriteNetwork(name, content string) error {
-	_, path, err := l.resolveNetworkPath(name)
+	_, leaf, err := networkFilename(name)
 	if err != nil {
 		return err
 	}
@@ -182,27 +194,43 @@ func (l *Library) WriteNetwork(name, content string) error {
 	if !strings.Contains(content, "devices:") {
 		return fmt.Errorf("%w: content must contain 'devices:' section", ErrEmptyContent)
 	}
-	// #nosec G304 -- path was resolved by resolveNetworkPath above; see
-	// ReadNetwork for the containment rationale.
-	return os.WriteFile(path, []byte(content), libraryFileMode)
+	root, err := l.openNetworksRoot()
+	if err != nil {
+		return err
+	}
+	defer func() { _ = root.Close() }()
+
+	f, err := root.OpenFile(leaf, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, libraryFileMode)
+	if err != nil {
+		return err
+	}
+	if _, writeErr := f.WriteString(content); writeErr != nil {
+		_ = f.Close()
+		return writeErr
+	}
+	return f.Close()
 }
 
 // DeleteNetwork removes a single network. Refuses to delete entries
 // whose source is "starter" because they'd just come back on next
 // bootstrap.
 func (l *Library) DeleteNetwork(name string) error {
-	name, path, err := l.resolveNetworkPath(name)
+	trimmed, leaf, err := networkFilename(name)
 	if err != nil {
 		return err
 	}
-	if l.detectSource(name+".yaml") == SourceStarter {
-		return fmt.Errorf("starter networks cannot be deleted: %s", name)
+	if l.detectSource(leaf) == SourceStarter {
+		return fmt.Errorf("starter networks cannot be deleted: %s", trimmed)
 	}
-	// #nosec G304 -- path was resolved by resolveNetworkPath above; see
-	// ReadNetwork for the containment rationale.
-	if removeErr := os.Remove(path); removeErr != nil {
+	root, err := l.openNetworksRoot()
+	if err != nil {
+		return err
+	}
+	defer func() { _ = root.Close() }()
+
+	if removeErr := root.Remove(leaf); removeErr != nil {
 		if errors.Is(removeErr, fs.ErrNotExist) {
-			return fmt.Errorf("%w: %s", ErrNotFound, name)
+			return fmt.Errorf("%w: %s", ErrNotFound, trimmed)
 		}
 		return removeErr
 	}

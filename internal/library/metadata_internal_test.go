@@ -1,6 +1,10 @@
 package library
 
-import "testing"
+import (
+	"os"
+	"path/filepath"
+	"testing"
+)
 
 // metadata.go's parseHeaderMetadata is package-private; tested from
 // inside the package since the API surface (NetworkEntry.Description /
@@ -123,5 +127,58 @@ func TestValidateName(t *testing.T) {
 		if err := validateName(n); err == nil {
 			t.Errorf("validateName(%q) should have errored", n)
 		}
+	}
+}
+
+// TestOpenNetworksRootRejectsTraversal proves the OS-enforced
+// containment layer (os.Root) rejects any leaf that would escape the
+// networks/ directory — independently of validateName. This is the
+// belt-and-suspenders guarantee that made CodeQL recognize the
+// ReadNetwork/WriteNetwork/DeleteNetwork sinks as safe by construction:
+// even a raw "../.." leaf handed straight to root.Open/OpenFile/Remove
+// (bypassing networkFilename's allowlist) never touches a file outside
+// the root.
+func TestOpenNetworksRootRejectsTraversal(t *testing.T) {
+	lib, err := Open(t.TempDir())
+	if err != nil {
+		t.Fatalf("open library: %v", err)
+	}
+
+	// Plant a file just outside the networks/ dir (in the library root)
+	// that a traversal leaf would target.
+	outside := filepath.Join(lib.Root(), "outside.yaml")
+	if writeErr := os.WriteFile(outside, []byte("devices: []\n"), 0o600); writeErr != nil {
+		t.Fatal(writeErr)
+	}
+
+	root, err := lib.openNetworksRoot()
+	if err != nil {
+		t.Fatalf("open networks root: %v", err)
+	}
+	defer func() { _ = root.Close() }()
+
+	escapes := []string{
+		"../outside.yaml",
+		"../../etc/passwd",
+		"nested/../../outside.yaml",
+	}
+	for _, leaf := range escapes {
+		t.Run(leaf, func(t *testing.T) {
+			if _, openErr := root.Open(leaf); openErr == nil {
+				t.Errorf("root.Open(%q): expected containment error, got nil", leaf)
+			}
+			if _, ofErr := root.OpenFile(leaf, os.O_WRONLY|os.O_CREATE, 0o600); ofErr == nil {
+				t.Errorf("root.OpenFile(%q): expected containment error, got nil", leaf)
+			}
+			if rmErr := root.Remove(leaf); rmErr == nil {
+				t.Errorf("root.Remove(%q): expected containment error, got nil", leaf)
+			}
+		})
+	}
+
+	// The outside file must be untouched (never opened/created/removed
+	// through the root).
+	if _, statErr := os.Stat(outside); statErr != nil {
+		t.Errorf("outside file was disturbed through the networks root: %v", statErr)
 	}
 }
