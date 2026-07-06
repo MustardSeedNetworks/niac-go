@@ -1,6 +1,7 @@
 import type { FC } from 'react';
 import type { SNMPAgent } from '../../api/types';
 import { CollapsibleSection, FormField } from '../form';
+import { SynthesizeWalkControl } from './SynthesizeWalkControl';
 import type { SNMPSectionProps } from './types';
 import { inputClassName, selectClassName } from './types';
 
@@ -10,6 +11,7 @@ export const SnmpSection: FC<SNMPSectionProps> = ({
   onToggle,
   onUpdate,
   walkFiles,
+  isNewDevice,
 }) => {
   const getSnmpConfig = (): SNMPAgent => ({
     community: 'public',
@@ -87,6 +89,14 @@ export const SnmpSection: FC<SNMPSectionProps> = ({
               ))}
             </select>
           </FormField>
+
+          <div className="md:col-span-2">
+            <SynthesizeWalkControl
+              hostname={device.hostname}
+              disabled={isNewDevice}
+              onSynthesized={(walkPath) => updateSnmp({ ...getSnmpConfig(), walkFile: walkPath })}
+            />
+          </div>
         </div>
       )}
     </CollapsibleSection>

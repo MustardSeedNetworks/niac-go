@@ -22,6 +22,8 @@ export interface ProtocolSectionProps extends ProtocolSectionBaseProps {
  */
 export interface SNMPSectionProps extends ProtocolSectionProps {
   walkFiles: LibraryFileEntry[] | null;
+  /** True for an unsaved device — gates the synthesize-walk control, which 404s until the device exists server-side. */
+  isNewDevice: boolean;
 }
 
 /**

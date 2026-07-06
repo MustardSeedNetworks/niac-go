@@ -14,6 +14,7 @@ import type {
   ErrorInjectionInfo,
   HistoryRecord,
   InterfacesResponse,
+  ModelDescriptor,
   NeighborRecord,
   PcapAnalysisResult,
   PcapUploadRequest,
@@ -26,6 +27,8 @@ import type {
   StackStatsResponse,
   StandaloneCaptureRequest,
   StandaloneCaptureStatus,
+  SynthesizeWalkRequest,
+  SynthesizeWalkResponse,
   Template,
   TemplateContent,
   TopologyGraph,
@@ -152,6 +155,24 @@ export const fetchLibraryPcaps = () => deduplicatedGet<LibraryFileEntry[]>('/api
  */
 export const revertWalk = (name: string) =>
   requestJson<LibraryFileEntry>('/api/v1/library/walks/revert', { name }, { method: 'POST' });
+
+/**
+ * Baseline walk synthesis (#546 p2). GET the (vendor, model) catalog to
+ * populate the device editor's "Synthesize baseline walk" picker; POST
+ * generates a walk for the given device from the chosen profile, writes
+ * it into the library, preserves any prior original, and attaches it to
+ * the device's walk_file server-side. See
+ * docs/design/2026-05-baseline-walk-synthesis.md for the full contract.
+ */
+export const fetchSynthesizeWalkModels = () =>
+  deduplicatedGet<ModelDescriptor[]>('/api/v1/synthesize-walk/models');
+
+export const synthesizeWalk = (hostname: string, payload: SynthesizeWalkRequest) =>
+  requestJson<SynthesizeWalkResponse>(
+    `/api/v1/devices/${encodeURIComponent(hostname)}/synthesize-walk`,
+    payload,
+    { method: 'POST' },
+  );
 
 /**
  * Per-type device editor schema (#546 part 1). The daemon serves a
