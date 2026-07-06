@@ -92,16 +92,15 @@ jobs:
       - name: Install libpcap-dev
         run: sudo apt-get update && sudo apt-get install -y libpcap-dev
 
-      - name: Download dependencies
-        run: go mod download
-
       - name: Verify dependencies
+        # ./.github/actions/setup-go already runs `go mod download`; this
+        # step only needs the extra verification setup-go doesn't do.
         run: go mod verify
 
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
         with:
-          version: v2.12.1
+          version: v2.12.2
           args: --timeout=5m
 
       - name: Verify niac.schema.json is up to date
@@ -254,6 +253,12 @@ jobs:
     runs-on: ubuntu-latest
     # Always runs — security checks are non-negotiable on every PR.
     permissions:
+      # Job-level `permissions:` REPLACES the workflow-level block entirely
+      # (they don't merge) — `actions: read` from the top-level block was
+      # silently dropped here, which broke the codeql-action/upload-sarif
+      # step below ("Resource not accessible by integration") and skipped
+      # every step after it (npm audit, gitleaks, Trivy) on 2026-07-04.
+      actions: read
       contents: read
       # github/codeql-action/upload-sarif@v4 requires security-events: write
       # to push results to the Security tab (regressed from a default-on
@@ -275,9 +280,11 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y libpcap-dev
 
       - name: Run govulncheck
-        run: |
-          go install golang.org/x/vuln/cmd/govulncheck@v1.3.0
-          govulncheck ./...
+        # make security-backend installs govulncheck if missing and runs the
+        # scan; using the target here keeps the version-string behavior in
+        # sync with `make security` / `make verify` locally instead of
+        # duplicating the invocation.
+        run: make security-backend
 
       - name: Run gosec
         uses: securego/gosec@9e6a9843d7a4a6e3e9a8539b02612c8a4aa3f889 # v2.27.1
@@ -286,18 +293,26 @@ jobs:
 
       - name: Upload gosec results
         uses: github/codeql-action/upload-sarif@54f647b7e1bb85c95cddabcd46b0c578ec92bc1a # v4.36.3
-        if: always()
+        # Code scanning requires a public repo or Advanced Security (same
+        # gate as codeql.yml); gosec enforcement stays blocking via the
+        # golangci-lint gosec linter in the backend job.
+        if: always() && github.event.repository.visibility == 'public'
         with:
           sarif_file: gosec-results.sarif
 
       - name: Set up Node.js
         uses: ./.github/actions/setup-node
 
-      - name: Run npm audit
+      - name: Install npm dependencies
         working-directory: ui
-        run: |
-          npm ci
-          npm audit --audit-level=high || true
+        run: npm ci
+
+      - name: Run npm audit
+        # Was `npm audit --audit-level=high || true` — the `|| true` silently
+        # discarded npm audit's exit code, so this step reported green
+        # regardless of findings. make security-frontend propagates the
+        # real exit code (see mk/security.mk).
+        run: make security-frontend
 
       # gitleaks-action requires a paid licence for organization repos. Use the
       # MIT-licensed gitleaks CLI directly instead — same engine, same config.
@@ -333,7 +348,10 @@ jobs:
           exit-code: '0'
 
       - name: Upload Trivy results
-        if: always() && hashFiles('trivy-results.sarif') != ''
+        # Code scanning requires a public repo or Advanced Security (same
+        # gate as codeql.yml); the "Fail on CRITICAL/HIGH findings" step
+        # below still blocks on the SARIF content regardless of visibility.
+        if: always() && hashFiles('trivy-results.sarif') != '' && github.event.repository.visibility == 'public'
         uses: github/codeql-action/upload-sarif@54f647b7e1bb85c95cddabcd46b0c578ec92bc1a # v4.36.3
         with:
           sarif_file: trivy-results.sarif
