@@ -49,7 +49,14 @@ security-backend-quiet:
 		go install golang.org/x/vuln/cmd/govulncheck@latest; \
 	fi
 	@printf "   Scanning Go dependencies...\n"
-	@govulncheck ./... 2>&1 | grep -E "(Vulnerability|No vulnerabilities)" | head -5 || printf "   No vulnerabilities found\n"
+	@OUTPUT=$$(govulncheck ./... 2>&1); \
+	STATUS=$$?; \
+	echo "$$OUTPUT" | grep -E "(Vulnerability|No vulnerabilities)" | head -5 || printf "   No vulnerabilities found\n"; \
+	if [ $$STATUS -ne 0 ]; then \
+		echo ""; \
+		echo "$$OUTPUT" | tail -60; \
+		exit $$STATUS; \
+	fi
 
 security-frontend: ## Run frontend security scan (npm audit)
 	@printf "$(BOLD)🔒 Running npm audit...$(RESET)\n"
@@ -58,7 +65,14 @@ security-frontend: ## Run frontend security scan (npm audit)
 
 security-frontend-quiet:
 	@printf "   Auditing npm packages...\n"
-	@cd $(UI_DIR) && npm audit --audit-level=high 2>&1 | grep -E "(found|vulnerabilities)" | head -3 || printf "   No vulnerabilities found\n"
+	@OUTPUT=$$(cd $(UI_DIR) && npm audit --audit-level=high 2>&1); \
+	STATUS=$$?; \
+	echo "$$OUTPUT" | grep -E "(found|vulnerabilities)" | head -3 || printf "   No vulnerabilities found\n"; \
+	if [ $$STATUS -ne 0 ]; then \
+		echo ""; \
+		echo "$$OUTPUT" | tail -60; \
+		exit $$STATUS; \
+	fi
 
 security-secrets: ## Scan for secrets in codebase (gitleaks)
 	@printf "$(BOLD)🔒 Running gitleaks...$(RESET)\n"
@@ -83,9 +97,16 @@ security-secrets-quiet:
 	fi; \
 	printf "   Scanning for secrets...\n"; \
 	if [ -f .gitleaks.toml ]; then \
-		$$GITLEAKS detect --source . --config .gitleaks.toml 2>&1 | grep -E "(leaks found|no leaks)" || printf "   No secrets found\n"; \
+		OUTPUT=$$($$GITLEAKS detect --source . --config .gitleaks.toml 2>&1); \
 	else \
-		$$GITLEAKS detect --source . 2>&1 | grep -E "(leaks found|no leaks)" || printf "   No secrets found\n"; \
+		OUTPUT=$$($$GITLEAKS detect --source . 2>&1); \
+	fi; \
+	STATUS=$$?; \
+	echo "$$OUTPUT" | grep -E "(leaks found|no leaks)" || printf "   No secrets found\n"; \
+	if [ $$STATUS -ne 0 ]; then \
+		echo ""; \
+		echo "$$OUTPUT" | tail -60; \
+		exit $$STATUS; \
 	fi
 
 security-trivy: ## Run Trivy vulnerability scan
