@@ -92,10 +92,9 @@ jobs:
       - name: Install libpcap-dev
         run: sudo apt-get update && sudo apt-get install -y libpcap-dev
 
-      - name: Download dependencies
-        run: go mod download
-
       - name: Verify dependencies
+        # ./.github/actions/setup-go already runs `go mod download`; this
+        # step only needs the extra verification setup-go doesn't do.
         run: go mod verify
 
       - name: Run golangci-lint
