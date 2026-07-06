@@ -36,8 +36,10 @@ jobs:
   # area (docs-only / c-only / frontend-only). The CI Complete aggregator at
   # the bottom of this file enforces that all required jobs either passed or
   # were intentionally skipped, so branch protection can require just CI
-  # Complete (plus CodeQL/license-check from other workflows) instead of
-  # every individual job.
+  # Complete (plus "Lint PR Title" / "Lint PR Body" from their own
+  # workflows) instead of every individual job. CodeQL and License
+  # Compliance are advisory, not required contexts — the `semgrep` job in
+  # this file is the required SAST gate.
   changes:
     name: Changed paths
     runs-on: ubuntu-latest
@@ -331,6 +333,47 @@ jobs:
             jq '.runs[].results[] | {ruleId, level, severity: .properties.security_severity, message: .message.text}' trivy-results.sarif
             exit 1
           fi
+
+  # ===========================================================================
+  # Semgrep SAST — required gate (Phase 4, replaces CodeQL as the required
+  # SAST signal since CodeQL is advisory-only)
+  # ===========================================================================
+  # Blocking on ERROR severity only for now — a deliberate first step,
+  # mirroring the seed/stem rollout. WARNING/MEDIUM findings are visible in
+  # the job log but do not fail the build yet; ratchet to a stricter
+  # --severity once any WARNING backlog is triaged in a follow-up.
+  #
+  # Runs unconditionally (no path filter) — same rationale as `security`
+  # above: SAST coverage on every PR is non-negotiable, and Semgrep is fast
+  # enough (~1-2 min for this ruleset) that gating it behind path filters
+  # isn't worth the added complexity.
+  semgrep:
+    name: Semgrep SAST
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Set up Python
+        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        with:
+          python-version: "3.13"
+
+      - name: Install Semgrep (pinned)
+        run: pip install "semgrep==1.168.0"
+
+      - name: Run Semgrep (blocking on ERROR severity)
+        run: |
+          semgrep scan \
+            --config p/golang \
+            --config p/typescript \
+            --config p/react \
+            --config p/owasp-top-ten \
+            --severity ERROR \
+            --error \
+            --metrics=off
 
   # ===========================================================================
   # C Lint (C23 Standard - NOT C++)
@@ -823,11 +866,13 @@ jobs:
   # Every required-status-check on `main` is consolidated into this single
   # job. It fails if any upstream job actually failed; it passes if every
   # upstream either succeeded or was intentionally skipped via the path
-  # filter. Branch protection should require ONLY "CI Complete" plus the
-  # security-critical checks from other workflows (CodeQL: Analyze (go),
-  # Analyze (javascript-typescript); License Compliance Check) — not every
-  # individual job — so docs-only PRs merge cleanly when backend/frontend/c
-  # are all skipped.
+  # filter. Branch protection requires ONLY "CI Complete" (plus "Lint PR
+  # Title" / "Lint PR Body" from their own workflows) — not every individual
+  # job — so docs-only PRs merge cleanly when backend/frontend/c are all
+  # skipped. CodeQL and License Compliance are NOT required contexts: CodeQL
+  # is advisory and License Compliance reports without blocking. The
+  # `semgrep` job in this file is the required SAST gate (blocking on ERROR
+  # severity).
   ci-complete:
     name: CI Complete
     runs-on: ubuntu-latest
@@ -842,6 +887,7 @@ jobs:
       - backend
       - frontend
       - security
+      - semgrep
       - c-lint
       - quality
       - docs
