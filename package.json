@@ -5,8 +5,8 @@
   "description": "NIAC - Network Infrastructure Analysis & Capture - Mustard Seed Networks",
   "type": "module",
   "engines": {
-    "node": "26.3.0",
-    "npm": "11.17.0"
+    "node": "26.4.0",
+    "npm": "11.18.0"
   },
   "scripts": {
     "prepare": "husky",
@@ -24,11 +24,11 @@
     "build-storybook": "cd ui && npm run build-storybook"
   },
   "devDependencies": {
-    "@commitlint/cli": "21.0.2",
-    "@commitlint/config-conventional": "21.0.2",
+    "@commitlint/cli": "21.2.0",
+    "@commitlint/config-conventional": "21.2.0",
     "husky": "9.1.7",
-    "lint-staged": "17.0.7",
-    "@typescript/native-preview": "7.0.0-dev.20260615.1"
+    "lint-staged": "17.0.8",
+    "@typescript/native-preview": "7.0.0-dev.20260706.1"
   },
   "lint-staged": {
     "ui/src/**/*.{ts,tsx}": "cd ui && npx biome check --write",
@@ -39,5 +39,5 @@
       "@commitlint/config-conventional"
     ]
   },
-  "packageManager": "npm@11.17.0"
+  "packageManager": "npm@11.18.0"
 }
