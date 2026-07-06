@@ -108,6 +108,33 @@ func ipAddressesToStrings(ips []net.IP) []string {
 	return result
 }
 
+// deviceSummary builds the JSON view of a device shared by /api/v1/devices and
+// /api/v1/segments: name/type/ips/protocols, plus MAC + vendor/model when the
+// vendor-template metadata is present (otherwise that YAML would be invisible to
+// operators browsing the device or segment lists).
+func deviceSummary(dev *config.Device) map[string]any {
+	entry := map[string]any{
+		"name":      dev.Name,
+		"type":      dev.Type,
+		"ips":       ipAddressesToStrings(dev.IPAddresses),
+		"protocols": getDeviceProtocols(dev),
+	}
+	if len(dev.MACAddress) > 0 {
+		entry["mac"] = dev.MACAddress.String()
+	}
+	if len(dev.Properties) > 0 {
+		entry["properties"] = dev.Properties
+		if v, ok := dev.Properties["vendor"]; ok && v != "" {
+			entry["vendor"] = v
+		}
+		if m, ok := dev.Properties["model"]; ok && m != "" {
+			entry["model"] = m
+		}
+	}
+
+	return entry
+}
+
 func (s *Server) handleDevices(w http.ResponseWriter, _ *http.Request) {
 	cfg := s.currentConfig()
 	if cfg == nil {
@@ -118,31 +145,7 @@ func (s *Server) handleDevices(w http.ResponseWriter, _ *http.Request) {
 
 	devices := make([]map[string]any, 0, len(cfg.Devices))
 	for i := range cfg.Devices {
-		dev := &cfg.Devices[i]
-		entry := map[string]any{
-			"name":      dev.Name,
-			"type":      dev.Type,
-			"ips":       ipAddressesToStrings(dev.IPAddresses),
-			"protocols": getDeviceProtocols(dev),
-		}
-		// Surface MAC + vendor properties so the UI device list can
-		// show the same information the new vendor templates encode
-		// in their YAML. Previously only name/type/ips/protocols
-		// reached the UI; the vendor template pack's metadata was
-		// invisible to operators browsing /devices.
-		if len(dev.MACAddress) > 0 {
-			entry["mac"] = dev.MACAddress.String()
-		}
-		if len(dev.Properties) > 0 {
-			entry["properties"] = dev.Properties
-			if v, ok := dev.Properties["vendor"]; ok && v != "" {
-				entry["vendor"] = v
-			}
-			if m, ok := dev.Properties["model"]; ok && m != "" {
-				entry["model"] = m
-			}
-		}
-		devices = append(devices, entry)
+		devices = append(devices, deviceSummary(&cfg.Devices[i]))
 	}
 
 	s.writeJSON(w, devices)

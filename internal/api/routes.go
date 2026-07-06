@@ -213,6 +213,7 @@ func (s *Server) registerReadOnlyRoutes(mux *http.ServeMux) {
 		{path: "/api/v1/device-schemas/", handler: s.handleDeviceEditorSchema, methods: []string{http.MethodGet}},
 		{path: "/api/v1/topology", handler: s.handleTopology, methods: []string{http.MethodGet}},
 		{path: "/api/v1/topology/export", handler: s.handleTopologyExport, methods: []string{http.MethodGet}},
+		{path: "/api/v1/segments", handler: s.handleSegments, methods: []string{http.MethodGet}},
 		{
 			path:    "/api/v1/errors",
 			handler: s.handleErrors,
