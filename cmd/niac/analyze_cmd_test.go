@@ -94,9 +94,12 @@ func TestRunAnalyzeGraphviz(t *testing.T) {
 	walkFile := filepath.Join(tmpDir, "test.walk")
 	dotFile := filepath.Join(tmpDir, "output.dot")
 
-	// Need neighbors for graphviz output
+	// A CDP neighbor makes the DOT graph non-empty, exercising the full
+	// walk -> parse -> neighbor -> Graphviz pipeline.
 	content := `.1.3.6.1.2.1.1.5.0 = STRING: "test-sw"
 .1.3.6.1.2.1.2.2.1.2.1 = STRING: "GigabitEthernet0/1"
+.1.3.6.1.4.1.9.9.23.1.2.1.1.6.1.1 = STRING: "core-rtr"
+.1.3.6.1.4.1.9.9.23.1.2.1.1.7.1.1 = STRING: "GigabitEthernet1/0/1"
 `
 	if err := os.WriteFile(walkFile, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
@@ -104,10 +107,16 @@ func TestRunAnalyzeGraphviz(t *testing.T) {
 
 	root := newTestAnalyzeRoot()
 	root.SetArgs([]string{"analyze-walk", "--graphviz", dotFile, walkFile})
-	err := root.Execute()
-	// May error because no neighbors - that's OK
-	if err != nil && !strings.Contains(err.Error(), "no neighbor") {
-		t.Errorf("analyze-walk --graphviz unexpected error: %v", err)
+	if err := root.Execute(); err != nil {
+		t.Fatalf("analyze-walk --graphviz failed: %v", err)
+	}
+
+	data, err := os.ReadFile(dotFile)
+	if err != nil {
+		t.Fatalf("graphviz file not written: %v", err)
+	}
+	if !strings.Contains(string(data), "core-rtr") {
+		t.Errorf("DOT output missing neighbor: %s", data)
 	}
 }
 

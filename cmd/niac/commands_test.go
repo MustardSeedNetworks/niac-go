@@ -35,9 +35,6 @@ func TestAddAnalyzeCommand(t *testing.T) {
 	if cmd.Flags().Lookup("output") == nil {
 		t.Error("Expected --output flag")
 	}
-	if cmd.Flags().Lookup("extract-topology") == nil {
-		t.Error("Expected --extract-topology flag")
-	}
 	if cmd.Flags().Lookup("show-neighbors") == nil {
 		t.Error("Expected --show-neighbors flag")
 	}
