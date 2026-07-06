@@ -254,6 +254,12 @@ jobs:
     runs-on: ubuntu-latest
     # Always runs — security checks are non-negotiable on every PR.
     permissions:
+      # Job-level `permissions:` REPLACES the workflow-level block entirely
+      # (they don't merge) — `actions: read` from the top-level block was
+      # silently dropped here, which broke the codeql-action/upload-sarif
+      # step below ("Resource not accessible by integration") and skipped
+      # every step after it (npm audit, gitleaks, Trivy) on 2026-07-04.
+      actions: read
       contents: read
       # github/codeql-action/upload-sarif@v4 requires security-events: write
       # to push results to the Security tab (regressed from a default-on
