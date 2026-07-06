@@ -22,6 +22,7 @@ import type {
   ReplayRequest,
   ReplayState,
   RuntimeStatus,
+  SegmentSummary,
   SimulationRequest,
   SimulationStatus,
   StackStatsResponse,
@@ -59,6 +60,10 @@ import type {
 
 export const fetchStats = () => deduplicatedGet<StackStatsResponse>('/api/v1/stats');
 export const fetchDevices = () => deduplicatedGet<DeviceSummary[]>('/api/v1/devices');
+// ADR 0008: multi-VLAN segments grouping the same devices /api/v1/devices
+// reports flat. A flat (non-segmented) config still reports one untagged
+// segment, so the shape is uniform.
+export const fetchSegments = () => deduplicatedGet<SegmentSummary[]>('/api/v1/segments');
 export const fetchHistory = () => deduplicatedGet<HistoryRecord[]>('/api/v1/history');
 export const fetchNeighbors = () => deduplicatedGet<NeighborRecord[]>('/api/v1/neighbors');
 export const fetchConfig = () => deduplicatedGet<ConfigDocument>('/api/v1/config');

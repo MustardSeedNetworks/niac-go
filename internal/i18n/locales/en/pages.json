@@ -75,6 +75,17 @@
     "ipAddressesHeader": "IP addresses",
     "availableSnmpWalks": "Available SNMP walks"
   },
+  "segments": {
+    "label": "Segments",
+    "title": "Segments",
+    "description": "Read-only view of the devices in each VLAN segment the active config describes.",
+    "vlanHeader": "VLAN {{tag}}",
+    "untaggedHeader": "Untagged",
+    "deviceCount_one": "{{count}} device",
+    "deviceCount_other": "{{count}} devices",
+    "emptySegmentDevices": "No devices in this segment.",
+    "empty": "No segments defined in the loaded configuration."
+  },
   "deviceLibrary": {
     "label": "Devices",
     "title": "Devices",

@@ -37,6 +37,22 @@ export interface DeviceSummary {
   properties?: Record<string, string>;
 }
 
+/**
+ * One multi-VLAN segment (ADR 0008) — a VLAN tag and the device set
+ * grouped under it, as returned by GET /api/v1/segments. A flat
+ * (non-segmented) config still reports exactly one untagged segment
+ * wrapping every device, so the wire shape is uniform whether or not
+ * `segments:` appears in the YAML.
+ */
+export interface SegmentSummary {
+  /** 0 = untagged/native VLAN, else 1..4094. */
+  vlanTag: number;
+  /** True only for the native/untagged segment. */
+  untagged?: boolean;
+  /** Same shape as GET /api/v1/devices — see DeviceSummary. */
+  devices: DeviceSummary[];
+}
+
 export interface HistoryRecord {
   id: number;
   startedAt: string;

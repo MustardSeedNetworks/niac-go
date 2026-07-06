@@ -30,6 +30,7 @@ export type {
   ReplayRequest,
   ReplayState,
   RuntimeStatus,
+  SegmentSummary,
   SimulationRequest,
   SimulationStatus,
   StackStatsResponse,

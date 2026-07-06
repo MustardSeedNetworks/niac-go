@@ -5,6 +5,7 @@ import {
   FileScan,
   GitCompare,
   KeyRound,
+  Layers,
   Network,
   PlugZap,
   Server,
@@ -63,6 +64,7 @@ export function useNavGroups(): SidebarNavGroup[] {
         label: t('groups.liveView'),
         items: [
           { path: '/devices', label: t('devices.label'), icon: Server },
+          { path: '/segments', label: t('segments.label'), icon: Layers },
           { path: '/topology', label: t('topology.label'), icon: Network },
           { path: '/traffic', label: t('traffic.label'), icon: Zap },
         ],

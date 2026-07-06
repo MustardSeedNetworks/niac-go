@@ -75,6 +75,17 @@
     "ipAddressesHeader": "Direcciones IP",
     "availableSnmpWalks": "Recorridos SNMP disponibles"
   },
+  "segments": {
+    "label": "Segmentos",
+    "title": "Segmentos",
+    "description": "Vista de solo lectura de los dispositivos de cada segmento VLAN que describe la configuración activa.",
+    "vlanHeader": "VLAN {{tag}}",
+    "untaggedHeader": "Untagged",
+    "deviceCount_one": "{{count}} dispositivo",
+    "deviceCount_other": "{{count}} dispositivos",
+    "emptySegmentDevices": "No hay dispositivos en este segmento.",
+    "empty": "No hay segmentos definidos en la configuración cargada."
+  },
   "deviceLibrary": {
     "label": "Dispositivos",
     "title": "Dispositivos",

@@ -6,6 +6,7 @@ import {
   FileScan,
   GitCompare,
   KeyRound,
+  Layers,
   Network,
   PlugZap,
   Server,
@@ -30,6 +31,9 @@ const RuntimeControlPage = lazy(() =>
 );
 const DevicesPage = lazy(() =>
   import('./pages/DevicesPage').then((m) => ({ default: m.DevicesPage })),
+);
+const SegmentsPage = lazy(() =>
+  import('./pages/SegmentsPage').then((m) => ({ default: m.SegmentsPage })),
 );
 const TopologyPage = lazy(() =>
   import('./pages/TopologyPage').then((m) => ({ default: m.TopologyPage })),
@@ -96,6 +100,7 @@ type PageI18nKey =
   | 'dashboard'
   | 'runtime'
   | 'devices'
+  | 'segments'
   | 'deviceLibrary'
   | 'topology'
   | 'automation'
@@ -212,6 +217,30 @@ const staticPages: PageDef[] = [
           swap the running network wholesale, restart the simulation from{' '}
           <strong>Simulation</strong>.
         </p>
+      </>
+    ),
+  },
+  {
+    path: '/segments',
+    i18nKey: 'segments',
+    icon: Layers,
+    component: SegmentsPage,
+    help: (
+      <>
+        <p>
+          Devices grouped by VLAN segment (ADR 0008), exactly as the active YAML config describes
+          them. A flat config with no <code>segments:</code> block still reports one "Untagged"
+          segment containing every device. Read-only.
+        </p>
+        <h4>Where to go from here</h4>
+        <ul>
+          <li>
+            <strong>Running Devices</strong> shows the same devices as a single flat list.
+          </li>
+          <li>
+            <strong>Topology</strong> shows the links between them.
+          </li>
+        </ul>
       </>
     ),
   },
