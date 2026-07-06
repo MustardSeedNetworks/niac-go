@@ -183,6 +183,16 @@ func (s *Server) registerReadOnlyRoutes(mux *http.ServeMux) {
 			csrf:    true,
 		},
 		{path: "/api/v1/library/walks", handler: s.handleLibraryWalks, methods: []string{http.MethodGet}},
+		// Revert mutates the walk on disk (restores + removes the .orig
+		// sidecar), so — like the networks POST above — it carries write
+		// rate limit + CSRF rather than being GET-only like its sibling.
+		{
+			path:    "/api/v1/library/walks/revert",
+			handler: s.handleLibraryWalkRevert,
+			methods: []string{http.MethodPost},
+			rl:      rlWrite,
+			csrf:    true,
+		},
 		{path: "/api/v1/library/pcaps", handler: s.handleLibraryPcaps, methods: []string{http.MethodGet}},
 		// Per-device baseline walk synthesis (#546 p2). POST-only; mutates the
 		// library + running config YAML, so write + CSRF.

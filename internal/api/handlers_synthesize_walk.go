@@ -4,8 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
@@ -34,11 +32,16 @@ type SynthesizeWalkRequest struct {
 
 // SynthesizeWalkResponse is the 201 body. WalkPath is library-relative
 // so the device's walk_file can be set directly to this string.
+// OriginalPreserved is true when a pristine ".orig" now exists for
+// WalkPath — i.e. the walk can be restored via POST
+// /api/v1/library/walks/revert. See library.PreserveOriginal for the
+// preserve-once contract: a prior edit's .orig is never overwritten,
+// so this stays true across repeated synthesize calls until reverted.
 type SynthesizeWalkResponse struct {
-	WalkPath           string `json:"walkPath"`
-	OIDCount           int    `json:"oidCount"`
-	SizeBytes          int    `json:"sizeBytes"`
-	PreviousWalkBacked string `json:"previousWalkBacked,omitempty"`
+	WalkPath          string `json:"walkPath"`
+	OIDCount          int    `json:"oidCount"`
+	SizeBytes         int    `json:"sizeBytes"`
+	OriginalPreserved bool   `json:"originalPreserved"`
 }
 
 // handleSynthesizeWalkModels handles GET /api/v1/synthesize-walk/models
@@ -88,7 +91,8 @@ func (s *Server) dispatchDeviceSubpath(w http.ResponseWriter, r *http.Request) {
 //  4. device exists in current config (else 404)
 //  5. (vendor, device.type) is synthesizable (else 422 — no silent
 //     fallback per resolution #2)
-//  6. write + attach (any failure → 500)
+//  6. preserve any existing walk's pristine original, then write +
+//     attach (any failure → 500)
 func (s *Server) handleSynthesizeWalk(w http.ResponseWriter, r *http.Request) {
 	if !s.libraryReady() {
 		s.writeLibraryUnavailable(w, r)
@@ -154,11 +158,24 @@ func (s *Server) handleSynthesizeWalk(w http.ResponseWriter, r *http.Request) {
 	})
 
 	relPath := "synthesized/" + dev.Name + ".walk"
-	// Was there a prior file? Check before WriteFile, since after
-	// WriteFile any prior copy is at relPath+".bak".
-	hadPrior := s.libraryFileExists(library.KindWalks, relPath)
 
-	if writeErr := s.library.WriteFile(library.KindWalks, relPath, walkBytes, true); writeErr != nil {
+	// Preserve-once: the FIRST time this walk is overwritten, snapshot
+	// its current content to relPath+".orig" so it can always be
+	// reverted (POST /api/v1/library/walks/revert). A later overwrite
+	// is a no-op here — the .orig must keep holding the pristine
+	// original, never a once-edited copy. Failing loudly rather than
+	// proceeding without the safety net: silently continuing would let
+	// this write destroy content with no way back.
+	if preserveErr := s.library.PreserveOriginal(library.KindWalks, relPath); preserveErr != nil {
+		s.logger.ErrorContext(
+			r.Context(), "[API] synthesize-walk: preserve original failed", "device", hostname, "error", preserveErr,
+		)
+		writeError(w, r, http.StatusInternalServerError, "preserve_failed",
+			"Failed to preserve the original walk before overwriting it", nil)
+		return
+	}
+
+	if writeErr := s.library.WriteFile(library.KindWalks, relPath, walkBytes); writeErr != nil {
 		s.logger.ErrorContext(r.Context(), "[API] synthesize-walk: write failed", "device", hostname, "error", writeErr)
 		writeError(w, r, http.StatusInternalServerError, "write_failed",
 			"Failed to write synthesised walk", nil)
@@ -185,12 +202,10 @@ func (s *Server) handleSynthesizeWalk(w http.ResponseWriter, r *http.Request) {
 	}
 
 	resp := SynthesizeWalkResponse{
-		WalkPath:  relPath,
-		OIDCount:  countOIDLines(walkBytes),
-		SizeBytes: len(walkBytes),
-	}
-	if hadPrior {
-		resp.PreviousWalkBacked = relPath + ".bak"
+		WalkPath:          relPath,
+		OIDCount:          countOIDLines(walkBytes),
+		SizeBytes:         len(walkBytes),
+		OriginalPreserved: s.library.HasOriginal(library.KindWalks, relPath),
 	}
 	w.WriteHeader(http.StatusCreated)
 	s.writeJSON(w, resp)
@@ -245,17 +260,6 @@ func additionalIPStrings(dev *config.Device) []string {
 		out = append(out, ip.String())
 	}
 	return out
-}
-
-// libraryFileExists returns true when {kind}/{relPath} is on disk.
-// Used to decide whether the response should advertise a .bak file.
-func (s *Server) libraryFileExists(kind library.Kind, relPath string) bool {
-	if s.library == nil {
-		return false
-	}
-	abs := filepath.Join(s.library.SubDir(kind), filepath.FromSlash(relPath))
-	_, err := os.Stat(abs)
-	return err == nil
 }
 
 // attachWalkToDevice rewrites the device's walk_file to point at

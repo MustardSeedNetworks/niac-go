@@ -1,10 +1,18 @@
-import { Database, FileBox, RefreshCw, Search } from 'lucide-react';
+import { Database, FileBox, RefreshCw, RotateCcw, Search } from 'lucide-react';
 import { type FC, useMemo, useState } from 'react';
-import { fetchLibraryPcaps, fetchLibraryWalks, type LibraryFileEntry } from '../api/client';
+import {
+  fetchLibraryPcaps,
+  fetchLibraryWalks,
+  type LibraryFileEntry,
+  revertWalk,
+} from '../api/client';
 import { useApiResource } from '../hooks/useApiResource';
 import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
+import { ConfirmModal } from '../ui/ConfirmModal';
+import { Tag } from '../ui/Tag';
 import { H2, SmallText } from '../ui/Typography';
+import { getErrorMessage } from '../utils/format';
 
 /**
  * LibraryFilesPage is the shared browser for the read-only library
@@ -16,6 +24,11 @@ import { H2, SmallText } from '../ui/Typography';
  * later PR — the immediate need is for the picker integrations
  * (device editor's SNMP section, traffic/packets PCAP picker) to have
  * a single source of truth.
+ *
+ * Walks additionally carry a preserve-once "original" (see
+ * library.PreserveOriginal server-side): once a walk has been
+ * overwritten, its `edited` flag flips true and a Revert control
+ * appears so it can be restored to the pristine copy.
  */
 
 interface Props {
@@ -26,6 +39,9 @@ function LibraryFilesView({ kind }: Props) {
   const fetcher = kind === 'walks' ? fetchLibraryWalks : fetchLibraryPcaps;
   const { data, loading, refetch, error } = useApiResource(fetcher, [], { intervalMs: 30000 });
   const [search, setSearch] = useState('');
+  const [revertTarget, setRevertTarget] = useState<string | null>(null);
+  const [reverting, setReverting] = useState(false);
+  const [revertError, setRevertError] = useState<string | null>(null);
 
   const entries = data ?? [];
   const filtered = useMemo(() => {
@@ -36,6 +52,22 @@ function LibraryFilesView({ kind }: Props) {
 
   const totalBytes = useMemo(() => filtered.reduce((acc, e) => acc + e.sizeBytes, 0), [filtered]);
 
+  const handleConfirmRevert = async () => {
+    if (!revertTarget || reverting) return;
+    setReverting(true);
+    setRevertError(null);
+    try {
+      await revertWalk(revertTarget);
+      setRevertTarget(null);
+      await refetch();
+    } catch (err) {
+      setRevertError(getErrorMessage(err));
+    } finally {
+      setReverting(false);
+    }
+  };
+
+  const columnCount = kind === 'walks' ? 5 : 4;
   const KindIcon = kind === 'walks' ? Database : FileBox;
   const title = kind === 'walks' ? 'SNMP Walks' : 'PCAP Captures';
   const emptyHint =
@@ -108,12 +140,20 @@ function LibraryFilesView({ kind }: Props) {
                     <th className="text-right py-row pr-4">Size</th>
                     <th className="text-left py-row pr-4">Source</th>
                     <th className="text-left py-row">Modified</th>
+                    {kind === 'walks' && <th className="text-right py-row">Actions</th>}
                   </tr>
                 </thead>
                 <tbody className="text-text-primary">
                   {filtered.map((entry) => (
                     <tr key={entry.name} className="border-b border-surface-border last:border-0">
-                      <td className="py-row pr-4 font-mono text-xs">{entry.name}</td>
+                      <td className="py-row pr-4 font-mono text-xs">
+                        <span className="inline-flex items-center gap-compact">
+                          {entry.name}
+                          {kind === 'walks' && entry.edited && (
+                            <Tag colorScheme="yellow">edited</Tag>
+                          )}
+                        </span>
+                      </td>
                       <td className="py-row pr-4 text-right tabular-nums">
                         {humanBytes(entry.sizeBytes)}
                       </td>
@@ -123,11 +163,33 @@ function LibraryFilesView({ kind }: Props) {
                       <td className="py-row text-xs text-text-muted">
                         {new Date(entry.modifiedAt).toLocaleString()}
                       </td>
+                      {kind === 'walks' && (
+                        <td className="py-row text-right">
+                          {entry.edited && (
+                            <Button
+                              variant="ghost"
+                              size="xs"
+                              leftIcon={<RotateCcw className="w-3.5 h-3.5" />}
+                              onClick={() => {
+                                setRevertError(null);
+                                setRevertTarget(entry.name);
+                              }}
+                              aria-label={`Revert ${entry.name} to its original`}
+                              data-testid={`revert-walk-${entry.name}`}
+                            >
+                              Revert
+                            </Button>
+                          )}
+                        </td>
+                      )}
                     </tr>
                   ))}
                   {search.trim() !== '' && filtered.length === 0 && (
                     <tr>
-                      <td colSpan={4} className="py-6 text-center text-xs text-text-muted">
+                      <td
+                        colSpan={columnCount}
+                        className="py-6 text-center text-xs text-text-muted"
+                      >
                         No entries match "{search}"
                       </td>
                     </tr>
@@ -138,6 +200,32 @@ function LibraryFilesView({ kind }: Props) {
           )}
         </CardContent>
       </Card>
+
+      {kind === 'walks' && (
+        <ConfirmModal
+          isOpen={revertTarget !== null}
+          onConfirm={() => void handleConfirmRevert()}
+          onCancel={() => {
+            setRevertTarget(null);
+            setRevertError(null);
+          }}
+          title="Revert to original"
+          message={
+            <div className="stack-sm">
+              <p>
+                Revert <span className="font-mono">{revertTarget}</span> to its original? This
+                discards edits.
+              </p>
+              {revertError && (
+                <SmallText className="text-status-error" role="alert">
+                  {revertError}
+                </SmallText>
+              )}
+            </div>
+          }
+          confirmLabel={reverting ? 'Reverting…' : 'Revert'}
+        />
+      )}
     </div>
   );
 }

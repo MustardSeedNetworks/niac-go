@@ -138,9 +138,20 @@ export interface LibraryFileEntry {
   sizeBytes: number;
   modifiedAt: string;
   source: 'starter' | 'bundle' | 'user';
+  edited: boolean;
 }
 export const fetchLibraryWalks = () => deduplicatedGet<LibraryFileEntry[]>('/api/v1/library/walks');
 export const fetchLibraryPcaps = () => deduplicatedGet<LibraryFileEntry[]>('/api/v1/library/pcaps');
+
+/**
+ * Revert a library walk to its preserved pristine original, discarding
+ * any edits made since the walk was first written. Backed by POST
+ * /api/v1/library/walks/revert; the daemon 404s if the walk has no
+ * preserved original to revert to (see library.PreserveOriginal
+ * server-side for the preserve-once contract).
+ */
+export const revertWalk = (name: string) =>
+  requestJson<LibraryFileEntry>('/api/v1/library/walks/revert', { name }, { method: 'POST' });
 
 /**
  * Per-type device editor schema (#546 part 1). The daemon serves a

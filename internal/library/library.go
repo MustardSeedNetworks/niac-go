@@ -34,6 +34,7 @@ var (
 	ErrUnsupportedKind = errors.New("unsupported library kind")
 	ErrEmptyContent    = errors.New("content is empty")
 	ErrAlreadyExists   = errors.New("library entry already exists")
+	ErrNoOriginal      = errors.New("no preserved original to revert to")
 )
 
 // Kind is one of the three top-level subdirectories of the library.
@@ -176,6 +177,22 @@ func validateName(name string) error {
 		case r == '.' || r == '_' || r == '-':
 		default:
 			return ErrInvalidName
+		}
+	}
+	return nil
+}
+
+// validateRelPath validates a walks/pcaps relative name that may
+// include one level of vendor subdirectory (e.g.
+// "cisco/cisco-c3900-01.walk"): each '/'-separated segment is checked
+// individually via validateName, so a crafted ".." segment anywhere
+// in the path is rejected the same way a bare invalid filename would
+// be. Shared by WriteFile and the PreserveOriginal/HasOriginal/
+// RevertToOriginal family in original.go.
+func validateRelPath(relPath string) error {
+	for segment := range strings.SplitSeq(filepath.ToSlash(relPath), "/") {
+		if err := validateName(segment); err != nil {
+			return err
 		}
 	}
 	return nil

@@ -343,6 +343,56 @@ func (s *Server) handleLibraryPcaps(w http.ResponseWriter, r *http.Request) {
 	s.handleLibraryFiles(w, r, library.KindPcaps)
 }
 
+// libraryWalkRevertRequest is the body for POST /api/v1/library/walks/revert.
+type libraryWalkRevertRequest struct {
+	Name string `json:"name"`
+}
+
+// handleLibraryWalkRevert handles POST /api/v1/library/walks/revert.
+// It restores a walk from its preserved pristine ".orig" copy (see
+// library.PreserveOriginal) and removes the sidecar, returning the
+// walk to a clean "no edits" state. Responds with the refreshed
+// FileEntry (edited=false) on success.
+func (s *Server) handleLibraryWalkRevert(w http.ResponseWriter, r *http.Request) {
+	if !s.libraryReady() {
+		s.writeLibraryUnavailable(w, r)
+		return
+	}
+	// Method gating (POST-only) is enforced declaratively by the route registry.
+	var req libraryWalkRevertRequest
+	if !decodeJSONStrict(w, r, &req, MaxRequestBodySize) {
+		return
+	}
+	name := strings.TrimSpace(req.Name)
+	if name == "" {
+		writeError(w, r, http.StatusBadRequest, "invalid_request", "Walk name required", nil)
+		return
+	}
+
+	if err := s.library.RevertToOriginal(library.KindWalks, name); err != nil {
+		if errors.Is(err, library.ErrNoOriginal) {
+			writeError(w, r, http.StatusNotFound, "no_original", "No preserved original to revert to", nil)
+			return
+		}
+		if errors.Is(err, library.ErrInvalidName) {
+			writeError(w, r, http.StatusBadRequest, "invalid_name", err.Error(), nil)
+			return
+		}
+		s.logger.ErrorContext(r.Context(), "[API] library: revert walk", "name", name, "error", err)
+		writeError(w, r, http.StatusInternalServerError, "revert_failed", "Failed to revert walk", nil)
+		return
+	}
+
+	entry, err := s.library.FileEntryByName(library.KindWalks, name)
+	if err != nil {
+		s.logger.ErrorContext(r.Context(), "[API] library: reload reverted walk", "name", name, "error", err)
+		writeError(w, r, http.StatusInternalServerError, "library_read_failed",
+			"Reverted but failed to reload the entry", nil)
+		return
+	}
+	s.writeJSON(w, entry)
+}
+
 // Drained body helper — kept for symmetry with the imports the upload
 // endpoints (networks today, walks/pcaps in a follow-up) already use.
 var _ = io.Discard
