@@ -20,12 +20,13 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Least-privilege default: read-only for every job. No job in this workflow
+# comments on PRs or annotates checks via the API (grepped for github-script /
+# octokit / gh pr / gh api — none found), so pull-requests/checks write scopes
+# aren't granted anywhere. The security job below grants its own narrower
+# elevated set (actions: read + security-events: write) for SARIF upload.
 permissions:
-  actions: read
   contents: read
-  pull-requests: write
-  checks: write
-  security-events: write
 
 jobs:
   # ===========================================================================
@@ -158,43 +159,6 @@ jobs:
           file: ./coverage.out
           flags: backend
           fail_ci_if_error: false
-
-  # ===========================================================================
-  # Go Race Detector
-  # ===========================================================================
-  # Dedicated race-only job to match seed's CI matrix (#56). The main backend
-  # job already runs the full suite under -race; this job is a separate gate
-  # so a race-detector regression shows up as its own failing check rather
-  # than blocking the broader backend pipeline.
-  race:
-    name: Backend (race detector)
-    runs-on: ubuntu-latest
-    needs: changes
-    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.frontend == 'true' || needs.changes.outputs.workflows == 'true'
-    env:
-      GOMODCACHE: ${{ github.workspace }}/.cache/go/pkg/mod
-      GOCACHE: ${{ github.workspace }}/.cache/go/build
-
-    steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-
-      - name: Set up Go
-        uses: ./.github/actions/setup-go
-
-      - name: Install libpcap-dev
-        run: sudo apt-get update && sudo apt-get install -y libpcap-dev
-
-      - name: Set up Node.js
-        uses: ./.github/actions/setup-node
-
-      - name: Build embedded UI assets
-        working-directory: ui
-        run: |
-          npm ci
-          npm run build
-
-      - name: Run tests with race detector
-        run: go test -short -race ./...
 
   # ===========================================================================
   # Frontend (TypeScript)
@@ -876,7 +840,6 @@ jobs:
     needs:
       - changes
       - backend
-      - race
       - frontend
       - security
       - c-lint
