@@ -40,6 +40,7 @@ import type {
   UseTemplateRequest,
   UseTemplateResponse,
   VersionInfo,
+  WalkAnalyzeResponse,
   WalkValidationResponse,
 } from './types';
 
@@ -89,6 +90,14 @@ export const validateWalk = (filename: string) =>
   requestJson<WalkValidationResponse>('/api/v1/walk/validate', { filename }, { method: 'POST' });
 export const fixWalk = (filename: string) =>
   requestJson<WalkValidationResponse>('/api/v1/walk/fix', { filename }, { method: 'POST' });
+
+/**
+ * Parse a walk file into device identity, interface inventory, and
+ * LLDP/CDP neighbors. Same filename resolution as validate/fix: a
+ * library-relative name ("cisco/c3900.walk") or a legacy config-dir path.
+ */
+export const analyzeWalk = (filename: string) =>
+  requestJson<WalkAnalyzeResponse>('/api/v1/walk/analyze', { filename }, { method: 'POST' });
 
 // =====================================================================
 // Config merge + import

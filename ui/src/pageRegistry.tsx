@@ -3,6 +3,7 @@ import {
   Activity,
   Database,
   FileBox,
+  FileScan,
   GitCompare,
   KeyRound,
   Network,
@@ -57,6 +58,9 @@ const TrafficInjectionPage = lazy(() =>
 const WalkValidatorPage = lazy(() =>
   import('./pages/WalkValidatorPage').then((m) => ({ default: m.WalkValidatorPage })),
 );
+const WalkAnalyzerPage = lazy(() =>
+  import('./pages/WalkAnalyzerPage').then((m) => ({ default: m.WalkAnalyzerPage })),
+);
 const LibraryWalksPage = lazy(() =>
   import('./pages/LibraryFilesPage').then((m) => ({ default: m.LibraryWalksPage })),
 );
@@ -100,6 +104,7 @@ type PageI18nKey =
   | 'packets'
   | 'configDiff'
   | 'walkValidator'
+  | 'walkAnalyzer'
   | 'libraryWalks'
   | 'libraryPcaps'
   | 'license';
@@ -418,6 +423,35 @@ const staticPages: PageDef[] = [
           Auto-fix rewrites the walk in place. A <code>.bak</code> next to the original is created
           before the rewrite so you can roll back. Re-run Validate after fixing to confirm.
         </p>
+      </>
+    ),
+  },
+  {
+    path: '/walk-analyzer',
+    i18nKey: 'walkAnalyzer',
+    icon: FileScan,
+    component: WalkAnalyzerPage,
+    help: (
+      <>
+        <p>
+          Parses a walk file into device identity, interface inventory, and LLDP/CDP neighbor
+          adjacencies — the same engine as <code>niac analyze-walk</code>. Read-only; never modifies
+          the file.
+        </p>
+        <h4>What it extracts</h4>
+        <ul>
+          <li>
+            <strong>Device</strong> — sysName, sysDescr, sysObjectID, and sysContact/sysLocation
+            when present (SNMPv2-MIB).
+          </li>
+          <li>
+            <strong>Interfaces</strong> — index, name, type, speed, admin/oper status, and MAC
+            address (IF-MIB / ifXTable).
+          </li>
+          <li>
+            <strong>Neighbors</strong> — adjacencies discovered via LLDP-MIB or CISCO-CDP-MIB.
+          </li>
+        </ul>
       </>
     ),
   },

@@ -223,6 +223,15 @@
     "noWalksFound": "No se encontraron recorridos",
     "pastePathLabel": "O pegue una ruta absoluta"
   },
+  "walkAnalyzer": {
+    "label": "Analizador de recorridos",
+    "title": "Analizador de recorridos",
+    "description": "Analice un archivo de recorrido SNMP para extraer la identidad del dispositivo, el inventario de interfaces y las adyacencias de vecinos LLDP/CDP.",
+    "pageTitle": "Analizador de recorridos",
+    "noWalksFound": "No se encontraron recorridos",
+    "pastePathLabel": "O pegue una ruta absoluta",
+    "noNeighborsFound": "No se encontraron vecinos LLDP/CDP."
+  },
   "libraryWalks": {
     "label": "Recorridos",
     "title": "Biblioteca de recorridos",

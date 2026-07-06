@@ -102,6 +102,27 @@ export function formatBytes(size: number): string {
   return `${value.toFixed(value >= 10 ? 0 : 1)} ${units[idx]}`;
 }
 
+/**
+ * Format a bits-per-second interface speed as bps/Kbps/Mbps/Gbps.
+ * Network link speeds are decimal SI (1 Mbps = 1,000,000 bps), unlike
+ * formatBytes' binary (1024) steps. Returns '—' for missing/zero speed
+ * (e.g. a loopback interface that never reported one) rather than "0
+ * bps", since zero here means "not reported," not "measured as zero."
+ */
+export function formatBitsPerSecond(bps?: number): string {
+  if (!bps || bps <= 0) {
+    return '—';
+  }
+  const units = ['bps', 'Kbps', 'Mbps', 'Gbps'];
+  let idx = 0;
+  let value = bps;
+  while (value >= 1000 && idx < units.length - 1) {
+    value /= 1000;
+    idx++;
+  }
+  return `${value.toFixed(value >= 10 ? 0 : 1)} ${units[idx]}`;
+}
+
 export function formatUptime(seconds: number): string {
   if (seconds < 60) {
     return `${Math.floor(seconds)}s`;

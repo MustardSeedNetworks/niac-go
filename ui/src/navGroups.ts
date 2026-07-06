@@ -2,6 +2,7 @@ import {
   Activity,
   Database,
   FileBox,
+  FileScan,
   GitCompare,
   KeyRound,
   Network,
@@ -76,6 +77,7 @@ export function useNavGroups(): SidebarNavGroup[] {
             label: t('walkValidator.label', { protocol: 'SNMP' }),
             icon: ShieldCheck,
           },
+          { path: '/walk-analyzer', label: t('walkAnalyzer.label'), icon: FileScan },
         ],
       },
       {

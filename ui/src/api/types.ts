@@ -10,6 +10,7 @@
  * - debug-types.ts: Debug console and logging types
  * - template-types.ts: Configuration template types
  * - pcap-types.ts: PCAP analyzer types
+ * - walk-analyze-types.ts: Walk analyzer types
  */
 
 // API Response Types
@@ -138,3 +139,13 @@ export type {
   UseTemplateRequest,
   UseTemplateResponse,
 } from './template-types';
+
+// Walk Analyzer Types
+export type {
+  WalkAnalysis,
+  WalkAnalyzeDevice,
+  WalkAnalyzeInterface,
+  WalkAnalyzeNeighbor,
+  WalkAnalyzeResponse,
+  WalkAnalyzeStats,
+} from './walk-analyze-types';
