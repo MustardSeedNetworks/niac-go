@@ -1,0 +1,275 @@
+# =============================================================================
+# goreleaser config for NIAC (Network In A Can)
+# =============================================================================
+# Canonical release packager. Driven by .github/workflows/release.yml inside
+# the goreleaser-cross container (which ships gcc + osxcross + mingw-w64).
+# Ported from seed/.goreleaser.yml — same gopacket/gopacket/pcap CGO surface.
+#
+# Covers natively:
+#   - Multi-arch builds (linux/windows × amd64/arm64; darwin arm64 only)
+#   - Archives (.tar.gz, .zip), Linux packages (.deb, .rpm) via nfpm
+#   - ldflags injection (Version, Commit, BuildTime, UIBuildHash)
+#   - cosign keyless signing of every artifact
+#   - syft SBOM per archive
+#   - SHA-256 checksums
+#   - release-please CHANGELOG.md as release body
+#
+# Handled outside goreleaser by sidecar jobs in release.yml:
+#   - UI frontend (npm run build) — pre-built by the build-ui job and
+#     downloaded into internal/api/ui/ before the Go build embeds it
+#   - SLSA L3 provenance — actions/attest-build-provenance@v2 reads
+#     goreleaser's outputs.hashes (base64 list of artifact SHA-256s)
+#     and produces a signed in-toto attestation uploaded as
+#     niac-slsa-provenance.intoto.jsonl
+#
+# Not produced from this config:
+#   - macOS .pkg installer (no native pkgbuild from Linux). macOS users get
+#     the .tar.gz; deploy/macos/build-pkg.sh stays in-tree for local builds.
+#   - launchd install scripts are bundled into the darwin archive instead of
+#     a native package (nfpm only produces deb/rpm).
+#
+# Tested against goreleaser v2.x.
+# =============================================================================
+
+version: 2
+
+project_name: niac
+
+before:
+  hooks:
+    - go mod download
+    # The UI build runs BEFORE goreleaser (in the build-ui job inside
+    # release.yml). Vite writes directly to internal/api/ui/, and the
+    # artifact is downloaded into the same path. Verify it's there before
+    # kicking off the Go build that embeds it.
+    - bash -c 'test -d internal/api/ui && test -n "$(ls -A internal/api/ui)" || (echo "internal/api/ui empty — UI build step failed or artifact missing"; exit 1)'
+
+builds:
+  - id: niac-linux
+    main: ./cmd/niac
+    binary: niac
+    env:
+      - CGO_ENABLED=1
+    goos: [linux]
+    goarch: [amd64, arm64]
+    flags:
+      - -trimpath
+      - -buildvcs=false
+    ldflags: &ldflags
+      - -s -w
+      - -X github.com/MustardSeedNetworks/niac-go/internal/version.Version={{.Version}}
+      - -X github.com/MustardSeedNetworks/niac-go/internal/version.Commit={{.Commit}}
+      - -X github.com/MustardSeedNetworks/niac-go/internal/version.BuildTime={{.Date}}
+      - -X github.com/MustardSeedNetworks/niac-go/internal/version.UIBuildHash={{.Env.UI_BUILD_HASH}}
+    # Per-target cross-compile settings. goreleaser-cross has all of
+    # these toolchains preinstalled; without them, building linux/arm64
+    # from an amd64 host fails on cgo runtime ARM64 assembly.
+    overrides:
+      - goos: linux
+        goarch: arm64
+        env:
+          - CC=aarch64-linux-gnu-gcc
+          - PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig
+
+  - id: niac-darwin
+    main: ./cmd/niac
+    binary: niac
+    env:
+      - CGO_ENABLED=1
+    goos: [darwin]
+    # Intel macOS (amd64) support dropped fleet-wide — Apple Silicon only.
+    goarch: [arm64]
+    flags:
+      - -trimpath
+      - -buildvcs=false
+    ldflags: *ldflags
+    # macOS cross-compile via osxcross (bundled in goreleaser-cross).
+    # The CC paths are stable inside the container image.
+    overrides:
+      - goos: darwin
+        goarch: arm64
+        env:
+          - CC=oa64-clang
+          - CXX=oa64-clang++
+
+  - id: niac-windows
+    main: ./cmd/niac
+    binary: niac
+    # Windows: CGO disabled (gopacket/pcap fork handles arm64 build without
+    # native libpcap-windows toolchain). Matches release.yml.
+    env:
+      - CGO_ENABLED=0
+    goos: [windows]
+    goarch: [amd64, arm64]
+    flags:
+      - -trimpath
+      - -buildvcs=false
+    ldflags: *ldflags
+
+archives:
+  - id: linux-archive
+    ids: [niac-linux]
+    name_template: "niac-{{ .Version }}-{{ .Os }}-{{ .Arch }}"
+    formats: [tar.gz]
+    files:
+      - src: README.md
+        dst: README.md
+      - src: LICENSE
+        dst: LICENSE
+      - src: cmd/niac/templates
+        dst: templates
+      - src: deploy/systemd/niac.service
+        dst: systemd/niac.service
+
+  - id: darwin-archive
+    ids: [niac-darwin]
+    name_template: "niac-{{ .Version }}-{{ .Os }}-{{ .Arch }}"
+    formats: [tar.gz]
+    files:
+      - src: README.md
+        dst: README.md
+      - src: LICENSE
+        dst: LICENSE
+      - src: cmd/niac/templates
+        dst: templates
+      - src: deploy/launchd/com.niac.plist
+        dst: launchd/com.niac.plist
+      - src: deploy/launchd/install.sh
+        dst: launchd/install.sh
+      - src: deploy/launchd/uninstall.sh
+        dst: launchd/uninstall.sh
+
+  - id: windows-archive
+    ids: [niac-windows]
+    name_template: "niac-{{ .Version }}-{{ .Os }}-{{ .Arch }}"
+    formats: [zip]
+    files:
+      - src: README.md
+        dst: README.md
+      - src: LICENSE
+        dst: LICENSE
+      - src: cmd/niac/templates
+        dst: templates
+      - src: deploy/windows/build.ps1
+        dst: install.ps1
+
+# Linux .deb + .rpm via nfpm (built into goreleaser). Port of deploy/nfpm/nfpm.yaml —
+# the standalone file's ${ARCH}/${VERSION}/${BINARY} sed-substitution + explicit
+# contents.src binary entry are no longer needed; goreleaser supplies its own
+# built binary and arch/version templating natively.
+nfpms:
+  - id: linux-packages
+    ids: [niac-linux]
+    package_name: niac
+    vendor: Mustard Seed Networks
+    homepage: https://github.com/MustardSeedNetworks/niac-go
+    maintainer: Kris Armstrong <kris.armstrong@icloud.com>
+    description: |
+      NIAC - Network In A Can by Mustard Seed Networks
+      .
+      NIAC is a network device simulator: ARP, DHCP, DNS, BGP, OSPF, SNMP and more,
+      with a web UI for orchestrating simulated topologies.
+    license: BSL-1.1
+    section: net
+    priority: optional
+    formats:
+      - deb
+      - rpm
+    file_name_template: >-
+      {{- if eq .ConventionalExtension ".deb" -}}
+        niac_{{ .Version }}_{{ .Arch }}
+      {{- else if eq .ConventionalExtension ".rpm" -}}
+        {{- $rpmarch := .Arch -}}
+        {{- if eq .Arch "amd64" }}{{ $rpmarch = "x86_64" }}{{ end -}}
+        {{- if eq .Arch "arm64" }}{{ $rpmarch = "aarch64" }}{{ end -}}
+        niac-{{ .Version }}-1.{{ $rpmarch }}
+      {{- end -}}
+    dependencies:
+      - systemd
+    overrides:
+      deb:
+        dependencies:
+          - libpcap0.8 | libpcap0.8t64
+          - systemd
+          - libcap2-bin
+      rpm:
+        dependencies:
+          - libpcap
+          - systemd
+          - libcap
+    contents:
+      - src: ./deploy/systemd/niac.service
+        dst: /usr/lib/systemd/system/niac.service
+        file_info:
+          mode: 0o644
+      - dst: /etc/niac
+        type: dir
+        file_info:
+          mode: 0o750
+          owner: niac
+          group: niac
+      - dst: /var/lib/niac
+        type: dir
+        file_info:
+          mode: 0o750
+          owner: niac
+          group: niac
+      - dst: /var/log/niac
+        type: dir
+        file_info:
+          mode: 0o750
+          owner: niac
+          group: niac
+    scripts:
+      preinstall: ./deploy/nfpm/preinstall.sh
+      postinstall: ./deploy/nfpm/postinstall.sh
+      preremove: ./deploy/nfpm/preremove.sh
+      postremove: ./deploy/nfpm/postremove.sh
+    # Default install location for the binary (overrides nfpm default of
+    # /usr/local/bin). Matches existing .deb/.rpm contract.
+    bindir: /usr/bin
+
+checksum:
+  name_template: "checksums.txt"
+  algorithm: sha256
+
+sboms:
+  - id: archives-sbom
+    artifacts: archive
+    documents:
+      - "{{ .ArtifactName }}.sbom.json"
+
+signs:
+  # Sign all release artifacts via cosign keyless OIDC. Mirrors release.yml's
+  # previous cosign sign-blob loop. Bundle format preserves Sigstore
+  # transparency log entry.
+  - cmd: cosign
+    signature: "${artifact}.cosign.bundle"
+    args:
+      - sign-blob
+      - "--yes"
+      - "--bundle"
+      - "${artifact}.cosign.bundle"
+      - "${artifact}"
+    artifacts: all
+    output: true
+
+release:
+  github:
+    owner: MustardSeedNetworks
+    name: niac-go
+  # Use release-please's CHANGELOG.md section as the release body. The
+  # `replace_existing_artifacts: true` lets a re-run overwrite a partial
+  # earlier failure cleanly.
+  replace_existing_artifacts: true
+  draft: false
+  prerelease: auto
+  mode: replace
+  header: |
+    NIAC {{ .Tag }} — Network In A Can, by Mustard Seed Networks.
+
+    See [CHANGELOG.md](https://github.com/MustardSeedNetworks/niac-go/blob/main/CHANGELOG.md)
+    for the full release notes.
+
+snapshot:
+  version_template: "0.0.0-dryrun-{{ .ShortCommit }}"
