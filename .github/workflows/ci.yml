@@ -275,9 +275,11 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y libpcap-dev
 
       - name: Run govulncheck
-        run: |
-          go install golang.org/x/vuln/cmd/govulncheck@v1.3.0
-          govulncheck ./...
+        # make security-backend installs govulncheck if missing and runs the
+        # scan; using the target here keeps the version-string behavior in
+        # sync with `make security` / `make verify` locally instead of
+        # duplicating the invocation.
+        run: make security-backend
 
       - name: Run gosec
         uses: securego/gosec@9e6a9843d7a4a6e3e9a8539b02612c8a4aa3f889 # v2.27.1
@@ -293,11 +295,16 @@ jobs:
       - name: Set up Node.js
         uses: ./.github/actions/setup-node
 
-      - name: Run npm audit
+      - name: Install npm dependencies
         working-directory: ui
-        run: |
-          npm ci
-          npm audit --audit-level=high || true
+        run: npm ci
+
+      - name: Run npm audit
+        # Was `npm audit --audit-level=high || true` — the `|| true` silently
+        # discarded npm audit's exit code, so this step reported green
+        # regardless of findings. make security-frontend propagates the
+        # real exit code (see mk/security.mk).
+        run: make security-frontend
 
       # gitleaks-action requires a paid licence for organization repos. Use the
       # MIT-licensed gitleaks CLI directly instead — same engine, same config.
@@ -615,22 +622,11 @@ jobs:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
           CGO_ENABLED: '1'
-        run: |
-          VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo "dev")
-          COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
-          BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-          # UI build hash matches Makefile recipe; mandatory per CLAUDE.md
-          # Universal Build Contract.
-          UI_BUILD_HASH=$(find internal/api/ui -type f -exec md5sum {} \; 2>/dev/null | sort | md5sum 2>/dev/null | cut -d' ' -f1)
-          echo "UI_BUILD_HASH=${UI_BUILD_HASH}"
-
-          go build -trimpath -buildvcs=false \
-            -ldflags="-s -w \
-              -X github.com/MustardSeedNetworks/niac-go/internal/version.Version=${VERSION} \
-              -X github.com/MustardSeedNetworks/niac-go/internal/version.Commit=${COMMIT} \
-              -X github.com/MustardSeedNetworks/niac-go/internal/version.BuildTime=${BUILD_TIME} \
-              -X github.com/MustardSeedNetworks/niac-go/internal/version.UIBuildHash=${UI_BUILD_HASH}" \
-            -o niac-${{ matrix.os }}-${{ matrix.arch }} ./cmd/niac
+        # make build-backend injects the same VERSION/COMMIT/BUILD_TIME/
+        # UI_BUILD_HASH ldflags via mk/vars.mk + the root Makefile's LDFLAGS
+        # (Universal Build Contract) — overriding BINARY_NAME here instead of
+        # duplicating the ldflags computation inline.
+        run: make build-backend BINARY_NAME=niac-${{ matrix.os }}-${{ matrix.arch }}
 
       - name: Verify binary
         run: ./niac-${{ matrix.os }}-${{ matrix.arch }} --help || ./niac-${{ matrix.os }}-${{ matrix.arch }} version || echo "Binary runs"
@@ -681,18 +677,11 @@ jobs:
         run: npm ci
 
       - name: Build backend
-        run: |
-          VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo "dev")
-          COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
-          BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-          UI_BUILD_HASH=$(find internal/api/ui -type f -exec md5sum {} \; 2>/dev/null | sort | md5sum 2>/dev/null | cut -d' ' -f1)
-          go build -trimpath -buildvcs=false \
-            -ldflags="-s -w \
-              -X github.com/MustardSeedNetworks/niac-go/internal/version.Version=${VERSION} \
-              -X github.com/MustardSeedNetworks/niac-go/internal/version.Commit=${COMMIT} \
-              -X github.com/MustardSeedNetworks/niac-go/internal/version.BuildTime=${BUILD_TIME} \
-              -X github.com/MustardSeedNetworks/niac-go/internal/version.UIBuildHash=${UI_BUILD_HASH}" \
-            -o niac ./cmd/niac
+        # make build-backend injects the identical ldflags via mk/vars.mk +
+        # the root Makefile's LDFLAGS (Universal Build Contract) instead of
+        # duplicating the VERSION/COMMIT/BUILD_TIME/UI_BUILD_HASH computation
+        # inline. Output name (./niac) matches BINARY_NAME's default.
+        run: make build-backend
 
       - name: Install Playwright browsers
         working-directory: ui
@@ -787,18 +776,11 @@ jobs:
           path: internal/api/ui/
 
       - name: Build backend
-        run: |
-          VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo "dev")
-          COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
-          BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-          UI_BUILD_HASH=$(find internal/api/ui -type f -exec md5sum {} \; 2>/dev/null | sort | md5sum 2>/dev/null | cut -d' ' -f1)
-          go build -trimpath -buildvcs=false \
-            -ldflags="-s -w \
-              -X github.com/MustardSeedNetworks/niac-go/internal/version.Version=${VERSION} \
-              -X github.com/MustardSeedNetworks/niac-go/internal/version.Commit=${COMMIT} \
-              -X github.com/MustardSeedNetworks/niac-go/internal/version.BuildTime=${BUILD_TIME} \
-              -X github.com/MustardSeedNetworks/niac-go/internal/version.UIBuildHash=${UI_BUILD_HASH}" \
-            -o niac ./cmd/niac
+        # make build-backend injects the identical ldflags via mk/vars.mk +
+        # the root Makefile's LDFLAGS (Universal Build Contract) instead of
+        # duplicating the VERSION/COMMIT/BUILD_TIME/UI_BUILD_HASH computation
+        # inline. Output name (./niac) matches BINARY_NAME's default.
+        run: make build-backend
 
       - name: Start server
         run: |

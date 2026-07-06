@@ -20,57 +20,30 @@
 #
 # REQUIREMENTS
 # ------------
-#   - Go 1.25.5+ (with CGO for libpcap)
+#   - Go 1.26.4+ (with CGO for libpcap)
 #   - Node.js 26.3.0 and npm 11.17.0
 #   - libpcap-dev (Linux) or libpcap (macOS via Homebrew)
 #
 # =============================================================================
 
 # =============================================================================
-# Version and Build Information
+# Shared Variables (single source of truth)
 # =============================================================================
+# VERSION/COMMIT/BUILD_TIME, platform/arch detection, and ANSI color codes
+# all live in mk/vars.mk. Include it first so every other mk/*.mk file (and
+# the targets below) can rely on it.
 
-# Version information (can be overridden)
-VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
-COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
-BUILD_TIME ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
+include mk/vars.mk
 
-# Platform detection
-UNAME := $(shell uname -s)
-ifeq ($(UNAME),Darwin)
-    PLATFORM := darwin
+# Platform pretty name for display — not in vars.mk since it's presentation
+# only, derived from vars.mk's PLATFORM.
+ifeq ($(PLATFORM),darwin)
     PLATFORM_PRETTY := macOS
-else ifeq ($(UNAME),Linux)
-    PLATFORM := linux
+else ifeq ($(PLATFORM),linux)
     PLATFORM_PRETTY := Linux
 else
-    PLATFORM := unknown
     PLATFORM_PRETTY := Unknown
 endif
-
-# Architecture detection
-ARCH := $(shell uname -m)
-ifeq ($(ARCH),x86_64)
-    GOARCH := amd64
-else ifeq ($(ARCH),arm64)
-    GOARCH := arm64
-else ifeq ($(ARCH),aarch64)
-    GOARCH := arm64
-endif
-
-# =============================================================================
-# ANSI Color Codes
-# =============================================================================
-
-BOLD := \033[1m
-RESET := \033[0m
-RED := \033[31m
-GREEN := \033[32m
-YELLOW := \033[33m
-BLUE := \033[34m
-MAGENTA := \033[35m
-CYAN := \033[36m
-WHITE := \033[37m
 
 # =============================================================================
 # Display Helpers
@@ -137,20 +110,19 @@ endef
 BINARY_NAME=niac
 CONVERTER_NAME=niac-convert
 
-# Version package path for ldflags injection
-VERSION_PKG=github.com/MustardSeedNetworks/niac-go/internal/version
+# VERSION_PKG comes from mk/vars.mk (single source of truth).
 
 # Go build flags for reproducible builds
 GO_BUILD_FLAGS := -trimpath -buildvcs=false
 GOFLAGS=$(GO_BUILD_FLAGS)
 
-# Directories — defined BEFORE UI_BUILD_HASH because that variable
-# uses `:=` (immediate evaluation) and references EMBED_DIR. Defining
-# EMBED_DIR after UI_BUILD_HASH meant the hash always evaluated
-# against an empty path and the embedded /__version endpoint reported
-# uiBuildHash="" in the make-built binary. GitHub release workflows set
-# uiBuildHash through their own ldflags.
-UI_DIR := ui
+# Directories — UI_DIR comes from mk/vars.mk. UI_DIST/EMBED_DIR defined
+# BEFORE UI_BUILD_HASH because that variable uses `:=` (immediate
+# evaluation) and references EMBED_DIR. Defining EMBED_DIR after
+# UI_BUILD_HASH meant the hash always evaluated against an empty path and
+# the embedded /__version endpoint reported uiBuildHash="" in the
+# make-built binary. GitHub release workflows set uiBuildHash through
+# their own ldflags.
 UI_DIST := $(UI_DIR)/dist
 EMBED_DIR := internal/api/ui
 
