@@ -116,16 +116,43 @@ func (l *Library) networkEntryFor(filename string) (NetworkEntry, error) {
 	}, nil
 }
 
+// resolveNetworkPath validates name (bare filename, no separators, no
+// "..", ASCII alnum/./_/- only via validateName) and resolves it to an
+// absolute path under the networks/ subdirectory. It then re-verifies,
+// via an absolute-path prefix check against the resolved networks/ base
+// directory, that the result cannot have escaped that directory —
+// defense in depth on top of the character allowlist, and the single
+// containment helper shared by ReadNetwork/WriteNetwork/DeleteNetwork so
+// the base-dir check lives in exactly one place.
+func (l *Library) resolveNetworkPath(name string) (string, string, error) {
+	trimmed := trimYAMLExt(name)
+	if err := validateName(trimmed); err != nil {
+		return "", "", err
+	}
+
+	baseDir, err := filepath.Abs(l.SubDir(KindNetworks))
+	if err != nil {
+		return "", "", fmt.Errorf("resolve networks dir: %w", err)
+	}
+
+	candidate := filepath.Join(baseDir, trimmed+".yaml")
+	if candidate != baseDir && !strings.HasPrefix(candidate, baseDir+string(os.PathSeparator)) {
+		return "", "", ErrInvalidName
+	}
+
+	return trimmed, candidate, nil
+}
+
 // ReadNetwork returns the full content of a single network. Validates
 // the requested name so a malicious caller can't escape networks/.
 func (l *Library) ReadNetwork(name string) (*NetworkContent, error) {
-	name = trimYAMLExt(name)
-	if err := validateName(name); err != nil {
+	name, path, err := l.resolveNetworkPath(name)
+	if err != nil {
 		return nil, err
 	}
-	path := filepath.Join(l.SubDir(KindNetworks), name+".yaml")
-	// #nosec G304 -- name was just validated by validateName above,
-	// which rejects path traversal and non-alphanumeric chars.
+	// #nosec G304 -- path was resolved by resolveNetworkPath above,
+	// which rejects path traversal/non-alphanumeric names and verifies
+	// the result stays within the networks/ base directory.
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
@@ -145,8 +172,8 @@ func (l *Library) ReadNetwork(name string) (*NetworkContent, error) {
 // endpoints. Marks user-created entries by NOT being part of the
 // starter pack — detectSource picks that up on next list.
 func (l *Library) WriteNetwork(name, content string) error {
-	name = trimYAMLExt(name)
-	if err := validateName(name); err != nil {
+	_, path, err := l.resolveNetworkPath(name)
+	if err != nil {
 		return err
 	}
 	if content == "" {
@@ -155,7 +182,8 @@ func (l *Library) WriteNetwork(name, content string) error {
 	if !strings.Contains(content, "devices:") {
 		return fmt.Errorf("%w: content must contain 'devices:' section", ErrEmptyContent)
 	}
-	path := filepath.Join(l.SubDir(KindNetworks), name+".yaml")
+	// #nosec G304 -- path was resolved by resolveNetworkPath above; see
+	// ReadNetwork for the containment rationale.
 	return os.WriteFile(path, []byte(content), libraryFileMode)
 }
 
@@ -163,20 +191,20 @@ func (l *Library) WriteNetwork(name, content string) error {
 // whose source is "starter" because they'd just come back on next
 // bootstrap.
 func (l *Library) DeleteNetwork(name string) error {
-	name = trimYAMLExt(name)
-	if err := validateName(name); err != nil {
+	name, path, err := l.resolveNetworkPath(name)
+	if err != nil {
 		return err
 	}
-	filename := name + ".yaml"
-	if l.detectSource(filename) == SourceStarter {
+	if l.detectSource(name+".yaml") == SourceStarter {
 		return fmt.Errorf("starter networks cannot be deleted: %s", name)
 	}
-	path := filepath.Join(l.SubDir(KindNetworks), filename)
-	if err := os.Remove(path); err != nil {
-		if errors.Is(err, fs.ErrNotExist) {
+	// #nosec G304 -- path was resolved by resolveNetworkPath above; see
+	// ReadNetwork for the containment rationale.
+	if removeErr := os.Remove(path); removeErr != nil {
+		if errors.Is(removeErr, fs.ErrNotExist) {
 			return fmt.Errorf("%w: %s", ErrNotFound, name)
 		}
-		return err
+		return removeErr
 	}
 	return nil
 }

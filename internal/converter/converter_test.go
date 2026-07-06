@@ -3,6 +3,8 @@ package converter
 import (
 	"bufio"
 	"bytes"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -842,6 +844,99 @@ func runLoadYAMLCase(t *testing.T, input string, wantError bool, validate func(*
 	}
 	if validate != nil {
 		validate(t, cfg)
+	}
+}
+
+// --- path traversal containment tests (CodeQL go/path-injection #151/#152) ---
+
+// TestValidateNoTraversal is the table-driven proof that the shared
+// sanitizer used by ConvertFile (input+output) and LoadYAMLConfig
+// rejects relative traversal sequences while still resolving legitimate
+// paths.
+func TestValidateNoTraversal(t *testing.T) {
+	tests := []struct {
+		name      string
+		path      string
+		wantError bool
+	}{
+		{name: "empty", path: "", wantError: true},
+		{name: "simple traversal", path: "../secret.yaml", wantError: true},
+		{name: "nested traversal", path: "../../etc/passwd", wantError: true},
+		{name: "traversal mid-path", path: "configs/../../etc/passwd", wantError: true},
+		{name: "bare dotdot", path: "..", wantError: true},
+		{name: "relative filename", path: "config.yaml", wantError: false},
+		{name: "relative subdir", path: "configs/config.yaml", wantError: false},
+		{name: "absolute path", path: "/tmp/config.yaml", wantError: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := validateNoTraversal("test", tt.path)
+			if tt.wantError && err == nil {
+				t.Errorf("validateNoTraversal(%q): expected error, got nil", tt.path)
+			}
+			if !tt.wantError && err != nil {
+				t.Errorf("validateNoTraversal(%q): unexpected error: %v", tt.path, err)
+			}
+		})
+	}
+}
+
+// TestLoadYAMLConfigRejectsTraversal proves the fix for CodeQL alerts
+// #151/#152: LoadYAMLConfig previously called os.Stat/os.ReadFile on a
+// merely filepath.Clean-ed path with no traversal check at all. It now
+// routes through validateNoTraversal exactly like ConvertFile does.
+//
+// The traversal candidate is a bare relative string (not built via
+// filepath.Join against a real directory) because filepath.Clean
+// legitimately cancels a single ".." against one real preceding path
+// component — the vulnerable case is a "..' segment with nothing
+// earlier in the path to cancel it, which is exactly what an attacker
+// controls when only the trailing filename component is user-supplied.
+func TestLoadYAMLConfigRejectsTraversal(t *testing.T) {
+	const traversal = "../../etc/passwd"
+	if _, err := LoadYAMLConfig(traversal); err == nil {
+		t.Errorf("LoadYAMLConfig(%q): expected traversal to be rejected, got nil error", traversal)
+	}
+
+	// A legitimate, non-traversing absolute path must still load.
+	dir := t.TempDir()
+	legit := filepath.Join(dir, "legit.yaml")
+	if err := os.WriteFile(legit, []byte("devices: []\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := LoadYAMLConfig(legit); err != nil {
+		t.Errorf("LoadYAMLConfig(%q): unexpected error: %v", legit, err)
+	}
+}
+
+// TestConvertFileRejectsTraversal locks in ConvertFile's existing
+// traversal guard (input and output) now that it shares the same
+// validateNoTraversal helper as LoadYAMLConfig. See
+// TestLoadYAMLConfigRejectsTraversal for why the traversal strings are
+// bare relative paths rather than filepath.Join results.
+func TestConvertFileRejectsTraversal(t *testing.T) {
+	dir := t.TempDir()
+	input := filepath.Join(dir, "device.dsl")
+	if err := os.WriteFile(input, []byte("Device(mac=\"00:11:22:33:44:55\")\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := ConvertFile("../../etc/device.dsl", filepath.Join(dir, "out.yaml"), false); err == nil {
+		t.Error("ConvertFile: expected input traversal to be rejected")
+	}
+
+	if err := ConvertFile(input, "../../etc/out.yaml", false); err == nil {
+		t.Error("ConvertFile: expected output traversal to be rejected")
+	}
+
+	// Legitimate paths still convert successfully.
+	out := filepath.Join(dir, "out.yaml")
+	if err := ConvertFile(input, out, false); err != nil {
+		t.Fatalf("ConvertFile: unexpected error: %v", err)
+	}
+	if _, err := os.Stat(out); err != nil {
+		t.Errorf("expected output file to be written: %v", err)
 	}
 }
 
