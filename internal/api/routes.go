@@ -247,6 +247,13 @@ func (s *Server) registerWalkRoutes(mux *http.ServeMux) {
 			csrf:    true,
 		},
 		{
+			path:    "/api/v1/walk/analyze",
+			handler: s.handleWalkAnalyze,
+			methods: []string{http.MethodPost},
+			rl:      rlWalk,
+			csrf:    true,
+		},
+		{
 			path:    "/api/v1/walk/fix",
 			handler: s.handleWalkValidation,
 			methods: []string{http.MethodPost},
