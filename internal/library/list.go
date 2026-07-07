@@ -42,6 +42,11 @@ type FileEntry struct {
 	SizeBytes  int64     `json:"sizeBytes"`
 	ModifiedAt time.Time `json:"modifiedAt"`
 	Source     Source    `json:"source"`
+	// Edited is true when a preserved pristine original exists for this
+	// entry (see PreserveOriginal / HasOriginal in original.go) — the
+	// entry has been overwritten at least once since it was first
+	// written and can be restored via RevertToOriginal.
+	Edited bool `json:"edited"`
 }
 
 // ListNetworks enumerates every YAML in networks/, parses metadata
@@ -141,6 +146,21 @@ func (l *Library) openNetworksRoot() (*os.Root, error) {
 	root, err := os.OpenRoot(l.SubDir(KindNetworks))
 	if err != nil {
 		return nil, fmt.Errorf("open networks dir: %w", err)
+	}
+	return root, nil
+}
+
+// openKindRoot opens kind's subdirectory (walks/ or pcaps/) as an
+// os.Root, giving the same OS-enforced containment as openNetworksRoot
+// for every file op on a user-supplied relative path. Using the root
+// (rather than filepath.Join + a bare os.* call guarded by #nosec) is
+// what makes path traversal impossible by construction and is the
+// structural safety CodeQL's go/path-injection query recognises.
+// Callers MUST Close the root.
+func (l *Library) openKindRoot(kind Kind) (*os.Root, error) {
+	root, err := os.OpenRoot(l.SubDir(kind))
+	if err != nil {
+		return nil, fmt.Errorf("open %s dir: %w", kind, err)
 	}
 	return root, nil
 }
@@ -245,21 +265,18 @@ func (l *Library) DeleteNetwork(name string) error {
 //
 // relPath may include one level of subdirectory ("synthesized/foo.walk",
 // "cisco/c3900.walk") — components are validated individually so a
-// crafted path can't escape the library kind directory. Existing
-// files are overwritten without warning; backupExisting=true moves
-// the prior copy to "{relPath}.bak" first (one-step rollback per the
-// design-doc resolution).
-func (l *Library) WriteFile(kind Kind, relPath string, content []byte, backupExisting bool) error {
+// crafted path can't escape the library kind directory. Existing files
+// are overwritten without warning; callers that need the prior content
+// preserved call PreserveOriginal (preserve-once ".orig") before writing.
+func (l *Library) WriteFile(kind Kind, relPath string, content []byte) error {
 	if kind != KindWalks && kind != KindPcaps {
 		return fmt.Errorf("%w: %s", ErrUnsupportedKind, kind)
 	}
 	if len(content) == 0 {
 		return ErrEmptyContent
 	}
-	for segment := range strings.SplitSeq(filepath.ToSlash(relPath), "/") {
-		if err := validateName(segment); err != nil {
-			return err
-		}
+	if err := validateRelPath(relPath); err != nil {
+		return err
 	}
 
 	dest := filepath.Join(l.SubDir(kind), filepath.FromSlash(relPath))
@@ -267,23 +284,14 @@ func (l *Library) WriteFile(kind Kind, relPath string, content []byte, backupExi
 		return fmt.Errorf("create dir for %s: %w", dest, mkErr)
 	}
 
-	if backupExisting {
-		if _, statErr := os.Stat(dest); statErr == nil {
-			// Move the prior file to .bak. Overwrites any older .bak,
-			// matching the one-step rollback contract from the design
-			// doc resolution.
-			if renameErr := os.Rename(dest, dest+".bak"); renameErr != nil {
-				return fmt.Errorf("backup %s: %w", dest, renameErr)
-			}
-		}
-	}
-
 	return os.WriteFile(dest, content, libraryFileMode)
 }
 
 // ListFiles enumerates walks/ or pcaps/. Used by PR 3's browser tabs.
 // One level of subdir nesting is allowed; names returned include the
-// subdir for namespacing (e.g. "cisco/c3900.walk").
+// subdir for namespacing (e.g. "cisco/c3900.walk"). Preserve-once
+// sidecars (.orig) and legacy rolling backups (.bak) are bookkeeping,
+// never entries in their own right, so they're excluded here.
 func (l *Library) ListFiles(kind Kind) ([]FileEntry, error) {
 	if kind != KindWalks && kind != KindPcaps {
 		return nil, fmt.Errorf("%w: %s", ErrUnsupportedKind, kind)
@@ -297,6 +305,9 @@ func (l *Library) ListFiles(kind Kind) ([]FileEntry, error) {
 		if d.IsDir() {
 			return nil
 		}
+		if isOriginalOrBackup(d.Name()) {
+			return nil
+		}
 		rel, relErr := filepath.Rel(dir, path)
 		if relErr != nil {
 			return relErr
@@ -305,12 +316,7 @@ func (l *Library) ListFiles(kind Kind) ([]FileEntry, error) {
 		if infoErr != nil {
 			return infoErr
 		}
-		out = append(out, FileEntry{
-			Name:       filepath.ToSlash(rel),
-			SizeBytes:  info.Size(),
-			ModifiedAt: info.ModTime().UTC(),
-			Source:     SourceUser,
-		})
+		out = append(out, l.fileEntry(kind, filepath.ToSlash(rel), info))
 		return nil
 	})
 	if err != nil {
@@ -318,6 +324,47 @@ func (l *Library) ListFiles(kind Kind) ([]FileEntry, error) {
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
 	return out, nil
+}
+
+// fileEntry builds the FileEntry row for relPath from its already-
+// stat'd info, stamping Edited via HasOriginal so ListFiles and
+// FileEntryByName share one source of truth for the row shape.
+func (l *Library) fileEntry(kind Kind, relPath string, info fs.FileInfo) FileEntry {
+	return FileEntry{
+		Name:       relPath,
+		SizeBytes:  info.Size(),
+		ModifiedAt: info.ModTime().UTC(),
+		Source:     SourceUser,
+		Edited:     l.HasOriginal(kind, relPath),
+	}
+}
+
+// FileEntryByName returns the single FileEntry for relPath within
+// kind's subdir, without a full ListFiles scan. Used to return a
+// freshly refreshed row after a mutating operation (e.g.
+// RevertToOriginal).
+func (l *Library) FileEntryByName(kind Kind, relPath string) (FileEntry, error) {
+	if kind != KindWalks && kind != KindPcaps {
+		return FileEntry{}, fmt.Errorf("%w: %s", ErrUnsupportedKind, kind)
+	}
+	if err := validateRelPath(relPath); err != nil {
+		return FileEntry{}, err
+	}
+	root, err := l.openKindRoot(kind)
+	if err != nil {
+		return FileEntry{}, err
+	}
+	defer func() { _ = root.Close() }()
+
+	leaf := filepath.ToSlash(relPath)
+	info, err := root.Stat(leaf)
+	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return FileEntry{}, fmt.Errorf("%w: %s", ErrNotFound, relPath)
+		}
+		return FileEntry{}, err
+	}
+	return l.fileEntry(kind, leaf, info), nil
 }
 
 // detectSource decides whether a given filename came from the starter

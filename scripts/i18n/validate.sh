@@ -428,7 +428,7 @@ check_locked_versions() {
   local issues=0
   # POSIX-compatible parallel arrays (no `declare -A` — macOS bash 3.x).
   local names=(i18next react-i18next i18next-browser-languagedetector)
-  local wants=(26.3.0 17.0.8 8.2.1)
+  local wants=(26.4.0 17.0.8 8.2.1)
   local i=0
   while [ "$i" -lt "${#names[@]}" ]; do
     local name="${names[$i]}"

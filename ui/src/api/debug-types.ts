@@ -1,6 +1,6 @@
 /**
  * Debug and Logging Types
- * Types for debug console, protocol debugging, and log entries
+ * Types for the debug console (live log stream) and the global debug level.
  */
 
 export type LogLevel = 'ERROR' | 'WARN' | 'INFO' | 'DEBUG';
@@ -30,59 +30,23 @@ export interface LogEntry {
   details?: Record<string, unknown>;
 }
 
-export type DebugLevel = 'OFF' | 'ERROR' | 'WARN' | 'INFO' | 'DEBUG' | 'TRACE';
+/**
+ * DebugLevel is the global protocol-stack verbosity. The five values map 1:1
+ * onto the backend's numeric ladder (0..4): off, basic, info, verbose, trace.
+ * NIAC's protocol handlers read one global level live, so this is the whole
+ * contract — there is no per-protocol surface.
+ */
+export type DebugLevel = 'off' | 'basic' | 'info' | 'verbose' | 'trace';
 
-export type DebugProtocol =
-  | 'SNMP'
-  | 'LLDP'
-  | 'CDP'
-  | 'STP'
-  | 'LACP'
-  | 'OSPF'
-  | 'BGP'
-  | 'EIGRP'
-  | 'RIP'
-  | 'ISIS'
-  | 'VRRP'
-  | 'HSRP'
-  | 'GLBP'
-  | 'BFD'
-  | 'MPLS'
-  | 'PIM'
-  | 'IGMP'
-  | 'MSDP'
-  | 'NetFlow';
-
-export type ProtocolCategory =
-  | 'discovery'
-  | 'switching'
-  | 'routing'
-  | 'redundancy'
-  | 'multicast'
-  | 'monitoring';
-
-export interface ProtocolDebugConfig {
-  protocol: DebugProtocol;
+/** Response from GET/PUT /api/v1/debug/level. */
+export interface DebugLevelResponse {
+  /** The current global debug level. */
   level: DebugLevel;
-  category: ProtocolCategory;
-}
-
-export interface ProtocolDebugLevelsResponse {
-  protocols: ProtocolDebugConfig[];
+  /** The boot default, for a "reset to default" affordance. */
   defaultLevel: DebugLevel;
 }
 
-export interface UpdateProtocolDebugLevelRequest {
-  protocol: DebugProtocol;
+/** Body for PUT /api/v1/debug/level. */
+export interface UpdateDebugLevelRequest {
   level: DebugLevel;
-}
-
-export interface UpdateProtocolDebugLevelsRequest {
-  protocols: UpdateProtocolDebugLevelRequest[];
-}
-
-export interface ResetProtocolDebugLevelsResponse {
-  success: boolean;
-  message: string;
-  protocols: ProtocolDebugConfig[];
 }

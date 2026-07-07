@@ -3,8 +3,10 @@ import {
   Activity,
   Database,
   FileBox,
+  FileScan,
   GitCompare,
   KeyRound,
+  Layers,
   Network,
   PlugZap,
   Server,
@@ -29,6 +31,9 @@ const RuntimeControlPage = lazy(() =>
 );
 const DevicesPage = lazy(() =>
   import('./pages/DevicesPage').then((m) => ({ default: m.DevicesPage })),
+);
+const SegmentsPage = lazy(() =>
+  import('./pages/SegmentsPage').then((m) => ({ default: m.SegmentsPage })),
 );
 const TopologyPage = lazy(() =>
   import('./pages/TopologyPage').then((m) => ({ default: m.TopologyPage })),
@@ -56,6 +61,9 @@ const TrafficInjectionPage = lazy(() =>
 );
 const WalkValidatorPage = lazy(() =>
   import('./pages/WalkValidatorPage').then((m) => ({ default: m.WalkValidatorPage })),
+);
+const WalkAnalyzerPage = lazy(() =>
+  import('./pages/WalkAnalyzerPage').then((m) => ({ default: m.WalkAnalyzerPage })),
 );
 const LibraryWalksPage = lazy(() =>
   import('./pages/LibraryFilesPage').then((m) => ({ default: m.LibraryWalksPage })),
@@ -92,6 +100,7 @@ type PageI18nKey =
   | 'dashboard'
   | 'runtime'
   | 'devices'
+  | 'segments'
   | 'deviceLibrary'
   | 'topology'
   | 'automation'
@@ -100,6 +109,7 @@ type PageI18nKey =
   | 'packets'
   | 'configDiff'
   | 'walkValidator'
+  | 'walkAnalyzer'
   | 'libraryWalks'
   | 'libraryPcaps'
   | 'license';
@@ -211,6 +221,30 @@ const staticPages: PageDef[] = [
     ),
   },
   {
+    path: '/segments',
+    i18nKey: 'segments',
+    icon: Layers,
+    component: SegmentsPage,
+    help: (
+      <>
+        <p>
+          Devices grouped by VLAN segment (ADR 0008), exactly as the active YAML config describes
+          them. A flat config with no <code>segments:</code> block still reports one "Untagged"
+          segment containing every device. Read-only.
+        </p>
+        <h4>Where to go from here</h4>
+        <ul>
+          <li>
+            <strong>Running Devices</strong> shows the same devices as a single flat list.
+          </li>
+          <li>
+            <strong>Topology</strong> shows the links between them.
+          </li>
+        </ul>
+      </>
+    ),
+  },
+  {
     path: '/device-config',
     i18nKey: 'deviceLibrary',
     icon: Wrench,
@@ -256,7 +290,9 @@ const staticPages: PageDef[] = [
         </p>
         <h4>Export</h4>
         <p>
-          Topology can be exported as Graphviz <code>.dot</code> or JSON via the export button.
+          Topology can be exported from the export button as a PNG image, a JSON snapshot, or —
+          rendered server-side from the running daemon — Graphviz <code>.dot</code> or GraphML for
+          use in Graphviz, yEd, or gephi.
         </p>
       </>
     ),
@@ -416,6 +452,35 @@ const staticPages: PageDef[] = [
           Auto-fix rewrites the walk in place. A <code>.bak</code> next to the original is created
           before the rewrite so you can roll back. Re-run Validate after fixing to confirm.
         </p>
+      </>
+    ),
+  },
+  {
+    path: '/walk-analyzer',
+    i18nKey: 'walkAnalyzer',
+    icon: FileScan,
+    component: WalkAnalyzerPage,
+    help: (
+      <>
+        <p>
+          Parses a walk file into device identity, interface inventory, and LLDP/CDP neighbor
+          adjacencies — the same engine as <code>niac analyze-walk</code>. Read-only; never modifies
+          the file.
+        </p>
+        <h4>What it extracts</h4>
+        <ul>
+          <li>
+            <strong>Device</strong> — sysName, sysDescr, sysObjectID, and sysContact/sysLocation
+            when present (SNMPv2-MIB).
+          </li>
+          <li>
+            <strong>Interfaces</strong> — index, name, type, speed, admin/oper status, and MAC
+            address (IF-MIB / ifXTable).
+          </li>
+          <li>
+            <strong>Neighbors</strong> — adjacencies discovered via LLDP-MIB or CISCO-CDP-MIB.
+          </li>
+        </ul>
       </>
     ),
   },

@@ -75,6 +75,17 @@
     "ipAddressesHeader": "IP addresses",
     "availableSnmpWalks": "Available SNMP walks"
   },
+  "segments": {
+    "label": "Segments",
+    "title": "Segments",
+    "description": "Read-only view of the devices in each VLAN segment the active config describes.",
+    "vlanHeader": "VLAN {{tag}}",
+    "untaggedHeader": "Untagged",
+    "deviceCount_one": "{{count}} device",
+    "deviceCount_other": "{{count}} devices",
+    "emptySegmentDevices": "No devices in this segment.",
+    "empty": "No segments defined in the loaded configuration."
+  },
   "deviceLibrary": {
     "label": "Devices",
     "title": "Devices",
@@ -123,7 +134,9 @@
     },
     "actionsMenu": {
       "exportPng": "Export as PNG",
-      "exportJson": "Export topology JSON"
+      "exportJson": "Export topology JSON",
+      "exportDot": "Export as DOT (Graphviz)",
+      "exportGraphml": "Export as GraphML"
     }
   },
   "automation": {
@@ -220,6 +233,15 @@
     "pageTitle": "SNMP Walks",
     "noWalksFound": "No walks found",
     "pastePathLabel": "Or paste an absolute path"
+  },
+  "walkAnalyzer": {
+    "label": "Walk Analyzer",
+    "title": "Walk Analyzer",
+    "description": "Parse an SNMP walk file into device identity, interface inventory, and LLDP/CDP neighbor adjacencies.",
+    "pageTitle": "Walk Analyzer",
+    "noWalksFound": "No walks found",
+    "pastePathLabel": "Or paste an absolute path",
+    "noNeighborsFound": "No LLDP/CDP neighbors found."
   },
   "libraryWalks": {
     "label": "Walks",

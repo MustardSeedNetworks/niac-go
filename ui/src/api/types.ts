@@ -10,6 +10,7 @@
  * - debug-types.ts: Debug console and logging types
  * - template-types.ts: Configuration template types
  * - pcap-types.ts: PCAP analyzer types
+ * - walk-analyze-types.ts: Walk analyzer types
  */
 
 // API Response Types
@@ -23,16 +24,20 @@ export type {
   FileEntry,
   HistoryRecord,
   InterfacesResponse,
+  ModelDescriptor,
   NeighborRecord,
   NetworkInterface,
   ReplayRequest,
   ReplayState,
   RuntimeStatus,
+  SegmentSummary,
   SimulationRequest,
   SimulationStatus,
   StackStatsResponse,
   StandaloneCaptureRequest,
   StandaloneCaptureStatus,
+  SynthesizeWalkRequest,
+  SynthesizeWalkResponse,
   TopologyGraph,
   TopologyLink,
   TopologyNode,
@@ -45,16 +50,11 @@ export type {
 // Debug Types
 export type {
   DebugLevel,
-  DebugProtocol,
+  DebugLevelResponse,
   LogEntry,
   LogLevel,
   Protocol,
-  ProtocolCategory,
-  ProtocolDebugConfig,
-  ProtocolDebugLevelsResponse,
-  ResetProtocolDebugLevelsResponse,
-  UpdateProtocolDebugLevelRequest,
-  UpdateProtocolDebugLevelsRequest,
+  UpdateDebugLevelRequest,
 } from './debug-types';
 
 // Device Configuration Types
@@ -140,3 +140,13 @@ export type {
   UseTemplateRequest,
   UseTemplateResponse,
 } from './template-types';
+
+// Walk Analyzer Types
+export type {
+  WalkAnalysis,
+  WalkAnalyzeDevice,
+  WalkAnalyzeInterface,
+  WalkAnalyzeNeighbor,
+  WalkAnalyzeResponse,
+  WalkAnalyzeStats,
+} from './walk-analyze-types';

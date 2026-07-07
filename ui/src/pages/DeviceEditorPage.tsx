@@ -114,6 +114,7 @@ export const DeviceEditorPage: FC = () => {
           onToggle={() => toggleSection('snmp')}
           onUpdate={updateField}
           walkFiles={walkFiles}
+          isNewDevice={isNewDevice}
         />
       )}
 

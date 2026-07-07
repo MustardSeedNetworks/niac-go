@@ -418,8 +418,8 @@ function DebugSection({ onClose }: DebugSectionProps): ReactElement {
         )}
       >
         <div>
-          <div className="text-sm text-text-primary">{t('debug.protocolDebugLevels')}</div>
-          <div className="text-xs text-text-muted">{t('debug.protocolDebugLevelsDescription')}</div>
+          <div className="text-sm text-text-primary">{t('debug.debugConsole')}</div>
+          <div className="text-xs text-text-muted">{t('debug.debugConsoleDescription')}</div>
         </div>
         <ChevronRight className="w-4 h-4 text-text-muted" />
       </button>

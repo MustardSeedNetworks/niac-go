@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/library"
 	"github.com/MustardSeedNetworks/niac-go/internal/protocols/snmp"
 )
 
@@ -177,6 +178,15 @@ func (s *Server) runWalkValidation(
 	w http.ResponseWriter, r *http.Request, validatedPath string, autoFix bool,
 ) (*snmp.ValidationResult, bool) {
 	if autoFix {
+		// AutoFixWalkFile persists the fixed content back to validatedPath
+		// (it writes outputPath="" through to the same file). When that
+		// path is a library-tracked walk, preserve its pristine original
+		// FIRST so the edit is revertible — mirrors the preserve-once
+		// contract synthesize-walk uses. Walks resolved from the legacy
+		// config-dir allow-list aren't library entries and have no
+		// "edited" badge to maintain, so this is a no-op for them.
+		s.preserveLibraryWalkOriginal(r, validatedPath)
+
 		result, err := snmp.AutoFixWalkFile(validatedPath, "")
 		if err != nil {
 			s.logger.ErrorContext(r.Context(), "[API] Walk file auto-fix error", "error", err)
@@ -209,6 +219,37 @@ func (s *Server) runWalkValidation(
 		"issues", len(result.Issues),
 	)
 	return result, true
+}
+
+// preserveLibraryWalkOriginal snapshots the pristine copy of a
+// library-tracked walk before AutoFixWalkFile overwrites it in place.
+// Best-effort: a preserve failure is logged, not fatal, since the fix
+// the caller asked for is the primary operation and a lost preserve
+// opportunity shouldn't block it.
+func (s *Server) preserveLibraryWalkOriginal(r *http.Request, validatedPath string) {
+	if !s.libraryReady() {
+		return
+	}
+	relPath, ok := libraryRelPath(s.library.SubDir(library.KindWalks), validatedPath)
+	if !ok {
+		return
+	}
+	if err := s.library.PreserveOriginal(library.KindWalks, relPath); err != nil {
+		s.logger.WarnContext(r.Context(), "[API] walk fix: preserve original failed",
+			"path", relPath, "error", err)
+	}
+}
+
+// libraryRelPath returns absPath relative to dir, and whether absPath
+// actually resolves under dir. Used to recognise when a walk resolved
+// via the legacy config-dir/library fallback chain
+// (validateWalkFilePath) is also a library entry.
+func libraryRelPath(dir, absPath string) (string, bool) {
+	rel, err := filepath.Rel(dir, absPath)
+	if err != nil || rel == "." || strings.HasPrefix(rel, "..") {
+		return "", false
+	}
+	return filepath.ToSlash(rel), true
 }
 
 // buildWalkValidationResponse returns the WalkValidationResponse with a contextual message.

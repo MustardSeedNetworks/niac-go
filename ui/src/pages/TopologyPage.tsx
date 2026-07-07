@@ -17,7 +17,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import '@xyflow/react/dist/style.css';
 import { Network, Radar, RefreshCw } from 'lucide-react';
-import { fetchDevices, fetchNeighbors, fetchTopology } from '../api/client';
+import { exportTopology, fetchDevices, fetchNeighbors, fetchTopology } from '../api/client';
 import type { DeviceSummary } from '../api/types';
 import { useApiResource } from '../hooks/useApiResource';
 import { Button } from '../ui/Button';
@@ -488,6 +488,42 @@ export const TopologyPage: FC = () => {
     URL.revokeObjectURL(url);
   }, [nodes, edges]);
 
+  const [exportError, setExportError] = useState<string | null>(null);
+
+  // Server-side topology export (DOT / GraphML). Unlike the client-side JSON
+  // snapshot above, this fetches the daemon's rendered topology, so the output
+  // reflects what the running simulation actually sees — suitable for feeding
+  // into Graphviz / yEd / gephi.
+  const exportServerFormat = useCallback(
+    async (format: 'dot' | 'graphml', extension: string, mimeType: string) => {
+      setExportError(null);
+      try {
+        const content = await exportTopology(format);
+        const blob = new Blob([content], { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `niac-topology-${new Date().toISOString().slice(0, 10)}.${extension}`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      } catch (err) {
+        setExportError((err as Error).message);
+      }
+    },
+    [],
+  );
+
+  const handleExportDOT = useCallback(
+    () => void exportServerFormat('dot', 'dot', 'text/vnd.graphviz'),
+    [exportServerFormat],
+  );
+  const handleExportGraphML = useCallback(
+    () => void exportServerFormat('graphml', 'graphml', 'application/xml'),
+    [exportServerFormat],
+  );
+
   // Refresh data by refetching from the API. We bump the reset
   // counter so the build-graph effect re-runs even when the data
   // payload is identical — otherwise repeat clicks looked like
@@ -642,7 +678,14 @@ export const TopologyPage: FC = () => {
                     disabled={nodes.length === 0}
                     onExportPNG={handleExportPNG}
                     onExportJSON={handleExport}
+                    onExportDOT={handleExportDOT}
+                    onExportGraphML={handleExportGraphML}
                   />
+                  {exportError && (
+                    <SmallText role="alert" className="text-status-error">
+                      {exportError}
+                    </SmallText>
+                  )}
                   {/* Layout-mode picker — one pill per mode. The active
                       pill is highlighted; clicking another re-runs the
                       layout and persists the choice. Hierarchical is the

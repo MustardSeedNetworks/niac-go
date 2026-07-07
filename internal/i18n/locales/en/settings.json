@@ -86,8 +86,8 @@
     },
     "devToolsTitle": "Developer Tools",
     "devToolsDescription": "Advanced debugging features",
-    "protocolDebugLevels": "Protocol Debug Levels",
-    "protocolDebugLevelsDescription": "Configure per-protocol logging",
+    "debugConsole": "Debug Console",
+    "debugConsoleDescription": "View live logs and set debug verbosity",
     "exportDiagnostics": "Export Diagnostics",
     "exportDiagnosticsDescription": "Download debug information"
   },

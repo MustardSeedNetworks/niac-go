@@ -153,7 +153,7 @@ See [`docs/SHARED_DEMO_CATALOG.md`](docs/SHARED_DEMO_CATALOG.md).
 | `make fmt-all` | Auto-format everything |
 | `make schema` | Regenerate JSON schema from `Config` struct |
 
-Verified versions: **Go 1.26.4**, Node.js 26.2.0+, golangci-lint v2.12.1.
+Verified versions: **Go 1.26.4**, Node.js 26.4.0+, golangci-lint v2.12.2.
 Cross-platform releases (Linux/macOS/Windows × amd64/arm64) are built by
 the `release.yml` workflow on native GitHub runners after release-please
 creates a `v*` tag.

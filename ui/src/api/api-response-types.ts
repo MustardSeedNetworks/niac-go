@@ -37,6 +37,22 @@ export interface DeviceSummary {
   properties?: Record<string, string>;
 }
 
+/**
+ * One multi-VLAN segment (ADR 0008) — a VLAN tag and the device set
+ * grouped under it, as returned by GET /api/v1/segments. A flat
+ * (non-segmented) config still reports exactly one untagged segment
+ * wrapping every device, so the wire shape is uniform whether or not
+ * `segments:` appears in the YAML.
+ */
+export interface SegmentSummary {
+  /** 0 = untagged/native VLAN, else 1..4094. */
+  vlanTag: number;
+  /** True only for the native/untagged segment. */
+  untagged?: boolean;
+  /** Same shape as GET /api/v1/devices — see DeviceSummary. */
+  devices: DeviceSummary[];
+}
+
 export interface HistoryRecord {
   id: number;
   startedAt: string;
@@ -94,6 +110,51 @@ export interface WalkValidationResponse {
   success: boolean;
   message?: string;
   result?: WalkValidationResult;
+}
+
+/**
+ * One (vendor, model) baseline-walk profile, as returned by
+ * GET /api/v1/synthesize-walk/models. Powers the "Synthesize baseline
+ * walk" picker in the device editor's SNMP section. Mirrors
+ * synth.ModelDescriptor server-side; vendor/model/type are free-form
+ * strings owned by the synth package, not a fixed frontend enum.
+ */
+export interface ModelDescriptor {
+  vendor: string;
+  model: string;
+  /** Human label, e.g. "Catalyst 9300-48P (48× 1G PoE+)". */
+  label: string;
+  /** Device type this model implies (switch, router, firewall, ...). */
+  type: string;
+  /** Default ifTable row count for this model. */
+  ifCount: number;
+  /** Per-port speed in Mbps. */
+  speedMbps: number;
+}
+
+/**
+ * Request body for POST /api/v1/devices/{hostname}/synthesize-walk.
+ * Model is optional — omitting it falls back to the vendor's generic
+ * per-type profile server-side rather than a specific platform.
+ */
+export interface SynthesizeWalkRequest {
+  vendor: string;
+  model?: string;
+  interfaceCount?: number;
+  community?: string;
+}
+
+/**
+ * 201 response from POST /api/v1/devices/{hostname}/synthesize-walk.
+ * walkPath is library-relative and already attached to the device's
+ * walk_file server-side; originalPreserved is true when a pristine
+ * ".orig" now exists so the walk can be reverted later.
+ */
+export interface SynthesizeWalkResponse {
+  walkPath: string;
+  oidCount: number;
+  sizeBytes: number;
+  originalPreserved: boolean;
 }
 
 export interface ConfigDocument {

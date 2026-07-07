@@ -1,37 +1,39 @@
-import { deduplicatedGet, request, requestJson } from './requestCore';
+import { deduplicatedGet, request, requestJson, requestText } from './requestCore';
 import type {
   AlertConfig,
   CloneDeviceRequest,
   ConfigDocument,
   ConfigSchema,
   ConfigUpdateRequest,
+  DebugLevelResponse,
   Device,
   DeviceDetailResponse,
   DeviceListResponse,
   DeviceMutationResponse,
   DeviceSummary,
   ErrorInjectionInfo,
-  FileEntry,
   HistoryRecord,
   InterfacesResponse,
+  ModelDescriptor,
   NeighborRecord,
   PcapAnalysisResult,
   PcapUploadRequest,
   PcapUploadResponse,
-  ProtocolDebugLevelsResponse,
   ReplayRequest,
   ReplayState,
-  ResetProtocolDebugLevelsResponse,
   RuntimeStatus,
+  SegmentSummary,
   SimulationRequest,
   SimulationStatus,
   StackStatsResponse,
   StandaloneCaptureRequest,
   StandaloneCaptureStatus,
+  SynthesizeWalkRequest,
+  SynthesizeWalkResponse,
   Template,
   TemplateContent,
   TopologyGraph,
-  UpdateProtocolDebugLevelsRequest,
+  UpdateDebugLevelRequest,
   UploadUserConfigRequest,
   UploadUserConfigResponse,
   UserConfigContent,
@@ -39,6 +41,7 @@ import type {
   UseTemplateRequest,
   UseTemplateResponse,
   VersionInfo,
+  WalkAnalyzeResponse,
   WalkValidationResponse,
 } from './types';
 
@@ -57,6 +60,10 @@ import type {
 
 export const fetchStats = () => deduplicatedGet<StackStatsResponse>('/api/v1/stats');
 export const fetchDevices = () => deduplicatedGet<DeviceSummary[]>('/api/v1/devices');
+// ADR 0008: multi-VLAN segments grouping the same devices /api/v1/devices
+// reports flat. A flat (non-segmented) config still reports one untagged
+// segment, so the shape is uniform.
+export const fetchSegments = () => deduplicatedGet<SegmentSummary[]>('/api/v1/segments');
 export const fetchHistory = () => deduplicatedGet<HistoryRecord[]>('/api/v1/history');
 export const fetchNeighbors = () => deduplicatedGet<NeighborRecord[]>('/api/v1/neighbors');
 export const fetchConfig = () => deduplicatedGet<ConfigDocument>('/api/v1/config');
@@ -88,6 +95,14 @@ export const validateWalk = (filename: string) =>
   requestJson<WalkValidationResponse>('/api/v1/walk/validate', { filename }, { method: 'POST' });
 export const fixWalk = (filename: string) =>
   requestJson<WalkValidationResponse>('/api/v1/walk/fix', { filename }, { method: 'POST' });
+
+/**
+ * Parse a walk file into device identity, interface inventory, and
+ * LLDP/CDP neighbors. Same filename resolution as validate/fix: a
+ * library-relative name ("cisco/c3900.walk") or a legacy config-dir path.
+ */
+export const analyzeWalk = (filename: string) =>
+  requestJson<WalkAnalyzeResponse>('/api/v1/walk/analyze', { filename }, { method: 'POST' });
 
 // =====================================================================
 // Config merge + import
@@ -122,6 +137,12 @@ export const importConfig = (payload: { format: 'yaml' | 'java-dsl'; content: st
 
 export const fetchVersion = () => deduplicatedGet<VersionInfo>('/api/v1/version');
 export const fetchTopology = () => deduplicatedGet<TopologyGraph>('/api/v1/topology');
+
+// Server-side topology export. The daemon renders the running topology as
+// Graphviz DOT or GraphML (for Graphviz / yEd / gephi interop) — richer than
+// the client-side JSON snapshot. Returns the raw document text.
+export const exportTopology = (format: 'dot' | 'graphml') =>
+  requestText(`/api/v1/topology/export?format=${format}`);
 export const fetchErrorTypes = () => deduplicatedGet<ErrorInjectionInfo>('/api/v1/errors');
 
 // Library file listings. Backed by GET /api/v1/library/{walks,pcaps},
@@ -134,9 +155,38 @@ export interface LibraryFileEntry {
   sizeBytes: number;
   modifiedAt: string;
   source: 'starter' | 'bundle' | 'user';
+  edited: boolean;
 }
 export const fetchLibraryWalks = () => deduplicatedGet<LibraryFileEntry[]>('/api/v1/library/walks');
 export const fetchLibraryPcaps = () => deduplicatedGet<LibraryFileEntry[]>('/api/v1/library/pcaps');
+
+/**
+ * Revert a library walk to its preserved pristine original, discarding
+ * any edits made since the walk was first written. Backed by POST
+ * /api/v1/library/walks/revert; the daemon 404s if the walk has no
+ * preserved original to revert to (see library.PreserveOriginal
+ * server-side for the preserve-once contract).
+ */
+export const revertWalk = (name: string) =>
+  requestJson<LibraryFileEntry>('/api/v1/library/walks/revert', { name }, { method: 'POST' });
+
+/**
+ * Baseline walk synthesis (#546 p2). GET the (vendor, model) catalog to
+ * populate the device editor's "Synthesize baseline walk" picker; POST
+ * generates a walk for the given device from the chosen profile, writes
+ * it into the library, preserves any prior original, and attaches it to
+ * the device's walk_file server-side. See
+ * docs/design/2026-05-baseline-walk-synthesis.md for the full contract.
+ */
+export const fetchSynthesizeWalkModels = () =>
+  deduplicatedGet<ModelDescriptor[]>('/api/v1/synthesize-walk/models');
+
+export const synthesizeWalk = (hostname: string, payload: SynthesizeWalkRequest) =>
+  requestJson<SynthesizeWalkResponse>(
+    `/api/v1/devices/${encodeURIComponent(hostname)}/synthesize-walk`,
+    payload,
+    { method: 'POST' },
+  );
 
 /**
  * Per-type device editor schema (#546 part 1). The daemon serves a
@@ -229,17 +279,13 @@ export const applyTemplate = (payload: UseTemplateRequest) =>
   requestJson<UseTemplateResponse>('/api/v1/templates/use', payload, { method: 'POST' });
 
 // =====================================================================
-// Protocol debug levels
+// Global debug level
 // =====================================================================
 
-export const fetchProtocolDebugLevels = () =>
-  deduplicatedGet<ProtocolDebugLevelsResponse>('/api/v1/debug/levels');
+export const fetchDebugLevel = () => deduplicatedGet<DebugLevelResponse>('/api/v1/debug/level');
 
-export const updateProtocolDebugLevels = (payload: UpdateProtocolDebugLevelsRequest) =>
-  requestJson<ProtocolDebugLevelsResponse>('/api/v1/debug/levels', payload, { method: 'PUT' });
-
-export const resetProtocolDebugLevels = () =>
-  request<ResetProtocolDebugLevelsResponse>('/api/v1/debug/levels/reset', { method: 'POST' });
+export const updateDebugLevel = (payload: UpdateDebugLevelRequest) =>
+  requestJson<DebugLevelResponse>('/api/v1/debug/level', payload, { method: 'PUT' });
 
 // =====================================================================
 // PCAP analyser
@@ -284,8 +330,6 @@ export const cloneDevice = (hostname: string, payload: CloneDeviceRequest) =>
   );
 
 export const fetchConfigSchema = () => deduplicatedGet<ConfigSchema>('/api/v1/config/schema');
-
-export const fetchWalkFiles = () => request<FileEntry[]>('/api/v1/files?kind=walks');
 
 // =====================================================================
 // User configs (saved YAML files)

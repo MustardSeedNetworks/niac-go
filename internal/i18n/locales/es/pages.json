@@ -75,6 +75,17 @@
     "ipAddressesHeader": "Direcciones IP",
     "availableSnmpWalks": "Recorridos SNMP disponibles"
   },
+  "segments": {
+    "label": "Segmentos",
+    "title": "Segmentos",
+    "description": "Vista de solo lectura de los dispositivos de cada segmento VLAN que describe la configuración activa.",
+    "vlanHeader": "VLAN {{tag}}",
+    "untaggedHeader": "Untagged",
+    "deviceCount_one": "{{count}} dispositivo",
+    "deviceCount_other": "{{count}} dispositivos",
+    "emptySegmentDevices": "No hay dispositivos en este segmento.",
+    "empty": "No hay segmentos definidos en la configuración cargada."
+  },
   "deviceLibrary": {
     "label": "Dispositivos",
     "title": "Dispositivos",
@@ -123,7 +134,9 @@
     },
     "actionsMenu": {
       "exportPng": "Exportar como PNG",
-      "exportJson": "Exportar topología JSON"
+      "exportJson": "Exportar topología JSON",
+      "exportDot": "Exportar como DOT (Graphviz)",
+      "exportGraphml": "Exportar como GraphML"
     }
   },
   "automation": {
@@ -220,6 +233,15 @@
     "pageTitle": "Recorridos SNMP",
     "noWalksFound": "No se encontraron recorridos",
     "pastePathLabel": "O pegue una ruta absoluta"
+  },
+  "walkAnalyzer": {
+    "label": "Analizador de recorridos",
+    "title": "Analizador de recorridos",
+    "description": "Analice un archivo de recorrido SNMP para extraer la identidad del dispositivo, el inventario de interfaces y las adyacencias de vecinos LLDP/CDP.",
+    "pageTitle": "Analizador de recorridos",
+    "noWalksFound": "No se encontraron recorridos",
+    "pastePathLabel": "O pegue una ruta absoluta",
+    "noNeighborsFound": "No se encontraron vecinos LLDP/CDP."
   },
   "libraryWalks": {
     "label": "Recorridos",

@@ -649,6 +649,10 @@ linters:
       - path: 'internal/protocols/snmp/.*_test\.go'
         linters:
           - testpackage
+      # Walk-analysis tests exercise unexported OID/MAC parsing helpers directly.
+      - path: 'internal/walkanalysis/.*_test\.go'
+        linters:
+          - testpackage
       # Converter tests exercise many unexported Parser methods.
       - path: 'internal/converter/.*_test\.go'
         linters:
@@ -707,5 +711,10 @@ linters:
           - gochecknoglobals
       # Config validator is a package-level singleton (go-playground/validator).
       - path: 'internal/converter/validate\.go'
+        linters:
+          - gochecknoglobals
+      # Walk-analysis IANA ifType names + SNMP status-enum tables are immutable
+      # lookup maps (Go has no const map); same pattern as snmp/mib.go.
+      - path: 'internal/walkanalysis/analyze\.go'
         linters:
           - gochecknoglobals

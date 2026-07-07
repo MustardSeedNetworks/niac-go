@@ -2,20 +2,22 @@ package main
 
 import (
 	"testing"
+
+	"github.com/MustardSeedNetworks/niac-go/internal/walkanalysis"
 )
 
 // TestOutputJSON tests JSON output of walk analysis (writes to stdout).
 func TestOutputJSON(t *testing.T) {
-	analysis := &WalkAnalysis{
-		Device: DeviceInfo{
+	analysis := &walkanalysis.Analysis{
+		Device: walkanalysis.Device{
 			SysName:  "test-switch",
 			SysDescr: "Cisco IOS",
 		},
-		Interfaces: []InterfaceInfo{
+		Interfaces: []walkanalysis.Interface{
 			{Index: 1, Name: "Gi0/1", Type: "ethernet"},
 		},
-		Neighbors: []NeighborInfo{},
-		Statistics: AnalysisStats{
+		Neighbors: []walkanalysis.Neighbor{},
+		Statistics: walkanalysis.Stats{
 			TotalInterfaces:    1,
 			PhysicalInterfaces: 1,
 		},
@@ -30,17 +32,21 @@ func TestOutputJSON(t *testing.T) {
 
 // TestOutputYAML tests YAML output of walk analysis.
 func TestOutputYAML(t *testing.T) {
-	analysis := &WalkAnalysis{
-		Device: DeviceInfo{
+	analysis := &walkanalysis.Analysis{
+		Device: walkanalysis.Device{
 			SysName:  "test-router",
 			SysDescr: "Cisco IOS XE",
 		},
-		Interfaces: []InterfaceInfo{
+		Interfaces: []walkanalysis.Interface{
 			{Index: 1, Name: "Gi0/0/0", Type: "ethernet"},
 			{Index: 2, Name: "Loopback0", Type: "loopback"},
 		},
-		Neighbors:  []NeighborInfo{},
-		Statistics: AnalysisStats{TotalInterfaces: 2, PhysicalInterfaces: 1, LogicalInterfaces: 1},
+		Neighbors: []walkanalysis.Neighbor{},
+		Statistics: walkanalysis.Stats{
+			TotalInterfaces:    2,
+			PhysicalInterfaces: 1,
+			LogicalInterfaces:  1,
+		},
 	}
 
 	err := outputYAML(analysis)
@@ -51,14 +57,14 @@ func TestOutputYAML(t *testing.T) {
 
 // TestOutputText tests text output of walk analysis.
 func TestOutputText(t *testing.T) {
-	analysis := &WalkAnalysis{
-		Device: DeviceInfo{
+	analysis := &walkanalysis.Analysis{
+		Device: walkanalysis.Device{
 			SysName:     "test-switch",
 			SysDescr:    "Cisco IOS Software",
 			SysContact:  "admin@test.com",
 			SysLocation: "Building A",
 		},
-		Interfaces: []InterfaceInfo{
+		Interfaces: []walkanalysis.Interface{
 			{
 				Index:       1,
 				Name:        "Gi0/1",
@@ -70,10 +76,20 @@ func TestOutputText(t *testing.T) {
 			},
 			{Index: 2, Name: "Loopback0", Type: "loopback"},
 		},
-		Neighbors: []NeighborInfo{
-			{LocalInterface: "Gi0/1", RemoteDevice: "core-rtr", RemoteInterface: "Gi1/0", Protocol: "lldp"},
+		Neighbors: []walkanalysis.Neighbor{
+			{
+				LocalInterface:  "Gi0/1",
+				RemoteDevice:    "core-rtr",
+				RemoteInterface: "Gi1/0",
+				Protocol:        "lldp",
+			},
 		},
-		Statistics: AnalysisStats{TotalInterfaces: 2, PhysicalInterfaces: 1, LogicalInterfaces: 1, TotalNeighbors: 1},
+		Statistics: walkanalysis.Stats{
+			TotalInterfaces:    2,
+			PhysicalInterfaces: 1,
+			LogicalInterfaces:  1,
+			TotalNeighbors:     1,
+		},
 	}
 
 	err := outputText(analysis)
@@ -84,10 +100,10 @@ func TestOutputText(t *testing.T) {
 
 // TestOutputTextMinimal tests text output with minimal data.
 func TestOutputTextMinimal(t *testing.T) {
-	analysis := &WalkAnalysis{
-		Device:     DeviceInfo{SysName: "dev1"},
-		Interfaces: []InterfaceInfo{},
-		Neighbors:  []NeighborInfo{},
+	analysis := &walkanalysis.Analysis{
+		Device:     walkanalysis.Device{SysName: "dev1"},
+		Interfaces: []walkanalysis.Interface{},
+		Neighbors:  []walkanalysis.Neighbor{},
 	}
 
 	err := outputText(analysis)
@@ -98,7 +114,7 @@ func TestOutputTextMinimal(t *testing.T) {
 
 // TestOutputNeighborsJSON tests neighbor output in JSON format.
 func TestOutputNeighborsJSON(t *testing.T) {
-	neighbors := []NeighborInfo{
+	neighbors := []walkanalysis.Neighbor{
 		{LocalInterface: "Gi0/1", RemoteDevice: "sw1", RemoteInterface: "Gi0/2", Protocol: "lldp"},
 	}
 
@@ -110,7 +126,7 @@ func TestOutputNeighborsJSON(t *testing.T) {
 
 // TestOutputNeighborsYAML tests neighbor output in YAML format.
 func TestOutputNeighborsYAML(t *testing.T) {
-	neighbors := []NeighborInfo{
+	neighbors := []walkanalysis.Neighbor{
 		{LocalInterface: "Gi0/1", RemoteDevice: "rtr1", RemoteInterface: "Gi1/0", Protocol: "cdp"},
 	}
 
@@ -122,7 +138,7 @@ func TestOutputNeighborsYAML(t *testing.T) {
 
 // TestOutputNeighborsText tests neighbor output in text format.
 func TestOutputNeighborsText(t *testing.T) {
-	neighbors := []NeighborInfo{
+	neighbors := []walkanalysis.Neighbor{
 		{LocalInterface: "Gi0/1", RemoteDevice: "sw1", RemoteInterface: "Gi0/2", Protocol: "lldp"},
 		{LocalInterface: "Gi0/2", RemoteDevice: "rtr1", RemoteInterface: "Gi1/0", Protocol: "cdp"},
 	}
@@ -135,7 +151,7 @@ func TestOutputNeighborsText(t *testing.T) {
 
 // TestOutputNeighborsEmpty tests neighbor output with empty list.
 func TestOutputNeighborsEmpty(t *testing.T) {
-	err := outputNeighbors([]NeighborInfo{}, "text")
+	err := outputNeighbors([]walkanalysis.Neighbor{}, "text")
 	if err != nil {
 		t.Errorf("outputNeighbors(empty) error = %v", err)
 	}
@@ -143,7 +159,7 @@ func TestOutputNeighborsEmpty(t *testing.T) {
 
 // TestOutputNeighborsInvalidFormat tests neighbor output with invalid format.
 func TestOutputNeighborsInvalidFormat(t *testing.T) {
-	err := outputNeighbors([]NeighborInfo{}, "invalid")
+	err := outputNeighbors([]walkanalysis.Neighbor{}, "invalid")
 	if err == nil {
 		t.Error("Expected error for invalid format")
 	}

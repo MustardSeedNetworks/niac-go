@@ -103,6 +103,15 @@ func (s *Server) registerWriteProtectedRoutes(mux *http.ServeMux) {
 			rl:      rlWrite,
 			csrf:    true,
 		},
+		// Global debug verbosity (GET current + default, PUT to set). The stack
+		// reads the global level live, so PUT takes effect with no restart.
+		{
+			path:    "/api/v1/debug/level",
+			handler: s.handleDebugLevel,
+			methods: []string{http.MethodGet, http.MethodPut},
+			rl:      rlWrite,
+			csrf:    true,
+		},
 		{
 			path:    "/api/v1/capture/filter",
 			handler: s.handleCaptureFilter,
@@ -174,6 +183,16 @@ func (s *Server) registerReadOnlyRoutes(mux *http.ServeMux) {
 			csrf:    true,
 		},
 		{path: "/api/v1/library/walks", handler: s.handleLibraryWalks, methods: []string{http.MethodGet}},
+		// Revert mutates the walk on disk (restores + removes the .orig
+		// sidecar), so — like the networks POST above — it carries write
+		// rate limit + CSRF rather than being GET-only like its sibling.
+		{
+			path:    "/api/v1/library/walks/revert",
+			handler: s.handleLibraryWalkRevert,
+			methods: []string{http.MethodPost},
+			rl:      rlWrite,
+			csrf:    true,
+		},
 		{path: "/api/v1/library/pcaps", handler: s.handleLibraryPcaps, methods: []string{http.MethodGet}},
 		// Per-device baseline walk synthesis (#546 p2). POST-only; mutates the
 		// library + running config YAML, so write + CSRF.
@@ -194,6 +213,7 @@ func (s *Server) registerReadOnlyRoutes(mux *http.ServeMux) {
 		{path: "/api/v1/device-schemas/", handler: s.handleDeviceEditorSchema, methods: []string{http.MethodGet}},
 		{path: "/api/v1/topology", handler: s.handleTopology, methods: []string{http.MethodGet}},
 		{path: "/api/v1/topology/export", handler: s.handleTopologyExport, methods: []string{http.MethodGet}},
+		{path: "/api/v1/segments", handler: s.handleSegments, methods: []string{http.MethodGet}},
 		{
 			path:    "/api/v1/errors",
 			handler: s.handleErrors,
@@ -223,6 +243,13 @@ func (s *Server) registerWalkRoutes(mux *http.ServeMux) {
 		{
 			path:    "/api/v1/walk/validate",
 			handler: s.handleWalkValidation,
+			methods: []string{http.MethodPost},
+			rl:      rlWalk,
+			csrf:    true,
+		},
+		{
+			path:    "/api/v1/walk/analyze",
+			handler: s.handleWalkAnalyze,
 			methods: []string{http.MethodPost},
 			rl:      rlWalk,
 			csrf:    true,

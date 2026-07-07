@@ -7,10 +7,11 @@ import {
   deleteDevice,
   fetchConfigDevice,
   fetchDeviceEditorSchema,
-  fetchWalkFiles,
+  fetchLibraryWalks,
+  type LibraryFileEntry,
   updateDevice,
 } from '../../api/client';
-import type { Device, FileEntry } from '../../api/types';
+import type { Device } from '../../api/types';
 import { useApiResource } from '../../hooks/useApiResource';
 import { DeviceFormSchema } from '../../schemas/forms';
 import { getErrorMessage } from '../../utils/format';
@@ -44,7 +45,7 @@ export interface UseDeviceEditorReturn {
   refetch: () => void;
 
   // Walk files for SNMP
-  walkFiles: FileEntry[] | null;
+  walkFiles: LibraryFileEntry[] | null;
 
   // Per-type visibility schema (#546 part 1). The editor uses this to
   // hide sections that don't apply to the currently picked
@@ -115,7 +116,7 @@ export const useDeviceEditor = (): UseDeviceEditorReturn => {
   }, [hostname, isNewDevice]);
 
   // Fetch available walk files
-  const { data: walkFiles } = useApiResource(fetchWalkFiles, []);
+  const { data: walkFiles } = useApiResource(fetchLibraryWalks, []);
 
   // Per-type editor schema. Re-fetches when device.type changes; on
   // error or while loading we fall through to the "show everything"
