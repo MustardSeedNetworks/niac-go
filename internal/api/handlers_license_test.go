@@ -104,3 +104,73 @@ func TestLicenseStatus_ProTrialReportsFeatures(t *testing.T) {
 		t.Error("expected non-empty Features in Pro trial")
 	}
 }
+
+func TestLicenseStatus_FeaturesCarryLabelsAndGrantedFlag(t *testing.T) {
+	t.Parallel()
+	mgr, err := license.NewManagerWithDir(t.TempDir())
+	if err != nil {
+		t.Fatalf("NewManagerWithDir: %v", err)
+	}
+	if res := mgr.StartTrial(); !res.Success {
+		t.Fatalf("StartTrial: %s", res.Message)
+	}
+	s := newLicenseHandlerServer(t, mgr)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/license", http.NoBody)
+	s.handleLicenseStatus(w, req)
+
+	var body LicenseStatusResponse
+	if err := json.NewDecoder(w.Body).Decode(&body); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+
+	catalog := license.FeatureCatalog()
+	if len(body.Features) != len(catalog) {
+		t.Fatalf("Features has %d entries, want %d (full catalog)", len(body.Features), len(catalog))
+	}
+
+	var sawGranted bool
+	for _, f := range body.Features {
+		if f.ID == "" {
+			t.Error("feature entry has empty ID")
+		}
+		if f.Label == "" {
+			t.Errorf("feature %q has empty Label", f.ID)
+		}
+		if f.Description == "" {
+			t.Errorf("feature %q has empty Description", f.ID)
+		}
+		if f.Granted {
+			sawGranted = true
+		}
+	}
+	if !sawGranted {
+		t.Error("expected at least one Granted feature during an active Pro trial")
+	}
+}
+
+func TestLicenseStatus_NilManagerFeaturesAllUngranted(t *testing.T) {
+	t.Parallel()
+	s := newLicenseHandlerServer(t, nil)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/license", http.NoBody)
+	s.handleLicenseStatus(w, req)
+
+	var body LicenseStatusResponse
+	if err := json.NewDecoder(w.Body).Decode(&body); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if len(body.Features) == 0 {
+		t.Fatal("expected the full feature catalog even when the license manager is nil")
+	}
+	for _, f := range body.Features {
+		if f.Granted {
+			t.Errorf("feature %q should not be Granted with no license manager", f.ID)
+		}
+		if f.Label == "" {
+			t.Errorf("feature %q has empty Label", f.ID)
+		}
+	}
+}

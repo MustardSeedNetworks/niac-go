@@ -8,9 +8,22 @@ package api
 
 import (
 	"net/http"
+	"slices"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/license"
 )
+
+// LicenseFeature is a single entry in LicenseStatusResponse.Features — the
+// Pro feature catalog paired with whether the active license grants it.
+// Label and Description come from license.FeatureCatalog() and are
+// English-only product copy (see that package for the i18n boundary).
+type LicenseFeature struct {
+	ID          string `json:"id"`
+	Label       string `json:"label"`
+	Description string `json:"description"`
+	// Granted is true when the active license includes this feature.
+	Granted bool `json:"granted"`
+}
 
 // LicenseStatusResponse is the JSON shape returned by
 // GET /api/v1/license. It is intentionally read-only — activation,
@@ -30,11 +43,12 @@ type LicenseStatusResponse struct {
 	// TrialDaysRemaining is the days left in the current trial; 0
 	// when no trial is active.
 	TrialDaysRemaining int `json:"trialDaysRemaining"`
-	// Features is the active feature set keyed by the keygen
-	// productCatalog feature names. Empty slice (not nil) when the
-	// license is not activated, so the UI can iterate without a nil
-	// check.
-	Features []string `json:"features"`
+	// Features is the full Pro feature catalog (license.FeatureCatalog()),
+	// each entry carrying a human-readable label + description plus
+	// whether the active license grants it. Always non-empty — even on
+	// Free tier — so the UI can show what upgrading unlocks instead of
+	// just what's currently active.
+	Features []LicenseFeature `json:"features"`
 	// LicenseEnforced is false when the server is running without a
 	// license manager (dev / test builds). The UI should treat
 	// LicenseEnforced=false as "all features available, hide upgrade
@@ -50,20 +64,29 @@ type LicenseStatusResponse struct {
 func (s *Server) handleLicenseStatus(w http.ResponseWriter, _ *http.Request) {
 	resp := LicenseStatusResponse{
 		Tier:            license.TierFree.String(),
-		Features:        []string{},
 		LicenseEnforced: s.license != nil,
 	}
 
+	var granted []string
 	if s.license != nil {
 		resp.IsActivated = s.license.IsActivated()
 		if st := s.license.GetState(); st != nil {
 			resp.Tier = st.Tier.String()
 			resp.IsTrialMode = st.IsTrialMode
-			if st.Features != nil {
-				resp.Features = st.Features
-			}
+			granted = st.Features
 		}
 		resp.TrialDaysRemaining = s.license.TrialDaysRemaining()
+	}
+
+	catalog := license.FeatureCatalog()
+	resp.Features = make([]LicenseFeature, 0, len(catalog))
+	for _, meta := range catalog {
+		resp.Features = append(resp.Features, LicenseFeature{
+			ID:          meta.ID,
+			Label:       meta.Label,
+			Description: meta.Description,
+			Granted:     slices.Contains(granted, meta.ID),
+		})
 	}
 
 	s.writeJSON(w, resp)

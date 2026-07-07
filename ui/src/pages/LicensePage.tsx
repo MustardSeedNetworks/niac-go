@@ -92,14 +92,28 @@ export const LicensePage: FC = () => {
           {status.features.length === 0 ? (
             <p className="text-text-secondary">{t('license.noFeatures')}</p>
           ) : (
-            <ul className="grid gap-compact sm:grid-cols-2">
+            <ul className="grid gap-comfortable sm:grid-cols-2">
               {status.features.map((feature) => (
                 <li
-                  key={feature}
-                  className="flex items-center gap-compact text-sm text-text-secondary"
+                  key={feature.id}
+                  className={`flex items-start gap-compact text-sm ${
+                    feature.granted ? '' : 'opacity-60'
+                  }`}
                 >
-                  <Check className={`${iconSizes.md} text-status-success`} />
-                  <code className="text-text-primary">{feature}</code>
+                  <Check
+                    className={`${iconSizes.md} mt-0.5 shrink-0 ${
+                      feature.granted ? 'text-status-success' : 'text-text-muted'
+                    }`}
+                  />
+                  <div>
+                    <p className="font-medium text-text-primary">{feature.label}</p>
+                    <p className="text-text-secondary">{feature.description}</p>
+                    {!feature.granted && (
+                      <p className="text-xs uppercase tracking-wide text-text-muted">
+                        {t('license.featureLocked')}
+                      </p>
+                    )}
+                  </div>
                 </li>
               ))}
             </ul>

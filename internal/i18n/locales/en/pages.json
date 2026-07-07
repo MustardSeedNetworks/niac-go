@@ -721,8 +721,9 @@
     "notActivated": "Not activated",
     "trial": "Trial",
     "trialDaysRemaining": "{{days}} days remaining",
-    "features": "Included features",
+    "features": "Features",
     "noFeatures": "No feature flags are reported for this tier.",
+    "featureLocked": "Requires upgrade",
     "manage": "Manage your license",
     "manageHint": "NIAC validates licenses offline — there is no phone-home. Activate, start a trial, or deactivate with the niac license CLI on the host running the daemon.",
     "cmd": {
