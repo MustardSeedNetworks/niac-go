@@ -9,7 +9,7 @@
   "dashboard": {
     "label": "Panel",
     "title": "Panel",
-    "description": "Contadores en vivo, instantáneas de ejecución y estado de automatización para la pila NIAC activa.",
+    "description": "Contadores en vivo, instantáneas de ejecución y acciones rápidas para la pila NIAC activa.",
     "status": {
       "running": "Simulación en ejecución",
       "stopped": "Simulación detenida",
@@ -21,11 +21,12 @@
     "stats": {
       "devicesOnline": "Dispositivos en línea",
       "devicesOnlineHelper": "Dispositivos de red activos",
-      "packetsRx": "Paquetes RX",
-      "packetsRxHelper": "{{sent}} enviados",
-      "packetsRxAwaiting": "A la espera de datos",
-      "dnsQueries": "Consultas DNS",
-      "dnsQueriesHelper": "DHCP: {{count}}"
+      "packetsTitle": "Paquetes",
+      "rxLabel": "RX",
+      "txLabel": "TX",
+      "queriesTitle": "Consultas",
+      "dnsLabel": "DNS",
+      "dhcpLabel": "DHCP"
     },
     "quickActions": {
       "title": "Acciones rápidas",
@@ -36,7 +37,9 @@
       "trafficInjectionLabel": "Inyección de tráfico",
       "trafficInjectionDescription": "Reproduzca archivos PCAP",
       "viewTopologyLabel": "Ver topología",
-      "viewTopologyDescription": "Gráfico de red"
+      "viewTopologyDescription": "Gráfico de red",
+      "startSimulationLabel": "Iniciar una simulación",
+      "startSimulationDescription": "Inicie una nueva ejecución"
     },
     "recentRuns": {
       "title": "Ejecuciones recientes",
@@ -50,14 +53,8 @@
     "errorPanel": {
       "title": "Tipos de inyección de errores",
       "tuiModeLabel": "Modo TUI:",
-      "tuiModeDescription": "Ejecute {{command}} para acceder a la inyección interactiva de errores con controles de teclado (pulse 'i' para el menú, teclas 1-7 para inyección rápida)."
-    },
-    "automation": {
-      "empty": "Las actualizaciones de automatización aparecerán después de que se complete la primera ejecución.",
-      "title": "Cronología de automatización",
-      "latestEventsTag": "Últimos eventos",
-      "eventDetail": "{{count}} dispositivos • duración {{duration}}",
-      "viewDetails": "Ver detalles"
+      "tuiModeDescription": "Ejecute {{command}} para acceder a la inyección interactiva de errores con controles de teclado (pulse 'i' para el menú, teclas 1-7 para inyección rápida).",
+      "clickHint": "Seleccione un tipo para inyectarlo en la página de Tráfico."
     }
   },
   "runtime": {

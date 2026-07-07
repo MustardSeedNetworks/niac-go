@@ -9,7 +9,7 @@
   "dashboard": {
     "label": "Dashboard",
     "title": "Dashboard",
-    "description": "Live counters, run snapshots, and automation status for the active NIAC stack.",
+    "description": "Live counters, run snapshots, and quick actions for the active NIAC stack.",
     "status": {
       "running": "Simulation Running",
       "stopped": "Simulation Stopped",
@@ -21,11 +21,12 @@
     "stats": {
       "devicesOnline": "Devices Online",
       "devicesOnlineHelper": "Active network devices",
-      "packetsRx": "Packets RX",
-      "packetsRxHelper": "{{sent}} sent",
-      "packetsRxAwaiting": "Awaiting data",
-      "dnsQueries": "DNS Queries",
-      "dnsQueriesHelper": "DHCP: {{count}}"
+      "packetsTitle": "Packets",
+      "rxLabel": "RX",
+      "txLabel": "TX",
+      "queriesTitle": "Queries",
+      "dnsLabel": "DNS",
+      "dhcpLabel": "DHCP"
     },
     "quickActions": {
       "title": "Quick Actions",
@@ -36,7 +37,9 @@
       "trafficInjectionLabel": "Traffic Injection",
       "trafficInjectionDescription": "Replay PCAP files",
       "viewTopologyLabel": "View Topology",
-      "viewTopologyDescription": "Network graph"
+      "viewTopologyDescription": "Network graph",
+      "startSimulationLabel": "Start a Simulation",
+      "startSimulationDescription": "Launch a new run"
     },
     "recentRuns": {
       "title": "Recent Runs",
@@ -50,14 +53,8 @@
     "errorPanel": {
       "title": "Error Injection Types",
       "tuiModeLabel": "TUI Mode:",
-      "tuiModeDescription": "Run {{command}} to access interactive error injection with keyboard controls (press 'i' for menu, keys 1-7 for quick injection)."
-    },
-    "automation": {
-      "empty": "Automation updates will appear after the first run completes.",
-      "title": "Automation timeline",
-      "latestEventsTag": "Latest events",
-      "eventDetail": "{{count}} devices • duration {{duration}}",
-      "viewDetails": "View details"
+      "tuiModeDescription": "Run {{command}} to access interactive error injection with keyboard controls (press 'i' for menu, keys 1-7 for quick injection).",
+      "clickHint": "Select a type to inject it on the Traffic page."
     }
   },
   "runtime": {

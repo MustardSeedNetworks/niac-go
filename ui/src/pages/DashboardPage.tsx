@@ -1,31 +1,36 @@
-import { Activity, Network, PlugZap, SatelliteDish, Server, Terminal, Zap } from 'lucide-react';
+import {
+  Activity,
+  Network,
+  Play,
+  PlugZap,
+  SatelliteDish,
+  Server,
+  Terminal,
+  Zap,
+} from 'lucide-react';
 import { type FC, memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { fetchSimulationStatus } from '../api/client';
-import type { ErrorType, HistoryRecord } from '../api/types';
-import { POLL_INTERVALS } from '../constants/polling';
+import type { ErrorType } from '../api/types';
 import { iconSizes } from '../constants/sizes';
 import { useAppState } from '../contexts/AppContext';
-import { useApiResource } from '../hooks/useApiResource';
+import { useSimulationStatus } from '../hooks/useSimulationStatus';
 import { Card, CardContent } from '../ui/Card';
 import { Tag } from '../ui/Tag';
-import { AccentLink, H2, SmallText } from '../ui/Typography';
-import { formatDuration, formatNumber, formatTime, formatUptime } from '../utils/format';
+import { AccentLink, H2 } from '../ui/Typography';
+import { formatNumber, formatTime, formatUptime } from '../utils/format';
 
 /**
  * Dashboard Page - Command Center
  *
- * Live counters, run snapshots, and automation status for the active NIAC stack.
+ * Live counters, run snapshots, and quick actions for the active NIAC stack.
  */
 export const DashboardPage: FC = () => {
   const { t } = useTranslation('pages');
   const { data: stats } = useAppState('stats');
   const { data: history } = useAppState('history');
   const { data: errorInfo } = useAppState('errorTypes');
-  const { data: simStatus } = useApiResource(fetchSimulationStatus, [], {
-    intervalMs: POLL_INTERVALS.fast,
-  });
-  const [showErrors, setShowErrors] = useState(false);
+  const { data: simStatus } = useSimulationStatus();
+  const [showErrorCatalog, setShowErrorCatalog] = useState(false);
 
   const isRunning = simStatus?.running ?? false;
   const uptimeSeconds = simStatus?.uptimeSeconds ?? 0;
@@ -85,47 +90,60 @@ export const DashboardPage: FC = () => {
           </CardContent>
         </Card>
 
+        {/* Honest pair: RX and TX are both real, labeled counters — neither
+            is smuggled into the other's helper text. */}
         <Card hover={true} className="group">
           <CardContent className="stack-xs">
             <div className="flex-between">
               <span className="text-sm font-medium text-text-muted">
-                {t('dashboard.stats.packetsRx')}
+                {t('dashboard.stats.packetsTitle')}
               </span>
               <Activity
                 className={`${iconSizes.lg} text-status-success group-hover:scale-110 transition-transform`}
               />
             </div>
-            <p className="text-3xl font-bold text-text-primary">
-              {stats ? formatNumber(stats.stack.packetsReceived) : '—'}
-            </p>
-            <p className="text-xs text-text-muted">
-              {stats
-                ? t('dashboard.stats.packetsRxHelper', {
-                    sent: formatNumber(stats.stack.packetsSent),
-                  })
-                : t('dashboard.stats.packetsRxAwaiting')}
-            </p>
+            <div className="flex items-end gap-comfortable">
+              <div>
+                <p className="text-2xl font-bold text-text-primary">
+                  {stats ? formatNumber(stats.stack.packetsReceived) : '—'}
+                </p>
+                <p className="text-xs text-text-muted">{t('dashboard.stats.rxLabel')}</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-text-primary">
+                  {stats ? formatNumber(stats.stack.packetsSent) : '—'}
+                </p>
+                <p className="text-xs text-text-muted">{t('dashboard.stats.txLabel')}</p>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
+        {/* Honest pair: DNS and DHCP are both real, labeled counters. */}
         <Card hover={true} className="group">
           <CardContent className="stack-xs">
             <div className="flex-between">
               <span className="text-sm font-medium text-text-muted">
-                {t('dashboard.stats.dnsQueries')}
+                {t('dashboard.stats.queriesTitle')}
               </span>
               <SatelliteDish
                 className={`${iconSizes.lg} text-status-warning group-hover:scale-110 transition-transform`}
               />
             </div>
-            <p className="text-3xl font-bold text-text-primary">
-              {stats ? formatNumber(stats.stack.dnsQueries) : '—'}
-            </p>
-            <p className="text-xs text-text-muted">
-              {t('dashboard.stats.dnsQueriesHelper', {
-                count: stats ? formatNumber(stats.stack.dhcpRequests) : '—',
-              })}
-            </p>
+            <div className="flex items-end gap-comfortable">
+              <div>
+                <p className="text-2xl font-bold text-text-primary">
+                  {stats ? formatNumber(stats.stack.dnsQueries) : '—'}
+                </p>
+                <p className="text-xs text-text-muted">{t('dashboard.stats.dnsLabel')}</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-text-primary">
+                  {stats ? formatNumber(stats.stack.dhcpRequests) : '—'}
+                </p>
+                <p className="text-xs text-text-muted">{t('dashboard.stats.dhcpLabel')}</p>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -140,9 +158,26 @@ export const DashboardPage: FC = () => {
               {t('dashboard.quickActions.title')}
             </H2>
             <div className="grid gap-default sm:grid-cols-2">
+              <AccentLink to="/runtime" className="no-underline">
+                <div className="flex items-center gap-default rounded-lg border border-surface-border bg-surface-hover pad text-left hover:bg-surface-hover hover:border-brand-primary/30 transition-all group">
+                  <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-status-success/20 flex-center group-hover:scale-110 transition-transform">
+                    <Play className={`${iconSizes.lg} text-status-success`} />
+                  </div>
+                  <div>
+                    <p className="font-medium text-text-primary">
+                      {t('dashboard.quickActions.startSimulationLabel')}
+                    </p>
+                    <p className="text-sm text-text-muted">
+                      {t('dashboard.quickActions.startSimulationDescription')}
+                    </p>
+                  </div>
+                </div>
+              </AccentLink>
+
               <button
                 type="button"
-                onClick={() => setShowErrors(!showErrors)}
+                onClick={() => setShowErrorCatalog(!showErrorCatalog)}
+                aria-expanded={showErrorCatalog}
                 className="flex items-center gap-default rounded-lg border border-surface-border bg-surface-hover pad text-left hover:bg-surface-hover hover:border-brand-primary/30 transition-all group"
               >
                 <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-status-warning/20 flex-center group-hover:scale-110 transition-transform">
@@ -207,8 +242,8 @@ export const DashboardPage: FC = () => {
               </AccentLink>
             </div>
 
-            {showErrors && errorInfo && (
-              <ErrorInjectionPanel errorTypes={errorInfo.availableTypes} info={errorInfo.info} />
+            {showErrorCatalog && errorInfo && (
+              <ErrorTypeCatalog errorTypes={errorInfo.availableTypes} info={errorInfo.info} />
             )}
           </CardContent>
         </Card>
@@ -259,109 +294,59 @@ export const DashboardPage: FC = () => {
               )}
             </div>
             {history && history.length > 0 && (
-              <AccentLink to="/traffic" className="text-sm">
+              <AccentLink to="/traffic#recent-runs" className="text-sm">
                 {t('dashboard.recentRuns.viewAll')}
               </AccentLink>
             )}
           </CardContent>
         </Card>
       </div>
-
-      <AutomationTimeline history={history} />
     </div>
   );
 };
 
 /**
- * Error Injection Panel - Shows available error types
+ * Error Type Catalog - Each entry deep-links to the real fault-injection
+ * surface (/traffic) with its error type preselected via query param,
+ * rather than duplicating the injection form here. One injection surface,
+ * not two.
  */
-const ErrorInjectionPanel = memo(
-  ({ errorTypes, info }: { errorTypes: ErrorType[]; info: string }) => {
-    const { t } = useTranslation('pages');
-    return (
-      <div className="mt-content rounded-xl border border-status-warning/20 bg-status-warning/10 pad">
-        <div className="mb-heading flex items-start gap-compact">
-          <PlugZap className={`mt-0.5 ${iconSizes.lg} text-status-warning`} />
-          <div>
-            <p className="font-semibold text-status-warning">{t('dashboard.errorPanel.title')}</p>
-            <SmallText className="text-status-warning/80">{info}</SmallText>
-          </div>
-        </div>
-        <div className="grid gap-compact sm:grid-cols-2 lg:grid-cols-3">
-          {errorTypes.map((errorType) => (
-            <div
-              key={errorType.type}
-              className="rounded-lg border border-surface-border bg-bg-surface/50 pad-sm"
-            >
-              <p className="font-semibold text-text-primary">{errorType.type}</p>
-              <SmallText className="text-text-muted">{errorType.description}</SmallText>
-            </div>
-          ))}
-        </div>
-        <div className="mt-heading rounded-lg bg-status-info/20 pad-sm text-sm text-status-info">
-          <strong>{t('dashboard.errorPanel.tuiModeLabel')}</strong>{' '}
-          {t('dashboard.errorPanel.tuiModeDescription', {
-            command: 'niac interactive [interface] [config]',
-          })}
+const ErrorTypeCatalog = memo(({ errorTypes, info }: { errorTypes: ErrorType[]; info: string }) => {
+  const { t } = useTranslation('pages');
+  return (
+    <div className="mt-content rounded-xl border border-status-warning/20 bg-status-warning/10 pad">
+      <div className="mb-heading flex items-start gap-compact">
+        <PlugZap className={`mt-0.5 ${iconSizes.lg} text-status-warning`} />
+        <div>
+          <p className="font-semibold text-status-warning">{t('dashboard.errorPanel.title')}</p>
+          <p className="text-sm text-status-warning/80">{info}</p>
+          <p className="text-xs text-status-warning/70 mt-tight">
+            {t('dashboard.errorPanel.clickHint')}
+          </p>
         </div>
       </div>
-    );
-  },
-);
-
-ErrorInjectionPanel.displayName = 'ErrorInjectionPanel';
-
-/**
- * Automation Timeline - Shows recent run history
- */
-const AutomationTimeline = memo(({ history }: { history: HistoryRecord[] | null }) => {
-  const { t } = useTranslation('pages');
-  const timeline = (history ?? []).slice(0, 4).map((run) => ({
-    title: run.configName,
-    detail: t('dashboard.automation.eventDetail', {
-      count: run.deviceCount,
-      duration: formatDuration(run.duration),
-    }),
-    time: formatTime(run.startedAt),
-  }));
-
-  if (timeline.length === 0) {
-    return (
-      <Card className="border-surface-border bg-bg-surface/70">
-        <CardContent>
-          <SmallText className="text-text-muted">{t('dashboard.automation.empty')}</SmallText>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  return (
-    <Card className="border-surface-border bg-bg-surface/70">
-      <CardContent className="stack-lg">
-        <div className="flex-between">
-          <H2 className="flex items-center gap-compact">
-            <SatelliteDish className={`${iconSizes.lg} text-brand-accent`} />
-            {t('dashboard.automation.title')}
-          </H2>
-          <Tag colorScheme="gray">{t('dashboard.automation.latestEventsTag')}</Tag>
-        </div>
-        <div className="stack-lg">
-          {timeline.map((event) => (
-            <div
-              key={event.title}
-              className="flex flex-col gap-tight rounded-lg border border-surface-border bg-bg-base/50 pad"
-            >
-              <SmallText className="text-status-info">{event.time}</SmallText>
-              <p className="font-semibold text-text-primary">{event.title}</p>
-              <SmallText className="text-text-muted">{event.detail}</SmallText>
-            </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
+      <div className="grid gap-compact sm:grid-cols-2 lg:grid-cols-3">
+        {errorTypes.map((errorType) => (
+          <AccentLink
+            key={errorType.type}
+            to={`/traffic?errorType=${encodeURIComponent(errorType.type)}`}
+            className="block no-underline rounded-lg border border-surface-border bg-bg-surface/50 pad-sm hover:border-brand-primary/30 transition-colors"
+          >
+            <p className="font-semibold text-text-primary">{errorType.type}</p>
+            <p className="text-sm text-text-muted">{errorType.description}</p>
+          </AccentLink>
+        ))}
+      </div>
+      <div className="mt-heading rounded-lg bg-status-info/20 pad-sm text-sm text-status-info">
+        <strong>{t('dashboard.errorPanel.tuiModeLabel')}</strong>{' '}
+        {t('dashboard.errorPanel.tuiModeDescription', {
+          command: 'niac interactive [interface] [config]',
+        })}
+      </div>
+    </div>
   );
 });
 
-AutomationTimeline.displayName = 'AutomationTimeline';
+ErrorTypeCatalog.displayName = 'ErrorTypeCatalog';
 
 export default DashboardPage;

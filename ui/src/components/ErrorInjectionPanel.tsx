@@ -1,7 +1,8 @@
 import { valibotResolver } from '@hookform/resolvers/valibot';
-import { type FC, useState } from 'react';
+import { type FC, useEffect, useState } from 'react';
 import { type SubmitHandler, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 import {
   clearAllErrors,
   clearError,
@@ -25,23 +26,42 @@ export const ErrorInjectionPanel: FC = () => {
   const { data: errorInfo, refetch: refetchErrors } = useApiResource(fetchErrorTypes, [], {
     intervalMs: 5000,
   });
+  // Deep-link support: the Dashboard's Error Injection quick action links
+  // here with ?errorType=<type> so a specific error type arrives
+  // preselected instead of duplicating this form on the dashboard itself.
+  const [searchParams] = useSearchParams();
+  const presetErrorType = searchParams.get('errorType') ?? '';
 
   const {
     register,
     handleSubmit,
     watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<ErrorInjectionFormFields>({
     resolver: valibotResolver(ErrorInjectionSchema),
     defaultValues: {
       selectedDevice: '',
       selectedInterface: '',
-      selectedErrorType: '',
+      selectedErrorType: presetErrorType,
       errorValue: 50,
     },
     mode: 'onBlur',
   });
   const selectedErrorType = watch('selectedErrorType');
+
+  // The <select> options render once errorInfo resolves, after this form's
+  // initial mount — so the uncontrolled defaultValues.selectedErrorType
+  // above can land on a value with no matching <option> yet. Re-apply the
+  // preselected type once the catalog (and the option it names) is loaded.
+  useEffect(() => {
+    if (
+      presetErrorType &&
+      errorInfo?.availableTypes?.some((errorType) => errorType.type === presetErrorType)
+    ) {
+      setValue('selectedErrorType', presetErrorType, { shouldValidate: true });
+    }
+  }, [presetErrorType, errorInfo, setValue]);
   const errorValue = watch('errorValue');
 
   const [clearingBusy, setClearingBusy] = useState(false);
