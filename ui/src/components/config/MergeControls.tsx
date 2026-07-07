@@ -26,6 +26,7 @@ interface MergeControlsProps {
   onAcceptAllLeft: () => void;
   onAcceptAllRight: () => void;
   onReset: () => void;
+  onClearAll: () => void;
   onExport: () => void;
   onPreview: () => void;
   disabled?: boolean;
@@ -42,6 +43,7 @@ export const MergeControls: FC<MergeControlsProps> = ({
   onAcceptAllLeft,
   onAcceptAllRight,
   onReset,
+  onClearAll,
   onExport,
   onPreview,
   disabled = false,
@@ -106,9 +108,8 @@ export const MergeControls: FC<MergeControlsProps> = ({
 
   const handleClearAll = useCallback(() => {
     setShowClearAllConfirm(false);
-    // Reset merge state in place; full page reload would wipe unrelated app state.
-    onReset();
-  }, [onReset]);
+    onClearAll();
+  }, [onClearAll]);
 
   return (
     <Card className="border-surface-border bg-bg-surface/70">
@@ -314,7 +315,7 @@ export const MergeControls: FC<MergeControlsProps> = ({
         onConfirm={handleClearAll}
         onCancel={() => setShowClearAllConfirm(false)}
         title="Clear All"
-        message="Clear all files and start over? This will reload the page."
+        message="Clear both loaded files and all merge decisions and start over?"
         confirmLabel="Clear All"
         confirmTone="red"
       />

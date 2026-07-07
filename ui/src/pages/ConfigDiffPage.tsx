@@ -114,6 +114,14 @@ export const ConfigDiffPage: FC = () => {
     setMessage({ type: 'success', text: 'All merge decisions reset' });
   }, []);
 
+  // Clear both loaded files and all merge decisions to start over
+  const handleClearAll = useCallback(() => {
+    setLeftFile(null);
+    setRightFile(null);
+    setMergeDecisions(new Map());
+    setMessage(null);
+  }, []);
+
   // Export merged content
   const handleExport = useCallback(() => {
     if (!mergedContent) {
@@ -276,6 +284,7 @@ export const ConfigDiffPage: FC = () => {
             onAcceptAllLeft={handleAcceptAllLeft}
             onAcceptAllRight={handleAcceptAllRight}
             onReset={handleReset}
+            onClearAll={handleClearAll}
             onExport={handleExport}
             onPreview={handlePreview}
             leftLabel={leftFile.name}

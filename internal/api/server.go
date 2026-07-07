@@ -54,8 +54,38 @@ import (
 const (
 	// MaxRequestBodySize is the maximum size for API request bodies (1MB).
 	MaxRequestBodySize = 1 << 20 // 1MB
-	// MaxPCAPUploadSize is the maximum size for PCAP file uploads (100MB).
+	// MaxPCAPUploadSize is the maximum size for a raw (decoded) PCAP file
+	// upload (100MB) — this is the number advertised to users/UI copy and
+	// is checked AFTER base64 decoding.
 	MaxPCAPUploadSize = 100 << 20 // 100MB
+
+	// MaxPCAPBase64Len is the maximum length of the base64-encoded PCAP
+	// payload that decodes to at most MaxPCAPUploadSize raw bytes. Base64
+	// expands data by 4/3 (each 3 raw bytes -> 4 encoded chars), and the
+	// encoded output length always rounds up to a multiple of 4 via padding,
+	// i.e. 4*ceil(N/3). Computed here as a ceiling division
+	// (N+base64Ratio-1)/base64Ratio so an exactly-100MiB raw capture is
+	// never rejected by an off-by-a-few-bytes floor-division error.
+	MaxPCAPBase64Len = 4 * ((MaxPCAPUploadSize + base64Ratio - 1) / base64Ratio)
+
+	// MaxPCAPUploadBodySize caps the raw HTTP request body for the PCAP
+	// upload/replay endpoints (enforced via http.MaxBytesReader in
+	// decodeJSONStrict, before any base64 decoding happens).
+	//
+	// Bug #1e: this cap used to reuse MaxPCAPUploadSize (100MB) directly for
+	// the whole JSON body. A 100MB raw pcap — the max the UI advertises —
+	// base64-encodes to ~137MB, so the JSON body blew past the 100MB body
+	// cap and every upload was rejected with a bare 413 well below the
+	// advertised limit (uploads actually failed around ~74MB raw). The body
+	// cap must instead cover the base64 expansion plus the small JSON
+	// envelope around it:
+	//   MaxPCAPBase64Len      ≈ 139,810,136 bytes (~133.34MiB) for 100MiB raw
+	//   + JSON envelope         (field names/braces/quotes/filename — at
+	//                            most a few hundred bytes)
+	//   + pcapEnvelopeMargin  = 2MiB safety margin
+	//   ≈ 133.34MiB + ~2MiB, rounded up to a clean 140MiB
+	// so a genuine 100MiB raw capture always fits comfortably under the cap.
+	MaxPCAPUploadBodySize = 140 << 20 // 140MiB
 
 	// DefaultRateLimit is the default requests per second allowed per IP.
 	DefaultRateLimit = 100

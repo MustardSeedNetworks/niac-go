@@ -10,6 +10,7 @@ import { formatBytes } from '../../utils/format';
 interface PcapUploaderProps {
   onFileSelect: (file: File | null) => void;
   onAnalyze: () => void;
+  onValidationError: (message: string) => void;
   isAnalyzing: boolean;
   selectedFile: File | null;
   error: string | null;
@@ -64,6 +65,7 @@ function validateFile(file: File): { valid: boolean; error?: string } {
 export const PcapUploader: FC<PcapUploaderProps> = ({
   onFileSelect,
   onAnalyze,
+  onValidationError,
   isAnalyzing,
   selectedFile,
   error,
@@ -86,12 +88,13 @@ export const PcapUploader: FC<PcapUploaderProps> = ({
         if (fileInputRef.current) {
           fileInputRef.current.value = '';
         }
+        onValidationError(validation.error ?? 'Invalid file');
         return;
       }
 
       onFileSelect(file);
     },
-    [onFileSelect],
+    [onFileSelect, onValidationError],
   );
 
   // Handle drag events
@@ -120,12 +123,13 @@ export const PcapUploader: FC<PcapUploaderProps> = ({
 
       const validation = validateFile(file);
       if (!validation.valid) {
+        onValidationError(validation.error ?? 'Invalid file');
         return;
       }
 
       onFileSelect(file);
     },
-    [onFileSelect],
+    [onFileSelect, onValidationError],
   );
 
   // Handle click to open file dialog

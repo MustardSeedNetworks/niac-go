@@ -1,20 +1,20 @@
 /**
  * MergeControls.test.tsx
  *
- * Data-safety regression test: a "modified" diff block left undecided
- * (no Left/Both/Right choice) silently keeps the original (left) content
- * in generateMergedContent. Previously nothing surfaced that risk, and
- * "Preview Merged" was reachable with undecided blocks still pending.
- * This pins:
- *   1. A visible warning appears while any block is undecided.
- *   2. "Preview Merged" is disabled until every block has a decision.
- *   3. Once all blocks are decided, the warning disappears and Preview
- *      is enabled.
+ * Two data-safety behaviors:
+ *   1. Undecided blocks — a "modified" block left undecided (no Left/Both/
+ *      Right choice) silently keeps the original (left) content, so a
+ *      warning must appear and "Preview Merged" must be disabled until every
+ *      block has a decision.
+ *   2. Clear All — the confirm copy must match actual behavior (clears both
+ *      files + all decisions, no "reload the page" claim) and must call
+ *      onClearAll, not onReset.
  */
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import userEvent from '@testing-library/user-event';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import '../../i18n';
-import type { DiffBlock, MergeDecision } from '../config/diff-viewer/types';
+import type { DiffBlock, MergeDecision } from './DiffViewer';
 import { MergeControls } from './MergeControls';
 
 const modifiedBlock: DiffBlock = {
@@ -29,9 +29,14 @@ const baseProps = {
   onAcceptAllLeft: vi.fn(),
   onAcceptAllRight: vi.fn(),
   onReset: vi.fn(),
+  onClearAll: vi.fn(),
   onExport: vi.fn(),
   onPreview: vi.fn(),
 };
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
 
 describe('MergeControls — undecided block safety', () => {
   it('warns and disables Preview when a modified block has no decision', () => {
@@ -53,5 +58,43 @@ describe('MergeControls — undecided block safety', () => {
 
     expect(screen.queryByRole('alert')).toBeNull();
     expect(screen.getByRole('button', { name: /preview merged/i })).toBeEnabled();
+  });
+});
+
+describe('MergeControls — Clear All', () => {
+  function renderControls(overrides: Partial<Parameters<typeof MergeControls>[0]> = {}) {
+    render(
+      <MergeControls
+        {...baseProps}
+        diffBlocks={[modifiedBlock]}
+        mergeDecisions={new Map<string, MergeDecision>()}
+        {...overrides}
+      />,
+    );
+    return baseProps;
+  }
+
+  it('confirm dialog copy for Clear All matches actual behavior (no page reload claim)', async () => {
+    const user = userEvent.setup();
+    renderControls();
+
+    await user.click(screen.getByRole('button', { name: 'Clear All' }));
+
+    expect(
+      screen.getByText(/Clear both loaded files and all merge decisions and start over\?/),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/reload the page/)).not.toBeInTheDocument();
+  });
+
+  it('calls onClearAll (not onReset) when Clear All is confirmed', async () => {
+    const user = userEvent.setup();
+    const { onClearAll, onReset } = renderControls();
+
+    await user.click(screen.getByRole('button', { name: 'Clear All' }));
+    const confirmButtons = screen.getAllByRole('button', { name: 'Clear All' });
+    await user.click(confirmButtons[confirmButtons.length - 1]);
+
+    expect(onClearAll).toHaveBeenCalledTimes(1);
+    expect(onReset).not.toHaveBeenCalled();
   });
 });

@@ -130,14 +130,19 @@ export const SelectedNetworkPreview: FC<SelectedNetworkPreviewProps> = ({
     };
   }, [source, name, uploadFile]);
 
-  const devices = useMemo<DevicePreview[]>(() => {
-    if (!yamlText) return [];
+  const { devices, parseError } = useMemo<{
+    devices: DevicePreview[];
+    parseError: string | null;
+  }>(() => {
+    if (!yamlText) return { devices: [], parseError: null };
     try {
       const parsed = parseYaml(yamlText) as ParsedYaml;
-      if (!parsed?.devices || !Array.isArray(parsed.devices)) return [];
-      return parsed.devices.map(summariseDevice);
-    } catch {
-      return [];
+      if (!parsed?.devices || !Array.isArray(parsed.devices)) {
+        return { devices: [], parseError: null };
+      }
+      return { devices: parsed.devices.map(summariseDevice), parseError: null };
+    } catch (err) {
+      return { devices: [], parseError: (err as Error).message };
     }
   }, [yamlText]);
 
@@ -164,7 +169,13 @@ export const SelectedNetworkPreview: FC<SelectedNetworkPreviewProps> = ({
           </SmallText>
         )}
 
-        {!loading && !error && devices.length === 0 && yamlText !== null && (
+        {!loading && !error && parseError && (
+          <SmallText className="text-status-error" role="alert">
+            Couldn't parse config: {parseError}
+          </SmallText>
+        )}
+
+        {!loading && !error && !parseError && devices.length === 0 && yamlText !== null && (
           <SmallText className="text-text-muted italic">
             Picked config has no devices — nothing will run.
           </SmallText>

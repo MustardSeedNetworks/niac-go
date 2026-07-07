@@ -45,6 +45,25 @@ describe('LibraryFilesPage (walks)', () => {
     revertWalk.mockReset();
   });
 
+  it('shows a loading state instead of the empty state while the initial fetch is pending', async () => {
+    let resolveFetch: (value: LibraryFileEntry[]) => void = () => {};
+    fetchLibraryWalks.mockReturnValue(
+      new Promise<LibraryFileEntry[]>((resolve) => {
+        resolveFetch = resolve;
+      }),
+    );
+
+    render(<LibraryWalksPage />);
+
+    expect(screen.getByText('Loading walks…')).toBeInTheDocument();
+    expect(screen.queryByText('No walks installed yet.')).not.toBeInTheDocument();
+
+    resolveFetch([]);
+
+    await waitFor(() => expect(screen.getByText('No walks installed yet.')).toBeInTheDocument());
+    expect(screen.queryByText('Loading walks…')).not.toBeInTheDocument();
+  });
+
   it('shows a Revert button and edited badge only for edited walks', async () => {
     fetchLibraryWalks.mockResolvedValue([editedWalk, cleanWalk]);
 

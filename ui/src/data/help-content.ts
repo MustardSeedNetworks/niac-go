@@ -3064,7 +3064,7 @@ export const features: Feature[] = [
   },
   {
     title: 'Logs',
-    description: 'Live log stream from the daemon, with per-protocol debug-level controls.',
+    description: 'Live log stream from the daemon, with debug-level controls.',
     path: '/debug',
   },
   {

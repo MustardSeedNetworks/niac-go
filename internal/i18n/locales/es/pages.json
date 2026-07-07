@@ -167,7 +167,7 @@
   "debug": {
     "label": "Registros",
     "title": "Registros",
-    "description": "Flujo de registros en vivo desde el daemon, con controles de nivel de depuración por protocolo."
+    "description": "Flujo de registros en vivo desde el daemon, con controles de nivel de depuración."
   },
   "packets": {
     "label": "Paquetes",
@@ -215,7 +215,9 @@
       "selectPacketForProtocol": "Seleccione un paquete para ver las capas de protocolo",
       "noProtocolLayers": "No hay capas de protocolo disponibles",
       "protocolHeaders": "Encabezados de protocolo",
-      "selectPacketForDetails": "Seleccione un paquete para ver los detalles"
+      "selectPacketForDetails": "Seleccione un paquete para ver los detalles",
+      "exportButton": "Exportar filtrados (JSON)",
+      "exportButtonTitle": "Exportar los paquetes filtrados actuales como JSON"
     }
   },
   "configDiff": {

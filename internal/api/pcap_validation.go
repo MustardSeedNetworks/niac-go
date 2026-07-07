@@ -13,8 +13,12 @@ import (
 
 // processInlineData decodes and validates inline PCAP data, writes it to a temp file.
 func (s *Server) processInlineData(inlineData string) (string, error) {
-	// SECURITY FIX #97: Additional check on base64 encoded data size
-	if len(inlineData) > MaxPCAPUploadSize*4/base64Ratio {
+	// SECURITY FIX #97: Additional check on base64 encoded data size.
+	// Bug #1e: this used to floor-divide (MaxPCAPUploadSize*4/base64Ratio),
+	// which is a few bytes short of the true max base64 length and could
+	// reject an exactly-100MiB raw capture. MaxPCAPBase64Len is the correct
+	// ceiling (4*ceil(N/3)).
+	if len(inlineData) > MaxPCAPBase64Len {
 		return "", ErrPCAPDataExceedsSizeLimit
 	}
 

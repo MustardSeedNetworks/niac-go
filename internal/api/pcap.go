@@ -33,7 +33,7 @@ type PcapUploadResponse struct {
 // Returns the raw PCAP bytes, the parsed request, and true on success.
 func decodePcapUpload(w http.ResponseWriter, r *http.Request) ([]byte, PcapUploadRequest, bool) {
 	var req PcapUploadRequest
-	if !decodeJSONStrict(w, r, &req, MaxPCAPUploadSize) {
+	if !decodeJSONStrict(w, r, &req, MaxPCAPUploadBodySize) {
 		return nil, req, false
 	}
 

@@ -10,6 +10,7 @@ import type { Template, TemplateContent, UserConfig } from '../../api/types';
 import { iconSizes } from '../../constants/sizes';
 import { useFavorites } from '../../hooks/useFavorites';
 import { SmallText } from '../../ui/Typography';
+import { copyToClipboard } from '../../utils/file';
 import { TemplatePreviewModal } from '../TemplatePreviewModal';
 import {
   type ConfigItem,
@@ -319,7 +320,7 @@ export const ConfigPicker: FC<ConfigPickerProps> = ({
             onSelectTemplate(t);
           }}
           onCopy={async () => {
-            // No-op; the modal expects a Promise<void>.
+            await copyToClipboard(previewContent?.content ?? '');
           }}
         />
       )}
