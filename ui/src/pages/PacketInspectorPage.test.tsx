@@ -34,6 +34,18 @@ vi.mock('../hooks/useEventSource', () => ({
   },
 }));
 
+// The page consumes the shared sim-status poll via useSimulationStatus
+// (useAppState('simStatus') under an AppProvider). Mock the hook so this
+// unit test doesn't need the whole AppProvider + its fan of client polls.
+vi.mock('../hooks/useSimulationStatus', () => ({
+  useSimulationStatus: () => ({
+    data: { running: false },
+    loading: false,
+    error: null,
+    refetch: vi.fn(),
+  }),
+}));
+
 async function readBlobAsJson(blob: Blob): Promise<unknown> {
   const text = await blob.text();
   return JSON.parse(text);
