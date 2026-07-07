@@ -1,5 +1,6 @@
 import { Globe, Plus, X } from 'lucide-react';
 import type { FC } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { DNSConfig, DNSRecord } from '../../api/types';
 import { iconSizes } from '../../constants/sizes';
 import { Button } from '../../ui/Button';
@@ -13,6 +14,7 @@ export const DnsSection: FC<ProtocolSectionProps> = ({
   onToggle,
   onUpdate,
 }) => {
+  const { t } = useTranslation('devices');
   const getDnsConfig = (): DNSConfig => ({
     forwardRecords: [],
     reverseRecords: [],
@@ -25,7 +27,7 @@ export const DnsSection: FC<ProtocolSectionProps> = ({
 
   return (
     <CollapsibleSection
-      title="DNS Server"
+      title={t('editor.sections.dns.title')}
       isExpanded={isExpanded}
       onToggle={onToggle}
       enabled={!!device.dns}
@@ -43,7 +45,7 @@ export const DnsSection: FC<ProtocolSectionProps> = ({
           <div className="stack">
             <h4 className="label flex items-center gap-compact">
               <Globe className={`${iconSizes.md} text-brand-accent`} />
-              Forward Records (A Records)
+              {t('editor.sections.dns.forwardRecordsTitle')}
             </h4>
             {(device.dns.forwardRecords || []).map((record: DNSRecord, index: number) => (
               <div
@@ -61,7 +63,7 @@ export const DnsSection: FC<ProtocolSectionProps> = ({
                     };
                     updateDns({ ...getDnsConfig(), forwardRecords: records });
                   }}
-                  placeholder="Hostname (e.g., www.example.com)"
+                  placeholder={t('editor.sections.dns.hostnamePlaceholder')}
                   className={smallInputClassName}
                 />
                 <input
@@ -72,7 +74,7 @@ export const DnsSection: FC<ProtocolSectionProps> = ({
                     records[index] = { ...records[index], ip: e.target.value };
                     updateDns({ ...getDnsConfig(), forwardRecords: records });
                   }}
-                  placeholder="IP Address"
+                  placeholder={t('editor.sections.dns.ipPlaceholder')}
                   className="w-40 rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary placeholder:text-text-muted focus:border-brand-accent focus:outline-none font-mono"
                 />
                 <input
@@ -86,7 +88,7 @@ export const DnsSection: FC<ProtocolSectionProps> = ({
                     };
                     updateDns({ ...getDnsConfig(), forwardRecords: records });
                   }}
-                  placeholder="TTL"
+                  placeholder={t('editor.sections.dns.ttlPlaceholder')}
                   className="w-24 rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary placeholder:text-text-muted focus:border-brand-accent focus:outline-none"
                 />
                 <Button
@@ -116,7 +118,7 @@ export const DnsSection: FC<ProtocolSectionProps> = ({
                 updateDns({ ...getDnsConfig(), forwardRecords: records });
               }}
             >
-              Add Forward Record
+              {t('editor.sections.dns.addForwardButton')}
             </Button>
           </div>
 
@@ -124,7 +126,7 @@ export const DnsSection: FC<ProtocolSectionProps> = ({
           <div className="stack">
             <h4 className="label flex items-center gap-compact">
               <Globe className={`${iconSizes.md} text-brand-accent`} />
-              Reverse Records (PTR Records)
+              {t('editor.sections.dns.reverseRecordsTitle')}
             </h4>
             {(device.dns.reverseRecords || []).map((record: DNSRecord, index: number) => (
               <div
@@ -139,7 +141,7 @@ export const DnsSection: FC<ProtocolSectionProps> = ({
                     records[index] = { ...records[index], ip: e.target.value };
                     updateDns({ ...getDnsConfig(), reverseRecords: records });
                   }}
-                  placeholder="IP Address"
+                  placeholder={t('editor.sections.dns.ipPlaceholder')}
                   className="w-40 rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary placeholder:text-text-muted focus:border-brand-accent focus:outline-none font-mono"
                 />
                 <input
@@ -153,7 +155,7 @@ export const DnsSection: FC<ProtocolSectionProps> = ({
                     };
                     updateDns({ ...getDnsConfig(), reverseRecords: records });
                   }}
-                  placeholder="Hostname (e.g., server.example.com)"
+                  placeholder={t('editor.sections.dns.reverseHostnamePlaceholder')}
                   className={smallInputClassName}
                 />
                 <Button
@@ -183,7 +185,7 @@ export const DnsSection: FC<ProtocolSectionProps> = ({
                 updateDns({ ...getDnsConfig(), reverseRecords: records });
               }}
             >
-              Add Reverse Record
+              {t('editor.sections.dns.addReverseButton')}
             </Button>
           </div>
         </div>

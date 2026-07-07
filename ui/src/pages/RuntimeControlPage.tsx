@@ -125,12 +125,12 @@ export const RuntimeControlPage: FC = () => {
 
   const handleStart = useCallback(async () => {
     if (!simulationSettings.selectedInterface) {
-      showError(new Error('Please select an interface above'));
+      showError(new Error(t('runtime.errorNoInterface')));
       return;
     }
 
     if (!simulationSettings.configName && !quickUploadFile) {
-      showError(new Error('Please select a configuration above or upload a config file'));
+      showError(new Error(t('runtime.errorNoConfig')));
       return;
     }
 
@@ -174,7 +174,7 @@ export const RuntimeControlPage: FC = () => {
         templateName: templateName,
       });
 
-      setSuccessMessage('Simulation started successfully!');
+      setSuccessMessage(t('runtime.startSuccess'));
       refetchSimStatus();
       setQuickUploadFile(null);
     } catch (err) {
@@ -182,7 +182,7 @@ export const RuntimeControlPage: FC = () => {
     } finally {
       setStarting(false);
     }
-  }, [simulationSettings, quickUploadFile, showError]);
+  }, [simulationSettings, quickUploadFile, showError, t]);
 
   const handleStopClick = useCallback(() => {
     setShowStopConfirm(true);
@@ -195,14 +195,14 @@ export const RuntimeControlPage: FC = () => {
 
     try {
       await stopSimulation();
-      setSuccessMessage('Simulation stopped');
+      setSuccessMessage(t('runtime.stopSuccess'));
       refetchSimStatus();
     } catch (err) {
       showError(err);
     } finally {
       setStopping(false);
     }
-  }, [showError]);
+  }, [showError, t]);
 
   return (
     <div className="stack-xl">
@@ -217,7 +217,7 @@ export const RuntimeControlPage: FC = () => {
                   {t('runtime.daemonModeWarning')}
                 </p>
                 <SmallText className="text-status-warning/90">
-                  To use simulation controls, start NIAC in daemon mode:
+                  {t('runtime.daemonModeInstructions')}
                 </SmallText>
                 <code className="mt-inline block rounded bg-scrim/40 pad-sm font-mono text-sm text-status-warning">
                   niac daemon
@@ -243,7 +243,7 @@ export const RuntimeControlPage: FC = () => {
               <div className="ml-auto flex flex-wrap items-end gap-default">
                 <div className="min-w-[14rem]">
                   <label htmlFor="rc-interface" className="block text-xs text-text-muted">
-                    Network interface
+                    {t('runtime.interfaceLabel')}
                   </label>
                   <div className="relative">
                     <Network
@@ -254,15 +254,17 @@ export const RuntimeControlPage: FC = () => {
                       value={simulationSettings.selectedInterface}
                       onChange={handleInterfaceChange}
                       disabled={interfacesLoading || interfaces.length === 0}
-                      title="Pick the host interface the daemon should bind to. Loopback (lo0/lo) is safest for local testing."
+                      title={t('runtime.interfaceTitle')}
                       className="w-full rounded border border-surface-border bg-bg-elevated py-row pl-10 pr-3 text-sm text-text-primary focus:border-brand-accent focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      {interfacesLoading && <option value="">Loading…</option>}
+                      {interfacesLoading && (
+                        <option value="">{t('runtime.interfaceLoadingOption')}</option>
+                      )}
                       {!interfacesLoading && interfaces.length === 0 && (
                         <option value="">{t('runtime.noUsableInterfaces')}</option>
                       )}
                       {!interfacesLoading && interfaces.length > 0 && (
-                        <option value="">Select interface…</option>
+                        <option value="">{t('runtime.interfaceSelectPrompt')}</option>
                       )}
                       {interfaces.map((iface) => (
                         <option key={iface.name} value={iface.name}>
@@ -287,29 +289,29 @@ export const RuntimeControlPage: FC = () => {
                   }
                   title={
                     !simulationSettings.selectedInterface
-                      ? 'Pick a network interface first'
+                      ? t('runtime.startTitlePickInterface')
                       : !simulationSettings.configName && !quickUploadFile
-                        ? 'Pick a config below first'
-                        : 'Start the simulation on the selected interface with the picked config'
+                        ? t('runtime.startTitlePickConfig')
+                        : t('runtime.startTitleReady')
                   }
                 >
-                  {starting ? 'Starting…' : 'Start Simulation'}
+                  {starting ? t('runtime.startingLabel') : t('runtime.startButtonLabel')}
                 </Button>
               </div>
             </div>
 
             {/* Picked-config status pill */}
             <div className="flex-between rounded border border-surface-border bg-bg-surface/40 px-3 py-row text-xs">
-              <span className="text-text-muted">Configuration:</span>
+              <span className="text-text-muted">{t('runtime.configurationLabel')}</span>
               {simulationSettings.configName || quickUploadFile ? (
                 <SmallText className="text-status-success">
                   {quickUploadFile
-                    ? `${quickUploadFile.name} (upload)`
-                    : `${simulationSettings.configName} (${simulationSettings.configSource === 'template' ? 'template' : 'config'})`}
+                    ? `${quickUploadFile.name} ${t('runtime.configUploadSuffix')}`
+                    : `${simulationSettings.configName} (${simulationSettings.configSource === 'template' ? t('runtime.configSourceTemplate') : t('runtime.configSourceConfig')})`}
                 </SmallText>
               ) : (
                 <SmallText className="italic text-text-muted">
-                  Pick one below — Start unlocks once you do
+                  {t('runtime.pickConfigHint')}
                 </SmallText>
               )}
             </div>

@@ -1,5 +1,6 @@
 import { Filter, LayoutGrid, LayoutList, Search, X } from 'lucide-react';
 import type { FC } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { DeviceType } from '../../api/types';
 import { iconSizes } from '../../constants/sizes';
 
@@ -28,6 +29,7 @@ export const DeviceSearchFilters: FC<DeviceSearchFiltersProps> = ({
   deviceTypes,
   protocols,
 }) => {
+  const { t } = useTranslation('devices');
   return (
     <div className="flex flex-wrap gap-comfortable">
       {/* Search */}
@@ -35,7 +37,7 @@ export const DeviceSearchFilters: FC<DeviceSearchFiltersProps> = ({
         <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-text-muted" />
         <input
           type="text"
-          placeholder="Search by hostname, MAC, or IP..."
+          placeholder={t('list.searchPlaceholder')}
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
           className="w-full rounded-lg border border-surface-border bg-bg-base/60 py-2.5 pl-10 pr-icon text-sm text-text-primary placeholder:text-text-muted focus:border-brand-accent focus:outline-none"
@@ -45,7 +47,7 @@ export const DeviceSearchFilters: FC<DeviceSearchFiltersProps> = ({
             type="button"
             onClick={() => onSearchChange('')}
             className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary"
-            aria-label="Clear search"
+            aria-label={t('list.searchClearAria')}
           >
             <X className="h-4 w-4" />
           </button>
@@ -60,7 +62,7 @@ export const DeviceSearchFilters: FC<DeviceSearchFiltersProps> = ({
           onChange={(e) => onTypeFilterChange(e.target.value as DeviceType | 'all')}
           className="rounded-lg border border-surface-border bg-bg-base/60 py-row px-3 text-sm text-text-primary focus:border-brand-accent focus:outline-none"
         >
-          <option value="all">All Types</option>
+          <option value="all">{t('list.allTypes')}</option>
           {deviceTypes.map((type) => (
             <option key={type} value={type}>
               {type.replace('_', ' ')}
@@ -75,7 +77,7 @@ export const DeviceSearchFilters: FC<DeviceSearchFiltersProps> = ({
         onChange={(e) => onProtocolFilterChange(e.target.value)}
         className="rounded-lg border border-surface-border bg-bg-base/60 py-row px-3 text-sm text-text-primary focus:border-brand-accent focus:outline-none"
       >
-        <option value="all">All Protocols</option>
+        <option value="all">{t('list.allProtocols')}</option>
         {protocols.map((proto) => (
           <option key={proto} value={proto}>
             {proto}
@@ -93,8 +95,8 @@ export const DeviceSearchFilters: FC<DeviceSearchFiltersProps> = ({
               ? 'bg-brand-primary text-text-primary'
               : 'text-text-muted hover:text-text-primary hover:bg-surface-hover'
           }`}
-          title="Table view"
-          aria-label="Table view"
+          title={t('list.tableViewTitle')}
+          aria-label={t('list.tableViewTitle')}
         >
           <LayoutList className={iconSizes.md} />
         </button>
@@ -106,8 +108,8 @@ export const DeviceSearchFilters: FC<DeviceSearchFiltersProps> = ({
               ? 'bg-brand-primary text-text-primary'
               : 'text-text-muted hover:text-text-primary hover:bg-surface-hover'
           }`}
-          title="Card view"
-          aria-label="Card view"
+          title={t('list.cardViewTitle')}
+          aria-label={t('list.cardViewTitle')}
         >
           <LayoutGrid className={iconSizes.md} />
         </button>

@@ -1,5 +1,6 @@
 import { FileText, Plus, X } from 'lucide-react';
 import type { FC } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { HTTPConfig, HTTPEndpoint } from '../../api/types';
 import { iconSizes } from '../../constants/sizes';
 import { Button } from '../../ui/Button';
@@ -13,6 +14,7 @@ export const HttpSection: FC<ProtocolSectionProps> = ({
   onToggle,
   onUpdate,
 }) => {
+  const { t } = useTranslation('devices');
   const getHttpConfig = (): HTTPConfig => ({
     enabled: true,
     serverName: 'NIAC/1.0',
@@ -26,7 +28,7 @@ export const HttpSection: FC<ProtocolSectionProps> = ({
 
   return (
     <CollapsibleSection
-      title="HTTP Server"
+      title={t('editor.sections.http.title')}
       isExpanded={isExpanded}
       onToggle={onToggle}
       enabled={device.http?.enabled ?? false}
@@ -37,12 +39,15 @@ export const HttpSection: FC<ProtocolSectionProps> = ({
       {device.http?.enabled && (
         <div className="stack-xl">
           <div className="grid gap-comfortable md:grid-cols-2">
-            <FormField label="Server Name" helpText="HTTP Server header value">
+            <FormField
+              label={t('editor.sections.http.serverNameLabel')}
+              helpText={t('editor.sections.http.serverNameHelp')}
+            >
               <input
                 type="text"
                 value={device.http.serverName || ''}
                 onChange={(e) => updateHttp({ ...getHttpConfig(), serverName: e.target.value })}
-                placeholder="Apache/2.4.41"
+                placeholder={t('editor.sections.http.serverNamePlaceholder')}
                 className={inputClassName}
               />
             </FormField>
@@ -52,7 +57,7 @@ export const HttpSection: FC<ProtocolSectionProps> = ({
           <div className="stack">
             <h4 className="label flex items-center gap-compact">
               <FileText className={`${iconSizes.md} text-brand-accent`} />
-              Endpoints
+              {t('editor.sections.http.endpointsTitle')}
             </h4>
             {(device.http.endpoints || []).map((endpoint: HTTPEndpoint, index: number) => (
               <div
@@ -88,7 +93,7 @@ export const HttpSection: FC<ProtocolSectionProps> = ({
                       };
                       updateHttp({ ...getHttpConfig(), endpoints });
                     }}
-                    placeholder="/api/status"
+                    placeholder={t('editor.sections.http.pathPlaceholder')}
                     className="flex-1 rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary placeholder:text-text-muted focus:border-brand-accent focus:outline-none font-mono"
                   />
                   <input
@@ -102,7 +107,7 @@ export const HttpSection: FC<ProtocolSectionProps> = ({
                       };
                       updateHttp({ ...getHttpConfig(), endpoints });
                     }}
-                    placeholder="Status"
+                    placeholder={t('editor.sections.http.statusPlaceholder')}
                     className="w-20 rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary placeholder:text-text-muted focus:border-brand-accent focus:outline-none"
                   />
                   <Button
@@ -131,7 +136,7 @@ export const HttpSection: FC<ProtocolSectionProps> = ({
                       };
                       updateHttp({ ...getHttpConfig(), endpoints });
                     }}
-                    placeholder="Content-Type (e.g., application/json)"
+                    placeholder={t('editor.sections.http.contentTypePlaceholder')}
                     className="w-64 rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary placeholder:text-text-muted focus:border-brand-accent focus:outline-none"
                   />
                   <input
@@ -145,7 +150,7 @@ export const HttpSection: FC<ProtocolSectionProps> = ({
                       };
                       updateHttp({ ...getHttpConfig(), endpoints });
                     }}
-                    placeholder="Response body"
+                    placeholder={t('editor.sections.http.bodyPlaceholder')}
                     className="flex-1 rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary placeholder:text-text-muted focus:border-brand-accent focus:outline-none"
                   />
                 </div>
@@ -168,7 +173,7 @@ export const HttpSection: FC<ProtocolSectionProps> = ({
                 updateHttp({ ...getHttpConfig(), endpoints });
               }}
             >
-              Add Endpoint
+              {t('editor.sections.http.addEndpointButton')}
             </Button>
           </div>
         </div>

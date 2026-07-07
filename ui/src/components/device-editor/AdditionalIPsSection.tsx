@@ -1,5 +1,6 @@
 import { Plus, X } from 'lucide-react';
 import type { FC } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Device } from '../../api/types';
 import { iconSizes } from '../../constants/sizes';
 import { Button } from '../../ui/Button';
@@ -20,6 +21,7 @@ export const AdditionalIPsSection: FC<AdditionalIPsSectionProps> = ({
   onToggle,
   onUpdate,
 }) => {
+  const { t } = useTranslation('devices');
   const handleIpChange = (index: number, value: string) => {
     const newIps = [...(device.ips || [])];
     newIps[index] = value;
@@ -36,10 +38,14 @@ export const AdditionalIPsSection: FC<AdditionalIPsSectionProps> = ({
   };
 
   return (
-    <CollapsibleSection title="Additional IP Addresses" isExpanded={isExpanded} onToggle={onToggle}>
+    <CollapsibleSection
+      title={t('editor.sections.additionalIps.title')}
+      isExpanded={isExpanded}
+      onToggle={onToggle}
+    >
       <div className="stack-lg">
         <SmallText className="text-text-muted">
-          Add secondary IP addresses for multi-homed or VLAN configurations.
+          {t('editor.sections.additionalIps.description')}
         </SmallText>
         {(device.ips || []).map((ip, index) => (
           <div key={`${ip || 'ip'}-${index}`} className="flex gap-compact">
@@ -47,7 +53,7 @@ export const AdditionalIPsSection: FC<AdditionalIPsSectionProps> = ({
               type="text"
               value={ip}
               onChange={(e) => handleIpChange(index, e.target.value)}
-              placeholder="e.g., 192.168.2.1"
+              placeholder={t('editor.sections.additionalIps.placeholder')}
               className={smallInputClassName}
             />
             <Button variant="ghost" tone="red" size="sm" onClick={() => handleRemoveIp(index)}>
@@ -61,7 +67,7 @@ export const AdditionalIPsSection: FC<AdditionalIPsSectionProps> = ({
           leftIcon={<Plus className={iconSizes.md} />}
           onClick={handleAddIp}
         >
-          Add IP Address
+          {t('editor.sections.additionalIps.addButton')}
         </Button>
       </div>
     </CollapsibleSection>

@@ -1,5 +1,6 @@
 import { Database, Plus, X } from 'lucide-react';
 import type { FC } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { DHCPConfig, DHCPLease } from '../../api/types';
 import { iconSizes } from '../../constants/sizes';
 import { Button } from '../../ui/Button';
@@ -13,6 +14,7 @@ export const DhcpSection: FC<ProtocolSectionProps> = ({
   onToggle,
   onUpdate,
 }) => {
+  const { t } = useTranslation('devices');
   const getDhcpConfig = (): DHCPConfig => ({
     subnetMask: '255.255.255.0',
     clientLeases: [],
@@ -25,7 +27,7 @@ export const DhcpSection: FC<ProtocolSectionProps> = ({
 
   return (
     <CollapsibleSection
-      title="DHCP Server"
+      title={t('editor.sections.dhcp.title')}
       isExpanded={isExpanded}
       onToggle={onToggle}
       enabled={!!device.dhcp}
@@ -40,7 +42,10 @@ export const DhcpSection: FC<ProtocolSectionProps> = ({
       {device.dhcp && (
         <div className="stack-xl">
           <div className="grid gap-comfortable md:grid-cols-2">
-            <FormField label="Subnet Mask" helpText="DHCP subnet mask">
+            <FormField
+              label={t('editor.sections.dhcp.subnetMaskLabel')}
+              helpText={t('editor.sections.dhcp.subnetMaskHelp')}
+            >
               <input
                 type="text"
                 value={device.dhcp.subnetMask || ''}
@@ -50,7 +55,10 @@ export const DhcpSection: FC<ProtocolSectionProps> = ({
               />
             </FormField>
 
-            <FormField label="Default Gateway" helpText="Router/gateway for clients">
+            <FormField
+              label={t('editor.sections.dhcp.gatewayLabel')}
+              helpText={t('editor.sections.dhcp.gatewayHelp')}
+            >
               <input
                 type="text"
                 value={device.dhcp.router || ''}
@@ -60,7 +68,10 @@ export const DhcpSection: FC<ProtocolSectionProps> = ({
               />
             </FormField>
 
-            <FormField label="DNS Server" helpText="Domain name server for clients">
+            <FormField
+              label={t('editor.sections.dhcp.dnsServerLabel')}
+              helpText={t('editor.sections.dhcp.dnsServerHelp')}
+            >
               <input
                 type="text"
                 value={device.dhcp.domainNameServer || ''}
@@ -75,7 +86,10 @@ export const DhcpSection: FC<ProtocolSectionProps> = ({
               />
             </FormField>
 
-            <FormField label="Domain Name" helpText="Domain suffix for clients">
+            <FormField
+              label={t('editor.sections.dhcp.domainNameLabel')}
+              helpText={t('editor.sections.dhcp.domainNameHelp')}
+            >
               <input
                 type="text"
                 value={device.dhcp.domainName || ''}
@@ -85,7 +99,10 @@ export const DhcpSection: FC<ProtocolSectionProps> = ({
               />
             </FormField>
 
-            <FormField label="Pool Start" helpText="Start of DHCP address pool">
+            <FormField
+              label={t('editor.sections.dhcp.poolStartLabel')}
+              helpText={t('editor.sections.dhcp.poolStartHelp')}
+            >
               <input
                 type="text"
                 value={device.dhcp.poolStart || ''}
@@ -95,7 +112,10 @@ export const DhcpSection: FC<ProtocolSectionProps> = ({
               />
             </FormField>
 
-            <FormField label="Pool End" helpText="End of DHCP address pool">
+            <FormField
+              label={t('editor.sections.dhcp.poolEndLabel')}
+              helpText={t('editor.sections.dhcp.poolEndHelp')}
+            >
               <input
                 type="text"
                 value={device.dhcp.poolEnd || ''}
@@ -110,7 +130,7 @@ export const DhcpSection: FC<ProtocolSectionProps> = ({
           <div className="stack">
             <h4 className="label flex items-center gap-compact">
               <Database className={`${iconSizes.md} text-brand-accent`} />
-              Static Leases
+              {t('editor.sections.dhcp.staticLeasesTitle')}
             </h4>
             {(device.dhcp.clientLeases || []).map((lease: DHCPLease, index: number) => (
               <div
@@ -128,7 +148,7 @@ export const DhcpSection: FC<ProtocolSectionProps> = ({
                     };
                     updateDhcp({ ...getDhcpConfig(), clientLeases: leases });
                   }}
-                  placeholder="MAC Address"
+                  placeholder={t('editor.sections.dhcp.macPlaceholder')}
                   className={smallInputClassName}
                 />
                 <input
@@ -142,7 +162,7 @@ export const DhcpSection: FC<ProtocolSectionProps> = ({
                     };
                     updateDhcp({ ...getDhcpConfig(), clientLeases: leases });
                   }}
-                  placeholder="IP Address"
+                  placeholder={t('editor.sections.dhcp.ipPlaceholder')}
                   className={smallInputClassName}
                 />
                 <Button
@@ -172,7 +192,7 @@ export const DhcpSection: FC<ProtocolSectionProps> = ({
                 updateDhcp({ ...getDhcpConfig(), clientLeases: leases });
               }}
             >
-              Add Static Lease
+              {t('editor.sections.dhcp.addLeaseButton')}
             </Button>
           </div>
         </div>

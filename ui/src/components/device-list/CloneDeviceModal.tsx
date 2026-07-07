@@ -2,6 +2,7 @@ import { valibotResolver } from '@hookform/resolvers/valibot';
 import { Copy } from 'lucide-react';
 import type { FC } from 'react';
 import { type SubmitHandler, useForm } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 import { iconSizes } from '../../constants/sizes';
 import { type CloneDeviceFormFields, CloneDeviceSchema } from '../../schemas/forms';
 import { Button } from '../../ui/Button';
@@ -13,6 +14,8 @@ interface CloneDeviceModalProps {
 }
 
 export const CloneDeviceModal: FC<CloneDeviceModalProps> = ({ hostname, onClone, onCancel }) => {
+  const { t } = useTranslation('devices');
+  const { t: tCommon } = useTranslation('common');
   const {
     register,
     handleSubmit,
@@ -33,7 +36,7 @@ export const CloneDeviceModal: FC<CloneDeviceModalProps> = ({ hostname, onClone,
         type="button"
         className="absolute inset-0 bg-scrim/70 backdrop-blur-sm"
         onClick={onCancel}
-        aria-label="Close clone device modal"
+        aria-label={t('list.cloneModal.closeAria')}
       />
       <div
         className="mx-4 w-full max-w-md rounded-2xl border border-surface-border bg-bg-surface/95 shadow-2xl"
@@ -43,17 +46,18 @@ export const CloneDeviceModal: FC<CloneDeviceModalProps> = ({ hostname, onClone,
         <form onSubmit={handleSubmit(onSubmit)} className="pad-lg stack-lg">
           <div className="flex items-center gap-default text-status-info">
             <Copy className={iconSizes.xl} />
-            <h2 className="heading-3">Clone Device</h2>
+            <h2 className="heading-3">{t('list.cloneModal.title')}</h2>
           </div>
           <p className="text-text-secondary">
-            Create a copy of <strong>{hostname}</strong> with a new name.
+            {t('list.cloneModal.descriptionPrefix')} <strong>{hostname}</strong>{' '}
+            {t('list.cloneModal.descriptionSuffix')}
           </p>
           <div>
             <label
               htmlFor="new-hostname"
               className="block text-sm font-medium text-text-secondary mb-2"
             >
-              New Hostname
+              {t('list.cloneModal.newHostnameLabel')}
             </label>
             <input
               id="new-hostname"
@@ -67,10 +71,10 @@ export const CloneDeviceModal: FC<CloneDeviceModalProps> = ({ hostname, onClone,
           </div>
           <div className="flex justify-end gap-default pt-2">
             <Button variant="outline" type="button" onClick={onCancel}>
-              Cancel
+              {tCommon('buttons.cancel')}
             </Button>
             <Button tone="violet" type="submit" disabled={!isValid}>
-              Clone
+              {tCommon('buttons.clone')}
             </Button>
           </div>
         </form>

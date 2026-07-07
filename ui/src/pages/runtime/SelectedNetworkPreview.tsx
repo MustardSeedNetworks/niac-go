@@ -1,5 +1,6 @@
 import { Eye, Router, Server, Wifi } from 'lucide-react';
 import { type FC, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { parse as parseYaml } from 'yaml';
 import { fetchTemplateContent, fetchUserConfigContent } from '../../api/client';
 import { iconSizes } from '../../constants/sizes';
@@ -91,6 +92,7 @@ export const SelectedNetworkPreview: FC<SelectedNetworkPreviewProps> = ({
   name,
   uploadFile,
 }) => {
+  const { t } = useTranslation('pages');
   const [yamlText, setYamlText] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -156,29 +158,29 @@ export const SelectedNetworkPreview: FC<SelectedNetworkPreviewProps> = ({
         <div className="flex items-baseline justify-between gap-default">
           <H2 className="flex items-center gap-compact text-lg">
             <Eye className={`${iconSizes.lg} text-brand-accent`} />
-            Selected: {displayName}
+            {t('runtime.preview.selectedPrefix')} {displayName}
           </H2>
-          <SmallText className="text-text-muted">Preview only — Start to launch</SmallText>
+          <SmallText className="text-text-muted">{t('runtime.preview.previewOnly')}</SmallText>
         </div>
 
-        {loading && <SmallText className="text-text-muted">Loading preview…</SmallText>}
+        {loading && (
+          <SmallText className="text-text-muted">{t('runtime.preview.loading')}</SmallText>
+        )}
 
         {error && (
           <SmallText className="text-status-error" role="alert">
-            Couldn't load preview: {error}
+            {t('runtime.preview.loadError', { error })}
           </SmallText>
         )}
 
         {!loading && !error && parseError && (
           <SmallText className="text-status-error" role="alert">
-            Couldn't parse config: {parseError}
+            {t('runtime.preview.parseError', { error: parseError })}
           </SmallText>
         )}
 
         {!loading && !error && !parseError && devices.length === 0 && yamlText !== null && (
-          <SmallText className="text-text-muted italic">
-            Picked config has no devices — nothing will run.
-          </SmallText>
+          <SmallText className="text-text-muted italic">{t('runtime.preview.noDevices')}</SmallText>
         )}
 
         {devices.length > 0 && (
@@ -221,8 +223,7 @@ export const SelectedNetworkPreview: FC<SelectedNetworkPreviewProps> = ({
 
         {devices.length > 0 && (
           <SmallText className="text-text-muted">
-            {devices.length} {devices.length === 1 ? 'device' : 'devices'} will launch when Start is
-            clicked.
+            {t('runtime.preview.deviceCount', { count: devices.length })}
           </SmallText>
         )}
       </CardContent>

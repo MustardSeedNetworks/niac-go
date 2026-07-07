@@ -10,6 +10,7 @@
  */
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import '../../i18n';
 import { ApiError } from '../../api/errors';
 import type { ModelDescriptor } from '../../api/types';
 import { SynthesizeWalkControl } from './SynthesizeWalkControl';
