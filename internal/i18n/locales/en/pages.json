@@ -224,7 +224,9 @@
     "description": "Compare two {{format}} network configs side-by-side and merge changes between them.",
     "originalFileTitle": "Original File",
     "modifiedFileTitle": "Modified File",
-    "readyToCompareTitle": "Ready to Compare"
+    "readyToCompareTitle": "Ready to Compare",
+    "undecidedBlocksWarning": "{{count}} block(s) are still undecided. They will keep the original (left) content until you choose Left, Both, or Right.",
+    "resolveAllBeforePreview": "Resolve all blocks (Left, Both, or Right) before previewing or exporting the merge."
   },
   "walkValidator": {
     "label": "{{protocol}} Walks",
@@ -232,7 +234,9 @@
     "description": "Validate and auto-fix {{protocol}} walk files used by the simulated {{protocol}} agents.",
     "pageTitle": "SNMP Walks",
     "noWalksFound": "No walks found",
-    "pastePathLabel": "Or paste an absolute path"
+    "pastePathLabel": "Or paste an absolute path",
+    "autoFixConfirmTitle": "Auto-fix walk file?",
+    "autoFixConfirmMessage": "This rewrites \"{{file}}\" in place. A .bak backup of the original is created alongside it before any changes are written."
   },
   "walkAnalyzer": {
     "label": "Walk Analyzer",
