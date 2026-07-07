@@ -15,11 +15,9 @@ import {
   ChevronLeft,
   ChevronRight,
   HelpCircle,
-  History,
   type LucideIcon,
   Menu,
   Settings,
-  Users,
   X,
 } from 'lucide-react';
 import { createElement, type FC, type ReactNode, useEffect, useState } from 'react';
@@ -48,17 +46,14 @@ interface SidebarLayoutProps {
   /**
    * Drawer callbacks — all optional. Pass only the ones your product uses;
    * the corresponding footer button only renders when its callback is provided.
-   * Stem typically uses help/settings/history; seed uses help/settings/profiles;
    * niac uses help/settings. Add more here if a new product needs another drawer.
    */
   onOpenHelp?: () => void;
   onOpenSettings?: () => void;
-  onOpenHistory?: () => void;
-  onOpenProfiles?: () => void;
   topBar?: ReactNode;
 }
 
-const STORAGE_KEY = 'stem-sidebar-collapsed';
+const STORAGE_KEY = 'niac-sidebar-collapsed';
 
 interface NavItemButtonProps {
   item: SidebarNavItem;
@@ -181,8 +176,6 @@ interface SidebarFooterProps {
   version?: string;
   onOpenHelp?: () => void;
   onOpenSettings?: () => void;
-  onOpenHistory?: () => void;
-  onOpenProfiles?: () => void;
   onExpand: () => void;
   // SidebarLayout mounts SidebarBody twice (mobile + desktop asides) and
   // both stay in the DOM regardless of viewport — the responsive classes
@@ -194,33 +187,11 @@ interface SidebarFooterProps {
   surfaceTestIds: boolean;
 }
 
-interface FullWidthDrawerButtonProps {
-  onClick: () => void;
-  icon: LucideIcon;
-  label: string;
-  title: string;
-}
-
-const FullWidthDrawerButton: FC<FullWidthDrawerButtonProps> = ({ onClick, icon, label, title }) => (
-  <button
-    type="button"
-    onClick={onClick}
-    className="w-full mb-heading flex items-center gap-compact px-3 py-row rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-hover transition-colors text-sm font-medium"
-    title={title}
-    aria-label={title}
-  >
-    {createElement(icon, { className: `${iconSizes.md} flex-shrink-0` })}
-    <span>{label}</span>
-  </button>
-);
-
 const SidebarFooter: FC<SidebarFooterProps> = ({
   collapsed,
   version,
   onOpenHelp,
   onOpenSettings,
-  onOpenHistory,
-  onOpenProfiles,
   onExpand,
   surfaceTestIds,
 }) => (
@@ -247,24 +218,6 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
         />
       ) : null}
     </div>
-
-    {onOpenHistory && !collapsed ? (
-      <FullWidthDrawerButton
-        onClick={onOpenHistory}
-        icon={History}
-        label="History"
-        title="Open test history"
-      />
-    ) : null}
-
-    {onOpenProfiles && !collapsed ? (
-      <FullWidthDrawerButton
-        onClick={onOpenProfiles}
-        icon={Users}
-        label="Profiles"
-        title="Manage profiles"
-      />
-    ) : null}
 
     {version ? (
       <div className={`text-xs font-mono text-text-muted ${collapsed ? '' : 'flex-between'}`}>
@@ -296,8 +249,6 @@ interface SidebarBodyProps {
   isActive: (path: string) => boolean;
   onOpenHelp?: () => void;
   onOpenSettings?: () => void;
-  onOpenHistory?: () => void;
-  onOpenProfiles?: () => void;
   // Forwarded to SidebarFooter — see comment there.
   surfaceTestIds: boolean;
 }
@@ -312,8 +263,6 @@ const SidebarBody: FC<SidebarBodyProps> = ({
   isActive,
   onOpenHelp,
   onOpenSettings,
-  onOpenHistory,
-  onOpenProfiles,
   surfaceTestIds,
 }) => {
   const { t } = useTranslation();
@@ -353,8 +302,6 @@ const SidebarBody: FC<SidebarBodyProps> = ({
         version={version}
         onOpenHelp={onOpenHelp}
         onOpenSettings={onOpenSettings}
-        onOpenHistory={onOpenHistory}
-        onOpenProfiles={onOpenProfiles}
         onExpand={onExpand}
         surfaceTestIds={surfaceTestIds}
       />
@@ -396,8 +343,6 @@ export const SidebarLayout: FC<SidebarLayoutProps> = ({
   children,
   onOpenHelp,
   onOpenSettings,
-  onOpenHistory,
-  onOpenProfiles,
   topBar,
 }) => {
   const location = useLocation();
@@ -432,8 +377,6 @@ export const SidebarLayout: FC<SidebarLayoutProps> = ({
       isActive={isActive}
       onOpenHelp={onOpenHelp}
       onOpenSettings={onOpenSettings}
-      onOpenHistory={onOpenHistory}
-      onOpenProfiles={onOpenProfiles}
       surfaceTestIds={surfaceTestIds}
     />
   );
