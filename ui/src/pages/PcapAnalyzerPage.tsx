@@ -15,13 +15,13 @@ import { StreamView } from '../components/StreamView';
 import { iconSizes } from '../constants/sizes';
 import { useColoringRules } from '../hooks/useColoringRules';
 import { useDisplayFilter } from '../hooks/useDisplayFilter';
+import { useErrorToast } from '../hooks/useErrorToast';
 import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
 import { Tag } from '../ui/Tag';
 import { H2, SmallText } from '../ui/Typography';
 import { getStreamFilter } from '../utils/conversations';
 import { fileToBase64 } from '../utils/file';
-import { getErrorMessage } from '../utils/format';
 
 /**
  * Convert PcapPacket to Packet for PacketDetails component
@@ -56,8 +56,12 @@ export const PcapAnalyzerPage: FC = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [analysisResult, setAnalysisResult] = useState<PcapAnalysisResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  // Field-scoped: the uploader's own rejected-file reason (bad type/size).
+  // Stays inline next to the uploader, unlike the toast-surfaced analyze
+  // failure below.
+  const [validationError, setValidationError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const showError = useErrorToast();
 
   // Selected packet state
   const [selectedPacket, setSelectedPacket] = useState<PcapPacket | null>(null);
@@ -87,7 +91,7 @@ export const PcapAnalyzerPage: FC = () => {
     setSelectedFile(file);
     setAnalysisResult(null);
     setSelectedPacket(null);
-    setError(null);
+    setValidationError(null);
     setSuccess(null);
     setFilterExpression('');
   }, []);
@@ -96,7 +100,7 @@ export const PcapAnalyzerPage: FC = () => {
   const handleValidationError = useCallback((message: string) => {
     setSelectedFile(null);
     setSuccess(null);
-    setError(message);
+    setValidationError(message);
   }, []);
 
   // Handle analysis
@@ -106,7 +110,7 @@ export const PcapAnalyzerPage: FC = () => {
     }
 
     setIsAnalyzing(true);
-    setError(null);
+    setValidationError(null);
     setSuccess(null);
 
     try {
@@ -132,12 +136,11 @@ export const PcapAnalyzerPage: FC = () => {
         setSelectedPacket(result.packets[0]);
       }
     } catch (err) {
-      const errorMessage = getErrorMessage(err) || 'Failed to analyze PCAP file';
-      setError(errorMessage);
+      showError(err);
     } finally {
       setIsAnalyzing(false);
     }
-  }, [selectedFile]);
+  }, [selectedFile, showError]);
 
   // Handle packet selection
   const handleSelectPacket = useCallback((packet: PcapPacket) => {
@@ -150,7 +153,7 @@ export const PcapAnalyzerPage: FC = () => {
     setSelectedFile(null);
     setAnalysisResult(null);
     setSelectedPacket(null);
-    setError(null);
+    setValidationError(null);
     setSuccess(null);
     setFilterExpression('');
   }, []);
@@ -225,7 +228,7 @@ export const PcapAnalyzerPage: FC = () => {
           onValidationError={handleValidationError}
           isAnalyzing={isAnalyzing}
           selectedFile={selectedFile}
-          error={error}
+          error={validationError}
           success={success}
         />
       )}

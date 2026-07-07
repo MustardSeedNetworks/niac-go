@@ -7,12 +7,12 @@ import {
   revertWalk,
 } from '../api/client';
 import { useApiResource } from '../hooks/useApiResource';
+import { useErrorToast } from '../hooks/useErrorToast';
 import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
 import { ConfirmModal } from '../ui/ConfirmModal';
 import { Tag } from '../ui/Tag';
 import { H2, SmallText } from '../ui/Typography';
-import { getErrorMessage } from '../utils/format';
 
 /**
  * LibraryFilesPage is the shared browser for the read-only library
@@ -37,11 +37,14 @@ interface Props {
 
 function LibraryFilesView({ kind }: Props) {
   const fetcher = kind === 'walks' ? fetchLibraryWalks : fetchLibraryPcaps;
-  const { data, loading, refetch, error } = useApiResource(fetcher, [], { intervalMs: 30000 });
+  const { data, loading, refetch, error } = useApiResource(fetcher, [], {
+    intervalMs: 30000,
+    errorToast: true,
+  });
   const [search, setSearch] = useState('');
   const [revertTarget, setRevertTarget] = useState<string | null>(null);
   const [reverting, setReverting] = useState(false);
-  const [revertError, setRevertError] = useState<string | null>(null);
+  const showError = useErrorToast();
 
   const entries = data ?? [];
   const filtered = useMemo(() => {
@@ -55,13 +58,12 @@ function LibraryFilesView({ kind }: Props) {
   const handleConfirmRevert = async () => {
     if (!revertTarget || reverting) return;
     setReverting(true);
-    setRevertError(null);
     try {
       await revertWalk(revertTarget);
       setRevertTarget(null);
       await refetch();
     } catch (err) {
-      setRevertError(getErrorMessage(err));
+      showError(err);
     } finally {
       setReverting(false);
     }
@@ -174,10 +176,7 @@ function LibraryFilesView({ kind }: Props) {
                               variant="ghost"
                               size="xs"
                               leftIcon={<RotateCcw className="w-3.5 h-3.5" />}
-                              onClick={() => {
-                                setRevertError(null);
-                                setRevertTarget(entry.name);
-                              }}
+                              onClick={() => setRevertTarget(entry.name)}
                               aria-label={`Revert ${entry.name} to its original`}
                               data-testid={`revert-walk-${entry.name}`}
                             >
@@ -209,23 +208,13 @@ function LibraryFilesView({ kind }: Props) {
         <ConfirmModal
           isOpen={revertTarget !== null}
           onConfirm={() => void handleConfirmRevert()}
-          onCancel={() => {
-            setRevertTarget(null);
-            setRevertError(null);
-          }}
+          onCancel={() => setRevertTarget(null)}
           title="Revert to original"
           message={
-            <div className="stack-sm">
-              <p>
-                Revert <span className="font-mono">{revertTarget}</span> to its original? This
-                discards edits.
-              </p>
-              {revertError && (
-                <SmallText className="text-status-error" role="alert">
-                  {revertError}
-                </SmallText>
-              )}
-            </div>
+            <p>
+              Revert <span className="font-mono">{revertTarget}</span> to its original? This
+              discards edits.
+            </p>
           }
           confirmLabel={reverting ? 'Reverting…' : 'Revert'}
         />

@@ -1,8 +1,23 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useUIStore } from '../stores/ui-store';
+import { getErrorMessage } from '../utils/format';
 
 interface Options<T> {
   intervalMs?: number;
   transform?: (value: T) => T;
+  /**
+   * Surface fetch/refetch failures as a global error toast (see
+   * `ui/ToastContainer`). Opt-in per call site — most callers keep this
+   * unset: background pollers that expect to be offline sometimes (e.g.
+   * the daemon isn't running yet) should rely on their own page-level
+   * indicator instead of toasting on every poll tick.
+   *
+   * Only fires once per distinct error message (dedup via a ref), and
+   * re-fires if the resource recovers and then fails again with a new
+   * message.
+   */
+  errorToast?: boolean | { title?: string };
 }
 
 export function useApiResource<T>(
@@ -10,12 +25,15 @@ export function useApiResource<T>(
   deps: unknown[] = [],
   options: Options<T> = {},
 ) {
-  const { intervalMs, transform } = options;
+  const { intervalMs, transform, errorToast } = options;
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const timerRef = useRef<number | null>(null);
   const fetcherRef = useRef<(signal?: AbortSignal) => Promise<T>>(fetcher);
+  const lastToastedMessageRef = useRef<string | null>(null);
+  const addNotification = useUIStore((s) => s.addNotification);
+  const { t } = useTranslation('common');
 
   // Update fetcher ref when it changes
   useEffect(() => {
@@ -30,18 +48,29 @@ export function useApiResource<T>(
         if (signal?.aborted) return;
         setData(transform ? transform(result) : result);
         setError(null);
+        lastToastedMessageRef.current = null;
       } catch (err) {
         // FIX #179: Suppress AbortError from state updates
         if (err instanceof DOMException && err.name === 'AbortError') return;
         if (signal?.aborted) return;
         setError(err as Error);
+        if (errorToast) {
+          const message = getErrorMessage(err);
+          if (lastToastedMessageRef.current !== message) {
+            lastToastedMessageRef.current = message;
+            const title =
+              (typeof errorToast === 'object' ? errorToast.title : undefined) ??
+              t('toast.requestFailedTitle');
+            addNotification({ type: 'error', title, message });
+          }
+        }
       } finally {
         if (!signal?.aborted) {
           setLoading(false);
         }
       }
     },
-    [transform],
+    [transform, errorToast, addNotification, t],
   );
 
   useEffect(() => {
