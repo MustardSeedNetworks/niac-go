@@ -3,6 +3,7 @@ package library
 import (
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -31,34 +32,43 @@ func (l *Library) PreserveOriginal(kind Kind, relPath string) error {
 		return err
 	}
 
-	dest := filepath.Join(l.SubDir(kind), filepath.FromSlash(relPath))
-	origPath := dest + originalSuffix
+	root, err := l.openKindRoot(kind)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = root.Close() }()
 
-	_, statErr := os.Stat(origPath)
-	if statErr == nil {
+	leaf := filepath.ToSlash(relPath)
+	origLeaf := leaf + originalSuffix
+
+	if _, statErr := root.Stat(origLeaf); statErr == nil {
 		return nil // already preserved — never overwrite the pristine copy
-	}
-	if !errors.Is(statErr, fs.ErrNotExist) {
-		return fmt.Errorf("stat %s: %w", origPath, statErr)
+	} else if !errors.Is(statErr, fs.ErrNotExist) {
+		return fmt.Errorf("stat %s: %w", origLeaf, statErr)
 	}
 
-	// #nosec G304 -- relPath validated by validateRelPath above; dest is bounded to l.SubDir(kind).
-	content, err := os.ReadFile(dest)
+	src, err := root.Open(leaf)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			return nil // nothing to preserve yet
 		}
-		return fmt.Errorf("read %s: %w", dest, err)
+		return fmt.Errorf("read %s: %w", leaf, err)
+	}
+	content, readErr := io.ReadAll(src)
+	_ = src.Close()
+	if readErr != nil {
+		return fmt.Errorf("read %s: %w", leaf, readErr)
 	}
 
-	// #nosec G703 -- origPath is dest+originalSuffix; dest is bounded to l.SubDir(kind)
-	// via relPath validated by validateRelPath above. gosec's taint tracker can't
-	// follow that provenance through the .orig suffix concatenation (same class of
-	// false positive as internal/truststore/truststore_linux.go's writeAnchorFile).
-	if writeErr := os.WriteFile(origPath, content, libraryFileMode); writeErr != nil {
-		return fmt.Errorf("write %s: %w", origPath, writeErr)
+	dst, err := root.OpenFile(origLeaf, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, libraryFileMode)
+	if err != nil {
+		return fmt.Errorf("write %s: %w", origLeaf, err)
 	}
-	return nil
+	if _, writeErr := dst.Write(content); writeErr != nil {
+		_ = dst.Close()
+		return fmt.Errorf("write %s: %w", origLeaf, writeErr)
+	}
+	return dst.Close()
 }
 
 // HasOriginal reports whether {relPath}.orig exists — i.e. whether
@@ -71,9 +81,13 @@ func (l *Library) HasOriginal(kind Kind, relPath string) bool {
 	if err := validateRelPath(relPath); err != nil {
 		return false
 	}
-	dest := filepath.Join(l.SubDir(kind), filepath.FromSlash(relPath))
-	_, err := os.Stat(dest + originalSuffix)
-	return err == nil
+	root, err := l.openKindRoot(kind)
+	if err != nil {
+		return false
+	}
+	defer func() { _ = root.Close() }()
+	_, statErr := root.Stat(filepath.ToSlash(relPath) + originalSuffix)
+	return statErr == nil
 }
 
 // RevertToOriginal restores {relPath} from {relPath}.orig and then
@@ -89,27 +103,41 @@ func (l *Library) RevertToOriginal(kind Kind, relPath string) error {
 		return err
 	}
 
-	dest := filepath.Join(l.SubDir(kind), filepath.FromSlash(relPath))
-	origPath := dest + originalSuffix
+	root, err := l.openKindRoot(kind)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = root.Close() }()
 
-	// #nosec G304 -- relPath validated by validateRelPath above; origPath is bounded to l.SubDir(kind).
-	content, err := os.ReadFile(origPath)
+	leaf := filepath.ToSlash(relPath)
+	origLeaf := leaf + originalSuffix
+
+	src, err := root.Open(origLeaf)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			return ErrNoOriginal
 		}
-		return fmt.Errorf("read %s: %w", origPath, err)
+		return fmt.Errorf("read %s: %w", origLeaf, err)
+	}
+	content, readErr := io.ReadAll(src)
+	_ = src.Close()
+	if readErr != nil {
+		return fmt.Errorf("read %s: %w", origLeaf, readErr)
 	}
 
-	// #nosec G703 -- dest is bounded to l.SubDir(kind) via relPath validated by
-	// validateRelPath above; gosec's taint tracker can't follow that provenance
-	// through the content read from origPath earlier in this function (same
-	// class of false positive as truststore_linux.go's writeAnchorFile).
-	if writeErr := os.WriteFile(dest, content, libraryFileMode); writeErr != nil {
-		return fmt.Errorf("restore %s: %w", dest, writeErr)
+	dst, err := root.OpenFile(leaf, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, libraryFileMode)
+	if err != nil {
+		return fmt.Errorf("restore %s: %w", leaf, err)
 	}
-	if rmErr := os.Remove(origPath); rmErr != nil {
-		return fmt.Errorf("remove %s: %w", origPath, rmErr)
+	if _, writeErr := dst.Write(content); writeErr != nil {
+		_ = dst.Close()
+		return fmt.Errorf("restore %s: %w", leaf, writeErr)
+	}
+	if closeErr := dst.Close(); closeErr != nil {
+		return fmt.Errorf("restore %s: %w", leaf, closeErr)
+	}
+	if rmErr := root.Remove(origLeaf); rmErr != nil {
+		return fmt.Errorf("remove %s: %w", origLeaf, rmErr)
 	}
 	return nil
 }

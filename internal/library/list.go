@@ -150,6 +150,21 @@ func (l *Library) openNetworksRoot() (*os.Root, error) {
 	return root, nil
 }
 
+// openKindRoot opens kind's subdirectory (walks/ or pcaps/) as an
+// os.Root, giving the same OS-enforced containment as openNetworksRoot
+// for every file op on a user-supplied relative path. Using the root
+// (rather than filepath.Join + a bare os.* call guarded by #nosec) is
+// what makes path traversal impossible by construction and is the
+// structural safety CodeQL's go/path-injection query recognises.
+// Callers MUST Close the root.
+func (l *Library) openKindRoot(kind Kind) (*os.Root, error) {
+	root, err := os.OpenRoot(l.SubDir(kind))
+	if err != nil {
+		return nil, fmt.Errorf("open %s dir: %w", kind, err)
+	}
+	return root, nil
+}
+
 // ReadNetwork returns the full content of a single network. The name is
 // validated and then opened relative to the networks/ os.Root, which
 // makes escaping the directory impossible.
@@ -335,15 +350,21 @@ func (l *Library) FileEntryByName(kind Kind, relPath string) (FileEntry, error) 
 	if err := validateRelPath(relPath); err != nil {
 		return FileEntry{}, err
 	}
-	abs := filepath.Join(l.SubDir(kind), filepath.FromSlash(relPath))
-	info, err := os.Stat(abs)
+	root, err := l.openKindRoot(kind)
+	if err != nil {
+		return FileEntry{}, err
+	}
+	defer func() { _ = root.Close() }()
+
+	leaf := filepath.ToSlash(relPath)
+	info, err := root.Stat(leaf)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			return FileEntry{}, fmt.Errorf("%w: %s", ErrNotFound, relPath)
 		}
 		return FileEntry{}, err
 	}
-	return l.fileEntry(kind, filepath.ToSlash(relPath), info), nil
+	return l.fileEntry(kind, leaf, info), nil
 }
 
 // detectSource decides whether a given filename came from the starter
