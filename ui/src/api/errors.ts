@@ -7,15 +7,26 @@
  * FIX #177: Inconsistent error handling
  */
 
+/** Field-level detail attached to an API error response (see internal/api ErrorDetail). */
+export interface ApiErrorDetail {
+  readonly field?: string;
+  readonly issue: string;
+  readonly value?: string;
+}
+
 export class ApiError extends Error {
   readonly status: number;
   readonly code: string;
+  /** Structured per-field detail, when the server included one (e.g. an
+   * invalid BPF filter's libpcap compile error). */
+  readonly details: readonly ApiErrorDetail[];
 
-  constructor(message: string, status: number, code = 'API_ERROR') {
+  constructor(message: string, status: number, code = 'API_ERROR', details: ApiErrorDetail[] = []) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
     this.code = code;
+    this.details = details;
   }
 }
 
