@@ -1,7 +1,18 @@
 import { type FC, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { fetchLibraryWalks, fixWalk, type LibraryFileEntry, validateWalk } from '../api/client';
-import type { WalkValidationIssue, WalkValidationResponse } from '../api/types';
+import {
+  fetchLibraryWalks,
+  fixWalk,
+  type LibraryFileEntry,
+  validateAllWalks,
+  validateWalk,
+} from '../api/client';
+import type {
+  WalkBatchValidationResponse,
+  WalkValidationIssue,
+  WalkValidationResponse,
+} from '../api/types';
+import { useErrorToast } from '../hooks/useErrorToast';
 import { Card, CardContent } from '../ui/Card';
 import { ConfirmModal } from '../ui/ConfirmModal';
 import { InfoPopover } from '../ui/InfoPopover';
@@ -41,6 +52,9 @@ export const WalkValidatorPage: FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<'idle' | 'validating' | 'fixing'>('idle');
   const [showAutoFixConfirm, setShowAutoFixConfirm] = useState(false);
+  const [batchResponse, setBatchResponse] = useState<WalkBatchValidationResponse | null>(null);
+  const [batchBusy, setBatchBusy] = useState(false);
+  const showError = useErrorToast();
 
   // Hydrate the file dropdown from /api/v1/library/walks. The daemon's
   // walk validator (validateWalkFilePath) falls back to the library
@@ -95,6 +109,23 @@ export const WalkValidatorPage: FC = () => {
       }
     },
     [targetPath],
+  );
+
+  const runBatch = useCallback(async () => {
+    setBatchBusy(true);
+    try {
+      const result = await validateAllWalks();
+      setBatchResponse(result);
+    } catch (err) {
+      showError(err);
+    } finally {
+      setBatchBusy(false);
+    }
+  }, [showError]);
+
+  const batchResults = useMemo(
+    () => (batchResponse ? Object.values(batchResponse.results) : []),
+    [batchResponse],
   );
 
   return (
@@ -178,6 +209,17 @@ export const WalkValidatorPage: FC = () => {
             >
               {busy === 'fixing' ? 'Fixing…' : 'Auto-fix'}
             </button>
+            <button
+              type="button"
+              onClick={() => void runBatch()}
+              disabled={batchBusy}
+              title="Validate every walk file referenced by the running config in one pass."
+              className="rounded bg-bg-base/60 px-3 py-compact-md text-sm font-medium text-text-primary ring-1 ring-surface-border hover:bg-bg-base/80 disabled:opacity-50"
+            >
+              {batchBusy
+                ? t('walkValidator.validatingAllButton')
+                : t('walkValidator.validateAllButton')}
+            </button>
             {error && (
               <span className="text-sm text-status-error" role="alert">
                 {error}
@@ -260,6 +302,63 @@ export const WalkValidatorPage: FC = () => {
               <p className="text-xs text-text-muted">
                 Showing first 200 of {issues.length} issues — auto-fix to clear them all.
               </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {batchResponse && (
+        <Card className="border-surface-border bg-bg-surface/70">
+          <CardContent className="stack-lg">
+            <header className="flex flex-wrap items-baseline gap-comfortable">
+              <h2 className="heading-3 text-text-primary">{t('walkValidator.batchHeading')}</h2>
+              <span className="text-sm text-text-muted">{batchResponse.message}</span>
+              <span
+                className={`rounded px-cell py-0.5 text-xs font-medium ring-1 ${
+                  batchResponse.success
+                    ? 'bg-status-success/20 text-status-success ring-status-success/40'
+                    : 'bg-status-error/20 text-status-error ring-status-error/40'
+                }`}
+              >
+                {batchResponse.success
+                  ? t('walkValidator.batchStatusValid')
+                  : t('walkValidator.batchStatusInvalid')}
+              </span>
+            </header>
+
+            {batchResults.length === 0 ? (
+              <p className="text-sm text-text-muted">{t('walkValidator.batchEmpty')}</p>
+            ) : (
+              <table className="w-full text-sm">
+                <thead className="bg-bg-base/40 text-left text-xs uppercase tracking-wider text-text-muted">
+                  <tr>
+                    <th className="px-3 py-row">{t('walkValidator.batchTable.filename')}</th>
+                    <th className="px-3 py-row w-24">{t('walkValidator.batchTable.status')}</th>
+                    <th className="px-3 py-row w-24">{t('walkValidator.batchTable.issues')}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-knob/5">
+                  {batchResults.map((result) => (
+                    <tr key={result.filename} className="text-text-primary hover:bg-bg-base/40">
+                      <td className="px-3 py-row font-mono text-xs">{result.filename}</td>
+                      <td className="px-3 py-row">
+                        <span
+                          className={`rounded px-cell py-0.5 text-[10px] font-medium ring-1 ${
+                            result.valid
+                              ? 'bg-status-success/20 text-status-success ring-status-success/40'
+                              : 'bg-status-error/20 text-status-error ring-status-error/40'
+                          }`}
+                        >
+                          {result.valid
+                            ? t('walkValidator.batchStatusValid')
+                            : t('walkValidator.batchStatusInvalid')}
+                        </span>
+                      </td>
+                      <td className="px-3 py-row text-text-muted">{result.issues.length}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             )}
           </CardContent>
         </Card>

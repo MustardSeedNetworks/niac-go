@@ -581,7 +581,18 @@
     "noWalksFound": "No se encontraron recorridos",
     "pastePathLabel": "O pegue una ruta absoluta",
     "autoFixConfirmTitle": "¿Corregir automáticamente el archivo de recorrido?",
-    "autoFixConfirmMessage": "Esto reescribe \"{{file}}\" en su lugar. Se crea una copia de seguridad .bak del original antes de escribir cualquier cambio."
+    "autoFixConfirmMessage": "Esto reescribe \"{{file}}\" en su lugar. Se crea una copia de seguridad .bak del original antes de escribir cualquier cambio.",
+    "validateAllButton": "Validar todos",
+    "validatingAllButton": "Validando todos…",
+    "batchHeading": "Todos los archivos de recorrido configurados",
+    "batchEmpty": "La configuración en ejecución no hace referencia a ningún archivo de recorrido.",
+    "batchTable": {
+      "filename": "Archivo",
+      "status": "Estado",
+      "issues": "Problemas"
+    },
+    "batchStatusValid": "Válido",
+    "batchStatusInvalid": "No válido"
   },
   "walkAnalyzer": {
     "label": "Analizador de recorridos",

@@ -581,7 +581,18 @@
     "noWalksFound": "No walks found",
     "pastePathLabel": "Or paste an absolute path",
     "autoFixConfirmTitle": "Auto-fix walk file?",
-    "autoFixConfirmMessage": "This rewrites \"{{file}}\" in place. A .bak backup of the original is created alongside it before any changes are written."
+    "autoFixConfirmMessage": "This rewrites \"{{file}}\" in place. A .bak backup of the original is created alongside it before any changes are written.",
+    "validateAllButton": "Validate all",
+    "validatingAllButton": "Validating all…",
+    "batchHeading": "All configured walk files",
+    "batchEmpty": "No walk files are referenced by the running config.",
+    "batchTable": {
+      "filename": "File",
+      "status": "Status",
+      "issues": "Issues"
+    },
+    "batchStatusValid": "Valid",
+    "batchStatusInvalid": "Invalid"
   },
   "walkAnalyzer": {
     "label": "Walk Analyzer",

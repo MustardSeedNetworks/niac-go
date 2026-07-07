@@ -113,6 +113,21 @@ export interface WalkValidationResponse {
 }
 
 /**
+ * Response from POST /api/v1/walk/validate-all — validates every walk file
+ * referenced by the running config in one call. `success` is true only when
+ * every file validated clean (mirrors the backend's invalidFiles==0 check,
+ * unlike WalkValidationResponse.success which just means "request succeeded").
+ */
+export interface WalkBatchValidationResponse {
+  success: boolean;
+  message: string;
+  totalFiles: number;
+  invalidFiles: number;
+  totalIssues: number;
+  results: Record<string, WalkValidationResult>;
+}
+
+/**
  * One (vendor, model) baseline-walk profile, as returned by
  * GET /api/v1/synthesize-walk/models. Powers the "Synthesize baseline
  * walk" picker in the device editor's SNMP section. Mirrors
