@@ -1,6 +1,6 @@
 import { AlertCircle, FileCheck, GitCompare, Layers, X } from 'lucide-react';
 import { type FC, useCallback, useMemo, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { Trans, useTranslation } from 'react-i18next';
 import { mergeConfigs as apiMergeConfigs } from '../api/client';
 import {
   computeDiff,
@@ -90,9 +90,9 @@ export const ConfigDiffPage: FC = () => {
     setMergeDecisions(decisions);
     setMessage({
       type: 'success',
-      text: 'All changes set to accept from left file',
+      text: t('configDiff.acceptAllLeftMessage'),
     });
-  }, [diffBlocks]);
+  }, [diffBlocks, t]);
 
   // Accept all from right
   const handleAcceptAllRight = useCallback(() => {
@@ -104,15 +104,15 @@ export const ConfigDiffPage: FC = () => {
     setMergeDecisions(decisions);
     setMessage({
       type: 'success',
-      text: 'All changes set to accept from right file',
+      text: t('configDiff.acceptAllRightMessage'),
     });
-  }, [diffBlocks]);
+  }, [diffBlocks, t]);
 
   // Reset all decisions
   const handleReset = useCallback(() => {
     setMergeDecisions(new Map());
-    setMessage({ type: 'success', text: 'All merge decisions reset' });
-  }, []);
+    setMessage({ type: 'success', text: t('configDiff.resetMessage') });
+  }, [t]);
 
   // Clear both loaded files and all merge decisions to start over
   const handleClearAll = useCallback(() => {
@@ -144,9 +144,9 @@ export const ConfigDiffPage: FC = () => {
 
     setMessage({
       type: 'success',
-      text: 'Merged configuration exported successfully',
+      text: t('configDiff.exportSuccessMessage'),
     });
-  }, [mergedContent, leftFile]);
+  }, [mergedContent, leftFile, t]);
 
   // Show preview modal
   const handlePreview = useCallback(() => {
@@ -171,7 +171,9 @@ export const ConfigDiffPage: FC = () => {
           {hasFiles && (
             <div className="flex items-center justify-end gap-compact">
               <Tag colorScheme="purple">
-                {diffBlocks.filter((b) => b.type !== 'unchanged').length} changes
+                {t('configDiff.changesCount', {
+                  count: diffBlocks.filter((b) => b.type !== 'unchanged').length,
+                })}
               </Tag>
             </div>
           )}
@@ -196,7 +198,7 @@ export const ConfigDiffPage: FC = () => {
                 type="button"
                 onClick={() => setMessage(null)}
                 className="ml-auto text-current hover:opacity-70"
-                aria-label="Dismiss message"
+                aria-label={t('configDiff.dismissMessage')}
               >
                 <X className={iconSizes.md} />
               </button>
@@ -215,12 +217,12 @@ export const ConfigDiffPage: FC = () => {
               </H2>
               {leftFile && (
                 <Tag colorScheme="blue" className="text-xs">
-                  Source
+                  {t('configDiff.sourceTag')}
                 </Tag>
               )}
             </div>
             <FileUploadZone
-              label="Upload original config"
+              label={t('configDiff.uploadOriginalLabel')}
               file={leftFile}
               onFileUpload={handleLeftFileUpload}
               onClear={() => {
@@ -239,12 +241,12 @@ export const ConfigDiffPage: FC = () => {
               </H2>
               {rightFile && (
                 <Tag colorScheme="green" className="text-xs">
-                  Changes
+                  {t('configDiff.changesTag')}
                 </Tag>
               )}
             </div>
             <FileUploadZone
-              label="Upload modified config"
+              label={t('configDiff.uploadModifiedLabel')}
               file={rightFile}
               onFileUpload={handleRightFileUpload}
               onClear={() => {
@@ -263,7 +265,7 @@ export const ConfigDiffPage: FC = () => {
             <CardContent className="stack-lg">
               <H2 className="flex items-center gap-compact">
                 <GitCompare className={`${iconSizes.lg} text-status-info`} />
-                Side-by-Side Comparison
+                {t('configDiff.sideBySideComparison')}
               </H2>
               <DiffViewer
                 leftContent={leftFile.content}
@@ -298,14 +300,14 @@ export const ConfigDiffPage: FC = () => {
                 <div>
                   <H2 className="mb-tight flex items-center gap-compact text-lg">
                     <Layers className={`${iconSizes.lg} text-brand-accent`} />
-                    Server-side overlay merge
+                    {t('configDiff.serverSideMergeTitle')}
                   </H2>
                   <P className="text-sm text-text-muted">
-                    Treats the right file as an overlay applied to the left base — same semantics as{' '}
-                    <code>niac config merge</code>. Devices in the overlay with the same name
-                    REPLACE base entries; overlay-only devices are appended; base-only devices are
-                    kept. Useful when you want CLI-equivalent output without resolving each diff
-                    block manually.
+                    <Trans
+                      i18nKey="configDiff.serverSideMergeDescription"
+                      ns="pages"
+                      components={{ code: <code /> }}
+                    />
                   </P>
                 </div>
                 <Button
@@ -327,17 +329,23 @@ export const ConfigDiffPage: FC = () => {
                       URL.revokeObjectURL(url);
                       setMessage({
                         type: 'success',
-                        text: `Server-side merge: ${result.baseDevices} base + ${result.overlayDevices} overlay → ${result.mergedDevices} devices`,
+                        text: t('configDiff.serverMergeSuccessMessage', {
+                          baseDevices: result.baseDevices,
+                          overlayDevices: result.overlayDevices,
+                          mergedDevices: result.mergedDevices,
+                        }),
                       });
                     } catch (err) {
                       setMessage({
                         type: 'error',
-                        text: `Server-side merge failed: ${(err as Error).message}`,
+                        text: t('configDiff.serverMergeFailedMessage', {
+                          error: (err as Error).message,
+                        }),
                       });
                     }
                   }}
                 >
-                  Run server merge
+                  {t('configDiff.runServerMergeButton')}
                 </Button>
               </div>
             </CardContent>
@@ -352,21 +360,22 @@ export const ConfigDiffPage: FC = () => {
             <GitCompare className={`mx-auto ${iconSizes['3xl']} text-text-disabled`} />
             <H2 className="mt-content mb-2">{t('configDiff.readyToCompareTitle')}</H2>
             <P className="text-text-muted max-w-md mx-auto">
-              Upload two YAML configuration files above to see a side-by-side comparison with
-              color-coded changes and interactive merge controls.
+              {t('configDiff.emptyStateDescription')}
             </P>
             <div className="flex flex-wrap justify-center gap-comfortable mt-6">
               <div className="flex items-center gap-compact">
                 <div className="w-3 h-3 rounded bg-status-success" />
-                <SmallText className="text-text-muted">Additions</SmallText>
+                <SmallText className="text-text-muted">{t('configDiff.additionsLabel')}</SmallText>
               </div>
               <div className="flex items-center gap-compact">
                 <div className="w-3 h-3 rounded bg-status-error" />
-                <SmallText className="text-text-muted">Deletions</SmallText>
+                <SmallText className="text-text-muted">{t('configDiff.deletionsLabel')}</SmallText>
               </div>
               <div className="flex items-center gap-compact">
                 <div className="w-3 h-3 rounded bg-status-warning" />
-                <SmallText className="text-text-muted">Modifications</SmallText>
+                <SmallText className="text-text-muted">
+                  {t('configDiff.modificationsLabel')}
+                </SmallText>
               </div>
             </div>
           </CardContent>

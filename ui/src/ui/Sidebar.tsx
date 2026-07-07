@@ -194,50 +194,53 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
   onOpenSettings,
   onExpand,
   surfaceTestIds,
-}) => (
-  <div className={`px-3 py-4 border-t border-surface-border ${collapsed ? 'text-center' : ''}`}>
-    <div className={`${collapsed ? 'stack-sm' : 'flex items-center gap-compact'} mb-heading`}>
-      {onOpenHelp ? (
-        <FooterIconButton
-          collapsed={collapsed}
-          onClick={onOpenHelp}
-          icon={HelpCircle}
-          label="Help"
-          title="Open help"
-          data-testid={surfaceTestIds ? 'sidebar-help-button' : undefined}
-        />
+}) => {
+  const { t } = useTranslation();
+  return (
+    <div className={`px-3 py-4 border-t border-surface-border ${collapsed ? 'text-center' : ''}`}>
+      <div className={`${collapsed ? 'stack-sm' : 'flex items-center gap-compact'} mb-heading`}>
+        {onOpenHelp ? (
+          <FooterIconButton
+            collapsed={collapsed}
+            onClick={onOpenHelp}
+            icon={HelpCircle}
+            label={t('footer.help')}
+            title={t('footer.openHelp')}
+            data-testid={surfaceTestIds ? 'sidebar-help-button' : undefined}
+          />
+        ) : null}
+        {onOpenSettings ? (
+          <FooterIconButton
+            collapsed={collapsed}
+            onClick={onOpenSettings}
+            icon={Settings}
+            label={t('footer.settings')}
+            title={t('footer.openSettings')}
+            data-testid={surfaceTestIds ? 'sidebar-settings-button' : undefined}
+          />
+        ) : null}
+      </div>
+
+      {version ? (
+        <div className={`text-xs font-mono text-text-muted ${collapsed ? '' : 'flex-between'}`}>
+          {!collapsed ? <span>{t('footer.version')}</span> : null}
+          <span>{version}</span>
+        </div>
       ) : null}
-      {onOpenSettings ? (
-        <FooterIconButton
-          collapsed={collapsed}
-          onClick={onOpenSettings}
-          icon={Settings}
-          label="Settings"
-          title="Open settings"
-          data-testid={surfaceTestIds ? 'sidebar-settings-button' : undefined}
-        />
+      {collapsed ? (
+        <button
+          type="button"
+          onClick={onExpand}
+          className="mt-inline p-1.5 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-hover transition-colors"
+          title={t('footer.expandSidebar')}
+          aria-label={t('footer.expandSidebar')}
+        >
+          <ChevronRight className={iconSizes.md} />
+        </button>
       ) : null}
     </div>
-
-    {version ? (
-      <div className={`text-xs font-mono text-text-muted ${collapsed ? '' : 'flex-between'}`}>
-        {!collapsed ? <span>Version</span> : null}
-        <span>{version}</span>
-      </div>
-    ) : null}
-    {collapsed ? (
-      <button
-        type="button"
-        onClick={onExpand}
-        className="mt-inline p-1.5 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-hover transition-colors"
-        title="Expand sidebar"
-        aria-label="Expand sidebar"
-      >
-        <ChevronRight className={iconSizes.md} />
-      </button>
-    ) : null}
-  </div>
-);
+  );
+};
 
 interface SidebarBodyProps {
   groups: SidebarNavGroup[];

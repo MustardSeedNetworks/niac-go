@@ -1,5 +1,6 @@
 import { FileUp, LayoutGrid, List, Search } from 'lucide-react';
 import { type FC, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   fetchTemplateContent,
   fetchTemplates,
@@ -43,6 +44,7 @@ export const ConfigPicker: FC<ConfigPickerProps> = ({
   onUpload,
   uploadFile,
 }) => {
+  const { t } = useTranslation('pages');
   const [templates, setTemplates] = useState<Template[]>([]);
   const [userConfigs, setUserConfigs] = useState<UserConfig[]>([]);
   const [loading, setLoading] = useState(true);
@@ -84,7 +86,9 @@ export const ConfigPicker: FC<ConfigPickerProps> = ({
         kind: 'local',
         key: 'local:current',
         name: uploadFile.name,
-        description: `${(uploadFile.size / 1024).toFixed(1)} KB local file`,
+        description: t('configPicker.localFileSize', {
+          size: (uploadFile.size / 1024).toFixed(1),
+        }),
         deviceCount: 0,
         file: uploadFile,
       });
@@ -216,8 +220,8 @@ export const ConfigPicker: FC<ConfigPickerProps> = ({
     } catch (err) {
       setConvertError(
         err instanceof Error
-          ? `Couldn't auto-convert Java DSL: ${err.message}`
-          : "Couldn't auto-convert Java DSL",
+          ? t('configPicker.javaDslConvertFailedWithReason', { reason: err.message })
+          : t('configPicker.javaDslConvertFailed'),
       );
     } finally {
       setConvertingDsl(false);
@@ -234,10 +238,14 @@ export const ConfigPicker: FC<ConfigPickerProps> = ({
           className={`flex items-center gap-1.5 rounded border border-surface-border bg-bg-surface/60 px-3 py-compact text-xs font-medium text-text-primary hover:bg-surface-hover ${
             convertingDsl ? 'cursor-wait opacity-60' : 'cursor-pointer'
           }`}
-          title="Pick a config from disk. YAML is used as-is; legacy Java-DSL (.cfg) is auto-converted."
+          title={t('configPicker.pickFromDiskTitle')}
         >
           <FileUp className={iconSizes.sm} />
-          {convertingDsl ? 'Converting…' : uploadFile ? 'Replace local file' : 'Upload local file…'}
+          {convertingDsl
+            ? t('configPicker.converting')
+            : uploadFile
+              ? t('configPicker.replaceLocalFile')
+              : t('configPicker.uploadLocalFile')}
         </label>
         <input
           id="config-upload"
@@ -253,7 +261,7 @@ export const ConfigPicker: FC<ConfigPickerProps> = ({
             onClick={handleClearLocal}
             className="text-xs font-medium text-status-error hover:text-status-error"
           >
-            Clear
+            {t('configPicker.clearButton')}
           </button>
         )}
       </div>
@@ -271,25 +279,25 @@ export const ConfigPicker: FC<ConfigPickerProps> = ({
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search configs…"
+            placeholder={t('configPicker.searchPlaceholder')}
             className="w-full rounded border border-surface-border bg-bg-surface/60 py-row pl-9 pr-3 text-sm text-text-primary placeholder:text-text-muted focus:border-brand-accent focus:outline-none"
           />
         </div>
         <fieldset
           className="flex rounded border border-surface-border bg-bg-surface/60 p-0.5"
-          aria-label="View density"
+          aria-label={t('configPicker.viewDensityLabel')}
         >
           <ViewToggle
             active={viewMode === 'grid'}
             onClick={() => updateViewMode('grid')}
             icon={<LayoutGrid className={iconSizes.md} />}
-            label="Card view"
+            label={t('configPicker.cardView')}
           />
           <ViewToggle
             active={viewMode === 'list'}
             onClick={() => updateViewMode('list')}
             icon={<List className={iconSizes.md} />}
-            label="Compact list"
+            label={t('configPicker.compactList')}
           />
         </fieldset>
       </div>

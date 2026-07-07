@@ -11,6 +11,7 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { LibraryFileEntry } from '../api/client';
+import '../i18n';
 import { useUIStore } from '../stores/ui-store';
 import { ToastContainer } from '../ui/ToastContainer';
 import { LibraryPcapsPage, LibraryWalksPage } from './LibraryFilesPage';

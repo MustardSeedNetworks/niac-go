@@ -1,5 +1,6 @@
 import { AlertCircle, FileCode, Upload, X } from 'lucide-react';
 import { type FC, useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { iconSizes } from '../../constants/sizes';
 import { SmallText } from '../../ui/Typography';
 import { formatBytes } from '../../utils/format';
@@ -38,6 +39,7 @@ export const FileUploadZone: FC<FileUploadZoneProps> = ({
   onClear,
   disabled,
 }) => {
+  const { t } = useTranslation('pages');
   const [dragOver, setDragOver] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -47,13 +49,13 @@ export const FileUploadZone: FC<FileUploadZoneProps> = ({
 
       // Validate file type
       if (!uploadedFile.name.match(/\.(yaml|yml)$/i)) {
-        setError('Please select a YAML file (.yaml or .yml)');
+        setError(t('configDiff.uploadInvalidTypeError'));
         return;
       }
 
       // Validate file size
       if (uploadedFile.size > MAX_FILE_SIZE) {
-        setError('File too large. Maximum size is 1MB');
+        setError(t('configDiff.uploadTooLargeError'));
         return;
       }
 
@@ -65,10 +67,10 @@ export const FileUploadZone: FC<FileUploadZoneProps> = ({
           size: uploadedFile.size,
         });
       } catch {
-        setError('Failed to read file');
+        setError(t('configDiff.uploadReadFailedError'));
       }
     },
-    [onFileUpload],
+    [onFileUpload, t],
   );
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -115,7 +117,10 @@ export const FileUploadZone: FC<FileUploadZoneProps> = ({
             <div>
               <p className="font-semibold text-text-primary">{file.name}</p>
               <SmallText className="text-status-success">
-                {formatBytes(file.size)} | {file.content.split('\n').length} lines
+                {t('configDiff.fileSummary', {
+                  size: formatBytes(file.size),
+                  lines: file.content.split('\n').length,
+                })}
               </SmallText>
             </div>
           </div>
@@ -124,7 +129,7 @@ export const FileUploadZone: FC<FileUploadZoneProps> = ({
             onClick={onClear}
             disabled={disabled}
             className="rounded-lg p-1.5 text-text-muted hover:bg-surface-hover hover:text-text-primary transition-colors disabled:opacity-50"
-            aria-label={`Remove ${file.name}`}
+            aria-label={t('configDiff.removeFileLabel', { fileName: file.name })}
           >
             <X className={iconSizes.md} />
           </button>
@@ -154,9 +159,7 @@ export const FileUploadZone: FC<FileUploadZoneProps> = ({
         />
         <Upload className={`mx-auto ${iconSizes['2xl']} text-text-muted mb-2`} />
         <p className="text-text-secondary font-medium">{label}</p>
-        <SmallText className="text-text-muted">
-          Drag & drop or click to select a YAML file
-        </SmallText>
+        <SmallText className="text-text-muted">{t('configDiff.dragDropHint')}</SmallText>
       </label>
       {error && (
         <div className="flex items-center gap-compact text-status-error text-sm">

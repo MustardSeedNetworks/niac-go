@@ -1,5 +1,6 @@
 import { Check, Eye, FileCode, FolderOpen, HardDrive, Star } from 'lucide-react';
 import type { FC } from 'react';
+import { useTranslation } from 'react-i18next';
 import { iconSizes } from '../../constants/sizes';
 import { Tag } from '../../ui/Tag';
 import { SmallText } from '../../ui/Typography';
@@ -58,17 +59,15 @@ export const ConfigsList: FC<{
   onClearLocal,
   searching,
 }) => {
+  const { t } = useTranslation('pages');
+
   if (loading) {
-    return <SmallText className="text-text-muted">Loading networks…</SmallText>;
+    return <SmallText className="text-text-muted">{t('configPicker.loadingNetworks')}</SmallText>;
   }
 
   const total = sections.local.length + sections.favorites.length + sections.all.length;
   if (total === 0) {
-    return (
-      <SmallText className="text-text-muted">
-        Nothing matches. Try a different search or upload a local YAML with the button above.
-      </SmallText>
-    );
+    return <SmallText className="text-text-muted">{t('configPicker.noMatches')}</SmallText>;
   }
 
   const renderSection = (label: string, items: ConfigItem[]) => {
@@ -118,9 +117,12 @@ export const ConfigsList: FC<{
 
   return (
     <div className="max-h-[480px] stack-lg overflow-y-auto pr-1">
-      {renderSection('Local upload', sections.local)}
-      {!searching && renderSection('Favorites', sections.favorites)}
-      {renderSection(searching ? 'Results' : 'All networks', sections.all)}
+      {renderSection(t('configPicker.localUploadSection'), sections.local)}
+      {!searching && renderSection(t('configPicker.favoritesSection'), sections.favorites)}
+      {renderSection(
+        searching ? t('configPicker.resultsSection') : t('configPicker.allNetworksSection'),
+        sections.all,
+      )}
     </div>
   );
 };
@@ -130,28 +132,34 @@ const FavoriteStar: FC<{
   favorited: boolean;
   onToggle: (key: string) => void;
   compact?: boolean;
-}> = ({ itemKey, favorited, onToggle, compact }) => (
-  <button
-    type="button"
-    onClick={(e) => {
-      e.stopPropagation();
-      onToggle(itemKey);
-    }}
-    aria-pressed={favorited}
-    aria-label={favorited ? 'Remove from favorites' : 'Add to favorites'}
-    title={favorited ? 'Remove from favorites' : 'Add to favorites'}
-    className={`rounded p-1 transition-colors ${
-      favorited
-        ? 'text-status-warning hover:text-status-warning'
-        : 'text-text-muted hover:text-status-warning'
-    } ${compact ? '' : 'hover:bg-surface-hover'}`}
-  >
-    <Star
-      className={compact ? iconSizes.sm : iconSizes.md}
-      fill={favorited ? 'currentColor' : 'none'}
-    />
-  </button>
-);
+}> = ({ itemKey, favorited, onToggle, compact }) => {
+  const { t } = useTranslation('pages');
+  const label = favorited
+    ? t('configPicker.removeFromFavorites')
+    : t('configPicker.addToFavorites');
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        onToggle(itemKey);
+      }}
+      aria-pressed={favorited}
+      aria-label={label}
+      title={label}
+      className={`rounded p-1 transition-colors ${
+        favorited
+          ? 'text-status-warning hover:text-status-warning'
+          : 'text-text-muted hover:text-status-warning'
+      } ${compact ? '' : 'hover:bg-surface-hover'}`}
+    >
+      <Star
+        className={compact ? iconSizes.sm : iconSizes.md}
+        fill={favorited ? 'currentColor' : 'none'}
+      />
+    </button>
+  );
+};
 
 const ConfigCard: FC<SharedItemProps> = ({
   item,
@@ -162,6 +170,7 @@ const ConfigCard: FC<SharedItemProps> = ({
   onView,
   onClearLocal,
 }) => {
+  const { t } = useTranslation('pages');
   const Icon =
     item.kind === 'builtin'
       ? (TEMPLATE_TYPE_ICON[item.template.type] ?? FileCode)
@@ -194,13 +203,13 @@ const ConfigCard: FC<SharedItemProps> = ({
       <div>
         <div className="font-semibold text-text-primary">{item.name}</div>
         <SmallText className="mt-0.5 line-clamp-2 text-text-muted">
-          {item.description || 'No description'}
+          {item.description || t('configPicker.noDescription')}
         </SmallText>
       </div>
       <div className="flex flex-wrap items-center gap-1.5">
         {item.kind !== 'local' && (
           <Tag colorScheme="purple" className="text-[10px]">
-            {item.deviceCount} {item.deviceCount === 1 ? 'device' : 'devices'}
+            {t('configPicker.deviceCount', { count: item.deviceCount })}
           </Tag>
         )}
         {item.kind === 'builtin' &&
@@ -214,16 +223,16 @@ const ConfigCard: FC<SharedItemProps> = ({
         {selected ? (
           <div className="flex flex-1 items-center justify-center gap-1.5 rounded bg-brand-primary/30 px-cell py-compact-md text-xs font-medium text-brand-accent ring-1 ring-brand-accent/60">
             <Check className={iconSizes.sm} />
-            <span>Selected</span>
+            <span>{t('configPicker.selectedLabel')}</span>
           </div>
         ) : (
           <button
             type="button"
             onClick={() => onSelect(item)}
             className="flex-1 rounded bg-brand-primary/20 px-cell py-compact-md text-xs font-medium text-brand-accent ring-1 ring-brand-accent/40 hover:bg-brand-primary/30"
-            title="Select this network — click Start Simulation below to run it"
+            title={t('configPicker.selectNetworkTitle')}
           >
-            Select
+            {t('configPicker.selectButton')}
           </button>
         )}
         {item.kind === 'builtin' && (
@@ -231,7 +240,7 @@ const ConfigCard: FC<SharedItemProps> = ({
             type="button"
             onClick={() => onView(item)}
             className="rounded border border-surface-border bg-bg-surface/60 px-cell py-compact-md text-xs font-medium text-text-primary hover:bg-surface-hover"
-            title="Preview YAML"
+            title={t('configPicker.previewYamlTitle')}
           >
             <Eye className={iconSizes.sm} />
           </button>
@@ -241,9 +250,9 @@ const ConfigCard: FC<SharedItemProps> = ({
             type="button"
             onClick={onClearLocal}
             className="rounded border border-status-error/30 bg-status-error/10 px-cell py-compact-md text-xs font-medium text-status-error hover:bg-status-error/20"
-            title="Drop the local file"
+            title={t('configPicker.dropLocalFileTitle')}
           >
-            Clear
+            {t('configPicker.clearButton')}
           </button>
         )}
       </div>
@@ -259,63 +268,71 @@ const ConfigRow: FC<SharedItemProps> = ({
   onToggleFavorite,
   onView,
   onClearLocal,
-}) => (
-  <li
-    className={`flex items-center gap-default px-3 py-row transition-colors ${
-      selected ? 'bg-brand-primary/10' : 'hover:bg-surface-hover'
-    }`}
-  >
-    {item.kind !== 'local' && (
-      <FavoriteStar itemKey={item.key} favorited={favorited} onToggle={onToggleFavorite} compact />
-    )}
-    <button
-      type="button"
-      onClick={() => onSelect(item)}
-      className="flex-1 text-left"
-      title={`Select ${item.name}`}
+}) => {
+  const { t } = useTranslation('pages');
+  return (
+    <li
+      className={`flex items-center gap-default px-3 py-row transition-colors ${
+        selected ? 'bg-brand-primary/10' : 'hover:bg-surface-hover'
+      }`}
     >
-      <div className="flex items-center gap-compact">
-        <span className="font-medium text-text-primary">{item.name}</span>
-        {item.kind !== 'local' && (
-          <Tag colorScheme="purple" className="text-[10px]">
-            {item.deviceCount} {item.deviceCount === 1 ? 'device' : 'devices'}
-          </Tag>
-        )}
-        {item.kind === 'local' && (
-          <Tag colorScheme="blue" className="text-[10px]">
-            Local
-          </Tag>
-        )}
-      </div>
-      {item.description && (
-        <SmallText
-          className={`mt-0.5 line-clamp-1 text-text-muted ${
-            item.kind === 'saved' ? 'font-mono text-[11px] text-text-muted' : ''
-          }`}
-        >
-          {item.description}
-        </SmallText>
+      {item.kind !== 'local' && (
+        <FavoriteStar
+          itemKey={item.key}
+          favorited={favorited}
+          onToggle={onToggleFavorite}
+          compact
+        />
       )}
-    </button>
-    {item.kind === 'builtin' && (
       <button
         type="button"
-        onClick={() => onView(item)}
-        className="rounded p-1.5 text-text-muted hover:bg-surface-hover hover:text-text-primary"
-        title="Preview the template YAML"
+        onClick={() => onSelect(item)}
+        className="flex-1 text-left"
+        title={t('configPicker.selectItemTitle', { name: item.name })}
       >
-        <Eye className={iconSizes.md} />
+        <div className="flex items-center gap-compact">
+          <span className="font-medium text-text-primary">{item.name}</span>
+          {item.kind !== 'local' && (
+            <Tag colorScheme="purple" className="text-[10px]">
+              {t('configPicker.deviceCount', { count: item.deviceCount })}
+            </Tag>
+          )}
+          {item.kind === 'local' && (
+            <Tag colorScheme="blue" className="text-[10px]">
+              {t('configPicker.localTag')}
+            </Tag>
+          )}
+        </div>
+        {item.description && (
+          <SmallText
+            className={`mt-0.5 line-clamp-1 text-text-muted ${
+              item.kind === 'saved' ? 'font-mono text-[11px] text-text-muted' : ''
+            }`}
+          >
+            {item.description}
+          </SmallText>
+        )}
       </button>
-    )}
-    {item.kind === 'local' && (
-      <button
-        type="button"
-        onClick={onClearLocal}
-        className="text-xs font-medium text-status-error hover:text-status-error"
-        title="Drop the local file"
-      >
-        Clear
-      </button>
-    )}
-  </li>
-);
+      {item.kind === 'builtin' && (
+        <button
+          type="button"
+          onClick={() => onView(item)}
+          className="rounded p-1.5 text-text-muted hover:bg-surface-hover hover:text-text-primary"
+          title={t('configPicker.previewTemplateYamlTitle')}
+        >
+          <Eye className={iconSizes.md} />
+        </button>
+      )}
+      {item.kind === 'local' && (
+        <button
+          type="button"
+          onClick={onClearLocal}
+          className="text-xs font-medium text-status-error hover:text-status-error"
+          title={t('configPicker.dropLocalFileTitle')}
+        >
+          {t('configPicker.clearButton')}
+        </button>
+      )}
+    </li>
+  );
+};

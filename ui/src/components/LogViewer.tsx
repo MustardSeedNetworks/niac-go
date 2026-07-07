@@ -1,5 +1,6 @@
 import { AlertCircle, Check, ChevronDown, ChevronRight, Copy, Terminal } from 'lucide-react';
 import { type FC, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { LogEntry, LogLevel } from '../api/types';
 import { iconSizes } from '../constants/sizes';
 import { copyToClipboard } from '../utils/file';
@@ -138,6 +139,7 @@ function formatDetails(details: Record<string, unknown>): string {
 
 // Individual log entry component
 const LogEntryRow: FC<{ log: LogEntry; searchQuery: string }> = memo(({ log, searchQuery }) => {
+  const { t } = useTranslation('pages');
   const [expanded, setExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -245,8 +247,8 @@ const LogEntryRow: FC<{ log: LogEntry; searchQuery: string }> = memo(({ log, sea
           type="button"
           onClick={handleCopy}
           className="shrink-0 p-1 rounded hover:bg-surface-hover text-text-muted hover:text-text-secondary transition-colors"
-          title="Copy log entry"
-          aria-label="Copy log entry"
+          title={t('debug.copyLogEntry')}
+          aria-label={t('debug.copyLogEntry')}
         >
           {copied ? (
             <Check className={`${iconSizes.sm} text-status-success`} />
@@ -263,23 +265,25 @@ const LogEntryRow: FC<{ log: LogEntry; searchQuery: string }> = memo(({ log, sea
             {/* Metadata row */}
             <div className="flex flex-wrap gap-comfortable text-xs text-text-muted">
               <span>
-                <strong className="text-text-muted">Time:</strong>{' '}
+                <strong className="text-text-muted">{t('debug.timeLabel')}</strong>{' '}
                 {formatFullTimestamp(log.timestamp)}
               </span>
               {log.source && (
                 <span>
-                  <strong className="text-text-muted">Source:</strong> {log.source}
+                  <strong className="text-text-muted">{t('debug.sourceLabel')}</strong> {log.source}
                 </span>
               )}
               <span>
-                <strong className="text-text-muted">ID:</strong> {log.id}
+                <strong className="text-text-muted">{t('debug.idLabel')}</strong> {log.id}
               </span>
             </div>
 
             {/* Details JSON */}
             <div className="rounded-lg border border-surface-border bg-bg-base/70 overflow-hidden">
               <div className="flex-between px-3 py-compact-md bg-bg-surface/50 border-b border-surface-border">
-                <span className="text-xs font-medium text-text-muted">Details</span>
+                <span className="text-xs font-medium text-text-muted">
+                  {t('debug.detailsLabel')}
+                </span>
                 <button
                   type="button"
                   onClick={async (e) => {
@@ -289,8 +293,8 @@ const LogEntryRow: FC<{ log: LogEntry; searchQuery: string }> = memo(({ log, sea
                     }
                   }}
                   className="p-1 rounded hover:bg-surface-hover text-text-muted hover:text-text-secondary transition-colors"
-                  title="Copy details JSON"
-                  aria-label="Copy details JSON"
+                  title={t('debug.copyDetailsJson')}
+                  aria-label={t('debug.copyDetailsJson')}
                 >
                   <Copy className={iconSizes.xs} />
                 </button>
@@ -309,6 +313,7 @@ const LogEntryRow: FC<{ log: LogEntry; searchQuery: string }> = memo(({ log, sea
 LogEntryRow.displayName = 'LogEntryRow';
 
 export const LogViewer: FC<LogViewerProps> = memo(({ logs, searchQuery, autoScroll }) => {
+  const { t } = useTranslation('pages');
   const containerRef = useRef<HTMLDivElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
 
@@ -349,10 +354,8 @@ export const LogViewer: FC<LogViewerProps> = memo(({ logs, searchQuery, autoScro
             <Terminal className={`${iconSizes.xl} text-text-disabled`} />
           </div>
           <div>
-            <p className="text-text-muted font-medium">No logs to display</p>
-            <p className="mt-tight text-sm text-text-disabled">
-              Logs will appear here when the debug console receives data
-            </p>
+            <p className="text-text-muted font-medium">{t('debug.noLogsToDisplay')}</p>
+            <p className="mt-tight text-sm text-text-disabled">{t('debug.noLogsHint')}</p>
           </div>
         </div>
       </div>
@@ -387,7 +390,7 @@ export const LogViewer: FC<LogViewerProps> = memo(({ logs, searchQuery, autoScro
         ref={containerRef}
         className="h-[500px] overflow-y-auto rounded-lg border border-surface-border bg-bg-base/70 scrollbar-thin scrollbar-track-surface-base scrollbar-thumb-surface-border"
         role="log"
-        aria-label="Debug console log output"
+        aria-label={t('debug.logOutputAriaLabel')}
         aria-live="polite"
       >
         {renderedLogs}
