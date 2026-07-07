@@ -118,19 +118,21 @@ export const MergeControls: FC<MergeControlsProps> = ({
         <div className="flex-between">
           <H2 className="flex items-center gap-compact">
             <FileCheck className={`${iconSizes.lg} text-brand-accent`} />
-            Merge Controls
+            {t('configDiff.mergeControlsTitle')}
           </H2>
           {stats.totalChanges > 0 && (
             <div className="flex items-center gap-compact">
               {stats.isComplete ? (
                 <Tag colorScheme="green" className="flex items-center gap-tight">
                   <CheckCircle2 className={iconSizes.xs} />
-                  All resolved
+                  {t('configDiff.allResolvedTag')}
                 </Tag>
               ) : (
                 <Tag colorScheme="yellow" className="flex items-center gap-tight">
                   <AlertCircle className={iconSizes.xs} />
-                  {stats.totalChanges - stats.decisionsCount} pending
+                  {t('configDiff.pendingCount', {
+                    count: stats.totalChanges - stats.decisionsCount,
+                  })}
                 </Tag>
               )}
             </div>
@@ -141,7 +143,9 @@ export const MergeControls: FC<MergeControlsProps> = ({
         {stats.totalChanges > 0 && (
           <div className="stack-sm">
             <div className="flex-between text-sm">
-              <SmallText className="text-text-muted">Resolution progress</SmallText>
+              <SmallText className="text-text-muted">
+                {t('configDiff.resolutionProgress')}
+              </SmallText>
               <SmallText className="text-text-secondary">
                 {stats.decisionsCount} / {stats.totalChanges} ({stats.progress}
                 %)
@@ -177,22 +181,22 @@ export const MergeControls: FC<MergeControlsProps> = ({
         {/* Decision breakdown */}
         {stats.decisionsCount > 0 && (
           <div className="flex items-center gap-comfortable flex-wrap">
-            <SmallText className="text-text-muted">Decisions:</SmallText>
+            <SmallText className="text-text-muted">{t('configDiff.decisionsLabel')}</SmallText>
             {stats.leftCount > 0 && (
               <Tag colorScheme="blue" className="text-xs">
                 <ChevronLeft className={`${iconSizes.xs} mr-1`} />
-                {stats.leftCount} left
+                {t('configDiff.leftCount', { count: stats.leftCount })}
               </Tag>
             )}
             {stats.rightCount > 0 && (
               <Tag colorScheme="green" className="text-xs">
                 <ChevronRight className={`${iconSizes.xs} mr-1`} />
-                {stats.rightCount} right
+                {t('configDiff.rightCount', { count: stats.rightCount })}
               </Tag>
             )}
             {stats.bothCount > 0 && (
               <Tag colorScheme="purple" className="text-xs">
-                {stats.bothCount} both
+                {t('configDiff.bothCount', { count: stats.bothCount })}
               </Tag>
             )}
           </div>
@@ -201,7 +205,7 @@ export const MergeControls: FC<MergeControlsProps> = ({
         {/* Quick actions */}
         <div className="stack">
           <SmallText className="text-text-muted uppercase tracking-wide font-semibold">
-            Quick Actions
+            {t('configDiff.quickActionsLabel')}
           </SmallText>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-default">
@@ -212,7 +216,7 @@ export const MergeControls: FC<MergeControlsProps> = ({
               leftIcon={<ChevronLeft className={iconSizes.md} />}
               className="justify-start"
             >
-              Accept all from {leftLabel}
+              {t('configDiff.acceptAllFrom', { label: leftLabel })}
             </Button>
 
             <Button
@@ -222,7 +226,7 @@ export const MergeControls: FC<MergeControlsProps> = ({
               leftIcon={<ChevronRight className={iconSizes.md} />}
               className="justify-start"
             >
-              Accept all from {rightLabel}
+              {t('configDiff.acceptAllFrom', { label: rightLabel })}
             </Button>
           </div>
         </div>
@@ -235,7 +239,7 @@ export const MergeControls: FC<MergeControlsProps> = ({
             onClick={onPreview}
             leftIcon={<FileCheck className={iconSizes.md} />}
           >
-            Preview Merged
+            {t('configDiff.previewMergedButton')}
           </Button>
 
           <Button
@@ -244,7 +248,7 @@ export const MergeControls: FC<MergeControlsProps> = ({
             onClick={onExport}
             leftIcon={<Download className={iconSizes.md} />}
           >
-            Export Result
+            {t('configDiff.exportResultButton')}
           </Button>
 
           <Button
@@ -253,7 +257,7 @@ export const MergeControls: FC<MergeControlsProps> = ({
             onClick={() => setShowResetConfirm(true)}
             leftIcon={<RotateCcw className={iconSizes.md} />}
           >
-            Reset Decisions
+            {t('configDiff.resetDecisionsButton')}
           </Button>
 
           <Button
@@ -262,16 +266,16 @@ export const MergeControls: FC<MergeControlsProps> = ({
             onClick={() => setShowClearAllConfirm(true)}
             leftIcon={<Trash2 className={iconSizes.md} />}
           >
-            Clear All
+            {t('configDiff.clearAllButton')}
           </Button>
         </div>
 
         {/* Help text */}
         <SmallText className="text-text-muted">
           {stats.totalChanges === 0
-            ? 'Upload two YAML config files to start comparing and merging.'
+            ? t('configDiff.helpTextEmpty')
             : stats.isComplete
-              ? 'All changes resolved. You can now preview and export the merged configuration.'
+              ? t('configDiff.helpTextComplete')
               : t('configDiff.resolveAllBeforePreview')}
         </SmallText>
       </CardContent>
@@ -281,9 +285,9 @@ export const MergeControls: FC<MergeControlsProps> = ({
         isOpen={showAcceptLeftConfirm}
         onConfirm={handleAcceptAllLeft}
         onCancel={() => setShowAcceptLeftConfirm(false)}
-        title={`Accept All from ${leftLabel}`}
-        message={`Accept all changes from "${leftLabel}"? This will override your current decisions.`}
-        confirmLabel="Accept All"
+        title={t('configDiff.acceptAllFromTitle', { label: leftLabel })}
+        message={t('configDiff.acceptAllFromMessage', { label: leftLabel })}
+        confirmLabel={t('configDiff.acceptAllConfirmLabel')}
         confirmTone="blue"
       />
 
@@ -292,9 +296,9 @@ export const MergeControls: FC<MergeControlsProps> = ({
         isOpen={showAcceptRightConfirm}
         onConfirm={handleAcceptAllRight}
         onCancel={() => setShowAcceptRightConfirm(false)}
-        title={`Accept All from ${rightLabel}`}
-        message={`Accept all changes from "${rightLabel}"? This will override your current decisions.`}
-        confirmLabel="Accept All"
+        title={t('configDiff.acceptAllFromTitle', { label: rightLabel })}
+        message={t('configDiff.acceptAllFromMessage', { label: rightLabel })}
+        confirmLabel={t('configDiff.acceptAllConfirmLabel')}
         confirmTone="green"
       />
 
@@ -303,9 +307,9 @@ export const MergeControls: FC<MergeControlsProps> = ({
         isOpen={showResetConfirm}
         onConfirm={handleReset}
         onCancel={() => setShowResetConfirm(false)}
-        title="Reset Decisions"
-        message="Reset all merge decisions? This cannot be undone."
-        confirmLabel="Reset"
+        title={t('configDiff.resetDecisionsButton')}
+        message={t('configDiff.resetConfirmMessage')}
+        confirmLabel={t('configDiff.resetConfirmLabel')}
         confirmTone="red"
       />
 
@@ -314,9 +318,9 @@ export const MergeControls: FC<MergeControlsProps> = ({
         isOpen={showClearAllConfirm}
         onConfirm={handleClearAll}
         onCancel={() => setShowClearAllConfirm(false)}
-        title="Clear All"
-        message="Clear both loaded files and all merge decisions and start over?"
-        confirmLabel="Clear All"
+        title={t('configDiff.clearAllButton')}
+        message={t('configDiff.clearAllConfirmMessage')}
+        confirmLabel={t('configDiff.clearAllButton')}
         confirmTone="red"
       />
     </Card>
@@ -333,6 +337,7 @@ interface MergePreviewModalProps {
 }
 
 export const MergePreviewModal: FC<MergePreviewModalProps> = ({ content, onClose, onExport }) => {
+  const { t } = useTranslation('pages');
   const lineCount = useMemo(() => content.split('\n').length, [content]);
 
   const handleCopy = useCallback(async () => {
@@ -345,7 +350,7 @@ export const MergePreviewModal: FC<MergePreviewModalProps> = ({ content, onClose
         type="button"
         className="absolute inset-0 bg-scrim/70 backdrop-blur-sm"
         onClick={onClose}
-        aria-label="Close modal"
+        aria-label={t('configDiff.closeModalLabel')}
       />
       <div
         className="relative mx-4 max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-2xl border border-surface-border bg-bg-surface/95 shadow-2xl flex flex-col"
@@ -361,19 +366,21 @@ export const MergePreviewModal: FC<MergePreviewModalProps> = ({ content, onClose
             </div>
             <div>
               <h2 id="preview-modal-title" className="heading-3 text-text-primary">
-                Merged Configuration Preview
+                {t('configDiff.previewModalTitle')}
               </h2>
-              <SmallText className="text-text-muted">{lineCount} lines</SmallText>
+              <SmallText className="text-text-muted">
+                {t('configDiff.lineCount', { count: lineCount })}
+              </SmallText>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
             className="rounded-lg pad-xs text-text-muted hover:bg-surface-hover hover:text-text-primary transition-colors"
-            aria-label="Close modal"
+            aria-label={t('configDiff.closeModalLabel')}
           >
             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <title>Close</title>
+              <title>{t('configDiff.closeButton')}</title>
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -399,13 +406,13 @@ export const MergePreviewModal: FC<MergePreviewModalProps> = ({ content, onClose
         {/* Modal Footer */}
         <div className="flex justify-end gap-default border-t border-surface-border px-6 py-4 bg-bg-base/50 flex-shrink-0">
           <Button variant="outline" onClick={onClose}>
-            Close
+            {t('configDiff.closeButton')}
           </Button>
           <Button variant="outline" onClick={handleCopy}>
-            Copy to Clipboard
+            {t('configDiff.copyToClipboardButton')}
           </Button>
           <Button tone="violet" onClick={onExport} leftIcon={<Download className={iconSizes.md} />}>
-            Download YAML
+            {t('configDiff.downloadYamlButton')}
           </Button>
         </div>
       </div>

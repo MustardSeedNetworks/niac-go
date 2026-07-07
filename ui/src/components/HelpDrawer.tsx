@@ -27,7 +27,8 @@ import {
   X,
 } from 'lucide-react';
 import type { ReactElement, ReactNode } from 'react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useBuildVersion } from '../hooks/useBuildVersion';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import { cn, drawer, layout, spacing } from '../styles/theme';
@@ -50,20 +51,28 @@ interface TabConfig {
   icon: ReactNode;
 }
 
-const TABS: TabConfig[] = [
-  { id: 'overview', label: 'Overview', icon: <LayoutGrid className="w-4 h-4" /> },
-  { id: 'devices', label: 'Devices', icon: <Boxes className="w-4 h-4" /> },
-  { id: 'protocols', label: 'Protocols', icon: <Network className="w-4 h-4" /> },
-  { id: 'commands', label: 'Commands', icon: <Terminal className="w-4 h-4" /> },
-  { id: 'glossary', label: 'Glossary', icon: <Book className="w-4 h-4" /> },
-  { id: 'shortcuts', label: 'Shortcuts', icon: <Keyboard className="w-4 h-4" /> },
-  { id: 'faq', label: 'FAQ', icon: <MessageCircleQuestion className="w-4 h-4" /> },
-];
-
 export function HelpDrawer({ isOpen, onClose }: HelpDrawerProps): ReactElement | null {
+  const { t } = useTranslation('help');
   const [activeTab, setActiveTab] = useState<HelpTab>('overview');
   const [searchQuery, setSearchQuery] = useState('');
   const buildVersion = useBuildVersion();
+
+  const TABS: TabConfig[] = useMemo(
+    () => [
+      { id: 'overview', label: t('tabs.overview'), icon: <LayoutGrid className="w-4 h-4" /> },
+      { id: 'devices', label: t('tabs.devices'), icon: <Boxes className="w-4 h-4" /> },
+      { id: 'protocols', label: t('tabs.protocols'), icon: <Network className="w-4 h-4" /> },
+      { id: 'commands', label: t('tabs.commands'), icon: <Terminal className="w-4 h-4" /> },
+      { id: 'glossary', label: t('tabs.glossary'), icon: <Book className="w-4 h-4" /> },
+      { id: 'shortcuts', label: t('tabs.shortcuts'), icon: <Keyboard className="w-4 h-4" /> },
+      {
+        id: 'faq',
+        label: t('tabs.faq'),
+        icon: <MessageCircleQuestion className="w-4 h-4" />,
+      },
+    ],
+    [t],
+  );
 
   const drawerRef = useFocusTrap<HTMLDivElement>({
     isActive: isOpen,
@@ -82,7 +91,7 @@ export function HelpDrawer({ isOpen, onClose }: HelpDrawerProps): ReactElement |
           type="button"
           className={cn(drawer.backdrop, 'cursor-default')}
           onClick={onClose}
-          aria-label="Close help drawer"
+          aria-label={t('drawer.backdropAriaLabel')}
         />
 
         {/* Drawer */}
@@ -91,7 +100,7 @@ export function HelpDrawer({ isOpen, onClose }: HelpDrawerProps): ReactElement |
           data-testid="help-drawer"
           role="dialog"
           aria-modal="true"
-          aria-label="Help"
+          aria-label={t('drawer.drawerAriaLabel')}
           className={cn(drawer.content, drawer.size.lg, 'animate-slide-in-right')}
         >
           {/* Header */}
@@ -100,7 +109,7 @@ export function HelpDrawer({ isOpen, onClose }: HelpDrawerProps): ReactElement |
               <div className={layout.inline.default}>
                 <HelpCircle className="w-5 h-5 text-brand-accent" aria-hidden="true" />
                 <div>
-                  <h2 className="heading-3 text-text-primary">Help</h2>
+                  <h2 className="heading-3 text-text-primary">{t('drawer.title')}</h2>
                   <p
                     className="caption text-text-muted"
                     data-testid="help-drawer-version"
@@ -118,7 +127,7 @@ export function HelpDrawer({ isOpen, onClose }: HelpDrawerProps): ReactElement |
                   'pad-xs hover:bg-surface-hover rounded-lg transition-colors',
                   'text-text-muted hover:text-text-primary',
                 )}
-                aria-label="Close help"
+                aria-label={t('drawer.closeAriaLabel')}
               >
                 <X className="w-5 h-5" aria-hidden="true" />
               </button>
@@ -130,7 +139,7 @@ export function HelpDrawer({ isOpen, onClose }: HelpDrawerProps): ReactElement |
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
                 <input
                   type="text"
-                  placeholder="Search help..."
+                  placeholder={t('drawer.searchPlaceholder')}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className={cn(

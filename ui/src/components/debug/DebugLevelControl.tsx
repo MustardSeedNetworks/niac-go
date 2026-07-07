@@ -1,5 +1,6 @@
 import { Activity } from 'lucide-react';
-import { type FC, useCallback, useEffect, useState } from 'react';
+import { type FC, useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { fetchDebugLevel, updateDebugLevel } from '../../api/client';
 import type { DebugLevel } from '../../api/types';
 import { iconSizes } from '../../constants/sizes';
@@ -15,16 +16,19 @@ interface LevelOption {
 // Ordered least→most verbose. These five map 1:1 onto the backend ladder
 // (0..4); there is no per-protocol surface — NIAC's handlers read one global
 // level live, so a change takes effect with no restart.
-const LEVELS: LevelOption[] = [
-  { value: 'off', label: 'Off', hint: 'Silence all protocol logging' },
-  { value: 'basic', label: 'Basic', hint: 'Key lifecycle lines only' },
-  { value: 'info', label: 'Info', hint: 'Normal operational detail' },
-  { value: 'verbose', label: 'Verbose', hint: 'Per-packet decision detail' },
-  { value: 'trace', label: 'Trace', hint: 'Everything, including raw frames' },
-];
-
-const labelFor = (value: DebugLevel): string =>
-  LEVELS.find((o) => o.value === value)?.label ?? value;
+function useLevels(): LevelOption[] {
+  const { t } = useTranslation('pages');
+  return useMemo(
+    () => [
+      { value: 'off', label: t('debug.levelOff'), hint: t('debug.levelOffHint') },
+      { value: 'basic', label: t('debug.levelBasic'), hint: t('debug.levelBasicHint') },
+      { value: 'info', label: t('debug.levelInfo'), hint: t('debug.levelInfoHint') },
+      { value: 'verbose', label: t('debug.levelVerbose'), hint: t('debug.levelVerboseHint') },
+      { value: 'trace', label: t('debug.levelTrace'), hint: t('debug.levelTraceHint') },
+    ],
+    [t],
+  );
+}
 
 /**
  * DebugLevelControl — the single global debug-verbosity control. Reads
@@ -32,6 +36,12 @@ const labelFor = (value: DebugLevel): string =>
  * stack honors the new level live.
  */
 export const DebugLevelControl: FC = () => {
+  const { t } = useTranslation('pages');
+  const LEVELS = useLevels();
+  const labelFor = useCallback(
+    (value: DebugLevel): string => LEVELS.find((o) => o.value === value)?.label ?? value,
+    [LEVELS],
+  );
   const [level, setLevel] = useState<DebugLevel | null>(null);
   const [defaultLevel, setDefaultLevel] = useState<DebugLevel>('basic');
   const [loading, setLoading] = useState(true);
@@ -97,13 +107,11 @@ export const DebugLevelControl: FC = () => {
     <div className="stack" data-testid="debug-level-control">
       <H2 className="flex items-center gap-compact text-lg">
         <Activity className={`${iconSizes.lg} text-brand-accent`} />
-        Debug level
+        {t('debug.debugLevelTitle')}
       </H2>
-      <SmallText className="text-text-muted">
-        Sets how much detail every protocol logs to the Debug Console. Takes effect immediately.
-      </SmallText>
+      <SmallText className="text-text-muted">{t('debug.debugLevelDescription')}</SmallText>
       <fieldset className="border-0 p-0">
-        <legend className="sr-only">Debug level</legend>
+        <legend className="sr-only">{t('debug.debugLevelTitle')}</legend>
         <div className="flex flex-wrap gap-compact">
           {LEVELS.map((opt) => {
             const active = level === opt.value;
@@ -135,7 +143,7 @@ export const DebugLevelControl: FC = () => {
         </div>
       </fieldset>
       <SmallText className="text-text-muted">
-        Default: {labelFor(defaultLevel)}. Off silences everything; Trace is the loudest.
+        {t('debug.debugLevelDefault', { level: labelFor(defaultLevel) })}
       </SmallText>
       {error && (
         <SmallText className="text-status-error" role="alert">
