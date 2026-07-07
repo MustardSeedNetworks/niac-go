@@ -26,6 +26,7 @@ export const ActionsMenu: FC<{
   onExportGraphML: () => void;
 }> = ({ disabled, onExportPNG, onExportJSON, onExportDOT, onExportGraphML }) => {
   const { t } = useTranslation('pages');
+  const { t: tCommon } = useTranslation('common');
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -62,7 +63,7 @@ export const ActionsMenu: FC<{
         aria-haspopup="menu"
         aria-expanded={open}
       >
-        Export
+        {tCommon('buttons.export')}
       </Button>
       {open && (
         <div

@@ -6,6 +6,7 @@
  */
 
 import type { FC } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { DeviceSummary } from '../../api/types';
 import {
   topologyDeviceColors as deviceColors,
@@ -25,6 +26,8 @@ interface DeviceDetailsPanelProps {
  * and provides actions to edit or close.
  */
 export const DeviceDetailsPanel: FC<DeviceDetailsPanelProps> = ({ device, onClose, onEdit }) => {
+  const { t } = useTranslation('pages');
+  const { t: tCommon } = useTranslation('common');
   if (!device) {
     return null;
   }
@@ -54,8 +57,8 @@ export const DeviceDetailsPanel: FC<DeviceDetailsPanelProps> = ({ device, onClos
           type="button"
           onClick={onClose}
           className="text-text-muted hover:text-text-primary text-xl"
-          title="Close the device details panel and return to the topology view"
-          aria-label="Close device details"
+          title={t('topology.deviceDetails.closeTitle')}
+          aria-label={t('topology.deviceDetails.closeAriaLabel')}
         >
           &times;
         </button>
@@ -64,7 +67,7 @@ export const DeviceDetailsPanel: FC<DeviceDetailsPanelProps> = ({ device, onClos
       {device.ips && device.ips.length > 0 && (
         <div className="mb-heading">
           <div className="text-xs text-text-muted uppercase tracking-wide mb-tight">
-            IP Addresses
+            {t('devices.ipAddressesHeader')}
           </div>
           <div className="stack-xs">
             {device.ips.map((ip) => (
@@ -78,7 +81,9 @@ export const DeviceDetailsPanel: FC<DeviceDetailsPanelProps> = ({ device, onClos
 
       {device.protocols && device.protocols.length > 0 && (
         <div className="mb-content">
-          <div className="text-xs text-text-muted uppercase tracking-wide mb-tight">Protocols</div>
+          <div className="text-xs text-text-muted uppercase tracking-wide mb-tight">
+            {t('packets.stats.protocols')}
+          </div>
           <div className="flex flex-wrap gap-tight">
             {device.protocols.map((proto) => (
               <Tag key={proto} colorScheme="purple" className="text-xs">
@@ -91,10 +96,10 @@ export const DeviceDetailsPanel: FC<DeviceDetailsPanelProps> = ({ device, onClos
 
       <div className="flex gap-compact">
         <Button size="sm" tone="violet" onClick={() => onEdit?.(device)} className="flex-1">
-          Edit Device
+          {t('deviceEditor.editLabel')}
         </Button>
         <Button size="sm" variant="outline" onClick={onClose}>
-          Close
+          {tCommon('buttons.close')}
         </Button>
       </div>
     </div>

@@ -1,4 +1,5 @@
 import { type FC, memo, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useTimeDisplay } from '../hooks/useTimeDisplay';
 import { Tag } from '../ui/Tag';
 import { SmallText } from '../ui/Typography';
@@ -85,6 +86,7 @@ PacketRow.displayName = 'PacketRow';
  */
 export const PacketList: FC<PacketListProps> = memo(
   ({ packets, selectedPacketId, onSelectPacket, autoScroll, getRowStyle }) => {
+    const { t } = useTranslation('pages');
     const { mode: timeMode, cycleMode: cycleTimeMode } = useTimeDisplay();
     const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -104,8 +106,8 @@ export const PacketList: FC<PacketListProps> = memo(
       return (
         <div className="h-full flex-center text-text-muted">
           <div className="text-center">
-            <p className="text-sm">No packets to display</p>
-            <SmallText>Waiting for packet stream...</SmallText>
+            <p className="text-sm">{t('packets.list.noPacketsTitle')}</p>
+            <SmallText>{t('packets.list.waitingForStream')}</SmallText>
           </div>
         </div>
       );
@@ -117,9 +119,9 @@ export const PacketList: FC<PacketListProps> = memo(
           type="button"
           onClick={cycleTimeMode}
           className="text-xs text-text-muted hover:text-brand-accent mb-tight text-left select-none"
-          title="Click to cycle: Absolute / Relative / Delta"
+          title={t('packets.list.cycleTimeModeTitle')}
         >
-          Mode: {getTimeDisplayLabel(timeMode)}
+          {t('packets.list.modeLabel')} {getTimeDisplayLabel(timeMode)}
         </button>
         <div
           ref={scrollContainerRef}

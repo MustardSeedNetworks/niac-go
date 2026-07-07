@@ -211,7 +211,7 @@ export const WalkAnalyzerPage: FC = () => {
             <CardContent className="stack-lg">
               <h2 className="heading-3 text-text-primary">Interfaces</h2>
               {interfaces.length === 0 ? (
-                <p className="text-sm text-text-muted">No interfaces found.</p>
+                <p className="text-sm text-text-muted">{t('walkAnalyzer.noInterfacesFound')}</p>
               ) : (
                 <table className="w-full text-sm">
                   <thead className="bg-bg-base/40 text-left text-xs uppercase tracking-wider text-text-muted">

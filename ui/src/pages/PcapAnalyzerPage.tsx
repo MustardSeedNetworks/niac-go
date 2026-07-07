@@ -56,6 +56,7 @@ function pcapPacketToPacket(pcapPacket: PcapPacket): Packet {
 export const PcapAnalyzerPage: FC = () => {
   const { t } = useTranslation('common');
   const { t: tHelp } = useTranslation('help');
+  const { t: tPages } = useTranslation('pages');
 
   // File and analysis state
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -127,14 +128,14 @@ export const PcapAnalyzerPage: FC = () => {
       });
 
       if (!uploadResponse.success) {
-        throw new Error(uploadResponse.message || 'Upload failed');
+        throw new Error(uploadResponse.message || tPages('libraryPcaps.analyzer.uploadFailed'));
       }
 
       // Fetch the analysis result
       const result = await fetchPcapAnalysis(uploadResponse.analysisId);
 
       setAnalysisResult(result);
-      setSuccess(`Successfully analyzed ${result.packets.length} packets`);
+      setSuccess(tPages('libraryPcaps.analyzer.analyzeSuccess', { count: result.packets.length }));
 
       // Auto-select first packet
       if (result.packets.length > 0) {
@@ -145,7 +146,7 @@ export const PcapAnalyzerPage: FC = () => {
     } finally {
       setIsAnalyzing(false);
     }
-  }, [selectedFile, showError]);
+  }, [selectedFile, showError, tPages]);
 
   // Handle packet selection
   const handleSelectPacket = useCallback((packet: PcapPacket) => {
@@ -249,12 +250,16 @@ export const PcapAnalyzerPage: FC = () => {
                 <div className="flex items-center gap-comfortable">
                   <H2 className="flex items-center gap-compact">
                     <FileSearch className={`${iconSizes.lg} text-brand-accent`} />
-                    PCAP Analysis
+                    {tPages('libraryPcaps.analyzer.pageHeading')}
                     <InfoPopover label={t('jargon.ariaLabel', { term: 'PCAP' })} title="PCAP">
                       {tHelp('jargon.pcap')}
                     </InfoPopover>
                   </H2>
-                  <Tag colorScheme="green">{analysisResult.packets.length} packets</Tag>
+                  <Tag colorScheme="green">
+                    {tPages('libraryPcaps.analyzer.packetsCountTag', {
+                      count: analysisResult.packets.length,
+                    })}
+                  </Tag>
                 </div>
 
                 {/* Control buttons */}
@@ -264,38 +269,38 @@ export const PcapAnalyzerPage: FC = () => {
                     <button
                       type="button"
                       onClick={() => setViewMode('packets')}
-                      title="Show every decoded packet with timestamp, headers, and payload"
+                      title={tPages('libraryPcaps.analyzer.tabPacketsTitle')}
                       className={`px-3 py-compact-md text-sm rounded-md transition-colors ${
                         viewMode === 'packets'
                           ? 'bg-brand-primary text-text-primary'
                           : 'text-text-muted hover:text-text-primary'
                       }`}
                     >
-                      Packets
+                      {tPages('libraryPcaps.analyzer.tabPackets')}
                     </button>
                     <button
                       type="button"
                       onClick={() => setViewMode('stats')}
-                      title="Show aggregate statistics: byte/packet totals per protocol and per host"
+                      title={tPages('libraryPcaps.analyzer.tabStatsTitle')}
                       className={`px-3 py-compact-md text-sm rounded-md transition-colors ${
                         viewMode === 'stats'
                           ? 'bg-brand-primary text-text-primary'
                           : 'text-text-muted hover:text-text-primary'
                       }`}
                     >
-                      Statistics
+                      {tPages('libraryPcaps.analyzer.tabStats')}
                     </button>
                     <button
                       type="button"
                       onClick={() => setViewMode('conversations')}
-                      title="Group packets by 5-tuple to see TCP/UDP flows and byte totals per conversation"
+                      title={tPages('libraryPcaps.analyzer.tabConversationsTitle')}
                       className={`px-3 py-compact-md text-sm rounded-md transition-colors ${
                         viewMode === 'conversations'
                           ? 'bg-brand-primary text-text-primary'
                           : 'text-text-muted hover:text-text-primary'
                       }`}
                     >
-                      Conversations
+                      {tPages('libraryPcaps.analyzer.tabConversations')}
                     </button>
                   </div>
 
@@ -305,7 +310,7 @@ export const PcapAnalyzerPage: FC = () => {
                     onClick={handleExport}
                     leftIcon={<Download className={iconSizes.md} />}
                   >
-                    Export
+                    {t('buttons.export')}
                   </Button>
 
                   <Button
@@ -314,7 +319,7 @@ export const PcapAnalyzerPage: FC = () => {
                     onClick={() => setShowColoringRules(true)}
                     leftIcon={<Palette className={iconSizes.md} />}
                   >
-                    Colors
+                    {tPages('libraryPcaps.analyzer.colorsButton')}
                   </Button>
 
                   <Button
@@ -324,7 +329,7 @@ export const PcapAnalyzerPage: FC = () => {
                     leftIcon={<Share2 className={iconSizes.md} />}
                     disabled={!canFollowStream}
                   >
-                    Follow Stream
+                    {tPages('libraryPcaps.analyzer.followStreamButton')}
                   </Button>
 
                   <Button
@@ -333,7 +338,7 @@ export const PcapAnalyzerPage: FC = () => {
                     onClick={handleClear}
                     leftIcon={<Trash2 className={iconSizes.md} />}
                   >
-                    Clear
+                    {t('buttons.clear')}
                   </Button>
                 </div>
               </div>
@@ -368,7 +373,7 @@ export const PcapAnalyzerPage: FC = () => {
                   <Card className="border-surface-border bg-bg-surface/70 h-[280px]">
                     <CardContent className="h-full flex flex-col">
                       <SmallText className="text-text-muted uppercase tracking-wide font-semibold mb-heading">
-                        Hex Dump
+                        {tPages('libraryPcaps.analyzer.hexDumpLabel')}
                       </SmallText>
                       <div className="flex-1 min-h-0">
                         <HexDumpViewer
@@ -384,7 +389,7 @@ export const PcapAnalyzerPage: FC = () => {
                   <Card className="border-surface-border bg-bg-surface/70 h-[280px]">
                     <CardContent className="h-full flex flex-col">
                       <SmallText className="text-text-muted uppercase tracking-wide font-semibold mb-heading">
-                        Packet Details
+                        {tPages('libraryPcaps.analyzer.packetDetailsLabel')}
                       </SmallText>
                       <div className="flex-1 min-h-0 overflow-y-auto">
                         <PacketDetails
@@ -425,16 +430,16 @@ export const PcapAnalyzerPage: FC = () => {
             <div className="flex items-start gap-default">
               <Info className={`${iconSizes.lg} text-status-info flex-shrink-0 mt-0.5`} />
               <div>
-                <p className="font-medium text-text-primary">About PCAP Analyzer</p>
+                <p className="font-medium text-text-primary">
+                  {tPages('libraryPcaps.analyzer.aboutTitle')}
+                </p>
                 <SmallText className="text-text-muted">
-                  Upload a PCAP or PCAPNG file to analyze network traffic. The analyzer will parse
-                  packets and provide detailed statistics, protocol breakdown, and packet-level
-                  inspection including hex dump viewing.
+                  {tPages('libraryPcaps.analyzer.aboutDescription')}
                 </SmallText>
                 <div className="mt-heading flex flex-wrap gap-compact">
-                  <Tag colorScheme="gray">Supports .pcap</Tag>
-                  <Tag colorScheme="gray">Supports .pcapng</Tag>
-                  <Tag colorScheme="gray">Max 100MB</Tag>
+                  <Tag colorScheme="gray">{tPages('libraryPcaps.analyzer.supportsPcap')}</Tag>
+                  <Tag colorScheme="gray">{tPages('libraryPcaps.analyzer.supportsPcapng')}</Tag>
+                  <Tag colorScheme="gray">{tPages('libraryPcaps.analyzer.maxSizeTag')}</Tag>
                 </div>
               </div>
             </div>

@@ -1,4 +1,5 @@
 import { type FC, memo, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface HexDumpViewerProps {
   /** Hex-encoded raw packet data */
@@ -163,6 +164,7 @@ export const HexDumpViewer: FC<HexDumpViewerProps> = memo(
     headerLength = 14, // Default Ethernet header length
     highlightRange,
   }) => {
+    const { t } = useTranslation('pages');
     const highlightStart = highlightRange?.[0] ?? -1;
     const highlightEnd = highlightRange?.[1] ?? -1;
     // Parse hex data into rows
@@ -188,7 +190,7 @@ export const HexDumpViewer: FC<HexDumpViewerProps> = memo(
     if (!rawData) {
       return (
         <div className="h-full flex-center text-text-muted">
-          <p className="text-sm">Select a packet to view hex dump</p>
+          <p className="text-sm">{t('packets.hexDump.selectPacketPlaceholder')}</p>
         </div>
       );
     }
@@ -200,19 +202,21 @@ export const HexDumpViewer: FC<HexDumpViewerProps> = memo(
         {/* Header with legend */}
         <div className="flex-between mb-2 pb-inline border-b border-surface-border">
           <div className="flex items-center gap-comfortable text-xs">
-            <span className="text-text-muted">{totalBytes} bytes</span>
+            <span className="text-text-muted">
+              {t('packets.stats.totalBytesHelper', { count: totalBytes })}
+            </span>
             <div className="flex items-center gap-compact">
               <span className="w-3 h-3 bg-status-info/30 rounded" />
-              <span className="text-text-muted">Header</span>
+              <span className="text-text-muted">{t('packets.hexDump.headerLegend')}</span>
             </div>
             <div className="flex items-center gap-compact">
               <span className="w-3 h-3 bg-bg-muted/30 rounded" />
-              <span className="text-text-muted">Payload</span>
+              <span className="text-text-muted">{t('packets.hexDump.payloadLegend')}</span>
             </div>
             {highlightStart >= 0 && (
               <div className="flex items-center gap-compact">
                 <span className="w-3 h-3 bg-status-warning/40 rounded" />
-                <span className="text-text-muted">Selected</span>
+                <span className="text-text-muted">{t('packets.hexDump.selectedLegend')}</span>
               </div>
             )}
           </div>

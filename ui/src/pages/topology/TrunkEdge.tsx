@@ -1,5 +1,6 @@
 import { BaseEdge, EdgeLabelRenderer, type EdgeProps, getSmoothStepPath } from '@xyflow/react';
 import type { FC } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { LinkEdgeData } from './types';
 
 /**
@@ -157,31 +158,38 @@ const MiddleLabel: FC<{ x: number; y: number; text: string; opacity: number }> =
 );
 
 const EdgeTooltip: FC<{ x: number; y: number; data: LinkEdgeData }> = ({ x, y, data }) => {
+  const { t } = useTranslation('pages');
+  const { t: tCommon } = useTranslation('common');
   const rows: [string, string][] = [];
   if (data.sourceInterface || data.targetInterface) {
-    rows.push(['Interfaces', `${data.sourceInterface ?? '?'} ↔ ${data.targetInterface ?? '?'}`]);
+    rows.push([
+      tCommon('labels.interfaces'),
+      `${data.sourceInterface ?? '?'} ↔ ${data.targetInterface ?? '?'}`,
+    ]);
   }
   if (data.vlans && data.vlans.length > 0) {
-    rows.push(['VLANs', data.vlans.join(', ')]);
+    rows.push([t('topology.trunkEdge.rowVlans'), data.vlans.join(', ')]);
   }
   if (data.speed) {
-    rows.push(['Speed', formatSpeed(data.speed)]);
+    rows.push([t('topology.trunkEdge.rowSpeed'), formatSpeed(data.speed)]);
   }
   if (data.duplex) {
-    rows.push(['Duplex', data.duplex]);
+    rows.push([t('topology.trunkEdge.rowDuplex'), data.duplex]);
   }
   if (data.status) {
-    rows.push(['Status', data.status]);
+    rows.push([tCommon('labels.status'), data.status]);
   }
   if (data.linkType) {
-    rows.push(['Type', data.linkType]);
+    rows.push([tCommon('labels.type'), data.linkType]);
   }
   if (typeof data.utilizationPercent === 'number' && data.utilizationPercent > 0) {
-    rows.push(['Utilisation', `${data.utilizationPercent.toFixed(0)} %`]);
+    rows.push([t('topology.trunkEdge.rowUtilisation'), `${data.utilizationPercent.toFixed(0)} %`]);
   }
   rows.push([
-    'Source',
-    data.discovered ? 'Discovered (LLDP/CDP/EDP/FDP)' : 'Declared (trunk_ports)',
+    t('topology.trunkEdge.rowSource'),
+    data.discovered
+      ? t('topology.trunkEdge.sourceDiscovered')
+      : t('topology.trunkEdge.sourceDeclared'),
   ]);
 
   return (

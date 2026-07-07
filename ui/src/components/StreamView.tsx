@@ -69,6 +69,7 @@ interface StreamSegment {
  */
 export const StreamView: FC<StreamViewProps> = memo(({ packets, clientEndpoint, onClose }) => {
   const { t } = useTranslation('pages');
+  const { t: tCommon } = useTranslation('common');
   const [displayMode, setDisplayMode] = useState<DisplayMode>('ascii');
 
   const segments = useMemo<StreamSegment[]>(() => {
@@ -101,9 +102,14 @@ export const StreamView: FC<StreamViewProps> = memo(({ packets, clientEndpoint, 
               {t('packets.inspector.followStreamTitle')}
             </h3>
             <SmallText className="text-text-muted">
-              {packets.length} packets |{' '}
-              <span className="text-status-info">{totalClientBytes} B client</span> /{' '}
-              <span className="text-status-error">{totalServerBytes} B server</span>
+              {tCommon('plurals.packetCount', { count: packets.length })} |{' '}
+              <span className="text-status-info">
+                {t('packets.streamView.clientBytesLabel', { count: totalClientBytes })}
+              </span>{' '}
+              /{' '}
+              <span className="text-status-error">
+                {t('packets.streamView.serverBytesLabel', { count: totalServerBytes })}
+              </span>
             </SmallText>
           </div>
           <div className="flex items-center gap-default">
@@ -118,7 +124,7 @@ export const StreamView: FC<StreamViewProps> = memo(({ packets, clientEndpoint, 
                     : 'text-text-muted hover:text-text-primary'
                 }`}
               >
-                ASCII
+                {t('packets.streamView.asciiToggle')}
               </button>
               <button
                 type="button"
@@ -129,7 +135,7 @@ export const StreamView: FC<StreamViewProps> = memo(({ packets, clientEndpoint, 
                     : 'text-text-muted hover:text-text-primary'
                 }`}
               >
-                Hex
+                {t('packets.streamView.hexToggle')}
               </button>
             </div>
 
@@ -170,7 +176,7 @@ export const StreamView: FC<StreamViewProps> = memo(({ packets, clientEndpoint, 
         {/* Footer */}
         <div className="flex items-center justify-end px-5 py-row-lg border-t border-surface-border">
           <Button variant="ghost" size="sm" onClick={onClose}>
-            Close
+            {tCommon('buttons.close')}
           </Button>
         </div>
       </div>

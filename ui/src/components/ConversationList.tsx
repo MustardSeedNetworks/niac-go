@@ -32,6 +32,7 @@ export const ConversationList: FC<ConversationListProps> = memo(
   ({ packets, onSelectConversation }) => {
     const { t } = useTranslation('common');
     const { t: tHelp } = useTranslation('help');
+    const { t: tPages } = useTranslation('pages');
     const [sortField, setSortField] = useState<SortField>('packets');
     const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
 
@@ -85,8 +86,8 @@ export const ConversationList: FC<ConversationListProps> = memo(
         <Card className="border-surface-border bg-bg-surface/70">
           <CardContent>
             <div className="text-center py-8 text-text-muted">
-              <p className="text-sm">No TCP/UDP conversations found</p>
-              <SmallText>Conversations require packets with port information</SmallText>
+              <p className="text-sm">{tPages('packets.conversations.emptyTitle')}</p>
+              <SmallText>{tPages('packets.conversations.emptyDescription')}</SmallText>
             </div>
           </CardContent>
         </Card>
@@ -104,7 +105,9 @@ export const ConversationList: FC<ConversationListProps> = memo(
                 {tHelp('jargon.fiveTuple')}
               </InfoPopover>
             </SmallText>
-            <SmallText className="text-text-muted">Click a row to filter packets</SmallText>
+            <SmallText className="text-text-muted">
+              {tPages('packets.conversations.clickToFilterHint')}
+            </SmallText>
           </div>
 
           <div className="overflow-auto rounded-lg border border-surface-border max-h-[500px]">
@@ -112,34 +115,38 @@ export const ConversationList: FC<ConversationListProps> = memo(
               <thead className="bg-bg-surface/80 sticky top-0 z-10">
                 <tr>
                   <th className="px-3 py-row text-left text-xs font-semibold uppercase tracking-wide text-text-muted">
-                    Endpoint A
+                    {tPages('packets.conversations.headerEndpointA')}
                   </th>
                   <th className="px-3 py-row text-left text-xs font-semibold uppercase tracking-wide text-text-muted">
-                    Endpoint B
+                    {tPages('packets.conversations.headerEndpointB')}
                   </th>
                   <th
                     className="px-3 py-row text-left text-xs font-semibold uppercase tracking-wide text-text-muted cursor-pointer hover:text-brand-accent select-none"
                     onClick={() => handleSort('protocol')}
                   >
-                    Protocol{sortIndicator('protocol')}
+                    {tPages('packets.list.headerProtocol')}
+                    {sortIndicator('protocol')}
                   </th>
                   <th
                     className="px-3 py-row text-right text-xs font-semibold uppercase tracking-wide text-text-muted cursor-pointer hover:text-brand-accent select-none"
                     onClick={() => handleSort('packets')}
                   >
-                    Packets{sortIndicator('packets')}
+                    {tPages('packets.conversations.headerPackets')}
+                    {sortIndicator('packets')}
                   </th>
                   <th
                     className="px-3 py-row text-right text-xs font-semibold uppercase tracking-wide text-text-muted cursor-pointer hover:text-brand-accent select-none"
                     onClick={() => handleSort('bytes')}
                   >
-                    Bytes{sortIndicator('bytes')}
+                    {tPages('packets.conversations.headerBytes')}
+                    {sortIndicator('bytes')}
                   </th>
                   <th
                     className="px-3 py-row text-right text-xs font-semibold uppercase tracking-wide text-text-muted cursor-pointer hover:text-brand-accent select-none"
                     onClick={() => handleSort('duration')}
                   >
-                    Duration{sortIndicator('duration')}
+                    {tPages('packets.stats.duration')}
+                    {sortIndicator('duration')}
                   </th>
                 </tr>
               </thead>

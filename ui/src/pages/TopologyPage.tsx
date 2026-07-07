@@ -72,6 +72,7 @@ const edgeTypes: EdgeTypes = {
  */
 export const TopologyPage: FC = () => {
   const { t } = useTranslation('pages');
+  const { t: tCommon } = useTranslation('common');
   const navigate = useNavigate();
 
   // Fetch topology data from the API with periodic polling
@@ -597,9 +598,8 @@ export const TopologyPage: FC = () => {
               <div>
                 <H2>{t('topology.page.networkTopologyTitle')}</H2>
                 <SmallText className="text-text-muted">
-                  {devices?.length || 0} {devices?.length === 1 ? 'device' : 'devices'} |{' '}
-                  {topology?.links?.length || 0}{' '}
-                  {topology?.links?.length === 1 ? 'connection' : 'connections'}
+                  {tCommon('plurals.deviceCount', { count: devices?.length || 0 })} |{' '}
+                  {t('topology.page.connectionCount', { count: topology?.links?.length || 0 })}
                 </SmallText>
               </div>
             </div>
@@ -608,14 +608,14 @@ export const TopologyPage: FC = () => {
               <div
                 className="inline-flex rounded-lg border border-surface-border bg-bg-base/40 p-0.5"
                 role="tablist"
-                aria-label="Topology view"
+                aria-label={t('topology.header.viewTabsAriaLabel')}
               >
                 <button
                   type="button"
                   role="tab"
                   aria-selected={view === 'graph'}
                   onClick={() => setView('graph')}
-                  title="Show devices and links as an interactive graph (drag to reposition, scroll to zoom)"
+                  title={t('topology.header.graphTabTitle')}
                   className={`flex items-center gap-1.5 rounded px-3 py-compact text-xs font-medium transition-colors ${
                     view === 'graph'
                       ? 'bg-status-info/20 text-status-info'
@@ -623,14 +623,14 @@ export const TopologyPage: FC = () => {
                   }`}
                 >
                   <Network className="w-3.5 h-3.5" />
-                  Graph
+                  {t('topology.header.graphTabLabel')}
                 </button>
                 <button
                   type="button"
                   role="tab"
                   aria-selected={view === 'neighbors'}
                   onClick={() => setView('neighbors')}
-                  title="Show LLDP/CDP neighbor relationships as a sortable table grouped by device"
+                  title={t('topology.header.neighborsTabTitle')}
                   className={`flex items-center gap-1.5 rounded px-3 py-compact text-xs font-medium transition-colors ${
                     view === 'neighbors'
                       ? 'bg-status-info/20 text-status-info'
@@ -638,7 +638,7 @@ export const TopologyPage: FC = () => {
                   }`}
                 >
                   <Radar className="w-3.5 h-3.5" />
-                  Neighbors
+                  {t('topology.header.neighborsTabLabel')}
                 </button>
               </div>
               <Button
@@ -648,7 +648,7 @@ export const TopologyPage: FC = () => {
                 leftIcon={<RefreshCw className="w-4 h-4" />}
                 disabled={loading}
               >
-                Refresh
+                {tCommon('buttons.refresh')}
               </Button>
               {view === 'graph' && (
                 <>
@@ -661,17 +661,17 @@ export const TopologyPage: FC = () => {
                     size="sm"
                     onClick={handleResetLayout}
                     disabled={nodes.length === 0}
-                    title="Clear hand-dragged positions, search, and type filters"
+                    title={t('topology.header.resetButtonTitle')}
                   >
-                    Reset
+                    {t('topology.header.resetButtonLabel')}
                   </Button>
                   <Button
                     variant={showLabels ? 'outline' : 'ghost'}
                     size="sm"
                     onClick={() => setShowLabels(!showLabels)}
-                    title="Toggle interface / VLAN / speed labels on edges"
+                    title={t('topology.header.labelsButtonTitle')}
                   >
-                    Labels
+                    {t('topology.header.labelsButtonLabel')}
                   </Button>
                   {/* Export is the only menu — PNG vs JSON is a real
                       two-option choice, but Reset + Labels + Layout
@@ -706,7 +706,9 @@ export const TopologyPage: FC = () => {
                           key={entry.mode}
                           type="button"
                           aria-pressed={active}
-                          aria-label={`Layout mode: ${entry.label}`}
+                          aria-label={t('topology.header.layoutModeAriaLabel', {
+                            label: entry.label,
+                          })}
                           title={entry.description}
                           onClick={() => handleLayoutModeChange(entry.mode)}
                           className={`rounded px-2.5 py-compact text-xs font-medium transition-colors ${
@@ -735,13 +737,15 @@ export const TopologyPage: FC = () => {
                 type="search"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search devices by name…"
-                aria-label="Filter devices by name"
+                placeholder={t('topology.header.searchPlaceholder')}
+                aria-label={t('topology.header.searchAriaLabel')}
                 className="w-full sm:w-64 rounded-md border border-surface-border bg-bg-base/40 px-3 py-compact-md text-xs text-text-primary placeholder:text-text-muted focus:border-status-info/40 focus:outline-none focus:ring-1 focus:ring-status-info/30"
               />
               {availableTypes.length > 0 && (
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <SmallText className="text-text-muted">Types:</SmallText>
+                  <SmallText className="text-text-muted">
+                    {t('topology.header.typesLabel')}
+                  </SmallText>
                   {availableTypes.map((type) => {
                     const active = activeTypes.has(type);
                     return (
@@ -752,8 +756,8 @@ export const TopologyPage: FC = () => {
                         aria-pressed={active}
                         title={
                           active
-                            ? `Hide ${type} devices from the graph`
-                            : `Show only ${type} devices (toggles a filter chip)`
+                            ? t('topology.header.typeFilterHideTitle', { type })
+                            : t('topology.header.typeFilterShowTitle', { type })
                         }
                         className={`rounded-full border px-2.5 py-0.5 text-[11px] font-medium capitalize transition-colors ${
                           active
@@ -769,10 +773,10 @@ export const TopologyPage: FC = () => {
                     <button
                       type="button"
                       onClick={() => setActiveTypes(new Set())}
-                      title="Remove all device-type filters and show every device in the topology"
+                      title={t('topology.header.clearTypeFiltersTitle')}
                       className="rounded-full px-cell py-0.5 text-[11px] font-medium text-text-muted hover:text-text-primary underline-offset-2 hover:underline"
                     >
-                      Clear
+                      {tCommon('buttons.clear')}
                     </button>
                   )}
                 </div>
@@ -793,7 +797,9 @@ export const TopologyPage: FC = () => {
               <div className="absolute inset-0 flex-center">
                 <div className="flex flex-col items-center gap-default">
                   <RefreshCw className="w-8 h-8 text-brand-accent animate-spin" />
-                  <SmallText className="text-text-muted">Loading topology...</SmallText>
+                  <SmallText className="text-text-muted">
+                    {t('topology.page.loadingTopology')}
+                  </SmallText>
                 </div>
               </div>
             ) : nodes.length === 0 ? (
@@ -802,7 +808,7 @@ export const TopologyPage: FC = () => {
                   <Network className="w-16 h-16 text-text-disabled mx-auto mb-content" />
                   <p className="text-text-muted mb-2">{t('topology.page.noTopologyData')}</p>
                   <SmallText className="text-text-muted">
-                    Configure devices with trunk ports or port-channels to visualize connections
+                    {t('topology.page.noConnectionsHint')}
                   </SmallText>
                 </div>
               </div>
@@ -814,11 +820,13 @@ export const TopologyPage: FC = () => {
                   // banner so it doesn't trap clicks on the canvas below.
                   <div className="pointer-events-none absolute top-0 left-0 right-0 z-50 bg-status-warning/60 border-b border-status-warning/40 px-4 py-row text-center backdrop-blur-sm">
                     <SmallText className="text-status-warning">
-                      Devices loaded, but the running config has no declared topology links. Add{' '}
-                      <code className="text-status-warning">trunk_ports:</code> or{' '}
-                      <code className="text-status-warning">port_channels:</code> entries to your
-                      YAML to visualise connections. Live LLDP/CDP/EDP/FDP neighbours are on the{' '}
-                      <strong>Neighbors</strong> page.
+                      {t('topology.page.noLinksBannerAddPrefix')}{' '}
+                      <code className="text-status-warning">trunk_ports:</code>{' '}
+                      {t('topology.page.noLinksBannerOr')}{' '}
+                      <code className="text-status-warning">port_channels:</code>{' '}
+                      {t('topology.page.noLinksBannerSuffix')}{' '}
+                      <strong>{t('topology.header.neighborsTabLabel')}</strong>{' '}
+                      {t('topology.page.noLinksBannerPageSuffix')}
                     </SmallText>
                   </div>
                 )}
@@ -896,6 +904,7 @@ export const TopologyPage: FC = () => {
                     y={contextMenu.y}
                     onClose={closeContextMenu}
                     items={contextMenuItems(contextMenu, {
+                      t,
                       edges,
                       hideDevice,
                       navigate,

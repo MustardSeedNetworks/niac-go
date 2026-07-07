@@ -9,27 +9,31 @@
  */
 import { render, screen } from '@testing-library/react';
 import { ReactFlowProvider } from '@xyflow/react';
+import { I18nextProvider } from 'react-i18next';
 import { describe, expect, it } from 'vitest';
+import i18n from '../../i18n';
 import { DeviceNode } from './DeviceNode';
 import type { DeviceNodeData } from './types';
 
 function renderNode(data: Partial<DeviceNodeData>) {
   // ReactFlow's Handle component requires ReactFlowProvider in context.
   return render(
-    <ReactFlowProvider>
-      <DeviceNode
-        data={
-          {
-            label: 'edge-router-01',
-            type: 'router',
-            status: 'online',
-            ips: ['10.0.0.1', '10.0.1.1', '10.0.2.1'],
-            protocols: ['BGP', 'OSPF', 'SNMP', 'ARP'],
-            ...data,
-          } as DeviceNodeData
-        }
-      />
-    </ReactFlowProvider>,
+    <I18nextProvider i18n={i18n}>
+      <ReactFlowProvider>
+        <DeviceNode
+          data={
+            {
+              label: 'edge-router-01',
+              type: 'router',
+              status: 'online',
+              ips: ['10.0.0.1', '10.0.1.1', '10.0.2.1'],
+              protocols: ['BGP', 'OSPF', 'SNMP', 'ARP'],
+              ...data,
+            } as DeviceNodeData
+          }
+        />
+      </ReactFlowProvider>
+    </I18nextProvider>,
   );
 }
 

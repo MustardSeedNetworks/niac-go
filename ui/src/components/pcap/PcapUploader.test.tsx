@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
+import '../../i18n';
 import { PcapUploader } from './PcapUploader';
 
 function makeFile(name: string, size: number, type = 'application/octet-stream'): File {

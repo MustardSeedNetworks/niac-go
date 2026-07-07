@@ -2,6 +2,7 @@ import { type FC, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchNeighbors } from '../../api/client';
 import { useApiResource } from '../../hooks/useApiResource';
+import type { TFunction } from '../../i18n';
 import { Card, CardContent } from '../../ui/Card';
 
 /**
@@ -17,25 +18,26 @@ type ProtocolFilter = (typeof PROTOCOL_FILTERS)[number];
 
 const NEIGHBOR_POLL_MS = 5_000;
 
-const formatTtl = (ttlNs: number): string => {
-  if (!ttlNs || ttlNs <= 0) return '—';
+const formatTtl = (ttlNs: number, tCommon: TFunction<'common'>, t: TFunction<'pages'>): string => {
+  if (!ttlNs || ttlNs <= 0) return tCommon('format.dash');
   const seconds = Math.round(ttlNs / 1_000_000_000);
-  if (seconds < 60) return `${seconds}s`;
+  if (seconds < 60) return tCommon('format.uptimeS', { value: seconds });
   const minutes = Math.round(seconds / 60);
-  return `${minutes}m`;
+  return t('topology.neighbors.ttlMinutes', { value: minutes });
 };
 
-const formatRelative = (iso: string): string => {
+const formatRelative = (iso: string, tCommon: TFunction<'common'>): string => {
   const ts = new Date(iso).getTime();
   if (!Number.isFinite(ts)) return iso;
   const deltaSec = Math.max(0, Math.round((Date.now() - ts) / 1000));
-  if (deltaSec < 60) return `${deltaSec}s ago`;
+  if (deltaSec < 60) return tCommon('format.relativeSecAgo', { value: deltaSec });
   const minutes = Math.round(deltaSec / 60);
-  return `${minutes}m ago`;
+  return tCommon('format.relativeMinAgo', { value: minutes });
 };
 
 export const NeighborsView: FC = () => {
   const { t } = useTranslation('pages');
+  const { t: tCommon } = useTranslation('common');
   const {
     data: neighbors,
     loading,
@@ -229,8 +231,10 @@ export const NeighborsView: FC = () => {
                     <td className="px-4 py-row font-mono text-xs text-text-muted">
                       {n.managementAddress || '—'}
                     </td>
-                    <td className="px-4 py-row text-text-muted">{formatTtl(n.ttl)}</td>
-                    <td className="px-4 py-row text-text-muted">{formatRelative(n.lastSeen)}</td>
+                    <td className="px-4 py-row text-text-muted">{formatTtl(n.ttl, tCommon, t)}</td>
+                    <td className="px-4 py-row text-text-muted">
+                      {formatRelative(n.lastSeen, tCommon)}
+                    </td>
                   </tr>
                 ))}
               </tbody>
