@@ -122,7 +122,11 @@ function LibraryFilesView({ kind }: Props) {
 
       <Card className="border-surface-border bg-bg-surface/70">
         <CardContent>
-          {error ? (
+          {loading && entries.length === 0 ? (
+            <div className="py-10 text-center">
+              <SmallText className="text-text-muted">Loading {kind}…</SmallText>
+            </div>
+          ) : error ? (
             <SmallText className="text-status-error">
               Failed to load library: {error.message}
             </SmallText>

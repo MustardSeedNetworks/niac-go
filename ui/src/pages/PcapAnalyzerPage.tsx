@@ -92,6 +92,13 @@ export const PcapAnalyzerPage: FC = () => {
     setFilterExpression('');
   }, []);
 
+  // Handle rejected file (invalid type/size) — surface the reason instead of failing silently
+  const handleValidationError = useCallback((message: string) => {
+    setSelectedFile(null);
+    setSuccess(null);
+    setError(message);
+  }, []);
+
   // Handle analysis
   const handleAnalyze = useCallback(async () => {
     if (!selectedFile) {
@@ -215,6 +222,7 @@ export const PcapAnalyzerPage: FC = () => {
         <PcapUploader
           onFileSelect={handleFileSelect}
           onAnalyze={handleAnalyze}
+          onValidationError={handleValidationError}
           isAnalyzing={isAnalyzing}
           selectedFile={selectedFile}
           error={error}

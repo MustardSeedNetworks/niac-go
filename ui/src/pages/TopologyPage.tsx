@@ -556,8 +556,12 @@ export const TopologyPage: FC = () => {
   // styles, and rasterises to PNG. We snapshot at 2× pixel ratio so
   // the image scales cleanly on Retina/4K screens.
   const handleExportPNG = useCallback(async () => {
+    setExportError(null);
     const root = document.querySelector<HTMLElement>('.react-flow');
-    if (!root) return;
+    if (!root) {
+      setExportError('Could not find the topology canvas to export.');
+      return;
+    }
     try {
       const { toPng } = await import('html-to-image');
       const dataUrl = await toPng(root, {
@@ -576,9 +580,7 @@ export const TopologyPage: FC = () => {
       link.click();
       document.body.removeChild(link);
     } catch (err) {
-      // Best-effort — surface in console rather than a modal since
-      // the PNG path is a convenience, not a primary flow.
-      console.error('Topology PNG export failed:', err);
+      setExportError((err as Error).message || 'Failed to export topology as PNG.');
     }
   }, []);
 

@@ -123,6 +123,7 @@ export const PacketInspectorPage: FC = () => {
   const [isPaused, setIsPaused] = useState(false);
   const [showColoringRules, setShowColoringRules] = useState(false);
   const [showStreamView, setShowStreamView] = useState(false);
+  const [captureError, setCaptureError] = useState<string | null>(null);
 
   // Coloring rules
   const {
@@ -363,11 +364,14 @@ export const PacketInspectorPage: FC = () => {
                       tone="red"
                       size="sm"
                       onClick={async () => {
+                        setCaptureError(null);
                         try {
                           await stopStandaloneCapture();
                           refetchCapture();
-                        } catch {
-                          // Surface via the empty-state error path on next render.
+                        } catch (err) {
+                          setCaptureError(
+                            err instanceof Error ? err.message : 'Failed to stop capture',
+                          );
                         }
                       }}
                     >
@@ -435,6 +439,12 @@ export const PacketInspectorPage: FC = () => {
                   {filteredPackets.length} / {packets.length} packets
                 </SmallText>
               </div>
+
+              {captureError && (
+                <SmallText className="mt-content text-status-error" role="alert">
+                  {captureError}
+                </SmallText>
+              )}
             </CardContent>
           </Card>
 

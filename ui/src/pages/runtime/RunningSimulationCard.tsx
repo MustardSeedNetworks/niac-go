@@ -1,5 +1,5 @@
 import { Activity, Download, FileCog } from 'lucide-react';
-import type { FC } from 'react';
+import { type FC, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchConfig } from '../../api/client';
 import { StatBlock } from '../../components/StatBlock';
@@ -37,8 +37,10 @@ export const RunningSimulationCard: FC<RunningSimulationCardProps> = ({
   message,
 }) => {
   const navigate = useNavigate();
+  const [downloadError, setDownloadError] = useState<string | null>(null);
 
   const handleDownload = async () => {
+    setDownloadError(null);
     try {
       const doc = await fetchConfig();
       const blob = new Blob([doc.content], { type: 'application/x-yaml' });
@@ -49,7 +51,7 @@ export const RunningSimulationCard: FC<RunningSimulationCardProps> = ({
       link.click();
       URL.revokeObjectURL(url);
     } catch (err) {
-      console.error('Failed to download config:', err);
+      setDownloadError(err instanceof Error ? err.message : 'Failed to download config');
     }
   };
 
@@ -97,6 +99,12 @@ export const RunningSimulationCard: FC<RunningSimulationCardProps> = ({
             className={message.tone === 'success' ? 'text-status-success' : 'text-status-error'}
           >
             {message.text}
+          </SmallText>
+        )}
+
+        {downloadError && (
+          <SmallText className="text-status-error" role="alert">
+            {downloadError}
           </SmallText>
         )}
 
