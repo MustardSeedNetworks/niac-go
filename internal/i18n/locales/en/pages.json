@@ -701,8 +701,9 @@
       "closeButton": "Close",
       "editCopyTitle": "Clone this template to your saved configs and open the device editor",
       "cloning": "Cloning…",
-      "editCopy": "Edit a copy",
-      "pickTemplate": "Pick this template"
+      "editCopy": "Customize first",
+      "pickTemplate": "Use as-is",
+      "pickTemplateTitle": "Select this template as the active configuration to run unchanged"
     }
   },
   "license": {

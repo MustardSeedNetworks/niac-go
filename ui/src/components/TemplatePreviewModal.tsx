@@ -228,7 +228,11 @@ export const TemplatePreviewModal: FC<TemplatePreviewModalProps> = ({
                   ? t('templates.previewModal.cloning')
                   : t('templates.previewModal.editCopy')}
               </Button>
-              <Button tone="violet" onClick={() => onUse(template)}>
+              <Button
+                tone="violet"
+                onClick={() => onUse(template)}
+                title={t('templates.previewModal.pickTemplateTitle')}
+              >
                 {t('templates.previewModal.pickTemplate')}
               </Button>
             </div>
