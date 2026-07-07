@@ -1,9 +1,10 @@
 import { Activity, Download, FileCog } from 'lucide-react';
-import { type FC, useState } from 'react';
+import type { FC } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchConfig } from '../../api/client';
 import { StatBlock } from '../../components/StatBlock';
 import { iconSizes } from '../../constants/sizes';
+import { useErrorToast } from '../../hooks/useErrorToast';
 import { Button } from '../../ui/Button';
 import { Card, CardContent } from '../../ui/Card';
 import { Tag } from '../../ui/Tag';
@@ -21,7 +22,8 @@ export interface RunningSimulationCardProps {
   };
   stopping: boolean;
   onStop: () => void;
-  message: { tone: 'success' | 'error'; text: string } | null;
+  /** Success-only status text; failures are surfaced as toasts. */
+  message: string | null;
 }
 
 /**
@@ -37,10 +39,9 @@ export const RunningSimulationCard: FC<RunningSimulationCardProps> = ({
   message,
 }) => {
   const navigate = useNavigate();
-  const [downloadError, setDownloadError] = useState<string | null>(null);
+  const showError = useErrorToast();
 
   const handleDownload = async () => {
-    setDownloadError(null);
     try {
       const doc = await fetchConfig();
       const blob = new Blob([doc.content], { type: 'application/x-yaml' });
@@ -51,7 +52,7 @@ export const RunningSimulationCard: FC<RunningSimulationCardProps> = ({
       link.click();
       URL.revokeObjectURL(url);
     } catch (err) {
-      setDownloadError(err instanceof Error ? err.message : 'Failed to download config');
+      showError(err);
     }
   };
 
@@ -94,19 +95,7 @@ export const RunningSimulationCard: FC<RunningSimulationCardProps> = ({
           />
         </div>
 
-        {message && (
-          <SmallText
-            className={message.tone === 'success' ? 'text-status-success' : 'text-status-error'}
-          >
-            {message.text}
-          </SmallText>
-        )}
-
-        {downloadError && (
-          <SmallText className="text-status-error" role="alert">
-            {downloadError}
-          </SmallText>
-        )}
+        {message && <SmallText className="text-status-success">{message}</SmallText>}
 
         <div className="flex flex-wrap gap-default">
           <Button

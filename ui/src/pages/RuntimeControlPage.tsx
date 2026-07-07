@@ -10,13 +10,13 @@ import {
 import type { NetworkInterface, Template, UserConfig } from '../api/types';
 import { ConfigPicker } from '../components/simulation/ConfigPicker';
 import { iconSizes } from '../constants/sizes';
+import { useErrorToast } from '../hooks/useErrorToast';
 import { useSimulationStatus } from '../hooks/useSimulationStatus';
 import { useUIStore } from '../stores/ui-store';
 import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
 import { H2, SmallText } from '../ui/Typography';
 import { fileToText } from '../utils/file';
-import { getErrorMessage } from '../utils/format';
 import { AdvancedSection } from './runtime/AdvancedSection';
 import { RunningSimulationCard } from './runtime/RunningSimulationCard';
 import { SelectedNetworkPreview } from './runtime/SelectedNetworkPreview';
@@ -43,10 +43,10 @@ export const RuntimeControlPage: FC = () => {
   const [quickUploadFile, setQuickUploadFile] = useState<File | null>(null);
   const [starting, setStarting] = useState(false);
   const [stopping, setStopping] = useState(false);
-  const [message, setMessage] = useState<{
-    tone: 'success' | 'error';
-    text: string;
-  } | null>(null);
+  // Success-only: failures are surfaced as toasts (see showError below), not
+  // a page-level banner.
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const showError = useErrorToast();
 
   // Hydrate the interface dropdown so the user can pick an interface inline
   // instead of having to open the Settings drawer.
@@ -111,7 +111,7 @@ export const RuntimeControlPage: FC = () => {
           configName: '',
           configPath: undefined,
         });
-        setMessage(null);
+        setSuccessMessage(null);
       }
     },
     [setSimulationSettings],
@@ -123,23 +123,17 @@ export const RuntimeControlPage: FC = () => {
 
   const handleStart = useCallback(async () => {
     if (!simulationSettings.selectedInterface) {
-      setMessage({
-        tone: 'error',
-        text: 'Please select an interface above',
-      });
+      showError(new Error('Please select an interface above'));
       return;
     }
 
     if (!simulationSettings.configName && !quickUploadFile) {
-      setMessage({
-        tone: 'error',
-        text: 'Please select a configuration above or upload a config file',
-      });
+      showError(new Error('Please select a configuration above or upload a config file'));
       return;
     }
 
     setStarting(true);
-    setMessage(null);
+    setSuccessMessage(null);
 
     try {
       let configData: string | undefined;
@@ -178,15 +172,15 @@ export const RuntimeControlPage: FC = () => {
         templateName: templateName,
       });
 
-      setMessage({ tone: 'success', text: 'Simulation started successfully!' });
+      setSuccessMessage('Simulation started successfully!');
       refetchSimStatus();
       setQuickUploadFile(null);
     } catch (err) {
-      setMessage({ tone: 'error', text: getErrorMessage(err) });
+      showError(err);
     } finally {
       setStarting(false);
     }
-  }, [simulationSettings, quickUploadFile]);
+  }, [simulationSettings, quickUploadFile, showError]);
 
   const handleStop = useCallback(async () => {
     if (
@@ -198,18 +192,18 @@ export const RuntimeControlPage: FC = () => {
     }
 
     setStopping(true);
-    setMessage(null);
+    setSuccessMessage(null);
 
     try {
       await stopSimulation();
-      setMessage({ tone: 'success', text: 'Simulation stopped' });
+      setSuccessMessage('Simulation stopped');
       refetchSimStatus();
     } catch (err) {
-      setMessage({ tone: 'error', text: getErrorMessage(err) });
+      showError(err);
     } finally {
       setStopping(false);
     }
-  }, []);
+  }, [showError]);
 
   return (
     <div className="stack-xl">
@@ -341,13 +335,9 @@ export const RuntimeControlPage: FC = () => {
               />
             )}
 
-            {message && (
-              <SmallText
-                className={message.tone === 'success' ? 'text-status-success' : 'text-status-error'}
-                role="alert"
-                aria-live="polite"
-              >
-                {message.text}
+            {successMessage && (
+              <SmallText className="text-status-success" role="status" aria-live="polite">
+                {successMessage}
               </SmallText>
             )}
           </CardContent>
@@ -359,7 +349,7 @@ export const RuntimeControlPage: FC = () => {
           simStatus={simStatus}
           stopping={stopping}
           onStop={handleStop}
-          message={message}
+          message={successMessage}
         />
       )}
 

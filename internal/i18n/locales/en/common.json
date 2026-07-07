@@ -172,6 +172,11 @@
     "openSettings": "Open Settings",
     "openHelp": "Open Help"
   },
+  "toast": {
+    "requestFailedTitle": "Request failed",
+    "streamDisconnectedTitle": "Log stream disconnected",
+    "streamDisconnectedMessage": "Reconnecting…"
+  },
   "plurals": {
     "deviceCount_one": "{{count}} device",
     "deviceCount_other": "{{count}} devices",

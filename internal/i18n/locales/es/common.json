@@ -172,6 +172,11 @@
     "openSettings": "Abrir configuración",
     "openHelp": "Abrir ayuda"
   },
+  "toast": {
+    "requestFailedTitle": "Error en la solicitud",
+    "streamDisconnectedTitle": "Transmisión de registros desconectada",
+    "streamDisconnectedMessage": "Reconectando…"
+  },
   "plurals": {
     "deviceCount_one": "{{count}} dispositivo",
     "deviceCount_other": "{{count}} dispositivos",
