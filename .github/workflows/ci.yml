@@ -93,11 +93,14 @@ jobs:
         uses: ./.github/actions/setup-go
 
       - name: Install libpcap-dev
-        # Retry with backoff: packages.microsoft.com intermittently serves an
-        # invalid InRelease, flaking the whole job (killed Lighthouse/#928 +
-        # Security Scanning/#932). Three attempts turn a transient mirror hiccup
-        # into a self-healing step instead of a red run.
+        # packages.microsoft.com intermittently serves an unsigned/invalid
+        # InRelease that aborts `apt-get update` for the whole runner, even
+        # though libpcap-dev comes from the Ubuntu archive (killed Lighthouse
+        # /#928 + Security Scanning/#932). Drop the unused Microsoft apt source
+        # so a broken third-party mirror can't red the job, then retry the
+        # install with backoff for genuinely transient hiccups.
         run: |
+          sudo grep -rlZ packages.microsoft.com /etc/apt/sources.list.d/ 2>/dev/null | xargs -0 -r sudo rm -f
           for i in 1 2 3; do
             if sudo apt-get update && sudo apt-get install -y libpcap-dev; then
               exit 0
@@ -262,11 +265,14 @@ jobs:
         uses: ./.github/actions/setup-go
 
       - name: Install libpcap-dev
-        # Retry with backoff: packages.microsoft.com intermittently serves an
-        # invalid InRelease, flaking the whole job (killed Lighthouse/#928 +
-        # Security Scanning/#932). Three attempts turn a transient mirror hiccup
-        # into a self-healing step instead of a red run.
+        # packages.microsoft.com intermittently serves an unsigned/invalid
+        # InRelease that aborts `apt-get update` for the whole runner, even
+        # though libpcap-dev comes from the Ubuntu archive (killed Lighthouse
+        # /#928 + Security Scanning/#932). Drop the unused Microsoft apt source
+        # so a broken third-party mirror can't red the job, then retry the
+        # install with backoff for genuinely transient hiccups.
         run: |
+          sudo grep -rlZ packages.microsoft.com /etc/apt/sources.list.d/ 2>/dev/null | xargs -0 -r sudo rm -f
           for i in 1 2 3; do
             if sudo apt-get update && sudo apt-get install -y libpcap-dev; then
               exit 0
@@ -659,11 +665,14 @@ jobs:
         uses: ./.github/actions/setup-go
 
       - name: Install libpcap-dev
-        # Retry with backoff: packages.microsoft.com intermittently serves an
-        # invalid InRelease, flaking the whole job (killed Lighthouse/#928 +
-        # Security Scanning/#932). Three attempts turn a transient mirror hiccup
-        # into a self-healing step instead of a red run.
+        # packages.microsoft.com intermittently serves an unsigned/invalid
+        # InRelease that aborts `apt-get update` for the whole runner, even
+        # though libpcap-dev comes from the Ubuntu archive (killed Lighthouse
+        # /#928 + Security Scanning/#932). Drop the unused Microsoft apt source
+        # so a broken third-party mirror can't red the job, then retry the
+        # install with backoff for genuinely transient hiccups.
         run: |
+          sudo grep -rlZ packages.microsoft.com /etc/apt/sources.list.d/ 2>/dev/null | xargs -0 -r sudo rm -f
           for i in 1 2 3; do
             if sudo apt-get update && sudo apt-get install -y libpcap-dev; then
               exit 0
@@ -738,11 +747,14 @@ jobs:
         uses: ./.github/actions/setup-node
 
       - name: Install libpcap-dev
-        # Retry with backoff: packages.microsoft.com intermittently serves an
-        # invalid InRelease, flaking the whole job (killed Lighthouse/#928 +
-        # Security Scanning/#932). Three attempts turn a transient mirror hiccup
-        # into a self-healing step instead of a red run.
+        # packages.microsoft.com intermittently serves an unsigned/invalid
+        # InRelease that aborts `apt-get update` for the whole runner, even
+        # though libpcap-dev comes from the Ubuntu archive (killed Lighthouse
+        # /#928 + Security Scanning/#932). Drop the unused Microsoft apt source
+        # so a broken third-party mirror can't red the job, then retry the
+        # install with backoff for genuinely transient hiccups.
         run: |
+          sudo grep -rlZ packages.microsoft.com /etc/apt/sources.list.d/ 2>/dev/null | xargs -0 -r sudo rm -f
           for i in 1 2 3; do
             if sudo apt-get update && sudo apt-get install -y libpcap-dev; then
               exit 0
@@ -861,11 +873,14 @@ jobs:
         uses: ./.github/actions/setup-node
 
       - name: Install libpcap-dev
-        # Retry with backoff: packages.microsoft.com intermittently serves an
-        # invalid InRelease, flaking the whole job (killed Lighthouse/#928 +
-        # Security Scanning/#932). Three attempts turn a transient mirror hiccup
-        # into a self-healing step instead of a red run.
+        # packages.microsoft.com intermittently serves an unsigned/invalid
+        # InRelease that aborts `apt-get update` for the whole runner, even
+        # though libpcap-dev comes from the Ubuntu archive (killed Lighthouse
+        # /#928 + Security Scanning/#932). Drop the unused Microsoft apt source
+        # so a broken third-party mirror can't red the job, then retry the
+        # install with backoff for genuinely transient hiccups.
         run: |
+          sudo grep -rlZ packages.microsoft.com /etc/apt/sources.list.d/ 2>/dev/null | xargs -0 -r sudo rm -f
           for i in 1 2 3; do
             if sudo apt-get update && sudo apt-get install -y libpcap-dev; then
               exit 0
