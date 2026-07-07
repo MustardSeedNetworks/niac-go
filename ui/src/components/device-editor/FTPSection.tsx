@@ -113,7 +113,8 @@ export const FtpSection: FC<ProtocolSectionProps> = ({
                   className="flex-1 rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary placeholder:text-text-muted focus:border-brand-accent focus:outline-none"
                 />
                 <input
-                  type="text"
+                  type="password"
+                  autoComplete="new-password"
                   value={user.password || ''}
                   onChange={(e) => {
                     const users = [...(device.ftp?.users || [])];

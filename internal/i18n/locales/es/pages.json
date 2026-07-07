@@ -226,7 +226,9 @@
     "description": "Compare dos configuraciones de red {{format}} en paralelo y fusione los cambios entre ellas.",
     "originalFileTitle": "Archivo original",
     "modifiedFileTitle": "Archivo modificado",
-    "readyToCompareTitle": "Listo para comparar"
+    "readyToCompareTitle": "Listo para comparar",
+    "undecidedBlocksWarning": "{{count}} bloque(s) siguen sin decidir. Conservarán el contenido original (izquierda) hasta que elija Izquierda, Ambos o Derecha.",
+    "resolveAllBeforePreview": "Resuelva todos los bloques (Izquierda, Ambos o Derecha) antes de previsualizar o exportar la fusión."
   },
   "walkValidator": {
     "label": "Recorridos {{protocol}}",
@@ -234,7 +236,9 @@
     "description": "Valide y corrija automáticamente los archivos de recorrido {{protocol}} utilizados por los agentes {{protocol}} simulados.",
     "pageTitle": "Recorridos SNMP",
     "noWalksFound": "No se encontraron recorridos",
-    "pastePathLabel": "O pegue una ruta absoluta"
+    "pastePathLabel": "O pegue una ruta absoluta",
+    "autoFixConfirmTitle": "¿Corregir automáticamente el archivo de recorrido?",
+    "autoFixConfirmMessage": "Esto reescribe \"{{file}}\" en su lugar. Se crea una copia de seguridad .bak del original antes de escribir cualquier cambio."
   },
   "walkAnalyzer": {
     "label": "Analizador de recorridos",

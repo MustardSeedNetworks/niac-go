@@ -16,6 +16,7 @@ import { useApiResource } from '../../hooks/useApiResource';
 import { DeviceFormSchema } from '../../schemas/forms';
 import { getErrorMessage } from '../../utils/format';
 import type { StatusMessage } from './DeviceEditorHeader';
+import { useUnsavedChangesGuard } from './useUnsavedChangesGuard';
 
 /**
  * Create an empty device with default values
@@ -76,6 +77,16 @@ export interface UseDeviceEditorReturn {
   handleSave: () => Promise<void>;
   handleDelete: () => Promise<void>;
   handleDiscard: () => void;
+
+  // Unsaved-changes navigation guard (#920 — the editor previously lost
+  // edits silently on navigate-away). requestNavigateBack replaces a bare
+  // `navigate('/device-config')` for the "Back" button; pendingLeavePath /
+  // confirmLeave / cancelLeave drive the confirmation modal rendered by
+  // DeviceEditorPage.
+  requestNavigateBack: () => void;
+  pendingLeavePath: string | null;
+  confirmLeave: () => void;
+  cancelLeave: () => void;
 }
 
 export const useDeviceEditor = (): UseDeviceEditorReturn => {
@@ -284,6 +295,17 @@ export const useDeviceEditor = (): UseDeviceEditorReturn => {
     }
   }, [isNewDevice, originalDevice, navigate, reset]);
 
+  const {
+    pendingPath: pendingLeavePath,
+    requestNavigate: requestNavigateBackTo,
+    confirmNavigate: confirmLeave,
+    cancelNavigate: cancelLeave,
+  } = useUnsavedChangesGuard(isDirty, navigate);
+  const requestNavigateBack = useCallback(
+    () => requestNavigateBackTo('/device-config'),
+    [requestNavigateBackTo],
+  );
+
   return {
     hostname,
     isNewDevice,
@@ -311,5 +333,9 @@ export const useDeviceEditor = (): UseDeviceEditorReturn => {
     handleSave,
     handleDelete,
     handleDiscard,
+    requestNavigateBack,
+    pendingLeavePath,
+    confirmLeave,
+    cancelLeave,
   };
 };

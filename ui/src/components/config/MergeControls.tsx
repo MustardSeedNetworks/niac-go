@@ -9,6 +9,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { type FC, useCallback, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { iconSizes } from '../../constants/sizes';
 import { Button } from '../../ui/Button';
 import { Card, CardContent } from '../../ui/Card';
@@ -49,6 +50,7 @@ export const MergeControls: FC<MergeControlsProps> = ({
   leftLabel = 'Original',
   rightLabel = 'Modified',
 }) => {
+  const { t } = useTranslation('pages');
   // Confirm modal states
   const [showAcceptLeftConfirm, setShowAcceptLeftConfirm] = useState(false);
   const [showAcceptRightConfirm, setShowAcceptRightConfirm] = useState(false);
@@ -154,6 +156,24 @@ export const MergeControls: FC<MergeControlsProps> = ({
           </div>
         )}
 
+        {/* Undecided-blocks warning — a "modified" block with no Left/Both/
+            Right decision silently keeps the original (left) content in
+            the preview, export, and server-side merge. Surface that risk
+            explicitly instead of letting it happen quietly. */}
+        {stats.totalChanges > 0 && !stats.isComplete && (
+          <div
+            className="flex items-start gap-compact rounded-lg border border-status-warning/30 bg-status-warning/10 pad-sm text-sm text-status-warning"
+            role="alert"
+          >
+            <AlertCircle className={`${iconSizes.md} mt-0.5 flex-shrink-0`} />
+            <span>
+              {t('configDiff.undecidedBlocksWarning', {
+                count: stats.totalChanges - stats.decisionsCount,
+              })}
+            </span>
+          </div>
+        )}
+
         {/* Decision breakdown */}
         {stats.decisionsCount > 0 && (
           <div className="flex items-center gap-comfortable flex-wrap">
@@ -211,7 +231,7 @@ export const MergeControls: FC<MergeControlsProps> = ({
         <div className="flex flex-wrap gap-default pt-2 border-t border-surface-border">
           <Button
             tone="violet"
-            disabled={disabled || stats.totalChanges === 0}
+            disabled={disabled || stats.totalChanges === 0 || !stats.isComplete}
             onClick={onPreview}
             leftIcon={<FileCheck className={iconSizes.md} />}
           >
@@ -251,8 +271,8 @@ export const MergeControls: FC<MergeControlsProps> = ({
           {stats.totalChanges === 0
             ? 'Upload two YAML config files to start comparing and merging.'
             : stats.isComplete
-              ? 'All changes resolved. You can now export the merged configuration.'
-              : 'Click the merge buttons on each changed block to decide how to merge.'}
+              ? 'All changes resolved. You can now preview and export the merged configuration.'
+              : t('configDiff.resolveAllBeforePreview')}
         </SmallText>
       </CardContent>
 
