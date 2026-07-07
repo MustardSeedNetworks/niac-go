@@ -1,6 +1,7 @@
 import { History } from 'lucide-react';
-import type { FC } from 'react';
+import { type FC, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useLocation } from 'react-router-dom';
 import { fetchHistory } from '../api/client';
 import { ErrorInjectionPanel } from '../components/ErrorInjectionPanel';
 import { ReplayControlPanel } from '../components/ReplayControlPanel';
@@ -17,6 +18,16 @@ export const TrafficInjectionPage: FC = () => {
   const { data: history } = useApiResource(fetchHistory, [], {
     intervalMs: POLL_INTERVALS.slow,
   });
+  const location = useLocation();
+
+  // Dashboard's "View all history" link points here with #recent-runs so
+  // it lands on the actual expanded run history instead of the top of a
+  // page whose primary content is fault injection.
+  useEffect(() => {
+    if (location.hash === '#recent-runs') {
+      document.getElementById('recent-runs')?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [location.hash]);
 
   return (
     <div className="space-y-8">
@@ -39,7 +50,7 @@ export const TrafficInjectionPage: FC = () => {
       </div>
 
       {/* Recent runs — previously lived on the standalone /analysis page */}
-      <Card className="border-surface-border bg-bg-surface/70">
+      <Card id="recent-runs" className="border-surface-border bg-bg-surface/70">
         <CardContent className="stack">
           <div className="flex-between">
             <H2 className="flex items-center gap-compact text-lg">

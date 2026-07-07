@@ -7,7 +7,7 @@
  * footer; there is no logout (NIAC is single-user).
  *
  *   ┌──────────────────────────────────────────────────────────────┐
- *   │ [logo] NIAC  [ConnectionStatus]    …    [theme toggle]       │
+ *   │ [logo] NIAC  [ConnectionStatus][SimStatus] … [theme toggle]  │
  *   └──────────────────────────────────────────────────────────────┘
  */
 import { Moon, Network, Sun } from 'lucide-react';
@@ -15,6 +15,7 @@ import type { FC, ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../hooks/useTheme';
 import { ConnectionStatus } from '../ui/ConnectionStatus';
+import { SimulationStatusChip } from '../ui/SimulationStatusChip';
 
 export const HeaderBar: FC = (): ReactElement => {
   const { t } = useTranslation('common');
@@ -32,6 +33,7 @@ export const HeaderBar: FC = (): ReactElement => {
         </div>
         <span className="font-display font-bold text-text-primary truncate">NIAC</span>
         <ConnectionStatus />
+        <SimulationStatusChip />
       </div>
 
       {/* Right slot: theme toggle only (no profiles / interfaces in NIAC).

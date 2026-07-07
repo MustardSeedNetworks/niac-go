@@ -2,7 +2,6 @@ import { Activity, BellRing, Network, PlugZap } from 'lucide-react';
 import { type FC, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  fetchSimulationStatus,
   fetchUsableInterfaces,
   fetchUserConfigContent,
   startSimulation,
@@ -10,9 +9,8 @@ import {
 } from '../api/client';
 import type { NetworkInterface, Template, UserConfig } from '../api/types';
 import { ConfigPicker } from '../components/simulation/ConfigPicker';
-import { POLL_INTERVALS } from '../constants/polling';
 import { iconSizes } from '../constants/sizes';
-import { useApiResource } from '../hooks/useApiResource';
+import { useSimulationStatus } from '../hooks/useSimulationStatus';
 import { useUIStore } from '../stores/ui-store';
 import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
@@ -37,10 +35,7 @@ import { SelectedNetworkPreview } from './runtime/SelectedNetworkPreview';
  */
 export const RuntimeControlPage: FC = () => {
   const { t } = useTranslation('pages');
-  const [refetchTrigger, setRefetchTrigger] = useState(0);
-  const { data: simStatus } = useApiResource(fetchSimulationStatus, [refetchTrigger], {
-    intervalMs: POLL_INTERVALS.fast,
-  });
+  const { data: simStatus, refetch: refetchSimStatus } = useSimulationStatus();
 
   const { simulationSettings, setSimulationSettings } = useUIStore();
   const [interfaces, setInterfaces] = useState<NetworkInterface[]>([]);
@@ -184,7 +179,7 @@ export const RuntimeControlPage: FC = () => {
       });
 
       setMessage({ tone: 'success', text: 'Simulation started successfully!' });
-      setRefetchTrigger((t) => t + 1);
+      refetchSimStatus();
       setQuickUploadFile(null);
     } catch (err) {
       setMessage({ tone: 'error', text: getErrorMessage(err) });
@@ -208,7 +203,7 @@ export const RuntimeControlPage: FC = () => {
     try {
       await stopSimulation();
       setMessage({ tone: 'success', text: 'Simulation stopped' });
-      setRefetchTrigger((t) => t + 1);
+      refetchSimStatus();
     } catch (err) {
       setMessage({ tone: 'error', text: getErrorMessage(err) });
     } finally {

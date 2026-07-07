@@ -5,6 +5,7 @@ import {
   fetchHistory,
   fetchInterfaces,
   fetchNeighbors,
+  fetchSimulationStatus,
   fetchStats,
   fetchVersion,
 } from '../api/client';
@@ -14,6 +15,7 @@ import type {
   HistoryRecord,
   InterfacesResponse,
   NeighborRecord,
+  SimulationStatus,
   StackStatsResponse,
   VersionInfo,
 } from '../api/types';
@@ -42,6 +44,7 @@ interface AppContextValue {
   version: ApiResourceResult<VersionInfo>;
   errorTypes: ApiResourceResult<ErrorInjectionInfo>;
   interfaces: ApiResourceResult<InterfacesResponse>;
+  simStatus: ApiResourceResult<SimulationStatus>;
   pollIntervals: typeof POLL_INTERVALS;
 }
 
@@ -66,6 +69,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
   });
   const errorTypes = useApiResource(fetchErrorTypes, []);
   const interfaces = useApiResource(fetchInterfaces, []);
+  // Single poller for simulation run/stop state, shared by HeaderBar (status
+  // chip), DashboardPage (status banner + stat cards), RuntimeControlPage
+  // (start/stop controls), and PacketInspectorPage (active-interface
+  // detection) via the useSimulationStatus() hook — see hooks/useSimulationStatus.ts.
+  // Previously each of those pages ran its own independent
+  // useApiResource(fetchSimulationStatus, …) poll against the same endpoint.
+  const simStatus = useApiResource(fetchSimulationStatus, [], {
+    intervalMs: POLL_INTERVALS.fast,
+  });
 
   // Memoize context value to prevent unnecessary re-renders
   const value = useMemo(
@@ -77,9 +89,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       version,
       errorTypes,
       interfaces,
+      simStatus,
       pollIntervals: POLL_INTERVALS,
     }),
-    [stats, devices, history, neighbors, version, errorTypes, interfaces],
+    [stats, devices, history, neighbors, version, errorTypes, interfaces, simStatus],
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

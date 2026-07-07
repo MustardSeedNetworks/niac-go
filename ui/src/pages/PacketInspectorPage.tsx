@@ -16,7 +16,6 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import {
   fetchCaptureStatus,
-  fetchSimulationStatus,
   fetchUsableInterfaces,
   startStandaloneCapture,
   stopStandaloneCapture,
@@ -35,6 +34,7 @@ import { useApiResource } from '../hooks/useApiResource';
 import { useColoringRules } from '../hooks/useColoringRules';
 import { useDisplayFilter } from '../hooks/useDisplayFilter';
 import { usePacketStream } from '../hooks/useEventSource';
+import { useSimulationStatus } from '../hooks/useSimulationStatus';
 import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
 import { Tag } from '../ui/Tag';
@@ -97,9 +97,7 @@ export const PacketInspectorPage: FC = () => {
   // populates from either a running simulation OR a standalone capture
   // session. Polling both lets us pick whichever is producing traffic
   // and show its interface in the header.
-  const { data: simStatus } = useApiResource(fetchSimulationStatus, [], {
-    intervalMs: POLL_INTERVALS.fast,
-  });
+  const { data: simStatus } = useSimulationStatus();
   const { data: captureStatus, refetch: refetchCapture } = useApiResource(fetchCaptureStatus, [], {
     intervalMs: POLL_INTERVALS.fast,
   });
