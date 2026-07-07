@@ -690,8 +690,9 @@
       "closeButton": "Cerrar",
       "editCopyTitle": "Clone esta plantilla en sus configuraciones guardadas y abra el editor de dispositivos",
       "cloning": "Clonando…",
-      "editCopy": "Editar una copia",
-      "pickTemplate": "Elegir esta plantilla"
+      "editCopy": "Personalizar primero",
+      "pickTemplate": "Usar tal cual",
+      "pickTemplateTitle": "Seleccione esta plantilla como la configuración activa para ejecutarla sin cambios"
     }
   },
   "license": {
