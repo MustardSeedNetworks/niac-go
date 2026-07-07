@@ -121,7 +121,7 @@
     "title": "Dispositivos en ejecución",
     "description": "Vista de solo lectura de los dispositivos que el daemon está simulando actualmente, junto con el YAML en ejecución.",
     "ipAddressesHeader": "Direcciones IP",
-    "availableSnmpWalks": "Recorridos SNMP disponibles",
+    "availableSnmpWalks": "Walks SNMP disponibles",
     "editInLibrary": "Editar en la biblioteca de dispositivos",
     "useInEditor": "Usar en el editor de dispositivos",
     "subtitle": "Dispositivos generados a partir del YAML de configuración activo",
@@ -595,19 +595,19 @@
     "batchStatusInvalid": "No válido"
   },
   "walkAnalyzer": {
-    "label": "Analizador de recorridos",
-    "title": "Analizador de recorridos",
-    "description": "Analice un archivo de recorrido SNMP para extraer la identidad del dispositivo, el inventario de interfaces y las adyacencias de vecinos LLDP/CDP.",
-    "pageTitle": "Analizador de recorridos",
-    "noWalksFound": "No se encontraron recorridos",
+    "label": "Analizador de Walk",
+    "title": "Analizador de Walk",
+    "description": "Analice un archivo walk de SNMP para extraer la identidad del dispositivo, el inventario de interfaces y las adyacencias de vecinos LLDP/CDP.",
+    "pageTitle": "Analizador de Walk",
+    "noWalksFound": "No se encontraron walks",
     "pastePathLabel": "O pegue una ruta absoluta",
     "noNeighborsFound": "No se encontraron vecinos LLDP/CDP.",
     "noInterfacesFound": "No se encontraron interfaces."
   },
   "libraryWalks": {
-    "label": "Recorridos",
-    "title": "Biblioteca de recorridos",
-    "description": "Navegador de solo lectura para los archivos de recorrido {{protocol}} en disco que el daemon sirve desde la biblioteca unificada."
+    "label": "Walks",
+    "title": "Biblioteca de Walk",
+    "description": "Navegador de solo lectura para los archivos walk de {{protocol}} en disco que el daemon sirve desde la biblioteca unificada."
   },
   "libraryPcaps": {
     "label": "{{format}}",
