@@ -17,6 +17,7 @@ import {
   topologyDeviceColors as deviceColors,
   topologyDeviceIcons as deviceIcons,
 } from '../../constants/device-types';
+import { UTILIZATION_CRITICAL_COLOR, UTILIZATION_HIGH_COLOR } from './layout';
 
 interface TopologyLegendProps {
   show: boolean;
@@ -53,8 +54,8 @@ const LINK_SPEEDS = [
 // base color; only the amber/red tiers are visually distinct enough
 // to document).
 const UTILIZATION_TIERS = [
-  { color: '#f59e0b', labelKey: 'utilizationHigh' },
-  { color: '#ef4444', labelKey: 'utilizationCritical' },
+  { color: UTILIZATION_HIGH_COLOR, labelKey: 'utilizationHigh' },
+  { color: UTILIZATION_CRITICAL_COLOR, labelKey: 'utilizationCritical' },
 ] as const;
 
 /**
