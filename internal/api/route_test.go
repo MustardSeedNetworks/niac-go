@@ -75,9 +75,9 @@ func TestRoutePolicyManifestMethodAndBody(t *testing.T) {
 	// larger cap, not the 1MB default — a regression here silently truncates
 	// valid captures.
 	for _, p := range []string{"/api/v1/pcap/upload", "/api/v1/replay"} {
-		if v := byPath[p]; v.MaxBodyBytes != int64(MaxPCAPUploadSize) {
-			t.Errorf("%s: maxBodyBytes = %d, want MaxPCAPUploadSize (%d)",
-				p, v.MaxBodyBytes, int64(MaxPCAPUploadSize))
+		if v := byPath[p]; v.MaxBodyBytes != int64(MaxPCAPUploadBodySize) {
+			t.Errorf("%s: maxBodyBytes = %d, want MaxPCAPUploadBodySize (%d)",
+				p, v.MaxBodyBytes, int64(MaxPCAPUploadBodySize))
 		}
 	}
 

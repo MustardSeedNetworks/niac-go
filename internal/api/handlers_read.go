@@ -300,9 +300,12 @@ func (s *Server) handleReplay(w http.ResponseWriter, r *http.Request) {
 	case http.MethodGet:
 		s.writeJSON(w, s.cfg.Replay.Status())
 	case http.MethodPost:
-		// SECURITY FIX #97: Enforce request body size limit for PCAP uploads
+		// SECURITY FIX #97: Enforce request body size limit for PCAP uploads.
+		// Bug #1e: use MaxPCAPUploadBodySize (accounts for base64 + JSON
+		// envelope overhead), not the raw-pcap MaxPCAPUploadSize — see the
+		// doc comment on MaxPCAPUploadBodySize in server.go.
 		var req ReplayRequest
-		if !decodeJSONStrict(w, r, &req, MaxPCAPUploadSize) {
+		if !decodeJSONStrict(w, r, &req, MaxPCAPUploadBodySize) {
 			return
 		}
 
