@@ -3,7 +3,7 @@ import type { FC, ReactNode } from 'react';
 import { iconSizes } from '../../constants/sizes';
 
 export interface FormFieldProps {
-  label: string;
+  label: ReactNode;
   children: ReactNode;
   helpText?: string;
   required?: boolean;

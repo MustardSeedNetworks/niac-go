@@ -1,4 +1,6 @@
 import { type FC, memo, useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { SmallText } from '../ui/Typography';
 import {
   type AutocompleteSuggestion,
   getAutocompleteSuggestions,
@@ -18,6 +20,7 @@ const QUICK_PROTOCOLS = ['tcp', 'udp', 'icmp', 'arp', 'dns', 'http'] as const;
  * Shows green border when valid, red when invalid.
  */
 export const FilterBar: FC<FilterBarProps> = memo(({ value, onChange, placeholder }) => {
+  const { t } = useTranslation('common');
   const [isFocused, setIsFocused] = useState(false);
   const [suggestions, setSuggestions] = useState<AutocompleteSuggestion[]>([]);
   const [selectedSuggestion, setSelectedSuggestion] = useState(-1);
@@ -101,6 +104,7 @@ export const FilterBar: FC<FilterBarProps> = memo(({ value, onChange, placeholde
 
   return (
     <div className="relative w-full">
+      <SmallText className="text-text-muted px-1">{t('filters.displayFilterCaption')}</SmallText>
       <div className="flex items-center gap-compact">
         <div className="relative flex-1">
           <input

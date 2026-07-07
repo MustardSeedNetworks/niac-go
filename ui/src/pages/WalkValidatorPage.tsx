@@ -4,6 +4,7 @@ import { fetchLibraryWalks, fixWalk, type LibraryFileEntry, validateWalk } from 
 import type { WalkValidationIssue, WalkValidationResponse } from '../api/types';
 import { Card, CardContent } from '../ui/Card';
 import { ConfirmModal } from '../ui/ConfirmModal';
+import { InfoPopover } from '../ui/InfoPopover';
 
 type Severity = 'error' | 'warning' | 'info';
 
@@ -28,6 +29,7 @@ const severityCounts = (issues: WalkValidationIssue[]): Record<Severity, number>
 export const WalkValidatorPage: FC = () => {
   const { t } = useTranslation('pages');
   const { t: tCommon } = useTranslation('common');
+  const { t: tHelp } = useTranslation('help');
   const [files, setFiles] = useState<LibraryFileEntry[]>([]);
   const [filesError, setFilesError] = useState<string | null>(null);
   const [filesLoading, setFilesLoading] = useState(true);
@@ -100,12 +102,22 @@ export const WalkValidatorPage: FC = () => {
       <Card className="border-surface-border bg-bg-surface/70">
         <CardContent className="stack-lg">
           <header>
-            <h1 className="text-2xl font-semibold text-text-primary">
+            <h1 className="flex items-center gap-compact text-2xl font-semibold text-text-primary">
               {t('walkValidator.pageTitle')}
+              <InfoPopover
+                label={tCommon('jargon.ariaLabel', { term: 'SNMP walk' })}
+                title="SNMP walk"
+              >
+                {tHelp('jargon.snmpWalk')}
+              </InfoPopover>
             </h1>
             <p className="text-sm text-text-muted">
               Same engine as <code>niac analyze-walk</code>. Validate detects malformed lines,
-              missing OIDs, and unquoted strings; fix auto-rewrites the file in place.
+              missing OIDs
+              <InfoPopover label={tCommon('jargon.ariaLabel', { term: 'OID' })} title="OID">
+                {tHelp('jargon.oid')}
+              </InfoPopover>
+              , and unquoted strings; fix auto-rewrites the file in place.
             </p>
           </header>
 

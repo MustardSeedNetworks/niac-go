@@ -1,5 +1,6 @@
 import { Download, FileSearch, Info, Palette, Share2, Trash2 } from 'lucide-react';
 import { type FC, useCallback, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { fetchPcapAnalysis, uploadPcap } from '../api/client';
 import type { PcapAnalysisResult, PcapPacket } from '../api/types';
 import { ColoringRulesPanel } from '../components/ColoringRulesPanel';
@@ -18,6 +19,7 @@ import { useDisplayFilter } from '../hooks/useDisplayFilter';
 import { useErrorToast } from '../hooks/useErrorToast';
 import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
+import { InfoPopover } from '../ui/InfoPopover';
 import { Tag } from '../ui/Tag';
 import { H2, SmallText } from '../ui/Typography';
 import { getStreamFilter } from '../utils/conversations';
@@ -52,6 +54,9 @@ function pcapPacketToPacket(pcapPacket: PcapPacket): Packet {
  * - Summary statistics and protocol breakdown
  */
 export const PcapAnalyzerPage: FC = () => {
+  const { t } = useTranslation('common');
+  const { t: tHelp } = useTranslation('help');
+
   // File and analysis state
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [analysisResult, setAnalysisResult] = useState<PcapAnalysisResult | null>(null);
@@ -245,6 +250,9 @@ export const PcapAnalyzerPage: FC = () => {
                   <H2 className="flex items-center gap-compact">
                     <FileSearch className={`${iconSizes.lg} text-brand-accent`} />
                     PCAP Analysis
+                    <InfoPopover label={t('jargon.ariaLabel', { term: 'PCAP' })} title="PCAP">
+                      {tHelp('jargon.pcap')}
+                    </InfoPopover>
                   </H2>
                   <Tag colorScheme="green">{analysisResult.packets.length} packets</Tag>
                 </div>

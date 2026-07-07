@@ -424,6 +424,9 @@ export const PacketInspectorPage: FC = () => {
                     onClick={handleFollowStream}
                     leftIcon={<Share2 className={iconSizes.md} />}
                     disabled={!canFollowStream}
+                    title={
+                      canFollowStream ? undefined : t('packets.inspector.followStreamDisabledTitle')
+                    }
                   >
                     Follow Stream
                   </Button>

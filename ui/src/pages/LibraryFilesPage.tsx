@@ -1,5 +1,6 @@
 import { Database, FileBox, RefreshCw, RotateCcw, Search } from 'lucide-react';
 import { type FC, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   fetchLibraryPcaps,
   fetchLibraryWalks,
@@ -11,6 +12,7 @@ import { useErrorToast } from '../hooks/useErrorToast';
 import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
 import { ConfirmModal } from '../ui/ConfirmModal';
+import { InfoPopover } from '../ui/InfoPopover';
 import { Tag } from '../ui/Tag';
 import { H2, SmallText } from '../ui/Typography';
 
@@ -36,6 +38,8 @@ interface Props {
 }
 
 function LibraryFilesView({ kind }: Props) {
+  const { t } = useTranslation('common');
+  const { t: tHelp } = useTranslation('help');
   const fetcher = kind === 'walks' ? fetchLibraryWalks : fetchLibraryPcaps;
   const { data, loading, refetch, error } = useApiResource(fetcher, [], {
     intervalMs: 30000,
@@ -144,7 +148,17 @@ function LibraryFilesView({ kind }: Props) {
                   <tr className="border-b border-surface-border">
                     <th className="text-left py-row pr-4">Name</th>
                     <th className="text-right py-row pr-4">Size</th>
-                    <th className="text-left py-row pr-4">Source</th>
+                    <th className="text-left py-row pr-4">
+                      <span className="inline-flex items-center gap-1">
+                        Source
+                        <InfoPopover
+                          label={t('jargon.ariaLabel', { term: 'starter / bundle / user' })}
+                          title="starter / bundle / user"
+                        >
+                          {tHelp('jargon.librarySource')}
+                        </InfoPopover>
+                      </span>
+                    </th>
                     <th className="text-left py-row">Modified</th>
                     {kind === 'walks' && <th className="text-right py-row">Actions</th>}
                   </tr>
