@@ -58,6 +58,7 @@ export const LogFilters: FC<LogFiltersProps> = memo(
     onClear,
   }) => {
     const { t } = useTranslation('common');
+    const { t: tPages } = useTranslation('pages');
     const handleLevelChange = (e: ChangeEvent<HTMLSelectElement>) => {
       onLevelChange(e.target.value as LogLevel | 'All');
     };
@@ -81,14 +82,14 @@ export const LogFilters: FC<LogFiltersProps> = memo(
           {/* Level Filter */}
           <div className="flex items-center gap-compact">
             <label htmlFor="level-filter" className="text-sm text-text-muted">
-              Level:
+              {tPages('debug.levelFilterLabel')}
             </label>
             <select
               id="level-filter"
               value={levelFilter}
               onChange={handleLevelChange}
               className="rounded-lg border border-surface-border bg-bg-base/60 px-3 py-compact-md text-sm text-text-primary focus:border-brand-accent focus:outline-none"
-              aria-label="Filter by log level"
+              aria-label={tPages('debug.filterByLevelAriaLabel')}
             >
               {LOG_LEVELS.map((level) => (
                 <option key={level} value={level}>
@@ -101,14 +102,14 @@ export const LogFilters: FC<LogFiltersProps> = memo(
           {/* Protocol Filter */}
           <div className="flex items-center gap-compact">
             <label htmlFor="protocol-filter" className="text-sm text-text-muted">
-              Protocol:
+              {tPages('debug.protocolFilterLabel')}
             </label>
             <select
               id="protocol-filter"
               value={protocolFilter}
               onChange={handleProtocolChange}
               className="rounded-lg border border-surface-border bg-bg-base/60 px-3 py-compact-md text-sm text-text-primary focus:border-brand-accent focus:outline-none"
-              aria-label="Filter by protocol"
+              aria-label={tPages('debug.filterByProtocolAriaLabel')}
             >
               {PROTOCOLS.map((protocol) => (
                 <option key={protocol} value={protocol}>
@@ -121,7 +122,7 @@ export const LogFilters: FC<LogFiltersProps> = memo(
           {/* Search Input */}
           <div className="flex flex-1 items-center gap-compact">
             <label htmlFor="log-search" className="text-sm text-text-muted">
-              Search:
+              {tPages('debug.searchFilterLabel')}
             </label>
             <div className="relative flex-1 max-w-md">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
@@ -130,9 +131,9 @@ export const LogFilters: FC<LogFiltersProps> = memo(
                 type="text"
                 value={searchQuery}
                 onChange={handleSearchChange}
-                placeholder="Filter logs..."
+                placeholder={tPages('debug.filterLogsPlaceholder')}
                 className="w-full rounded-lg border border-surface-border bg-bg-base/60 py-compact-md pl-9 pr-3 text-sm text-text-primary placeholder:text-text-muted focus:border-brand-accent focus:outline-none"
-                aria-label="Search logs"
+                aria-label={tPages('debug.searchLogsAriaLabel')}
               />
             </div>
           </div>
@@ -149,7 +150,7 @@ export const LogFilters: FC<LogFiltersProps> = memo(
                 onChange={handleAutoScrollChange}
                 className="h-4 w-4 rounded border-border-muted bg-bg-elevated text-brand-primary focus:ring-brand-primary focus:ring-offset-surface-base"
               />
-              <span className="text-sm text-text-secondary">Auto-scroll</span>
+              <span className="text-sm text-text-secondary">{tPages('debug.autoScrollLabel')}</span>
             </label>
 
             {/* Log Count */}
@@ -168,12 +169,16 @@ export const LogFilters: FC<LogFiltersProps> = memo(
                 leftIcon={
                   paused ? <Play className={iconSizes.md} /> : <Pause className={iconSizes.md} />
                 }
-                aria-label={paused ? 'Resume log stream' : 'Pause log stream'}
+                aria-label={
+                  paused
+                    ? tPages('debug.resumeLogStreamAriaLabel')
+                    : tPages('debug.pauseLogStreamAriaLabel')
+                }
                 className={
                   paused ? 'bg-status-success hover:bg-status-success border-status-success' : ''
                 }
               >
-                {paused ? 'Resume' : 'Pause'}
+                {paused ? tPages('debug.resumeButton') : tPages('debug.pauseButton')}
               </Button>
             )}
             <Button
@@ -181,18 +186,18 @@ export const LogFilters: FC<LogFiltersProps> = memo(
               size="sm"
               onClick={onExport}
               leftIcon={<Download className={iconSizes.md} />}
-              aria-label="Export logs to file"
+              aria-label={tPages('debug.exportLogsAriaLabel')}
             >
-              Export
+              {tPages('debug.exportButton')}
             </Button>
             <Button
               variant="ghost"
               size="sm"
               onClick={onClear}
               leftIcon={<Trash2 className="h-4 w-4" />}
-              aria-label="Clear all logs"
+              aria-label={tPages('debug.clearAllLogsAriaLabel')}
             >
-              Clear
+              {tPages('debug.clearButton')}
             </Button>
           </div>
         </div>

@@ -1,5 +1,6 @@
 import { Copy, Download, FileCode, Pencil, X } from 'lucide-react';
 import { type FC, useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { applyTemplate } from '../api/client';
 import type { Template, TemplateContent } from '../api/types';
@@ -29,6 +30,7 @@ export const TemplatePreviewModal: FC<TemplatePreviewModalProps> = ({
   onUse,
   onCopy,
 }) => {
+  const { t } = useTranslation('pages');
   const navigate = useNavigate();
   const [editing, setEditing] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
@@ -52,7 +54,7 @@ export const TemplatePreviewModal: FC<TemplatePreviewModalProps> = ({
       // the editor; the new config is now in the saved-configs list.
       navigate('/device-config');
     } catch (err) {
-      setEditError(getErrorMessage(err) || 'Failed to create editable copy');
+      setEditError(getErrorMessage(err) || t('templates.previewModal.editCopyFailed'));
     } finally {
       setEditing(false);
     }
@@ -105,7 +107,7 @@ export const TemplatePreviewModal: FC<TemplatePreviewModalProps> = ({
         type="button"
         className="absolute inset-0 bg-scrim/70 backdrop-blur-sm"
         onClick={onClose}
-        aria-label="Close modal"
+        aria-label={t('templates.previewModal.closeModalLabel')}
       />
       <div
         className="relative mx-4 max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-2xl border border-surface-border bg-bg-surface/95 shadow-2xl"
@@ -124,7 +126,7 @@ export const TemplatePreviewModal: FC<TemplatePreviewModalProps> = ({
                 {template.name}
               </h2>
               <SmallText className="text-text-muted">
-                {template.description || 'Configuration template preview'}
+                {template.description || t('templates.previewModal.defaultDescription')}
               </SmallText>
             </div>
           </div>
@@ -132,7 +134,7 @@ export const TemplatePreviewModal: FC<TemplatePreviewModalProps> = ({
             type="button"
             onClick={onClose}
             className="rounded-lg pad-xs text-text-muted hover:bg-surface-hover hover:text-text-primary transition-colors"
-            aria-label="Close modal"
+            aria-label={t('templates.previewModal.closeModalLabel')}
           >
             <X className={iconSizes.lg} />
           </button>
@@ -141,7 +143,7 @@ export const TemplatePreviewModal: FC<TemplatePreviewModalProps> = ({
         {/* Template metadata */}
         <div className="flex flex-wrap items-center gap-default border-b border-surface-border px-6 py-row-lg bg-bg-base/50">
           <Tag colorScheme="purple">
-            {template.deviceCount} {template.deviceCount === 1 ? 'device' : 'devices'}
+            {t('templates.previewModal.deviceCount', { count: template.deviceCount })}
           </Tag>
           <Tag colorScheme="gray" className="capitalize">
             {template.type}
@@ -164,14 +166,14 @@ export const TemplatePreviewModal: FC<TemplatePreviewModalProps> = ({
             <div className="flex-center py-centered">
               <div className="flex items-center gap-default text-text-muted">
                 <div className="h-5 w-5 animate-spin rounded-full border-2 border-brand-primary border-t-transparent" />
-                <span>Loading template content...</span>
+                <span>{t('templates.previewModal.loading')}</span>
               </div>
             </div>
           )}
 
           {error && (
             <div className="rounded-lg border border-status-error/30 bg-status-error/10 pad text-status-error">
-              <p className="font-semibold">Failed to load template</p>
+              <p className="font-semibold">{t('templates.previewModal.loadFailed')}</p>
               <SmallText className="text-status-error">{error.message}</SmallText>
             </div>
           )}
@@ -198,7 +200,7 @@ export const TemplatePreviewModal: FC<TemplatePreviewModalProps> = ({
               onClick={onCopy}
               disabled={!content}
             >
-              Copy YAML
+              {t('templates.previewModal.copyYaml')}
             </Button>
             <Button
               variant="ghost"
@@ -207,25 +209,27 @@ export const TemplatePreviewModal: FC<TemplatePreviewModalProps> = ({
               onClick={handleDownload}
               disabled={!content}
             >
-              Download
+              {t('templates.previewModal.download')}
             </Button>
           </div>
           <div className="flex flex-col items-end gap-tight">
             <div className="flex gap-compact">
               <Button variant="outline" onClick={onClose}>
-                Close
+                {t('templates.previewModal.closeButton')}
               </Button>
               <Button
                 variant="outline"
                 leftIcon={<Pencil className={iconSizes.md} />}
                 onClick={handleEditCopy}
                 disabled={editing || !content}
-                title="Clone this template to your saved configs and open the device editor"
+                title={t('templates.previewModal.editCopyTitle')}
               >
-                {editing ? 'Cloning…' : 'Edit a copy'}
+                {editing
+                  ? t('templates.previewModal.cloning')
+                  : t('templates.previewModal.editCopy')}
               </Button>
               <Button tone="violet" onClick={() => onUse(template)}>
-                Pick this template
+                {t('templates.previewModal.pickTemplate')}
               </Button>
             </div>
             {editError && (

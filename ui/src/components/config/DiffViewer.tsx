@@ -1,4 +1,5 @@
 import { type FC, useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Tag } from '../../ui/Tag';
 import { SmallText } from '../../ui/Typography';
 import { DiffBlockComponent } from './diff-viewer/DiffBlock';
@@ -27,25 +28,31 @@ const DiffStatsBar: FC<{
   decisionsCount,
   changedBlocksCount,
   showMergeControls,
-}) => (
-  <div className="flex items-center gap-comfortable flex-wrap">
-    <SmallText className="text-text-muted">Changes:</SmallText>
-    <Tag colorScheme="green" className="text-xs">
-      +{additions} additions
-    </Tag>
-    <Tag colorScheme="red" className="text-xs">
-      -{deletions} deletions
-    </Tag>
-    <Tag colorScheme="yellow" className="text-xs">
-      {modifications} modified blocks
-    </Tag>
-    {showMergeControls && (
-      <SmallText className="text-text-muted ml-auto">
-        {decisionsCount} / {changedBlocksCount} decisions made
-      </SmallText>
-    )}
-  </div>
-);
+}) => {
+  const { t } = useTranslation('pages');
+  return (
+    <div className="flex items-center gap-comfortable flex-wrap">
+      <SmallText className="text-text-muted">{t('configDiff.changesLabel')}</SmallText>
+      <Tag colorScheme="green" className="text-xs">
+        {t('configDiff.additionsCount', { count: additions })}
+      </Tag>
+      <Tag colorScheme="red" className="text-xs">
+        {t('configDiff.deletionsCount', { count: deletions })}
+      </Tag>
+      <Tag colorScheme="yellow" className="text-xs">
+        {t('configDiff.modifiedBlocksCount', { count: modifications })}
+      </Tag>
+      {showMergeControls && (
+        <SmallText className="text-text-muted ml-auto">
+          {t('configDiff.decisionsMadeCount', {
+            decisionsCount,
+            changedBlocksCount,
+          })}
+        </SmallText>
+      )}
+    </div>
+  );
+};
 
 /**
  * Column headers for left and right panels
@@ -67,11 +74,14 @@ const ColumnHeaders: FC<{
 /**
  * Empty state when no content is provided
  */
-const EmptyState: FC = () => (
-  <div className="flex-center h-64 text-text-muted">
-    <SmallText>Upload files to compare</SmallText>
-  </div>
-);
+const EmptyState: FC = () => {
+  const { t } = useTranslation('pages');
+  return (
+    <div className="flex-center h-64 text-text-muted">
+      <SmallText>{t('configDiff.uploadFilesToCompare')}</SmallText>
+    </div>
+  );
+};
 
 /**
  * Side-by-side diff viewer component

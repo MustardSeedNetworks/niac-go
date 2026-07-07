@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Template } from '../../api/template-types';
+import '../../i18n';
 import { ConfigPicker } from './ConfigPicker';
 
 // ConfigPicker reads/writes view-mode + favorites prefs via localStorage

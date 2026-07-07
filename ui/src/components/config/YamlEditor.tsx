@@ -17,6 +17,8 @@ import {
 } from '@codemirror/view';
 import { tags } from '@lezer/highlight';
 import { type FC, useCallback, useEffect, useMemo, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
+import i18n from '../../i18n';
 
 /**
  * Custom dark theme for CodeMirror that matches the app's design
@@ -142,6 +144,7 @@ export const YamlEditor: FC<YamlEditorProps> = ({
   className = '',
   onValidationError,
 }) => {
+  const { t } = useTranslation('pages');
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
 
@@ -260,7 +263,7 @@ export const YamlEditor: FC<YamlEditorProps> = ({
       ref={containerRef}
       className={`rounded-xl border border-surface-border bg-bg-base/70 overflow-hidden ${className}`}
       style={containerStyle}
-      aria-label="YAML editor"
+      aria-label={t('configDiff.yamlEditorLabel')}
     />
   );
 };
@@ -286,13 +289,13 @@ function validateYaml(content: string): string[] {
 
     // Check for tabs (YAML should use spaces)
     if (line.includes('\t')) {
-      errors.push(`Line ${lineNum}: Tabs are not allowed in YAML, use spaces instead`);
+      errors.push(i18n.t('configDiff.yamlTabsError', { ns: 'pages', lineNum }));
     }
 
     // Check for inconsistent indentation
     const leadingSpaces = line.match(/^(\s*)/)?.[1].length ?? 0;
     if (leadingSpaces > 0 && leadingSpaces % 2 !== 0) {
-      errors.push(`Line ${lineNum}: Inconsistent indentation (should be multiple of 2 spaces)`);
+      errors.push(i18n.t('configDiff.yamlIndentationError', { ns: 'pages', lineNum }));
     }
 
     // Check for trailing colons without value on same line

@@ -142,7 +142,12 @@
     "skipToMainContent": "Skip to main content"
   },
   "footer": {
-    "version": "Version"
+    "version": "Version",
+    "help": "Help",
+    "openHelp": "Open help",
+    "settings": "Settings",
+    "openSettings": "Open settings",
+    "expandSidebar": "Expand sidebar"
   },
   "emptyState": {
     "noDevicesFound": "No devices found",

@@ -40,6 +40,7 @@ interface Props {
 function LibraryFilesView({ kind }: Props) {
   const { t } = useTranslation('common');
   const { t: tHelp } = useTranslation('help');
+  const { t: tPages } = useTranslation('pages');
   const fetcher = kind === 'walks' ? fetchLibraryWalks : fetchLibraryPcaps;
   const { data, loading, refetch, error } = useApiResource(fetcher, [], {
     intervalMs: 30000,
@@ -75,11 +76,14 @@ function LibraryFilesView({ kind }: Props) {
 
   const columnCount = kind === 'walks' ? 5 : 4;
   const KindIcon = kind === 'walks' ? Database : FileBox;
-  const title = kind === 'walks' ? 'SNMP Walks' : 'PCAP Captures';
+  const title =
+    kind === 'walks' ? tPages('libraryFiles.walksTitle') : tPages('libraryFiles.pcapsTitle');
+  const kindLabel =
+    kind === 'walks' ? tPages('libraryFiles.walksKind') : tPages('libraryFiles.pcapsKind');
   const emptyHint =
     kind === 'walks'
-      ? 'Drop walk files into ~/.niac/library/walks/, or run `niac content install` to fetch the published bundle.'
-      : 'Drop pcap files into ~/.niac/library/pcaps/, or run `niac content install` to fetch the published bundle.';
+      ? tPages('libraryFiles.walksEmptyHint')
+      : tPages('libraryFiles.pcapsEmptyHint');
 
   return (
     <div className="stack-xl">
@@ -93,7 +97,7 @@ function LibraryFilesView({ kind }: Props) {
               <div>
                 <H2>{title}</H2>
                 <SmallText className="text-text-muted">
-                  {entries.length} {entries.length === 1 ? 'file' : 'files'} ·{' '}
+                  {tPages('libraryFiles.fileCount', { count: entries.length })} ·{' '}
                   {humanBytes(totalBytes)}
                 </SmallText>
               </div>
@@ -106,8 +110,8 @@ function LibraryFilesView({ kind }: Props) {
                   type="search"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search by name…"
-                  aria-label="Filter library entries by name"
+                  placeholder={tPages('libraryFiles.searchPlaceholder')}
+                  aria-label={tPages('libraryFiles.filterAriaLabel')}
                   className="w-64 rounded-md border border-surface-border bg-bg-base/40 pl-7 pr-3 py-compact-md text-xs text-text-primary placeholder:text-text-muted focus:border-status-info/40 focus:outline-none focus:ring-1 focus:ring-status-info/30"
                 />
               </div>
@@ -117,9 +121,9 @@ function LibraryFilesView({ kind }: Props) {
                 onClick={refetch}
                 leftIcon={<RefreshCw className="w-4 h-4" />}
                 disabled={loading}
-                title="Re-fetch the file listing from the daemon's library directory"
+                title={tPages('libraryFiles.refreshTitle')}
               >
-                Refresh
+                {tPages('libraryFiles.refreshButton')}
               </Button>
             </div>
           </div>
@@ -130,15 +134,19 @@ function LibraryFilesView({ kind }: Props) {
         <CardContent>
           {loading && entries.length === 0 ? (
             <div className="py-10 text-center">
-              <SmallText className="text-text-muted">Loading {kind}…</SmallText>
+              <SmallText className="text-text-muted">
+                {tPages('libraryFiles.loadingKind', { kind: kindLabel })}
+              </SmallText>
             </div>
           ) : error ? (
             <SmallText className="text-status-error">
-              Failed to load library: {error.message}
+              {tPages('libraryFiles.loadFailed', { error: error.message })}
             </SmallText>
           ) : entries.length === 0 ? (
             <div className="py-10 text-center">
-              <SmallText className="text-text-muted">No {kind} installed yet.</SmallText>
+              <SmallText className="text-text-muted">
+                {tPages('libraryFiles.noneInstalled', { kind: kindLabel })}
+              </SmallText>
               <p className="mt-inline text-xs text-text-muted">{emptyHint}</p>
             </div>
           ) : (
@@ -146,11 +154,11 @@ function LibraryFilesView({ kind }: Props) {
               <table className="w-full text-sm">
                 <thead className="text-xs text-text-muted uppercase tracking-wide">
                   <tr className="border-b border-surface-border">
-                    <th className="text-left py-row pr-4">Name</th>
-                    <th className="text-right py-row pr-4">Size</th>
+                    <th className="text-left py-row pr-4">{tPages('libraryFiles.nameHeader')}</th>
+                    <th className="text-right py-row pr-4">{tPages('libraryFiles.sizeHeader')}</th>
                     <th className="text-left py-row pr-4">
                       <span className="inline-flex items-center gap-1">
-                        Source
+                        {tPages('libraryFiles.sourceHeader')}
                         <InfoPopover
                           label={t('jargon.ariaLabel', { term: 'starter / bundle / user' })}
                           title="starter / bundle / user"
@@ -159,8 +167,10 @@ function LibraryFilesView({ kind }: Props) {
                         </InfoPopover>
                       </span>
                     </th>
-                    <th className="text-left py-row">Modified</th>
-                    {kind === 'walks' && <th className="text-right py-row">Actions</th>}
+                    <th className="text-left py-row">{tPages('libraryFiles.modifiedHeader')}</th>
+                    {kind === 'walks' && (
+                      <th className="text-right py-row">{tPages('libraryFiles.actionsHeader')}</th>
+                    )}
                   </tr>
                 </thead>
                 <tbody className="text-text-primary">
@@ -170,7 +180,7 @@ function LibraryFilesView({ kind }: Props) {
                         <span className="inline-flex items-center gap-compact">
                           {entry.name}
                           {kind === 'walks' && entry.edited && (
-                            <Tag colorScheme="yellow">edited</Tag>
+                            <Tag colorScheme="yellow">{tPages('libraryFiles.editedTag')}</Tag>
                           )}
                         </span>
                       </td>
@@ -191,10 +201,10 @@ function LibraryFilesView({ kind }: Props) {
                               size="xs"
                               leftIcon={<RotateCcw className="w-3.5 h-3.5" />}
                               onClick={() => setRevertTarget(entry.name)}
-                              aria-label={`Revert ${entry.name} to its original`}
+                              aria-label={tPages('libraryFiles.revertLabel', { name: entry.name })}
                               data-testid={`revert-walk-${entry.name}`}
                             >
-                              Revert
+                              {tPages('libraryFiles.revertButton')}
                             </Button>
                           )}
                         </td>
@@ -207,7 +217,7 @@ function LibraryFilesView({ kind }: Props) {
                         colSpan={columnCount}
                         className="py-6 text-center text-xs text-text-muted"
                       >
-                        No entries match "{search}"
+                        {tPages('libraryFiles.noMatchEntries', { query: search })}
                       </td>
                     </tr>
                   )}
@@ -223,14 +233,17 @@ function LibraryFilesView({ kind }: Props) {
           isOpen={revertTarget !== null}
           onConfirm={() => void handleConfirmRevert()}
           onCancel={() => setRevertTarget(null)}
-          title="Revert to original"
+          title={tPages('libraryFiles.revertModalTitle')}
           message={
             <p>
-              Revert <span className="font-mono">{revertTarget}</span> to its original? This
-              discards edits.
+              {tPages('libraryFiles.revertModalMessagePrefix')}{' '}
+              <span className="font-mono">{revertTarget}</span>{' '}
+              {tPages('libraryFiles.revertModalMessageSuffix')}
             </p>
           }
-          confirmLabel={reverting ? 'Reverting…' : 'Revert'}
+          confirmLabel={
+            reverting ? tPages('libraryFiles.revertingButton') : tPages('libraryFiles.revertButton')
+          }
         />
       )}
     </div>
@@ -238,16 +251,22 @@ function LibraryFilesView({ kind }: Props) {
 }
 
 const SourceBadge: FC<{ source: LibraryFileEntry['source'] }> = ({ source }) => {
+  const { t } = useTranslation('pages');
   const styles: Record<LibraryFileEntry['source'], string> = {
     starter: 'border-brand-primary/40 bg-brand-primary/10 text-brand-accent',
     bundle: 'border-status-info/40 bg-status-info/10 text-status-info',
     user: 'border-status-success/40 bg-status-success/10 text-status-success',
   };
+  const labels: Record<LibraryFileEntry['source'], string> = {
+    starter: t('libraryFiles.sourceStarter'),
+    bundle: t('libraryFiles.sourceBundle'),
+    user: t('libraryFiles.sourceUser'),
+  };
   return (
     <span
       className={`inline-block rounded-full border px-cell py-0.5 text-[10px] font-medium capitalize ${styles[source]}`}
     >
-      {source}
+      {labels[source]}
     </span>
   );
 };

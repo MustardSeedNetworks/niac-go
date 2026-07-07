@@ -142,7 +142,12 @@
     "skipToMainContent": "Saltar al contenido principal"
   },
   "footer": {
-    "version": "Versión"
+    "version": "Versión",
+    "help": "Ayuda",
+    "openHelp": "Abrir ayuda",
+    "settings": "Configuración",
+    "openSettings": "Abrir configuración",
+    "expandSidebar": "Expandir barra lateral"
   },
   "emptyState": {
     "noDevicesFound": "No se encontraron dispositivos",

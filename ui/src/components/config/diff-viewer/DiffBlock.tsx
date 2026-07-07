@@ -1,5 +1,6 @@
 import { ChevronLeft, ChevronRight, ChevronsLeftRight } from 'lucide-react';
 import { type FC, memo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { iconSizes } from '../../../constants/sizes';
 import { Button } from '../../../ui/Button';
 import { Tag } from '../../../ui/Tag';
@@ -35,43 +36,53 @@ function padLines(lines: DiffLine[], targetLength: number): DiffLine[] {
 const MergeControls: FC<{
   decision?: MergeDecision;
   onDecision: (choice: MergeDecision['choice']) => void;
-}> = ({ decision, onDecision }) => (
-  <div className="flex-center gap-compact py-row px-4 bg-bg-surface/80 border-b border-surface-border">
-    <SmallText className="text-text-muted mr-2">Accept:</SmallText>
-    <Button
-      size="sm"
-      variant={decision?.choice === 'left' ? undefined : 'outline'}
-      tone={decision?.choice === 'left' ? 'violet' : undefined}
-      onClick={() => onDecision('left')}
-      leftIcon={<ChevronLeft className={iconSizes.xs} />}
-    >
-      Left
-    </Button>
-    <Button
-      size="sm"
-      variant={decision?.choice === 'both' ? undefined : 'outline'}
-      tone={decision?.choice === 'both' ? 'violet' : undefined}
-      onClick={() => onDecision('both')}
-      leftIcon={<ChevronsLeftRight className={iconSizes.xs} />}
-    >
-      Both
-    </Button>
-    <Button
-      size="sm"
-      variant={decision?.choice === 'right' ? undefined : 'outline'}
-      tone={decision?.choice === 'right' ? 'violet' : undefined}
-      onClick={() => onDecision('right')}
-      leftIcon={<ChevronRight className={iconSizes.xs} />}
-    >
-      Right
-    </Button>
-    {decision && (
-      <Tag colorScheme="purple" className="ml-inline text-xs">
-        {decision.choice.toUpperCase()}
-      </Tag>
-    )}
-  </div>
-);
+}> = ({ decision, onDecision }) => {
+  const { t } = useTranslation('pages');
+  const choiceLabels: Record<MergeDecision['choice'], string> = {
+    left: t('configDiff.leftChoiceLabel'),
+    both: t('configDiff.bothChoiceLabel'),
+    right: t('configDiff.rightChoiceLabel'),
+    none: t('configDiff.noneChoiceLabel'),
+  };
+
+  return (
+    <div className="flex-center gap-compact py-row px-4 bg-bg-surface/80 border-b border-surface-border">
+      <SmallText className="text-text-muted mr-2">{t('configDiff.acceptLabel')}</SmallText>
+      <Button
+        size="sm"
+        variant={decision?.choice === 'left' ? undefined : 'outline'}
+        tone={decision?.choice === 'left' ? 'violet' : undefined}
+        onClick={() => onDecision('left')}
+        leftIcon={<ChevronLeft className={iconSizes.xs} />}
+      >
+        {choiceLabels.left}
+      </Button>
+      <Button
+        size="sm"
+        variant={decision?.choice === 'both' ? undefined : 'outline'}
+        tone={decision?.choice === 'both' ? 'violet' : undefined}
+        onClick={() => onDecision('both')}
+        leftIcon={<ChevronsLeftRight className={iconSizes.xs} />}
+      >
+        {choiceLabels.both}
+      </Button>
+      <Button
+        size="sm"
+        variant={decision?.choice === 'right' ? undefined : 'outline'}
+        tone={decision?.choice === 'right' ? 'violet' : undefined}
+        onClick={() => onDecision('right')}
+        leftIcon={<ChevronRight className={iconSizes.xs} />}
+      >
+        {choiceLabels.right}
+      </Button>
+      {decision && (
+        <Tag colorScheme="purple" className="ml-inline text-xs">
+          {choiceLabels[decision.choice].toUpperCase()}
+        </Tag>
+      )}
+    </div>
+  );
+};
 
 /**
  * Diff block with merge controls
