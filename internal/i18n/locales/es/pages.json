@@ -187,11 +187,20 @@
       "headerChassisId": "ID de chasis",
       "headerMgmtAddr": "Dir. gestión",
       "headerTtl": "TTL",
-      "headerLastSeen": "Visto por última vez"
+      "headerLastSeen": "Visto por última vez",
+      "ttlMinutes": "{{value}}m"
     },
     "page": {
       "networkTopologyTitle": "Topología de red",
-      "noTopologyData": "Sin datos de topología disponibles"
+      "noTopologyData": "Sin datos de topología disponibles",
+      "connectionCount_one": "{{count}} conexión",
+      "connectionCount_other": "{{count}} conexiones",
+      "loadingTopology": "Cargando topología...",
+      "noConnectionsHint": "Configure dispositivos con puertos trunk o port-channels para visualizar las conexiones",
+      "noLinksBannerAddPrefix": "Se cargaron los dispositivos, pero la configuración en ejecución no declara enlaces de topología. Agregue",
+      "noLinksBannerOr": "o",
+      "noLinksBannerSuffix": "a su YAML para visualizar las conexiones. Los vecinos LLDP/CDP/EDP/FDP en vivo están en la página",
+      "noLinksBannerPageSuffix": "."
     },
     "legend": {
       "deviceTypesHeading": "Tipos de dispositivo",
@@ -211,13 +220,71 @@
       "lineStyleDiscovered": "Detectado (LLDP/CDP)",
       "directionHeading": "Dirección",
       "directionSingle": "Unidireccional (enlace de acceso)",
-      "directionDouble": "Bidireccional (trunk/LAG)"
+      "directionDouble": "Bidireccional (trunk/LAG)",
+      "showLegend": "Mostrar leyenda",
+      "legendHeading": "Leyenda",
+      "deviceTypeRouter": "Router",
+      "deviceTypeSwitch": "Switch",
+      "deviceTypeFirewall": "Firewall",
+      "deviceTypeServer": "Servidor",
+      "deviceTypeWorkstation": "Estación de trabajo",
+      "deviceTypeAccessPoint": "Punto de acceso"
     },
     "actionsMenu": {
       "exportPng": "Exportar como PNG",
       "exportJson": "Exportar topología JSON",
       "exportDot": "Exportar como DOT (Graphviz)",
       "exportGraphml": "Exportar como GraphML"
+    },
+    "header": {
+      "viewTabsAriaLabel": "Vista de topología",
+      "graphTabTitle": "Mostrar dispositivos y enlaces como un gráfico interactivo (arrastre para reposicionar, desplácese para acercar/alejar)",
+      "graphTabLabel": "Gráfico",
+      "neighborsTabTitle": "Mostrar las relaciones de vecinos LLDP/CDP como una tabla ordenable agrupada por dispositivo",
+      "neighborsTabLabel": "Vecinos",
+      "resetButtonTitle": "Borrar posiciones arrastradas a mano, la búsqueda y los filtros de tipo",
+      "resetButtonLabel": "Restablecer",
+      "labelsButtonTitle": "Alternar las etiquetas de interfaz / VLAN / velocidad en los enlaces",
+      "labelsButtonLabel": "Etiquetas",
+      "layoutModeAriaLabel": "Modo de diseño: {{label}}",
+      "searchPlaceholder": "Buscar dispositivos por nombre…",
+      "searchAriaLabel": "Filtrar dispositivos por nombre",
+      "typesLabel": "Tipos:",
+      "typeFilterHideTitle": "Ocultar los dispositivos de tipo {{type}} del gráfico",
+      "typeFilterShowTitle": "Mostrar solo los dispositivos de tipo {{type}} (alterna un filtro)",
+      "clearTypeFiltersTitle": "Eliminar todos los filtros de tipo de dispositivo y mostrar todos los dispositivos de la topología"
+    },
+    "deviceDetails": {
+      "closeTitle": "Cerrar el panel de detalles del dispositivo y volver a la vista de topología",
+      "closeAriaLabel": "Cerrar detalles del dispositivo"
+    },
+    "deviceNode": {
+      "tooltipSummary": "{{label}} ({{type}}, {{status}})",
+      "tooltipIps": "IPs: {{ips}}",
+      "tooltipProtocols": "Protocolos: {{protocols}}"
+    },
+    "contextMenu": {
+      "viewDetails": "Ver detalles",
+      "editYaml": "Editar YAML",
+      "editYamlHint": "dispositivos →",
+      "focusNeighborhood": "Enfocar vecindario",
+      "copyName": "Copiar nombre",
+      "hideFromView": "Ocultar de la vista",
+      "hideFromViewHint": "hasta Restablecer",
+      "copyInterfacePair": "Copiar par dispositivo/interfaz",
+      "copyVlanList_one": "Copiar lista de VLAN ({{count}})",
+      "copyVlanList_other": "Copiar lista de VLAN ({{count}})",
+      "resetLayout": "Restablecer diseño",
+      "resetLayoutHint": "borra arrastres / filtros"
+    },
+    "trunkEdge": {
+      "rowVlans": "VLANs",
+      "rowSpeed": "Velocidad",
+      "rowDuplex": "Dúplex",
+      "rowUtilisation": "Utilización",
+      "rowSource": "Origen",
+      "sourceDiscovered": "Detectado (LLDP/CDP/EDP/FDP)",
+      "sourceDeclared": "Declarado (trunk_ports)"
     }
   },
   "automation": {
@@ -340,7 +407,9 @@
       "headerDestination": "Destino",
       "headerProtocol": "Protocolo",
       "headerLength": "Longitud",
-      "headerInfo": "Información"
+      "headerInfo": "Información",
+      "waitingForStream": "Esperando flujo de paquetes...",
+      "modeLabel": "Modo:"
     },
     "inspector": {
       "standaloneCapture": "Captura de paquetes independiente",
@@ -353,7 +422,68 @@
       "protocolHeaders": "Encabezados de protocolo",
       "selectPacketForDetails": "Seleccione un paquete para ver los detalles",
       "exportButton": "Exportar filtrados (JSON)",
-      "exportButtonTitle": "Exportar los paquetes filtrados actuales como JSON"
+      "exportButtonTitle": "Exportar los paquetes filtrados actuales como JSON",
+      "connectedStatus": "Conectado",
+      "connectingStatus": "Conectando...",
+      "viewTabsAriaLabel": "Vista de paquetes",
+      "liveCaptureTab": "Captura en vivo",
+      "pcapFilesTab": "Archivos PCAP",
+      "onInterfacePrefix": "en",
+      "standaloneTag": "Independiente",
+      "stopCaptureButton": "Detener captura",
+      "colorsButton": "Colores",
+      "reconnectButton": "Reconectar",
+      "autoScrollLabel": "Desplazamiento automático",
+      "packetsCountLabel": "{{shown}} / {{total}} paquetes",
+      "packetListLabel": "Lista de paquetes",
+      "pausedTag": "En pausa",
+      "hexDumpLabel": "Volcado hexadecimal",
+      "packetDetailsLabel": "Detalles del paquete",
+      "summaryLabel": "Resumen",
+      "standaloneDescriptionPart1": "Capture una interfaz sin iniciar una simulación. Las tramas se transmiten al visor a continuación en cuanto llegan al cable. O",
+      "standaloneStartSimLink": "inicie una simulación",
+      "standaloneDescriptionPart2": "si quiere que NIAC también responda en el cable.",
+      "interfaceLabel": "Interfaz",
+      "standaloneBpfLabel": "Filtro BPF (opcional)",
+      "standaloneBpfPlaceholder": "p. ej. tcp port 80",
+      "startingLabel": "Iniciando…",
+      "startCaptureButton": "Iniciar captura"
+    },
+    "hexDump": {
+      "selectPacketPlaceholder": "Seleccione un paquete para ver el volcado hexadecimal",
+      "headerLegend": "Encabezado",
+      "payloadLegend": "Carga útil",
+      "selectedLegend": "Seleccionado"
+    },
+    "streamView": {
+      "clientBytesLabel": "{{count}} B cliente",
+      "serverBytesLabel": "{{count}} B servidor",
+      "asciiToggle": "ASCII",
+      "hexToggle": "Hex"
+    },
+    "conversations": {
+      "emptyTitle": "No se encontraron conversaciones TCP/UDP",
+      "emptyDescription": "Las conversaciones requieren paquetes con información de puerto",
+      "clickToFilterHint": "Haga clic en una fila para filtrar paquetes",
+      "headerEndpointA": "Extremo A",
+      "headerEndpointB": "Extremo B",
+      "headerPackets": "Paquetes",
+      "headerBytes": "Bytes"
+    },
+    "bpfFilter": {
+      "presetTcp": "TCP",
+      "presetUdp": "UDP",
+      "presetPort80": "Puerto 80",
+      "presetPort443": "Puerto 443",
+      "presetNotArp": "No ARP",
+      "presetIcmp": "ICMP",
+      "invalidFilterError": "Expresión de filtro BPF no válida",
+      "clearFilterError": "Error al borrar el filtro",
+      "inputPlaceholder": "Filtro BPF (p. ej. tcp port 80)",
+      "activeLabel": "Activo:"
+    },
+    "filterBar": {
+      "inputPlaceholder": "Filtro de visualización (p. ej., ip.src == 10.0.0.1 && tcp)"
     }
   },
   "configDiff": {
@@ -460,7 +590,8 @@
     "pageTitle": "Analizador de recorridos",
     "noWalksFound": "No se encontraron recorridos",
     "pastePathLabel": "O pegue una ruta absoluta",
-    "noNeighborsFound": "No se encontraron vecinos LLDP/CDP."
+    "noNeighborsFound": "No se encontraron vecinos LLDP/CDP.",
+    "noInterfacesFound": "No se encontraron interfaces."
   },
   "libraryWalks": {
     "label": "Recorridos",
@@ -470,7 +601,41 @@
   "libraryPcaps": {
     "label": "{{format}}",
     "title": "Biblioteca de {{format}}",
-    "description": "Navegador de solo lectura para las capturas {{format}} en disco que el daemon sirve desde la biblioteca unificada."
+    "description": "Navegador de solo lectura para las capturas {{format}} en disco que el daemon sirve desde la biblioteca unificada.",
+    "uploader": {
+      "invalidFileType": "Tipo de archivo no válido. Seleccione un archivo PCAP ({{extensions}})",
+      "fileTooLarge": "Archivo demasiado grande. El tamaño máximo es {{size}}",
+      "fileEmpty": "El archivo está vacío",
+      "invalidFile": "Archivo no válido",
+      "dropAriaLabel": "Suelte el archivo PCAP aquí o haga clic para seleccionarlo",
+      "dropToUpload": "Suelte el archivo para cargarlo",
+      "dragDropTitle": "Arrastre y suelte un archivo PCAP",
+      "browseHint": "o haga clic para explorar ({{extensions}})",
+      "maxFileSizeLabel": "Tamaño máximo del archivo: {{size}}",
+      "analyzing": "Analizando…",
+      "analyzeButton": "Analizar PCAP"
+    },
+    "analyzer": {
+      "pageHeading": "Análisis PCAP",
+      "packetsCountTag": "{{count}} paquetes",
+      "tabPackets": "Paquetes",
+      "tabStats": "Estadísticas",
+      "tabConversations": "Conversaciones",
+      "tabPacketsTitle": "Muestra cada paquete decodificado con marca de tiempo, encabezados y carga útil",
+      "tabStatsTitle": "Muestra estadísticas agregadas: totales de bytes/paquetes por protocolo y por host",
+      "tabConversationsTitle": "Agrupa los paquetes por 5-tuple para ver flujos TCP/UDP y totales de bytes por conversación",
+      "colorsButton": "Colores",
+      "followStreamButton": "Seguir flujo",
+      "hexDumpLabel": "Volcado hexadecimal",
+      "packetDetailsLabel": "Detalles del paquete",
+      "uploadFailed": "Error al cargar el archivo",
+      "analyzeSuccess": "Se analizaron correctamente {{count}} paquetes",
+      "aboutTitle": "Acerca del analizador PCAP",
+      "aboutDescription": "Cargue un archivo PCAP o PCAPNG para analizar el tráfico de red. El analizador procesará los paquetes y proporcionará estadísticas detalladas, desglose de protocolos e inspección a nivel de paquete, incluida la visualización del volcado hexadecimal.",
+      "supportsPcap": "Admite .pcap",
+      "supportsPcapng": "Admite .pcapng",
+      "maxSizeTag": "Máximo 100 MB"
+    }
   },
   "templates": {
     "states": {

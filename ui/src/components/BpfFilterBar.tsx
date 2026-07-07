@@ -10,12 +10,12 @@ import { getErrorMessage } from '../utils/format';
 
 /** Common BPF filter presets. */
 const BPF_PRESETS = [
-  { label: 'TCP', filter: 'tcp' },
-  { label: 'UDP', filter: 'udp' },
-  { label: 'Port 80', filter: 'port 80' },
-  { label: 'Port 443', filter: 'port 443' },
-  { label: 'Not ARP', filter: 'not arp' },
-  { label: 'ICMP', filter: 'icmp' },
+  { labelKey: 'packets.bpfFilter.presetTcp', filter: 'tcp' },
+  { labelKey: 'packets.bpfFilter.presetUdp', filter: 'udp' },
+  { labelKey: 'packets.bpfFilter.presetPort80', filter: 'port 80' },
+  { labelKey: 'packets.bpfFilter.presetPort443', filter: 'port 443' },
+  { labelKey: 'packets.bpfFilter.presetNotArp', filter: 'not arp' },
+  { labelKey: 'packets.bpfFilter.presetIcmp', filter: 'icmp' },
 ] as const;
 
 /**
@@ -27,6 +27,7 @@ const BPF_PRESETS = [
 export const BpfFilterBar: FC = memo(() => {
   const { t } = useTranslation('common');
   const { t: tHelp } = useTranslation('help');
+  const { t: tPages } = useTranslation('pages');
   const [input, setInput] = useState('');
   const [activeFilter, setActiveFilter] = useState('');
   const [isActive, setIsActive] = useState(false);
@@ -72,11 +73,11 @@ export const BpfFilterBar: FC = memo(() => {
       setActiveFilter(result.filter);
       setIsActive(result.active);
     } catch (err) {
-      setError(getErrorMessage(err) || 'Invalid BPF filter expression');
+      setError(getErrorMessage(err) || tPages('packets.bpfFilter.invalidFilterError'));
     } finally {
       setIsLoading(false);
     }
-  }, [input]);
+  }, [input, tPages]);
 
   // Clear the filter
   const handleClear = useCallback(async () => {
@@ -89,11 +90,11 @@ export const BpfFilterBar: FC = memo(() => {
       setIsActive(false);
       setInput('');
     } catch (err) {
-      setError(getErrorMessage(err) || 'Failed to clear filter');
+      setError(getErrorMessage(err) || tPages('packets.bpfFilter.clearFilterError'));
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [tPages]);
 
   // Apply preset
   const handlePreset = useCallback((filter: string) => {
@@ -134,7 +135,7 @@ export const BpfFilterBar: FC = memo(() => {
             setError(null);
           }}
           onKeyDown={handleKeyDown}
-          placeholder="BPF filter (e.g. tcp port 80)"
+          placeholder={tPages('packets.bpfFilter.inputPlaceholder')}
           className={`flex-1 bg-bg-base/70 border rounded-lg px-3 py-compact-md text-sm font-mono text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 ${
             error
               ? 'border-status-error/60 focus:ring-status-error/40'
@@ -152,7 +153,7 @@ export const BpfFilterBar: FC = memo(() => {
           onClick={handleApply}
           disabled={isLoading || !input.trim()}
         >
-          Apply
+          {t('buttons.apply')}
         </Button>
 
         {/* Clear button */}
@@ -164,7 +165,7 @@ export const BpfFilterBar: FC = memo(() => {
             disabled={isLoading}
             leftIcon={<X className="h-3.5 w-3.5" />}
           >
-            Clear
+            {t('buttons.clear')}
           </Button>
         )}
       </div>
@@ -181,7 +182,8 @@ export const BpfFilterBar: FC = memo(() => {
       {isActive && activeFilter && (
         <div className="flex items-center gap-1.5 px-1">
           <SmallText className="text-status-success">
-            Active: <span className="font-mono">{activeFilter}</span>
+            {tPages('packets.bpfFilter.activeLabel')}{' '}
+            <span className="font-mono">{activeFilter}</span>
           </SmallText>
         </div>
       )}
@@ -195,7 +197,7 @@ export const BpfFilterBar: FC = memo(() => {
             onClick={() => handlePreset(preset.filter)}
             className="px-cell py-0.5 text-xs rounded bg-bg-elevated/60 text-text-muted hover:text-text-primary hover:bg-bg-elevated/60 border border-surface-border transition-colors"
           >
-            {preset.label}
+            {tPages(preset.labelKey)}
           </button>
         ))}
       </div>

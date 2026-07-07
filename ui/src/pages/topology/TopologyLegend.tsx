@@ -25,13 +25,13 @@ interface TopologyLegendProps {
 }
 
 const DEVICE_TYPES = [
-  { type: 'router', label: 'Router' },
-  { type: 'switch', label: 'Switch' },
-  { type: 'firewall', label: 'Firewall' },
-  { type: 'server', label: 'Server' },
-  { type: 'workstation', label: 'Workstation' },
-  { type: 'access-point', label: 'Access Point' },
-];
+  { type: 'router', labelKey: 'deviceTypeRouter' },
+  { type: 'switch', labelKey: 'deviceTypeSwitch' },
+  { type: 'firewall', labelKey: 'deviceTypeFirewall' },
+  { type: 'server', labelKey: 'deviceTypeServer' },
+  { type: 'workstation', labelKey: 'deviceTypeWorkstation' },
+  { type: 'access-point', labelKey: 'deviceTypeAccessPoint' },
+] as const;
 
 // Matches DeviceNode.tsx's statusColor map (bg-status-success /
 // bg-bg-muted / bg-status-warning) — kept as CSS custom properties so
@@ -73,7 +73,7 @@ export const TopologyLegend: FC<TopologyLegendProps> = ({ show, onToggle }) => {
         className="flex items-center gap-compact px-3 py-row rounded-lg bg-bg-elevated/90 border border-surface-border text-sm text-text-secondary hover:bg-bg-elevated/90 transition-colors"
       >
         <Eye className="w-4 h-4" />
-        Show Legend
+        {t('topology.legend.showLegend')}
       </button>
     );
   }
@@ -81,7 +81,9 @@ export const TopologyLegend: FC<TopologyLegendProps> = ({ show, onToggle }) => {
   return (
     <div className="bg-bg-elevated/95 backdrop-blur-sm border border-surface-border rounded-xl pad min-w-[200px]">
       <div className="flex-between mb-heading">
-        <span className="text-sm font-semibold text-text-primary">Legend</span>
+        <span className="text-sm font-semibold text-text-primary">
+          {t('topology.legend.legendHeading')}
+        </span>
         <button
           type="button"
           onClick={onToggle}
@@ -104,7 +106,7 @@ export const TopologyLegend: FC<TopologyLegendProps> = ({ show, onToggle }) => {
                 {t('topology.legend.deviceTypesHeading')}
               </div>
               <div className="space-y-1.5">
-                {DEVICE_TYPES.map(({ type, label }) => {
+                {DEVICE_TYPES.map(({ type, labelKey }) => {
                   const Icon = deviceIcons[type] || Network;
                   const color = deviceColors[type];
                   return (
@@ -112,7 +114,9 @@ export const TopologyLegend: FC<TopologyLegendProps> = ({ show, onToggle }) => {
                       <div className="w-4 h-4 flex-center">
                         <Icon className="w-4 h-4 text-current" />
                       </div>
-                      <span className="text-xs text-text-secondary">{label}</span>
+                      <span className="text-xs text-text-secondary">
+                        {t(`topology.legend.${labelKey}`)}
+                      </span>
                       <div
                         className="w-2 h-2 rounded-full ml-auto"
                         style={{ backgroundColor: color }}

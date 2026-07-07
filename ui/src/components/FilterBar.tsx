@@ -21,6 +21,7 @@ const QUICK_PROTOCOLS = ['tcp', 'udp', 'icmp', 'arp', 'dns', 'http'] as const;
  */
 export const FilterBar: FC<FilterBarProps> = memo(({ value, onChange, placeholder }) => {
   const { t } = useTranslation('common');
+  const { t: tPages } = useTranslation('pages');
   const [isFocused, setIsFocused] = useState(false);
   const [suggestions, setSuggestions] = useState<AutocompleteSuggestion[]>([]);
   const [selectedSuggestion, setSelectedSuggestion] = useState(-1);
@@ -115,7 +116,7 @@ export const FilterBar: FC<FilterBarProps> = memo(({ value, onChange, placeholde
             onFocus={() => setIsFocused(true)}
             onBlur={() => setTimeout(() => setIsFocused(false), 200)}
             onKeyDown={handleKeyDown}
-            placeholder={placeholder ?? 'Display filter (e.g., ip.src == 10.0.0.1 && tcp)'}
+            placeholder={placeholder ?? tPages('packets.filterBar.inputPlaceholder')}
             className={`w-full rounded-lg border ${borderColor} bg-bg-base/60 px-3 py-row text-sm text-text-primary placeholder:text-text-muted focus:outline-none font-mono transition-colors`}
           />
           {validationError && isFocused && (

@@ -1,5 +1,6 @@
 import type { useNavigate } from 'react-router-dom';
 import type { DeviceSummary } from '../../api/types';
+import type { TFunction } from '../../i18n';
 import type { ContextMenuItem } from './ContextMenu';
 import type { LinkEdge } from './types';
 
@@ -19,6 +20,7 @@ export type ContextMenuTarget =
  * through ContextMenu itself.
  */
 export interface ContextMenuCtx {
+  t: TFunction<'pages'>;
   edges: LinkEdge[];
   hideDevice: (name: string) => void;
   navigate: ReturnType<typeof useNavigate>;
@@ -55,11 +57,12 @@ export function contextMenuItems(menu: ContextMenuTarget, ctx: ContextMenuCtx): 
 }
 
 function nodeMenuItems(nodeId: string, ctx: ContextMenuCtx): ContextMenuItem[] {
+  const { t } = ctx;
   const device = ctx.devices?.find((d) => d.name === nodeId);
   return [
     {
       key: 'view',
-      label: 'View details',
+      label: t('topology.contextMenu.viewDetails'),
       onSelect: () => {
         if (device) ctx.setSelectedDevice(device);
       },
@@ -67,26 +70,26 @@ function nodeMenuItems(nodeId: string, ctx: ContextMenuCtx): ContextMenuItem[] {
     },
     {
       key: 'edit',
-      label: 'Edit YAML',
-      hint: 'devices →',
+      label: t('topology.contextMenu.editYaml'),
+      hint: t('topology.contextMenu.editYamlHint'),
       onSelect: () => ctx.navigate(`/device-config/${nodeId}`),
     },
     {
       key: 'focus',
-      label: 'Focus neighbourhood',
+      label: t('topology.contextMenu.focusNeighborhood'),
       onSelect: () =>
         ctx.setFocusedNodeId((curr: string | null) => (curr === nodeId ? null : nodeId)),
     },
     {
       key: 'copy-name',
-      label: 'Copy name',
+      label: t('topology.contextMenu.copyName'),
       onSelect: () => ctx.copyToClipboard(nodeId),
       separatorBefore: true,
     },
     {
       key: 'hide',
-      label: 'Hide from view',
-      hint: 'until Reset',
+      label: t('topology.contextMenu.hideFromView'),
+      hint: t('topology.contextMenu.hideFromViewHint'),
       destructive: true,
       onSelect: () => ctx.hideDevice(nodeId),
       separatorBefore: true,
@@ -95,6 +98,7 @@ function nodeMenuItems(nodeId: string, ctx: ContextMenuCtx): ContextMenuItem[] {
 }
 
 function edgeMenuItems(edgeId: string, ctx: ContextMenuCtx): ContextMenuItem[] {
+  const { t } = ctx;
   const edge = ctx.edges.find((e) => e.id === edgeId);
   const ifacePair =
     edge?.data?.sourceInterface || edge?.data?.targetInterface
@@ -103,7 +107,7 @@ function edgeMenuItems(edgeId: string, ctx: ContextMenuCtx): ContextMenuItem[] {
   const items: ContextMenuItem[] = [
     {
       key: 'copy-pair',
-      label: 'Copy device/interface pair',
+      label: t('topology.contextMenu.copyInterfacePair'),
       onSelect: () => ctx.copyToClipboard(ifacePair),
     },
   ];
@@ -114,7 +118,7 @@ function edgeMenuItems(edgeId: string, ctx: ContextMenuCtx): ContextMenuItem[] {
     const vlanList = edge.data.vlans.join(',');
     items.push({
       key: 'copy-vlans',
-      label: `Copy VLAN list (${edge.data.vlans.length})`,
+      label: t('topology.contextMenu.copyVlanList', { count: edge.data.vlans.length }),
       onSelect: () => ctx.copyToClipboard(vlanList),
     });
   }
@@ -122,16 +126,17 @@ function edgeMenuItems(edgeId: string, ctx: ContextMenuCtx): ContextMenuItem[] {
 }
 
 function paneMenuItems(ctx: ContextMenuCtx): ContextMenuItem[] {
+  const { t } = ctx;
   return [
     {
       key: 'export',
-      label: 'Export topology JSON',
+      label: t('topology.actionsMenu.exportJson'),
       onSelect: ctx.handleExport,
     },
     {
       key: 'reset',
-      label: 'Reset layout',
-      hint: 'clears drags / filters',
+      label: t('topology.contextMenu.resetLayout'),
+      hint: t('topology.contextMenu.resetLayoutHint'),
       destructive: true,
       onSelect: ctx.handleResetLayout,
       separatorBefore: true,
