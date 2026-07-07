@@ -1,6 +1,7 @@
 import { FileCog, Server } from 'lucide-react';
 import { type ChangeEvent, type FC, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import {
   fetchConfig,
   fetchDevices,
@@ -37,6 +38,7 @@ export const DevicesPage: FC = () => (
  * Device List Card - Shows devices from current config
  */
 const DeviceListCard: FC = () => {
+  const { t } = useTranslation('pages');
   const {
     data: devices,
     loading,
@@ -45,7 +47,7 @@ const DeviceListCard: FC = () => {
 
   return (
     <BaseCard<DeviceSummary[]>
-      title="Config workspace"
+      title={t('devices.title')}
       subtitle="Devices rendered from active YAML config"
       icon={<Server className={`${iconSizes.lg} text-status-info`} />}
       data={devices}
@@ -54,7 +56,17 @@ const DeviceListCard: FC = () => {
       getStatus={(d) => (d.length > 0 ? 'success' : 'unknown')}
       emptyMessage="No devices defined in the loaded configuration"
     >
-      {(data) => <DeviceTable devices={data} />}
+      {(data) => (
+        <>
+          <DeviceTable devices={data} />
+          <Link
+            to="/device-config"
+            className="mt-heading inline-block text-sm text-brand-accent hover:underline"
+          >
+            {t('devices.editInLibrary')} &rarr;
+          </Link>
+        </>
+      )}
     </BaseCard>
   );
 };
@@ -226,9 +238,17 @@ const WalkFileBrowser: FC<{
               <p className="text-text-primary">{file.name}</p>
               <SmallText className="text-text-muted capitalize">{file.source}</SmallText>
             </div>
-            <Button size="sm" variant="outline" onClick={() => onCopy(file.name)}>
-              Copy name
-            </Button>
+            <div className="flex items-center gap-tight">
+              <Button size="sm" variant="outline" onClick={() => onCopy(file.name)}>
+                Copy name
+              </Button>
+              <Link
+                to="/device-config/new#snmp"
+                className="text-sm text-brand-accent hover:underline whitespace-nowrap"
+              >
+                {t('devices.useInEditor')}
+              </Link>
+            </div>
           </div>
         ))}
       </div>
