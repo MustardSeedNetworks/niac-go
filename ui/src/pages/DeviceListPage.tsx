@@ -2,7 +2,6 @@ import type { FC } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { CloneDeviceModal } from '../components/device-list/CloneDeviceModal';
-import { ConfirmDeleteModal } from '../components/device-list/ConfirmDeleteModal';
 import { DeviceBulkActions } from '../components/device-list/DeviceBulkActions';
 import { DeviceCardView } from '../components/device-list/DeviceCardView';
 import { DeviceListHeader } from '../components/device-list/DeviceListHeader';
@@ -127,13 +126,15 @@ export const DeviceListPage: FC = () => {
       )}
 
       {/* Delete confirmation modal */}
-      {showDeleteConfirm && (
-        <ConfirmDeleteModal
-          hostname={showDeleteConfirm}
-          onConfirm={() => handleDelete(showDeleteConfirm)}
-          onCancel={() => setShowDeleteConfirm(null)}
-        />
-      )}
+      <ConfirmModal
+        isOpen={showDeleteConfirm !== null}
+        onConfirm={() => showDeleteConfirm && handleDelete(showDeleteConfirm)}
+        onCancel={() => setShowDeleteConfirm(null)}
+        title={t('list.deleteConfirmTitle')}
+        message={t('list.deleteConfirmMessage', { hostname: showDeleteConfirm ?? '' })}
+        confirmLabel={t('list.deleteConfirmLabel')}
+        confirmTone="red"
+      />
 
       {/* Clone device modal */}
       {showCloneModal && (
