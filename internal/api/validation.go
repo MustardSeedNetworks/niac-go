@@ -322,13 +322,16 @@ func validateSimulationRequest(req SimulationRequest) []ErrorDetail {
 func validateReplayRequest(req ReplayRequest) []ErrorDetail {
 	var errs []ErrorDetail
 
-	// Validate inline data size
-	if len(req.InlineData) > MaxPCAPUploadSize*4/base64Ratio {
+	// Validate inline data size. Bug #1e: MaxPCAPBase64Len is a ceiling
+	// (4*ceil(N/3)), unlike the previous floor-divided MaxPCAPUploadSize*4/
+	// base64Ratio, which could reject an exactly-100MiB raw capture by a
+	// few bytes.
+	if len(req.InlineData) > MaxPCAPBase64Len {
 		errs = append(errs, ErrorDetail{
 			Field: "data",
 			Issue: fmt.Sprintf(
 				"inline data exceeds maximum size of %d bytes (100MB base64)",
-				MaxPCAPUploadSize*4/base64Ratio,
+				MaxPCAPBase64Len,
 			),
 			Value: "[too large]",
 		})
