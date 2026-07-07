@@ -47,6 +47,7 @@ export const WalkValidatorPage: FC = () => {
 
   const [selectedFile, setSelectedFile] = useState<string>('');
   const [customPath, setCustomPath] = useState<string>('');
+  const [oidFilter, setOidFilter] = useState<string>('');
 
   const [response, setResponse] = useState<WalkValidationResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -90,6 +91,17 @@ export const WalkValidatorPage: FC = () => {
   const issues = response?.result?.issues ?? [];
   const counts = useMemo(() => severityCounts(issues), [issues]);
 
+  // OID filter applies to the FULL issue list before the 200-row display
+  // cap below, so a match past the cap is still reachable by filtering.
+  const filteredIssues = useMemo(() => {
+    const needle = oidFilter.trim().toLowerCase();
+    if (!needle) return issues;
+    return issues.filter((issue) => (issue.oid ?? '').toLowerCase().includes(needle));
+  }, [issues, oidFilter]);
+
+  const ISSUES_DISPLAY_CAP = 200;
+  const visibleIssues = filteredIssues.slice(0, ISSUES_DISPLAY_CAP);
+
   const run = useCallback(
     async (action: 'validating' | 'fixing') => {
       if (!targetPath) {
@@ -102,6 +114,7 @@ export const WalkValidatorPage: FC = () => {
         const result =
           action === 'fixing' ? await fixWalk(targetPath) : await validateWalk(targetPath);
         setResponse(result);
+        setOidFilter('');
       } catch (err) {
         setError((err as Error).message);
       } finally {
@@ -261,20 +274,37 @@ export const WalkValidatorPage: FC = () => {
               )}
             </header>
 
+            {issues.length > 0 && (
+              <label className="block text-sm">
+                <span className="text-text-secondary">{t('walkValidator.oidFilterLabel')}</span>
+                <input
+                  type="text"
+                  value={oidFilter}
+                  onChange={(e) => setOidFilter(e.target.value)}
+                  placeholder={t('walkValidator.oidFilterPlaceholder')}
+                  title="Filters the full issue list by OID substring before applying the display cap below."
+                  className="mt-tight w-full max-w-sm rounded border border-surface-border bg-bg-base/60 px-3 py-row font-mono text-xs text-text-primary placeholder:text-text-muted focus:border-status-info focus:outline-none"
+                />
+              </label>
+            )}
+
             {issues.length === 0 ? (
               <p className="text-sm text-text-muted">No issues reported.</p>
+            ) : filteredIssues.length === 0 ? (
+              <p className="text-sm text-text-muted">{t('walkValidator.noMatchingIssues')}</p>
             ) : (
               <table className="w-full text-sm">
                 <thead className="bg-bg-base/40 text-left text-xs uppercase tracking-wider text-text-muted">
                   <tr>
-                    <th className="px-3 py-row w-16">Line</th>
-                    <th className="px-3 py-row w-24">Severity</th>
-                    <th className="px-3 py-row">Message</th>
-                    <th className="px-3 py-row">Original</th>
+                    <th className="px-3 py-row w-16">{t('walkValidator.issuesTable.line')}</th>
+                    <th className="px-3 py-row w-24">{t('walkValidator.issuesTable.severity')}</th>
+                    <th className="px-3 py-row">{t('walkValidator.issuesTable.message')}</th>
+                    <th className="px-3 py-row">{t('walkValidator.issuesTable.oid')}</th>
+                    <th className="px-3 py-row">{t('walkValidator.issuesTable.original')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-knob/5">
-                  {issues.slice(0, 200).map((issue, idx) => (
+                  {visibleIssues.map((issue, idx) => (
                     <tr
                       key={`${issue.line}-${idx}`}
                       className="text-text-primary hover:bg-bg-base/40"
@@ -290,6 +320,9 @@ export const WalkValidatorPage: FC = () => {
                         </span>
                       </td>
                       <td className="px-3 py-row">{issue.message}</td>
+                      <td className="px-3 py-row font-mono text-xs text-text-muted">
+                        {issue.oid ?? ''}
+                      </td>
                       <td className="px-3 py-row truncate font-mono text-xs text-text-muted">
                         {issue.original}
                       </td>
@@ -298,9 +331,13 @@ export const WalkValidatorPage: FC = () => {
                 </tbody>
               </table>
             )}
-            {issues.length > 200 && (
+            {filteredIssues.length > ISSUES_DISPLAY_CAP && (
               <p className="text-xs text-text-muted">
-                Showing first 200 of {issues.length} issues — auto-fix to clear them all.
+                {t('walkValidator.showingFiltered', {
+                  shown: ISSUES_DISPLAY_CAP,
+                  filtered: filteredIssues.length,
+                  total: issues.length,
+                })}
               </p>
             )}
           </CardContent>

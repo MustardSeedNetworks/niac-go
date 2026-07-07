@@ -592,7 +592,18 @@
       "issues": "Problemas"
     },
     "batchStatusValid": "Válido",
-    "batchStatusInvalid": "No válido"
+    "batchStatusInvalid": "No válido",
+    "issuesTable": {
+      "line": "Línea",
+      "severity": "Gravedad",
+      "message": "Mensaje",
+      "original": "Original",
+      "oid": "OID"
+    },
+    "oidFilterLabel": "Filtrar por OID",
+    "oidFilterPlaceholder": "p. ej. .1.3.6.1.2.1.1",
+    "noMatchingIssues": "Ningún problema coincide con ese filtro de OID.",
+    "showingFiltered": "Mostrando los primeros {{shown}} de {{filtered}} problemas coincidentes ({{total}} en total) — corrija automáticamente para eliminarlos todos."
   },
   "walkAnalyzer": {
     "label": "Analizador de Walk",

@@ -196,6 +196,19 @@ func ParseWalkFile(filename string) ([]WalkEntry, error) {
 	return entries, nil
 }
 
+// extractLineOID extracts the OID portion of a raw walk-file line (everything
+// before the first "="), trimmed of whitespace. Returns "" if the line has no
+// "=" separator. Shared between ParseWalkFile's line parser and the walk
+// validator so both agree on what counts as "the OID for this line".
+func extractLineOID(line string) string {
+	parts := strings.SplitN(strings.TrimSpace(line), "=", OIDPartsMinPDU)
+	if len(parts) != OIDPartsMinPDU {
+		return ""
+	}
+
+	return strings.TrimSpace(parts[0])
+}
+
 // parseWalkLine parses a single line from a walk file.
 func parseWalkLine(line string) (*WalkEntry, error) {
 	// Match pattern: OID = TYPE: VALUE
@@ -205,7 +218,7 @@ func parseWalkLine(line string) (*WalkEntry, error) {
 		return nil, ErrInvalidWalkFormat
 	}
 
-	oid := strings.TrimSpace(parts[0])
+	oid := extractLineOID(line)
 	rest := strings.TrimSpace(parts[1])
 
 	// net-snmp emits zero-length octet strings with no type prefix, as

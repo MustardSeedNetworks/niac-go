@@ -90,6 +90,7 @@ export interface WalkValidationIssue {
   original: string;
   suggestion?: string;
   autoFix: boolean;
+  oid?: string;
 }
 
 /**
