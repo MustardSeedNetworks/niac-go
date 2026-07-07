@@ -1,12 +1,4 @@
-import {
-  ChevronDown,
-  ChevronRight,
-  FileCode,
-  FileUp,
-  LayoutGrid,
-  List,
-  Search,
-} from 'lucide-react';
+import { FileUp, LayoutGrid, List, Search } from 'lucide-react';
 import { type FC, useEffect, useMemo, useState } from 'react';
 import {
   fetchTemplateContent,
@@ -19,7 +11,6 @@ import { iconSizes } from '../../constants/sizes';
 import { useFavorites } from '../../hooks/useFavorites';
 import { SmallText } from '../../ui/Typography';
 import { TemplatePreviewModal } from '../TemplatePreviewModal';
-import { JavaDslImportCard } from '../templates/JavaDslImportCard';
 import {
   type ConfigItem,
   type ConfigPickerProps,
@@ -56,7 +47,6 @@ export const ConfigPicker: FC<ConfigPickerProps> = ({
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>(() => readPref(VIEW_PREF_KEY, 'grid'));
-  const [showJavaDsl, setShowJavaDsl] = useState(false);
   const { isFavorite, toggleFavorite } = useFavorites(FAVORITES_STORAGE_KEY);
 
   // Preview modal state (built-in templates only)
@@ -316,28 +306,6 @@ export const ConfigPicker: FC<ConfigPickerProps> = ({
         onClearLocal={handleClearLocal}
         searching={search.trim().length > 0}
       />
-
-      {/* Java-DSL import — collapsed by default since most users won't need it */}
-      <details
-        className="rounded border border-surface-border bg-bg-base/40 pad-sm"
-        open={showJavaDsl}
-        onToggle={(e) => setShowJavaDsl(e.currentTarget.open)}
-      >
-        <summary className="flex cursor-pointer items-center gap-compact text-sm text-text-secondary hover:text-text-primary">
-          {showJavaDsl ? (
-            <ChevronDown className={iconSizes.md} />
-          ) : (
-            <ChevronRight className={iconSizes.md} />
-          )}
-          <FileCode className={iconSizes.md} />
-          <span>
-            Convert a legacy Java-DSL <code className="text-xs">.cfg</code> to YAML
-          </span>
-        </summary>
-        <div className="mt-heading">
-          <JavaDslImportCard />
-        </div>
-      </details>
 
       {previewTemplate && (
         <TemplatePreviewModal
