@@ -42,6 +42,7 @@ import type {
   UseTemplateResponse,
   VersionInfo,
   WalkAnalyzeResponse,
+  WalkBatchValidationResponse,
   WalkValidationResponse,
 } from './types';
 
@@ -95,6 +96,14 @@ export const validateWalk = (filename: string) =>
   requestJson<WalkValidationResponse>('/api/v1/walk/validate', { filename }, { method: 'POST' });
 export const fixWalk = (filename: string) =>
   requestJson<WalkValidationResponse>('/api/v1/walk/fix', { filename }, { method: 'POST' });
+
+/**
+ * Validate every walk file referenced by the running config in one call.
+ * Used by the "Validate all" control on the walk validator page so operators
+ * don't have to check each device's walk file one at a time.
+ */
+export const validateAllWalks = () =>
+  requestJson<WalkBatchValidationResponse>('/api/v1/walk/validate-all', {}, { method: 'POST' });
 
 /**
  * Parse a walk file into device identity, interface inventory, and

@@ -42,6 +42,7 @@ export type {
   TopologyLink,
   TopologyNode,
   VersionInfo,
+  WalkBatchValidationResponse,
   WalkValidationIssue,
   WalkValidationResponse,
   WalkValidationResult,
