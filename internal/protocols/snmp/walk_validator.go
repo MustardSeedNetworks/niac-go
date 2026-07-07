@@ -18,6 +18,7 @@ type ValidationIssue struct {
 	Original   string `json:"original"`
 	Suggestion string `json:"suggestion,omitempty"`
 	AutoFix    bool   `json:"auto_fix"` // Whether this can be auto-fixed
+	OID        string `json:"oid,omitempty"`
 }
 
 // ValidationResult contains the results of validating a walk file.
@@ -148,8 +149,23 @@ func containsError(issues []ValidationIssue) bool {
 	return false
 }
 
-// validateWalkLine validates a single line and returns any issues found.
+// validateWalkLine validates a single line and returns any issues found, each
+// stamped with the OID parsed from the line (via the shared extractLineOID
+// parser used by ParseWalkFile). Structural issues where no OID could be
+// parsed (e.g. a missing "=" separator) are left with an empty OID.
 func validateWalkLine(lineNum int, line string) []ValidationIssue {
+	issues := collectWalkLineIssues(lineNum, line)
+
+	lineOID := extractLineOID(line)
+	for i := range issues {
+		issues[i].OID = lineOID
+	}
+
+	return issues
+}
+
+// collectWalkLineIssues performs the actual per-line validation checks.
+func collectWalkLineIssues(lineNum int, line string) []ValidationIssue {
 	var issues []ValidationIssue
 
 	trimmedLine := strings.TrimSpace(line)

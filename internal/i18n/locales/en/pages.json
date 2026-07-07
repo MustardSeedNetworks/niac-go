@@ -592,7 +592,18 @@
       "issues": "Issues"
     },
     "batchStatusValid": "Valid",
-    "batchStatusInvalid": "Invalid"
+    "batchStatusInvalid": "Invalid",
+    "issuesTable": {
+      "line": "Line",
+      "severity": "Severity",
+      "message": "Message",
+      "original": "Original",
+      "oid": "OID"
+    },
+    "oidFilterLabel": "Filter by OID",
+    "oidFilterPlaceholder": "e.g. .1.3.6.1.2.1.1",
+    "noMatchingIssues": "No issues match that OID filter.",
+    "showingFiltered": "Showing first {{shown}} of {{filtered}} matching issues ({{total}} total) — auto-fix to clear them all."
   },
   "walkAnalyzer": {
     "label": "Walk Analyzer",

@@ -148,3 +148,63 @@ describe('WalkValidatorPage — Validate all', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('daemon unavailable');
   });
 });
+
+describe('WalkValidatorPage — OID column and filter', () => {
+  const validateResult = {
+    message: 'Walk file has 2 issues',
+    result: {
+      totalLines: 2,
+      validLines: 0,
+      valid: false,
+      issues: [
+        {
+          line: 1,
+          severity: 'warning',
+          message: "Type 'strng' appears to be misspelled",
+          original: '.1.3.6.1.2.1.1.5.0 = strng: "router1"',
+          autoFix: true,
+          oid: '.1.3.6.1.2.1.1.5.0',
+        },
+        {
+          line: 2,
+          severity: 'error',
+          message: "Missing ':' separator between type and value",
+          original: '.1.3.6.1.4.1.9.1.1 = STRINGnope',
+          autoFix: false,
+          oid: '.1.3.6.1.4.1.9.1.1',
+        },
+      ],
+    },
+  };
+
+  it('renders the OID for each issue in the results table', async () => {
+    fetchLibraryWalks.mockResolvedValue(files);
+    validateWalk.mockResolvedValueOnce(validateResult);
+    render(<WalkValidatorPage />);
+
+    await waitFor(() => expect(screen.getByText(/cisco\/c3900\.walk/)).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: /^validate$/i }));
+
+    expect(await screen.findByText('.1.3.6.1.2.1.1.5.0')).toBeInTheDocument();
+    expect(screen.getByText('.1.3.6.1.4.1.9.1.1')).toBeInTheDocument();
+  });
+
+  it('narrows the displayed issues by OID substring', async () => {
+    fetchLibraryWalks.mockResolvedValue(files);
+    validateWalk.mockResolvedValueOnce(validateResult);
+    render(<WalkValidatorPage />);
+
+    await waitFor(() => expect(screen.getByText(/cisco\/c3900\.walk/)).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: /^validate$/i }));
+
+    await waitFor(() => expect(screen.getByText('.1.3.6.1.2.1.1.5.0')).toBeInTheDocument());
+    expect(screen.getByText('.1.3.6.1.4.1.9.1.1')).toBeInTheDocument();
+
+    const filterInput = screen.getByPlaceholderText(/1\.3\.6\.1\.2\.1\.1/);
+    fireEvent.change(filterInput, { target: { value: '9.1.1' } });
+
+    await waitFor(() => expect(screen.queryByText('.1.3.6.1.2.1.1.5.0')).not.toBeInTheDocument());
+    expect(screen.getByText('.1.3.6.1.4.1.9.1.1')).toBeInTheDocument();
+  });
+});
