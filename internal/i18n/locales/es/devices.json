@@ -15,6 +15,7 @@
   },
   "list": {
     "title": "Biblioteca de dispositivos",
+    "viewRunningState": "Ver estado en ejecución",
     "searchPlaceholder": "Buscar dispositivos por nombre, tipo o nombre de host...",
     "noDevices": "Aún no hay dispositivos en la biblioteca",
     "createFirst": "Cree su primer dispositivo",
@@ -55,7 +56,13 @@
     "trunkPorts": "Puertos troncales",
     "portChannels": "Canales de puertos",
     "saveSuccess": "Dispositivo guardado",
-    "saveFailed": "Error al guardar el dispositivo"
+    "saveFailed": "Error al guardar el dispositivo",
+    "unsavedNavigation": {
+      "title": "¿Salir sin guardar?",
+      "message": "Este dispositivo tiene cambios sin guardar. Si sale ahora, esos cambios se perderán.",
+      "confirmLabel": "Salir",
+      "cancelLabel": "Quedarse"
+    }
   },
   "running": {
     "noDevicesRunning": "No hay dispositivos en ejecución actualmente",

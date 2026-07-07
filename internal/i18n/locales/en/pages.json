@@ -4,7 +4,8 @@
     "library": "Library",
     "liveView": "Live View",
     "inspect": "Inspect",
-    "alerts": "Alerts"
+    "tools": "Tools",
+    "system": "System"
   },
   "dashboard": {
     "label": "Dashboard",
@@ -70,7 +71,9 @@
     "title": "Running Devices",
     "description": "Read-only view of the devices the daemon is currently simulating, plus the running YAML.",
     "ipAddressesHeader": "IP addresses",
-    "availableSnmpWalks": "Available SNMP walks"
+    "availableSnmpWalks": "Available SNMP walks",
+    "editInLibrary": "Edit in Device Library",
+    "useInEditor": "Use in device editor"
   },
   "segments": {
     "label": "Segments",
@@ -84,8 +87,8 @@
     "empty": "No segments defined in the loaded configuration."
   },
   "deviceLibrary": {
-    "label": "Devices",
-    "title": "Devices",
+    "label": "Device Library",
+    "title": "Device Library",
     "description": "Reusable device definitions: search, filter, edit, clone, and delete. Click a device to open the visual editor."
   },
   "deviceEditor": {
@@ -146,8 +149,8 @@
     }
   },
   "traffic": {
-    "label": "Traffic",
-    "title": "Traffic",
+    "label": "Fault Injection",
+    "title": "Fault Injection",
     "description": "Inject controlled errors into the running simulation and replay captured {{format}} files.",
     "page": {
       "errorInjectionTitle": "Error Injection",
@@ -164,7 +167,7 @@
   "debug": {
     "label": "Logs",
     "title": "Logs",
-    "description": "Live log stream from the daemon, with per-protocol debug-level controls."
+    "description": "Live log stream from the daemon, with debug-level controls."
   },
   "packets": {
     "label": "Packets",
@@ -212,7 +215,9 @@
       "selectPacketForProtocol": "Select a packet to view protocol layers",
       "noProtocolLayers": "No protocol layers available",
       "protocolHeaders": "Protocol Headers",
-      "selectPacketForDetails": "Select a packet to view details"
+      "selectPacketForDetails": "Select a packet to view details",
+      "exportButton": "Export filtered (JSON)",
+      "exportButtonTitle": "Export the currently filtered packets as JSON"
     }
   },
   "configDiff": {
@@ -221,7 +226,9 @@
     "description": "Compare two {{format}} network configs side-by-side and merge changes between them.",
     "originalFileTitle": "Original File",
     "modifiedFileTitle": "Modified File",
-    "readyToCompareTitle": "Ready to Compare"
+    "readyToCompareTitle": "Ready to Compare",
+    "undecidedBlocksWarning": "{{count}} block(s) are still undecided. They will keep the original (left) content until you choose Left, Both, or Right.",
+    "resolveAllBeforePreview": "Resolve all blocks (Left, Both, or Right) before previewing or exporting the merge."
   },
   "walkValidator": {
     "label": "{{protocol}} Walks",
@@ -229,7 +236,9 @@
     "description": "Validate and auto-fix {{protocol}} walk files used by the simulated {{protocol}} agents.",
     "pageTitle": "SNMP Walks",
     "noWalksFound": "No walks found",
-    "pastePathLabel": "Or paste an absolute path"
+    "pastePathLabel": "Or paste an absolute path",
+    "autoFixConfirmTitle": "Auto-fix walk file?",
+    "autoFixConfirmMessage": "This rewrites \"{{file}}\" in place. A .bak backup of the original is created alongside it before any changes are written."
   },
   "walkAnalyzer": {
     "label": "Walk Analyzer",

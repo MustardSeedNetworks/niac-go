@@ -15,6 +15,7 @@
   },
   "list": {
     "title": "Device Library",
+    "viewRunningState": "View running state",
     "searchPlaceholder": "Search devices by name, type, or hostname...",
     "noDevices": "No devices in the library yet",
     "createFirst": "Create your first device",
@@ -55,7 +56,13 @@
     "trunkPorts": "Trunk Ports",
     "portChannels": "Port Channels",
     "saveSuccess": "Device saved",
-    "saveFailed": "Failed to save device"
+    "saveFailed": "Failed to save device",
+    "unsavedNavigation": {
+      "title": "Leave without saving?",
+      "message": "This device has unsaved changes. If you leave now, those changes will be lost.",
+      "confirmLabel": "Leave",
+      "cancelLabel": "Stay"
+    }
   },
   "running": {
     "noDevicesRunning": "No devices are currently running",

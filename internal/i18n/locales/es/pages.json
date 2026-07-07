@@ -4,7 +4,8 @@
     "library": "Biblioteca",
     "liveView": "Vista en vivo",
     "inspect": "Inspeccionar",
-    "alerts": "Alertas"
+    "tools": "Herramientas",
+    "system": "Sistema"
   },
   "dashboard": {
     "label": "Panel",
@@ -70,7 +71,9 @@
     "title": "Dispositivos en ejecución",
     "description": "Vista de solo lectura de los dispositivos que el daemon está simulando actualmente, junto con el YAML en ejecución.",
     "ipAddressesHeader": "Direcciones IP",
-    "availableSnmpWalks": "Recorridos SNMP disponibles"
+    "availableSnmpWalks": "Recorridos SNMP disponibles",
+    "editInLibrary": "Editar en la biblioteca de dispositivos",
+    "useInEditor": "Usar en el editor de dispositivos"
   },
   "segments": {
     "label": "Segmentos",
@@ -84,8 +87,8 @@
     "empty": "No hay segmentos definidos en la configuración cargada."
   },
   "deviceLibrary": {
-    "label": "Dispositivos",
-    "title": "Dispositivos",
+    "label": "Biblioteca de dispositivos",
+    "title": "Biblioteca de dispositivos",
     "description": "Definiciones de dispositivos reutilizables: buscar, filtrar, editar, clonar y eliminar. Haga clic en un dispositivo para abrir el editor visual."
   },
   "deviceEditor": {
@@ -146,8 +149,8 @@
     }
   },
   "traffic": {
-    "label": "Tráfico",
-    "title": "Tráfico",
+    "label": "Inyección de fallos",
+    "title": "Inyección de fallos",
     "description": "Inyecte errores controlados en la simulación en ejecución y reproduzca archivos {{format}} capturados.",
     "page": {
       "errorInjectionTitle": "Inyección de errores",
@@ -164,7 +167,7 @@
   "debug": {
     "label": "Registros",
     "title": "Registros",
-    "description": "Flujo de registros en vivo desde el daemon, con controles de nivel de depuración por protocolo."
+    "description": "Flujo de registros en vivo desde el daemon, con controles de nivel de depuración."
   },
   "packets": {
     "label": "Paquetes",
@@ -212,7 +215,9 @@
       "selectPacketForProtocol": "Seleccione un paquete para ver las capas de protocolo",
       "noProtocolLayers": "No hay capas de protocolo disponibles",
       "protocolHeaders": "Encabezados de protocolo",
-      "selectPacketForDetails": "Seleccione un paquete para ver los detalles"
+      "selectPacketForDetails": "Seleccione un paquete para ver los detalles",
+      "exportButton": "Exportar filtrados (JSON)",
+      "exportButtonTitle": "Exportar los paquetes filtrados actuales como JSON"
     }
   },
   "configDiff": {
@@ -221,7 +226,9 @@
     "description": "Compare dos configuraciones de red {{format}} en paralelo y fusione los cambios entre ellas.",
     "originalFileTitle": "Archivo original",
     "modifiedFileTitle": "Archivo modificado",
-    "readyToCompareTitle": "Listo para comparar"
+    "readyToCompareTitle": "Listo para comparar",
+    "undecidedBlocksWarning": "{{count}} bloque(s) siguen sin decidir. Conservarán el contenido original (izquierda) hasta que elija Izquierda, Ambos o Derecha.",
+    "resolveAllBeforePreview": "Resuelva todos los bloques (Izquierda, Ambos o Derecha) antes de previsualizar o exportar la fusión."
   },
   "walkValidator": {
     "label": "Recorridos {{protocol}}",
@@ -229,7 +236,9 @@
     "description": "Valide y corrija automáticamente los archivos de recorrido {{protocol}} utilizados por los agentes {{protocol}} simulados.",
     "pageTitle": "Recorridos SNMP",
     "noWalksFound": "No se encontraron recorridos",
-    "pastePathLabel": "O pegue una ruta absoluta"
+    "pastePathLabel": "O pegue una ruta absoluta",
+    "autoFixConfirmTitle": "¿Corregir automáticamente el archivo de recorrido?",
+    "autoFixConfirmMessage": "Esto reescribe \"{{file}}\" en su lugar. Se crea una copia de seguridad .bak del original antes de escribir cualquier cambio."
   },
   "walkAnalyzer": {
     "label": "Analizador de recorridos",

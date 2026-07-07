@@ -125,7 +125,7 @@ export const RuntimeControlPage: FC = () => {
     if (!simulationSettings.selectedInterface) {
       setMessage({
         tone: 'error',
-        text: 'Please select an interface in Settings',
+        text: 'Please select an interface above',
       });
       return;
     }
@@ -133,7 +133,7 @@ export const RuntimeControlPage: FC = () => {
     if (!simulationSettings.configName && !quickUploadFile) {
       setMessage({
         tone: 'error',
-        text: 'Please select a configuration in Settings or upload a config file',
+        text: 'Please select a configuration above or upload a config file',
       });
       return;
     }
@@ -227,7 +227,7 @@ export const RuntimeControlPage: FC = () => {
                   To use simulation controls, start NIAC in daemon mode:
                 </SmallText>
                 <code className="mt-inline block rounded bg-scrim/40 pad-sm font-mono text-sm text-status-warning">
-                  niac daemon --listen :8080 --token yourtoken
+                  niac daemon
                 </code>
               </div>
             </div>

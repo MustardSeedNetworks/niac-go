@@ -23,6 +23,5 @@ export {
   writeSavedLayoutMode,
   writeSavedPositions,
 } from './persistence';
-export { TopologyHeader } from './TopologyHeader';
 export { TopologyLegend } from './TopologyLegend';
 export type { DeviceNode as DeviceNodeType, DeviceNodeData, LinkEdge, LinkEdgeData } from './types';

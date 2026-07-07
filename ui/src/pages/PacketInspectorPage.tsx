@@ -40,6 +40,7 @@ import { Card, CardContent } from '../ui/Card';
 import { Tag } from '../ui/Tag';
 import { H2, SmallText } from '../ui/Typography';
 import { getStreamFilter } from '../utils/conversations';
+import { buildProtocolLayers, computeHeaderBoundary } from '../utils/protocol-layers';
 import { PcapAnalyzerPage } from './PcapAnalyzerPage';
 
 /** Maximum number of packets to buffer */
@@ -89,6 +90,7 @@ const ConnectionStatus: FC<{
  * - Protocol and search filtering
  */
 export const PacketInspectorPage: FC = () => {
+  const { t } = useTranslation('pages');
   const navigate = useNavigate();
   const [view, setView] = useState<'live' | 'files'>('live');
   // The page streams from /api/v1/stream/packets, which the daemon
@@ -121,6 +123,7 @@ export const PacketInspectorPage: FC = () => {
   const [isPaused, setIsPaused] = useState(false);
   const [showColoringRules, setShowColoringRules] = useState(false);
   const [showStreamView, setShowStreamView] = useState(false);
+  const [captureError, setCaptureError] = useState<string | null>(null);
 
   // Coloring rules
   const {
@@ -195,13 +198,14 @@ export const PacketInspectorPage: FC = () => {
     setSelectedPacket(null);
   }, []);
 
-  // Export packets as JSON
+  // Export the currently filtered packets as JSON. Respects the active
+  // display filter so the export matches what's on screen.
   const handleExport = useCallback(() => {
-    if (packets.length === 0) {
+    if (filteredPackets.length === 0) {
       return;
     }
 
-    const exportData = JSON.stringify(packets, null, 2);
+    const exportData = JSON.stringify(filteredPackets, null, 2);
     const blob = new Blob([exportData], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -211,7 +215,7 @@ export const PacketInspectorPage: FC = () => {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-  }, [packets]);
+  }, [filteredPackets]);
 
   // Toggle pause state
   const handlePauseToggle = useCallback(() => {
@@ -243,6 +247,26 @@ export const PacketInspectorPage: FC = () => {
       !!selectedPacket.sourcePort &&
       !!selectedPacket.destPort
     );
+  }, [selectedPacket]);
+
+  // Header/payload byte boundary for the hex dump, derived from the
+  // selected packet's dissected protocol layers rather than a hardcoded
+  // Ethernet-only constant, so IP/TCP/UDP header bytes are colored
+  // correctly instead of bleeding into "Payload".
+  const hexHeaderLength = useMemo(() => {
+    if (!selectedPacket) {
+      return undefined;
+    }
+    const layers = buildProtocolLayers(selectedPacket.headers, {
+      timestamp: selectedPacket.timestamp,
+      protocol: selectedPacket.protocol,
+      sourceIp: selectedPacket.sourceIp,
+      destIp: selectedPacket.destIp,
+      sourcePort: selectedPacket.sourcePort,
+      destPort: selectedPacket.destPort,
+      size: selectedPacket.size,
+    });
+    return computeHeaderBoundary(layers);
   }, [selectedPacket]);
 
   // Stream packets for StreamView (all packets in current conversation)
@@ -361,11 +385,14 @@ export const PacketInspectorPage: FC = () => {
                       tone="red"
                       size="sm"
                       onClick={async () => {
+                        setCaptureError(null);
                         try {
                           await stopStandaloneCapture();
                           refetchCapture();
-                        } catch {
-                          // Surface via the empty-state error path on next render.
+                        } catch (err) {
+                          setCaptureError(
+                            err instanceof Error ? err.message : 'Failed to stop capture',
+                          );
                         }
                       }}
                     >
@@ -378,9 +405,10 @@ export const PacketInspectorPage: FC = () => {
                     size="sm"
                     onClick={handleExport}
                     leftIcon={<Download className={iconSizes.md} />}
-                    disabled={packets.length === 0}
+                    disabled={filteredPackets.length === 0}
+                    title={t('packets.inspector.exportButtonTitle')}
                   >
-                    Export
+                    {t('packets.inspector.exportButton')}
                   </Button>
 
                   <Button
@@ -433,6 +461,12 @@ export const PacketInspectorPage: FC = () => {
                   {filteredPackets.length} / {packets.length} packets
                 </SmallText>
               </div>
+
+              {captureError && (
+                <SmallText className="mt-content text-status-error" role="alert">
+                  {captureError}
+                </SmallText>
+              )}
             </CardContent>
           </Card>
 
@@ -483,7 +517,7 @@ export const PacketInspectorPage: FC = () => {
                   <div className="flex-1 min-h-0">
                     <HexDumpViewer
                       rawData={selectedPacket?.rawData ?? ''}
-                      headerLength={14}
+                      headerLength={hexHeaderLength}
                       highlightRange={highlightRange}
                     />
                   </div>

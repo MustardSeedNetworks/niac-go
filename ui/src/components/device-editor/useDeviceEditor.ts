@@ -16,6 +16,7 @@ import { useApiResource } from '../../hooks/useApiResource';
 import { DeviceFormSchema } from '../../schemas/forms';
 import { getErrorMessage } from '../../utils/format';
 import type { StatusMessage } from './DeviceEditorHeader';
+import { useUnsavedChangesGuard } from './useUnsavedChangesGuard';
 
 /**
  * Create an empty device with default values
@@ -76,6 +77,16 @@ export interface UseDeviceEditorReturn {
   handleSave: () => Promise<void>;
   handleDelete: () => Promise<void>;
   handleDiscard: () => void;
+
+  // Unsaved-changes navigation guard (#920 — the editor previously lost
+  // edits silently on navigate-away). requestNavigateBack replaces a bare
+  // `navigate('/device-config')` for the "Back" button; pendingLeavePath /
+  // confirmLeave / cancelLeave drive the confirmation modal rendered by
+  // DeviceEditorPage.
+  requestNavigateBack: () => void;
+  pendingLeavePath: string | null;
+  confirmLeave: () => void;
+  cancelLeave: () => void;
 }
 
 export const useDeviceEditor = (): UseDeviceEditorReturn => {
@@ -98,7 +109,9 @@ export const useDeviceEditor = (): UseDeviceEditorReturn => {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [message, setMessage] = useState<StatusMessage | null>(null);
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['basic']));
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(
+    () => new Set(location.hash === '#snmp' ? ['basic', 'snmp'] : ['basic']),
+  );
   const [showYamlPreview, setShowYamlPreview] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -153,6 +166,16 @@ export const useDeviceEditor = (): UseDeviceEditorReturn => {
       setOriginalDevice(fetchedDevice.device);
     }
   }, [fetchedDevice, reset]);
+
+  // Deep-link support: the Running Devices walk browser links here with
+  // `#snmp` so a copied walk name can actually be used. Once the section
+  // has rendered (post-loading), scroll it into view.
+  useEffect(() => {
+    if (location.hash !== '#snmp' || loading) {
+      return;
+    }
+    document.getElementById('snmp-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [location.hash, loading]);
 
   // Check if device has been modified. Deliberately kept as a structural
   // JSON compare (not rhf's formState.isDirty) so the unsaved-changes
@@ -284,6 +307,17 @@ export const useDeviceEditor = (): UseDeviceEditorReturn => {
     }
   }, [isNewDevice, originalDevice, navigate, reset]);
 
+  const {
+    pendingPath: pendingLeavePath,
+    requestNavigate: requestNavigateBackTo,
+    confirmNavigate: confirmLeave,
+    cancelNavigate: cancelLeave,
+  } = useUnsavedChangesGuard(isDirty, navigate);
+  const requestNavigateBack = useCallback(
+    () => requestNavigateBackTo('/device-config'),
+    [requestNavigateBackTo],
+  );
+
   return {
     hostname,
     isNewDevice,
@@ -311,5 +345,9 @@ export const useDeviceEditor = (): UseDeviceEditorReturn => {
     handleSave,
     handleDelete,
     handleDiscard,
+    requestNavigateBack,
+    pendingLeavePath,
+    confirmLeave,
+    cancelLeave,
   };
 };

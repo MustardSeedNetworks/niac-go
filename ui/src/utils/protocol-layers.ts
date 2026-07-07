@@ -43,6 +43,31 @@ export function buildProtocolLayers(
   return layers;
 }
 
+/** Minimum header length: a bare Ethernet II frame is always 14 bytes. */
+const MIN_HEADER_LENGTH = 14;
+
+/**
+ * Derive the header/payload byte boundary from a packet's protocol layers.
+ *
+ * Every layer up through the transport header (Ethernet, IP, TCP/UDP/ICMP)
+ * annotates its fields with `byteStart`/`byteEnd`; application-layer fields
+ * (DNS, ARP) do not, since their bytes belong to the payload. The boundary
+ * is the highest `byteEnd` seen across all layers, i.e. the first payload
+ * byte, clamped to the Ethernet header's fixed 14-byte minimum for packets
+ * whose Ethernet layer couldn't be fully parsed (e.g. no EtherType field).
+ */
+export function computeHeaderBoundary(layers: ProtocolLayer[]): number {
+  let boundary = 0;
+  for (const layer of layers) {
+    for (const field of layer.fields) {
+      if (field.byteEnd !== undefined && field.byteEnd > boundary) {
+        boundary = field.byteEnd;
+      }
+    }
+  }
+  return Math.max(boundary, MIN_HEADER_LENGTH);
+}
+
 function buildFrameLayer(packet: PacketMeta): ProtocolLayer {
   const totalLength = packet.length ?? packet.size ?? 0;
   return {

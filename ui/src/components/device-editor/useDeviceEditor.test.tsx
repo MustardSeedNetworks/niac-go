@@ -14,13 +14,17 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { useDeviceEditor } from './useDeviceEditor';
 
 const mockNavigate = vi.fn();
+let mockLocation: { pathname: string; hash: string } = {
+  pathname: '/device-config/new',
+  hash: '',
+};
 vi.mock('react-router-dom', async (importOriginal) => {
   const actual = await importOriginal<typeof import('react-router-dom')>();
   return {
     ...actual,
     useNavigate: () => mockNavigate,
     useParams: () => ({ hostname: 'new' }),
-    useLocation: () => ({ pathname: '/device-config/new' }),
+    useLocation: () => mockLocation,
   };
 });
 
@@ -39,6 +43,7 @@ const wrapper = ({ children }: { children: React.ReactNode }): React.ReactElemen
 
 afterEach(() => {
   vi.clearAllMocks();
+  mockLocation = { pathname: '/device-config/new', hash: '' };
 });
 
 function render() {
@@ -98,5 +103,21 @@ describe('useDeviceEditor', () => {
       expect.objectContaining({ hostname: 'edge-01', mac: '00:1A:2B:3C:4D:5E' }),
     );
     expect(result.current.fieldErrors.hostname).toBeUndefined();
+  });
+
+  it('expands the SNMP section up front when arriving via #snmp (Running Devices deep link)', async () => {
+    mockLocation = { pathname: '/device-config/new', hash: '#snmp' };
+    const { result } = render();
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(result.current.expandedSections.has('snmp')).toBe(true);
+    expect(result.current.expandedSections.has('basic')).toBe(true);
+  });
+
+  it('does not expand the SNMP section without the #snmp hash', async () => {
+    const { result } = render();
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(result.current.expandedSections.has('snmp')).toBe(false);
   });
 });

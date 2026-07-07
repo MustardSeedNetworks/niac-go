@@ -87,12 +87,14 @@ func (s *Server) registerWriteProtectedRoutes(mux *http.ServeMux) {
 			admin:   true,
 		},
 		// Replay accepts inline PCAP payloads (handleReplay POST decodes up to
-		// MaxPCAPUploadSize), so the registry cap must match that, not 1MB.
+		// MaxPCAPUploadBodySize, which accounts for base64 + JSON envelope
+		// overhead on top of the MaxPCAPUploadSize raw cap), so the registry
+		// cap must match that, not 1MB.
 		{
 			path:         "/api/v1/replay",
 			handler:      s.handleReplay,
 			methods:      []string{http.MethodGet, http.MethodPost, http.MethodDelete},
-			maxBodyBytes: MaxPCAPUploadSize,
+			maxBodyBytes: MaxPCAPUploadBodySize,
 			rl:           rlWrite,
 			csrf:         true,
 		},
@@ -276,14 +278,16 @@ func (s *Server) registerWalkRoutes(mux *http.ServeMux) {
 // pcap_ingest license feature; upload additionally rate-limited + CSRF).
 func (s *Server) registerPcapRoutes(mux *http.ServeMux) {
 	s.registerAll(mux, []apiRoute{
-		// Upload decodes a base64 PCAP payload up to MaxPCAPUploadSize (100MB)
-		// via decodeJSONStrict; the registry cap must match so it never truncates
-		// a valid capture before the handler reads it.
+		// Upload decodes a base64 PCAP payload up to MaxPCAPUploadSize (100MB
+		// raw) via decodeJSONStrict, but the base64-encoded JSON body is
+		// larger than that (~137MB); the registry cap must match
+		// MaxPCAPUploadBodySize so it never truncates a valid capture before
+		// the handler reads it.
 		{
 			path:         "/api/v1/pcap/upload",
 			handler:      s.handlePcapUpload,
 			methods:      []string{http.MethodPost},
-			maxBodyBytes: MaxPCAPUploadSize,
+			maxBodyBytes: MaxPCAPUploadBodySize,
 			rl:           rlUpload,
 			csrf:         true,
 			feature:      "pcap_ingest",

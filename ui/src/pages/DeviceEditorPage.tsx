@@ -1,5 +1,6 @@
 import type { FC } from 'react';
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   AdditionalIPsSection,
   BasicSettingsSection,
@@ -21,6 +22,7 @@ import {
   useDeviceEditor,
   YamlPreviewSection,
 } from '../components/device-editor';
+import { ConfirmModal } from '../ui/ConfirmModal';
 
 export const DeviceEditorPage: FC = () => {
   const {
@@ -47,7 +49,12 @@ export const DeviceEditorPage: FC = () => {
     handleSave,
     handleDelete,
     handleDiscard,
+    requestNavigateBack,
+    pendingLeavePath,
+    confirmLeave,
+    cancelLeave,
   } = useDeviceEditor();
+  const { t } = useTranslation('devices');
 
   // Generate YAML preview
   const yamlPreview = useMemo(() => buildYamlPreview(device), [device]);
@@ -82,7 +89,7 @@ export const DeviceEditorPage: FC = () => {
         onDelete={() => setShowDeleteConfirm(true)}
         onDiscard={handleDiscard}
         onSave={handleSave}
-        onNavigateBack={() => navigate('/device-config')}
+        onNavigateBack={requestNavigateBack}
       />
 
       {/* YAML Preview */}
@@ -217,6 +224,18 @@ export const DeviceEditorPage: FC = () => {
           onCancel={() => setShowDeleteConfirm(false)}
         />
       )}
+
+      {/* Unsaved-changes navigation guard — covers the Back button and
+          any in-app link clicked while the form is dirty. */}
+      <ConfirmModal
+        isOpen={pendingLeavePath !== null}
+        onConfirm={confirmLeave}
+        onCancel={cancelLeave}
+        title={t('editor.unsavedNavigation.title')}
+        message={t('editor.unsavedNavigation.message')}
+        confirmLabel={t('editor.unsavedNavigation.confirmLabel')}
+        cancelLabel={t('editor.unsavedNavigation.cancelLabel')}
+      />
     </div>
   );
 };

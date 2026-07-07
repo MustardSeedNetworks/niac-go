@@ -1,5 +1,6 @@
 import { ChevronDown, ChevronUp, Settings2 } from 'lucide-react';
 import { type FC, useCallback, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { LogEntry, LogLevel, Protocol } from '../api/types';
 import { DebugLevelControl } from '../components/debug/DebugLevelControl';
 import { LogFilters } from '../components/LogFilters';
@@ -43,6 +44,7 @@ function mapToLogEntry(data: unknown): LogEntry | null {
 }
 
 export const DebugConsolePage: FC = () => {
+  const { t } = useTranslation('pages');
   // Log storage and filters
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [levelFilter, setLevelFilter] = useState<LogLevel | 'All'>('All');
@@ -176,7 +178,7 @@ export const DebugConsolePage: FC = () => {
         <CardContent className="stack-lg">
           {/* Header with Connection Status */}
           <div className="flex-between">
-            <h2 className="heading-2 text-text-primary">Debug Console</h2>
+            <h2 className="heading-2 text-text-primary">{t('debug.title')}</h2>
             <div className="flex items-center gap-default">
               {/* Debug Settings Toggle */}
               <Button

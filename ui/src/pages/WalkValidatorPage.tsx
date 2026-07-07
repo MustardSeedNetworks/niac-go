@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { fetchLibraryWalks, fixWalk, type LibraryFileEntry, validateWalk } from '../api/client';
 import type { WalkValidationIssue, WalkValidationResponse } from '../api/types';
 import { Card, CardContent } from '../ui/Card';
+import { ConfirmModal } from '../ui/ConfirmModal';
 
 type Severity = 'error' | 'warning' | 'info';
 
@@ -26,6 +27,7 @@ const severityCounts = (issues: WalkValidationIssue[]): Record<Severity, number>
 
 export const WalkValidatorPage: FC = () => {
   const { t } = useTranslation('pages');
+  const { t: tCommon } = useTranslation('common');
   const [files, setFiles] = useState<LibraryFileEntry[]>([]);
   const [filesError, setFilesError] = useState<string | null>(null);
   const [filesLoading, setFilesLoading] = useState(true);
@@ -36,6 +38,7 @@ export const WalkValidatorPage: FC = () => {
   const [response, setResponse] = useState<WalkValidationResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<'idle' | 'validating' | 'fixing'>('idle');
+  const [showAutoFixConfirm, setShowAutoFixConfirm] = useState(false);
 
   // Hydrate the file dropdown from /api/v1/library/walks. The daemon's
   // walk validator (validateWalkFilePath) falls back to the library
@@ -156,7 +159,7 @@ export const WalkValidatorPage: FC = () => {
             </button>
             <button
               type="button"
-              onClick={() => void run('fixing')}
+              onClick={() => setShowAutoFixConfirm(true)}
               disabled={busy !== 'idle' || !targetPath}
               className="rounded bg-status-warning/20 px-3 py-compact-md text-sm font-medium text-status-warning ring-1 ring-status-warning/40 hover:bg-status-warning/30 disabled:opacity-50"
               title="Validate and rewrite the file in place. A .bak is created next to the original."
@@ -249,6 +252,20 @@ export const WalkValidatorPage: FC = () => {
           </CardContent>
         </Card>
       )}
+
+      <ConfirmModal
+        isOpen={showAutoFixConfirm}
+        onConfirm={() => {
+          setShowAutoFixConfirm(false);
+          void run('fixing');
+        }}
+        onCancel={() => setShowAutoFixConfirm(false)}
+        title={t('walkValidator.autoFixConfirmTitle')}
+        message={t('walkValidator.autoFixConfirmMessage', { file: targetPath })}
+        confirmLabel={tCommon('buttons.autoFix')}
+        cancelLabel={tCommon('buttons.cancel')}
+        confirmTone="blue"
+      />
     </div>
   );
 };
