@@ -215,7 +215,9 @@
       "selectPacketForProtocol": "Select a packet to view protocol layers",
       "noProtocolLayers": "No protocol layers available",
       "protocolHeaders": "Protocol Headers",
-      "selectPacketForDetails": "Select a packet to view details"
+      "selectPacketForDetails": "Select a packet to view details",
+      "exportButton": "Export filtered (JSON)",
+      "exportButtonTitle": "Export the currently filtered packets as JSON"
     }
   },
   "configDiff": {
