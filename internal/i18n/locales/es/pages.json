@@ -130,7 +130,23 @@
     },
     "legend": {
       "deviceTypesHeading": "Tipos de dispositivo",
-      "linkSpeedsHeading": "Velocidades de enlace"
+      "linkSpeedsHeading": "Velocidades de enlace",
+      "nodesHeading": "Nodos",
+      "statusHeading": "Estado",
+      "statusOnline": "En línea",
+      "statusOffline": "Fuera de línea",
+      "statusWarning": "Advertencia",
+      "focusHint": "Haga clic en un nodo para resaltar sus vecinos: los dispositivos no relacionados se atenúan.",
+      "edgesHeading": "Enlaces",
+      "utilizationHeading": "Utilización",
+      "utilizationHigh": "Alta (60–84%)",
+      "utilizationCritical": "Crítica (85%+)",
+      "lineStyleHeading": "Estilo de línea",
+      "lineStyleDeclared": "Declarado (config)",
+      "lineStyleDiscovered": "Detectado (LLDP/CDP)",
+      "directionHeading": "Dirección",
+      "directionSingle": "Unidireccional (enlace de acceso)",
+      "directionDouble": "Bidireccional (trunk/LAG)"
     },
     "actionsMenu": {
       "exportPng": "Exportar como PNG",
