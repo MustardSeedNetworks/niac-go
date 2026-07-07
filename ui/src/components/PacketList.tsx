@@ -1,4 +1,4 @@
-import { type FC, memo } from 'react';
+import { type FC, memo, useEffect, useRef } from 'react';
 import { useTimeDisplay } from '../hooks/useTimeDisplay';
 import { Tag } from '../ui/Tag';
 import { SmallText } from '../ui/Typography';
@@ -86,6 +86,19 @@ PacketRow.displayName = 'PacketRow';
 export const PacketList: FC<PacketListProps> = memo(
   ({ packets, selectedPacketId, onSelectPacket, autoScroll, getRowStyle }) => {
     const { mode: timeMode, cycleMode: cycleTimeMode } = useTimeDisplay();
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+    // When auto-scroll is enabled, follow the newest packet as it arrives.
+    useEffect(() => {
+      if (!autoScroll) {
+        return;
+      }
+      const container = scrollContainerRef.current;
+      if (!container) {
+        return;
+      }
+      container.scrollTop = container.scrollHeight;
+    }, [autoScroll, packets.length]);
 
     if (packets.length === 0) {
       return (
@@ -109,6 +122,7 @@ export const PacketList: FC<PacketListProps> = memo(
           Mode: {getTimeDisplayLabel(timeMode)}
         </button>
         <div
+          ref={scrollContainerRef}
           className={`flex-1 overflow-y-auto stack-xs pr-2 ${autoScroll ? 'scroll-smooth' : ''}`}
           style={{ scrollBehavior: autoScroll ? 'smooth' : 'auto' }}
         >
