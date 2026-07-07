@@ -2,6 +2,7 @@ import { type FC, memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { PcapPacket } from '../api/types';
 import { Card, CardContent } from '../ui/Card';
+import { InfoPopover } from '../ui/InfoPopover';
 import { Tag } from '../ui/Tag';
 import { SmallText } from '../ui/Typography';
 import {
@@ -30,6 +31,7 @@ interface ConversationListProps {
 export const ConversationList: FC<ConversationListProps> = memo(
   ({ packets, onSelectConversation }) => {
     const { t } = useTranslation('common');
+    const { t: tHelp } = useTranslation('help');
     const [sortField, setSortField] = useState<SortField>('packets');
     const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
 
@@ -95,8 +97,12 @@ export const ConversationList: FC<ConversationListProps> = memo(
       <Card className="border-surface-border bg-bg-surface/70">
         <CardContent>
           <div className="mb-heading flex-between">
-            <SmallText className="text-text-muted">
+            <SmallText className="text-text-muted flex items-center gap-1">
               {t('plurals.conversationCount', { count: conversations.length })}
+              <span>{t('jargon.groupedByTerm', { term: '5-tuple' })}</span>
+              <InfoPopover label={t('jargon.ariaLabel', { term: '5-tuple' })} title="5-tuple">
+                {tHelp('jargon.fiveTuple')}
+              </InfoPopover>
             </SmallText>
             <SmallText className="text-text-muted">Click a row to filter packets</SmallText>
           </div>

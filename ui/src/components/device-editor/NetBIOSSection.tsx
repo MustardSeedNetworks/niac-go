@@ -1,7 +1,9 @@
 import { Network } from 'lucide-react';
 import type { FC } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { NetBIOSConfig, NetBIOSService } from '../../api/types';
 import { iconSizes } from '../../constants/sizes';
+import { InfoPopover } from '../../ui/InfoPopover';
 import { CollapsibleSection, FormField } from '../form';
 import type { ProtocolSectionProps } from './types';
 import { inputClassName } from './types';
@@ -12,6 +14,8 @@ export const NetBiosSection: FC<ProtocolSectionProps> = ({
   onToggle,
   onUpdate,
 }) => {
+  const { t } = useTranslation('common');
+  const { t: tHelp } = useTranslation('help');
   const getNetbiosConfig = (): NetBIOSConfig => ({
     enabled: true,
     nodeType: 'B',
@@ -67,7 +71,20 @@ export const NetBiosSection: FC<ProtocolSectionProps> = ({
               />
             </FormField>
 
-            <FormField label="Node Type" helpText="NetBIOS node type">
+            <FormField
+              label={
+                <>
+                  Node Type
+                  <InfoPopover
+                    label={t('jargon.ariaLabel', { term: 'NetBIOS node type' })}
+                    title="NetBIOS node type"
+                  >
+                    {tHelp('jargon.netbiosNodeType')}
+                  </InfoPopover>
+                </>
+              }
+              helpText="NetBIOS node type"
+            >
               <select
                 value={device.netbios.nodeType || 'B'}
                 onChange={(e) =>
@@ -135,20 +152,25 @@ export const NetBiosSection: FC<ProtocolSectionProps> = ({
               ))}
             </div>
 
-            <label className="flex items-center gap-compact cursor-pointer mt-inline">
-              <input
-                type="checkbox"
-                checked={device.netbios.msbrowse ?? false}
-                onChange={(e) =>
-                  updateNetBios({
-                    ...getNetbiosConfig(),
-                    msbrowse: e.target.checked,
-                  })
-                }
-                className="w-4 h-4 rounded border-border-muted bg-bg-elevated text-brand-primary focus:ring-brand-primary"
-              />
-              <span className="text-sm text-text-secondary">Master Browser (MSBROWSE)</span>
-            </label>
+            <div className="flex items-center gap-1 mt-inline">
+              <label className="flex items-center gap-compact cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={device.netbios.msbrowse ?? false}
+                  onChange={(e) =>
+                    updateNetBios({
+                      ...getNetbiosConfig(),
+                      msbrowse: e.target.checked,
+                    })
+                  }
+                  className="w-4 h-4 rounded border-border-muted bg-bg-elevated text-brand-primary focus:ring-brand-primary"
+                />
+                <span className="text-sm text-text-secondary">Master Browser (MSBROWSE)</span>
+              </label>
+              <InfoPopover label={t('jargon.ariaLabel', { term: 'MSBROWSE' })} title="MSBROWSE">
+                {tHelp('jargon.msbrowse')}
+              </InfoPopover>
+            </div>
           </div>
         </div>
       )}

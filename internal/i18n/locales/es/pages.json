@@ -211,6 +211,7 @@
       "standaloneCapture": "Captura de paquetes independiente",
       "noInterfaces": "No se detectaron interfaces",
       "followStreamTitle": "Seguir flujo",
+    "followStreamDisabledTitle": "Seleccione un paquete TCP o UDP con puerto de origen y de destino para seguir su flujo",
       "noPayload": "No hay datos de carga útil disponibles para este flujo",
       "selectPacketForProtocol": "Seleccione un paquete para ver las capas de protocolo",
       "noProtocolLayers": "No hay capas de protocolo disponibles",

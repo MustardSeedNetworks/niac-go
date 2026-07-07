@@ -211,6 +211,7 @@
       "standaloneCapture": "Standalone packet capture",
       "noInterfaces": "No interfaces detected",
       "followStreamTitle": "Follow Stream",
+    "followStreamDisabledTitle": "Select a TCP or UDP packet with both a source and destination port to follow its stream",
       "noPayload": "No payload data available for this stream",
       "selectPacketForProtocol": "Select a packet to view protocol layers",
       "noProtocolLayers": "No protocol layers available",

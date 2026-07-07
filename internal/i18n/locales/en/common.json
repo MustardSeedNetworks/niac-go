@@ -213,5 +213,13 @@
     "relativeDayAgo": "{{value}}d ago",
     "dash": "—",
     "unexpectedError": "An unexpected error occurred"
+  },
+  "filters": {
+    "captureFilterCaption": "Capture filter — drops packets before they're buffered",
+    "displayFilterCaption": "Display filter — hides buffered packets from view"
+  },
+  "jargon": {
+    "ariaLabel": "About {{term}}",
+    "groupedByTerm": "grouped by {{term}}"
   }
 }

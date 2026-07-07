@@ -213,5 +213,13 @@
     "relativeDayAgo": "hace {{value}}d",
     "dash": "—",
     "unexpectedError": "Ocurrió un error inesperado"
+  },
+  "filters": {
+    "captureFilterCaption": "Filtro de captura — descarta paquetes antes de almacenarlos en el búfer",
+    "displayFilterCaption": "Filtro de visualización — oculta paquetes ya almacenados en el búfer"
+  },
+  "jargon": {
+    "ariaLabel": "Acerca de {{term}}",
+    "groupedByTerm": "agrupado por {{term}}"
   }
 }

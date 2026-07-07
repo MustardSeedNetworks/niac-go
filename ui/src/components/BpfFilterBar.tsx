@@ -1,8 +1,10 @@
 import { AlertCircle, CheckCircle2, Filter, X } from 'lucide-react';
 import { type FC, memo, useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { clearCaptureFilter, getCaptureFilter, setCaptureFilter } from '../api/capture';
 import { iconSizes } from '../constants/sizes';
 import { Button } from '../ui/Button';
+import { InfoPopover } from '../ui/InfoPopover';
 import { SmallText } from '../ui/Typography';
 import { getErrorMessage } from '../utils/format';
 
@@ -23,6 +25,8 @@ const BPF_PRESETS = [
  * Shows the active filter and provides presets for common filters.
  */
 export const BpfFilterBar: FC = memo(() => {
+  const { t } = useTranslation('common');
+  const { t: tHelp } = useTranslation('help');
   const [input, setInput] = useState('');
   const [activeFilter, setActiveFilter] = useState('');
   const [isActive, setIsActive] = useState(false);
@@ -110,11 +114,15 @@ export const BpfFilterBar: FC = memo(() => {
 
   return (
     <div className="stack-sm">
+      <SmallText className="text-text-muted px-1">{t('filters.captureFilterCaption')}</SmallText>
       <div className="flex items-center gap-compact">
         {/* Filter icon and active indicator */}
         <div className="flex items-center gap-1.5 flex-shrink-0">
           <Filter className={`${iconSizes.md} text-text-muted`} />
           {isActive && <CheckCircle2 className="h-3.5 w-3.5 text-status-success" />}
+          <InfoPopover label={t('jargon.ariaLabel', { term: 'BPF' })} title="BPF">
+            {tHelp('jargon.bpf')}
+          </InfoPopover>
         </div>
 
         {/* Input */}
