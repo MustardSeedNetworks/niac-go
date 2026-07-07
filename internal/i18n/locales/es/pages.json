@@ -64,7 +64,10 @@
     "description": "Supervise el estado de ejecución, vea las interfaces de red y gestione la configuración de NIAC.",
     "daemonModeWarning": "Modo daemon no detectado",
     "startSimulationTitle": "Iniciar simulación",
-    "noUsableInterfaces": "Sin interfaces utilizables"
+    "noUsableInterfaces": "Sin interfaces utilizables",
+    "stopConfirmTitle": "¿Detener la simulación?",
+    "stopConfirmMessage": "¿Está seguro de que desea detener la simulación? Esto interrumpirá la ejecución actual.",
+    "stopConfirmLabel": "Detener"
   },
   "devices": {
     "label": "Dispositivos en ejecución",

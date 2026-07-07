@@ -23,7 +23,8 @@
     "clone": "Clonar",
     "edit": "Editar",
     "deleteConfirmTitle": "¿Eliminar dispositivo?",
-    "deleteConfirmMessage": "Esto eliminará permanentemente la definición del dispositivo. Las simulaciones en ejecución no se verán afectadas hasta que se reinicien.",
+    "deleteConfirmMessage": "Esto eliminará permanentemente {{hostname}} de la biblioteca de dispositivos. Las simulaciones en ejecución no se verán afectadas hasta que se reinicien.",
+    "deleteConfirmLabel": "Eliminar",
     "tableHeaderHostname": "Nombre de host",
     "tableHeaderType": "Tipo",
     "tableHeaderIpAddress": "Dirección IP",
@@ -62,7 +63,8 @@
       "message": "Este dispositivo tiene cambios sin guardar. Si sale ahora, esos cambios se perderán.",
       "confirmLabel": "Salir",
       "cancelLabel": "Quedarse"
-    }
+    },
+    "deletingLabel": "Eliminando…"
   },
   "running": {
     "noDevicesRunning": "No hay dispositivos en ejecución actualmente",
