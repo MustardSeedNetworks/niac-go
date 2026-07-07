@@ -1,4 +1,4 @@
-import { ApiError, NetworkError, TimeoutError } from './errors';
+import { ApiError, type ApiErrorDetail, NetworkError, TimeoutError } from './errors';
 
 /**
  * Core HTTP request infrastructure for the API client. Everything that
@@ -167,10 +167,14 @@ async function buildRequestHeaders(path: string, init: RequestInit) {
 function parseApiError(text: string, status: number, fallback = ''): ApiError {
   if (text) {
     try {
-      const parsed = JSON.parse(text) as { error?: string; message?: string };
+      const parsed = JSON.parse(text) as {
+        error?: string;
+        message?: string;
+        details?: ApiErrorDetail[];
+      };
       const message = parsed.message || fallback || text;
       const code = parsed.error || 'API_ERROR';
-      return new ApiError(message, status, code);
+      return new ApiError(message, status, code, parsed.details ?? []);
     } catch {
       // Body wasn't JSON — fall through to raw text.
     }

@@ -2,11 +2,29 @@ import { AlertCircle, CheckCircle2, Filter, X } from 'lucide-react';
 import { type FC, memo, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { clearCaptureFilter, getCaptureFilter, setCaptureFilter } from '../api/capture';
+import { isApiError } from '../api/errors';
 import { iconSizes } from '../constants/sizes';
 import { Button } from '../ui/Button';
 import { InfoPopover } from '../ui/InfoPopover';
 import { SmallText } from '../ui/Typography';
 import { getErrorMessage } from '../utils/format';
+
+/**
+ * Extract the server-reported reason a BPF filter was rejected. When the
+ * API attaches a structured detail (the real libpcap compile error), use
+ * it instead of the generic top-level message so the operator sees why
+ * their expression failed, not just that it did.
+ */
+function getFilterRejectionReason(err: unknown, fallback: string): string {
+  if (isApiError(err)) {
+    const filterDetail = err.details.find((detail) => detail.field === 'filter');
+    if (filterDetail?.issue) {
+      return filterDetail.issue;
+    }
+  }
+
+  return getErrorMessage(err) || fallback;
+}
 
 /** Common BPF filter presets. */
 const BPF_PRESETS = [
@@ -73,7 +91,7 @@ export const BpfFilterBar: FC = memo(() => {
       setActiveFilter(result.filter);
       setIsActive(result.active);
     } catch (err) {
-      setError(getErrorMessage(err) || tPages('packets.bpfFilter.invalidFilterError'));
+      setError(getFilterRejectionReason(err, tPages('packets.bpfFilter.invalidFilterError')));
     } finally {
       setIsLoading(false);
     }

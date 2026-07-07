@@ -62,8 +62,12 @@ func (s *Server) handleCaptureFilterSet(w http.ResponseWriter, r *http.Request) 
 
 	if err := stack.SetCaptureFilter(req.Filter); err != nil {
 		s.logger.ErrorContext(r.Context(), "[API] Failed to set capture filter", "filter", req.Filter, "error", err)
+		// The libpcap compile error describes the caller's own filter
+		// expression, so it is safe to echo back verbatim.
 		writeError(w, r, http.StatusBadRequest, "invalid_filter",
-			"Invalid BPF filter expression", nil)
+			"Invalid BPF filter expression", []ErrorDetail{
+				{Field: "filter", Issue: err.Error(), Value: req.Filter},
+			})
 
 		return
 	}
