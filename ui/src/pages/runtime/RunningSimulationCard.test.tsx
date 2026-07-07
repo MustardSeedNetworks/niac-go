@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import '../../i18n';
 import { useUIStore } from '../../stores/ui-store';
 import { ToastContainer } from '../../ui/ToastContainer';
 import { RunningSimulationCard } from './RunningSimulationCard';

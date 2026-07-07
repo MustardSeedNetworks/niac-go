@@ -1,4 +1,5 @@
 import type { FC } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Device, DeviceInterface } from '../../api/types';
 import { Button } from '../../ui/Button';
 import { CollapsibleSection } from '../form/CollapsibleSection';
@@ -26,6 +27,8 @@ export const InterfacesSection: FC<InterfacesSectionProps> = ({
   onToggle,
   onUpdate,
 }) => {
+  const { t } = useTranslation('devices');
+  const { t: tCommon } = useTranslation('common');
   const interfaces = device.interfaceDetails ?? [];
 
   const updateInterface = <K extends keyof DeviceInterface>(
@@ -52,7 +55,7 @@ export const InterfacesSection: FC<InterfacesSectionProps> = ({
 
   return (
     <CollapsibleSection
-      title="Interfaces"
+      title={t('editor.interfaces')}
       isExpanded={isExpanded}
       onToggle={onToggle}
       required={false}
@@ -61,25 +64,32 @@ export const InterfacesSection: FC<InterfacesSectionProps> = ({
         {interfaces.map((iface, index) => (
           <div key={`${iface.name || 'interface'}-${index}`} className="device-editor-row-panel">
             <div className="device-editor-field-grid">
-              <FormField label="Name" required={true} htmlFor={`interface-${index}-name`}>
+              <FormField
+                label={t('editor.sections.interfaces.nameLabel')}
+                required={true}
+                htmlFor={`interface-${index}-name`}
+              >
                 <input
                   id={`interface-${index}-name`}
                   type="text"
-                  aria-label={`Interface ${index + 1} name`}
+                  aria-label={t('editor.sections.interfaces.nameAria', { index: index + 1 })}
                   value={iface.name}
                   onChange={(event) => updateInterface(index, 'name', event.target.value)}
-                  placeholder="Ethernet1/1"
+                  placeholder={t('editor.sections.interfaces.namePlaceholder')}
                   className={monoInputClassName}
                 />
               </FormField>
 
-              <FormField label="Speed (Mbps)" htmlFor={`interface-${index}-speed`}>
+              <FormField
+                label={t('editor.sections.interfaces.speedLabel')}
+                htmlFor={`interface-${index}-speed`}
+              >
                 <input
                   id={`interface-${index}-speed`}
                   type="number"
                   min="0"
                   step="1"
-                  aria-label={`Interface ${index + 1} speed Mbps`}
+                  aria-label={t('editor.sections.interfaces.speedAria', { index: index + 1 })}
                   value={iface.speed ?? 0}
                   onChange={(event) =>
                     updateInterface(index, 'speed', Number.parseInt(event.target.value, 10) || 0)
@@ -88,10 +98,13 @@ export const InterfacesSection: FC<InterfacesSectionProps> = ({
                 />
               </FormField>
 
-              <FormField label="Duplex" htmlFor={`interface-${index}-duplex`}>
+              <FormField
+                label={t('editor.sections.interfaces.duplexLabel')}
+                htmlFor={`interface-${index}-duplex`}
+              >
                 <select
                   id={`interface-${index}-duplex`}
-                  aria-label={`Interface ${index + 1} duplex`}
+                  aria-label={t('editor.sections.interfaces.duplexAria', { index: index + 1 })}
                   value={iface.duplex ?? ''}
                   onChange={(event) =>
                     updateInterface(
@@ -102,17 +115,20 @@ export const InterfacesSection: FC<InterfacesSectionProps> = ({
                   }
                   className={selectClassName}
                 >
-                  <option value="">Unset</option>
-                  <option value="full">Full</option>
-                  <option value="half">Half</option>
-                  <option value="auto">Auto</option>
+                  <option value="">{t('editor.sections.interfaces.unsetOption')}</option>
+                  <option value="full">{t('editor.sections.interfaces.fullOption')}</option>
+                  <option value="half">{t('editor.sections.interfaces.halfOption')}</option>
+                  <option value="auto">{t('editor.sections.interfaces.autoOption')}</option>
                 </select>
               </FormField>
 
-              <FormField label="Admin Status" htmlFor={`interface-${index}-admin-status`}>
+              <FormField
+                label={t('editor.sections.interfaces.adminStatusLabel')}
+                htmlFor={`interface-${index}-admin-status`}
+              >
                 <select
                   id={`interface-${index}-admin-status`}
-                  aria-label={`Interface ${index + 1} admin status`}
+                  aria-label={t('editor.sections.interfaces.adminStatusAria', { index: index + 1 })}
                   value={iface.adminStatus ?? ''}
                   onChange={(event) =>
                     updateInterface(
@@ -123,16 +139,19 @@ export const InterfacesSection: FC<InterfacesSectionProps> = ({
                   }
                   className={selectClassName}
                 >
-                  <option value="">Unset</option>
-                  <option value="up">Up</option>
-                  <option value="down">Down</option>
+                  <option value="">{t('editor.sections.interfaces.unsetOption')}</option>
+                  <option value="up">{t('editor.sections.interfaces.upOption')}</option>
+                  <option value="down">{t('editor.sections.interfaces.downOption')}</option>
                 </select>
               </FormField>
 
-              <FormField label="Oper Status" htmlFor={`interface-${index}-oper-status`}>
+              <FormField
+                label={t('editor.sections.interfaces.operStatusLabel')}
+                htmlFor={`interface-${index}-oper-status`}
+              >
                 <select
                   id={`interface-${index}-oper-status`}
-                  aria-label={`Interface ${index + 1} oper status`}
+                  aria-label={t('editor.sections.interfaces.operStatusAria', { index: index + 1 })}
                   value={iface.operStatus ?? ''}
                   onChange={(event) =>
                     updateInterface(
@@ -143,21 +162,24 @@ export const InterfacesSection: FC<InterfacesSectionProps> = ({
                   }
                   className={selectClassName}
                 >
-                  <option value="">Unset</option>
-                  <option value="up">Up</option>
-                  <option value="down">Down</option>
-                  <option value="testing">Testing</option>
+                  <option value="">{t('editor.sections.interfaces.unsetOption')}</option>
+                  <option value="up">{t('editor.sections.interfaces.upOption')}</option>
+                  <option value="down">{t('editor.sections.interfaces.downOption')}</option>
+                  <option value="testing">{t('editor.sections.interfaces.testingOption')}</option>
                 </select>
               </FormField>
 
-              <FormField label="Description" htmlFor={`interface-${index}-description`}>
+              <FormField
+                label={tCommon('labels.description')}
+                htmlFor={`interface-${index}-description`}
+              >
                 <input
                   id={`interface-${index}-description`}
                   type="text"
-                  aria-label={`Interface ${index + 1} description`}
+                  aria-label={t('editor.sections.interfaces.descriptionAria', { index: index + 1 })}
                   value={iface.description ?? ''}
                   onChange={(event) => updateInterface(index, 'description', event.target.value)}
-                  placeholder="uplink"
+                  placeholder={t('editor.sections.interfaces.descriptionPlaceholder')}
                   className={inputClassName}
                 />
               </FormField>
@@ -171,14 +193,14 @@ export const InterfacesSection: FC<InterfacesSectionProps> = ({
                 tone="red"
                 size="sm"
               >
-                Remove
+                {tCommon('buttons.remove')}
               </Button>
             </div>
           </div>
         ))}
 
         <Button type="button" onClick={addInterface} variant="outline" tone="gray" size="sm">
-          Add Interface
+          {t('editor.sections.interfaces.addButton')}
         </Button>
       </div>
     </CollapsibleSection>

@@ -1,4 +1,5 @@
 import type { FC } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { SNMPAgent } from '../../api/types';
 import { CollapsibleSection, FormField } from '../form';
 import { SynthesizeWalkControl } from './SynthesizeWalkControl';
@@ -13,6 +14,7 @@ export const SnmpSection: FC<SNMPSectionProps> = ({
   walkFiles,
   isNewDevice,
 }) => {
+  const { t } = useTranslation('devices');
   const getSnmpConfig = (): SNMPAgent => ({
     community: 'public',
     sysName: device.hostname,
@@ -35,7 +37,7 @@ export const SnmpSection: FC<SNMPSectionProps> = ({
   return (
     <CollapsibleSection
       id="snmp-section"
-      title="SNMP Agent"
+      title={t('editor.sections.snmp.title')}
       isExpanded={isExpanded}
       onToggle={onToggle}
       enabled={!!device.snmpAgent}
@@ -49,7 +51,10 @@ export const SnmpSection: FC<SNMPSectionProps> = ({
     >
       {device.snmpAgent && (
         <div className="grid gap-comfortable md:grid-cols-2">
-          <FormField label="Community String" helpText="SNMP v1/v2c community string">
+          <FormField
+            label={t('editor.sections.snmp.communityLabel')}
+            helpText={t('editor.sections.snmp.communityHelp')}
+          >
             <input
               type="text"
               value={device.snmpAgent.community || ''}
@@ -59,19 +64,22 @@ export const SnmpSection: FC<SNMPSectionProps> = ({
             />
           </FormField>
 
-          <FormField label="System Name" helpText="SNMP sysName value">
+          <FormField
+            label={t('editor.sections.snmp.sysNameLabel')}
+            helpText={t('editor.sections.snmp.sysNameHelp')}
+          >
             <input
               type="text"
               value={device.snmpAgent.sysName || ''}
               onChange={(e) => updateSnmp({ ...getSnmpConfig(), sysName: e.target.value })}
-              placeholder="Device hostname"
+              placeholder={t('editor.sections.snmp.sysNamePlaceholder')}
               className={inputClassName}
             />
           </FormField>
 
           <FormField
-            label="Walk File"
-            helpText="SNMP walk file from the library (Library › Walks)"
+            label={t('editor.sections.snmp.walkFileLabel')}
+            helpText={t('editor.sections.snmp.walkFileHelp')}
             className="md:col-span-2"
           >
             <select
@@ -79,9 +87,11 @@ export const SnmpSection: FC<SNMPSectionProps> = ({
               onChange={(e) => updateSnmp({ ...getSnmpConfig(), walkFile: e.target.value })}
               className={selectClassName}
             >
-              <option value="">Select a walk file...</option>
+              <option value="">{t('editor.sections.snmp.walkFileSelectPrompt')}</option>
               {currentWalkMissing && (
-                <option value={currentWalk}>{currentWalk} (not in library)</option>
+                <option value={currentWalk}>
+                  {currentWalk} {t('editor.sections.snmp.walkFileMissingSuffix')}
+                </option>
               )}
               {walkFiles?.map((file) => (
                 <option key={file.name} value={file.name}>

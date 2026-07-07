@@ -1,5 +1,6 @@
 import type { FC } from 'react';
 import type { FieldErrors } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 import type { Device, DeviceType } from '../../api/types';
 import { deviceTypeOptions as deviceTypes } from '../../constants/device-types';
 import { CollapsibleSection } from '../form/CollapsibleSection';
@@ -22,18 +23,19 @@ export const BasicSettingsSection: FC<BasicSettingsSectionProps> = ({
   onUpdate,
   errors,
 }) => {
+  const { t } = useTranslation('devices');
   return (
     <CollapsibleSection
-      title="Basic Settings"
+      title={t('editor.sections.basic.title')}
       isExpanded={isExpanded}
       onToggle={onToggle}
       required={true}
     >
       <div className="grid gap-comfortable md:grid-cols-2">
         <FormField
-          label="Hostname"
+          label={t('editor.sections.basic.hostnameLabel')}
           required={true}
-          helpText="Unique identifier for the device"
+          helpText={t('editor.sections.basic.hostnameHelp')}
           htmlFor="device-hostname"
           error={errors?.hostname?.message}
         >
@@ -42,15 +44,15 @@ export const BasicSettingsSection: FC<BasicSettingsSectionProps> = ({
             type="text"
             value={device.hostname}
             onChange={(e) => onUpdate('hostname', e.target.value)}
-            placeholder="e.g., core-switch-01"
+            placeholder={t('editor.sections.basic.hostnamePlaceholder')}
             className={inputClassName}
           />
         </FormField>
 
         <FormField
-          label="MAC Address"
+          label={t('editor.sections.basic.macLabel')}
           required={true}
-          helpText="Hardware address in format XX:XX:XX:XX:XX:XX"
+          helpText={t('editor.sections.basic.macHelp')}
           htmlFor="device-mac"
           error={errors?.mac?.message}
         >
@@ -59,12 +61,16 @@ export const BasicSettingsSection: FC<BasicSettingsSectionProps> = ({
             type="text"
             value={device.mac}
             onChange={(e) => onUpdate('mac', e.target.value.toUpperCase())}
-            placeholder="e.g., 00:1A:2B:3C:4D:5E"
+            placeholder={t('editor.sections.basic.macPlaceholder')}
             className={monoInputClassName}
           />
         </FormField>
 
-        <FormField label="Device Type" helpText="Category of network device" htmlFor="device-type">
+        <FormField
+          label={t('editor.sections.basic.typeLabel')}
+          helpText={t('editor.sections.basic.typeHelp')}
+          htmlFor="device-type"
+        >
           <select
             id="device-type"
             value={device.type || 'unknown'}
@@ -80,8 +86,8 @@ export const BasicSettingsSection: FC<BasicSettingsSectionProps> = ({
         </FormField>
 
         <FormField
-          label="Primary IP Address"
-          helpText="Main management IP address"
+          label={t('editor.sections.basic.ipLabel')}
+          helpText={t('editor.sections.basic.ipHelp')}
           htmlFor="device-primary-ip"
           error={errors?.ip?.message}
         >
@@ -90,7 +96,7 @@ export const BasicSettingsSection: FC<BasicSettingsSectionProps> = ({
             type="text"
             value={device.ip || ''}
             onChange={(e) => onUpdate('ip', e.target.value)}
-            placeholder="e.g., 192.168.1.1"
+            placeholder={t('editor.sections.basic.ipPlaceholder')}
             className={monoInputClassName}
           />
         </FormField>

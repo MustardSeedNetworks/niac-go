@@ -1,5 +1,6 @@
 import { Copy, Edit3, Network, Trash2 } from 'lucide-react';
 import type { FC } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   deviceTypeColors,
   deviceTypeIcons,
@@ -11,6 +12,7 @@ import { Card, CardContent } from '../../ui/Card';
 import { Tag } from '../../ui/Tag';
 
 export const DeviceCardView: FC = () => {
+  const { t } = useTranslation('devices');
   const {
     devices,
     selectedDevices,
@@ -56,7 +58,7 @@ export const DeviceCardView: FC = () => {
                     </div>
                   </label>
                   <Tag colorScheme={typeColor} className="text-xs capitalize">
-                    {device.type?.replace('_', ' ') || 'unknown'}
+                    {device.type?.replace('_', ' ') || t('list.unknownType')}
                   </Tag>
                 </div>
 
@@ -64,7 +66,7 @@ export const DeviceCardView: FC = () => {
                   type="button"
                   onClick={() => onEdit(device.hostname)}
                   className="w-full text-left rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary focus:ring-offset-2 focus:ring-offset-surface-base"
-                  aria-label={`Edit device ${device.hostname}`}
+                  aria-label={t('list.editDeviceAria', { hostname: device.hostname })}
                 >
                   {/* Device name and IP */}
                   <div>
@@ -74,7 +76,7 @@ export const DeviceCardView: FC = () => {
                     <div className="flex items-center gap-tight mt-tight">
                       <Network className={`${iconSizes.sm} text-text-muted`} />
                       <span className="text-sm text-text-muted font-mono">
-                        {device.ip || device.ips?.[0] || 'No IP'}
+                        {device.ip || device.ips?.[0] || t('list.noIp')}
                       </span>
                       {device.ips && device.ips.length > 1 && (
                         <span className="text-xs text-text-muted">+{device.ips.length - 1}</span>
@@ -94,7 +96,7 @@ export const DeviceCardView: FC = () => {
                         </Tag>
                       ))
                     ) : (
-                      <span className="text-text-muted text-xs">No protocols</span>
+                      <span className="text-text-muted text-xs">{t('list.noProtocols')}</span>
                     )}
                     {deviceProtocols.length > 3 && (
                       <Tag colorScheme="gray" className="text-xs">
@@ -110,8 +112,8 @@ export const DeviceCardView: FC = () => {
                     type="button"
                     onClick={() => onEdit(device.hostname)}
                     className="pad-xs text-text-muted hover:text-brand-accent hover:bg-surface-hover rounded-lg transition-colors"
-                    title={`Open the device editor for ${device.hostname} to modify protocols, interfaces, and credentials`}
-                    aria-label={`Edit device ${device.hostname}`}
+                    title={t('list.editDeviceTitle', { hostname: device.hostname })}
+                    aria-label={t('list.editDeviceAria', { hostname: device.hostname })}
                   >
                     <Edit3 className={iconSizes.md} />
                   </button>
@@ -119,8 +121,8 @@ export const DeviceCardView: FC = () => {
                     type="button"
                     onClick={() => onClone(device.hostname)}
                     className="pad-xs text-text-muted hover:text-status-info hover:bg-surface-hover rounded-lg transition-colors"
-                    title={`Create a copy of ${device.hostname} with a new hostname; all protocols and interfaces are duplicated`}
-                    aria-label={`Clone device ${device.hostname}`}
+                    title={t('list.cloneDeviceTitle', { hostname: device.hostname })}
+                    aria-label={t('list.cloneDeviceAria', { hostname: device.hostname })}
                   >
                     <Copy className={iconSizes.md} />
                   </button>
@@ -128,8 +130,8 @@ export const DeviceCardView: FC = () => {
                     type="button"
                     onClick={() => onDelete(device.hostname)}
                     className="pad-xs text-text-muted hover:text-status-error hover:bg-surface-hover rounded-lg transition-colors"
-                    title={`Permanently remove ${device.hostname} from the library; cannot be undone`}
-                    aria-label={`Delete device ${device.hostname}`}
+                    title={t('list.deleteDeviceTitle', { hostname: device.hostname })}
+                    aria-label={t('list.deleteDeviceAria', { hostname: device.hostname })}
                   >
                     <Trash2 className={iconSizes.md} />
                   </button>

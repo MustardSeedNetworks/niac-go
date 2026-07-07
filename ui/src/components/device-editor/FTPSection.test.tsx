@@ -9,6 +9,7 @@
  */
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+import '../../i18n';
 import type { Device } from '../../api/types';
 import { FtpSection } from './FTPSection';
 

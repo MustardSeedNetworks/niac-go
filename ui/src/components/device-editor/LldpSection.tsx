@@ -1,4 +1,5 @@
 import type { FC } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { LLDPConfig } from '../../api/types';
 import { CollapsibleSection, FormField } from '../form';
 import type { ProtocolSectionProps } from './types';
@@ -10,6 +11,7 @@ export const LldpSection: FC<ProtocolSectionProps> = ({
   onToggle,
   onUpdate,
 }) => {
+  const { t } = useTranslation('devices');
   const getLldpConfig = (): LLDPConfig => ({
     enabled: true,
     ...(device.lldp ?? {}),
@@ -21,7 +23,7 @@ export const LldpSection: FC<ProtocolSectionProps> = ({
 
   return (
     <CollapsibleSection
-      title="LLDP (Link Layer Discovery Protocol)"
+      title={t('editor.sections.lldp.title')}
       isExpanded={isExpanded}
       onToggle={onToggle}
       enabled={device.lldp?.enabled ?? false}
@@ -31,7 +33,10 @@ export const LldpSection: FC<ProtocolSectionProps> = ({
     >
       {device.lldp?.enabled && (
         <div className="grid gap-comfortable md:grid-cols-2">
-          <FormField label="System Description" helpText="LLDP system description">
+          <FormField
+            label={t('editor.sections.lldp.systemDescriptionLabel')}
+            helpText={t('editor.sections.lldp.systemDescriptionHelp')}
+          >
             <input
               type="text"
               value={device.lldp.systemDescription || ''}
@@ -41,12 +46,15 @@ export const LldpSection: FC<ProtocolSectionProps> = ({
                   systemDescription: e.target.value,
                 })
               }
-              placeholder="Cisco IOS Software..."
+              placeholder={t('editor.sections.lldp.systemDescriptionPlaceholder')}
               className={inputClassName}
             />
           </FormField>
 
-          <FormField label="Port Description" helpText="LLDP port description">
+          <FormField
+            label={t('editor.sections.lldp.portDescriptionLabel')}
+            helpText={t('editor.sections.lldp.portDescriptionHelp')}
+          >
             <input
               type="text"
               value={device.lldp.portDescription || ''}
@@ -56,12 +64,15 @@ export const LldpSection: FC<ProtocolSectionProps> = ({
                   portDescription: e.target.value,
                 })
               }
-              placeholder="GigabitEthernet0/1"
+              placeholder={t('editor.sections.lldp.portDescriptionPlaceholder')}
               className={inputClassName}
             />
           </FormField>
 
-          <FormField label="Advertise Interval (seconds)" helpText="How often to send LLDP frames">
+          <FormField
+            label={t('editor.sections.lldp.advertiseIntervalLabel')}
+            helpText={t('editor.sections.lldp.advertiseIntervalHelp')}
+          >
             <input
               type="number"
               value={device.lldp.advertiseInterval || 30}
@@ -77,7 +88,10 @@ export const LldpSection: FC<ProtocolSectionProps> = ({
             />
           </FormField>
 
-          <FormField label="TTL (seconds)" helpText="Time-to-live for LLDP information">
+          <FormField
+            label={t('editor.sections.lldp.ttlLabel')}
+            helpText={t('editor.sections.lldp.ttlHelp')}
+          >
             <input
               type="number"
               value={device.lldp.ttl || 120}

@@ -1,5 +1,6 @@
 import { AlertCircle, ArrowLeft, Check, RefreshCw, Save, Trash2 } from 'lucide-react';
 import type { FC } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Device, DeviceType } from '../../api/types';
 import { deviceTypeIcons } from '../../constants/device-types';
 import { iconSizes } from '../../constants/sizes';
@@ -42,6 +43,8 @@ export const DeviceEditorHeader: FC<DeviceEditorHeaderProps> = ({
   onSave,
   onNavigateBack,
 }) => {
+  const { t } = useTranslation('devices');
+  const { t: tCommon } = useTranslation('common');
   const deviceType = device.type ?? 'unknown';
   const DeviceIcon = deviceTypeIcons[deviceType as DeviceType] ?? deviceTypeIcons.unknown;
 
@@ -54,26 +57,30 @@ export const DeviceEditorHeader: FC<DeviceEditorHeaderProps> = ({
               type="button"
               onClick={onNavigateBack}
               className="pad-xs text-text-muted hover:text-text-primary hover:bg-surface-hover rounded-lg transition-colors"
-              title="Back to device list"
+              title={t('editor.header.backTitle')}
             >
               <ArrowLeft className={iconSizes.lg} />
             </button>
             <DeviceIcon className={`${iconSizes.xl} text-brand-accent`} />
             <div>
-              <H2>{isNewDevice ? 'New Device' : device.hostname || 'Edit Device'}</H2>
+              <H2>
+                {isNewDevice ? t('editor.newDevice') : device.hostname || t('editor.editDevice')}
+              </H2>
               <SmallText className="text-text-muted">
-                {isNewDevice ? 'Create a new network device' : 'Edit device configuration'}
+                {isNewDevice
+                  ? t('editor.header.newDeviceSubtitle')
+                  : t('editor.header.editDeviceSubtitle')}
               </SmallText>
             </div>
             {isDirty && (
               <Tag colorScheme="yellow" className="ml-inline">
-                Unsaved Changes
+                {t('editor.header.unsavedBadge')}
               </Tag>
             )}
           </div>
           <div className="flex gap-compact">
             <Button variant="outline" onClick={onToggleYamlPreview}>
-              {showYamlPreview ? 'Hide YAML' : 'Show YAML'}
+              {showYamlPreview ? t('editor.header.hideYaml') : t('editor.header.showYaml')}
             </Button>
             {!isNewDevice && (
               <Button
@@ -83,11 +90,11 @@ export const DeviceEditorHeader: FC<DeviceEditorHeaderProps> = ({
                 className="text-status-error hover:text-status-error border-status-error/30 hover:border-status-error/50"
                 disabled={deleting}
               >
-                Delete
+                {tCommon('buttons.delete')}
               </Button>
             )}
             <Button variant="outline" onClick={onDiscard} disabled={!isDirty || saving}>
-              Discard
+              {tCommon('buttons.discard')}
             </Button>
             <Button
               tone="violet"
@@ -101,7 +108,11 @@ export const DeviceEditorHeader: FC<DeviceEditorHeaderProps> = ({
               onClick={onSave}
               disabled={!isDirty || saving}
             >
-              {saving ? 'Saving...' : isNewDevice ? 'Create' : 'Save'}
+              {saving
+                ? tCommon('status.saving')
+                : isNewDevice
+                  ? tCommon('buttons.create')
+                  : tCommon('buttons.save')}
             </Button>
           </div>
         </div>

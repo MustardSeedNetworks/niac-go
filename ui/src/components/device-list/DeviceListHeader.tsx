@@ -22,6 +22,7 @@ export const DeviceListHeader: FC<DeviceListHeaderProps> = ({
   onRefresh,
 }) => {
   const { t } = useTranslation('devices');
+  const { t: tCommon } = useTranslation('common');
   const navigate = useNavigate();
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -44,12 +45,14 @@ export const DeviceListHeader: FC<DeviceListHeaderProps> = ({
       <div>
         <H2 className="flex items-center gap-compact">
           <Server className={`${iconSizes.lg} text-brand-accent`} />
-          Device Configuration
+          {t('list.deviceConfigTitle')}
         </H2>
         <P className="text-text-muted mt-tight">
-          Manage network device configurations for simulation.
+          {t('list.deviceConfigDescription')}
           {deviceCount > 0 && (
-            <output className="ml-inline text-brand-accent">{deviceCount} devices</output>
+            <output className="ml-inline text-brand-accent">
+              {tCommon('plurals.deviceCount', { count: deviceCount })}
+            </output>
           )}
         </P>
       </div>
@@ -68,16 +71,16 @@ export const DeviceListHeader: FC<DeviceListHeaderProps> = ({
           onClick={onRefresh}
           disabled={loading}
         >
-          Refresh
+          {tCommon('buttons.refresh')}
         </Button>
         <Button
           variant="outline"
           leftIcon={<FileCode className={iconSizes.md} />}
           onClick={() => exportDevicesAsYAML(filteredDevices)}
           disabled={noDevices}
-          title="Download a NIAC-loadable YAML config of the filtered devices"
+          title={t('list.downloadYamlTitle')}
         >
-          Download YAML
+          {t('list.downloadYamlButton')}
         </Button>
         {/* Data-only exports — kept under a disclosure since JSON/CSV
             can't be re-imported into NIAC; useful for reporting / pipe
@@ -89,9 +92,9 @@ export const DeviceListHeader: FC<DeviceListHeaderProps> = ({
             rightIcon={<ChevronDown className={iconSizes.sm} />}
             onClick={() => setExportMenuOpen((v) => !v)}
             disabled={noDevices}
-            title="Export device data for reporting (not re-importable)"
+            title={t('list.dataExportTitle')}
           >
-            Data
+            {t('list.dataExportButton')}
           </Button>
           {exportMenuOpen && (
             <div className="absolute right-0 z-10 mt-tight w-44 rounded-lg border border-surface-border bg-bg-surface shadow-lg">
@@ -103,7 +106,7 @@ export const DeviceListHeader: FC<DeviceListHeaderProps> = ({
                 }}
                 className="block w-full px-3 py-row text-left text-sm text-text-primary hover:bg-surface-hover"
               >
-                JSON (data only)
+                {t('list.exportJson')}
               </button>
               <button
                 type="button"
@@ -113,7 +116,7 @@ export const DeviceListHeader: FC<DeviceListHeaderProps> = ({
                 }}
                 className="block w-full px-3 py-row text-left text-sm text-text-primary hover:bg-surface-hover"
               >
-                CSV (data only)
+                {t('list.exportCsv')}
               </button>
             </div>
           )}
@@ -124,7 +127,7 @@ export const DeviceListHeader: FC<DeviceListHeaderProps> = ({
           onClick={() => navigate('/device-config/new')}
           data-testid="device-add"
         >
-          Add Device
+          {t('list.states.addDevice')}
         </Button>
       </div>
     </div>

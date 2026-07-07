@@ -1,4 +1,5 @@
 import type { FC } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { STPConfig } from '../../api/types';
 import { CollapsibleSection, FormField } from '../form';
 import type { ProtocolSectionProps } from './types';
@@ -10,6 +11,7 @@ export const StpSection: FC<ProtocolSectionProps> = ({
   onToggle,
   onUpdate,
 }) => {
+  const { t } = useTranslation('devices');
   const getStpConfig = (): STPConfig => ({
     enabled: true,
     bridgePriority: 32768,
@@ -22,7 +24,7 @@ export const StpSection: FC<ProtocolSectionProps> = ({
 
   return (
     <CollapsibleSection
-      title="STP (Spanning Tree Protocol)"
+      title={t('editor.sections.stp.title')}
       isExpanded={isExpanded}
       onToggle={onToggle}
       enabled={device.stp?.enabled ?? false}
@@ -33,8 +35,8 @@ export const StpSection: FC<ProtocolSectionProps> = ({
       {device.stp?.enabled && (
         <div className="grid gap-comfortable md:grid-cols-2">
           <FormField
-            label="Bridge Priority"
-            helpText="STP bridge priority (0-61440, in steps of 4096)"
+            label={t('editor.sections.stp.bridgePriorityLabel')}
+            helpText={t('editor.sections.stp.bridgePriorityHelp')}
           >
             <input
               type="number"

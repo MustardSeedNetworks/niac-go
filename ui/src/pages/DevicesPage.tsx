@@ -48,13 +48,13 @@ const DeviceListCard: FC = () => {
   return (
     <BaseCard<DeviceSummary[]>
       title={t('devices.title')}
-      subtitle="Devices rendered from active YAML config"
+      subtitle={t('devices.subtitle')}
       icon={<Server className={`${iconSizes.lg} text-status-info`} />}
       data={devices}
       loading={loading && !devices}
       error={error?.message}
       getStatus={(d) => (d.length > 0 ? 'success' : 'unknown')}
-      emptyMessage="No devices defined in the loaded configuration"
+      emptyMessage={t('devices.emptyMessage')}
     >
       {(data) => (
         <>
@@ -75,6 +75,8 @@ const DeviceListCard: FC = () => {
  * Config Editor Card - YAML configuration editor
  */
 const ConfigEditorCard: FC = () => {
+  const { t } = useTranslation('pages');
+  const { t: tCommon } = useTranslation('common');
   const { data, loading, error } = useApiResource(fetchConfig, [], {
     intervalMs: POLL_INTERVALS.verySlow,
   });
@@ -119,7 +121,7 @@ const ConfigEditorCard: FC = () => {
       const updated = await updateConfig({ content: value });
       setValue(updated.content);
       setDirty(false);
-      setStatus({ tone: 'success', message: 'Configuration saved' });
+      setStatus({ tone: 'success', message: t('devices.configSaved') });
     } catch (err) {
       setStatus({ tone: 'error', message: getErrorMessage(err) });
     } finally {
@@ -130,11 +132,11 @@ const ConfigEditorCard: FC = () => {
   const handleWalkCopy = async (name: string) => {
     try {
       await copyToClipboard(name);
-      setStatus({ tone: 'success', message: `Copied ${name}` });
+      setStatus({ tone: 'success', message: t('devices.walkCopied', { name }) });
     } catch (err) {
       setStatus({
         tone: 'error',
-        message: getErrorMessage(err) || 'Unable to copy walk name',
+        message: getErrorMessage(err) || t('devices.walkCopyError'),
       });
     }
   };
@@ -148,11 +150,11 @@ const ConfigEditorCard: FC = () => {
   if (noConfigLoaded) {
     return (
       <BaseCard
-        title="YAML editor"
-        subtitle="Edit active configuration"
+        title={t('devices.yamlEditorTitle')}
+        subtitle={t('devices.yamlEditorSubtitle')}
         icon={<FileCog className={`${iconSizes.lg} text-status-success`} />}
         data={null}
-        emptyMessage="No simulation is running. Pick a network on Simulation and start it to see and edit the running YAML here."
+        emptyMessage={t('devices.noConfigMessage')}
         getStatus={() => 'success'}
       >
         {() => null}
@@ -162,8 +164,8 @@ const ConfigEditorCard: FC = () => {
 
   return (
     <BaseCard<{ content: string; path: string; modifiedAt: string; sizeBytes: number }>
-      title="YAML editor"
-      subtitle="Edit active configuration"
+      title={t('devices.yamlEditorTitle')}
+      subtitle={t('devices.yamlEditorSubtitle')}
       icon={<FileCog className={`${iconSizes.lg} text-status-success`} />}
       data={data}
       loading={loading && !data}
@@ -172,9 +174,9 @@ const ConfigEditorCard: FC = () => {
     >
       {(cfg) => (
         <>
-          <CardRow label="Path" value={cfg.path} mono />
-          <CardRow label="Updated" value={formatTime(cfg.modifiedAt)} />
-          <CardRow label="Size" value={formatBytes(cfg.sizeBytes)} />
+          <CardRow label={tCommon('labels.path')} value={cfg.path} mono />
+          <CardRow label={tCommon('labels.updatedAt')} value={formatTime(cfg.modifiedAt)} />
+          <CardRow label={tCommon('labels.size')} value={formatBytes(cfg.sizeBytes)} />
           <textarea
             className="mt-heading h-72 w-full rounded-xl border border-surface-border bg-bg-base/70 pad-sm font-mono text-sm text-text-primary shadow-inner focus:border-brand-accent focus:outline-none"
             value={value}
@@ -194,18 +196,17 @@ const ConfigEditorCard: FC = () => {
               tone="violet"
               disabled={!dirty || saving}
               onClick={handleSave}
-              title="Validate, write to disk, and diff-reload the running simulation"
+              title={t('devices.saveReloadTitle')}
             >
-              {saving ? 'Saving…' : 'Save & reload simulation'}
+              {saving ? t('devices.savingLabel') : t('devices.saveReloadButton')}
             </Button>
             <Button variant="outline" disabled={!dirty || saving} onClick={handleReset}>
-              Discard changes
+              {t('devices.discardChangesButton')}
             </Button>
           </div>
           <SmallText className="mt-inline text-text-muted">
-            Save runs the same validation as <code>niac validate</code>, writes the YAML to disk,
-            then diff-reloads the running stack — added devices spin up, removed devices stop,
-            existing devices are updated in place.
+            {t('devices.saveHelpTextPrefix')} <code>niac validate</code>
+            {t('devices.saveHelpTextSuffix')}
           </SmallText>
           <WalkFileBrowser files={walkFiles ?? []} onCopy={handleWalkCopy} />
         </>
@@ -240,7 +241,7 @@ const WalkFileBrowser: FC<{
             </div>
             <div className="flex items-center gap-tight">
               <Button size="sm" variant="outline" onClick={() => onCopy(file.name)}>
-                Copy name
+                {t('devices.copyNameButton')}
               </Button>
               <Link
                 to="/device-config/new#snmp"

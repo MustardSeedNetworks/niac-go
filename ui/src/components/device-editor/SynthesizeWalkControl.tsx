@@ -1,4 +1,5 @@
 import { type FC, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { fetchSynthesizeWalkModels, synthesizeWalk } from '../../api/client';
 import { isApiError } from '../../api/errors';
 import type { ModelDescriptor } from '../../api/types';
@@ -64,6 +65,7 @@ export const SynthesizeWalkControl: FC<SynthesizeWalkControlProps> = ({
   disabled,
   onSynthesized,
 }) => {
+  const { t } = useTranslation('devices');
   const { data: models, error: modelsError } = useApiResource(fetchSynthesizeWalkModels, []);
   const [selected, setSelected] = useState('');
   const [generating, setGenerating] = useState(false);
@@ -85,13 +87,18 @@ export const SynthesizeWalkControl: FC<SynthesizeWalkControlProps> = ({
       const res = await synthesizeWalk(hostname, { vendor: model.vendor, model: model.model });
       onSynthesized(res.walkPath);
       setSuccess(
-        `Generated ${model.label} — ${res.oidCount} OIDs, ${res.sizeBytes} bytes${
-          res.originalPreserved ? '; original preserved' : ''
-        }`,
+        t('editor.sections.synthesizeWalk.generatedMessage', {
+          label: model.label,
+          oidCount: res.oidCount,
+          sizeBytes: res.sizeBytes,
+        }) +
+          (res.originalPreserved
+            ? t('editor.sections.synthesizeWalk.originalPreservedSuffix')
+            : ''),
       );
     } catch (err) {
       if (isApiError(err) && err.code === 'unsupported_combo') {
-        setError('This vendor has no profile for this device type.');
+        setError(t('editor.sections.synthesizeWalk.unsupportedCombo'));
       } else {
         setError(getErrorMessage(err));
       }
@@ -102,8 +109,8 @@ export const SynthesizeWalkControl: FC<SynthesizeWalkControlProps> = ({
 
   return (
     <FormField
-      label="Synthesize Baseline Walk"
-      helpText="Generate a baseline SNMP walk from a vendor/model profile instead of capturing one from real hardware"
+      label={t('editor.sections.synthesizeWalk.label')}
+      helpText={t('editor.sections.synthesizeWalk.help')}
     >
       <div className="stack-sm" data-testid="synthesize-walk-control">
         <div className="flex flex-wrap items-center gap-default">
@@ -115,11 +122,11 @@ export const SynthesizeWalkControl: FC<SynthesizeWalkControlProps> = ({
               setSuccess(null);
             }}
             disabled={disabled || generating || !models}
-            aria-label="Baseline walk model"
+            aria-label={t('editor.sections.synthesizeWalk.selectAria')}
             data-testid="synthesize-walk-model-select"
             className={selectClassName}
           >
-            <option value="">Select a model...</option>
+            <option value="">{t('editor.sections.synthesizeWalk.selectPrompt')}</option>
             {groups.map((group) => (
               <optgroup key={group.vendor} label={group.vendor}>
                 {group.options.map(({ index, model }) => (
@@ -135,15 +142,21 @@ export const SynthesizeWalkControl: FC<SynthesizeWalkControlProps> = ({
             onClick={() => void handleGenerate()}
             data-testid="synthesize-walk-generate"
           >
-            {generating ? 'Generating…' : 'Generate walk'}
+            {generating
+              ? t('editor.sections.synthesizeWalk.generatingButton')
+              : t('editor.sections.synthesizeWalk.generateButton')}
           </Button>
         </div>
         {disabled && (
-          <p className="text-xs text-text-muted">Save the device before generating a walk.</p>
+          <p className="text-xs text-text-muted">
+            {t('editor.sections.synthesizeWalk.saveFirstHint')}
+          </p>
         )}
         {!disabled && modelsError && (
           <p className="text-xs text-status-error" role="alert">
-            Could not load device profiles: {getErrorMessage(modelsError)}
+            {t('editor.sections.synthesizeWalk.modelsLoadError', {
+              message: getErrorMessage(modelsError),
+            })}
           </p>
         )}
         {error && (

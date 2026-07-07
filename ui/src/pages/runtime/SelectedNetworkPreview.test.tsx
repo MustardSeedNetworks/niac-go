@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import '../../i18n';
 import { SelectedNetworkPreview } from './SelectedNetworkPreview';
 
 const fetchTemplateContent = vi.fn();

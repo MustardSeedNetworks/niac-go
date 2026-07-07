@@ -1,5 +1,6 @@
 import { Radio } from 'lucide-react';
 import type { FC } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { TrafficConfig } from '../../api/types';
 import { iconSizes } from '../../constants/sizes';
 import { CollapsibleSection, FormField } from '../form';
@@ -11,6 +12,7 @@ export const TrafficSection: FC<ProtocolSectionProps> = ({
   onToggle,
   onUpdate,
 }) => {
+  const { t } = useTranslation('devices');
   const getTrafficConfig = (): TrafficConfig => ({
     enabled: true,
     arpAnnouncements: {
@@ -37,7 +39,7 @@ export const TrafficSection: FC<ProtocolSectionProps> = ({
 
   return (
     <CollapsibleSection
-      title="Traffic Patterns"
+      title={t('editor.sections.traffic.title')}
       isExpanded={isExpanded}
       onToggle={onToggle}
       enabled={device.traffic?.enabled ?? false}
@@ -52,7 +54,7 @@ export const TrafficSection: FC<ProtocolSectionProps> = ({
             <div className="flex-between">
               <h4 className="label flex items-center gap-compact">
                 <Radio className={`${iconSizes.md} text-brand-accent`} />
-                ARP Announcements
+                {t('editor.sections.traffic.arpAnnouncementsTitle')}
               </h4>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
@@ -78,7 +80,10 @@ export const TrafficSection: FC<ProtocolSectionProps> = ({
               </label>
             </div>
             {device.traffic.arpAnnouncements?.enabled && (
-              <FormField label="Interval (seconds)" helpText="Time between ARP announcements">
+              <FormField
+                label={t('editor.sections.traffic.intervalLabel')}
+                helpText={t('editor.sections.traffic.arpIntervalHelp')}
+              >
                 <input
                   type="number"
                   value={device.traffic.arpAnnouncements.interval ?? 60}
@@ -104,7 +109,7 @@ export const TrafficSection: FC<ProtocolSectionProps> = ({
             <div className="flex-between">
               <h4 className="label flex items-center gap-compact">
                 <Radio className={`${iconSizes.md} text-brand-accent`} />
-                Periodic Pings
+                {t('editor.sections.traffic.periodicPingsTitle')}
               </h4>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
@@ -131,7 +136,10 @@ export const TrafficSection: FC<ProtocolSectionProps> = ({
             </div>
             {device.traffic.periodicPings?.enabled && (
               <div className="grid gap-comfortable md:grid-cols-2">
-                <FormField label="Interval (seconds)" helpText="Time between pings">
+                <FormField
+                  label={t('editor.sections.traffic.intervalLabel')}
+                  helpText={t('editor.sections.traffic.pingIntervalHelp')}
+                >
                   <input
                     type="number"
                     value={device.traffic.periodicPings.interval ?? 30}
@@ -150,7 +158,10 @@ export const TrafficSection: FC<ProtocolSectionProps> = ({
                     className="w-full rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary placeholder:text-text-muted focus:border-brand-accent focus:outline-none"
                   />
                 </FormField>
-                <FormField label="Payload Size (bytes)" helpText="Size of ICMP payload">
+                <FormField
+                  label={t('editor.sections.traffic.payloadSizeLabel')}
+                  helpText={t('editor.sections.traffic.payloadSizeHelp')}
+                >
                   <input
                     type="number"
                     value={device.traffic.periodicPings.payloadSize ?? 56}
@@ -179,7 +190,7 @@ export const TrafficSection: FC<ProtocolSectionProps> = ({
             <div className="flex-between">
               <h4 className="label flex items-center gap-compact">
                 <Radio className={`${iconSizes.md} text-brand-accent`} />
-                Random Traffic
+                {t('editor.sections.traffic.randomTrafficTitle')}
               </h4>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
@@ -207,7 +218,10 @@ export const TrafficSection: FC<ProtocolSectionProps> = ({
             {device.traffic.randomTraffic?.enabled && (
               <div className="stack-lg">
                 <div className="grid gap-comfortable md:grid-cols-2">
-                  <FormField label="Interval (seconds)" helpText="Time between traffic bursts">
+                  <FormField
+                    label={t('editor.sections.traffic.intervalLabel')}
+                    helpText={t('editor.sections.traffic.randomIntervalHelp')}
+                  >
                     <input
                       type="number"
                       value={device.traffic.randomTraffic.interval ?? 60}
@@ -227,7 +241,10 @@ export const TrafficSection: FC<ProtocolSectionProps> = ({
                       className="w-full rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary placeholder:text-text-muted focus:border-brand-accent focus:outline-none"
                     />
                   </FormField>
-                  <FormField label="Packet Count" helpText="Packets per burst">
+                  <FormField
+                    label={t('editor.sections.traffic.packetCountLabel')}
+                    helpText={t('editor.sections.traffic.packetCountHelp')}
+                  >
                     <input
                       type="number"
                       value={device.traffic.randomTraffic.packetCount ?? 5}
@@ -250,7 +267,9 @@ export const TrafficSection: FC<ProtocolSectionProps> = ({
                   </FormField>
                 </div>
                 <div className="stack-sm">
-                  <h5 className="text-xs font-medium text-text-muted">Traffic Patterns</h5>
+                  <h5 className="text-xs font-medium text-text-muted">
+                    {t('editor.sections.traffic.patternsLabel')}
+                  </h5>
                   <div className="flex flex-wrap gap-comfortable">
                     {(['broadcast_arp', 'multicast', 'udp'] as const).map((pattern) => (
                       <label key={pattern} className="flex items-center gap-compact cursor-pointer">
@@ -288,10 +307,10 @@ export const TrafficSection: FC<ProtocolSectionProps> = ({
                         />
                         <span className="text-sm text-text-secondary">
                           {pattern === 'broadcast_arp'
-                            ? 'Broadcast ARP'
+                            ? t('editor.sections.traffic.broadcastArp')
                             : pattern === 'multicast'
-                              ? 'Multicast'
-                              : 'UDP'}
+                              ? t('editor.sections.traffic.multicast')
+                              : t('editor.sections.traffic.udpPattern')}
                         </span>
                       </label>
                     ))}

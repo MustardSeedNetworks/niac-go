@@ -1,5 +1,6 @@
 import { Folder, Plus, X } from 'lucide-react';
 import type { FC } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { FTPConfig, FTPUser } from '../../api/types';
 import { iconSizes } from '../../constants/sizes';
 import { Button } from '../../ui/Button';
@@ -13,6 +14,7 @@ export const FtpSection: FC<ProtocolSectionProps> = ({
   onToggle,
   onUpdate,
 }) => {
+  const { t } = useTranslation('devices');
   const getFtpConfig = (): FTPConfig => ({
     enabled: true,
     systemType: 'UNIX Type: L8',
@@ -26,7 +28,7 @@ export const FtpSection: FC<ProtocolSectionProps> = ({
 
   return (
     <CollapsibleSection
-      title="FTP Server"
+      title={t('editor.sections.ftp.title')}
       isExpanded={isExpanded}
       onToggle={onToggle}
       enabled={device.ftp?.enabled ?? false}
@@ -37,7 +39,10 @@ export const FtpSection: FC<ProtocolSectionProps> = ({
       {device.ftp?.enabled && (
         <div className="stack-xl">
           <div className="grid gap-comfortable md:grid-cols-2">
-            <FormField label="Welcome Banner" helpText="FTP welcome message">
+            <FormField
+              label={t('editor.sections.ftp.welcomeBannerLabel')}
+              helpText={t('editor.sections.ftp.welcomeBannerHelp')}
+            >
               <input
                 type="text"
                 value={device.ftp.welcomeBanner || ''}
@@ -47,22 +52,28 @@ export const FtpSection: FC<ProtocolSectionProps> = ({
                     welcomeBanner: e.target.value,
                   })
                 }
-                placeholder="Welcome to FTP Server"
+                placeholder={t('editor.sections.ftp.welcomeBannerPlaceholder')}
                 className={inputClassName}
               />
             </FormField>
 
-            <FormField label="System Type" helpText="SYST response">
+            <FormField
+              label={t('editor.sections.ftp.systemTypeLabel')}
+              helpText={t('editor.sections.ftp.systemTypeHelp')}
+            >
               <input
                 type="text"
                 value={device.ftp.systemType || ''}
                 onChange={(e) => updateFtp({ ...getFtpConfig(), systemType: e.target.value })}
-                placeholder="UNIX Type: L8"
+                placeholder={t('editor.sections.ftp.systemTypePlaceholder')}
                 className={inputClassName}
               />
             </FormField>
 
-            <FormField label="Allow Anonymous" helpText="Allow anonymous FTP access">
+            <FormField
+              label={t('editor.sections.ftp.allowAnonymousLabel')}
+              helpText={t('editor.sections.ftp.allowAnonymousHelp')}
+            >
               <label className="relative inline-flex items-center cursor-pointer mt-inline">
                 <input
                   type="checkbox"
@@ -81,7 +92,9 @@ export const FtpSection: FC<ProtocolSectionProps> = ({
                   />
                 </div>
                 <span className="ml-3 text-sm text-text-secondary">
-                  {device.ftp.allowAnonymous ? 'Enabled' : 'Disabled'}
+                  {device.ftp.allowAnonymous
+                    ? t('editor.sections.ftp.enabledState')
+                    : t('editor.sections.ftp.disabledState')}
                 </span>
               </label>
             </FormField>
@@ -91,7 +104,7 @@ export const FtpSection: FC<ProtocolSectionProps> = ({
           <div className="stack">
             <h4 className="label flex items-center gap-compact">
               <Folder className={`${iconSizes.md} text-brand-accent`} />
-              FTP Users
+              {t('editor.sections.ftp.usersTitle')}
             </h4>
             {(device.ftp.users || []).map((user: FTPUser, index: number) => (
               <div
@@ -109,7 +122,7 @@ export const FtpSection: FC<ProtocolSectionProps> = ({
                     };
                     updateFtp({ ...getFtpConfig(), users });
                   }}
-                  placeholder="Username"
+                  placeholder={t('editor.sections.ftp.usernamePlaceholder')}
                   className="flex-1 rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary placeholder:text-text-muted focus:border-brand-accent focus:outline-none"
                 />
                 <input
@@ -124,7 +137,7 @@ export const FtpSection: FC<ProtocolSectionProps> = ({
                     };
                     updateFtp({ ...getFtpConfig(), users });
                   }}
-                  placeholder="Password"
+                  placeholder={t('editor.sections.ftp.passwordPlaceholder')}
                   className="flex-1 rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary placeholder:text-text-muted focus:border-brand-accent focus:outline-none"
                 />
                 <input
@@ -135,7 +148,7 @@ export const FtpSection: FC<ProtocolSectionProps> = ({
                     users[index] = { ...users[index], homeDir: e.target.value };
                     updateFtp({ ...getFtpConfig(), users });
                   }}
-                  placeholder="Home Directory"
+                  placeholder={t('editor.sections.ftp.homeDirPlaceholder')}
                   className="flex-1 rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary placeholder:text-text-muted focus:border-brand-accent focus:outline-none font-mono"
                 />
                 <Button
@@ -165,7 +178,7 @@ export const FtpSection: FC<ProtocolSectionProps> = ({
                 updateFtp({ ...getFtpConfig(), users });
               }}
             >
-              Add User
+              {t('editor.sections.ftp.addUserButton')}
             </Button>
           </div>
         </div>

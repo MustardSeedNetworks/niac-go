@@ -6,6 +6,7 @@ import {
   useState,
   useTransition,
 } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cloneDevice, deleteDevice, fetchConfigDevices } from '../../api/client';
 import type { Device, DeviceListResponse, DeviceType } from '../../api/types';
 import { useApiResource } from '../../hooks/useApiResource';
@@ -71,6 +72,7 @@ export interface UseDeviceListStateReturn {
 }
 
 export const useDeviceListState = (): UseDeviceListStateReturn => {
+  const { t } = useTranslation('devices');
   const {
     data: deviceList,
     loading,
@@ -219,7 +221,7 @@ export const useDeviceListState = (): UseDeviceListStateReturn => {
         await deleteDevice(hostname);
         setMessage({
           type: 'success',
-          text: `Device "${hostname}" deleted successfully`,
+          text: t('list.deviceDeletedMessage', { hostname }),
         });
         refetch();
       } catch (err) {
@@ -228,7 +230,7 @@ export const useDeviceListState = (): UseDeviceListStateReturn => {
         refetch();
       }
     },
-    [refetch, removeOptimisticDevice],
+    [refetch, removeOptimisticDevice, t],
   );
 
   // Handle device clone
@@ -238,7 +240,7 @@ export const useDeviceListState = (): UseDeviceListStateReturn => {
         await cloneDevice(hostname, { newHostname: newHostname });
         setMessage({
           type: 'success',
-          text: `Device cloned as "${newHostname}"`,
+          text: t('list.deviceClonedMessage', { newHostname }),
         });
         setShowCloneModal(null);
         refetch();
@@ -246,7 +248,7 @@ export const useDeviceListState = (): UseDeviceListStateReturn => {
         setMessage({ type: 'error', text: getErrorMessage(err) });
       }
     },
-    [refetch],
+    [refetch, t],
   );
 
   // Handle bulk delete confirmation
@@ -271,15 +273,15 @@ export const useDeviceListState = (): UseDeviceListStateReturn => {
     if (errorCount === 0) {
       setMessage({
         type: 'success',
-        text: `${successCount} devices deleted successfully`,
+        text: t('list.bulkDeleteSuccessMessage', { count: successCount }),
       });
     } else {
       setMessage({
         type: 'error',
-        text: `Deleted ${successCount} devices, ${errorCount} failed`,
+        text: t('list.bulkDeletePartialMessage', { success: successCount, failed: errorCount }),
       });
     }
-  }, [selectedDevices, refetch]);
+  }, [selectedDevices, refetch, t]);
 
   return {
     deviceList,

@@ -1,4 +1,5 @@
 import type { FC } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { CDPConfig } from '../../api/types';
 import { CollapsibleSection, FormField } from '../form';
 import type { ProtocolSectionProps } from './types';
@@ -10,6 +11,7 @@ export const CdpSection: FC<ProtocolSectionProps> = ({
   onToggle,
   onUpdate,
 }) => {
+  const { t } = useTranslation('devices');
   const getCdpConfig = (): CDPConfig => ({
     enabled: true,
     ...(device.cdp ?? {}),
@@ -21,7 +23,7 @@ export const CdpSection: FC<ProtocolSectionProps> = ({
 
   return (
     <CollapsibleSection
-      title="CDP (Cisco Discovery Protocol)"
+      title={t('editor.sections.cdp.title')}
       isExpanded={isExpanded}
       onToggle={onToggle}
       enabled={device.cdp?.enabled ?? false}
@@ -31,27 +33,36 @@ export const CdpSection: FC<ProtocolSectionProps> = ({
     >
       {device.cdp?.enabled && (
         <div className="grid gap-comfortable md:grid-cols-2">
-          <FormField label="Platform" helpText="Hardware platform">
+          <FormField
+            label={t('editor.sections.cdp.platformLabel')}
+            helpText={t('editor.sections.cdp.platformHelp')}
+          >
             <input
               type="text"
               value={device.cdp.platform || ''}
               onChange={(e) => updateCdp({ ...getCdpConfig(), platform: e.target.value })}
-              placeholder="cisco WS-C3750-48P"
+              placeholder={t('editor.sections.cdp.platformPlaceholder')}
               className={inputClassName}
             />
           </FormField>
 
-          <FormField label="Port ID" helpText="Local port identifier">
+          <FormField
+            label={t('editor.sections.cdp.portIdLabel')}
+            helpText={t('editor.sections.cdp.portIdHelp')}
+          >
             <input
               type="text"
               value={device.cdp.portId || ''}
               onChange={(e) => updateCdp({ ...getCdpConfig(), portId: e.target.value })}
-              placeholder="GigabitEthernet0/1"
+              placeholder={t('editor.sections.cdp.portIdPlaceholder')}
               className={inputClassName}
             />
           </FormField>
 
-          <FormField label="Software Version" helpText="IOS/NX-OS version">
+          <FormField
+            label={t('editor.sections.cdp.softwareVersionLabel')}
+            helpText={t('editor.sections.cdp.softwareVersionHelp')}
+          >
             <input
               type="text"
               value={device.cdp.softwareVersion || ''}
@@ -61,12 +72,15 @@ export const CdpSection: FC<ProtocolSectionProps> = ({
                   softwareVersion: e.target.value,
                 })
               }
-              placeholder="Cisco IOS Software, Version 15.1(4)M"
+              placeholder={t('editor.sections.cdp.softwareVersionPlaceholder')}
               className={inputClassName}
             />
           </FormField>
 
-          <FormField label="Holdtime (seconds)" helpText="How long to hold neighbor information">
+          <FormField
+            label={t('editor.sections.cdp.holdtimeLabel')}
+            helpText={t('editor.sections.cdp.holdtimeHelp')}
+          >
             <input
               type="number"
               value={device.cdp.holdtime || 180}

@@ -16,6 +16,7 @@ export const NetBiosSection: FC<ProtocolSectionProps> = ({
 }) => {
   const { t } = useTranslation('common');
   const { t: tHelp } = useTranslation('help');
+  const { t: tDevices } = useTranslation('devices');
   const getNetbiosConfig = (): NetBIOSConfig => ({
     enabled: true,
     nodeType: 'B',
@@ -29,7 +30,7 @@ export const NetBiosSection: FC<ProtocolSectionProps> = ({
 
   return (
     <CollapsibleSection
-      title="NetBIOS"
+      title={tDevices('editor.sections.netbios.title')}
       isExpanded={isExpanded}
       onToggle={onToggle}
       enabled={device.netbios?.enabled ?? false}
@@ -40,7 +41,10 @@ export const NetBiosSection: FC<ProtocolSectionProps> = ({
       {device.netbios?.enabled && (
         <div className="stack-xl">
           <div className="grid gap-comfortable md:grid-cols-2">
-            <FormField label="NetBIOS Name" helpText="NetBIOS computer name (max 15 chars)">
+            <FormField
+              label={tDevices('editor.sections.netbios.nameLabel')}
+              helpText={tDevices('editor.sections.netbios.nameHelp')}
+            >
               <input
                 type="text"
                 value={device.netbios.name || ''}
@@ -50,13 +54,16 @@ export const NetBiosSection: FC<ProtocolSectionProps> = ({
                     name: e.target.value.toUpperCase().slice(0, 15),
                   })
                 }
-                placeholder="FILESERVER"
+                placeholder={tDevices('editor.sections.netbios.namePlaceholder')}
                 maxLength={15}
                 className={`${inputClassName} uppercase`}
               />
             </FormField>
 
-            <FormField label="Workgroup" helpText="NetBIOS workgroup/domain">
+            <FormField
+              label={tDevices('editor.sections.netbios.workgroupLabel')}
+              helpText={tDevices('editor.sections.netbios.workgroupHelp')}
+            >
               <input
                 type="text"
                 value={device.netbios.workgroup || ''}
@@ -66,7 +73,7 @@ export const NetBiosSection: FC<ProtocolSectionProps> = ({
                     workgroup: e.target.value.toUpperCase(),
                   })
                 }
-                placeholder="WORKGROUP"
+                placeholder={tDevices('editor.sections.netbios.workgroupPlaceholder')}
                 className={`${inputClassName} uppercase`}
               />
             </FormField>
@@ -74,7 +81,7 @@ export const NetBiosSection: FC<ProtocolSectionProps> = ({
             <FormField
               label={
                 <>
-                  Node Type
+                  {tDevices('editor.sections.netbios.nodeTypeLabel')}
                   <InfoPopover
                     label={t('jargon.ariaLabel', { term: 'NetBIOS node type' })}
                     title="NetBIOS node type"
@@ -83,7 +90,7 @@ export const NetBiosSection: FC<ProtocolSectionProps> = ({
                   </InfoPopover>
                 </>
               }
-              helpText="NetBIOS node type"
+              helpText={tDevices('editor.sections.netbios.nodeTypeHelp')}
             >
               <select
                 value={device.netbios.nodeType || 'B'}
@@ -95,14 +102,17 @@ export const NetBiosSection: FC<ProtocolSectionProps> = ({
                 }
                 className={inputClassName}
               >
-                <option value="B">B-node (Broadcast)</option>
-                <option value="P">P-node (Point-to-Point)</option>
-                <option value="M">M-node (Mixed)</option>
-                <option value="H">H-node (Hybrid)</option>
+                <option value="B">{tDevices('editor.sections.netbios.nodeTypeB')}</option>
+                <option value="P">{tDevices('editor.sections.netbios.nodeTypeP')}</option>
+                <option value="M">{tDevices('editor.sections.netbios.nodeTypeM')}</option>
+                <option value="H">{tDevices('editor.sections.netbios.nodeTypeH')}</option>
               </select>
             </FormField>
 
-            <FormField label="TTL (seconds)" helpText="Time-to-live for NetBIOS announcements">
+            <FormField
+              label={tDevices('editor.sections.netbios.ttlLabel')}
+              helpText={tDevices('editor.sections.netbios.ttlHelp')}
+            >
               <input
                 type="number"
                 value={device.netbios.ttl ?? 300000}
@@ -123,7 +133,7 @@ export const NetBiosSection: FC<ProtocolSectionProps> = ({
           <div className="stack">
             <h4 className="label flex items-center gap-compact">
               <Network className={`${iconSizes.md} text-brand-accent`} />
-              NetBIOS Services
+              {tDevices('editor.sections.netbios.servicesTitle')}
             </h4>
             <div className="flex flex-wrap gap-comfortable">
               {(['workstation', 'fileserver', 'messenger'] as NetBIOSService[]).map((service) => (
@@ -165,7 +175,9 @@ export const NetBiosSection: FC<ProtocolSectionProps> = ({
                   }
                   className="w-4 h-4 rounded border-border-muted bg-bg-elevated text-brand-primary focus:ring-brand-primary"
                 />
-                <span className="text-sm text-text-secondary">Master Browser (MSBROWSE)</span>
+                <span className="text-sm text-text-secondary">
+                  {tDevices('editor.sections.netbios.masterBrowserLabel')}
+                </span>
               </label>
               <InfoPopover label={t('jargon.ariaLabel', { term: 'MSBROWSE' })} title="MSBROWSE">
                 {tHelp('jargon.msbrowse')}

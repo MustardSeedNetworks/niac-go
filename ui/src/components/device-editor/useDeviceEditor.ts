@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { type FieldErrors, type Path, type PathValue, useForm } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import * as v from 'valibot';
 import {
@@ -90,6 +91,7 @@ export interface UseDeviceEditorReturn {
 }
 
 export const useDeviceEditor = (): UseDeviceEditorReturn => {
+  const { t } = useTranslation('devices');
   const { hostname } = useParams<{ hostname: string }>();
   const navigate = useNavigate();
   const location = useLocation();
@@ -242,7 +244,7 @@ export const useDeviceEditor = (): UseDeviceEditorReturn => {
       }
       setMessage({
         type: 'error',
-        text: result.issues[0]?.message ?? 'Please fix the highlighted fields',
+        text: result.issues[0]?.message ?? t('editor.messages.fixHighlightedFields'),
       });
       return;
     }
@@ -253,19 +255,19 @@ export const useDeviceEditor = (): UseDeviceEditorReturn => {
     try {
       if (isNewDevice) {
         await createDevice(current);
-        setMessage({ type: 'success', text: 'Device created successfully' });
+        setMessage({ type: 'success', text: t('editor.messages.createdSuccess') });
         // Navigate to the new device's edit page
         setTimeout(() => {
           navigate(`/device-config/${encodeURIComponent(current.hostname)}`);
         }, 500);
       } else {
         if (!hostname) {
-          setMessage({ type: 'error', text: 'Missing hostname for update' });
+          setMessage({ type: 'error', text: t('editor.messages.missingHostname') });
           setSaving(false);
           return;
         }
         await updateDevice(hostname, current);
-        setMessage({ type: 'success', text: 'Device updated successfully' });
+        setMessage({ type: 'success', text: t('editor.messages.updatedSuccess') });
         setOriginalDevice(current);
         // If hostname changed, navigate to new URL
         if (current.hostname !== hostname) {
@@ -279,7 +281,7 @@ export const useDeviceEditor = (): UseDeviceEditorReturn => {
     } finally {
       setSaving(false);
     }
-  }, [getValues, clearErrors, setError, hostname, isNewDevice, navigate]);
+  }, [getValues, clearErrors, setError, hostname, isNewDevice, navigate, t]);
 
   // Handle delete
   const handleDelete = useCallback(async () => {
