@@ -61,11 +61,12 @@ function generatePacketId(): string {
 const ConnectionStatus: FC<{
   connected: boolean;
 }> = ({ connected }) => {
+  const { t } = useTranslation('pages');
   if (connected) {
     return (
       <div className="flex items-center gap-compact">
         <Wifi className={`${iconSizes.md} text-status-success`} />
-        <Tag colorScheme="green">Connected</Tag>
+        <Tag colorScheme="green">{t('packets.inspector.connectedStatus')}</Tag>
       </div>
     );
   }
@@ -74,7 +75,7 @@ const ConnectionStatus: FC<{
   return (
     <div className="flex items-center gap-compact">
       <WifiOff className={`${iconSizes.md} text-status-warning animate-pulse`} />
-      <Tag colorScheme="yellow">Connecting...</Tag>
+      <Tag colorScheme="yellow">{t('packets.inspector.connectingStatus')}</Tag>
     </div>
   );
 };
@@ -301,7 +302,7 @@ export const PacketInspectorPage: FC = () => {
       <div
         className="inline-flex rounded-lg border border-surface-border bg-bg-base/40 p-0.5"
         role="tablist"
-        aria-label="Packets view"
+        aria-label={t('packets.inspector.viewTabsAriaLabel')}
       >
         <button
           type="button"
@@ -315,7 +316,7 @@ export const PacketInspectorPage: FC = () => {
           }`}
         >
           <Radio className="w-3.5 h-3.5" />
-          Live capture
+          {t('packets.inspector.liveCaptureTab')}
         </button>
         <button
           type="button"
@@ -329,7 +330,7 @@ export const PacketInspectorPage: FC = () => {
           }`}
         >
           <FileBox className="w-3.5 h-3.5" />
-          PCAP files
+          {t('packets.inspector.pcapFilesTab')}
         </button>
       </div>
 
@@ -345,11 +346,14 @@ export const PacketInspectorPage: FC = () => {
               <div className="flex flex-col gap-comfortable sm:flex-row sm:items-center sm:justify-between">
                 {/* Title and connection status */}
                 <div className="flex items-center gap-comfortable">
-                  <H2>Packets</H2>
+                  <H2>{t('packets.title')}</H2>
                   <SmallText className="text-text-muted">
-                    on <span className="font-mono text-text-primary">{activeInterface ?? '—'}</span>
+                    {t('packets.inspector.onInterfacePrefix')}{' '}
+                    <span className="font-mono text-text-primary">{activeInterface ?? '—'}</span>
                   </SmallText>
-                  {captureRunning && !simRunning && <Tag colorScheme="violet">Standalone</Tag>}
+                  {captureRunning && !simRunning && (
+                    <Tag colorScheme="violet">{t('packets.inspector.standaloneTag')}</Tag>
+                  )}
                   <ConnectionStatus connected={connected} />
                 </div>
 
@@ -367,7 +371,9 @@ export const PacketInspectorPage: FC = () => {
                       )
                     }
                   >
-                    {isPaused ? 'Resume' : 'Pause'}
+                    {isPaused
+                      ? t('buttons.resume', { ns: 'common' })
+                      : t('buttons.pause', { ns: 'common' })}
                   </Button>
 
                   <Button
@@ -377,7 +383,7 @@ export const PacketInspectorPage: FC = () => {
                     leftIcon={<Trash2 className={iconSizes.md} />}
                     disabled={packets.length === 0}
                   >
-                    Clear
+                    {t('buttons.clear', { ns: 'common' })}
                   </Button>
 
                   {captureRunning && !simRunning && (
@@ -394,7 +400,7 @@ export const PacketInspectorPage: FC = () => {
                         }
                       }}
                     >
-                      Stop capture
+                      {t('packets.inspector.stopCaptureButton')}
                     </Button>
                   )}
 
@@ -415,7 +421,7 @@ export const PacketInspectorPage: FC = () => {
                     onClick={() => setShowColoringRules(true)}
                     leftIcon={<Palette className={iconSizes.md} />}
                   >
-                    Colors
+                    {t('packets.inspector.colorsButton')}
                   </Button>
 
                   <Button
@@ -428,13 +434,13 @@ export const PacketInspectorPage: FC = () => {
                       canFollowStream ? undefined : t('packets.inspector.followStreamDisabledTitle')
                     }
                   >
-                    Follow Stream
+                    {t('packets.inspector.followStreamTitle')}
                   </Button>
 
                   {/* SSE auto-reconnects, but manual reconnect is available */}
                   {!connected && (
                     <Button tone="violet" size="sm" onClick={reconnect}>
-                      Reconnect
+                      {t('packets.inspector.reconnectButton')}
                     </Button>
                   )}
                 </div>
@@ -454,12 +460,17 @@ export const PacketInspectorPage: FC = () => {
                     onChange={(e) => setAutoScroll(e.target.checked)}
                     className="rounded border-border-muted bg-bg-elevated text-brand-primary focus:ring-brand-accent focus:ring-offset-surface-base"
                   />
-                  <SmallText className="text-text-muted">Auto-scroll</SmallText>
+                  <SmallText className="text-text-muted">
+                    {t('packets.inspector.autoScrollLabel')}
+                  </SmallText>
                 </label>
 
                 {/* Packet count */}
                 <SmallText className="text-text-muted">
-                  {filteredPackets.length} / {packets.length} packets
+                  {t('packets.inspector.packetsCountLabel', {
+                    shown: filteredPackets.length,
+                    total: packets.length,
+                  })}
                 </SmallText>
               </div>
             </CardContent>
@@ -480,11 +491,11 @@ export const PacketInspectorPage: FC = () => {
                 <CardContent className="h-full flex flex-col">
                   <div className="flex-between mb-heading">
                     <SmallText className="text-text-muted uppercase tracking-wide font-semibold">
-                      Packet List
+                      {t('packets.inspector.packetListLabel')}
                     </SmallText>
                     {isPaused && (
                       <Tag colorScheme="yellow" className="text-xs">
-                        Paused
+                        {t('packets.inspector.pausedTag')}
                       </Tag>
                     )}
                   </div>
@@ -507,7 +518,7 @@ export const PacketInspectorPage: FC = () => {
               <Card className="border-surface-border bg-bg-surface/70 h-[350px]">
                 <CardContent className="h-full flex flex-col">
                   <SmallText className="text-text-muted uppercase tracking-wide font-semibold mb-heading">
-                    Hex Dump
+                    {t('packets.inspector.hexDumpLabel')}
                   </SmallText>
                   <div className="flex-1 min-h-0">
                     <HexDumpViewer
@@ -523,7 +534,7 @@ export const PacketInspectorPage: FC = () => {
               <Card className="border-surface-border bg-bg-surface/70 h-[220px]">
                 <CardContent className="h-full flex flex-col">
                   <SmallText className="text-text-muted uppercase tracking-wide font-semibold mb-heading">
-                    Packet Details
+                    {t('packets.inspector.packetDetailsLabel')}
                   </SmallText>
                   <div className="flex-1 min-h-0 overflow-y-auto">
                     <PacketDetails
@@ -617,22 +628,21 @@ const StandaloneCaptureStarter: FC<{
               {t('packets.inspector.standaloneCapture')}
             </p>
             <SmallText className="text-text-muted">
-              Sniff an interface without starting a simulation. Frames stream into the viewer below
-              as soon as they hit the wire. Or{' '}
+              {t('packets.inspector.standaloneDescriptionPart1')}{' '}
               <button
                 type="button"
                 onClick={navigateToSim}
                 className="text-brand-accent underline hover:text-brand-accent"
               >
-                start a simulation
+                {t('packets.inspector.standaloneStartSimLink')}
               </button>{' '}
-              if you want NIAC to also respond on the wire.
+              {t('packets.inspector.standaloneDescriptionPart2')}
             </SmallText>
           </div>
         </div>
         <div className="grid gap-default sm:grid-cols-[1fr_2fr_auto] sm:items-end">
           <label className="flex flex-col gap-tight text-sm text-text-muted">
-            Interface
+            {t('packets.inspector.interfaceLabel')}
             <select
               value={selectedIface}
               onChange={(e) => setSelectedIface(e.target.value)}
@@ -654,18 +664,20 @@ const StandaloneCaptureStarter: FC<{
             </select>
           </label>
           <label className="flex flex-col gap-tight text-sm text-text-muted">
-            BPF filter (optional)
+            {t('packets.inspector.standaloneBpfLabel')}
             <input
               type="text"
               value={bpfFilter}
               onChange={(e) => setBpfFilter(e.target.value)}
               disabled={busy}
-              placeholder="e.g. tcp port 80"
+              placeholder={t('packets.inspector.standaloneBpfPlaceholder')}
               className="rounded-lg border border-surface-border bg-bg-base/60 px-3 py-row font-mono text-sm text-text-primary focus:border-brand-accent focus:outline-none"
             />
           </label>
           <Button tone="violet" onClick={handleStart} disabled={!selectedIface || busy}>
-            {busy ? 'Starting…' : 'Start capture'}
+            {busy
+              ? t('packets.inspector.startingLabel')
+              : t('packets.inspector.startCaptureButton')}
           </Button>
         </div>
       </CardContent>

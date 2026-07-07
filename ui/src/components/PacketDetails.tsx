@@ -104,7 +104,9 @@ export const PacketDetails: FC<PacketDetailsProps> = memo(({ packet, onFieldSele
       {/* Summary */}
       {packet.summary && (
         <div className="mt-heading pt-2 border-t border-surface-border">
-          <SmallText className="text-text-muted uppercase text-xs tracking-wide">Summary</SmallText>
+          <SmallText className="text-text-muted uppercase text-xs tracking-wide">
+            {t('packets.inspector.summaryLabel')}
+          </SmallText>
           <p className="text-sm text-text-secondary py-compact">{packet.summary}</p>
         </div>
       )}

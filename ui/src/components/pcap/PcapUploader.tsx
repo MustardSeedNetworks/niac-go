@@ -1,6 +1,8 @@
 import { AlertCircle, CheckCircle, FileUp, Upload, X } from 'lucide-react';
 import { type FC, useCallback, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { iconSizes } from '../../constants/sizes';
+import type { TFunction } from '../../i18n';
 import { Button } from '../../ui/Button';
 import { Card, CardContent } from '../../ui/Card';
 import { Tag } from '../../ui/Tag';
@@ -26,7 +28,7 @@ const ACCEPTED_EXTENSIONS = ['.pcap', '.pcapng', '.cap'];
 /**
  * Validate file for PCAP upload
  */
-function validateFile(file: File): { valid: boolean; error?: string } {
+function validateFile(file: File, t: TFunction<'pages'>): { valid: boolean; error?: string } {
   // Check file extension
   const fileName = file.name.toLowerCase();
   const hasValidExtension = ACCEPTED_EXTENSIONS.some((ext) => fileName.endsWith(ext));
@@ -34,7 +36,9 @@ function validateFile(file: File): { valid: boolean; error?: string } {
   if (!hasValidExtension) {
     return {
       valid: false,
-      error: `Invalid file type. Please select a PCAP file (${ACCEPTED_EXTENSIONS.join(', ')})`,
+      error: t('libraryPcaps.uploader.invalidFileType', {
+        extensions: ACCEPTED_EXTENSIONS.join(', '),
+      }),
     };
   }
 
@@ -42,14 +46,14 @@ function validateFile(file: File): { valid: boolean; error?: string } {
   if (file.size > MAX_FILE_SIZE) {
     return {
       valid: false,
-      error: `File too large. Maximum size is ${formatBytes(MAX_FILE_SIZE)}`,
+      error: t('libraryPcaps.uploader.fileTooLarge', { size: formatBytes(MAX_FILE_SIZE) }),
     };
   }
 
   if (file.size === 0) {
     return {
       valid: false,
-      error: 'File is empty',
+      error: t('libraryPcaps.uploader.fileEmpty'),
     };
   }
 
@@ -71,6 +75,8 @@ export const PcapUploader: FC<PcapUploaderProps> = ({
   error,
   success,
 }) => {
+  const { t } = useTranslation('pages');
+  const { t: tCommon } = useTranslation('common');
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -82,19 +88,19 @@ export const PcapUploader: FC<PcapUploaderProps> = ({
         return;
       }
 
-      const validation = validateFile(file);
+      const validation = validateFile(file, t);
       if (!validation.valid) {
         // Reset input
         if (fileInputRef.current) {
           fileInputRef.current.value = '';
         }
-        onValidationError(validation.error ?? 'Invalid file');
+        onValidationError(validation.error ?? t('libraryPcaps.uploader.invalidFile'));
         return;
       }
 
       onFileSelect(file);
     },
-    [onFileSelect, onValidationError],
+    [onFileSelect, onValidationError, t],
   );
 
   // Handle drag events
@@ -121,15 +127,15 @@ export const PcapUploader: FC<PcapUploaderProps> = ({
         return;
       }
 
-      const validation = validateFile(file);
+      const validation = validateFile(file, t);
       if (!validation.valid) {
-        onValidationError(validation.error ?? 'Invalid file');
+        onValidationError(validation.error ?? t('libraryPcaps.uploader.invalidFile'));
         return;
       }
 
       onFileSelect(file);
     },
-    [onFileSelect, onValidationError],
+    [onFileSelect, onValidationError, t],
   );
 
   // Handle click to open file dialog
@@ -171,7 +177,7 @@ export const PcapUploader: FC<PcapUploaderProps> = ({
             }
             ${isAnalyzing ? 'pointer-events-none opacity-50' : ''}
           `}
-          aria-label="Drop PCAP file here or click to select"
+          aria-label={t('libraryPcaps.uploader.dropAriaLabel')}
         >
           <div className="flex flex-col items-center gap-default">
             <div
@@ -184,15 +190,19 @@ export const PcapUploader: FC<PcapUploaderProps> = ({
 
             <div>
               <p className="text-lg font-medium text-text-primary">
-                {isDragOver ? 'Drop file to upload' : 'Drag & drop PCAP file'}
+                {isDragOver
+                  ? t('libraryPcaps.uploader.dropToUpload')
+                  : t('libraryPcaps.uploader.dragDropTitle')}
               </p>
               <SmallText className="text-text-muted">
-                or click to browse ({ACCEPTED_EXTENSIONS.join(', ')})
+                {t('libraryPcaps.uploader.browseHint', {
+                  extensions: ACCEPTED_EXTENSIONS.join(', '),
+                })}
               </SmallText>
             </div>
 
             <SmallText className="text-text-muted">
-              Maximum file size: {formatBytes(MAX_FILE_SIZE)}
+              {t('libraryPcaps.uploader.maxFileSizeLabel', { size: formatBytes(MAX_FILE_SIZE) })}
             </SmallText>
           </div>
         </button>
@@ -207,7 +217,7 @@ export const PcapUploader: FC<PcapUploaderProps> = ({
                 <SmallText className="text-text-muted">{formatBytes(selectedFile.size)}</SmallText>
               </div>
               <Tag colorScheme="purple" className="text-xs">
-                Ready
+                {tCommon('status.ready')}
               </Tag>
             </div>
 
@@ -219,7 +229,7 @@ export const PcapUploader: FC<PcapUploaderProps> = ({
                 disabled={isAnalyzing}
                 leftIcon={<X className={iconSizes.md} />}
               >
-                Clear
+                {tCommon('buttons.clear')}
               </Button>
             </div>
           </div>
@@ -255,7 +265,9 @@ export const PcapUploader: FC<PcapUploaderProps> = ({
             )
           }
         >
-          {isAnalyzing ? 'Analyzing...' : 'Analyze PCAP'}
+          {isAnalyzing
+            ? t('libraryPcaps.uploader.analyzing')
+            : t('libraryPcaps.uploader.analyzeButton')}
         </Button>
       </CardContent>
     </Card>

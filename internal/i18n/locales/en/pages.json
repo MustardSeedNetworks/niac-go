@@ -125,11 +125,20 @@
       "headerChassisId": "Chassis ID",
       "headerMgmtAddr": "Mgmt Addr",
       "headerTtl": "TTL",
-      "headerLastSeen": "Last Seen"
+      "headerLastSeen": "Last Seen",
+      "ttlMinutes": "{{value}}m"
     },
     "page": {
       "networkTopologyTitle": "Network Topology",
-      "noTopologyData": "No topology data available"
+      "noTopologyData": "No topology data available",
+      "connectionCount_one": "{{count}} connection",
+      "connectionCount_other": "{{count}} connections",
+      "loadingTopology": "Loading topology...",
+      "noConnectionsHint": "Configure devices with trunk ports or port-channels to visualize connections",
+      "noLinksBannerAddPrefix": "Devices loaded, but the running config has no declared topology links. Add",
+      "noLinksBannerOr": "or",
+      "noLinksBannerSuffix": "entries to your YAML to visualize connections. Live LLDP/CDP/EDP/FDP neighbors are on the",
+      "noLinksBannerPageSuffix": "page."
     },
     "legend": {
       "deviceTypesHeading": "Device Types",
@@ -149,13 +158,71 @@
       "lineStyleDiscovered": "Discovered (LLDP/CDP)",
       "directionHeading": "Direction",
       "directionSingle": "Single (access link)",
-      "directionDouble": "Bidirectional (trunk/LAG)"
+      "directionDouble": "Bidirectional (trunk/LAG)",
+      "showLegend": "Show Legend",
+      "legendHeading": "Legend",
+      "deviceTypeRouter": "Router",
+      "deviceTypeSwitch": "Switch",
+      "deviceTypeFirewall": "Firewall",
+      "deviceTypeServer": "Server",
+      "deviceTypeWorkstation": "Workstation",
+      "deviceTypeAccessPoint": "Access Point"
     },
     "actionsMenu": {
       "exportPng": "Export as PNG",
       "exportJson": "Export topology JSON",
       "exportDot": "Export as DOT (Graphviz)",
       "exportGraphml": "Export as GraphML"
+    },
+    "header": {
+      "viewTabsAriaLabel": "Topology view",
+      "graphTabTitle": "Show devices and links as an interactive graph (drag to reposition, scroll to zoom)",
+      "graphTabLabel": "Graph",
+      "neighborsTabTitle": "Show LLDP/CDP neighbor relationships as a sortable table grouped by device",
+      "neighborsTabLabel": "Neighbors",
+      "resetButtonTitle": "Clear hand-dragged positions, search, and type filters",
+      "resetButtonLabel": "Reset",
+      "labelsButtonTitle": "Toggle interface / VLAN / speed labels on edges",
+      "labelsButtonLabel": "Labels",
+      "layoutModeAriaLabel": "Layout mode: {{label}}",
+      "searchPlaceholder": "Search devices by name…",
+      "searchAriaLabel": "Filter devices by name",
+      "typesLabel": "Types:",
+      "typeFilterHideTitle": "Hide {{type}} devices from the graph",
+      "typeFilterShowTitle": "Show only {{type}} devices (toggles a filter chip)",
+      "clearTypeFiltersTitle": "Remove all device-type filters and show every device in the topology"
+    },
+    "deviceDetails": {
+      "closeTitle": "Close the device details panel and return to the topology view",
+      "closeAriaLabel": "Close device details"
+    },
+    "deviceNode": {
+      "tooltipSummary": "{{label}} ({{type}}, {{status}})",
+      "tooltipIps": "IPs: {{ips}}",
+      "tooltipProtocols": "Protocols: {{protocols}}"
+    },
+    "contextMenu": {
+      "viewDetails": "View details",
+      "editYaml": "Edit YAML",
+      "editYamlHint": "devices →",
+      "focusNeighborhood": "Focus neighbourhood",
+      "copyName": "Copy name",
+      "hideFromView": "Hide from view",
+      "hideFromViewHint": "until Reset",
+      "copyInterfacePair": "Copy device/interface pair",
+      "copyVlanList_one": "Copy VLAN list ({{count}})",
+      "copyVlanList_other": "Copy VLAN list ({{count}})",
+      "resetLayout": "Reset layout",
+      "resetLayoutHint": "clears drags / filters"
+    },
+    "trunkEdge": {
+      "rowVlans": "VLANs",
+      "rowSpeed": "Speed",
+      "rowDuplex": "Duplex",
+      "rowUtilisation": "Utilisation",
+      "rowSource": "Source",
+      "sourceDiscovered": "Discovered (LLDP/CDP/EDP/FDP)",
+      "sourceDeclared": "Declared (trunk_ports)"
     }
   },
   "automation": {
@@ -224,20 +291,83 @@
       "headerDestination": "Destination",
       "headerProtocol": "Protocol",
       "headerLength": "Length",
-      "headerInfo": "Info"
+      "headerInfo": "Info",
+      "waitingForStream": "Waiting for packet stream...",
+      "modeLabel": "Mode:"
     },
     "inspector": {
       "standaloneCapture": "Standalone packet capture",
       "noInterfaces": "No interfaces detected",
       "followStreamTitle": "Follow Stream",
-    "followStreamDisabledTitle": "Select a TCP or UDP packet with both a source and destination port to follow its stream",
+      "followStreamDisabledTitle": "Select a TCP or UDP packet with both a source and destination port to follow its stream",
       "noPayload": "No payload data available for this stream",
       "selectPacketForProtocol": "Select a packet to view protocol layers",
       "noProtocolLayers": "No protocol layers available",
       "protocolHeaders": "Protocol Headers",
       "selectPacketForDetails": "Select a packet to view details",
       "exportButton": "Export filtered (JSON)",
-      "exportButtonTitle": "Export the currently filtered packets as JSON"
+      "exportButtonTitle": "Export the currently filtered packets as JSON",
+      "connectedStatus": "Connected",
+      "connectingStatus": "Connecting...",
+      "viewTabsAriaLabel": "Packets view",
+      "liveCaptureTab": "Live capture",
+      "pcapFilesTab": "PCAP files",
+      "onInterfacePrefix": "on",
+      "standaloneTag": "Standalone",
+      "stopCaptureButton": "Stop capture",
+      "colorsButton": "Colors",
+      "reconnectButton": "Reconnect",
+      "autoScrollLabel": "Auto-scroll",
+      "packetsCountLabel": "{{shown}} / {{total}} packets",
+      "packetListLabel": "Packet List",
+      "pausedTag": "Paused",
+      "hexDumpLabel": "Hex Dump",
+      "packetDetailsLabel": "Packet Details",
+      "summaryLabel": "Summary",
+      "standaloneDescriptionPart1": "Sniff an interface without starting a simulation. Frames stream into the viewer below as soon as they hit the wire. Or",
+      "standaloneStartSimLink": "start a simulation",
+      "standaloneDescriptionPart2": "if you want NIAC to also respond on the wire.",
+      "interfaceLabel": "Interface",
+      "standaloneBpfLabel": "BPF filter (optional)",
+      "standaloneBpfPlaceholder": "e.g. tcp port 80",
+      "startingLabel": "Starting…",
+      "startCaptureButton": "Start capture"
+    },
+    "hexDump": {
+      "selectPacketPlaceholder": "Select a packet to view hex dump",
+      "headerLegend": "Header",
+      "payloadLegend": "Payload",
+      "selectedLegend": "Selected"
+    },
+    "streamView": {
+      "clientBytesLabel": "{{count}} B client",
+      "serverBytesLabel": "{{count}} B server",
+      "asciiToggle": "ASCII",
+      "hexToggle": "Hex"
+    },
+    "conversations": {
+      "emptyTitle": "No TCP/UDP conversations found",
+      "emptyDescription": "Conversations require packets with port information",
+      "clickToFilterHint": "Click a row to filter packets",
+      "headerEndpointA": "Endpoint A",
+      "headerEndpointB": "Endpoint B",
+      "headerPackets": "Packets",
+      "headerBytes": "Bytes"
+    },
+    "bpfFilter": {
+      "presetTcp": "TCP",
+      "presetUdp": "UDP",
+      "presetPort80": "Port 80",
+      "presetPort443": "Port 443",
+      "presetNotArp": "Not ARP",
+      "presetIcmp": "ICMP",
+      "invalidFilterError": "Invalid BPF filter expression",
+      "clearFilterError": "Failed to clear filter",
+      "inputPlaceholder": "BPF filter (e.g. tcp port 80)",
+      "activeLabel": "Active:"
+    },
+    "filterBar": {
+      "inputPlaceholder": "Display filter (e.g., ip.src == 10.0.0.1 && tcp)"
     }
   },
   "configDiff": {
@@ -267,7 +397,8 @@
     "pageTitle": "Walk Analyzer",
     "noWalksFound": "No walks found",
     "pastePathLabel": "Or paste an absolute path",
-    "noNeighborsFound": "No LLDP/CDP neighbors found."
+    "noNeighborsFound": "No LLDP/CDP neighbors found.",
+    "noInterfacesFound": "No interfaces found."
   },
   "libraryWalks": {
     "label": "Walks",
@@ -277,7 +408,41 @@
   "libraryPcaps": {
     "label": "{{format}}s",
     "title": "{{format}} Library",
-    "description": "Read-only browser for the on-disk {{format}} captures the daemon serves from the unified library."
+    "description": "Read-only browser for the on-disk {{format}} captures the daemon serves from the unified library.",
+    "uploader": {
+      "invalidFileType": "Invalid file type. Please select a PCAP file ({{extensions}})",
+      "fileTooLarge": "File too large. Maximum size is {{size}}",
+      "fileEmpty": "File is empty",
+      "invalidFile": "Invalid file",
+      "dropAriaLabel": "Drop PCAP file here or click to select",
+      "dropToUpload": "Drop file to upload",
+      "dragDropTitle": "Drag & drop PCAP file",
+      "browseHint": "or click to browse ({{extensions}})",
+      "maxFileSizeLabel": "Maximum file size: {{size}}",
+      "analyzing": "Analyzing…",
+      "analyzeButton": "Analyze PCAP"
+    },
+    "analyzer": {
+      "pageHeading": "PCAP Analysis",
+      "packetsCountTag": "{{count}} packets",
+      "tabPackets": "Packets",
+      "tabStats": "Statistics",
+      "tabConversations": "Conversations",
+      "tabPacketsTitle": "Show every decoded packet with timestamp, headers, and payload",
+      "tabStatsTitle": "Show aggregate statistics: byte/packet totals per protocol and per host",
+      "tabConversationsTitle": "Group packets by 5-tuple to see TCP/UDP flows and byte totals per conversation",
+      "colorsButton": "Colors",
+      "followStreamButton": "Follow Stream",
+      "hexDumpLabel": "Hex Dump",
+      "packetDetailsLabel": "Packet Details",
+      "uploadFailed": "Upload failed",
+      "analyzeSuccess": "Successfully analyzed {{count}} packets",
+      "aboutTitle": "About PCAP Analyzer",
+      "aboutDescription": "Upload a PCAP or PCAPNG file to analyze network traffic. The analyzer will parse packets and provide detailed statistics, protocol breakdown, and packet-level inspection including hex dump viewing.",
+      "supportsPcap": "Supports .pcap",
+      "supportsPcapng": "Supports .pcapng",
+      "maxSizeTag": "Max 100MB"
+    }
   },
   "templates": {
     "states": {

@@ -4,6 +4,7 @@
 
 import { Handle, Position } from '@xyflow/react';
 import { type FC, memo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   topologyDeviceColors as deviceColors,
   topologyDeviceIcons as deviceIcons,
@@ -20,6 +21,7 @@ interface DeviceNodeProps {
  * Displays device icon, name, type, IPs, and protocols.
  */
 export const DeviceNode: FC<DeviceNodeProps> = memo(({ data, selected }) => {
+  const { t } = useTranslation('pages');
   const deviceType = (data.type as string)?.toLowerCase() || 'unknown';
   const Icon = deviceIcons[deviceType] || deviceIcons.unknown;
   const color = deviceColors[deviceType] || deviceColors.unknown;
@@ -35,12 +37,16 @@ export const DeviceNode: FC<DeviceNodeProps> = memo(({ data, selected }) => {
   // multi-line description and surface it through both title (native hover
   // tooltip) and aria-label (screen readers).
   const status = data.status || 'online';
-  const tooltipLines: string[] = [`${data.label} (${data.type}, ${status})`];
+  const tooltipLines: string[] = [
+    t('topology.deviceNode.tooltipSummary', { label: data.label, type: data.type, status }),
+  ];
   if (data.ips && data.ips.length > 0) {
-    tooltipLines.push(`IPs: ${data.ips.join(', ')}`);
+    tooltipLines.push(t('topology.deviceNode.tooltipIps', { ips: data.ips.join(', ') }));
   }
   if (data.protocols && data.protocols.length > 0) {
-    tooltipLines.push(`Protocols: ${data.protocols.join(', ')}`);
+    tooltipLines.push(
+      t('topology.deviceNode.tooltipProtocols', { protocols: data.protocols.join(', ') }),
+    );
   }
   const tooltip = tooltipLines.join('\n');
 
