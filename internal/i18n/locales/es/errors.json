@@ -45,7 +45,7 @@
   },
   "walk": {
     "validationFailed": "La validación falló",
-    "parseError": "No se pudo analizar el archivo de recorrido"
+    "parseError": "No se pudo analizar el archivo walk"
   },
   "injection": {
     "deviceLabel": "Dispositivo",

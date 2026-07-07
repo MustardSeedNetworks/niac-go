@@ -77,6 +77,11 @@ const DNT_TERMS = [
   'jitter',
   'throughput',
   'latency',
+  // Domain nouns kept verbatim app-wide (the Library "Walks" section, the
+  // "Walk Analyzer", device-editor "walk file"). es must not render these as
+  // "recorrido". Both forms: singular "walk"/"Walk" and plural "walks"/"Walks".
+  'walk',
+  'Walks',
 ];
 
 function flatKeyPaths(node: Json, prefix = ''): string[] {
