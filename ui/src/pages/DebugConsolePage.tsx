@@ -1,5 +1,5 @@
 import { ChevronDown, ChevronUp, Settings2 } from 'lucide-react';
-import { type FC, useCallback, useMemo, useState } from 'react';
+import { type FC, useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { LogEntry, LogLevel, Protocol } from '../api/types';
 import { DebugLevelControl } from '../components/debug/DebugLevelControl';
@@ -7,6 +7,7 @@ import { LogFilters } from '../components/LogFilters';
 import { LogViewer } from '../components/LogViewer';
 import { iconSizes } from '../constants/sizes';
 import { useLogStream } from '../hooks/useEventSource';
+import { useUIStore } from '../stores/ui-store';
 import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
 import { ConfirmModal } from '../ui/ConfirmModal';
@@ -45,6 +46,11 @@ function mapToLogEntry(data: unknown): LogEntry | null {
 
 export const DebugConsolePage: FC = () => {
   const { t } = useTranslation('pages');
+  const { t: tCommon } = useTranslation('common');
+  const addNotification = useUIStore((s) => s.addNotification);
+  // Only toast on a drop after a real connection was established — the
+  // initial "still connecting" window on mount isn't a disconnect.
+  const hasConnectedRef = useRef(false);
   // Log storage and filters
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [levelFilter, setLevelFilter] = useState<LogLevel | 'All'>('All');
@@ -83,9 +89,28 @@ export const DebugConsolePage: FC = () => {
     setPaused((prev) => !prev);
   }, []);
 
+  // Fires when the stream drops after having connected at least once — the
+  // browser's EventSource auto-reconnects, so this is informational only.
+  const handleDisconnect = useCallback(() => {
+    if (!hasConnectedRef.current) {
+      return;
+    }
+    addNotification({
+      type: 'warning',
+      title: tCommon('toast.streamDisconnectedTitle'),
+      message: tCommon('toast.streamDisconnectedMessage'),
+    });
+  }, [addNotification, tCommon]);
+
+  const handleConnect = useCallback(() => {
+    hasConnectedRef.current = true;
+  }, []);
+
   // SSE connection for log streaming (auto-reconnects)
   const { connected, reconnect } = useLogStream({
     onMessage: handleMessage,
+    onConnect: handleConnect,
+    onDisconnect: handleDisconnect,
   });
 
   // Filter logs based on current filters

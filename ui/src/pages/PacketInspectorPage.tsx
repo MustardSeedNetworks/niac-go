@@ -33,6 +33,7 @@ import { iconSizes } from '../constants/sizes';
 import { useApiResource } from '../hooks/useApiResource';
 import { useColoringRules } from '../hooks/useColoringRules';
 import { useDisplayFilter } from '../hooks/useDisplayFilter';
+import { useErrorToast } from '../hooks/useErrorToast';
 import { usePacketStream } from '../hooks/useEventSource';
 import { useSimulationStatus } from '../hooks/useSimulationStatus';
 import { Button } from '../ui/Button';
@@ -123,7 +124,7 @@ export const PacketInspectorPage: FC = () => {
   const [isPaused, setIsPaused] = useState(false);
   const [showColoringRules, setShowColoringRules] = useState(false);
   const [showStreamView, setShowStreamView] = useState(false);
-  const [captureError, setCaptureError] = useState<string | null>(null);
+  const showError = useErrorToast();
 
   // Coloring rules
   const {
@@ -385,14 +386,11 @@ export const PacketInspectorPage: FC = () => {
                       tone="red"
                       size="sm"
                       onClick={async () => {
-                        setCaptureError(null);
                         try {
                           await stopStandaloneCapture();
                           refetchCapture();
                         } catch (err) {
-                          setCaptureError(
-                            err instanceof Error ? err.message : 'Failed to stop capture',
-                          );
+                          showError(err);
                         }
                       }}
                     >
@@ -461,12 +459,6 @@ export const PacketInspectorPage: FC = () => {
                   {filteredPackets.length} / {packets.length} packets
                 </SmallText>
               </div>
-
-              {captureError && (
-                <SmallText className="mt-content text-status-error" role="alert">
-                  {captureError}
-                </SmallText>
-              )}
             </CardContent>
           </Card>
 
@@ -586,7 +578,7 @@ const StandaloneCaptureStarter: FC<{
   const [selectedIface, setSelectedIface] = useState('');
   const [bpfFilter, setBpfFilter] = useState('');
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const showError = useErrorToast();
 
   // Default to the first usable interface once the list arrives.
   useEffect(() => {
@@ -600,7 +592,6 @@ const StandaloneCaptureStarter: FC<{
       return;
     }
     setBusy(true);
-    setError(null);
     try {
       await startStandaloneCapture({
         interface: selectedIface,
@@ -608,10 +599,10 @@ const StandaloneCaptureStarter: FC<{
       });
       onStarted();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to start capture');
+      showError(err);
       setBusy(false);
     }
-  }, [bpfFilter, busy, onStarted, selectedIface]);
+  }, [bpfFilter, busy, onStarted, selectedIface, showError]);
 
   return (
     <Card className="border-surface-border bg-bg-surface/70">
@@ -674,11 +665,6 @@ const StandaloneCaptureStarter: FC<{
             {busy ? 'Starting…' : 'Start capture'}
           </Button>
         </div>
-        {error && (
-          <SmallText className="text-status-error" role="alert">
-            {error}
-          </SmallText>
-        )}
       </CardContent>
     </Card>
   );

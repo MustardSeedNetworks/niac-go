@@ -5,10 +5,10 @@ import { fetchAlerts, fetchStats, updateAlerts } from '../api/client';
 import type { AlertConfig } from '../api/types';
 import { iconSizes } from '../constants/sizes';
 import { useApiResource } from '../hooks/useApiResource';
+import { useErrorToast } from '../hooks/useErrorToast';
 import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
 import { H2, P, SmallText } from '../ui/Typography';
-import { getErrorMessage } from '../utils/format';
 
 /**
  * Alerts page — configure packet-threshold + webhook alerting for the
@@ -33,15 +33,15 @@ const AlertConfigCard: FC<{ recentErrors: number }> = ({ recentErrors }) => {
   const { t } = useTranslation('pages');
   const { data, loading, error } = useApiResource(fetchAlerts, [], {
     intervalMs: 15000,
+    errorToast: true,
   });
   const [threshold, setThreshold] = useState('');
   const [webhook, setWebhook] = useState('');
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [status, setStatus] = useState<{
-    tone: 'success' | 'error';
-    text: string;
-  } | null>(null);
+  // Success-only: save failures are surfaced as toasts, not a page banner.
+  const [savedMessage, setSavedMessage] = useState<string | null>(null);
+  const showError = useErrorToast();
 
   useEffect(() => {
     if (data && !dirty) {
@@ -55,7 +55,7 @@ const AlertConfigCard: FC<{ recentErrors: number }> = ({ recentErrors }) => {
       return;
     }
     setSaving(true);
-    setStatus(null);
+    setSavedMessage(null);
     try {
       const payload: AlertConfig = {
         packetsThreshold: threshold ? Number(threshold) : 0,
@@ -63,9 +63,9 @@ const AlertConfigCard: FC<{ recentErrors: number }> = ({ recentErrors }) => {
       };
       await updateAlerts(payload);
       setDirty(false);
-      setStatus({ tone: 'success', text: 'Alert configuration saved' });
+      setSavedMessage('Alert configuration saved');
     } catch (err) {
-      setStatus({ tone: 'error', text: getErrorMessage(err) });
+      showError(err);
     } finally {
       setSaving(false);
     }
@@ -78,7 +78,7 @@ const AlertConfigCard: FC<{ recentErrors: number }> = ({ recentErrors }) => {
     setThreshold(data.packetsThreshold ? String(data.packetsThreshold) : '');
     setWebhook(data.webhookUrl ?? '');
     setDirty(false);
-    setStatus(null);
+    setSavedMessage(null);
   };
 
   return (
@@ -127,7 +127,7 @@ const AlertConfigCard: FC<{ recentErrors: number }> = ({ recentErrors }) => {
                   onChange={(event) => {
                     setThreshold(event.target.value);
                     setDirty(true);
-                    setStatus(null);
+                    setSavedMessage(null);
                   }}
                 />
               </div>
@@ -143,18 +143,12 @@ const AlertConfigCard: FC<{ recentErrors: number }> = ({ recentErrors }) => {
                   onChange={(event) => {
                     setWebhook(event.target.value);
                     setDirty(true);
-                    setStatus(null);
+                    setSavedMessage(null);
                   }}
                 />
               </div>
             </div>
-            {status && (
-              <SmallText
-                className={status.tone === 'success' ? 'text-status-success' : 'text-status-error'}
-              >
-                {status.text}
-              </SmallText>
-            )}
+            {savedMessage && <SmallText className="text-status-success">{savedMessage}</SmallText>}
             <div className="flex flex-wrap gap-default">
               <Button
                 tone="violet"

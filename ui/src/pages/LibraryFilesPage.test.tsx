@@ -4,12 +4,15 @@
  * Locks the revert-to-original contract: the "edited" Tag + Revert
  * button appear only for walk entries whose `edited` flag is true,
  * confirming the modal calls revertWalk with the entry's name and
- * refetches the list, and a failed revert surfaces an error without
- * losing the user's place.
+ * refetches the list, and a failed revert surfaces an error toast
+ * (see refactor/global-error-toasts) without losing the user's place —
+ * no more bespoke inline revert-error banner in the modal.
  */
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { LibraryFileEntry } from '../api/client';
+import { useUIStore } from '../stores/ui-store';
+import { ToastContainer } from '../ui/ToastContainer';
 import { LibraryPcapsPage, LibraryWalksPage } from './LibraryFilesPage';
 
 const fetchLibraryWalks = vi.fn();
@@ -43,6 +46,7 @@ describe('LibraryFilesPage (walks)', () => {
     fetchLibraryWalks.mockReset();
     fetchLibraryPcaps.mockReset();
     revertWalk.mockReset();
+    useUIStore.getState().clearNotifications();
   });
 
   it('shows a loading state instead of the empty state while the initial fetch is pending', async () => {
@@ -102,16 +106,22 @@ describe('LibraryFilesPage (walks)', () => {
     expect(revertWalk).not.toHaveBeenCalled();
   });
 
-  it('surfaces an error and keeps the modal open when revert fails', async () => {
+  it('surfaces a failed revert as a toast and keeps the modal open', async () => {
     fetchLibraryWalks.mockResolvedValue([editedWalk]);
     revertWalk.mockRejectedValue(new Error('daemon unavailable'));
 
-    render(<LibraryWalksPage />);
+    render(
+      <>
+        <LibraryWalksPage />
+        <ToastContainer />
+      </>,
+    );
 
     fireEvent.click(await screen.findByTestId(`revert-walk-${editedWalk.name}`));
     const dialog = await screen.findByRole('dialog');
     fireEvent.click(within(dialog).getByRole('button', { name: 'Revert' }));
 
+    // Toast, not a bespoke inline banner inside the modal.
     expect(await screen.findByRole('alert')).toHaveTextContent('daemon unavailable');
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     expect(fetchLibraryWalks).toHaveBeenCalledTimes(1);
@@ -123,6 +133,7 @@ describe('LibraryFilesPage (pcaps)', () => {
     fetchLibraryWalks.mockReset();
     fetchLibraryPcaps.mockReset();
     revertWalk.mockReset();
+    useUIStore.getState().clearNotifications();
   });
 
   it('never renders an Actions column or edited badge for pcaps', async () => {
