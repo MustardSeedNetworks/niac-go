@@ -1,5 +1,6 @@
 import { ChevronDown, Download, FileCode, Plus, RefreshCw, Server } from 'lucide-react';
 import { type FC, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import type { Device } from '../../api/types';
 import { iconSizes } from '../../constants/sizes';
@@ -20,6 +21,7 @@ export const DeviceListHeader: FC<DeviceListHeaderProps> = ({
   loading,
   onRefresh,
 }) => {
+  const { t } = useTranslation('devices');
   const navigate = useNavigate();
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -52,6 +54,14 @@ export const DeviceListHeader: FC<DeviceListHeaderProps> = ({
         </P>
       </div>
       <div className="flex gap-compact">
+        <Button
+          variant="outline"
+          leftIcon={<Server className={iconSizes.md} />}
+          onClick={() => navigate('/devices')}
+          data-testid="view-running-state"
+        >
+          {t('list.viewRunningState')}
+        </Button>
         <Button
           variant="outline"
           leftIcon={<RefreshCw className={iconSizes.md} />}

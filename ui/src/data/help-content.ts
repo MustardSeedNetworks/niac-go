@@ -3048,7 +3048,7 @@ export const features: Feature[] = [
     path: '/devices',
   },
   {
-    title: 'Devices Library',
+    title: 'Device Library',
     description: 'Reusable device definitions. Edit, clone, delete the library on disk.',
     path: '/device-config',
   },
@@ -3058,7 +3058,7 @@ export const features: Feature[] = [
     path: '/topology',
   },
   {
-    title: 'Traffic',
+    title: 'Fault Injection',
     description: 'Inject controlled errors into the simulation and replay captured PCAPs.',
     path: '/traffic',
   },

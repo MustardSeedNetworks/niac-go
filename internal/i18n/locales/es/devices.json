@@ -15,6 +15,7 @@
   },
   "list": {
     "title": "Biblioteca de dispositivos",
+    "viewRunningState": "Ver estado en ejecución",
     "searchPlaceholder": "Buscar dispositivos por nombre, tipo o nombre de host...",
     "noDevices": "Aún no hay dispositivos en la biblioteca",
     "createFirst": "Cree su primer dispositivo",

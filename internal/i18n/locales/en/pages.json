@@ -4,7 +4,8 @@
     "library": "Library",
     "liveView": "Live View",
     "inspect": "Inspect",
-    "alerts": "Alerts"
+    "tools": "Tools",
+    "system": "System"
   },
   "dashboard": {
     "label": "Dashboard",
@@ -73,7 +74,9 @@
     "title": "Running Devices",
     "description": "Read-only view of the devices the daemon is currently simulating, plus the running YAML.",
     "ipAddressesHeader": "IP addresses",
-    "availableSnmpWalks": "Available SNMP walks"
+    "availableSnmpWalks": "Available SNMP walks",
+    "editInLibrary": "Edit in Device Library",
+    "useInEditor": "Use in device editor"
   },
   "segments": {
     "label": "Segments",
@@ -87,8 +90,8 @@
     "empty": "No segments defined in the loaded configuration."
   },
   "deviceLibrary": {
-    "label": "Devices",
-    "title": "Devices",
+    "label": "Device Library",
+    "title": "Device Library",
     "description": "Reusable device definitions: search, filter, edit, clone, and delete. Click a device to open the visual editor."
   },
   "deviceEditor": {
@@ -149,8 +152,8 @@
     }
   },
   "traffic": {
-    "label": "Traffic",
-    "title": "Traffic",
+    "label": "Fault Injection",
+    "title": "Fault Injection",
     "description": "Inject controlled errors into the running simulation and replay captured {{format}} files.",
     "page": {
       "errorInjectionTitle": "Error Injection",

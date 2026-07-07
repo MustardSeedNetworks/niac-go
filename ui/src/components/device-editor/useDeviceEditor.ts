@@ -109,7 +109,9 @@ export const useDeviceEditor = (): UseDeviceEditorReturn => {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [message, setMessage] = useState<StatusMessage | null>(null);
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['basic']));
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(
+    () => new Set(location.hash === '#snmp' ? ['basic', 'snmp'] : ['basic']),
+  );
   const [showYamlPreview, setShowYamlPreview] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -164,6 +166,16 @@ export const useDeviceEditor = (): UseDeviceEditorReturn => {
       setOriginalDevice(fetchedDevice.device);
     }
   }, [fetchedDevice, reset]);
+
+  // Deep-link support: the Running Devices walk browser links here with
+  // `#snmp` so a copied walk name can actually be used. Once the section
+  // has rendered (post-loading), scroll it into view.
+  useEffect(() => {
+    if (location.hash !== '#snmp' || loading) {
+      return;
+    }
+    document.getElementById('snmp-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [location.hash, loading]);
 
   // Check if device has been modified. Deliberately kept as a structural
   // JSON compare (not rhf's formState.isDirty) so the unsaved-changes

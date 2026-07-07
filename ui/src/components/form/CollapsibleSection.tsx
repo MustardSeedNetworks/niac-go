@@ -12,6 +12,8 @@ export interface CollapsibleSectionProps {
   required?: boolean;
   enabled?: boolean;
   onEnableChange?: (enabled: boolean) => void;
+  /** Anchor id for deep-linking to this section (e.g. `#snmp` from the Running Devices walk browser). */
+  id?: string;
 }
 
 export const CollapsibleSection: FC<CollapsibleSectionProps> = ({
@@ -22,8 +24,9 @@ export const CollapsibleSection: FC<CollapsibleSectionProps> = ({
   required,
   enabled,
   onEnableChange,
+  id,
 }) => (
-  <Card className="border-surface-border bg-bg-surface/70 overflow-hidden">
+  <Card id={id} className="border-surface-border bg-bg-surface/70 overflow-hidden">
     <div className="flex-between px-6 py-4 hover:bg-surface-hover transition-colors">
       <div className="flex items-center gap-default">
         <button

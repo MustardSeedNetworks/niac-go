@@ -4,7 +4,8 @@
     "library": "Biblioteca",
     "liveView": "Vista en vivo",
     "inspect": "Inspeccionar",
-    "alerts": "Alertas"
+    "tools": "Herramientas",
+    "system": "Sistema"
   },
   "dashboard": {
     "label": "Panel",
@@ -73,7 +74,9 @@
     "title": "Dispositivos en ejecución",
     "description": "Vista de solo lectura de los dispositivos que el daemon está simulando actualmente, junto con el YAML en ejecución.",
     "ipAddressesHeader": "Direcciones IP",
-    "availableSnmpWalks": "Recorridos SNMP disponibles"
+    "availableSnmpWalks": "Recorridos SNMP disponibles",
+    "editInLibrary": "Editar en la biblioteca de dispositivos",
+    "useInEditor": "Usar en el editor de dispositivos"
   },
   "segments": {
     "label": "Segmentos",
@@ -87,8 +90,8 @@
     "empty": "No hay segmentos definidos en la configuración cargada."
   },
   "deviceLibrary": {
-    "label": "Dispositivos",
-    "title": "Dispositivos",
+    "label": "Biblioteca de dispositivos",
+    "title": "Biblioteca de dispositivos",
     "description": "Definiciones de dispositivos reutilizables: buscar, filtrar, editar, clonar y eliminar. Haga clic en un dispositivo para abrir el editor visual."
   },
   "deviceEditor": {
@@ -149,8 +152,8 @@
     }
   },
   "traffic": {
-    "label": "Tráfico",
-    "title": "Tráfico",
+    "label": "Inyección de fallos",
+    "title": "Inyección de fallos",
     "description": "Inyecte errores controlados en la simulación en ejecución y reproduzca archivos {{format}} capturados.",
     "page": {
       "errorInjectionTitle": "Inyección de errores",

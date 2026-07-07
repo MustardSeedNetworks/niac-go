@@ -28,8 +28,10 @@ import type { SidebarNavGroup } from './ui/Sidebar';
  *   1. Overview   — am I running? start/stop the sim.
  *   2. Library    — pick the network + manage device definitions.
  *   3. Live View  — look at the currently running sim.
- *   4. Inspect    — debug logs, packets, walk files.
- *   5. Alerts     — notify me when things break.
+ *   4. Inspect    — debug logs, packets.
+ *   5. Tools      — active test/analysis utilities (diff, walk
+ *                   validation/analysis, fault injection, alerts).
+ *   6. System     — entitlement, not run-state; anchored at the bottom.
  *
  * Sidebar labels are deliberately shorter than the corresponding page
  * header titles in pageRegistry; both source from the same pages.*
@@ -44,7 +46,6 @@ export function useNavGroups(): SidebarNavGroup[] {
         items: [
           { path: '/', label: t('dashboard.label'), icon: Activity },
           { path: '/runtime', label: t('runtime.label'), icon: PlugZap },
-          { path: '/license', label: t('license.label'), icon: KeyRound },
         ],
       },
       {
@@ -57,34 +58,40 @@ export function useNavGroups(): SidebarNavGroup[] {
             label: t('libraryPcaps.label', { format: 'PCAP' }),
             icon: FileBox,
           },
-          { path: '/config-diff', label: t('configDiff.label'), icon: GitCompare },
+          { path: '/segments', label: t('segments.label'), icon: Layers },
         ],
       },
       {
         label: t('groups.liveView'),
         items: [
           { path: '/devices', label: t('devices.label'), icon: Server },
-          { path: '/segments', label: t('segments.label'), icon: Layers },
           { path: '/topology', label: t('topology.label'), icon: Network },
-          { path: '/traffic', label: t('traffic.label'), icon: Zap },
         ],
       },
       {
         label: t('groups.inspect'),
         items: [
-          { path: '/debug', label: t('debug.label'), icon: Terminal },
           { path: '/packets', label: t('packets.label'), icon: FileBox },
+          { path: '/debug', label: t('debug.label'), icon: Terminal },
+        ],
+      },
+      {
+        label: t('groups.tools'),
+        items: [
+          { path: '/config-diff', label: t('configDiff.label'), icon: GitCompare },
           {
             path: '/walk-validator',
             label: t('walkValidator.label', { protocol: 'SNMP' }),
             icon: ShieldCheck,
           },
           { path: '/walk-analyzer', label: t('walkAnalyzer.label'), icon: FileScan },
+          { path: '/traffic', label: t('traffic.label'), icon: Zap },
+          { path: '/automation', label: t('automation.label'), icon: Workflow },
         ],
       },
       {
-        label: t('groups.alerts'),
-        items: [{ path: '/automation', label: t('automation.label'), icon: Workflow }],
+        label: t('groups.system'),
+        items: [{ path: '/license', label: t('license.label'), icon: KeyRound }],
       },
     ],
     [t],

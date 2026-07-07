@@ -15,6 +15,7 @@
   },
   "list": {
     "title": "Device Library",
+    "viewRunningState": "View running state",
     "searchPlaceholder": "Search devices by name, type, or hostname...",
     "noDevices": "No devices in the library yet",
     "createFirst": "Create your first device",

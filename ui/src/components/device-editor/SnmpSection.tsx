@@ -34,6 +34,7 @@ export const SnmpSection: FC<SNMPSectionProps> = ({
 
   return (
     <CollapsibleSection
+      id="snmp-section"
       title="SNMP Agent"
       isExpanded={isExpanded}
       onToggle={onToggle}
