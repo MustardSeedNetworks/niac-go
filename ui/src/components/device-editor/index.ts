@@ -2,7 +2,6 @@
 export { AdditionalIPsSection } from './AdditionalIPsSection';
 export { BasicSettingsSection } from './BasicSettingsSection';
 export { CdpSection } from './CdpSection';
-export { DeleteConfirmModal } from './DeleteConfirmModal';
 export type { StatusMessage } from './DeviceEditorHeader';
 export { DeviceEditorHeader } from './DeviceEditorHeader';
 export { DeviceEditorStatusView } from './DeviceEditorStatusView';

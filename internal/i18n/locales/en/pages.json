@@ -64,7 +64,10 @@
     "description": "Monitor runtime status, view network interfaces, and manage NIAC configuration.",
     "daemonModeWarning": "Daemon Mode Not Detected",
     "startSimulationTitle": "Start Simulation",
-    "noUsableInterfaces": "No usable interfaces"
+    "noUsableInterfaces": "No usable interfaces",
+    "stopConfirmTitle": "Stop simulation?",
+    "stopConfirmMessage": "Are you sure you want to stop the simulation? This will interrupt the current run.",
+    "stopConfirmLabel": "Stop"
   },
   "devices": {
     "label": "Running Devices",
