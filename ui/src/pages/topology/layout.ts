@@ -331,6 +331,14 @@ export function createEdges(links: TopologyLink[]): LinkEdge[] {
  * Math.max picks the direction-based default. Callers MUST take
  * Math.max(baseWidth, returned-width).
  */
+// Utilization edge colors, exported so the topology legend documents the
+// exact same palette the graph renders — single source of truth, no drift
+// between the swatch and the wire. (This file is an allow-listed domain
+// palette in check-token-discipline.sh; the legend imports these instead of
+// re-hardcoding the hex.)
+export const UTILIZATION_HIGH_COLOR = '#f59e0b'; // amber-500, 60–84%
+export const UTILIZATION_CRITICAL_COLOR = '#ef4444'; // red-500, >= 85%
+
 function utilizationStyle(
   utilisation: number | undefined,
   baseColor: string,
@@ -345,10 +353,7 @@ function utilizationStyle(
     return { stroke: baseColor, strokeWidth: 3 };
   }
   if (utilisation < 85) {
-    // amber-500 — keeps in-house palette consistent with existing
-    // status tints elsewhere in the UI.
-    return { stroke: '#f59e0b', strokeWidth: 4 };
+    return { stroke: UTILIZATION_HIGH_COLOR, strokeWidth: 4 };
   }
-  // red-500 for >= 85 %.
-  return { stroke: '#ef4444', strokeWidth: 5 };
+  return { stroke: UTILIZATION_CRITICAL_COLOR, strokeWidth: 5 };
 }

@@ -133,7 +133,23 @@
     },
     "legend": {
       "deviceTypesHeading": "Device Types",
-      "linkSpeedsHeading": "Link Speeds"
+      "linkSpeedsHeading": "Link Speeds",
+      "nodesHeading": "Nodes",
+      "statusHeading": "Status",
+      "statusOnline": "Online",
+      "statusOffline": "Offline",
+      "statusWarning": "Warning",
+      "focusHint": "Click a node to highlight its neighbors — unrelated devices dim.",
+      "edgesHeading": "Edges",
+      "utilizationHeading": "Utilization",
+      "utilizationHigh": "High (60–84%)",
+      "utilizationCritical": "Critical (85%+)",
+      "lineStyleHeading": "Line Style",
+      "lineStyleDeclared": "Declared (config)",
+      "lineStyleDiscovered": "Discovered (LLDP/CDP)",
+      "directionHeading": "Direction",
+      "directionSingle": "Single (access link)",
+      "directionDouble": "Bidirectional (trunk/LAG)"
     },
     "actionsMenu": {
       "exportPng": "Export as PNG",
