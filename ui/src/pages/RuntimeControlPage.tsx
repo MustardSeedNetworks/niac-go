@@ -14,6 +14,7 @@ import { useSimulationStatus } from '../hooks/useSimulationStatus';
 import { useUIStore } from '../stores/ui-store';
 import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
+import { ConfirmModal } from '../ui/ConfirmModal';
 import { H2, SmallText } from '../ui/Typography';
 import { fileToText } from '../utils/file';
 import { getErrorMessage } from '../utils/format';
@@ -43,6 +44,7 @@ export const RuntimeControlPage: FC = () => {
   const [quickUploadFile, setQuickUploadFile] = useState<File | null>(null);
   const [starting, setStarting] = useState(false);
   const [stopping, setStopping] = useState(false);
+  const [showStopConfirm, setShowStopConfirm] = useState(false);
   const [message, setMessage] = useState<{
     tone: 'success' | 'error';
     text: string;
@@ -188,15 +190,12 @@ export const RuntimeControlPage: FC = () => {
     }
   }, [simulationSettings, quickUploadFile]);
 
-  const handleStop = useCallback(async () => {
-    if (
-      !window.confirm(
-        'Are you sure you want to stop the simulation? This will interrupt the current run.',
-      )
-    ) {
-      return;
-    }
+  const handleStopClick = useCallback(() => {
+    setShowStopConfirm(true);
+  }, []);
 
+  const handleStopConfirmed = useCallback(async () => {
+    setShowStopConfirm(false);
     setStopping(true);
     setMessage(null);
 
@@ -358,12 +357,21 @@ export const RuntimeControlPage: FC = () => {
         <RunningSimulationCard
           simStatus={simStatus}
           stopping={stopping}
-          onStop={handleStop}
+          onStop={handleStopClick}
           message={message}
         />
       )}
 
       <AdvancedSection />
+
+      <ConfirmModal
+        isOpen={showStopConfirm}
+        onConfirm={handleStopConfirmed}
+        onCancel={() => setShowStopConfirm(false)}
+        title={t('runtime.stopConfirmTitle')}
+        message={t('runtime.stopConfirmMessage')}
+        confirmLabel={t('runtime.stopConfirmLabel')}
+      />
     </div>
   );
 };

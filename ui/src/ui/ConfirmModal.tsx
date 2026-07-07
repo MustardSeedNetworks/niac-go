@@ -14,6 +14,13 @@ export interface ConfirmModalProps {
   cancelLabel?: string;
   confirmTone?: 'red' | 'violet' | 'blue' | 'green';
   icon?: ReactNode;
+  /** True while the confirmed action is in flight — disables the confirm
+   * button and swaps in `confirmingLabel` so a slow delete/stop can't be
+   * double-submitted. */
+  confirming?: boolean;
+  /** Label shown on the confirm button while `confirming` is true.
+   * Defaults to `confirmLabel`. */
+  confirmingLabel?: string;
 }
 
 export const ConfirmModal: FC<ConfirmModalProps> = ({
@@ -26,6 +33,8 @@ export const ConfirmModal: FC<ConfirmModalProps> = ({
   cancelLabel = 'Cancel',
   confirmTone = 'red',
   icon,
+  confirming = false,
+  confirmingLabel,
 }) => (
   <Modal isOpen={isOpen} onClose={onCancel} size="sm" showCloseButton={false}>
     <div className="stack-lg">
@@ -50,8 +59,8 @@ export const ConfirmModal: FC<ConfirmModalProps> = ({
         <Button variant="outline" onClick={onCancel}>
           {cancelLabel}
         </Button>
-        <Button tone={confirmTone} onClick={onConfirm}>
-          {confirmLabel}
+        <Button tone={confirmTone} onClick={onConfirm} disabled={confirming}>
+          {confirming ? (confirmingLabel ?? confirmLabel) : confirmLabel}
         </Button>
       </div>
     </div>

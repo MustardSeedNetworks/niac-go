@@ -6,7 +6,6 @@ import {
   BasicSettingsSection,
   buildYamlPreview,
   CdpSection,
-  DeleteConfirmModal,
   DeviceEditorHeader,
   DeviceEditorStatusView,
   DhcpSection,
@@ -216,14 +215,17 @@ export const DeviceEditorPage: FC = () => {
       )}
 
       {/* Delete Confirmation Modal */}
-      {showDeleteConfirm && (
-        <DeleteConfirmModal
-          deviceHostname={device.hostname}
-          deleting={deleting}
-          onConfirm={handleDelete}
-          onCancel={() => setShowDeleteConfirm(false)}
-        />
-      )}
+      <ConfirmModal
+        isOpen={showDeleteConfirm}
+        onConfirm={handleDelete}
+        onCancel={() => setShowDeleteConfirm(false)}
+        title={t('list.deleteConfirmTitle')}
+        message={t('list.deleteConfirmMessage', { hostname: device.hostname })}
+        confirmLabel={t('list.deleteConfirmLabel')}
+        confirmTone="red"
+        confirming={deleting}
+        confirmingLabel={t('editor.deletingLabel')}
+      />
 
       {/* Unsaved-changes navigation guard — covers the Back button and
           any in-app link clicked while the form is dirty. */}

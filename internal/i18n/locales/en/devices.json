@@ -23,7 +23,8 @@
     "clone": "Clone",
     "edit": "Edit",
     "deleteConfirmTitle": "Delete device?",
-    "deleteConfirmMessage": "This will permanently remove the device definition. Running simulations are unaffected until restarted.",
+    "deleteConfirmMessage": "This will permanently remove {{hostname}} from the device library. Running simulations are unaffected until restarted.",
+    "deleteConfirmLabel": "Delete",
     "tableHeaderHostname": "Hostname",
     "tableHeaderType": "Type",
     "tableHeaderIpAddress": "IP Address",
@@ -62,7 +63,8 @@
       "message": "This device has unsaved changes. If you leave now, those changes will be lost.",
       "confirmLabel": "Leave",
       "cancelLabel": "Stay"
-    }
+    },
+    "deletingLabel": "Deleting…"
   },
   "running": {
     "noDevicesRunning": "No devices are currently running",
