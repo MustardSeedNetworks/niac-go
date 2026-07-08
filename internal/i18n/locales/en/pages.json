@@ -254,7 +254,9 @@
       "typesLabel": "Types:",
       "typeFilterHideTitle": "Hide {{type}} devices from the graph",
       "typeFilterShowTitle": "Show only {{type}} devices (toggles a filter chip)",
-      "clearTypeFiltersTitle": "Remove all device-type filters and show every device in the topology"
+      "clearTypeFiltersTitle": "Remove all device-type filters and show every device in the topology",
+      "layoutPersistenceNote": "Saved on this browser",
+      "layoutPersistenceHint": "Dragged node positions are saved to this browser only — they are not synced to any server or other device."
     },
     "deviceDetails": {
       "closeTitle": "Close the device details panel and return to the topology view",
