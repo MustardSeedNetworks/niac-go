@@ -117,6 +117,42 @@
       "deviceCount_other": "{{count}} dispositivos se lanzarán al hacer clic en Iniciar."
     }
   },
+  "newSimWizard": {
+    "label": "Nueva simulación",
+    "title": "Nueva simulación",
+    "description": "Ruta guiada para construir una configuración, agregar dispositivos e iniciar una simulación.",
+    "steps": {
+      "template": "Plantilla",
+      "devices": "Dispositivos",
+      "protocols": "Protocolos",
+      "review": "Revisión",
+      "finish": "Finalizar"
+    },
+    "backLabel": "Atrás",
+    "nextLabel": "Siguiente",
+    "template": {
+      "interfaceLabel": "Interfaz de red",
+      "startEmpty": "Empezar vacío",
+      "help": "Elige una configuración inicial abajo, o empieza vacío y agrega dispositivos en el siguiente paso.",
+      "errorNoSource": "Elige una plantilla, configuración guardada, archivo subido, o Empezar vacío primero",
+      "startingLabel": "Iniciando…"
+    },
+    "devices": {
+      "help": "Agrega o edita dispositivos para esta simulación usando la Biblioteca de dispositivos abajo."
+    },
+    "protocols": {
+      "title": "Protocolos",
+      "subtitle": "Resumen de protocolos por dispositivo para la configuración que acabas de construir"
+    },
+    "finish": {
+      "title": "Todo listo",
+      "help": "La simulación ya está corriendo con la configuración que construiste. Guárdala y luego ve a Simulación para monitorearla o detenerla.",
+      "saveLabel": "Guardar configuración",
+      "savingLabel": "Guardando…",
+      "saved": "Configuración guardada.",
+      "gotoRuntime": "Ir a Simulación"
+    }
+  },
   "devices": {
     "label": "Dispositivos en ejecución",
     "title": "Dispositivos en ejecución",

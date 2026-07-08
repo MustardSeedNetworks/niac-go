@@ -19,7 +19,13 @@ import { H2, SmallText } from '../../ui/Typography';
  *   source 'template'    → fetchTemplateContent(name)
  *   source 'userConfig'  → fetchUserConfigContent(name)
  *   source 'upload'      → read the File directly
+ *   content (raw YAML)   → skip the fetch entirely and preview it as-is
  *   source null          → render nothing
+ *
+ * The `content` prop lets NewSimulationWizard's Review step reuse this
+ * component for a config that's already live on the daemon (not a
+ * template/userConfig/upload) — it has the YAML in hand from `fetchConfig()`
+ * and just needs the same device-summary rendering.
  */
 interface DevicePreview {
   name: string;
@@ -33,6 +39,8 @@ interface SelectedNetworkPreviewProps {
   source: ConfigSource | null;
   name: string;
   uploadFile?: File | null;
+  /** Raw YAML to preview directly, bypassing the source-based fetch. */
+  content?: string;
 }
 
 // The YAML on disk uses snake_case (snmp_agent, netbios_status, …) which
@@ -91,6 +99,7 @@ export const SelectedNetworkPreview: FC<SelectedNetworkPreviewProps> = ({
   source,
   name,
   uploadFile,
+  content,
 }) => {
   const { t } = useTranslation('pages');
   const [yamlText, setYamlText] = useState<string | null>(null);
@@ -100,6 +109,11 @@ export const SelectedNetworkPreview: FC<SelectedNetworkPreviewProps> = ({
   useEffect(() => {
     let cancelled = false;
     setError(null);
+
+    if (content !== undefined) {
+      setYamlText(content);
+      return;
+    }
 
     if (!source || (!name && !uploadFile)) {
       setYamlText(null);
@@ -130,7 +144,7 @@ export const SelectedNetworkPreview: FC<SelectedNetworkPreviewProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [source, name, uploadFile]);
+  }, [source, name, uploadFile, content]);
 
   const { devices, parseError, parseErrorLine } = useMemo<{
     devices: DevicePreview[];
@@ -157,7 +171,7 @@ export const SelectedNetworkPreview: FC<SelectedNetworkPreviewProps> = ({
     }
   }, [yamlText]);
 
-  if (!source) return null;
+  if (!source && content === undefined) return null;
 
   const displayName = uploadFile?.name ?? name;
 
