@@ -45,6 +45,7 @@ import (
 	"github.com/MustardSeedNetworks/niac-go/internal/api/tokenstore"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/content"
 	"github.com/MustardSeedNetworks/niac-go/internal/library"
 	"github.com/MustardSeedNetworks/niac-go/internal/license"
 	"github.com/MustardSeedNetworks/niac-go/internal/protocols"
@@ -372,17 +373,7 @@ func NewServer(cfg ServerConfig) *Server {
 			"root", libraryRoot, "error", err)
 	} else {
 		slog.Info("[API] Content library opened", "root", lib.Root())
-		// #897 L4: fold the legacy $HOME/.niac/configs (and friends) user
-		// configs into the library's networks/ store, once, non-destructively,
-		// so the unified /api/v1/library/networks surface is the only config
-		// picker the UI needs after upgrading from the removed
-		// /api/v1/configs endpoint.
-		if migrated, migrateErr := migrateLegacyUserConfigs(lib); migrateErr != nil {
-			slog.Error("[API] Failed to migrate legacy user configs into the library",
-				"error", migrateErr)
-		} else if migrated > 0 {
-			slog.Info("[API] Migrated legacy user configs into the library", "count", migrated)
-		}
+		bootstrapLibraryContent(lib)
 	}
 
 	srv := &Server{
@@ -412,6 +403,42 @@ func NewServer(cfg ServerConfig) *Server {
 			"error", lmErr)
 	}
 	return srv
+}
+
+// bootstrapLibraryContent runs the one-time, non-destructive population
+// steps for a freshly-opened library: folding legacy user configs into
+// networks/, and adopting the niac-content deb/rpm bundle into walks/ if
+// it's installed and walks/ is still empty. Both are additive/no-op on
+// a library that already has content.
+func bootstrapLibraryContent(lib *library.Library) {
+	// #897 L4: fold the legacy $HOME/.niac/configs (and friends) user
+	// configs into the library's networks/ store, once, non-destructively,
+	// so the unified /api/v1/library/networks surface is the only config
+	// picker the UI needs after upgrading from the removed
+	// /api/v1/configs endpoint.
+	migrated, migrateErr := migrateLegacyUserConfigs(lib)
+	switch {
+	case migrateErr != nil:
+		slog.Error("[API] Failed to migrate legacy user configs into the library",
+			"error", migrateErr)
+	case migrated > 0:
+		slog.Info("[API] Migrated legacy user configs into the library", "count", migrated)
+	}
+
+	// Workstream L3a: if the niac-content deb/rpm is installed (see
+	// .goreleaser.yml) and walks/ is still empty, adopt its bundle as the
+	// starting library content. Local file only — never a network fetch.
+	// No-op if the package isn't installed or walks/ already has content.
+	bundlePath := content.PackagedBundlePath()
+	manifest, installed, installErr := content.InstallPackagedIfEmpty(lib, bundlePath)
+	switch {
+	case installErr != nil:
+		slog.Error("[API] Failed to install packaged content bundle",
+			"path", bundlePath, "error", installErr)
+	case installed:
+		slog.Info("[API] Installed packaged content bundle",
+			"path", bundlePath, "files", manifest.Files, "bytes", manifest.Bytes)
+	}
 }
 
 // initialTokenStore seeds the bearer-token store at construction time.
