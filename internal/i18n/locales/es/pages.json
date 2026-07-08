@@ -309,7 +309,10 @@
       "recentRunsTag": "Historial",
       "recentRunsDescription": "Ejecuciones de simulación pasadas registradas por el daemon.",
       "recentRunStats": "{{time}} · duración {{duration}} · RX {{rx}} · TX {{tx}}",
-      "noCapturedRuns": "Aún no hay ejecuciones capturadas."
+      "noCapturedRuns": "Aún no hay ejecuciones capturadas.",
+      "replayProgressLabel": "{{sent}} / {{total}} packets ({{percent}}%)",
+      "replayProgressBytes": "{{bytes}} enviados",
+      "replayProgressUnknown": "Enviando packets… (total desconocido)"
     }
   },
   "debug": {

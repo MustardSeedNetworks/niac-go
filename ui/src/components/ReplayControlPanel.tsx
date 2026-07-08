@@ -1,11 +1,63 @@
 import { type FC, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { fetchLibraryPcaps, fetchReplayStatus, startReplay, stopReplay } from '../api/client';
 import { useApiResource } from '../hooks/useApiResource';
 import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
 import { Tag } from '../ui/Tag';
 import { SmallText } from '../ui/Typography';
-import { getErrorMessage } from '../utils/format';
+import { formatBytes, getErrorMessage } from '../utils/format';
+
+const PERCENT_MAX = 100;
+
+/**
+ * Live packets/bytes-sent progress bar for an in-flight replay. Renders
+ * "unknown total" copy instead of a fake 0% bar when the backend hasn't
+ * reported a packet total yet (percentComplete omitted from the JSON).
+ */
+const ReplayProgress: FC<{
+  packetsSent: number;
+  bytesSent: number;
+  packetsTotal: number;
+  percentComplete?: number;
+}> = ({ packetsSent, bytesSent, packetsTotal, percentComplete }) => {
+  const { t } = useTranslation('pages');
+  const hasTotal = packetsTotal > 0 && percentComplete !== undefined;
+  const percent = hasTotal ? Math.min(PERCENT_MAX, Math.max(0, percentComplete)) : 0;
+
+  return (
+    <div className="mt-tight" data-testid="replay-progress">
+      <div
+        className="w-full h-2 bg-bg-elevated border border-border-default rounded-full overflow-hidden"
+        role="progressbar"
+        aria-valuenow={hasTotal ? percent : undefined}
+        aria-valuemin={0}
+        aria-valuemax={PERCENT_MAX}
+        aria-label={t('traffic.page.replayProgressLabel', {
+          sent: packetsSent,
+          total: packetsTotal,
+          percent: percent.toFixed(0),
+        })}
+      >
+        <div
+          className="h-full bg-status-info transition-[width] duration-300"
+          style={{ width: hasTotal ? `${percent}%` : '100%' }}
+        />
+      </div>
+      <SmallText className="text-text-muted">
+        {hasTotal
+          ? t('traffic.page.replayProgressLabel', {
+              sent: packetsSent,
+              total: packetsTotal,
+              percent: percent.toFixed(0),
+            })
+          : t('traffic.page.replayProgressUnknown')}
+        {' • '}
+        {t('traffic.page.replayProgressBytes', { bytes: formatBytes(bytesSent) })}
+      </SmallText>
+    </div>
+  );
+};
 
 export const ReplayControlPanel: FC = () => {
   // Hydrates from /api/v1/library/pcaps. The daemon's
@@ -90,6 +142,12 @@ export const ReplayControlPanel: FC = () => {
                   {replayStatus.loopMs > 0 && ` • Looping every ${replayStatus.loopMs}ms`}
                   {replayStatus.scale !== 1.0 && ` • Scale: ${replayStatus.scale}x`}
                 </SmallText>
+                <ReplayProgress
+                  packetsSent={replayStatus.packetsSent}
+                  bytesSent={replayStatus.bytesSent}
+                  packetsTotal={replayStatus.packetsTotal}
+                  percentComplete={replayStatus.percentComplete}
+                />
               </div>
               <Button onClick={handleStop} disabled={isSubmitting} variant="secondary">
                 Stop Replay
