@@ -424,6 +424,8 @@
       "noPayload": "No payload data available for this stream",
       "selectPacketForProtocol": "Select a packet to view protocol layers",
       "noProtocolLayers": "No protocol layers available",
+      "expandAll": "Expand all",
+      "collapseAll": "Collapse all",
       "protocolHeaders": "Protocol Headers",
       "selectPacketForDetails": "Select a packet to view details",
       "exportButton": "Export filtered (JSON)",
