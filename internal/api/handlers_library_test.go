@@ -17,14 +17,30 @@ import (
 // handlers can be exercised directly with httptest. Returns the root
 // so the test can plant fixture walks/pcaps before calling the
 // handler.
+//
+// walks/ is pre-seeded with a placeholder before Open so the embedded
+// starter walks bootstrap sees a non-empty dir and skips — tests here
+// plant their own walk fixtures and expect walks/ to start pristine.
 func newLibraryTestServer(t *testing.T) (*Server, string) {
 	t.Helper()
 	root := t.TempDir()
 	t.Setenv("NIAC_LIBRARY_ROOT", root)
 
+	walksDir := filepath.Join(root, "walks")
+	if err := os.MkdirAll(walksDir, 0o755); err != nil {
+		t.Fatalf("pre-create walks dir: %v", err)
+	}
+	placeholder := filepath.Join(walksDir, ".keep")
+	if err := os.WriteFile(placeholder, nil, 0o644); err != nil {
+		t.Fatalf("write walks placeholder: %v", err)
+	}
+
 	lib, err := library.Open(root)
 	if err != nil {
 		t.Fatalf("open library: %v", err)
+	}
+	if removeErr := os.Remove(placeholder); removeErr != nil {
+		t.Fatalf("remove walks placeholder: %v", removeErr)
 	}
 	return &Server{
 		logger:  slog.Default(),

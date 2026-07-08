@@ -16,6 +16,15 @@ import (
 //go:embed starter/*.yaml
 var starterPack embed.FS
 
+// starterWalks holds a small, curated set of SNMP walk files (one
+// representative device per vendor) bundled into the binary. On first
+// run they're copied into walks/ so replay has something to work with
+// before any content tarball is installed. Keep the set small — for
+// the full corpus users install the content bundle.
+//
+//go:embed starter/walks/*.walk
+var starterWalks embed.FS
+
 // starterPackEntries marks every starter file with Source==starter via
 // a sentinel filename suffix recognised by detectSource(); we keep the
 // upstream filenames identical to make user customization (overwrite a
@@ -57,6 +66,42 @@ func (l *Library) bootstrapStarterPack() error {
 	return nil
 }
 
+// bootstrapWalks copies the embedded starter walks into the walks/
+// subdir, but only if that directory is empty. A library that already
+// has user content is left strictly alone.
+func (l *Library) bootstrapWalks() error {
+	walksDir := l.SubDir(KindWalks)
+	empty, err := dirIsEmpty(walksDir)
+	if err != nil {
+		return fmt.Errorf("check walks dir: %w", err)
+	}
+	if !empty {
+		return nil
+	}
+
+	entries, err := starterWalks.ReadDir("starter/walks")
+	if err != nil {
+		return fmt.Errorf("read starter walks: %w", err)
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() || !isWalkFilename(entry.Name()) {
+			continue
+		}
+		src := filepath.Join("starter", "walks", entry.Name())
+		data, readErr := fs.ReadFile(starterWalks, src)
+		if readErr != nil {
+			return fmt.Errorf("read starter walk %s: %w", entry.Name(), readErr)
+		}
+		dst := filepath.Join(walksDir, entry.Name())
+		if writeErr := os.WriteFile(dst, data, libraryFileMode); writeErr != nil {
+			return fmt.Errorf("write starter walk %s: %w", dst, writeErr)
+		}
+	}
+
+	return nil
+}
+
 func dirIsEmpty(path string) (bool, error) {
 	// #nosec G304 -- caller passes Library.SubDir(kind) which is
 	// always rooted under the resolved Library.root we own.
@@ -77,4 +122,8 @@ func dirIsEmpty(path string) (bool, error) {
 func isYAMLFilename(name string) bool {
 	ext := filepath.Ext(name)
 	return ext == ".yaml" || ext == ".yml"
+}
+
+func isWalkFilename(name string) bool {
+	return filepath.Ext(name) == ".walk"
 }

@@ -9,8 +9,9 @@
 // the picker / browser sees comes from here. Content arrives via three
 // optional ingress paths:
 //
-//  1. Embedded starter pack — unpacked into networks/ on first run if
-//     the dir is empty, so the daemon works out of the box.
+//  1. Embedded starter packs — unpacked into networks/ and walks/ on
+//     first run if each dir is empty, so the daemon works out of the
+//     box.
 //  2. CLI: `niac content install` downloads a versioned tarball from
 //     the GitHub release and extracts it here (PR 2).
 //  3. UI upload: POST /api/v1/library/install accepts a tarball via
@@ -98,9 +99,10 @@ func DefaultRoot() string {
 }
 
 // Open resolves the library root, ensures the three subdirectories
-// exist, and unpacks the embedded starter pack into networks/ if that
-// directory is brand new. The returned Library is ready for List/Read
-// calls; callers MUST handle the returned error before using it.
+// exist, and unpacks the embedded starter packs into networks/ and
+// walks/ if those directories are brand new. The returned Library is
+// ready for List/Read calls; callers MUST handle the returned error
+// before using it.
 func Open(root string) (*Library, error) {
 	abs, err := filepath.Abs(root)
 	if err != nil {
@@ -115,6 +117,10 @@ func Open(root string) (*Library, error) {
 
 	if bootstrapErr := lib.bootstrapStarterPack(); bootstrapErr != nil {
 		return nil, fmt.Errorf("bootstrap starter pack: %w", bootstrapErr)
+	}
+
+	if bootstrapErr := lib.bootstrapWalks(); bootstrapErr != nil {
+		return nil, fmt.Errorf("bootstrap starter walks: %w", bootstrapErr)
 	}
 
 	return lib, nil
