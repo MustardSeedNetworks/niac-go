@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -141,12 +142,9 @@ func isSkippableLine(trimmedLine string) bool {
 
 // containsError checks if any issue in the slice has error severity.
 func containsError(issues []ValidationIssue) bool {
-	for _, issue := range issues {
-		if issue.Severity == "error" {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(issues, func(issue ValidationIssue) bool {
+		return issue.Severity == "error"
+	})
 }
 
 // validateWalkLine validates a single line and returns any issues found, each

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"slices"
 
 	"github.com/gopacket/gopacket"
 	"github.com/gopacket/gopacket/layers"
@@ -116,13 +117,9 @@ func (h *IPHandler) shouldProcessTTL(ip *layers.IPv4, devices []*config.Device) 
 		return true
 	}
 
-	for _, device := range devices {
-		if device.MapToIP != nil {
-			return false
-		}
-	}
-
-	return true
+	return !slices.ContainsFunc(devices, func(device *config.Device) bool {
+		return device.MapToIP != nil
+	})
 }
 
 // routeToProtocolHandler dispatches the packet to the appropriate L4 handler.

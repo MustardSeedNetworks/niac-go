@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -255,13 +256,10 @@ func isSynthesizedTopologyOID(oid string) bool {
 	}
 
 	trimmed := strings.TrimPrefix(oid, ".")
-	for _, prefix := range prefixes {
-		if trimmed == prefix || strings.HasPrefix(trimmed, prefix+".") {
-			return true
-		}
-	}
 
-	return false
+	return slices.ContainsFunc(prefixes, func(prefix string) bool {
+		return trimmed == prefix || strings.HasPrefix(trimmed, prefix+".")
+	})
 }
 
 // HandleGet processes an SNMP GET request.

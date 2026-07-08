@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"slices"
 
 	"github.com/gopacket/gopacket"
 	"github.com/gopacket/gopacket/layers"
@@ -280,13 +281,9 @@ func (h *TCPHandler) deviceHasIP(device *config.Device, targetIP any) bool {
 		return false
 	}
 
-	for _, deviceIP := range device.IPAddresses {
-		if deviceIP.Equal(ip) {
-			return true
-		}
-	}
-
-	return false
+	return slices.ContainsFunc(device.IPAddresses, func(deviceIP net.IP) bool {
+		return deviceIP.Equal(ip)
+	})
 }
 
 // lookupDestinationMAC looks up the MAC address for a destination IP, scoped

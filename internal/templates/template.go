@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"io"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -214,12 +215,10 @@ func Get(name string) (*Template, error) {
 func Exists(name string) bool {
 	name = strings.TrimSuffix(name, ".yaml")
 	reg, _ := loadRegistry()
-	for _, t := range reg {
-		if t.Name == name {
-			return true
-		}
-	}
-	return false
+
+	return slices.ContainsFunc(reg, func(t TemplateMetadata) bool {
+		return t.Name == name
+	})
 }
 
 // loadTemplate loads template content from embedded filesystem.

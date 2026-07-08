@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"slices"
 	"time"
 
 	"github.com/gopacket/gopacket"
@@ -411,14 +412,10 @@ func reflectorForIP(devices []*config.Device, ip net.IP) *config.Device {
 // reflectorSignatureMatch reports whether payload carries a reflector signature
 // at reflectorSigOffset.
 func reflectorSignatureMatch(payload []byte) bool {
-	for _, sig := range []string{reflectorSigData, reflectorSigProbe} {
-		if len(payload) >= reflectorSigOffset+len(sig) &&
-			string(payload[reflectorSigOffset:reflectorSigOffset+len(sig)]) == sig {
-			return true
-		}
-	}
-
-	return false
+	return slices.ContainsFunc([]string{reflectorSigData, reflectorSigProbe}, func(sig string) bool {
+		return len(payload) >= reflectorSigOffset+len(sig) &&
+			string(payload[reflectorSigOffset:reflectorSigOffset+len(sig)]) == sig
+	})
 }
 
 // wiggleTOS toggles the IP-precedence bit (or the bottom two DSCP bits when

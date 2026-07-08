@@ -52,12 +52,9 @@ func (s *Server) validateDeviceCreatePreconditions(
 
 // deviceExists checks if a device with the given hostname exists.
 func deviceExists(devices []config.Device, hostname string) bool {
-	for _, dev := range devices {
-		if dev.Name == hostname {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(devices, func(dev config.Device) bool {
+		return dev.Name == hostname
+	})
 }
 
 func deepCopyConfig(cfg *config.Config) *config.Config {

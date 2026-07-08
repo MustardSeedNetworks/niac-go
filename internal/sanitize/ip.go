@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -104,12 +105,10 @@ func isSpecialIP(ip string) bool {
 		"127.0.0.1", "127.0.0.0",
 		"224.0.0.", "239.255.255.250", // Multicast
 	}
-	for _, special := range specials {
-		if strings.HasPrefix(ip, special) || ip == special {
-			return true
-		}
-	}
-	return false
+
+	return slices.ContainsFunc(specials, func(special string) bool {
+		return strings.HasPrefix(ip, special) || ip == special
+	})
 }
 
 // looksLikeIPOctet reports whether s is a valid single IPv4 octet (0-255,
