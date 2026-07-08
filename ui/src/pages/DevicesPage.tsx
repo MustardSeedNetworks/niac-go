@@ -1,5 +1,5 @@
 import { FileCog, Server } from 'lucide-react';
-import { type ChangeEvent, type FC, useEffect, useState } from 'react';
+import { type FC, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import {
@@ -11,6 +11,7 @@ import {
 } from '../api/client';
 import { isApiError } from '../api/errors';
 import type { DeviceSummary } from '../api/types';
+import { YamlEditor } from '../components/config/YamlEditor';
 import { DeviceTable } from '../components/DeviceTable';
 import { POLL_INTERVALS } from '../constants/polling';
 import { iconSizes } from '../constants/sizes';
@@ -90,6 +91,9 @@ const ConfigEditorCard: FC = () => {
     tone: 'success' | 'error';
     message: string;
   } | null>(null);
+  // Line reported by a structured YAML parse error (see internal/api
+  // ErrorDetail.line), so the editor can highlight and scroll to it.
+  const [errorLine, setErrorLine] = useState<number | null>(null);
 
   useEffect(() => {
     if (data && !dirty) {
@@ -97,10 +101,11 @@ const ConfigEditorCard: FC = () => {
     }
   }, [data, dirty]);
 
-  const handleChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
-    setValue(event.target.value);
+  const handleChange = (newValue: string) => {
+    setValue(newValue);
     setDirty(true);
     setStatus(null);
+    setErrorLine(null);
   };
 
   const handleReset = () => {
@@ -108,6 +113,7 @@ const ConfigEditorCard: FC = () => {
       setValue(data.content);
       setDirty(false);
       setStatus(null);
+      setErrorLine(null);
     }
   };
 
@@ -117,13 +123,21 @@ const ConfigEditorCard: FC = () => {
     }
     setSaving(true);
     setStatus(null);
+    setErrorLine(null);
     try {
       const updated = await updateConfig({ content: value });
       setValue(updated.content);
       setDirty(false);
       setStatus({ tone: 'success', message: t('devices.configSaved') });
     } catch (err) {
-      setStatus({ tone: 'error', message: getErrorMessage(err) });
+      const detail = isApiError(err) ? err.details[0] : undefined;
+      const line = detail?.line ?? null;
+      const message =
+        line !== null && detail
+          ? t('devices.configParseErrorLine', { line, message: detail.issue })
+          : getErrorMessage(err);
+      setErrorLine(line);
+      setStatus({ tone: 'error', message });
     } finally {
       setSaving(false);
     }
@@ -177,12 +191,13 @@ const ConfigEditorCard: FC = () => {
           <CardRow label={tCommon('labels.path')} value={cfg.path} mono />
           <CardRow label={tCommon('labels.updatedAt')} value={formatTime(cfg.modifiedAt)} />
           <CardRow label={tCommon('labels.size')} value={formatBytes(cfg.sizeBytes)} />
-          <textarea
-            className="mt-heading h-72 w-full rounded-xl border border-surface-border bg-bg-base/70 pad-sm font-mono text-sm text-text-primary shadow-inner focus:border-brand-accent focus:outline-none"
+          <YamlEditor
+            className="mt-heading"
+            height="18rem"
             value={value}
             onChange={handleChange}
-            spellCheck={false}
-            disabled={loading || saving}
+            readOnly={loading || saving}
+            errorLine={errorLine}
           />
           {status && (
             <SmallText

@@ -249,7 +249,11 @@ func (s *Server) validateConfigContent(
 	newCfg, err := config.LoadYAMLBytes([]byte(content))
 	if err != nil {
 		s.logger.ErrorContext(r.Context(), "[API] Config validation failed", "error", err)
-		writeError(w, r, http.StatusBadRequest, "config_invalid", "Configuration validation failed", nil)
+
+		line, msg := parseYAMLError(err)
+		writeError(w, r, http.StatusBadRequest, "config_invalid", "Configuration validation failed",
+			[]ErrorDetail{{Issue: msg, Line: line}})
+
 		return nil, false
 	}
 	return newCfg, true

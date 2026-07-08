@@ -130,8 +130,11 @@ func (s *Server) createAndSaveDevice(
 	newDevice, err := createDeviceFromRequest(req)
 	if err != nil {
 		s.logger.ErrorContext(r.Context(), "[API] Device creation failed", "error", err, "hostname", req.Hostname)
+
+		line, msg := parseYAMLError(err)
 		writeError(w, r, http.StatusBadRequest, "device_creation_failed",
-			"Failed to create device from request", nil)
+			"Failed to create device from request", []ErrorDetail{{Issue: msg, Line: line}})
+
 		return nil, err
 	}
 

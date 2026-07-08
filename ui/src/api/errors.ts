@@ -12,6 +12,10 @@ export interface ApiErrorDetail {
   readonly field?: string;
   readonly issue: string;
   readonly value?: string;
+  /** 1-based source line, when known (e.g. YAML parse errors). */
+  readonly line?: number;
+  /** 1-based source column, when known. */
+  readonly column?: number;
 }
 
 export class ApiError extends Error {
