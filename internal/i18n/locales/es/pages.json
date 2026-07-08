@@ -254,7 +254,9 @@
       "typesLabel": "Tipos:",
       "typeFilterHideTitle": "Ocultar los dispositivos de tipo {{type}} del gráfico",
       "typeFilterShowTitle": "Mostrar solo los dispositivos de tipo {{type}} (alterna un filtro)",
-      "clearTypeFiltersTitle": "Eliminar todos los filtros de tipo de dispositivo y mostrar todos los dispositivos de la topología"
+      "clearTypeFiltersTitle": "Eliminar todos los filtros de tipo de dispositivo y mostrar todos los dispositivos de la topología",
+      "layoutPersistenceNote": "Guardado en este navegador",
+      "layoutPersistenceHint": "Las posiciones de los nodos que arrastra se guardan solo en este navegador — no se sincronizan con ningún servidor ni otro dispositivo."
     },
     "deviceDetails": {
       "closeTitle": "Cerrar el panel de detalles del dispositivo y volver a la vista de topología",
