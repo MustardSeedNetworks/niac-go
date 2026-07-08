@@ -87,7 +87,6 @@ export interface SimulationSettings {
   selectedInterface: string;
   configSource: ConfigSource;
   configName: string;
-  configPath?: string;
 }
 
 const DEFAULT_DEBUG_CONSOLE_HEIGHT = 300;
@@ -96,7 +95,6 @@ const DEFAULT_SIMULATION_SETTINGS: SimulationSettings = {
   selectedInterface: '',
   configSource: 'template',
   configName: '',
-  configPath: undefined,
 };
 
 export const useUIStore = create<UIStoreState>()(

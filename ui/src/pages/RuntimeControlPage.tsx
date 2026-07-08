@@ -1,13 +1,9 @@
 import { Activity, BellRing, Network, PlugZap } from 'lucide-react';
 import { type FC, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  fetchUsableInterfaces,
-  fetchUserConfigContent,
-  startSimulation,
-  stopSimulation,
-} from '../api/client';
-import type { NetworkInterface, Template, UserConfig } from '../api/types';
+import { fetchUsableInterfaces, startSimulation, stopSimulation } from '../api/client';
+import { fetchLibraryNetworkContent } from '../api/library-client';
+import type { LibraryNetwork, NetworkInterface, Template } from '../api/types';
 import { ConfigPicker } from '../components/simulation/ConfigPicker';
 import { iconSizes } from '../constants/sizes';
 import { useErrorToast } from '../hooks/useErrorToast';
@@ -83,7 +79,6 @@ export const RuntimeControlPage: FC = () => {
       setSimulationSettings({
         configSource: 'template',
         configName: template.name,
-        configPath: undefined,
       });
       setQuickUploadFile(null);
     },
@@ -91,11 +86,10 @@ export const RuntimeControlPage: FC = () => {
   );
 
   const handleSelectUserConfig = useCallback(
-    (config: UserConfig) => {
+    (config: LibraryNetwork) => {
       setSimulationSettings({
         configSource: 'userConfig',
         configName: config.name,
-        configPath: config.path,
       });
       setQuickUploadFile(null);
     },
@@ -111,7 +105,6 @@ export const RuntimeControlPage: FC = () => {
         setSimulationSettings({
           configSource: 'upload',
           configName: '',
-          configPath: undefined,
         });
         setSuccessMessage(null);
       }
@@ -139,7 +132,6 @@ export const RuntimeControlPage: FC = () => {
 
     try {
       let configData: string | undefined;
-      let configPath: string | undefined;
       let templateName: string | undefined;
 
       // Handle quick upload file
@@ -156,20 +148,17 @@ export const RuntimeControlPage: FC = () => {
       else if (simulationSettings.configSource === 'template') {
         templateName = simulationSettings.configName;
       }
-      // Handle user config - use the stored path
+      // Handle a saved library network — the library confines entries
+      // behind an os.Root keyed by name (internal/library/list.go), so
+      // there's no filesystem path to hand the daemon; fetch the content
+      // and send it inline instead.
       else if (simulationSettings.configSource === 'userConfig') {
-        if (simulationSettings.configPath) {
-          configPath = simulationSettings.configPath;
-        } else {
-          // Fetch user config content and send as configData
-          const userConfigContent = await fetchUserConfigContent(simulationSettings.configName);
-          configData = userConfigContent.content;
-        }
+        const userConfigContent = await fetchLibraryNetworkContent(simulationSettings.configName);
+        configData = userConfigContent.content;
       }
 
       await startSimulation({
         interface: simulationSettings.selectedInterface,
-        configPath: configPath,
         configData: configData,
         templateName: templateName,
       });
@@ -320,7 +309,6 @@ export const RuntimeControlPage: FC = () => {
               selection={{
                 source: quickUploadFile ? 'upload' : (simulationSettings.configSource ?? null),
                 name: quickUploadFile ? quickUploadFile.name : simulationSettings.configName,
-                path: simulationSettings.configPath,
               }}
               onSelectTemplate={handleSelectTemplate}
               onSelectUserConfig={handleSelectUserConfig}

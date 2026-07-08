@@ -14,10 +14,12 @@ const fetchLibraryPcaps = vi.fn();
 const fetchReplayStatus = vi.fn<() => Promise<ReplayState>>();
 
 vi.mock('../api/client', () => ({
-  fetchLibraryPcaps: () => fetchLibraryPcaps(),
   fetchReplayStatus: () => fetchReplayStatus(),
   startReplay: vi.fn(),
   stopReplay: vi.fn(),
+}));
+vi.mock('../api/library-client', () => ({
+  fetchLibraryPcaps: () => fetchLibraryPcaps(),
 }));
 
 const runningWithProgress: ReplayState = {

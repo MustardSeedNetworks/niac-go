@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { sanitizeWalk, sanitizeWalksBatch } from '../api/client';
+import { sanitizeWalk, sanitizeWalksBatch } from '../api/library-client';
 import { useUIStore } from '../stores/ui-store';
 import { useErrorToast } from './useErrorToast';
 

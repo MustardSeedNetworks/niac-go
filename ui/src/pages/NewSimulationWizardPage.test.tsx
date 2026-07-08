@@ -12,7 +12,7 @@ import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { DeviceListResponse, SimulationStatus, Template, UserConfig } from '../api/types';
+import type { DeviceListResponse, LibraryNetwork, SimulationStatus, Template } from '../api/types';
 import { AppProvider } from '../contexts/AppContext';
 import '../i18n';
 import { NewSimulationWizardPage } from './NewSimulationWizardPage';
@@ -39,11 +39,9 @@ const localStorageMock = (() => {
 Object.defineProperty(globalThis, 'localStorage', { value: localStorageMock, writable: true });
 
 const startSimulation = vi.fn<(payload: unknown) => Promise<SimulationStatus>>();
-const uploadUserConfig =
-  vi.fn<(payload: unknown) => Promise<{ success: boolean; message: string; path: string }>>();
 const fetchUsableInterfaces = vi.fn();
 const fetchTemplates = vi.fn<() => Promise<Template[]>>();
-const fetchUserConfigs = vi.fn<() => Promise<{ configs: UserConfig[] }>>();
+const fetchLibraryNetworks = vi.fn<() => Promise<LibraryNetwork[]>>();
 const fetchConfigDevices = vi.fn<() => Promise<DeviceListResponse>>();
 
 vi.mock('../api/client', async (importOriginal) => {
@@ -64,12 +62,14 @@ vi.mock('../api/client', async (importOriginal) => {
     // Wizard-specific
     fetchUsableInterfaces: () => fetchUsableInterfaces(),
     fetchTemplates: () => fetchTemplates(),
-    fetchUserConfigs: () => fetchUserConfigs(),
     fetchConfigDevices: () => fetchConfigDevices(),
-    uploadUserConfig: (payload: unknown) => uploadUserConfig(payload),
     startSimulation: (payload: unknown) => startSimulation(payload),
   };
 });
+
+vi.mock('../api/library-client', () => ({
+  fetchLibraryNetworks: () => fetchLibraryNetworks(),
+}));
 
 const wrapper = ({ children }: { children: ReactNode }) => (
   <MemoryRouter>
@@ -87,18 +87,13 @@ beforeEach(() => {
     interfaces: [{ name: 'lo0', addresses: ['127.0.0.1'], isUp: true, isLoopback: true }],
   });
   fetchTemplates.mockResolvedValue([]);
-  fetchUserConfigs.mockResolvedValue({ configs: [] });
+  fetchLibraryNetworks.mockResolvedValue([]);
   fetchConfigDevices.mockResolvedValue({ devices: [], total: 0 });
   startSimulation.mockResolvedValue({
     running: true,
     interface: 'lo0',
     deviceCount: 0,
     uptimeSeconds: 0,
-  });
-  uploadUserConfig.mockResolvedValue({
-    success: true,
-    message: 'created',
-    path: '/tmp/new-simulation.yaml',
   });
 });
 
@@ -127,14 +122,11 @@ describe('NewSimulationWizardPage — step navigation', () => {
     await user.click(screen.getByTestId('wizard-start-empty'));
     await user.click(screen.getByTestId('wizard-next-button'));
 
-    await waitFor(() => expect(uploadUserConfig).toHaveBeenCalledTimes(1));
-    expect(uploadUserConfig).toHaveBeenCalledWith(
-      expect.objectContaining({ content: 'devices: []\n' }),
-    );
-
+    // The blank skeleton is sent inline; the daemon materialises it to its
+    // own _running.inline.yaml, so there's no client-side configPath.
     await waitFor(() => expect(startSimulation).toHaveBeenCalledTimes(1));
     expect(startSimulation).toHaveBeenCalledWith(
-      expect.objectContaining({ interface: 'lo0', configPath: '/tmp/new-simulation.yaml' }),
+      expect.objectContaining({ interface: 'lo0', configData: 'devices: []\n' }),
     );
 
     await waitFor(() =>

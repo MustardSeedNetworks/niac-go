@@ -21,13 +21,15 @@ vi.mock('../api/client', () => ({
   fetchHistory: () => fetchHistory(),
   fetchDevices: () => fetchDevices(),
   fetchErrorTypes: () => fetchErrorTypes(),
-  fetchLibraryPcaps: () => fetchLibraryPcaps(),
   fetchReplayStatus: () => fetchReplayStatus(),
   injectError: vi.fn(),
   clearError: vi.fn(),
   clearAllErrors: vi.fn(),
   startReplay: vi.fn(),
   stopReplay: vi.fn(),
+}));
+vi.mock('../api/library-client', () => ({
+  fetchLibraryPcaps: () => fetchLibraryPcaps(),
 }));
 
 describe('TrafficInjectionPage', () => {

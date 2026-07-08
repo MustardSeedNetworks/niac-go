@@ -356,6 +356,17 @@ func NewServer(cfg ServerConfig) *Server {
 			"root", libraryRoot, "error", err)
 	} else {
 		slog.Info("[API] Content library opened", "root", lib.Root())
+		// #897 L4: fold the legacy $HOME/.niac/configs (and friends) user
+		// configs into the library's networks/ store, once, non-destructively,
+		// so the unified /api/v1/library/networks surface is the only config
+		// picker the UI needs after upgrading from the removed
+		// /api/v1/configs endpoint.
+		if migrated, migrateErr := migrateLegacyUserConfigs(lib); migrateErr != nil {
+			slog.Error("[API] Failed to migrate legacy user configs into the library",
+				"error", migrateErr)
+		} else if migrated > 0 {
+			slog.Info("[API] Migrated legacy user configs into the library", "count", migrated)
+		}
 	}
 
 	srv := &Server{

@@ -16,8 +16,9 @@ import { FileUp, FolderOpen, LayoutTemplate, Network, PlugZap } from 'lucide-rea
 import type { ReactElement } from 'react';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { fetchTemplates, fetchUsableInterfaces, fetchUserConfigs } from '../../api/client';
-import type { NetworkInterface, Template, UserConfig } from '../../api/types';
+import { fetchTemplates, fetchUsableInterfaces } from '../../api/client';
+import { fetchLibraryNetworks } from '../../api/library-client';
+import type { LibraryNetwork, NetworkInterface, Template } from '../../api/types';
 import { type ConfigSource, useUIStore } from '../../stores/ui-store';
 import { cn } from '../../styles/theme';
 
@@ -58,7 +59,7 @@ export function SimulationSection(): ReactElement {
   const { simulationSettings, setSimulationSettings } = useUIStore();
   const [interfaces, setInterfaces] = useState<NetworkInterface[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
-  const [userConfigs, setUserConfigs] = useState<UserConfig[]>([]);
+  const [userConfigs, setUserConfigs] = useState<LibraryNetwork[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<ConfigTab>(() => {
     // Set initial tab based on current config source
@@ -82,11 +83,11 @@ export function SimulationSection(): ReactElement {
         const [interfacesResp, templatesResp, configsResp] = await Promise.all([
           fetchUsableInterfaces(),
           fetchTemplates(),
-          fetchUserConfigs(),
+          fetchLibraryNetworks(),
         ]);
         setInterfaces(interfacesResp.interfaces);
         setTemplates(templatesResp);
-        setUserConfigs(configsResp.configs);
+        setUserConfigs(configsResp);
       } catch (err) {
         console.error('Failed to load simulation settings data:', err);
       } finally {
@@ -120,18 +121,16 @@ export function SimulationSection(): ReactElement {
       setSimulationSettings({
         configSource: 'template',
         configName: template.name,
-        configPath: undefined,
       });
     },
     [setSimulationSettings],
   );
 
   const handleUserConfigSelect = useCallback(
-    (config: UserConfig) => {
+    (config: LibraryNetwork) => {
       setSimulationSettings({
         configSource: 'userConfig',
         configName: config.name,
-        configPath: config.path,
       });
     },
     [setSimulationSettings],
@@ -317,9 +316,9 @@ function TemplateList({ templates, selectedName, onSelect }: TemplateListProps):
 }
 
 interface UserConfigListProps {
-  configs: UserConfig[];
+  configs: LibraryNetwork[];
   selectedName: string;
-  onSelect: (config: UserConfig) => void;
+  onSelect: (config: LibraryNetwork) => void;
 }
 
 function UserConfigList({ configs, selectedName, onSelect }: UserConfigListProps): ReactElement {
@@ -390,7 +389,6 @@ function UploadSection(): ReactElement {
       setSimulationSettings({
         configSource: 'upload',
         configName: file.name.replace(/\.(yaml|yml)$/i, ''),
-        configPath: undefined,
       });
     },
     [setSimulationSettings, t],

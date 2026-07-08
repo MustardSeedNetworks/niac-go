@@ -34,8 +34,10 @@ vi.mock('../../api/client', () => ({
   updateDevice: vi.fn(),
   deleteDevice: vi.fn(),
   fetchConfigDevice: () => Promise.resolve({ device: null }),
-  fetchLibraryWalks: () => Promise.resolve([]),
   fetchDeviceEditorSchema: () => Promise.resolve({ visibleSections: [] }),
+}));
+vi.mock('../../api/library-client', () => ({
+  fetchLibraryWalks: () => Promise.resolve([]),
 }));
 
 const wrapper = ({ children }: { children: React.ReactNode }): React.ReactElement =>

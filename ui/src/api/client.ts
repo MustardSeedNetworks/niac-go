@@ -38,10 +38,6 @@ import type {
   TemplateContent,
   TopologyGraph,
   UpdateDebugLevelRequest,
-  UploadUserConfigRequest,
-  UploadUserConfigResponse,
-  UserConfigContent,
-  UserConfigsResponse,
   UseTemplateRequest,
   UseTemplateResponse,
   VersionInfo,
@@ -158,69 +154,10 @@ export const exportTopology = (format: 'dot' | 'graphml') =>
   requestText(`/api/v1/topology/export?format=${format}`);
 export const fetchErrorTypes = () => deduplicatedGet<ErrorInjectionInfo>('/api/v1/errors');
 
-// Library file listings. Backed by GET /api/v1/library/{walks,pcaps},
-// which return [{name, sizeBytes, modifiedAt, source}]. The picker
-// integrations on the device editor (SNMP walks) and Packets / Traffic
-// pages (PCAPs) consume these to surface library content without
-// hitting the older /api/v1/files routes.
-export interface LibraryFileEntry {
-  name: string;
-  sizeBytes: number;
-  modifiedAt: string;
-  source: 'starter' | 'bundle' | 'user';
-  edited: boolean;
-}
-export const fetchLibraryWalks = () => deduplicatedGet<LibraryFileEntry[]>('/api/v1/library/walks');
-export const fetchLibraryPcaps = () => deduplicatedGet<LibraryFileEntry[]>('/api/v1/library/pcaps');
-
-/**
- * Revert a library walk to its preserved pristine original, discarding
- * any edits made since the walk was first written. Backed by POST
- * /api/v1/library/walks/revert; the daemon 404s if the walk has no
- * preserved original to revert to (see library.PreserveOriginal
- * server-side for the preserve-once contract).
- */
-export const revertWalk = (name: string) =>
-  requestJson<LibraryFileEntry>('/api/v1/library/walks/revert', { name }, { method: 'POST' });
-
-/**
- * Per-walk outcome reported by sanitizeWalk / sanitizeWalksBatch. Mirrors
- * the daemon's sanitizeWalkResult shape.
- */
-export interface SanitizeWalkResult {
-  name: string;
-  success: boolean;
-  error?: string;
-  ipsTransformed?: number;
-  hostnamesTransformed?: number;
-}
-
-export interface SanitizeWalkBatchResponse {
-  results: SanitizeWalkResult[];
-  sanitized: number;
-  failed: number;
-}
-
-/**
- * Sanitize a library walk in place, replacing IPs/hostnames with
- * deterministic placeholders. Preserves the walk's pristine original
- * (idempotent — a no-op if already preserved) so it stays recoverable via
- * revertWalk. Backed by POST /api/v1/library/walks/sanitize.
- */
-export const sanitizeWalk = (name: string) =>
-  requestJson<LibraryFileEntry>('/api/v1/library/walks/sanitize', { name }, { method: 'POST' });
-
-/**
- * Sanitize multiple library walks in one request. Backed by POST
- * /api/v1/library/walks/sanitize-batch; per-name failures don't fail the
- * whole request — see SanitizeWalkBatchResponse.results.
- */
-export const sanitizeWalksBatch = (names: string[]) =>
-  requestJson<SanitizeWalkBatchResponse>(
-    '/api/v1/library/walks/sanitize-batch',
-    { names },
-    { method: 'POST' },
-  );
+// Content library endpoint wrappers (walks/pcaps listing, revert/sanitize,
+// and the unified networks store — #548, #897 L4) live in
+// library-client.ts, imported directly by call sites (Biome's
+// noBarrelFile/noReExportAll bans re-exporting them from here).
 
 /**
  * Baseline walk synthesis (#546 p2). GET the (vendor, model) catalog to
@@ -409,20 +346,3 @@ export const cloneDevice = (hostname: string, payload: CloneDeviceRequest) =>
   );
 
 export const fetchConfigSchema = () => deduplicatedGet<ConfigSchema>('/api/v1/config/schema');
-
-// =====================================================================
-// User configs (saved YAML files)
-// =====================================================================
-
-export const fetchUserConfigs = () => deduplicatedGet<UserConfigsResponse>('/api/v1/configs');
-
-export const fetchUserConfigContent = (name: string) =>
-  request<UserConfigContent>(`/api/v1/configs/${encodeURIComponent(name)}`);
-
-export const uploadUserConfig = (payload: UploadUserConfigRequest) =>
-  requestJson<UploadUserConfigResponse>('/api/v1/configs', payload, { method: 'POST' });
-
-export const deleteUserConfig = (name: string) =>
-  request<{ success: boolean; message: string }>(`/api/v1/configs/${encodeURIComponent(name)}`, {
-    method: 'DELETE',
-  });

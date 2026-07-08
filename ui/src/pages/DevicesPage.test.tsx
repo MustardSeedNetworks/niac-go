@@ -23,9 +23,11 @@ vi.mock('../api/client', () => ({
       modifiedAt: '2026-01-01T00:00:00Z',
       sizeBytes: 12,
     }),
+  updateConfig: vi.fn(),
+}));
+vi.mock('../api/library-client', () => ({
   fetchLibraryWalks: () =>
     Promise.resolve([{ name: 'cisco/cisco-c3900-01.walk', source: 'bundled' }]),
-  updateConfig: vi.fn(),
 }));
 
 describe('DevicesPage', () => {

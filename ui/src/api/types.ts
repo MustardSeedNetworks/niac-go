@@ -132,15 +132,14 @@ export type {
 
 // Template Types
 export type {
+  LibraryNetwork,
+  LibraryNetworkContent,
   Template,
   TemplateContent,
+  UploadLibraryNetworkRequest,
+  UploadLibraryNetworkResponse,
   UploadTemplateRequest,
   UploadTemplateResponse,
-  UploadUserConfigRequest,
-  UploadUserConfigResponse,
-  UserConfig,
-  UserConfigContent,
-  UserConfigsResponse,
   UseTemplateRequest,
   UseTemplateResponse,
 } from './template-types';

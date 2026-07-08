@@ -260,6 +260,12 @@ export async function request<T>(
         throw parseApiError(text, response.status, response.statusText);
       }
 
+      // 204 No Content (e.g. DELETE /api/v1/library/networks/{name}) has no
+      // body — calling response.json() on it throws a SyntaxError.
+      if (response.status === 204) {
+        return undefined as T;
+      }
+
       const data = (await response.json()) as T;
       return toCamelCase(data);
     } catch (err) {

@@ -8,7 +8,7 @@
  */
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { LibraryFileEntry } from '../api/client';
+import type { LibraryFileEntry } from '../api/library-client';
 import type { WalkAnalysis } from '../api/types';
 import '../i18n'; // initialise i18next before the page renders (uses t('walkAnalyzer.*'))
 import { WalkAnalyzerPage } from './WalkAnalyzerPage';
@@ -17,8 +17,10 @@ const fetchLibraryWalks = vi.fn();
 const analyzeWalk = vi.fn();
 
 vi.mock('../api/client', () => ({
-  fetchLibraryWalks: () => fetchLibraryWalks(),
   analyzeWalk: (filename: string) => analyzeWalk(filename),
+}));
+vi.mock('../api/library-client', () => ({
+  fetchLibraryWalks: () => fetchLibraryWalks(),
 }));
 
 const walkEntry: LibraryFileEntry = {

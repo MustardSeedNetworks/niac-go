@@ -8,10 +8,9 @@ import {
   deleteDevice,
   fetchConfigDevice,
   fetchDeviceEditorSchema,
-  fetchLibraryWalks,
-  type LibraryFileEntry,
   updateDevice,
 } from '../../api/client';
+import { fetchLibraryWalks, type LibraryFileEntry } from '../../api/library-client';
 import type { Device } from '../../api/types';
 import { useApiResource } from '../../hooks/useApiResource';
 import { DeviceFormSchema } from '../../schemas/forms';

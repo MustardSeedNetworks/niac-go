@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/api/auth"
+	"github.com/MustardSeedNetworks/niac-go/internal/library"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/api/csrf"
 
@@ -609,23 +610,28 @@ func generateTestToken() string {
 	return base64.URLEncoding.EncodeToString(b)
 }
 
-// TestCSRFWiring_TemplatesAndConfigs is the #740 regression test: it
-// drives requests through the real mux (registerAPIRoutes) to prove the
-// templates + configs mutating endpoints actually have csrfProtect in
-// their middleware chain. A POST without the X-Csrf-Token header must be
-// rejected with 403 — if someone removes csrfProtect from routes.go,
-// this fails.
-func TestCSRFWiring_TemplatesAndConfigs(t *testing.T) {
-	t.Setenv("NIAC_CONFIGS_DIR", t.TempDir())
+// TestCSRFWiring_TemplatesAndLibraryNetworks is the #740 regression test
+// (extended for #897 L4's library-networks unification): it drives
+// requests through the real mux (registerAPIRoutes) to prove the
+// templates + library-networks mutating endpoints actually have
+// csrfProtect in their middleware chain. A POST without the
+// X-Csrf-Token header must be rejected with 403 — if someone removes
+// csrfProtect from routes.go, this fails.
+func TestCSRFWiring_TemplatesAndLibraryNetworks(t *testing.T) {
 	server, _, token := newTestServerWithAuth(t)
-	// The templates/configs routes chain through writeRateLimit, whose
+	lib, err := library.Open(t.TempDir())
+	if err != nil {
+		t.Fatalf("open library: %v", err)
+	}
+	server.library = lib
+	// The templates/library routes chain through writeRateLimit, whose
 	// limiter newTestServerWithAuth doesn't initialize — set it so the
 	// full mux chain doesn't nil-panic before reaching csrfProtect.
 	server.writeLimiter = ratelimit.NewRateLimiter(WriteRateLimit, WriteBurst)
 	mux := http.NewServeMux()
 	server.registerAPIRoutes(mux)
 
-	for _, path := range []string{"/api/v1/templates", "/api/v1/configs"} {
+	for _, path := range []string{"/api/v1/templates", "/api/v1/library/networks"} {
 		t.Run("POST "+path+" without CSRF -> 403", func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, path,
 				bytes.NewReader([]byte(`{"name":"x","content":"y"}`)))
