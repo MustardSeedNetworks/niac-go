@@ -5,6 +5,13 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.94.3](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.2...v0.94.3) (2026-07-08)
+
+
+### Bug Fixes
+
+* **release:** gitignore corpus checkout + writable daemon cert dir ([#974](https://github.com/MustardSeedNetworks/niac-go/issues/974)) ([1cf0280](https://github.com/MustardSeedNetworks/niac-go/commit/1cf02802c4906dc84f67b46dad7b3f6c50c174c4))
+
 ## [0.94.2](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.1...v0.94.2) (2026-07-08)
 
 
