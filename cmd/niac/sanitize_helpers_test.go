@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/MustardSeedNetworks/niac-go/internal/sanitize"
 )
 
 // TestValidateFilePath tests file path validation.
@@ -205,98 +207,6 @@ func TestValidateBatchPaths(t *testing.T) {
 	})
 }
 
-// TestGetInitialMappingCounts tests mapping count retrieval.
-func TestGetInitialMappingCounts(t *testing.T) {
-	mapping := newSanitizationMapping()
-	mapping.IPMappings["10.0.0.1"] = "10.0.0.2"
-	mapping.IPMappings["10.0.0.3"] = "10.0.0.4"
-	mapping.Hostnames["host1"] = "niac-core-sw-01"
-
-	ips, hosts := getInitialMappingCounts(mapping)
-
-	if ips != 2 {
-		t.Errorf("Expected 2 IP mappings, got %d", ips)
-	}
-	if hosts != 1 {
-		t.Errorf("Expected 1 hostname mapping, got %d", hosts)
-	}
-}
-
-// TestUpdateMappingStatistics tests statistics update.
-func TestUpdateMappingStatistics(t *testing.T) {
-	mapping := newSanitizationMapping()
-	mapping.IPMappings["a"] = "b"
-	mapping.IPMappings["c"] = "d"
-	mapping.Hostnames["h1"] = "h2"
-
-	updateMappingStatistics(mapping, 0, 0)
-
-	if mapping.Statistics.IPsTransformed != 2 {
-		t.Errorf("Expected 2 IPs transformed, got %d", mapping.Statistics.IPsTransformed)
-	}
-	if mapping.Statistics.HostnamesTransformed != 1 {
-		t.Errorf("Expected 1 hostname transformed, got %d", mapping.Statistics.HostnamesTransformed)
-	}
-}
-
-// TestSanitizeLineCommunity tests community string sanitization.
-func TestSanitizeLineCommunity(t *testing.T) {
-	mapping := newSanitizationMapping()
-
-	line := `SNMPv2-MIB::snmpCommunity.1 = STRING: secretCommunity`
-	result := sanitizeLine(line, mapping, "niac-go.com", "DC-WEST", "netadmin@niac-go.com", "public")
-
-	if !strings.Contains(result, "public") {
-		t.Errorf("Expected community to be replaced with 'public', got: %s", result)
-	}
-	if strings.Contains(result, "secretCommunity") {
-		t.Error("Original community string should be replaced")
-	}
-}
-
-// TestSanitizeLineSpecialIP tests that special IPs are not transformed.
-func TestSanitizeLineSpecialIP(t *testing.T) {
-	mapping := newSanitizationMapping()
-
-	line := `.1.3.6.1.2.1.4.20.1.1.127.0.0.1 = IpAddress: 127.0.0.1`
-	result := sanitizeLine(line, mapping, "niac-go.com", "DC-WEST", "netadmin@niac-go.com", "public")
-
-	if !strings.Contains(result, "127.0.0.1") {
-		t.Error("Localhost IP should not be transformed")
-	}
-}
-
-// TestSanitizeLineDNS tests DNS domain replacement.
-func TestSanitizeLineDNS(t *testing.T) {
-	mapping := newSanitizationMapping()
-
-	tests := []struct {
-		name         string
-		line         string
-		wantContains string
-	}{
-		{
-			name:         "local domain replaced",
-			line:         `hostname.local`,
-			wantContains: "niac-go.local",
-		},
-		{
-			name:         "com domain replaced",
-			line:         `server.example.com`,
-			wantContains: "niac-go.com",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := sanitizeLine(tt.line, mapping, "niac-go.com", "DC-WEST", "netadmin@niac-go.com", "public")
-			if !strings.Contains(result, tt.wantContains) {
-				t.Errorf("sanitizeLine() = %q, want to contain %q", result, tt.wantContains)
-			}
-		})
-	}
-}
-
 // TestSanitizeBatch tests batch sanitization.
 func TestSanitizeBatch(t *testing.T) {
 	inputDir := t.TempDir()
@@ -310,9 +220,9 @@ func TestSanitizeBatch(t *testing.T) {
 		}
 	}
 
-	mapping := newSanitizationMapping()
+	mapping := sanitize.NewMapping()
 
-	err := sanitizeBatch(inputDir, outputDir, mapping, "niac-go.com", "DC-WEST", "netadmin@niac-go.com", "public", "")
+	err := sanitizeBatch(inputDir, outputDir, mapping, sanitize.DefaultOptions(), "")
 	if err != nil {
 		t.Fatalf("sanitizeBatch() error = %v", err)
 	}
@@ -334,9 +244,7 @@ func TestSanitizeBatchNoWalkFiles(t *testing.T) {
 	inputDir := t.TempDir()
 	outputDir := filepath.Join(t.TempDir(), "output")
 
-	mapping := newSanitizationMapping()
-
-	err := sanitizeBatch(inputDir, outputDir, mapping, "niac-go.com", "DC-WEST", "netadmin@niac-go.com", "public", "")
+	err := sanitizeBatch(inputDir, outputDir, sanitize.NewMapping(), sanitize.DefaultOptions(), "")
 	if err == nil {
 		t.Error("Expected error for directory with no .walk files")
 	}
@@ -353,18 +261,7 @@ func TestSanitizeBatchWithMappingFile(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	mapping := newSanitizationMapping()
-
-	err := sanitizeBatch(
-		inputDir,
-		outputDir,
-		mapping,
-		"niac-go.com",
-		"DC-WEST",
-		"netadmin@niac-go.com",
-		"public",
-		mappingFile,
-	)
+	err := sanitizeBatch(inputDir, outputDir, sanitize.NewMapping(), sanitize.DefaultOptions(), mappingFile)
 	if err != nil {
 		t.Fatalf("sanitizeBatch() error = %v", err)
 	}

@@ -1,46 +1,17 @@
 package main
 
 import (
-	"bufio"
-	"crypto/sha256"
-	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net"
 	"os"
 	"path/filepath"
-	"regexp"
-	"sort"
-	"strconv"
 	"strings"
-	"sync"
 
 	"github.com/spf13/cobra"
 
-	"github.com/MustardSeedNetworks/niac-go/internal/safeconv"
+	"github.com/MustardSeedNetworks/niac-go/internal/sanitize"
 )
-
-// defaultDeviceType is the device type abbreviation for generic/unrecognized devices.
-const defaultDeviceType = "dev"
-
-// IPMapping tracks IP address transformations.
-type IPMapping struct {
-	Original  string `json:"original"`
-	Sanitized string `json:"sanitized"`
-}
-
-// SanitizationMapping stores all transformations.
-type SanitizationMapping struct {
-	IPMappings map[string]string `json:"ip_mappings"`
-	Hostnames  map[string]string `json:"hostnames"`
-	Statistics struct {
-		FilesProcessed       int `json:"files_processed"`
-		IPsTransformed       int `json:"ips_transformed"`
-		HostnamesTransformed int `json:"hostnames_transformed"`
-	} `json:"statistics"`
-	mu sync.RWMutex // Protect concurrent access to maps
-}
 
 type sanitizeOptions struct {
 	mappingFile string
@@ -55,6 +26,7 @@ type sanitizeOptions struct {
 
 func addSanitizeCommand(root *cobra.Command, _ *serviceOptions) {
 	options := new(sanitizeOptions)
+	defaults := sanitize.DefaultOptions()
 
 	sanitizeCmd := &cobra.Command{
 		Use:   "sanitize <input-walk> <output-walk>",
@@ -105,10 +77,10 @@ What is TRANSFORMED (deterministic):
 	}
 
 	sanitizeCmd.Flags().StringVar(&options.mappingFile, "mapping-file", "", "JSON file to load/save IP mappings")
-	sanitizeCmd.Flags().StringVar(&options.domain, "domain", "niac-go.com", "Domain for hostnames and DNS")
-	sanitizeCmd.Flags().StringVar(&options.location, "location", "DC-WEST", "Default location suffix")
-	sanitizeCmd.Flags().StringVar(&options.contact, "contact", "netadmin@niac-go.com", "Contact email")
-	sanitizeCmd.Flags().StringVar(&options.community, "community", "public", "SNMP community string")
+	sanitizeCmd.Flags().StringVar(&options.domain, "domain", defaults.Domain, "Domain for hostnames and DNS")
+	sanitizeCmd.Flags().StringVar(&options.location, "location", defaults.Location, "Default location suffix")
+	sanitizeCmd.Flags().StringVar(&options.contact, "contact", defaults.Contact, "Contact email")
+	sanitizeCmd.Flags().StringVar(&options.community, "community", defaults.Community, "SNMP community string")
 	sanitizeCmd.Flags().BoolVar(&options.batch, "batch", false, "Batch process multiple files")
 	sanitizeCmd.Flags().StringVar(&options.inputDir, "input-dir", "", "Input directory for batch mode")
 	sanitizeCmd.Flags().StringVar(&options.outputDir, "output-dir", "", "Output directory for batch mode")
@@ -145,10 +117,12 @@ func validateBatchPaths(inputDir, outputDir string) error {
 func runSanitize(args []string, options *sanitizeOptions) error {
 	batch := options.batch
 	mappingFile := options.mappingFile
-	domain := options.domain
-	location := options.location
-	contact := options.contact
-	community := options.community
+	opts := sanitize.Options{
+		Domain:    options.domain,
+		Location:  options.location,
+		Contact:   options.contact,
+		Community: options.community,
+	}
 
 	// Validate input paths (Fix #67 - Input validation)
 	if batch {
@@ -169,11 +143,7 @@ func runSanitize(args []string, options *sanitizeOptions) error {
 		}
 	}
 
-	// Load or create mapping
-	mapping := new(SanitizationMapping)
-	mapping.IPMappings = make(map[string]string)
-	mapping.Hostnames = make(map[string]string)
-
+	mapping := sanitize.NewMapping()
 	if mappingFile != "" {
 		loadErr := loadMapping(mappingFile, mapping)
 		if loadErr != nil && !os.IsNotExist(loadErr) {
@@ -182,24 +152,19 @@ func runSanitize(args []string, options *sanitizeOptions) error {
 	}
 
 	if batch {
-		inputDir := options.inputDir
-		outputDir := options.outputDir
-		return sanitizeBatch(inputDir, outputDir, mapping, domain, location, contact, community, mappingFile)
+		return sanitizeBatch(options.inputDir, options.outputDir, mapping, opts, mappingFile)
 	}
 
 	// Single file mode
 	inputFile := args[0]
 	outputFile := args[1]
 
-	sanitizeErr := sanitizeFile(inputFile, outputFile, mapping, domain, location, contact, community)
-	if sanitizeErr != nil {
+	if sanitizeErr := sanitizeFile(inputFile, outputFile, mapping, opts); sanitizeErr != nil {
 		return fmt.Errorf("sanitization failed: %w", sanitizeErr)
 	}
 
-	// Save mapping if file specified
 	if mappingFile != "" {
-		saveErr := saveMapping(mappingFile, mapping)
-		if saveErr != nil {
+		if saveErr := saveMapping(mappingFile, mapping); saveErr != nil {
 			return fmt.Errorf("failed to save mapping: %w", saveErr)
 		}
 	}
@@ -213,16 +178,15 @@ func runSanitize(args []string, options *sanitizeOptions) error {
 
 func sanitizeBatch(
 	inputDir, outputDir string,
-	mapping *SanitizationMapping,
-	domain, location, contact, community, mappingFile string,
+	mapping *sanitize.Mapping,
+	opts sanitize.Options,
+	mappingFile string,
 ) error {
-	// Create output directory
 	mkdirErr := os.MkdirAll(outputDir, 0o750)
 	if mkdirErr != nil {
 		return fmt.Errorf("failed to create output directory: %w", mkdirErr)
 	}
 
-	// Find all .walk files
 	walkFiles, err := filepath.Glob(filepath.Join(inputDir, "*.walk"))
 	if err != nil {
 		return fmt.Errorf("failed to list walk files: %w", err)
@@ -240,8 +204,7 @@ func sanitizeBatch(
 
 		fmt.Fprintf(os.Stdout, "[%d/%d] Sanitizing %s...\n", i+1, len(walkFiles), basename)
 
-		sanitizeErr := sanitizeFile(inputFile, outputFile, mapping, domain, location, contact, community)
-		if sanitizeErr != nil {
+		if sanitizeErr := sanitizeFile(inputFile, outputFile, mapping, opts); sanitizeErr != nil {
 			fmt.Fprintf(os.Stderr, "   ⚠️  Error: %v\n", sanitizeErr)
 			continue
 		}
@@ -249,10 +212,8 @@ func sanitizeBatch(
 		mapping.Statistics.FilesProcessed++
 	}
 
-	// Save mapping
 	if mappingFile != "" {
-		saveErr := saveMapping(mappingFile, mapping)
-		if saveErr != nil {
+		if saveErr := saveMapping(mappingFile, mapping); saveErr != nil {
 			return fmt.Errorf("failed to save mapping: %w", saveErr)
 		}
 		fmt.Fprintf(os.Stdout, "\n💾 Saved mapping to %s\n", mappingFile)
@@ -266,470 +227,68 @@ func sanitizeBatch(
 	return nil
 }
 
-func sanitizeFile(
-	inputFile, outputFile string,
-	mapping *SanitizationMapping,
-	domain, location, contact, community string,
-) error {
-	initialIPs, initialHostnames := getInitialMappingCounts(mapping)
-
-	tempFile := outputFile + ".tmp"
-	err := processSanitizeFile(inputFile, tempFile, mapping, domain, location, contact, community)
+// sanitizeFile reads inputFile, sanitizes it via internal/sanitize, and
+// atomically writes the result to outputFile (write to a .tmp sibling,
+// then rename) so a failed run never leaves a partial file behind.
+func sanitizeFile(inputFile, outputFile string, mapping *sanitize.Mapping, opts sanitize.Options) error {
+	content, err := os.ReadFile(inputFile)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to read input file: %w", err)
 	}
 
-	if renameErr := os.Rename(tempFile, outputFile); renameErr != nil {
-		return fmt.Errorf("failed to rename temp file: %w", renameErr)
+	sanitized, _, err := sanitize.Content(content, mapping, opts)
+	if err != nil {
+		return fmt.Errorf("failed to sanitize content: %w", err)
 	}
 
-	updateMappingStatistics(mapping, initialIPs, initialHostnames)
-	return nil
+	return writeSanitizedAtomic(outputFile, sanitized)
 }
 
-// getInitialMappingCounts retrieves current mapping counts for tracking new transformations.
-func getInitialMappingCounts(mapping *SanitizationMapping) (int, int) {
-	mapping.mu.RLock()
-	defer mapping.mu.RUnlock()
-	return len(mapping.IPMappings), len(mapping.Hostnames)
-}
+// sanitizedFileMode is the permission for sanitized walk output: owner
+// read/write only, since walks can carry pre-scrub network detail on disk
+// during the write.
+const sanitizedFileMode = 0o600
 
-// processSanitizeFile handles the file I/O and line-by-line sanitization.
-func processSanitizeFile(
-	inputFile, tempFile string,
-	mapping *SanitizationMapping,
-	domain, location, contact, community string,
-) error {
-	input, err := os.Open(inputFile)
+// writeSanitizedAtomic writes content to outputFile via a same-directory
+// ".tmp" sibling and an atomic rename, so a failed run never leaves a
+// partial file. The write and rename go through an os.Root opened on the
+// output directory: every leaf operation is confined to that directory by
+// the OS (openat2 RESOLVE_BENEATH semantics), which is what makes path
+// traversal impossible by construction — the same structural containment
+// the library package relies on, and what lets gosec's taint analysis see
+// the write target as bounded rather than an arbitrary sink.
+func writeSanitizedAtomic(outputFile string, content []byte) error {
+	dir := filepath.Dir(outputFile)
+	root, err := os.OpenRoot(dir)
 	if err != nil {
-		return fmt.Errorf("failed to open input file: %w", err)
+		return fmt.Errorf("failed to open output directory: %w", err)
 	}
-	defer input.Close()
+	defer func() { _ = root.Close() }()
 
-	output, err := os.Create(tempFile)
+	tmpLeaf := filepath.Base(outputFile) + ".tmp"
+	f, err := root.OpenFile(tmpLeaf, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, sanitizedFileMode)
 	if err != nil {
 		return fmt.Errorf("failed to create output file: %w", err)
 	}
+	if _, writeErr := f.Write(content); writeErr != nil {
+		_ = f.Close()
+		_ = root.Remove(tmpLeaf)
+		return fmt.Errorf("failed to write output file: %w", writeErr)
+	}
+	if closeErr := f.Close(); closeErr != nil {
+		_ = root.Remove(tmpLeaf)
+		return fmt.Errorf("failed to close output file: %w", closeErr)
+	}
 
-	writeErr := writeAndFinalize(input, output, mapping, domain, location, contact, community)
-	if writeErr != nil {
-		_ = output.Close() // Best effort cleanup; file will be removed
-		_ = os.Remove(tempFile)
-		return writeErr
+	if renameErr := root.Rename(tmpLeaf, filepath.Base(outputFile)); renameErr != nil {
+		_ = root.Remove(tmpLeaf)
+		return fmt.Errorf("failed to rename temp file: %w", renameErr)
 	}
 
 	return nil
 }
 
-// maxWalkLineBytes bounds a single scanned walk line. Hex-string values can be
-// large, so this is well above bufio's 64KiB default while still capping memory.
-const maxWalkLineBytes = 8 << 20 // 8 MiB
-
-// writeAndFinalize processes all lines and finalizes the output file. It is a
-// two-pass operation: pass one collects identity strings (hostname, contact)
-// that vendor/entity OIDs echo outside the system group; pass two applies the
-// per-line rules and scrubs those echoes globally.
-func writeAndFinalize(
-	input *os.File,
-	output *os.File,
-	mapping *SanitizationMapping,
-	domain, location, contact, community string,
-) error {
-	scanner := bufio.NewScanner(input)
-	scanner.Buffer(make([]byte, 0, bufio.MaxScanTokenSize), maxWalkLineBytes)
-
-	var lines []string
-	for scanner.Scan() {
-		lines = append(lines, scanner.Text())
-	}
-	if err := scanner.Err(); err != nil {
-		return fmt.Errorf("scanner error: %w", err)
-	}
-
-	subs := collectIdentitySubs(lines, mapping, contact)
-
-	writer := bufio.NewWriter(output)
-	for _, line := range lines {
-		var out string
-		if isIdentityScalar(line) {
-			// The scalar rules already replace this line's value; scrubbing it
-			// again would double-sanitize the just-written hostname.
-			out = sanitizeLine(line, mapping, domain, location, contact, community)
-		} else {
-			// Scrub echoed identity before the per-line DNS rewrite so a full
-			// FQDN still matches, then apply IP/DNS rules.
-			out = sanitizeLine(applyIdentitySubs(line, subs), mapping, domain, location, contact, community)
-		}
-		if _, err := fmt.Fprintln(writer, out); err != nil {
-			return fmt.Errorf("failed to write line: %w", err)
-		}
-	}
-
-	if err := writer.Flush(); err != nil {
-		return fmt.Errorf("failed to flush writer: %w", err)
-	}
-
-	if err := output.Sync(); err != nil {
-		return fmt.Errorf("failed to sync output: %w", err)
-	}
-
-	if err := output.Close(); err != nil {
-		return fmt.Errorf("failed to close output file: %w", err)
-	}
-
-	return nil
-}
-
-// updateMappingStatistics updates the transformation statistics.
-func updateMappingStatistics(mapping *SanitizationMapping, initialIPs, initialHostnames int) {
-	mapping.mu.Lock()
-	defer mapping.mu.Unlock()
-	mapping.Statistics.IPsTransformed += len(mapping.IPMappings) - initialIPs
-	mapping.Statistics.HostnamesTransformed += len(mapping.Hostnames) - initialHostnames
-}
-
-// Precompiled patterns for sanitizeLine. Compiling once (rather than per line)
-// matters: walks run to hundreds of thousands of lines each.
-var (
-	stringValueRe   = regexp.MustCompile(`= STRING:.*`)
-	stringCaptureRe = regexp.MustCompile(`= STRING: (.+)`)
-	ipValueRe       = regexp.MustCompile(`IpAddress: (\d+\.\d+\.\d+\.\d+)`)
-	dnsLocalRe      = regexp.MustCompile(`\.local\b`)
-	dnsTLDRe        = regexp.MustCompile(`\.(com|net|org)\b`)
-
-	// ipIndexedOIDRe matches the standard IPv4 table columns whose row index ends
-	// in a dotted-quad IP address. Only OIDs matching this have their trailing
-	// four arcs rewritten as an IP; applying that to an arbitrary OID whose last
-	// arcs merely look like octets corrupts the MIB structure.
-	//   .4.20.1 ipAddrTable      · .4.21.1 ipRouteTable
-	//   .4.22.1 ipNetToMediaTable · .3.1.1 atTable (legacy)
-	ipIndexedOIDRe = regexp.MustCompile(`^\.1\.3\.6\.1\.2\.1\.(?:4\.2[012]\.1|3\.1\.1)\.`)
-)
-
-// sysGroupPrefix is the numeric OID root of the SNMPv2-MIB system group.
-const sysGroupPrefix = ".1.3.6.1.2.1.1."
-
-// ipv4OctetCount is the number of trailing OID arcs that form a dotted-quad index.
-const ipv4OctetCount = 4
-
-func sanitizeLine(line string, mapping *SanitizationMapping, domain, location, contact, community string) string {
-	// 1-3. System-group identity scalars. Match both numeric walks
-	// (.1.3.6.1.2.1.1.<n>.0, i.e. snmpwalk -On) and symbolic walks (MIB name).
-	isContact := isSystemScalar(line, "4", "sysContact")
-	switch {
-	case isContact:
-		line = stringValueRe.ReplaceAllString(line, "= STRING: "+contact)
-	case isSystemScalar(line, "6", "sysLocation"):
-		line = stringValueRe.ReplaceAllString(line, "= STRING: NiAC-Go - "+location+" - Network Operations")
-	case isSystemScalar(line, "5", "sysName"):
-		// Use the unquoted value so the scalar and the global echo scrub
-		// (collectIdentitySubs) sanitize the identical hostname string.
-		if v, ok := scalarStringValue(line); ok {
-			line = stringValueRe.ReplaceAllString(line, "= STRING: "+sanitizeHostname(v, mapping))
-		}
-	}
-
-	// 4. SNMP community strings (symbolic MIB objects only; numeric community
-	// columns are enterprise-specific and not represented by a fixed OID).
-	if strings.Contains(line, "snmpCommunity") || strings.Contains(line, "community") {
-		line = stringValueRe.ReplaceAllString(line, "= STRING: "+community)
-	}
-
-	// 5. IP addresses in IpAddress values.
-	line = ipValueRe.ReplaceAllStringFunc(line, func(match string) string {
-		ip := ipValueRe.FindStringSubmatch(match)[1]
-		if isSpecialIP(ip) {
-			return match
-		}
-		return "IpAddress: " + sanitizeIP(ip, mapping)
-	})
-
-	// 6. IP addresses embedded as the row index of a standard IPv4 table column.
-	line = rewriteOIDIndexIP(line, mapping)
-
-	// 7. DNS domains (but skip email addresses in contact strings).
-	if domain != "" && !isContact {
-		line = dnsLocalRe.ReplaceAllString(line, ".niac-go.local")
-		line = dnsTLDRe.ReplaceAllString(line, "."+domain)
-	}
-
-	return line
-}
-
-// isSystemScalar reports whether line is the given system-group scalar, in either
-// numeric (.1.3.6.1.2.1.1.<arc>.0) or symbolic (MIB object name) walk format.
-func isSystemScalar(line, arc, symbolic string) bool {
-	return strings.HasPrefix(line, sysGroupPrefix+arc+".0 ") || strings.Contains(line, symbolic)
-}
-
-// rewriteOIDIndexIP rewrites the trailing dotted-quad IP index of a standard
-// IPv4-indexed table column and leaves every other OID untouched, so structural
-// arcs that merely look like octets are never disturbed. Only the OID field is
-// considered; the value field is handled by the IpAddress pass.
-func rewriteOIDIndexIP(line string, mapping *SanitizationMapping) string {
-	sep := strings.Index(line, " = ")
-	if sep < 0 {
-		return line
-	}
-	oid := line[:sep]
-	if !hasIPIndexedPrefix(oid) {
-		return line
-	}
-
-	arcs := strings.Split(oid, ".")
-	if len(arcs) < ipv4OctetCount {
-		return line
-	}
-	index := arcs[len(arcs)-ipv4OctetCount:]
-	for _, arc := range index {
-		if !looksLikeIPOctet(arc) {
-			return line
-		}
-	}
-
-	ip := strings.Join(index, ".")
-	if isSpecialIP(ip) {
-		return line
-	}
-
-	copy(arcs[len(arcs)-ipv4OctetCount:], strings.Split(sanitizeIP(ip, mapping), "."))
-	return strings.Join(arcs, ".") + line[sep:]
-}
-
-// hasIPIndexedPrefix reports whether oid sits under a known IPv4-indexed table column.
-func hasIPIndexedPrefix(oid string) bool {
-	return ipIndexedOIDRe.MatchString(oid)
-}
-
-// minIdentityScrubLen is the shortest identity value eligible for global scrubbing.
-// Shorter values risk matching legitimate substrings elsewhere in the walk.
-const minIdentityScrubLen = 5
-
-// identitySub is a literal find/replace for an echoed identity string.
-type identitySub struct {
-	from string
-	to   string
-}
-
-// isIdentityScalar reports whether line is one of the system-group identity
-// scalars whose value the per-line rules already replace.
-func isIdentityScalar(line string) bool {
-	return isSystemScalar(line, "4", "sysContact") ||
-		isSystemScalar(line, "5", "sysName") ||
-		isSystemScalar(line, "6", "sysLocation")
-}
-
-// collectIdentitySubs scans a walk for the sysName and sysContact scalar values
-// and returns literal substitutions (original -> sanitized) for the distinctive
-// ones. Real devices echo these strings in vendor OIDs, entPhysicalName, and
-// CDP/LLDP neighbor tables, which the per-line scalar rules never reach. The
-// substitutions are ordered longest-first so overlapping values replace fully.
-func collectIdentitySubs(lines []string, mapping *SanitizationMapping, contact string) []identitySub {
-	seen := make(map[string]struct{})
-	var subs []identitySub
-
-	add := func(orig, repl string) {
-		if !isDistinctiveIdentifier(orig) || orig == repl {
-			return
-		}
-		if _, dup := seen[orig]; dup {
-			return
-		}
-		seen[orig] = struct{}{}
-		subs = append(subs, identitySub{from: orig, to: repl})
-	}
-
-	for _, line := range lines {
-		switch {
-		case isSystemScalar(line, "5", "sysName"):
-			if v, ok := scalarStringValue(line); ok {
-				add(v, sanitizeHostname(v, mapping))
-			}
-		case isSystemScalar(line, "4", "sysContact"):
-			if v, ok := scalarStringValue(line); ok {
-				add(v, contact)
-			}
-		}
-	}
-
-	sort.SliceStable(subs, func(i, j int) bool { return len(subs[i].from) > len(subs[j].from) })
-	return subs
-}
-
-// applyIdentitySubs replaces every occurrence of each collected identity string.
-func applyIdentitySubs(line string, subs []identitySub) string {
-	for _, sub := range subs {
-		if strings.Contains(line, sub.from) {
-			line = strings.ReplaceAll(line, sub.from, sub.to)
-		}
-	}
-	return line
-}
-
-// scalarStringValue extracts and unquotes the STRING value of a walk line.
-func scalarStringValue(line string) (string, bool) {
-	matches := stringCaptureRe.FindStringSubmatch(line)
-	if len(matches) <= 1 {
-		return "", false
-	}
-	value := strings.TrimSpace(matches[1])
-	value = strings.TrimSuffix(strings.TrimPrefix(value, `"`), `"`)
-	return value, value != ""
-}
-
-// isDistinctiveIdentifier reports whether s is specific enough to blanket-replace:
-// long enough and containing a character typical of a hostname or contact
-// (digit, dot, hyphen, underscore, or @), which excludes plain dictionary words.
-func isDistinctiveIdentifier(s string) bool {
-	if len(s) < minIdentityScrubLen {
-		return false
-	}
-	return strings.ContainsAny(s, "0123456789.-_@")
-}
-
-func sanitizeIP(ip string, mapping *SanitizationMapping) string {
-	// Fix #60: Check if already mapped with read lock
-	mapping.mu.RLock()
-	if sanitized, exists := mapping.IPMappings[ip]; exists {
-		mapping.mu.RUnlock()
-		return sanitized
-	}
-	mapping.mu.RUnlock()
-
-	// Deterministic mapping using hash
-	hash := sha256.Sum256([]byte(ip))
-	hashInt := binary.BigEndian.Uint32(hash[:4])
-
-	// Map to 10.0.0.0/8 network
-	// Spread across different /16s based on original network
-	parsedIP := net.ParseIP(ip)
-	if parsedIP == nil {
-		return ip
-	}
-
-	ipBytes := parsedIP.To4()
-	if ipBytes == nil {
-		return ip // IPv6 not supported yet
-	}
-
-	// Determine subnet based on original first octet
-	var subnet byte
-	switch {
-	case ipBytes[0] == privateIPClassA:
-		subnet = 0 // 10.0.0.0/16 - Data Center West
-	case ipBytes[0] == privateIPClassB:
-		subnet = 1 // 10.1.0.0/16 - Data Center East
-	case ipBytes[0] == privateIPClassC:
-		subnet = 2 // 10.2.0.0/16 - Corporate Campus
-	case ipBytes[0] == 63 || ipBytes[0] < privateIPClassA:
-		subnet = maxPercentage // 10.100.0.0/16 - Management
-	default:
-		subnet = 3 // 10.3.0.0/16 - Remote Offices
-	}
-
-	// Use hash for host portion
-	octet3 := safeconv.ByteFromUint32(hashInt >> bitShiftOctet)
-	octet4 := safeconv.ByteFromUint32(hashInt)
-
-	sanitized := fmt.Sprintf("10.%d.%d.%d", subnet, octet3, octet4)
-
-	// Fix #60: Store mapping with write lock
-	mapping.mu.Lock()
-	// Double-check in case another goroutine added it while we waited
-	if existing, exists := mapping.IPMappings[ip]; exists {
-		mapping.mu.Unlock()
-		return existing
-	}
-	mapping.IPMappings[ip] = sanitized
-	mapping.mu.Unlock()
-
-	return sanitized
-}
-
-func sanitizeHostname(hostname string, mapping *SanitizationMapping) string {
-	// Fix #60: Check if already mapped with read lock
-	mapping.mu.RLock()
-	if sanitized, exists := mapping.Hostnames[hostname]; exists {
-		mapping.mu.RUnlock()
-		return sanitized
-	}
-	mapping.mu.RUnlock()
-
-	// Determine device type from hostname patterns
-	var deviceType string
-	lower := strings.ToLower(hostname)
-	switch {
-	case strings.Contains(lower, "sw") || strings.Contains(lower, "switch"):
-		deviceType = "sw"
-	case strings.Contains(lower, "rtr") || strings.Contains(lower, "router"):
-		deviceType = "rtr"
-	case strings.Contains(lower, "ap") || strings.Contains(lower, "access"):
-		deviceType = "ap"
-	case strings.Contains(lower, "srv") || strings.Contains(lower, "server"):
-		deviceType = "srv"
-	case strings.Contains(lower, "fw") || strings.Contains(lower, "firewall"):
-		deviceType = "fw"
-	default:
-		deviceType = defaultDeviceType
-	}
-
-	// Generate deterministic number from hash
-	hash := sha256.Sum256([]byte(hostname))
-	num := binary.BigEndian.Uint16(hash[:2]) % maxPercentage
-
-	sanitized := fmt.Sprintf("niac-core-%s-%02d", deviceType, num)
-
-	// Fix #60: Store mapping with write lock
-	mapping.mu.Lock()
-	// Double-check in case another goroutine added it while we waited
-	if existing, exists := mapping.Hostnames[hostname]; exists {
-		mapping.mu.Unlock()
-		return existing
-	}
-	mapping.Hostnames[hostname] = sanitized
-	mapping.mu.Unlock()
-
-	return sanitized
-}
-
-func isSpecialIP(ip string) bool {
-	// Don't transform special IPs
-	specials := []string{
-		"0.0.0.0", "255.255.255.255",
-		"127.0.0.1", "127.0.0.0",
-		"224.0.0.", "239.255.255.250", // Multicast
-	}
-
-	for _, special := range specials {
-		if strings.HasPrefix(ip, special) || ip == special {
-			return true
-		}
-	}
-
-	return false
-}
-
-func looksLikeIPOctet(s string) bool {
-	// Must be 1-3 digits and <= 255
-	if len(s) < 1 || len(s) > 3 {
-		return false
-	}
-
-	for _, c := range s {
-		if c < '0' || c > '9' {
-			return false
-		}
-	}
-
-	// Parse and check range (digits already validated above)
-	val, err := strconv.Atoi(s)
-	if err != nil {
-		return false
-	}
-	return val >= 0 && val <= 255
-}
-
-func loadMapping(filename string, mapping *SanitizationMapping) error {
+func loadMapping(filename string, mapping *sanitize.Mapping) error {
 	data, err := os.ReadFile(filename)
 	if err != nil {
 		return fmt.Errorf("failed to read mapping file: %w", err)
@@ -742,12 +301,8 @@ func loadMapping(filename string, mapping *SanitizationMapping) error {
 	return nil
 }
 
-func saveMapping(filename string, mapping *SanitizationMapping) error {
-	// Use lock when marshaling to avoid concurrent modifications
-	mapping.mu.RLock()
+func saveMapping(filename string, mapping *sanitize.Mapping) error {
 	data, err := json.MarshalIndent(mapping, "", "  ")
-	mapping.mu.RUnlock()
-
 	if err != nil {
 		return fmt.Errorf("failed to marshal mapping: %w", err)
 	}

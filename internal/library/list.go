@@ -287,6 +287,42 @@ func (l *Library) WriteFile(kind Kind, relPath string, content []byte) error {
 	return os.WriteFile(dest, content, libraryFileMode)
 }
 
+// ReadFile returns the raw content of {kind}/{relPath}. Used by the
+// walk-sanitize route (#950) to load a walk before transforming it; opened
+// relative to the kind's os.Root, the same OS-enforced containment
+// PreserveOriginal/RevertToOriginal use, so a crafted relPath can't escape
+// the library directory.
+func (l *Library) ReadFile(kind Kind, relPath string) ([]byte, error) {
+	if kind != KindWalks && kind != KindPcaps {
+		return nil, fmt.Errorf("%w: %s", ErrUnsupportedKind, kind)
+	}
+	if err := validateRelPath(relPath); err != nil {
+		return nil, err
+	}
+
+	root, err := l.openKindRoot(kind)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = root.Close() }()
+
+	leaf := filepath.ToSlash(relPath)
+	src, err := root.Open(leaf)
+	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return nil, ErrNotFound
+		}
+		return nil, fmt.Errorf("read %s: %w", leaf, err)
+	}
+	defer func() { _ = src.Close() }()
+
+	content, err := io.ReadAll(src)
+	if err != nil {
+		return nil, fmt.Errorf("read %s: %w", leaf, err)
+	}
+	return content, nil
+}
+
 // ListFiles enumerates walks/ or pcaps/. Used by PR 3's browser tabs.
 // One level of subdir nesting is allowed; names returned include the
 // subdir for namespacing (e.g. "cisco/c3900.walk"). Preserve-once
