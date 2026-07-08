@@ -31,9 +31,11 @@ function padLines(lines: DiffLine[], targetLength: number): DiffLine[] {
 }
 
 /**
- * Merge control buttons for a diff block
+ * Merge control buttons for a diff block. Exported so both the
+ * side-by-side (DiffBlock) and unified (DiffBlockOverlay) renderers
+ * share one implementation.
  */
-const MergeControls: FC<{
+export const DiffBlockMergeControls: FC<{
   decision?: MergeDecision;
   onDecision: (choice: MergeDecision['choice']) => void;
 }> = ({ decision, onDecision }) => {
@@ -101,7 +103,7 @@ export const DiffBlockComponent: FC<DiffBlockComponentProps> = memo(
       >
         {/* Merge controls for changed blocks */}
         {isChanged && showMergeControls && (
-          <MergeControls decision={decision} onDecision={onDecision} />
+          <DiffBlockMergeControls decision={decision} onDecision={onDecision} />
         )}
 
         {/* Side-by-side diff display */}
