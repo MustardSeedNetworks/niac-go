@@ -173,11 +173,15 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          curl -sSfL -o syft.tar.gz \
+          # Download + extract under /tmp, never in the repo tree — goreleaser
+          # aborts on a dirty git state, and a stray ./syft or ./syft.tar.gz
+          # left in the checkout would trip it.
+          curl -sSfL -o /tmp/syft.tar.gz \
             "https://github.com/anchore/syft/releases/download/v${SYFT_VERSION}/syft_${SYFT_VERSION}_linux_amd64.tar.gz"
-          echo "${SYFT_SHA256}  syft.tar.gz" | sha256sum -c -
-          tar -xzf syft.tar.gz syft
-          install -m 0755 syft /usr/local/bin/syft
+          echo "${SYFT_SHA256}  /tmp/syft.tar.gz" | sha256sum -c -
+          tar -xzf /tmp/syft.tar.gz -C /tmp syft
+          install -m 0755 /tmp/syft /usr/local/bin/syft
+          rm -f /tmp/syft.tar.gz /tmp/syft
 
       - name: Install Cosign inside container
         run: |
