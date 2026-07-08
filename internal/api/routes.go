@@ -208,21 +208,6 @@ func (s *Server) registerReadOnlyRoutes(mux *http.ServeMux) {
 			rl:      rlWrite,
 			csrf:    true,
 		},
-		// User configs: POST/DELETE mutate — write + CSRF (#740).
-		{
-			path:    "/api/v1/configs",
-			handler: s.handleUserConfigs,
-			methods: []string{http.MethodGet, http.MethodPost},
-			rl:      rlWrite,
-			csrf:    true,
-		},
-		{
-			path:    "/api/v1/configs/",
-			handler: s.handleUserConfigByName,
-			methods: []string{http.MethodGet, http.MethodDelete},
-			rl:      rlWrite,
-			csrf:    true,
-		},
 		// Per-device actions. synthesize-walk (#546 p2) mutates the library +
 		// running config YAML, so this path carries write rate limit + CSRF;
 		// csrf.Protect skips safe GETs, so the read-only interfaces action

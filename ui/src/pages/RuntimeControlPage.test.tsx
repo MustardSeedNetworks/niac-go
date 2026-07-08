@@ -33,7 +33,6 @@ vi.mock('../api/client', async (importOriginal) => {
     fetchErrorTypes: vi.fn(),
     fetchInterfaces: vi.fn(),
     fetchUsableInterfaces: vi.fn(),
-    fetchUserConfigContent: vi.fn(),
     startSimulation: vi.fn(),
     stopSimulation: () => stopSimulation(),
   };

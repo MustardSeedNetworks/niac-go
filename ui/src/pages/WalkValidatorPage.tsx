@@ -1,12 +1,7 @@
 import { type FC, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  fetchLibraryWalks,
-  fixWalk,
-  type LibraryFileEntry,
-  validateAllWalks,
-  validateWalk,
-} from '../api/client';
+import { fixWalk, validateAllWalks, validateWalk } from '../api/client';
+import { fetchLibraryWalks, type LibraryFileEntry } from '../api/library-client';
 import type {
   WalkBatchValidationResponse,
   WalkValidationIssue,

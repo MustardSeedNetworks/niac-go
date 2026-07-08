@@ -1,13 +1,9 @@
 import { FileUp, LayoutGrid, List, Search } from 'lucide-react';
 import { type FC, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  fetchTemplateContent,
-  fetchTemplates,
-  fetchUserConfigs,
-  importConfig,
-} from '../../api/client';
-import type { Template, TemplateContent, UserConfig } from '../../api/types';
+import { fetchTemplateContent, fetchTemplates, importConfig } from '../../api/client';
+import { fetchLibraryNetworks } from '../../api/library-client';
+import type { LibraryNetwork, Template, TemplateContent } from '../../api/types';
 import { iconSizes } from '../../constants/sizes';
 import { useFavorites } from '../../hooks/useFavorites';
 import { SmallText } from '../../ui/Typography';
@@ -46,7 +42,7 @@ export const ConfigPicker: FC<ConfigPickerProps> = ({
 }) => {
   const { t } = useTranslation('pages');
   const [templates, setTemplates] = useState<Template[]>([]);
-  const [userConfigs, setUserConfigs] = useState<UserConfig[]>([]);
+  const [userConfigs, setUserConfigs] = useState<LibraryNetwork[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>(() => readPref(VIEW_PREF_KEY, 'grid'));
@@ -60,11 +56,11 @@ export const ConfigPicker: FC<ConfigPickerProps> = ({
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([fetchTemplates(), fetchUserConfigs()])
+    Promise.all([fetchTemplates(), fetchLibraryNetworks()])
       .then(([t, u]) => {
         if (cancelled) return;
         setTemplates(t);
-        setUserConfigs(u.configs);
+        setUserConfigs(u);
       })
       .catch(() => {
         // Best-effort hydration; the empty state covers failure.
@@ -96,9 +92,9 @@ export const ConfigPicker: FC<ConfigPickerProps> = ({
     for (const c of userConfigs) {
       list.push({
         kind: 'saved',
-        key: `saved:${c.path}`,
+        key: `saved:${c.name}`,
         name: c.name,
-        description: c.path,
+        description: c.description || c.useCase || '',
         deviceCount: c.deviceCount,
         config: c,
       });

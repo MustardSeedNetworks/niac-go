@@ -1,6 +1,7 @@
 import { type FC, type ReactNode, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { analyzeWalk, fetchLibraryWalks, type LibraryFileEntry } from '../api/client';
+import { analyzeWalk } from '../api/client';
+import { fetchLibraryWalks, type LibraryFileEntry } from '../api/library-client';
 import type { WalkAnalyzeResponse } from '../api/types';
 import { Card, CardContent, CardRow, CardValue } from '../ui/Card';
 import { formatBitsPerSecond } from '../utils/format';

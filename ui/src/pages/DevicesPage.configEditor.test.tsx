@@ -30,8 +30,10 @@ vi.mock('../api/client', () => ({
       modifiedAt: '2026-01-01T00:00:00Z',
       sizeBytes: 12,
     }),
-  fetchLibraryWalks: () => Promise.resolve([]),
   updateConfig: (...args: unknown[]) => updateConfig(...args),
+}));
+vi.mock('../api/library-client', () => ({
+  fetchLibraryWalks: () => Promise.resolve([]),
 }));
 
 let latestErrorLine: number | null | undefined;

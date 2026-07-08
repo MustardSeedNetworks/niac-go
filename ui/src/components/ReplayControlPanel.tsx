@@ -1,6 +1,7 @@
 import { type FC, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { fetchLibraryPcaps, fetchReplayStatus, startReplay, stopReplay } from '../api/client';
+import { fetchReplayStatus, startReplay, stopReplay } from '../api/client';
+import { fetchLibraryPcaps } from '../api/library-client';
 import { useApiResource } from '../hooks/useApiResource';
 import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';

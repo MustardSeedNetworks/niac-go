@@ -2,14 +2,9 @@ import { FileCog, Server } from 'lucide-react';
 import { type FC, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import {
-  fetchConfig,
-  fetchDevices,
-  fetchLibraryWalks,
-  type LibraryFileEntry,
-  updateConfig,
-} from '../api/client';
+import { fetchConfig, fetchDevices, updateConfig } from '../api/client';
 import { isApiError } from '../api/errors';
+import { fetchLibraryWalks, type LibraryFileEntry } from '../api/library-client';
 import type { DeviceSummary } from '../api/types';
 import { YamlEditor } from '../components/config/YamlEditor';
 import { DeviceTable } from '../components/DeviceTable';

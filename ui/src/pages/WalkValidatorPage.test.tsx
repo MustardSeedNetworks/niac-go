@@ -20,10 +20,12 @@ const validateWalk = vi.fn();
 const validateAllWalks = vi.fn();
 
 vi.mock('../api/client', () => ({
-  fetchLibraryWalks: () => fetchLibraryWalks(),
   fixWalk: (filename: string) => fixWalk(filename),
   validateWalk: (filename: string) => validateWalk(filename),
   validateAllWalks: () => validateAllWalks(),
+}));
+vi.mock('../api/library-client', () => ({
+  fetchLibraryWalks: () => fetchLibraryWalks(),
 }));
 
 const files = [

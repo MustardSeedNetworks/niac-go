@@ -1,6 +1,6 @@
 import { Building2, FileCode, Globe, Router, Server, Shield, Wifi } from 'lucide-react';
 import type { FC } from 'react';
-import type { Template, UserConfig } from '../../api/types';
+import type { LibraryNetwork, Template } from '../../api/types';
 
 /**
  * Shared types + helpers for the ConfigPicker family of components.
@@ -58,7 +58,7 @@ export type ConfigItem =
       name: string;
       description: string;
       deviceCount: number;
-      config: UserConfig;
+      config: LibraryNetwork;
     }
   | {
       kind: 'local';
@@ -71,13 +71,15 @@ export type ConfigItem =
 
 /**
  * Selection is what the parent Simulation page tracks. Only one of
- * source values is active at a time; the source string picks which
- * of name/path is meaningful.
+ * source values is active at a time. Library networks have no
+ * filesystem path exposed to the frontend (the daemon confines them
+ * behind an os.Root by name — see internal/library/list.go), so the
+ * daemon always loads a picked network's content via
+ * fetchLibraryNetworkContent(name) and sends it inline.
  */
 export interface Selection {
   source: 'template' | 'userConfig' | 'upload' | null;
   name: string;
-  path?: string;
 }
 
 export interface ConfigPickerProps {
@@ -85,8 +87,8 @@ export interface ConfigPickerProps {
   selection: Selection;
   /** Called when the user picks a built-in template. */
   onSelectTemplate: (template: Template) => void;
-  /** Called when the user picks a saved (user) config. */
-  onSelectUserConfig: (config: UserConfig) => void;
+  /** Called when the user picks a saved (user) network from the library. */
+  onSelectUserConfig: (config: LibraryNetwork) => void;
   /** Called when the user uploads a file (or clears it). */
   onUpload: (file: File | null) => void;
   /** The current upload file, if any. */

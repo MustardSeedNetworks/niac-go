@@ -4,17 +4,19 @@ import '../../i18n';
 import { SelectedNetworkPreview } from './SelectedNetworkPreview';
 
 const fetchTemplateContent = vi.fn();
-const fetchUserConfigContent = vi.fn();
+const fetchLibraryNetworkContent = vi.fn();
 
 vi.mock('../../api/client', () => ({
   fetchTemplateContent: (name: string) => fetchTemplateContent(name),
-  fetchUserConfigContent: (name: string) => fetchUserConfigContent(name),
+}));
+vi.mock('../../api/library-client', () => ({
+  fetchLibraryNetworkContent: (name: string) => fetchLibraryNetworkContent(name),
 }));
 
 describe('SelectedNetworkPreview', () => {
   beforeEach(() => {
     fetchTemplateContent.mockReset();
-    fetchUserConfigContent.mockReset();
+    fetchLibraryNetworkContent.mockReset();
   });
 
   it('shows the empty-devices message for a valid config with no devices', async () => {

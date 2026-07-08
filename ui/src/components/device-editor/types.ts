@@ -1,4 +1,4 @@
-import type { LibraryFileEntry } from '../../api/client';
+import type { LibraryFileEntry } from '../../api/library-client';
 import type { Device } from '../../api/types';
 
 /**

@@ -15,7 +15,7 @@
  */
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { LibraryFileEntry } from '../api/client';
+import type { LibraryFileEntry } from '../api/library-client';
 import '../i18n';
 import { useUIStore } from '../stores/ui-store';
 import { ToastContainer } from '../ui/ToastContainer';
@@ -27,7 +27,7 @@ const revertWalk = vi.fn();
 const sanitizeWalk = vi.fn();
 const sanitizeWalksBatch = vi.fn();
 
-vi.mock('../api/client', () => ({
+vi.mock('../api/library-client', () => ({
   fetchLibraryWalks: () => fetchLibraryWalks(),
   fetchLibraryPcaps: () => fetchLibraryPcaps(),
   revertWalk: (name: string) => revertWalk(name),

@@ -2,7 +2,8 @@ import { Eye, Router, Server, Wifi } from 'lucide-react';
 import { type FC, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { parse as parseYaml, YAMLParseError } from 'yaml';
-import { fetchTemplateContent, fetchUserConfigContent } from '../../api/client';
+import { fetchTemplateContent } from '../../api/client';
+import { fetchLibraryNetworkContent } from '../../api/library-client';
 import { iconSizes } from '../../constants/sizes';
 import type { ConfigSource } from '../../stores/ui-store';
 import { Card, CardContent } from '../../ui/Card';
@@ -17,7 +18,7 @@ import { H2, SmallText } from '../../ui/Typography';
  * before committing.
  *
  *   source 'template'    → fetchTemplateContent(name)
- *   source 'userConfig'  → fetchUserConfigContent(name)
+ *   source 'userConfig'  → fetchLibraryNetworkContent(name)
  *   source 'upload'      → read the File directly
  *   source null          → render nothing
  */
@@ -113,7 +114,7 @@ export const SelectedNetworkPreview: FC<SelectedNetworkPreviewProps> = ({
         : source === 'template'
           ? fetchTemplateContent(name).then((c) => c.content)
           : source === 'userConfig'
-            ? fetchUserConfigContent(name).then((c) => c.content)
+            ? fetchLibraryNetworkContent(name).then((c) => c.content)
             : Promise.resolve('');
 
     loader

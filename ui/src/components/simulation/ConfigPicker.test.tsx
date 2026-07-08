@@ -35,16 +35,18 @@ Object.defineProperty(globalThis, 'localStorage', {
 });
 
 const fetchTemplates = vi.fn();
-const fetchUserConfigs = vi.fn();
+const fetchLibraryNetworks = vi.fn();
 const fetchTemplateContent = vi.fn();
 const importConfig = vi.fn();
 const copyToClipboard = vi.fn();
 
 vi.mock('../../api/client', () => ({
   fetchTemplates: () => fetchTemplates(),
-  fetchUserConfigs: () => fetchUserConfigs(),
   fetchTemplateContent: (name: string) => fetchTemplateContent(name),
   importConfig: (...args: unknown[]) => importConfig(...args),
+}));
+vi.mock('../../api/library-client', () => ({
+  fetchLibraryNetworks: () => fetchLibraryNetworks(),
 }));
 
 vi.mock('../../utils/file', () => ({
@@ -69,7 +71,7 @@ const template: Template = {
 describe('ConfigPicker — TemplatePreviewModal Copy YAML', () => {
   beforeEach(() => {
     fetchTemplates.mockReset().mockResolvedValue([template]);
-    fetchUserConfigs.mockReset().mockResolvedValue({ configs: [] });
+    fetchLibraryNetworks.mockReset().mockResolvedValue([]);
     fetchTemplateContent.mockReset();
     importConfig.mockReset();
     copyToClipboard.mockReset().mockResolvedValue(undefined);

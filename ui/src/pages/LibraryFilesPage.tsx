@@ -6,7 +6,7 @@ import {
   fetchLibraryWalks,
   type LibraryFileEntry,
   revertWalk,
-} from '../api/client';
+} from '../api/library-client';
 import { DataTable, type DataTableColumn, type DataTableSelection } from '../components/DataTable';
 import { useApiResource } from '../hooks/useApiResource';
 import { useErrorToast } from '../hooks/useErrorToast';
