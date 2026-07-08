@@ -1,11 +1,12 @@
 import { valibotResolver } from '@hookform/resolvers/valibot';
-import { type FC, useEffect, useState } from 'react';
+import { type FC, useCallback, useEffect, useState } from 'react';
 import { type SubmitHandler, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import {
   clearAllErrors,
   clearError,
+  fetchDeviceInterfaces,
   fetchDevices,
   fetchErrorTypes,
   injectError,
@@ -49,6 +50,30 @@ export const ErrorInjectionPanel: FC = () => {
     mode: 'onBlur',
   });
   const selectedErrorType = watch('selectedErrorType');
+  const selectedDeviceIp = watch('selectedDevice');
+
+  // Error injection targets a device IP, but the per-device interfaces
+  // route is hostname-scoped — resolve the hostname from the device list
+  // already loaded above before fetching its interfaces.
+  const selectedDeviceHostname =
+    devices?.find((dev) => dev.ips?.[0] === selectedDeviceIp)?.name ?? '';
+
+  const { data: deviceInterfaces } = useApiResource(
+    useCallback(
+      () =>
+        selectedDeviceHostname
+          ? fetchDeviceInterfaces(selectedDeviceHostname)
+          : Promise.resolve([]),
+      [selectedDeviceHostname],
+    ),
+    [selectedDeviceHostname],
+  );
+
+  // The previously selected interface may not exist on a newly selected
+  // device — clear it rather than silently submitting a stale value.
+  useEffect(() => {
+    setValue('selectedInterface', '');
+  }, [selectedDeviceHostname, setValue]);
 
   // The <select> options render once errorInfo resolves, after this form's
   // initial mount — so the uncontrolled defaultValues.selectedErrorType
@@ -164,18 +189,35 @@ export const ErrorInjectionPanel: FC = () => {
                 ) : null}
               </div>
 
-              {/* Interface Input */}
+              {/* Interface Selector — scoped to the selected device's own
+                  interfaces (#897 p5f) so a typo can't silently no-op. */}
               <div>
                 <label htmlFor="error-interface" className="block text-sm font-medium mb-2">
                   {t('injection.interfaceLabel')}
                 </label>
-                <input
+                <select
                   id="error-interface"
-                  type="text"
                   {...register('selectedInterface')}
-                  placeholder={t('injection.interfacePlaceholder')}
-                  className="w-full px-3 py-row bg-bg-elevated border border-border-default rounded-md focus:outline-none focus:ring-2 focus:ring-status-info"
-                />
+                  disabled={!selectedDeviceHostname || !deviceInterfaces?.length}
+                  className="w-full px-3 py-row bg-bg-elevated border border-border-default rounded-md focus:outline-none focus:ring-2 focus:ring-status-info disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <option value="">{t('injection.interfaceSelectPlaceholder')}</option>
+                  {deviceInterfaces?.map((iface) => (
+                    <option key={iface.name} value={iface.name}>
+                      {iface.name}
+                      {iface.description ? ` (${iface.description})` : ''}
+                    </option>
+                  ))}
+                </select>
+                {!selectedDeviceHostname ? (
+                  <SmallText className="text-text-muted mt-tight">
+                    {t('injection.interfaceNoDeviceHint')}
+                  </SmallText>
+                ) : deviceInterfaces && deviceInterfaces.length === 0 ? (
+                  <SmallText className="text-text-muted mt-tight">
+                    {t('injection.interfaceNoneHint')}
+                  </SmallText>
+                ) : null}
                 {errors.selectedInterface ? (
                   <p className="text-xs text-status-error mt-tight">
                     {errors.selectedInterface.message}
