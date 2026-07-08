@@ -1,7 +1,7 @@
 import { Eye, Router, Server, Wifi } from 'lucide-react';
 import { type FC, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { parse as parseYaml } from 'yaml';
+import { parse as parseYaml, YAMLParseError } from 'yaml';
 import { fetchTemplateContent, fetchUserConfigContent } from '../../api/client';
 import { iconSizes } from '../../constants/sizes';
 import type { ConfigSource } from '../../stores/ui-store';
@@ -132,19 +132,28 @@ export const SelectedNetworkPreview: FC<SelectedNetworkPreviewProps> = ({
     };
   }, [source, name, uploadFile]);
 
-  const { devices, parseError } = useMemo<{
+  const { devices, parseError, parseErrorLine } = useMemo<{
     devices: DevicePreview[];
     parseError: string | null;
+    parseErrorLine: number | null;
   }>(() => {
-    if (!yamlText) return { devices: [], parseError: null };
+    if (!yamlText) return { devices: [], parseError: null, parseErrorLine: null };
     try {
       const parsed = parseYaml(yamlText) as ParsedYaml;
       if (!parsed?.devices || !Array.isArray(parsed.devices)) {
-        return { devices: [], parseError: null };
+        return { devices: [], parseError: null, parseErrorLine: null };
       }
-      return { devices: parsed.devices.map(summariseDevice), parseError: null };
+      return {
+        devices: parsed.devices.map(summariseDevice),
+        parseError: null,
+        parseErrorLine: null,
+      };
     } catch (err) {
-      return { devices: [], parseError: (err as Error).message };
+      // yaml's YAMLParseError carries a structured 1-based line/column
+      // (linePos), so report it distinctly instead of a generic message —
+      // mirrors the backend's parseYAMLError (internal/api/yaml_errors.go).
+      const line = err instanceof YAMLParseError ? (err.linePos?.[0]?.line ?? null) : null;
+      return { devices: [], parseError: (err as Error).message, parseErrorLine: line };
     }
   }, [yamlText]);
 
@@ -175,7 +184,9 @@ export const SelectedNetworkPreview: FC<SelectedNetworkPreviewProps> = ({
 
         {!loading && !error && parseError && (
           <SmallText className="text-status-error" role="alert">
-            {t('runtime.preview.parseError', { error: parseError })}
+            {parseErrorLine !== null
+              ? t('runtime.preview.parseErrorWithLine', { line: parseErrorLine, error: parseError })
+              : t('runtime.preview.parseError', { error: parseError })}
           </SmallText>
         )}
 

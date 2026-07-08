@@ -111,6 +111,7 @@
       "loading": "Loading preview…",
       "loadError": "Couldn't load preview: {{error}}",
       "parseError": "Couldn't parse config: {{error}}",
+      "parseErrorWithLine": "Couldn't parse config at line {{line}}: {{error}}",
       "noDevices": "Picked config has no devices — nothing will run.",
       "deviceCount_one": "{{count}} device will launch when Start is clicked.",
       "deviceCount_other": "{{count}} devices will launch when Start is clicked."
@@ -136,6 +137,7 @@
     "saveHelpTextPrefix": "Save runs the same validation as",
     "saveHelpTextSuffix": ", writes the YAML to disk, then diff-reloads the running stack — added devices spin up, removed devices stop, existing devices are updated in place.",
     "configSaved": "Configuration saved",
+    "configParseErrorLine": "Line {{line}}: {{message}}",
     "walkCopied": "Copied {{name}}",
     "walkCopyError": "Unable to copy walk name",
     "copyNameButton": "Copy name"

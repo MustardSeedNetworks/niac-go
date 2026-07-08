@@ -111,6 +111,7 @@
       "loading": "Cargando vista previa…",
       "loadError": "No se pudo cargar la vista previa: {{error}}",
       "parseError": "No se pudo analizar la configuración: {{error}}",
+      "parseErrorWithLine": "No se pudo analizar la configuración en la línea {{line}}: {{error}}",
       "noDevices": "La configuración elegida no tiene dispositivos — no se ejecutará nada.",
       "deviceCount_one": "{{count}} dispositivo se lanzará al hacer clic en Iniciar.",
       "deviceCount_other": "{{count}} dispositivos se lanzarán al hacer clic en Iniciar."
@@ -136,6 +137,7 @@
     "saveHelpTextPrefix": "Guardar ejecuta la misma validación que",
     "saveHelpTextSuffix": ", escribe el YAML en disco y luego recarga por diferencias la pila en ejecución — los dispositivos agregados se inician, los eliminados se detienen y los existentes se actualizan en el lugar.",
     "configSaved": "Configuración guardada",
+    "configParseErrorLine": "Línea {{line}}: {{message}}",
     "walkCopied": "{{name}} copiado",
     "walkCopyError": "No se pudo copiar el nombre del walk",
     "copyNameButton": "Copiar nombre"

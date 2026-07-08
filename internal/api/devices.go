@@ -164,7 +164,10 @@ func (s *Server) handleDeviceUpdate(w http.ResponseWriter, r *http.Request, host
 	if req.RawYAML != "" {
 		updatedDevice, parseErr := updateDeviceFromYAML(req.RawYAML, hostname)
 		if parseErr != nil {
-			writeError(w, r, http.StatusBadRequest, "parse_failed", parseErr.Error(), nil)
+			line, msg := parseYAMLError(parseErr)
+			writeError(w, r, http.StatusBadRequest, "parse_failed", parseErr.Error(),
+				[]ErrorDetail{{Issue: msg, Line: line}})
+
 			return
 		}
 

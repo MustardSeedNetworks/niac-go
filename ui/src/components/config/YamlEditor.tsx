@@ -7,8 +7,10 @@ import {
   indentOnInput,
   syntaxHighlighting,
 } from '@codemirror/language';
-import { EditorState, type Extension } from '@codemirror/state';
+import { EditorState, type Extension, StateEffect, StateField } from '@codemirror/state';
 import {
+  Decoration,
+  type DecorationSet,
   EditorView,
   highlightActiveLine,
   highlightActiveLineGutter,
@@ -19,6 +21,46 @@ import { tags } from '@lezer/highlight';
 import { type FC, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import i18n from '../../i18n';
+
+/**
+ * Line decoration used to highlight the offending line reported by a
+ * structured YAML parse error (see internal/api ErrorDetail.line). Set via
+ * `setErrorLineEffect` and cleared by dispatching it with `line: null`.
+ */
+const setErrorLineEffect = StateEffect.define<number | null>();
+
+const errorLineDecoration = Decoration.line({ class: 'cm-niac-error-line' });
+
+const errorLineField = StateField.define<DecorationSet>({
+  create() {
+    return Decoration.none;
+  },
+  update(decorations, tr) {
+    let next = decorations.map(tr.changes);
+
+    for (const effect of tr.effects) {
+      if (effect.is(setErrorLineEffect)) {
+        if (effect.value === null) {
+          next = Decoration.none;
+        } else {
+          const lineNum = Math.min(Math.max(effect.value, 1), tr.state.doc.lines);
+          const line = tr.state.doc.line(lineNum);
+          next = Decoration.set([errorLineDecoration.range(line.from)]);
+        }
+      }
+    }
+
+    return next;
+  },
+  provide: (field) => EditorView.decorations.from(field),
+});
+
+const errorLineTheme = EditorView.theme({
+  '.cm-niac-error-line': {
+    backgroundColor: 'rgba(239, 68, 68, 0.18)',
+    borderLeft: '3px solid #ef4444',
+  },
+});
 
 /**
  * Custom dark theme for CodeMirror that matches the app's design
@@ -117,6 +159,9 @@ interface YamlEditorProps {
   className?: string;
   /** Callback when validation errors are detected */
   onValidationError?: (errors: string[]) => void;
+  /** 1-based line to highlight and scroll into view (e.g. a structured YAML
+   * parse error's line number). `null`/`undefined` clears the highlight. */
+  errorLine?: number | null;
 }
 
 /**
@@ -143,6 +188,7 @@ export const YamlEditor: FC<YamlEditorProps> = ({
   lineWrapping = false,
   className = '',
   onValidationError,
+  errorLine,
 }) => {
   const { t } = useTranslation('pages');
   const containerRef = useRef<HTMLDivElement>(null);
@@ -154,6 +200,8 @@ export const YamlEditor: FC<YamlEditorProps> = ({
       yaml(),
       syntaxHighlighting(yamlHighlighting),
       niacTheme,
+      errorLineField,
+      errorLineTheme,
       history(),
       keymap.of([...defaultKeymap, ...historyKeymap]),
       indentOnInput(),
@@ -203,7 +251,13 @@ export const YamlEditor: FC<YamlEditorProps> = ({
     [onChange, onValidationError],
   );
 
-  // Initialize editor
+  // Initialize editor. `value` is intentionally excluded from the deps
+  // array: it seeds the initial doc only. Re-running this effect on every
+  // keystroke would destroy and recreate the whole CodeMirror view (losing
+  // cursor position, focus, and undo history) each time `onChange` flows a
+  // new value back in as a prop. External value changes (load, reset,
+  // discard) are instead applied by the sync effect below, which dispatches
+  // a targeted doc replacement instead of a full teardown.
   useEffect(() => {
     if (!containerRef.current) {
       return;
@@ -230,7 +284,7 @@ export const YamlEditor: FC<YamlEditorProps> = ({
       view.destroy();
       viewRef.current = null;
     };
-  }, [extensions, handleUpdate, value]); // Note: value is intentionally excluded
+  }, [extensions, handleUpdate]);
 
   // Update content when value prop changes externally
   useEffect(() => {
@@ -249,6 +303,29 @@ export const YamlEditor: FC<YamlEditorProps> = ({
       });
     }
   }, [value]);
+
+  // Highlight and scroll to the reported error line, when set.
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view) {
+      return;
+    }
+
+    if (errorLine === undefined || errorLine === null || errorLine < 1) {
+      view.dispatch({ effects: setErrorLineEffect.of(null) });
+      return;
+    }
+
+    const lineNum = Math.min(errorLine, view.state.doc.lines);
+    const line = view.state.doc.line(lineNum);
+
+    view.dispatch({
+      effects: [
+        setErrorLineEffect.of(errorLine),
+        EditorView.scrollIntoView(line.from, { y: 'center' }),
+      ],
+    });
+  }, [errorLine]);
 
   // Container styles
   const containerStyle = {

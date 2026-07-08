@@ -28,23 +28,31 @@ Object.defineProperty(window, 'matchMedia', {
   }),
 });
 
-// ResizeObserver: used by xyflow, codemirror, recharts, headlessui
-global.ResizeObserver = vi.fn().mockImplementation(() => ({
-  observe: vi.fn(),
-  unobserve: vi.fn(),
-  disconnect: vi.fn(),
-})) as unknown as typeof ResizeObserver;
+// ResizeObserver: used by xyflow, codemirror, recharts, headlessui.
+// Must be a real class (not an arrow-function mockImplementation) — some
+// consumers (CodeMirror's EditorView) construct it with `new`, which throws
+// "is not a constructor" against an arrow function.
+class MockResizeObserver implements ResizeObserver {
+  observe = vi.fn();
+  unobserve = vi.fn();
+  disconnect = vi.fn();
+}
+global.ResizeObserver = MockResizeObserver;
 
-// IntersectionObserver: used by lazy loading, infinite scroll
-global.IntersectionObserver = vi.fn().mockImplementation(() => ({
-  observe: vi.fn(),
-  unobserve: vi.fn(),
-  disconnect: vi.fn(),
-  takeRecords: vi.fn(() => []),
-  root: null,
-  rootMargin: '',
-  thresholds: [],
-})) as unknown as typeof IntersectionObserver;
+// IntersectionObserver: used by lazy loading, infinite scroll, and
+// CodeMirror's DOMObserver (@codemirror/view). Must be a real class, not an
+// arrow-function mockImplementation — see the ResizeObserver comment above.
+class MockIntersectionObserver implements IntersectionObserver {
+  readonly root: Element | Document | null = null;
+  readonly rootMargin: string = '';
+  readonly scrollMargin: string = '';
+  readonly thresholds: ReadonlyArray<number> = [];
+  observe = vi.fn();
+  unobserve = vi.fn();
+  disconnect = vi.fn();
+  takeRecords = vi.fn(() => []);
+}
+global.IntersectionObserver = MockIntersectionObserver;
 
 // localStorage: Node 22+'s experimental global `localStorage` shadows
 // jsdom's window.localStorage and throws on access without a

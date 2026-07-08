@@ -27,13 +27,16 @@ describe('SelectedNetworkPreview', () => {
     ).toBeInTheDocument();
   });
 
-  it('surfaces a distinct parse-error message for malformed YAML instead of the empty-devices message', async () => {
+  it('surfaces a distinct line-numbered parse-error message for malformed YAML instead of the empty-devices message', async () => {
     fetchTemplateContent.mockResolvedValue({ content: 'devices: [\n  - broken: [unterminated' });
 
     render(<SelectedNetworkPreview source="template" name="broken.yaml" />);
 
     await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
-    expect(screen.getByRole('alert')).toHaveTextContent("Couldn't parse config:");
+    // yaml's YAMLParseError reports the unterminated flow sequence on line 2
+    // (1-based) — assert the structured "at line N" wording rather than the
+    // generic fallback, proving the line was actually extracted.
+    expect(screen.getByRole('alert')).toHaveTextContent("Couldn't parse config at line 2:");
     expect(
       screen.queryByText('Picked config has no devices — nothing will run.'),
     ).not.toBeInTheDocument();
