@@ -12,6 +12,7 @@ import {
   Server,
   ShieldCheck,
   Terminal,
+  Wand2,
   Workflow,
   Wrench,
   Zap,
@@ -28,6 +29,9 @@ const DashboardPage = lazy(() =>
 );
 const RuntimeControlPage = lazy(() =>
   import('./pages/RuntimeControlPage').then((m) => ({ default: m.RuntimeControlPage })),
+);
+const NewSimulationWizardPage = lazy(() =>
+  import('./pages/NewSimulationWizardPage').then((m) => ({ default: m.NewSimulationWizardPage })),
 );
 const DevicesPage = lazy(() =>
   import('./pages/DevicesPage').then((m) => ({ default: m.DevicesPage })),
@@ -99,6 +103,7 @@ export type PageConfig = {
 type PageI18nKey =
   | 'dashboard'
   | 'runtime'
+  | 'newSimWizard'
   | 'devices'
   | 'segments'
   | 'deviceLibrary'
@@ -197,6 +202,29 @@ const staticPages: PageDef[] = [
             Use <code>lo0</code> (macOS) / <code>lo</code> (Linux) for safe local testing.
           </li>
         </ul>
+      </>
+    ),
+  },
+  {
+    path: '/new-simulation',
+    i18nKey: 'newSimWizard',
+    icon: Wand2,
+    component: NewSimulationWizardPage,
+    help: (
+      <>
+        <p>
+          A guided path through the existing pieces of the app: pick a starting config, add/edit
+          devices, review the per-device protocol config, then save. Nothing here is new — each step
+          embeds the same page or endpoint used elsewhere (Simulation's config picker, Device
+          Library, Running Devices' protocol table, the Simulation page's preview, and the
+          config-save endpoint).
+        </p>
+        <h4>Why the simulation starts early</h4>
+        <p>
+          Device editing only works against the daemon's currently-running config, so step 1 starts
+          the simulation on the picked interface before handing off to the device editor — there's
+          no separate "load without running" step.
+        </p>
       </>
     ),
   },

@@ -11,6 +11,7 @@ import {
   Server,
   ShieldCheck,
   Terminal,
+  Wand2,
   Workflow,
   Wrench,
   Zap,
@@ -46,6 +47,7 @@ export function useNavGroups(): SidebarNavGroup[] {
         items: [
           { path: '/', label: t('dashboard.label'), icon: Activity },
           { path: '/runtime', label: t('runtime.label'), icon: PlugZap },
+          { path: '/new-simulation', label: t('newSimWizard.label'), icon: Wand2 },
         ],
       },
       {
