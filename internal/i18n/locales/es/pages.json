@@ -464,7 +464,9 @@
       "clientBytesLabel": "{{count}} B cliente",
       "serverBytesLabel": "{{count}} B servidor",
       "asciiToggle": "ASCII",
-      "hexToggle": "Hex"
+      "hexToggle": "Hex",
+      "clientToServerAriaLabel": "Cliente a servidor",
+      "serverToClientAriaLabel": "Servidor a cliente"
     },
     "conversations": {
       "emptyTitle": "No se encontraron conversaciones TCP/UDP",
