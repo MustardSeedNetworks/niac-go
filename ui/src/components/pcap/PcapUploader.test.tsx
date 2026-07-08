@@ -23,6 +23,7 @@ describe('PcapUploader', () => {
         selectedFile={null}
         error={null}
         success={null}
+        uploadProgress={null}
       />,
     );
 
@@ -52,6 +53,7 @@ describe('PcapUploader', () => {
         selectedFile={null}
         error={null}
         success={null}
+        uploadProgress={null}
       />,
     );
 
@@ -74,9 +76,64 @@ describe('PcapUploader', () => {
         selectedFile={null}
         error="Invalid file type. Please select a PCAP file (.pcap, .pcapng, .cap)"
         success={null}
+        uploadProgress={null}
       />,
     );
 
     expect(screen.getByText(/Invalid file type/)).toBeInTheDocument();
+  });
+
+  it('renders a determinate progress bar while uploadProgress is set', () => {
+    const { rerender } = render(
+      <PcapUploader
+        onFileSelect={vi.fn()}
+        onAnalyze={vi.fn()}
+        onValidationError={vi.fn()}
+        isAnalyzing={true}
+        selectedFile={makeFile('capture.pcap', 1024)}
+        error={null}
+        success={null}
+        uploadProgress={42}
+      />,
+    );
+
+    expect(screen.getByTestId('pcap-upload-progress')).toBeInTheDocument();
+    const bar = screen.getByTestId('pcap-upload-progress-bar');
+    expect(bar).toHaveStyle({ width: '42%' });
+    expect(screen.getByText(/42%/)).toBeInTheDocument();
+
+    // Upload finished (or hasn't started): no progress bar.
+    rerender(
+      <PcapUploader
+        onFileSelect={vi.fn()}
+        onAnalyze={vi.fn()}
+        onValidationError={vi.fn()}
+        isAnalyzing={false}
+        selectedFile={makeFile('capture.pcap', 1024)}
+        error={null}
+        success={null}
+        uploadProgress={null}
+      />,
+    );
+
+    expect(screen.queryByTestId('pcap-upload-progress')).not.toBeInTheDocument();
+  });
+
+  it('displays the friendly over-limit message when the server rejects an oversized upload', () => {
+    render(
+      <PcapUploader
+        onFileSelect={vi.fn()}
+        onAnalyze={vi.fn()}
+        onValidationError={vi.fn()}
+        isAnalyzing={false}
+        selectedFile={null}
+        error="This capture is too large for the server to accept (limit: 140.0 MB). Please choose a smaller file."
+        success={null}
+        uploadProgress={null}
+      />,
+    );
+
+    expect(screen.getByText(/too large for the server to accept/)).toBeInTheDocument();
+    expect(screen.getByText(/140\.0 MB/)).toBeInTheDocument();
   });
 });

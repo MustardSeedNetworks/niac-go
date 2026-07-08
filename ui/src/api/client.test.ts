@@ -7,6 +7,51 @@ vi.stubGlobal('fetch', mockFetch);
 // Mock import.meta.env
 vi.stubGlobal('import', { meta: { env: { VITE_API_BASE: '', VITE_API_TOKEN: 'test-token' } } });
 
+/**
+ * Minimal fake XMLHttpRequest for exercising uploadPcapWithProgress, which
+ * uses XHR (not fetch) specifically so it can observe xhr.upload.onprogress
+ * — something fetch has no cross-browser way to report.
+ */
+class FakeXHR {
+  static instances: FakeXHR[] = [];
+
+  method = '';
+  url = '';
+  readonly headers: Record<string, string> = {};
+  withCredentials = false;
+  timeout = 0;
+  status = 0;
+  statusText = '';
+  responseText = '';
+  sentBody: string | undefined;
+  upload: { onprogress: ((event: ProgressEvent) => void) | null } = { onprogress: null };
+  onload: (() => void) | null = null;
+  onerror: (() => void) | null = null;
+  ontimeout: (() => void) | null = null;
+  onabort: (() => void) | null = null;
+
+  constructor() {
+    FakeXHR.instances.push(this);
+  }
+
+  open(method: string, url: string) {
+    this.method = method;
+    this.url = url;
+  }
+
+  setRequestHeader(key: string, value: string) {
+    this.headers[key] = value;
+  }
+
+  send(body?: string) {
+    this.sentBody = body;
+  }
+
+  abort() {
+    this.onabort?.();
+  }
+}
+
 describe('API Client', () => {
   beforeEach(() => {
     mockFetch.mockReset();
@@ -204,6 +249,76 @@ describe('API Client', () => {
       const result = await fetchVersion();
       expect(result).toBeDefined();
       expect(mockFetch).toHaveBeenCalledTimes(3);
+    });
+  });
+
+  describe('uploadPcapWithProgress', () => {
+    beforeEach(() => {
+      FakeXHR.instances = [];
+      vi.stubGlobal('XMLHttpRequest', FakeXHR);
+    });
+
+    it('reports upload progress and resolves with the camel-cased response', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ token: 'csrf-token' }),
+      });
+
+      const { uploadPcapWithProgress } = await import('./client');
+      const onProgress = vi.fn();
+
+      const promise = uploadPcapWithProgress({ filename: 'x.pcap', data: 'AAAA' }, onProgress);
+
+      await vi.waitFor(() => expect(FakeXHR.instances).toHaveLength(1));
+      const xhr = FakeXHR.instances[0];
+      expect(xhr.method).toBe('POST');
+      // Headers normalizes names to lowercase when iterated.
+      expect(xhr.headers['x-csrf-token']).toBe('csrf-token');
+
+      xhr.upload.onprogress?.({ lengthComputable: true, loaded: 50, total: 100 } as ProgressEvent);
+      expect(onProgress).toHaveBeenCalledWith(50);
+
+      xhr.status = 200;
+      xhr.responseText = JSON.stringify({
+        success: true,
+        analysis_id: 'abc123',
+        message: 'Successfully analyzed 3 packets',
+      });
+      xhr.onload?.();
+
+      await expect(promise).resolves.toEqual({
+        success: true,
+        analysisId: 'abc123',
+        message: 'Successfully analyzed 3 packets',
+      });
+    });
+
+    it('rejects with the structured over-limit error on 413', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ token: 'csrf-token' }),
+      });
+
+      const { uploadPcapWithProgress } = await import('./client');
+      const promise = uploadPcapWithProgress({ filename: 'big.pcap', data: 'AAAA' }, vi.fn());
+
+      await vi.waitFor(() => expect(FakeXHR.instances).toHaveLength(1));
+      const xhr = FakeXHR.instances[0];
+
+      xhr.status = 413;
+      xhr.statusText = 'Request Entity Too Large';
+      xhr.responseText = JSON.stringify({
+        error: 'request_too_large',
+        message: 'Request body exceeds the 140.0 MB size limit',
+        details: [{ field: 'body', issue: 'max_size_exceeded', value: '140.0 MB' }],
+      });
+      xhr.onload?.();
+
+      await expect(promise).rejects.toMatchObject({
+        code: 'request_too_large',
+        status: 413,
+        details: [{ field: 'body', issue: 'max_size_exceeded', value: '140.0 MB' }],
+      });
     });
   });
 });

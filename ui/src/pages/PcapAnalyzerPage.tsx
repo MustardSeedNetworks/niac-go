@@ -1,7 +1,8 @@
 import { Download, FileSearch, Info, Palette, Share2, Trash2 } from 'lucide-react';
 import { type FC, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { fetchPcapAnalysis, uploadPcap } from '../api/client';
+import { fetchPcapAnalysis, uploadPcapWithProgress } from '../api/client';
+import { isApiError } from '../api/errors';
 import type { PcapAnalysisResult, PcapPacket } from '../api/types';
 import { ColoringRulesPanel } from '../components/ColoringRulesPanel';
 import { ConversationList } from '../components/ConversationList';
@@ -67,6 +68,7 @@ export const PcapAnalyzerPage: FC = () => {
   // failure below.
   const [validationError, setValidationError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const showError = useErrorToast();
 
   // Selected packet state
@@ -118,14 +120,15 @@ export const PcapAnalyzerPage: FC = () => {
     setIsAnalyzing(true);
     setValidationError(null);
     setSuccess(null);
+    setUploadProgress(0);
 
     try {
       // Convert file to base64 and upload to backend
       const base64Data = await fileToBase64(selectedFile);
-      const uploadResponse = await uploadPcap({
-        filename: selectedFile.name,
-        data: base64Data,
-      });
+      const uploadResponse = await uploadPcapWithProgress(
+        { filename: selectedFile.name, data: base64Data },
+        setUploadProgress,
+      );
 
       if (!uploadResponse.success) {
         throw new Error(uploadResponse.message || tPages('libraryPcaps.analyzer.uploadFailed'));
@@ -142,9 +145,19 @@ export const PcapAnalyzerPage: FC = () => {
         setSelectedPacket(result.packets[0]);
       }
     } catch (err) {
-      showError(err);
+      // The server enforces its own upload size cap (independent of the
+      // client-side MAX_FILE_SIZE check) — surface that specific failure
+      // as a friendly, actionable inline message instead of a generic
+      // toast, since the fix is "pick a smaller file."
+      if (isApiError(err) && err.code === 'request_too_large') {
+        const limit = err.details.find((detail) => detail.field === 'body')?.value ?? '100MB';
+        setValidationError(tPages('libraryPcaps.uploader.serverFileTooLarge', { size: limit }));
+      } else {
+        showError(err);
+      }
     } finally {
       setIsAnalyzing(false);
+      setUploadProgress(null);
     }
   }, [selectedFile, showError, tPages]);
 
@@ -236,6 +249,7 @@ export const PcapAnalyzerPage: FC = () => {
           selectedFile={selectedFile}
           error={validationError}
           success={success}
+          uploadProgress={uploadProgress}
         />
       )}
 

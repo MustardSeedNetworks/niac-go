@@ -5,8 +5,11 @@ package api
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
+
+	"github.com/MustardSeedNetworks/niac-go/internal/content"
 )
 
 // decodeJSONStrict reads and validates JSON from r.Body into dst. It applies
@@ -51,8 +54,11 @@ func decodeJSONStrictWith(
 		if errors.As(err, &maxBytesErr) {
 			attrs := append([]any{"max_size", maxSize}, extraAttrs...)
 			logger.WarnContext(r.Context(), "Request body too large", attrs...)
+			limit := content.HumanBytes(maxSize)
 			writeError(w, r, http.StatusRequestEntityTooLarge,
-				"request_too_large", "Request body exceeds size limit", nil)
+				"request_too_large",
+				fmt.Sprintf("Request body exceeds the %s size limit", limit),
+				[]ErrorDetail{{Field: "body", Issue: "max_size_exceeded", Value: limit}})
 			return false
 		}
 		attrs := append([]any{"error", err}, extraAttrs...)
