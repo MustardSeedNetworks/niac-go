@@ -160,13 +160,29 @@ export const StreamView: FC<StreamViewProps> = memo(({ packets, clientEndpoint, 
               {segments.map((segment, idx) => (
                 <div
                   key={`${segment.timestamp}-${idx}`}
-                  className={`px-3 py-compact-md rounded whitespace-pre-wrap break-all ${
+                  className={`flex items-start gap-tight px-3 py-compact-md rounded whitespace-pre-wrap break-all ${
                     segment.isClient
                       ? 'bg-status-info/30 text-status-info border-l-2 border-status-info'
                       : 'bg-status-error/30 text-status-error border-l-2 border-status-error'
                   }`}
                 >
-                  {displayMode === 'ascii' ? hexToAscii(segment.data) : formatHex(segment.data)}
+                  {/* Non-color direction cue: color alone doesn't work for colorblind
+                      users, so a text glyph carries direction independently. */}
+                  <span
+                    role="img"
+                    aria-label={
+                      segment.isClient
+                        ? t('packets.streamView.clientToServerAriaLabel')
+                        : t('packets.streamView.serverToClientAriaLabel')
+                    }
+                    data-testid="stream-direction-glyph"
+                    className="shrink-0 font-bold"
+                  >
+                    {segment.isClient ? '→' : '←'}
+                  </span>
+                  <span>
+                    {displayMode === 'ascii' ? hexToAscii(segment.data) : formatHex(segment.data)}
+                  </span>
                 </div>
               ))}
             </div>
