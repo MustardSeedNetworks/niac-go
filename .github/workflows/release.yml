@@ -168,6 +168,9 @@ jobs:
           # install pattern in ci.yml — never pipe an installer script
           # straight to a shell.
           SYFT_SHA256: "d654f678b709eb53c393d38519d5ed7d2e57205529404018614cfefa0fb2b5ca"
+        # Container run steps default to `sh` (dash), which rejects
+        # `set -o pipefail`; force bash (present in goreleaser-cross).
+        shell: bash
         run: |
           set -euo pipefail
           curl -sSfL -o syft.tar.gz \
@@ -278,6 +281,7 @@ jobs:
         if: env.HAS_CONTENT_KEY == 'true'
         # goreleaser-cross is Go-focused; make sure ssh (deploy-key checkout),
         # python3 and make (bundle generation) are present.
+        shell: bash
         run: |
           set -euo pipefail
           apt-get update
@@ -297,6 +301,7 @@ jobs:
         # `make content-bundle` writes dist/niac-content-<version>.tar.gz; copy
         # it to the fixed name the content config expects, at the repo root so
         # goreleaser's `--clean` (which only wipes dist/) can't delete it.
+        shell: bash
         run: |
           set -euo pipefail
           make content-bundle CONTENT_CORPUS=.content-corpus/walks/sanitized
