@@ -326,9 +326,7 @@ func (h *VariMibIntegralHandler) GetValue() any {
 	}
 
 	// Ensure non-negative for counter types
-	if value < 0 {
-		value = 0
-	}
+	value = max(value, 0)
 
 	// Return appropriate type based on ASN type
 	switch h.asnType {
