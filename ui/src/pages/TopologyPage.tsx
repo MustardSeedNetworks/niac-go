@@ -20,6 +20,7 @@ import { Network, Radar, RefreshCw } from 'lucide-react';
 import { exportTopology, fetchDevices, fetchNeighbors, fetchTopology } from '../api/client';
 import type { DeviceSummary } from '../api/types';
 import { useApiResource } from '../hooks/useApiResource';
+import { useTopologyLayoutPersistence } from '../hooks/useTopologyLayoutPersistence';
 import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
 import { H2, SmallText } from '../ui/Typography';
@@ -37,11 +38,8 @@ import {
   layoutNodes,
   NeighborsView,
   readSavedLayoutMode,
-  readSavedPositions,
-  TOPOLOGY_POSITIONS_KEY,
   TopologyLegend,
   writeSavedLayoutMode,
-  writeSavedPositions,
 } from './topology';
 import { TrunkEdge } from './topology/TrunkEdge';
 
@@ -124,6 +122,11 @@ export const TopologyPage: FC = () => {
   // because rings get hard to read past ~6 devices and the layered
   // dagre layout matches how operators draw networks on a whiteboard.
   const [layoutMode, setLayoutMode] = useState<LayoutMode>(() => readSavedLayoutMode());
+  // Node-position persistence (browser-local, debounced writes) — see
+  // ../hooks/useTopologyLayoutPersistence.ts. Layout *mode* persistence
+  // stays a direct localStorage read/write above; only positions get
+  // debounced since they change on every drag.
+  const layoutPersistence = useTopologyLayoutPersistence();
   const handleLayoutModeChange = useCallback(
     (mode: LayoutMode) => {
       setLayoutMode(mode);
@@ -132,12 +135,10 @@ export const TopologyPage: FC = () => {
       // the layout algorithm gets a clean canvas. Without this, the
       // user's pre-mode-change positions stick and "Hierarchical" still
       // looks like whatever they had.
-      if (typeof window !== 'undefined') {
-        window.localStorage.removeItem(TOPOLOGY_POSITIONS_KEY);
-      }
+      layoutPersistence.resetPositions();
       setNodes((current) => current.map((node) => ({ ...node, position: { x: 0, y: 0 } })));
     },
-    [setNodes],
+    [setNodes, layoutPersistence],
   );
   // Session-only "hide this device" set. Cleared by Reset, lost on
   // page reload — we don't persist it because hiding is meant to be a
@@ -271,7 +272,7 @@ export const TopologyPage: FC = () => {
       for (const node of current) {
         positionByName.set(node.id, node.position);
       }
-      const stored = readSavedPositions();
+      const stored = layoutPersistence.loadPositions();
       return layoutedNodes.map((node) => {
         const existing = positionByName.get(node.id);
         const saved = stored[node.id];
@@ -298,18 +299,19 @@ export const TopologyPage: FC = () => {
     resetCounter,
     setNodes,
     setEdges,
+    layoutPersistence,
   ]);
 
   // Persist node positions when the user stops dragging so layouts
-  // survive page reloads. Keyed by device name; stored as a flat
-  // {name: {x, y}} map in localStorage.
+  // survive page reloads. Keyed by device name; stored (debounced) as
+  // a flat {name: {x, y}} map in localStorage — browser-local only.
   const handleNodeDragStop = useCallback(() => {
     const positions: Record<string, { x: number; y: number }> = {};
     for (const node of nodes) {
       positions[node.id] = { x: node.position.x, y: node.position.y };
     }
-    writeSavedPositions(positions);
-  }, [nodes]);
+    layoutPersistence.savePositions(positions);
+  }, [nodes, layoutPersistence]);
 
   // Handle node selection
   const handleNodeClick = useCallback(
@@ -334,9 +336,7 @@ export const TopologyPage: FC = () => {
   // "existing ?? saved ?? fresh" fallback kept the (0,0) and visibly
   // did nothing.
   const handleResetLayout = useCallback(() => {
-    if (typeof window !== 'undefined') {
-      window.localStorage.removeItem(TOPOLOGY_POSITIONS_KEY);
-    }
+    layoutPersistence.resetPositions();
     setFocusedNodeId(null);
     setSearch('');
     setActiveTypes(new Set());
@@ -348,7 +348,7 @@ export const TopologyPage: FC = () => {
     window.setTimeout(() => {
       rfInstance.current?.fitView({ padding: 0.2, duration: 400 });
     }, 150);
-  }, [setNodes, setEdges]);
+  }, [setNodes, setEdges, layoutPersistence]);
 
   // The set of unique device types currently in the graph — drives the
   // filter chip row. Sorted for stable button order.
@@ -662,6 +662,7 @@ export const TopologyPage: FC = () => {
                     onClick={handleResetLayout}
                     disabled={nodes.length === 0}
                     title={t('topology.header.resetButtonTitle')}
+                    data-testid="topology-reset-layout-button"
                   >
                     {t('topology.header.resetButtonLabel')}
                   </Button>
@@ -722,6 +723,18 @@ export const TopologyPage: FC = () => {
                       );
                     })}
                   </div>
+                  {/* Unobtrusive reminder that dragged positions live in
+                      this browser's localStorage only — no backend
+                      route, so a different browser/profile starts from
+                      the default layout. Hidden below `lg` to keep the
+                      toolbar from wrapping on narrow viewports. */}
+                  <SmallText
+                    className="hidden lg:inline text-text-muted"
+                    title={t('topology.header.layoutPersistenceHint')}
+                    data-testid="topology-layout-persistence-note"
+                  >
+                    {t('topology.header.layoutPersistenceNote')}
+                  </SmallText>
                 </>
               )}
             </div>
