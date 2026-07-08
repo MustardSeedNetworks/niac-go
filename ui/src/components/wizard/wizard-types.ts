@@ -1,4 +1,4 @@
-import type { Template, UserConfig } from '../../api/types';
+import type { LibraryNetwork, Template } from '../../api/types';
 
 /**
  * NewSimulationWizard step identifiers, in stepper order. Kept as a
@@ -27,7 +27,7 @@ export interface WizardState {
   step: number;
   source: WizardSource | null;
   template: Template | null;
-  userConfig: UserConfig | null;
+  userConfig: LibraryNetwork | null;
   uploadFile: File | null;
   selectedInterface: string;
   configPath: string | null;

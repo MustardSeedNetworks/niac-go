@@ -1,7 +1,8 @@
 import { type FC, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { applyTemplate, startSimulation, uploadUserConfig } from '../api/client';
-import type { Template, UserConfig } from '../api/types';
+import { applyTemplate, startSimulation } from '../api/client';
+import { fetchLibraryNetworkContent } from '../api/library-client';
+import type { LibraryNetwork, Template } from '../api/types';
 import { DevicesStep } from '../components/wizard/DevicesStep';
 import { FinishStep } from '../components/wizard/FinishStep';
 import { ProtocolsStep } from '../components/wizard/ProtocolsStep';
@@ -76,15 +77,20 @@ export const NewSimulationWizardPage: FC = () => {
         const applied = await applyTemplate({ templateName: state.template.name });
         configPath = applied.configPath;
       } else if (state.source === 'userConfig' && state.userConfig) {
-        configPath = state.userConfig.path;
+        // Library networks aren't exposed as a filesystem path, so fetch
+        // the picked network's content and send it inline. The daemon
+        // persists inline config to its own _running.inline.yaml and
+        // points the active config path there, so step 2's device edits
+        // land on that copy rather than mutating the saved network.
+        const network = await fetchLibraryNetworkContent(state.userConfig.name);
+        configData = network.content;
       } else if (state.source === 'upload' && state.uploadFile) {
         configData = await fileToText(state.uploadFile);
       } else if (state.source === 'empty') {
-        const created = await uploadUserConfig({
-          name: `new-simulation-${Date.now()}`,
-          content: EMPTY_CONFIG_YAML,
-        });
-        configPath = created.path;
+        // Same inline path as above — the daemon materialises the blank
+        // skeleton to _running.inline.yaml, giving step 2 a real, editable
+        // active config without minting a persistent named entry.
+        configData = EMPTY_CONFIG_YAML;
       } else {
         throw new Error(t('newSimWizard.template.errorNoSource'));
       }
@@ -141,7 +147,7 @@ export const NewSimulationWizardPage: FC = () => {
                 uploadFile: null,
               }))
             }
-            onSelectUserConfig={(userConfig: UserConfig) =>
+            onSelectUserConfig={(userConfig: LibraryNetwork) =>
               setState((s) => ({
                 ...s,
                 source: 'userConfig',

@@ -2,7 +2,7 @@ import { Network } from 'lucide-react';
 import { type FC, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchUsableInterfaces } from '../../api/client';
-import type { NetworkInterface, Template, UserConfig } from '../../api/types';
+import type { LibraryNetwork, NetworkInterface, Template } from '../../api/types';
 import { iconSizes } from '../../constants/sizes';
 import { Card, CardContent } from '../../ui/Card';
 import { SmallText } from '../../ui/Typography';
@@ -12,7 +12,7 @@ import type { WizardState } from './wizard-types';
 interface TemplateStepProps {
   state: WizardState;
   onSelectTemplate: (template: Template) => void;
-  onSelectUserConfig: (config: UserConfig) => void;
+  onSelectUserConfig: (config: LibraryNetwork) => void;
   onUpload: (file: File | null) => void;
   onSelectEmpty: () => void;
   onInterfaceChange: (iface: string) => void;
@@ -61,7 +61,6 @@ export const TemplateStep: FC<TemplateStepProps> = ({
     name: state.uploadFile
       ? state.uploadFile.name
       : (state.template?.name ?? state.userConfig?.name ?? ''),
-    path: state.userConfig?.path,
   };
 
   return (
