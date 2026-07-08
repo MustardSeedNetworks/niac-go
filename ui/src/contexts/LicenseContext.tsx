@@ -27,13 +27,27 @@ import {
 } from 'react';
 import { deduplicatedGet } from '../api/requestCore';
 
+/**
+ * A single entry in LicenseStatus.features — the full Pro feature
+ * catalog, each carrying display copy (English, sourced from the
+ * backend registry — not translated) plus whether the active
+ * license grants it.
+ */
+export interface LicenseFeature {
+  id: string;
+  label: string;
+  description: string;
+  granted: boolean;
+}
+
 /** Shape of GET /api/v1/license — mirrors LicenseStatusResponse on the server. */
 export interface LicenseStatus {
   tier: string;
   isActivated: boolean;
   isTrialMode: boolean;
   trialDaysRemaining: number;
-  features: string[];
+  /** The full Pro feature catalog with granted status. Always non-empty. */
+  features: LicenseFeature[];
   /**
    * False on dev / test builds where no license manager is wired
    * in. UIs should treat this as "all features available, hide
@@ -97,7 +111,7 @@ export function LicenseProvider({ children }: LicenseProviderProps): ReactElemen
       if (!status.licenseEnforced) {
         return true;
       }
-      return status.features.includes(feature);
+      return status.features.some((f) => f.id === feature && f.granted);
     },
     [status],
   );

@@ -732,8 +732,9 @@
     "notActivated": "Sin activar",
     "trial": "Prueba",
     "trialDaysRemaining": "{{days}} días restantes",
-    "features": "Funciones incluidas",
+    "features": "Funciones",
     "noFeatures": "No se reportan indicadores de funciones para este nivel.",
+    "featureLocked": "Requiere actualización",
     "manage": "Administrar su licencia",
     "manageHint": "NIAC valida las licencias sin conexión, sin comunicación externa. Active, inicie una prueba o desactive con la CLI niac license en el host que ejecuta el daemon.",
     "cmd": {
