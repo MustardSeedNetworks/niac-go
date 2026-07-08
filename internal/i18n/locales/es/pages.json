@@ -817,6 +817,24 @@
     "revertingButton": "Revirtiendo…",
     "sourceStarter": "starter",
     "sourceBundle": "bundle",
-    "sourceUser": "usuario"
+    "sourceUser": "usuario",
+    "sanitizeLabel": "Sanear {{name}}",
+    "sanitizeButton": "Sanear",
+    "sanitizingButton": "Saneando…",
+    "sanitizeModalTitle": "Sanear walk",
+    "sanitizeModalMessagePrefix": "¿Sanear",
+    "sanitizeModalMessageSuffix": "? Esto escribe una copia saneada en su lugar; el original sigue siendo recuperable mediante Revertir.",
+    "sanitizeSuccessTitle": "Walk saneado",
+    "sanitizeSuccessMessage": "{{name}} fue saneado. El original sigue siendo recuperable mediante Revertir.",
+    "selectAllAriaLabel": "Seleccionar todos los walks",
+    "selectRowAriaLabel": "Seleccionar {{name}}",
+    "selectedCount_one": "{{count}} seleccionado",
+    "selectedCount_other": "{{count}} seleccionados",
+    "sanitizeSelectedButton": "Sanear seleccionados",
+    "sanitizeBatchModalTitle": "Sanear walks seleccionados",
+    "sanitizeBatchModalMessage": "¿Sanear {{count}} walks seleccionados? Esto escribe copias saneadas en su lugar; los originales siguen siendo recuperables mediante Revertir.",
+    "sanitizeBatchSuccessTitle": "Walks saneados",
+    "sanitizeBatchPartialTitle": "Algunos walks no se pudieron sanear",
+    "sanitizeBatchSummary": "{{sanitized}} saneados, {{failed}} fallidos"
   }
 }

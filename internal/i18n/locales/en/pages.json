@@ -817,6 +817,24 @@
     "revertingButton": "Reverting…",
     "sourceStarter": "starter",
     "sourceBundle": "bundle",
-    "sourceUser": "user"
+    "sourceUser": "user",
+    "sanitizeLabel": "Sanitize {{name}}",
+    "sanitizeButton": "Sanitize",
+    "sanitizingButton": "Sanitizing…",
+    "sanitizeModalTitle": "Sanitize walk",
+    "sanitizeModalMessagePrefix": "Sanitize",
+    "sanitizeModalMessageSuffix": "? This writes a sanitized copy in place; the original stays recoverable via Revert.",
+    "sanitizeSuccessTitle": "Walk sanitized",
+    "sanitizeSuccessMessage": "{{name}} was sanitized. The original stays recoverable via Revert.",
+    "selectAllAriaLabel": "Select all walks",
+    "selectRowAriaLabel": "Select {{name}}",
+    "selectedCount_one": "{{count}} selected",
+    "selectedCount_other": "{{count}} selected",
+    "sanitizeSelectedButton": "Sanitize selected",
+    "sanitizeBatchModalTitle": "Sanitize selected walks",
+    "sanitizeBatchModalMessage": "Sanitize {{count}} selected walks? This writes sanitized copies in place; originals stay recoverable via Revert.",
+    "sanitizeBatchSuccessTitle": "Walks sanitized",
+    "sanitizeBatchPartialTitle": "Some walks failed to sanitize",
+    "sanitizeBatchSummary": "{{sanitized}} sanitized, {{failed}} failed"
   }
 }
