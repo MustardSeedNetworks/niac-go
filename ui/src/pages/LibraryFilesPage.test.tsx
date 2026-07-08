@@ -7,6 +7,11 @@
  * refetches the list, and a failed revert surfaces an error toast
  * (see refactor/global-error-toasts) without losing the user's place —
  * no more bespoke inline revert-error banner in the modal.
+ *
+ * Also locks the sanitize contract (Phase 6 Slice B): a per-row Sanitize
+ * action confirms then calls sanitizeWalk, and a selection-driven batch
+ * action confirms then calls sanitizeWalksBatch — both refetch on success
+ * and surface a toast (success or, on partial batch failure, warning).
  */
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -19,11 +24,15 @@ import { LibraryPcapsPage, LibraryWalksPage } from './LibraryFilesPage';
 const fetchLibraryWalks = vi.fn();
 const fetchLibraryPcaps = vi.fn();
 const revertWalk = vi.fn();
+const sanitizeWalk = vi.fn();
+const sanitizeWalksBatch = vi.fn();
 
 vi.mock('../api/client', () => ({
   fetchLibraryWalks: () => fetchLibraryWalks(),
   fetchLibraryPcaps: () => fetchLibraryPcaps(),
   revertWalk: (name: string) => revertWalk(name),
+  sanitizeWalk: (name: string) => sanitizeWalk(name),
+  sanitizeWalksBatch: (names: string[]) => sanitizeWalksBatch(names),
 }));
 
 const editedWalk: LibraryFileEntry = {
@@ -47,6 +56,8 @@ describe('LibraryFilesPage (walks)', () => {
     fetchLibraryWalks.mockReset();
     fetchLibraryPcaps.mockReset();
     revertWalk.mockReset();
+    sanitizeWalk.mockReset();
+    sanitizeWalksBatch.mockReset();
     useUIStore.getState().clearNotifications();
   });
 
@@ -127,6 +138,122 @@ describe('LibraryFilesPage (walks)', () => {
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     expect(fetchLibraryWalks).toHaveBeenCalledTimes(1);
   });
+
+  it('calls sanitizeWalk with the entry name on confirm, then refetches and toasts success', async () => {
+    fetchLibraryWalks.mockResolvedValueOnce([cleanWalk]).mockResolvedValueOnce([editedWalk]);
+    sanitizeWalk.mockResolvedValue({ ...cleanWalk, edited: true });
+
+    render(
+      <>
+        <LibraryWalksPage />
+        <ToastContainer />
+      </>,
+    );
+
+    fireEvent.click(await screen.findByTestId(`sanitize-walk-${cleanWalk.name}`));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Sanitize' }));
+
+    await waitFor(() => expect(sanitizeWalk).toHaveBeenCalledWith(cleanWalk.name));
+    await waitFor(() => expect(fetchLibraryWalks).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(await screen.findByRole('alert')).toHaveTextContent('Walk sanitized');
+  });
+
+  it('does not call sanitizeWalk when the sanitize confirmation is cancelled', async () => {
+    fetchLibraryWalks.mockResolvedValue([cleanWalk]);
+
+    render(<LibraryWalksPage />);
+
+    fireEvent.click(await screen.findByTestId(`sanitize-walk-${cleanWalk.name}`));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(sanitizeWalk).not.toHaveBeenCalled();
+  });
+
+  it('surfaces a failed sanitize as a toast and keeps the modal open', async () => {
+    fetchLibraryWalks.mockResolvedValue([cleanWalk]);
+    sanitizeWalk.mockRejectedValue(new Error('daemon unavailable'));
+
+    render(
+      <>
+        <LibraryWalksPage />
+        <ToastContainer />
+      </>,
+    );
+
+    fireEvent.click(await screen.findByTestId(`sanitize-walk-${cleanWalk.name}`));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Sanitize' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('daemon unavailable');
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(fetchLibraryWalks).toHaveBeenCalledTimes(1);
+  });
+
+  it('selects walks via row checkboxes and sanitizes the selection as a batch', async () => {
+    fetchLibraryWalks.mockResolvedValueOnce([cleanWalk, editedWalk]).mockResolvedValueOnce([]);
+    sanitizeWalksBatch.mockResolvedValue({
+      results: [
+        { name: cleanWalk.name, success: true, ipsTransformed: 2, hostnamesTransformed: 1 },
+        { name: editedWalk.name, success: true, ipsTransformed: 0, hostnamesTransformed: 0 },
+      ],
+      sanitized: 2,
+      failed: 0,
+    });
+
+    render(
+      <>
+        <LibraryWalksPage />
+        <ToastContainer />
+      </>,
+    );
+
+    fireEvent.click(await screen.findByLabelText(`Select ${cleanWalk.name}`));
+    fireEvent.click(screen.getByLabelText(`Select ${editedWalk.name}`));
+
+    fireEvent.click(await screen.findByTestId('sanitize-selected-walks'));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Sanitize selected' }));
+
+    await waitFor(() =>
+      expect(sanitizeWalksBatch).toHaveBeenCalledWith([cleanWalk.name, editedWalk.name]),
+    );
+    await waitFor(() => expect(fetchLibraryWalks).toHaveBeenCalledTimes(2));
+    expect(await screen.findByRole('alert')).toHaveTextContent('2 sanitized, 0 failed');
+    // Selection clears after a successful batch.
+    expect(screen.queryByTestId('sanitize-selected-walks')).not.toBeInTheDocument();
+  });
+
+  it('reports partial batch failures as a warning toast', async () => {
+    fetchLibraryWalks.mockResolvedValue([cleanWalk, editedWalk]);
+    sanitizeWalksBatch.mockResolvedValue({
+      results: [
+        { name: cleanWalk.name, success: true, ipsTransformed: 1, hostnamesTransformed: 0 },
+        { name: editedWalk.name, success: false, error: 'not found' },
+      ],
+      sanitized: 1,
+      failed: 1,
+    });
+
+    render(
+      <>
+        <LibraryWalksPage />
+        <ToastContainer />
+      </>,
+    );
+
+    fireEvent.click(await screen.findByLabelText(`Select ${cleanWalk.name}`));
+    fireEvent.click(screen.getByLabelText(`Select ${editedWalk.name}`));
+    fireEvent.click(await screen.findByTestId('sanitize-selected-walks'));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Sanitize selected' }));
+
+    await waitFor(() => expect(sanitizeWalksBatch).toHaveBeenCalled());
+    expect(await screen.findByRole('alert')).toHaveTextContent('1 sanitized, 1 failed');
+  });
 });
 
 describe('LibraryFilesPage (pcaps)', () => {
@@ -134,6 +261,8 @@ describe('LibraryFilesPage (pcaps)', () => {
     fetchLibraryWalks.mockReset();
     fetchLibraryPcaps.mockReset();
     revertWalk.mockReset();
+    sanitizeWalk.mockReset();
+    sanitizeWalksBatch.mockReset();
     useUIStore.getState().clearNotifications();
   });
 
