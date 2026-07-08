@@ -43,16 +43,20 @@ jobs:
         id: release
         uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         with:
-          # PAT (not GITHUB_TOKEN) so the release PR's CI runs and the
-          # tag-push event triggers release.yml. With GITHUB_TOKEN those
-          # downstream workflows are silently skipped per GitHub's
-          # anti-recursion policy — this bit niac in Phase 2 goreleaser-cross
-          # migration testing (a GITHUB_TOKEN-authored tag never fired
-          # release.yml's `push: tags: v*` trigger). Falls back to
-          # GITHUB_TOKEN if the secret isn't set, so the workflow doesn't
-          # break if the PAT expires before being renewed (cascade is lost
-          # until renewed). Matches seed/stem.
-          token: ${{ secrets.RELEASE_PLEASE_TOKEN || secrets.GITHUB_TOKEN }}
+          # niac uses the built-in GITHUB_TOKEN, not a fine-grained PAT. The
+          # MustardSeedNetworks org forbids fine-grained PATs whose lifetime is
+          # > 366 days, and rejects them at API-call time. That hard-fails
+          # release-please when RELEASE_PLEASE_TOKEN holds such a token: the
+          # `|| GITHUB_TOKEN` fallback never fires because the secret IS set
+          # (just rejected), so `||` keeps the rejected token.
+          #
+          # Trade-off: a GITHUB_TOKEN-authored tag does not fire release.yml's
+          # `push: tags: v*` trigger (GitHub's anti-recursion policy), so the
+          # release build is kicked manually / via workflow_dispatch for now.
+          # The longer-term fleet token strategy (a GitHub App token, which
+          # stem uses) is tracked separately — niac deliberately diverges here
+          # to keep release-please green without an org-forbidden PAT.
+          token: ${{ secrets.GITHUB_TOKEN }}
           # NOTE: do NOT pass release-type here. It is declared per-package in
           # release-please-config.json (release-type: go). Passing it as a
           # direct action input forces a mode that ignores the config-file's
