@@ -10,6 +10,7 @@ package replay
 import (
 	"errors"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -48,11 +49,44 @@ func New(engine *capture.Engine, debugLevel int) *Controller {
 	return &Controller{engine: engine, debugLevel: debugLevel}
 }
 
-// Status returns the current replay state.
+// Status returns the current replay state, including live progress counters
+// read from the running capture.PlaybackEngine (if any).
 func (c *Controller) Status() api.ReplayState {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	return c.state
+
+	state := c.state
+	if c.current != nil {
+		progress := c.current.Progress()
+		state.PacketsSent = progress.PacketsSent
+		state.BytesSent = progress.BytesSent
+		state.PacketsTotal = progress.TotalPackets
+		state.BytesTotal = progress.TotalBytes
+		state.PercentComplete = percentComplete(progress.PacketsSent, progress.TotalPackets)
+	}
+	return state
+}
+
+// percentScale converts a fraction to a percentage; percentRoundingFactor
+// rounds percentComplete's result to two decimal places.
+const (
+	percentScale           = 100
+	percentRoundingFactor  = 100
+	percentCompleteMaximum = 100
+)
+
+// percentComplete returns sent/total as a percentage in [0, 100], rounded to
+// two decimal places. It returns 0 (which ReplayState omits from its JSON
+// via omitempty) when total is unknown rather than fabricating a value.
+func percentComplete(sent, total uint64) float64 {
+	if total == 0 {
+		return 0
+	}
+	pct := float64(sent) / float64(total) * percentScale
+	if pct > percentCompleteMaximum {
+		pct = percentCompleteMaximum
+	}
+	return math.Round(pct*percentRoundingFactor) / percentRoundingFactor
 }
 
 // Start begins PCAP replay with the given request. If a replay is already

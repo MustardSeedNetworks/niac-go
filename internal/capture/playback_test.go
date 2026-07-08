@@ -613,3 +613,94 @@ func TestPlaybackEngine_ConcurrentStartStop(t *testing.T) {
 		}
 	}
 }
+
+// TestPlaybackEngine_Progress_ZeroValue tests that a freshly constructed
+// engine reports an all-zero progress snapshot (no total known yet).
+func TestPlaybackEngine_Progress_ZeroValue(t *testing.T) {
+	pb := &PlaybackEngine{stopChan: make(chan struct{})}
+
+	progress := pb.Progress()
+	if progress.PacketsSent != 0 || progress.BytesSent != 0 {
+		t.Errorf("expected zero sent counters, got %+v", progress)
+	}
+	if progress.TotalPackets != 0 || progress.TotalBytes != 0 {
+		t.Errorf("expected zero total counters, got %+v", progress)
+	}
+}
+
+// TestPlaybackEngine_Progress_TracksCounters is a white-box test that drives
+// the atomic counters directly (same package) to verify Progress() reflects
+// them without needing a live capture engine.
+func TestPlaybackEngine_Progress_TracksCounters(t *testing.T) {
+	pb := &PlaybackEngine{stopChan: make(chan struct{})}
+
+	pb.totalPackets.Store(10)
+	pb.totalBytes.Store(1000)
+	pb.packetsSent.Store(3)
+	pb.bytesSent.Store(300)
+
+	progress := pb.Progress()
+	if progress.PacketsSent != 3 || progress.BytesSent != 300 {
+		t.Errorf("expected sent=3/300, got %+v", progress)
+	}
+	if progress.TotalPackets != 10 || progress.TotalBytes != 1000 {
+		t.Errorf("expected total=10/1000, got %+v", progress)
+	}
+}
+
+// TestPlaybackEngine_Progress_AfterPlayOnce runs a real playOnce() pass over
+// a loopback interface (same CI-skip convention as the rest of this file,
+// since sending packets needs raw-socket privileges) and asserts the
+// progress counters match the packets actually written to the PCAP.
+func TestPlaybackEngine_Progress_AfterPlayOnce(t *testing.T) {
+	if os.Getenv("CI") != "" {
+		t.Skip("Skipping playback test in CI environment")
+	}
+
+	loopbackNames := []string{"lo", "lo0"}
+
+	var testInterface string
+
+	for _, name := range loopbackNames {
+		if InterfaceExists(name) {
+			testInterface = name
+
+			break
+		}
+	}
+
+	if testInterface == "" {
+		t.Skip("No loopback interface found")
+	}
+
+	engine, err := New(testInterface, 0)
+	if err != nil {
+		t.Skipf("Cannot create engine: %v", err)
+	}
+	defer engine.Close()
+
+	const packetCount = 5
+	pcapFile := createTestPCAP(t, packetCount)
+
+	playbackConfig := &config.CapturePlayback{FileName: pcapFile}
+	pb := NewPlaybackEngine(engine, playbackConfig, 0)
+
+	// playOnce is synchronous, so no polling/timing is needed to observe the
+	// final counters.
+	pb.playOnce()
+
+	progress := pb.Progress()
+	if progress.TotalPackets != packetCount {
+		t.Errorf("expected TotalPackets=%d, got %d", packetCount, progress.TotalPackets)
+	}
+	if progress.PacketsSent != packetCount {
+		t.Errorf("expected PacketsSent=%d, got %d", packetCount, progress.PacketsSent)
+	}
+	if progress.TotalBytes == 0 {
+		t.Error("expected non-zero TotalBytes")
+	}
+	if progress.BytesSent != progress.TotalBytes {
+		t.Errorf("expected BytesSent (%d) to equal TotalBytes (%d) after a full pass",
+			progress.BytesSent, progress.TotalBytes)
+	}
+}
