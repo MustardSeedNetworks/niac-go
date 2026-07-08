@@ -5,6 +5,79 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.94.1](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.0...v0.94.1) (2026-07-08)
+
+
+### Features
+
+* add SNMP walk analyzer and multi-VLAN segments views ([#906](https://github.com/MustardSeedNetworks/niac-go/issues/906)) ([ca39928](https://github.com/MustardSeedNetworks/niac-go/commit/ca39928f14bf4aa9f1a1e4d3c38f4cbf23f9e9d0))
+* **api:** batch device delete in one request with per-hostname results ([#948](https://github.com/MustardSeedNetworks/niac-go/issues/948)) ([bfa2b43](https://github.com/MustardSeedNetworks/niac-go/commit/bfa2b437551de2b46c3648008aaa8a45e3a6872c))
+* **api:** library install route + content-bundle upload UI ([#967](https://github.com/MustardSeedNetworks/niac-go/issues/967)) ([84a3b7c](https://github.com/MustardSeedNetworks/niac-go/commit/84a3b7c2607f6c6e622ed4b37d830420160b4622))
+* **api:** library walk sanitize route + internal/sanitize extraction ([#954](https://github.com/MustardSeedNetworks/niac-go/issues/954)) ([8de0b48](https://github.com/MustardSeedNetworks/niac-go/commit/8de0b48d289246c17cf68b72b74f6e5b314f9129))
+* **api:** per-device interfaces read route + Error-Injection interface dropdown ([#946](https://github.com/MustardSeedNetworks/niac-go/issues/946)) ([882f1d1](https://github.com/MustardSeedNetworks/niac-go/commit/882f1d196bd8a1237320e546f460098544a46907))
+* **api:** structured YAML parse errors (line/column) + editor line highlight ([#947](https://github.com/MustardSeedNetworks/niac-go/issues/947)) ([5e1b515](https://github.com/MustardSeedNetworks/niac-go/commit/5e1b515788a81b2961b51f0544e9e802494c73f3))
+* **api:** surface real libpcap BPF compile error to the UI ([#942](https://github.com/MustardSeedNetworks/niac-go/issues/942)) ([abbd929](https://github.com/MustardSeedNetworks/niac-go/commit/abbd929ed9b5138f27a2a465c51e1a5f1c7549f4))
+* **content:** bundle generator + niac-content deb/rpm [UNVALIDATED packaging] ([#966](https://github.com/MustardSeedNetworks/niac-go/issues/966)) ([502acd7](https://github.com/MustardSeedNetworks/niac-go/commit/502acd76637b312b81ab1e9c769c511178d1d4d4))
+* **library:** embed essential walks seeded on first run ([#965](https://github.com/MustardSeedNetworks/niac-go/issues/965)) ([f37130b](https://github.com/MustardSeedNetworks/niac-go/commit/f37130b8d607c78192414a92d50190efeabae4ea))
+* **license:** human-readable labels + descriptions per feature flag ([#944](https://github.com/MustardSeedNetworks/niac-go/issues/944)) ([8f66983](https://github.com/MustardSeedNetworks/niac-go/commit/8f6698366c2d8a41eab9a5eebd712b5d8968172f))
+* **release:** migrate to goreleaser-cross, retire native-runner matrix ([#908](https://github.com/MustardSeedNetworks/niac-go/issues/908)) ([ed1733f](https://github.com/MustardSeedNetworks/niac-go/commit/ed1733f8d8750d23c77944195ca7827aba37e9ff))
+* **replay:** live progress (packets/bytes sent, percent) in status + UI bar ([#945](https://github.com/MustardSeedNetworks/niac-go/issues/945)) ([b4239a7](https://github.com/MustardSeedNetworks/niac-go/commit/b4239a7fb116e1698ab067bd18afc7fc55f8e23a))
+* **ui:** accessible jargon-disclosure popovers + filter captions ([#932](https://github.com/MustardSeedNetworks/niac-go/issues/932)) ([8f739cb](https://github.com/MustardSeedNetworks/niac-go/commit/8f739cb9342495ba87efe3034d67877445283003))
+* **ui:** Block/Overlay merge-view toggle in ConfigDiff ([#955](https://github.com/MustardSeedNetworks/niac-go/issues/955)) ([f02cb2b](https://github.com/MustardSeedNetworks/niac-go/commit/f02cb2b1d9b44d0768fb6cb875c58e0e3ed8e784))
+* **ui:** clarify template preview CTAs (Use as-is / Customize first) ([#939](https://github.com/MustardSeedNetworks/niac-go/issues/939)) ([819b197](https://github.com/MustardSeedNetworks/niac-go/commit/819b197d3ee12ab5ddd60790642025734a7949a5))
+* **ui:** complete the topology legend to match rendered encodings ([#931](https://github.com/MustardSeedNetworks/niac-go/issues/931)) ([80446b4](https://github.com/MustardSeedNetworks/niac-go/commit/80446b4d44d41aec9d658193310af209dd4447f5))
+* **ui:** dashboard honesty + shared sim-status chip in header ([#927](https://github.com/MustardSeedNetworks/niac-go/issues/927)) ([2ca6dea](https://github.com/MustardSeedNetworks/niac-go/commit/2ca6dea7d40318c64eb8c8fea3538edcc558a5b6))
+* **ui:** expand-all/collapse-all controls in ProtocolTree ([#953](https://github.com/MustardSeedNetworks/niac-go/issues/953)) ([a9fd433](https://github.com/MustardSeedNetworks/niac-go/commit/a9fd4338867e4e14592b1d1211c8a29c42844526))
+* **ui:** group TrafficSection into three collapsible subsections ([#952](https://github.com/MustardSeedNetworks/niac-go/issues/952)) ([206f8f4](https://github.com/MustardSeedNetworks/niac-go/commit/206f8f4bcc723913a0532a8f78af62919493a5b8))
+* **ui:** guided New Simulation wizard composing existing config flow ([#962](https://github.com/MustardSeedNetworks/niac-go/issues/962)) ([ee4eb1e](https://github.com/MustardSeedNetworks/niac-go/commit/ee4eb1edfb313d0455f71f8e4ece3321854da87c))
+* **ui:** non-color direction glyphs in StreamView ([#951](https://github.com/MustardSeedNetworks/niac-go/issues/951)) ([15f15ad](https://github.com/MustardSeedNetworks/niac-go/commit/15f15ad49c73468ecc51234cc1988c59b879109a))
+* **ui:** pcap upload progress bar and friendly over-limit error ([#960](https://github.com/MustardSeedNetworks/niac-go/issues/960)) ([6bdf4e0](https://github.com/MustardSeedNetworks/niac-go/commit/6bdf4e0445857daac8d3e0e8c2745eec28ddc96e))
+* **ui:** persist topology layout to localStorage ([#956](https://github.com/MustardSeedNetworks/niac-go/issues/956)) ([e50bdd3](https://github.com/MustardSeedNetworks/niac-go/commit/e50bdd3d1cbae5f5d75dfdce014983a5271f29c1))
+* **ui:** sanitize actions on the library walks view ([#961](https://github.com/MustardSeedNetworks/niac-go/issues/961)) ([fed1a6a](https://github.com/MustardSeedNetworks/niac-go/commit/fed1a6af703eddff4ee925cfa8fab869c70cda2a))
+* **ui:** wire batch walk validation (validate-all) with per-file results ([#940](https://github.com/MustardSeedNetworks/niac-go/issues/940)) ([529adea](https://github.com/MustardSeedNetworks/niac-go/commit/529adea99aa5a1e7e048fe5ccbd39ea8e25e3b8b))
+* **walk:** add OID to validation issues + OID column/filter in the validator ([#943](https://github.com/MustardSeedNetworks/niac-go/issues/943)) ([4bb0e56](https://github.com/MustardSeedNetworks/niac-go/commit/4bb0e5650384e9a3bf1625db960c305c4fe43ee0))
+
+
+### Bug Fixes
+
+* **api:** size pcap upload body cap for base64 overhead so 100MB raw is accepted ([#922](https://github.com/MustardSeedNetworks/niac-go/issues/922)) ([c5f7c2a](https://github.com/MustardSeedNetworks/niac-go/commit/c5f7c2a116226280e05683c61dad8171a8f9f110))
+* **build:** make quality gates fail honestly, dedupe vars.mk ([#903](https://github.com/MustardSeedNetworks/niac-go/issues/903)) ([74b38d0](https://github.com/MustardSeedNetworks/niac-go/commit/74b38d0afe8da68bbe7954e2445236dddf8e8c33))
+* **i18n:** keep 'walk'/'Walks' verbatim in es + gate it in CI ([#941](https://github.com/MustardSeedNetworks/niac-go/issues/941)) ([6a451b4](https://github.com/MustardSeedNetworks/niac-go/commit/6a451b4ad0845b7a54bcdb0b1367d851b17bc7e0))
+* **release:** correct release-please manifest to 0.94.0 ([#964](https://github.com/MustardSeedNetworks/niac-go/issues/964)) ([ab4a957](https://github.com/MustardSeedNetworks/niac-go/commit/ab4a957394507453ec938875d36fe73562a30bc6))
+* **security:** contain path traversal in converter + library (CodeQL go/path-injection) ([#907](https://github.com/MustardSeedNetworks/niac-go/issues/907)) ([f39ed36](https://github.com/MustardSeedNetworks/niac-go/commit/f39ed36b0e1844c8ec5dc9480889f3091e5be6c1))
+* **ui:** data-safety guards (FTP password, walk auto-fix confirm, unsaved-changes guard) ([#925](https://github.com/MustardSeedNetworks/niac-go/issues/925)) ([5868328](https://github.com/MustardSeedNetworks/niac-go/commit/586832838eb03f1ab4f272b705b7aa5c6064f191))
+* **ui:** mock useSimulationStatus in PacketInspectorPage filtered-export test ([#930](https://github.com/MustardSeedNetworks/niac-go/issues/930)) ([0f56374](https://github.com/MustardSeedNetworks/niac-go/commit/0f563744ab7d421ba6335bebf68cccaeb3923b63))
+* **ui:** packet inspector auto-scroll, filtered export, hex header boundary ([#923](https://github.com/MustardSeedNetworks/niac-go/issues/923)) ([aacb4bd](https://github.com/MustardSeedNetworks/niac-go/commit/aacb4bd962d753d122dda75aa7f5ced392d9863a))
+* **ui:** surface silent failures and correct misleading copy ([#924](https://github.com/MustardSeedNetworks/niac-go/issues/924)) ([4269b39](https://github.com/MustardSeedNetworks/niac-go/commit/4269b39e9aff8f99196ee7e5fe225723989d7876))
+
+
+### Code Refactoring
+
+* **api:** unify config store — migrate legacy configs into library networks ([#963](https://github.com/MustardSeedNetworks/niac-go/issues/963)) ([f480c9c](https://github.com/MustardSeedNetworks/niac-go/commit/f480c9cad5033b5b502d484972e69ac51bae9cd5))
+* **ui:** consolidate delete-confirm modals onto shared ConfirmModal ([#928](https://github.com/MustardSeedNetworks/niac-go/issues/928)) ([70ce5ec](https://github.com/MustardSeedNetworks/niac-go/commit/70ce5ec80b8c05f04099208143f17fc99b12ccd7))
+* **ui:** extract DataTable primitive and migrate fitting list views ([#957](https://github.com/MustardSeedNetworks/niac-go/issues/957)) ([83cdccc](https://github.com/MustardSeedNetworks/niac-go/commit/83cdcccd059908e508337e95e026b5495b6b9aa7))
+* **ui:** resolve Devices naming collision + regroup nav (Tools/System, Fault Injection) ([#926](https://github.com/MustardSeedNetworks/niac-go/issues/926)) ([6e3abb2](https://github.com/MustardSeedNetworks/niac-go/commit/6e3abb222e24fdf1d9c5c7a1db6cf1aede3d5655))
+* **ui:** wire global toast error surface, retire per-page banners ([#929](https://github.com/MustardSeedNetworks/niac-go/issues/929)) ([da0f479](https://github.com/MustardSeedNetworks/niac-go/commit/da0f479509c0cffa6770b94adc16acd368f76af2))
+
+
+### Continuous Integration
+
+* gate frontend on vitest + retry flaky libpcap-dev apt install ([#934](https://github.com/MustardSeedNetworks/niac-go/issues/934)) ([4211e0a](https://github.com/MustardSeedNetworks/niac-go/commit/4211e0ab335724ba18d013bded3066dc5c7ba5e8))
+* **governance:** exempt release-please PRs from human PR-body template ([#918](https://github.com/MustardSeedNetworks/niac-go/issues/918)) ([11934a6](https://github.com/MustardSeedNetworks/niac-go/commit/11934a6f5b4bfe400e32aaf8766f8bfd42ade983))
+* **perf:** enable Go cache, dedup -race, least-privilege ([#914](https://github.com/MustardSeedNetworks/niac-go/issues/914)) ([a3c43a1](https://github.com/MustardSeedNetworks/niac-go/commit/a3c43a153c9c803f76021151f5c0ac0d1fc21d53)), closes [#913](https://github.com/MustardSeedNetworks/niac-go/issues/913)
+* **release:** use GITHUB_TOKEN for release-please ([#949](https://github.com/MustardSeedNetworks/niac-go/issues/949)) ([2acc0a2](https://github.com/MustardSeedNetworks/niac-go/commit/2acc0a2623c1ee024afe13678de357e41d4bfdbd))
+* **security:** add Semgrep SAST gate ([#916](https://github.com/MustardSeedNetworks/niac-go/issues/916)) ([1ff7b02](https://github.com/MustardSeedNetworks/niac-go/commit/1ff7b0267394b31aa697871d5ee64d60b055a9cb))
+
+
+### Miscellaneous
+
+* **content:** remove phone-home online download path ([#959](https://github.com/MustardSeedNetworks/niac-go/issues/959)) ([021b97d](https://github.com/MustardSeedNetworks/niac-go/commit/021b97dec04554f7783cacca29a179bea5e4463c))
+* **i18n:** externalize config-diff + library + debug + help/sidebar labels (en+es) ([#936](https://github.com/MustardSeedNetworks/niac-go/issues/936)) ([63bd846](https://github.com/MustardSeedNetworks/niac-go/commit/63bd8460d361fcf21ca11ddacc531c87b6e6cd98))
+* **i18n:** externalize packet inspector + pcap + topology strings (en+es) ([#937](https://github.com/MustardSeedNetworks/niac-go/issues/937)) ([ba8d314](https://github.com/MustardSeedNetworks/niac-go/commit/ba8d31459833c98547f64da6f4bc56144ec3dd7a))
+* **i18n:** externalize runtime + device-list/editor strings (en+es) ([#938](https://github.com/MustardSeedNetworks/niac-go/issues/938)) ([cb1b99a](https://github.com/MustardSeedNetworks/niac-go/commit/cb1b99a0755c66b4afd9ae7d0731fa54172d789c))
+* **license:** add license-key-circumvention clause to BUSL Additional Use Grant ([#912](https://github.com/MustardSeedNetworks/niac-go/issues/912)) ([ae360a3](https://github.com/MustardSeedNetworks/niac-go/commit/ae360a34973452fe842573360a38b11c55273ed8))
+* **ui:** remove dead components + stem storage-key leak + redundant Java-DSL card ([#921](https://github.com/MustardSeedNetworks/niac-go/issues/921)) ([3d018a3](https://github.com/MustardSeedNetworks/niac-go/commit/3d018a3180ef1c6e6297ff6d63dea2977a4b5061))
+
 ## [0.94.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.93.0...v0.94.0) (2026-07-05)
 
 
