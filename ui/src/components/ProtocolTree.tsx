@@ -1,4 +1,4 @@
-import { type FC, memo, useMemo } from 'react';
+import { type FC, memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { PcapPacket } from '../api/types';
 import { buildProtocolLayers } from '../utils/protocol-layers';
@@ -34,6 +34,34 @@ export const ProtocolTree: FC<ProtocolTreeProps> = memo(({ packet, onFieldSelect
     return buildProtocolLayers(packet.headers as Record<string, unknown> | undefined, pkt);
   }, [packet]);
 
+  const [expandedLayers, setExpandedLayers] = useState<Set<string>>(() => new Set());
+
+  useEffect(() => {
+    setExpandedLayers(
+      new Set(layers.filter((layer) => layer.expanded ?? true).map((layer) => layer.name)),
+    );
+  }, [layers]);
+
+  const toggleLayer = useCallback((name: string) => {
+    setExpandedLayers((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) {
+        next.delete(name);
+      } else {
+        next.add(name);
+      }
+      return next;
+    });
+  }, []);
+
+  const expandAll = useCallback(() => {
+    setExpandedLayers(new Set(layers.map((layer) => layer.name)));
+  }, [layers]);
+
+  const collapseAll = useCallback(() => {
+    setExpandedLayers(new Set());
+  }, []);
+
   if (!packet) {
     return (
       <div className="h-full flex-center text-text-muted">
@@ -52,8 +80,32 @@ export const ProtocolTree: FC<ProtocolTreeProps> = memo(({ packet, onFieldSelect
 
   return (
     <div className="h-full overflow-y-auto stack-xs">
+      <div className="flex items-center justify-end gap-tight pb-1">
+        <button
+          type="button"
+          data-testid="protocol-tree-expand-all"
+          onClick={expandAll}
+          className="text-xs text-text-muted hover:bg-surface-hover rounded px-1 py-0.5"
+        >
+          {t('packets.inspector.expandAll')}
+        </button>
+        <button
+          type="button"
+          data-testid="protocol-tree-collapse-all"
+          onClick={collapseAll}
+          className="text-xs text-text-muted hover:bg-surface-hover rounded px-1 py-0.5"
+        >
+          {t('packets.inspector.collapseAll')}
+        </button>
+      </div>
       {layers.map((layer) => (
-        <ProtocolTreeLayer key={layer.name} layer={layer} onFieldSelect={onFieldSelect} />
+        <ProtocolTreeLayer
+          key={layer.name}
+          layer={layer}
+          isExpanded={expandedLayers.has(layer.name)}
+          onToggle={toggleLayer}
+          onFieldSelect={onFieldSelect}
+        />
       ))}
     </div>
   );

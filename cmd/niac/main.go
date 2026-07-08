@@ -55,10 +55,6 @@ const (
 	colWidthHelp      = 51
 
 	// Network constants.
-	privateIPClassA   = 10
-	privateIPClassB   = 172
-	privateIPClassC   = 192
-	bitShiftOctet     = 8
 	defaultMTU        = 1514
 	legacyPprofPort   = 6060
 	legacyDefaultSecs = 60
@@ -68,7 +64,6 @@ const (
 	templatePadOffset     = 2
 	minPageLen            = 20
 	maxDeviceCount        = 20 // maximum devices in generated config
-	maxPercentage         = 100
 	millisecondsThreshold = 1000
 	randomBound           = 10 // for rand.Intn
 	baseIPOffset          = 10 // offset for generated device IPs
