@@ -45,6 +45,12 @@ func TestRoutePolicyManifest(t *testing.T) {
 	if !impOK || !imp.Admin || !imp.CSRF || !imp.RateLimited {
 		t.Errorf("/api/v1/config/import policy = %+v, want admin+csrf+rateLimited", imp)
 	}
+	// Whole-library install (#897 L3b) is the same admin-class shape as
+	// config/import — it replaces networks/walks/pcaps content wholesale.
+	inst, instOK := byPath["/api/v1/library/install"]
+	if !instOK || !inst.Admin || !inst.CSRF || !inst.RateLimited {
+		t.Errorf("/api/v1/library/install policy = %+v, want admin+csrf+rateLimited", inst)
+	}
 	// A safe read carries none of those.
 	rd, rdOK := byPath["/api/v1/topology"]
 	if !rdOK || rd.Admin || rd.CSRF || rd.RateLimited {
@@ -79,6 +85,12 @@ func TestRoutePolicyManifestMethodAndBody(t *testing.T) {
 			t.Errorf("%s: maxBodyBytes = %d, want MaxPCAPUploadBodySize (%d)",
 				p, v.MaxBodyBytes, int64(MaxPCAPUploadBodySize))
 		}
+	}
+	// Content-bundle install carries its own (larger) cap for the same
+	// base64-expansion reason as pcap/replay.
+	if v := byPath["/api/v1/library/install"]; v.MaxBodyBytes != int64(MaxLibraryInstallBodySize) {
+		t.Errorf("/api/v1/library/install: maxBodyBytes = %d, want MaxLibraryInstallBodySize (%d)",
+			v.MaxBodyBytes, int64(MaxLibraryInstallBodySize))
 	}
 
 	// Method-gated routes report their methods: a multi-method dispatcher

@@ -87,6 +87,22 @@ const (
 	// so a genuine 100MiB raw capture always fits comfortably under the cap.
 	MaxPCAPUploadBodySize = 140 << 20 // 140MiB
 
+	// MaxLibraryBundleUploadSize is the maximum size for a raw (decoded)
+	// content bundle upload (512MB gzip-tar) — the number advertised to
+	// users/UI copy, checked AFTER base64 decoding. content.Extract applies
+	// its own independent per-file (256MiB) and total-uncompressed (4GiB)
+	// caps once the tar is unpacked; this is the outer transfer-size guard.
+	MaxLibraryBundleUploadSize = 512 << 20 // 512MB
+
+	// MaxLibraryInstallBodySize caps the raw HTTP request body for the
+	// content-bundle install endpoint (enforced via http.MaxBytesReader in
+	// decodeJSONStrict, before any base64 decoding happens). Same expansion
+	// math as MaxPCAPUploadBodySize (bug #1e): base64 inflates by 4/3, so
+	// the cap must cover that plus the small JSON envelope around it —
+	//   512MiB raw -> ~682.67MiB base64 -> +2MiB margin -> rounded up to a
+	// clean 700MiB, so a genuine 512MiB raw bundle always fits comfortably.
+	MaxLibraryInstallBodySize = 700 << 20 // 700MiB
+
 	// DefaultRateLimit is the default requests per second allowed per IP.
 	DefaultRateLimit = 100
 	// DefaultBurst is the default burst size for rate limiting.

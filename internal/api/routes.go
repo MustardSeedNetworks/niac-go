@@ -183,6 +183,21 @@ func (s *Server) registerLibraryRoutes(mux *http.ServeMux) {
 			csrf:    true,
 		},
 		{path: "/api/v1/library/pcaps", handler: s.handleLibraryPcaps, methods: []string{http.MethodGet}},
+		// Install accepts a gzip-tar content bundle (base64 in the JSON body,
+		// like /api/v1/pcap/upload) and extracts it over the whole library —
+		// networks/walks/pcaps at once — so it carries the same admin-class
+		// policy as /api/v1/config/import: write rate limit, CSRF, AND an
+		// admin-scoped token (#897 L3b), plus the larger body cap the base64
+		// expansion needs (see MaxLibraryInstallBodySize).
+		{
+			path:         "/api/v1/library/install",
+			handler:      s.handleLibraryInstall,
+			methods:      []string{http.MethodPost},
+			maxBodyBytes: MaxLibraryInstallBodySize,
+			rl:           rlWrite,
+			csrf:         true,
+			admin:        true,
+		},
 	})
 }
 

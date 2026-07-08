@@ -8,6 +8,8 @@ import {
   revertWalk,
 } from '../api/library-client';
 import { DataTable, type DataTableColumn, type DataTableSelection } from '../components/DataTable';
+import { ContentBundleUploader } from '../components/library/ContentBundleUploader';
+import { RequireScope } from '../components/ui/RequireScope';
 import { useApiResource } from '../hooks/useApiResource';
 import { useErrorToast } from '../hooks/useErrorToast';
 import { useWalkSanitize } from '../hooks/useWalkSanitize';
@@ -23,11 +25,11 @@ import { H2, SmallText } from '../ui/Typography';
  * subdirs (walks/, pcaps/). It exists once and is wrapped twice in
  * pageRegistry so the route system stays declarative.
  *
- * Per #548 PR 3 the page is intentionally minimal: list + search +
- * total stats. Upload + delete for binary content are deferred to a
- * later PR — the immediate need is for the picker integrations
- * (device editor's SNMP section, traffic/packets PCAP picker) to have
- * a single source of truth.
+ * Per #548 PR 3 the page started intentionally minimal: list + search +
+ * total stats, with upload deferred. #897 L3b adds the content-bundle
+ * install control (admin-scoped, gated by <RequireScope>) — the
+ * air-gapped/manual-install path for the whole library (networks +
+ * walks + pcaps at once) — above the file listing.
  *
  * Walks additionally carry a preserve-once "original" (see
  * library.PreserveOriginal server-side): once a walk has been
@@ -180,6 +182,10 @@ function LibraryFilesView({ kind }: Props) {
 
   return (
     <div className="stack-xl">
+      <RequireScope min="admin">
+        <ContentBundleUploader />
+      </RequireScope>
+
       <Card className="border-surface-border bg-bg-surface/70">
         <CardContent>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-comfortable">

@@ -878,6 +878,22 @@
     "sanitizeBatchModalMessage": "Sanitize {{count}} selected walks? This writes sanitized copies in place; originals stay recoverable via Revert.",
     "sanitizeBatchSuccessTitle": "Walks sanitized",
     "sanitizeBatchPartialTitle": "Some walks failed to sanitize",
-    "sanitizeBatchSummary": "{{sanitized}} sanitized, {{failed}} failed"
+    "sanitizeBatchSummary": "{{sanitized}} sanitized, {{failed}} failed",
+    "installBundle": {
+      "title": "Install Content Bundle",
+      "description": "Upload a content bundle (tar.gz) to install networks, walks, and pcaps in one step — the manual/air-gapped install path. Requires an admin-scoped token.",
+      "browseButton": "Choose Bundle…",
+      "maxFileSizeLabel": "Max size: {{size}}",
+      "invalidFileType": "Invalid file type. Expected {{extensions}}",
+      "fileTooLarge": "File is too large. Maximum size is {{size}}",
+      "fileEmpty": "File is empty",
+      "installButton": "Install Bundle",
+      "installingButton": "Installing…",
+      "uploadingProgress": "Uploading… {{percent}}%",
+      "installSuccessTitle": "Content bundle installed",
+      "installSuccessMessage": "{{networks}} networks, {{walks}} walks, {{pcaps}} pcaps installed",
+      "installFailedTitle": "Bundle install failed",
+      "serverFileTooLarge": "The server rejected the upload: file exceeds {{size}}"
+    }
   }
 }

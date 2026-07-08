@@ -1,4 +1,5 @@
 import { deduplicatedGet, request, requestJson } from './requestCore';
+import { requestJsonWithProgress } from './requestUpload';
 import type {
   LibraryNetwork,
   LibraryNetworkContent,
@@ -99,4 +100,48 @@ export const sanitizeWalksBatch = (names: string[]) =>
     '/api/v1/library/walks/sanitize-batch',
     { names },
     { method: 'POST' },
+  );
+
+// =====================================================================
+// Content bundle install (#897 L3b) — the air-gapped/manual-install path.
+// POST /api/v1/library/install extracts a gzip-tar bundle (the same format
+// `niac content install --bundle` and the embedded/deb starter bundles
+// use) over networks/walks/pcaps at once, so it's admin-scoped like
+// config/import (see internal/api/routes.go).
+// =====================================================================
+
+export interface LibraryInstallRequest {
+  filename: string;
+  /** Base64-encoded gzip-tar content bundle. */
+  data: string;
+}
+
+export interface LibraryInstallResponse {
+  success: boolean;
+  files: number;
+  directories: number;
+  bytes: number;
+  perKind: Partial<Record<'networks' | 'walks' | 'pcaps', number>>;
+  message: string;
+}
+
+export const installContentBundle = (payload: LibraryInstallRequest) =>
+  requestJson<LibraryInstallResponse>('/api/v1/library/install', payload, { method: 'POST' });
+
+/**
+ * installContentBundleWithProgress is installContentBundle's
+ * progress-reporting sibling — mirrors uploadPcapWithProgress so the
+ * uploader UI can render a determinate progress bar while a (potentially
+ * large, base64-inflated) bundle is in flight.
+ */
+export const installContentBundleWithProgress = (
+  payload: LibraryInstallRequest,
+  onProgress: (percent: number) => void,
+  signal?: AbortSignal,
+) =>
+  requestJsonWithProgress<LibraryInstallResponse>(
+    '/api/v1/library/install',
+    payload,
+    onProgress,
+    signal,
   );
