@@ -10,7 +10,9 @@
 package walkanalysis
 
 import (
+	"maps"
 	"math"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -234,11 +236,7 @@ func extractInterfaces(entries []snmp.WalkEntry) ([]Interface, map[int]string, i
 		}
 	}
 
-	indices := make([]int, 0, len(accum))
-	for idx := range accum {
-		indices = append(indices, idx)
-	}
-	sort.Ints(indices)
+	indices := slices.Sorted(maps.Keys(accum))
 
 	nameByIndex := make(map[int]string, len(accum))
 	list := make([]Interface, 0, len(accum))
