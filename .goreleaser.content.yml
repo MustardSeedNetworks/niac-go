@@ -1,0 +1,94 @@
+# =============================================================================
+# goreleaser config for the niac-content package (workstream L3a)
+# =============================================================================
+# SEPARATE from .goreleaser.yml on purpose. niac-content ships the sanitized
+# SNMP walk corpus, which lives in the private niac-demo-catalog repo and is
+# only reachable in CI when the CONTENT_REPO_DEPLOY_KEY secret is set. Baking
+# this into the core release config would hard-fail every niac release whose
+# runner lacks the corpus (nfpm errors on the missing contents.src). Keeping
+# it here — invoked by the gated `niac-content` job in release.yml — means the
+# core niac release always builds standalone; niac-content is strictly additive.
+#
+# The CI job generates ./niac-content-bundle.tar.gz (via `make content-bundle`)
+# BEFORE running goreleaser with this config. `--clean` wipes dist/ but not the
+# repo root, so the bundle survives; the before-hook below fails fast if it's
+# somehow absent.
+#
+# meta: true → no Go build, this config only assembles the tarball into a
+# deb/rpm. On a real release it appends the packages to the existing GitHub
+# release created by the core `goreleaser` job (release.mode: append).
+#
+# Tested against goreleaser v2.x.
+# =============================================================================
+
+version: 2
+
+project_name: niac-content
+
+before:
+  hooks:
+    - bash -c 'test -f niac-content-bundle.tar.gz || (echo "niac-content-bundle.tar.gz missing — the CI content-bundle step must run before goreleaser"; exit 1)'
+
+# No builds: this is a data-only (meta) package.
+builds:
+  - id: niac-content-noop
+    skip: true
+
+nfpms:
+  - id: niac-content
+    meta: true
+    package_name: niac-content
+    vendor: Mustard Seed Networks
+    homepage: https://github.com/MustardSeedNetworks/niac-go
+    maintainer: Kris Armstrong <kris.armstrong@icloud.com>
+    description: |
+      NIAC content bundle — sanitized SNMP walk corpus for offline simulation.
+      .
+      Installs the deduped multi-vendor walk library to
+      /usr/share/niac/content/niac-content.tar.gz. The niac daemon adopts it
+      into the content library on first run if the library's walks/ dir holds
+      no real content yet. No network fetch — this package IS the content; see
+      internal/content/extract.go.
+    license: BSL-1.1
+    section: net
+    priority: optional
+    formats:
+      - deb
+      - rpm
+    # Architecture-independent payload (a tarball of text walks), so both the
+    # deb (_all) and rpm (.noarch) are single arch-neutral packages.
+    file_name_template: >-
+      {{- if eq .ConventionalExtension ".deb" -}}
+        niac-content_{{ .Version }}_all
+      {{- else if eq .ConventionalExtension ".rpm" -}}
+        niac-content-{{ .Version }}-1.noarch
+      {{- end -}}
+    recommends:
+      - niac
+    contents:
+      - src: niac-content-bundle.tar.gz
+        dst: /usr/share/niac/content/niac-content.tar.gz
+        file_info:
+          mode: 0o644
+
+# The core release owns checksums.txt; don't emit a second one that would
+# clobber it when appending to the same GitHub release.
+checksum:
+  disable: true
+
+release:
+  github:
+    owner: MustardSeedNetworks
+    name: niac-go
+  # Append to the release the core `goreleaser` job already created for this
+  # tag — never recreate or replace its artifacts.
+  mode: append
+  draft: false
+  prerelease: auto
+
+# Don't regenerate release notes — the core job already set the body.
+changelog:
+  disable: true
+
+snapshot:
+  version_template: "0.0.0-dryrun-{{ .ShortCommit }}"

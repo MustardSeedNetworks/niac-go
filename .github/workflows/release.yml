@@ -222,6 +222,105 @@ jobs:
           retention-days: 14
 
   # =========================================================================
+  # niac-content package (workstream L3a) — the sanitized SNMP walk corpus
+  # as a standalone, arch-neutral deb/rpm. The corpus lives in the private
+  # MustardSeedNetworks/niac-demo-catalog repo, reachable only when the
+  # CONTENT_REPO_DEPLOY_KEY secret (a read-only deploy key on that repo) is
+  # set.
+  #
+  # RESILIENCE: every real step is gated on HAS_CONTENT_KEY. With no key the
+  # whole job is a green no-op, so the core release (the `goreleaser` job
+  # above) is entirely unaffected — you simply don't get a niac-content
+  # package. It runs its own .goreleaser.content.yml with release.mode=append,
+  # so on a real release it adds packages to the release the core job already
+  # created; it never touches the core artifacts.
+  #
+  # UNVALIDATED end-to-end until a release runs with the key set. The nfpm
+  # deb/rpm build itself is validated; the corpus deploy-key checkout and the
+  # append-to-release upload run for the first time in CI here.
+  # =========================================================================
+  niac-content:
+    name: niac-content package
+    if: ${{ !inputs.provenance_only }}
+    runs-on: ubuntu-latest
+    needs: [goreleaser]
+    container:
+      # Reuse the pinned goreleaser-cross image so goreleaser is already
+      # present at the exact version the core job uses. No cross toolchain is
+      # needed (this is a data-only meta package), but version parity beats
+      # installing a second goreleaser.
+      image: goreleaser/goreleaser-cross:v1.26.3-v2.16.0
+    env:
+      # Job-level env CAN reference secrets; step-level `if` CAN reference the
+      # env context. This indirection is required because a job-level `if:`
+      # cannot reference `secrets` directly.
+      HAS_CONTENT_KEY: ${{ secrets.CONTENT_REPO_DEPLOY_KEY != '' }}
+    steps:
+      - name: Report whether the content deploy key is present
+        run: |
+          if [ "$HAS_CONTENT_KEY" = "true" ]; then
+            echo "CONTENT_REPO_DEPLOY_KEY present — building niac-content."
+          else
+            echo "::notice::CONTENT_REPO_DEPLOY_KEY not set — skipping niac-content package. Core release is unaffected."
+          fi
+
+      - name: Checkout niac-go
+        if: env.HAS_CONTENT_KEY == 'true'
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+
+      - name: Mark workspace as safe (container runs as root)
+        if: env.HAS_CONTENT_KEY == 'true'
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Install corpus-checkout + bundle prerequisites
+        if: env.HAS_CONTENT_KEY == 'true'
+        # goreleaser-cross is Go-focused; make sure ssh (deploy-key checkout),
+        # python3 and make (bundle generation) are present.
+        run: |
+          set -euo pipefail
+          apt-get update
+          apt-get install -y --no-install-recommends openssh-client python3 make
+
+      - name: Checkout sanitized walk corpus (read-only deploy key)
+        if: env.HAS_CONTENT_KEY == 'true'
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          repository: MustardSeedNetworks/niac-demo-catalog
+          ssh-key: ${{ secrets.CONTENT_REPO_DEPLOY_KEY }}
+          path: .content-corpus
+          fetch-depth: 1
+
+      - name: Generate content bundle
+        if: env.HAS_CONTENT_KEY == 'true'
+        # `make content-bundle` writes dist/niac-content-<version>.tar.gz; copy
+        # it to the fixed name the content config expects, at the repo root so
+        # goreleaser's `--clean` (which only wipes dist/) can't delete it.
+        run: |
+          set -euo pipefail
+          make content-bundle CONTENT_CORPUS=.content-corpus/walks/sanitized
+          cp dist/niac-content-*.tar.gz niac-content-bundle.tar.gz
+
+      - name: Build niac-content packages (snapshot/dry-run)
+        if: ${{ env.HAS_CONTENT_KEY == 'true' && inputs.dry_run }}
+        run: goreleaser release --config .goreleaser.content.yml --snapshot --clean --skip=publish,sign,announce
+
+      - name: Build + append niac-content packages (release)
+        if: ${{ env.HAS_CONTENT_KEY == 'true' && !inputs.dry_run }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: goreleaser release --config .goreleaser.content.yml --clean
+
+      - name: Upload dry-run niac-content packages for inspection
+        if: ${{ env.HAS_CONTENT_KEY == 'true' && inputs.dry_run }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: niac-content-dryrun-${{ github.run_id }}
+          path: dist/
+          retention-days: 14
+
+  # =========================================================================
   # SLSA provenance backfill — recomputes the subject list from a tag's
   # already-published checksums.txt instead of running goreleaser. Used
   # to retroactively attest tags that shipped before the provenance job
