@@ -2,7 +2,7 @@ package api
 
 import (
 	"errors"
-	"io"
+	"fmt"
 	"io/fs"
 	"net/http"
 	"os"
@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/library"
+	"github.com/MustardSeedNetworks/niac-go/internal/sanitize"
 )
 
 // libraryReady returns true if the on-disk library opened cleanly; the
@@ -393,6 +394,153 @@ func (s *Server) handleLibraryWalkRevert(w http.ResponseWriter, r *http.Request)
 	s.writeJSON(w, entry)
 }
 
-// Drained body helper — kept for symmetry with the imports the upload
-// endpoints (networks today, walks/pcaps in a follow-up) already use.
-var _ = io.Discard
+// maxSanitizeBatch caps a single sanitize-batch request, mirroring the
+// per-request bulk-operation cap devices batch-delete uses (MaxDeviceCount).
+const maxSanitizeBatch = MaxDeviceCount
+
+// sanitizeWalkResult reports the outcome of sanitizing a single walk as
+// part of a single or batch sanitize request.
+type sanitizeWalkResult struct {
+	Name                 string `json:"name"`
+	Success              bool   `json:"success"`
+	Error                string `json:"error,omitempty"`
+	IPsTransformed       int    `json:"ipsTransformed,omitempty"`
+	HostnamesTransformed int    `json:"hostnamesTransformed,omitempty"`
+}
+
+// sanitizeWalk preserves name's pristine original (idempotent — a no-op if
+// already preserved), reads the current content, runs it through
+// internal/sanitize with the CLI's default options, and overwrites the
+// entry with the sanitized bytes. The original stays recoverable via
+// RevertToOriginal for as long as the .orig sidecar exists.
+func (s *Server) sanitizeWalk(name string) (library.FileEntry, sanitize.Stats, error) {
+	if err := s.library.PreserveOriginal(library.KindWalks, name); err != nil {
+		return library.FileEntry{}, sanitize.Stats{}, err
+	}
+
+	content, err := s.library.ReadFile(library.KindWalks, name)
+	if err != nil {
+		return library.FileEntry{}, sanitize.Stats{}, err
+	}
+
+	sanitized, stats, err := sanitize.Content(content, nil, sanitize.DefaultOptions())
+	if err != nil {
+		return library.FileEntry{}, sanitize.Stats{}, err
+	}
+
+	if writeErr := s.library.WriteFile(library.KindWalks, name, sanitized); writeErr != nil {
+		return library.FileEntry{}, sanitize.Stats{}, writeErr
+	}
+
+	entry, err := s.library.FileEntryByName(library.KindWalks, name)
+	if err != nil {
+		return library.FileEntry{}, sanitize.Stats{}, err
+	}
+	return entry, stats, nil
+}
+
+// libraryWalkSanitizeRequest is the body for POST /api/v1/library/walks/sanitize.
+type libraryWalkSanitizeRequest struct {
+	Name string `json:"name"`
+}
+
+// handleLibraryWalkSanitize handles POST /api/v1/library/walks/sanitize. It
+// preserves the walk's pristine original (if not already preserved) and
+// overwrites the entry with a sanitized copy, responding with the refreshed
+// FileEntry (edited=true) on success — mirroring handleLibraryWalkRevert's
+// response shape.
+func (s *Server) handleLibraryWalkSanitize(w http.ResponseWriter, r *http.Request) {
+	if !s.libraryReady() {
+		s.writeLibraryUnavailable(w, r)
+		return
+	}
+	// Method gating (POST-only) is enforced declaratively by the route registry.
+	var req libraryWalkSanitizeRequest
+	if !decodeJSONStrict(w, r, &req, MaxRequestBodySize) {
+		return
+	}
+	name := strings.TrimSpace(req.Name)
+	if name == "" {
+		writeError(w, r, http.StatusBadRequest, "invalid_request", "Walk name required", nil)
+		return
+	}
+
+	entry, _, err := s.sanitizeWalk(name)
+	if err != nil {
+		if errors.Is(err, library.ErrInvalidName) {
+			writeError(w, r, http.StatusBadRequest, "invalid_name", err.Error(), nil)
+			return
+		}
+		if errors.Is(err, library.ErrNotFound) {
+			writeError(w, r, http.StatusNotFound, "not_found", "Walk not found", nil)
+			return
+		}
+		s.logger.ErrorContext(r.Context(), "[API] library: sanitize walk", "name", name, "error", err)
+		writeError(w, r, http.StatusInternalServerError, "sanitize_failed", "Failed to sanitize walk", nil)
+		return
+	}
+	s.writeJSON(w, entry)
+}
+
+// libraryWalkSanitizeBatchRequest is the body for
+// POST /api/v1/library/walks/sanitize-batch.
+type libraryWalkSanitizeBatchRequest struct {
+	Names []string `json:"names"`
+}
+
+// libraryWalkSanitizeBatchResponse reports per-walk outcomes rather than
+// failing the whole request when some walks don't exist, mirroring
+// handleDeviceBatchDelete's shape.
+type libraryWalkSanitizeBatchResponse struct {
+	Results   []sanitizeWalkResult `json:"results"`
+	Sanitized int                  `json:"sanitized"`
+	Failed    int                  `json:"failed"`
+}
+
+// handleLibraryWalkSanitizeBatch handles POST /api/v1/library/walks/sanitize-batch.
+func (s *Server) handleLibraryWalkSanitizeBatch(w http.ResponseWriter, r *http.Request) {
+	if !s.libraryReady() {
+		s.writeLibraryUnavailable(w, r)
+		return
+	}
+	// Method gating (POST-only) is enforced declaratively by the route registry.
+	var req libraryWalkSanitizeBatchRequest
+	if !decodeJSONStrict(w, r, &req, MaxRequestBodySize) {
+		return
+	}
+	if len(req.Names) == 0 {
+		writeError(w, r, http.StatusBadRequest, "validation_failed", "names must not be empty", nil)
+		return
+	}
+	if len(req.Names) > maxSanitizeBatch {
+		writeError(w, r, http.StatusBadRequest, "validation_failed",
+			fmt.Sprintf("names must not exceed %d entries", maxSanitizeBatch), nil)
+		return
+	}
+
+	results := make([]sanitizeWalkResult, 0, len(req.Names))
+	sanitized, failed := 0, 0
+
+	for _, rawName := range req.Names {
+		name := strings.TrimSpace(rawName)
+		entry, stats, err := s.sanitizeWalk(name)
+		if err != nil {
+			failed++
+			results = append(results, sanitizeWalkResult{Name: name, Success: false, Error: err.Error()})
+			continue
+		}
+		sanitized++
+		results = append(results, sanitizeWalkResult{
+			Name:                 entry.Name,
+			Success:              true,
+			IPsTransformed:       stats.IPsTransformed,
+			HostnamesTransformed: stats.HostnamesTransformed,
+		})
+	}
+
+	s.writeJSON(w, libraryWalkSanitizeBatchResponse{
+		Results:   results,
+		Sanitized: sanitized,
+		Failed:    failed,
+	})
+}
