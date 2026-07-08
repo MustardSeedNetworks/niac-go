@@ -16,6 +16,7 @@ import (
 //	POST   /api/v1/config/devices           - Create new device
 //	PUT    /api/v1/config/devices/:id       - Update device
 //	DELETE /api/v1/config/devices/:id       - Delete device
+//	DELETE /api/v1/config/devices           - Batch delete devices
 //	POST   /api/v1/config/devices/:id/clone - Clone device
 func (s *Server) handleDevicesV2(w http.ResponseWriter, r *http.Request) {
 	// Parse the path to determine action
@@ -51,6 +52,9 @@ func (s *Server) handleDevicesV2(w http.ResponseWriter, r *http.Request) {
 	case r.Method == http.MethodDelete && deviceID != "":
 		// Delete device
 		s.handleDeviceDelete(w, r, deviceID)
+	case r.Method == http.MethodDelete && deviceID == "":
+		// Batch delete devices
+		s.handleDeviceBatchDelete(w, r)
 	case r.Method == http.MethodPost && action == "clone":
 		// Clone device
 		s.handleDeviceClone(w, r, deviceID)
@@ -206,22 +210,15 @@ func (s *Server) handleDeviceUpdate(w http.ResponseWriter, r *http.Request, host
 	s.writeJSON(w, resp)
 }
 
-// handleDeviceDelete deletes a device.
-func (s *Server) handleDeviceDelete(w http.ResponseWriter, r *http.Request, hostname string) {
-	cfg := s.currentConfig()
-	if cfg == nil {
-		writeError(w, r, http.StatusNotFound, "config_not_found", "No configuration loaded", nil)
-
-		return
-	}
-
-	// Find and remove device
-	newCfg := *deepCopyConfig(cfg)
+// removeDeviceByHostname returns devices with the named device removed and
+// whether it was found. It is the single code path shared by the single- and
+// batch-delete handlers so both apply identical removal semantics.
+func removeDeviceByHostname(devices []config.Device, hostname string) ([]config.Device, bool) {
 	found := false
 
-	newDevices := make([]config.Device, 0, len(cfg.Devices)-1)
+	newDevices := make([]config.Device, 0, len(devices))
 
-	for _, dev := range cfg.Devices {
+	for _, dev := range devices {
 		if dev.Name == hostname {
 			found = true
 
@@ -231,6 +228,21 @@ func (s *Server) handleDeviceDelete(w http.ResponseWriter, r *http.Request, host
 		newDevices = append(newDevices, dev)
 	}
 
+	return newDevices, found
+}
+
+// handleDeviceDelete deletes a single device.
+func (s *Server) handleDeviceDelete(w http.ResponseWriter, r *http.Request, hostname string) {
+	cfg := s.currentConfig()
+	if cfg == nil {
+		writeError(w, r, http.StatusNotFound, "config_not_found", "No configuration loaded", nil)
+
+		return
+	}
+
+	newCfg := *deepCopyConfig(cfg)
+
+	newDevices, found := removeDeviceByHostname(newCfg.Devices, hostname)
 	if !found {
 		writeError(w, r, http.StatusNotFound, "device_not_found",
 			fmt.Sprintf("Device '%s' not found", hostname), nil)
@@ -255,6 +267,86 @@ func (s *Server) handleDeviceDelete(w http.ResponseWriter, r *http.Request, host
 	s.writeJSON(w, map[string]string{
 		"status":   "deleted",
 		"hostname": hostname,
+	})
+}
+
+// handleDeviceBatchDelete deletes multiple devices in a single request,
+// reporting a per-hostname result rather than failing the whole request when
+// some hostnames don't exist. The config is persisted once at the end so the
+// batch is a single atomic write instead of N sequential saves.
+func (s *Server) handleDeviceBatchDelete(w http.ResponseWriter, r *http.Request) {
+	var req DeviceBatchDeleteRequest
+	if !decodeJSONStrict(w, r, &req, MaxRequestBodySize) {
+		return
+	}
+
+	if len(req.Hostnames) == 0 {
+		writeError(w, r, http.StatusBadRequest, "validation_failed", "hostnames must not be empty", nil)
+
+		return
+	}
+
+	if len(req.Hostnames) > MaxDeviceCount {
+		writeError(w, r, http.StatusBadRequest, "validation_failed",
+			fmt.Sprintf("hostnames must not exceed %d entries", MaxDeviceCount), nil)
+
+		return
+	}
+
+	cfg := s.currentConfig()
+	if cfg == nil {
+		writeError(w, r, http.StatusNotFound, "config_not_found", "No configuration loaded", nil)
+
+		return
+	}
+
+	newCfg := *deepCopyConfig(cfg)
+
+	results := make([]DeviceBatchDeleteResult, 0, len(req.Hostnames))
+	deletedHostnames := make([]string, 0, len(req.Hostnames))
+
+	deleted, failed := 0, 0
+
+	for _, hostname := range req.Hostnames {
+		newDevices, found := removeDeviceByHostname(newCfg.Devices, hostname)
+		if !found {
+			failed++
+
+			results = append(results, DeviceBatchDeleteResult{
+				Hostname: hostname,
+				Success:  false,
+				Error:    fmt.Sprintf("Device '%s' not found", hostname),
+			})
+
+			continue
+		}
+
+		newCfg.Devices = newDevices
+		deleted++
+
+		deletedHostnames = append(deletedHostnames, hostname)
+		results = append(results, DeviceBatchDeleteResult{
+			Hostname: hostname,
+			Success:  true,
+		})
+	}
+
+	if deleted > 0 {
+		if err := s.saveConfig(&newCfg); err != nil {
+			writeError(w, r, http.StatusInternalServerError, "save_failed", "Failed to save configuration", nil)
+
+			return
+		}
+
+		if s.sseHub != nil {
+			s.sseHub.BroadcastLog("info", "Devices deleted: "+strings.Join(deletedHostnames, ", "))
+		}
+	}
+
+	s.writeJSON(w, DeviceBatchDeleteResponse{
+		Results: results,
+		Deleted: deleted,
+		Failed:  failed,
 	})
 }
 

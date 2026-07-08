@@ -187,6 +187,33 @@ export interface CloneDeviceRequest {
   newIp?: string;
 }
 
+/**
+ * Request body for DELETE /api/v1/config/devices (batch delete)
+ */
+export interface DeviceBatchDeleteRequest {
+  hostnames: string[];
+}
+
+/**
+ * Per-hostname outcome of a batch device delete.
+ */
+export interface DeviceBatchDeleteResult {
+  hostname: string;
+  success: boolean;
+  error?: string;
+}
+
+/**
+ * Response from DELETE /api/v1/config/devices (batch delete). The request
+ * succeeds even when some hostnames fail; per-hostname outcomes are in
+ * `results`.
+ */
+export interface DeviceBatchDeleteResponse {
+  results: DeviceBatchDeleteResult[];
+  deleted: number;
+  failed: number;
+}
+
 // ============================================================================
 // JSON Schema Types (for dynamic form generation)
 // ============================================================================

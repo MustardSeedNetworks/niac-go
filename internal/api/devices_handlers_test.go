@@ -235,6 +235,120 @@ func TestHandleDeviceDeleteNotFound(t *testing.T) {
 	}
 }
 
+func TestHandleDeviceBatchDeleteSuccess(t *testing.T) {
+	server := newDeviceTestServer(t)
+
+	body := `{"hostnames":["router1","switch1"]}`
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/config/devices", strings.NewReader(body))
+	server.handleDevicesV2(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d: %s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+
+	var resp DeviceBatchDeleteResponse
+	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+
+	if resp.Deleted != 2 {
+		t.Errorf("Deleted = %d, want 2", resp.Deleted)
+	}
+	if resp.Failed != 0 {
+		t.Errorf("Failed = %d, want 0", resp.Failed)
+	}
+	if len(resp.Results) != 2 {
+		t.Fatalf("len(Results) = %d, want 2", len(resp.Results))
+	}
+	for _, r := range resp.Results {
+		if !r.Success {
+			t.Errorf("hostname %q: Success = false, want true", r.Hostname)
+		}
+	}
+
+	cfg := server.currentConfig()
+	if len(cfg.Devices) != 0 {
+		t.Errorf("len(cfg.Devices) = %d, want 0", len(cfg.Devices))
+	}
+}
+
+func TestHandleDeviceBatchDeletePartialFailure(t *testing.T) {
+	server := newDeviceTestServer(t)
+
+	body := `{"hostnames":["router1","nonexistent"]}`
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/config/devices", strings.NewReader(body))
+	server.handleDevicesV2(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d: %s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+
+	var resp DeviceBatchDeleteResponse
+	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+
+	if resp.Deleted != 1 {
+		t.Errorf("Deleted = %d, want 1", resp.Deleted)
+	}
+	if resp.Failed != 1 {
+		t.Errorf("Failed = %d, want 1", resp.Failed)
+	}
+
+	var failedResult *DeviceBatchDeleteResult
+	for i := range resp.Results {
+		if resp.Results[i].Hostname == "nonexistent" {
+			failedResult = &resp.Results[i]
+		}
+	}
+
+	if failedResult == nil {
+		t.Fatal("expected a result for hostname \"nonexistent\"")
+	}
+	if failedResult.Success {
+		t.Error("Success = true, want false for nonexistent hostname")
+	}
+	if failedResult.Error == "" {
+		t.Error("Error = \"\", want a non-empty message naming the failure")
+	}
+
+	cfg := server.currentConfig()
+	for _, dev := range cfg.Devices {
+		if dev.Name == "router1" {
+			t.Error("router1 should have been deleted")
+		}
+	}
+	if len(cfg.Devices) != 1 {
+		t.Errorf("len(cfg.Devices) = %d, want 1 (switch1 should remain)", len(cfg.Devices))
+	}
+}
+
+func TestHandleDeviceBatchDeleteEmptyBody(t *testing.T) {
+	server := newDeviceTestServer(t)
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/config/devices", strings.NewReader(`{"hostnames":[]}`))
+	server.handleDevicesV2(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("status = %d, want %d: %s", rec.Code, http.StatusBadRequest, rec.Body.String())
+	}
+}
+
+func TestHandleDeviceBatchDeleteMalformedBody(t *testing.T) {
+	server := newDeviceTestServer(t)
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/config/devices", strings.NewReader("not json"))
+	server.handleDevicesV2(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("status = %d, want %d: %s", rec.Code, http.StatusBadRequest, rec.Body.String())
+	}
+}
+
 func TestHandleDeviceUpdatePartial(t *testing.T) {
 	server := newDeviceTestServer(t)
 

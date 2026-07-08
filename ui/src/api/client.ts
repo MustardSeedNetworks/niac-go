@@ -7,6 +7,8 @@ import type {
   ConfigUpdateRequest,
   DebugLevelResponse,
   Device,
+  DeviceBatchDeleteRequest,
+  DeviceBatchDeleteResponse,
   DeviceDetailResponse,
   DeviceInterface,
   DeviceListResponse,
@@ -339,6 +341,13 @@ export const deleteDevice = (hostname: string) =>
   request<DeviceMutationResponse>(`/api/v1/config/devices/${encodeURIComponent(hostname)}`, {
     method: 'DELETE',
   });
+
+export const deleteDevices = (hostnames: string[]) =>
+  requestJson<DeviceBatchDeleteResponse>(
+    '/api/v1/config/devices',
+    { hostnames } satisfies DeviceBatchDeleteRequest,
+    { method: 'DELETE' },
+  );
 
 export const cloneDevice = (hostname: string, payload: CloneDeviceRequest) =>
   requestJson<DeviceMutationResponse>(
