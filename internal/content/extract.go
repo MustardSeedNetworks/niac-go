@@ -12,15 +12,19 @@
 //   - The daemon's POST /api/v1/library/install handler (PR 3) —
 //     UI uploads of the same tarball format.
 //
-// Security: every path coming out of the tarball is normalised and
-// re-rooted under <library>/<kind>/ before any file is touched, so a
-// crafted bundle can't drop files outside the library or follow a
-// symlink to /etc/passwd.
+// Security: the library root is opened as an [os.Root] and every path
+// coming out of the tarball is written relative to it. The kernel
+// rejects any entry that would escape the root — including one that
+// traverses a symlink already present on disk — so a crafted bundle
+// cannot drop files outside the library or follow a symlink to
+// /etc/passwd. A cheap pathEscapes() pre-check rejects obvious ../
+// entries early with ErrPathEscape; os.Root is the real containment.
 package content
 
 import (
 	"archive/tar"
 	"compress/gzip"
+	"crypto/rand"
 	"errors"
 	"fmt"
 	"io"
@@ -87,6 +91,18 @@ func Extract(r io.Reader, libRoot string, opts ExtractOptions) (Manifest, error)
 		return Manifest{}, fmt.Errorf("resolve library root: %w", absErr)
 	}
 
+	// Open the library root as an os.Root so every write below is
+	// contained by the kernel, not a string prefix check. The directory
+	// must exist to be opened, so create it first (idempotent).
+	if mkErr := os.MkdirAll(abs, libraryDirMode); mkErr != nil {
+		return Manifest{}, fmt.Errorf("create library root: %w", mkErr)
+	}
+	root, rootErr := os.OpenRoot(abs)
+	if rootErr != nil {
+		return Manifest{}, fmt.Errorf("open library root: %w", rootErr)
+	}
+	defer func() { _ = root.Close() }()
+
 	gz, gzErr := gzip.NewReader(r)
 	if gzErr != nil {
 		return Manifest{}, fmt.Errorf("open gzip stream: %w", gzErr)
@@ -107,7 +123,7 @@ func Extract(r io.Reader, libRoot string, opts ExtractOptions) (Manifest, error)
 			return manifest, fmt.Errorf("read tar entry: %w", hdrErr)
 		}
 
-		if procErr := processEntry(tr, hdr, abs, opts, overwrite, &manifest, &totalBytes); procErr != nil {
+		if procErr := processEntry(tr, hdr, root, opts, overwrite, &manifest, &totalBytes); procErr != nil {
 			return manifest, procErr
 		}
 	}
@@ -120,23 +136,22 @@ func Extract(r io.Reader, libRoot string, opts ExtractOptions) (Manifest, error)
 // Extract to keep the loop body under the cognitive-complexity cap.
 //
 // The path-traversal defence is layered: resolveEntryPath rejects any
-// entry that escapes (../ / leading /) and rebuilds the destination
-// under libRoot/<kind>/. Then directly before each filesystem call we
-// re-derive the cleaned absolute path and confirm it still has
-// libRoot as its prefix. The second check is redundant on a correct
-// resolveEntryPath but lives at the syscall site so CodeQL's
-// zip-slip query and any future reviewer can see the protection
-// inline without chasing the call graph.
+// entry with a ../ component or leading / (ErrPathEscape) and returns
+// a path relative to the library root. Every filesystem call then goes
+// through os.Root, which resolves that relative path inside the root
+// and has the kernel reject anything that escapes — including a
+// traversal through a symlink already on disk, which the old string
+// prefix check could not catch (a TOCTOU window between check and open).
 func processEntry(
 	tr *tar.Reader,
 	hdr *tar.Header,
-	libRoot string,
+	root *os.Root,
 	opts ExtractOptions,
 	overwrite bool,
 	manifest *Manifest,
 	totalBytes *int64,
 ) error {
-	dest, kind, skipReason, err := resolveEntryPath(libRoot, hdr.Name)
+	rel, kind, skipReason, err := resolveEntryPath(hdr.Name)
 	if err != nil {
 		return err
 	}
@@ -147,16 +162,11 @@ func processEntry(
 		return nil
 	}
 
-	safeDest, safeErr := ensureUnderRoot(libRoot, dest)
-	if safeErr != nil {
-		return safeErr
-	}
-
 	switch hdr.Typeflag {
 	case tar.TypeDir:
 		if !opts.DryRun {
-			if mkErr := os.MkdirAll(safeDest, libraryDirMode); mkErr != nil {
-				return fmt.Errorf("mkdir %s: %w", safeDest, mkErr)
+			if mkErr := root.MkdirAll(rel, libraryDirMode); mkErr != nil {
+				return fmt.Errorf("mkdir %s: %w", rel, mkErr)
 			}
 		}
 		manifest.Directories++
@@ -171,7 +181,7 @@ func processEntry(
 			return fmt.Errorf("%w (running total %d bytes)", ErrBundleTooLarge, *totalBytes)
 		}
 		if !opts.DryRun {
-			if writeErr := writeFile(libRoot, safeDest, tr, hdr.Size, overwrite); writeErr != nil {
+			if writeErr := writeFile(root, rel, tr, hdr.Size, overwrite); writeErr != nil {
 				return writeErr
 			}
 		}
@@ -185,24 +195,12 @@ func processEntry(
 	}
 }
 
-// ensureUnderRoot is the inline zip-slip guard. Takes the resolved
-// destination and re-verifies it still resolves under libRoot after
-// filepath.Clean strips any . or .. components. Returns the cleaned
-// path on success.
-func ensureUnderRoot(libRoot, dest string) (string, error) {
-	clean := filepath.Clean(dest)
-	rootClean := filepath.Clean(libRoot) + string(filepath.Separator)
-	if !strings.HasPrefix(clean+string(filepath.Separator), rootClean) {
-		return "", fmt.Errorf("%w: %s resolved outside %s", ErrPathEscape, dest, libRoot)
-	}
-	return clean, nil
-}
-
 // resolveEntryPath validates a tar entry path against the library
-// layout and returns its on-disk destination plus the kind it belongs
-// to. A non-empty skipReason means the entry is structurally valid but
-// carries no payload worth writing (e.g. the bare "networks/" header).
-func resolveEntryPath(libRoot, name string) (string, library.Kind, string, error) {
+// layout and returns its destination RELATIVE to the library root plus
+// the kind it belongs to. A non-empty skipReason means the entry is
+// structurally valid but carries no payload worth writing (e.g. the
+// bare "networks/" header).
+func resolveEntryPath(name string) (string, library.Kind, string, error) {
 	clean := strings.TrimPrefix(filepath.ToSlash(name), "./")
 	clean = strings.TrimPrefix(clean, "/")
 	if clean == "" || clean == "." {
@@ -225,16 +223,16 @@ func resolveEntryPath(libRoot, name string) (string, library.Kind, string, error
 		return "", kind, "bare kind directory", nil
 	}
 
-	// Build the destination under <libRoot>/<kind>/; the inline
-	// ensureUnderRoot check at every syscall site is what actually
-	// enforces the boundary, so we don't duplicate the prefix check
-	// here.
-	dest := filepath.Join(libRoot, top, filepath.FromSlash(parts[1]))
-	return dest, kind, "", nil
+	// Path relative to the library root; os.Root resolves and contains it
+	// at every filesystem call in processEntry / writeFile.
+	rel := filepath.Join(top, filepath.FromSlash(parts[1]))
+	return rel, kind, "", nil
 }
 
 // pathEscapes returns true when the normalised tar entry path contains
-// a `..` component that would let it leave its kind directory.
+// a `..` component that would let it leave its kind directory. This is a
+// cheap early reject that yields the ErrPathEscape sentinel; os.Root is
+// the authoritative containment at write time.
 func pathEscapes(clean string) bool {
 	if clean == ".." {
 		return true
@@ -257,55 +255,72 @@ func matchKind(top string) (library.Kind, bool) {
 	return "", false
 }
 
-// writeFile creates or overwrites dest with size bytes from r. Always
-// writes via a temp file in the same dir then atomically renames so a
-// crash mid-extract leaves the previous version intact.
-//
-// libRoot is passed solely so we can re-verify dest is still under it
-// inline — defence-in-depth for the path-traversal check that already
-// ran in resolveEntryPath / ensureUnderRoot. The cost is one extra
-// HasPrefix per file; the upside is that any future caller can't
-// bypass the guard by skipping the intermediate validators.
-func writeFile(libRoot, dest string, r io.Reader, size int64, overwrite bool) error {
-	if _, err := ensureUnderRoot(libRoot, dest); err != nil {
-		return err
-	}
+// writeFile creates or overwrites rel (relative to root) with size bytes
+// from r. Writes via a temp file in the same directory then atomically
+// renames, so a crash mid-extract leaves the previous version intact.
+// All operations go through os.Root, so the kernel guarantees rel cannot
+// escape the library root — including through a symlink already on disk.
+func writeFile(root *os.Root, rel string, r io.Reader, size int64, overwrite bool) error {
 	if !overwrite {
-		if _, statErr := os.Stat(dest); statErr == nil {
+		if _, statErr := root.Stat(rel); statErr == nil {
 			return nil
 		}
 	}
 
-	if mkErr := os.MkdirAll(filepath.Dir(dest), libraryDirMode); mkErr != nil {
-		return fmt.Errorf("mkdir parent of %s: %w", dest, mkErr)
+	dir := filepath.Dir(rel)
+	if mkErr := root.MkdirAll(dir, libraryDirMode); mkErr != nil {
+		return fmt.Errorf("mkdir parent of %s: %w", rel, mkErr)
 	}
 
-	tmp, createErr := os.CreateTemp(filepath.Dir(dest), ".content-*.tmp")
+	tmpRel, tmp, createErr := createTemp(root, dir, filepath.Base(rel))
 	if createErr != nil {
-		return fmt.Errorf("create temp for %s: %w", dest, createErr)
+		return fmt.Errorf("create temp for %s: %w", rel, createErr)
 	}
-	tmpPath := tmp.Name()
-	cleanup := func() { _ = os.Remove(tmpPath) }
+	cleanup := func() { _ = root.Remove(tmpRel) }
 
 	if _, copyErr := io.CopyN(tmp, r, size); copyErr != nil {
 		_ = tmp.Close()
 		cleanup()
-		return fmt.Errorf("copy bytes for %s: %w", dest, copyErr)
+		return fmt.Errorf("copy bytes for %s: %w", rel, copyErr)
 	}
 	if chmodErr := tmp.Chmod(libraryFileMode); chmodErr != nil {
 		_ = tmp.Close()
 		cleanup()
-		return fmt.Errorf("chmod temp for %s: %w", dest, chmodErr)
+		return fmt.Errorf("chmod temp for %s: %w", rel, chmodErr)
 	}
 	if closeErr := tmp.Close(); closeErr != nil {
 		cleanup()
-		return fmt.Errorf("close temp for %s: %w", dest, closeErr)
+		return fmt.Errorf("close temp for %s: %w", rel, closeErr)
 	}
-	if renameErr := os.Rename(tmpPath, dest); renameErr != nil {
+	if renameErr := root.Rename(tmpRel, rel); renameErr != nil {
 		cleanup()
-		return fmt.Errorf("rename %s -> %s: %w", tmpPath, dest, renameErr)
+		return fmt.Errorf("rename %s -> %s: %w", tmpRel, rel, renameErr)
 	}
 	return nil
+}
+
+// createTemp opens a fresh temp file under dir (relative to root) with a
+// random name and O_EXCL, so it can never open — and thus never follow —
+// a file or symlink already present at the path. os.Root has no
+// CreateTemp of its own; this mirrors os.CreateTemp's safety inside the
+// root (a predictable name + O_TRUNC would let a pre-planted in-root
+// symlink alias the write to another library file).
+func createTemp(root *os.Root, dir, base string) (string, *os.File, error) {
+	for range 10 {
+		var b [8]byte
+		if _, err := rand.Read(b[:]); err != nil {
+			return "", nil, err
+		}
+		name := filepath.Join(dir, fmt.Sprintf(".content-%s-%x.tmp", base, b))
+		f, err := root.OpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_EXCL, libraryFileMode)
+		if err == nil {
+			return name, f, nil
+		}
+		if !errors.Is(err, os.ErrExist) {
+			return "", nil, err
+		}
+	}
+	return "", nil, errors.New("exhausted temp-name attempts")
 }
 
 // File modes for files/dirs we create. Match internal/library so the
