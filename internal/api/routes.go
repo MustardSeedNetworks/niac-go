@@ -196,12 +196,14 @@ func (s *Server) registerReadOnlyRoutes(mux *http.ServeMux) {
 			csrf:    true,
 		},
 		{path: "/api/v1/library/pcaps", handler: s.handleLibraryPcaps, methods: []string{http.MethodGet}},
-		// Per-device baseline walk synthesis (#546 p2). POST-only; mutates the
-		// library + running config YAML, so write + CSRF.
+		// Per-device actions. synthesize-walk (#546 p2) mutates the library +
+		// running config YAML, so this path carries write rate limit + CSRF;
+		// csrf.Protect skips safe GETs, so the read-only interfaces action
+		// (#897 p5f) added alongside it isn't CSRF-gated in practice.
 		{
 			path:    "/api/v1/devices/",
 			handler: s.dispatchDeviceSubpath,
-			methods: []string{http.MethodPost},
+			methods: []string{http.MethodGet, http.MethodPost},
 			rl:      rlWrite,
 			csrf:    true,
 		},

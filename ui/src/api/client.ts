@@ -8,6 +8,7 @@ import type {
   DebugLevelResponse,
   Device,
   DeviceDetailResponse,
+  DeviceInterface,
   DeviceListResponse,
   DeviceMutationResponse,
   DeviceSummary,
@@ -196,6 +197,14 @@ export const synthesizeWalk = (hostname: string, payload: SynthesizeWalkRequest)
     payload,
     { method: 'POST' },
   );
+
+/**
+ * Per-device interface list (#897 p5f). Feeds the Error-Injection panel's
+ * interface picker so it's a dropdown scoped to the selected device rather
+ * than free text that silently no-ops on a typo.
+ */
+export const fetchDeviceInterfaces = (hostname: string) =>
+  deduplicatedGet<DeviceInterface[]>(`/api/v1/devices/${encodeURIComponent(hostname)}/interfaces`);
 
 /**
  * Per-type device editor schema (#546 part 1). The daemon serves a

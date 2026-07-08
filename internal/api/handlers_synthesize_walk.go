@@ -55,10 +55,11 @@ func (s *Server) handleSynthesizeWalkModels(w http.ResponseWriter, _ *http.Reque
 }
 
 // dispatchDeviceSubpath routes /api/v1/devices/{hostname}/{action}
-// to the right per-action handler. Today there's exactly one action
-// (synthesize-walk); the dispatch shape leaves room for adding more
-// per-device actions (clone-walk, regenerate-mac, etc.) without
-// touching the router every time.
+// to the right per-action handler. Actions today: synthesize-walk
+// (POST, mutates) and interfaces (GET, read-only — #897 p5f, feeds
+// the Error-Injection UI's interface picker). The dispatch shape
+// leaves room for adding more per-device actions (clone-walk,
+// regenerate-mac, etc.) without touching the router every time.
 func (s *Server) dispatchDeviceSubpath(w http.ResponseWriter, r *http.Request) {
 	const hostnameAndAction = 2 // {hostname}/{action} after the prefix strip
 	rest := strings.TrimPrefix(r.URL.Path, "/api/v1/devices/")
@@ -67,14 +68,63 @@ func (s *Server) dispatchDeviceSubpath(w http.ResponseWriter, r *http.Request) {
 		writeError(w, r, http.StatusNotFound, "not_found", "Unknown device action", nil)
 		return
 	}
-	action := parts[1]
+	hostname, action := parts[0], parts[1]
 	switch action {
 	case "synthesize-walk":
+		if r.Method != http.MethodPost {
+			w.Header().Set("Allow", http.MethodPost)
+			writeError(w, r, http.StatusMethodNotAllowed, "method_not_allowed", "Method not allowed", nil)
+			return
+		}
 		s.handleSynthesizeWalk(w, r)
+	case "interfaces":
+		if r.Method != http.MethodGet {
+			w.Header().Set("Allow", http.MethodGet)
+			writeError(w, r, http.StatusMethodNotAllowed, "method_not_allowed", "Method not allowed", nil)
+			return
+		}
+		s.handleDeviceInterfaces(w, r, hostname)
 	default:
 		writeError(w, r, http.StatusNotFound, "not_found",
 			fmt.Sprintf("Unknown device action: %s", action), nil)
 	}
+}
+
+// deviceInterfaceResponse is one entry in the GET
+// /api/v1/devices/{hostname}/interfaces response — enough for the
+// Error-Injection UI to populate a per-device interface dropdown
+// without falling back to free text (which silently no-ops on a typo).
+type deviceInterfaceResponse struct {
+	Name        string `json:"name"`
+	Description string `json:"description,omitempty"`
+	AdminStatus string `json:"adminStatus,omitempty"`
+	OperStatus  string `json:"operStatus,omitempty"`
+}
+
+// handleDeviceInterfaces handles GET /api/v1/devices/{hostname}/interfaces.
+// Returns the hostname's configured interfaces (config.Device.Interfaces),
+// or 404 when the hostname doesn't match any device in the running config.
+// A known device with no interfaces configured returns an empty array, not
+// 404 — only an unknown hostname is an error.
+func (s *Server) handleDeviceInterfaces(w http.ResponseWriter, r *http.Request, hostname string) {
+	dev := findDeviceByName(s.cfg.Config, hostname)
+	if dev == nil {
+		writeError(w, r, http.StatusNotFound, "not_found",
+			fmt.Sprintf("Device not found: %s", hostname), nil)
+		return
+	}
+
+	out := make([]deviceInterfaceResponse, 0, len(dev.Interfaces))
+	for i := range dev.Interfaces {
+		iface := &dev.Interfaces[i]
+		out = append(out, deviceInterfaceResponse{
+			Name:        iface.Name,
+			Description: iface.Description,
+			AdminStatus: iface.AdminStatus,
+			OperStatus:  iface.OperStatus,
+		})
+	}
+	s.writeJSON(w, out)
 }
 
 // handleSynthesizeWalk handles POST
