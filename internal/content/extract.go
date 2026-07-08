@@ -1,12 +1,14 @@
-// Package content owns the on-disk content bundle: download, verify,
-// extract, and inventory. The bundle is a gzip-compressed tar that
-// mirrors the library layout (networks/, walks/, pcaps/) and is
-// extracted into a library root resolved by internal/library.
+// Package content owns the on-disk content bundle: extract and
+// inventory. The bundle is a gzip-compressed tar that mirrors the
+// library layout (networks/, walks/, pcaps/) and is extracted into a
+// library root resolved by internal/library. Bundles are always local
+// — embedded essentials, the niac-content deb/rpm package, or a UI
+// upload — niac never fetches content over the network.
 //
-// Two CLI surfaces consume this package:
+// Two surfaces consume this package:
 //
-//   - `niac content install` (cmd/niac/content.go) — local or remote
-//     install of the versioned bundle.
+//   - `niac content install --bundle` (cmd/niac/content.go) — install
+//     of a local bundle file.
 //   - The daemon's POST /api/v1/library/install handler (PR 3) —
 //     UI uploads of the same tarball format.
 //
@@ -60,7 +62,7 @@ type ExtractOptions struct {
 	// SkipExisting flips the default overwrite-on-conflict behaviour to
 	// "skip existing files" (additive merge). The zero value (false)
 	// overwrites, so reinstalling a newer bundle replaces older
-	// content — which is what `niac content update` wants.
+	// content.
 	SkipExisting bool
 }
 
