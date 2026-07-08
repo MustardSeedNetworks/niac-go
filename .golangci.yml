@@ -527,6 +527,18 @@ linters:
       - common-false-positives
     # Excluding configuration per-path, per-linter, per-text and per-source.
     rules:
+      # TEMPORARY (tooling lag): golangci-lint 2.12.2 (latest, built with
+      # go1.26.2) bundles a staticcheck that does not recognize
+      # testing.T.Fatal as terminating under Go 1.26.5, producing SA5011
+      # false-positives on the idiomatic `if x == nil { t.Fatal(...) }; x.field`
+      # pattern (49 sites, all in _test.go). The code is correct — t.Fatal
+      # calls runtime.Goexit. Introduced with the Go 1.26.5 bump for
+      # GO-2026-4970. REMOVE this rule when golangci-lint ships a Go
+      # 1.26.5-compatible release (warn-unused: true above will flag it as
+      # unused once that lands, as a reminder).
+      - text: 'SA5011'
+        path: '_test\.go'
+        linters: [ staticcheck ]
       - source: 'TODO'
         linters: [ godot ]
       - text: 'should have a package comment'
