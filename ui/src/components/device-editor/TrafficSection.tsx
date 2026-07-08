@@ -1,10 +1,60 @@
-import { Radio } from 'lucide-react';
-import type { FC } from 'react';
+import { ChevronDown, ChevronRight, Radio } from 'lucide-react';
+import { type FC, type ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { TrafficConfig } from '../../api/types';
 import { iconSizes } from '../../constants/sizes';
 import { CollapsibleSection, FormField } from '../form';
 import type { ProtocolSectionProps } from './types';
+
+interface TrafficSubsectionProps {
+  title: string;
+  testId: string;
+  defaultExpanded?: boolean;
+  headerExtra: ReactNode;
+  children: ReactNode;
+}
+
+/**
+ * Independently-collapsible group within TrafficSection. Distinct from the
+ * top-level CollapsibleSection: the enable/disable switch (headerExtra)
+ * always stays visible so the traffic mechanism's on/off state is never
+ * hidden by collapsing — only its detail fields collapse.
+ */
+const TrafficSubsection: FC<TrafficSubsectionProps> = ({
+  title,
+  testId,
+  defaultExpanded = false,
+  headerExtra,
+  children,
+}) => {
+  const [isOpen, setIsOpen] = useState(defaultExpanded);
+
+  return (
+    <div className="rounded-lg border border-surface-border bg-bg-base/40 pad stack">
+      <div className="flex-between">
+        <button
+          type="button"
+          onClick={() => setIsOpen((open) => !open)}
+          aria-expanded={isOpen}
+          data-testid={testId}
+          className="flex items-center gap-compact text-left focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand-primary rounded-lg"
+        >
+          {isOpen ? (
+            <ChevronDown className={`${iconSizes.sm} text-text-muted`} />
+          ) : (
+            <ChevronRight className={`${iconSizes.sm} text-text-muted`} />
+          )}
+          <h4 className="label flex items-center gap-compact">
+            <Radio className={`${iconSizes.md} text-brand-accent`} />
+            {title}
+          </h4>
+        </button>
+        {headerExtra}
+      </div>
+      {isOpen && children}
+    </div>
+  );
+};
 
 export const TrafficSection: FC<ProtocolSectionProps> = ({
   device,
@@ -37,6 +87,22 @@ export const TrafficSection: FC<ProtocolSectionProps> = ({
     onUpdate('traffic', config);
   };
 
+  const enableSwitch = (checked: boolean, onChange: (checked: boolean) => void) => (
+    <label className="relative inline-flex items-center cursor-pointer">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="sr-only peer"
+      />
+      <div className="w-9 h-5 bg-bg-elevated rounded-full peer peer-checked:bg-brand-primary peer-focus:ring-2 peer-focus:ring-brand-primary transition-colors">
+        <div
+          className={`absolute top-0.5 left-0.5 w-4 h-4 bg-knob rounded-full transition-transform ${checked ? 'translate-x-4' : ''}`}
+        />
+      </div>
+    </label>
+  );
+
   return (
     <CollapsibleSection
       title={t('editor.sections.traffic.title')}
@@ -49,36 +115,24 @@ export const TrafficSection: FC<ProtocolSectionProps> = ({
     >
       {device.traffic?.enabled && (
         <div className="stack-xl">
-          {/* ARP Announcements */}
-          <div className="rounded-lg border border-surface-border bg-bg-base/40 pad stack">
-            <div className="flex-between">
-              <h4 className="label flex items-center gap-compact">
-                <Radio className={`${iconSizes.md} text-brand-accent`} />
-                {t('editor.sections.traffic.arpAnnouncementsTitle')}
-              </h4>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={device.traffic.arpAnnouncements?.enabled ?? false}
-                  onChange={(e) => {
-                    const baseConfig = getTrafficConfig();
-                    updateTraffic({
-                      ...baseConfig,
-                      arpAnnouncements: {
-                        ...baseConfig.arpAnnouncements,
-                        enabled: e.target.checked,
-                      },
-                    });
-                  }}
-                  className="sr-only peer"
-                />
-                <div className="w-9 h-5 bg-bg-elevated rounded-full peer peer-checked:bg-brand-primary peer-focus:ring-2 peer-focus:ring-brand-primary transition-colors">
-                  <div
-                    className={`absolute top-0.5 left-0.5 w-4 h-4 bg-knob rounded-full transition-transform ${device.traffic.arpAnnouncements?.enabled ? 'translate-x-4' : ''}`}
-                  />
-                </div>
-              </label>
-            </div>
+          <TrafficSubsection
+            title={t('editor.sections.traffic.arpAnnouncementsTitle')}
+            testId="traffic-subsection-arp-header"
+            defaultExpanded
+            headerExtra={enableSwitch(
+              device.traffic.arpAnnouncements?.enabled ?? false,
+              (checked) => {
+                const baseConfig = getTrafficConfig();
+                updateTraffic({
+                  ...baseConfig,
+                  arpAnnouncements: {
+                    ...baseConfig.arpAnnouncements,
+                    enabled: checked,
+                  },
+                });
+              },
+            )}
+          >
             {device.traffic.arpAnnouncements?.enabled && (
               <FormField
                 label={t('editor.sections.traffic.intervalLabel')}
@@ -102,38 +156,22 @@ export const TrafficSection: FC<ProtocolSectionProps> = ({
                 />
               </FormField>
             )}
-          </div>
+          </TrafficSubsection>
 
-          {/* Periodic Pings */}
-          <div className="rounded-lg border border-surface-border bg-bg-base/40 pad stack">
-            <div className="flex-between">
-              <h4 className="label flex items-center gap-compact">
-                <Radio className={`${iconSizes.md} text-brand-accent`} />
-                {t('editor.sections.traffic.periodicPingsTitle')}
-              </h4>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={device.traffic.periodicPings?.enabled ?? false}
-                  onChange={(e) => {
-                    const baseConfig = getTrafficConfig();
-                    updateTraffic({
-                      ...baseConfig,
-                      periodicPings: {
-                        ...baseConfig.periodicPings,
-                        enabled: e.target.checked,
-                      },
-                    });
-                  }}
-                  className="sr-only peer"
-                />
-                <div className="w-9 h-5 bg-bg-elevated rounded-full peer peer-checked:bg-brand-primary peer-focus:ring-2 peer-focus:ring-brand-primary transition-colors">
-                  <div
-                    className={`absolute top-0.5 left-0.5 w-4 h-4 bg-knob rounded-full transition-transform ${device.traffic.periodicPings?.enabled ? 'translate-x-4' : ''}`}
-                  />
-                </div>
-              </label>
-            </div>
+          <TrafficSubsection
+            title={t('editor.sections.traffic.periodicPingsTitle')}
+            testId="traffic-subsection-pings-header"
+            headerExtra={enableSwitch(device.traffic.periodicPings?.enabled ?? false, (checked) => {
+              const baseConfig = getTrafficConfig();
+              updateTraffic({
+                ...baseConfig,
+                periodicPings: {
+                  ...baseConfig.periodicPings,
+                  enabled: checked,
+                },
+              });
+            })}
+          >
             {device.traffic.periodicPings?.enabled && (
               <div className="grid gap-comfortable md:grid-cols-2">
                 <FormField
@@ -183,38 +221,22 @@ export const TrafficSection: FC<ProtocolSectionProps> = ({
                 </FormField>
               </div>
             )}
-          </div>
+          </TrafficSubsection>
 
-          {/* Random Traffic */}
-          <div className="rounded-lg border border-surface-border bg-bg-base/40 pad stack">
-            <div className="flex-between">
-              <h4 className="label flex items-center gap-compact">
-                <Radio className={`${iconSizes.md} text-brand-accent`} />
-                {t('editor.sections.traffic.randomTrafficTitle')}
-              </h4>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={device.traffic.randomTraffic?.enabled ?? false}
-                  onChange={(e) => {
-                    const baseConfig = getTrafficConfig();
-                    updateTraffic({
-                      ...baseConfig,
-                      randomTraffic: {
-                        ...baseConfig.randomTraffic,
-                        enabled: e.target.checked,
-                      },
-                    });
-                  }}
-                  className="sr-only peer"
-                />
-                <div className="w-9 h-5 bg-bg-elevated rounded-full peer peer-checked:bg-brand-primary peer-focus:ring-2 peer-focus:ring-brand-primary transition-colors">
-                  <div
-                    className={`absolute top-0.5 left-0.5 w-4 h-4 bg-knob rounded-full transition-transform ${device.traffic.randomTraffic?.enabled ? 'translate-x-4' : ''}`}
-                  />
-                </div>
-              </label>
-            </div>
+          <TrafficSubsection
+            title={t('editor.sections.traffic.randomTrafficTitle')}
+            testId="traffic-subsection-random-header"
+            headerExtra={enableSwitch(device.traffic.randomTraffic?.enabled ?? false, (checked) => {
+              const baseConfig = getTrafficConfig();
+              updateTraffic({
+                ...baseConfig,
+                randomTraffic: {
+                  ...baseConfig.randomTraffic,
+                  enabled: checked,
+                },
+              });
+            })}
+          >
             {device.traffic.randomTraffic?.enabled && (
               <div className="stack-lg">
                 <div className="grid gap-comfortable md:grid-cols-2">
@@ -318,7 +340,7 @@ export const TrafficSection: FC<ProtocolSectionProps> = ({
                 </div>
               </div>
             )}
-          </div>
+          </TrafficSubsection>
         </div>
       )}
     </CollapsibleSection>
