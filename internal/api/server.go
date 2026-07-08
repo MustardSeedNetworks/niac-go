@@ -188,6 +188,15 @@ type ReplayState struct {
 	LoopMs    int       `json:"loopMs"`
 	Scale     float64   `json:"scale"`
 	StartedAt time.Time `json:"startedAt,omitzero"`
+
+	// Progress counters for the current (or most recent) replay iteration.
+	// PacketsTotal/BytesTotal are 0 until the PCAP has been read; PercentComplete
+	// is omitted (not faked as 0) whenever PacketsTotal is unknown.
+	PacketsSent     uint64  `json:"packetsSent"`
+	BytesSent       uint64  `json:"bytesSent"`
+	PacketsTotal    uint64  `json:"packetsTotal"`
+	BytesTotal      uint64  `json:"bytesTotal"`
+	PercentComplete float64 `json:"percentComplete,omitempty"`
 }
 
 // ReplayManager controls PCAP playback from the API server.

@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/gopacket/gopacket"
@@ -37,12 +38,30 @@ type PlaybackEngine struct {
 	stopChan   chan struct{}
 	wg         sync.WaitGroup
 	mu         sync.Mutex
+
+	// Progress counters, read via Progress(). packetsSent/bytesSent reset at
+	// the start of each playOnce (so a looped replay reports per-iteration
+	// progress rather than an ever-growing total); totalPackets/totalBytes
+	// are set once loadPCAP finishes reading the file.
+	packetsSent  atomic.Uint64
+	bytesSent    atomic.Uint64
+	totalPackets atomic.Uint64
+	totalBytes   atomic.Uint64
 }
 
 // PlaybackPacket represents a packet with timestamp for playback.
 type PlaybackPacket struct {
 	Data      []byte
 	Timestamp time.Time
+}
+
+// PlaybackProgress reports live counters for an in-progress (or just
+// finished) replay iteration.
+type PlaybackProgress struct {
+	PacketsSent  uint64
+	BytesSent    uint64
+	TotalPackets uint64
+	TotalBytes   uint64
 }
 
 // NewPlaybackEngine creates a new PCAP playback engine.
@@ -52,6 +71,17 @@ func NewPlaybackEngine(engine *Engine, playbackConfig *config.CapturePlayback, d
 		config:     playbackConfig,
 		debugLevel: debugLevel,
 		stopChan:   make(chan struct{}),
+	}
+}
+
+// Progress returns a snapshot of the current playback progress. Safe to call
+// concurrently with playbackLoop.
+func (p *PlaybackEngine) Progress() PlaybackProgress {
+	return PlaybackProgress{
+		PacketsSent:  p.packetsSent.Load(),
+		BytesSent:    p.bytesSent.Load(),
+		TotalPackets: p.totalPackets.Load(),
+		TotalBytes:   p.totalBytes.Load(),
 	}
 }
 
@@ -165,6 +195,17 @@ func (p *PlaybackEngine) playOnce() {
 		return
 	}
 
+	// Reset per-iteration progress counters so a looped replay reports
+	// progress against the current pass, not a running lifetime total.
+	var totalBytes uint64
+	for _, pkt := range packets {
+		totalBytes += uint64(len(pkt.Data))
+	}
+	p.packetsSent.Store(0)
+	p.bytesSent.Store(0)
+	p.totalPackets.Store(uint64(len(packets)))
+	p.totalBytes.Store(totalBytes)
+
 	if len(packets) == 0 {
 		p.logBasic("No packets found in PCAP file")
 		return
@@ -229,6 +270,8 @@ func (p *PlaybackEngine) sendPacketWithLogging(pkt PlaybackPacket, packetNum, to
 		p.logBasic("Error sending packet", "packetNum", packetNum, "error", err)
 		return
 	}
+	p.packetsSent.Add(1)
+	p.bytesSent.Add(uint64(len(pkt.Data)))
 	if p.debugLevel >= debugLevelVerbose {
 		slog.Debug("Sent packet", "packetNum", packetNum, "total", totalPackets, "bytes", len(pkt.Data))
 	}

@@ -192,6 +192,12 @@ export interface ReplayState {
   loopMs: number;
   scale: number;
   startedAt?: string;
+  packetsSent: number;
+  bytesSent: number;
+  packetsTotal: number;
+  bytesTotal: number;
+  /** Omitted by the backend (not sent as 0) whenever packetsTotal is unknown. */
+  percentComplete?: number;
 }
 
 export interface ReplayRequest {
