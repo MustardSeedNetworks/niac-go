@@ -184,6 +184,45 @@ export const revertWalk = (name: string) =>
   requestJson<LibraryFileEntry>('/api/v1/library/walks/revert', { name }, { method: 'POST' });
 
 /**
+ * Per-walk outcome reported by sanitizeWalk / sanitizeWalksBatch. Mirrors
+ * the daemon's sanitizeWalkResult shape.
+ */
+export interface SanitizeWalkResult {
+  name: string;
+  success: boolean;
+  error?: string;
+  ipsTransformed?: number;
+  hostnamesTransformed?: number;
+}
+
+export interface SanitizeWalkBatchResponse {
+  results: SanitizeWalkResult[];
+  sanitized: number;
+  failed: number;
+}
+
+/**
+ * Sanitize a library walk in place, replacing IPs/hostnames with
+ * deterministic placeholders. Preserves the walk's pristine original
+ * (idempotent — a no-op if already preserved) so it stays recoverable via
+ * revertWalk. Backed by POST /api/v1/library/walks/sanitize.
+ */
+export const sanitizeWalk = (name: string) =>
+  requestJson<LibraryFileEntry>('/api/v1/library/walks/sanitize', { name }, { method: 'POST' });
+
+/**
+ * Sanitize multiple library walks in one request. Backed by POST
+ * /api/v1/library/walks/sanitize-batch; per-name failures don't fail the
+ * whole request — see SanitizeWalkBatchResponse.results.
+ */
+export const sanitizeWalksBatch = (names: string[]) =>
+  requestJson<SanitizeWalkBatchResponse>(
+    '/api/v1/library/walks/sanitize-batch',
+    { names },
+    { method: 'POST' },
+  );
+
+/**
  * Baseline walk synthesis (#546 p2). GET the (vendor, model) catalog to
  * populate the device editor's "Synthesize baseline walk" picker; POST
  * generates a walk for the given device from the chosen profile, writes
