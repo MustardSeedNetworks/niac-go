@@ -426,17 +426,19 @@ func bootstrapLibraryContent(lib *library.Library) {
 	}
 
 	// Workstream L3a: if the niac-content deb/rpm is installed (see
-	// .goreleaser.yml) and walks/ is still empty, adopt its bundle as the
-	// starting library content. Local file only — never a network fetch.
-	// No-op if the package isn't installed or walks/ already has content.
+	// .goreleaser.yml), adopt its full device set over the embedded
+	// essentials that bootstrapWalks just seeded — precedence is deb
+	// bundle > embedded starters. Additive and once: skipped as soon as
+	// walks/ holds any non-starter (user/bundle) content. Local file
+	// only — never a network fetch. No-op if the package isn't installed.
 	bundlePath := content.PackagedBundlePath()
-	manifest, installed, installErr := content.InstallPackagedIfEmpty(lib, bundlePath)
+	manifest, installed, installErr := content.AdoptPackagedBundle(lib, bundlePath)
 	switch {
 	case installErr != nil:
-		slog.Error("[API] Failed to install packaged content bundle",
+		slog.Error("[API] Failed to adopt packaged content bundle",
 			"path", bundlePath, "error", installErr)
 	case installed:
-		slog.Info("[API] Installed packaged content bundle",
+		slog.Info("[API] Adopted packaged content bundle",
 			"path", bundlePath, "files", manifest.Files, "bytes", manifest.Bytes)
 	}
 }
