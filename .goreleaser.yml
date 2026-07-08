@@ -229,6 +229,14 @@ nfpms:
     # /usr/local/bin). Matches existing .deb/.rpm contract.
     bindir: /usr/bin
 
+# The niac-content deb/rpm (workstream L3a) is NOT built here. It depends
+# on the sanitized walk corpus from the private niac-demo-catalog repo,
+# which is only available when the CONTENT_REPO_DEPLOY_KEY secret is set.
+# Building it inline would hard-fail this core release whenever the corpus
+# is absent (missing contents.src). It lives in its own config,
+# .goreleaser.content.yml, run by the gated `niac-content` job in
+# release.yml — so the core niac release always succeeds standalone.
+
 checksum:
   name_template: "checksums.txt"
   algorithm: sha256

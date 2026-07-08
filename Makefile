@@ -176,6 +176,28 @@ clean-all: clean ## Clean everything including dependencies
 	rm -rf dist/
 
 # =============================================================================
+# Content Bundle
+# =============================================================================
+# Reproducible gzip-tar bundles in the internal/content.Extract format
+# (top-level walks/ dir). Source corpus is the sanitized SNMP walk catalog
+# in the sibling niac-demo-catalog repo — override CONTENT_CORPUS if yours
+# lives elsewhere. `full` feeds the niac-content deb/rpm package; the deb/rpm
+# ships the bundle to disk, it does not embed it — see .goreleaser.yml.
+# `essentials` is the small L1 subset embedded directly in the daemon binary.
+
+.PHONY: content-bundle content-bundle-essentials
+
+CONTENT_CORPUS ?= ../niac-demo-catalog/walks/sanitized
+CONTENT_BUNDLE := $(DIST_DIR)/niac-content-$(VERSION).tar.gz
+CONTENT_BUNDLE_ESSENTIALS := $(DIST_DIR)/niac-content-essentials-$(VERSION).tar.gz
+
+content-bundle: ## Generate the full content bundle (dist/niac-content-<version>.tar.gz)
+	python3 scripts/gen-content-bundle.py --corpus $(CONTENT_CORPUS) --out $(CONTENT_BUNDLE) --mode full
+
+content-bundle-essentials: ## Generate the essentials (L1) content bundle for embedding
+	python3 scripts/gen-content-bundle.py --corpus $(CONTENT_CORPUS) --out $(CONTENT_BUNDLE_ESSENTIALS) --mode essentials
+
+# =============================================================================
 # Version Information
 # =============================================================================
 
