@@ -5,6 +5,20 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.94.2](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.1...v0.94.2) (2026-07-08)
+
+
+### Bug Fixes
+
+* **release:** force bash on container SBOM/bundle steps ([#968](https://github.com/MustardSeedNetworks/niac-go/issues/968)) ([f331398](https://github.com/MustardSeedNetworks/niac-go/commit/f331398e1c592d45843bcd00c0ddc141fc80bce7))
+* **security:** bump Go 1.26.4 -&gt; 1.26.5 for GO-2026-4970 ([#970](https://github.com/MustardSeedNetworks/niac-go/issues/970)) ([a883bb2](https://github.com/MustardSeedNetworks/niac-go/commit/a883bb22a875b580615859ec1ca0bde159aae414))
+
+
+### Continuous Integration
+
+* **lint:** exclude SA5011 in tests under Go 1.26.5 tooling lag ([#972](https://github.com/MustardSeedNetworks/niac-go/issues/972)) ([d2bcd1c](https://github.com/MustardSeedNetworks/niac-go/commit/d2bcd1cefaedcaa35c5953ef5f73bcc477363bf1))
+* **release:** use msn-ci-bot App token for release-please ([#969](https://github.com/MustardSeedNetworks/niac-go/issues/969)) ([d02b216](https://github.com/MustardSeedNetworks/niac-go/commit/d02b216ff1ad5fc9793c4a4a52f310dea2200136))
+
 ## [0.94.1](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.0...v0.94.1) (2026-07-08)
 
 
