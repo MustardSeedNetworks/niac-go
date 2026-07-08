@@ -7,7 +7,7 @@ import {
   useTransition,
 } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cloneDevice, deleteDevice, fetchConfigDevices } from '../../api/client';
+import { cloneDevice, deleteDevice, deleteDevices, fetchConfigDevices } from '../../api/client';
 import type { Device, DeviceListResponse, DeviceType } from '../../api/types';
 import { useApiResource } from '../../hooks/useApiResource';
 import { getErrorMessage } from '../../utils/format';
@@ -251,35 +251,42 @@ export const useDeviceListState = (): UseDeviceListStateReturn => {
     [refetch, t],
   );
 
-  // Handle bulk delete confirmation
+  // Handle bulk delete confirmation. Sends every selected hostname in a
+  // single request rather than N sequential deletes.
   const handleBulkDeleteConfirm = useCallback(async () => {
     setShowBulkDeleteConfirm(false);
 
-    let successCount = 0;
-    let errorCount = 0;
+    const hostnames = Array.from(selectedDevices);
 
-    for (const hostname of selectedDevices) {
-      try {
-        await deleteDevice(hostname);
-        successCount++;
-      } catch {
-        errorCount++;
+    try {
+      const response = await deleteDevices(hostnames);
+
+      setSelectedDevices(new Set());
+      refetch();
+
+      if (response.failed === 0) {
+        setMessage({
+          type: 'success',
+          text: t('list.bulkDeleteSuccessMessage', { count: response.deleted }),
+        });
+      } else {
+        const failedHostnames = response.results
+          .filter((result) => !result.success)
+          .map((result) => result.hostname)
+          .join(', ');
+
+        setMessage({
+          type: 'error',
+          text: t('list.bulkDeletePartialMessageNamed', {
+            success: response.deleted,
+            hostnames: failedHostnames,
+          }),
+        });
       }
-    }
-
-    setSelectedDevices(new Set());
-    refetch();
-
-    if (errorCount === 0) {
-      setMessage({
-        type: 'success',
-        text: t('list.bulkDeleteSuccessMessage', { count: successCount }),
-      });
-    } else {
-      setMessage({
-        type: 'error',
-        text: t('list.bulkDeletePartialMessage', { success: successCount, failed: errorCount }),
-      });
+    } catch (err) {
+      setSelectedDevices(new Set());
+      refetch();
+      setMessage({ type: 'error', text: getErrorMessage(err) });
     }
   }, [selectedDevices, refetch, t]);
 

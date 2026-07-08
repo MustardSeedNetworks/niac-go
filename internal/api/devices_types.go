@@ -175,3 +175,26 @@ type DeviceListResponse struct {
 	Devices    []DeviceResponse `json:"devices"`
 	TotalCount int              `json:"totalCount"`
 }
+
+// DeviceBatchDeleteRequest represents a request to delete multiple devices
+// in a single call.
+type DeviceBatchDeleteRequest struct {
+	Hostnames []string `json:"hostnames"`
+}
+
+// DeviceBatchDeleteResult reports the outcome of deleting a single hostname
+// as part of a batch delete request.
+type DeviceBatchDeleteResult struct {
+	Hostname string `json:"hostname"`
+	Success  bool   `json:"success"`
+	Error    string `json:"error,omitempty"`
+}
+
+// DeviceBatchDeleteResponse represents the response for a batch device
+// delete. The request succeeds (200) even when some hostnames fail;
+// per-hostname outcomes are reported in Results.
+type DeviceBatchDeleteResponse struct {
+	Results []DeviceBatchDeleteResult `json:"results"`
+	Deleted int                       `json:"deleted"`
+	Failed  int                       `json:"failed"`
+}

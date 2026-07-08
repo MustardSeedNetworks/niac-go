@@ -78,6 +78,7 @@
     "bulkDeleteSuccessMessage_one": "{{count}} dispositivo eliminado correctamente",
     "bulkDeleteSuccessMessage_other": "{{count}} dispositivos eliminados correctamente",
     "bulkDeletePartialMessage": "Se eliminaron {{success}} dispositivos, {{failed}} fallaron",
+    "bulkDeletePartialMessageNamed": "Se eliminaron {{success}} dispositivos. No se pudieron eliminar: {{hostnames}}",
     "cloneModal": {
       "closeAria": "Cerrar el modal de clonar dispositivo",
       "title": "Clonar dispositivo",
