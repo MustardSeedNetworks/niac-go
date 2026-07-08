@@ -352,6 +352,48 @@ func TestListFilesRejectsNetworksKind(t *testing.T) {
 	}
 }
 
+func TestReadFileRoundTrip(t *testing.T) {
+	lib := openTempLibrary(t)
+	root := lib.Root()
+
+	walkPath := filepath.Join(root, "walks", "router.walk")
+	if err := os.WriteFile(walkPath, []byte("1.3.6.1 = STRING: x\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := lib.ReadFile(library.KindWalks, "router.walk")
+	if err != nil {
+		t.Fatalf("ReadFile: %v", err)
+	}
+	if string(got) != "1.3.6.1 = STRING: x\n" {
+		t.Errorf("ReadFile content = %q, want %q", got, "1.3.6.1 = STRING: x\n")
+	}
+}
+
+func TestReadFileMissing(t *testing.T) {
+	lib := openTempLibrary(t)
+	_, err := lib.ReadFile(library.KindWalks, "missing.walk")
+	if !errors.Is(err, library.ErrNotFound) {
+		t.Errorf("want ErrNotFound, got %v", err)
+	}
+}
+
+func TestReadFileInvalidName(t *testing.T) {
+	lib := openTempLibrary(t)
+	_, err := lib.ReadFile(library.KindWalks, "../../etc/passwd")
+	if !errors.Is(err, library.ErrInvalidName) {
+		t.Errorf("want ErrInvalidName, got %v", err)
+	}
+}
+
+func TestReadFileRejectsNetworksKind(t *testing.T) {
+	lib := openTempLibrary(t)
+	_, err := lib.ReadFile(library.KindNetworks, "anything.yaml")
+	if !errors.Is(err, library.ErrUnsupportedKind) {
+		t.Errorf("want ErrUnsupportedKind for KindNetworks, got %v", err)
+	}
+}
+
 func TestDefaultRootHonoursEnv(t *testing.T) {
 	t.Setenv("NIAC_LIBRARY_ROOT", "/tmp/custom-niac-library-root")
 	got := library.DefaultRoot()

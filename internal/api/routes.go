@@ -31,6 +31,7 @@ func (s *Server) registerAPIRoutes(mux *http.ServeMux) {
 
 	s.registerWriteProtectedRoutes(mux)
 	s.registerReadOnlyRoutes(mux)
+	s.registerLibraryRoutes(mux)
 	s.registerWalkRoutes(mux)
 	s.registerPcapRoutes(mux)
 	s.registerSSERoutes(mux)
@@ -132,6 +133,59 @@ func (s *Server) registerWriteProtectedRoutes(mux *http.ServeMux) {
 	})
 }
 
+// registerLibraryRoutes registers the content library surface (#548): networks
+// full CRUD, walks/pcaps read-only listing, and the walk mutation actions
+// (revert, sanitize) that carry write rate limit + CSRF like the networks
+// POST above. Split out of registerReadOnlyRoutes to keep both under the
+// funlen cap as the library surface grows (#950).
+func (s *Server) registerLibraryRoutes(mux *http.ServeMux) {
+	s.registerAll(mux, []apiRoute{
+		{
+			path:    "/api/v1/library/networks",
+			handler: s.handleLibraryNetworks,
+			methods: []string{http.MethodGet, http.MethodPost},
+			rl:      rlWrite,
+			csrf:    true,
+		},
+		{
+			path:    "/api/v1/library/networks/",
+			handler: s.handleLibraryNetworkByName,
+			methods: []string{http.MethodGet, http.MethodDelete},
+			rl:      rlWrite,
+			csrf:    true,
+		},
+		{path: "/api/v1/library/walks", handler: s.handleLibraryWalks, methods: []string{http.MethodGet}},
+		// Revert mutates the walk on disk (restores + removes the .orig
+		// sidecar), so — like the networks POST above — it carries write
+		// rate limit + CSRF rather than being GET-only like its sibling.
+		{
+			path:    "/api/v1/library/walks/revert",
+			handler: s.handleLibraryWalkRevert,
+			methods: []string{http.MethodPost},
+			rl:      rlWrite,
+			csrf:    true,
+		},
+		// Sanitize mutates the walk on disk (preserves the original, then
+		// overwrites with a scrubbed copy — see library.PreserveOriginal),
+		// so it carries the same write rate limit + CSRF as revert (#950).
+		{
+			path:    "/api/v1/library/walks/sanitize",
+			handler: s.handleLibraryWalkSanitize,
+			methods: []string{http.MethodPost},
+			rl:      rlWrite,
+			csrf:    true,
+		},
+		{
+			path:    "/api/v1/library/walks/sanitize-batch",
+			handler: s.handleLibraryWalkSanitizeBatch,
+			methods: []string{http.MethodPost},
+			rl:      rlWrite,
+			csrf:    true,
+		},
+		{path: "/api/v1/library/pcaps", handler: s.handleLibraryPcaps, methods: []string{http.MethodGet}},
+	})
+}
+
 // registerReadOnlyRoutes registers reads plus the mutating CRUD endpoints that
 // historically shared this group; the mutating ones carry write rate limit +
 // CSRF (#740). csrfProtect internally skips GET, so reads pass through.
@@ -169,33 +223,6 @@ func (s *Server) registerReadOnlyRoutes(mux *http.ServeMux) {
 			rl:      rlWrite,
 			csrf:    true,
 		},
-		// Library (#548): networks full CRUD (write + CSRF); walks/pcaps read-only.
-		{
-			path:    "/api/v1/library/networks",
-			handler: s.handleLibraryNetworks,
-			methods: []string{http.MethodGet, http.MethodPost},
-			rl:      rlWrite,
-			csrf:    true,
-		},
-		{
-			path:    "/api/v1/library/networks/",
-			handler: s.handleLibraryNetworkByName,
-			methods: []string{http.MethodGet, http.MethodDelete},
-			rl:      rlWrite,
-			csrf:    true,
-		},
-		{path: "/api/v1/library/walks", handler: s.handleLibraryWalks, methods: []string{http.MethodGet}},
-		// Revert mutates the walk on disk (restores + removes the .orig
-		// sidecar), so — like the networks POST above — it carries write
-		// rate limit + CSRF rather than being GET-only like its sibling.
-		{
-			path:    "/api/v1/library/walks/revert",
-			handler: s.handleLibraryWalkRevert,
-			methods: []string{http.MethodPost},
-			rl:      rlWrite,
-			csrf:    true,
-		},
-		{path: "/api/v1/library/pcaps", handler: s.handleLibraryPcaps, methods: []string{http.MethodGet}},
 		// Per-device actions. synthesize-walk (#546 p2) mutates the library +
 		// running config YAML, so this path carries write rate limit + CSRF;
 		// csrf.Protect skips safe GETs, so the read-only interfaces action
