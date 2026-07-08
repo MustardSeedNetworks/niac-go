@@ -8,6 +8,11 @@ Wants=network-online.target
 Type=simple
 User=niac
 Group=niac
+# ProtectSystem=strict makes / read-only; without a writable CWD the daemon
+# fails at first start creating its self-signed TLS cert dir ("mkdir certs:
+# read-only file system"). Root the working dir + cert dir under the
+# ReadWritePath /var/lib/niac so a fresh install starts cleanly.
+WorkingDirectory=/var/lib/niac
 ExecStart=/usr/bin/niac daemon
 Restart=on-failure
 RestartSec=5
@@ -38,6 +43,7 @@ LimitNPROC=4096
 
 # Environment
 Environment=HOME=/var/lib/niac
+Environment=NIAC_CERT_DIR=/var/lib/niac/certs
 
 [Install]
 WantedBy=multi-user.target
