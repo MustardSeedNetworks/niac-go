@@ -17,6 +17,14 @@ interface PcapUploaderProps {
   selectedFile: File | null;
   error: string | null;
   success: string | null;
+  /**
+   * Upload completion percent (0-100) while the file is in flight, or
+   * `null` when no upload is in progress. The upload itself happens in
+   * the parent page (via the XHR-based uploadPcapWithProgress client
+   * call, which is what makes onprogress observable); this component
+   * only renders the resulting determinate progress bar.
+   */
+  uploadProgress: number | null;
 }
 
 /** Maximum file size: 100MB */
@@ -74,6 +82,7 @@ export const PcapUploader: FC<PcapUploaderProps> = ({
   selectedFile,
   error,
   success,
+  uploadProgress,
 }) => {
   const { t } = useTranslation('pages');
   const { t: tCommon } = useTranslation('common');
@@ -231,6 +240,30 @@ export const PcapUploader: FC<PcapUploaderProps> = ({
               >
                 {tCommon('buttons.clear')}
               </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Upload Progress */}
+        {uploadProgress !== null && (
+          <div className="stack-sm" data-testid="pcap-upload-progress">
+            <div className="flex-between">
+              <SmallText className="text-text-muted">
+                {t('libraryPcaps.uploader.uploadingProgress', { percent: uploadProgress })}
+              </SmallText>
+            </div>
+            <div
+              className="h-2 w-full overflow-hidden rounded-full bg-bg-base/60"
+              role="progressbar"
+              aria-valuenow={uploadProgress}
+              aria-valuemin={0}
+              aria-valuemax={100}
+            >
+              <div
+                className="h-full rounded-full bg-brand-accent transition-[width] duration-150"
+                style={{ width: `${uploadProgress}%` }}
+                data-testid="pcap-upload-progress-bar"
+              />
             </div>
           </div>
         )}

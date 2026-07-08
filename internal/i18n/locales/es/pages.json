@@ -685,7 +685,9 @@
       "browseHint": "o haga clic para explorar ({{extensions}})",
       "maxFileSizeLabel": "Tamaño máximo del archivo: {{size}}",
       "analyzing": "Analizando…",
-      "analyzeButton": "Analizar PCAP"
+      "analyzeButton": "Analizar PCAP",
+      "uploadingProgress": "Cargando… {{percent}}%",
+      "serverFileTooLarge": "Esta captura es demasiado grande para que el servidor la acepte (límite: {{size}}). Elija un archivo más pequeño."
     },
     "analyzer": {
       "pageHeading": "Análisis PCAP",
