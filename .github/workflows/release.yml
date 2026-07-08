@@ -370,9 +370,10 @@ jobs:
         shell: bash
         env:
           REF_NAME: ${{ github.ref_name }}
+          DRY_RUN: ${{ inputs.dry_run }}
         run: |
           set -euo pipefail
-          if [ "${{ inputs.dry_run }}" = "true" ]; then
+          if [ "${DRY_RUN}" = "true" ]; then
             version="0.0.0-dryrun-$(git rev-parse --short HEAD)"
           else
             version="${REF_NAME#v}"
