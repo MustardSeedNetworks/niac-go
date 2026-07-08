@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"maps"
 	"net"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -147,13 +148,9 @@ func inferYAMLDeviceType(yamlDevice converter.Device) string {
 }
 
 func containsAny(value string, needles ...string) bool {
-	for _, needle := range needles {
-		if strings.Contains(value, needle) {
-			return true
-		}
-	}
-
-	return false
+	return slices.ContainsFunc(needles, func(needle string) bool {
+		return strings.Contains(value, needle)
+	})
 }
 
 // parseDeviceMACAddress parses the MAC address for a device.

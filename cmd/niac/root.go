@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -168,13 +169,9 @@ func shouldUseLegacyCommand(args []string, root *cobra.Command) bool {
 		return false
 	}
 
-	for _, cmd := range root.Commands() {
-		if cmd.Name() == firstArg || cmd.HasAlias(firstArg) {
-			return false
-		}
-	}
-
-	return true
+	return !slices.ContainsFunc(root.Commands(), func(cmd *cobra.Command) bool {
+		return cmd.Name() == firstArg || cmd.HasAlias(firstArg)
+	})
 }
 
 func firstCommandArg(args []string, root *cobra.Command) string {

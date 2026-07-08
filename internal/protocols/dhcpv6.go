@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
+	"slices"
 	"sync"
 	"time"
 
@@ -314,13 +315,9 @@ func findIPv6ServerDevice(devices []*config.Device) *config.Device {
 
 // hasIPv6Address checks if the IP list contains any IPv6 address.
 func hasIPv6Address(ips []net.IP) bool {
-	for _, ip := range ips {
-		if ip.To4() == nil && ip.To16() != nil {
-			return true
-		}
-	}
-
-	return false
+	return slices.ContainsFunc(ips, func(ip net.IP) bool {
+		return ip.To4() == nil && ip.To16() != nil
+	})
 }
 
 // getFirstIPv6Address returns the first IPv6 address from the list.

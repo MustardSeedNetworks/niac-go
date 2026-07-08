@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 	"sync"
 	"sync/atomic"
 
@@ -156,13 +157,10 @@ func configUsesVLANs(cfg *config.Config) bool {
 	if cfg == nil {
 		return false
 	}
-	for i := range cfg.Devices {
-		if cfg.Devices[i].VLAN > 0 {
-			return true
-		}
-	}
 
-	return false
+	return slices.ContainsFunc(cfg.Devices, func(d config.Device) bool {
+		return d.VLAN > 0
+	})
 }
 
 func NewStack(

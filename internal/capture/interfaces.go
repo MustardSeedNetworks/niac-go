@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"slices"
 
 	"github.com/gopacket/gopacket/pcap"
 )
@@ -25,13 +26,9 @@ func InterfaceExists(name string) bool {
 		return false
 	}
 
-	for _, device := range devices {
-		if device.Name == name {
-			return true
-		}
-	}
-
-	return false
+	return slices.ContainsFunc(devices, func(device pcap.Interface) bool {
+		return device.Name == name
+	})
 }
 
 // ListInterfaces prints all available network interfaces.
@@ -111,13 +108,9 @@ func getUsableInterfacePrefixes() []string {
 
 // IsUsableInterface checks if an interface name matches usable prefixes.
 func IsUsableInterface(name string) bool {
-	for _, prefix := range getUsableInterfacePrefixes() {
-		if len(name) >= len(prefix) && name[:len(prefix)] == prefix {
-			return true
-		}
-	}
-
-	return false
+	return slices.ContainsFunc(getUsableInterfacePrefixes(), func(prefix string) bool {
+		return len(name) >= len(prefix) && name[:len(prefix)] == prefix
+	})
 }
 
 // GetUsableInterfaces returns only usable network interfaces (ethernet, WiFi, loopback).

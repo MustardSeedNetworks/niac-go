@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"slices"
 	"sync/atomic"
 
 	"github.com/gopacket/gopacket"
@@ -250,13 +251,9 @@ func (h *ICMPv6Handler) sendEchoReply(
 
 // deviceHasIP checks if a device has a specific IP address.
 func (h *ICMPv6Handler) deviceHasIP(device *config.Device, ip net.IP) bool {
-	for _, deviceIP := range device.IPAddresses {
-		if deviceIP.Equal(ip) {
-			return true
-		}
-	}
-
-	return false
+	return slices.ContainsFunc(device.IPAddresses, func(deviceIP net.IP) bool {
+		return deviceIP.Equal(ip)
+	})
 }
 
 // logEchoReplySent logs when an echo reply is sent.

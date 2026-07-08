@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"slices"
 
 	"github.com/gopacket/gopacket/layers"
 	"github.com/gosnmp/gosnmp"
@@ -186,13 +187,9 @@ func snmpAccessAllowed(device *config.Device, srcIP net.IP) bool {
 		return true
 	}
 
-	for _, ip := range device.SNMPConfig.AccessList {
-		if ip != nil && ip.Equal(srcIP) {
-			return true
-		}
-	}
-
-	return false
+	return slices.ContainsFunc(device.SNMPConfig.AccessList, func(ip net.IP) bool {
+		return ip != nil && ip.Equal(srcIP)
+	})
 }
 
 func (h *SNMPHandler) decodeRequest(payload []byte) (*gosnmp.SnmpPacket, error) {

@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -186,13 +187,9 @@ func parseSegmentTag(tag string) (int, error) {
 }
 
 func configHasDevices(segments []Segment) bool {
-	for _, seg := range segments {
-		if len(seg.Devices) > 0 || seg.ConfigPath != "" {
-			return true
-		}
-	}
-
-	return false
+	return slices.ContainsFunc(segments, func(seg Segment) bool {
+		return len(seg.Devices) > 0 || seg.ConfigPath != ""
+	})
 }
 
 func resolveIncludePath(configDir, includePath string) string {

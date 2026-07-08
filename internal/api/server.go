@@ -28,6 +28,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"slices"
 	"sync"
 	"time"
 
@@ -791,12 +792,9 @@ func addrIsNonLoopback(addr string) (bool, error) {
 	if lookupErr != nil {
 		return false, fmt.Errorf("lookup %q: %w", host, lookupErr)
 	}
-	for _, ipAddr := range ips {
-		if !ipAddr.IP.IsLoopback() {
-			return true, nil
-		}
-	}
-	return false, nil
+	return slices.ContainsFunc(ips, func(ipAddr net.IPAddr) bool {
+		return !ipAddr.IP.IsLoopback()
+	}), nil
 }
 
 // addrLookupTimeout bounds the DNS lookup inside addrIsNonLoopback so

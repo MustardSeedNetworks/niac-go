@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net"
 	"os"
+	"slices"
 	"sync"
 	"time"
 
@@ -362,13 +363,9 @@ func macMatchesMask(mac, match, mask net.HardwareAddr) bool {
 
 // isIPInPool checks if IP is in the pool.
 func (h *DHCPHandler) isIPInPool(ip net.IP) bool {
-	for _, poolIP := range h.ipPool {
-		if poolIP.Equal(ip) {
-			return true
-		}
-	}
-
-	return false
+	return slices.ContainsFunc(h.ipPool, func(poolIP net.IP) bool {
+		return poolIP.Equal(ip)
+	})
 }
 
 // isIPLeased checks if IP is currently leased.
