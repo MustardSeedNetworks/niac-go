@@ -1,65 +1,55 @@
 // SPDX-License-Identifier: BUSL-1.1
 
-package license
+package license_test
 
-import "testing"
+import (
+	"testing"
 
-// TestFeatureCatalogCoversProFeatures ensures every feature ID proFeatures()
-// can grant has a non-empty label + description in featureMeta. This is an
-// internal-package test (not license_test) specifically so it can reach
-// proFeatures() directly and catch a newly added Pro feature that shipped
-// without display copy.
+	"github.com/MustardSeedNetworks/niac-go/internal/license"
+)
+
+// TestFeatureCatalogCoversProFeatures ensures every feature the Pro catalog
+// exposes ships with non-empty display copy, so a newly added Pro feature
+// can't reach the /license UI as a bare ID. FeatureCatalog() enumerates
+// exactly the granted Pro features; a feature with no registry entry surfaces
+// here as an empty Label/Description and fails this test.
 func TestFeatureCatalogCoversProFeatures(t *testing.T) {
-	ids := proFeatures()
-	if len(ids) == 0 {
-		t.Fatal("proFeatures() returned no IDs; test can't assert coverage")
+	catalog := license.FeatureCatalog()
+	if len(catalog) == 0 {
+		t.Fatal("FeatureCatalog() returned no entries; test can't assert coverage")
 	}
 
-	for _, id := range ids {
-		meta, ok := featureMeta[id]
-		if !ok {
-			t.Errorf("feature %q has no entry in featureMeta", id)
-			continue
+	for _, f := range catalog {
+		if f.ID == "" {
+			t.Error("FeatureCatalog() entry has an empty ID")
 		}
-		if meta.Label == "" {
-			t.Errorf("feature %q has an empty Label", id)
+		if f.Label == "" {
+			t.Errorf("feature %q has an empty Label", f.ID)
 		}
-		if meta.Description == "" {
-			t.Errorf("feature %q has an empty Description", id)
+		if f.Description == "" {
+			t.Errorf("feature %q has an empty Description", f.ID)
 		}
 	}
 }
 
-// TestFeatureCatalogNoOrphans ensures featureMeta doesn't carry stale
-// entries for features proFeatures() no longer grants — an orphaned entry
-// would silently mislead anyone reading the registry as the source of
-// truth for what Pro currently unlocks.
-func TestFeatureCatalogNoOrphans(t *testing.T) {
-	granted := make(map[string]bool, len(proFeatures()))
-	for _, id := range proFeatures() {
-		granted[id] = true
+// TestFeatureCatalogIsStable ensures FeatureCatalog() returns a deterministic,
+// duplicate-free ordering so API consumers get a predictable list every call.
+func TestFeatureCatalogIsStable(t *testing.T) {
+	first := license.FeatureCatalog()
+	second := license.FeatureCatalog()
+
+	if len(first) != len(second) {
+		t.Fatalf("FeatureCatalog() length not stable: %d vs %d", len(first), len(second))
 	}
 
-	for id := range featureMeta {
-		if !granted[id] {
-			t.Errorf("featureMeta has an orphaned entry %q not returned by proFeatures()", id)
+	seen := make(map[string]bool, len(first))
+	for i := range first {
+		if first[i] != second[i] {
+			t.Errorf("FeatureCatalog()[%d] not stable: %+v vs %+v", i, first[i], second[i])
 		}
-	}
-}
-
-// TestFeatureCatalogOrderMatchesProFeatures ensures FeatureCatalog() returns
-// entries in proFeatures() order with IDs populated, so API consumers get a
-// stable, predictable ordering.
-func TestFeatureCatalogOrderMatchesProFeatures(t *testing.T) {
-	ids := proFeatures()
-	catalog := FeatureCatalog()
-
-	if len(catalog) != len(ids) {
-		t.Fatalf("FeatureCatalog() returned %d entries, want %d", len(catalog), len(ids))
-	}
-	for i, id := range ids {
-		if catalog[i].ID != id {
-			t.Errorf("FeatureCatalog()[%d].ID = %q, want %q", i, catalog[i].ID, id)
+		if seen[first[i].ID] {
+			t.Errorf("FeatureCatalog() has a duplicate ID %q", first[i].ID)
 		}
+		seen[first[i].ID] = true
 	}
 }

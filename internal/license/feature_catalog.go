@@ -19,63 +19,67 @@ type FeatureMeta struct {
 	Description string `json:"description"`
 }
 
-// featureMeta maps every feature ID proFeatures() can return to its
-// human-readable label + description. Every ID in proFeatures() MUST have
+// featureMeta returns the map of every feature ID proFeatures() can return to
+// its human-readable label + description. Every ID in proFeatures() MUST have
 // an entry here — TestFeatureCatalogCoversProFeatures enforces this so a
-// newly added Pro feature can't ship without display copy.
-var featureMeta = map[string]FeatureMeta{
-	"unlimited_devices": {
-		Label:       "Unlimited Devices",
-		Description: "Simulate more than the Free tier's device cap in a single config.",
-	},
-	"bgp": {
-		Label:       "BGP Routing",
-		Description: "Simulate BGP peering and route advertisement between devices.",
-	},
-	"ospf": {
-		Label:       "OSPF Routing",
-		Description: "Simulate OSPF adjacency formation and link-state routing.",
-	},
-	"netbios": {
-		Label:       "NetBIOS",
-		Description: "Respond to NetBIOS name service queries for legacy Windows discovery.",
-	},
-	"ftp": {
-		Label:       "FTP Server",
-		Description: "Simulate an FTP server on a device for file-transfer test scenarios.",
-	},
-	"stp": {
-		Label:       "Spanning Tree (STP)",
-		Description: "Simulate Spanning Tree Protocol topology and port states.",
-	},
-	"ipv6_advanced": {
-		Label:       "Advanced IPv6",
-		Description: "Simulate advanced IPv6 behaviors beyond basic SLAAC/address assignment.",
-	},
-	"error_injection": {
-		Label:       "Error Injection",
-		Description: "Inject configurable protocol errors and malformed responses for negative testing.",
-	},
-	"traffic_shaping": {
-		Label:       "Traffic Shaping",
-		Description: "Apply bandwidth limits, latency, and jitter to simulated device traffic.",
-	},
-	"config_templates": {
-		Label:       "Config Templates",
-		Description: "Save and reuse device configurations as reusable templates.",
-	},
-	"multi_ip": {
-		Label:       "Multi-IP Devices",
-		Description: "Assign multiple IP addresses to a single simulated device.",
-	},
-	"pcap_ingest": {
-		Label:       "PCAP Ingest",
-		Description: "Import packet captures to seed or replay simulated device behavior.",
-	},
-	"rest_api": {
-		Label:       "REST API",
-		Description: "Drive NIAC programmatically via the full REST API surface.",
-	},
+// newly added Pro feature can't ship without display copy. It is a function
+// (not a package var) so the registry isn't shared mutable global state; the
+// literal is cheap to build and the only caller is the /license request path.
+func featureMeta() map[string]FeatureMeta {
+	return map[string]FeatureMeta{
+		"unlimited_devices": {
+			Label:       "Unlimited Devices",
+			Description: "Simulate more than the Free tier's device cap in a single config.",
+		},
+		"bgp": {
+			Label:       "BGP Routing",
+			Description: "Simulate BGP peering and route advertisement between devices.",
+		},
+		"ospf": {
+			Label:       "OSPF Routing",
+			Description: "Simulate OSPF adjacency formation and link-state routing.",
+		},
+		"netbios": {
+			Label:       "NetBIOS",
+			Description: "Respond to NetBIOS name service queries for legacy Windows discovery.",
+		},
+		"ftp": {
+			Label:       "FTP Server",
+			Description: "Simulate an FTP server on a device for file-transfer test scenarios.",
+		},
+		"stp": {
+			Label:       "Spanning Tree (STP)",
+			Description: "Simulate Spanning Tree Protocol topology and port states.",
+		},
+		"ipv6_advanced": {
+			Label:       "Advanced IPv6",
+			Description: "Simulate advanced IPv6 behaviors beyond basic SLAAC/address assignment.",
+		},
+		"error_injection": {
+			Label:       "Error Injection",
+			Description: "Inject configurable protocol errors and malformed responses for negative testing.",
+		},
+		"traffic_shaping": {
+			Label:       "Traffic Shaping",
+			Description: "Apply bandwidth limits, latency, and jitter to simulated device traffic.",
+		},
+		"config_templates": {
+			Label:       "Config Templates",
+			Description: "Save and reuse device configurations as reusable templates.",
+		},
+		"multi_ip": {
+			Label:       "Multi-IP Devices",
+			Description: "Assign multiple IP addresses to a single simulated device.",
+		},
+		"pcap_ingest": {
+			Label:       "PCAP Ingest",
+			Description: "Import packet captures to seed or replay simulated device behavior.",
+		},
+		"rest_api": {
+			Label:       "REST API",
+			Description: "Drive NIAC programmatically via the full REST API surface.",
+		},
+	}
 }
 
 // FeatureCatalog returns metadata for every feature Pro can grant, in the
@@ -84,11 +88,12 @@ var featureMeta = map[string]FeatureMeta{
 // display-ready list.
 func FeatureCatalog() []FeatureMeta {
 	ids := proFeatures()
+	meta := featureMeta()
 	catalog := make([]FeatureMeta, 0, len(ids))
 	for _, id := range ids {
-		meta := featureMeta[id]
-		meta.ID = id
-		catalog = append(catalog, meta)
+		f := meta[id]
+		f.ID = id
+		catalog = append(catalog, f)
 	}
 	return catalog
 }

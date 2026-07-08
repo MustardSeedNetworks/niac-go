@@ -32,8 +32,8 @@ func TestLicenseStatus_NilManagerReportsUnenforced(t *testing.T) {
 		t.Fatalf("status = %d, want 200", w.Code)
 	}
 	var body LicenseStatusResponse
-	if err := json.NewDecoder(w.Body).Decode(&body); err != nil {
-		t.Fatalf("decode: %v", err)
+	if decErr := json.NewDecoder(w.Body).Decode(&body); decErr != nil {
+		t.Fatalf("decode: %v", decErr)
 	}
 	if body.LicenseEnforced {
 		t.Error("LicenseEnforced should be false when manager is nil")
@@ -121,8 +121,8 @@ func TestLicenseStatus_FeaturesCarryLabelsAndGrantedFlag(t *testing.T) {
 	s.handleLicenseStatus(w, req)
 
 	var body LicenseStatusResponse
-	if err := json.NewDecoder(w.Body).Decode(&body); err != nil {
-		t.Fatalf("decode: %v", err)
+	if decErr := json.NewDecoder(w.Body).Decode(&body); decErr != nil {
+		t.Fatalf("decode: %v", decErr)
 	}
 
 	catalog := license.FeatureCatalog()
@@ -159,8 +159,8 @@ func TestLicenseStatus_NilManagerFeaturesAllUngranted(t *testing.T) {
 	s.handleLicenseStatus(w, req)
 
 	var body LicenseStatusResponse
-	if err := json.NewDecoder(w.Body).Decode(&body); err != nil {
-		t.Fatalf("decode: %v", err)
+	if decErr := json.NewDecoder(w.Body).Decode(&body); decErr != nil {
+		t.Fatalf("decode: %v", decErr)
 	}
 	if len(body.Features) == 0 {
 		t.Fatal("expected the full feature catalog even when the license manager is nil")
