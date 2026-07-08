@@ -123,12 +123,8 @@ func emitInterfaces(buf *bytes.Buffer, p Profile, dev DeviceInput, opts BuildOpt
 	if count <= 0 {
 		count = p.DefaultIfCount
 	}
-	if count > MaxInterfaces {
-		count = MaxInterfaces
-	}
-	if count < 1 {
-		count = 1
-	}
+	count = min(count, MaxInterfaces)
+	count = max(count, 1)
 
 	// 1.3.6.1.2.1.2.* — IF-MIB.
 	emitInteger(buf, "1.3.6.1.2.1.2.1.0", count) // ifNumber

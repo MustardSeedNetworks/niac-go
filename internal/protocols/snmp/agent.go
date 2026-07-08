@@ -466,9 +466,7 @@ func (a *Agent) ProcessPDU(
 			reps = SNMPRetryCount
 		}
 
-		if reps > MaxOIDResultSize {
-			reps = MaxOIDResultSize
-		}
+		reps = min(reps, MaxOIDResultSize)
 
 		return a.processGetBulk(vars, nonRepeaters, reps)
 	case gosnmp.Sequence,
