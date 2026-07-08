@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/library"
+	"github.com/MustardSeedNetworks/niac-go/internal/protocols/snmp"
 )
 
 // sampleYAML is the minimum YAML the WriteNetwork validator accepts:
@@ -23,13 +24,32 @@ devices:
 // starter pack auto-unpacks into networks/ on first Open. Tests that
 // want a fully empty library should call ListNetworks → DeleteNetwork
 // for every entry, or simply work around the starter content.
+//
+// walks/ is pre-seeded with a placeholder before Open so the starter
+// walks bootstrap sees a non-empty dir and skips — most callers plant
+// their own walk fixtures and expect walks/ to start pristine. The
+// starter-walks bootstrap itself is covered by
+// TestOpenBootstrapsStarterWalks / TestOpenSkipsWalksBootstrapWhenWalksHasContent.
 func openTempLibrary(t *testing.T) *library.Library {
 	t.Helper()
 	root := t.TempDir()
 	t.Setenv("NIAC_LIBRARY_ROOT", root)
+
+	walksDir := filepath.Join(root, "walks")
+	if err := os.MkdirAll(walksDir, 0o755); err != nil {
+		t.Fatalf("pre-create walks dir: %v", err)
+	}
+	placeholder := filepath.Join(walksDir, ".keep")
+	if err := os.WriteFile(placeholder, nil, 0o644); err != nil {
+		t.Fatalf("write walks placeholder: %v", err)
+	}
+
 	lib, err := library.Open(root)
 	if err != nil {
 		t.Fatalf("open library: %v", err)
+	}
+	if removeErr := os.Remove(placeholder); removeErr != nil {
+		t.Fatalf("remove walks placeholder: %v", removeErr)
 	}
 	return lib
 }
@@ -99,6 +119,80 @@ func TestOpenSkipsBootstrapWhenNetworksHasContent(t *testing.T) {
 	}
 	if entries[0].Name != "user" {
 		t.Errorf("expected name=user, got %s", entries[0].Name)
+	}
+	if entries[0].Source != library.SourceUser {
+		t.Errorf("expected source=user, got %s", entries[0].Source)
+	}
+}
+
+func TestOpenBootstrapsStarterWalks(t *testing.T) {
+	root := t.TempDir()
+	t.Setenv("NIAC_LIBRARY_ROOT", root)
+	lib, err := library.Open(root)
+	if err != nil {
+		t.Fatalf("open: %v", err)
+	}
+
+	entries, err := lib.ListFiles(library.KindWalks)
+	if err != nil {
+		t.Fatalf("list walks: %v", err)
+	}
+	if len(entries) == 0 {
+		t.Fatal("expected starter walks to unpack into walks/, got 0 entries")
+	}
+
+	starterCount := 0
+	for _, e := range entries {
+		if e.SizeBytes == 0 {
+			t.Errorf("starter walk %s is empty", e.Name)
+		}
+		if e.Source == library.SourceStarter {
+			starterCount++
+		}
+	}
+	if starterCount != len(entries) {
+		t.Errorf("expected every bootstrapped walk to be SourceStarter, got %d/%d", starterCount, len(entries))
+	}
+
+	for _, e := range entries {
+		path := filepath.Join(lib.SubDir(library.KindWalks), e.Name)
+		walkEntries, parseErr := snmp.ParseWalkFile(path)
+		if parseErr != nil {
+			t.Errorf("starter walk %s does not parse: %v", e.Name, parseErr)
+			continue
+		}
+		if len(walkEntries) == 0 {
+			t.Errorf("starter walk %s parsed with 0 entries", e.Name)
+		}
+	}
+}
+
+func TestOpenSkipsWalksBootstrapWhenWalksHasContent(t *testing.T) {
+	root := t.TempDir()
+	// Pre-create walks/ with a user file before Open. Bootstrap must
+	// NOT touch that dir.
+	if err := os.MkdirAll(filepath.Join(root, "walks"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	userWalk := filepath.Join(root, "walks", "user.walk")
+	if err := os.WriteFile(userWalk, []byte("1.3.6.1 = STRING: x\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	lib, err := library.Open(root)
+	if err != nil {
+		t.Fatalf("open: %v", err)
+	}
+
+	entries, err := lib.ListFiles(library.KindWalks)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 1 {
+		t.Fatalf("expected exactly 1 entry (the pre-existing user file), got %d: %v", len(entries), entries)
+	}
+	if entries[0].Name != "user.walk" {
+		t.Errorf("expected name=user.walk, got %s", entries[0].Name)
 	}
 	if entries[0].Source != library.SourceUser {
 		t.Errorf("expected source=user, got %s", entries[0].Source)

@@ -370,9 +370,23 @@ func (l *Library) fileEntry(kind Kind, relPath string, info fs.FileInfo) FileEnt
 		Name:       relPath,
 		SizeBytes:  info.Size(),
 		ModifiedAt: info.ModTime().UTC(),
-		Source:     SourceUser,
+		Source:     l.detectFileSource(kind, relPath),
 		Edited:     l.HasOriginal(kind, relPath),
 	}
+}
+
+// detectFileSource mirrors detectSource for the walks/pcaps kinds:
+// consulting the embedded starterWalks pack is the source of truth for
+// SourceStarter. Only KindWalks has a starter pack today; pcaps have
+// no embedded set, so they're always SourceUser.
+func (l *Library) detectFileSource(kind Kind, relPath string) Source {
+	if kind != KindWalks {
+		return SourceUser
+	}
+	if _, err := starterWalks.Open(filepath.Join("starter", "walks", relPath)); err == nil {
+		return SourceStarter
+	}
+	return SourceUser
 }
 
 // FileEntryByName returns the single FileEntry for relPath within
