@@ -1,4 +1,5 @@
 import { deduplicatedGet, request, requestJson, requestText } from './requestCore';
+import { requestJsonWithProgress } from './requestUpload';
 import type {
   AlertConfig,
   CloneDeviceRequest,
@@ -289,6 +290,18 @@ export const updateDebugLevel = (payload: UpdateDebugLevelRequest) =>
 
 export const uploadPcap = (payload: PcapUploadRequest) =>
   requestJson<PcapUploadResponse>('/api/v1/pcap/upload', payload, { method: 'POST' });
+
+/**
+ * uploadPcapWithProgress is uploadPcap's progress-reporting sibling — used
+ * by the uploader UI so it can render a determinate progress bar while the
+ * (potentially large, base64-inflated) capture is in flight.
+ */
+export const uploadPcapWithProgress = (
+  payload: PcapUploadRequest,
+  onProgress: (percent: number) => void,
+  signal?: AbortSignal,
+) =>
+  requestJsonWithProgress<PcapUploadResponse>('/api/v1/pcap/upload', payload, onProgress, signal);
 
 export const fetchPcapAnalysis = (analysisId: string) =>
   request<PcapAnalysisResult>(`/api/v1/pcap/${encodeURIComponent(analysisId)}`);

@@ -30,7 +30,7 @@ const isPlainObject = (value: unknown): value is Record<string, unknown> =>
 const toCamelKey = (key: string) =>
   key.replace(/_([a-z0-9])/g, (_, char: string) => char.toUpperCase());
 
-const toCamelCase = <T>(value: T): T => {
+export const toCamelCase = <T>(value: T): T => {
   if (Array.isArray(value)) {
     return value.map((item) => toCamelCase(item)) as T;
   }
@@ -51,7 +51,7 @@ const toSnakeKey = (key: string) =>
     .replace(/([A-Z]+)([A-Z][a-z])/g, '$1_$2')
     .toLowerCase();
 
-const toSnakeCase = <T>(value: T): T => {
+export const toSnakeCase = <T>(value: T): T => {
   if (Array.isArray(value)) {
     return value.map((item) => toSnakeCase(item)) as T;
   }
@@ -65,7 +65,7 @@ const toSnakeCase = <T>(value: T): T => {
   return value;
 };
 
-function buildUrl(path: string) {
+export function buildUrl(path: string) {
   if (path.startsWith('http')) {
     return path;
   }
@@ -144,7 +144,7 @@ function resetCSRFToken() {
   csrfTokenPromise = null;
 }
 
-async function buildRequestHeaders(path: string, init: RequestInit) {
+export async function buildRequestHeaders(path: string, init: RequestInit) {
   const headers = new Headers(init.headers);
   headers.set('Accept', 'application/json');
   if (API_TOKEN) {
@@ -164,7 +164,7 @@ async function buildRequestHeaders(path: string, init: RequestInit) {
  * the raw JSON blob; copy the error field into ApiError.code so feature
  * pages can branch on the failure kind.
  */
-function parseApiError(text: string, status: number, fallback = ''): ApiError {
+export function parseApiError(text: string, status: number, fallback = ''): ApiError {
   if (text) {
     try {
       const parsed = JSON.parse(text) as {

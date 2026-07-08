@@ -117,6 +117,42 @@
       "deviceCount_other": "{{count}} devices will launch when Start is clicked."
     }
   },
+  "newSimWizard": {
+    "label": "New Simulation",
+    "title": "New Simulation",
+    "description": "Guided path to build a config, add devices, and start a simulation.",
+    "steps": {
+      "template": "Template",
+      "devices": "Devices",
+      "protocols": "Protocols",
+      "review": "Review",
+      "finish": "Finish"
+    },
+    "backLabel": "Back",
+    "nextLabel": "Next",
+    "template": {
+      "interfaceLabel": "Network interface",
+      "startEmpty": "Start empty",
+      "help": "Pick a starting config below, or start empty and add devices in the next step.",
+      "errorNoSource": "Pick a template, saved config, upload, or Start empty first",
+      "startingLabel": "Starting…"
+    },
+    "devices": {
+      "help": "Add or edit devices for this simulation using the Device Library below."
+    },
+    "protocols": {
+      "title": "Protocols",
+      "subtitle": "Per-device protocol summary for the config you just built"
+    },
+    "finish": {
+      "title": "All set",
+      "help": "The simulation is already running on the config you built. Save it, then head to Simulation to monitor or stop it.",
+      "saveLabel": "Save configuration",
+      "savingLabel": "Saving…",
+      "saved": "Configuration saved.",
+      "gotoRuntime": "Go to Simulation"
+    }
+  },
   "devices": {
     "label": "Running Devices",
     "title": "Running Devices",
@@ -254,7 +290,9 @@
       "typesLabel": "Types:",
       "typeFilterHideTitle": "Hide {{type}} devices from the graph",
       "typeFilterShowTitle": "Show only {{type}} devices (toggles a filter chip)",
-      "clearTypeFiltersTitle": "Remove all device-type filters and show every device in the topology"
+      "clearTypeFiltersTitle": "Remove all device-type filters and show every device in the topology",
+      "layoutPersistenceNote": "Saved on this browser",
+      "layoutPersistenceHint": "Dragged node positions are saved to this browser only — they are not synced to any server or other device."
     },
     "deviceDetails": {
       "closeTitle": "Close the device details panel and return to the topology view",
@@ -647,7 +685,9 @@
       "browseHint": "or click to browse ({{extensions}})",
       "maxFileSizeLabel": "Maximum file size: {{size}}",
       "analyzing": "Analyzing…",
-      "analyzeButton": "Analyze PCAP"
+      "analyzeButton": "Analyze PCAP",
+      "uploadingProgress": "Uploading… {{percent}}%",
+      "serverFileTooLarge": "This capture is too large for the server to accept (limit: {{size}}). Please choose a smaller file."
     },
     "analyzer": {
       "pageHeading": "PCAP Analysis",
