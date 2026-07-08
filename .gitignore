@@ -40,6 +40,7 @@ test_walk_loader.go
 # Build artifacts
 bin/
 dist/
+dist-prebuilt/
 build/
 
 # Generated shared demo catalog assets
@@ -124,3 +125,7 @@ _project_specs
 # Go workspace
 go.work.sum
 ui/storybook-static/
+
+# CI: sibling niac-demo-catalog corpus checkout for the niac-content bundle
+# (release.yml). Kept out of the tree so goreleaser does not see a dirty state.
+.content-corpus/

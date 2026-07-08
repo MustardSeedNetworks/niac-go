@@ -2,25 +2,33 @@
 # goreleaser config for NIAC (Network In A Can)
 # =============================================================================
 # Canonical release packager. Driven by .github/workflows/release.yml inside
-# the goreleaser-cross container (which ships gcc + osxcross + mingw-w64).
-# Ported from seed/.goreleaser.yml — same gopacket/gopacket/pcap CGO surface.
+# the goreleaser-cross container (which ships gcc + osxcross) for linux/
+# darwin; Windows is built and packaged outside this container entirely
+# (see the builds section below). Ported from seed/.goreleaser.yml — same
+# gopacket/gopacket/pcap CGO surface.
 #
 # Covers natively:
-#   - Multi-arch builds (linux/windows × amd64/arm64; darwin arm64 only)
-#   - Archives (.tar.gz, .zip), Linux packages (.deb, .rpm) via nfpm
+#   - Multi-arch builds (linux amd64/arm64; darwin arm64 only — Windows is
+#     built natively outside this config, see below)
+#   - Archives (.tar.gz), Linux packages (.deb, .rpm) via nfpm
 #   - ldflags injection (Version, Commit, BuildTime, UIBuildHash)
 #   - cosign keyless signing of every artifact
 #   - syft SBOM per archive
 #   - SHA-256 checksums
 #   - release-please CHANGELOG.md as release body
 #
-# Handled outside goreleaser by sidecar jobs in release.yml:
+# Handled outside goreleaser by sidecar jobs/steps in release.yml:
 #   - UI frontend (npm run build) — pre-built by the build-ui job and
 #     downloaded into internal/api/ui/ before the Go build embeds it
+#   - Windows binaries — built natively (CGO + Npcap SDK) by build-windows,
+#     then archived/checksummed/SBOM'd/signed and appended to the release
+#     by a sidecar step in the goreleaser job (see the builds section below
+#     for why goreleaser itself can't produce them)
 #   - SLSA L3 provenance — actions/attest-build-provenance@v2 reads
-#     goreleaser's outputs.hashes (base64 list of artifact SHA-256s)
-#     and produces a signed in-toto attestation uploaded as
-#     niac-slsa-provenance.intoto.jsonl
+#     goreleaser's outputs.hashes (base64 list of artifact SHA-256s,
+#     sourced from the final checksums.txt after the Windows sidecar step
+#     appends its entries) and produces a signed in-toto attestation
+#     uploaded as niac-slsa-provenance.intoto.jsonl
 #
 # Not produced from this config:
 #   - macOS .pkg installer (no native pkgbuild from Linux). macOS users get
@@ -92,19 +100,18 @@ builds:
           - CC=oa64-clang
           - CXX=oa64-clang++
 
-  - id: niac-windows
-    main: ./cmd/niac
-    binary: niac
-    # Windows: CGO disabled (gopacket/pcap fork handles arm64 build without
-    # native libpcap-windows toolchain). Matches release.yml.
-    env:
-      - CGO_ENABLED=0
-    goos: [windows]
-    goarch: [amd64, arm64]
-    flags:
-      - -trimpath
-      - -buildvcs=false
-    ldflags: *ldflags
+  # Windows is intentionally NOT built here. gopacket/pcap needs real cgo
+  # linked against the Npcap SDK for packet capture, which the
+  # goreleaser-cross Linux container can't provide for Windows (its
+  # mingw-w64 cross toolchain has no path to the Windows-only Npcap SDK
+  # .lib files). The only OSS-legal way to hand goreleaser an
+  # already-built binary is the `prebuilt` builder, which is a GoReleaser
+  # Pro feature we don't license — so Windows binaries are built natively
+  # on windows-latest/windows-11-arm (build-windows job in release.yml,
+  # CGO_ENABLED=1 + Npcap SDK) and archived/checksummed/SBOM'd/signed by a
+  # sidecar step in the `goreleaser` job that appends them to the same
+  # GitHub release goreleaser just published. See release.yml for the
+  # full sequence.
 
 archives:
   - id: linux-archive
@@ -139,19 +146,12 @@ archives:
       - src: deploy/launchd/uninstall.sh
         dst: launchd/uninstall.sh
 
-  - id: windows-archive
-    ids: [niac-windows]
-    name_template: "niac-{{ .Version }}-{{ .Os }}-{{ .Arch }}"
-    formats: [zip]
-    files:
-      - src: README.md
-        dst: README.md
-      - src: LICENSE
-        dst: LICENSE
-      - src: cmd/niac/templates
-        dst: templates
-      - src: deploy/windows/build.ps1
-        dst: install.ps1
+# windows-archive is NOT defined here — see the builds section above.
+# The sidecar step in release.yml uses the exact same
+# "niac-{{ .Version }}-{{ .Os }}-{{ .Arch }}" naming convention and the
+# same file set (README.md, LICENSE, cmd/niac/templates, deploy/windows/
+# build.ps1 as install.ps1) so the zip is indistinguishable from a
+# goreleaser-native archive.
 
 # Linux .deb + .rpm via nfpm (built into goreleaser). Port of deploy/nfpm/nfpm.yaml —
 # the standalone file's ${ARCH}/${VERSION}/${BINARY} sed-substitution + explicit
