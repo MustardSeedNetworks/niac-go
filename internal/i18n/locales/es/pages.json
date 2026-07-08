@@ -878,6 +878,22 @@
     "sanitizeBatchModalMessage": "¿Sanear {{count}} walks seleccionados? Esto escribe copias saneadas en su lugar; los originales siguen siendo recuperables mediante Revertir.",
     "sanitizeBatchSuccessTitle": "Walks saneados",
     "sanitizeBatchPartialTitle": "Algunos walks no se pudieron sanear",
-    "sanitizeBatchSummary": "{{sanitized}} saneados, {{failed}} fallidos"
+    "sanitizeBatchSummary": "{{sanitized}} saneados, {{failed}} fallidos",
+    "installBundle": {
+      "title": "Instalar paquete de contenido",
+      "description": "Suba un paquete de contenido (tar.gz) para instalar networks, walks y pcaps en un solo paso — la ruta de instalación manual/air-gapped. Requiere un token con alcance admin.",
+      "browseButton": "Elegir paquete…",
+      "maxFileSizeLabel": "Tamaño máximo: {{size}}",
+      "invalidFileType": "Tipo de archivo inválido. Se esperaba {{extensions}}",
+      "fileTooLarge": "El archivo es demasiado grande. El tamaño máximo es {{size}}",
+      "fileEmpty": "El archivo está vacío",
+      "installButton": "Instalar paquete",
+      "installingButton": "Instalando…",
+      "uploadingProgress": "Subiendo… {{percent}}%",
+      "installSuccessTitle": "Paquete de contenido instalado",
+      "installSuccessMessage": "{{networks}} networks, {{walks}} walks, {{pcaps}} pcaps instalados",
+      "installFailedTitle": "Error al instalar el paquete",
+      "serverFileTooLarge": "El servidor rechazó la subida: el archivo excede {{size}}"
+    }
   }
 }

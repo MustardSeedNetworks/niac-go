@@ -21,6 +21,15 @@ import { useUIStore } from '../stores/ui-store';
 import { ToastContainer } from '../ui/ToastContainer';
 import { LibraryPcapsPage, LibraryWalksPage } from './LibraryFilesPage';
 
+// This page's own concern is the walks/pcaps listing (revert/sanitize),
+// not scope gating — the admin-only <ContentBundleUploader> it now renders
+// (#897 L3b) is covered by its own component test, so RequireScope is
+// stubbed to render its children unconditionally rather than pulling in a
+// real <ScopeProvider> + /auth/scope fetch mock here.
+vi.mock('../components/ui/RequireScope', () => ({
+  RequireScope: ({ children }: { children: React.ReactNode }) => children,
+}));
+
 const fetchLibraryWalks = vi.fn();
 const fetchLibraryPcaps = vi.fn();
 const revertWalk = vi.fn();
@@ -197,8 +206,18 @@ describe('LibraryFilesPage (walks)', () => {
     fetchLibraryWalks.mockResolvedValueOnce([cleanWalk, editedWalk]).mockResolvedValueOnce([]);
     sanitizeWalksBatch.mockResolvedValue({
       results: [
-        { name: cleanWalk.name, success: true, ipsTransformed: 2, hostnamesTransformed: 1 },
-        { name: editedWalk.name, success: true, ipsTransformed: 0, hostnamesTransformed: 0 },
+        {
+          name: cleanWalk.name,
+          success: true,
+          ipsTransformed: 2,
+          hostnamesTransformed: 1,
+        },
+        {
+          name: editedWalk.name,
+          success: true,
+          ipsTransformed: 0,
+          hostnamesTransformed: 0,
+        },
       ],
       sanitized: 2,
       failed: 0,
@@ -231,7 +250,12 @@ describe('LibraryFilesPage (walks)', () => {
     fetchLibraryWalks.mockResolvedValue([cleanWalk, editedWalk]);
     sanitizeWalksBatch.mockResolvedValue({
       results: [
-        { name: cleanWalk.name, success: true, ipsTransformed: 1, hostnamesTransformed: 0 },
+        {
+          name: cleanWalk.name,
+          success: true,
+          ipsTransformed: 1,
+          hostnamesTransformed: 0,
+        },
         { name: editedWalk.name, success: false, error: 'not found' },
       ],
       sanitized: 1,
