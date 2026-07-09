@@ -56,49 +56,38 @@ const (
 	metadataReadBytes = 4096
 )
 
-var (
-	registryOnce    sync.Once
-	registry        []TemplateMetadata
-	errLoadRegistry error
-)
-
 // loadRegistry reads every file in builtin/, parses its header comment
 // for description + use case, and returns the sorted metadata slice.
 // Cached after the first call.
-func loadRegistry() ([]TemplateMetadata, error) {
-	registryOnce.Do(func() {
-		entries, err := builtinFS.ReadDir("builtin")
-		if err != nil {
-			errLoadRegistry = fmt.Errorf("read builtin/: %w", err)
-			return
+var loadRegistry = sync.OnceValues(func() ([]TemplateMetadata, error) {
+	entries, err := builtinFS.ReadDir("builtin")
+	if err != nil {
+		return nil, fmt.Errorf("read builtin/: %w", err)
+	}
+
+	out := make([]TemplateMetadata, 0, len(entries))
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".yaml") {
+			continue
+		}
+		name := strings.TrimSuffix(entry.Name(), ".yaml")
+
+		content, readErr := loadTemplate(name)
+		if readErr != nil {
+			return nil, readErr
 		}
 
-		out := make([]TemplateMetadata, 0, len(entries))
-		for _, entry := range entries {
-			if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".yaml") {
-				continue
-			}
-			name := strings.TrimSuffix(entry.Name(), ".yaml")
+		desc, useCase := parseHeaderMetadata(content)
+		out = append(out, TemplateMetadata{
+			Name:        name,
+			Description: desc,
+			UseCase:     useCase,
+		})
+	}
 
-			content, readErr := loadTemplate(name)
-			if readErr != nil {
-				errLoadRegistry = readErr
-				return
-			}
-
-			desc, useCase := parseHeaderMetadata(content)
-			out = append(out, TemplateMetadata{
-				Name:        name,
-				Description: desc,
-				UseCase:     useCase,
-			})
-		}
-
-		sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
-		registry = out
-	})
-	return registry, errLoadRegistry
-}
+	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
+	return out, nil
+})
 
 // parseHeaderMetadata reads the leading comment block of a template
 // YAML file and pulls out a description and use-case string. Recognised

@@ -5,6 +5,25 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.94.5](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.4...v0.94.5) (2026-07-09)
+
+
+### Bug Fixes
+
+* **content:** enforce bundle extraction containment via os.Root ([#985](https://github.com/MustardSeedNetworks/niac-go/issues/985)) ([0665243](https://github.com/MustardSeedNetworks/niac-go/commit/0665243f7a8daaca101dadb279e854cd1a98345d))
+
+
+### Code Refactoring
+
+* use min/max builtins and range-over-int (D2) ([#982](https://github.com/MustardSeedNetworks/niac-go/issues/982)) ([568d6ea](https://github.com/MustardSeedNetworks/niac-go/commit/568d6ea41902d5a865fd96651caa7232350f34af))
+* use slices.ContainsFunc for membership checks (D1) ([#980](https://github.com/MustardSeedNetworks/niac-go/issues/980)) ([e094fde](https://github.com/MustardSeedNetworks/niac-go/commit/e094fded9bcfbe41bc8a1e94e690d92e6c7972db))
+* use sync.OnceValues and maps.Keys/slices.Sorted (D3+D4) ([#983](https://github.com/MustardSeedNetworks/niac-go/issues/983)) ([fa63df6](https://github.com/MustardSeedNetworks/niac-go/commit/fa63df660b098f68d296173f59260aca086c2312))
+
+
+### Miscellaneous
+
+* **deps:** bump to latest (frontend patches + Go x/ minor) ([#978](https://github.com/MustardSeedNetworks/niac-go/issues/978)) ([ad0f05e](https://github.com/MustardSeedNetworks/niac-go/commit/ad0f05eee2ffdb04e2ada86322bc42a52a652989))
+
 ## [0.94.4](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.3...v0.94.4) (2026-07-08)
 
 
