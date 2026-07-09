@@ -47,12 +47,15 @@ func (s *Server) prepareReplayRequest(req ReplayRequest) (ReplayRequest, error) 
 
 	if req.InlineData == "" {
 		// SECURITY FIX #162: Validate PCAP file path to prevent arbitrary file access
-		validatedPath, err := s.validatePcapFilePath(req.File)
+		validatedPath, allowedDir, err := s.validatePcapFilePath(req.File)
 		if err != nil {
 			return req, err
 		}
 
 		req.File = validatedPath
+		// Anchor playback's os.Root at the allow-listed dir the file resolved
+		// under, so every path component is contained at open time (#986).
+		req.RootDir = allowedDir
 
 		return req, nil
 	}
@@ -80,38 +83,40 @@ func (s *Server) prepareReplayRequest(req ReplayRequest) (ReplayRequest, error) 
 // denied / not found) propagate via lastErr and fall through to the
 // next allowed dir; hard failures (extension, null byte, dir-not-file)
 // short-circuit out.
-func (s *Server) validatePcapFilePath(filename string) (string, error) {
+// Returns the validated absolute path and the allow-listed directory it
+// resolved under (so playback can anchor an os.Root there, #986).
+func (s *Server) validatePcapFilePath(filename string) (string, string, error) {
 	if filename == "" {
-		return "", errors.New("filename cannot be empty")
+		return "", "", errors.New("filename cannot be empty")
 	}
 
 	cleanPath := filepath.Clean(filename)
 	if strings.ContainsRune(cleanPath, 0) {
-		return "", errors.New("filename contains invalid characters")
+		return "", "", errors.New("filename contains invalid characters")
 	}
 
 	allowedDirs, err := s.resolvePcapAllowedDirs()
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	var lastErr error
 	for _, allowedDir := range allowedDirs {
 		absPath, hardFail, attemptErr := tryPcapInDir(cleanPath, filename, allowedDir)
 		if hardFail {
-			return "", attemptErr
+			return "", "", attemptErr
 		}
 		if attemptErr != nil {
 			lastErr = attemptErr
 			continue
 		}
-		return absPath, nil
+		return absPath, allowedDir, nil
 	}
 
 	if lastErr != nil {
-		return "", lastErr
+		return "", "", lastErr
 	}
-	return "", fmt.Errorf("pcap file not found: %s", filename)
+	return "", "", fmt.Errorf("pcap file not found: %s", filename)
 }
 
 // tryPcapInDir resolves cleanPath against allowedDir and returns the

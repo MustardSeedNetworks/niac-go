@@ -302,25 +302,38 @@ func (p *PlaybackEngine) logBasic(msg string, args ...any) {
 }
 
 // loadPCAP loads packets from a PCAP file.
-// openPCAPFile opens the configured playback file through an os.Root
-// rooted at its parent directory, so the kernel rejects the open when the
-// base name is a symlink escaping that directory. The file is reopened on
-// every loop iteration, so this containment runs on each open — it closes
-// the validate→open TOCTOU window that a plain pcap.OpenOffline (which
-// re-resolves the path inside libpcap) would leave. The caller owns the
-// returned file and must Close it.
+// openPCAPFile opens the configured playback file through an os.Root so the
+// kernel rejects the open if any path component escapes the root — including
+// via a symlink already on disk. The file is reopened on every loop
+// iteration, so this containment runs on each open, closing the validate→open
+// TOCTOU window that a plain pcap.OpenOffline (which re-resolves the path
+// inside libpcap) would leave. The root is anchored at the API-validated
+// allow-listed directory (config.RootDir) when set — covering intermediate
+// path components — else at the file's own parent directory (operator-
+// authored config / CLI paths). The caller owns the returned file.
 func (p *PlaybackEngine) openPCAPFile() (*os.File, error) {
 	cleanedName := filepath.Clean(p.config.FileName)
 	if strings.Contains(cleanedName, "..") {
 		return nil, fmt.Errorf("playback file path must not contain path traversal: %s", p.config.FileName)
 	}
-	root, err := os.OpenRoot(filepath.Dir(cleanedName))
+
+	rootDir := filepath.Clean(p.config.RootDir)
+	if p.config.RootDir == "" {
+		rootDir = filepath.Dir(cleanedName)
+	}
+
+	rel, err := filepath.Rel(rootDir, cleanedName)
+	if err != nil {
+		return nil, fmt.Errorf("resolve playback path under %s: %w", rootDir, err)
+	}
+
+	root, err := os.OpenRoot(rootDir)
 	if err != nil {
 		return nil, fmt.Errorf("open playback directory: %w", err)
 	}
 	defer func() { _ = root.Close() }()
 
-	f, err := root.Open(filepath.Base(cleanedName))
+	f, err := root.Open(rel)
 	if err != nil {
 		return nil, fmt.Errorf("open PCAP file %s: %w", p.config.FileName, err)
 	}
