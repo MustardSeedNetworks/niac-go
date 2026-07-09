@@ -330,3 +330,34 @@ func TestValidateAlertConfig(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateReplayRequest_Rate(t *testing.T) {
+	tests := []struct {
+		name     string
+		req      ReplayRequest
+		wantErrs int
+	}{
+		{name: "timing default", req: ReplayRequest{}, wantErrs: 0},
+		{name: "topspeed", req: ReplayRequest{RateMode: "topspeed"}, wantErrs: 0},
+		{name: "pps valid", req: ReplayRequest{RateMode: "pps", Pps: 1000}, wantErrs: 0},
+		{name: "pps missing rate", req: ReplayRequest{RateMode: "pps"}, wantErrs: 1},
+		{name: "pps negative", req: ReplayRequest{RateMode: "pps", Pps: -5}, wantErrs: 1},
+		{name: "pps too high", req: ReplayRequest{RateMode: "pps", Pps: maxReplayPPS + 1}, wantErrs: 1},
+		{name: "mbps valid", req: ReplayRequest{RateMode: "mbps", MbpsCap: 100}, wantErrs: 0},
+		{name: "mbps missing cap", req: ReplayRequest{RateMode: "mbps"}, wantErrs: 1},
+		{name: "mbps too high", req: ReplayRequest{RateMode: "mbps", MbpsCap: maxReplayMbps + 1}, wantErrs: 1},
+		{name: "unknown mode", req: ReplayRequest{RateMode: "warpspeed"}, wantErrs: 1},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			errs := validateReplayRequest(tt.req)
+			if len(errs) != tt.wantErrs {
+				t.Errorf("validateReplayRequest() returned %d errors, want %d", len(errs), tt.wantErrs)
+				for _, e := range errs {
+					t.Logf("  error: field=%s issue=%s", e.Field, e.Issue)
+				}
+			}
+		})
+	}
+}
