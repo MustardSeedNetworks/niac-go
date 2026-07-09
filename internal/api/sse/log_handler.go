@@ -31,18 +31,21 @@ type logHandler struct {
 	hub atomic.Pointer[Hub]
 }
 
-// sseLogTee and sseLogTeeOnce are package-globals because slog.SetDefault
-// is itself a process-global. The install-once + atomic hub rotation
-// pattern is what prevents the test-suite deadlock described on
-// InstallLogTee; any alternative that stuffs state somewhere else
-// would either duplicate the chain (the original bug) or hide globals
-// inside an unexported singleton with no practical difference.
+// getLogTee is a package-global because slog.SetDefault is itself a
+// process-global. The install-once + atomic hub rotation pattern is
+// what prevents the test-suite deadlock described on InstallLogTee; any
+// alternative that stuffs state somewhere else would either duplicate
+// the chain (the original bug) or hide globals inside an unexported
+// singleton with no practical difference.
 //
 //nolint:gochecknoglobals // process-global tee paired with slog.SetDefault.
-var (
-	sseLogTee     *logHandler
-	sseLogTeeOnce sync.Once
-)
+var getLogTee = sync.OnceValue(func() *logHandler {
+	h := &logHandler{
+		next: slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo}),
+	}
+	slog.SetDefault(slog.New(h))
+	return h
+})
 
 // InstallLogTee makes sure a single logHandler is wrapped around
 // the slog default and points its broadcast target at hub. Safe to call
@@ -68,13 +71,7 @@ var (
 // which in the test suite produced a chain that grew one layer per
 // test and eventually hung shutdown.
 func InstallLogTee(hub *Hub) {
-	sseLogTeeOnce.Do(func() {
-		sseLogTee = &logHandler{
-			next: slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo}),
-		}
-		slog.SetDefault(slog.New(sseLogTee))
-	})
-	sseLogTee.hub.Store(hub)
+	getLogTee().hub.Store(hub)
 }
 
 // NewLogHandler is retained for callers / tests that want a fresh
