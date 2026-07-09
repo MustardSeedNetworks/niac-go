@@ -69,7 +69,6 @@ export default defineConfig(({ mode }) => {
               id.includes('/node_modules/scheduler/')
             )
               return 'vendor-react';
-            if (id.includes('/node_modules/@tanstack/react-query/')) return 'vendor-query';
             if (
               id.includes('/node_modules/i18next/') ||
               id.includes('/node_modules/react-i18next/') ||
