@@ -111,6 +111,7 @@ func (c *Controller) Start(req api.ReplayRequest) (api.ReplayState, error) {
 
 	cfg := &config.CapturePlayback{
 		FileName:  req.File,
+		RootDir:   req.RootDir,
 		LoopTime:  req.LoopMs,
 		ScaleTime: req.Scale,
 	}

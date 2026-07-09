@@ -168,7 +168,15 @@ func (c *Config) NormalizedSegments() []Segment {
 
 // CapturePlayback represents PCAP file playback configuration.
 type CapturePlayback struct {
-	FileName  string
+	FileName string
+	// RootDir, when set, is the validated directory the file must resolve
+	// under. Playback opens the file through an os.Root anchored here, so
+	// the kernel rejects any component (including an intermediate-directory
+	// symlink) that escapes it — closing the validate→open TOCTOU across the
+	// whole path. The API replay handler sets this to the allow-listed pcap
+	// directory. When empty (operator-authored config / CLI paths), playback
+	// falls back to rooting at the file's own parent directory.
+	RootDir   string
 	LoopTime  int     // milliseconds
 	ScaleTime float64 // time scaling factor
 }

@@ -3,6 +3,7 @@ package capture
 import (
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -12,7 +13,7 @@ import (
 	"time"
 
 	"github.com/gopacket/gopacket"
-	"github.com/gopacket/gopacket/pcap"
+	"github.com/gopacket/gopacket/pcapgo"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 )
@@ -92,16 +93,16 @@ func (p *PlaybackEngine) Start() error {
 		return ErrNoPlaybackConfiguration
 	}
 
-	// Check if PCAP file exists. The config.FileName has been validated by the
-	// API layer (validatePcapFilePath), but make the bound explicit here so
-	// static analysers see a barrier on this Stat call.
-	cleanedName := filepath.Clean(p.config.FileName)
-	if strings.Contains(cleanedName, "..") {
-		return fmt.Errorf("playback file path must not contain path traversal: %s", p.config.FileName)
+	// Verify the PCAP file opens safely before spawning the playback
+	// goroutine. openPCAPFile enforces containment via os.Root, so a file
+	// that is a symlink escaping its directory is rejected at the syscall
+	// rather than merely string-checked. The file is reopened per loop in
+	// loadPCAP; this is the early pre-flight so Start reports the error.
+	preflight, err := p.openPCAPFile()
+	if err != nil {
+		return err
 	}
-	if _, err := os.Stat(cleanedName); err != nil {
-		return fmt.Errorf("PCAP file not found: %s: %w", p.config.FileName, err)
-	}
+	_ = preflight.Close()
 
 	p.mu.Lock()
 
@@ -301,35 +302,107 @@ func (p *PlaybackEngine) logBasic(msg string, args ...any) {
 }
 
 // loadPCAP loads packets from a PCAP file.
-func (p *PlaybackEngine) loadPCAP() ([]PlaybackPacket, error) {
-	// Open PCAP file. The path was bounded in Start() but reaffirm here so
-	// each pcap.OpenOffline sink has a visible barrier on the cleaned path.
+// openPCAPFile opens the configured playback file through an os.Root so the
+// kernel rejects the open if any path component escapes the root — including
+// via a symlink already on disk. The file is reopened on every loop
+// iteration, so this containment runs on each open, closing the validate→open
+// TOCTOU window that a plain pcap.OpenOffline (which re-resolves the path
+// inside libpcap) would leave. The root is anchored at the API-validated
+// allow-listed directory (config.RootDir) when set — covering intermediate
+// path components — else at the file's own parent directory (operator-
+// authored config / CLI paths). The caller owns the returned file.
+func (p *PlaybackEngine) openPCAPFile() (*os.File, error) {
 	cleanedName := filepath.Clean(p.config.FileName)
 	if strings.Contains(cleanedName, "..") {
 		return nil, fmt.Errorf("playback file path must not contain path traversal: %s", p.config.FileName)
 	}
-	handle, err := pcap.OpenOffline(cleanedName)
+
+	rootDir := filepath.Clean(p.config.RootDir)
+	if p.config.RootDir == "" {
+		rootDir = filepath.Dir(cleanedName)
+	}
+
+	rel, err := filepath.Rel(rootDir, cleanedName)
+	if err != nil {
+		return nil, fmt.Errorf("resolve playback path under %s: %w", rootDir, err)
+	}
+
+	root, err := os.OpenRoot(rootDir)
+	if err != nil {
+		return nil, fmt.Errorf("open playback directory: %w", err)
+	}
+	defer func() { _ = root.Close() }()
+
+	f, err := root.Open(rel)
+	if err != nil {
+		return nil, fmt.Errorf("open PCAP file %s: %w", p.config.FileName, err)
+	}
+	return f, nil
+}
+
+// packetReader is the shared surface of the pcapgo classic and pcapng
+// readers used for playback.
+type packetReader interface {
+	ReadPacketData() ([]byte, gopacket.CaptureInfo, error)
+}
+
+// newPacketReader selects the classic-pcap or pcapng reader by sniffing
+// the file magic, then rewinds. Pure-Go pcapgo replaces libpcap's
+// pcap.OpenOffline on the replay-read path: it reads from an io.Reader
+// (our os.Root-opened *os.File), so there is no fd shared with a C FILE*
+// (the pcap.OpenOfflineFile fdopen hazard) and no CGO on this path.
+func newPacketReader(f *os.File) (packetReader, error) {
+	// pcapngSHB is the first four bytes of a pcapng Section Header Block;
+	// classic pcap files start with a different magic (0xa1b2c3d4 et al.).
+	pcapngSHB := [4]byte{0x0a, 0x0d, 0x0d, 0x0a}
+
+	var magic [4]byte
+	if _, err := io.ReadFull(f, magic[:]); err != nil {
+		return nil, fmt.Errorf("read pcap magic: %w", err)
+	}
+	if _, err := f.Seek(0, io.SeekStart); err != nil {
+		return nil, fmt.Errorf("rewind pcap: %w", err)
+	}
+	if magic == pcapngSHB {
+		return pcapgo.NewNgReader(f, pcapgo.DefaultNgReaderOptions)
+	}
+	return pcapgo.NewReader(f)
+}
+
+func (p *PlaybackEngine) loadPCAP() ([]PlaybackPacket, error) {
+	f, err := p.openPCAPFile()
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = f.Close() }()
+
+	reader, err := newPacketReader(f)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open PCAP file: %w", err)
 	}
-	defer handle.Close()
 
-	// Pre-allocate slice with reasonable initial capacity to reduce reallocations
+	// Pre-allocate slice with reasonable initial capacity to reduce reallocations.
 	packets := make([]PlaybackPacket, 0, initialPacketCap)
 
-	// Read all packets
-	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
-	for packet := range packetSource.Packets() {
-		if packet == nil {
+	for {
+		data, ci, readErr := reader.ReadPacketData()
+		if readErr != nil {
+			// EOF is the normal terminator. A malformed/truncated trailing
+			// packet stops the read and replays what was read so far —
+			// matching the old break-on-nil-packet behaviour, but logged.
+			if !errors.Is(readErr, io.EOF) {
+				p.logError("stopped PCAP read at unreadable packet", "error", readErr, "read", len(packets))
+			}
 			break
 		}
 
-		// Store packet data and timestamp
-		pkt := PlaybackPacket{
-			Data:      packet.Data(),
-			Timestamp: packet.Metadata().Timestamp,
-		}
-		packets = append(packets, pkt)
+		// Copy: pcapgo may reuse the backing array on the next read.
+		buf := make([]byte, len(data))
+		copy(buf, data)
+		packets = append(packets, PlaybackPacket{
+			Data:      buf,
+			Timestamp: ci.Timestamp,
+		})
 	}
 
 	return packets, nil

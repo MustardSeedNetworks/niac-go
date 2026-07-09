@@ -62,7 +62,7 @@ func TestPrepareReplayRequestWhitespaceFile(t *testing.T) {
 func TestValidatePcapFilePathEmpty(t *testing.T) {
 	server, _ := newTestServer(t)
 
-	_, err := server.validatePcapFilePath("")
+	_, _, err := server.validatePcapFilePath("")
 	if err == nil {
 		t.Error("validatePcapFilePath('') should fail")
 	}
@@ -71,7 +71,7 @@ func TestValidatePcapFilePathEmpty(t *testing.T) {
 func TestValidatePcapFilePathNonExistent(t *testing.T) {
 	server, _ := newTestServer(t)
 
-	_, err := server.validatePcapFilePath("nonexistent.pcap")
+	_, _, err := server.validatePcapFilePath("nonexistent.pcap")
 	if err == nil {
 		t.Error("validatePcapFilePath(nonexistent) should fail")
 	}

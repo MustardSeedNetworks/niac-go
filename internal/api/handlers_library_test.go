@@ -208,7 +208,7 @@ func TestValidatePcapFilePathFallsBackToLibrary(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	got, err := server.validatePcapFilePath("lib-only.pcap")
+	got, _, err := server.validatePcapFilePath("lib-only.pcap")
 	if err != nil {
 		t.Fatalf("validatePcapFilePath: %v", err)
 	}
@@ -233,7 +233,7 @@ func TestValidatePcapFilePathPreservesConfigDirPriority(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	got, err := server.validatePcapFilePath(filename)
+	got, _, err := server.validatePcapFilePath(filename)
 	if err != nil {
 		t.Fatalf("validatePcapFilePath: %v", err)
 	}
