@@ -1,5 +1,6 @@
 import { type FC, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { ReplayRateMode } from '../api/api-response-types';
 import { fetchReplayStatus, startReplay, stopReplay } from '../api/client';
 import { fetchLibraryPcaps } from '../api/library-client';
 import { useApiResource } from '../hooks/useApiResource';
@@ -74,6 +75,11 @@ export const ReplayControlPanel: FC = () => {
   const [selectedFile, setSelectedFile] = useState('');
   const [loopMs, setLoopMs] = useState(0);
   const [scale, setScale] = useState(1.0);
+  const [rateMode, setRateMode] = useState<ReplayRateMode>('');
+  const [pps, setPps] = useState(0);
+  const [mbpsCap, setMbpsCap] = useState(0);
+  const [loopCount, setLoopCount] = useState(0);
+  const [bpfFilter, setBpfFilter] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState<{
     type: 'success' | 'error';
@@ -94,6 +100,11 @@ export const ReplayControlPanel: FC = () => {
         file: selectedFile,
         loopMs: loopMs,
         scale: scale,
+        rateMode: rateMode || undefined,
+        pps: rateMode === 'pps' ? pps : undefined,
+        mbpsCap: rateMode === 'mbps' ? mbpsCap : undefined,
+        loopCount: loopCount || undefined,
+        bpfFilter: bpfFilter.trim() || undefined,
       });
       setMessage({ type: 'success', text: 'Replay started successfully' });
       refetchStatus();
@@ -142,6 +153,14 @@ export const ReplayControlPanel: FC = () => {
                     : 'Unknown'}
                   {replayStatus.loopMs > 0 && ` • Looping every ${replayStatus.loopMs}ms`}
                   {replayStatus.scale !== 1.0 && ` • Scale: ${replayStatus.scale}x`}
+                  {replayStatus.rateMode &&
+                    replayStatus.rateMode !== 'timing' &&
+                    ` • Rate: ${replayStatus.rateMode}`}
+                  {(replayStatus.loopCount ?? 0) > 0 && ` • Loop ${replayStatus.loopCount}×`}
+                  {replayStatus.bpfFilter && ` • Filter: ${replayStatus.bpfFilter}`}
+                  {(replayStatus.passes ?? 0) > 1 && ` • Iteration ${replayStatus.passes}`}
+                  {(replayStatus.packetsFiltered ?? 0) > 0 &&
+                    ` • ${replayStatus.packetsFiltered} filtered`}
                 </SmallText>
                 <ReplayProgress
                   packetsSent={replayStatus.packetsSent}
@@ -222,6 +241,106 @@ export const ReplayControlPanel: FC = () => {
               />
               <SmallText className="text-text-muted">
                 1.0 = Original timing, 2.0 = 2x faster, 0.5 = 2x slower
+              </SmallText>
+            </div>
+
+            {/* Rate Mode */}
+            <div>
+              <label htmlFor="replay-rate-mode" className="block text-sm font-medium mb-2">
+                Rate Mode
+              </label>
+              <select
+                id="replay-rate-mode"
+                value={rateMode}
+                onChange={(e) => setRateMode(e.target.value as ReplayRateMode)}
+                disabled={replayStatus?.running}
+                className="w-full px-3 py-row bg-bg-elevated border border-border-default rounded-md focus:outline-none focus:ring-2 focus:ring-status-info disabled:opacity-50"
+              >
+                <option value="">Timing (original)</option>
+                <option value="topspeed">Topspeed</option>
+                <option value="pps">Fixed rate (pps)</option>
+                <option value="mbps">Throughput cap (Mbps)</option>
+              </select>
+              <SmallText className="text-text-muted">
+                Timing honors capture timing (× Time Scale); the others override it
+              </SmallText>
+            </div>
+
+            {/* Rate parameter: pps or Mbps, shown for the matching mode */}
+            {rateMode === 'pps' && (
+              <div>
+                <label htmlFor="replay-pps" className="block text-sm font-medium mb-2">
+                  Rate (pps)
+                </label>
+                <input
+                  id="replay-pps"
+                  type="number"
+                  min="1"
+                  step="100"
+                  value={pps}
+                  onChange={(e) => setPps(Number.parseFloat(e.target.value) || 0)}
+                  disabled={replayStatus?.running}
+                  className="w-full px-3 py-row bg-bg-elevated border border-border-default rounded-md focus:outline-none focus:ring-2 focus:ring-status-info disabled:opacity-50"
+                />
+                <SmallText className="text-text-muted">Packets per second</SmallText>
+              </div>
+            )}
+            {rateMode === 'mbps' && (
+              <div>
+                <label htmlFor="replay-mbps" className="block text-sm font-medium mb-2">
+                  Throughput cap (Mbps)
+                </label>
+                <input
+                  id="replay-mbps"
+                  type="number"
+                  min="0.1"
+                  step="1"
+                  value={mbpsCap}
+                  onChange={(e) => setMbpsCap(Number.parseFloat(e.target.value) || 0)}
+                  disabled={replayStatus?.running}
+                  className="w-full px-3 py-row bg-bg-elevated border border-border-default rounded-md focus:outline-none focus:ring-2 focus:ring-status-info disabled:opacity-50"
+                />
+                <SmallText className="text-text-muted">Megabits per second</SmallText>
+              </div>
+            )}
+
+            {/* Loop Count */}
+            <div>
+              <label htmlFor="replay-loop-count" className="block text-sm font-medium mb-2">
+                Loop Count
+              </label>
+              <input
+                id="replay-loop-count"
+                type="number"
+                min="0"
+                step="1"
+                value={loopCount}
+                onChange={(e) => setLoopCount(Number.parseInt(e.target.value, 10) || 0)}
+                placeholder="0 = per Loop Interval"
+                disabled={replayStatus?.running}
+                className="w-full px-3 py-row bg-bg-elevated border border-border-default rounded-md focus:outline-none focus:ring-2 focus:ring-status-info disabled:opacity-50"
+              />
+              <SmallText className="text-text-muted">
+                0 = unbounded, N = stop after N passes
+              </SmallText>
+            </div>
+
+            {/* BPF Filter */}
+            <div className="col-span-full">
+              <label htmlFor="replay-bpf" className="block text-sm font-medium mb-2">
+                BPF Filter
+              </label>
+              <input
+                id="replay-bpf"
+                type="text"
+                value={bpfFilter}
+                onChange={(e) => setBpfFilter(e.target.value)}
+                placeholder="e.g. udp port 53 (blank = replay all)"
+                disabled={replayStatus?.running}
+                className="w-full px-3 py-row bg-bg-elevated border border-border-default rounded-md focus:outline-none focus:ring-2 focus:ring-status-info disabled:opacity-50"
+              />
+              <SmallText className="text-text-muted">
+                tcpdump-style filter; replay only matching packets
               </SmallText>
             </div>
           </div>
