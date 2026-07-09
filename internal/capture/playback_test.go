@@ -361,7 +361,7 @@ func TestPlaybackEngine_LoadPCAP(t *testing.T) {
 	pb := NewPlaybackEngine(engine, playbackConfig, 0)
 
 	// Test loading PCAP
-	packets, err := pb.loadPCAP()
+	packets, err := collectPlayback(pb)
 	if err != nil {
 		t.Fatalf("Failed to load PCAP: %v", err)
 	}
