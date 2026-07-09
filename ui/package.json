@@ -78,7 +78,6 @@
     "@vitejs/plugin-react": "6.0.3",
     "@vitest/coverage-v8": "4.1.10",
     "axe-core": "4.12.1",
-    "babel-plugin-react-compiler": "1.0.0",
     "i18next-parser": "9.4.0",
     "jsdom": "29.1.1",
     "playwright": "1.61.1",
