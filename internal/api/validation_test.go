@@ -2,6 +2,7 @@ package api
 
 import (
 	"net"
+	"strings"
 	"testing"
 )
 
@@ -372,6 +373,31 @@ func TestValidateReplayRequest_LoopCount(t *testing.T) {
 		{name: "positive count", req: ReplayRequest{LoopCount: 5}, wantErrs: 0},
 		{name: "negative count", req: ReplayRequest{LoopCount: -1}, wantErrs: 1},
 		{name: "over max", req: ReplayRequest{LoopCount: maxReplayLoopCount + 1}, wantErrs: 1},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			errs := validateReplayRequest(tt.req)
+			if len(errs) != tt.wantErrs {
+				t.Errorf("validateReplayRequest() returned %d errors, want %d", len(errs), tt.wantErrs)
+				for _, e := range errs {
+					t.Logf("  error: field=%s issue=%s", e.Field, e.Issue)
+				}
+			}
+		})
+	}
+}
+
+func TestValidateReplayRequest_BPFFilter(t *testing.T) {
+	tests := []struct {
+		name     string
+		req      ReplayRequest
+		wantErrs int
+	}{
+		{name: "empty filter", req: ReplayRequest{}, wantErrs: 0},
+		{name: "valid filter", req: ReplayRequest{BPFFilter: "udp port 53"}, wantErrs: 0},
+		{name: "malformed filter", req: ReplayRequest{BPFFilter: "not a bpf !!!"}, wantErrs: 1},
+		{name: "over length", req: ReplayRequest{BPFFilter: strings.Repeat("a", maxBPFFilterLen+1)}, wantErrs: 1},
 	}
 
 	for _, tt := range tests {

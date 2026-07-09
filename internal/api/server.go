@@ -137,6 +137,7 @@ const (
 	maxReplayPPS        = 10_000_000  // max replay rate (packets/sec)
 	maxReplayMbps       = 1_000_000.0 // max replay throughput cap (Mbps)
 	maxReplayLoopCount  = 1_000_000   // max bounded replay passes
+	maxBPFFilterLen     = 1024        // max replay BPF filter expression length
 	truncateErrorValue  = 50          // truncate value for error messages
 	protocolCapacity    = 8           // initial protocol slice capacity
 	historyListLimit    = 20          // limit for history listing
@@ -211,6 +212,9 @@ type ReplayRequest struct {
 	// unbounded when loopMs>0, single-shot otherwise; N>0 stops after N passes,
 	// back-to-back when loopMs==0).
 	LoopCount int `json:"loopCount,omitempty"`
+	// BPFFilter replays only packets matching this tcpdump-style filter
+	// (e.g. "udp port 53"); empty replays every packet.
+	BPFFilter string `json:"bpfFilter,omitempty"`
 	// RootDir is the validated allow-listed directory File was resolved
 	// under; playback opens File through an os.Root anchored here so no path
 	// component can escape it. Server-set, never client-supplied.
@@ -227,6 +231,7 @@ type ReplayState struct {
 	Pps       float64   `json:"pps,omitempty"`
 	MbpsCap   float64   `json:"mbpsCap,omitempty"`
 	LoopCount int       `json:"loopCount,omitempty"`
+	BPFFilter string    `json:"bpfFilter,omitempty"`
 	StartedAt time.Time `json:"startedAt,omitzero"`
 
 	// Progress counters for the current (or most recent) replay iteration.
@@ -239,6 +244,8 @@ type ReplayState struct {
 	PercentComplete float64 `json:"percentComplete,omitempty"`
 	// Passes counts completed replay iterations across the run ("iteration N").
 	Passes uint64 `json:"passes"`
+	// PacketsFiltered counts packets skipped by bpfFilter in the current pass.
+	PacketsFiltered uint64 `json:"packetsFiltered"`
 }
 
 // ReplayManager controls PCAP playback from the API server.

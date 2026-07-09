@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/MustardSeedNetworks/niac-go/internal/capture"
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 	"github.com/MustardSeedNetworks/niac-go/internal/safeconv"
 )
@@ -408,8 +409,36 @@ func validateReplayRequest(req ReplayRequest) []ErrorDetail {
 	}
 
 	errs = append(errs, validateReplayRate(req)...)
+	errs = append(errs, validateReplayFilter(req)...)
 
 	return errs
+}
+
+// validateReplayFilter checks the replay BPF filter length and that it
+// compiles, so the API rejects a malformed expression with a clean 400 before
+// playback starts.
+func validateReplayFilter(req ReplayRequest) []ErrorDetail {
+	if req.BPFFilter == "" {
+		return nil
+	}
+
+	if len(req.BPFFilter) > maxBPFFilterLen {
+		return []ErrorDetail{{
+			Field: "bpfFilter",
+			Issue: "bpfFilter exceeds maximum length of 1024 characters",
+			Value: "[too long]",
+		}}
+	}
+
+	if err := capture.ValidateBPFExpr(req.BPFFilter); err != nil {
+		return []ErrorDetail{{
+			Field: "bpfFilter",
+			Issue: err.Error(),
+			Value: req.BPFFilter,
+		}}
+	}
+
+	return nil
 }
 
 // validateReplayRate validates the rate mode and its mode-specific parameter.

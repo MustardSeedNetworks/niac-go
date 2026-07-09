@@ -13,7 +13,9 @@ import (
 	"time"
 
 	"github.com/gopacket/gopacket"
+	"github.com/gopacket/gopacket/layers"
 	"github.com/gopacket/gopacket/pcapgo"
+	"golang.org/x/net/bpf"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 )
@@ -61,6 +63,14 @@ type PlaybackEngine struct {
 	// packetsSent it is not reset per pass), so a looping replay can report
 	// "iteration N".
 	passes atomic.Uint64
+	// packetsFiltered counts packets skipped by BPFFilter this pass (reset
+	// alongside packetsSent).
+	packetsFiltered atomic.Uint64
+
+	// bpfVM is the compiled replay filter, or nil when no BPFFilter is set. Set
+	// under mu in Start before the playback goroutine spawns; read only by that
+	// single goroutine, so its serial Run calls need no further locking.
+	bpfVM *bpf.VM
 }
 
 // PlaybackPacket represents a packet with timestamp for playback.
@@ -72,11 +82,12 @@ type PlaybackPacket struct {
 // PlaybackProgress reports live counters for an in-progress (or just
 // finished) replay iteration.
 type PlaybackProgress struct {
-	PacketsSent  uint64
-	BytesSent    uint64
-	TotalPackets uint64
-	TotalBytes   uint64
-	Passes       uint64
+	PacketsSent     uint64
+	BytesSent       uint64
+	TotalPackets    uint64
+	TotalBytes      uint64
+	Passes          uint64
+	PacketsFiltered uint64
 }
 
 // NewPlaybackEngine creates a new PCAP playback engine.
@@ -93,11 +104,12 @@ func NewPlaybackEngine(engine *Engine, playbackConfig *config.CapturePlayback, d
 // concurrently with playbackLoop.
 func (p *PlaybackEngine) Progress() PlaybackProgress {
 	return PlaybackProgress{
-		PacketsSent:  p.packetsSent.Load(),
-		BytesSent:    p.bytesSent.Load(),
-		TotalPackets: p.totalPackets.Load(),
-		TotalBytes:   p.totalBytes.Load(),
-		Passes:       p.passes.Load(),
+		PacketsSent:     p.packetsSent.Load(),
+		BytesSent:       p.bytesSent.Load(),
+		TotalPackets:    p.totalPackets.Load(),
+		TotalBytes:      p.totalBytes.Load(),
+		Passes:          p.passes.Load(),
+		PacketsFiltered: p.packetsFiltered.Load(),
 	}
 }
 
@@ -108,16 +120,20 @@ func (p *PlaybackEngine) Start() error {
 		return ErrNoPlaybackConfiguration
 	}
 
-	// Verify the PCAP file opens safely before spawning the playback
-	// goroutine. openPCAPFile enforces containment via os.Root, so a file
-	// that is a symlink escaping its directory is rejected at the syscall
-	// rather than merely string-checked. The file is reopened per loop in
-	// forEachPacket; this is the early pre-flight so Start reports the error.
-	preflight, err := p.openPCAPFile()
-	if err != nil {
+	// Pre-flight the file (and compile any BPF filter) before spawning the
+	// playback goroutine, so a bad path or filter is reported synchronously.
+	if err := p.verifyPCAPOpens(); err != nil {
 		return err
 	}
-	_ = preflight.Close()
+
+	var filterVM *bpf.VM
+	if p.config.BPFFilter != "" {
+		compiled, err := p.compileFilter()
+		if err != nil {
+			return err
+		}
+		filterVM = compiled
+	}
 
 	p.mu.Lock()
 
@@ -131,6 +147,7 @@ func (p *PlaybackEngine) Start() error {
 	// Recreate stopChan so Start→Stop→Start is safe.
 	p.stopChan = make(chan struct{})
 	p.passes.Store(0)
+	p.bpfVM = filterVM
 	p.mu.Unlock()
 
 	if p.debugLevel >= 1 {
@@ -247,6 +264,7 @@ func (p *PlaybackEngine) playOnce() {
 	// (0 on the first pass → Progress omits percentComplete).
 	p.packetsSent.Store(0)
 	p.bytesSent.Store(0)
+	p.packetsFiltered.Store(0)
 	p.totalPackets.Store(p.cachedTotalPackets.Load())
 	p.totalBytes.Store(p.cachedTotalBytes.Load())
 
@@ -261,6 +279,13 @@ func (p *PlaybackEngine) playOnce() {
 	err := p.forEachPacket(func(pkt PlaybackPacket) bool {
 		if p.isStopped() {
 			return true
+		}
+		// Drop packets the BPF filter rejects before they affect timing or
+		// counters — timing is relative to the first *sent* packet.
+		if !p.matchesFilter(pkt.Data) {
+			p.packetsFiltered.Add(1)
+
+			return false
 		}
 		if read == 0 {
 			firstPacketTime = pkt.Timestamp
@@ -403,6 +428,36 @@ func (p *PlaybackEngine) logBasic(msg string, args ...any) {
 	}
 }
 
+// verifyPCAPOpens confirms the PCAP opens under os.Root containment (a symlink
+// escaping its directory is rejected at the syscall), so Start reports a bad
+// path synchronously rather than in the playback goroutine.
+func (p *PlaybackEngine) verifyPCAPOpens() error {
+	f, err := p.openPCAPFile()
+	if err != nil {
+		return err
+	}
+
+	return f.Close()
+}
+
+// compileFilter opens the capture to read its link type and compiles BPFFilter
+// into a match VM. Called only when BPFFilter is set, so it never returns a nil
+// VM with a nil error.
+func (p *PlaybackEngine) compileFilter() (*bpf.VM, error) {
+	f, err := p.openPCAPFile()
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = f.Close() }()
+
+	reader, err := newPacketReader(f)
+	if err != nil {
+		return nil, fmt.Errorf("open PCAP for filter: %w", err)
+	}
+
+	return compileBPFVM(reader.LinkType(), p.config.BPFFilter)
+}
+
 // openPCAPFile opens the configured playback file through an os.Root so the
 // kernel rejects the open if any path component escapes the root — including
 // via a symlink already on disk. The file is reopened on every loop
@@ -445,6 +500,7 @@ func (p *PlaybackEngine) openPCAPFile() (*os.File, error) {
 // readers used for playback.
 type packetReader interface {
 	ReadPacketData() ([]byte, gopacket.CaptureInfo, error)
+	LinkType() layers.LinkType
 }
 
 // newPacketReader selects the classic-pcap or pcapng reader by sniffing

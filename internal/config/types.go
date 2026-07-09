@@ -210,6 +210,9 @@ type CapturePlayback struct {
 	PacketsPerSec float64
 	// MbpsCap is the throughput cap for RateMbps (megabits/second).
 	MbpsCap float64
+	// BPFFilter, when set, replays only packets matching this tcpdump-style
+	// filter (e.g. "udp port 53"). Empty replays every packet.
+	BPFFilter string
 }
 
 // DiscoveryProtocols configures discovery protocol behavior.
