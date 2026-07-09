@@ -57,6 +57,10 @@ type PlaybackEngine struct {
 	totalBytes         atomic.Uint64
 	cachedTotalPackets atomic.Uint64
 	cachedTotalBytes   atomic.Uint64
+	// passes counts completed replay iterations across the whole run (unlike
+	// packetsSent it is not reset per pass), so a looping replay can report
+	// "iteration N".
+	passes atomic.Uint64
 }
 
 // PlaybackPacket represents a packet with timestamp for playback.
@@ -72,6 +76,7 @@ type PlaybackProgress struct {
 	BytesSent    uint64
 	TotalPackets uint64
 	TotalBytes   uint64
+	Passes       uint64
 }
 
 // NewPlaybackEngine creates a new PCAP playback engine.
@@ -92,6 +97,7 @@ func (p *PlaybackEngine) Progress() PlaybackProgress {
 		BytesSent:    p.bytesSent.Load(),
 		TotalPackets: p.totalPackets.Load(),
 		TotalBytes:   p.totalBytes.Load(),
+		Passes:       p.passes.Load(),
 	}
 }
 
@@ -124,6 +130,7 @@ func (p *PlaybackEngine) Start() error {
 	p.running = true
 	// Recreate stopChan so Start→Stop→Start is safe.
 	p.stopChan = make(chan struct{})
+	p.passes.Store(0)
 	p.mu.Unlock()
 
 	if p.debugLevel >= 1 {
@@ -168,33 +175,68 @@ func (p *PlaybackEngine) Stop() {
 	}
 }
 
-// playbackLoop is the main playback loop.
+// playbackLoop is the main playback loop. LoopTime>0 replays at that interval
+// cadence; otherwise passes run back-to-back. LoopCount bounds the total passes
+// (0 = unbounded when an interval is set, single-shot otherwise).
 func (p *PlaybackEngine) playbackLoop() {
 	defer p.wg.Done()
 
-	// If LoopTime is specified, loop playback at that interval
 	if p.config.LoopTime > 0 {
-		loopInterval := time.Duration(p.config.LoopTime) * time.Millisecond
+		p.loopWithInterval()
 
-		ticker := time.NewTicker(loopInterval)
-		defer ticker.Stop()
+		return
+	}
 
-		// Play immediately on start
-		p.playOnce()
+	p.loopBackToBack()
+}
 
-		// Then play on each tick
-		for {
-			select {
-			case <-ticker.C:
-				p.playOnce()
-			case <-p.stopChan:
+// loopWithInterval replays once immediately, then on each LoopTime tick, until
+// stopped or LoopCount passes have run.
+func (p *PlaybackEngine) loopWithInterval() {
+	ticker := time.NewTicker(time.Duration(p.config.LoopTime) * time.Millisecond)
+	defer ticker.Stop()
+
+	p.playOnce()
+	if p.recordPassDone() {
+		return
+	}
+
+	for {
+		select {
+		case <-ticker.C:
+			p.playOnce()
+			if p.recordPassDone() {
 				return
 			}
+		case <-p.stopChan:
+			return
 		}
-	} else {
-		// Play once and exit
-		p.playOnce()
 	}
+}
+
+// loopBackToBack replays with no inter-pass gap. With LoopCount==0 this is a
+// single pass (the historical no-interval behavior); LoopCount>0 replays that
+// many passes.
+func (p *PlaybackEngine) loopBackToBack() {
+	for {
+		if p.isStopped() {
+			return
+		}
+
+		p.playOnce()
+		reached := p.recordPassDone()
+		if p.config.LoopCount == 0 || reached {
+			return
+		}
+	}
+}
+
+// recordPassDone increments the completed-pass counter and reports whether a
+// configured LoopCount has been reached.
+func (p *PlaybackEngine) recordPassDone() bool {
+	done := p.passes.Add(1)
+
+	return p.config.LoopCount > 0 && done >= uint64(p.config.LoopCount)
 }
 
 // playOnce streams the PCAP file once, sending each packet as it is read so
