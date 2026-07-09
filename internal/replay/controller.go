@@ -110,10 +110,13 @@ func (c *Controller) Start(req api.ReplayRequest) (api.ReplayState, error) {
 	c.cleanupTempFile()
 
 	cfg := &config.CapturePlayback{
-		FileName:  req.File,
-		RootDir:   req.RootDir,
-		LoopTime:  req.LoopMs,
-		ScaleTime: req.Scale,
+		FileName:      req.File,
+		RootDir:       req.RootDir,
+		LoopTime:      req.LoopMs,
+		ScaleTime:     req.Scale,
+		RateMode:      config.RateMode(req.RateMode),
+		PacketsPerSec: req.Pps,
+		MbpsCap:       req.MbpsCap,
 	}
 	player := capture.NewPlaybackEngine(c.engine, cfg, c.debugLevel)
 	if err := player.Start(); err != nil {
@@ -135,6 +138,9 @@ func (c *Controller) Start(req api.ReplayRequest) (api.ReplayState, error) {
 		File:      req.File,
 		LoopMs:    req.LoopMs,
 		Scale:     req.Scale,
+		RateMode:  req.RateMode,
+		Pps:       req.Pps,
+		MbpsCap:   req.MbpsCap,
 		StartedAt: time.Now().UTC(),
 	}
 	if req.Uploaded {

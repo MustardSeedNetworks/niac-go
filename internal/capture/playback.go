@@ -21,6 +21,9 @@ import (
 // Playback constants.
 const (
 	debugLevelBasic = 2 // debug level for basic playback logging
+
+	bitsPerByte = 8 // bits in a byte, for Mbps pacing
+	bitsPerMbit = 1_000_000
 )
 
 // Sentinel errors for playback.
@@ -220,7 +223,9 @@ func (p *PlaybackEngine) playOnce() {
 		if read == 0 {
 			firstPacketTime = pkt.Timestamp
 		}
-		if !p.waitForPacketTiming(pkt, startTime, firstPacketTime) {
+		// read/readBytes are the counts already sent, which the pps/mbps
+		// governors pace against.
+		if !p.sleepOrStop(p.pacingDelay(pkt, read, readBytes, startTime, firstPacketTime)) {
 			return true
 		}
 
@@ -260,20 +265,63 @@ func (p *PlaybackEngine) isStopped() bool {
 	}
 }
 
-// waitForPacketTiming waits until it's time to send the packet.
-// Returns false if playback was stopped during the wait.
+// waitForPacketTiming waits until it's time to send the packet under the
+// original-timing rate mode. Returns false if playback was stopped during the
+// wait.
 func (p *PlaybackEngine) waitForPacketTiming(pkt PlaybackPacket, startTime, firstPacketTime time.Time) bool {
-	sleepDuration := p.calculatePacketDelay(pkt, startTime, firstPacketTime)
-	if sleepDuration <= 0 {
+	return p.sleepOrStop(p.calculatePacketDelay(pkt, startTime, firstPacketTime))
+}
+
+// sleepOrStop waits for delay, returning true when it elapses or immediately if
+// delay <= 0, and false if playback is stopped first.
+func (p *PlaybackEngine) sleepOrStop(delay time.Duration) bool {
+	if delay <= 0 {
 		return true
 	}
 
 	select {
-	case <-time.After(sleepDuration):
+	case <-time.After(delay):
 		return true
 	case <-p.stopChan:
 		return false
 	}
+}
+
+// pacingDelay returns how long to wait before sending the current packet under
+// the configured rate mode. sentPackets/sentBytes are the counts already sent
+// this pass (the pps/mbps governors pace the average rate against them).
+func (p *PlaybackEngine) pacingDelay(
+	pkt PlaybackPacket,
+	sentPackets, sentBytes uint64,
+	startTime, firstPacketTime time.Time,
+) time.Duration {
+	switch p.config.RateMode {
+	case config.RateTopspeed:
+		return 0
+	case config.RatePPS:
+		// Send packet index N (0-based) at startTime + N/pps seconds.
+		targetElapsed := float64(sentPackets) / p.config.PacketsPerSec * float64(time.Second)
+		return rateDelay(startTime, time.Duration(targetElapsed))
+	case config.RateMbps:
+		// Hold average throughput at the cap: having already sent sentBytes,
+		// the next send is due at startTime + sentBytes*8 / (mbps*1e6) seconds.
+		targetElapsed := float64(sentBytes*bitsPerByte) / (p.config.MbpsCap * bitsPerMbit) * float64(time.Second)
+		return rateDelay(startTime, time.Duration(targetElapsed))
+	case config.RateTiming:
+		return p.calculatePacketDelay(pkt, startTime, firstPacketTime)
+	default: // empty / unknown → original timing
+		return p.calculatePacketDelay(pkt, startTime, firstPacketTime)
+	}
+}
+
+// rateDelay returns the wait needed for targetElapsed to have passed since
+// startTime, or 0 if that moment is already past.
+func rateDelay(startTime time.Time, targetElapsed time.Duration) time.Duration {
+	if d := time.Until(startTime.Add(targetElapsed)); d > 0 {
+		return d
+	}
+
+	return 0
 }
 
 // sendPacketWithLogging sends a packet and logs the result.

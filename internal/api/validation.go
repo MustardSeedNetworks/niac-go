@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/MustardSeedNetworks/niac-go/internal/config"
 	"github.com/MustardSeedNetworks/niac-go/internal/safeconv"
 )
 
@@ -387,6 +388,58 @@ func validateReplayRequest(req ReplayRequest) []ErrorDetail {
 			Field: "scale",
 			Issue: "scale exceeds maximum of 1000x",
 			Value: fmt.Sprintf("%f", req.Scale),
+		})
+	}
+
+	errs = append(errs, validateReplayRate(req)...)
+
+	return errs
+}
+
+// validateReplayRate validates the rate mode and its mode-specific parameter.
+// A pacing mode overrides the captured timing, so only the parameter that the
+// selected mode consumes is checked.
+func validateReplayRate(req ReplayRequest) []ErrorDetail {
+	var errs []ErrorDetail
+
+	switch config.RateMode(req.RateMode) {
+	case "", config.RateTiming, config.RateTopspeed:
+		// No rate parameter to validate.
+	case config.RatePPS:
+		if req.Pps <= 0 {
+			errs = append(errs, ErrorDetail{
+				Field: "pps",
+				Issue: `pps must be greater than 0 when rateMode is "pps"`,
+				Value: fmt.Sprintf("%f", req.Pps),
+			})
+		}
+		if req.Pps > maxReplayPPS {
+			errs = append(errs, ErrorDetail{
+				Field: "pps",
+				Issue: "pps exceeds maximum of 10000000 packets/sec",
+				Value: fmt.Sprintf("%f", req.Pps),
+			})
+		}
+	case config.RateMbps:
+		if req.MbpsCap <= 0 {
+			errs = append(errs, ErrorDetail{
+				Field: "mbpsCap",
+				Issue: `mbpsCap must be greater than 0 when rateMode is "mbps"`,
+				Value: fmt.Sprintf("%f", req.MbpsCap),
+			})
+		}
+		if req.MbpsCap > maxReplayMbps {
+			errs = append(errs, ErrorDetail{
+				Field: "mbpsCap",
+				Issue: "mbpsCap exceeds maximum of 1000000 Mbps",
+				Value: fmt.Sprintf("%f", req.MbpsCap),
+			})
+		}
+	default:
+		errs = append(errs, ErrorDetail{
+			Field: "rateMode",
+			Issue: "rateMode must be one of: timing, topspeed, pps, mbps",
+			Value: req.RateMode,
 		})
 	}
 

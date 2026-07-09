@@ -166,6 +166,25 @@ func (c *Config) NormalizedSegments() []Segment {
 	return []Segment{{Tag: UntaggedTag, Devices: c.Devices}}
 }
 
+// RateMode selects how replay paces its packet sends. ScaleTime applies only
+// in RateTiming.
+type RateMode string
+
+const (
+	// RateTiming (the default, also the zero value "") replays packets at their
+	// original inter-packet spacing, optionally sped up/slowed by ScaleTime.
+	RateTiming RateMode = "timing"
+	// RateTopspeed sends packets back-to-back with no inter-packet delay,
+	// ignoring the captured timestamps.
+	RateTopspeed RateMode = "topspeed"
+	// RatePPS paces sends to a fixed packets-per-second (PacketsPerSec),
+	// ignoring the captured timestamps.
+	RatePPS RateMode = "pps"
+	// RateMbps paces sends to cap average throughput at MbpsCap megabits/sec,
+	// ignoring the captured timestamps.
+	RateMbps RateMode = "mbps"
+)
+
 // CapturePlayback represents PCAP file playback configuration.
 type CapturePlayback struct {
 	FileName string
@@ -178,7 +197,14 @@ type CapturePlayback struct {
 	// falls back to rooting at the file's own parent directory.
 	RootDir   string
 	LoopTime  int     // milliseconds
-	ScaleTime float64 // time scaling factor
+	ScaleTime float64 // time scaling factor (RateTiming only)
+
+	// RateMode selects the pacing strategy; empty means RateTiming.
+	RateMode RateMode
+	// PacketsPerSec is the target rate for RatePPS (packets/second).
+	PacketsPerSec float64
+	// MbpsCap is the throughput cap for RateMbps (megabits/second).
+	MbpsCap float64
 }
 
 // DiscoveryProtocols configures discovery protocol behavior.

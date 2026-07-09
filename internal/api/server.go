@@ -127,17 +127,19 @@ const (
 	ErrMsgRequestBodyTooLarge = "http: request body too large"
 
 	// Validation and limit constants.
-	requestIDBytes      = 16       // bytes for unique request ID
-	maxURLLength        = 2048     // max webhook URL length
-	maxInterfaceNameLen = 15       // Linux IFNAMSIZ limit
-	maxPathLength       = 4096     // max file path length
-	maxQueryParamLen    = 1024     // max query parameter length
-	maxLoopMs           = 86400000 // max loop ms (24 hours)
-	maxScaleFactor      = 1000.0   // max scale factor
-	truncateErrorValue  = 50       // truncate value for error messages
-	protocolCapacity    = 8        // initial protocol slice capacity
-	historyListLimit    = 20       // limit for history listing
-	maxFileEntries      = 200      // max file entries to return
+	requestIDBytes      = 16          // bytes for unique request ID
+	maxURLLength        = 2048        // max webhook URL length
+	maxInterfaceNameLen = 15          // Linux IFNAMSIZ limit
+	maxPathLength       = 4096        // max file path length
+	maxQueryParamLen    = 1024        // max query parameter length
+	maxLoopMs           = 86400000    // max loop ms (24 hours)
+	maxScaleFactor      = 1000.0      // max scale factor
+	maxReplayPPS        = 10_000_000  // max replay rate (packets/sec)
+	maxReplayMbps       = 1_000_000.0 // max replay throughput cap (Mbps)
+	truncateErrorValue  = 50          // truncate value for error messages
+	protocolCapacity    = 8           // initial protocol slice capacity
+	historyListLimit    = 20          // limit for history listing
+	maxFileEntries      = 200         // max file entries to return
 
 	// HTTP server timeout constants.
 	httpReadTimeout       = 10 // seconds
@@ -197,6 +199,13 @@ type ReplayRequest struct {
 	Scale      float64 `json:"scale"`
 	InlineData string  `json:"data,omitempty"`
 	Uploaded   bool    `json:"-"`
+	// RateMode paces the replay: "" / "timing" honors original inter-packet
+	// timing (× Scale); "topspeed" sends back-to-back; "pps" holds Pps
+	// packets/sec; "mbps" caps average throughput at MbpsCap. Pps/MbpsCap are
+	// only read in their matching mode.
+	RateMode string  `json:"rateMode,omitempty"`
+	Pps      float64 `json:"pps,omitempty"`
+	MbpsCap  float64 `json:"mbpsCap,omitempty"`
 	// RootDir is the validated allow-listed directory File was resolved
 	// under; playback opens File through an os.Root anchored here so no path
 	// component can escape it. Server-set, never client-supplied.
@@ -209,6 +218,9 @@ type ReplayState struct {
 	File      string    `json:"file"`
 	LoopMs    int       `json:"loopMs"`
 	Scale     float64   `json:"scale"`
+	RateMode  string    `json:"rateMode,omitempty"`
+	Pps       float64   `json:"pps,omitempty"`
+	MbpsCap   float64   `json:"mbpsCap,omitempty"`
 	StartedAt time.Time `json:"startedAt,omitzero"`
 
 	// Progress counters for the current (or most recent) replay iteration.
