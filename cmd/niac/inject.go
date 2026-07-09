@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"slices"
 	"strconv"
@@ -160,10 +161,7 @@ func runInject(args []string, options *injectOptions) error {
 	if !isValidErrorType(errorType) {
 		// Show both snake_case and canonical formats in error message
 		aliases := errorTypeAliases()
-		aliasKeys := make([]string, 0, len(aliases))
-		for k := range aliases {
-			aliasKeys = append(aliasKeys, k)
-		}
+		aliasKeys := slices.Collect(maps.Keys(aliases))
 		return fmt.Errorf("invalid error type: %s\n\nValid error types are:\n  %s\n\nOr use snake_case aliases:\n  %s",
 			errorType, strings.Join(validErrorTypes(), "\n  "), strings.Join(aliasKeys, "\n  "))
 	}

@@ -6,9 +6,11 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"maps"
 	"math"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -125,12 +127,7 @@ func (w *MibZipWriter) serializeNode(node *mibNode) {
 	}
 
 	// Get sorted child keys for deterministic output
-	keys := make([]int, 0, len(node.children))
-	for k := range node.children {
-		keys = append(keys, k)
-	}
-
-	sort.Ints(keys)
+	keys := slices.Sorted(maps.Keys(node.children))
 
 	// Process children
 	for _, k := range keys {
