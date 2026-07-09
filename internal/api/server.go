@@ -197,6 +197,10 @@ type ReplayRequest struct {
 	Scale      float64 `json:"scale"`
 	InlineData string  `json:"data,omitempty"`
 	Uploaded   bool    `json:"-"`
+	// RootDir is the validated allow-listed directory File was resolved
+	// under; playback opens File through an os.Root anchored here so no path
+	// component can escape it. Server-set, never client-supplied.
+	RootDir string `json:"-"`
 }
 
 // ReplayState reports the current replay status.
