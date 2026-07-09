@@ -19,9 +19,9 @@ func TestPlaybackEngine_LoadPCAP_RoundTrip(t *testing.T) {
 		stopChan: make(chan struct{}),
 	}
 
-	packets, err := pb.loadPCAP()
+	packets, err := collectPlayback(pb)
 	if err != nil {
-		t.Fatalf("loadPCAP: %v", err)
+		t.Fatalf("collectPlayback: %v", err)
 	}
 	if len(packets) != 3 {
 		t.Fatalf("got %d packets, want 3", len(packets))
@@ -58,8 +58,8 @@ func TestPlaybackEngine_LoadPCAP_RejectsSymlinkEscape(t *testing.T) {
 		stopChan: make(chan struct{}),
 	}
 
-	if _, err := pb.loadPCAP(); err == nil {
-		t.Fatal("expected loadPCAP to reject a symlink escaping its directory, got nil")
+	if _, err := collectPlayback(pb); err == nil {
+		t.Fatal("expected playback to reject a symlink escaping its directory, got nil")
 	}
 }
 
@@ -91,8 +91,8 @@ func TestPlaybackEngine_LoadPCAP_RejectsIntermediateSymlinkEscape(t *testing.T) 
 		stopChan: make(chan struct{}),
 	}
 
-	if _, err := pb.loadPCAP(); err == nil {
-		t.Fatal("expected loadPCAP to reject an intermediate-directory symlink escaping the allowed root, got nil")
+	if _, err := collectPlayback(pb); err == nil {
+		t.Fatal("expected playback to reject an intermediate-directory symlink escaping the allowed root, got nil")
 	}
 }
 
@@ -110,9 +110,9 @@ func TestPlaybackEngine_LoadPCAP_RootDirLoadsNestedFile(t *testing.T) {
 		stopChan: make(chan struct{}),
 	}
 
-	packets, err := pb.loadPCAP()
+	packets, err := collectPlayback(pb)
 	if err != nil {
-		t.Fatalf("loadPCAP with RootDir set: %v", err)
+		t.Fatalf("collectPlayback with RootDir set: %v", err)
 	}
 	if len(packets) != 3 {
 		t.Fatalf("got %d packets, want 3", len(packets))

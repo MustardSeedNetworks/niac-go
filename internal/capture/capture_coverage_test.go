@@ -389,9 +389,9 @@ func TestPlaybackEngine_LoadPCAP_EmptyFile(t *testing.T) {
 		stopChan: make(chan struct{}),
 	}
 
-	packets, err := pb.loadPCAP()
+	packets, err := collectPlayback(pb)
 	if err != nil {
-		t.Fatalf("loadPCAP on empty file failed: %v", err)
+		t.Fatalf("collectPlayback on empty file failed: %v", err)
 	}
 
 	if len(packets) != 0 {
@@ -416,7 +416,7 @@ func TestPlaybackEngine_LoadPCAP_InvalidFile(t *testing.T) {
 		stopChan: make(chan struct{}),
 	}
 
-	_, err = pb.loadPCAP()
+	_, err = collectPlayback(pb)
 	if err == nil {
 		t.Error("Expected error loading invalid PCAP file")
 	}

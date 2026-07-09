@@ -20,8 +20,7 @@ import (
 
 // Playback constants.
 const (
-	debugLevelBasic  = 2    // debug level for basic playback logging
-	initialPacketCap = 1000 // initial packet slice capacity
+	debugLevelBasic = 2 // debug level for basic playback logging
 )
 
 // Sentinel errors for playback.
@@ -42,12 +41,19 @@ type PlaybackEngine struct {
 
 	// Progress counters, read via Progress(). packetsSent/bytesSent reset at
 	// the start of each playOnce (so a looped replay reports per-iteration
-	// progress rather than an ever-growing total); totalPackets/totalBytes
-	// are set once loadPCAP finishes reading the file.
-	packetsSent  atomic.Uint64
-	bytesSent    atomic.Uint64
-	totalPackets atomic.Uint64
-	totalBytes   atomic.Uint64
+	// progress rather than an ever-growing total). Because playback now streams
+	// the file rather than materializing it, the total isn't known until a pass
+	// finishes: totalPackets/totalBytes stay 0 during the first pass (Progress
+	// then omits percentComplete rather than faking it) and are populated from
+	// cachedTotal* — the counts observed on the previous completed pass — at the
+	// start of every subsequent looped pass, so a loop shows a real bar from
+	// pass two on.
+	packetsSent        atomic.Uint64
+	bytesSent          atomic.Uint64
+	totalPackets       atomic.Uint64
+	totalBytes         atomic.Uint64
+	cachedTotalPackets atomic.Uint64
+	cachedTotalBytes   atomic.Uint64
 }
 
 // PlaybackPacket represents a packet with timestamp for playback.
@@ -97,7 +103,7 @@ func (p *PlaybackEngine) Start() error {
 	// goroutine. openPCAPFile enforces containment via os.Root, so a file
 	// that is a symlink escaping its directory is rejected at the syscall
 	// rather than merely string-checked. The file is reopened per loop in
-	// loadPCAP; this is the early pre-flight so Start reports the error.
+	// forEachPacket; this is the early pre-flight so Start reports the error.
 	preflight, err := p.openPCAPFile()
 	if err != nil {
 		return err
@@ -188,54 +194,60 @@ func (p *PlaybackEngine) playbackLoop() {
 	}
 }
 
-// playOnce plays the PCAP file once.
+// playOnce streams the PCAP file once, sending each packet as it is read so
+// the whole capture is never held in memory (multi-hundred-MB demo corpus).
 func (p *PlaybackEngine) playOnce() {
-	packets, err := p.loadPCAP()
+	// Reset per-iteration progress. The total isn't known until this pass
+	// finishes reading, so seed it from the previous pass's observed counts
+	// (0 on the first pass → Progress omits percentComplete).
+	p.packetsSent.Store(0)
+	p.bytesSent.Store(0)
+	p.totalPackets.Store(p.cachedTotalPackets.Load())
+	p.totalBytes.Store(p.cachedTotalBytes.Load())
+
+	startTime := time.Now()
+
+	var (
+		read            uint64
+		readBytes       uint64
+		firstPacketTime time.Time
+	)
+
+	err := p.forEachPacket(func(pkt PlaybackPacket) bool {
+		if p.isStopped() {
+			return true
+		}
+		if read == 0 {
+			firstPacketTime = pkt.Timestamp
+		}
+		if !p.waitForPacketTiming(pkt, startTime, firstPacketTime) {
+			return true
+		}
+
+		read++
+		readBytes += uint64(len(pkt.Data))
+		p.sendPacketWithLogging(pkt, read, p.totalPackets.Load())
+
+		return false
+	})
 	if err != nil {
 		p.logError("Error loading PCAP", "error", err)
 		return
 	}
 
-	// Reset per-iteration progress counters so a looped replay reports
-	// progress against the current pass, not a running lifetime total.
-	var totalBytes uint64
-	for _, pkt := range packets {
-		totalBytes += uint64(len(pkt.Data))
-	}
-	p.packetsSent.Store(0)
-	p.bytesSent.Store(0)
-	p.totalPackets.Store(uint64(len(packets)))
-	p.totalBytes.Store(totalBytes)
-
-	if len(packets) == 0 {
+	if read == 0 {
 		p.logBasic("No packets found in PCAP file")
 		return
 	}
 
-	p.logBasic("Replaying packets from PCAP", "count", len(packets), "filename", p.config.FileName)
+	// Publish the observed totals so this (and any subsequent looped) pass can
+	// report a real percentComplete.
+	p.cachedTotalPackets.Store(read)
+	p.cachedTotalBytes.Store(readBytes)
+	p.totalPackets.Store(read)
+	p.totalBytes.Store(readBytes)
 
-	p.replayPackets(packets)
-}
-
-// replayPackets replays all packets with proper timing.
-func (p *PlaybackEngine) replayPackets(packets []PlaybackPacket) {
-	startTime := time.Now()
-	firstPacketTime := packets[0].Timestamp
-	totalPackets := len(packets)
-
-	for i, pkt := range packets {
-		if p.isStopped() {
-			return
-		}
-
-		if !p.waitForPacketTiming(pkt, startTime, firstPacketTime) {
-			return
-		}
-
-		p.sendPacketWithLogging(pkt, i+1, totalPackets)
-	}
-
-	p.logPlaybackComplete(startTime, totalPackets)
+	p.logPlaybackComplete(startTime, read)
 }
 
 // isStopped checks if the playback should stop.
@@ -265,7 +277,7 @@ func (p *PlaybackEngine) waitForPacketTiming(pkt PlaybackPacket, startTime, firs
 }
 
 // sendPacketWithLogging sends a packet and logs the result.
-func (p *PlaybackEngine) sendPacketWithLogging(pkt PlaybackPacket, packetNum, totalPackets int) {
+func (p *PlaybackEngine) sendPacketWithLogging(pkt PlaybackPacket, packetNum, totalPackets uint64) {
 	err := p.engine.SendPacket(pkt.Data)
 	if err != nil {
 		p.logBasic("Error sending packet", "packetNum", packetNum, "error", err)
@@ -279,7 +291,7 @@ func (p *PlaybackEngine) sendPacketWithLogging(pkt PlaybackPacket, packetNum, to
 }
 
 // logPlaybackComplete logs the playback completion message.
-func (p *PlaybackEngine) logPlaybackComplete(startTime time.Time, packetCount int) {
+func (p *PlaybackEngine) logPlaybackComplete(startTime time.Time, packetCount uint64) {
 	if p.debugLevel < debugLevelBasic {
 		return
 	}
@@ -301,7 +313,6 @@ func (p *PlaybackEngine) logBasic(msg string, args ...any) {
 	}
 }
 
-// loadPCAP loads packets from a PCAP file.
 // openPCAPFile opens the configured playback file through an os.Root so the
 // kernel rejects the open if any path component escapes the root — including
 // via a symlink already on disk. The file is reopened on every loop
@@ -369,29 +380,32 @@ func newPacketReader(f *os.File) (packetReader, error) {
 	return pcapgo.NewReader(f)
 }
 
-func (p *PlaybackEngine) loadPCAP() ([]PlaybackPacket, error) {
+// forEachPacket streams the configured PCAP file, invoking fn for each packet
+// as it is read — never holding more than one packet, so replay memory is
+// independent of file size. fn returns true to stop early (e.g. on the stop
+// signal). It returns an error only when the file cannot be opened or its
+// header cannot be read; a malformed/truncated trailing packet stops the read
+// and replays the valid prefix (logged), matching the previous behaviour.
+func (p *PlaybackEngine) forEachPacket(fn func(PlaybackPacket) bool) error {
 	f, err := p.openPCAPFile()
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer func() { _ = f.Close() }()
 
 	reader, err := newPacketReader(f)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open PCAP file: %w", err)
+		return fmt.Errorf("failed to open PCAP file: %w", err)
 	}
 
-	// Pre-allocate slice with reasonable initial capacity to reduce reallocations.
-	packets := make([]PlaybackPacket, 0, initialPacketCap)
-
+	var read int
 	for {
 		data, ci, readErr := reader.ReadPacketData()
 		if readErr != nil {
 			// EOF is the normal terminator. A malformed/truncated trailing
-			// packet stops the read and replays what was read so far —
-			// matching the old break-on-nil-packet behaviour, but logged.
+			// packet stops the read and replays what was read so far — logged.
 			if !errors.Is(readErr, io.EOF) {
-				p.logError("stopped PCAP read at unreadable packet", "error", readErr, "read", len(packets))
+				p.logError("stopped PCAP read at unreadable packet", "error", readErr, "read", read)
 			}
 			break
 		}
@@ -399,13 +413,13 @@ func (p *PlaybackEngine) loadPCAP() ([]PlaybackPacket, error) {
 		// Copy: pcapgo may reuse the backing array on the next read.
 		buf := make([]byte, len(data))
 		copy(buf, data)
-		packets = append(packets, PlaybackPacket{
-			Data:      buf,
-			Timestamp: ci.Timestamp,
-		})
+		read++
+		if fn(PlaybackPacket{Data: buf, Timestamp: ci.Timestamp}) {
+			break
+		}
 	}
 
-	return packets, nil
+	return nil
 }
 
 // calculatePacketDelay calculates how long to wait before sending a packet
