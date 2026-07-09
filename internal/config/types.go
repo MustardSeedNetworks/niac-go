@@ -196,8 +196,13 @@ type CapturePlayback struct {
 	// directory. When empty (operator-authored config / CLI paths), playback
 	// falls back to rooting at the file's own parent directory.
 	RootDir   string
-	LoopTime  int     // milliseconds
+	LoopTime  int     // milliseconds; inter-pass interval when looping
 	ScaleTime float64 // time scaling factor (RateTiming only)
+	// LoopCount bounds the number of replay passes: 0 keeps the existing
+	// behavior (infinite when LoopTime>0, single-shot otherwise); N>0 stops
+	// after N passes. With LoopTime==0 and LoopCount>0 the passes run
+	// back-to-back.
+	LoopCount int
 
 	// RateMode selects the pacing strategy; empty means RateTiming.
 	RateMode RateMode

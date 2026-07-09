@@ -391,6 +391,22 @@ func validateReplayRequest(req ReplayRequest) []ErrorDetail {
 		})
 	}
 
+	if req.LoopCount < 0 {
+		errs = append(errs, ErrorDetail{
+			Field: "loopCount",
+			Issue: "loopCount cannot be negative",
+			Value: strconv.Itoa(req.LoopCount),
+		})
+	}
+
+	if req.LoopCount > maxReplayLoopCount {
+		errs = append(errs, ErrorDetail{
+			Field: "loopCount",
+			Issue: "loopCount exceeds maximum of 1000000 passes",
+			Value: strconv.Itoa(req.LoopCount),
+		})
+	}
+
 	errs = append(errs, validateReplayRate(req)...)
 
 	return errs

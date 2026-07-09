@@ -63,6 +63,7 @@ func (c *Controller) Status() api.ReplayState {
 		state.PacketsTotal = progress.TotalPackets
 		state.BytesTotal = progress.TotalBytes
 		state.PercentComplete = percentComplete(progress.PacketsSent, progress.TotalPackets)
+		state.Passes = progress.Passes
 	}
 	return state
 }
@@ -117,6 +118,7 @@ func (c *Controller) Start(req api.ReplayRequest) (api.ReplayState, error) {
 		RateMode:      config.RateMode(req.RateMode),
 		PacketsPerSec: req.Pps,
 		MbpsCap:       req.MbpsCap,
+		LoopCount:     req.LoopCount,
 	}
 	player := capture.NewPlaybackEngine(c.engine, cfg, c.debugLevel)
 	if err := player.Start(); err != nil {
@@ -141,6 +143,7 @@ func (c *Controller) Start(req api.ReplayRequest) (api.ReplayState, error) {
 		RateMode:  req.RateMode,
 		Pps:       req.Pps,
 		MbpsCap:   req.MbpsCap,
+		LoopCount: req.LoopCount,
 		StartedAt: time.Now().UTC(),
 	}
 	if req.Uploaded {

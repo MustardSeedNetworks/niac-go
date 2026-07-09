@@ -136,6 +136,7 @@ const (
 	maxScaleFactor      = 1000.0      // max scale factor
 	maxReplayPPS        = 10_000_000  // max replay rate (packets/sec)
 	maxReplayMbps       = 1_000_000.0 // max replay throughput cap (Mbps)
+	maxReplayLoopCount  = 1_000_000   // max bounded replay passes
 	truncateErrorValue  = 50          // truncate value for error messages
 	protocolCapacity    = 8           // initial protocol slice capacity
 	historyListLimit    = 20          // limit for history listing
@@ -206,6 +207,10 @@ type ReplayRequest struct {
 	RateMode string  `json:"rateMode,omitempty"`
 	Pps      float64 `json:"pps,omitempty"`
 	MbpsCap  float64 `json:"mbpsCap,omitempty"`
+	// LoopCount bounds the number of replay passes (0 = current behavior:
+	// unbounded when loopMs>0, single-shot otherwise; N>0 stops after N passes,
+	// back-to-back when loopMs==0).
+	LoopCount int `json:"loopCount,omitempty"`
 	// RootDir is the validated allow-listed directory File was resolved
 	// under; playback opens File through an os.Root anchored here so no path
 	// component can escape it. Server-set, never client-supplied.
@@ -221,6 +226,7 @@ type ReplayState struct {
 	RateMode  string    `json:"rateMode,omitempty"`
 	Pps       float64   `json:"pps,omitempty"`
 	MbpsCap   float64   `json:"mbpsCap,omitempty"`
+	LoopCount int       `json:"loopCount,omitempty"`
 	StartedAt time.Time `json:"startedAt,omitzero"`
 
 	// Progress counters for the current (or most recent) replay iteration.
@@ -231,6 +237,8 @@ type ReplayState struct {
 	PacketsTotal    uint64  `json:"packetsTotal"`
 	BytesTotal      uint64  `json:"bytesTotal"`
 	PercentComplete float64 `json:"percentComplete,omitempty"`
+	// Passes counts completed replay iterations across the run ("iteration N").
+	Passes uint64 `json:"passes"`
 }
 
 // ReplayManager controls PCAP playback from the API server.

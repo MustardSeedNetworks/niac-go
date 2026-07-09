@@ -361,3 +361,28 @@ func TestValidateReplayRequest_Rate(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateReplayRequest_LoopCount(t *testing.T) {
+	tests := []struct {
+		name     string
+		req      ReplayRequest
+		wantErrs int
+	}{
+		{name: "default zero", req: ReplayRequest{}, wantErrs: 0},
+		{name: "positive count", req: ReplayRequest{LoopCount: 5}, wantErrs: 0},
+		{name: "negative count", req: ReplayRequest{LoopCount: -1}, wantErrs: 1},
+		{name: "over max", req: ReplayRequest{LoopCount: maxReplayLoopCount + 1}, wantErrs: 1},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			errs := validateReplayRequest(tt.req)
+			if len(errs) != tt.wantErrs {
+				t.Errorf("validateReplayRequest() returned %d errors, want %d", len(errs), tt.wantErrs)
+				for _, e := range errs {
+					t.Logf("  error: field=%s issue=%s", e.Field, e.Issue)
+				}
+			}
+		})
+	}
+}
