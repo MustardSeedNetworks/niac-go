@@ -122,9 +122,7 @@ func handleScrollInput(
 	case "up":
 		if selectedIdx > 0 {
 			selectedIdx--
-			if selectedIdx < scrollY {
-				scrollY = selectedIdx
-			}
+			scrollY = min(scrollY, selectedIdx)
 		}
 
 		return selectedIdx, scrollY, true
@@ -139,9 +137,7 @@ func handleScrollInput(
 		return selectedIdx, scrollY, true
 	case "pgup":
 		scrollY -= visibleRows
-		if scrollY < 0 {
-			scrollY = 0
-		}
+		scrollY = max(scrollY, 0)
 
 		return selectedIdx, scrollY, true
 	case "pgdown":

@@ -63,9 +63,7 @@ func (a *Agent) SynthesizePeerTopology(resolve PeerMACResolver) {
 
 		a.addLearnedFDBEntry(mac, bridgePort)
 
-		if bridgePort > maxPort {
-			maxPort = bridgePort
-		}
+		maxPort = max(maxPort, bridgePort)
 
 		changed = true
 	}

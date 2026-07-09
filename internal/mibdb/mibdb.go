@@ -449,9 +449,7 @@ func (h *VariMibIntegralHandler) Value() int64 {
 	}
 
 	// Ensure non-negative for counters
-	if value < 0 {
-		value = 0
-	}
+	value = max(value, 0)
 
 	return value
 }

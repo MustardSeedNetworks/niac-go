@@ -462,9 +462,7 @@ func (h *IPerf3Handler) sendResults(
 
 	// Calculate simulated results based on device config
 	duration := time.Since(session.StartTime).Seconds()
-	if duration < 1 {
-		duration = 1
-	}
+	duration = max(duration, 1)
 
 	// Use configured bandwidth or calculate from bytes received
 	downloadBps := cfg.DownloadMbps * iperf3BitsPerMbps

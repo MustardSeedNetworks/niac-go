@@ -441,9 +441,7 @@ func reflectorDelay(cfg *config.ReflectorConfig) time.Duration {
 		ms += getSimRand().IntN(2*cfg.JitterMs+1) - cfg.JitterMs
 	}
 
-	if ms < 0 {
-		ms = 0
-	}
+	ms = max(ms, 0)
 
 	return time.Duration(ms) * time.Millisecond
 }

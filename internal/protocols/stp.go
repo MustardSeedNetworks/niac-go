@@ -397,7 +397,7 @@ func (h *STPHandler) SendConfigBPDU(device *config.Device) error {
 // makeBridgeID creates a bridge ID from priority and MAC address.
 func (h *STPHandler) makeBridgeID(priority uint16, mac net.HardwareAddr) uint64 {
 	bridgeID := uint64(priority) << stpBridgeIDShift48
-	for i := 0; i < SizeOfMac && i < len(mac); i++ {
+	for i := range min(SizeOfMac, len(mac)) {
 		shift := stpBridgeIDShift40 - i*stpMACBytesShift
 		if shift >= 0 {
 			bridgeID |= uint64(mac[i]) << uint(shift)

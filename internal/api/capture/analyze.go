@@ -521,7 +521,7 @@ func topNFromMap(m map[string]int, n int) []IPCount {
 	})
 
 	result := make([]IPCount, 0, n)
-	for i := 0; i < len(sorted) && i < n; i++ {
+	for i := range min(len(sorted), n) {
 		result = append(result, IPCount{
 			IP:    sorted[i].key,
 			Count: sorted[i].value,

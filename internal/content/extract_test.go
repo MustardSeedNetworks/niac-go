@@ -212,6 +212,37 @@ func TestExtractRejectsSymlinkEntries(t *testing.T) {
 	}
 }
 
+// TestExtractRejectsSymlinkTraversal proves the os.Root containment
+// closes a symlink-TOCTOU escape that the old string prefix check could
+// not: a symlink planted inside the library root pointing outside it
+// must not let a bundle entry write through it. The cleaned path
+// "networks/evil/pwned.yaml" is textually under the root (so the old
+// HasPrefix check passed and would have written to the symlink target);
+// os.Root refuses to traverse the escaping symlink at the syscall.
+func TestExtractRejectsSymlinkTraversal(t *testing.T) {
+	root := t.TempDir()
+	outside := t.TempDir()
+
+	if err := os.MkdirAll(filepath.Join(root, "networks"), 0o755); err != nil {
+		t.Fatalf("mkdir networks: %v", err)
+	}
+	if err := os.Symlink(outside, filepath.Join(root, "networks", "evil")); err != nil {
+		t.Skipf("symlinks unsupported on this platform: %v", err)
+	}
+
+	tarball := buildTarball(t, []tarballEntry{
+		{name: "networks/evil/pwned.yaml", body: "owned"},
+	})
+
+	_, err := content.Extract(bytes.NewReader(tarball), root, content.ExtractOptions{})
+	if err == nil {
+		t.Fatal("expected extraction through an escaping symlink to be rejected, got nil")
+	}
+	if _, statErr := os.Stat(filepath.Join(outside, "pwned.yaml")); statErr == nil {
+		t.Fatal("file escaped the library root through the symlink")
+	}
+}
+
 func TestExtractRoundTripPreservesContent(t *testing.T) {
 	want := "name: example\ndevices: []\n"
 	tarball := buildTarball(t, []tarballEntry{{name: "networks/x.yaml", body: want}})
