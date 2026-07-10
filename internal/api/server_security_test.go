@@ -18,7 +18,7 @@ import (
 	"github.com/MustardSeedNetworks/niac-go/internal/api/auth"
 	"github.com/MustardSeedNetworks/niac-go/internal/library"
 
-	"github.com/MustardSeedNetworks/niac-go/internal/api/csrf"
+	"github.com/MustardSeedNetworks/foundation/pkg/csrf"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/api/ratelimit"
 

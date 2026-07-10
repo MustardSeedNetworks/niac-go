@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/MustardSeedNetworks/niac-go/internal/api/csrf"
+	"github.com/MustardSeedNetworks/foundation/pkg/csrf"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 	"github.com/MustardSeedNetworks/niac-go/internal/logging"
