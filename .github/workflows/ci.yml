@@ -296,7 +296,7 @@ jobs:
           args: "-no-fail -fmt sarif -out gosec-results.sarif ./..."
 
       - name: Upload gosec results
-        uses: github/codeql-action/upload-sarif@54f647b7e1bb85c95cddabcd46b0c578ec92bc1a # v4.36.3
+        uses: github/codeql-action/upload-sarif@99df26d4f13ea111d4ec1a7dddef6063f76b97e9 # v4.37.0
         # Code scanning requires a public repo or Advanced Security (same
         # gate as codeql.yml); gosec enforcement stays blocking via the
         # golangci-lint gosec linter in the backend job.
@@ -356,7 +356,7 @@ jobs:
         # gate as codeql.yml); the "Fail on CRITICAL/HIGH findings" step
         # below still blocks on the SARIF content regardless of visibility.
         if: always() && hashFiles('trivy-results.sarif') != '' && github.event.repository.visibility == 'public'
-        uses: github/codeql-action/upload-sarif@54f647b7e1bb85c95cddabcd46b0c578ec92bc1a # v4.36.3
+        uses: github/codeql-action/upload-sarif@99df26d4f13ea111d4ec1a7dddef6063f76b97e9 # v4.37.0
         with:
           sarif_file: trivy-results.sarif
 
@@ -395,7 +395,7 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Set up Python
-        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: "3.13"
 
