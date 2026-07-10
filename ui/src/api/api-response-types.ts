@@ -186,11 +186,19 @@ export interface ConfigUpdateRequest {
   content: string;
 }
 
+/** Replay pacing mode; '' / 'timing' honors the captured inter-packet timing. */
+export type ReplayRateMode = '' | 'timing' | 'topspeed' | 'pps' | 'mbps';
+
 export interface ReplayState {
   running: boolean;
   file: string;
   loopMs: number;
   scale: number;
+  rateMode?: ReplayRateMode;
+  pps?: number;
+  mbpsCap?: number;
+  loopCount?: number;
+  bpfFilter?: string;
   startedAt?: string;
   packetsSent: number;
   bytesSent: number;
@@ -198,6 +206,10 @@ export interface ReplayState {
   bytesTotal: number;
   /** Omitted by the backend (not sent as 0) whenever packetsTotal is unknown. */
   percentComplete?: number;
+  /** Completed replay iterations across the run ("iteration N"). */
+  passes: number;
+  /** Packets skipped by bpfFilter in the current pass. */
+  packetsFiltered: number;
 }
 
 export interface ReplayRequest {
@@ -205,6 +217,11 @@ export interface ReplayRequest {
   loopMs?: number;
   scale?: number;
   data?: string;
+  rateMode?: ReplayRateMode;
+  pps?: number;
+  mbpsCap?: number;
+  loopCount?: number;
+  bpfFilter?: string;
 }
 
 export interface FileEntry {
