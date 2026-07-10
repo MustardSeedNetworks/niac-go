@@ -40,8 +40,8 @@ func TestTierString(t *testing.T) {
 func wantProFeatures() []string {
 	return []string{
 		"unlimited_devices",
-		"bgp", "ospf", "netbios", "ftp", "stp",
-		"ipv6_advanced", "error_injection", "traffic_shaping",
+		"netbios", "ftp", "stp",
+		"ipv6_advanced", "error_injection",
 		"config_templates", "multi_ip", "pcap_ingest", "rest_api",
 	}
 }

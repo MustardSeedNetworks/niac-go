@@ -76,17 +76,6 @@ const (
 	// DefaultDHCPv6ValidLifetime is the default DHCPv6 valid lifetime in seconds.
 	DefaultDHCPv6ValidLifetime = 2592000
 
-	// DefaultARPAnnouncementInterval is the default ARP announcement interval in seconds.
-	DefaultARPAnnouncementInterval = 60
-	// DefaultPeriodicPingInterval is the default periodic ping interval in seconds.
-	DefaultPeriodicPingInterval = 120
-	// DefaultPeriodicPingPayloadSize is the default periodic ping payload size in bytes.
-	DefaultPeriodicPingPayloadSize = 32
-	// DefaultRandomTrafficInterval is the default random traffic interval in seconds.
-	DefaultRandomTrafficInterval = 180
-	// DefaultRandomTrafficPacketCount is the default packets per interval.
-	DefaultRandomTrafficPacketCount = 5
-
 	// DefaultSNMPCommunity is the default SNMP community string.
 	DefaultSNMPCommunity = "public"
 
@@ -251,13 +240,10 @@ type Device struct {
 	HTTPConfig          *HTTPConfig          // HTTP server configuration
 	FTPConfig           *FTPConfig           // FTP server configuration
 	NetBIOSConfig       *NetBIOSConfig       // NetBIOS service configuration
-	BGPConfig           *BGPConfig           // BGP speaker configuration (v0.86.0 — Pro)
-	OSPFConfig          *OSPFConfig          // OSPF speaker configuration (v0.86.0 — Pro)
 	SNMPv3Config        *SNMPv3Config        // SNMPv3 USM users (v0.86.0 — free, safe SNMP variant)
 	ICMPConfig          *ICMPConfig          // ICMP/ICMPv4 configuration
 	ICMPv6Config        *ICMPv6Config        // ICMPv6 configuration
 	DHCPv6Config        *DHCPv6Config        // DHCPv6 server configuration
-	TrafficConfig       *TrafficConfig       // Traffic pattern configuration (v1.6.0)
 	OSFingerprintConfig *OSFingerprintConfig // OS fingerprinting configuration (v1.24.0)
 	IPerf3              *IPerf3Config        // iPerf3 server emulation configuration (v1.25.0)
 	ReflectorConfig     *ReflectorConfig     // NetAlly UDP reflector endpoint (v0.94.0)
@@ -509,49 +495,6 @@ type NetBIOSName struct {
 	Group  bool
 }
 
-// BGPConfig holds BGP (Border Gateway Protocol) speaker configuration.
-//
-// Added 2026-05-27 — Pro tier feature. Presence on a Device trips the
-// `bgp` gate at create/update time. The protocol speaker itself is a
-// separate, larger workstream (RFC 4271); this struct exists today
-// purely so the license-gate has something concrete to test against
-// instead of "TODO: not yet modeled."
-type BGPConfig struct {
-	Enabled   bool
-	ASN       uint32
-	RouterID  net.IP
-	HoldTime  uint16 // seconds (default 180)
-	KeepAlive uint16 // seconds (default 60)
-	Neighbors []BGPNeighbor
-}
-
-// BGPNeighbor represents a single BGP peer entry.
-type BGPNeighbor struct {
-	IP       net.IP
-	RemoteAS uint32
-	Password string // MD5/TCP-AO shared secret (optional)
-}
-
-// OSPFConfig holds OSPF (Open Shortest Path First) speaker configuration.
-//
-// Added 2026-05-27 — Pro tier feature. Same shape and reasoning as
-// BGPConfig: schema-only stub so the gate has a concrete handle.
-// Speaker implementation tracked separately (RFC 2328).
-type OSPFConfig struct {
-	Enabled   bool
-	RouterID  net.IP
-	HelloTime uint16 // seconds (default 10)
-	DeadTime  uint16 // seconds (default 40)
-	Areas     []OSPFArea
-}
-
-// OSPFArea represents an OSPF area declaration.
-type OSPFArea struct {
-	AreaID   string
-	Networks []string
-	Stub     bool
-}
-
 // SNMPv3Config holds SNMPv3 USM (User-based Security Model)
 // configuration: engine ID + users with auth/priv credentials.
 //
@@ -647,35 +590,6 @@ type DHCPv6Pool struct {
 	Network    string // IPv6 network (e.g., "2001:db8::/64")
 	RangeStart string // Start of address range
 	RangeEnd   string // End of address range
-}
-
-// TrafficConfig holds traffic pattern configuration (v1.6.0).
-type TrafficConfig struct {
-	Enabled          bool
-	ARPAnnouncements *ARPAnnouncementConfig
-	PeriodicPings    *PeriodicPingConfig
-	RandomTraffic    *RandomTrafficConfig
-}
-
-// ARPAnnouncementConfig configures gratuitous ARP announcements.
-type ARPAnnouncementConfig struct {
-	Enabled  bool
-	Interval int // Interval in seconds (default: 60)
-}
-
-// PeriodicPingConfig configures periodic ICMP echo requests.
-type PeriodicPingConfig struct {
-	Enabled     bool
-	Interval    int // Interval in seconds (default: 120)
-	PayloadSize int // Payload size in bytes (default: 32)
-}
-
-// RandomTrafficConfig configures random background traffic.
-type RandomTrafficConfig struct {
-	Enabled     bool
-	Interval    int      // Interval in seconds (default: 180)
-	PacketCount int      // Number of packets per interval (default: 5)
-	Patterns    []string // Traffic patterns: "broadcast_arp", "multicast", "udp"
 }
 
 // TrapConfig holds SNMP trap configuration (v1.6.0).

@@ -18,10 +18,9 @@ for NIAC. Without a license, NIAC runs in the Free tier (up to 10
 simulated devices, common protocols). NIAC Pro ($599/yr) unlocks:
 
   • Unlimited simulated devices
-  • Advanced protocols: BGP, OSPF, SNMPv3, NetBIOS, FTP, STP
+  • Advanced protocols: SNMPv3, NetBIOS, FTP, STP
   • Advanced IPv4/IPv6 stack features
   • Error injection (latency, loss, jitter, protocol faults)
-  • Traffic shaping
   • Config templates
   • Multi-IP per simulated endpoint
   • PCAP ingest + analysis

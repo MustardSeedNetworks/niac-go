@@ -111,13 +111,10 @@ type Device struct {
 	HTTP          *HTTPConfig          `yaml:"http,omitempty"`
 	Ftp           *FtpConfig           `yaml:"ftp,omitempty"`
 	Netbios       *NetbiosConfig       `yaml:"netbios,omitempty"`
-	Bgp           *BgpConfig           `yaml:"bgp,omitempty"`    // v0.86.0 — Pro
-	Ospf          *OspfConfig          `yaml:"ospf,omitempty"`   // v0.86.0 — Pro
 	Snmpv3        *Snmpv3Config        `yaml:"snmpv3,omitempty"` // v0.86.0 — free (safe SNMP variant)
 	Icmp          *IcmpConfig          `yaml:"icmp,omitempty"`
 	Icmpv6        *Icmpv6Config        `yaml:"icmpv6,omitempty"`
 	Dhcpv6        *Dhcpv6Config        `yaml:"dhcpv6,omitempty"`
-	Traffic       *TrafficConfig       `yaml:"traffic,omitempty"`        // v1.6.0
 	OSFingerprint *OSFingerprintConfig `yaml:"os_fingerprint,omitempty"` // v1.24.0
 	IPerf3        *IPerf3Config        `yaml:"iperf3,omitempty"`         // v1.25.0
 	Reflector     *ReflectorConfig     `yaml:"reflector,omitempty"`      // v0.94.0 — NetAlly UDP reflector endpoint
@@ -394,47 +391,6 @@ type NetbiosName struct {
 	Group  bool   `yaml:"group,omitempty"`
 }
 
-// BgpConfig represents BGP (Border Gateway Protocol) speaker configuration.
-//
-// Added 2026-05-27 for license-gating purposes. Presence on a device
-// activates the bgp Pro feature gate; the protocol speaker itself is
-// a separate workstream (RFC 4271).
-type BgpConfig struct {
-	Enabled   bool          `yaml:"enabled,omitempty"`
-	ASN       uint32        `yaml:"asn,omitempty"        validate:"omitempty,gte=1,lte=4294967295"`
-	RouterID  string        `yaml:"router_id,omitempty"  validate:"omitempty,ip"`
-	HoldTime  uint16        `yaml:"hold_time,omitempty"`  // seconds (default 180)
-	KeepAlive uint16        `yaml:"keep_alive,omitempty"` // seconds (default 60)
-	Neighbors []BgpNeighbor `yaml:"neighbors,omitempty"`
-}
-
-// BgpNeighbor represents one BGP peer entry.
-type BgpNeighbor struct {
-	IP       string `yaml:"ip"                 validate:"required,ip"`
-	RemoteAS uint32 `yaml:"remote_as"          validate:"required,gte=1"`
-	Password string `yaml:"password,omitempty"`
-}
-
-// OspfConfig represents OSPF (Open Shortest Path First) configuration.
-//
-// Added 2026-05-27 for license-gating purposes. Presence on a device
-// activates the ospf Pro feature gate; the protocol speaker itself is
-// a separate workstream (RFC 2328).
-type OspfConfig struct {
-	Enabled   bool       `yaml:"enabled,omitempty"`
-	RouterID  string     `yaml:"router_id,omitempty"  validate:"omitempty,ip"`
-	HelloTime uint16     `yaml:"hello_time,omitempty"` // seconds (default 10)
-	DeadTime  uint16     `yaml:"dead_time,omitempty"`  // seconds (default 40)
-	Areas     []OspfArea `yaml:"areas,omitempty"`
-}
-
-// OspfArea represents an OSPF area declaration.
-type OspfArea struct {
-	AreaID   string   `yaml:"area_id"            validate:"required"`
-	Networks []string `yaml:"networks,omitempty"`
-	Stub     bool     `yaml:"stub,omitempty"`
-}
-
 // Snmpv3Config represents SNMPv3 user / auth / priv configuration.
 //
 // Added 2026-05-27. NOT license-gated — SNMPv3 is the only safe SNMP
@@ -529,35 +485,6 @@ type Dhcpv6Pool struct {
 	Network    string `yaml:"network,omitempty"`
 	RangeStart string `yaml:"range_start,omitempty"`
 	RangeEnd   string `yaml:"range_end,omitempty"`
-}
-
-// TrafficConfig represents traffic pattern configuration (v1.6.0).
-type TrafficConfig struct {
-	Enabled          bool                   `yaml:"enabled,omitempty"`
-	ARPAnnouncements *ARPAnnouncementConfig `yaml:"arp_announcements,omitempty"`
-	PeriodicPings    *PeriodicPingConfig    `yaml:"periodic_pings,omitempty"`
-	RandomTraffic    *RandomTrafficConfig   `yaml:"random_traffic,omitempty"`
-}
-
-// ARPAnnouncementConfig configures gratuitous ARP announcements.
-type ARPAnnouncementConfig struct {
-	Enabled  bool `yaml:"enabled,omitempty"`
-	Interval int  `yaml:"interval,omitempty"` // seconds
-}
-
-// PeriodicPingConfig configures periodic ICMP echo requests.
-type PeriodicPingConfig struct {
-	Enabled     bool `yaml:"enabled,omitempty"`
-	Interval    int  `yaml:"interval,omitempty"`     // seconds
-	PayloadSize int  `yaml:"payload_size,omitempty"` // bytes
-}
-
-// RandomTrafficConfig configures random background traffic.
-type RandomTrafficConfig struct {
-	Enabled     bool     `yaml:"enabled,omitempty"`
-	Interval    int      `yaml:"interval,omitempty"`     // seconds
-	PacketCount int      `yaml:"packet_count,omitempty"` // packets per interval
-	Patterns    []string `yaml:"patterns,omitempty"`     // traffic patterns
 }
 
 // TrapsConfig represents SNMP trap configuration (v1.6.0).

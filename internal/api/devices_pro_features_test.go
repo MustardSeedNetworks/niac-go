@@ -74,30 +74,7 @@ func TestDeviceFeature_AllowsFreeOnSingleIP(t *testing.T) {
 	}
 }
 
-func TestDeviceFeature_BlocksFreeOnTrafficShaping(t *testing.T) {
-	t.Parallel()
-	mgr := freshManager(t)
-	s := newProtoGateServer(t, mgr)
-
-	dev := &config.Device{
-		Name:          "shaped",
-		TrafficConfig: &config.TrafficConfig{Enabled: true},
-	}
-	w := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/", http.NoBody)
-
-	if s.requireDeviceProtocolFeatures(w, req, dev) {
-		t.Fatal("expected Free tier to be blocked on TrafficConfig")
-	}
-	var body FeatureGateResponse
-	_ = json.NewDecoder(w.Body).Decode(&body)
-	if body.RequiredFeature != "traffic_shaping" {
-		t.Errorf("RequiredFeature = %q, want traffic_shaping",
-			body.RequiredFeature)
-	}
-}
-
-func TestDeviceFeature_AllowsProTrialOnTrafficAndMultiIP(t *testing.T) {
+func TestDeviceFeature_AllowsProTrialOnMultiIP(t *testing.T) {
 	t.Parallel()
 	mgr := freshManager(t)
 	if res := mgr.StartTrial(); !res.Success {
@@ -111,8 +88,7 @@ func TestDeviceFeature_AllowsProTrialOnTrafficAndMultiIP(t *testing.T) {
 			net.ParseIP("10.0.0.1"),
 			net.ParseIP("10.0.0.2"),
 		},
-		MapToIP:       net.ParseIP("203.0.113.5"),
-		TrafficConfig: &config.TrafficConfig{Enabled: true},
+		MapToIP: net.ParseIP("203.0.113.5"),
 	}
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/", http.NoBody)
