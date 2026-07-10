@@ -47,21 +47,6 @@ func gatedDeviceProtocolChecks() []protocolFeatureCheck {
 			present: func(d *config.Device) bool { return d != nil && d.NetBIOSConfig != nil },
 		},
 		{
-			feature: "bgp",
-			present: func(d *config.Device) bool { return d != nil && d.BGPConfig != nil },
-		},
-		{
-			feature: "ospf",
-			present: func(d *config.Device) bool { return d != nil && d.OSPFConfig != nil },
-		},
-		{
-			// traffic_shaping: any device-level traffic pattern config
-			// (ARP announcements, periodic pings, random background
-			// traffic) requires Pro.
-			feature: "traffic_shaping",
-			present: func(d *config.Device) bool { return d != nil && d.TrafficConfig != nil },
-		},
-		{
 			// multi_ip: a device with more than one IP address, or
 			// with MapToIP set (UDP-mapping to an external IP), is a
 			// Pro feature. Single-IP devices stay Free.

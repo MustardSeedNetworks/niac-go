@@ -74,13 +74,16 @@ func (t Tier) String() string {
 //
 // snmpv3 was removed from Pro on 2026-05-27: SNMPv3 is the only safe SNMP
 // version (v1/v2c send credentials in cleartext), so gating it would push
-// customers toward the insecure variants. BGP + OSPF stay on Pro because
-// they're large protocol implementations, not a safety floor.
+// customers toward the insecure variants.
+//
+// bgp, ospf, and traffic_shaping were removed from Pro on 2026-07-10: none
+// of them had a working simulation (no protocol implementation, schema-only
+// config stubs, dead TrafficGenerator), so selling them was vaporware.
 func proFeatures() []string {
 	return []string{
 		"unlimited_devices",
-		"bgp", "ospf", "netbios", "ftp", "stp",
-		"ipv6_advanced", "error_injection", "traffic_shaping",
+		"netbios", "ftp", "stp",
+		"ipv6_advanced", "error_injection",
 		"config_templates", "multi_ip", "pcap_ingest", "rest_api",
 	}
 }

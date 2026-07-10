@@ -13,16 +13,15 @@ type DeviceResponse struct {
 	Protocols        []string                  `json:"protocols"`
 
 	// Protocol configurations (optional, included when requested)
-	SNMPAgent     *SNMPAgentResponse     `json:"snmpAgent,omitempty"`
-	CDP           *CDPResponse           `json:"cdp,omitempty"`
-	LLDP          *LLDPResponse          `json:"lldp,omitempty"`
-	DHCP          *DHCPResponse          `json:"dhcp,omitempty"`
-	DNS           *DNSResponse           `json:"dns,omitempty"`
-	HTTP          *HTTPResponse          `json:"http,omitempty"`
-	FTP           *FTPResponse           `json:"ftp,omitempty"`
-	NetBIOS       *NetBIOSResponse       `json:"netbios,omitempty"`
-	STP           *STPResponse           `json:"stp,omitempty"`
-	TrafficConfig *TrafficConfigResponse `json:"trafficConfig,omitempty"`
+	SNMPAgent *SNMPAgentResponse `json:"snmpAgent,omitempty"`
+	CDP       *CDPResponse       `json:"cdp,omitempty"`
+	LLDP      *LLDPResponse      `json:"lldp,omitempty"`
+	DHCP      *DHCPResponse      `json:"dhcp,omitempty"`
+	DNS       *DNSResponse       `json:"dns,omitempty"`
+	HTTP      *HTTPResponse      `json:"http,omitempty"`
+	FTP       *FTPResponse       `json:"ftp,omitempty"`
+	NetBIOS   *NetBIOSResponse   `json:"netbios,omitempty"`
+	STP       *STPResponse       `json:"stp,omitempty"`
 
 	// Raw YAML for advanced editing
 	RawYAML string `json:"rawYaml,omitempty"`
@@ -107,16 +106,6 @@ type NetBIOSResponse struct {
 type STPResponse struct {
 	Enabled  bool   `json:"enabled"`
 	Priority uint16 `json:"priority,omitempty"`
-}
-
-// TrafficConfigResponse represents traffic pattern configuration.
-type TrafficConfigResponse struct {
-	Enabled         bool `json:"enabled"`
-	ARPEnabled      bool `json:"arpEnabled,omitempty"`
-	ARPInterval     int  `json:"arpInterval,omitempty"`
-	PingEnabled     bool `json:"pingEnabled,omitempty"`
-	PingInterval    int  `json:"pingInterval,omitempty"`
-	PingPayloadSize int  `json:"pingPayloadSize,omitempty"`
 }
 
 // DeviceInterfaceResponse represents configured metadata for a device interface.

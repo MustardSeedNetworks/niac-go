@@ -110,28 +110,6 @@ func buildDHCPResponse(dev *config.Device) *DHCPResponse {
 	return resp
 }
 
-// buildTrafficConfigResponse creates a TrafficConfigResponse from device config.
-func buildTrafficConfigResponse(dev *config.Device) *TrafficConfigResponse {
-	if dev.TrafficConfig == nil || !dev.TrafficConfig.Enabled {
-		return nil
-	}
-
-	tc := &TrafficConfigResponse{Enabled: true}
-
-	if dev.TrafficConfig.ARPAnnouncements != nil {
-		tc.ARPEnabled = dev.TrafficConfig.ARPAnnouncements.Enabled
-		tc.ARPInterval = dev.TrafficConfig.ARPAnnouncements.Interval
-	}
-
-	if dev.TrafficConfig.PeriodicPings != nil {
-		tc.PingEnabled = dev.TrafficConfig.PeriodicPings.Enabled
-		tc.PingInterval = dev.TrafficConfig.PeriodicPings.Interval
-		tc.PingPayloadSize = dev.TrafficConfig.PeriodicPings.PayloadSize
-	}
-
-	return tc
-}
-
 // populateProtocolDetails fills in protocol detail fields on DeviceResponse.
 func populateProtocolDetails(resp *DeviceResponse, dev *config.Device) {
 	resp.SNMPAgent = buildSNMPAgentResponse(dev)
@@ -143,7 +121,6 @@ func populateProtocolDetails(resp *DeviceResponse, dev *config.Device) {
 	resp.FTP = buildFTPResponse(dev)
 	resp.NetBIOS = buildNetBIOSResponse(dev)
 	resp.STP = buildSTPResponse(dev)
-	resp.TrafficConfig = buildTrafficConfigResponse(dev)
 }
 
 func buildCDPResponse(dev *config.Device) *CDPResponse {

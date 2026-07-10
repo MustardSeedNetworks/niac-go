@@ -12,7 +12,7 @@ type FeatureMeta struct {
 	// ID is the wire feature name (matches keygen's productCatalog and
 	// the string proFeatures() returns).
 	ID string `json:"id"`
-	// Label is a short, human-readable name (e.g. "BGP Routing").
+	// Label is a short, human-readable name (e.g. "NetBIOS").
 	Label string `json:"label"`
 	// Description is a one-sentence explanation of what the feature
 	// unlocks.
@@ -30,14 +30,6 @@ func featureMeta() map[string]FeatureMeta {
 		"unlimited_devices": {
 			Label:       "Unlimited Devices",
 			Description: "Simulate more than the Free tier's device cap in a single config.",
-		},
-		"bgp": {
-			Label:       "BGP Routing",
-			Description: "Simulate BGP peering and route advertisement between devices.",
-		},
-		"ospf": {
-			Label:       "OSPF Routing",
-			Description: "Simulate OSPF adjacency formation and link-state routing.",
 		},
 		"netbios": {
 			Label:       "NetBIOS",
@@ -58,10 +50,6 @@ func featureMeta() map[string]FeatureMeta {
 		"error_injection": {
 			Label:       "Error Injection",
 			Description: "Inject configurable protocol errors and malformed responses for negative testing.",
-		},
-		"traffic_shaping": {
-			Label:       "Traffic Shaping",
-			Description: "Apply bandwidth limits, latency, and jitter to simulated device traffic.",
 		},
 		"config_templates": {
 			Label:       "Config Templates",

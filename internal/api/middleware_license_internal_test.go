@@ -125,7 +125,7 @@ func TestRequireFeature_NoLicenseReturnsFreeTier(t *testing.T) {
 	// No StartTrial / Activate — state stays nil ⇒ Free tier.
 	s := newGateTestServer(t, mgr)
 
-	h := s.requireFeature("bgp", nopHandler(new(bool)))
+	h := s.requireFeature("netbios", nopHandler(new(bool)))
 	req := httptest.NewRequest(http.MethodGet, "/anything", http.NoBody)
 	w := httptest.NewRecorder()
 	h(w, req)

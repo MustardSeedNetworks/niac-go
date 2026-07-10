@@ -798,17 +798,6 @@ func printStartupSummary(cfg *config.Config, _ int) {
 		}
 	}
 
-	// Count devices with traffic patterns
-	trafficCount := 0
-	for _, dev := range cfg.Devices {
-		if dev.TrafficConfig != nil && dev.TrafficConfig.Enabled {
-			trafficCount++
-		}
-	}
-	if trafficCount > 0 {
-		fmt.Fprintf(os.Stdout, "  • Traffic generation: %d device(s)\n", trafficCount)
-	}
-
 	// Show PCAP playback if configured
 	if cfg.CapturePlayback != nil {
 		fmt.Fprintf(os.Stdout, "  • PCAP playback: %s\n", cfg.CapturePlayback.FileName)

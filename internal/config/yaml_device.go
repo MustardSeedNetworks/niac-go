@@ -386,9 +386,7 @@ func parseDeviceProtocolConfigs(device *Device, yamlDevice *converter.Device) er
 	device.FTPConfig = parseFTPConfig(yamlDevice.Ftp, device.Name)
 	device.NetBIOSConfig = parseNetBIOSConfig(yamlDevice.Netbios, device.Name)
 
-	// Handle routing + manageability protocols (v0.86.0)
-	device.BGPConfig = parseBGPConfig(yamlDevice.Bgp)
-	device.OSPFConfig = parseOSPFConfig(yamlDevice.Ospf)
+	// Handle manageability protocols (v0.86.0)
 	device.SNMPv3Config = parseSNMPv3Config(yamlDevice.Snmpv3)
 
 	// Handle ICMP protocols
@@ -397,9 +395,6 @@ func parseDeviceProtocolConfigs(device *Device, yamlDevice *converter.Device) er
 
 	// Handle DHCPv6 configuration
 	device.DHCPv6Config = parseDHCPv6Config(yamlDevice.Dhcpv6)
-
-	// Handle Traffic configuration
-	device.TrafficConfig = parseTrafficConfig(yamlDevice.Traffic)
 
 	// Handle OS Fingerprint configuration
 	device.OSFingerprintConfig = parseOSFingerprintConfig(yamlDevice.OSFingerprint)

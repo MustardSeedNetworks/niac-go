@@ -37,11 +37,6 @@ devices:
         targets:
           - "10.0.0.100:162"
 
-    traffic:
-      enabled: true
-      patterns: ["http", "dns"]
-      interval: 30
-
   # Test Switch
   - name: test-switch-01
     mac: "00:DE:AD:BE:EF:02"
@@ -138,10 +133,6 @@ devices:
     mac: "00:DE:AD:BE:EF:20"
     ips:
       - "10.0.0.201"
-    traffic:
-      enabled: true
-      patterns: ["http", "dns", "icmp"]
-      interval: 10
 
     netbios:
       enabled: true
