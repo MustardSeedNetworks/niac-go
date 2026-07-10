@@ -3,18 +3,6 @@
   "$id": "https://raw.githubusercontent.com/MustardSeedNetworks/niac-go/main/docs/schemas/niac.schema.json",
   "$ref": "#/$defs/Config",
   "$defs": {
-    "ARPAnnouncementConfig": {
-      "properties": {
-        "enabled": {
-          "type": "boolean"
-        },
-        "interval": {
-          "type": "integer"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object"
-    },
     "AddMib": {
       "properties": {
         "oid": {
@@ -33,52 +21,6 @@
         "oid",
         "type",
         "value"
-      ]
-    },
-    "BgpConfig": {
-      "properties": {
-        "enabled": {
-          "type": "boolean"
-        },
-        "asn": {
-          "type": "integer"
-        },
-        "router_id": {
-          "type": "string"
-        },
-        "hold_time": {
-          "type": "integer"
-        },
-        "keep_alive": {
-          "type": "integer"
-        },
-        "neighbors": {
-          "items": {
-            "$ref": "#/$defs/BgpNeighbor"
-          },
-          "type": "array"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object"
-    },
-    "BgpNeighbor": {
-      "properties": {
-        "ip": {
-          "type": "string"
-        },
-        "remote_as": {
-          "type": "integer"
-        },
-        "password": {
-          "type": "string"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "ip",
-        "remote_as"
       ]
     },
     "CapturePlayback": {
@@ -277,12 +219,6 @@
         "netbios": {
           "$ref": "#/$defs/NetbiosConfig"
         },
-        "bgp": {
-          "$ref": "#/$defs/BgpConfig"
-        },
-        "ospf": {
-          "$ref": "#/$defs/OspfConfig"
-        },
         "snmpv3": {
           "$ref": "#/$defs/Snmpv3Config"
         },
@@ -294,9 +230,6 @@
         },
         "dhcpv6": {
           "$ref": "#/$defs/Dhcpv6Config"
-        },
-        "traffic": {
-          "$ref": "#/$defs/TrafficConfig"
         },
         "os_fingerprint": {
           "$ref": "#/$defs/OSFingerprintConfig"
@@ -980,66 +913,6 @@
       "additionalProperties": false,
       "type": "object"
     },
-    "OspfArea": {
-      "properties": {
-        "area_id": {
-          "type": "string"
-        },
-        "networks": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "stub": {
-          "type": "boolean"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "area_id"
-      ]
-    },
-    "OspfConfig": {
-      "properties": {
-        "enabled": {
-          "type": "boolean"
-        },
-        "router_id": {
-          "type": "string"
-        },
-        "hello_time": {
-          "type": "integer"
-        },
-        "dead_time": {
-          "type": "integer"
-        },
-        "areas": {
-          "items": {
-            "$ref": "#/$defs/OspfArea"
-          },
-          "type": "array"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object"
-    },
-    "PeriodicPingConfig": {
-      "properties": {
-        "enabled": {
-          "type": "boolean"
-        },
-        "interval": {
-          "type": "integer"
-        },
-        "payload_size": {
-          "type": "integer"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object"
-    },
     "PortChannel": {
       "properties": {
         "id": {
@@ -1075,27 +948,6 @@
       "required": [
         "enabled"
       ]
-    },
-    "RandomTrafficConfig": {
-      "properties": {
-        "enabled": {
-          "type": "boolean"
-        },
-        "interval": {
-          "type": "integer"
-        },
-        "packet_count": {
-          "type": "integer"
-        },
-        "patterns": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object"
     },
     "ReflectorConfig": {
       "properties": {
@@ -1269,24 +1121,6 @@
         },
         "interval": {
           "type": "integer"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object"
-    },
-    "TrafficConfig": {
-      "properties": {
-        "enabled": {
-          "type": "boolean"
-        },
-        "arp_announcements": {
-          "$ref": "#/$defs/ARPAnnouncementConfig"
-        },
-        "periodic_pings": {
-          "$ref": "#/$defs/PeriodicPingConfig"
-        },
-        "random_traffic": {
-          "$ref": "#/$defs/RandomTrafficConfig"
         }
       },
       "additionalProperties": false,
