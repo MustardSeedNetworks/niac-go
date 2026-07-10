@@ -21,4 +21,4 @@ jobs:
   # The gate is defined once in the fleet-shared repo; this repo only wires it.
   # To change license policy for the fleet, edit that workflow, not this file.
   license-check:
-    uses: MustardSeedNetworks/.github/.github/workflows/license-check.yml@main
+    uses: MustardSeedNetworks/.github/.github/workflows/license-check.yml@762b756e6fb5803443b9bcfdba03b88596c18e04 # v1.0.0
