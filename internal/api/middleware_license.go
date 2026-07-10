@@ -45,7 +45,7 @@ func (s *Server) writeFeatureGate(
 	tierName := license.TierFree.String()
 	if s.license != nil {
 		if st := s.license.GetState(); st != nil {
-			tierName = st.Tier.String()
+			tierName = license.Tier(st.Tier).String()
 		}
 	}
 	if upgradeMessage == "" {

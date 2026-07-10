@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/MustardSeedNetworks/niac-go/internal/api/csrf"
+	"github.com/MustardSeedNetworks/foundation/pkg/csrf"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/capture"
 	"github.com/MustardSeedNetworks/niac-go/internal/config"

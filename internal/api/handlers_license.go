@@ -71,7 +71,7 @@ func (s *Server) handleLicenseStatus(w http.ResponseWriter, _ *http.Request) {
 	if s.license != nil {
 		resp.IsActivated = s.license.IsActivated()
 		if st := s.license.GetState(); st != nil {
-			resp.Tier = st.Tier.String()
+			resp.Tier = license.Tier(st.Tier).String()
 			resp.IsTrialMode = st.IsTrialMode
 			granted = st.Features
 		}

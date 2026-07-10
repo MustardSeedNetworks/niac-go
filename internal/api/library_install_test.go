@@ -10,7 +10,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/MustardSeedNetworks/niac-go/internal/api/csrf"
+	"github.com/MustardSeedNetworks/foundation/pkg/csrf"
+
 	"github.com/MustardSeedNetworks/niac-go/internal/api/ratelimit"
 	"github.com/MustardSeedNetworks/niac-go/internal/api/tokenstore"
 	"github.com/MustardSeedNetworks/niac-go/internal/library"
