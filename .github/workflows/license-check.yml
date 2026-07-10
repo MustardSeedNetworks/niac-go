@@ -54,6 +54,7 @@ jobs:
 
           go-licenses check ./... \
             --ignore=github.com/MustardSeedNetworks/niac-go \
+            --ignore=github.com/MustardSeedNetworks/foundation \
             --disallowed_types=forbidden,restricted || {
             echo "❌ FAILED: Incompatible licenses found in Go dependencies"
             echo ""
