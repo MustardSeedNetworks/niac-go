@@ -62,6 +62,7 @@ const ReplayProgress: FC<{
 };
 
 export const ReplayControlPanel: FC = () => {
+  const { t } = useTranslation('pages');
   // Hydrates from /api/v1/library/pcaps. The daemon's
   // validatePcapFilePath falls back to ~/.niac/library/pcaps/ when
   // the file isn't in the legacy config-dir allow-list, so passing
@@ -88,7 +89,7 @@ export const ReplayControlPanel: FC = () => {
 
   const handleStart = async () => {
     if (!selectedFile) {
-      setMessage({ type: 'error', text: 'Please select a PCAP file' });
+      setMessage({ type: 'error', text: t('traffic.page.replayNoFileError') });
       return;
     }
 
@@ -106,12 +107,12 @@ export const ReplayControlPanel: FC = () => {
         loopCount: loopCount || undefined,
         bpfFilter: bpfFilter.trim() || undefined,
       });
-      setMessage({ type: 'success', text: 'Replay started successfully' });
+      setMessage({ type: 'success', text: t('traffic.page.replayStartSuccess') });
       refetchStatus();
     } catch (err: unknown) {
       setMessage({
         type: 'error',
-        text: getErrorMessage(err) || 'Failed to start replay',
+        text: getErrorMessage(err) || t('traffic.page.replayStartError'),
       });
     } finally {
       setIsSubmitting(false);
@@ -122,12 +123,12 @@ export const ReplayControlPanel: FC = () => {
     setIsSubmitting(true);
     try {
       await stopReplay();
-      setMessage({ type: 'success', text: 'Replay stopped' });
+      setMessage({ type: 'success', text: t('traffic.page.replayStopSuccess') });
       refetchStatus();
     } catch (err: unknown) {
       setMessage({
         type: 'error',
-        text: getErrorMessage(err) || 'Failed to stop replay',
+        text: getErrorMessage(err) || t('traffic.page.replayStopError'),
       });
     } finally {
       setIsSubmitting(false);
@@ -143,24 +144,30 @@ export const ReplayControlPanel: FC = () => {
             <div className="flex-between">
               <div>
                 <div className="flex items-center gap-compact mb-tight">
-                  <Tag colorScheme="green">Running</Tag>
+                  <Tag colorScheme="green">{t('traffic.page.replayStatusRunning')}</Tag>
                   <span className="font-medium">{replayStatus.file}</span>
                 </div>
                 <SmallText className="text-text-muted">
-                  Started:{' '}
-                  {replayStatus.startedAt
-                    ? new Date(replayStatus.startedAt).toLocaleString()
-                    : 'Unknown'}
-                  {replayStatus.loopMs > 0 && ` • Looping every ${replayStatus.loopMs}ms`}
-                  {replayStatus.scale !== 1.0 && ` • Scale: ${replayStatus.scale}x`}
+                  {t('traffic.page.replayStarted', {
+                    time: replayStatus.startedAt
+                      ? new Date(replayStatus.startedAt).toLocaleString()
+                      : t('traffic.page.replayStartedUnknown'),
+                  })}
+                  {replayStatus.loopMs > 0 &&
+                    ` • ${t('traffic.page.replayLoopingEvery', { ms: replayStatus.loopMs })}`}
+                  {replayStatus.scale !== 1.0 &&
+                    ` • ${t('traffic.page.replayScaleTag', { scale: replayStatus.scale })}`}
                   {replayStatus.rateMode &&
                     replayStatus.rateMode !== 'timing' &&
-                    ` • Rate: ${replayStatus.rateMode}`}
-                  {(replayStatus.loopCount ?? 0) > 0 && ` • Loop ${replayStatus.loopCount}×`}
-                  {replayStatus.bpfFilter && ` • Filter: ${replayStatus.bpfFilter}`}
-                  {(replayStatus.passes ?? 0) > 1 && ` • Iteration ${replayStatus.passes}`}
+                    ` • ${t('traffic.page.replayRateTag', { mode: replayStatus.rateMode })}`}
+                  {(replayStatus.loopCount ?? 0) > 0 &&
+                    ` • ${t('traffic.page.replayLoopTag', { count: replayStatus.loopCount })}`}
+                  {replayStatus.bpfFilter &&
+                    ` • ${t('traffic.page.replayFilterTag', { filter: replayStatus.bpfFilter })}`}
+                  {(replayStatus.passes ?? 0) > 1 &&
+                    ` • ${t('traffic.page.replayIterationTag', { n: replayStatus.passes })}`}
                   {(replayStatus.packetsFiltered ?? 0) > 0 &&
-                    ` • ${replayStatus.packetsFiltered} filtered`}
+                    ` • ${t('traffic.page.replayFilteredTag', { n: replayStatus.packetsFiltered })}`}
                 </SmallText>
                 <ReplayProgress
                   packetsSent={replayStatus.packetsSent}
@@ -170,7 +177,7 @@ export const ReplayControlPanel: FC = () => {
                 />
               </div>
               <Button onClick={handleStop} disabled={isSubmitting} variant="secondary">
-                Stop Replay
+                {t('traffic.page.replayStopButton')}
               </Button>
             </div>
           </CardContent>
@@ -184,7 +191,7 @@ export const ReplayControlPanel: FC = () => {
             {/* File Selector */}
             <div className="col-span-full">
               <label htmlFor="replay-file" className="block text-sm font-medium mb-2">
-                PCAP File
+                {t('traffic.page.replayFileLabel')}
               </label>
               <select
                 id="replay-file"
@@ -193,10 +200,13 @@ export const ReplayControlPanel: FC = () => {
                 disabled={replayStatus?.running}
                 className="w-full px-3 py-row bg-bg-elevated border border-border-default rounded-md focus:outline-none focus:ring-2 focus:ring-status-info disabled:opacity-50"
               >
-                <option value="">Select PCAP file...</option>
+                <option value="">{t('traffic.page.replayFileSelectPrompt')}</option>
                 {pcapFiles?.map((file) => (
                   <option key={file.name} value={file.name}>
-                    {file.name} ({(file.sizeBytes / 1024).toFixed(1)} KB)
+                    {t('traffic.page.replayFileOption', {
+                      name: file.name,
+                      size: (file.sizeBytes / 1024).toFixed(1),
+                    })}
                   </option>
                 ))}
               </select>
@@ -205,7 +215,7 @@ export const ReplayControlPanel: FC = () => {
             {/* Loop Interval */}
             <div>
               <label htmlFor="replay-loop" className="block text-sm font-medium mb-2">
-                Loop Interval (ms)
+                {t('traffic.page.replayLoopIntervalLabel')}
               </label>
               <input
                 id="replay-loop"
@@ -214,19 +224,19 @@ export const ReplayControlPanel: FC = () => {
                 step="1000"
                 value={loopMs}
                 onChange={(e) => setLoopMs(Number.parseInt(e.target.value, 10) || 0)}
-                placeholder="0 = no loop"
+                placeholder={t('traffic.page.replayLoopIntervalPlaceholder')}
                 disabled={replayStatus?.running}
                 className="w-full px-3 py-row bg-bg-elevated border border-border-default rounded-md focus:outline-none focus:ring-2 focus:ring-status-info disabled:opacity-50"
               />
               <SmallText className="text-text-muted">
-                0 = Play once, &gt;0 = Loop with delay
+                {t('traffic.page.replayLoopIntervalHelp')}
               </SmallText>
             </div>
 
             {/* Time Scale */}
             <div>
               <label htmlFor="replay-scale" className="block text-sm font-medium mb-2">
-                Time Scale
+                {t('traffic.page.replayTimeScaleLabel')}
               </label>
               <input
                 id="replay-scale"
@@ -240,14 +250,14 @@ export const ReplayControlPanel: FC = () => {
                 className="w-full px-3 py-row bg-bg-elevated border border-border-default rounded-md focus:outline-none focus:ring-2 focus:ring-status-info disabled:opacity-50"
               />
               <SmallText className="text-text-muted">
-                1.0 = Original timing, 2.0 = 2x faster, 0.5 = 2x slower
+                {t('traffic.page.replayTimeScaleHelp')}
               </SmallText>
             </div>
 
             {/* Rate Mode */}
             <div>
               <label htmlFor="replay-rate-mode" className="block text-sm font-medium mb-2">
-                Rate Mode
+                {t('traffic.page.replayRateModeLabel')}
               </label>
               <select
                 id="replay-rate-mode"
@@ -256,13 +266,13 @@ export const ReplayControlPanel: FC = () => {
                 disabled={replayStatus?.running}
                 className="w-full px-3 py-row bg-bg-elevated border border-border-default rounded-md focus:outline-none focus:ring-2 focus:ring-status-info disabled:opacity-50"
               >
-                <option value="">Timing (original)</option>
-                <option value="topspeed">Topspeed</option>
-                <option value="pps">Fixed rate (pps)</option>
-                <option value="mbps">Throughput cap (Mbps)</option>
+                <option value="">{t('traffic.page.replayRateModeTiming')}</option>
+                <option value="topspeed">{t('traffic.page.replayRateModeTopspeed')}</option>
+                <option value="pps">{t('traffic.page.replayRateModePps')}</option>
+                <option value="mbps">{t('traffic.page.replayRateModeMbps')}</option>
               </select>
               <SmallText className="text-text-muted">
-                Timing honors capture timing (× Time Scale); the others override it
+                {t('traffic.page.replayRateModeHelp')}
               </SmallText>
             </div>
 
@@ -270,7 +280,7 @@ export const ReplayControlPanel: FC = () => {
             {rateMode === 'pps' && (
               <div>
                 <label htmlFor="replay-pps" className="block text-sm font-medium mb-2">
-                  Rate (pps)
+                  {t('traffic.page.replayPpsLabel')}
                 </label>
                 <input
                   id="replay-pps"
@@ -282,13 +292,13 @@ export const ReplayControlPanel: FC = () => {
                   disabled={replayStatus?.running}
                   className="w-full px-3 py-row bg-bg-elevated border border-border-default rounded-md focus:outline-none focus:ring-2 focus:ring-status-info disabled:opacity-50"
                 />
-                <SmallText className="text-text-muted">Packets per second</SmallText>
+                <SmallText className="text-text-muted">{t('traffic.page.replayPpsHelp')}</SmallText>
               </div>
             )}
             {rateMode === 'mbps' && (
               <div>
                 <label htmlFor="replay-mbps" className="block text-sm font-medium mb-2">
-                  Throughput cap (Mbps)
+                  {t('traffic.page.replayMbpsLabel')}
                 </label>
                 <input
                   id="replay-mbps"
@@ -300,14 +310,16 @@ export const ReplayControlPanel: FC = () => {
                   disabled={replayStatus?.running}
                   className="w-full px-3 py-row bg-bg-elevated border border-border-default rounded-md focus:outline-none focus:ring-2 focus:ring-status-info disabled:opacity-50"
                 />
-                <SmallText className="text-text-muted">Megabits per second</SmallText>
+                <SmallText className="text-text-muted">
+                  {t('traffic.page.replayMbpsHelp')}
+                </SmallText>
               </div>
             )}
 
             {/* Loop Count */}
             <div>
               <label htmlFor="replay-loop-count" className="block text-sm font-medium mb-2">
-                Loop Count
+                {t('traffic.page.replayLoopCountLabel')}
               </label>
               <input
                 id="replay-loop-count"
@@ -316,32 +328,30 @@ export const ReplayControlPanel: FC = () => {
                 step="1"
                 value={loopCount}
                 onChange={(e) => setLoopCount(Number.parseInt(e.target.value, 10) || 0)}
-                placeholder="0 = per Loop Interval"
+                placeholder={t('traffic.page.replayLoopCountPlaceholder')}
                 disabled={replayStatus?.running}
                 className="w-full px-3 py-row bg-bg-elevated border border-border-default rounded-md focus:outline-none focus:ring-2 focus:ring-status-info disabled:opacity-50"
               />
               <SmallText className="text-text-muted">
-                0 = unbounded, N = stop after N passes
+                {t('traffic.page.replayLoopCountHelp')}
               </SmallText>
             </div>
 
             {/* BPF Filter */}
             <div className="col-span-full">
               <label htmlFor="replay-bpf" className="block text-sm font-medium mb-2">
-                BPF Filter
+                {t('traffic.page.replayBpfLabel')}
               </label>
               <input
                 id="replay-bpf"
                 type="text"
                 value={bpfFilter}
                 onChange={(e) => setBpfFilter(e.target.value)}
-                placeholder="e.g. udp port 53 (blank = replay all)"
+                placeholder={t('traffic.page.replayBpfPlaceholder')}
                 disabled={replayStatus?.running}
                 className="w-full px-3 py-row bg-bg-elevated border border-border-default rounded-md focus:outline-none focus:ring-2 focus:ring-status-info disabled:opacity-50"
               />
-              <SmallText className="text-text-muted">
-                tcpdump-style filter; replay only matching packets
-              </SmallText>
+              <SmallText className="text-text-muted">{t('traffic.page.replayBpfHelp')}</SmallText>
             </div>
           </div>
 
@@ -363,7 +373,9 @@ export const ReplayControlPanel: FC = () => {
           {/* Action Button */}
           {!replayStatus?.running && (
             <Button onClick={handleStart} disabled={isSubmitting} className="w-full">
-              {isSubmitting ? 'Starting...' : 'Start Replay'}
+              {isSubmitting
+                ? t('traffic.page.replayStarting')
+                : t('traffic.page.replayStartButton')}
             </Button>
           )}
         </CardContent>
