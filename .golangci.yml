@@ -245,6 +245,7 @@ linters:
             - "**/internal/device/**"
             - "**/internal/mibdb/**"
             - "**/internal/topology/**"
+            - "**/internal/fabric/**"
           deny:
             - pkg: github.com/MustardSeedNetworks/niac-go/internal/api
               desc: "the simulation/domain core must not import the web/API layer — dependencies point inward; wire transport at internal/api or internal/daemon. topology is derived domain (config→graph) consumed by api/ipc/interactive, so it stays inward too"

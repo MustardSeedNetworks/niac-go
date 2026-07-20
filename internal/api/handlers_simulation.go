@@ -27,6 +27,29 @@ func (s *Server) handleSimulation(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// handleSimulationPreflight compiles a simulation request without changing runtime state.
+func (s *Server) handleSimulationPreflight(w http.ResponseWriter, r *http.Request) {
+	if s.daemon == nil {
+		writeError(w, r, http.StatusNotImplemented, "daemon_required", "Daemon mode is required", nil)
+		return
+	}
+	var req SimulationRequest
+	if !decodeJSONStrict(w, r, &req, MaxRequestBodySize) {
+		return
+	}
+	if validationErrors := validateSimulationForPreflight(req); len(validationErrors) > 0 {
+		writeError(w, r, http.StatusBadRequest, "validation_failed", "Validation failed", validationErrors)
+		return
+	}
+	report, err := s.daemon.PreflightSimulation(req)
+	if err != nil {
+		s.logger.ErrorContext(r.Context(), "[API] Simulation preflight failed", "error", err)
+		writeError(w, r, http.StatusBadRequest, "preflight_failed", "Simulation preflight failed", nil)
+		return
+	}
+	s.writeJSON(w, report)
+}
+
 // handleSimulationStart processes POST requests to start a simulation.
 func (s *Server) handleSimulationStart(w http.ResponseWriter, r *http.Request) {
 	var req SimulationRequest

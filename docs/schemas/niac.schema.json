@@ -109,6 +109,18 @@
             "$ref": "#/$defs/Segment"
           },
           "type": "array"
+        },
+        "networks": {
+          "items": {
+            "$ref": "#/$defs/Network"
+          },
+          "type": "array"
+        },
+        "attachments": {
+          "items": {
+            "$ref": "#/$defs/LogicalAttachment"
+          },
+          "type": "array"
         }
       },
       "additionalProperties": false,
@@ -243,6 +255,12 @@
         "interfaces": {
           "items": {
             "$ref": "#/$defs/Interface"
+          },
+          "type": "array"
+        },
+        "routes": {
+          "items": {
+            "$ref": "#/$defs/Route"
           },
           "type": "array"
         },
@@ -756,6 +774,12 @@
         "name": {
           "type": "string"
         },
+        "network": {
+          "type": "string"
+        },
+        "address": {
+          "type": "string"
+        },
         "speed": {
           "type": "integer"
         },
@@ -823,6 +847,22 @@
       "additionalProperties": false,
       "type": "object"
     },
+    "LogicalAttachment": {
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "connect": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "name",
+        "connect"
+      ]
+    },
     "NetbiosConfig": {
       "properties": {
         "enabled": {
@@ -873,6 +913,25 @@
       },
       "additionalProperties": false,
       "type": "object"
+    },
+    "Network": {
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "subnet": {
+          "type": "string"
+        },
+        "virtual_vlan": {
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "name",
+        "subnet"
+      ]
     },
     "OSFingerprintConfig": {
       "properties": {
@@ -963,6 +1022,22 @@
       },
       "additionalProperties": false,
       "type": "object"
+    },
+    "Route": {
+      "properties": {
+        "destination": {
+          "type": "string"
+        },
+        "via": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "destination",
+        "via"
+      ]
     },
     "Segment": {
       "properties": {

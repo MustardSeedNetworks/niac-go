@@ -10,6 +10,8 @@ import (
 	"log/slog"
 	"strings"
 	"testing"
+
+	"github.com/MustardSeedNetworks/niac-go/internal/fabric"
 )
 
 func TestAddrIsNonLoopback(t *testing.T) {
@@ -74,6 +76,9 @@ func makeGateServer(addr, token string) *Server {
 // in Server.Start passes without dragging in the real DaemonController.
 type nilDaemonController struct{}
 
+func (*nilDaemonController) PreflightSimulation(SimulationRequest) (fabric.Report, error) {
+	return fabric.Report{}, nil
+}
 func (*nilDaemonController) StartSimulation(SimulationRequest) error { return nil }
 func (*nilDaemonController) StopSimulation() error                   { return nil }
 func (*nilDaemonController) GetStatus() SimulationStatus             { return SimulationStatus{} }

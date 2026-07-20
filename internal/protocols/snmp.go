@@ -266,6 +266,11 @@ func snmpPeekVersion(payload []byte) (gosnmp.SnmpVersion, bool) {
 }
 
 func (h *SNMPHandler) sourceMAC(device *config.Device, pkt *Packet) net.HardwareAddr {
+	if h.stack != nil {
+		if mac := h.stack.replySourceMAC(pkt, device); len(mac) == snmpMACAddrLen {
+			return mac
+		}
+	}
 	if len(device.MACAddress) == snmpMACAddrLen {
 		return device.MACAddress
 	}

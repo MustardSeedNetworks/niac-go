@@ -12,13 +12,14 @@ import (
 
 // Packet represents a network packet with metadata.
 type Packet struct {
-	Buffer       []byte
-	Length       int
-	SerialNumber int
-	Timestamp    time.Time
-	LoopTime     time.Duration // For periodic packets
-	Device       any           // Associated device
-	VLAN         int           // -1 if no VLAN
+	Buffer               []byte
+	Length               int
+	SerialNumber         int
+	Timestamp            time.Time
+	LoopTime             time.Duration // For periodic packets
+	Device               any           // Associated device
+	VLAN                 int           // -1 if no VLAN
+	fabricReplySourceMAC net.HardwareAddr
 }
 
 // Constants for packet parsing.
@@ -64,13 +65,14 @@ func NewPacket(size int) *Packet {
 // Clone creates a deep copy of the packet.
 func (p *Packet) Clone() *Packet {
 	clone := &Packet{
-		Buffer:       make([]byte, len(p.Buffer)),
-		Length:       p.Length,
-		SerialNumber: p.SerialNumber,
-		Timestamp:    p.Timestamp,
-		LoopTime:     p.LoopTime,
-		Device:       p.Device,
-		VLAN:         p.VLAN,
+		Buffer:               make([]byte, len(p.Buffer)),
+		Length:               p.Length,
+		SerialNumber:         p.SerialNumber,
+		Timestamp:            p.Timestamp,
+		LoopTime:             p.LoopTime,
+		Device:               p.Device,
+		VLAN:                 p.VLAN,
+		fabricReplySourceMAC: cloneMAC(p.fabricReplySourceMAC),
 	}
 	copy(clone.Buffer, p.Buffer)
 

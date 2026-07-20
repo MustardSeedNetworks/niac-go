@@ -5,7 +5,14 @@ import type { LibraryNetwork, Template } from '../../api/types';
  * const tuple (not an enum) so the stepper can derive index/label
  * arrays from the same source of truth.
  */
-export const WIZARD_STEPS = ['template', 'devices', 'protocols', 'review', 'finish'] as const;
+export const WIZARD_STEPS = [
+  'template',
+  'preflight',
+  'devices',
+  'protocols',
+  'review',
+  'finish',
+] as const;
 export type WizardStepId = (typeof WIZARD_STEPS)[number];
 
 /**
@@ -18,10 +25,9 @@ export type WizardSource = 'template' | 'userConfig' | 'upload' | 'empty';
 /**
  * WizardState is held locally (useState) in the container — it never
  * touches the global ui-store. Once `configPath` is set the picked
- * config has been materialised as a real, safe (non-built-in) file and
- * the simulation has been started against it, which is what unlocks
- * the existing device-editing surface (device CRUD only operates on
- * the daemon's currently-active config).
+ * config has been materialised as a real, safe (non-built-in) file. The
+ * preflight step starts it only after the server accepts the physical
+ * binding, which unlocks the existing device-editing surface.
  */
 export interface WizardState {
   step: number;

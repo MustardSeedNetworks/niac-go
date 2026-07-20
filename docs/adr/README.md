@@ -14,5 +14,6 @@ people and the diffs. Format matches the sibling repos (seed/stem).
 | [0006](0006-internal-api-sub-package-decomposition.md) | Decompose `internal/api` into isolated sub-packages | Accepted |
 | [0007](0007-json-wire-casing-convention.md) | JSON wire-casing convention (camelCase API, no exceptions) | Accepted |
 | [0008](0008-multi-vlan-segment-playback.md) | Multi-VLAN segment playback (tagged + untagged, per-segment config) | Proposed |
+| [0009](0009-routed-fabric-and-physical-attachments.md) | Routed fabric separated from physical attachments | Accepted |
 
 Status values: Proposed · Accepted · Amended · Superseded.

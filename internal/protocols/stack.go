@@ -3,6 +3,7 @@ package protocols
 import (
 	"errors"
 	"fmt"
+	"net"
 	"os"
 	"slices"
 	"sync"
@@ -11,6 +12,7 @@ import (
 	"github.com/MustardSeedNetworks/niac-go/internal/apperr"
 	"github.com/MustardSeedNetworks/niac-go/internal/capture"
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/fabric"
 	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 )
 
@@ -69,6 +71,7 @@ type Stack struct {
 	configMu      sync.RWMutex
 	reloadMu      sync.Mutex
 	devices       *DeviceTable
+	fabric        *fabricRuntime
 	segmentTables map[int]*DeviceTable // multi-VLAN mode (ADR 0008): tag -> that segment's isolated device set; nil when running flat
 	vlanMode      bool                 // any device is VLAN-tagged: ignore untagged frames (no native/default replay)
 	serialNumber  int
@@ -219,6 +222,41 @@ func NewStack(
 	stack.initializeDevices(cfg)
 
 	return stack
+}
+
+// ConfigureFabric installs the immutable routed topology before the stack starts.
+func (s *Stack) ConfigureFabric(topology *fabric.Topology) {
+	s.fabric = newFabricRuntime(topology, s.config)
+	if s.fabric == nil {
+		return
+	}
+	s.dhcpHandler = NewDHCPHandler(s)
+	if s.fabric.attachmentDHCP != nil {
+		s.configureDHCPServer(s.fabric.attachmentDHCP)
+	}
+}
+
+func (s *Stack) replySourceMAC(pkt *Packet, device *config.Device) net.HardwareAddr {
+	if len(pkt.fabricReplySourceMAC) == SizeOfMac {
+		return cloneMAC(pkt.fabricReplySourceMAC)
+	}
+	if device != nil {
+		return cloneMAC(device.MACAddress)
+	}
+	return nil
+}
+
+func (s *Stack) deviceOwnsIPv4(device *config.Device, ip net.IP) bool {
+	if s.fabric != nil {
+		return s.fabric.deviceOwnsIPv4(device, ip)
+	}
+	return slices.ContainsFunc(device.IPAddresses, func(candidate net.IP) bool {
+		return candidate.Equal(ip)
+	})
+}
+
+func (s *Stack) allowDHCP() bool {
+	return s.fabric == nil || s.fabric.attachmentDHCP != nil
 }
 
 // AddPacketObserver registers an observer for stack packet events.

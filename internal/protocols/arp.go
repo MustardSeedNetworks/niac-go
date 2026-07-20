@@ -101,13 +101,24 @@ func (h *ARPHandler) handleARPRequest(pkt *Packet, arp *layers.ARP) {
 	h.stack.IncrementStat("arp_requests")
 	h.logARPRequest(pkt, targetIP, sourceIP, sourceMAC)
 
-	devices := h.stack.devicesFor(pkt.VLAN).GetByIP(targetIP)
+	devices := h.targetDevices(targetIP, pkt.VLAN)
 	if len(devices) == 0 {
 		h.logDebug("ARP Request: No device found for IP", "ip", targetIP)
 		return
 	}
 
 	h.sendARPReplies(devices, targetIP, sourceMAC, sourceIP, pkt.VLAN)
+}
+
+func (h *ARPHandler) targetDevices(targetIP net.IP, vlan int) []*config.Device {
+	if h.stack.fabric != nil {
+		device, ok := h.stack.fabric.resolveARP(targetIP)
+		if !ok {
+			return nil
+		}
+		return []*config.Device{device}
+	}
+	return h.stack.devicesFor(vlan).GetByIP(targetIP)
 }
 
 // logARPRequest logs an ARP request at verbose debug level.

@@ -426,24 +426,13 @@ func (h *ICMPHandler) handleEchoRequest(
 			continue
 		}
 
-		// Check if device has this IP
-		hasIP := false
-
-		for _, deviceIP := range device.IPAddresses {
-			if deviceIP.Equal(ipLayer.DstIP) {
-				hasIP = true
-
-				break
-			}
-		}
-
-		if !hasIP {
+		if !h.stack.deviceOwnsIPv4(device, ipLayer.DstIP) {
 			continue
 		}
 
 		// Build ICMP Echo Reply
 		err := h.sendEchoReply(
-			device.MACAddress,
+			h.stack.replySourceMAC(pkt, device),
 			srcMAC,
 			ipLayer.DstIP,
 			ipLayer.SrcIP,

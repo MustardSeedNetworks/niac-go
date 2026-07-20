@@ -114,7 +114,9 @@ func (h *UDPHandler) HandlePacket(pkt *Packet, ipLayer *layers.IPv4, devices []*
 		h.stack.dnsHandler.HandleQuery(pkt, ipLayer, udp, devices)
 	case UDPPortDHCP:
 		// DHCP server port
-		h.stack.dhcpHandler.HandlePacket(pkt, ipLayer, udp, devices)
+		if h.stack.allowDHCP() {
+			h.stack.dhcpHandler.HandlePacket(pkt, ipLayer, udp, devices)
+		}
 	case UDPPortSNMP:
 		h.handleSNMP(pkt, ipLayer, udp, devices)
 	case NetBIOSNameServicePort:

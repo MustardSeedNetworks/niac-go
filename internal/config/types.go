@@ -112,6 +112,27 @@ type Config struct {
 	CapturePlayback    *CapturePlayback    // Optional PCAP playback config
 	DiscoveryProtocols *DiscoveryProtocols // Discovery protocol configuration
 	Segments           []Segment           // Multi-VLAN playback bindings (ADR 0008); empty = flat/untagged
+	Networks           []Network
+	Attachments        []LogicalAttachment
+}
+
+// Network declares one internal routed IPv4 network.
+type Network struct {
+	Name        string
+	Subnet      string
+	VirtualVLAN int
+}
+
+// LogicalAttachment identifies the virtual network exposed at start time.
+type LogicalAttachment struct {
+	Name    string
+	Network string
+}
+
+// Route declares an IPv4 static route through a named device interface.
+type Route struct {
+	Destination string
+	Via         string
 }
 
 // UntaggedTag is the Segment.Tag value for the native/untagged VLAN.
@@ -229,6 +250,7 @@ type Device struct {
 	TTLConfig           *TTLConfig // ICMP TTL timeout behavior (traceroute simulation)
 	VLAN                int        // Optional VLAN membership (Java Vlan)
 	Interfaces          []Interface
+	Routes              []Route
 	SNMPConfig          SNMPConfig
 	DHCPConfig          *DHCPConfig          // DHCP server configuration
 	DNSConfig           *DNSConfig           // DNS server configuration
@@ -343,6 +365,8 @@ type DNSRecord struct {
 // Interface represents a network interface on a device.
 type Interface struct {
 	Name        string
+	Network     string
+	Address     string
 	Speed       int // Mbps
 	Duplex      string
 	AdminStatus string // up, down

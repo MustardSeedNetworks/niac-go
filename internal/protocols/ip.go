@@ -3,6 +3,7 @@ package protocols
 import (
 	"fmt"
 	"net"
+	"net/netip"
 	"os"
 	"slices"
 
@@ -52,7 +53,7 @@ func (h *IPHandler) HandlePacket(pkt *Packet) {
 			ip.SrcIP, ip.DstIP, ip.Protocol, pkt.SerialNumber)
 	}
 
-	devices := h.getTargetDevices(ip, pkt.SerialNumber, debugLevel, pkt.VLAN)
+	devices := h.getTargetDevices(ip, pkt, debugLevel, pkt.VLAN)
 	if devices == nil {
 		return
 	}
@@ -89,10 +90,26 @@ func (h *IPHandler) parseIPv4Layer(pkt *Packet, debugLevel int) *layers.IPv4 {
 // the VLAN segment (if any) the packet arrived on.
 func (h *IPHandler) getTargetDevices(
 	ip *layers.IPv4,
-	serialNum int,
+	pkt *Packet,
 	debugLevel int,
 	vlan int,
 ) []*config.Device {
+	if h.stack.fabric != nil {
+		if ip.DstIP.Equal(net.IPv4bcast) && h.stack.fabric.attachmentDHCP != nil {
+			return []*config.Device{h.stack.fabric.attachmentDHCP}
+		}
+		dst, ok := netip.AddrFromSlice(ip.DstIP)
+		if !ok {
+			return nil
+		}
+		resolution, resolved := h.stack.fabric.resolveIPv4(dst.Unmap(), pkt.GetDestMAC())
+		if !resolved {
+			return nil
+		}
+		pkt.fabricReplySourceMAC = cloneMAC(resolution.replySourceMAC)
+		return []*config.Device{resolution.device}
+	}
+	serialNum := pkt.SerialNumber
 	isBroadcast := ip.DstIP.Equal([]byte{255, 255, 255, 255})
 	devices := h.stack.devicesFor(vlan).GetByIP(ip.DstIP)
 

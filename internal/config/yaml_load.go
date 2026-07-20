@@ -208,6 +208,8 @@ func createBaseConfig(yamlConfig *converter.Config) *Config {
 	cfg := &Config{
 		Devices:     make([]Device, 0, len(yamlConfig.Devices)),
 		IncludePath: yamlConfig.IncludePath,
+		Networks:    convertNetworks(yamlConfig.Networks),
+		Attachments: convertLogicalAttachments(yamlConfig.Attachments),
 	}
 
 	// Copy CapturePlayback if present (use first one from array for now)

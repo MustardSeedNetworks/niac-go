@@ -47,6 +47,7 @@ import (
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 	"github.com/MustardSeedNetworks/niac-go/internal/content"
+	"github.com/MustardSeedNetworks/niac-go/internal/fabric"
 	"github.com/MustardSeedNetworks/niac-go/internal/library"
 	"github.com/MustardSeedNetworks/niac-go/internal/license"
 	"github.com/MustardSeedNetworks/niac-go/internal/protocols"
@@ -315,9 +316,13 @@ type ServerConfig struct {
 
 // SimulationRequest represents a request to start a simulation.
 type SimulationRequest struct {
-	Interface  string `json:"interface"`
-	ConfigPath string `json:"configPath,omitempty"`
-	ConfigData string `json:"configData,omitempty"`
+	Interface      string                `json:"interface"`
+	Attachment     string                `json:"attachment,omitempty"`
+	AttachmentMode fabric.AttachmentMode `json:"attachmentMode,omitempty"`
+	AccessVLAN     uint16                `json:"accessVlan,omitempty"`
+	Dedicated      bool                  `json:"dedicated,omitempty"`
+	ConfigPath     string                `json:"configPath,omitempty"`
+	ConfigData     string                `json:"configData,omitempty"`
 	// TemplateName, when set, tells the daemon to load a built-in
 	// template directly from disk by name. This preserves the template's
 	// own directory as the include_path base, which matters for templates
@@ -341,6 +346,7 @@ type SimulationStatus struct {
 
 // DaemonController interface for daemon mode operations.
 type DaemonController interface {
+	PreflightSimulation(req SimulationRequest) (fabric.Report, error)
 	StartSimulation(req SimulationRequest) error
 	StopSimulation() error
 	GetStatus() SimulationStatus

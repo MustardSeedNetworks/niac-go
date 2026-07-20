@@ -48,6 +48,7 @@ func convertYAMLDevice(yamlDevice converter.Device, includePath string) (Device,
 	device.TrunkPorts = convertTrunkPorts(yamlDevice.TrunkPorts)
 	device.PortChannels = convertPortChannels(yamlDevice.PortChannels)
 	device.Interfaces = convertInterfaces(yamlDevice.Interfaces)
+	device.Routes = convertRoutes(yamlDevice.Routes)
 
 	return device, nil
 }
@@ -60,6 +61,8 @@ func convertInterfaces(in []converter.Interface) []Interface {
 	for i, iface := range in {
 		out[i] = Interface{
 			Name:        iface.Name,
+			Network:     iface.Network,
+			Address:     iface.Address,
 			Speed:       iface.Speed,
 			Duplex:      iface.Duplex,
 			AdminStatus: iface.AdminStatus,
