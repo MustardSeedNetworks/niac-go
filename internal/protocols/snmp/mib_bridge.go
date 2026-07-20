@@ -24,7 +24,7 @@ func (a *Agent) initializeBridgeMIB() {
 	// trunk_ports on top would give ports a bogus offset-0 ifIndex mapping and
 	// mislead the downstream FDB port derivation. The walk owns BRIDGE-MIB;
 	// trunk_ports only drive neighbour/forwarding topology (see #862).
-	if a.hasWalkContent() {
+	if a.hasWalkContent() && a.mib.Get(dot1dBaseNumPorts) != nil {
 		return
 	}
 

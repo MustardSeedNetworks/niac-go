@@ -214,6 +214,9 @@ func (a *Agent) LoadWalkFile(filename string) error {
 		})
 		loaded++
 	}
+	if a.mib.Get(dot1dBaseNumPorts) == nil {
+		a.initializeBridgeMIB()
+	}
 
 	if a.debugLevel >= 1 {
 		a.logger.Debug(
