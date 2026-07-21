@@ -93,10 +93,11 @@ does not currently generate:
 ## CT304 live acceptance — 2026-07-21
 
 The deployed Linux build is the GitHub Actions `Build (linux-amd64)` artifact
-from workflow run `29870052471`, built from commit `0abf0b2`.
+from workflow run `29870817687`, built from the pull-request merge commit
+reported by the binary as `8304494`.
 The deployed binary SHA-256 is
-`47ad7cc5c2808d440f425ed1d1ff9a80a532d76ab255aa7b8569951e18289923` and
-`/__version` reports commit `0abf0b2`, Go `1.26.5`, and a non-empty UI hash.
+`7d82d0e02b9d2f82d6f0af8eed373104f4f80e990c0557b68fb9fa8742c11cb0` and
+`/__version` reports commit `8304494`, Go `1.26.5`, and a non-empty UI hash.
 CT304 runs `/usr/bin/niac daemon --attachment-policy eth0=access:200` with
 `demo-multisite-modern.yaml` from the managed `/var/lib/niac/configs` root;
 the simulation was started through the daemon API with attachment `cyberscope`
