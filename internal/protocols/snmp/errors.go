@@ -10,6 +10,7 @@ var (
 	ErrEndOfMIBView        = errors.New("end of MIB view")
 	ErrEmptyOID            = errors.New("empty OID")
 	ErrInvalidOIDComponent = errors.New("invalid OID component")
+	ErrInvalidValue        = errors.New("invalid value")
 )
 
 // Sentinel errors for addmib operations.

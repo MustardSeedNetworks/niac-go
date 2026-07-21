@@ -8,7 +8,8 @@ import (
 )
 
 type snmpAgentGroup struct {
-	agents map[string]*snmp.Agent
+	agents    map[string]*snmp.Agent
+	telemetry *snmp.ProtocolTelemetry
 	// v3 is the device's SNMPv3 authoritative engine (nil when v3 is disabled).
 	v3 *snmp.V3Engine
 	// v3Agent is the MIB-backing agent used to answer v3 scoped PDUs (the base
@@ -17,7 +18,7 @@ type snmpAgentGroup struct {
 }
 
 func newSnmpAgentGroup() *snmpAgentGroup {
-	return &snmpAgentGroup{agents: make(map[string]*snmp.Agent)}
+	return &snmpAgentGroup{agents: make(map[string]*snmp.Agent), telemetry: snmp.NewProtocolTelemetry()}
 }
 
 func (g *snmpAgentGroup) Get(community string) *snmp.Agent {
@@ -26,6 +27,19 @@ func (g *snmpAgentGroup) Get(community string) *snmp.Agent {
 	}
 
 	return g.agents[community]
+}
+
+func (g *snmpAgentGroup) observer() *snmp.Agent {
+	if g == nil {
+		return nil
+	}
+	if g.v3Agent != nil {
+		return g.v3Agent
+	}
+	for _, agent := range g.agents {
+		return agent
+	}
+	return nil
 }
 
 func (g *snmpAgentGroup) Ensure(community string, device *config.Device, debugLevel int) *snmp.Agent {
@@ -42,7 +56,7 @@ func (g *snmpAgentGroup) Ensure(community string, device *config.Device, debugLe
 		return agent
 	}
 
-	agent := snmp.NewAgentWithCommunity(device, community, debugLevel)
+	agent := snmp.NewAgentWithCommunityAndTelemetry(device, community, debugLevel, g.telemetry)
 	g.agents[community] = agent
 
 	return agent

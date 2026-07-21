@@ -20,17 +20,12 @@ devices:
       walk_file: ""
 
     dhcp:
-      enabled: true
-      pools:
-        - network: "192.168.100.0/24"
-          range_start: "192.168.100.50"
-          range_end: "192.168.100.200"
-          gateway: "192.168.100.1"
-          dns_servers:
-            - "192.168.100.1"
-            - "8.8.8.8"
-          domain: "iot.local"
-          lease_time: 86400
+      subnet_mask: "255.255.255.0"
+      pool_start: "192.168.100.50"
+      pool_end: "192.168.100.200"
+      router: "192.168.100.1"
+      domain_name_server: "192.168.100.1"
+      server_identifier: "192.168.100.1"
 
   # Temperature Sensor 1
   - name: temp-sensor-01
@@ -110,14 +105,11 @@ devices:
           body: '{"devices":7,"online":7,"offline":0}'
 
     dns:
-      enabled: true
-      records:
+      forward_records:
         - name: "gateway.iot.local"
-          type: "A"
-          value: "192.168.100.1"
+          ip: "192.168.100.1"
         - name: "hub.iot.local"
-          type: "A"
-          value: "192.168.100.100"
+          ip: "192.168.100.100"
 
     snmp_agent:
       walk_file: ""

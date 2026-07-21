@@ -10,7 +10,10 @@ import (
 
 // topoWalk mixes device-content OIDs with the topology tables a capture carries
 // from its *original* neighbours (LLDP remote, CDP cache, bridge FDB).
-const topoWalk = `.1.3.6.1.2.1.1.5.0 = STRING: "captured-device-name"
+const topoWalk = `.1.3.6.1.2.1.1.1.0 = STRING: "captured description"
+.1.3.6.1.2.1.1.4.0 = STRING: "captured-contact@example.test"
+.1.3.6.1.2.1.1.5.0 = STRING: "captured-device-name"
+.1.3.6.1.2.1.1.6.0 = STRING: "captured location"
 .1.3.6.1.2.1.2.2.1.2.1 = STRING: "GigabitEthernet1/0/1"
 .1.0.8802.1.1.2.1.3.7.1.3.1 = STRING: "Gi1/0/1"
 .1.0.8802.1.1.2.1.4.1.1.9.1.1 = STRING: "foreign-lldp-neighbor"
@@ -91,27 +94,36 @@ func TestLoadWalkFileStripsTopologyWhenTrunkPortsDeclared(t *testing.T) {
 	}
 }
 
-// TestLoadWalkFileSkipsWalkSysName: the device keeps its configured identity;
-// the capture's sysName never wins (else same-walk devices collide as one node).
-func TestLoadWalkFileSkipsWalkSysName(t *testing.T) {
+// TestLoadWalkFilePreservesAuthoredIdentity verifies authored YAML identity
+// wins while captured identity remains available for fields left unauthored.
+func TestLoadWalkFilePreservesAuthoredIdentity(t *testing.T) {
 	p := filepath.Join(t.TempDir(), "t.walk")
 	if err := os.WriteFile(p, []byte(topoWalk), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	dev := createTestDevice() // has a configured Name
+	dev.SNMPConfig.SysName = "authored-name"
+	dev.SNMPConfig.SysDescr = "authored description"
+	dev.SNMPConfig.SysContact = "authored-contact@example.test"
+	// SysLocation is deliberately absent so the captured value remains.
 	agent := NewAgent(dev, 0)
 	if err := agent.LoadWalkFile(p); err != nil {
 		t.Fatalf("LoadWalkFile: %v", err)
 	}
 
-	got, _ := agent.HandleGet(".1.3.6.1.2.1.1.5.0")
-	if got == nil {
-		t.Fatal("sysName missing")
+	wants := map[string]string{
+		"1.3.6.1.2.1.1.1.0": "authored description",
+		"1.3.6.1.2.1.1.4.0": "authored-contact@example.test",
+		"1.3.6.1.2.1.1.5.0": "authored-name",
+		"1.3.6.1.2.1.1.6.0": "captured location",
 	}
-	if s, _ := got.Value.(string); s == "captured-device-name" {
-		t.Error("walk sysName leaked; device identity must win")
-	}
-	if s, _ := got.Value.(string); s != dev.Name {
-		t.Errorf("sysName = %q, want configured name %q", s, dev.Name)
+	for oid, want := range wants {
+		got, err := agent.HandleGet(oid)
+		if err != nil {
+			t.Fatalf("HandleGet(%s): %v", oid, err)
+		}
+		if got.Value != want {
+			t.Errorf("%s = %q, want %q", oid, got.Value, want)
+		}
 	}
 }

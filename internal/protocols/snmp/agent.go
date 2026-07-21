@@ -35,13 +35,15 @@ const (
 
 // Agent represents an SNMP agent instance for a device.
 type Agent struct {
-	device     *config.Device
-	mib        *MIB
-	community  string
-	startTime  time.Time
-	debugLevel int
-	logger     *slog.Logger
-	mu         sync.RWMutex
+	device        *config.Device
+	mib           *MIB
+	community     string
+	startTime     time.Time
+	debugLevel    int
+	logger        *slog.Logger
+	mu            sync.RWMutex
+	stats         snmpStats
+	protocolStats *ProtocolTelemetry
 }
 
 // NewAgent creates a new SNMP agent for a device using the device's community.
@@ -56,13 +58,24 @@ func NewAgent(device *config.Device, debugLevel int) *Agent {
 
 // NewAgentWithCommunity creates a new SNMP agent for a device with a specific community.
 func NewAgentWithCommunity(device *config.Device, community string, debugLevel int) *Agent {
+	return NewAgentWithCommunityAndTelemetry(device, community, debugLevel, NewProtocolTelemetry())
+}
+
+// NewAgentWithCommunityAndTelemetry creates an agent backed by shared per-device telemetry.
+func NewAgentWithCommunityAndTelemetry(
+	device *config.Device,
+	community string,
+	debugLevel int,
+	telemetry *ProtocolTelemetry,
+) *Agent {
 	agent := &Agent{
-		device:     device,
-		mib:        NewMIB(),
-		community:  community,
-		startTime:  time.Now(),
-		debugLevel: debugLevel,
-		logger:     slog.Default(),
+		device:        device,
+		mib:           NewMIB(),
+		community:     community,
+		startTime:     time.Now(),
+		debugLevel:    debugLevel,
+		logger:        slog.Default(),
+		protocolStats: telemetry,
 	}
 	if agent.community == "" {
 		agent.community = config.DefaultSNMPCommunity
@@ -70,9 +83,12 @@ func NewAgentWithCommunity(device *config.Device, community string, debugLevel i
 
 	// Initialize standard MIB-II system objects
 	agent.initializeSystemMIB()
+	agent.initializeSNMPMIB()
+	agent.initializeMIBIIProtocolGroups()
 
 	// Initialize neighbor discovery MIBs (IF-MIB, LLDP-MIB, CDP-MIB)
 	agent.initializeNeighborMIBs()
+	agent.protocolStats.attachMIB(agent.mib)
 
 	return agent
 }
@@ -80,7 +96,10 @@ func NewAgentWithCommunity(device *config.Device, community string, debugLevel i
 // initializeSystemMIB initializes standard MIB-II system group OIDs.
 func (a *Agent) initializeSystemMIB() {
 	// sysDescr (1.3.6.1.2.1.1.1.0)
-	sysDescr := a.device.Properties["sysDescr"]
+	sysDescr := a.device.SNMPConfig.SysDescr
+	if sysDescr == "" {
+		sysDescr = a.device.Properties["sysDescr"]
+	}
 	if sysDescr == "" {
 		sysDescr = fmt.Sprintf("%s %s", a.device.Type, a.device.Name)
 	}
@@ -118,7 +137,10 @@ func (a *Agent) initializeSystemMIB() {
 	})
 
 	// sysContact (1.3.6.1.2.1.1.4.0)
-	sysContact := a.device.Properties["sysContact"]
+	sysContact := a.device.SNMPConfig.SysContact
+	if sysContact == "" {
+		sysContact = a.device.Properties["sysContact"]
+	}
 	if sysContact == "" {
 		sysContact = "admin@example.com"
 	}
@@ -129,7 +151,10 @@ func (a *Agent) initializeSystemMIB() {
 	})
 
 	// sysName (1.3.6.1.2.1.1.5.0)
-	sysName := a.device.Properties["sysName"]
+	sysName := a.device.SNMPConfig.SysName
+	if sysName == "" {
+		sysName = a.device.Properties["sysName"]
+	}
 	if sysName == "" {
 		sysName = a.device.Name
 	}
@@ -140,7 +165,10 @@ func (a *Agent) initializeSystemMIB() {
 	})
 
 	// sysLocation (1.3.6.1.2.1.1.6.0)
-	sysLocation := a.device.Properties["sysLocation"]
+	sysLocation := a.device.SNMPConfig.SysLocation
+	if sysLocation == "" {
+		sysLocation = a.device.Properties["sysLocation"]
+	}
 	if sysLocation == "" {
 		sysLocation = unknownPlaceholder
 	}
@@ -198,7 +226,7 @@ func (a *Agent) LoadWalkFile(filename string) error {
 		// captured device's name — otherwise every device sharing a walk collides
 		// under one name and a discovery tool merges them. sysDescr/location stay
 		// as the walk's authentic values.
-		if isAuthoredSysNameOID(entry.OID) {
+		if a.isAuthoredIdentityOID(entry.OID) || isAgentOwnedSNMPOID(entry.OID) || isLiveProtocolOID(entry.OID) {
 			skipped++
 
 			continue
@@ -214,6 +242,18 @@ func (a *Agent) LoadWalkFile(filename string) error {
 		})
 		loaded++
 	}
+	if a.mib.Get(dot1dBaseNumPorts) == nil {
+		a.initializeBridgeMIB()
+	}
+	a.registerLiveMIBIIProtocolCounters()
+	a.refreshBridgePortCounters()
+	a.refreshAuthoredInterfaceMIBs()
+	if a.ownsSynthesizedTopology() {
+		a.refreshAuthoredDiscoveryMIBs()
+	}
+	// The walk owns the authoritative IF-MIB indexes. Rebuild the configured
+	// route rows after loading it so ipRouteIfIndex references those indexes.
+	a.registerConfiguredRoutes(a.device)
 
 	if a.debugLevel >= 1 {
 		a.logger.Debug(
@@ -228,14 +268,44 @@ func (a *Agent) LoadWalkFile(filename string) error {
 	return nil
 }
 
+func isLiveProtocolOID(oid string) bool {
+	oid = strings.TrimPrefix(oid, ".")
+	for _, root := range []string{ipMIBBase, icmpMIBRoot, tcpMIBRoot, udpMIBRoot, egpMIBRoot} {
+		if oid == root || strings.HasPrefix(oid, root+".") {
+			return true
+		}
+	}
+	return false
+}
+
+func isAgentOwnedSNMPOID(oid string) bool {
+	oid = strings.TrimPrefix(oid, ".")
+	return oid == snmpGroup || strings.HasPrefix(oid, snmpGroup+".")
+}
+
 // sysNameOID is SNMPv2-MIB::sysName.0 — a device's administrative identity,
 // always authored from the config rather than the capture walk.
-const sysNameOID = "1.3.6.1.2.1.1.5.0"
+const (
+	authoredSysDescrOID    = "1.3.6.1.2.1.1.1.0"
+	authoredSysContactOID  = "1.3.6.1.2.1.1.4.0"
+	sysNameOID             = "1.3.6.1.2.1.1.5.0"
+	authoredSysLocationOID = "1.3.6.1.2.1.1.6.0"
+)
 
 // isAuthoredSysNameOID reports whether oid is sysName.0 (with or without the
 // leading dot walks use).
 func isAuthoredSysNameOID(oid string) bool {
 	return strings.TrimPrefix(oid, ".") == sysNameOID
+}
+
+func (a *Agent) isAuthoredIdentityOID(oid string) bool {
+	oid = strings.TrimPrefix(oid, ".")
+	if isAuthoredSysNameOID(oid) {
+		return true
+	}
+	return (oid == authoredSysDescrOID && a.device.SNMPConfig.SysDescr != "") ||
+		(oid == authoredSysContactOID && a.device.SNMPConfig.SysContact != "") ||
+		(oid == authoredSysLocationOID && a.device.SNMPConfig.SysLocation != "")
 }
 
 // ownsSynthesizedTopology reports whether this device's topology is authored
@@ -393,6 +463,15 @@ func estimateVarbindSize(oid string, value *OIDValue) int {
 func (a *Agent) SetOID(oid string, value *OIDValue) error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
+	oid = strings.TrimPrefix(oid, ".")
+	if oid == snmpGroup+".30.0" {
+		enabled, ok := snmpInteger(value.Value)
+		if !ok || (enabled != authenticationTrapsOn && enabled != authenticationTrapsOff) {
+			return fmt.Errorf("%w: snmpEnableAuthenTraps must be enabled(1) or disabled(2)", ErrInvalidValue)
+		}
+		a.stats.enableAuthenTraps.Store(uint32(enabled))
+		return nil
+	}
 
 	// Check if OID is writable
 	// For now, allow setting any OID
@@ -405,6 +484,19 @@ func (a *Agent) SetOID(oid string, value *OIDValue) error {
 	}
 
 	return nil
+}
+
+func snmpInteger(value any) (int, bool) {
+	switch n := value.(type) {
+	case int:
+		return n, true
+	case int32:
+		return int(n), true
+	case int64:
+		return int(n), true
+	default:
+		return 0, false
+	}
 }
 
 // GetCommunity returns the agent's community string.
@@ -455,6 +547,8 @@ func (a *Agent) ProcessPDU(
 	nonRepeaters int,
 	maxRepetitions uint32,
 ) []gosnmp.SnmpPDU {
+	a.recordInboundPDU(pduType, len(vars))
+
 	switch pduType {
 	case gosnmp.GetRequest:
 		return a.processGetRequest(vars)
@@ -469,9 +563,10 @@ func (a *Agent) ProcessPDU(
 		reps = min(reps, MaxOIDResultSize)
 
 		return a.processGetBulk(vars, nonRepeaters, reps)
+	case gosnmp.SetRequest:
+		return a.processSetRequest(vars)
 	case gosnmp.Sequence,
 		gosnmp.GetResponse,
-		gosnmp.SetRequest,
 		gosnmp.Trap,
 		gosnmp.InformRequest,
 		gosnmp.SNMPv2Trap,
@@ -500,6 +595,37 @@ func (a *Agent) ProcessPDU(
 			Value: nil,
 		}}
 	}
+}
+
+// ProcessRequest processes a v1/v2c request and derives the response status
+// required by the version's error model.
+func (a *Agent) ProcessRequest(request *gosnmp.SnmpPacket) ([]gosnmp.SnmpPDU, gosnmp.SNMPError, uint8) {
+	variables := a.ProcessPDU(
+		request.PDUType, request.Variables, int(request.NonRepeaters), request.MaxRepetitions,
+	)
+	for i, variable := range variables {
+		if request.PDUType == gosnmp.SetRequest && variable.Type == gosnmp.NoSuchObject {
+			return variables, gosnmp.BadValue, uint8(i + 1)
+		}
+		if request.Version == gosnmp.Version1 &&
+			(variable.Type == gosnmp.NoSuchObject || variable.Type == gosnmp.EndOfMibView) {
+			return request.Variables, gosnmp.NoSuchName, uint8(i + 1)
+		}
+	}
+	return variables, gosnmp.NoError, 0
+}
+
+func (a *Agent) processSetRequest(vars []gosnmp.SnmpPDU) []gosnmp.SnmpPDU {
+	response := make([]gosnmp.SnmpPDU, len(vars))
+	for i, variable := range vars {
+		value := &OIDValue{Type: variable.Type, Value: variable.Value}
+		if err := a.SetOID(variable.Name, value); err != nil {
+			response[i] = gosnmp.SnmpPDU{Name: variable.Name, Type: gosnmp.NoSuchObject}
+			continue
+		}
+		response[i] = variable
+	}
+	return response
 }
 
 // processGetRequest processes GET request variables.

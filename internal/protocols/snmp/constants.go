@@ -194,8 +194,14 @@ const (
 	// IPRouteTypeIndirect is the route type for indirect routes (4).
 	IPRouteTypeIndirect = 4
 
+	// IPRouteTypeDirect is the route type for directly connected routes (3).
+	IPRouteTypeDirect = 3
+
 	// IPRouteProtoLocal is the routing protocol for local routes (2).
 	IPRouteProtoLocal = 2
+
+	// IPRouteProtoNetMgmt is the protocol value for configured routes (3).
+	IPRouteProtoNetMgmt = 3
 
 	// BridgeTypeTransparent is the bridge type for transparent-only bridges (2).
 	BridgeTypeTransparent = 2

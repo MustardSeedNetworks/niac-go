@@ -4,6 +4,14 @@ if (process.env.FORCE_COLOR) {
   delete process.env.NO_COLOR;
 }
 
+const e2ePort = process.env.E2E_PORT ?? '18445';
+const e2ePortNumber = Number(e2ePort);
+if (!/^\d+$/.test(e2ePort) || e2ePortNumber < 1 || e2ePortNumber > 65535) {
+  throw new Error('E2E_PORT must be a numeric TCP port between 1 and 65535');
+}
+const e2eHost = '127.0.0.1';
+const baseURL = process.env.E2E_BASE_URL ?? `https://${e2eHost}:${e2ePort}`;
+
 /**
  * Playwright E2E Test Configuration
  *
@@ -43,7 +51,7 @@ export default defineConfig({
     ['json', { outputFile: 'playwright-report/results.json' }],
   ],
   use: {
-    baseURL: process.env.E2E_BASE_URL || 'http://localhost:5173',
+    baseURL,
     storageState: 'playwright/.auth/user.json',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
@@ -73,13 +81,15 @@ export default defineConfig({
       use: { ...devices['Desktop Safari'] },
     },
   ],
-  // Run local dev server before tests if not in CI
-  webServer: process.env.CI
+  // Explicit E2E_BASE_URL adopts an operator-managed daemon (CI uses 8445).
+  // Otherwise Playwright owns the make-built HTTPS daemon and tears it down.
+  webServer: process.env.E2E_BASE_URL
     ? undefined
     : {
-        command: 'npm run dev',
-        url: 'http://localhost:5173',
+        command: `cd .. && NIAC_E2E_DRY_RUN_SIMULATION=1 ./niac daemon --listen ${e2eHost}:${e2ePort} --storage disabled`,
+        url: `${baseURL}/__version`,
         reuseExistingServer: !process.env.CI,
         timeout: 120000,
+        ignoreHTTPSErrors: true,
       },
 });

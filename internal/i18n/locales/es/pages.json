@@ -123,6 +123,7 @@
     "description": "Ruta guiada para construir una configuración, agregar dispositivos e iniciar una simulación.",
     "steps": {
       "template": "Plantilla",
+      "preflight": "Conexión",
       "devices": "Dispositivos",
       "protocols": "Protocolos",
       "review": "Revisión",
@@ -136,6 +137,19 @@
       "help": "Elige una configuración inicial abajo, o empieza vacío y agrega dispositivos en el siguiente paso.",
       "errorNoSource": "Elige una plantilla, configuración guardada, archivo subido, o Empezar vacío primero",
       "startingLabel": "Iniciando…"
+    },
+    "preflight": {
+      "title": "Revisar conexión física",
+      "help": "El inicio requiere una política de conexión aprobada por un administrador para la interfaz, el modo y la VLAN de acceso seleccionados.",
+      "attachmentLabel": "Conexión del escenario",
+      "modeLabel": "Conexión física",
+      "accessMode": "VLAN de acceso",
+      "directMode": "Cable directo (sin etiqueta)",
+      "vlanLabel": "VLAN de acceso (1–4094)",
+      "requestError": "Falló la comprobación previa",
+      "safe": "La topología y la conexión pasaron la comprobación para {{count}} redes virtuales. Verifica el aislamiento del host antes de conectar el probador.",
+      "checkLabel": "Ejecutar comprobación",
+      "startLabel": "Iniciar simulación"
     },
     "devices": {
       "help": "Agrega o edita dispositivos para esta simulación usando la Biblioteca de dispositivos abajo."

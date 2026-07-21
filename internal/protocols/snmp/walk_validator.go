@@ -135,9 +135,9 @@ func processWalkLine(lineNum int, line string, result *ValidationResult) {
 	}
 }
 
-// isSkippableLine returns true if the line should be skipped (empty or comment).
+// isSkippableLine reports walk metadata that does not represent a variable binding.
 func isSkippableLine(trimmedLine string) bool {
-	return trimmedLine == "" || strings.HasPrefix(trimmedLine, "#")
+	return trimmedLine == "" || strings.HasPrefix(trimmedLine, "#") || isEndOfMIBLine(trimmedLine)
 }
 
 // containsError checks if any issue in the slice has error severity.

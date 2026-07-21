@@ -34,7 +34,7 @@ devices:
       walk_file: ""
       traps:
         enabled: true
-        targets:
+        receivers:
           - "10.0.0.100:162"
 
   # Test Switch
@@ -76,33 +76,23 @@ devices:
       - "2001:db8::100"
 
     dhcp:
-      enabled: true
-      pools:
-        - network: "10.0.0.0/24"
-          range_start: "10.0.0.201"
-          range_end: "10.0.0.254"
-          gateway: "10.0.0.1"
-          dns_servers:
-            - "10.0.0.100"
-            - "8.8.8.8"
-          domain: "test.local"
-          lease_time: 3600
+      subnet_mask: "255.255.255.0"
+      pool_start: "10.0.0.201"
+      pool_end: "10.0.0.254"
+      router: "10.0.0.1"
+      domain_name_server: "10.0.0.100"
+      server_identifier: "10.0.0.100"
 
     dns:
-      enabled: true
-      records:
+      forward_records:
         - name: "router.test.local"
-          type: "A"
-          value: "10.0.0.1"
+          ip: "10.0.0.1"
         - name: "switch.test.local"
-          type: "A"
-          value: "10.0.0.2"
+          ip: "10.0.0.2"
         - name: "server.test.local"
-          type: "A"
-          value: "10.0.0.100"
+          ip: "10.0.0.100"
         - name: "test1.test.local"
-          type: "A"
-          value: "10.0.0.201"
+          ip: "10.0.0.201"
 
     http:
       enabled: true
@@ -117,12 +107,13 @@ devices:
 
     ftp:
       enabled: true
-      username: "testuser"
-      password: "testpass"
+      users:
+        - username: "testuser"
+          password: "testpass"
 
     netbios:
       enabled: true
-      workstation_name: "TESTSERVER"
+      name: "TESTSERVER"
       workgroup: "TESTLAB"
 
     snmp_agent:
@@ -136,7 +127,7 @@ devices:
 
     netbios:
       enabled: true
-      workstation_name: "TESTCLIENT01"
+      name: "TESTCLIENT01"
       workgroup: "TESTLAB"
 
   # Test Client 2
@@ -148,5 +139,5 @@ devices:
 
     netbios:
       enabled: true
-      workstation_name: "TESTCLIENT02"
+      name: "TESTCLIENT02"
       workgroup: "TESTLAB"

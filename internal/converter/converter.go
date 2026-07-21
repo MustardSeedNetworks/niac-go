@@ -3,7 +3,10 @@ package converter
 
 import (
 	"bufio"
+	"bytes"
+	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -169,9 +172,18 @@ func LoadYAMLConfigFromBytes(data []byte) (*Config, error) {
 	}
 
 	var config Config
-	err := yaml.Unmarshal(data, &config)
-	if err != nil {
+	decoder := yaml.NewDecoder(bytes.NewReader(data))
+	decoder.KnownFields(true)
+	err := decoder.Decode(&config)
+	if err != nil && !errors.Is(err, io.EOF) {
 		return nil, fmt.Errorf("error parsing YAML: %w", err)
+	}
+	var extra yaml.Node
+	if extraErr := decoder.Decode(&extra); !errors.Is(extraErr, io.EOF) {
+		if extraErr != nil {
+			return nil, fmt.Errorf("error parsing YAML: %w", extraErr)
+		}
+		return nil, errors.New("error parsing YAML: multiple documents are not allowed")
 	}
 
 	if validateErr := ValidateConfig(&config); validateErr != nil {
@@ -187,24 +199,9 @@ func LoadYAMLConfigFromBytes(data []byte) (*Config, error) {
 // then catches everything else (IP formats, VLAN range, enum membership,
 // mutual exclusion of ip and ips).
 func ValidateConfig(config *Config) error {
-	// Validate devices have required fields
 	for i, device := range config.Devices {
-		if device.MAC == "" {
-			return fmt.Errorf("%w: device %d", ErrDeviceMissingMAC, i)
-		}
-		// IP address is optional in Java configs (some devices don't have IPs)
-
-		// If SNMP agent specified, validate it (empty SNMP agents are allowed)
-		if device.SnmpAgent != nil && len(device.SnmpAgent.AddMibs) > 0 {
-			// Validate AddMibs have required fields
-			for j, mib := range device.SnmpAgent.AddMibs {
-				if mib.OID == "" {
-					return fmt.Errorf("%w: device %d AddMib %d", ErrAddMibMissingOID, i, j)
-				}
-				if mib.Type == "" {
-					return fmt.Errorf("%w: device %d AddMib %d", ErrAddMibMissingType, i, j)
-				}
-			}
+		if err := validateDeviceConfig(device, i); err != nil {
+			return err
 		}
 	}
 
@@ -216,6 +213,29 @@ func ValidateConfig(config *Config) error {
 	}
 
 	return validateConfigStruct(config)
+}
+
+func validateDeviceConfig(device Device, index int) error {
+	vendor := strings.TrimSpace(device.Vendor)
+	if device.MAC == "" && vendor == "" {
+		return fmt.Errorf("%w: device %d", ErrDeviceMissingMAC, index)
+	}
+	if device.MAC != "" && vendor != "" {
+		return fmt.Errorf("%w: device %d", ErrDeviceMACSourceConflict, index)
+	}
+	if device.SnmpAgent == nil {
+		return nil
+	}
+	for mibIndex, mib := range device.SnmpAgent.AddMibs {
+		if mib.OID == "" {
+			return fmt.Errorf("%w: device %d AddMib %d", ErrAddMibMissingOID, index, mibIndex)
+		}
+		if mib.Type == "" {
+			return fmt.Errorf("%w: device %d AddMib %d", ErrAddMibMissingType, index, mibIndex)
+		}
+	}
+
+	return nil
 }
 
 // PrintSummary prints a summary of the config.

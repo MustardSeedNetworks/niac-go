@@ -2,9 +2,10 @@ import { type FC, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { applyTemplate, startSimulation } from '../api/client';
 import { fetchLibraryNetworkContent } from '../api/library-client';
-import type { LibraryNetwork, Template } from '../api/types';
+import type { LibraryNetwork, SimulationRequest, Template } from '../api/types';
 import { DevicesStep } from '../components/wizard/DevicesStep';
 import { FinishStep } from '../components/wizard/FinishStep';
+import { PreflightStep } from '../components/wizard/PreflightStep';
 import { ProtocolsStep } from '../components/wizard/ProtocolsStep';
 import { ReviewStep } from '../components/wizard/ReviewStep';
 import { TemplateStep } from '../components/wizard/TemplateStep';
@@ -26,7 +27,11 @@ import { fileToText } from '../utils/file';
 // config the daemon will load. Not a reimplementation of `niac config
 // generate`; it's just the seed content for a config the wizard's
 // existing-component steps then build up.
-const EMPTY_CONFIG_YAML = 'devices: []\n';
+const EMPTY_CONFIG_YAML = `devices:
+  - name: new-device
+    type: host
+    mac: 02:00:00:00:00:01
+`;
 
 /**
  * NewSimulationWizard — a thin orchestration layer over existing pages
@@ -34,24 +39,25 @@ const EMPTY_CONFIG_YAML = 'devices: []\n';
  * or reimplement device/config editing; it sequences:
  *
  *   1. Template  — ConfigPicker (pick a template / saved config / upload / empty)
- *   2. Devices   — the existing Device Library page (device CRUD)
- *   3. Protocols — the existing DeviceTable's Protocols column, read-only
- *   4. Review    — the existing SelectedNetworkPreview
- *   5. Finish    — the existing config-save endpoint, then hand off to
+ *   2. Connection — server preflight of the logical and physical binding
+ *   3. Devices   — the existing Device Library page (device CRUD)
+ *   4. Protocols — the existing DeviceTable's Protocols column, read-only
+ *   5. Review    — the existing SelectedNetworkPreview
+ *   6. Finish    — the existing config-save endpoint, then hand off to
  *                  the existing Simulation page
  *
  * Device CRUD in this app only operates on the daemon's single active
  * config (`s.configPath()` server-side) — there's no "stage a draft
- * config" endpoint. So step 1's Next action materialises the picked
- * source as a real (non-built-in) config file and starts the simulation
- * against it, which is what unlocks steps 2-3's editing. See the PR
- * description for the full rationale.
+ * config" endpoint. Step 1 therefore materialises the picked source as
+ * a real (non-built-in) config. Step 2 preflights and starts that config,
+ * which unlocks the existing editing surfaces.
  */
 export const NewSimulationWizardPage: FC = () => {
   const { t } = useTranslation('pages');
   const { data: simStatus } = useSimulationStatus();
   const showError = useErrorToast();
   const [state, setState] = useState<WizardState>(initialWizardState);
+  const [preparedRequest, setPreparedRequest] = useState<SimulationRequest | null>(null);
 
   const steps = WIZARD_STEPS.map((id) => ({
     id,
@@ -62,7 +68,7 @@ export const NewSimulationWizardPage: FC = () => {
     setState((s) => ({ ...s, step: Math.max(0, s.step - 1) }));
   }, []);
 
-  const materializeAndStart = useCallback(async () => {
+  const prepareConfig = useCallback(async () => {
     setState((s) => ({ ...s, starting: true }));
     try {
       let configPath: string | undefined;
@@ -95,12 +101,11 @@ export const NewSimulationWizardPage: FC = () => {
         throw new Error(t('newSimWizard.template.errorNoSource'));
       }
 
-      await startSimulation({
+      setPreparedRequest({
         interface: state.selectedInterface,
         configPath,
         configData,
       });
-
       setState((s) => ({ ...s, step: 1, configPath: configPath ?? null, starting: false }));
     } catch (err) {
       showError(err);
@@ -108,13 +113,27 @@ export const NewSimulationWizardPage: FC = () => {
     }
   }, [state, showError, t]);
 
+  const startPreparedSimulation = useCallback(
+    async (request: SimulationRequest) => {
+      setState((s) => ({ ...s, starting: true }));
+      try {
+        await startSimulation(request);
+        setState((s) => ({ ...s, step: 2, starting: false }));
+      } catch (err) {
+        showError(err);
+        setState((s) => ({ ...s, starting: false }));
+      }
+    },
+    [showError],
+  );
+
   const goNext = useCallback(() => {
     if (state.step === 0) {
-      void materializeAndStart();
+      void prepareConfig();
       return;
     }
     setState((s) => ({ ...s, step: Math.min(WIZARD_STEPS.length - 1, s.step + 1) }));
-  }, [state.step, materializeAndStart]);
+  }, [state.step, prepareConfig]);
 
   const canProceed = state.step === 0 ? isTemplateStepComplete(state) && !state.starting : true;
 
@@ -179,13 +198,27 @@ export const NewSimulationWizardPage: FC = () => {
             }
           />
         )}
-        {state.step === 1 && <DevicesStep />}
-        {state.step === 2 && <ProtocolsStep />}
-        {state.step === 3 && <ReviewStep />}
-        {state.step === 4 && <FinishStep />}
+        {state.step === 1 && preparedRequest && (
+          <PreflightStep
+            request={preparedRequest}
+            onStart={(request) => void startPreparedSimulation(request)}
+            starting={state.starting}
+          />
+        )}
+        {state.step === 2 && <DevicesStep />}
+        {state.step === 3 && <ProtocolsStep />}
+        {state.step === 4 && <ReviewStep />}
+        {state.step === 5 && <FinishStep />}
       </div>
 
-      {state.step < WIZARD_STEPS.length - 1 && (
+      {state.step === 1 && (
+        <div className="flex justify-start">
+          <Button variant="outline" data-testid="wizard-back-button" onClick={goBack}>
+            {t('newSimWizard.backLabel')}
+          </Button>
+        </div>
+      )}
+      {state.step !== 1 && state.step < WIZARD_STEPS.length - 1 && (
         <div className="flex justify-between gap-default">
           <Button
             variant="outline"

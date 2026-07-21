@@ -255,6 +255,13 @@ func (s *Server) registerReadOnlyRoutes(mux *http.ServeMux) {
 		{path: "/api/v1/interfaces", handler: s.handleInterfaces, methods: []string{http.MethodGet}},
 		{path: "/api/v1/runtime", handler: s.handleRuntime, methods: []string{http.MethodGet}},
 		{
+			path:    "/api/v1/simulation/preflight",
+			handler: s.handleSimulationPreflight,
+			methods: []string{http.MethodPost},
+			rl:      rlWrite,
+			csrf:    true,
+		},
+		{
 			path:    "/api/v1/simulation",
 			handler: s.handleSimulation,
 			methods: []string{http.MethodGet, http.MethodPost, http.MethodDelete},

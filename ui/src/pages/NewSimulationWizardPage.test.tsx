@@ -39,6 +39,7 @@ const localStorageMock = (() => {
 Object.defineProperty(globalThis, 'localStorage', { value: localStorageMock, writable: true });
 
 const startSimulation = vi.fn<(payload: unknown) => Promise<SimulationStatus>>();
+const preflightSimulation = vi.fn();
 const fetchUsableInterfaces = vi.fn();
 const fetchTemplates = vi.fn<() => Promise<Template[]>>();
 const fetchLibraryNetworks = vi.fn<() => Promise<LibraryNetwork[]>>();
@@ -64,6 +65,7 @@ vi.mock('../api/client', async (importOriginal) => {
     fetchTemplates: () => fetchTemplates(),
     fetchConfigDevices: () => fetchConfigDevices(),
     startSimulation: (payload: unknown) => startSimulation(payload),
+    preflightSimulation: (payload: unknown) => preflightSimulation(payload),
   };
 });
 
@@ -95,6 +97,24 @@ beforeEach(() => {
     deviceCount: 0,
     uptimeSeconds: 0,
   });
+  preflightSimulation.mockResolvedValue({
+    safe: true,
+    topology: {
+      binding: {
+        attachment: 'tester',
+        interface: 'lo0',
+        mode: 'access',
+        accessVlan: 200,
+        network: 'lab-access',
+        wireTagged: false,
+      },
+      networks: [],
+      interfaces: [],
+      routes: [],
+      dhcpScopes: [],
+    },
+    diagnostics: [],
+  });
 });
 
 describe('NewSimulationWizardPage — step navigation', () => {
@@ -113,7 +133,7 @@ describe('NewSimulationWizardPage — step navigation', () => {
     expect(screen.getByTestId('wizard-next-button')).not.toBeDisabled();
   });
 
-  it('starts the simulation and advances to Devices on Next, then Back returns to Template', async () => {
+  it('starts the simulation and advances to Devices, then Back returns to Connection', async () => {
     const user = userEvent.setup();
     renderWizard();
 
@@ -122,11 +142,19 @@ describe('NewSimulationWizardPage — step navigation', () => {
     await user.click(screen.getByTestId('wizard-start-empty'));
     await user.click(screen.getByTestId('wizard-next-button'));
 
-    // The blank skeleton is sent inline; the daemon materialises it to its
-    // own _running.inline.yaml, so there's no client-side configPath.
+    await waitFor(() => expect(screen.getByTestId('wizard-preflight-check')).toBeInTheDocument());
+    expect(startSimulation).not.toHaveBeenCalled();
+    await user.click(screen.getByTestId('wizard-preflight-check'));
+    await waitFor(() => expect(screen.getByTestId('wizard-preflight-start')).not.toBeDisabled());
+    await user.click(screen.getByTestId('wizard-preflight-start'));
+
     await waitFor(() => expect(startSimulation).toHaveBeenCalledTimes(1));
     expect(startSimulation).toHaveBeenCalledWith(
-      expect.objectContaining({ interface: 'lo0', configData: 'devices: []\n' }),
+      expect.objectContaining({
+        interface: 'lo0',
+        attachmentMode: 'access',
+        accessVlan: 200,
+      }),
     );
 
     await waitFor(() =>
@@ -136,6 +164,28 @@ describe('NewSimulationWizardPage — step navigation', () => {
     expect(screen.getByTestId('wizard-step-devices')).toHaveAttribute('data-status', 'active');
 
     await user.click(screen.getByTestId('wizard-back-button'));
-    await waitFor(() => expect(screen.getByTestId('wizard-interface-select')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByTestId('wizard-preflight-check')).toBeInTheDocument());
+  });
+
+  it('returns from a failed preflight without losing the selected source or interface', async () => {
+    const user = userEvent.setup();
+    preflightSimulation.mockRejectedValueOnce(new Error('connection rejected'));
+    renderWizard();
+
+    await waitFor(() => expect(screen.getByTestId('wizard-interface-select')).not.toBeDisabled());
+    await user.selectOptions(screen.getByTestId('wizard-interface-select'), 'lo0');
+    await user.click(screen.getByTestId('wizard-start-empty'));
+    await user.click(screen.getByTestId('wizard-next-button'));
+    await waitFor(() => expect(screen.getByTestId('wizard-preflight-check')).toBeInTheDocument());
+
+    await user.click(screen.getByTestId('wizard-preflight-check'));
+    expect(await screen.findByRole('alert')).toHaveTextContent('connection rejected');
+    await user.click(screen.getByTestId('wizard-back-button'));
+
+    expect(await screen.findByTestId('wizard-interface-select')).toHaveValue('lo0');
+    expect(screen.getByTestId('wizard-next-button')).not.toBeDisabled();
+    await user.click(screen.getByTestId('wizard-next-button'));
+
+    await waitFor(() => expect(screen.getByTestId('wizard-preflight-check')).toBeInTheDocument());
   });
 });

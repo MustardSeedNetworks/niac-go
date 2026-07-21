@@ -388,12 +388,8 @@ func (h *HTTPHandler) sendResponse(
 		return
 	}
 
-	// Reply to the requester's own frame source MAC and VLAN — a real tester is
-	// not a modelled device, so a device-table lookup by IP would fail.
-	vlan := reqPktVLAN(reqPkt)
-
-	srcMAC := requestSourceMAC(reqPkt)
-	if srcMAC == nil {
+	identity, ok := h.stack.replyEthernet(reqPkt, device)
+	if !ok {
 		if debugLevel >= DebugLevelInfo {
 			_, _ = fmt.Fprintf(os.Stdout, "Cannot send HTTP response: no source MAC for %s\n", ipLayer.SrcIP)
 		}
@@ -403,8 +399,8 @@ func (h *HTTPHandler) sendResponse(
 
 	// Build Ethernet header
 	eth := &layers.Ethernet{
-		SrcMAC:       device.MACAddress,
-		DstMAC:       srcMAC,
+		SrcMAC:       identity.source,
+		DstMAC:       identity.destination,
 		EthernetType: layers.EthernetTypeIPv4,
 	}
 
@@ -466,7 +462,7 @@ func (h *HTTPHandler) sendResponse(
 		Length:       len(buffer.Bytes()),
 		SerialNumber: serialNum,
 		Device:       device,
-		VLAN:         vlan, // reply on the VLAN the request arrived on (tagged or untagged)
+		VLAN:         identity.vlan,
 	}
 
 	h.stack.Send(responsePkt)

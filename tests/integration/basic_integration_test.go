@@ -24,8 +24,10 @@ devices:
     mac: "00:11:22:33:44:55"
     ips:
       - "192.168.1.1"
-    snmp:
+    snmp_agent:
       community: public
+      sysdescr: "Test Router"
+      syscontact: "admin@test.com"
     properties:
       sysDescr: "Test Router"
       sysContact: "admin@test.com"
@@ -252,7 +254,7 @@ devices:
     mac: "00:11:22:33:44:01"
     ips:
       - "192.168.1.1"
-    snmp:
+    snmp_agent:
       community: public
 
   - name: switch-1
@@ -260,7 +262,7 @@ devices:
     mac: "00:11:22:33:44:02"
     ips:
       - "192.168.1.2"
-    snmp:
+    snmp_agent:
       community: public
 
   - name: ap-1
@@ -268,7 +270,7 @@ devices:
     mac: "00:11:22:33:44:03"
     ips:
       - "192.168.1.3"
-    snmp:
+    snmp_agent:
       community: public
 `
 
@@ -437,8 +439,9 @@ devices:
     mac: "00:11:22:33:44:55"
     ips:
       - "192.168.1.1"
-    snmp:
+    snmp_agent:
       community: public
+      sysdescr: "Simulation Router"
     properties:
       sysDescr: "Simulation Router"
 `

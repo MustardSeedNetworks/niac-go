@@ -109,6 +109,18 @@
             "$ref": "#/$defs/Segment"
           },
           "type": "array"
+        },
+        "networks": {
+          "items": {
+            "$ref": "#/$defs/Network"
+          },
+          "type": "array"
+        },
+        "attachments": {
+          "items": {
+            "$ref": "#/$defs/LogicalAttachment"
+          },
+          "type": "array"
         }
       },
       "additionalProperties": false,
@@ -167,6 +179,12 @@
         },
         "mac": {
           "type": "string"
+        },
+        "vendor": {
+          "type": "string"
+        },
+        "mac_suffix": {
+          "type": "integer"
         },
         "ips": {
           "items": {
@@ -246,6 +264,12 @@
           },
           "type": "array"
         },
+        "routes": {
+          "items": {
+            "$ref": "#/$defs/Route"
+          },
+          "type": "array"
+        },
         "trunk_ports": {
           "items": {
             "$ref": "#/$defs/TrunkPort"
@@ -266,10 +290,7 @@
         }
       },
       "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "mac"
-      ]
+      "type": "object"
     },
     "DhcpLease": {
       "properties": {
@@ -756,6 +777,12 @@
         "name": {
           "type": "string"
         },
+        "network": {
+          "type": "string"
+        },
+        "address": {
+          "type": "string"
+        },
         "speed": {
           "type": "integer"
         },
@@ -823,6 +850,22 @@
       "additionalProperties": false,
       "type": "object"
     },
+    "LogicalAttachment": {
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "connect": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "name",
+        "connect"
+      ]
+    },
     "NetbiosConfig": {
       "properties": {
         "enabled": {
@@ -873,6 +916,25 @@
       },
       "additionalProperties": false,
       "type": "object"
+    },
+    "Network": {
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "subnet": {
+          "type": "string"
+        },
+        "virtual_vlan": {
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "name",
+        "subnet"
+      ]
     },
     "OSFingerprintConfig": {
       "properties": {
@@ -964,6 +1026,26 @@
       "additionalProperties": false,
       "type": "object"
     },
+    "Route": {
+      "properties": {
+        "destination": {
+          "type": "string"
+        },
+        "via": {
+          "type": "string"
+        },
+        "next_hop": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "destination",
+        "via",
+        "next_hop"
+      ]
+    },
     "Segment": {
       "properties": {
         "tag": {
@@ -987,6 +1069,24 @@
     },
     "SnmpAgent": {
       "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "community": {
+          "type": "string"
+        },
+        "sysname": {
+          "type": "string"
+        },
+        "sysdescr": {
+          "type": "string"
+        },
+        "syscontact": {
+          "type": "string"
+        },
+        "syslocation": {
+          "type": "string"
+        },
         "walk_file": {
           "type": "string"
         },
@@ -1193,6 +1293,9 @@
         },
         "remote_interface": {
           "type": "string"
+        },
+        "fdb_only": {
+          "type": "boolean"
         }
       },
       "additionalProperties": false,

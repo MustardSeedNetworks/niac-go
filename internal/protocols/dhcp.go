@@ -426,12 +426,19 @@ func (h *DHCPHandler) parseDHCPPacket(pkt *Packet) *dhcpPacketInfo {
 // findServerDevice finds a suitable server device from the device list.
 func findServerDevice(devices []*config.Device) *config.Device {
 	for _, dev := range devices {
-		if len(dev.IPAddresses) > 0 {
+		if dev != nil && dev.DHCPConfig != nil {
 			return dev
 		}
 	}
 
 	return nil
+}
+
+func (h *DHCPHandler) configuredServerIP() net.IP {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
+	return append(net.IP(nil), h.serverIP...)
 }
 
 // getRequestedIP extracts the requested IP from DHCP options.
@@ -471,7 +478,7 @@ func (h *DHCPHandler) handleDHCPDiscover(
 		info.dhcp.Xid,
 		info.dhcp.ClientHWAddr,
 		lease.IP,
-		serverDevice.IPAddresses[0],
+		h.configuredServerIP(),
 		serverDevice.MACAddress,
 		info.vlan,
 	)
@@ -557,7 +564,7 @@ func (h *DHCPHandler) handleDHCPRequest(
 		info.dhcp.Xid,
 		info.dhcp.ClientHWAddr,
 		lease.IP,
-		serverDevice.IPAddresses[0],
+		h.configuredServerIP(),
 		serverDevice.MACAddress,
 		info.vlan,
 	)
@@ -624,7 +631,7 @@ func (h *DHCPHandler) handleDHCPInform(
 	serialNum, debugLevel int,
 ) {
 	err := h.SendDHCPInformAck(info.dhcp.Xid, info.dhcp.ClientHWAddr,
-		serverDevice.IPAddresses[0], serverDevice.MACAddress, info.vlan)
+		h.configuredServerIP(), serverDevice.MACAddress, info.vlan)
 	if err != nil {
 		if debugLevel >= 1 {
 			logging.ProtocolDebugf("DHCP", debugLevel, 1, "Failed to send Inform Ack: %v sn=%d", err, serialNum)
@@ -796,7 +803,7 @@ func (h *DHCPHandler) sendDHCPNakForRequest(
 	serialNum, debugLevel int,
 ) {
 	nakErr := h.SendDHCPNak(info.dhcp.Xid, info.dhcp.ClientHWAddr,
-		serverDevice.IPAddresses[0], serverDevice.MACAddress, info.vlan)
+		h.configuredServerIP(), serverDevice.MACAddress, info.vlan)
 	if nakErr != nil {
 		if debugLevel >= 1 {
 			logging.ProtocolDebugf("DHCP", debugLevel, 1, "Failed to send Nak: %v sn=%d", nakErr, serialNum)

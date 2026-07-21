@@ -3,18 +3,19 @@ package snmp
 import (
 	"log/slog"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gosnmp/gosnmp"
 )
 
-type ifCounterConfig struct {
-	oid      string
-	rate     float64
-	snmpType gosnmp.Asn1BER
-}
-
-// registerIfTableInputCounters registers input traffic counters.
+const (
+	dot3StatsDuplexStatus  = "1.3.6.1.2.1.10.7.2.1.19"
+	interfaceStatusUp      = 1
+	interfaceStatusDown    = 2
+	interfaceStatusTesting = 3
+	duplexHalf             = 2
+)
 
 func (a *Agent) initializeIFMIB() {
 	logger := slog.Default()
@@ -64,6 +65,63 @@ func (a *Agent) initializeIFMIB() {
 	}
 }
 
+func (a *Agent) refreshAuthoredInterfaceMIBs() {
+	for _, iface := range a.device.Interfaces {
+		index, ok := a.ifIndexForInterface(iface.Name)
+		if !ok {
+			continue
+		}
+		if iface.Speed > 0 {
+			speedBps := uint64(iface.Speed) * MicrosPerSec
+			a.mib.Set(ifSpeed+"."+index, &OIDValue{
+				Type: gosnmp.Gauge32, Value: safeUint32FromUint64(min(speedBps, MaxUint32Value)),
+			})
+			a.mib.Set(ifHighSpeed+"."+index, &OIDValue{
+				Type: gosnmp.Gauge32, Value: safeUint32FromUint64(uint64(iface.Speed)),
+			})
+		}
+		if status := interfaceStatus(iface.AdminStatus); status != 0 {
+			a.mib.Set(ifAdminStatus+"."+index, &OIDValue{Type: gosnmp.Integer, Value: status})
+		}
+		if status := interfaceStatus(iface.OperStatus); status != 0 {
+			a.mib.Set(ifOperStatus+"."+index, &OIDValue{Type: gosnmp.Integer, Value: status})
+		}
+		if iface.Description != "" {
+			a.mib.Set(
+				ifAlias+"."+index,
+				&OIDValue{Type: gosnmp.OctetString, Value: iface.Description},
+			)
+		}
+		a.registerIfTableCounters(iface.Name, index)
+		a.registerIfXTablePacketCounters(iface.Name, index)
+		switch strings.ToLower(iface.Duplex) {
+		case "half":
+			a.mib.Set(
+				dot3StatsDuplexStatus+"."+index,
+				&OIDValue{Type: gosnmp.Integer, Value: duplexHalf},
+			)
+		case "full":
+			a.mib.Set(
+				dot3StatsDuplexStatus+"."+index,
+				&OIDValue{Type: gosnmp.Integer, Value: DuplexFull},
+			)
+		}
+	}
+}
+
+func interfaceStatus(status string) int {
+	switch strings.ToLower(status) {
+	case "up":
+		return interfaceStatusUp
+	case "down":
+		return interfaceStatusDown
+	case "testing":
+		return interfaceStatusTesting
+	default:
+		return 0
+	}
+}
+
 // createInterfaceEntry creates a single interface entry in IF-MIB with complete counters.
 func (a *Agent) createInterfaceEntry(ifIdx int, interfaceName, mac string, speedBps uint64) {
 	idxStr := strconv.Itoa(ifIdx)
@@ -73,10 +131,11 @@ func (a *Agent) createInterfaceEntry(ifIdx int, interfaceName, mac string, speed
 	a.registerIfTableBasicOIDs(ifIdx, idxStr, interfaceName, macBytes, speedBps)
 
 	// Register ifTable counters (dynamic traffic simulation)
-	a.registerIfTableCounters(ifIdx, idxStr)
+	a.registerIfTableCounters(interfaceName, idxStr)
 
 	// Register ifXTable entries (extended interface table)
 	a.registerIfXTableOIDs(ifIdx, idxStr, interfaceName, speedBps)
+	a.registerIfXTablePacketCounters(interfaceName, idxStr)
 }
 
 // registerIfTableBasicOIDs registers basic ifTable OIDs (index, description, type, etc.).
@@ -124,74 +183,102 @@ func (a *Agent) registerIfTableBasicOIDs(
 }
 
 // registerIfTableCounters registers dynamic ifTable counter OIDs (traffic simulation).
-func (a *Agent) registerIfTableCounters(ifIdx int, idxStr string) {
-	startTime := a.startTime
-
-	// Input counters
-	a.registerIfTableInputCounters(ifIdx, idxStr, startTime)
-
-	// Output counters
-	a.registerIfTableOutputCounters(ifIdx, idxStr, startTime)
-}
-
-// ifCounterConfig defines configuration for a traffic counter OID.
-
-func (a *Agent) registerIfTableInputCounters(ifIdx int, idxStr string, startTime time.Time) {
-	dynamicCounters := []ifCounterConfig{
-		{ifInOctets, 1000000, gosnmp.Counter32}, // ~1MB/s base traffic
-		{ifInUcastPkts, 1000, gosnmp.Counter32}, // unicast packets
-		{ifInNUcastPkts, 10, gosnmp.Counter32},  // broadcast/multicast
+func (a *Agent) registerIfTableCounters(interfaceName, idxStr string) {
+	counters := []struct {
+		oid   string
+		value func(interfaceSnapshot) uint64
+	}{
+		{ifInOctets, func(s interfaceSnapshot) uint64 { return s.inOctets }},
+		{ifInUcastPkts, func(s interfaceSnapshot) uint64 { return s.inUcast }},
+		{ifInNUcastPkts, func(s interfaceSnapshot) uint64 { return s.inNUcast }},
+		{ifOutOctets, func(s interfaceSnapshot) uint64 { return s.outOctets }},
+		{ifOutUcastPkts, func(s interfaceSnapshot) uint64 { return s.outUcast }},
+		{ifOutNUcastPkts, func(s interfaceSnapshot) uint64 { return s.outNUcast }},
 	}
-	a.registerDynamicCounters(dynamicCounters, ifIdx, idxStr, startTime)
-
-	staticCounters := []ifCounterConfig{
-		{ifInDiscards, 0, gosnmp.Counter32},
-		{ifInErrors, 0, gosnmp.Counter32},
-		{ifInUnknownProtos, 0, gosnmp.Counter32},
-	}
-	a.registerStaticZeroCounters(staticCounters, idxStr)
-}
-
-// registerIfTableOutputCounters registers output traffic counters.
-func (a *Agent) registerIfTableOutputCounters(ifIdx int, idxStr string, startTime time.Time) {
-	dynamicCounters := []ifCounterConfig{
-		{ifOutOctets, 800000, gosnmp.Counter32}, // ~800KB/s base traffic
-		{ifOutUcastPkts, 800, gosnmp.Counter32}, // unicast packets
-		{ifOutNUcastPkts, 5, gosnmp.Counter32},  // broadcast/multicast
-	}
-	a.registerDynamicCounters(dynamicCounters, ifIdx, idxStr, startTime)
-
-	staticCounters := []ifCounterConfig{
-		{ifOutDiscards, 0, gosnmp.Counter32},
-		{ifOutErrors, 0, gosnmp.Counter32},
-		{ifOutQLen, 0, gosnmp.Gauge32},
-	}
-	a.registerStaticZeroCounters(staticCounters, idxStr)
-}
-
-// registerDynamicCounters registers dynamic traffic counters with time-based values.
-func (a *Agent) registerDynamicCounters(
-	counters []ifCounterConfig,
-	ifIdx int,
-	idxStr string,
-	startTime time.Time,
-) {
-	for _, c := range counters {
-		oid := c.oid + "." + idxStr
-		rate := c.rate
-		snmpType := c.snmpType
-		a.mib.SetDynamic(oid, func() *OIDValue {
-			elapsed := time.Since(startTime).Seconds()
-			value := uint32((elapsed * rate * float64(ifIdx%TrafficDivisor+1)) / TrafficDivisor)
-			return &OIDValue{Type: snmpType, Value: value}
+	for _, counter := range counters {
+		value := counter.value
+		a.mib.SetDynamic(counter.oid+"."+idxStr, func() *OIDValue {
+			snapshot := a.protocolStats.interfaceSnapshot(interfaceName)
+			return &OIDValue{
+				Type:  gosnmp.Counter32,
+				Value: safeUint32FromUint64(value(snapshot)),
+			}
 		})
 	}
+	for _, oid := range []string{
+		ifInDiscards, ifInErrors, ifInUnknownProtos, ifOutDiscards, ifOutErrors, ifOutQLen,
+	} {
+		fullOID := oid + "." + idxStr
+		if a.mib.Get(fullOID) == nil {
+			a.mib.Set(fullOID, &OIDValue{Type: gosnmp.Counter32, Value: uint32(0)})
+		}
+	}
 }
 
-// registerStaticZeroCounters registers static zero-valued counters.
-func (a *Agent) registerStaticZeroCounters(counters []ifCounterConfig, idxStr string) {
-	for _, c := range counters {
-		a.mib.Set(c.oid+"."+idxStr, &OIDValue{Type: c.snmpType, Value: uint32(0)})
+func (a *Agent) registerIfXTablePacketCounters(interfaceName, idxStr string) {
+	counters := []struct {
+		oid      string
+		value    func(interfaceSnapshot) uint64
+		snmpType gosnmp.Asn1BER
+	}{
+		{
+			ifInMulticastPkts,
+			func(s interfaceSnapshot) uint64 { return s.inNUcast - s.inBroadcast },
+			gosnmp.Counter32,
+		},
+		{
+			ifInBroadcastPkts,
+			func(s interfaceSnapshot) uint64 { return s.inBroadcast },
+			gosnmp.Counter32,
+		},
+		{
+			ifOutMulticastPkts,
+			func(s interfaceSnapshot) uint64 { return s.outNUcast - s.outBroadcast },
+			gosnmp.Counter32,
+		},
+		{
+			ifOutBroadcastPkts,
+			func(s interfaceSnapshot) uint64 { return s.outBroadcast },
+			gosnmp.Counter32,
+		},
+		{ifHCInOctets, func(s interfaceSnapshot) uint64 { return s.inOctets }, gosnmp.Counter64},
+		{ifHCInUcastPkts, func(s interfaceSnapshot) uint64 { return s.inUcast }, gosnmp.Counter64},
+		{
+			ifHCInMulticastPkts,
+			func(s interfaceSnapshot) uint64 { return s.inNUcast - s.inBroadcast },
+			gosnmp.Counter64,
+		},
+		{
+			ifHCInBroadcastPkts,
+			func(s interfaceSnapshot) uint64 { return s.inBroadcast },
+			gosnmp.Counter64,
+		},
+		{ifHCOutOctets, func(s interfaceSnapshot) uint64 { return s.outOctets }, gosnmp.Counter64},
+		{
+			ifHCOutUcastPkts,
+			func(s interfaceSnapshot) uint64 { return s.outUcast },
+			gosnmp.Counter64,
+		},
+		{
+			ifHCOutMulticastPkts,
+			func(s interfaceSnapshot) uint64 { return s.outNUcast - s.outBroadcast },
+			gosnmp.Counter64,
+		},
+		{
+			ifHCOutBroadcastPkts,
+			func(s interfaceSnapshot) uint64 { return s.outBroadcast },
+			gosnmp.Counter64,
+		},
+	}
+	for _, counter := range counters {
+		value, snmpType := counter.value, counter.snmpType
+		a.mib.SetDynamic(counter.oid+"."+idxStr, func() *OIDValue {
+			result := value(a.protocolStats.interfaceSnapshot(interfaceName))
+			if snmpType == gosnmp.Counter32 {
+				return &OIDValue{Type: snmpType, Value: safeUint32FromUint64(result)}
+			}
+			return &OIDValue{Type: snmpType, Value: result}
+		})
 	}
 }
 

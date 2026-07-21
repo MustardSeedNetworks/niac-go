@@ -25,7 +25,16 @@ const (
 const (
 	walkScanBufInitial = 64 * 1024
 	walkScanBufMax     = 4 * 1024 * 1024
+	endOfMIBMarker     = "No more variables left in this MIB View"
 )
+
+// isEndOfMIBLine reports whether net-snmp emitted its terminal walk marker.
+// The marker is traversal metadata, not an SNMP variable binding.
+func isEndOfMIBLine(line string) bool {
+	_, value, ok := strings.Cut(line, "=")
+
+	return ok && strings.HasPrefix(strings.TrimSpace(value), endOfMIBMarker)
+}
 
 // isHexStringLine reports whether a parsed walk line declared a Hex-STRING
 // value, and therefore may be continued on following bare-hex lines.
@@ -165,6 +174,9 @@ func ParseWalkFile(filename string) ([]WalkEntry, error) {
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue
 		}
+		if isEndOfMIBLine(line) {
+			continue
+		}
 
 		// net-snmp continues long Hex-STRING values on subsequent lines that
 		// carry only whitespace-separated hex octets (no "OID = TYPE:" prefix).
@@ -284,30 +296,33 @@ func parseTypeAndValue(typeStr, valueStr string) (gosnmp.Asn1BER, any, error) {
 }
 
 func parseIntegerValue(valueStr string) (gosnmp.Asn1BER, any, error) {
-	value, err := strconv.ParseInt(valueStr, 10, 32)
+	value, err := strconv.ParseInt(valueStr, 10, 64)
 	if err != nil {
 		return 0, nil, fmt.Errorf("failed to parse integer: %w", err)
 	}
+	bounded := safeInt32(value)
 
-	return gosnmp.Integer, int(value), nil
+	return gosnmp.Integer, int(bounded), nil
 }
 
 func parseGaugeValue(valueStr string) (gosnmp.Asn1BER, any, error) {
-	value, err := strconv.ParseUint(valueStr, 10, 32)
+	value, err := strconv.ParseUint(valueStr, 10, 64)
 	if err != nil {
 		return 0, nil, fmt.Errorf("failed to parse gauge: %w", err)
 	}
+	bounded := safeUint32FromUint64(value)
 
-	return gosnmp.Gauge32, uint(value), nil
+	return gosnmp.Gauge32, uint(bounded), nil
 }
 
 func parseCounter32Value(valueStr string) (gosnmp.Asn1BER, any, error) {
-	value, err := strconv.ParseUint(valueStr, 10, 32)
+	value, err := strconv.ParseUint(valueStr, 10, 64)
 	if err != nil {
 		return 0, nil, fmt.Errorf("failed to parse counter32: %w", err)
 	}
+	bounded := safeUint32FromUint64(value)
 
-	return gosnmp.Counter32, uint(value), nil
+	return gosnmp.Counter32, uint(bounded), nil
 }
 
 func parseCounter64Value(valueStr string) (gosnmp.Asn1BER, any, error) {

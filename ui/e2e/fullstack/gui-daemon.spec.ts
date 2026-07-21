@@ -6,15 +6,15 @@ devices:
   - name: sim-router-01
     type: router
     mac: "02:00:00:00:00:01"
-    ip: "192.0.2.10"
-    arp:
-      enabled: true
+    ips:
+      - "192.0.2.10"
     icmp:
       enabled: true
   - name: sim-switch-01
     type: switch
     mac: "02:00:00:00:00:02"
-    ip: "192.0.2.20"
+    ips:
+      - "192.0.2.20"
     lldp:
       enabled: true
 `;

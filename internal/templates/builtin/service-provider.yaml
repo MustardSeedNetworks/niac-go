@@ -115,17 +115,13 @@ devices:
           body: '{"network":"operational","alarms":0}'
 
     dns:
-      enabled: true
-      records:
+      forward_records:
         - name: "pe1.sp.net"
-          type: "A"
-          value: "10.255.1.1"
+          ip: "10.255.1.1"
         - name: "pe2.sp.net"
-          type: "A"
-          value: "10.255.1.2"
+          ip: "10.255.1.2"
         - name: "noc.sp.net"
-          type: "A"
-          value: "10.255.0.100"
+          ip: "10.255.0.100"
 
     snmp_agent:
       walk_file: ""

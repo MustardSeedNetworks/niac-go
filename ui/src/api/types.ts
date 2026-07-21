@@ -47,7 +47,6 @@ export type {
   WalkValidationResponse,
   WalkValidationResult,
 } from './api-response-types';
-
 // Debug Types
 export type {
   DebugLevel,
@@ -57,7 +56,6 @@ export type {
   Protocol,
   UpdateDebugLevelRequest,
 } from './debug-types';
-
 // Device Configuration Types
 export type {
   AddMib,
@@ -119,6 +117,16 @@ export type {
   TTLConfig,
   UpdateDeviceRequest,
 } from './device-config-types';
+export type {
+  FabricBinding,
+  FabricDhcpScope,
+  FabricDiagnostic,
+  FabricInterface,
+  FabricNetwork,
+  FabricRoute,
+  SimulationPreflightReport,
+  SimulationPreflightRequest,
+} from './fabric-types';
 
 // PCAP Types
 export type {

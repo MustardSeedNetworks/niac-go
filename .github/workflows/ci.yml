@@ -17,7 +17,9 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  # Include the commit so a wedged run cannot block validation of a newer
+  # commit on the same pull request.
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event.pull_request.head.sha || github.sha }}
   cancel-in-progress: true
 
 # Least-privilege default: read-only for every job. No job in this workflow

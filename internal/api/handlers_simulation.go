@@ -1,7 +1,10 @@
 package api
 
 import (
+	"errors"
 	"net/http"
+
+	"github.com/MustardSeedNetworks/niac-go/internal/config"
 )
 
 func (s *Server) handleSimulation(w http.ResponseWriter, r *http.Request) {
@@ -27,6 +30,32 @@ func (s *Server) handleSimulation(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// handleSimulationPreflight compiles a simulation request without changing runtime state.
+func (s *Server) handleSimulationPreflight(w http.ResponseWriter, r *http.Request) {
+	if s.daemon == nil {
+		writeError(w, r, http.StatusNotImplemented, "daemon_required", "Daemon mode is required", nil)
+		return
+	}
+	var req SimulationRequest
+	if !decodeJSONStrict(w, r, &req, MaxRequestBodySize) {
+		return
+	}
+	if validationErrors := validateSimulationForPreflight(req); len(validationErrors) > 0 {
+		writeError(w, r, http.StatusBadRequest, "validation_failed", "Validation failed", validationErrors)
+		return
+	}
+	report, err := s.daemon.PreflightSimulation(req)
+	if err != nil {
+		if writeManagedConfigPathError(w, r, err) {
+			return
+		}
+		s.logger.ErrorContext(r.Context(), "[API] Simulation preflight failed", "error", err)
+		writeError(w, r, http.StatusBadRequest, "preflight_failed", "Simulation preflight failed", nil)
+		return
+	}
+	s.writeJSON(w, report)
+}
+
 // handleSimulationStart processes POST requests to start a simulation.
 func (s *Server) handleSimulationStart(w http.ResponseWriter, r *http.Request) {
 	var req SimulationRequest
@@ -46,6 +75,9 @@ func (s *Server) handleSimulationStart(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := s.daemon.StartSimulation(req); err != nil {
+		if writeManagedConfigPathError(w, r, err) {
+			return
+		}
 		// SECURITY: Don't leak internal error details to the client, but
 		// log them server-side so the daemon log can be used to diagnose
 		// why a start failed (config parse, capture engine, walk file…).
@@ -57,6 +89,17 @@ func (s *Server) handleSimulationStart(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusCreated)
 	s.writeJSON(w, s.daemon.GetStatus())
+}
+
+func writeManagedConfigPathError(w http.ResponseWriter, r *http.Request, err error) bool {
+	if !errors.Is(err, config.ErrPathOutsideManagedRoots) {
+		return false
+	}
+	writeError(w, r, http.StatusBadRequest, "validation_failed", "Validation failed", []ErrorDetail{{
+		Field: "config_path", Issue: "configuration must be selected from NIAC-managed storage",
+		Value: "[redacted]",
+	}})
+	return true
 }
 
 // handleSimulationStop processes DELETE requests to stop a simulation.

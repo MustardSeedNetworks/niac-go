@@ -293,6 +293,22 @@ func (m *MIB) Delete(oid string) {
 	}
 }
 
+// ReplacePrefix atomically replaces all entries below prefix.
+func (m *MIB) ReplacePrefix(prefix string, entries map[string]*OIDValue) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	prefix = strings.TrimPrefix(prefix, ".") + "."
+	for oid := range m.entries {
+		if strings.HasPrefix(oid, prefix) {
+			delete(m.entries, oid)
+		}
+	}
+	for oid, value := range entries {
+		m.entries[strings.TrimPrefix(oid, ".")] = value
+	}
+	m.dirty = true
+}
+
 // Count returns the number of OIDs in the MIB.
 func (m *MIB) Count() int {
 	m.mu.RLock()

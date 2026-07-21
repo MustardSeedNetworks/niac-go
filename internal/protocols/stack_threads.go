@@ -2,6 +2,7 @@ package protocols
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -115,6 +116,9 @@ func (s *Stack) decodeThread() {
 
 // decodePacket decodes a packet and routes to appropriate handler.
 func (s *Stack) decodePacket(pkt *Packet) {
+	s.reloadMu.RLock()
+	defer s.reloadMu.RUnlock()
+
 	// Defense in depth: a simulator is exposed to arbitrary, adversarial, and
 	// malformed traffic (discovery tools, scanners, fuzzers). A panic while
 	// handling one packet must never take down the whole sim — recover, log,
@@ -133,13 +137,17 @@ func (s *Stack) decodePacket(pkt *Packet) {
 		}
 	}()
 
+	if s.fabric != nil && !s.fabric.acceptsFrame(pkt.VLAN, pkt.VLANTagged) {
+		return
+	}
+
 	// VLAN confinement: when the sim serves tagged VLANs, ignore untagged frames
 	// entirely. This guarantees it only ever replays on its tagged VLAN(s) and can
 	// never respond on the native/default VLAN — so a misconfigured trunk can't
 	// turn it into a rogue DHCP/ARP responder on a management network. Tagged
 	// traffic (incl. a tester's cross-subnet queries, which arrive on its own
 	// VLAN) is unaffected.
-	if s.vlanMode && pkt.VLAN <= 0 {
+	if s.fabric == nil && s.vlanMode && pkt.VLAN <= 0 {
 		return
 	}
 
@@ -314,28 +322,15 @@ func (s *Stack) sendThread() {
 
 // sendPacket sends a packet to the network.
 func (s *Stack) sendPacket(pkt *Packet) {
-	if pkt.Length == 0 {
-		pkt.Length = len(pkt.Buffer)
-	}
-
-	// Tag replies onto the VLAN their request arrived on, so a trunk-attached
-	// tester (e.g. a CyberScope tagging into VLAN 210) accepts them. Untagged
-	// requests carry VLAN <= 0 and insertDot1Q leaves the frame unchanged.
-	frame := pkt.Buffer[:pkt.Length]
-	if pkt.VLAN > 0 {
-		frame = insertDot1Q(frame, pkt.VLAN)
-	}
-
-	err := s.capture.SendPacket(frame)
+	frame, wireVLAN, err := s.finalizeEgressFrame(pkt)
 	if err != nil {
-		if s.debugConfig.GetGlobal() >= DebugLevelInfo {
-			_, _ = fmt.Fprintf(os.Stdout, "Error sending packet sn=%d: %v\n", pkt.SerialNumber, err)
-		}
+		s.recordSendError(pkt, err)
+		return
+	}
 
-		s.stats.mu.Lock()
-		s.stats.Errors++
-		s.stats.mu.Unlock()
-
+	err = s.capture.SendPacket(frame)
+	if err != nil {
+		s.recordSendError(pkt, err)
 		return
 	}
 
@@ -343,7 +338,12 @@ func (s *Stack) sendPacket(pkt *Packet) {
 	s.stats.PacketsSent++
 	s.stats.mu.Unlock()
 
-	s.notifyObservers("tx", pkt)
+	transmitted := pkt.Clone()
+	transmitted.Buffer = bytes.Clone(frame)
+	transmitted.Length = len(frame)
+	transmitted.VLAN = wireVLAN
+	s.recordOutboundProtocol(transmitted)
+	s.notifyObservers("tx", transmitted)
 
 	if s.debugConfig.GetGlobal() >= DebugLevelVerbose {
 		_, _ = fmt.Fprintf(os.Stdout, "Sent packet sn=%d length=%d\n", pkt.SerialNumber, pkt.Length)
@@ -359,6 +359,41 @@ func (s *Stack) sendPacket(pkt *Packet) {
 			}
 		}()
 	}
+}
+
+func (s *Stack) finalizeEgressFrame(pkt *Packet) ([]byte, int, error) {
+	if pkt == nil {
+		return nil, -1, errors.New("cannot transmit a nil packet")
+	}
+	length := pkt.Length
+	if length == 0 {
+		length = len(pkt.Buffer)
+	}
+	if length < ethHeaderLen || length > len(pkt.Buffer) {
+		return nil, -1, fmt.Errorf("invalid Ethernet frame length %d", length)
+	}
+	frame := pkt.Buffer[:length]
+	if s.fabric != nil && !s.fabric.binding.WireTagged {
+		untagged, err := stripDot1Q(frame)
+		return untagged, -1, err
+	}
+	if pkt.VLAN > 0 {
+		frame = insertDot1Q(frame, pkt.VLAN)
+	}
+	return frame, pkt.VLAN, nil
+}
+
+func (s *Stack) recordSendError(pkt *Packet, err error) {
+	if s.debugConfig.GetGlobal() >= DebugLevelInfo {
+		serial := 0
+		if pkt != nil {
+			serial = pkt.SerialNumber
+		}
+		_, _ = fmt.Fprintf(os.Stdout, "Error sending packet sn=%d: %v\n", serial, err)
+	}
+	s.stats.mu.Lock()
+	s.stats.Errors++
+	s.stats.mu.Unlock()
 }
 
 // babbleThread generates periodic network traffic.

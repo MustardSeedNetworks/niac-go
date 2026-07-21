@@ -97,29 +97,21 @@ devices:
     ips:
       - "10.0.10.100"
     dhcp:
-      enabled: true
-      pools:
-        - network: "10.0.0.0/8"
-          range_start: "10.100.0.1"
-          range_end: "10.100.255.254"
-          gateway: "10.0.0.1"
-          dns_servers:
-            - "10.0.10.100"
-          domain: "enterprise.com"
-          lease_time: 86400
+      subnet_mask: "255.0.0.0"
+      pool_start: "10.100.0.1"
+      pool_end: "10.100.255.254"
+      router: "10.0.0.1"
+      domain_name_server: "10.0.10.100"
+      server_identifier: "10.0.10.100"
 
     dns:
-      enabled: true
-      records:
+      forward_records:
         - name: "core01.enterprise.com"
-          type: "A"
-          value: "10.0.0.1"
+          ip: "10.0.0.1"
         - name: "core02.enterprise.com"
-          type: "A"
-          value: "10.0.0.2"
+          ip: "10.0.0.2"
         - name: "dns.enterprise.com"
-          type: "A"
-          value: "10.0.10.100"
+          ip: "10.0.10.100"
 
     snmp_agent:
       walk_file: ""

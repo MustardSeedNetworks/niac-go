@@ -35,7 +35,7 @@ func TestConvertYAMLDeviceReflector(t *testing.T) {
 		Reflector: &converter.ReflectorConfig{LatencyMs: 10, JitterMs: 2},
 	}
 
-	device, err := convertYAMLDevice(yamlDevice, "")
+	device, err := convertYAMLDevice(yamlDevice, "", nil)
 	if err != nil {
 		t.Fatalf("convertYAMLDevice: %v", err)
 	}

@@ -5,14 +5,35 @@ package protocols
 
 import (
 	"net"
+	"net/netip"
 	"time"
 
 	"github.com/gopacket/gopacket/layers"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/fabric"
 )
 
 // ---- Exported internal types for testing ----
+
+// FabricRuntimeForTest exposes the immutable fabric resolver to external tests.
+type FabricRuntimeForTest struct {
+	runtime *fabricRuntime
+}
+
+// NewFabricRuntimeForTest constructs the fabric resolver for tests.
+func NewFabricRuntimeForTest(topology *fabric.Topology, cfg *config.Config) *FabricRuntimeForTest {
+	return &FabricRuntimeForTest{runtime: newFabricRuntime(topology, cfg)}
+}
+
+// ResolveIPv4 exposes routed endpoint resolution for tests.
+func (r *FabricRuntimeForTest) ResolveIPv4(
+	dst netip.Addr,
+	ingressMAC net.HardwareAddr,
+) (*config.Device, net.HardwareAddr, bool, bool) {
+	resolution, ok := r.runtime.resolveIPv4(dst, ingressMAC)
+	return resolution.device, resolution.replySourceMAC, resolution.routed, ok
+}
 
 // DNSRecord is an exported alias for dnsRecord.
 type DNSRecord = dnsRecord

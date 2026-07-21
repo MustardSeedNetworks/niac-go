@@ -1,6 +1,7 @@
 package snmp
 
 import (
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -32,6 +33,30 @@ func TestParseWalkFile_PathTraversal(t *testing.T) {
 			if err != nil && !strings.Contains(err.Error(), "directory traversal not allowed") &&
 				!strings.Contains(err.Error(), "failed to access walk file") {
 				t.Errorf("Expected path traversal or file access error, got: %v", err)
+			}
+		})
+	}
+}
+
+func TestParseWalkLineBoundsOutOfRange32BitValues(t *testing.T) {
+	tests := []struct {
+		name string
+		line string
+		want any
+	}{
+		{name: "positive integer", line: ".1 = INTEGER: 12582912000", want: int(math.MaxInt32)},
+		{name: "negative integer", line: ".1 = INTEGER: -12582912000", want: int(math.MinInt32)},
+		{name: "gauge", line: ".1 = Gauge32: 10000000000", want: uint(math.MaxUint32)},
+		{name: "counter", line: ".1 = Counter32: 10000000000", want: uint(math.MaxUint32)},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			entry, err := parseWalkLine(tt.line)
+			if err != nil {
+				t.Fatalf("parseWalkLine() error = %v", err)
+			}
+			if entry.Value != tt.want {
+				t.Fatalf("parseWalkLine() value = %v (%T), want %v (%T)", entry.Value, entry.Value, tt.want, tt.want)
 			}
 		})
 	}
@@ -385,5 +410,31 @@ func TestParseWalkFile_HexContinuation(t *testing.T) {
 	const wantHex = "00112233445566778899AABB" // 12 octets: line 1 + folded line 2
 	if hex, _ := entries[0].Value.(string); hex != wantHex {
 		t.Errorf("hex value = %q, want %q (continuation not folded)", hex, wantHex)
+	}
+}
+
+func TestParseWalkFileEndOfMIBMarker(t *testing.T) {
+	walkFile := filepath.Join(t.TempDir(), "completed.walk")
+	walkData := `.1.3.6.1.2.1.1.5.0 = STRING: "router-01"
+.1.3.6.1.4.1.14988.1.1.14.1.1.89.1 = No more variables left in this MIB View (It is past the end of the MIB tree)
+`
+	if err := os.WriteFile(walkFile, []byte(walkData), 0o600); err != nil {
+		t.Fatalf("write walk: %v", err)
+	}
+
+	entries, err := ParseWalkFile(walkFile)
+	if err != nil {
+		t.Fatalf("ParseWalkFile: %v", err)
+	}
+	if len(entries) != 1 {
+		t.Fatalf("entries = %d, want terminal marker omitted", len(entries))
+	}
+
+	validation, err := ValidateWalkFile(walkFile)
+	if err != nil {
+		t.Fatalf("ValidateWalkFile: %v", err)
+	}
+	if !validation.Valid || len(validation.Issues) != 0 {
+		t.Fatalf("validation = %+v, want valid walk without issues", validation)
 	}
 }

@@ -535,3 +535,9 @@ func validateSimulationStartRequest(req SimulationRequest) []ErrorDetail {
 	}
 	return errs
 }
+
+func validateSimulationForPreflight(req SimulationRequest) []ErrorDetail {
+	errs := validateSimulationStartRequest(req)
+	errs = append(errs, validateSimulationRequest(req)...)
+	return errs
+}

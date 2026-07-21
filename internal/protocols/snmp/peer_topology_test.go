@@ -1,7 +1,10 @@
 package snmp
 
 import (
+	"fmt"
 	"net"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -62,6 +65,86 @@ func TestSynthesizePeerTopologyLearnsHostOnPort(t *testing.T) {
 	// entry plus PC01 should carry a learned/self status under the FDB.
 	if got := learnedFDBCount(agent); got != 1 {
 		t.Errorf("learned FDB entries = %d, want exactly 1 (PC01)", got)
+	}
+}
+
+func TestAuthoredDiscoveryUsesWalkInterfaceIdentityEndToEnd(t *testing.T) {
+	dev := createTestDevice()
+	dev.Type = "switch"
+	dev.SNMPConfig.WalkFile = "switch.walk"
+	dev.LLDPConfig = &config.LLDPConfig{Enabled: true}
+	dev.CDPConfig = &config.CDPConfig{Enabled: true}
+	dev.TrunkPorts = []config.TrunkPort{{
+		Interface: "FastEthernet0/5", RemoteDevice: "PC01", RemoteInterface: "eth0",
+	}}
+	dev.Interfaces = []config.Interface{{
+		Name: "FastEthernet0/5", Speed: 100, Duplex: "half", AdminStatus: "down",
+		OperStatus: "down", Description: "intentional demo fault",
+	}}
+	agent := NewAgent(dev, 0)
+	walkPath := filepath.Join(t.TempDir(), "switch.walk")
+	walk := `.1.3.6.1.2.1.2.2.1.2.10005 = STRING: "FastEthernet0/5"
+.1.3.6.1.2.1.17.1.2.0 = INTEGER: 5
+.1.3.6.1.2.1.17.1.4.1.2.5 = INTEGER: 10005
+`
+	if err := os.WriteFile(walkPath, []byte(walk), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := agent.LoadWalkFile(walkPath); err != nil {
+		t.Fatalf("LoadWalkFile: %v", err)
+	}
+	pcMAC, _ := net.ParseMAC("aa:bb:cc:00:00:21")
+	agent.SynthesizePeerTopology(func(string) ([]byte, bool) { return pcMAC, true })
+
+	assertMIBValue(t, agent, lldpLocPortTable+".1.3.10005", "FastEthernet0/5")
+	assertMIBValue(t, agent, lldpRemTable+".1.9.0.10005.1", "PC01")
+	assertMIBValue(t, agent, cdpCacheTable+".1.6.10005.1", "PC01")
+	assertMIBValue(t, agent, dot1dBasePortIfIndex+".5", 10005)
+	assertMIBValue(t, agent, dot1dTpFdbPort+"."+macBytesToOIDIndex(pcMAC), 5)
+	assertMIBValue(t, agent, ifSpeed+".10005", 100000000)
+	assertMIBValue(t, agent, ifHighSpeed+".10005", 100)
+	assertMIBValue(t, agent, ifAdminStatus+".10005", 2)
+	assertMIBValue(t, agent, ifOperStatus+".10005", 2)
+	assertMIBValue(t, agent, ifAlias+".10005", "intentional demo fault")
+	assertMIBValue(t, agent, dot3StatsDuplexStatus+".10005", 2)
+
+	if stale := agent.mib.Get(cdpCacheTable + ".1.6.1.1"); stale != nil {
+		t.Fatalf("stale ordinal CDP row remains: %v", stale.Value)
+	}
+}
+
+func TestFDBOnlyAttachmentLearnsMACWithoutInventingNeighbor(t *testing.T) {
+	dev := createTestDevice()
+	dev.Type = "switch"
+	dev.LLDPConfig = &config.LLDPConfig{Enabled: true}
+	dev.CDPConfig = &config.CDPConfig{Enabled: true}
+	dev.Interfaces = []config.Interface{{Name: "FastEthernet0/5"}}
+	dev.TrunkPorts = []config.TrunkPort{{
+		Interface: "FastEthernet0/5", RemoteDevice: "PC01", RemoteInterface: "eth0", FDBOnly: true,
+	}}
+	agent := NewAgent(dev, 0)
+	pcMAC, _ := net.ParseMAC("aa:bb:cc:00:00:21")
+	agent.SynthesizePeerTopology(func(string) ([]byte, bool) { return pcMAC, true })
+
+	assertMIBValue(t, agent, lldpLocPortTable+".1.3.1", "FastEthernet0/5")
+	assertMIBValue(t, agent, dot1dTpFdbPort+"."+macBytesToOIDIndex(pcMAC), 1)
+	for _, prefix := range []string{lldpRemTable, cdpCacheTable} {
+		for _, oid := range agent.mib.AllOIDs() {
+			if strings.HasPrefix(oid, prefix+".") {
+				t.Fatalf("FDB-only host produced discovery neighbor %s", oid)
+			}
+		}
+	}
+}
+
+func assertMIBValue(t *testing.T, agent *Agent, oid string, want any) {
+	t.Helper()
+	entry := agent.mib.Get(oid)
+	if entry == nil {
+		t.Fatalf("%s is absent", oid)
+	}
+	if got := entry.Value; fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Fatalf("%s = %v, want %v", oid, got, want)
 	}
 }
 

@@ -191,6 +191,48 @@ func TestValidate_DuplicateIP(t *testing.T) {
 	}
 }
 
+func TestValidate_DetectsDuplicateIdentityAcrossSegments(t *testing.T) {
+	mac := net.HardwareAddr{0x00, 0x11, 0x22, 0x33, 0x44, 0x55}
+	cfg := &Config{Segments: []Segment{
+		{Tag: 10, Devices: []Device{{
+			Name: "duplicate", Type: "switch", MACAddress: mac,
+			IPAddresses: []net.IP{net.ParseIP("192.0.2.10")},
+		}}},
+		{Tag: 20, Devices: []Device{{
+			Name: "duplicate", Type: "switch", MACAddress: mac,
+			IPAddresses: []net.IP{net.ParseIP("192.0.2.10")},
+		}}},
+	}}
+
+	result := NewValidator("segments.yaml").Validate(cfg)
+
+	if result.Valid {
+		t.Fatal("Validate() valid = true, want duplicate identity errors")
+	}
+	if len(result.Errors) != 3 {
+		t.Fatalf("errors = %#v, want duplicate name, MAC, and IP", result.Errors)
+	}
+}
+
+func TestValidate_ResolvesForwardTopologyReference(t *testing.T) {
+	cfg := &Config{Devices: []Device{
+		{
+			Name: "first", Type: "switch",
+			TrunkPorts: []TrunkPort{{
+				Interface: "Ethernet1", VLANs: []int{10},
+				RemoteDevice: "second", RemoteInterface: "Ethernet1",
+			}},
+		},
+		{Name: "second", Type: "switch"},
+	}}
+
+	result := NewValidator("topology.yaml").Validate(cfg)
+
+	if result.HasWarnings() {
+		t.Fatalf("warnings = %#v, want none for a declared forward reference", result.Warnings)
+	}
+}
+
 func TestValidate_InvalidThreshold(t *testing.T) {
 	cfg := &Config{
 		Devices: []Device{
@@ -222,6 +264,39 @@ func TestValidate_InvalidThreshold(t *testing.T) {
 
 	if len(result.Errors) == 0 {
 		t.Error("Expected error for invalid threshold")
+	}
+}
+
+func TestValidate_SNMPRequiresExplicitCommunity(t *testing.T) {
+	enabled := true
+	disabled := false
+	tests := []struct {
+		name  string
+		snmp  SNMPConfig
+		valid bool
+	}{
+		{name: "absent", valid: true},
+		{name: "explicit community", snmp: SNMPConfig{Enabled: &enabled, Community: "NetAllyDemo"}, valid: true},
+		{name: "explicitly disabled", snmp: SNMPConfig{Enabled: &disabled, SysName: "switch-1"}, valid: true},
+		{name: "enabled without community", snmp: SNMPConfig{Enabled: &enabled, SysName: "switch-1"}},
+		{name: "walk without community", snmp: SNMPConfig{SysName: "switch-1", WalkFile: "switch.walk"}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := &Config{Devices: []Device{{
+				Name:        "switch-1",
+				Type:        "switch",
+				MACAddress:  net.HardwareAddr{0x02, 0, 0, 0, 0, 1},
+				IPAddresses: []net.IP{net.ParseIP("192.0.2.1")},
+				SNMPConfig:  tt.snmp,
+			}}}
+
+			result := NewValidator("test.yaml").Validate(cfg)
+			if result.Valid != tt.valid {
+				t.Fatalf("Valid = %v, want %v; errors = %#v", result.Valid, tt.valid, result.Errors)
+			}
+		})
 	}
 }
 

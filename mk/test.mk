@@ -109,7 +109,7 @@ test-frontend-quiet:
 # E2E Tests
 # =============================================================================
 
-test-e2e: ## Run frontend E2E tests (requires backend running)
+test-e2e: build ## Build and run frontend E2E tests against the HTTPS daemon
 	@echo ""
 	@echo "🎭 Running E2E tests (Playwright)..."
 	@E2E_COUNT=$$(find $(UI_DIR)/e2e -name "*.spec.ts" 2>/dev/null | wc -l | tr -d ' '); \
@@ -124,7 +124,7 @@ test-e2e-ui: ## Run E2E tests with Playwright UI
 	cd $(UI_DIR) && npx playwright test --ui
 
 test-e2e-install: ## Install Playwright browsers
-	cd $(UI_DIR) && npx playwright install --with-deps chromium
+	cd $(UI_DIR) && npx playwright install --with-deps chromium webkit
 
 # =============================================================================
 # Coverage

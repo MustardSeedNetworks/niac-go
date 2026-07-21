@@ -123,6 +123,7 @@
     "description": "Guided path to build a config, add devices, and start a simulation.",
     "steps": {
       "template": "Template",
+      "preflight": "Connection",
       "devices": "Devices",
       "protocols": "Protocols",
       "review": "Review",
@@ -136,6 +137,19 @@
       "help": "Pick a starting config below, or start empty and add devices in the next step.",
       "errorNoSource": "Pick a template, saved config, upload, or Start empty first",
       "startingLabel": "Starting…"
+    },
+    "preflight": {
+      "title": "Review physical connection",
+      "help": "Startup requires an administrator-approved attachment policy for the selected interface, mode, and access VLAN.",
+      "attachmentLabel": "Scenario attachment",
+      "modeLabel": "Physical connection",
+      "accessMode": "Access VLAN",
+      "directMode": "Direct cable (untagged)",
+      "vlanLabel": "Access VLAN (1–4094)",
+      "requestError": "Preflight failed",
+      "safe": "Topology and binding preflight passed for {{count}} virtual networks. Verify host-side isolation before connecting the tester.",
+      "checkLabel": "Run preflight",
+      "startLabel": "Start simulation"
     },
     "devices": {
       "help": "Add or edit devices for this simulation using the Device Library below."

@@ -16,6 +16,8 @@ import (
 	"github.com/MustardSeedNetworks/niac-go/internal/api/tokenstore"
 	"github.com/MustardSeedNetworks/niac-go/internal/capture"
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/fabric"
+	"github.com/MustardSeedNetworks/niac-go/internal/library"
 	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 	"github.com/MustardSeedNetworks/niac-go/internal/protocols"
 	"github.com/MustardSeedNetworks/niac-go/internal/replay"
@@ -29,6 +31,8 @@ var (
 	ErrConfigPathOrDataRequired = errors.New("either config_path, config_data, or template_name must be provided")
 	ErrNoSimulationRunning      = errors.New("no simulation running")
 	ErrTemplateNotFound         = errors.New("template not found")
+	ErrUnsafeTopology           = errors.New("routed topology failed preflight")
+	ErrInvalidSimulationConfig  = errors.New("simulation configuration failed semantic validation")
 )
 
 const (
@@ -74,6 +78,8 @@ type Config struct {
 	// auto-generation under CertDir.
 	CertFile string
 	KeyFile  string
+	// AttachmentPolicies are operator-owned permissions for routed physical bindings.
+	AttachmentPolicies []fabric.PhysicalAttachmentPolicy
 }
 
 // Daemon manages the NIAC simulation lifecycle.
@@ -101,6 +107,7 @@ type Simulation struct {
 	engine *capture.Engine
 	stack  *protocols.Stack
 	cfg    *config.Config
+	fabric *fabric.Topology
 	replay api.ReplayManager
 	cancel context.CancelFunc
 }
@@ -271,7 +278,7 @@ const maxSimulationConfigSize = 10 * 1024 * 1024 // 10MB limit
 // config YAML editor, "Download YAML" — has a real path to read from.
 // Without this, those surfaces returned config_read_failed because they
 // did a file Stat on the literal string "<inline>".
-func loadSimulationConfig(req api.SimulationRequest) (*config.Config, string, error) {
+func loadSimulationConfig(req api.SimulationRequest, persistInline bool) (*config.Config, string, error) {
 	switch {
 	case req.TemplateName != "":
 		// Loading templates by name preserves the template's own
@@ -302,6 +309,9 @@ func loadSimulationConfig(req api.SimulationRequest) (*config.Config, string, er
 		if err != nil {
 			return nil, "", fmt.Errorf("load configuration: %w", err)
 		}
+		if !persistInline {
+			return cfg, "", nil
+		}
 		path, err := persistInlineConfig(req.ConfigData)
 		if err != nil {
 			// Persistence failure isn't fatal — the sim can still run on
@@ -312,18 +322,101 @@ func loadSimulationConfig(req api.SimulationRequest) (*config.Config, string, er
 		}
 		return cfg, path, nil
 	case req.ConfigPath != "":
-		cleanedPath := filepath.Clean(req.ConfigPath)
-		if strings.Contains(cleanedPath, "..") {
-			return nil, "", fmt.Errorf("config path must not contain '..' components: %s", req.ConfigPath)
-		}
-		cfg, err := config.Load(cleanedPath)
+		managedPath, err := config.ResolveManagedConfigPath(req.ConfigPath, simulationConfigRoots())
 		if err != nil {
 			return nil, "", fmt.Errorf("load configuration: %w", err)
 		}
-		return cfg, cleanedPath, nil
+		cfg, err := config.Load(managedPath)
+		if err != nil {
+			return nil, "", fmt.Errorf("load configuration: %w", err)
+		}
+		return cfg, managedPath, nil
 	default:
 		return nil, "", ErrConfigPathOrDataRequired
 	}
+}
+
+func simulationConfigRoots() []string {
+	roots := []string{
+		filepath.Join(library.DefaultRoot(), string(library.KindNetworks)),
+		"configs",
+		"/var/lib/niac/configs",
+		os.ExpandEnv("$HOME/.niac/configs"),
+	}
+	if custom := os.Getenv("NIAC_CONFIGS_DIR"); custom != "" {
+		roots = append([]string{custom}, roots...)
+	}
+	return append(roots, templates.Dirs()...)
+}
+
+func loadValidSimulationConfig(
+	req api.SimulationRequest,
+	persistInline bool,
+) (*config.Config, string, error) {
+	cfg, path, err := loadSimulationConfig(req, persistInline)
+	if err != nil {
+		return nil, "", err
+	}
+	result := config.NewValidator(path).Validate(cfg)
+	if result.HasErrors() {
+		return nil, "", fmt.Errorf("%w: %w", ErrInvalidSimulationConfig, result)
+	}
+	return cfg, path, nil
+}
+
+// PreflightSimulation compiles a routed request without opening capture or changing runtime state.
+func (d *Daemon) PreflightSimulation(req api.SimulationRequest) (fabric.Report, error) {
+	cfg, _, err := loadValidSimulationConfig(req, false)
+	if err != nil {
+		return fabric.Report{}, err
+	}
+	if !usesRoutedFabric(cfg) {
+		return fabric.Report{
+			Safe: true,
+			Topology: fabric.Topology{Binding: fabric.CompiledBinding{
+				Binding: d.bindingFromRequest(req),
+			}},
+		}, nil
+	}
+	return fabric.Compile(cfg, d.bindingFromRequest(req)), nil
+}
+
+func usesRoutedFabric(cfg *config.Config) bool {
+	return len(cfg.Networks) > 0 || len(cfg.Attachments) > 0
+}
+
+func (d *Daemon) bindingFromRequest(req api.SimulationRequest) fabric.Binding {
+	binding := fabric.Binding{
+		Attachment: req.Attachment,
+		Interface:  req.Interface,
+		Mode:       req.AttachmentMode,
+		AccessVLAN: req.AccessVLAN,
+	}
+	for _, policy := range d.cfg.AttachmentPolicies {
+		if policy.Approves(binding) {
+			binding.PolicyApproved = true
+			break
+		}
+	}
+	return binding
+}
+
+type compiledSimulationFabric struct {
+	topology *fabric.Topology
+}
+
+func (d *Daemon) compileSimulationFabric(
+	cfg *config.Config,
+	req api.SimulationRequest,
+) (compiledSimulationFabric, error) {
+	if !usesRoutedFabric(cfg) {
+		return compiledSimulationFabric{}, nil
+	}
+	report := fabric.Compile(cfg, d.bindingFromRequest(req))
+	if !report.Safe {
+		return compiledSimulationFabric{}, fmt.Errorf("%w: %v", ErrUnsafeTopology, report.Diagnostics)
+	}
+	return compiledSimulationFabric{topology: &report.Topology}, nil
 }
 
 // inlineConfigName is the deterministic filename used to materialise inline
@@ -377,29 +470,40 @@ func (d *Daemon) StartSimulation(req api.SimulationRequest) error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
-	if d.simulation != nil {
-		if err := d.stopSimulationLocked(); err != nil {
-			return fmt.Errorf("stop existing simulation: %w", err)
-		}
-	}
-
 	dryRun := e2eDryRunSimulation()
 	if !dryRun && !capture.InterfaceExists(req.Interface) {
 		return fmt.Errorf("%w: %s", ErrInterfaceNotExist, req.Interface)
 	}
 
-	cfg, configPath, err := loadSimulationConfig(req)
+	cfg, configPath, err := loadValidSimulationConfig(req, false)
 	if err != nil {
 		return err
+	}
+	compiledFabric, err := d.compileSimulationFabric(cfg, req)
+	if err != nil {
+		return err
+	}
+	compiled := compiledFabric.topology
+	if req.ConfigData != "" {
+		configPath, err = persistInlineConfig(req.ConfigData)
+		if err != nil {
+			return fmt.Errorf("persist inline config: %w", err)
+		}
+	}
+	if d.simulation != nil {
+		if stopErr := d.stopSimulationLocked(); stopErr != nil {
+			return fmt.Errorf("stop existing simulation: %w", stopErr)
+		}
 	}
 
 	var engine *capture.Engine
 	var cancel context.CancelFunc
 	var replay api.ReplayManager
 	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(DefaultDebugLevel))
+	stack.ConfigureFabric(compiled)
 
 	if !dryRun {
-		engine, stack, cancel, err = startSimulationStack(req.Interface, cfg)
+		engine, stack, cancel, err = startSimulationStack(req.Interface, cfg, compiled)
 		if err != nil {
 			return err
 		}
@@ -416,6 +520,7 @@ func (d *Daemon) StartSimulation(req api.SimulationRequest) error {
 		engine:     engine,
 		stack:      stack,
 		cfg:        cfg,
+		fabric:     compiled,
 		replay:     replay,
 		cancel:     cancel,
 	}
@@ -462,7 +567,7 @@ func resolvePlaybackPath(fileName, configPath string) string {
 // startSimulationStack creates the capture engine and starts the protocol stack.
 // Returns (engine, stack, cancel, err). Cleans up on failure.
 func startSimulationStack(
-	iface string, cfg *config.Config,
+	iface string, cfg *config.Config, topology *fabric.Topology,
 ) (*capture.Engine, *protocols.Stack, context.CancelFunc, error) {
 	engine, err := capture.New(iface, DefaultDebugLevel)
 	if err != nil {
@@ -470,6 +575,7 @@ func startSimulationStack(
 	}
 
 	stack := protocols.NewStack(engine, cfg, logging.NewDebugConfig(DefaultDebugLevel))
+	stack.ConfigureFabric(topology)
 
 	// Lifecycle cancel used by StopSimulation. Stack.Start() does not accept a context,
 	// so the stop signal flows via Stack.Stop() and engine.Close(). The cancel is

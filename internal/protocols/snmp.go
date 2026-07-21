@@ -50,9 +50,14 @@ func (h *SNMPHandler) HandlePacket(pkt *Packet, ip *layers.IPv4, udp *layers.UDP
 		h.handleV3(pkt, ip, udp, devices)
 		return
 	}
+	if ver, ok := snmpPeekVersion(udp.Payload); ok && ver != gosnmp.Version1 && ver != gosnmp.Version2c {
+		h.recordForDevices(devices, func(agent *snmp.Agent) { agent.RecordBadVersion() })
+		return
+	}
 
 	request, err := h.decodeRequest(udp.Payload)
 	if err != nil {
+		h.recordForDevices(devices, func(agent *snmp.Agent) { agent.RecordASNParseError() })
 		if h.stack.GetProtocolDebugLevel(logging.ProtocolSNMP) >= DebugLevelInfo {
 			_, _ = fmt.Fprintf(os.Stdout, "SNMP: decode failed for %s sn=%d err=%v\n", ip.DstIP, pkt.SerialNumber, err)
 		}
@@ -77,8 +82,10 @@ func (h *SNMPHandler) processDeviceRequest(
 	if agent == nil {
 		return
 	}
+	agent.RecordInboundPacket()
+	agent.RecordInboundError(request.Error)
 
-	payload, err := h.buildResponse(agent, request)
+	payload, status, err := h.buildResponse(agent, request)
 	if err != nil {
 		if h.stack.GetProtocolDebugLevel(logging.ProtocolSNMP) >= 1 {
 			_, _ = fmt.Fprintf(os.Stdout,
@@ -93,7 +100,9 @@ func (h *SNMPHandler) processDeviceRequest(
 	h.stack.stats.SNMPQueries++
 	h.stack.stats.mu.Unlock()
 
-	h.sendResponse(pkt, ip, udp, device, payload)
+	if h.sendResponse(pkt, ip, udp, device, payload) {
+		agent.RecordResponse(status)
+	}
 }
 
 // findAgent finds the appropriate SNMP agent for a device request.
@@ -104,46 +113,48 @@ func (h *SNMPHandler) findAgent(device *config.Device, srcIP net.IP, community s
 	}
 
 	if !snmpAccessAllowed(device, srcIP) {
+		if agent := group.Get(community); agent != nil {
+			agent.RecordBadCommunityUse()
+		}
 		return nil
 	}
-
 	agent := group.Get(community)
 	if agent == nil {
-		agent = group.Get("public")
+		if observer := group.observer(); observer != nil {
+			observer.RecordBadCommunityName()
+		}
 	}
-
 	return agent
 }
 
 // buildResponse creates and marshals an SNMP response.
-func (h *SNMPHandler) buildResponse(agent *snmp.Agent, request *gosnmp.SnmpPacket) ([]byte, error) {
+func (h *SNMPHandler) buildResponse(
+	agent *snmp.Agent,
+	request *gosnmp.SnmpPacket,
+) ([]byte, gosnmp.SNMPError, error) {
 	// The simulator speaks SNMP v1/v2c only. gosnmp's MarshalMsg dispatches a
 	// Version3 packet to marshalV3, which dereferences SecurityParameters we
 	// never populate → nil-pointer SIGSEGV. Discovery tools such as NetAlly
 	// CyberScope/AirCheck send SNMPv3 probes, so decline unsupported versions
 	// here rather than letting one probe crash the whole simulator.
 	if request.Version != gosnmp.Version1 && request.Version != gosnmp.Version2c {
-		return nil, fmt.Errorf("%w: %v", ErrUnsupportedSNMPVersion, request.Version)
+		return nil, gosnmp.GenErr, fmt.Errorf("%w: %v", ErrUnsupportedSNMPVersion, request.Version)
 	}
 
-	responseVars := agent.ProcessPDU(
-		request.PDUType,
-		request.Variables,
-		int(request.NonRepeaters),
-		request.MaxRepetitions,
-	)
+	responseVars, status, errorIndex := agent.ProcessRequest(request)
 
 	response := &gosnmp.SnmpPacket{
 		Version:    request.Version,
 		Community:  request.Community,
 		PDUType:    gosnmp.GetResponse,
 		RequestID:  request.RequestID,
-		Error:      gosnmp.NoError,
-		ErrorIndex: 0,
+		Error:      status,
+		ErrorIndex: errorIndex,
 		Variables:  responseVars,
 	}
 
-	return response.MarshalMsg()
+	payload, err := response.MarshalMsg()
+	return payload, status, err
 }
 
 // sendResponse sends the SNMP response packet.
@@ -153,19 +164,19 @@ func (h *SNMPHandler) sendResponse(
 	udp *layers.UDP,
 	device *config.Device,
 	payload []byte,
-) {
+) bool {
 	srcIP := ip.DstIP.To4()
 	dstIP := ip.SrcIP.To4()
 
 	if srcIP == nil || dstIP == nil {
-		return
+		return false
 	}
 
 	srcMAC := h.sourceMAC(device, pkt)
 	dstMAC := pkt.GetSourceMAC()
 
 	if len(dstMAC) == 0 || len(srcMAC) == 0 {
-		return
+		return false
 	}
 
 	err := h.stack.udpHandler.SendUDP(
@@ -179,6 +190,17 @@ func (h *SNMPHandler) sendResponse(
 		_, _ = fmt.Fprintf(os.Stdout,
 			"SNMP: failed to emit response for device %s sn=%d err=%v\n",
 			device.Name, pkt.SerialNumber, err)
+	}
+	return err == nil
+}
+
+func (h *SNMPHandler) recordForDevices(devices []*config.Device, record func(*snmp.Agent)) {
+	for _, device := range devices {
+		if group := h.stack.getSNMPAgents(device); group != nil {
+			if agent := group.observer(); agent != nil {
+				record(agent)
+			}
+		}
 	}
 }
 
@@ -196,7 +218,7 @@ func (h *SNMPHandler) decodeRequest(payload []byte) (*gosnmp.SnmpPacket, error) 
 	decoder := gosnmp.GoSNMP{
 		Transport: "udp",
 		Version:   gosnmp.Version2c,
-		Community: "public",
+		Community: config.DefaultSNMPCommunity,
 		MaxOids:   gosnmp.MaxOids,
 	}
 
@@ -234,7 +256,9 @@ func (h *SNMPHandler) handleV3(pkt *Packet, ip *layers.IPv4, udp *layers.UDP, de
 		h.stack.stats.SNMPQueries++
 		h.stack.stats.mu.Unlock()
 
-		h.sendResponse(pkt, ip, udp, device, resp)
+		if h.sendResponse(pkt, ip, udp, device, resp) {
+			group.v3Agent.RecordResponse(gosnmp.NoError)
+		}
 	}
 }
 
@@ -266,6 +290,11 @@ func snmpPeekVersion(payload []byte) (gosnmp.SnmpVersion, bool) {
 }
 
 func (h *SNMPHandler) sourceMAC(device *config.Device, pkt *Packet) net.HardwareAddr {
+	if h.stack != nil {
+		if mac := h.stack.replySourceMAC(pkt, device); len(mac) == snmpMACAddrLen {
+			return mac
+		}
+	}
 	if len(device.MACAddress) == snmpMACAddrLen {
 		return device.MACAddress
 	}

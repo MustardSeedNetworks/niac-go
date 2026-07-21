@@ -355,6 +355,9 @@ export interface StandaloneCaptureRequest {
 
 export interface SimulationRequest {
   interface: string;
+  attachment?: string;
+  attachmentMode?: 'direct' | 'access';
+  accessVlan?: number;
   configPath?: string;
   configData?: string;
   /**

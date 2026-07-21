@@ -21,10 +21,13 @@ func (t *VLANTag) UnmarshalYAML(node *yaml.Node) error {
 
 // Sentinel errors for converter.
 var (
-	ErrInvalidLoopTimeFormat      = errors.New("invalid LoopTime format")
-	ErrInvalidScaleTimeFormat     = errors.New("invalid ScaleTime format")
-	ErrInvalidVlanFormat          = errors.New("invalid Vlan format")
-	ErrDeviceMissingMAC           = errors.New("device missing MAC address")
+	ErrInvalidLoopTimeFormat   = errors.New("invalid LoopTime format")
+	ErrInvalidScaleTimeFormat  = errors.New("invalid ScaleTime format")
+	ErrInvalidVlanFormat       = errors.New("invalid Vlan format")
+	ErrDeviceMissingMAC        = errors.New("device missing MAC address")
+	ErrDeviceMACSourceConflict = errors.New(
+		"device must use either mac or vendor identity, not both",
+	)
 	ErrAddMibMissingOID           = errors.New("AddMib missing OID")
 	ErrAddMibMissingType          = errors.New("AddMib missing type")
 	ErrCapturePlaybackMissingFile = errors.New("CapturePlayback missing file name")
@@ -54,7 +57,22 @@ type Config struct {
 	// isolated network (own IP space) on its tag, and top-level `devices` must
 	// be empty. When absent, `devices` is served as a single untagged segment —
 	// today's flat behavior.
-	Segments []Segment `yaml:"segments,omitempty" validate:"omitempty,dive"`
+	Segments    []Segment           `yaml:"segments,omitempty"    validate:"omitempty,dive"`
+	Networks    []Network           `yaml:"networks,omitempty"    validate:"omitempty,dive"`
+	Attachments []LogicalAttachment `yaml:"attachments,omitempty" validate:"omitempty,dive"`
+}
+
+// Network declares one internal routed IPv4 network.
+type Network struct {
+	Name        string `yaml:"name"                   validate:"required"`
+	Subnet      string `yaml:"subnet"                 validate:"required,cidr"`
+	VirtualVLAN int    `yaml:"virtual_vlan,omitempty" validate:"omitempty,gte=1,lte=4094"`
+}
+
+// LogicalAttachment names the virtual network exposed by a deployment binding.
+type LogicalAttachment struct {
+	Name    string `yaml:"name"    validate:"required"`
+	Connect string `yaml:"connect" validate:"required"`
 }
 
 // Segment binds a device set to a VLAN tag for multi-VLAN playback. Exactly one
@@ -92,9 +110,13 @@ type CapturePlayback struct {
 
 // Device represents a network device.
 type Device struct {
-	Name          string               `yaml:"name,omitempty"`
-	Type          string               `yaml:"type,omitempty"           validate:"omitempty,oneof=router switch ap access-point firewall server host workstation iot"`
-	MAC           string               `yaml:"mac"                      validate:"required,mac"`
+	Name string `yaml:"name,omitempty"`
+	Type string `yaml:"type,omitempty" validate:"omitempty,oneof=router switch ap access-point firewall server host workstation iot"`
+
+	MAC       string `yaml:"mac,omitempty"        validate:"omitempty,mac"`
+	Vendor    string `yaml:"vendor,omitempty"`
+	MACSuffix uint32 `yaml:"mac_suffix,omitempty" validate:"lte=16777215"`
+
 	IPs           []string             `yaml:"ips,omitempty"            validate:"omitempty,dive,ip"`
 	VLAN          int                  `yaml:"vlan,omitempty"           validate:"omitempty,gte=1,lte=4094"`
 	MapToIP       string               `yaml:"map_to_ip,omitempty"      validate:"omitempty,ip"`
@@ -119,8 +141,9 @@ type Device struct {
 	IPerf3        *IPerf3Config        `yaml:"iperf3,omitempty"`         // v1.25.0
 	Reflector     *ReflectorConfig     `yaml:"reflector,omitempty"`      // v0.94.0 — NetAlly UDP reflector endpoint
 	Interfaces    []Interface          `yaml:"interfaces,omitempty"`     // Device interface metadata
-	TrunkPorts    []TrunkPort          `yaml:"trunk_ports,omitempty"`    // v1.23.0 — topology link declarations
-	PortChannels  []PortChannel        `yaml:"port_channels,omitempty"`  // v1.23.0 — LAG bundling
+	Routes        []Route              `yaml:"routes,omitempty"         validate:"omitempty,dive"`
+	TrunkPorts    []TrunkPort          `yaml:"trunk_ports,omitempty"`   // v1.23.0 — topology link declarations
+	PortChannels  []PortChannel        `yaml:"port_channels,omitempty"` // v1.23.0 — LAG bundling
 	// Properties is a free-form vendor-metadata block used by the
 	// vendor template pack (cmd/niac/templates/vendor-templates) to
 	// carry vendor / model / OS / port-config strings into the
@@ -132,12 +155,21 @@ type Device struct {
 // Interface represents configured metadata for a device interface.
 type Interface struct {
 	Name        string `yaml:"name"`
+	Network     string `yaml:"network,omitempty"`
+	Address     string `yaml:"address,omitempty"      validate:"omitempty,cidr"`
 	Speed       int    `yaml:"speed,omitempty"` // Mbps
 	Duplex      string `yaml:"duplex,omitempty"`
 	AdminStatus string `yaml:"admin_status,omitempty"`
 	OperStatus  string `yaml:"oper_status,omitempty"`
 	Description string `yaml:"description,omitempty"`
 	VLANs       []int  `yaml:"vlans,omitempty"`
+}
+
+// Route declares an IPv4 static route through a named device interface.
+type Route struct {
+	Destination string `yaml:"destination" validate:"required,cidr"`
+	Via         string `yaml:"via"         validate:"required"`
+	NextHop     string `yaml:"next_hop"    validate:"required,ip4_addr"`
 }
 
 // TrunkPort declares a VLAN-tagged trunk link to a neighbouring device.
@@ -149,6 +181,7 @@ type TrunkPort struct {
 	NativeVLAN      int    `yaml:"native_vlan,omitempty"`
 	RemoteDevice    string `yaml:"remote_device,omitempty"`
 	RemoteInterface string `yaml:"remote_interface,omitempty"`
+	FDBOnly         bool   `yaml:"fdb_only,omitempty"`
 }
 
 // PortChannel declares a Link Aggregation (LACP) bundle. Doesn't
@@ -209,6 +242,12 @@ type OSFingerprintConfig struct {
 
 // SnmpAgent represents SNMP agent configuration.
 type SnmpAgent struct {
+	Enabled           *bool              `yaml:"enabled,omitempty"`
+	Community         string             `yaml:"community,omitempty"`
+	SysName           string             `yaml:"sysname,omitempty"`
+	SysDescr          string             `yaml:"sysdescr,omitempty"`
+	SysContact        string             `yaml:"syscontact,omitempty"`
+	SysLocation       string             `yaml:"syslocation,omitempty"`
 	WalkFile          string             `yaml:"walk_file,omitempty"`
 	WalkFiles         []string           `yaml:"walk_files,omitempty"`
 	AddMibs           []AddMib           `yaml:"add_mibs,omitempty"           validate:"omitempty,dive"`

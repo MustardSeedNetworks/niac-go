@@ -84,11 +84,7 @@ func (a *Agent) SynthesizePeerTopology(resolve PeerMACResolver) {
 // adds the dot1dBasePort row — a small, in-range port, not the ifIndex (which a
 // manager would reject as out of range).
 func (a *Agent) bridgePortForInterface(name string, offset int, hasOffset bool) (int, bool) {
-	ifIndex, ok := a.mib.IndexSuffixForValue(ifDescr, name)
-	if !ok {
-		ifIndex, ok = a.mib.IndexSuffixForValue(ifName, name)
-	}
-
+	ifIndex, ok := a.ifIndexForInterface(name)
 	if !ok {
 		return 0, false
 	}
@@ -123,15 +119,47 @@ func (a *Agent) bridgePortForInterface(name string, offset int, hasOffset bool) 
 	return port, true
 }
 
+// ifIndexForInterface resolves an authored interface name through the loaded
+// IF-MIB, preferring ifDescr and then ifName as discovery managers do.
+func (a *Agent) ifIndexForInterface(name string) (string, bool) {
+	ifIndex, ok := a.mib.IndexSuffixForValue(ifDescr, name)
+	if !ok {
+		ifIndex, ok = a.mib.IndexSuffixForValue(ifName, name)
+	}
+	return ifIndex, ok
+}
+
 // basePortOffset infers the capture's linear bridgePort→ifIndex offset (ifIndex =
 // bridgePort + offset) from a sampled dot1dBasePortIfIndex row.
 func (a *Agent) basePortOffset() (int, bool) {
-	p, i, ok := a.mib.SampleIntEntry(dot1dBasePortIfIndex)
-	if !ok {
-		return 0, false
+	prefix := dot1dBasePortIfIndex + "."
+	counts := make(map[int]int)
+	a.mib.mu.RLock()
+	defer a.mib.mu.RUnlock()
+	for oid, value := range a.mib.entries {
+		if !strings.HasPrefix(oid, prefix) {
+			continue
+		}
+		port, portErr := strconv.Atoi(strings.TrimPrefix(oid, prefix))
+		ifIndex, indexErr := strconv.Atoi(oidValueString(value))
+		if portErr == nil && indexErr == nil {
+			counts[ifIndex-port]++
+		}
 	}
+	bestOffset, bestCount := 0, 0
+	for offset, count := range counts {
+		if count > bestCount || (count == bestCount && absInt(offset) > absInt(bestOffset)) {
+			bestOffset, bestCount = offset, count
+		}
+	}
+	return bestOffset, bestCount > 0
+}
 
-	return i - p, true
+func absInt(value int) int {
+	if value < 0 {
+		return -value
+	}
+	return value
 }
 
 // raiseBaseNumPorts ensures dot1dBaseNumPorts is at least n.

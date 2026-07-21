@@ -27,6 +27,8 @@ import type {
   ReplayState,
   RuntimeStatus,
   SegmentSummary,
+  SimulationPreflightReport,
+  SimulationPreflightRequest,
   SimulationRequest,
   SimulationStatus,
   StackStatsResponse,
@@ -244,6 +246,10 @@ export const fetchUsableInterfaces = () =>
   deduplicatedGet<InterfacesResponse>('/api/v1/interfaces?filter=usable');
 export const fetchRuntimeStatus = () => deduplicatedGet<RuntimeStatus>('/api/v1/runtime');
 export const fetchSimulationStatus = () => deduplicatedGet<SimulationStatus>('/api/v1/simulation');
+export const preflightSimulation = (payload: SimulationPreflightRequest) =>
+  requestJson<SimulationPreflightReport>('/api/v1/simulation/preflight', payload, {
+    method: 'POST',
+  });
 export const startSimulation = (payload: SimulationRequest) =>
   requestJson<SimulationStatus>('/api/v1/simulation', payload, { method: 'POST' });
 export const stopSimulation = () =>
