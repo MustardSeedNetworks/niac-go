@@ -226,7 +226,7 @@ func (a *Agent) LoadWalkFile(filename string) error {
 		// captured device's name — otherwise every device sharing a walk collides
 		// under one name and a discovery tool merges them. sysDescr/location stay
 		// as the walk's authentic values.
-		if a.isAuthoredIdentityOID(entry.OID) || isAgentOwnedSNMPOID(entry.OID) {
+		if a.isAuthoredIdentityOID(entry.OID) || isAgentOwnedSNMPOID(entry.OID) || isLiveProtocolOID(entry.OID) {
 			skipped++
 
 			continue
@@ -245,6 +245,7 @@ func (a *Agent) LoadWalkFile(filename string) error {
 	if a.mib.Get(dot1dBaseNumPorts) == nil {
 		a.initializeBridgeMIB()
 	}
+	a.refreshBridgePortCounters()
 	a.refreshAuthoredInterfaceMIBs()
 	if a.ownsSynthesizedTopology() {
 		a.refreshAuthoredDiscoveryMIBs()
@@ -264,6 +265,16 @@ func (a *Agent) LoadWalkFile(filename string) error {
 	}
 
 	return nil
+}
+
+func isLiveProtocolOID(oid string) bool {
+	oid = strings.TrimPrefix(oid, ".")
+	for _, root := range []string{ipMIBBase, icmpMIBRoot, tcpMIBRoot, udpMIBRoot, egpMIBRoot} {
+		if oid == root || strings.HasPrefix(oid, root+".") {
+			return true
+		}
+	}
+	return false
 }
 
 func isAgentOwnedSNMPOID(oid string) bool {

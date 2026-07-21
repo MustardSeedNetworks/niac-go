@@ -54,20 +54,7 @@ func (a *Agent) initializeTCPMIB() {
 	for _, scalar := range values {
 		a.mib.Set(tcpMIBRoot+"."+strconv.Itoa(scalar.id)+".0", &OIDValue{Type: scalar.typeID, Value: scalar.value})
 	}
-	for oid, counter := range map[string]*atomic.Uint32{
-		tcpMIBRoot + ".5.0":  &a.protocolStats.tcpActiveOpens,
-		tcpMIBRoot + ".6.0":  &a.protocolStats.tcpPassiveOpens,
-		tcpMIBRoot + ".7.0":  &a.protocolStats.tcpAttemptFails,
-		tcpMIBRoot + ".8.0":  &a.protocolStats.tcpEstabResets,
-		tcpMIBRoot + ".10.0": &a.protocolStats.tcpInSegs,
-		tcpMIBRoot + ".11.0": &a.protocolStats.tcpOutSegs,
-		tcpMIBRoot + ".15.0": &a.protocolStats.tcpOutRsts,
-	} {
-		a.setProtocolCounter(oid, counter)
-	}
-	a.mib.SetDynamic(tcpMIBRoot+".9.0", func() *OIDValue {
-		return &OIDValue{Type: gosnmp.Gauge32, Value: a.protocolStats.tcpFlows.currentEstablished()}
-	})
+	a.registerLiveTCPCounters()
 
 	for _, ip := range mibIIIPv4Addresses(a.device.IPAddresses) {
 		for _, port := range a.configuredTCPPorts() {
@@ -82,13 +69,28 @@ func (a *Agent) initializeTCPMIB() {
 	}
 }
 
+func (a *Agent) registerLiveTCPCounters() {
+	for oid, counter := range map[string]*atomic.Uint32{
+		tcpMIBRoot + ".5.0":  &a.protocolStats.tcpActiveOpens,
+		tcpMIBRoot + ".6.0":  &a.protocolStats.tcpPassiveOpens,
+		tcpMIBRoot + ".7.0":  &a.protocolStats.tcpAttemptFails,
+		tcpMIBRoot + ".8.0":  &a.protocolStats.tcpEstabResets,
+		tcpMIBRoot + ".10.0": &a.protocolStats.tcpInSegs,
+		tcpMIBRoot + ".11.0": &a.protocolStats.tcpOutSegs,
+		tcpMIBRoot + ".15.0": &a.protocolStats.tcpOutRsts,
+	} {
+		a.setProtocolCounter(oid, counter)
+	}
+	a.mib.SetDynamic(tcpMIBRoot+".9.0", func() *OIDValue {
+		return &OIDValue{Type: gosnmp.Gauge32, Value: a.protocolStats.tcpFlows.currentEstablished()}
+	})
+}
+
 func (a *Agent) initializeUDPMIB() {
 	for id := 1; id <= 4; id++ {
 		a.mib.Set(udpMIBRoot+"."+strconv.Itoa(id)+".0", &OIDValue{Type: gosnmp.Counter32, Value: uint32(0)})
 	}
-	a.setProtocolCounter(udpMIBRoot+".1.0", &a.protocolStats.udpInDatagrams)
-	a.setProtocolCounter(udpMIBRoot+".2.0", &a.protocolStats.udpNoPorts)
-	a.setProtocolCounter(udpMIBRoot+".4.0", &a.protocolStats.udpOutDatagrams)
+	a.registerLiveUDPCounters()
 	for _, ip := range mibIIIPv4Addresses(a.device.IPAddresses) {
 		for _, port := range a.configuredUDPPorts() {
 			index := ip + "." + strconv.Itoa(port)
@@ -97,6 +99,12 @@ func (a *Agent) initializeUDPMIB() {
 			a.mib.Set(entry+".2."+index, &OIDValue{Type: gosnmp.Integer, Value: port})
 		}
 	}
+}
+
+func (a *Agent) registerLiveUDPCounters() {
+	a.setProtocolCounter(udpMIBRoot+".1.0", &a.protocolStats.udpInDatagrams)
+	a.setProtocolCounter(udpMIBRoot+".2.0", &a.protocolStats.udpNoPorts)
+	a.setProtocolCounter(udpMIBRoot+".4.0", &a.protocolStats.udpOutDatagrams)
 }
 
 func (a *Agent) configuredTCPPorts() []int {

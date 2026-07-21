@@ -41,6 +41,10 @@ func (a *Agent) initializeICMPMIB() {
 	for id := 1; id <= 26; id++ {
 		a.mib.Set(icmpMIBRoot+"."+strconv.Itoa(id)+".0", &OIDValue{Type: gosnmp.Counter32, Value: uint32(0)})
 	}
+	a.registerLiveICMPCounters()
+}
+
+func (a *Agent) registerLiveICMPCounters() {
 	a.setProtocolCounter(icmpMIBRoot+".1.0", &a.protocolStats.icmpInMsgs)
 	a.setProtocolCounter(icmpMIBRoot+".14.0", &a.protocolStats.icmpOutMsgs)
 	for icmpType, oid := range map[uint8]int{

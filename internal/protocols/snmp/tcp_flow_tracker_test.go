@@ -39,6 +39,18 @@ func TestTCPFlowTrackerHandshakeExpiry(t *testing.T) {
 	assertProtocolCounter(t, agent, tcpMIBRoot+".9.0", 0)
 }
 
+func TestTCPFlowTrackerSYNRetransmissionDoesNotDoubleActiveOpen(t *testing.T) {
+	telemetry := NewProtocolTelemetry()
+	agent := NewAgentWithCommunityAndTelemetry(createTestDevice(), "public", 0, telemetry)
+	syn := tcpFlowEvent(false)
+	syn.TCPSYN = true
+
+	telemetry.RecordOutbound(syn)
+	telemetry.RecordOutbound(syn)
+
+	assertProtocolCounter(t, agent, tcpMIBRoot+".5.0", 1)
+}
+
 func TestTCPFlowTrackerPublishesConnectionTableToAgent(t *testing.T) {
 	telemetry := NewProtocolTelemetry()
 	agent := NewAgentWithCommunityAndTelemetry(createTestDevice(), "public", 0, telemetry)

@@ -51,6 +51,22 @@ func (a *Agent) initializeBridgeMIB() {
 	}
 }
 
+func (a *Agent) refreshBridgePortCounters() {
+	entry := a.mib.Get(dot1dBaseNumPorts)
+	if entry == nil {
+		return
+	}
+	numPorts, err := strconv.Atoi(oidValueString(entry))
+	if err != nil || numPorts < 1 {
+		return
+	}
+	for port := 1; port <= numPorts; port++ {
+		if a.mib.Get(dot1dBasePortIfIndex+"."+strconv.Itoa(port)) != nil {
+			a.registerDot1dTpPortEntry(port)
+		}
+	}
+}
+
 // registerDot1dBaseGroup registers dot1dBase OIDs.
 func (a *Agent) registerDot1dBaseGroup(numPorts int, macBytes []byte) {
 	a.mib.Set(dot1dBaseBridgeAddress, &OIDValue{Type: gosnmp.OctetString, Value: macBytes})

@@ -265,7 +265,7 @@ func (t *ProtocolTelemetry) RecordOutbound(event ProtocolEvent) {
 		if event.TCPSYN {
 			if event.TCPACK && opened {
 				t.tcpPassiveOpens.Add(1)
-			} else if !event.TCPACK {
+			} else if !event.TCPACK && opened {
 				t.tcpActiveOpens.Add(1)
 			}
 		}

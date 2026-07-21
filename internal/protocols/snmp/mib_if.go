@@ -208,7 +208,10 @@ func (a *Agent) registerIfTableCounters(interfaceName, idxStr string) {
 	for _, oid := range []string{
 		ifInDiscards, ifInErrors, ifInUnknownProtos, ifOutDiscards, ifOutErrors, ifOutQLen,
 	} {
-		a.mib.Set(oid+"."+idxStr, &OIDValue{Type: gosnmp.Counter32, Value: uint32(0)})
+		fullOID := oid + "." + idxStr
+		if a.mib.Get(fullOID) == nil {
+			a.mib.Set(fullOID, &OIDValue{Type: gosnmp.Counter32, Value: uint32(0)})
+		}
 	}
 }
 
