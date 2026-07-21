@@ -245,6 +245,7 @@ func (a *Agent) LoadWalkFile(filename string) error {
 	if a.mib.Get(dot1dBaseNumPorts) == nil {
 		a.initializeBridgeMIB()
 	}
+	a.registerLiveMIBIIProtocolCounters()
 	a.refreshBridgePortCounters()
 	a.refreshAuthoredInterfaceMIBs()
 	if a.ownsSynthesizedTopology() {

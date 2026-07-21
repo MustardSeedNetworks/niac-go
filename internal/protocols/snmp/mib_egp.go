@@ -22,3 +22,10 @@ func (a *Agent) initializeMIBIIProtocolGroups() {
 	a.initializeTransportMIBs()
 	a.initializeEGPMIB()
 }
+
+func (a *Agent) registerLiveMIBIIProtocolCounters() {
+	a.registerLiveIPScalars()
+	a.registerLiveICMPCounters()
+	a.registerLiveTCPCounters()
+	a.registerLiveUDPCounters()
+}

@@ -1,6 +1,8 @@
 package snmp
 
 import (
+	"os"
+	"path/filepath"
 	"sync"
 	"testing"
 )
@@ -74,6 +76,35 @@ func TestProtocolTelemetryFragmentEvidence(t *testing.T) {
 		if value.Value != want {
 			t.Errorf("%s = %v, want %d", oid, value.Value, want)
 		}
+	}
+}
+
+func TestWalkLoadPreservesLiveProtocolCounters(t *testing.T) {
+	device := createTestDevice()
+	telemetry := NewProtocolTelemetry()
+	agent := NewAgentWithCommunityAndTelemetry(device, "public", 0, telemetry)
+	walkPath := filepath.Join(t.TempDir(), "captured.walk")
+	walk := `.1.3.6.1.2.1.4.3.0 = Counter32: 900
+.1.3.6.1.2.1.5.1.0 = Counter32: 901
+.1.3.6.1.2.1.6.10.0 = Counter32: 902
+.1.3.6.1.2.1.7.1.0 = Counter32: 903
+`
+	if err := os.WriteFile(walkPath, []byte(walk), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := agent.LoadWalkFile(walkPath); err != nil {
+		t.Fatal(err)
+	}
+
+	telemetry.RecordInbound(ProtocolEvent{Protocol: protocolICMP, ICMPType: 8})
+	telemetry.RecordInbound(ProtocolEvent{Protocol: protocolTCP})
+	telemetry.RecordInbound(ProtocolEvent{Protocol: protocolUDP})
+
+	for oid, want := range map[string]uint32{
+		ipInReceives: 3, icmpMIBRoot + ".1.0": 1,
+		tcpMIBRoot + ".10.0": 1, udpMIBRoot + ".1.0": 1,
+	} {
+		assertProtocolCounter(t, agent, oid, want)
 	}
 }
 

@@ -91,6 +91,14 @@ func (s *Stack) recordOutboundProtocol(pkt *Packet) {
 		interfaceNameForIP(device, ip.SrcIP), pkt.Length,
 		frameIsNonUnicast(pkt), frameIsBroadcast(pkt),
 	)
+	if pkt.fabricFirstHopDevice != nil && pkt.fabricFirstHopDevice != device {
+		if firstHopGroup := s.getSNMPAgents(pkt.fabricFirstHopDevice); firstHopGroup != nil {
+			firstHopGroup.telemetry.RecordInterfaceOutbound(
+				interfaceNameForIP(pkt.fabricFirstHopDevice, pkt.fabricFirstHopIP), pkt.Length,
+				frameIsNonUnicast(pkt), frameIsBroadcast(pkt),
+			)
+		}
+	}
 }
 
 func interfaceNameForIP(device *config.Device, target net.IP) string {
