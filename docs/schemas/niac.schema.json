@@ -180,6 +180,12 @@
         "mac": {
           "type": "string"
         },
+        "vendor": {
+          "type": "string"
+        },
+        "mac_suffix": {
+          "type": "integer"
+        },
         "ips": {
           "items": {
             "type": "string"
@@ -284,10 +290,7 @@
         }
       },
       "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "mac"
-      ]
+      "type": "object"
     },
     "DhcpLease": {
       "properties": {
@@ -1030,13 +1033,17 @@
         },
         "via": {
           "type": "string"
+        },
+        "next_hop": {
+          "type": "string"
         }
       },
       "additionalProperties": false,
       "type": "object",
       "required": [
         "destination",
-        "via"
+        "via",
+        "next_hop"
       ]
     },
     "Segment": {
@@ -1062,6 +1069,24 @@
     },
     "SnmpAgent": {
       "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "community": {
+          "type": "string"
+        },
+        "sysname": {
+          "type": "string"
+        },
+        "sysdescr": {
+          "type": "string"
+        },
+        "syscontact": {
+          "type": "string"
+        },
+        "syslocation": {
+          "type": "string"
+        },
         "walk_file": {
           "type": "string"
         },
@@ -1268,6 +1293,9 @@
         },
         "remote_interface": {
           "type": "string"
+        },
+        "fdb_only": {
+          "type": "boolean"
         }
       },
       "additionalProperties": false,

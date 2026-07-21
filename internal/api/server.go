@@ -320,7 +320,6 @@ type SimulationRequest struct {
 	Attachment     string                `json:"attachment,omitempty"`
 	AttachmentMode fabric.AttachmentMode `json:"attachmentMode,omitempty"`
 	AccessVLAN     uint16                `json:"accessVlan,omitempty"`
-	Dedicated      bool                  `json:"dedicated,omitempty"`
 	ConfigPath     string                `json:"configPath,omitempty"`
 	ConfigData     string                `json:"configData,omitempty"`
 	// TemplateName, when set, tells the daemon to load a built-in

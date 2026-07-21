@@ -93,12 +93,11 @@ func TestRunConfigExportWithValidation(t *testing.T) {
     mac: "00:11:22:33:44:55"
     ips:
       - "10.0.0.1"
-    snmpAgent:
+    snmp_agent:
       community: "public"
     lldp:
       enabled: true
-      system_name: "device-1"
-      chassis_id: "00:11:22:33:44:55"
+      system_description: "device-1"
 `
 	if err := os.WriteFile(inputFile, []byte(configContent), 0o644); err != nil {
 		t.Fatal(err)

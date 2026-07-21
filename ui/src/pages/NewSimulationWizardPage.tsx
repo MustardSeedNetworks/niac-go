@@ -211,6 +211,13 @@ export const NewSimulationWizardPage: FC = () => {
         {state.step === 5 && <FinishStep />}
       </div>
 
+      {state.step === 1 && (
+        <div className="flex justify-start">
+          <Button variant="outline" data-testid="wizard-back-button" onClick={goBack}>
+            {t('newSimWizard.backLabel')}
+          </Button>
+        </div>
+      )}
       {state.step !== 1 && state.step < WIZARD_STEPS.length - 1 && (
         <div className="flex justify-between gap-default">
           <Button

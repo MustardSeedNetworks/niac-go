@@ -179,7 +179,7 @@ func (h *TCPHandler) routeToHandler(
 		h.stack.iperf3Handler.HandleIPerf3Request(pkt, ipLayer, tcp, devices)
 	default:
 		if isSYNOnly {
-			h.sendRST(ipLayer, tcp, devices, pkt.VLAN)
+			h.sendRST(pkt, ipLayer, tcp, devices)
 		}
 	}
 }
@@ -243,20 +243,19 @@ func (h *TCPHandler) handleHealthCheckPort(
 }
 
 // sendRST sends a TCP RST packet.
-func (h *TCPHandler) sendRST(ipLayer *layers.IPv4, tcp *layers.TCP, devices []*config.Device, vlan int) {
+func (h *TCPHandler) sendRST(pkt *Packet, ipLayer *layers.IPv4, tcp *layers.TCP, devices []*config.Device) {
 	debugLevel := h.stack.GetDebugLevel()
 
-	device := h.findDeviceWithIP(devices, ipLayer.DstIP)
-	if device == nil {
+	if len(devices) == 0 {
+		return
+	}
+	device := devices[0]
+	identity, ok := h.stack.replyEthernet(pkt, device)
+	if !ok {
 		return
 	}
 
-	dstMAC := h.lookupDestinationMAC(ipLayer.SrcIP, debugLevel, vlan)
-	if dstMAC == nil {
-		return
-	}
-
-	h.sendRSTPacket(device, dstMAC, ipLayer, tcp, debugLevel, vlan)
+	h.sendRSTPacket(device, identity, ipLayer, tcp, debugLevel)
 }
 
 // findDeviceWithIP finds a device that has the specified IP address and MAC.
@@ -309,15 +308,14 @@ func (h *TCPHandler) lookupDestinationMAC(srcIP any, debugLevel int, vlan int) [
 // sendRSTPacket builds and sends a TCP RST packet.
 func (h *TCPHandler) sendRSTPacket(
 	device *config.Device,
-	dstMAC []byte,
+	identity replyEthernetIdentity,
 	ipLayer *layers.IPv4,
 	tcp *layers.TCP,
 	debugLevel int,
-	vlan int,
 ) {
 	eth := &layers.Ethernet{
-		SrcMAC:       device.MACAddress,
-		DstMAC:       dstMAC,
+		SrcMAC:       identity.source,
+		DstMAC:       identity.destination,
 		EthernetType: layers.EthernetTypeIPv4,
 	}
 
@@ -352,7 +350,7 @@ func (h *TCPHandler) sendRSTPacket(
 		return
 	}
 
-	h.sendSerializedPacket(buffer.Bytes(), device, ipReply, tcpReply, debugLevel, vlan)
+	h.sendSerializedPacket(buffer.Bytes(), device, ipReply, tcpReply, debugLevel, identity.vlan)
 }
 
 // sendSerializedPacket sends a serialized packet and logs the result.

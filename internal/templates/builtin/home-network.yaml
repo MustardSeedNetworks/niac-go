@@ -17,28 +17,19 @@ devices:
       system_description: "Home Broadband Router"
 
     dhcp:
-      enabled: true
-      pools:
-        - network: "192.168.1.0/24"
-          range_start: "192.168.1.50"
-          range_end: "192.168.1.200"
-          gateway: "192.168.1.1"
-          dns_servers:
-            - "192.168.1.1"
-            - "8.8.8.8"
-            - "1.1.1.1"
-          domain: "home.local"
-          lease_time: 86400
+      subnet_mask: "255.255.255.0"
+      pool_start: "192.168.1.50"
+      pool_end: "192.168.1.200"
+      router: "192.168.1.1"
+      domain_name_server: "192.168.1.1"
+      server_identifier: "192.168.1.1"
 
     dns:
-      enabled: true
-      records:
+      forward_records:
         - name: "router.home.local"
-          type: "A"
-          value: "192.168.1.1"
+          ip: "192.168.1.1"
         - name: "nas.home.local"
-          type: "A"
-          value: "192.168.1.10"
+          ip: "192.168.1.10"
 
     http:
       enabled: true

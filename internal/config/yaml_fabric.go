@@ -23,7 +23,7 @@ func convertLogicalAttachments(in []converter.LogicalAttachment) []LogicalAttach
 func convertRoutes(in []converter.Route) []Route {
 	out := make([]Route, len(in))
 	for i, route := range in {
-		out[i] = Route{Destination: route.Destination, Via: route.Via}
+		out[i] = Route{Destination: route.Destination, Via: route.Via, NextHop: route.NextHop}
 	}
 	return out
 }

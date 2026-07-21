@@ -15,7 +15,7 @@ const (
 type DiagnosticCode string
 
 const (
-	CodeDedicatedRequired       DiagnosticCode = "dedicated_interface_required"
+	CodeAttachmentPolicyDenied  DiagnosticCode = "attachment_policy_denied"
 	CodeInvalidAccessVLAN       DiagnosticCode = "invalid_access_vlan"
 	CodeInvalidAttachmentMode   DiagnosticCode = "invalid_attachment_mode"
 	CodeUnknownAttachment       DiagnosticCode = "unknown_attachment"
@@ -33,6 +33,10 @@ const (
 	CodeReservedInterfaceAddr   DiagnosticCode = "reserved_interface_address"
 	CodeUnknownRouteInterface   DiagnosticCode = "unknown_route_interface"
 	CodeInvalidRoute            DiagnosticCode = "invalid_route"
+	CodeInvalidRouteNextHop     DiagnosticCode = "invalid_route_next_hop"
+	CodeRouteNextHopOffLink     DiagnosticCode = "route_next_hop_off_link"
+	CodeUnknownRouteNextHop     DiagnosticCode = "unknown_route_next_hop"
+	CodeRouteNextHopSelf        DiagnosticCode = "route_next_hop_self"
 	CodeDHCPNetworkAmbiguous    DiagnosticCode = "dhcp_network_ambiguous"
 	CodeDHCPPoolOutsideNetwork  DiagnosticCode = "dhcp_pool_outside_network"
 	CodeInvalidDHCPRange        DiagnosticCode = "invalid_dhcp_range"
@@ -43,11 +47,23 @@ const (
 
 // Binding maps a scenario attachment to one physical deployment interface.
 type Binding struct {
-	Attachment string         `json:"attachment"`
-	Interface  string         `json:"interface"`
-	Mode       AttachmentMode `json:"mode"`
-	AccessVLAN uint16         `json:"accessVlan,omitempty"`
-	Dedicated  bool           `json:"dedicated,omitempty"`
+	Attachment     string         `json:"attachment"`
+	Interface      string         `json:"interface"`
+	Mode           AttachmentMode `json:"mode"`
+	AccessVLAN     uint16         `json:"accessVlan,omitempty"`
+	PolicyApproved bool           `json:"-"`
+}
+
+// PhysicalAttachmentPolicy is an operator-owned permission for one exact host attachment.
+type PhysicalAttachmentPolicy struct {
+	Interface  string
+	Mode       AttachmentMode
+	AccessVLAN uint16
+}
+
+// Approves reports whether the policy exactly matches a requested physical binding.
+func (p PhysicalAttachmentPolicy) Approves(binding Binding) bool {
+	return p.Interface == binding.Interface && p.Mode == binding.Mode && p.AccessVLAN == binding.AccessVLAN
 }
 
 // CompiledBinding is the physical exposure contract shown by preflight.
@@ -78,6 +94,7 @@ type Route struct {
 	Device      string       `json:"device"`
 	Destination netip.Prefix `json:"destination"`
 	Via         string       `json:"via"`
+	NextHop     netip.Addr   `json:"nextHop,omitzero"`
 	Connected   bool         `json:"connected"`
 }
 

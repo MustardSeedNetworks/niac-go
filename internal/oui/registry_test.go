@@ -48,7 +48,9 @@ func TestEmbeddedRegistryContainsLabVendors(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadEmbedded() error = %v", err)
 	}
-	for _, vendor := range []string{"Cisco", "Juniper", "Aruba"} {
+	for _, vendor := range []string{
+		"Cisco", "Juniper", "Aruba", "Meraki", "MikroTik", "Palo Alto", "Raspberry Pi",
+	} {
 		if _, err = registry.Allocate(vendor, 1); err != nil {
 			t.Errorf("Allocate(%q) error = %v", vendor, err)
 		}

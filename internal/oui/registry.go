@@ -115,10 +115,20 @@ func parseLine(line string) (prefix, string, bool) {
 }
 
 func vendorSearch(vendor string) string {
-	if strings.EqualFold(strings.TrimSpace(vendor), "aruba") {
+	switch strings.ToLower(strings.TrimSpace(vendor)) {
+	case "aruba":
 		return "hewlett packard enterprise"
+	case "meraki":
+		return "cisco meraki"
+	case "mikrotik":
+		return "routerboard.com"
+	case "palo alto":
+		return "palo alto networks"
+	case "raspberry pi":
+		return "raspberry pi"
+	default:
+		return strings.ToLower(strings.TrimSpace(vendor))
 	}
-	return strings.ToLower(strings.TrimSpace(vendor))
 }
 
 func comparePrefix(left, right prefix) int {

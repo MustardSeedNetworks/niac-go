@@ -101,13 +101,13 @@ func TestDNSSelectServerDevice(t *testing.T) {
 		{Name: "d1", IPAddresses: []net.IP{net.ParseIP("10.0.0.1")}, MACAddress: mac},
 	}
 
-	dev, ip := h.selectServerDevice(devices, false)
+	dev, ip := h.selectServerDevice(devices, false, nil)
 	if dev == nil || ip == nil {
 		t.Fatal("expected server device to be found")
 	}
 
 	// IPv6 request - no IPv6 addresses
-	dev, ip = h.selectServerDevice(devices, true)
+	dev, ip = h.selectServerDevice(devices, true, nil)
 	if dev != nil || ip != nil {
 		t.Error("expected no server for IPv6 when no IPv6 addresses")
 	}
@@ -454,14 +454,18 @@ func TestDHCPFindServerDevice(t *testing.T) {
 		t.Error("expected nil for empty device list")
 	}
 
-	// Device without IPs
+	// Device without DHCP configuration
 	devs := []*config.Device{{Name: "d1"}}
 	if findServerDevice(devs) != nil {
-		t.Error("expected nil for device without IPs")
+		t.Error("expected nil for device without DHCP configuration")
 	}
 
-	// Device with IPs
-	devs = []*config.Device{{Name: "d1", IPAddresses: []net.IP{net.ParseIP("10.0.0.1")}}}
+	// An addressed non-server must not be selected ahead of the DHCP device.
+	devs = []*config.Device{
+		{Name: "addressed", IPAddresses: []net.IP{net.ParseIP("10.0.0.1")}},
+		nil,
+		{Name: "d1", DHCPConfig: &config.DHCPConfig{}},
+	}
 	got := findServerDevice(devs)
 	if got == nil || got.Name != "d1" {
 		t.Error("expected d1 to be returned")
@@ -1402,6 +1406,7 @@ func TestStackFormatMACForFDB(t *testing.T) {
 }
 
 func TestStackSNMPEnabled(t *testing.T) {
+	disabled := false
 	tests := []struct {
 		name string
 		cfg  config.SNMPConfig
@@ -1409,12 +1414,14 @@ func TestStackSNMPEnabled(t *testing.T) {
 	}{
 		{"empty", config.SNMPConfig{}, false},
 		{"community", config.SNMPConfig{Community: "public"}, true},
-		{"walkfile", config.SNMPConfig{WalkFile: "walk.txt"}, true},
-		{"sysname", config.SNMPConfig{SysName: "sw1"}, true},
-		{"addmibs", config.SNMPConfig{AddMibs: []config.AddMib{{}}}, true},
-		{"fdb dot1d", config.SNMPConfig{Dot1DFdbTable: &config.FdbTableConfig{}}, true},
-		{"traps", config.SNMPConfig{Traps: &config.TrapConfig{Enabled: true}}, true},
+		{"whitespace community", config.SNMPConfig{Community: "  "}, false},
+		{"walkfile without community", config.SNMPConfig{WalkFile: "walk.txt"}, false},
+		{"sysname without community", config.SNMPConfig{SysName: "sw1"}, false},
+		{"addmibs without community", config.SNMPConfig{AddMibs: []config.AddMib{{}}}, false},
+		{"fdb without community", config.SNMPConfig{Dot1DFdbTable: &config.FdbTableConfig{}}, false},
+		{"traps without community", config.SNMPConfig{Traps: &config.TrapConfig{Enabled: true}}, false},
 		{"traps disabled", config.SNMPConfig{Traps: &config.TrapConfig{Enabled: false}}, false},
+		{"explicitly disabled", config.SNMPConfig{Enabled: &disabled, Community: "public"}, false},
 	}
 
 	for _, tt := range tests {
@@ -1486,8 +1493,8 @@ func TestStackGetBaseCommunity(t *testing.T) {
 
 	dev := &config.Device{Name: "d1"}
 	community := stack.getBaseCommunity(dev)
-	if community != config.DefaultSNMPCommunity {
-		t.Errorf("expected default community, got %q", community)
+	if community != "" {
+		t.Errorf("expected no implicit community, got %q", community)
 	}
 
 	dev.SNMPConfig.Community = "private"

@@ -14,6 +14,24 @@ func mergeSnmpAgent(base *SnmpAgent, incoming *SnmpAgent) *SnmpAgent {
 	if incoming == nil {
 		return base
 	}
+	if base.Enabled == nil {
+		base.Enabled = incoming.Enabled
+	}
+	if base.Community == "" {
+		base.Community = incoming.Community
+	}
+	if base.SysName == "" {
+		base.SysName = incoming.SysName
+	}
+	if base.SysDescr == "" {
+		base.SysDescr = incoming.SysDescr
+	}
+	if base.SysContact == "" {
+		base.SysContact = incoming.SysContact
+	}
+	if base.SysLocation == "" {
+		base.SysLocation = incoming.SysLocation
+	}
 	if base.WalkFile == "" {
 		base.WalkFile = incoming.WalkFile
 	}

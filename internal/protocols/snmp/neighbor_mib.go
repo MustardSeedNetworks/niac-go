@@ -1,5 +1,10 @@
 package snmp
 
+import (
+	"slices"
+	"strings"
+)
+
 // LLDP-MIB OID prefixes (IEEE 802.1AB)
 
 const (
@@ -67,13 +72,19 @@ const (
 	// ipRouteTable (1.3.6.1.2.1.4.21) - deprecated but still commonly used.
 	ipRouteTable   = ipMIBBase + ".21"
 	ipRouteEntry   = ipRouteTable + ".1"
-	ipRouteDest    = ipRouteEntry + ".1"  // Destination
-	ipRouteIfIndex = ipRouteEntry + ".2"  // Interface index
-	ipRouteMetric1 = ipRouteEntry + ".3"  // Metric
-	ipRouteNextHop = ipRouteEntry + ".7"  // Next hop
-	ipRouteType    = ipRouteEntry + ".8"  // Route type (1=other,2=invalid,3=direct,4=indirect)
-	ipRouteProto   = ipRouteEntry + ".9"  // Protocol (1=other,2=local,3=netmgmt,4=icmp,etc.)
+	ipRouteDest    = ipRouteEntry + ".1" // Destination
+	ipRouteIfIndex = ipRouteEntry + ".2" // Interface index
+	ipRouteMetric1 = ipRouteEntry + ".3" // Metric
+	ipRouteMetric2 = ipRouteEntry + ".4"
+	ipRouteMetric3 = ipRouteEntry + ".5"
+	ipRouteMetric4 = ipRouteEntry + ".6"
+	ipRouteNextHop = ipRouteEntry + ".7" // Next hop
+	ipRouteType    = ipRouteEntry + ".8" // Route type (1=other,2=invalid,3=direct,4=indirect)
+	ipRouteProto   = ipRouteEntry + ".9" // Protocol (1=other,2=local,3=netmgmt,4=icmp,etc.)
+	ipRouteAge     = ipRouteEntry + ".10"
 	ipRouteMask    = ipRouteEntry + ".11" // Subnet mask
+	ipRouteInfo    = ipRouteEntry + ".12"
+	ipRouteMetric5 = ipRouteEntry + ".13"
 
 	// ipNetToMediaTable (1.3.6.1.2.1.4.22) - ARP table.
 	ipNetToMediaTable       = ipMIBBase + ".22"
@@ -238,6 +249,26 @@ func (a *Agent) initializeNeighborMIBs() {
 
 	// Initialize CDP global and cache
 	if device.CDPConfig != nil && device.CDPConfig.Enabled {
+		a.initializeCDPMIB()
+	}
+}
+
+// refreshAuthoredDiscoveryMIBs rebuilds local and remote discovery rows after
+// a walk has supplied its authoritative IF-MIB indexes.
+func (a *Agent) refreshAuthoredDiscoveryMIBs() {
+	prefixes := []string{lldpLocPortTable, lldpRemoteSystemsData, cdpCache}
+	for _, oid := range a.mib.AllOIDs() {
+		if slices.ContainsFunc(prefixes, func(prefix string) bool {
+			return oid == prefix || strings.HasPrefix(oid, prefix+".")
+		}) {
+			a.mib.Delete(oid)
+		}
+	}
+	if a.device.LLDPConfig != nil && a.device.LLDPConfig.Enabled {
+		a.initializeLLDPLocalMIB()
+		a.initializeLLDPRemoteMIB()
+	}
+	if a.device.CDPConfig != nil && a.device.CDPConfig.Enabled {
 		a.initializeCDPMIB()
 	}
 }

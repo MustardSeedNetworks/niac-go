@@ -140,7 +140,7 @@ func TestPrintDeviceList(t *testing.T) {
     mac: "00:11:22:33:44:55"
     ips:
       - "192.168.1.1"
-    snmpAgent:
+    snmp_agent:
       community: "public"
   - name: "switch-1"
     type: "switch"

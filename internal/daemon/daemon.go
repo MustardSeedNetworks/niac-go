@@ -17,6 +17,7 @@ import (
 	"github.com/MustardSeedNetworks/niac-go/internal/capture"
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 	"github.com/MustardSeedNetworks/niac-go/internal/fabric"
+	"github.com/MustardSeedNetworks/niac-go/internal/library"
 	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 	"github.com/MustardSeedNetworks/niac-go/internal/protocols"
 	"github.com/MustardSeedNetworks/niac-go/internal/replay"
@@ -31,6 +32,7 @@ var (
 	ErrNoSimulationRunning      = errors.New("no simulation running")
 	ErrTemplateNotFound         = errors.New("template not found")
 	ErrUnsafeTopology           = errors.New("routed topology failed preflight")
+	ErrInvalidSimulationConfig  = errors.New("simulation configuration failed semantic validation")
 )
 
 const (
@@ -76,6 +78,8 @@ type Config struct {
 	// auto-generation under CertDir.
 	CertFile string
 	KeyFile  string
+	// AttachmentPolicies are operator-owned permissions for routed physical bindings.
+	AttachmentPolicies []fabric.PhysicalAttachmentPolicy
 }
 
 // Daemon manages the NIAC simulation lifecycle.
@@ -318,45 +322,101 @@ func loadSimulationConfig(req api.SimulationRequest, persistInline bool) (*confi
 		}
 		return cfg, path, nil
 	case req.ConfigPath != "":
-		cleanedPath := filepath.Clean(req.ConfigPath)
-		if strings.Contains(cleanedPath, "..") {
-			return nil, "", fmt.Errorf("config path must not contain '..' components: %s", req.ConfigPath)
-		}
-		cfg, err := config.Load(cleanedPath)
+		managedPath, err := config.ResolveManagedConfigPath(req.ConfigPath, simulationConfigRoots())
 		if err != nil {
 			return nil, "", fmt.Errorf("load configuration: %w", err)
 		}
-		return cfg, cleanedPath, nil
+		cfg, err := config.Load(managedPath)
+		if err != nil {
+			return nil, "", fmt.Errorf("load configuration: %w", err)
+		}
+		return cfg, managedPath, nil
 	default:
 		return nil, "", ErrConfigPathOrDataRequired
 	}
 }
 
+func simulationConfigRoots() []string {
+	roots := []string{
+		filepath.Join(library.DefaultRoot(), string(library.KindNetworks)),
+		"configs",
+		"/var/lib/niac/configs",
+		os.ExpandEnv("$HOME/.niac/configs"),
+	}
+	if custom := os.Getenv("NIAC_CONFIGS_DIR"); custom != "" {
+		roots = append([]string{custom}, roots...)
+	}
+	return append(roots, templates.Dirs()...)
+}
+
+func loadValidSimulationConfig(
+	req api.SimulationRequest,
+	persistInline bool,
+) (*config.Config, string, error) {
+	cfg, path, err := loadSimulationConfig(req, persistInline)
+	if err != nil {
+		return nil, "", err
+	}
+	result := config.NewValidator(path).Validate(cfg)
+	if result.HasErrors() {
+		return nil, "", fmt.Errorf("%w: %w", ErrInvalidSimulationConfig, result)
+	}
+	return cfg, path, nil
+}
+
 // PreflightSimulation compiles a routed request without opening capture or changing runtime state.
 func (d *Daemon) PreflightSimulation(req api.SimulationRequest) (fabric.Report, error) {
-	cfg, _, err := loadSimulationConfig(req, false)
+	cfg, _, err := loadValidSimulationConfig(req, false)
 	if err != nil {
 		return fabric.Report{}, err
 	}
-	if len(cfg.Networks) == 0 && len(cfg.Attachments) == 0 {
+	if !usesRoutedFabric(cfg) {
 		return fabric.Report{
 			Safe: true,
 			Topology: fabric.Topology{Binding: fabric.CompiledBinding{
-				Binding: bindingFromRequest(req),
+				Binding: d.bindingFromRequest(req),
 			}},
 		}, nil
 	}
-	return fabric.Compile(cfg, bindingFromRequest(req)), nil
+	return fabric.Compile(cfg, d.bindingFromRequest(req)), nil
 }
 
-func bindingFromRequest(req api.SimulationRequest) fabric.Binding {
-	return fabric.Binding{
+func usesRoutedFabric(cfg *config.Config) bool {
+	return len(cfg.Networks) > 0 || len(cfg.Attachments) > 0
+}
+
+func (d *Daemon) bindingFromRequest(req api.SimulationRequest) fabric.Binding {
+	binding := fabric.Binding{
 		Attachment: req.Attachment,
 		Interface:  req.Interface,
 		Mode:       req.AttachmentMode,
 		AccessVLAN: req.AccessVLAN,
-		Dedicated:  req.Dedicated,
 	}
+	for _, policy := range d.cfg.AttachmentPolicies {
+		if policy.Approves(binding) {
+			binding.PolicyApproved = true
+			break
+		}
+	}
+	return binding
+}
+
+type compiledSimulationFabric struct {
+	topology *fabric.Topology
+}
+
+func (d *Daemon) compileSimulationFabric(
+	cfg *config.Config,
+	req api.SimulationRequest,
+) (compiledSimulationFabric, error) {
+	if !usesRoutedFabric(cfg) {
+		return compiledSimulationFabric{}, nil
+	}
+	report := fabric.Compile(cfg, d.bindingFromRequest(req))
+	if !report.Safe {
+		return compiledSimulationFabric{}, fmt.Errorf("%w: %v", ErrUnsafeTopology, report.Diagnostics)
+	}
+	return compiledSimulationFabric{topology: &report.Topology}, nil
 }
 
 // inlineConfigName is the deterministic filename used to materialise inline
@@ -415,17 +475,20 @@ func (d *Daemon) StartSimulation(req api.SimulationRequest) error {
 		return fmt.Errorf("%w: %s", ErrInterfaceNotExist, req.Interface)
 	}
 
-	cfg, configPath, err := loadSimulationConfig(req, true)
+	cfg, configPath, err := loadValidSimulationConfig(req, false)
 	if err != nil {
 		return err
 	}
-	var compiled *fabric.Topology
-	if len(cfg.Networks) > 0 {
-		report := fabric.Compile(cfg, bindingFromRequest(req))
-		if !report.Safe {
-			return fmt.Errorf("%w: %v", ErrUnsafeTopology, report.Diagnostics)
+	compiledFabric, err := d.compileSimulationFabric(cfg, req)
+	if err != nil {
+		return err
+	}
+	compiled := compiledFabric.topology
+	if req.ConfigData != "" {
+		configPath, err = persistInlineConfig(req.ConfigData)
+		if err != nil {
+			return fmt.Errorf("persist inline config: %w", err)
 		}
-		compiled = &report.Topology
 	}
 	if d.simulation != nil {
 		if stopErr := d.stopSimulationLocked(); stopErr != nil {

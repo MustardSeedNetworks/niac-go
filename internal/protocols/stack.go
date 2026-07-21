@@ -66,10 +66,10 @@ const (
 
 // Stack manages the network protocol stack.
 type Stack struct {
-	capture       *capture.Engine
+	capture       stackCapture
 	config        *config.Config
 	configMu      sync.RWMutex
-	reloadMu      sync.Mutex
+	reloadMu      sync.RWMutex
 	devices       *DeviceTable
 	fabric        *fabricRuntime
 	segmentTables map[int]*DeviceTable // multi-VLAN mode (ADR 0008): tag -> that segment's isolated device set; nil when running flat
@@ -125,6 +125,13 @@ type Stack struct {
 	observers  []PacketObserver
 }
 
+type stackCapture interface {
+	ReadPacket([]byte) ([]byte, error)
+	SendPacket([]byte) error
+	SetFilter(string) error
+	Filter() string
+}
+
 // PacketObserver receives every packet the stack handles. Direction is
 // "rx" for inbound (just decoded) or "tx" for outbound (about to send).
 //
@@ -168,6 +175,17 @@ func configUsesVLANs(cfg *config.Config) bool {
 
 func NewStack(
 	captureEngine *capture.Engine,
+	cfg *config.Config,
+	debugConfig *logging.DebugConfig,
+) *Stack {
+	if captureEngine == nil {
+		return newStack(nil, cfg, debugConfig)
+	}
+	return newStack(captureEngine, cfg, debugConfig)
+}
+
+func newStack(
+	captureEngine stackCapture,
 	cfg *config.Config,
 	debugConfig *logging.DebugConfig,
 ) *Stack {
@@ -244,6 +262,24 @@ func (s *Stack) replySourceMAC(pkt *Packet, device *config.Device) net.HardwareA
 		return cloneMAC(device.MACAddress)
 	}
 	return nil
+}
+
+type replyEthernetIdentity struct {
+	source      net.HardwareAddr
+	destination net.HardwareAddr
+	vlan        int
+}
+
+func (s *Stack) replyEthernet(pkt *Packet, device *config.Device) (replyEthernetIdentity, bool) {
+	if pkt == nil {
+		return replyEthernetIdentity{}, false
+	}
+	identity := replyEthernetIdentity{
+		source:      s.replySourceMAC(pkt, device),
+		destination: pkt.GetSourceMAC(),
+		vlan:        pkt.VLAN,
+	}
+	return identity, len(identity.source) == SizeOfMac && len(identity.destination) == SizeOfMac
 }
 
 func (s *Stack) deviceOwnsIPv4(device *config.Device, ip net.IP) bool {
@@ -409,7 +445,24 @@ func (s *Stack) ReloadConfig(cfg *config.Config) error {
 	s.reloadMu.Lock()
 	defer s.reloadMu.Unlock()
 
+	var replacementFabric *fabricRuntime
+	if s.fabric != nil {
+		report := fabric.Compile(cfg, s.fabric.binding.Binding)
+		if !report.Safe {
+			return fmt.Errorf("%w: %v", ErrUnsafeFabricReload, report.Diagnostics)
+		}
+		replacementFabric = newFabricRuntime(&report.Topology, cfg)
+	}
+
 	s.initializeDevices(cfg)
+	s.vlanMode = configUsesVLANs(cfg)
+	if replacementFabric != nil {
+		s.fabric = replacementFabric
+		s.dhcpHandler = NewDHCPHandler(s)
+		if s.fabric.attachmentDHCP != nil {
+			s.configureDHCPServer(s.fabric.attachmentDHCP)
+		}
+	}
 
 	if s.neighbors != nil {
 		s.neighbors.reset()

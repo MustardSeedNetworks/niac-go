@@ -21,7 +21,8 @@ func TestStartSimulationE2EDryRunDoesNotOpenInterface(t *testing.T) {
   - name: dry-run-router
     type: router
     mac: "02:00:00:00:00:01"
-    ip: "192.0.2.10"
+    ips:
+      - "192.0.2.10"
 `,
 	})
 	if err != nil {

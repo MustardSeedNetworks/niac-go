@@ -70,7 +70,7 @@ func (a *Agent) initializeLLDPLocalMIB() {
 
 	// Local port entries
 	for idx, trunk := range device.TrunkPorts {
-		portNum := idx + 1
+		portNum := a.discoveryIfIndex(trunk.Interface, idx+1)
 		a.createLLDPLocalPortEntry(portNum, trunk.Interface, lldp.PortDescription)
 	}
 
@@ -119,11 +119,11 @@ func (a *Agent) initializeLLDPRemoteMIB() {
 	remIndex := 1
 
 	for portIdx, trunk := range device.TrunkPorts {
-		if trunk.RemoteDevice == "" {
+		if trunk.RemoteDevice == "" || trunk.FDBOnly {
 			continue
 		}
 
-		portNum := portIdx + 1
+		portNum := a.discoveryIfIndex(trunk.Interface, portIdx+1)
 		timeMark := 0 // lldpRemTimeMark
 
 		// Create remote entry
@@ -235,11 +235,11 @@ func (a *Agent) initializeCDPMIB() {
 	deviceIndex := 1
 
 	for ifIdx, trunk := range device.TrunkPorts {
-		if trunk.RemoteDevice == "" {
+		if trunk.RemoteDevice == "" || trunk.FDBOnly {
 			continue
 		}
 
-		ifIndex := ifIdx + 1
+		ifIndex := a.discoveryIfIndex(trunk.Interface, ifIdx+1)
 		a.createCDPCacheEntry(ifIndex, deviceIndex, trunk, cdp)
 
 		deviceIndex++
@@ -248,6 +248,18 @@ func (a *Agent) initializeCDPMIB() {
 	if a.debugLevel >= DebugLevelMinimum {
 		logger.Info("Initialized CDP MIB", "neighbors", deviceIndex-1, "device", device.Name)
 	}
+}
+
+func (a *Agent) discoveryIfIndex(interfaceName string, fallback int) int {
+	index, ok := a.ifIndexForInterface(interfaceName)
+	if !ok {
+		return fallback
+	}
+	resolved, err := strconv.Atoi(index)
+	if err != nil {
+		return fallback
+	}
+	return resolved
 }
 
 // createCDPCacheEntry creates a CDP cache (neighbor) entry.

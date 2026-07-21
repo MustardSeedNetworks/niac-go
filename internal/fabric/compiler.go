@@ -53,11 +53,15 @@ func (c *scenarioCompiler) compileBinding() {
 }
 
 func (c *scenarioCompiler) validateBindingMode() {
+	if !c.binding.PolicyApproved {
+		c.add(
+			CodeAttachmentPolicyDenied,
+			"interface",
+			"physical attachment is not approved by operator policy",
+		)
+	}
 	switch c.binding.Mode {
 	case ModeDirect:
-		if !c.binding.Dedicated {
-			c.add(CodeDedicatedRequired, "dedicated", "direct mode requires a dedicated interface")
-		}
 		if c.binding.AccessVLAN != 0 {
 			c.add(CodeInvalidAccessVLAN, "accessVlan", "direct mode does not use an access VLAN")
 		}

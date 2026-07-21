@@ -10,6 +10,7 @@ import (
 )
 
 type fabricRuntime struct {
+	binding           fabric.CompiledBinding
 	attachmentNetwork string
 	devicesByName     map[string]*config.Device
 	interfacesByAddr  map[netip.Addr]fabricEndpoint
@@ -24,15 +25,19 @@ type fabricEndpoint struct {
 }
 
 type fabricRouter struct {
-	device *config.Device
-	mac    net.HardwareAddr
-	routes []netip.Prefix
+	device       *config.Device
+	attachmentIP netip.Addr
+	mac          net.HardwareAddr
+	routes       []netip.Prefix
 }
 
 type fabricResolution struct {
 	device         *config.Device
 	replySourceMAC net.HardwareAddr
 	routed         bool
+	firstHopIP     netip.Addr
+	firstHopMAC    net.HardwareAddr
+	firstHopDevice *config.Device
 }
 
 func newFabricRuntime(topology *fabric.Topology, cfg *config.Config) *fabricRuntime {
@@ -41,6 +46,7 @@ func newFabricRuntime(topology *fabric.Topology, cfg *config.Config) *fabricRunt
 	}
 
 	runtime := &fabricRuntime{
+		binding:           topology.Binding,
 		attachmentNetwork: topology.Binding.Network,
 		devicesByName:     make(map[string]*config.Device, len(cfg.Devices)),
 		interfacesByAddr:  make(map[netip.Addr]fabricEndpoint, len(topology.Interfaces)),
@@ -54,6 +60,19 @@ func newFabricRuntime(topology *fabric.Topology, cfg *config.Config) *fabricRunt
 	runtime.indexAttachmentDHCP(topology.DHCPScopes)
 
 	return runtime
+}
+
+func (r *fabricRuntime) acceptsFrame(vlan int, tagged bool) bool {
+	if r == nil {
+		return true
+	}
+
+	switch r.binding.Mode {
+	case fabric.ModeDirect, fabric.ModeAccess:
+		return !tagged && vlan <= 0
+	default:
+		return false
+	}
 }
 
 func (r *fabricRuntime) indexAttachmentDHCP(scopes []fabric.DHCPScope) {
@@ -84,7 +103,9 @@ func (r *fabricRuntime) indexAttachmentRouters(topology *fabric.Topology) {
 		if iface.Network != r.attachmentNetwork || device == nil || device.Type != "router" {
 			continue
 		}
-		router := &fabricRouter{device: device, mac: cloneMAC(device.MACAddress)}
+		router := &fabricRouter{
+			device: device, attachmentIP: iface.Address.Addr(), mac: cloneMAC(device.MACAddress),
+		}
 		routers[iface.Device] = router
 		r.attachmentRouters = append(r.attachmentRouters, *router)
 	}
@@ -121,6 +142,7 @@ func (r *fabricRuntime) resolveIPv4(dst netip.Addr, ingressMAC net.HardwareAddr)
 	}
 	return fabricResolution{
 		device: endpoint.device, replySourceMAC: cloneMAC(router.mac), routed: true,
+		firstHopIP: router.attachmentIP, firstHopMAC: cloneMAC(router.mac), firstHopDevice: router.device,
 	}, true
 }
 

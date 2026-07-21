@@ -199,24 +199,36 @@ func (a *Agent) registerDot1dTpGroup(device *config.Device, numPorts int, macByt
 // registerDot1dTpPortEntry registers a single dot1dTpPortTable entry.
 func (a *Agent) registerDot1dTpPortEntry(portIdx int) {
 	portStr := strconv.Itoa(portIdx)
-	startTime := a.startTime
 
 	a.mib.Set(dot1dTpPort+"."+portStr, &OIDValue{Type: gosnmp.Integer, Value: portIdx})
 	a.mib.Set(dot1dTpPortMaxInfo+"."+portStr, &OIDValue{Type: gosnmp.Integer, Value: DefaultMTU})
 	a.mib.SetDynamic(dot1dTpPortInFrames+"."+portStr, func() *OIDValue {
-		elapsed := time.Since(startTime).Seconds()
-		frames := uint32(elapsed * 100 * float64(portIdx%10+1))
-		return &OIDValue{Type: gosnmp.Counter32, Value: frames}
+		stats := a.protocolStats.interfaceSnapshot(a.interfaceNameForBridgePort(portStr))
+		return &OIDValue{Type: gosnmp.Counter32, Value: safeUint32FromUint64(stats.inUcast + stats.inNUcast)}
 	})
 	a.mib.SetDynamic(dot1dTpPortOutFrames+"."+portStr, func() *OIDValue {
-		elapsed := time.Since(startTime).Seconds()
-		frames := uint32(elapsed * 80 * float64(portIdx%10+1))
-		return &OIDValue{Type: gosnmp.Counter32, Value: frames}
+		stats := a.protocolStats.interfaceSnapshot(a.interfaceNameForBridgePort(portStr))
+		return &OIDValue{Type: gosnmp.Counter32, Value: safeUint32FromUint64(stats.outUcast + stats.outNUcast)}
 	})
 	a.mib.Set(
 		dot1dTpPortInDiscards+"."+portStr,
 		&OIDValue{Type: gosnmp.Counter32, Value: uint32(0)},
 	)
+}
+
+func (a *Agent) interfaceNameForBridgePort(port string) string {
+	entry := a.mib.Get(dot1dBasePortIfIndex + "." + port)
+	if entry == nil {
+		return ""
+	}
+	index := oidValueString(entry)
+	if name := a.mib.Get(ifName + "." + index); name != nil {
+		return oidValueString(name)
+	}
+	if name := a.mib.Get(ifDescr + "." + index); name != nil {
+		return oidValueString(name)
+	}
+	return ""
 }
 
 // macToOIDIndex converts a MAC address to OID index format (decimal octets separated by dots).

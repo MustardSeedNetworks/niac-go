@@ -20,7 +20,6 @@ export const PreflightStep: FC<PreflightStepProps> = ({ request, onStart, starti
   const [attachment, setAttachment] = useState('tester');
   const [mode, setMode] = useState<'direct' | 'access'>('access');
   const [accessVlan, setAccessVlan] = useState(ACCESS_VLAN_DEFAULT);
-  const [dedicated, setDedicated] = useState(false);
   const [report, setReport] = useState<SimulationPreflightReport | null>(null);
   const [approvedPayload, setApprovedPayload] = useState<SimulationPreflightRequest | null>(null);
   const [error, setError] = useState('');
@@ -31,7 +30,6 @@ export const PreflightStep: FC<PreflightStepProps> = ({ request, onStart, starti
     ...request,
     attachment,
     attachmentMode: mode,
-    dedicated: mode === 'direct' ? dedicated : false,
     ...(mode === 'access' ? { accessVlan } : {}),
   };
 
@@ -115,20 +113,6 @@ export const PreflightStep: FC<PreflightStepProps> = ({ request, onStart, starti
             />
           </label>
         )}
-        {mode === 'direct' && (
-          <label className="flex items-start gap-compact text-sm text-text-secondary">
-            <input
-              type="checkbox"
-              data-testid="wizard-dedicated-interface"
-              checked={dedicated}
-              onChange={(event) => {
-                setDedicated(event.target.checked);
-                invalidate();
-              }}
-            />
-            {t('newSimWizard.preflight.dedicatedLabel')}
-          </label>
-        )}
         {error && (
           <SmallText className="text-status-error" role="alert">
             {error}
@@ -155,8 +139,7 @@ export const PreflightStep: FC<PreflightStepProps> = ({ request, onStart, starti
             disabled={
               !attachment ||
               (mode === 'access' &&
-                (!Number.isInteger(accessVlan) || accessVlan < 1 || accessVlan > 4094)) ||
-              (mode === 'direct' && !dedicated)
+                (!Number.isInteger(accessVlan) || accessVlan < 1 || accessVlan > 4094))
             }
           >
             {t('newSimWizard.preflight.checkLabel')}

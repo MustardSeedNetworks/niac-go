@@ -29,7 +29,7 @@ func (h *DNSHandler) HandleQuery(
 	h.stack.IncrementStat("dns_queries")
 	h.logDNSQueries(dns.Questions, ipLayer.SrcIP, debugLevel, pkt.SerialNumber)
 
-	serverDevice, serverIP := h.selectServerDevice(devices, false)
+	serverDevice, serverIP := h.selectServerDevice(devices, false, ipLayer.DstIP)
 	if !h.validateServerDevice(serverDevice, serverIP, debugLevel, pkt.SerialNumber, "DNS") {
 		return
 	}
@@ -39,8 +39,11 @@ func (h *DNSHandler) HandleQuery(
 	}
 
 	response := h.buildDNSResponse(dns, serverDevice, debugLevel, pkt.SerialNumber)
-	srcMAC := h.extractSourceMAC(packet)
-	h.sendAndLogResponse(response, serverIP, ipLayer.SrcIP, serverDevice.MACAddress, srcMAC,
+	identity, ok := h.stack.replyEthernet(pkt, serverDevice)
+	if !ok {
+		return
+	}
+	h.sendAndLogResponse(response, serverIP, ipLayer.SrcIP, identity.source, identity.destination,
 		udpLayer.SrcPort, pkt.VLAN, debugLevel, pkt.SerialNumber)
 }
 
@@ -317,7 +320,7 @@ func (h *DNSHandler) HandleQueryV6(
 
 	h.stack.IncrementStat("dns_queries")
 
-	serverDevice, serverIP := h.selectServerDevice(devices, true)
+	serverDevice, serverIP := h.selectServerDevice(devices, true, nil)
 	if !h.validateServerDevice(serverDevice, serverIP, debugLevel, pkt.SerialNumber, "DNS/IPv6") {
 		return
 	}

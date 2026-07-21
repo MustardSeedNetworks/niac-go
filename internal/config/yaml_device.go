@@ -9,12 +9,13 @@ import (
 	"strings"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/converter"
+	"github.com/MustardSeedNetworks/niac-go/internal/oui"
 )
 
-func convertYAMLDevice(yamlDevice converter.Device, includePath string) (Device, error) {
+func convertYAMLDevice(yamlDevice converter.Device, includePath string, registry *oui.Registry) (Device, error) {
 	device := createBaseDevice(yamlDevice)
 
-	if err := parseDeviceMACAddress(&device, &yamlDevice); err != nil {
+	if err := parseDeviceMACAddress(&device, &yamlDevice, registry); err != nil {
 		return device, err
 	}
 
@@ -90,6 +91,7 @@ func convertTrunkPorts(in []converter.TrunkPort) []TrunkPort {
 			NativeVLAN:      t.NativeVLAN,
 			RemoteDevice:    t.RemoteDevice,
 			RemoteInterface: t.RemoteInterface,
+			FDBOnly:         t.FDBOnly,
 		}
 	}
 	return out
@@ -123,10 +125,6 @@ func createBaseDevice(yamlDevice converter.Device) Device {
 		Type:       inferYAMLDeviceType(yamlDevice),
 		Interfaces: make([]Interface, 0),
 		Properties: props,
-		SNMPConfig: SNMPConfig{
-			Community: DefaultSNMPCommunity,
-			SysName:   yamlDevice.Name,
-		},
 	}
 }
 
@@ -157,8 +155,19 @@ func containsAny(value string, needles ...string) bool {
 }
 
 // parseDeviceMACAddress parses the MAC address for a device.
-func parseDeviceMACAddress(device *Device, yamlDevice *converter.Device) error {
+func parseDeviceMACAddress(device *Device, yamlDevice *converter.Device, registry *oui.Registry) error {
 	if yamlDevice.MAC == "" {
+		if registry == nil {
+			return fmt.Errorf("device %s: %w", yamlDevice.Name, converter.ErrDeviceMissingMAC)
+		}
+		mac, err := registry.Allocate(yamlDevice.Vendor, yamlDevice.MACSuffix)
+		if err != nil {
+			return fmt.Errorf("device %s vendor identity: %w", yamlDevice.Name, err)
+		}
+		device.MACAddress = mac
+		device.MACVendor = yamlDevice.Vendor
+		device.MACSuffix = yamlDevice.MACSuffix
+
 		return nil
 	}
 
@@ -240,6 +249,20 @@ func parseDeviceSNMPConfig(device *Device, yamlDevice *converter.Device, include
 	}
 
 	snmpAgent := yamlDevice.SnmpAgent
+	device.SNMPConfig.SysName = yamlDevice.Name
+	if snmpAgent.Enabled != nil {
+		enabled := *snmpAgent.Enabled
+		device.SNMPConfig.Enabled = &enabled
+	}
+	if snmpAgent.Community != "" {
+		device.SNMPConfig.Community = snmpAgent.Community
+	}
+	if snmpAgent.SysName != "" {
+		device.SNMPConfig.SysName = snmpAgent.SysName
+	}
+	device.SNMPConfig.SysDescr = snmpAgent.SysDescr
+	device.SNMPConfig.SysContact = snmpAgent.SysContact
+	device.SNMPConfig.SysLocation = snmpAgent.SysLocation
 
 	if err := parseSNMPWalkFiles(device, snmpAgent, includePath, yamlDevice.Name); err != nil {
 		return err

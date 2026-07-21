@@ -3,7 +3,6 @@ package protocols
 import (
 	"encoding/binary"
 	"fmt"
-	"net"
 	"os"
 	"strings"
 	"time"
@@ -420,12 +419,8 @@ func (h *HealthCheckHandler) sendSYNACK(
 		return
 	}
 
-	// Reply to the requester's own MAC (from the request frame), not a modelled
-	// device — a real tester is not in our device table. Reply on its VLAN.
-	vlan := reqPktVLAN(reqPkt)
-
-	srcMAC := requestSourceMAC(reqPkt)
-	if srcMAC == nil {
+	identity, ok := h.stack.replyEthernet(reqPkt, device)
+	if !ok {
 		if debugLevel >= DebugLevelInfo {
 			_, _ = fmt.Fprintf(os.Stdout, "Cannot send SYN-ACK: no source MAC for %s\n", ipLayer.SrcIP)
 		}
@@ -435,8 +430,8 @@ func (h *HealthCheckHandler) sendSYNACK(
 
 	// Build Ethernet header
 	eth := &layers.Ethernet{
-		SrcMAC:       device.MACAddress,
-		DstMAC:       srcMAC,
+		SrcMAC:       identity.source,
+		DstMAC:       identity.destination,
 		EthernetType: layers.EthernetTypeIPv4,
 	}
 
@@ -488,7 +483,7 @@ func (h *HealthCheckHandler) sendSYNACK(
 		Length:       len(buffer.Bytes()),
 		SerialNumber: serialNum,
 		Device:       device,
-		VLAN:         vlan, // reply on the VLAN the request arrived on (tagged or untagged)
+		VLAN:         identity.vlan,
 	}
 
 	h.stack.Send(pkt)
@@ -497,27 +492,6 @@ func (h *HealthCheckHandler) sendSYNACK(
 		_, _ = fmt.Fprintf(os.Stdout, "Sent TCP SYN-ACK from %s:%d to %s:%d device=%s\n",
 			ipReply.SrcIP, tcpReply.SrcPort, ipReply.DstIP, tcpReply.DstPort, device.Name)
 	}
-}
-
-// reqPktVLAN returns the request packet's VLAN, or 0 (untagged) if absent, so a
-// reply is sent on the VLAN the request arrived on.
-func reqPktVLAN(pkt *Packet) int {
-	if pkt == nil {
-		return 0
-	}
-
-	return pkt.VLAN
-}
-
-// requestSourceMAC returns the request frame's source MAC — the correct reply
-// destination even when the requester (a real tester) is not a modelled device,
-// unlike a device-table lookup by IP.
-func requestSourceMAC(pkt *Packet) net.HardwareAddr {
-	if pkt == nil {
-		return nil
-	}
-
-	return pkt.GetSourceMAC()
 }
 
 // sendTCPResponse sends a TCP response with payload.
@@ -539,16 +513,14 @@ func (h *HealthCheckHandler) sendTCPResponse(
 		return
 	}
 
-	vlan := reqPktVLAN(reqPkt)
-
-	srcMAC := requestSourceMAC(reqPkt)
-	if srcMAC == nil {
+	identity, ok := h.stack.replyEthernet(reqPkt, device)
+	if !ok {
 		return
 	}
 
 	eth := &layers.Ethernet{
-		SrcMAC:       device.MACAddress,
-		DstMAC:       srcMAC,
+		SrcMAC:       identity.source,
+		DstMAC:       identity.destination,
 		EthernetType: layers.EthernetTypeIPv4,
 	}
 
@@ -600,7 +572,7 @@ func (h *HealthCheckHandler) sendTCPResponse(
 		Length:       len(buffer.Bytes()),
 		SerialNumber: serialNum,
 		Device:       device,
-		VLAN:         vlan, // reply on the VLAN the request arrived on (tagged or untagged)
+		VLAN:         identity.vlan,
 	}
 
 	h.stack.Send(pkt)

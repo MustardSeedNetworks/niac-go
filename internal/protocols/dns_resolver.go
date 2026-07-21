@@ -274,13 +274,14 @@ func (h *DNSHandler) logPTRParseFailure(name []byte, ctx *dnsResolveContext) {
 func (h *DNSHandler) selectServerDevice(
 	devices []*config.Device,
 	wantIPv6 bool,
+	targetIP net.IP,
 ) (*config.Device, net.IP) {
 	for _, dev := range devices {
 		if !h.deviceHasDNSRecords(dev) {
 			continue
 		}
 
-		ip := pickIPAddressForDNS(dev, wantIPv6)
+		ip := h.pickServerIP(dev, wantIPv6, targetIP)
 		if ip == nil {
 			continue
 		}
@@ -293,6 +294,13 @@ func (h *DNSHandler) selectServerDevice(
 	}
 
 	return nil, nil
+}
+
+func (h *DNSHandler) pickServerIP(device *config.Device, wantIPv6 bool, targetIP net.IP) net.IP {
+	if !wantIPv6 && targetIP != nil && h.stack.deviceOwnsIPv4(device, targetIP) {
+		return targetIP.To4()
+	}
+	return pickIPAddressForDNS(device, wantIPv6)
 }
 
 func (h *DNSHandler) deviceHasDNSRecords(dev *config.Device) bool {

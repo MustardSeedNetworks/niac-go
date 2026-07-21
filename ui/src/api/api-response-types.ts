@@ -358,7 +358,6 @@ export interface SimulationRequest {
   attachment?: string;
   attachmentMode?: 'direct' | 'access';
   accessVlan?: number;
-  dedicated?: boolean;
   configPath?: string;
   configData?: string;
   /**

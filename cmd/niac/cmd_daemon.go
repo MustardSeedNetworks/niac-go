@@ -15,6 +15,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/daemon"
+	"github.com/MustardSeedNetworks/niac-go/internal/fabric"
 	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 )
 
@@ -33,6 +34,7 @@ type daemonOptions struct {
 	token               string
 	storagePath         string
 	webhookAllowedHosts []string
+	attachmentPolicies  []string
 	// Wave 1 (TLS-by-default) options.
 	certDir  string
 	apiToken string
@@ -73,6 +75,12 @@ NIAC_API_TOKEN or --api-token.`,
   # Use a token file with scoped tokens (read-only / read-write)
   niac daemon --token-file /etc/niac/tokens.json
 
+  # Permit routed labs on an operator-managed access port
+  niac daemon --attachment-policy eth0=access:200
+
+  # Permit a directly connected untagged tester
+  niac daemon --attachment-policy eth1=direct
+
   # Disable run-history persistence
   niac daemon --storage disabled`,
 		RunE: func(_ *cobra.Command, _ []string) error {
@@ -93,6 +101,9 @@ NIAC_API_TOKEN or --api-token.`,
 	daemonCmd.Flags().
 		StringSliceVar(&options.webhookAllowedHosts, "webhook-allowed-host", nil,
 			"Hostname allowed as alert webhook destination (repeatable; if any are set, all webhook URLs must match exactly). When unset, the existing private-IP/blocked-hostname filter is used.")
+	daemonCmd.Flags().
+		StringSliceVar(&options.attachmentPolicies, "attachment-policy", nil,
+			"Operator-approved routed attachment (repeatable): INTERFACE=direct or INTERFACE=access:VLAN")
 
 	// HTTPS is required, no opt-out. The HTTP listener exists only as a
 	// 308 redirector. No --tls or --http flags.
@@ -158,6 +169,40 @@ func resolveDaemonAPIToken(o *daemonOptions) string {
 	return resolveAPIToken(o.token)
 }
 
+func parseAttachmentPolicies(values []string) ([]fabric.PhysicalAttachmentPolicy, error) {
+	const syntax = "expected INTERFACE=direct or INTERFACE=access:VLAN"
+	policies := make([]fabric.PhysicalAttachmentPolicy, 0, len(values))
+	seen := make(map[fabric.PhysicalAttachmentPolicy]struct{}, len(values))
+	for _, value := range values {
+		interfaceName, modeValue, ok := strings.Cut(value, "=")
+		if !ok || strings.TrimSpace(interfaceName) != interfaceName || interfaceName == "" {
+			return nil, fmt.Errorf("invalid attachment policy %q: %s", value, syntax)
+		}
+
+		policy := fabric.PhysicalAttachmentPolicy{Interface: interfaceName}
+		switch {
+		case modeValue == string(fabric.ModeDirect):
+			policy.Mode = fabric.ModeDirect
+		case strings.HasPrefix(modeValue, string(fabric.ModeAccess)+":"):
+			vlanText := strings.TrimPrefix(modeValue, string(fabric.ModeAccess)+":")
+			vlan, err := strconv.ParseUint(vlanText, 10, 16)
+			if err != nil || vlan == 0 || vlan > 4094 {
+				return nil, fmt.Errorf("invalid attachment policy %q: access VLAN must be between 1 and 4094", value)
+			}
+			policy.Mode = fabric.ModeAccess
+			policy.AccessVLAN = uint16(vlan)
+		default:
+			return nil, fmt.Errorf("invalid attachment policy %q: %s", value, syntax)
+		}
+		if _, duplicate := seen[policy]; duplicate {
+			return nil, fmt.Errorf("duplicate attachment policy %q", value)
+		}
+		seen[policy] = struct{}{}
+		policies = append(policies, policy)
+	}
+	return policies, nil
+}
+
 func runDaemon(options *daemonOptions, info versionInfo) error {
 	logging.InitColors(true)
 
@@ -165,6 +210,10 @@ func runDaemon(options *daemonOptions, info versionInfo) error {
 	token := resolveDaemonAPIToken(options)
 	tokenFile := resolveDaemonTokenFile(options)
 	certDir := resolveDaemonCertDir(options)
+	attachmentPolicies, err := parseAttachmentPolicies(options.attachmentPolicies)
+	if err != nil {
+		return err
+	}
 
 	scheme := "http"
 	if tlsOn {
@@ -199,6 +248,7 @@ func runDaemon(options *daemonOptions, info versionInfo) error {
 		WebhookAllowedHosts: options.webhookAllowedHosts,
 		EnableTLS:           tlsOn,
 		CertDir:             certDir,
+		AttachmentPolicies:  attachmentPolicies,
 	}
 
 	// Sanity-check the listen address up front so we fail with the helpful

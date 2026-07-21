@@ -67,7 +67,7 @@ func TestBuildResponseRejectsSNMPv3(t *testing.T) {
 	}
 
 	// Must not panic; must decline to answer.
-	payload, err := h.buildResponse(agent, req)
+	payload, _, err := h.buildResponse(agent, req)
 	if err == nil {
 		t.Fatal("expected an error for an SNMPv3 request, got nil")
 	}
@@ -89,7 +89,7 @@ func TestBuildResponseAcceptsV2c(t *testing.T) {
 		Variables: []gosnmp.SnmpPDU{{Name: ".1.3.6.1.2.1.1.5.0", Type: gosnmp.Null}},
 	}
 
-	payload, err := h.buildResponse(agent, req)
+	payload, _, err := h.buildResponse(agent, req)
 	if err != nil {
 		t.Fatalf("v2c buildResponse: %v", err)
 	}

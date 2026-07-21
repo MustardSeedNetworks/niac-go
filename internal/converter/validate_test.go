@@ -61,6 +61,25 @@ func TestValidateConfig_InvalidMAC(t *testing.T) {
 	}
 }
 
+func TestValidateConfig_VendorIdentity(t *testing.T) {
+	device := validDevice()
+	device.MAC = ""
+	device.Vendor = "cisco"
+	device.MACSuffix = 0x010203
+	if err := ValidateConfig(&Config{Devices: []Device{device}}); err != nil {
+		t.Fatalf("vendor identity rejected: %v", err)
+	}
+}
+
+func TestValidateConfig_RejectsConflictingMACSources(t *testing.T) {
+	device := validDevice()
+	device.Vendor = "cisco"
+	err := ValidateConfig(&Config{Devices: []Device{device}})
+	if !errors.Is(err, ErrDeviceMACSourceConflict) {
+		t.Fatalf("error = %v, want ErrDeviceMACSourceConflict", err)
+	}
+}
+
 func TestValidateConfig_InvalidIP(t *testing.T) {
 	d := validDevice()
 	d.IPs = []string{"not.an.ip.address"}

@@ -52,11 +52,43 @@ func (v *Validator) Validate(cfg *Config) *ListError {
 	}
 
 	deviceNames := make(map[string]bool)
+	knownDeviceNames := make(map[string]bool)
 	deviceIPs := make(map[string]string)
 	deviceMACs := make(map[string]string)
 
-	for i, device := range cfg.Devices {
-		v.validateDevice(&device, i, deviceNames, deviceIPs, deviceMACs)
+	if len(cfg.Segments) == 0 {
+		for i := range cfg.Devices {
+			knownDeviceNames[cfg.Devices[i].Name] = true
+		}
+		for i := range cfg.Devices {
+			v.validateDevice(
+				&cfg.Devices[i],
+				fmt.Sprintf("devices[%d]", i),
+				deviceNames,
+				knownDeviceNames,
+				deviceIPs,
+				deviceMACs,
+			)
+		}
+		return v.errors
+	}
+
+	for i := range cfg.Segments {
+		for j := range cfg.Segments[i].Devices {
+			knownDeviceNames[cfg.Segments[i].Devices[j].Name] = true
+		}
+	}
+	for i := range cfg.Segments {
+		for j := range cfg.Segments[i].Devices {
+			v.validateDevice(
+				&cfg.Segments[i].Devices[j],
+				fmt.Sprintf("segments[%d].devices[%d]", i, j),
+				deviceNames,
+				knownDeviceNames,
+				deviceIPs,
+				deviceMACs,
+			)
+		}
 	}
 
 	return v.errors
@@ -65,13 +97,12 @@ func (v *Validator) Validate(cfg *Config) *ListError {
 // validateDevice validates a single device configuration.
 func (v *Validator) validateDevice(
 	device *Device,
-	index int,
+	prefix string,
 	names map[string]bool,
+	knownNames map[string]bool,
 	ips map[string]string,
 	macs map[string]string,
 ) {
-	prefix := fmt.Sprintf("devices[%d]", index)
-
 	v.validateDeviceIdentity(device, prefix, names)
 	v.validateDeviceMAC(device, prefix, macs)
 	v.validateDeviceIPs(device, prefix, ips)
@@ -81,13 +112,29 @@ func (v *Validator) validateDevice(
 			fmt.Sprintf("invalid VLAN ID: %d (must be %d-%d)", device.VLAN, minVLANID, maxVLANID))
 	}
 
+	v.validateSNMPCommunity(device, prefix)
 	v.validateSNMPTraps(device, prefix)
 	v.validateDNSRecords(device, prefix)
 	v.validateTTLConfig(device, prefix)
 	v.validateSNMPAccessList(device, prefix)
 	v.validateNetBIOSNames(device, prefix)
 	v.validatePortChannels(device, prefix)
-	v.validateTrunkPorts(device, prefix, names)
+	v.validateTrunkPorts(device, prefix, knownNames)
+}
+
+func (v *Validator) validateSNMPCommunity(device *Device, prefix string) {
+	cfg := device.SNMPConfig
+	if cfg.Enabled != nil && !*cfg.Enabled {
+		return
+	}
+
+	configured := cfg.Enabled != nil || cfg.SysName != "" || cfg.SysDescr != "" || cfg.SysContact != "" ||
+		cfg.SysLocation != "" || cfg.WalkFile != "" || len(cfg.WalkFiles) > 0 || len(cfg.AddMibs) > 0 ||
+		len(cfg.CommunityIncludes) > 0 || len(cfg.AccessList) > 0 || cfg.SnmpAddr != nil ||
+		cfg.Dot1DFdbTable != nil || cfg.Dot1QFdbTable != nil || cfg.Traps != nil
+	if configured && strings.TrimSpace(cfg.Community) == "" {
+		v.addError(prefix+".snmp_agent.community", "SNMPv1/v2c requires an explicit community")
+	}
 }
 
 // validateDeviceIdentity validates device name and type fields.

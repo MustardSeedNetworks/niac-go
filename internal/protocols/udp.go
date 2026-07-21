@@ -151,6 +151,7 @@ func (h *UDPHandler) sendPortUnreachable(
 	udp *layers.UDP,
 	devices []*config.Device,
 ) {
+	h.stack.recordUDPNoPort(devices)
 	if h.stack.icmpHandler == nil || len(devices) == 0 {
 		return
 	}
@@ -161,8 +162,8 @@ func (h *UDPHandler) sendPortUnreachable(
 		return
 	}
 
-	dstMAC := pkt.GetSourceMAC()
-	if dstMAC == nil {
+	identity, ok := h.stack.replyEthernet(pkt, device)
+	if !ok {
 		return
 	}
 
@@ -171,10 +172,10 @@ func (h *UDPHandler) sendPortUnreachable(
 
 	_ = h.stack.icmpHandler.SendICMPUnreachable(
 		ipLayer.DstIP, ipLayer.SrcIP,
-		device.MACAddress, dstMAC,
+		identity.source, identity.destination,
 		layers.ICMPv4CodePort,
 		original,
-		pkt.VLAN,
+		identity.vlan,
 	)
 }
 
@@ -192,6 +193,10 @@ func (h *UDPHandler) handleSNMP(pkt *Packet, ipLayer *layers.IPv4, udp *layers.U
 
 func (h *UDPHandler) proxyToMap(device *config.Device, ipLayer *layers.IPv4, udp *layers.UDP, pkt *Packet) {
 	if device == nil || device.MapToIP == nil {
+		return
+	}
+	identity, ok := h.stack.replyEthernet(pkt, device)
+	if !ok {
 		return
 	}
 
@@ -219,14 +224,6 @@ func (h *UDPHandler) proxyToMap(device *config.Device, ipLayer *layers.IPv4, udp
 			return
 		}
 
-		srcMAC := device.MACAddress
-
-		dstMAC := pkt.GetSourceMAC()
-
-		if len(srcMAC) == 0 || len(dstMAC) == 0 {
-			return
-		}
-
 		srcIP := ipLayer.DstIP.To4()
 		if srcIP == nil {
 			return
@@ -238,9 +235,9 @@ func (h *UDPHandler) proxyToMap(device *config.Device, ipLayer *layers.IPv4, udp
 			uint16(udp.DstPort),
 			uint16(udp.SrcPort),
 			buf[:n],
-			[]byte(srcMAC),
-			[]byte(dstMAC),
-			pkt.VLAN,
+			[]byte(identity.source),
+			[]byte(identity.destination),
+			identity.vlan,
 		)
 	}()
 }
@@ -343,7 +340,7 @@ func (h *UDPHandler) sendUDPWithTOS(
 // wiggled so the round trip's DiffServ handling is observable, and the reply is
 // delayed by the device's configured latency +/- jitter.
 func (h *UDPHandler) tryReflect(pkt *Packet, ipLayer *layers.IPv4, udp *layers.UDP, devices []*config.Device) bool {
-	device := reflectorForIP(devices, ipLayer.DstIP)
+	device := h.reflectorForIP(devices, ipLayer.DstIP)
 	if device == nil {
 		return false
 	}
@@ -352,10 +349,8 @@ func (h *UDPHandler) tryReflect(pkt *Packet, ipLayer *layers.IPv4, udp *layers.U
 		return false
 	}
 
-	srcMAC := []byte(device.MACAddress)
-	dstMAC := pkt.GetSourceMAC()
-
-	if len(srcMAC) == 0 || len(dstMAC) == 0 {
+	identity, ok := h.stack.replyEthernet(pkt, device)
+	if !ok {
 		return false
 	}
 
@@ -373,10 +368,12 @@ func (h *UDPHandler) tryReflect(pkt *Packet, ipLayer *layers.IPv4, udp *layers.U
 	payload := append([]byte(nil), udp.Payload...)
 	srcPort := uint16(udp.SrcPort)
 	dstPort := uint16(udp.DstPort)
-	vlan := pkt.VLAN
 
 	send := func() {
-		_ = h.sendUDPWithTOS(srcIP, dstIP, srcPort, dstPort, payload, srcMAC, dstMAC, vlan, tos)
+		_ = h.sendUDPWithTOS(
+			srcIP, dstIP, srcPort, dstPort, payload,
+			identity.source, identity.destination, identity.vlan, tos,
+		)
 	}
 
 	if delay := reflectorDelay(device.ReflectorConfig); delay > 0 {
@@ -395,16 +392,10 @@ func (h *UDPHandler) tryReflect(pkt *Packet, ipLayer *layers.IPv4, udp *layers.U
 
 // reflectorForIP returns the first reflector-enabled device that owns ip, or
 // nil if none does.
-func reflectorForIP(devices []*config.Device, ip net.IP) *config.Device {
+func (h *UDPHandler) reflectorForIP(devices []*config.Device, ip net.IP) *config.Device {
 	for _, device := range devices {
-		if device.ReflectorConfig == nil {
-			continue
-		}
-
-		for _, deviceIP := range device.IPAddresses {
-			if deviceIP.Equal(ip) {
-				return device
-			}
+		if device.ReflectorConfig != nil && h.stack.deviceOwnsIPv4(device, ip) {
+			return device
 		}
 	}
 

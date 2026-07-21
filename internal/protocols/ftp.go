@@ -102,11 +102,8 @@ func (h *FTPHandler) sendResponse(
 		return
 	}
 
-	// Reply to the requester's own frame source MAC and VLAN.
-	vlan := reqPktVLAN(reqPkt)
-
-	srcMAC := requestSourceMAC(reqPkt)
-	if srcMAC == nil {
+	identity, ok := h.stack.replyEthernet(reqPkt, device)
+	if !ok {
 		if debugLevel >= DebugLevelInfo {
 			_, _ = fmt.Fprintf(os.Stdout, "Cannot send FTP response: no source MAC for %s\n", ipLayer.SrcIP)
 		}
@@ -116,8 +113,8 @@ func (h *FTPHandler) sendResponse(
 
 	// Build Ethernet header
 	eth := &layers.Ethernet{
-		SrcMAC:       device.MACAddress,
-		DstMAC:       srcMAC,
+		SrcMAC:       identity.source,
+		DstMAC:       identity.destination,
 		EthernetType: layers.EthernetTypeIPv4,
 	}
 
@@ -179,7 +176,7 @@ func (h *FTPHandler) sendResponse(
 		Length:       len(buffer.Bytes()),
 		SerialNumber: serialNum,
 		Device:       device,
-		VLAN:         vlan, // reply on the VLAN the request arrived on (tagged or untagged)
+		VLAN:         identity.vlan,
 	}
 
 	h.stack.Send(responsePkt)

@@ -32,6 +32,13 @@ var ErrOriginalIPLayerMissing = errors.New("original IP layer missing")
 // ErrDecodingPacket is a sentinel error for packet decoding failures.
 var ErrDecodingPacket = errors.New("error decoding packet")
 
+// Ethernet framing errors are rejected before a packet reaches protocol handlers.
+var (
+	ErrEthernetFrameTooShort = errors.New("ethernet frame is shorter than its header")
+	ErrVLANHeaderTruncated   = errors.New("802.1Q header is truncated")
+	ErrVLANStackUnsupported  = errors.New("stacked VLAN tags are not supported")
+)
+
 // ErrUnsupportedSNMPVersion is returned when an SNMP request uses a version the
 // simulator cannot safely marshal a response for (currently anything other than
 // v1/v2c). Marshalling a Version3 response via gosnmp without security
@@ -42,6 +49,7 @@ var ErrUnsupportedSNMPVersion = errors.New("unsupported SNMP version")
 var (
 	ErrStackAlreadyRunning = errors.New("stack already running")
 	ErrNilConfig           = errors.New("reload config: nil config")
+	ErrUnsafeFabricReload  = errors.New("reload config: unsafe routed topology")
 )
 
 // ErrDeviceNoMACAddress is a sentinel error for STP indicating device has no MAC address.

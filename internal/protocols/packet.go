@@ -8,6 +8,8 @@ import (
 
 	"github.com/gopacket/gopacket"
 	"github.com/gopacket/gopacket/layers"
+
+	"github.com/MustardSeedNetworks/niac-go/internal/config"
 )
 
 // Packet represents a network packet with metadata.
@@ -19,27 +21,32 @@ type Packet struct {
 	LoopTime             time.Duration // For periodic packets
 	Device               any           // Associated device
 	VLAN                 int           // -1 if no VLAN
+	VLANTagged           bool          // true when the received wire frame carried 802.1Q
 	fabricReplySourceMAC net.HardwareAddr
+	fabricFirstHopIP     net.IP
+	fabricFirstHopMAC    net.HardwareAddr
+	fabricFirstHopDevice *config.Device
 }
 
 // Constants for packet parsing.
 const (
-	SizeOfMac         = 6
-	SizeOfIP          = 4
-	SizeOfIPv6        = 16
-	EtherTypeIP       = 0x0800
-	EtherTypeARP      = 0x0806
-	EtherTypeIPv6     = 0x86dd
-	EtherTypeVLAN     = 0x8100
-	EtherTypeLLDP     = 0x88cc
-	EtherTypeEDP      = 0x00E02B
-	EtherTypeFDP      = 0x8037
-	etherHeaderSize   = 14     // Ethernet header size
-	vlanIDMask        = 0x0FFF // VLAN ID mask (12 bits)
-	ethTypeOffsetMult = 2      // Multiplier for EtherType offset (src+dst MACs)
-	checksumWordMask  = 0xFFFF // Mask for 16-bit word in checksum calculation
-	checksumWordShift = 16     // Bit shift for folding 32-bit to 16-bit checksum
-	checksumByteShift = 8      // Bit shift for padding odd-length byte in checksum
+	SizeOfMac           = 6
+	SizeOfIP            = 4
+	SizeOfIPv6          = 16
+	EtherTypeIP         = 0x0800
+	EtherTypeARP        = 0x0806
+	EtherTypeIPv6       = 0x86dd
+	EtherTypeVLAN       = 0x8100
+	EtherTypeLLDP       = 0x88cc
+	EtherTypeEDP        = 0x00E02B
+	EtherTypeFDP        = 0x8037
+	etherHeaderSize     = 14     // Ethernet header size
+	vlanIDMask          = 0x0FFF // VLAN ID mask (12 bits)
+	ethTypeOffsetMult   = 2      // Multiplier for EtherType offset (src+dst MACs)
+	checksumWordMask    = 0xFFFF // Mask for 16-bit word in checksum calculation
+	checksumWordShift   = 16     // Bit shift for folding 32-bit to 16-bit checksum
+	checksumByteShift   = 8      // Bit shift for padding odd-length byte in checksum
+	vlanEtherTypeOffset = etherHeaderSize + 2
 )
 
 // MaxPacketSize is the maximum IP packet size (IPv4/IPv6)
@@ -72,7 +79,11 @@ func (p *Packet) Clone() *Packet {
 		LoopTime:             p.LoopTime,
 		Device:               p.Device,
 		VLAN:                 p.VLAN,
+		VLANTagged:           p.VLANTagged,
 		fabricReplySourceMAC: cloneMAC(p.fabricReplySourceMAC),
+		fabricFirstHopIP:     append(net.IP(nil), p.fabricFirstHopIP...),
+		fabricFirstHopMAC:    cloneMAC(p.fabricFirstHopMAC),
+		fabricFirstHopDevice: p.fabricFirstHopDevice,
 	}
 	copy(clone.Buffer, p.Buffer)
 
@@ -181,6 +192,9 @@ func (p *Packet) GetEtherType() uint16 {
 
 // ParsePacket parses raw bytes into a Packet.
 func ParsePacket(data []byte, serialNum int) (*Packet, error) {
+	if len(data) < etherHeaderSize {
+		return nil, fmt.Errorf("%w: %w", ErrDecodingPacket, ErrEthernetFrameTooShort)
+	}
 	pkt := &Packet{
 		Buffer:       data,
 		Length:       len(data),
@@ -192,9 +206,15 @@ func ParsePacket(data []byte, serialNum int) (*Packet, error) {
 	// Check for VLAN tag
 	etherType := pkt.GetEtherType()
 	if etherType == EtherTypeVLAN {
-		// VLAN tag present
+		if len(data) < etherHeaderSize+dot1qTagLen {
+			return nil, fmt.Errorf("%w: %w", ErrDecodingPacket, ErrVLANHeaderTruncated)
+		}
+		if innerType := pkt.Get16(vlanEtherTypeOffset); innerType == EtherTypeVLAN {
+			return nil, fmt.Errorf("%w: %w", ErrDecodingPacket, ErrVLANStackUnsupported)
+		}
 		vlanInfo := pkt.Get16(SizeOfMac*ethTypeOffsetMult + ethTypeOffsetMult)
 		pkt.VLAN = int(vlanInfo & vlanIDMask)
+		pkt.VLANTagged = true
 	}
 
 	return pkt, nil

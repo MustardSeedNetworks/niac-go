@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/converter"
+	"github.com/MustardSeedNetworks/niac-go/internal/oui"
 )
 
 func LoadYAML(filename string) (*Config, error) {
@@ -58,19 +59,27 @@ func validateYAMLConfig(yamlConfig *converter.Config) (*converter.Config, error)
 }
 
 func buildConfigFromYAML(yamlConfig *converter.Config, configDir string) (*Config, error) {
+	var registry *oui.Registry
+	if usesVendorIdentity(yamlConfig) {
+		var err error
+		registry, err = oui.LoadEmbedded()
+		if err != nil {
+			return nil, fmt.Errorf("load IEEE OUI registry: %w", err)
+		}
+	}
 	cfg := createBaseConfig(yamlConfig)
 	cfg.IncludePath = resolveIncludePath(configDir, cfg.IncludePath)
 
 	for _, yamlDevice := range yamlConfig.Devices {
-		device, err := convertYAMLDevice(yamlDevice, cfg.IncludePath)
-		if err != nil {
-			return nil, err
+		device, deviceErr := convertYAMLDevice(yamlDevice, cfg.IncludePath, registry)
+		if deviceErr != nil {
+			return nil, deviceErr
 		}
 
 		cfg.Devices = append(cfg.Devices, device)
 	}
 
-	segments, err := buildSegments(yamlConfig, cfg.IncludePath, configDir)
+	segments, err := buildSegments(yamlConfig, cfg.IncludePath, configDir, registry)
 	if err != nil {
 		return nil, err
 	}
@@ -87,9 +96,23 @@ func buildConfigFromYAML(yamlConfig *converter.Config, configDir string) (*Confi
 	return cfg, nil
 }
 
+func usesVendorIdentity(cfg *converter.Config) bool {
+	return slices.ContainsFunc(cfg.Devices, func(device converter.Device) bool {
+		return strings.TrimSpace(device.Vendor) != ""
+	}) || slices.ContainsFunc(cfg.Segments, func(segment converter.Segment) bool {
+		return slices.ContainsFunc(segment.Devices, func(device converter.Device) bool {
+			return strings.TrimSpace(device.Vendor) != ""
+		})
+	})
+}
+
 // buildSegments converts and validates the multi-VLAN segment bindings (ADR
 // 0008). Segments and a top-level device list are mutually exclusive.
-func buildSegments(yamlConfig *converter.Config, includePath, configDir string) ([]Segment, error) {
+func buildSegments(
+	yamlConfig *converter.Config,
+	includePath, configDir string,
+	registry *oui.Registry,
+) ([]Segment, error) {
 	if len(yamlConfig.Segments) == 0 {
 		return nil, nil
 	}
@@ -101,7 +124,7 @@ func buildSegments(yamlConfig *converter.Config, includePath, configDir string) 
 	segments := make([]Segment, 0, len(yamlConfig.Segments))
 
 	for _, ySeg := range yamlConfig.Segments {
-		seg, err := buildSegment(ySeg, includePath, configDir)
+		seg, err := buildSegment(ySeg, includePath, configDir, registry)
 		if err != nil {
 			return nil, err
 		}
@@ -112,7 +135,11 @@ func buildSegments(yamlConfig *converter.Config, includePath, configDir string) 
 	return segments, nil
 }
 
-func buildSegment(ySeg converter.Segment, includePath, configDir string) (Segment, error) {
+func buildSegment(
+	ySeg converter.Segment,
+	includePath, configDir string,
+	registry *oui.Registry,
+) (Segment, error) {
 	tag, err := parseSegmentTag(string(ySeg.Tag))
 	if err != nil {
 		return Segment{}, err
@@ -132,7 +159,7 @@ func buildSegment(ySeg converter.Segment, includePath, configDir string) (Segmen
 	}
 
 	for _, yamlDevice := range ySeg.Devices {
-		device, convErr := convertYAMLDevice(yamlDevice, includePath)
+		device, convErr := convertYAMLDevice(yamlDevice, includePath, registry)
 		if convErr != nil {
 			return Segment{}, convErr
 		}

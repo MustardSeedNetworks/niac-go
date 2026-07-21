@@ -18,6 +18,7 @@ func referenceConfig() *config.Config {
 		Devices: []config.Device{
 			referenceRouter(),
 			referenceDHCPServer(),
+			referenceRoutePeer(),
 		},
 	}
 }
@@ -30,7 +31,19 @@ func referenceRouter() config.Device {
 			{Name: "outside", Network: "lab-access", Address: "10.10.200.1/24"},
 			{Name: "evt", Network: "evt-data", Address: "10.20.210.1/24"},
 		},
-		Routes: []config.Route{{Destination: "10.20.0.0/16", Via: "evt"}},
+		Routes: []config.Route{{
+			Destination: "10.20.0.0/16", Via: "evt", NextHop: "10.20.210.2",
+		}},
+	}
+}
+
+func referenceRoutePeer() config.Device {
+	return config.Device{
+		Name: "EVT-EDGE-R1",
+		Type: "router",
+		Interfaces: []config.Interface{
+			{Name: "cos", Network: "evt-data", Address: "10.20.210.2/24"},
+		},
 	}
 }
 
@@ -51,10 +64,11 @@ func referenceDHCPServer() config.Device {
 
 func accessBinding() fabric.Binding {
 	return fabric.Binding{
-		Attachment: "tester",
-		Interface:  "eth0",
-		Mode:       fabric.ModeAccess,
-		AccessVLAN: 200,
+		Attachment:     "tester",
+		Interface:      "eth0",
+		Mode:           fabric.ModeAccess,
+		AccessVLAN:     200,
+		PolicyApproved: true,
 	}
 }
 

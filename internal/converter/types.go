@@ -21,10 +21,13 @@ func (t *VLANTag) UnmarshalYAML(node *yaml.Node) error {
 
 // Sentinel errors for converter.
 var (
-	ErrInvalidLoopTimeFormat      = errors.New("invalid LoopTime format")
-	ErrInvalidScaleTimeFormat     = errors.New("invalid ScaleTime format")
-	ErrInvalidVlanFormat          = errors.New("invalid Vlan format")
-	ErrDeviceMissingMAC           = errors.New("device missing MAC address")
+	ErrInvalidLoopTimeFormat   = errors.New("invalid LoopTime format")
+	ErrInvalidScaleTimeFormat  = errors.New("invalid ScaleTime format")
+	ErrInvalidVlanFormat       = errors.New("invalid Vlan format")
+	ErrDeviceMissingMAC        = errors.New("device missing MAC address")
+	ErrDeviceMACSourceConflict = errors.New(
+		"device must use either mac or vendor identity, not both",
+	)
 	ErrAddMibMissingOID           = errors.New("AddMib missing OID")
 	ErrAddMibMissingType          = errors.New("AddMib missing type")
 	ErrCapturePlaybackMissingFile = errors.New("CapturePlayback missing file name")
@@ -107,9 +110,13 @@ type CapturePlayback struct {
 
 // Device represents a network device.
 type Device struct {
-	Name          string               `yaml:"name,omitempty"`
-	Type          string               `yaml:"type,omitempty"           validate:"omitempty,oneof=router switch ap access-point firewall server host workstation iot"`
-	MAC           string               `yaml:"mac"                      validate:"required,mac"`
+	Name string `yaml:"name,omitempty"`
+	Type string `yaml:"type,omitempty" validate:"omitempty,oneof=router switch ap access-point firewall server host workstation iot"`
+
+	MAC       string `yaml:"mac,omitempty"        validate:"omitempty,mac"`
+	Vendor    string `yaml:"vendor,omitempty"`
+	MACSuffix uint32 `yaml:"mac_suffix,omitempty" validate:"lte=16777215"`
+
 	IPs           []string             `yaml:"ips,omitempty"            validate:"omitempty,dive,ip"`
 	VLAN          int                  `yaml:"vlan,omitempty"           validate:"omitempty,gte=1,lte=4094"`
 	MapToIP       string               `yaml:"map_to_ip,omitempty"      validate:"omitempty,ip"`
@@ -162,6 +169,7 @@ type Interface struct {
 type Route struct {
 	Destination string `yaml:"destination" validate:"required,cidr"`
 	Via         string `yaml:"via"         validate:"required"`
+	NextHop     string `yaml:"next_hop"    validate:"required,ip4_addr"`
 }
 
 // TrunkPort declares a VLAN-tagged trunk link to a neighbouring device.
@@ -173,6 +181,7 @@ type TrunkPort struct {
 	NativeVLAN      int    `yaml:"native_vlan,omitempty"`
 	RemoteDevice    string `yaml:"remote_device,omitempty"`
 	RemoteInterface string `yaml:"remote_interface,omitempty"`
+	FDBOnly         bool   `yaml:"fdb_only,omitempty"`
 }
 
 // PortChannel declares a Link Aggregation (LACP) bundle. Doesn't
@@ -233,6 +242,12 @@ type OSFingerprintConfig struct {
 
 // SnmpAgent represents SNMP agent configuration.
 type SnmpAgent struct {
+	Enabled           *bool              `yaml:"enabled,omitempty"`
+	Community         string             `yaml:"community,omitempty"`
+	SysName           string             `yaml:"sysname,omitempty"`
+	SysDescr          string             `yaml:"sysdescr,omitempty"`
+	SysContact        string             `yaml:"syscontact,omitempty"`
+	SysLocation       string             `yaml:"syslocation,omitempty"`
 	WalkFile          string             `yaml:"walk_file,omitempty"`
 	WalkFiles         []string           `yaml:"walk_files,omitempty"`
 	AddMibs           []AddMib           `yaml:"add_mibs,omitempty"           validate:"omitempty,dive"`

@@ -12,10 +12,11 @@ import (
 func TestCompileReferenceLab(t *testing.T) {
 	cfg := referenceConfig()
 	binding := fabric.Binding{
-		Attachment: "tester",
-		Interface:  "eth0",
-		Mode:       fabric.ModeAccess,
-		AccessVLAN: 200,
+		Attachment:     "tester",
+		Interface:      "eth0",
+		Mode:           fabric.ModeAccess,
+		AccessVLAN:     200,
+		PolicyApproved: true,
 	}
 
 	report := fabric.Compile(cfg, binding)
@@ -26,8 +27,8 @@ func TestCompileReferenceLab(t *testing.T) {
 	if got := len(report.Topology.Networks); got != 2 {
 		t.Fatalf("networks = %d, want 2", got)
 	}
-	if got := len(report.Topology.Routes); got != 3 {
-		t.Fatalf("routes = %d, want 3 (two connected and one static)", got)
+	if got := len(report.Topology.Routes); got != 4 {
+		t.Fatalf("routes = %d, want 4 (three connected and one static)", got)
 	}
 	if got := len(report.Topology.DHCPScopes); got != 1 {
 		t.Fatalf("DHCP scopes = %d, want 1", got)
@@ -37,16 +38,50 @@ func TestCompileReferenceLab(t *testing.T) {
 	}
 }
 
+func TestCompileDHCPInfersNetworkOnMultiInterfaceRouter(t *testing.T) {
+	cfg := referenceConfig()
+	cfg.Devices[0].DHCPConfig = &config.DHCPConfig{
+		PoolStart: net.ParseIP("10.10.200.100"),
+		PoolEnd:   net.ParseIP("10.10.200.199"),
+		Router:    net.ParseIP("10.10.200.1"),
+	}
+	cfg.Devices[1].DHCPConfig = nil
+
+	report := fabric.Compile(cfg, accessBinding())
+
+	if !report.Safe {
+		t.Fatalf("Compile() diagnostics = %#v", report.Diagnostics)
+	}
+	if len(report.Topology.DHCPScopes) != 1 || report.Topology.DHCPScopes[0].Network != "lab-access" {
+		t.Fatalf("DHCP scopes = %#v, want one lab-access scope", report.Topology.DHCPScopes)
+	}
+}
+
+func TestCompileRejectsDHCPPoolAcrossRoutedNetworks(t *testing.T) {
+	cfg := referenceConfig()
+	cfg.Devices[0].DHCPConfig = &config.DHCPConfig{
+		PoolStart: net.ParseIP("10.10.200.100"),
+		PoolEnd:   net.ParseIP("10.20.210.199"),
+		Router:    net.ParseIP("10.10.200.1"),
+	}
+	cfg.Devices[1].DHCPConfig = nil
+
+	report := fabric.Compile(cfg, accessBinding())
+
+	assertDiagnostic(t, report, fabric.CodeDHCPPoolOutsideNetwork)
+}
+
 func TestCompileAccessVLANIsDeploymentSpecific(t *testing.T) {
 	cfg := referenceConfig()
 
 	for _, vlan := range []uint16{2, 200, 300, 4094} {
 		t.Run(fmt.Sprintf("vlan-%d", vlan), func(t *testing.T) {
 			report := fabric.Compile(cfg, fabric.Binding{
-				Attachment: "tester",
-				Interface:  "eth0",
-				Mode:       fabric.ModeAccess,
-				AccessVLAN: vlan,
+				Attachment:     "tester",
+				Interface:      "eth0",
+				Mode:           fabric.ModeAccess,
+				AccessVLAN:     vlan,
+				PolicyApproved: true,
 			})
 			if !report.Safe {
 				t.Fatalf("VLAN %d rejected: %#v", vlan, report.Diagnostics)
@@ -65,30 +100,39 @@ func TestCompileRejectsUnsafeBindings(t *testing.T) {
 		code    fabric.DiagnosticCode
 	}{
 		{
-			name: "direct interface not affirmed dedicated",
+			name: "direct interface denied by operator policy",
 			binding: fabric.Binding{
 				Attachment: "tester",
 				Interface:  "eth0",
 				Mode:       fabric.ModeDirect,
 			},
-			code: fabric.CodeDedicatedRequired,
+			code: fabric.CodeAttachmentPolicyDenied,
+		},
+		{
+			name: "access interface denied by operator policy",
+			binding: fabric.Binding{
+				Attachment: "tester", Interface: "eth0", Mode: fabric.ModeAccess, AccessVLAN: 200,
+			},
+			code: fabric.CodeAttachmentPolicyDenied,
 		},
 		{
 			name: "access VLAN missing",
 			binding: fabric.Binding{
-				Attachment: "tester",
-				Interface:  "eth0",
-				Mode:       fabric.ModeAccess,
+				Attachment:     "tester",
+				Interface:      "eth0",
+				Mode:           fabric.ModeAccess,
+				PolicyApproved: true,
 			},
 			code: fabric.CodeInvalidAccessVLAN,
 		},
 		{
 			name: "unknown logical attachment",
 			binding: fabric.Binding{
-				Attachment: "missing",
-				Interface:  "eth0",
-				Mode:       fabric.ModeAccess,
-				AccessVLAN: 200,
+				Attachment:     "missing",
+				Interface:      "eth0",
+				Mode:           fabric.ModeAccess,
+				AccessVLAN:     200,
+				PolicyApproved: true,
 			},
 			code: fabric.CodeUnknownAttachment,
 		},
@@ -102,6 +146,15 @@ func TestCompileRejectsUnsafeBindings(t *testing.T) {
 			}
 			assertDiagnostic(t, report, tt.code)
 		})
+	}
+}
+
+func TestCompileAcceptsApprovedDirectPolicy(t *testing.T) {
+	report := fabric.Compile(referenceConfig(), fabric.Binding{
+		Attachment: "tester", Interface: "eth1", Mode: fabric.ModeDirect, PolicyApproved: true,
+	})
+	if !report.Safe {
+		t.Fatalf("Compile() diagnostics = %#v", report.Diagnostics)
 	}
 }
 
@@ -174,6 +227,62 @@ func TestCompileRejectsInvalidNetworkSemantics(t *testing.T) {
 				cfg.Devices[0].Interfaces[0].Address = "10.10.200.255/24"
 			},
 			code: fabric.CodeReservedInterfaceAddr,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := referenceConfig()
+			tt.mutate(cfg)
+			report := fabric.Compile(cfg, accessBinding())
+			if report.Safe {
+				t.Fatal("Compile() safe = true, want false")
+			}
+			assertDiagnostic(t, report, tt.code)
+		})
+	}
+}
+
+func TestCompileRejectsInvalidRouteSemantics(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*config.Config)
+		code   fabric.DiagnosticCode
+	}{
+		{
+			name: "invalid next hop",
+			mutate: func(cfg *config.Config) {
+				cfg.Devices[0].Routes[0].NextHop = "not-an-address"
+			},
+			code: fabric.CodeInvalidRouteNextHop,
+		},
+		{
+			name: "next hop outside egress network",
+			mutate: func(cfg *config.Config) {
+				cfg.Devices[0].Routes[0].NextHop = "10.10.200.2"
+			},
+			code: fabric.CodeRouteNextHopOffLink,
+		},
+		{
+			name: "next hop is network address",
+			mutate: func(cfg *config.Config) {
+				cfg.Devices[0].Routes[0].NextHop = "10.20.210.0"
+			},
+			code: fabric.CodeRouteNextHopOffLink,
+		},
+		{
+			name: "next hop is not configured",
+			mutate: func(cfg *config.Config) {
+				cfg.Devices[0].Routes[0].NextHop = "10.20.210.99"
+			},
+			code: fabric.CodeUnknownRouteNextHop,
+		},
+		{
+			name: "next hop belongs to routed device",
+			mutate: func(cfg *config.Config) {
+				cfg.Devices[0].Routes[0].NextHop = "10.20.210.1"
+			},
+			code: fabric.CodeRouteNextHopSelf,
 		},
 	}
 

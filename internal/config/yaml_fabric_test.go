@@ -22,6 +22,7 @@ devices:
     routes:
       - destination: 10.20.0.0/16
         via: outside
+        next_hop: 10.10.200.2
 `))
 	if err != nil {
 		t.Fatalf("LoadYAMLBytes() error = %v", err)
@@ -37,5 +38,8 @@ devices:
 	}
 	if got := cfg.Devices[0].Routes[0].Destination; got != "10.20.0.0/16" {
 		t.Fatalf("route destination = %q", got)
+	}
+	if got := cfg.Devices[0].Routes[0].NextHop; got != "10.10.200.2" {
+		t.Fatalf("route next hop = %q", got)
 	}
 }

@@ -25,8 +25,7 @@ func TestValidateCommand(t *testing.T) {
       - "10.0.0.1"
     lldp:
       enabled: true
-      system_name: "test-switch"
-      chassis_id: "00:11:22:33:44:55"
+      system_description: "test-switch"
 `,
 			expectError: false,
 			description: "Valid configuration with minimal required fields",

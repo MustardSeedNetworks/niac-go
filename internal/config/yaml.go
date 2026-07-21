@@ -2,189 +2,203 @@ package config
 
 import (
 	"errors"
+	"net"
+	"strconv"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/MustardSeedNetworks/niac-go/internal/converter"
 )
 
-// MarshalConfigYAML builds a YAML representation of a config without relying on struct tags.
+// MarshalConfigYAML serializes the complete runtime configuration through the
+// canonical YAML DTO used by the loader.
 func MarshalConfigYAML(cfg *Config) ([]byte, error) {
 	if cfg == nil {
 		return nil, errors.New("config is nil")
 	}
 
-	data := map[string]any{}
-
-	if cfg.IncludePath != "" {
-		data["include_path"] = cfg.IncludePath
-	}
-
-	devices := make([]any, 0, len(cfg.Devices))
-	for _, dev := range cfg.Devices {
-		devices = append(devices, buildDeviceMap(&dev))
-	}
-
-	data["devices"] = devices
-
-	return yaml.Marshal(data)
+	return yaml.Marshal(configToYAML(cfg))
 }
 
-func buildDeviceMap(dev *Device) map[string]any {
-	data := map[string]any{
-		"name": dev.Name,
-		"type": dev.Type,
+func configToYAML(cfg *Config) converter.Config {
+	out := converter.Config{
+		IncludePath: cfg.IncludePath,
+		Devices:     devicesToYAML(cfg.Devices),
+		Networks:    networksToYAML(cfg.Networks),
+		Attachments: attachmentsToYAML(cfg.Attachments),
+		Segments:    segmentsToYAML(cfg.Segments),
 	}
-
-	buildDeviceBasicFields(data, dev)
-	buildDeviceInterfaces(data, dev)
-	buildDeviceSNMPAgent(data, dev)
-	buildDeviceCDP(data, dev)
-	buildDeviceLLDP(data, dev)
-
-	return data
+	if cfg.CapturePlayback != nil {
+		out.CapturePlaybacks = []converter.CapturePlayback{{
+			FileName:  cfg.CapturePlayback.FileName,
+			LoopTime:  cfg.CapturePlayback.LoopTime,
+			ScaleTime: cfg.CapturePlayback.ScaleTime,
+		}}
+	}
+	if cfg.DiscoveryProtocols != nil {
+		out.DiscoveryProtocols = discoveryProtocolsToYAML(cfg.DiscoveryProtocols)
+	}
+	return out
 }
 
-// buildDeviceBasicFields adds basic device fields to the map.
-func buildDeviceBasicFields(data map[string]any, dev *Device) {
-	if dev.MACAddress != nil {
-		data["mac"] = dev.MACAddress.String()
-	}
-
-	buildDeviceIPAddresses(data, dev)
-
-	if dev.VLAN > 0 {
-		data["vlan"] = dev.VLAN
-	}
-}
-
-// buildDeviceIPAddresses adds IP addresses to the device map.
-func buildDeviceIPAddresses(data map[string]any, dev *Device) {
-	if len(dev.IPAddresses) == 0 {
-		return
-	}
-
-	if len(dev.IPAddresses) == 1 {
-		data["ip"] = dev.IPAddresses[0].String()
-
-		return
-	}
-
-	ips := make([]string, 0, len(dev.IPAddresses))
-	for _, ip := range dev.IPAddresses {
-		ips = append(ips, ip.String())
-	}
-
-	data["ips"] = ips
-}
-
-func buildDeviceInterfaces(data map[string]any, dev *Device) {
-	if len(dev.Interfaces) == 0 {
-		return
-	}
-
-	interfaces := make([]map[string]any, 0, len(dev.Interfaces))
-	for _, iface := range dev.Interfaces {
-		ifaceMap := map[string]any{"name": iface.Name}
-		addPositiveInt(ifaceMap, "speed", iface.Speed)
-		addNonEmptyString(ifaceMap, "duplex", iface.Duplex)
-		addNonEmptyString(ifaceMap, "admin_status", iface.AdminStatus)
-		addNonEmptyString(ifaceMap, "oper_status", iface.OperStatus)
-		addNonEmptyString(ifaceMap, "description", iface.Description)
-		if len(iface.VLANs) > 0 {
-			ifaceMap["vlans"] = iface.VLANs
+func networksToYAML(networks []Network) []converter.Network {
+	out := make([]converter.Network, len(networks))
+	for i, network := range networks {
+		out[i] = converter.Network{
+			Name: network.Name, Subnet: network.Subnet, VirtualVLAN: network.VirtualVLAN,
 		}
-		interfaces = append(interfaces, ifaceMap)
 	}
-
-	data["interfaces"] = interfaces
+	return out
 }
 
-// buildDeviceSNMPAgent adds SNMP agent configuration to the device map.
-func buildDeviceSNMPAgent(data map[string]any, dev *Device) {
-	if dev.SNMPConfig.Community == "" && dev.SNMPConfig.WalkFile == "" {
-		return
+func attachmentsToYAML(attachments []LogicalAttachment) []converter.LogicalAttachment {
+	out := make([]converter.LogicalAttachment, len(attachments))
+	for i, attachment := range attachments {
+		out[i] = converter.LogicalAttachment{Name: attachment.Name, Connect: attachment.Network}
 	}
-
-	snmp := map[string]any{
-		"enabled": true,
-	}
-
-	addNonEmptyString(snmp, "community", dev.SNMPConfig.Community)
-	addNonEmptyString(snmp, "sysname", dev.SNMPConfig.SysName)
-	addNonEmptyString(snmp, "syslocation", dev.SNMPConfig.SysLocation)
-	addNonEmptyString(snmp, "sysdescr", dev.SNMPConfig.SysDescr)
-	addNonEmptyString(snmp, "syscontact", dev.SNMPConfig.SysContact)
-	addNonEmptyString(snmp, "walk_file", dev.SNMPConfig.WalkFile)
-
-	buildSNMPAddMibs(snmp, dev.SNMPConfig.AddMibs)
-
-	data["snmp_agent"] = snmp
+	return out
 }
 
-// buildSNMPAddMibs adds custom MIBs to the SNMP configuration.
-func buildSNMPAddMibs(snmp map[string]any, addMibs []AddMib) {
-	if len(addMibs) == 0 {
-		return
+func segmentsToYAML(segments []Segment) []converter.Segment {
+	out := make([]converter.Segment, len(segments))
+	for i, segment := range segments {
+		tag := strconv.Itoa(segment.Tag)
+		if segment.Tag == UntaggedTag {
+			tag = "untagged"
+		}
+		out[i] = converter.Segment{Tag: converter.VLANTag(tag)}
+		if segment.ConfigPath != "" {
+			out[i].Config = segment.ConfigPath
+		} else {
+			out[i].Devices = devicesToYAML(segment.Devices)
+		}
 	}
-
-	mibs := make([]map[string]any, 0, len(addMibs))
-	for _, mib := range addMibs {
-		mibs = append(mibs, map[string]any{
-			"oid":   mib.OID,
-			"type":  mib.Type,
-			"value": mib.Value,
-		})
-	}
-
-	snmp["add_mibs"] = mibs
+	return out
 }
 
-// buildDeviceCDP adds CDP configuration to the device map.
-func buildDeviceCDP(data map[string]any, dev *Device) {
-	if dev.CDPConfig == nil || !dev.CDPConfig.Enabled {
-		return
+func devicesToYAML(devices []Device) []converter.Device {
+	out := make([]converter.Device, len(devices))
+	for i := range devices {
+		out[i] = deviceToYAML(&devices[i])
 	}
-
-	cdp := map[string]any{
-		"enabled": true,
-	}
-
-	addNonEmptyString(cdp, "platform", dev.CDPConfig.Platform)
-	addNonEmptyString(cdp, "software_version", dev.CDPConfig.SoftwareVersion)
-	addNonEmptyString(cdp, "port_id", dev.CDPConfig.PortID)
-	addPositiveInt(cdp, "version", dev.CDPConfig.Version)
-	addPositiveInt(cdp, "holdtime", dev.CDPConfig.Holdtime)
-
-	data["cdp"] = cdp
+	return out
 }
 
-// buildDeviceLLDP adds LLDP configuration to the device map.
-func buildDeviceLLDP(data map[string]any, dev *Device) {
-	if dev.LLDPConfig == nil || !dev.LLDPConfig.Enabled {
-		return
+func deviceToYAML(device *Device) converter.Device {
+	out := converter.Device{
+		Name:          device.Name,
+		Type:          device.Type,
+		MAC:           hardwareAddrString(device.MACAddress),
+		Vendor:        device.MACVendor,
+		MACSuffix:     device.MACSuffix,
+		IPs:           ipStrings(device.IPAddresses),
+		VLAN:          device.VLAN,
+		MapToIP:       ipString(device.MapToIP),
+		Babble:        device.Babble,
+		TTL:           ttlToYAML(device.TTLConfig),
+		SnmpAgent:     snmpToYAML(&device.SNMPConfig),
+		Dhcp:          dhcpToYAML(device.DHCPConfig),
+		DNS:           dnsToYAML(device.DNSConfig),
+		Lldp:          lldpToYAML(device.LLDPConfig),
+		Cdp:           cdpToYAML(device.CDPConfig),
+		Edp:           edpToYAML(device.EDPConfig),
+		Fdp:           fdpToYAML(device.FDPConfig),
+		Stp:           stpToYAML(device.STPConfig),
+		HTTP:          httpToYAML(device.HTTPConfig),
+		Ftp:           ftpToYAML(device.FTPConfig),
+		Netbios:       netbiosToYAML(device.NetBIOSConfig),
+		Snmpv3:        snmpv3ToYAML(device.SNMPv3Config),
+		Icmp:          icmpToYAML(device.ICMPConfig),
+		Icmpv6:        icmpv6ToYAML(device.ICMPv6Config),
+		Dhcpv6:        dhcpv6ToYAML(device.DHCPv6Config),
+		OSFingerprint: osFingerprintToYAML(device.OSFingerprintConfig),
+		IPerf3:        iperf3ToYAML(device.IPerf3),
+		Reflector:     reflectorToYAML(device.ReflectorConfig),
+		Interfaces:    interfacesToYAML(device.Interfaces),
+		Routes:        routesToYAML(device.Routes),
+		TrunkPorts:    trunkPortsToYAML(device.TrunkPorts),
+		PortChannels:  portChannelsToYAML(device.PortChannels),
+		Properties:    device.Properties,
 	}
-
-	lldp := map[string]any{
-		"enabled": true,
+	if device.MACVendor != "" {
+		out.MAC = ""
 	}
-
-	addNonEmptyString(lldp, "system_description", dev.LLDPConfig.SystemDescription)
-	addNonEmptyString(lldp, "port_description", dev.LLDPConfig.PortDescription)
-	addNonEmptyString(lldp, "chassis_id_type", dev.LLDPConfig.ChassisIDType)
-	addPositiveInt(lldp, "ttl", dev.LLDPConfig.TTL)
-
-	data["lldp"] = lldp
+	return out
 }
 
-// addNonEmptyString adds a string value to the map if it's non-empty.
-func addNonEmptyString(m map[string]any, key, value string) {
-	if value != "" {
-		m[key] = value
+func interfacesToYAML(interfaces []Interface) []converter.Interface {
+	out := make([]converter.Interface, len(interfaces))
+	for i, iface := range interfaces {
+		out[i] = converter.Interface{
+			Name: iface.Name, Network: iface.Network, Address: iface.Address,
+			Speed: iface.Speed, Duplex: iface.Duplex, AdminStatus: iface.AdminStatus,
+			OperStatus: iface.OperStatus, Description: iface.Description, VLANs: iface.VLANs,
+		}
+	}
+	return out
+}
+
+func routesToYAML(routes []Route) []converter.Route {
+	out := make([]converter.Route, len(routes))
+	for i, route := range routes {
+		out[i] = converter.Route{
+			Destination: route.Destination, Via: route.Via, NextHop: route.NextHop,
+		}
+	}
+	return out
+}
+
+func trunkPortsToYAML(ports []TrunkPort) []converter.TrunkPort {
+	out := make([]converter.TrunkPort, len(ports))
+	for i, port := range ports {
+		out[i] = converter.TrunkPort{
+			Interface: port.Interface, VLANs: port.VLANs, NativeVLAN: port.NativeVLAN,
+			RemoteDevice: port.RemoteDevice, RemoteInterface: port.RemoteInterface, FDBOnly: port.FDBOnly,
+		}
+	}
+	return out
+}
+
+func portChannelsToYAML(channels []PortChannel) []converter.PortChannel {
+	out := make([]converter.PortChannel, len(channels))
+	for i, channel := range channels {
+		out[i] = converter.PortChannel{ID: channel.ID, Members: channel.Members, Mode: channel.Mode}
+	}
+	return out
+}
+
+func discoveryProtocolsToYAML(protocols *DiscoveryProtocols) *converter.DiscoveryProtocols {
+	return &converter.DiscoveryProtocols{
+		LLDP: protocolToYAML(protocols.LLDP), CDP: protocolToYAML(protocols.CDP),
+		EDP: protocolToYAML(protocols.EDP), FDP: protocolToYAML(protocols.FDP),
 	}
 }
 
-// addPositiveInt adds an int value to the map if it's positive.
-func addPositiveInt(m map[string]any, key string, value int) {
-	if value > 0 {
-		m[key] = value
+func protocolToYAML(protocol *ProtocolConfig) *converter.ProtocolConfig {
+	if protocol == nil {
+		return nil
 	}
+	return &converter.ProtocolConfig{Enabled: protocol.Enabled, Interval: protocol.Interval}
+}
+
+func ipString(ip net.IP) string {
+	if ip == nil {
+		return ""
+	}
+	return ip.String()
+}
+
+func ipStrings(ips []net.IP) []string {
+	out := make([]string, len(ips))
+	for i, ip := range ips {
+		out[i] = ipString(ip)
+	}
+	return out
+}
+
+func hardwareAddrString(address net.HardwareAddr) string {
+	if address == nil {
+		return ""
+	}
+	return address.String()
 }

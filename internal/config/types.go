@@ -133,6 +133,7 @@ type LogicalAttachment struct {
 type Route struct {
 	Destination string
 	Via         string
+	NextHop     string
 }
 
 // UntaggedTag is the Segment.Tag value for the native/untagged VLAN.
@@ -244,6 +245,8 @@ type Device struct {
 	Name                string
 	Type                string // router, switch, ap, etc.
 	MACAddress          net.HardwareAddr
+	MACVendor           string
+	MACSuffix           uint32
 	IPAddresses         []net.IP
 	MapToIP             net.IP     // Map UDP traffic to external IP (Java MapToIp)
 	Babble              bool       // Periodically emit babble traffic
@@ -377,6 +380,7 @@ type Interface struct {
 
 // SNMPConfig holds SNMP configuration.
 type SNMPConfig struct {
+	Enabled           *bool
 	Community         string
 	SysName           string
 	SysDescr          string
@@ -663,6 +667,7 @@ type TrunkPort struct {
 	NativeVLAN      int    // Native VLAN (untagged, default: 1)
 	RemoteDevice    string // Remote device name (for topology validation)
 	RemoteInterface string // Remote interface name (for LLDP/CDP neighbor)
+	FDBOnly         bool   // Learn the peer MAC without advertising an LLDP/CDP neighbor
 }
 
 // Load reads and parses a configuration file

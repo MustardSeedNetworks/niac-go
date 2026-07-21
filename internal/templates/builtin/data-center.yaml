@@ -105,29 +105,21 @@ devices:
     ips:
       - "10.1.10.100"
     dhcp:
-      enabled: true
-      pools:
-        - network: "10.1.0.0/16"
-          range_start: "10.1.50.1"
-          range_end: "10.1.50.254"
-          gateway: "10.1.0.1"
-          dns_servers:
-            - "10.1.10.100"
-          domain: "dc.local"
-          lease_time: 43200
+      subnet_mask: "255.255.0.0"
+      pool_start: "10.1.50.1"
+      pool_end: "10.1.50.254"
+      router: "10.1.0.1"
+      domain_name_server: "10.1.10.100"
+      server_identifier: "10.1.10.100"
 
     dns:
-      enabled: true
-      records:
+      forward_records:
         - name: "rtr01.dc.local"
-          type: "A"
-          value: "10.1.0.1"
+          ip: "10.1.0.1"
         - name: "rtr02.dc.local"
-          type: "A"
-          value: "10.1.0.2"
+          ip: "10.1.0.2"
         - name: "web01.dc.local"
-          type: "A"
-          value: "10.1.10.10"
+          ip: "10.1.10.10"
 
     snmp_agent:
       walk_file: ""

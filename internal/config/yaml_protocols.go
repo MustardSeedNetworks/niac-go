@@ -411,11 +411,10 @@ func parseThresholdTrap(
 	return cfg
 }
 
-// parseDHCPConfig parses DHCP configuration from YAML
-// Returns an empty DHCPConfig if input is nil (not an error condition).
+// parseDHCPConfig parses DHCP configuration from YAML.
 func parseDHCPConfig(yamlDhcp *converter.DhcpServer) *DHCPConfig {
 	if yamlDhcp == nil {
-		return &DHCPConfig{}
+		return nil
 	}
 
 	dhcpCfg := &DHCPConfig{}

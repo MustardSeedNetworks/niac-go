@@ -13,37 +13,29 @@ import (
 )
 
 func (s *Stack) initSNMPAgent(device *config.Device) {
-	if !snmpEnabled(device.SNMPConfig) && !snmpv3Enabled(device.SNMPv3Config) {
+	v2Enabled := snmpEnabled(device.SNMPConfig)
+	v3Enabled := snmpv3Enabled(device.SNMPv3Config)
+	if !v2Enabled && !v3Enabled {
 		return
 	}
 
 	debugLevel := s.debugConfig.GetProtocolLevel(logging.ProtocolSNMP)
 	group := newSnmpAgentGroup()
 
-	baseCommunity := device.SNMPConfig.Community
-	if baseCommunity == "" {
-		baseCommunity = config.DefaultSNMPCommunity
+	var baseAgent *snmp.Agent
+	if v2Enabled {
+		baseAgent = group.Ensure(device.SNMPConfig.Community, device, debugLevel)
+	} else {
+		baseAgent = snmp.NewAgentWithCommunityAndTelemetry(device, "", debugLevel, group.telemetry)
 	}
-
-	baseAgent := group.Ensure(baseCommunity, device, debugLevel)
 
 	s.initSNMPv3Engine(device, group, baseAgent, debugLevel)
 
-	// Load walk files into base community agent
-	for _, walkFile := range device.SNMPConfig.WalkFiles {
+	// Load each configured walk once into the base community agent. The YAML
+	// adapter retains the singular path in WalkFile and WalkFiles, so iterating
+	// both fields independently would replay the same capture twice.
+	for _, walkFile := range configuredWalkFiles(device.SNMPConfig) {
 		err := baseAgent.LoadWalkFile(walkFile)
-		if err != nil && debugLevel >= 1 {
-			_, _ = fmt.Fprintf(
-				os.Stdout,
-				"SNMP: failed to load walk file for %s: %v\n",
-				device.Name,
-				err,
-			)
-		}
-	}
-
-	if device.SNMPConfig.WalkFile != "" {
-		err := baseAgent.LoadWalkFile(device.SNMPConfig.WalkFile)
 		if err != nil && debugLevel >= 1 {
 			_, _ = fmt.Fprintf(
 				os.Stdout,
@@ -69,10 +61,11 @@ func (s *Stack) initSNMPAgent(device *config.Device) {
 		}
 	}
 
-	// Apply AddMib entries to base community (Java uses public)
+	// Apply authored MIB entries to the base agent used by the enabled SNMP
+	// transport. An SNMPv3-only device must not gain a v2c community as a side
+	// effect of loading these values.
 	for _, mib := range device.SNMPConfig.AddMibs {
-		agent := group.Ensure(config.DefaultSNMPCommunity, device, debugLevel)
-		err := agent.AddMib(mib.OID, mib.Type, mib.Value)
+		err := baseAgent.AddMib(mib.OID, mib.Type, mib.Value)
 		if err != nil && debugLevel >= DebugLevelInfo {
 			_, _ = fmt.Fprintf(
 				os.Stdout,
@@ -87,6 +80,9 @@ func (s *Stack) initSNMPAgent(device *config.Device) {
 	// Now that the MIB is loaded, fill downstream bridge FDB entries from the
 	// fleet roster (a host MAC on the access port it hangs off) so a scanner can
 	// answer "nearest switch/port" for discovered hosts.
+	if !v2Enabled {
+		baseAgent.SynthesizePeerTopology(s.peerMACResolver())
+	}
 	group.SynthesizePeerTopologyAll(s.peerMACResolver())
 
 	// Every MIB is now fully loaded (walk files, AddMib, topology, peer FDB).
@@ -94,9 +90,30 @@ func (s *Stack) initSNMPAgent(device *config.Device) {
 	// does not trigger a large sort on the stack's single decode goroutine —
 	// which would stall SNMP responses fleet-wide when a scanner walks every
 	// device at once.
+	if !v2Enabled {
+		baseAgent.Reindex()
+	}
 	group.ReindexAll()
 
 	s.snmpAgents[device] = group
+}
+
+func configuredWalkFiles(cfg config.SNMPConfig) []string {
+	files := make([]string, 0, len(cfg.WalkFiles)+1)
+	seen := make(map[string]struct{}, len(cfg.WalkFiles)+1)
+	candidates := append([]string(nil), cfg.WalkFiles...)
+	candidates = append(candidates, cfg.WalkFile)
+	for _, file := range candidates {
+		if file == "" {
+			continue
+		}
+		if _, exists := seen[file]; exists {
+			continue
+		}
+		seen[file] = struct{}{}
+		files = append(files, file)
+	}
+	return files
 }
 
 // peerMACResolver returns a lookup from device name to MAC over the whole config
@@ -153,25 +170,11 @@ func snmpv3Enabled(cfg *config.SNMPv3Config) bool {
 }
 
 func snmpEnabled(cfg config.SNMPConfig) bool {
-	if cfg.Community != "" || cfg.WalkFile != "" || len(cfg.WalkFiles) > 0 || cfg.SysName != "" ||
-		cfg.SysDescr != "" || cfg.SysContact != "" || cfg.SysLocation != "" {
-		return true
+	if cfg.Enabled != nil && !*cfg.Enabled {
+		return false
 	}
 
-	if len(cfg.AddMibs) > 0 || len(cfg.CommunityIncludes) > 0 || len(cfg.AccessList) > 0 ||
-		cfg.SnmpAddr != nil {
-		return true
-	}
-
-	if cfg.Dot1DFdbTable != nil || cfg.Dot1QFdbTable != nil {
-		return true
-	}
-
-	if cfg.Traps != nil && cfg.Traps.Enabled {
-		return true
-	}
-
-	return false
+	return strings.TrimSpace(cfg.Community) != ""
 }
 
 func (s *Stack) getSNMPAgents(device *config.Device) *snmpAgentGroup {
@@ -213,6 +216,10 @@ func formatMACForFDB(mac net.HardwareAddr) (string, string) {
 
 // updateDeviceFDBTables updates FDB tables for a single device.
 func (s *Stack) updateDeviceFDBTables(device *config.Device, decMac, hexMac string) {
+	if !snmpEnabled(device.SNMPConfig) {
+		return
+	}
+
 	group := s.ensureSNMPAgentGroup(device)
 	debugLevel := s.debugConfig.GetProtocolLevel(logging.ProtocolSNMP)
 	baseCommunity := s.getBaseCommunity(device)
@@ -234,11 +241,7 @@ func (s *Stack) ensureSNMPAgentGroup(device *config.Device) *snmpAgentGroup {
 
 // getBaseCommunity returns the base SNMP community for a device.
 func (s *Stack) getBaseCommunity(device *config.Device) string {
-	if device.SNMPConfig.Community != "" {
-		return device.SNMPConfig.Community
-	}
-
-	return config.DefaultSNMPCommunity
+	return strings.TrimSpace(device.SNMPConfig.Community)
 }
 
 // updateDot1DFdbTable updates the dot1d FDB table for a device.

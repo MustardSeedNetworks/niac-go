@@ -10,7 +10,6 @@ export interface FabricBinding {
   interface: string;
   mode: 'direct' | 'access';
   accessVlan?: number;
-  dedicated?: boolean;
   network: string;
   wireTagged: boolean;
 }

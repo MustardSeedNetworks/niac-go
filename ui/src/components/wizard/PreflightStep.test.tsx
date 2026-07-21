@@ -64,7 +64,7 @@ describe('PreflightStep', () => {
     expect(onStart).toHaveBeenCalledWith(expect.objectContaining({ accessVlan: 200 }));
   });
 
-  it('accepts direct attachment without a VLAN and blocks start on diagnostics', async () => {
+  it('submits direct mode without browser-owned isolation authorization', async () => {
     const user = userEvent.setup();
     preflightSimulation.mockResolvedValue({
       ...safeReport,
@@ -75,15 +75,16 @@ describe('PreflightStep', () => {
 
     await user.selectOptions(screen.getByTestId('wizard-attachment-mode'), 'direct');
     expect(screen.queryByTestId('wizard-access-vlan')).not.toBeInTheDocument();
-    expect(screen.getByTestId('wizard-preflight-check')).toBeDisabled();
-    await user.click(screen.getByTestId('wizard-dedicated-interface'));
+    expect(screen.queryByTestId('wizard-dedicated-interface')).not.toBeInTheDocument();
+    expect(screen.getByTestId('wizard-preflight-check')).not.toBeDisabled();
     await user.click(screen.getByTestId('wizard-preflight-check'));
 
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('not found'));
     expect(preflightSimulation).toHaveBeenCalledWith(
-      expect.objectContaining({ attachmentMode: 'direct', dedicated: true }),
+      expect.objectContaining({ attachmentMode: 'direct' }),
     );
     expect(preflightSimulation.mock.calls[0][0]).not.toHaveProperty('accessVlan');
+    expect(preflightSimulation.mock.calls[0][0]).not.toHaveProperty('dedicated');
     expect(screen.getByTestId('wizard-preflight-start')).toBeDisabled();
   });
 

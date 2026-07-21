@@ -4,6 +4,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -43,6 +44,45 @@ devices:
 	if !device.IPAddresses[0].Equal(expectedIP) {
 		t.Errorf("Expected IP %s, got %s", expectedIP, device.IPAddresses[0])
 	}
+	if device.SNMPConfig.Community != "" || device.SNMPConfig.SysName != "" {
+		t.Fatalf("absent snmp_agent produced SNMP config: %#v", device.SNMPConfig)
+	}
+}
+
+func TestParseDHCPConfigKeepsAbsentServiceDisabled(t *testing.T) {
+	if got := parseDHCPConfig(nil); got != nil {
+		t.Fatalf("parseDHCPConfig(nil) = %#v, want nil", got)
+	}
+}
+
+func TestLoadYAML_AllocatesVendorMACFromEmbeddedIEEERegistry(t *testing.T) {
+	yaml := `
+devices:
+  - name: vendor-switch
+    type: switch
+    vendor: cisco
+    mac_suffix: 66051
+    ips: ["192.0.2.10"]
+`
+	cfg, err := LoadYAML(createTempYAML(t, yaml))
+	if err != nil {
+		t.Fatalf("LoadYAML: %v", err)
+	}
+	device := cfg.Devices[0]
+	if got, want := device.MACAddress.String(), "00:00:0c:01:02:03"; got != want {
+		t.Fatalf("MACAddress = %q, want %q", got, want)
+	}
+	if device.MACVendor != "cisco" || device.MACSuffix != 0x010203 {
+		t.Fatalf("vendor source lost: vendor=%q suffix=%d", device.MACVendor, device.MACSuffix)
+	}
+
+	encoded, err := MarshalConfigYAML(cfg)
+	if err != nil {
+		t.Fatalf("MarshalYAML: %v", err)
+	}
+	if !strings.Contains(string(encoded), "vendor: cisco") || strings.Contains(string(encoded), "mac: 00:00:0c") {
+		t.Fatalf("vendor identity did not round-trip canonically:\n%s", encoded)
+	}
 }
 
 // TestLoadYAML_TrunkPorts verifies the YAML loader populates
@@ -61,6 +101,7 @@ devices:
         native_vlan: 1
         remote_device: "sw-b"
         remote_interface: "Ethernet1/1"
+        fdb_only: true
   - name: sw-b
     type: switch
     mac: "00:11:22:33:44:02"
@@ -102,6 +143,9 @@ devices:
 	}
 	if trunk.NativeVLAN != 1 {
 		t.Errorf("sw-a trunk native_vlan = %d, want 1", trunk.NativeVLAN)
+	}
+	if !trunk.FDBOnly {
+		t.Error("sw-a trunk fdb_only = false, want true")
 	}
 
 	swB := cfg.Devices[1]
@@ -253,6 +297,51 @@ devices:
 	got := cfg.Devices[0].SNMPConfig.WalkFile
 	if got != walkFile {
 		t.Fatalf("walk file = %q, want %q", got, walkFile)
+	}
+}
+
+func TestLoadYAML_PreservesSNMPAgentIdentity(t *testing.T) {
+	yaml := `
+devices:
+  - name: snmp-device
+    type: switch
+    mac: "00:11:22:33:44:55"
+    ips:
+      - "192.168.1.1"
+    snmp_agent:
+      enabled: true
+      community: "NetAllyDemo"
+      sysname: "COS-ACC-SW1"
+      sysdescr: "Cisco Catalyst 9300 access switch"
+      syslocation: "Colorado Springs, CO"
+      syscontact: "netops@demo.lab"
+`
+	configFile := createTempYAML(t, yaml)
+	defer func() { _ = os.Remove(configFile) }()
+
+	cfg, err := LoadYAML(configFile)
+	if err != nil {
+		t.Fatalf("LoadYAML failed: %v", err)
+	}
+
+	got := cfg.Devices[0].SNMPConfig
+	if got.Enabled == nil || !*got.Enabled {
+		t.Errorf("Enabled = %v, want true", got.Enabled)
+	}
+	if got.Community != "NetAllyDemo" {
+		t.Errorf("Community = %q, want %q", got.Community, "NetAllyDemo")
+	}
+	if got.SysName != "COS-ACC-SW1" {
+		t.Errorf("SysName = %q, want %q", got.SysName, "COS-ACC-SW1")
+	}
+	if got.SysDescr != "Cisco Catalyst 9300 access switch" {
+		t.Errorf("SysDescr = %q", got.SysDescr)
+	}
+	if got.SysLocation != "Colorado Springs, CO" {
+		t.Errorf("SysLocation = %q", got.SysLocation)
+	}
+	if got.SysContact != "netops@demo.lab" {
+		t.Errorf("SysContact = %q", got.SysContact)
 	}
 }
 

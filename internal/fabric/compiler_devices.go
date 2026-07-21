@@ -103,12 +103,31 @@ func (c *scenarioCompiler) compileRoutes(device *config.Device, interfaces map[s
 			c.add(CodeInvalidRoute, field+".destination", err.Error())
 			continue
 		}
-		if _, exists := interfaces[source.Via]; !exists {
+		iface, exists := interfaces[source.Via]
+		if !exists {
 			c.add(CodeUnknownRouteInterface, field+".via", "route references an unknown interface")
 			continue
 		}
+		nextHop, err := netip.ParseAddr(source.NextHop)
+		if err != nil || !nextHop.Is4() {
+			c.add(CodeInvalidRouteNextHop, field+".next_hop", "next hop must be an IPv4 address")
+			continue
+		}
+		if !iface.Address.Masked().Contains(nextHop) || isReservedEndpoint(iface.Address.Masked(), nextHop) {
+			c.add(CodeRouteNextHopOffLink, field+".next_hop", "next hop must be a usable address on the egress network")
+			continue
+		}
+		owner, assigned := c.addresses[nextHop]
+		if !assigned {
+			c.add(CodeUnknownRouteNextHop, field+".next_hop", "next hop is not assigned to a configured peer")
+			continue
+		}
+		if owner == device.Name {
+			c.add(CodeRouteNextHopSelf, field+".next_hop", "next hop cannot belong to the routed device")
+			continue
+		}
 		c.report.Topology.Routes = append(c.report.Topology.Routes, Route{
-			Device: device.Name, Destination: destination, Via: source.Via,
+			Device: device.Name, Destination: destination, Via: source.Via, NextHop: nextHop,
 		})
 	}
 }
@@ -117,15 +136,40 @@ func (c *scenarioCompiler) compileDHCP(device *config.Device, interfaces map[str
 	if device.DHCPConfig == nil || !hasDHCPPool(device.DHCPConfig) {
 		return
 	}
-	if len(interfaces) != 1 {
+	start, startOK := ipToAddr(device.DHCPConfig.PoolStart)
+	end, endOK := ipToAddr(device.DHCPConfig.PoolEnd)
+	if !startOK || !endOK {
 		c.add(
-			CodeDHCPNetworkAmbiguous,
+			CodeDHCPPoolOutsideNetwork,
 			"devices."+device.Name+".dhcp",
-			"DHCP server requires one routed interface",
+			"DHCP pool must be inside its network",
 		)
 		return
 	}
+	candidates := make(map[string]Interface)
 	for _, iface := range interfaces {
+		network := c.networks[iface.Network]
+		if network.Prefix.Contains(start) && network.Prefix.Contains(end) {
+			candidates[iface.Network] = iface
+		}
+	}
+	if len(candidates) == 0 {
+		c.add(
+			CodeDHCPPoolOutsideNetwork,
+			"devices."+device.Name+".dhcp",
+			"DHCP pool must be inside one routed network",
+		)
+		return
+	}
+	if len(candidates) > 1 {
+		c.add(
+			CodeDHCPNetworkAmbiguous,
+			"devices."+device.Name+".dhcp",
+			"DHCP pool must identify exactly one routed network",
+		)
+		return
+	}
+	for _, iface := range candidates {
 		c.appendDHCPScope(device, iface)
 	}
 }

@@ -803,6 +803,28 @@ func TestLoadYAMLConfigFromBytes(t *testing.T) {
 			wantError: true,
 		},
 		{
+			name: "unknown top-level field",
+			input: `devcies:
+  - mac: "00:11:22:33:44:55"`,
+			wantError: true,
+		},
+		{
+			name: "unknown device field",
+			input: `devices:
+  - mac: "00:11:22:33:44:55"
+    comunity: public`,
+			wantError: true,
+		},
+		{
+			name: "multiple YAML documents",
+			input: `devices:
+  - mac: "00:11:22:33:44:55"
+---
+devices:
+  - mac: "00:11:22:33:44:66"`,
+			wantError: true,
+		},
+		{
 			name: "YAML with capture playbacks",
 			input: `capture_playbacks:
   - file_name: "test.pcap"

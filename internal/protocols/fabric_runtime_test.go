@@ -108,6 +108,7 @@ func routedRuntimeFixture(t *testing.T) (*config.Config, *fabric.Topology) {
 	}
 	report := fabric.Compile(cfg, fabric.Binding{
 		Attachment: "tester", Interface: "eth0", Mode: fabric.ModeAccess, AccessVLAN: 200,
+		PolicyApproved: true,
 	})
 	if !report.Safe {
 		t.Fatalf("Compile() diagnostics = %#v", report.Diagnostics)

@@ -6,8 +6,11 @@ import (
 	"net/netip"
 	"os"
 	"slices"
+	"sync"
+	"time"
 
 	"github.com/gopacket/gopacket"
+	"github.com/gopacket/gopacket/ip4defrag"
 	"github.com/gopacket/gopacket/layers"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
@@ -29,13 +32,16 @@ const (
 
 // IPHandler handles IP packets.
 type IPHandler struct {
-	stack *Stack
+	stack      *Stack
+	defragMu   sync.Mutex
+	defraggers map[fragmentDomain]*ip4defrag.IPv4Defragmenter
+	now        func() time.Time
 }
 
 // NewIPHandler creates a new IP handler.
 func NewIPHandler(stack *Stack) *IPHandler {
 	return &IPHandler{
-		stack: stack,
+		stack: stack, defraggers: make(map[fragmentDomain]*ip4defrag.IPv4Defragmenter), now: time.Now,
 	}
 }
 
@@ -57,8 +63,19 @@ func (h *IPHandler) HandlePacket(pkt *Packet) {
 	if devices == nil {
 		return
 	}
+	h.stack.recordInboundProtocol(pkt, ip, devices)
+	if ip.Flags&layers.IPv4MoreFragments != 0 || ip.FragOffset > 0 {
+		var complete bool
+		ip, complete = h.reassembleIPv4(pkt, ip, devices)
+		if !complete {
+			return
+		}
+	}
+	if h.handleFabricTTLTimeout(pkt, ip) {
+		return
+	}
 
-	if h.shouldProcessTTL(ip, devices) && h.handleTTLTimeout(pkt, ip) {
+	if len(pkt.fabricFirstHopIP) == 0 && h.shouldProcessTTL(ip, devices) && h.handleTTLTimeout(pkt, ip) {
 		return
 	}
 
@@ -107,6 +124,11 @@ func (h *IPHandler) getTargetDevices(
 			return nil
 		}
 		pkt.fabricReplySourceMAC = cloneMAC(resolution.replySourceMAC)
+		if resolution.routed {
+			pkt.fabricFirstHopIP = net.IP(resolution.firstHopIP.AsSlice())
+			pkt.fabricFirstHopMAC = cloneMAC(resolution.firstHopMAC)
+			pkt.fabricFirstHopDevice = resolution.firstHopDevice
+		}
 		return []*config.Device{resolution.device}
 	}
 	serialNum := pkt.SerialNumber
@@ -126,6 +148,26 @@ func (h *IPHandler) getTargetDevices(
 	}
 
 	return devices
+}
+
+func (h *IPHandler) handleFabricTTLTimeout(pkt *Packet, ipLayer *layers.IPv4) bool {
+	if h.stack.fabric == nil || len(pkt.fabricFirstHopIP) == 0 || ipLayer.TTL > 1 {
+		return false
+	}
+	dstMAC := pkt.GetSourceMAC()
+	if len(dstMAC) == 0 || len(pkt.fabricFirstHopMAC) == 0 {
+		return false
+	}
+	err := h.stack.icmpHandler.SendICMPTimeExceeded(
+		pkt.fabricFirstHopIP,
+		ipLayer.SrcIP,
+		pkt.fabricFirstHopMAC,
+		dstMAC,
+		ipLayer,
+		pkt.fabricFirstHopDevice,
+		pkt.VLAN,
+	)
+	return err == nil
 }
 
 // shouldProcessTTL determines if TTL handling should be applied.

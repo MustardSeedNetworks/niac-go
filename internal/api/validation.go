@@ -539,8 +539,5 @@ func validateSimulationStartRequest(req SimulationRequest) []ErrorDetail {
 func validateSimulationForPreflight(req SimulationRequest) []ErrorDetail {
 	errs := validateSimulationStartRequest(req)
 	errs = append(errs, validateSimulationRequest(req)...)
-	if req.Attachment == "" {
-		errs = append(errs, ErrorDetail{Field: "attachment", Issue: "logical attachment is required"})
-	}
 	return errs
 }
