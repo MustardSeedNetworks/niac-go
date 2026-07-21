@@ -5,6 +5,47 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.94.6](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.5...v0.94.6) (2026-07-21)
+
+
+### Features
+
+* complete CyberScope routed MIB-II telemetry ([#1017](https://github.com/MustardSeedNetworks/niac-go/issues/1017)) ([f9b4298](https://github.com/MustardSeedNetworks/niac-go/commit/f9b42983aa1b2678970047dce9a5436d321bee49))
+* **replay:** add bounded loop-count (--loop=N) ([#999](https://github.com/MustardSeedNetworks/niac-go/issues/999)) ([de57260](https://github.com/MustardSeedNetworks/niac-go/commit/de5726027219b02303ffe855931ece93bc4fa2c3))
+* **replay:** add topspeed / pps / Mbps-cap rate modes ([#998](https://github.com/MustardSeedNetworks/niac-go/issues/998)) ([b37e2e5](https://github.com/MustardSeedNetworks/niac-go/commit/b37e2e54ce716cccc9411ba2b99a9d055be283a8))
+* **replay:** apply a BPF filter on replay (selective subset) ([#1000](https://github.com/MustardSeedNetworks/niac-go/issues/1000)) ([8bb6e7a](https://github.com/MustardSeedNetworks/niac-go/commit/8bb6e7a1d4b33e3f9efad58ad806ad106423fd0d))
+* **replay:** expose rate/loop/filter controls in the UI ([#1001](https://github.com/MustardSeedNetworks/niac-go/issues/1001)) ([e30c67a](https://github.com/MustardSeedNetworks/niac-go/commit/e30c67a2bd159c74792c35e07847df0ee52d6af6))
+* **replay:** localize the whole ReplayControlPanel ([#1002](https://github.com/MustardSeedNetworks/niac-go/issues/1002)) ([49b1d5a](https://github.com/MustardSeedNetworks/niac-go/commit/49b1d5a139c2a0c683740c464f803a878a39d700))
+* **replay:** stream pcap replay instead of materializing the whole file ([#997](https://github.com/MustardSeedNetworks/niac-go/issues/997)) ([2241cf2](https://github.com/MustardSeedNetworks/niac-go/commit/2241cf2f033c0fb9d317a3b8f357a6e2bd638bbe))
+
+
+### Bug Fixes
+
+* **capture:** open replay pcap via os.Root, read via pure-Go pcapgo ([#987](https://github.com/MustardSeedNetworks/niac-go/issues/987)) ([1c38205](https://github.com/MustardSeedNetworks/niac-go/commit/1c3820538e824bc13cd9304b8dd0b3b9f1593d12))
+* **license:** remove BGP/OSPF/traffic_shaping vaporware surface ([#1011](https://github.com/MustardSeedNetworks/niac-go/issues/1011)) ([08bce6c](https://github.com/MustardSeedNetworks/niac-go/commit/08bce6ceb9f17143a6763e2fe583ab8cdb0002b9))
+* **replay:** anchor pcap os.Root at the validated allowed dir ([#993](https://github.com/MustardSeedNetworks/niac-go/issues/993)) ([e288cf0](https://github.com/MustardSeedNetworks/niac-go/commit/e288cf0f65fcc179de385be7036c8905f23358f0)), closes [#986](https://github.com/MustardSeedNetworks/niac-go/issues/986)
+
+
+### Code Refactoring
+
+* **license:** consume shared foundation module for license + csrf ([#1005](https://github.com/MustardSeedNetworks/niac-go/issues/1005)) ([4a117eb](https://github.com/MustardSeedNetworks/niac-go/commit/4a117eb40138b62c24300954a5c8947d0080d7fe))
+
+
+### Continuous Integration
+
+* **license-check:** consume the fleet-shared reusable workflow ([#1007](https://github.com/MustardSeedNetworks/niac-go/issues/1007)) ([d20046b](https://github.com/MustardSeedNetworks/niac-go/commit/d20046b0912b9c49649a3d165276fc39843ece25))
+* **license-check:** ignore first-party foundation module ([#1006](https://github.com/MustardSeedNetworks/niac-go/issues/1006)) ([35640bf](https://github.com/MustardSeedNetworks/niac-go/commit/35640bfebb3f2628440159deb732e15493ad6a4b))
+* pin fleet-shared reusable workflows to a tagged SHA ([#1010](https://github.com/MustardSeedNetworks/niac-go/issues/1010)) ([1420659](https://github.com/MustardSeedNetworks/niac-go/commit/142065928a9f76014146e07f37aad1396bfaea67))
+* **semgrep:** consume the fleet-shared reusable Semgrep workflow ([#1008](https://github.com/MustardSeedNetworks/niac-go/issues/1008)) ([40d4435](https://github.com/MustardSeedNetworks/niac-go/commit/40d443557d833006da6b962ad961026e8ad8db3f))
+
+
+### Miscellaneous
+
+* delete dead subsystems (simulator, mibdb, ipc server, snmp traps) ([#1012](https://github.com/MustardSeedNetworks/niac-go/issues/1012)) ([4020ff5](https://github.com/MustardSeedNetworks/niac-go/commit/4020ff5f4f444fa4aa087664308d88fc0254f733))
+* onboard Renovate via shared org preset ([#1003](https://github.com/MustardSeedNetworks/niac-go/issues/1003)) ([f0b39cc](https://github.com/MustardSeedNetworks/niac-go/commit/f0b39ccd3229882e484b7c7cb5cd259977624808))
+* **ui:** drop unused @tanstack/react-query dep ([#992](https://github.com/MustardSeedNetworks/niac-go/issues/992)) ([8812969](https://github.com/MustardSeedNetworks/niac-go/commit/8812969aad175caf6fe17895cf3810c150d51dee))
+* **ui:** drop unused babel-plugin-react-compiler devDep ([#989](https://github.com/MustardSeedNetworks/niac-go/issues/989)) ([49da1e0](https://github.com/MustardSeedNetworks/niac-go/commit/49da1e0d63dc8e45d8416d91a36ca39e6f415f28))
+
 ## [0.94.5](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.4...v0.94.5) (2026-07-09)
 
 
