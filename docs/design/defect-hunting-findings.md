@@ -92,9 +92,15 @@ does not currently generate:
 
 ## CT304 live acceptance — 2026-07-21
 
-The deployed Linux build is `cb96afbb7e43dbdb10ce30cc8a6aa4b6a60aa5a3a847ee4479ebf609c75d84f2`.
+The deployed Linux build is the GitHub Actions `Build (linux-amd64)` artifact
+from workflow run `29870052471`, built from commit `0abf0b2`.
+The deployed binary SHA-256 is
+`47ad7cc5c2808d440f425ed1d1ff9a80a532d76ab255aa7b8569951e18289923` and
+`/__version` reports commit `0abf0b2`, Go `1.26.5`, and a non-empty UI hash.
 CT304 runs `/usr/bin/niac daemon --attachment-policy eth0=access:200` with
-`demo-multisite-modern.yaml` from the managed `/var/lib/niac/configs` root.
+`demo-multisite-modern.yaml` from the managed `/var/lib/niac/configs` root;
+the simulation was started through the daemon API with attachment `cyberscope`
+and reports 135 devices.
 
 - Proxmox `net0` is `tag=200`; the bridge reports `200 PVID Egress Untagged`.
 - The container has no IPv4 address or VLAN subinterface on `eth0`.
@@ -105,6 +111,9 @@ CT304 runs `/usr/bin/niac daemon --attachment-policy eth0=access:200` with
   v3 authPriv succeeded for EVT. `ifNumber=53`, system identity, IP, TCP, and
   UDP counters returned. NIAC reported 62 SNMP queries, 2 DHCP requests, and
   zero errors during the test.
+- A VLAN-200 namespace probe queried `LAB-EDGE-R1`, `COS-CORE-R1`,
+  `EVT-CORE-R1`, `EHV-CORE-R1`, and `LON-CORE-R1` with the authored
+  `NetAllyDemo` community. The probe was removed after the test.
 - The temporary endpoint namespace and its bridge port were removed after testing.
 
 ## First implementation slice
