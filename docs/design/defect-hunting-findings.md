@@ -68,30 +68,27 @@ evidence.
 
 ### Required MIB-II completion work
 
-The CT304 proof establishes interoperability and topology routing, but it does
-not close the MIB-II work. The remaining implementation must model enough
-stateful behavior for the corresponding objects and problem signals to be
-truthful:
+The implementation now supplies stateful behavior for the corresponding
+objects and problem signals. The remaining acceptance work is live validation
+against CyberScope and explicit coverage of event sources that the simulator
+does not currently generate:
 
-- TCP listener and connection lifecycle, input/output segments, retransmits,
-  resets, and connection-state transitions. This requires a bounded per-device
-  flow tracker and atomic tcpConnTable publication; flag-only rows would invent
-  sessions because the current TCP dispatcher is one-shot/stateless;
-- IPv4 fragmentation/reassembly and the associated discard/reassembly counters.
-  Fragment evidence and live request/create counters are now recorded, but
-  successful/failed reassembly still requires an actual bounded reassembly
-  engine;
-- per-interface octet/packet/error/discard counters tied to actual simulated
-  ingress, forwarding, egress, half-duplex, and link-speed conditions. The
-  current IF-MIB rates are elapsed-time synthesis and must be replaced after
-  interface identity is carried through fabric resolution;
-- bridge/FDB/STP/VLAN counters and state transitions tied to the same forwarding
-  model used by LLDP/CDP and route tables. Bridge counters must remain zero
-  until the forwarding engine emits authoritative ingress/egress bridge-port
-  events;
-- problem-condition correlation so CyberScope sees the same half-duplex,
-  speed/duplex, error, and topology findings through MIB-II as through the
-  configured scenario.
+- TCP listener and connection lifecycle, input/output segments, resets, and
+  state transitions are supplied by the bounded per-device flow tracker and
+  dynamic tcpConnTable publication. Retransmission counters remain zero unless
+  the simulator emits a retransmission event.
+- IPv4 fragmentation/reassembly and associated request, success, and failure
+  counters are supplied by the bounded per-VLAN reassembly engine.
+- Per-interface and bridge-port octet/packet counters are packet-authoritative
+  and share the forwarding attribution path; authored speed, duplex, admin,
+  oper, and alias state is reflected consistently across IF-MIB, IF-X, and
+  EtherLike groups.
+- Error/discard counters, dynamic FDB learning, and STP topology-change
+  counters remain truthful zero because NIAC has no packet-loss/error injector,
+  physical ingress-port event source, or BPDU event source yet. These are
+  explicit capability gaps, not fabricated telemetry.
+- CyberScope/Link-Live acceptance must still confirm the resulting topology,
+  counters, and authored problem conditions on the GitHub-built CT304 artifact.
 
 ## CT304 live acceptance — 2026-07-21
 
