@@ -302,8 +302,9 @@ func parseIntegerValue(valueStr string) (gosnmp.Asn1BER, any, error) {
 		return 0, nil, fmt.Errorf("failed to parse integer: %w", err)
 	}
 	value = max(min(value, math.MaxInt32), math.MinInt32)
+	bounded := int32(value)
 
-	return gosnmp.Integer, int(value), nil
+	return gosnmp.Integer, int(bounded), nil
 }
 
 func parseGaugeValue(valueStr string) (gosnmp.Asn1BER, any, error) {
@@ -312,8 +313,9 @@ func parseGaugeValue(valueStr string) (gosnmp.Asn1BER, any, error) {
 		return 0, nil, fmt.Errorf("failed to parse gauge: %w", err)
 	}
 	value = min(value, math.MaxUint32)
+	bounded := uint32(value)
 
-	return gosnmp.Gauge32, uint(value), nil
+	return gosnmp.Gauge32, uint(bounded), nil
 }
 
 func parseCounter32Value(valueStr string) (gosnmp.Asn1BER, any, error) {
@@ -322,8 +324,9 @@ func parseCounter32Value(valueStr string) (gosnmp.Asn1BER, any, error) {
 		return 0, nil, fmt.Errorf("failed to parse counter32: %w", err)
 	}
 	value = min(value, math.MaxUint32)
+	bounded := uint32(value)
 
-	return gosnmp.Counter32, uint(value), nil
+	return gosnmp.Counter32, uint(bounded), nil
 }
 
 func parseCounter64Value(valueStr string) (gosnmp.Asn1BER, any, error) {
