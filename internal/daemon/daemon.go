@@ -466,7 +466,7 @@ func e2eDryRunSimulation() bool {
 }
 
 // StartSimulation starts a new simulation.
-func (d *Daemon) StartSimulation(req api.SimulationRequest) error {
+func (d *Daemon) StartSimulation(req api.SimulationRequest, routedLabsAllowed bool) error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
@@ -475,7 +475,7 @@ func (d *Daemon) StartSimulation(req api.SimulationRequest) error {
 		return fmt.Errorf("%w: %s", ErrInterfaceNotExist, req.Interface)
 	}
 
-	cfg, configPath, err := loadValidSimulationConfig(req, false)
+	cfg, configPath, err := loadAuthorizedSimulationConfig(req, routedLabsAllowed)
 	if err != nil {
 		return err
 	}
@@ -549,6 +549,20 @@ func (d *Daemon) StartSimulation(req api.SimulationRequest) error {
 	}
 
 	return nil
+}
+
+func loadAuthorizedSimulationConfig(
+	req api.SimulationRequest,
+	routedLabsAllowed bool,
+) (*config.Config, string, error) {
+	cfg, configPath, err := loadValidSimulationConfig(req, false)
+	if err != nil {
+		return nil, "", err
+	}
+	if usesRoutedFabric(cfg) && !routedLabsAllowed {
+		return nil, "", api.ErrRoutedLabsLicenseRequired
+	}
+	return cfg, configPath, nil
 }
 
 // resolvePlaybackPath turns a (possibly relative) capture_playbacks file_name

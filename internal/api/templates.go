@@ -46,7 +46,7 @@ func (s *Server) handleTemplateByName(w http.ResponseWriter, r *http.Request) {
 	// gated behind the config_templates feature; listing / reading /
 	// deleting templates stays open.
 	if name == "use" {
-		if s.license != nil && !s.license.HasFeature("config_templates") {
+		if s.license == nil || !s.license.HasFeature("config_templates") {
 			s.writeFeatureGate(w, r, "config_templates",
 				"Applying a config template requires the Pro tier. "+
 					"Start a 14-day Pro trial with `niac license trial`.")

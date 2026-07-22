@@ -82,7 +82,7 @@ func (t Tier) String() string {
 func proFeatures() []string {
 	return []string{
 		"unlimited_devices",
-		"netbios", "ftp", "stp",
+		"routed_labs", "netbios", "ftp", "stp",
 		"ipv6_advanced", "error_injection",
 		"config_templates", "multi_ip", "pcap_ingest", "rest_api",
 	}

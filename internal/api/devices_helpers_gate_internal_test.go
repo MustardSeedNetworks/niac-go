@@ -123,21 +123,17 @@ func TestDeviceCreate_HardCapStillEnforced(t *testing.T) {
 	}
 }
 
-func TestDeviceCreate_NilLicenseAllowsUpToHardCap(t *testing.T) {
+func TestDeviceCreate_NilLicenseEnforcesFreeCap(t *testing.T) {
 	t.Parallel()
-	// Dev / test build: license manager is nil. Free cap is bypassed
-	// to keep local workflows working; the hard cap still applies.
 	s := newGateTestServerWithDevices(t, nil, FreeTierDeviceCount+5)
 
 	req := httptest.NewRequest(http.MethodPost, "/api/devices", http.NoBody)
 	w := httptest.NewRecorder()
 
-	cfg, err := s.validateDeviceCreatePreconditions(w, req, "newhost")
-	if err != nil {
-		t.Fatalf("nil-license build unexpectedly blocked: %v (status=%d)",
-			err, w.Code)
+	if cfg, err := s.validateDeviceCreatePreconditions(w, req, "newhost"); err == nil || cfg != nil {
+		t.Fatalf("nil-license request passed: cfg=%#v err=%v", cfg, err)
 	}
-	if cfg == nil {
-		t.Fatal("expected non-nil config")
+	if w.Code != http.StatusPaymentRequired {
+		t.Fatalf("status = %d, want 402", w.Code)
 	}
 }

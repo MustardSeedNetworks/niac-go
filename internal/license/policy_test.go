@@ -6,6 +6,8 @@ import (
 	"slices"
 	"testing"
 
+	foundation "github.com/MustardSeedNetworks/foundation/pkg/license"
+
 	"github.com/MustardSeedNetworks/niac-go/internal/license"
 )
 
@@ -40,7 +42,7 @@ func TestTierString(t *testing.T) {
 func wantProFeatures() []string {
 	return []string{
 		"unlimited_devices",
-		"netbios", "ftp", "stp",
+		"routed_labs", "netbios", "ftp", "stp",
 		"ipv6_advanced", "error_injection",
 		"config_templates", "multi_ip", "pcap_ingest", "rest_api",
 	}
@@ -124,6 +126,38 @@ func TestActivationLifecycle(t *testing.T) {
 	}
 	if mgr2.IsActivated() {
 		t.Error("expected !IsActivated after Deactivate")
+	}
+}
+
+func TestPersistedProStateUsesCurrentFeaturePolicy(t *testing.T) {
+	tmp := t.TempDir()
+	oldPolicy := license.Policy()
+	_, proCode, _ := oldPolicy.FeaturesForTier(int(license.TierPro))
+	oldPolicy.FeaturesForTier = func(wireTier int) ([]string, string, bool) {
+		if wireTier != int(license.TierPro) {
+			return nil, "", false
+		}
+		return []string{"unlimited_devices"}, proCode, true
+	}
+	oldManager, err := foundation.NewManagerWithDir(
+		foundation.NewProductionVerifier(oldPolicy), oldPolicy, tmp,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result := oldManager.StartTrial(); !result.Success {
+		t.Fatalf("StartTrial() = %#v", result)
+	}
+
+	manager, err := license.NewManagerWithDir(tmp)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !manager.HasFeature("routed_labs") {
+		t.Fatal("persisted Pro state did not receive routed_labs from current policy")
+	}
+	if !slices.Contains(manager.GetState().Features, "routed_labs") {
+		t.Fatalf("state features = %v", manager.GetState().Features)
 	}
 }
 

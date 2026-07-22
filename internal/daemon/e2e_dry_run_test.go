@@ -24,7 +24,7 @@ func TestStartSimulationE2EDryRunDoesNotOpenInterface(t *testing.T) {
     ips:
       - "192.0.2.10"
 `,
-	})
+	}, true)
 	if err != nil {
 		t.Fatalf("StartSimulation() error = %v", err)
 	}

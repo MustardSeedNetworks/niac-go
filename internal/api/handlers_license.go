@@ -49,11 +49,8 @@ type LicenseStatusResponse struct {
 	// Free tier — so the UI can show what upgrading unlocks instead of
 	// just what's currently active.
 	Features []LicenseFeature `json:"features"`
-	// LicenseEnforced is false when the server is running without a
-	// license manager (dev / test builds). The UI should treat
-	// LicenseEnforced=false as "all features available, hide upgrade
-	// hints" so local development isn't cluttered with paid-tier
-	// prompts.
+	// LicenseEnforced reports that paid feature gates are active. It remains
+	// true when manager initialization fails because those gates fail closed.
 	LicenseEnforced bool `json:"licenseEnforced"`
 }
 
@@ -64,7 +61,7 @@ type LicenseStatusResponse struct {
 func (s *Server) handleLicenseStatus(w http.ResponseWriter, _ *http.Request) {
 	resp := LicenseStatusResponse{
 		Tier:            license.TierFree.String(),
-		LicenseEnforced: s.license != nil,
+		LicenseEnforced: true,
 	}
 
 	var granted []string

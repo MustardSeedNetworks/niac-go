@@ -79,9 +79,9 @@ type nilDaemonController struct{}
 func (*nilDaemonController) PreflightSimulation(SimulationRequest) (fabric.Report, error) {
 	return fabric.Report{}, nil
 }
-func (*nilDaemonController) StartSimulation(SimulationRequest) error { return nil }
-func (*nilDaemonController) StopSimulation() error                   { return nil }
-func (*nilDaemonController) GetStatus() SimulationStatus             { return SimulationStatus{} }
+func (*nilDaemonController) StartSimulation(SimulationRequest, bool) error { return nil }
+func (*nilDaemonController) StopSimulation() error                         { return nil }
+func (*nilDaemonController) GetStatus() SimulationStatus                   { return SimulationStatus{} }
 
 func TestStart_LoopbackWithoutTokenIsAllowed(t *testing.T) {
 	// Loopback bind without token must NOT trip the gate. We don't

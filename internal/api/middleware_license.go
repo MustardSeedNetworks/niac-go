@@ -71,12 +71,11 @@ func (s *Server) writeFeatureGate(
 // includes `feature`. Returns 402 Payment Required with a structured
 // upgrade hint otherwise.
 //
-// A nil license manager is treated as "license disabled" (dev / test
-// builds) and permits all features so the gating layer never breaks
-// local workflows.
+// A nil license manager cannot establish an entitlement and therefore fails
+// closed like an inactive Free-tier manager.
 func (s *Server) requireFeature(feature string, next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if s.license == nil || s.license.HasFeature(feature) {
+		if s.license != nil && s.license.HasFeature(feature) {
 			next(w, r)
 			return
 		}

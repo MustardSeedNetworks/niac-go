@@ -45,7 +45,7 @@ func freshManager(t *testing.T) *license.Manager {
 	return mgr
 }
 
-func TestRequireFeature_AllowsWhenLicenseDisabled(t *testing.T) {
+func TestRequireFeature_BlocksWhenLicenseManagerUnavailable(t *testing.T) {
 	t.Parallel()
 	s := newGateTestServer(t, nil)
 
@@ -55,11 +55,11 @@ func TestRequireFeature_AllowsWhenLicenseDisabled(t *testing.T) {
 	w := httptest.NewRecorder()
 	h(w, req)
 
-	if !called {
-		t.Error("expected handler to run when license manager is nil")
+	if called {
+		t.Error("handler ran without an available license manager")
 	}
-	if w.Code != http.StatusOK {
-		t.Errorf("status = %d, want 200", w.Code)
+	if w.Code != http.StatusPaymentRequired {
+		t.Errorf("status = %d, want 402", w.Code)
 	}
 }
 

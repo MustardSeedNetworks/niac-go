@@ -35,8 +35,8 @@ func TestLicenseStatus_NilManagerReportsUnenforced(t *testing.T) {
 	if decErr := json.NewDecoder(w.Body).Decode(&body); decErr != nil {
 		t.Fatalf("decode: %v", decErr)
 	}
-	if body.LicenseEnforced {
-		t.Error("LicenseEnforced should be false when manager is nil")
+	if !body.LicenseEnforced {
+		t.Error("LicenseEnforced should remain true when manager is nil")
 	}
 	if body.Tier != license.TierFree.String() {
 		t.Errorf("Tier = %q, want Free", body.Tier)
