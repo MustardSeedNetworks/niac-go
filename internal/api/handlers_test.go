@@ -3,6 +3,7 @@ package api
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -221,6 +222,70 @@ func TestHandleConfig(t *testing.T) {
 			t.Errorf("status = %d, want %d", rec.Code, http.StatusMethodNotAllowed)
 		}
 	})
+}
+
+func TestHandleConfigUpdateEnforcesEntitlementsBeforeApply(t *testing.T) {
+	server, _ := createTestServer(t)
+	applied := false
+	server.cfg.ApplyConfig = func(*config.Config) error {
+		applied = true
+		return nil
+	}
+
+	var oversized bytes.Buffer
+	oversized.WriteString("devices:\n")
+	for index := 0; index <= FreeTierDeviceCount; index++ {
+		_, _ = fmt.Fprintf(&oversized,
+			"  - name: device-%d\n    type: router\n    mac: 02:00:00:00:00:%02x\n", index, index)
+	}
+	tests := []struct {
+		name    string
+		content string
+		feature string
+	}{
+		{
+			name: "SSH management",
+			content: `devices:
+  - name: edge
+    type: router
+    mac: 02:00:00:00:00:01
+    ssh:
+      enabled: true
+      username: admin
+      password_env: NIAC_TEST_SSH_PASSWORD
+`,
+			feature: "routed_labs",
+		},
+		{name: "Free device cap", content: oversized.String(), feature: "unlimited_devices"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			applied = false
+			body, err := json.Marshal(map[string]string{"content": test.content})
+			if err != nil {
+				t.Fatalf("marshal request: %v", err)
+			}
+			recorder := httptest.NewRecorder()
+			request := httptest.NewRequest(http.MethodPut, "/api/v1/config", bytes.NewReader(body))
+
+			server.handleConfig(recorder, request)
+
+			if recorder.Code != http.StatusPaymentRequired {
+				t.Fatalf("status = %d, want 402: %s", recorder.Code, recorder.Body.String())
+			}
+			var response FeatureGateResponse
+			if decodeErr := json.NewDecoder(recorder.Body).Decode(&response); decodeErr != nil {
+				t.Fatalf("decode response: %v", decodeErr)
+			}
+			if response.RequiredFeature != test.feature {
+				t.Fatalf("required feature = %q, want %q", response.RequiredFeature, test.feature)
+			}
+			if applied {
+				t.Fatal("unauthorized configuration reached ApplyConfig")
+			}
+		})
+	}
 }
 
 func TestHandleErrors(t *testing.T) {

@@ -466,7 +466,7 @@ func e2eDryRunSimulation() bool {
 }
 
 // StartSimulation starts a new simulation.
-func (d *Daemon) StartSimulation(req api.SimulationRequest, routedLabsAllowed bool) error {
+func (d *Daemon) StartSimulation(req api.SimulationRequest, entitlements api.SimulationEntitlements) error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
@@ -475,7 +475,7 @@ func (d *Daemon) StartSimulation(req api.SimulationRequest, routedLabsAllowed bo
 		return fmt.Errorf("%w: %s", ErrInterfaceNotExist, req.Interface)
 	}
 
-	cfg, configPath, err := loadAuthorizedSimulationConfig(req, routedLabsAllowed)
+	cfg, configPath, err := loadAuthorizedSimulationConfig(req, entitlements)
 	if err != nil {
 		return err
 	}
@@ -553,14 +553,14 @@ func (d *Daemon) StartSimulation(req api.SimulationRequest, routedLabsAllowed bo
 
 func loadAuthorizedSimulationConfig(
 	req api.SimulationRequest,
-	routedLabsAllowed bool,
+	entitlements api.SimulationEntitlements,
 ) (*config.Config, string, error) {
 	cfg, configPath, err := loadValidSimulationConfig(req, false)
 	if err != nil {
 		return nil, "", err
 	}
-	if usesRoutedFabric(cfg) && !routedLabsAllowed {
-		return nil, "", api.ErrRoutedLabsLicenseRequired
+	if entitlementErr := api.ValidateConfigEntitlements(cfg, entitlements); entitlementErr != nil {
+		return nil, "", entitlementErr
 	}
 	return cfg, configPath, nil
 }
@@ -683,7 +683,7 @@ func (d *Daemon) GetStatus() api.SimulationStatus {
 
 		status.UptimeSeconds = time.Since(d.simulation.StartedAt).Seconds()
 		if d.simulation.cfg != nil {
-			status.DeviceCount = len(d.simulation.cfg.Devices)
+			status.DeviceCount = d.simulation.cfg.DeviceCount()
 		}
 	}
 

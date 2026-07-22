@@ -451,7 +451,7 @@ snmp_agent:
    then start or restart NIAC. From a client shell:
 
    ```text
-   ssh admin@10.10.200.1
+   ssh -T admin@10.10.200.1
    # enable
    # configure terminal
    # interface Gi0/1

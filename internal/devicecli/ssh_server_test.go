@@ -76,6 +76,21 @@ func TestSSHServerAcceptsBareCarriageReturn(t *testing.T) {
 	readThrough(t, output, "edge-1#")
 }
 
+func TestSSHServerRejectsPTYWithoutTerminalLineDiscipline(t *testing.T) {
+	_, state := newSession()
+	client := connectSSH(t, newSSHServer(t, state))
+	defer client.Close()
+	session, err := client.NewSession()
+	if err != nil {
+		t.Fatalf("NewSession() error = %v", err)
+	}
+	defer session.Close()
+
+	if err = session.RequestPty("xterm", 80, 24, ssh.TerminalModes{}); err == nil {
+		t.Fatal("RequestPty() succeeded without terminal line discipline")
+	}
+}
+
 func TestSSHServerBoundsChannelsPerConnection(t *testing.T) {
 	_, state := newSession()
 	client := connectSSH(t, newSSHServer(t, state))

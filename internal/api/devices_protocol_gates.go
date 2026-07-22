@@ -35,6 +35,12 @@ type protocolFeatureCheck struct {
 func gatedDeviceProtocolChecks() []protocolFeatureCheck {
 	return []protocolFeatureCheck{
 		{
+			feature: "routed_labs",
+			present: func(d *config.Device) bool {
+				return d != nil && d.SSHConfig != nil && d.SSHConfig.Enabled
+			},
+		},
+		{
 			feature: "stp",
 			present: func(d *config.Device) bool { return d != nil && d.STPConfig != nil },
 		},

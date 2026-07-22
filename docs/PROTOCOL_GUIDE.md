@@ -940,7 +940,8 @@ devices:
 
 Set `NIAC_EDGE_ROUTER_PASSWORD` in the environment that launches NIAC, or in
 the NIAC service environment, then start or restart NIAC. From a client shell,
-connect with `ssh admin@10.10.200.1`.
+connect with `ssh -T admin@10.10.200.1`. The first command profile uses the
+client terminal's line handling and does not allocate a remote PTY.
 
 The first command set includes interface status and addressing, static routes,
 hostname and VLAN state, running/startup configuration, checkpoints, reload,

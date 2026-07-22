@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gopacket/gopacket"
 	"github.com/gopacket/gopacket/layers"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/virtualtcp"
@@ -102,6 +103,41 @@ func TestSSHTCPHandlerAcknowledgesRetransmissionWithoutRedelivery(t *testing.T) 
 	}
 	if err := <-result; !errors.Is(err, net.ErrClosed) {
 		t.Fatalf("second Read() after close = %v, want net.ErrClosed", err)
+	}
+}
+
+func TestSSHTCPHandlerIgnoresOutOfWindowFIN(t *testing.T) {
+	stack := &Stack{sendQueue: make(chan *Packet, 1)}
+	handler := &sshTCPHandler{stack: stack, sessions: make(map[string]*sshTCPSession), now: time.Now}
+	session := &sshTCPSession{
+		key: "client", established: true, clientNext: 100, serverNext: 200,
+		connection: virtualtcp.NewPacketConn(
+			"10.0.0.1:22", "10.0.0.2:40000", func(context.Context, []byte) error { return nil },
+		),
+		sourceIP: net.ParseIP("10.0.0.1"), destinationIP: net.ParseIP("10.0.0.2"),
+		sourceMAC:      net.HardwareAddr{0x02, 0, 0, 0, 0, 1},
+		destinationMAC: net.HardwareAddr{0x02, 0, 0, 0, 0, 2},
+		sourcePort:     TCPPortSSH, destinationPort: 40000,
+	}
+	handler.sessions[session.key] = session
+	defer handler.closeSession(session.key)
+
+	handler.acceptSegment(session, &layers.TCP{Seq: 99, FIN: true})
+
+	if handler.session(session.key) == nil {
+		t.Fatal("out-of-window FIN closed the SSH session")
+	}
+	if session.clientNext != 100 {
+		t.Fatalf("clientNext = %d, want 100", session.clientNext)
+	}
+	response := <-stack.sendQueue
+	packet := gopacket.NewPacket(response.Buffer, layers.LayerTypeEthernet, gopacket.Default)
+	tcp, ok := packet.Layer(layers.LayerTypeTCP).(*layers.TCP)
+	if !ok {
+		t.Fatal("response did not contain TCP")
+	}
+	if !tcp.ACK || tcp.FIN || tcp.Ack != 100 {
+		t.Fatalf("response flags ACK=%v FIN=%v ack=%d, want plain ACK 100", tcp.ACK, tcp.FIN, tcp.Ack)
 	}
 }
 

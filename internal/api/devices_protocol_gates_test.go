@@ -122,6 +122,23 @@ func TestRequireDeviceProtocolFeatures_BlocksFreeOnNetBIOS(t *testing.T) {
 	}
 }
 
+func TestRequireDeviceProtocolFeatures_BlocksFreeOnSSH(t *testing.T) {
+	t.Parallel()
+	s := newProtoGateServer(t, freshManager(t))
+	dev := &config.Device{Name: "withssh", SSHConfig: &config.SSHConfig{Enabled: true}}
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/", http.NoBody)
+
+	if s.requireDeviceProtocolFeatures(w, req, dev) {
+		t.Fatal("expected Free tier to be blocked on SSH")
+	}
+	var body FeatureGateResponse
+	_ = json.NewDecoder(w.Body).Decode(&body)
+	if body.RequiredFeature != "routed_labs" {
+		t.Errorf("RequiredFeature = %q, want routed_labs", body.RequiredFeature)
+	}
+}
+
 func TestRequireDeviceProtocolFeatures_AllowsProTrial(t *testing.T) {
 	t.Parallel()
 	mgr := freshManager(t)

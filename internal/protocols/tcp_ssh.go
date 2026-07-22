@@ -161,11 +161,13 @@ func (h *sshTCPHandler) acceptSegment(session *sshTCPSession, tcp *layers.TCP) {
 	if startServer {
 		session.established = true
 	}
+	expectedSequence := session.clientNext
 	payloadAccepted := len(tcp.Payload) > 0 && tcp.Seq == session.clientNext
 	if payloadAccepted {
 		session.clientNext += safeconv.Uint32(len(tcp.Payload))
 	}
-	if tcp.FIN {
+	finAccepted := tcp.FIN && (payloadAccepted || len(tcp.Payload) == 0 && tcp.Seq == expectedSequence)
+	if finAccepted {
 		session.clientNext++
 	}
 	session.mu.Unlock()
@@ -181,10 +183,10 @@ func (h *sshTCPHandler) acceptSegment(session *sshTCPSession, tcp *layers.TCP) {
 			return
 		}
 	}
-	if len(tcp.Payload) > 0 {
+	if len(tcp.Payload) > 0 || tcp.FIN && !finAccepted {
 		_ = h.sendSegment(session, nil, false, false)
 	}
-	if tcp.FIN {
+	if finAccepted {
 		_ = h.sendSegment(session, nil, false, true)
 		h.closeSession(session.key)
 	}

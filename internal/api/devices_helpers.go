@@ -22,30 +22,44 @@ func (s *Server) validateDeviceCreatePreconditions(
 		writeError(w, r, http.StatusBadRequest, "config_not_found", "No configuration loaded", nil)
 		return nil, errValidationFailed
 	}
+	if err := s.validateDeviceAddition(w, r, cfg, hostname); err != nil {
+		return nil, err
+	}
+	return cfg, nil
+}
 
-	if len(cfg.Devices) >= MaxDeviceCount {
+func (s *Server) validateDeviceAddition(
+	w http.ResponseWriter, r *http.Request, cfg *config.Config, hostname string,
+) error {
+	deviceCount := cfg.DeviceCount()
+	if deviceCount >= MaxDeviceCount {
 		writeError(w, r, http.StatusTooManyRequests, "device_limit_reached",
 			fmt.Sprintf("Maximum device count of %d reached", MaxDeviceCount), nil)
-		return nil, errValidationFailed
+		return errValidationFailed
 	}
 
 	// Free-tier soft cap. Pro licenses carry the "unlimited_devices"
 	// feature and skip this gate. A nil manager cannot establish that grant.
 	if (s.license == nil || !s.license.HasFeature("unlimited_devices")) &&
-		len(cfg.Devices) >= FreeTierDeviceCount {
+		deviceCount >= FreeTierDeviceCount {
 		s.writeFeatureGate(w, r, "unlimited_devices",
 			fmt.Sprintf("Free tier supports up to %d devices. "+
 				"Upgrade to Pro for unlimited devices.", FreeTierDeviceCount))
-		return nil, errValidationFailed
+		return errValidationFailed
+	}
+
+	if len(cfg.Segments) > 0 {
+		writeError(w, r, http.StatusConflict, "segmented_config_requires_replacement",
+			"Devices in segmented configurations must be changed through whole-config replacement", nil)
+		return errValidationFailed
 	}
 
 	if deviceExists(cfg.Devices, hostname) {
 		writeError(w, r, http.StatusConflict, "device_exists",
 			fmt.Sprintf("Device '%s' already exists", hostname), nil)
-		return nil, errValidationFailed
+		return errValidationFailed
 	}
-
-	return cfg, nil
+	return nil
 }
 
 // deviceExists checks if a device with the given hostname exists.

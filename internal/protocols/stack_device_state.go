@@ -59,11 +59,12 @@ func deviceInterfaceStates(compiled []fabric.Interface, device *config.Device) [
 }
 
 func deviceInterfaceState(compiled fabric.Interface, authored config.Interface) devicestate.Interface {
+	adminUp := statusUp(authored.AdminStatus)
+	carrierUp := statusUp(authored.OperStatus)
 	return devicestate.Interface{
 		Name: compiled.Name, Network: compiled.Network, Address: compiled.Address,
 		Description: authored.Description, VLANs: authored.VLANs,
-		AdminUp: statusUp(authored.AdminStatus), OperUp: statusUp(authored.OperStatus),
-		CarrierUp: statusUp(authored.OperStatus),
+		AdminUp: adminUp, OperUp: adminUp && carrierUp, CarrierUp: carrierUp,
 	}
 }
 
