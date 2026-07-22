@@ -34,7 +34,7 @@ func (s *Store) UpdateInterface(name string, update func(Interface) (Interface, 
 			return ErrConcurrentUpdate
 		}
 		s.running.network.Interfaces[index] = cloneInterface(next)
-		if current.Address != next.Address {
+		if current.Address != next.Address || current.AdminUp != next.AdminUp || current.OperUp != next.OperUp {
 			s.running.network.Routes = reconcileConnectedRoute(s.running.network.Routes, next)
 		}
 		s.version++
@@ -49,7 +49,7 @@ func reconcileConnectedRoute(routes []Route, iface Interface) []Route {
 	result := slices.DeleteFunc(append([]Route(nil), routes...), func(route Route) bool {
 		return route.Connected && route.Via == iface.Name
 	})
-	if iface.Address.IsValid() {
+	if iface.Address.IsValid() && iface.AdminUp && iface.OperUp {
 		result = append(result, Route{
 			Destination: iface.Address.Masked(), Via: iface.Name, Connected: true,
 		})
