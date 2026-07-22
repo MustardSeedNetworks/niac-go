@@ -6,6 +6,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/gosnmp/gosnmp"
 
@@ -162,6 +163,26 @@ func TestLinkTrapReportsIndependentAdminAndOperationalStatus(t *testing.T) {
 	if statuses[".1.3.6.1.2.1.2.2.1.7.1"] != snmp.IfStatusDown ||
 		statuses[".1.3.6.1.2.1.2.2.1.8.1"] != snmp.IfStatusUp {
 		t.Fatalf("link statuses = %#v", statuses)
+	}
+}
+
+func TestFormatSyslogUsesNilValueForInvalidHostname(t *testing.T) {
+	event := devicestate.Event{Timestamp: time.Date(2026, time.July, 22, 12, 0, 0, 0, time.UTC)}
+	for _, hostname := range []string{"", "edge router", "edge\nrouter", strings.Repeat("a", 256), "routér"} {
+		t.Run(hostname, func(t *testing.T) {
+			message := formatSyslog(hostname, event)
+			if !strings.HasPrefix(message, "<133>1 2026-07-22T12:00:00Z - niac ") {
+				t.Fatalf("formatSyslog() = %q", message)
+			}
+		})
+	}
+}
+
+func TestFormatSyslogPreservesValidHostname(t *testing.T) {
+	event := devicestate.Event{Timestamp: time.Date(2026, time.July, 22, 12, 0, 0, 0, time.UTC)}
+	message := formatSyslog("edge-1.example", event)
+	if !strings.HasPrefix(message, "<133>1 2026-07-22T12:00:00Z edge-1.example niac ") {
+		t.Fatalf("formatSyslog() = %q", message)
 	}
 }
 

@@ -3,6 +3,9 @@
 package license
 
 import (
+	"os"
+	"os/user"
+	"path/filepath"
 	"slices"
 
 	fnd "github.com/MustardSeedNetworks/foundation/pkg/license"
@@ -38,6 +41,40 @@ func NewManager() (*Manager, error) {
 		return nil, err
 	}
 	return &Manager{Manager: manager}, nil
+}
+
+// NewRuntimeManager loads license state from the invoking operator when a
+// simulation needs elevated packet-capture privileges.
+func NewRuntimeManager() (*Manager, error) {
+	manager, err := fnd.NewManagerWithDir(
+		fnd.NewProductionVerifier(Policy()), Policy(), runtimeConfigDir(),
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &Manager{Manager: manager}, nil
+}
+
+func runtimeConfigDir() string {
+	current, err := user.Current()
+	if err == nil {
+		return filepath.Join(ResolveConfigHome(current, os.Getenv("SUDO_USER")), ".config", configSubdir)
+	}
+	home, homeErr := os.UserHomeDir()
+	if homeErr != nil {
+		home = os.TempDir()
+	}
+	return filepath.Join(home, ".config", configSubdir)
+}
+
+// ResolveConfigHome returns the operator home that owns license state.
+func ResolveConfigHome(current *user.User, sudoUser string) string {
+	if current.Uid == "0" && sudoUser != "" && sudoUser != "root" {
+		if invoking, err := user.Lookup(sudoUser); err == nil && invoking.HomeDir != "" {
+			return invoking.HomeDir
+		}
+	}
+	return current.HomeDir
 }
 
 // NewManagerWithDir creates a license manager that persists state in configDir.

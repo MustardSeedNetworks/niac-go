@@ -1,9 +1,13 @@
 package devicestate
 
 import (
+	"errors"
 	"slices"
 	"strconv"
 )
+
+// ErrVLANNotFound indicates that a device has no VLAN with the requested ID.
+var ErrVLANNotFound = errors.New("vlan not found")
 
 // EnsureVLAN creates an active VLAN when it is not already present.
 func (s *Store) EnsureVLAN(id int) {
@@ -40,7 +44,7 @@ func (s *Store) UpdateVLAN(id int, update func(VLAN) VLAN) error {
 		}
 	}
 	s.mu.RUnlock()
-	return nil
+	return ErrVLANNotFound
 }
 
 // EnsureRouter creates a routing process when it is not already present.
