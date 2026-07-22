@@ -202,8 +202,25 @@ func applyPartialDeviceUpdate(dev *config.Device, req DeviceUpdateRequest) error
 		}
 		dev.Interfaces = interfaces
 	}
+	if req.SNMPAgent != nil {
+		applySNMPAgentRequest(&dev.SNMPConfig, req.SNMPAgent)
+	}
 
 	return nil
+}
+
+func applySNMPAgentRequest(dst *config.SNMPConfig, src *SNMPAgentRequest) {
+	dst.Community = strings.TrimSpace(src.Community)
+	dst.SysName = strings.TrimSpace(src.SysName)
+	dst.SysDescr = strings.TrimSpace(src.SysDescr)
+	dst.SysContact = strings.TrimSpace(src.SysContact)
+	dst.SysLocation = strings.TrimSpace(src.SysLocation)
+	dst.WalkFile = strings.TrimSpace(src.WalkFile)
+	dst.WalkFiles = append([]string(nil), src.WalkFiles...)
+	dst.AddMibs = make([]config.AddMib, 0, len(src.AddMibs))
+	for _, mib := range src.AddMibs {
+		dst.AddMibs = append(dst.AddMibs, config.AddMib{OID: mib.OID, Type: mib.Type, Value: mib.Value})
+	}
 }
 
 func interfaceUpdatesToConfig(updates []DeviceInterfaceUpdate) ([]config.Interface, error) {
@@ -323,6 +340,9 @@ func createDeviceFromRequest(req DeviceCreateRequest) (*config.Device, error) {
 			return nil, err
 		}
 		dev.Interfaces = interfaces
+	}
+	if req.SNMPAgent != nil {
+		applySNMPAgentRequest(&dev.SNMPConfig, req.SNMPAgent)
 	}
 
 	if req.RawYAML != "" {

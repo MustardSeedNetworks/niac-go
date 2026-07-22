@@ -353,3 +353,20 @@ func TestValidate_InvalidDNSRecord(t *testing.T) {
 		t.Error("Expected invalid for empty DNS record name")
 	}
 }
+
+func TestValidate_AddMibOID(t *testing.T) {
+	cfg := &Config{Devices: []Device{{
+		Name: "switch-1", Type: "switch",
+		MACAddress:  net.HardwareAddr{0x02, 0, 0, 0, 0, 1},
+		IPAddresses: []net.IP{net.ParseIP("192.0.2.1")},
+		SNMPConfig: SNMPConfig{Community: "public", AddMibs: []AddMib{
+			{OID: "1.3.6.1.4.1.9.1", Type: "STRING", Value: "9300"},
+			{OID: "bad.oid", Type: "STRING", Value: "bad"},
+			{OID: "1.3.6.1.4.1.9.1", Type: "STRING", Value: "duplicate"},
+		}},
+	}}}
+	result := NewValidator("test.yaml").Validate(cfg)
+	if result.Valid {
+		t.Fatal("expected invalid AddMib OID configuration")
+	}
+}

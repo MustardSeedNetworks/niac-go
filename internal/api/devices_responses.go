@@ -62,6 +62,7 @@ func buildSNMPAgentResponse(dev *config.Device) *SNMPAgentResponse {
 		SysDescr:    dev.SNMPConfig.SysDescr,
 		SysContact:  dev.SNMPConfig.SysContact,
 		WalkFile:    dev.SNMPConfig.WalkFile,
+		WalkFiles:   append([]string(nil), dev.SNMPConfig.WalkFiles...),
 	}
 
 	if len(dev.SNMPConfig.AddMibs) > 0 {

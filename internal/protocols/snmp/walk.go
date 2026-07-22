@@ -2,6 +2,7 @@ package snmp
 
 import (
 	"bufio"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -86,19 +87,25 @@ func isHexByte(s string) bool {
 }
 
 // appendHexContinuation folds a Hex-STRING continuation line's octets into the
-// preceding entry. Hex values are stored as a space-free upper-of-lower hex
-// string (see parseHexStringValue), so append the same normalized form.
+// preceding entry. Values are kept as binary octets so SNMP marshaling emits
+// the captured bytes rather than their hexadecimal text representation.
 func appendHexContinuation(entry *WalkEntry, line string) {
 	if entry.Type != gosnmp.OctetString {
 		return
 	}
 
-	prev, ok := entry.Value.(string)
+	prev, ok := entry.Value.([]byte)
 	if !ok {
 		return
 	}
 
-	entry.Value = prev + strings.ReplaceAll(line, " ", "")
+	continuation, err := decodeHexOctets(line)
+	if err != nil {
+		return
+	}
+	combined := append([]byte(nil), prev...)
+	combined = append(combined, continuation...)
+	entry.Value = combined
 }
 
 // WalkEntry represents a single entry from an SNMP walk file.
@@ -283,7 +290,7 @@ func parseTypeAndValue(typeStr, valueStr string) (gosnmp.Asn1BER, any, error) {
 	case "IPADDRESS", "IP ADDRESS", "IPADDR":
 		return gosnmp.IPAddress, valueStr, nil
 	case "BITS":
-		return gosnmp.OctetString, strings.TrimPrefix(valueStr, "0x"), nil
+		return parseHexStringValue(valueStr)
 	case "HEX-STRING", "HEX":
 		return parseHexStringValue(valueStr)
 	case "OPAQUE":
@@ -359,10 +366,26 @@ func parseTimeticksValue(valueStr string) (gosnmp.Asn1BER, any, error) {
 }
 
 func parseHexStringValue(valueStr string) (gosnmp.Asn1BER, any, error) {
-	value := strings.ReplaceAll(valueStr, " ", "")
-	value = strings.TrimPrefix(value, "0x")
+	value, err := decodeHexOctets(valueStr)
+	if err != nil {
+		return 0, nil, err
+	}
 
 	return gosnmp.OctetString, value, nil
+}
+
+func decodeHexOctets(value string) ([]byte, error) {
+	value = strings.TrimSpace(value)
+	value = strings.TrimPrefix(strings.TrimPrefix(value, "0x"), "0X")
+	value = strings.ReplaceAll(value, " ", "")
+	value = strings.ReplaceAll(value, "\t", "")
+
+	decoded, err := hex.DecodeString(value)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode hexadecimal octets: %w", err)
+	}
+
+	return decoded, nil
 }
 
 // ExportToWalkFile exports MIB entries to a walk file format.

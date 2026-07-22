@@ -135,6 +135,44 @@ func (v *Validator) validateSNMPCommunity(device *Device, prefix string) {
 	if configured && strings.TrimSpace(cfg.Community) == "" {
 		v.addError(prefix+".snmp_agent.community", "SNMPv1/v2c requires an explicit community")
 	}
+	v.validateSNMPAddMibs(cfg.AddMibs, prefix)
+}
+
+func (v *Validator) validateSNMPAddMibs(mibs []AddMib, prefix string) {
+	seen := make(map[string]struct{}, len(mibs))
+	for i, mib := range mibs {
+		oid := strings.TrimPrefix(strings.TrimSpace(mib.OID), ".")
+		if !isValidOIDText(oid) {
+			v.addError(
+				fmt.Sprintf("%s.snmp_agent.add_mibs[%d].oid", prefix, i),
+				"MIB OID must contain numeric dotted components",
+			)
+		}
+		if _, duplicate := seen[oid]; duplicate {
+			v.addError(fmt.Sprintf("%s.snmp_agent.add_mibs[%d].oid", prefix, i), "duplicate MIB OID")
+		}
+		seen[oid] = struct{}{}
+		if strings.TrimSpace(mib.Type) == "" {
+			v.addError(fmt.Sprintf("%s.snmp_agent.add_mibs[%d].type", prefix, i), "MIB type is required")
+		}
+	}
+}
+
+func isValidOIDText(oid string) bool {
+	if oid == "" {
+		return false
+	}
+	for part := range strings.SplitSeq(oid, ".") {
+		if part == "" {
+			return false
+		}
+		for _, r := range part {
+			if r < '0' || r > '9' {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 // validateDeviceIdentity validates device name and type fields.

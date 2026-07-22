@@ -1,5 +1,6 @@
 import type { FC } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { AddMib, MibType } from '../../api/service-protocol-types';
 import type { SNMPAgent } from '../../api/types';
 import { CollapsibleSection, FormField } from '../form';
 import { SynthesizeWalkControl } from './SynthesizeWalkControl';
@@ -33,6 +34,20 @@ export const SnmpSection: FC<SNMPSectionProps> = ({
   const currentWalk = device.snmpAgent?.walkFile ?? '';
   const currentWalkMissing =
     currentWalk !== '' && !(walkFiles ?? []).some((file) => file.name === currentWalk);
+
+  const addMibs = device.snmpAgent?.addMibs ?? [];
+  const updateAddMibs = (next: AddMib[]) => updateSnmp({ ...getSnmpConfig(), addMibs: next });
+  const mibTypes: MibType[] = [
+    'STRING',
+    'INTEGER',
+    'Counter32',
+    'Counter64',
+    'Gauge32',
+    'TimeTicks',
+    'OID',
+    'IpAddress',
+    'Hex-STRING',
+  ];
 
   return (
     <CollapsibleSection
@@ -107,6 +122,77 @@ export const SnmpSection: FC<SNMPSectionProps> = ({
               disabled={isNewDevice}
               onSynthesized={(walkPath) => updateSnmp({ ...getSnmpConfig(), walkFile: walkPath })}
             />
+          </div>
+
+          <div className="md:col-span-2 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-text-primary">MIB overrides</span>
+              <button
+                type="button"
+                className="rounded bg-brand-primary px-2 py-1 text-xs text-knob"
+                onClick={() => updateAddMibs([...addMibs, { oid: '', type: 'STRING', value: '' }])}
+              >
+                Add OID
+              </button>
+            </div>
+            {addMibs.map((mib, index) => (
+              <div
+                className="grid gap-2 md:grid-cols-[2fr_1fr_2fr_auto]"
+                key={`${index}-${mib.oid}`}
+              >
+                <input
+                  aria-label="MIB OID"
+                  className={inputClassName}
+                  placeholder="1.3.6.1.4.1..."
+                  value={mib.oid}
+                  onChange={(e) =>
+                    updateAddMibs(
+                      addMibs.map((item, i) =>
+                        i === index ? { ...item, oid: e.target.value } : item,
+                      ),
+                    )
+                  }
+                />
+                <select
+                  aria-label="MIB type"
+                  className={selectClassName}
+                  value={mib.type}
+                  onChange={(e) =>
+                    updateAddMibs(
+                      addMibs.map((item, i) =>
+                        i === index ? { ...item, type: e.target.value as MibType } : item,
+                      ),
+                    )
+                  }
+                >
+                  {mibTypes.map((type) => (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  aria-label="MIB value"
+                  className={inputClassName}
+                  value={mib.value}
+                  onChange={(e) =>
+                    updateAddMibs(
+                      addMibs.map((item, i) =>
+                        i === index ? { ...item, value: e.target.value } : item,
+                      ),
+                    )
+                  }
+                />
+                <button
+                  type="button"
+                  aria-label="Remove MIB override"
+                  className="rounded border border-status-error px-2 text-status-error"
+                  onClick={() => updateAddMibs(addMibs.filter((_, i) => i !== index))}
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
           </div>
         </div>
       )}
