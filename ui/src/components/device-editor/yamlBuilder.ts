@@ -31,6 +31,20 @@ const appendSnmpLines = (lines: string[], device: Device) => {
   if (device.snmpAgent.walkFile) {
     lines.push(`      walkFile: "${device.snmpAgent.walkFile}"`);
   }
+  if (device.snmpAgent.walkFiles && device.snmpAgent.walkFiles.length > 0) {
+    lines.push('      walkFiles:');
+    for (const walkFile of device.snmpAgent.walkFiles) {
+      lines.push(`        - "${walkFile}"`);
+    }
+  }
+  if (device.snmpAgent.addMibs && device.snmpAgent.addMibs.length > 0) {
+    lines.push('      addMibs:');
+    for (const mib of device.snmpAgent.addMibs) {
+      lines.push(`        - oid: "${mib.oid}"`);
+      lines.push(`          type: "${mib.type}"`);
+      lines.push(`          value: "${mib.value}"`);
+    }
+  }
 };
 
 const appendInterfaceLines = (lines: string[], device: Device) => {

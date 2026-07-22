@@ -36,11 +36,30 @@ type SNMPAgentResponse struct {
 	SysDescr    string           `json:"sysdescr,omitempty"`
 	SysContact  string           `json:"syscontact,omitempty"`
 	WalkFile    string           `json:"walkFile,omitempty"`
+	WalkFiles   []string         `json:"walkFiles,omitempty"`
 	AddMibs     []AddMibResponse `json:"addMibs,omitempty"`
 }
 
 // AddMibResponse represents an additional MIB entry.
 type AddMibResponse struct {
+	OID   string `json:"oid"`
+	Type  string `json:"type"`
+	Value string `json:"value"`
+}
+
+// SNMPAgentRequest is the editable SNMP subset accepted by device CRUD.
+type SNMPAgentRequest struct {
+	Community   string          `json:"community,omitempty"`
+	SysName     string          `json:"sysName,omitempty"`
+	SysDescr    string          `json:"sysDescr,omitempty"`
+	SysContact  string          `json:"sysContact,omitempty"`
+	SysLocation string          `json:"sysLocation,omitempty"`
+	WalkFile    string          `json:"walkFile,omitempty"`
+	WalkFiles   []string        `json:"walkFiles,omitempty"`
+	AddMibs     []AddMibRequest `json:"addMibs,omitempty"`
+}
+
+type AddMibRequest struct {
 	OID   string `json:"oid"`
 	Type  string `json:"type"`
 	Value string `json:"value"`
@@ -140,6 +159,7 @@ type DeviceCreateRequest struct {
 	InterfaceDetails []DeviceInterfaceUpdate `json:"interfaceDetails,omitempty"`
 	Template         string                  `json:"template,omitempty"` // Use template as base
 	RawYAML          string                  `json:"rawYaml,omitempty"`  // Advanced: full YAML
+	SNMPAgent        *SNMPAgentRequest       `json:"snmpAgent,omitempty"`
 }
 
 // DeviceUpdateRequest represents a request to update a device.
@@ -150,6 +170,7 @@ type DeviceUpdateRequest struct {
 	Interfaces       []DeviceInterfaceUpdate `json:"interfaces,omitempty"`
 	InterfaceDetails []DeviceInterfaceUpdate `json:"interfaceDetails,omitempty"`
 	RawYAML          string                  `json:"rawYaml,omitempty"` // Full YAML for the device
+	SNMPAgent        *SNMPAgentRequest       `json:"snmpAgent,omitempty"`
 }
 
 // DeviceCloneRequest represents a request to clone a device.

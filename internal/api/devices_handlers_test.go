@@ -741,6 +741,27 @@ func TestCreateDeviceFromRequest(t *testing.T) {
 	})
 }
 
+func TestCreateDeviceFromRequestPersistsSNMPOverlay(t *testing.T) {
+	dev, err := createDeviceFromRequest(DeviceCreateRequest{
+		Hostname: "edge-1",
+		Type:     "switch",
+		SNMPAgent: &SNMPAgentRequest{
+			Community: "NetAllyDemo",
+			WalkFiles: []string{"cisco/base.walk", "cisco/vendor.walk"},
+			AddMibs:   []AddMibRequest{{OID: "1.3.6.1.4.1.9.1.1.0", Type: "STRING", Value: "9300"}},
+		},
+	})
+	if err != nil {
+		t.Fatalf("createDeviceFromRequest: %v", err)
+	}
+	if dev.SNMPConfig.Community != "NetAllyDemo" || len(dev.SNMPConfig.WalkFiles) != 2 {
+		t.Fatalf("SNMP config not persisted: %+v", dev.SNMPConfig)
+	}
+	if got := dev.SNMPConfig.AddMibs[0]; got.OID != "1.3.6.1.4.1.9.1.1.0" || got.Value != "9300" {
+		t.Fatalf("AddMib not persisted: %+v", got)
+	}
+}
+
 func TestCollectDeviceProtocols(t *testing.T) {
 	t.Run("no protocols", func(t *testing.T) {
 		dev := &config.Device{Name: "test"}
