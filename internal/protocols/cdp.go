@@ -283,12 +283,10 @@ func (h *CDPHandler) buildDeviceIDTLV(device *config.Device) []byte {
 
 // buildAddressesTLV builds the Addresses TLV.
 func (h *CDPHandler) buildAddressesTLV(device *config.Device) []byte {
-	if len(device.IPAddresses) == 0 {
+	ip := h.stack.firstStateIPAddress(device)
+	if ip == nil {
 		return nil
 	}
-
-	// For simplicity, include only the first IP address
-	ip := device.IPAddresses[0]
 
 	var (
 		addrBytes []byte

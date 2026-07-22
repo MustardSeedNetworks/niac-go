@@ -2,6 +2,7 @@ package protocols
 
 import (
 	"fmt"
+	"net/netip"
 	"os"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
@@ -122,7 +123,14 @@ func (s *Stack) resetDeviceState() {
 	s.segmentTables = nil
 
 	s.snmpAgents = make(map[*config.Device]*snmpAgentGroup)
+	for _, store := range s.deviceStates {
+		store.SetChangeObserver(nil)
+	}
 	s.deviceStates = make(map[*config.Device]*devicestate.Store)
+	s.stateIPv4Mu.Lock()
+	s.stateIPv4 = make(map[*DeviceTable]map[netip.Addr][]*config.Device)
+	s.stateDeviceIPv4 = make(map[*config.Device]deviceIPv4Index)
+	s.stateIPv4Mu.Unlock()
 
 	if s.dhcpHandler != nil {
 		s.dhcpHandler.Reset()
@@ -143,7 +151,7 @@ func (s *Stack) resetDeviceState() {
 // registerDevice registers a single device with all relevant handlers,
 // targeting the stack's single flat device table (the no-segments path).
 func (s *Stack) registerDevice(device *config.Device) {
-	s.registerDeviceState(device)
+	s.registerDeviceState(device, s.devices)
 	s.registerDeviceAddresses(device, s.devices)
 	s.registerDeviceFeatures(device, s.devices)
 	s.configureDHCPServer(device)
@@ -164,7 +172,7 @@ func (s *Stack) registerDevice(device *config.Device) {
 // by *config.Device pointer, not by table, so it coexists safely across
 // segments even when two segments reuse the same IP.
 func (s *Stack) registerSegmentDevice(device *config.Device, table *DeviceTable) {
-	s.registerDeviceState(device)
+	s.registerDeviceState(device, table)
 	s.registerDeviceAddresses(device, table)
 	s.registerDeviceFeatures(device, table)
 	s.configureDHCPServer(device)
@@ -216,7 +224,8 @@ func (s *Stack) configureDHCPServer(device *config.Device) {
 		serverIP = device.IPAddresses[0]
 	}
 
-	s.dhcpHandler.SetServerConfig(
+	s.dhcpHandler.setServerConfig(
+		device,
 		serverIP,
 		device.DHCPConfig.Router,
 		device.DHCPConfig.DomainNameServer,

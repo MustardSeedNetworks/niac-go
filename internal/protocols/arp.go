@@ -118,7 +118,7 @@ func (h *ARPHandler) targetDevices(targetIP net.IP, vlan int) []*config.Device {
 		}
 		return []*config.Device{device}
 	}
-	return h.stack.devicesFor(vlan).GetByIP(targetIP)
+	return h.stack.devicesForStateIPv4(vlan, targetIP)
 }
 
 // logARPRequest logs an ARP request at verbose debug level.
@@ -231,11 +231,11 @@ func (h *ARPHandler) createPacket(buffer []byte) *Packet {
 
 // SendGratuitousARP sends a gratuitous ARP announcement.
 func (h *ARPHandler) SendGratuitousARP(device *config.Device) error {
-	if len(device.MACAddress) == 0 || len(device.IPAddresses) == 0 {
+	ip := h.stack.firstStateIPv4Address(device)
+	if len(device.MACAddress) == 0 || ip == nil {
 		return ErrDeviceMissingMACOrIP
 	}
 
-	ip := device.IPAddresses[0]
 	broadcastMAC := net.HardwareAddr{0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
 	zeroMAC := net.HardwareAddr{0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
 

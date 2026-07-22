@@ -12,6 +12,7 @@ import (
 
 	"github.com/gopacket/gopacket"
 	"github.com/gopacket/gopacket/layers"
+	"golang.org/x/crypto/ssh"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 	"github.com/MustardSeedNetworks/niac-go/internal/devicecli"
@@ -33,6 +34,7 @@ type sshTCPHandler struct {
 	servers  map[*config.Device]*devicecli.SSHServer
 	sessions map[string]*sshTCPSession
 	now      func() time.Time
+	hostKey  func(string) (ssh.Signer, error)
 }
 
 type sshTCPSession struct {
@@ -62,7 +64,7 @@ type sshOutboundSegment struct {
 func newSSHTCPHandler(stack *Stack) *sshTCPHandler {
 	return &sshTCPHandler{
 		stack: stack, servers: make(map[*config.Device]*devicecli.SSHServer),
-		sessions: make(map[string]*sshTCPSession), now: time.Now,
+		sessions: make(map[string]*sshTCPSession), now: time.Now, hostKey: loadOrCreateSSHHostSigner,
 	}
 }
 
@@ -391,9 +393,14 @@ func (h *sshTCPHandler) server(device *config.Device) (*devicecli.SSHServer, err
 	if !found || password == "" {
 		return nil, fmt.Errorf("SSH password environment variable %q is not set", device.SSHConfig.PasswordEnv)
 	}
+	hostSigner, err := h.hostKey(device.Name)
+	if err != nil {
+		return nil, err
+	}
 	server, err := devicecli.NewSSHServer(
 		h.stack.deviceStates[device],
 		devicecli.Credentials{Username: device.SSHConfig.Username, Password: password},
+		hostSigner,
 	)
 	if err != nil {
 		return nil, err

@@ -87,6 +87,7 @@ type DHCPHandler struct {
 	ipPool             []net.IP
 	poolStart          net.IP
 	poolEnd            net.IP
+	serverDevice       *config.Device
 	serverIP           net.IP
 	subnetMask         net.IP
 	gateway            net.IP
@@ -133,13 +134,31 @@ func (h *DHCPHandler) SetPool(start, end net.IP) {
 
 // SetServerConfig configures DHCP server parameters.
 func (h *DHCPHandler) SetServerConfig(serverIP, gateway net.IP, dnsServers []net.IP, domain string) {
+	h.setServerConfig(nil, serverIP, gateway, dnsServers, domain)
+}
+
+func (h *DHCPHandler) setServerConfig(
+	device *config.Device,
+	serverIP, gateway net.IP,
+	dnsServers []net.IP,
+	domain string,
+) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
+	h.serverDevice = device
 	h.serverIP = serverIP
 	h.gateway = gateway
 	h.dnsServers = dnsServers
 	h.domainName = domain
+}
+
+func (h *DHCPHandler) updateDerivedServerIP(device *config.Device, serverIP net.IP) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if h.serverDevice == device {
+		h.serverIP = serverIP
+	}
 }
 
 // SetAdvancedOptions configures advanced DHCP options.
@@ -169,6 +188,7 @@ func (h *DHCPHandler) Reset() {
 	h.ipPool = nil
 	h.poolStart = nil
 	h.poolEnd = nil
+	h.serverDevice = nil
 	h.serverIP = nil
 	h.subnetMask = getDefaultSubnetMask()
 	h.gateway = nil

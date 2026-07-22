@@ -133,7 +133,7 @@ func (h *IPHandler) getTargetDevices(
 	}
 	serialNum := pkt.SerialNumber
 	isBroadcast := ip.DstIP.Equal([]byte{255, 255, 255, 255})
-	devices := h.stack.devicesFor(vlan).GetByIP(ip.DstIP)
+	devices := h.stack.devicesForStateIPv4(vlan, ip.DstIP)
 
 	if len(devices) == 0 && !isBroadcast {
 		if debugLevel >= DebugLevelVerbose {
@@ -236,16 +236,14 @@ func (h *IPHandler) handleTTLTimeout(pkt *Packet, ipLayer *layers.IPv4) bool {
 		return false
 	}
 
-	srcIP := firstIPv4Address(device)
+	srcIP := h.stack.firstStateIPv4Address(device)
 	if srcIP == nil || len(device.MACAddress) == 0 {
 		return false
 	}
 
 	// If the TTL device is the destination, ignore.
-	for _, ip := range device.IPAddresses {
-		if ip.Equal(ipLayer.DstIP) {
-			return false
-		}
+	if h.stack.deviceOwnsIPv4(device, ipLayer.DstIP) {
+		return false
 	}
 
 	// Skip if destination is in TTL subnet

@@ -90,6 +90,9 @@ func (s *Store) appendEvent(event Event) {
 }
 
 func (s *Store) signalChange() {
+	if s.changeObserver != nil {
+		s.changeObserver(s.snapshot(s.running))
+	}
 	select {
 	case s.changes <- struct{}{}:
 	default:

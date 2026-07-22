@@ -425,7 +425,7 @@ func (s *Stack) sendBabble(device *config.Device) {
 		return
 	}
 
-	srcIP := firstIPv4Address(device)
+	srcIP := s.firstStateIPv4Address(device)
 	if srcIP == nil {
 		return
 	}

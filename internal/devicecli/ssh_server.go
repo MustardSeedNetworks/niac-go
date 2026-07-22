@@ -2,8 +2,6 @@ package devicecli
 
 import (
 	"bufio"
-	"crypto/ed25519"
-	"crypto/rand"
 	"crypto/sha256"
 	"crypto/subtle"
 	"errors"
@@ -35,26 +33,25 @@ type SSHServer struct {
 }
 
 // NewSSHServer creates an SSH transport with no default credentials.
-func NewSSHServer(state *devicestate.Store, credentials Credentials) (*SSHServer, error) {
+func NewSSHServer(
+	state *devicestate.Store,
+	credentials Credentials,
+	hostSigner ssh.Signer,
+) (*SSHServer, error) {
 	if state == nil {
 		return nil, errors.New("device state is required")
 	}
 	if credentials.Username == "" || credentials.Password == "" {
 		return nil, errors.New("SSH credentials are required")
 	}
+	if hostSigner == nil {
+		return nil, errors.New("SSH host signer is required")
+	}
 	config := &ssh.ServerConfig{
 		PasswordCallback: passwordCallback(credentials),
 		MaxAuthTries:     maxSSHAuthAttempts,
 	}
-	_, privateKey, err := ed25519.GenerateKey(rand.Reader)
-	if err != nil {
-		return nil, fmt.Errorf("generate SSH host key: %w", err)
-	}
-	signer, err := ssh.NewSignerFromKey(privateKey)
-	if err != nil {
-		return nil, fmt.Errorf("create SSH signer: %w", err)
-	}
-	config.AddHostKey(signer)
+	config.AddHostKey(hostSigner)
 	return &SSHServer{state: state, config: config}, nil
 }
 

@@ -282,10 +282,13 @@ func (h *TCPHandler) deviceHasIP(device *config.Device, targetIP any) bool {
 	if !ok {
 		return false
 	}
+	if ip.To4() == nil {
+		return slices.ContainsFunc(device.IPAddresses, func(deviceIP net.IP) bool {
+			return deviceIP.Equal(ip)
+		})
+	}
 
-	return slices.ContainsFunc(device.IPAddresses, func(deviceIP net.IP) bool {
-		return deviceIP.Equal(ip)
-	})
+	return h.stack.deviceOwnsIPv4(device, ip)
 }
 
 // lookupDestinationMAC looks up the MAC address for a destination IP, scoped
@@ -296,7 +299,7 @@ func (h *TCPHandler) lookupDestinationMAC(srcIP any, debugLevel int, vlan int) [
 		return nil
 	}
 
-	srcDevice := h.stack.devicesFor(vlan).GetByIP(ip)
+	srcDevice := h.stack.devicesForStateIPv4(vlan, ip)
 	if len(srcDevice) > 0 && len(srcDevice[0].MACAddress) > 0 {
 		return srcDevice[0].MACAddress
 	}

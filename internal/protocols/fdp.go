@@ -205,7 +205,7 @@ func (h *FDPHandler) buildFDPFrame(device *config.Device) []byte {
 	payload = append(payload, h.buildCapabilitiesTLV(device)...)
 	payload = append(payload, h.buildSoftwareTLV(device)...)
 
-	if len(device.IPAddresses) > 0 {
+	if h.stack.firstStateIPAddress(device) != nil {
 		payload = append(payload, h.buildIPAddressTLV(device)...)
 	}
 
@@ -350,12 +350,10 @@ func (h *FDPHandler) buildSoftwareTLV(device *config.Device) []byte {
 
 // buildIPAddressTLV builds the IP Address TLV.
 func (h *FDPHandler) buildIPAddressTLV(device *config.Device) []byte {
-	if len(device.IPAddresses) == 0 {
+	ip := h.stack.firstStateIPAddress(device)
+	if ip == nil {
 		return nil
 	}
-
-	// Use first IP address
-	ip := device.IPAddresses[0]
 
 	var ipBytes []byte
 	if ip.To4() != nil {

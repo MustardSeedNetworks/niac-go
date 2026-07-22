@@ -29,16 +29,17 @@ type configuration struct {
 
 // Store serializes device-state reads and transactions.
 type Store struct {
-	mu           sync.RWMutex
-	running      configuration
-	startup      configuration
-	authored     configuration
-	version      uint64
-	events       []Event
-	checkpoints  map[string]configuration
-	changes      chan struct{}
-	changeSignal chan<- struct{}
-	now          func() time.Time
+	mu             sync.RWMutex
+	running        configuration
+	startup        configuration
+	authored       configuration
+	version        uint64
+	events         []Event
+	checkpoints    map[string]configuration
+	changes        chan struct{}
+	changeSignal   chan<- struct{}
+	changeObserver func(Snapshot)
+	now            func() time.Time
 }
 
 // NewStore creates a store seeded with authored device identity.
@@ -47,6 +48,17 @@ func NewStore(identity Identity) *Store {
 	return &Store{
 		running: initial, startup: initial, authored: initial, version: 1,
 		changes: make(chan struct{}, 1), now: time.Now,
+	}
+}
+
+// SetChangeObserver installs a synchronous observer for committed state.
+// The observer must not call back into the store.
+func (s *Store) SetChangeObserver(observer func(Snapshot)) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.changeObserver = observer
+	if observer != nil {
+		observer(s.snapshot(s.running))
 	}
 }
 

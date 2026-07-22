@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/netip"
 	"os"
 	"slices"
 	"sync"
@@ -114,11 +115,14 @@ type Stack struct {
 	stopChan chan struct{}
 	wg       sync.WaitGroup
 
-	debugConfig   *logging.DebugConfig
-	snmpAgents    map[*config.Device]*snmpAgentGroup
-	deviceStates  map[*config.Device]*devicestate.Store
-	notifications *stateNotificationManager
-	errorManager  *apperr.StateManager
+	debugConfig     *logging.DebugConfig
+	snmpAgents      map[*config.Device]*snmpAgentGroup
+	deviceStates    map[*config.Device]*devicestate.Store
+	stateIPv4Mu     sync.RWMutex
+	stateIPv4       map[*DeviceTable]map[netip.Addr][]*config.Device
+	stateDeviceIPv4 map[*config.Device]deviceIPv4Index
+	notifications   *stateNotificationManager
+	errorManager    *apperr.StateManager
 
 	// observers receive every packet the stack sees (rx) or sends (tx).
 	// The API server registers one to feed its SSE hub. Observers are
@@ -290,6 +294,13 @@ func (s *Stack) replyEthernet(pkt *Packet, device *config.Device) (replyEthernet
 }
 
 func (s *Stack) deviceOwnsIPv4(device *config.Device, ip net.IP) bool {
+	address, ok := netip.AddrFromSlice(ip)
+	if !ok || !address.Unmap().Is4() {
+		return false
+	}
+	if owns, managed := s.stateDeviceOwnsIPv4(device, address.Unmap()); managed {
+		return owns
+	}
 	if s.fabric != nil {
 		return s.fabric.deviceOwnsIPv4(device, ip)
 	}

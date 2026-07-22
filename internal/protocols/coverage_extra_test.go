@@ -3038,22 +3038,6 @@ func TestICMPv6ExtractEthernetLayer(t *testing.T) {
 	}
 }
 
-// ---------- ICMP getAddressMaskTargets ----------
-
-func TestICMPGetAddressMaskTargets(t *testing.T) {
-	stack := newTestStackInternal(t)
-	h := NewICMPHandler(stack)
-
-	ipLayer := &layers.IPv4{SrcIP: net.ParseIP("10.0.0.1"), DstIP: net.ParseIP("10.0.0.2")}
-	pkt := &Packet{Buffer: make([]byte, 14), SerialNumber: 1}
-
-	targets := h.getAddressMaskTargets(pkt, ipLayer)
-	if targets == nil {
-		// May be nil if no devices match, which is fine for coverage
-		t.Log("no matching devices found (expected)")
-	}
-}
-
 // ---------- SNMP sourceMAC ----------
 
 func TestSNMPSourceMAC(t *testing.T) {

@@ -2,7 +2,9 @@ package protocols
 
 import (
 	"fmt"
+	"net"
 	"net/netip"
+	"slices"
 	"strings"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
@@ -10,8 +12,20 @@ import (
 	"github.com/MustardSeedNetworks/niac-go/internal/fabric"
 )
 
-func (s *Stack) registerDeviceState(device *config.Device) {
-	s.deviceStates[device] = devicestate.NewStore(deviceIdentity(device))
+type deviceIPv4Index struct {
+	table     *DeviceTable
+	addresses []netip.Addr
+}
+
+func (s *Stack) registerDeviceState(device *config.Device, table *DeviceTable) {
+	store := devicestate.NewStore(deviceIdentity(device))
+	s.deviceStates[device] = store
+	store.SetChangeObserver(func(snapshot devicestate.Snapshot) {
+		s.indexDeviceIPv4(table, device, snapshot.Network)
+		if device.DHCPConfig != nil && device.DHCPConfig.ServerIdentifier == nil {
+			s.dhcpHandler.updateDerivedServerIP(device, s.firstStateIPv4Address(device))
+		}
+	})
 }
 
 func deviceIdentity(device *config.Device) devicestate.Identity {
@@ -41,6 +55,106 @@ func (s *Stack) configureDeviceStates(topology *fabric.Topology) {
 		}
 		state.ReplaceNetwork(deviceNetworkState(topology, device))
 	}
+}
+
+func (s *Stack) devicesForStateIPv4(vlan int, ip net.IP) []*config.Device {
+	address, ok := netip.AddrFromSlice(ip)
+	if !ok || !address.Unmap().Is4() {
+		return nil
+	}
+	table := s.devicesFor(vlan)
+	if table == nil {
+		return nil
+	}
+	s.stateIPv4Mu.RLock()
+	byAddress, managed := s.stateIPv4[table]
+	devices := byAddress[address.Unmap()]
+	result := append([]*config.Device(nil), devices...)
+	s.stateIPv4Mu.RUnlock()
+	if managed {
+		return result
+	}
+	return table.GetByIP(ip)
+}
+
+func (s *Stack) indexDeviceIPv4(table *DeviceTable, device *config.Device, network devicestate.Network) {
+	addresses := make([]netip.Addr, 0, len(network.Interfaces))
+	seen := make(map[netip.Addr]struct{}, len(network.Interfaces))
+	for _, iface := range network.Interfaces {
+		if iface.Address.IsValid() && iface.AdminUp && iface.OperUp {
+			address := iface.Address.Addr().Unmap()
+			if _, exists := seen[address]; !exists {
+				addresses = append(addresses, address)
+				seen[address] = struct{}{}
+			}
+		}
+	}
+
+	s.stateIPv4Mu.Lock()
+	defer s.stateIPv4Mu.Unlock()
+	previous := s.stateDeviceIPv4[device]
+	for _, address := range previous.addresses {
+		if !address.Is4() {
+			continue
+		}
+		matches := s.stateIPv4[previous.table][address]
+		s.stateIPv4[previous.table][address] = slices.DeleteFunc(matches, func(candidate *config.Device) bool {
+			return candidate == device
+		})
+		if len(s.stateIPv4[previous.table][address]) == 0 {
+			delete(s.stateIPv4[previous.table], address)
+		}
+	}
+	if s.stateIPv4[table] == nil {
+		s.stateIPv4[table] = make(map[netip.Addr][]*config.Device)
+	}
+	for _, address := range addresses {
+		if !address.Is4() {
+			continue
+		}
+		s.stateIPv4[table][address] = append(s.stateIPv4[table][address], device)
+	}
+	s.stateDeviceIPv4[device] = deviceIPv4Index{table: table, addresses: addresses}
+}
+
+func (s *Stack) stateDeviceOwnsIPv4(device *config.Device, address netip.Addr) (bool, bool) {
+	s.stateIPv4Mu.RLock()
+	defer s.stateIPv4Mu.RUnlock()
+	indexed, managed := s.stateDeviceIPv4[device]
+	return slices.Contains(indexed.addresses, address), managed
+}
+
+func (s *Stack) firstStateIPv4Address(device *config.Device) net.IP {
+	s.stateIPv4Mu.RLock()
+	indexed, managed := s.stateDeviceIPv4[device]
+	addresses := indexed.addresses
+	for _, address := range addresses {
+		if address.Is4() {
+			result := net.IP(address.AsSlice())
+			s.stateIPv4Mu.RUnlock()
+			return result
+		}
+	}
+	s.stateIPv4Mu.RUnlock()
+	if !managed {
+		return firstIPv4Address(device)
+	}
+	return nil
+}
+
+func (s *Stack) firstStateIPAddress(device *config.Device) net.IP {
+	s.stateIPv4Mu.RLock()
+	indexed, managed := s.stateDeviceIPv4[device]
+	if len(indexed.addresses) > 0 {
+		result := net.IP(indexed.addresses[0].AsSlice())
+		s.stateIPv4Mu.RUnlock()
+		return result
+	}
+	s.stateIPv4Mu.RUnlock()
+	if !managed && len(device.IPAddresses) > 0 {
+		return device.IPAddresses[0]
+	}
+	return nil
 }
 
 func flatDeviceNetworkState(device *config.Device) devicestate.Network {

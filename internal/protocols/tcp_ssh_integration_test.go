@@ -28,6 +28,7 @@ func TestSSHAuthenticatesAndRunsCLIThroughVirtualPacketStack(t *testing.T) {
 		},
 	}}}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
+	useTemporarySSHHostKeys(t, stack)
 	stream := newPacketSSHClient(t, stack, clientMAC, deviceMAC)
 	connection, channels, requests, err := ssh.NewClientConn(stream, "10.0.0.1:22", &ssh.ClientConfig{
 		User: "admin", Auth: []ssh.AuthMethod{ssh.Password("test-password")},

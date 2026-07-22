@@ -2,6 +2,8 @@ package devicecli_test
 
 import (
 	"bufio"
+	"crypto/ed25519"
+	"crypto/rand"
 	"io"
 	"net"
 	"strings"
@@ -116,9 +118,17 @@ func TestSSHServerBoundsChannelsPerConnection(t *testing.T) {
 
 func newSSHServer(t *testing.T, state *devicestate.Store) *devicecli.SSHServer {
 	t.Helper()
+	_, privateKey, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatalf("GenerateKey() error = %v", err)
+	}
+	hostSigner, err := ssh.NewSignerFromKey(privateKey)
+	if err != nil {
+		t.Fatalf("NewSignerFromKey() error = %v", err)
+	}
 	server, err := devicecli.NewSSHServer(state, devicecli.Credentials{
 		Username: "admin", Password: "test-password",
-	})
+	}, hostSigner)
 	if err != nil {
 		t.Fatalf("NewSSHServer() error = %v", err)
 	}

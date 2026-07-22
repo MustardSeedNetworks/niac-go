@@ -440,6 +440,9 @@ func TestFabricRoutesTCPRepliesWithGatewayMAC(t *testing.T) {
 				}
 			}
 			stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
+			if tt.ssh {
+				useTemporarySSHHostKeys(t, stack)
+			}
 			stack.ConfigureFabric(topology)
 			testerMAC := mustForwardingMAC(t, "02:00:00:00:00:fe")
 
