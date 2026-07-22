@@ -13,6 +13,7 @@ import (
 	"github.com/gopacket/gopacket/layers"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/devicestate"
 	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 )
 
@@ -2737,14 +2738,14 @@ func TestSNMPAgentGroupGet(t *testing.T) {
 		t.Error("expected nil for nil group")
 	}
 
-	group := newSnmpAgentGroup()
+	group := newSnmpAgentGroup(devicestate.NewStore(devicestate.Identity{Hostname: "d1"}))
 	if group.Get("public") != nil {
 		t.Error("expected nil for empty group")
 	}
 }
 
 func TestSNMPAgentGroupEnsure(t *testing.T) {
-	group := newSnmpAgentGroup()
+	group := newSnmpAgentGroup(devicestate.NewStore(devicestate.Identity{Hostname: "d1"}))
 	dev := &config.Device{Name: "d1"}
 
 	agent := group.Ensure("public", dev, 0)
@@ -2771,7 +2772,7 @@ func TestSNMPAgentGroupCommunities(t *testing.T) {
 		t.Error("expected nil for nil group")
 	}
 
-	group := newSnmpAgentGroup()
+	group := newSnmpAgentGroup(devicestate.NewStore(devicestate.Identity{Hostname: "d1"}))
 	dev := &config.Device{Name: "d1"}
 	group.Ensure("public", dev, 0)
 	group.Ensure("private", dev, 0)

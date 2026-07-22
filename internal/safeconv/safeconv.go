@@ -44,6 +44,25 @@ func Uint32(v int) uint32 {
 	return uint32(v)
 }
 
+// Uint32FromInt64 converts an int64 to uint32 with bounds checking.
+func Uint32FromInt64(v int64) uint32 {
+	if v < 0 {
+		return 0
+	}
+	if v > math.MaxUint32 {
+		return math.MaxUint32
+	}
+	return uint32(v)
+}
+
+// Uint32FromUint64 converts a uint64 to uint32 with bounds checking.
+func Uint32FromUint64(v uint64) uint32 {
+	if v > math.MaxUint32 {
+		return math.MaxUint32
+	}
+	return uint32(v)
+}
+
 // Byte safely converts an int to a byte, clamping to [0, 255].
 func Byte(v int) byte {
 	if v < 0 {

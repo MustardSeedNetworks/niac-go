@@ -382,7 +382,7 @@ func (h *LLDPHandler) buildPortDescriptionTLV(device *config.Device) []byte {
 
 // buildSystemNameTLV builds the System Name TLV.
 func (h *LLDPHandler) buildSystemNameTLV(device *config.Device) []byte {
-	name := []byte(device.Name)
+	name := []byte(h.stack.deviceHostname(device))
 
 	length := min(len(name), lldpMaxTLVLength) // clamped to 9-bit max
 	if length == 0 {

@@ -140,7 +140,7 @@ func (a *Agent) registerRoute(
 	routeType int,
 	proto int,
 ) {
-	ifIndex, ok := a.interfaceIndex(interfaceName)
+	ifIndex, ok := a.InterfaceIndex(interfaceName)
 	if !ok {
 		return
 	}
@@ -158,7 +158,8 @@ func (a *Agent) registerRoute(
 	a.mib.Set(ipRouteInfo+"."+destination, &OIDValue{Type: gosnmp.ObjectIdentifier, Value: "0.0"})
 }
 
-func (a *Agent) interfaceIndex(name string) (int, bool) {
+// InterfaceIndex resolves an interface name through the active IF-MIB.
+func (a *Agent) InterfaceIndex(name string) (int, bool) {
 	if name == "" {
 		return 0, false
 	}
@@ -180,7 +181,7 @@ func (a *Agent) registerIPAddrTableEntries(device *config.Device) {
 		if err != nil || ip.To4() == nil {
 			continue
 		}
-		ifIndex, ok := a.interfaceIndex(iface.Name)
+		ifIndex, ok := a.InterfaceIndex(iface.Name)
 		if !ok {
 			continue
 		}

@@ -107,6 +107,7 @@ func (a *Agent) refreshAuthoredInterfaceMIBs() {
 			)
 		}
 	}
+	a.refreshDeviceStateInterfaceMIBs()
 }
 
 func interfaceStatus(status string) int {

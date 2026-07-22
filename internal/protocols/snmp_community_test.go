@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/devicestate"
 	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 )
 
@@ -68,5 +69,23 @@ func TestConfiguredWalkFilesDeduplicatesSingularCompatibilityField(t *testing.T)
 
 	if got, want := configuredWalkFiles(cfg), []string{"base.walk", "overlay.walk"}; !slices.Equal(got, want) {
 		t.Fatalf("configuredWalkFiles() = %v, want %v", got, want)
+	}
+}
+
+func TestSNMPAgentGroupInterfaceIndexUsesBaseCommunity(t *testing.T) {
+	device := &config.Device{Name: "switch-1"}
+	group := newSnmpAgentGroup(devicestate.NewStore(devicestate.Identity{Hostname: "switch-1"}))
+	base := group.Ensure("traps", device, 0)
+	secondary := group.Ensure("monitor", device, 0)
+	if err := base.AddMib("1.3.6.1.2.1.2.2.1.2.47", "string", "Gi0/1"); err != nil {
+		t.Fatal(err)
+	}
+	if err := secondary.AddMib("1.3.6.1.2.1.2.2.1.2.3", "string", "Gi0/1"); err != nil {
+		t.Fatal(err)
+	}
+	group.baseAgent = base
+
+	if index, found := group.interfaceIndex("Gi0/1"); !found || index != 47 {
+		t.Fatalf("interfaceIndex() = (%d, %v), want (47, true)", index, found)
 	}
 }

@@ -151,6 +151,18 @@ func TestUint32Boundaries(t *testing.T) {
 	}
 }
 
+func TestUint32WideConversionsClamp(t *testing.T) {
+	if got := safeconv.Uint32FromInt64(-1); got != 0 {
+		t.Fatalf("Uint32FromInt64(-1) = %d", got)
+	}
+	if got := safeconv.Uint32FromInt64(math.MaxInt64); got != math.MaxUint32 {
+		t.Fatalf("Uint32FromInt64(MaxInt64) = %d", got)
+	}
+	if got := safeconv.Uint32FromUint64(math.MaxUint64); got != math.MaxUint32 {
+		t.Fatalf("Uint32FromUint64(MaxUint64) = %d", got)
+	}
+}
+
 func TestDNSRCodeBoundaries(t *testing.T) {
 	// Valid DNS RCodes are 0-15 (use integer range Go 1.22+)
 	for i := range 16 {

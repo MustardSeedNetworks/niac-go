@@ -44,13 +44,14 @@ const (
 // TCPHandler handles TCP packets.
 type TCPHandler struct {
 	stack *Stack
+	ssh   *sshTCPHandler
 }
 
 // NewTCPHandler creates a new TCP handler.
 func NewTCPHandler(stack *Stack) *TCPHandler {
-	return &TCPHandler{
-		stack: stack,
-	}
+	handler := &TCPHandler{stack: stack}
+	handler.ssh = newSSHTCPHandler(stack)
+	return handler
 }
 
 // HandlePacket processes a TCP packet over IPv4.
@@ -144,6 +145,8 @@ func (h *TCPHandler) routeToHandler(
 		}
 	case TCPPortHTTPS:
 		h.handleHealthCheckPort(pkt, ipLayer, tcp, devices, TCPPortHTTPS, isSYNOnly, nil)
+	case TCPPortSSH:
+		h.ssh.HandlePacket(pkt, ipLayer, tcp, devices)
 	case TCPPortFTP:
 		h.handleFTP(pkt, ipLayer, tcp, devices, hasPayload)
 	case TCPPortLDAP, TCPPortLDAPS:

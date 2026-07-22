@@ -270,7 +270,7 @@ func (h *CDPHandler) buildLLCSNAPHeader() []byte {
 
 // buildDeviceIDTLV builds the Device ID TLV.
 func (h *CDPHandler) buildDeviceIDTLV(device *config.Device) []byte {
-	deviceID := []byte(device.Name)
+	deviceID := []byte(h.stack.deviceHostname(device))
 	length := min(cdpTLVHeaderSize+len(deviceID), cdpMaxUint16) // Type (2) + Length (2) + Value, capped at max uint16
 
 	tlv := make([]byte, length)

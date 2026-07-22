@@ -12,6 +12,7 @@ import (
 	"github.com/MustardSeedNetworks/niac-go/internal/apperr"
 	"github.com/MustardSeedNetworks/niac-go/internal/capture"
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/devicestate"
 	"github.com/MustardSeedNetworks/niac-go/internal/fabric"
 	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 )
@@ -113,9 +114,11 @@ type Stack struct {
 	stopChan chan struct{}
 	wg       sync.WaitGroup
 
-	debugConfig  *logging.DebugConfig
-	snmpAgents   map[*config.Device]*snmpAgentGroup
-	errorManager *apperr.StateManager
+	debugConfig   *logging.DebugConfig
+	snmpAgents    map[*config.Device]*snmpAgentGroup
+	deviceStates  map[*config.Device]*devicestate.Store
+	notifications *stateNotificationManager
+	errorManager  *apperr.StateManager
 
 	// observers receive every packet the stack sees (rx) or sends (tx).
 	// The API server registers one to feed its SSE hub. Observers are
@@ -193,18 +196,19 @@ func newStack(
 	bufferSize := DefaultQueueBufferSize
 
 	stack := &Stack{
-		capture:      captureEngine,
-		config:       cfg,
-		devices:      NewDeviceTable(),
-		sendQueue:    make(chan *Packet, bufferSize),
-		recvQueue:    make(chan *Packet, bufferSize),
-		stats:        &Statistics{},
-		stopChan:     make(chan struct{}),
-		debugConfig:  debugConfig,
-		snmpAgents:   make(map[*config.Device]*snmpAgentGroup),
-		neighbors:    newNeighborTable(),
-		errorManager: apperr.NewStateManager(),
-		vlanMode:     configUsesVLANs(cfg),
+		capture:       captureEngine,
+		config:        cfg,
+		devices:       NewDeviceTable(),
+		sendQueue:     make(chan *Packet, bufferSize),
+		recvQueue:     make(chan *Packet, bufferSize),
+		stats:         &Statistics{},
+		stopChan:      make(chan struct{}),
+		debugConfig:   debugConfig,
+		snmpAgents:    make(map[*config.Device]*snmpAgentGroup),
+		neighbors:     newNeighborTable(),
+		errorManager:  apperr.NewStateManager(),
+		notifications: newStateNotificationManager(),
+		vlanMode:      configUsesVLANs(cfg),
 	}
 
 	// Create protocol handlers
@@ -244,10 +248,12 @@ func newStack(
 
 // ConfigureFabric installs the immutable routed topology before the stack starts.
 func (s *Stack) ConfigureFabric(topology *fabric.Topology) {
+	s.configureDeviceStates(topology)
 	s.fabric = newFabricRuntime(topology, s.config)
 	if s.fabric == nil {
 		return
 	}
+	s.fabric.bindDeviceStates(s.deviceStates)
 	s.dhcpHandler = NewDHCPHandler(s)
 	if s.fabric.attachmentDHCP != nil {
 		s.configureDHCPServer(s.fabric.attachmentDHCP)
@@ -321,6 +327,8 @@ func (s *Stack) Start() error {
 	s.wg.Add(1)
 
 	go s.babbleThread()
+
+	s.wg.Go(func() { s.notifications.Run(s.stopChan) })
 
 	// Start discovery protocol periodic advertisements
 	s.lldpHandler.Start()
@@ -445,19 +453,21 @@ func (s *Stack) ReloadConfig(cfg *config.Config) error {
 	s.reloadMu.Lock()
 	defer s.reloadMu.Unlock()
 
-	var replacementFabric *fabricRuntime
+	var replacementTopology *fabric.Topology
 	if s.fabric != nil {
 		report := fabric.Compile(cfg, s.fabric.binding.Binding)
 		if !report.Safe {
 			return fmt.Errorf("%w: %v", ErrUnsafeFabricReload, report.Diagnostics)
 		}
-		replacementFabric = newFabricRuntime(&report.Topology, cfg)
+		replacementTopology = &report.Topology
 	}
 
 	s.initializeDevices(cfg)
 	s.vlanMode = configUsesVLANs(cfg)
-	if replacementFabric != nil {
-		s.fabric = replacementFabric
+	if replacementTopology != nil {
+		s.configureDeviceStates(replacementTopology)
+		s.fabric = newFabricRuntime(replacementTopology, cfg)
+		s.fabric.bindDeviceStates(s.deviceStates)
 		s.dhcpHandler = NewDHCPHandler(s)
 		if s.fabric.attachmentDHCP != nil {
 			s.configureDHCPServer(s.fabric.attachmentDHCP)

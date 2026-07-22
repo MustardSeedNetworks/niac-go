@@ -20,14 +20,18 @@ func (s *Stack) initSNMPAgent(device *config.Device) {
 	}
 
 	debugLevel := s.debugConfig.GetProtocolLevel(logging.ProtocolSNMP)
-	group := newSnmpAgentGroup()
+	group := newSnmpAgentGroup(s.deviceStates[device])
 
 	var baseAgent *snmp.Agent
 	if v2Enabled {
 		baseAgent = group.Ensure(device.SNMPConfig.Community, device, debugLevel)
 	} else {
-		baseAgent = snmp.NewAgentWithCommunityAndTelemetry(device, "", debugLevel, group.telemetry)
+		baseAgent = snmp.NewAgentWithState(device, group.state, snmp.AgentOptions{
+			DebugLevel: debugLevel,
+			Telemetry:  group.telemetry,
+		})
 	}
+	group.baseAgent = baseAgent
 
 	s.initSNMPv3Engine(device, group, baseAgent, debugLevel)
 
@@ -185,6 +189,14 @@ func (s *Stack) getSNMPAgents(device *config.Device) *snmpAgentGroup {
 	return s.snmpAgents[device]
 }
 
+func (s *Stack) interfaceIndexResolver(device *config.Device) func(string) (int, bool) {
+	group := s.snmpAgents[device]
+	if group == nil {
+		return nil
+	}
+	return group.interfaceIndex
+}
+
 func (s *Stack) updateFDBTables(mac net.HardwareAddr) {
 	if s == nil || len(mac) == 0 {
 		return
@@ -232,7 +244,7 @@ func (s *Stack) updateDeviceFDBTables(device *config.Device, decMac, hexMac stri
 func (s *Stack) ensureSNMPAgentGroup(device *config.Device) *snmpAgentGroup {
 	group := s.snmpAgents[device]
 	if group == nil {
-		group = newSnmpAgentGroup()
+		group = newSnmpAgentGroup(s.deviceStates[device])
 		s.snmpAgents[device] = group
 	}
 
