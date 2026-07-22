@@ -129,7 +129,7 @@ export const SnmpSection: FC<SNMPSectionProps> = ({
               <span className="text-sm font-medium text-text-primary">MIB overrides</span>
               <button
                 type="button"
-                className="rounded bg-brand-primary px-2 py-1 text-xs text-white"
+                className="rounded bg-brand-primary px-2 py-1 text-xs text-knob"
                 onClick={() => updateAddMibs([...addMibs, { oid: '', type: 'STRING', value: '' }])}
               >
                 Add OID
