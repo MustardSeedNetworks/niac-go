@@ -50,7 +50,7 @@ The validator performs comprehensive checks:
 - IP address duplicates
 
 **Protocol Validation:**
-- SNMP trap threshold ranges (0-100)
+- SNMP trap receiver addresses and supported state triggers
 - SNMP trap receiver format (IP:port or IP)
 - DNS record format (domain names, IPs)
 - DNS forward and reverse record completeness
@@ -81,7 +81,7 @@ niac validate config.yaml --json > validation-results.json
 ✗ Configuration errors found: config.yaml
 
 devices[0].mac_address: duplicate MAC address 00:11:22:33:44:55 (also used by router-02)
-devices[1].snmp.traps.high_cpu.threshold: threshold must be between 0 and 100, got 150
+devices[1].snmp_agent.traps.receivers[0]: invalid trap receiver format
 
 Summary: 2 error(s), 0 warning(s)
 
@@ -706,6 +706,7 @@ NIAC-Go respects the following environment variables:
 - `NO_COLOR` - Disable color output (set to any value)
 - `NIAC_DEBUG` - Default debug level (0-3)
 - `NIAC_INTERFACE` - Default network interface
+- Per-device SSH password variables named by `devices[].ssh.password_env`
 
 Example:
 ```bash
@@ -715,6 +716,18 @@ export NIAC_INTERFACE=en0
 
 niac my-config.yaml  # Uses environment defaults
 ```
+
+## Simulated Device CLI
+
+When a device enables `ssh`, connect to any of its simulated IPv4 addresses
+with the configured username. The password is read from the environment
+variable named by `password_env`; passwords are never stored in the scenario.
+
+The IOS-like profile supports `enable`, `configure terminal`, `show ip interface
+brief`, `show ip route`, running/startup configuration display and save,
+interface `shutdown`/`no shutdown`, IPv4 address changes, static routes,
+hostname and VLAN changes, checkpoints, rollback, reload, and configuration
+event display. Type `?` or a command prefix followed by `?` for contextual help.
 
 ## Output Formats
 
