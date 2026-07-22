@@ -62,6 +62,47 @@ func TestParseWalkLineBoundsOutOfRange32BitValues(t *testing.T) {
 	}
 }
 
+func TestParseWalkLineHexValuesAreBinaryOctets(t *testing.T) {
+	tests := []struct {
+		name string
+		line string
+	}{
+		{name: "hex string", line: ".1 = Hex-STRING: 00 11 aa ff"},
+		{name: "bits", line: ".1 = BITS: 0x00 11 aa ff"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			entry, err := parseWalkLine(tt.line)
+			if err != nil {
+				t.Fatalf("parseWalkLine() error = %v", err)
+			}
+			got, ok := entry.Value.([]byte)
+			if !ok {
+				t.Fatalf("parseWalkLine() value type = %T, want []byte", entry.Value)
+			}
+			want := []byte{0x00, 0x11, 0xaa, 0xff}
+			if string(got) != string(want) {
+				t.Fatalf("parseWalkLine() value = %x, want %x", got, want)
+			}
+		})
+	}
+}
+
+func TestParseWalkLineHexContinuationAppendsBinaryOctets(t *testing.T) {
+	entry, err := parseWalkLine(".1 = Hex-STRING: 00 11")
+	if err != nil {
+		t.Fatalf("parseWalkLine() error = %v", err)
+	}
+	appendHexContinuation(entry, "aa ff")
+	got, ok := entry.Value.([]byte)
+	if !ok {
+		t.Fatalf("entry value type = %T, want []byte", entry.Value)
+	}
+	if want := []byte{0x00, 0x11, 0xaa, 0xff}; string(got) != string(want) {
+		t.Fatalf("entry value = %x, want %x", got, want)
+	}
+}
+
 // TestParseWalkFile_SymlinkRejection verifies symlink attacks are rejected.
 func TestParseWalkFile_SymlinkRejection(t *testing.T) {
 	// Create temporary directory and files
@@ -407,9 +448,9 @@ func TestParseWalkFile_HexContinuation(t *testing.T) {
 		t.Fatalf("expected 2 entries (continuation folded, not a new OID), got %d", len(entries))
 	}
 
-	const wantHex = "00112233445566778899AABB" // 12 octets: line 1 + folded line 2
-	if hex, _ := entries[0].Value.(string); hex != wantHex {
-		t.Errorf("hex value = %q, want %q (continuation not folded)", hex, wantHex)
+	wantHex := []byte{0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xaa, 0xbb}
+	if hex, _ := entries[0].Value.([]byte); string(hex) != string(wantHex) {
+		t.Errorf("hex value = %x, want %x (continuation not folded)", hex, wantHex)
 	}
 }
 

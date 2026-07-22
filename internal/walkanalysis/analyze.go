@@ -10,6 +10,7 @@
 package walkanalysis
 
 import (
+	"encoding/hex"
 	"maps"
 	"math"
 	"slices"
@@ -553,10 +554,14 @@ func lookupString(byOID map[string]snmp.WalkEntry, oid string) string {
 }
 
 func entryString(e snmp.WalkEntry) string {
-	if s, ok := e.Value.(string); ok {
-		return strings.TrimSpace(s)
+	switch value := e.Value.(type) {
+	case string:
+		return strings.TrimSpace(value)
+	case []byte:
+		return hex.EncodeToString(value)
+	default:
+		return ""
 	}
-	return ""
 }
 
 // entryInt returns an SNMP Integer value (ifType, admin/oper status).
