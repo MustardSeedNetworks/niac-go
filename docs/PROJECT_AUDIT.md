@@ -182,8 +182,8 @@ re-investigate.
 - ✅ **All workflows have concurrency groups** (PR #486).
 - ✅ **All `@actions/*` and third-party action versions standardised**
   to current latest majors (PR #486).
-- ✅ **Release pipeline supports `dry_run`** and produced 6-platform
-  artifacts on v0.66.36 with no broken-tag chain (PR #485 + #486).
+- ✅ **Manual release dispatch produces snapshot artifacts only**; publishing
+  is reserved for CI runs triggered by version tags.
 - ✅ **JSON Schema published + CI-guarded** (this PR).
 - ✅ **Per-page help on all 15 pages** (this PR).
 - ✅ **Tooltips on every interactive control on touched pages** (this
