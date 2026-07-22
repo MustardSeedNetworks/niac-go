@@ -6,24 +6,17 @@ The NIAC-Go WebUI provides a web-based interface for monitoring and controlling 
 
 ## Accessing the WebUI
 
-### Starting the API Server
+### Starting the Daemon
 
 ```bash
-# Generate API token
-export NIAC_API_TOKEN=$(openssl rand -base64 32)
-
-# Start with API server
-sudo niac run config.yaml --api :8080
-
-# Open browser to http://localhost:8080
+niac daemon
+# Open https://localhost:8445
 ```
 
 ### Authentication
 
-1. On first visit, you'll be prompted for the API token
-2. Enter the `NIAC_API_TOKEN` value
-3. Token is stored in browser localStorage
-4. Click "Connect" to authenticate
+The default loopback daemon does not require a token. A non-loopback listener
+requires `NIAC_API_TOKEN`; enter that token when the Web UI prompts for it.
 
 ## Main Dashboard
 

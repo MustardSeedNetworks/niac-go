@@ -8,8 +8,10 @@ info:
     device monitoring, configuration updates, and PCAP replay functionality.
 
     ## Authentication
-    All endpoints require Bearer token authentication. Set the token via
-    the `NIAC_API_TOKEN` environment variable when starting the server.
+    This specification models authenticated listeners. Non-loopback listeners
+    require Bearer authentication; set `NIAC_API_TOKEN` before starting the
+    server. The installed loopback-only daemon also permits tokenless local
+    access.
 
     ## CSRF Protection
     State-changing operations (POST, PUT, PATCH, DELETE) require a CSRF token.
@@ -20,19 +22,21 @@ info:
     - Default: 100 requests/second per IP
     - Burst: 200 requests
     - Response: HTTP 429 when exceeded
-  version: 2.8.1
+  version: "v1"
   contact:
     name: Kris Armstrong
     url: https://github.com/MustardSeedNetworks/niac-go
   license:
-    name: MIT
+    name: Business Source License 1.1
     url: https://github.com/MustardSeedNetworks/niac-go/blob/main/LICENSE
 
 servers:
-  - url: http://localhost:8080/api/v1
-    description: Local development server
+  - url: https://localhost:8445/api/v1
+    description: Installed loopback daemon; bearer token optional on loopback
   - url: https://niac.example.com/api/v1
     description: Production server (example)
+  - url: http://localhost:8080/api/v1
+    description: Explicit `niac run --web` mode; NIAC_API_TOKEN required
 
 security:
   - BearerAuth: []

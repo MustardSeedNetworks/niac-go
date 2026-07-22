@@ -25,7 +25,8 @@ the lab.
 - **Per-protocol debug levels** — turn verbose logging on/off at the protocol layer without restarting
 - **PCAP analysis** — `niac analyze-pcap` summarises captures by protocol; `niac analyze-walk` extracts topology from SNMP walks
 - **Error injection** — inject latency, loss, jitter, or protocol-specific faults on a running simulation
-- **Web UI** — daemon mode exposes a React/TypeScript control plane on port 8080
+- **Web UI** — daemon mode exposes a React/TypeScript control plane over HTTPS
+  on port 8445
 - **Interactive TUI** — single-screen control for ad-hoc lab use
 - **Templates** — ship YAML scenarios (`niac template`) and run them anywhere
 
@@ -48,14 +49,14 @@ sudo ./niac run eth0 my-lab.yaml
 
 # Or start the daemon + web UI
 sudo ./niac daemon
-# → open http://localhost:8080
+# → open https://localhost:8445
 ```
 
 ## Commands
 
 | Command | Purpose |
 |---------|---------|
-| `niac daemon` | Run with web UI control plane (port 8080) |
+| `niac daemon` | Run with HTTPS web UI control plane (port 8445) |
 | `niac run <iface> <config>` | Run a simulation on a real interface |
 | `niac interactive <iface> <config>` | Run with a TUI dashboard |
 | `niac init [out]` | Interactive template wizard |
@@ -153,10 +154,11 @@ See [`docs/SHARED_DEMO_CATALOG.md`](docs/SHARED_DEMO_CATALOG.md).
 | `make fmt-all` | Auto-format everything |
 | `make schema` | Regenerate JSON schema from `Config` struct |
 
-Verified versions: **Go 1.26.4**, Node.js 26.4.0+, golangci-lint v2.12.2.
-Cross-platform releases (Linux/macOS/Windows × amd64/arm64) are built by
-the `release.yml` workflow on native GitHub runners after release-please
-creates a `v*` tag.
+Verified versions: **Go 1.26.5**, Node.js 26.4.0, golangci-lint v2.12.2.
+All release artifacts are built in GitHub Actions by the pinned `release.yml`
+pipeline after release-please creates a `v*` tag. Linux and Apple Silicon macOS
+use GoReleaser Cross; Windows uses native GitHub runners with CGO and the Npcap
+SDK. Intel macOS is not a supported release target.
 
 ## Versioning & Releases
 
